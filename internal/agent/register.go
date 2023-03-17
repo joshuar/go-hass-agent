@@ -7,13 +7,13 @@ import (
 	"time"
 
 	"github.com/grandcat/zeroconf"
+	"github.com/joshuar/go-hass-agent/internal/hass"
 	log "github.com/sirupsen/logrus"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/data/binding"
 	"fyne.io/fyne/v2/data/validation"
-	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
 	validate "github.com/go-playground/validator/v10"
@@ -24,18 +24,16 @@ const (
 )
 
 type RegistrationInfo struct {
-	Server, Token string
-	UseTLS        bool
+	Server, Token binding.String
+	UseTLS        binding.Bool
 }
 
-func (r *RegistrationInfo) IsValid() bool {
-	if r.Server == "" {
-		return false
+func NewRegistration() *RegistrationInfo {
+	return &RegistrationInfo{
+		Server: binding.NewString(),
+		Token:  binding.NewString(),
+		UseTLS: binding.NewBool(),
 	}
-	if r.Token == "" {
-		return false
-	}
-	return true
 }
 
 func findServers() binding.StringList {
@@ -61,7 +59,7 @@ func findServers() binding.StringList {
 	defer cancel()
 	err = resolver.Browse(ctx, "_home-assistant._tcp", "local.", entries)
 	if err != nil {
-		log.Fatalln("Failed to browse:", err.Error())
+		log.Fatalf("Failed to browse:", err.Error())
 	}
 
 	<-ctx.Done()
@@ -75,84 +73,60 @@ func findServers() binding.StringList {
 
 func (agent *Agent) GetRegistrationInfo() *RegistrationInfo {
 
-	registrationInfo := &RegistrationInfo{
-		UseTLS: true,
-	}
+	registrationInfo := NewRegistration()
+
+	done := make(chan bool, 1)
 
 	s := findServers()
 	allServers, _ := s.Get()
 
-	w := agent.ui.NewWindow("App Registration")
+	log.Debug("Prompt for registration details")
 
-	customServer := make(chan bool)
+	w := agent.App.NewWindow("App Registration")
+
 	serverSelect := widget.NewSelect(allServers, func(s string) {
-		log.Debugf("User selected server %s", s)
-		registrationInfo.Server = s
+		registrationInfo.Server.Set(s)
 	})
-	manualServerSelect := widget.NewCheck("Use Custom Server", func(b bool) {
-		log.Debugf("Use custom server %v", b)
-		customServer <- b
-	})
-
-	serverManual := widget.NewEntry()
+	serverManual := widget.NewEntryWithData(registrationInfo.Server)
 	serverManual.Validator = NewHostPort()
-	tokenSelect := widget.NewEntry()
+	serverManual.Disable()
+	manualServerSelect := widget.NewCheck("Use Custom Server", func(b bool) {
+		switch b {
+		case true:
+			serverManual.Enable()
+			serverSelect.Disable()
+		case false:
+			serverManual.Disable()
+			serverSelect.Enable()
+		}
+	})
+	tokenSelect := widget.NewEntryWithData(registrationInfo.Token)
 	tokenSelect.Validator = validation.NewRegexp(`^[A-Za-z0-9_-]+$`, "token can only contain letters, numbers, '_', and '-'")
-
-	defaultItems := []*widget.FormItem{
-		{Text: "Token", Widget: tokenSelect},
-		{Text: "Server", Widget: container.New(layout.NewHBoxLayout(),
-			serverSelect,
-			widget.NewCheck("Use TLS?", func(b bool) {
-				switch b {
-				case true:
-					registrationInfo.UseTLS = true
-				case false:
-					registrationInfo.UseTLS = false
-				}
-			}),
-		)},
-		{Widget: manualServerSelect},
-	}
+	tlsSelect := widget.NewCheckWithData("Use TLS?", registrationInfo.UseTLS)
 
 	form := &widget.Form{
-		Items: defaultItems,
+		Items: []*widget.FormItem{
+			{Text: "Token", Widget: tokenSelect},
+			{Text: "Found Server", Widget: serverSelect},
+			{Text: "Manual Server", Widget: container.NewHBox(manualServerSelect, serverManual)},
+			{Widget: tlsSelect},
+		},
 		OnSubmit: func() { // optional, handle form submission
-			if manualServerSelect.Checked {
-				registrationInfo.Server = serverManual.Text
-			}
-			registrationInfo.Token = tokenSelect.Text
-			if registrationInfo.IsValid() {
-				w.Close()
-			} else {
-				err := errors.New("you need to specify both a token and server")
-				dialog.ShowError(err, w)
-			}
+			s, _ := registrationInfo.Server.Get()
+			t, _ := registrationInfo.Token.Get()
+			log.Debugf("User selected server %s and token %s", s, t)
+			done <- true
 		},
 	}
+
 	w.SetContent(container.New(layout.NewVBoxLayout(),
 		widget.NewLabel(HelpText),
 		form,
 	))
 
-	go func(f *widget.Form) {
-		for useCustomServer := range customServer {
-			if useCustomServer {
-				if len(f.Items) == 3 {
-					f.Append("Manual Server:", serverManual)
-					f.Refresh()
-				}
-			} else {
-				registrationInfo.Server = serverSelect.Selected
-				if len(f.Items) != 3 {
-					f.Items = f.Items[:3]
-					f.Refresh()
-				}
-			}
-		}
-	}(form)
-
-	w.ShowAndRun()
+	w.Show()
+	<-done
+	w.Close()
 	return registrationInfo
 }
 
@@ -166,4 +140,16 @@ func NewHostPort() fyne.StringValidator {
 		}
 		return nil
 	}
+}
+
+func (a *Agent) SaveRegistration(r *hass.RegistrationResponse) error {
+	a.App.Preferences().SetString("CloudhookURL", r.CloudhookURL)
+	a.App.Preferences().SetString("RemoteUIURL", r.RemoteUIURL)
+	a.App.Preferences().SetString("Secret", r.Secret)
+	a.App.Preferences().SetString("WebhookID", r.WebhookID)
+	return nil
+}
+
+func (a *Agent) RegisterWithHass(r *RegistrationInfo) *hass.RegistrationResponse {
+	return &hass.RegistrationResponse{}
 }

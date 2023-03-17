@@ -6,12 +6,8 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/joshuar/go-hass-agent/internal/agent"
 	"github.com/spf13/cobra"
-)
-
-const (
-	Name    = "go-hass-agent"
-	Version = "0.0.1"
 )
 
 func init() {
@@ -20,9 +16,9 @@ func init() {
 
 var versionCmd = &cobra.Command{
 	Use:   "version",
-	Short: fmt.Sprintf("Print the version number of %s", Name),
-	Long:  fmt.Sprintf("All software has versions. This is the version of %s", Name),
+	Short: "Print the version number",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("%s: %s", Name, Version)
+		a := agent.NewAgent()
+		fmt.Printf("%s %s", a.Name, a.Version)
 	},
 }

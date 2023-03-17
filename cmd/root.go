@@ -39,13 +39,18 @@ to quickly create a Cobra application.`,
 			}()
 			log.Info("Profiling is enabled and available at localhost:6060")
 		}
-		agent := agent.NewAgent()
-		agent.GetRegistrationInfo()
-
 	},
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
-	// Run: func(cmd *cobra.Command, args []string) { },
+	Run: func(cmd *cobra.Command, args []string) {
+		agent := agent.NewAgent()
+
+		w := agent.StartTrayIcon()
+		w.SetMaster()
+		w.Hide()
+		go agent.LoadConfig()
+		w.ShowAndRun()
+	},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
