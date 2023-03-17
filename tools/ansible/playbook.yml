@@ -1,0 +1,19 @@
+---
+- name: Set up containers
+  hosts: localhost
+  tasks:
+  - name: Create a pod
+    containers.podman.podman_pod:
+      name: go-hass-app-home-assistant
+      state: created
+      network: host
+
+  - name: Container setup
+    containers.podman.podman_container:
+      name: go-hass-app-home-assistant-server
+      image: "ghcr.io/home-assistant/home-assistant:{{ home_assistant_version }}"
+      state: present
+      pod: go-hass-app-home-assistant
+      volume:
+        - go-hass-app-home-assistant-config:/config"
+      timezone: "{{ timezone }}"
