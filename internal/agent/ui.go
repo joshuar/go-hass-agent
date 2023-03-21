@@ -18,13 +18,13 @@ func NewUI() fyne.App {
 	return a
 }
 
-func (a *Agent) StartTrayIcon() fyne.Window {
-	if desk, ok := a.App.(desktop.App); ok {
+func startTrayIcon(a fyne.App, name string) fyne.Window {
+	if desk, ok := a.(desktop.App); ok {
 		log.Debug("Creating tray icon")
 		h := fyne.NewMenuItem("Hello", func() {})
 		h.Icon = theme.HomeIcon()
 		menu := fyne.NewMenu("Hello World", h)
 		desk.SetSystemTrayMenu(menu)
 	}
-	return a.App.NewWindow(a.Name)
+	return a.NewWindow(name)
 }

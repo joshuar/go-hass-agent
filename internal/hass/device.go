@@ -1,6 +1,9 @@
 package hass
 
 import (
+	"runtime"
+
+	"github.com/joshuar/go-hass-agent/internal/linux"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -15,11 +18,17 @@ type deviceInfo interface {
 	OsName() string
 	OsVersion() string
 	SupportsEncryption() bool
-	AppData() *AppData
+	AppData() interface{}
 }
 
-type AppData struct {
-	PushNotificationKey string `json:"push_notification_key"`
+func NewDevice() deviceInfo {
+	switch os := runtime.GOOS; os {
+	case "linux":
+		return linux.NewLinuxDevice()
+	default:
+		log.Error("Unsupported Operating System.")
+		return nil
+	}
 }
 
 func GetDeviceInfo(d deviceInfo) {
@@ -35,3 +44,33 @@ func GetDeviceInfo(d deviceInfo) {
 	log.Infof("Supports Encryption: %v", d.SupportsEncryption())
 }
 
+func GenerateRegistrationRequest(d deviceInfo) *RegistrationRequest {
+	if d.AppData() != nil {
+		return &RegistrationRequest{
+			DeviceID:           d.DeviceID(),
+			AppID:              d.AppID(),
+			AppName:            d.AppName(),
+			AppVersion:         d.AppVersion(),
+			DeviceName:         d.DeviceName(),
+			Manufacturer:       d.Manufacturer(),
+			Model:              d.Model(),
+			OsName:             d.OsName(),
+			OsVersion:          d.OsVersion(),
+			SupportsEncryption: d.SupportsEncryption(),
+			AppData:            d.AppData(),
+		}
+	} else {
+		return &RegistrationRequest{
+			DeviceID:           d.DeviceID(),
+			AppID:              d.AppID(),
+			AppName:            d.AppName(),
+			AppVersion:         d.AppVersion(),
+			DeviceName:         d.DeviceName(),
+			Manufacturer:       d.Manufacturer(),
+			Model:              d.Model(),
+			OsName:             d.OsName(),
+			OsVersion:          d.OsVersion(),
+			SupportsEncryption: d.SupportsEncryption(),
+		}
+	}
+}

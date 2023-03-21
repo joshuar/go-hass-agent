@@ -7,7 +7,6 @@ import (
 
 	"git.lukeshu.com/go/libsystemd/sd_id128"
 	"github.com/acobaugh/osrelease"
-	hass "github.com/joshuar/go-hass-agent/internal/hass"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -86,8 +85,8 @@ func (l *linuxDevice) SupportsEncryption() bool {
 	return true
 }
 
-func (l *linuxDevice) AppData() *hass.AppData {
-	return &hass.AppData{}
+func (l *linuxDevice) AppData() interface{} {
+	return nil
 }
 
 func NewLinuxDevice() *linuxDevice {

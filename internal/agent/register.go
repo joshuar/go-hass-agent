@@ -23,13 +23,8 @@ const (
 	HelpText = "As an initial step, this app will need to log into your Home Assistant server and register itself.\nPlease enter the relevant details for your Home Assistant server url/port and a long-lived access token."
 )
 
-type RegistrationInfo struct {
-	Server, Token binding.String
-	UseTLS        binding.Bool
-}
-
-func NewRegistration() *RegistrationInfo {
-	return &RegistrationInfo{
+func NewRegistration() *hass.RegistrationHost {
+	return &hass.RegistrationHost{
 		Server: binding.NewString(),
 		Token:  binding.NewString(),
 		UseTLS: binding.NewBool(),
@@ -71,7 +66,7 @@ func findServers() binding.StringList {
 	return serverList
 }
 
-func (agent *Agent) GetRegistrationInfo() *RegistrationInfo {
+func (agent *Agent) GetRegistrationHostInfo() *hass.RegistrationHost {
 
 	registrationInfo := NewRegistration()
 
@@ -101,7 +96,7 @@ func (agent *Agent) GetRegistrationInfo() *RegistrationInfo {
 		}
 	})
 	tokenSelect := widget.NewEntryWithData(registrationInfo.Token)
-	tokenSelect.Validator = validation.NewRegexp(`^[A-Za-z0-9_-]+$`, "token can only contain letters, numbers, '_', and '-'")
+	tokenSelect.Validator = validation.NewRegexp(`^[A-Za-z0-9_-.]+$`, "token can only contain letters, numbers, '_', '-' and '.'")
 	tlsSelect := widget.NewCheckWithData("Use TLS?", registrationInfo.UseTLS)
 
 	form := &widget.Form{
@@ -113,8 +108,7 @@ func (agent *Agent) GetRegistrationInfo() *RegistrationInfo {
 		},
 		OnSubmit: func() { // optional, handle form submission
 			s, _ := registrationInfo.Server.Get()
-			t, _ := registrationInfo.Token.Get()
-			log.Debugf("User selected server %s and token %s", s, t)
+			log.Debugf("User selected server %s", s)
 			done <- true
 		},
 	}
@@ -142,14 +136,19 @@ func NewHostPort() fyne.StringValidator {
 	}
 }
 
-func (a *Agent) SaveRegistration(r *hass.RegistrationResponse) error {
+func (a *Agent) SaveRegistration(r *hass.RegistrationResponse, h *hass.RegistrationHost) error {
 	a.App.Preferences().SetString("CloudhookURL", r.CloudhookURL)
 	a.App.Preferences().SetString("RemoteUIURL", r.RemoteUIURL)
 	a.App.Preferences().SetString("Secret", r.Secret)
 	a.App.Preferences().SetString("WebhookID", r.WebhookID)
+	host, _ := h.Server.Get()
+	useTLS, _ := h.UseTLS.Get()
+	var instanceURL string
+	if useTLS {
+		instanceURL = "https://" + host
+	} else {
+		instanceURL = "http://" + host
+	}
+	a.App.Preferences().SetString("InstanceURL", instanceURL)
 	return nil
-}
-
-func (a *Agent) RegisterWithHass(r *RegistrationInfo) *hass.RegistrationResponse {
-	return &hass.RegistrationResponse{}
 }
