@@ -13,7 +13,6 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/data/binding"
-	"fyne.io/fyne/v2/data/validation"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
 	validate "github.com/go-playground/validator/v10"
@@ -96,7 +95,7 @@ func (agent *Agent) GetRegistrationHostInfo() *hass.RegistrationHost {
 		}
 	})
 	tokenSelect := widget.NewEntryWithData(registrationInfo.Token)
-	tokenSelect.Validator = validation.NewRegexp(`^[A-Za-z0-9_-.]+$`, "token can only contain letters, numbers, '_', '-' and '.'")
+	// tokenSelect.Validator = validation.NewRegexp(`^[A-Za-z0-9_-\.]+$`, "token can only contain letters, numbers, '_', '-' and '.'")
 	tlsSelect := widget.NewCheckWithData("Use TLS?", registrationInfo.UseTLS)
 
 	form := &widget.Form{
@@ -150,5 +149,8 @@ func (a *Agent) SaveRegistration(r *hass.RegistrationResponse, h *hass.Registrat
 		instanceURL = "http://" + host
 	}
 	a.App.Preferences().SetString("InstanceURL", instanceURL)
+	token, _ := h.Token.Get()
+	a.App.Preferences().SetString("Token", token)
+	a.App.Preferences().SetString("Version", a.Version)
 	return nil
 }

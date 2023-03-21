@@ -82,7 +82,7 @@ func (l *linuxDevice) OsVersion() string {
 }
 
 func (l *linuxDevice) SupportsEncryption() bool {
-	return true
+	return false
 }
 
 func (l *linuxDevice) AppData() interface{} {

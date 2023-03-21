@@ -8,6 +8,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+type GenericRequest struct {
+	Type string      `json:"type"`
+	Data interface{} `json:"data,omitempty"`
+}
 type RegistrationHost struct {
 	Server, Token binding.String
 	UseTLS        binding.Bool
@@ -59,4 +63,43 @@ func RegisterWithHass(ri *RegistrationHost, rr *RegistrationRequest) *Registrati
 	} else {
 		return res
 	}
+}
+
+type ConfigResponse struct {
+	Components   []string `json:"components"`
+	ConfigDir    string   `json:"config_dir"`
+	Elevation    int      `json:"elevation"`
+	Latitude     float64  `json:"latitude"`
+	LocationName string   `json:"location_name"`
+	Longitude    float64  `json:"longitude"`
+	TimeZone     string   `json:"time_zone"`
+	UnitSystem   struct {
+		Length      string `json:"length"`
+		Mass        string `json:"mass"`
+		Temperature string `json:"temperature"`
+		Volume      string `json:"volume"`
+	} `json:"unit_system"`
+	Version               string   `json:"version"`
+	WhitelistExternalDirs []string `json:"whitelist_external_dirs"`
+}
+
+func GetConfig(host string) *ConfigResponse {
+	req := &GenericRequest{
+		Type: "get_config",
+	}
+	res := &ConfigResponse{}
+	ctx := context.Background()
+	log.Debugf("Requesting to %s", host)
+	err := requests.
+		URL(host).
+		BodyJSON(&req).
+		ToJSON(&res).
+		Fetch(ctx)
+	if err != nil {
+		log.Errorf("Unable to fetch config: %v", err)
+		return nil
+	} else {
+		return res
+	}
+
 }

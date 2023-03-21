@@ -1,6 +1,7 @@
-package config
+package agent
 
 type AppConfig struct {
 	RestAPIURL string `json:"restapi_url"`
-	Secret     string `json:"secret"`
+	secret     string
+	token      string
 }
