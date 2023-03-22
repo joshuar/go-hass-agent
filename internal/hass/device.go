@@ -4,7 +4,7 @@ import (
 	"runtime"
 
 	"github.com/joshuar/go-hass-agent/internal/linux"
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog/log"
 )
 
 type deviceInfo interface {
@@ -26,51 +26,20 @@ func NewDevice() deviceInfo {
 	case "linux":
 		return linux.NewLinuxDevice()
 	default:
-		log.Error("Unsupported Operating System.")
+		log.Error().Msg("Unsupported Operating System.")
 		return nil
 	}
 }
 
 func GetDeviceInfo(d deviceInfo) {
-	log.Infof("Device ID: %s", d.DeviceID())
-	log.Infof("Device Name: %s", d.DeviceName())
-	log.Infof("App ID: %s", d.AppID())
-	log.Infof("App Name: %s", d.AppName())
-	log.Infof("App Verson: %s", d.AppVersion())
-	log.Infof("Manufacturer: %s", d.Manufacturer())
-	log.Infof("Model: %s", d.Model())
-	log.Infof("OS Name: %s", d.OsName())
-	log.Infof("OS Version: %s", d.OsVersion())
-	log.Infof("Supports Encryption: %v", d.SupportsEncryption())
-}
-
-func GenerateRegistrationRequest(d deviceInfo) *RegistrationRequest {
-	if d.AppData() != nil {
-		return &RegistrationRequest{
-			DeviceID:           d.DeviceID(),
-			AppID:              d.AppID(),
-			AppName:            d.AppName(),
-			AppVersion:         d.AppVersion(),
-			DeviceName:         d.DeviceName(),
-			Manufacturer:       d.Manufacturer(),
-			Model:              d.Model(),
-			OsName:             d.OsName(),
-			OsVersion:          d.OsVersion(),
-			SupportsEncryption: d.SupportsEncryption(),
-			AppData:            d.AppData(),
-		}
-	} else {
-		return &RegistrationRequest{
-			DeviceID:           d.DeviceID(),
-			AppID:              d.AppID(),
-			AppName:            d.AppName(),
-			AppVersion:         d.AppVersion(),
-			DeviceName:         d.DeviceName(),
-			Manufacturer:       d.Manufacturer(),
-			Model:              d.Model(),
-			OsName:             d.OsName(),
-			OsVersion:          d.OsVersion(),
-			SupportsEncryption: d.SupportsEncryption(),
-		}
-	}
+	log.Info().Msgf("Device ID: %s", d.DeviceID())
+	log.Info().Msgf("Device Name: %s", d.DeviceName())
+	log.Info().Msgf("App ID: %s", d.AppID())
+	log.Info().Msgf("App Name: %s", d.AppName())
+	log.Info().Msgf("App Verson: %s", d.AppVersion())
+	log.Info().Msgf("Manufacturer: %s", d.Manufacturer())
+	log.Info().Msgf("Model: %s", d.Model())
+	log.Info().Msgf("OS Name: %s", d.OsName())
+	log.Info().Msgf("OS Version: %s", d.OsVersion())
+	log.Info().Msgf("Supports Encryption: %v", d.SupportsEncryption())
 }

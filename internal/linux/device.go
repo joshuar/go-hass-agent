@@ -7,7 +7,7 @@ import (
 
 	"git.lukeshu.com/go/libsystemd/sd_id128"
 	"github.com/acobaugh/osrelease"
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -94,27 +94,32 @@ func NewLinuxDevice() *linuxDevice {
 	hostnameCtlCmd := checkForBinary("hostnamectl")
 	out, err := exec.Command(hostnameCtlCmd, "--json=short").Output()
 	if err != nil {
-		log.Fatalf("Could not execute hostnamectl: %v", err)
+		log.Fatal().Caller().
+			Msgf("Could not execute hostnamectl: %v", err)
 	}
 	var h *hostnameCtl
 	err = json.Unmarshal(out, &h)
 	if err != nil {
-		log.Fatalf("Failed to parse output of hostnamectl: %v", err)
+		log.Fatal().Caller().
+			Msgf("Failed to parse output of hostnamectl: %v", err)
 	}
 
 	osrelease, err := osrelease.Read()
 	if err != nil {
-		log.Fatalf("Unable to read file /etc/os-release: %v", err)
+		log.Fatal().Caller().
+			Msgf("Unable to read file /etc/os-release: %v", err)
 	}
 
 	currentUser, err := user.Current()
 	if err != nil {
-		log.Fatalf("Could not retrieve current user details: %v", err.Error())
+		log.Fatal().Caller().
+			Msgf("Could not retrieve current user details: %v", err.Error())
 	}
 
 	machineID, err := sd_id128.GetRandomUUID()
 	if err != nil {
-		log.Fatalf("Could not retrieve a machine ID: %v", err)
+		log.Fatal().Caller().
+			Msgf("Could not retrieve a machine ID: %v", err)
 	}
 
 	return &linuxDevice{
@@ -128,8 +133,10 @@ func NewLinuxDevice() *linuxDevice {
 func checkForBinary(binary string) string {
 	path, err := exec.LookPath(binary)
 	if err != nil {
-		log.Fatalf("Could not find needed executable %s in PATH", binary)
+		log.Fatal().Caller().
+			Msgf("Could not find needed executable %s in PATH", binary)
 	}
-	log.Debugf("%s is available at %s\n", binary, path)
+	log.Debug().Caller().
+		Msgf("%s is available at %s\n", binary, path)
 	return path
 }

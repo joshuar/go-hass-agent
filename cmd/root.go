@@ -8,7 +8,8 @@ import (
 	"os"
 
 	"github.com/joshuar/go-hass-agent/internal/agent"
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -29,23 +30,26 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 		if debugFlag {
-			log.SetLevel(log.DebugLevel)
-			log.Debug("Debug logging enabled")
+			zerolog.SetGlobalLevel(zerolog.DebugLevel)
+			log.Debug().Msg("Debug logging enabled")
+		} else {
+			zerolog.SetGlobalLevel(zerolog.InfoLevel)
 		}
 		if profileFlag {
 			go func() {
-				log.Info(http.ListenAndServe("localhost:6060", nil))
+				log.Info().Err(http.ListenAndServe("localhost:6060", nil))
 			}()
-			log.Info("Profiling is enabled and available at localhost:6060")
+			log.Info().Msg("Profiling is enabled and available at localhost:6060")
 		}
 	},
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	Run: func(cmd *cobra.Command, args []string) {
 		agent := agent.NewAgent()
-		done := make(chan bool, 1)
-		agent.SetupSystemTray(done)
+		agent.SetupSystemTray()
+		agent.SetupRunners()
 		agent.App.Run()
 	},
 }

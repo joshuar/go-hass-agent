@@ -20,5 +20,7 @@ var infoCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		l := linux.NewLinuxDevice()
 		hass.GetDeviceInfo(l)
+		hass.RunLocationUpdater()
+		// linux.NewLinuxLocationInfo(l.AppID())
 	},
 }

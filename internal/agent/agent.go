@@ -2,10 +2,12 @@ package agent
 
 import (
 	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/driver/desktop"
+	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
 	"github.com/joshuar/go-hass-agent/internal/hass"
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -44,21 +46,24 @@ func (a *Agent) LoadConfig(done chan bool) {
 		switch {
 		case CloudhookURL != "":
 			a.config.RestAPIURL = CloudhookURL
-			log.Debugf("Using CloudhookURL %s for REST API access", a.config.RestAPIURL)
+			log.Debug().Caller().
+				Msgf("Using CloudhookURL %s for Home Assistant access", a.config.RestAPIURL)
 			done <- true
 			return
 		case RemoteUIURL != "" && WebhookID != "":
 			a.config.RestAPIURL = RemoteUIURL + "/api/webhook/" + WebhookID
-			log.Debugf("Using RemoteUIURL %s for REST API access", a.config.RestAPIURL)
+			log.Debug().Caller().
+				Msgf("Using RemoteUIURL %s for Home Assistant access", a.config.RestAPIURL)
 			done <- true
 			return
 		case WebhookID != "" && InstanceURL != "":
 			a.config.RestAPIURL = InstanceURL + "/api/webhook/" + WebhookID
-			log.Debugf("Using InstanceURL %s for REST API access", a.config.RestAPIURL)
+			log.Debug().Caller().
+				Msgf("Using InstanceURL %s for Home Assistant access", a.config.RestAPIURL)
 			done <- true
 			return
 		default:
-			log.Warn("No suitable existing config found, running registration")
+			log.Warn().Msg("No suitable existing config found! Starting new registration process")
 			device := hass.NewDevice()
 			registrationHostInfo := a.GetRegistrationHostInfo()
 			registrationRequest := hass.GenerateRegistrationRequest(device)
@@ -78,27 +83,34 @@ func (a *Agent) GetHassConfig(configLoaded chan bool) {
 	a.hassConfig = hass.GetConfig(a.config.RestAPIURL)
 }
 
-func (a *Agent) SetupSystemTray(configLoaded chan bool) {
+func (a *Agent) SetupSystemTray() {
+	configLoaded := make(chan bool, 1)
 	a.LoadConfig(configLoaded)
 	<-configLoaded
 	a.hassConfig = hass.GetConfig(a.config.RestAPIURL)
 	a.Tray = a.App.NewWindow("System Tray")
 	a.Tray.SetMaster()
 	if desk, ok := a.App.(desktop.App); ok {
-		log.Debug("Creating tray icon")
+		log.Debug().Caller().
+			Msg("Config loaded successfully. Creating tray icon.")
 
-		ha_version := fyne.NewMenuItem("Home Assistant Version", func() {
-			w := a.App.NewWindow("Home Assistant Version")
-			w.SetContent(widget.NewLabel(a.hassConfig.Version))
+		menuItemAbout := fyne.NewMenuItem("About", func() {
+			w := a.App.NewWindow("About " + a.Name)
+			w.SetContent(container.New(layout.NewVBoxLayout(),
+				widget.NewLabel("App Version: "+a.Version),
+				widget.NewLabel("Home Assistant Version: "+a.hassConfig.Version),
+				widget.NewButton("Ok", func() {
+					w.Close()
+				}),
+			))
 			w.Show()
 		})
-		app_version := fyne.NewMenuItem("App Version", func() {
-			w := a.App.NewWindow("App Version")
-			w.SetContent(widget.NewLabel(a.Version))
-			w.Show()
-		})
-		menu := fyne.NewMenu(a.Name, ha_version, app_version)
+		menu := fyne.NewMenu(a.Name, menuItemAbout)
 		desk.SetSystemTrayMenu(menu)
 	}
 	a.Tray.Hide()
+}
+
+func (a *Agent) SetupRunners() {
+	go hass.RunLocationUpdater()
 }

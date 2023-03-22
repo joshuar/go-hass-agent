@@ -8,7 +8,7 @@ import (
 
 	"github.com/grandcat/zeroconf"
 	"github.com/joshuar/go-hass-agent/internal/hass"
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog/log"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -36,29 +36,30 @@ func findServers() binding.StringList {
 
 	resolver, err := zeroconf.NewResolver(nil)
 	if err != nil {
-		log.Fatalln("Failed to initialize resolver:", err.Error())
-	}
+		log.Warn().Msgf("Failed to initialize resolver:", err.Error())
+	} else {
+		entries := make(chan *zeroconf.ServiceEntry)
+		go func(results <-chan *zeroconf.ServiceEntry) {
+			for entry := range results {
+				server := entry.AddrIPv4[0].String() + ":" + fmt.Sprint(entry.Port)
+				serverList.Append(server)
+				log.Debug().Caller().
+					Msgf("Found a record %s", server)
+			}
+		}(entries)
 
-	entries := make(chan *zeroconf.ServiceEntry)
-	go func(results <-chan *zeroconf.ServiceEntry) {
-		for entry := range results {
-			server := entry.AddrIPv4[0].String() + ":" + fmt.Sprint(entry.Port)
-			serverList.Append(server)
-			log.Debugf("Found a record %s", server)
+		log.Info().Msg("Looking for Home Assistant instances on the network...")
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+		defer cancel()
+		err = resolver.Browse(ctx, "_home-assistant._tcp", "local.", entries)
+		if err != nil {
+			log.Warn().Msgf("Failed to browse:", err.Error())
 		}
-	}(entries)
 
-	log.Info("Looking for Home Assistant instances on the network...")
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	defer cancel()
-	err = resolver.Browse(ctx, "_home-assistant._tcp", "local.", entries)
-	if err != nil {
-		log.Fatalf("Failed to browse:", err.Error())
-	}
-
-	<-ctx.Done()
-	if serverList == nil {
-		log.Warn("Could not find any Home Assistant servers on the network")
+		<-ctx.Done()
+		if serverList == nil {
+			log.Warn().Msg("Could not find any Home Assistant servers on the network")
+		}
 	}
 	// add http://localhost:8123 to the list of servers as a fall-back/default option
 	serverList.Append("localhost:8123")
@@ -73,8 +74,6 @@ func (agent *Agent) GetRegistrationHostInfo() *hass.RegistrationHost {
 
 	s := findServers()
 	allServers, _ := s.Get()
-
-	log.Debug("Prompt for registration details")
 
 	w := agent.App.NewWindow("App Registration")
 
@@ -107,7 +106,8 @@ func (agent *Agent) GetRegistrationHostInfo() *hass.RegistrationHost {
 		},
 		OnSubmit: func() { // optional, handle form submission
 			s, _ := registrationInfo.Server.Get()
-			log.Debugf("User selected server %s", s)
+			log.Debug().Caller().
+				Msgf("User selected server %s", s)
 			done <- true
 		},
 	}

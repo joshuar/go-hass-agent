@@ -5,7 +5,6 @@ go 1.19
 require (
 	github.com/go-playground/validator/v10 v10.11.2
 	github.com/grandcat/zeroconf v1.0.0
-	github.com/sirupsen/logrus v1.9.0
 	github.com/spf13/cobra v1.6.1
 )
 
@@ -30,6 +29,8 @@ require (
 	github.com/jsummers/gobmp v0.0.0-20151104160322-e2ba15ffa76e // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/leodido/go-urn v1.2.1 // indirect
+	github.com/mattn/go-colorable v0.1.12 // indirect
+	github.com/mattn/go-isatty v0.0.14 // indirect
 	github.com/miekg/dns v1.1.52 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/srwiley/oksvg v0.0.0-20220731023508-a61f04f16b76 // indirect
@@ -54,6 +55,8 @@ require (
 	github.com/acobaugh/osrelease v0.1.0
 	github.com/carlmjohnson/requests v0.22.3
 	github.com/inconshreveable/mousetrap v1.0.1 // indirect
+	github.com/maltegrosse/go-geoclue2 v0.1.1
+	github.com/rs/zerolog v1.29.0
 	github.com/spf13/pflag v1.0.5 // indirect
 	golang.org/x/sys v0.6.0 // indirect
 )
