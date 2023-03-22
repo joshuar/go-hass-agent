@@ -16,23 +16,24 @@ const (
 )
 
 type Agent struct {
-	App           fyne.App
-	Tray          fyne.Window
-	config        AppConfig
-	hassConfig    *hass.ConfigResponse
+	App    fyne.App
+	Tray   fyne.Window
+	config AppConfig
+	// hassConfig    *hass.ConfigResponse
 	Name, Version string
+	configLoaded  chan bool
 }
 
 func NewAgent() *Agent {
-	a := NewUI()
 	return &Agent{
-		App:     a,
-		Name:    Name,
-		Version: Version,
+		App:          NewUI(),
+		Name:         Name,
+		Version:      Version,
+		configLoaded: make(chan bool, 1),
 	}
 }
 
-func (a *Agent) LoadConfig(done chan bool) {
+func (a *Agent) LoadConfig() {
 	// go func() {
 	for {
 		CloudhookURL := a.App.Preferences().String("CloudhookURL")
@@ -48,19 +49,19 @@ func (a *Agent) LoadConfig(done chan bool) {
 			a.config.RestAPIURL = CloudhookURL
 			log.Debug().Caller().
 				Msgf("Using CloudhookURL %s for Home Assistant access", a.config.RestAPIURL)
-			done <- true
+			a.configLoaded <- true
 			return
 		case RemoteUIURL != "" && WebhookID != "":
 			a.config.RestAPIURL = RemoteUIURL + "/api/webhook/" + WebhookID
 			log.Debug().Caller().
 				Msgf("Using RemoteUIURL %s for Home Assistant access", a.config.RestAPIURL)
-			done <- true
+			a.configLoaded <- true
 			return
 		case WebhookID != "" && InstanceURL != "":
 			a.config.RestAPIURL = InstanceURL + "/api/webhook/" + WebhookID
 			log.Debug().Caller().
 				Msgf("Using InstanceURL %s for Home Assistant access", a.config.RestAPIURL)
-			done <- true
+			a.configLoaded <- true
 			return
 		default:
 			log.Warn().Msg("No suitable existing config found! Starting new registration process")
@@ -78,16 +79,13 @@ func (a *Agent) GetConfigVersion() string {
 	return a.App.Preferences().String("Version")
 }
 
-func (a *Agent) GetHassConfig(configLoaded chan bool) {
-	<-configLoaded
-	a.hassConfig = hass.GetConfig(a.config.RestAPIURL)
-}
+// func (a *Agent) GetHassConfig(configLoaded chan bool) {
+// 	<-configLoaded
+// 	a.hassConfig = hass.GetConfig(a.config.RestAPIURL)
+// }
 
 func (a *Agent) SetupSystemTray() {
-	configLoaded := make(chan bool, 1)
-	a.LoadConfig(configLoaded)
-	<-configLoaded
-	a.hassConfig = hass.GetConfig(a.config.RestAPIURL)
+	// a.hassConfig = hass.GetConfig(a.config.RestAPIURL)
 	a.Tray = a.App.NewWindow("System Tray")
 	a.Tray.SetMaster()
 	if desk, ok := a.App.(desktop.App); ok {
@@ -98,7 +96,7 @@ func (a *Agent) SetupSystemTray() {
 			w := a.App.NewWindow("About " + a.Name)
 			w.SetContent(container.New(layout.NewVBoxLayout(),
 				widget.NewLabel("App Version: "+a.Version),
-				widget.NewLabel("Home Assistant Version: "+a.hassConfig.Version),
+				// widget.NewLabel("Home Assistant Version: "+a.hassConfig.Version),
 				widget.NewButton("Ok", func() {
 					w.Close()
 				}),
@@ -112,5 +110,6 @@ func (a *Agent) SetupSystemTray() {
 }
 
 func (a *Agent) SetupRunners() {
-	go hass.RunLocationUpdater()
+	<-a.configLoaded
+	go a.runLocationUpdater()
 }

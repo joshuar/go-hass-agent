@@ -1,8 +1,8 @@
 package linux
 
 import (
+	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/maltegrosse/go-geoclue2"
-	"github.com/rs/zerolog/log"
 )
 
 type linuxLocation struct {
@@ -10,6 +10,7 @@ type linuxLocation struct {
 	longitude float64
 	accuracy  float64
 	speed     float64
+	altitude  float64
 }
 
 func (l *linuxLocation) Gps() []float64 {
@@ -29,7 +30,7 @@ func (l *linuxLocation) Speed() int {
 }
 
 func (l *linuxLocation) Altitude() int {
-	return 0
+	return int(l.altitude)
 }
 
 func (l *linuxLocation) Course() int {
@@ -40,47 +41,41 @@ func (l *linuxLocation) VerticalAccuracy() int {
 	return 0
 }
 
-func LinuxLocationUpdater(locationInfoCh chan interface{}) {
+func LinuxLocationUpdater(appID string, locationInfoCh chan interface{}) {
 
 	locationInfo := &linuxLocation{}
 
 	gcm, err := geoclue2.NewGeoclueManager()
-	if err != nil {
-		log.Error().Msg(err.Error())
-	}
+	logging.CheckError(err)
+
 	client, err := gcm.GetClient()
-	if err != nil {
-		log.Error().Msg(err.Error())
-	}
-	err = client.SetDesktopId("foo")
+	logging.CheckError(err)
+
+	err = client.SetDesktopId(appID)
+	logging.CheckError(err)
+
 	err = client.Start()
-	if err != nil {
-		log.Error().Msg(err.Error())
-	}
+	logging.CheckError(err)
 
 	c := client.SubscribeLocationUpdated()
 	for v := range c {
 		_, location, err := client.ParseLocationUpdated(v)
-		if err != nil {
-			log.Error().Msg(err.Error())
-		}
+		logging.CheckError(err)
+
 		locationInfo.latitude, err = location.GetLatitude()
-		if err != nil {
-			log.Error().Msg(err.Error())
-		}
+		logging.CheckError(err)
+
 		locationInfo.longitude, err = location.GetLongitude()
-		if err != nil {
-			log.Error().Msg(err.Error())
-		}
+		logging.CheckError(err)
+
 		locationInfo.accuracy, err = location.GetAccuracy()
-		if err != nil {
-			log.Error().Msg(err.Error())
-		}
+		logging.CheckError(err)
 
 		locationInfo.speed, err = location.GetSpeed()
-		if err != nil {
-			log.Error().Msg(err.Error())
-		}
+		logging.CheckError(err)
+
+		locationInfo.altitude, err = location.GetAltitude()
+		logging.CheckError(err)
 
 		locationInfoCh <- locationInfo
 	}

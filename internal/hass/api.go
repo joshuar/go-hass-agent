@@ -11,3 +11,13 @@ type GenericRequest struct {
 	Encrypted     bool        `json:"encrypted,omitempty"`
 	EncryptedData interface{} `json:"encrypted_data,omitempty"`
 }
+
+type GenericResponse struct {
+	Type   string `json:"type"`
+	ID     int    `json:"id"`
+	Result struct {
+		Body    string      `json:"body"`
+		Status  string      `json:"status"`
+		Headers interface{} `json:"headers"`
+	} `json:"result"`
+}

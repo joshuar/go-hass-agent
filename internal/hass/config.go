@@ -44,5 +44,4 @@ func GetConfig(host string) *ConfigResponse {
 		log.Debug().Msg("Configuration fetched successfully")
 		return res
 	}
-
 }
