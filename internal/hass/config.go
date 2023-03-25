@@ -1,12 +1,5 @@
 package hass
 
-import (
-	"context"
-
-	"github.com/carlmjohnson/requests"
-	"github.com/rs/zerolog/log"
-)
-
 type ConfigResponse struct {
 	Components   []string `json:"components"`
 	ConfigDir    string   `json:"config_dir"`
@@ -25,23 +18,23 @@ type ConfigResponse struct {
 	WhitelistExternalDirs []string `json:"whitelist_external_dirs"`
 }
 
-func GetConfig(host string) *ConfigResponse {
-	req := &GenericRequest{
-		Type: RequestTypeGetConfig,
-	}
-	res := &ConfigResponse{}
-	ctx := context.Background()
-	err := requests.
-		URL(host).
-		BodyJSON(&req).
-		ToJSON(&res).
-		Fetch(ctx)
-	if err != nil {
-		log.Error().Caller().
-			Msgf("Unable to fetch config: %v", err)
-		return nil
-	} else {
-		log.Debug().Msg("Configuration fetched successfully")
-		return res
-	}
-}
+// func GetConfig(host string) *ConfigResponse {
+// 	req := &GenericRequest{
+// 		Type: RequestTypeGetConfig,
+// 	}
+// 	res := &ConfigResponse{}
+// 	ctx := context.Background()
+// 	err := requests.
+// 		URL(host).
+// 		BodyJSON(&req).
+// 		ToJSON(&res).
+// 		Fetch(ctx)
+// 	if err != nil {
+// 		log.Error().Caller().
+// 			Msgf("Unable to fetch config: %v", err)
+// 		return nil
+// 	} else {
+// 		log.Debug().Msg("Configuration fetched successfully")
+// 		return res
+// 	}
+// }

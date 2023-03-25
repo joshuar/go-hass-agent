@@ -1,9 +1,7 @@
 package hass
 
 import (
-	"runtime"
-
-	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/rs/zerolog/log"
 )
 
@@ -22,13 +20,7 @@ type deviceInfo interface {
 }
 
 func NewDevice() deviceInfo {
-	switch os := runtime.GOOS; os {
-	case "linux":
-		return linux.NewLinuxDevice()
-	default:
-		log.Error().Msg("Unsupported Operating System.")
-		return nil
-	}
+	return device.NewDevice()
 }
 
 func GetDeviceInfo(d deviceInfo) {

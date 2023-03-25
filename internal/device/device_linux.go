@@ -1,4 +1,4 @@
-package linux
+package device
 
 import (
 	"encoding/json"
@@ -89,7 +89,7 @@ func (l *linuxDevice) AppData() interface{} {
 	return nil
 }
 
-func NewLinuxDevice() *linuxDevice {
+func NewDevice() *linuxDevice {
 
 	hostnameCtlCmd := checkForBinary("hostnamectl")
 	out, err := exec.Command(hostnameCtlCmd, "--json=short").Output()

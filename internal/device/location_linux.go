@@ -1,4 +1,4 @@
-package linux
+package device
 
 import (
 	"github.com/joshuar/go-hass-agent/internal/logging"
@@ -41,7 +41,7 @@ func (l *linuxLocation) VerticalAccuracy() int {
 	return 0
 }
 
-func LinuxLocationUpdater(appID string, locationInfoCh chan interface{}) {
+func LocationUpdater(appID string, locationInfoCh chan interface{}) {
 
 	locationInfo := &linuxLocation{}
 

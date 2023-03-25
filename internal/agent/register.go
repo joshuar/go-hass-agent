@@ -19,10 +19,10 @@ import (
 )
 
 const (
-	HelpText = "As an initial step, this app will need to log into your Home Assistant server and register itself.\nPlease enter the relevant details for your Home Assistant server url/port and a long-lived access token."
+	HelpText = ""
 )
 
-func NewRegistration() *hass.RegistrationHost {
+func newRegistration() *hass.RegistrationHost {
 	return &hass.RegistrationHost{
 		Server: binding.NewString(),
 		Token:  binding.NewString(),
@@ -66,9 +66,9 @@ func findServers() binding.StringList {
 	return serverList
 }
 
-func (agent *Agent) GetRegistrationHostInfo() *hass.RegistrationHost {
+func (agent *Agent) getRegistrationHostInfo() *hass.RegistrationHost {
 
-	registrationInfo := NewRegistration()
+	registrationInfo := newRegistration()
 
 	done := make(chan bool, 1)
 
@@ -81,7 +81,7 @@ func (agent *Agent) GetRegistrationHostInfo() *hass.RegistrationHost {
 		registrationInfo.Server.Set(s)
 	})
 	serverManual := widget.NewEntryWithData(registrationInfo.Server)
-	serverManual.Validator = NewHostPort()
+	serverManual.Validator = newHostPort()
 	serverManual.Disable()
 	manualServerSelect := widget.NewCheck("Use Custom Server", func(b bool) {
 		switch b {
@@ -113,7 +113,7 @@ func (agent *Agent) GetRegistrationHostInfo() *hass.RegistrationHost {
 	}
 
 	w.SetContent(container.New(layout.NewVBoxLayout(),
-		widget.NewLabel(HelpText),
+		widget.NewLabel(agent.MsgPrinter.Sprint("As an initial step, this app will need to log into your Home Assistant server and register itself.\nPlease enter the relevant details for your Home Assistant server url/port and a long-lived access token.")),
 		form,
 	))
 
@@ -125,7 +125,7 @@ func (agent *Agent) GetRegistrationHostInfo() *hass.RegistrationHost {
 
 // NewHostPort is a custom fyne validator that will validate a string is a
 // valid hostname:port combination
-func NewHostPort() fyne.StringValidator {
+func newHostPort() fyne.StringValidator {
 	v := validate.New()
 	return func(text string) error {
 		if err := v.Var(text, "hostname_port"); err != nil {
@@ -135,7 +135,7 @@ func NewHostPort() fyne.StringValidator {
 	}
 }
 
-func (a *Agent) SaveRegistration(r *hass.RegistrationResponse, h *hass.RegistrationHost) error {
+func (a *Agent) saveRegistration(r *hass.RegistrationResponse, h *hass.RegistrationHost) error {
 	a.App.Preferences().SetString("CloudhookURL", r.CloudhookURL)
 	a.App.Preferences().SetString("RemoteUIURL", r.RemoteUIURL)
 	a.App.Preferences().SetString("Secret", r.Secret)
@@ -153,4 +153,12 @@ func (a *Agent) SaveRegistration(r *hass.RegistrationResponse, h *hass.Registrat
 	a.App.Preferences().SetString("Token", token)
 	a.App.Preferences().SetString("Version", a.Version)
 	return nil
+}
+
+func (a *Agent) runRegistrationWorker() {
+	device := hass.NewDevice()
+	registrationHostInfo := a.getRegistrationHostInfo()
+	registrationRequest := hass.GenerateRegistrationRequest(device)
+	appRegistrationInfo := hass.RegisterWithHass(registrationHostInfo, registrationRequest)
+	a.saveRegistration(appRegistrationInfo, registrationHostInfo)
 }

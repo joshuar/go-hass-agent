@@ -1,0 +1,39 @@
+{
+    "language": "en",
+    "messages": [
+        {
+            "id": "About",
+            "message": "About",
+            "translation": "About",
+            "translatorComment": "Copied from source.",
+            "placeholders": [
+                {
+                    "id": "Name",
+                    "string": "%[1]v",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "a.Name"
+                }
+            ],
+            "fuzzy": true
+        },
+        {
+            "id": "App Version: {Version}",
+            "message": "App Version: {Version}",
+            "translation": "App Version: {Version}",
+            "translatorComment": "Copied from source.",
+            "placeholders": [
+                {
+                    "id": "Version",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "a.Version"
+                }
+            ],
+            "fuzzy": true
+        }
+    ]
+}

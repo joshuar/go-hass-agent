@@ -6,8 +6,11 @@ import (
 	"fyne.io/fyne/v2/driver/desktop"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
+	"github.com/jeandeaual/go-locale"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/rs/zerolog/log"
+	"golang.org/x/text/language"
+	"golang.org/x/text/message"
 )
 
 const (
@@ -22,61 +25,31 @@ type Agent struct {
 	// hassConfig    *hass.ConfigResponse
 	Name, Version string
 	configLoaded  chan bool
+	requestsCh    chan interface{}
+	responsesCh   chan interface{}
+	MsgPrinter    *message.Printer
 }
 
 func NewAgent() *Agent {
-	return &Agent{
+	a := &Agent{
 		App:          NewUI(),
 		Name:         Name,
 		Version:      Version,
 		configLoaded: make(chan bool, 1),
+		requestsCh:   make(chan interface{}),
+		responsesCh:  make(chan interface{}),
 	}
-}
 
-func (a *Agent) LoadConfig() {
-	// go func() {
-	for {
-		CloudhookURL := a.App.Preferences().String("CloudhookURL")
-		RemoteUIURL := a.App.Preferences().String("RemoteUIURL")
-		WebhookID := a.App.Preferences().String("WebhookID")
-		InstanceURL := a.App.Preferences().String("InstanceURL")
-
-		a.config.secret = a.App.Preferences().String("Secret")
-		a.config.token = a.App.Preferences().String("Token")
-
-		switch {
-		case CloudhookURL != "":
-			a.config.RestAPIURL = CloudhookURL
-			log.Debug().Caller().
-				Msgf("Using CloudhookURL %s for Home Assistant access", a.config.RestAPIURL)
-			a.configLoaded <- true
-			return
-		case RemoteUIURL != "" && WebhookID != "":
-			a.config.RestAPIURL = RemoteUIURL + "/api/webhook/" + WebhookID
-			log.Debug().Caller().
-				Msgf("Using RemoteUIURL %s for Home Assistant access", a.config.RestAPIURL)
-			a.configLoaded <- true
-			return
-		case WebhookID != "" && InstanceURL != "":
-			a.config.RestAPIURL = InstanceURL + "/api/webhook/" + WebhookID
-			log.Debug().Caller().
-				Msgf("Using InstanceURL %s for Home Assistant access", a.config.RestAPIURL)
-			a.configLoaded <- true
-			return
-		default:
-			log.Warn().Msg("No suitable existing config found! Starting new registration process")
-			device := hass.NewDevice()
-			registrationHostInfo := a.GetRegistrationHostInfo()
-			registrationRequest := hass.GenerateRegistrationRequest(device)
-			appRegistrationInfo := hass.RegisterWithHass(registrationHostInfo, registrationRequest)
-			a.SaveRegistration(appRegistrationInfo, registrationHostInfo)
-		}
+	userLocales, err := locale.GetLocales()
+	if err != nil {
+		log.Warn().Msg("Could not find a suitable locale. Defaulting to English.")
+		a.MsgPrinter = message.NewPrinter(message.MatchLanguage(language.English.String()))
+	} else {
+		a.MsgPrinter = message.NewPrinter(message.MatchLanguage(userLocales...))
+		log.Debug().Caller().Msgf("Setting language to %v.", userLocales)
 	}
-	// }()
-}
 
-func (a *Agent) GetConfigVersion() string {
-	return a.App.Preferences().String("Version")
+	return a
 }
 
 // func (a *Agent) GetHassConfig(configLoaded chan bool) {
@@ -93,9 +66,9 @@ func (a *Agent) SetupSystemTray() {
 			Msg("Config loaded successfully. Creating tray icon.")
 
 		menuItemAbout := fyne.NewMenuItem("About", func() {
-			w := a.App.NewWindow("About " + a.Name)
+			w := a.App.NewWindow(a.MsgPrinter.Sprintf("About ", a.Name))
 			w.SetContent(container.New(layout.NewVBoxLayout(),
-				widget.NewLabel("App Version: "+a.Version),
+				widget.NewLabel(a.MsgPrinter.Sprintf("App Version: %s", a.Version)),
 				// widget.NewLabel("Home Assistant Version: "+a.hassConfig.Version),
 				widget.NewButton("Ok", func() {
 					w.Close()
@@ -109,7 +82,9 @@ func (a *Agent) SetupSystemTray() {
 	a.Tray.Hide()
 }
 
-func (a *Agent) SetupRunners() {
+func (a *Agent) RunWorkers() {
 	<-a.configLoaded
-	go a.runLocationUpdater()
+	go hass.RequestDispatcher(a.config.RestAPIURL, a.requestsCh, a.responsesCh)
+	go a.runLocationWorker()
+	go a.runSensorWorker()
 }

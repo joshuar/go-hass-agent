@@ -5,6 +5,7 @@ package cmd
 
 import (
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 
 	"github.com/joshuar/go-hass-agent/internal/agent"
@@ -14,7 +15,6 @@ import (
 )
 
 var (
-	cfgFile     string
 	debugFlag   bool
 	profileFlag bool
 )
@@ -33,7 +33,7 @@ to quickly create a Cobra application.`,
 		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 		if debugFlag {
 			zerolog.SetGlobalLevel(zerolog.DebugLevel)
-			log.Debug().Msg("Debug logging enabled")
+			log.Debug().Msg("Debug logging enabled.")
 		} else {
 			zerolog.SetGlobalLevel(zerolog.InfoLevel)
 		}
@@ -41,22 +41,18 @@ to quickly create a Cobra application.`,
 			go func() {
 				log.Info().Err(http.ListenAndServe("localhost:6060", nil))
 			}()
-			log.Info().Msg("Profiling is enabled and available at localhost:6060")
+			log.Info().Msg("Profiling is enabled and available at localhost:6060.")
 		}
 	},
-	// Uncomment the following line if your bare application
-	// has an action associated with it:
 	Run: func(cmd *cobra.Command, args []string) {
 		agent := agent.NewAgent()
 		agent.SetupSystemTray()
 		go agent.LoadConfig()
-		go agent.SetupRunners()
+		go agent.RunWorkers()
 		agent.App.Run()
 	},
 }
 
-// Execute adds all child commands to the root command and sets flags appropriately.
-// This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	err := rootCmd.Execute()
 	if err != nil {
@@ -65,18 +61,6 @@ func Execute() {
 }
 
 func init() {
-	// Here you will define your flags and configuration settings.
-	// Cobra supports persistent flags, which, if defined here,
-	// will be global for your application.
-
-	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.go-hass-agent.yaml)")
-
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
-	// rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-	// cobra.OnInitialize(config.InitialiseConfig)
-
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "$HOME/.config/go-hass-app.yaml", "config file (default is $HOME/.config/go-hass-app.yaml)")
 	rootCmd.PersistentFlags().BoolVarP(&debugFlag, "debug", "d", false, "debug output (default is false)")
 	rootCmd.PersistentFlags().BoolVarP(&profileFlag, "profile", "p", false, "enable profiling (default is false)")
 }

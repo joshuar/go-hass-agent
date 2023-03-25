@@ -18,6 +18,10 @@ const (
 	RequestTypeGetConfig RequestType = "get_config"
 	// RequestTypeUpdateLocation is a RequestType of type update_location.
 	RequestTypeUpdateLocation RequestType = "update_location"
+	// RequestTypeRegisterSensor is a RequestType of type register_sensor.
+	RequestTypeRegisterSensor RequestType = "register_sensor"
+	// RequestTypeUpdateSensorStates is a RequestType of type update_sensor_states.
+	RequestTypeUpdateSensorStates RequestType = "update_sensor_states"
 )
 
 var ErrInvalidRequestType = errors.New("not a valid RequestType")
@@ -34,9 +38,11 @@ func (x RequestType) IsValid() bool {
 }
 
 var _RequestTypeValue = map[string]RequestType{
-	"encrypted":       RequestTypeEncrypted,
-	"get_config":      RequestTypeGetConfig,
-	"update_location": RequestTypeUpdateLocation,
+	"encrypted":            RequestTypeEncrypted,
+	"get_config":           RequestTypeGetConfig,
+	"update_location":      RequestTypeUpdateLocation,
+	"register_sensor":      RequestTypeRegisterSensor,
+	"update_sensor_states": RequestTypeUpdateSensorStates,
 }
 
 // ParseRequestType attempts to convert a string to a RequestType.

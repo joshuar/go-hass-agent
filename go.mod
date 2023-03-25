@@ -5,7 +5,9 @@ go 1.19
 require (
 	github.com/go-playground/validator/v10 v10.11.2
 	github.com/grandcat/zeroconf v1.0.0
+	github.com/jeandeaual/go-locale v0.0.0-20220711133428-7de61946b173
 	github.com/spf13/cobra v1.6.1
+	golang.org/x/text v0.8.0
 )
 
 require (
@@ -39,11 +41,11 @@ require (
 	github.com/tevino/abool v1.2.0 // indirect
 	github.com/yuin/goldmark v1.4.13 // indirect
 	golang.org/x/crypto v0.5.0 // indirect
+	golang.org/x/exp v0.0.0-20230321023759-10a507213a29 // indirect
 	golang.org/x/image v0.0.0-20220601225756-64ec528b34cd // indirect
 	golang.org/x/mobile v0.0.0-20211207041440-4e6c2922fdee // indirect
 	golang.org/x/mod v0.9.0 // indirect
 	golang.org/x/net v0.8.0 // indirect
-	golang.org/x/text v0.8.0 // indirect
 	golang.org/x/tools v0.7.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	honnef.co/go/js/dom v0.0.0-20210725211120-f030747120f2 // indirect
