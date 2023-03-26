@@ -131,7 +131,7 @@ func (agent *Agent) runActiveAppSensor() {
 		dataCh:     make(chan interface{}),
 	}
 
-	go device.ActiveAppUpdater(updateCh)
+	go device.AppUpdater(updateCh)
 
 	for data := range updateCh {
 		// switch sensor := data.(type) {
@@ -153,24 +153,6 @@ func (agent *Agent) runActiveAppSensor() {
 			encrypted: encryptRequests,
 		})
 		runningAppsSensor.handleResponse(response)
-		// }
-		// appName := data.(activeApp).Name()
-		// log.Debug().Caller().
-		// 	Msgf("Current active app %s.", appName)
-		// sensor.state = appName
-		// sensorRequest := &sensorRequest{
-		// 	data:      sensor,
-		// 	encrypted: encryptRequests,
-		// }
-		// response := agent.updateActiveApp(sensorRequest)
-		// switch {
-		// case response["success"] != nil:
-		// 	if response["success"].(bool) && !sensor.Registered() {
-		// 		sensor.registered = true
-		// 		log.Debug().Caller().Msg("Sensor registered.")
-		// 	}
-		// case response[sensor.UniqueID()]:
-		// 	spew.Dump(response[sensor.UniqueID()])
 		// }
 	}
 }

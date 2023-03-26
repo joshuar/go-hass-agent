@@ -103,7 +103,6 @@ func RequestDispatcher(requestURL string, requestsCh, responsesCh chan interface
 				// spew.Dump(res)
 				if err != nil {
 					log.Error().Msgf("Unable to send request: %v", err)
-					responsesCh <- nil
 				} else {
 					responsesCh <- res
 				}

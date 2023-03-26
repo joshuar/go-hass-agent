@@ -20,4 +20,6 @@
   needed. The data sent should satisfy the `LocationInfo` interface in
   `internal/agent/location.go`.
 
+#### App Sensors
 
+- 

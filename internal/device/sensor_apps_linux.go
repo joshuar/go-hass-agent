@@ -45,7 +45,7 @@ func (a *appInfo) Attributes() interface{} {
 	}
 }
 
-func ActiveAppUpdater(app chan interface{}) {
+func AppUpdater(app chan interface{}) {
 	monitorConn, err := dbus.ConnectSessionBus()
 	logging.CheckError(err)
 	defer monitorConn.Close()
