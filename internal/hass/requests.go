@@ -18,21 +18,9 @@ type Request interface {
 	RequestType() RequestType
 	RequestData() interface{}
 	IsEncrypted() bool
-	// MarshalJSON() ([]byte, error)
 }
 
-// type Request struct {
-// 	Type          RequestType
-// 	Data          interface{}
-// 	Encrypted     bool
-// 	EncryptedData bool
-// }
-
 func MarshalJSON(request Request) ([]byte, error) {
-	// data, err := request.MarshalJSON()
-	// if err != nil {
-	// 	return nil, err
-	// } else {
 	if request.IsEncrypted() {
 		return json.Marshal(&struct {
 			Type          RequestType `json:"type"`
@@ -52,7 +40,6 @@ func MarshalJSON(request Request) ([]byte, error) {
 			Data: request.RequestData(),
 		})
 	}
-	// }
 }
 
 type UnencryptedRequest struct {
@@ -65,21 +52,6 @@ type EncryptedRequest struct {
 	Encrypted     bool        `json:"encrypted"`
 	EncryptedData interface{} `json:"encrypted_data"`
 }
-
-// func formatRequest(request Request) interface{} {
-// 	if request.IsEncrypted() {
-// 		return &EncryptedRequest{
-// 			Type:          RequestTypeEncrypted,
-// 			Encrypted:     true,
-// 			EncryptedData: request.RequestData(),
-// 		}
-// 	} else {
-// 		return &UnencryptedRequest{
-// 			Type: request.RequestType(),
-// 			Data: request.RequestData(),
-// 		}
-// 	}
-// }
 
 func RequestDispatcher(requestURL string, requestsCh, responsesCh chan interface{}) {
 	var wg sync.WaitGroup
@@ -110,4 +82,54 @@ func RequestDispatcher(requestURL string, requestsCh, responsesCh chan interface
 		}(r)
 	}
 	wg.Wait()
+}
+
+type Conn struct {
+	requestsCh, responsesCh chan interface{}
+	requestURL              string
+}
+
+func NewConnection(requestURL string) *Conn {
+	newConn := &Conn{
+		requestsCh:  make(chan interface{}),
+		responsesCh: make(chan interface{}),
+		requestURL:  requestURL,
+	}
+	go newConn.processRequests()
+	return newConn
+}
+
+func (c *Conn) processRequests() {
+	var wg sync.WaitGroup
+	for r := range c.requestsCh {
+		wg.Add(1)
+		go func(r interface{}) {
+			ctx := context.Background()
+			defer wg.Done()
+			req, err := MarshalJSON(r.(Request))
+			if err != nil {
+				log.Error().Msgf("Unable to format request: %v", err)
+				c.responsesCh <- nil
+			} else {
+				var res interface{}
+				err = requests.
+					URL(c.requestURL).
+					BodyBytes(req).
+					ToJSON(&res).
+					Fetch(ctx)
+				// spew.Dump(res)
+				if err != nil {
+					log.Error().Msgf("Unable to send request: %v", err)
+				} else {
+					c.responsesCh <- res
+				}
+			}
+		}(r)
+	}
+	wg.Wait()
+}
+
+func (c *Conn) SendRequest(request Request) interface{} {
+	c.requestsCh <- request
+	return <-c.responsesCh
 }

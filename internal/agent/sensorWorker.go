@@ -1,16 +1,7 @@
 package agent
 
-func (agent *Agent) runSensorWorker() {
+import "github.com/joshuar/go-hass-agent/internal/hass"
 
-	go agent.runActiveAppSensor()
-
+func (agent *Agent) runSensorWorker(conn *hass.Conn) {
+	go agent.runActiveAppSensor(conn)
 }
-
-// func (a *Agent) updateDesktopInfo(d desktopInfo) error {
-// 	spew.Dump(d.ActiveApp())
-// 	return nil
-// }
-
-// func (agent *Agent) updateSensor(s *interface{}) error {
-
-// }

@@ -19,14 +19,11 @@ const (
 )
 
 type Agent struct {
-	App    fyne.App
-	Tray   fyne.Window
-	config AppConfig
-	// hassConfig    *hass.ConfigResponse
+	App           fyne.App
+	Tray          fyne.Window
+	config        AppConfig
 	Name, Version string
 	configLoaded  chan bool
-	requestsCh    chan interface{}
-	responsesCh   chan interface{}
 	MsgPrinter    *message.Printer
 }
 
@@ -36,8 +33,6 @@ func NewAgent() *Agent {
 		Name:         Name,
 		Version:      Version,
 		configLoaded: make(chan bool, 1),
-		requestsCh:   make(chan interface{}),
-		responsesCh:  make(chan interface{}),
 	}
 
 	userLocales, err := locale.GetLocales()
@@ -82,9 +77,9 @@ func (a *Agent) SetupSystemTray() {
 	a.Tray.Hide()
 }
 
-func (a *Agent) RunWorkers() {
-	<-a.configLoaded
-	go hass.RequestDispatcher(a.config.RestAPIURL, a.requestsCh, a.responsesCh)
-	go a.runLocationWorker()
-	go a.runSensorWorker()
+func (agent *Agent) RunWorkers() {
+	<-agent.configLoaded
+	conn := hass.NewConnection(agent.config.RestAPIURL)
+	go agent.runLocationWorker(conn)
+	go agent.runSensorWorker(conn)
 }

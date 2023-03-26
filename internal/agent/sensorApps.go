@@ -22,7 +22,6 @@ type appSensor struct {
 	state      interface{}
 	stateClass string
 	attributes interface{}
-	dataCh     chan interface{}
 	disabled   bool
 	registered bool
 }
@@ -103,7 +102,7 @@ func (s *appSensor) handleResponse(response map[string]interface{}) {
 	}
 }
 
-func (agent *Agent) runActiveAppSensor() {
+func (agent *Agent) runActiveAppSensor(conn *hass.Conn) {
 	var encryptRequests = false
 	if agent.config.secret != "" {
 		encryptRequests = true
@@ -118,7 +117,6 @@ func (agent *Agent) runActiveAppSensor() {
 		id:         "active_app_2",
 		registered: false,
 		disabled:   false,
-		dataCh:     make(chan interface{}),
 	}
 
 	runningAppsSensor := &appSensor{
@@ -128,7 +126,6 @@ func (agent *Agent) runActiveAppSensor() {
 		stateClass: "measurement",
 		registered: false,
 		disabled:   false,
-		dataCh:     make(chan interface{}),
 	}
 
 	go device.AppUpdater(updateCh)
@@ -136,29 +133,23 @@ func (agent *Agent) runActiveAppSensor() {
 	for data := range updateCh {
 		// switch sensor := data.(type) {
 		// case activeApp:
-		var response map[string]interface{}
+		var response interface{}
 
 		activeAppSensor.state = data.(activeApp).Name()
 		activeAppSensor.attributes = data.(activeApp).Attributes()
-		response = agent.updateAppSensor(&sensorRequest{
+		response = conn.SendRequest(&sensorRequest{
 			data:      activeAppSensor,
 			encrypted: encryptRequests,
 		})
-		activeAppSensor.handleResponse(response)
+		activeAppSensor.handleResponse(response.(map[string]interface{}))
 		// case runningApps:
 		runningAppsSensor.state = data.(runningApps).Count()
 		runningAppsSensor.attributes = data.(runningApps).Attributes()
-		response = agent.updateAppSensor(&sensorRequest{
+		response = conn.SendRequest(&sensorRequest{
 			data:      runningAppsSensor,
 			encrypted: encryptRequests,
 		})
-		runningAppsSensor.handleResponse(response)
+		runningAppsSensor.handleResponse(response.(map[string]interface{}))
 		// }
 	}
-}
-
-func (agent *Agent) updateAppSensor(request hass.Request) map[string]interface{} {
-	agent.requestsCh <- request
-	response := <-agent.responsesCh
-	return response.(map[string]interface{})
 }
