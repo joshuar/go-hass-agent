@@ -6,25 +6,43 @@ import (
 	"github.com/godbus/dbus/v5"
 	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/rs/zerolog/log"
-	"golang.org/x/exp/slices"
 )
-
-var ignoreApps = []string{"org.kde.plasmashell"}
 
 type appInfo struct {
 	activeApps map[string]interface{}
-	// sensors    map[string]*hass.SensorInfo
 }
 
 func (a *appInfo) Name() string {
 	for key, value := range a.activeApps {
 		if value.(uint32) == 2 {
-			if !slices.Contains(ignoreApps, key) {
-				return key
-			}
+			return key
 		}
 	}
 	return "Unknown"
+}
+
+func (a *appInfo) Count() int {
+	var count int
+	for _, value := range a.activeApps {
+		if value.(uint32) > 0 {
+			count++
+		}
+	}
+	return count
+}
+
+func (a *appInfo) Attributes() interface{} {
+	var runningApps []string
+	for key, value := range a.activeApps {
+		if value.(uint32) > 0 {
+			runningApps = append(runningApps, key)
+		}
+	}
+	return struct {
+		RunningApps []string `json:"running_apps"`
+	}{
+		RunningApps: runningApps,
+	}
 }
 
 func ActiveAppUpdater(app chan interface{}) {
@@ -42,7 +60,7 @@ func ActiveAppUpdater(app chan interface{}) {
 
 	c := make(chan *dbus.Message, 10)
 	monitorConn.Eavesdrop(c)
-	log.Debug().Caller().Msg("Monitoring DBUS for active app changes")
+	log.Debug().Caller().Msg("Monitoring D-Bus for app changes.")
 
 	appChkConn, err := dbus.ConnectSessionBus()
 	logging.CheckError(err)
@@ -63,7 +81,6 @@ func ActiveAppUpdater(app chan interface{}) {
 		obj := appChkConn.Object(portalDest, "/org/freedesktop/portal/desktop")
 		err = obj.Call("org.freedesktop.impl.portal.Background.GetAppState", 0).Store(&a.activeApps)
 		logging.CheckError(err)
-		log.Debug().Caller().Msgf("Current active app: %s.", a.Name())
 		app <- a
 	}
 

@@ -3,7 +3,6 @@ package agent
 import (
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass"
-	"github.com/rs/zerolog/log"
 )
 
 type locationData interface {
@@ -82,8 +81,6 @@ func (a *Agent) runLocationWorker() {
 	go device.LocationUpdater(a.App.UniqueID(), locationInfoCh)
 
 	for loc := range locationInfoCh {
-		log.Debug().Caller().
-			Msgf("Got location %v.", loc.(locationData).Gps())
 		l := &location{
 			data: loc.(locationData),
 		}
@@ -91,15 +88,7 @@ func (a *Agent) runLocationWorker() {
 	}
 }
 
-func (a *Agent) updateLocation(r hass.Request) error {
+func (a *Agent) updateLocation(r hass.Request) {
 	a.requestsCh <- r
-	res := <-a.responsesCh
-	switch v := res.(type) {
-	case error:
-		log.Error().Msg("Unable to update location.")
-		return v
-	default:
-		log.Debug().Caller().Msg("Location Updated.")
-		return nil
-	}
+	<-a.responsesCh
 }

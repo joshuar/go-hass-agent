@@ -81,3 +81,4 @@ func (s *sensorRequest) RequestData() interface{} {
 func (s *sensorRequest) IsEncrypted() bool {
 	return s.encrypted
 }
+

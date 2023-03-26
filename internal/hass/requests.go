@@ -6,7 +6,6 @@ import (
 	"sync"
 
 	"github.com/carlmjohnson/requests"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/rs/zerolog/log"
 )
 
@@ -67,16 +66,6 @@ type EncryptedRequest struct {
 	EncryptedData interface{} `json:"encrypted_data"`
 }
 
-type Response struct {
-	Type   string `json:"type"`
-	ID     int    `json:"id"`
-	Result struct {
-		Body    string      `json:"body"`
-		Status  string      `json:"status"`
-		Headers interface{} `json:"headers"`
-	} `json:"result"`
-}
-
 // func formatRequest(request Request) interface{} {
 // 	if request.IsEncrypted() {
 // 		return &EncryptedRequest{
@@ -94,30 +83,28 @@ type Response struct {
 
 func RequestDispatcher(requestURL string, requestsCh, responsesCh chan interface{}) {
 	var wg sync.WaitGroup
-	// res := Response{}
-	res := make(map[string]interface{})
 	for r := range requestsCh {
 		wg.Add(1)
 		go func(r interface{}) {
 			ctx := context.Background()
 			defer wg.Done()
+			// spew.Dump(r.(Request))
 			req, err := MarshalJSON(r.(Request))
-			spew.Dump(req)
 			if err != nil {
 				log.Error().Msgf("Unable to format request: %v", err)
-				responsesCh <- err
+				responsesCh <- nil
 			} else {
+				var res interface{}
 				err = requests.
 					URL(requestURL).
 					BodyBytes(req).
 					ToJSON(&res).
 					Fetch(ctx)
-				spew.Dump(res)
+				// spew.Dump(res)
 				if err != nil {
-					log.Error().Msgf("Request unsuccessful: %v", err)
-					responsesCh <- err
+					log.Error().Msgf("Unable to send request: %v", err)
+					responsesCh <- nil
 				} else {
-					log.Debug().Caller().Msg("Request successful.")
 					responsesCh <- res
 				}
 			}
