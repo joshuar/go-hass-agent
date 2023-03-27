@@ -123,7 +123,7 @@ func (agent *Agent) getRegistrationHostInfo() *hass.RegistrationHost {
 	return registrationInfo
 }
 
-// NewHostPort is a custom fyne validator that will validate a string is a
+// newHostPort is a custom fyne validator that will validate a string is a
 // valid hostname:port combination
 func newHostPort() fyne.StringValidator {
 	v := validate.New()

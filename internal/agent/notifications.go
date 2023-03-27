@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 
+	"fyne.io/fyne/v2"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/rs/zerolog/log"
@@ -60,25 +61,12 @@ func (agent *Agent) runNotificationsWorker() {
 				log.Error().Msgf("Recieved error on websocket, %s: %s", response.Error.Code, response.Error.Message)
 			}
 		case "event":
-			log.Debug().Msgf("Received notification event with message %s", response.Notification.Message)
-		// err = wsjson.Write(ctx, conn, struct {
-		// 	Type      string `json:"type"`
-		// 	WebhookID string `json:"webhook_id"`
-		// 	ConfirmID string `json:"confirm_id"`
-		// 	ID        int    `json:"id"`
-		// }{
-		// 	Type:      "mobile_app/push_notification_confirm",
-		// 	WebhookID: webhookID,
-		// 	ConfirmID: response.Notification.ConfirmID,
-		// 	ID:        response.ID + 1,
-		// })
-		// logging.CheckError(err)
+			agent.App.SendNotification(&fyne.Notification{
+				Title:   response.Notification.Title,
+				Content: response.Notification.Message,
+			})
 		default:
 			log.Debug().Msgf("Received unhandled response %v", response)
 		}
 	}
-	// if res.Body.Read() != "auth_ok" {
-	// 	log.Error().Msgf("Could not authenticate websocket: %v", res)
-	// }
-
 }
