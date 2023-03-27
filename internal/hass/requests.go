@@ -101,12 +101,12 @@ func NewConnection(requestURL string) *Conn {
 
 func (c *Conn) processRequests() {
 	var wg sync.WaitGroup
-	for r := range c.requestsCh {
+	for request := range c.requestsCh {
 		wg.Add(1)
-		go func(r interface{}) {
+		go func(request interface{}) {
 			ctx := context.Background()
 			defer wg.Done()
-			req, err := MarshalJSON(r.(Request))
+			reqJson, err := MarshalJSON(request.(Request))
 			if err != nil {
 				log.Error().Msgf("Unable to format request: %v", err)
 				c.responsesCh <- nil
@@ -114,17 +114,18 @@ func (c *Conn) processRequests() {
 				var res interface{}
 				err = requests.
 					URL(c.requestURL).
-					BodyBytes(req).
+					BodyBytes(reqJson).
 					ToJSON(&res).
 					Fetch(ctx)
 				// spew.Dump(res)
 				if err != nil {
 					log.Error().Msgf("Unable to send request: %v", err)
+					c.responsesCh <- nil
 				} else {
 					c.responsesCh <- res
 				}
 			}
-		}(r)
+		}(request)
 	}
 	wg.Wait()
 }
@@ -132,4 +133,21 @@ func (c *Conn) processRequests() {
 func (c *Conn) SendRequest(request Request) interface{} {
 	c.requestsCh <- request
 	return <-c.responsesCh
+}
+
+type WebsocketResponse struct {
+	Type    string `json:"type"`
+	Success bool   `json:"success,omitempty"`
+	Error   struct {
+		Code    string `json:"code"`
+		Message string `json:"message"`
+	} `json:"error,omitempty"`
+	ID           int         `json:"id,omitempty"`
+	Result       interface{} `json:"result,omitempty"`
+	HAVersion    string      `json:"ha_version,omitempty"`
+	Notification struct {
+		Message   string `json:"message,omitempty"`
+		Title     string `json:"title,omitempty"`
+		ConfirmID string `json:"confirm_id,omitempty"`
+	} `json:"event,omitempty"`
 }

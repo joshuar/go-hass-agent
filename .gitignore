@@ -22,3 +22,4 @@ go-hass-agent
 # Go workspace file
 go.work
 .token
+go-hass-agent

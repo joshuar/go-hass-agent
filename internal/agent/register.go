@@ -75,7 +75,7 @@ func (agent *Agent) getRegistrationHostInfo() *hass.RegistrationHost {
 	s := findServers()
 	allServers, _ := s.Get()
 
-	w := agent.App.NewWindow("App Registration")
+	w := agent.App.NewWindow(agent.MsgPrinter.Sprintf("App Registration"))
 
 	serverSelect := widget.NewSelect(allServers, func(s string) {
 		registrationInfo.Server.Set(s)
@@ -83,7 +83,7 @@ func (agent *Agent) getRegistrationHostInfo() *hass.RegistrationHost {
 	serverManual := widget.NewEntryWithData(registrationInfo.Server)
 	serverManual.Validator = newHostPort()
 	serverManual.Disable()
-	manualServerSelect := widget.NewCheck("Use Custom Server", func(b bool) {
+	manualServerSelect := widget.NewCheck(agent.MsgPrinter.Sprintf("Use Custom Server"), func(b bool) {
 		switch b {
 		case true:
 			serverManual.Enable()
@@ -95,13 +95,13 @@ func (agent *Agent) getRegistrationHostInfo() *hass.RegistrationHost {
 	})
 	tokenSelect := widget.NewEntryWithData(registrationInfo.Token)
 	// tokenSelect.Validator = validation.NewRegexp(`^[A-Za-z0-9_-\.]+$`, "token can only contain letters, numbers, '_', '-' and '.'")
-	tlsSelect := widget.NewCheckWithData("Use TLS?", registrationInfo.UseTLS)
+	tlsSelect := widget.NewCheckWithData(agent.MsgPrinter.Sprintf("Use TLS?"), registrationInfo.UseTLS)
 
 	form := &widget.Form{
 		Items: []*widget.FormItem{
-			{Text: "Token", Widget: tokenSelect},
-			{Text: "Found Server", Widget: serverSelect},
-			{Text: "Manual Server", Widget: container.NewHBox(manualServerSelect, serverManual)},
+			{Text: agent.MsgPrinter.Sprintf("Token"), Widget: tokenSelect},
+			{Text: agent.MsgPrinter.Sprintf("Found Server"), Widget: serverSelect},
+			{Text: agent.MsgPrinter.Sprintf("Manual Server"), Widget: container.NewHBox(manualServerSelect, serverManual)},
 			{Widget: tlsSelect},
 		},
 		OnSubmit: func() { // optional, handle form submission
@@ -135,24 +135,26 @@ func newHostPort() fyne.StringValidator {
 	}
 }
 
-func (a *Agent) saveRegistration(r *hass.RegistrationResponse, h *hass.RegistrationHost) error {
-	a.App.Preferences().SetString("CloudhookURL", r.CloudhookURL)
-	a.App.Preferences().SetString("RemoteUIURL", r.RemoteUIURL)
-	a.App.Preferences().SetString("Secret", r.Secret)
-	a.App.Preferences().SetString("WebhookID", r.WebhookID)
+func (a *Agent) saveRegistration(r *hass.RegistrationResponse, h *hass.RegistrationHost) {
 	host, _ := h.Server.Get()
 	useTLS, _ := h.UseTLS.Get()
-	var instanceURL string
-	if useTLS {
-		instanceURL = "https://" + host
-	} else {
-		instanceURL = "http://" + host
-	}
-	a.App.Preferences().SetString("InstanceURL", instanceURL)
+	a.App.Preferences().SetString("Host", host)
+	a.App.Preferences().SetBool("UseTLS", useTLS)
 	token, _ := h.Token.Get()
 	a.App.Preferences().SetString("Token", token)
 	a.App.Preferences().SetString("Version", a.Version)
-	return nil
+	if r.CloudhookURL != "" {
+		a.App.Preferences().SetString("CloudhookURL", r.CloudhookURL)
+	}
+	if r.RemoteUIURL != "" {
+		a.App.Preferences().SetString("RemoteUIURL", r.RemoteUIURL)
+	}
+	if r.Secret != "" {
+		a.App.Preferences().SetString("Secret", r.Secret)
+	}
+	if r.WebhookID != "" {
+		a.App.Preferences().SetString("WebhookID", r.WebhookID)
+	}
 }
 
 func (a *Agent) runRegistrationWorker() {
@@ -160,5 +162,7 @@ func (a *Agent) runRegistrationWorker() {
 	registrationHostInfo := a.getRegistrationHostInfo()
 	registrationRequest := hass.GenerateRegistrationRequest(device)
 	appRegistrationInfo := hass.RegisterWithHass(registrationHostInfo, registrationRequest)
-	a.saveRegistration(appRegistrationInfo, registrationHostInfo)
+	if appRegistrationInfo != nil {
+		a.saveRegistration(appRegistrationInfo, registrationHostInfo)
+	}
 }

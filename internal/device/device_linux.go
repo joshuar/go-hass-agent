@@ -86,7 +86,11 @@ func (l *linuxDevice) SupportsEncryption() bool {
 }
 
 func (l *linuxDevice) AppData() interface{} {
-	return nil
+	return &struct {
+		PushWebsocket bool `json:"push_websocket_channel"`
+	}{
+		PushWebsocket: true,
+	}
 }
 
 func NewDevice() *linuxDevice {

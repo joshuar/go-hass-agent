@@ -74,7 +74,12 @@ func (s *appSensor) Registered() bool {
 	return s.registered
 }
 
-func (s *appSensor) handleResponse(response map[string]interface{}) {
+func (s *appSensor) handleResponse(rawResponse interface{}) {
+	if rawResponse == nil {
+		log.Debug().Msg("No response data.")
+		return
+	}
+	response := rawResponse.(map[string]interface{})
 	if v, ok := response["success"]; ok {
 		if v.(bool) && !s.Registered() {
 			s.registered = true
@@ -141,7 +146,7 @@ func (agent *Agent) runActiveAppSensor(conn *hass.Conn) {
 			data:      activeAppSensor,
 			encrypted: encryptRequests,
 		})
-		activeAppSensor.handleResponse(response.(map[string]interface{}))
+		activeAppSensor.handleResponse(response)
 		// case runningApps:
 		runningAppsSensor.state = data.(runningApps).Count()
 		runningAppsSensor.attributes = data.(runningApps).Attributes()
@@ -149,7 +154,7 @@ func (agent *Agent) runActiveAppSensor(conn *hass.Conn) {
 			data:      runningAppsSensor,
 			encrypted: encryptRequests,
 		})
-		runningAppsSensor.handleResponse(response.(map[string]interface{}))
+		runningAppsSensor.handleResponse(response)
 		// }
 	}
 }

@@ -34,6 +34,48 @@
                 }
             ],
             "fuzzy": true
+        },
+        {
+            "id": "App Registration",
+            "message": "App Registration",
+            "translation": "App Registration",
+            "translatorComment": "Copied from source.",
+            "fuzzy": true
+        },
+        {
+            "id": "Use Custom Server",
+            "message": "Use Custom Server",
+            "translation": "Use Custom Server",
+            "translatorComment": "Copied from source.",
+            "fuzzy": true
+        },
+        {
+            "id": "Use TLS?",
+            "message": "Use TLS?",
+            "translation": "Use TLS?",
+            "translatorComment": "Copied from source.",
+            "fuzzy": true
+        },
+        {
+            "id": "Token",
+            "message": "Token",
+            "translation": "Token",
+            "translatorComment": "Copied from source.",
+            "fuzzy": true
+        },
+        {
+            "id": "Found Server",
+            "message": "Found Server",
+            "translation": "Found Server",
+            "translatorComment": "Copied from source.",
+            "fuzzy": true
+        },
+        {
+            "id": "Manual Server",
+            "message": "Manual Server",
+            "translation": "Manual Server",
+            "translatorComment": "Copied from source.",
+            "fuzzy": true
         }
     ]
 }

@@ -2,50 +2,68 @@ package agent
 
 import "github.com/rs/zerolog/log"
 
+const (
+	websocketPath = "/api/websocket"
+	webHookPath   = "/api/webhook/"
+)
+
 type AppConfig struct {
-	RestAPIURL string `json:"restapi_url"`
-	secret     string
-	token      string
+	APIURL       string `json:"restapi_url"`
+	WebSocketURL string `json:"instance_url"`
+	secret       string
+	token        string
+	webhookID    string
 }
 
-func (a *Agent) LoadConfig() {
+func (agent *Agent) LoadConfig() {
 	// go func() {
 	for {
-		CloudhookURL := a.App.Preferences().String("CloudhookURL")
-		RemoteUIURL := a.App.Preferences().String("RemoteUIURL")
-		WebhookID := a.App.Preferences().String("WebhookID")
-		InstanceURL := a.App.Preferences().String("InstanceURL")
+		CloudhookURL := agent.App.Preferences().String("CloudhookURL")
+		RemoteUIURL := agent.App.Preferences().String("RemoteUIURL")
+		Host := agent.App.Preferences().String("Host")
+		UseTLS := agent.App.Preferences().Bool("UseTLS")
 
-		a.config.secret = a.App.Preferences().String("Secret")
-		a.config.token = a.App.Preferences().String("Token")
+		agent.config.secret = agent.App.Preferences().String("Secret")
+		agent.config.token = agent.App.Preferences().String("Token")
+		agent.config.webhookID = agent.App.Preferences().String("WebhookID")
+
+		if UseTLS {
+			agent.config.WebSocketURL = "wss://" + Host + websocketPath
+		} else {
+			agent.config.WebSocketURL = "ws://" + Host + websocketPath
+		}
 
 		switch {
 		case CloudhookURL != "":
-			a.config.RestAPIURL = CloudhookURL
+			agent.config.APIURL = CloudhookURL
 			log.Debug().Caller().
-				Msgf("Using CloudhookURL %s for Home Assistant access", a.config.RestAPIURL)
-			a.configLoaded <- true
+				Msgf("Using CloudhookURL %s for Home Assistant access", agent.config.APIURL)
+			agent.configLoaded <- true
 			return
-		case RemoteUIURL != "" && WebhookID != "":
-			a.config.RestAPIURL = RemoteUIURL + "/api/webhook/" + WebhookID
+		case RemoteUIURL != "" && agent.config.webhookID != "":
+			agent.config.APIURL = RemoteUIURL + webHookPath + agent.config.webhookID
 			log.Debug().Caller().
-				Msgf("Using RemoteUIURL %s for Home Assistant access", a.config.RestAPIURL)
-			a.configLoaded <- true
+				Msgf("Using RemoteUIURL %s for Home Assistant access", agent.config.APIURL)
+			agent.configLoaded <- true
 			return
-		case WebhookID != "" && InstanceURL != "":
-			a.config.RestAPIURL = InstanceURL + "/api/webhook/" + WebhookID
+		case agent.config.webhookID != "" && Host != "":
+			if UseTLS {
+				agent.config.APIURL = "https://" + Host + webHookPath + agent.config.webhookID
+			} else {
+				agent.config.APIURL = "http://" + Host + webHookPath + agent.config.webhookID
+			}
 			log.Debug().Caller().
-				Msgf("Using InstanceURL %s for Home Assistant access", a.config.RestAPIURL)
-			a.configLoaded <- true
+				Msgf("Using generated URL %s for Home Assistant access", agent.config.APIURL)
+			agent.configLoaded <- true
 			return
 		default:
 			log.Warn().Msg("No suitable existing config found! Starting new registration process")
-			a.runRegistrationWorker()
+			agent.runRegistrationWorker()
 		}
 	}
 	// }()
 }
 
-func (a *Agent) GetConfigVersion() string {
-	return a.App.Preferences().String("Version")
+func (agent *Agent) GetConfigVersion() string {
+	return agent.App.Preferences().String("Version")
 }

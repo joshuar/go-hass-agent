@@ -79,7 +79,8 @@ func (a *Agent) SetupSystemTray() {
 
 func (agent *Agent) RunWorkers() {
 	<-agent.configLoaded
-	conn := hass.NewConnection(agent.config.RestAPIURL)
+	conn := hass.NewConnection(agent.config.APIURL)
 	go agent.runLocationWorker(conn)
 	go agent.runSensorWorker(conn)
+	go agent.runNotificationsWorker()
 }
