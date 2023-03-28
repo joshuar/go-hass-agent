@@ -71,6 +71,7 @@ func (agent *Agent) getRegistrationHostInfo() *hass.RegistrationHost {
 	registrationInfo := newRegistration()
 
 	done := make(chan bool, 1)
+	defer close(done)
 
 	s := findServers()
 	allServers, _ := s.Get()
@@ -135,34 +136,35 @@ func newHostPort() fyne.StringValidator {
 	}
 }
 
-func (a *Agent) saveRegistration(r *hass.RegistrationResponse, h *hass.RegistrationHost) {
+func (agent *Agent) saveRegistration(r *hass.RegistrationResponse, h *hass.RegistrationHost) {
 	host, _ := h.Server.Get()
 	useTLS, _ := h.UseTLS.Get()
-	a.App.Preferences().SetString("Host", host)
-	a.App.Preferences().SetBool("UseTLS", useTLS)
+	agent.App.Preferences().SetString("Host", host)
+	agent.App.Preferences().SetBool("UseTLS", useTLS)
 	token, _ := h.Token.Get()
-	a.App.Preferences().SetString("Token", token)
-	a.App.Preferences().SetString("Version", a.Version)
+	agent.App.Preferences().SetString("Token", token)
+	agent.App.Preferences().SetString("Version", agent.Version)
 	if r.CloudhookURL != "" {
-		a.App.Preferences().SetString("CloudhookURL", r.CloudhookURL)
+		agent.App.Preferences().SetString("CloudhookURL", r.CloudhookURL)
 	}
 	if r.RemoteUIURL != "" {
-		a.App.Preferences().SetString("RemoteUIURL", r.RemoteUIURL)
+		agent.App.Preferences().SetString("RemoteUIURL", r.RemoteUIURL)
 	}
 	if r.Secret != "" {
-		a.App.Preferences().SetString("Secret", r.Secret)
+		agent.App.Preferences().SetString("Secret", r.Secret)
 	}
 	if r.WebhookID != "" {
-		a.App.Preferences().SetString("WebhookID", r.WebhookID)
+		agent.App.Preferences().SetString("WebhookID", r.WebhookID)
 	}
 }
 
-func (a *Agent) runRegistrationWorker() {
+func (agent *Agent) runRegistrationWorker() {
 	device := hass.NewDevice()
-	registrationHostInfo := a.getRegistrationHostInfo()
+	agent.App.Preferences().SetString("DeviceID", device.DeviceID())
+	registrationHostInfo := agent.getRegistrationHostInfo()
 	registrationRequest := hass.GenerateRegistrationRequest(device)
 	appRegistrationInfo := hass.RegisterWithHass(registrationHostInfo, registrationRequest)
 	if appRegistrationInfo != nil {
-		a.saveRegistration(appRegistrationInfo, registrationHostInfo)
+		agent.saveRegistration(appRegistrationInfo, registrationHostInfo)
 	}
 }

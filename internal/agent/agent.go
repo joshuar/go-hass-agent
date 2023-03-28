@@ -2,11 +2,13 @@ package agent
 
 import (
 	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/driver/desktop"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
 	"github.com/jeandeaual/go-locale"
+	"github.com/joshuar/go-hass-agent/assets/trayicon"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/text/language"
@@ -14,8 +16,9 @@ import (
 )
 
 const (
-	Name    = "go-hass-agent"
-	Version = "0.0.1"
+	Name      = "go-hass-agent"
+	Version   = "0.0.1"
+	fyneAppID = "com.github.joshuar.go-hass-agent"
 )
 
 type Agent struct {
@@ -26,9 +29,15 @@ type Agent struct {
 	MsgPrinter    *message.Printer
 }
 
+func newUI() fyne.App {
+	a := app.NewWithID(fyneAppID)
+	a.SetIcon(&trayicon.TrayIcon{})
+	return a
+}
+
 func NewAgent() *Agent {
 	a := &Agent{
-		App:     NewUI(),
+		App:     newUI(),
 		Name:    Name,
 		Version: Version,
 	}

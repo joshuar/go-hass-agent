@@ -140,7 +140,5 @@ func checkForBinary(binary string) string {
 		log.Fatal().Caller().
 			Msgf("Could not find needed executable %s in PATH", binary)
 	}
-	log.Debug().Caller().
-		Msgf("%s is available at %s\n", binary, path)
 	return path
 }

@@ -79,9 +79,15 @@ func AppUpdater(app chan interface{}) {
 
 	for range c {
 		obj := appChkConn.Object(portalDest, "/org/freedesktop/portal/desktop")
-		err = obj.Call("org.freedesktop.impl.portal.Background.GetAppState", 0).Store(&a.activeApps)
-		logging.CheckError(err)
-		app <- a
+		var activeAppList map[string]interface{}
+		err = obj.Call("org.freedesktop.impl.portal.Background.GetAppState", 0).Store(&activeAppList)
+		if err != nil {
+			log.Warn().Msgf("Problem getting active app list: %v.", err)
+		} else {
+			a.activeApps = nil
+			a.activeApps = activeAppList
+			app <- a
+		}
 	}
 
 }

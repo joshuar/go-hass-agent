@@ -3,6 +3,7 @@ package hass
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/carlmjohnson/requests"
 	"github.com/rs/zerolog/log"
@@ -23,29 +24,30 @@ func NewConnection(requestURL string) *Conn {
 	return newConn
 }
 
-func (c *Conn) processRequests() {
+func (conn *Conn) processRequests() {
 	var wg sync.WaitGroup
-	for request := range c.requestsCh {
+	for request := range conn.requestsCh {
 		wg.Add(1)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 		go func(request interface{}) {
-			ctx := context.Background()
+			defer cancel()
 			defer wg.Done()
 			reqJson, err := MarshalJSON(request.(Request))
 			if err != nil {
 				log.Error().Msgf("Unable to format request: %v", err)
-				c.responsesCh <- nil
+				conn.responsesCh <- nil
 			} else {
 				var res interface{}
 				err = requests.
-					URL(c.requestURL).
+					URL(conn.requestURL).
 					BodyBytes(reqJson).
 					ToJSON(&res).
 					Fetch(ctx)
 				if err != nil {
 					log.Error().Msgf("Unable to send request: %v", err)
-					c.responsesCh <- nil
+					conn.responsesCh <- nil
 				} else {
-					c.responsesCh <- res
+					conn.responsesCh <- res
 				}
 			}
 		}(request)
@@ -53,7 +55,7 @@ func (c *Conn) processRequests() {
 	wg.Wait()
 }
 
-func (c *Conn) SendRequest(request Request) interface{} {
-	c.requestsCh <- request
-	return <-c.responsesCh
+func (conn *Conn) SendRequest(request Request) interface{} {
+	conn.requestsCh <- request
+	return <-conn.responsesCh
 }

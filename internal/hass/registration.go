@@ -2,6 +2,7 @@ package hass
 
 import (
 	"context"
+	"time"
 
 	"fyne.io/fyne/v2/data/binding"
 	"github.com/carlmjohnson/requests"
@@ -46,7 +47,8 @@ func RegisterWithHass(ri *RegistrationHost, rr *RegistrationRequest) *Registrati
 	} else {
 		host = "http://" + server
 	}
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
 	err := requests.
 		URL(host+"/api/mobile_app/registrations").
 		Header("Authorization", "Bearer "+token).
