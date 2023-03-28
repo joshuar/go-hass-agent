@@ -23,16 +23,14 @@ type Agent struct {
 	Tray          fyne.Window
 	config        AppConfig
 	Name, Version string
-	configLoaded  chan bool
 	MsgPrinter    *message.Printer
 }
 
 func NewAgent() *Agent {
 	a := &Agent{
-		App:          NewUI(),
-		Name:         Name,
-		Version:      Version,
-		configLoaded: make(chan bool, 1),
+		App:     NewUI(),
+		Name:    Name,
+		Version: Version,
 	}
 
 	userLocales, err := locale.GetLocales()
@@ -77,8 +75,8 @@ func (a *Agent) SetupSystemTray() {
 	a.Tray.Hide()
 }
 
-func (agent *Agent) RunWorkers() {
-	<-agent.configLoaded
+func (agent *Agent) RunWorkers(configLoaded chan bool) {
+	<-configLoaded
 	conn := hass.NewConnection(agent.config.APIURL)
 	go agent.runLocationWorker(conn)
 	go agent.runSensorWorker(conn)

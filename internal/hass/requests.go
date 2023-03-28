@@ -48,6 +48,16 @@ type EncryptedRequest struct {
 	EncryptedData interface{} `json:"encrypted_data"`
 }
 
+type Response struct {
+	Success bool `json:"success,omitempty"`
+	// Type    string `json:"type,omitempty"`
+	// Error   struct {
+	// 	Code    string `json:"code"`
+	// 	Message string `json:"message"`
+	// } `json:"error,omitempty"`
+	// ID string `json:"id,omitempty"`
+}
+
 type WebsocketResponse struct {
 	Type    string `json:"type"`
 	Success bool   `json:"success,omitempty"`

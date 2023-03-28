@@ -41,7 +41,6 @@ func (c *Conn) processRequests() {
 					BodyBytes(reqJson).
 					ToJSON(&res).
 					Fetch(ctx)
-				// spew.Dump(res)
 				if err != nil {
 					log.Error().Msgf("Unable to send request: %v", err)
 					c.responsesCh <- nil

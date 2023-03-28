@@ -14,12 +14,13 @@
 
 #### Location Information
 
-- Implement a function `LocationUpdater` that can be run in a goroutine, that accepts a parameter
-  of type `chan interface{}`.
+- Implement a function `LocationUpdater(chan interface{})` that can be run in a goroutine.
 - The function should use the passed channel to send location updates when
   needed. The data sent should satisfy the `LocationInfo` interface in
   `internal/agent/location.go`.
 
 #### App Sensors
 
-- 
+- Create a function `AppUpdater(chan interface{})` that can be run in a goroutine.
+- The function should send data on the channel that that implements both the `activeApp` and `runningApps`
+  interfaces in `internal/agent/sensorApps.go`. 

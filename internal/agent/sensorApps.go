@@ -138,6 +138,7 @@ func (agent *Agent) runActiveAppSensor(conn *hass.Conn) {
 	for data := range updateCh {
 		// switch sensor := data.(type) {
 		// case activeApp:
+		// var response interface{}
 		var response interface{}
 
 		activeAppSensor.state = data.(activeApp).Name()

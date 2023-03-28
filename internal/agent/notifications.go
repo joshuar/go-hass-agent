@@ -20,7 +20,7 @@ func (agent *Agent) runNotificationsWorker() {
 	accessToken := agent.config.token
 	webhookID := agent.config.webhookID
 
-	log.Debug().Msgf("Establishing websocket connection to %s", url)
+	log.Debug().Caller().Msgf("Establishing websocket connection to %s.", url)
 	conn, _, err := websocket.Dial(ctx, url, nil)
 	logging.CheckError(err)
 	defer conn.Close(websocket.StatusInternalError, "error on websocket")
@@ -33,7 +33,7 @@ func (agent *Agent) runNotificationsWorker() {
 		logging.CheckError(err)
 		switch response.Type {
 		case "auth_required":
-			log.Debug().Msg("Requesting authorisation for websocket.")
+			log.Debug().Caller().Msg("Requesting authorisation for websocket.")
 			err = wsjson.Write(ctx, conn, struct {
 				Type        string `json:"type"`
 				AccessToken string `json:"access_token"`
@@ -43,7 +43,7 @@ func (agent *Agent) runNotificationsWorker() {
 			})
 			logging.CheckError(err)
 		case "auth_ok":
-			log.Debug().Msg("Registering app for push notifications.")
+			log.Debug().Caller().Msg("Registering app for push notifications.")
 			err = wsjson.Write(ctx, conn, &struct {
 				Type           string `json:"type"`
 				ID             int    `json:"id"`
@@ -58,7 +58,7 @@ func (agent *Agent) runNotificationsWorker() {
 			logging.CheckError(err)
 		case "result":
 			if !response.Success {
-				log.Error().Msgf("Recieved error on websocket, %s: %s", response.Error.Code, response.Error.Message)
+				log.Error().Msgf("Recieved error on websocket, %s: %s.", response.Error.Code, response.Error.Message)
 			}
 		case "event":
 			agent.App.SendNotification(&fyne.Notification{
@@ -66,7 +66,7 @@ func (agent *Agent) runNotificationsWorker() {
 				Content: response.Notification.Message,
 			})
 		default:
-			log.Debug().Msgf("Received unhandled response %v", response)
+			log.Debug().Caller().Msgf("Received unhandled response %v", response)
 		}
 	}
 }
