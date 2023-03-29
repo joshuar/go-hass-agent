@@ -3,6 +3,7 @@ package device
 import (
 	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/maltegrosse/go-geoclue2"
+	"github.com/rs/zerolog/log"
 )
 
 type linuxLocation struct {
@@ -59,6 +60,7 @@ func LocationUpdater(appID string, locationInfoCh chan interface{}) {
 
 	c := client.SubscribeLocationUpdated()
 	for v := range c {
+		log.Debug().Caller().Msg("Location update received.")
 		_, location, err := client.ParseLocationUpdated(v)
 		logging.CheckError(err)
 

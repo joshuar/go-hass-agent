@@ -15,7 +15,7 @@ type AppConfig struct {
 	webhookID    string
 }
 
-func (agent *Agent) LoadConfig(configLoaded chan bool) {
+func (agent *Agent) LoadConfig() {
 	// go func() {
 	for {
 		CloudhookURL := agent.App.Preferences().String("CloudhookURL")
@@ -38,13 +38,13 @@ func (agent *Agent) LoadConfig(configLoaded chan bool) {
 			agent.config.APIURL = CloudhookURL
 			log.Debug().Caller().
 				Msgf("Using CloudhookURL %s for Home Assistant access", agent.config.APIURL)
-			configLoaded <- true
+			// configLoaded <- true
 			return
 		case RemoteUIURL != "" && agent.config.webhookID != "":
 			agent.config.APIURL = RemoteUIURL + webHookPath + agent.config.webhookID
 			log.Debug().Caller().
 				Msgf("Using RemoteUIURL %s for Home Assistant access", agent.config.APIURL)
-			configLoaded <- true
+			// configLoaded <- true
 			return
 		case agent.config.webhookID != "" && Host != "":
 			if UseTLS {
@@ -54,7 +54,7 @@ func (agent *Agent) LoadConfig(configLoaded chan bool) {
 			}
 			log.Debug().Caller().
 				Msgf("Using generated URL %s for Home Assistant access", agent.config.APIURL)
-			configLoaded <- true
+			// configLoaded <- true
 			return
 		default:
 			log.Warn().Msg("No suitable existing config found! Starting new registration process")

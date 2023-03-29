@@ -1,12 +1,17 @@
 package agent
 
 import (
+	"context"
+	"sync"
+	"time"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/driver/desktop"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
+	"github.com/carlmjohnson/requests"
 	"github.com/jeandeaual/go-locale"
 	"github.com/joshuar/go-hass-agent/assets/trayicon"
 	"github.com/joshuar/go-hass-agent/internal/hass"
@@ -36,7 +41,7 @@ func newUI() fyne.App {
 }
 
 func NewAgent() *Agent {
-	a := &Agent{
+	agent := &Agent{
 		App:     newUI(),
 		Name:    Name,
 		Version: Version,
@@ -45,13 +50,17 @@ func NewAgent() *Agent {
 	userLocales, err := locale.GetLocales()
 	if err != nil {
 		log.Warn().Msg("Could not find a suitable locale. Defaulting to English.")
-		a.MsgPrinter = message.NewPrinter(message.MatchLanguage(language.English.String()))
+		agent.MsgPrinter = message.NewPrinter(message.MatchLanguage(language.English.String()))
 	} else {
-		a.MsgPrinter = message.NewPrinter(message.MatchLanguage(userLocales...))
+		agent.MsgPrinter = message.NewPrinter(message.MatchLanguage(userLocales...))
 		log.Debug().Caller().Msgf("Setting language to %v.", userLocales)
 	}
+	agent.setupSystemTray()
 
-	return a
+	var once sync.Once
+
+	go agent.runWorkers(&once)
+	return agent
 }
 
 // func (a *Agent) GetHassConfig(configLoaded chan bool) {
@@ -59,7 +68,7 @@ func NewAgent() *Agent {
 // 	a.hassConfig = hass.GetConfig(a.config.RestAPIURL)
 // }
 
-func (a *Agent) SetupSystemTray() {
+func (a *Agent) setupSystemTray() {
 	// a.hassConfig = hass.GetConfig(a.config.RestAPIURL)
 	a.Tray = a.App.NewWindow("System Tray")
 	a.Tray.SetMaster()
@@ -84,10 +93,38 @@ func (a *Agent) SetupSystemTray() {
 	a.Tray.Hide()
 }
 
-func (agent *Agent) RunWorkers(configLoaded chan bool) {
-	<-configLoaded
-	conn := hass.NewConnection(agent.config.APIURL)
-	go agent.runLocationWorker(conn)
-	go agent.runSensorWorker(conn)
+func (agent *Agent) runWorkers(once *sync.Once) {
+	once.Do(func() { agent.LoadConfig() })
 	go agent.runNotificationsWorker()
+	go agent.runLocationWorker()
+	go agent.runActiveAppSensor()
+}
+
+func (agent *Agent) Exit() {
+	log.Debug().Caller().Msg("Shutting down agent.")
+}
+
+func (agent *Agent) PostRequest(ctx context.Context, request interface{}) interface{} {
+
+	requestCtx, cancel := context.WithTimeout(ctx, time.Second)
+	defer cancel()
+	// defer wg.Done()
+	reqJson, err := hass.MarshalJSON(request.(hass.Request))
+	if err != nil {
+		log.Error().Msgf("Unable to format request: %v", err)
+		return nil
+	} else {
+		var res interface{}
+		err = requests.
+			URL(agent.config.APIURL).
+			BodyBytes(reqJson).
+			ToJSON(&res).
+			Fetch(requestCtx)
+		if err != nil {
+			log.Error().Msgf("Unable to send request: %v", err)
+			return nil
+		} else {
+			return res
+		}
+	}
 }

@@ -20,7 +20,7 @@ func (agent *Agent) runNotificationsWorker() {
 	webhookID := agent.config.webhookID
 
 	for {
-		log.Debug().Caller().Msgf("Establishing websocket connection to %s.", url)
+		log.Debug().Caller().Msgf("Using %s for websocket connection for notification access.", url)
 		conn, _, err := websocket.Dial(ctx, url, nil)
 		if err != nil {
 			log.Warn().Msgf("Could not connect websocket: %v. Will retry.", err)
@@ -34,7 +34,7 @@ func (agent *Agent) runNotificationsWorker() {
 				err = wsjson.Read(ctx, conn, &response)
 				if err != nil {
 					log.Warn().Msg(err.Error())
-					conn.Close(websocket.StatusInternalError, err.Error())
+					conn.Close(websocket.StatusInternalError, "closing connection")
 					return
 				}
 				switch response.Type {

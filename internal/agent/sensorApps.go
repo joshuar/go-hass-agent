@@ -1,8 +1,9 @@
 package agent
 
 import (
+	"context"
+
 	"github.com/joshuar/go-hass-agent/internal/device"
-	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/rs/zerolog/log"
 )
 
@@ -76,38 +77,38 @@ func (s *appSensor) Registered() bool {
 
 func (s *appSensor) handleResponse(rawResponse interface{}) {
 	if rawResponse == nil {
-		log.Debug().Msg("No response data.")
-		return
-	}
-	response := rawResponse.(map[string]interface{})
-	if v, ok := response["success"]; ok {
-		if v.(bool) && !s.Registered() {
-			s.registered = true
-			log.Debug().Caller().Msgf("Sensor %s registered.", s.name)
+		log.Debug().Caller().Msg("No response data.")
+	} else {
+		response := rawResponse.(map[string]interface{})
+		if v, ok := response["success"]; ok {
+			if v.(bool) && !s.Registered() {
+				s.registered = true
+				log.Debug().Caller().Msgf("Sensor %s registered.", s.name)
+			}
 		}
-	}
-	if v, ok := response[s.UniqueID()]; ok {
-		status := v.(map[string]interface{})
-		if !status["success"].(bool) {
-			error := status["error"].(map[string]interface{})
-			log.Error().Msgf("Could not update sensor %s, %s: %s", s.name, error["code"], error["message"])
-		} else {
-			log.Debug().Msgf("Sensor %s updated. State is now: %v", s.name, s.state)
-		}
-		if v, ok := status["is_disabled"]; ok {
-			switch v.(bool) {
-			case true:
-				log.Debug().Msgf("Sensor %s has been disabled.", s.name)
-				s.disabled = true
-			case false:
-				log.Debug().Msgf("Sensor %s has been enabled.", s.name)
-				s.disabled = false
+		if v, ok := response[s.UniqueID()]; ok {
+			status := v.(map[string]interface{})
+			if !status["success"].(bool) {
+				error := status["error"].(map[string]interface{})
+				log.Error().Msgf("Could not update sensor %s, %s: %s", s.name, error["code"], error["message"])
+			} else {
+				log.Debug().Msgf("Sensor %s updated. State is now: %v", s.name, s.state)
+			}
+			if v, ok := status["is_disabled"]; ok {
+				switch v.(bool) {
+				case true:
+					log.Debug().Msgf("Sensor %s has been disabled.", s.name)
+					s.disabled = true
+				case false:
+					log.Debug().Msgf("Sensor %s has been enabled.", s.name)
+					s.disabled = false
+				}
 			}
 		}
 	}
 }
 
-func (agent *Agent) runActiveAppSensor(conn *hass.Conn) {
+func (agent *Agent) runActiveAppSensor() {
 	var encryptRequests = false
 	if agent.config.secret != "" {
 		encryptRequests = true
@@ -115,6 +116,8 @@ func (agent *Agent) runActiveAppSensor(conn *hass.Conn) {
 
 	updateCh := make(chan interface{})
 	defer close(updateCh)
+
+	ctx := context.Background()
 
 	activeAppSensor := &appSensor{
 		state:      "Unknown",
@@ -136,26 +139,23 @@ func (agent *Agent) runActiveAppSensor(conn *hass.Conn) {
 	go device.AppUpdater(updateCh)
 
 	for data := range updateCh {
-		// switch sensor := data.(type) {
-		// case activeApp:
-		// var response interface{}
-		var response interface{}
-
 		activeAppSensor.state = data.(activeApp).Name()
 		activeAppSensor.attributes = data.(activeApp).Attributes()
-		response = conn.SendRequest(&sensorRequest{
-			data:      activeAppSensor,
-			encrypted: encryptRequests,
-		})
-		activeAppSensor.handleResponse(response)
-		// case runningApps:
+		go func() {
+			response := agent.PostRequest(ctx, &sensorRequest{
+				data:      activeAppSensor,
+				encrypted: encryptRequests,
+			})
+			activeAppSensor.handleResponse(response)
+		}()
 		runningAppsSensor.state = data.(runningApps).Count()
 		runningAppsSensor.attributes = data.(runningApps).Attributes()
-		response = conn.SendRequest(&sensorRequest{
-			data:      runningAppsSensor,
-			encrypted: encryptRequests,
-		})
-		runningAppsSensor.handleResponse(response)
-		// }
+		go func() {
+			response := agent.PostRequest(ctx, &sensorRequest{
+				data:      runningAppsSensor,
+				encrypted: encryptRequests,
+			})
+			runningAppsSensor.handleResponse(response)
+		}()
 	}
 }

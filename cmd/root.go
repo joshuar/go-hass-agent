@@ -46,11 +46,8 @@ to quickly create a Cobra application.`,
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		agent := agent.NewAgent()
-		agent.SetupSystemTray()
-		configLoaded := make(chan bool, 1)
-		go agent.LoadConfig(configLoaded)
-		go agent.RunWorkers(configLoaded)
 		agent.App.Run()
+		agent.Exit()
 	},
 }
 

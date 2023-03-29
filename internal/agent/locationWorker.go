@@ -1,8 +1,11 @@
 package agent
 
 import (
+	"context"
+
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass"
+	"github.com/rs/zerolog/log"
 )
 
 type locationData interface {
@@ -47,16 +50,33 @@ func (l *location) RequestData() interface{} {
 func (l *location) IsEncrypted() bool {
 	return l.encrypt
 }
-func (a *Agent) runLocationWorker(conn *hass.Conn) {
+func (agent *Agent) runLocationWorker() {
 
 	locationInfoCh := make(chan interface{})
+	defer close(locationInfoCh)
 
-	go device.LocationUpdater(a.App.UniqueID(), locationInfoCh)
+	ctx := context.Background()
 
+	go device.LocationUpdater(agent.App.UniqueID(), locationInfoCh)
+
+	log.Debug().Caller().Msg("Running location worker.")
+
+	// for {
+	// 	select {
 	for loc := range locationInfoCh {
+		log.Debug().Caller().Msgf("Location updated to: %v", loc.(locationData).Gps())
 		l := &location{
 			data: loc.(locationData),
 		}
-		conn.SendRequest(l)
+		agent.PostRequest(ctx, l)
+		// agent.hassAPI.SendRequest(l)
 	}
+	// }
+
+	// for loc := range locationInfoCh {
+	// 	l := &location{
+	// 		data: loc.(locationData),
+	// 	}
+	// 	agent.hassAPI.SendRequest(l)
+	// }
 }
