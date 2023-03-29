@@ -50,6 +50,15 @@ func (l *location) RequestData() interface{} {
 func (l *location) IsEncrypted() bool {
 	return l.encrypt
 }
+
+func (l *location) handleResponse(rawResponse interface{}) {
+	if rawResponse == nil {
+		log.Debug().Caller().Msg("No response data.")
+	} else {
+		log.Debug().Caller().Msgf("Location updated to %v", l.data.Gps())
+	}
+}
+
 func (agent *Agent) runLocationWorker() {
 
 	locationInfoCh := make(chan interface{})
@@ -61,22 +70,17 @@ func (agent *Agent) runLocationWorker() {
 
 	log.Debug().Caller().Msg("Running location worker.")
 
-	// for {
-	// 	select {
-	for loc := range locationInfoCh {
-		log.Debug().Caller().Msgf("Location updated to: %v", loc.(locationData).Gps())
-		l := &location{
-			data: loc.(locationData),
+	for {
+		select {
+		case loc := <-locationInfoCh:
+			l := &location{
+				data: loc.(locationData),
+			}
+			go hass.APIRequest(ctx, agent.config.APIURL, l, l.handleResponse)
+		case <-agent.done:
+			log.Debug().Caller().Msgf("Cleaning up location sensor.")
+			l := &location{}
+			go hass.APIRequest(ctx, agent.config.APIURL, l, l.handleResponse)
 		}
-		agent.PostRequest(ctx, l)
-		// agent.hassAPI.SendRequest(l)
 	}
-	// }
-
-	// for loc := range locationInfoCh {
-	// 	l := &location{
-	// 		data: loc.(locationData),
-	// 	}
-	// 	agent.hassAPI.SendRequest(l)
-	// }
 }

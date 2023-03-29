@@ -2,18 +2,18 @@
     "language": "en",
     "messages": [
         {
-            "id": "About",
-            "message": "About",
-            "translation": "About",
+            "id": "About {Name}",
+            "message": "About {Name}",
+            "translation": "About {Name}",
             "translatorComment": "Copied from source.",
             "placeholders": [
                 {
                     "id": "Name",
-                    "string": "%[1]v",
+                    "string": "%[1]s",
                     "type": "string",
                     "underlyingType": "string",
                     "argNum": 1,
-                    "expr": "a.Name"
+                    "expr": "agent.Name"
                 }
             ],
             "fuzzy": true
@@ -30,7 +30,7 @@
                     "type": "string",
                     "underlyingType": "string",
                     "argNum": 1,
-                    "expr": "a.Version"
+                    "expr": "agent.Version"
                 }
             ],
             "fuzzy": true

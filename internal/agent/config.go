@@ -1,6 +1,9 @@
 package agent
 
-import "github.com/rs/zerolog/log"
+import (
+	"github.com/joshuar/go-hass-agent/internal/hass"
+	"github.com/rs/zerolog/log"
+)
 
 const (
 	websocketPath = "/api/websocket"
@@ -15,7 +18,7 @@ type AppConfig struct {
 	webhookID    string
 }
 
-func (agent *Agent) LoadConfig() {
+func (agent *Agent) loadConfig() {
 	// go func() {
 	for {
 		CloudhookURL := agent.App.Preferences().String("CloudhookURL")
@@ -66,4 +69,26 @@ func (agent *Agent) LoadConfig() {
 
 func (agent *Agent) GetConfigVersion() string {
 	return agent.App.Preferences().String("Version")
+}
+
+func (agent *Agent) saveRegistration(r *hass.RegistrationResponse, h *hass.RegistrationHost) {
+	host, _ := h.Server.Get()
+	useTLS, _ := h.UseTLS.Get()
+	agent.App.Preferences().SetString("Host", host)
+	agent.App.Preferences().SetBool("UseTLS", useTLS)
+	token, _ := h.Token.Get()
+	agent.App.Preferences().SetString("Token", token)
+	agent.App.Preferences().SetString("Version", agent.Version)
+	if r.CloudhookURL != "" {
+		agent.App.Preferences().SetString("CloudhookURL", r.CloudhookURL)
+	}
+	if r.RemoteUIURL != "" {
+		agent.App.Preferences().SetString("RemoteUIURL", r.RemoteUIURL)
+	}
+	if r.Secret != "" {
+		agent.App.Preferences().SetString("Secret", r.Secret)
+	}
+	if r.WebhookID != "" {
+		agent.App.Preferences().SetString("WebhookID", r.WebhookID)
+	}
 }

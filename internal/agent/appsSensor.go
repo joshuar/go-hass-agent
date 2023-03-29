@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/joshuar/go-hass-agent/internal/device"
+	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/rs/zerolog/log"
 )
 
@@ -122,7 +123,7 @@ func (agent *Agent) runActiveAppSensor() {
 	activeAppSensor := &appSensor{
 		state:      "Unknown",
 		name:       "Active App",
-		id:         "active_app_2",
+		id:         "active_app",
 		registered: false,
 		disabled:   false,
 	}
@@ -141,21 +142,16 @@ func (agent *Agent) runActiveAppSensor() {
 	for data := range updateCh {
 		activeAppSensor.state = data.(activeApp).Name()
 		activeAppSensor.attributes = data.(activeApp).Attributes()
-		go func() {
-			response := agent.PostRequest(ctx, &sensorRequest{
-				data:      activeAppSensor,
-				encrypted: encryptRequests,
-			})
-			activeAppSensor.handleResponse(response)
-		}()
+		go hass.APIRequest(ctx, agent.config.APIURL, &sensorRequest{
+			data:      activeAppSensor,
+			encrypted: encryptRequests,
+		}, activeAppSensor.handleResponse)
+
 		runningAppsSensor.state = data.(runningApps).Count()
 		runningAppsSensor.attributes = data.(runningApps).Attributes()
-		go func() {
-			response := agent.PostRequest(ctx, &sensorRequest{
-				data:      runningAppsSensor,
-				encrypted: encryptRequests,
-			})
-			runningAppsSensor.handleResponse(response)
-		}()
+		go hass.APIRequest(ctx, agent.config.APIURL, &sensorRequest{
+			data:      runningAppsSensor,
+			encrypted: encryptRequests,
+		}, runningAppsSensor.handleResponse)
 	}
 }
