@@ -7,20 +7,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-//go:generate stringer -type=currentState
-
-const (
-	Unknown          currentState = 0
-	Charging         currentState = 1
-	Discharging      currentState = 2
-	Empty            currentState = 3
-	FullyCharged     currentState = 4
-	PendingCharge    currentState = 5
-	PendingDischarge currentState = 6
-)
-
-type currentState int
-
 type upowerBattery struct {
 	details map[string]dbus.Variant
 }
@@ -54,7 +40,22 @@ func (s *upowerBattery) ChargerType() string {
 }
 
 func (s *upowerBattery) State() string {
-	return s.details["State"].Value().(currentState).String()
+	switch s.details["State"].Value().(uint32) {
+	case 1:
+		return "Charging"
+	case 2:
+		return "Discharging"
+	case 3:
+		return "Empty"
+	case 4:
+		return "Fully Charged"
+	case 5:
+		return "Pending Charge"
+	case 6:
+		return "Pending Discharge"
+	default:
+		return "Unknown"
+	}
 }
 
 func (s *upowerBattery) ID() string {

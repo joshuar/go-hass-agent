@@ -15,7 +15,7 @@ const (
 	battery batteryDeviceClass = iota
 	temperature
 	power
-	none
+	state
 )
 
 type batteryDeviceClass int
@@ -59,6 +59,9 @@ func newBatterySensor(batteryID string, sensorType batteryDeviceClass, encryptRe
 	case power:
 		sensorName = batteryID + " Battery Power"
 		sensorID = batteryID + "_battery_power"
+	case state:
+		sensorName = batteryID + " Battery State"
+		sensorID = batteryID + "_battery_state"
 	default:
 		return nil
 	}
@@ -79,13 +82,22 @@ func (b *batterySensor) Attributes() interface{} {
 }
 
 func (b *batterySensor) DeviceClass() string {
-	return b.deviceClass.String()
+	switch b.deviceClass {
+	case battery, temperature, power:
+		return b.deviceClass.String()
+	default:
+		return ""
+	}
 }
 
 func (b *batterySensor) Icon() string {
 	switch b.deviceClass {
 	case battery:
-		return fmt.Sprintf("mdi:battery-%d", int(math.Round(b.state.(float64)/10)*10))
+		if b.state.(float64) >= 95 {
+			return "mdi:battery"
+		} else {
+			return fmt.Sprintf("mdi:battery-%d", int(math.Round(b.state.(float64)/10)*10))
+		}
 	case power:
 		if math.Signbit(b.state.(float64)) {
 			return "mdi:battery-minus"
@@ -216,6 +228,7 @@ func newBatteryTracker(batteryID string, encryptRequests bool) *batteryTracker {
 	newTracker.sensors[battery] = newBatterySensor(batteryID, battery, encryptRequests)
 	newTracker.sensors[temperature] = newBatterySensor(batteryID, temperature, encryptRequests)
 	newTracker.sensors[power] = newBatterySensor(batteryID, power, encryptRequests)
+	newTracker.sensors[state] = newBatterySensor(batteryID, state, encryptRequests)
 	go newTracker.monitor()
 	return newTracker
 }
@@ -226,6 +239,7 @@ func (tracker *batteryTracker) monitor() {
 		tracker.sensors[battery].state = tracker.currentInfo.LevelPercent()
 		tracker.sensors[temperature].state = tracker.currentInfo.Temperature()
 		tracker.sensors[power].state = tracker.currentInfo.Power()
+		tracker.sensors[state].state = tracker.currentInfo.State()
 		tracker.sensors[power].attributes = struct {
 			Voltage float64 `json:"voltage"`
 			Energy  float64 `json:"energy"`
@@ -240,6 +254,7 @@ func (tracker *batteryTracker) UpdateHass(ctx context.Context, url string) {
 	go hass.APIRequest(ctx, url, tracker.sensors[power], tracker.sensors[power].HandleAPIResponse)
 	go hass.APIRequest(ctx, url, tracker.sensors[temperature], tracker.sensors[temperature].HandleAPIResponse)
 	go hass.APIRequest(ctx, url, tracker.sensors[battery], tracker.sensors[battery].HandleAPIResponse)
+	go hass.APIRequest(ctx, url, tracker.sensors[state], tracker.sensors[state].HandleAPIResponse)
 }
 
 func (agent *Agent) runBatterySensorWorker() {

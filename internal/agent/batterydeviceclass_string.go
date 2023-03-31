@@ -11,12 +11,12 @@ func _() {
 	_ = x[battery-0]
 	_ = x[temperature-1]
 	_ = x[power-2]
-	_ = x[none-3]
+	_ = x[state-3]
 }
 
-const _batteryDeviceClass_name = "batterytemperaturepowernone"
+const _batteryDeviceClass_name = "batterytemperaturepowerstate"
 
-var _batteryDeviceClass_index = [...]uint8{0, 7, 18, 23, 27}
+var _batteryDeviceClass_index = [...]uint8{0, 7, 18, 23, 28}
 
 func (i batteryDeviceClass) String() string {
 	if i < 0 || i >= batteryDeviceClass(len(_batteryDeviceClass_index)-1) {

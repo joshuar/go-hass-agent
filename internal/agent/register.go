@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/grandcat/zeroconf"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/rs/zerolog/log"
@@ -79,11 +78,8 @@ func (agent *Agent) getRegistrationHostInfo() *hass.RegistrationHost {
 
 	w := agent.App.NewWindow(agent.MsgPrinter.Sprintf("App Registration"))
 
-	// tokenLabel := widget.NewLabel(agent.MsgPrinter.Sprintf("Token:"))
 	tokenSelect := widget.NewEntryWithData(registrationInfo.Token)
-	// tokenSelect.Validator = validation.NewRegexp(`^[A-Za-z0-9_-\.]+$`, "token can only contain letters, numbers, '_', '-' and '.'")
 
-	// autoServerLabel := widget.NewLabel(agent.MsgPrinter.Sprintf("Auto-discovered Servers:"))
 	autoServerSelect := widget.NewSelect(allServers, func(s string) {
 		registrationInfo.Server.Set(s)
 	})
@@ -102,7 +98,6 @@ func (agent *Agent) getRegistrationHostInfo() *hass.RegistrationHost {
 		}
 	})
 
-	// tlsLabel := widget.NewLabel(agent.MsgPrinter.Sprintf("Use TLS?"))
 	tlsSelect := widget.NewCheckWithData("", registrationInfo.UseTLS)
 
 	form := widget.NewForm(
@@ -116,7 +111,6 @@ func (agent *Agent) getRegistrationHostInfo() *hass.RegistrationHost {
 		s, _ := registrationInfo.Server.Get()
 		log.Debug().Caller().
 			Msgf("User selected server %s", s)
-		spew.Dump(registrationInfo)
 		done <- true
 	}
 	form.OnCancel = func() {
@@ -139,24 +133,11 @@ func (agent *Agent) getRegistrationHostInfo() *hass.RegistrationHost {
 	return registrationInfo
 }
 
-// newHostPort is a custom fyne validator that will validate a string is a
-// valid hostname:port combination
-func newHostPort() fyne.StringValidator {
-	v := validate.New()
-	return func(text string) error {
-		if err := v.Var(text, "hostname_port"); err != nil {
-			return errors.New("you need to specify a valid hostname:port combination")
-		}
-		return nil
-	}
-}
-
 func (agent *Agent) runRegistrationWorker() error {
 	device := hass.NewDevice()
 	agent.App.Preferences().SetString("DeviceID", device.DeviceID())
 	agent.App.Preferences().SetString("DeviceName", device.DeviceName())
 	registrationHostInfo := agent.getRegistrationHostInfo()
-	spew.Dump(registrationHostInfo)
 	if registrationHostInfo != nil {
 		registrationRequest := hass.GenerateRegistrationRequest(device)
 		appRegistrationInfo := hass.RegisterWithHass(registrationHostInfo, registrationRequest)
@@ -168,5 +149,17 @@ func (agent *Agent) runRegistrationWorker() error {
 		}
 	} else {
 		return errors.New("problem getting registration information")
+	}
+}
+
+// newHostPort is a custom fyne validator that will validate a string is a
+// valid hostname:port combination
+func newHostPort() fyne.StringValidator {
+	v := validate.New()
+	return func(text string) error {
+		if err := v.Var(text, "hostname_port"); err != nil {
+			return errors.New("you need to specify a valid hostname:port combination")
+		}
+		return nil
 	}
 }

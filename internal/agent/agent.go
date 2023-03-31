@@ -60,4 +60,5 @@ func (agent *Agent) runWorkers(once *sync.Once) {
 func (agent *Agent) Exit() {
 	log.Debug().Caller().Msg("Shutting down agent.")
 	agent.done <- true
+	agent.App.Quit()
 }

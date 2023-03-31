@@ -1,8 +1,6 @@
 package agent
 
 import (
-	"os"
-
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/rs/zerolog/log"
 )
@@ -63,8 +61,7 @@ func (agent *Agent) loadConfig() {
 			if err != nil {
 				log.Debug().Caller().
 					Msgf("Error trying to register: %v. Exiting.", err)
-				agent.App.Quit()
-				os.Exit(-1)
+				agent.Exit()
 			}
 		}
 	}
