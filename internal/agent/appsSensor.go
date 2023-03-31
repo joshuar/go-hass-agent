@@ -19,14 +19,18 @@ type runningApps interface {
 }
 
 type appSensor struct {
-	name       string
-	id         string
-	state      interface{}
-	stateClass string
-	attributes interface{}
-	disabled   bool
-	registered bool
+	name            string
+	id              string
+	state           interface{}
+	stateClass      string
+	attributes      interface{}
+	disabled        bool
+	registered      bool
+	encryptRequests bool
 }
+
+// Ensure appSensor satisfies the sensor interface so it can be
+// treated as a sensor
 
 func (s *appSensor) Attributes() interface{} {
 	return s.attributes
@@ -109,6 +113,24 @@ func (s *appSensor) HandleAPIResponse(rawResponse interface{}) {
 	}
 }
 
+// Ensure that appSensor satisfies the hass.Request interface
+// so its data can be sent as a request to HA
+
+func (a *appSensor) RequestType() hass.RequestType {
+	if a.Registered() {
+		return hass.RequestTypeUpdateSensorStates
+	}
+	return hass.RequestTypeRegisterSensor
+}
+
+func (a *appSensor) RequestData() interface{} {
+	return MarshallSensorData(a)
+}
+
+func (a *appSensor) IsEncrypted() bool {
+	return a.encryptRequests
+}
+
 func (agent *Agent) runAppSensorWorker() {
 	var encryptRequests = false
 	if agent.config.secret != "" {
@@ -120,23 +142,25 @@ func (agent *Agent) runAppSensorWorker() {
 
 	ctx := context.Background()
 
-	deviceName, _ := agent.GetDeviceDetails()
+	// deviceName, _ := agent.GetDeviceDetails()
 
 	activeAppSensor := &appSensor{
-		state:      "Unknown",
-		name:       deviceName + " Active App",
-		id:         deviceName + "_active_app",
-		registered: false,
-		disabled:   false,
+		state:           "Unknown",
+		name:            "Active App",
+		id:              "active_app",
+		registered:      false,
+		disabled:        false,
+		encryptRequests: encryptRequests,
 	}
 
 	runningAppsSensor := &appSensor{
-		state:      "Unknown",
-		name:       deviceName + " Running Apps",
-		id:         deviceName + "_running_apps",
-		stateClass: "measurement",
-		registered: false,
-		disabled:   false,
+		state:           "Unknown",
+		name:            "Running Apps",
+		id:              "running_apps",
+		stateClass:      "measurement",
+		registered:      false,
+		disabled:        false,
+		encryptRequests: encryptRequests,
 	}
 
 	go device.AppUpdater(updateCh)
@@ -144,16 +168,18 @@ func (agent *Agent) runAppSensorWorker() {
 	for data := range updateCh {
 		activeAppSensor.state = data.(activeApp).Name()
 		activeAppSensor.attributes = data.(activeApp).Attributes()
-		go hass.APIRequest(ctx, agent.config.APIURL, &sensorRequest{
-			data:      activeAppSensor,
-			encrypted: encryptRequests,
-		}, activeAppSensor.HandleAPIResponse)
+		go hass.APIRequest(ctx, agent.config.APIURL, activeAppSensor, activeAppSensor.HandleAPIResponse)
+		// go hass.APIRequest(ctx, agent.config.APIURL, &sensorRequest{
+		// 	data:      activeAppSensor,
+		// 	encrypted: encryptRequests,
+		// }, activeAppSensor.HandleAPIResponse)
 
 		runningAppsSensor.state = data.(runningApps).Count()
 		runningAppsSensor.attributes = data.(runningApps).Attributes()
-		go hass.APIRequest(ctx, agent.config.APIURL, &sensorRequest{
-			data:      runningAppsSensor,
-			encrypted: encryptRequests,
-		}, runningAppsSensor.HandleAPIResponse)
+		go hass.APIRequest(ctx, agent.config.APIURL, runningAppsSensor, runningAppsSensor.HandleAPIResponse)
+		// go hass.APIRequest(ctx, agent.config.APIURL, &sensorRequest{
+		// 	data:      runningAppsSensor,
+		// 	encrypted: encryptRequests,
+		// }, runningAppsSensor.HandleAPIResponse)
 	}
 }

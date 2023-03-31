@@ -1,9 +1,5 @@
 package agent
 
-import (
-	"github.com/joshuar/go-hass-agent/internal/hass"
-)
-
 type sensor interface {
 	Attributes() interface{}
 	DeviceClass() string
@@ -18,11 +14,6 @@ type sensor interface {
 	Disabled() bool
 	Registered() bool
 	HandleAPIResponse(interface{})
-}
-
-type sensorRequest struct {
-	data      sensor
-	encrypted bool
 }
 
 type sensorRegistrationInfo struct {
@@ -45,44 +36,6 @@ type sensorUpdateInfo struct {
 	State           interface{} `json:"state"`
 	Type            string      `json:"type"`
 	UniqueID        string      `json:"unique_id"`
-}
-
-func (s *sensorRequest) RequestType() hass.RequestType {
-	if s.data.Registered() {
-		return hass.RequestTypeUpdateSensorStates
-	}
-	return hass.RequestTypeRegisterSensor
-}
-
-func (s *sensorRequest) RequestData() interface{} {
-	if s.data.Registered() {
-		return []sensorUpdateInfo{{
-			StateAttributes: s.data.Attributes(),
-			Icon:            s.data.Icon(),
-			State:           s.data.State(),
-			Type:            s.data.SensorType(),
-			UniqueID:        s.data.UniqueID(),
-		},
-		}
-	} else {
-		return sensorRegistrationInfo{
-			StateAttributes:   s.data.Attributes(),
-			DeviceClass:       s.data.DeviceClass(),
-			Icon:              s.data.Icon(),
-			Name:              s.data.Name(),
-			State:             s.data.State(),
-			Type:              s.data.SensorType(),
-			UniqueID:          s.data.UniqueID(),
-			UnitOfMeasurement: s.data.UnitOfMeasurement(),
-			StateClass:        s.data.StateClass(),
-			EntityCategory:    s.data.EntityCategory(),
-			Disabled:          s.data.Disabled(),
-		}
-	}
-}
-
-func (s *sensorRequest) IsEncrypted() bool {
-	return s.encrypted
 }
 
 func MarshallSensorData(s sensor) interface{} {

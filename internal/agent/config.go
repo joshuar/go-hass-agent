@@ -1,6 +1,8 @@
 package agent
 
 import (
+	"os"
+
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/rs/zerolog/log"
 )
@@ -19,7 +21,6 @@ type AppConfig struct {
 }
 
 func (agent *Agent) loadConfig() {
-	// go func() {
 	for {
 		CloudhookURL := agent.App.Preferences().String("CloudhookURL")
 		RemoteUIURL := agent.App.Preferences().String("RemoteUIURL")
@@ -41,13 +42,11 @@ func (agent *Agent) loadConfig() {
 			agent.config.APIURL = CloudhookURL
 			log.Debug().Caller().
 				Msgf("Using CloudhookURL %s for Home Assistant access", agent.config.APIURL)
-			// configLoaded <- true
 			return
 		case RemoteUIURL != "" && agent.config.webhookID != "":
 			agent.config.APIURL = RemoteUIURL + webHookPath + agent.config.webhookID
 			log.Debug().Caller().
 				Msgf("Using RemoteUIURL %s for Home Assistant access", agent.config.APIURL)
-			// configLoaded <- true
 			return
 		case agent.config.webhookID != "" && Host != "":
 			if UseTLS {
@@ -57,14 +56,18 @@ func (agent *Agent) loadConfig() {
 			}
 			log.Debug().Caller().
 				Msgf("Using generated URL %s for Home Assistant access", agent.config.APIURL)
-			// configLoaded <- true
 			return
 		default:
 			log.Warn().Msg("No suitable existing config found! Starting new registration process")
-			agent.runRegistrationWorker()
+			err := agent.runRegistrationWorker()
+			if err != nil {
+				log.Debug().Caller().
+					Msgf("Error trying to register: %v. Exiting.", err)
+				agent.App.Quit()
+				os.Exit(-1)
+			}
 		}
 	}
-	// }()
 }
 
 func (agent *Agent) GetConfigVersion() string {

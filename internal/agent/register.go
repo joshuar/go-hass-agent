@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/grandcat/zeroconf"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/rs/zerolog/log"
@@ -78,45 +79,59 @@ func (agent *Agent) getRegistrationHostInfo() *hass.RegistrationHost {
 
 	w := agent.App.NewWindow(agent.MsgPrinter.Sprintf("App Registration"))
 
-	serverSelect := widget.NewSelect(allServers, func(s string) {
-		registrationInfo.Server.Set(s)
-	})
-	serverManual := widget.NewEntryWithData(registrationInfo.Server)
-	serverManual.Validator = newHostPort()
-	serverManual.Disable()
-	manualServerSelect := widget.NewCheck(agent.MsgPrinter.Sprintf("Use Custom Server"), func(b bool) {
-		switch b {
-		case true:
-			serverManual.Enable()
-			serverSelect.Disable()
-		case false:
-			serverManual.Disable()
-			serverSelect.Enable()
-		}
-	})
+	// tokenLabel := widget.NewLabel(agent.MsgPrinter.Sprintf("Token:"))
 	tokenSelect := widget.NewEntryWithData(registrationInfo.Token)
 	// tokenSelect.Validator = validation.NewRegexp(`^[A-Za-z0-9_-\.]+$`, "token can only contain letters, numbers, '_', '-' and '.'")
-	tlsSelect := widget.NewCheckWithData(agent.MsgPrinter.Sprintf("Use TLS?"), registrationInfo.UseTLS)
 
-	form := &widget.Form{
-		Items: []*widget.FormItem{
-			{Text: agent.MsgPrinter.Sprintf("Token"), Widget: tokenSelect},
-			{Text: agent.MsgPrinter.Sprintf("Found Server"), Widget: serverSelect},
-			{Text: agent.MsgPrinter.Sprintf("Manual Server"), Widget: container.NewHBox(manualServerSelect, serverManual)},
-			{Widget: tlsSelect},
-		},
-		OnSubmit: func() { // optional, handle form submission
-			s, _ := registrationInfo.Server.Get()
-			log.Debug().Caller().
-				Msgf("User selected server %s", s)
-			done <- true
-		},
+	// autoServerLabel := widget.NewLabel(agent.MsgPrinter.Sprintf("Auto-discovered Servers:"))
+	autoServerSelect := widget.NewSelect(allServers, func(s string) {
+		registrationInfo.Server.Set(s)
+	})
+
+	manualServerEntry := widget.NewEntryWithData(registrationInfo.Server)
+	manualServerEntry.Validator = newHostPort()
+	manualServerEntry.Disable()
+	manualServerSelect := widget.NewCheck("", func(b bool) {
+		switch b {
+		case true:
+			manualServerEntry.Enable()
+			autoServerSelect.Disable()
+		case false:
+			manualServerEntry.Disable()
+			autoServerSelect.Enable()
+		}
+	})
+
+	// tlsLabel := widget.NewLabel(agent.MsgPrinter.Sprintf("Use TLS?"))
+	tlsSelect := widget.NewCheckWithData("", registrationInfo.UseTLS)
+
+	form := widget.NewForm(
+		widget.NewFormItem(agent.MsgPrinter.Sprintf("Token"), tokenSelect),
+		widget.NewFormItem(agent.MsgPrinter.Sprintf("Auto-discovered Servers"), autoServerSelect),
+		widget.NewFormItem(agent.MsgPrinter.Sprintf("Use Custom Server?"), manualServerSelect),
+		widget.NewFormItem(agent.MsgPrinter.Sprintf("Manual Server Entry"), manualServerEntry),
+		widget.NewFormItem(agent.MsgPrinter.Sprintf("Use TLS?"), tlsSelect),
+	)
+	form.OnSubmit = func() {
+		s, _ := registrationInfo.Server.Get()
+		log.Debug().Caller().
+			Msgf("User selected server %s", s)
+		spew.Dump(registrationInfo)
+		done <- true
+	}
+	form.OnCancel = func() {
+		registrationInfo = nil
+		done <- true
 	}
 
 	w.SetContent(container.New(layout.NewVBoxLayout(),
 		widget.NewLabel(agent.MsgPrinter.Sprint("As an initial step, this app will need to log into your Home Assistant server and register itself.\nPlease enter the relevant details for your Home Assistant server url/port and a long-lived access token.")),
 		form,
 	))
+
+	w.SetOnClosed(func() {
+		done <- true
+	})
 
 	w.Show()
 	<-done
@@ -136,15 +151,22 @@ func newHostPort() fyne.StringValidator {
 	}
 }
 
-func (agent *Agent) runRegistrationWorker() {
+func (agent *Agent) runRegistrationWorker() error {
 	device := hass.NewDevice()
 	agent.App.Preferences().SetString("DeviceID", device.DeviceID())
 	agent.App.Preferences().SetString("DeviceName", device.DeviceName())
-
 	registrationHostInfo := agent.getRegistrationHostInfo()
-	registrationRequest := hass.GenerateRegistrationRequest(device)
-	appRegistrationInfo := hass.RegisterWithHass(registrationHostInfo, registrationRequest)
-	if appRegistrationInfo != nil {
-		agent.saveRegistration(appRegistrationInfo, registrationHostInfo)
+	spew.Dump(registrationHostInfo)
+	if registrationHostInfo != nil {
+		registrationRequest := hass.GenerateRegistrationRequest(device)
+		appRegistrationInfo := hass.RegisterWithHass(registrationHostInfo, registrationRequest)
+		if appRegistrationInfo != nil {
+			agent.saveRegistration(appRegistrationInfo, registrationHostInfo)
+			return nil
+		} else {
+			return errors.New("registration failed")
+		}
+	} else {
+		return errors.New("problem getting registration information")
 	}
 }

@@ -3,6 +3,7 @@ module github.com/joshuar/go-hass-agent
 go 1.19
 
 require (
+	github.com/cenkalti/backoff v2.2.1+incompatible
 	github.com/go-playground/validator/v10 v10.11.2
 	github.com/godbus/dbus/v5 v5.1.0
 	github.com/grandcat/zeroconf v1.0.0
@@ -15,7 +16,6 @@ require (
 require (
 	fyne.io/systray v1.10.1-0.20230207085535-4a244dbb9d03 // indirect
 	github.com/benoitkugler/textlayout v0.3.0 // indirect
-	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fredbi/uri v0.1.0 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect

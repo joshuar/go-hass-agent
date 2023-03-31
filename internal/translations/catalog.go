@@ -38,24 +38,25 @@ func init() {
 }
 
 var messageKeyToIndex = map[string]int{
-	"About %s":          0,
-	"App Registration":  2,
-	"App Version: %s":   1,
-	"Found Server":      6,
-	"Manual Server":     7,
-	"Token":             5,
-	"Use Custom Server": 3,
-	"Use TLS?":          4,
+	"About %s":                6,
+	"App Registration":        0,
+	"App Version: %s":         7,
+	"Auto-discovered Servers": 2,
+	"Manual Server Entry":     4,
+	"Token":                   1,
+	"Use Custom Server?":      3,
+	"Use TLS?":                5,
 }
 
 var enIndex = []uint32{ // 9 elements
-	0x00000000, 0x0000000c, 0x0000001f, 0x00000030,
-	0x00000042, 0x0000004b, 0x00000051, 0x0000005e,
-	0x0000006c,
+	0x00000000, 0x00000011, 0x00000017, 0x0000002f,
+	0x00000042, 0x00000056, 0x0000005f, 0x0000006b,
+	0x0000007e,
 } // Size: 60 bytes
 
-const enData string = "" + // Size: 108 bytes
-	"\x02About %[1]s\x02App Version: %[1]s\x02App Registration\x02Use Custom " +
-	"Server\x02Use TLS?\x02Token\x02Found Server\x02Manual Server"
+const enData string = "" + // Size: 126 bytes
+	"\x02App Registration\x02Token\x02Auto-discovered Servers\x02Use Custom S" +
+	"erver?\x02Manual Server Entry\x02Use TLS?\x02About %[1]s\x02App Version:" +
+	" %[1]s"
 
-	// Total table size 168 bytes (0KiB); checksum: 52982089
+	// Total table size 186 bytes (0KiB); checksum: 431C5DCB
