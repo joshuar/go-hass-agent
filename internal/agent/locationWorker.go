@@ -79,8 +79,9 @@ func (agent *Agent) runLocationWorker() {
 			go hass.APIRequest(ctx, agent.config.APIURL, l, l.handleResponse)
 		case <-agent.done:
 			log.Debug().Caller().Msgf("Cleaning up location sensor.")
-			l := &location{}
-			go hass.APIRequest(ctx, agent.config.APIURL, l, l.handleResponse)
+			// l := &location{}
+			// go hass.APIRequest(ctx, agent.config.APIURL, l, l.handleResponse)
+			return
 		}
 	}
 }

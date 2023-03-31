@@ -62,6 +62,10 @@ func (s *upowerBattery) ID() string {
 	return s.details["NativePath"].Value().(string)
 }
 
+func (s *upowerBattery) Type() interface{} {
+	return s.details["Type"].Value()
+}
+
 func BatteryUpdater(status chan interface{}) {
 
 	conn, err := ConnectSystemDBus()
@@ -82,11 +86,11 @@ func BatteryUpdater(status chan interface{}) {
 	}
 
 	ticker := time.NewTicker(time.Second * 30)
-	done := make(chan bool)
+	tickerDone := make(chan bool)
 
 	for {
 		select {
-		case <-done:
+		case <-tickerDone:
 			return
 		case <-ticker.C:
 			for i := 0; i < len(batteryList); i++ {
@@ -102,6 +106,10 @@ func BatteryUpdater(status chan interface{}) {
 					status <- battery
 				}
 			}
+		case <-status:
+			log.Debug().Caller().
+				Msg("Stopping Linux battery updater.")
+			return
 		}
 	}
 }

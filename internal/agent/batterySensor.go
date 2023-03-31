@@ -10,15 +10,26 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-//go:generate stringer -type=batteryDeviceClass
+//go:generate stringer -type=batteryDeviceClass,batteryType -output batterySensor_string.go
 const (
 	battery batteryDeviceClass = iota
 	temperature
 	power
 	state
+
+	unknown batteryType = iota
+	linePower
+	generic
+	ups
+	monitor
+	mouse
+	keyboard
+	pda
+	phone
 )
 
 type batteryDeviceClass int
+type batteryType int
 
 // BatteryState is an interface that represents the state
 // of a device battery at a particular point in time
@@ -32,6 +43,7 @@ type BatteryState interface {
 	ChargerType() string
 	State() string
 	ID() string
+	Type() interface{}
 }
 
 // batterySensor implements the sensor interface to
@@ -203,7 +215,7 @@ func (b *batterySensor) RequestType() hass.RequestType {
 }
 
 func (b *batterySensor) RequestData() interface{} {
-	return MarshallSensorData(b)
+	return hass.MarshallSensorData(b)
 }
 
 func (b *batterySensor) IsEncrypted() bool {
@@ -274,14 +286,22 @@ func (agent *Agent) runBatterySensorWorker() {
 	ctx := context.Background()
 	go device.BatteryUpdater(updateCh)
 
-	for i := range updateCh {
-		info := i.(BatteryState)
-		if _, ok := batteries[info.ID()]; ok {
-			batteries[info.ID()].updateCh <- info
-		} else {
-			batteries[info.ID()] = newBatteryTracker(info.ID(), encryptRequests)
-			batteries[info.ID()].updateCh <- info
+	// for i := range updateCh {
+	for {
+		select {
+		case i := <-updateCh:
+			info := i.(BatteryState)
+			if _, ok := batteries[info.ID()]; ok {
+				batteries[info.ID()].updateCh <- info
+			} else {
+				batteries[info.ID()] = newBatteryTracker(info.ID(), encryptRequests)
+				batteries[info.ID()].updateCh <- info
+			}
+			batteries[info.ID()].UpdateHass(ctx, apiURL)
+		case <-agent.done:
+			log.Debug().Caller().
+				Msg("Cleaning up battery sensors.")
+			return
 		}
-		batteries[info.ID()].UpdateHass(ctx, apiURL)
 	}
 }

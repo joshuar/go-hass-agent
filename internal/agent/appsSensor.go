@@ -124,7 +124,7 @@ func (a *appSensor) RequestType() hass.RequestType {
 }
 
 func (a *appSensor) RequestData() interface{} {
-	return MarshallSensorData(a)
+	return hass.MarshallSensorData(a)
 }
 
 func (a *appSensor) IsEncrypted() bool {
@@ -165,21 +165,22 @@ func (agent *Agent) runAppSensorWorker() {
 
 	go device.AppUpdater(updateCh)
 
-	for data := range updateCh {
-		activeAppSensor.state = data.(activeApp).Name()
-		activeAppSensor.attributes = data.(activeApp).Attributes()
-		go hass.APIRequest(ctx, agent.config.APIURL, activeAppSensor, activeAppSensor.HandleAPIResponse)
-		// go hass.APIRequest(ctx, agent.config.APIURL, &sensorRequest{
-		// 	data:      activeAppSensor,
-		// 	encrypted: encryptRequests,
-		// }, activeAppSensor.HandleAPIResponse)
+	for {
+		select {
+		case data := <-updateCh:
+			// }
+			// for data := range updateCh {
+			activeAppSensor.state = data.(activeApp).Name()
+			activeAppSensor.attributes = data.(activeApp).Attributes()
+			go hass.APIRequest(ctx, agent.config.APIURL, activeAppSensor, activeAppSensor.HandleAPIResponse)
 
-		runningAppsSensor.state = data.(runningApps).Count()
-		runningAppsSensor.attributes = data.(runningApps).Attributes()
-		go hass.APIRequest(ctx, agent.config.APIURL, runningAppsSensor, runningAppsSensor.HandleAPIResponse)
-		// go hass.APIRequest(ctx, agent.config.APIURL, &sensorRequest{
-		// 	data:      runningAppsSensor,
-		// 	encrypted: encryptRequests,
-		// }, runningAppsSensor.HandleAPIResponse)
+			runningAppsSensor.state = data.(runningApps).Count()
+			runningAppsSensor.attributes = data.(runningApps).Attributes()
+			go hass.APIRequest(ctx, agent.config.APIURL, runningAppsSensor, runningAppsSensor.HandleAPIResponse)
+
+		case <-agent.done:
+			log.Debug().Caller().Msgf("Cleaning up app sensor.")
+			return
+		}
 	}
 }

@@ -59,27 +59,34 @@ func LocationUpdater(appID string, locationInfoCh chan interface{}) {
 	logging.CheckError(err)
 
 	c := client.SubscribeLocationUpdated()
-	for v := range c {
-		log.Debug().Caller().Msg("Location update received.")
-		_, location, err := client.ParseLocationUpdated(v)
-		logging.CheckError(err)
+	for {
+		select {
+		// for v := range c {
+		case v := <-c:
+			log.Debug().Caller().Msg("Location update received.")
+			_, location, err := client.ParseLocationUpdated(v)
+			logging.CheckError(err)
 
-		locationInfo.latitude, err = location.GetLatitude()
-		logging.CheckError(err)
+			locationInfo.latitude, err = location.GetLatitude()
+			logging.CheckError(err)
 
-		locationInfo.longitude, err = location.GetLongitude()
-		logging.CheckError(err)
+			locationInfo.longitude, err = location.GetLongitude()
+			logging.CheckError(err)
 
-		locationInfo.accuracy, err = location.GetAccuracy()
-		logging.CheckError(err)
+			locationInfo.accuracy, err = location.GetAccuracy()
+			logging.CheckError(err)
 
-		locationInfo.speed, err = location.GetSpeed()
-		logging.CheckError(err)
+			locationInfo.speed, err = location.GetSpeed()
+			logging.CheckError(err)
 
-		locationInfo.altitude, err = location.GetAltitude()
-		logging.CheckError(err)
+			locationInfo.altitude, err = location.GetAltitude()
+			logging.CheckError(err)
 
-		locationInfoCh <- locationInfo
+			locationInfoCh <- locationInfo
+		case <-locationInfoCh:
+			log.Debug().Caller().
+				Msg("Closing down Linux location updater.")
+			return
+		}
 	}
-
 }

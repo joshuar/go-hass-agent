@@ -1,4 +1,4 @@
-package agent
+package hass
 
 type sensor interface {
 	Attributes() interface{}
