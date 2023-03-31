@@ -46,8 +46,13 @@ func (a *appInfo) Attributes() interface{} {
 }
 
 func AppUpdater(app chan interface{}) {
-	monitorConn, err := dbus.ConnectSessionBus()
-	logging.CheckError(err)
+	monitorConn, err := ConnectSessionBus()
+	if err != nil {
+		log.Debug().Caller().
+			Msgf("Could not connect to DBus to monitor app state: %v", err)
+		return
+
+	}
 	defer monitorConn.Close()
 
 	rules := []string{
@@ -62,8 +67,13 @@ func AppUpdater(app chan interface{}) {
 	monitorConn.Eavesdrop(c)
 	log.Debug().Caller().Msg("Monitoring D-Bus for app changes.")
 
-	appChkConn, err := dbus.ConnectSessionBus()
-	logging.CheckError(err)
+	appChkConn, err := ConnectSessionBus()
+	if err != nil {
+		log.Debug().Caller().
+			Msgf("Could not connect to DBus to monitor app state: %v", err)
+		return
+
+	}
 
 	var portalDest string
 	switch os.Getenv("XDG_CURRENT_DESKTOP") {

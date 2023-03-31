@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/rs/zerolog/log"
@@ -86,7 +85,7 @@ func (b *batterySensor) DeviceClass() string {
 func (b *batterySensor) Icon() string {
 	switch b.deviceClass {
 	case battery:
-		return fmt.Sprintf("mdi:battery-%d", int(math.Round(b.state.(float64)/0.1)*10))
+		return fmt.Sprintf("mdi:battery-%d", int(math.Round(b.state.(float64)/10)*10))
 	case power:
 		if math.Signbit(b.state.(float64)) {
 			return "mdi:battery-minus"
@@ -105,7 +104,7 @@ func (b *batterySensor) Name() string {
 func (b *batterySensor) State() interface{} {
 	switch b.deviceClass {
 	case battery:
-		return int(b.state.(float64) * 100)
+		return b.state.(float64)
 	default:
 		return b.state
 	}
@@ -234,7 +233,6 @@ func (tracker *batteryTracker) monitor() {
 			Voltage: tracker.currentInfo.Voltage(),
 			Energy:  tracker.currentInfo.Energy(),
 		}
-		spew.Dump(tracker.sensors[power].RequestData())
 	}
 }
 
@@ -263,7 +261,6 @@ func (agent *Agent) runBatterySensorWorker() {
 
 	for i := range updateCh {
 		info := i.(BatteryState)
-		spew.Dump(info)
 		if _, ok := batteries[info.ID()]; ok {
 			batteries[info.ID()].updateCh <- info
 		} else {
