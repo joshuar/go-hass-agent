@@ -6,6 +6,7 @@ import (
 
 	"github.com/carlmjohnson/requests"
 	"github.com/cenkalti/backoff"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/rs/zerolog/log"
 )
 
@@ -31,6 +32,7 @@ func APIRequest(ctx context.Context, url string, request interface{}, response f
 			log.Error().Msgf("Unable to send request: %v", err)
 			response(nil)
 		} else {
+			spew.Dump(res)
 			response(res)
 		}
 	}

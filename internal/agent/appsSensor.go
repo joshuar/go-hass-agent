@@ -76,7 +76,7 @@ func (s *appSensor) Registered() bool {
 	return s.registered
 }
 
-func (s *appSensor) handleResponse(rawResponse interface{}) {
+func (s *appSensor) HandleAPIResponse(rawResponse interface{}) {
 	if rawResponse == nil {
 		log.Debug().Caller().Msg("No response data.")
 	} else {
@@ -84,24 +84,24 @@ func (s *appSensor) handleResponse(rawResponse interface{}) {
 		if v, ok := response["success"]; ok {
 			if v.(bool) && !s.Registered() {
 				s.registered = true
-				log.Debug().Caller().Msgf("Sensor %s registered.", s.name)
+				log.Debug().Caller().Msgf("Sensor %s registered.", s.Name())
 			}
 		}
 		if v, ok := response[s.UniqueID()]; ok {
 			status := v.(map[string]interface{})
 			if !status["success"].(bool) {
 				error := status["error"].(map[string]interface{})
-				log.Error().Msgf("Could not update sensor %s, %s: %s", s.name, error["code"], error["message"])
+				log.Error().Msgf("Could not update sensor %s, %s: %s", s.Name(), error["code"], error["message"])
 			} else {
-				log.Debug().Msgf("Sensor %s updated. State is now: %v", s.name, s.state)
+				log.Debug().Msgf("Sensor %s updated. State is now: %v", s.Name(), s.State())
 			}
 			if v, ok := status["is_disabled"]; ok {
 				switch v.(bool) {
 				case true:
-					log.Debug().Msgf("Sensor %s has been disabled.", s.name)
+					log.Debug().Msgf("Sensor %s has been disabled.", s.Name())
 					s.disabled = true
 				case false:
-					log.Debug().Msgf("Sensor %s has been enabled.", s.name)
+					log.Debug().Msgf("Sensor %s has been enabled.", s.Name())
 					s.disabled = false
 				}
 			}
@@ -109,7 +109,7 @@ func (s *appSensor) handleResponse(rawResponse interface{}) {
 	}
 }
 
-func (agent *Agent) runActiveAppSensor() {
+func (agent *Agent) runAppSensorWorker() {
 	var encryptRequests = false
 	if agent.config.secret != "" {
 		encryptRequests = true
@@ -120,18 +120,20 @@ func (agent *Agent) runActiveAppSensor() {
 
 	ctx := context.Background()
 
+	deviceName, _ := agent.GetDeviceDetails()
+
 	activeAppSensor := &appSensor{
 		state:      "Unknown",
-		name:       "Active App",
-		id:         "active_app",
+		name:       deviceName + " Active App",
+		id:         deviceName + "_active_app",
 		registered: false,
 		disabled:   false,
 	}
 
 	runningAppsSensor := &appSensor{
 		state:      "Unknown",
-		name:       "Running Apps",
-		id:         "running_apps",
+		name:       deviceName + " Running Apps",
+		id:         deviceName + "_running_apps",
 		stateClass: "measurement",
 		registered: false,
 		disabled:   false,
@@ -145,13 +147,13 @@ func (agent *Agent) runActiveAppSensor() {
 		go hass.APIRequest(ctx, agent.config.APIURL, &sensorRequest{
 			data:      activeAppSensor,
 			encrypted: encryptRequests,
-		}, activeAppSensor.handleResponse)
+		}, activeAppSensor.HandleAPIResponse)
 
 		runningAppsSensor.state = data.(runningApps).Count()
 		runningAppsSensor.attributes = data.(runningApps).Attributes()
 		go hass.APIRequest(ctx, agent.config.APIURL, &sensorRequest{
 			data:      runningAppsSensor,
 			encrypted: encryptRequests,
-		}, runningAppsSensor.handleResponse)
+		}, runningAppsSensor.HandleAPIResponse)
 	}
 }

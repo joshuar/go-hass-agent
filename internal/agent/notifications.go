@@ -14,8 +14,6 @@ import (
 )
 
 func (agent *Agent) runNotificationsWorker() {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-	defer cancel()
 
 	url := agent.config.WebSocketURL
 
@@ -24,6 +22,8 @@ func (agent *Agent) runNotificationsWorker() {
 
 	for {
 		log.Debug().Caller().Msgf("Using %s for websocket connection for notification access.", url)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+		defer cancel()
 		var conn *websocket.Conn
 		var err error
 		retryFunc := func() error {
@@ -57,6 +57,7 @@ func (agent *Agent) webSocketNotifications(conn *websocket.Conn, reconnect chan 
 		err := wsjson.Read(ctx, conn, &response)
 		if err != nil {
 			log.Warn().Msg(err.Error())
+			ctx.Done()
 			reconnect <- true
 			return
 		} else {

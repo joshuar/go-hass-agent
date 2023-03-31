@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os/exec"
 	"os/user"
+	"strings"
 
 	"git.lukeshu.com/go/libsystemd/sd_id128"
 	"github.com/acobaugh/osrelease"
@@ -58,7 +59,8 @@ func (l *linuxDevice) AppID() string {
 }
 
 func (l *linuxDevice) DeviceName() string {
-	return l.hostnameCtl.Hostname
+	shortHostname, _, _ := strings.Cut(l.hostnameCtl.Hostname, ".")
+	return shortHostname
 }
 
 func (l *linuxDevice) DeviceID() string {

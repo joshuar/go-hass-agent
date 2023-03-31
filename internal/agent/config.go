@@ -71,6 +71,11 @@ func (agent *Agent) GetConfigVersion() string {
 	return agent.App.Preferences().String("Version")
 }
 
+func (agent *Agent) GetDeviceDetails() (string, string) {
+	return agent.App.Preferences().String("DeviceName"),
+		agent.App.Preferences().String("DeviceID")
+}
+
 func (agent *Agent) saveRegistration(r *hass.RegistrationResponse, h *hass.RegistrationHost) {
 	host, _ := h.Server.Get()
 	useTLS, _ := h.UseTLS.Get()

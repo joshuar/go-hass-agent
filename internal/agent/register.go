@@ -139,6 +139,8 @@ func newHostPort() fyne.StringValidator {
 func (agent *Agent) runRegistrationWorker() {
 	device := hass.NewDevice()
 	agent.App.Preferences().SetString("DeviceID", device.DeviceID())
+	agent.App.Preferences().SetString("DeviceName", device.DeviceName())
+
 	registrationHostInfo := agent.getRegistrationHostInfo()
 	registrationRequest := hass.GenerateRegistrationRequest(device)
 	appRegistrationInfo := hass.RegisterWithHass(registrationHostInfo, registrationRequest)

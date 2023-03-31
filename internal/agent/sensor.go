@@ -1,6 +1,8 @@
 package agent
 
-import "github.com/joshuar/go-hass-agent/internal/hass"
+import (
+	"github.com/joshuar/go-hass-agent/internal/hass"
+)
 
 type sensor interface {
 	Attributes() interface{}
@@ -15,6 +17,7 @@ type sensor interface {
 	EntityCategory() string
 	Disabled() bool
 	Registered() bool
+	HandleAPIResponse(interface{})
 }
 
 type sensorRequest struct {
@@ -23,7 +26,7 @@ type sensorRequest struct {
 }
 
 type sensorRegistrationInfo struct {
-	Attributes        interface{} `json:"attributes,omitempty"`
+	StateAttributes   interface{} `json:"attributes,omitempty"`
 	DeviceClass       string      `json:"device_class,omitempty"`
 	Icon              string      `json:"icon,omitempty"`
 	Name              string      `json:"name"`
@@ -37,11 +40,11 @@ type sensorRegistrationInfo struct {
 }
 
 type sensorUpdateInfo struct {
-	Attributes interface{} `json:"attributes,omitempty"`
-	Icon       string      `json:"icon,omitempty"`
-	State      interface{} `json:"state"`
-	Type       string      `json:"type"`
-	UniqueID   string      `json:"unique_id"`
+	StateAttributes interface{} `json:"attributes,omitempty"`
+	Icon            string      `json:"icon,omitempty"`
+	State           interface{} `json:"state"`
+	Type            string      `json:"type"`
+	UniqueID        string      `json:"unique_id"`
 }
 
 func (s *sensorRequest) RequestType() hass.RequestType {
@@ -54,16 +57,16 @@ func (s *sensorRequest) RequestType() hass.RequestType {
 func (s *sensorRequest) RequestData() interface{} {
 	if s.data.Registered() {
 		return []sensorUpdateInfo{{
-			Attributes: s.data.Attributes(),
-			Icon:       s.data.Icon(),
-			State:      s.data.State(),
-			Type:       s.data.SensorType(),
-			UniqueID:   s.data.UniqueID(),
+			StateAttributes: s.data.Attributes(),
+			Icon:            s.data.Icon(),
+			State:           s.data.State(),
+			Type:            s.data.SensorType(),
+			UniqueID:        s.data.UniqueID(),
 		},
 		}
 	} else {
 		return sensorRegistrationInfo{
-			Attributes:        s.data.Attributes(),
+			StateAttributes:   s.data.Attributes(),
 			DeviceClass:       s.data.DeviceClass(),
 			Icon:              s.data.Icon(),
 			Name:              s.data.Name(),
@@ -82,3 +85,29 @@ func (s *sensorRequest) IsEncrypted() bool {
 	return s.encrypted
 }
 
+func MarshallSensorData(s sensor) interface{} {
+	if s.Registered() {
+		return []sensorUpdateInfo{{
+			StateAttributes: s.Attributes(),
+			Icon:            s.Icon(),
+			State:           s.State(),
+			Type:            s.SensorType(),
+			UniqueID:        s.UniqueID(),
+		},
+		}
+	} else {
+		return sensorRegistrationInfo{
+			StateAttributes:   s.Attributes(),
+			DeviceClass:       s.DeviceClass(),
+			Icon:              s.Icon(),
+			Name:              s.Name(),
+			State:             s.State(),
+			Type:              s.SensorType(),
+			UniqueID:          s.UniqueID(),
+			UnitOfMeasurement: s.UnitOfMeasurement(),
+			StateClass:        s.StateClass(),
+			EntityCategory:    s.EntityCategory(),
+			Disabled:          s.Disabled(),
+		}
+	}
+}

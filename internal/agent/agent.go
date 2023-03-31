@@ -53,7 +53,8 @@ func (agent *Agent) runWorkers(once *sync.Once) {
 	once.Do(func() { agent.loadConfig() })
 	go agent.runNotificationsWorker()
 	go agent.runLocationWorker()
-	go agent.runActiveAppSensor()
+	go agent.runAppSensorWorker()
+	go agent.runBatterySensorWorker()
 }
 
 func (agent *Agent) Exit() {
