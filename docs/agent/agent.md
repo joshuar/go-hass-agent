@@ -1,6 +1,4 @@
 # Agent
-
-
 ## Configuration
 
 - The agent needs a valid configuration and will prompt the user to help create it if one isn't found.
@@ -9,21 +7,27 @@
   config. It will also create a new config (prompting the user for required
   details via `runRegistrationWorker`) if needed. 
 
+
 ## Workers
 
 - Most of the agent work is done by worker functions, named `runSomethingWorker`.  
   - For example, to track and update location, there is `runLocationWorker` in `internal/agent/location.go`.
 - Once the config has been loaded, all the worker functions are started in separate goroutines.
 
+### Contexts
+
+The agent creates a cancellable context for itself. Any worker goroutines should
+derive their own contexts from this (adding their own timeouts, cancellations as
+needed). 
+
 ## Data Updates
 
 - Data updates are left entirely up to the individual sensors and the platform
   the app is running on. For example, on Linux, location and running apps are
   updated as often as the relevant information is published on the user's
-  session D-Bus. 
-- There is no polling/update interval. Sensors tell the app when they have new
-  data and the app publishes the update to Home Assistant.
-
+  session DBus. 
+- Sensors push data to the app's worker routines which handle
+  publishing it to Home Assistant. 
 ## Notifications
 
 - The agent supports receiving notifications from Home Assistant via a

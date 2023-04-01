@@ -131,7 +131,7 @@ func (a *appSensor) IsEncrypted() bool {
 	return a.encryptRequests
 }
 
-func (agent *Agent) runAppSensorWorker() {
+func (agent *Agent) runAppSensorWorker(ctx context.Context) {
 	var encryptRequests = false
 	if agent.config.secret != "" {
 		encryptRequests = true
@@ -139,8 +139,6 @@ func (agent *Agent) runAppSensorWorker() {
 
 	updateCh := make(chan interface{})
 	defer close(updateCh)
-
-	ctx := context.Background()
 
 	// deviceName, _ := agent.GetDeviceDetails()
 
@@ -163,7 +161,7 @@ func (agent *Agent) runAppSensorWorker() {
 		encryptRequests: encryptRequests,
 	}
 
-	go device.AppUpdater(updateCh)
+	go device.AppUpdater(ctx, updateCh)
 
 	for {
 		select {
@@ -178,8 +176,9 @@ func (agent *Agent) runAppSensorWorker() {
 			runningAppsSensor.attributes = data.(runningApps).Attributes()
 			go hass.APIRequest(ctx, agent.config.APIURL, runningAppsSensor, runningAppsSensor.HandleAPIResponse)
 
-		case <-agent.done:
+		case <-ctx.Done():
 			log.Debug().Caller().Msgf("Cleaning up app sensor.")
+			// close(updateCh)
 			return
 		}
 	}

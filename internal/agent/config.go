@@ -1,6 +1,8 @@
 package agent
 
 import (
+	"context"
+
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/rs/zerolog/log"
 )
@@ -18,7 +20,7 @@ type AppConfig struct {
 	webhookID    string
 }
 
-func (agent *Agent) loadConfig() {
+func (agent *Agent) loadConfig(ctx context.Context) {
 	for {
 		CloudhookURL := agent.App.Preferences().String("CloudhookURL")
 		RemoteUIURL := agent.App.Preferences().String("RemoteUIURL")
@@ -57,7 +59,7 @@ func (agent *Agent) loadConfig() {
 			return
 		default:
 			log.Warn().Msg("No suitable existing config found! Starting new registration process")
-			err := agent.runRegistrationWorker()
+			err := agent.runRegistrationWorker(ctx)
 			if err != nil {
 				log.Debug().Caller().
 					Msgf("Error trying to register: %v. Exiting.", err)

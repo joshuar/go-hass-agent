@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"context"
 	"sync"
 
 	"fyne.io/fyne/v2"
@@ -22,15 +23,14 @@ type Agent struct {
 	config        AppConfig
 	Name, Version string
 	MsgPrinter    *message.Printer
-	done          chan struct{}
 }
 
-func NewAgent() *Agent {
+func NewAgent() (*Agent, context.Context, context.CancelFunc) {
+	agentCtx, cancel := context.WithCancel(context.Background())
 	agent := &Agent{
 		App:     newUI(),
 		Name:    Name,
 		Version: Version,
-		done:    make(chan struct{}),
 	}
 
 	userLocales, err := locale.GetLocales()
@@ -45,20 +45,20 @@ func NewAgent() *Agent {
 
 	var once sync.Once
 
-	go agent.runWorkers(&once)
-	return agent
+	go agent.runWorkers(agentCtx, &once)
+	return agent, agentCtx, cancel
 }
 
-func (agent *Agent) runWorkers(once *sync.Once) {
-	once.Do(func() { agent.loadConfig() })
-	go agent.runNotificationsWorker()
-	go agent.runLocationWorker()
-	go agent.runAppSensorWorker()
-	go agent.runBatterySensorWorker()
+func (agent *Agent) runWorkers(ctx context.Context, once *sync.Once) {
+	once.Do(func() { agent.loadConfig(ctx) })
+	go agent.runNotificationsWorker(ctx)
+	go agent.runLocationWorker(ctx)
+	go agent.runAppSensorWorker(ctx)
+	go agent.runBatterySensorWorker(ctx)
 }
 
 func (agent *Agent) Exit() {
 	log.Debug().Caller().Msg("Shutting down agent.")
-	close(agent.done)
+	agent.Tray.Close()
 	agent.App.Quit()
 }

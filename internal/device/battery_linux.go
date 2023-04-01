@@ -1,10 +1,18 @@
 package device
 
 import (
+	"context"
 	"time"
 
 	"github.com/godbus/dbus/v5"
 	"github.com/rs/zerolog/log"
+)
+
+const (
+	upowerDBusDest         = "org.freedesktop.UPower"
+	upowerDBusPath         = "org.freedesktop.UPower"
+	upowerGetDevicesMethod = "org.freedesktop.UPower.EnumerateDevices"
+	upowerGetPropsMethod   = "org.freedesktop.DBus.Properties.GetAll"
 )
 
 type upowerBattery struct {
@@ -66,9 +74,9 @@ func (s *upowerBattery) Type() interface{} {
 	return s.details["Type"].Value()
 }
 
-func BatteryUpdater(status chan interface{}) {
+func BatteryUpdater(ctx context.Context, status chan interface{}) {
 
-	conn, err := ConnectSystemDBus()
+	conn, err := DBusConnectSystem(ctx)
 	if err != nil {
 		log.Debug().Caller().
 			Msgf("Could not connect to DBus to monitor batteries: %v", err)
@@ -76,9 +84,9 @@ func BatteryUpdater(status chan interface{}) {
 	}
 	defer conn.Close()
 
-	obj := conn.Object("org.freedesktop.UPower", "/org/freedesktop/UPower")
+	obj := conn.Object(upowerDBusDest, upowerDBusPath)
 	var batteryList []dbus.ObjectPath
-	err = obj.Call("org.freedesktop.UPower.EnumerateDevices", 0).Store(&batteryList)
+	err = obj.Call(upowerGetDevicesMethod, 0).Store(&batteryList)
 	if err != nil {
 		log.Debug().Caller().
 			Msgf("Unable to find all battery devices: %v", err)
@@ -97,7 +105,7 @@ func BatteryUpdater(status chan interface{}) {
 				battery := &upowerBattery{}
 				var batteryInfo map[string]dbus.Variant
 				obj := conn.Object("org.freedesktop.UPower", batteryList[i])
-				err := obj.Call("org.freedesktop.DBus.Properties.GetAll", 0, "org.freedesktop.UPower.Device").Store(&batteryInfo)
+				err := obj.Call(upowerGetPropsMethod, 0, "org.freedesktop.UPower.Device").Store(&batteryInfo)
 				if err != nil {
 					log.Debug().Caller().
 						Msgf("Could not get properties for battery %s: %v", batteryList[i], err)
@@ -109,8 +117,7 @@ func BatteryUpdater(status chan interface{}) {
 		case <-status:
 			log.Debug().Caller().
 				Msg("Stopping Linux battery updater.")
-			conn.Close()
-			tickerDone <- true
+			return
 		}
 	}
 }

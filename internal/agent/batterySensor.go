@@ -156,7 +156,12 @@ func (b *batterySensor) UnitOfMeasurement() string {
 }
 
 func (b *batterySensor) StateClass() string {
-	return "measurement"
+	switch b.deviceClass {
+	case battery, temperature, power:
+		return "measurement"
+	default:
+		return ""
+	}
 }
 
 func (b *batterySensor) EntityCategory() string {
@@ -232,7 +237,7 @@ type batteryTracker struct {
 	sensors     map[batteryDeviceClass]*batterySensor
 }
 
-func newBatteryTracker(batteryID string, encryptRequests bool) *batteryTracker {
+func newBatteryTracker(ctx context.Context, batteryID string, encryptRequests bool) *batteryTracker {
 	newTracker := &batteryTracker{
 		updateCh: make(chan BatteryState),
 		sensors:  make(map[batteryDeviceClass]*batterySensor),
@@ -241,23 +246,28 @@ func newBatteryTracker(batteryID string, encryptRequests bool) *batteryTracker {
 	newTracker.sensors[temperature] = newBatterySensor(batteryID, temperature, encryptRequests)
 	newTracker.sensors[power] = newBatterySensor(batteryID, power, encryptRequests)
 	newTracker.sensors[state] = newBatterySensor(batteryID, state, encryptRequests)
-	go newTracker.monitor()
+	go newTracker.monitor(ctx)
 	return newTracker
 }
 
-func (tracker *batteryTracker) monitor() {
-	for update := range tracker.updateCh {
-		tracker.currentInfo = update
-		tracker.sensors[battery].state = tracker.currentInfo.LevelPercent()
-		tracker.sensors[temperature].state = tracker.currentInfo.Temperature()
-		tracker.sensors[power].state = tracker.currentInfo.Power()
-		tracker.sensors[state].state = tracker.currentInfo.State()
-		tracker.sensors[power].attributes = struct {
-			Voltage float64 `json:"voltage"`
-			Energy  float64 `json:"energy"`
-		}{
-			Voltage: tracker.currentInfo.Voltage(),
-			Energy:  tracker.currentInfo.Energy(),
+func (tracker *batteryTracker) monitor(ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case update := <-tracker.updateCh:
+			tracker.currentInfo = update
+			tracker.sensors[battery].state = tracker.currentInfo.LevelPercent()
+			tracker.sensors[temperature].state = tracker.currentInfo.Temperature()
+			tracker.sensors[power].state = tracker.currentInfo.Power()
+			tracker.sensors[state].state = tracker.currentInfo.State()
+			tracker.sensors[power].attributes = struct {
+				Voltage float64 `json:"voltage"`
+				Energy  float64 `json:"energy"`
+			}{
+				Voltage: tracker.currentInfo.Voltage(),
+				Energy:  tracker.currentInfo.Energy(),
+			}
 		}
 	}
 }
@@ -269,7 +279,7 @@ func (tracker *batteryTracker) UpdateHass(ctx context.Context, url string) {
 	go hass.APIRequest(ctx, url, tracker.sensors[state], tracker.sensors[state].HandleAPIResponse)
 }
 
-func (agent *Agent) runBatterySensorWorker() {
+func (agent *Agent) runBatterySensorWorker(ctx context.Context) {
 	var encryptRequests = false
 	if agent.config.secret != "" {
 		encryptRequests = true
@@ -283,9 +293,7 @@ func (agent *Agent) runBatterySensorWorker() {
 
 	batteries := make(map[string]*batteryTracker)
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	go device.BatteryUpdater(updateCh)
+	go device.BatteryUpdater(ctx, updateCh)
 
 	// for i := range updateCh {
 	for {
@@ -295,14 +303,14 @@ func (agent *Agent) runBatterySensorWorker() {
 			if _, ok := batteries[info.ID()]; ok {
 				batteries[info.ID()].updateCh <- info
 			} else {
-				batteries[info.ID()] = newBatteryTracker(info.ID(), encryptRequests)
+				batteries[info.ID()] = newBatteryTracker(ctx, info.ID(), encryptRequests)
 				batteries[info.ID()].updateCh <- info
 			}
 			batteries[info.ID()].UpdateHass(ctx, apiURL)
-		case <-agent.done:
+		case <-ctx.Done():
 			log.Debug().Caller().
 				Msg("Cleaning up battery sensors.")
-			cancel()
+			// close(updateCh)
 			return
 		}
 	}

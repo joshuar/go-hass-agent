@@ -30,7 +30,7 @@ func newRegistration() *hass.RegistrationHost {
 	}
 }
 
-func findServers() binding.StringList {
+func findServers(ctx context.Context) binding.StringList {
 
 	serverList := binding.NewStringList()
 
@@ -49,9 +49,9 @@ func findServers() binding.StringList {
 		}(entries)
 
 		log.Info().Msg("Looking for Home Assistant instances on the network...")
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-		defer cancel()
-		err = resolver.Browse(ctx, "_home-assistant._tcp", "local.", entries)
+		searchCtx, searchCancel := context.WithTimeout(ctx, time.Second*5)
+		defer searchCancel()
+		err = resolver.Browse(searchCtx, "_home-assistant._tcp", "local.", entries)
 		if err != nil {
 			log.Warn().Msgf("Failed to browse:", err.Error())
 		}
@@ -66,14 +66,14 @@ func findServers() binding.StringList {
 	return serverList
 }
 
-func (agent *Agent) getRegistrationHostInfo() *hass.RegistrationHost {
+func (agent *Agent) getRegistrationHostInfo(ctx context.Context) *hass.RegistrationHost {
 
 	registrationInfo := newRegistration()
 
 	done := make(chan bool, 1)
 	defer close(done)
 
-	s := findServers()
+	s := findServers(ctx)
 	allServers, _ := s.Get()
 
 	w := agent.App.NewWindow(agent.MsgPrinter.Sprintf("App Registration"))
@@ -133,11 +133,11 @@ func (agent *Agent) getRegistrationHostInfo() *hass.RegistrationHost {
 	return registrationInfo
 }
 
-func (agent *Agent) runRegistrationWorker() error {
+func (agent *Agent) runRegistrationWorker(ctx context.Context) error {
 	device := hass.NewDevice()
 	agent.App.Preferences().SetString("DeviceID", device.DeviceID())
 	agent.App.Preferences().SetString("DeviceName", device.DeviceName())
-	registrationHostInfo := agent.getRegistrationHostInfo()
+	registrationHostInfo := agent.getRegistrationHostInfo(ctx)
 	if registrationHostInfo != nil {
 		registrationRequest := hass.GenerateRegistrationRequest(device)
 		appRegistrationInfo := hass.RegisterWithHass(registrationHostInfo, registrationRequest)

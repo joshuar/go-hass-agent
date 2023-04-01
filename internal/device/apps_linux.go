@@ -1,11 +1,15 @@
 package device
 
 import (
-	"os"
+	"context"
 
 	"github.com/godbus/dbus/v5"
-	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/rs/zerolog/log"
+)
+
+const (
+	appStateDBusMethod = "org.freedesktop.impl.portal.Background.GetAppState"
+	appStateDBusPath   = "/org/freedesktop/portal/desktop"
 )
 
 type appInfo struct {
@@ -45,44 +49,42 @@ func (a *appInfo) Attributes() interface{} {
 	}
 }
 
-func AppUpdater(app chan interface{}) {
-	monitorConn, err := ConnectSessionBus()
+func AppUpdater(ctx context.Context, app chan interface{}) {
+	monitorConn, err := DBusConnectSession(ctx)
 	if err != nil {
 		log.Debug().Caller().
 			Msgf("Could not connect to DBus to monitor app state: %v", err)
 		return
-
 	}
 	defer monitorConn.Close()
 
 	rules := []string{
 		"type='signal',member='RunningApplicationsChanged',path='/org/freedesktop/portal/desktop',interface='org.freedesktop.impl.portal.Background'",
 	}
-	var flag uint = 0
-
-	call := monitorConn.BusObject().Call("org.freedesktop.DBus.Monitoring.BecomeMonitor", 0, rules, flag)
-	logging.CheckError(call.Err)
+	err = DBusBecomeMonitor(monitorConn, rules, 0)
+	if err != nil {
+		log.Debug().Caller().
+			Msgf("Could become monitor: %v", err)
+		return
+	}
 
 	c := make(chan *dbus.Message, 10)
+	defer close(c)
 	monitorConn.Eavesdrop(c)
-	log.Debug().Caller().Msg("Monitoring D-Bus for app changes.")
+	log.Debug().Caller().Msg("Monitoring DBus for app changes.")
 
-	appChkConn, err := ConnectSessionBus()
+	appChkConn, err := DBusConnectSession(ctx)
 	if err != nil {
 		log.Debug().Caller().
 			Msgf("Could not connect to DBus to monitor app state: %v", err)
 		return
-
 	}
 
-	var portalDest string
-	switch os.Getenv("XDG_CURRENT_DESKTOP") {
-	case "KDE":
-		portalDest = "org.freedesktop.impl.portal.desktop.kde"
-	case "GNOME":
-		portalDest = "org.freedesktop.impl.portal.desktop.kde"
-	default:
-		log.Warn().Msg("Unsupported desktop/window environment. No app logging available.")
+	portalDest := FindPortal()
+	if portalDest == "" {
+		log.Debug().Caller().
+			Msgf("Unsupported or unknown portal")
+		return
 	}
 
 	a := &appInfo{}
@@ -90,22 +92,20 @@ func AppUpdater(app chan interface{}) {
 	for {
 		select {
 		case <-c:
-			// for range c {
-			obj := appChkConn.Object(portalDest, "/org/freedesktop/portal/desktop")
+			obj := appChkConn.Object(portalDest, appStateDBusPath)
 			var activeAppList map[string]interface{}
-			err = obj.Call("org.freedesktop.impl.portal.Background.GetAppState", 0).Store(&activeAppList)
+			err = obj.Call(appStateDBusMethod, 0).Store(&activeAppList)
 			if err != nil {
-				log.Warn().Msgf("Problem getting active app list: %v.", err)
+				log.Debug().Caller().Msgf(err.Error())
 			} else {
 				a.activeApps = nil
 				a.activeApps = activeAppList
 				app <- a
 			}
+		case <-ctx.Done():
 		case <-app:
 			log.Debug().Caller().
 				Msg("Stopping Linux app updater.")
-			monitorConn.Close()
-			appChkConn.Close()
 			return
 		}
 	}

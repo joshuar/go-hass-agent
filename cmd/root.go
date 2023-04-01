@@ -45,9 +45,11 @@ to quickly create a Cobra application.`,
 		}
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		agent := agent.NewAgent()
+		agent, _, agentCancel := agent.NewAgent()
 		agent.App.Run()
+		agentCancel()
 		agent.Exit()
+		os.Exit(0)
 	},
 }
 

@@ -11,8 +11,9 @@ import (
 )
 
 type HassWebsocket struct {
-	conn *websocket.Conn
-	ctx  context.Context
+	conn    *websocket.Conn
+	ReadCh  chan *WebsocketResponse
+	WriteCh chan interface{}
 }
 
 type WebsocketResponse struct {
@@ -34,32 +35,48 @@ type WebsocketResponse struct {
 	} `json:"event,omitempty"`
 }
 
-func (ws *HassWebsocket) Read(responseCh chan WebsocketResponse) {
+func (ws *HassWebsocket) Read(ctx context.Context) {
 	for {
-		ctx, cancel := context.WithCancel(ws.ctx)
+		response := &WebsocketResponse{
+			Success: true,
+		}
+		err := wsjson.Read(ctx, ws.conn, &response)
+		if err != nil {
+			log.Debug().Caller().Msg(err.Error())
+		}
 		select {
-		case <-ws.ctx.Done():
-		case <-responseCh:
-			cancel()
+		case <-ctx.Done():
+			log.Debug().Caller().
+				Msg("Stopping reading from websocket.")
+			close(ws.ReadCh)
 			return
-		default:
-			response := &WebsocketResponse{
-				Success: true,
-			}
-			err := wsjson.Read(ctx, ws.conn, &response)
-			responseCh <- *response
+		case ws.ReadCh <- response:
+		}
+	}
+}
+
+func (ws *HassWebsocket) Write(ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			log.Debug().Caller().
+				Msg("Stopping writing to websocket.")
+			ws.conn.Close(websocket.StatusNormalClosure, "")
+			close(ws.WriteCh)
+			return
+		case data := <-ws.WriteCh:
+			writeCtx, writeCancel := context.WithTimeout(ctx, time.Minute)
+			defer writeCancel()
+			err := wsjson.Write(writeCtx, ws.conn, data)
 			if err != nil {
-				log.Warn().Msg(err.Error())
+				log.Debug().Caller().Msg(err.Error())
 			}
 		}
 	}
 }
 
-func (ws *HassWebsocket) Write(data interface{}) error {
-	ctx, cancel := context.WithTimeout(ws.ctx, time.Minute)
-	defer cancel()
-	err := wsjson.Write(ctx, ws.conn, data)
-	return err
+func (ws *HassWebsocket) Close() {
+	ws.conn.Close(websocket.StatusNormalClosure, "requested websocket close")
 }
 
 func NewWebsocket(ctx context.Context, url string) *HassWebsocket {
@@ -81,8 +98,12 @@ func NewWebsocket(ctx context.Context, url string) *HassWebsocket {
 		cancelConnect()
 		return nil
 	}
-	return &HassWebsocket{
-		conn: conn,
-		ctx:  ctx,
+	ws := &HassWebsocket{
+		conn:    conn,
+		ReadCh:  make(chan *WebsocketResponse),
+		WriteCh: make(chan interface{}),
 	}
+	go ws.Read(ctx)
+	go ws.Write(ctx)
+	return ws
 }
