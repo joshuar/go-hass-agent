@@ -85,7 +85,8 @@ func LocationUpdater(appID string, locationInfoCh chan interface{}) {
 			locationInfoCh <- locationInfo
 		case <-locationInfoCh:
 			log.Debug().Caller().
-				Msg("Closing down Linux location updater.")
+				Msg("Stopping Linux location updater.")
+			gcm.DeleteClient(client)
 			return
 		}
 	}

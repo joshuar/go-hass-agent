@@ -22,7 +22,7 @@ type Agent struct {
 	config        AppConfig
 	Name, Version string
 	MsgPrinter    *message.Printer
-	done          chan bool
+	done          chan struct{}
 }
 
 func NewAgent() *Agent {
@@ -30,7 +30,7 @@ func NewAgent() *Agent {
 		App:     newUI(),
 		Name:    Name,
 		Version: Version,
-		done:    make(chan bool),
+		done:    make(chan struct{}),
 	}
 
 	userLocales, err := locale.GetLocales()

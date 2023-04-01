@@ -64,7 +64,8 @@ func (agent *Agent) runLocationWorker() {
 	locationInfoCh := make(chan interface{})
 	defer close(locationInfoCh)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	go device.LocationUpdater(agent.App.UniqueID(), locationInfoCh)
 
@@ -79,6 +80,7 @@ func (agent *Agent) runLocationWorker() {
 			go hass.APIRequest(ctx, agent.config.APIURL, l, l.handleResponse)
 		case <-agent.done:
 			log.Debug().Caller().Msgf("Cleaning up location sensor.")
+			cancel()
 			// l := &location{}
 			// go hass.APIRequest(ctx, agent.config.APIURL, l, l.handleResponse)
 			return

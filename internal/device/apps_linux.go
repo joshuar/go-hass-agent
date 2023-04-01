@@ -103,7 +103,9 @@ func AppUpdater(app chan interface{}) {
 			}
 		case <-app:
 			log.Debug().Caller().
-				Msg("Stopping Linux app sensor.")
+				Msg("Stopping Linux app updater.")
+			monitorConn.Close()
+			appChkConn.Close()
 			return
 		}
 	}

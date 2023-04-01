@@ -283,7 +283,8 @@ func (agent *Agent) runBatterySensorWorker() {
 
 	batteries := make(map[string]*batteryTracker)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	go device.BatteryUpdater(updateCh)
 
 	// for i := range updateCh {
@@ -301,6 +302,7 @@ func (agent *Agent) runBatterySensorWorker() {
 		case <-agent.done:
 			log.Debug().Caller().
 				Msg("Cleaning up battery sensors.")
+			cancel()
 			return
 		}
 	}

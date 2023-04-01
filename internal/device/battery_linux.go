@@ -109,7 +109,8 @@ func BatteryUpdater(status chan interface{}) {
 		case <-status:
 			log.Debug().Caller().
 				Msg("Stopping Linux battery updater.")
-			return
+			conn.Close()
+			tickerDone <- true
 		}
 	}
 }

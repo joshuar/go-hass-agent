@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"fyne.io/fyne/v2"
-	"github.com/cenkalti/backoff/v4"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/rs/zerolog/log"
@@ -16,57 +15,47 @@ import (
 func (agent *Agent) runNotificationsWorker() {
 
 	url := agent.config.WebSocketURL
+	ctxNotifications, cancelNotifications := context.WithCancel(context.Background())
 
-	reconnect := make(chan bool)
-	defer close(reconnect)
+	// go agent.webSocketNotifications(conn, reconnect)
 
 	for {
-		log.Debug().Caller().Msgf("Using %s for websocket connection for notification access.", url)
-		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-		defer cancel()
-		var conn *websocket.Conn
-		var err error
-		retryFunc := func() error {
-			conn, _, err = websocket.Dial(ctx, url, nil)
-			if err != nil {
-				log.Debug().Caller().Msgf("Unable to connect to websocket: %v", err)
-				return err
-			}
-			return nil
-		}
-		err = backoff.Retry(retryFunc, backoff.NewExponentialBackOff())
-		if err != nil {
-			log.Debug().Caller().Msgf("Failed to connect to websocket: %v", err)
+		select {
+		case <-agent.done:
+			log.Debug().Caller().Msg("Closing notifications worker.")
+			cancelNotifications()
 			return
+		default:
+			ws := hass.NewWebsocket(ctxNotifications, url)
+			if ws == nil {
+				log.Debug().Caller().
+					Msgf("No websocket connection made.")
+				cancelNotifications()
+				return
+			} else {
+				data := make(chan hass.WebsocketResponse)
+				defer close(data)
+				go ws.Read(data)
+				agent.handleNotifications(data, ws)
+			}
 		}
-		defer conn.Close(websocket.StatusNormalClosure, "")
-		go agent.webSocketNotifications(conn, reconnect)
-		<-reconnect
 	}
 }
 
-func (agent *Agent) webSocketNotifications(conn *websocket.Conn, reconnect chan bool) {
+func (agent *Agent) handleNotifications(response chan hass.WebsocketResponse, ws *hass.HassWebsocket) {
 	accessToken := agent.config.token
 	webhookID := agent.config.webhookID
 
 	for {
-		ctx := context.Background()
-		response := &hass.WebsocketResponse{
-			Success: true,
-		}
-		err := wsjson.Read(ctx, conn, &response)
-		if err != nil {
-			log.Warn().Msg(err.Error())
-			ctx.Done()
-			reconnect <- true
+		select {
+		case <-agent.done:
+			log.Debug().Caller().Msg("Stopping handling notifications.")
 			return
-		} else {
-			switch response.Type {
+		case r := <-response:
+			switch r.Type {
 			case "auth_required":
 				log.Debug().Caller().Msg("Requesting authorisation for websocket.")
-				reqCtx, cancel := context.WithTimeout(ctx, time.Minute)
-				defer cancel()
-				err = wsjson.Write(reqCtx, conn, struct {
+				err := ws.Write(struct {
 					Type        string `json:"type"`
 					AccessToken string `json:"access_token"`
 				}{
@@ -76,9 +65,7 @@ func (agent *Agent) webSocketNotifications(conn *websocket.Conn, reconnect chan 
 				logging.CheckError(err)
 			case "auth_ok":
 				log.Debug().Caller().Msg("Registering app for push notifications.")
-				reqCtx, cancel := context.WithTimeout(ctx, time.Minute)
-				defer cancel()
-				err = wsjson.Write(reqCtx, conn, &struct {
+				err := ws.Write(struct {
 					Type           string `json:"type"`
 					ID             int    `json:"id"`
 					WebHookID      string `json:"webhook_id"`
@@ -91,17 +78,85 @@ func (agent *Agent) webSocketNotifications(conn *websocket.Conn, reconnect chan 
 				})
 				logging.CheckError(err)
 			case "result":
-				if !response.Success {
-					log.Error().Msgf("Recieved error on websocket, %s: %s.", response.Error.Code, response.Error.Message)
-					reconnect <- true
+				if !r.Success {
+					log.Error().Msgf("Recieved error on websocket, %s: %s.", r.Error.Code, r.Error.Message)
+					// reconnect <- true
 				}
 			case "event":
 				agent.App.SendNotification(&fyne.Notification{
-					Title:   response.Notification.Title,
-					Content: response.Notification.Message,
+					Title:   r.Notification.Title,
+					Content: r.Notification.Message,
 				})
 			default:
 				log.Debug().Caller().Msgf("Received unhandled response %v", response)
+			}
+		}
+	}
+}
+
+func (agent *Agent) webSocketNotifications(conn *websocket.Conn, reconnect chan bool) {
+	accessToken := agent.config.token
+	webhookID := agent.config.webhookID
+
+	for {
+		select {
+		case <-agent.done:
+			log.Debug().Caller().
+				Msg("Stopping listening for notifications.")
+			return
+		default:
+			ctx := context.Background()
+			response := &hass.WebsocketResponse{
+				Success: true,
+			}
+			err := wsjson.Read(ctx, conn, &response)
+			if err != nil {
+				log.Warn().Msg(err.Error())
+				// ctx.Done()
+				return
+			} else {
+				switch response.Type {
+				case "auth_required":
+					log.Debug().Caller().Msg("Requesting authorisation for websocket.")
+					reqCtx, cancel := context.WithTimeout(ctx, time.Minute)
+					defer cancel()
+					err = wsjson.Write(reqCtx, conn, struct {
+						Type        string `json:"type"`
+						AccessToken string `json:"access_token"`
+					}{
+						Type:        "auth",
+						AccessToken: accessToken,
+					})
+					logging.CheckError(err)
+				case "auth_ok":
+					log.Debug().Caller().Msg("Registering app for push notifications.")
+					reqCtx, cancel := context.WithTimeout(ctx, time.Minute)
+					defer cancel()
+					err = wsjson.Write(reqCtx, conn, &struct {
+						Type           string `json:"type"`
+						ID             int    `json:"id"`
+						WebHookID      string `json:"webhook_id"`
+						SupportConfirm bool   `json:"support_confirm"`
+					}{
+						Type:           "mobile_app/push_notification_channel",
+						ID:             1,
+						WebHookID:      webhookID,
+						SupportConfirm: false,
+					})
+					logging.CheckError(err)
+				case "result":
+					if !response.Success {
+						log.Error().Msgf("Recieved error on websocket, %s: %s.", response.Error.Code, response.Error.Message)
+						reconnect <- true
+					}
+				case "event":
+					agent.App.SendNotification(&fyne.Notification{
+						Title:   response.Notification.Title,
+						Content: response.Notification.Message,
+					})
+				default:
+					log.Debug().Caller().Msgf("Received unhandled response %v", response)
+				}
 			}
 		}
 	}
