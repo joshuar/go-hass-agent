@@ -75,7 +75,7 @@ func (agent *Agent) runLocationWorker(ctx context.Context) {
 				data: loc.(locationData),
 			}
 
-			go hass.APIRequest(ctx, agent.config.APIURL, l, l.handleResponse)
+			go hass.APIRequest(ctx, l, l.handleResponse)
 		case <-ctx.Done():
 			log.Debug().Caller().Msgf("Cleaning up location sensor.")
 			return

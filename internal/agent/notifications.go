@@ -4,16 +4,14 @@ import (
 	"context"
 
 	"fyne.io/fyne/v2"
+	"github.com/joshuar/go-hass-agent/internal/config"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/rs/zerolog/log"
 )
 
 func (agent *Agent) runNotificationsWorker(ctx context.Context) {
-
-	url := agent.config.WebSocketURL
-
 	for {
-		ws := hass.NewWebsocket(ctx, url)
+		ws := hass.NewWebsocket(ctx)
 		if ws == nil {
 			log.Debug().Caller().
 				Msgf("No websocket connection made.")
@@ -31,8 +29,12 @@ func (agent *Agent) runNotificationsWorker(ctx context.Context) {
 }
 
 func (agent *Agent) handleNotifications(ctx context.Context, response chan *hass.WebsocketResponse, request chan interface{}) {
-	accessToken := agent.config.token
-	webhookID := agent.config.webhookID
+
+	config, validConfig := config.FromContext(ctx)
+	if !validConfig {
+		log.Debug().Caller().Msg("Could not retrieve valid config from context.")
+		return
+	}
 
 	for {
 		select {
@@ -48,7 +50,7 @@ func (agent *Agent) handleNotifications(ctx context.Context, response chan *hass
 					AccessToken string `json:"access_token"`
 				}{
 					Type:        "auth",
-					AccessToken: accessToken,
+					AccessToken: config.Token,
 				}
 			case "auth_ok":
 				log.Debug().Caller().Msg("Registering app for push notifications.")
@@ -60,7 +62,7 @@ func (agent *Agent) handleNotifications(ctx context.Context, response chan *hass
 				}{
 					Type:           "mobile_app/push_notification_channel",
 					ID:             1,
-					WebHookID:      webhookID,
+					WebHookID:      config.WebhookID,
 					SupportConfirm: false,
 				}
 			case "result":

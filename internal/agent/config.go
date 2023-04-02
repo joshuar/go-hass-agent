@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 
+	"github.com/joshuar/go-hass-agent/internal/config"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/rs/zerolog/log"
 )
@@ -12,51 +13,72 @@ const (
 	webHookPath   = "/api/webhook/"
 )
 
-type AppConfig struct {
-	APIURL       string `json:"restapi_url"`
-	WebSocketURL string `json:"instance_url"`
-	secret       string
-	token        string
-	webhookID    string
-}
+// type AppConfig struct {
+// 	APIURL       string `json:"restapi_url"`
+// 	WebSocketURL string `json:"instance_url"`
+// 	secret       string
+// 	token        string
+// 	webhookID    string
+// }
 
-func (agent *Agent) loadConfig(ctx context.Context) {
+// // key is an unexported type for keys defined in this package.
+// // This prevents collisions with keys defined in other packages.
+// type key int
+
+// // configKey is the key for agent.AppConfig values in Contexts. It is
+// // unexported; clients use user.NewContext and user.FromContext
+// // instead of using this key directly.
+// var configKey key
+
+// // NewContext returns a new Context that carries value c.
+// func NewContext(ctx context.Context, c *AppConfig) context.Context {
+// 	return context.WithValue(ctx, configKey, c)
+// }
+
+// // FromContext returns the User value stored in ctx, if any.
+// func FromContext(ctx context.Context) (*AppConfig, bool) {
+// 	c, ok := ctx.Value(configKey).(*AppConfig)
+// 	return c, ok
+// }
+
+func (agent *Agent) loadConfig(ctx context.Context) *config.AppConfig {
 	for {
 		CloudhookURL := agent.App.Preferences().String("CloudhookURL")
 		RemoteUIURL := agent.App.Preferences().String("RemoteUIURL")
 		Host := agent.App.Preferences().String("Host")
 		UseTLS := agent.App.Preferences().Bool("UseTLS")
 
-		agent.config.secret = agent.App.Preferences().String("Secret")
-		agent.config.token = agent.App.Preferences().String("Token")
-		agent.config.webhookID = agent.App.Preferences().String("WebhookID")
+		config := &config.AppConfig{}
+		config.Secret = agent.App.Preferences().String("Secret")
+		config.Token = agent.App.Preferences().String("Token")
+		config.WebhookID = agent.App.Preferences().String("WebhookID")
 
 		if UseTLS {
-			agent.config.WebSocketURL = "wss://" + Host + websocketPath
+			config.WebSocketURL = "wss://" + Host + websocketPath
 		} else {
-			agent.config.WebSocketURL = "ws://" + Host + websocketPath
+			config.WebSocketURL = "ws://" + Host + websocketPath
 		}
 
 		switch {
 		case CloudhookURL != "":
-			agent.config.APIURL = CloudhookURL
+			config.APIURL = CloudhookURL
 			log.Debug().Caller().
-				Msgf("Using CloudhookURL %s for Home Assistant access", agent.config.APIURL)
-			return
-		case RemoteUIURL != "" && agent.config.webhookID != "":
-			agent.config.APIURL = RemoteUIURL + webHookPath + agent.config.webhookID
+				Msgf("Using CloudhookURL %s for Home Assistant access", config.APIURL)
+			return config
+		case RemoteUIURL != "" && config.WebhookID != "":
+			config.APIURL = RemoteUIURL + webHookPath + config.WebhookID
 			log.Debug().Caller().
-				Msgf("Using RemoteUIURL %s for Home Assistant access", agent.config.APIURL)
-			return
-		case agent.config.webhookID != "" && Host != "":
+				Msgf("Using RemoteUIURL %s for Home Assistant access", config.APIURL)
+			return config
+		case config.WebhookID != "" && Host != "":
 			if UseTLS {
-				agent.config.APIURL = "https://" + Host + webHookPath + agent.config.webhookID
+				config.APIURL = "https://" + Host + webHookPath + config.WebhookID
 			} else {
-				agent.config.APIURL = "http://" + Host + webHookPath + agent.config.webhookID
+				config.APIURL = "http://" + Host + webHookPath + config.WebhookID
 			}
 			log.Debug().Caller().
-				Msgf("Using generated URL %s for Home Assistant access", agent.config.APIURL)
-			return
+				Msgf("Using generated URL %s for Home Assistant access", config.APIURL)
+			return config
 		default:
 			log.Warn().Msg("No suitable existing config found! Starting new registration process")
 			err := agent.runRegistrationWorker(ctx)

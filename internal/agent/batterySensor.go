@@ -46,20 +46,9 @@ type BatteryState interface {
 	Type() interface{}
 }
 
-// batterySensor implements the sensor interface to
-// create a battery sensor in HA based on its deviceClass
-type batterySensor struct {
-	deviceClass     batteryDeviceClass
-	state           interface{}
-	attributes      interface{}
-	name            string
-	entityID        string
-	disabled        bool
-	registered      bool
-	encryptRequests bool
-}
+type batterySensor sensorState
 
-func newBatterySensor(batteryID string, sensorType batteryDeviceClass, encryptRequests bool) *batterySensor {
+func newBatterySensor(batteryID string, sensorType batteryDeviceClass) *batterySensor {
 	var sensorName, sensorID string
 	switch sensorType {
 	case battery:
@@ -78,10 +67,9 @@ func newBatterySensor(batteryID string, sensorType batteryDeviceClass, encryptRe
 		return nil
 	}
 	return &batterySensor{
-		name:            sensorName,
-		entityID:        sensorID,
-		encryptRequests: encryptRequests,
-		deviceClass:     sensorType,
+		name:        sensorName,
+		entityID:    sensorID,
+		deviceClass: sensorType,
 	}
 
 }
@@ -96,7 +84,7 @@ func (b *batterySensor) Attributes() interface{} {
 func (b *batterySensor) DeviceClass() string {
 	switch b.deviceClass {
 	case battery, temperature, power:
-		return b.deviceClass.String()
+		return b.deviceClass.(batteryDeviceClass).String()
 	default:
 		return ""
 	}
@@ -223,10 +211,6 @@ func (b *batterySensor) RequestData() interface{} {
 	return hass.MarshallSensorData(b)
 }
 
-func (b *batterySensor) IsEncrypted() bool {
-	return b.encryptRequests
-}
-
 // batteryTracker keeps track of a particular battery
 // it handles creating and updating the individual sensors
 // associated with the battery in HA
@@ -237,15 +221,16 @@ type batteryTracker struct {
 	sensors     map[batteryDeviceClass]*batterySensor
 }
 
-func newBatteryTracker(ctx context.Context, batteryID string, encryptRequests bool) *batteryTracker {
+func newBatteryTracker(ctx context.Context, batteryID string) *batteryTracker {
 	newTracker := &batteryTracker{
 		updateCh: make(chan BatteryState),
 		sensors:  make(map[batteryDeviceClass]*batterySensor),
 	}
-	newTracker.sensors[battery] = newBatterySensor(batteryID, battery, encryptRequests)
-	newTracker.sensors[temperature] = newBatterySensor(batteryID, temperature, encryptRequests)
-	newTracker.sensors[power] = newBatterySensor(batteryID, power, encryptRequests)
-	newTracker.sensors[state] = newBatterySensor(batteryID, state, encryptRequests)
+
+	newTracker.sensors[battery] = newBatterySensor(batteryID, battery)
+	newTracker.sensors[temperature] = newBatterySensor(batteryID, temperature)
+	newTracker.sensors[power] = newBatterySensor(batteryID, power)
+	newTracker.sensors[state] = newBatterySensor(batteryID, state)
 	go newTracker.monitor(ctx)
 	return newTracker
 }
@@ -272,24 +257,17 @@ func (tracker *batteryTracker) monitor(ctx context.Context) {
 	}
 }
 
-func (tracker *batteryTracker) UpdateHass(ctx context.Context, url string) {
-	go hass.APIRequest(ctx, url, tracker.sensors[power], tracker.sensors[power].HandleAPIResponse)
-	go hass.APIRequest(ctx, url, tracker.sensors[temperature], tracker.sensors[temperature].HandleAPIResponse)
-	go hass.APIRequest(ctx, url, tracker.sensors[battery], tracker.sensors[battery].HandleAPIResponse)
-	go hass.APIRequest(ctx, url, tracker.sensors[state], tracker.sensors[state].HandleAPIResponse)
+func (tracker *batteryTracker) UpdateHass(ctx context.Context) {
+	go hass.APIRequest(ctx, tracker.sensors[power], tracker.sensors[power].HandleAPIResponse)
+	go hass.APIRequest(ctx, tracker.sensors[temperature], tracker.sensors[temperature].HandleAPIResponse)
+	go hass.APIRequest(ctx, tracker.sensors[battery], tracker.sensors[battery].HandleAPIResponse)
+	go hass.APIRequest(ctx, tracker.sensors[state], tracker.sensors[state].HandleAPIResponse)
 }
 
 func (agent *Agent) runBatterySensorWorker(ctx context.Context) {
-	var encryptRequests = false
-	if agent.config.secret != "" {
-		encryptRequests = true
-	}
 
 	updateCh := make(chan interface{})
 	defer close(updateCh)
-
-	// deviceName, _ := agent.GetDeviceDetails()
-	apiURL := agent.config.APIURL
 
 	batteries := make(map[string]*batteryTracker)
 
@@ -303,10 +281,10 @@ func (agent *Agent) runBatterySensorWorker(ctx context.Context) {
 			if _, ok := batteries[info.ID()]; ok {
 				batteries[info.ID()].updateCh <- info
 			} else {
-				batteries[info.ID()] = newBatteryTracker(ctx, info.ID(), encryptRequests)
+				batteries[info.ID()] = newBatteryTracker(ctx, info.ID())
 				batteries[info.ID()].updateCh <- info
 			}
-			batteries[info.ID()].UpdateHass(ctx, apiURL)
+			batteries[info.ID()].UpdateHass(ctx)
 		case <-ctx.Done():
 			log.Debug().Caller().
 				Msg("Cleaning up battery sensors.")

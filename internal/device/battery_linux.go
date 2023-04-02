@@ -10,7 +10,7 @@ import (
 
 const (
 	upowerDBusDest         = "org.freedesktop.UPower"
-	upowerDBusPath         = "org.freedesktop.UPower"
+	upowerDBusPath         = "/org/freedesktop/UPower"
 	upowerGetDevicesMethod = "org.freedesktop.UPower.EnumerateDevices"
 	upowerGetPropsMethod   = "org.freedesktop.DBus.Properties.GetAll"
 )

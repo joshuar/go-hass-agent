@@ -6,6 +6,7 @@ import (
 
 	"fyne.io/fyne/v2"
 	"github.com/jeandeaual/go-locale"
+	"github.com/joshuar/go-hass-agent/internal/config"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
@@ -20,7 +21,6 @@ const (
 type Agent struct {
 	App           fyne.App
 	Tray          fyne.Window
-	config        AppConfig
 	Name, Version string
 	MsgPrinter    *message.Printer
 }
@@ -50,11 +50,13 @@ func NewAgent() (*Agent, context.Context, context.CancelFunc) {
 }
 
 func (agent *Agent) runWorkers(ctx context.Context, once *sync.Once) {
-	once.Do(func() { agent.loadConfig(ctx) })
-	go agent.runNotificationsWorker(ctx)
-	go agent.runLocationWorker(ctx)
-	go agent.runAppSensorWorker(ctx)
-	go agent.runBatterySensorWorker(ctx)
+	appConfig := &config.AppConfig{}
+	once.Do(func() { appConfig = agent.loadConfig(ctx) })
+	workerCtx := config.NewContext(ctx, appConfig)
+	go agent.runNotificationsWorker(workerCtx)
+	go agent.runLocationWorker(workerCtx)
+	go agent.runAppSensorWorker(workerCtx)
+	go agent.runBatterySensorWorker(workerCtx)
 }
 
 func (agent *Agent) Exit() {

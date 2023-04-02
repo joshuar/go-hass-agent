@@ -7,6 +7,7 @@ import (
 
 	"github.com/carlmjohnson/requests"
 	"github.com/cenkalti/backoff"
+	"github.com/joshuar/go-hass-agent/internal/config"
 	"github.com/rs/zerolog/log"
 )
 
@@ -18,11 +19,10 @@ type RequestType string
 type Request interface {
 	RequestType() RequestType
 	RequestData() interface{}
-	IsEncrypted() bool
 }
 
-func MarshalJSON(request Request) ([]byte, error) {
-	if request.IsEncrypted() {
+func MarshalJSON(request Request, secret string) ([]byte, error) {
+	if secret != "" {
 		return json.Marshal(&struct {
 			Type          RequestType `json:"type"`
 			Encrypted     bool        `json:"encrypted"`
@@ -64,11 +64,20 @@ type Response struct {
 	// ID string `json:"id,omitempty"`
 }
 
-func APIRequest(ctx context.Context, url string, request interface{}, response func(r interface{})) {
+func APIRequest(ctx context.Context, request interface{}, response func(r interface{})) {
 
 	requestCtx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
-	reqJson, err := MarshalJSON(request.(Request))
+
+	config, validConfig := config.FromContext(requestCtx)
+	if !validConfig {
+		log.Debug().Caller().Msg("Could not retrieve valid config from context.")
+		cancel()
+		response(nil)
+		return
+	}
+
+	reqJson, err := MarshalJSON(request.(Request), config.Secret)
 	if err != nil {
 		log.Error().Msgf("Unable to format request: %v", err)
 		response(nil)
@@ -76,7 +85,7 @@ func APIRequest(ctx context.Context, url string, request interface{}, response f
 		var res interface{}
 		requestFunc := func() error {
 			return requests.
-				URL(url).
+				URL(config.APIURL).
 				BodyBytes(reqJson).
 				ToJSON(&res).
 				Fetch(requestCtx)
