@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/carlmjohnson/requests"
-	"github.com/cenkalti/backoff"
+	"github.com/cenkalti/backoff/v4"
 	"github.com/joshuar/go-hass-agent/internal/config"
 	"github.com/rs/zerolog/log"
 )
@@ -56,12 +56,6 @@ type EncryptedRequest struct {
 
 type Response struct {
 	Success bool `json:"success,omitempty"`
-	// Type    string `json:"type,omitempty"`
-	// Error   struct {
-	// 	Code    string `json:"code"`
-	// 	Message string `json:"message"`
-	// } `json:"error,omitempty"`
-	// ID string `json:"id,omitempty"`
 }
 
 func APIRequest(ctx context.Context, request interface{}, response func(r interface{})) {

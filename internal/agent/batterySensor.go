@@ -49,20 +49,24 @@ type BatteryState interface {
 type batterySensor sensorState
 
 func newBatterySensor(batteryID string, sensorType batteryDeviceClass) *batterySensor {
-	var sensorName, sensorID string
+	var sensorName, sensorID, stateClass string
 	switch sensorType {
 	case battery:
 		sensorName = batteryID + " Battery Level"
 		sensorID = batteryID + "_battery_level"
+		stateClass = "measurement"
 	case temperature:
 		sensorName = batteryID + " Battery Temperature"
 		sensorID = batteryID + "_battery_temperature"
+		stateClass = "measurement"
 	case power:
 		sensorName = batteryID + " Battery Power"
 		sensorID = batteryID + "_battery_power"
+		stateClass = "measurement"
 	case state:
 		sensorName = batteryID + " Battery State"
 		sensorID = batteryID + "_battery_state"
+		stateClass = ""
 	default:
 		return nil
 	}
@@ -70,6 +74,7 @@ func newBatterySensor(batteryID string, sensorType batteryDeviceClass) *batteryS
 		name:        sensorName,
 		entityID:    sensorID,
 		deviceClass: sensorType,
+		stateClass:  stateClass,
 	}
 
 }
@@ -144,12 +149,7 @@ func (b *batterySensor) UnitOfMeasurement() string {
 }
 
 func (b *batterySensor) StateClass() string {
-	switch b.deviceClass {
-	case battery, temperature, power:
-		return "measurement"
-	default:
-		return ""
-	}
+	return b.stateClass
 }
 
 func (b *batterySensor) EntityCategory() string {
@@ -273,7 +273,6 @@ func (agent *Agent) runBatterySensorWorker(ctx context.Context) {
 
 	go device.BatteryUpdater(ctx, updateCh)
 
-	// for i := range updateCh {
 	for {
 		select {
 		case i := <-updateCh:
@@ -288,7 +287,6 @@ func (agent *Agent) runBatterySensorWorker(ctx context.Context) {
 		case <-ctx.Done():
 			log.Debug().Caller().
 				Msg("Cleaning up battery sensors.")
-			// close(updateCh)
 			return
 		}
 	}

@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/cenkalti/backoff"
+	"github.com/cenkalti/backoff/v4"
 	"github.com/joshuar/go-hass-agent/internal/config"
 	"github.com/rs/zerolog/log"
 	"nhooyr.io/websocket"

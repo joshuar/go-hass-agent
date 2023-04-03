@@ -19,8 +19,7 @@ type locationData interface {
 }
 
 type location struct {
-	data    locationData
-	encrypt bool
+	data locationData
 }
 
 func (l *location) RequestType() hass.RequestType {
@@ -45,10 +44,6 @@ func (l *location) RequestData() interface{} {
 		Course:           l.data.Course(),
 		VerticalAccuracy: l.data.VerticalAccuracy(),
 	}
-}
-
-func (l *location) IsEncrypted() bool {
-	return l.encrypt
 }
 
 func (l *location) handleResponse(rawResponse interface{}) {

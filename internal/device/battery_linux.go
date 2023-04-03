@@ -76,17 +76,16 @@ func (s *upowerBattery) Type() interface{} {
 
 func BatteryUpdater(ctx context.Context, status chan interface{}) {
 
-	conn, err := DBusConnectSystem(ctx)
-	if err != nil {
+	deviceAPI, deviceAPIExists := FromContext(ctx)
+	if !deviceAPIExists {
 		log.Debug().Caller().
-			Msgf("Could not connect to DBus to monitor batteries: %v", err)
+			Msg("Could not connect to DBus to monitor batteries.")
 		return
 	}
-	defer conn.Close()
 
-	obj := conn.Object(upowerDBusDest, upowerDBusPath)
+	obj := deviceAPI.DBusConn(systemBus).Object(upowerDBusDest, upowerDBusPath)
 	var batteryList []dbus.ObjectPath
-	err = obj.Call(upowerGetDevicesMethod, 0).Store(&batteryList)
+	err := obj.Call(upowerGetDevicesMethod, 0).Store(&batteryList)
 	if err != nil {
 		log.Debug().Caller().
 			Msgf("Unable to find all battery devices: %v", err)
@@ -104,7 +103,7 @@ func BatteryUpdater(ctx context.Context, status chan interface{}) {
 			for i := 0; i < len(batteryList); i++ {
 				battery := &upowerBattery{}
 				var batteryInfo map[string]dbus.Variant
-				obj := conn.Object("org.freedesktop.UPower", batteryList[i])
+				obj := deviceAPI.DBusConn(systemBus).Object("org.freedesktop.UPower", batteryList[i])
 				err := obj.Call(upowerGetPropsMethod, 0, "org.freedesktop.UPower.Device").Store(&batteryInfo)
 				if err != nil {
 					log.Debug().Caller().

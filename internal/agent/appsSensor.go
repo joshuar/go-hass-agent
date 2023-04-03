@@ -18,16 +18,7 @@ type runningApps interface {
 	Attributes() interface{}
 }
 
-type appSensor struct {
-	name            string
-	id              string
-	state           interface{}
-	stateClass      string
-	attributes      interface{}
-	disabled        bool
-	registered      bool
-	encryptRequests bool
-}
+type appSensor sensorState
 
 // Ensure appSensor satisfies the sensor interface so it can be
 // treated as a sensor
@@ -57,7 +48,7 @@ func (s *appSensor) SensorType() string {
 }
 
 func (s *appSensor) UniqueID() string {
-	return s.id
+	return s.entityID
 }
 
 func (s *appSensor) UnitOfMeasurement() string {
@@ -127,20 +118,14 @@ func (a *appSensor) RequestData() interface{} {
 	return hass.MarshallSensorData(a)
 }
 
-func (a *appSensor) IsEncrypted() bool {
-	return a.encryptRequests
-}
-
 func (agent *Agent) runAppSensorWorker(ctx context.Context) {
 	updateCh := make(chan interface{})
 	defer close(updateCh)
 
-	// deviceName, _ := agent.GetDeviceDetails()
-
 	activeAppSensor := &appSensor{
 		state:      "Unknown",
 		name:       "Active App",
-		id:         "active_app",
+		entityID:   "active_app",
 		registered: false,
 		disabled:   false,
 	}
@@ -148,7 +133,7 @@ func (agent *Agent) runAppSensorWorker(ctx context.Context) {
 	runningAppsSensor := &appSensor{
 		state:      "Unknown",
 		name:       "Running Apps",
-		id:         "running_apps",
+		entityID:   "running_apps",
 		stateClass: "measurement",
 		registered: false,
 		disabled:   false,
@@ -159,8 +144,6 @@ func (agent *Agent) runAppSensorWorker(ctx context.Context) {
 	for {
 		select {
 		case data := <-updateCh:
-			// }
-			// for data := range updateCh {
 			activeAppSensor.state = data.(activeApp).Name()
 			activeAppSensor.attributes = data.(activeApp).Attributes()
 			go hass.APIRequest(ctx, activeAppSensor, activeAppSensor.HandleAPIResponse)
@@ -171,7 +154,7 @@ func (agent *Agent) runAppSensorWorker(ctx context.Context) {
 
 		case <-ctx.Done():
 			log.Debug().Caller().Msgf("Cleaning up app sensor.")
-			// close(updateCh)
+			close(updateCh)
 			return
 		}
 	}

@@ -50,33 +50,11 @@ func (a *appInfo) Attributes() interface{} {
 }
 
 func AppUpdater(ctx context.Context, app chan interface{}) {
-	monitorConn, err := DBusConnectSession(ctx)
-	if err != nil {
-		log.Debug().Caller().
-			Msgf("Could not connect to DBus to monitor app state: %v", err)
-		return
-	}
-	defer monitorConn.Close()
 
-	rules := []string{
-		"type='signal',member='RunningApplicationsChanged',path='/org/freedesktop/portal/desktop',interface='org.freedesktop.impl.portal.Background'",
-	}
-	err = DBusBecomeMonitor(monitorConn, rules, 0)
-	if err != nil {
+	deviceAPI, deviceAPIExists := FromContext(ctx)
+	if !deviceAPIExists {
 		log.Debug().Caller().
-			Msgf("Could become monitor: %v", err)
-		return
-	}
-
-	c := make(chan *dbus.Message, 10)
-	defer close(c)
-	monitorConn.Eavesdrop(c)
-	log.Debug().Caller().Msg("Monitoring DBus for app changes.")
-
-	appChkConn, err := DBusConnectSession(ctx)
-	if err != nil {
-		log.Debug().Caller().
-			Msgf("Could not connect to DBus to monitor app state: %v", err)
+			Msg("Could not connect to DBus to monitor batteries.")
 		return
 	}
 
@@ -89,12 +67,17 @@ func AppUpdater(ctx context.Context, app chan interface{}) {
 
 	a := &appInfo{}
 
-	for {
-		select {
-		case <-c:
-			obj := appChkConn.Object(portalDest, appStateDBusPath)
+	appChangeSignal := &DBusWatchData{
+		bus: sessionBus,
+		signal: DBusSignal{
+			path: "/org/freedesktop/portal/desktop",
+			intr: "org.freedesktop.impl.portal.Background",
+		},
+		event: "org.freedesktop.impl.portal.Background.RunningApplicationsChanged",
+		eventHandler: func(s *dbus.Signal) {
+			obj := deviceAPI.dBusSession.Object(portalDest, appStateDBusPath)
 			var activeAppList map[string]interface{}
-			err = obj.Call(appStateDBusMethod, 0).Store(&activeAppList)
+			err := obj.Call(appStateDBusMethod, 0).Store(&activeAppList)
 			if err != nil {
 				log.Debug().Caller().Msgf(err.Error())
 			} else {
@@ -102,6 +85,24 @@ func AppUpdater(ctx context.Context, app chan interface{}) {
 				a.activeApps = activeAppList
 				app <- a
 			}
+		},
+	}
+	log.Debug().Caller().Msg("Adding a DBus watch for app change events.")
+	deviceAPI.WatchEvents <- appChangeSignal
+
+	for {
+		select {
+		// case <-c:
+		// 	obj := deviceAPI.dBusSession.Object(portalDest, appStateDBusPath)
+		// 	var activeAppList map[string]interface{}
+		// 	err = obj.Call(appStateDBusMethod, 0).Store(&activeAppList)
+		// 	if err != nil {
+		// 		log.Debug().Caller().Msgf(err.Error())
+		// 	} else {
+		// 		a.activeApps = nil
+		// 		a.activeApps = activeAppList
+		// 		app <- a
+		// 	}
 		case <-ctx.Done():
 		case <-app:
 			log.Debug().Caller().

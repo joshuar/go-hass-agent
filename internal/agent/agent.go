@@ -23,14 +23,16 @@ type Agent struct {
 	Tray          fyne.Window
 	Name, Version string
 	MsgPrinter    *message.Printer
+	cancel        context.CancelFunc
 }
 
-func NewAgent() (*Agent, context.Context, context.CancelFunc) {
-	agentCtx, cancel := context.WithCancel(context.Background())
+func NewAgent(ctx context.Context) *Agent {
+	agentCtx, cancel := context.WithCancel(ctx)
 	agent := &Agent{
 		App:     newUI(),
 		Name:    Name,
 		Version: Version,
+		cancel:  cancel,
 	}
 
 	userLocales, err := locale.GetLocales()
@@ -46,7 +48,7 @@ func NewAgent() (*Agent, context.Context, context.CancelFunc) {
 	var once sync.Once
 
 	go agent.runWorkers(agentCtx, &once)
-	return agent, agentCtx, cancel
+	return agent
 }
 
 func (agent *Agent) runWorkers(ctx context.Context, once *sync.Once) {
@@ -61,6 +63,7 @@ func (agent *Agent) runWorkers(ctx context.Context, once *sync.Once) {
 
 func (agent *Agent) Exit() {
 	log.Debug().Caller().Msg("Shutting down agent.")
+	agent.cancel()
 	agent.Tray.Close()
 	agent.App.Quit()
 }
