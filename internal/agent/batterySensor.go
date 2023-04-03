@@ -10,22 +10,12 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-//go:generate stringer -type=batteryDeviceClass,batteryType -output batterySensor_string.go
+//go:generate stringer -type=batteryDeviceClass -output batterySensor_string.go
 const (
 	battery batteryDeviceClass = iota
 	temperature
 	power
 	state
-
-	unknown batteryType = iota
-	linePower
-	generic
-	ups
-	monitor
-	mouse
-	keyboard
-	pda
-	phone
 )
 
 type batteryDeviceClass int

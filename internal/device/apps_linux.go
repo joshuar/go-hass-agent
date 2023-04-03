@@ -66,23 +66,20 @@ func AppUpdater(ctx context.Context, app chan interface{}) {
 	}
 
 	a := &appInfo{}
-
-	appChangeSignal := &DBusWatchData{
+	appChangeSignal := &DBusWatchRequest{
 		bus: sessionBus,
-		signal: DBusSignal{
+		match: DBusSignalMatch{
 			path: "/org/freedesktop/portal/desktop",
 			intr: "org.freedesktop.impl.portal.Background",
 		},
 		event: "org.freedesktop.impl.portal.Background.RunningApplicationsChanged",
 		eventHandler: func(s *dbus.Signal) {
-			obj := deviceAPI.dBusSession.Object(portalDest, appStateDBusPath)
-			var activeAppList map[string]interface{}
-			err := obj.Call(appStateDBusMethod, 0).Store(&activeAppList)
+			activeAppList, err := deviceAPI.GetDBusData(sessionBus, portalDest, appStateDBusPath, appStateDBusMethod)
 			if err != nil {
 				log.Debug().Caller().Msgf(err.Error())
 			} else {
 				a.activeApps = nil
-				a.activeApps = activeAppList
+				a.activeApps = activeAppList.(map[string]interface{})
 				app <- a
 			}
 		},

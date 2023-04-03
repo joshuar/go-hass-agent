@@ -2,10 +2,9 @@ package device
 
 import (
 	"context"
+	"fmt"
 	"os"
-	"strconv"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/godbus/dbus/v5"
 	"github.com/rs/zerolog/log"
 )
@@ -17,31 +16,69 @@ const (
 )
 
 type dbusType int
-type deviceAPI struct {
-	dBusSystem                          *dbus.Conn
-	dBusSession                         *dbus.Conn
-	DBusSessionEvents, DBusSystemEvents chan *dbus.Signal
-	WatchEvents                         chan *DBusWatchData
+type bus struct {
+	conn    *dbus.Conn
+	events  chan *dbus.Signal
+	busType dbusType
 }
 
-type DBusSignal struct {
+func NewBus(ctx context.Context, t dbusType) *bus {
+	var conn *dbus.Conn
+	var err error
+	switch t {
+	case sessionBus:
+		conn, err = dbus.ConnectSessionBus(dbus.WithContext(ctx))
+	case systemBus:
+		conn, err = dbus.ConnectSystemBus(dbus.WithContext(ctx))
+	}
+	if err != nil {
+		log.Debug().Caller().
+			Msgf("Could not connect to bus: %v", err)
+		return nil
+	}
+	events := make(chan *dbus.Signal)
+	conn.Signal(events)
+	return &bus{
+		conn:    conn,
+		events:  events,
+		busType: t,
+	}
+}
+
+type DBusSignalMatch struct {
 	path dbus.ObjectPath
 	intr string
 }
 
-type DBusWatchData struct {
+type DBusWatchRequest struct {
 	bus          dbusType
-	signal       DBusSignal
+	match        DBusSignalMatch
 	event        string
 	eventHandler func(*dbus.Signal)
 }
 
-func (d *deviceAPI) DBusConn(t dbusType) *dbus.Conn {
+type deviceAPI struct {
+	dBusSystem, dBusSession *bus
+	WatchEvents             chan *DBusWatchRequest
+}
+
+func NewContextWithDeviceAPI(ctx context.Context) context.Context {
+	deviceAPI := &deviceAPI{
+		dBusSystem:  NewBus(ctx, systemBus),
+		dBusSession: NewBus(ctx, sessionBus),
+		WatchEvents: make(chan *DBusWatchRequest),
+	}
+	go deviceAPI.monitorDBus(ctx)
+	deviceCtx := NewContext(ctx, deviceAPI)
+	return deviceCtx
+}
+
+func (d *deviceAPI) bus(t dbusType) *dbus.Conn {
 	switch t {
 	case sessionBus:
-		return d.dBusSession
+		return d.dBusSession.conn
 	case systemBus:
-		return d.dBusSystem
+		return d.dBusSystem.conn
 	default:
 		return nil
 	}
@@ -55,18 +92,18 @@ func (d *deviceAPI) monitorDBus(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			close(d.WatchEvents)
-			close(d.DBusSessionEvents)
-			close(d.DBusSessionEvents)
+			close(d.dBusSession.events)
+			close(d.dBusSystem.events)
 		case watch := <-d.WatchEvents:
-			d.WatchDBusSignal(watch.bus, watch.signal)
+			d.AddDBusWatch(watch.bus, watch.match)
 			events[watch.bus][watch.event] = watch.eventHandler
-			log.Debug().Caller().Msgf("Added watch for %v", watch)
-			spew.Dump(events)
-		case systemSignal := <-d.DBusSystemEvents:
+			log.Debug().Caller().Msgf("Added watch for %v on %v", watch.event, watch.match.path)
+		case systemSignal := <-d.dBusSystem.events:
+			log.Debug().Msgf("Recieved system event: %v", systemSignal.Name)
 			if handlerFunc, ok := events[systemBus][systemSignal.Name]; ok {
 				handlerFunc(systemSignal)
 			}
-		case sessionSignal := <-d.DBusSessionEvents:
+		case sessionSignal := <-d.dBusSession.events:
 			log.Debug().Msgf("Recieved session event: %v", sessionSignal.Name)
 			if handlerFunc, ok := events[sessionBus][sessionSignal.Name]; ok {
 				handlerFunc(sessionSignal)
@@ -75,10 +112,12 @@ func (d *deviceAPI) monitorDBus(ctx context.Context) {
 	}
 }
 
-func (d *deviceAPI) WatchDBusSignal(t dbusType, s DBusSignal) error {
-	if err := d.DBusConn(t).AddMatchSignal(
-		dbus.WithMatchObjectPath(s.path),
-		dbus.WithMatchInterface(s.intr),
+// watchDBusSignal will add a matcher to the specified bus monitoring for
+// the specified path and interface.
+func (d *deviceAPI) AddDBusWatch(t dbusType, m DBusSignalMatch) error {
+	if err := d.bus(t).AddMatchSignal(
+		dbus.WithMatchObjectPath(m.path),
+		dbus.WithMatchInterface(m.intr),
 	); err != nil {
 		return err
 	} else {
@@ -86,33 +125,29 @@ func (d *deviceAPI) WatchDBusSignal(t dbusType, s DBusSignal) error {
 	}
 }
 
-func NewContextWithDeviceAPI(ctx context.Context) context.Context {
-	system, err := dbus.ConnectSystemBus(dbus.WithContext(ctx))
+func (d *deviceAPI) GetDBusProp(t dbusType, dest string, path dbus.ObjectPath, prop string) (dbus.Variant, error) {
+	obj := d.bus(t).Object(dest, path)
+	res, err := obj.GetProperty(prop)
 	if err != nil {
-		log.Debug().Caller().
-			Msgf("Could not connect to system bus: %v", err)
+		return dbus.MakeVariant(""), err
 	}
-	systemEvents := make(chan *dbus.Signal)
-	system.Signal(systemEvents)
+	return res, nil
+}
 
-	session, err := dbus.ConnectSessionBus(dbus.WithContext(ctx))
+func (d *deviceAPI) GetDBusData(t dbusType, dest string, path dbus.ObjectPath, method string, args ...interface{}) (interface{}, error) {
+	obj := d.bus(t).Object(dest, path)
+	var data interface{}
+	var err error
+	if args != nil {
+		err = obj.Call(method, 0, args).Store(&data)
+	} else {
+		err = obj.Call(method, 0).Store(&data)
+	}
 	if err != nil {
-		log.Debug().Caller().
-			Msgf("Could not connect to session bus: %v", err)
+		fmt.Fprintln(os.Stderr, err)
+		return nil, err
 	}
-	sessionEvents := make(chan *dbus.Signal)
-	session.Signal(sessionEvents)
-
-	deviceAPI := &deviceAPI{
-		dBusSystem:        system,
-		DBusSystemEvents:  systemEvents,
-		dBusSession:       session,
-		DBusSessionEvents: sessionEvents,
-		WatchEvents:       make(chan *DBusWatchData),
-	}
-	go deviceAPI.monitorDBus(ctx)
-	deviceCtx := NewContext(ctx, deviceAPI)
-	return deviceCtx
+	return data, nil
 }
 
 // key is an unexported type for keys defined in this package.
@@ -133,42 +168,6 @@ func NewContext(ctx context.Context, d *deviceAPI) context.Context {
 func FromContext(ctx context.Context) (*deviceAPI, bool) {
 	c, ok := ctx.Value(configKey).(*deviceAPI)
 	return c, ok
-}
-
-func DBusConnectSystem(ctx context.Context) (*dbus.Conn, error) {
-	conn, err := dbus.SystemBusPrivate(dbus.WithContext(ctx))
-	if err != nil {
-		log.Debug().Caller().
-			Msg("Failed to connect to private system bus.")
-		conn.Close()
-		return nil, err
-	}
-
-	err = conn.Auth([]dbus.Auth{dbus.AuthExternal(strconv.Itoa(os.Getuid()))})
-	if err != nil {
-		log.Debug().Caller().
-			Msg("Failed to authenticate to private system bus.")
-		conn.Close()
-		return nil, err
-	}
-
-	err = conn.Hello()
-	if err != nil {
-		log.Debug().Caller().
-			Msg("Failed to send Hello call.")
-		conn.Close()
-		return nil, err
-	}
-	return conn, nil
-}
-
-func DBusConnectSession(ctx context.Context) (*dbus.Conn, error) {
-	return dbus.ConnectSessionBus(dbus.WithContext(ctx))
-}
-
-func DBusBecomeMonitor(conn *dbus.Conn, rules []string, flag uint) error {
-	call := conn.BusObject().Call(monitorDBusMethod, 0, rules, flag)
-	return call.Err
 }
 
 func FindPortal() string {
