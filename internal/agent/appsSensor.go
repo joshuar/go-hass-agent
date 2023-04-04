@@ -154,7 +154,6 @@ func (agent *Agent) runAppSensorWorker(ctx context.Context) {
 
 		case <-ctx.Done():
 			log.Debug().Caller().Msgf("Cleaning up app sensor.")
-			close(updateCh)
 			return
 		}
 	}

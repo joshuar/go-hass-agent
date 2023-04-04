@@ -19,31 +19,9 @@ const (
 	state
 )
 
-// batteryDeviceClass is the Device Class of the sensor, derived from the
-// state type.
+// batteryDeviceClass is the Device Class of the sensor, derived from the state
+// type.
 type batteryDeviceClass int
-
-type batteryState interface {
-	ID() string
-	Type() device.BatteryProp
-	Value() interface{}
-	ExtraValues() interface{}
-}
-
-// BatteryState is an interface that represents the state
-// of a device battery at a particular point in time
-type BatteryState interface {
-	LevelPercent() float64
-	Temperature() float64
-	Health() string
-	Power() float64
-	Voltage() float64
-	Energy() float64
-	ChargerType() string
-	State() string
-	ID() string
-	Type() interface{}
-}
 
 type batterySensor sensorState
 
@@ -81,8 +59,8 @@ func newBatterySensor(batteryID string, sensorType device.BatteryProp) *batteryS
 
 }
 
-// Ensure a batterySensor satisfies the sensor interface so it can be
-// treated as a sensor
+// Ensure a batterySensor satisfies the sensor interface so it can be treated as
+// a sensor
 
 func (b *batterySensor) Attributes() interface{} {
 	return b.attributes
@@ -166,8 +144,8 @@ func (b *batterySensor) Registered() bool {
 	return b.registered
 }
 
-// Ensure that a batterySensor satisfies the hass.Request interface
-// so its data can be sent as a request to HA
+// Ensure that a batterySensor satisfies the hass.Request interface so its data
+// can be sent as a request to HA
 
 func (b *batterySensor) RequestType() hass.RequestType {
 	if b.Registered() {
@@ -225,10 +203,10 @@ func (agent *Agent) runBatterySensorWorker(ctx context.Context) {
 	for {
 		select {
 		case i := <-updateCh:
-			update := i.(batteryState)
-			sensorID := update.ID() + update.Type().String()
+			update := i.(sensorUpdate)
+			sensorID := update.ID() + update.Type().(device.BatteryProp).String()
 			if _, ok := sensors[sensorID]; !ok {
-				sensors[sensorID] = newBatterySensor(update.ID(), update.Type())
+				sensors[sensorID] = newBatterySensor(update.ID(), update.Type().(device.BatteryProp))
 			}
 			sensors[sensorID].state = update.Value()
 			sensors[sensorID].attributes = update.ExtraValues()

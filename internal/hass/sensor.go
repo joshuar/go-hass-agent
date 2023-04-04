@@ -15,6 +15,9 @@ type sensor interface {
 	Registered() bool
 }
 
+// batteryState represents the state of a battery property. It is an interface
+// that each device that wants to implement battery sensors should satisfy.
+
 type sensorRegistrationInfo struct {
 	StateAttributes   interface{} `json:"attributes,omitempty"`
 	DeviceClass       string      `json:"device_class,omitempty"`

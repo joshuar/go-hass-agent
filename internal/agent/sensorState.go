@@ -10,3 +10,10 @@ type sensorState struct {
 	disabled    bool
 	registered  bool
 }
+
+type sensorUpdate interface {
+	ID() string
+	Type() interface{}
+	Value() interface{}
+	ExtraValues() interface{}
+}
