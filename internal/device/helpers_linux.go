@@ -10,8 +10,7 @@ import (
 )
 
 const (
-	monitorDBusMethod          = "org.freedesktop.DBus.Monitoring.BecomeMonitor"
-	sessionBus        dbusType = iota
+	sessionBus dbusType = iota
 	systemBus
 )
 

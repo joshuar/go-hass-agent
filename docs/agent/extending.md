@@ -3,12 +3,21 @@
 ## Adding OS support
 
 - The intention of the agent design is to make it OS-agnostic.
-- All OS specific code should go under `internal/sensors` and using filename
-  suffixes such as `filename_GOOS_GOARCH.go`. 
-- In general, you'll need to implement the functionality required for each of
-  the worker functions the agent runs, that pull/push data to Home Assistant.
-  Specific details are further in this document.
-
+- Most OS specific code for fetching sensor data should likely be part of the
+  device package and using filename suffixes such as `filename_GOOS_GOARCH.go`. 
+- You'll need to implement the functionality required for each of
+  the worker functions for getting sensor data the agent runs, that pull/push
+  data to Home Assistant. Specific details are further in this document.
+- For some OSes, you might need some code to initialise or create some data source
+  or API that the individual sensor fetching code uses. 
+  - For example, on Linux, a DBus connection is used for a lot of the sensor data gathering.
+- In such cases, you should pass this through as a value in a context. This
+  context should be created in the `agent.Run()` function, before the agent
+  itself is created with `agent.New(ctx)`. You can then pass your context
+  initialised with whatever you need to the latter and it will propagate through
+  the agent code.
+- Then, when you need access to your data/APIs, just fetch it from the context
+  value as needed. 
 
 ### Worker Implementation Details
 

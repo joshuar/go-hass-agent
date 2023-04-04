@@ -3,18 +3,16 @@ package device
 import (
 	"context"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/godbus/dbus/v5"
 	"github.com/rs/zerolog/log"
 )
 
-//go:generate stringer -type=batteryProp -output battery_linux_props.go -trimprefix battery
+//go:generate stringer -type=batteryProp -output battery_props_linux.go -trimprefix battery
 
 const (
 	upowerDBusDest         = "org.freedesktop.UPower"
 	upowerDBusPath         = "/org/freedesktop/UPower"
 	upowerGetDevicesMethod = "org.freedesktop.UPower.EnumerateDevices"
-	upowerGetPropsMethod   = "org.freedesktop.DBus.Properties.GetAll"
 
 	Percentage batteryProp = iota
 	Temperature
@@ -105,6 +103,9 @@ func BatteryUpdater(ctx context.Context, status chan interface{}) {
 
 	batteryTracker := make(map[string]*upowerBattery)
 	for _, v := range batteryList.([]dbus.ObjectPath) {
+
+		// Populate the batteryTracker map with the battery's current
+		// properties. Send it to Home Assistant.
 		batteryID := string(v)
 		batteryTracker[batteryID] = &upowerBattery{}
 		batteryTracker[batteryID].props = make(map[batteryProp]dbus.Variant)
@@ -117,6 +118,10 @@ func BatteryUpdater(ctx context.Context, status chan interface{}) {
 		}
 		status <- batteryTracker[batteryID]
 
+		// Create a DBus signal match to watch for property changes for this
+		// battery. If a property changes, check it is one we want to track and
+		// if so, update the battery's state in batteryTracker and send the
+		// update back to Home Assistant.
 		batteryChangeSignal := &DBusWatchRequest{
 			bus: systemBus,
 			match: DBusSignalMatch{
@@ -142,8 +147,6 @@ func BatteryUpdater(ctx context.Context, status chan interface{}) {
 		}
 		deviceAPI.WatchEvents <- batteryChangeSignal
 	}
-
-	spew.Dump(batteryTracker)
 
 	for {
 		select {

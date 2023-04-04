@@ -19,7 +19,6 @@ const (
 )
 
 type batteryDeviceClass int
-type batteryType int
 
 // BatteryState is an interface that represents the state
 // of a device battery at a particular point in time
