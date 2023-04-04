@@ -71,7 +71,21 @@ func (s *appSensor) Registered() bool {
 	return s.registered
 }
 
-func (s *appSensor) HandleAPIResponse(rawResponse interface{}) {
+// Ensure that appSensor satisfies the hass.Request interface
+// so its data can be sent as a request to HA
+
+func (a *appSensor) RequestType() hass.RequestType {
+	if a.Registered() {
+		return hass.RequestTypeUpdateSensorStates
+	}
+	return hass.RequestTypeRegisterSensor
+}
+
+func (a *appSensor) RequestData() interface{} {
+	return hass.MarshallSensorData(a)
+}
+
+func (s *appSensor) ResponseHandler(rawResponse interface{}) {
 	if rawResponse == nil {
 		log.Debug().Caller().Msg("No response data.")
 	} else {
@@ -104,20 +118,6 @@ func (s *appSensor) HandleAPIResponse(rawResponse interface{}) {
 	}
 }
 
-// Ensure that appSensor satisfies the hass.Request interface
-// so its data can be sent as a request to HA
-
-func (a *appSensor) RequestType() hass.RequestType {
-	if a.Registered() {
-		return hass.RequestTypeUpdateSensorStates
-	}
-	return hass.RequestTypeRegisterSensor
-}
-
-func (a *appSensor) RequestData() interface{} {
-	return hass.MarshallSensorData(a)
-}
-
 func (agent *Agent) runAppSensorWorker(ctx context.Context) {
 	updateCh := make(chan interface{})
 	defer close(updateCh)
@@ -146,11 +146,11 @@ func (agent *Agent) runAppSensorWorker(ctx context.Context) {
 		case data := <-updateCh:
 			activeAppSensor.state = data.(activeApp).Name()
 			activeAppSensor.attributes = data.(activeApp).Attributes()
-			go hass.APIRequest(ctx, activeAppSensor, activeAppSensor.HandleAPIResponse)
+			go hass.APIRequest(ctx, activeAppSensor)
 
 			runningAppsSensor.state = data.(runningApps).Count()
 			runningAppsSensor.attributes = data.(runningApps).Attributes()
-			go hass.APIRequest(ctx, runningAppsSensor, runningAppsSensor.HandleAPIResponse)
+			go hass.APIRequest(ctx, runningAppsSensor)
 
 		case <-ctx.Done():
 			log.Debug().Caller().Msgf("Cleaning up app sensor.")

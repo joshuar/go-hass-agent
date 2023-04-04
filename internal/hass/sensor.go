@@ -13,7 +13,6 @@ type sensor interface {
 	EntityCategory() string
 	Disabled() bool
 	Registered() bool
-	HandleAPIResponse(interface{})
 }
 
 type sensorRegistrationInfo struct {

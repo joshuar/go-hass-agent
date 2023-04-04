@@ -7,59 +7,107 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-//go:generate stringer -type=batteryProp -output battery_props_linux.go -trimprefix battery
+//go:generate stringer -type=BatteryProp -output battery_props_linux.go -trimprefix battery
 
 const (
 	upowerDBusDest         = "org.freedesktop.UPower"
 	upowerDBusPath         = "/org/freedesktop/UPower"
 	upowerGetDevicesMethod = "org.freedesktop.UPower.EnumerateDevices"
 
-	Percentage batteryProp = iota
+	// Note: order is important!
+	batteryType BatteryProp = iota
+	Percentage
 	Temperature
-	EnergyRate
 	Voltage
 	Energy
+	EnergyRate
 	batteryState
-	NativePath
-	batteryType
 )
 
-type batteryProp int
+type BatteryProp int
 
 type upowerBattery struct {
-	props map[batteryProp]dbus.Variant
+	name  string
+	props map[BatteryProp]dbus.Variant
 }
 
-func (s *upowerBattery) LevelPercent() float64 {
-	return s.props[Percentage].Value().(float64)
+func (b *upowerBattery) MarshallStateUpdate(prop BatteryProp) *upowerBatteryState {
+	// We don't send Energy or Voltage updates separately.
+	// These are sent as part of the EnergyRate (Power) update.
+	if prop == Energy || prop == Voltage || prop == batteryType {
+		return nil
+	}
+	log.Debug().Caller().Msgf("Marshalling update for %v for battery %v", prop.String(), b.name)
+	state := &upowerBatteryState{
+		batteryID: b.name,
+		prop: upowerBatteryProp{
+			kind:  prop,
+			value: b.props[prop].Value(),
+		},
+	}
+	switch prop {
+	case EnergyRate:
+		state.attributes = &struct {
+			Voltage float64 `json:"Voltage"`
+			Energy  float64 `json:"Energy"`
+		}{
+			Voltage: b.props[Voltage].Value().(float64),
+			Energy:  b.props[Energy].Value().(float64),
+		}
+	case Percentage:
+		state.attributes = &struct {
+			Type string `json:"Battery Type"`
+		}{
+			Type: stringType(b.props[batteryType].Value().(uint32)),
+		}
+	}
+	return state
 }
 
-func (s *upowerBattery) Temperature() float64 {
-	return s.props[Temperature].Value().(float64)
+type upowerBatteryProp struct {
+	kind  BatteryProp
+	value interface{}
 }
 
-func (s *upowerBattery) Health() string {
-	return "good"
+type upowerBatteryState struct {
+	batteryID  string
+	prop       upowerBatteryProp
+	attributes interface{}
 }
 
-func (s *upowerBattery) Power() float64 {
-	return s.props[EnergyRate].Value().(float64)
+func (state *upowerBatteryState) ID() string {
+	return state.batteryID
 }
 
-func (s *upowerBattery) Voltage() float64 {
-	return s.props[Voltage].Value().(float64)
+func (state *upowerBatteryState) Type() BatteryProp {
+	return state.prop.kind
 }
 
-func (s *upowerBattery) Energy() float64 {
-	return s.props[Energy].Value().(float64)
+func (state *upowerBatteryState) Value() interface{} {
+	switch state.prop.kind {
+	case Voltage:
+		fallthrough
+	case Temperature:
+		fallthrough
+	case Energy:
+		fallthrough
+	case EnergyRate:
+		fallthrough
+	case Percentage:
+		return state.prop.value.(float64)
+	case batteryState:
+		return stringState(state.prop.value.(uint32))
+	default:
+		return state.prop.value
+	}
 }
 
-func (s *upowerBattery) ChargerType() string {
-	return "Unknown"
+func (state *upowerBatteryState) ExtraValues() interface{} {
+	return state.attributes
 }
 
-func (s *upowerBattery) State() string {
-	switch s.props[batteryState].Value().(uint32) {
+func stringState(state uint32) string {
+	switch state {
 	case 1:
 		return "Charging"
 	case 2:
@@ -77,12 +125,29 @@ func (s *upowerBattery) State() string {
 	}
 }
 
-func (s *upowerBattery) ID() string {
-	return s.props[NativePath].Value().(string)
-}
-
-func (s *upowerBattery) Type() interface{} {
-	return s.props[batteryType].Value()
+func stringType(t uint32) string {
+	switch t {
+	case 0:
+		return "Unknown"
+	case 1:
+		return "Line Power"
+	case 2:
+		return "Battery"
+	case 3:
+		return "Ups"
+	case 4:
+		return "Monitor"
+	case 5:
+		return "Mouse"
+	case 6:
+		return "Keyboard"
+	case 7:
+		return "Pda"
+	case 8:
+		return "Phone"
+	default:
+		return "Unknown"
+	}
 }
 
 func BatteryUpdater(ctx context.Context, status chan interface{}) {
@@ -108,15 +173,22 @@ func BatteryUpdater(ctx context.Context, status chan interface{}) {
 		// properties. Send it to Home Assistant.
 		batteryID := string(v)
 		batteryTracker[batteryID] = &upowerBattery{}
-		batteryTracker[batteryID].props = make(map[batteryProp]dbus.Variant)
-		for _, k := range []batteryProp{Percentage, Temperature, EnergyRate, Voltage, Energy, batteryState, NativePath, batteryType} {
-			p, err := deviceAPI.GetDBusProp(systemBus, upowerDBusDest, dbus.ObjectPath(batteryID), "org.freedesktop.UPower.Device."+k.String())
+		batteryTracker[batteryID].props = make(map[BatteryProp]dbus.Variant)
+		p, _ := deviceAPI.GetDBusProp(systemBus, upowerDBusDest, dbus.ObjectPath(batteryID), "org.freedesktop.UPower.Device.NativePath")
+		batteryTracker[batteryID].name = p.Value().(string)
+
+		for _, prop := range []BatteryProp{batteryType, Percentage, Temperature, Voltage, Energy, EnergyRate, batteryState} {
+			propValue, err := deviceAPI.GetDBusProp(systemBus, upowerDBusDest, dbus.ObjectPath(batteryID), "org.freedesktop.UPower.Device."+prop.String())
 			if err != nil {
 				log.Debug().Caller().Msgf(err.Error())
 			}
-			batteryTracker[batteryID].props[k] = p
+			batteryTracker[batteryID].props[prop] = propValue
+			stateUpdate := batteryTracker[batteryID].MarshallStateUpdate(prop)
+			if stateUpdate != nil {
+				status <- stateUpdate
+			}
 		}
-		status <- batteryTracker[batteryID]
+		// status <- batteryTracker[batteryID]
 
 		// Create a DBus signal match to watch for property changes for this
 		// battery. If a property changes, check it is one we want to track and
@@ -134,12 +206,16 @@ func BatteryUpdater(ctx context.Context, status chan interface{}) {
 				batteryID := string(s.Path)
 				props := s.Body[1].(map[string]dbus.Variant)
 				for propName, propValue := range props {
-					for batteryProp := range batteryTracker[batteryID].props {
-						if propName == batteryProp.String() {
-							batteryTracker[batteryID].props[batteryProp] = propValue
+					for BatteryProp := range batteryTracker[batteryID].props {
+						if propName == BatteryProp.String() {
+							batteryTracker[batteryID].props[BatteryProp] = propValue
 							log.Debug().Caller().
-								Msgf("Updating battery property %v to %v", batteryProp.String(), propValue.Value())
-							status <- batteryTracker[batteryID]
+								Msgf("Updating battery property %v to %v", BatteryProp.String(), propValue.Value())
+
+							stateUpdate := batteryTracker[batteryID].MarshallStateUpdate(BatteryProp)
+							if stateUpdate != nil {
+								status <- stateUpdate
+							}
 						}
 					}
 				}

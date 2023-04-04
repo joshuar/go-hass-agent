@@ -46,7 +46,7 @@ func (l *location) RequestData() interface{} {
 	}
 }
 
-func (l *location) handleResponse(rawResponse interface{}) {
+func (l *location) ResponseHandler(rawResponse interface{}) {
 	if rawResponse == nil {
 		log.Debug().Caller().Msg("No response data.")
 	} else {
@@ -70,7 +70,7 @@ func (agent *Agent) runLocationWorker(ctx context.Context) {
 				data: loc.(locationData),
 			}
 
-			go hass.APIRequest(ctx, l, l.handleResponse)
+			go hass.APIRequest(ctx, l)
 		case <-ctx.Done():
 			log.Debug().Caller().Msgf("Cleaning up location sensor.")
 			return

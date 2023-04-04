@@ -19,6 +19,7 @@ type RequestType string
 type Request interface {
 	RequestType() RequestType
 	RequestData() interface{}
+	ResponseHandler(interface{})
 }
 
 func MarshalJSON(request Request, secret string) ([]byte, error) {
@@ -58,7 +59,7 @@ type Response struct {
 	Success bool `json:"success,omitempty"`
 }
 
-func APIRequest(ctx context.Context, request interface{}, response func(r interface{})) {
+func APIRequest(ctx context.Context, request Request) {
 
 	requestCtx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
@@ -67,14 +68,14 @@ func APIRequest(ctx context.Context, request interface{}, response func(r interf
 	if !validConfig {
 		log.Debug().Caller().Msg("Could not retrieve valid config from context.")
 		cancel()
-		response(nil)
+		request.ResponseHandler(nil)
 		return
 	}
 
-	reqJson, err := MarshalJSON(request.(Request), config.Secret)
+	reqJson, err := MarshalJSON(request, config.Secret)
 	if err != nil {
 		log.Error().Msgf("Unable to format request: %v", err)
-		response(nil)
+		request.ResponseHandler(nil)
 	} else {
 		var res interface{}
 		requestFunc := func() error {
@@ -88,9 +89,9 @@ func APIRequest(ctx context.Context, request interface{}, response func(r interf
 		if err != nil {
 			log.Error().Msgf("Unable to send request: %v", err)
 			cancel()
-			response(nil)
+			request.ResponseHandler(nil)
 		} else {
-			response(res)
+			request.ResponseHandler(res)
 		}
 	}
 }
