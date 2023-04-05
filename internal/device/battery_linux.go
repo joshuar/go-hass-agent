@@ -88,7 +88,7 @@ type upowerBatteryState struct {
 	attributes interface{}
 }
 
-func (state *upowerBatteryState) ID() string {
+func (state *upowerBatteryState) Device() string {
 	return state.batteryID
 }
 

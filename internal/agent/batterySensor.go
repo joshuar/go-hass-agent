@@ -4,61 +4,50 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"strings"
 
-	"github.com/gobeam/stringy"
+	"github.com/iancoleman/strcase"
 
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/rs/zerolog/log"
 )
 
-//go:generate stringer -type=batteryDeviceClass -output batterySensor_iota.go
-const (
-	battery batteryDeviceClass = iota
-	temperature
-	power
-	state
-)
-
-// batteryDeviceClass is the Device Class of the sensor, derived from the state
-// type.
-type batteryDeviceClass int
-
 // batterySensor is a specific type of sensorState for battery sensors
 type batterySensor sensorState
 
 func newBatterySensor(batteryID string, sensorType string) *batterySensor {
-	var sensorName, sensorID, stateClass string
-	var deviceClass batteryDeviceClass
-	str := stringy.New(sensorType)
+	var sensorName, sensorID string
+	var stateClass stateClassType
+	var deviceClass deviceClassType
 	switch sensorType {
 	case "Percentage":
-		sensorName = batteryID + " Battery Level"
+		sensorName = batteryID + " battery level"
 		sensorID = batteryID + "_battery_level"
-		stateClass = "measurement"
-		deviceClass = battery
+		stateClass = measurement
+		deviceClass = deviceClassBattery
 	case "Temperature":
-		sensorName = batteryID + " Battery Temperature"
+		sensorName = batteryID + " battery temperature"
 		sensorID = batteryID + "_battery_temperature"
-		stateClass = "measurement"
-		deviceClass = temperature
+		stateClass = measurement
+		deviceClass = deviceClassTemperature
 	case "EnergyRate":
-		sensorName = batteryID + " Battery Power"
+		sensorName = batteryID + " battery power"
 		sensorID = batteryID + "_battery_power"
-		stateClass = "measurement"
-		deviceClass = power
+		stateClass = measurement
+		deviceClass = deviceClassPower
 	case "BatteryStatus":
 		fallthrough
 	case "BatteryLevel":
-		sensorName = batteryID + " " + sensorType
-		sensorID = batteryID + "_" + str.SnakeCase().ToLower()
-		stateClass = ""
-		deviceClass = state
+		sensorName = batteryID + " " + strcase.ToDelimited(sensorType, ' ')
+		sensorID = batteryID + "_" + strings.ToLower(strcase.ToSnake(sensorType))
+		stateClass = 0
+		deviceClass = 0
 	default:
-		sensorName = batteryID + " Battery " + sensorType
-		sensorID = batteryID + "_" + str.SnakeCase().ToLower()
-		stateClass = ""
-		deviceClass = state
+		sensorName = batteryID + " battery " + strcase.ToDelimited(sensorType, ' ')
+		sensorID = batteryID + "_" + strings.ToLower(strcase.ToSnake(sensorType))
+		stateClass = 0
+		deviceClass = 0
 	}
 	return &batterySensor{
 		name:        sensorName,
@@ -76,23 +65,22 @@ func (b *batterySensor) Attributes() interface{} {
 }
 
 func (b *batterySensor) DeviceClass() string {
-	switch b.deviceClass {
-	case battery, temperature, power:
-		return b.deviceClass.(batteryDeviceClass).String()
-	default:
+	if b.deviceClass != 0 {
+		return b.deviceClass.String()
+	} else {
 		return ""
 	}
 }
 
 func (b *batterySensor) Icon() string {
 	switch b.deviceClass {
-	case battery:
+	case deviceClassBattery:
 		if b.state.(float64) >= 95 {
 			return "mdi:battery"
 		} else {
 			return fmt.Sprintf("mdi:battery-%d", int(math.Round(b.state.(float64)/10)*10))
 		}
-	case power:
+	case deviceClassPower:
 		if math.Signbit(b.state.(float64)) {
 			return "mdi:battery-minus"
 		} else {
@@ -109,7 +97,7 @@ func (b *batterySensor) Name() string {
 
 func (b *batterySensor) State() interface{} {
 	switch b.deviceClass {
-	case battery:
+	case deviceClassBattery:
 		return b.state.(float64)
 	default:
 		return b.state
@@ -126,11 +114,11 @@ func (b *batterySensor) UniqueID() string {
 
 func (b *batterySensor) UnitOfMeasurement() string {
 	switch b.deviceClass {
-	case battery:
+	case deviceClassBattery:
 		return "%"
-	case temperature:
+	case deviceClassTemperature:
 		return "°C"
-	case power:
+	case deviceClassPower:
 		return "W"
 	default:
 		return ""
@@ -138,7 +126,11 @@ func (b *batterySensor) UnitOfMeasurement() string {
 }
 
 func (b *batterySensor) StateClass() string {
-	return b.stateClass
+	if b.stateClass != 0 {
+		return b.stateClass.String()
+	} else {
+		return ""
+	}
 }
 
 func (b *batterySensor) EntityCategory() string {
@@ -213,9 +205,9 @@ func (agent *Agent) runBatterySensorWorker(ctx context.Context) {
 		select {
 		case data := <-updateCh:
 			update := data.(sensorUpdate)
-			sensorID := update.ID() + update.Type()
+			sensorID := update.Device() + update.Type()
 			if _, ok := sensors[sensorID]; !ok {
-				sensors[sensorID] = newBatterySensor(update.ID(), update.Type())
+				sensors[sensorID] = newBatterySensor(update.Device(), update.Type())
 			}
 			sensors[sensorID].state = update.Value()
 			sensors[sensorID].attributes = update.ExtraValues()

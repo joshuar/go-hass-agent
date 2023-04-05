@@ -71,7 +71,7 @@ type appState struct {
 	attributes interface{}
 }
 
-func (a *appState) ID() string {
+func (a *appState) Device() string {
 	return ""
 }
 

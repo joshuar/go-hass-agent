@@ -15,14 +15,14 @@ func newAppSensor(sensorType string) *appSensor {
 	switch sensorType {
 	case "ActiveApp":
 		return &appSensor{
-			name:     "Active App",
+			name:     "active app",
 			entityID: "active_app",
 		}
 	case "RunningApps":
 		return &appSensor{
-			name:       "Running Apps",
+			name:       "running apps",
 			entityID:   "running_apps",
-			stateClass: "measurement",
+			stateClass: measurement,
 		}
 	default:
 		return nil
@@ -37,7 +37,11 @@ func (s *appSensor) Attributes() interface{} {
 }
 
 func (s *appSensor) DeviceClass() string {
-	return ""
+	if s.deviceClass != 0 {
+		return s.deviceClass.String()
+	} else {
+		return ""
+	}
 }
 
 func (s *appSensor) Icon() string {
@@ -65,7 +69,11 @@ func (s *appSensor) UnitOfMeasurement() string {
 }
 
 func (s *appSensor) StateClass() string {
-	return s.stateClass
+	if s.stateClass != 0 {
+		return s.stateClass.String()
+	} else {
+		return ""
+	}
 }
 
 func (s *appSensor) EntityCategory() string {
@@ -139,7 +147,7 @@ func (agent *Agent) runAppSensorWorker(ctx context.Context) {
 		select {
 		case data := <-updateCh:
 			update := data.(sensorUpdate)
-			sensorID := update.ID() + update.Type()
+			sensorID := update.Device() + update.Type()
 			if _, ok := sensors[sensorID]; !ok {
 				sensors[sensorID] = newAppSensor(update.Type())
 			}
