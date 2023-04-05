@@ -8,17 +8,25 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-type activeApp interface {
-	Name() string
-	Attributes() interface{}
-}
-
-type runningApps interface {
-	Count() int
-	Attributes() interface{}
-}
-
+// appSensor is a specific type of sensorState for app sensors
 type appSensor sensorState
+
+func newAppSensor(sensorType string) *appSensor {
+	switch sensorType {
+	case "ActiveApp":
+		return &appSensor{
+			name:     "Active App",
+			entityID: "active_app",
+		}
+	case "RunningApps":
+		return &appSensor{
+			name:     "Running Apps",
+			entityID: "running_apps",
+		}
+	default:
+		return nil
+	}
+}
 
 // Ensure appSensor satisfies the sensor interface so it can be
 // treated as a sensor
@@ -122,36 +130,21 @@ func (agent *Agent) runAppSensorWorker(ctx context.Context) {
 	updateCh := make(chan interface{})
 	defer close(updateCh)
 
-	activeAppSensor := &appSensor{
-		state:      "Unknown",
-		name:       "Active App",
-		entityID:   "active_app",
-		registered: false,
-		disabled:   false,
-	}
-
-	runningAppsSensor := &appSensor{
-		state:      "Unknown",
-		name:       "Running Apps",
-		entityID:   "running_apps",
-		stateClass: "measurement",
-		registered: false,
-		disabled:   false,
-	}
+	sensors := make(map[string]*appSensor)
 
 	go device.AppUpdater(ctx, updateCh)
 
 	for {
 		select {
 		case data := <-updateCh:
-			activeAppSensor.state = data.(activeApp).Name()
-			activeAppSensor.attributes = data.(activeApp).Attributes()
-			go hass.APIRequest(ctx, activeAppSensor)
-
-			runningAppsSensor.state = data.(runningApps).Count()
-			runningAppsSensor.attributes = data.(runningApps).Attributes()
-			go hass.APIRequest(ctx, runningAppsSensor)
-
+			update := data.(sensorUpdate)
+			sensorID := update.ID() + update.Type()
+			if _, ok := sensors[sensorID]; !ok {
+				sensors[sensorID] = newAppSensor(update.Type())
+			}
+			sensors[sensorID].state = update.Value()
+			sensors[sensorID].attributes = update.ExtraValues()
+			go hass.APIRequest(ctx, sensors[sensorID])
 		case <-ctx.Done():
 			log.Debug().Caller().Msgf("Cleaning up app sensor.")
 			return

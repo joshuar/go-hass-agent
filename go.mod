@@ -60,6 +60,7 @@ require (
 	github.com/acobaugh/osrelease v0.1.0
 	github.com/carlmjohnson/requests v0.22.3
 	github.com/cenkalti/backoff/v4 v4.2.0
+	github.com/gobeam/stringy v0.0.6
 	github.com/inconshreveable/mousetrap v1.0.1 // indirect
 	github.com/maltegrosse/go-geoclue2 v0.1.1
 	github.com/rs/zerolog v1.29.0

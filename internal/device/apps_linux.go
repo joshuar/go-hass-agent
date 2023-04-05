@@ -7,10 +7,26 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+//go:generate stringer -type=AppSensorType -output appSensor_types_linux.go
 const (
 	appStateDBusMethod = "org.freedesktop.impl.portal.Background.GetAppState"
 	appStateDBusPath   = "/org/freedesktop/portal/desktop"
+
+	ActiveApp AppSensorType = iota
+	RunningApps
 )
+
+type AppSensorType int
+
+type activeApp interface {
+	Name() string
+	Attributes() interface{}
+}
+
+type runningApps interface {
+	Count() int
+	Attributes() interface{}
+}
 
 type appInfo struct {
 	activeApps map[string]interface{}
@@ -49,7 +65,48 @@ func (a *appInfo) Attributes() interface{} {
 	}
 }
 
-func AppUpdater(ctx context.Context, app chan interface{}) {
+type appState struct {
+	value      interface{}
+	stateType  AppSensorType
+	attributes interface{}
+}
+
+func (a *appState) ID() string {
+	return ""
+}
+
+func (a *appState) Type() string {
+	return a.stateType.String()
+}
+
+func (a *appState) Value() interface{} {
+	return a.value
+}
+
+func (a *appState) ExtraValues() interface{} {
+	return a.attributes
+}
+
+func (a *appInfo) marshallStateUpdate(t AppSensorType) *appState {
+	switch t {
+	case RunningApps:
+		return &appState{
+			value:      a.Count(),
+			stateType:  t,
+			attributes: a.Attributes(),
+		}
+	case ActiveApp:
+		return &appState{
+			value:      a.Name(),
+			stateType:  t,
+			attributes: a.Attributes(),
+		}
+	default:
+		return nil
+	}
+}
+
+func AppUpdater(ctx context.Context, update chan interface{}) {
 
 	deviceAPI, deviceAPIExists := FromContext(ctx)
 	if !deviceAPIExists {
@@ -80,31 +137,21 @@ func AppUpdater(ctx context.Context, app chan interface{}) {
 			} else {
 				a.activeApps = nil
 				a.activeApps = activeAppList.(map[string]interface{})
-				app <- a
+				update <- a.marshallStateUpdate(RunningApps)
+				update <- a.marshallStateUpdate(ActiveApp)
 			}
 		},
 	}
 	log.Debug().Caller().Msg("Adding a DBus watch for app change events.")
 	deviceAPI.WatchEvents <- appChangeSignal
 
-	for {
-		select {
-		// case <-c:
-		// 	obj := deviceAPI.dBusSession.Object(portalDest, appStateDBusPath)
-		// 	var activeAppList map[string]interface{}
-		// 	err = obj.Call(appStateDBusMethod, 0).Store(&activeAppList)
-		// 	if err != nil {
-		// 		log.Debug().Caller().Msgf(err.Error())
-		// 	} else {
-		// 		a.activeApps = nil
-		// 		a.activeApps = activeAppList
-		// 		app <- a
-		// 	}
-		case <-ctx.Done():
-		case <-app:
-			log.Debug().Caller().
-				Msg("Stopping Linux app updater.")
-			return
-		}
-	}
+	<-update
+	// for {
+	// 	select {
+	// 	case <-ctx.Done():
+	log.Debug().Caller().
+		Msg("Stopping Linux app updater.")
+	// return
+	// 	}
+	// }
 }

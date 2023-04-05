@@ -4,7 +4,8 @@ import (
 	"context"
 	"fmt"
 	"math"
-	"strings"
+
+	"github.com/gobeam/stringy"
 
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass"
@@ -23,11 +24,20 @@ const (
 // type.
 type batteryDeviceClass int
 
+// batterySensor is a specific type of sensorState for battery sensors
 type batterySensor sensorState
+
+type batterySensorUpdate interface {
+	ID() string
+	Type() device.BatteryProp
+	Value() interface{}
+	ExtraValues() interface{}
+}
 
 func newBatterySensor(batteryID string, sensorType device.BatteryProp) *batterySensor {
 	var sensorName, sensorID, stateClass string
 	var deviceClass batteryDeviceClass
+	str := stringy.New(sensorType.String())
 	switch sensorType {
 	case device.Percentage:
 		sensorName = batteryID + " Battery Level"
@@ -46,7 +56,7 @@ func newBatterySensor(batteryID string, sensorType device.BatteryProp) *batteryS
 		deviceClass = power
 	default:
 		sensorName = batteryID + " Battery " + sensorType.String()
-		sensorID = batteryID + "_" + strings.ToLower(sensorType.String())
+		sensorID = batteryID + "_" + str.SnakeCase().ToLower()
 		stateClass = ""
 		deviceClass = state
 	}
@@ -56,7 +66,6 @@ func newBatterySensor(batteryID string, sensorType device.BatteryProp) *batteryS
 		deviceClass: deviceClass,
 		stateClass:  stateClass,
 	}
-
 }
 
 // Ensure a batterySensor satisfies the sensor interface so it can be treated as
@@ -202,11 +211,11 @@ func (agent *Agent) runBatterySensorWorker(ctx context.Context) {
 
 	for {
 		select {
-		case i := <-updateCh:
-			update := i.(sensorUpdate)
-			sensorID := update.ID() + update.Type().(device.BatteryProp).String()
+		case data := <-updateCh:
+			update := data.(batterySensorUpdate)
+			sensorID := update.ID() + update.Type().String()
 			if _, ok := sensors[sensorID]; !ok {
-				sensors[sensorID] = newBatterySensor(update.ID(), update.Type().(device.BatteryProp))
+				sensors[sensorID] = newBatterySensor(update.ID(), update.Type())
 			}
 			sensors[sensorID].state = update.Value()
 			sensors[sensorID].attributes = update.ExtraValues()

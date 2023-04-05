@@ -13,7 +13,7 @@ type sensorState struct {
 
 type sensorUpdate interface {
 	ID() string
-	Type() interface{}
+	Type() string
 	Value() interface{}
 	ExtraValues() interface{}
 }

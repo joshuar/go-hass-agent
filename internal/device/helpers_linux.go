@@ -87,12 +87,14 @@ func (d *deviceAPI) monitorDBus(ctx context.Context) {
 	events := make(map[dbusType]map[string]func(*dbus.Signal))
 	events[sessionBus] = make(map[string]func(*dbus.Signal))
 	events[systemBus] = make(map[string]func(*dbus.Signal))
+	defer close(d.WatchEvents)
+	defer close(d.dBusSession.events)
+	defer close(d.dBusSystem.events)
 	for {
 		select {
 		case <-ctx.Done():
-			close(d.WatchEvents)
-			close(d.dBusSession.events)
-			close(d.dBusSystem.events)
+			log.Debug().Caller().Msg("Stopping DBus Monitor.")
+			return
 		case watch := <-d.WatchEvents:
 			d.AddDBusWatch(watch.bus, watch.match)
 			events[watch.bus][watch.event] = watch.eventHandler
