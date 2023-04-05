@@ -59,7 +59,7 @@ func (a *appInfo) Attributes() interface{} {
 		}
 	}
 	return struct {
-		RunningApps []string `json:"running_apps"`
+		RunningApps []string `json:"Running Apps"`
 	}{
 		RunningApps: runningApps,
 	}

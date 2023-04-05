@@ -5,13 +5,17 @@
 !/.gitignore
 
 !*.go
+!*.json
 !go.sum
 !go.mod
 
 !README.md
 !LICENSE
+!docs/
+!tools/
 
 # !Makefile
 
 # ...even if they are in subdirectories
 !*/
+.vscode/settings.json

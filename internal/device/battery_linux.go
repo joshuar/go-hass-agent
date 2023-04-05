@@ -3,6 +3,7 @@ package device
 import (
 	"context"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/godbus/dbus/v5"
 	"github.com/rs/zerolog/log"
 )
@@ -91,8 +92,8 @@ func (state *upowerBatteryState) ID() string {
 	return state.batteryID
 }
 
-func (state *upowerBatteryState) Type() BatteryProp {
-	return state.prop.kind
+func (state *upowerBatteryState) Type() string {
+	return state.prop.kind.String()
 }
 
 func (state *upowerBatteryState) Value() interface{} {
@@ -110,6 +111,7 @@ func (state *upowerBatteryState) Value() interface{} {
 	case battState:
 		return stringState(state.prop.value.(uint32))
 	case BatteryLevel:
+		spew.Dump(state)
 		return stringLevel(state.prop.value.(uint32))
 	default:
 		return state.prop.value.(string)

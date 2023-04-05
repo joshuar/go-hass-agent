@@ -27,35 +27,35 @@ type batteryDeviceClass int
 // batterySensor is a specific type of sensorState for battery sensors
 type batterySensor sensorState
 
-type batterySensorUpdate interface {
-	ID() string
-	Type() device.BatteryProp
-	Value() interface{}
-	ExtraValues() interface{}
-}
-
-func newBatterySensor(batteryID string, sensorType device.BatteryProp) *batterySensor {
+func newBatterySensor(batteryID string, sensorType string) *batterySensor {
 	var sensorName, sensorID, stateClass string
 	var deviceClass batteryDeviceClass
-	str := stringy.New(sensorType.String())
+	str := stringy.New(sensorType)
 	switch sensorType {
-	case device.Percentage:
+	case "Percentage":
 		sensorName = batteryID + " Battery Level"
 		sensorID = batteryID + "_battery_level"
 		stateClass = "measurement"
 		deviceClass = battery
-	case device.Temperature:
+	case "Temperature":
 		sensorName = batteryID + " Battery Temperature"
 		sensorID = batteryID + "_battery_temperature"
 		stateClass = "measurement"
 		deviceClass = temperature
-	case device.EnergyRate:
+	case "EnergyRate":
 		sensorName = batteryID + " Battery Power"
 		sensorID = batteryID + "_battery_power"
 		stateClass = "measurement"
 		deviceClass = power
+	case "BatteryStatus":
+		fallthrough
+	case "BatteryLevel":
+		sensorName = batteryID + " " + sensorType
+		sensorID = batteryID + "_" + str.SnakeCase().ToLower()
+		stateClass = ""
+		deviceClass = state
 	default:
-		sensorName = batteryID + " Battery " + sensorType.String()
+		sensorName = batteryID + " Battery " + sensorType
 		sensorID = batteryID + "_" + str.SnakeCase().ToLower()
 		stateClass = ""
 		deviceClass = state
@@ -212,8 +212,8 @@ func (agent *Agent) runBatterySensorWorker(ctx context.Context) {
 	for {
 		select {
 		case data := <-updateCh:
-			update := data.(batterySensorUpdate)
-			sensorID := update.ID() + update.Type().String()
+			update := data.(sensorUpdate)
+			sensorID := update.ID() + update.Type()
 			if _, ok := sensors[sensorID]; !ok {
 				sensors[sensorID] = newBatterySensor(update.ID(), update.Type())
 			}

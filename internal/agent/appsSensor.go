@@ -20,8 +20,9 @@ func newAppSensor(sensorType string) *appSensor {
 		}
 	case "RunningApps":
 		return &appSensor{
-			name:     "Running Apps",
-			entityID: "running_apps",
+			name:       "Running Apps",
+			entityID:   "running_apps",
+			stateClass: "measurement",
 		}
 	default:
 		return nil
