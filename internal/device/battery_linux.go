@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/godbus/dbus/v5"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/rs/zerolog/log"
@@ -17,7 +18,7 @@ const (
 	upowerDBusPath         = "/org/freedesktop/UPower"
 	upowerGetDevicesMethod = "org.freedesktop.UPower.EnumerateDevices"
 
-	battType BatteryProp = iota
+	battType BatteryProp = iota + 1
 	Percentage
 	Temperature
 	Voltage
@@ -306,6 +307,7 @@ func BatteryUpdater(ctx context.Context, status chan interface{}, done chan stru
 			batteryTracker[batteryID].updateProp(deviceAPI, BatteryLevel)
 			if batteryTracker[batteryID].getProp(BatteryLevel).(uint32) != 1 {
 				stateUpdate := batteryTracker[batteryID].marshallStateUpdate(deviceAPI, BatteryLevel)
+				spew.Dump(stateUpdate)
 				if stateUpdate != nil {
 					status <- stateUpdate
 				}

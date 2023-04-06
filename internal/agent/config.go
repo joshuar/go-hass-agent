@@ -49,7 +49,7 @@ func (agent *Agent) loadConfig(ctx context.Context) *config.AppConfig {
 				config.APIURL = "http://" + Host + webHookPath + config.WebhookID
 			}
 			log.Debug().Caller().
-				Msgf("Using generated URL %s for Home Assistant access", config.APIURL)
+				Msgf("Using URL %s for Home Assistant access", config.APIURL)
 			return config
 		default:
 			log.Warn().Msg("No suitable existing config found! Starting new registration process")

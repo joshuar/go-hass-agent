@@ -4,9 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
-	"github.com/grandcat/zeroconf"
+	// "github.com/grandcat/zeroconf"
+
+	"github.com/hashicorp/mdns"
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/rs/zerolog/log"
@@ -31,37 +32,27 @@ func newRegistration() *hass.RegistrationHost {
 	}
 }
 
-func findServers(ctx context.Context) binding.StringList {
+func findServers() binding.StringList {
 
 	serverList := binding.NewStringList()
 
-	resolver, err := zeroconf.NewResolver(nil)
-	if err != nil {
-		log.Warn().Msgf("Failed to initialize resolver:", err.Error())
-	} else {
-		entries := make(chan *zeroconf.ServiceEntry)
-		go func(results <-chan *zeroconf.ServiceEntry) {
-			for entry := range results {
-				server := entry.AddrIPv4[0].String() + ":" + fmt.Sprint(entry.Port)
-				serverList.Append(server)
-				log.Debug().Caller().
-					Msgf("Found a record %s", server)
-			}
-		}(entries)
-
-		log.Info().Msg("Looking for Home Assistant instances on the network...")
-		searchCtx, searchCancel := context.WithTimeout(ctx, time.Second*5)
-		defer searchCancel()
-		err = resolver.Browse(searchCtx, "_home-assistant._tcp", "local.", entries)
-		if err != nil {
-			log.Warn().Msgf("Failed to browse:", err.Error())
+	entriesCh := make(chan *mdns.ServiceEntry, 4)
+	go func() {
+		for entry := range entriesCh {
+			server := entry.AddrV4.String() + ":" + fmt.Sprint(entry.Port)
+			log.Debug().Caller().Msgf("Found a server: %s", server)
+			serverList.Append(server)
 		}
+	}()
 
-		<-ctx.Done()
-		if serverList == nil {
-			log.Warn().Msg("Could not find any Home Assistant servers on the network")
-		}
+	// Start the lookup
+	mdns.Lookup("_home-assistant._tcp", entriesCh)
+	close(entriesCh)
+
+	if serverList == nil {
+		log.Warn().Msg("Could not find any Home Assistant servers on the network")
 	}
+	// }
 	// add http://localhost:8123 to the list of servers as a fall-back/default option
 	serverList.Append("localhost:8123")
 	return serverList
@@ -74,7 +65,7 @@ func (agent *Agent) getRegistrationHostInfo(ctx context.Context) *hass.Registrat
 	done := make(chan bool, 1)
 	defer close(done)
 
-	s := findServers(ctx)
+	s := findServers()
 	allServers, _ := s.Get()
 
 	w := agent.App.NewWindow(agent.MsgPrinter.Sprintf("App Registration"))
