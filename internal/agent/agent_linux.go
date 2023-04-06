@@ -7,8 +7,8 @@ import (
 )
 
 func Run() {
-	ctx := device.NewContextWithDeviceAPI(context.Background())
-	agent := NewAgent(ctx)
-	agent.App.Run()
-	agent.Exit()
+	ctx, cancelfunc := context.WithCancel(context.Background())
+	deviceCtx := device.Init(ctx)
+	RunAgent(deviceCtx)
+	cancelfunc()
 }

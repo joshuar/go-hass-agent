@@ -61,7 +61,7 @@ type deviceAPI struct {
 	WatchEvents             chan *DBusWatchRequest
 }
 
-func NewContextWithDeviceAPI(ctx context.Context) context.Context {
+func Init(ctx context.Context) context.Context {
 	deviceAPI := &deviceAPI{
 		dBusSystem:  NewBus(ctx, systemBus),
 		dBusSession: NewBus(ctx, sessionBus),
@@ -87,6 +87,7 @@ func (d *deviceAPI) monitorDBus(ctx context.Context) {
 	events := make(map[dbusType]map[string]func(*dbus.Signal))
 	events[sessionBus] = make(map[string]func(*dbus.Signal))
 	events[systemBus] = make(map[string]func(*dbus.Signal))
+	watches := make(map[dbusType]*DBusWatchRequest)
 	defer close(d.WatchEvents)
 	defer d.dBusSession.conn.RemoveSignal(d.dBusSession.events)
 	defer d.dBusSystem.conn.RemoveSignal(d.dBusSystem.events)
@@ -94,10 +95,17 @@ func (d *deviceAPI) monitorDBus(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			log.Debug().Caller().Msg("Stopping DBus Monitor.")
+			for bus, request := range watches {
+				d.RemoveDBusWatch(bus, request)
+			}
+			close(d.WatchEvents)
+			d.dBusSession.conn.RemoveSignal(d.dBusSession.events)
+			d.dBusSystem.conn.RemoveSignal(d.dBusSystem.events)
 			return
 		case watch := <-d.WatchEvents:
 			d.AddDBusWatch(watch.bus, watch.match)
 			events[watch.bus][watch.event] = watch.eventHandler
+			watches[watch.bus] = watch
 			log.Debug().Caller().Msgf("Added watch for %v on %v", watch.event, watch.match.path)
 		case systemSignal := <-d.dBusSystem.events:
 			log.Debug().Msgf("Recieved system event: %v", systemSignal.Name)
@@ -119,6 +127,17 @@ func (d *deviceAPI) AddDBusWatch(t dbusType, m DBusSignalMatch) error {
 	if err := d.bus(t).AddMatchSignal(
 		dbus.WithMatchObjectPath(m.path),
 		dbus.WithMatchInterface(m.intr),
+	); err != nil {
+		return err
+	} else {
+		return nil
+	}
+}
+
+func (d *deviceAPI) RemoveDBusWatch(t dbusType, w *DBusWatchRequest) error {
+	if err := d.bus(t).RemoveMatchSignal(
+		dbus.WithMatchObjectPath(w.match.path),
+		dbus.WithMatchInterface(w.match.intr),
 	); err != nil {
 		return err
 	} else {

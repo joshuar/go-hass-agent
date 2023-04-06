@@ -26,7 +26,7 @@ type Agent struct {
 	cancel        context.CancelFunc
 }
 
-func NewAgent(ctx context.Context) *Agent {
+func RunAgent(ctx context.Context) {
 	agentCtx, cancel := context.WithCancel(ctx)
 	agent := &Agent{
 		App:     newUI(),
@@ -48,7 +48,9 @@ func NewAgent(ctx context.Context) *Agent {
 	var once sync.Once
 
 	go agent.runWorkers(agentCtx, &once)
-	return agent
+
+	agent.App.Run()
+	agent.exit()
 }
 
 func (agent *Agent) runWorkers(ctx context.Context, once *sync.Once) {
@@ -58,13 +60,10 @@ func (agent *Agent) runWorkers(ctx context.Context, once *sync.Once) {
 	go agent.runNotificationsWorker(workerCtx)
 	go agent.runLocationWorker(workerCtx)
 	go TrackSensors(workerCtx)
-	// go agent.runAppSensorWorker(workerCtx)
-	// go agent.runBatterySensorWorker(workerCtx)
 }
 
-func (agent *Agent) Exit() {
+func (agent *Agent) exit() {
 	log.Debug().Caller().Msg("Shutting down agent.")
 	agent.cancel()
 	agent.Tray.Close()
-	agent.App.Quit()
 }
