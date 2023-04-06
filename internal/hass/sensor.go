@@ -1,12 +1,74 @@
 package hass
 
-type sensor interface {
+//go:generate stringer -type=SensorType,SensorDeviceClass,SensorStateClass -output sensor_strings.go -trimprefix Sensor
+
+const (
+	TypeSensor SensorType = iota + 1
+	TypeBinary
+
+	Apparent_power SensorDeviceClass = iota + 1
+	Aqi
+	Atmospheric_pressure
+	SensorBattery
+	Carbon_dioxide
+	Carbon_monoxide
+	Current
+	Data_rate
+	Data_size
+	Date
+	Distance
+	Duration
+	Energy
+	Enum
+	Frequency
+	Gas
+	Humidity
+	Illuminance
+	Irradiance
+	Moisture
+	Monetary
+	Nitrogen_dioxide
+	Nitrogen_monoxide
+	Nitrous_oxide
+	Ozone
+	Pm1
+	Pm25
+	Pm10
+	Power_factor
+	SensorPower
+	Precipitation
+	Precipitation_intensity
+	Pressure
+	Reactive_power
+	Signal_strength
+	Sound_pressure
+	Speed
+	Sulphur_dioxide
+	SensorTemperature
+	Timestamp
+	Volatile_organic_compounds
+	Voltage
+	Volume
+	Water
+	Weight
+	Wind_speed
+
+	Measurement SensorStateClass = iota
+	Total
+	Total_increasing
+)
+
+type SensorType int
+type SensorDeviceClass int
+type SensorStateClass int
+
+type Sensor interface {
 	Attributes() interface{}
 	DeviceClass() string
 	Icon() string
 	Name() string
 	State() interface{}
-	SensorType() string
+	Type() string
 	UniqueID() string
 	UnitOfMeasurement() string
 	StateClass() string
@@ -15,8 +77,18 @@ type sensor interface {
 	Registered() bool
 }
 
-// batteryState represents the state of a battery property. It is an interface
-// that each device that wants to implement battery sensors should satisfy.
+type SensorUpdate interface {
+	Device() string
+	Name() string
+	Icon() string
+	SensorType() SensorType
+	DeviceClass() SensorDeviceClass
+	StateClass() SensorStateClass
+	State() interface{}
+	Units() string
+	Category() string
+	Attributes() interface{}
+}
 
 type sensorRegistrationInfo struct {
 	StateAttributes   interface{} `json:"attributes,omitempty"`
@@ -40,13 +112,13 @@ type sensorUpdateInfo struct {
 	UniqueID        string      `json:"unique_id"`
 }
 
-func MarshallSensorData(s sensor) interface{} {
+func MarshalSensorData(s Sensor) interface{} {
 	if s.Registered() {
 		return []sensorUpdateInfo{{
 			StateAttributes: s.Attributes(),
 			Icon:            s.Icon(),
 			State:           s.State(),
-			Type:            s.SensorType(),
+			Type:            s.Type(),
 			UniqueID:        s.UniqueID(),
 		},
 		}
@@ -57,7 +129,7 @@ func MarshallSensorData(s sensor) interface{} {
 			Icon:              s.Icon(),
 			Name:              s.Name(),
 			State:             s.State(),
-			Type:              s.SensorType(),
+			Type:              s.Type(),
 			UniqueID:          s.UniqueID(),
 			UnitOfMeasurement: s.UnitOfMeasurement(),
 			StateClass:        s.StateClass(),

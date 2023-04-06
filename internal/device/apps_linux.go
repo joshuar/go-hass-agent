@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/godbus/dbus/v5"
+	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/rs/zerolog/log"
 )
 
@@ -71,19 +72,45 @@ type appState struct {
 	attributes interface{}
 }
 
+// appState implements hass.SensorUpdate
+
 func (a *appState) Device() string {
 	return ""
 }
 
-func (a *appState) Type() string {
+func (a *appState) Name() string {
 	return a.stateType.String()
 }
 
-func (a *appState) Value() interface{} {
+func (a *appState) Icon() string {
+	return "mdi:application"
+}
+
+func (a *appState) SensorType() hass.SensorType {
+	return hass.TypeSensor
+}
+
+func (a *appState) DeviceClass() hass.SensorDeviceClass {
+	return 0
+}
+
+func (a *appState) StateClass() hass.SensorStateClass {
+	return 0
+}
+
+func (a *appState) State() interface{} {
 	return a.value
 }
 
-func (a *appState) ExtraValues() interface{} {
+func (a *appState) Units() string {
+	return ""
+}
+
+func (a *appState) Category() string {
+	return ""
+}
+
+func (a *appState) Attributes() interface{} {
 	return a.attributes
 }
 
@@ -106,7 +133,7 @@ func (a *appInfo) marshallStateUpdate(t AppSensorType) *appState {
 	}
 }
 
-func AppUpdater(ctx context.Context, update chan interface{}) {
+func AppUpdater(ctx context.Context, update chan interface{}, done chan struct{}) {
 
 	deviceAPI, deviceAPIExists := FromContext(ctx)
 	if !deviceAPIExists {
@@ -145,13 +172,7 @@ func AppUpdater(ctx context.Context, update chan interface{}) {
 	log.Debug().Caller().Msg("Adding a DBus watch for app change events.")
 	deviceAPI.WatchEvents <- appChangeSignal
 
-	<-update
-	// for {
-	// 	select {
-	// 	case <-ctx.Done():
+	<-done
 	log.Debug().Caller().
 		Msg("Stopping Linux app updater.")
-	// return
-	// 	}
-	// }
 }

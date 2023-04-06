@@ -57,8 +57,9 @@ func (agent *Agent) runWorkers(ctx context.Context, once *sync.Once) {
 	workerCtx := config.NewContext(ctx, appConfig)
 	go agent.runNotificationsWorker(workerCtx)
 	go agent.runLocationWorker(workerCtx)
-	go agent.runAppSensorWorker(workerCtx)
-	go agent.runBatterySensorWorker(workerCtx)
+	go TrackSensors(workerCtx)
+	// go agent.runAppSensorWorker(workerCtx)
+	// go agent.runBatterySensorWorker(workerCtx)
 }
 
 func (agent *Agent) Exit() {

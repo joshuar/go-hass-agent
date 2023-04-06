@@ -5,7 +5,6 @@ package cmd
 
 import (
 	"github.com/joshuar/go-hass-agent/internal/device"
-	hass "github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/spf13/cobra"
 )
 
@@ -18,7 +17,7 @@ var infoCmd = &cobra.Command{
 	Short: "Print details of this device",
 	Long:  "This will show the information that was used to register this device with Home Assistant",
 	Run: func(cmd *cobra.Command, args []string) {
-		device := device.NewDevice()
-		hass.GetDeviceInfo(device)
+		thisDevice := device.NewDevice()
+		device.GetDeviceInfo(thisDevice)
 	},
 }

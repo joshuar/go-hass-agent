@@ -60,7 +60,6 @@ type Response struct {
 }
 
 func APIRequest(ctx context.Context, request Request) {
-
 	requestCtx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
 

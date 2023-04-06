@@ -2,9 +2,11 @@ package device
 
 import (
 	"context"
+	"fmt"
+	"math"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/godbus/dbus/v5"
+	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/rs/zerolog/log"
 )
 
@@ -50,7 +52,7 @@ func (b *upowerBattery) marshallStateUpdate(api *deviceAPI, prop BatteryProp) *u
 	state := &upowerBatteryState{
 		batteryID: b.getProp(NativePath).(string),
 		prop: upowerBatteryProp{
-			kind:  prop,
+			name:  prop,
 			value: b.getProp(prop),
 		},
 	}
@@ -78,7 +80,7 @@ func (b *upowerBattery) marshallStateUpdate(api *deviceAPI, prop BatteryProp) *u
 }
 
 type upowerBatteryProp struct {
-	kind  BatteryProp
+	name  BatteryProp
 	value interface{}
 }
 
@@ -88,16 +90,67 @@ type upowerBatteryState struct {
 	attributes interface{}
 }
 
+// uPowerBatteryState implements hass.SensorUpdate
+
 func (state *upowerBatteryState) Device() string {
 	return state.batteryID
 }
 
-func (state *upowerBatteryState) Type() string {
-	return state.prop.kind.String()
+func (state *upowerBatteryState) Name() string {
+	return state.prop.name.String()
 }
 
-func (state *upowerBatteryState) Value() interface{} {
-	switch state.prop.kind {
+func (state *upowerBatteryState) Icon() string {
+	switch state.prop.name {
+	case Percentage:
+		if state.prop.value.(float64) >= 95 {
+			return "mdi:battery"
+		} else {
+			return fmt.Sprintf("mdi:battery-%d", int(math.Round(state.prop.value.(float64)/10)*10))
+		}
+	case EnergyRate:
+		if math.Signbit(state.prop.value.(float64)) {
+			return "mdi:battery-minus"
+		} else {
+			return "mdi:battery-plus"
+		}
+	default:
+		return "mdi:battery"
+	}
+}
+
+func (state *upowerBatteryState) SensorType() hass.SensorType {
+	return hass.TypeSensor
+}
+
+func (state *upowerBatteryState) DeviceClass() hass.SensorDeviceClass {
+	switch state.prop.name {
+	case Percentage:
+		return hass.SensorBattery
+	case Temperature:
+		return hass.SensorTemperature
+	case EnergyRate:
+		return hass.SensorPower
+	default:
+		return 0
+	}
+}
+
+func (state *upowerBatteryState) StateClass() hass.SensorStateClass {
+	switch state.prop.name {
+	case Percentage:
+		fallthrough
+	case Temperature:
+		fallthrough
+	case EnergyRate:
+		return hass.Measurement
+	default:
+		return 0
+	}
+}
+
+func (state *upowerBatteryState) State() interface{} {
+	switch state.prop.name {
 	case Voltage:
 		fallthrough
 	case Temperature:
@@ -111,14 +164,30 @@ func (state *upowerBatteryState) Value() interface{} {
 	case battState:
 		return stringState(state.prop.value.(uint32))
 	case BatteryLevel:
-		spew.Dump(state)
 		return stringLevel(state.prop.value.(uint32))
 	default:
 		return state.prop.value.(string)
 	}
 }
 
-func (state *upowerBatteryState) ExtraValues() interface{} {
+func (state *upowerBatteryState) Units() string {
+	switch state.prop.name {
+	case Percentage:
+		return "%"
+	case Temperature:
+		return "°C"
+	case EnergyRate:
+		return "W"
+	default:
+		return ""
+	}
+}
+
+func (state *upowerBatteryState) Category() string {
+	return "diagnostic"
+}
+
+func (state *upowerBatteryState) Attributes() interface{} {
 	return state.attributes
 }
 
@@ -187,7 +256,7 @@ func stringLevel(l uint32) string {
 	}
 }
 
-func BatteryUpdater(ctx context.Context, status chan interface{}) {
+func BatteryUpdater(ctx context.Context, status chan interface{}, done chan struct{}) {
 
 	deviceAPI, deviceAPIExists := FromContext(ctx)
 	if !deviceAPIExists {
@@ -235,9 +304,11 @@ func BatteryUpdater(ctx context.Context, status chan interface{}) {
 			}
 		} else {
 			batteryTracker[batteryID].updateProp(deviceAPI, BatteryLevel)
-			stateUpdate := batteryTracker[batteryID].marshallStateUpdate(deviceAPI, BatteryLevel)
-			if stateUpdate != nil {
-				status <- stateUpdate
+			if batteryTracker[batteryID].getProp(BatteryLevel).(uint32) != 1 {
+				stateUpdate := batteryTracker[batteryID].marshallStateUpdate(deviceAPI, BatteryLevel)
+				if stateUpdate != nil {
+					status <- stateUpdate
+				}
 			}
 		}
 
@@ -274,7 +345,7 @@ func BatteryUpdater(ctx context.Context, status chan interface{}) {
 		deviceAPI.WatchEvents <- batteryChangeSignal
 	}
 
-	<-status
+	<-done
 	log.Debug().Caller().
 		Msg("Stopping Linux battery updater.")
 }

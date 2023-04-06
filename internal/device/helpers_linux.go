@@ -88,8 +88,8 @@ func (d *deviceAPI) monitorDBus(ctx context.Context) {
 	events[sessionBus] = make(map[string]func(*dbus.Signal))
 	events[systemBus] = make(map[string]func(*dbus.Signal))
 	defer close(d.WatchEvents)
-	defer close(d.dBusSession.events)
-	defer close(d.dBusSystem.events)
+	defer d.dBusSession.conn.RemoveSignal(d.dBusSession.events)
+	defer d.dBusSystem.conn.RemoveSignal(d.dBusSystem.events)
 	for {
 		select {
 		case <-ctx.Done():

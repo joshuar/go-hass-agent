@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/grandcat/zeroconf"
+	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/rs/zerolog/log"
 
@@ -134,12 +135,12 @@ func (agent *Agent) getRegistrationHostInfo(ctx context.Context) *hass.Registrat
 }
 
 func (agent *Agent) runRegistrationWorker(ctx context.Context) error {
-	device := hass.NewDevice()
-	agent.App.Preferences().SetString("DeviceID", device.DeviceID())
-	agent.App.Preferences().SetString("DeviceName", device.DeviceName())
+	thisDevice := device.NewDevice()
+	agent.App.Preferences().SetString("DeviceID", thisDevice.DeviceID())
+	agent.App.Preferences().SetString("DeviceName", thisDevice.DeviceName())
 	registrationHostInfo := agent.getRegistrationHostInfo(ctx)
 	if registrationHostInfo != nil {
-		registrationRequest := hass.GenerateRegistrationRequest(device)
+		registrationRequest := device.GenerateRegistrationRequest(thisDevice)
 		appRegistrationInfo := hass.RegisterWithHass(registrationHostInfo, registrationRequest)
 		if appRegistrationInfo != nil {
 			agent.saveRegistration(appRegistrationInfo, registrationHostInfo)

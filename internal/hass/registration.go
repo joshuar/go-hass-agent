@@ -62,34 +62,3 @@ func RegisterWithHass(ri *RegistrationHost, rr *RegistrationRequest) *Registrati
 		return res
 	}
 }
-
-func GenerateRegistrationRequest(d deviceInfo) *RegistrationRequest {
-	if d.AppData() != nil {
-		return &RegistrationRequest{
-			DeviceID:           d.DeviceID(),
-			AppID:              d.AppID(),
-			AppName:            d.AppName(),
-			AppVersion:         d.AppVersion(),
-			DeviceName:         d.DeviceName(),
-			Manufacturer:       d.Manufacturer(),
-			Model:              d.Model(),
-			OsName:             d.OsName(),
-			OsVersion:          d.OsVersion(),
-			SupportsEncryption: d.SupportsEncryption(),
-			AppData:            d.AppData(),
-		}
-	} else {
-		return &RegistrationRequest{
-			DeviceID:           d.DeviceID(),
-			AppID:              d.AppID(),
-			AppName:            d.AppName(),
-			AppVersion:         d.AppVersion(),
-			DeviceName:         d.DeviceName(),
-			Manufacturer:       d.Manufacturer(),
-			Model:              d.Model(),
-			OsName:             d.OsName(),
-			OsVersion:          d.OsVersion(),
-			SupportsEncryption: d.SupportsEncryption(),
-		}
-	}
-}
