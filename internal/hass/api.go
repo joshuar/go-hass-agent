@@ -65,7 +65,8 @@ func APIRequest(ctx context.Context, request Request) {
 
 	config, validConfig := config.FromContext(requestCtx)
 	if !validConfig {
-		log.Debug().Caller().Msg("Could not retrieve valid config from context.")
+		log.Debug().Caller().
+			Msg("Could not retrieve valid config from context.")
 		cancel()
 		request.ResponseHandler(nil)
 		return
@@ -73,7 +74,8 @@ func APIRequest(ctx context.Context, request Request) {
 
 	reqJson, err := MarshalJSON(request, config.Secret)
 	if err != nil {
-		log.Error().Msgf("Unable to format request: %v", err)
+		log.Debug().Caller().
+			Msgf("Unable to format request: %v", err)
 		request.ResponseHandler(nil)
 	} else {
 		var res interface{}
@@ -86,7 +88,8 @@ func APIRequest(ctx context.Context, request Request) {
 		}
 		err := backoff.Retry(requestFunc, backoff.WithContext(backoff.NewExponentialBackOff(), requestCtx))
 		if err != nil {
-			log.Error().Msgf("Unable to send request: %v", err)
+			log.Debug().Caller().
+				Msgf("Unable to send request: %v", err)
 			cancel()
 			request.ResponseHandler(nil)
 		} else {

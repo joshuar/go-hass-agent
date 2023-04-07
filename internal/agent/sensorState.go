@@ -5,11 +5,12 @@ import (
 	"strings"
 
 	"github.com/iancoleman/strcase"
-	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/rs/zerolog/log"
 )
 
+// sensorState tracks the current state of a sensor, including the sensor value
+// and whether it is registered/disabled in HA.
 type sensorState struct {
 	deviceClass hass.SensorDeviceClass
 	stateClass  hass.SensorStateClass
@@ -25,8 +26,7 @@ type sensorState struct {
 	registered  bool
 }
 
-// sensorState implements hass.Sensor
-
+// sensorState implements hass.Sensor to represent a sensor in HA.
 func (s *sensorState) Attributes() interface{} {
 	return s.attributes
 }
@@ -91,121 +91,87 @@ func (s *sensorState) Registered() bool {
 	return s.registered
 }
 
-// sensorState implements hass.Request
+// sensorState implements hass.Request so its data can be sent to the HA API
 
-func (b *sensorState) RequestType() hass.RequestType {
-	if b.registered {
+func (sensor *sensorState) RequestType() hass.RequestType {
+	if sensor.registered {
 		return hass.RequestTypeUpdateSensorStates
 	}
 	return hass.RequestTypeRegisterSensor
 }
 
-func (b *sensorState) RequestData() interface{} {
-	return hass.MarshalSensorData(b)
+func (sensor *sensorState) RequestData() interface{} {
+	return hass.MarshalSensorData(sensor)
 }
 
-func (b *sensorState) ResponseHandler(rawResponse interface{}) {
+func (sensor *sensorState) ResponseHandler(rawResponse interface{}) {
 	if rawResponse == nil || len(rawResponse.(map[string]interface{})) == 0 {
-		log.Debug().Caller().Msg("No response data.")
+		log.Debug().Caller().
+			Msg("No response data.")
 	} else {
 		response := rawResponse.(map[string]interface{})
 		if v, ok := response["success"]; ok {
-			if v.(bool) && !b.registered {
-				b.registered = true
-				log.Debug().Caller().Msgf("Sensor %s registered.", b.name)
+			if v.(bool) && !sensor.registered {
+				sensor.registered = true
+				log.Debug().Caller().
+					Msgf("Sensor %s registered.", sensor.name)
 			}
 		}
-		if v, ok := response[b.entityID]; ok {
+		if v, ok := response[sensor.entityID]; ok {
 			status := v.(map[string]interface{})
 			if !status["success"].(bool) {
 				error := status["error"].(map[string]interface{})
-				log.Error().Msgf("Could not update sensor %s, %s: %s", b.name, error["code"], error["message"])
+				log.Error().Msgf("Could not update sensor %s, %s: %s", sensor.name, error["code"], error["message"])
 			} else {
-				log.Debug().Msgf("Sensor %s updated. State is now: %v", b.name, b.state)
+				log.Debug().Caller().
+					Msgf("Sensor %s updated. State is now: %v", sensor.name, sensor.state)
 			}
 			if v, ok := status["is_disabled"]; ok {
 				switch v.(bool) {
 				case true:
-					log.Debug().Msgf("Sensor %s has been disabled.", b.name)
-					b.disabled = true
+					log.Debug().Caller().
+						Msgf("Sensor %s has been disabled.", sensor.name)
+					sensor.disabled = true
 				case false:
-					log.Debug().Msgf("Sensor %s has been enabled.", b.name)
-					b.disabled = false
+					log.Debug().Caller().
+						Msgf("Sensor %s has been enabled.", sensor.name)
+					sensor.disabled = false
 				}
 			}
 		}
 	}
 }
 
-func newSensor(s hass.SensorUpdate) *sensorState {
+// newSensor takes a hass.SensorUpdate sent by the platform/device and derives
+// the information to encapsulate it as a sensorState.
+func newSensor(newSensor hass.SensorUpdate) *sensorState {
 	sensor := &sensorState{
-		deviceClass: s.DeviceClass(),
-		stateClass:  s.StateClass(),
-		sensorType:  s.SensorType(),
-		state:       s.State(),
-		attributes:  s.Attributes(),
-		icon:        s.Icon(),
-		stateUnits:  s.Units(),
-		category:    s.Category(),
+		deviceClass: newSensor.DeviceClass(),
+		stateClass:  newSensor.StateClass(),
+		sensorType:  newSensor.SensorType(),
+		state:       newSensor.State(),
+		attributes:  newSensor.Attributes(),
+		icon:        newSensor.Icon(),
+		stateUnits:  newSensor.Units(),
+		category:    newSensor.Category(),
 		registered:  false,
 		disabled:    false,
 	}
-	if s.Device() != "" {
-		sensor.name = s.Device() + " " + strcase.ToDelimited(s.Name(), ' ')
-		sensor.entityID = s.Device() + "_" + strings.ToLower(strcase.ToSnake(s.Name()))
+	if newSensor.Device() != "" {
+		sensor.name = newSensor.Device() + " " + strcase.ToDelimited(newSensor.Name(), ' ')
+		sensor.entityID = newSensor.Device() + "_" + strings.ToLower(strcase.ToSnake(newSensor.Name()))
 	} else {
-		sensor.name = strcase.ToDelimited(s.Name(), ' ')
-		sensor.entityID = strings.ToLower(strcase.ToSnake(s.Name()))
+		sensor.name = strcase.ToDelimited(newSensor.Name(), ' ')
+		sensor.entityID = strings.ToLower(strcase.ToSnake(newSensor.Name()))
 	}
 	return sensor
 }
 
-func (s *sensorState) updateSensor(ctx context.Context, update hass.SensorUpdate) {
-	s.state = update.State()
-	s.attributes = update.Attributes()
-	s.icon = update.Icon()
-	go hass.APIRequest(ctx, s)
-}
-
-func TrackSensors(ctx context.Context) {
-
-	updateCh := make(chan interface{})
-	// defer close(updateCh)
-	doneCh := make(chan struct{})
-
-	sensors := make(map[string]*sensorState)
-
-	go device.AppUpdater(ctx, updateCh, doneCh)
-	go device.BatteryUpdater(ctx, updateCh, doneCh)
-
-	for {
-		select {
-		case data := <-updateCh:
-			sensorID := data.(hass.SensorUpdate).Device() + data.(hass.SensorUpdate).Name()
-			if _, ok := sensors[sensorID]; !ok {
-				sensors[sensorID] = newSensor(data.(hass.SensorUpdate))
-				log.Debug().Caller().Msgf("New sensor discovered: %s", sensors[sensorID].name)
-				// log.Debug().Msgf("Attributes %v", sensors[sensorID].Attributes())
-				// log.Debug().Msgf("DeviceClass %s", sensors[sensorID].DeviceClass())
-				// log.Debug().Msgf("Icon %s", sensors[sensorID].Icon())
-				// log.Debug().Msgf("Name %s", sensors[sensorID].Name())
-				// log.Debug().Msgf("State %v", sensors[sensorID].State())
-				// log.Debug().Msgf("Type %s", sensors[sensorID].Type())
-				// log.Debug().Msgf("UniqueID %s", sensors[sensorID].UniqueID())
-				// log.Debug().Msgf("Unit %s", sensors[sensorID].UnitOfMeasurement())
-				// log.Debug().Msgf("StateClass %s", sensors[sensorID].StateClass())
-				// log.Debug().Msgf("Category %s", sensors[sensorID].EntityCategory())
-				// log.Debug().Msgf("Disabled? %v", sensors[sensorID].Disabled())
-				// log.Debug().Msgf("Registered? %v", sensors[sensorID].Registered())
-				go hass.APIRequest(ctx, sensors[sensorID])
-			} else {
-				sensors[sensorID].updateSensor(ctx, data.(hass.SensorUpdate))
-			}
-		case <-ctx.Done():
-			log.Debug().Caller().
-				Msg("Stopping sensor tracking.")
-			close(doneCh)
-			return
-		}
-	}
+// updateSensor ensures the bare minimum properties of a sensor are updated from
+// a hass.SensorUpdate
+func (sensor *sensorState) updateSensor(ctx context.Context, update hass.SensorUpdate) {
+	sensor.state = update.State()
+	sensor.attributes = update.Attributes()
+	sensor.icon = update.Icon()
+	go hass.APIRequest(ctx, sensor)
 }

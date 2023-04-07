@@ -1,6 +1,8 @@
 package device
 
 import (
+	"context"
+
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/rs/zerolog/log"
 )
@@ -61,4 +63,44 @@ func GenerateRegistrationRequest(d DeviceInfo) *hass.RegistrationRequest {
 			SupportsEncryption: d.SupportsEncryption(),
 		}
 	}
+}
+
+type SensorInfo struct {
+	sensorWorkers map[string]func(context.Context, chan interface{}, chan struct{})
+}
+
+func NewSensorInfo() *SensorInfo {
+	return &SensorInfo{
+		sensorWorkers: make(map[string]func(context.Context, chan interface{}, chan struct{})),
+	}
+}
+
+func (i *SensorInfo) Add(name string, workerFunc func(context.Context, chan interface{}, chan struct{})) {
+	log.Debug().Caller().
+		Msgf("Added a sensorWorker for %s", name)
+	i.sensorWorkers[name] = workerFunc
+}
+
+func (i *SensorInfo) Get() map[string]func(context.Context, chan interface{}, chan struct{}) {
+	return i.sensorWorkers
+}
+
+// key is an unexported type for keys defined in this package.
+// This prevents collisions with keys defined in other packages.
+type key int
+
+// configKey is the key for device.deviceAPI values in Contexts. It is
+// unexported; clients use device.NewContext and device.FromContext
+// instead of using this key directly.
+var configKey key
+
+// NewContext returns a new Context that carries value d.
+func NewContext(ctx context.Context, d *deviceAPI) context.Context {
+	return context.WithValue(ctx, configKey, d)
+}
+
+// FromContext returns the deviceAPI value stored in ctx, if any.
+func FromContext(ctx context.Context) (*deviceAPI, bool) {
+	c, ok := ctx.Value(configKey).(*deviceAPI)
+	return c, ok
 }

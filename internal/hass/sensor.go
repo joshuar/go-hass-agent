@@ -58,10 +58,17 @@ const (
 	Total_increasing
 )
 
+// SensorType reflects the type of sensor, sensor or binary_sensor.
 type SensorType int
+
+// SensorDeviceClass reflects the HA device class of the sensor.
 type SensorDeviceClass int
+
+// SensorStateClass reflects the HA state class of the sensor.
 type SensorStateClass int
 
+// Sensor represents a sensor in HA. As an interface, it leaves it up to the
+// underlying struct to provide the appropriate data for this representation.
 type Sensor interface {
 	Attributes() interface{}
 	DeviceClass() string
@@ -77,6 +84,9 @@ type Sensor interface {
 	Registered() bool
 }
 
+// SensorUpdate represents an update for a sensor. It reflects the current state
+// of the sensor at the point in time it is used. It provides a bridge between
+// platform/device and HA implementations of what a sensor is.
 type SensorUpdate interface {
 	Device() string
 	Name() string
@@ -90,6 +100,8 @@ type SensorUpdate interface {
 	Attributes() interface{}
 }
 
+// sensorRegistrationInfo is the JSON structure required to register a sensor
+// with HA.
 type sensorRegistrationInfo struct {
 	StateAttributes   interface{} `json:"attributes,omitempty"`
 	DeviceClass       string      `json:"device_class,omitempty"`
@@ -104,6 +116,8 @@ type sensorRegistrationInfo struct {
 	Disabled          bool        `json:"disabled,omitempty"`
 }
 
+// sensorUpdateInfo is the JSON structure required to update HA with the current
+// sensor state.
 type sensorUpdateInfo struct {
 	StateAttributes interface{} `json:"attributes,omitempty"`
 	Icon            string      `json:"icon,omitempty"`
@@ -112,6 +126,8 @@ type sensorUpdateInfo struct {
 	UniqueID        string      `json:"unique_id"`
 }
 
+// MarshalSensorDate takes the sensor data and returns the appropriate JSON
+// structure to either register or update the sensor in HA.
 func MarshalSensorData(s Sensor) interface{} {
 	if s.Registered() {
 		return []sensorUpdateInfo{{

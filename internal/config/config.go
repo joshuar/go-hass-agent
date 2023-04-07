@@ -3,8 +3,8 @@ package config
 import "context"
 
 type AppConfig struct {
-	APIURL       string `json:"restapi_url"`
-	WebSocketURL string `json:"instance_url"`
+	APIURL       string
+	WebSocketURL string
 	Secret       string
 	Token        string
 	WebhookID    string

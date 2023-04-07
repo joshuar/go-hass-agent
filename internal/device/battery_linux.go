@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/godbus/dbus/v5"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/rs/zerolog/log"
@@ -307,7 +306,6 @@ func BatteryUpdater(ctx context.Context, status chan interface{}, done chan stru
 			batteryTracker[batteryID].updateProp(deviceAPI, BatteryLevel)
 			if batteryTracker[batteryID].getProp(BatteryLevel).(uint32) != 1 {
 				stateUpdate := batteryTracker[batteryID].marshallStateUpdate(deviceAPI, BatteryLevel)
-				spew.Dump(stateUpdate)
 				if stateUpdate != nil {
 					status <- stateUpdate
 				}
@@ -326,7 +324,6 @@ func BatteryUpdater(ctx context.Context, status chan interface{}, done chan stru
 			},
 			event: "org.freedesktop.DBus.Properties.PropertiesChanged",
 			eventHandler: func(s *dbus.Signal) {
-				log.Debug().Caller().Msg("Recieved changed battery state.")
 				batteryID := string(s.Path)
 				props := s.Body[1].(map[string]dbus.Variant)
 				for propName, propValue := range props {

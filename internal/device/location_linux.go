@@ -14,6 +14,8 @@ type linuxLocation struct {
 	altitude  float64
 }
 
+// linuxLocation implements hass.LocationUpdate
+
 func (l *linuxLocation) Gps() []float64 {
 	return []float64{l.latitude, l.longitude}
 }
@@ -42,7 +44,7 @@ func (l *linuxLocation) VerticalAccuracy() int {
 	return 0
 }
 
-func LocationUpdater(appID string, locationInfoCh chan interface{}) {
+func LocationUpdater(appID string, locationInfoCh chan interface{}, done chan struct{}) {
 
 	locationInfo := &linuxLocation{}
 
@@ -61,7 +63,6 @@ func LocationUpdater(appID string, locationInfoCh chan interface{}) {
 	c := client.SubscribeLocationUpdated()
 	for {
 		select {
-		// for v := range c {
 		case v := <-c:
 			log.Debug().Caller().Msg("Location update received.")
 			_, location, err := client.ParseLocationUpdated(v)
@@ -83,7 +84,7 @@ func LocationUpdater(appID string, locationInfoCh chan interface{}) {
 			logging.CheckError(err)
 
 			locationInfoCh <- locationInfo
-		case <-locationInfoCh:
+		case <-done:
 			log.Debug().Caller().
 				Msg("Stopping Linux location updater.")
 			gcm.DeleteClient(client)

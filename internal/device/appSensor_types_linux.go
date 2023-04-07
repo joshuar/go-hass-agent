@@ -8,8 +8,8 @@ func _() {
 	// An "invalid array index" compiler error signifies that the constant values have changed.
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
-	_ = x[ActiveApp-2]
-	_ = x[RunningApps-3]
+	_ = x[ActiveApp-4]
+	_ = x[RunningApps-5]
 }
 
 const _AppSensorType_name = "ActiveAppRunningApps"
@@ -17,9 +17,9 @@ const _AppSensorType_name = "ActiveAppRunningApps"
 var _AppSensorType_index = [...]uint8{0, 9, 20}
 
 func (i AppSensorType) String() string {
-	i -= 2
+	i -= 4
 	if i < 0 || i >= AppSensorType(len(_AppSensorType_index)-1) {
-		return "AppSensorType(" + strconv.FormatInt(int64(i+2), 10) + ")"
+		return "AppSensorType(" + strconv.FormatInt(int64(i+4), 10) + ")"
 	}
 	return _AppSensorType_name[_AppSensorType_index[i]:_AppSensorType_index[i+1]]
 }

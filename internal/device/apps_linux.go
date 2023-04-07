@@ -10,8 +10,10 @@ import (
 
 //go:generate stringer -type=AppSensorType -output appSensor_types_linux.go
 const (
-	appStateDBusMethod = "org.freedesktop.impl.portal.Background.GetAppState"
-	appStateDBusPath   = "/org/freedesktop/portal/desktop"
+	appStateDBusMethod    = "org.freedesktop.impl.portal.Background.GetAppState"
+	appStateDBusPath      = "/org/freedesktop/portal/desktop"
+	appStateDBusInterface = "org.freedesktop.impl.portal.Background"
+	appStateDBusEvent     = "org.freedesktop.impl.portal.Background.RunningApplicationsChanged"
 
 	ActiveApp AppSensorType = iota
 	RunningApps
@@ -32,6 +34,8 @@ type runningApps interface {
 type appInfo struct {
 	activeApps map[string]interface{}
 }
+
+// appInfo implements the runningApps and activeApps interfaces.
 
 func (a *appInfo) Name() string {
 	for key, value := range a.activeApps {
@@ -134,11 +138,10 @@ func (a *appInfo) marshallStateUpdate(t AppSensorType) *appState {
 }
 
 func AppUpdater(ctx context.Context, update chan interface{}, done chan struct{}) {
-
 	deviceAPI, deviceAPIExists := FromContext(ctx)
 	if !deviceAPIExists {
 		log.Debug().Caller().
-			Msg("Could not connect to DBus to monitor batteries.")
+			Msg("Could not connect to DBus to monitor app state.")
 		return
 	}
 
@@ -153,12 +156,15 @@ func AppUpdater(ctx context.Context, update chan interface{}, done chan struct{}
 	appChangeSignal := &DBusWatchRequest{
 		bus: sessionBus,
 		match: DBusSignalMatch{
-			path: "/org/freedesktop/portal/desktop",
-			intr: "org.freedesktop.impl.portal.Background",
+			path: appStateDBusPath,
+			intr: appStateDBusInterface,
 		},
-		event: "org.freedesktop.impl.portal.Background.RunningApplicationsChanged",
+		event: appStateDBusEvent,
 		eventHandler: func(s *dbus.Signal) {
-			activeAppList, err := deviceAPI.GetDBusData(sessionBus, portalDest, appStateDBusPath, appStateDBusMethod)
+			activeAppList, err := deviceAPI.GetDBusData(sessionBus,
+				portalDest,
+				appStateDBusPath,
+				appStateDBusMethod)
 			if err != nil {
 				log.Debug().Caller().Msgf(err.Error())
 			} else {
@@ -169,7 +175,8 @@ func AppUpdater(ctx context.Context, update chan interface{}, done chan struct{}
 			}
 		},
 	}
-	log.Debug().Caller().Msg("Adding a DBus watch for app change events.")
+	log.Debug().Caller().
+		Msg("Adding a DBus watch for app change events.")
 	deviceAPI.WatchEvents <- appChangeSignal
 
 	<-done

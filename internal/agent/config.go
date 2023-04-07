@@ -57,7 +57,7 @@ func (agent *Agent) loadConfig(ctx context.Context) *config.AppConfig {
 			if err != nil {
 				log.Debug().Caller().
 					Msgf("Error trying to register: %v. Exiting.", err)
-				agent.exit()
+				agent.stop()
 			}
 		}
 	}
