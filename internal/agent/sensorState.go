@@ -157,9 +157,9 @@ func newSensor(newSensor hass.SensorUpdate) *sensorState {
 		registered:  false,
 		disabled:    false,
 	}
-	if newSensor.Device() != "" {
-		sensor.name = newSensor.Device() + " " + strcase.ToDelimited(newSensor.Name(), ' ')
-		sensor.entityID = newSensor.Device() + "_" + strings.ToLower(strcase.ToSnake(newSensor.Name()))
+	if newSensor.Group() != "" {
+		sensor.name = newSensor.Group() + " " + strcase.ToDelimited(newSensor.Name(), ' ')
+		sensor.entityID = newSensor.Group() + "_" + strings.ToLower(strcase.ToSnake(newSensor.Name()))
 	} else {
 		sensor.name = strcase.ToDelimited(newSensor.Name(), ' ')
 		sensor.entityID = strings.ToLower(strcase.ToSnake(newSensor.Name()))

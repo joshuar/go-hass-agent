@@ -19,12 +19,10 @@ func (agent *Agent) runNotificationsWorker(ctx context.Context) {
 		} else {
 			go agent.handleNotifications(ctx, ws.ReadCh, ws.WriteCh)
 		}
-		select {
-		case <-ctx.Done():
-			log.Debug().Caller().Msg("Closing notifications worker.")
-			ws.Close()
-			return
-		}
+
+		<-ctx.Done()
+		log.Debug().Caller().Msg("Closing notifications worker.")
+		ws.Close()
 	}
 }
 
@@ -68,7 +66,6 @@ func (agent *Agent) handleNotifications(ctx context.Context, response chan *hass
 			case "result":
 				if !r.Success {
 					log.Error().Msgf("Recieved error on websocket, %s: %s.", r.Error.Code, r.Error.Message)
-					// reconnect <- true
 				}
 			case "event":
 				agent.App.SendNotification(&fyne.Notification{
@@ -76,7 +73,7 @@ func (agent *Agent) handleNotifications(ctx context.Context, response chan *hass
 					Content: r.Notification.Message,
 				})
 			default:
-				log.Debug().Caller().Msgf("Received unhandled response %v", response)
+				log.Debug().Caller().Msgf("Received unhandled response %v", r)
 			}
 		}
 	}

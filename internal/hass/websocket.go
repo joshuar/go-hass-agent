@@ -44,6 +44,8 @@ func (ws *HassWebsocket) Read(ctx context.Context) {
 		err := wsjson.Read(ctx, ws.conn, &response)
 		if err != nil {
 			log.Debug().Caller().Msg(err.Error())
+			close(ws.ReadCh)
+			return
 		}
 		select {
 		case <-ctx.Done():

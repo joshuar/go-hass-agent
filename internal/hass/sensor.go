@@ -1,5 +1,7 @@
 package hass
 
+import "strings"
+
 //go:generate stringer -type=SensorType,SensorDeviceClass,SensorStateClass -output sensor_strings.go -trimprefix Sensor
 
 const (
@@ -88,7 +90,7 @@ type Sensor interface {
 // of the sensor at the point in time it is used. It provides a bridge between
 // platform/device and HA implementations of what a sensor is.
 type SensorUpdate interface {
-	Device() string
+	Group() string
 	Name() string
 	Icon() string
 	SensorType() SensorType
@@ -148,7 +150,7 @@ func MarshalSensorData(s Sensor) interface{} {
 			Type:              s.Type(),
 			UniqueID:          s.UniqueID(),
 			UnitOfMeasurement: s.UnitOfMeasurement(),
-			StateClass:        s.StateClass(),
+			StateClass:        strings.ToLower(s.StateClass()),
 			EntityCategory:    s.EntityCategory(),
 			Disabled:          s.Disabled(),
 		}

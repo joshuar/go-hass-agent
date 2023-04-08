@@ -32,15 +32,15 @@ type runningApps interface {
 }
 
 type appInfo struct {
-	activeApps map[string]interface{}
+	activeApps map[string]dbus.Variant
 }
 
 // appInfo implements the runningApps and activeApps interfaces.
 
 func (a *appInfo) Name() string {
-	for key, value := range a.activeApps {
-		if value.(uint32) == 2 {
-			return key
+	for appName, state := range a.activeApps {
+		if state.Value().(uint32) == 2 {
+			return appName
 		}
 	}
 	return "Unknown"
@@ -48,8 +48,8 @@ func (a *appInfo) Name() string {
 
 func (a *appInfo) Count() int {
 	var count int
-	for _, value := range a.activeApps {
-		if value.(uint32) > 0 {
+	for _, state := range a.activeApps {
+		if state.Value().(uint32) > 0 {
 			count++
 		}
 	}
@@ -58,9 +58,9 @@ func (a *appInfo) Count() int {
 
 func (a *appInfo) Attributes() interface{} {
 	var runningApps []string
-	for key, value := range a.activeApps {
-		if value.(uint32) > 0 {
-			runningApps = append(runningApps, key)
+	for appName, state := range a.activeApps {
+		if state.Value().(uint32) > 0 {
+			runningApps = append(runningApps, appName)
 		}
 	}
 	return struct {
@@ -78,7 +78,7 @@ type appState struct {
 
 // appState implements hass.SensorUpdate
 
-func (a *appState) Device() string {
+func (a *appState) Group() string {
 	return ""
 }
 
@@ -161,15 +161,16 @@ func AppUpdater(ctx context.Context, update chan interface{}, done chan struct{}
 		},
 		event: appStateDBusEvent,
 		eventHandler: func(s *dbus.Signal) {
-			activeAppList, err := deviceAPI.GetDBusData(sessionBus,
+			activeAppList := deviceAPI.GetDBusDataAsMap(sessionBus,
 				portalDest,
 				appStateDBusPath,
-				appStateDBusMethod)
-			if err != nil {
-				log.Debug().Caller().Msgf(err.Error())
+				appStateDBusMethod, "")
+			if activeAppList == nil {
+				log.Debug().Caller().
+					Msg("No active apps found.")
 			} else {
 				a.activeApps = nil
-				a.activeApps = activeAppList.(map[string]interface{})
+				a.activeApps = activeAppList
 				update <- a.marshallStateUpdate(RunningApps)
 				update <- a.marshallStateUpdate(ActiveApp)
 			}

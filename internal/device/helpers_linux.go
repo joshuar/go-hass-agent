@@ -2,7 +2,6 @@ package device
 
 import (
 	"context"
-	"fmt"
 	"os"
 
 	"github.com/godbus/dbus/v5"
@@ -135,29 +134,54 @@ func (d *deviceAPI) RemoveDBusWatch(t dbusType, w *DBusWatchRequest) error {
 	}
 }
 
-func (d *deviceAPI) GetDBusProp(t dbusType, dest string, path dbus.ObjectPath, prop string) (dbus.Variant, error) {
+func (d *deviceAPI) GetDBusObject(t dbusType, dest string, path dbus.ObjectPath) dbus.BusObject {
+	return d.bus(t).Object(dest, path)
+}
+
+func (d *deviceAPI) GetDBusProp(t dbusType, dest string, path dbus.ObjectPath, prop string) dbus.Variant {
 	obj := d.bus(t).Object(dest, path)
 	res, err := obj.GetProperty(prop)
 	if err != nil {
-		return dbus.MakeVariant(""), err
+		log.Debug().Caller().Msg(err.Error())
+		return dbus.MakeVariant("")
 	}
-	return res, nil
+	return res
 }
 
-func (d *deviceAPI) GetDBusData(t dbusType, dest string, path dbus.ObjectPath, method string, args ...interface{}) (interface{}, error) {
+func (d *deviceAPI) GetDBusDataAsMap(t dbusType, dest string, path dbus.ObjectPath, method string, args string) map[string]dbus.Variant {
+	log.Debug().Msgf("Dest %s Path %s Method %s Args %s", dest, path, method, args)
 	obj := d.bus(t).Object(dest, path)
-	var data interface{}
+	var data map[string]dbus.Variant
 	var err error
-	if args != nil {
+	if args != "" {
 		err = obj.Call(method, 0, args).Store(&data)
 	} else {
 		err = obj.Call(method, 0).Store(&data)
 	}
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		return nil, err
+		log.Debug().Caller().
+			Msgf(err.Error())
+		return nil
 	}
-	return data, nil
+	return data
+}
+
+func (d *deviceAPI) GetDBusDataAsList(t dbusType, dest string, path dbus.ObjectPath, method string, args string) []string {
+	log.Debug().Msgf("Dest %s Path %s Method %s Args %s", dest, path, method, args)
+	obj := d.bus(t).Object(dest, path)
+	var data []string
+	var err error
+	if args != "" {
+		err = obj.Call(method, 0, args).Store(&data)
+	} else {
+		err = obj.Call(method, 0).Store(&data)
+	}
+	if err != nil {
+		log.Debug().Caller().
+			Msgf(err.Error())
+		return nil
+	}
+	return data
 }
 
 func SetupContext(ctx context.Context) context.Context {
@@ -170,6 +194,7 @@ func SetupContext(ctx context.Context) context.Context {
 	go deviceAPI.monitorDBus(ctx)
 	deviceAPI.SensorInfo.Add("Battery", BatteryUpdater)
 	deviceAPI.SensorInfo.Add("Apps", AppUpdater)
+	deviceAPI.SensorInfo.Add("Network", NetworkUpdater)
 	deviceCtx := NewContext(ctx, deviceAPI)
 	return deviceCtx
 }

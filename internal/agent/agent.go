@@ -108,7 +108,7 @@ func (agent *Agent) trackSensors(ctx context.Context) {
 			case data := <-updateCh:
 				switch data := data.(type) {
 				case hass.SensorUpdate:
-					sensorID := data.Device() + data.Name()
+					sensorID := data.Group() + data.Name()
 					if _, ok := sensors[sensorID]; !ok {
 						sensors[sensorID] = newSensor(data)
 						log.Debug().Caller().Msgf("New sensor discovered: %s", sensors[sensorID].name)
@@ -138,7 +138,7 @@ func (agent *Agent) trackSensors(ctx context.Context) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		device.LocationUpdater(agent.App.UniqueID(), updateCh, doneCh)
+		device.LocationUpdater(ctx, agent.App.UniqueID(), updateCh, doneCh)
 	}()
 
 	for name, workerFunction := range deviceAPI.SensorInfo.Get() {

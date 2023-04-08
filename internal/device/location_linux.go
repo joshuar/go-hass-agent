@@ -1,6 +1,8 @@
 package device
 
 import (
+	"context"
+
 	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/maltegrosse/go-geoclue2"
 	"github.com/rs/zerolog/log"
@@ -44,7 +46,7 @@ func (l *linuxLocation) VerticalAccuracy() int {
 	return 0
 }
 
-func LocationUpdater(appID string, locationInfoCh chan interface{}, done chan struct{}) {
+func LocationUpdater(ctx context.Context, appID string, locationInfoCh chan interface{}, done chan struct{}) {
 
 	locationInfo := &linuxLocation{}
 

@@ -36,9 +36,10 @@ type upowerBattery struct {
 }
 
 func (b *upowerBattery) updateProp(api *deviceAPI, prop BatteryProp) {
-	propValue, err := api.GetDBusProp(systemBus, upowerDBusDest, b.dBusPath, "org.freedesktop.UPower.Device."+prop.String())
-	if err != nil {
-		log.Debug().Caller().Msgf(err.Error())
+	propValue := api.GetDBusProp(systemBus, upowerDBusDest, b.dBusPath, "org.freedesktop.UPower.Device."+prop.String())
+	if propValue.Value() == "" {
+		log.Debug().Caller().
+			Msgf("Could not update property %s. Not found?", prop.String())
 	}
 	b.props[prop] = propValue
 }
@@ -92,7 +93,7 @@ type upowerBatteryState struct {
 
 // uPowerBatteryState implements hass.SensorUpdate
 
-func (state *upowerBatteryState) Device() string {
+func (state *upowerBatteryState) Group() string {
 	return state.batteryID
 }
 
@@ -265,20 +266,20 @@ func BatteryUpdater(ctx context.Context, status chan interface{}, done chan stru
 		return
 	}
 
-	batteryList, err := deviceAPI.GetDBusData(systemBus, upowerDBusDest, upowerDBusPath, upowerGetDevicesMethod)
-	if err != nil {
+	batteryList := deviceAPI.GetDBusDataAsList(systemBus, upowerDBusDest, upowerDBusPath, upowerGetDevicesMethod, "")
+	if batteryList == nil {
 		log.Debug().Caller().
-			Msgf("Unable to find all battery devices: %v", err)
+			Msg("Unable to any battery devices")
 		return
 	}
 
 	batteryTracker := make(map[string]*upowerBattery)
-	for _, v := range batteryList.([]dbus.ObjectPath) {
+	for _, v := range batteryList {
 
 		// Track this battery in batteryTracker.
-		batteryID := string(v)
+		batteryID := v
 		batteryTracker[batteryID] = &upowerBattery{
-			dBusPath: v,
+			dBusPath: dbus.ObjectPath(v),
 		}
 		batteryTracker[batteryID].props = make(map[BatteryProp]dbus.Variant)
 		batteryTracker[batteryID].updateProp(deviceAPI, NativePath)
@@ -319,7 +320,7 @@ func BatteryUpdater(ctx context.Context, status chan interface{}, done chan stru
 		batteryChangeSignal := &DBusWatchRequest{
 			bus: systemBus,
 			match: DBusSignalMatch{
-				path: v,
+				path: dbus.ObjectPath(v),
 				intr: "org.freedesktop.DBus.Properties",
 			},
 			event: "org.freedesktop.DBus.Properties.PropertiesChanged",
