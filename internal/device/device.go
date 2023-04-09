@@ -1,3 +1,8 @@
+// Copyright (c) 2023 Joshua Rich <joshua.rich@gmail.com>
+//
+// This software is released under the MIT License.
+// https://opensource.org/licenses/MIT
+
 package device
 
 import (
@@ -77,7 +82,7 @@ func NewSensorInfo() *SensorInfo {
 
 func (i *SensorInfo) Add(name string, workerFunc func(context.Context, chan interface{}, chan struct{})) {
 	log.Debug().Caller().
-		Msgf("Added a sensorWorker for %s", name)
+		Msgf("Registering %s sensors.", name)
 	i.sensorWorkers[name] = workerFunc
 }
 

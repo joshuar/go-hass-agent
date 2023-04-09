@@ -1,3 +1,8 @@
+// Copyright (c) 2023 Joshua Rich <joshua.rich@gmail.com>
+//
+// This software is released under the MIT License.
+// https://opensource.org/licenses/MIT
+
 package device
 
 import (
@@ -140,10 +145,6 @@ func (state *networkSensor) Name() string {
 	switch state.sensorType {
 	case ConnectionState:
 		return state.connection + " State"
-	// case AddressIPv4:
-	// 	return state.connection + " IPv4 Address"
-	// case AddressIPv6:
-	// 	return state.connection + " IPv6 Address"
 	case WifiSSID:
 		return state.connection + " Wifi Connection"
 	case WifiFrequency:
@@ -161,10 +162,6 @@ func (state *networkSensor) ID() string {
 	switch state.sensorType {
 	case ConnectionState:
 		return state.connection + "_connection_state"
-	// case AddressIPv4:
-	// 	return state.connection + "_ipv4_address"
-	// case AddressIPv6:
-	// 	return state.connection + "_ipv6_address"
 	case WifiSSID:
 		return state.connection + "_wifi_connection"
 	case WifiFrequency:
@@ -179,7 +176,26 @@ func (state *networkSensor) ID() string {
 }
 
 func (state *networkSensor) Icon() string {
-	return "mdi:wifi"
+	switch state.sensorType {
+	case ConnectionState:
+		switch state.sensorValue {
+		case "Online":
+			return "mdi:network"
+		case "Offline":
+			return "mdi:close-network"
+		default:
+			return "mdi:help-network"
+		}
+	case WifiSSID:
+		fallthrough
+	case WifiFrequency:
+		fallthrough
+	case WifiSpeed:
+		fallthrough
+	case WifiStrength:
+		return "mdi:wifi"
+	}
+	return "mdi:network"
 }
 
 func (state *networkSensor) SensorType() hass.SensorType {
@@ -267,22 +283,6 @@ func marshallStateUpdate(ctx context.Context, sensor networkProp, path dbus.Obje
 			Ipv4:           getIPAddr(ctx, ConnectionIPv4, path),
 			Ipv6:           getIPAddr(ctx, ConnectionIPv6, path),
 		}
-	// case AddressIPv4:
-	// 	fallthrough
-	// case AddressIPv6:
-	// 	addrs := v.Value().([]map[string]dbus.Variant)
-	// 	for _, a := range addrs {
-	// 		ip := net.ParseIP(a["address"].Value().(string))
-	// 		if ip.IsGlobalUnicast() {
-	// 			value = ip.String()
-	// 			attributes = &struct {
-	// 				Prefix uint32 `json:"Prefix"`
-	// 			}{
-	// 				Prefix: a["prefix"].Value().(uint32),
-	// 			}
-
-	// 		}
-	// 	}
 	case WifiSSID:
 		value = string(v.Value().([]byte))
 	case WifiFrequency:
