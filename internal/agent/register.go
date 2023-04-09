@@ -58,7 +58,6 @@ func findServers() binding.StringList {
 
 func (agent *Agent) getRegistrationHostInfo(ctx context.Context) *hass.RegistrationHost {
 
-	// a := app.New()
 	msgPrinter := newMsgPrinter()
 
 	registrationInfo := newRegistration()

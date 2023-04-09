@@ -25,6 +25,15 @@ type Agent struct {
 	MsgPrinter    *message.Printer
 }
 
+func NewAgent() *Agent {
+	return &Agent{
+		App:        newUI(),
+		Name:       Name,
+		Version:    Version,
+		MsgPrinter: newMsgPrinter(),
+	}
+}
+
 func Run() {
 	ctx, cancelfunc := context.WithCancel(context.Background())
 	deviceCtx := device.SetupContext(ctx)
@@ -33,12 +42,7 @@ func Run() {
 }
 
 func start(ctx context.Context) {
-	agent := &Agent{
-		App:        newUI(),
-		Name:       Name,
-		Version:    Version,
-		MsgPrinter: newMsgPrinter(),
-	}
+	agent := NewAgent()
 
 	var wg sync.WaitGroup
 
@@ -80,7 +84,6 @@ func (agent *Agent) tracker(agentCtx context.Context, configWG *sync.WaitGroup) 
 	configWG.Wait()
 
 	appConfig := agent.loadConfig()
-
 	ctx := config.NewContext(agentCtx, appConfig)
 
 	go agent.runNotificationsWorker(ctx)

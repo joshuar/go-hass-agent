@@ -4,6 +4,8 @@ Copyright © 2023 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
+	"github.com/joshuar/go-hass-agent/internal/agent"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -15,7 +17,7 @@ var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print the version number",
 	Run: func(cmd *cobra.Command, args []string) {
-		// a := agent.NewAgent()
-		// fmt.Printf("%s %s", a.Name, a.Version)
+		agent := agent.NewAgent()
+		log.Info().Msgf("%s: %s", agent.Name, agent.Version)
 	},
 }
