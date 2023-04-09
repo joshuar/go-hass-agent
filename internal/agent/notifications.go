@@ -9,10 +9,6 @@ import (
 )
 
 func (agent *Agent) runNotificationsWorker(ctx context.Context) {
-
-	// var workerCtx context.Context
-	// once.Do(func() { workerCtx = agent.loadConfig(ctx) })
-
 	for {
 		ws := hass.NewWebsocket(ctx)
 		if ws == nil {

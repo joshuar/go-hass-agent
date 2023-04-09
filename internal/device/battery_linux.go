@@ -372,8 +372,4 @@ func BatteryUpdater(ctx context.Context, status chan interface{}, done chan stru
 		}
 		deviceAPI.WatchEvents <- batteryChangeSignal
 	}
-
-	// <-done
-	// log.Debug().Caller().
-	// 	Msg("Stopping Linux battery updater.")
 }

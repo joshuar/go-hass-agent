@@ -17,50 +17,74 @@ const (
 	appStateDBusInterface = "org.freedesktop.impl.portal.Background"
 	appStateDBusEvent     = "org.freedesktop.impl.portal.Background.RunningApplicationsChanged"
 
-	ActiveApp AppSensorType = iota
+	ActiveApp appSensorType = iota
 	RunningApps
 )
 
-type AppSensorType int
+type appSensorType int
 
-type activeApp interface {
-	Name() string
-	Attributes() interface{}
+type appSensor struct {
+	sensorType  appSensorType
+	sensorValue map[string]dbus.Variant
 }
 
-type runningApps interface {
-	Count() int
-	Attributes() interface{}
+// appSensor implements hass.SensorUpdate
+
+func (s *appSensor) Name() string {
+	return strcase.ToDelimited(s.sensorType.String(), ' ')
 }
 
-type appInfo struct {
-	activeApps map[string]dbus.Variant
+func (s *appSensor) ID() string {
+	return strings.ToLower(strcase.ToSnake(s.sensorType.String()))
 }
 
-// appInfo implements the runningApps and activeApps interfaces.
+func (s *appSensor) Icon() string {
+	return "mdi:application"
+}
 
-func (a *appInfo) Name() string {
-	for appName, state := range a.activeApps {
-		if state.Value().(uint32) == 2 {
-			return appName
+func (s *appSensor) SensorType() hass.SensorType {
+	return hass.TypeSensor
+}
+
+func (s *appSensor) DeviceClass() hass.SensorDeviceClass {
+	return 0
+}
+
+func (s *appSensor) StateClass() hass.SensorStateClass {
+	return 0
+}
+
+func (s *appSensor) State() interface{} {
+	switch s.sensorType {
+	case ActiveApp:
+		for appName, state := range s.sensorValue {
+			if state.Value().(uint32) == 2 {
+				return appName
+			}
 		}
-	}
-	return "Unknown"
-}
-
-func (a *appInfo) Count() int {
-	var count int
-	for _, state := range a.activeApps {
-		if state.Value().(uint32) > 0 {
-			count++
+	case RunningApps:
+		var count int
+		for _, state := range s.sensorValue {
+			if state.Value().(uint32) > 0 {
+				count++
+			}
 		}
+		return count
 	}
-	return count
+	return ""
 }
 
-func (a *appInfo) Attributes() interface{} {
+func (s *appSensor) Units() string {
+	return ""
+}
+
+func (s *appSensor) Category() string {
+	return ""
+}
+
+func (s *appSensor) Attributes() interface{} {
 	var runningApps []string
-	for appName, state := range a.activeApps {
+	for appName, state := range s.sensorValue {
 		if state.Value().(uint32) > 0 {
 			runningApps = append(runningApps, appName)
 		}
@@ -72,70 +96,10 @@ func (a *appInfo) Attributes() interface{} {
 	}
 }
 
-type appState struct {
-	value      interface{}
-	stateType  AppSensorType
-	attributes interface{}
-}
-
-// appState implements hass.SensorUpdate
-
-func (a *appState) Name() string {
-	return strcase.ToDelimited(a.stateType.String(), ' ')
-}
-
-func (a *appState) ID() string {
-	return strings.ToLower(strcase.ToSnake(a.stateType.String()))
-}
-
-func (a *appState) Icon() string {
-	return "mdi:application"
-}
-
-func (a *appState) SensorType() hass.SensorType {
-	return hass.TypeSensor
-}
-
-func (a *appState) DeviceClass() hass.SensorDeviceClass {
-	return 0
-}
-
-func (a *appState) StateClass() hass.SensorStateClass {
-	return 0
-}
-
-func (a *appState) State() interface{} {
-	return a.value
-}
-
-func (a *appState) Units() string {
-	return ""
-}
-
-func (a *appState) Category() string {
-	return ""
-}
-
-func (a *appState) Attributes() interface{} {
-	return a.attributes
-}
-
-func (a *appInfo) marshallStateUpdate(t AppSensorType) *appState {
-	switch t {
-	case RunningApps:
-		return &appState{
-			value:      a.Count(),
-			stateType:  t,
-			attributes: a.Attributes(),
-		}
-	case ActiveApp:
-		return &appState{
-			value:      a.Name(),
-			stateType:  t,
-			attributes: a.Attributes(),
-		}
-	default:
-		return nil
+func marshallAppStateUpdate(t appSensorType, v map[string]dbus.Variant) *appSensor {
+	return &appSensor{
+		sensorValue: v,
+		sensorType:  t,
 	}
 }
 
@@ -154,7 +118,6 @@ func AppUpdater(ctx context.Context, update chan interface{}, done chan struct{}
 		return
 	}
 
-	a := &appInfo{}
 	appChangeSignal := &DBusWatchRequest{
 		bus: sessionBus,
 		match: DBusSignalMatch{
@@ -171,18 +134,10 @@ func AppUpdater(ctx context.Context, update chan interface{}, done chan struct{}
 				log.Debug().Caller().
 					Msg("No active apps found.")
 			} else {
-				a.activeApps = nil
-				a.activeApps = activeAppList
-				update <- a.marshallStateUpdate(RunningApps)
-				update <- a.marshallStateUpdate(ActiveApp)
+				update <- marshallAppStateUpdate(RunningApps, activeAppList)
+				update <- marshallAppStateUpdate(ActiveApp, activeAppList)
 			}
 		},
 	}
-	log.Debug().Caller().
-		Msg("Adding a DBus watch for app change events.")
 	deviceAPI.WatchEvents <- appChangeSignal
-
-	// <-done
-	// log.Debug().Caller().
-	// 	Msg("Stopping Linux app updater.")
 }

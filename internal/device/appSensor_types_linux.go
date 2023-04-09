@@ -16,9 +16,9 @@ const _AppSensorType_name = "ActiveAppRunningApps"
 
 var _AppSensorType_index = [...]uint8{0, 9, 20}
 
-func (i AppSensorType) String() string {
+func (i appSensorType) String() string {
 	i -= 4
-	if i < 0 || i >= AppSensorType(len(_AppSensorType_index)-1) {
+	if i < 0 || i >= appSensorType(len(_AppSensorType_index)-1) {
 		return "AppSensorType(" + strconv.FormatInt(int64(i+4), 10) + ")"
 	}
 	return _AppSensorType_name[_AppSensorType_index[i]:_AppSensorType_index[i+1]]
