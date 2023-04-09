@@ -56,7 +56,12 @@ func (s *appSensor) DeviceClass() hass.SensorDeviceClass {
 }
 
 func (s *appSensor) StateClass() hass.SensorStateClass {
-	return 0
+	switch s.sensorType {
+	case RunningApps:
+		return hass.Measurement
+	default:
+		return 0
+	}
 }
 
 func (s *appSensor) State() interface{} {
