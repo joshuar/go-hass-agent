@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"strings"
 
 	"github.com/godbus/dbus/v5"
+	"github.com/iancoleman/strcase"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/rs/zerolog/log"
 )
@@ -49,7 +51,7 @@ func (b *upowerBattery) getProp(prop BatteryProp) interface{} {
 }
 
 func (b *upowerBattery) marshallStateUpdate(api *deviceAPI, prop BatteryProp) *upowerBatteryState {
-	log.Debug().Caller().Msgf("Marshalling update for %v for battery %v", prop.String(), b.getProp(NativePath).(string))
+	// log.Debug().Caller().Msgf("Marshalling update for %v for battery %v", prop.String(), b.getProp(NativePath).(string))
 	state := &upowerBatteryState{
 		batteryID: b.getProp(NativePath).(string),
 		prop: upowerBatteryProp{
@@ -93,12 +95,38 @@ type upowerBatteryState struct {
 
 // uPowerBatteryState implements hass.SensorUpdate
 
-func (state *upowerBatteryState) Group() string {
-	return state.batteryID
+func (state *upowerBatteryState) Name() string {
+	switch state.prop.name {
+	case Percentage:
+		fallthrough
+	case BatteryLevel:
+		return state.batteryID + " Battery Level"
+	case battState:
+		return state.batteryID + " Battery State"
+	case Temperature:
+		return state.batteryID + " Battery Temperature"
+	case EnergyRate:
+		return state.batteryID + " Battery Power"
+	default:
+		return state.batteryID + strcase.ToDelimited(state.prop.name.String(), ' ')
+	}
 }
 
-func (state *upowerBatteryState) Name() string {
-	return state.prop.name.String()
+func (state *upowerBatteryState) ID() string {
+	switch state.prop.name {
+	case Percentage:
+		fallthrough
+	case BatteryLevel:
+		return state.batteryID + "_battery_level"
+	case battState:
+		return state.batteryID + "_battery_state"
+	case Temperature:
+		return state.batteryID + "_battery_temperature"
+	case EnergyRate:
+		return state.batteryID + "_battery_power"
+	default:
+		return state.batteryID + "_" + strings.ToLower(strcase.ToSnake(state.prop.name.String()))
+	}
 }
 
 func (state *upowerBatteryState) Icon() string {
@@ -345,7 +373,7 @@ func BatteryUpdater(ctx context.Context, status chan interface{}, done chan stru
 		deviceAPI.WatchEvents <- batteryChangeSignal
 	}
 
-	<-done
-	log.Debug().Caller().
-		Msg("Stopping Linux battery updater.")
+	// <-done
+	// log.Debug().Caller().
+	// 	Msg("Stopping Linux battery updater.")
 }

@@ -4,12 +4,15 @@ import (
 	"context"
 
 	"fyne.io/fyne/v2"
-	"github.com/joshuar/go-hass-agent/internal/config"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/rs/zerolog/log"
 )
 
 func (agent *Agent) runNotificationsWorker(ctx context.Context) {
+
+	// var workerCtx context.Context
+	// once.Do(func() { workerCtx = agent.loadConfig(ctx) })
+
 	for {
 		ws := hass.NewWebsocket(ctx)
 		if ws == nil {
@@ -28,11 +31,7 @@ func (agent *Agent) runNotificationsWorker(ctx context.Context) {
 
 func (agent *Agent) handleNotifications(ctx context.Context, response chan *hass.WebsocketResponse, request chan interface{}) {
 
-	config, validConfig := config.FromContext(ctx)
-	if !validConfig {
-		log.Debug().Caller().Msg("Could not retrieve valid config from context.")
-		return
-	}
+	config := agent.loadConfig()
 
 	for {
 		select {

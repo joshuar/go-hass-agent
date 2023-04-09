@@ -8,7 +8,6 @@ import (
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
 	"github.com/joshuar/go-hass-agent/assets/trayicon"
-	"github.com/rs/zerolog/log"
 )
 
 func newUI() fyne.App {
@@ -22,9 +21,6 @@ func (agent *Agent) setupSystemTray() {
 	agent.Tray = agent.App.NewWindow("System Tray")
 	agent.Tray.SetMaster()
 	if desk, ok := agent.App.(desktop.App); ok {
-		log.Debug().Caller().
-			Msg("Config loaded successfully. Creating tray icon.")
-
 		menuItemAbout := fyne.NewMenuItem("About", func() {
 			w := agent.App.NewWindow(agent.MsgPrinter.Sprintf("About %s", agent.Name))
 			w.SetContent(container.New(layout.NewVBoxLayout(),

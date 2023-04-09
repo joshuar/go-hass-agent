@@ -2,9 +2,7 @@ package agent
 
 import (
 	"context"
-	"strings"
 
-	"github.com/iancoleman/strcase"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/rs/zerolog/log"
 )
@@ -146,6 +144,8 @@ func (sensor *sensorState) ResponseHandler(rawResponse interface{}) {
 // the information to encapsulate it as a sensorState.
 func newSensor(newSensor hass.SensorUpdate) *sensorState {
 	sensor := &sensorState{
+		entityID:    newSensor.ID(),
+		name:        newSensor.Name(),
 		deviceClass: newSensor.DeviceClass(),
 		stateClass:  newSensor.StateClass(),
 		sensorType:  newSensor.SensorType(),
@@ -156,13 +156,6 @@ func newSensor(newSensor hass.SensorUpdate) *sensorState {
 		category:    newSensor.Category(),
 		registered:  false,
 		disabled:    false,
-	}
-	if newSensor.Group() != "" {
-		sensor.name = newSensor.Group() + " " + strcase.ToDelimited(newSensor.Name(), ' ')
-		sensor.entityID = newSensor.Group() + "_" + strings.ToLower(strcase.ToSnake(newSensor.Name()))
-	} else {
-		sensor.name = strcase.ToDelimited(newSensor.Name(), ' ')
-		sensor.entityID = strings.ToLower(strcase.ToSnake(newSensor.Name()))
 	}
 	return sensor
 }

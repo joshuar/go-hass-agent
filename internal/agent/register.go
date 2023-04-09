@@ -5,8 +5,6 @@ import (
 	"errors"
 	"fmt"
 
-	// "github.com/grandcat/zeroconf"
-
 	"github.com/hashicorp/mdns"
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass"
@@ -60,6 +58,9 @@ func findServers() binding.StringList {
 
 func (agent *Agent) getRegistrationHostInfo(ctx context.Context) *hass.RegistrationHost {
 
+	// a := app.New()
+	msgPrinter := newMsgPrinter()
+
 	registrationInfo := newRegistration()
 
 	done := make(chan bool, 1)
@@ -68,7 +69,7 @@ func (agent *Agent) getRegistrationHostInfo(ctx context.Context) *hass.Registrat
 	s := findServers()
 	allServers, _ := s.Get()
 
-	w := agent.App.NewWindow(agent.MsgPrinter.Sprintf("App Registration"))
+	w := agent.App.NewWindow(msgPrinter.Sprintf("App Registration"))
 
 	tokenSelect := widget.NewEntryWithData(registrationInfo.Token)
 
@@ -93,16 +94,18 @@ func (agent *Agent) getRegistrationHostInfo(ctx context.Context) *hass.Registrat
 	tlsSelect := widget.NewCheckWithData("", registrationInfo.UseTLS)
 
 	form := widget.NewForm(
-		widget.NewFormItem(agent.MsgPrinter.Sprintf("Token"), tokenSelect),
-		widget.NewFormItem(agent.MsgPrinter.Sprintf("Auto-discovered Servers"), autoServerSelect),
-		widget.NewFormItem(agent.MsgPrinter.Sprintf("Use Custom Server?"), manualServerSelect),
-		widget.NewFormItem(agent.MsgPrinter.Sprintf("Manual Server Entry"), manualServerEntry),
-		widget.NewFormItem(agent.MsgPrinter.Sprintf("Use TLS?"), tlsSelect),
+		widget.NewFormItem(msgPrinter.Sprintf("Token"), tokenSelect),
+		widget.NewFormItem(msgPrinter.Sprintf("Auto-discovered Servers"), autoServerSelect),
+		widget.NewFormItem(msgPrinter.Sprintf("Use Custom Server?"), manualServerSelect),
+		widget.NewFormItem(msgPrinter.Sprintf("Manual Server Entry"), manualServerEntry),
+		widget.NewFormItem(msgPrinter.Sprintf("Use TLS?"), tlsSelect),
 	)
 	form.OnSubmit = func() {
 		s, _ := registrationInfo.Server.Get()
 		log.Debug().Caller().
 			Msgf("User selected server %s", s)
+
+		w.Close()
 		done <- true
 	}
 	form.OnCancel = func() {
@@ -111,18 +114,39 @@ func (agent *Agent) getRegistrationHostInfo(ctx context.Context) *hass.Registrat
 	}
 
 	w.SetContent(container.New(layout.NewVBoxLayout(),
-		widget.NewLabel(agent.MsgPrinter.Sprint("As an initial step, this app will need to log into your Home Assistant server and register itself.\nPlease enter the relevant details for your Home Assistant server url/port and a long-lived access token.")),
+		widget.NewLabel(msgPrinter.Sprint("As an initial step, this app will need to log into your Home Assistant server and register itself.\nPlease enter the relevant details for your Home Assistant server url/port and a long-lived access token.")),
 		form,
 	))
 
 	w.SetOnClosed(func() {
 		done <- true
 	})
-
 	w.Show()
 	<-done
 	w.Close()
 	return registrationInfo
+}
+
+func (agent *Agent) saveRegistration(r *hass.RegistrationResponse, h *hass.RegistrationHost) {
+	host, _ := h.Server.Get()
+	useTLS, _ := h.UseTLS.Get()
+	agent.App.Preferences().SetString("Host", host)
+	agent.App.Preferences().SetBool("UseTLS", useTLS)
+	token, _ := h.Token.Get()
+	agent.App.Preferences().SetString("Token", token)
+	agent.App.Preferences().SetString("Version", agent.Version)
+	if r.CloudhookURL != "" {
+		agent.App.Preferences().SetString("CloudhookURL", r.CloudhookURL)
+	}
+	if r.RemoteUIURL != "" {
+		agent.App.Preferences().SetString("RemoteUIURL", r.RemoteUIURL)
+	}
+	if r.Secret != "" {
+		agent.App.Preferences().SetString("Secret", r.Secret)
+	}
+	if r.WebhookID != "" {
+		agent.App.Preferences().SetString("WebhookID", r.WebhookID)
+	}
 }
 
 func (agent *Agent) runRegistrationWorker(ctx context.Context) error {

@@ -90,8 +90,8 @@ type Sensor interface {
 // of the sensor at the point in time it is used. It provides a bridge between
 // platform/device and HA implementations of what a sensor is.
 type SensorUpdate interface {
-	Group() string
 	Name() string
+	ID() string
 	Icon() string
 	SensorType() SensorType
 	DeviceClass() SensorDeviceClass

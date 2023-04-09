@@ -1,13 +1,35 @@
 package config
 
-import "context"
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+
+	"github.com/go-playground/validator/v10"
+	"github.com/rs/zerolog/log"
+)
 
 type AppConfig struct {
-	APIURL       string
-	WebSocketURL string
+	APIURL       string `validate:"required"`
+	WebSocketURL string `validate:"required"`
 	Secret       string
-	Token        string
-	WebhookID    string
+	Token        string `validate:"required"`
+	WebhookID    string `validate:"required"`
+}
+
+type validationError struct {
+	Namespace       string `json:"namespace"` // can differ when a custom TagNameFunc is registered or
+	Field           string `json:"field"`     // by passing alt name to ReportError like below
+	StructNamespace string `json:"structNamespace"`
+	StructField     string `json:"structField"`
+	Tag             string `json:"tag"`
+	ActualTag       string `json:"actualTag"`
+	Kind            string `json:"kind"`
+	Type            string `json:"type"`
+	Value           string `json:"value"`
+	Param           string `json:"param"`
+	Message         string `json:"message"`
 }
 
 // key is an unexported type for keys defined in this package.
@@ -28,4 +50,48 @@ func NewContext(ctx context.Context, c *AppConfig) context.Context {
 func FromContext(ctx context.Context) (*AppConfig, bool) {
 	c, ok := ctx.Value(configKey).(*AppConfig)
 	return c, ok
+}
+
+func (config *AppConfig) Validate() error {
+	validate := validator.New()
+	err := validate.Struct(config)
+	if err != nil {
+
+		// this check is only needed when your code could produce
+		// an invalid value for validation such as interface with nil
+		// value most including myself do not usually have code like this.
+		if _, ok := err.(*validator.InvalidValidationError); ok {
+			fmt.Println(err)
+			return err
+		}
+
+		for _, err := range err.(validator.ValidationErrors) {
+			e := validationError{
+				Namespace:       err.Namespace(),
+				Field:           err.Field(),
+				StructNamespace: err.StructNamespace(),
+				StructField:     err.StructField(),
+				Tag:             err.Tag(),
+				ActualTag:       err.ActualTag(),
+				Kind:            fmt.Sprintf("%v", err.Kind()),
+				Type:            fmt.Sprintf("%v", err.Type()),
+				Value:           fmt.Sprintf("%v", err.Value()),
+				Param:           err.Param(),
+				Message:         err.Error(),
+			}
+
+			indent, err := json.MarshalIndent(e, "", "  ")
+			if err != nil {
+				fmt.Println(err)
+				panic(err)
+			}
+
+			fmt.Println(string(indent))
+		}
+
+		// from here you can create your own error messages in whatever language you wish
+		log.Debug().Caller().Msg("Config seems invalid.")
+		return errors.New("invalid config")
+	}
+	return nil
 }

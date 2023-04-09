@@ -2,8 +2,10 @@ package device
 
 import (
 	"context"
+	"strings"
 
 	"github.com/godbus/dbus/v5"
+	"github.com/iancoleman/strcase"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/rs/zerolog/log"
 )
@@ -78,12 +80,12 @@ type appState struct {
 
 // appState implements hass.SensorUpdate
 
-func (a *appState) Group() string {
-	return ""
+func (a *appState) Name() string {
+	return strcase.ToDelimited(a.stateType.String(), ' ')
 }
 
-func (a *appState) Name() string {
-	return a.stateType.String()
+func (a *appState) ID() string {
+	return strings.ToLower(strcase.ToSnake(a.stateType.String()))
 }
 
 func (a *appState) Icon() string {
@@ -180,7 +182,7 @@ func AppUpdater(ctx context.Context, update chan interface{}, done chan struct{}
 		Msg("Adding a DBus watch for app change events.")
 	deviceAPI.WatchEvents <- appChangeSignal
 
-	<-done
-	log.Debug().Caller().
-		Msg("Stopping Linux app updater.")
+	// <-done
+	// log.Debug().Caller().
+	// 	Msg("Stopping Linux app updater.")
 }

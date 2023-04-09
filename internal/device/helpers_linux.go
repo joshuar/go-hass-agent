@@ -93,15 +93,14 @@ func (d *deviceAPI) monitorDBus(ctx context.Context) {
 			return
 		case watch := <-d.WatchEvents:
 			d.AddDBusWatch(watch.bus, watch.match)
-			events[watch.bus][watch.event] = watch.eventHandler
+			events[watch.bus][string(watch.match.path)] = watch.eventHandler
 			watches[watch.bus] = watch
-			log.Debug().Caller().Msgf("Added watch for %v on %v", watch.event, watch.match.path)
 		case systemSignal := <-d.dBusSystem.events:
-			if handlerFunc, ok := events[systemBus][systemSignal.Name]; ok {
+			if handlerFunc, ok := events[systemBus][string(systemSignal.Path)]; ok {
 				handlerFunc(systemSignal)
 			}
 		case sessionSignal := <-d.dBusSession.events:
-			if handlerFunc, ok := events[sessionBus][sessionSignal.Name]; ok {
+			if handlerFunc, ok := events[sessionBus][string(sessionSignal.Path)]; ok {
 				handlerFunc(sessionSignal)
 			}
 		}
@@ -149,7 +148,6 @@ func (d *deviceAPI) GetDBusProp(t dbusType, dest string, path dbus.ObjectPath, p
 }
 
 func (d *deviceAPI) GetDBusDataAsMap(t dbusType, dest string, path dbus.ObjectPath, method string, args string) map[string]dbus.Variant {
-	log.Debug().Msgf("Dest %s Path %s Method %s Args %s", dest, path, method, args)
 	obj := d.bus(t).Object(dest, path)
 	var data map[string]dbus.Variant
 	var err error
