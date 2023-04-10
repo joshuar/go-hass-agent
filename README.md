@@ -21,11 +21,11 @@ This app will add some sensors to a Home Assistant instance:
 - Device location.
 - Current active application and list of running applications.
 - Battery status (for example, laptop battery and any peripherals).
-- Network status (for example, network connection status and IP addresses and
-  wifi details where relevant).
+- Network status (for example, network connection status, IP addresses and
+  Wi-Fi details where relevant).
 
-The code is designed to be extended to add additional sensors. See
-[Device/Sensors](docs/device/sensors.md) for details on adding additional sensors.
+The code can be extended to add additional sensors. See
+[Device/Sensors](docs/device/sensors.md) for details.
 
 ## Use-cases
 
@@ -35,7 +35,7 @@ As examples of some of the things that can be done with the data published by th
   laptop/desktop. For example, you could set your lights dim or activate a scene
   when you are gaming. 
 - With your laptop plugged into a smart plug that is also controlled by Home
-  Assistant, turn the smart plug on/off based on the laptop battery charge to
+  Assistant, turn the smart plug on/off based on the battery charge to
   force a full charge/discharge cycle of the battery, extending its life over
   leaving it constantly charged. 
 - Like on mobile devices, create automations based on the location of your
@@ -47,12 +47,13 @@ See also the [FAQ](docs/faq.md).
 ## Usage
 
 go-hass-agent runs as a tray icon. It is operating system, distribution and
-desktop-environment agnostic and should manifest itself in any tray.
+desktop-environment agnostic and should manifest itself in any tray of any
+desktop environment.
 
 ### First-run
 
 On first-run, go-hass-agent will display a window where you will need to enter
-some details, so it can register itself with your Home Assistant instance to be
+some details, so it can register itself with a Home Assistant instance to be
 able to report sensors and receive notifications.  
 
 ![Registration Window](docs/agent/registration.png)
@@ -61,16 +62,16 @@ able to report sensors and receive notifications.
 
 - A long-lived access token. You can generate one on your [account profile
   page](https://www.home-assistant.io/docs/authentication/#your-account-profile). 
-- The hostname (or IP address) and port on which your Home Assistant instance
+- The hostname (or IP address) and port on which a Home Assistant instance
   can be found. 
-  - go-hass-agent will try to auto-detect this for you and you can select it in
+  - go-hass-agent will try to auto-detect this for you, and you can select it in
   the *Auto-discovered servers* list. Otherwise, you will need to select *Use
-  Custom Server?* and enter the details manually in *Manual Server Entry*.
-- If your Home Assistant instance is protected by TLS/SSL, be sure to select
+  Custom Server?*, and enter the details manually in *Manual Server Entry*.
+- If the Home Assistant instance supports TLS/SSL, be sure to select
   *Use TLS?* as well.
 
 When you have entered all the details, click **Submit** and the agent should
-start running and reporting sensors to your Home Assistant. 
+start running and reporting sensors to the Home Assistant instance. 
 
 ### Regular Usage
 
@@ -85,11 +86,10 @@ Assistant.
 I would welcome your contribution! If you find any improvement or issue you want
 to fix, feel free to send a pull request!
 
-### Development
-
-Some notes on the development and architecture can be found in the [`docs`](docs/) folder
-in the source repository. This might help anyone looking to contribute, extend
-or fork this tool.
+Some documentation for development can be found in [docs/agent](docs/agent/)
+(for operating system and general agent development) and
+[docs/device](docs/device/) (for sensor development). This might help anyone
+looking to contribute, extend or fork this tool.
 
 ### Translations
 

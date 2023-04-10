@@ -10,17 +10,16 @@
 ### Contexts
 
 The agent creates a cancellable context for itself. Any platform code should
-accept this context and handle cancellation of it gracefully (adding their own
-timeouts, cancellations as needed). 
+accept this context and handle context cancellation gracefully (adding their own
+timeouts, cancellations as needed). More details in [extending](extending.md).
 
 ## Data Updates
 
 - Data updates are left entirely up to the individual sensors and the platform
   the app is running on. For example, on Linux, location and running apps are
   updated as often as the relevant information is published on the user's
-  session DBus. 
-- Sensors push data to the app's worker routines which handle publishing it to
-  Home Assistant. 
+  session DBus. More details about how sensor updates work can be found in
+  [device/sensors](../device/sensors.md).
 ## Notifications
 
 - The agent supports receiving notifications from Home Assistant via a
