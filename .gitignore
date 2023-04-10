@@ -7,6 +7,8 @@
 !*.go
 !*.json
 !*.png
+!*.yml
+!*.yaml
 !go.sum
 !go.mod
 
@@ -20,3 +22,5 @@
 # ...even if they are in subdirectories
 !*/
 .vscode/settings.json
+
+dist/

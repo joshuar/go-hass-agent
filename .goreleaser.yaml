@@ -1,0 +1,251 @@
+before:
+  hooks:
+    - go mod tidy
+    - go generate ./...
+    - desktop-file-validate assets/go-hass-agent.desktop
+builds:
+  - env:
+      - CGO_ENABLED=1
+    goos:
+      - linux
+      # - windows
+      # - darwin
+    goarch:
+      - amd64
+      # - arm
+      # - arm64
+
+archives:
+  - format: tar.xz
+    # this name template makes the OS and Arch compatible with the results of uname.
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+    # use zip for windows archives
+    format_overrides:
+    - goos: windows
+      format: zip
+checksum:
+  name_template: 'checksums.txt'
+snapshot:
+  name_template: "{{ incpatch .Version }}-next"
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+
+nfpms:
+  -
+    id: go-hass-agent
+    package_name: go-hass-agent
+
+    # You can change the file name of the package.
+    #
+    # Default: '{{ .PackageName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ with .Arm }}v{{ . }}{{ end }}{{ with .Mips }}_{{ . }}{{ end }}{{ if not (eq .Amd64 "v1") }}{{ .Amd64 }}{{ end }}'
+    # Templates: allowed
+    file_name_template: "{{ .ConventionalFileName }}"
+
+    # Build IDs for the builds you want to create NFPM packages for.
+    # Defaults empty, which means no filtering.
+    # builds:
+    #   - foo
+    #   - bar
+
+    vendor: org.github.joshuar
+    homepage: https://github.com/joshuar/go-hass-app
+    maintainer: Joshua Rich <joshua.rich@gmail.com>
+    description: |-
+      A Home Assistant, native app for desktop/laptop devices.
+    license: MIT
+    formats:
+      # - apk
+      - deb
+      - rpm
+      # - termux.deb # Since: v1.11
+      - archlinux  # Since: v1.13
+    dependencies:
+      - dbus
+    # Packages your package recommends installing. (overridable)
+    # recommends:
+    #   - bzr
+    #   - gtk
+    # Packages your package suggests installing. (overridable)
+    # suggests:
+    #   - cvs
+    #   - ksh
+    # Packages that conflict with your package. (overridable)
+    # conflicts:
+    #   - svn
+    #   - bash
+    # Packages it replaces. (overridable)
+    # replaces:
+    #   - fish
+
+    # Path that the binaries should be installed.
+    # Default: '/usr/bin'
+    bindir: /usr/bin
+
+    # Version Epoch.
+    # Default: extracted from `version` if it is semver compatible
+    # epoch: "2"
+
+    # Version Prerelease.
+    # Default: extracted from `version` if it is semver compatible
+    # prerelease: beta1
+
+    # Version Metadata (previously deb.metadata).
+    # Setting metadata might interfere with version comparisons depending on the
+    # packager.
+    #
+    # Default: extracted from `version` if it is semver compatible
+    # version_metadata: git
+
+    # Version Release.
+    release: '1'
+
+    # Section.
+    section: default
+
+    # Priority.
+    priority: extra
+
+    # Makes a meta package - an empty package that contains only supporting
+    # files and dependencies.
+    # When set to `true`, the `builds` option is ignored.
+    #
+    # Default: false
+    meta: false
+
+    # Contents to add to the package.
+    # GoReleaser will automatically add the binaries.
+    contents:
+      - src: LICENSE
+        dst: /usr/share/licenses/go-hass-agent/LICENSE
+      - src: README.md
+        dst: /usr/share/doc/go-hass-agent/README.md
+      - src: assets/trayicon/logo-pretty.png
+        dst: /usr/share/pixmaps/go-hass-agent.png
+      - src: assets/go-hass-agent.desktop
+        dst: /usr/share/applications/go-hass-agent.desktop
+
+    # Scripts to execute during the installation of the package. (overridable)
+    #
+    # Keys are the possible targets during the installation process
+    # Values are the paths to the scripts which will be executed.
+    # scripts:
+    #   preinstall: "scripts/preinstall.sh"
+    #   postinstall: "scripts/postinstall.sh"
+    #   preremove: "scripts/preremove.sh"
+    #   postremove: "scripts/postremove.sh"
+
+    # Custom configuration applied only to the RPM packager.
+    rpm:
+      # RPM specific scripts.
+      # scripts:
+      #   # The pretrans script runs before all RPM package transactions / stages.
+      #   pretrans: ./scripts/pretrans.sh
+      #   # The posttrans script runs after all RPM package transactions / stages.
+      #   posttrans: ./scripts/posttrans.sh
+
+      # The package summary.
+      #
+      # Default: first line of the description
+      summary: A Home Assistant, native app for desktop/laptop devices
+
+      # The package group.
+      # This option is deprecated by most distros but required by old distros
+      # like CentOS 5 / EL 5 and earlier.
+      group: Unspecified
+
+      # The packager is used to identify the organization that actually packaged
+      # the software, as opposed to the author of the software.
+      # `maintainer` will be used as fallback if not specified.
+      # This will expand any env var you set in the field, eg packager: ${PACKAGER}
+      # packager: GoReleaser <staff@goreleaser.com>
+
+      # Compression algorithm (gzip (default), lzma or xz).
+      compression: lzma
+
+      # The package is signed if a key_file is set
+      # signature:
+      #   # PGP secret key file path (can also be ASCII-armored).
+      #   # The passphrase is taken from the environment variable
+      #   # `$NFPM_ID_RPM_PASSPHRASE` with a fallback to `$NFPM_ID_PASSPHRASE`,
+      #   # where ID is the id of the current nfpm config.
+      #   # The id will be transformed to uppercase.
+      #   # E.g. If your nfpm id is 'default' then the rpm-specific passphrase
+      #   # should be set as `$NFPM_DEFAULT_RPM_PASSPHRASE`
+      #   #
+      #   # Templates: allowed
+      #   key_file: '{{ .Env.GPG_KEY_PATH }}'
+
+    # Custom configuration applied only to the Deb packager.
+    deb:
+      # Lintian overrides
+      lintian_overrides:
+        - statically-linked-binary
+        - changelog-file-missing-in-native-package
+
+      # Custom deb special files.
+      # scripts:
+      #   # Deb rules script.
+      #   rules: foo.sh
+      #   # Deb templates file, when using debconf.
+      #   templates: templates
+
+      # Custom deb triggers
+      # triggers:
+      #   # register interest on a trigger activated by another package
+      #   # (also available: interest_await, interest_noawait)
+      #   interest:
+      #     - some-trigger-name
+      #   # activate a trigger for another package
+      #   # (also available: activate_await, activate_noawait)
+      #   activate:
+      #     - another-trigger-name
+
+      # Packages which would break if this package would be installed.
+      # The installation of this package is blocked if `some-package`
+      # is already installed.
+      # breaks:
+      #   - some-package
+
+      # The package is signed if a key_file is set
+      # signature:
+      #   # PGP secret key file path (can also be ASCII-armored).
+      #   # The passphrase is taken from the environment variable
+      #   # `$NFPM_ID_DEB_PASSPHRASE` with a fallback to `$NFPM_ID_PASSPHRASE`,
+      #   # where ID is the id of the current nfpm config.
+      #   # The id will be transformed to uppercase.
+      #   # E.g. If your nfpm id is 'default' then the deb-specific passphrase
+      #   # should be set as `$NFPM_DEFAULT_DEB_PASSPHRASE`
+      #   #
+      #   # Templates: allowed
+      #   key_file: '{{ .Env.GPG_KEY_PATH }}'
+
+        # # The type describes the signers role, possible values are "origin",
+        # # "maint" and "archive".
+        # #
+        # # Default: 'origin'
+        # type: origin
+
+    archlinux:
+      # Archlinux-specific scripts
+      # scripts:
+      #   # The preupgrade script runs before pacman upgrades the package.
+      #   preupgrade: ./scripts/preupgrade.sh
+      #   # The postupgrade script runs after pacman upgrades the package.
+      #   postupgrade: ./scripts/postupgrade.sh
+
+      # The packager refers to the organization packaging the software, not to be confused
+      # with the maintainer, which is the person who maintains the software.
+      packager: GoReleaser <staff@goreleaser.com>
+
+
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
