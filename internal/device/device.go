@@ -71,22 +71,22 @@ func GenerateRegistrationRequest(d DeviceInfo) *hass.RegistrationRequest {
 }
 
 type SensorInfo struct {
-	sensorWorkers map[string]func(context.Context, chan interface{}, chan struct{})
+	sensorWorkers map[string]func(context.Context, chan interface{})
 }
 
 func NewSensorInfo() *SensorInfo {
 	return &SensorInfo{
-		sensorWorkers: make(map[string]func(context.Context, chan interface{}, chan struct{})),
+		sensorWorkers: make(map[string]func(context.Context, chan interface{})),
 	}
 }
 
-func (i *SensorInfo) Add(name string, workerFunc func(context.Context, chan interface{}, chan struct{})) {
+func (i *SensorInfo) Add(name string, workerFunc func(context.Context, chan interface{})) {
 	log.Debug().Caller().
 		Msgf("Registering %s sensors.", name)
 	i.sensorWorkers[name] = workerFunc
 }
 
-func (i *SensorInfo) Get() map[string]func(context.Context, chan interface{}, chan struct{}) {
+func (i *SensorInfo) Get() map[string]func(context.Context, chan interface{}) {
 	return i.sensorWorkers
 }
 

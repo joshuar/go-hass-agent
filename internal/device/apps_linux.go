@@ -113,7 +113,7 @@ func marshallAppStateUpdate(t appSensorType, v map[string]dbus.Variant) *appSens
 	}
 }
 
-func AppUpdater(ctx context.Context, update chan interface{}, done chan struct{}) {
+func AppUpdater(ctx context.Context, update chan interface{}) {
 	deviceAPI, deviceAPIExists := FromContext(ctx)
 	if !deviceAPIExists {
 		log.Debug().Caller().
@@ -129,10 +129,11 @@ func AppUpdater(ctx context.Context, update chan interface{}, done chan struct{}
 	}
 
 	appChangeSignal := &DBusWatchRequest{
-		bus: sessionBus,
-		match: DBusSignalMatch{
-			path: appStateDBusPath,
-			intr: appStateDBusInterface,
+		bus:  sessionBus,
+		path: appStateDBusPath,
+		match: []dbus.MatchOption{
+			dbus.WithMatchObjectPath(appStateDBusPath),
+			dbus.WithMatchInterface(appStateDBusInterface),
 		},
 		event: appStateDBusEvent,
 		eventHandler: func(s *dbus.Signal) {

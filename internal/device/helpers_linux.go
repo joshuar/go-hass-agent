@@ -8,6 +8,7 @@ package device
 import (
 	"context"
 	"os"
+	"strings"
 
 	"github.com/godbus/dbus/v5"
 	"github.com/rs/zerolog/log"
@@ -48,14 +49,10 @@ func NewBus(ctx context.Context, t dbusType) *bus {
 	}
 }
 
-type DBusSignalMatch struct {
-	path dbus.ObjectPath
-	intr string
-}
-
 type DBusWatchRequest struct {
 	bus          dbusType
-	match        DBusSignalMatch
+	path         dbus.ObjectPath
+	match        []dbus.MatchOption
 	event        string
 	eventHandler func(*dbus.Signal)
 }
@@ -89,24 +86,39 @@ func (d *deviceAPI) monitorDBus(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			log.Debug().Caller().Msg("Stopping DBus Monitor.")
-			for bus, request := range watches {
-				d.RemoveDBusWatch(bus, request)
-			}
+			// for bus, request := range watches {
+			// 	d.RemoveDBusWatch(bus, request.match.path, request.match.intr)
+			// }
 			close(d.WatchEvents)
 			d.dBusSession.conn.RemoveSignal(d.dBusSession.events)
 			d.dBusSystem.conn.RemoveSignal(d.dBusSystem.events)
 			return
 		case watch := <-d.WatchEvents:
 			d.AddDBusWatch(watch.bus, watch.match)
-			events[watch.bus][string(watch.match.path)] = watch.eventHandler
+			events[watch.bus][string(watch.path)] = watch.eventHandler
 			watches[watch.bus] = watch
+		// For each bus signal handler, try to match first on an exact path
+		// match, then try a substr match. In either case of a match, run the
+		// handler function.
 		case systemSignal := <-d.dBusSystem.events:
 			if handlerFunc, ok := events[systemBus][string(systemSignal.Path)]; ok {
 				handlerFunc(systemSignal)
+			} else {
+				for matchPath, handlerFunc := range events[systemBus] {
+					if strings.Contains(string(systemSignal.Path), matchPath) {
+						handlerFunc(systemSignal)
+					}
+				}
 			}
 		case sessionSignal := <-d.dBusSession.events:
 			if handlerFunc, ok := events[sessionBus][string(sessionSignal.Path)]; ok {
 				handlerFunc(sessionSignal)
+			} else {
+				for matchPath, handlerFunc := range events[systemBus] {
+					if strings.Contains(string(sessionSignal.Path), matchPath) {
+						handlerFunc(sessionSignal)
+					}
+				}
 			}
 		}
 	}
@@ -114,11 +126,8 @@ func (d *deviceAPI) monitorDBus(ctx context.Context) {
 
 // AddDBusWatch will add a matcher to the specified bus monitoring for
 // the specified path and interface.
-func (d *deviceAPI) AddDBusWatch(t dbusType, m DBusSignalMatch) error {
-	if err := d.bus(t).AddMatchSignal(
-		dbus.WithMatchObjectPath(m.path),
-		dbus.WithMatchInterface(m.intr),
-	); err != nil {
+func (d *deviceAPI) AddDBusWatch(t dbusType, matches []dbus.MatchOption) error {
+	if err := d.bus(t).AddMatchSignal(matches...); err != nil {
 		return err
 	} else {
 		return nil
@@ -127,10 +136,10 @@ func (d *deviceAPI) AddDBusWatch(t dbusType, m DBusSignalMatch) error {
 
 // RemoveDBusWatch will remove a matcher from the specified bus to stop it
 // generating signals for that match.
-func (d *deviceAPI) RemoveDBusWatch(t dbusType, w *DBusWatchRequest) error {
+func (d *deviceAPI) RemoveDBusWatch(t dbusType, path dbus.ObjectPath, intr string) error {
 	if err := d.bus(t).RemoveMatchSignal(
-		dbus.WithMatchObjectPath(w.match.path),
-		dbus.WithMatchInterface(w.match.intr),
+		dbus.WithMatchObjectPath(path),
+		dbus.WithMatchInterface(intr),
 	); err != nil {
 		return err
 	} else {
@@ -143,6 +152,7 @@ func (d *deviceAPI) GetDBusObject(t dbusType, dest string, path dbus.ObjectPath)
 }
 
 func (d *deviceAPI) GetDBusProp(t dbusType, dest string, path dbus.ObjectPath, prop string) dbus.Variant {
+	// log.Debug().Msgf("Fetching property %v on path %v through interface %v", prop, path, dest)
 	obj := d.bus(t).Object(dest, path)
 	res, err := obj.GetProperty(prop)
 	if err != nil {

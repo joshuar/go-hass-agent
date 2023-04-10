@@ -20,11 +20,12 @@ func _() {
 	_ = x[WifiFrequency-12]
 	_ = x[WifiSpeed-13]
 	_ = x[WifiStrength-14]
+	_ = x[WifiHWAddress-15]
 }
 
-const _networkProp_name = "ConnectionStateConnectionIDConnectionDevicesConnectionTypeConnectionIPv4ConnectionIPv6AddressIPv4AddressIPv6WifiSSIDWifiFrequencyWifiSpeedWifiStrength"
+const _networkProp_name = "ConnectionStateConnectionIDConnectionDevicesConnectionTypeConnectionIPv4ConnectionIPv6AddressIPv4AddressIPv6WifiSSIDWifiFrequencyWifiSpeedWifiStrengthWifiHWAddress"
 
-var _networkProp_index = [...]uint8{0, 15, 27, 44, 58, 72, 86, 97, 108, 116, 129, 138, 150}
+var _networkProp_index = [...]uint8{0, 15, 27, 44, 58, 72, 86, 97, 108, 116, 129, 138, 150, 163}
 
 func (i networkProp) String() string {
 	i -= 3

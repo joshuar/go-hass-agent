@@ -147,9 +147,9 @@ func (agent *Agent) tracker(agentCtx context.Context, configWG *sync.WaitGroup) 
 		wg.Add(1)
 		log.Debug().Caller().
 			Msgf("Setting up sensors for %s.", name)
-		go func(worker func(context.Context, chan interface{}, chan struct{})) {
+		go func(worker func(context.Context, chan interface{})) {
 			defer wg.Done()
-			worker(ctx, updateCh, doneCh)
+			worker(ctx, updateCh)
 		}(workerFunction)
 	}
 	wg.Wait()

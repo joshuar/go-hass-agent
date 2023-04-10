@@ -293,7 +293,7 @@ func stringLevel(l uint32) string {
 	}
 }
 
-func BatteryUpdater(ctx context.Context, status chan interface{}, done chan struct{}) {
+func BatteryUpdater(ctx context.Context, status chan interface{}) {
 
 	deviceAPI, deviceAPIExists := FromContext(ctx)
 	if !deviceAPIExists {
@@ -355,11 +355,16 @@ func BatteryUpdater(ctx context.Context, status chan interface{}, done chan stru
 		// if so, update the battery's state in batteryTracker and send the
 		// update back to Home Assistant.
 		batteryChangeSignal := &DBusWatchRequest{
-			bus: systemBus,
-			match: DBusSignalMatch{
-				path: dbus.ObjectPath(v),
-				intr: "org.freedesktop.DBus.Properties",
+			bus:  systemBus,
+			path: dbus.ObjectPath(v),
+			match: []dbus.MatchOption{
+				dbus.WithMatchObjectPath(dbus.ObjectPath(v)),
+				dbus.WithMatchInterface("org.freedesktop.DBus.Properties"),
 			},
+			// match: DBusSignalMatch{
+			// 	path: dbus.ObjectPath(v),
+			// 	intr: "org.freedesktop.DBus.Properties",
+			// },
 			event: "org.freedesktop.DBus.Properties.PropertiesChanged",
 			eventHandler: func(s *dbus.Signal) {
 				batteryID := string(s.Path)
