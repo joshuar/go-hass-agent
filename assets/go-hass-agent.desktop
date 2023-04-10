@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=go-hass-agent
+Comment=A Home Assistant, native app for desktop/laptop devices.
+Path=/usr/bin
+Exec=go-hass-agent
+Icon=go-hass-agent
+Terminal=false
+Categories=System;Monitor;TrayIcon;
+OnlyShowIn=KDE;GNOME;
+StartupNotify=true
+Keywords=home;assistant;hass;
