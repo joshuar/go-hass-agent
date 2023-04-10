@@ -33,6 +33,7 @@ const (
 	battState
 	NativePath
 	BatteryLevel
+	Model
 )
 
 type BatteryProp int
@@ -59,6 +60,7 @@ func (b *upowerBattery) marshallStateUpdate(api *deviceAPI, prop BatteryProp) *u
 	// log.Debug().Caller().Msgf("Marshalling update for %v for battery %v", prop.String(), b.getProp(NativePath).(string))
 	state := &upowerBatteryState{
 		batteryID: b.getProp(NativePath).(string),
+		model:     b.getProp(Model).(string),
 		prop: upowerBatteryProp{
 			name:  prop,
 			value: b.getProp(prop),
@@ -94,6 +96,7 @@ type upowerBatteryProp struct {
 
 type upowerBatteryState struct {
 	batteryID  string
+	model      string
 	prop       upowerBatteryProp
 	attributes interface{}
 }
@@ -105,15 +108,15 @@ func (state *upowerBatteryState) Name() string {
 	case Percentage:
 		fallthrough
 	case BatteryLevel:
-		return state.batteryID + " Battery Level"
+		return state.model + " Battery Level"
 	case battState:
-		return state.batteryID + " Battery State"
+		return state.model + " Battery State"
 	case Temperature:
-		return state.batteryID + " Battery Temperature"
+		return state.model + " Battery Temperature"
 	case EnergyRate:
-		return state.batteryID + " Battery Power"
+		return state.model + " Battery Power"
 	default:
-		return state.batteryID + strcase.ToDelimited(state.prop.name.String(), ' ')
+		return state.model + strcase.ToDelimited(state.prop.name.String(), ' ')
 	}
 }
 
@@ -317,6 +320,7 @@ func BatteryUpdater(ctx context.Context, status chan interface{}, done chan stru
 		batteryTracker[batteryID].props = make(map[BatteryProp]dbus.Variant)
 		batteryTracker[batteryID].updateProp(deviceAPI, NativePath)
 		batteryTracker[batteryID].updateProp(deviceAPI, battType)
+		batteryTracker[batteryID].updateProp(deviceAPI, Model)
 
 		// Standard battery properties as sensors
 		for _, prop := range []BatteryProp{battState} {

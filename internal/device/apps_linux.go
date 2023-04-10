@@ -15,7 +15,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-//go:generate stringer -type=AppSensorType -output appSensor_types_linux.go
+//go:generate stringer -type=appSensorType -output appSensor_types_linux.go
 const (
 	appStateDBusMethod    = "org.freedesktop.impl.portal.Background.GetAppState"
 	appStateDBusPath      = "/org/freedesktop/portal/desktop"

@@ -44,6 +44,42 @@ As examples of some of the things that can be done with the data published by th
 
 See also the [FAQ](docs/faq.md). 
 
+## Usage
+
+go-hass-agent runs as a tray icon. It is operating system, distribution and
+desktop-environment agnostic and should manifest itself in any tray.
+
+### First-run
+
+On first-run, go-hass-agent will display a window where you will need to enter
+some details, so it can register itself with your Home Assistant instance to be
+able to report sensors and receive notifications.  
+
+![Registration Window](docs/agent/registration.png)
+
+**You will need:**
+
+- A long-lived access token. You can generate one on your [account profile
+  page](https://www.home-assistant.io/docs/authentication/#your-account-profile). 
+- The hostname (or IP address) and port on which your Home Assistant instance
+  can be found. 
+  - go-hass-agent will try to auto-detect this for you and you can select it in
+  the *Auto-discovered servers* list. Otherwise, you will need to select *Use
+  Custom Server?* and enter the details manually in *Manual Server Entry*.
+- If your Home Assistant instance is protected by TLS/SSL, be sure to select
+  *Use TLS?* as well.
+
+When you have entered all the details, click **Submit** and the agent should
+start running and reporting sensors to your Home Assistant. 
+
+### Regular Usage
+
+When running, go-hass-agent will appear as a device under the [Mobile
+App](https://www.home-assistant.io/integrations/mobile_app) integration in your
+Home Assistant instance. It should also report a list of sensors/entities you
+can use in any automations, scripts, dashboards and other parts of Home
+Assistant.
+
 ## Contributing
 
 I would welcome your contribution! If you find any improvement or issue you want

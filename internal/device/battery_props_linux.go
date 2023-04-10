@@ -17,11 +17,12 @@ func _() {
 	_ = x[battState-10]
 	_ = x[NativePath-11]
 	_ = x[BatteryLevel-12]
+	_ = x[Model-13]
 }
 
-const _BatteryProp_name = "TypePercentageTemperatureVoltageEnergyEnergyRateStateNativePathBatteryLevel"
+const _BatteryProp_name = "TypePercentageTemperatureVoltageEnergyEnergyRateStateNativePathBatteryLevelModel"
 
-var _BatteryProp_index = [...]uint8{0, 4, 14, 25, 32, 38, 48, 53, 63, 75}
+var _BatteryProp_index = [...]uint8{0, 4, 14, 25, 32, 38, 48, 53, 63, 75, 80}
 
 func (i BatteryProp) String() string {
 	i -= 4
