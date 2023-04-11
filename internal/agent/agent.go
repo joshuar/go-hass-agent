@@ -50,8 +50,10 @@ func Run() {
 }
 
 func start(ctx context.Context) {
+	log.Info().Msg("Starting agent.")
 	agent := NewAgent()
 
+	// If possible, create and log to a file as well as the console.
 	logFile, err := storage.Child(agent.App.Storage().RootURI(), "go-hass-app.log")
 	if err != nil {
 		log.Error().Err(err).
@@ -81,8 +83,8 @@ func start(ctx context.Context) {
 			log.Warn().Msg("No suitable existing config found! Starting new registration process")
 			err := agent.runRegistrationWorker(ctx)
 			if err != nil {
-				log.Debug().Caller().
-					Msgf("Error trying to register: %v. Exiting.", err)
+				log.Error().Err(err).
+					Msgf("Error trying to register: %v. Exiting.")
 				agent.stop()
 			}
 			appConfig = agent.loadConfig()
@@ -98,7 +100,7 @@ func start(ctx context.Context) {
 }
 
 func (agent *Agent) stop() {
-	log.Debug().Caller().Msg("Shutting down agent.")
+	log.Info().Msg("Shutting down agent.")
 	agent.Tray.Close()
 }
 

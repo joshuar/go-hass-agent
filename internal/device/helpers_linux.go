@@ -72,6 +72,7 @@ func (d *deviceAPI) bus(t dbusType) *dbus.Conn {
 	case systemBus:
 		return d.dBusSystem.conn
 	default:
+		log.Warn().Msg("Could not discern DBus bus type.")
 		return nil
 	}
 }
@@ -161,7 +162,8 @@ func (d *deviceAPI) GetDBusProp(t dbusType, dest string, path dbus.ObjectPath, p
 	obj := d.bus(t).Object(dest, path)
 	res, err := obj.GetProperty(prop)
 	if err != nil {
-		log.Debug().Caller().Msg(err.Error())
+		log.Error().Err(err).
+			Msgf("Unable to retrieve property %s (%s)", prop, dest)
 		return dbus.MakeVariant("")
 	}
 	return res
@@ -177,15 +179,14 @@ func (d *deviceAPI) GetDBusDataAsMap(t dbusType, dest string, path dbus.ObjectPa
 		err = obj.Call(method, 0).Store(&data)
 	}
 	if err != nil {
-		log.Debug().Caller().
-			Msgf(err.Error())
+		log.Error().Err(err).
+			Msgf("Unable to execute %s on %s (args: %s)", method, dest, args)
 		return nil
 	}
 	return data
 }
 
 func (d *deviceAPI) GetDBusDataAsList(t dbusType, dest string, path dbus.ObjectPath, method string, args string) []string {
-	log.Debug().Msgf("Dest %s Path %s Method %s Args %s", dest, path, method, args)
 	obj := d.bus(t).Object(dest, path)
 	var data []string
 	var err error
@@ -195,8 +196,25 @@ func (d *deviceAPI) GetDBusDataAsList(t dbusType, dest string, path dbus.ObjectP
 		err = obj.Call(method, 0).Store(&data)
 	}
 	if err != nil {
-		log.Debug().Caller().
-			Msgf(err.Error())
+		log.Error().Err(err).
+			Msgf("Unable to execute %s on %s (args: %s)", method, dest, args)
+		return nil
+	}
+	return data
+}
+
+func (d *deviceAPI) GetDBusData(t dbusType, dest string, path dbus.ObjectPath, method string, args string) interface{} {
+	obj := d.bus(t).Object(dest, path)
+	var data interface{}
+	var err error
+	if args != "" {
+		err = obj.Call(method, 0, args).Store(&data)
+	} else {
+		err = obj.Call(method, 0).Store(&data)
+	}
+	if err != nil {
+		log.Error().Err(err).
+			Msgf("Unable to execute %s on %s (args: %s)", method, dest, args)
 		return nil
 	}
 	return data

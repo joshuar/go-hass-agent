@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/carlmjohnson/requests"
-	"github.com/cenkalti/backoff/v4"
 	"github.com/joshuar/go-hass-agent/internal/config"
 	"github.com/rs/zerolog/log"
 )
@@ -84,17 +83,26 @@ func APIRequest(ctx context.Context, request Request) {
 		request.ResponseHandler(nil)
 	} else {
 		var res interface{}
-		requestFunc := func() error {
-			return requests.
-				URL(config.APIURL).
-				BodyBytes(reqJson).
-				ToJSON(&res).
-				Fetch(requestCtx)
-		}
-		err := backoff.Retry(requestFunc, backoff.NewExponentialBackOff())
+		err := requests.
+			URL(config.APIURL).
+			BodyBytes(reqJson).
+			ToJSON(&res).
+			Fetch(requestCtx)
+
+		// requestFunc := func() error {
+		// 	return requests.
+		// 		URL(config.APIURL).
+		// 		BodyBytes(reqJson).
+		// 		ToJSON(&res).
+		// 		Fetch(requestCtx)
+		// }
+		// retryNotifyFunc := func(e error, d time.Duration) {
+		// 	log.Debug().Msgf("Retrying request %s in %v seconds.", string(reqJson), d.Seconds())
+		// }
+		// err := backoff.RetryNotify(requestFunc, backoff.NewExponentialBackOff(), retryNotifyFunc)
 		if err != nil {
 			log.Error().Stack().Err(err).
-				Msgf("Unable to send request with body:\n\t%s", reqJson)
+				Msgf("Unable to send request with body:\n\t%s\n\t", reqJson)
 			cancel()
 			request.ResponseHandler(nil)
 		} else {
