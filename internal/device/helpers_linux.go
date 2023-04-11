@@ -36,8 +36,8 @@ func NewBus(ctx context.Context, t dbusType) *bus {
 		conn, err = dbus.ConnectSystemBus(dbus.WithContext(ctx))
 	}
 	if err != nil {
-		log.Debug().Caller().
-			Msgf("Could not connect to bus: %v", err)
+		log.Error().Stack().Err(err).
+			Msg("Could not connect to bus")
 		return nil
 	}
 	events := make(chan *dbus.Signal)
@@ -49,6 +49,8 @@ func NewBus(ctx context.Context, t dbusType) *bus {
 	}
 }
 
+// DBusWatchRequest contains all the information required to set-up a DBus match
+// signal watcher.
 type DBusWatchRequest struct {
 	bus          dbusType
 	path         dbus.ObjectPath
@@ -93,13 +95,15 @@ func (d *deviceAPI) monitorDBus(ctx context.Context) {
 			d.dBusSession.conn.RemoveSignal(d.dBusSession.events)
 			d.dBusSystem.conn.RemoveSignal(d.dBusSystem.events)
 			return
+		// When a new watch request is received, send it to the right DBus
+		// connection and record it so it can be matched to a handler.
 		case watch := <-d.WatchEvents:
 			d.AddDBusWatch(watch.bus, watch.match)
 			events[watch.bus][string(watch.path)] = watch.eventHandler
 			watches[watch.bus] = watch
 		// For each bus signal handler, try to match first on an exact path
-		// match, then try a substr match. In either case of a match, run the
-		// handler function.
+		// match, then try a substr match. Whichever matches, run the
+		// handler function associated with it.
 		case systemSignal := <-d.dBusSystem.events:
 			if handlerFunc, ok := events[systemBus][string(systemSignal.Path)]; ok {
 				handlerFunc(systemSignal)
@@ -151,8 +155,9 @@ func (d *deviceAPI) GetDBusObject(t dbusType, dest string, path dbus.ObjectPath)
 	return d.bus(t).Object(dest, path)
 }
 
+// GetDBusProp will retrieve the specified property value from the given path
+// and destination.
 func (d *deviceAPI) GetDBusProp(t dbusType, dest string, path dbus.ObjectPath, prop string) dbus.Variant {
-	// log.Debug().Msgf("Fetching property %v on path %v through interface %v", prop, path, dest)
 	obj := d.bus(t).Object(dest, path)
 	res, err := obj.GetProperty(prop)
 	if err != nil {
@@ -221,7 +226,7 @@ func FindPortal() string {
 	case "GNOME":
 		return "org.freedesktop.impl.portal.desktop.kde"
 	default:
-		log.Warn().Msg("Unsupported desktop/window environment. No app logging available.")
+		log.Warn().Msg("Unsupported desktop/window environment.")
 		return ""
 	}
 }

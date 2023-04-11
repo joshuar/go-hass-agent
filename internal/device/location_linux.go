@@ -51,7 +51,7 @@ func (l *linuxLocation) VerticalAccuracy() int {
 	return 0
 }
 
-func LocationUpdater(ctx context.Context, appID string, locationInfoCh chan interface{}, done chan struct{}) {
+func LocationUpdater(ctx context.Context, appID string, locationInfoCh chan interface{}) {
 
 	locationInfo := &linuxLocation{}
 
@@ -91,7 +91,7 @@ func LocationUpdater(ctx context.Context, appID string, locationInfoCh chan inte
 			logging.CheckError(err)
 
 			locationInfoCh <- locationInfo
-		case <-done:
+		case <-ctx.Done():
 			log.Debug().Caller().
 				Msg("Stopping Linux location updater.")
 			gcm.DeleteClient(client)

@@ -13,6 +13,7 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/agent"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"github.com/rs/zerolog/pkgerrors"
 	"github.com/spf13/cobra"
 )
 
@@ -32,6 +33,7 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		zerolog.ErrorStackMarshaler = pkgerrors.MarshalStack
 		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 		if debugFlag {
 			zerolog.SetGlobalLevel(zerolog.DebugLevel)
@@ -54,7 +56,7 @@ to quickly create a Cobra application.`,
 func Execute() {
 	err := rootCmd.Execute()
 	if err != nil {
-		os.Exit(1)
+		log.Fatal().Err(err).Msg("Could not start.")
 	}
 }
 

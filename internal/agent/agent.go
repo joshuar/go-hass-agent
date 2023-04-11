@@ -7,12 +7,15 @@ package agent
 
 import (
 	"context"
+	"os"
 	"sync"
 
 	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/storage"
 	"github.com/joshuar/go-hass-agent/internal/config"
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/text/message"
 )
@@ -48,6 +51,22 @@ func Run() {
 
 func start(ctx context.Context) {
 	agent := NewAgent()
+
+	logFile, err := storage.Child(agent.App.Storage().RootURI(), "go-hass-app.log")
+	if err != nil {
+		log.Error().Err(err).
+			Msg("Unable to create a log file. Will only write logs to stdout.")
+	} else {
+		logWriter, err := storage.Writer(logFile)
+		if err != nil {
+			log.Error().Err(err).
+				Msg("Unable to open log file for writing.")
+		} else {
+			consoleWriter := zerolog.ConsoleWriter{Out: os.Stdout}
+			multiWriter := zerolog.MultiLevelWriter(consoleWriter, logWriter)
+			log.Logger = log.Output(multiWriter)
+		}
+	}
 
 	var wg sync.WaitGroup
 
@@ -101,8 +120,6 @@ func (agent *Agent) tracker(agentCtx context.Context, configWG *sync.WaitGroup) 
 	}
 
 	updateCh := make(chan interface{})
-	// defer close(updateCh)
-	doneCh := make(chan struct{})
 
 	sensors := make(map[string]*sensorState)
 
@@ -116,10 +133,10 @@ func (agent *Agent) tracker(agentCtx context.Context, configWG *sync.WaitGroup) 
 					if _, ok := sensors[sensorID]; !ok {
 						sensors[sensorID] = newSensor(data)
 						log.Debug().Caller().Msgf("New sensor discovered: %s", sensors[sensorID].name)
-						go hass.APIRequest(ctx, sensors[sensorID])
 					} else {
 						sensors[sensorID].updateSensor(ctx, data)
 					}
+					go hass.APIRequest(ctx, sensors[sensorID])
 				case hass.LocationUpdate:
 					l := &location{
 						data: data,
@@ -129,7 +146,6 @@ func (agent *Agent) tracker(agentCtx context.Context, configWG *sync.WaitGroup) 
 			case <-ctx.Done():
 				log.Debug().Caller().
 					Msg("Stopping sensor tracking.")
-				close(doneCh)
 				return
 			}
 		}
@@ -140,7 +156,7 @@ func (agent *Agent) tracker(agentCtx context.Context, configWG *sync.WaitGroup) 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		device.LocationUpdater(ctx, agent.App.UniqueID(), updateCh, doneCh)
+		device.LocationUpdater(ctx, agent.App.UniqueID(), updateCh)
 	}()
 
 	for name, workerFunction := range deviceAPI.SensorInfo.Get() {

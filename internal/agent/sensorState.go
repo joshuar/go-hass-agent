@@ -108,9 +108,13 @@ func (sensor *sensorState) RequestData() interface{} {
 }
 
 func (sensor *sensorState) ResponseHandler(rawResponse interface{}) {
-	if rawResponse == nil || len(rawResponse.(map[string]interface{})) == 0 {
+	if rawResponse == nil {
 		log.Debug().Caller().
-			Msg("No response data.")
+			Msg("No response received. Likely failed request.")
+
+	} else if len(rawResponse.(map[string]interface{})) == 0 {
+		log.Debug().Caller().
+			Msg("No response data. Likely problem with request data.")
 	} else {
 		response := rawResponse.(map[string]interface{})
 		if v, ok := response["success"]; ok {
@@ -124,10 +128,13 @@ func (sensor *sensorState) ResponseHandler(rawResponse interface{}) {
 			status := v.(map[string]interface{})
 			if !status["success"].(bool) {
 				error := status["error"].(map[string]interface{})
-				log.Error().Msgf("Could not update sensor %s, %s: %s", sensor.name, error["code"], error["message"])
+				log.Debug().Caller().
+					Msgf("Could not update sensor %s, %s: %s",
+						sensor.name, error["code"], error["message"])
 			} else {
 				log.Debug().Caller().
-					Msgf("Sensor %s updated. State is now: %v", sensor.name, sensor.state)
+					Msgf("Sensor %s updated. State is now: %v",
+						sensor.name, sensor.state)
 			}
 			if v, ok := status["is_disabled"]; ok {
 				switch v.(bool) {
@@ -171,5 +178,4 @@ func (sensor *sensorState) updateSensor(ctx context.Context, update hass.SensorU
 	sensor.state = update.State()
 	sensor.attributes = update.Attributes()
 	sensor.icon = update.Icon()
-	go hass.APIRequest(ctx, sensor)
 }
