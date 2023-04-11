@@ -44,6 +44,12 @@ As examples of some of the things that can be done with the data published by th
 
 See also the [FAQ](docs/faq.md). 
 
+## Installation
+
+Head over to the [releases](https://github.com/joshuar/go-hass-agent/releases)
+page and download the appropriate package for your operating system and/or
+distribution.
+
 ## Usage
 
 go-hass-agent runs as a tray icon. It is operating system, distribution and
@@ -83,6 +89,8 @@ Assistant.
 
 ## Contributing
 
+### Development
+
 I would welcome your contribution! If you find any improvement or issue you want
 to fix, feel free to send a pull request!
 
@@ -99,3 +107,13 @@ and `message` packages that are part of
 [golang.org/x/text](https://pkg.go.dev/golang.org/x/text). 
 
 I would welcome pull requests for translations!
+
+
+## Acknowledgements
+
+The app icon is taken from the [Home Assistant
+project](https://github.com/home-assistant/assets).
+
+## License
+
+[MIT](LICENSE)

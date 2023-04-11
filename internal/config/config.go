@@ -66,7 +66,6 @@ func (config *AppConfig) Validate() error {
 		// an invalid value for validation such as interface with nil
 		// value most including myself do not usually have code like this.
 		if _, ok := err.(*validator.InvalidValidationError); ok {
-			fmt.Println(err)
 			return err
 		}
 
@@ -85,13 +84,10 @@ func (config *AppConfig) Validate() error {
 				Message:         err.Error(),
 			}
 
-			indent, err := json.MarshalIndent(e, "", "  ")
+			_, err := json.MarshalIndent(e, "", "  ")
 			if err != nil {
-				fmt.Println(err)
 				panic(err)
 			}
-
-			fmt.Println(string(indent))
 		}
 
 		// from here you can create your own error messages in whatever language you wish

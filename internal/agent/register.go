@@ -9,8 +9,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
-	"github.com/hashicorp/mdns"
+	"github.com/grandcat/zeroconf"
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/rs/zerolog/log"
@@ -23,10 +24,6 @@ import (
 	validate "github.com/go-playground/validator/v10"
 )
 
-const (
-	HelpText = ""
-)
-
 func newRegistration() *hass.RegistrationHost {
 	return &hass.RegistrationHost{
 		Server: binding.NewString(),
@@ -35,45 +32,52 @@ func newRegistration() *hass.RegistrationHost {
 	}
 }
 
-func findServers() binding.StringList {
+func findServers(ctx context.Context) binding.StringList {
 
 	serverList := binding.NewStringList()
 
-	entriesCh := make(chan *mdns.ServiceEntry, 4)
-	go func() {
-		for entry := range entriesCh {
-			server := entry.AddrV4.String() + ":" + fmt.Sprint(entry.Port)
-			log.Debug().Caller().Msgf("Found a server: %s", server)
-			serverList.Append(server)
-		}
-	}()
-
-	// Start the lookup
-	mdns.Lookup("_home-assistant._tcp", entriesCh)
-	close(entriesCh)
-
-	if serverList == nil {
-		log.Warn().Msg("Could not find any Home Assistant servers on the network")
-	}
-	// }
-	// add http://localhost:8123 to the list of servers as a fall-back/default option
+	// add http://localhost:8123 to the list of servers as a fall-back/default
+	// option
 	serverList.Append("localhost:8123")
+
+	resolver, err := zeroconf.NewResolver(nil)
+	if err != nil {
+		log.Warn().Msgf("Failed to initialize resolver:", err.Error())
+	} else {
+		entries := make(chan *zeroconf.ServiceEntry)
+		go func(results <-chan *zeroconf.ServiceEntry) {
+			for entry := range results {
+				server := entry.AddrIPv4[0].String() + ":" + fmt.Sprint(entry.Port)
+				serverList.Append(server)
+				log.Debug().Caller().
+					Msgf("Found a record %s", server)
+			}
+		}(entries)
+
+		log.Info().Msg("Looking for Home Assistant instances on the network...")
+		searchCtx, searchCancel := context.WithTimeout(ctx, time.Second*5)
+		defer searchCancel()
+		err = resolver.Browse(searchCtx, "_home-assistant._tcp", "local.", entries)
+		if err != nil {
+			log.Warn().Msgf("Failed to browse:", err.Error())
+		}
+
+		<-searchCtx.Done()
+	}
 	return serverList
 }
 
 func (agent *Agent) getRegistrationHostInfo(ctx context.Context) *hass.RegistrationHost {
-
-	msgPrinter := newMsgPrinter()
 
 	registrationInfo := newRegistration()
 
 	done := make(chan bool, 1)
 	defer close(done)
 
-	s := findServers()
+	s := findServers(ctx)
 	allServers, _ := s.Get()
 
-	w := agent.App.NewWindow(msgPrinter.Sprintf("App Registration"))
+	w := agent.App.NewWindow(agent.MsgPrinter.Sprintf("App Registration"))
 
 	tokenSelect := widget.NewEntryWithData(registrationInfo.Token)
 
@@ -98,11 +102,11 @@ func (agent *Agent) getRegistrationHostInfo(ctx context.Context) *hass.Registrat
 	tlsSelect := widget.NewCheckWithData("", registrationInfo.UseTLS)
 
 	form := widget.NewForm(
-		widget.NewFormItem(msgPrinter.Sprintf("Token"), tokenSelect),
-		widget.NewFormItem(msgPrinter.Sprintf("Auto-discovered Servers"), autoServerSelect),
-		widget.NewFormItem(msgPrinter.Sprintf("Use Custom Server?"), manualServerSelect),
-		widget.NewFormItem(msgPrinter.Sprintf("Manual Server Entry"), manualServerEntry),
-		widget.NewFormItem(msgPrinter.Sprintf("Use TLS?"), tlsSelect),
+		widget.NewFormItem(agent.MsgPrinter.Sprintf("Token"), tokenSelect),
+		widget.NewFormItem(agent.MsgPrinter.Sprintf("Auto-discovered Servers"), autoServerSelect),
+		widget.NewFormItem(agent.MsgPrinter.Sprintf("Use Custom Server?"), manualServerSelect),
+		widget.NewFormItem(agent.MsgPrinter.Sprintf("Manual Server Entry"), manualServerEntry),
+		widget.NewFormItem(agent.MsgPrinter.Sprintf("Use TLS?"), tlsSelect),
 	)
 	form.OnSubmit = func() {
 		s, _ := registrationInfo.Server.Get()
@@ -118,7 +122,7 @@ func (agent *Agent) getRegistrationHostInfo(ctx context.Context) *hass.Registrat
 	}
 
 	w.SetContent(container.New(layout.NewVBoxLayout(),
-		widget.NewLabel(msgPrinter.Sprint("As an initial step, this app will need to log into your Home Assistant server and register itself.\nPlease enter the relevant details for your Home Assistant server url/port and a long-lived access token.")),
+		widget.NewLabel(agent.MsgPrinter.Sprint("As an initial step, this app will need to log into your Home Assistant server and register itself.\nPlease enter the relevant details for your Home Assistant server url/port and a long-lived access token.")),
 		form,
 	))
 

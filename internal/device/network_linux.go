@@ -19,9 +19,14 @@ import (
 //go:generate stringer -type=networkProp -output network_props_linux.go
 
 const (
-	dBusDest                    = "org.freedesktop.NetworkManager"
-	dBusPath                    = "/org/freedesktop/NetworkManager"
-	dBusActiveConnectionsMethod = "org.freedesktop.NetworkManager.ActiveConnections"
+	dBusDest = "org.freedesktop.NetworkManager"
+	dBusPath = "/org/freedesktop/NetworkManager"
+
+	connIntr     = "org.freedesktop.NetworkManager.Connection.Active"
+	ipv4Intr     = "org.freedesktop.NetworkManager.IP4Config"
+	ipv6Intr     = "org.freedesktop.NetworkManager.IP6Config"
+	wirelessIntr = "org.freedesktop.NetworkManager.Device.Wireless"
+	apIntr       = "org.freedesktop.NetworkManager.AccessPoint"
 
 	ConnectionState networkProp = iota
 	ConnectionID
@@ -365,11 +370,6 @@ func NetworkUpdater(ctx context.Context, status chan interface{}) {
 			case s.Name == "org.freedesktop.NetworkManager.Connection.Active.StateChanged":
 				processConnectionState(ctx, s.Path, status)
 				processConnectionType(ctx, s.Path, status)
-				// name := getNetProp(ctx, s.Path, ConnectionID).Value().(string)
-				// if name != "" {
-				// 	connState := marshallNetworkStateUpdate(ctx, ConnectionState, s.Path, name, dbus.MakeVariant(s.Body[0]))
-				// 	status <- connState
-				// }
 			}
 		},
 	}
