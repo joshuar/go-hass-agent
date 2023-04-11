@@ -5,8 +5,7 @@
 !/.gitignore
 
 !*.go
-!*.json
-!*.png
+!translations/**/*.json
 !*.yml
 !*.yaml
 !go.sum
@@ -14,8 +13,9 @@
 
 !README.md
 !LICENSE
-!assets/go-hass-agent.desktop
-!docs/
+!assets/
+!docs/**/*.md
+!docs/**/*.png
 !tools/
 
 # !Makefile
