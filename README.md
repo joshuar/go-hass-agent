@@ -99,6 +99,3 @@ and `message` packages that are part of
 [golang.org/x/text](https://pkg.go.dev/golang.org/x/text). 
 
 I would welcome pull requests for translations!
-
-
-

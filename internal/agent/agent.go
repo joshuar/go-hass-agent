@@ -44,12 +44,7 @@ func NewAgent() *Agent {
 
 func Run() {
 	ctx, cancelfunc := context.WithCancel(context.Background())
-	deviceCtx := device.SetupContext(ctx)
-	start(deviceCtx)
-	cancelfunc()
-}
-
-func start(ctx context.Context) {
+	ctx = device.SetupContext(ctx)
 	log.Info().Msg("Starting agent.")
 	agent := NewAgent()
 
@@ -97,6 +92,7 @@ func start(ctx context.Context) {
 
 	agent.App.Run()
 	agent.stop()
+	cancelfunc()
 }
 
 func (agent *Agent) stop() {
@@ -104,27 +100,22 @@ func (agent *Agent) stop() {
 	agent.Tray.Close()
 }
 
-// TrackSensors should be run in a goroutine and is responsible for creating,
-// tracking and update HA with all sensors provided from the platform/device.
+// tracker should be run in a goroutine and is responsible for creating,
+// tracking and updating HA with all sensors provided from the platform/device.
 func (agent *Agent) tracker(agentCtx context.Context, configWG *sync.WaitGroup) {
 	configWG.Wait()
 
 	appConfig := agent.loadConfig()
 	ctx := config.NewContext(agentCtx, appConfig)
+	sensorInfo := device.SetupSensors()
+	sensors := make(map[string]*sensorState)
+	updateCh := make(chan interface{})
 
 	go agent.runNotificationsWorker(ctx)
 
-	deviceAPI, deviceAPIExists := device.FromContext(ctx)
-	if !deviceAPIExists {
-		log.Debug().Caller().
-			Msg("Could not retrieve deviceAPI from context.")
-		return
-	}
-
-	updateCh := make(chan interface{})
-
-	sensors := make(map[string]*sensorState)
-
+	// goroutine to listen for sensor updates. Sensors are tracked in a map to
+	// handle registration and disabling/enabling. Updates are sent to Home
+	// Assistant.
 	go func() {
 		for {
 			select {
@@ -161,7 +152,8 @@ func (agent *Agent) tracker(agentCtx context.Context, configWG *sync.WaitGroup) 
 		device.LocationUpdater(ctx, agent.App.UniqueID(), updateCh)
 	}()
 
-	for name, workerFunction := range deviceAPI.SensorInfo.Get() {
+	// Run all the defined sensor update functions.
+	for name, workerFunction := range sensorInfo.Get() {
 		wg.Add(1)
 		log.Debug().Caller().
 			Msgf("Setting up sensors for %s.", name)

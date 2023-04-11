@@ -26,6 +26,7 @@ type bus struct {
 	busType dbusType
 }
 
+// NewBus sets up DBus connections and channels for receiving signals. It creates both a system and session bus connection.
 func NewBus(ctx context.Context, t dbusType) *bus {
 	var conn *dbus.Conn
 	var err error
@@ -59,12 +60,6 @@ type DBusWatchRequest struct {
 	eventHandler func(*dbus.Signal)
 }
 
-type deviceAPI struct {
-	*SensorInfo
-	dBusSystem, dBusSession *bus
-	WatchEvents             chan *DBusWatchRequest
-}
-
 func (d *deviceAPI) bus(t dbusType) *dbus.Conn {
 	switch t {
 	case sessionBus:
@@ -77,6 +72,9 @@ func (d *deviceAPI) bus(t dbusType) *dbus.Conn {
 	}
 }
 
+// monitorDBus listens for DBus watch requests and ensures the appropriate
+// signal watches are created. It will also dispatch to a handler function when
+// a signal is matched.
 func (d *deviceAPI) monitorDBus(ctx context.Context) {
 	events := make(map[dbusType]map[string]func(*dbus.Signal))
 	events[sessionBus] = make(map[string]func(*dbus.Signal))
@@ -87,11 +85,9 @@ func (d *deviceAPI) monitorDBus(ctx context.Context) {
 	defer d.dBusSystem.conn.RemoveSignal(d.dBusSystem.events)
 	for {
 		select {
+		// When the context is finished/cancelled, try to clean up gracefully.
 		case <-ctx.Done():
 			log.Debug().Caller().Msg("Stopping DBus Monitor.")
-			// for bus, request := range watches {
-			// 	d.RemoveDBusWatch(bus, request.match.path, request.match.intr)
-			// }
 			close(d.WatchEvents)
 			d.dBusSession.conn.RemoveSignal(d.dBusSession.events)
 			d.dBusSystem.conn.RemoveSignal(d.dBusSystem.events)
@@ -218,21 +214,6 @@ func (d *deviceAPI) GetDBusData(t dbusType, dest string, path dbus.ObjectPath, m
 		return nil
 	}
 	return data
-}
-
-func SetupContext(ctx context.Context) context.Context {
-	deviceAPI := &deviceAPI{
-		SensorInfo:  NewSensorInfo(),
-		dBusSystem:  NewBus(ctx, systemBus),
-		dBusSession: NewBus(ctx, sessionBus),
-		WatchEvents: make(chan *DBusWatchRequest),
-	}
-	go deviceAPI.monitorDBus(ctx)
-	deviceAPI.SensorInfo.Add("Battery", BatteryUpdater)
-	deviceAPI.SensorInfo.Add("Apps", AppUpdater)
-	deviceAPI.SensorInfo.Add("Network", NetworkUpdater)
-	deviceCtx := NewContext(ctx, deviceAPI)
-	return deviceCtx
 }
 
 // FindPortal is a helper function to work out which portal interface should be

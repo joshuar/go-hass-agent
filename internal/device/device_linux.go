@@ -6,6 +6,7 @@
 package device
 
 import (
+	"context"
 	"encoding/json"
 	"os/exec"
 	"os/user"
@@ -148,4 +149,29 @@ func checkForBinary(binary string) string {
 			Msgf("Could not find needed executable %s in PATH", binary)
 	}
 	return path
+}
+
+type deviceAPI struct {
+	dBusSystem, dBusSession *bus
+	WatchEvents             chan *DBusWatchRequest
+}
+
+func SetupContext(ctx context.Context) context.Context {
+	deviceAPI := &deviceAPI{
+		dBusSystem:  NewBus(ctx, systemBus),
+		dBusSession: NewBus(ctx, sessionBus),
+		WatchEvents: make(chan *DBusWatchRequest),
+	}
+	go deviceAPI.monitorDBus(ctx)
+	deviceCtx := NewContext(ctx, deviceAPI)
+	return deviceCtx
+}
+
+func SetupSensors() *SensorInfo {
+	sensorInfo := NewSensorInfo()
+	sensorInfo.Add("Battery", BatteryUpdater)
+	sensorInfo.Add("Apps", AppUpdater)
+	sensorInfo.Add("Network", NetworkUpdater)
+	// Add each SensorUpdater function here...
+	return sensorInfo
 }
