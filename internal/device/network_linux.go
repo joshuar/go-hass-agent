@@ -340,13 +340,22 @@ func NetworkUpdater(ctx context.Context, status chan interface{}) {
 	deviceAPI, deviceAPIExists := FromContext(ctx)
 	if !deviceAPIExists {
 		log.Debug().Caller().
-			Msg("Could not connect to DBus to monitor batteries.")
+			Msg("Could not connect to DBus to monitor network.")
 		return
 	}
 
-	deviceList := deviceAPI.GetDBusData(
+	myDeviceList := deviceAPI.GetDBusData(
 		systemBus, dBusDest, dBusPath,
-		"org.freedesktop.NetworkManager.GetDevices", "").([]dbus.ObjectPath)
+		"org.freedesktop.NetworkManager.GetDevices", "")
+
+	if myDeviceList == nil {
+		log.Debug().Caller().
+			Msg("Could not list devices from network manager")
+		return
+	}
+
+	deviceList := myDeviceList.([]dbus.ObjectPath)
+
 	if len(deviceList) > 0 {
 		for _, device := range deviceList {
 			conn := deviceActiveConnection(ctx, device)
