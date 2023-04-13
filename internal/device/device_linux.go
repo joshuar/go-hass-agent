@@ -162,9 +162,14 @@ func SetupContext(ctx context.Context) context.Context {
 		dBusSession: NewBus(ctx, sessionBus),
 		WatchEvents: make(chan *DBusWatchRequest),
 	}
-	go deviceAPI.monitorDBus(ctx)
-	deviceCtx := NewContext(ctx, deviceAPI)
-	return deviceCtx
+	if deviceAPI.dBusSession == nil && deviceAPI.dBusSystem == nil {
+		log.Warn().Msg("No DBus connections could be established.")
+		return ctx
+	} else {
+		go deviceAPI.monitorDBus(ctx)
+		deviceCtx := NewContext(ctx, deviceAPI)
+		return deviceCtx
+	}
 }
 
 func SetupSensors() *SensorInfo {

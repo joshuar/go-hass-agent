@@ -40,13 +40,14 @@ func NewBus(ctx context.Context, t dbusType) *bus {
 		log.Error().Stack().Err(err).
 			Msg("Could not connect to bus")
 		return nil
-	}
-	events := make(chan *dbus.Signal)
-	conn.Signal(events)
-	return &bus{
-		conn:    conn,
-		events:  events,
-		busType: t,
+	} else {
+		events := make(chan *dbus.Signal)
+		conn.Signal(events)
+		return &bus{
+			conn:    conn,
+			events:  events,
+			busType: t,
+		}
 	}
 }
 
@@ -63,9 +64,17 @@ type DBusWatchRequest struct {
 func (d *deviceAPI) bus(t dbusType) *dbus.Conn {
 	switch t {
 	case sessionBus:
-		return d.dBusSession.conn
+		if d.dBusSession != nil {
+			return d.dBusSession.conn
+		} else {
+			return nil
+		}
 	case systemBus:
-		return d.dBusSystem.conn
+		if d.dBusSystem != nil {
+			return d.dBusSystem.conn
+		} else {
+			return nil
+		}
 	default:
 		log.Warn().Msg("Could not discern DBus bus type.")
 		return nil
@@ -77,12 +86,45 @@ func (d *deviceAPI) bus(t dbusType) *dbus.Conn {
 // a signal is matched.
 func (d *deviceAPI) monitorDBus(ctx context.Context) {
 	events := make(map[dbusType]map[string]func(*dbus.Signal))
-	events[sessionBus] = make(map[string]func(*dbus.Signal))
-	events[systemBus] = make(map[string]func(*dbus.Signal))
 	watches := make(map[dbusType]*DBusWatchRequest)
 	defer close(d.WatchEvents)
-	defer d.dBusSession.conn.RemoveSignal(d.dBusSession.events)
-	defer d.dBusSystem.conn.RemoveSignal(d.dBusSystem.events)
+	// For each bus signal handler that exists, try to match first on an exact
+	// path match, then try a substr match. Whichever matches, run the handler
+	// function associated with it.
+	if d.dBusSession != nil {
+		events[sessionBus] = make(map[string]func(*dbus.Signal))
+		defer d.dBusSession.conn.RemoveSignal(d.dBusSession.events)
+		go func() {
+			for sessionSignal := range d.dBusSession.events {
+				if handlerFunc, ok := events[sessionBus][string(sessionSignal.Path)]; ok {
+					handlerFunc(sessionSignal)
+				} else {
+					for matchPath, handlerFunc := range events[systemBus] {
+						if strings.Contains(string(sessionSignal.Path), matchPath) {
+							handlerFunc(sessionSignal)
+						}
+					}
+				}
+			}
+		}()
+	}
+	if d.dBusSystem != nil {
+		events[systemBus] = make(map[string]func(*dbus.Signal))
+		defer d.dBusSystem.conn.RemoveSignal(d.dBusSystem.events)
+		go func() {
+			for systemSignal := range d.dBusSystem.events {
+				if handlerFunc, ok := events[systemBus][string(systemSignal.Path)]; ok {
+					handlerFunc(systemSignal)
+				} else {
+					for matchPath, handlerFunc := range events[systemBus] {
+						if strings.Contains(string(systemSignal.Path), matchPath) {
+							handlerFunc(systemSignal)
+						}
+					}
+				}
+			}
+		}()
+	}
 	for {
 		select {
 		// When the context is finished/cancelled, try to clean up gracefully.
@@ -98,29 +140,6 @@ func (d *deviceAPI) monitorDBus(ctx context.Context) {
 			d.AddDBusWatch(watch.bus, watch.match)
 			events[watch.bus][string(watch.path)] = watch.eventHandler
 			watches[watch.bus] = watch
-		// For each bus signal handler, try to match first on an exact path
-		// match, then try a substr match. Whichever matches, run the
-		// handler function associated with it.
-		case systemSignal := <-d.dBusSystem.events:
-			if handlerFunc, ok := events[systemBus][string(systemSignal.Path)]; ok {
-				handlerFunc(systemSignal)
-			} else {
-				for matchPath, handlerFunc := range events[systemBus] {
-					if strings.Contains(string(systemSignal.Path), matchPath) {
-						handlerFunc(systemSignal)
-					}
-				}
-			}
-		case sessionSignal := <-d.dBusSession.events:
-			if handlerFunc, ok := events[sessionBus][string(sessionSignal.Path)]; ok {
-				handlerFunc(sessionSignal)
-			} else {
-				for matchPath, handlerFunc := range events[systemBus] {
-					if strings.Contains(string(sessionSignal.Path), matchPath) {
-						handlerFunc(sessionSignal)
-					}
-				}
-			}
 		}
 	}
 }
@@ -149,71 +168,91 @@ func (d *deviceAPI) RemoveDBusWatch(t dbusType, path dbus.ObjectPath, intr strin
 }
 
 func (d *deviceAPI) GetDBusObject(t dbusType, dest string, path dbus.ObjectPath) dbus.BusObject {
-	return d.bus(t).Object(dest, path)
+	if d.bus(t) != nil {
+		return d.bus(t).Object(dest, path)
+	} else {
+		return nil
+	}
 }
 
 // GetDBusProp will retrieve the specified property value from the given path
 // and destination.
 func (d *deviceAPI) GetDBusProp(t dbusType, dest string, path dbus.ObjectPath, prop string) dbus.Variant {
-	obj := d.bus(t).Object(dest, path)
-	res, err := obj.GetProperty(prop)
-	if err != nil {
-		log.Error().Err(err).
-			Msgf("Unable to retrieve property %s (%s)", prop, dest)
+	if d.bus(t) != nil {
+		obj := d.bus(t).Object(dest, path)
+		res, err := obj.GetProperty(prop)
+		if err != nil {
+			log.Error().Err(err).
+				Msgf("Unable to retrieve property %s (%s)", prop, dest)
+			return dbus.MakeVariant("")
+		}
+		return res
+	} else {
 		return dbus.MakeVariant("")
 	}
-	return res
 }
 
 func (d *deviceAPI) GetDBusDataAsMap(t dbusType, dest string, path dbus.ObjectPath, method string, args string) map[string]dbus.Variant {
-	obj := d.bus(t).Object(dest, path)
-	var data map[string]dbus.Variant
-	var err error
-	if args != "" {
-		err = obj.Call(method, 0, args).Store(&data)
+	if d.bus(t) != nil {
+		obj := d.bus(t).Object(dest, path)
+		var data map[string]dbus.Variant
+		var err error
+		if args != "" {
+			err = obj.Call(method, 0, args).Store(&data)
+		} else {
+			err = obj.Call(method, 0).Store(&data)
+		}
+		if err != nil {
+			log.Error().Err(err).
+				Msgf("Unable to execute %s on %s (args: %s)", method, dest, args)
+			return nil
+		}
+		return data
 	} else {
-		err = obj.Call(method, 0).Store(&data)
-	}
-	if err != nil {
-		log.Error().Err(err).
-			Msgf("Unable to execute %s on %s (args: %s)", method, dest, args)
 		return nil
 	}
-	return data
 }
 
 func (d *deviceAPI) GetDBusDataAsList(t dbusType, dest string, path dbus.ObjectPath, method string, args string) []string {
-	obj := d.bus(t).Object(dest, path)
-	var data []string
-	var err error
-	if args != "" {
-		err = obj.Call(method, 0, args).Store(&data)
+	if d.bus(t) != nil {
+		obj := d.bus(t).Object(dest, path)
+		var data []string
+		var err error
+		if args != "" {
+			err = obj.Call(method, 0, args).Store(&data)
+		} else {
+			err = obj.Call(method, 0).Store(&data)
+		}
+		if err != nil {
+			log.Error().Err(err).
+				Msgf("Unable to execute %s on %s (args: %s)", method, dest, args)
+			return nil
+		}
+		return data
 	} else {
-		err = obj.Call(method, 0).Store(&data)
-	}
-	if err != nil {
-		log.Error().Err(err).
-			Msgf("Unable to execute %s on %s (args: %s)", method, dest, args)
 		return nil
 	}
-	return data
 }
 
 func (d *deviceAPI) GetDBusData(t dbusType, dest string, path dbus.ObjectPath, method string, args string) interface{} {
-	obj := d.bus(t).Object(dest, path)
-	var data interface{}
-	var err error
-	if args != "" {
-		err = obj.Call(method, 0, args).Store(&data)
+	if d.bus(t) != nil {
+		obj := d.bus(t).Object(dest, path)
+		var data interface{}
+		var err error
+		if args != "" {
+			err = obj.Call(method, 0, args).Store(&data)
+		} else {
+			err = obj.Call(method, 0).Store(&data)
+		}
+		if err != nil {
+			log.Error().Err(err).
+				Msgf("Unable to execute %s on %s (args: %s)", method, dest, args)
+			return nil
+		}
+		return data
 	} else {
-		err = obj.Call(method, 0).Store(&data)
-	}
-	if err != nil {
-		log.Error().Err(err).
-			Msgf("Unable to execute %s on %s (args: %s)", method, dest, args)
 		return nil
 	}
-	return data
 }
 
 // FindPortal is a helper function to work out which portal interface should be
