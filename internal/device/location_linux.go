@@ -53,19 +53,42 @@ func (l *linuxLocation) VerticalAccuracy() int {
 
 func LocationUpdater(ctx context.Context, appID string, locationInfoCh chan interface{}) {
 
+	deviceAPI, deviceAPIExists := FromContext(ctx)
+	if !deviceAPIExists {
+		log.Debug().Caller().
+			Msg("Could not connect to DBus to monitor network.")
+		return
+	}
+
+	if deviceAPI.dBusSystem == nil {
+		log.Debug().
+			Msg("No system bus connection. Location sensor unavailable.")
+		return
+	}
+
 	locationInfo := &linuxLocation{}
 
 	gcm, err := geoclue2.NewGeoclueManager()
-	logging.CheckError(err)
+	if err != nil {
+		log.Debug().Err(err).
+			Msg("Could not create geoclue interface.")
+	}
 
 	client, err := gcm.GetClient()
-	logging.CheckError(err)
+	if err != nil {
+		log.Debug().Err(err).
+			Msg("Could not create geoclue interface.")
+	}
 
-	err = client.SetDesktopId(appID)
-	logging.CheckError(err)
+	if err := client.SetDesktopId(appID); err != nil {
+		log.Debug().Err(err).
+			Msg("Could not create geoclue interface.")
+	}
 
-	err = client.Start()
-	logging.CheckError(err)
+	if err := client.Start(); err != nil {
+		log.Debug().Err(err).
+			Msg("Could not create geoclue interface.")
+	}
 
 	c := client.SubscribeLocationUpdated()
 	for {

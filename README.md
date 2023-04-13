@@ -10,10 +10,6 @@ A [Home Assistant](https://www.home-assistant.io/), [native app
 integration](https://developers.home-assistant.io/docs/api/native-app-integration)
 for desktop/laptop devices.
 
-Currently, only Linux is supported. Though the code is designed to be extensible
-to other operating systems. See [Agent/Extending](docs/agent/extending.md) for
-details on how to extend for other operating systems.
-
 ## Features
 
 This app will add some sensors to a Home Assistant instance:
@@ -43,6 +39,18 @@ As examples of some of the things that can be done with the data published by th
 - Receive notifications from Home Assistant on your desktop/laptop.
 
 See also the [FAQ](docs/faq.md). 
+
+## Compatibility
+
+Currently, only Linux is supported. Though the code is designed to be extensible
+to other operating systems. See [Agent/Extending](docs/agent/extending.md) for
+details on how to extend for other operating systems.
+
+### Incompatible Linux Distributions
+
+Unfortunately, go-hass-agent will not run on the following distributions:
+
+- Debian 11 (stable).
 
 ## Installation
 
