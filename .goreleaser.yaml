@@ -4,39 +4,14 @@ before:
     - go generate ./...
     - desktop-file-validate assets/go-hass-agent.desktop
 
-# .goreleaser.yml
 changelog:
-  # Changelog generation implementation to use.
-  #
-  # Valid options are:
-  # - `git`: uses `git log`;
-  # - `github`: uses the compare GitHub API, appending the author login to the changelog.
-  # - `gitlab`: uses the compare GitLab API, appending the author name and email to the changelog.
-  # - `github-native`: uses the GitHub release notes generation API, disables the groups feature.
-  #
-  # Default: 'git'
   use: github-native
-
-  # Sorts the changelog by the commit's messages.
-  # Could either be asc, desc or empty
   sort: asc
-
-  # Max commit hash length to use in the changelog.
-  #
-  # 0: use whatever the changelog implementation gives you
-  # -1: remove the commit hash from the changelog
-  # any other number: max length.
-  #
-  # Since: v1.11.2
-  abbrev: -1
-  
+  abbrev: 0
   filters:
-    # Commit messages matching the regexp listed here will be removed from
-    # the changelog
     exclude:
       - '^docs:'
       - typo
-      - (?i)foo
 
 builds:
   - env:
@@ -49,8 +24,6 @@ builds:
       - amd64
       # - arm
       # - arm64
-
-
 
 archives:
   - format: tar.xz
