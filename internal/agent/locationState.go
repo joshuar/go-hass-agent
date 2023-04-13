@@ -28,6 +28,6 @@ func (l *location) ResponseHandler(rawResponse interface{}) {
 	if rawResponse == nil {
 		log.Debug().Caller().Msg("No response data.")
 	} else {
-		log.Debug().Caller().Msgf("Location updated to %v", l.data.Gps())
+		log.Debug().Caller().Msg("Location updated.")
 	}
 }

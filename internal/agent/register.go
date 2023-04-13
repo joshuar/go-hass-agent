@@ -50,7 +50,7 @@ func findServers(ctx context.Context) binding.StringList {
 				server := entry.AddrIPv4[0].String() + ":" + fmt.Sprint(entry.Port)
 				serverList.Append(server)
 				log.Debug().Caller().
-					Msgf("Found a record %s", server)
+					Msg("Found a HA instance via mDNS")
 			}
 		}(entries)
 
