@@ -40,6 +40,9 @@ func (agent *Agent) handleNotifications(ctx context.Context, response chan *hass
 			log.Debug().Caller().Msg("Stopping handling notifications.")
 			return
 		case r := <-response:
+			if r == nil {
+				return
+			}
 			switch r.Type {
 			case "auth_required":
 				log.Debug().Caller().Msg("Requesting authorisation for websocket.")
