@@ -500,15 +500,17 @@ func processConnectionType(ctx context.Context, conn dbus.ObjectPath, status cha
 	case "802-11-wireless":
 		dp := getNetProp(ctx, conn, ConnectionDevices)
 		devicePath := dp.Value().([]dbus.ObjectPath)[0]
-		wifiProps := []networkProp{WifiSSID, WifiHWAddress, WifiFrequency, WifiSpeed, WifiStrength}
-		for _, prop := range wifiProps {
-			propValue := getNetProp(ctx, devicePath, prop)
-			propState := marshallNetworkStateUpdate(ctx,
-				prop,
-				devicePath,
-				"wifi",
-				propValue)
-			status <- propState
+		if devicePath != "/" {
+			wifiProps := []networkProp{WifiSSID, WifiHWAddress, WifiFrequency, WifiSpeed, WifiStrength}
+			for _, prop := range wifiProps {
+				propValue := getNetProp(ctx, devicePath, prop)
+				propState := marshallNetworkStateUpdate(ctx,
+					prop,
+					devicePath,
+					"wifi",
+					propValue)
+				status <- propState
+			}
 		}
 	}
 }
