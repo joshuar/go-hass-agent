@@ -7,6 +7,7 @@ package device
 
 import (
 	"context"
+	"os"
 	"os/user"
 	"strings"
 
@@ -18,7 +19,7 @@ import (
 
 const (
 	Name    = "go-hass-agent"
-	Version = "0.0.1"
+	Version = "0.0.3"
 )
 
 type linuxDevice struct {
@@ -83,16 +84,18 @@ func NewDevice(ctx context.Context) *linuxDevice {
 
 	device := &linuxDevice{}
 
+	// Try to fetch hostname, vendor, model from DBus. Fall back to
+	// /sys/devices/virtual/dmi/id for vendor and model if DBus doesn't work.
+	// Ref:
+	// https://github.com/ansible/ansible/blob/devel/lib/ansible/module_utils/facts/hardware/linux.py
 	deviceAPI, deviceAPIExists := FromContext(ctx)
 	if !deviceAPIExists {
 		log.Debug().Caller().
 			Msg("Could not connect to DBus to monitor network.")
 		return nil
 	}
-
 	var dBusDest = "org.freedesktop.hostname1"
 	var dBusPath = "/org/freedesktop/hostname1"
-
 	hostnameFromDBus := deviceAPI.GetDBusProp(systemBus,
 		dBusDest,
 		dbus.ObjectPath(dBusPath),
@@ -102,7 +105,6 @@ func NewDevice(ctx context.Context) *linuxDevice {
 	} else {
 		device.hostname = "localhost"
 	}
-
 	hwVendorFromDBus := deviceAPI.GetDBusProp(systemBus,
 		dBusDest,
 		dbus.ObjectPath(dBusPath),
@@ -110,9 +112,13 @@ func NewDevice(ctx context.Context) *linuxDevice {
 	if vendor := hwVendorFromDBus.Value().(string); vendor != "" {
 		device.hwVendor = vendor
 	} else {
-		device.hwVendor = "Unknown Vendor"
+		hwVendor, err := os.ReadFile("/sys/devices/virtual/dmi/id/board_vendor")
+		if err != nil {
+			device.hwVendor = "Unknown Vendor"
+		} else {
+			device.hwVendor = strings.TrimSpace(string(hwVendor))
+		}
 	}
-
 	hwModelFromDBus := deviceAPI.GetDBusProp(systemBus,
 		dBusDest,
 		dbus.ObjectPath(dBusPath),
@@ -120,9 +126,15 @@ func NewDevice(ctx context.Context) *linuxDevice {
 	if model := hwModelFromDBus.Value().(string); model != "" {
 		device.hwModel = model
 	} else {
-		device.hwModel = "Unknown Vendor"
+		hwModel, err := os.ReadFile("/sys/devices/virtual/dmi/id/product_name")
+		if err != nil {
+			device.hwModel = "Unknown Vendor"
+		} else {
+			device.hwModel = strings.TrimSpace(string(hwModel))
+		}
 	}
 
+	// Grab everything from the /etc/os-release file.
 	osrelease, err := osrelease.Read()
 	if err != nil {
 		log.Fatal().Caller().
@@ -130,6 +142,7 @@ func NewDevice(ctx context.Context) *linuxDevice {
 	}
 	device.osRelease = osrelease
 
+	// Use the current user's username to construct an app ID.
 	currentUser, err := user.Current()
 	if err != nil {
 		log.Fatal().Caller().
@@ -137,6 +150,7 @@ func NewDevice(ctx context.Context) *linuxDevice {
 	}
 	device.appID = Name + "-" + currentUser.Username
 
+	// Generate a semi-random machine ID.
 	machineID, err := sd_id128.GetRandomUUID()
 	if err != nil {
 		log.Fatal().Caller().
