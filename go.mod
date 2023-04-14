@@ -59,7 +59,6 @@ require (
 	golang.org/x/tools v0.7.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	honnef.co/go/js/dom v0.0.0-20210725211120-f030747120f2 // indirect
-	kernel.org/pub/linux/libs/security/libcap/psx v1.2.68 // indirect
 )
 
 require (
@@ -75,5 +74,4 @@ require (
 	github.com/rs/zerolog v1.29.0
 	github.com/spf13/pflag v1.0.5 // indirect
 	golang.org/x/sys v0.6.0 // indirect
-	kernel.org/pub/linux/libs/security/libcap/cap v1.2.68
 )
