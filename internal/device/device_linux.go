@@ -7,13 +7,12 @@ package device
 
 import (
 	"context"
-	"encoding/json"
-	"os/exec"
 	"os/user"
 	"strings"
 
 	"git.lukeshu.com/go/libsystemd/sd_id128"
 	"github.com/acobaugh/osrelease"
+	"github.com/godbus/dbus/v5"
 	"github.com/rs/zerolog/log"
 )
 
@@ -23,33 +22,12 @@ const (
 )
 
 type linuxDevice struct {
-	hostnameCtl *hostnameCtl
-	osRelease   map[string]string
-	appID       string
-	machineID   string
-}
-
-type hostnameCtl struct {
-	Hostname                  string `json:"Hostname"`
-	StaticHostname            string `json:"StaticHostname"`
-	PrettyHostname            string `json:"PrettyHostname"`
-	DefaultHostname           string `json:"DefaultHostname"`
-	HostnameSource            string `json:"HostnameSource"`
-	IconName                  string `json:"IconName"`
-	Chassis                   string `json:"Chassis"`
-	Deployment                string `json:"Deployment"`
-	Location                  string `json:"Location"`
-	KernelName                string `json:"KernelName"`
-	KernelRelease             string `json:"KernelRelease"`
-	KernelVersion             string `json:"KernelVersion"`
-	OperatingSystemPrettyName string `json:"OperatingSystemPrettyName"`
-	OperatingSystemCPEName    string `json:"OperatingSystemCPEName"`
-	OperatingSystemHomeURL    string `json:"OperatingSystemHomeURL"`
-	HardwareVendor            string `json:"HardwareVendor"`
-	HardwareModel             string `json:"HardwareModel"`
-	HardwareSerial            string `json:"HardwareSerial"`
-	FirmwareVersion           string `json:"FirmwareVersion"`
-	ProductUUID               string `json:"ProductUUID"`
+	hostname  string
+	hwVendor  string
+	hwModel   string
+	osRelease map[string]string
+	appID     string
+	machineID string
 }
 
 func (l *linuxDevice) AppName() string {
@@ -65,7 +43,7 @@ func (l *linuxDevice) AppID() string {
 }
 
 func (l *linuxDevice) DeviceName() string {
-	shortHostname, _, _ := strings.Cut(l.hostnameCtl.Hostname, ".")
+	shortHostname, _, _ := strings.Cut(l.hostname, ".")
 	return shortHostname
 }
 
@@ -74,15 +52,15 @@ func (l *linuxDevice) DeviceID() string {
 }
 
 func (l *linuxDevice) Manufacturer() string {
-	return l.hostnameCtl.HardwareVendor
+	return l.hwVendor
 }
 
 func (l *linuxDevice) Model() string {
-	return l.hostnameCtl.HardwareModel
+	return l.hwModel
 }
 
 func (l *linuxDevice) OsName() string {
-	return l.hostnameCtl.OperatingSystemPrettyName
+	return l.osRelease["PRETTY_NAME"]
 }
 
 func (l *linuxDevice) OsVersion() string {
@@ -101,19 +79,48 @@ func (l *linuxDevice) AppData() interface{} {
 	}
 }
 
-func NewDevice() *linuxDevice {
+func NewDevice(ctx context.Context) *linuxDevice {
 
-	hostnameCtlCmd := checkForBinary("hostnamectl")
-	out, err := exec.Command(hostnameCtlCmd, "--json=short").Output()
-	if err != nil {
-		log.Fatal().Caller().
-			Msgf("Could not execute hostnamectl: %v", err)
+	device := &linuxDevice{}
+
+	deviceAPI, deviceAPIExists := FromContext(ctx)
+	if !deviceAPIExists {
+		log.Debug().Caller().
+			Msg("Could not connect to DBus to monitor network.")
+		return nil
 	}
-	var h *hostnameCtl
-	err = json.Unmarshal(out, &h)
-	if err != nil {
-		log.Fatal().Caller().
-			Msgf("Failed to parse output of hostnamectl: %v", err)
+
+	var dBusDest = "org.freedesktop.hostname1"
+	var dBusPath = "/org/freedesktop/hostname1"
+
+	hostnameFromDBus := deviceAPI.GetDBusProp(systemBus,
+		dBusDest,
+		dbus.ObjectPath(dBusPath),
+		dBusDest+".Hostname")
+	if hostname := hostnameFromDBus.Value().(string); hostname != "" {
+		device.hostname = hostname
+	} else {
+		device.hostname = "localhost"
+	}
+
+	hwVendorFromDBus := deviceAPI.GetDBusProp(systemBus,
+		dBusDest,
+		dbus.ObjectPath(dBusPath),
+		dBusDest+".HardwareVendor")
+	if vendor := hwVendorFromDBus.Value().(string); vendor != "" {
+		device.hwVendor = vendor
+	} else {
+		device.hwVendor = "Unknown Vendor"
+	}
+
+	hwModelFromDBus := deviceAPI.GetDBusProp(systemBus,
+		dBusDest,
+		dbus.ObjectPath(dBusPath),
+		dBusDest+".HardwareModel")
+	if model := hwModelFromDBus.Value().(string); model != "" {
+		device.hwModel = model
+	} else {
+		device.hwModel = "Unknown Vendor"
 	}
 
 	osrelease, err := osrelease.Read()
@@ -121,34 +128,23 @@ func NewDevice() *linuxDevice {
 		log.Fatal().Caller().
 			Msgf("Unable to read file /etc/os-release: %v", err)
 	}
+	device.osRelease = osrelease
 
 	currentUser, err := user.Current()
 	if err != nil {
 		log.Fatal().Caller().
 			Msgf("Could not retrieve current user details: %v", err.Error())
 	}
+	device.appID = Name + "-" + currentUser.Username
 
 	machineID, err := sd_id128.GetRandomUUID()
 	if err != nil {
 		log.Fatal().Caller().
 			Msgf("Could not retrieve a machine ID: %v", err)
 	}
+	device.machineID = machineID.String()
 
-	return &linuxDevice{
-		hostnameCtl: h,
-		osRelease:   osrelease,
-		appID:       Name + "-" + currentUser.Username,
-		machineID:   machineID.String(),
-	}
-}
-
-func checkForBinary(binary string) string {
-	path, err := exec.LookPath(binary)
-	if err != nil {
-		log.Fatal().Caller().
-			Msgf("Could not find needed executable %s in PATH", binary)
-	}
-	return path
+	return device
 }
 
 type deviceAPI struct {

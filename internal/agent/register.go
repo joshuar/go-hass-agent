@@ -158,7 +158,7 @@ func (agent *Agent) saveRegistration(r *hass.RegistrationResponse, h *hass.Regis
 }
 
 func (agent *Agent) runRegistrationWorker(ctx context.Context) error {
-	thisDevice := device.NewDevice()
+	thisDevice := device.NewDevice(ctx)
 	agent.App.Preferences().SetString("DeviceID", thisDevice.DeviceID())
 	agent.App.Preferences().SetString("DeviceName", thisDevice.DeviceName())
 	registrationHostInfo := agent.getRegistrationHostInfo(ctx)

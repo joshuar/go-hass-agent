@@ -13,6 +13,7 @@ import (
 	"github.com/iancoleman/strcase"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/rs/zerolog/log"
+	"github.com/shirou/gopsutil/v3/process"
 )
 
 //go:generate stringer -type=appSensorType -output appSensor_types_linux.go
@@ -93,17 +94,32 @@ func (s *appSensor) Category() string {
 }
 
 func (s *appSensor) Attributes() interface{} {
-	var runningApps []string
-	for appName, state := range s.sensorValue {
-		if state.Value().(uint32) > 0 {
-			runningApps = append(runningApps, appName)
+	switch s.sensorType {
+	case ActiveApp:
+		appProcesses := findProcesses(getProcessBasename(s.State().(string)))
+		var cmd string
+		if len(appProcesses) > 0 {
+			cmd, _ = appProcesses[0].Cmdline()
+		}
+		return struct {
+			Cmd string `json:"Command Line"`
+		}{
+			Cmd: cmd,
+		}
+	case RunningApps:
+		var runningApps []string
+		for appName, state := range s.sensorValue {
+			if state.Value().(uint32) > 0 {
+				runningApps = append(runningApps, appName)
+			}
+		}
+		return struct {
+			RunningApps []string `json:"Running Apps"`
+		}{
+			RunningApps: runningApps,
 		}
 	}
-	return struct {
-		RunningApps []string `json:"Running Apps"`
-	}{
-		RunningApps: runningApps,
-	}
+	return nil
 }
 
 func marshallAppStateUpdate(t appSensorType, v map[string]dbus.Variant) *appSensor {
@@ -151,4 +167,24 @@ func AppUpdater(ctx context.Context, update chan interface{}) {
 		},
 	}
 	deviceAPI.WatchEvents <- appChangeSignal
+}
+
+func findProcesses(name string) []*process.Process {
+	allProcesses, err := process.Processes()
+	if err != nil {
+		log.Debug().Caller().
+			Msg("Unable to retrieve processes list.")
+	}
+	var matchedProcesses []*process.Process
+	for _, p := range allProcesses {
+		if n, _ := p.Name(); strings.Contains(n, name) {
+			matchedProcesses = append(matchedProcesses, p)
+		}
+	}
+	return matchedProcesses
+}
+
+func getProcessBasename(name string) string {
+	s := strings.Split(name, ".")
+	return s[len(s)-1]
 }
