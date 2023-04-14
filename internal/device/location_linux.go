@@ -8,7 +8,6 @@ package device
 import (
 	"context"
 
-	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/maltegrosse/go-geoclue2"
 	"github.com/rs/zerolog/log"
 )
@@ -95,24 +94,12 @@ func LocationUpdater(ctx context.Context, appID string, locationInfoCh chan inte
 		select {
 		case v := <-c:
 			log.Debug().Caller().Msg("Location update received.")
-			_, location, err := client.ParseLocationUpdated(v)
-			logging.CheckError(err)
-
-			locationInfo.latitude, err = location.GetLatitude()
-			logging.CheckError(err)
-
-			locationInfo.longitude, err = location.GetLongitude()
-			logging.CheckError(err)
-
-			locationInfo.accuracy, err = location.GetAccuracy()
-			logging.CheckError(err)
-
-			locationInfo.speed, err = location.GetSpeed()
-			logging.CheckError(err)
-
-			locationInfo.altitude, err = location.GetAltitude()
-			logging.CheckError(err)
-
+			_, location, _ := client.ParseLocationUpdated(v)
+			locationInfo.latitude, _ = location.GetLatitude()
+			locationInfo.longitude, _ = location.GetLongitude()
+			locationInfo.accuracy, _ = location.GetAccuracy()
+			locationInfo.speed, _ = location.GetSpeed()
+			locationInfo.altitude, _ = location.GetAltitude()
 			locationInfoCh <- locationInfo
 		case <-ctx.Done():
 			log.Debug().Caller().
