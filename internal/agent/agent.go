@@ -7,6 +7,7 @@ package agent
 
 import (
 	"context"
+	_ "embed"
 	"os"
 	"sync"
 
@@ -20,9 +21,12 @@ import (
 	"golang.org/x/text/message"
 )
 
+//go:generate sh -c "printf %s $(git tag | tail -1) > VERSION"
+//go:embed VERSION
+var Version string
+
 const (
 	Name      = "go-hass-agent"
-	Version   = "0.0.1"
 	fyneAppID = "com.github.joshuar.go-hass-agent"
 )
 
