@@ -45,7 +45,14 @@ func (s *appSensor) ID() string {
 }
 
 func (s *appSensor) Icon() string {
-	return "mdi:application"
+	switch s.sensorType {
+	case RunningApps:
+		return "mdi:apps"
+	case ActiveApp:
+		fallthrough
+	default:
+		return "mdi:application"
+	}
 }
 
 func (s *appSensor) SensorType() hass.SensorType {
