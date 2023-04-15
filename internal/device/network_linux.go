@@ -9,7 +9,6 @@ import (
 	"context"
 	"net"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/godbus/dbus/v5"
 	"github.com/iancoleman/strcase"
 	"github.com/joshuar/go-hass-agent/internal/hass"
@@ -153,7 +152,7 @@ func getIPAddrProp(ctx context.Context, connProp networkProp, path dbus.ObjectPa
 }
 
 type networkSensor struct {
-	sensorGroup            string
+	sensorGroup      string
 	sensorType       networkProp
 	sensorValue      interface{}
 	sensorAttributes interface{}
@@ -206,7 +205,11 @@ func (state *networkSensor) Icon() string {
 		case "Online":
 			return "mdi:network"
 		case "Offline":
-			return "mdi:close-network"
+			return "mdi:network-off"
+		case "Activating":
+			return "mdi:plus-network"
+		case "Deactivating":
+			return "mdi:minus-network"
 		default:
 			return "mdi:help-network"
 		}
@@ -217,9 +220,18 @@ func (state *networkSensor) Icon() string {
 	case WifiFrequency:
 		fallthrough
 	case WifiSpeed:
-		fallthrough
-	case WifiStrength:
 		return "mdi:wifi"
+	case WifiStrength:
+		switch s := state.sensorValue.(uint8); {
+		case s <= 25:
+			return "mdi:wifi-strength-1"
+		case s > 25 && s <= 50:
+			return "mdi:wifi-strength-2"
+		case s > 50 && s <= 75:
+			return "mdi:wifi-strength-3"
+		case s > 75:
+			return "mdi:wifi-strength-4"
+		}
 	}
 	return "mdi:network"
 }
@@ -328,7 +340,7 @@ func marshallNetworkStateUpdate(ctx context.Context, sensor networkProp, path db
 		value = v.Value().(uint8)
 	}
 	return &networkSensor{
-		sensorGroup:            group,
+		sensorGroup:      group,
 		sensorType:       sensor,
 		sensorValue:      value,
 		sensorAttributes: attributes,
@@ -424,41 +436,54 @@ func NetworkUpdater(ctx context.Context, status chan interface{}) {
 	}
 	deviceAPI.WatchEvents <- wifiStateWatch
 
-	catchAllWatch := &DBusWatchRequest{
+	// Add a DBus watch for global connectivity changes. If global connectivity
+	// is established, check and update external IP sensor.
+	networkStateWatch := &DBusWatchRequest{
 		bus:  systemBus,
 		path: "/org/freedesktop/NetworkManager",
 		match: []dbus.MatchOption{
 			dbus.WithMatchPathNamespace("/org/freedesktop/NetworkManager"),
+			dbus.WithMatchInterface("org.freedesktop.NetworkManager"),
 		},
-		event: "org.freedesktop.DBus.Properties.PropertiesChanged",
+		event: "org.freedesktop.NetworkManager.Statechanged",
 		eventHandler: func(s *dbus.Signal) {
-			switch prop := s.Body[0].(type) {
-			case string:
-				propsChanged := s.Body[1].(map[string]dbus.Variant)
-				switch prop {
-				case "org.freedesktop.NetworkManager":
-					if connList, ok := propsChanged["ActiveConnections"]; ok {
-						spew.Dump(connList)
-					}
-				case "org.freedesktop.NetworkManager.Device.Statistics":
-					// no-op
-				case "org.freedesktop.NetworkManager.AccessPoint":
-					// no-op
-				default:
-					spew.Dump(s)
+			switch state := s.Body[0].(type) {
+			case uint32:
+				if state == 70 {
+					updateExternalIPSensors(ctx, status)
 				}
 			}
-			// switch {
-			// case s.Name == "org.freedesktop.NetworkManager.Connection.Active.StateChanged":
-			// 	name := getNetProp(ctx, s.Path, ConnectionID).Value().(string)
-			// 	if name != "" {
-			// 		connState := marshallNetworkStateUpdate(ctx, ConnectionState, s.Path, name, dbus.MakeVariant(s.Body[0]))
-			// 		status <- connState
-			// 	}
-			// }
 		},
 	}
-	deviceAPI.WatchEvents <- catchAllWatch
+	deviceAPI.WatchEvents <- networkStateWatch
+
+	// catchAllWatch := &DBusWatchRequest{
+	// 	bus:  systemBus,
+	// 	path: "/org/freedesktop/NetworkManager",
+	// 	match: []dbus.MatchOption{
+	// 		dbus.WithMatchPathNamespace("/org/freedesktop/NetworkManager"),
+	// 	},
+	// 	event: "org.freedesktop.DBus.Properties.PropertiesChanged",
+	// 	eventHandler: func(s *dbus.Signal) {
+	// 		switch prop := s.Body[0].(type) {
+	// 		case string:
+	// 			propsChanged := s.Body[1].(map[string]dbus.Variant)
+	// 			switch prop {
+	// 			case "org.freedesktop.NetworkManager":
+	// 				if connList, ok := propsChanged["ActiveConnections"]; ok {
+	// 					spew.Dump(connList)
+	// 				}
+	// 			case "org.freedesktop.NetworkManager.Device.Statistics":
+	// 				// no-op
+	// 			case "org.freedesktop.NetworkManager.AccessPoint":
+	// 				// no-op
+	// 			default:
+	// 				spew.Dump(s)
+	// 			}
+	// 		}
+	// 	},
+	// }
+	// deviceAPI.WatchEvents <- catchAllWatch
 
 }
 
@@ -473,7 +498,7 @@ func deviceActiveConnection(ctx context.Context, device dbus.ObjectPath) dbus.Ob
 		systemBus, dBusDest, device,
 		"org.freedesktop.NetworkManager.Device.ActiveConnection").
 		Value().(dbus.ObjectPath)
-	if conn != "" && conn != "/" {
+	if conn.IsValid() {
 		return conn
 	} else {
 		return ""
@@ -500,7 +525,7 @@ func processConnectionType(ctx context.Context, conn dbus.ObjectPath, status cha
 	case "802-11-wireless":
 		dp := getNetProp(ctx, conn, ConnectionDevices)
 		devicePath := dp.Value().([]dbus.ObjectPath)[0]
-		if devicePath != "/" {
+		if devicePath.IsValid() {
 			wifiProps := []networkProp{WifiSSID, WifiHWAddress, WifiFrequency, WifiSpeed, WifiStrength}
 			for _, prop := range wifiProps {
 				propValue := getNetProp(ctx, devicePath, prop)

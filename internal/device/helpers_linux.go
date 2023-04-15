@@ -184,7 +184,7 @@ func (d *deviceAPI) GetDBusProp(t dbusType, dest string, path dbus.ObjectPath, p
 		obj := d.bus(t).Object(dest, path)
 		res, err := obj.GetProperty(prop)
 		if err != nil {
-			log.Error().Err(err).
+			log.Debug().Caller().Err(err).
 				Msgf("Unable to retrieve property %s (%s)", prop, dest)
 			return dbus.MakeVariant("")
 		}
