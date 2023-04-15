@@ -17,8 +17,9 @@ This app will add some sensors to a Home Assistant instance:
 - Device location.
 - Current active application and list of running applications.
 - Battery status (for example, laptop battery and any peripherals).
-- Network status (for example, network connection status, IP addresses and
-  Wi-Fi details where relevant).
+- Network status (for example, network connection status, internal and external
+  IP addresses and Wi-Fi details where relevant).
+- Power profile.
 
 The code can be extended to add additional sensors. See
 [Device/Sensors](docs/device/sensors.md) for details.

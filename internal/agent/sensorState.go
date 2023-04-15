@@ -121,7 +121,7 @@ func (sensor *sensorState) ResponseHandler(rawResponse interface{}) {
 			if v.(bool) && !sensor.registered {
 				sensor.registered = true
 				log.Debug().Caller().
-					Msgf("Sensor %s registered.", sensor.name)
+					Msgf("Sensor %s registered with state %v", sensor.name, sensor.state)
 			}
 		}
 		if v, ok := response[sensor.entityID]; ok {
