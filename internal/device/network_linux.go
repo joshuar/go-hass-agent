@@ -153,7 +153,7 @@ func getIPAddrProp(ctx context.Context, connProp networkProp, path dbus.ObjectPa
 }
 
 type networkSensor struct {
-	group            string
+	sensorGroup            string
 	sensorType       networkProp
 	sensorValue      interface{}
 	sensorAttributes interface{}
@@ -164,7 +164,7 @@ type networkSensor struct {
 func (state *networkSensor) Name() string {
 	switch state.sensorType {
 	case ConnectionState:
-		return state.group + " State"
+		return state.sensorGroup + " State"
 	case WifiSSID:
 		return "Wi-Fi Connection"
 	case WifiHWAddress:
@@ -176,14 +176,14 @@ func (state *networkSensor) Name() string {
 	case WifiStrength:
 		return "Wi-Fi Signal Strength"
 	default:
-		return state.group + " " + strcase.ToDelimited(state.sensorType.String(), ' ')
+		return state.sensorGroup + " " + strcase.ToDelimited(state.sensorType.String(), ' ')
 	}
 }
 
 func (state *networkSensor) ID() string {
 	switch state.sensorType {
 	case ConnectionState:
-		return state.group + "_connection_state"
+		return state.sensorGroup + "_connection_state"
 	case WifiSSID:
 		return "wifi_connection"
 	case WifiHWAddress:
@@ -195,7 +195,7 @@ func (state *networkSensor) ID() string {
 	case WifiStrength:
 		return "wifi_signal_strength"
 	default:
-		return state.group + "_" + strcase.ToSnake(state.sensorType.String())
+		return state.sensorGroup + "_" + strcase.ToSnake(state.sensorType.String())
 	}
 }
 
@@ -328,7 +328,7 @@ func marshallNetworkStateUpdate(ctx context.Context, sensor networkProp, path db
 		value = v.Value().(uint8)
 	}
 	return &networkSensor{
-		group:            group,
+		sensorGroup:            group,
 		sensorType:       sensor,
 		sensorValue:      value,
 		sensorAttributes: attributes,

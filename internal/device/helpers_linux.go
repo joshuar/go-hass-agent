@@ -144,8 +144,10 @@ func (d *deviceAPI) monitorDBus(ctx context.Context) {
 	}
 }
 
-// AddDBusWatch will add a matcher to the specified bus monitoring for
-// the specified path and interface.
+// AddDBusWatch will add a matcher to the specified bus monitoring for the
+// specified path and interface. For adding dbus.MatchOptions, see the available
+// ones here:
+// https://dbus.freedesktop.org/doc/dbus-specification.html#message-bus-routing-match-rules
 func (d *deviceAPI) AddDBusWatch(t dbusType, matches []dbus.MatchOption) error {
 	if err := d.bus(t).AddMatchSignal(matches...); err != nil {
 		return err
