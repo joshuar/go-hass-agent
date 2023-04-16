@@ -28,13 +28,13 @@ func (agent *Agent) setupSystemTray() {
 	if desk, ok := agent.App.(desktop.App); ok {
 		menuItemAbout := fyne.NewMenuItem("About", func() {
 			deviceName, deviceID := agent.GetDeviceDetails()
-			w := agent.App.NewWindow(agent.MsgPrinter.Sprintf("About %s", agent.Name))
+			w := agent.App.NewWindow(translator.Translate("About %s", agent.Name))
 			w.SetContent(container.New(layout.NewVBoxLayout(),
-				widget.NewLabel(agent.MsgPrinter.Sprintf(
+				widget.NewLabel(translator.Translate(
 					"App Version: %s", agent.Version)),
-				widget.NewLabel(agent.MsgPrinter.Sprintf(
+				widget.NewLabel(translator.Translate(
 					"Device Name: "+deviceName)),
-				widget.NewLabel(agent.MsgPrinter.Sprintf(
+				widget.NewLabel(translator.Translate(
 					"Device ID: "+deviceID)),
 				widget.NewButton("Ok", func() {
 					w.Close()

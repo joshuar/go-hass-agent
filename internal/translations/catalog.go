@@ -38,9 +38,10 @@ func init() {
 }
 
 var messageKeyToIndex = map[string]int{
-	"About %s":                6,
-	"App Registration":        0,
-	"App Version: %s":         7,
+	"About %s":         7,
+	"App Registration": 0,
+	"App Version: %s":  8,
+	"As an initial step, this app will need to log into your Home Assistant server and register itself.\nPlease enter the relevant details for your Home Assistant server url/port and a long-lived access token.": 6,
 	"Auto-discovered Servers": 2,
 	"Manual Server Entry":     4,
 	"Token":                   1,
@@ -48,15 +49,18 @@ var messageKeyToIndex = map[string]int{
 	"Use TLS?":                5,
 }
 
-var enIndex = []uint32{ // 9 elements
+var enIndex = []uint32{ // 10 elements
 	0x00000000, 0x00000011, 0x00000017, 0x0000002f,
-	0x00000042, 0x00000056, 0x0000005f, 0x0000006b,
-	0x0000007e,
-} // Size: 60 bytes
+	0x00000042, 0x00000056, 0x0000005f, 0x0000012b,
+	0x00000137, 0x0000014a,
+} // Size: 64 bytes
 
-const enData string = "" + // Size: 126 bytes
+const enData string = "" + // Size: 330 bytes
 	"\x02App Registration\x02Token\x02Auto-discovered Servers\x02Use Custom S" +
-	"erver?\x02Manual Server Entry\x02Use TLS?\x02About %[1]s\x02App Version:" +
-	" %[1]s"
+	"erver?\x02Manual Server Entry\x02Use TLS?\x02As an initial step, this ap" +
+	"p will need to log into your Home Assistant server and register itself." +
+	"\x0aPlease enter the relevant details for your Home Assistant server url" +
+	"/port and a long-lived access token.\x02About %[1]s\x02App Version: %[1]" +
+	"s"
 
-	// Total table size 186 bytes (0KiB); checksum: 431C5DCB
+	// Total table size 394 bytes (0KiB); checksum: F6B7E254
