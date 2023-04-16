@@ -21,8 +21,8 @@ This app will add some sensors to a Home Assistant instance:
   IP addresses and Wi-Fi details where relevant).
 - Power profile.
 
-The code can be extended to add additional sensors. See
-[Device/Sensors](docs/device/sensors.md) for details.
+The code can be extended to add additional sensors. See the [development
+docs](docs/development.md) for details.
 
 ## Use-cases
 
@@ -44,14 +44,8 @@ See also the [FAQ](docs/faq.md).
 ## Compatibility
 
 Currently, only Linux is supported. Though the code is designed to be extensible
-to other operating systems. See [Agent/Extending](docs/agent/extending.md) for
+to other operating systems. See [the development docs](docs/development.md) for
 details on how to extend for other operating systems.
-
-### Incompatible Linux Distributions
-
-Unfortunately, go-hass-agent will not run on the following distributions:
-
-- Debian 11 (stable).
 
 ## Installation
 
@@ -61,13 +55,13 @@ distribution.
 
 ## Usage
 
-go-hass-agent runs as a tray icon. It is operating system, distribution and
+**go-hass-agent** runs as a tray icon. It is operating system, distribution and
 desktop-environment agnostic and should manifest itself in any tray of any
 desktop environment.
 
 ### First-run
 
-On first-run, go-hass-agent will display a window where you will need to enter
+On first-run, **go-hass-agent** will display a window where you will need to enter
 some details, so it can register itself with a Home Assistant instance to be
 able to report sensors and receive notifications.  
 
@@ -79,7 +73,7 @@ able to report sensors and receive notifications.
   page](https://www.home-assistant.io/docs/authentication/#your-account-profile). 
 - The hostname (or IP address) and port on which a Home Assistant instance
   can be found. 
-  - go-hass-agent will try to auto-detect this for you, and you can select it in
+  - **go-hass-agent** will try to auto-detect this for you, and you can select it in
   the *Auto-discovered servers* list. Otherwise, you will need to select *Use
   Custom Server?*, and enter the details manually in *Manual Server Entry*.
 - If the Home Assistant instance supports TLS/SSL, be sure to select
@@ -90,7 +84,7 @@ start running and reporting sensors to the Home Assistant instance.
 
 ### Regular Usage
 
-When running, go-hass-agent will appear as a device under the [Mobile
+When running, **go-hass-agent** will appear as a device under the [Mobile
 App](https://www.home-assistant.io/integrations/mobile_app) integration in your
 Home Assistant instance. It should also report a list of sensors/entities you
 can use in any automations, scripts, dashboards and other parts of Home
@@ -103,10 +97,10 @@ Assistant.
 I would welcome your contribution! If you find any improvement or issue you want
 to fix, feel free to send a pull request!
 
-Some documentation for development can be found in [docs/agent](docs/agent/)
-(for operating system and general agent development) and
-[docs/device](docs/device/) (for sensor development). This might help anyone
-looking to contribute, extend or fork this tool.
+Some documentation for development can be found in
+the [development docs](docs/development.md). There is information for developing
+**go-hass-agent** for different operating systems as well as adding additional
+sensors. This might help anyone looking to contribute, extend or fork this tool.
 
 ### Translations
 
@@ -116,7 +110,6 @@ and `message` packages that are part of
 [golang.org/x/text](https://pkg.go.dev/golang.org/x/text). 
 
 I would welcome pull requests for translations!
-
 
 ## Acknowledgements
 
