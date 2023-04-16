@@ -48,7 +48,8 @@ func (ws *HassWebsocket) Read(ctx context.Context) {
 		}
 		err := wsjson.Read(ctx, ws.conn, &response)
 		if err != nil {
-			log.Debug().Caller().Msg(err.Error())
+			log.Debug().Err(err).Caller().
+				Msg("Unable to read from websocket.")
 			close(ws.ReadCh)
 			return
 		}
@@ -77,7 +78,8 @@ func (ws *HassWebsocket) Write(ctx context.Context) {
 			defer writeCancel()
 			err := wsjson.Write(writeCtx, ws.conn, data)
 			if err != nil {
-				log.Debug().Caller().Msg(err.Error())
+				log.Debug().Err(err).Caller().
+					Msg("Unable to write to websocket.")
 			}
 		}
 	}
@@ -103,13 +105,16 @@ func NewWebsocket(ctx context.Context) *HassWebsocket {
 	retryFunc := func() error {
 		conn, _, err = websocket.Dial(ctxConnect, config.WebSocketURL, nil)
 		if err != nil {
+			log.Debug().Err(err).Caller().
+				Msg("Could not connect to websocket.")
 			return err
 		}
 		return nil
 	}
 	err = backoff.Retry(retryFunc, backoff.WithContext(backoff.NewExponentialBackOff(), ctxConnect))
 	if err != nil {
-		log.Debug().Caller().Msg(err.Error())
+		log.Debug().Err(err).Caller().
+			Msg("Could not connect to websocket.")
 		cancelConnect()
 		return nil
 	}
