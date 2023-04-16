@@ -77,7 +77,7 @@ func (agent *Agent) getRegistrationHostInfo(ctx context.Context) *hass.Registrat
 	s := findServers(ctx)
 	allServers, _ := s.Get()
 
-	w := agent.App.NewWindow(agent.MsgPrinter.Sprintf("App Registration"))
+	w := agent.App.NewWindow(translator.Translate("App Registration"))
 
 	tokenSelect := widget.NewEntryWithData(registrationInfo.Token)
 
@@ -102,11 +102,11 @@ func (agent *Agent) getRegistrationHostInfo(ctx context.Context) *hass.Registrat
 	tlsSelect := widget.NewCheckWithData("", registrationInfo.UseTLS)
 
 	form := widget.NewForm(
-		widget.NewFormItem(agent.MsgPrinter.Sprintf("Token"), tokenSelect),
-		widget.NewFormItem(agent.MsgPrinter.Sprintf("Auto-discovered Servers"), autoServerSelect),
-		widget.NewFormItem(agent.MsgPrinter.Sprintf("Use Custom Server?"), manualServerSelect),
-		widget.NewFormItem(agent.MsgPrinter.Sprintf("Manual Server Entry"), manualServerEntry),
-		widget.NewFormItem(agent.MsgPrinter.Sprintf("Use TLS?"), tlsSelect),
+		widget.NewFormItem(translator.Translate("Token"), tokenSelect),
+		widget.NewFormItem(translator.Translate("Auto-discovered Servers"), autoServerSelect),
+		widget.NewFormItem(translator.Translate("Use Custom Server?"), manualServerSelect),
+		widget.NewFormItem(translator.Translate("Manual Server Entry"), manualServerEntry),
+		widget.NewFormItem(translator.Translate("Use TLS?"), tlsSelect),
 	)
 	form.OnSubmit = func() {
 		s, _ := registrationInfo.Server.Get()
@@ -122,7 +122,7 @@ func (agent *Agent) getRegistrationHostInfo(ctx context.Context) *hass.Registrat
 	}
 
 	w.SetContent(container.New(layout.NewVBoxLayout(),
-		widget.NewLabel(agent.MsgPrinter.Sprint("As an initial step, this app will need to log into your Home Assistant server and register itself.\nPlease enter the relevant details for your Home Assistant server url/port and a long-lived access token.")),
+		widget.NewLabel(translator.Translate("As an initial step, this app will need to log into your Home Assistant server and register itself.\nPlease enter the relevant details for your Home Assistant server url/port and a long-lived access token.")),
 		form,
 	))
 

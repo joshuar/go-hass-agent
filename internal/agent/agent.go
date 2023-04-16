@@ -16,14 +16,16 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/config"
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass"
+	"github.com/joshuar/go-hass-agent/internal/translations"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"golang.org/x/text/message"
 )
 
 //go:generate sh -c "printf %s $(git tag | tail -1) > VERSION"
 //go:embed VERSION
 var Version string
+
+var translator *translations.Translator
 
 const (
 	Name      = "go-hass-agent"
@@ -34,15 +36,13 @@ type Agent struct {
 	App           fyne.App
 	Tray          fyne.Window
 	Name, Version string
-	MsgPrinter    *message.Printer
 }
 
 func NewAgent() *Agent {
 	return &Agent{
-		App:        newUI(),
-		Name:       Name,
-		Version:    Version,
-		MsgPrinter: newMsgPrinter(),
+		App:     newUI(),
+		Name:    Name,
+		Version: Version,
 	}
 }
 
@@ -51,6 +51,8 @@ func Run() {
 	ctx = device.SetupContext(ctx)
 	log.Info().Msg("Starting agent.")
 	agent := NewAgent()
+	
+	translator = translations.NewTranslator()
 
 	// If possible, create and log to a file as well as the console.
 	logFile, err := storage.Child(agent.App.Storage().RootURI(), "go-hass-app.log")

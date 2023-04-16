@@ -6,11 +6,8 @@
 package agent
 
 import (
-	"github.com/jeandeaual/go-locale"
 	"github.com/joshuar/go-hass-agent/internal/config"
 	"github.com/rs/zerolog/log"
-	"golang.org/x/text/language"
-	"golang.org/x/text/message"
 )
 
 const (
@@ -63,14 +60,4 @@ func (agent *Agent) GetConfigVersion() string {
 func (agent *Agent) GetDeviceDetails() (string, string) {
 	return agent.App.Preferences().String("DeviceName"),
 		agent.App.Preferences().String("DeviceID")
-}
-
-func newMsgPrinter() *message.Printer {
-	userLocales, err := locale.GetLocales()
-	if err != nil {
-		log.Warn().Msg("Could not find a suitable locale. Defaulting to English.")
-		return message.NewPrinter(message.MatchLanguage(language.English.String()))
-	}
-	log.Debug().Caller().Msgf("Setting language to %v.", userLocales)
-	return message.NewPrinter(message.MatchLanguage(userLocales...))
 }
