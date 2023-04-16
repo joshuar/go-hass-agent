@@ -180,7 +180,11 @@ func (state *networkSensor) Name() string {
 	case WifiStrength:
 		return "Wi-Fi Signal Strength"
 	default:
-		return state.sensorGroup + " " + strcase.ToDelimited(state.sensorType.String(), ' ')
+		prettySensorName := strcase.ToDelimited(state.sensorType.String(), ' ')
+		log.Debug().Caller().
+			Msgf("Unexpected sensor %s with type %s.",
+				prettySensorName, state.sensorType.String())
+		return state.sensorGroup + " " + prettySensorName
 	}
 }
 
@@ -199,7 +203,8 @@ func (state *networkSensor) ID() string {
 	case WifiStrength:
 		return "wifi_signal_strength"
 	default:
-		return state.sensorGroup + "_" + strcase.ToSnake(state.sensorType.String())
+		snakeSensorName := strcase.ToSnake(state.sensorType.String())
+		return state.sensorGroup + "_" + snakeSensorName
 	}
 }
 
@@ -416,7 +421,7 @@ func NetworkUpdater(ctx context.Context, status chan interface{}) {
 					switch propName {
 					case "Ssid":
 						propType = WifiSSID
-					case "Bssid":
+					case "HwAddress":
 						propType = WifiHWAddress
 					case "Frequency":
 						propType = WifiFrequency
@@ -513,24 +518,15 @@ func deviceActiveConnection(ctx context.Context, device dbus.ObjectPath) dbus.Ob
 func processConnectionState(ctx context.Context, conn dbus.ObjectPath, status chan interface{}) {
 	name := string(variantToValue[[]uint8](getNetProp(ctx, conn, ConnectionID)))
 	state := getNetProp(ctx, conn, ConnectionState)
-	// if stateValue != nil {
-	// var stateValue uint32
-	// if state.Store(&stateValue) != nil {
-	// 	// not an active connection, ignore
-	// 	return
-	// }
 	connState := marshalNetworkStateUpdate(ctx, ConnectionState, conn, name, state)
 	status <- connState
 }
 
 func processConnectionType(ctx context.Context, conn dbus.ObjectPath, status chan interface{}) {
-	// Get connection type and then fetch and monitor additional type
-	// dependent properties
-	connType := getNetProp(ctx, conn, ConnectionType)
-	switch connType.Value().(string) {
+	connType := string(variantToValue[[]uint8](getNetProp(ctx, conn, ConnectionType)))
+	switch connType {
 	case "802-11-wireless":
-		dp := getNetProp(ctx, conn, ConnectionDevices)
-		devicePath := dp.Value().([]dbus.ObjectPath)[0]
+		devicePath := variantToValue[[]dbus.ObjectPath](getNetProp(ctx, conn, ConnectionDevices))[0]
 		if devicePath.IsValid() {
 			wifiProps := []networkProp{WifiSSID, WifiHWAddress, WifiFrequency, WifiSpeed, WifiStrength}
 			for _, prop := range wifiProps {

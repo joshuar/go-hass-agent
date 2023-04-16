@@ -83,7 +83,12 @@ func (a *address) Category() string {
 }
 
 func (a *address) Attributes() interface{} {
-	return nil
+	now := time.Now()
+	return &struct {
+		LastUpdated string `json:"Last Updated"`
+	}{
+		LastUpdated: now.Format(time.RFC3339),
+	}
 }
 
 func lookupExternalIPs(ctx context.Context) []*address {
