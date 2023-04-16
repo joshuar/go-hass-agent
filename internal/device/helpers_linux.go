@@ -257,6 +257,19 @@ func (d *deviceAPI) GetDBusData(t dbusType, dest string, path dbus.ObjectPath, m
 	}
 }
 
+// variantToValue converts a dbus.Variant type into the specified Go native
+// type.
+func variantToValue[S any](variant dbus.Variant) S {
+	var value S
+	err := variant.Store(&value)
+	if err != nil {
+		log.Debug().Err(err).
+			Msgf("Unable to convert dbus variant to type.")
+		return value
+	}
+	return value
+}
+
 // FindPortal is a helper function to work out which portal interface should be
 // used for getting information on running apps.
 func FindPortal() string {

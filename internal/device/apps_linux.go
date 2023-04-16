@@ -116,7 +116,7 @@ func (s *appSensor) Attributes() interface{} {
 	case RunningApps:
 		var runningApps []string
 		for appName, state := range s.sensorValue {
-			if state.Value().(uint32) > 0 {
+			if variantToValue[uint32](state) > 0 {
 				runningApps = append(runningApps, appName)
 			}
 		}

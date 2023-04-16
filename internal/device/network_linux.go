@@ -50,8 +50,6 @@ func getNetProp(ctx context.Context, path dbus.ObjectPath, prop networkProp) dbu
 	connIntr := "org.freedesktop.NetworkManager.Connection.Active"
 	ipv4Intr := "org.freedesktop.NetworkManager.IP4Config"
 	ipv6Intr := "org.freedesktop.NetworkManager.IP6Config"
-	wirelessIntr := "org.freedesktop.NetworkManager.Device.Wireless"
-	apIntr := "org.freedesktop.NetworkManager.AccessPoint"
 
 	var dbusProp string
 	switch prop {
@@ -71,55 +69,55 @@ func getNetProp(ctx context.Context, path dbus.ObjectPath, prop networkProp) dbu
 		dbusProp = ipv4Intr + ".AddressData"
 	case AddressIPv6:
 		dbusProp = ipv6Intr + ".AddressData"
-	case WifiSSID:
-		ap := deviceAPI.GetDBusProp(systemBus,
-			dBusDest,
-			path,
-			wirelessIntr+".ActiveAccessPoint")
-		apPath := ap.Value().(dbus.ObjectPath)
-		dbusProp = apIntr + ".Ssid"
-		path = apPath
-	case WifiFrequency:
-		ap := deviceAPI.GetDBusProp(systemBus,
-			dBusDest,
-			path,
-			wirelessIntr+".ActiveAccessPoint")
-
-		apPath := ap.Value().(dbus.ObjectPath)
-		dbusProp = apIntr + ".Frequency"
-		path = apPath
-	case WifiSpeed:
-		ap := deviceAPI.GetDBusProp(systemBus,
-			dBusDest,
-			path,
-			wirelessIntr+".ActiveAccessPoint")
-
-		apPath := ap.Value().(dbus.ObjectPath)
-		dbusProp = apIntr + ".MaxBitrate"
-		path = apPath
-	case WifiStrength:
-		ap := deviceAPI.GetDBusProp(systemBus,
-			dBusDest,
-			path,
-			wirelessIntr+".ActiveAccessPoint")
-
-		apPath := ap.Value().(dbus.ObjectPath)
-		dbusProp = apIntr + ".Strength"
-		path = apPath
-	case WifiHWAddress:
-		ap := deviceAPI.GetDBusProp(systemBus,
-			dBusDest,
-			path,
-			wirelessIntr+".ActiveAccessPoint")
-
-		apPath := ap.Value().(dbus.ObjectPath)
-		dbusProp = apIntr + ".HwAddress"
-		path = apPath
+	default:
+		log.Debug().Caller().
+			Msgf("Unknown network property %v", prop)
+		return dbus.MakeVariant("")
 	}
 
 	return deviceAPI.GetDBusProp(systemBus,
 		dBusDest,
 		path,
+		dbusProp)
+}
+
+func getWifiProp(ctx context.Context, path dbus.ObjectPath, wifiProp networkProp) dbus.Variant {
+	wirelessIntr := "org.freedesktop.NetworkManager.Device.Wireless"
+	apIntr := "org.freedesktop.NetworkManager.AccessPoint"
+
+	deviceAPI, _ := FromContext(ctx)
+
+	apPath := variantToValue[dbus.ObjectPath](deviceAPI.GetDBusProp(systemBus,
+		dBusDest,
+		path,
+		wirelessIntr+".ActiveAccessPoint"))
+	if !apPath.IsValid() {
+		log.Debug().Caller().
+			Msgf("AP DBus Path is invalid")
+		return dbus.MakeVariant("")
+	}
+	// apPath := ap.Value().(dbus.ObjectPath)
+
+	var dbusProp string
+	switch wifiProp {
+	case WifiSSID:
+		dbusProp = apIntr + ".Ssid"
+	case WifiFrequency:
+		dbusProp = apIntr + ".Frequency"
+	case WifiSpeed:
+		dbusProp = apIntr + ".MaxBitrate"
+	case WifiStrength:
+		dbusProp = apIntr + ".Strength"
+	case WifiHWAddress:
+		dbusProp = apIntr + ".HwAddress"
+	default:
+		log.Debug().Caller().
+			Msgf("Unknown wifi property %v", wifiProp)
+		return dbus.MakeVariant("")
+	}
+	return deviceAPI.GetDBusProp(systemBus,
+		dBusDest,
+		apPath,
 		dbusProp)
 }
 
@@ -130,6 +128,13 @@ func getIPAddrProp(ctx context.Context, connProp networkProp, path dbus.ObjectPa
 		addrProp = AddressIPv4
 	case ConnectionIPv6:
 		addrProp = AddressIPv6
+	default:
+		log.Debug().Caller().
+			Msgf("Unknown address property %v", connProp)
+		return ""
+	}
+	if !path.IsValid() {
+		return ""
 	}
 	p := getNetProp(ctx, path, connProp)
 	switch configPath := p.Value().(type) {
@@ -222,7 +227,7 @@ func (state *networkSensor) Icon() string {
 	case WifiSpeed:
 		return "mdi:wifi"
 	case WifiStrength:
-		switch s := state.sensorValue.(uint8); {
+		switch s := state.sensorValue.(uint32); {
 		case s <= 25:
 			return "mdi:wifi-strength-1"
 		case s > 25 && s <= 50:
@@ -289,55 +294,49 @@ func (state *networkSensor) Attributes() interface{} {
 	return state.sensorAttributes
 }
 
-func stateToString(state interface{}) string {
-	switch state := state.(type) {
-	case string:
+func stateToString(state uint32) string {
+	switch state {
+	case 0:
 		return "Unknown"
-	case uint32:
-		switch state {
-		case 0:
-			return "Unknown"
-		case 1:
-			return "Activating"
-		case 2:
-			return "Online"
-		case 3:
-			return "Deactivating"
-		case 4:
-			return "Offline"
-		default:
-			return "Unknown"
-		}
+	case 1:
+		return "Activating"
+	case 2:
+		return "Online"
+	case 3:
+		return "Deactivating"
+	case 4:
+		return "Offline"
 	default:
 		return "Unknown"
 	}
 }
 
-func marshallNetworkStateUpdate(ctx context.Context, sensor networkProp, path dbus.ObjectPath, group string, v dbus.Variant) *networkSensor {
-	// log.Debug().Caller().Msgf("Marshalling update for %v for connection %v", sensor.String(), conn.name)
+func marshalNetworkStateUpdate(ctx context.Context, sensor networkProp, path dbus.ObjectPath, group string, v dbus.Variant) *networkSensor {
 	var value, attributes interface{}
 	switch sensor {
 	case ConnectionState:
-		value = stateToString(v.Value())
+		connState := variantToValue[uint32](v)
+		value = stateToString(connState)
+		connType := string(variantToValue[[]uint8](getNetProp(ctx, path, ConnectionType)))
 		attributes = &struct {
 			ConnectionType string `json:"Connection Type"`
 			Ipv4           string `json:"IPv4 Address"`
 			Ipv6           string `json:"IPv6 Address"`
 		}{
-			ConnectionType: getNetProp(ctx, path, ConnectionType).Value().(string),
+			ConnectionType: connType,
 			Ipv4:           getIPAddrProp(ctx, ConnectionIPv4, path),
 			Ipv6:           getIPAddrProp(ctx, ConnectionIPv6, path),
 		}
 	case WifiSSID:
-		value = string(v.Value().([]byte))
+		value = string(variantToValue[[]uint8](v))
 	case WifiHWAddress:
-		value = v.Value().(string)
+		value = string(variantToValue[[]uint8](v))
 	case WifiFrequency:
-		value = v.Value().(uint32)
+		value = variantToValue[uint32](v)
 	case WifiSpeed:
-		value = v.Value().(uint32)
+		value = variantToValue[uint32](v)
 	case WifiStrength:
-		value = v.Value().(uint8)
+		value = variantToValue[uint32](v)
 	}
 	return &networkSensor{
 		sensorGroup:      group,
@@ -379,57 +378,63 @@ func NetworkUpdater(ctx context.Context, status chan interface{}) {
 	}
 
 	// Set up a DBus watch for connection state changes
+	activeConnDbusPath := dbus.ObjectPath(dBusPath + "/ActiveConnection")
 	connStateWatch := &DBusWatchRequest{
 		bus:  systemBus,
-		path: "/org/freedesktop/NetworkManager/ActiveConnection",
+		path: activeConnDbusPath,
 		match: []dbus.MatchOption{
-			dbus.WithMatchPathNamespace("/org/freedesktop/NetworkManager/ActiveConnection"),
+			dbus.WithMatchPathNamespace(activeConnDbusPath),
 		},
 		event: "org.freedesktop.DBus.Properties.PropertiesChanged",
 		eventHandler: func(s *dbus.Signal) {
-			switch {
-			case s.Name == "org.freedesktop.NetworkManager.Connection.Active.StateChanged":
-				processConnectionState(ctx, s.Path, status)
-				processConnectionType(ctx, s.Path, status)
+			if s.Path.IsValid() {
+				switch {
+				case s.Name == "org.freedesktop.NetworkManager.Connection.Active.StateChanged":
+					processConnectionState(ctx, s.Path, status)
+					processConnectionType(ctx, s.Path, status)
+				}
 			}
 		},
 	}
 	deviceAPI.WatchEvents <- connStateWatch
 
 	// Set up a DBus watch for Wi-Fi state changes
+	apDbusPath := dbus.ObjectPath(dBusPath + "/AccessPoint")
 	wifiStateWatch := &DBusWatchRequest{
 		bus:  systemBus,
-		path: "/org/freedesktop/NetworkManager/AccessPoint",
+		path: apDbusPath,
 		match: []dbus.MatchOption{
-			dbus.WithMatchPathNamespace("/org/freedesktop/NetworkManager/AccessPoint"),
+			dbus.WithMatchPathNamespace(apDbusPath),
 			dbus.WithMatchInterface("org.freedesktop.DBus.Properties"),
 		},
 		event: "org.freedesktop.DBus.Properties.PropertiesChanged",
 		eventHandler: func(s *dbus.Signal) {
-			updatedProps := s.Body[1].(map[string]dbus.Variant)
-			for propName, propValue := range updatedProps {
-				var propType networkProp
-				switch propName {
-				case "Ssid":
-					propType = WifiSSID
-				case "Bssid":
-					propType = WifiHWAddress
-				case "Frequency":
-					propType = WifiFrequency
-				case "Bitrate":
-					propType = WifiSpeed
-				case "Strength":
-					propType = WifiStrength
-				default:
-					log.Debug().Msgf("Unhandled property %v changed to %v", propName, propValue)
-				}
-				if propType != 0 {
-					propState := marshallNetworkStateUpdate(ctx,
-						propType,
-						s.Path,
-						"wifi",
-						propValue)
-					status <- propState
+			if s.Path.IsValid() {
+				updatedProps := s.Body[1].(map[string]dbus.Variant)
+				for propName, propValue := range updatedProps {
+					var propType networkProp
+					switch propName {
+					case "Ssid":
+						propType = WifiSSID
+					case "Bssid":
+						propType = WifiHWAddress
+					case "Frequency":
+						propType = WifiFrequency
+					case "Bitrate":
+						propType = WifiSpeed
+					case "Strength":
+						propType = WifiStrength
+					default:
+						log.Debug().Msgf("Unhandled property %v changed to %v", propName, propValue)
+					}
+					if propType != 0 {
+						propState := marshalNetworkStateUpdate(ctx,
+							propType,
+							s.Path,
+							"wifi",
+							propValue)
+						status <- propState
+					}
 				}
 			}
 		},
@@ -440,10 +445,10 @@ func NetworkUpdater(ctx context.Context, status chan interface{}) {
 	// is established, check and update external IP sensor.
 	networkStateWatch := &DBusWatchRequest{
 		bus:  systemBus,
-		path: "/org/freedesktop/NetworkManager",
+		path: dBusPath,
 		match: []dbus.MatchOption{
-			dbus.WithMatchPathNamespace("/org/freedesktop/NetworkManager"),
-			dbus.WithMatchInterface("org.freedesktop.NetworkManager"),
+			dbus.WithMatchPathNamespace(dBusPath),
+			dbus.WithMatchInterface(dBusDest),
 		},
 		event: "org.freedesktop.NetworkManager.Statechanged",
 		eventHandler: func(s *dbus.Signal) {
@@ -506,14 +511,15 @@ func deviceActiveConnection(ctx context.Context, device dbus.ObjectPath) dbus.Ob
 }
 
 func processConnectionState(ctx context.Context, conn dbus.ObjectPath, status chan interface{}) {
-	name := getNetProp(ctx, conn, ConnectionID).Value().(string)
+	name := string(variantToValue[[]uint8](getNetProp(ctx, conn, ConnectionID)))
 	state := getNetProp(ctx, conn, ConnectionState)
-	var stateValue uint32
-	if state.Store(&stateValue) != nil {
-		// not an active connection, ignore
-		return
-	}
-	connState := marshallNetworkStateUpdate(ctx, ConnectionState, conn, name, state)
+	// if stateValue != nil {
+	// var stateValue uint32
+	// if state.Store(&stateValue) != nil {
+	// 	// not an active connection, ignore
+	// 	return
+	// }
+	connState := marshalNetworkStateUpdate(ctx, ConnectionState, conn, name, state)
 	status <- connState
 }
 
@@ -528,8 +534,8 @@ func processConnectionType(ctx context.Context, conn dbus.ObjectPath, status cha
 		if devicePath.IsValid() {
 			wifiProps := []networkProp{WifiSSID, WifiHWAddress, WifiFrequency, WifiSpeed, WifiStrength}
 			for _, prop := range wifiProps {
-				propValue := getNetProp(ctx, devicePath, prop)
-				propState := marshallNetworkStateUpdate(ctx,
+				propValue := getWifiProp(ctx, devicePath, prop)
+				propState := marshalNetworkStateUpdate(ctx,
 					prop,
 					devicePath,
 					"wifi",
