@@ -184,6 +184,7 @@ func SetupContext(ctx context.Context) context.Context {
 
 func SetupSensors() *SensorInfo {
 	sensorInfo := NewSensorInfo()
+	sensorInfo.Add("Location", LocationUpdater)
 	sensorInfo.Add("Battery", BatteryUpdater)
 	sensorInfo.Add("Apps", AppUpdater)
 	sensorInfo.Add("Network", NetworkUpdater)

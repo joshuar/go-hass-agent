@@ -84,7 +84,7 @@ func Run() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		appConfig := agent.loadConfig()
+		appConfig := agent.loadAppConfig()
 		for appConfig.Validate() != nil {
 			log.Warn().Msg("No suitable existing config found! Starting new registration process")
 			err := agent.runRegistrationWorker(ctx)
@@ -93,7 +93,7 @@ func Run() {
 					Msgf("Error trying to register: %v. Exiting.")
 				agent.stop()
 			}
-			appConfig = agent.loadConfig()
+			appConfig = agent.loadAppConfig()
 		}
 	}()
 
@@ -117,11 +117,12 @@ func (agent *Agent) stop() {
 func (agent *Agent) tracker(agentCtx context.Context, configWG *sync.WaitGroup) {
 	configWG.Wait()
 
-	appConfig := agent.loadConfig()
+	appConfig := agent.loadAppConfig()
 	ctx := config.NewContext(agentCtx, appConfig)
 	sensorInfo := device.SetupSensors()
 	sensors := make(map[string]*sensorState)
 	updateCh := make(chan interface{})
+	hassConfig := hass.NewHassConfig(ctx)
 
 	go agent.runNotificationsWorker(ctx)
 
@@ -141,13 +142,13 @@ func (agent *Agent) tracker(agentCtx context.Context, configWG *sync.WaitGroup) 
 					} else {
 						sensors[sensorID].updateSensor(ctx, data)
 					}
+					stateInHass := hassConfig.GetEntityState(sensors[sensorID].entityID)
+					sensors[sensorID].updateDisabled(stateInHass["disabled"].(bool))
 					if !sensors[sensorID].disabled {
 						go hass.APIRequest(ctx, sensors[sensorID])
 					}
 				case hass.LocationUpdate:
-					l := &location{
-						data: data,
-					}
+					l := hass.MarshalLocationUpdate(data)
 					go hass.APIRequest(ctx, l)
 				}
 			case <-ctx.Done():
@@ -159,12 +160,6 @@ func (agent *Agent) tracker(agentCtx context.Context, configWG *sync.WaitGroup) 
 	}()
 
 	var wg sync.WaitGroup
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		device.LocationUpdater(ctx, agent.App.UniqueID(), updateCh)
-	}()
 
 	// Run all the defined sensor update functions.
 	for name, workerFunction := range sensorInfo.Get() {

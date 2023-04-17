@@ -5,14 +5,31 @@
 
 package hass
 
-type ConfigResponse struct {
-	Components   []string `json:"components"`
-	ConfigDir    string   `json:"config_dir"`
-	Elevation    int      `json:"elevation"`
-	Latitude     float64  `json:"latitude"`
-	LocationName string   `json:"location_name"`
-	Longitude    float64  `json:"longitude"`
-	TimeZone     string   `json:"time_zone"`
+import (
+	"bytes"
+	"context"
+	"sync"
+	"time"
+
+	"github.com/perimeterx/marshmallow"
+	"github.com/rs/zerolog/log"
+)
+
+type HassConfig struct {
+	mu sync.Mutex
+	hassConfigProps
+	rawConfigProps map[string]interface{}
+}
+
+type hassConfigProps struct {
+	Components   []string                          `json:"components"`
+	Entities     map[string]map[string]interface{} `json:"entities"`
+	ConfigDir    string                            `json:"config_dir"`
+	Elevation    int                               `json:"elevation"`
+	Latitude     float64                           `json:"latitude"`
+	LocationName string                            `json:"location_name"`
+	Longitude    float64                           `json:"longitude"`
+	TimeZone     string                            `json:"time_zone"`
 	UnitSystem   struct {
 		Length      string `json:"length"`
 		Mass        string `json:"mass"`
@@ -23,23 +40,59 @@ type ConfigResponse struct {
 	WhitelistExternalDirs []string `json:"whitelist_external_dirs"`
 }
 
-// func GetConfig(host string) *ConfigResponse {
-// 	req := &GenericRequest{
-// 		Type: RequestTypeGetConfig,
-// 	}
-// 	res := &ConfigResponse{}
-// 	ctx := context.Background()
-// 	err := requests.
-// 		URL(host).
-// 		BodyJSON(&req).
-// 		ToJSON(&res).
-// 		Fetch(ctx)
-// 	if err != nil {
-// 		log.Error().Caller().
-// 			Msgf("Unable to fetch config: %v", err)
-// 		return nil
-// 	} else {
-// 		log.Debug().Msg("Configuration fetched successfully")
-// 		return res
-// 	}
-// }
+func NewHassConfig(ctx context.Context) *HassConfig {
+	c := &HassConfig{}
+	c.refresh(ctx)
+	c.updater(ctx)
+	return c
+}
+
+func (h *HassConfig) refresh(ctx context.Context) {
+	APIRequest(ctx, h)
+}
+
+func (h *HassConfig) updater(ctx context.Context) {
+	ticker := time.NewTicker(time.Minute * 1)
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				log.Debug().Caller().Msg("Getting updated config from HA.")
+				h.refresh(ctx)
+			}
+		}
+	}()
+}
+
+func (h *HassConfig) GetEntityState(entity string) map[string]interface{} {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if v, ok := h.hassConfigProps.Entities[entity]; ok {
+		return v
+	}
+	return nil
+}
+
+// HassConfig implements hass.Request so that it can be sent as a request to HA
+// to get its data.
+
+func (h *HassConfig) RequestType() RequestType {
+	return RequestTypeGetConfig
+}
+
+func (h *HassConfig) RequestData() interface{} {
+	return struct{}{}
+}
+
+func (h *HassConfig) ResponseHandler(resp bytes.Buffer) {
+	h.mu.Lock()
+	result, err := marshmallow.Unmarshal(resp.Bytes(), &h.hassConfigProps)
+	if err != nil {
+		log.Debug().Err(err).
+			Msg("Couldn't unmarshal Hass config.")
+	}
+	h.rawConfigProps = result
+	h.mu.Unlock()
+}
