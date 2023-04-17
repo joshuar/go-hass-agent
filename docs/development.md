@@ -18,6 +18,8 @@ need to be installed:
   - Typically installed with `go install github.com/abice/go-enum@latest`.
 - [fyne-cross](https://github.com/fyne-io/fyne-cross).
   - Typically installed with `go install github.com/fyne-io/fyne-cross@latest`
+- [gotext](https://cs.opensource.google/go/x/text)
+  - Typically installed with `go install golang.org/x/text/cmd/gotext@latest`
 - [goreleaser](https://goreleaser.com/install/).
 
 ## Extending the Agent
