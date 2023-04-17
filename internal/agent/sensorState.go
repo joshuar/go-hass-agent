@@ -7,7 +7,9 @@ package agent
 
 import (
 	"context"
+	"errors"
 
+	"github.com/dgraph-io/badger/v4"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/rs/zerolog/log"
 )
@@ -108,20 +110,18 @@ func (sensor *sensorState) RequestData() interface{} {
 }
 
 func (sensor *sensorState) ResponseHandler(rawResponse interface{}) {
-	if rawResponse == nil {
+	switch {
+	case rawResponse == nil:
 		log.Debug().Caller().
 			Msg("No response received. Likely failed request.")
-
-	} else if len(rawResponse.(map[string]interface{})) == 0 {
+	case len(rawResponse.(map[string]interface{})) == 0:
 		log.Debug().Caller().
 			Msg("No response data. Likely problem with request data.")
-	} else {
+	default:
 		response := rawResponse.(map[string]interface{})
 		if v, ok := response["success"]; ok {
 			if v.(bool) && !sensor.registered {
-				sensor.registered = true
-				log.Debug().Caller().
-					Msgf("Sensor %s registered with state %v", sensor.name, sensor.state)
+				sensor.updateRegistration()
 			}
 		}
 		if v, ok := response[sensor.entityID]; ok {
@@ -136,17 +136,8 @@ func (sensor *sensorState) ResponseHandler(rawResponse interface{}) {
 					Msgf("Sensor %s updated. State is now: %v",
 						sensor.name, sensor.state)
 			}
-			if v, ok := status["is_disabled"]; ok {
-				switch v.(bool) {
-				case true:
-					log.Debug().Caller().
-						Msgf("Sensor %s has been disabled.", sensor.name)
-					sensor.disabled = true
-				case false:
-					log.Debug().Caller().
-						Msgf("Sensor %s has been enabled.", sensor.name)
-					sensor.disabled = false
-				}
+			if _, ok := status["is_disabled"]; ok {
+				sensor.updateDisabled(true)
 			}
 		}
 	}
@@ -155,6 +146,19 @@ func (sensor *sensorState) ResponseHandler(rawResponse interface{}) {
 // newSensor takes a hass.SensorUpdate sent by the platform/device and derives
 // the information to encapsulate it as a sensorState.
 func newSensor(newSensor hass.SensorUpdate) *sensorState {
+	state, err := sensorRegistry.GetState(newSensor.ID())
+	if err != nil {
+		if errors.Is(err, badger.ErrKeyNotFound) {
+			log.Debug().
+				Msgf("Adding %s to registry DB.", newSensor.Name())
+			err := sensorRegistry.NewState(newSensor.ID())
+			if err != nil {
+				log.Debug().Err(err).
+					Msgf("Could not add %s to registry DB.", newSensor.Name())
+			}
+		}
+		log.Debug().Err(err).Msg("Could not retrieve state.")
+	}
 	sensor := &sensorState{
 		entityID:    newSensor.ID(),
 		name:        newSensor.Name(),
@@ -166,8 +170,8 @@ func newSensor(newSensor hass.SensorUpdate) *sensorState {
 		icon:        newSensor.Icon(),
 		stateUnits:  newSensor.Units(),
 		category:    newSensor.Category(),
-		registered:  false,
-		disabled:    false,
+		registered:  state.Registered,
+		disabled:    state.Disabled,
 	}
 	return sensor
 }
@@ -178,4 +182,33 @@ func (sensor *sensorState) updateSensor(ctx context.Context, update hass.SensorU
 	sensor.state = update.State()
 	sensor.attributes = update.Attributes()
 	sensor.icon = update.Icon()
+}
+
+// updateRegistration updates the registration status of the sensor in the
+// on-disk sensor registry for persistence/tracking between runs of
+// go-hass-agent
+func (sensor *sensorState) updateRegistration() {
+	err := sensorRegistry.SetState(sensor.entityID, "registered", true)
+	if err != nil {
+		log.Debug().Err(err).
+			Msgf("Could not store registration for sensor %s in DB.", sensor.name)
+	} else {
+		sensor.registered = true
+		log.Debug().Caller().
+			Msgf("Sensor %s registered with state %v", sensor.name, sensor.state)
+	}
+}
+
+// updateDisabled updates the disabled status of the sensor in the on-disk
+// sensor registry for persistence/tracking between runs of go-hass-agent.
+func (sensor *sensorState) updateDisabled(value bool) {
+	err := sensorRegistry.SetState(sensor.entityID, "disabled", value)
+	if err != nil {
+		log.Debug().Err(err).
+			Msgf("Could not set disabled status in DB for sensor %s", sensor.name)
+	} else {
+		log.Debug().Caller().
+			Msgf("Sensor %s disabled set to %v.", sensor.name, value)
+		sensor.disabled = value
+	}
 }

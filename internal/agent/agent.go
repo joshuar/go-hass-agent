@@ -16,6 +16,7 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/config"
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass"
+	"github.com/joshuar/go-hass-agent/internal/sensors"
 	"github.com/joshuar/go-hass-agent/internal/translations"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -26,6 +27,7 @@ import (
 var Version string
 
 var translator *translations.Translator
+var sensorRegistry *sensors.SensorRegistry
 
 const (
 	Name      = "go-hass-agent"
@@ -51,11 +53,14 @@ func Run() {
 	ctx = device.SetupContext(ctx)
 	log.Info().Msg("Starting agent.")
 	agent := NewAgent()
-	
+
+	agentStorage := agent.App.Storage().RootURI()
+
 	translator = translations.NewTranslator()
+	sensorRegistry = sensors.OpenSensorRegistry(agentStorage)
 
 	// If possible, create and log to a file as well as the console.
-	logFile, err := storage.Child(agent.App.Storage().RootURI(), "go-hass-app.log")
+	logFile, err := storage.Child(agentStorage, "go-hass-app.log")
 	if err != nil {
 		log.Error().Err(err).
 			Msg("Unable to create a log file. Will only write logs to stdout.")
@@ -103,6 +108,7 @@ func Run() {
 
 func (agent *Agent) stop() {
 	log.Info().Msg("Shutting down agent.")
+	sensorRegistry.CloseSensorRegistry()
 	agent.Tray.Close()
 }
 
@@ -135,7 +141,9 @@ func (agent *Agent) tracker(agentCtx context.Context, configWG *sync.WaitGroup) 
 					} else {
 						sensors[sensorID].updateSensor(ctx, data)
 					}
-					go hass.APIRequest(ctx, sensors[sensorID])
+					if !sensors[sensorID].disabled {
+						go hass.APIRequest(ctx, sensors[sensorID])
+					}
 				case hass.LocationUpdate:
 					l := &location{
 						data: data,
