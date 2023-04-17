@@ -10,7 +10,7 @@ A [Home Assistant](https://www.home-assistant.io/), [native app
 integration](https://developers.home-assistant.io/docs/api/native-app-integration)
 for desktop/laptop devices.
 
-## Features
+## 🎉 Features
 
 This app will add some sensors to a Home Assistant instance:
 
@@ -24,7 +24,7 @@ This app will add some sensors to a Home Assistant instance:
 The code can be extended to add additional sensors. See the [development
 docs](docs/development.md) for details.
 
-## Use-cases
+## 🤔 Use-cases
 
 As examples of some of the things that can be done with the data published by this app:
 
@@ -41,19 +41,19 @@ As examples of some of the things that can be done with the data published by th
 
 See also the [FAQ](docs/faq.md). 
 
-## Compatibility
+## 🤝 Compatibility
 
 Currently, only Linux is supported. Though the code is designed to be extensible
 to other operating systems. See [the development docs](docs/development.md) for
 details on how to extend for other operating systems.
 
-## Installation
+## ⬇️ Installation
 
 Head over to the [releases](https://github.com/joshuar/go-hass-agent/releases)
 page and download the appropriate package for your operating system and/or
 distribution.
 
-## Usage
+## 🖱️ Usage
 
 **go-hass-agent** runs as a tray icon. It is operating system, distribution and
 desktop-environment agnostic and should manifest itself in any tray of any
@@ -90,9 +90,9 @@ Home Assistant instance. It should also report a list of sensors/entities you
 can use in any automations, scripts, dashboards and other parts of Home
 Assistant.
 
-## Contributing
+## 🧑‍🤝‍🧑 Contributing
 
-### Development
+### 🏗️ Development
 
 I would welcome your contribution! If you find any improvement or issue you want
 to fix, feel free to send a pull request!
@@ -102,7 +102,7 @@ the [development docs](docs/development.md). There is information for developing
 **go-hass-agent** for different operating systems as well as adding additional
 sensors. This might help anyone looking to contribute, extend or fork this tool.
 
-### Translations
+### 🌐 Translations
 
 While this application does not have many points where text is displayed to
 the end user (logging aside), translation is supported through the `language`
@@ -111,7 +111,7 @@ and `message` packages that are part of
 
 I would welcome pull requests for translations!
 
-## Acknowledgements
+## 🙌 Acknowledgements
 
 The app icon is taken from the [Home Assistant
 project](https://github.com/home-assistant/assets).
