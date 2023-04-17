@@ -6,7 +6,9 @@
 package agent
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 
 	"github.com/dgraph-io/badger/v4"
@@ -109,16 +111,15 @@ func (sensor *sensorState) RequestData() interface{} {
 	return hass.MarshalSensorData(sensor)
 }
 
-func (sensor *sensorState) ResponseHandler(rawResponse interface{}) {
+func (sensor *sensorState) ResponseHandler(rawResponse bytes.Buffer) {
 	switch {
-	case rawResponse == nil:
-		log.Debug().Caller().
-			Msg("No response received. Likely failed request.")
-	case len(rawResponse.(map[string]interface{})) == 0:
+	case rawResponse.Len() == 0:
 		log.Debug().Caller().
 			Msg("No response data. Likely problem with request data.")
 	default:
-		response := rawResponse.(map[string]interface{})
+		var r interface{}
+		json.Unmarshal(rawResponse.Bytes(), &r)
+		response := r.(map[string]interface{})
 		if v, ok := response["success"]; ok {
 			if v.(bool) && !sensor.registered {
 				sensor.updateRegistration()
@@ -202,13 +203,15 @@ func (sensor *sensorState) updateRegistration() {
 // updateDisabled updates the disabled status of the sensor in the on-disk
 // sensor registry for persistence/tracking between runs of go-hass-agent.
 func (sensor *sensorState) updateDisabled(value bool) {
-	err := sensorRegistry.SetState(sensor.entityID, "disabled", value)
-	if err != nil {
-		log.Debug().Err(err).
-			Msgf("Could not set disabled status in DB for sensor %s", sensor.name)
-	} else {
-		log.Debug().Caller().
-			Msgf("Sensor %s disabled set to %v.", sensor.name, value)
-		sensor.disabled = value
+	if sensor.disabled != value {
+		err := sensorRegistry.SetState(sensor.entityID, "disabled", value)
+		if err != nil {
+			log.Debug().Err(err).
+				Msgf("Could not set disabled status in DB for sensor %s", sensor.name)
+		} else {
+			log.Debug().Caller().
+				Msgf("Sensor %s disabled set to %v.", sensor.name, value)
+			sensor.disabled = value
+		}
 	}
 }

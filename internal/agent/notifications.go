@@ -32,7 +32,7 @@ func (agent *Agent) runNotificationsWorker(ctx context.Context) {
 
 func (agent *Agent) handleNotifications(ctx context.Context, response chan *hass.WebsocketResponse, request chan interface{}) {
 
-	config := agent.loadConfig()
+	config := agent.loadAppConfig()
 
 	for {
 		select {

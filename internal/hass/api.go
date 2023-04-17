@@ -6,6 +6,7 @@
 package hass
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"time"
@@ -23,7 +24,7 @@ type RequestType string
 type Request interface {
 	RequestType() RequestType
 	RequestData() interface{}
-	ResponseHandler(interface{})
+	ResponseHandler(bytes.Buffer)
 }
 
 func MarshalJSON(request Request, secret string) ([]byte, error) {
@@ -64,6 +65,8 @@ type Response struct {
 }
 
 func APIRequest(ctx context.Context, request Request) {
+	var res bytes.Buffer
+
 	requestCtx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
 
@@ -72,7 +75,7 @@ func APIRequest(ctx context.Context, request Request) {
 		log.Error().Caller().
 			Msg("Could not retrieve valid config from context.")
 		cancel()
-		request.ResponseHandler(nil)
+		request.ResponseHandler(res)
 		return
 	}
 
@@ -80,15 +83,13 @@ func APIRequest(ctx context.Context, request Request) {
 	if err != nil {
 		log.Error().Stack().Err(err).
 			Msg("Unable to format request")
-		request.ResponseHandler(nil)
+		request.ResponseHandler(res)
 	} else {
-		var res interface{}
 		err := requests.
 			URL(config.APIURL).
 			BodyBytes(reqJson).
-			ToJSON(&res).
+			ToBytesBuffer(&res).
 			Fetch(requestCtx)
-
 		// requestFunc := func() error {
 		// 	return requests.
 		// 		URL(config.APIURL).
@@ -104,9 +105,7 @@ func APIRequest(ctx context.Context, request Request) {
 			log.Error().Stack().Err(err).
 				Msgf("Unable to send request with body:\n\t%s\n\t", reqJson)
 			cancel()
-			request.ResponseHandler(nil)
-		} else {
-			request.ResponseHandler(res)
 		}
+		request.ResponseHandler(res)
 	}
 }

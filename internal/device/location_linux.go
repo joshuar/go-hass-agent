@@ -12,6 +12,10 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+const (
+	appID = "org.joshuar.go-hass-agent"
+)
+
 type linuxLocation struct {
 	latitude  float64
 	longitude float64
@@ -50,7 +54,7 @@ func (l *linuxLocation) VerticalAccuracy() int {
 	return 0
 }
 
-func LocationUpdater(ctx context.Context, appID string, locationInfoCh chan interface{}) {
+func LocationUpdater(ctx context.Context, locationInfoCh chan interface{}) {
 
 	deviceAPI, deviceAPIExists := FromContext(ctx)
 	if !deviceAPIExists {

@@ -15,7 +15,7 @@ const (
 	webHookPath   = "/api/webhook/"
 )
 
-func (agent *Agent) loadConfig() *config.AppConfig {
+func (agent *Agent) loadAppConfig() *config.AppConfig {
 	CloudhookURL := agent.App.Preferences().String("CloudhookURL")
 	RemoteUIURL := agent.App.Preferences().String("RemoteUIURL")
 	Host := agent.App.Preferences().String("Host")
@@ -53,7 +53,7 @@ func (agent *Agent) loadConfig() *config.AppConfig {
 	return appConfig
 }
 
-func (agent *Agent) GetConfigVersion() string {
+func (agent *Agent) GetAppConfigVersion() string {
 	return agent.App.Preferences().String("Version")
 }
 
