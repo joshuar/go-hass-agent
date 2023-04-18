@@ -7,6 +7,7 @@ package sensors
 
 import (
 	"encoding/json"
+	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/storage"
@@ -32,11 +33,28 @@ func OpenSensorRegistry(appPath fyne.URI) *SensorRegistry {
 		return nil
 	}
 
-	db, err := badger.Open(badger.DefaultOptions(uri.Path()))
+	// Open a badgerDB with largely the default options, but trying to optimise
+	// for low memory usage as per:
+	// https://dgraph.io/docs/badger/get-started/#memory-usage
+	db, err := badger.Open(badger.DefaultOptions(uri.Path()).
+		WithMemTableSize(12 << 20))
 	if err != nil {
 		log.Debug().Err(err).Msg("Could not open sensor registry DB.")
 		return nil
 	}
+
+	go func() {
+		ticker := time.NewTicker(5 * time.Minute)
+		defer ticker.Stop()
+		for range ticker.C {
+		again:
+			err := db.RunValueLogGC(0.7)
+			if err == nil {
+				goto again
+			}
+		}
+	}()
+
 	return &SensorRegistry{
 		uri: uri,
 		db:  db,
