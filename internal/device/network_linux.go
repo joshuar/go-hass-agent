@@ -516,8 +516,8 @@ func deviceActiveConnection(ctx context.Context, device dbus.ObjectPath) dbus.Ob
 }
 
 func processConnectionState(ctx context.Context, conn dbus.ObjectPath, status chan interface{}) {
-	if conn != "/" {
-		name := string(variantToValue[[]uint8](getNetProp(ctx, conn, ConnectionID)))
+	name := string(variantToValue[[]uint8](getNetProp(ctx, conn, ConnectionID)))
+	if conn != "/" && name != "lo" {
 		state := getNetProp(ctx, conn, ConnectionState)
 		connState := marshalNetworkStateUpdate(ctx, ConnectionState, conn, name, state)
 		status <- connState

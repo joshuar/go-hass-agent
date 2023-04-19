@@ -100,8 +100,8 @@ func Run() {
 	go agent.tracker(ctx, &wg)
 
 	agent.App.Run()
-	agent.stop()
 	cancelfunc()
+	agent.stop()
 }
 
 func (agent *Agent) stop() {
