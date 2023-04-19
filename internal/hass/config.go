@@ -42,12 +42,12 @@ type hassConfigProps struct {
 
 func NewHassConfig(ctx context.Context) *HassConfig {
 	c := &HassConfig{}
-	c.refresh(ctx)
+	c.Refresh(ctx)
 	c.updater(ctx)
 	return c
 }
 
-func (h *HassConfig) refresh(ctx context.Context) {
+func (h *HassConfig) Refresh(ctx context.Context) {
 	APIRequest(ctx, h)
 }
 
@@ -60,7 +60,7 @@ func (h *HassConfig) updater(ctx context.Context) {
 				return
 			case <-ticker.C:
 				log.Debug().Caller().Msg("Getting updated config from HA.")
-				h.refresh(ctx)
+				h.Refresh(ctx)
 			}
 		}
 	}()
@@ -73,6 +73,16 @@ func (h *HassConfig) GetEntityState(entity string) map[string]interface{} {
 		return v
 	}
 	return nil
+}
+
+func (h *HassConfig) IsEntityDisabled(entity string) bool {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if v, ok := h.hassConfigProps.Entities[entity]; ok {
+		return v["disabled"].(bool)
+	} else {
+		return false
+	}
 }
 
 // HassConfig implements hass.Request so that it can be sent as a request to HA

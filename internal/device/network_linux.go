@@ -191,7 +191,7 @@ func (state *networkSensor) Name() string {
 func (state *networkSensor) ID() string {
 	switch state.sensorType {
 	case ConnectionState:
-		return state.sensorGroup + "_connection_state"
+		return strcase.ToSnake(state.sensorGroup) + "_connection_state"
 	case WifiSSID:
 		return "wifi_connection"
 	case WifiHWAddress:
@@ -204,7 +204,7 @@ func (state *networkSensor) ID() string {
 		return "wifi_signal_strength"
 	default:
 		snakeSensorName := strcase.ToSnake(state.sensorType.String())
-		return state.sensorGroup + "_" + snakeSensorName
+		return strcase.ToSnake(state.sensorGroup) + "_" + snakeSensorName
 	}
 }
 
@@ -516,10 +516,12 @@ func deviceActiveConnection(ctx context.Context, device dbus.ObjectPath) dbus.Ob
 }
 
 func processConnectionState(ctx context.Context, conn dbus.ObjectPath, status chan interface{}) {
-	name := string(variantToValue[[]uint8](getNetProp(ctx, conn, ConnectionID)))
-	state := getNetProp(ctx, conn, ConnectionState)
-	connState := marshalNetworkStateUpdate(ctx, ConnectionState, conn, name, state)
-	status <- connState
+	if conn != "/" {
+		name := string(variantToValue[[]uint8](getNetProp(ctx, conn, ConnectionID)))
+		state := getNetProp(ctx, conn, ConnectionState)
+		connState := marshalNetworkStateUpdate(ctx, ConnectionState, conn, name, state)
+		status <- connState
+	}
 }
 
 func processConnectionType(ctx context.Context, conn dbus.ObjectPath, status chan interface{}) {
