@@ -3,15 +3,12 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-package agent
+package sensors
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
-	"errors"
 
-	"github.com/dgraph-io/badger/v4"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/rs/zerolog/log"
 )
@@ -29,8 +26,7 @@ type sensorState struct {
 	name        string
 	entityID    string
 	category    string
-	disabled    bool
-	registered  bool
+	metadata    *registryEntry
 }
 
 // sensorState implements hass.Sensor to represent a sensor in HA.
@@ -91,17 +87,17 @@ func (s *sensorState) EntityCategory() string {
 }
 
 func (s *sensorState) Disabled() bool {
-	return s.disabled
+	return s.metadata.IsDisabled()
 }
 
 func (s *sensorState) Registered() bool {
-	return s.registered
+	return s.metadata.IsRegistered()
 }
 
 // sensorState implements hass.Request so its data can be sent to the HA API
 
 func (sensor *sensorState) RequestType() hass.RequestType {
-	if sensor.registered {
+	if sensor.metadata.IsRegistered() {
 		return hass.RequestTypeUpdateSensorStates
 	}
 	return hass.RequestTypeRegisterSensor
@@ -121,8 +117,10 @@ func (sensor *sensorState) ResponseHandler(rawResponse bytes.Buffer) {
 		json.Unmarshal(rawResponse.Bytes(), &r)
 		response := r.(map[string]interface{})
 		if v, ok := response["success"]; ok {
-			if v.(bool) && !sensor.registered {
-				sensor.updateRegistration()
+			if v.(bool) && !sensor.metadata.IsRegistered() {
+				sensor.metadata.SetRegistered(true)
+				log.Debug().Caller().
+					Msgf("Sensor %s registered in HA.", sensor.name)
 			}
 		}
 		if v, ok := response[sensor.entityID]; ok {
@@ -138,80 +136,10 @@ func (sensor *sensorState) ResponseHandler(rawResponse bytes.Buffer) {
 						sensor.name, sensor.state)
 			}
 			if _, ok := status["is_disabled"]; ok {
-				sensor.updateDisabled(true)
+				sensor.metadata.SetDisabled(true)
+			} else if sensor.metadata.IsDisabled() {
+				sensor.metadata.SetDisabled(false)
 			}
-		}
-	}
-}
-
-// newSensor takes a hass.SensorUpdate sent by the platform/device and derives
-// the information to encapsulate it as a sensorState.
-func newSensor(newSensor hass.SensorUpdate) *sensorState {
-	state, err := sensorRegistry.GetState(newSensor.ID())
-	if err != nil {
-		if errors.Is(err, badger.ErrKeyNotFound) {
-			log.Debug().
-				Msgf("Adding %s to registry DB.", newSensor.Name())
-			err := sensorRegistry.NewState(newSensor.ID())
-			if err != nil {
-				log.Debug().Err(err).
-					Msgf("Could not add %s to registry DB.", newSensor.Name())
-			}
-		}
-		log.Debug().Err(err).Msg("Could not retrieve state.")
-	}
-	sensor := &sensorState{
-		entityID:    newSensor.ID(),
-		name:        newSensor.Name(),
-		deviceClass: newSensor.DeviceClass(),
-		stateClass:  newSensor.StateClass(),
-		sensorType:  newSensor.SensorType(),
-		state:       newSensor.State(),
-		attributes:  newSensor.Attributes(),
-		icon:        newSensor.Icon(),
-		stateUnits:  newSensor.Units(),
-		category:    newSensor.Category(),
-		registered:  state.Registered,
-		disabled:    state.Disabled,
-	}
-	return sensor
-}
-
-// updateSensor ensures the bare minimum properties of a sensor are updated from
-// a hass.SensorUpdate
-func (sensor *sensorState) updateSensor(ctx context.Context, update hass.SensorUpdate) {
-	sensor.state = update.State()
-	sensor.attributes = update.Attributes()
-	sensor.icon = update.Icon()
-}
-
-// updateRegistration updates the registration status of the sensor in the
-// on-disk sensor registry for persistence/tracking between runs of
-// go-hass-agent
-func (sensor *sensorState) updateRegistration() {
-	err := sensorRegistry.SetState(sensor.entityID, "registered", true)
-	if err != nil {
-		log.Debug().Err(err).
-			Msgf("Could not store registration for sensor %s in DB.", sensor.name)
-	} else {
-		sensor.registered = true
-		log.Debug().Caller().
-			Msgf("Sensor %s registered with state %v", sensor.name, sensor.state)
-	}
-}
-
-// updateDisabled updates the disabled status of the sensor in the on-disk
-// sensor registry for persistence/tracking between runs of go-hass-agent.
-func (sensor *sensorState) updateDisabled(value bool) {
-	if sensor.disabled != value {
-		err := sensorRegistry.SetState(sensor.entityID, "disabled", value)
-		if err != nil {
-			log.Debug().Err(err).
-				Msgf("Could not set disabled status in DB for sensor %s", sensor.name)
-		} else {
-			log.Debug().Caller().
-				Msgf("Sensor %s disabled set to %v.", sensor.name, value)
-			sensor.disabled = value
 		}
 	}
 }

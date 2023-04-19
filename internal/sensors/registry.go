@@ -6,7 +6,9 @@
 package sensors
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"time"
 
 	"fyne.io/fyne/v2"
@@ -15,17 +17,12 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-type SensorRegistry struct {
+type sensorRegistry struct {
 	uri fyne.URI
 	db  *badger.DB
 }
 
-type sensorStates struct {
-	Registered bool
-	Disabled   bool
-}
-
-func OpenSensorRegistry(appPath fyne.URI) *SensorRegistry {
+func OpenSensorRegistry(ctx context.Context, appPath fyne.URI) *sensorRegistry {
 	uri, err := storage.Child(appPath, "sensorRegistry")
 	if err != nil {
 		log.Error().Err(err).
@@ -34,9 +31,10 @@ func OpenSensorRegistry(appPath fyne.URI) *SensorRegistry {
 	}
 
 	// Open a badgerDB with largely the default options, but trying to optimise
-	// for low memory usage as per:
+	// for lower memory usage as per:
 	// https://dgraph.io/docs/badger/get-started/#memory-usage
 	db, err := badger.Open(badger.DefaultOptions(uri.Path()).
+		// * If the number of sensors is large, this might need adjustment.
 		WithMemTableSize(12 << 20))
 	if err != nil {
 		log.Debug().Err(err).Msg("Could not open sensor registry DB.")
@@ -55,36 +53,46 @@ func OpenSensorRegistry(appPath fyne.URI) *SensorRegistry {
 		}
 	}()
 
-	return &SensorRegistry{
+	go func() {
+		<-ctx.Done()
+		log.Debug().Caller().Msg("Closing registry.")
+		db.Close()
+	}()
+
+	return &sensorRegistry{
 		uri: uri,
 		db:  db,
 	}
 }
 
-func (reg *SensorRegistry) CloseSensorRegistry() {
+func (reg *sensorRegistry) CloseSensorRegistry() {
 	reg.db.Close()
 }
 
-func (reg *SensorRegistry) NewState(sensor string) error {
-	newState := &sensorStates{
-		Registered: false,
-		Disabled:   false,
+func (reg *sensorRegistry) Add(id string) *registryEntry {
+	entry := newRegistryEntry(id)
+	if values, err := reg.Get(entry.id); err != nil {
+		if errors.Is(err, badger.ErrKeyNotFound) {
+			log.Debug().
+				Msgf("Adding %s to registry DB.", entry.id)
+			err := reg.Set(entry.id, entry.values)
+			if err != nil {
+				log.Debug().Err(err).
+					Msgf("Could not add %s to registry DB.", id)
+			}
+		} else {
+			log.Debug().Err(err).Msg("Could not retrieve state.")
+		}
+	} else {
+		entry.values = values
 	}
-	v, err := json.Marshal(newState)
-	if err != nil {
-		return err
-	}
-	err = reg.db.Update(func(txn *badger.Txn) error {
-		err = txn.Set([]byte(sensor), v)
-		return err
-	})
-	return err
+	return entry
 }
 
-func (reg *SensorRegistry) GetState(sensor string) (*sensorStates, error) {
-	state := &sensorStates{}
+func (reg *sensorRegistry) Get(id string) (*registryValues, error) {
+	state := &registryValues{}
 	err := reg.db.View(func(txn *badger.Txn) error {
-		item, err := txn.Get([]byte(sensor))
+		item, err := txn.Get([]byte(id))
 		if err != nil {
 			return err
 		}
@@ -103,35 +111,61 @@ func (reg *SensorRegistry) GetState(sensor string) (*sensorStates, error) {
 	return state, nil
 }
 
-func (reg *SensorRegistry) SetState(sensor, stateType string, value bool) error {
-	currentState := &sensorStates{}
+func (reg *sensorRegistry) Set(id string, values *registryValues) error {
 	err := reg.db.Update(func(txn *badger.Txn) error {
-		item, err := txn.Get([]byte(sensor))
-		if err != nil {
-			return err
-		}
-		err = item.Value(func(val []byte) error {
-			err := json.Unmarshal(val, currentState)
-			return err
-		})
-		if err != nil {
-			return err
-		}
-		switch stateType {
-		case "registered":
-			currentState.Registered = value
-		case "disabled":
-			currentState.Disabled = value
-		}
-		v, err := json.Marshal(currentState)
+		v, err := json.Marshal(values)
 		if err != nil {
 			return err
 		}
 		err = reg.db.Update(func(txn *badger.Txn) error {
-			err = txn.Set([]byte(sensor), v)
+			err = txn.Set([]byte(id), v)
 			return err
 		})
 		return err
 	})
 	return err
+}
+
+func (reg *sensorRegistry) Update(entry *registryEntry) error {
+	return reg.Set(entry.id, entry.values)
+}
+
+type registryValues struct {
+	Registered bool `json:"Registered"`
+	Disabled   bool `json:"Disabled"`
+}
+
+func newRegistryValues() *registryValues {
+	return &registryValues{
+		Disabled:   false,
+		Registered: false,
+	}
+}
+
+type registryEntry struct {
+	id     string
+	values *registryValues
+}
+
+func newRegistryEntry(id string) *registryEntry {
+	return &registryEntry{
+		id:     id,
+		values: newRegistryValues(),
+	}
+}
+
+func (e *registryEntry) IsDisabled() bool {
+	return e.values.Disabled
+}
+
+func (e *registryEntry) SetDisabled(state bool) {
+	e.values.Disabled = state
+}
+
+func (e *registryEntry) IsRegistered() bool {
+	return e.values.Registered
+}
+
+func (e *registryEntry) SetRegistered(state bool) {
+	e.values.Registered = state
 }

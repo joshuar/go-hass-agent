@@ -27,7 +27,6 @@ import (
 var Version string
 
 var translator *translations.Translator
-var sensorRegistry *sensors.SensorRegistry
 
 const (
 	Name      = "go-hass-agent"
@@ -57,7 +56,6 @@ func Run() {
 	agentStorage := agent.App.Storage().RootURI()
 
 	translator = translations.NewTranslator()
-	sensorRegistry = sensors.OpenSensorRegistry(agentStorage)
 
 	// If possible, create and log to a file as well as the console.
 	logFile, err := storage.Child(agentStorage, "go-hass-app.log")
@@ -108,7 +106,6 @@ func Run() {
 
 func (agent *Agent) stop() {
 	log.Info().Msg("Shutting down agent.")
-	sensorRegistry.CloseSensorRegistry()
 	agent.Tray.Close()
 }
 
@@ -119,10 +116,8 @@ func (agent *Agent) tracker(agentCtx context.Context, configWG *sync.WaitGroup) 
 
 	appConfig := agent.loadAppConfig()
 	ctx := config.NewContext(agentCtx, appConfig)
-	sensorInfo := device.SetupSensors()
-	sensors := make(map[string]*sensorState)
+	sensorTracker := sensors.NewSensorTracker(ctx, agent.App.Storage().RootURI())
 	updateCh := make(chan interface{})
-	hassConfig := hass.NewHassConfig(ctx)
 
 	go agent.runNotificationsWorker(ctx)
 
@@ -136,17 +131,13 @@ func (agent *Agent) tracker(agentCtx context.Context, configWG *sync.WaitGroup) 
 				switch data := data.(type) {
 				case hass.SensorUpdate:
 					sensorID := data.ID()
-					if _, ok := sensors[sensorID]; !ok {
-						sensors[sensorID] = newSensor(data)
-						log.Debug().Caller().Msgf("New sensor discovered: %s", sensors[sensorID].name)
+					if !sensorTracker.Exists(sensorID) {
+						sensorTracker.Add(data)
+						log.Debug().Caller().Msgf("Sensor discovered: %s", data.Name())
 					} else {
-						sensors[sensorID].updateSensor(ctx, data)
+						sensorTracker.Update(data)
 					}
-					stateInHass := hassConfig.GetEntityState(sensors[sensorID].entityID)
-					sensors[sensorID].updateDisabled(stateInHass["disabled"].(bool))
-					if !sensors[sensorID].disabled {
-						go hass.APIRequest(ctx, sensors[sensorID])
-					}
+					go sensorTracker.Send(ctx, sensorID)
 				case hass.LocationUpdate:
 					l := hass.MarshalLocationUpdate(data)
 					go hass.APIRequest(ctx, l)
@@ -159,17 +150,5 @@ func (agent *Agent) tracker(agentCtx context.Context, configWG *sync.WaitGroup) 
 		}
 	}()
 
-	var wg sync.WaitGroup
-
-	// Run all the defined sensor update functions.
-	for name, workerFunction := range sensorInfo.Get() {
-		wg.Add(1)
-		log.Debug().Caller().
-			Msgf("Setting up sensors for %s.", name)
-		go func(worker func(context.Context, chan interface{})) {
-			defer wg.Done()
-			worker(ctx, updateCh)
-		}(workerFunction)
-	}
-	wg.Wait()
+	sensorTracker.StartWorkers(ctx, updateCh)
 }
