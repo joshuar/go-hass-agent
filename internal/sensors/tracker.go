@@ -32,16 +32,35 @@ func NewSensorTracker(ctx context.Context, appPath fyne.URI) *sensorTracker {
 	}
 }
 
+// Add creates a new sensor in the tracker based on a recieved state
+// update.
 func (tracker *sensorTracker) Add(s hass.SensorUpdate) {
 	tracker.mu.Lock()
 	defer tracker.mu.Unlock()
-	tracker.newState(s)
+	sensor := &sensorState{
+		entityID:    s.ID(),
+		name:        s.Name(),
+		deviceClass: s.DeviceClass(),
+		stateClass:  s.StateClass(),
+		sensorType:  s.SensorType(),
+		state:       s.State(),
+		attributes:  s.Attributes(),
+		icon:        s.Icon(),
+		stateUnits:  s.Units(),
+		category:    s.Category(),
+		metadata:    tracker.registry.Add(s.ID()),
+	}
+	tracker.sensor[s.ID()] = sensor
 }
 
+// Update ensures the bare minimum properties of a sensor are updated from
+// a hass.SensorUpdate
 func (tracker *sensorTracker) Update(s hass.SensorUpdate) {
 	tracker.mu.Lock()
 	defer tracker.mu.Unlock()
-	tracker.updateState(s)
+	tracker.sensor[s.ID()].state = s.State()
+	tracker.sensor[s.ID()].attributes = s.Attributes()
+	tracker.sensor[s.ID()].icon = s.Icon()
 }
 
 func (tracker *sensorTracker) Get(id string) *sensorState {
@@ -60,10 +79,8 @@ func (tracker *sensorTracker) Exists(id string) bool {
 	}
 }
 
-// func (tracker *sensorTracker) Disabled(id string) bool {
-// 	return tracker.sensor[id].Disabled
-// }
-
+// Send will send a sensor update to HA, checking to ensure the sensor is not
+// disabled. It will also update the local registry state based on the response.
 func (tracker *sensorTracker) Send(ctx context.Context, id string) {
 	if tracker.hassConfig.IsEntityDisabled(id) {
 		if !tracker.sensor[id].metadata.IsDisabled() {
@@ -75,31 +92,8 @@ func (tracker *sensorTracker) Send(ctx context.Context, id string) {
 	}
 }
 
-func (tracker *sensorTracker) newState(newSensor hass.SensorUpdate) {
-	sensor := &sensorState{
-		entityID:    newSensor.ID(),
-		name:        newSensor.Name(),
-		deviceClass: newSensor.DeviceClass(),
-		stateClass:  newSensor.StateClass(),
-		sensorType:  newSensor.SensorType(),
-		state:       newSensor.State(),
-		attributes:  newSensor.Attributes(),
-		icon:        newSensor.Icon(),
-		stateUnits:  newSensor.Units(),
-		category:    newSensor.Category(),
-		metadata:    tracker.registry.Add(newSensor.ID()),
-	}
-	tracker.sensor[newSensor.ID()] = sensor
-}
-
-// updateSensor ensures the bare minimum properties of a sensor are updated from
-// a hass.SensorUpdate
-func (tracker *sensorTracker) updateState(update hass.SensorUpdate) {
-	tracker.sensor[update.ID()].state = update.State()
-	tracker.sensor[update.ID()].attributes = update.Attributes()
-	tracker.sensor[update.ID()].icon = update.Icon()
-}
-
+// StartWorkers will call all the sensor worker functions that have been defined
+// for this device.
 func (tracker *sensorTracker) StartWorkers(ctx context.Context, updateCh chan interface{}) {
 	var wg sync.WaitGroup
 
