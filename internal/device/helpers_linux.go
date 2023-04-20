@@ -195,7 +195,7 @@ func (d *deviceAPI) GetDBusProp(t dbusType, dest string, path dbus.ObjectPath, p
 	}
 }
 
-func (d *deviceAPI) GetDBusDataAsMap(t dbusType, dest string, path dbus.ObjectPath, method string, args string) map[string]dbus.Variant {
+func (d *deviceAPI) GetDBusDataAsMap(t dbusType, dest string, path dbus.ObjectPath, method string, args string) (map[string]dbus.Variant, error) {
 	if d.bus(t) != nil {
 		obj := d.bus(t).Object(dest, path)
 		var data map[string]dbus.Variant
@@ -208,15 +208,15 @@ func (d *deviceAPI) GetDBusDataAsMap(t dbusType, dest string, path dbus.ObjectPa
 		if err != nil {
 			log.Error().Err(err).
 				Msgf("Unable to execute %s on %s (args: %s)", method, dest, args)
-			return nil
+			return nil, err
 		}
-		return data
+		return data, nil
 	} else {
-		return nil
+		return nil, errors.New("no bus connection")
 	}
 }
 
-func (d *deviceAPI) GetDBusDataAsList(t dbusType, dest string, path dbus.ObjectPath, method string, args string) []string {
+func (d *deviceAPI) GetDBusDataAsList(t dbusType, dest string, path dbus.ObjectPath, method string, args string) ([]string, error) {
 	if d.bus(t) != nil {
 		obj := d.bus(t).Object(dest, path)
 		var data []string
@@ -227,17 +227,15 @@ func (d *deviceAPI) GetDBusDataAsList(t dbusType, dest string, path dbus.ObjectP
 			err = obj.Call(method, 0).Store(&data)
 		}
 		if err != nil {
-			log.Error().Err(err).
-				Msgf("Unable to execute %s on %s (args: %s)", method, dest, args)
-			return nil
+			return nil, err
 		}
-		return data
+		return data, nil
 	} else {
-		return nil
+		return nil, errors.New("no bus connection")
 	}
 }
 
-func (d *deviceAPI) GetDBusData(t dbusType, dest string, path dbus.ObjectPath, method string, args string) interface{} {
+func (d *deviceAPI) GetDBusData(t dbusType, dest string, path dbus.ObjectPath, method string, args string) (interface{}, error) {
 	if d.bus(t) != nil {
 		obj := d.bus(t).Object(dest, path)
 		var data interface{}
@@ -248,13 +246,11 @@ func (d *deviceAPI) GetDBusData(t dbusType, dest string, path dbus.ObjectPath, m
 			err = obj.Call(method, 0).Store(&data)
 		}
 		if err != nil {
-			log.Error().Err(err).
-				Msgf("Unable to execute %s on %s (args: %s)", method, dest, args)
-			return nil
+			return nil, err
 		}
-		return data
+		return data, nil
 	} else {
-		return nil
+		return nil, errors.New("no bus connection")
 	}
 }
 

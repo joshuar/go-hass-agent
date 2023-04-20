@@ -160,12 +160,12 @@ func AppUpdater(ctx context.Context, update chan interface{}) {
 		},
 		event: appStateDBusEvent,
 		eventHandler: func(s *dbus.Signal) {
-			activeAppList := deviceAPI.GetDBusDataAsMap(sessionBus,
+			activeAppList, err := deviceAPI.GetDBusDataAsMap(sessionBus,
 				portalDest,
 				appStateDBusPath,
 				appStateDBusMethod, "")
-			if activeAppList == nil {
-				log.Debug().Caller().
+			if err != nil {
+				log.Debug().Err(err).Caller().
 					Msg("No active apps found.")
 			} else {
 				update <- marshallAppStateUpdate(RunningApps, activeAppList)
