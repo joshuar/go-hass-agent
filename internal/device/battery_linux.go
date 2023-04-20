@@ -303,10 +303,10 @@ func BatteryUpdater(ctx context.Context, status chan interface{}) {
 		return
 	}
 
-	batteryList := deviceAPI.GetDBusDataAsList(systemBus, upowerDBusDest, upowerDBusPath, upowerGetDevicesMethod, "")
-	if batteryList == nil {
-		log.Debug().Caller().
-			Msg("Unable to any battery devices")
+	batteryList, err := deviceAPI.GetDBusDataAsList(systemBus, upowerDBusDest, upowerDBusPath, upowerGetDevicesMethod, "")
+	if err != nil {
+		log.Debug().Err(err).Caller().
+			Msg("Unable to get any battery devices from DBus.")
 		return
 	}
 

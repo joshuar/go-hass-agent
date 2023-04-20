@@ -382,13 +382,12 @@ func NetworkUpdater(ctx context.Context, status chan interface{}) {
 		return
 	}
 
-	myDeviceList := deviceAPI.GetDBusData(
+	myDeviceList, err := deviceAPI.GetDBusData(
 		systemBus, dBusDest, dBusPath,
 		"org.freedesktop.NetworkManager.GetDevices", "")
-
-	if myDeviceList == nil {
-		log.Debug().Caller().
-			Msg("Could not list devices from network manager")
+	if err != nil {
+		log.Debug().Err(err).Caller().
+			Msg("Could not list devices from network manager.")
 		return
 	}
 
@@ -526,13 +525,14 @@ func deviceActiveConnection(ctx context.Context, device dbus.ObjectPath) dbus.Ob
 			Msg("Could not connect to DBus to monitor batteries.")
 		return ""
 	}
-	conn, err := deviceAPI.GetDBusProp(
+	variant, err := deviceAPI.GetDBusProp(
 		systemBus, dBusDest, device,
 		"org.freedesktop.NetworkManager.Device.ActiveConnection")
-	if err != nil || !conn.Value().(dbus.ObjectPath).IsValid() {
+	conn := dbus.ObjectPath(variantToValue[[]uint8](variant))
+	if err != nil || !conn.IsValid() {
 		return ""
 	} else {
-		return variantToValue[dbus.ObjectPath](conn)
+		return conn
 	}
 }
 
@@ -573,6 +573,7 @@ func processConnectionType(ctx context.Context, conn dbus.ObjectPath, status cha
 				log.Debug().Err(err).Caller().
 					Msg("Invalid connection device.")
 			} else {
+				// ! this conversion might yield unexpected results
 				devicePath := variantToValue[[]dbus.ObjectPath](variant)[0]
 				if devicePath.IsValid() {
 					wifiProps := []networkProp{WifiSSID, WifiHWAddress, WifiFrequency, WifiSpeed, WifiStrength}
