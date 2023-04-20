@@ -7,6 +7,7 @@ package device
 
 import (
 	"context"
+	"errors"
 	"os"
 	"strings"
 
@@ -179,18 +180,18 @@ func (d *deviceAPI) GetDBusObject(t dbusType, dest string, path dbus.ObjectPath)
 
 // GetDBusProp will retrieve the specified property value from the given path
 // and destination.
-func (d *deviceAPI) GetDBusProp(t dbusType, dest string, path dbus.ObjectPath, prop string) dbus.Variant {
+func (d *deviceAPI) GetDBusProp(t dbusType, dest string, path dbus.ObjectPath, prop string) (dbus.Variant, error) {
 	if d.bus(t) != nil {
 		obj := d.bus(t).Object(dest, path)
 		res, err := obj.GetProperty(prop)
 		if err != nil {
-			log.Debug().Caller().Err(err).
-				Msgf("Unable to retrieve property %s (%s)", prop, dest)
-			return dbus.MakeVariant("")
+			// log.Debug().Caller().Err(err).
+			// 	Msgf("Unable to retrieve property %s (%s)", prop, dest)
+			return dbus.MakeVariant(""), err
 		}
-		return res
+		return res, nil
 	} else {
-		return dbus.MakeVariant("")
+		return dbus.MakeVariant(""), errors.New("no bus connection")
 	}
 }
 
