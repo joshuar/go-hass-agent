@@ -138,9 +138,14 @@ func (d *deviceAPI) monitorDBus(ctx context.Context) {
 		// When a new watch request is received, send it to the right DBus
 		// connection and record it so it can be matched to a handler.
 		case watch := <-d.WatchEvents:
-			d.AddDBusWatch(watch.bus, watch.match)
-			events[watch.bus][string(watch.path)] = watch.eventHandler
-			watches[watch.bus] = watch
+			err := d.AddDBusWatch(watch.bus, watch.match)
+			if err != nil {
+				log.Debug().Err(err).Caller().
+					Msgf("Could not add watch for %v.", watch.event)
+			} else {
+				events[watch.bus][string(watch.path)] = watch.eventHandler
+				watches[watch.bus] = watch
+			}
 		}
 	}
 }
@@ -195,13 +200,13 @@ func (d *deviceAPI) GetDBusProp(t dbusType, dest string, path dbus.ObjectPath, p
 	}
 }
 
-func (d *deviceAPI) GetDBusDataAsMap(t dbusType, dest string, path dbus.ObjectPath, method string, args string) (map[string]dbus.Variant, error) {
+func (d *deviceAPI) GetDBusDataAsMap(t dbusType, dest string, path dbus.ObjectPath, method string, args ...interface{}) (map[string]dbus.Variant, error) {
 	if d.bus(t) != nil {
 		obj := d.bus(t).Object(dest, path)
 		var data map[string]dbus.Variant
 		var err error
-		if args != "" {
-			err = obj.Call(method, 0, args).Store(&data)
+		if args != nil {
+			err = obj.Call(method, 0, args...).Store(&data)
 		} else {
 			err = obj.Call(method, 0).Store(&data)
 		}
@@ -216,13 +221,13 @@ func (d *deviceAPI) GetDBusDataAsMap(t dbusType, dest string, path dbus.ObjectPa
 	}
 }
 
-func (d *deviceAPI) GetDBusDataAsList(t dbusType, dest string, path dbus.ObjectPath, method string, args string) ([]string, error) {
+func (d *deviceAPI) GetDBusDataAsList(t dbusType, dest string, path dbus.ObjectPath, method string, args ...interface{}) ([]string, error) {
 	if d.bus(t) != nil {
 		obj := d.bus(t).Object(dest, path)
 		var data []string
 		var err error
-		if args != "" {
-			err = obj.Call(method, 0, args).Store(&data)
+		if args != nil {
+			err = obj.Call(method, 0, args...).Store(&data)
 		} else {
 			err = obj.Call(method, 0).Store(&data)
 		}
@@ -235,13 +240,13 @@ func (d *deviceAPI) GetDBusDataAsList(t dbusType, dest string, path dbus.ObjectP
 	}
 }
 
-func (d *deviceAPI) GetDBusData(t dbusType, dest string, path dbus.ObjectPath, method string, args string) (interface{}, error) {
+func (d *deviceAPI) GetDBusData(t dbusType, dest string, path dbus.ObjectPath, method string, args ...interface{}) (interface{}, error) {
 	if d.bus(t) != nil {
 		obj := d.bus(t).Object(dest, path)
 		var data interface{}
 		var err error
-		if args != "" {
-			err = obj.Call(method, 0, args).Store(&data)
+		if args != nil {
+			err = obj.Call(method, 0, args...).Store(&data)
 		} else {
 			err = obj.Call(method, 0).Store(&data)
 		}
