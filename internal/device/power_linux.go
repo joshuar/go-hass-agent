@@ -103,13 +103,12 @@ func PowerUpater(ctx context.Context, status chan interface{}) {
 		return
 	}
 
-	activePowerProfile := deviceAPI.GetDBusProp(systemBus,
+	activePowerProfile, err := deviceAPI.GetDBusProp(systemBus,
 		powerProfilesDBusDest,
 		powerProfilesDBusPath,
 		powerProfilesDBusDest+".ActiveProfile")
-
-	// If we cannot retrieve a power profile from DBus, this is a no-op
-	if activePowerProfile.Value() == "" {
+	if err != nil {
+		log.Debug().Err(err).Msg("Cannot retrieve a power profile from DBus.")
 		return
 	}
 

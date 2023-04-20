@@ -96,42 +96,42 @@ func NewDevice(ctx context.Context) *linuxDevice {
 	}
 	var dBusDest = "org.freedesktop.hostname1"
 	var dBusPath = "/org/freedesktop/hostname1"
-	hostnameFromDBus := deviceAPI.GetDBusProp(systemBus,
+	hostnameFromDBus, err := deviceAPI.GetDBusProp(systemBus,
 		dBusDest,
 		dbus.ObjectPath(dBusPath),
 		dBusDest+".Hostname")
-	if hostname := hostnameFromDBus.Value().(string); hostname != "" {
-		device.hostname = hostname
-	} else {
+	if err != nil {
 		device.hostname = "localhost"
+	} else {
+		device.hostname = string(variantToValue[[]uint8](hostnameFromDBus))
 	}
-	hwVendorFromDBus := deviceAPI.GetDBusProp(systemBus,
+	hwVendorFromDBus, err := deviceAPI.GetDBusProp(systemBus,
 		dBusDest,
 		dbus.ObjectPath(dBusPath),
 		dBusDest+".HardwareVendor")
-	if vendor := hwVendorFromDBus.Value().(string); vendor != "" {
-		device.hwVendor = vendor
-	} else {
+	if err != nil {
 		hwVendor, err := os.ReadFile("/sys/devices/virtual/dmi/id/board_vendor")
 		if err != nil {
 			device.hwVendor = "Unknown Vendor"
 		} else {
 			device.hwVendor = strings.TrimSpace(string(hwVendor))
 		}
+	} else {
+		device.hwVendor = string(variantToValue[[]uint8](hwVendorFromDBus))
 	}
-	hwModelFromDBus := deviceAPI.GetDBusProp(systemBus,
+	hwModelFromDBus, err := deviceAPI.GetDBusProp(systemBus,
 		dBusDest,
 		dbus.ObjectPath(dBusPath),
 		dBusDest+".HardwareModel")
-	if model := hwModelFromDBus.Value().(string); model != "" {
-		device.hwModel = model
-	} else {
+	if err != nil {
 		hwModel, err := os.ReadFile("/sys/devices/virtual/dmi/id/product_name")
 		if err != nil {
 			device.hwModel = "Unknown Vendor"
 		} else {
 			device.hwModel = strings.TrimSpace(string(hwModel))
 		}
+	} else {
+		device.hwModel = string(variantToValue[[]uint8](hwModelFromDBus))
 	}
 
 	// Grab everything from the /etc/os-release file.

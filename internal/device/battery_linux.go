@@ -44,12 +44,13 @@ type upowerBattery struct {
 }
 
 func (b *upowerBattery) updateProp(api *deviceAPI, prop BatteryProp) {
-	propValue := api.GetDBusProp(systemBus, upowerDBusDest, b.dBusPath, "org.freedesktop.UPower.Device."+prop.String())
-	if propValue.Value() == "" {
+	propValue, err := api.GetDBusProp(systemBus, upowerDBusDest, b.dBusPath, "org.freedesktop.UPower.Device."+prop.String())
+	if err != nil {
 		log.Debug().Caller().
 			Msgf("Could not update property %s. Not found?", prop.String())
+	} else {
+		b.props[prop] = propValue
 	}
-	b.props[prop] = propValue
 }
 
 func (b *upowerBattery) getProp(prop BatteryProp) interface{} {
