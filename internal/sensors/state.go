@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"encoding/json"
 
+	"github.com/iancoleman/strcase"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/rs/zerolog/log"
 )
@@ -55,15 +56,20 @@ func (s *sensorState) State() interface{} {
 }
 
 func (s *sensorState) Type() string {
-	switch s.sensorType {
-	case hass.TypeSensor:
-		return "sensor"
-	case hass.TypeBinary:
-		return "binary_sensor"
-	default:
-		log.Debug().Caller().Msgf("Invalid or unknown sensor type %v", s.sensorType)
+	if s.sensorType != 0 {
+		return s.sensorType.String()
+	} else {
 		return ""
 	}
+	// switch s.sensorType {
+	// case hass.TypeSensor:
+	// 	return "sensor"
+	// case hass.TypeBinary:
+	// 	return "binary_sensor"
+	// default:
+	// 	log.Debug().Caller().Msgf("Invalid or unknown sensor type %v", s.sensorType)
+	// 	return ""
+	// }
 }
 
 func (s *sensorState) UniqueID() string {
@@ -76,7 +82,7 @@ func (s *sensorState) UnitOfMeasurement() string {
 
 func (s *sensorState) StateClass() string {
 	if s.stateClass != 0 {
-		return s.stateClass.String()
+		return strcase.ToCamel(s.stateClass.String())
 	} else {
 		return ""
 	}

@@ -85,8 +85,6 @@ func getWifiProp(ctx context.Context, path dbus.ObjectPath, wifiProp networkProp
 
 	deviceAPI, _ := FromContext(ctx)
 
-	log.Debug().Msgf("Processing path %s", path)
-
 	var apPath dbus.ObjectPath
 	ap, err := deviceAPI.GetDBusProp(systemBus,
 		dBusDest,
@@ -271,7 +269,7 @@ func (state *networkSensor) StateClass() hass.SensorStateClass {
 	case WifiSpeed:
 		fallthrough
 	case WifiStrength:
-		return hass.Measurement
+		return hass.StateMeasurement
 	default:
 		return 0
 	}
@@ -384,7 +382,7 @@ func NetworkUpdater(ctx context.Context, status chan interface{}) {
 
 	myDeviceList, err := deviceAPI.GetDBusData(
 		systemBus, dBusDest, dBusPath,
-		"org.freedesktop.NetworkManager.GetDevices", "")
+		"org.freedesktop.NetworkManager.GetDevices")
 	if err != nil {
 		log.Debug().Err(err).Caller().
 			Msg("Could not list devices from network manager.")

@@ -8,6 +8,7 @@ package device
 import (
 	"context"
 	"strings"
+	"time"
 
 	"github.com/godbus/dbus/v5"
 	"github.com/iancoleman/strcase"
@@ -66,7 +67,7 @@ func (s *appSensor) DeviceClass() hass.SensorDeviceClass {
 func (s *appSensor) StateClass() hass.SensorStateClass {
 	switch s.sensorType {
 	case RunningApps:
-		return hass.Measurement
+		return hass.StateMeasurement
 	default:
 		return 0
 	}
@@ -108,10 +109,15 @@ func (s *appSensor) Attributes() interface{} {
 		if len(appProcesses) > 0 {
 			cmd, _ = appProcesses[0].Cmdline()
 		}
+		t, _ := appProcesses[0].CreateTime()
 		return struct {
-			Cmd string `json:"Command Line"`
+			Cmd     string `json:"Command Line"`
+			Count   int    `json:"Process Count"`
+			Started string `json:"Started"`
 		}{
-			Cmd: cmd,
+			Cmd:     cmd,
+			Count:   len(appProcesses),
+			Started: time.UnixMilli(t).Format(time.RFC3339),
 		}
 	case RunningApps:
 		var runningApps []string
@@ -163,7 +169,7 @@ func AppUpdater(ctx context.Context, update chan interface{}) {
 			activeAppList, err := deviceAPI.GetDBusDataAsMap(sessionBus,
 				portalDest,
 				appStateDBusPath,
-				appStateDBusMethod, "")
+				appStateDBusMethod)
 			if err != nil {
 				log.Debug().Err(err).Caller().
 					Msg("No active apps found.")

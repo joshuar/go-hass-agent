@@ -181,7 +181,7 @@ func (state *upowerBatteryState) StateClass() hass.SensorStateClass {
 	case Temperature:
 		fallthrough
 	case EnergyRate:
-		return hass.Measurement
+		return hass.StateMeasurement
 	default:
 		return 0
 	}
@@ -303,7 +303,7 @@ func BatteryUpdater(ctx context.Context, status chan interface{}) {
 		return
 	}
 
-	batteryList, err := deviceAPI.GetDBusDataAsList(systemBus, upowerDBusDest, upowerDBusPath, upowerGetDevicesMethod, "")
+	batteryList, err := deviceAPI.GetDBusDataAsList(systemBus, upowerDBusDest, upowerDBusPath, upowerGetDevicesMethod)
 	if err != nil {
 		log.Debug().Err(err).Caller().
 			Msg("Unable to get any battery devices from DBus.")
