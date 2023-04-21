@@ -11,11 +11,14 @@ func _() {
 	_ = x[TotalMemory-1]
 	_ = x[AvailableMemory-2]
 	_ = x[UsedMemory-3]
+	_ = x[TotalSwapMemory-4]
+	_ = x[UsedSwapMemory-5]
+	_ = x[FreeSwapMemory-6]
 }
 
-const _memoryStat_name = "TotalMemoryAvailableMemoryUsedMemory"
+const _memoryStat_name = "TotalMemoryAvailableMemoryUsedMemoryTotalSwapMemoryUsedSwapMemoryFreeSwapMemory"
 
-var _memoryStat_index = [...]uint8{0, 11, 26, 36}
+var _memoryStat_index = [...]uint8{0, 11, 26, 36, 51, 65, 79}
 
 func (i memoryStat) String() string {
 	i -= 1
