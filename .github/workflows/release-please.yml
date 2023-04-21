@@ -19,11 +19,3 @@ jobs:
           release-type: node
           package-name: release-please-action
           token: ${{ secrets.GITHUB_TOKEN }}          
-      - if: ${{ steps.release-please.outputs.release_created }}
-        name: Run goreleaser
-        uses: goreleaser/goreleaser-action@v2
-        with:
-          version: latest
-          args: release --rm-dist
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
