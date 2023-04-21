@@ -12,6 +12,7 @@ import (
 
 	"github.com/iancoleman/strcase"
 	"github.com/joshuar/go-hass-agent/internal/hass"
+	"github.com/lthibault/jitterbug/v2"
 	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v3/mem"
 )
@@ -76,7 +77,11 @@ func (m *memory) Attributes() interface{} {
 
 func MemoryUpdater(ctx context.Context, status chan interface{}) {
 	sendMemStats(status)
-	ticker := time.NewTicker(time.Minute)
+
+	ticker := jitterbug.New(
+		time.Minute,
+		&jitterbug.Norm{Stdev: time.Second * 5},
+	)
 	go func() {
 		for {
 			select {

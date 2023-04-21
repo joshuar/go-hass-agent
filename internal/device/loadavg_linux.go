@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/joshuar/go-hass-agent/internal/hass"
+	"github.com/lthibault/jitterbug/v2"
 	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v3/load"
 )
@@ -87,7 +88,10 @@ func (l *loadavg) Attributes() interface{} {
 
 func LoadAvgUpdater(ctx context.Context, status chan interface{}) {
 	sendLoadAvgStats(status)
-	ticker := time.NewTicker(time.Minute)
+	ticker := jitterbug.New(
+		time.Minute,
+		&jitterbug.Norm{Stdev: time.Second * 5},
+	)
 	go func() {
 		for {
 			select {

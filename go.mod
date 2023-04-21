@@ -3,11 +3,13 @@ module github.com/joshuar/go-hass-agent
 go 1.19
 
 require (
+	github.com/davecgh/go-spew v1.1.1
 	github.com/go-playground/validator/v10 v10.11.2
 	github.com/godbus/dbus/v5 v5.1.0
 	github.com/jeandeaual/go-locale v0.0.0-20220711133428-7de61946b173
 	github.com/shirou/gopsutil/v3 v3.23.3
 	github.com/spf13/cobra v1.6.1
+	github.com/stretchr/testify v1.8.2
 	golang.org/x/text v0.8.0
 	nhooyr.io/websocket v1.8.7
 )
@@ -17,7 +19,6 @@ require (
 	github.com/benoitkugler/textlayout v0.3.0 // indirect
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
-	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dgraph-io/ristretto v0.1.1 // indirect
 	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/fredbi/uri v0.1.0 // indirect
@@ -55,7 +56,7 @@ require (
 	github.com/shoenig/go-m1cpu v0.1.4 // indirect
 	github.com/srwiley/oksvg v0.0.0-20220731023508-a61f04f16b76 // indirect
 	github.com/srwiley/rasterx v0.0.0-20210519020934-456a8d69b780 // indirect
-	github.com/stretchr/testify v1.8.2 // indirect
+	github.com/stretchr/objx v0.5.0 // indirect
 	github.com/tevino/abool v1.2.0 // indirect
 	github.com/tklauser/go-sysconf v0.3.11 // indirect
 	github.com/tklauser/numcpus v0.6.0 // indirect
@@ -83,6 +84,7 @@ require (
 	github.com/grandcat/zeroconf v1.0.0
 	github.com/iancoleman/strcase v0.2.0
 	github.com/inconshreveable/mousetrap v1.0.1 // indirect
+	github.com/lthibault/jitterbug/v2 v2.2.2
 	github.com/maltegrosse/go-geoclue2 v0.1.1
 	github.com/perimeterx/marshmallow v1.1.4
 	github.com/rs/zerolog v1.29.0
