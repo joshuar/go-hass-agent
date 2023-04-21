@@ -27,7 +27,12 @@ type sensorState struct {
 	name        string
 	entityID    string
 	category    string
-	metadata    *registryEntry
+	metadata    *sensorMetadata
+}
+
+type sensorMetadata struct {
+	Registered bool `json:"Registered"`
+	Disabled   bool `json:"Disabled"`
 }
 
 // sensorState implements hass.Sensor to represent a sensor in HA.
@@ -61,15 +66,6 @@ func (s *sensorState) Type() string {
 	} else {
 		return ""
 	}
-	// switch s.sensorType {
-	// case hass.TypeSensor:
-	// 	return "sensor"
-	// case hass.TypeBinary:
-	// 	return "binary_sensor"
-	// default:
-	// 	log.Debug().Caller().Msgf("Invalid or unknown sensor type %v", s.sensorType)
-	// 	return ""
-	// }
 }
 
 func (s *sensorState) UniqueID() string {
@@ -93,17 +89,17 @@ func (s *sensorState) EntityCategory() string {
 }
 
 func (s *sensorState) Disabled() bool {
-	return s.metadata.IsDisabled()
+	return s.metadata.Disabled
 }
 
 func (s *sensorState) Registered() bool {
-	return s.metadata.IsRegistered()
+	return s.metadata.Registered
 }
 
 // sensorState implements hass.Request so its data can be sent to the HA API
 
 func (sensor *sensorState) RequestType() hass.RequestType {
-	if sensor.metadata.IsRegistered() {
+	if sensor.metadata.Registered {
 		return hass.RequestTypeUpdateSensorStates
 	}
 	return hass.RequestTypeRegisterSensor
@@ -123,8 +119,8 @@ func (sensor *sensorState) ResponseHandler(rawResponse bytes.Buffer) {
 		json.Unmarshal(rawResponse.Bytes(), &r)
 		response := r.(map[string]interface{})
 		if v, ok := response["success"]; ok {
-			if v.(bool) && !sensor.metadata.IsRegistered() {
-				sensor.metadata.SetRegistered(true)
+			if v.(bool) && !sensor.metadata.Registered {
+				sensor.metadata.Registered = true
 				log.Debug().Caller().
 					Msgf("Sensor %s registered in HA.", sensor.name)
 			}
@@ -142,10 +138,25 @@ func (sensor *sensorState) ResponseHandler(rawResponse bytes.Buffer) {
 						sensor.name, sensor.state)
 			}
 			if _, ok := status["is_disabled"]; ok {
-				sensor.metadata.SetDisabled(true)
-			} else if sensor.metadata.IsDisabled() {
-				sensor.metadata.SetDisabled(false)
+				sensor.metadata.Disabled = true
+			} else if sensor.metadata.Disabled {
+				sensor.metadata.Disabled = false
 			}
 		}
+	}
+}
+
+func marshalSensorState(s hass.SensorUpdate) *sensorState {
+	return &sensorState{
+		entityID:    s.ID(),
+		name:        s.Name(),
+		deviceClass: s.DeviceClass(),
+		stateClass:  s.StateClass(),
+		sensorType:  s.SensorType(),
+		state:       s.State(),
+		attributes:  s.Attributes(),
+		icon:        s.Icon(),
+		stateUnits:  s.Units(),
+		category:    s.Category(),
 	}
 }

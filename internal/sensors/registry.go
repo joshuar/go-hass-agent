@@ -8,7 +8,6 @@ package sensors
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"time"
 
 	"fyne.io/fyne/v2"
@@ -69,28 +68,11 @@ func (reg *sensorRegistry) CloseSensorRegistry() {
 	reg.db.Close()
 }
 
-func (reg *sensorRegistry) Add(id string) *registryEntry {
-	entry := newRegistryEntry(id)
-	if values, err := reg.Get(entry.id); err != nil {
-		if errors.Is(err, badger.ErrKeyNotFound) {
-			log.Debug().
-				Msgf("Adding %s to registry DB.", entry.id)
-			err := reg.Set(entry.id, entry.values)
-			if err != nil {
-				log.Debug().Err(err).
-					Msgf("Could not add %s to registry DB.", id)
-			}
-		} else {
-			log.Debug().Err(err).Msg("Could not retrieve state.")
-		}
-	} else {
-		entry.values = values
+func (reg *sensorRegistry) Get(id string) (*sensorMetadata, error) {
+	state := &sensorMetadata{
+		Registered: false,
+		Disabled:   false,
 	}
-	return entry
-}
-
-func (reg *sensorRegistry) Get(id string) (*registryValues, error) {
-	state := &registryValues{}
 	err := reg.db.View(func(txn *badger.Txn) error {
 		item, err := txn.Get([]byte(id))
 		if err != nil {
@@ -111,7 +93,7 @@ func (reg *sensorRegistry) Get(id string) (*registryValues, error) {
 	return state, nil
 }
 
-func (reg *sensorRegistry) Set(id string, values *registryValues) error {
+func (reg *sensorRegistry) Set(id string, values *sensorMetadata) error {
 	err := reg.db.Update(func(txn *badger.Txn) error {
 		v, err := json.Marshal(values)
 		if err != nil {
@@ -124,48 +106,4 @@ func (reg *sensorRegistry) Set(id string, values *registryValues) error {
 		return err
 	})
 	return err
-}
-
-func (reg *sensorRegistry) Update(entry *registryEntry) error {
-	return reg.Set(entry.id, entry.values)
-}
-
-type registryValues struct {
-	Registered bool `json:"Registered"`
-	Disabled   bool `json:"Disabled"`
-}
-
-func newRegistryValues() *registryValues {
-	return &registryValues{
-		Disabled:   false,
-		Registered: false,
-	}
-}
-
-type registryEntry struct {
-	id     string
-	values *registryValues
-}
-
-func newRegistryEntry(id string) *registryEntry {
-	return &registryEntry{
-		id:     id,
-		values: newRegistryValues(),
-	}
-}
-
-func (e *registryEntry) IsDisabled() bool {
-	return e.values.Disabled
-}
-
-func (e *registryEntry) SetDisabled(state bool) {
-	e.values.Disabled = state
-}
-
-func (e *registryEntry) IsRegistered() bool {
-	return e.values.Registered
-}
-
-func (e *registryEntry) SetRegistered(state bool) {
-	e.values.Registered = state
 }

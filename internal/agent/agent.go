@@ -130,14 +130,7 @@ func (agent *Agent) tracker(agentCtx context.Context, configWG *sync.WaitGroup) 
 			case data := <-updateCh:
 				switch data := data.(type) {
 				case hass.SensorUpdate:
-					sensorID := data.ID()
-					if !sensorTracker.Exists(sensorID) {
-						sensorTracker.Add(data)
-						log.Debug().Caller().Msgf("Sensor discovered: %s", data.Name())
-					} else {
-						sensorTracker.Update(data)
-					}
-					go sensorTracker.Send(ctx, sensorID)
+					go sensorTracker.Update(ctx, data)
 				case hass.LocationUpdate:
 					l := hass.MarshalLocationUpdate(data)
 					go hass.APIRequest(ctx, l)
