@@ -12,6 +12,7 @@ import (
 
 	"github.com/godbus/dbus/v5"
 	"github.com/joshuar/go-hass-agent/internal/hass"
+	"github.com/lthibault/jitterbug/v2"
 	"github.com/rs/zerolog/log"
 )
 
@@ -121,7 +122,11 @@ func ProblemsUpdater(ctx context.Context, status chan interface{}) {
 
 	sendAllProblems(deviceAPI, status)
 
-	ticker := time.NewTicker(time.Minute * 15)
+	ticker := jitterbug.New(
+		time.Minute*15,
+		&jitterbug.Norm{Stdev: time.Minute},
+	)
+
 	go func() {
 		for {
 			select {

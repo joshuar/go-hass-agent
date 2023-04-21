@@ -13,6 +13,7 @@ import (
 
 	"github.com/carlmjohnson/requests"
 	"github.com/joshuar/go-hass-agent/internal/hass"
+	"github.com/lthibault/jitterbug/v2"
 	"github.com/rs/zerolog/log"
 )
 
@@ -140,7 +141,10 @@ func updateExternalIPSensors(ctx context.Context, status chan interface{}) {
 func ExternalIPUpdater(ctx context.Context, status chan interface{}) {
 	// Set up a ticker with the interval specified to check if the external IPs
 	// have changed.
-	ticker := time.NewTicker(time.Minute * 5)
+	ticker := jitterbug.New(
+		time.Minute*5,
+		&jitterbug.Norm{Stdev: time.Second * 30},
+	)
 	go func() {
 		for {
 			select {
