@@ -19,19 +19,19 @@ import (
 //go:generate stringer -type=memoryStat -output mem_stats_linux.go
 
 const (
-	TotalMemory memoryStat = iota + 1
-	AvailableMemory
-	UsedMemory
-	TotalSwapMemory
-	UsedSwapMemory
-	FreeSwapMemory
+	MemoryTotal memoryStat = iota + 1
+	MemoryAvailable
+	MemoryUsed
+	SwapMemoryTotal
+	SwapMemoryUsed
+	SwapMemoryFree
 )
 
 type memoryStat int
 
 type memory struct {
-	memStats *mem.VirtualMemoryStat
-	name     memoryStat
+	value uint64
+	name  memoryStat
 }
 
 func (m *memory) Name() string {
@@ -59,24 +59,7 @@ func (m *memory) StateClass() hass.SensorStateClass {
 }
 
 func (m *memory) State() interface{} {
-	switch m.name {
-	case TotalMemory:
-		return m.memStats.Total
-	case AvailableMemory:
-		return m.memStats.Available
-	case UsedMemory:
-		return m.memStats.Used
-	case TotalSwapMemory:
-		return m.memStats.SwapTotal
-	case FreeSwapMemory:
-		return m.memStats.SwapFree
-	// case UsedSwapMemory:
-	// 	return m.memStats.SwapCached
-	default:
-		log.Debug().Caller().
-			Msg("Unexpected memory state measurement requested.")
-		return 0
-	}
+	return m.value
 }
 
 func (m *memory) Units() string {
@@ -92,8 +75,7 @@ func (m *memory) Attributes() interface{} {
 }
 
 func MemoryUpdater(ctx context.Context, status chan interface{}) {
-	latest := getStats()
-	sendStats(latest, status)
+	sendMemStats(status)
 	ticker := time.NewTicker(time.Minute)
 	go func() {
 		for {
@@ -101,31 +83,41 @@ func MemoryUpdater(ctx context.Context, status chan interface{}) {
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
-				latest := getStats()
-				sendStats(latest, status)
+				sendMemStats(status)
 			}
 		}
 	}()
 }
 
-func getStats() *memory {
-	stats := &memory{}
-	if m, err := mem.VirtualMemory(); err != nil {
+func sendMemStats(status chan interface{}) {
+	stats := []memoryStat{MemoryTotal, MemoryAvailable, MemoryUsed, SwapMemoryTotal, SwapMemoryFree}
+	var memDetails *mem.VirtualMemoryStat
+	var err error
+	if memDetails, err = mem.VirtualMemory(); err != nil {
 		log.Debug().Err(err).Caller().
 			Msg("Problem fetching memory stats.")
-		stats.memStats = nil
-	} else {
-		stats.memStats = m
+		return
 	}
-	return stats
-}
-
-func sendStats(latest *memory, status chan interface{}) {
-	stats := []memoryStat{TotalMemory, AvailableMemory, UsedMemory, TotalSwapMemory, FreeSwapMemory}
-	if latest.memStats != nil {
-		for _, stat := range stats {
-			latest.name = stat
-			status <- latest
+	for _, stat := range stats {
+		var statValue uint64
+		switch stat {
+		case MemoryTotal:
+			statValue = memDetails.Total
+		case MemoryAvailable:
+			statValue = memDetails.Available
+		case MemoryUsed:
+			statValue = memDetails.Used
+		case SwapMemoryTotal:
+			statValue = memDetails.SwapTotal
+		case SwapMemoryFree:
+			statValue = memDetails.SwapFree
+			// case UsedSwapMemory:
+			// 	return m.memStats.SwapCached
 		}
+		state := &memory{
+			value: statValue,
+			name:  stat,
+		}
+		status <- state
 	}
 }

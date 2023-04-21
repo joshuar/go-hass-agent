@@ -8,15 +8,15 @@ func _() {
 	// An "invalid array index" compiler error signifies that the constant values have changed.
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
-	_ = x[TotalMemory-1]
-	_ = x[AvailableMemory-2]
-	_ = x[UsedMemory-3]
-	_ = x[TotalSwapMemory-4]
-	_ = x[UsedSwapMemory-5]
-	_ = x[FreeSwapMemory-6]
+	_ = x[MemoryTotal-1]
+	_ = x[MemoryAvailable-2]
+	_ = x[MemoryUsed-3]
+	_ = x[SwapMemoryTotal-4]
+	_ = x[SwapMemoryUsed-5]
+	_ = x[SwapMemoryFree-6]
 }
 
-const _memoryStat_name = "TotalMemoryAvailableMemoryUsedMemoryTotalSwapMemoryUsedSwapMemoryFreeSwapMemory"
+const _memoryStat_name = "MemoryTotalMemoryAvailableMemoryUsedSwapMemoryTotalSwapMemoryUsedSwapMemoryFree"
 
 var _memoryStat_index = [...]uint8{0, 11, 26, 36, 51, 65, 79}
 
