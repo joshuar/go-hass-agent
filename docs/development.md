@@ -59,7 +59,7 @@ See [device/sensors.md](device/sensors.md).
 This repository is using [conventional commit
 messages](https://www.conventionalcommits.org/en/v1.0.0/#summary). This provides
 the ability to automatically include relevant notes in the
-[changelog](../changelog.md). The [TL;DR](https://en.wikipedia.org/wiki/TL;DR)
+[changelog](../CHANGELOG.md). The [TL;DR](https://en.wikipedia.org/wiki/TL;DR)
 is when writing commit messages, add a prefix:
 
 - `feat:` for a new feature, like a new sensor.
