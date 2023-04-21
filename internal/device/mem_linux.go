@@ -22,13 +22,16 @@ const (
 	TotalMemory memoryStat = iota + 1
 	AvailableMemory
 	UsedMemory
+	TotalSwapMemory
+	UsedSwapMemory
+	FreeSwapMemory
 )
 
 type memoryStat int
 
 type memory struct {
-	stats *mem.VirtualMemoryStat
-	name  memoryStat
+	memStats *mem.VirtualMemoryStat
+	name     memoryStat
 }
 
 func (m *memory) Name() string {
@@ -58,11 +61,17 @@ func (m *memory) StateClass() hass.SensorStateClass {
 func (m *memory) State() interface{} {
 	switch m.name {
 	case TotalMemory:
-		return m.stats.Total
+		return m.memStats.Total
 	case AvailableMemory:
-		return m.stats.Available
+		return m.memStats.Available
 	case UsedMemory:
-		return m.stats.Used
+		return m.memStats.Used
+	case TotalSwapMemory:
+		return m.memStats.SwapTotal
+	case FreeSwapMemory:
+		return m.memStats.SwapFree
+	// case UsedSwapMemory:
+	// 	return m.memStats.SwapCached
 	default:
 		log.Debug().Caller().
 			Msg("Unexpected memory state measurement requested.")
@@ -100,22 +109,21 @@ func MemoryUpdater(ctx context.Context, status chan interface{}) {
 }
 
 func getStats() *memory {
+	stats := &memory{}
 	if m, err := mem.VirtualMemory(); err != nil {
 		log.Debug().Err(err).Caller().
 			Msg("Problem fetching memory stats.")
-		return &memory{
-			stats: nil,
-		}
+		stats.memStats = nil
 	} else {
-		return &memory{
-			stats: m,
-		}
+		stats.memStats = m
 	}
+	return stats
 }
 
 func sendStats(latest *memory, status chan interface{}) {
-	if latest.stats != nil {
-		for _, stat := range []memoryStat{TotalMemory, AvailableMemory, UsedMemory} {
+	stats := []memoryStat{TotalMemory, AvailableMemory, UsedMemory, TotalSwapMemory, FreeSwapMemory}
+	if latest.memStats != nil {
+		for _, stat := range stats {
 			latest.name = stat
 			status <- latest
 		}
