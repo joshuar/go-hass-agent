@@ -191,6 +191,7 @@ func SetupSensors() *SensorInfo {
 	sensorInfo.Add("Power", PowerUpater)
 	sensorInfo.Add("ExternalIP", ExternalIPUpdater)
 	sensorInfo.Add("Problems", ProblemsUpdater)
+	sensorInfo.Add("Memory", MemoryUpdater)
 	// Add each SensorUpdater function here...
 	return sensorInfo
 }
