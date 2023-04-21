@@ -17,4 +17,4 @@ jobs:
         with:
           release-type: node
           package-name: release-please-action
-          repo-token: ${{ secrets.GITHUB_TOKEN }}          
+          token: ${{ secrets.GITHUB_TOKEN }}          
