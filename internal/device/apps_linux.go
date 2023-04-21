@@ -106,10 +106,11 @@ func (s *appSensor) Attributes() interface{} {
 	case ActiveApp:
 		appProcesses := findProcesses(getProcessBasename(s.State().(string)))
 		var cmd string
+		var createTime int64
 		if len(appProcesses) > 0 {
 			cmd, _ = appProcesses[0].Cmdline()
+			createTime, _ = appProcesses[0].CreateTime()
 		}
-		t, _ := appProcesses[0].CreateTime()
 		return struct {
 			Cmd     string `json:"Command Line"`
 			Count   int    `json:"Process Count"`
@@ -117,7 +118,7 @@ func (s *appSensor) Attributes() interface{} {
 		}{
 			Cmd:     cmd,
 			Count:   len(appProcesses),
-			Started: time.UnixMilli(t).Format(time.RFC3339),
+			Started: time.UnixMilli(createTime).Format(time.RFC3339),
 		}
 	case RunningApps:
 		var runningApps []string
