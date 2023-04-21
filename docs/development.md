@@ -54,3 +54,15 @@ An example can be found in `device/helpers_linux.go`.
 
 See [device/sensors.md](device/sensors.md).
 
+## Committing Code
+
+This repository is using [conventional commit
+messages](https://www.conventionalcommits.org/en/v1.0.0/#summary). This provides
+the ability to automatically include relevant notes in the
+[changelog](../changelog.md). The [TL;DR](https://en.wikipedia.org/wiki/TL;DR)
+is when writing commit messages, add a prefix:
+
+- `feat:` for a new feature, like a new sensor.
+- `fix:` when fixing an issue.
+- `refactor:` when making non-visible but useful code changes.
+- …and so on. See the link above or see the existing commit messages for examples.
