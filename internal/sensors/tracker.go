@@ -16,7 +16,7 @@ import (
 )
 
 type sensorTracker struct {
-	mu            sync.Mutex
+	mu            sync.RWMutex
 	sensor        map[string]*sensorState
 	sensorWorkers *device.SensorInfo
 	registry      *sensorRegistry
@@ -34,61 +34,61 @@ func NewSensorTracker(ctx context.Context, appPath fyne.URI) *sensorTracker {
 
 // Add creates a new sensor in the tracker based on a recieved state
 // update.
-func (tracker *sensorTracker) Add(s hass.SensorUpdate) {
+func (tracker *sensorTracker) add(s hass.SensorUpdate) {
 	tracker.mu.Lock()
 	defer tracker.mu.Unlock()
-	sensor := &sensorState{
-		entityID:    s.ID(),
-		name:        s.Name(),
-		deviceClass: s.DeviceClass(),
-		stateClass:  s.StateClass(),
-		sensorType:  s.SensorType(),
-		state:       s.State(),
-		attributes:  s.Attributes(),
-		icon:        s.Icon(),
-		stateUnits:  s.Units(),
-		category:    s.Category(),
-		metadata:    tracker.registry.Add(s.ID()),
+	state := marshalSensorState(s)
+	metadata, err := tracker.registry.Get(state.entityID)
+	if err != nil {
+		log.Debug().Err(err).Caller().
+			Msgf("Sensor %s not found in registry.", s.Name())
 	}
-	tracker.sensor[s.ID()] = sensor
+	state.metadata = metadata
+	tracker.sensor[state.entityID] = state
+	log.Debug().Caller().Msgf("Added sensor: %s", state.entityID)
 }
 
-// Update ensures the bare minimum properties of a sensor are updated from
-// a hass.SensorUpdate
-func (tracker *sensorTracker) Update(s hass.SensorUpdate) {
-	tracker.mu.Lock()
-	defer tracker.mu.Unlock()
-	tracker.sensor[s.ID()].state = s.State()
-	tracker.sensor[s.ID()].attributes = s.Attributes()
-	tracker.sensor[s.ID()].icon = s.Icon()
+// Update will send a sensor update to HA, checking to ensure the sensor is not
+// disabled. It will also update the local registry state based on the response.
+func (tracker *sensorTracker) Update(ctx context.Context, s hass.SensorUpdate) {
+	sensorID := s.ID()
+	if !tracker.exists(sensorID) {
+		tracker.add(s)
+	} else {
+		tracker.update(s)
+	}
+	sensor := tracker.get(sensorID)
+	if tracker.hassConfig.IsEntityDisabled(sensorID) {
+		if !sensor.metadata.Disabled {
+			sensor.metadata.Disabled = true
+		}
+	} else {
+		hass.APIRequest(ctx, sensor)
+		tracker.registry.Set(sensorID, sensor.metadata)
+	}
 }
 
-func (tracker *sensorTracker) Get(id string) *sensorState {
-	tracker.mu.Lock()
-	defer tracker.mu.Unlock()
+func (tracker *sensorTracker) get(id string) *sensorState {
+	tracker.mu.RLock()
+	defer tracker.mu.RUnlock()
 	return tracker.sensor[id]
 }
 
-func (tracker *sensorTracker) Exists(id string) bool {
+func (tracker *sensorTracker) update(s hass.SensorUpdate) {
 	tracker.mu.Lock()
-	defer tracker.mu.Unlock()
+	tracker.sensor[s.ID()].state = s.State()
+	tracker.sensor[s.ID()].attributes = s.Attributes()
+	tracker.sensor[s.ID()].icon = s.Icon()
+	tracker.mu.Unlock()
+}
+
+func (tracker *sensorTracker) exists(id string) bool {
+	tracker.mu.RLock()
+	defer tracker.mu.RUnlock()
 	if _, ok := tracker.sensor[id]; ok {
 		return true
 	} else {
 		return false
-	}
-}
-
-// Send will send a sensor update to HA, checking to ensure the sensor is not
-// disabled. It will also update the local registry state based on the response.
-func (tracker *sensorTracker) Send(ctx context.Context, id string) {
-	if tracker.hassConfig.IsEntityDisabled(id) {
-		if !tracker.sensor[id].metadata.IsDisabled() {
-			tracker.sensor[id].metadata.SetDisabled(true)
-		}
-	} else {
-		hass.APIRequest(ctx, tracker.sensor[id])
-		tracker.registry.Update(tracker.sensor[id].metadata)
 	}
 }
 
