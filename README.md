@@ -1,8 +1,8 @@
 # go-hass-app
 
-![MIT](https://img.shields.io/github/license/joshuar/go-hass-agent) 
+![MIT](https://img.shields.io/github/license/joshuar/go-hass-agent)
 ![GitHub last commit](https://img.shields.io/github/last-commit/joshuar/go-hass-agent)
-[![Go Report Card](https://goreportcard.com/badge/github.com/joshuar/go-hass-agent?style=flat-square)](https://goreportcard.com/report/github.com/joshuar/go-hass-agent) 
+[![Go Report Card](https://goreportcard.com/badge/github.com/joshuar/go-hass-agent?style=flat-square)](https://goreportcard.com/report/github.com/joshuar/go-hass-agent)
 [![Go Reference](https://pkg.go.dev/badge/github.com/joshuar/go-hass-agent.svg)](https://pkg.go.dev/github.com/joshuar/go-hass-agent)
 [![Release](https://img.shields.io/github/release/joshuar/go-hass-agent?style=flat-square)](https://github.com/joshuar/go-hass-agent/releases/latest)
 
@@ -20,6 +20,9 @@ This app will add some sensors to a Home Assistant instance:
 - Network status (for example, network connection status, internal and external
   IP addresses and Wi-Fi details where relevant).
 - Power profile.
+- Problems detected by ABRT.
+- Memory and swap usage (total/free/used).
+- Load Averages.
 
 The code can be extended to add additional sensors. See the [development
 docs](docs/development.md) for details.
@@ -30,16 +33,16 @@ As examples of some of the things that can be done with the data published by th
 
 - Change your lighting depending on what active/running apps are on your
   laptop/desktop. For example, you could set your lights dim or activate a scene
-  when you are gaming. 
+  when you are gaming.
 - With your laptop plugged into a smart plug that is also controlled by Home
   Assistant, turn the smart plug on/off based on the battery charge to
   force a full charge/discharge cycle of the battery, extending its life over
-  leaving it constantly charged. 
+  leaving it constantly charged.
 - Like on mobile devices, create automations based on the location of your
-  laptop running this app. 
+  laptop running this app.
 - Receive notifications from Home Assistant on your desktop/laptop.
 
-See also the [FAQ](docs/faq.md). 
+See also the [FAQ](docs/faq.md).
 
 ## 🤝 Compatibility
 
@@ -63,16 +66,16 @@ desktop environment.
 
 On first-run, **go-hass-agent** will display a window where you will need to enter
 some details, so it can register itself with a Home Assistant instance to be
-able to report sensors and receive notifications.  
+able to report sensors and receive notifications.
 
 ![Registration Window](docs/agent/registration.png)
 
 **You will need:**
 
 - A long-lived access token. You can generate one on your [account profile
-  page](https://www.home-assistant.io/docs/authentication/#your-account-profile). 
+  page](https://www.home-assistant.io/docs/authentication/#your-account-profile).
 - The hostname (or IP address) and port on which a Home Assistant instance
-  can be found. 
+  can be found.
   - **go-hass-agent** will try to auto-detect this for you, and you can select it in
   the *Auto-discovered servers* list. Otherwise, you will need to select *Use
   Custom Server?*, and enter the details manually in *Manual Server Entry*.
@@ -80,7 +83,7 @@ able to report sensors and receive notifications.
   *Use TLS?* as well.
 
 When you have entered all the details, click **Submit** and the agent should
-start running and reporting sensors to the Home Assistant instance. 
+start running and reporting sensors to the Home Assistant instance.
 
 ### Regular Usage
 
@@ -107,7 +110,7 @@ sensors. This might help anyone looking to contribute, extend or fork this tool.
 While this application does not have many points where text is displayed to
 the end user (logging aside), translation is supported through the `language`
 and `message` packages that are part of
-[golang.org/x/text](https://pkg.go.dev/golang.org/x/text). 
+[golang.org/x/text](https://pkg.go.dev/golang.org/x/text).
 
 I would welcome pull requests for translations!
 
