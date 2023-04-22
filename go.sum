@@ -62,8 +62,8 @@ github.com/benoitkugler/textlayout v0.3.0/go.mod h1:o+1hFV+JSHBC9qNLIuwVoLedERU7
 github.com/benoitkugler/textlayout-testdata v0.1.1/go.mod h1:i/qZl09BbUOtd7Bu/W1CAubRwTWrEXWq6JwMkw8wYxo=
 github.com/bgentry/speakeasy v0.1.0/go.mod h1:+zsyZBPWlz7T6j88CTgSN5bM796AkVf0kBD4zp0CCIs=
 github.com/bketelsen/crypt v0.0.4/go.mod h1:aI6NrJ0pMGgvZKL1iVgXLnfIFJtfV+bKCoqOes/6LfM=
-github.com/carlmjohnson/requests v0.23.3 h1:22EEJsJqjNWprjQtqw2nLoQ1Sz+I1qJUbvhd0cHSHUg=
-github.com/carlmjohnson/requests v0.23.3/go.mod h1:Qzp6tW4DQyainPP+tGwiJTzwxvElTIKm0B191TgTtOA=
+github.com/carlmjohnson/requests v0.23.1 h1:d8FpOZC6We3raxa3cW1oEyK+cNz4XSW8A6wjMkMsbOM=
+github.com/carlmjohnson/requests v0.23.1/go.mod h1:i/0+cvgndkM7SPtw911bcbYR4CP+/9vP/+TbcFqPz3A=
 github.com/cenkalti/backoff v2.2.1+incompatible h1:tNowT99t7UNflLxfYYSlKYsBpXdEet03Pg2g16Swow4=
 github.com/cenkalti/backoff v2.2.1+incompatible/go.mod h1:90ReRw6GdpyfrHakVjL/QHaoyV4aDUVVkXQJJJ3NXXM=
 github.com/cenkalti/backoff/v4 v4.2.1 h1:y4OZtCnogmCPw98Zjyt5a6+QwPLGkiQsYW5oUqylYbM=
