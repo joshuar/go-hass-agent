@@ -7,7 +7,7 @@ permissions:
   contents: write
   pull-requests: write
 
-name: release-please
+name: release
 
 jobs:
   release-please:
@@ -29,6 +29,9 @@ jobs:
           go install github.com/abice/go-enum@latest
           go install github.com/fyne-io/fyne-cross@latest
           go install golang.org/x/text/cmd/gotext@latest
+      - name: Install dependencies
+        run: sudo apt-get install -y desktop-file-utils gcc libgl1-mesa-dev libegl1-mesa-dev libgles2-mesa-dev libx11-dev xorg-dev
+        if: ${{ runner.os == 'Linux' }}        
       - if: ${{ steps.release-please.outputs.release_created }}
         name: Run goreleaser
         uses: goreleaser/goreleaser-action@v2
