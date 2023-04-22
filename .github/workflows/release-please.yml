@@ -18,4 +18,22 @@ jobs:
         with:
           release-type: node
           package-name: release-please-action
-          token: ${{ secrets.GITHUB_TOKEN }}          
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.16.x'
+      - name: Install Go dependencies
+        run: |
+          go install golang.org/x/tools/cmd/stringer@latest
+          go install github.com/abice/go-enum@latest
+          go install github.com/fyne-io/fyne-cross@latest
+          go install golang.org/x/text/cmd/gotext@latest
+      - if: ${{ steps.release-please.outputs.release_created }}
+        name: Run goreleaser
+        uses: goreleaser/goreleaser-action@v2
+        with:
+          version: latest
+          args: release --rm-dist
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
