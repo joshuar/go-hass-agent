@@ -136,7 +136,7 @@ func (s *appSensor) Attributes() interface{} {
 	return nil
 }
 
-func marshallAppStateUpdate(t appSensorType, v map[string]dbus.Variant) *appSensor {
+func marshalAppStateUpdate(t appSensorType, v map[string]dbus.Variant) *appSensor {
 	return &appSensor{
 		sensorValue: v,
 		sensorType:  t,
@@ -175,8 +175,8 @@ func AppUpdater(ctx context.Context, update chan interface{}) {
 				log.Debug().Err(err).Caller().
 					Msg("No active apps found.")
 			} else {
-				update <- marshallAppStateUpdate(RunningApps, activeAppList)
-				update <- marshallAppStateUpdate(ActiveApp, activeAppList)
+				update <- marshalAppStateUpdate(RunningApps, activeAppList)
+				update <- marshalAppStateUpdate(ActiveApp, activeAppList)
 			}
 		},
 	}

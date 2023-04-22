@@ -81,7 +81,7 @@ func (state *powerSensor) Attributes() interface{} {
 	return state.sensorAttributes
 }
 
-func marshallPowerState(ctx context.Context, sensor powerProp, path dbus.ObjectPath, group string, v dbus.Variant) *powerSensor {
+func marshalPowerStateUpdate(ctx context.Context, sensor powerProp, path dbus.ObjectPath, group string, v dbus.Variant) *powerSensor {
 	var value, attributes interface{}
 	switch sensor {
 	case Profile:
@@ -112,7 +112,7 @@ func PowerUpater(ctx context.Context, status chan interface{}) {
 		return
 	}
 
-	status <- marshallPowerState(ctx,
+	status <- marshalPowerStateUpdate(ctx,
 		Profile,
 		powerProfilesDBusPath,
 		"",
@@ -136,7 +136,7 @@ func PowerUpater(ctx context.Context, status chan interface{}) {
 					log.Debug().Msgf("Unhandled property %v changed to %v", propName, propValue)
 				}
 				if propType != 0 {
-					propState := marshallPowerState(ctx,
+					propState := marshalPowerStateUpdate(ctx,
 						propType,
 						s.Path,
 						"",

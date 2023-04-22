@@ -57,7 +57,7 @@ func (b *upowerBattery) getProp(prop BatteryProp) interface{} {
 	return b.props[prop].Value()
 }
 
-func (b *upowerBattery) marshallStateUpdate(api *deviceAPI, prop BatteryProp) *upowerBatteryState {
+func (b *upowerBattery) marshalBatteryStateUpdate(api *deviceAPI, prop BatteryProp) *upowerBatteryState {
 	// log.Debug().Caller().Msgf("Marshalling update for %v for battery %v", prop.String(), b.getProp(NativePath).(string))
 	state := &upowerBatteryState{
 		batteryID: b.getProp(NativePath).(string),
@@ -326,7 +326,7 @@ func BatteryUpdater(ctx context.Context, status chan interface{}) {
 		// Standard battery properties as sensors
 		for _, prop := range []BatteryProp{battState} {
 			batteryTracker[batteryID].updateProp(deviceAPI, prop)
-			stateUpdate := batteryTracker[batteryID].marshallStateUpdate(deviceAPI, prop)
+			stateUpdate := batteryTracker[batteryID].marshalBatteryStateUpdate(deviceAPI, prop)
 			if stateUpdate != nil {
 				status <- stateUpdate
 			}
@@ -336,7 +336,7 @@ func BatteryUpdater(ctx context.Context, status chan interface{}) {
 		if batteryTracker[batteryID].getProp(battType).(uint32) == 2 {
 			for _, prop := range []BatteryProp{Percentage, Temperature, EnergyRate} {
 				batteryTracker[batteryID].updateProp(deviceAPI, prop)
-				stateUpdate := batteryTracker[batteryID].marshallStateUpdate(deviceAPI, prop)
+				stateUpdate := batteryTracker[batteryID].marshalBatteryStateUpdate(deviceAPI, prop)
 				if stateUpdate != nil {
 					status <- stateUpdate
 				}
@@ -344,7 +344,7 @@ func BatteryUpdater(ctx context.Context, status chan interface{}) {
 		} else {
 			batteryTracker[batteryID].updateProp(deviceAPI, BatteryLevel)
 			if batteryTracker[batteryID].getProp(BatteryLevel).(uint32) != 1 {
-				stateUpdate := batteryTracker[batteryID].marshallStateUpdate(deviceAPI, BatteryLevel)
+				stateUpdate := batteryTracker[batteryID].marshalBatteryStateUpdate(deviceAPI, BatteryLevel)
 				if stateUpdate != nil {
 					status <- stateUpdate
 				}
@@ -376,7 +376,7 @@ func BatteryUpdater(ctx context.Context, status chan interface{}) {
 							batteryTracker[batteryID].props[BatteryProp] = propValue
 							log.Debug().Caller().
 								Msgf("Updating battery property %v to %v", BatteryProp.String(), propValue.Value())
-							stateUpdate := batteryTracker[batteryID].marshallStateUpdate(deviceAPI, BatteryProp)
+							stateUpdate := batteryTracker[batteryID].marshalBatteryStateUpdate(deviceAPI, BatteryProp)
 							if stateUpdate != nil {
 								status <- stateUpdate
 							}
