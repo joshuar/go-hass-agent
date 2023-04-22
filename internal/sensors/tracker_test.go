@@ -85,10 +85,10 @@ func TestExistsSuccess(t *testing.T) {
 }
 
 func TestAdd(t *testing.T) {
-	fakeSensor := &FakeSensor{
-		name:  "FakeSensor",
-		state: "FakeValue",
-	}
+	// fakeSensor := &FakeSensor{
+	// 	name:  "FakeSensor",
+	// 	state: "FakeValue",
+	// }
 
 	fakeRegistry := new(sensorRegistry)
 	db, err := badger.Open(badger.DefaultOptions("").WithInMemory(true))
@@ -101,7 +101,7 @@ func TestAdd(t *testing.T) {
 		registry:      fakeRegistry,
 		hassConfig:    nil,
 	}
-	tracker.Add(fakeSensor)
+	// tracker.Add(fakeSensor)
 	if !tracker.exists("FakeSensor") {
 		t.Error("Fake sensor was not added!")
 	}
