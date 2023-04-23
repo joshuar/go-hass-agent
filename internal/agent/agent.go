@@ -109,6 +109,10 @@ func (agent *Agent) stop() {
 	agent.Tray.Close()
 }
 
+func (agent *Agent) getStorageURI() fyne.URI {
+	return agent.App.Storage().RootURI()
+}
+
 // tracker should be run in a goroutine and is responsible for creating,
 // tracking and updating HA with all sensors provided from the platform/device.
 func (agent *Agent) tracker(agentCtx context.Context, configWG *sync.WaitGroup) {
@@ -116,7 +120,7 @@ func (agent *Agent) tracker(agentCtx context.Context, configWG *sync.WaitGroup) 
 
 	appConfig := agent.loadAppConfig()
 	ctx := config.NewContext(agentCtx, appConfig)
-	sensorTracker := sensors.NewSensorTracker(ctx, agent.App.Storage().RootURI())
+	sensorTracker := sensors.NewSensorTracker(ctx, agent.getStorageURI())
 	updateCh := make(chan interface{})
 
 	go agent.runNotificationsWorker(ctx)

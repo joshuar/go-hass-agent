@@ -43,19 +43,21 @@ func OpenSensorRegistry(ctx context.Context, appPath fyne.URI) *sensorRegistry {
 	go func() {
 		ticker := time.NewTicker(5 * time.Minute)
 		defer ticker.Stop()
-		for range ticker.C {
-		again:
-			err := db.RunValueLogGC(0.7)
-			if err == nil {
-				goto again
+		for {
+			select {
+			case <-ticker.C:
+				log.Debug().Caller().Msg("Running GC on registry DB.")
+			again:
+				err := db.RunValueLogGC(0.7)
+				if err == nil {
+					goto again
+				}
+			case <-ctx.Done():
+				log.Debug().Caller().Msg("Closing registry.")
+				db.Close()
+
 			}
 		}
-	}()
-
-	go func() {
-		<-ctx.Done()
-		log.Debug().Caller().Msg("Closing registry.")
-		db.Close()
 	}()
 
 	return &sensorRegistry{
@@ -64,8 +66,8 @@ func OpenSensorRegistry(ctx context.Context, appPath fyne.URI) *sensorRegistry {
 	}
 }
 
-func (reg *sensorRegistry) CloseSensorRegistry() {
-	reg.db.Close()
+func (reg *sensorRegistry) CloseSensorRegistry() error {
+	return reg.db.Close()
 }
 
 func (reg *sensorRegistry) Get(id string) (*sensorMetadata, error) {
