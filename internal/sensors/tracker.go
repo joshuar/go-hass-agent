@@ -69,6 +69,9 @@ func (tracker *sensorTracker) get(id string) *sensorState {
 }
 
 func (tracker *sensorTracker) update(s hass.SensorUpdate) {
+	if !tracker.exists(s.ID()) {
+		return
+	}
 	tracker.mu.Lock()
 	tracker.sensor[s.ID()].state = s.State()
 	tracker.sensor[s.ID()].attributes = s.Attributes()
