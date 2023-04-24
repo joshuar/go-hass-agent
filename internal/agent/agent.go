@@ -53,12 +53,10 @@ func Run() {
 	log.Info().Msg("Starting agent.")
 	agent := NewAgent()
 
-	agentStorage := agent.App.Storage().RootURI()
-
 	translator = translations.NewTranslator()
 
 	// If possible, create and log to a file as well as the console.
-	logFile, err := storage.Child(agentStorage, "go-hass-app.log")
+	logFile, err := agent.extraStoragePath("go-hass-app.log")
 	if err != nil {
 		log.Error().Err(err).
 			Msg("Unable to create a log file. Will only write logs to stdout.")
@@ -113,6 +111,16 @@ func (agent *Agent) getStorageURI() fyne.URI {
 	return agent.App.Storage().RootURI()
 }
 
+func (agent *Agent) extraStoragePath(id string) (fyne.URI, error) {
+	rootPath := agent.App.Storage().RootURI()
+	extraPath, err := storage.Child(rootPath, id)
+	if err != nil {
+		return nil, err
+	} else {
+		return extraPath, nil
+	}
+}
+
 // tracker should be run in a goroutine and is responsible for creating,
 // tracking and updating HA with all sensors provided from the platform/device.
 func (agent *Agent) tracker(agentCtx context.Context, configWG *sync.WaitGroup) {
@@ -120,7 +128,12 @@ func (agent *Agent) tracker(agentCtx context.Context, configWG *sync.WaitGroup) 
 
 	appConfig := agent.loadAppConfig()
 	ctx := config.NewContext(agentCtx, appConfig)
-	sensorTracker := sensors.NewSensorTracker(ctx, agent.getStorageURI())
+	registryPath, err := agent.extraStoragePath("sensorRegistry")
+	if err != nil {
+		log.Debug().Err(err).
+			Msg("Unable to store registry on disk, will opt for in-memory store.")
+	}
+	sensorTracker := sensors.NewSensorTracker(ctx, registryPath)
 	updateCh := make(chan interface{})
 
 	go agent.runNotificationsWorker(ctx)

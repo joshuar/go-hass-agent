@@ -25,10 +25,14 @@ type sensorTracker struct {
 }
 
 func NewSensorTracker(ctx context.Context, appPath fyne.URI) *sensorTracker {
+	r, err := OpenSensorRegistry(ctx, appPath)
+	if err != nil {
+		return nil
+	}
 	return &sensorTracker{
 		sensor:        make(map[string]*sensorState),
 		sensorWorkers: device.SetupSensors(),
-		registry:      OpenSensorRegistry(ctx, appPath),
+		registry:      r,
 		hassConfig:    hass.NewHassConfig(ctx),
 	}
 }
@@ -37,6 +41,10 @@ func NewSensorTracker(ctx context.Context, appPath fyne.URI) *sensorTracker {
 // update.
 func (tracker *sensorTracker) add(s hass.SensorUpdate) error {
 	tracker.mu.Lock()
+	if tracker.sensor == nil {
+		tracker.mu.Unlock()
+		return errors.New("sensor map not initialised")
+	}
 	state := marshalSensorState(s)
 	metadata, err := tracker.registry.Get(state.entityID)
 	if err != nil {
@@ -51,29 +59,6 @@ func (tracker *sensorTracker) add(s hass.SensorUpdate) error {
 		return nil
 	} else {
 		return errors.New("sensor was not added")
-	}
-}
-
-// Update will send a sensor update to HA, checking to ensure the sensor is not
-// disabled. It will also update the local registry state based on the response.
-func (tracker *sensorTracker) Update(ctx context.Context, s hass.SensorUpdate) {
-	sensorID := s.ID()
-	var err error
-	if !tracker.exists(sensorID) {
-		err = tracker.add(s)
-	} else {
-		tracker.update(s)
-	}
-	if err == nil {
-		sensor := tracker.get(sensorID)
-		if tracker.hassConfig.IsEntityDisabled(sensorID) {
-			if !sensor.metadata.Disabled {
-				sensor.metadata.Disabled = true
-			}
-		} else {
-			hass.APIRequest(ctx, sensor)
-			tracker.registry.Set(sensorID, sensor.metadata)
-		}
 	}
 }
 
@@ -117,4 +102,27 @@ func (tracker *sensorTracker) StartWorkers(ctx context.Context, updateCh chan in
 		}(workerFunction)
 	}
 	wg.Wait()
+}
+
+// Update will send a sensor update to HA, checking to ensure the sensor is not
+// disabled. It will also update the local registry state based on the response.
+func (tracker *sensorTracker) Update(ctx context.Context, s hass.SensorUpdate) {
+	sensorID := s.ID()
+	var err error
+	if !tracker.exists(sensorID) {
+		err = tracker.add(s)
+	} else {
+		tracker.update(s)
+	}
+	if err == nil {
+		sensor := tracker.get(sensorID)
+		if tracker.hassConfig.IsEntityDisabled(sensorID) {
+			if !sensor.metadata.Disabled {
+				sensor.metadata.Disabled = true
+			}
+		} else {
+			hass.APIRequest(ctx, sensor)
+			tracker.registry.Set(sensorID, sensor.metadata)
+		}
+	}
 }

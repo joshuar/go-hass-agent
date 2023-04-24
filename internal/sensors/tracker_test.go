@@ -8,10 +8,14 @@ package sensors
 import (
 	"context"
 	"os"
+	"reflect"
+	"sync"
 	"testing"
 
 	"fyne.io/fyne/v2/app"
+	"github.com/davecgh/go-spew/spew"
 	badger "github.com/dgraph-io/badger/v4"
+	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -117,39 +121,214 @@ func TestNewSensorTracker(t *testing.T) {
 	os.RemoveAll(uri.Path())
 }
 
-func TestAdd(t *testing.T) {
-	fakeSensorUpdate := &mockSensorUpdate{}
-	tracker := newMockSensorTracker(t)
-	err := tracker.add(fakeSensorUpdate)
-	assert.Nil(t, err)
+func Test_sensorTracker_add(t *testing.T) {
+	type fields struct {
+		mu            sync.RWMutex
+		sensor        map[string]*sensorState
+		sensorWorkers *device.SensorInfo
+		registry      *sensorRegistry
+		hassConfig    *hass.HassConfig
+	}
+	type args struct {
+		s hass.SensorUpdate
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "successful add",
+			fields: fields{
+				registry: newMockSensorRegistry(t),
+				sensor:   make(map[string]*sensorState)},
+			args: args{s: &mockSensorUpdate{}},
+		},
+		{
+			name: "unsuccessful add",
+			fields: fields{
+				registry: newMockSensorRegistry(t)},
+			args:    args{s: &mockSensorUpdate{}},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tracker := &sensorTracker{
+				mu:            tt.fields.mu,
+				sensor:        tt.fields.sensor,
+				sensorWorkers: tt.fields.sensorWorkers,
+				registry:      tt.fields.registry,
+				hassConfig:    tt.fields.hassConfig,
+			}
+			if err := tracker.add(tt.args.s); (err != nil) != tt.wantErr {
+				t.Errorf("sensorTracker.add() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
 }
 
-func TestGet(t *testing.T) {
-	tracker := newMockSensorTracker(t)
-
-	// test non-existent sensor
-	got := tracker.get("nonexistent")
-	assert.Nil(t, got)
-
-	// test existing sensor
-	fakeSensorUpdate := &mockSensorUpdate{}
-	err := tracker.add(fakeSensorUpdate)
-	assert.Nil(t, err)
-	got = tracker.get(fakeSensorUpdate.ID())
-	assert.NotNil(t, got)
+func Test_sensorTracker_Update(t *testing.T) {
+	type fields struct {
+		mu            sync.RWMutex
+		sensor        map[string]*sensorState
+		sensorWorkers *device.SensorInfo
+		registry      *sensorRegistry
+		hassConfig    *hass.HassConfig
+	}
+	type args struct {
+		ctx context.Context
+		s   hass.SensorUpdate
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tracker := &sensorTracker{
+				mu:            tt.fields.mu,
+				sensor:        tt.fields.sensor,
+				sensorWorkers: tt.fields.sensorWorkers,
+				registry:      tt.fields.registry,
+				hassConfig:    tt.fields.hassConfig,
+			}
+			tracker.Update(tt.args.ctx, tt.args.s)
+		})
+	}
 }
 
-func TestExists(t *testing.T) {
-
-	tracker := newMockSensorTracker(t)
-
-	// test sensor doesn't exist
-	input := "NonExistentSensorID"
-	assert.False(t, tracker.exists(input))
-
-	// test sensor exists
+func Test_sensorTracker_get(t *testing.T) {
 	fakeSensorUpdate := &mockSensorUpdate{}
-	err := tracker.add(fakeSensorUpdate)
-	assert.Nil(t, err)
-	assert.True(t, tracker.exists(fakeSensorUpdate.ID()))
+	tracker := newMockSensorTracker(t)
+	tracker.add(fakeSensorUpdate)
+	fakeSensorState := tracker.get(fakeSensorUpdate.ID())
+	type args struct {
+		id string
+	}
+	tests := []struct {
+		name string
+		args args
+		want *sensorState
+	}{
+		{
+			name: "existing sensor",
+			args: args{id: fakeSensorUpdate.ID()},
+			want: fakeSensorState,
+		},
+		{
+			name: "nonexisting sensor",
+			args: args{id: "nonexistent"},
+			want: nil,
+		}}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tracker.get(tt.args.id); !reflect.DeepEqual(got, tt.want) {
+				spew.Dump(fakeSensorState)
+				t.Errorf("sensorTracker.get() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_sensorTracker_update(t *testing.T) {
+	type fields struct {
+		mu            sync.RWMutex
+		sensor        map[string]*sensorState
+		sensorWorkers *device.SensorInfo
+		registry      *sensorRegistry
+		hassConfig    *hass.HassConfig
+	}
+	type args struct {
+		s hass.SensorUpdate
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tracker := &sensorTracker{
+				mu:            tt.fields.mu,
+				sensor:        tt.fields.sensor,
+				sensorWorkers: tt.fields.sensorWorkers,
+				registry:      tt.fields.registry,
+				hassConfig:    tt.fields.hassConfig,
+			}
+			tracker.update(tt.args.s)
+		})
+	}
+}
+
+func Test_sensorTracker_exists(t *testing.T) {
+	fakeSensorUpdate := &mockSensorUpdate{}
+	tracker := newMockSensorTracker(t)
+	tracker.add(fakeSensorUpdate)
+
+	type args struct {
+		id string
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{
+			name: "nonexisting sensor",
+			args: args{id: "nonexisting"},
+			want: false,
+		},
+		{
+			name: "existing sensor",
+			args: args{id: fakeSensorUpdate.ID()},
+			want: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tracker.exists(tt.args.id); got != tt.want {
+				t.Errorf("sensorTracker.exists() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_sensorTracker_StartWorkers(t *testing.T) {
+	type fields struct {
+		mu            sync.RWMutex
+		sensor        map[string]*sensorState
+		sensorWorkers *device.SensorInfo
+		registry      *sensorRegistry
+		hassConfig    *hass.HassConfig
+	}
+	type args struct {
+		ctx      context.Context
+		updateCh chan interface{}
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tracker := &sensorTracker{
+				mu:            tt.fields.mu,
+				sensor:        tt.fields.sensor,
+				sensorWorkers: tt.fields.sensorWorkers,
+				registry:      tt.fields.registry,
+				hassConfig:    tt.fields.hassConfig,
+			}
+			tracker.StartWorkers(tt.args.ctx, tt.args.updateCh)
+		})
+	}
 }

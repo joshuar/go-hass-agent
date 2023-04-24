@@ -7,80 +7,199 @@ package sensors
 
 import (
 	"context"
-	"os"
+	"reflect"
 	"testing"
 
-	"fyne.io/fyne/v2/app"
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/storage"
+	badger "github.com/dgraph-io/badger/v4"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestRegistry(t *testing.T) {
-	testApp := app.NewWithID("org.joshuar.go-hass-agent-test")
-	uri := testApp.Storage().RootURI()
-
+func TestOpenSensorRegistry(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-
-	t.Logf("Using %s for temporary registry DB for testing", uri.Path())
-
-	t.Log("Test open registry")
-	registry := OpenSensorRegistry(ctx, uri)
-	assert.NotNil(t, registry)
-
-	t.Log("Test close registry")
-	err := registry.CloseSensorRegistry()
+	db, err := badger.Open(badger.DefaultOptions("").WithInMemory(true))
 	assert.Nil(t, err)
-
-	os.RemoveAll(registry.uri.Path())
+	defer db.Close()
+	wantedRegistry := &sensorRegistry{
+		db: db,
+	}
+	badPath, _ := storage.ParseURI("file:///some/bad/path")
+	type args struct {
+		ctx          context.Context
+		registryPath fyne.URI
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    *sensorRegistry
+		wantErr bool
+	}{
+		{
+			name:    "successful open",
+			args:    args{ctx: ctx, registryPath: nil},
+			want:    wantedRegistry,
+			wantErr: false,
+		},
+		{
+			name:    "unsuccessful open",
+			args:    args{ctx: ctx, registryPath: badPath},
+			want:    nil,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := OpenSensorRegistry(tt.args.ctx, tt.args.registryPath)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("OpenSensorRegistry() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if tt.want != nil {
+				assert.IsType(t, wantedRegistry.db, got.db)
+			}
+			// if !reflect.DeepEqual(got, tt.want) {
+			// 	t.Errorf("OpenSensorRegistry() = %v, want %v", got, tt.want)
+			// }
+		})
+	}
 }
 
-func TestRegistryCancel(t *testing.T) {
-	testApp := app.NewWithID("org.joshuar.go-hass-agent-test")
-	uri := testApp.Storage().RootURI()
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	t.Logf("Using %s for temporary registry DB for testing", uri.Path())
-
-	registry := OpenSensorRegistry(ctx, uri)
-	assert.NotNil(t, registry)
-
-	t.Log("Test handling cancel")
-	cancel()
-
-	os.RemoveAll(registry.uri.Path())
+func Test_sensorRegistry_CloseSensorRegistry(t *testing.T) {
+	db, err := badger.Open(badger.DefaultOptions("").WithInMemory(true))
+	assert.Nil(t, err)
+	defer db.Close()
+	type fields struct {
+		db *badger.DB
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		wantErr bool
+	}{
+		{
+			name:    "successful close",
+			fields:  fields{db: db},
+			wantErr: false,
+		},
+		{
+			name:    "successful close on nonexistent db",
+			fields:  fields{db: nil},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			reg := &sensorRegistry{
+				db: tt.fields.db,
+			}
+			if err := reg.CloseSensorRegistry(); (err != nil) != tt.wantErr {
+				t.Errorf("sensorRegistry.CloseSensorRegistry() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
 }
 
-func TestRegistryAccess(t *testing.T) {
-	testApp := app.NewWithID("org.joshuar.go-hass-agent-test")
-	uri := testApp.Storage().RootURI()
+func Test_sensorRegistry_Get(t *testing.T) {
+	db, err := badger.Open(badger.DefaultOptions("").WithInMemory(true))
+	assert.Nil(t, err)
+	defer db.Close()
+	reg := &sensorRegistry{
+		db: db,
+	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	t.Logf("Using %s for temporary registry DB for testing", uri.Path())
-
-	registry := OpenSensorRegistry(ctx, uri)
-	assert.NotNil(t, registry)
-
-	data := &sensorMetadata{
+	fakeMetadata := &sensorMetadata{
 		Registered: true,
 		Disabled:   false,
 	}
 
-	t.Log("Test access with data")
-	err := registry.Set("test", data)
+	err = reg.Set("fakeSensor", fakeMetadata)
 	assert.Nil(t, err)
 
-	got, err := registry.Get("test")
+	type fields struct {
+		reg *sensorRegistry
+	}
+	type args struct {
+		id string
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		want    *sensorMetadata
+		wantErr bool
+	}{
+		{
+			name:   "existing",
+			fields: fields{reg: reg},
+			args:   args{id: "fakeSensor"},
+			want:   fakeMetadata,
+		},
+		{
+			name:    "nonexisting",
+			fields:  fields{reg: reg},
+			args:    args{id: "noSensor"},
+			want:    &sensorMetadata{},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := reg.Get(tt.args.id)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("sensorRegistry.Get() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("sensorRegistry.Get() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_sensorRegistry_Set(t *testing.T) {
+	db, err := badger.Open(badger.DefaultOptions("").WithInMemory(true))
 	assert.Nil(t, err)
-	assert.Equal(t, data, got)
+	defer db.Close()
 
-	t.Log("Test access without data")
-	got, err = registry.Get("notExists")
-	assert.NotNil(t, err)
-	assert.NotEqual(t, got, data)
+	fakeMetadata := &sensorMetadata{
+		Registered: true,
+		Disabled:   false,
+	}
 
-	os.RemoveAll(registry.uri.Path())
+	type fields struct {
+		db *badger.DB
+	}
+	type args struct {
+		id     string
+		values *sensorMetadata
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		{
+			name:   "add valid data",
+			fields: fields{db: db},
+			args:   args{id: "fakeSensor", values: fakeMetadata},
+		},
+		{
+			name:   "add defaults",
+			fields: fields{db: db},
+			args:   args{id: "fakeSensor", values: &sensorMetadata{}},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			reg := &sensorRegistry{
+				db: tt.fields.db,
+			}
+			if err := reg.Set(tt.args.id, tt.args.values); (err != nil) != tt.wantErr {
+				t.Errorf("sensorRegistry.Set() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
 }
