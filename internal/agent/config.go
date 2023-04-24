@@ -79,7 +79,7 @@ func (agent *Agent) Pref(pref string, value interface{}) {
 }
 
 func (agent *Agent) SetPref(pref string, value interface{}) {
-	valueType := reflect.ValueOf(value).Elem()
+	valueType := reflect.ValueOf(value)
 	switch valueType.Kind() {
 	case reflect.String:
 		agent.app.Preferences().SetString(pref, value.(string))
