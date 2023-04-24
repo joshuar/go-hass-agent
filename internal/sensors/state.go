@@ -36,13 +36,26 @@ type sensorMetadata struct {
 }
 
 // sensorState implements hass.Sensor to represent a sensor in HA.
-func (s *sensorState) Attributes() interface{} {
-	return s.attributes
-}
 
 func (s *sensorState) DeviceClass() string {
 	if s.deviceClass != 0 {
 		return s.deviceClass.String()
+	} else {
+		return ""
+	}
+}
+
+func (s *sensorState) StateClass() string {
+	if s.stateClass != 0 {
+		return strcase.ToCamel(s.stateClass.String())
+	} else {
+		return ""
+	}
+}
+
+func (s *sensorState) Type() string {
+	if s.sensorType != 0 {
+		return s.sensorType.String()
 	} else {
 		return ""
 	}
@@ -60,12 +73,8 @@ func (s *sensorState) State() interface{} {
 	return s.state
 }
 
-func (s *sensorState) Type() string {
-	if s.sensorType != 0 {
-		return s.sensorType.String()
-	} else {
-		return ""
-	}
+func (s *sensorState) Attributes() interface{} {
+	return s.attributes
 }
 
 func (s *sensorState) UniqueID() string {
@@ -74,14 +83,6 @@ func (s *sensorState) UniqueID() string {
 
 func (s *sensorState) UnitOfMeasurement() string {
 	return s.stateUnits
-}
-
-func (s *sensorState) StateClass() string {
-	if s.stateClass != 0 {
-		return strcase.ToCamel(s.stateClass.String())
-	} else {
-		return ""
-	}
 }
 
 func (s *sensorState) EntityCategory() string {
