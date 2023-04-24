@@ -16,6 +16,14 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func newMockSensorRegistry(t *testing.T) *sensorRegistry {
+	fakeRegistry := new(sensorRegistry)
+	db, err := badger.Open(badger.DefaultOptions("").WithInMemory(true))
+	assert.Nil(t, err)
+	fakeRegistry.db = db
+	return fakeRegistry
+}
+
 func TestOpenSensorRegistry(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
