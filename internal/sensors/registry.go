@@ -11,33 +11,37 @@ import (
 	"time"
 
 	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/storage"
 	badger "github.com/dgraph-io/badger/v4"
 	"github.com/rs/zerolog/log"
 )
 
 type sensorRegistry struct {
-	uri fyne.URI
-	db  *badger.DB
+	db *badger.DB
 }
 
-func OpenSensorRegistry(ctx context.Context, appPath fyne.URI) *sensorRegistry {
-	uri, err := storage.Child(appPath, "sensorRegistry")
-	if err != nil {
-		log.Error().Err(err).
-			Msg("Unable open sensor registry path. Will not be able to track sensor status.")
-		return nil
-	}
-
-	// Open a badgerDB with largely the default options, but trying to optimise
-	// for lower memory usage as per:
-	// https://dgraph.io/docs/badger/get-started/#memory-usage
-	db, err := badger.Open(badger.DefaultOptions(uri.Path()).
-		// * If the number of sensors is large, this might need adjustment.
-		WithMemTableSize(12 << 20))
-	if err != nil {
-		log.Debug().Err(err).Msg("Could not open sensor registry DB.")
-		return nil
+func OpenSensorRegistry(ctx context.Context, registryPath fyne.URI) (*sensorRegistry, error) {
+	var db *badger.DB
+	var err error
+	if registryPath != nil {
+		// Open a badgerDB with largely the default options, but trying to
+		// optimise for lower memory usage as per:
+		// https://dgraph.io/docs/badger/get-started/#memory-usage
+		db, err = badger.Open(badger.DefaultOptions(registryPath.Path()).
+			// * If the number of sensors is large, this might need adjustment.
+			WithMemTableSize(12 << 20))
+		if err != nil {
+			log.Debug().Err(err).Msg("Could not open sensor registry DB.")
+			return nil, err
+		}
+	} else {
+		// As a fallback when no registryPath was provided, open an in-memory
+		// database.  This will allow the agent to continue working, but sensor
+		// registered and disabled states will not be tracked.
+		db, err = badger.Open(badger.DefaultOptions("").WithInMemory(true))
+		if err != nil {
+			log.Debug().Err(err).Msg("Could not open sensor registry DB.")
+			return nil, err
+		}
 	}
 
 	go func() {
@@ -59,14 +63,15 @@ func OpenSensorRegistry(ctx context.Context, appPath fyne.URI) *sensorRegistry {
 		}
 	}()
 
-	return &sensorRegistry{
-		uri: uri,
-		db:  db,
-	}
+	return &sensorRegistry{db: db}, nil
 }
 
 func (reg *sensorRegistry) CloseSensorRegistry() error {
-	return reg.db.Close()
+	if reg.db != nil {
+		return reg.db.Close()
+	} else {
+		return nil
+	}
 }
 
 func (reg *sensorRegistry) Get(id string) (*sensorMetadata, error) {
