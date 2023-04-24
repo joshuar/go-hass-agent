@@ -60,8 +60,8 @@ func TestAgent_stop(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			agent := &Agent{
-				App:     tt.fields.App,
-				Tray:    tt.fields.Tray,
+				app:     tt.fields.App,
+				tray:    tt.fields.Tray,
 				Name:    tt.fields.Name,
 				Version: tt.fields.Version,
 			}
@@ -87,8 +87,8 @@ func TestAgent_getStorageURI(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			agent := &Agent{
-				App:     tt.fields.App,
-				Tray:    tt.fields.Tray,
+				app:     tt.fields.App,
+				tray:    tt.fields.Tray,
 				Name:    tt.fields.Name,
 				Version: tt.fields.Version,
 			}
@@ -120,8 +120,8 @@ func TestAgent_tracker(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			agent := &Agent{
-				App:     tt.fields.App,
-				Tray:    tt.fields.Tray,
+				app:     tt.fields.App,
+				tray:    tt.fields.Tray,
 				Name:    tt.fields.Name,
 				Version: tt.fields.Version,
 			}

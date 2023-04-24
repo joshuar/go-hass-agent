@@ -71,7 +71,7 @@ func (agent *Agent) handleNotifications(ctx context.Context, response chan *hass
 					log.Error().Msgf("Recieved error on websocket, %s: %s.", r.Error.Code, r.Error.Message)
 				}
 			case "event":
-				agent.App.SendNotification(&fyne.Notification{
+				agent.app.SendNotification(&fyne.Notification{
 					Title:   r.Notification.Title,
 					Content: r.Notification.Message,
 				})
