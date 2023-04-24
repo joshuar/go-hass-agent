@@ -27,7 +27,7 @@ func (agent *Agent) setupSystemTray() {
 	agent.tray.SetMaster()
 	if desk, ok := agent.app.(desktop.App); ok {
 		menuItemAbout := fyne.NewMenuItem("About", func() {
-			deviceName, deviceID := agent.GetDeviceDetails()
+			deviceName, deviceID := agent.DeviceDetails()
 			w := agent.app.NewWindow(translator.Translate("About %s", agent.Name))
 			w.SetContent(container.New(layout.NewVBoxLayout(),
 				widget.NewLabel(translator.Translate(
