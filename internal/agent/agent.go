@@ -131,7 +131,7 @@ func (agent *Agent) tracker(agentCtx context.Context, configWG *sync.WaitGroup) 
 	registryPath, err := agent.extraStoragePath("sensorRegistry")
 	if err != nil {
 		log.Debug().Err(err).
-			Msg("Unable to store registry on disk, will opt for in-memory store.")
+			Msg("Unable to store registry on disk, trying in-memory store.")
 	}
 	sensorTracker := sensors.NewSensorTracker(ctx, registryPath)
 	updateCh := make(chan interface{})

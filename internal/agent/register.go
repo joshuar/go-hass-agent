@@ -122,7 +122,9 @@ func (agent *Agent) getRegistrationHostInfo(ctx context.Context) *hass.Registrat
 	}
 
 	w.SetContent(container.New(layout.NewVBoxLayout(),
-		widget.NewLabel(translator.Translate("As an initial step, this app will need to log into your Home Assistant server and register itself.\nPlease enter the relevant details for your Home Assistant server url/port and a long-lived access token.")),
+		widget.NewLabel(
+			translator.Translate(
+				"As an initial step, this app will need to log into your Home Assistant server and register itself.\nPlease enter the relevant details for your Home Assistant server url/port and a long-lived access token.")),
 		form,
 	))
 
@@ -138,29 +140,29 @@ func (agent *Agent) getRegistrationHostInfo(ctx context.Context) *hass.Registrat
 func (agent *Agent) saveRegistration(r *hass.RegistrationResponse, h *hass.RegistrationHost) {
 	host, _ := h.Server.Get()
 	useTLS, _ := h.UseTLS.Get()
-	agent.app.Preferences().SetString("Host", host)
-	agent.app.Preferences().SetBool("UseTLS", useTLS)
+	agent.SetPref("Host", host)
+	agent.SetPref("UseTLS", useTLS)
 	token, _ := h.Token.Get()
-	agent.app.Preferences().SetString("Token", token)
-	agent.app.Preferences().SetString("Version", agent.Version)
+	agent.SetPref("Token", token)
+	agent.SetPref("Version", agent.Version)
 	if r.CloudhookURL != "" {
-		agent.app.Preferences().SetString("CloudhookURL", r.CloudhookURL)
+		agent.SetPref("CloudhookURL", r.CloudhookURL)
 	}
 	if r.RemoteUIURL != "" {
-		agent.app.Preferences().SetString("RemoteUIURL", r.RemoteUIURL)
+		agent.SetPref("RemoteUIURL", r.RemoteUIURL)
 	}
 	if r.Secret != "" {
-		agent.app.Preferences().SetString("Secret", r.Secret)
+		agent.SetPref("Secret", r.Secret)
 	}
 	if r.WebhookID != "" {
-		agent.app.Preferences().SetString("WebhookID", r.WebhookID)
+		agent.SetPref("WebhookID", r.WebhookID)
 	}
 }
 
 func (agent *Agent) runRegistrationWorker(ctx context.Context) error {
 	thisDevice := device.NewDevice(ctx)
-	agent.app.Preferences().SetString("DeviceID", thisDevice.DeviceID())
-	agent.app.Preferences().SetString("DeviceName", thisDevice.DeviceName())
+	agent.SetPref("DeviceID", thisDevice.DeviceID())
+	agent.SetPref("DeviceName", thisDevice.DeviceName())
 	registrationHostInfo := agent.getRegistrationHostInfo(ctx)
 	if registrationHostInfo != nil {
 		registrationRequest := device.GenerateRegistrationRequest(thisDevice)
