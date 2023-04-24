@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"time"
 
 	"github.com/carlmjohnson/requests"
@@ -28,16 +29,20 @@ type Request interface {
 }
 
 func MarshalJSON(request Request, secret string) ([]byte, error) {
-	if secret != "" {
-		return json.Marshal(&struct {
-			Type          RequestType `json:"type"`
-			Encrypted     bool        `json:"encrypted"`
-			EncryptedData interface{} `json:"encrypted_data"`
-		}{
-			Type:          RequestTypeEncrypted,
-			Encrypted:     true,
-			EncryptedData: request.RequestData(),
-		})
+	if request.RequestType() == RequestTypeEncrypted {
+		if secret != "" {
+			return json.Marshal(&struct {
+				Type          RequestType `json:"type"`
+				Encrypted     bool        `json:"encrypted"`
+				EncryptedData interface{} `json:"encrypted_data"`
+			}{
+				Type:          RequestTypeEncrypted,
+				Encrypted:     true,
+				EncryptedData: request.RequestData(),
+			})
+		} else {
+			return nil, errors.New("encrypted request recieved without secret")
+		}
 	} else {
 		return json.Marshal(&struct {
 			Type RequestType `json:"type"`
