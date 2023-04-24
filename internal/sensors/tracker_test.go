@@ -13,7 +13,6 @@ import (
 	"testing"
 
 	"fyne.io/fyne/v2/app"
-	"github.com/davecgh/go-spew/spew"
 	badger "github.com/dgraph-io/badger/v4"
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass"
@@ -23,6 +22,10 @@ import (
 
 type mockSensorUpdate struct {
 	mock.Mock
+	id         string
+	state      interface{}
+	icon       string
+	attributes interface{}
 }
 
 func (m *mockSensorUpdate) Name() string {
@@ -34,13 +37,21 @@ func (m *mockSensorUpdate) Name() string {
 func (m *mockSensorUpdate) ID() string {
 	m.On("ID")
 	args := m.Called()
-	return args.String()
+	if m.id == "" {
+		return args.String()
+	} else {
+		return m.id
+	}
 }
 
 func (m *mockSensorUpdate) Icon() string {
 	m.On("Icon")
 	args := m.Called()
-	return args.String()
+	if m.icon == "" {
+		return args.String()
+	} else {
+		return m.icon
+	}
 }
 
 func (m *mockSensorUpdate) SensorType() hass.SensorType {
@@ -64,7 +75,12 @@ func (m *mockSensorUpdate) StateClass() hass.SensorStateClass {
 func (m *mockSensorUpdate) State() interface{} {
 	m.On("State")
 	args := m.Called()
-	return args.String()
+	if m.state == nil {
+		return args.String()
+	} else {
+		return m.state
+	}
+
 }
 
 func (m *mockSensorUpdate) Units() string {
@@ -82,7 +98,7 @@ func (m *mockSensorUpdate) Category() string {
 func (m *mockSensorUpdate) Attributes() interface{} {
 	m.On("Attributes")
 	m.Called()
-	return nil
+	return m.attributes
 }
 
 type MockSensorRegistry struct {
@@ -228,7 +244,6 @@ func Test_sensorTracker_get(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := tracker.get(tt.args.id); !reflect.DeepEqual(got, tt.want) {
-				spew.Dump(fakeSensorState)
 				t.Errorf("sensorTracker.get() = %v, want %v", got, tt.want)
 			}
 		})
@@ -236,6 +251,9 @@ func Test_sensorTracker_get(t *testing.T) {
 }
 
 func Test_sensorTracker_update(t *testing.T) {
+	fakeSensorUpdate := &mockSensorUpdate{}
+	fakeSensorStates := make(map[string]*sensorState)
+	fakeSensorStates[fakeSensorUpdate.ID()] = marshalSensorState(fakeSensorUpdate)
 	type fields struct {
 		mu            sync.RWMutex
 		sensor        map[string]*sensorState
@@ -251,7 +269,22 @@ func Test_sensorTracker_update(t *testing.T) {
 		fields fields
 		args   args
 	}{
-		// TODO: Add test cases.
+		{
+			name:   "try to update nonexistent sensor",
+			fields: fields{sensor: make(map[string]*sensorState)},
+			args: args{s: &mockSensorUpdate{
+				state: "foo",
+				icon:  "bar",
+			}},
+		},
+		{
+			name:   "try to update existing sensor",
+			fields: fields{sensor: fakeSensorStates},
+			args: args{s: &mockSensorUpdate{
+				state: "foo",
+				icon:  "bar",
+			}},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -301,6 +334,17 @@ func Test_sensorTracker_exists(t *testing.T) {
 }
 
 func Test_sensorTracker_StartWorkers(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	updateCh := make(chan interface{})
+	defer close(updateCh)
+
+	fakeWorkerFunc := func(context.Context, chan interface{}) {}
+
+	fakeWorkers := device.NewSensorInfo()
+	fakeWorkers.Add("fakeSensor", fakeWorkerFunc)
+
 	type fields struct {
 		mu            sync.RWMutex
 		sensor        map[string]*sensorState
@@ -317,7 +361,11 @@ func Test_sensorTracker_StartWorkers(t *testing.T) {
 		fields fields
 		args   args
 	}{
-		// TODO: Add test cases.
+		{
+			name:   "test adding worker",
+			fields: fields{sensorWorkers: fakeWorkers},
+			args:   args{ctx: ctx, updateCh: updateCh},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
