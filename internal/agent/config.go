@@ -6,8 +6,9 @@
 package agent
 
 import (
+	"reflect"
+
 	"github.com/joshuar/go-hass-agent/internal/config"
-	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -16,48 +17,73 @@ const (
 )
 
 func (agent *Agent) loadAppConfig() *config.AppConfig {
-	CloudhookURL := agent.app.Preferences().String("CloudhookURL")
-	RemoteUIURL := agent.app.Preferences().String("RemoteUIURL")
-	Host := agent.app.Preferences().String("Host")
-	UseTLS := agent.app.Preferences().Bool("UseTLS")
+	var CloudhookURL, RemoteUIURL, Host string
+	var UseTLS bool
+
+	agent.Pref("CloudhookURL", &CloudhookURL)
+	agent.Pref("RemoteUIURL", &RemoteUIURL)
+	agent.Pref("Host", &Host)
+	agent.Pref("UseTLS", &UseTLS)
 
 	appConfig := &config.AppConfig{}
-	appConfig.Secret = agent.app.Preferences().String("Secret")
-	appConfig.Token = agent.app.Preferences().String("Token")
-	appConfig.WebhookID = agent.app.Preferences().String("WebhookID")
+	agent.Pref("Token", &appConfig.Token)
+	agent.Pref("Secret", &appConfig.Secret)
+	agent.Pref("WebhookID", &appConfig.WebhookID)
 
+	var scheme string
 	if UseTLS {
-		appConfig.WebSocketURL = "wss://" + Host + websocketPath
+		scheme = "wss://"
 	} else {
-		appConfig.WebSocketURL = "ws://" + Host + websocketPath
+		scheme = "ws://"
 	}
+	appConfig.WebSocketURL = scheme + Host + websocketPath
 
 	switch {
 	case CloudhookURL != "":
 		appConfig.APIURL = CloudhookURL
-		log.Debug().Caller().
-			Msgf("Using CloudhookURL %s for Home Assistant access", appConfig.APIURL)
 	case RemoteUIURL != "" && appConfig.WebhookID != "":
 		appConfig.APIURL = RemoteUIURL + webHookPath + appConfig.WebhookID
-		log.Debug().Caller().
-			Msgf("Using RemoteUIURL %s for Home Assistant access", appConfig.APIURL)
 	case appConfig.WebhookID != "" && Host != "":
+		var scheme string
 		if UseTLS {
-			appConfig.APIURL = "https://" + Host + webHookPath + appConfig.WebhookID
+			scheme = "https://"
 		} else {
-			appConfig.APIURL = "http://" + Host + webHookPath + appConfig.WebhookID
+			scheme = "http://"
 		}
-		log.Debug().Caller().
-			Msgf("Using URL %s for Home Assistant access", appConfig.APIURL)
+		appConfig.APIURL = scheme + Host + webHookPath + appConfig.WebhookID
 	}
 	return appConfig
 }
 
-func (agent *Agent) GetAppConfigVersion() string {
+func (agent *Agent) AppConfigVersion() string {
 	return agent.app.Preferences().String("Version")
 }
 
-func (agent *Agent) GetDeviceDetails() (string, string) {
+func (agent *Agent) DeviceDetails() (string, string) {
 	return agent.app.Preferences().String("DeviceName"),
 		agent.app.Preferences().String("DeviceID")
+}
+
+func (agent *Agent) Pref(pref string, value interface{}) {
+	valueType := reflect.ValueOf(value).Elem()
+	switch valueType.Kind() {
+	case reflect.String:
+		newValue := value.(*string)
+		*newValue = agent.app.Preferences().String(pref)
+		value = newValue
+	case reflect.Bool:
+		newValue := value.(*bool)
+		*newValue = agent.app.Preferences().Bool(pref)
+		value = newValue
+	}
+}
+
+func (agent *Agent) SetPref(pref string, value interface{}) {
+	valueType := reflect.ValueOf(value).Elem()
+	switch valueType.Kind() {
+	case reflect.String:
+		agent.app.Preferences().SetString(pref, value.(string))
+	case reflect.Bool:
+		agent.app.Preferences().SetBool(pref, value.(bool))
+	}
 }
