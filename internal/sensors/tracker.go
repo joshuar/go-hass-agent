@@ -7,6 +7,7 @@ package sensors
 
 import (
 	"context"
+	"errors"
 	"sync"
 
 	"fyne.io/fyne/v2"
@@ -34,37 +35,45 @@ func NewSensorTracker(ctx context.Context, appPath fyne.URI) *sensorTracker {
 
 // Add creates a new sensor in the tracker based on a recieved state
 // update.
-func (tracker *sensorTracker) add(s hass.SensorUpdate) {
+func (tracker *sensorTracker) add(s hass.SensorUpdate) error {
 	tracker.mu.Lock()
-	defer tracker.mu.Unlock()
 	state := marshalSensorState(s)
 	metadata, err := tracker.registry.Get(state.entityID)
 	if err != nil {
-		log.Debug().Err(err).Caller().
+		log.Debug().Caller().
 			Msgf("Sensor %s not found in registry.", s.Name())
 	}
 	state.metadata = metadata
 	tracker.sensor[state.entityID] = state
-	log.Debug().Caller().Msgf("Added sensor: %s", state.entityID)
+	tracker.mu.Unlock()
+	if tracker.exists(state.entityID) {
+		log.Debug().Caller().Msgf("Added sensor: %s", state.entityID)
+		return nil
+	} else {
+		return errors.New("sensor was not added")
+	}
 }
 
 // Update will send a sensor update to HA, checking to ensure the sensor is not
 // disabled. It will also update the local registry state based on the response.
 func (tracker *sensorTracker) Update(ctx context.Context, s hass.SensorUpdate) {
 	sensorID := s.ID()
+	var err error
 	if !tracker.exists(sensorID) {
-		tracker.add(s)
+		err = tracker.add(s)
 	} else {
 		tracker.update(s)
 	}
-	sensor := tracker.get(sensorID)
-	if tracker.hassConfig.IsEntityDisabled(sensorID) {
-		if !sensor.metadata.Disabled {
-			sensor.metadata.Disabled = true
+	if err == nil {
+		sensor := tracker.get(sensorID)
+		if tracker.hassConfig.IsEntityDisabled(sensorID) {
+			if !sensor.metadata.Disabled {
+				sensor.metadata.Disabled = true
+			}
+		} else {
+			hass.APIRequest(ctx, sensor)
+			tracker.registry.Set(sensorID, sensor.metadata)
 		}
-	} else {
-		hass.APIRequest(ctx, sensor)
-		tracker.registry.Set(sensorID, sensor.metadata)
 	}
 }
 

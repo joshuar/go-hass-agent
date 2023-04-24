@@ -6,103 +6,150 @@
 package sensors
 
 import (
+	"context"
+	"os"
 	"testing"
 
-	"github.com/dgraph-io/badger/v4"
+	"fyne.io/fyne/v2/app"
+	badger "github.com/dgraph-io/badger/v4"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
-type FakeSensor struct {
-	name  string
-	state interface{}
+type mockSensorUpdate struct {
+	mock.Mock
 }
 
-func (f *FakeSensor) Name() string {
-	return f.name
+func (m *mockSensorUpdate) Name() string {
+	m.On("Name")
+	args := m.Called()
+	return args.String()
 }
 
-func (f *FakeSensor) ID() string {
-	return f.name
+func (m *mockSensorUpdate) ID() string {
+	m.On("ID")
+	args := m.Called()
+	return args.String()
 }
 
-func (f *FakeSensor) Icon() string {
-	return "mdi:user"
+func (m *mockSensorUpdate) Icon() string {
+	m.On("Icon")
+	args := m.Called()
+	return args.String()
 }
-func (f *FakeSensor) SensorType() hass.SensorType {
+
+func (m *mockSensorUpdate) SensorType() hass.SensorType {
+	m.On("SensorType")
+	m.Called()
 	return hass.TypeSensor
 }
 
-func (f *FakeSensor) DeviceClass() hass.SensorDeviceClass {
+func (m *mockSensorUpdate) DeviceClass() hass.SensorDeviceClass {
+	m.On("DeviceClass")
+	m.Called()
 	return 0
 }
 
-func (f *FakeSensor) StateClass() hass.SensorStateClass {
+func (m *mockSensorUpdate) StateClass() hass.SensorStateClass {
+	m.On("StateClass")
+	m.Called()
 	return 0
 }
 
-func (f *FakeSensor) State() interface{} {
-	return f.state
+func (m *mockSensorUpdate) State() interface{} {
+	m.On("State")
+	args := m.Called()
+	return args.String()
 }
 
-func (f *FakeSensor) Units() string {
-	return ""
-}
-func (f *FakeSensor) Category() string {
-	return ""
+func (m *mockSensorUpdate) Units() string {
+	m.On("Units")
+	args := m.Called()
+	return args.String()
 }
 
-func (f *FakeSensor) Attributes() interface{} {
+func (m *mockSensorUpdate) Category() string {
+	m.On("Category")
+	args := m.Called()
+	return args.String()
+}
+
+func (m *mockSensorUpdate) Attributes() interface{} {
+	m.On("Attributes")
+	m.Called()
 	return nil
 }
 
 type MockSensorRegistry struct {
 	mock.Mock
-	uri string
-	db  *badger.DB
 }
 
-func (m *MockSensorRegistry) Add(id string) *MockRegistryEntry {
-	return &MockRegistryEntry{}
-}
-
-type MockRegistryEntry struct {
-	mock.Mock
-}
-
-func TestExistsSuccess(t *testing.T) {
-	input := "NonExistentSensorID"
-	tracker := &sensorTracker{
-		sensor:        make(map[string]*sensorState),
-		sensorWorkers: nil,
-		registry:      nil,
-		hassConfig:    nil,
-	}
-	if tracker.exists(input) {
-		t.Error("Fake sensor should not exist!")
-	}
-}
-
-func TestAdd(t *testing.T) {
-	// fakeSensor := &FakeSensor{
-	// 	name:  "FakeSensor",
-	// 	state: "FakeValue",
-	// }
-
+func newMockSensorRegistry(t *testing.T) *sensorRegistry {
 	fakeRegistry := new(sensorRegistry)
 	db, err := badger.Open(badger.DefaultOptions("").WithInMemory(true))
 	assert.Nil(t, err)
 	fakeRegistry.db = db
+	return fakeRegistry
+}
 
-	tracker := &sensorTracker{
+func newMockSensorTracker(t *testing.T) *sensorTracker {
+	fakeRegistry := newMockSensorRegistry(t)
+	fakeTracker := &sensorTracker{
 		sensor:        make(map[string]*sensorState),
 		sensorWorkers: nil,
 		registry:      fakeRegistry,
 		hassConfig:    nil,
 	}
-	// tracker.Add(fakeSensor)
-	if !tracker.exists("FakeSensor") {
-		t.Error("Fake sensor was not added!")
-	}
+	return fakeTracker
+}
+
+var testApp = app.NewWithID("org.joshuar.go-hass-agent-test")
+var uri = testApp.Storage().RootURI()
+
+func TestNewSensorTracker(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	tracker := NewSensorTracker(ctx, uri)
+	assert.IsType(t, &sensorTracker{}, tracker)
+
+	os.RemoveAll(uri.Path())
+}
+
+func TestAdd(t *testing.T) {
+	fakeSensorUpdate := &mockSensorUpdate{}
+	tracker := newMockSensorTracker(t)
+	err := tracker.add(fakeSensorUpdate)
+	assert.Nil(t, err)
+}
+
+func TestGet(t *testing.T) {
+	tracker := newMockSensorTracker(t)
+
+	// test non-existent sensor
+	got := tracker.get("nonexistent")
+	assert.Nil(t, got)
+
+	// test existing sensor
+	fakeSensorUpdate := &mockSensorUpdate{}
+	err := tracker.add(fakeSensorUpdate)
+	assert.Nil(t, err)
+	got = tracker.get(fakeSensorUpdate.ID())
+	assert.NotNil(t, got)
+}
+
+func TestExists(t *testing.T) {
+
+	tracker := newMockSensorTracker(t)
+
+	// test sensor doesn't exist
+	input := "NonExistentSensorID"
+	assert.False(t, tracker.exists(input))
+
+	// test sensor exists
+	fakeSensorUpdate := &mockSensorUpdate{}
+	err := tracker.add(fakeSensorUpdate)
+	assert.Nil(t, err)
+	assert.True(t, tracker.exists(fakeSensorUpdate.ID()))
 }
