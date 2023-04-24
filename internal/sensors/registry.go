@@ -55,7 +55,6 @@ func OpenSensorRegistry(ctx context.Context, appPath fyne.URI) *sensorRegistry {
 			case <-ctx.Done():
 				log.Debug().Caller().Msg("Closing registry.")
 				db.Close()
-
 			}
 		}
 	}()
