@@ -34,14 +34,14 @@ const (
 )
 
 type Agent struct {
-	App           fyne.App
-	Tray          fyne.Window
+	app           fyne.App
+	tray          fyne.Window
 	Name, Version string
 }
 
 func NewAgent() *Agent {
 	return &Agent{
-		App:     newUI(),
+		app:     newUI(),
 		Name:    Name,
 		Version: Version,
 	}
@@ -97,22 +97,22 @@ func Run() {
 
 	go agent.tracker(ctx, &wg)
 
-	agent.App.Run()
+	agent.app.Run()
 	cancelfunc()
 	agent.stop()
 }
 
 func (agent *Agent) stop() {
 	log.Info().Msg("Shutting down agent.")
-	agent.Tray.Close()
+	agent.tray.Close()
 }
 
 func (agent *Agent) getStorageURI() fyne.URI {
-	return agent.App.Storage().RootURI()
+	return agent.app.Storage().RootURI()
 }
 
 func (agent *Agent) extraStoragePath(id string) (fyne.URI, error) {
-	rootPath := agent.App.Storage().RootURI()
+	rootPath := agent.app.Storage().RootURI()
 	extraPath, err := storage.Child(rootPath, id)
 	if err != nil {
 		return nil, err

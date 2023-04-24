@@ -16,15 +16,15 @@ const (
 )
 
 func (agent *Agent) loadAppConfig() *config.AppConfig {
-	CloudhookURL := agent.App.Preferences().String("CloudhookURL")
-	RemoteUIURL := agent.App.Preferences().String("RemoteUIURL")
-	Host := agent.App.Preferences().String("Host")
-	UseTLS := agent.App.Preferences().Bool("UseTLS")
+	CloudhookURL := agent.app.Preferences().String("CloudhookURL")
+	RemoteUIURL := agent.app.Preferences().String("RemoteUIURL")
+	Host := agent.app.Preferences().String("Host")
+	UseTLS := agent.app.Preferences().Bool("UseTLS")
 
 	appConfig := &config.AppConfig{}
-	appConfig.Secret = agent.App.Preferences().String("Secret")
-	appConfig.Token = agent.App.Preferences().String("Token")
-	appConfig.WebhookID = agent.App.Preferences().String("WebhookID")
+	appConfig.Secret = agent.app.Preferences().String("Secret")
+	appConfig.Token = agent.app.Preferences().String("Token")
+	appConfig.WebhookID = agent.app.Preferences().String("WebhookID")
 
 	if UseTLS {
 		appConfig.WebSocketURL = "wss://" + Host + websocketPath
@@ -54,10 +54,10 @@ func (agent *Agent) loadAppConfig() *config.AppConfig {
 }
 
 func (agent *Agent) GetAppConfigVersion() string {
-	return agent.App.Preferences().String("Version")
+	return agent.app.Preferences().String("Version")
 }
 
 func (agent *Agent) GetDeviceDetails() (string, string) {
-	return agent.App.Preferences().String("DeviceName"),
-		agent.App.Preferences().String("DeviceID")
+	return agent.app.Preferences().String("DeviceName"),
+		agent.app.Preferences().String("DeviceID")
 }

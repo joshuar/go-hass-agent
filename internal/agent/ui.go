@@ -23,12 +23,12 @@ func newUI() fyne.App {
 
 func (agent *Agent) setupSystemTray() {
 	// a.hassConfig = hass.GetConfig(a.config.RestAPIURL)
-	agent.Tray = agent.App.NewWindow("System Tray")
-	agent.Tray.SetMaster()
-	if desk, ok := agent.App.(desktop.App); ok {
+	agent.tray = agent.app.NewWindow("System Tray")
+	agent.tray.SetMaster()
+	if desk, ok := agent.app.(desktop.App); ok {
 		menuItemAbout := fyne.NewMenuItem("About", func() {
 			deviceName, deviceID := agent.GetDeviceDetails()
-			w := agent.App.NewWindow(translator.Translate("About %s", agent.Name))
+			w := agent.app.NewWindow(translator.Translate("About %s", agent.Name))
 			w.SetContent(container.New(layout.NewVBoxLayout(),
 				widget.NewLabel(translator.Translate(
 					"App Version: %s", agent.Version)),
@@ -45,5 +45,5 @@ func (agent *Agent) setupSystemTray() {
 		menu := fyne.NewMenu(agent.Name, menuItemAbout)
 		desk.SetSystemTrayMenu(menu)
 	}
-	agent.Tray.Hide()
+	agent.tray.Hide()
 }
