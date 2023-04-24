@@ -13,7 +13,6 @@ import (
 	"testing"
 
 	"fyne.io/fyne/v2/app"
-	badger "github.com/dgraph-io/badger/v4"
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/stretchr/testify/assert"
@@ -103,14 +102,6 @@ func (m *mockSensorUpdate) Attributes() interface{} {
 
 type MockSensorRegistry struct {
 	mock.Mock
-}
-
-func newMockSensorRegistry(t *testing.T) *sensorRegistry {
-	fakeRegistry := new(sensorRegistry)
-	db, err := badger.Open(badger.DefaultOptions("").WithInMemory(true))
-	assert.Nil(t, err)
-	fakeRegistry.db = db
-	return fakeRegistry
 }
 
 func newMockSensorTracker(t *testing.T) *sensorTracker {
