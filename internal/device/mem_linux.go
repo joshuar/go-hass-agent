@@ -35,6 +35,8 @@ type memory struct {
 	name  memoryStat
 }
 
+// memory implements hass.SensorUpdate
+
 func (m *memory) Name() string {
 	return strcase.ToDelimited(m.name.String(), ' ')
 }
