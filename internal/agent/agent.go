@@ -156,6 +156,9 @@ func (agent *Agent) tracker(agentCtx context.Context, configWG *sync.WaitGroup) 
 				case hass.LocationUpdate:
 					l := hass.MarshalLocationUpdate(data)
 					go hass.APIRequest(ctx, l)
+				default:
+					log.Debug().Caller().
+						Msgf("Got unexpected status update %v", data)
 				}
 			case <-ctx.Done():
 				log.Debug().Caller().

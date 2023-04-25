@@ -193,6 +193,7 @@ func SetupSensors() *SensorInfo {
 	sensorInfo.Add("Problems", ProblemsUpdater)
 	sensorInfo.Add("Memory", MemoryUpdater)
 	sensorInfo.Add("LoadAvg", LoadAvgUpdater)
+	sensorInfo.Add("DiskUsage", DiskUsageUpdater)
 	// Add each SensorUpdater function here...
 	return sensorInfo
 }
