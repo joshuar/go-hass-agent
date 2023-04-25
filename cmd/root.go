@@ -26,8 +26,13 @@ var (
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "go-hass-agent",
-	Short: "A Home Assistant, native app integration for desktop/laptop devices.",
-	Long: `go-hass-agent runs in a system tray and reports various sensors about desktop/laptop devices to a Home Assistant instance. This includes the usual system metrics like load and memory usage as well as things like the current active application, where possible. It can also recieve notifications from Home Assistant.`,
+	Short: "A brief description of your application",
+	Long: `A longer description that spans multiple lines and likely contains
+examples and usage of using your application. For example:
+
+Cobra is a CLI library for Go that empowers applications.
+This application is a tool to generate the needed files
+to quickly create a Cobra application.`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		zerolog.ErrorStackMarshaler = pkgerrors.MarshalStack
 		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
@@ -47,7 +52,7 @@ var rootCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		if debugID != "" {
 			agent.Run(debugID)
-		} else {}
+		} else {
 			agent.Run("")
 		}
 	},
