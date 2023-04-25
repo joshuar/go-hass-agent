@@ -3,7 +3,6 @@ module github.com/joshuar/go-hass-agent
 go 1.19
 
 require (
-	github.com/davecgh/go-spew v1.1.1
 	github.com/go-playground/validator/v10 v10.12.0
 	github.com/godbus/dbus/v5 v5.1.0
 	github.com/jeandeaual/go-locale v0.0.0-20220711133428-7de61946b173
@@ -18,6 +17,7 @@ require (
 	fyne.io/systray v1.10.1-0.20230403195833-7dc3c09283d6 // indirect
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dgraph-io/ristretto v0.1.1 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/fredbi/uri v1.0.0 // indirect
