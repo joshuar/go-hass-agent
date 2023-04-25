@@ -28,6 +28,8 @@ var Version string
 
 var translator *translations.Translator
 
+var debugAppID = ""
+
 const (
 	Name      = "go-hass-agent"
 	fyneAppID = "com.github.joshuar.go-hass-agent"
@@ -47,7 +49,10 @@ func NewAgent() *Agent {
 	}
 }
 
-func Run() {
+func Run(id string) {
+	if id != "" {
+		debugAppID = id
+	}
 	ctx, cancelfunc := context.WithCancel(context.Background())
 	ctx = device.SetupContext(ctx)
 	log.Info().Msg("Starting agent.")
