@@ -19,6 +19,7 @@ import (
 
 var (
 	debugFlag   bool
+	debugID     string
 	profileFlag bool
 )
 
@@ -49,7 +50,11 @@ to quickly create a Cobra application.`,
 		}
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		agent.Run()
+		if debugID != "" {
+			agent.Run(debugID)
+		} else {
+			agent.Run("")
+		}
 	},
 }
 
@@ -63,4 +68,5 @@ func Execute() {
 func init() {
 	rootCmd.PersistentFlags().BoolVarP(&debugFlag, "debug", "d", false, "debug output (default is false)")
 	rootCmd.PersistentFlags().BoolVarP(&profileFlag, "profile", "p", false, "enable profiling (default is false)")
+	rootCmd.PersistentFlags().StringVar(&debugID, "debugID", "", "specify a custom app ID (for debugging)")
 }

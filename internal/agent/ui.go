@@ -11,13 +11,21 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/driver/desktop"
 	"fyne.io/fyne/v2/layout"
+	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/joshuar/go-hass-agent/assets/trayicon"
 )
 
 func newUI() fyne.App {
-	a := app.NewWithID(fyneAppID)
-	a.SetIcon(&trayicon.TrayIcon{})
+	var a fyne.App
+	if debugAppID != "" {
+		a = app.NewWithID(debugAppID)
+		a.SetIcon(theme.FyneLogo())
+
+	} else {
+		a = app.NewWithID(fyneAppID)
+		a.SetIcon(&trayicon.TrayIcon{})
+	}
 	return a
 }
 
