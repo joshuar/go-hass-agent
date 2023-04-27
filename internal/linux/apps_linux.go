@@ -94,6 +94,10 @@ func (s *appSensor) State() interface{} {
 }
 
 func (s *appSensor) Units() string {
+	switch s.sensorType {
+	case RunningApps:
+		return "apps"
+	}
 	return ""
 }
 
