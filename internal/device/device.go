@@ -89,23 +89,3 @@ func (i *SensorInfo) Add(name string, workerFunc func(context.Context, chan inte
 func (i *SensorInfo) Get() map[string]func(context.Context, chan interface{}) {
 	return i.sensorWorkers
 }
-
-// key is an unexported type for keys defined in this package.
-// This prevents collisions with keys defined in other packages.
-type key int
-
-// configKey is the key for device.deviceAPI values in Contexts. It is
-// unexported; clients use device.NewContext and device.FromContext
-// instead of using this key directly.
-var configKey key
-
-// NewContext returns a new Context that carries value d.
-func NewContext(ctx context.Context, d *deviceAPI) context.Context {
-	return context.WithValue(ctx, configKey, d)
-}
-
-// FromContext returns the deviceAPI value stored in ctx, if any.
-func FromContext(ctx context.Context) (*deviceAPI, bool) {
-	c, ok := ctx.Value(configKey).(*deviceAPI)
-	return c, ok
-}

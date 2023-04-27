@@ -42,7 +42,7 @@ type validationError struct {
 type key int
 
 // configKey is the key for agent.AppConfig values in Contexts. It is
-// unexported; clients use user.NewContext and user.FromContext
+// unexported; clients use config.NewContext and config.FromContext
 // instead of using this key directly.
 var configKey key
 
@@ -51,7 +51,7 @@ func NewContext(ctx context.Context, c *AppConfig) context.Context {
 	return context.WithValue(ctx, configKey, c)
 }
 
-// FromContext returns the User value stored in ctx, if any.
+// FromContext returns the value stored in ctx, if any.
 func FromContext(ctx context.Context) (*AppConfig, bool) {
 	c, ok := ctx.Value(configKey).(*AppConfig)
 	return c, ok

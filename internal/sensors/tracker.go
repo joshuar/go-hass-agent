@@ -31,7 +31,7 @@ func NewSensorTracker(ctx context.Context, appPath fyne.URI) *sensorTracker {
 	}
 	return &sensorTracker{
 		sensor:        make(map[string]*sensorState),
-		sensorWorkers: device.SetupSensors(),
+		sensorWorkers: SetupSensors(),
 		registry:      r,
 		hassConfig:    hass.NewHassConfig(ctx),
 	}

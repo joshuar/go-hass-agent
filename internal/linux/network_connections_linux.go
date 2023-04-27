@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-package device
+package linux
 
 import (
 	"context"
@@ -467,24 +467,24 @@ func NetworkUpdater(ctx context.Context, status chan interface{}) {
 
 	// Add a DBus watch for global connectivity changes. If global connectivity
 	// is established, check and update external IP sensor.
-	networkStateWatch := &DBusWatchRequest{
-		bus:  systemBus,
-		path: dBusPath,
-		match: []dbus.MatchOption{
-			dbus.WithMatchPathNamespace(dBusPath),
-			dbus.WithMatchInterface(dBusDest),
-		},
-		event: "org.freedesktop.NetworkManager.Statechanged",
-		eventHandler: func(s *dbus.Signal) {
-			switch state := s.Body[0].(type) {
-			case uint32:
-				if state == 70 {
-					updateExternalIPSensors(ctx, status)
-				}
-			}
-		},
-	}
-	deviceAPI.WatchEvents <- networkStateWatch
+	// networkStateWatch := &DBusWatchRequest{
+	// 	bus:  systemBus,
+	// 	path: dBusPath,
+	// 	match: []dbus.MatchOption{
+	// 		dbus.WithMatchPathNamespace(dBusPath),
+	// 		dbus.WithMatchInterface(dBusDest),
+	// 	},
+	// 	event: "org.freedesktop.NetworkManager.Statechanged",
+	// 	eventHandler: func(s *dbus.Signal) {
+	// 		switch state := s.Body[0].(type) {
+	// 		case uint32:
+	// 			if state == 70 {
+	// 				device.UpdateExternalIPSensors(ctx, status)
+	// 			}
+	// 		}
+	// 	},
+	// }
+	// deviceAPI.WatchEvents <- networkStateWatch
 
 	// catchAllWatch := &DBusWatchRequest{
 	// 	bus:  systemBus,
@@ -516,7 +516,7 @@ func NetworkUpdater(ctx context.Context, status chan interface{}) {
 
 }
 
-func deviceActiveConnection(ctx context.Context, device dbus.ObjectPath) dbus.ObjectPath {
+func deviceActiveConnection(ctx context.Context, networkDevice dbus.ObjectPath) dbus.ObjectPath {
 	deviceAPI, deviceAPIExists := FromContext(ctx)
 	if !deviceAPIExists {
 		log.Debug().Caller().
@@ -524,7 +524,7 @@ func deviceActiveConnection(ctx context.Context, device dbus.ObjectPath) dbus.Ob
 		return ""
 	}
 	variant, err := deviceAPI.GetDBusProp(
-		systemBus, dBusDest, device,
+		systemBus, dBusDest, networkDevice,
 		"org.freedesktop.NetworkManager.Device.ActiveConnection")
 	conn := dbus.ObjectPath(variantToValue[[]uint8](variant))
 	if err != nil || !conn.IsValid() {
