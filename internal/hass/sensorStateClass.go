@@ -5,11 +5,11 @@
 
 package hass
 
-//go:generate stringer -type=SensorStateClass -output sensorStateClassStrings.go -trimprefix State
+//go:generate stringer -type=SensorStateClass -output sensorStateClassStrings.go -linecomment
 const (
-	StateMeasurement SensorStateClass = iota + 1
-	StateTotal
-	StateTotalIncreasing
+	StateMeasurement     SensorStateClass = iota + 1 // measurement
+	StateTotal                                       // total
+	StateTotalIncreasing                             // total_increasing
 )
 
 // SensorStateClass reflects the HA state class of the sensor.

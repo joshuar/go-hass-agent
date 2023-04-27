@@ -5,23 +5,21 @@
 
 package hass
 
-import "strings"
-
 // Sensor represents a sensor in HA. As an interface, it leaves it up to the
 // underlying struct to provide the appropriate data for this representation.
 type Sensor interface {
-		Attributes() interface{}
-		DeviceClass() string
-		Icon() string
-		Name() string
-		State() interface{}
-		Type() string
-		UniqueID() string
-		UnitOfMeasurement() string
-		StateClass() string
-		EntityCategory() string
-		Disabled() bool
-		Registered() bool
+	Attributes() interface{}
+	DeviceClass() string
+	Icon() string
+	Name() string
+	State() interface{}
+	Type() string
+	UniqueID() string
+	UnitOfMeasurement() string
+	StateClass() string
+	EntityCategory() string
+	Disabled() bool
+	Registered() bool
 }
 
 // SensorUpdate represents an update for a sensor. It reflects the current state
@@ -88,7 +86,7 @@ func MarshalSensorData(s Sensor) interface{} {
 			Type:              s.Type(),
 			UniqueID:          s.UniqueID(),
 			UnitOfMeasurement: s.UnitOfMeasurement(),
-			StateClass:        strings.ToLower(s.StateClass()),
+			StateClass:        s.StateClass(),
 			EntityCategory:    s.EntityCategory(),
 			Disabled:          s.Disabled(),
 		}
