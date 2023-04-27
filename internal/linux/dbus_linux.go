@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-package device
+package linux
 
 import (
 	"context"
@@ -21,10 +21,26 @@ const (
 )
 
 type dbusType int
+
 type bus struct {
 	conn    *dbus.Conn
 	events  chan *dbus.Signal
 	busType dbusType
+}
+
+type DeviceAPI struct {
+	dBusSystem, dBusSession *bus
+	WatchEvents             chan *DBusWatchRequest
+}
+
+// DBusWatchRequest contains all the information required to set-up a DBus match
+// signal watcher.
+type DBusWatchRequest struct {
+	bus          dbusType
+	path         dbus.ObjectPath
+	match        []dbus.MatchOption
+	event        string
+	eventHandler func(*dbus.Signal)
 }
 
 // NewBus sets up DBus connections and channels for receiving signals. It creates both a system and session bus connection.
@@ -52,17 +68,21 @@ func NewBus(ctx context.Context, t dbusType) *bus {
 	}
 }
 
-// DBusWatchRequest contains all the information required to set-up a DBus match
-// signal watcher.
-type DBusWatchRequest struct {
-	bus          dbusType
-	path         dbus.ObjectPath
-	match        []dbus.MatchOption
-	event        string
-	eventHandler func(*dbus.Signal)
+func NewDeviceAPI(ctx context.Context) *DeviceAPI {
+	api := &DeviceAPI{
+		dBusSystem:  NewBus(ctx, systemBus),
+		dBusSession: NewBus(ctx, sessionBus),
+		WatchEvents: make(chan *DBusWatchRequest),
+	}
+	if api.dBusSystem == nil && api.dBusSession == nil {
+		return nil
+	} else {
+		go api.monitorDBus(ctx)
+		return api
+	}
 }
 
-func (d *deviceAPI) bus(t dbusType) *dbus.Conn {
+func (d *DeviceAPI) bus(t dbusType) *dbus.Conn {
 	switch t {
 	case sessionBus:
 		if d.dBusSession != nil {
@@ -85,7 +105,7 @@ func (d *deviceAPI) bus(t dbusType) *dbus.Conn {
 // monitorDBus listens for DBus watch requests and ensures the appropriate
 // signal watches are created. It will also dispatch to a handler function when
 // a signal is matched.
-func (d *deviceAPI) monitorDBus(ctx context.Context) {
+func (d *DeviceAPI) monitorDBus(ctx context.Context) {
 	events := make(map[dbusType]map[string]func(*dbus.Signal))
 	watches := make(map[dbusType]*DBusWatchRequest)
 	defer close(d.WatchEvents)
@@ -154,7 +174,7 @@ func (d *deviceAPI) monitorDBus(ctx context.Context) {
 // specified path and interface. For adding dbus.MatchOptions, see the available
 // ones here:
 // https://dbus.freedesktop.org/doc/dbus-specification.html#message-bus-routing-match-rules
-func (d *deviceAPI) AddDBusWatch(t dbusType, matches []dbus.MatchOption) error {
+func (d *DeviceAPI) AddDBusWatch(t dbusType, matches []dbus.MatchOption) error {
 	if err := d.bus(t).AddMatchSignal(matches...); err != nil {
 		return err
 	} else {
@@ -164,7 +184,7 @@ func (d *deviceAPI) AddDBusWatch(t dbusType, matches []dbus.MatchOption) error {
 
 // RemoveDBusWatch will remove a matcher from the specified bus to stop it
 // generating signals for that match.
-func (d *deviceAPI) RemoveDBusWatch(t dbusType, path dbus.ObjectPath, intr string) error {
+func (d *DeviceAPI) RemoveDBusWatch(t dbusType, path dbus.ObjectPath, intr string) error {
 	if err := d.bus(t).RemoveMatchSignal(
 		dbus.WithMatchObjectPath(path),
 		dbus.WithMatchInterface(intr),
@@ -175,7 +195,7 @@ func (d *deviceAPI) RemoveDBusWatch(t dbusType, path dbus.ObjectPath, intr strin
 	}
 }
 
-func (d *deviceAPI) GetDBusObject(t dbusType, dest string, path dbus.ObjectPath) dbus.BusObject {
+func (d *DeviceAPI) GetDBusObject(t dbusType, dest string, path dbus.ObjectPath) dbus.BusObject {
 	if d.bus(t) != nil {
 		return d.bus(t).Object(dest, path)
 	} else {
@@ -185,7 +205,7 @@ func (d *deviceAPI) GetDBusObject(t dbusType, dest string, path dbus.ObjectPath)
 
 // GetDBusProp will retrieve the specified property value from the given path
 // and destination.
-func (d *deviceAPI) GetDBusProp(t dbusType, dest string, path dbus.ObjectPath, prop string) (dbus.Variant, error) {
+func (d *DeviceAPI) GetDBusProp(t dbusType, dest string, path dbus.ObjectPath, prop string) (dbus.Variant, error) {
 	if d.bus(t) != nil {
 		obj := d.bus(t).Object(dest, path)
 		res, err := obj.GetProperty(prop)
@@ -200,7 +220,7 @@ func (d *deviceAPI) GetDBusProp(t dbusType, dest string, path dbus.ObjectPath, p
 	}
 }
 
-func (d *deviceAPI) GetDBusDataAsMap(t dbusType, dest string, path dbus.ObjectPath, method string, args ...interface{}) (map[string]dbus.Variant, error) {
+func (d *DeviceAPI) GetDBusDataAsMap(t dbusType, dest string, path dbus.ObjectPath, method string, args ...interface{}) (map[string]dbus.Variant, error) {
 	if d.bus(t) != nil {
 		obj := d.bus(t).Object(dest, path)
 		var data map[string]dbus.Variant
@@ -221,7 +241,7 @@ func (d *deviceAPI) GetDBusDataAsMap(t dbusType, dest string, path dbus.ObjectPa
 	}
 }
 
-func (d *deviceAPI) GetDBusDataAsList(t dbusType, dest string, path dbus.ObjectPath, method string, args ...interface{}) ([]string, error) {
+func (d *DeviceAPI) GetDBusDataAsList(t dbusType, dest string, path dbus.ObjectPath, method string, args ...interface{}) ([]string, error) {
 	if d.bus(t) != nil {
 		obj := d.bus(t).Object(dest, path)
 		var data []string
@@ -240,7 +260,7 @@ func (d *deviceAPI) GetDBusDataAsList(t dbusType, dest string, path dbus.ObjectP
 	}
 }
 
-func (d *deviceAPI) GetDBusData(t dbusType, dest string, path dbus.ObjectPath, method string, args ...interface{}) (interface{}, error) {
+func (d *DeviceAPI) GetDBusData(t dbusType, dest string, path dbus.ObjectPath, method string, args ...interface{}) (interface{}, error) {
 	if d.bus(t) != nil {
 		obj := d.bus(t).Object(dest, path)
 		var data interface{}
@@ -284,4 +304,85 @@ func FindPortal() string {
 		log.Warn().Msg("Unsupported desktop/window environment.")
 		return ""
 	}
+}
+
+func GetHostname(ctx context.Context) string {
+	deviceAPI, deviceAPIExists := FromContext(ctx)
+	if !deviceAPIExists {
+		log.Debug().Caller().
+			Msg("Could not connect to DBus to monitor network.")
+		return "localhost"
+	}
+	var dBusDest = "org.freedesktop.hostname1"
+	var dBusPath = "/org/freedesktop/hostname1"
+	hostnameFromDBus, err := deviceAPI.GetDBusProp(systemBus,
+		dBusDest,
+		dbus.ObjectPath(dBusPath),
+		dBusDest+".Hostname")
+	if err != nil {
+		return "localhost"
+	} else {
+		return string(variantToValue[[]uint8](hostnameFromDBus))
+	}
+}
+
+func GetHardwareDetails(ctx context.Context) (string, string) {
+	var vendor, model string
+	deviceAPI, deviceAPIExists := FromContext(ctx)
+	if !deviceAPIExists {
+		log.Debug().Caller().
+			Msg("Could not connect to DBus to monitor network.")
+		return "", ""
+	}
+	var dBusDest = "org.freedesktop.hostname1"
+	var dBusPath = "/org/freedesktop/hostname1"
+	hwVendorFromDBus, err := deviceAPI.GetDBusProp(systemBus,
+		dBusDest,
+		dbus.ObjectPath(dBusPath),
+		dBusDest+".HardwareVendor")
+	if err != nil {
+		hwVendor, err := os.ReadFile("/sys/devices/virtual/dmi/id/board_vendor")
+		if err != nil {
+			vendor = "Unknown Vendor"
+		} else {
+			vendor = strings.TrimSpace(string(hwVendor))
+		}
+	} else {
+		vendor = string(variantToValue[[]uint8](hwVendorFromDBus))
+	}
+	hwModelFromDBus, err := deviceAPI.GetDBusProp(systemBus,
+		dBusDest,
+		dbus.ObjectPath(dBusPath),
+		dBusDest+".HardwareModel")
+	if err != nil {
+		hwModel, err := os.ReadFile("/sys/devices/virtual/dmi/id/product_name")
+		if err != nil {
+			model = "Unknown Vendor"
+		} else {
+			model = strings.TrimSpace(string(hwModel))
+		}
+	} else {
+		model = string(variantToValue[[]uint8](hwModelFromDBus))
+	}
+	return vendor, model
+}
+
+// key is an unexported type for keys defined in this package.
+// This prevents collisions with keys defined in other packages.
+type key int
+
+// configKey is the key for DeviceAPI values in Contexts. It is
+// unexported; clients use linux.NewContext and linux.FromContext
+// instead of using this key directly.
+var configKey key
+
+// NewContext returns a new Context that carries value c.
+func NewContext(ctx context.Context, c *DeviceAPI) context.Context {
+	return context.WithValue(ctx, configKey, c)
+}
+
+// FromContext returns the value stored in ctx, if any.
+func FromContext(ctx context.Context) (*DeviceAPI, bool) {
+	c, ok := ctx.Value(configKey).(*DeviceAPI)
+	return c, ok
 }

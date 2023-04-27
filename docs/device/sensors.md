@@ -1,6 +1,6 @@
 <!--
  Copyright (c) 2023 Joshua Rich <joshua.rich@gmail.com>
- 
+
  This software is released under the MIT License.
  https://opensource.org/licenses/MIT
 -->
@@ -9,7 +9,7 @@
 
 ## Code Location
 
-Platform/device sensor code belongs under `device/`. Ideally, create a new `.go`
+Platform/device sensor code belongs under `GOARCH/`. Ideally, create a new `.go`
 file for each sensor or sensor group you are adding.
 
 ## Representing a sensor
@@ -36,7 +36,7 @@ type SensorUpdate interface {
 ### Name() string
 
 A friendly name for this sensor. It will be what is shown in the Home Assistant
-UI for the sensor. 
+UI for the sensor.
 
 An example would be "My Network Sensor".
 
@@ -52,12 +52,11 @@ An example would be "my_network_sensor_1".
 
 The [Material Design Icon](https://pictogrammers.github.io/@mdi/font/2.0.46/)
 representing the current state. It can be changed dynamically based on the
-current state or remain constant. Format is "mdi:icon_name". 
+current state or remain constant. Format is "mdi:icon_name".
 
-### SensorType() hass.SensorType 
+### SensorType() hass.SensorType
 
 The `hass.SensorType` for this sensor. Either `TypeSensor` or `TypeBinary`.
-
 
 ### DeviceClass() hass.SensorDeviceClass
 
@@ -94,7 +93,7 @@ of a device or an empty string for anything else.
 
 Any additional attributes or state/values you would like to associate with the
 sensor. This should be formatted as a `struct{}` that can be marshaled into
-valid JSON.  
+valid JSON.
 
 ## Managing sensor updates
 
@@ -104,6 +103,9 @@ following signature:
 ```go
 func SensorUpdater(ctx context.Context, updateCh chan interface{})
 ```
+
+Create this function in the `sensors` package, in a file called
+`setup_GOARCH.go`.
 
 The `ctx` parameter will contain the device/platform specific APIs and
 variables. You can retrieve those in the function with:
@@ -121,19 +123,19 @@ See [agent/extending](../agent/extending.md) for more details on creating this
 context and loading it with the right information.
 
 The `updateCh` will be the channel you use to send the sensor data that
-implements the `hass.SensorUpdate` interface. 
+implements the `hass.SensorUpdate` interface.
 
 Within this function, you should create the sensors you want to report to Home
 Assistant and set up a way to send updates. You will want:
 
 - A way to get the sensor data you need. Most likely stored in a struct.
 - Ensure this data struct meets the `hass.SensorUpdate` interface requirements.
-- Pass the data struct through the `updateCh` channel as needed where it will be
+- Pass the data struct through the `updateCh` channel as required where it will be
 tracked and sent to Home Assistant by the agent.
 
 How this is achieved will vary and can be done in any way. For example, the
 battery sensor data is manifested by listening for DBus signals that indicate a
-battery property has changed. 
+battery property has changed.
 
 ## Sensor tracking
 
@@ -158,4 +160,4 @@ tracker and will run each `SensorUpdater` function that has been defined.
 See the `apps_linux.go` or `battery_linux.go` files for examples of code
 to track the current/running apps and battery states on Linux. These use DBus
 events for tracking the changes. That is only one possible way to get the
-updates; any other method you can think of would probably work as well. 
+updates; any other method you can think of would probably work as well.

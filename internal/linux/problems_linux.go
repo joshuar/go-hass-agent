@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-package device
+package linux
 
 import (
 	"context"
@@ -94,7 +94,7 @@ func marshalProblemDetails(details map[string]dbus.Variant) map[string]interface
 	return parsed
 }
 
-func sendAllProblems(deviceAPI *deviceAPI, status chan interface{}) {
+func sendAllProblems(deviceAPI *DeviceAPI, status chan interface{}) {
 	problems := &problems{
 		list: make(map[string]map[string]interface{}),
 	}

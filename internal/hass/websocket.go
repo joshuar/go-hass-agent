@@ -91,19 +91,19 @@ func (ws *HassWebsocket) Close() {
 
 func NewWebsocket(ctx context.Context) *HassWebsocket {
 
-	config, validConfig := config.FromContext(ctx)
+	agentConfig, validConfig := config.FromContext(ctx)
 	if !validConfig {
 		log.Debug().Caller().Msg("Could not retrieve valid config from context.")
 		return nil
 	}
 
-	log.Debug().Caller().Msgf("Using %s for websocket connection.", config.WebSocketURL)
+	log.Debug().Caller().Msgf("Using %s for websocket connection.", agentConfig.WebSocketURL)
 	ctxConnect, cancelConnect := context.WithTimeout(ctx, time.Minute)
 	defer cancelConnect()
 	var conn *websocket.Conn
 	var err error
 	retryFunc := func() error {
-		conn, _, err = websocket.Dial(ctxConnect, config.WebSocketURL, nil)
+		conn, _, err = websocket.Dial(ctxConnect, agentConfig.WebSocketURL, nil)
 		if err != nil {
 			log.Debug().Err(err).Caller().
 				Msg("Could not connect to websocket.")

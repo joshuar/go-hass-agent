@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-package device
+package linux
 
 import (
 	"context"
@@ -43,7 +43,7 @@ type upowerBattery struct {
 	props    map[BatteryProp]dbus.Variant
 }
 
-func (b *upowerBattery) updateProp(api *deviceAPI, prop BatteryProp) {
+func (b *upowerBattery) updateProp(api *DeviceAPI, prop BatteryProp) {
 	propValue, err := api.GetDBusProp(systemBus, upowerDBusDest, b.dBusPath, "org.freedesktop.UPower.Device."+prop.String())
 	if err != nil {
 		log.Debug().Caller().
@@ -57,7 +57,7 @@ func (b *upowerBattery) getProp(prop BatteryProp) interface{} {
 	return b.props[prop].Value()
 }
 
-func (b *upowerBattery) marshalBatteryStateUpdate(api *deviceAPI, prop BatteryProp) *upowerBatteryState {
+func (b *upowerBattery) marshalBatteryStateUpdate(api *DeviceAPI, prop BatteryProp) *upowerBatteryState {
 	// log.Debug().Caller().Msgf("Marshalling update for %v for battery %v", prop.String(), b.getProp(NativePath).(string))
 	state := &upowerBatteryState{
 		batteryID: b.getProp(NativePath).(string),

@@ -129,7 +129,7 @@ func lookupExternalIPs(ctx context.Context) []*address {
 	return nil
 }
 
-func updateExternalIPSensors(ctx context.Context, status chan interface{}) {
+func UpdateExternalIPSensors(ctx context.Context, status chan interface{}) {
 	ips := lookupExternalIPs(ctx)
 	for _, ip := range ips {
 		if ip.addr != nil {
@@ -152,7 +152,7 @@ func ExternalIPUpdater(ctx context.Context, status chan interface{}) {
 				return
 			case <-ticker.C:
 				log.Debug().Caller().Msg("Checking for external IP update...")
-				updateExternalIPSensors(ctx, status)
+				UpdateExternalIPSensors(ctx, status)
 			}
 		}
 	}()

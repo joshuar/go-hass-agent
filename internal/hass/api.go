@@ -75,7 +75,7 @@ func APIRequest(ctx context.Context, request Request) {
 	requestCtx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
 
-	config, validConfig := config.FromContext(requestCtx)
+	agentConfig, validConfig := config.FromContext(requestCtx)
 	if !validConfig {
 		log.Error().Caller().
 			Msg("Could not retrieve valid config from context.")
@@ -83,14 +83,14 @@ func APIRequest(ctx context.Context, request Request) {
 		request.ResponseHandler(res)
 		return
 	}
-	reqJson, err := MarshalJSON(request, config.Secret)
+	reqJson, err := MarshalJSON(request, agentConfig.Secret)
 	if err != nil {
 		log.Error().Stack().Err(err).
 			Msg("Unable to format request")
 		request.ResponseHandler(res)
 	} else {
 		err := requests.
-			URL(config.APIURL).
+			URL(agentConfig.APIURL).
 			BodyBytes(reqJson).
 			ToBytesBuffer(&res).
 			Fetch(requestCtx)

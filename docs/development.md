@@ -1,6 +1,6 @@
 <!--
  Copyright (c) 2023 Joshua Rich <joshua.rich@gmail.com>
- 
+
  This software is released under the MIT License.
  https://opensource.org/licenses/MIT
 -->
@@ -28,11 +28,13 @@ need to be installed:
 
 The intention of the agent design is to make it OS-agnostic.
 
-Most OS specific code for fetching sensor data should likely be part of the
-`device` package and using filename suffixes such as `filename_GOOS_GOARCH.go`. 
+Most OS specific code for fetching sensor data should likely be part of a
+`GOARCH` package and using filename suffixes such as `filename_GOOS_GOARCH.go`.
+See the files under `linux/` as examples.
 
 For some OSes, you might need some code to initialise or create some data source
-or API that the individual sensor fetching code uses. 
+or API that the individual sensor fetching code uses. This code should be placed
+in `device/`, using filename suffixes such as `filename_GOOS_GOARCH.go`
 
 For example, on Linux, a DBus connection is used for a lot of the sensor data gathering.
 
@@ -48,7 +50,7 @@ that contains the necessary values for the platform. It will be propagated
 throughout the code wherever a context is passed and available for retrieval and
 use.
 
-An example can be found in `device/helpers_linux.go`.
+An example can be found in `device/device_linux.go`.
 
 ### Adding sensors
 
