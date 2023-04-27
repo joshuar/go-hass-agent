@@ -75,7 +75,7 @@ func (l *loadavg) State() interface{} {
 }
 
 func (l *loadavg) Units() string {
-	return ""
+	return "load"
 }
 
 func (l *loadavg) Category() string {

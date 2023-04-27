@@ -54,7 +54,7 @@ func (p *problems) State() interface{} {
 }
 
 func (p *problems) Units() string {
-	return ""
+	return "problems"
 }
 
 func (p *problems) Category() string {
