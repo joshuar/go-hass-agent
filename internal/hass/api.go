@@ -83,7 +83,6 @@ func APIRequest(ctx context.Context, request Request) {
 		request.ResponseHandler(res)
 		return
 	}
-
 	reqJson, err := MarshalJSON(request, config.Secret)
 	if err != nil {
 		log.Error().Stack().Err(err).

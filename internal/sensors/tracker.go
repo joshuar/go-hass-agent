@@ -68,15 +68,16 @@ func (tracker *sensorTracker) get(id string) *sensorState {
 	return tracker.sensor[id]
 }
 
-func (tracker *sensorTracker) update(s hass.SensorUpdate) {
+func (tracker *sensorTracker) update(s hass.SensorUpdate) error {
 	if !tracker.exists(s.ID()) {
-		return
+		return errors.New("sensor not found")
 	}
 	tracker.mu.Lock()
 	tracker.sensor[s.ID()].state = s.State()
 	tracker.sensor[s.ID()].attributes = s.Attributes()
 	tracker.sensor[s.ID()].icon = s.Icon()
 	tracker.mu.Unlock()
+	return nil
 }
 
 func (tracker *sensorTracker) exists(id string) bool {
@@ -115,7 +116,7 @@ func (tracker *sensorTracker) Update(ctx context.Context, s hass.SensorUpdate) {
 	if !tracker.exists(sensorID) {
 		err = tracker.add(s)
 	} else {
-		tracker.update(s)
+		err = tracker.update(s)
 	}
 	if err == nil {
 		sensor := tracker.get(sensorID)

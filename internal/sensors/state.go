@@ -9,7 +9,6 @@ import (
 	"bytes"
 	"encoding/json"
 
-	"github.com/iancoleman/strcase"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/rs/zerolog/log"
 )
@@ -47,7 +46,7 @@ func (s *sensorState) DeviceClass() string {
 
 func (s *sensorState) StateClass() string {
 	if s.stateClass != 0 {
-		return strcase.ToCamel(s.stateClass.String())
+		return s.stateClass.String()
 	} else {
 		return ""
 	}
@@ -57,7 +56,7 @@ func (s *sensorState) Type() string {
 	if s.sensorType != 0 {
 		return s.sensorType.String()
 	} else {
-		return ""
+		return hass.TypeSensor.String()
 	}
 }
 
@@ -112,9 +111,9 @@ func (sensor *sensorState) RequestData() interface{} {
 
 func (sensor *sensorState) ResponseHandler(rawResponse bytes.Buffer) {
 	switch {
-	case rawResponse.Len() == 0:
+	case rawResponse.Len() == 0 || rawResponse.String() == "{}":
 		log.Debug().Caller().
-			Msg("No response data. Likely problem with request data.")
+			Msgf("No response for %s request. Likely problem with request data.", sensor.name)
 	default:
 		var r interface{}
 		json.Unmarshal(rawResponse.Bytes(), &r)
