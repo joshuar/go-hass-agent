@@ -16,7 +16,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-//go:generate stringer -type=networkProp -output network_props_linux.go
+//go:generate stringer -type=networkProp -output network_connection_props_linux.go
 
 const (
 	dBusDest = "org.freedesktop.NetworkManager"
