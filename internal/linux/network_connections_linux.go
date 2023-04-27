@@ -16,7 +16,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-//go:generate stringer -type=networkProp -output network_connection_props_linux.go
+//go:generate stringer -type=networkProp -output network_connections_props_linux.go
 
 const (
 	dBusDest = "org.freedesktop.NetworkManager"
@@ -371,7 +371,7 @@ func marshalNetworkStateUpdate(ctx context.Context, sensor networkProp, path dbu
 	}
 }
 
-func NetworkUpdater(ctx context.Context, status chan interface{}) {
+func NetworkConnectionsUpdater(ctx context.Context, status chan interface{}) {
 
 	deviceAPI, deviceAPIExists := FromContext(ctx)
 	if !deviceAPIExists {
