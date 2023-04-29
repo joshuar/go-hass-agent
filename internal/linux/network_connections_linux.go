@@ -46,7 +46,7 @@ const (
 type networkProp int
 
 func getNetProp(ctx context.Context, path dbus.ObjectPath, prop networkProp) (dbus.Variant, error) {
-	deviceAPI, _ := FromContext(ctx)
+	deviceAPI, _ := FetchAPIFromContext(ctx)
 
 	connIntr := "org.freedesktop.NetworkManager.Connection.Active"
 	ipv4Intr := "org.freedesktop.NetworkManager.IP4Config"
@@ -83,7 +83,7 @@ func getWifiProp(ctx context.Context, path dbus.ObjectPath, wifiProp networkProp
 	wirelessIntr := "org.freedesktop.NetworkManager.Device.Wireless"
 	apIntr := "org.freedesktop.NetworkManager.AccessPoint"
 
-	deviceAPI, _ := FromContext(ctx)
+	deviceAPI, _ := FetchAPIFromContext(ctx)
 
 	var apPath dbus.ObjectPath
 	ap, err := deviceAPI.GetDBusProp(systemBus,
@@ -372,11 +372,10 @@ func marshalNetworkStateUpdate(ctx context.Context, sensor networkProp, path dbu
 }
 
 func NetworkConnectionsUpdater(ctx context.Context, status chan interface{}) {
-
-	deviceAPI, deviceAPIExists := FromContext(ctx)
-	if !deviceAPIExists {
-		log.Debug().Caller().
-			Msg("Could not connect to DBus to monitor network.")
+	deviceAPI, err := FetchAPIFromContext(ctx)
+	if err != nil {
+		log.Debug().Err(err).Caller().
+			Msg("Could not connect to DBus.")
 		return
 	}
 
@@ -519,12 +518,13 @@ func NetworkConnectionsUpdater(ctx context.Context, status chan interface{}) {
 }
 
 func deviceActiveConnection(ctx context.Context, networkDevice dbus.ObjectPath) dbus.ObjectPath {
-	deviceAPI, deviceAPIExists := FromContext(ctx)
-	if !deviceAPIExists {
-		log.Debug().Caller().
-			Msg("Could not connect to DBus to monitor batteries.")
+	deviceAPI, err := FetchAPIFromContext(ctx)
+	if err != nil {
+		log.Debug().Err(err).Caller().
+			Msg("Could not connect to DBus.")
 		return ""
 	}
+
 	variant, err := deviceAPI.GetDBusProp(
 		systemBus, dBusDest, networkDevice,
 		"org.freedesktop.NetworkManager.Device.ActiveConnection")

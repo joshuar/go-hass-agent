@@ -295,11 +295,10 @@ func stringLevel(l uint32) string {
 }
 
 func BatteryUpdater(ctx context.Context, status chan interface{}) {
-
-	deviceAPI, deviceAPIExists := FromContext(ctx)
-	if !deviceAPIExists {
-		log.Debug().Caller().
-			Msg("Could not connect to DBus to monitor batteries.")
+	deviceAPI, err := FetchAPIFromContext(ctx)
+	if err != nil {
+		log.Debug().Err(err).Caller().
+			Msg("Could not connect to DBus.")
 		return
 	}
 
