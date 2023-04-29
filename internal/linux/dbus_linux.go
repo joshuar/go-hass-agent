@@ -414,8 +414,8 @@ type key int
 // instead of using this key directly.
 var configKey key
 
-// NewContext returns a new Context that carries value c.
-func NewContext(ctx context.Context, c *DeviceAPI) context.Context {
+// StoreAPIInContext returns a new Context that carries value c.
+func StoreAPIInContext(ctx context.Context, c *DeviceAPI) context.Context {
 	return context.WithValue(ctx, configKey, c)
 }
 
