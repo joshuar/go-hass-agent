@@ -402,68 +402,70 @@ func NetworkConnectionsUpdater(ctx context.Context, status chan interface{}) {
 	}
 
 	// Set up a DBus watch for connection state changes
-	activeConnDbusPath := dbus.ObjectPath(dBusPath + "/ActiveConnection")
-	connStateWatch := &DBusWatchRequest{
-		bus:  systemBus,
-		path: activeConnDbusPath,
-		match: []dbus.MatchOption{
-			dbus.WithMatchPathNamespace(activeConnDbusPath),
-		},
-		event: "org.freedesktop.DBus.Properties.PropertiesChanged",
-		eventHandler: func(s *dbus.Signal) {
-			if s.Path.IsValid() {
-				switch {
-				case s.Name == "org.freedesktop.NetworkManager.Connection.Active.StateChanged":
-					processConnectionState(ctx, s.Path, status)
-					processConnectionType(ctx, s.Path, status)
-				}
-			}
-		},
+	activeConnDBusPath := dbus.ObjectPath(dBusPath + "/ActiveConnection")
+	connStateDBusMatch := []dbus.MatchOption{
+		dbus.WithMatchPathNamespace(activeConnDBusPath),
 	}
-	deviceAPI.WatchEvents <- connStateWatch
+	connStateHandler := func(s *dbus.Signal) {
+		if s.Path.IsValid() {
+			switch {
+			case s.Name == "org.freedesktop.NetworkManager.Connection.Active.StateChanged":
+				processConnectionState(ctx, s.Path, status)
+				processConnectionType(ctx, s.Path, status)
+			}
+		}
+	}
+	connStateDBusWatch := NewDBusWatchRequest().
+		System().
+		Path(activeConnDBusPath).
+		Match(connStateDBusMatch).
+		Event("org.freedesktop.DBus.Properties.PropertiesChanged").
+		Handler(connStateHandler)
+	deviceAPI.WatchEvents <- connStateDBusWatch
 
 	// Set up a DBus watch for Wi-Fi state changes
 	apDbusPath := dbus.ObjectPath(dBusPath + "/AccessPoint")
-	wifiStateWatch := &DBusWatchRequest{
-		bus:  systemBus,
-		path: apDbusPath,
-		match: []dbus.MatchOption{
-			dbus.WithMatchPathNamespace(apDbusPath),
-			dbus.WithMatchInterface("org.freedesktop.DBus.Properties"),
-		},
-		event: "org.freedesktop.DBus.Properties.PropertiesChanged",
-		eventHandler: func(s *dbus.Signal) {
-			if s.Path.IsValid() {
-				updatedProps := s.Body[1].(map[string]dbus.Variant)
-				for propName, propValue := range updatedProps {
-					var propType networkProp
-					switch propName {
-					case "Ssid":
-						propType = WifiSSID
-					case "HwAddress":
-						propType = WifiHWAddress
-					case "Frequency":
-						propType = WifiFrequency
-					case "Bitrate":
-						propType = WifiSpeed
-					case "Strength":
-						propType = WifiStrength
-					default:
-						log.Debug().Msgf("Unhandled property %v changed to %v", propName, propValue)
-					}
-					if propType != 0 {
-						propState := marshalNetworkStateUpdate(ctx,
-							propType,
-							s.Path,
-							"wifi",
-							propValue)
-						status <- propState
-					}
+	wifiStateDBusMatch := []dbus.MatchOption{
+		dbus.WithMatchPathNamespace(apDbusPath),
+		dbus.WithMatchInterface("org.freedesktop.DBus.Properties"),
+	}
+	wifiStateHandler := func(s *dbus.Signal) {
+		if s.Path.IsValid() {
+			updatedProps := s.Body[1].(map[string]dbus.Variant)
+			for propName, propValue := range updatedProps {
+				var propType networkProp
+				switch propName {
+				case "Ssid":
+					propType = WifiSSID
+				case "HwAddress":
+					propType = WifiHWAddress
+				case "Frequency":
+					propType = WifiFrequency
+				case "Bitrate":
+					propType = WifiSpeed
+				case "Strength":
+					propType = WifiStrength
+				default:
+					log.Debug().Msgf("Unhandled property %v changed to %v", propName, propValue)
+				}
+				if propType != 0 {
+					propState := marshalNetworkStateUpdate(ctx,
+						propType,
+						s.Path,
+						"wifi",
+						propValue)
+					status <- propState
 				}
 			}
-		},
+		}
 	}
-	deviceAPI.WatchEvents <- wifiStateWatch
+	wifiStateDBusWatch := NewDBusWatchRequest().
+		System().
+		Path(apDbusPath).
+		Match(wifiStateDBusMatch).
+		Event("org.freedesktop.DBus.Properties.PropertiesChanged").
+		Handler(wifiStateHandler)
+	deviceAPI.WatchEvents <- wifiStateDBusWatch
 
 	// Add a DBus watch for global connectivity changes. If global connectivity
 	// is established, check and update external IP sensor.

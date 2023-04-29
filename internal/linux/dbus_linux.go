@@ -30,12 +30,12 @@ type bus struct {
 
 type DeviceAPI struct {
 	dBusSystem, dBusSession *bus
-	WatchEvents             chan *DBusWatchRequest
+	WatchEvents             chan *dBusWatchRequest
 }
 
-// DBusWatchRequest contains all the information required to set-up a DBus match
+// dBusWatchRequest contains all the information required to set-up a DBus match
 // signal watcher.
-type DBusWatchRequest struct {
+type dBusWatchRequest struct {
 	bus          dbusType
 	path         dbus.ObjectPath
 	match        []dbus.MatchOption
@@ -72,7 +72,7 @@ func NewDeviceAPI(ctx context.Context) *DeviceAPI {
 	api := &DeviceAPI{
 		dBusSystem:  NewBus(ctx, systemBus),
 		dBusSession: NewBus(ctx, sessionBus),
-		WatchEvents: make(chan *DBusWatchRequest),
+		WatchEvents: make(chan *dBusWatchRequest),
 	}
 	if api.dBusSystem == nil && api.dBusSession == nil {
 		return nil
@@ -107,7 +107,7 @@ func (d *DeviceAPI) bus(t dbusType) *dbus.Conn {
 // a signal is matched.
 func (d *DeviceAPI) monitorDBus(ctx context.Context) {
 	events := make(map[dbusType]map[string]func(*dbus.Signal))
-	watches := make(map[dbusType]*DBusWatchRequest)
+	watches := make(map[dbusType]*dBusWatchRequest)
 	defer close(d.WatchEvents)
 	// For each bus signal handler that exists, try to match first on an exact
 	// path match, then try a substr match. Whichever matches, run the handler
@@ -277,6 +277,40 @@ func (d *DeviceAPI) GetDBusData(t dbusType, dest string, path dbus.ObjectPath, m
 	} else {
 		return nil, errors.New("no bus connection")
 	}
+}
+
+func NewDBusWatchRequest() *dBusWatchRequest {
+	return &dBusWatchRequest{}
+}
+
+func (w *dBusWatchRequest) Session() *dBusWatchRequest {
+	w.bus = sessionBus
+	return w
+}
+
+func (w *dBusWatchRequest) System() *dBusWatchRequest {
+	w.bus = systemBus
+	return w
+}
+
+func (w *dBusWatchRequest) Path(p dbus.ObjectPath) *dBusWatchRequest {
+	w.path = p
+	return w
+}
+
+func (w *dBusWatchRequest) Match(m []dbus.MatchOption) *dBusWatchRequest {
+	w.match = m
+	return w
+}
+
+func (w *dBusWatchRequest) Event(e string) *dBusWatchRequest {
+	w.event = e
+	return w
+}
+
+func (w *dBusWatchRequest) Handler(h func(*dbus.Signal)) *dBusWatchRequest {
+	w.eventHandler = h
+	return w
 }
 
 // variantToValue converts a dbus.Variant type into the specified Go native

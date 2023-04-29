@@ -162,29 +162,30 @@ func AppUpdater(ctx context.Context, update chan interface{}) {
 		return
 	}
 
-	appChangeSignal := &DBusWatchRequest{
-		bus:  sessionBus,
-		path: appStateDBusPath,
-		match: []dbus.MatchOption{
-			dbus.WithMatchObjectPath(appStateDBusPath),
-			dbus.WithMatchInterface(appStateDBusInterface),
-		},
-		event: appStateDBusEvent,
-		eventHandler: func(s *dbus.Signal) {
-			activeAppList, err := deviceAPI.GetDBusDataAsMap(sessionBus,
-				portalDest,
-				appStateDBusPath,
-				appStateDBusMethod)
-			if err != nil {
-				log.Debug().Err(err).Caller().
-					Msg("No active apps found.")
-			} else {
-				update <- marshalAppStateUpdate(RunningApps, activeAppList)
-				update <- marshalAppStateUpdate(ActiveApp, activeAppList)
-			}
-		},
+	appStateDBusMatches := []dbus.MatchOption{
+		dbus.WithMatchObjectPath(appStateDBusPath),
+		dbus.WithMatchInterface(appStateDBusInterface),
 	}
-	deviceAPI.WatchEvents <- appChangeSignal
+	appStateHandler := func(s *dbus.Signal) {
+		activeAppList, err := deviceAPI.GetDBusDataAsMap(sessionBus,
+			portalDest,
+			appStateDBusPath,
+			appStateDBusMethod)
+		if err != nil {
+			log.Debug().Err(err).Caller().
+				Msg("No active apps found.")
+		} else {
+			update <- marshalAppStateUpdate(RunningApps, activeAppList)
+			update <- marshalAppStateUpdate(ActiveApp, activeAppList)
+		}
+	}
+	appStateDBusWatch := NewDBusWatchRequest().
+		Session().
+		Path(appStateDBusPath).
+		Match(appStateDBusMatches).
+		Event(appStateDBusEvent).
+		Handler(appStateHandler)
+	deviceAPI.WatchEvents <- appStateDBusWatch
 }
 
 func findProcesses(name string) []*process.Process {

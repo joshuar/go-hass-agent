@@ -118,33 +118,34 @@ func PowerUpater(ctx context.Context, status chan interface{}) {
 		"",
 		activePowerProfile)
 
-	powerProfileWatch := &DBusWatchRequest{
-		bus:  systemBus,
-		path: powerProfilesDBusPath,
-		match: []dbus.MatchOption{
-			dbus.WithMatchObjectPath(powerProfilesDBusPath),
-		},
-		event: "org.freedesktop.DBus.Properties.PropertiesChanged",
-		eventHandler: func(s *dbus.Signal) {
-			updatedProps := s.Body[1].(map[string]dbus.Variant)
-			for propName, propValue := range updatedProps {
-				var propType powerProp
-				switch propName {
-				case "ActiveProfile":
-					propType = Profile
-				default:
-					log.Debug().Msgf("Unhandled property %v changed to %v", propName, propValue)
-				}
-				if propType != 0 {
-					propState := marshalPowerStateUpdate(ctx,
-						propType,
-						s.Path,
-						"",
-						propValue)
-					status <- propState
-				}
-			}
-		},
+	powerProfileDBusMatch := []dbus.MatchOption{
+		dbus.WithMatchObjectPath(powerProfilesDBusPath),
 	}
-	deviceAPI.WatchEvents <- powerProfileWatch
+	powerProfileHandler := func(s *dbus.Signal) {
+		updatedProps := s.Body[1].(map[string]dbus.Variant)
+		for propName, propValue := range updatedProps {
+			var propType powerProp
+			switch propName {
+			case "ActiveProfile":
+				propType = Profile
+			default:
+				log.Debug().Msgf("Unhandled property %v changed to %v", propName, propValue)
+			}
+			if propType != 0 {
+				propState := marshalPowerStateUpdate(ctx,
+					propType,
+					s.Path,
+					"",
+					propValue)
+				status <- propState
+			}
+		}
+	}
+	powerProfileDBusWatch := NewDBusWatchRequest().
+		System().
+		Path(powerProfilesDBusPath).
+		Match(powerProfileDBusMatch).
+		Event("org.freedesktop.DBus.Properties.PropertiesChanged").
+		Handler(powerProfileHandler)
+	deviceAPI.WatchEvents <- powerProfileDBusWatch
 }

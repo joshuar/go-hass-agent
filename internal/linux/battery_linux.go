@@ -355,36 +355,33 @@ func BatteryUpdater(ctx context.Context, status chan interface{}) {
 		// battery. If a property changes, check it is one we want to track and
 		// if so, update the battery's state in batteryTracker and send the
 		// update back to Home Assistant.
-		batteryChangeSignal := &DBusWatchRequest{
-			bus:  systemBus,
-			path: dbus.ObjectPath(v),
-			match: []dbus.MatchOption{
-				dbus.WithMatchObjectPath(dbus.ObjectPath(v)),
-				dbus.WithMatchInterface("org.freedesktop.DBus.Properties"),
-			},
-			// match: DBusSignalMatch{
-			// 	path: dbus.ObjectPath(v),
-			// 	intr: "org.freedesktop.DBus.Properties",
-			// },
-			event: "org.freedesktop.DBus.Properties.PropertiesChanged",
-			eventHandler: func(s *dbus.Signal) {
-				batteryID := string(s.Path)
-				props := s.Body[1].(map[string]dbus.Variant)
-				for propName, propValue := range props {
-					for BatteryProp := range batteryTracker[batteryID].props {
-						if propName == BatteryProp.String() {
-							batteryTracker[batteryID].props[BatteryProp] = propValue
-							log.Debug().Caller().
-								Msgf("Updating battery property %v to %v", BatteryProp.String(), propValue.Value())
-							stateUpdate := batteryTracker[batteryID].marshalBatteryStateUpdate(deviceAPI, BatteryProp)
-							if stateUpdate != nil {
-								status <- stateUpdate
-							}
+		batteryChangeDBusMatches := []dbus.MatchOption{
+			dbus.WithMatchObjectPath(dbus.ObjectPath(v)),
+			dbus.WithMatchInterface("org.freedesktop.DBus.Properties"),
+		}
+		batteryChangeHandler := func(s *dbus.Signal) {
+			batteryID := string(s.Path)
+			props := s.Body[1].(map[string]dbus.Variant)
+			for propName, propValue := range props {
+				for BatteryProp := range batteryTracker[batteryID].props {
+					if propName == BatteryProp.String() {
+						batteryTracker[batteryID].props[BatteryProp] = propValue
+						log.Debug().Caller().
+							Msgf("Updating battery property %v to %v", BatteryProp.String(), propValue.Value())
+						stateUpdate := batteryTracker[batteryID].marshalBatteryStateUpdate(deviceAPI, BatteryProp)
+						if stateUpdate != nil {
+							status <- stateUpdate
 						}
 					}
 				}
-			},
+			}
 		}
-		deviceAPI.WatchEvents <- batteryChangeSignal
+		batteryChangeDBusWatch := NewDBusWatchRequest().
+			System().
+			Path(dbus.ObjectPath(v)).
+			Match(batteryChangeDBusMatches).
+			Event("org.freedesktop.DBus.Properties.PropertiesChanged").
+			Handler(batteryChangeHandler)
+		deviceAPI.WatchEvents <- batteryChangeDBusWatch
 	}
 }
