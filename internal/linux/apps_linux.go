@@ -179,13 +179,12 @@ func AppUpdater(ctx context.Context, update chan interface{}) {
 			update <- marshalAppStateUpdate(ActiveApp, activeAppList)
 		}
 	}
-	NewDBusWatchRequest().
-		Session().
+	deviceAPI.SessionBusRequest().
 		Path(appStateDBusPath).
 		Match(appStateDBusMatches).
 		Event(appStateDBusEvent).
 		Handler(appStateHandler).
-		Add(deviceAPI)
+		AddWatch()
 }
 
 func findProcesses(name string) []*process.Process {

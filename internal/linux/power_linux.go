@@ -141,11 +141,10 @@ func PowerUpater(ctx context.Context, status chan interface{}) {
 			}
 		}
 	}
-	NewDBusWatchRequest().
-		System().
+	deviceAPI.SystemBusRequest().
 		Path(powerProfilesDBusPath).
 		Match(powerProfileDBusMatch).
 		Event("org.freedesktop.DBus.Properties.PropertiesChanged").
 		Handler(powerProfileHandler).
-		Add(deviceAPI)
+		AddWatch()
 }
