@@ -123,7 +123,7 @@ func SetupContext(ctx context.Context) context.Context {
 		log.Warn().Msg("No DBus connections could be established.")
 		return ctx
 	} else {
-		deviceCtx := linux.NewContext(ctx, deviceAPI)
+		deviceCtx := linux.StoreAPIInContext(ctx, deviceAPI)
 		return deviceCtx
 	}
 }
