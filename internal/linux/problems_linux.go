@@ -10,7 +10,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/godbus/dbus/v5"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/lthibault/jitterbug/v2"
 	"github.com/rs/zerolog/log"
@@ -65,12 +64,12 @@ func (p *problems) Attributes() interface{} {
 	return p.list
 }
 
-func marshalProblemDetails(details map[string]dbus.Variant) map[string]interface{} {
+func marshalProblemDetails(details map[string]string) map[string]interface{} {
 	parsed := make(map[string]interface{})
 	for k, v := range details {
 		switch k {
 		case "time":
-			timeValue, err := strconv.ParseInt(variantToValue[string](v), 10, 64)
+			timeValue, err := strconv.ParseInt(v, 10, 64)
 			if err != nil {
 				log.Debug().Err(err).Msg("Could not parse problem time.")
 				parsed["time"] = 0
@@ -78,7 +77,7 @@ func marshalProblemDetails(details map[string]dbus.Variant) map[string]interface
 				parsed["time"] = time.Unix(timeValue, 0).Format(time.RFC3339)
 			}
 		case "count":
-			countValue, err := strconv.Atoi(variantToValue[string](v))
+			countValue, err := strconv.Atoi(v)
 			if err != nil {
 				log.Debug().Err(err).Msg("Could not parse problem count.")
 				parsed["count"] = 0
@@ -88,7 +87,7 @@ func marshalProblemDetails(details map[string]dbus.Variant) map[string]interface
 		case "package":
 			fallthrough
 		case "reason":
-			parsed[k] = string(variantToValue[[]uint8](v))
+			parsed[k] = v
 		}
 	}
 	return parsed
@@ -99,16 +98,25 @@ func sendAllProblems(deviceAPI *DeviceAPI, status chan interface{}) {
 		list: make(map[string]map[string]interface{}),
 	}
 
-	problemList, _ := deviceAPI.GetDBusDataAsList(systemBus, dBusProblemIntr, dBusProblemsDest, dBusProblemIntr+".GetProblems")
-	for _, p := range problemList {
+	problemList := deviceAPI.SystemBusRequest().
+		Path(dBusProblemsDest).
+		Destination(dBusProblemIntr).
+		GetData(dBusProblemIntr + ".GetProblems").AsStringList()
 
-		problemDetails, err := deviceAPI.GetDBusDataAsMap(systemBus, dBusProblemIntr, dBusProblemsDest, dBusProblemIntr+".GetInfo", p, []string{"time", "count", "package", "reason"})
-		if err != nil {
-			log.Debug().Err(err).Msg("Could not retrieve details.")
+	for _, p := range problemList {
+		problemDetails := deviceAPI.SystemBusRequest().
+			Path(dBusProblemsDest).
+			Destination(dBusProblemIntr).
+			GetData(dBusProblemIntr+".GetInfo", p, []string{"time", "count", "package", "reason"}).AsStringMap()
+		if problemDetails == nil {
+			log.Debug().Msg("No problems retrieved.")
+		} else {
+			problems.list[p] = marshalProblemDetails(problemDetails)
 		}
-		problems.list[p] = marshalProblemDetails(problemDetails)
 	}
-	status <- problems
+	if len(problems.list) > 0 {
+		status <- problems
+	}
 
 }
 

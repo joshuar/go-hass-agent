@@ -167,11 +167,11 @@ func AppUpdater(ctx context.Context, update chan interface{}) {
 		dbus.WithMatchInterface(appStateDBusInterface),
 	}
 	appStateHandler := func(s *dbus.Signal) {
-		activeAppList, err := deviceAPI.GetDBusDataAsMap(sessionBus,
-			portalDest,
-			appStateDBusPath,
-			appStateDBusMethod)
-		if err != nil {
+		activeAppList := deviceAPI.SessionBusRequest().
+			Path(appStateDBusPath).
+			Destination(portalDest).
+			GetData(appStateDBusMethod).AsVariantMap()
+		if activeAppList == nil {
 			log.Debug().Err(err).Caller().
 				Msg("No active apps found.")
 		} else {
