@@ -10,6 +10,7 @@ import (
 	"errors"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/godbus/dbus/v5"
 	"github.com/rs/zerolog/log"
@@ -23,55 +24,101 @@ const (
 type dbusType int
 
 type bus struct {
-	conn    *dbus.Conn
-	events  chan *dbus.Signal
-	busType dbusType
+	mu        sync.RWMutex
+	conn      *dbus.Conn
+	events    chan *dbus.Signal
+	eventList map[string]func(*dbus.Signal)
+	busType   dbusType
 }
 
+// NewBus sets up DBus connections and channels for receiving signals. It creates both a system and session bus connection.
+func NewBus(ctx context.Context, t dbusType) *bus {
+	var conn *dbus.Conn
+	var err error
+	switch t {
+	case sessionBus:
+		conn, err = dbus.ConnectSessionBus(dbus.WithContext(ctx))
+	case systemBus:
+		conn, err = dbus.ConnectSystemBus(dbus.WithContext(ctx))
+	}
+	if err != nil {
+		log.Error().Stack().Err(err).
+			Msg("Could not connect to bus")
+		return nil
+	} else {
+		bus := &bus{
+			conn:      conn,
+			events:    make(chan *dbus.Signal),
+			eventList: make(map[string]func(*dbus.Signal)),
+			busType:   t,
+		}
+		conn.Signal(bus.events)
+		go func() {
+			defer bus.conn.RemoveSignal(bus.events)
+			for signal := range bus.events {
+				// bus.mu.RLock()
+				if handlerFunc, ok := bus.eventList[string(signal.Path)]; ok {
+					handlerFunc(signal)
+				} else {
+					for matchPath, handlerFunc := range bus.eventList {
+						if strings.Contains(string(signal.Path), matchPath) {
+							handlerFunc(signal)
+						}
+					}
+				}
+				// bus.mu.Unlock()
+			}
+		}()
+		return bus
+	}
+}
+
+// busRequest contains properties for building different types of DBus requests
 type busRequest struct {
-	conn         *dbus.Conn
+	bus          *bus
 	path         dbus.ObjectPath
 	match        []dbus.MatchOption
 	event        string
 	eventHandler func(*dbus.Signal)
-	method       string
 	dest         string
 }
 
+// Path defines the DBus path on which a request will operate
 func (r *busRequest) Path(p dbus.ObjectPath) *busRequest {
 	r.path = p
 	return r
 }
 
+// Match defines DBus routing match rules on which a request will operate
 func (r *busRequest) Match(m []dbus.MatchOption) *busRequest {
 	r.match = m
 	return r
 }
 
+// Event defines an event on which a DBus request should match
 func (r *busRequest) Event(e string) *busRequest {
 	r.event = e
 	return r
 }
 
+// Handler defines a function that will handle a matched DBus signal
 func (r *busRequest) Handler(h func(*dbus.Signal)) *busRequest {
 	r.eventHandler = h
 	return r
 }
 
-func (r *busRequest) Method(m string) *busRequest {
-	r.method = m
-	return r
-}
-
+// Destination defines the location/interface on a given DBus path for a request
+// to operate
 func (r *busRequest) Destination(d string) *busRequest {
 	r.dest = d
 	return r
 }
 
-// GetProp fetches the specified property from DBus
+// GetProp fetches the specified property from DBus with the options specified
+// in the builder
 func (r *busRequest) GetProp(prop string) (dbus.Variant, error) {
-	if r.conn != nil {
-		obj := r.conn.Object(r.dest, r.path)
+	if r.bus != nil {
+		obj := r.bus.conn.Object(r.dest, r.path)
 		res, err := obj.GetProperty(prop)
 		if err != nil {
 			log.Debug().Caller().Err(err).
@@ -84,11 +131,11 @@ func (r *busRequest) GetProp(prop string) (dbus.Variant, error) {
 	}
 }
 
-// GetData fetches DBus data from the given method
+// GetData fetches DBus data from the given method in the builder
 func (r *busRequest) GetData(method string, args ...interface{}) *dbusData {
-	if r.conn != nil {
+	if r.bus != nil {
 		d := &dbusData{}
-		obj := r.conn.Object(r.dest, r.path)
+		obj := r.bus.conn.Object(r.dest, r.path)
 		var err error
 		if args != nil {
 			err = obj.Call(method, 0, args...).Store(&d.data)
@@ -106,6 +153,20 @@ func (r *busRequest) GetData(method string, args ...interface{}) *dbusData {
 			Msgf("no bus connection")
 		return nil
 	}
+}
+
+// AddWatch adds a DBus watch to the bus with the given options in the builder
+func (r *busRequest) AddWatch() error {
+	if err := r.bus.conn.AddMatchSignal(r.match...); err != nil {
+		return err
+	} else {
+		log.Debug().Caller().
+			Msgf("Adding watch on %s for %s", r.path, r.event)
+		r.bus.mu.Lock()
+		r.bus.eventList[string(r.path)] = r.eventHandler
+		r.bus.mu.Unlock()
+	}
+	return nil
 }
 
 type dbusData struct {
@@ -138,234 +199,34 @@ func (d *dbusData) AsStringList() []string {
 
 type DeviceAPI struct {
 	dBusSystem, dBusSession *bus
-	WatchEvents             chan *dBusWatchRequest
+}
+
+// NewDeviceAPI sets up a DeviceAPI struct with appropriate DBus API endpoints
+func NewDeviceAPI(ctx context.Context) *DeviceAPI {
+	api := &DeviceAPI{
+		dBusSystem:  NewBus(ctx, systemBus),
+		dBusSession: NewBus(ctx, sessionBus),
+	}
+	if api.dBusSystem == nil && api.dBusSession == nil {
+		return nil
+	} else {
+		// go api.monitorDBus(ctx)
+		return api
+	}
 }
 
 // SessionBusRequest creates a request builder for the session bus
 func (d *DeviceAPI) SessionBusRequest() *busRequest {
 	return &busRequest{
-		conn: d.dBusSession.conn,
+		bus: d.dBusSession,
 	}
 }
 
 // SystemBusRequest creates a request builder for the system bus
 func (d *DeviceAPI) SystemBusRequest() *busRequest {
 	return &busRequest{
-		conn: d.dBusSystem.conn,
+		bus: d.dBusSystem,
 	}
-}
-
-// dBusWatchRequest contains all the information required to set-up a DBus match
-// signal watcher.
-type dBusWatchRequest struct {
-	bus          dbusType
-	path         dbus.ObjectPath
-	match        []dbus.MatchOption
-	event        string
-	eventHandler func(*dbus.Signal)
-}
-
-// NewBus sets up DBus connections and channels for receiving signals. It creates both a system and session bus connection.
-func NewBus(ctx context.Context, t dbusType) *bus {
-	var conn *dbus.Conn
-	var err error
-	switch t {
-	case sessionBus:
-		conn, err = dbus.ConnectSessionBus(dbus.WithContext(ctx))
-	case systemBus:
-		conn, err = dbus.ConnectSystemBus(dbus.WithContext(ctx))
-	}
-	if err != nil {
-		log.Error().Stack().Err(err).
-			Msg("Could not connect to bus")
-		return nil
-	} else {
-		events := make(chan *dbus.Signal)
-		conn.Signal(events)
-		return &bus{
-			conn:    conn,
-			events:  events,
-			busType: t,
-		}
-	}
-}
-
-func NewDeviceAPI(ctx context.Context) *DeviceAPI {
-	api := &DeviceAPI{
-		dBusSystem:  NewBus(ctx, systemBus),
-		dBusSession: NewBus(ctx, sessionBus),
-		WatchEvents: make(chan *dBusWatchRequest),
-	}
-	if api.dBusSystem == nil && api.dBusSession == nil {
-		return nil
-	} else {
-		go api.monitorDBus(ctx)
-		return api
-	}
-}
-
-func (d *DeviceAPI) bus(t dbusType) *dbus.Conn {
-	switch t {
-	case sessionBus:
-		if d.dBusSession != nil {
-			return d.dBusSession.conn
-		} else {
-			return nil
-		}
-	case systemBus:
-		if d.dBusSystem != nil {
-			return d.dBusSystem.conn
-		} else {
-			return nil
-		}
-	default:
-		log.Warn().Msg("Could not discern DBus bus type.")
-		return nil
-	}
-}
-
-// monitorDBus listens for DBus watch requests and ensures the appropriate
-// signal watches are created. It will also dispatch to a handler function when
-// a signal is matched.
-func (d *DeviceAPI) monitorDBus(ctx context.Context) {
-	events := make(map[dbusType]map[string]func(*dbus.Signal))
-	watches := make(map[dbusType]*dBusWatchRequest)
-	defer close(d.WatchEvents)
-	// For each bus signal handler that exists, try to match first on an exact
-	// path match, then try a substr match. Whichever matches, run the handler
-	// function associated with it.
-	if d.dBusSession != nil {
-		events[sessionBus] = make(map[string]func(*dbus.Signal))
-		defer d.dBusSession.conn.RemoveSignal(d.dBusSession.events)
-		go func() {
-			for sessionSignal := range d.dBusSession.events {
-				if handlerFunc, ok := events[sessionBus][string(sessionSignal.Path)]; ok {
-					handlerFunc(sessionSignal)
-				} else {
-					for matchPath, handlerFunc := range events[systemBus] {
-						if strings.Contains(string(sessionSignal.Path), matchPath) {
-							handlerFunc(sessionSignal)
-						}
-					}
-				}
-			}
-		}()
-	}
-	if d.dBusSystem != nil {
-		events[systemBus] = make(map[string]func(*dbus.Signal))
-		defer d.dBusSystem.conn.RemoveSignal(d.dBusSystem.events)
-		go func() {
-			for systemSignal := range d.dBusSystem.events {
-				if handlerFunc, ok := events[systemBus][string(systemSignal.Path)]; ok {
-					handlerFunc(systemSignal)
-				} else {
-					for matchPath, handlerFunc := range events[systemBus] {
-						if strings.Contains(string(systemSignal.Path), matchPath) {
-							handlerFunc(systemSignal)
-						}
-					}
-				}
-			}
-		}()
-	}
-	for {
-		select {
-		// When the context is finished/cancelled, try to clean up gracefully.
-		case <-ctx.Done():
-			log.Debug().Caller().Msg("Stopping DBus Monitor.")
-			close(d.WatchEvents)
-			d.dBusSession.conn.RemoveSignal(d.dBusSession.events)
-			d.dBusSystem.conn.RemoveSignal(d.dBusSystem.events)
-			return
-		// When a new watch request is received, send it to the right DBus
-		// connection and record it so it can be matched to a handler.
-		case watch := <-d.WatchEvents:
-			err := d.AddDBusWatch(watch.bus, watch.match)
-			if err != nil {
-				log.Debug().Err(err).Caller().
-					Msgf("Could not add watch for %v.", watch.event)
-			} else {
-				events[watch.bus][string(watch.path)] = watch.eventHandler
-				watches[watch.bus] = watch
-			}
-		}
-	}
-}
-
-// AddDBusWatch will add a matcher to the specified bus monitoring for the
-// specified path and interface. For adding dbus.MatchOptions, see the available
-// ones here:
-// https://dbus.freedesktop.org/doc/dbus-specification.html#message-bus-routing-match-rules
-func (d *DeviceAPI) AddDBusWatch(t dbusType, matches []dbus.MatchOption) error {
-	if err := d.bus(t).AddMatchSignal(matches...); err != nil {
-		return err
-	} else {
-		return nil
-	}
-}
-
-// RemoveDBusWatch will remove a matcher from the specified bus to stop it
-// generating signals for that match.
-func (d *DeviceAPI) RemoveDBusWatch(t dbusType, path dbus.ObjectPath, intr string) error {
-	if err := d.bus(t).RemoveMatchSignal(
-		dbus.WithMatchObjectPath(path),
-		dbus.WithMatchInterface(intr),
-	); err != nil {
-		return err
-	} else {
-		return nil
-	}
-}
-
-func (d *DeviceAPI) GetDBusObject(t dbusType, dest string, path dbus.ObjectPath) dbus.BusObject {
-	if d.bus(t) != nil {
-		return d.bus(t).Object(dest, path)
-	} else {
-		return nil
-	}
-}
-
-func NewDBusWatchRequest() *dBusWatchRequest {
-	return &dBusWatchRequest{}
-}
-
-func (w *dBusWatchRequest) Session() *dBusWatchRequest {
-	w.bus = sessionBus
-	return w
-}
-
-func (w *dBusWatchRequest) System() *dBusWatchRequest {
-	w.bus = systemBus
-	return w
-}
-
-// Path sets the DBus path for the watch
-func (w *dBusWatchRequest) Path(p dbus.ObjectPath) *dBusWatchRequest {
-	w.path = p
-	return w
-}
-
-// Match sets the DBus matches that will be used
-func (w *dBusWatchRequest) Match(m []dbus.MatchOption) *dBusWatchRequest {
-	w.match = m
-	return w
-}
-
-// Event sets the DBus event trigger for the watch
-func (w *dBusWatchRequest) Event(e string) *dBusWatchRequest {
-	w.event = e
-	return w
-}
-
-// Handler sets the function that will handle the signal that matches
-func (w *dBusWatchRequest) Handler(h func(*dbus.Signal)) *dBusWatchRequest {
-	w.eventHandler = h
-	return w
-}
-
-// Add ensures the watch is registered with DBus
-func (w *dBusWatchRequest) Add(d *DeviceAPI) {
-	d.WatchEvents <- w
 }
 
 // variantToValue converts a dbus.Variant type into the specified Go native
@@ -395,6 +256,8 @@ func FindPortal() string {
 	}
 }
 
+// GetHostname will try to fetch the hostname of the device from DBus. Failing
+// that, it will default to using "localhost"
 func GetHostname(ctx context.Context) string {
 	deviceAPI, err := FetchAPIFromContext(ctx)
 	if err != nil {
@@ -415,6 +278,9 @@ func GetHostname(ctx context.Context) string {
 	}
 }
 
+// GetHardwareDetails will try to get a hardware vendor and model from DBus.
+// Failing that, it will try to read them from the /sys filesystem. If that
+// fails, it returns empty strings for these values
 func GetHardwareDetails(ctx context.Context) (string, string) {
 	var vendor, model string
 	deviceAPI, err := FetchAPIFromContext(ctx)
@@ -465,12 +331,13 @@ type key int
 // instead of using this key directly.
 var configKey key
 
-// StoreAPIInContext returns a new Context that carries value c.
+// StoreAPIInContext returns a new Context that embeds a DeviceAPI.
 func StoreAPIInContext(ctx context.Context, c *DeviceAPI) context.Context {
 	return context.WithValue(ctx, configKey, c)
 }
 
-// FetchAPIFromContext returns the value stored in ctx, if any.
+// FetchAPIFromContext returns the DeviceAPI stored in ctx, or an error if there
+// is none
 func FetchAPIFromContext(ctx context.Context) (*DeviceAPI, error) {
 	if c, ok := ctx.Value(configKey).(*DeviceAPI); !ok {
 		return nil, errors.New("no API in context")
