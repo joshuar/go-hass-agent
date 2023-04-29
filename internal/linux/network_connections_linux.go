@@ -73,10 +73,10 @@ func getNetProp(ctx context.Context, path dbus.ObjectPath, prop networkProp) (db
 	default:
 		return dbus.MakeVariant(""), errors.New("unknown network property")
 	}
-	return deviceAPI.GetDBusProp(systemBus,
-		dBusDest,
-		path,
-		dbusProp)
+	return deviceAPI.SystemBusRequest().
+		Path(path).
+		Destination(dBusDest).
+		GetProp(dbusProp)
 }
 
 func getWifiProp(ctx context.Context, path dbus.ObjectPath, wifiProp networkProp) (dbus.Variant, error) {
@@ -86,10 +86,10 @@ func getWifiProp(ctx context.Context, path dbus.ObjectPath, wifiProp networkProp
 	deviceAPI, _ := FetchAPIFromContext(ctx)
 
 	var apPath dbus.ObjectPath
-	ap, err := deviceAPI.GetDBusProp(systemBus,
-		dBusDest,
-		path,
-		wirelessIntr+".ActiveAccessPoint")
+	ap, err := deviceAPI.SystemBusRequest().
+		Path(path).
+		Destination(dBusDest).
+		GetProp(wirelessIntr + ".ActiveAccessPoint")
 	if err != nil {
 		return dbus.MakeVariant(""), err
 	} else {
@@ -114,10 +114,10 @@ func getWifiProp(ctx context.Context, path dbus.ObjectPath, wifiProp networkProp
 	default:
 		return dbus.MakeVariant(""), errors.New("unknown wifi property")
 	}
-	return deviceAPI.GetDBusProp(systemBus,
-		dBusDest,
-		apPath,
-		dbusProp)
+	return deviceAPI.SystemBusRequest().
+		Path(apPath).
+		Destination(dBusDest).
+		GetProp(dbusProp)
 }
 
 func getIPAddrProp(ctx context.Context, connProp networkProp, path dbus.ObjectPath) (string, error) {
@@ -379,17 +379,16 @@ func NetworkConnectionsUpdater(ctx context.Context, status chan interface{}) {
 		return
 	}
 
-	myDeviceList, err := deviceAPI.GetDBusData(
-		systemBus, dBusDest, dBusPath,
-		"org.freedesktop.NetworkManager.GetDevices")
-	if err != nil {
+	deviceList := deviceAPI.SystemBusRequest().
+		Path(dBusPath).
+		Destination(dBusDest).
+		GetData("org.freedesktop.NetworkManager.GetDevices").
+		AsObjectPathList()
+	if deviceList == nil {
 		log.Debug().Err(err).Caller().
 			Msg("Could not list devices from network manager.")
 		return
 	}
-
-	deviceList := myDeviceList.([]dbus.ObjectPath)
-
 	if len(deviceList) > 0 {
 		for _, device := range deviceList {
 			conn := deviceActiveConnection(ctx, device)
@@ -517,7 +516,7 @@ func NetworkConnectionsUpdater(ctx context.Context, status chan interface{}) {
 
 }
 
-func deviceActiveConnection(ctx context.Context, networkDevice dbus.ObjectPath) dbus.ObjectPath {
+func deviceActiveConnection(ctx context.Context, networkDevicePath dbus.ObjectPath) dbus.ObjectPath {
 	deviceAPI, err := FetchAPIFromContext(ctx)
 	if err != nil {
 		log.Debug().Err(err).Caller().
@@ -525,9 +524,10 @@ func deviceActiveConnection(ctx context.Context, networkDevice dbus.ObjectPath) 
 		return ""
 	}
 
-	variant, err := deviceAPI.GetDBusProp(
-		systemBus, dBusDest, networkDevice,
-		"org.freedesktop.NetworkManager.Device.ActiveConnection")
+	variant, err := deviceAPI.SystemBusRequest().
+		Path(networkDevicePath).
+		Destination(dBusDest).
+		GetProp("org.freedesktop.NetworkManager.Device.ActiveConnection")
 	conn := dbus.ObjectPath(variantToValue[[]uint8](variant))
 	if err != nil || !conn.IsValid() {
 		return ""

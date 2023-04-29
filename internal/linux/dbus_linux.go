@@ -28,9 +28,131 @@ type bus struct {
 	busType dbusType
 }
 
+type busRequest struct {
+	conn         *dbus.Conn
+	path         dbus.ObjectPath
+	match        []dbus.MatchOption
+	event        string
+	eventHandler func(*dbus.Signal)
+	method       string
+	dest         string
+}
+
+func (r *busRequest) Path(p dbus.ObjectPath) *busRequest {
+	r.path = p
+	return r
+}
+
+func (r *busRequest) Match(m []dbus.MatchOption) *busRequest {
+	r.match = m
+	return r
+}
+
+func (r *busRequest) Event(e string) *busRequest {
+	r.event = e
+	return r
+}
+
+func (r *busRequest) Handler(h func(*dbus.Signal)) *busRequest {
+	r.eventHandler = h
+	return r
+}
+
+func (r *busRequest) Method(m string) *busRequest {
+	r.method = m
+	return r
+}
+
+func (r *busRequest) Destination(d string) *busRequest {
+	r.dest = d
+	return r
+}
+
+// GetProp fetches the specified property from DBus
+func (r *busRequest) GetProp(prop string) (dbus.Variant, error) {
+	if r.conn != nil {
+		obj := r.conn.Object(r.dest, r.path)
+		res, err := obj.GetProperty(prop)
+		if err != nil {
+			log.Debug().Caller().Err(err).
+				Msgf("Unable to retrieve property %s (%s)", prop, r.dest)
+			return dbus.MakeVariant(""), err
+		}
+		return res, nil
+	} else {
+		return dbus.MakeVariant(""), errors.New("no bus connection")
+	}
+}
+
+// GetData fetches DBus data from the given method
+func (r *busRequest) GetData(method string, args ...interface{}) *dbusData {
+	if r.conn != nil {
+		d := &dbusData{}
+		obj := r.conn.Object(r.dest, r.path)
+		var err error
+		if args != nil {
+			err = obj.Call(method, 0, args...).Store(&d.data)
+		} else {
+			err = obj.Call(method, 0).Store(&d.data)
+		}
+		if err != nil {
+			log.Debug().Err(err).Caller().
+				Msgf("Unable to execute %s on %s (args: %s)", method, r.dest, args)
+			return nil
+		}
+		return d
+	} else {
+		log.Debug().Caller().
+			Msgf("no bus connection")
+		return nil
+	}
+}
+
+type dbusData struct {
+	data interface{}
+}
+
+// AsVariantMap formats DBus data as a map[string]dbus.Variant
+func (d *dbusData) AsVariantMap() map[string]dbus.Variant {
+	wanted := make(map[string]dbus.Variant)
+	for k, v := range d.data.(map[string]interface{}) {
+		wanted[k] = dbus.MakeVariant(v)
+	}
+	return wanted
+}
+
+// AsStringMap formats DBus data as a map[string]string
+func (d *dbusData) AsStringMap() map[string]string {
+	return d.data.(map[string]string)
+}
+
+// AsObjectPathList formats DBus data as a []dbus.ObjectPath
+func (d *dbusData) AsObjectPathList() []dbus.ObjectPath {
+	return d.data.([]dbus.ObjectPath)
+}
+
+// AsStringList formats DBus data as a []string
+func (d *dbusData) AsStringList() []string {
+	return d.data.([]string)
+}
+
 type DeviceAPI struct {
 	dBusSystem, dBusSession *bus
 	WatchEvents             chan *dBusWatchRequest
+}
+
+// SessionBusRequest creates a request builder for the session bus
+func (d *DeviceAPI) SessionBusRequest() *busRequest {
+	return &busRequest{
+		conn: d.dBusSession.conn,
+	}
+}
+
+// SystemBusRequest creates a request builder for the system bus
+func (d *DeviceAPI) SystemBusRequest() *busRequest {
+	return &busRequest{
+		conn: d.dBusSystem.conn,
+	}
 }
 
 // dBusWatchRequest contains all the information required to set-up a DBus match
@@ -203,82 +325,6 @@ func (d *DeviceAPI) GetDBusObject(t dbusType, dest string, path dbus.ObjectPath)
 	}
 }
 
-// GetDBusProp will retrieve the specified property value from the given path
-// and destination.
-func (d *DeviceAPI) GetDBusProp(t dbusType, dest string, path dbus.ObjectPath, prop string) (dbus.Variant, error) {
-	if d.bus(t) != nil {
-		obj := d.bus(t).Object(dest, path)
-		res, err := obj.GetProperty(prop)
-		if err != nil {
-			// log.Debug().Caller().Err(err).
-			// 	Msgf("Unable to retrieve property %s (%s)", prop, dest)
-			return dbus.MakeVariant(""), err
-		}
-		return res, nil
-	} else {
-		return dbus.MakeVariant(""), errors.New("no bus connection")
-	}
-}
-
-func (d *DeviceAPI) GetDBusDataAsMap(t dbusType, dest string, path dbus.ObjectPath, method string, args ...interface{}) (map[string]dbus.Variant, error) {
-	if d.bus(t) != nil {
-		obj := d.bus(t).Object(dest, path)
-		var data map[string]dbus.Variant
-		var err error
-		if args != nil {
-			err = obj.Call(method, 0, args...).Store(&data)
-		} else {
-			err = obj.Call(method, 0).Store(&data)
-		}
-		if err != nil {
-			log.Error().Err(err).
-				Msgf("Unable to execute %s on %s (args: %s)", method, dest, args)
-			return nil, err
-		}
-		return data, nil
-	} else {
-		return nil, errors.New("no bus connection")
-	}
-}
-
-func (d *DeviceAPI) GetDBusDataAsList(t dbusType, dest string, path dbus.ObjectPath, method string, args ...interface{}) ([]string, error) {
-	if d.bus(t) != nil {
-		obj := d.bus(t).Object(dest, path)
-		var data []string
-		var err error
-		if args != nil {
-			err = obj.Call(method, 0, args...).Store(&data)
-		} else {
-			err = obj.Call(method, 0).Store(&data)
-		}
-		if err != nil {
-			return nil, err
-		}
-		return data, nil
-	} else {
-		return nil, errors.New("no bus connection")
-	}
-}
-
-func (d *DeviceAPI) GetDBusData(t dbusType, dest string, path dbus.ObjectPath, method string, args ...interface{}) (interface{}, error) {
-	if d.bus(t) != nil {
-		obj := d.bus(t).Object(dest, path)
-		var data interface{}
-		var err error
-		if args != nil {
-			err = obj.Call(method, 0, args...).Store(&data)
-		} else {
-			err = obj.Call(method, 0).Store(&data)
-		}
-		if err != nil {
-			return nil, err
-		}
-		return data, nil
-	} else {
-		return nil, errors.New("no bus connection")
-	}
-}
-
 func NewDBusWatchRequest() *dBusWatchRequest {
 	return &dBusWatchRequest{}
 }
@@ -293,26 +339,31 @@ func (w *dBusWatchRequest) System() *dBusWatchRequest {
 	return w
 }
 
+// Path sets the DBus path for the watch
 func (w *dBusWatchRequest) Path(p dbus.ObjectPath) *dBusWatchRequest {
 	w.path = p
 	return w
 }
 
+// Match sets the DBus matches that will be used
 func (w *dBusWatchRequest) Match(m []dbus.MatchOption) *dBusWatchRequest {
 	w.match = m
 	return w
 }
 
+// Event sets the DBus event trigger for the watch
 func (w *dBusWatchRequest) Event(e string) *dBusWatchRequest {
 	w.event = e
 	return w
 }
 
+// Handler sets the function that will handle the signal that matches
 func (w *dBusWatchRequest) Handler(h func(*dbus.Signal)) *dBusWatchRequest {
 	w.eventHandler = h
 	return w
 }
 
+// Add ensures the watch is registered with DBus
 func (w *dBusWatchRequest) Add(d *DeviceAPI) {
 	d.WatchEvents <- w
 }
@@ -353,10 +404,10 @@ func GetHostname(ctx context.Context) string {
 	}
 	var dBusDest = "org.freedesktop.hostname1"
 	var dBusPath = "/org/freedesktop/hostname1"
-	hostnameFromDBus, err := deviceAPI.GetDBusProp(systemBus,
-		dBusDest,
-		dbus.ObjectPath(dBusPath),
-		dBusDest+".Hostname")
+	hostnameFromDBus, err := deviceAPI.SystemBusRequest().
+		Path(dbus.ObjectPath(dBusPath)).
+		Destination(dBusDest).
+		GetProp(dBusDest + ".Hostname")
 	if err != nil {
 		return "localhost"
 	} else {
@@ -374,10 +425,10 @@ func GetHardwareDetails(ctx context.Context) (string, string) {
 	}
 	var dBusDest = "org.freedesktop.hostname1"
 	var dBusPath = "/org/freedesktop/hostname1"
-	hwVendorFromDBus, err := deviceAPI.GetDBusProp(systemBus,
-		dBusDest,
-		dbus.ObjectPath(dBusPath),
-		dBusDest+".HardwareVendor")
+	hwVendorFromDBus, err := deviceAPI.SystemBusRequest().
+		Path(dbus.ObjectPath(dBusPath)).
+		Destination(dBusDest).
+		GetProp(dBusDest + ".HardwareVendor")
 	if err != nil {
 		hwVendor, err := os.ReadFile("/sys/devices/virtual/dmi/id/board_vendor")
 		if err != nil {
@@ -388,10 +439,10 @@ func GetHardwareDetails(ctx context.Context) (string, string) {
 	} else {
 		vendor = string(variantToValue[[]uint8](hwVendorFromDBus))
 	}
-	hwModelFromDBus, err := deviceAPI.GetDBusProp(systemBus,
-		dBusDest,
-		dbus.ObjectPath(dBusPath),
-		dBusDest+".HardwareModel")
+	hwModelFromDBus, err := deviceAPI.SystemBusRequest().
+		Path(dbus.ObjectPath(dBusPath)).
+		Destination(dBusDest).
+		GetProp(dBusDest + ".HardwareVendor")
 	if err != nil {
 		hwModel, err := os.ReadFile("/sys/devices/virtual/dmi/id/product_name")
 		if err != nil {

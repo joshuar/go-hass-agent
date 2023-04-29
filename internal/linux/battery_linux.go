@@ -44,7 +44,10 @@ type upowerBattery struct {
 }
 
 func (b *upowerBattery) updateProp(api *DeviceAPI, prop BatteryProp) {
-	propValue, err := api.GetDBusProp(systemBus, upowerDBusDest, b.dBusPath, "org.freedesktop.UPower.Device."+prop.String())
+	propValue, err := api.SystemBusRequest().
+		Path(b.dBusPath).
+		Destination(upowerDBusDest).
+		GetProp("org.freedesktop.UPower.Device." + prop.String())
 	if err != nil {
 		log.Debug().Caller().
 			Msgf("Could not update property %s. Not found?", prop.String())
@@ -302,8 +305,11 @@ func BatteryUpdater(ctx context.Context, status chan interface{}) {
 		return
 	}
 
-	batteryList, err := deviceAPI.GetDBusDataAsList(systemBus, upowerDBusDest, upowerDBusPath, upowerGetDevicesMethod)
-	if err != nil {
+	batteryList := deviceAPI.SystemBusRequest().
+		Path(upowerDBusPath).
+		Destination(upowerDBusDest).
+		GetData(upowerGetDevicesMethod).AsObjectPathList()
+	if batteryList == nil {
 		log.Debug().Err(err).Caller().
 			Msg("Unable to get any battery devices from DBus.")
 		return
@@ -313,9 +319,9 @@ func BatteryUpdater(ctx context.Context, status chan interface{}) {
 	for _, v := range batteryList {
 
 		// Track this battery in batteryTracker.
-		batteryID := v
+		batteryID := string(v)
 		batteryTracker[batteryID] = &upowerBattery{
-			dBusPath: dbus.ObjectPath(v),
+			dBusPath: v,
 		}
 		batteryTracker[batteryID].props = make(map[BatteryProp]dbus.Variant)
 		batteryTracker[batteryID].updateProp(deviceAPI, NativePath)
