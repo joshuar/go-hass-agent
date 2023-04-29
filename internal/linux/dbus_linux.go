@@ -313,6 +313,10 @@ func (w *dBusWatchRequest) Handler(h func(*dbus.Signal)) *dBusWatchRequest {
 	return w
 }
 
+func (w *dBusWatchRequest) Add(d *DeviceAPI) {
+	d.WatchEvents <- w
+}
+
 // variantToValue converts a dbus.Variant type into the specified Go native
 // type.
 func variantToValue[S any](variant dbus.Variant) S {
@@ -341,10 +345,10 @@ func FindPortal() string {
 }
 
 func GetHostname(ctx context.Context) string {
-	deviceAPI, deviceAPIExists := FromContext(ctx)
-	if !deviceAPIExists {
-		log.Debug().Caller().
-			Msg("Could not connect to DBus to monitor network.")
+	deviceAPI, err := FetchAPIFromContext(ctx)
+	if err != nil {
+		log.Debug().Err(err).Caller().
+			Msg("Could not connect to DBus.")
 		return "localhost"
 	}
 	var dBusDest = "org.freedesktop.hostname1"
@@ -362,10 +366,10 @@ func GetHostname(ctx context.Context) string {
 
 func GetHardwareDetails(ctx context.Context) (string, string) {
 	var vendor, model string
-	deviceAPI, deviceAPIExists := FromContext(ctx)
-	if !deviceAPIExists {
-		log.Debug().Caller().
-			Msg("Could not connect to DBus to monitor network.")
+	deviceAPI, err := FetchAPIFromContext(ctx)
+	if err != nil {
+		log.Debug().Err(err).Caller().
+			Msg("Could not connect to DBus.")
 		return "", ""
 	}
 	var dBusDest = "org.freedesktop.hostname1"
@@ -415,8 +419,11 @@ func NewContext(ctx context.Context, c *DeviceAPI) context.Context {
 	return context.WithValue(ctx, configKey, c)
 }
 
-// FromContext returns the value stored in ctx, if any.
-func FromContext(ctx context.Context) (*DeviceAPI, bool) {
-	c, ok := ctx.Value(configKey).(*DeviceAPI)
-	return c, ok
+// FetchAPIFromContext returns the value stored in ctx, if any.
+func FetchAPIFromContext(ctx context.Context) (*DeviceAPI, error) {
+	if c, ok := ctx.Value(configKey).(*DeviceAPI); !ok {
+		return nil, errors.New("no API in context")
+	} else {
+		return c, nil
+	}
 }

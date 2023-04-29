@@ -148,10 +148,10 @@ func marshalAppStateUpdate(t appSensorType, v map[string]dbus.Variant) *appSenso
 }
 
 func AppUpdater(ctx context.Context, update chan interface{}) {
-	deviceAPI, deviceAPIExists := FromContext(ctx)
-	if !deviceAPIExists {
-		log.Debug().Caller().
-			Msg("Could not connect to DBus to monitor app state.")
+	deviceAPI, err := FetchAPIFromContext(ctx)
+	if err != nil {
+		log.Debug().Err(err).Caller().
+			Msg("Could not connect to DBus.")
 		return
 	}
 
@@ -179,13 +179,13 @@ func AppUpdater(ctx context.Context, update chan interface{}) {
 			update <- marshalAppStateUpdate(ActiveApp, activeAppList)
 		}
 	}
-	appStateDBusWatch := NewDBusWatchRequest().
+	NewDBusWatchRequest().
 		Session().
 		Path(appStateDBusPath).
 		Match(appStateDBusMatches).
 		Event(appStateDBusEvent).
-		Handler(appStateHandler)
-	deviceAPI.WatchEvents <- appStateDBusWatch
+		Handler(appStateHandler).
+		Add(deviceAPI)
 }
 
 func findProcesses(name string) []*process.Process {

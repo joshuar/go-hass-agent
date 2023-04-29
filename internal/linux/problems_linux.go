@@ -113,10 +113,10 @@ func sendAllProblems(deviceAPI *DeviceAPI, status chan interface{}) {
 }
 
 func ProblemsUpdater(ctx context.Context, status chan interface{}) {
-	deviceAPI, deviceAPIExists := FromContext(ctx)
-	if !deviceAPIExists {
-		log.Debug().Caller().
-			Msg("Could not connect to DBus to monitor network.")
+	deviceAPI, err := FetchAPIFromContext(ctx)
+	if err != nil {
+		log.Debug().Err(err).Caller().
+			Msg("Could not connect to DBus.")
 		return
 	}
 
