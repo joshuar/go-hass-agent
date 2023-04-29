@@ -414,13 +414,13 @@ func NetworkConnectionsUpdater(ctx context.Context, status chan interface{}) {
 			}
 		}
 	}
-	connStateDBusWatch := NewDBusWatchRequest().
+	NewDBusWatchRequest().
 		System().
 		Path(activeConnDBusPath).
 		Match(connStateDBusMatch).
 		Event("org.freedesktop.DBus.Properties.PropertiesChanged").
-		Handler(connStateHandler)
-	deviceAPI.WatchEvents <- connStateDBusWatch
+		Handler(connStateHandler).
+		Add(deviceAPI)
 
 	// Set up a DBus watch for Wi-Fi state changes
 	apDbusPath := dbus.ObjectPath(dBusPath + "/AccessPoint")
@@ -458,13 +458,13 @@ func NetworkConnectionsUpdater(ctx context.Context, status chan interface{}) {
 			}
 		}
 	}
-	wifiStateDBusWatch := NewDBusWatchRequest().
+	NewDBusWatchRequest().
 		System().
 		Path(apDbusPath).
 		Match(wifiStateDBusMatch).
 		Event("org.freedesktop.DBus.Properties.PropertiesChanged").
-		Handler(wifiStateHandler)
-	deviceAPI.WatchEvents <- wifiStateDBusWatch
+		Handler(wifiStateHandler).
+		Add(deviceAPI)
 
 	// Add a DBus watch for global connectivity changes. If global connectivity
 	// is established, check and update external IP sensor.

@@ -375,12 +375,12 @@ func BatteryUpdater(ctx context.Context, status chan interface{}) {
 				}
 			}
 		}
-		batteryChangeDBusWatch := NewDBusWatchRequest().
+		NewDBusWatchRequest().
 			System().
 			Path(dbus.ObjectPath(v)).
 			Match(batteryChangeDBusMatches).
 			Event("org.freedesktop.DBus.Properties.PropertiesChanged").
-			Handler(batteryChangeHandler)
-		deviceAPI.WatchEvents <- batteryChangeDBusWatch
+			Handler(batteryChangeHandler).
+			Add(deviceAPI)
 	}
 }
