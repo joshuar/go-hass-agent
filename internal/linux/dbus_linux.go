@@ -175,26 +175,42 @@ type dbusData struct {
 
 // AsVariantMap formats DBus data as a map[string]dbus.Variant
 func (d *dbusData) AsVariantMap() map[string]dbus.Variant {
-	wanted := make(map[string]dbus.Variant)
-	for k, v := range d.data.(map[string]interface{}) {
-		wanted[k] = dbus.MakeVariant(v)
+	if d.data != nil {
+		wanted := make(map[string]dbus.Variant)
+		for k, v := range d.data.(map[string]interface{}) {
+			wanted[k] = dbus.MakeVariant(v)
+		}
+		return wanted
+	} else {
+		return nil
 	}
-	return wanted
 }
 
 // AsStringMap formats DBus data as a map[string]string
 func (d *dbusData) AsStringMap() map[string]string {
-	return d.data.(map[string]string)
+	if d.data != nil {
+		return d.data.(map[string]string)
+	} else {
+		return nil
+	}
 }
 
 // AsObjectPathList formats DBus data as a []dbus.ObjectPath
 func (d *dbusData) AsObjectPathList() []dbus.ObjectPath {
-	return d.data.([]dbus.ObjectPath)
+	if d.data != nil {
+		return d.data.([]dbus.ObjectPath)
+	} else {
+		return nil
+	}
 }
 
 // AsStringList formats DBus data as a []string
 func (d *dbusData) AsStringList() []string {
-	return d.data.([]string)
+	if d.data != nil {
+		return d.data.([]string)
+	} else {
+		return nil
+	}
 }
 
 type DeviceAPI struct {
