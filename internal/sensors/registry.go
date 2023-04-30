@@ -19,7 +19,7 @@ type sensorRegistry struct {
 	db *badger.DB
 }
 
-func OpenSensorRegistry(ctx context.Context, registryPath fyne.URI) (*sensorRegistry, error) {
+func openSensorRegistry(ctx context.Context, registryPath fyne.URI) (*sensorRegistry, error) {
 	var db *badger.DB
 	var err error
 	if registryPath != nil {
@@ -66,7 +66,7 @@ func OpenSensorRegistry(ctx context.Context, registryPath fyne.URI) (*sensorRegi
 	return &sensorRegistry{db: db}, nil
 }
 
-func (reg *sensorRegistry) CloseSensorRegistry() error {
+func (reg *sensorRegistry) closeSensorRegistry() error {
 	if reg.db != nil {
 		return reg.db.Close()
 	} else {

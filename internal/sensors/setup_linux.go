@@ -10,7 +10,7 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/linux"
 )
 
-func SetupSensors() *device.SensorInfo {
+func setupSensors() *device.SensorInfo {
 	sensorInfo := device.NewSensorInfo()
 	sensorInfo.Add("Location", linux.LocationUpdater)
 	sensorInfo.Add("Battery", linux.BatteryUpdater)

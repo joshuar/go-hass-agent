@@ -59,7 +59,7 @@ func TestOpenSensorRegistry(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := OpenSensorRegistry(tt.args.ctx, tt.args.registryPath)
+			got, err := openSensorRegistry(tt.args.ctx, tt.args.registryPath)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("OpenSensorRegistry() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -102,7 +102,7 @@ func Test_sensorRegistry_CloseSensorRegistry(t *testing.T) {
 			reg := &sensorRegistry{
 				db: tt.fields.db,
 			}
-			if err := reg.CloseSensorRegistry(); (err != nil) != tt.wantErr {
+			if err := reg.closeSensorRegistry(); (err != nil) != tt.wantErr {
 				t.Errorf("sensorRegistry.CloseSensorRegistry() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

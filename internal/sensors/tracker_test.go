@@ -7,7 +7,6 @@ package sensors
 
 import (
 	"context"
-	"os"
 	"reflect"
 	"sync"
 	"testing"
@@ -15,7 +14,6 @@ import (
 	"fyne.io/fyne/v2/app"
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -117,16 +115,6 @@ func newMockSensorTracker(t *testing.T) *sensorTracker {
 
 var testApp = app.NewWithID("org.joshuar.go-hass-agent-test")
 var uri = testApp.Storage().RootURI()
-
-func TestNewSensorTracker(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	tracker := NewSensorTracker(ctx, uri)
-	assert.IsType(t, &sensorTracker{}, tracker)
-
-	os.RemoveAll(uri.Path())
-}
 
 func Test_sensorTracker_add(t *testing.T) {
 	type fields struct {
@@ -367,7 +355,7 @@ func Test_sensorTracker_StartWorkers(t *testing.T) {
 				registry:      tt.fields.registry,
 				hassConfig:    tt.fields.hassConfig,
 			}
-			tracker.StartWorkers(tt.args.ctx, tt.args.updateCh)
+			tracker.startWorkers(tt.args.ctx, tt.args.updateCh)
 		})
 	}
 }
