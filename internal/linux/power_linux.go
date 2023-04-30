@@ -19,7 +19,7 @@ import (
 const (
 	powerProfilesDBusPath           = "/net/hadess/PowerProfiles"
 	powerProfilesDBusDest           = "net.hadess.PowerProfiles"
-	Profile               powerProp = iota + 1
+	profile               powerProp = iota + 1
 )
 
 type powerProp int
@@ -33,7 +33,7 @@ type powerSensor struct {
 
 func (state *powerSensor) Name() string {
 	switch state.sensorType {
-	case Profile:
+	case profile:
 		return "Power Profile"
 	default:
 		return state.sensorGroup + " " + strcase.ToDelimited(state.sensorType.String(), ' ')
@@ -42,7 +42,7 @@ func (state *powerSensor) Name() string {
 
 func (state *powerSensor) ID() string {
 	switch state.sensorType {
-	case Profile:
+	case profile:
 		return "power_profile"
 	default:
 		return state.sensorGroup + "_" + strcase.ToSnake(state.sensorType.String())
@@ -84,7 +84,7 @@ func (state *powerSensor) Attributes() interface{} {
 func marshalPowerStateUpdate(ctx context.Context, sensor powerProp, path dbus.ObjectPath, group string, v dbus.Variant) *powerSensor {
 	var value, attributes interface{}
 	switch sensor {
-	case Profile:
+	case profile:
 		value = strings.Trim(v.String(), "\"")
 	}
 	return &powerSensor{
@@ -113,7 +113,7 @@ func PowerUpater(ctx context.Context, status chan interface{}) {
 	}
 
 	status <- marshalPowerStateUpdate(ctx,
-		Profile,
+		profile,
 		powerProfilesDBusPath,
 		"",
 		activePowerProfile)
@@ -127,7 +127,7 @@ func PowerUpater(ctx context.Context, status chan interface{}) {
 			var propType powerProp
 			switch propName {
 			case "ActiveProfile":
-				propType = Profile
+				propType = profile
 			default:
 				log.Debug().Msgf("Unhandled property %v changed to %v", propName, propValue)
 			}
