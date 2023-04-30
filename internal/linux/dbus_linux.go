@@ -31,8 +31,8 @@ type bus struct {
 	busType   dbusType
 }
 
-// NewBus sets up DBus connections and channels for receiving signals. It creates both a system and session bus connection.
-func NewBus(ctx context.Context, t dbusType) *bus {
+// newBus sets up DBus connections and channels for receiving signals. It creates both a system and session bus connection.
+func newBus(ctx context.Context, t dbusType) *bus {
 	var conn *dbus.Conn
 	var err error
 	switch t {
@@ -220,8 +220,8 @@ type DeviceAPI struct {
 // NewDeviceAPI sets up a DeviceAPI struct with appropriate DBus API endpoints
 func NewDeviceAPI(ctx context.Context) *DeviceAPI {
 	api := &DeviceAPI{
-		dBusSystem:  NewBus(ctx, systemBus),
-		dBusSession: NewBus(ctx, sessionBus),
+		dBusSystem:  newBus(ctx, systemBus),
+		dBusSession: newBus(ctx, sessionBus),
 	}
 	if api.dBusSystem == nil && api.dBusSession == nil {
 		return nil
