@@ -17,15 +17,15 @@ import (
 	"github.com/shirou/gopsutil/v3/process"
 )
 
-//go:generate stringer -type=appSensorType -output appSensor_types_linux.go
+//go:generate stringer -type=appSensorType -output appSensor_types_linux.go -linecomment
 const (
 	appStateDBusMethod    = "org.freedesktop.impl.portal.Background.GetAppState"
 	appStateDBusPath      = "/org/freedesktop/portal/desktop"
 	appStateDBusInterface = "org.freedesktop.impl.portal.Background"
 	appStateDBusEvent     = "org.freedesktop.impl.portal.Background.RunningApplicationsChanged"
 
-	ActiveApp appSensorType = iota
-	RunningApps
+	activeApp   appSensorType = iota // Active App
+	runningApps                      // Running Apps
 )
 
 type appSensorType int
@@ -38,7 +38,7 @@ type appSensor struct {
 // appSensor implements hass.SensorUpdate
 
 func (s *appSensor) Name() string {
-	return strcase.ToDelimited(s.sensorType.String(), ' ')
+	return s.sensorType.String()
 }
 
 func (s *appSensor) ID() string {
@@ -47,9 +47,9 @@ func (s *appSensor) ID() string {
 
 func (s *appSensor) Icon() string {
 	switch s.sensorType {
-	case RunningApps:
+	case runningApps:
 		return "mdi:apps"
-	case ActiveApp:
+	case activeApp:
 		fallthrough
 	default:
 		return "mdi:application"
@@ -66,7 +66,7 @@ func (s *appSensor) DeviceClass() hass.SensorDeviceClass {
 
 func (s *appSensor) StateClass() hass.SensorStateClass {
 	switch s.sensorType {
-	case RunningApps:
+	case runningApps:
 		return hass.StateMeasurement
 	default:
 		return 0
@@ -75,13 +75,13 @@ func (s *appSensor) StateClass() hass.SensorStateClass {
 
 func (s *appSensor) State() interface{} {
 	switch s.sensorType {
-	case ActiveApp:
+	case activeApp:
 		for appName, state := range s.sensorValue {
 			if state.Value().(uint32) == 2 {
 				return appName
 			}
 		}
-	case RunningApps:
+	case runningApps:
 		var count int
 		for _, state := range s.sensorValue {
 			if state.Value().(uint32) > 0 {
@@ -95,7 +95,7 @@ func (s *appSensor) State() interface{} {
 
 func (s *appSensor) Units() string {
 	switch s.sensorType {
-	case RunningApps:
+	case runningApps:
 		return "apps"
 	}
 	return ""
@@ -107,7 +107,7 @@ func (s *appSensor) Category() string {
 
 func (s *appSensor) Attributes() interface{} {
 	switch s.sensorType {
-	case ActiveApp:
+	case activeApp:
 		appProcesses := findProcesses(getProcessBasename(s.State().(string)))
 		var cmd string
 		var createTime int64
@@ -124,7 +124,7 @@ func (s *appSensor) Attributes() interface{} {
 			Count:   len(appProcesses),
 			Started: time.UnixMilli(createTime).Format(time.RFC3339),
 		}
-	case RunningApps:
+	case runningApps:
 		var runningApps []string
 		for appName, state := range s.sensorValue {
 			if variantToValue[uint32](state) > 0 {
@@ -175,8 +175,8 @@ func AppUpdater(ctx context.Context, update chan interface{}) {
 			log.Debug().Err(err).Caller().
 				Msg("No active apps found.")
 		} else {
-			update <- marshalAppStateUpdate(RunningApps, activeAppList)
-			update <- marshalAppStateUpdate(ActiveApp, activeAppList)
+			update <- marshalAppStateUpdate(runningApps, activeAppList)
+			update <- marshalAppStateUpdate(activeApp, activeAppList)
 		}
 	}
 	deviceAPI.SessionBusRequest().
