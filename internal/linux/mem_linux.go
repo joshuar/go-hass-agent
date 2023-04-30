@@ -17,15 +17,15 @@ import (
 	"github.com/shirou/gopsutil/v3/mem"
 )
 
-//go:generate stringer -type=memoryStat -output mem_stats_linux.go
+//go:generate stringer -type=memoryStat -output mem_stats_linux.go -linecomment
 
 const (
-	MemoryTotal memoryStat = iota + 1
-	MemoryAvailable
-	MemoryUsed
-	SwapMemoryTotal
-	SwapMemoryUsed
-	SwapMemoryFree
+	memoryTotal     memoryStat = iota + 1 // Memory Total
+	memoryAvailable                       // Memory Available
+	memoryUsed                            // Memory Used
+	swapMemoryTotal                       // Swap Memory Total
+	swapMemoryUsed                        // Swap Memory Used
+	swapMemoryFree                        // Swap Memory Free
 )
 
 type memoryStat int
@@ -38,7 +38,7 @@ type memory struct {
 // memory implements hass.SensorUpdate
 
 func (m *memory) Name() string {
-	return strcase.ToDelimited(m.name.String(), ' ')
+	return m.name.String()
 }
 
 func (m *memory) ID() string {
@@ -97,7 +97,7 @@ func MemoryUpdater(ctx context.Context, status chan interface{}) {
 }
 
 func sendMemStats(status chan interface{}) {
-	stats := []memoryStat{MemoryTotal, MemoryAvailable, MemoryUsed, SwapMemoryTotal, SwapMemoryFree}
+	stats := []memoryStat{memoryTotal, memoryAvailable, memoryUsed, swapMemoryTotal, swapMemoryFree}
 	var memDetails *mem.VirtualMemoryStat
 	var err error
 	if memDetails, err = mem.VirtualMemory(); err != nil {
@@ -108,15 +108,15 @@ func sendMemStats(status chan interface{}) {
 	for _, stat := range stats {
 		var statValue uint64
 		switch stat {
-		case MemoryTotal:
+		case memoryTotal:
 			statValue = memDetails.Total
-		case MemoryAvailable:
+		case memoryAvailable:
 			statValue = memDetails.Available
-		case MemoryUsed:
+		case memoryUsed:
 			statValue = memDetails.Used
-		case SwapMemoryTotal:
+		case swapMemoryTotal:
 			statValue = memDetails.SwapTotal
-		case SwapMemoryFree:
+		case swapMemoryFree:
 			statValue = memDetails.SwapFree
 			// case UsedSwapMemory:
 			// 	return m.memStats.SwapCached
