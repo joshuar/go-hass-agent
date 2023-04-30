@@ -22,25 +22,19 @@ const (
 	dBusDest = "org.freedesktop.NetworkManager"
 	dBusPath = "/org/freedesktop/NetworkManager"
 
-	connIntr     = "org.freedesktop.NetworkManager.Connection.Active"
-	ipv4Intr     = "org.freedesktop.NetworkManager.IP4Config"
-	ipv6Intr     = "org.freedesktop.NetworkManager.IP6Config"
-	wirelessIntr = "org.freedesktop.NetworkManager.Device.Wireless"
-	apIntr       = "org.freedesktop.NetworkManager.AccessPoint"
-
-	ConnectionState networkProp = iota
-	ConnectionID
-	ConnectionDevices
-	ConnectionType
-	ConnectionIPv4
-	ConnectionIPv6
-	AddressIPv4
-	AddressIPv6
-	WifiSSID
-	WifiFrequency
-	WifiSpeed
-	WifiStrength
-	WifiHWAddress
+	connectionState networkProp = iota
+	connectionID
+	connectionDevices
+	connectionType
+	connectionIPv4
+	connectionIPv6
+	addressIPv4
+	addressIPv6
+	wifiSSID
+	wifiFrequency
+	wifiSpeed
+	wifiStrength
+	wifiHWAddress
 )
 
 type networkProp int
@@ -54,21 +48,21 @@ func getNetProp(ctx context.Context, path dbus.ObjectPath, prop networkProp) (db
 
 	var dbusProp string
 	switch prop {
-	case ConnectionID:
+	case connectionID:
 		dbusProp = connIntr + ".Id"
-	case ConnectionState:
+	case connectionState:
 		dbusProp = connIntr + ".State"
-	case ConnectionType:
+	case connectionType:
 		dbusProp = connIntr + ".Type"
-	case ConnectionDevices:
+	case connectionDevices:
 		dbusProp = connIntr + ".Devices"
-	case ConnectionIPv4:
+	case connectionIPv4:
 		dbusProp = connIntr + ".Ip4Config"
-	case ConnectionIPv6:
+	case connectionIPv6:
 		dbusProp = connIntr + ".Ip6Config"
-	case AddressIPv4:
+	case addressIPv4:
 		dbusProp = ipv4Intr + ".AddressData"
-	case AddressIPv6:
+	case addressIPv6:
 		dbusProp = ipv6Intr + ".AddressData"
 	default:
 		return dbus.MakeVariant(""), errors.New("unknown network property")
@@ -101,15 +95,15 @@ func getWifiProp(ctx context.Context, path dbus.ObjectPath, wifiProp networkProp
 
 	var dbusProp string
 	switch wifiProp {
-	case WifiSSID:
+	case wifiSSID:
 		dbusProp = apIntr + ".Ssid"
-	case WifiFrequency:
+	case wifiFrequency:
 		dbusProp = apIntr + ".Frequency"
-	case WifiSpeed:
+	case wifiSpeed:
 		dbusProp = apIntr + ".MaxBitrate"
-	case WifiStrength:
+	case wifiStrength:
 		dbusProp = apIntr + ".Strength"
-	case WifiHWAddress:
+	case wifiHWAddress:
 		dbusProp = apIntr + ".HwAddress"
 	default:
 		return dbus.MakeVariant(""), errors.New("unknown wifi property")
@@ -123,10 +117,10 @@ func getWifiProp(ctx context.Context, path dbus.ObjectPath, wifiProp networkProp
 func getIPAddrProp(ctx context.Context, connProp networkProp, path dbus.ObjectPath) (string, error) {
 	var addrProp networkProp
 	switch connProp {
-	case ConnectionIPv4:
-		addrProp = AddressIPv4
-	case ConnectionIPv6:
-		addrProp = AddressIPv6
+	case connectionIPv4:
+		addrProp = addressIPv4
+	case connectionIPv6:
+		addrProp = addressIPv6
 	default:
 		return "", errors.New("unknown address property")
 	}
@@ -168,17 +162,17 @@ type networkSensor struct {
 
 func (state *networkSensor) Name() string {
 	switch state.sensorType {
-	case ConnectionState:
+	case connectionState:
 		return state.sensorGroup + " State"
-	case WifiSSID:
+	case wifiSSID:
 		return "Wi-Fi Connection"
-	case WifiHWAddress:
+	case wifiHWAddress:
 		return "Wi-Fi BSSID"
-	case WifiFrequency:
+	case wifiFrequency:
 		return "Wi-Fi Frequency"
-	case WifiSpeed:
+	case wifiSpeed:
 		return "Wi-Fi Link Speed"
-	case WifiStrength:
+	case wifiStrength:
 		return "Wi-Fi Signal Strength"
 	default:
 		prettySensorName := strcase.ToDelimited(state.sensorType.String(), ' ')
@@ -191,17 +185,17 @@ func (state *networkSensor) Name() string {
 
 func (state *networkSensor) ID() string {
 	switch state.sensorType {
-	case ConnectionState:
+	case connectionState:
 		return strcase.ToSnake(state.sensorGroup) + "_connection_state"
-	case WifiSSID:
+	case wifiSSID:
 		return "wifi_connection"
-	case WifiHWAddress:
+	case wifiHWAddress:
 		return "wifi_bssid"
-	case WifiFrequency:
+	case wifiFrequency:
 		return "wifi_frequency"
-	case WifiSpeed:
+	case wifiSpeed:
 		return "wifi_link_speed"
-	case WifiStrength:
+	case wifiStrength:
 		return "wifi_signal_strength"
 	default:
 		snakeSensorName := strcase.ToSnake(state.sensorType.String())
@@ -211,7 +205,7 @@ func (state *networkSensor) ID() string {
 
 func (state *networkSensor) Icon() string {
 	switch state.sensorType {
-	case ConnectionState:
+	case connectionState:
 		switch state.sensorValue {
 		case "Online":
 			return "mdi:network"
@@ -224,15 +218,15 @@ func (state *networkSensor) Icon() string {
 		default:
 			return "mdi:help-network"
 		}
-	case WifiSSID:
+	case wifiSSID:
 		fallthrough
-	case WifiHWAddress:
+	case wifiHWAddress:
 		fallthrough
-	case WifiFrequency:
+	case wifiFrequency:
 		fallthrough
-	case WifiSpeed:
+	case wifiSpeed:
 		return "mdi:wifi"
-	case WifiStrength:
+	case wifiStrength:
 		switch s := state.sensorValue.(uint32); {
 		case s <= 25:
 			return "mdi:wifi-strength-1"
@@ -253,9 +247,9 @@ func (state *networkSensor) SensorType() hass.SensorType {
 
 func (state *networkSensor) DeviceClass() hass.SensorDeviceClass {
 	switch state.sensorType {
-	case WifiFrequency:
+	case wifiFrequency:
 		return hass.Frequency
-	case WifiSpeed:
+	case wifiSpeed:
 		return hass.Data_rate
 	default:
 		return 0
@@ -264,11 +258,11 @@ func (state *networkSensor) DeviceClass() hass.SensorDeviceClass {
 
 func (state *networkSensor) StateClass() hass.SensorStateClass {
 	switch state.sensorType {
-	case WifiFrequency:
+	case wifiFrequency:
 		fallthrough
-	case WifiSpeed:
+	case wifiSpeed:
 		fallthrough
-	case WifiStrength:
+	case wifiStrength:
 		return hass.StateMeasurement
 	default:
 		return 0
@@ -281,11 +275,11 @@ func (state *networkSensor) State() interface{} {
 
 func (state *networkSensor) Units() string {
 	switch state.sensorType {
-	case WifiFrequency:
+	case wifiFrequency:
 		return "MHz"
-	case WifiSpeed:
+	case wifiSpeed:
 		return "kB/s"
-	case WifiStrength:
+	case wifiStrength:
 		return "%"
 	default:
 		return ""
@@ -320,10 +314,10 @@ func stateToString(state uint32) string {
 func marshalNetworkStateUpdate(ctx context.Context, sensor networkProp, path dbus.ObjectPath, group string, v dbus.Variant) *networkSensor {
 	var value, attributes interface{}
 	switch sensor {
-	case ConnectionState:
+	case connectionState:
 		connState := variantToValue[uint32](v)
 		value = stateToString(connState)
-		connTypeVariant, err := getNetProp(ctx, path, ConnectionType)
+		connTypeVariant, err := getNetProp(ctx, path, connectionType)
 		var connType string
 		if err != nil {
 			connType = "Unknown"
@@ -331,13 +325,13 @@ func marshalNetworkStateUpdate(ctx context.Context, sensor networkProp, path dbu
 			connType = string(variantToValue[[]uint8](connTypeVariant))
 		}
 		var ip4Addr, ip6Addr, addr string
-		addr, err = getIPAddrProp(ctx, ConnectionIPv4, path)
+		addr, err = getIPAddrProp(ctx, connectionIPv4, path)
 		if err != nil {
 			ip4Addr = ""
 		} else {
 			ip4Addr = addr
 		}
-		addr, err = getIPAddrProp(ctx, ConnectionIPv6, path)
+		addr, err = getIPAddrProp(ctx, connectionIPv6, path)
 		if err != nil {
 			ip6Addr = ""
 		} else {
@@ -352,15 +346,15 @@ func marshalNetworkStateUpdate(ctx context.Context, sensor networkProp, path dbu
 			Ipv4:           ip4Addr,
 			Ipv6:           ip6Addr,
 		}
-	case WifiSSID:
+	case wifiSSID:
 		value = string(variantToValue[[]uint8](v))
-	case WifiHWAddress:
+	case wifiHWAddress:
 		value = string(variantToValue[[]uint8](v))
-	case WifiFrequency:
+	case wifiFrequency:
 		value = variantToValue[uint32](v)
-	case WifiSpeed:
+	case wifiSpeed:
 		value = variantToValue[uint32](v)
-	case WifiStrength:
+	case wifiStrength:
 		value = variantToValue[uint32](v)
 	}
 	return &networkSensor{
@@ -436,15 +430,15 @@ func NetworkConnectionsUpdater(ctx context.Context, status chan interface{}) {
 				var propType networkProp
 				switch propName {
 				case "Ssid":
-					propType = WifiSSID
+					propType = wifiSSID
 				case "HwAddress":
-					propType = WifiHWAddress
+					propType = wifiHWAddress
 				case "Frequency":
-					propType = WifiFrequency
+					propType = wifiFrequency
 				case "Bitrate":
-					propType = WifiSpeed
+					propType = wifiSpeed
 				case "Strength":
-					propType = WifiStrength
+					propType = wifiStrength
 				default:
 					log.Debug().Msgf("Unhandled property %v changed to %v", propName, propValue)
 				}
@@ -540,19 +534,19 @@ func deviceActiveConnection(ctx context.Context, networkDevicePath dbus.ObjectPa
 func processConnectionState(ctx context.Context, conn dbus.ObjectPath, status chan interface{}) {
 	var variant dbus.Variant
 	var err error
-	variant, err = getNetProp(ctx, conn, ConnectionID)
+	variant, err = getNetProp(ctx, conn, connectionID)
 	if err != nil {
 		log.Debug().Err(err).Caller().
 			Msgf("Invalid connection %s", conn)
 	} else {
 		name := string(variantToValue[[]uint8](variant))
 		if conn != "/" && name != "lo" {
-			variant, err = getNetProp(ctx, conn, ConnectionState)
+			variant, err = getNetProp(ctx, conn, connectionState)
 			if err != nil {
 				log.Debug().Err(err).Caller().
 					Msgf("Invalid connection state %v.", variant.Value())
 			} else {
-				connState := marshalNetworkStateUpdate(ctx, ConnectionState, conn, name, variant)
+				connState := marshalNetworkStateUpdate(ctx, connectionState, conn, name, variant)
 				status <- connState
 			}
 		}
@@ -562,14 +556,14 @@ func processConnectionState(ctx context.Context, conn dbus.ObjectPath, status ch
 func processConnectionType(ctx context.Context, conn dbus.ObjectPath, status chan interface{}) {
 	var variant dbus.Variant
 	var err error
-	variant, err = getNetProp(ctx, conn, ConnectionType)
+	variant, err = getNetProp(ctx, conn, connectionType)
 	if err != nil {
 		log.Debug().Err(err).Msg("Invalid connection type.")
 	} else {
 		connType := string(variantToValue[[]uint8](variant))
 		switch connType {
 		case "802-11-wireless":
-			variant, err = getNetProp(ctx, conn, ConnectionDevices)
+			variant, err = getNetProp(ctx, conn, connectionDevices)
 			if err != nil {
 				log.Debug().Err(err).Caller().
 					Msg("Invalid connection device.")
@@ -577,7 +571,7 @@ func processConnectionType(ctx context.Context, conn dbus.ObjectPath, status cha
 				// ! this conversion might yield unexpected results
 				devicePath := variantToValue[[]dbus.ObjectPath](variant)[0]
 				if devicePath.IsValid() {
-					wifiProps := []networkProp{WifiSSID, WifiHWAddress, WifiFrequency, WifiSpeed, WifiStrength}
+					wifiProps := []networkProp{wifiSSID, wifiHWAddress, wifiFrequency, wifiSpeed, wifiStrength}
 					for _, prop := range wifiProps {
 						propValue, err := getWifiProp(ctx, devicePath, prop)
 						if err != nil {
