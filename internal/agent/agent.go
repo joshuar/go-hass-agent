@@ -15,7 +15,6 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/storage"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/joshuar/go-hass-agent/internal/config"
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/sensors"
@@ -107,7 +106,6 @@ func Run(id string) {
 		wg.Wait()
 		appConfig := agent.loadAppConfig()
 		ctx := config.NewContext(agentCtx, appConfig)
-		spew.Dump(ctx)
 		registryPath, err := agent.extraStoragePath("sensorRegistry")
 		if err != nil {
 			log.Debug().Err(err).
