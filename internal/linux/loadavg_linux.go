@@ -87,7 +87,7 @@ func (l *loadavg) Attributes() interface{} {
 }
 
 func LoadAvgUpdater(ctx context.Context, status chan interface{}) {
-	sendLoadAvgStats(status)
+	sendLoadAvgStats(ctx, status)
 	ticker := jitterbug.New(
 		time.Minute,
 		&jitterbug.Norm{Stdev: time.Second * 5},
@@ -98,16 +98,16 @@ func LoadAvgUpdater(ctx context.Context, status chan interface{}) {
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
-				sendLoadAvgStats(status)
+				sendLoadAvgStats(ctx, status)
 			}
 		}
 	}()
 }
 
-func sendLoadAvgStats(status chan interface{}) {
+func sendLoadAvgStats(ctx context.Context, status chan interface{}) {
 	var latest *load.AvgStat
 	var err error
-	if latest, err = load.Avg(); err != nil {
+	if latest, err = load.AvgWithContext(ctx); err != nil {
 		log.Debug().Err(err).Caller().
 			Msg("Problem fetching loadavg stats.")
 		return

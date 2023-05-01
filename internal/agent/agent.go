@@ -9,10 +9,13 @@ import (
 	"context"
 	_ "embed"
 	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/storage"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/joshuar/go-hass-agent/internal/config"
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/sensors"
@@ -52,8 +55,8 @@ func Run(id string) {
 	if id != "" {
 		debugAppID = id
 	}
-	ctx, cancelfunc := context.WithCancel(context.Background())
-	ctx = device.SetupContext(ctx)
+	agentCtx, cancelfunc := context.WithCancel(context.Background())
+	agentCtx = device.SetupContext(agentCtx)
 	log.Info().Msg("Starting agent.")
 	agent := NewAgent()
 
@@ -87,7 +90,7 @@ func Run(id string) {
 		appConfig := agent.loadAppConfig()
 		for appConfig.Validate() != nil {
 			log.Warn().Msg("No suitable existing config found! Starting new registration process")
-			err := agent.runRegistrationWorker(ctx)
+			err := agent.runRegistrationWorker(agentCtx)
 			if err != nil {
 				log.Error().Err(err).
 					Msgf("Error trying to register: %v. Exiting.")
@@ -99,23 +102,37 @@ func Run(id string) {
 
 	// Wait for the config to load, then start the sensor tracker and
 	// notifications worker
+	trackerWg := &sync.WaitGroup{}
 	go func() {
 		wg.Wait()
 		appConfig := agent.loadAppConfig()
-		ctx := config.NewContext(ctx, appConfig)
+		ctx := config.NewContext(agentCtx, appConfig)
+		spew.Dump(ctx)
 		registryPath, err := agent.extraStoragePath("sensorRegistry")
 		if err != nil {
 			log.Debug().Err(err).
 				Msg("Unable to store registry on disk, trying in-memory store.")
 		}
 		updateCh := make(chan interface{})
-		sensors.RunSensorTracker(ctx, registryPath, updateCh)
+		sensors.RunSensorTracker(ctx, registryPath, updateCh, trackerWg)
 		go agent.runNotificationsWorker(ctx)
+	}()
+
+	// Handle interrupt/termination signals
+	c := make(chan os.Signal)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-c
+		cancelfunc()
+		trackerWg.Wait()
+		agent.stop()
+		os.Exit(1)
 	}()
 
 	agent.setupSystemTray()
 	agent.app.Run()
 	cancelfunc()
+	trackerWg.Wait()
 	agent.stop()
 }
 

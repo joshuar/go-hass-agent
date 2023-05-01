@@ -407,15 +407,12 @@ func NetworkConnectionsUpdater(ctx context.Context, status chan interface{}) {
 			}
 		}
 	}
-	// NewDBusWatchRequest().
-	// 	System().
 	deviceAPI.SystemBusRequest().
 		Path(activeConnDBusPath).
 		Match(connStateDBusMatch).
 		Event("org.freedesktop.DBus.Properties.PropertiesChanged").
 		Handler(connStateHandler).
 		AddWatch()
-		// Add(deviceAPI)
 
 	// Set up a DBus watch for Wi-Fi state changes
 	apDbusPath := dbus.ObjectPath(dBusPath + "/AccessPoint")

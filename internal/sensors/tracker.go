@@ -24,7 +24,7 @@ type sensorTracker struct {
 	hassConfig    *hass.HassConfig
 }
 
-func RunSensorTracker(ctx context.Context, appPath fyne.URI, updateCh chan interface{}) {
+func RunSensorTracker(ctx context.Context, appPath fyne.URI, updateCh chan interface{}, wg *sync.WaitGroup) {
 	r, err := openSensorRegistry(ctx, appPath)
 	if err != nil {
 		log.Debug().Err(err).Caller().
@@ -62,7 +62,7 @@ func RunSensorTracker(ctx context.Context, appPath fyne.URI, updateCh chan inter
 			}
 		}
 	}()
-	tracker.startWorkers(ctx, updateCh)
+	tracker.startWorkers(ctx, updateCh, wg)
 }
 
 // Add creates a new sensor in the tracker based on a recieved state
@@ -120,8 +120,9 @@ func (tracker *sensorTracker) exists(id string) bool {
 
 // startWorkers will call all the sensor worker functions that have been defined
 // for this device.
-func (tracker *sensorTracker) startWorkers(ctx context.Context, updateCh chan interface{}) {
-	var wg sync.WaitGroup
+func (tracker *sensorTracker) startWorkers(ctx context.Context, updateCh chan interface{}, wg *sync.WaitGroup) {
+	// var wg sync.WaitGroup
+	// workerCtx, cancelfunc := context.WithCancel(ctx)
 
 	// Run all the defined sensor update functions.
 	for name, workerFunction := range tracker.sensorWorkers.Get() {
