@@ -78,7 +78,7 @@ func (m *memory) Attributes() interface{} {
 }
 
 func MemoryUpdater(ctx context.Context, status chan interface{}) {
-	sendMemStats(status)
+	sendMemStats(ctx, status)
 
 	ticker := jitterbug.New(
 		time.Minute,
@@ -90,17 +90,17 @@ func MemoryUpdater(ctx context.Context, status chan interface{}) {
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
-				sendMemStats(status)
+				sendMemStats(ctx, status)
 			}
 		}
 	}()
 }
 
-func sendMemStats(status chan interface{}) {
+func sendMemStats(ctx context.Context, status chan interface{}) {
 	stats := []memoryStat{memoryTotal, memoryAvailable, memoryUsed, swapMemoryTotal, swapMemoryFree}
 	var memDetails *mem.VirtualMemoryStat
 	var err error
-	if memDetails, err = mem.VirtualMemory(); err != nil {
+	if memDetails, err = mem.VirtualMemoryWithContext(ctx); err != nil {
 		log.Debug().Err(err).Caller().
 			Msg("Problem fetching memory stats.")
 		return
