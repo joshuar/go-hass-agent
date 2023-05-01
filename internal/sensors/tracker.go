@@ -20,12 +20,13 @@ type sensorTracker struct {
 	mu            sync.RWMutex
 	sensor        map[string]*sensorState
 	sensorWorkers *device.SensorInfo
-	registry      *sensorRegistry
+	registry      Registry
 	hassConfig    *hass.HassConfig
 }
 
 func RunSensorTracker(ctx context.Context, appPath fyne.URI, updateCh chan interface{}, wg *sync.WaitGroup) {
-	r, err := openSensorRegistry(ctx, appPath)
+	r := &nutsdbRegistry{}
+	err := r.Open(ctx, appPath)
 	if err != nil {
 		log.Debug().Err(err).Caller().
 			Msg("Unable to open registry")
