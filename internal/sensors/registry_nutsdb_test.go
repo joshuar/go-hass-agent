@@ -7,79 +7,67 @@ package sensors
 
 import (
 	"context"
+	"os"
 	"reflect"
 	"testing"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/storage"
-	badger "github.com/dgraph-io/badger/v4"
+	"github.com/nutsdb/nutsdb"
 	"github.com/stretchr/testify/assert"
 )
 
-func newMockSensorRegistry(t *testing.T) *sensorRegistry {
-	fakeRegistry := new(sensorRegistry)
-	db, err := badger.Open(badger.DefaultOptions("").WithInMemory(true))
-	assert.Nil(t, err)
-	fakeRegistry.db = db
-	return fakeRegistry
-}
-
-func TestOpenSensorRegistry(t *testing.T) {
+func Test_nutsdbRegistry_Open(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	db, err := badger.Open(badger.DefaultOptions("").WithInMemory(true))
-	assert.Nil(t, err)
-	defer db.Close()
-	wantedRegistry := &sensorRegistry{
-		db: db,
-	}
 	badPath, _ := storage.ParseURI("file:///some/bad/path")
+	type fields struct {
+		db *nutsdb.DB
+	}
 	type args struct {
 		ctx          context.Context
 		registryPath fyne.URI
 	}
 	tests := []struct {
 		name    string
+		fields  fields
 		args    args
-		want    *sensorRegistry
 		wantErr bool
 	}{
 		{
 			name:    "successful open",
 			args:    args{ctx: ctx, registryPath: nil},
-			want:    wantedRegistry,
 			wantErr: false,
 		},
 		{
 			name:    "unsuccessful open",
 			args:    args{ctx: ctx, registryPath: badPath},
-			want:    nil,
 			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := openSensorRegistry(tt.args.ctx, tt.args.registryPath)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("OpenSensorRegistry() error = %v, wantErr %v", err, tt.wantErr)
-				return
+			r := &nutsdbRegistry{
+				db: tt.fields.db,
 			}
-			if tt.want != nil {
-				assert.IsType(t, wantedRegistry.db, got.db)
+			if err := r.Open(tt.args.ctx, tt.args.registryPath); (err != nil) != tt.wantErr {
+				t.Errorf("nutsdbRegistry.Open() error = %v, wantErr %v", err, tt.wantErr)
 			}
-			// if !reflect.DeepEqual(got, tt.want) {
-			// 	t.Errorf("OpenSensorRegistry() = %v, want %v", got, tt.want)
-			// }
 		})
 	}
 }
 
-func Test_sensorRegistry_CloseSensorRegistry(t *testing.T) {
-	db, err := badger.Open(badger.DefaultOptions("").WithInMemory(true))
+func Test_nutsdbRegistry_Close(t *testing.T) {
+	dname, err := os.MkdirTemp("", "sampledir")
 	assert.Nil(t, err)
-	defer db.Close()
+	defer os.RemoveAll(dname)
+	db, err := nutsdb.Open(
+		nutsdb.DefaultOptions,
+		nutsdb.WithDir(dname),
+	)
+	assert.Nil(t, err)
 	type fields struct {
-		db *badger.DB
+		db *nutsdb.DB
 	}
 	tests := []struct {
 		name    string
@@ -99,34 +87,31 @@ func Test_sensorRegistry_CloseSensorRegistry(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			reg := &sensorRegistry{
+			r := &nutsdbRegistry{
 				db: tt.fields.db,
 			}
-			if err := reg.closeSensorRegistry(); (err != nil) != tt.wantErr {
-				t.Errorf("sensorRegistry.CloseSensorRegistry() error = %v, wantErr %v", err, tt.wantErr)
+			if err := r.Close(); (err != nil) != tt.wantErr {
+				t.Errorf("nutsdbRegistry.Close() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
 }
 
-func Test_sensorRegistry_Get(t *testing.T) {
-	db, err := badger.Open(badger.DefaultOptions("").WithInMemory(true))
+func Test_nutsdbRegistry_Get(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	r := &nutsdbRegistry{}
+	err := r.Open(ctx, nil)
 	assert.Nil(t, err)
-	defer db.Close()
-	reg := &sensorRegistry{
-		db: db,
-	}
-
 	fakeMetadata := &sensorMetadata{
 		Registered: true,
 		Disabled:   false,
 	}
-
-	err = reg.Set("fakeSensor", fakeMetadata)
+	err = r.Set("fakeSensor", fakeMetadata)
 	assert.Nil(t, err)
 
 	type fields struct {
-		reg *sensorRegistry
+		db *nutsdb.DB
 	}
 	type args struct {
 		id string
@@ -140,13 +125,13 @@ func Test_sensorRegistry_Get(t *testing.T) {
 	}{
 		{
 			name:   "existing",
-			fields: fields{reg: reg},
+			fields: fields{db: r.db},
 			args:   args{id: "fakeSensor"},
 			want:   fakeMetadata,
 		},
 		{
 			name:    "nonexisting",
-			fields:  fields{reg: reg},
+			fields:  fields{db: r.db},
 			args:    args{id: "noSensor"},
 			want:    &sensorMetadata{},
 			wantErr: true,
@@ -154,30 +139,33 @@ func Test_sensorRegistry_Get(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := reg.Get(tt.args.id)
+			r := &nutsdbRegistry{
+				db: tt.fields.db,
+			}
+			got, err := r.Get(tt.args.id)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("sensorRegistry.Get() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("nutsdbRegistry.Get() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("sensorRegistry.Get() = %v, want %v", got, tt.want)
+				t.Errorf("nutsdbRegistry.Get() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func Test_sensorRegistry_Set(t *testing.T) {
-	db, err := badger.Open(badger.DefaultOptions("").WithInMemory(true))
+func Test_nutsdbRegistry_Set(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	r := &nutsdbRegistry{}
+	err := r.Open(ctx, nil)
 	assert.Nil(t, err)
-	defer db.Close()
-
 	fakeMetadata := &sensorMetadata{
 		Registered: true,
 		Disabled:   false,
 	}
-
 	type fields struct {
-		db *badger.DB
+		db *nutsdb.DB
 	}
 	type args struct {
 		id     string
@@ -191,22 +179,22 @@ func Test_sensorRegistry_Set(t *testing.T) {
 	}{
 		{
 			name:   "add valid data",
-			fields: fields{db: db},
+			fields: fields{db: r.db},
 			args:   args{id: "fakeSensor", values: fakeMetadata},
 		},
 		{
 			name:   "add defaults",
-			fields: fields{db: db},
+			fields: fields{db: r.db},
 			args:   args{id: "fakeSensor", values: &sensorMetadata{}},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			reg := &sensorRegistry{
+			r := &nutsdbRegistry{
 				db: tt.fields.db,
 			}
-			if err := reg.Set(tt.args.id, tt.args.values); (err != nil) != tt.wantErr {
-				t.Errorf("sensorRegistry.Set() error = %v, wantErr %v", err, tt.wantErr)
+			if err := r.Set(tt.args.id, tt.args.values); (err != nil) != tt.wantErr {
+				t.Errorf("nutsdbRegistry.Set() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
