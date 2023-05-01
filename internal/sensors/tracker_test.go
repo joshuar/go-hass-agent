@@ -11,7 +11,6 @@ import (
 	"sync"
 	"testing"
 
-	"fyne.io/fyne/v2/app"
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/stretchr/testify/mock"
@@ -113,15 +112,12 @@ func newMockSensorTracker(t *testing.T) *sensorTracker {
 	return fakeTracker
 }
 
-var testApp = app.NewWithID("org.joshuar.go-hass-agent-test")
-var uri = testApp.Storage().RootURI()
-
 func Test_sensorTracker_add(t *testing.T) {
 	type fields struct {
 		mu            sync.RWMutex
 		sensor        map[string]*sensorState
 		sensorWorkers *device.SensorInfo
-		registry      *sensorRegistry
+		registry      Registry
 		hassConfig    *hass.HassConfig
 	}
 	type args struct {
@@ -169,7 +165,7 @@ func Test_sensorTracker_Update(t *testing.T) {
 		mu            sync.RWMutex
 		sensor        map[string]*sensorState
 		sensorWorkers *device.SensorInfo
-		registry      *sensorRegistry
+		registry      *badgerDBRegistry
 		hassConfig    *hass.HassConfig
 	}
 	type args struct {
@@ -237,7 +233,7 @@ func Test_sensorTracker_update(t *testing.T) {
 		mu            sync.RWMutex
 		sensor        map[string]*sensorState
 		sensorWorkers *device.SensorInfo
-		registry      *sensorRegistry
+		registry      *badgerDBRegistry
 		hassConfig    *hass.HassConfig
 	}
 	type args struct {
@@ -330,7 +326,7 @@ func Test_sensorTracker_StartWorkers(t *testing.T) {
 		mu            sync.RWMutex
 		sensor        map[string]*sensorState
 		sensorWorkers *device.SensorInfo
-		registry      *sensorRegistry
+		registry      *badgerDBRegistry
 		hassConfig    *hass.HassConfig
 	}
 	type args struct {
