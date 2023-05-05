@@ -1,13 +1,10 @@
 on:
   push:
-    # run only against tags
     tags:
       - '*'
 
 permissions:
   contents: write
-  # packages: write
-  # issues: write
 
 name: goreleaser
 
