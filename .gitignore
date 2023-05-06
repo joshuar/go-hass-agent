@@ -8,21 +8,16 @@
 !translations/**/*.json
 !*.yml
 !*.yaml
+!*.md
 !go.sum
 !go.mod
-
-!README.md
-!LICENSE
-!CHANGELOG.md
 !assets/
 !docs/**/*.md
 !docs/**/*.png
 !tools/
-
-# !Makefile
-
 # ...even if they are in subdirectories
 !*/
-.vscode/settings.json
 
+.vscode/settings.json
 dist/
+fyne-cross/
