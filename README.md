@@ -19,10 +19,12 @@ This app will add some sensors to a Home Assistant instance:
 - Battery status (for example, laptop battery and any peripherals).
 - Network status (for example, network connection status, internal and external
   IP addresses and Wi-Fi details where relevant).
+- Memory and swap usage (total/free/used).
+- Disk usage.
+- Load Averages.
+- Uptime.
 - Power profile.
 - Problems detected by ABRT.
-- Memory and swap usage (total/free/used).
-- Load Averages.
 
 The code can be extended to add additional sensors. See the [development
 docs](docs/development.md) for details.
