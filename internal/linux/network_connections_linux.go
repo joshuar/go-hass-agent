@@ -11,7 +11,6 @@ import (
 	"net"
 	"strings"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/godbus/dbus/v5"
 	"github.com/iancoleman/strcase"
 	"github.com/joshuar/go-hass-agent/internal/hass"
@@ -413,7 +412,7 @@ func NetworkConnectionsUpdater(ctx context.Context, status chan interface{}) {
 						// 	processConnectionType(ctx, conn, status)
 						// }
 					}
-					spew.Dump(s.Body)
+					// spew.Dump(s.Body)
 				case activeConnectionObject:
 					log.Debug().Caller().
 						Msgf("Processing active connections %s.", s.Path)
