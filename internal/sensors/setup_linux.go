@@ -23,6 +23,7 @@ func setupSensors() *device.SensorInfo {
 	sensorInfo.Add("Memory", linux.MemoryUpdater)
 	sensorInfo.Add("LoadAvg", linux.LoadAvgUpdater)
 	sensorInfo.Add("DiskUsage", linux.DiskUsageUpdater)
+	sensorInfo.Add("Time", linux.TimeUpdater)
 	// Add each SensorUpdater function here...
 	return sensorInfo
 }
