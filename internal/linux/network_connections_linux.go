@@ -9,7 +9,9 @@ import (
 	"context"
 	"errors"
 	"net"
+	"strings"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/godbus/dbus/v5"
 	"github.com/iancoleman/strcase"
 	"github.com/joshuar/go-hass-agent/internal/hass"
@@ -23,7 +25,10 @@ const (
 	networkManagerObject   = "org.freedesktop.NetworkManager"
 	activeConnectionObject = "org.freedesktop.NetworkManager.Connection.Active"
 	accessPointObject      = "org.freedesktop.NetworkManager.AccessPoint"
+	deviceObject           = "org.freedesktop.NetworkManager.Device"
 	wirelessDeviceObject   = "org.freedesktop.NetworkManager.Device.Wireless"
+	ip4ConfigObject        = "org.freedesktop.NetworkManager.IP4Config"
+	ip6ConfigObject        = "org.freedesktop.NetworkManager.IP6Config"
 
 	connectionState networkProp = iota
 	connectionID
@@ -43,10 +48,10 @@ const (
 type networkProp int
 
 func getNetProp(ctx context.Context, path dbus.ObjectPath, prop networkProp) (dbus.Variant, error) {
-	deviceAPI, _ := FetchAPIFromContext(ctx)
-
-	ipv4Intr := "org.freedesktop.NetworkManager.IP4Config"
-	ipv6Intr := "org.freedesktop.NetworkManager.IP6Config"
+	deviceAPI, err := FetchAPIFromContext(ctx)
+	if err != nil {
+		return dbus.MakeVariant(""), err
+	}
 
 	var dbusProp string
 	switch prop {
@@ -63,9 +68,9 @@ func getNetProp(ctx context.Context, path dbus.ObjectPath, prop networkProp) (db
 	case connectionIPv6:
 		dbusProp = activeConnectionObject + ".Ip6Config"
 	case addressIPv4:
-		dbusProp = ipv4Intr + ".AddressData"
+		dbusProp = ip4ConfigObject + ".AddressData"
 	case addressIPv6:
-		dbusProp = ipv6Intr + ".AddressData"
+		dbusProp = ip6ConfigObject + ".AddressData"
 	default:
 		return dbus.MakeVariant(""), errors.New("unknown network property")
 	}
@@ -76,8 +81,10 @@ func getNetProp(ctx context.Context, path dbus.ObjectPath, prop networkProp) (db
 }
 
 func getWifiProp(ctx context.Context, path dbus.ObjectPath, wifiProp networkProp) (dbus.Variant, error) {
-
-	deviceAPI, _ := FetchAPIFromContext(ctx)
+	deviceAPI, err := FetchAPIFromContext(ctx)
+	if err != nil {
+		return dbus.MakeVariant(""), err
+	}
 
 	var apPath dbus.ObjectPath
 	ap, err := deviceAPI.SystemBusRequest().
@@ -373,24 +380,17 @@ func NetworkConnectionsUpdater(ctx context.Context, status chan interface{}) {
 		return
 	}
 
-	deviceList := deviceAPI.SystemBusRequest().
+	connList, err := deviceAPI.SystemBusRequest().
 		Path(networkManagerPath).
 		Destination(networkManagerObject).
-		GetData("org.freedesktop.NetworkManager.GetDevices").
-		AsObjectPathList()
-	if deviceList == nil {
+		GetProp(networkManagerObject + ".ActiveConnections")
+	if err != nil {
 		log.Debug().Err(err).Caller().
-			Msg("Could not list devices from network manager.")
-		return
+			Msg("Could not retrieve active connection list.")
 	}
-	if len(deviceList) > 0 {
-		for _, device := range deviceList {
-			conn := deviceActiveConnection(ctx, device)
-			if conn != "" {
-				processConnectionState(ctx, conn, status)
-				processConnectionType(ctx, conn, status)
-			}
-		}
+	for _, conn := range connList.Value().([]dbus.ObjectPath) {
+		processConnectionState(ctx, conn, status)
+		processConnectionType(ctx, conn, status)
 	}
 
 	deviceAPI.SystemBusRequest().
@@ -403,14 +403,46 @@ func NetworkConnectionsUpdater(ctx context.Context, status chan interface{}) {
 			switch obj := s.Body[0].(type) {
 			case string:
 				switch obj {
+				case networkManagerObject:
+					updatedProps := s.Body[1].(map[string]dbus.Variant)
+					if _, ok := updatedProps["ActiveConnections"]; ok {
+						log.Debug().Caller().
+							Msg("Processing active connections changes.")
+						// for _, conn := range c.Value().([]dbus.ObjectPath) {
+						// 	processConnectionState(ctx, conn, status)
+						// 	processConnectionType(ctx, conn, status)
+						// }
+					}
+					spew.Dump(s.Body)
 				case activeConnectionObject:
+					log.Debug().Caller().
+						Msgf("Processing active connections %s.", s.Path)
 					processConnectionState(ctx, s.Path, status)
 					processConnectionType(ctx, s.Path, status)
+				case deviceObject:
+					updatedProps := s.Body[1].(map[string]dbus.Variant)
+					if c, ok := updatedProps["ActiveConnection"]; ok {
+						log.Debug().Caller().
+							Msgf("Processing device connection update %s.", c.String())
+						// processConnectionState(
+						// 	ctx, c.Value().(dbus.ObjectPath), status)
+						// processConnectionType(
+						// 	ctx, c.Value().(dbus.ObjectPath), status)
+					}
 				case accessPointObject:
 					fallthrough
 				case wirelessDeviceObject:
 					updatedProps := s.Body[1].(map[string]dbus.Variant)
 					processWifiProps(ctx, updatedProps, s.Path, status)
+				case ip4ConfigObject:
+					fallthrough
+				case ip6ConfigObject:
+					device := ipConfigToDevice(ctx, s.Path, obj)
+					log.Debug().Caller().
+						Msgf("Device %s was updated.", device)
+					// connection := deviceToConnection(ctx, device)
+				case "org.freedesktop.NetworkManager.DnsManager":
+					// no-op
 				case "org.freedesktop.NetworkManager.Device.Statistics":
 					// no-op
 					// default:
@@ -419,26 +451,6 @@ func NetworkConnectionsUpdater(ctx context.Context, status chan interface{}) {
 			}
 		}).
 		AddWatch()
-}
-
-func deviceActiveConnection(ctx context.Context, networkDevicePath dbus.ObjectPath) dbus.ObjectPath {
-	deviceAPI, err := FetchAPIFromContext(ctx)
-	if err != nil {
-		log.Debug().Err(err).Caller().
-			Msg("Could not connect to DBus.")
-		return ""
-	}
-
-	variant, err := deviceAPI.SystemBusRequest().
-		Path(networkDevicePath).
-		Destination(networkManagerObject).
-		GetProp("org.freedesktop.NetworkManager.Device.ActiveConnection")
-	conn := dbus.ObjectPath(variantToValue[[]uint8](variant))
-	if err != nil || !conn.IsValid() {
-		return ""
-	} else {
-		return conn
-	}
 }
 
 func processConnectionState(ctx context.Context, conn dbus.ObjectPath, status chan interface{}) {
@@ -530,4 +542,68 @@ func processWifiProps(ctx context.Context, props map[string]dbus.Variant, path d
 			}
 		}
 	}
+}
+
+func deviceToConnection(ctx context.Context, networkDevicePath dbus.ObjectPath) dbus.ObjectPath {
+	deviceAPI, err := FetchAPIFromContext(ctx)
+	if err != nil {
+		log.Debug().Err(err).Caller().
+			Msg("Could not connect to DBus.")
+		return ""
+	}
+
+	variant, err := deviceAPI.SystemBusRequest().
+		Path(networkDevicePath).
+		Destination(networkManagerObject).
+		GetProp(networkManagerObject + ".ActiveConnection")
+	conn := dbus.ObjectPath(variantToValue[[]uint8](variant))
+	if err != nil || !conn.IsValid() {
+		return ""
+	} else {
+		return conn
+	}
+}
+
+func ipConfigToDevice(ctx context.Context, ipConfigPath dbus.ObjectPath, ipConfigType string) dbus.ObjectPath {
+	var configProp string
+	switch {
+	case strings.Contains(ipConfigType, "IP4Config"):
+		configProp = "Ip4Config"
+	case strings.Contains(ipConfigType, "IP6Config"):
+		configProp = "Ip6Config"
+	}
+	deviceAPI, err := FetchAPIFromContext(ctx)
+	if err != nil {
+		log.Debug().Err(err).Caller().
+			Msg("Could not connect to DBus.")
+		return ""
+	}
+
+	deviceList := deviceAPI.SystemBusRequest().
+		Path(networkManagerPath).
+		Destination(networkManagerObject).
+		GetData(networkManagerObject + ".GetDevices").
+		AsObjectPathList()
+	if deviceList == nil {
+		log.Debug().Err(err).Caller().
+			Msg("Could not list devices from network manager.")
+		return ""
+	}
+	if len(deviceList) > 0 {
+		for _, devicePath := range deviceList {
+			c, err := deviceAPI.SystemBusRequest().
+				Path(devicePath).
+				Destination(networkManagerObject).
+				GetProp(deviceObject + "." + configProp)
+			if err != nil {
+				log.Debug().Caller().Err(err).
+					Msg("Could not retrieve device config.")
+			}
+			deviceConfig := string(variantToValue[[]uint8](c))
+			if deviceConfig == string(ipConfigPath) {
+				return devicePath
+			}
+		}
+	}
+	return ""
 }
