@@ -8,19 +8,19 @@ func _() {
 	// An "invalid array index" compiler error signifies that the constant values have changed.
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
-	_ = x[connectionState-5]
-	_ = x[connectionID-6]
-	_ = x[connectionDevices-7]
-	_ = x[connectionType-8]
-	_ = x[connectionIPv4-9]
-	_ = x[connectionIPv6-10]
-	_ = x[addressIPv4-11]
-	_ = x[addressIPv6-12]
-	_ = x[wifiSSID-13]
-	_ = x[wifiFrequency-14]
-	_ = x[wifiSpeed-15]
-	_ = x[wifiStrength-16]
-	_ = x[wifiHWAddress-17]
+	_ = x[connectionState-8]
+	_ = x[connectionID-9]
+	_ = x[connectionDevices-10]
+	_ = x[connectionType-11]
+	_ = x[connectionIPv4-12]
+	_ = x[connectionIPv6-13]
+	_ = x[addressIPv4-14]
+	_ = x[addressIPv6-15]
+	_ = x[wifiSSID-16]
+	_ = x[wifiFrequency-17]
+	_ = x[wifiSpeed-18]
+	_ = x[wifiStrength-19]
+	_ = x[wifiHWAddress-20]
 }
 
 const _networkProp_name = "connectionStateconnectionIDconnectionDevicesconnectionTypeconnectionIPv4connectionIPv6addressIPv4addressIPv6wifiSSIDwifiFrequencywifiSpeedwifiStrengthwifiHWAddress"
@@ -28,9 +28,9 @@ const _networkProp_name = "connectionStateconnectionIDconnectionDevicesconnectio
 var _networkProp_index = [...]uint8{0, 15, 27, 44, 58, 72, 86, 97, 108, 116, 129, 138, 150, 163}
 
 func (i networkProp) String() string {
-	i -= 5
+	i -= 8
 	if i < 0 || i >= networkProp(len(_networkProp_index)-1) {
-		return "networkProp(" + strconv.FormatInt(int64(i+5), 10) + ")"
+		return "networkProp(" + strconv.FormatInt(int64(i+8), 10) + ")"
 	}
 	return _networkProp_name[_networkProp_index[i]:_networkProp_index[i+1]]
 }
