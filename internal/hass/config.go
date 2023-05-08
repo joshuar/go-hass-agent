@@ -59,7 +59,6 @@ func (h *HassConfig) updater(ctx context.Context) {
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
-				log.Debug().Caller().Msg("Getting updated config from HA.")
 				h.Refresh(ctx)
 			}
 		}
@@ -102,7 +101,9 @@ func (h *HassConfig) ResponseHandler(resp bytes.Buffer) {
 	if err != nil {
 		log.Debug().Err(err).
 			Msg("Couldn't unmarshal Hass config.")
+		return
 	}
 	h.rawConfigProps = result
 	h.mu.Unlock()
+	log.Debug().Caller().Msg("Updated stored HA config.")
 }
