@@ -26,7 +26,7 @@ type timeProp int
 
 type timeSensor struct {
 	prop  timeProp
-	value string
+	value interface{}
 }
 
 func (m *timeSensor) Name() string {
@@ -56,7 +56,12 @@ func (m *timeSensor) DeviceClass() hass.SensorDeviceClass {
 }
 
 func (m *timeSensor) StateClass() hass.SensorStateClass {
-	return 0
+	switch m.prop {
+	case uptime:
+		return hass.StateMeasurement
+	default:
+		return 0
+	}
 }
 
 func (m *timeSensor) State() interface{} {
@@ -64,7 +69,12 @@ func (m *timeSensor) State() interface{} {
 }
 
 func (m *timeSensor) Units() string {
-	return ""
+	switch m.prop {
+	case uptime:
+		return "h"
+	default:
+		return ""
+	}
 }
 
 func (m *timeSensor) Category() string {
@@ -105,7 +115,7 @@ func TimeUpdater(ctx context.Context, status chan interface{}) {
 	}()
 }
 
-func getUptime(ctx context.Context) string {
+func getUptime(ctx context.Context) interface{} {
 	u, err := host.UptimeWithContext(ctx)
 	if err != nil {
 		log.Debug().Caller().Err(err).
@@ -114,7 +124,7 @@ func getUptime(ctx context.Context) string {
 	}
 	epoch := time.Unix(0, 0)
 	uptime := time.Unix(int64(u), 0)
-	return uptime.Sub(epoch).String()
+	return uptime.Sub(epoch).Hours()
 }
 
 func getBoottime(ctx context.Context) string {
