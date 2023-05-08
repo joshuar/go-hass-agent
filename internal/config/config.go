@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 
+	"fyne.io/fyne/v2"
 	"github.com/go-playground/validator/v10"
 	"github.com/rs/zerolog/log"
 )
@@ -21,6 +22,7 @@ type AppConfig struct {
 	Secret       string
 	Token        string `validate:"required"`
 	WebhookID    string `validate:"required"`
+	NotifyCh     chan fyne.Notification
 }
 
 type validationError struct {

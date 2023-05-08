@@ -8,6 +8,7 @@ package agent
 import (
 	"reflect"
 
+	"fyne.io/fyne/v2"
 	"github.com/joshuar/go-hass-agent/internal/config"
 )
 
@@ -52,6 +53,9 @@ func (agent *Agent) loadAppConfig() *config.AppConfig {
 		}
 		appConfig.APIURL = scheme + Host + webHookPath + appConfig.WebhookID
 	}
+
+	appConfig.NotifyCh = make(chan fyne.Notification)
+
 	return appConfig
 }
 

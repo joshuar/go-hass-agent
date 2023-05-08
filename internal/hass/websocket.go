@@ -7,22 +7,27 @@ package hass
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"time"
 
+	"fyne.io/fyne/v2"
 	"github.com/cenkalti/backoff/v4"
 	"github.com/joshuar/go-hass-agent/internal/config"
 	"github.com/rs/zerolog/log"
-	"nhooyr.io/websocket"
-	"nhooyr.io/websocket/wsjson"
+
+	"github.com/lxzan/gws"
 )
 
-type HassWebsocket struct {
-	conn    *websocket.Conn
-	ReadCh  chan *WebsocketResponse
-	WriteCh chan interface{}
+type websocketMsg struct {
+	Type           string `json:"type"`
+	ID             int    `json:"id,omitempty"`
+	WebHookID      string `json:"webhook_id,omitempty"`
+	SupportConfirm bool   `json:"support_confirm,omitempty"`
+	AccessToken    string `json:"access_token,omitempty"`
 }
 
-type WebsocketResponse struct {
+type websocketResponse struct {
 	Type    string `json:"type"`
 	Success bool   `json:"success,omitempty"`
 	Error   struct {
@@ -41,69 +46,38 @@ type WebsocketResponse struct {
 	} `json:"event,omitempty"`
 }
 
-func (ws *HassWebsocket) Read(ctx context.Context) {
-	for {
-		response := &WebsocketResponse{
-			Success: true,
-		}
-		err := wsjson.Read(ctx, ws.conn, &response)
-		if err != nil {
-			log.Debug().Err(err).Caller().
-				Msg("Unable to read from websocket.")
-			close(ws.ReadCh)
-			return
-		}
-		select {
-		case <-ctx.Done():
-			log.Debug().Caller().
-				Msg("Stopping reading from websocket.")
-			close(ws.ReadCh)
-			return
-		case ws.ReadCh <- response:
-		}
+func StartWebsocket(ctx context.Context, doneCh chan struct{}) {
+	log.Debug().Caller().Msg("Trying websocket...")
+	conn, err := tryWebsocketConnect(ctx, doneCh)
+	if err != nil {
+		log.Debug().Err(err).Caller().
+			Msg("Could not connect to websocket.")
+		return
 	}
+	log.Debug().Caller().Msg("Websocket connection established.")
+	go conn.ReadLoop()
 }
 
-func (ws *HassWebsocket) Write(ctx context.Context) {
-	for {
-		select {
-		case <-ctx.Done():
-			log.Debug().Caller().
-				Msg("Stopping writing to websocket.")
-			ws.conn.Close(websocket.StatusNormalClosure, "")
-			close(ws.WriteCh)
-			return
-		case data := <-ws.WriteCh:
-			writeCtx, writeCancel := context.WithTimeout(ctx, time.Minute)
-			defer writeCancel()
-			err := wsjson.Write(writeCtx, ws.conn, data)
-			if err != nil {
-				log.Debug().Err(err).Caller().
-					Msg("Unable to write to websocket.")
-			}
-		}
-	}
-}
-
-func (ws *HassWebsocket) Close() {
-	ws.conn.Close(websocket.StatusNormalClosure, "requested websocket close")
-}
-
-func NewWebsocket(ctx context.Context) *HassWebsocket {
-
+func tryWebsocketConnect(ctx context.Context, doneCh chan struct{}) (*gws.Conn, error) {
 	agentConfig, validConfig := config.FromContext(ctx)
 	if !validConfig {
-		log.Debug().Caller().Msg("Could not retrieve valid config from context.")
-		return nil
+		return nil, errors.New("could not retrieve valid config from context")
 	}
+	url := agentConfig.WebSocketURL
 
-	log.Debug().Caller().Msgf("Using %s for websocket connection.", agentConfig.WebSocketURL)
+	log.Debug().Caller().
+		Msgf("Using %s for websocket connection.", url)
+
 	ctxConnect, cancelConnect := context.WithTimeout(ctx, time.Minute)
 	defer cancelConnect()
-	var conn *websocket.Conn
+
+	var socket *gws.Conn
 	var err error
+
 	retryFunc := func() error {
-		conn, _, err = websocket.Dial(ctxConnect, agentConfig.WebSocketURL, nil)
+		socket, _, err = gws.NewClient(NewWebsocket(ctx, doneCh), &gws.ClientOption{
+			Addr: url,
+		})
 		if err != nil {
 			log.Debug().Err(err).Caller().
 				Msg("Could not connect to websocket.")
@@ -113,17 +87,147 @@ func NewWebsocket(ctx context.Context) *HassWebsocket {
 	}
 	err = backoff.Retry(retryFunc, backoff.WithContext(backoff.NewExponentialBackOff(), ctxConnect))
 	if err != nil {
-		log.Debug().Err(err).Caller().
-			Msg("Could not connect to websocket.")
 		cancelConnect()
+		return nil, err
+	}
+	return socket, nil
+}
+
+type webSocketData struct {
+	conn *gws.Conn
+	data interface{}
+}
+
+type WebSocket struct {
+	ReadCh    chan *webSocketData
+	WriteCh   chan *webSocketData
+	token     string
+	webhookID string
+	doneCh    chan struct{}
+}
+
+func NewWebsocket(ctx context.Context, doneCh chan struct{}) *WebSocket {
+	agentConfig, validConfig := config.FromContext(ctx)
+	if !validConfig {
+		log.Debug().Caller().
+			Msg("Could not retrieve valid config from context.")
 		return nil
 	}
-	ws := &HassWebsocket{
-		conn:    conn,
-		ReadCh:  make(chan *WebsocketResponse),
-		WriteCh: make(chan interface{}),
+	ws := &WebSocket{
+		ReadCh:    make(chan *webSocketData),
+		WriteCh:   make(chan *webSocketData),
+		token:     agentConfig.Token,
+		webhookID: agentConfig.WebhookID,
+		doneCh:    doneCh,
 	}
-	go ws.Read(ctx)
-	go ws.Write(ctx)
+	go ws.responseHandler(ctx, agentConfig.NotifyCh)
+	go ws.requestHandler(ctx)
 	return ws
+}
+
+func (c *WebSocket) OnError(socket *gws.Conn, err error) {
+	log.Debug().Caller().Err(err).
+		Msg("Error on websocket")
+	close(c.doneCh)
+}
+
+func (c *WebSocket) OnClose(socket *gws.Conn, code uint16, reason []byte) {
+	log.Debug().Caller().
+		Msgf("onclose: code=%d, payload=%s\n", code, string(reason))
+	close(c.doneCh)
+}
+
+func (c *WebSocket) OnPong(socket *gws.Conn, payload []byte) {
+}
+
+func (c *WebSocket) OnOpen(socket *gws.Conn) {
+	log.Debug().Caller().Msg("Socket opened.")
+}
+
+func (c *WebSocket) OnPing(socket *gws.Conn, payload []byte) {
+	socket.WritePong(payload)
+}
+
+func (c *WebSocket) OnMessage(socket *gws.Conn, message *gws.Message) {
+	response := &websocketResponse{
+		Success: true,
+	}
+	err := json.Unmarshal(message.Bytes(), &response)
+	if err != nil {
+		log.Debug().Caller().Err(err).
+			Msgf("Failed to unmarshall response %s.", message.Data.String())
+		return
+	}
+	c.ReadCh <- &webSocketData{
+		conn: socket,
+		data: response,
+	}
+}
+
+func (c *WebSocket) responseHandler(ctx context.Context, notifyCh chan fyne.Notification) {
+	for {
+		select {
+		case <-ctx.Done():
+			log.Debug().Caller().Msg("Stopping websocket response handler.")
+			return
+		case r := <-c.ReadCh:
+			if r == nil {
+				return
+			}
+			response := r.data.(*websocketResponse)
+			switch response.Type {
+			case "auth_required":
+				log.Debug().Caller().
+					Msg("Requesting authorisation for websocket.")
+				c.WriteCh <- &webSocketData{
+					conn: r.conn,
+					data: &websocketMsg{
+						Type:        "auth",
+						AccessToken: c.token,
+					}}
+			case "auth_ok":
+				// spew.Dump(response)
+				log.Debug().Caller().
+					Msg("Registering app for push notifications.")
+				c.WriteCh <- &webSocketData{
+					conn: r.conn,
+					data: &websocketMsg{
+						Type:           "mobile_app/push_notification_channel",
+						ID:             1,
+						WebHookID:      c.webhookID,
+						SupportConfirm: false,
+					}}
+			case "result":
+				if !response.Success {
+					log.Error().
+						Msgf("Recieved error on websocket, %s: %s.", response.Error.Code, response.Error.Message)
+				}
+			case "event":
+				notifyCh <- *fyne.NewNotification(response.Notification.Title, response.Notification.Message)
+			default:
+				log.Debug().Caller().Msgf("Received unhandled response %v", r)
+			}
+		}
+	}
+}
+
+func (c *WebSocket) requestHandler(ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			log.Debug().Caller().Msg("Stopping websocket request handler.")
+			return
+		case m := <-c.WriteCh:
+			msg, err := json.Marshal(&m.data)
+			if err != nil {
+				log.Debug().Caller().Err(err).
+					Msg("Unable to marshal message.")
+			}
+			err = m.conn.WriteMessage(gws.OpcodeText, msg)
+			if err != nil {
+				log.Debug().Caller().Err(err).
+					Msg("Unable to send message.")
+			}
+		}
+	}
 }

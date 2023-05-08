@@ -10,7 +10,6 @@ require (
 	github.com/spf13/cobra v1.7.0
 	github.com/stretchr/testify v1.8.2
 	golang.org/x/text v0.9.0
-	nhooyr.io/websocket v1.8.7
 )
 
 require (
@@ -87,6 +86,7 @@ require (
 	github.com/iancoleman/strcase v0.2.0
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/lthibault/jitterbug/v2 v2.2.2
+	github.com/lxzan/gws v1.5.0
 	github.com/maltegrosse/go-geoclue2 v0.1.1
 	github.com/nutsdb/nutsdb v0.12.0
 	github.com/perimeterx/marshmallow v1.1.4
