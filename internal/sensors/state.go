@@ -122,7 +122,8 @@ func (sensor *sensorState) ResponseHandler(rawResponse bytes.Buffer) {
 			if v.(bool) && !sensor.metadata.Registered {
 				sensor.metadata.Registered = true
 				log.Debug().Caller().
-					Msgf("Sensor %s registered in HA.", sensor.name)
+					Msgf("Sensor %s registered in HA.",
+						sensor.Name())
 			}
 		}
 		if v, ok := response[sensor.entityID]; ok {
@@ -131,11 +132,15 @@ func (sensor *sensorState) ResponseHandler(rawResponse bytes.Buffer) {
 				error := status["error"].(map[string]interface{})
 				log.Debug().Caller().
 					Msgf("Could not update sensor %s, %s: %s",
-						sensor.name, error["code"], error["message"])
+						sensor.Name(),
+						error["code"],
+						error["message"])
 			} else {
 				log.Debug().Caller().
-					Msgf("Sensor %s updated. State is now: %v",
-						sensor.name, sensor.state)
+					Msgf("Sensor %s updated. State is now: %v %s",
+						sensor.Name(),
+						sensor.State(),
+						sensor.UnitOfMeasurement())
 			}
 			if _, ok := status["is_disabled"]; ok {
 				sensor.metadata.Disabled = true
