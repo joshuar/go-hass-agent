@@ -47,7 +47,6 @@ type websocketResponse struct {
 }
 
 func StartWebsocket(ctx context.Context, doneCh chan struct{}) {
-	log.Debug().Caller().Msg("Trying websocket...")
 	conn, err := tryWebsocketConnect(ctx, doneCh)
 	if err != nil {
 		log.Debug().Err(err).Caller().
@@ -64,9 +63,6 @@ func tryWebsocketConnect(ctx context.Context, doneCh chan struct{}) (*gws.Conn, 
 		return nil, errors.New("could not retrieve valid config from context")
 	}
 	url := agentConfig.WebSocketURL
-
-	log.Debug().Caller().
-		Msgf("Using %s for websocket connection.", url)
 
 	ctxConnect, cancelConnect := context.WithTimeout(ctx, time.Minute)
 	defer cancelConnect()
@@ -141,7 +137,7 @@ func (c *WebSocket) OnPong(socket *gws.Conn, payload []byte) {
 }
 
 func (c *WebSocket) OnOpen(socket *gws.Conn) {
-	log.Debug().Caller().Msg("Socket opened.")
+	log.Debug().Caller().Msg("Websocket opened.")
 }
 
 func (c *WebSocket) OnPing(socket *gws.Conn, payload []byte) {
