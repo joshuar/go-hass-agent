@@ -137,8 +137,9 @@ func (sensor *sensorState) ResponseHandler(rawResponse bytes.Buffer) {
 						error["message"])
 			} else {
 				log.Debug().Caller().
-					Msgf("Sensor %s updated. State is now: %v %s",
+					Msgf("Sensor %s updated (%s). State is now: %v %s",
 						sensor.Name(),
+						sensor.UniqueID(),
 						sensor.State(),
 						sensor.UnitOfMeasurement())
 			}
