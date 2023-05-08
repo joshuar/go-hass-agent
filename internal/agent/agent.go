@@ -112,8 +112,8 @@ func Run(id string) {
 				Msg("Unable to store registry on disk, trying in-memory store.")
 		}
 		updateCh := make(chan interface{})
-		sensors.RunSensorTracker(ctx, registryPath, updateCh, trackerWg)
 		go agent.runNotificationsWorker(ctx)
+		sensors.RunSensorTracker(ctx, registryPath, updateCh, trackerWg)
 	}()
 
 	// Handle interrupt/termination signals
