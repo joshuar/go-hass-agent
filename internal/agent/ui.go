@@ -6,6 +6,8 @@
 package agent
 
 import (
+	"net/url"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
@@ -50,7 +52,18 @@ func (agent *Agent) setupSystemTray() {
 			))
 			w.Show()
 		})
-		menu := fyne.NewMenu(agent.Name, menuItemAbout)
+		menuItemIssue := fyne.NewMenuItem("Report Issue", func() {
+			url, _ := url.Parse(issueURL)
+			agent.app.OpenURL(url)
+		})
+		menuItemFeatureRequest := fyne.NewMenuItem("Request Feature", func() {
+			url, _ := url.Parse(featureRequestURL)
+			agent.app.OpenURL(url)
+		})
+		menu := fyne.NewMenu(agent.Name,
+			menuItemAbout,
+			menuItemIssue,
+			menuItemFeatureRequest)
 		desk.SetSystemTrayMenu(menu)
 	}
 	agent.tray.Hide()
