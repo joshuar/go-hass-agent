@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"sync/atomic"
 	"time"
 
 	"fyne.io/fyne/v2"
@@ -19,9 +20,11 @@ import (
 	"github.com/lxzan/gws"
 )
 
+const PingInterval = time.Minute
+
 type websocketMsg struct {
 	Type           string `json:"type"`
-	ID             int    `json:"id,omitempty"`
+	ID             uint64 `json:"id,omitempty"`
 	WebHookID      string `json:"webhook_id,omitempty"`
 	SupportConfirm bool   `json:"support_confirm,omitempty"`
 	AccessToken    string `json:"access_token,omitempty"`
@@ -34,7 +37,7 @@ type websocketResponse struct {
 		Code    string `json:"code"`
 		Message string `json:"message"`
 	} `json:"error,omitempty"`
-	ID           int         `json:"id,omitempty"`
+	ID           uint64      `json:"id,omitempty"`
 	Result       interface{} `json:"result,omitempty"`
 	HAVersion    string      `json:"ha_version,omitempty"`
 	Notification struct {
@@ -95,11 +98,13 @@ type webSocketData struct {
 }
 
 type WebSocket struct {
-	ReadCh    chan *webSocketData
-	WriteCh   chan *webSocketData
-	token     string
-	webhookID string
-	doneCh    chan struct{}
+	ReadCh     chan *webSocketData
+	WriteCh    chan *webSocketData
+	token      string
+	webhookID  string
+	doneCh     chan struct{}
+	cancelFunc context.CancelFunc
+	nextID     uint64
 }
 
 func NewWebsocket(ctx context.Context, doneCh chan struct{}) *WebSocket {
@@ -109,42 +114,72 @@ func NewWebsocket(ctx context.Context, doneCh chan struct{}) *WebSocket {
 			Msg("Could not retrieve valid config from context.")
 		return nil
 	}
+	wsCtx, wsCancel := context.WithCancel(ctx)
 	ws := &WebSocket{
-		ReadCh:    make(chan *webSocketData),
-		WriteCh:   make(chan *webSocketData),
-		token:     agentConfig.Token,
-		webhookID: agentConfig.WebhookID,
-		doneCh:    doneCh,
+		ReadCh:     make(chan *webSocketData),
+		WriteCh:    make(chan *webSocketData),
+		token:      agentConfig.Token,
+		webhookID:  agentConfig.WebhookID,
+		cancelFunc: wsCancel,
+		doneCh:     doneCh,
 	}
-	go ws.responseHandler(ctx, agentConfig.NotifyCh)
-	go ws.requestHandler(ctx)
+	go ws.responseHandler(wsCtx, agentConfig.NotifyCh)
+	go ws.requestHandler(wsCtx)
 	return ws
 }
 
 func (c *WebSocket) OnError(socket *gws.Conn, err error) {
 	log.Debug().Caller().Err(err).
 		Msg("Error on websocket")
+	c.cancelFunc()
 	close(c.doneCh)
 }
 
 func (c *WebSocket) OnClose(socket *gws.Conn, code uint16, reason []byte) {
 	log.Debug().Caller().
 		Msgf("onclose: code=%d, payload=%s\n", code, string(reason))
+	c.cancelFunc()
 	close(c.doneCh)
 }
 
 func (c *WebSocket) OnPong(socket *gws.Conn, payload []byte) {
+	log.Debug().Caller().Msg("Recieved pong on websocket")
 }
 
 func (c *WebSocket) OnOpen(socket *gws.Conn) {
 	log.Debug().Caller().Msg("Websocket opened.")
+	go func() {
+		ticker := time.NewTicker(PingInterval)
+		done := make(chan bool)
+		for {
+			select {
+			case <-done:
+				return
+			case <-ticker.C:
+				log.Debug().Caller().
+					Msg("Sending ping on websocket")
+				err := socket.SetDeadline(time.Now().Add(2 * PingInterval))
+				if err != nil {
+					log.Debug().Err(err).
+						Msg("Error setting deadline on websocket.")
+				}
+				c.WriteCh <- &webSocketData{
+					conn: socket,
+					data: &websocketMsg{
+						Type: "ping",
+						ID:   atomic.LoadUint64(&c.nextID),
+					},
+				}
+			}
+		}
+	}()
 }
 
 func (c *WebSocket) OnPing(socket *gws.Conn, payload []byte) {
-	socket.WritePong(payload)
 }
 
 func (c *WebSocket) OnMessage(socket *gws.Conn, message *gws.Message) {
+	defer message.Close()
 	response := &websocketResponse{
 		Success: true,
 	}
@@ -171,6 +206,7 @@ func (c *WebSocket) responseHandler(ctx context.Context, notifyCh chan fyne.Noti
 				return
 			}
 			response := r.data.(*websocketResponse)
+			atomic.AddUint64(&c.nextID, response.ID+1)
 			switch response.Type {
 			case "auth_required":
 				log.Debug().Caller().
@@ -189,7 +225,7 @@ func (c *WebSocket) responseHandler(ctx context.Context, notifyCh chan fyne.Noti
 					conn: r.conn,
 					data: &websocketMsg{
 						Type:           "mobile_app/push_notification_channel",
-						ID:             1,
+						ID:             atomic.LoadUint64(&c.nextID),
 						WebHookID:      c.webhookID,
 						SupportConfirm: false,
 					}}
@@ -200,6 +236,12 @@ func (c *WebSocket) responseHandler(ctx context.Context, notifyCh chan fyne.Noti
 				}
 			case "event":
 				notifyCh <- *fyne.NewNotification(response.Notification.Title, response.Notification.Message)
+			case "pong":
+				b, err := json.Marshal(response)
+				if err != nil {
+					log.Debug().Err(err).Msg("Unable to unmarshal.")
+				}
+				c.OnPong(r.conn, b)
 			default:
 				log.Debug().Caller().Msgf("Received unhandled response %v", r)
 			}
