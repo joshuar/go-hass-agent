@@ -112,6 +112,48 @@ func Run(id string) {
 	agent.stop()
 }
 
+func RunHeadless(id string) {
+	if id != "" {
+		debugAppID = id
+	}
+	agentCtx, cancelfunc := context.WithCancel(context.Background())
+	agentCtx = device.SetupContext(agentCtx)
+	log.Info().Msg("Starting agent.")
+	agent := NewAgent()
+
+	agent.SetupLogging()
+
+	// Wait for the config to load, then start the sensor tracker and
+	// notifications worker
+	trackerWg := &sync.WaitGroup{}
+	go func() {
+		appConfig := agent.loadAppConfig()
+		ctx := config.NewContext(agentCtx, appConfig)
+		registryPath, err := agent.extraStoragePath("sensorRegistry")
+		if err != nil {
+			log.Debug().Err(err).
+				Msg("Unable to store registry on disk, trying in-memory store.")
+		}
+		updateCh := make(chan interface{})
+		go agent.runNotificationsWorker(ctx)
+		sensors.RunSensorTracker(ctx, registryPath, updateCh, trackerWg)
+	}()
+
+	// Handle interrupt/termination signals
+	c := make(chan os.Signal)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-c
+		cancelfunc()
+		trackerWg.Wait()
+		agent.stop()
+		os.Exit(1)
+	}()
+	<-agentCtx.Done()
+	trackerWg.Wait()
+	agent.stop()
+}
+
 func (agent *Agent) stop() {
 	log.Info().Msg("Shutting down agent.")
 }
