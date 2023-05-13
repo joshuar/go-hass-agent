@@ -60,9 +60,9 @@ distribution.
 
 ## 🖱️ Usage
 
-**go-hass-agent** runs as a tray icon. It is operating system, distribution and
-desktop-environment agnostic and should manifest itself in any tray of any
-desktop environment.
+**go-hass-agent** runs as a tray icon by default. It is operating system,
+distribution and desktop-environment agnostic and should manifest itself in any
+tray of any desktop environment.
 
 ### First-run
 
@@ -87,6 +87,16 @@ able to report sensors and receive notifications.
 When you have entered all the details, click **Submit** and the agent should
 start running and reporting sensors to the Home Assistant instance.
 
+As alternative, you can register **go-hass-agent** on the command-line with by
+running:
+
+```shell
+go-hass-agent register --token _TOKEN_ --url _URL_
+```
+
+You will need to provide a long-lived token `_TOKEN_` and the URL of your Home
+Assistant instance, `_URL_`.
+
 ### Regular Usage
 
 When running, **go-hass-agent** will appear as a device under the [Mobile
@@ -94,6 +104,11 @@ App](https://www.home-assistant.io/integrations/mobile_app) integration in your
 Home Assistant instance. It should also report a list of sensors/entities you
 can use in any automations, scripts, dashboards and other parts of Home
 Assistant.
+
+### Running Headless
+
+**go-hass-agent** can run in a "headless" mode, without any GUI elements, by
+specifying the `-t` or `--terminal` command-line option.
 
 ## 🧑‍🤝‍🧑 Contributing
 
