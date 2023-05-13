@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/joshuar/go-hass-agent/internal/hass"
-	"github.com/lthibault/jitterbug/v2"
 	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v3/disk"
 )
@@ -66,39 +65,25 @@ func (s *diskUsageState) Attributes() interface{} {
 }
 
 func DiskUsageUpdater(ctx context.Context, status chan interface{}) {
-	sendDiskUsageStats(ctx, status)
-	ticker := jitterbug.New(
-		time.Minute,
-		&jitterbug.Norm{Stdev: time.Second * 5},
-	)
-	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-ticker.C:
-				sendDiskUsageStats(ctx, status)
-			}
-		}
-	}()
 
-}
-
-func sendDiskUsageStats(ctx context.Context, status chan interface{}) {
-	p, err := disk.PartitionsWithContext(ctx, false)
-	if err != nil {
-		log.Debug().Err(err).
-			Msg("Could not retrieve list of physical partitions.")
-		return
-	}
-	for _, partition := range p {
-		usage, err := disk.UsageWithContext(ctx, partition.Mountpoint)
+	sendDiskUsageStats := func() {
+		p, err := disk.PartitionsWithContext(ctx, false)
 		if err != nil {
 			log.Debug().Err(err).
-				Msgf("Failed to get usage info for mountpount %s.", partition.Mountpoint)
+				Msg("Could not retrieve list of physical partitions.")
 			return
 		}
-		u := diskUsageState(*usage)
-		status <- &u
+		for _, partition := range p {
+			usage, err := disk.UsageWithContext(ctx, partition.Mountpoint)
+			if err != nil {
+				log.Debug().Err(err).
+					Msgf("Failed to get usage info for mountpount %s.", partition.Mountpoint)
+				return
+			}
+			u := diskUsageState(*usage)
+			status <- &u
+		}
 	}
+
+	pollSensors(ctx, sendDiskUsageStats, time.Minute, time.Second*5)
 }

@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/joshuar/go-hass-agent/internal/hass"
-	"github.com/lthibault/jitterbug/v2"
 	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v3/load"
 )
@@ -87,41 +86,28 @@ func (l *loadavg) Attributes() interface{} {
 }
 
 func LoadAvgUpdater(ctx context.Context, status chan interface{}) {
-	sendLoadAvgStats(ctx, status)
-	ticker := jitterbug.New(
-		time.Minute,
-		&jitterbug.Norm{Stdev: time.Second * 5},
-	)
-	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-ticker.C:
-				sendLoadAvgStats(ctx, status)
-			}
-		}
-	}()
-}
 
-func sendLoadAvgStats(ctx context.Context, status chan interface{}) {
-	var latest *load.AvgStat
-	var err error
-	if latest, err = load.AvgWithContext(ctx); err != nil {
-		log.Debug().Err(err).Caller().
-			Msg("Problem fetching loadavg stats.")
-		return
+	sendLoadAvgStats := func() {
+		var latest *load.AvgStat
+		var err error
+		if latest, err = load.AvgWithContext(ctx); err != nil {
+			log.Debug().Err(err).Caller().
+				Msg("Problem fetching loadavg stats.")
+			return
+		}
+		status <- &loadavg{
+			load: latest.Load1,
+			name: load1,
+		}
+		status <- &loadavg{
+			load: latest.Load5,
+			name: load5,
+		}
+		status <- &loadavg{
+			load: latest.Load15,
+			name: load15,
+		}
 	}
-	status <- &loadavg{
-		load: latest.Load1,
-		name: load1,
-	}
-	status <- &loadavg{
-		load: latest.Load5,
-		name: load5,
-	}
-	status <- &loadavg{
-		load: latest.Load15,
-		name: load15,
-	}
+
+	pollSensors(ctx, sendLoadAvgStats, time.Minute, time.Second*5)
 }

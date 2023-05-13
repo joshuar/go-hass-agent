@@ -11,7 +11,6 @@ import (
 
 	"github.com/iancoleman/strcase"
 	"github.com/joshuar/go-hass-agent/internal/hass"
-	"github.com/lthibault/jitterbug/v2"
 	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v3/net"
 )
@@ -86,52 +85,38 @@ func (i *networkStatsDetails) Attributes() interface{} {
 }
 
 func NetworkStatsUpdater(ctx context.Context, status chan interface{}) {
-	sendNetStats(ctx, status)
 
-	ticker := jitterbug.New(
-		time.Minute,
-		&jitterbug.Norm{Stdev: time.Second * 5},
-	)
-	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-ticker.C:
-				sendNetStats(ctx, status)
+	sendNetStats := func() {
+		statTypes := []networkStat{bytesRecv, bytesSent}
+		var allInterfaces []net.IOCountersStat
+		var err error
+		if allInterfaces, err = net.IOCountersWithContext(ctx, false); err != nil {
+			log.Debug().Err(err).Caller().
+				Msg("Problem fetching network stats.")
+			return
+		}
+		for _, interfaceStats := range allInterfaces {
+			for _, stat := range statTypes {
+				details := &networkStatsDetails{}
+				details.statType = stat
+				switch stat {
+				case bytesRecv:
+					details.statValue = interfaceStats.BytesRecv
+					details.statAttributes.Packets = interfaceStats.PacketsRecv
+					details.statAttributes.Errors = interfaceStats.Errin
+					details.statAttributes.Drops = interfaceStats.Dropin
+					details.statAttributes.FifoErrors = interfaceStats.Fifoin
+				case bytesSent:
+					details.statValue = interfaceStats.BytesSent
+					details.statAttributes.Packets = interfaceStats.PacketsSent
+					details.statAttributes.Errors = interfaceStats.Errout
+					details.statAttributes.Drops = interfaceStats.Dropout
+					details.statAttributes.FifoErrors = interfaceStats.Fifoout
+				}
+				status <- details
 			}
 		}
-	}()
-}
+	}
 
-func sendNetStats(ctx context.Context, status chan interface{}) {
-	statTypes := []networkStat{bytesRecv, bytesSent}
-	var allInterfaces []net.IOCountersStat
-	var err error
-	if allInterfaces, err = net.IOCountersWithContext(ctx, false); err != nil {
-		log.Debug().Err(err).Caller().
-			Msg("Problem fetching network stats.")
-		return
-	}
-	for _, interfaceStats := range allInterfaces {
-		for _, stat := range statTypes {
-			details := &networkStatsDetails{}
-			details.statType = stat
-			switch stat {
-			case bytesRecv:
-				details.statValue = interfaceStats.BytesRecv
-				details.statAttributes.Packets = interfaceStats.PacketsRecv
-				details.statAttributes.Errors = interfaceStats.Errin
-				details.statAttributes.Drops = interfaceStats.Dropin
-				details.statAttributes.FifoErrors = interfaceStats.Fifoin
-			case bytesSent:
-				details.statValue = interfaceStats.BytesSent
-				details.statAttributes.Packets = interfaceStats.PacketsSent
-				details.statAttributes.Errors = interfaceStats.Errout
-				details.statAttributes.Drops = interfaceStats.Dropout
-				details.statAttributes.FifoErrors = interfaceStats.Fifoout
-			}
-			status <- details
-		}
-	}
+	pollSensors(ctx, sendNetStats, time.Minute, time.Second*5)
 }

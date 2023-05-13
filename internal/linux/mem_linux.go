@@ -12,7 +12,6 @@ import (
 
 	"github.com/iancoleman/strcase"
 	"github.com/joshuar/go-hass-agent/internal/hass"
-	"github.com/lthibault/jitterbug/v2"
 	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v3/mem"
 )
@@ -78,53 +77,39 @@ func (m *memory) Attributes() interface{} {
 }
 
 func MemoryUpdater(ctx context.Context, status chan interface{}) {
-	sendMemStats(ctx, status)
 
-	ticker := jitterbug.New(
-		time.Minute,
-		&jitterbug.Norm{Stdev: time.Second * 5},
-	)
-	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-ticker.C:
-				sendMemStats(ctx, status)
+	sendMemStats := func() {
+		stats := []memoryStat{memoryTotal, memoryAvailable, memoryUsed, swapMemoryTotal, swapMemoryFree}
+		var memDetails *mem.VirtualMemoryStat
+		var err error
+		if memDetails, err = mem.VirtualMemoryWithContext(ctx); err != nil {
+			log.Debug().Err(err).Caller().
+				Msg("Problem fetching memory stats.")
+			return
+		}
+		for _, stat := range stats {
+			var statValue uint64
+			switch stat {
+			case memoryTotal:
+				statValue = memDetails.Total
+			case memoryAvailable:
+				statValue = memDetails.Available
+			case memoryUsed:
+				statValue = memDetails.Used
+			case swapMemoryTotal:
+				statValue = memDetails.SwapTotal
+			case swapMemoryFree:
+				statValue = memDetails.SwapFree
+				// case UsedSwapMemory:
+				// 	return m.memStats.SwapCached
 			}
+			state := &memory{
+				value: statValue,
+				name:  stat,
+			}
+			status <- state
 		}
-	}()
-}
+	}
 
-func sendMemStats(ctx context.Context, status chan interface{}) {
-	stats := []memoryStat{memoryTotal, memoryAvailable, memoryUsed, swapMemoryTotal, swapMemoryFree}
-	var memDetails *mem.VirtualMemoryStat
-	var err error
-	if memDetails, err = mem.VirtualMemoryWithContext(ctx); err != nil {
-		log.Debug().Err(err).Caller().
-			Msg("Problem fetching memory stats.")
-		return
-	}
-	for _, stat := range stats {
-		var statValue uint64
-		switch stat {
-		case memoryTotal:
-			statValue = memDetails.Total
-		case memoryAvailable:
-			statValue = memDetails.Available
-		case memoryUsed:
-			statValue = memDetails.Used
-		case swapMemoryTotal:
-			statValue = memDetails.SwapTotal
-		case swapMemoryFree:
-			statValue = memDetails.SwapFree
-			// case UsedSwapMemory:
-			// 	return m.memStats.SwapCached
-		}
-		state := &memory{
-			value: statValue,
-			name:  stat,
-		}
-		status <- state
-	}
+	pollSensors(ctx, sendMemStats, time.Minute, time.Second*5)
 }

@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/joshuar/go-hass-agent/internal/hass"
-	"github.com/lthibault/jitterbug/v2"
 	"github.com/rs/zerolog/log"
 )
 
@@ -93,33 +92,6 @@ func marshalProblemDetails(details map[string]string) map[string]interface{} {
 	return parsed
 }
 
-func sendAllProblems(deviceAPI *DeviceAPI, status chan interface{}) {
-	problems := &problems{
-		list: make(map[string]map[string]interface{}),
-	}
-
-	problemList := deviceAPI.SystemBusRequest().
-		Path(dBusProblemsDest).
-		Destination(dBusProblemIntr).
-		GetData(dBusProblemIntr + ".GetProblems").AsStringList()
-
-	for _, p := range problemList {
-		problemDetails := deviceAPI.SystemBusRequest().
-			Path(dBusProblemsDest).
-			Destination(dBusProblemIntr).
-			GetData(dBusProblemIntr+".GetInfo", p, []string{"time", "count", "package", "reason"}).AsStringMap()
-		if problemDetails == nil {
-			log.Debug().Msg("No problems retrieved.")
-		} else {
-			problems.list[p] = marshalProblemDetails(problemDetails)
-		}
-	}
-	if len(problems.list) > 0 {
-		status <- problems
-	}
-
-}
-
 func ProblemsUpdater(ctx context.Context, status chan interface{}) {
 	deviceAPI, err := FetchAPIFromContext(ctx)
 	if err != nil {
@@ -128,57 +100,31 @@ func ProblemsUpdater(ctx context.Context, status chan interface{}) {
 		return
 	}
 
-	sendAllProblems(deviceAPI, status)
+	problems := func() {
+		problems := &problems{
+			list: make(map[string]map[string]interface{}),
+		}
 
-	ticker := jitterbug.New(
-		time.Minute*15,
-		&jitterbug.Norm{Stdev: time.Minute},
-	)
+		problemList := deviceAPI.SystemBusRequest().
+			Path(dBusProblemsDest).
+			Destination(dBusProblemIntr).
+			GetData(dBusProblemIntr + ".GetProblems").AsStringList()
 
-	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-ticker.C:
-				log.Debug().Caller().Msg("Getting current problem list...")
-				sendAllProblems(deviceAPI, status)
+		for _, p := range problemList {
+			problemDetails := deviceAPI.SystemBusRequest().
+				Path(dBusProblemsDest).
+				Destination(dBusProblemIntr).
+				GetData(dBusProblemIntr+".GetInfo", p, []string{"time", "count", "package", "reason"}).AsStringMap()
+			if problemDetails == nil {
+				log.Debug().Msg("No problems retrieved.")
+			} else {
+				problems.list[p] = marshalProblemDetails(problemDetails)
 			}
 		}
-	}()
+		if len(problems.list) > 0 {
+			status <- problems
+		}
+	}
 
-	// TODO: Turn into DBus watch
-
-	// It would be better to watch for signals of problems being created or
-	// removed. But currently it looks like only problem creation triggers a
-	// signal.
-
-	// problemWatch := &DBusWatchRequest{
-	// 	bus:  systemBus,
-	// 	path: "/org/freedesktop/Problems2",
-	// 	match: []dbus.MatchOption{
-	// 		dbus.WithMatchObjectPath("/org/freedesktop/Problems2"),
-	// 		dbus.WithMatchInterface("org.freedesktop.Problems2"),
-	// 	},
-	// 	event: "org.freedesktop.Problems2.Crash",
-	// 	eventHandler: func(s *dbus.Signal) {
-	// 		spew.Dump(s)
-	// 		sendAllProblems(deviceAPI, status)
-	// 	},
-	// }
-	// deviceAPI.WatchEvents <- problemWatch
-
-	// problemCatchAll := &DBusWatchRequest{
-	// 	bus:  systemBus,
-	// 	path: "/org/freedesktop/Problems2",
-	// 	match: []dbus.MatchOption{
-	// 		dbus.WithMatchObjectPath("/org/freedesktop/Problems2"),
-	// 		dbus.WithMatchObjectPath("/org/freedesktop/problems"),
-	// 	},
-	// 	event: "org.freedesktop.DBus.Properties.PropertiesChanged",
-	// 	eventHandler: func(s *dbus.Signal) {
-	// 		spew.Dump(s)
-	// 	},
-	// }
-	// deviceAPI.WatchEvents <- problemCatchAll
+	pollSensors(ctx, problems, time.Minute*15, time.Minute)
 }
