@@ -24,7 +24,7 @@ import (
 	validate "github.com/go-playground/validator/v10"
 )
 
-func newRegistration() *hass.RegistrationHost {
+func NewRegistration() *hass.RegistrationHost {
 	return &hass.RegistrationHost{
 		Server: binding.NewString(),
 		Token:  binding.NewString(),
@@ -67,9 +67,9 @@ func findServers(ctx context.Context) binding.StringList {
 	return serverList
 }
 
-func (agent *Agent) getRegistrationHostInfo(ctx context.Context) *hass.RegistrationHost {
+func (agent *Agent) requestRegistrationInfoUI(ctx context.Context) *hass.RegistrationHost {
 
-	registrationInfo := newRegistration()
+	registrationInfo := NewRegistration()
 
 	done := make(chan bool, 1)
 	defer close(done)
@@ -157,13 +157,15 @@ func (agent *Agent) saveRegistration(r *hass.RegistrationResponse, h *hass.Regis
 	if r.WebhookID != "" {
 		agent.SetPref("WebhookID", r.WebhookID)
 	}
+	// ! https://github.com/fyne-io/fyne/issues/3170
+	time.Sleep(110 * time.Millisecond)
 }
 
-func (agent *Agent) runRegistrationWorker(ctx context.Context) error {
+func (agent *Agent) runRegistrationWorker(ctx context.Context, getRegistrationInfo func(context.Context) *hass.RegistrationHost) error {
 	thisDevice := device.NewDevice(ctx)
 	agent.SetPref("DeviceID", thisDevice.DeviceID())
 	agent.SetPref("DeviceName", thisDevice.DeviceName())
-	registrationHostInfo := agent.getRegistrationHostInfo(ctx)
+	registrationHostInfo := getRegistrationInfo(ctx)
 	if registrationHostInfo != nil {
 		registrationRequest := device.GenerateRegistrationRequest(thisDevice)
 		appRegistrationInfo := hass.RegisterWithHass(registrationHostInfo, registrationRequest)
