@@ -11,6 +11,7 @@ import (
 
 	"fyne.io/fyne/v2/data/binding"
 	"github.com/carlmjohnson/requests"
+	"github.com/cenkalti/backoff"
 	"github.com/rs/zerolog/log"
 )
 
@@ -54,12 +55,20 @@ func RegisterWithHass(ri *RegistrationHost, rr *RegistrationRequest) *Registrati
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
-	err := requests.
-		URL(host+"/api/mobile_app/registrations").
-		Header("Authorization", "Bearer "+token).
-		BodyJSON(&rr).
-		ToJSON(&res).
-		Fetch(ctx)
+	requestFunc := func() error {
+		return requests.
+			URL(host+"/api/mobile_app/registrations").
+			Header("Authorization", "Bearer "+token).
+			BodyJSON(&rr).
+			ToJSON(&res).
+			Fetch(ctx)
+	}
+	retryNotifyFunc := func(e error, d time.Duration) {
+		log.Debug().Err(e).
+			Msgf("Retrying registration request in %v seconds.", d.Seconds())
+	}
+	err := backoff.RetryNotify(requestFunc, backoff.NewExponentialBackOff(), retryNotifyFunc)
+
 	if err != nil {
 		log.Error().Msgf("Unable to register: %v", err)
 		return nil
