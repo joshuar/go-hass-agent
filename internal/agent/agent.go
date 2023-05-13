@@ -66,25 +66,14 @@ func Run(id string) {
 
 	agent.SetupLogging()
 
-	var wg sync.WaitGroup
-
 	// Try to load the app config. If it is not valid, start a new registration
 	// process. Keep trying until we successfully register with HA or the user
 	// quits.
+	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		appConfig := agent.loadAppConfig()
-		for appConfig.Validate() != nil {
-			log.Warn().Msg("No suitable existing config found! Starting new registration process")
-			err := agent.runRegistrationWorker(agentCtx, agent.requestRegistrationInfoUI)
-			if err != nil {
-				log.Error().Err(err).
-					Msgf("Error trying to register: %v. Exiting.")
-				agent.stop()
-			}
-			appConfig = agent.loadAppConfig()
-		}
+		agent.Load(agentCtx, agent.requestRegistrationInfoUI)
 	}()
 
 	// Wait for the config to load, then start the sensor tracker and
