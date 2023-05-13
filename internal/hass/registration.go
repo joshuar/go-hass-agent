@@ -11,7 +11,7 @@ import (
 
 	"fyne.io/fyne/v2/data/binding"
 	"github.com/carlmjohnson/requests"
-	"github.com/cenkalti/backoff"
+	"github.com/cenkalti/backoff/v4"
 	"github.com/rs/zerolog/log"
 )
 
