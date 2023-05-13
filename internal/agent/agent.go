@@ -17,6 +17,7 @@ import (
 	"fyne.io/fyne/v2/storage"
 	"github.com/joshuar/go-hass-agent/internal/config"
 	"github.com/joshuar/go-hass-agent/internal/device"
+	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/sensors"
 	"github.com/joshuar/go-hass-agent/internal/translations"
 	"github.com/rs/zerolog"
@@ -63,22 +64,7 @@ func Run(id string) {
 
 	translator = translations.NewTranslator()
 
-	// If possible, create and log to a file as well as the console.
-	logFile, err := agent.extraStoragePath("go-hass-app.log")
-	if err != nil {
-		log.Error().Err(err).
-			Msg("Unable to create a log file. Will only write logs to stdout.")
-	} else {
-		logWriter, err := storage.Writer(logFile)
-		if err != nil {
-			log.Error().Err(err).
-				Msg("Unable to open log file for writing.")
-		} else {
-			consoleWriter := zerolog.ConsoleWriter{Out: os.Stdout}
-			multiWriter := zerolog.MultiLevelWriter(consoleWriter, logWriter)
-			log.Logger = log.Output(multiWriter)
-		}
-	}
+	agent.SetupLogging()
 
 	var wg sync.WaitGroup
 
@@ -91,7 +77,7 @@ func Run(id string) {
 		appConfig := agent.loadAppConfig()
 		for appConfig.Validate() != nil {
 			log.Warn().Msg("No suitable existing config found! Starting new registration process")
-			err := agent.runRegistrationWorker(agentCtx)
+			err := agent.runRegistrationWorker(agentCtx, agent.requestRegistrationInfoUI)
 			if err != nil {
 				log.Error().Err(err).
 					Msgf("Error trying to register: %v. Exiting.")
@@ -133,12 +119,12 @@ func Run(id string) {
 	agent.app.Run()
 	cancelfunc()
 	trackerWg.Wait()
+	agent.tray.Close()
 	agent.stop()
 }
 
 func (agent *Agent) stop() {
 	log.Info().Msg("Shutting down agent.")
-	agent.tray.Close()
 }
 
 func (agent *Agent) extraStoragePath(id string) (fyne.URI, error) {
@@ -148,5 +134,38 @@ func (agent *Agent) extraStoragePath(id string) (fyne.URI, error) {
 		return nil, err
 	} else {
 		return extraPath, nil
+	}
+}
+
+func (agent *Agent) SetupLogging() {
+	// If possible, create and log to a file as well as the console.
+	logFile, err := agent.extraStoragePath("go-hass-app.log")
+	if err != nil {
+		log.Error().Err(err).
+			Msg("Unable to create a log file. Will only write logs to stdout.")
+	} else {
+		logWriter, err := storage.Writer(logFile)
+		if err != nil {
+			log.Error().Err(err).
+				Msg("Unable to open log file for writing.")
+		} else {
+			consoleWriter := zerolog.ConsoleWriter{Out: os.Stdout}
+			multiWriter := zerolog.MultiLevelWriter(consoleWriter, logWriter)
+			log.Logger = log.Output(multiWriter)
+		}
+	}
+}
+
+func (agent *Agent) Load(ctx context.Context, registrationFetcher func(context.Context) *hass.RegistrationHost) {
+	appConfig := agent.loadAppConfig()
+	for appConfig.Validate() != nil {
+		log.Warn().Msg("No suitable existing config found! Starting new registration process")
+		err := agent.runRegistrationWorker(ctx, registrationFetcher)
+		if err != nil {
+			log.Error().Err(err).
+				Msgf("Error trying to register: %v. Exiting.")
+			agent.stop()
+		}
+		appConfig = agent.loadAppConfig()
 	}
 }
