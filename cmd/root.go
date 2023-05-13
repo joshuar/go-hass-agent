@@ -18,9 +18,10 @@ import (
 )
 
 var (
-	debugFlag   bool
-	debugID     string
-	profileFlag bool
+	debugFlag    bool
+	debugID      string
+	profileFlag  bool
+	headlessFlag bool
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -47,10 +48,16 @@ var rootCmd = &cobra.Command{
 		}
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		if debugID != "" {
-			agent.Run(debugID)
+		var runCmd func(string)
+		if headlessFlag {
+			runCmd = agent.RunHeadless
 		} else {
-			agent.Run("")
+			runCmd = agent.Run
+		}
+		if debugID != "" {
+			runCmd(debugID)
+		} else {
+			runCmd("")
 		}
 	},
 }
@@ -63,7 +70,12 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.PersistentFlags().BoolVarP(&debugFlag, "debug", "d", false, "debug output (default is false)")
-	rootCmd.PersistentFlags().BoolVarP(&profileFlag, "profile", "p", false, "enable profiling (default is false)")
-	rootCmd.PersistentFlags().StringVar(&debugID, "debugID", "", "specify a custom app ID (for debugging)")
+	rootCmd.PersistentFlags().BoolVarP(&debugFlag, "debug", "d", false,
+		"debug output (default is false)")
+	rootCmd.PersistentFlags().BoolVarP(&profileFlag, "profile", "p", false,
+		"enable profiling (default is false)")
+	rootCmd.PersistentFlags().StringVar(&debugID, "debugID", "",
+		"specify a custom app ID (for debugging)")
+	rootCmd.Flags().BoolVarP(&headlessFlag, "terminal", "t", false,
+		"run in terminal (without a GUI)")
 }
