@@ -11,7 +11,6 @@ import (
 
 	"github.com/iancoleman/strcase"
 	"github.com/joshuar/go-hass-agent/internal/hass"
-	"github.com/lthibault/jitterbug/v2"
 	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v3/host"
 )
@@ -82,11 +81,20 @@ func (m *timeSensor) Category() string {
 }
 
 func (m *timeSensor) Attributes() interface{} {
-	return nil
+	switch m.prop {
+	case uptime:
+		return struct {
+			NativeUnit string `json:"native_unit_of_measurement"`
+		}{
+			NativeUnit: "h",
+		}
+	default:
+		return nil
+	}
 }
 
 func TimeUpdater(ctx context.Context, status chan interface{}) {
-	update := func() {
+	updateTimes := func() {
 		status <- &timeSensor{
 			prop:  uptime,
 			value: getUptime(ctx),
@@ -98,21 +106,7 @@ func TimeUpdater(ctx context.Context, status chan interface{}) {
 		}
 	}
 
-	update()
-	ticker := jitterbug.New(
-		time.Minute*15,
-		&jitterbug.Norm{Stdev: time.Minute},
-	)
-	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-ticker.C:
-				update()
-			}
-		}
-	}()
+	pollSensors(ctx, updateTimes, time.Minute*15, time.Minute)
 }
 
 func getUptime(ctx context.Context) interface{} {

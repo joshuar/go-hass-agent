@@ -129,16 +129,17 @@ func lookupExternalIPs(ctx context.Context) []*address {
 	return nil
 }
 
-func UpdateExternalIPSensors(ctx context.Context, status chan interface{}) {
-	ips := lookupExternalIPs(ctx)
-	for _, ip := range ips {
-		if ip.addr != nil {
-			status <- ip
+func ExternalIPUpdater(ctx context.Context, status chan interface{}) {
+
+	updateExternalIP := func() {
+		ips := lookupExternalIPs(ctx)
+		for _, ip := range ips {
+			if ip.addr != nil {
+				status <- ip
+			}
 		}
 	}
-}
 
-func ExternalIPUpdater(ctx context.Context, status chan interface{}) {
 	// Set up a ticker with the interval specified to check if the external IPs
 	// have changed.
 	ticker := jitterbug.New(
@@ -152,7 +153,7 @@ func ExternalIPUpdater(ctx context.Context, status chan interface{}) {
 				return
 			case <-ticker.C:
 				log.Debug().Caller().Msg("Checking for external IP update...")
-				UpdateExternalIPSensors(ctx, status)
+				updateExternalIP()
 			}
 		}
 	}()
