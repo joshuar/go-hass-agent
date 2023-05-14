@@ -206,7 +206,7 @@ func (c *WebSocket) responseHandler(ctx context.Context, notifyCh chan fyne.Noti
 				return
 			}
 			response := r.data.(*websocketResponse)
-			atomic.AddUint64(&c.nextID, response.ID+1)
+			atomic.AddUint64(&c.nextID, 1)
 			switch response.Type {
 			case "auth_required":
 				log.Debug().Caller().
@@ -233,6 +233,11 @@ func (c *WebSocket) responseHandler(ctx context.Context, notifyCh chan fyne.Noti
 				if !response.Success {
 					log.Error().
 						Msgf("Recieved error on websocket, %s: %s.", response.Error.Code, response.Error.Message)
+					if response.Error.Code == "id_reuse" {
+						log.Debug().Caller().
+							Msg("id_reuse error, attempting manual increment.")
+						atomic.AddUint64(&c.nextID, 1)
+					}
 				}
 			case "event":
 				notifyCh <- *fyne.NewNotification(response.Notification.Title, response.Notification.Message)
