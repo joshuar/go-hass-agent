@@ -15,9 +15,9 @@ import (
 )
 
 func (agent *Agent) runNotificationsWorker(ctx context.Context) {
-	agentConfig, validConfig := config.FromContext(ctx)
-	if !validConfig {
-		log.Debug().Caller().
+	agentConfig, err := config.FetchConfigFromContext(ctx)
+	if err != nil {
+		log.Debug().Caller().Err(err).
 			Msg("Could not retrieve valid config from context.")
 		return
 	}

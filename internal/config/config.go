@@ -48,15 +48,18 @@ type key int
 // instead of using this key directly.
 var configKey key
 
-// NewContext returns a new Context that carries value c.
-func NewContext(ctx context.Context, c *AppConfig) context.Context {
+// StoreConfigInContext returns a new Context that carries value c.
+func StoreConfigInContext(ctx context.Context, c *AppConfig) context.Context {
 	return context.WithValue(ctx, configKey, c)
 }
 
-// FromContext returns the value stored in ctx, if any.
-func FromContext(ctx context.Context) (*AppConfig, bool) {
-	c, ok := ctx.Value(configKey).(*AppConfig)
-	return c, ok
+// FetchConfigFromContext returns the value stored in ctx, if any.
+func FetchConfigFromContext(ctx context.Context) (*AppConfig, error) {
+	if c, ok := ctx.Value(configKey).(*AppConfig); !ok {
+		return nil, errors.New("no API in context")
+	} else {
+		return c, nil
+	}
 }
 
 func (config *AppConfig) Validate() error {

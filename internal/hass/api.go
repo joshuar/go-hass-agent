@@ -75,9 +75,9 @@ func APIRequest(ctx context.Context, request Request) {
 	requestCtx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
 
-	agentConfig, validConfig := config.FromContext(requestCtx)
-	if !validConfig {
-		log.Error().Caller().
+	agentConfig, err := config.FetchConfigFromContext(requestCtx)
+	if err != nil {
+		log.Error().Caller().Err(err).
 			Msg("Could not retrieve valid config from context.")
 		cancel()
 		request.ResponseHandler(res)
