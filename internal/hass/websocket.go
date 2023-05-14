@@ -8,7 +8,6 @@ package hass
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"sync/atomic"
 	"time"
 
@@ -61,9 +60,9 @@ func StartWebsocket(ctx context.Context, doneCh chan struct{}) {
 }
 
 func tryWebsocketConnect(ctx context.Context, doneCh chan struct{}) (*gws.Conn, error) {
-	agentConfig, validConfig := config.FromContext(ctx)
-	if !validConfig {
-		return nil, errors.New("could not retrieve valid config from context")
+	agentConfig, err := config.FetchConfigFromContext(ctx)
+	if err != nil {
+		return nil, err
 	}
 	url := agentConfig.WebSocketURL
 
@@ -71,7 +70,6 @@ func tryWebsocketConnect(ctx context.Context, doneCh chan struct{}) (*gws.Conn, 
 	defer cancelConnect()
 
 	var socket *gws.Conn
-	var err error
 
 	retryFunc := func() error {
 		socket, _, err = gws.NewClient(NewWebsocket(ctx, doneCh), &gws.ClientOption{
@@ -108,9 +106,9 @@ type WebSocket struct {
 }
 
 func NewWebsocket(ctx context.Context, doneCh chan struct{}) *WebSocket {
-	agentConfig, validConfig := config.FromContext(ctx)
-	if !validConfig {
-		log.Debug().Caller().
+	agentConfig, err := config.FetchConfigFromContext(ctx)
+	if err != nil {
+		log.Debug().Caller().Err(err).
 			Msg("Could not retrieve valid config from context.")
 		return nil
 	}

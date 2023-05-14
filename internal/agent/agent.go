@@ -82,7 +82,7 @@ func Run(id string) {
 	go func() {
 		wg.Wait()
 		appConfig := agent.loadAppConfig()
-		ctx := config.NewContext(agentCtx, appConfig)
+		ctx := config.StoreConfigInContext(agentCtx, appConfig)
 		registryPath, err := agent.extraStoragePath("sensorRegistry")
 		if err != nil {
 			log.Debug().Err(err).
@@ -128,7 +128,7 @@ func RunHeadless(id string) {
 	trackerWg := &sync.WaitGroup{}
 	go func() {
 		appConfig := agent.loadAppConfig()
-		ctx := config.NewContext(agentCtx, appConfig)
+		ctx := config.StoreConfigInContext(agentCtx, appConfig)
 		registryPath, err := agent.extraStoragePath("sensorRegistry")
 		if err != nil {
 			log.Debug().Err(err).
