@@ -9,9 +9,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"reflect"
 	"testing"
 
+	"github.com/joshuar/go-hass-agent/internal/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -39,7 +42,7 @@ func (m *mockRequest) RequestData() interface{} {
 }
 
 func (m *mockRequest) ResponseHandler(b bytes.Buffer) {
-	m.On("ResponseHandler")
+	m.On("ResponseHandler", b)
 	m.Called(b)
 }
 
@@ -113,7 +116,23 @@ func TestMarshalJSON(t *testing.T) {
 	}
 }
 
+func mockServer(t *testing.T) *httptest.Server {
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"success":true}`))
+	}))
+}
+
 func TestAPIRequest(t *testing.T) {
+	server := mockServer(t)
+	defer server.Close()
+
+	mockConfig := &config.AppConfig{
+		APIURL: server.URL,
+	}
+
+	mockCtx := config.NewContext(context.Background(), mockConfig)
+
 	type args struct {
 		ctx     context.Context
 		request Request
@@ -122,7 +141,20 @@ func TestAPIRequest(t *testing.T) {
 		name string
 		args args
 	}{
-		// TODO: Add test cases.
+		{
+			name: "standard test",
+			args: args{
+				ctx:     mockCtx,
+				request: Request(unencryptedRequest),
+			},
+		},
+		{
+			name: "invalid context",
+			args: args{
+				ctx:     context.Background(),
+				request: Request(unencryptedRequest),
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
