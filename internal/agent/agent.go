@@ -85,10 +85,12 @@ func Run(id string) {
 		ctx := config.StoreConfigInContext(agentCtx, appConfig)
 		workerWg.Add(1)
 		go func() {
+			defer workerWg.Done()
 			agent.runNotificationsWorker(ctx)
 		}()
 		workerWg.Add(1)
 		go func() {
+			defer workerWg.Done()
 			agent.runSensorTracker(ctx)
 		}()
 	}()
@@ -100,11 +102,14 @@ func Run(id string) {
 		<-c
 		cancelfunc()
 		workerWg.Wait()
+		agent.stop()
 		os.Exit(1)
 	}()
 
 	agent.setupSystemTray()
 	agent.app.Run()
+	cancelfunc()
+	workerWg.Wait()
 	agent.stop()
 }
 
@@ -127,10 +132,12 @@ func RunHeadless(id string) {
 		ctx := config.StoreConfigInContext(agentCtx, appConfig)
 		workerWg.Add(1)
 		go func() {
+			defer workerWg.Done()
 			agent.runNotificationsWorker(ctx)
 		}()
 		workerWg.Add(1)
 		go func() {
+			defer workerWg.Done()
 			agent.runSensorTracker(ctx)
 		}()
 	}()
