@@ -184,11 +184,13 @@ func AppUpdater(ctx context.Context, update chan interface{}) {
 		Match(appStateDBusMatches).
 		Event(appStateDBusEvent).
 		Handler(appStateHandler).
-		AddWatch()
+		AddWatch(ctx)
 }
 
 func findProcesses(name string) []*process.Process {
-	allProcesses, err := process.Processes()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*500)
+	defer cancel()
+	allProcesses, err := process.ProcessesWithContext(ctx)
 	if err != nil {
 		log.Debug().Caller().
 			Msg("Unable to retrieve processes list.")

@@ -449,7 +449,7 @@ func NetworkConnectionsUpdater(ctx context.Context, status chan interface{}) {
 				}
 			}
 		}).
-		AddWatch()
+		AddWatch(ctx)
 }
 
 func processConnectionState(ctx context.Context, conn dbus.ObjectPath, status chan interface{}) {

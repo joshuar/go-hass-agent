@@ -146,5 +146,5 @@ func PowerUpater(ctx context.Context, status chan interface{}) {
 		Match(powerProfileDBusMatch).
 		Event("org.freedesktop.DBus.Properties.PropertiesChanged").
 		Handler(powerProfileHandler).
-		AddWatch()
+		AddWatch(ctx)
 }
