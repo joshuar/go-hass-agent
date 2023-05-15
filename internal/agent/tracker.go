@@ -7,14 +7,13 @@ package agent
 
 import (
 	"context"
-	"sync"
 
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/sensors"
 	"github.com/rs/zerolog/log"
 )
 
-func (agent *Agent) runSensorTracker(ctx context.Context, wg *sync.WaitGroup) {
+func (agent *Agent) runSensorTracker(ctx context.Context) {
 	registryPath, err := agent.extraStoragePath("sensorRegistry")
 	if err != nil {
 		log.Debug().Err(err).
@@ -51,5 +50,5 @@ func (agent *Agent) runSensorTracker(ctx context.Context, wg *sync.WaitGroup) {
 			}
 		}
 	}()
-	tracker.StartWorkers(ctx, updateCh, wg)
+	tracker.StartWorkers(ctx, updateCh)
 }
