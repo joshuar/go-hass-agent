@@ -95,9 +95,8 @@ func (tracker *sensorTracker) exists(id string) bool {
 
 // StartWorkers will call all the sensor worker functions that have been defined
 // for this device.
-func (tracker *sensorTracker) StartWorkers(ctx context.Context, updateCh chan interface{}, wg *sync.WaitGroup) {
-	// var wg sync.WaitGroup
-	// workerCtx, cancelfunc := context.WithCancel(ctx)
+func (tracker *sensorTracker) StartWorkers(ctx context.Context, updateCh chan interface{}) {
+	var wg sync.WaitGroup
 
 	// Run all the defined sensor update functions.
 	for name, workerFunction := range tracker.sensorWorkers.Get() {

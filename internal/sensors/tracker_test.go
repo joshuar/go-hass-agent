@@ -315,8 +315,6 @@ func Test_sensorTracker_StartWorkers(t *testing.T) {
 	updateCh := make(chan interface{})
 	defer close(updateCh)
 
-	var wg sync.WaitGroup
-
 	fakeWorkerFunc := func(context.Context, chan interface{}) {}
 
 	fakeWorkers := device.NewSensorInfo()
@@ -353,7 +351,7 @@ func Test_sensorTracker_StartWorkers(t *testing.T) {
 				registry:      tt.fields.registry,
 				hassConfig:    tt.fields.hassConfig,
 			}
-			tracker.StartWorkers(tt.args.ctx, tt.args.updateCh, &wg)
+			tracker.StartWorkers(tt.args.ctx, tt.args.updateCh)
 		})
 	}
 }

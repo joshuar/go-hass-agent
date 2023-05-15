@@ -68,22 +68,29 @@ func Run(id string) {
 	// Try to load the app config. If it is not valid, start a new registration
 	// process. Keep trying until we successfully register with HA or the user
 	// quits.
-	var wg sync.WaitGroup
-	wg.Add(1)
+	var configWg sync.WaitGroup
+	configWg.Add(1)
 	go func() {
-		defer wg.Done()
+		defer configWg.Done()
 		agent.Load(agentCtx, agent.requestRegistrationInfoUI)
 	}()
 
 	// Wait for the config to load, then start the sensor tracker and
 	// notifications worker
-	trackerWg := &sync.WaitGroup{}
+	var workerWg sync.WaitGroup
+	defer workerWg.Done()
 	go func() {
-		wg.Wait()
+		configWg.Wait()
 		appConfig := agent.loadAppConfig()
 		ctx := config.StoreConfigInContext(agentCtx, appConfig)
-		go agent.runNotificationsWorker(ctx)
-		agent.runSensorTracker(ctx, trackerWg)
+		workerWg.Add(1)
+		go func() {
+			agent.runNotificationsWorker(ctx)
+		}()
+		workerWg.Add(1)
+		go func() {
+			agent.runSensorTracker(ctx)
+		}()
 	}()
 
 	// Handle interrupt/termination signals
@@ -92,16 +99,12 @@ func Run(id string) {
 	go func() {
 		<-c
 		cancelfunc()
-		trackerWg.Wait()
-		agent.stop()
+		workerWg.Wait()
 		os.Exit(1)
 	}()
 
 	agent.setupSystemTray()
 	agent.app.Run()
-	cancelfunc()
-	trackerWg.Wait()
-	agent.tray.Close()
 	agent.stop()
 }
 
@@ -118,12 +121,18 @@ func RunHeadless(id string) {
 
 	// Wait for the config to load, then start the sensor tracker and
 	// notifications worker
-	trackerWg := &sync.WaitGroup{}
+	var workerWg sync.WaitGroup
 	go func() {
 		appConfig := agent.loadAppConfig()
 		ctx := config.StoreConfigInContext(agentCtx, appConfig)
-		go agent.runNotificationsWorker(ctx)
-		agent.runSensorTracker(ctx, trackerWg)
+		workerWg.Add(1)
+		go func() {
+			agent.runNotificationsWorker(ctx)
+		}()
+		workerWg.Add(1)
+		go func() {
+			agent.runSensorTracker(ctx)
+		}()
 	}()
 
 	// Handle interrupt/termination signals
@@ -132,12 +141,10 @@ func RunHeadless(id string) {
 	go func() {
 		<-c
 		cancelfunc()
-		trackerWg.Wait()
-		agent.stop()
+		workerWg.Wait()
 		os.Exit(1)
 	}()
 	<-agentCtx.Done()
-	trackerWg.Wait()
 	agent.stop()
 }
 
