@@ -18,7 +18,6 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/config"
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass"
-	"github.com/joshuar/go-hass-agent/internal/sensors"
 	"github.com/joshuar/go-hass-agent/internal/translations"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -83,14 +82,8 @@ func Run(id string) {
 		wg.Wait()
 		appConfig := agent.loadAppConfig()
 		ctx := config.StoreConfigInContext(agentCtx, appConfig)
-		registryPath, err := agent.extraStoragePath("sensorRegistry")
-		if err != nil {
-			log.Debug().Err(err).
-				Msg("Unable to store registry on disk, trying in-memory store.")
-		}
-		updateCh := make(chan interface{})
 		go agent.runNotificationsWorker(ctx)
-		sensors.RunSensorTracker(ctx, registryPath, updateCh, trackerWg)
+		agent.runSensorTracker(ctx, trackerWg)
 	}()
 
 	// Handle interrupt/termination signals
@@ -129,14 +122,8 @@ func RunHeadless(id string) {
 	go func() {
 		appConfig := agent.loadAppConfig()
 		ctx := config.StoreConfigInContext(agentCtx, appConfig)
-		registryPath, err := agent.extraStoragePath("sensorRegistry")
-		if err != nil {
-			log.Debug().Err(err).
-				Msg("Unable to store registry on disk, trying in-memory store.")
-		}
-		updateCh := make(chan interface{})
 		go agent.runNotificationsWorker(ctx)
-		sensors.RunSensorTracker(ctx, registryPath, updateCh, trackerWg)
+		agent.runSensorTracker(ctx, trackerWg)
 	}()
 
 	// Handle interrupt/termination signals

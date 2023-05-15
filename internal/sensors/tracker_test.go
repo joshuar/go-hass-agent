@@ -353,7 +353,7 @@ func Test_sensorTracker_StartWorkers(t *testing.T) {
 				registry:      tt.fields.registry,
 				hassConfig:    tt.fields.hassConfig,
 			}
-			tracker.startWorkers(tt.args.ctx, tt.args.updateCh, &wg)
+			tracker.StartWorkers(tt.args.ctx, tt.args.updateCh, &wg)
 		})
 	}
 }
