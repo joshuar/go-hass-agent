@@ -66,14 +66,6 @@ func (config *AppConfig) Validate() error {
 	validate := validator.New()
 	err := validate.Struct(config)
 	if err != nil {
-
-		// this check is only needed when your code could produce
-		// an invalid value for validation such as interface with nil
-		// value most including myself do not usually have code like this.
-		if _, ok := err.(*validator.InvalidValidationError); ok {
-			return err
-		}
-
 		for _, err := range err.(validator.ValidationErrors) {
 			e := validationError{
 				Namespace:       err.Namespace(),
