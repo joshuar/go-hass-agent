@@ -9,36 +9,28 @@ import (
 	"context"
 
 	"fyne.io/fyne/v2"
-	"github.com/joshuar/go-hass-agent/internal/config"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/rs/zerolog/log"
 )
 
 func (agent *Agent) runNotificationsWorker(ctx context.Context) {
-	agentConfig, err := config.FetchConfigFromContext(ctx)
-	if err != nil {
-		log.Debug().Caller().Err(err).
-			Msg("Could not retrieve valid config from context.")
-		return
-	}
-
-	go func() {
-		for n := range agentConfig.NotifyCh {
-			agent.app.SendNotification(&fyne.Notification{
-				Title:   n.Title,
-				Content: n.Content,
-			})
-		}
-	}()
-
 	doneCh := make(chan struct{})
+	notifyCh := make(chan fyne.Notification)
 
-	hass.StartWebsocket(ctx, doneCh)
+	hass.StartWebsocket(ctx, notifyCh, doneCh)
 	for {
 		select {
 		case <-doneCh:
 			doneCh = make(chan struct{})
-			hass.StartWebsocket(ctx, doneCh)
+			hass.StartWebsocket(ctx, notifyCh, doneCh)
+		case <-ctx.Done():
+			log.Debug().Caller().Msg("Stopping notification handler.")
+			return
+		case n := <-notifyCh:
+			agent.app.SendNotification(&fyne.Notification{
+				Title:   n.Title,
+				Content: n.Content,
+			})
 		}
 	}
 }
