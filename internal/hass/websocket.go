@@ -48,8 +48,8 @@ type websocketResponse struct {
 	} `json:"event,omitempty"`
 }
 
-func StartWebsocket(ctx context.Context, doneCh chan struct{}) {
-	conn, err := tryWebsocketConnect(ctx, doneCh)
+func StartWebsocket(ctx context.Context, notifyCh chan fyne.Notification, doneCh chan struct{}) {
+	conn, err := tryWebsocketConnect(ctx, notifyCh, doneCh)
 	if err != nil {
 		log.Debug().Err(err).Caller().
 			Msg("Could not connect to websocket.")
@@ -59,7 +59,7 @@ func StartWebsocket(ctx context.Context, doneCh chan struct{}) {
 	go conn.ReadLoop()
 }
 
-func tryWebsocketConnect(ctx context.Context, doneCh chan struct{}) (*gws.Conn, error) {
+func tryWebsocketConnect(ctx context.Context, notifyCh chan fyne.Notification, doneCh chan struct{}) (*gws.Conn, error) {
 	agentConfig, err := config.FetchConfigFromContext(ctx)
 	if err != nil {
 		return nil, err
@@ -72,7 +72,7 @@ func tryWebsocketConnect(ctx context.Context, doneCh chan struct{}) (*gws.Conn, 
 	var socket *gws.Conn
 
 	retryFunc := func() error {
-		socket, _, err = gws.NewClient(NewWebsocket(ctx, doneCh), &gws.ClientOption{
+		socket, _, err = gws.NewClient(NewWebsocket(ctx, notifyCh, doneCh), &gws.ClientOption{
 			Addr: url,
 		})
 		if err != nil {
@@ -105,7 +105,7 @@ type WebSocket struct {
 	nextID     uint64
 }
 
-func NewWebsocket(ctx context.Context, doneCh chan struct{}) *WebSocket {
+func NewWebsocket(ctx context.Context, notifyCh chan fyne.Notification, doneCh chan struct{}) *WebSocket {
 	agentConfig, err := config.FetchConfigFromContext(ctx)
 	if err != nil {
 		log.Debug().Caller().Err(err).
@@ -121,7 +121,7 @@ func NewWebsocket(ctx context.Context, doneCh chan struct{}) *WebSocket {
 		cancelFunc: wsCancel,
 		doneCh:     doneCh,
 	}
-	go ws.responseHandler(wsCtx, agentConfig.NotifyCh)
+	go ws.responseHandler(wsCtx, notifyCh)
 	go ws.requestHandler(wsCtx)
 	return ws
 }
