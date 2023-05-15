@@ -127,7 +127,6 @@ func TestAppConfig_Validate(t *testing.T) {
 				Secret:       tt.fields.Secret,
 				Token:        tt.fields.Token,
 				WebhookID:    tt.fields.WebhookID,
-				NotifyCh:     tt.fields.NotifyCh,
 			}
 			if err := config.Validate(); (err != nil) != tt.wantErr {
 				t.Errorf("AppConfig.Validate() error = %v, wantErr %v", err, tt.wantErr)
