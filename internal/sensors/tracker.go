@@ -24,46 +24,20 @@ type sensorTracker struct {
 	hassConfig    *hass.HassConfig
 }
 
-func RunSensorTracker(ctx context.Context, appPath fyne.URI, updateCh chan interface{}, wg *sync.WaitGroup) {
+func NewSensorTracker(ctx context.Context, registryPath fyne.URI) *sensorTracker {
 	r := &nutsdbRegistry{}
-	err := r.Open(ctx, appPath)
+	err := r.Open(ctx, registryPath)
 	if err != nil {
 		log.Debug().Err(err).Caller().
 			Msg("Unable to open registry")
-		return
+		return nil
 	}
-	tracker := &sensorTracker{
+	return &sensorTracker{
 		sensor:        make(map[string]*sensorState),
 		sensorWorkers: setupSensors(),
 		registry:      r,
 		hassConfig:    hass.NewHassConfig(ctx),
 	}
-
-	// goroutine to listen for sensor updates. Sensors are tracked in a map to
-	// handle registration and disabling/enabling. Updates are sent to Home
-	// Assistant.
-	go func() {
-		for {
-			select {
-			case data := <-updateCh:
-				switch data := data.(type) {
-				case hass.SensorUpdate:
-					go tracker.Update(ctx, data)
-				case hass.LocationUpdate:
-					l := hass.MarshalLocationUpdate(data)
-					go hass.APIRequest(ctx, l)
-				default:
-					log.Debug().Caller().
-						Msgf("Got unexpected status update %v", data)
-				}
-			case <-ctx.Done():
-				log.Debug().Caller().
-					Msg("Stopping sensor tracking.")
-				return
-			}
-		}
-	}()
-	tracker.startWorkers(ctx, updateCh, wg)
 }
 
 // Add creates a new sensor in the tracker based on a recieved state
@@ -119,9 +93,9 @@ func (tracker *sensorTracker) exists(id string) bool {
 	}
 }
 
-// startWorkers will call all the sensor worker functions that have been defined
+// StartWorkers will call all the sensor worker functions that have been defined
 // for this device.
-func (tracker *sensorTracker) startWorkers(ctx context.Context, updateCh chan interface{}, wg *sync.WaitGroup) {
+func (tracker *sensorTracker) StartWorkers(ctx context.Context, updateCh chan interface{}, wg *sync.WaitGroup) {
 	// var wg sync.WaitGroup
 	// workerCtx, cancelfunc := context.WithCancel(ctx)
 
