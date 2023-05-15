@@ -156,8 +156,8 @@ func (r *busRequest) GetData(method string, args ...interface{}) *dbusData {
 }
 
 // AddWatch adds a DBus watch to the bus with the given options in the builder
-func (r *busRequest) AddWatch() error {
-	if err := r.bus.conn.AddMatchSignal(r.match...); err != nil {
+func (r *busRequest) AddWatch(ctx context.Context) error {
+	if err := r.bus.conn.AddMatchSignalContext(ctx, r.match...); err != nil {
 		return err
 	} else {
 		log.Debug().Caller().
