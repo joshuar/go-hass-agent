@@ -33,7 +33,7 @@ var registerCmd = &cobra.Command{
 		log.Info().Msg("Starting registration process.")
 		agent := agent.NewAgent()
 		agent.SetupLogging()
-		agent.Load(agentCtx, registrationFetcher)
+		agent.CheckConfig(agentCtx, registrationFetcher)
 		cancelfunc()
 		log.Info().Msg("Device registered with Home Assistant.")
 	},

@@ -16,6 +16,12 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+type Config interface {
+	Get(string) (interface{}, error)
+	Set(string, interface{}) error
+	Validate() error
+}
+
 type AppConfig struct {
 	APIURL       string `validate:"required"`
 	WebSocketURL string `validate:"required"`
