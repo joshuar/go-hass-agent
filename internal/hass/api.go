@@ -75,36 +75,30 @@ func APIRequest(ctx context.Context, request Request) {
 	requestCtx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
 
-	agentConfig, err := config.FetchConfigFromContext(requestCtx)
+	secret, err := config.FetchPropertyFromContext(ctx, "secret")
 	if err != nil {
-		log.Error().Caller().Err(err).
-			Msg("Could not retrieve valid config from context.")
-		cancel()
+		log.Error().Stack().Err(err).
+			Msg("Could not fetch secret from agent config.")
 		request.ResponseHandler(res)
-		return
 	}
-	reqJson, err := MarshalJSON(request, agentConfig.Secret)
+	url, err := config.FetchPropertyFromContext(ctx, "apiURL")
+	if err != nil {
+		log.Error().Stack().Err(err).
+			Msg("Could not fetch api url from agent config.")
+		request.ResponseHandler(res)
+	}
+
+	reqJson, err := MarshalJSON(request, secret.(string))
 	if err != nil {
 		log.Error().Stack().Err(err).
 			Msg("Unable to format request")
 		request.ResponseHandler(res)
 	} else {
 		err := requests.
-			URL(agentConfig.APIURL).
+			URL(url.(string)).
 			BodyBytes(reqJson).
 			ToBytesBuffer(&res).
 			Fetch(requestCtx)
-		// requestFunc := func() error {
-		// 	return requests.
-		// 		URL(config.APIURL).
-		// 		BodyBytes(reqJson).
-		// 		ToJSON(&res).
-		// 		Fetch(requestCtx)
-		// }
-		// retryNotifyFunc := func(e error, d time.Duration) {
-		// 	log.Debug().Msgf("Retrying request %s in %v seconds.", string(reqJson), d.Seconds())
-		// }
-		// err := backoff.RetryNotify(requestFunc, backoff.NewExponentialBackOff(), retryNotifyFunc)
 		if err != nil {
 			log.Error().Stack().Err(err).
 				Msgf("Unable to send request with body:\n\t%s\n\t", reqJson)
