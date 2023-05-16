@@ -75,18 +75,20 @@ func APIRequest(ctx context.Context, request Request) {
 	requestCtx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
 
-	secret, err := config.FetchPropertyFromContext(ctx, "secret")
+	secret, err := config.FetchPropertyFromContext(requestCtx, "secret")
 	if err != nil {
 		log.Error().Stack().Err(err).
 			Msg("Could not fetch secret from agent config.")
 		request.ResponseHandler(res)
+		cancel()
 		return
 	}
-	url, err := config.FetchPropertyFromContext(ctx, "apiURL")
+	url, err := config.FetchPropertyFromContext(requestCtx, "apiURL")
 	if err != nil {
 		log.Error().Stack().Err(err).
 			Msg("Could not fetch api url from agent config.")
 		request.ResponseHandler(res)
+		cancel()
 		return
 	}
 
@@ -94,6 +96,7 @@ func APIRequest(ctx context.Context, request Request) {
 	if err != nil {
 		log.Error().Stack().Err(err).
 			Msg("Unable to format request")
+		cancel()
 		request.ResponseHandler(res)
 	} else {
 		err := requests.
