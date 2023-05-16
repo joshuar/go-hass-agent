@@ -154,6 +154,7 @@ func (c *WebSocket) OnOpen(socket *gws.Conn) {
 		for {
 			select {
 			case <-done:
+				c.cancelFunc()
 				return
 			case <-ticker.C:
 				log.Debug().Caller().
