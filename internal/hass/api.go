@@ -80,12 +80,14 @@ func APIRequest(ctx context.Context, request Request) {
 		log.Error().Stack().Err(err).
 			Msg("Could not fetch secret from agent config.")
 		request.ResponseHandler(res)
+		return
 	}
 	url, err := config.FetchPropertyFromContext(ctx, "apiURL")
 	if err != nil {
 		log.Error().Stack().Err(err).
 			Msg("Could not fetch api url from agent config.")
 		request.ResponseHandler(res)
+		return
 	}
 
 	reqJson, err := MarshalJSON(request, secret.(string))
