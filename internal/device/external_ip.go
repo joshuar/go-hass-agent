@@ -130,9 +130,10 @@ func lookupExternalIPs(ctx context.Context) []*address {
 }
 
 func ExternalIPUpdater(ctx context.Context, status chan interface{}) {
-
 	updateExternalIP := func() {
-		ips := lookupExternalIPs(ctx)
+		requestCtx, cancel := context.WithTimeout(ctx, time.Second*5)
+		defer cancel()
+		ips := lookupExternalIPs(requestCtx)
 		for _, ip := range ips {
 			if ip.addr != nil {
 				status <- ip
@@ -146,6 +147,8 @@ func ExternalIPUpdater(ctx context.Context, status chan interface{}) {
 		time.Minute*5,
 		&jitterbug.Norm{Stdev: time.Second * 30},
 	)
+
+	updateExternalIP()
 	go func() {
 		for {
 			select {
