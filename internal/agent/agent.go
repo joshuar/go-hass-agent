@@ -72,7 +72,7 @@ func Run(id string) {
 	configWg.Add(1)
 	go func() {
 		defer configWg.Done()
-		agent.Load(agentCtx, agent.requestRegistrationInfoUI)
+		agent.CheckConfig(agentCtx, agent.requestRegistrationInfoUI)
 	}()
 
 	// Wait for the config to load, then start the sensor tracker and
@@ -188,9 +188,9 @@ func (agent *Agent) SetupLogging() {
 	}
 }
 
-func (agent *Agent) Load(ctx context.Context, registrationFetcher func(context.Context) *hass.RegistrationHost) {
-	appConfig := agent.loadAppConfig()
-	for appConfig.Validate() != nil {
+func (agent *Agent) CheckConfig(ctx context.Context, registrationFetcher func(context.Context) *hass.RegistrationHost) {
+	config := agent.LoadConfig()
+	for config.Validate() != nil {
 		log.Warn().Msg("No suitable existing config found! Starting new registration process")
 		err := agent.runRegistrationWorker(ctx, registrationFetcher)
 		if err != nil {
@@ -198,6 +198,6 @@ func (agent *Agent) Load(ctx context.Context, registrationFetcher func(context.C
 				Msgf("Error trying to register: %v. Exiting.")
 			agent.stop()
 		}
-		appConfig = agent.loadAppConfig()
+		config = agent.LoadConfig()
 	}
 }
