@@ -131,7 +131,7 @@ func TestAPIRequest(t *testing.T) {
 		APIURL: server.URL,
 	}
 
-	mockCtx := config.StoreConfigInContext(context.Background(), mockConfig)
+	mockCtx := config.StoreInContext(context.Background(), mockConfig)
 
 	type args struct {
 		ctx     context.Context
