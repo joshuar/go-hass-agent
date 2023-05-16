@@ -7,19 +7,40 @@ package config
 
 import (
 	"context"
+	"errors"
 	"reflect"
 	"testing"
 
-	"fyne.io/fyne/v2"
+	"github.com/stretchr/testify/mock"
 )
 
-func TestStoreConfigInContext(t *testing.T) {
-	baseCtx := context.Background()
-	mockConfig := &AppConfig{}
-	wantCtx := context.WithValue(baseCtx, configKey, mockConfig)
+type mockConfig struct {
+	mock.Mock
+}
+
+func (m *mockConfig) Get(property string) (interface{}, error) {
+	args := m.Called(property)
+	return args.String(0), args.Error(1)
+}
+
+func (m *mockConfig) Set(property string, value interface{}) error {
+	args := m.Called(property, value)
+	return args.Error(1)
+}
+
+func (m *mockConfig) Validate() error {
+	m.On("Validate")
+	m.Called()
+	return nil
+}
+
+func TestStoreInContext(t *testing.T) {
+	wantedCtx := context.WithValue(context.Background(),
+		configKey,
+		&mockConfig{})
 	type args struct {
 		ctx context.Context
-		c   *AppConfig
+		c   Config
 	}
 	tests := []struct {
 		name string
@@ -28,108 +49,107 @@ func TestStoreConfigInContext(t *testing.T) {
 	}{
 		{
 			name: "standard test",
-			args: args{ctx: baseCtx, c: mockConfig},
-			want: wantCtx,
+			args: args{ctx: context.Background(), c: &mockConfig{}},
+			want: wantedCtx,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := StoreConfigInContext(tt.args.ctx, tt.args.c); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewContext() = %v, want %v", got, tt.want)
+			if got := StoreInContext(tt.args.ctx, tt.args.c); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("StoreInContext() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func TestFetchConfigFromContext(t *testing.T) {
-	goodCtx := context.WithValue(context.Background(), configKey, &AppConfig{})
-	badCtx := context.Background()
+func TestFetchFromContext(t *testing.T) {
+	validCtx := context.WithValue(context.Background(),
+		configKey,
+		&mockConfig{})
+	invalidCtx := context.Background()
 	type args struct {
 		ctx context.Context
 	}
 	tests := []struct {
 		name    string
 		args    args
-		want    *AppConfig
+		want    Config
 		wantErr bool
 	}{
 		{
-			name:    "valid context",
-			args:    args{ctx: goodCtx},
-			want:    &AppConfig{},
+			name:    "fetch valid",
+			args:    args{ctx: validCtx},
+			want:    &mockConfig{},
 			wantErr: false,
 		},
 		{
-			name:    "invalid context",
-			args:    args{ctx: badCtx},
+			name:    "fetch invalid",
+			args:    args{ctx: invalidCtx},
 			want:    nil,
 			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := FetchConfigFromContext(tt.args.ctx)
+			got, err := FetchFromContext(tt.args.ctx)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("FetchConfigFromContext() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("FetchFromContext() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("FetchConfigFromContext() = %v, want %v", got, tt.want)
+				t.Errorf("FetchFromContext() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func TestAppConfig_Validate(t *testing.T) {
-	type fields struct {
-		APIURL       string
-		WebSocketURL string
-		Secret       string
-		Token        string
-		WebhookID    string
-		NotifyCh     chan fyne.Notification
+func TestFetchPropertyFromContext(t *testing.T) {
+	config := new(mockConfig)
+	config.On("Get", "valid").Return("validValue", nil)
+	config.On("Get", "invalid").Return("", errors.New("invalid"))
+
+	validCtx := context.WithValue(context.Background(),
+		configKey,
+		config)
+	invalidCtx := context.Background()
+	type args struct {
+		ctx      context.Context
+		property string
 	}
 	tests := []struct {
 		name    string
-		fields  fields
+		args    args
+		want    interface{}
 		wantErr bool
 	}{
 		{
-			name: "valid config",
-			fields: fields{
-				APIURL:       "string",
-				WebSocketURL: "string",
-				Token:        "string",
-				WebhookID:    "string",
-			},
+			name:    "test valid property",
+			args:    args{ctx: validCtx, property: "valid"},
+			want:    "validValue",
 			wantErr: false,
 		},
 		{
-			name: "invalid config",
-			fields: fields{
-				APIURL:       "string",
-				WebSocketURL: "string",
-				WebhookID:    "string",
-			},
+			name:    "test invalid property",
+			args:    args{ctx: validCtx, property: "invalid"},
+			want:    nil,
 			wantErr: true,
 		},
 		{
-			name:    "empty config",
-			fields:  fields{},
+			name:    "test invalid context",
+			args:    args{ctx: invalidCtx, property: "valid"},
+			want:    nil,
 			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			config := &AppConfig{
-				APIURL:       tt.fields.APIURL,
-				WebSocketURL: tt.fields.WebSocketURL,
-				Secret:       tt.fields.Secret,
-				Token:        tt.fields.Token,
-				WebhookID:    tt.fields.WebhookID,
+			got, err := FetchPropertyFromContext(tt.args.ctx, tt.args.property)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("FetchPropertyFromContext() error = %v, wantErr %v", err, tt.wantErr)
+				return
 			}
-			if err := config.Validate(); (err != nil) != tt.wantErr {
-				t.Errorf("AppConfig.Validate() error = %v, wantErr %v", err, tt.wantErr)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("FetchPropertyFromContext() = %v, want %v", got, tt.want)
 			}
 		})
 	}
