@@ -194,6 +194,8 @@ func findProcesses(name string) []*process.Process {
 	if err != nil {
 		log.Debug().Caller().
 			Msg("Unable to retrieve processes list.")
+		cancel()
+		return nil
 	}
 	var matchedProcesses []*process.Process
 	for _, p := range allProcesses {
