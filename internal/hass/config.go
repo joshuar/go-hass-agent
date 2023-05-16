@@ -8,6 +8,7 @@ package hass
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -106,4 +107,26 @@ func (h *HassConfig) ResponseHandler(resp bytes.Buffer) {
 	h.rawConfigProps = result
 	h.mu.Unlock()
 	log.Debug().Caller().Msg("Updated stored HA config.")
+}
+
+// HassConfig implements config.Config
+
+func (c *HassConfig) Get(property string) (interface{}, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if value, ok := c.rawConfigProps[property]; ok {
+		return value, nil
+	} else {
+		return nil, fmt.Errorf("config does not have an option %s", property)
+	}
+}
+
+func (c *HassConfig) Set(property string, value interface{}) error {
+	log.Debug().Caller().Msg("Hass configuration is not settable.")
+	return nil
+}
+
+func (c *HassConfig) Validate() error {
+	log.Debug().Caller().Msg("Hass configuration has no validation.")
+	return nil
 }
