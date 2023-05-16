@@ -123,13 +123,33 @@ func mockServer(t *testing.T) *httptest.Server {
 	}))
 }
 
+type mockConfig struct {
+	mock.Mock
+}
+
+func (m *mockConfig) Get(property string) (interface{}, error) {
+	args := m.Called(property)
+	return args.String(0), args.Error(1)
+}
+
+func (m *mockConfig) Set(property string, value interface{}) error {
+	args := m.Called(property, value)
+	return args.Error(1)
+}
+
+func (m *mockConfig) Validate() error {
+	m.On("Validate")
+	m.Called()
+	return nil
+}
+
 func TestAPIRequest(t *testing.T) {
 	server := mockServer(t)
 	defer server.Close()
 
-	mockConfig := &config.AppConfig{
-		APIURL: server.URL,
-	}
+	mockConfig := &mockConfig{}
+	mockConfig.On("Get", "apiURL").Return(server.URL, nil)
+	mockConfig.On("Get", "secret").Return("", nil)
 
 	mockCtx := config.StoreInContext(context.Background(), mockConfig)
 
