@@ -81,8 +81,8 @@ func Run(id string) {
 	defer workerWg.Done()
 	go func() {
 		configWg.Wait()
-		appConfig := agent.loadAppConfig()
-		ctx := config.StoreConfigInContext(agentCtx, appConfig)
+		appConfig := agent.LoadConfig()
+		ctx := config.StoreInContext(agentCtx, appConfig)
 		workerWg.Add(1)
 		go func() {
 			defer workerWg.Done()
@@ -128,8 +128,8 @@ func RunHeadless(id string) {
 	// notifications worker
 	var workerWg sync.WaitGroup
 	go func() {
-		appConfig := agent.loadAppConfig()
-		ctx := config.StoreConfigInContext(agentCtx, appConfig)
+		appConfig := agent.LoadConfig()
+		ctx := config.StoreInContext(agentCtx, appConfig)
 		workerWg.Add(1)
 		go func() {
 			defer workerWg.Done()

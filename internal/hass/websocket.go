@@ -60,11 +60,10 @@ func StartWebsocket(ctx context.Context, notifyCh chan fyne.Notification, doneCh
 }
 
 func tryWebsocketConnect(ctx context.Context, notifyCh chan fyne.Notification, doneCh chan struct{}) (*gws.Conn, error) {
-	agentConfig, err := config.FetchConfigFromContext(ctx)
+	url, err := config.FetchPropertyFromContext(ctx, "websocketURL")
 	if err != nil {
 		return nil, err
 	}
-	url := agentConfig.WebSocketURL
 
 	ctxConnect, cancelConnect := context.WithTimeout(ctx, time.Minute)
 	defer cancelConnect()
@@ -73,7 +72,7 @@ func tryWebsocketConnect(ctx context.Context, notifyCh chan fyne.Notification, d
 
 	retryFunc := func() error {
 		socket, _, err = gws.NewClient(NewWebsocket(ctx, notifyCh, doneCh), &gws.ClientOption{
-			Addr: url,
+			Addr: url.(string),
 		})
 		if err != nil {
 			log.Debug().Err(err).Caller().
@@ -106,18 +105,21 @@ type WebSocket struct {
 }
 
 func NewWebsocket(ctx context.Context, notifyCh chan fyne.Notification, doneCh chan struct{}) *WebSocket {
-	agentConfig, err := config.FetchConfigFromContext(ctx)
+	token, err := config.FetchPropertyFromContext(ctx, "token")
 	if err != nil {
-		log.Debug().Caller().Err(err).
-			Msg("Could not retrieve valid config from context.")
 		return nil
 	}
+	webhookID, err := config.FetchPropertyFromContext(ctx, "webhookID")
+	if err != nil {
+		return nil
+	}
+
 	wsCtx, wsCancel := context.WithCancel(ctx)
 	ws := &WebSocket{
 		ReadCh:     make(chan *webSocketData),
 		WriteCh:    make(chan *webSocketData),
-		token:      agentConfig.Token,
-		webhookID:  agentConfig.WebhookID,
+		token:      token.(string),
+		webhookID:  webhookID.(string),
 		cancelFunc: wsCancel,
 		doneCh:     doneCh,
 	}
