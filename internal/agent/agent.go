@@ -93,15 +93,7 @@ func Run(appID string) {
 	}()
 
 	// Handle interrupt/termination signals
-	c := make(chan os.Signal)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		<-c
-		cancelFunc()
-		workerWg.Wait()
-		agent.stop()
-		os.Exit(1)
-	}()
+	agent.handleSignals(cancelFunc, &workerWg)
 
 	agent.setupSystemTray()
 	agent.app.Run()
@@ -124,24 +116,13 @@ func RunHeadless(appID string) {
 		workerWg.Add(1)
 		go func() {
 			defer workerWg.Done()
-			agent.runNotificationsWorker(ctx)
-		}()
-		workerWg.Add(1)
-		go func() {
-			defer workerWg.Done()
 			agent.runSensorTracker(ctx)
 		}()
 	}()
 
 	// Handle interrupt/termination signals
-	c := make(chan os.Signal)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		<-c
-		cancelFunc()
-		workerWg.Wait()
-		os.Exit(1)
-	}()
+	agent.handleSignals(cancelFunc, &workerWg)
+
 	<-agentCtx.Done()
 	agent.stop()
 }
@@ -191,4 +172,16 @@ func (agent *Agent) CheckConfig(ctx context.Context, registrationFetcher func(co
 		}
 		config = agent.LoadConfig()
 	}
+}
+
+func (agent *Agent) handleSignals(cancelFunc context.CancelFunc, wg *sync.WaitGroup) {
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-c
+		cancelFunc()
+		wg.Wait()
+		agent.stop()
+		os.Exit(1)
+	}()
 }
