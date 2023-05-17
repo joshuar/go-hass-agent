@@ -176,12 +176,11 @@ func newLocation(deviceAPI *DeviceAPI, locationPath dbus.ObjectPath) *linuxLocat
 			return value.Value().(float64)
 		}
 	}
-	location := &linuxLocation{
+	return &linuxLocation{
 		latitude:  getProp("Latitude"),
 		longitude: getProp("Longitude"),
 		accuracy:  getProp("Accuracy"),
 		speed:     getProp("Speed"),
 		altitude:  getProp("Altitude"),
 	}
-	return location
 }
