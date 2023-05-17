@@ -6,6 +6,7 @@
 package agent
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 
@@ -84,34 +85,36 @@ func (c *agentConfig) Set(property string, value interface{}) error {
 }
 
 func (c *agentConfig) Validate() error {
-	checkErr := func(err error) {
-		if err != nil {
-			log.Debug().Caller().Err(err).Msg("Validation error.")
-			return
-		}
-	}
 	var value interface{}
 	var err error
 
-	value, err = c.Get("apiURL")
-	checkErr(err)
+	value, _ = c.Get("apiURL")
 	err = c.validator.Var(value, "required,url")
-	checkErr(err)
+	if err != nil {
+		log.Debug().Caller().Err(err).Msgf("Validation failure for %s.", "apiURL")
+		return errors.New("config validation failed")
+	}
 
-	value, err = c.Get("websocketURL")
-	checkErr(err)
+	value, _ = c.Get("websocketURL")
 	err = c.validator.Var(value, "required,url")
-	checkErr(err)
+	if err != nil {
+		log.Debug().Caller().Err(err).Msgf("Validation failure for %s.", "websocketURL")
+		return errors.New("config validation failed")
+	}
 
-	value, err = c.Get("token")
-	checkErr(err)
+	value, _ = c.Get("token")
 	err = c.validator.Var(value, "required,ascii")
-	checkErr(err)
+	if err != nil {
+		log.Debug().Caller().Err(err).Msgf("Validation failure for %s.", "token")
+		return errors.New("config validation failed")
+	}
 
-	value, err = c.Get("webhookID")
-	checkErr(err)
+	value, _ = c.Get("webhookID")
 	err = c.validator.Var(value, "required,ascii")
-	checkErr(err)
+	if err != nil {
+		log.Debug().Caller().Err(err).Msgf("Validation failure for %s.", "webhookID")
+		return errors.New("config validation failed")
+	}
 
 	return nil
 }
