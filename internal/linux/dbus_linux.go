@@ -131,10 +131,19 @@ func (r *busRequest) GetProp(prop string) (dbus.Variant, error) {
 	}
 }
 
+// SetProp sets the specific property to the specified value
+func (r *busRequest) SetProp(prop string, value dbus.Variant) error {
+	if r.bus != nil {
+		obj := r.bus.conn.Object(r.dest, r.path)
+		return obj.SetProperty(prop, value)
+	}
+	return errors.New("no bus connection")
+}
+
 // GetData fetches DBus data from the given method in the builder
 func (r *busRequest) GetData(method string, args ...interface{}) *dbusData {
+	d := new(dbusData)
 	if r.bus != nil {
-		d := &dbusData{}
 		obj := r.bus.conn.Object(r.dest, r.path)
 		var err error
 		if args != nil {
@@ -145,13 +154,26 @@ func (r *busRequest) GetData(method string, args ...interface{}) *dbusData {
 		if err != nil {
 			log.Debug().Err(err).Caller().
 				Msgf("Unable to execute %s on %s (args: %s)", method, r.dest, args)
-			return nil
 		}
 		return d
 	} else {
 		log.Debug().Caller().
 			Msgf("no bus connection")
-		return nil
+		return d
+	}
+}
+
+// Call executes the given method in the builder and returns the error state
+func (r *busRequest) Call(method string, args ...interface{}) error {
+	if r.bus != nil {
+		obj := r.bus.conn.Object(r.dest, r.path)
+		if args != nil {
+			return obj.Call(method, 0, args...).Err
+		} else {
+			return obj.Call(method, 0).Err
+		}
+	} else {
+		return errors.New("no bus connection")
 	}
 }
 
@@ -210,6 +232,15 @@ func (d *dbusData) AsStringList() []string {
 		return d.data.([]string)
 	} else {
 		return nil
+	}
+}
+
+// AsObjectPath formats DBus data as a dbus.ObjectPath
+func (d *dbusData) AsObjectPath() dbus.ObjectPath {
+	if d.data != nil {
+		return d.data.(dbus.ObjectPath)
+	} else {
+		return ""
 	}
 }
 
