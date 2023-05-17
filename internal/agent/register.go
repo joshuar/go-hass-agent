@@ -162,7 +162,7 @@ func (agent *Agent) saveRegistration(r *hass.RegistrationResponse, h *hass.Regis
 }
 
 func (agent *Agent) runRegistrationWorker(ctx context.Context, getRegistrationInfo func(context.Context) *hass.RegistrationHost) error {
-	thisDevice := device.NewDevice(ctx)
+	thisDevice := device.NewDevice(ctx, Name, Version)
 	agent.SetPref("DeviceID", thisDevice.DeviceID())
 	agent.SetPref("DeviceName", thisDevice.DeviceName())
 	registrationHostInfo := getRegistrationInfo(ctx)

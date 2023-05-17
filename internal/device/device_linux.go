@@ -16,26 +16,23 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-const (
-	Name    = "go-hass-agent"
-	Version = "0.0.3"
-)
-
 type linuxDevice struct {
-	hostname  string
-	hwVendor  string
-	hwModel   string
-	osRelease map[string]string
-	appID     string
-	machineID string
+	appName    string
+	appVersion string
+	appID      string
+	hostname   string
+	hwVendor   string
+	hwModel    string
+	osRelease  map[string]string
+	machineID  string
 }
 
 func (l *linuxDevice) AppName() string {
-	return Name
+	return l.appName
 }
 
 func (l *linuxDevice) AppVersion() string {
-	return Version
+	return l.appVersion
 }
 
 func (l *linuxDevice) AppID() string {
@@ -79,9 +76,12 @@ func (l *linuxDevice) AppData() interface{} {
 	}
 }
 
-func NewDevice(ctx context.Context) *linuxDevice {
+func NewDevice(ctx context.Context, name string, version string) *linuxDevice {
 
-	newDevice := &linuxDevice{}
+	newDevice := &linuxDevice{
+		appName:    name,
+		appVersion: version,
+	}
 
 	// Try to fetch hostname, vendor, model from DBus. Fall back to
 	// /sys/devices/virtual/dmi/id for vendor and model if DBus doesn't work.
@@ -104,7 +104,7 @@ func NewDevice(ctx context.Context) *linuxDevice {
 		log.Fatal().Caller().
 			Msgf("Could not retrieve current user details: %v", err.Error())
 	}
-	newDevice.appID = Name + "-" + currentUser.Username
+	newDevice.appID = name + "-" + currentUser.Username
 
 	// Generate a semi-random machine ID.
 	machineID, err := sd_id128.GetRandomUUID()
