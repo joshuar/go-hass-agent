@@ -8,12 +8,15 @@ package linux
 import (
 	"context"
 
-	"github.com/maltegrosse/go-geoclue2"
+	"github.com/godbus/dbus/v5"
 	"github.com/rs/zerolog/log"
 )
 
 const (
-	appID = "org.joshuar.go-hass-agent"
+	appID                  = "org.joshuar.go-hass-agent"
+	geoclueInterface       = "org.freedesktop.GeoClue2"
+	geoclueClientInterface = geoclueInterface + ".Client"
+	geocluePath            = "/org/freedesktop/GeoClue2/Manager"
 )
 
 type linuxLocation struct {
@@ -68,47 +71,117 @@ func LocationUpdater(ctx context.Context, locationInfoCh chan interface{}) {
 		return
 	}
 
-	locationInfo := &linuxLocation{}
+	clientPath := deviceAPI.SystemBusRequest().
+		Path(geocluePath).
+		Destination(geoclueInterface).
+		GetData("org.freedesktop.GeoClue2.Manager.GetClient").AsObjectPath()
+	if !clientPath.IsValid() {
+		log.Debug().Caller().
+			Msg("Could not set up geoclue client.")
+		return
+	}
 
-	gcm, err := geoclue2.NewGeoclueManager()
+	err = deviceAPI.SystemBusRequest().
+		Path(clientPath).
+		Destination(geoclueInterface).
+		SetProp("org.freedesktop.GeoClue2.Client.DesktopId",
+			dbus.MakeVariant(appID))
 	if err != nil {
-		log.Debug().Err(err).
-			Msg("Could not create geoclue interface.")
+		log.Debug().Caller().Err(err).
+			Msg("Could not create geoclue client")
+		return
 	}
 
-	client, err := gcm.GetClient()
+	err = deviceAPI.SystemBusRequest().
+		Path(clientPath).
+		Destination(geoclueInterface).
+		SetProp("org.freedesktop.GeoClue2.Client.DistanceThreshold",
+			dbus.MakeVariant(uint32(0)))
 	if err != nil {
-		log.Debug().Err(err).
-			Msg("Could not create geoclue interface.")
+		log.Debug().Caller().Err(err).
+			Msg("Could not set distance threshold")
+		return
 	}
 
-	if err := client.SetDesktopId(appID); err != nil {
-		log.Debug().Err(err).
-			Msg("Could not create geoclue interface.")
+	err = deviceAPI.SystemBusRequest().
+		Path(clientPath).
+		Destination(geoclueInterface).
+		SetProp("org.freedesktop.GeoClue2.Client.TimeThreshold",
+			dbus.MakeVariant(uint32(0)))
+	if err != nil {
+		log.Debug().Caller().Err(err).
+			Msg("Could not set time threshold")
+		return
 	}
 
-	if err := client.Start(); err != nil {
-		log.Debug().Err(err).
-			Msg("Could not create geoclue interface.")
-	}
-
-	c := client.SubscribeLocationUpdated()
-	for {
-		select {
-		case v := <-c:
-			log.Debug().Caller().Msg("Location update received.")
-			_, location, _ := client.ParseLocationUpdated(v)
-			locationInfo.latitude, _ = location.GetLatitude()
-			locationInfo.longitude, _ = location.GetLongitude()
-			locationInfo.accuracy, _ = location.GetAccuracy()
-			locationInfo.speed, _ = location.GetSpeed()
-			locationInfo.altitude, _ = location.GetAltitude()
-			locationInfoCh <- locationInfo
-		case <-ctx.Done():
-			log.Debug().Caller().
-				Msg("Stopping Linux location updater.")
-			gcm.DeleteClient(client)
-			return
+	locationUpdateHandler := func(s *dbus.Signal) {
+		if s.Name == "org.freedesktop.GeoClue2.Client.LocationUpdated" {
+			locationPath := s.Body[1].(dbus.ObjectPath)
+			location := newLocation(deviceAPI, locationPath)
+			locationInfoCh <- location
 		}
 	}
+
+	deviceAPI.SystemBusRequest().
+		Path(clientPath).
+		Match([]dbus.MatchOption{
+			dbus.WithMatchObjectPath(clientPath),
+			dbus.WithMatchInterface(geoclueClientInterface),
+		}).
+		Event("org.freedesktop.GeoClue2.Client.LocationUpdated").
+		Handler(locationUpdateHandler).
+		AddWatch(ctx)
+
+	err = deviceAPI.SystemBusRequest().
+		Path(clientPath).
+		Destination(geoclueInterface).
+		Call("org.freedesktop.GeoClue2.Client.Start")
+	if err != nil {
+		log.Debug().Caller().Err(err).
+			Msg("Failed to start location updater.")
+		return
+	}
+
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				log.Debug().Caller().
+					Msg("Stopping location updater.")
+				err = deviceAPI.SystemBusRequest().
+					Path(clientPath).
+					Destination(geoclueInterface).
+					Call("org.freedesktop.GeoClue2.Client.Stop")
+				if err != nil {
+					log.Debug().Caller().Err(err).
+						Msg("Failed to stop location updater.")
+					return
+				}
+			}
+		}
+	}()
+}
+
+func newLocation(deviceAPI *DeviceAPI, locationPath dbus.ObjectPath) *linuxLocation {
+	getProp := func(prop string) float64 {
+		value, err := deviceAPI.SystemBusRequest().
+			Path(locationPath).
+			Destination(geoclueInterface).
+			GetProp("org.freedesktop.GeoClue2.Location." + prop)
+		if err != nil {
+			log.Debug().Caller().Err(err).
+				Msgf("Could not retrieve %s.", prop)
+			return 0
+		} else {
+			return value.Value().(float64)
+		}
+	}
+	location := &linuxLocation{
+		latitude:  getProp("Latitude"),
+		longitude: getProp("Longitude"),
+		accuracy:  getProp("Accuracy"),
+		speed:     getProp("Speed"),
+		altitude:  getProp("Altitude"),
+	}
+	return location
 }

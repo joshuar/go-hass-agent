@@ -87,7 +87,6 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/lthibault/jitterbug/v2 v2.2.2
 	github.com/lxzan/gws v1.5.1
-	github.com/maltegrosse/go-geoclue2 v0.1.1
 	github.com/nutsdb/nutsdb v0.12.0
 	github.com/perimeterx/marshmallow v1.1.4
 	github.com/rs/zerolog v1.29.1
