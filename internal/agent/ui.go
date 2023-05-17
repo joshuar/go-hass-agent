@@ -18,10 +18,10 @@ import (
 	"github.com/joshuar/go-hass-agent/assets/trayicon"
 )
 
-func newUI() fyne.App {
+func newUI(appID string) fyne.App {
 	var a fyne.App
-	if debugAppID != "" {
-		a = app.NewWithID(debugAppID)
+	if appID != "" {
+		a = app.NewWithID(appID)
 		a.SetIcon(theme.FyneLogo())
 
 	} else {

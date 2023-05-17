@@ -44,26 +44,23 @@ type Agent struct {
 	Name, Version string
 }
 
-func NewAgent() *Agent {
-	return &Agent{
-		app:     newUI(),
+func NewAgent(appID string) (context.Context, context.CancelFunc, *Agent) {
+	a := &Agent{
+		app:     newUI(appID),
 		Name:    Name,
 		Version: Version,
 	}
+	ctx, cancelfunc := context.WithCancel(context.Background())
+	ctx = device.SetupContext(ctx)
+	a.SetupLogging()
+	return ctx, cancelfunc, a
 }
 
-func Run(id string) {
-	if id != "" {
-		debugAppID = id
-	}
-	agentCtx, cancelfunc := context.WithCancel(context.Background())
-	agentCtx = device.SetupContext(agentCtx)
-	log.Info().Msg("Starting agent.")
-	agent := NewAgent()
-
+func Run(appID string) {
 	translator = translations.NewTranslator()
 
-	agent.SetupLogging()
+	agentCtx, cancelFunc, agent := NewAgent(appID)
+	log.Info().Msg("Started agent.")
 
 	// Try to load the app config. If it is not valid, start a new registration
 	// process. Keep trying until we successfully register with HA or the user
@@ -100,7 +97,7 @@ func Run(id string) {
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-c
-		cancelfunc()
+		cancelFunc()
 		workerWg.Wait()
 		agent.stop()
 		os.Exit(1)
@@ -108,21 +105,15 @@ func Run(id string) {
 
 	agent.setupSystemTray()
 	agent.app.Run()
-	cancelfunc()
+	cancelFunc()
 	workerWg.Wait()
 	agent.stop()
 }
 
-func RunHeadless(id string) {
-	if id != "" {
-		debugAppID = id
-	}
-	agentCtx, cancelfunc := context.WithCancel(context.Background())
-	agentCtx = device.SetupContext(agentCtx)
-	log.Info().Msg("Starting agent.")
-	agent := NewAgent()
+func RunHeadless(appID string) {
 
-	agent.SetupLogging()
+	agentCtx, cancelFunc, agent := NewAgent(appID)
+	log.Info().Msg("Started agent.")
 
 	// Wait for the config to load, then start the sensor tracker and
 	// notifications worker
@@ -147,7 +138,7 @@ func RunHeadless(id string) {
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-c
-		cancelfunc()
+		cancelFunc()
 		workerWg.Wait()
 		os.Exit(1)
 	}()

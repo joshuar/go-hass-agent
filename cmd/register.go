@@ -12,7 +12,6 @@ import (
 
 	"fyne.io/fyne/v2/data/binding"
 	"github.com/joshuar/go-hass-agent/internal/agent"
-	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -28,13 +27,11 @@ var registerCmd = &cobra.Command{
 	Short: "Register this device with Home Assistant",
 	Long:  `Register will attempt to register this device with Home Assistant. A URL for a Home Assistant instance and long-lived access token is required to be provided.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		agentCtx, cancelfunc := context.WithCancel(context.Background())
-		agentCtx = device.SetupContext(agentCtx)
+		agentCtx, cancelFunc, agent := agent.NewAgent("")
 		log.Info().Msg("Starting registration process.")
-		agent := agent.NewAgent()
 		agent.SetupLogging()
 		agent.CheckConfig(agentCtx, registrationFetcher)
-		cancelfunc()
+		cancelFunc()
 		log.Info().Msg("Device registered with Home Assistant.")
 	},
 }
