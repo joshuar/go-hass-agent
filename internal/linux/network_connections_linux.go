@@ -399,6 +399,9 @@ func NetworkConnectionsUpdater(ctx context.Context, status chan interface{}) {
 		}).
 		Event("org.freedesktop.DBus.Properties.PropertiesChanged").
 		Handler(func(s *dbus.Signal) {
+			if len(s.Body) == 0 {
+				return
+			}
 			switch obj := s.Body[0].(type) {
 			case string:
 				switch obj {
