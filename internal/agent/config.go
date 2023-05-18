@@ -119,6 +119,12 @@ func (c *agentConfig) Validate() error {
 	return nil
 }
 
+func (c *agentConfig) Refresh() error {
+	log.Debug().Caller().
+		Msg("Agent config does not support refresh.")
+	return nil
+}
+
 func (c *agentConfig) generateWebsocketURL() string {
 	var scheme string
 	if c.prefs.BoolWithFallback("UseTLS", false) {

@@ -139,8 +139,14 @@ func (m *mockConfig) Set(property string, value interface{}) error {
 
 func (m *mockConfig) Validate() error {
 	m.On("Validate")
-	m.Called()
-	return nil
+	args := m.Called()
+	return args.Error(1)
+}
+
+func (m *mockConfig) Refresh() error {
+	m.On("Refresh")
+	args := m.Called()
+	return args.Error(1)
 }
 
 func TestAPIRequest(t *testing.T) {

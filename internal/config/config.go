@@ -14,6 +14,7 @@ type Config interface {
 	Get(string) (interface{}, error)
 	Set(string, interface{}) error
 	Validate() error
+	Refresh() error
 }
 
 // key is an unexported type for keys defined in this package.
