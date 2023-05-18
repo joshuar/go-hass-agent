@@ -44,10 +44,11 @@ func (agent *Agent) setupSystemTray() {
 	if desk, ok := agent.app.(desktop.App); ok {
 		menuItemAbout := fyne.NewMenuItem("About", func() {
 			deviceName, deviceID := agent.DeviceDetails()
+			hassVersion, _ := hassConfig.Get("version")
 			w := agent.app.NewWindow(translator.Translate("About %s", agent.Name))
 			w.SetContent(container.New(layout.NewVBoxLayout(),
 				widget.NewLabel(translator.Translate(
-					"App Version: %s", agent.Version)),
+					"App Version: %s\tHA Version: %s", agent.Version, hassVersion)),
 				widget.NewLabel(translator.Translate(
 					"Device Name: "+deviceName)),
 				widget.NewLabel(translator.Translate(
