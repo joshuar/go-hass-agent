@@ -21,7 +21,6 @@ type sensorTracker struct {
 	sensor        map[string]*sensorState
 	sensorWorkers *device.SensorInfo
 	registry      Registry
-	hassConfig    *hass.HassConfig
 }
 
 func NewSensorTracker(ctx context.Context, registryPath fyne.URI) *sensorTracker {
@@ -36,7 +35,6 @@ func NewSensorTracker(ctx context.Context, registryPath fyne.URI) *sensorTracker
 		sensor:        make(map[string]*sensorState),
 		sensorWorkers: setupSensors(),
 		registry:      r,
-		hassConfig:    hass.NewHassConfig(ctx),
 	}
 }
 
@@ -113,7 +111,7 @@ func (tracker *sensorTracker) StartWorkers(ctx context.Context, updateCh chan in
 
 // Update will send a sensor update to HA, checking to ensure the sensor is not
 // disabled. It will also update the local registry state based on the response.
-func (tracker *sensorTracker) Update(ctx context.Context, s hass.SensorUpdate) {
+func (tracker *sensorTracker) Update(ctx context.Context, s hass.SensorUpdate, c *hass.HassConfig) {
 	sensorID := s.ID()
 	var err error
 	if !tracker.exists(sensorID) {
@@ -123,7 +121,7 @@ func (tracker *sensorTracker) Update(ctx context.Context, s hass.SensorUpdate) {
 	}
 	if err == nil {
 		sensor := tracker.get(sensorID)
-		if tracker.hassConfig.IsEntityDisabled(sensorID) {
+		if c.IsEntityDisabled(sensorID) {
 			if !sensor.metadata.Disabled {
 				sensor.metadata.Disabled = true
 			}

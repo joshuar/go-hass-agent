@@ -35,7 +35,7 @@ func (agent *Agent) runSensorTracker(ctx context.Context) {
 			case data := <-updateCh:
 				switch data := data.(type) {
 				case hass.SensorUpdate:
-					go tracker.Update(ctx, data)
+					go tracker.Update(ctx, data, hassConfig)
 				case hass.LocationUpdate:
 					l := hass.MarshalLocationUpdate(data)
 					go hass.APIRequest(ctx, l)
