@@ -29,7 +29,7 @@ var Version string
 
 var translator *translations.Translator
 
-var debugAppID = ""
+var hassConfig *hass.HassConfig
 
 const (
 	Name              = "go-hass-agent"
@@ -79,16 +79,17 @@ func Run(appID string) {
 	go func() {
 		configWg.Wait()
 		appConfig := agent.LoadConfig()
-		ctx := config.StoreInContext(agentCtx, appConfig)
+		agentWorkerCtx := config.StoreInContext(agentCtx, appConfig)
+		hassConfig = hass.NewHassConfig(agentWorkerCtx)
 		workerWg.Add(1)
 		go func() {
 			defer workerWg.Done()
-			agent.runNotificationsWorker(ctx)
+			agent.runNotificationsWorker(agentWorkerCtx)
 		}()
 		workerWg.Add(1)
 		go func() {
 			defer workerWg.Done()
-			agent.runSensorTracker(ctx)
+			agent.runSensorTracker(agentWorkerCtx)
 		}()
 	}()
 
@@ -112,11 +113,12 @@ func RunHeadless(appID string) {
 	var workerWg sync.WaitGroup
 	go func() {
 		appConfig := agent.LoadConfig()
-		ctx := config.StoreInContext(agentCtx, appConfig)
+		agentWorkerCtx := config.StoreInContext(agentCtx, appConfig)
+		hassConfig = hass.NewHassConfig(agentWorkerCtx)
 		workerWg.Add(1)
 		go func() {
 			defer workerWg.Done()
-			agent.runSensorTracker(ctx)
+			agent.runSensorTracker(agentWorkerCtx)
 		}()
 	}()
 

@@ -107,7 +107,6 @@ func newMockSensorTracker(t *testing.T) *sensorTracker {
 		sensor:        make(map[string]*sensorState),
 		sensorWorkers: nil,
 		registry:      fakeRegistry,
-		hassConfig:    nil,
 	}
 	return fakeTracker
 }
@@ -151,44 +150,10 @@ func Test_sensorTracker_add(t *testing.T) {
 				sensor:        tt.fields.sensor,
 				sensorWorkers: tt.fields.sensorWorkers,
 				registry:      tt.fields.registry,
-				hassConfig:    tt.fields.hassConfig,
 			}
 			if err := tracker.add(tt.args.s); (err != nil) != tt.wantErr {
 				t.Errorf("sensorTracker.add() error = %v, wantErr %v", err, tt.wantErr)
 			}
-		})
-	}
-}
-
-func Test_sensorTracker_Update(t *testing.T) {
-	type fields struct {
-		mu            sync.RWMutex
-		sensor        map[string]*sensorState
-		sensorWorkers *device.SensorInfo
-		registry      *badgerDBRegistry
-		hassConfig    *hass.HassConfig
-	}
-	type args struct {
-		ctx context.Context
-		s   hass.SensorUpdate
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		args   args
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tracker := &sensorTracker{
-				mu:            tt.fields.mu,
-				sensor:        tt.fields.sensor,
-				sensorWorkers: tt.fields.sensorWorkers,
-				registry:      tt.fields.registry,
-				hassConfig:    tt.fields.hassConfig,
-			}
-			tracker.Update(tt.args.ctx, tt.args.s)
 		})
 	}
 }
@@ -268,7 +233,6 @@ func Test_sensorTracker_update(t *testing.T) {
 				sensor:        tt.fields.sensor,
 				sensorWorkers: tt.fields.sensorWorkers,
 				registry:      tt.fields.registry,
-				hassConfig:    tt.fields.hassConfig,
 			}
 			tracker.update(tt.args.s)
 		})
@@ -349,7 +313,6 @@ func Test_sensorTracker_StartWorkers(t *testing.T) {
 				sensor:        tt.fields.sensor,
 				sensorWorkers: tt.fields.sensorWorkers,
 				registry:      tt.fields.registry,
-				hassConfig:    tt.fields.hassConfig,
 			}
 			tracker.StartWorkers(tt.args.ctx, tt.args.updateCh)
 		})
