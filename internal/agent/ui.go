@@ -10,6 +10,7 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
+	"fyne.io/fyne/v2/cmd/fyne_settings/settings"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/driver/desktop"
 	"fyne.io/fyne/v2/layout"
@@ -32,7 +33,12 @@ func newUI(appID string) fyne.App {
 }
 
 func (agent *Agent) setupSystemTray() {
-	// a.hassConfig = hass.GetConfig(a.config.RestAPIURL)
+	openSettings := func() {
+		w := agent.app.NewWindow("Fyne Settings")
+		w.SetContent(settings.NewSettings().LoadAppearanceScreen(w))
+		w.Resize(fyne.NewSize(480, 480))
+		w.Show()
+	}
 	agent.tray = agent.app.NewWindow("System Tray")
 	agent.tray.SetMaster()
 	if desk, ok := agent.app.(desktop.App); ok {
@@ -60,10 +66,12 @@ func (agent *Agent) setupSystemTray() {
 			url, _ := url.Parse(featureRequestURL)
 			agent.app.OpenURL(url)
 		})
+		menuItemSettings := fyne.NewMenuItem("Settings", openSettings)
 		menu := fyne.NewMenu(agent.Name,
 			menuItemAbout,
 			menuItemIssue,
-			menuItemFeatureRequest)
+			menuItemFeatureRequest,
+			menuItemSettings)
 		desk.SetSystemTrayMenu(menu)
 	}
 	agent.tray.Hide()
