@@ -11,6 +11,7 @@ import (
 
 	"github.com/godbus/dbus/v5"
 	"github.com/iancoleman/strcase"
+	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/rs/zerolog/log"
 )
@@ -96,14 +97,15 @@ func marshalPowerStateUpdate(ctx context.Context, sensor powerProp, path dbus.Ob
 }
 
 func PowerUpater(ctx context.Context, status chan interface{}) {
-	deviceAPI, err := FetchAPIFromContext(ctx)
+	deviceAPI, err := device.FetchAPIFromContext(ctx)
 	if err != nil {
 		log.Debug().Err(err).Caller().
 			Msg("Could not connect to DBus.")
 		return
 	}
+	dbusAPI := deviceAPI.EndPoint("system").(*bus)
 
-	activePowerProfile, err := deviceAPI.SystemBusRequest().
+	activePowerProfile, err := NewBusRequest(dbusAPI).
 		Path(powerProfilesDBusPath).
 		Destination(powerProfilesDBusDest).
 		GetProp(powerProfilesDBusDest + ".ActiveProfile")
@@ -118,33 +120,31 @@ func PowerUpater(ctx context.Context, status chan interface{}) {
 		"",
 		activePowerProfile)
 
-	powerProfileDBusMatch := []dbus.MatchOption{
-		dbus.WithMatchObjectPath(powerProfilesDBusPath),
-	}
-	powerProfileHandler := func(s *dbus.Signal) {
-		updatedProps := s.Body[1].(map[string]dbus.Variant)
-		for propName, propValue := range updatedProps {
-			var propType powerProp
-			switch propName {
-			case "ActiveProfile":
-				propType = profile
-			default:
-				log.Debug().Msgf("Unhandled property %v changed to %v", propName, propValue)
-			}
-			if propType != 0 {
-				propState := marshalPowerStateUpdate(ctx,
-					propType,
-					s.Path,
-					"",
-					propValue)
-				status <- propState
-			}
-		}
-	}
-	deviceAPI.SystemBusRequest().
+		NewBusRequest(dbusAPI).
 		Path(powerProfilesDBusPath).
-		Match(powerProfileDBusMatch).
+		Match([]dbus.MatchOption{
+			dbus.WithMatchObjectPath(powerProfilesDBusPath),
+		}).
 		Event("org.freedesktop.DBus.Properties.PropertiesChanged").
-		Handler(powerProfileHandler).
+		Handler(func(s *dbus.Signal) {
+			updatedProps := s.Body[1].(map[string]dbus.Variant)
+			for propName, propValue := range updatedProps {
+				var propType powerProp
+				switch propName {
+				case "ActiveProfile":
+					propType = profile
+				default:
+					log.Debug().Msgf("Unhandled property %v changed to %v", propName, propValue)
+				}
+				if propType != 0 {
+					propState := marshalPowerStateUpdate(ctx,
+						propType,
+						s.Path,
+						"",
+						propValue)
+					status <- propState
+				}
+			}
+		}).
 		AddWatch(ctx)
 }
