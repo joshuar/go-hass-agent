@@ -7,7 +7,6 @@ package linux
 
 import (
 	"context"
-	"errors"
 )
 
 type LinuxDeviceAPI struct {
@@ -44,28 +43,4 @@ func (d *LinuxDeviceAPI) SensorWorkers() []func(context.Context, chan interface{
 
 func (d *LinuxDeviceAPI) EndPoint(e string) interface{} {
 	return d.dbus[e]
-}
-
-// key is an unexported type for keys defined in this package.
-// This prevents collisions with keys defined in other packages.
-type key int
-
-// configKey is the key for DeviceAPI values in Contexts. It is
-// unexported; clients use linux.NewContext and linux.FromContext
-// instead of using this key directly.
-var configKey key
-
-// StoreAPIInContext returns a new Context that embeds a DeviceAPI.
-func StoreAPIInContext(ctx context.Context, c *LinuxDeviceAPI) context.Context {
-	return context.WithValue(ctx, configKey, c)
-}
-
-// FetchAPIFromContext returns the DeviceAPI stored in ctx, or an error if there
-// is none
-func FetchAPIFromContext(ctx context.Context) (*LinuxDeviceAPI, error) {
-	if c, ok := ctx.Value(configKey).(*LinuxDeviceAPI); !ok {
-		return nil, errors.New("no API in context")
-	} else {
-		return c, nil
-	}
 }

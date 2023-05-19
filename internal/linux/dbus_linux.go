@@ -281,7 +281,7 @@ func findPortal() string {
 // GetHostname will try to fetch the hostname of the device from DBus. Failing
 // that, it will default to using "localhost"
 func GetHostname(ctx context.Context) string {
-	deviceAPI, err := FetchAPIFromContext(ctx)
+	deviceAPI, err := device.FetchAPIFromContext(ctx)
 	if err != nil {
 		log.Debug().Err(err).Caller().
 			Msg("Could not connect to DBus.")
@@ -305,7 +305,7 @@ func GetHostname(ctx context.Context) string {
 // fails, it returns empty strings for these values
 func GetHardwareDetails(ctx context.Context) (string, string) {
 	var vendor, model string
-	deviceAPI, err := FetchAPIFromContext(ctx)
+	deviceAPI, err := device.FetchAPIFromContext(ctx)
 	if err != nil {
 		log.Debug().Err(err).Caller().
 			Msg("Could not connect to DBus.")
