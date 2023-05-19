@@ -69,7 +69,11 @@ func (s *sensorState) Name() string {
 }
 
 func (s *sensorState) State() interface{} {
-	return s.state
+	if s.state != nil {
+		return s.state
+	} else {
+		return "Unknown"
+	}
 }
 
 func (s *sensorState) Attributes() interface{} {
@@ -89,11 +93,20 @@ func (s *sensorState) EntityCategory() string {
 }
 
 func (s *sensorState) Disabled() bool {
-	return s.metadata.Disabled
+	if s.metadata != nil {
+		return s.metadata.Disabled
+	} else {
+		return false
+	}
+
 }
 
 func (s *sensorState) Registered() bool {
-	return s.metadata.Registered
+	if s.metadata != nil {
+		return s.metadata.Registered
+	} else {
+		return false
+	}
 }
 
 // sensorState implements hass.Request so its data can be sent to the HA API
@@ -116,7 +129,12 @@ func (sensor *sensorState) ResponseHandler(rawResponse bytes.Buffer) {
 			Msgf("No response for %s request. Likely problem with request data.", sensor.name)
 	default:
 		var r interface{}
-		json.Unmarshal(rawResponse.Bytes(), &r)
+		err := json.Unmarshal(rawResponse.Bytes(), &r)
+		if err != nil {
+			log.Debug().Caller().Err(err).
+				Msg("Could not unmarshal response.")
+			return
+		}
 		response := r.(map[string]interface{})
 		if v, ok := response["success"]; ok {
 			if v.(bool) && !sensor.metadata.Registered {
