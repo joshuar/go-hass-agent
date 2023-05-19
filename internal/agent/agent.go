@@ -18,6 +18,7 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/config"
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass"
+	"github.com/joshuar/go-hass-agent/internal/sensors"
 	"github.com/joshuar/go-hass-agent/internal/translations"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -30,6 +31,8 @@ var Version string
 var translator *translations.Translator
 
 var hassConfig *hass.HassConfig
+
+var tracker *sensors.SensorTracker
 
 const (
 	Name              = "go-hass-agent"

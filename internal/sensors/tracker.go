@@ -16,14 +16,14 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-type sensorTracker struct {
+type SensorTracker struct {
 	mu            sync.RWMutex
 	sensor        map[string]*sensorState
 	sensorWorkers *device.SensorInfo
 	registry      Registry
 }
 
-func NewSensorTracker(ctx context.Context, registryPath fyne.URI) *sensorTracker {
+func NewSensorTracker(ctx context.Context, registryPath fyne.URI) *SensorTracker {
 	r := &nutsdbRegistry{}
 	err := r.Open(ctx, registryPath)
 	if err != nil {
@@ -31,7 +31,7 @@ func NewSensorTracker(ctx context.Context, registryPath fyne.URI) *sensorTracker
 			Msg("Unable to open registry")
 		return nil
 	}
-	return &sensorTracker{
+	return &SensorTracker{
 		sensor:        make(map[string]*sensorState),
 		sensorWorkers: setupSensors(),
 		registry:      r,
@@ -40,7 +40,7 @@ func NewSensorTracker(ctx context.Context, registryPath fyne.URI) *sensorTracker
 
 // Add creates a new sensor in the tracker based on a recieved state
 // update.
-func (tracker *sensorTracker) add(s hass.SensorUpdate) error {
+func (tracker *SensorTracker) add(s hass.SensorUpdate) error {
 	tracker.mu.Lock()
 	if tracker.sensor == nil {
 		tracker.mu.Unlock()
@@ -63,13 +63,14 @@ func (tracker *sensorTracker) add(s hass.SensorUpdate) error {
 	}
 }
 
-func (tracker *sensorTracker) get(id string) *sensorState {
+// Get fetches a sensors current tracked state
+func (tracker *SensorTracker) Get(id string) *sensorState {
 	tracker.mu.RLock()
 	defer tracker.mu.RUnlock()
 	return tracker.sensor[id]
 }
 
-func (tracker *sensorTracker) update(s hass.SensorUpdate) error {
+func (tracker *SensorTracker) update(s hass.SensorUpdate) error {
 	if !tracker.exists(s.ID()) {
 		return errors.New("sensor not found")
 	}
@@ -81,7 +82,7 @@ func (tracker *sensorTracker) update(s hass.SensorUpdate) error {
 	return nil
 }
 
-func (tracker *sensorTracker) exists(id string) bool {
+func (tracker *SensorTracker) exists(id string) bool {
 	tracker.mu.RLock()
 	defer tracker.mu.RUnlock()
 	if _, ok := tracker.sensor[id]; ok {
@@ -93,7 +94,7 @@ func (tracker *sensorTracker) exists(id string) bool {
 
 // StartWorkers will call all the sensor worker functions that have been defined
 // for this device.
-func (tracker *sensorTracker) StartWorkers(ctx context.Context, updateCh chan interface{}) {
+func (tracker *SensorTracker) StartWorkers(ctx context.Context, updateCh chan interface{}) {
 	var wg sync.WaitGroup
 
 	// Run all the defined sensor update functions.
@@ -111,7 +112,7 @@ func (tracker *sensorTracker) StartWorkers(ctx context.Context, updateCh chan in
 
 // Update will send a sensor update to HA, checking to ensure the sensor is not
 // disabled. It will also update the local registry state based on the response.
-func (tracker *sensorTracker) Update(ctx context.Context, s hass.SensorUpdate, c *hass.HassConfig) {
+func (tracker *SensorTracker) Update(ctx context.Context, s hass.SensorUpdate, c *hass.HassConfig) {
 	sensorID := s.ID()
 	var err error
 	if !tracker.exists(sensorID) {
@@ -120,7 +121,7 @@ func (tracker *sensorTracker) Update(ctx context.Context, s hass.SensorUpdate, c
 		err = tracker.update(s)
 	}
 	if err == nil {
-		sensor := tracker.get(sensorID)
+		sensor := tracker.Get(sensorID)
 		if c.IsEntityDisabled(sensorID) {
 			if !sensor.metadata.Disabled {
 				sensor.metadata.Disabled = true
