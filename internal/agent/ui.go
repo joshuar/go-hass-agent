@@ -17,6 +17,7 @@ import (
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
+	xlayout "fyne.io/x/fyne/layout"
 	"github.com/joshuar/go-hass-agent/assets/trayicon"
 )
 
@@ -89,35 +90,31 @@ func (agent *Agent) setupSystemTray() {
 func (agent *Agent) makeSensorTable() {
 	s, _ := hassConfig.Get("entities")
 	sensors := s.(map[string]map[string]interface{})
-	var sensorsTable [][3]string
+	var sensorsTable []fyne.CanvasObject
 	for rowKey, rowValue := range sensors {
-		var sensorRow [3]string
-		sensorRow[0] = rowKey
-		sensorRow[1] = fmt.Sprintf("Disabled: %v", rowValue["disabled"])
+		var sensorRow []fyne.CanvasObject
+		sensorRow = append(sensorRow, widget.NewLabel(rowKey))
 		sensorState := tracker.Get(rowKey)
 		if sensorState != nil {
-			sensorRow[2] = fmt.Sprintf("%v %s",
-				sensorState.State(), sensorState.UnitOfMeasurement())
+			sensorRow = append(sensorRow, widget.NewLabel(fmt.Sprintf("%v %s",
+				sensorState.State(), sensorState.UnitOfMeasurement())))
 		} else {
-			sensorRow[2] = ""
+			sensorRow = append(sensorRow, widget.NewLabel(""))
 		}
-		sensorsTable = append(sensorsTable, sensorRow)
+		if rowValue["disabled"].(bool) {
+			sensorRow = append(sensorRow, widget.NewLabel("Disabled"))
+		} else {
+			sensorRow = append(sensorRow, widget.NewLabel(""))
+		}
+		tableRow := container.New(layout.NewGridLayout(3), sensorRow...)
+		sensorsTable = append(sensorsTable,
+			xlayout.Responsive(tableRow))
 	}
-	t := widget.NewTable(
-		func() (int, int) { return len(sensors), 3 },
-		func() fyne.CanvasObject {
-			return widget.NewLabel("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
-		},
-		func(id widget.TableCellID, cell fyne.CanvasObject) {
-			label := cell.(*widget.Label)
-			label.SetText(sensorsTable[id.Row][id.Col])
-		})
-	// t.SetColumnWidth(0, 34)
-	// t.SetColumnWidth(1, 102)
-	// t.SetRowHeight(2, 50)
+	table := xlayout.NewResponsiveLayout(sensorsTable...)
+	layout := container.NewVScroll(table)
 	w := agent.app.NewWindow(agent.setTitle("Sensors"))
-	w.SetContent(t)
-	w.FullScreen()
+	w.SetContent(layout)
+	w.Resize(fyne.NewSize(480, 640))
 	w.Show()
 }
 
