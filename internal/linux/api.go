@@ -7,22 +7,23 @@ package linux
 
 import (
 	"context"
+	"sync"
 )
 
 type LinuxDeviceAPI struct {
+	mu   sync.Mutex
 	dbus map[string]*bus
 }
 
 // NewDeviceAPI sets up a DeviceAPI struct with appropriate DBus API endpoints
 func NewDeviceAPI(ctx context.Context) *LinuxDeviceAPI {
-
-	dbusEndpoints := make(map[string]*bus)
-	dbusEndpoints["session"] = newBus(ctx, sessionBus)
-	dbusEndpoints["system"] = newBus(ctx, systemBus)
-
-	return &LinuxDeviceAPI{
-		dbus: dbusEndpoints,
-	}
+	api := new(LinuxDeviceAPI)
+	api.dbus = make(map[string]*bus)
+	api.mu.Lock()
+	api.dbus["session"] = newBus(ctx, sessionBus)
+	api.dbus["system"] = newBus(ctx, systemBus)
+	api.mu.Unlock()
+	return api
 }
 
 func (d *LinuxDeviceAPI) SensorWorkers() []func(context.Context, chan interface{}) {
@@ -42,5 +43,7 @@ func (d *LinuxDeviceAPI) SensorWorkers() []func(context.Context, chan interface{
 }
 
 func (d *LinuxDeviceAPI) EndPoint(e string) interface{} {
+	d.mu.Lock()
+	defer d.mu.Unlock()
 	return d.dbus[e]
 }
