@@ -12,6 +12,7 @@ import (
 
 	"github.com/godbus/dbus/v5"
 	"github.com/iancoleman/strcase"
+	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v3/process"
@@ -148,12 +149,13 @@ func marshalAppStateUpdate(t appSensorType, v map[string]dbus.Variant) *appSenso
 }
 
 func AppUpdater(ctx context.Context, update chan interface{}) {
-	deviceAPI, err := FetchAPIFromContext(ctx)
+	deviceAPI, err := device.FetchAPIFromContext(ctx)
 	if err != nil {
 		log.Debug().Err(err).Caller().
 			Msg("Could not connect to DBus.")
 		return
 	}
+	dbusAPI := deviceAPI.EndPoint("session").(*bus)
 
 	portalDest := findPortal()
 	if portalDest == "" {
@@ -167,7 +169,7 @@ func AppUpdater(ctx context.Context, update chan interface{}) {
 		dbus.WithMatchInterface(appStateDBusInterface),
 	}
 	appStateHandler := func(s *dbus.Signal) {
-		activeAppList := deviceAPI.SessionBusRequest().
+		activeAppList := NewBusRequest(dbusAPI).
 			Path(appStateDBusPath).
 			Destination(portalDest).
 			GetData(appStateDBusMethod).AsVariantMap()
@@ -179,7 +181,7 @@ func AppUpdater(ctx context.Context, update chan interface{}) {
 			update <- marshalAppStateUpdate(activeApp, activeAppList)
 		}
 	}
-	deviceAPI.SessionBusRequest().
+	NewBusRequest(dbusAPI).
 		Path(appStateDBusPath).
 		Match(appStateDBusMatches).
 		Event(appStateDBusEvent).
