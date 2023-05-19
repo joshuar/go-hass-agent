@@ -13,6 +13,7 @@ import (
 
 	"github.com/godbus/dbus/v5"
 	"github.com/iancoleman/strcase"
+	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/rs/zerolog/log"
 )
@@ -43,7 +44,7 @@ type upowerBattery struct {
 	props    map[batteryProp]dbus.Variant
 }
 
-func (b *upowerBattery) updateProp(api *DeviceAPI, prop batteryProp) {
+func (b *upowerBattery) updateProp(dbusAPI *bus, prop batteryProp) {
 	var p string
 	switch prop {
 	case battType:
@@ -67,7 +68,7 @@ func (b *upowerBattery) updateProp(api *DeviceAPI, prop batteryProp) {
 	case model:
 		p = "Model"
 	}
-	propValue, err := api.SystemBusRequest().
+	propValue, err := NewBusRequest(dbusAPI).
 		Path(b.dBusPath).
 		Destination(upowerDBusDest).
 		GetProp("org.freedesktop.UPower.Device." + p)
@@ -83,7 +84,7 @@ func (b *upowerBattery) getProp(prop batteryProp) interface{} {
 	return b.props[prop].Value()
 }
 
-func (b *upowerBattery) marshalBatteryStateUpdate(api *DeviceAPI, prop batteryProp) *upowerBatteryState {
+func (b *upowerBattery) marshalBatteryStateUpdate(dbusAPI *bus, prop batteryProp) *upowerBatteryState {
 	// log.Debug().Caller().Msgf("Marshalling update for %v for battery %v", prop.String(), b.getProp(NativePath).(string))
 	state := &upowerBatteryState{
 		batteryID: b.getProp(nativePath).(string),
@@ -95,8 +96,8 @@ func (b *upowerBattery) marshalBatteryStateUpdate(api *DeviceAPI, prop batteryPr
 	}
 	switch prop {
 	case energyRate:
-		b.updateProp(api, voltage)
-		b.updateProp(api, energy)
+		b.updateProp(dbusAPI, voltage)
+		b.updateProp(dbusAPI, energy)
 		state.attributes = &struct {
 			Voltage float64 `json:"Voltage"`
 			Energy  float64 `json:"Energy"`
@@ -295,14 +296,15 @@ func stringLevel(l uint32) string {
 }
 
 func BatteryUpdater(ctx context.Context, status chan interface{}) {
-	deviceAPI, err := FetchAPIFromContext(ctx)
+	deviceAPI, err := device.FetchAPIFromContext(ctx)
 	if err != nil {
 		log.Debug().Err(err).Caller().
 			Msg("Could not connect to DBus.")
 		return
 	}
+	dbusAPI := deviceAPI.EndPoint("system").(*bus)
 
-	batteryList := deviceAPI.SystemBusRequest().
+	batteryList := NewBusRequest(dbusAPI).
 		Path(upowerDBusPath).
 		Destination(upowerDBusDest).
 		GetData(upowerGetDevicesMethod).AsObjectPathList()
@@ -321,14 +323,14 @@ func BatteryUpdater(ctx context.Context, status chan interface{}) {
 			dBusPath: v,
 		}
 		batteryTracker[batteryID].props = make(map[batteryProp]dbus.Variant)
-		batteryTracker[batteryID].updateProp(deviceAPI, nativePath)
-		batteryTracker[batteryID].updateProp(deviceAPI, battType)
-		batteryTracker[batteryID].updateProp(deviceAPI, model)
+		batteryTracker[batteryID].updateProp(dbusAPI, nativePath)
+		batteryTracker[batteryID].updateProp(dbusAPI, battType)
+		batteryTracker[batteryID].updateProp(dbusAPI, model)
 
 		// Standard battery properties as sensors
 		for _, prop := range []batteryProp{battState} {
-			batteryTracker[batteryID].updateProp(deviceAPI, prop)
-			stateUpdate := batteryTracker[batteryID].marshalBatteryStateUpdate(deviceAPI, prop)
+			batteryTracker[batteryID].updateProp(dbusAPI, prop)
+			stateUpdate := batteryTracker[batteryID].marshalBatteryStateUpdate(dbusAPI, prop)
 			if stateUpdate != nil {
 				status <- stateUpdate
 			}
@@ -337,16 +339,16 @@ func BatteryUpdater(ctx context.Context, status chan interface{}) {
 		// For some battery types, track additional properties as sensors
 		if batteryTracker[batteryID].getProp(battType).(uint32) == 2 {
 			for _, prop := range []batteryProp{percentage, temperature, energyRate} {
-				batteryTracker[batteryID].updateProp(deviceAPI, prop)
-				stateUpdate := batteryTracker[batteryID].marshalBatteryStateUpdate(deviceAPI, prop)
+				batteryTracker[batteryID].updateProp(dbusAPI, prop)
+				stateUpdate := batteryTracker[batteryID].marshalBatteryStateUpdate(dbusAPI, prop)
 				if stateUpdate != nil {
 					status <- stateUpdate
 				}
 			}
 		} else {
-			batteryTracker[batteryID].updateProp(deviceAPI, batteryLevel)
+			batteryTracker[batteryID].updateProp(dbusAPI, batteryLevel)
 			if batteryTracker[batteryID].getProp(batteryLevel).(uint32) != 1 {
-				stateUpdate := batteryTracker[batteryID].marshalBatteryStateUpdate(deviceAPI, batteryLevel)
+				stateUpdate := batteryTracker[batteryID].marshalBatteryStateUpdate(dbusAPI, batteryLevel)
 				if stateUpdate != nil {
 					status <- stateUpdate
 				}
@@ -370,7 +372,7 @@ func BatteryUpdater(ctx context.Context, status chan interface{}) {
 						batteryTracker[batteryID].props[BatteryProp] = propValue
 						log.Debug().Caller().
 							Msgf("Updating battery property %v to %v", BatteryProp.String(), propValue.Value())
-						stateUpdate := batteryTracker[batteryID].marshalBatteryStateUpdate(deviceAPI, BatteryProp)
+						stateUpdate := batteryTracker[batteryID].marshalBatteryStateUpdate(dbusAPI, BatteryProp)
 						if stateUpdate != nil {
 							status <- stateUpdate
 						}
@@ -378,7 +380,7 @@ func BatteryUpdater(ctx context.Context, status chan interface{}) {
 				}
 			}
 		}
-		deviceAPI.SystemBusRequest().
+		NewBusRequest(dbusAPI).
 			Path(dbus.ObjectPath(v)).
 			Match(batteryChangeDBusMatches).
 			Event("org.freedesktop.DBus.Properties.PropertiesChanged").
