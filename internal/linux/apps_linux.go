@@ -155,7 +155,7 @@ func AppUpdater(ctx context.Context, update chan interface{}) {
 			Msg("Could not connect to DBus.")
 		return
 	}
-	dbusAPI := deviceAPI.EndPoint("session").(*bus)
+	dbusAPI := device.GetAPIEndpoint[*bus](deviceAPI, "session")
 
 	portalDest := findPortal()
 	if portalDest == "" {

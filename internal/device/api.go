@@ -38,3 +38,11 @@ func FetchAPIFromContext(ctx context.Context) (API, error) {
 		return c, nil
 	}
 }
+
+func GetAPIEndpoint[T any](api API, endpoint string) T {
+	if e := api.EndPoint(endpoint); e != nil {
+		return e.(T)
+	} else {
+		return *new(T)
+	}
+}

@@ -100,7 +100,7 @@ func ProblemsUpdater(ctx context.Context, status chan interface{}) {
 			Msg("Could not connect to DBus.")
 		return
 	}
-	dbusAPI := deviceAPI.EndPoint("system").(*bus)
+	dbusAPI := device.GetAPIEndpoint[*bus](deviceAPI, "system")
 
 	problems := func() {
 		problems := &problems{
