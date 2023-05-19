@@ -97,7 +97,13 @@ func (tracker *SensorTracker) StartWorkers(ctx context.Context, updateCh chan in
 	var wg sync.WaitGroup
 
 	// Run all the defined sensor update functions.
-	deviceAPI, _ := linux.FetchAPIFromContext(ctx)
+	deviceAPI, err := linux.FetchAPIFromContext(ctx)
+	if err != nil {
+		log.Debug().Caller().Err(err).
+			Msg("Could not fetch sensor workers.")
+		wg.Done()
+		return
+	}
 	deviceAPI.Workers = append(deviceAPI.Workers, device.ExternalIPUpdater)
 	for _, worker := range deviceAPI.Workers {
 		wg.Add(1)
