@@ -79,7 +79,6 @@ func APIRequest(ctx context.Context, request Request) {
 	if err != nil {
 		log.Error().Stack().Err(err).
 			Msg("Could not fetch secret from agent config.")
-		request.ResponseHandler(res)
 		cancel()
 		return
 	}
@@ -87,7 +86,6 @@ func APIRequest(ctx context.Context, request Request) {
 	if err != nil {
 		log.Error().Stack().Err(err).
 			Msg("Could not fetch api url from agent config.")
-		request.ResponseHandler(res)
 		cancel()
 		return
 	}
@@ -97,7 +95,7 @@ func APIRequest(ctx context.Context, request Request) {
 		log.Error().Stack().Err(err).
 			Msg("Unable to format request")
 		cancel()
-		request.ResponseHandler(res)
+		return
 	} else {
 		err := requests.
 			URL(url.(string)).
@@ -108,6 +106,7 @@ func APIRequest(ctx context.Context, request Request) {
 			log.Error().Stack().Err(err).
 				Msgf("Unable to send request with body:\n\t%s\n\t", reqJson)
 			cancel()
+			return
 		}
 		request.ResponseHandler(res)
 	}
