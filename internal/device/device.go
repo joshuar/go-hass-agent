@@ -6,10 +6,7 @@
 package device
 
 import (
-	"context"
-
 	"github.com/joshuar/go-hass-agent/internal/hass"
-	"github.com/rs/zerolog/log"
 )
 
 type DeviceInfo interface {
@@ -55,24 +52,4 @@ func GenerateRegistrationRequest(d DeviceInfo) *hass.RegistrationRequest {
 			SupportsEncryption: d.SupportsEncryption(),
 		}
 	}
-}
-
-type SensorInfo struct {
-	sensorWorkers map[string]func(context.Context, chan interface{})
-}
-
-func NewSensorInfo() *SensorInfo {
-	return &SensorInfo{
-		sensorWorkers: make(map[string]func(context.Context, chan interface{})),
-	}
-}
-
-func (i *SensorInfo) Add(name string, workerFunc func(context.Context, chan interface{})) {
-	log.Debug().Caller().
-		Msgf("Registering %s sensors.", name)
-	i.sensorWorkers[name] = workerFunc
-}
-
-func (i *SensorInfo) Get() map[string]func(context.Context, chan interface{}) {
-	return i.sensorWorkers
 }

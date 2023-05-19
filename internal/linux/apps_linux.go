@@ -155,7 +155,7 @@ func AppUpdater(ctx context.Context, update chan interface{}) {
 		return
 	}
 
-	portalDest := FindPortal()
+	portalDest := findPortal()
 	if portalDest == "" {
 		log.Debug().Caller().
 			Msgf("Unsupported or unknown portal")

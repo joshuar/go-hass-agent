@@ -6,12 +6,10 @@
 package device
 
 import (
-	"context"
 	"reflect"
 	"testing"
 
 	"github.com/joshuar/go-hass-agent/internal/hass"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -119,91 +117,6 @@ func TestGenerateRegistrationRequest(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := GenerateRegistrationRequest(tt.args.d); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("GenerateRegistrationRequest() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestNewSensorInfo(t *testing.T) {
-	wanted := &SensorInfo{
-		sensorWorkers: make(map[string]func(context.Context, chan interface{})),
-	}
-	tests := []struct {
-		name string
-		want *SensorInfo
-	}{
-		{
-			name: "default test",
-			want: wanted,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := NewSensorInfo(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewSensorInfo() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestSensorInfo_Add(t *testing.T) {
-	testName := "test"
-	testFunc := func(context.Context, chan interface{}) {}
-	type args struct {
-		name       string
-		workerFunc func(context.Context, chan interface{})
-	}
-	tests := []struct {
-		name string
-		args args
-	}{
-		{
-			name: "default test",
-			args: args{name: testName, workerFunc: testFunc},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			i := NewSensorInfo()
-			i.Add(tt.args.name, tt.args.workerFunc)
-			assert.Contains(t, i.sensorWorkers, testName)
-		})
-	}
-}
-
-func TestSensorInfo_Get(t *testing.T) {
-	testName := "test"
-	testFunc := func(context.Context, chan interface{}) {}
-	testMap := make(map[string]func(context.Context, chan interface{}))
-	testMap[testName] = testFunc
-	type fields struct {
-		sensorsName string
-		sensorsFunc func(context.Context, chan interface{})
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   map[string]func(context.Context, chan interface{})
-	}{
-		{
-			name:   "test empty",
-			fields: fields{},
-			want:   make(map[string]func(context.Context, chan interface{})),
-		},
-		{
-			name:   "test exists",
-			fields: fields{sensorsName: testName, sensorsFunc: testFunc},
-			want:   testMap,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			i := NewSensorInfo()
-			if tt.fields.sensorsName != "" {
-				i.Add(tt.fields.sensorsName, tt.fields.sensorsFunc)
-			}
-			if got := i.Get(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("SensorInfo.Get() = %v, want %v", got, tt.want)
 			}
 		})
 	}

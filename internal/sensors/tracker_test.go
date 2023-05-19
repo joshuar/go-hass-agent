@@ -6,12 +6,10 @@
 package sensors
 
 import (
-	"context"
 	"reflect"
 	"sync"
 	"testing"
 
-	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/stretchr/testify/mock"
 )
@@ -104,20 +102,18 @@ type MockSensorRegistry struct {
 func newMockSensorTracker(t *testing.T) *SensorTracker {
 	fakeRegistry := newMockSensorRegistry(t)
 	fakeTracker := &SensorTracker{
-		sensor:        make(map[string]*sensorState),
-		sensorWorkers: nil,
-		registry:      fakeRegistry,
+		sensor:   make(map[string]*sensorState),
+		registry: fakeRegistry,
 	}
 	return fakeTracker
 }
 
 func Test_sensorTracker_add(t *testing.T) {
 	type fields struct {
-		mu            sync.RWMutex
-		sensor        map[string]*sensorState
-		sensorWorkers *device.SensorInfo
-		registry      Registry
-		hassConfig    *hass.HassConfig
+		mu         sync.RWMutex
+		sensor     map[string]*sensorState
+		registry   Registry
+		hassConfig *hass.HassConfig
 	}
 	type args struct {
 		s hass.SensorUpdate
@@ -146,10 +142,9 @@ func Test_sensorTracker_add(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tracker := &SensorTracker{
-				mu:            tt.fields.mu,
-				sensor:        tt.fields.sensor,
-				sensorWorkers: tt.fields.sensorWorkers,
-				registry:      tt.fields.registry,
+				mu:       tt.fields.mu,
+				sensor:   tt.fields.sensor,
+				registry: tt.fields.registry,
 			}
 			if err := tracker.add(tt.args.s); (err != nil) != tt.wantErr {
 				t.Errorf("sensorTracker.add() error = %v, wantErr %v", err, tt.wantErr)
@@ -195,11 +190,10 @@ func Test_sensorTracker_update(t *testing.T) {
 	fakeSensorStates := make(map[string]*sensorState)
 	fakeSensorStates[fakeSensorUpdate.ID()] = marshalSensorState(fakeSensorUpdate)
 	type fields struct {
-		mu            sync.RWMutex
-		sensor        map[string]*sensorState
-		sensorWorkers *device.SensorInfo
-		registry      *badgerDBRegistry
-		hassConfig    *hass.HassConfig
+		mu         sync.RWMutex
+		sensor     map[string]*sensorState
+		registry   *badgerDBRegistry
+		hassConfig *hass.HassConfig
 	}
 	type args struct {
 		s hass.SensorUpdate
@@ -229,10 +223,9 @@ func Test_sensorTracker_update(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tracker := &SensorTracker{
-				mu:            tt.fields.mu,
-				sensor:        tt.fields.sensor,
-				sensorWorkers: tt.fields.sensorWorkers,
-				registry:      tt.fields.registry,
+				mu:       tt.fields.mu,
+				sensor:   tt.fields.sensor,
+				registry: tt.fields.registry,
 			}
 			tracker.update(tt.args.s)
 		})
@@ -268,53 +261,6 @@ func Test_sensorTracker_exists(t *testing.T) {
 			if got := tracker.exists(tt.args.id); got != tt.want {
 				t.Errorf("sensorTracker.exists() = %v, want %v", got, tt.want)
 			}
-		})
-	}
-}
-
-func Test_sensorTracker_StartWorkers(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	updateCh := make(chan interface{})
-	defer close(updateCh)
-
-	fakeWorkerFunc := func(context.Context, chan interface{}) {}
-
-	fakeWorkers := device.NewSensorInfo()
-	fakeWorkers.Add("fakeSensor", fakeWorkerFunc)
-
-	type fields struct {
-		mu            sync.RWMutex
-		sensor        map[string]*sensorState
-		sensorWorkers *device.SensorInfo
-		registry      *badgerDBRegistry
-		hassConfig    *hass.HassConfig
-	}
-	type args struct {
-		ctx      context.Context
-		updateCh chan interface{}
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		args   args
-	}{
-		{
-			name:   "test adding worker",
-			fields: fields{sensorWorkers: fakeWorkers},
-			args:   args{ctx: ctx, updateCh: updateCh},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tracker := &SensorTracker{
-				mu:            tt.fields.mu,
-				sensor:        tt.fields.sensor,
-				sensorWorkers: tt.fields.sensorWorkers,
-				registry:      tt.fields.registry,
-			}
-			tracker.StartWorkers(tt.args.ctx, tt.args.updateCh)
 		})
 	}
 }
