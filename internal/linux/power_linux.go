@@ -103,7 +103,7 @@ func PowerUpater(ctx context.Context, status chan interface{}) {
 			Msg("Could not connect to DBus.")
 		return
 	}
-	dbusAPI := deviceAPI.EndPoint("system").(*bus)
+	dbusAPI := device.GetAPIEndpoint[*bus](deviceAPI, "system")
 
 	activePowerProfile, err := NewBusRequest(dbusAPI).
 		Path(powerProfilesDBusPath).
@@ -120,7 +120,7 @@ func PowerUpater(ctx context.Context, status chan interface{}) {
 		"",
 		activePowerProfile)
 
-		NewBusRequest(dbusAPI).
+	NewBusRequest(dbusAPI).
 		Path(powerProfilesDBusPath).
 		Match([]dbus.MatchOption{
 			dbus.WithMatchObjectPath(powerProfilesDBusPath),

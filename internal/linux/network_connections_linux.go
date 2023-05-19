@@ -369,7 +369,7 @@ func NetworkConnectionsUpdater(ctx context.Context, status chan interface{}) {
 			Msg("Could not connect to DBus.")
 		return
 	}
-	dbusAPI := deviceAPI.EndPoint("system").(*bus)
+	dbusAPI := device.GetAPIEndpoint[*bus](deviceAPI, "system")
 
 	connList, err := NewBusRequest(dbusAPI).
 		Path(networkManagerPath).
@@ -539,14 +539,15 @@ func processWifiProps(dbusAPI *bus, props map[string]dbus.Variant, path dbus.Obj
 }
 
 func deviceToConnection(ctx context.Context, networkDevicePath dbus.ObjectPath) dbus.ObjectPath {
-	deviceAPI, err := FetchAPIFromContext(ctx)
+	deviceAPI, err := device.FetchAPIFromContext(ctx)
 	if err != nil {
 		log.Debug().Err(err).Caller().
 			Msg("Could not connect to DBus.")
 		return ""
 	}
+	dbusAPI := device.GetAPIEndpoint[*bus](deviceAPI, "system")
 
-	variant, err := deviceAPI.SystemBusRequest().
+	variant, err := NewBusRequest(dbusAPI).
 		Path(networkDevicePath).
 		Destination(networkManagerObject).
 		GetProp(networkManagerObject + ".ActiveConnection")
@@ -566,14 +567,15 @@ func ipConfigToDevice(ctx context.Context, ipConfigPath dbus.ObjectPath, ipConfi
 	case strings.Contains(ipConfigType, "IP6Config"):
 		configProp = "Ip6Config"
 	}
-	deviceAPI, err := FetchAPIFromContext(ctx)
+	deviceAPI, err := device.FetchAPIFromContext(ctx)
 	if err != nil {
 		log.Debug().Err(err).Caller().
 			Msg("Could not connect to DBus.")
 		return ""
 	}
+	dbusAPI := device.GetAPIEndpoint[*bus](deviceAPI, "system")
 
-	deviceList := deviceAPI.SystemBusRequest().
+	deviceList := NewBusRequest(dbusAPI).
 		Path(networkManagerPath).
 		Destination(networkManagerObject).
 		GetData(networkManagerObject + ".GetDevices").
@@ -585,7 +587,7 @@ func ipConfigToDevice(ctx context.Context, ipConfigPath dbus.ObjectPath, ipConfi
 	}
 	if len(deviceList) > 0 {
 		for _, devicePath := range deviceList {
-			c, err := deviceAPI.SystemBusRequest().
+			c, err := NewBusRequest(dbusAPI).
 				Path(devicePath).
 				Destination(networkManagerObject).
 				GetProp(deviceObject + "." + configProp)
