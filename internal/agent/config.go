@@ -51,6 +51,8 @@ func (agent *Agent) LoadConfig() *agentConfig {
 	}
 }
 
+// agentConfig implements config.Config
+
 func (c *agentConfig) Get(property string) (interface{}, error) {
 	switch property {
 	case "version":

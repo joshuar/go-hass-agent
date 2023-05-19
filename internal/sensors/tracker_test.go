@@ -101,9 +101,9 @@ type MockSensorRegistry struct {
 	mock.Mock
 }
 
-func newMockSensorTracker(t *testing.T) *sensorTracker {
+func newMockSensorTracker(t *testing.T) *SensorTracker {
 	fakeRegistry := newMockSensorRegistry(t)
-	fakeTracker := &sensorTracker{
+	fakeTracker := &SensorTracker{
 		sensor:        make(map[string]*sensorState),
 		sensorWorkers: nil,
 		registry:      fakeRegistry,
@@ -145,7 +145,7 @@ func Test_sensorTracker_add(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tracker := &sensorTracker{
+			tracker := &SensorTracker{
 				mu:            tt.fields.mu,
 				sensor:        tt.fields.sensor,
 				sensorWorkers: tt.fields.sensorWorkers,
@@ -162,7 +162,7 @@ func Test_sensorTracker_get(t *testing.T) {
 	fakeSensorUpdate := &mockSensorUpdate{}
 	tracker := newMockSensorTracker(t)
 	tracker.add(fakeSensorUpdate)
-	fakeSensorState := tracker.get(fakeSensorUpdate.ID())
+	fakeSensorState := tracker.Get(fakeSensorUpdate.ID())
 	type args struct {
 		id string
 	}
@@ -183,7 +183,7 @@ func Test_sensorTracker_get(t *testing.T) {
 		}}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := tracker.get(tt.args.id); !reflect.DeepEqual(got, tt.want) {
+			if got := tracker.Get(tt.args.id); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("sensorTracker.get() = %v, want %v", got, tt.want)
 			}
 		})
@@ -228,7 +228,7 @@ func Test_sensorTracker_update(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tracker := &sensorTracker{
+			tracker := &SensorTracker{
 				mu:            tt.fields.mu,
 				sensor:        tt.fields.sensor,
 				sensorWorkers: tt.fields.sensorWorkers,
@@ -308,7 +308,7 @@ func Test_sensorTracker_StartWorkers(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tracker := &sensorTracker{
+			tracker := &SensorTracker{
 				mu:            tt.fields.mu,
 				sensor:        tt.fields.sensor,
 				sensorWorkers: tt.fields.sensorWorkers,
