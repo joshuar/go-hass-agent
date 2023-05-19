@@ -83,6 +83,12 @@ type busRequest struct {
 	dest         string
 }
 
+func NewBusRequest(b *bus) *busRequest {
+	return &busRequest{
+		bus: b,
+	}
+}
+
 // Path defines the DBus path on which a request will operate
 func (r *busRequest) Path(p dbus.ObjectPath) *busRequest {
 	r.path = p
