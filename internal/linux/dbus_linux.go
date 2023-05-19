@@ -244,38 +244,6 @@ func (d *dbusData) AsObjectPath() dbus.ObjectPath {
 	}
 }
 
-type DeviceAPI struct {
-	dBusSystem, dBusSession *bus
-}
-
-// NewDeviceAPI sets up a DeviceAPI struct with appropriate DBus API endpoints
-func NewDeviceAPI(ctx context.Context) *DeviceAPI {
-	api := &DeviceAPI{
-		dBusSystem:  newBus(ctx, systemBus),
-		dBusSession: newBus(ctx, sessionBus),
-	}
-	if api.dBusSystem == nil && api.dBusSession == nil {
-		return nil
-	} else {
-		// go api.monitorDBus(ctx)
-		return api
-	}
-}
-
-// SessionBusRequest creates a request builder for the session bus
-func (d *DeviceAPI) SessionBusRequest() *busRequest {
-	return &busRequest{
-		bus: d.dBusSession,
-	}
-}
-
-// SystemBusRequest creates a request builder for the system bus
-func (d *DeviceAPI) SystemBusRequest() *busRequest {
-	return &busRequest{
-		bus: d.dBusSystem,
-	}
-}
-
 // variantToValue converts a dbus.Variant type into the specified Go native
 // type.
 func variantToValue[S any](variant dbus.Variant) S {
@@ -289,9 +257,9 @@ func variantToValue[S any](variant dbus.Variant) S {
 	return value
 }
 
-// FindPortal is a helper function to work out which portal interface should be
+// findPortal is a helper function to work out which portal interface should be
 // used for getting information on running apps.
-func FindPortal() string {
+func findPortal() string {
 	switch os.Getenv("XDG_CURRENT_DESKTOP") {
 	case "KDE":
 		return "org.freedesktop.impl.portal.desktop.kde"
@@ -367,28 +335,4 @@ func GetHardwareDetails(ctx context.Context) (string, string) {
 		model = string(variantToValue[[]uint8](hwModelFromDBus))
 	}
 	return vendor, model
-}
-
-// key is an unexported type for keys defined in this package.
-// This prevents collisions with keys defined in other packages.
-type key int
-
-// configKey is the key for DeviceAPI values in Contexts. It is
-// unexported; clients use linux.NewContext and linux.FromContext
-// instead of using this key directly.
-var configKey key
-
-// StoreAPIInContext returns a new Context that embeds a DeviceAPI.
-func StoreAPIInContext(ctx context.Context, c *DeviceAPI) context.Context {
-	return context.WithValue(ctx, configKey, c)
-}
-
-// FetchAPIFromContext returns the DeviceAPI stored in ctx, or an error if there
-// is none
-func FetchAPIFromContext(ctx context.Context) (*DeviceAPI, error) {
-	if c, ok := ctx.Value(configKey).(*DeviceAPI); !ok {
-		return nil, errors.New("no API in context")
-	} else {
-		return c, nil
-	}
 }

@@ -13,14 +13,14 @@ import (
 	"fyne.io/fyne/v2"
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass"
+	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/rs/zerolog/log"
 )
 
 type SensorTracker struct {
-	mu            sync.RWMutex
-	sensor        map[string]*sensorState
-	sensorWorkers *device.SensorInfo
-	registry      Registry
+	mu       sync.RWMutex
+	sensor   map[string]*sensorState
+	registry Registry
 }
 
 func NewSensorTracker(ctx context.Context, registryPath fyne.URI) *SensorTracker {
@@ -32,9 +32,8 @@ func NewSensorTracker(ctx context.Context, registryPath fyne.URI) *SensorTracker
 		return nil
 	}
 	return &SensorTracker{
-		sensor:        make(map[string]*sensorState),
-		sensorWorkers: setupSensors(),
-		registry:      r,
+		sensor:   make(map[string]*sensorState),
+		registry: r,
 	}
 }
 
@@ -98,14 +97,14 @@ func (tracker *SensorTracker) StartWorkers(ctx context.Context, updateCh chan in
 	var wg sync.WaitGroup
 
 	// Run all the defined sensor update functions.
-	for name, workerFunction := range tracker.sensorWorkers.Get() {
+	deviceAPI, _ := linux.FetchAPIFromContext(ctx)
+	deviceAPI.Workers = append(deviceAPI.Workers, device.ExternalIPUpdater)
+	for _, worker := range deviceAPI.Workers {
 		wg.Add(1)
-		log.Debug().Caller().
-			Msgf("Setting up sensors for %s.", name)
 		go func(worker func(context.Context, chan interface{})) {
 			defer wg.Done()
 			worker(ctx, updateCh)
-		}(workerFunction)
+		}(worker)
 	}
 	wg.Wait()
 }
