@@ -12,6 +12,7 @@ import (
 
 type DeviceAPI struct {
 	dBusSystem, dBusSession *bus
+	dbus                    map[string]*bus
 	Workers                 []func(context.Context, chan interface{})
 }
 
@@ -30,9 +31,14 @@ func NewDeviceAPI(ctx context.Context) *DeviceAPI {
 	workers = append(workers, DiskUsageUpdater)
 	workers = append(workers, TimeUpdater)
 
+	dbusEndpoints := make(map[string]*bus)
+	dbusEndpoints["session"] = newBus(ctx, sessionBus)
+	dbusEndpoints["system"] = newBus(ctx, systemBus)
+
 	api := &DeviceAPI{
-		dBusSystem:  newBus(ctx, systemBus),
-		dBusSession: newBus(ctx, sessionBus),
+		dBusSystem:  dbusEndpoints["system"],
+		dBusSession: dbusEndpoints["session"],
+		dbus:        dbusEndpoints,	
 		Workers:     workers,
 	}
 	if api.dBusSystem == nil && api.dBusSession == nil {
@@ -41,6 +47,14 @@ func NewDeviceAPI(ctx context.Context) *DeviceAPI {
 		// go api.monitorDBus(ctx)
 		return api
 	}
+}
+
+func (d *DeviceAPI) SensorWorkers() []func(context.Context, chan interface{}) {
+	return d.Workers
+}
+
+func (d *DeviceAPI) EndPoint(e string) interface{} {
+	return d.dbus[e]
 }
 
 // SessionBusRequest creates a request builder for the session bus
