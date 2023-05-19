@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/rs/zerolog/log"
 )
@@ -93,25 +94,26 @@ func marshalProblemDetails(details map[string]string) map[string]interface{} {
 }
 
 func ProblemsUpdater(ctx context.Context, status chan interface{}) {
-	deviceAPI, err := FetchAPIFromContext(ctx)
+	deviceAPI, err := device.FetchAPIFromContext(ctx)
 	if err != nil {
 		log.Debug().Err(err).Caller().
 			Msg("Could not connect to DBus.")
 		return
 	}
+	dbusAPI := deviceAPI.EndPoint("system").(*bus)
 
 	problems := func() {
 		problems := &problems{
 			list: make(map[string]map[string]interface{}),
 		}
 
-		problemList := deviceAPI.SystemBusRequest().
+		problemList := NewBusRequest(dbusAPI).
 			Path(dBusProblemsDest).
 			Destination(dBusProblemIntr).
 			GetData(dBusProblemIntr + ".GetProblems").AsStringList()
 
 		for _, p := range problemList {
-			problemDetails := deviceAPI.SystemBusRequest().
+			problemDetails := NewBusRequest(dbusAPI).
 				Path(dBusProblemsDest).
 				Destination(dBusProblemIntr).
 				GetData(dBusProblemIntr+".GetInfo", p, []string{"time", "count", "package", "reason"}).AsStringMap()
