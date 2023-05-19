@@ -16,8 +16,8 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/storage"
 	"github.com/joshuar/go-hass-agent/internal/config"
-	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass"
+	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/sensors"
 	"github.com/joshuar/go-hass-agent/internal/translations"
 	"github.com/rs/zerolog"
@@ -54,7 +54,7 @@ func NewAgent(appID string) (context.Context, context.CancelFunc, *Agent) {
 		Version: Version,
 	}
 	ctx, cancelfunc := context.WithCancel(context.Background())
-	ctx = device.SetupContext(ctx)
+	ctx = linux.SetupContext(ctx)
 	a.SetupLogging()
 	return ctx, cancelfunc, a
 }

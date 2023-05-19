@@ -14,6 +14,7 @@ import (
 	"github.com/grandcat/zeroconf"
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass"
+	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/rs/zerolog/log"
 
 	"fyne.io/fyne/v2"
@@ -162,7 +163,7 @@ func (agent *Agent) saveRegistration(r *hass.RegistrationResponse, h *hass.Regis
 }
 
 func (agent *Agent) runRegistrationWorker(ctx context.Context, getRegistrationInfo func(context.Context) *hass.RegistrationHost) error {
-	thisDevice := device.NewDevice(ctx, Name, Version)
+	thisDevice := linux.NewDevice(ctx, Name, Version)
 	agent.SetPref("DeviceID", thisDevice.DeviceID())
 	agent.SetPref("DeviceName", thisDevice.DeviceName())
 	registrationHostInfo := getRegistrationInfo(ctx)
