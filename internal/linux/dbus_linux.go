@@ -13,6 +13,7 @@ import (
 	"sync"
 
 	"github.com/godbus/dbus/v5"
+	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/rs/zerolog/log"
 )
 
@@ -286,10 +287,10 @@ func GetHostname(ctx context.Context) string {
 			Msg("Could not connect to DBus.")
 		return "localhost"
 	}
+	dbusAPI := device.GetAPIEndpoint[*bus](deviceAPI, "system")
 	var dBusDest = "org.freedesktop.hostname1"
-	var dBusPath = "/org/freedesktop/hostname1"
-	hostnameFromDBus, err := deviceAPI.SystemBusRequest().
-		Path(dbus.ObjectPath(dBusPath)).
+	hostnameFromDBus, err := NewBusRequest(dbusAPI).
+		Path(dbus.ObjectPath("/org/freedesktop/hostname1")).
 		Destination(dBusDest).
 		GetProp(dBusDest + ".Hostname")
 	if err != nil {
@@ -310,9 +311,10 @@ func GetHardwareDetails(ctx context.Context) (string, string) {
 			Msg("Could not connect to DBus.")
 		return "", ""
 	}
+	dbusAPI := device.GetAPIEndpoint[*bus](deviceAPI, "system")
 	var dBusDest = "org.freedesktop.hostname1"
 	var dBusPath = "/org/freedesktop/hostname1"
-	hwVendorFromDBus, err := deviceAPI.SystemBusRequest().
+	hwVendorFromDBus, err := NewBusRequest(dbusAPI).
 		Path(dbus.ObjectPath(dBusPath)).
 		Destination(dBusDest).
 		GetProp(dBusDest + ".HardwareVendor")
@@ -326,7 +328,7 @@ func GetHardwareDetails(ctx context.Context) (string, string) {
 	} else {
 		vendor = string(variantToValue[[]uint8](hwVendorFromDBus))
 	}
-	hwModelFromDBus, err := deviceAPI.SystemBusRequest().
+	hwModelFromDBus, err := NewBusRequest(dbusAPI).
 		Path(dbus.ObjectPath(dBusPath)).
 		Destination(dBusDest).
 		GetProp(dBusDest + ".HardwareVendor")
