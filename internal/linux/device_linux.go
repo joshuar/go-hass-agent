@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-package device
+package linux
 
 import (
 	"context"
@@ -12,7 +12,7 @@ import (
 
 	"git.lukeshu.com/go/libsystemd/sd_id128"
 	"github.com/acobaugh/osrelease"
-	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/rs/zerolog/log"
 )
 
@@ -87,8 +87,8 @@ func NewDevice(ctx context.Context, name string, version string) *linuxDevice {
 	// /sys/devices/virtual/dmi/id for vendor and model if DBus doesn't work.
 	// Ref:
 	// https://github.com/ansible/ansible/blob/devel/lib/ansible/module_utils/facts/hardware/linux.py
-	newDevice.hostname = linux.GetHostname(ctx)
-	newDevice.hwVendor, newDevice.hwModel = linux.GetHardwareDetails(ctx)
+	newDevice.hostname = GetHostname(ctx)
+	newDevice.hwVendor, newDevice.hwModel = GetHardwareDetails(ctx)
 
 	// Grab everything from the /etc/os-release file.
 	osrelease, err := osrelease.Read()
@@ -118,12 +118,12 @@ func NewDevice(ctx context.Context, name string, version string) *linuxDevice {
 }
 
 func SetupContext(ctx context.Context) context.Context {
-	deviceAPI := linux.NewDeviceAPI(ctx)
+	deviceAPI := NewDeviceAPI(ctx)
 	if deviceAPI == nil {
 		log.Warn().Msg("No DBus connections could be established.")
 		return ctx
 	} else {
-		deviceCtx := linux.StoreAPIInContext(ctx, deviceAPI)
+		deviceCtx := device.StoreAPIInContext(ctx, deviceAPI)
 		return deviceCtx
 	}
 }

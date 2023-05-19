@@ -13,7 +13,6 @@ import (
 	"fyne.io/fyne/v2"
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass"
-	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/rs/zerolog/log"
 )
 
@@ -97,15 +96,15 @@ func (tracker *SensorTracker) StartWorkers(ctx context.Context, updateCh chan in
 	var wg sync.WaitGroup
 
 	// Run all the defined sensor update functions.
-	deviceAPI, err := linux.FetchAPIFromContext(ctx)
+	deviceAPI, err := device.FetchAPIFromContext(ctx)
 	if err != nil {
 		log.Debug().Caller().Err(err).
 			Msg("Could not fetch sensor workers.")
-		wg.Done()
 		return
 	}
-	deviceAPI.Workers = append(deviceAPI.Workers, device.ExternalIPUpdater)
-	for _, worker := range deviceAPI.Workers {
+	sensorWorkers := deviceAPI.SensorWorkers()
+	sensorWorkers = append(sensorWorkers, device.ExternalIPUpdater)
+	for _, worker := range sensorWorkers {
 		wg.Add(1)
 		go func(worker func(context.Context, chan interface{})) {
 			defer wg.Done()
