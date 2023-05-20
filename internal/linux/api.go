@@ -15,7 +15,7 @@ type LinuxDeviceAPI struct {
 	dbus map[string]*bus
 }
 
-// NewDeviceAPI sets up a DeviceAPI struct with appropriate DBus API endpoints
+// NewDeviceAPI sets up a DeviceAPI struct with appropriate DBus API endpoints.
 func NewDeviceAPI(ctx context.Context) *LinuxDeviceAPI {
 	api := new(LinuxDeviceAPI)
 	api.dbus = make(map[string]*bus)
@@ -26,6 +26,7 @@ func NewDeviceAPI(ctx context.Context) *LinuxDeviceAPI {
 	return api
 }
 
+// SensorWorkers returns a list of functions to start to enable sensor tracking.
 func (d *LinuxDeviceAPI) SensorWorkers() []func(context.Context, chan interface{}) {
 	var workers []func(context.Context, chan interface{})
 	workers = append(workers, LocationUpdater)
@@ -42,6 +43,8 @@ func (d *LinuxDeviceAPI) SensorWorkers() []func(context.Context, chan interface{
 	return workers
 }
 
+// EndPoint will return the given endpoint as an interface. Use
+// device.GetAPIEndpoint to safely assert the type of the API.
 func (d *LinuxDeviceAPI) EndPoint(e string) interface{} {
 	d.mu.Lock()
 	defer d.mu.Unlock()

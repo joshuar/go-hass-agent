@@ -30,7 +30,7 @@ func StoreAPIInContext(ctx context.Context, a API) context.Context {
 }
 
 // FetchAPIFromContext returns the API stored in ctx, or an error if there is
-// none
+// none.
 func FetchAPIFromContext(ctx context.Context) (API, error) {
 	if c, ok := ctx.Value(configKey).(API); !ok {
 		return nil, errors.New("no API in context")
@@ -39,6 +39,9 @@ func FetchAPIFromContext(ctx context.Context) (API, error) {
 	}
 }
 
+// GetAPIEndpoint is a helper function to assert an API endpoint as the
+// appropriate type. We don't know what type of endpoint might be stored in the
+// device API, so this function helps to safely establish the endpoint type.
 func GetAPIEndpoint[T any](api API, endpoint string) T {
 	if e := api.EndPoint(endpoint); e != nil {
 		return e.(T)
