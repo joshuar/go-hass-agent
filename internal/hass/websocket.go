@@ -150,7 +150,7 @@ func (c *WebSocket) OnOpen(socket *gws.Conn) {
 	log.Debug().Caller().Msg("Websocket opened.")
 	go func() {
 		ticker := time.NewTicker(PingInterval)
-		done := make(chan bool)
+		done := make(chan struct{})
 		for {
 			select {
 			case <-done:
