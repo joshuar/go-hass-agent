@@ -22,6 +22,8 @@ type Sensor interface {
 	EntityCategory() string
 	Disabled() bool
 	Registered() bool
+	MarshalJSON() ([]byte, error)
+	UnMarshalJSON([]byte) error
 }
 
 // SensorUpdate represents an update for a sensor. It reflects the current state
@@ -66,7 +68,7 @@ type sensorUpdateInfo struct {
 	UniqueID        string      `json:"unique_id"`
 }
 
-func AsSensorUpdate(s Sensor) *sensorUpdateInfo {
+func MarshalSensorUpdate(s Sensor) *sensorUpdateInfo {
 	return &sensorUpdateInfo{
 		StateAttributes: s.Attributes(),
 		Icon:            s.Icon(),
@@ -76,7 +78,7 @@ func AsSensorUpdate(s Sensor) *sensorUpdateInfo {
 	}
 }
 
-func AsSensorRegistration(s Sensor) *sensorRegistrationInfo {
+func MarshalSensorRegistration(s Sensor) *sensorRegistrationInfo {
 	return &sensorRegistrationInfo{
 		StateAttributes:   s.Attributes(),
 		DeviceClass:       s.DeviceClass(),
