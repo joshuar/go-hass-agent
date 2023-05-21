@@ -72,7 +72,7 @@ func (agent *Agent) requestRegistrationInfoUI(ctx context.Context) *hass.Registr
 
 	registrationInfo := NewRegistration()
 
-	done := make(chan bool, 1)
+	done := make(chan struct{}, 1)
 	defer close(done)
 
 	s := findServers(ctx)
@@ -115,11 +115,11 @@ func (agent *Agent) requestRegistrationInfoUI(ctx context.Context) *hass.Registr
 			Msgf("User selected server %s", s)
 
 		w.Close()
-		done <- true
+		close(done)
 	}
 	form.OnCancel = func() {
 		registrationInfo = nil
-		done <- true
+		close(done)
 	}
 
 	w.SetContent(container.New(layout.NewVBoxLayout(),
@@ -130,7 +130,7 @@ func (agent *Agent) requestRegistrationInfoUI(ctx context.Context) *hass.Registr
 	))
 
 	w.SetOnClosed(func() {
-		done <- true
+		close(done)
 	})
 	w.Show()
 	<-done
