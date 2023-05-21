@@ -44,7 +44,7 @@ func (m *mockSensor) State() interface{} {
 
 func (m *mockSensor) Type() string {
 	args := m.Called()
-	return args.String()
+	return args.String(0)
 }
 
 func (m *mockSensor) UniqueID() string {
@@ -59,7 +59,7 @@ func (m *mockSensor) UnitOfMeasurement() string {
 
 func (m *mockSensor) StateClass() string {
 	args := m.Called()
-	return args.String()
+	return args.String(0)
 }
 
 func (m *mockSensor) EntityCategory() string {
@@ -106,8 +106,8 @@ func TestMarshalSensorData(t *testing.T) {
 	unregisterdSensor.On("UniqueID").Return("aString")
 	unregisterdSensor.On("UnitOfMeasurement").Return("aString")
 
-	unregistered := json.RawMessage(`{"attributes":"aString","device_class":"aString","icon":"aString","name":"aString","state":"aString","type":"string","unique_id":"aString","unit_of_measurement":"aString","state_class":"string","entity_category":"aString"}`)
-	registered := json.RawMessage(`[{"attributes":"aString","icon":"aString","state":"aString","type":"string","unique_id":"aString"}]`)
+	unregistered := json.RawMessage(`{"attributes":"aString","device_class":"aString","icon":"aString","name":"aString","state":"aString","type":"aString","unique_id":"aString","unit_of_measurement":"aString","state_class":"aString","entity_category":"aString"}`)
+	registered := json.RawMessage(`[{"attributes":"aString","icon":"aString","state":"aString","type":"aString","unique_id":"aString"}]`)
 	type args struct {
 		s Sensor
 	}
