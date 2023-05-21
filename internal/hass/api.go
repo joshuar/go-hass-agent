@@ -24,7 +24,7 @@ type RequestType string
 
 type Request interface {
 	RequestType() RequestType
-	RequestData() interface{}
+	RequestData() *json.RawMessage
 	ResponseHandler(bytes.Buffer)
 }
 
@@ -32,9 +32,9 @@ func MarshalJSON(request Request, secret string) ([]byte, error) {
 	if request.RequestType() == RequestTypeEncrypted {
 		if secret != "" {
 			return json.Marshal(&struct {
-				Type          RequestType `json:"type"`
-				Encrypted     bool        `json:"encrypted"`
-				EncryptedData interface{} `json:"encrypted_data"`
+				Type          RequestType      `json:"type"`
+				Encrypted     bool             `json:"encrypted"`
+				EncryptedData *json.RawMessage `json:"encrypted_data"`
 			}{
 				Type:          RequestTypeEncrypted,
 				Encrypted:     true,
@@ -45,8 +45,8 @@ func MarshalJSON(request Request, secret string) ([]byte, error) {
 		}
 	} else {
 		return json.Marshal(&struct {
-			Type RequestType `json:"type"`
-			Data interface{} `json:"data"`
+			Type RequestType      `json:"type"`
+			Data *json.RawMessage `json:"data"`
 		}{
 			Type: request.RequestType(),
 			Data: request.RequestData(),
@@ -55,14 +55,14 @@ func MarshalJSON(request Request, secret string) ([]byte, error) {
 }
 
 type UnencryptedRequest struct {
-	Type RequestType `json:"type"`
-	Data interface{} `json:"data"`
+	Type RequestType      `json:"type"`
+	Data *json.RawMessage `json:"data"`
 }
 
 type EncryptedRequest struct {
-	Type          RequestType `json:"type"`
-	Encrypted     bool        `json:"encrypted"`
-	EncryptedData interface{} `json:"encrypted_data"`
+	Type          RequestType      `json:"type"`
+	Encrypted     bool             `json:"encrypted"`
+	EncryptedData *json.RawMessage `json:"encrypted_data"`
 }
 
 type Response struct {

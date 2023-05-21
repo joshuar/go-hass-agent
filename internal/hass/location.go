@@ -7,6 +7,7 @@ package hass
 
 import (
 	"bytes"
+	"encoding/json"
 
 	"github.com/rs/zerolog/log"
 )
@@ -58,8 +59,10 @@ func (l *locationUpdateInfo) RequestType() RequestType {
 	return RequestTypeUpdateLocation
 }
 
-func (l *locationUpdateInfo) RequestData() interface{} {
-	return l
+func (l *locationUpdateInfo) RequestData() *json.RawMessage {
+	data, _ := json.Marshal(l)
+	raw := json.RawMessage(data)
+	return &raw
 }
 
 func (l *locationUpdateInfo) ResponseHandler(resp bytes.Buffer) {

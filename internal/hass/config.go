@@ -8,6 +8,7 @@ package hass
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
@@ -92,8 +93,8 @@ func (h *HassConfig) RequestType() RequestType {
 	return RequestTypeGetConfig
 }
 
-func (h *HassConfig) RequestData() interface{} {
-	return struct{}{}
+func (h *HassConfig) RequestData() *json.RawMessage {
+	return nil
 }
 
 func (h *HassConfig) ResponseHandler(resp bytes.Buffer) {

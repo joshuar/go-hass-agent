@@ -5,6 +5,8 @@
 
 package hass
 
+import "encoding/json"
+
 // Sensor represents a sensor in HA. As an interface, it leaves it up to the
 // underlying struct to provide the appropriate data for this representation.
 type Sensor interface {
@@ -64,11 +66,39 @@ type sensorUpdateInfo struct {
 	UniqueID        string      `json:"unique_id"`
 }
 
+func AsSensorUpdate(s Sensor) *sensorUpdateInfo {
+	return &sensorUpdateInfo{
+		StateAttributes: s.Attributes(),
+		Icon:            s.Icon(),
+		State:           s.State(),
+		Type:            s.Type(),
+		UniqueID:        s.UniqueID(),
+	}
+}
+
+func AsSensorRegistration(s Sensor) *sensorRegistrationInfo {
+	return &sensorRegistrationInfo{
+		StateAttributes:   s.Attributes(),
+		DeviceClass:       s.DeviceClass(),
+		Icon:              s.Icon(),
+		Name:              s.Name(),
+		State:             s.State(),
+		Type:              s.Type(),
+		UniqueID:          s.UniqueID(),
+		UnitOfMeasurement: s.UnitOfMeasurement(),
+		StateClass:        s.StateClass(),
+		EntityCategory:    s.EntityCategory(),
+		Disabled:          s.Disabled(),
+	}
+}
+
 // MarshalSensorDate takes the sensor data and returns the appropriate JSON
 // structure to either register or update the sensor in HA.
-func MarshalSensorData(s Sensor) interface{} {
+func MarshalSensorData(s Sensor) *json.RawMessage {
+	var marshaled []byte
+	var raw json.RawMessage
 	if s.Registered() {
-		return []sensorUpdateInfo{{
+		d := []sensorUpdateInfo{{
 			StateAttributes: s.Attributes(),
 			Icon:            s.Icon(),
 			State:           s.State(),
@@ -76,8 +106,11 @@ func MarshalSensorData(s Sensor) interface{} {
 			UniqueID:        s.UniqueID(),
 		},
 		}
+		marshaled, _ = json.Marshal(d)
+		raw = json.RawMessage(marshaled)
+		return &raw
 	} else {
-		return sensorRegistrationInfo{
+		d := sensorRegistrationInfo{
 			StateAttributes:   s.Attributes(),
 			DeviceClass:       s.DeviceClass(),
 			Icon:              s.Icon(),
@@ -90,5 +123,8 @@ func MarshalSensorData(s Sensor) interface{} {
 			EntityCategory:    s.EntityCategory(),
 			Disabled:          s.Disabled(),
 		}
+		marshaled, _ = json.Marshal(d)
+		raw = json.RawMessage(marshaled)
+		return &raw
 	}
 }
