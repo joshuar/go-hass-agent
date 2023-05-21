@@ -6,6 +6,7 @@
 package hass
 
 import (
+	"encoding/json"
 	"reflect"
 	"testing"
 
@@ -14,102 +15,116 @@ import (
 
 type mockSensor struct {
 	mock.Mock
-	attributes interface{}
-	state      interface{}
-	registered bool
-	disabled   bool
 }
 
 func (m *mockSensor) Attributes() interface{} {
-	m.On("Attributes")
-	m.Called()
-	return m.attributes
+	args := m.Called()
+	return args.String(0)
 }
 
 func (m *mockSensor) DeviceClass() string {
-	m.On("DeviceClass")
 	args := m.Called()
-	return args.String()
+	return args.String(0)
 }
 
 func (m *mockSensor) Icon() string {
-	m.On("Icon")
 	args := m.Called()
-	return args.String()
+	return args.String(0)
 }
 
 func (m *mockSensor) Name() string {
-	m.On("Name")
 	args := m.Called()
-	return args.String()
+	return args.String(0)
 }
 
 func (m *mockSensor) State() interface{} {
-	m.On("State")
-	m.Called()
-	return m.state
+	args := m.Called()
+	return args.String(0)
 }
 
 func (m *mockSensor) Type() string {
-	m.On("Type")
 	args := m.Called()
 	return args.String()
 }
 
 func (m *mockSensor) UniqueID() string {
-	m.On("UniqueID")
 	args := m.Called()
-	return args.String()
+	return args.String(0)
 }
 
 func (m *mockSensor) UnitOfMeasurement() string {
-	m.On("UnitOfMeasurement")
 	args := m.Called()
-	return args.String()
+	return args.String(0)
 }
 
 func (m *mockSensor) StateClass() string {
-	m.On("StateClass")
 	args := m.Called()
 	return args.String()
 }
 
 func (m *mockSensor) EntityCategory() string {
-	m.On("EntityCategory")
 	args := m.Called()
-	return args.String()
+	return args.String(0)
 }
 
 func (m *mockSensor) Registered() bool {
-	m.On("Registered")
-	m.Called()
-	return m.registered
+	args := m.Called()
+	return args.Bool(0)
 }
 
 func (m *mockSensor) Disabled() bool {
-	m.On("Disabled")
-	m.Called()
-	return m.disabled
+	args := m.Called()
+	return args.Bool(0)
 }
 
 func TestMarshalSensorData(t *testing.T) {
+	registeredSensor := new(mockSensor)
+	registeredSensor.On("Attributes").Return("aString")
+	registeredSensor.On("DeviceClass").Return("aString")
+	registeredSensor.On("Disabled").Return(false)
+	registeredSensor.On("EntityCategory").Return("aString")
+	registeredSensor.On("Icon").Return("aString")
+	registeredSensor.On("Name").Return("aString")
+	registeredSensor.On("Registered").Return(true)
+	registeredSensor.On("State").Return("aString")
+	registeredSensor.On("StateClass").Return("aString")
+	registeredSensor.On("Type").Return("aString")
+	registeredSensor.On("UniqueID").Return("aString")
+	registeredSensor.On("UnitOfMeasurement").Return("aString")
+
+	unregisterdSensor := new(mockSensor)
+	unregisterdSensor.On("Attributes").Return("aString")
+	unregisterdSensor.On("DeviceClass").Return("aString")
+	unregisterdSensor.On("Disabled").Return(false)
+	unregisterdSensor.On("EntityCategory").Return("aString")
+	unregisterdSensor.On("Icon").Return("aString")
+	unregisterdSensor.On("Name").Return("aString")
+	unregisterdSensor.On("Registered").Return(false)
+	unregisterdSensor.On("State").Return("aString")
+	unregisterdSensor.On("StateClass").Return("aString")
+	unregisterdSensor.On("Type").Return("aString")
+	unregisterdSensor.On("UniqueID").Return("aString")
+	unregisterdSensor.On("UnitOfMeasurement").Return("aString")
+
+	unregistered := json.RawMessage(`{"attributes":"aString","device_class":"aString","icon":"aString","name":"aString","state":"aString","type":"string","unique_id":"aString","unit_of_measurement":"aString","state_class":"string","entity_category":"aString"}`)
+	registered := json.RawMessage(`[{"attributes":"aString","icon":"aString","state":"aString","type":"string","unique_id":"aString"}]`)
 	type args struct {
 		s Sensor
 	}
 	tests := []struct {
 		name string
 		args args
-		want interface{}
+		want *json.RawMessage
 	}{
 		{
 			name: "test unregistered sensor",
-			args: args{s: &mockSensor{}},
-			want: sensorRegistrationInfo{},
+			args: args{s: unregisterdSensor},
+			want: &unregistered,
 		},
 		{
 			name: "test registered sensor",
-			args: args{s: &mockSensor{registered: true}},
-			want: []sensorUpdateInfo{{}},
+			args: args{s: registeredSensor},
+			want: &registered,
 		},
 	}
 	for _, tt := range tests {

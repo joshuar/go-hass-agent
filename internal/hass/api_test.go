@@ -15,66 +15,37 @@ import (
 	"testing"
 
 	"github.com/joshuar/go-hass-agent/internal/config"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
 type mockRequest struct {
 	mock.Mock
-	requestType RequestType
-	data        interface{}
 }
 
 func (m *mockRequest) RequestType() RequestType {
-	m.On("RequestType")
-	m.Called()
-	return m.requestType
+	args := m.Called()
+	return args.Get(0).(RequestType)
 }
 
-func (m *mockRequest) RequestData() interface{} {
-	m.On("RequestData")
-	m.Called()
-	if m.data == nil {
-		return m.String()
-	} else {
-		return m.data
-	}
+func (m *mockRequest) RequestData() *json.RawMessage {
+	args := m.Called()
+	return args.Get(0).(*json.RawMessage)
 }
 
 func (m *mockRequest) ResponseHandler(b bytes.Buffer) {
-	m.On("ResponseHandler", b)
 	m.Called(b)
 }
 
-var unencryptedRequest = &mockRequest{
-	requestType: RequestTypeUpdateSensorStates,
-}
-
-var encryptedRequest = &mockRequest{
-	requestType: RequestTypeEncrypted,
-}
-
 func TestMarshalJSON(t *testing.T) {
-	unencryptedRequest.data = ""
-	unencryptedRequestJSON, err := json.Marshal(&struct {
-		Type RequestType `json:"type"`
-		Data interface{} `json:"data"`
-	}{
-		Type: RequestTypeUpdateSensorStates,
-		Data: "",
-	})
-	assert.Nil(t, err)
-	encryptedRequest.data = ""
-	encryptedRequestJSON, err := json.Marshal(&struct {
-		Type          RequestType `json:"type"`
-		Encrypted     bool        `json:"encrypted"`
-		EncryptedData interface{} `json:"encrypted_data"`
-	}{
-		Type:          RequestTypeEncrypted,
-		Encrypted:     true,
-		EncryptedData: "",
-	})
-	assert.Nil(t, err)
+	requestData := json.RawMessage(`{"someField": "someValue"}`)
+	request := new(mockRequest)
+	request.On("RequestType").Return(RequestTypeUpdateSensorStates)
+	request.On("RequestData").Return(&requestData)
+
+	encryptedRequest := new(mockRequest)
+	encryptedRequest.On("RequestType").Return(RequestTypeEncrypted)
+	encryptedRequest.On("RequestData").Return(&requestData)
+
 	type args struct {
 		request Request
 		secret  string
@@ -87,8 +58,8 @@ func TestMarshalJSON(t *testing.T) {
 	}{
 		{
 			name: "unencrypted request",
-			args: args{request: unencryptedRequest},
-			want: unencryptedRequestJSON,
+			args: args{request: request},
+			want: []byte(`{"type":"update_sensor_states","data":{"someField":"someValue"}}`),
 		},
 		{
 			name:    "encrypted request without secret",
@@ -99,7 +70,7 @@ func TestMarshalJSON(t *testing.T) {
 		{
 			name: "encrypted request with secret",
 			args: args{request: encryptedRequest, secret: "fakeSecret"},
-			want: encryptedRequestJSON,
+			want: []byte(`{"type":"encrypted","encrypted":true,"encrypted_data":{"someField":"someValue"}}`),
 		},
 	}
 	for _, tt := range tests {
@@ -138,13 +109,11 @@ func (m *mockConfig) Set(property string, value interface{}) error {
 }
 
 func (m *mockConfig) Validate() error {
-	m.On("Validate")
 	args := m.Called()
 	return args.Error(1)
 }
 
 func (m *mockConfig) Refresh() error {
-	m.On("Refresh")
 	args := m.Called()
 	return args.Error(1)
 }
@@ -159,6 +128,12 @@ func TestAPIRequest(t *testing.T) {
 
 	mockCtx := config.StoreInContext(context.Background(), mockConfig)
 
+	requestData := json.RawMessage(`{"someField": "someValue"}`)
+	request := new(mockRequest)
+	request.On("RequestType").Return(RequestTypeUpdateSensorStates)
+	request.On("RequestData").Return(&requestData)
+	request.On("ResponseHandler", *bytes.NewBufferString(`{"success":true}`)).Return()
+
 	type args struct {
 		ctx     context.Context
 		request Request
@@ -168,17 +143,17 @@ func TestAPIRequest(t *testing.T) {
 		args args
 	}{
 		{
-			name: "standard test",
+			name: "successful test",
 			args: args{
 				ctx:     mockCtx,
-				request: Request(unencryptedRequest),
+				request: Request(request),
 			},
 		},
 		{
 			name: "invalid context",
 			args: args{
 				ctx:     context.Background(),
-				request: Request(unencryptedRequest),
+				request: Request(request),
 			},
 		},
 	}

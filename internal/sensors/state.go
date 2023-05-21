@@ -98,7 +98,6 @@ func (s *sensorState) Disabled() bool {
 	} else {
 		return false
 	}
-
 }
 
 func (s *sensorState) Registered() bool {
@@ -118,7 +117,7 @@ func (sensor *sensorState) RequestType() hass.RequestType {
 	return hass.RequestTypeRegisterSensor
 }
 
-func (sensor *sensorState) RequestData() interface{} {
+func (sensor *sensorState) RequestData() *json.RawMessage {
 	return hass.MarshalSensorData(sensor)
 }
 
