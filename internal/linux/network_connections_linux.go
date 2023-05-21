@@ -47,68 +47,44 @@ const (
 
 type networkProp int
 
-func getNetProp(dbusAPI *bus, path dbus.ObjectPath, prop networkProp) (dbus.Variant, error) {
-	var dbusProp string
-	switch prop {
+func (p networkProp) dbusProp() string {
+	switch p {
 	case connectionID:
-		dbusProp = activeConnectionObject + ".Id"
+		return activeConnectionObject + ".Id"
 	case connectionState:
-		dbusProp = activeConnectionObject + ".State"
+		return activeConnectionObject + ".State"
 	case connectionType:
-		dbusProp = activeConnectionObject + ".Type"
+		return activeConnectionObject + ".Type"
 	case connectionDevices:
-		dbusProp = activeConnectionObject + ".Devices"
+		return activeConnectionObject + ".Devices"
 	case connectionIPv4:
-		dbusProp = activeConnectionObject + ".Ip4Config"
+		return activeConnectionObject + ".Ip4Config"
 	case connectionIPv6:
-		dbusProp = activeConnectionObject + ".Ip6Config"
+		return activeConnectionObject + ".Ip6Config"
 	case addressIPv4:
-		dbusProp = ip4ConfigObject + ".AddressData"
+		return ip4ConfigObject + ".AddressData"
 	case addressIPv6:
-		dbusProp = ip6ConfigObject + ".AddressData"
+		return ip6ConfigObject + ".AddressData"
+	case wifiSSID:
+		return accessPointObject + ".Ssid"
+	case wifiFrequency:
+		return accessPointObject + ".Frequency"
+	case wifiSpeed:
+		return accessPointObject + ".MaxBitrate"
+	case wifiStrength:
+		return accessPointObject + ".Strength"
+	case wifiHWAddress:
+		return accessPointObject + ".HwAddress"
 	default:
-		return dbus.MakeVariant(""), errors.New("unknown network property")
+		return ""
 	}
-	return NewBusRequest(dbusAPI).
-		Path(path).
-		Destination(networkManagerObject).
-		GetProp(dbusProp)
 }
 
-func getWifiProp(dbusAPI *bus, path dbus.ObjectPath, wifiProp networkProp) (dbus.Variant, error) {
-	var apPath dbus.ObjectPath
-	ap, err := NewBusRequest(dbusAPI).
+func getNetProp(dbusAPI *bus, path dbus.ObjectPath, prop networkProp) (dbus.Variant, error) {
+	return NewBusRequest(dbusAPI).
 		Path(path).
 		Destination(networkManagerObject).
-		GetProp(wirelessDeviceObject + ".ActiveAccessPoint")
-	if err != nil {
-		return dbus.MakeVariant(""), err
-	} else {
-		apPath = dbus.ObjectPath((variantToValue[[]uint8](ap)))
-		if !apPath.IsValid() {
-			return dbus.MakeVariant(""), errors.New("AP DBus Path is invalid")
-		}
-	}
-
-	var dbusProp string
-	switch wifiProp {
-	case wifiSSID:
-		dbusProp = accessPointObject + ".Ssid"
-	case wifiFrequency:
-		dbusProp = accessPointObject + ".Frequency"
-	case wifiSpeed:
-		dbusProp = accessPointObject + ".MaxBitrate"
-	case wifiStrength:
-		dbusProp = accessPointObject + ".Strength"
-	case wifiHWAddress:
-		dbusProp = accessPointObject + ".HwAddress"
-	default:
-		return dbus.MakeVariant(""), errors.New("unknown wifi property")
-	}
-	return NewBusRequest(dbusAPI).
-		Path(apPath).
-		Destination(networkManagerObject).
-		GetProp(dbusProp)
+		GetProp(prop.dbusProp())
 }
 
 func getIPAddrProp(dbusAPI *bus, connProp networkProp, path dbus.ObjectPath) (string, error) {
@@ -470,6 +446,27 @@ func processConnectionState(dbusAPI *bus, conn dbus.ObjectPath, status chan inte
 }
 
 func processConnectionType(dbusAPI *bus, conn dbus.ObjectPath, status chan interface{}) {
+	getWifiProp := func(path dbus.ObjectPath, prop networkProp) (dbus.Variant, error) {
+		var apPath dbus.ObjectPath
+		ap, err := NewBusRequest(dbusAPI).
+			Path(path).
+			Destination(networkManagerObject).
+			GetProp(wirelessDeviceObject + ".ActiveAccessPoint")
+		if err != nil {
+			return dbus.MakeVariant(""), err
+		} else {
+			apPath = dbus.ObjectPath((variantToValue[[]uint8](ap)))
+			if !apPath.IsValid() {
+				return dbus.MakeVariant(""), errors.New("AP DBus Path is invalid")
+			}
+		}
+
+		return NewBusRequest(dbusAPI).
+			Path(apPath).
+			Destination(networkManagerObject).
+			GetProp(prop.dbusProp())
+	}
+
 	var variant dbus.Variant
 	var err error
 	variant, err = getNetProp(dbusAPI, conn, connectionType)
@@ -489,7 +486,7 @@ func processConnectionType(dbusAPI *bus, conn dbus.ObjectPath, status chan inter
 				if devicePath.IsValid() {
 					wifiProps := []networkProp{wifiSSID, wifiHWAddress, wifiFrequency, wifiSpeed, wifiStrength}
 					for _, prop := range wifiProps {
-						propValue, err := getWifiProp(dbusAPI, devicePath, prop)
+						propValue, err := getWifiProp(devicePath, prop)
 						if err != nil {
 							log.Debug().Err(err).Caller().
 								Msg("Invalid wifi property.")
