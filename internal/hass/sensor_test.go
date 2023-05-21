@@ -77,6 +77,16 @@ func (m *mockSensor) Disabled() bool {
 	return args.Bool(0)
 }
 
+func (m *mockSensor) MarshalJSON() ([]byte, error) {
+	args := m.Called()
+	return args.Get(0).([]byte), args.Error(1)
+}
+
+func (m *mockSensor) UnMarshalJSON(b []byte) error {
+	args := m.Called(b)
+	return args.Error(1)
+}
+
 func TestMarshalSensorData(t *testing.T) {
 	registeredSensor := new(mockSensor)
 	registeredSensor.On("Attributes").Return("aString")

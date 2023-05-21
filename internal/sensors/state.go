@@ -108,6 +108,20 @@ func (s *sensorState) Registered() bool {
 	}
 }
 
+func (s *sensorState) MarshalJSON() ([]byte, error) {
+	if s.Registered() {
+		m := hass.MarshalSensorUpdate(s)
+		return json.Marshal(m)
+	} else {
+		m := hass.MarshalSensorRegistration(s)
+		return json.Marshal(m)
+	}
+}
+
+func (s *sensorState) UnMarshalJSON(b []byte) error {
+	return json.Unmarshal(b, &s)
+}
+
 // sensorState implements hass.Request so its data can be sent to the HA API
 
 func (sensor *sensorState) RequestType() hass.RequestType {
@@ -118,7 +132,9 @@ func (sensor *sensorState) RequestType() hass.RequestType {
 }
 
 func (sensor *sensorState) RequestData() *json.RawMessage {
-	return hass.MarshalSensorData(sensor)
+	data, _ := sensor.MarshalJSON()
+	raw := json.RawMessage(data)
+	return &raw
 }
 
 func (sensor *sensorState) ResponseHandler(rawResponse bytes.Buffer) {
