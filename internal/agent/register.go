@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/grandcat/zeroconf"
@@ -72,8 +73,7 @@ func (agent *Agent) requestRegistrationInfoUI(ctx context.Context) *hass.Registr
 
 	registrationInfo := NewRegistration()
 
-	done := make(chan struct{}, 1)
-	defer close(done)
+	var wg sync.WaitGroup
 
 	s := findServers(ctx)
 	allServers, _ := s.Get()
@@ -115,11 +115,11 @@ func (agent *Agent) requestRegistrationInfoUI(ctx context.Context) *hass.Registr
 			Msgf("User selected server %s", s)
 
 		w.Close()
-		close(done)
+		wg.Done()
 	}
 	form.OnCancel = func() {
 		registrationInfo = nil
-		close(done)
+		wg.Done()
 	}
 
 	w.SetContent(container.New(layout.NewVBoxLayout(),
@@ -128,12 +128,9 @@ func (agent *Agent) requestRegistrationInfoUI(ctx context.Context) *hass.Registr
 				"As an initial step, this app will need to log into your Home Assistant server and register itself.\nPlease enter the relevant details for your Home Assistant server url/port and a long-lived access token.")),
 		form,
 	))
-
-	w.SetOnClosed(func() {
-		close(done)
-	})
 	w.Show()
-	<-done
+	wg.Add(1)
+	wg.Wait()
 	w.Close()
 	return registrationInfo
 }
