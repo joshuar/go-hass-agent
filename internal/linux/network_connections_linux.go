@@ -125,10 +125,10 @@ func getIPAddrProp(dbusAPI *bus, connProp networkProp, path dbus.ObjectPath) (st
 }
 
 type networkSensor struct {
-	sensorGroup      string
-	sensorType       networkProp
 	sensorValue      interface{}
 	sensorAttributes interface{}
+	sensorGroup      string
+	sensorType       networkProp
 }
 
 // networkSensor implements hass.SensorUpdate

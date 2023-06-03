@@ -32,8 +32,8 @@ const (
 type appSensorType int
 
 type appSensor struct {
-	sensorType  appSensorType
 	sensorValue map[string]dbus.Variant
+	sensorType  appSensorType
 }
 
 // appSensor implements hass.SensorUpdate
@@ -118,12 +118,12 @@ func (s *appSensor) Attributes() interface{} {
 		}
 		return struct {
 			Cmd     string `json:"Command Line"`
-			Count   int    `json:"Process Count"`
 			Started string `json:"Started"`
+			Count   int    `json:"Process Count"`
 		}{
 			Cmd:     cmd,
-			Count:   len(appProcesses),
 			Started: time.UnixMilli(createTime).Format(time.RFC3339),
+			Count:   len(appProcesses),
 		}
 	case runningApps:
 		var runningApps []string
@@ -168,7 +168,7 @@ func AppUpdater(ctx context.Context, update chan interface{}) {
 		dbus.WithMatchObjectPath(appStateDBusPath),
 		dbus.WithMatchInterface(appStateDBusInterface),
 	}
-	appStateHandler := func(s *dbus.Signal) {
+	appStateHandler := func(_ *dbus.Signal) {
 		activeAppList := NewBusRequest(dbusAPI).
 			Path(appStateDBusPath).
 			Destination(portalDest).

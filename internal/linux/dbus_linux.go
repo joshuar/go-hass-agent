@@ -25,11 +25,11 @@ const (
 type dbusType int
 
 type bus struct {
-	mu        sync.RWMutex
 	conn      *dbus.Conn
 	events    chan *dbus.Signal
 	eventList map[string]func(*dbus.Signal)
 	busType   dbusType
+	mu        sync.RWMutex
 }
 
 // newBus sets up DBus connections and channels for receiving signals. It creates both a system and session bus connection.
@@ -77,11 +77,11 @@ func newBus(ctx context.Context, t dbusType) *bus {
 // busRequest contains properties for building different types of DBus requests
 type busRequest struct {
 	bus          *bus
-	path         dbus.ObjectPath
-	match        []dbus.MatchOption
-	event        string
 	eventHandler func(*dbus.Signal)
+	path         dbus.ObjectPath
+	event        string
 	dest         string
+	match        []dbus.MatchOption
 }
 
 func NewBusRequest(b *bus) *busRequest {
