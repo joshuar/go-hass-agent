@@ -30,22 +30,22 @@ func Test_sensorState_DeviceClass(t *testing.T) {
 	tests := []struct {
 		name   string
 		fields fields
-		want   string
+		want   hass.SensorDeviceClass
 	}{
 		{
 			name:   "valid deviceClass",
 			fields: fields{deviceClass: hass.Frequency},
-			want:   hass.Frequency.String(),
+			want:   hass.Frequency,
 		},
 		{
 			name:   "unknown deviceClass",
 			fields: fields{},
-			want:   "",
+			want:   hass.SensorDeviceClass(0),
 		},
 		{
 			name:   "invalid deviceClass",
 			fields: fields{deviceClass: 65534},
-			want:   "SensorDeviceClass(65534)",
+			want:   hass.SensorDeviceClass(65534),
 		},
 	}
 	for _, tt := range tests {
@@ -75,22 +75,22 @@ func Test_sensorState_StateClass(t *testing.T) {
 	tests := []struct {
 		name   string
 		fields fields
-		want   string
+		want   hass.SensorStateClass
 	}{
 		{
 			name:   "valid stateClass",
 			fields: fields{stateClass: hass.StateMeasurement},
-			want:   hass.StateMeasurement.String(),
+			want:   hass.StateMeasurement,
 		},
 		{
 			name:   "no stateClass",
 			fields: fields{},
-			want:   "",
+			want:   hass.SensorStateClass(0),
 		},
 		{
 			name:   "invalid deviceClass",
 			fields: fields{stateClass: 65534},
-			want:   "SensorStateClass(65534)",
+			want:   hass.SensorStateClass(65534),
 		},
 	}
 	for _, tt := range tests {
@@ -121,22 +121,22 @@ func Test_sensorState_Type(t *testing.T) {
 	tests := []struct {
 		name   string
 		fields fields
-		want   string
+		want   hass.SensorType
 	}{
 		{
 			name:   "type sensor",
 			fields: fields{sensorType: hass.TypeSensor},
-			want:   hass.TypeSensor.String(),
+			want:   hass.TypeSensor,
 		},
 		{
 			name:   "type binary sensor",
 			fields: fields{sensorType: hass.TypeBinary},
-			want:   hass.TypeBinary.String(),
+			want:   hass.TypeBinary,
 		},
 		{
 			name:   "default sensor",
 			fields: fields{},
-			want:   hass.TypeSensor.String(),
+			want:   hass.TypeSensor,
 		},
 	}
 	for _, tt := range tests {
@@ -154,7 +154,7 @@ func Test_sensorState_Type(t *testing.T) {
 				category:    tt.fields.category,
 				metadata:    tt.fields.metadata,
 			}
-			if got := s.Type(); got != tt.want {
+			if got := s.SensorType(); got != tt.want {
 				t.Errorf("sensorState.Type() = %v, want %v", got, tt.want)
 			}
 		})

@@ -22,9 +22,9 @@ func (m *mockSensor) Attributes() interface{} {
 	return args.String(0)
 }
 
-func (m *mockSensor) DeviceClass() string {
+func (m *mockSensor) DeviceClass() SensorDeviceClass {
 	args := m.Called()
-	return args.String(0)
+	return args.Get(0).(SensorDeviceClass)
 }
 
 func (m *mockSensor) Icon() string {
@@ -42,27 +42,27 @@ func (m *mockSensor) State() interface{} {
 	return args.String(0)
 }
 
-func (m *mockSensor) Type() string {
+func (m *mockSensor) SensorType() SensorType {
+	args := m.Called()
+	return args.Get(0).(SensorType)
+}
+
+func (m *mockSensor) ID() string {
 	args := m.Called()
 	return args.String(0)
 }
 
-func (m *mockSensor) UniqueID() string {
+func (m *mockSensor) Units() string {
 	args := m.Called()
 	return args.String(0)
 }
 
-func (m *mockSensor) UnitOfMeasurement() string {
+func (m *mockSensor) StateClass() SensorStateClass {
 	args := m.Called()
-	return args.String(0)
+	return args.Get(0).(SensorStateClass)
 }
 
-func (m *mockSensor) StateClass() string {
-	args := m.Called()
-	return args.String(0)
-}
-
-func (m *mockSensor) EntityCategory() string {
+func (m *mockSensor) Category() string {
 	args := m.Called()
 	return args.String(0)
 }
@@ -90,34 +90,34 @@ func (m *mockSensor) UnMarshalJSON(b []byte) error {
 func TestMarshalSensorData(t *testing.T) {
 	registeredSensor := new(mockSensor)
 	registeredSensor.On("Attributes").Return("aString")
-	registeredSensor.On("DeviceClass").Return("aString")
+	registeredSensor.On("DeviceClass").Return(Duration)
 	registeredSensor.On("Disabled").Return(false)
-	registeredSensor.On("EntityCategory").Return("aString")
+	registeredSensor.On("Category").Return("aString")
 	registeredSensor.On("Icon").Return("aString")
 	registeredSensor.On("Name").Return("aString")
 	registeredSensor.On("Registered").Return(true)
 	registeredSensor.On("State").Return("aString")
-	registeredSensor.On("StateClass").Return("aString")
-	registeredSensor.On("Type").Return("aString")
-	registeredSensor.On("UniqueID").Return("aString")
-	registeredSensor.On("UnitOfMeasurement").Return("aString")
+	registeredSensor.On("StateClass").Return(SensorStateClass(0))
+	registeredSensor.On("SensorType").Return(SensorType(0))
+	registeredSensor.On("ID").Return("aString")
+	registeredSensor.On("Units").Return("aString")
 
 	unregisterdSensor := new(mockSensor)
 	unregisterdSensor.On("Attributes").Return("aString")
-	unregisterdSensor.On("DeviceClass").Return("aString")
+	unregisterdSensor.On("DeviceClass").Return(Duration)
 	unregisterdSensor.On("Disabled").Return(false)
-	unregisterdSensor.On("EntityCategory").Return("aString")
+	unregisterdSensor.On("Category").Return("aString")
 	unregisterdSensor.On("Icon").Return("aString")
 	unregisterdSensor.On("Name").Return("aString")
 	unregisterdSensor.On("Registered").Return(false)
 	unregisterdSensor.On("State").Return("aString")
-	unregisterdSensor.On("StateClass").Return("aString")
-	unregisterdSensor.On("Type").Return("aString")
-	unregisterdSensor.On("UniqueID").Return("aString")
-	unregisterdSensor.On("UnitOfMeasurement").Return("aString")
+	unregisterdSensor.On("StateClass").Return(SensorStateClass(0))
+	unregisterdSensor.On("SensorType").Return(SensorType(0))
+	unregisterdSensor.On("ID").Return("aString")
+	unregisterdSensor.On("Units").Return("aString")
 
-	unregistered := json.RawMessage(`{"attributes":"aString","device_class":"aString","icon":"aString","name":"aString","state":"aString","type":"aString","unique_id":"aString","unit_of_measurement":"aString","state_class":"aString","entity_category":"aString"}`)
-	registered := json.RawMessage(`[{"attributes":"aString","icon":"aString","state":"aString","type":"aString","unique_id":"aString"}]`)
+	unregistered := json.RawMessage(`{"attributes":"aString","device_class":"Duration","icon":"aString","name":"aString","state":"aString","type":"sensor","unique_id":"aString","unit_of_measurement":"aString","entity_category":"aString"}`)
+	registered := json.RawMessage(`[{"attributes":"aString","icon":"aString","state":"aString","type":"sensor","unique_id":"aString"}]`)
 	type args struct {
 		s Sensor
 	}

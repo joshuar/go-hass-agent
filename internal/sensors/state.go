@@ -36,28 +36,16 @@ type sensorMetadata struct {
 
 // sensorState implements hass.Sensor to represent a sensor in HA.
 
-func (s *sensorState) DeviceClass() string {
-	if s.deviceClass != 0 {
-		return s.deviceClass.String()
-	} else {
-		return ""
-	}
+func (s *sensorState) DeviceClass() hass.SensorDeviceClass {
+	return s.deviceClass
 }
 
-func (s *sensorState) StateClass() string {
-	if s.stateClass != 0 {
-		return s.stateClass.String()
-	} else {
-		return ""
-	}
+func (s *sensorState) StateClass() hass.SensorStateClass {
+	return s.stateClass
 }
 
-func (s *sensorState) Type() string {
-	if s.sensorType != 0 {
-		return s.sensorType.String()
-	} else {
-		return hass.TypeSensor.String()
-	}
+func (s *sensorState) SensorType() hass.SensorType {
+	return s.sensorType
 }
 
 func (s *sensorState) Icon() string {
@@ -80,15 +68,15 @@ func (s *sensorState) Attributes() interface{} {
 	return s.attributes
 }
 
-func (s *sensorState) UniqueID() string {
+func (s *sensorState) ID() string {
 	return s.entityID
 }
 
-func (s *sensorState) UnitOfMeasurement() string {
+func (s *sensorState) Units() string {
 	return s.stateUnits
 }
 
-func (s *sensorState) EntityCategory() string {
+func (s *sensorState) Category() string {
 	return s.category
 }
 
@@ -172,9 +160,9 @@ func (sensor *sensorState) ResponseHandler(rawResponse bytes.Buffer) {
 				log.Debug().Caller().
 					Msgf("Sensor %s updated (%s). State is now: %v %s",
 						sensor.Name(),
-						sensor.UniqueID(),
+						sensor.ID(),
 						sensor.State(),
-						sensor.UnitOfMeasurement())
+						sensor.Units())
 			}
 			if _, ok := status["is_disabled"]; ok {
 				sensor.metadata.Disabled = true
