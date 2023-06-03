@@ -23,29 +23,29 @@ const PingInterval = time.Minute
 
 type websocketMsg struct {
 	Type           string `json:"type"`
-	ID             uint64 `json:"id,omitempty"`
 	WebHookID      string `json:"webhook_id,omitempty"`
-	SupportConfirm bool   `json:"support_confirm,omitempty"`
 	AccessToken    string `json:"access_token,omitempty"`
+	ID             uint64 `json:"id,omitempty"`
+	SupportConfirm bool   `json:"support_confirm,omitempty"`
 }
 
 type websocketResponse struct {
-	Type    string `json:"type"`
-	Success bool   `json:"success,omitempty"`
-	Error   struct {
+	Result interface{} `json:"result,omitempty"`
+	Error  struct {
 		Code    string `json:"code"`
 		Message string `json:"message"`
 	} `json:"error,omitempty"`
-	ID           uint64      `json:"id,omitempty"`
-	Result       interface{} `json:"result,omitempty"`
-	HAVersion    string      `json:"ha_version,omitempty"`
+	Type         string `json:"type"`
+	HAVersion    string `json:"ha_version,omitempty"`
 	Notification struct {
+		Data      interface{} `json:"data,omitempty"`
 		Message   string      `json:"message"`
 		Title     string      `json:"title,omitempty"`
-		Target    []string    `json:"target,omitempty"`
-		Data      interface{} `json:"data,omitempty"`
 		ConfirmID string      `json:"confirm_id,omitempty"`
+		Target    []string    `json:"target,omitempty"`
 	} `json:"event,omitempty"`
+	ID      uint64 `json:"id,omitempty"`
+	Success bool   `json:"success,omitempty"`
 }
 
 func StartWebsocket(ctx context.Context, notifyCh chan fyne.Notification, doneCh chan struct{}) {
@@ -97,10 +97,10 @@ type webSocketData struct {
 type WebSocket struct {
 	ReadCh     chan *webSocketData
 	WriteCh    chan *webSocketData
-	token      string
-	webhookID  string
 	doneCh     chan struct{}
 	cancelFunc context.CancelFunc
+	token      string
+	webhookID  string
 	nextID     uint64
 }
 

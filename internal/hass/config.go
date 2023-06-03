@@ -18,28 +18,28 @@ import (
 )
 
 type HassConfig struct {
-	mu sync.Mutex
-	hassConfigProps
 	rawConfigProps map[string]interface{}
+	hassConfigProps
+	mu sync.Mutex
 }
 
 type hassConfigProps struct {
-	Components   []string                          `json:"components"`
-	Entities     map[string]map[string]interface{} `json:"entities"`
-	ConfigDir    string                            `json:"config_dir"`
-	Elevation    int                               `json:"elevation"`
-	Latitude     float64                           `json:"latitude"`
-	LocationName string                            `json:"location_name"`
-	Longitude    float64                           `json:"longitude"`
-	TimeZone     string                            `json:"time_zone"`
-	UnitSystem   struct {
+	Entities   map[string]map[string]interface{} `json:"entities"`
+	UnitSystem struct {
 		Length      string `json:"length"`
 		Mass        string `json:"mass"`
 		Temperature string `json:"temperature"`
 		Volume      string `json:"volume"`
 	} `json:"unit_system"`
+	ConfigDir             string   `json:"config_dir"`
+	LocationName          string   `json:"location_name"`
+	TimeZone              string   `json:"time_zone"`
 	Version               string   `json:"version"`
+	Components            []string `json:"components"`
 	WhitelistExternalDirs []string `json:"whitelist_external_dirs"`
+	Elevation             int      `json:"elevation"`
+	Latitude              float64  `json:"latitude"`
+	Longitude             float64  `json:"longitude"`
 }
 
 func NewHassConfig(ctx context.Context) *HassConfig {
