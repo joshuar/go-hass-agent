@@ -98,6 +98,11 @@ func (h *HassConfig) RequestData() *json.RawMessage {
 }
 
 func (h *HassConfig) ResponseHandler(resp bytes.Buffer) {
+	if resp.Bytes() == nil {
+		log.Debug().
+			Msg("No response returned.")
+		return
+	}
 	h.mu.Lock()
 	result, err := marshmallow.Unmarshal(resp.Bytes(), &h.hassConfigProps)
 	if err != nil {
