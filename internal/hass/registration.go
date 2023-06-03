@@ -28,6 +28,7 @@ type RegistrationResponse struct {
 }
 
 type RegistrationRequest struct {
+	AppData            interface{} `json:"app_data,omitempty"`
 	DeviceID           string      `json:"device_id"`
 	AppID              string      `json:"app_id"`
 	AppName            string      `json:"app_name"`
@@ -38,7 +39,6 @@ type RegistrationRequest struct {
 	OsName             string      `json:"os_name"`
 	OsVersion          string      `json:"os_version"`
 	SupportsEncryption bool        `json:"supports_encryption"`
-	AppData            interface{} `json:"app_data,omitempty"`
 }
 
 func RegisterWithHass(ri *RegistrationHost, rr *RegistrationRequest) *RegistrationResponse {
