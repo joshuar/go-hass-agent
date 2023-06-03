@@ -6,7 +6,6 @@
 package hass
 
 import (
-	"encoding/json"
 	"reflect"
 	"testing"
 
@@ -87,60 +86,82 @@ func (m *mockSensor) UnMarshalJSON(b []byte) error {
 	return args.Error(1)
 }
 
-func TestMarshalSensorData(t *testing.T) {
-	registeredSensor := new(mockSensor)
-	registeredSensor.On("Attributes").Return("aString")
-	registeredSensor.On("DeviceClass").Return(Duration)
-	registeredSensor.On("Disabled").Return(false)
-	registeredSensor.On("Category").Return("aString")
-	registeredSensor.On("Icon").Return("aString")
-	registeredSensor.On("Name").Return("aString")
-	registeredSensor.On("Registered").Return(true)
-	registeredSensor.On("State").Return("aString")
-	registeredSensor.On("StateClass").Return(SensorStateClass(0))
-	registeredSensor.On("SensorType").Return(SensorType(0))
-	registeredSensor.On("ID").Return("aString")
-	registeredSensor.On("Units").Return("aString")
-
-	unregisterdSensor := new(mockSensor)
-	unregisterdSensor.On("Attributes").Return("aString")
-	unregisterdSensor.On("DeviceClass").Return(Duration)
-	unregisterdSensor.On("Disabled").Return(false)
-	unregisterdSensor.On("Category").Return("aString")
-	unregisterdSensor.On("Icon").Return("aString")
-	unregisterdSensor.On("Name").Return("aString")
-	unregisterdSensor.On("Registered").Return(false)
-	unregisterdSensor.On("State").Return("aString")
-	unregisterdSensor.On("StateClass").Return(SensorStateClass(0))
-	unregisterdSensor.On("SensorType").Return(SensorType(0))
-	unregisterdSensor.On("ID").Return("aString")
-	unregisterdSensor.On("Units").Return("aString")
-
-	unregistered := json.RawMessage(`{"attributes":"aString","device_class":"Duration","icon":"aString","name":"aString","state":"aString","type":"sensor","unique_id":"aString","unit_of_measurement":"aString","entity_category":"aString"}`)
-	registered := json.RawMessage(`[{"attributes":"aString","icon":"aString","state":"aString","type":"sensor","unique_id":"aString"}]`)
+func TestMarshalSensorUpdate(t *testing.T) {
+	validUpdate := new(mockSensor)
+	validUpdate.On("State").Return("state")
+	validUpdate.On("Attributes").Return("attributes")
+	validUpdate.On("Icon").Return("icon")
+	validUpdate.On("SensorType").Return(SensorType(0))
+	validUpdate.On("ID").Return("uniqueid")
 	type args struct {
 		s Sensor
 	}
 	tests := []struct {
-		name string
 		args args
-		want *json.RawMessage
+		want *sensorUpdateInfo
+		name string
 	}{
 		{
-			name: "test unregistered sensor",
-			args: args{s: unregisterdSensor},
-			want: &unregistered,
-		},
-		{
-			name: "test registered sensor",
-			args: args{s: registeredSensor},
-			want: &registered,
+			name: "valid update",
+			args: args{s: validUpdate},
+			want: &sensorUpdateInfo{
+				StateAttributes: "attributes",
+				State:           "state",
+				Icon:            "icon",
+				Type:            "sensor",
+				UniqueID:        "uniqueid",
+			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := MarshalSensorData(tt.args.s); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("MarshalSensorData() = %v, want %v", got, tt.want)
+			if got := MarshalSensorUpdate(tt.args.s); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("MarshalSensorUpdate() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestMarshalSensorRegistration(t *testing.T) {
+	validUpdate := new(mockSensor)
+	validUpdate.On("State").Return("state")
+	validUpdate.On("Attributes").Return("attributes")
+	validUpdate.On("Icon").Return("icon")
+	validUpdate.On("SensorType").Return(SensorType(0))
+	validUpdate.On("ID").Return("uniqueid")
+	validUpdate.On("Name").Return("name")
+	validUpdate.On("DeviceClass").Return(Duration)
+	validUpdate.On("StateClass").Return(SensorStateClass(0))
+	validUpdate.On("Units").Return("")
+	validUpdate.On("Category").Return("")
+	validUpdate.On("Disabled").Return(false)
+	validUpdate.On("Registered").Return(false)
+	type args struct {
+		s Sensor
+	}
+	tests := []struct {
+		args args
+		want *sensorRegistrationInfo
+		name string
+	}{
+		{
+			name: "valid registration",
+			args: args{s: validUpdate},
+			want: &sensorRegistrationInfo{
+				StateAttributes: "attributes",
+				DeviceClass:     "Duration",
+				Icon:            "icon",
+				Name:            "name",
+				State:           "state",
+				UniqueID:        "uniqueid",
+				Type:            "sensor",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := MarshalSensorRegistration(tt.args.s); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("MarshalSensorRegistration() = %v, want %v", got, tt.want)
 			}
 		})
 	}
