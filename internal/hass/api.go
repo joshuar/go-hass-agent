@@ -34,7 +34,7 @@ func MarshalJSON(request Request, secret string) ([]byte, error) {
 			return json.Marshal(&struct {
 				Type          RequestType      `json:"type"`
 				Encrypted     bool             `json:"encrypted"`
-				EncryptedData *json.RawMessage `json:"encrypted_data"`
+				EncryptedData *json.RawMessage `json:"encrypted_data,omitempty"`
 			}{
 				Type:          RequestTypeEncrypted,
 				Encrypted:     true,
@@ -46,7 +46,7 @@ func MarshalJSON(request Request, secret string) ([]byte, error) {
 	} else {
 		return json.Marshal(&struct {
 			Type RequestType      `json:"type"`
-			Data *json.RawMessage `json:"data"`
+			Data *json.RawMessage `json:"data,omitempty"`
 		}{
 			Type: request.RequestType(),
 			Data: request.RequestData(),
