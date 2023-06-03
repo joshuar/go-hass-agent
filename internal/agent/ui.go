@@ -19,6 +19,7 @@ import (
 	"fyne.io/fyne/v2/widget"
 	xlayout "fyne.io/x/fyne/layout"
 	"github.com/joshuar/go-hass-agent/assets/trayicon"
+	"github.com/rs/zerolog/log"
 )
 
 func newUI(appID string) fyne.App {
@@ -88,7 +89,12 @@ func (agent *Agent) setupSystemTray() {
 }
 
 func (agent *Agent) makeSensorTable() {
-	s, _ := hassConfig.Get("entities")
+	s, err := hassConfig.Get("entities")
+	if err != nil {
+		log.Debug().Caller().Err(err).
+			Msg("Could not get entities from config.")
+		return
+	}
 	sensors := s.(map[string]map[string]interface{})
 	var sensorsTable []fyne.CanvasObject
 	for rowKey, rowValue := range sensors {
@@ -97,7 +103,7 @@ func (agent *Agent) makeSensorTable() {
 		sensorState := tracker.Get(rowKey)
 		if sensorState != nil {
 			sensorRow = append(sensorRow, widget.NewLabel(fmt.Sprintf("%v %s",
-				sensorState.State(), sensorState.UnitOfMeasurement())))
+				sensorState.State(), sensorState.Units())))
 		} else {
 			sensorRow = append(sensorRow, widget.NewLabel(""))
 		}
