@@ -14,6 +14,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/joshuar/go-hass-agent/internal/config"
 	"github.com/stretchr/testify/mock"
 )
@@ -59,7 +60,7 @@ func TestMarshalJSON(t *testing.T) {
 		{
 			name: "unencrypted request",
 			args: args{request: request},
-			want: []byte(`{"type":"update_sensor_states","data":{"someField":"someValue"}}`),
+			want: []byte(`{"data":{"someField":"someValue"},"type":"update_sensor_states"}`),
 		},
 		{
 			name:    "encrypted request without secret",
@@ -70,12 +71,13 @@ func TestMarshalJSON(t *testing.T) {
 		{
 			name: "encrypted request with secret",
 			args: args{request: encryptedRequest, secret: "fakeSecret"},
-			want: []byte(`{"type":"encrypted","encrypted":true,"encrypted_data":{"someField":"someValue"}}`),
+			want: []byte(`{"encrypted_data":{"someField":"someValue"},"type":"encrypted","encrypted":true}`),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := MarshalJSON(tt.args.request, tt.args.secret)
+			spew.Dump(MarshalJSON(tt.args.request, tt.args.secret))
 			if (err != nil) != tt.wantErr {
 				t.Errorf("MarshalJSON() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -88,7 +90,7 @@ func TestMarshalJSON(t *testing.T) {
 }
 
 func mockServer(t *testing.T) *httptest.Server {
-	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"success":true}`))
 	}))
@@ -139,8 +141,8 @@ func TestAPIRequest(t *testing.T) {
 		request Request
 	}
 	tests := []struct {
-		name string
 		args args
+		name string
 	}{
 		{
 			name: "successful test",
@@ -158,7 +160,7 @@ func TestAPIRequest(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+		t.Run(tt.name, func(_ *testing.T) {
 			APIRequest(tt.args.ctx, tt.args.request)
 		})
 	}
