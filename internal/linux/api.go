@@ -11,8 +11,8 @@ import (
 )
 
 type LinuxDeviceAPI struct {
-	mu   sync.Mutex
 	dbus map[string]*bus
+	mu   sync.Mutex
 }
 
 // NewDeviceAPI sets up a DeviceAPI struct with appropriate DBus API endpoints.

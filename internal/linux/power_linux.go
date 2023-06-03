@@ -26,10 +26,10 @@ const (
 type powerProp int
 
 type powerSensor struct {
-	sensorGroup      string
-	sensorType       powerProp
 	sensorValue      interface{}
 	sensorAttributes interface{}
+	sensorGroup      string
+	sensorType       powerProp
 }
 
 func (state *powerSensor) Name() string {

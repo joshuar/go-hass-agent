@@ -24,8 +24,8 @@ const (
 type timeProp int
 
 type timeSensor struct {
-	prop  timeProp
 	value interface{}
+	prop  timeProp
 }
 
 func (m *timeSensor) Name() string {

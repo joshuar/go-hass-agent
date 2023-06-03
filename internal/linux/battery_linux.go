@@ -40,8 +40,8 @@ const (
 type batteryProp int
 
 type upowerBattery struct {
-	dBusPath dbus.ObjectPath
 	props    map[batteryProp]dbus.Variant
+	dBusPath dbus.ObjectPath
 }
 
 func (b *upowerBattery) updateProp(dbusAPI *bus, prop batteryProp) {
@@ -118,15 +118,15 @@ func (b *upowerBattery) marshalBatteryStateUpdate(dbusAPI *bus, prop batteryProp
 }
 
 type upowerBatteryProp struct {
-	name  batteryProp
 	value interface{}
+	name  batteryProp
 }
 
 type upowerBatteryState struct {
+	attributes interface{}
+	prop       upowerBatteryProp
 	batteryID  string
 	model      string
-	prop       upowerBatteryProp
-	attributes interface{}
 }
 
 // uPowerBatteryState implements hass.SensorUpdate
