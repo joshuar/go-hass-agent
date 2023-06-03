@@ -15,17 +15,17 @@ import (
 
 func Test_sensorState_DeviceClass(t *testing.T) {
 	type fields struct {
-		deviceClass hass.SensorDeviceClass
-		stateClass  hass.SensorStateClass
-		sensorType  hass.SensorType
 		state       interface{}
-		stateUnits  string
 		attributes  interface{}
+		metadata    *sensorMetadata
+		stateUnits  string
 		icon        string
 		name        string
 		entityID    string
 		category    string
-		metadata    *sensorMetadata
+		deviceClass hass.SensorDeviceClass
+		stateClass  hass.SensorStateClass
+		sensorType  hass.SensorType
 	}
 	tests := []struct {
 		name   string
@@ -60,17 +60,17 @@ func Test_sensorState_DeviceClass(t *testing.T) {
 
 func Test_sensorState_StateClass(t *testing.T) {
 	type fields struct {
-		deviceClass hass.SensorDeviceClass
-		stateClass  hass.SensorStateClass
-		sensorType  hass.SensorType
 		state       interface{}
-		stateUnits  string
 		attributes  interface{}
+		metadata    *sensorMetadata
+		stateUnits  string
 		icon        string
 		name        string
 		entityID    string
 		category    string
-		metadata    *sensorMetadata
+		deviceClass hass.SensorDeviceClass
+		stateClass  hass.SensorStateClass
+		sensorType  hass.SensorType
 	}
 	tests := []struct {
 		name   string
@@ -163,17 +163,17 @@ func Test_sensorState_Type(t *testing.T) {
 
 func Test_sensorState_State(t *testing.T) {
 	type fields struct {
-		deviceClass hass.SensorDeviceClass
-		stateClass  hass.SensorStateClass
-		sensorType  hass.SensorType
 		state       interface{}
-		stateUnits  string
 		attributes  interface{}
+		metadata    *sensorMetadata
+		stateUnits  string
 		icon        string
 		name        string
 		entityID    string
 		category    string
-		metadata    *sensorMetadata
+		deviceClass hass.SensorDeviceClass
+		stateClass  hass.SensorStateClass
+		sensorType  hass.SensorType
 	}
 	tests := []struct {
 		name   string
@@ -203,17 +203,17 @@ func Test_sensorState_State(t *testing.T) {
 
 func Test_sensorState_RequestType(t *testing.T) {
 	type fields struct {
-		deviceClass hass.SensorDeviceClass
-		stateClass  hass.SensorStateClass
-		sensorType  hass.SensorType
 		state       interface{}
-		stateUnits  string
 		attributes  interface{}
+		metadata    *sensorMetadata
+		stateUnits  string
 		icon        string
 		name        string
 		entityID    string
 		category    string
-		metadata    *sensorMetadata
+		deviceClass hass.SensorDeviceClass
+		stateClass  hass.SensorStateClass
+		sensorType  hass.SensorType
 	}
 	tests := []struct {
 		name   string
@@ -249,17 +249,17 @@ func Test_sensorState_RequestData(t *testing.T) {
 		metadata: &sensorMetadata{Registered: false},
 	})
 	type fields struct {
-		deviceClass hass.SensorDeviceClass
-		stateClass  hass.SensorStateClass
-		sensorType  hass.SensorType
 		state       interface{}
-		stateUnits  string
 		attributes  interface{}
+		metadata    *sensorMetadata
+		stateUnits  string
 		icon        string
 		name        string
 		entityID    string
 		category    string
-		metadata    *sensorMetadata
+		deviceClass hass.SensorDeviceClass
+		stateClass  hass.SensorStateClass
+		sensorType  hass.SensorType
 	}
 	tests := []struct {
 		name   string

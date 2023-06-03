@@ -16,17 +16,17 @@ import (
 // sensorState tracks the current state of a sensor, including the sensor value
 // and whether it is registered/disabled in HA.
 type sensorState struct {
-	deviceClass hass.SensorDeviceClass
-	stateClass  hass.SensorStateClass
-	sensorType  hass.SensorType
 	state       interface{}
-	stateUnits  string
 	attributes  interface{}
+	metadata    *sensorMetadata
+	stateUnits  string
 	icon        string
 	name        string
 	entityID    string
 	category    string
-	metadata    *sensorMetadata
+	deviceClass hass.SensorDeviceClass
+	stateClass  hass.SensorStateClass
+	sensorType  hass.SensorType
 }
 
 type sensorMetadata struct {

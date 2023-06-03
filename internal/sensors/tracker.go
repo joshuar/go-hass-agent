@@ -17,9 +17,9 @@ import (
 )
 
 type SensorTracker struct {
-	mu       sync.RWMutex
-	sensor   map[string]*sensorState
 	registry Registry
+	sensor   map[string]*sensorState
+	mu       sync.RWMutex
 }
 
 func NewSensorTracker(ctx context.Context, registryPath fyne.URI) *SensorTracker {
