@@ -55,12 +55,12 @@ func MarshalJSON(request Request, secret string) ([]byte, error) {
 }
 
 type UnencryptedRequest struct {
-	Data *json.RawMessage `json:"data"`
+	Data *json.RawMessage `json:"data,omitempty"`
 	Type RequestType      `json:"type"`
 }
 
 type EncryptedRequest struct {
-	EncryptedData *json.RawMessage `json:"encrypted_data"`
+	EncryptedData *json.RawMessage `json:"encrypted_data,omitempty"`
 	Type          RequestType      `json:"type"`
 	Encrypted     bool             `json:"encrypted"`
 }
