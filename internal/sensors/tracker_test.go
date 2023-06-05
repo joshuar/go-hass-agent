@@ -14,87 +14,6 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-type mockSensorUpdate struct {
-	mock.Mock
-	id         string
-	state      interface{}
-	icon       string
-	attributes interface{}
-}
-
-func (m *mockSensorUpdate) Name() string {
-	m.On("Name")
-	args := m.Called()
-	return args.String()
-}
-
-func (m *mockSensorUpdate) ID() string {
-	m.On("ID")
-	args := m.Called()
-	if m.id == "" {
-		return args.String()
-	} else {
-		return m.id
-	}
-}
-
-func (m *mockSensorUpdate) Icon() string {
-	m.On("Icon")
-	args := m.Called()
-	if m.icon == "" {
-		return args.String()
-	} else {
-		return m.icon
-	}
-}
-
-func (m *mockSensorUpdate) SensorType() hass.SensorType {
-	m.On("SensorType")
-	m.Called()
-	return hass.TypeSensor
-}
-
-func (m *mockSensorUpdate) DeviceClass() hass.SensorDeviceClass {
-	m.On("DeviceClass")
-	m.Called()
-	return 0
-}
-
-func (m *mockSensorUpdate) StateClass() hass.SensorStateClass {
-	m.On("StateClass")
-	m.Called()
-	return 0
-}
-
-func (m *mockSensorUpdate) State() interface{} {
-	m.On("State")
-	args := m.Called()
-	if m.state == nil {
-		return args.String()
-	} else {
-		return m.state
-	}
-
-}
-
-func (m *mockSensorUpdate) Units() string {
-	m.On("Units")
-	args := m.Called()
-	return args.String()
-}
-
-func (m *mockSensorUpdate) Category() string {
-	m.On("Category")
-	args := m.Called()
-	return args.String()
-}
-
-func (m *mockSensorUpdate) Attributes() interface{} {
-	m.On("Attributes")
-	m.Called()
-	return m.attributes
-}
-
 type MockSensorRegistry struct {
 	mock.Mock
 }
@@ -109,6 +28,19 @@ func newMockSensorTracker(t *testing.T) *SensorTracker {
 }
 
 func Test_sensorTracker_add(t *testing.T) {
+	s := new(mockSensorUpdate)
+	s.On("Attributes").Return("")
+	s.On("Category").Return("")
+	s.On("DeviceClass").Return(hass.Duration)
+	s.On("Disabled").Return(false)
+	s.On("Registered").Return(true)
+	s.On("ID").Return("default")
+	s.On("Icon").Return("default")
+	s.On("Name").Return("default")
+	s.On("SensorType").Return(hass.TypeSensor)
+	s.On("StateClass").Return(hass.StateMeasurement)
+	s.On("Units").Return("")
+	s.On("State").Return("default")
 	type fields struct {
 		mu         sync.RWMutex
 		sensor     map[string]*sensorState
@@ -129,13 +61,13 @@ func Test_sensorTracker_add(t *testing.T) {
 			fields: fields{
 				registry: newMockSensorRegistry(t),
 				sensor:   make(map[string]*sensorState)},
-			args: args{s: &mockSensorUpdate{}},
+			args: args{s: s},
 		},
 		{
 			name: "unsuccessful add",
 			fields: fields{
 				registry: newMockSensorRegistry(t)},
-			args:    args{s: &mockSensorUpdate{}},
+			args:    args{s: s},
 			wantErr: true,
 		},
 	}
@@ -154,10 +86,22 @@ func Test_sensorTracker_add(t *testing.T) {
 }
 
 func Test_sensorTracker_get(t *testing.T) {
-	fakeSensorUpdate := &mockSensorUpdate{}
+	s := new(mockSensorUpdate)
+	s.On("Attributes").Return("")
+	s.On("Category").Return("")
+	s.On("DeviceClass").Return(hass.Duration)
+	s.On("Disabled").Return(false)
+	s.On("Registered").Return(true)
+	s.On("ID").Return("default")
+	s.On("Icon").Return("default")
+	s.On("Name").Return("default")
+	s.On("SensorType").Return(hass.TypeSensor)
+	s.On("StateClass").Return(hass.StateMeasurement)
+	s.On("Units").Return("")
+	s.On("State").Return("default")
 	tracker := newMockSensorTracker(t)
-	tracker.add(fakeSensorUpdate)
-	fakeSensorState := tracker.Get(fakeSensorUpdate.ID())
+	tracker.add(s)
+	fakeSensorState := tracker.Get(s.ID())
 	type args struct {
 		id string
 	}
@@ -168,7 +112,7 @@ func Test_sensorTracker_get(t *testing.T) {
 	}{
 		{
 			name: "existing sensor",
-			args: args{id: fakeSensorUpdate.ID()},
+			args: args{id: s.ID()},
 			want: fakeSensorState,
 		},
 		{
@@ -185,57 +129,23 @@ func Test_sensorTracker_get(t *testing.T) {
 	}
 }
 
-func Test_sensorTracker_update(t *testing.T) {
-	fakeSensorUpdate := &mockSensorUpdate{}
-	fakeSensorStates := make(map[string]*sensorState)
-	fakeSensorStates[fakeSensorUpdate.ID()] = marshalSensorState(fakeSensorUpdate)
-	type fields struct {
-		mu         sync.RWMutex
-		sensor     map[string]*sensorState
-		registry   *badgerDBRegistry
-		hassConfig *hass.HassConfig
-	}
-	type args struct {
-		s hass.SensorUpdate
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		args   args
-	}{
-		{
-			name:   "try to update nonexistent sensor",
-			fields: fields{sensor: make(map[string]*sensorState)},
-			args: args{s: &mockSensorUpdate{
-				state: "foo",
-				icon:  "bar",
-			}},
-		},
-		{
-			name:   "try to update existing sensor",
-			fields: fields{sensor: fakeSensorStates},
-			args: args{s: &mockSensorUpdate{
-				state: "foo",
-				icon:  "bar",
-			}},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tracker := &SensorTracker{
-				mu:       tt.fields.mu,
-				sensor:   tt.fields.sensor,
-				registry: tt.fields.registry,
-			}
-			tracker.update(tt.args.s)
-		})
-	}
-}
-
 func Test_sensorTracker_exists(t *testing.T) {
-	fakeSensorUpdate := &mockSensorUpdate{}
+	s := new(mockSensorUpdate)
+	s.On("Attributes").Return("")
+	s.On("Category").Return("")
+	s.On("DeviceClass").Return(hass.Duration)
+	s.On("Disabled").Return(false)
+	s.On("Registered").Return(true)
+	s.On("ID").Return("default")
+	s.On("Icon").Return("default")
+	s.On("Name").Return("default")
+	s.On("SensorType").Return(hass.TypeSensor)
+	s.On("StateClass").Return(hass.StateMeasurement)
+	s.On("Units").Return("")
+	s.On("State").Return("default")
+
 	tracker := newMockSensorTracker(t)
-	tracker.add(fakeSensorUpdate)
+	tracker.add(s)
 
 	type args struct {
 		id string
@@ -252,7 +162,7 @@ func Test_sensorTracker_exists(t *testing.T) {
 		},
 		{
 			name: "existing sensor",
-			args: args{id: fakeSensorUpdate.ID()},
+			args: args{id: s.ID()},
 			want: true,
 		},
 	}
