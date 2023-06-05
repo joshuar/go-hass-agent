@@ -14,7 +14,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/joshuar/go-hass-agent/internal/config"
 	"github.com/stretchr/testify/mock"
 )
@@ -77,7 +76,6 @@ func TestMarshalJSON(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := MarshalJSON(tt.args.request, tt.args.secret)
-			spew.Dump(MarshalJSON(tt.args.request, tt.args.secret))
 			if (err != nil) != tt.wantErr {
 				t.Errorf("MarshalJSON() error = %v, wantErr %v", err, tt.wantErr)
 				return
