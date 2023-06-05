@@ -82,7 +82,7 @@ func (state *powerSensor) Attributes() interface{} {
 	return state.sensorAttributes
 }
 
-func marshalPowerStateUpdate(ctx context.Context, sensor powerProp, path dbus.ObjectPath, group string, v dbus.Variant) *powerSensor {
+func marshalPowerStateUpdate(sensor powerProp, group string, v dbus.Variant) *powerSensor {
 	var value, attributes interface{}
 	switch sensor {
 	case profile:
@@ -114,11 +114,7 @@ func PowerUpater(ctx context.Context, status chan interface{}) {
 		return
 	}
 
-	status <- marshalPowerStateUpdate(ctx,
-		profile,
-		powerProfilesDBusPath,
-		"",
-		activePowerProfile)
+	status <- marshalPowerStateUpdate(profile, powerProfilesDBusPath, activePowerProfile)
 
 	NewBusRequest(dbusAPI).
 		Path(powerProfilesDBusPath).
@@ -137,11 +133,7 @@ func PowerUpater(ctx context.Context, status chan interface{}) {
 					log.Debug().Msgf("Unhandled property %v changed to %v", propName, propValue)
 				}
 				if propType != 0 {
-					propState := marshalPowerStateUpdate(ctx,
-						propType,
-						s.Path,
-						"",
-						propValue)
+					propState := marshalPowerStateUpdate(propType, string(s.Path), propValue)
 					status <- propState
 				}
 			}
