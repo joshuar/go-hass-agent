@@ -44,7 +44,7 @@ func findServers(ctx context.Context) binding.StringList {
 
 	resolver, err := zeroconf.NewResolver(nil)
 	if err != nil {
-		log.Warn().Msgf("Failed to initialize resolver:", err.Error())
+		log.Debug().Err(err).Msg("Failed to initialize resolver.")
 	} else {
 		entries := make(chan *zeroconf.ServiceEntry)
 		go func(results <-chan *zeroconf.ServiceEntry) {
@@ -61,7 +61,7 @@ func findServers(ctx context.Context) binding.StringList {
 		defer searchCancel()
 		err = resolver.Browse(searchCtx, "_home-assistant._tcp", "local.", entries)
 		if err != nil {
-			log.Warn().Msgf("Failed to browse:", err.Error())
+			log.Debug().Err(err).Msg("Failed to browse")
 		}
 
 		<-searchCtx.Done()
