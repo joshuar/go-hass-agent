@@ -1,9 +1,8 @@
 # Ignore everything
-*
+.vscode/
 
 # But not these files...
-!/.gitignore
-
+!.gitignore
 !*.go
 !translations/**/*.json
 !*.yml
@@ -11,13 +10,5 @@
 !*.md
 !go.sum
 !go.mod
-!assets/
-!docs/**/*.md
-!docs/**/*.png
 !tools/
-# ...even if they are in subdirectories
-!*/
-
-.vscode/settings.json
-dist/
-fyne-cross/
+!/assets/
