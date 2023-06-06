@@ -24,6 +24,7 @@ This app will add some sensors to a Home Assistant instance:
 - Load Averages.
 - Uptime.
 - Power profile.
+- Screen lock.
 - Problems detected by ABRT.
 
 The code can be extended to add additional sensors. See the [development
@@ -107,8 +108,10 @@ Assistant.
 
 ### Running Headless
 
-**go-hass-agent** can run in a "headless" mode, without any GUI elements, by
-specifying the `-t` or `--terminal` command-line option.
+**go-hass-agent** can run in a “headless” mode, without any GUI elements, by
+specifying the `-t` or `--terminal` command-line option. On Linux systems, There
+is also a systemd service file that can be used for automatic start-up,
+installed (but not activated by default) in `/usr/lib/systemd/system`.
 
 ## 🧑‍🤝‍🧑 Contributing
 
@@ -120,7 +123,7 @@ to fix, feel free to send a pull request!
 Some documentation for development can be found in
 the [development docs](docs/development.md). There is information for developing
 **go-hass-agent** for different operating systems as well as adding additional
-sensors. This might help anyone looking to contribute, extend or fork this tool.
+sensors. This might help anyone to look to contribute, extend or fork this tool.
 
 ### 🌐 Translations
 
