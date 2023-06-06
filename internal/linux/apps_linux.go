@@ -164,28 +164,26 @@ func AppUpdater(ctx context.Context, update chan interface{}) {
 		return
 	}
 
-	appStateDBusMatches := []dbus.MatchOption{
-		dbus.WithMatchObjectPath(appStateDBusPath),
-		dbus.WithMatchInterface(appStateDBusInterface),
-	}
-	appStateHandler := func(_ *dbus.Signal) {
-		activeAppList := NewBusRequest(dbusAPI).
-			Path(appStateDBusPath).
-			Destination(portalDest).
-			GetData(appStateDBusMethod).AsVariantMap()
-		if activeAppList == nil {
-			log.Debug().Err(err).Caller().
-				Msg("No active apps found.")
-		} else {
-			update <- marshalAppStateUpdate(runningApps, activeAppList)
-			update <- marshalAppStateUpdate(activeApp, activeAppList)
-		}
-	}
 	NewBusRequest(dbusAPI).
 		Path(appStateDBusPath).
-		Match(appStateDBusMatches).
+		Match([]dbus.MatchOption{
+			dbus.WithMatchObjectPath(appStateDBusPath),
+			dbus.WithMatchInterface(appStateDBusInterface),
+		}).
 		Event(appStateDBusEvent).
-		Handler(appStateHandler).
+		Handler(func(_ *dbus.Signal) {
+			activeAppList := NewBusRequest(dbusAPI).
+				Path(appStateDBusPath).
+				Destination(portalDest).
+				GetData(appStateDBusMethod).AsVariantMap()
+			if activeAppList == nil {
+				log.Debug().Err(err).Caller().
+					Msg("No active apps found.")
+			} else {
+				update <- marshalAppStateUpdate(runningApps, activeAppList)
+				update <- marshalAppStateUpdate(activeApp, activeAppList)
+			}
+		}).
 		AddWatch(ctx)
 }
 
