@@ -1,0 +1,15 @@
+# Copyright (c) 2023 Joshua Rich <joshua.rich@gmail.com>
+# 
+# This software is released under the MIT License.
+# https://opensource.org/licenses/MIT
+
+[Unit]
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+ExecStart=/usr/bin/go-hass-agent --terminal
+Type=simple
+
+[Install]
+WantedBy=default.target
