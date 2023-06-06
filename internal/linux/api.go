@@ -40,6 +40,7 @@ func (d *LinuxDeviceAPI) SensorWorkers() []func(context.Context, chan interface{
 	workers = append(workers, LoadAvgUpdater)
 	workers = append(workers, DiskUsageUpdater)
 	workers = append(workers, TimeUpdater)
+	workers = append(workers, ScreenLockUpdater)
 	return workers
 }
 
