@@ -12,7 +12,6 @@ import (
 
 	"github.com/godbus/dbus/v5"
 	"github.com/iancoleman/strcase"
-	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v3/process"
@@ -149,14 +148,6 @@ func marshalAppStateUpdate(t appSensorType, v map[string]dbus.Variant) *appSenso
 }
 
 func AppUpdater(ctx context.Context, update chan interface{}) {
-	deviceAPI, err := device.FetchAPIFromContext(ctx)
-	if err != nil {
-		log.Debug().Err(err).Caller().
-			Msg("Could not connect to DBus.")
-		return
-	}
-	dbusAPI := device.GetAPIEndpoint[*bus](deviceAPI, "session")
-
 	portalDest := findPortal()
 	if portalDest == "" {
 		log.Debug().Caller().
@@ -164,7 +155,7 @@ func AppUpdater(ctx context.Context, update chan interface{}) {
 		return
 	}
 
-	NewBusRequest(dbusAPI).
+	err := NewBusRequest(ctx, "session").
 		Path(appStateDBusPath).
 		Match([]dbus.MatchOption{
 			dbus.WithMatchObjectPath(appStateDBusPath),
@@ -172,12 +163,12 @@ func AppUpdater(ctx context.Context, update chan interface{}) {
 		}).
 		Event(appStateDBusEvent).
 		Handler(func(_ *dbus.Signal) {
-			activeAppList := NewBusRequest(dbusAPI).
+			activeAppList := NewBusRequest(ctx, "session").
 				Path(appStateDBusPath).
 				Destination(portalDest).
 				GetData(appStateDBusMethod).AsVariantMap()
 			if activeAppList == nil {
-				log.Debug().Err(err).Caller().
+				log.Debug().Caller().
 					Msg("No active apps found.")
 			} else {
 				update <- marshalAppStateUpdate(runningApps, activeAppList)
@@ -185,6 +176,10 @@ func AppUpdater(ctx context.Context, update chan interface{}) {
 			}
 		}).
 		AddWatch(ctx)
+	if err != nil {
+		log.Debug().Caller().Err(err).
+			Msg("Failed to create active app DBus watch.")
+	}
 }
 
 func findProcesses(name string) []*process.Process {

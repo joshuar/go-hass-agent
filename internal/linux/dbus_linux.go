@@ -84,9 +84,15 @@ type busRequest struct {
 	match        []dbus.MatchOption
 }
 
-func NewBusRequest(b *bus) *busRequest {
+func NewBusRequest(ctx context.Context, busType string) *busRequest {
+	deviceAPI, err := device.FetchAPIFromContext(ctx)
+	if err != nil {
+		log.Debug().Err(err).Caller().
+			Msg("Could not connect to DBus.")
+	}
+	dbusAPI := device.GetAPIEndpoint[*bus](deviceAPI, busType)
 	return &busRequest{
-		bus: b,
+		bus: dbusAPI,
 	}
 }
 
@@ -281,15 +287,8 @@ func findPortal() string {
 // GetHostname will try to fetch the hostname of the device from DBus. Failing
 // that, it will default to using "localhost"
 func GetHostname(ctx context.Context) string {
-	deviceAPI, err := device.FetchAPIFromContext(ctx)
-	if err != nil {
-		log.Debug().Err(err).Caller().
-			Msg("Could not connect to DBus.")
-		return "localhost"
-	}
-	dbusAPI := device.GetAPIEndpoint[*bus](deviceAPI, "system")
 	var dBusDest = "org.freedesktop.hostname1"
-	hostnameFromDBus, err := NewBusRequest(dbusAPI).
+	hostnameFromDBus, err := NewBusRequest(ctx, "system").
 		Path(dbus.ObjectPath("/org/freedesktop/hostname1")).
 		Destination(dBusDest).
 		GetProp(dBusDest + ".Hostname")
@@ -305,16 +304,9 @@ func GetHostname(ctx context.Context) string {
 // fails, it returns empty strings for these values
 func GetHardwareDetails(ctx context.Context) (string, string) {
 	var vendor, model string
-	deviceAPI, err := device.FetchAPIFromContext(ctx)
-	if err != nil {
-		log.Debug().Err(err).Caller().
-			Msg("Could not connect to DBus.")
-		return "", ""
-	}
-	dbusAPI := device.GetAPIEndpoint[*bus](deviceAPI, "system")
 	var dBusDest = "org.freedesktop.hostname1"
 	var dBusPath = "/org/freedesktop/hostname1"
-	hwVendorFromDBus, err := NewBusRequest(dbusAPI).
+	hwVendorFromDBus, err := NewBusRequest(ctx, "system").
 		Path(dbus.ObjectPath(dBusPath)).
 		Destination(dBusDest).
 		GetProp(dBusDest + ".HardwareVendor")
@@ -328,7 +320,7 @@ func GetHardwareDetails(ctx context.Context) (string, string) {
 	} else {
 		vendor = string(variantToValue[[]uint8](hwVendorFromDBus))
 	}
-	hwModelFromDBus, err := NewBusRequest(dbusAPI).
+	hwModelFromDBus, err := NewBusRequest(ctx, "system").
 		Path(dbus.ObjectPath(dBusPath)).
 		Destination(dBusDest).
 		GetProp(dBusDest + ".HardwareVendor")
