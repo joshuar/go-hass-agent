@@ -9,7 +9,6 @@ import (
 	"context"
 
 	"github.com/godbus/dbus/v5"
-	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/rs/zerolog/log"
 )
 
@@ -59,21 +58,7 @@ func (l *linuxLocation) VerticalAccuracy() int {
 }
 
 func LocationUpdater(ctx context.Context, locationInfoCh chan interface{}) {
-	deviceAPI, err := device.FetchAPIFromContext(ctx)
-	if err != nil {
-		log.Debug().Err(err).Caller().
-			Msg("Could not connect to DBus.")
-		return
-	}
-	dbusAPI := deviceAPI.EndPoint("system").(*bus)
-
-	if dbusAPI == nil {
-		log.Debug().Caller().
-			Msg("No system bus connection. Location sensor unavailable.")
-		return
-	}
-
-	clientPath := NewBusRequest(dbusAPI).
+	clientPath := NewBusRequest(ctx, "system").
 		Path(geocluePath).
 		Destination(geoclueInterface).
 		GetData("org.freedesktop.GeoClue2.Manager.GetClient").AsObjectPath()
@@ -83,7 +68,7 @@ func LocationUpdater(ctx context.Context, locationInfoCh chan interface{}) {
 		return
 	}
 
-	err = NewBusRequest(dbusAPI).
+	err := NewBusRequest(ctx, "system").
 		Path(clientPath).
 		Destination(geoclueInterface).
 		SetProp("org.freedesktop.GeoClue2.Client.DesktopId",
@@ -94,7 +79,7 @@ func LocationUpdater(ctx context.Context, locationInfoCh chan interface{}) {
 		return
 	}
 
-	err = NewBusRequest(dbusAPI).
+	err = NewBusRequest(ctx, "system").
 		Path(clientPath).
 		Destination(geoclueInterface).
 		SetProp("org.freedesktop.GeoClue2.Client.DistanceThreshold",
@@ -105,7 +90,7 @@ func LocationUpdater(ctx context.Context, locationInfoCh chan interface{}) {
 		return
 	}
 
-	err = NewBusRequest(dbusAPI).
+	err = NewBusRequest(ctx, "system").
 		Path(clientPath).
 		Destination(geoclueInterface).
 		SetProp("org.freedesktop.GeoClue2.Client.TimeThreshold",
@@ -119,12 +104,12 @@ func LocationUpdater(ctx context.Context, locationInfoCh chan interface{}) {
 	locationUpdateHandler := func(s *dbus.Signal) {
 		if s.Name == "org.freedesktop.GeoClue2.Client.LocationUpdated" {
 			locationPath := s.Body[1].(dbus.ObjectPath)
-			location := newLocation(dbusAPI, locationPath)
+			location := newLocation(ctx, locationPath)
 			locationInfoCh <- location
 		}
 	}
 
-	NewBusRequest(dbusAPI).
+	err = NewBusRequest(ctx, "system").
 		Path(clientPath).
 		Match([]dbus.MatchOption{
 			dbus.WithMatchObjectPath(clientPath),
@@ -133,8 +118,13 @@ func LocationUpdater(ctx context.Context, locationInfoCh chan interface{}) {
 		Event("org.freedesktop.GeoClue2.Client.LocationUpdated").
 		Handler(locationUpdateHandler).
 		AddWatch(ctx)
+	if err != nil {
+		log.Debug().Caller().Err(err).
+			Msg("Failed to create location DBus watch.")
+		return
+	}
 
-	err = NewBusRequest(dbusAPI).
+	err = NewBusRequest(ctx, "system").
 		Path(clientPath).
 		Destination(geoclueInterface).
 		Call("org.freedesktop.GeoClue2.Client.Start")
@@ -150,7 +140,7 @@ func LocationUpdater(ctx context.Context, locationInfoCh chan interface{}) {
 			case <-ctx.Done():
 				log.Debug().Caller().
 					Msg("Stopping location updater.")
-				err = NewBusRequest(dbusAPI).
+				err = NewBusRequest(ctx, "system").
 					Path(clientPath).
 					Destination(geoclueInterface).
 					Call("org.freedesktop.GeoClue2.Client.Stop")
@@ -164,9 +154,9 @@ func LocationUpdater(ctx context.Context, locationInfoCh chan interface{}) {
 	}()
 }
 
-func newLocation(dbusAPI *bus, locationPath dbus.ObjectPath) *linuxLocation {
+func newLocation(ctx context.Context, locationPath dbus.ObjectPath) *linuxLocation {
 	getProp := func(prop string) float64 {
-		value, err := NewBusRequest(dbusAPI).
+		value, err := NewBusRequest(ctx, "system").
 			Path(locationPath).
 			Destination(geoclueInterface).
 			GetProp("org.freedesktop.GeoClue2.Location." + prop)

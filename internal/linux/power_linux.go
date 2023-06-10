@@ -11,7 +11,6 @@ import (
 
 	"github.com/godbus/dbus/v5"
 	"github.com/iancoleman/strcase"
-	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/rs/zerolog/log"
 )
@@ -97,15 +96,7 @@ func marshalPowerStateUpdate(sensor powerProp, group string, v dbus.Variant) *po
 }
 
 func PowerUpater(ctx context.Context, status chan interface{}) {
-	deviceAPI, err := device.FetchAPIFromContext(ctx)
-	if err != nil {
-		log.Debug().Err(err).Caller().
-			Msg("Could not connect to DBus.")
-		return
-	}
-	dbusAPI := device.GetAPIEndpoint[*bus](deviceAPI, "system")
-
-	activePowerProfile, err := NewBusRequest(dbusAPI).
+	activePowerProfile, err := NewBusRequest(ctx, "system").
 		Path(powerProfilesDBusPath).
 		Destination(powerProfilesDBusDest).
 		GetProp(powerProfilesDBusDest + ".ActiveProfile")
@@ -116,7 +107,7 @@ func PowerUpater(ctx context.Context, status chan interface{}) {
 
 	status <- marshalPowerStateUpdate(profile, powerProfilesDBusPath, activePowerProfile)
 
-	NewBusRequest(dbusAPI).
+	err = NewBusRequest(ctx, "system").
 		Path(powerProfilesDBusPath).
 		Match([]dbus.MatchOption{
 			dbus.WithMatchObjectPath(powerProfilesDBusPath),
@@ -139,4 +130,8 @@ func PowerUpater(ctx context.Context, status chan interface{}) {
 			}
 		}).
 		AddWatch(ctx)
+	if err != nil {
+		log.Debug().Caller().Err(err).
+			Msg("Failed to create power state DBus watch.")
+	}
 }

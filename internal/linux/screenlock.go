@@ -9,9 +9,7 @@ import (
 	"context"
 
 	"github.com/godbus/dbus/v5"
-	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass"
-	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -68,15 +66,7 @@ func (l *screenlock) Attributes() interface{} {
 }
 
 func ScreenLockUpdater(ctx context.Context, update chan interface{}) {
-	deviceAPI, err := device.FetchAPIFromContext(ctx)
-	if err != nil {
-		log.Debug().Err(err).Caller().
-			Msg("Could not connect to DBus.")
-		return
-	}
-	dbusAPI := device.GetAPIEndpoint[*bus](deviceAPI, "session")
-
-	NewBusRequest(dbusAPI).
+	NewBusRequest(ctx, "session").
 		Path(screensaverDBusPath).
 		Match([]dbus.MatchOption{
 			dbus.WithMatchObjectPath(screensaverDBusPath),
