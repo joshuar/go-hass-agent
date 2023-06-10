@@ -58,49 +58,45 @@ type sensorUpdateInfo struct {
 }
 
 func MarshalSensorUpdate(s Sensor) *sensorUpdateInfo {
-	var sensorType string
-	if s.SensorType() == 0 {
-		sensorType = "sensor"
-	} else {
-		sensorType = s.SensorType().String()
-	}
 	return &sensorUpdateInfo{
 		StateAttributes: s.Attributes(),
 		Icon:            s.Icon(),
 		State:           s.State(),
-		Type:            sensorType,
+		Type:            marshalClass(s.SensorType()),
 		UniqueID:        s.ID(),
 	}
 }
 
 func MarshalSensorRegistration(s Sensor) *sensorRegistrationInfo {
-	var deviceClass, stateClass, sensorType string
-	if s.DeviceClass() == 0 {
-		deviceClass = ""
-	} else {
-		deviceClass = s.DeviceClass().String()
-	}
-	if s.StateClass() == 0 {
-		stateClass = ""
-	} else {
-		stateClass = s.StateClass().String()
-	}
-	if s.SensorType() == 0 {
-		sensorType = "sensor"
-	} else {
-		sensorType = s.SensorType().String()
-	}
 	return &sensorRegistrationInfo{
 		StateAttributes:   s.Attributes(),
-		DeviceClass:       deviceClass,
+		DeviceClass:       marshalClass(s.DeviceClass()),
 		Icon:              s.Icon(),
 		Name:              s.Name(),
 		State:             s.State(),
-		Type:              sensorType,
+		Type:              marshalClass(s.SensorType()),
 		UniqueID:          s.ID(),
 		UnitOfMeasurement: s.Units(),
-		StateClass:        stateClass,
+		StateClass:        marshalClass(s.StateClass()),
 		EntityCategory:    s.Category(),
 		Disabled:          s.Disabled(),
+	}
+}
+
+type ComparableStringer interface {
+	comparable
+	String() string
+}
+
+func returnZero[T any](s ...T) T {
+	var zero T
+	return zero
+}
+
+func marshalClass[C ComparableStringer](class C) string {
+	if class == returnZero[C](class) {
+		return ""
+	} else {
+		return class.String()
 	}
 }
