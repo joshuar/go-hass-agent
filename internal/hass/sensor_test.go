@@ -108,7 +108,6 @@ func TestMarshalSensorUpdate(t *testing.T) {
 				StateAttributes: "attributes",
 				State:           "state",
 				Icon:            "icon",
-				Type:            "sensor",
 				UniqueID:        "uniqueid",
 			},
 		},
