@@ -163,16 +163,15 @@ func AppUpdater(ctx context.Context, update chan interface{}) {
 		}).
 		Event(appStateDBusEvent).
 		Handler(func(_ *dbus.Signal) {
-			activeAppList := NewBusRequest(ctx, "session").
+			if activeAppList := NewBusRequest(ctx, "session").
 				Path(appStateDBusPath).
 				Destination(portalDest).
-				GetData(appStateDBusMethod).AsVariantMap()
-			if activeAppList == nil {
-				log.Debug().Caller().
-					Msg("No active apps found.")
-			} else {
+				GetData(appStateDBusMethod).AsVariantMap(); activeAppList != nil {
 				update <- marshalAppStateUpdate(runningApps, activeAppList)
 				update <- marshalAppStateUpdate(activeApp, activeAppList)
+			} else {
+				log.Debug().Caller().
+					Msg("No active apps found.")
 			}
 		}).
 		AddWatch(ctx)
