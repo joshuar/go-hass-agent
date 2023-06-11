@@ -17,9 +17,10 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+//go:generate stringer -type=dbusType -output dbusTypes_string.go -linecomment
 const (
-	sessionBus dbusType = iota
-	systemBus
+	sessionBus dbusType = iota // session
+	systemBus                  // system
 )
 
 type dbusType int
@@ -84,13 +85,13 @@ type busRequest struct {
 	match        []dbus.MatchOption
 }
 
-func NewBusRequest(ctx context.Context, busType string) *busRequest {
+func NewBusRequest(ctx context.Context, busType dbusType) *busRequest {
 	deviceAPI, err := device.FetchAPIFromContext(ctx)
 	if err != nil {
 		log.Debug().Err(err).Caller().
 			Msg("Could not connect to DBus.")
 	}
-	dbusAPI := device.GetAPIEndpoint[*bus](deviceAPI, busType)
+	dbusAPI := device.GetAPIEndpoint[*bus](deviceAPI, busType.String())
 	return &busRequest{
 		bus: dbusAPI,
 	}
@@ -288,7 +289,7 @@ func findPortal() string {
 // that, it will default to using "localhost"
 func GetHostname(ctx context.Context) string {
 	var dBusDest = "org.freedesktop.hostname1"
-	hostnameFromDBus, err := NewBusRequest(ctx, "system").
+	hostnameFromDBus, err := NewBusRequest(ctx, systemBus).
 		Path(dbus.ObjectPath("/org/freedesktop/hostname1")).
 		Destination(dBusDest).
 		GetProp(dBusDest + ".Hostname")
@@ -306,7 +307,7 @@ func GetHardwareDetails(ctx context.Context) (string, string) {
 	var vendor, model string
 	var dBusDest = "org.freedesktop.hostname1"
 	var dBusPath = "/org/freedesktop/hostname1"
-	hwVendorFromDBus, err := NewBusRequest(ctx, "system").
+	hwVendorFromDBus, err := NewBusRequest(ctx, systemBus).
 		Path(dbus.ObjectPath(dBusPath)).
 		Destination(dBusDest).
 		GetProp(dBusDest + ".HardwareVendor")
@@ -320,7 +321,7 @@ func GetHardwareDetails(ctx context.Context) (string, string) {
 	} else {
 		vendor = string(variantToValue[[]uint8](hwVendorFromDBus))
 	}
-	hwModelFromDBus, err := NewBusRequest(ctx, "system").
+	hwModelFromDBus, err := NewBusRequest(ctx, systemBus).
 		Path(dbus.ObjectPath(dBusPath)).
 		Destination(dBusDest).
 		GetProp(dBusDest + ".HardwareVendor")

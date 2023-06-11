@@ -67,7 +67,7 @@ func (b *upowerBattery) updateProp(ctx context.Context, prop batteryProp) {
 	case model:
 		p = "Model"
 	}
-	propValue, err := NewBusRequest(ctx, "system").
+	propValue, err := NewBusRequest(ctx, systemBus).
 		Path(b.dBusPath).
 		Destination(upowerDBusDest).
 		GetProp("org.freedesktop.UPower.Device." + p)
@@ -295,7 +295,7 @@ func stringLevel(l uint32) string {
 }
 
 func BatteryUpdater(ctx context.Context, status chan interface{}) {
-	batteryList := NewBusRequest(ctx, "system").
+	batteryList := NewBusRequest(ctx, systemBus).
 		Path(upowerDBusPath).
 		Destination(upowerDBusDest).
 		GetData(upowerGetDevicesMethod).AsObjectPathList()
@@ -350,7 +350,7 @@ func BatteryUpdater(ctx context.Context, status chan interface{}) {
 		// battery. If a property changes, check it is one we want to track and
 		// if so, update the battery's state in batteryTracker and send the
 		// update back to Home Assistant.
-		err := NewBusRequest(ctx, "system").
+		err := NewBusRequest(ctx, systemBus).
 			Path(dbus.ObjectPath(v)).
 			Match([]dbus.MatchOption{
 				dbus.WithMatchObjectPath(dbus.ObjectPath(v)),
