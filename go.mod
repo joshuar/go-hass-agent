@@ -3,17 +3,17 @@ module github.com/joshuar/go-hass-agent
 go 1.19
 
 require (
-	github.com/go-playground/validator/v10 v10.13.0
+	github.com/go-playground/validator/v10 v10.14.1
 	github.com/godbus/dbus/v5 v5.1.0
 	github.com/jeandeaual/go-locale v0.0.0-20220711133428-7de61946b173
-	github.com/shirou/gopsutil/v3 v3.23.4
+	github.com/shirou/gopsutil/v3 v3.23.5
 	github.com/spf13/cobra v1.7.0
-	github.com/stretchr/testify v1.8.2
+	github.com/stretchr/testify v1.8.4
 	golang.org/x/text v0.9.0
 )
 
 require (
-	fyne.io/systray v1.10.1-0.20230508214253-6892e4d55d1c // indirect
+	fyne.io/systray v1.10.1-0.20230602210930-b6a2d6ca2a7b // indirect
 	github.com/bwmarrin/snowflake v0.3.0 // indirect
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
@@ -25,6 +25,7 @@ require (
 	github.com/fyne-io/gl-js v0.0.0-20230506162202-1fdaa286a934 // indirect
 	github.com/fyne-io/glfw-js v0.0.0-20220517201726-bebc2019cd33 // indirect
 	github.com/fyne-io/image v0.0.0-20221020213044-f609c6a24345 // indirect
+	github.com/gabriel-vasile/mimetype v1.4.2 // indirect
 	github.com/go-gl/gl v0.0.0-20211210172815-726fda9656d6 // indirect
 	github.com/go-gl/glfw/v3.3/glfw v0.0.0-20221017161538-93cebf72946b // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
@@ -62,7 +63,7 @@ require (
 	github.com/xujiajun/mmap-go v1.0.1 // indirect
 	github.com/xujiajun/utils v0.0.0-20220904132955-5f7c5b914235 // indirect
 	github.com/yuin/goldmark v1.5.4 // indirect
-	github.com/yusufpapurcu/wmi v1.2.2 // indirect
+	github.com/yusufpapurcu/wmi v1.2.3 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	golang.org/x/crypto v0.9.0 // indirect
 	golang.org/x/image v0.7.0 // indirect
@@ -76,8 +77,8 @@ require (
 )
 
 require (
-	fyne.io/fyne/v2 v2.3.4
-	fyne.io/x/fyne v0.0.0-20230411205836-1ca0ead20763
+	fyne.io/fyne/v2 v2.3.5
+	fyne.io/x/fyne v0.0.0-20230527115803-2bc5e346c12d
 	git.lukeshu.com/go/libsystemd v0.5.3
 	github.com/acobaugh/osrelease v0.1.0
 	github.com/carlmjohnson/requests v0.23.1
@@ -87,8 +88,8 @@ require (
 	github.com/iancoleman/strcase v0.2.0
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/lthibault/jitterbug/v2 v2.2.2
-	github.com/lxzan/gws v1.5.1
-	github.com/nutsdb/nutsdb v0.12.0
+	github.com/lxzan/gws v1.5.4
+	github.com/nutsdb/nutsdb v0.12.2
 	github.com/perimeterx/marshmallow v1.1.4
 	github.com/rs/zerolog v1.29.1
 	github.com/spf13/pflag v1.0.5 // indirect
