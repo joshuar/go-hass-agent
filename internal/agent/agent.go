@@ -102,7 +102,6 @@ func Run(appID string) {
 	agent.setupSystemTray()
 	agent.app.Run()
 	cancelFunc()
-	workerWg.Wait()
 	agent.stop()
 }
 
