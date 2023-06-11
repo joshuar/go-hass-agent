@@ -150,12 +150,8 @@ func (c *WebSocket) OnOpen(socket *gws.Conn) {
 	log.Debug().Caller().Msg("Websocket opened.")
 	go func() {
 		ticker := time.NewTicker(PingInterval)
-		done := make(chan struct{})
 		for {
 			select {
-			case <-done:
-				c.cancelFunc()
-				return
 			case <-ticker.C:
 				log.Debug().Caller().
 					Msg("Sending ping on websocket")
