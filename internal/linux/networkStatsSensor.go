@@ -15,7 +15,7 @@ import (
 	"github.com/shirou/gopsutil/v3/net"
 )
 
-//go:generate stringer -type=networkStat -output network_statistics_stat_linux.go
+//go:generate stringer -type=networkStat -output networkStatsSensorProps.go
 
 const (
 	bytesSent networkStat = iota + 1
