@@ -135,21 +135,17 @@ func LocationUpdater(ctx context.Context, locationInfoCh chan interface{}) {
 	}
 
 	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				log.Debug().Caller().
-					Msg("Stopping location updater.")
-				err = NewBusRequest(ctx, systemBus).
-					Path(clientPath).
-					Destination(geoclueInterface).
-					Call("org.freedesktop.GeoClue2.Client.Stop")
-				if err != nil {
-					log.Debug().Caller().Err(err).
-						Msg("Failed to stop location updater.")
-					return
-				}
-			}
+		<-ctx.Done()
+		log.Debug().Caller().
+			Msg("Stopping location updater.")
+		err = NewBusRequest(ctx, systemBus).
+			Path(clientPath).
+			Destination(geoclueInterface).
+			Call("org.freedesktop.GeoClue2.Client.Stop")
+		if err != nil {
+			log.Debug().Caller().Err(err).
+				Msg("Failed to stop location updater.")
+			return
 		}
 	}()
 }
