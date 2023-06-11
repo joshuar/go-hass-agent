@@ -16,7 +16,7 @@ import (
 	"github.com/shirou/gopsutil/v3/mem"
 )
 
-//go:generate stringer -type=memoryStat -output mem_stats_linux.go -linecomment
+//go:generate stringer -type=memoryStat -output memorySensorProps.go -linecomment
 
 const (
 	memoryTotal     memoryStat = iota + 1 // Memory Total

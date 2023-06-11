@@ -17,7 +17,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-//go:generate stringer -type=networkProp -output network_connections_props_linux.go
+//go:generate stringer -type=networkProp -output networkConnectionSensorProps.go
 
 const (
 	networkManagerPath     = "/org/freedesktop/NetworkManager"

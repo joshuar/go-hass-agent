@@ -15,7 +15,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-//go:generate stringer -type=powerProp -output power_props_linux.go
+//go:generate stringer -type=powerProp -output powerSensorProps.go
 const (
 	powerProfilesDBusPath           = "/net/hadess/PowerProfiles"
 	powerProfilesDBusDest           = "net.hadess.PowerProfiles"

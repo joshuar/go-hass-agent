@@ -17,7 +17,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-//go:generate stringer -type=dbusType -output dbusTypes_string.go -linecomment
+//go:generate stringer -type=dbusType -output dbusTypesStringer.go -linecomment
 const (
 	sessionBus dbusType = iota // session
 	systemBus                  // system

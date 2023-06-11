@@ -17,7 +17,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-//go:generate stringer -type=batteryProp -output battery_props_linux.go -linecomment
+//go:generate stringer -type=batteryProp -output batterySensorProps.go -linecomment
 
 const (
 	upowerDBusDest         = "org.freedesktop.UPower"

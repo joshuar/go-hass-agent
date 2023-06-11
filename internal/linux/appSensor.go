@@ -17,7 +17,7 @@ import (
 	"github.com/shirou/gopsutil/v3/process"
 )
 
-//go:generate stringer -type=appSensorType -output appSensor_types_linux.go -linecomment
+//go:generate stringer -type=appSensorType -output appSensorProps.go -linecomment
 const (
 	appStateDBusMethod    = "org.freedesktop.impl.portal.Background.GetAppState"
 	appStateDBusPath      = "/org/freedesktop/portal/desktop"
