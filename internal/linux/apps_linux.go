@@ -108,36 +108,47 @@ func (s *appSensor) Category() string {
 func (s *appSensor) Attributes() interface{} {
 	switch s.sensorType {
 	case activeApp:
-		appProcesses := findProcesses(getProcessBasename(s.State().(string)))
-		var cmd string
-		var createTime int64
-		if len(appProcesses) > 0 {
-			cmd, _ = appProcesses[0].Cmdline()
-			createTime, _ = appProcesses[0].CreateTime()
-		}
-		return struct {
-			Cmd     string `json:"Command Line"`
-			Started string `json:"Started"`
-			Count   int    `json:"Process Count"`
-		}{
-			Cmd:     cmd,
-			Started: time.UnixMilli(createTime).Format(time.RFC3339),
-			Count:   len(appProcesses),
-		}
+		return newActiveAppDetails(s.State().(string))
 	case runningApps:
-		var runningApps []string
-		for appName, state := range s.sensorValue {
-			if variantToValue[uint32](state) > 0 {
-				runningApps = append(runningApps, appName)
-			}
-		}
-		return struct {
-			RunningApps []string `json:"Running Apps"`
-		}{
-			RunningApps: runningApps,
-		}
+		return newRunningAppsDetails(s.sensorValue)
 	}
 	return nil
+}
+
+type activeAppDetails struct {
+	Cmd     string `json:"Command Line"`
+	Started string `json:"Started"`
+	Count   int    `json:"Process Count"`
+}
+
+func newActiveAppDetails(app string) *activeAppDetails {
+	var appProcesses []*process.Process
+	var cmd string
+	var createTime int64
+	appProcesses = findProcesses(getProcessBasename(app))
+	if len(appProcesses) > 0 {
+		cmd, _ = appProcesses[0].Cmdline()
+		createTime, _ = appProcesses[0].CreateTime()
+	}
+	return &activeAppDetails{
+		Cmd:     cmd,
+		Started: time.UnixMilli(createTime).Format(time.RFC3339),
+		Count:   len(appProcesses),
+	}
+}
+
+type runningAppsDetails struct {
+	RunningApps []string `json:"Running Apps"`
+}
+
+func newRunningAppsDetails(apps map[string]dbus.Variant) *runningAppsDetails {
+	details := new(runningAppsDetails)
+	for appName, state := range apps {
+		if variantToValue[uint32](state) > 0 {
+			details.RunningApps = append(details.RunningApps, appName)
+		}
+	}
+	return details
 }
 
 func marshalAppStateUpdate(t appSensorType, v map[string]dbus.Variant) *appSensor {
