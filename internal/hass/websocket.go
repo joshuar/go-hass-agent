@@ -150,23 +150,20 @@ func (c *WebSocket) OnOpen(socket *gws.Conn) {
 	log.Debug().Caller().Msg("Websocket opened.")
 	go func() {
 		ticker := time.NewTicker(PingInterval)
-		for {
-			select {
-			case <-ticker.C:
-				log.Debug().Caller().
-					Msg("Sending ping on websocket")
-				err := socket.SetDeadline(time.Now().Add(2 * PingInterval))
-				if err != nil {
-					log.Debug().Err(err).
-						Msg("Error setting deadline on websocket.")
-				}
-				c.WriteCh <- &webSocketData{
-					conn: socket,
-					data: &websocketMsg{
-						Type: "ping",
-						ID:   atomic.LoadUint64(&c.nextID),
-					},
-				}
+		for range ticker.C {
+			log.Debug().Caller().
+				Msg("Sending ping on websocket")
+			if err := socket.SetDeadline(time.Now().Add(2 * PingInterval)); err != nil {
+				log.Debug().Err(err).
+					Msg("Error setting deadline on websocket.")
+				return
+			}
+			c.WriteCh <- &webSocketData{
+				conn: socket,
+				data: &websocketMsg{
+					Type: "ping",
+					ID:   atomic.LoadUint64(&c.nextID),
+				},
 			}
 		}
 	}()
@@ -180,8 +177,7 @@ func (c *WebSocket) OnMessage(socket *gws.Conn, message *gws.Message) {
 	response := &websocketResponse{
 		Success: true,
 	}
-	err := json.Unmarshal(message.Bytes(), &response)
-	if err != nil {
+	if err := json.Unmarshal(message.Bytes(), &response); err != nil {
 		log.Debug().Caller().Err(err).
 			Msgf("Failed to unmarshall response %s.", message.Data.String())
 		return
