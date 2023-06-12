@@ -45,12 +45,12 @@ func (tracker *SensorTracker) add(s hass.SensorUpdate) error {
 		return errors.New("sensor map not initialised")
 	}
 	state := marshalSensorState(s)
-	metadata, err := tracker.registry.Get(state.entityID)
+	registryItem, err := tracker.registry.Get(state.entityID)
 	if err != nil {
 		log.Debug().Caller().
 			Msgf("Sensor %s not found in registry.", s.Name())
 	}
-	state.metadata = metadata
+	state.metadata = registryItem.data
 	tracker.sensor[state.entityID] = state
 	tracker.mu.Unlock()
 	if tracker.exists(state.entityID) {
@@ -132,7 +132,7 @@ func (tracker *SensorTracker) Update(ctx context.Context, s hass.SensorUpdate, c
 			}
 		} else {
 			hass.APIRequest(ctx, sensor)
-			tracker.registry.Set(sensorID, sensor.metadata)
+			tracker.registry.Set(registryItem{id: sensorID, data: sensor.metadata})
 		}
 	}
 }

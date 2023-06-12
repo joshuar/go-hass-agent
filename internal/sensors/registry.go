@@ -11,9 +11,14 @@ import (
 	"fyne.io/fyne/v2"
 )
 
+type registryItem struct {
+	id   string
+	data *sensorMetadata
+}
+
 type Registry interface {
-	Open(ctx context.Context, registryPath fyne.URI) error
-	Get(string) (*sensorMetadata, error)
-	Set(string, *sensorMetadata) error
+	Open(context.Context, fyne.URI) error
+	Get(string) (*registryItem, error)
+	Set(registryItem) error
 	Close() error
 }

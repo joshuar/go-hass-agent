@@ -6,20 +6,42 @@
 package sensors
 
 import (
+	"context"
 	"reflect"
 	"sync"
 	"testing"
 
+	"fyne.io/fyne/v2"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/stretchr/testify/mock"
 )
 
-type MockSensorRegistry struct {
+type mockSensorRegistry struct {
 	mock.Mock
 }
 
+func (r *mockSensorRegistry) Open(ctx context.Context, registryPath fyne.URI) error {
+	args := r.Called(ctx, registryPath)
+	return args.Error(0)
+}
+
+func (r *mockSensorRegistry) Get(id string) (*registryItem, error) {
+	args := r.Called(id)
+	return args.Get(0).(*registryItem), args.Error(1)
+}
+
+func (r *mockSensorRegistry) Set(item registryItem) error {
+	args := r.Called(item)
+	return args.Error(0)
+}
+
+func (r *mockSensorRegistry) Close() error {
+	args := r.Called()
+	return args.Error(0)
+}
+
 func newMockSensorTracker(t *testing.T) *SensorTracker {
-	fakeRegistry := newMockSensorRegistry(t)
+	fakeRegistry := &mockSensorRegistry{}
 	fakeTracker := &SensorTracker{
 		sensor:   make(map[string]*sensorState),
 		registry: fakeRegistry,
@@ -41,6 +63,8 @@ func Test_sensorTracker_add(t *testing.T) {
 	s.On("StateClass").Return(hass.StateMeasurement)
 	s.On("Units").Return("")
 	s.On("State").Return("default")
+	rSuccess := new(mockSensorRegistry)
+	rSuccess.On("Get", "default").Return(&registryItem{}, nil)
 	type fields struct {
 		mu         sync.RWMutex
 		sensor     map[string]*sensorState
@@ -59,14 +83,14 @@ func Test_sensorTracker_add(t *testing.T) {
 		{
 			name: "successful add",
 			fields: fields{
-				registry: newMockSensorRegistry(t),
+				registry: rSuccess,
 				sensor:   make(map[string]*sensorState)},
 			args: args{s: s},
 		},
 		{
 			name: "unsuccessful add",
 			fields: fields{
-				registry: newMockSensorRegistry(t)},
+				registry: &mockSensorRegistry{}},
 			args:    args{s: s},
 			wantErr: true,
 		},
@@ -100,6 +124,9 @@ func Test_sensorTracker_get(t *testing.T) {
 	s.On("Units").Return("")
 	s.On("State").Return("default")
 	tracker := newMockSensorTracker(t)
+	registry := new(mockSensorRegistry)
+	registry.On("Get", "default").Return(&registryItem{}, nil)
+	tracker.registry = registry
 	tracker.add(s)
 	fakeSensorState := tracker.Get(s.ID())
 	type args struct {
@@ -145,6 +172,10 @@ func Test_sensorTracker_exists(t *testing.T) {
 	s.On("State").Return("default")
 
 	tracker := newMockSensorTracker(t)
+	registry := new(mockSensorRegistry)
+	registry.On("Get", "default").Return(&registryItem{}, nil)
+	tracker.registry = registry
+
 	tracker.add(s)
 
 	type args struct {

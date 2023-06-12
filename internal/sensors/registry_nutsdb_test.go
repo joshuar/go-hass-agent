@@ -107,7 +107,7 @@ func Test_nutsdbRegistry_Get(t *testing.T) {
 		Registered: true,
 		Disabled:   false,
 	}
-	err = r.Set("fakeSensor", fakeMetadata)
+	err = r.Set(registryItem{id: "fakeSensor", data: fakeMetadata})
 	assert.Nil(t, err)
 
 	type fields struct {
@@ -193,7 +193,7 @@ func Test_nutsdbRegistry_Set(t *testing.T) {
 			r := &nutsdbRegistry{
 				db: tt.fields.db,
 			}
-			if err := r.Set(tt.args.id, tt.args.values); (err != nil) != tt.wantErr {
+			if err := r.Set(registryItem{id: tt.args.id, data: tt.args.values}); (err != nil) != tt.wantErr {
 				t.Errorf("nutsdbRegistry.Set() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
