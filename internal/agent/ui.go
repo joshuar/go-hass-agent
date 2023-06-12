@@ -17,7 +17,6 @@ import (
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
-	xlayout "fyne.io/x/fyne/layout"
 	"github.com/joshuar/go-hass-agent/assets/trayicon"
 	"github.com/rs/zerolog/log"
 )
@@ -89,41 +88,61 @@ func (agent *Agent) setupSystemTray() {
 }
 
 func (agent *Agent) makeSensorTable() {
+	var tableData [][]string
+	var entityNames []string
 	s, err := hassConfig.Get("entities")
 	if err != nil {
 		log.Debug().Caller().Err(err).
 			Msg("Could not get entities from config.")
 		return
 	}
-	sensors := s.(map[string]map[string]interface{})
-	var sensorsTable []fyne.CanvasObject
-	for rowKey, rowValue := range sensors {
-		var sensorRow []fyne.CanvasObject
-		sensorRow = append(sensorRow, widget.NewLabel(rowKey))
-		sensorState := tracker.Get(rowKey)
-		if sensorState != nil {
-			sensorRow = append(sensorRow, widget.NewLabel(fmt.Sprintf("%v %s",
-				sensorState.State(), sensorState.Units())))
-		} else {
-			sensorRow = append(sensorRow, widget.NewLabel(""))
+	for k, _ := range s.(map[string]map[string]interface{}) {
+		if state := tracker.Get(k); state != nil {
+			entityNames = append(entityNames, k)
+			tableData = append(tableData,
+				[]string{
+					k,
+					fmt.Sprintf("%v %s",
+						state.State(), state.Units()),
+				})
 		}
-		if rowValue["disabled"].(bool) {
-			sensorRow = append(sensorRow, widget.NewLabel("Disabled"))
-		} else {
-			sensorRow = append(sensorRow, widget.NewLabel(""))
-		}
-		tableRow := container.New(layout.NewGridLayout(3), sensorRow...)
-		sensorsTable = append(sensorsTable,
-			xlayout.Responsive(tableRow))
 	}
-	table := xlayout.NewResponsiveLayout(sensorsTable...)
-	layout := container.NewVScroll(table)
+
+	longestName := longestString(entityNames)
+
+	list := widget.NewTable(
+		func() (int, int) {
+			return len(tableData), len(tableData[0])
+		},
+		func() fyne.CanvasObject {
+			return widget.NewLabel(longestName)
+		},
+		func(i widget.TableCellID, o fyne.CanvasObject) {
+			o.(*widget.Label).SetText(tableData[i.Row][i.Col])
+		})
 	w := agent.app.NewWindow(agent.setTitle("Sensors"))
-	w.SetContent(layout)
+	w.SetContent(list)
 	w.Resize(fyne.NewSize(480, 640))
 	w.Show()
 }
 
 func (agent *Agent) setTitle(s string) string {
 	return translator.Translate("%s: %s", agent.Name, s)
+}
+
+func longestString(a []string) string {
+	var l string
+	if len(a) > 0 {
+		l = a[0]
+		a = a[1:]
+	}
+	for _, s := range a {
+		if len(l) <= len(s) {
+			// if len(l) < len(s) {
+			// 	l = l[:0]
+			// }
+			l = s
+		}
+	}
+	return l
 }
