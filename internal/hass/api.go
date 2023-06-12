@@ -72,21 +72,16 @@ type Response struct {
 func APIRequest(ctx context.Context, request Request) {
 	var res bytes.Buffer
 
-	requestCtx, cancel := context.WithTimeout(ctx, time.Second)
-	defer cancel()
-
-	secret, err := config.FetchPropertyFromContext(requestCtx, "secret")
+	secret, err := config.FetchPropertyFromContext(ctx, "secret")
 	if err != nil {
 		log.Error().Stack().Err(err).
 			Msg("Could not fetch secret from agent config.")
-		cancel()
 		return
 	}
-	url, err := config.FetchPropertyFromContext(requestCtx, "apiURL")
+	url, err := config.FetchPropertyFromContext(ctx, "apiURL")
 	if err != nil {
 		log.Error().Stack().Err(err).
 			Msg("Could not fetch api url from agent config.")
-		cancel()
 		return
 	}
 
@@ -94,20 +89,22 @@ func APIRequest(ctx context.Context, request Request) {
 	if err != nil {
 		log.Error().Stack().Err(err).
 			Msg("Unable to format request")
+		return
+	}
+
+	requestCtx, cancel := context.WithTimeout(ctx, time.Second)
+	defer cancel()
+
+	err = requests.
+		URL(url.(string)).
+		BodyBytes(reqJson).
+		ToBytesBuffer(&res).
+		Fetch(requestCtx)
+	if err != nil {
+		log.Error().Stack().Err(err).
+			Msgf("Unable to send request with body:\n\t%s\n\t", reqJson)
 		cancel()
 		return
-	} else {
-		err := requests.
-			URL(url.(string)).
-			BodyBytes(reqJson).
-			ToBytesBuffer(&res).
-			Fetch(requestCtx)
-		if err != nil {
-			log.Error().Stack().Err(err).
-				Msgf("Unable to send request with body:\n\t%s\n\t", reqJson)
-			cancel()
-			return
-		}
-		request.ResponseHandler(res)
 	}
+	request.ResponseHandler(res)
 }
