@@ -53,10 +53,13 @@ func (r *nutsdbRegistry) Close() error {
 	}
 }
 
-func (r *nutsdbRegistry) Get(id string) (*sensorMetadata, error) {
-	state := &sensorMetadata{
-		Registered: false,
-		Disabled:   false,
+func (r *nutsdbRegistry) Get(id string) (*registryItem, error) {
+	item := &registryItem{
+		id: id,
+		data: &sensorMetadata{
+			Registered: false,
+			Disabled:   false,
+		},
 	}
 	if err := r.db.View(
 		func(tx *nutsdb.Tx) error {
@@ -64,23 +67,23 @@ func (r *nutsdbRegistry) Get(id string) (*sensorMetadata, error) {
 			if e, err := tx.Get(registryBucket, key); err != nil {
 				return err
 			} else {
-				err := json.Unmarshal(e.Value, state)
+				err := json.Unmarshal(e.Value, item.data)
 				return err
 			}
 		}); err != nil {
-		return state, err
+		return item, err
 	}
-	return state, nil
+	return item, nil
 }
 
-func (r *nutsdbRegistry) Set(id string, values *sensorMetadata) error {
-	v, err := json.Marshal(values)
+func (r *nutsdbRegistry) Set(item registryItem) error {
+	v, err := json.Marshal(item.data)
 	if err != nil {
 		return err
 	}
 	if err := r.db.Update(
 		func(tx *nutsdb.Tx) error {
-			if err := tx.Put(registryBucket, []byte(id), v, 0); err != nil {
+			if err := tx.Put(registryBucket, []byte(item.id), v, 0); err != nil {
 				return err
 			}
 			return nil
