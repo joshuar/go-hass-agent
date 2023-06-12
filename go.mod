@@ -67,7 +67,6 @@ require (
 
 require (
 	fyne.io/fyne/v2 v2.3.5
-	fyne.io/x/fyne v0.0.0-20230527115803-2bc5e346c12d
 	git.lukeshu.com/go/libsystemd v0.5.3
 	github.com/acobaugh/osrelease v0.1.0
 	github.com/carlmjohnson/requests v0.23.1
