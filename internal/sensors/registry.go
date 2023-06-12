@@ -12,8 +12,8 @@ import (
 )
 
 type registryItem struct {
-	id   string
 	data *sensorMetadata
+	id   string
 }
 
 type Registry interface {
