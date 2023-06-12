@@ -107,8 +107,9 @@ func (s *appSensor) Category() string {
 
 func (s *appSensor) Attributes() interface{} {
 	switch s.sensorType {
-	case activeApp:
-		return newActiveAppDetails(s.State().(string))
+	// TODO: profile and improve code to avoid memory leak
+	// case activeApp:
+	// 	return newActiveAppDetails(s.State().(string))
 	case runningApps:
 		return newRunningAppsDetails(s.sensorValue)
 	}
