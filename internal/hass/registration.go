@@ -70,7 +70,7 @@ func RegisterWithHass(ri *RegistrationHost, rr *RegistrationRequest) *Registrati
 	err := backoff.RetryNotify(requestFunc, backoff.NewExponentialBackOff(), retryNotifyFunc)
 
 	if err != nil {
-		log.Error().Msgf("Unable to register: %v", err)
+		log.Debug().Err(err).Msg("Unable to register")
 		return nil
 	} else {
 		return res
