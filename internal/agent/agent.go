@@ -167,14 +167,15 @@ func (agent *Agent) SetupLogging() {
 func (agent *Agent) CheckConfig(ctx context.Context, registrationFetcher func(context.Context) *hass.RegistrationHost) {
 	config := agent.LoadConfig()
 	for config.Validate() != nil {
-		log.Warn().Msg("No suitable existing config found! Starting new registration process")
+		log.Warn().Msg("No suitable existing config found! Starting new registration process.")
 		err := agent.runRegistrationWorker(ctx, registrationFetcher)
 		if err != nil {
 			log.Error().Err(err).
-				Msgf("Error trying to register: %v. Exiting.")
+				Msg("Error trying to register.")
 			agent.stop()
+		} else {
+			config = agent.LoadConfig()
 		}
-		config = agent.LoadConfig()
 	}
 }
 
