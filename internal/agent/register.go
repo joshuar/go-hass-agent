@@ -21,6 +21,7 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/data/binding"
+	"fyne.io/fyne/v2/data/validation"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
 	validate "github.com/go-playground/validator/v10"
@@ -81,6 +82,7 @@ func (agent *Agent) requestRegistrationInfoUI(ctx context.Context) *hass.Registr
 	w := agent.app.NewWindow(translator.Translate("App Registration"))
 
 	tokenSelect := widget.NewEntryWithData(registrationInfo.Token)
+	tokenSelect.Validator = validation.NewRegexp("[A-Za-z0-9_\\.]+", "Invalid token format")
 
 	autoServerSelect := widget.NewSelect(allServers, func(s string) {
 		registrationInfo.Server.Set(s)
