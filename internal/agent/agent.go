@@ -68,11 +68,11 @@ func Run(appID string) {
 	// Try to load the app config. If it is not valid, start a new registration
 	// process. Keep trying until we successfully register with HA or the user
 	// quits.
-	var configWg sync.WaitGroup
-	configWg.Add(1)
+	var configOnce sync.Once
 	go func() {
-		defer configWg.Done()
-		agent.CheckConfig(agentCtx, agent.requestRegistrationInfoUI)
+		configOnce.Do(func() {
+			agent.CheckConfig(agentCtx, agent.requestRegistrationInfoUI)
+		})
 	}()
 
 	// Wait for the config to load, then start the sensor tracker and
@@ -80,7 +80,10 @@ func Run(appID string) {
 	var workerWg sync.WaitGroup
 	defer workerWg.Done()
 	go func() {
-		configWg.Wait()
+		configOnce.Do(func() {
+			agent.CheckConfig(agentCtx, agent.requestRegistrationInfoUI)
+		})
+
 		appConfig := agent.LoadConfig()
 		agentWorkerCtx := config.StoreInContext(agentCtx, appConfig)
 		hassConfig = hass.NewHassConfig(agentWorkerCtx)
