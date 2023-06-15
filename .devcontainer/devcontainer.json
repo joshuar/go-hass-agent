@@ -12,6 +12,17 @@
     "mounts": [
         "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind,consistency=cached"
     ],    
+    "customizations": {
+        "vscode": {
+          "extensions": [
+            "vivaxy.vscode-conventional-commits",
+            "eamodio.gitlens",
+            "golang.go",
+            "premparihar.gotestexplorer",
+            "ymotongpoo.licenser",
+            "esbenp.prettier-vscode",
+        ]}
+      },    
     "runArgs": [
         "--userns=keep-id:uid=1000,gid=1000"
     ],
