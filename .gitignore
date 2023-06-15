@@ -1,6 +1,7 @@
 # Ignore everything
 .vscode/
 internal/agent/VERSION
+home-assistant
 
 # But not these files...
 !.gitignore
