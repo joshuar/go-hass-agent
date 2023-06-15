@@ -1,0 +1,20 @@
+{
+    "image": "mcr.microsoft.com/devcontainers/python",
+    "appPort": ["8123:8123"],
+    "postCreateCommand": "tools/devcontainer/postcreate",
+    "postStartCommand": ". /workspaces/go-hass-agent/home-assistant/venv/bin/activate && hass -c $HA_PATH/config",
+    "remoteEnv": {
+        "PATH": "${containerEnv:PATH}:/usr/local/go/bin",
+        "GO_DL": "go1.20.5.linux-amd64.tar.gz",
+        "HA_PATH": "/workspaces/go-hass-agent/home-assistant",
+        "DISPLAY": "${localEnv:DISPLAY}"
+    },
+    "mounts": [
+        "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind,consistency=cached"
+    ],    
+    "runArgs": [
+        "--userns=keep-id:uid=1000,gid=1000"
+    ],
+    "containerUser": "vscode",
+    "updateRemoteUserUID": true
+}
