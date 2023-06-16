@@ -11,7 +11,8 @@
     },
     "mounts": [
         "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind,consistency=cached"
-    ],    
+    ],
+    "shutdownAction": "stopContainer",
     "customizations": {
         "vscode": {
           "extensions": [
@@ -22,7 +23,7 @@
             "ymotongpoo.licenser",
             "esbenp.prettier-vscode",
         ]}
-      },    
+      },
     "runArgs": [
         "--userns=keep-id:uid=1000,gid=1000"
     ],
