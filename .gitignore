@@ -1,5 +1,4 @@
 # Ignore everything
-.vscode/
 internal/agent/VERSION
 home-assistant
 
