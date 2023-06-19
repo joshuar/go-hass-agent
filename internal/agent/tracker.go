@@ -26,29 +26,26 @@ func (agent *Agent) runSensorTracker(ctx context.Context) {
 		return
 	}
 	updateCh := make(chan interface{})
-	// goroutine to listen for sensor updates. Sensors are tracked in a map to
-	// handle registration and disabling/enabling. Updates are sent to Home
-	// Assistant.
-	go func() {
-		for {
-			select {
-			case data := <-updateCh:
-				switch data := data.(type) {
-				case hass.SensorUpdate:
-					go tracker.Update(ctx, data, hassConfig)
-				case hass.LocationUpdate:
-					l := hass.MarshalLocationUpdate(data)
-					go hass.APIRequest(ctx, l)
-				default:
-					log.Debug().Caller().
-						Msgf("Got unexpected status update %v", data)
-				}
-			case <-ctx.Done():
+	go tracker.StartWorkers(ctx, updateCh)
+	// Sensors are tracked in a map to handle registration and
+	// disabling/enabling. Updates are sent to Home Assistant.
+	for {
+		select {
+		case data := <-updateCh:
+			switch data := data.(type) {
+			case hass.SensorUpdate:
+				go tracker.Update(ctx, data, hassConfig)
+			case hass.LocationUpdate:
+				l := hass.MarshalLocationUpdate(data)
+				go hass.APIRequest(ctx, l)
+			default:
 				log.Debug().Caller().
-					Msg("Stopping sensor tracking.")
-				return
+					Msgf("Got unexpected status update %v", data)
 			}
+		case <-ctx.Done():
+			log.Debug().Caller().
+				Msg("Stopping sensor tracking.")
+			return
 		}
-	}()
-	tracker.StartWorkers(ctx, updateCh)
+	}
 }

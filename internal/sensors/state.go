@@ -16,17 +16,8 @@ import (
 // sensorState tracks the current state of a sensor, including the sensor value
 // and whether it is registered/disabled in HA.
 type sensorState struct {
-	state       interface{}
-	attributes  interface{}
-	metadata    *sensorMetadata
-	stateUnits  string
-	icon        string
-	name        string
-	entityID    string
-	category    string
-	deviceClass hass.SensorDeviceClass
-	stateClass  hass.SensorStateClass
-	sensorType  hass.SensorType
+	data     hass.SensorUpdate
+	metadata *sensorMetadata
 }
 
 type sensorMetadata struct {
@@ -37,47 +28,47 @@ type sensorMetadata struct {
 // sensorState implements hass.Sensor to represent a sensor in HA.
 
 func (s *sensorState) DeviceClass() hass.SensorDeviceClass {
-	return s.deviceClass
+	return s.data.DeviceClass()
 }
 
 func (s *sensorState) StateClass() hass.SensorStateClass {
-	return s.stateClass
+	return s.data.StateClass()
 }
 
 func (s *sensorState) SensorType() hass.SensorType {
-	return s.sensorType
+	return s.data.SensorType()
 }
 
 func (s *sensorState) Icon() string {
-	return s.icon
+	return s.data.Icon()
 }
 
 func (s *sensorState) Name() string {
-	return s.name
+	return s.data.Name()
 }
 
 func (s *sensorState) State() interface{} {
-	if s.state != nil {
-		return s.state
+	if s.data.State() != nil {
+		return s.data.State()
 	} else {
 		return "Unknown"
 	}
 }
 
 func (s *sensorState) Attributes() interface{} {
-	return s.attributes
+	return s.data.Attributes()
 }
 
 func (s *sensorState) ID() string {
-	return s.entityID
+	return s.data.ID()
 }
 
 func (s *sensorState) Units() string {
-	return s.stateUnits
+	return s.data.Units()
 }
 
 func (s *sensorState) Category() string {
-	return s.category
+	return s.data.Category()
 }
 
 func (s *sensorState) Disabled() bool {
@@ -129,7 +120,7 @@ func (sensor *sensorState) ResponseHandler(rawResponse bytes.Buffer) {
 	switch {
 	case rawResponse.Len() == 0 || rawResponse.String() == "{}":
 		log.Debug().Caller().
-			Msgf("No response for %s request. Likely problem with request data.", sensor.name)
+			Msgf("No response for %s request. Likely problem with request data.", sensor.Name())
 	default:
 		var r interface{}
 		err := json.Unmarshal(rawResponse.Bytes(), &r)
@@ -147,7 +138,7 @@ func (sensor *sensorState) ResponseHandler(rawResponse bytes.Buffer) {
 						sensor.Name())
 			}
 		}
-		if v, ok := response[sensor.entityID]; ok {
+		if v, ok := response[sensor.ID()]; ok {
 			status := v.(map[string]interface{})
 			if !status["success"].(bool) {
 				error := status["error"].(map[string]interface{})
@@ -170,20 +161,5 @@ func (sensor *sensorState) ResponseHandler(rawResponse bytes.Buffer) {
 				sensor.metadata.Disabled = false
 			}
 		}
-	}
-}
-
-func marshalSensorState(s hass.SensorUpdate) *sensorState {
-	return &sensorState{
-		entityID:    s.ID(),
-		name:        s.Name(),
-		deviceClass: s.DeviceClass(),
-		stateClass:  s.StateClass(),
-		sensorType:  s.SensorType(),
-		state:       s.State(),
-		attributes:  s.Attributes(),
-		icon:        s.Icon(),
-		stateUnits:  s.Units(),
-		category:    s.Category(),
 	}
 }
