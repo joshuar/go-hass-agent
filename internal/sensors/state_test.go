@@ -91,17 +91,8 @@ func (m *mockSensorUpdate) UnMarshalJSON(b []byte) error {
 
 func Test_sensorState_DeviceClass(t *testing.T) {
 	type fields struct {
-		state       interface{}
-		attributes  interface{}
-		metadata    *sensorMetadata
-		stateUnits  string
-		icon        string
-		name        string
-		entityID    string
-		category    string
-		deviceClass hass.SensorDeviceClass
-		stateClass  hass.SensorStateClass
-		sensorType  hass.SensorType
+		data     hass.SensorUpdate
+		metadata *sensorMetadata
 	}
 	tests := []struct {
 		name   string
@@ -113,17 +104,8 @@ func Test_sensorState_DeviceClass(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &sensorState{
-				state:       tt.fields.state,
-				attributes:  tt.fields.attributes,
-				metadata:    tt.fields.metadata,
-				stateUnits:  tt.fields.stateUnits,
-				icon:        tt.fields.icon,
-				name:        tt.fields.name,
-				entityID:    tt.fields.entityID,
-				category:    tt.fields.category,
-				deviceClass: tt.fields.deviceClass,
-				stateClass:  tt.fields.stateClass,
-				sensorType:  tt.fields.sensorType,
+				data:     tt.fields.data,
+				metadata: tt.fields.metadata,
 			}
 			if got := s.DeviceClass(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("sensorState.DeviceClass() = %v, want %v", got, tt.want)
@@ -134,17 +116,8 @@ func Test_sensorState_DeviceClass(t *testing.T) {
 
 func Test_sensorState_StateClass(t *testing.T) {
 	type fields struct {
-		state       interface{}
-		attributes  interface{}
-		metadata    *sensorMetadata
-		stateUnits  string
-		icon        string
-		name        string
-		entityID    string
-		category    string
-		deviceClass hass.SensorDeviceClass
-		stateClass  hass.SensorStateClass
-		sensorType  hass.SensorType
+		data     hass.SensorUpdate
+		metadata *sensorMetadata
 	}
 	tests := []struct {
 		name   string
@@ -156,17 +129,8 @@ func Test_sensorState_StateClass(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &sensorState{
-				state:       tt.fields.state,
-				attributes:  tt.fields.attributes,
-				metadata:    tt.fields.metadata,
-				stateUnits:  tt.fields.stateUnits,
-				icon:        tt.fields.icon,
-				name:        tt.fields.name,
-				entityID:    tt.fields.entityID,
-				category:    tt.fields.category,
-				deviceClass: tt.fields.deviceClass,
-				stateClass:  tt.fields.stateClass,
-				sensorType:  tt.fields.sensorType,
+				data:     tt.fields.data,
+				metadata: tt.fields.metadata,
 			}
 			if got := s.StateClass(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("sensorState.StateClass() = %v, want %v", got, tt.want)
@@ -177,17 +141,8 @@ func Test_sensorState_StateClass(t *testing.T) {
 
 func Test_sensorState_SensorType(t *testing.T) {
 	type fields struct {
-		state       interface{}
-		attributes  interface{}
-		metadata    *sensorMetadata
-		stateUnits  string
-		icon        string
-		name        string
-		entityID    string
-		category    string
-		deviceClass hass.SensorDeviceClass
-		stateClass  hass.SensorStateClass
-		sensorType  hass.SensorType
+		data     hass.SensorUpdate
+		metadata *sensorMetadata
 	}
 	tests := []struct {
 		name   string
@@ -199,17 +154,8 @@ func Test_sensorState_SensorType(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &sensorState{
-				state:       tt.fields.state,
-				attributes:  tt.fields.attributes,
-				metadata:    tt.fields.metadata,
-				stateUnits:  tt.fields.stateUnits,
-				icon:        tt.fields.icon,
-				name:        tt.fields.name,
-				entityID:    tt.fields.entityID,
-				category:    tt.fields.category,
-				deviceClass: tt.fields.deviceClass,
-				stateClass:  tt.fields.stateClass,
-				sensorType:  tt.fields.sensorType,
+				data:     tt.fields.data,
+				metadata: tt.fields.metadata,
 			}
 			if got := s.SensorType(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("sensorState.SensorType() = %v, want %v", got, tt.want)
@@ -220,17 +166,8 @@ func Test_sensorState_SensorType(t *testing.T) {
 
 func Test_sensorState_Icon(t *testing.T) {
 	type fields struct {
-		state       interface{}
-		attributes  interface{}
-		metadata    *sensorMetadata
-		stateUnits  string
-		icon        string
-		name        string
-		entityID    string
-		category    string
-		deviceClass hass.SensorDeviceClass
-		stateClass  hass.SensorStateClass
-		sensorType  hass.SensorType
+		data     hass.SensorUpdate
+		metadata *sensorMetadata
 	}
 	tests := []struct {
 		name   string
@@ -242,17 +179,8 @@ func Test_sensorState_Icon(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &sensorState{
-				state:       tt.fields.state,
-				attributes:  tt.fields.attributes,
-				metadata:    tt.fields.metadata,
-				stateUnits:  tt.fields.stateUnits,
-				icon:        tt.fields.icon,
-				name:        tt.fields.name,
-				entityID:    tt.fields.entityID,
-				category:    tt.fields.category,
-				deviceClass: tt.fields.deviceClass,
-				stateClass:  tt.fields.stateClass,
-				sensorType:  tt.fields.sensorType,
+				data:     tt.fields.data,
+				metadata: tt.fields.metadata,
 			}
 			if got := s.Icon(); got != tt.want {
 				t.Errorf("sensorState.Icon() = %v, want %v", got, tt.want)
@@ -263,17 +191,8 @@ func Test_sensorState_Icon(t *testing.T) {
 
 func Test_sensorState_Name(t *testing.T) {
 	type fields struct {
-		state       interface{}
-		attributes  interface{}
-		metadata    *sensorMetadata
-		stateUnits  string
-		icon        string
-		name        string
-		entityID    string
-		category    string
-		deviceClass hass.SensorDeviceClass
-		stateClass  hass.SensorStateClass
-		sensorType  hass.SensorType
+		data     hass.SensorUpdate
+		metadata *sensorMetadata
 	}
 	tests := []struct {
 		name   string
@@ -285,17 +204,8 @@ func Test_sensorState_Name(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &sensorState{
-				state:       tt.fields.state,
-				attributes:  tt.fields.attributes,
-				metadata:    tt.fields.metadata,
-				stateUnits:  tt.fields.stateUnits,
-				icon:        tt.fields.icon,
-				name:        tt.fields.name,
-				entityID:    tt.fields.entityID,
-				category:    tt.fields.category,
-				deviceClass: tt.fields.deviceClass,
-				stateClass:  tt.fields.stateClass,
-				sensorType:  tt.fields.sensorType,
+				data:     tt.fields.data,
+				metadata: tt.fields.metadata,
 			}
 			if got := s.Name(); got != tt.want {
 				t.Errorf("sensorState.Name() = %v, want %v", got, tt.want)
@@ -306,17 +216,8 @@ func Test_sensorState_Name(t *testing.T) {
 
 func Test_sensorState_State(t *testing.T) {
 	type fields struct {
-		state       interface{}
-		attributes  interface{}
-		metadata    *sensorMetadata
-		stateUnits  string
-		icon        string
-		name        string
-		entityID    string
-		category    string
-		deviceClass hass.SensorDeviceClass
-		stateClass  hass.SensorStateClass
-		sensorType  hass.SensorType
+		data     hass.SensorUpdate
+		metadata *sensorMetadata
 	}
 	tests := []struct {
 		name   string
@@ -328,17 +229,8 @@ func Test_sensorState_State(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &sensorState{
-				state:       tt.fields.state,
-				attributes:  tt.fields.attributes,
-				metadata:    tt.fields.metadata,
-				stateUnits:  tt.fields.stateUnits,
-				icon:        tt.fields.icon,
-				name:        tt.fields.name,
-				entityID:    tt.fields.entityID,
-				category:    tt.fields.category,
-				deviceClass: tt.fields.deviceClass,
-				stateClass:  tt.fields.stateClass,
-				sensorType:  tt.fields.sensorType,
+				data:     tt.fields.data,
+				metadata: tt.fields.metadata,
 			}
 			if got := s.State(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("sensorState.State() = %v, want %v", got, tt.want)
@@ -349,17 +241,8 @@ func Test_sensorState_State(t *testing.T) {
 
 func Test_sensorState_Attributes(t *testing.T) {
 	type fields struct {
-		state       interface{}
-		attributes  interface{}
-		metadata    *sensorMetadata
-		stateUnits  string
-		icon        string
-		name        string
-		entityID    string
-		category    string
-		deviceClass hass.SensorDeviceClass
-		stateClass  hass.SensorStateClass
-		sensorType  hass.SensorType
+		data     hass.SensorUpdate
+		metadata *sensorMetadata
 	}
 	tests := []struct {
 		name   string
@@ -371,17 +254,8 @@ func Test_sensorState_Attributes(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &sensorState{
-				state:       tt.fields.state,
-				attributes:  tt.fields.attributes,
-				metadata:    tt.fields.metadata,
-				stateUnits:  tt.fields.stateUnits,
-				icon:        tt.fields.icon,
-				name:        tt.fields.name,
-				entityID:    tt.fields.entityID,
-				category:    tt.fields.category,
-				deviceClass: tt.fields.deviceClass,
-				stateClass:  tt.fields.stateClass,
-				sensorType:  tt.fields.sensorType,
+				data:     tt.fields.data,
+				metadata: tt.fields.metadata,
 			}
 			if got := s.Attributes(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("sensorState.Attributes() = %v, want %v", got, tt.want)
@@ -392,17 +266,8 @@ func Test_sensorState_Attributes(t *testing.T) {
 
 func Test_sensorState_ID(t *testing.T) {
 	type fields struct {
-		state       interface{}
-		attributes  interface{}
-		metadata    *sensorMetadata
-		stateUnits  string
-		icon        string
-		name        string
-		entityID    string
-		category    string
-		deviceClass hass.SensorDeviceClass
-		stateClass  hass.SensorStateClass
-		sensorType  hass.SensorType
+		data     hass.SensorUpdate
+		metadata *sensorMetadata
 	}
 	tests := []struct {
 		name   string
@@ -414,17 +279,8 @@ func Test_sensorState_ID(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &sensorState{
-				state:       tt.fields.state,
-				attributes:  tt.fields.attributes,
-				metadata:    tt.fields.metadata,
-				stateUnits:  tt.fields.stateUnits,
-				icon:        tt.fields.icon,
-				name:        tt.fields.name,
-				entityID:    tt.fields.entityID,
-				category:    tt.fields.category,
-				deviceClass: tt.fields.deviceClass,
-				stateClass:  tt.fields.stateClass,
-				sensorType:  tt.fields.sensorType,
+				data:     tt.fields.data,
+				metadata: tt.fields.metadata,
 			}
 			if got := s.ID(); got != tt.want {
 				t.Errorf("sensorState.ID() = %v, want %v", got, tt.want)
@@ -435,17 +291,8 @@ func Test_sensorState_ID(t *testing.T) {
 
 func Test_sensorState_Units(t *testing.T) {
 	type fields struct {
-		state       interface{}
-		attributes  interface{}
-		metadata    *sensorMetadata
-		stateUnits  string
-		icon        string
-		name        string
-		entityID    string
-		category    string
-		deviceClass hass.SensorDeviceClass
-		stateClass  hass.SensorStateClass
-		sensorType  hass.SensorType
+		data     hass.SensorUpdate
+		metadata *sensorMetadata
 	}
 	tests := []struct {
 		name   string
@@ -457,17 +304,8 @@ func Test_sensorState_Units(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &sensorState{
-				state:       tt.fields.state,
-				attributes:  tt.fields.attributes,
-				metadata:    tt.fields.metadata,
-				stateUnits:  tt.fields.stateUnits,
-				icon:        tt.fields.icon,
-				name:        tt.fields.name,
-				entityID:    tt.fields.entityID,
-				category:    tt.fields.category,
-				deviceClass: tt.fields.deviceClass,
-				stateClass:  tt.fields.stateClass,
-				sensorType:  tt.fields.sensorType,
+				data:     tt.fields.data,
+				metadata: tt.fields.metadata,
 			}
 			if got := s.Units(); got != tt.want {
 				t.Errorf("sensorState.Units() = %v, want %v", got, tt.want)
@@ -478,17 +316,8 @@ func Test_sensorState_Units(t *testing.T) {
 
 func Test_sensorState_Category(t *testing.T) {
 	type fields struct {
-		state       interface{}
-		attributes  interface{}
-		metadata    *sensorMetadata
-		stateUnits  string
-		icon        string
-		name        string
-		entityID    string
-		category    string
-		deviceClass hass.SensorDeviceClass
-		stateClass  hass.SensorStateClass
-		sensorType  hass.SensorType
+		data     hass.SensorUpdate
+		metadata *sensorMetadata
 	}
 	tests := []struct {
 		name   string
@@ -500,17 +329,8 @@ func Test_sensorState_Category(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &sensorState{
-				state:       tt.fields.state,
-				attributes:  tt.fields.attributes,
-				metadata:    tt.fields.metadata,
-				stateUnits:  tt.fields.stateUnits,
-				icon:        tt.fields.icon,
-				name:        tt.fields.name,
-				entityID:    tt.fields.entityID,
-				category:    tt.fields.category,
-				deviceClass: tt.fields.deviceClass,
-				stateClass:  tt.fields.stateClass,
-				sensorType:  tt.fields.sensorType,
+				data:     tt.fields.data,
+				metadata: tt.fields.metadata,
 			}
 			if got := s.Category(); got != tt.want {
 				t.Errorf("sensorState.Category() = %v, want %v", got, tt.want)
@@ -521,17 +341,8 @@ func Test_sensorState_Category(t *testing.T) {
 
 func Test_sensorState_Disabled(t *testing.T) {
 	type fields struct {
-		state       interface{}
-		attributes  interface{}
-		metadata    *sensorMetadata
-		stateUnits  string
-		icon        string
-		name        string
-		entityID    string
-		category    string
-		deviceClass hass.SensorDeviceClass
-		stateClass  hass.SensorStateClass
-		sensorType  hass.SensorType
+		data     hass.SensorUpdate
+		metadata *sensorMetadata
 	}
 	tests := []struct {
 		name   string
@@ -543,17 +354,8 @@ func Test_sensorState_Disabled(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &sensorState{
-				state:       tt.fields.state,
-				attributes:  tt.fields.attributes,
-				metadata:    tt.fields.metadata,
-				stateUnits:  tt.fields.stateUnits,
-				icon:        tt.fields.icon,
-				name:        tt.fields.name,
-				entityID:    tt.fields.entityID,
-				category:    tt.fields.category,
-				deviceClass: tt.fields.deviceClass,
-				stateClass:  tt.fields.stateClass,
-				sensorType:  tt.fields.sensorType,
+				data:     tt.fields.data,
+				metadata: tt.fields.metadata,
 			}
 			if got := s.Disabled(); got != tt.want {
 				t.Errorf("sensorState.Disabled() = %v, want %v", got, tt.want)
@@ -564,17 +366,8 @@ func Test_sensorState_Disabled(t *testing.T) {
 
 func Test_sensorState_Registered(t *testing.T) {
 	type fields struct {
-		state       interface{}
-		attributes  interface{}
-		metadata    *sensorMetadata
-		stateUnits  string
-		icon        string
-		name        string
-		entityID    string
-		category    string
-		deviceClass hass.SensorDeviceClass
-		stateClass  hass.SensorStateClass
-		sensorType  hass.SensorType
+		data     hass.SensorUpdate
+		metadata *sensorMetadata
 	}
 	tests := []struct {
 		name   string
@@ -586,17 +379,8 @@ func Test_sensorState_Registered(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &sensorState{
-				state:       tt.fields.state,
-				attributes:  tt.fields.attributes,
-				metadata:    tt.fields.metadata,
-				stateUnits:  tt.fields.stateUnits,
-				icon:        tt.fields.icon,
-				name:        tt.fields.name,
-				entityID:    tt.fields.entityID,
-				category:    tt.fields.category,
-				deviceClass: tt.fields.deviceClass,
-				stateClass:  tt.fields.stateClass,
-				sensorType:  tt.fields.sensorType,
+				data:     tt.fields.data,
+				metadata: tt.fields.metadata,
 			}
 			if got := s.Registered(); got != tt.want {
 				t.Errorf("sensorState.Registered() = %v, want %v", got, tt.want)
@@ -606,18 +390,22 @@ func Test_sensorState_Registered(t *testing.T) {
 }
 
 func Test_sensorState_MarshalJSON(t *testing.T) {
+	s := new(mockSensorUpdate)
+	s.On("Attributes").Return("")
+	s.On("Category").Return("")
+	s.On("DeviceClass").Return(hass.Duration)
+	s.On("Disabled").Return(false)
+	s.On("Registered").Return(true)
+	s.On("ID").Return("default")
+	s.On("Icon").Return("default")
+	s.On("Name").Return("default")
+	s.On("SensorType").Return(hass.TypeSensor)
+	s.On("StateClass").Return(hass.StateMeasurement)
+	s.On("Units").Return("")
+	s.On("State").Return("default")
 	type fields struct {
-		state       interface{}
-		attributes  interface{}
-		metadata    *sensorMetadata
-		stateUnits  string
-		icon        string
-		name        string
-		entityID    string
-		category    string
-		deviceClass hass.SensorDeviceClass
-		stateClass  hass.SensorStateClass
-		sensorType  hass.SensorType
+		data     hass.SensorUpdate
+		metadata *sensorMetadata
 	}
 	tests := []struct {
 		name    string
@@ -631,8 +419,9 @@ func Test_sensorState_MarshalJSON(t *testing.T) {
 				metadata: &sensorMetadata{
 					Registered: true,
 				},
+				data: s,
 			},
-			want:    []byte(`{"state":"Unknown","type":"sensor","unique_id":""}`),
+			want:    []byte(`{"attributes":"","icon":"default","state":"default","type":"sensor","unique_id":"default"}`),
 			wantErr: false,
 		},
 		{
@@ -641,25 +430,17 @@ func Test_sensorState_MarshalJSON(t *testing.T) {
 				metadata: &sensorMetadata{
 					Registered: false,
 				},
+				data: s,
 			},
-			want:    []byte(`{"name":"","state":"Unknown","type":"sensor","unique_id":""}`),
+			want:    []byte(`{"attributes":"","device_class":"Duration","icon":"default","name":"default","state":"default","type":"sensor","unique_id":"default","state_class":"measurement"}`),
 			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &sensorState{
-				state:       tt.fields.state,
-				attributes:  tt.fields.attributes,
-				metadata:    tt.fields.metadata,
-				stateUnits:  tt.fields.stateUnits,
-				icon:        tt.fields.icon,
-				name:        tt.fields.name,
-				entityID:    tt.fields.entityID,
-				category:    tt.fields.category,
-				deviceClass: tt.fields.deviceClass,
-				stateClass:  tt.fields.stateClass,
-				sensorType:  tt.fields.sensorType,
+				data:     tt.fields.data,
+				metadata: tt.fields.metadata,
 			}
 			got, err := s.MarshalJSON()
 			if (err != nil) != tt.wantErr {
@@ -674,18 +455,22 @@ func Test_sensorState_MarshalJSON(t *testing.T) {
 }
 
 func Test_sensorState_UnMarshalJSON(t *testing.T) {
+	s := new(mockSensorUpdate)
+	s.On("Attributes").Return("")
+	s.On("Category").Return("")
+	s.On("DeviceClass").Return(hass.Duration)
+	s.On("Disabled").Return(false)
+	s.On("Registered").Return(true)
+	s.On("ID").Return("default")
+	s.On("Icon").Return("default")
+	s.On("Name").Return("default")
+	s.On("SensorType").Return(hass.TypeSensor)
+	s.On("StateClass").Return(hass.StateMeasurement)
+	s.On("Units").Return("")
+	s.On("State").Return("default")
 	type fields struct {
-		state       interface{}
-		attributes  interface{}
-		metadata    *sensorMetadata
-		stateUnits  string
-		icon        string
-		name        string
-		entityID    string
-		category    string
-		deviceClass hass.SensorDeviceClass
-		stateClass  hass.SensorStateClass
-		sensorType  hass.SensorType
+		data     hass.SensorUpdate
+		metadata *sensorMetadata
 	}
 	type args struct {
 		b []byte
@@ -699,30 +484,18 @@ func Test_sensorState_UnMarshalJSON(t *testing.T) {
 		{
 			name: "default test",
 			fields: fields{
-				name:       "default",
-				state:      "default",
-				sensorType: hass.TypeSensor,
+				data: s,
 			},
 			args: args{
 				b: []byte(`{"name":"default","state":"default","type":"sensor"}`),
 			},
 			wantErr: false,
-		},
-	}
+		}}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &sensorState{
-				state:       tt.fields.state,
-				attributes:  tt.fields.attributes,
-				metadata:    tt.fields.metadata,
-				stateUnits:  tt.fields.stateUnits,
-				icon:        tt.fields.icon,
-				name:        tt.fields.name,
-				entityID:    tt.fields.entityID,
-				category:    tt.fields.category,
-				deviceClass: tt.fields.deviceClass,
-				stateClass:  tt.fields.stateClass,
-				sensorType:  tt.fields.sensorType,
+				data:     tt.fields.data,
+				metadata: tt.fields.metadata,
 			}
 			if err := s.UnMarshalJSON(tt.args.b); (err != nil) != tt.wantErr {
 				t.Errorf("sensorState.UnMarshalJSON() error = %v, wantErr %v", err, tt.wantErr)
@@ -733,17 +506,8 @@ func Test_sensorState_UnMarshalJSON(t *testing.T) {
 
 func Test_sensorState_RequestType(t *testing.T) {
 	type fields struct {
-		state       interface{}
-		attributes  interface{}
-		metadata    *sensorMetadata
-		stateUnits  string
-		icon        string
-		name        string
-		entityID    string
-		category    string
-		deviceClass hass.SensorDeviceClass
-		stateClass  hass.SensorStateClass
-		sensorType  hass.SensorType
+		data     hass.SensorUpdate
+		metadata *sensorMetadata
 	}
 	tests := []struct {
 		name   string
@@ -759,22 +523,12 @@ func Test_sensorState_RequestType(t *testing.T) {
 			name:   "registered sensor",
 			fields: fields{metadata: &sensorMetadata{Registered: true}},
 			want:   hass.RequestTypeUpdateSensorStates,
-		},
-	}
+		}}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			sensor := &sensorState{
-				state:       tt.fields.state,
-				attributes:  tt.fields.attributes,
-				metadata:    tt.fields.metadata,
-				stateUnits:  tt.fields.stateUnits,
-				icon:        tt.fields.icon,
-				name:        tt.fields.name,
-				entityID:    tt.fields.entityID,
-				category:    tt.fields.category,
-				deviceClass: tt.fields.deviceClass,
-				stateClass:  tt.fields.stateClass,
-				sensorType:  tt.fields.sensorType,
+				data:     tt.fields.data,
+				metadata: tt.fields.metadata,
 			}
 			if got := sensor.RequestType(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("sensorState.RequestType() = %v, want %v", got, tt.want)
@@ -784,19 +538,23 @@ func Test_sensorState_RequestType(t *testing.T) {
 }
 
 func Test_sensorState_RequestData(t *testing.T) {
-	defaultMsg := json.RawMessage(`{"name":"","state":"Unknown","type":"sensor","unique_id":""}`)
+	defaultMsg := json.RawMessage(`{"attributes":"","device_class":"Duration","icon":"default","name":"default","state":"default","type":"sensor","unique_id":"default","state_class":"measurement"}`)
+	s := new(mockSensorUpdate)
+	s.On("Attributes").Return("")
+	s.On("Category").Return("")
+	s.On("DeviceClass").Return(hass.Duration)
+	s.On("Disabled").Return(false)
+	s.On("Registered").Return(true)
+	s.On("ID").Return("default")
+	s.On("Icon").Return("default")
+	s.On("Name").Return("default")
+	s.On("SensorType").Return(hass.TypeSensor)
+	s.On("StateClass").Return(hass.StateMeasurement)
+	s.On("Units").Return("")
+	s.On("State").Return("default")
 	type fields struct {
-		state       interface{}
-		attributes  interface{}
-		metadata    *sensorMetadata
-		stateUnits  string
-		icon        string
-		name        string
-		entityID    string
-		category    string
-		deviceClass hass.SensorDeviceClass
-		stateClass  hass.SensorStateClass
-		sensorType  hass.SensorType
+		data     hass.SensorUpdate
+		metadata *sensorMetadata
 	}
 	tests := []struct {
 		name   string
@@ -804,25 +562,19 @@ func Test_sensorState_RequestData(t *testing.T) {
 		want   *json.RawMessage
 	}{
 		{
-			name:   "default test",
-			fields: fields{},
-			want:   &defaultMsg,
+			name: "default test",
+			fields: fields{
+				data:     s,
+				metadata: &sensorMetadata{},
+			},
+			want: &defaultMsg,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			sensor := &sensorState{
-				state:       tt.fields.state,
-				attributes:  tt.fields.attributes,
-				metadata:    tt.fields.metadata,
-				stateUnits:  tt.fields.stateUnits,
-				icon:        tt.fields.icon,
-				name:        tt.fields.name,
-				entityID:    tt.fields.entityID,
-				category:    tt.fields.category,
-				deviceClass: tt.fields.deviceClass,
-				stateClass:  tt.fields.stateClass,
-				sensorType:  tt.fields.sensorType,
+				data:     tt.fields.data,
+				metadata: tt.fields.metadata,
 			}
 			if got := sensor.RequestData(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("sensorState.RequestData() = %v, want %v", got, tt.want)
@@ -832,6 +584,19 @@ func Test_sensorState_RequestData(t *testing.T) {
 }
 
 func Test_sensorState_ResponseHandler(t *testing.T) {
+	s := new(mockSensorUpdate)
+	s.On("Attributes").Return("")
+	s.On("Category").Return("")
+	s.On("DeviceClass").Return(hass.Duration)
+	s.On("Disabled").Return(false)
+	s.On("Registered").Return(true)
+	s.On("ID").Return("default")
+	s.On("Icon").Return("default")
+	s.On("Name").Return("default")
+	s.On("SensorType").Return(hass.TypeSensor)
+	s.On("StateClass").Return(hass.StateMeasurement)
+	s.On("Units").Return("")
+	s.On("State").Return("default")
 	registeredResponse := bytes.NewBufferString(`{
 		"data": {
 		  "attributes": {
@@ -893,17 +658,8 @@ func Test_sensorState_ResponseHandler(t *testing.T) {
 	// 	  }
 	//   }`)
 	type fields struct {
-		state       interface{}
-		attributes  interface{}
-		metadata    *sensorMetadata
-		stateUnits  string
-		icon        string
-		name        string
-		entityID    string
-		category    string
-		deviceClass hass.SensorDeviceClass
-		stateClass  hass.SensorStateClass
-		sensorType  hass.SensorType
+		data     hass.SensorUpdate
+		metadata *sensorMetadata
 	}
 	type args struct {
 		rawResponse bytes.Buffer
@@ -914,14 +670,24 @@ func Test_sensorState_ResponseHandler(t *testing.T) {
 		args   args
 	}{
 		{
-			name:   "registered sensor",
-			fields: fields{},
-			args:   args{rawResponse: *registeredResponse},
+			name: "registered sensor",
+			fields: fields{
+				data: s,
+				metadata: &sensorMetadata{
+					Registered: true,
+				},
+			},
+			args: args{rawResponse: *registeredResponse},
 		},
 		{
-			name:   "updated sensor",
-			fields: fields{},
-			args:   args{rawResponse: *updatedResponse},
+			name: "updated sensor",
+			fields: fields{
+				data: s,
+				metadata: &sensorMetadata{
+					Registered: true,
+				},
+			},
+			args: args{rawResponse: *updatedResponse},
 		},
 		// {
 		// 	name:   "disabled sensor",
@@ -939,78 +705,21 @@ func Test_sensorState_ResponseHandler(t *testing.T) {
 		// 	args:   args{rawResponse: *errorResponse},
 		// },
 		{
-			name:   "no response",
-			fields: fields{},
-			args:   args{rawResponse: *bytes.NewBuffer(nil)},
+			name: "no response",
+			fields: fields{
+				data:     s,
+				metadata: &sensorMetadata{},
+			},
+			args: args{rawResponse: *bytes.NewBuffer(nil)},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			sensor := &sensorState{
-				state:       tt.fields.state,
-				attributes:  tt.fields.attributes,
-				metadata:    tt.fields.metadata,
-				stateUnits:  tt.fields.stateUnits,
-				icon:        tt.fields.icon,
-				name:        tt.fields.name,
-				entityID:    tt.fields.entityID,
-				category:    tt.fields.category,
-				deviceClass: tt.fields.deviceClass,
-				stateClass:  tt.fields.stateClass,
-				sensorType:  tt.fields.sensorType,
+				data:     tt.fields.data,
+				metadata: tt.fields.metadata,
 			}
 			sensor.ResponseHandler(tt.args.rawResponse)
-		})
-	}
-}
-
-func Test_marshalSensorState(t *testing.T) {
-	s := new(mockSensorUpdate)
-	s.On("Attributes").Return("")
-	s.On("Category").Return("")
-	s.On("DeviceClass").Return(hass.Duration)
-	s.On("Disabled").Return(false)
-	s.On("Registered").Return(true)
-	s.On("ID").Return("default")
-	s.On("Icon").Return("default")
-	s.On("Name").Return("default")
-	s.On("SensorType").Return(hass.TypeSensor)
-	s.On("StateClass").Return(hass.StateMeasurement)
-	s.On("Units").Return("")
-	s.On("State").Return("default")
-	type args struct {
-		s hass.SensorUpdate
-	}
-	tests := []struct {
-		name string
-		args args
-		want *sensorState
-	}{
-		{
-			name: "default test",
-			args: args{
-				s: s,
-			},
-			want: &sensorState{
-				name:        "default",
-				state:       "default",
-				attributes:  "",
-				stateUnits:  "",
-				entityID:    "default",
-				icon:        "default",
-				category:    "",
-				deviceClass: hass.Duration,
-				sensorType:  hass.TypeSensor,
-				stateClass:  hass.StateMeasurement,
-				metadata:    nil,
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := marshalSensorState(tt.args.s); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("marshalSensorState() = %v, want %v", got, tt.want)
-			}
 		})
 	}
 }
