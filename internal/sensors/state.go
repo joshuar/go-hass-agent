@@ -56,7 +56,11 @@ func (s *sensorState) State() interface{} {
 }
 
 func (s *sensorState) Attributes() interface{} {
-	return s.data.Attributes()
+	if s.data.Attributes() != nil {
+		return s.data.Attributes()
+	} else {
+		return ""
+	}
 }
 
 func (s *sensorState) ID() string {
