@@ -8,6 +8,7 @@ package sensors
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/rs/zerolog/log"
@@ -56,11 +57,7 @@ func (s *sensorState) State() interface{} {
 }
 
 func (s *sensorState) Attributes() interface{} {
-	if s.data.Attributes() != nil {
-		return s.data.Attributes()
-	} else {
-		return ""
-	}
+	return s.data.Attributes()
 }
 
 func (s *sensorState) ID() string {
@@ -145,12 +142,10 @@ func (sensor *sensorState) ResponseHandler(rawResponse bytes.Buffer) {
 		if v, ok := response[sensor.ID()]; ok {
 			status := v.(map[string]interface{})
 			if !status["success"].(bool) {
-				error := status["error"].(map[string]interface{})
-				log.Debug().Caller().
-					Msgf("Could not update sensor %s, %s: %s",
-						sensor.Name(),
-						error["code"],
-						error["message"])
+				hassErr := status["error"].(map[string]interface{})
+				err := fmt.Errorf("%s: %s", hassErr["code"], hassErr["message"])
+				log.Debug().Caller().Err(err).
+					Msgf("Could not update sensor %s.", sensor.Name())
 			} else {
 				log.Debug().Caller().
 					Msgf("Sensor %s updated (%s). State is now: %v %s",
