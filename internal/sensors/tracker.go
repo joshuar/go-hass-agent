@@ -55,12 +55,7 @@ func (tracker *SensorTracker) add(s hass.SensorUpdate) error {
 	}
 	tracker.sensor[s.ID()] = state
 	tracker.mu.Unlock()
-	if tracker.exists(s.ID()) {
-		log.Debug().Caller().Msgf("Sensor: %s added (%s).", state.Name(), state.ID())
-		return nil
-	} else {
-		return errors.New("sensor was not added")
-	}
+	return nil
 }
 
 // Get fetches a sensors current tracked state
