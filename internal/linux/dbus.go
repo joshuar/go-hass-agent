@@ -26,11 +26,35 @@ const (
 type dbusType int
 
 type bus struct {
-	conn      *dbus.Conn
-	events    chan *dbus.Signal
-	eventList map[string]func(*dbus.Signal)
-	busType   dbusType
-	mu        sync.RWMutex
+	conn           *dbus.Conn
+	signals        chan *dbus.Signal
+	signalMatchers map[string]func(*dbus.Signal)
+	matchRequests  chan signalMatcher
+	busType        dbusType
+	mu             sync.RWMutex
+}
+
+func (bus *bus) signalHandler(ctx context.Context) {
+	bus.conn.Signal(bus.signals)
+	defer bus.conn.RemoveSignal(bus.signals)
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case signal := <-bus.signals:
+			// bus.mu.RLock()
+			// defer bus.mu.Unlock()
+			for matchPath, handlerFunc := range bus.signalMatchers {
+				if strings.Contains(string(signal.Path), matchPath) {
+					handlerFunc(signal)
+				}
+			}
+		case request := <-bus.matchRequests:
+			// bus.mu.Lock()
+			// defer bus.mu.Unlock()
+			bus.signalMatchers[request.match] = request.handler
+		}
+	}
 }
 
 // newBus sets up DBus connections and channels for receiving signals. It creates both a system and session bus connection.
@@ -49,30 +73,20 @@ func newBus(ctx context.Context, t dbusType) *bus {
 		return nil
 	} else {
 		bus := &bus{
-			conn:      conn,
-			events:    make(chan *dbus.Signal),
-			eventList: make(map[string]func(*dbus.Signal)),
-			busType:   t,
+			conn:           conn,
+			signals:        make(chan *dbus.Signal),
+			signalMatchers: make(map[string]func(*dbus.Signal)),
+			matchRequests:  make(chan signalMatcher),
+			busType:        t,
 		}
-		conn.Signal(bus.events)
-		go func() {
-			defer bus.conn.RemoveSignal(bus.events)
-			for signal := range bus.events {
-				// bus.mu.RLock()
-				if handlerFunc, ok := bus.eventList[string(signal.Path)]; ok {
-					handlerFunc(signal)
-				} else {
-					for matchPath, handlerFunc := range bus.eventList {
-						if strings.Contains(string(signal.Path), matchPath) {
-							handlerFunc(signal)
-						}
-					}
-				}
-				// bus.mu.Unlock()
-			}
-		}()
+		go bus.signalHandler(ctx)
 		return bus
 	}
+}
+
+type signalMatcher struct {
+	handler func(*dbus.Signal)
+	match   string
 }
 
 // busRequest contains properties for building different types of DBus requests
@@ -198,9 +212,10 @@ func (r *busRequest) AddWatch(ctx context.Context) error {
 	} else {
 		log.Debug().Caller().
 			Msgf("Adding watch on %s for %s", r.path, r.event)
-		r.bus.mu.Lock()
-		r.bus.eventList[string(r.path)] = r.eventHandler
-		r.bus.mu.Unlock()
+		r.bus.matchRequests <- signalMatcher{
+			match:   string(r.path),
+			handler: r.eventHandler,
+		}
 	}
 	return nil
 }
