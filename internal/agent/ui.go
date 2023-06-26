@@ -21,6 +21,11 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+const (
+	issueURL          = "https://github.com/joshuar/go-hass-agent/issues/new?assignees=joshuar&labels=&template=bug_report.md&title=%5BBUG%5D"
+	featureRequestURL = "https://github.com/joshuar/go-hass-agent/issues/new?assignees=&labels=&template=feature_request.md&title="
+)
+
 func newUI(appID string) fyne.App {
 	var a fyne.App
 	if appID != "" {
