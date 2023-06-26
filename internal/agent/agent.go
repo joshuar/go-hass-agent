@@ -37,8 +37,6 @@ var tracker *sensors.SensorTracker
 const (
 	Name              = "go-hass-agent"
 	fyneAppID         = "com.github.joshuar.go-hass-agent"
-	issueURL          = "https://github.com/joshuar/autocorrector/issues/new?assignees=joshuar&labels=&template=bug_report.md&title=%5BBUG%5D"
-	featureRequestURL = "https://github.com/joshuar/autocorrector/issues/new?assignees=&labels=&template=feature_request.md&title="
 )
 
 type Agent struct {
