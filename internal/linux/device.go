@@ -7,12 +7,14 @@ package linux
 
 import (
 	"context"
+	"encoding/json"
 	"os/user"
 	"strings"
 
 	"git.lukeshu.com/go/libsystemd/sd_id128"
 	"github.com/acobaugh/osrelease"
 	"github.com/joshuar/go-hass-agent/internal/device"
+	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/rs/zerolog/log"
 )
 
@@ -76,8 +78,23 @@ func (l *linuxDevice) AppData() interface{} {
 	}
 }
 
-func NewDevice(ctx context.Context, name string, version string) *linuxDevice {
+func (l *linuxDevice) MarshalJSON() ([]byte, error) {
+	return json.Marshal(&hass.RegistrationRequest{
+		DeviceID:           l.DeviceID(),
+		AppID:              l.AppID(),
+		AppName:            l.AppName(),
+		AppVersion:         l.AppVersion(),
+		DeviceName:         l.DeviceName(),
+		Manufacturer:       l.Manufacturer(),
+		Model:              l.Model(),
+		OsName:             l.OsName(),
+		OsVersion:          l.OsVersion(),
+		SupportsEncryption: l.SupportsEncryption(),
+		AppData:            l.AppData(),
+	})
+}
 
+func NewDevice(ctx context.Context, name string, version string) *linuxDevice {
 	newDevice := &linuxDevice{
 		appName:    name,
 		appVersion: version,

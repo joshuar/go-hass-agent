@@ -35,14 +35,23 @@ var hassConfig *hass.HassConfig
 var tracker *sensors.SensorTracker
 
 const (
-	Name              = "go-hass-agent"
-	fyneAppID         = "com.github.joshuar.go-hass-agent"
+	Name = "go-hass-agent"
 )
 
+// Agent holds the data and structure representing an instance of the agent.
+// This includes the data structure for the UI elements and tray and some
+// strings such as app name and version.
 type Agent struct {
 	app           fyne.App
-	tray          fyne.Window
+	done          chan struct{}
 	Name, Version string
+}
+
+// AgentOptions holds options taken from the command-line that was used to
+// invoke go-hass-agent that are relevant for agent functionality.
+type AgentOptions struct {
+	ID                 string
+	Headless, Register bool
 }
 
 func NewAgent(appID string) (context.Context, context.CancelFunc, *Agent) {
@@ -50,90 +59,96 @@ func NewAgent(appID string) (context.Context, context.CancelFunc, *Agent) {
 		app:     newUI(appID),
 		Name:    Name,
 		Version: Version,
+		done:    make(chan struct{}),
 	}
 	ctx, cancelfunc := context.WithCancel(context.Background())
 	ctx = linux.SetupContext(ctx)
-	a.SetupLogging()
+	a.setupLogging()
 	return ctx, cancelfunc, a
 }
 
-func Run(appID string) {
+// Run is the "main loop" of the agent. It sets up the agent, loads the config
+// then spawns a sensor tracker and the workers to gather sensor data and
+// publish it to Home Assistant
+func Run(options AgentOptions) {
 	translator = translations.NewTranslator()
+	agentCtx, cancelFunc, agent := NewAgent(options.ID)
+	defer close(agent.done)
 
-	agentCtx, cancelFunc, agent := NewAgent(appID)
-	log.Info().Msg("Started agent.")
+	registrationDone := make(chan struct{})
+	if !agent.IsRegistered() {
+		// If the app is not registered, run a registration flow
+		log.Info().Msg("Registration required. Starting registration process.")
+		go agent.registrationProcess(agentCtx, "", "", options.Headless, registrationDone)
+	} else {
+		// Otherwise, continue
+		close(registrationDone)
+	}
 
-	// Try to load the app config. If it is not valid, start a new registration
-	// process. Keep trying until we successfully register with HA or the user
-	// quits.
-	var configOnce sync.Once
-	go func() {
-		configOnce.Do(func() {
-			agent.CheckConfig(agentCtx, agent.requestRegistrationInfoUI)
-		})
-	}()
-
-	// Wait for the config to load, then start the sensor tracker and
-	// notifications worker
 	var workerWg sync.WaitGroup
-	defer workerWg.Done()
 	go func() {
-		configOnce.Do(func() {
-			agent.CheckConfig(agentCtx, agent.requestRegistrationInfoUI)
-		})
-
+		<-registrationDone
+		// Load the config. If it is not valid, exit
 		appConfig := agent.LoadConfig()
+		if err := appConfig.Validate(); err != nil {
+			log.Fatal().Err(err).Msg("Invalid config. Cannot start.")
+		}
+		// Store the config in a new context for workers
 		agentWorkerCtx := config.StoreInContext(agentCtx, appConfig)
+		// Retrieve the hass config
 		hassConfig = hass.NewHassConfig(agentWorkerCtx)
+		// Start all the sensor and notification workers as appropriate
+		if !options.Headless {
+			workerWg.Add(1)
+			go func() {
+				defer workerWg.Done()
+				agent.runNotificationsWorker(agentWorkerCtx)
+			}()
+		}
 		workerWg.Add(1)
 		go func() {
 			defer workerWg.Done()
-			agent.runNotificationsWorker(agentWorkerCtx)
-		}()
-		workerWg.Add(1)
-		go func() {
-			defer workerWg.Done()
+			log.Debug().Msg("Starting sensor tracker.")
 			agent.runSensorTracker(agentWorkerCtx)
 		}()
 	}()
+	agent.handleSignals(cancelFunc)
+	agent.handleShutdown(agentCtx)
 
-	// Handle interrupt/termination signals
-	agent.handleSignals(cancelFunc, &workerWg)
-
-	agent.setupSystemTray()
-	agent.app.Run()
-	cancelFunc()
-	agent.stop()
+	// If we are not running in headless mode, show a tray icon
+	if !options.Headless {
+		agent.setupSystemTray()
+		agent.app.Run()
+	}
+	<-agent.done
 }
 
-func RunHeadless(appID string) {
+// Register runs a registration flow. It either prompts the user for needed
+// information or parses what is already provided. It will send a registration
+// request to Home Assistant and handles the response. It will handle either a
+// UI or non-UI registration flow.
+func Register(options AgentOptions, server, token string) {
+	translator = translations.NewTranslator()
+	agentCtx, cancelFunc, agent := NewAgent(options.ID)
+	defer close(agent.done)
 
-	agentCtx, cancelFunc, agent := NewAgent(appID)
-	log.Info().Msg("Started agent.")
+	// Don't proceed unless the agent is registered and forced is not set
+	if agent.IsRegistered() && !options.Register {
+		log.Warn().Msg("Agent is already registered and forced option not specified, not performing registration.")
+		return
+	}
 
-	// Wait for the config to load, then start the sensor tracker and
-	// notifications worker
-	var workerWg sync.WaitGroup
-	go func() {
-		appConfig := agent.LoadConfig()
-		agentWorkerCtx := config.StoreInContext(agentCtx, appConfig)
-		hassConfig = hass.NewHassConfig(agentWorkerCtx)
-		workerWg.Add(1)
-		go func() {
-			defer workerWg.Done()
-			agent.runSensorTracker(agentWorkerCtx)
-		}()
-	}()
+	registrationDone := make(chan struct{})
+	go agent.registrationProcess(agentCtx, server, token, options.Headless, registrationDone)
 
-	// Handle interrupt/termination signals
-	agent.handleSignals(cancelFunc, &workerWg)
+	agent.handleSignals(cancelFunc)
+	agent.handleShutdown(agentCtx)
+	if !options.Headless {
+		agent.app.Run()
+	}
 
-	<-agentCtx.Done()
-	agent.stop()
-}
-
-func (agent *Agent) stop() {
-	log.Info().Msg("Shutting down agent.")
+	<-registrationDone
+	log.Info().Msg("Device registered with Home Assistant.")
 }
 
 func (agent *Agent) extraStoragePath(id string) (fyne.URI, error) {
@@ -146,8 +161,9 @@ func (agent *Agent) extraStoragePath(id string) (fyne.URI, error) {
 	}
 }
 
-func (agent *Agent) SetupLogging() {
-	// If possible, create and log to a file as well as the console.
+// setupLogging will attempt to create and then write logging to a file. If it
+// cannot do this, logging will only be available on stdout
+func (agent *Agent) setupLogging() {
 	logFile, err := agent.extraStoragePath("go-hass-app.log")
 	if err != nil {
 		log.Error().Err(err).
@@ -165,29 +181,20 @@ func (agent *Agent) SetupLogging() {
 	}
 }
 
-func (agent *Agent) CheckConfig(ctx context.Context, registrationFetcher func(context.Context) *hass.RegistrationHost) {
-	config := agent.LoadConfig()
-	for config.Validate() != nil {
-		log.Warn().Msg("No suitable existing config found! Starting new registration process.")
-		err := agent.runRegistrationWorker(ctx, registrationFetcher)
-		if err != nil {
-			log.Error().Err(err).
-				Msg("Error trying to register.")
-			agent.stop()
-		} else {
-			config = agent.LoadConfig()
-		}
-	}
-}
-
-func (agent *Agent) handleSignals(cancelFunc context.CancelFunc, wg *sync.WaitGroup) {
+// handleSignals will handle Ctrl-C of the agent
+func (agent *Agent) handleSignals(cancelFunc context.CancelFunc) {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-c
 		cancelFunc()
-		wg.Wait()
-		agent.stop()
+	}()
+}
+
+// handleShutdown will handle context cancellation of the agent
+func (agent *Agent) handleShutdown(ctx context.Context) {
+	go func() {
+		<-ctx.Done()
 		os.Exit(1)
 	}()
 }

@@ -29,6 +29,10 @@ func (agent *Agent) DeviceDetails() (string, string) {
 		agent.app.Preferences().String("DeviceID")
 }
 
+func (agent *Agent) IsRegistered() bool {
+	return agent.app.Preferences().BoolWithFallback("Registered", false)
+}
+
 func (agent *Agent) SetPref(pref string, value interface{}) {
 	valueType := reflect.ValueOf(value)
 	switch valueType.Kind() {
