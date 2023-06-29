@@ -1,8 +1,4 @@
-# Ignore everything
-internal/agent/VERSION
-home-assistant
-
-# But not these files...
+# Don't ignore these files
 !.gitignore
 !*.go
 !translations/**/*.json
@@ -13,3 +9,9 @@ home-assistant
 !go.mod
 !tools/
 !/assets/
+
+# Ignore these files
+internal/agent/VERSION
+home-assistant
+fyne-cross
+dist
