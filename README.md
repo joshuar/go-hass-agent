@@ -80,10 +80,10 @@ able to report sensors and receive notifications.
 - The hostname (or IP address) and port on which a Home Assistant instance
   can be found.
   - **go-hass-agent** will try to auto-detect this for you, and you can select it in
-  the *Auto-discovered servers* list. Otherwise, you will need to select *Use
-  Custom Server?*, and enter the details manually in *Manual Server Entry*.
+    the _Auto-discovered servers_ list. Otherwise, you will need to select _Use
+    Custom Server?_, and enter the details manually in _Manual Server Entry_.
 - If the Home Assistant instance supports TLS/SSL, be sure to select
-  *Use TLS?* as well.
+  _Use TLS?_ as well.
 
 When you have entered all the details, click **Submit** and the agent should
 start running and reporting sensors to the Home Assistant instance.
@@ -92,7 +92,7 @@ As alternative, you can register **go-hass-agent** on the command-line with by
 running:
 
 ```shell
-go-hass-agent register --token _TOKEN_ --url _URL_
+go-hass-agent register --token _TOKEN_ --server _URL_
 ```
 
 You will need to provide a long-lived token `_TOKEN_` and the URL of your Home
