@@ -11,13 +11,35 @@ import (
 
 	"fyne.io/fyne/v2/data/binding"
 	"github.com/carlmjohnson/requests"
-	"github.com/cenkalti/backoff/v4"
+	"github.com/go-playground/validator/v10"
 	"github.com/rs/zerolog/log"
 )
 
-type RegistrationHost struct {
+type RegistrationDetails struct {
 	Server, Token binding.String
 	UseTLS        binding.Bool
+	Device        DeviceInfo
+}
+
+func (r *RegistrationDetails) Validate() bool {
+	validate := validator.New()
+	check := func(value string, validation string) bool {
+		if err := validate.Var(value, validation); err != nil {
+			log.Debug().Err(err).Msgf("Invalid registration details.")
+			return false
+		}
+		return true
+	}
+	if server, _ := r.Server.Get(); !check(server, "required,hostname_port") {
+		return false
+	}
+	if token, _ := r.Token.Get(); !check(token, "required") {
+		return false
+	}
+	if r.Device == nil {
+		return false
+	}
+	return true
 }
 
 type RegistrationResponse struct {
@@ -41,38 +63,33 @@ type RegistrationRequest struct {
 	SupportsEncryption bool        `json:"supports_encryption"`
 }
 
-func RegisterWithHass(ri *RegistrationHost, rr *RegistrationRequest) *RegistrationResponse {
-	res := &RegistrationResponse{}
+func RegisterWithHass(registration *RegistrationDetails) (*RegistrationResponse, error) {
+	request, err := registration.Device.MarshalJSON()
+	if err != nil {
+		log.Debug().Err(err).Msg("Unable to generate registration request.")
+		return nil, err
+	}
+	response := &RegistrationResponse{}
 
-	token, _ := ri.Token.Get()
+	token, _ := registration.Token.Get()
 
 	var host string
-	server, _ := ri.Server.Get()
-	if v, _ := ri.UseTLS.Get(); v {
+	server, _ := registration.Server.Get()
+	if v, _ := registration.UseTLS.Get(); v {
 		host = "https://" + server
 	} else {
 		host = "http://" + server
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
-	requestFunc := func() error {
-		return requests.
-			URL(host+"/api/mobile_app/registrations").
-			Header("Authorization", "Bearer "+token).
-			BodyJSON(&rr).
-			ToJSON(&res).
-			Fetch(ctx)
-	}
-	retryNotifyFunc := func(e error, d time.Duration) {
-		log.Debug().Err(e).
-			Msgf("Retrying registration request in %v seconds.", d.Seconds())
-	}
-	err := backoff.RetryNotify(requestFunc, backoff.NewExponentialBackOff(), retryNotifyFunc)
-
+	err = requests.
+		URL(host+"/api/mobile_app/registrations").
+		Header("Authorization", "Bearer "+token).
+		BodyBytes(request).
+		ToJSON(&response).
+		Fetch(ctx)
 	if err != nil {
-		log.Debug().Err(err).Msg("Unable to register")
-		return nil
-	} else {
-		return res
+		return nil, err
 	}
+	return response, nil
 }

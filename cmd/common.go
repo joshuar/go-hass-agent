@@ -27,6 +27,9 @@ func setDebugging() {
 	} else {
 		zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	}
+	if debugID != "" {
+		appID = debugID
+	}
 }
 
 func setProfiling() {

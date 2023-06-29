@@ -20,6 +20,8 @@ var (
 	headlessFlag bool
 )
 
+var appID = "com.github.joshuar.go-hass-agent"
+
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "go-hass-agent",
@@ -33,23 +35,16 @@ var rootCmd = &cobra.Command{
 		setProfiling()
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		var runCmd func(string)
-		if headlessFlag {
-			runCmd = agent.RunHeadless
-		} else {
-			runCmd = agent.Run
-		}
-		if debugID != "" {
-			runCmd(debugID)
-		} else {
-			runCmd("")
-		}
+		agent.Run(agent.AgentOptions{
+			Headless: headlessFlag,
+			ID:       appID,
+		})
 	},
 }
 
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		log.Fatal().Err(err).Msg("Could not start.")
+		log.Fatal().Msg("Could not start.")
 	}
 }
 
@@ -60,6 +55,6 @@ func init() {
 		"enable profiling (default is false)")
 	rootCmd.PersistentFlags().StringVar(&debugID, "debugID", "",
 		"specify a custom app ID (for debugging)")
-	rootCmd.Flags().BoolVarP(&headlessFlag, "terminal", "t", false,
+	rootCmd.PersistentFlags().BoolVarP(&headlessFlag, "terminal", "t", false,
 		"run in terminal (without a GUI)")
 }

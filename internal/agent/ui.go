@@ -15,7 +15,6 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/driver/desktop"
 	"fyne.io/fyne/v2/layout"
-	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/joshuar/go-hass-agent/assets/trayicon"
 	"github.com/rs/zerolog/log"
@@ -27,26 +26,12 @@ const (
 )
 
 func newUI(appID string) fyne.App {
-	var a fyne.App
-	if appID != "" {
-		a = app.NewWithID(appID)
-		a.SetIcon(theme.FyneLogo())
-
-	} else {
-		a = app.NewWithID(fyneAppID)
-		a.SetIcon(&trayicon.TrayIcon{})
-	}
+	a := app.NewWithID(appID)
+	a.SetIcon(&trayicon.TrayIcon{})
 	return a
 }
 
 func (agent *Agent) setupSystemTray() {
-	openSettings := func() {
-		w := agent.app.NewWindow(agent.setTitle("Fyne Settings"))
-		w.SetContent(settings.NewSettings().LoadAppearanceScreen(w))
-		w.Show()
-	}
-	agent.tray = agent.app.NewWindow("go-hass-agent")
-	agent.tray.SetMaster()
 	if desk, ok := agent.app.(desktop.App); ok {
 		menuItemAbout := fyne.NewMenuItem("About", func() {
 			deviceName, deviceID := agent.DeviceDetails()
@@ -78,9 +63,9 @@ func (agent *Agent) setupSystemTray() {
 					agent.app.OpenURL(url)
 				})
 		menuItemSettings := fyne.
-			NewMenuItem(translator.Translate("Settings"), openSettings)
+			NewMenuItem(translator.Translate("Settings"), agent.settingsWindow)
 		menuItemSensors := fyne.
-			NewMenuItem(translator.Translate("Sensors"), agent.makeSensorTable)
+			NewMenuItem(translator.Translate("Sensors"), agent.sensorsWindow)
 		menu := fyne.NewMenu(agent.Name,
 			menuItemAbout,
 			menuItemIssue,
@@ -89,10 +74,15 @@ func (agent *Agent) setupSystemTray() {
 			menuItemSensors)
 		desk.SetSystemTrayMenu(menu)
 	}
-	agent.tray.Hide()
 }
 
-func (agent *Agent) makeSensorTable() {
+func (agent *Agent) settingsWindow() {
+	w := agent.app.NewWindow(agent.setTitle("Fyne Settings"))
+	w.SetContent(settings.NewSettings().LoadAppearanceScreen(w))
+	w.Show()
+}
+
+func (agent *Agent) sensorsWindow() {
 	var tableData [][]string
 	var entityNames []string
 	s, err := hassConfig.Get("entities")
@@ -101,7 +91,7 @@ func (agent *Agent) makeSensorTable() {
 			Msg("Could not get entities from config.")
 		return
 	}
-	for k, _ := range s.(map[string]map[string]interface{}) {
+	for k := range s.(map[string]map[string]interface{}) {
 		if state := tracker.Get(k); state != nil {
 			entityNames = append(entityNames, k)
 			tableData = append(tableData,
