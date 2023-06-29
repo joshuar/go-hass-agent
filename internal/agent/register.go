@@ -146,6 +146,9 @@ func (agent *Agent) saveRegistration(r *hass.RegistrationResponse, h *hass.Regis
 	if r.WebhookID != "" {
 		agent.SetPref("WebhookID", r.WebhookID)
 	}
+	agent.SetPref("DeviceName", h.Device.DeviceName())
+	agent.SetPref("DeviceID", h.Device.AppID())
+
 	agent.SetPref("Registered", true)
 
 	// ! https://github.com/fyne-io/fyne/issues/3170
