@@ -75,13 +75,21 @@ func Run(options AgentOptions) {
 	agentCtx, cancelFunc, agent := NewAgent(options.ID)
 	defer close(agent.done)
 
+	appConfig := agent.LoadConfig()
 	registrationDone := make(chan struct{})
-	if !agent.IsRegistered() {
-		// If the app is not registered, run a registration flow
+	switch {
+	// If the agent isn't registered but the config is valid, set the agent as
+	// registered and continue execution. Required check for versions upgraded
+	// from v1.2.6 and below.
+	case !agent.IsRegistered() && appConfig.Validate() == nil:
+		appConfig.Set("Registered", true)
+		close(registrationDone)
+	// If the app is not registered, run a registration flow
+	case !agent.IsRegistered():
 		log.Info().Msg("Registration required. Starting registration process.")
 		go agent.registrationProcess(agentCtx, "", "", options.Headless, registrationDone)
-	} else {
-		// Otherwise, continue
+	// The app is registered, continue (config check performed later).
+	default:
 		close(registrationDone)
 	}
 
