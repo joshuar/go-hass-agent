@@ -1,7 +1,7 @@
 before:
   hooks:
     - go mod tidy
-    # - go generate ./...
+    - go generate ./...
     - desktop-file-validate assets/go-hass-agent.desktop
     - fyne-cross linux -icon assets/trayicon/logo-pretty.png -release -app-version {{.Version}}
 
@@ -11,7 +11,7 @@ changelog:
   abbrev: 0
   filters:
     exclude:
-      - '^docs:'
+      - "^docs:"
       - typo
 
 builds:
@@ -26,9 +26,8 @@ builds:
       # - arm
       # - arm64
 
-# .goreleaser.yaml
 archives:
-- format: binary
+  - format: binary
 
 release:
   extra_files:
@@ -66,7 +65,7 @@ nfpms:
           - libxcursor1
           - libxrandr2
           - libxinerama1
-    release: '1'
+    release: "1"
     section: default
     priority: extra
     meta: false
@@ -88,5 +87,4 @@ nfpms:
         - changelog-file-missing-in-native-package
     archlinux:
       packager: GoReleaser <staff@goreleaser.com>
-
 # yaml-language-server: $schema=https://goreleaser.com/static/schema.json
