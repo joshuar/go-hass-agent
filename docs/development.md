@@ -9,7 +9,7 @@
 
 ## Build Requirements
 
-`go-hass-agent` has a number of build requirements external to `go.mod` that
+**go-hass-agent** has a number of build requirements external to `go.mod` that
 need to be installed:
 
 - [stringer](https://pkg.go.dev/golang.org/x/tools/cmd/stringer).
@@ -21,6 +21,41 @@ need to be installed:
 - [gotext](https://cs.opensource.google/go/x/text)
   - Typically installed with `go install golang.org/x/text/cmd/gotext@latest`
 - [goreleaser](https://goreleaser.com/install/).
+
+## Building
+
+**go-hass-agent** makes use of `go generate` to generate some of the code. A typical build process would be:
+
+```shell
+go generate ./...
+go build
+```
+
+## Packaging
+
+**go-hass-agent** uses [Goreleaser](https://goreleaser.com/intro/) to create
+packages for Fedora, Arch and Ubuntu and
+[fyne-cross](https://github.com/fyne-io/fyne-cross) to create packages for
+Debian.
+
+To build a "local-only" package with Goreleaser:
+
+```shell
+goreleaser release --snapshot --clean
+```
+
+Packages will be available under the `dist/` folder.
+
+See the [Goreleaser docs](https://goreleaser.com/quick-start/) for more commands
+and information.
+
+To build a package for Debian with fyne-cross:
+
+```shell
+fyne-cross linux -icon assets/trayicon/logo-pretty.png -release
+```
+
+The `.tar.xz` will be available under `fyne-cross/dist/linux-amd64/`.
 
 ## Extending the Agent
 

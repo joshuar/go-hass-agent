@@ -57,7 +57,18 @@ details on how to extend for other operating systems.
 
 Head over to the [releases](https://github.com/joshuar/go-hass-agent/releases)
 page and download the appropriate package for your operating system and/or
-distribution.
+distribution:
+
+- For **Fedora**, use the `.rpm`.
+- For **Ubuntu**, use the `.deb`.
+- For **Debian**, use the `.tar.xz`.
+- For **Arch**, use the `.tar.zst`.
+
+For other distributions not listed above, you can try the binary, or build it
+yourself from source (see [development](docs/development.md)). Note that while
+Go is known for statically compiled binaries that "run anywhere", the Fyne UI
+toolkit used by **go-hass-agent** makes use of shared libraries that may need to
+be installed as well.
 
 ## 🖱️ Usage
 
