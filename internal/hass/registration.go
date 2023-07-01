@@ -25,12 +25,11 @@ func (r *RegistrationDetails) Validate() bool {
 	validate := validator.New()
 	check := func(value string, validation string) bool {
 		if err := validate.Var(value, validation); err != nil {
-			log.Debug().Err(err).Msgf("Invalid registration details.")
 			return false
 		}
 		return true
 	}
-	if server, _ := r.Server.Get(); !check(server, "required,hostname_port") {
+	if server, _ := r.Server.Get(); !check(server, "required,hostname_port") && !check(server, "required,hostname") {
 		return false
 	}
 	if token, _ := r.Token.Get(); !check(token, "required") {
