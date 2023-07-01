@@ -235,8 +235,8 @@ func findServers(ctx context.Context) binding.StringList {
 func newHostPort() fyne.StringValidator {
 	v := validate.New()
 	return func(text string) error {
-		if err := v.Var(text, "hostname_port"); err != nil {
-			return errors.New("you need to specify a valid hostname:port combination")
+		if v.Var(text, "hostname_port") != nil && v.Var(text, "hostname") != nil {
+			return errors.New("you need to specify a valid hostname or hostname:port combination")
 		}
 		return nil
 	}
