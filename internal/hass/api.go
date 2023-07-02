@@ -17,10 +17,16 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-//go:generate go-enum --marshal
+//go:generate stringer -type=RequestType -output apiRequestType.go -linecomment
+const (
+	requestTypeEncrypted          RequestType = iota + 1 // encrypted
+	requestTypeGetConfig                                 // get_config
+	requestTypeUpdateLocation                            // update_location
+	RequestTypeRegisterSensor                            // register_sensor
+	RequestTypeUpdateSensorStates                        // update_sensor_states
+)
 
-// ENUM(encrypted,get_config,update_location,register_sensor,update_sensor_states)
-type RequestType string
+type RequestType int
 
 type Request interface {
 	RequestType() RequestType
@@ -29,14 +35,14 @@ type Request interface {
 }
 
 func MarshalJSON(request Request, secret string) ([]byte, error) {
-	if request.RequestType() == RequestTypeEncrypted {
+	if request.RequestType() == requestTypeEncrypted {
 		if secret != "" {
 			return json.Marshal(&struct {
 				EncryptedData *json.RawMessage `json:"encrypted_data,omitempty"`
-				Type          RequestType      `json:"type"`
+				Type          string           `json:"type"`
 				Encrypted     bool             `json:"encrypted"`
 			}{
-				Type:          RequestTypeEncrypted,
+				Type:          requestTypeEncrypted.String(),
 				Encrypted:     true,
 				EncryptedData: request.RequestData(),
 			})
@@ -46,9 +52,9 @@ func MarshalJSON(request Request, secret string) ([]byte, error) {
 	} else {
 		return json.Marshal(&struct {
 			Data *json.RawMessage `json:"data,omitempty"`
-			Type RequestType      `json:"type"`
+			Type string           `json:"type"`
 		}{
-			Type: request.RequestType(),
+			Type: request.RequestType().String(),
 			Data: request.RequestData(),
 		})
 	}

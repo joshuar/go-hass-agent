@@ -14,8 +14,6 @@ need to be installed:
 
 - [stringer](https://pkg.go.dev/golang.org/x/tools/cmd/stringer).
   - Typically installed with `go install golang.org/x/tools/cmd/stringer@latest`.
-- [go-enum](https://github.com/abice/go-enum).
-  - Typically installed with `go install github.com/abice/go-enum@latest`.
 - [fyne-cross](https://github.com/fyne-io/fyne-cross).
   - Typically installed with `go install github.com/fyne-io/fyne-cross@latest`
 - [gotext](https://cs.opensource.google/go/x/text)

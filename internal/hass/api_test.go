@@ -43,7 +43,7 @@ func TestMarshalJSON(t *testing.T) {
 	request.On("RequestData").Return(&requestData)
 
 	encryptedRequest := new(mockRequest)
-	encryptedRequest.On("RequestType").Return(RequestTypeEncrypted)
+	encryptedRequest.On("RequestType").Return(requestTypeEncrypted)
 	encryptedRequest.On("RequestData").Return(&requestData)
 
 	type args struct {
