@@ -93,7 +93,7 @@ func (h *HassConfig) RequestType() RequestType {
 	return requestTypeGetConfig
 }
 
-func (h *HassConfig) RequestData() *json.RawMessage {
+func (h *HassConfig) RequestData() json.RawMessage {
 	return nil
 }
 

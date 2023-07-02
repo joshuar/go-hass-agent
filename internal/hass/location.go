@@ -59,10 +59,10 @@ func (l *locationUpdateInfo) RequestType() RequestType {
 	return requestTypeUpdateLocation
 }
 
-func (l *locationUpdateInfo) RequestData() *json.RawMessage {
+func (l *locationUpdateInfo) RequestData() json.RawMessage {
 	data, _ := json.Marshal(l)
 	raw := json.RawMessage(data)
-	return &raw
+	return raw
 }
 
 func (l *locationUpdateInfo) ResponseHandler(resp bytes.Buffer) {
