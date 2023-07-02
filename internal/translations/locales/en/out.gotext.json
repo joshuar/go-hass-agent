@@ -51,26 +51,9 @@
             "fuzzy": true
         },
         {
-            "id": "About {Name}",
-            "message": "About {Name}",
-            "translation": "About {Name}",
-            "translatorComment": "Copied from source.",
-            "placeholders": [
-                {
-                    "id": "Name",
-                    "string": "%[1]s",
-                    "type": "string",
-                    "underlyingType": "string",
-                    "argNum": 1,
-                    "expr": "agent.Name"
-                }
-            ],
-            "fuzzy": true
-        },
-        {
-            "id": "App Version: {Version}",
-            "message": "App Version: {Version}",
-            "translation": "App Version: {Version}",
+            "id": "App Version: {Version}\tHA Version: {HassVersion}",
+            "message": "App Version: {Version}\tHA Version: {HassVersion}",
+            "translation": "App Version: {Version}\tHA Version: {HassVersion}",
             "translatorComment": "Copied from source.",
             "placeholders": [
                 {
@@ -80,6 +63,74 @@
                     "underlyingType": "string",
                     "argNum": 1,
                     "expr": "agent.Version"
+                },
+                {
+                    "id": "HassVersion",
+                    "string": "%[2]s",
+                    "type": "interface{}",
+                    "underlyingType": "interface{}",
+                    "argNum": 2,
+                    "expr": "hassVersion"
+                }
+            ],
+            "fuzzy": true
+        },
+        {
+            "id": "Ok",
+            "message": "Ok",
+            "translation": "Ok",
+            "translatorComment": "Copied from source.",
+            "fuzzy": true
+        },
+        {
+            "id": "Report Issue",
+            "message": "Report Issue",
+            "translation": "Report Issue",
+            "translatorComment": "Copied from source.",
+            "fuzzy": true
+        },
+        {
+            "id": "Request Feature",
+            "message": "Request Feature",
+            "translation": "Request Feature",
+            "translatorComment": "Copied from source.",
+            "fuzzy": true
+        },
+        {
+            "id": "Settings",
+            "message": "Settings",
+            "translation": "Settings",
+            "translatorComment": "Copied from source.",
+            "fuzzy": true
+        },
+        {
+            "id": "Sensors",
+            "message": "Sensors",
+            "translation": "Sensors",
+            "translatorComment": "Copied from source.",
+            "fuzzy": true
+        },
+        {
+            "id": "{Name}: {S}",
+            "message": "{Name}: {S}",
+            "translation": "{Name}: {S}",
+            "translatorComment": "Copied from source.",
+            "placeholders": [
+                {
+                    "id": "Name",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "agent.Name"
+                },
+                {
+                    "id": "S",
+                    "string": "%[2]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 2,
+                    "expr": "s"
                 }
             ],
             "fuzzy": true
