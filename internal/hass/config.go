@@ -45,7 +45,6 @@ type hassConfigProps struct {
 func NewHassConfig(ctx context.Context) *HassConfig {
 	c := &HassConfig{}
 	c.Refresh(ctx)
-	c.updater(ctx)
 	return c
 }
 
@@ -70,7 +69,7 @@ func (h *HassConfig) updater(ctx context.Context) {
 func (h *HassConfig) GetEntityState(entity string) map[string]interface{} {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	if v, ok := h.hassConfigProps.Entities[entity]; ok {
+	if v, ok := h.Entities[entity]; ok {
 		return v
 	}
 	return nil
@@ -112,7 +111,6 @@ func (h *HassConfig) ResponseHandler(resp bytes.Buffer) {
 	}
 	h.rawConfigProps = result
 	h.mu.Unlock()
-	log.Debug().Caller().Msg("Updated stored HA config.")
 }
 
 // HassConfig implements config.Config
