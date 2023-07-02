@@ -56,7 +56,7 @@ type locationUpdateInfo struct {
 // request
 
 func (l *locationUpdateInfo) RequestType() RequestType {
-	return RequestTypeUpdateLocation
+	return requestTypeUpdateLocation
 }
 
 func (l *locationUpdateInfo) RequestData() *json.RawMessage {

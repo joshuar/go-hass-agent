@@ -90,7 +90,7 @@ func (h *HassConfig) IsEntityDisabled(entity string) bool {
 // to get its data.
 
 func (h *HassConfig) RequestType() RequestType {
-	return RequestTypeGetConfig
+	return requestTypeGetConfig
 }
 
 func (h *HassConfig) RequestData() *json.RawMessage {
