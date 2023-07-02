@@ -111,10 +111,10 @@ func (sensor *sensorState) RequestType() hass.RequestType {
 	return hass.RequestTypeRegisterSensor
 }
 
-func (sensor *sensorState) RequestData() *json.RawMessage {
+func (sensor *sensorState) RequestData() json.RawMessage {
 	data, _ := sensor.MarshalJSON()
 	raw := json.RawMessage(data)
-	return &raw
+	return raw
 }
 
 func (sensor *sensorState) ResponseHandler(rawResponse bytes.Buffer) {

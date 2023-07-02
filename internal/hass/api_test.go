@@ -27,9 +27,9 @@ func (m *mockRequest) RequestType() RequestType {
 	return args.Get(0).(RequestType)
 }
 
-func (m *mockRequest) RequestData() *json.RawMessage {
+func (m *mockRequest) RequestData() json.RawMessage {
 	args := m.Called()
-	return args.Get(0).(*json.RawMessage)
+	return args.Get(0).(json.RawMessage)
 }
 
 func (m *mockRequest) ResponseHandler(b bytes.Buffer) {
@@ -40,11 +40,11 @@ func TestMarshalJSON(t *testing.T) {
 	requestData := json.RawMessage(`{"someField": "someValue"}`)
 	request := new(mockRequest)
 	request.On("RequestType").Return(RequestTypeUpdateSensorStates)
-	request.On("RequestData").Return(&requestData)
+	request.On("RequestData").Return(requestData)
 
 	encryptedRequest := new(mockRequest)
 	encryptedRequest.On("RequestType").Return(requestTypeEncrypted)
-	encryptedRequest.On("RequestData").Return(&requestData)
+	encryptedRequest.On("RequestData").Return(requestData)
 
 	type args struct {
 		request Request
