@@ -15,7 +15,7 @@ import (
 	"github.com/shirou/gopsutil/v3/host"
 )
 
-//go:generate stringer -type=timeProp -output time_props.go -linecomment
+//go:generate stringer -type=timeProp -output timeSensorProps.go -linecomment
 const (
 	boottime timeProp = iota + 1 // Last Reboot
 	uptime                       // Uptime
