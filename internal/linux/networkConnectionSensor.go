@@ -516,7 +516,7 @@ func processWifiProps(ctx context.Context, props map[string]dbus.Variant, path d
 			case "Strength":
 				propType = wifiStrength
 			default:
-				log.Debug().Msgf("Unhandled property %v changed to %v", propName, propValue)
+				log.Debug().Caller().Msgf("Unhandled property %v changed to %v", propName, propValue)
 			}
 			if propType != 0 {
 				propState := marshalNetworkStateUpdate(ctx,
