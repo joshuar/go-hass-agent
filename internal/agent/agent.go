@@ -16,7 +16,6 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/storage"
 	"github.com/joshuar/go-hass-agent/internal/config"
-	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/sensors"
 	"github.com/joshuar/go-hass-agent/internal/translations"
@@ -29,8 +28,6 @@ import (
 var Version string
 
 var translator *translations.Translator
-
-var hassConfig *hass.HassConfig
 
 var tracker *sensors.SensorTracker
 
@@ -103,8 +100,6 @@ func Run(options AgentOptions) {
 		}
 		// Store the config in a new context for workers
 		agentWorkerCtx := config.StoreInContext(agentCtx, appConfig)
-		// Retrieve the hass config
-		hassConfig = hass.NewHassConfig(agentWorkerCtx)
 		// Start all the sensor and notification workers as appropriate
 		if !options.Headless {
 			workerWg.Add(1)
@@ -112,11 +107,12 @@ func Run(options AgentOptions) {
 				defer workerWg.Done()
 				agent.runNotificationsWorker(agentWorkerCtx)
 			}()
+			agent.setupSystemTray(agentWorkerCtx)
 		}
 		workerWg.Add(1)
 		go func() {
 			defer workerWg.Done()
-			log.Debug().Msg("Starting sensor tracker.")
+			log.Debug().Caller().Msg("Starting sensor tracker.")
 			agent.runSensorTracker(agentWorkerCtx)
 		}()
 	}()
@@ -125,7 +121,6 @@ func Run(options AgentOptions) {
 
 	// If we are not running in headless mode, show a tray icon
 	if !options.Headless {
-		agent.setupSystemTray()
 		agent.app.Run()
 	}
 	<-agent.done

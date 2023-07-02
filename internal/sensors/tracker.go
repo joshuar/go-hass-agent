@@ -17,9 +17,10 @@ import (
 )
 
 type SensorTracker struct {
-	registry Registry
-	sensor   map[string]*sensorState
-	mu       sync.RWMutex
+	registry   Registry
+	sensor     map[string]*sensorState
+	hassConfig *hass.HassConfig
+	mu         sync.RWMutex
 }
 
 func NewSensorTracker(ctx context.Context, registryPath fyne.URI) *SensorTracker {
@@ -31,31 +32,29 @@ func NewSensorTracker(ctx context.Context, registryPath fyne.URI) *SensorTracker
 		return nil
 	}
 	return &SensorTracker{
-		sensor:   make(map[string]*sensorState),
-		registry: r,
+		registry:   r,
+		sensor:     make(map[string]*sensorState),
+		hassConfig: hass.NewHassConfig(ctx),
 	}
 }
 
 // Add creates a new sensor in the tracker based on a recieved state
 // update.
-func (tracker *SensorTracker) add(s hass.SensorUpdate) error {
+func (tracker *SensorTracker) add(sensor *sensorState) (*sensorState, error) {
 	tracker.mu.Lock()
 	if tracker.sensor == nil {
 		tracker.mu.Unlock()
-		return errors.New("sensor map not initialised")
+		return nil, errors.New("sensor map not initialised")
 	}
-	registryItem, err := tracker.registry.Get(s.ID())
+	registryItem, err := tracker.registry.Get(sensor.ID())
 	if err != nil {
 		log.Debug().Caller().
-			Msgf("Sensor %s not found in registry.", s.Name())
+			Msgf("Sensor %s not found in registry.", sensor.Name())
 	}
-	state := &sensorState{
-		data:     s,
-		metadata: registryItem.data,
-	}
-	tracker.sensor[s.ID()] = state
+	sensor.metadata.Registered = registryItem.data.Registered
+	tracker.sensor[sensor.ID()] = sensor
 	tracker.mu.Unlock()
-	return nil
+	return sensor, nil
 }
 
 func (tracker *SensorTracker) isDisabled(id string) bool {
@@ -125,25 +124,25 @@ func (tracker *SensorTracker) StartWorkers(ctx context.Context, updateCh chan in
 
 // Update will send a sensor update to HA, checking to ensure the sensor is not
 // disabled. It will also update the local registry state based on the response.
-func (tracker *SensorTracker) Update(ctx context.Context, s hass.SensorUpdate, c *hass.HassConfig) {
+func (tracker *SensorTracker) Update(ctx context.Context, s hass.SensorUpdate) {
+	tracker.hassConfig.Refresh(ctx)
 	// Assemble a sensor from the provided sensorUpdate, the HA config (for
 	// disabled status) and the registry (for registered status)
 	sensorID := s.ID()
 	sensor := &sensorState{
 		data: s,
 		metadata: &sensorMetadata{
-			Disabled:   c.IsEntityDisabled(sensorID),
-			Registered: tracker.isRegistered(sensorID),
+			Disabled: tracker.hassConfig.IsEntityDisabled(sensorID),
 		},
 	}
 	// Update the registry with the latest assembled sensor data
-	if err := tracker.add(sensor); err != nil {
+	if sensor, err := tracker.add(sensor); err != nil {
 		log.Debug().Caller().Err(err).
 			Msg("Add sensor failed.")
-		return
-	}
-	// If the sensor is not disabled, update HA
-	if !sensor.metadata.Disabled {
-		hass.APIRequest(ctx, sensor)
+	} else {
+		// If the sensor is not disabled, update HA
+		if !sensor.metadata.Disabled {
+			hass.APIRequest(ctx, sensor)
+		}
 	}
 }

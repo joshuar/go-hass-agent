@@ -6,6 +6,7 @@
 package agent
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 
@@ -17,6 +18,7 @@ import (
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
 	"github.com/joshuar/go-hass-agent/assets/trayicon"
+	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/rs/zerolog/log"
 )
 
@@ -31,10 +33,12 @@ func newUI(appID string) fyne.App {
 	return a
 }
 
-func (agent *Agent) setupSystemTray() {
+func (agent *Agent) setupSystemTray(ctx context.Context) {
+	log.Debug().Caller().Msg("Creating tray icon.")
 	if desk, ok := agent.app.(desktop.App); ok {
 		menuItemAbout := fyne.NewMenuItem("About", func() {
 			deviceName, deviceID := agent.DeviceDetails()
+			hassConfig := hass.NewHassConfig(ctx)
 			hassVersion, _ := hassConfig.Get("version")
 			w := agent.app.NewWindow(agent.setTitle("About"))
 			w.SetContent(container.New(layout.NewVBoxLayout(),
@@ -65,7 +69,9 @@ func (agent *Agent) setupSystemTray() {
 		menuItemSettings := fyne.
 			NewMenuItem(translator.Translate("Settings"), agent.settingsWindow)
 		menuItemSensors := fyne.
-			NewMenuItem(translator.Translate("Sensors"), agent.sensorsWindow)
+			NewMenuItem(translator.Translate("Sensors"), func() {
+				agent.sensorsWindow(ctx)
+			})
 		menu := fyne.NewMenu(agent.Name,
 			menuItemAbout,
 			menuItemIssue,
@@ -82,9 +88,10 @@ func (agent *Agent) settingsWindow() {
 	w.Show()
 }
 
-func (agent *Agent) sensorsWindow() {
+func (agent *Agent) sensorsWindow(ctx context.Context) {
 	var tableData [][]string
 	var entityNames []string
+	hassConfig := hass.NewHassConfig(ctx)
 	s, err := hassConfig.Get("entities")
 	if err != nil {
 		log.Debug().Caller().Err(err).
