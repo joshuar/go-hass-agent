@@ -58,11 +58,35 @@ func (tracker *SensorTracker) add(s hass.SensorUpdate) error {
 	return nil
 }
 
-// Get fetches a sensors current tracked state
-func (tracker *SensorTracker) Get(id string) *sensorState {
+func (tracker *SensorTracker) isDisabled(id string) bool {
 	tracker.mu.RLock()
 	defer tracker.mu.RUnlock()
-	return tracker.sensor[id]
+	if tracker.sensor[id] != nil {
+		return tracker.sensor[id].metadata.Disabled
+	} else {
+		return false
+	}
+}
+
+func (tracker *SensorTracker) isRegistered(id string) bool {
+	tracker.mu.RLock()
+	defer tracker.mu.RUnlock()
+	if tracker.sensor[id] != nil {
+		return tracker.sensor[id].metadata.Registered
+	} else {
+		return false
+	}
+}
+
+// Get fetches a sensors current tracked state
+func (tracker *SensorTracker) Get(id string) (sensorState, error) {
+	tracker.mu.RLock()
+	defer tracker.mu.RUnlock()
+	if tracker.sensor[id] != nil {
+		return *tracker.sensor[id], nil
+	} else {
+		return sensorState{}, errors.New("not found")
+	}
 }
 
 func (tracker *SensorTracker) exists(id string) bool {
@@ -102,19 +126,24 @@ func (tracker *SensorTracker) StartWorkers(ctx context.Context, updateCh chan in
 // Update will send a sensor update to HA, checking to ensure the sensor is not
 // disabled. It will also update the local registry state based on the response.
 func (tracker *SensorTracker) Update(ctx context.Context, s hass.SensorUpdate, c *hass.HassConfig) {
+	// Assemble a sensor from the provided sensorUpdate, the HA config (for
+	// disabled status) and the registry (for registered status)
 	sensorID := s.ID()
-	if err := tracker.add(s); err != nil {
+	sensor := &sensorState{
+		data: s,
+		metadata: &sensorMetadata{
+			Disabled:   c.IsEntityDisabled(sensorID),
+			Registered: tracker.isRegistered(sensorID),
+		},
+	}
+	// Update the registry with the latest assembled sensor data
+	if err := tracker.add(sensor); err != nil {
 		log.Debug().Caller().Err(err).
 			Msg("Add sensor failed.")
 		return
 	}
-	sensor := tracker.Get(sensorID)
-	if c.IsEntityDisabled(sensorID) {
-		if !sensor.metadata.Disabled {
-			sensor.metadata.Disabled = true
-		}
-	} else {
+	// If the sensor is not disabled, update HA
+	if !sensor.metadata.Disabled {
 		hass.APIRequest(ctx, sensor)
-		tracker.registry.Set(registryItem{id: sensorID, data: sensor.metadata})
 	}
 }
