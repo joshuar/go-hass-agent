@@ -17,7 +17,6 @@ import (
 
 type RegistrationDetails struct {
 	Server, Token binding.String
-	UseTLS        binding.Bool
 	Device        DeviceInfo
 }
 
@@ -29,7 +28,7 @@ func (r *RegistrationDetails) Validate() bool {
 		}
 		return true
 	}
-	if server, _ := r.Server.Get(); !check(server, "required,hostname_port") && !check(server, "required,hostname") {
+	if server, _ := r.Server.Get(); !check(server, "required,http_url") {
 		return false
 	}
 	if token, _ := r.Token.Get(); !check(token, "required") {
@@ -68,17 +67,10 @@ func RegisterWithHass(registration *RegistrationDetails) (*RegistrationResponse,
 		log.Debug().Err(err).Msg("Unable to generate registration request.")
 		return nil, err
 	}
-	response := &RegistrationResponse{}
-
 	token, _ := registration.Token.Get()
+	host, _ := registration.Server.Get()
 
-	var host string
-	server, _ := registration.Server.Get()
-	if v, _ := registration.UseTLS.Get(); v {
-		host = "https://" + server
-	} else {
-		host = "http://" + server
-	}
+	var response *RegistrationResponse
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 	err = requests.
