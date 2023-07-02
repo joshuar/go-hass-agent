@@ -17,8 +17,9 @@ import (
 // sensorState tracks the current state of a sensor, including the sensor value
 // and whether it is registered/disabled in HA.
 type sensorState struct {
-	data     hass.SensorUpdate
-	metadata *sensorMetadata
+	data       hass.SensorUpdate
+	metadata   *sensorMetadata
+	DisabledCh chan bool
 }
 
 type sensorMetadata struct {
@@ -118,6 +119,7 @@ func (sensor *sensorState) RequestData() json.RawMessage {
 }
 
 func (sensor *sensorState) ResponseHandler(rawResponse bytes.Buffer) {
+	defer close(sensor.DisabledCh)
 	switch {
 	case rawResponse.Len() == 0 || rawResponse.String() == "{}":
 		log.Debug().Caller().
@@ -132,7 +134,7 @@ func (sensor *sensorState) ResponseHandler(rawResponse bytes.Buffer) {
 		}
 		response := r.(map[string]interface{})
 		if v, ok := response["success"]; ok {
-			if v.(bool) && !sensor.metadata.Registered {
+			if v.(bool) && !sensor.Registered() {
 				sensor.metadata.Registered = true
 				log.Debug().Caller().
 					Msgf("Sensor %s registered in HA.",
@@ -156,7 +158,8 @@ func (sensor *sensorState) ResponseHandler(rawResponse bytes.Buffer) {
 			}
 			if _, ok := status["is_disabled"]; ok {
 				sensor.metadata.Disabled = true
-			} else if sensor.metadata.Disabled {
+				sensor.DisabledCh <- true
+			} else if sensor.Disabled() {
 				sensor.metadata.Disabled = false
 			}
 		}
