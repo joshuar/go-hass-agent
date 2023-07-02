@@ -8,6 +8,7 @@ package agent
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"reflect"
 
 	"fyne.io/fyne/v2"
@@ -132,13 +133,22 @@ func (c *agentConfig) Refresh() error {
 }
 
 func (c *agentConfig) generateWebsocketURL() string {
+	// TODO: look into websocket http upgrade method
 	var scheme string
-	if c.prefs.BoolWithFallback("UseTLS", false) {
+	host := c.prefs.String("Host")
+	u, err := url.Parse(host)
+	if err != nil {
+		log.Debug().Err(err).Msg("Could not parse host into URL.")
+	}
+	switch u.Scheme {
+	case "https":
 		scheme = "wss://"
-	} else {
+	case "http":
+		fallthrough
+	default:
 		scheme = "ws://"
 	}
-	return scheme + c.prefs.StringWithFallback("Host", "localhost") + websocketPath
+	return scheme + u.Host + websocketPath
 }
 
 func (c *agentConfig) generateAPIURL() string {
@@ -146,20 +156,13 @@ func (c *agentConfig) generateAPIURL() string {
 	remoteUIURL := c.prefs.String("RemoteUIURL")
 	webhookID := c.prefs.String("WebhookID")
 	host := c.prefs.String("Host")
-	useTLS := c.prefs.Bool("UseTLS")
 	switch {
 	case cloudhookURL != "":
 		return cloudhookURL
 	case remoteUIURL != "" && webhookID != "":
 		return remoteUIURL + webHookPath + webhookID
 	case webhookID != "" && host != "":
-		var scheme string
-		if useTLS {
-			scheme = "https://"
-		} else {
-			scheme = "http://"
-		}
-		return scheme + host + webHookPath + webhookID
+		return host + webHookPath + webhookID
 	default:
 		return ""
 	}

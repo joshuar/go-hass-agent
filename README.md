@@ -88,13 +88,10 @@ able to report sensors and receive notifications.
 
 - A long-lived access token. You can generate one on your [account profile
   page](https://www.home-assistant.io/docs/authentication/#your-account-profile).
-- The hostname (or IP address) and port on which a Home Assistant instance
-  can be found.
+- The web address (URL) on which a Home Assistant instance can be found.
   - **go-hass-agent** will try to auto-detect this for you, and you can select it in
     the _Auto-discovered servers_ list. Otherwise, you will need to select _Use
     Custom Server?_, and enter the details manually in _Manual Server Entry_.
-- If the Home Assistant instance supports TLS/SSL, be sure to select
-  _Use TLS?_ as well.
 
 When you have entered all the details, click **Submit** and the agent should
 start running and reporting sensors to the Home Assistant instance.

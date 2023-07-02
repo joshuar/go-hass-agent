@@ -8,8 +8,9 @@ package agent
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/url"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/grandcat/zeroconf"
@@ -32,7 +33,6 @@ func (agent *Agent) newRegistration(ctx context.Context, server, token string) *
 	registrationInfo := &hass.RegistrationDetails{
 		Server: binding.NewString(),
 		Token:  binding.NewString(),
-		UseTLS: binding.NewBool(),
 		Device: agent.setupDevice(ctx),
 	}
 	u, err := url.Parse(server)
@@ -41,11 +41,6 @@ func (agent *Agent) newRegistration(ctx context.Context, server, token string) *
 			Msg("Cannot parse provided URL. Ignoring")
 	} else {
 		registrationInfo.Server.Set(u.Host)
-		if u.Scheme == "https" {
-			registrationInfo.UseTLS.Set(true)
-		} else {
-			registrationInfo.UseTLS.Set(false)
-		}
 	}
 	if token != "" {
 		registrationInfo.Token.Set(token)
@@ -83,14 +78,11 @@ func (agent *Agent) registrationWindow(ctx context.Context, registration *hass.R
 		}
 	})
 
-	tlsSelect := widget.NewCheckWithData("", registration.UseTLS)
-
 	form := widget.NewForm(
 		widget.NewFormItem(translator.Translate("Token"), tokenSelect),
 		widget.NewFormItem(translator.Translate("Auto-discovered Servers"), autoServerSelect),
 		widget.NewFormItem(translator.Translate("Use Custom Server?"), manualServerSelect),
 		widget.NewFormItem(translator.Translate("Manual Server Entry"), manualServerEntry),
-		widget.NewFormItem(translator.Translate("Use TLS?"), tlsSelect),
 	)
 	form.OnSubmit = func() {
 		s, _ := registration.Server.Get()
@@ -128,9 +120,7 @@ func (agent *Agent) registrationWindow(ctx context.Context, registration *hass.R
 // requests to Home Assistant.
 func (agent *Agent) saveRegistration(r *hass.RegistrationResponse, h *hass.RegistrationDetails) {
 	host, _ := h.Server.Get()
-	useTLS, _ := h.UseTLS.Get()
 	agent.SetPref("Host", host)
-	agent.SetPref("UseTLS", useTLS)
 	token, _ := h.Token.Get()
 	agent.SetPref("Token", token)
 	agent.SetPref("Version", agent.Version)
@@ -150,6 +140,15 @@ func (agent *Agent) saveRegistration(r *hass.RegistrationResponse, h *hass.Regis
 	agent.SetPref("DeviceID", h.Device.AppID())
 
 	agent.SetPref("Registered", true)
+
+	registryPath, err := agent.extraStoragePath("sensorRegistry")
+	if err != nil {
+		return
+	} else {
+		if err := os.RemoveAll(registryPath.Path()); err != nil {
+			log.Debug().Err(err).Msg("Could not remove existing registry DB.")
+		}
+	}
 
 	// ! https://github.com/fyne-io/fyne/issues/3170
 	time.Sleep(110 * time.Millisecond)
@@ -201,7 +200,7 @@ func findServers(ctx context.Context) binding.StringList {
 
 	// add http://localhost:8123 to the list of servers as a fall-back/default
 	// option
-	serverList.Append("localhost:8123")
+	serverList.Append("http://localhost:8123")
 
 	resolver, err := zeroconf.NewResolver(nil)
 	if err != nil {
@@ -210,10 +209,17 @@ func findServers(ctx context.Context) binding.StringList {
 		entries := make(chan *zeroconf.ServiceEntry)
 		go func(results <-chan *zeroconf.ServiceEntry) {
 			for entry := range results {
-				server := entry.AddrIPv4[0].String() + ":" + fmt.Sprint(entry.Port)
-				serverList.Append(server)
-				log.Debug().Caller().
-					Msg("Found a HA instance via mDNS")
+				var server string
+				for _, t := range entry.Text {
+					if value, found := strings.CutPrefix(t, "base_url="); found {
+						server = value
+					}
+				}
+				if server != "" {
+					serverList.Append(server)
+				} else {
+					log.Debug().Msgf("Entry %s did not have a base_url value. Not using it.", entry.HostName)
+				}
 			}
 		}(entries)
 
@@ -235,8 +241,8 @@ func findServers(ctx context.Context) binding.StringList {
 func newHostPort() fyne.StringValidator {
 	v := validate.New()
 	return func(text string) error {
-		if v.Var(text, "hostname_port") != nil && v.Var(text, "hostname") != nil {
-			return errors.New("you need to specify a valid hostname or hostname:port combination")
+		if v.Var(text, "http_url") != nil {
+			return errors.New("you need to specify a valid url")
 		}
 		return nil
 	}
