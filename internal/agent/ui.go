@@ -92,7 +92,7 @@ func (agent *Agent) sensorsWindow() {
 		return
 	}
 	for k := range s.(map[string]map[string]interface{}) {
-		if state := tracker.Get(k); state != nil {
+		if state, err := tracker.Get(k); err == nil {
 			entityNames = append(entityNames, k)
 			tableData = append(tableData,
 				[]string{
