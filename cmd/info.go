@@ -7,7 +7,6 @@ package cmd
 
 import (
 	"github.com/joshuar/go-hass-agent/internal/agent"
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -19,9 +18,12 @@ var infoCmd = &cobra.Command{
 	Use:   "info",
 	Short: "Print details of this device",
 	Long:  "This will show the information that was used to register this device with Home Assistant",
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		setLogging()
+		setDebugging()
+		setProfiling()
+	},
 	Run: func(cmd *cobra.Command, args []string) {
-		_, _, agent := agent.NewAgent("")
-		deviceName, deviceID := agent.DeviceDetails()
-		log.Info().Msgf("Device Name %s. Device ID %s.", deviceName, deviceID)
+		agent.ShowInfo(agent.AgentOptions{ID: appID})
 	},
 }
