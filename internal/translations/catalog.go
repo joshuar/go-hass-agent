@@ -38,36 +38,35 @@ func init() {
 }
 
 var messageKeyToIndex = map[string]int{
-	"%s: %s":                          13,
+	"%s: %s":                          12,
 	"App Registration":                0,
-	"App Version: %s\tHA Version: %s": 7,
-	"As an initial step, this app will need to log into your Home Assistant server and register itself.\nPlease enter the relevant details for your Home Assistant server url/port and a long-lived access token.": 6,
+	"App Version: %s\tHA Version: %s": 6,
+	"As an initial step, this app will need to log into your Home Assistant server and register itself.\nPlease enter the relevant details for your Home Assistant server url/port and a long-lived access token.": 5,
 	"Auto-discovered Servers": 2,
 	"Manual Server Entry":     4,
-	"Ok":                      8,
-	"Report Issue":            9,
-	"Request Feature":         10,
-	"Sensors":                 12,
-	"Settings":                11,
+	"Ok":                      7,
+	"Report Issue":            8,
+	"Request Feature":         9,
+	"Sensors":                 11,
+	"Settings":                10,
 	"Token":                   1,
 	"Use Custom Server?":      3,
-	"Use TLS?":                5,
 }
 
-var enIndex = []uint32{ // 15 elements
+var enIndex = []uint32{ // 14 elements
 	0x00000000, 0x00000011, 0x00000017, 0x0000002f,
-	0x00000042, 0x00000056, 0x0000005f, 0x0000012b,
-	0x00000150, 0x00000153, 0x00000160, 0x00000170,
-	0x00000179, 0x00000181, 0x0000018e,
-} // Size: 84 bytes
+	0x00000042, 0x00000056, 0x00000122, 0x00000147,
+	0x0000014a, 0x00000157, 0x00000167, 0x00000170,
+	0x00000178, 0x00000185,
+} // Size: 80 bytes
 
-const enData string = "" + // Size: 398 bytes
+const enData string = "" + // Size: 389 bytes
 	"\x02App Registration\x02Token\x02Auto-discovered Servers\x02Use Custom S" +
-	"erver?\x02Manual Server Entry\x02Use TLS?\x02As an initial step, this ap" +
-	"p will need to log into your Home Assistant server and register itself." +
-	"\x0aPlease enter the relevant details for your Home Assistant server url" +
-	"/port and a long-lived access token.\x02App Version: %[1]s\x09HA Version" +
-	": %[2]s\x02Ok\x02Report Issue\x02Request Feature\x02Settings\x02Sensors" +
-	"\x02%[1]s: %[2]s"
+	"erver?\x02Manual Server Entry\x02As an initial step, this app will need " +
+	"to log into your Home Assistant server and register itself.\x0aPlease en" +
+	"ter the relevant details for your Home Assistant server url/port and a l" +
+	"ong-lived access token.\x02App Version: %[1]s\x09HA Version: %[2]s\x02Ok" +
+	"\x02Report Issue\x02Request Feature\x02Settings\x02Sensors\x02%[1]s: %[2" +
+	"]s"
 
-	// Total table size 482 bytes (0KiB); checksum: 8085B27B
+	// Total table size 469 bytes (0KiB); checksum: ACEB68F6
