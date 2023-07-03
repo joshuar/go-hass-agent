@@ -170,7 +170,7 @@ func (agent *Agent) registerWithoutUI(ctx context.Context, registration *hass.Re
 	return hass.RegisterWithHass(registration)
 }
 
-func (agent *Agent) registrationProcess(ctx context.Context, server, token string, headless bool, done chan struct{}) {
+func (agent *Agent) registrationProcess(ctx context.Context, server, token string, force, headless bool, done chan struct{}) {
 	appConfig := agent.LoadConfig()
 	// If the agent isn't registered but the config is valid, set the agent as
 	// registered and continue execution. Required check for versions upgraded
@@ -180,7 +180,7 @@ func (agent *Agent) registrationProcess(ctx context.Context, server, token strin
 		close(done)
 	}
 	// If the app is not registered, run a registration flow
-	if !agent.IsRegistered() {
+	if !agent.IsRegistered() || force {
 		log.Info().Msg("Registration required. Starting registration process.")
 		// The app is registered, continue (config check performed later).
 
