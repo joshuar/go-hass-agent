@@ -44,34 +44,9 @@
             "fuzzy": true
         },
         {
-            "id": "App Version: {Version}\tHA Version: {HassVersion}",
-            "message": "App Version: {Version}\tHA Version: {HassVersion}",
-            "translation": "App Version: {Version}\tHA Version: {HassVersion}",
-            "translatorComment": "Copied from source.",
-            "placeholders": [
-                {
-                    "id": "Version",
-                    "string": "%[1]s",
-                    "type": "string",
-                    "underlyingType": "string",
-                    "argNum": 1,
-                    "expr": "agent.Version"
-                },
-                {
-                    "id": "HassVersion",
-                    "string": "%[2]s",
-                    "type": "interface{}",
-                    "underlyingType": "interface{}",
-                    "argNum": 2,
-                    "expr": "hassVersion"
-                }
-            ],
-            "fuzzy": true
-        },
-        {
-            "id": "Ok",
-            "message": "Ok",
-            "translation": "Ok",
+            "id": "About",
+            "message": "About",
+            "translation": "About",
             "translatorComment": "Copied from source.",
             "fuzzy": true
         },
@@ -100,6 +75,45 @@
             "id": "Sensors",
             "message": "Sensors",
             "translation": "Sensors",
+            "translatorComment": "Copied from source.",
+            "fuzzy": true
+        },
+        {
+            "id": "Quit",
+            "message": "Quit",
+            "translation": "Quit",
+            "translatorComment": "Copied from source.",
+            "fuzzy": true
+        },
+        {
+            "id": "App Version: {Version}\tHA Version: {HassVersion}",
+            "message": "App Version: {Version}\tHA Version: {HassVersion}",
+            "translation": "App Version: {Version}\tHA Version: {HassVersion}",
+            "translatorComment": "Copied from source.",
+            "placeholders": [
+                {
+                    "id": "Version",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "agent.Version"
+                },
+                {
+                    "id": "HassVersion",
+                    "string": "%[2]s",
+                    "type": "interface{}",
+                    "underlyingType": "interface{}",
+                    "argNum": 2,
+                    "expr": "hassVersion"
+                }
+            ],
+            "fuzzy": true
+        },
+        {
+            "id": "Ok",
+            "message": "Ok",
+            "translation": "Ok",
             "translatorComment": "Copied from source.",
             "fuzzy": true
         },
