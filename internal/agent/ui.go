@@ -37,22 +37,7 @@ func (agent *Agent) setupSystemTray(ctx context.Context) {
 	log.Debug().Caller().Msg("Creating tray icon.")
 	if desk, ok := agent.app.(desktop.App); ok {
 		menuItemAbout := fyne.NewMenuItem("About", func() {
-			deviceName, deviceID := agent.DeviceDetails()
-			hassConfig := hass.NewHassConfig(ctx)
-			hassVersion, _ := hassConfig.Get("version")
-			w := agent.app.NewWindow(agent.setTitle("About"))
-			w.SetContent(container.New(layout.NewVBoxLayout(),
-				widget.NewLabel(translator.Translate(
-					"App Version: %s\tHA Version: %s", agent.Version, hassVersion)),
-				widget.NewLabel(translator.Translate(
-					"Device Name: "+deviceName)),
-				widget.NewLabel(translator.Translate(
-					"Device ID: "+deviceID)),
-				widget.NewButton(translator.Translate("Ok"), func() {
-					w.Close()
-				}),
-			))
-			w.Show()
+			agent.aboutWindow(ctx)
 		})
 		menuItemIssue := fyne.
 			NewMenuItem(translator.Translate("Report Issue"),
@@ -80,6 +65,26 @@ func (agent *Agent) setupSystemTray(ctx context.Context) {
 			menuItemSensors)
 		desk.SetSystemTrayMenu(menu)
 	}
+}
+
+func (agent *Agent) aboutWindow(ctx context.Context) {
+	deviceName, deviceID := agent.DeviceDetails()
+	hassConfig := hass.NewHassConfig(ctx)
+	hassVersion, _ := hassConfig.Get("version")
+	w := agent.app.NewWindow(agent.setTitle("About"))
+	w.SetContent(container.New(layout.NewVBoxLayout(),
+		widget.NewLabel(translator.Translate(
+			"App Version: %s\tHA Version: %s", agent.Version, hassVersion)),
+		widget.NewLabel(translator.Translate(
+			"Device Name: "+deviceName)),
+		widget.NewLabel(translator.Translate(
+			"Device ID: "+deviceID)),
+		widget.NewButton(translator.Translate("Ok"), func() {
+			w.Close()
+		}),
+	))
+	w.Show()
+
 }
 
 func (agent *Agent) settingsWindow() {
