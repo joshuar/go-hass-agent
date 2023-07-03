@@ -77,7 +77,7 @@ func (c *agentConfig) Get(property string) (interface{}, error) {
 	case "host":
 		return c.prefs.String("Host"), nil
 	case "useTLS":
-		return c.prefs.String("UseTLS"), nil
+		return c.prefs.Bool("UseTLS"), nil
 	default:
 		return nil, fmt.Errorf("unknown config property %s", property)
 	}
