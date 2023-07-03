@@ -20,6 +20,24 @@ need to be installed:
   - Typically installed with `go install golang.org/x/text/cmd/gotext@latest`
 - [goreleaser](https://goreleaser.com/install/).
 
+## Development Environment
+
+It is recommended to use [Visual Studio Code](https://code.visualstudio.com/).
+This project makes use of a [Devcontainer](https://containers.dev/) to provide
+some convenience during development.
+
+If using Visual Studio Code, you should be prompted when opening your cloned
+copy of the code to setup the dev container. The container contains a
+installation of Home Assistant that can be used for testing. To start Home
+Assistant, run the _Run Home Assistant Core_ task. Home Assistant should then be
+available on `http://localhost:8123` for testing against.
+
+Note that while you can also build and run the agent within the container
+environment, this will limit what sensors are reported and may even hinder
+development of new sensors. As such, it is recommended to build and run outside
+of the container. You can still connect to Home Assistant running within the
+container, as it is exposed as per above.
+
 ## Building
 
 **go-hass-agent** makes use of `go generate` to generate some of the code. A typical build process would be:
@@ -54,40 +72,6 @@ fyne-cross linux -icon assets/trayicon/logo-pretty.png -release
 ```
 
 The `.tar.xz` will be available under `fyne-cross/dist/linux-amd64/`.
-
-## Extending the Agent
-
-### Adding OS support
-
-The intention of the agent design is to make it OS-agnostic.
-
-Most OS specific code for fetching sensor data should likely be part of a
-`GOARCH` package and using filename suffixes such as `filename_GOOS_GOARCH.go`.
-See the files under `linux/` as examples.
-
-For some OSes, you might need some code to initialise or create some data source
-or API that the individual sensor fetching code uses. This code should be placed
-in `device/`, using filename suffixes such as `filename_GOOS_GOARCH.go`
-
-For example, on Linux, a DBus connection is used for a lot of the sensor data gathering.
-
-In such cases, you should pass this through as a value in a context. You can
-create the following function for your platform:
-
-```go
-SetupContext(ctx context.Context) context.Context
-```
-
-It should accept a `context.Context` and derive its own context from this base
-that contains the necessary values for the platform. It will be propagated
-throughout the code wherever a context is passed and available for retrieval and
-use.
-
-An example can be found in `device/device_linux.go`.
-
-### Adding sensors
-
-See [device/sensors.md](device/sensors.md).
 
 ## Committing Code
 
