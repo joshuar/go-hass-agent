@@ -32,6 +32,9 @@ jobs:
         shell: sh
         run: cd internal/agent && printf %s $(git tag | tail -1) > VERSION
 
+      - name: Generate
+        run: go generate -v ./...
+
       - name: Build
         run: go build -v ./...
 

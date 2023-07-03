@@ -282,8 +282,6 @@ github.com/lucor/goinfo v0.0.0-20210802170112-c078a2b0f08b/go.mod h1:PRq09yoB+Q2
 github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0/go.mod h1:zJYVVT2jmtg6P3p1VtQj7WsuWi/y4VnjVBn7F8KPB3I=
 github.com/lufia/plan9stats v0.0.0-20230326075908-cb1d2100619a h1:N9zuLhTvBSRt0gWSiJswwQ2HqDmtX/ZCDJURnKUt1Ik=
 github.com/lufia/plan9stats v0.0.0-20230326075908-cb1d2100619a/go.mod h1:JKx41uQRwqlTZabZc+kILPrO/3jlKnQ2Z8b7YiVw5cE=
-github.com/lxzan/gws v1.5.4 h1:SopOgftwyc1iovRqGrxpYqoxf/dfWf9IQ40CDPAjNBE=
-github.com/lxzan/gws v1.5.4/go.mod h1:dsC6S7kJNh+iWqqu2HiO8tnNCji04HwyJCYfTOS+6iY=
 github.com/lxzan/gws v1.6.0 h1:2H8PyjBxqsknMOdBYRBVkWqTp/6ruohiuhuDBh1thwk=
 github.com/lxzan/gws v1.6.0/go.mod h1:dsC6S7kJNh+iWqqu2HiO8tnNCji04HwyJCYfTOS+6iY=
 github.com/magiconair/properties v1.8.5/go.mod h1:y3VJvCyxH9uVvJTWEGAELF3aiYNyPKd5NZ3oSwXrF60=
@@ -320,8 +318,6 @@ github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646/go.mod h1:jpp1/29i3P1S
 github.com/nicksnyder/go-i18n/v2 v2.1.1/go.mod h1:d++QJC9ZVf7pa48qrsRWhMJ5pSHIPmS3OLqK1niyLxs=
 github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e h1:fD57ERR4JtEqsWbfPhv4DMiApHyliiK5xCTNVSPiaAs=
 github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e/go.mod h1:zD1mROLANZcx1PVRCS0qkT7pwLkGfwJo4zjcN/Tysno=
-github.com/nutsdb/nutsdb v0.12.2 h1:FDGH6UZwvqqB4MWelVBOKxWh81VAUUsIwfe7xLurOac=
-github.com/nutsdb/nutsdb v0.12.2/go.mod h1:FSztXVhUSK5YmedmZQ6m37cU/KpVbGaezUEmUBP8DEo=
 github.com/nutsdb/nutsdb v0.12.3 h1:a7LvkV6+t+93WZ0TPm8+K5tN1q92V8WPD+J7aIVdzUA=
 github.com/nutsdb/nutsdb v0.12.3/go.mod h1:FSztXVhUSK5YmedmZQ6m37cU/KpVbGaezUEmUBP8DEo=
 github.com/pascaldekloe/goe v0.0.0-20180627143212-57f6aae5913c/go.mod h1:lzWF7FIEvWOWxwDKqyGYQf6ZUaNfKdP144TG7ZOy1lc=
