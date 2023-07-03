@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/url"
 	"reflect"
+	"strings"
 	"time"
 
 	"fyne.io/fyne/v2"
@@ -135,8 +136,9 @@ func (c *agentConfig) Upgrade() error {
 	if err != nil {
 		return err
 	}
+	switch {
 	// * Upgrade host to include scheme for versions < v.1.4.0
-	if semver.Compare(configVersion.(string), "v1.4.0") < 0 {
+	case semver.Compare(configVersion.(string), "v1.4.0") < 0:
 		host, err := c.Get("host")
 		if err != nil {
 			return err
@@ -156,6 +158,16 @@ func (c *agentConfig) Upgrade() error {
 		default:
 			newHost = "http://" + host.(string)
 		}
+		c.Set("Host", newHost)
+		fallthrough
+	// * Trim trailing slash from host for versions < v1.4.3
+	case semver.Compare(configVersion.(string), "v1.4.3") < 0:
+		host, err := c.Get("host")
+		if err != nil {
+			return err
+		}
+		var newHost string
+		newHost = strings.TrimSuffix(host.(string), "/")
 		c.Set("Host", newHost)
 	}
 
