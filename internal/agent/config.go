@@ -96,31 +96,23 @@ func (c *agentConfig) Validate() error {
 	var err error
 
 	value, _ = c.Get("apiURL")
-	err = c.validator.Var(value, "required,url")
-	if err != nil {
-		log.Debug().Caller().Err(err).Msgf("Validation failure for %s.", "apiURL")
-		return errors.New("config validation failed")
+	if c.validator.Var(value, "required,url") != nil && c.validator.Var(value, "required,hostname") != nil && c.validator.Var(value, "required,hostname_port") != nil {
+		return errors.New("apiURL does not match either a URL, hostname or hostname:port")
 	}
 
 	value, _ = c.Get("websocketURL")
-	err = c.validator.Var(value, "required,url")
-	if err != nil {
-		log.Debug().Caller().Err(err).Msgf("Validation failure for %s.", "websocketURL")
-		return errors.New("config validation failed")
+	if c.validator.Var(value, "required,url") != nil && c.validator.Var(value, "required,hostname") != nil && c.validator.Var(value, "required,hostname_port") != nil {
+		return errors.New("websocketURL does not match either a URL, hostname or hostname:port")
 	}
 
 	value, _ = c.Get("token")
-	err = c.validator.Var(value, "required,ascii")
-	if err != nil {
-		log.Debug().Caller().Err(err).Msgf("Validation failure for %s.", "token")
-		return errors.New("config validation failed")
+	if err = c.validator.Var(value, "required,ascii"); err != nil {
+		return errors.New("invalid long-lived token format")
 	}
 
 	value, _ = c.Get("webhookID")
-	err = c.validator.Var(value, "required,ascii")
-	if err != nil {
-		log.Debug().Caller().Err(err).Msgf("Validation failure for %s.", "webhookID")
-		return errors.New("config validation failed")
+	if err = c.validator.Var(value, "required,ascii"); err != nil {
+		return errors.New("invalid webhookID format")
 	}
 
 	return nil
