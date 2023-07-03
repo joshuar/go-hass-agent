@@ -10,10 +10,13 @@ import (
 	"fmt"
 	"net/url"
 	"reflect"
+	"time"
 
 	"fyne.io/fyne/v2"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/go-playground/validator/v10"
 	"github.com/rs/zerolog/log"
+	"golang.org/x/mod/semver"
 )
 
 const (
@@ -72,6 +75,10 @@ func (c *agentConfig) Get(property string) (interface{}, error) {
 		return c.prefs.String("WebhookID"), nil
 	case "secret":
 		return c.prefs.String("Secret"), nil
+	case "host":
+		return c.prefs.String("Host"), nil
+	case "useTLS":
+		return c.prefs.String("UseTLS"), nil
 	default:
 		return nil, fmt.Errorf("unknown config property %s", property)
 	}
@@ -96,12 +103,13 @@ func (c *agentConfig) Validate() error {
 	var err error
 
 	value, _ = c.Get("apiURL")
-	if c.validator.Var(value, "required,url") != nil && c.validator.Var(value, "required,hostname") != nil && c.validator.Var(value, "required,hostname_port") != nil {
+	if c.validator.Var(value, "required,url") != nil {
 		return errors.New("apiURL does not match either a URL, hostname or hostname:port")
 	}
 
 	value, _ = c.Get("websocketURL")
-	if c.validator.Var(value, "required,url") != nil && c.validator.Var(value, "required,hostname") != nil && c.validator.Var(value, "required,hostname_port") != nil {
+	spew.Dump(value)
+	if c.validator.Var(value, "required,url") != nil {
 		return errors.New("websocketURL does not match either a URL, hostname or hostname:port")
 	}
 
@@ -121,6 +129,43 @@ func (c *agentConfig) Validate() error {
 func (c *agentConfig) Refresh() error {
 	log.Debug().Caller().
 		Msg("Agent config does not support refresh.")
+	return nil
+}
+
+func (c *agentConfig) Upgrade() error {
+	configVersion, err := c.Get("version")
+	if err != nil {
+		return err
+	}
+	// * Upgrade host to include scheme for versions < v.1.4.0
+	if semver.Compare(configVersion.(string), "v1.4.0") < 0 {
+		host, err := c.Get("host")
+		if err != nil {
+			return err
+		}
+		useTLS, err := c.Get("useTLS")
+		if err != nil {
+			return err
+		}
+		var newHost string
+		switch useTLS.(type) {
+		case bool:
+			if useTLS.(bool) {
+				newHost = "https://" + host.(string)
+			} else {
+				newHost = "http://" + host.(string)
+			}
+		default:
+			newHost = "http://" + host.(string)
+		}
+		c.Set("Host", newHost)
+	}
+
+	c.Set("Version", Version)
+
+	// ! https://github.com/fyne-io/fyne/issues/3170
+	time.Sleep(110 * time.Millisecond)
+
 	return nil
 }
 

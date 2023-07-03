@@ -80,6 +80,9 @@ func Run(options AgentOptions) {
 		<-registrationDone
 		// Load the config. If it is not valid, exit
 		appConfig := agent.LoadConfig()
+		if err := appConfig.Upgrade(); err != nil {
+			log.Warn().Err(err).Msg("Could not upgrade config.")
+		}
 		if err := appConfig.Validate(); err != nil {
 			log.Fatal().Err(err).Msg("Invalid config. Cannot start.")
 		}
