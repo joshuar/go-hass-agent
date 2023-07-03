@@ -135,9 +135,11 @@ func (c *WebSocket) OnError(socket *gws.Conn, err error) {
 	close(c.doneCh)
 }
 
-func (c *WebSocket) OnClose(socket *gws.Conn, code uint16, reason []byte) {
-	log.Debug().Caller().
-		Msgf("onclose: code=%d, payload=%s\n", code, string(reason))
+func (c *WebSocket) OnClose(socket *gws.Conn, err error) {
+	if err != nil {
+		log.Debug().Caller().Err(err).
+			Msg("Close error.")
+	}
 	c.cancelFunc()
 	close(c.doneCh)
 }

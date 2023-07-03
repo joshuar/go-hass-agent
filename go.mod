@@ -75,8 +75,8 @@ require (
 	github.com/iancoleman/strcase v0.2.0
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/lthibault/jitterbug/v2 v2.2.2
-	github.com/lxzan/gws v1.5.4
-	github.com/nutsdb/nutsdb v0.12.2
+	github.com/lxzan/gws v1.6.0
+	github.com/nutsdb/nutsdb v0.12.3
 	github.com/perimeterx/marshmallow v1.1.4
 	github.com/rs/zerolog v1.29.1
 	github.com/spf13/pflag v1.0.5 // indirect
