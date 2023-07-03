@@ -48,8 +48,13 @@ func NewHassConfig(ctx context.Context) *HassConfig {
 	return c
 }
 
-func (h *HassConfig) Refresh(ctx context.Context) {
+func (h *HassConfig) Refresh(ctx context.Context) error {
 	APIRequest(ctx, h)
+	return nil
+}
+
+func (h *HassConfig) Upgrade() error {
+	return nil
 }
 
 func (h *HassConfig) updater(ctx context.Context) {
