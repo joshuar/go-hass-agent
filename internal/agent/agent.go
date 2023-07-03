@@ -113,8 +113,10 @@ func Run(options AgentOptions) {
 	// If we are not running in headless mode, show a tray icon
 	if !options.Headless {
 		agent.app.Run()
+		agent.app.Quit()
 	}
-	<-agent.done
+	workerWg.Wait()
+	<-agentCtx.Done()
 }
 
 // Register runs a registration flow. It either prompts the user for needed
@@ -193,6 +195,7 @@ func (agent *Agent) handleSignals(cancelFunc context.CancelFunc) {
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-c
+		log.Debug().Msg("Ctrl-C pressed.")
 		cancelFunc()
 	}()
 }
@@ -200,7 +203,15 @@ func (agent *Agent) handleSignals(cancelFunc context.CancelFunc) {
 // handleShutdown will handle context cancellation of the agent
 func (agent *Agent) handleShutdown(ctx context.Context) {
 	go func() {
-		<-ctx.Done()
-		os.Exit(1)
+		for {
+			select {
+			case <-ctx.Done():
+				log.Debug().Msg("Context cancelled.")
+				os.Exit(1)
+			case <-agent.done:
+				log.Debug().Msg("Agent done.")
+				os.Exit(0)
+			}
+		}
 	}()
 }
