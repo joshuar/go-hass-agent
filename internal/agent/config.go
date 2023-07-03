@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"fyne.io/fyne/v2"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/go-playground/validator/v10"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/mod/semver"
@@ -108,7 +107,6 @@ func (c *agentConfig) Validate() error {
 	}
 
 	value, _ = c.Get("websocketURL")
-	spew.Dump(value)
 	if c.validator.Var(value, "required,url") != nil {
 		return errors.New("websocketURL does not match either a URL, hostname or hostname:port")
 	}
