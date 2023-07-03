@@ -36,7 +36,8 @@ func newUI(appID string) fyne.App {
 func (agent *Agent) setupSystemTray(ctx context.Context) {
 	log.Debug().Caller().Msg("Creating tray icon.")
 	if desk, ok := agent.app.(desktop.App); ok {
-		menuItemAbout := fyne.NewMenuItem("About", func() {
+		log.Debug().Caller().Msg("Running in desktop mode. Setting tray menu.")
+		menuItemAbout := fyne.NewMenuItem(translator.Translate("About"), func() {
 			agent.aboutWindow(ctx)
 		})
 		menuItemIssue := fyne.
@@ -57,12 +58,17 @@ func (agent *Agent) setupSystemTray(ctx context.Context) {
 			NewMenuItem(translator.Translate("Sensors"), func() {
 				agent.sensorsWindow(ctx)
 			})
+		menuItemQuit := fyne.NewMenuItem(translator.Translate("Quit"), func() {
+			close(agent.done)
+		})
+		menuItemQuit.IsQuit = true
 		menu := fyne.NewMenu(agent.Name,
 			menuItemAbout,
 			menuItemIssue,
 			menuItemFeatureRequest,
 			menuItemSettings,
-			menuItemSensors)
+			menuItemSensors,
+			menuItemQuit)
 		desk.SetSystemTrayMenu(menu)
 	}
 }
