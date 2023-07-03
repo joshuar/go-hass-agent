@@ -73,7 +73,7 @@ func Run(options AgentOptions) {
 	defer close(agent.done)
 
 	registrationDone := make(chan struct{})
-	go agent.registrationProcess(agentCtx, "", "", options.Headless, registrationDone)
+	go agent.registrationProcess(agentCtx, "", "", options.Register, options.Headless, registrationDone)
 
 	var workerWg sync.WaitGroup
 	go func() {
@@ -135,7 +135,7 @@ func Register(options AgentOptions, server, token string) {
 	}
 
 	registrationDone := make(chan struct{})
-	go agent.registrationProcess(agentCtx, server, token, options.Headless, registrationDone)
+	go agent.registrationProcess(agentCtx, server, token, options.Register, options.Headless, registrationDone)
 
 	agent.handleSignals(cancelFunc)
 	agent.handleShutdown(agentCtx)
