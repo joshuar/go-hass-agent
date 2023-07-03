@@ -85,10 +85,6 @@ func (agent *Agent) registrationWindow(ctx context.Context, registration *hass.R
 		widget.NewFormItem(translator.Translate("Manual Server Entry"), manualServerEntry),
 	)
 	form.OnSubmit = func() {
-		s, _ := registration.Server.Get()
-		log.Debug().Caller().
-			Msgf("User selected server %s", s)
-
 		w.Close()
 	}
 	form.OnCancel = func() {
@@ -109,7 +105,6 @@ func (agent *Agent) registrationWindow(ctx context.Context, registration *hass.R
 		close(done)
 	})
 
-	// w.SetMaster()
 	w.Show()
 	w.Close()
 }
@@ -176,19 +171,34 @@ func (agent *Agent) registerWithoutUI(ctx context.Context, registration *hass.Re
 }
 
 func (agent *Agent) registrationProcess(ctx context.Context, server, token string, headless bool, done chan struct{}) {
-	registration := agent.newRegistration(ctx, server, token)
-	var registrationResponse *hass.RegistrationResponse
-	var err error
-	if headless {
-		registrationResponse, err = agent.registerWithoutUI(ctx, registration)
-	} else {
-		registrationResponse, err = agent.registerWithUI(ctx, registration)
+	appConfig := agent.LoadConfig()
+	// If the agent isn't registered but the config is valid, set the agent as
+	// registered and continue execution. Required check for versions upgraded
+	// from v1.2.6 and below.
+	if !agent.IsRegistered() && appConfig.Validate() == nil {
+		appConfig.Set("Registered", true)
+		close(done)
 	}
-	if err != nil {
-		log.Fatal().Err(err).Msg("Could not register device with Home Assistant.")
+	// If the app is not registered, run a registration flow
+	if !agent.IsRegistered() {
+		log.Info().Msg("Registration required. Starting registration process.")
+		// The app is registered, continue (config check performed later).
+
+		registration := agent.newRegistration(ctx, server, token)
+		var registrationResponse *hass.RegistrationResponse
+		var err error
+		if headless {
+			registrationResponse, err = agent.registerWithoutUI(ctx, registration)
+		} else {
+			registrationResponse, err = agent.registerWithUI(ctx, registration)
+		}
+		if err != nil {
+			log.Fatal().Err(err).Msg("Could not register device with Home Assistant.")
+		}
+
+		agent.saveRegistration(registrationResponse, registration)
 	}
 
-	agent.saveRegistration(registrationResponse, registration)
 	close(done)
 }
 
