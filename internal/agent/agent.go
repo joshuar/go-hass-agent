@@ -51,7 +51,7 @@ type AgentOptions struct {
 	Headless, Register bool
 }
 
-func NewAgent(appID string) (context.Context, context.CancelFunc, *Agent) {
+func newAgent(appID string) (context.Context, context.CancelFunc, *Agent) {
 	a := &Agent{
 		app:     newUI(appID),
 		Name:    Name,
@@ -69,7 +69,7 @@ func NewAgent(appID string) (context.Context, context.CancelFunc, *Agent) {
 // publish it to Home Assistant
 func Run(options AgentOptions) {
 	translator = translations.NewTranslator()
-	agentCtx, cancelFunc, agent := NewAgent(options.ID)
+	agentCtx, cancelFunc, agent := newAgent(options.ID)
 	defer close(agent.done)
 
 	registrationDone := make(chan struct{})
@@ -120,7 +120,7 @@ func Run(options AgentOptions) {
 // UI or non-UI registration flow.
 func Register(options AgentOptions, server, token string) {
 	translator = translations.NewTranslator()
-	agentCtx, cancelFunc, agent := NewAgent(options.ID)
+	agentCtx, cancelFunc, agent := newAgent(options.ID)
 	defer close(agent.done)
 
 	// Don't proceed unless the agent is registered and forced is not set
@@ -140,6 +140,18 @@ func Register(options AgentOptions, server, token string) {
 
 	<-registrationDone
 	log.Info().Msg("Device registered with Home Assistant.")
+}
+
+func ShowVersion(options AgentOptions) {
+	_, _, agent := newAgent(options.ID)
+	log.Info().Msgf("%s: %s", agent.Name, agent.Version)
+}
+
+func ShowInfo(options AgentOptions) {
+	_, _, agent := newAgent(options.ID)
+	deviceName, deviceID := agent.DeviceDetails()
+	log.Info().Msgf("Device Name %s. Device ID %s.", deviceName, deviceID)
+
 }
 
 func (agent *Agent) extraStoragePath(id string) (fyne.URI, error) {
