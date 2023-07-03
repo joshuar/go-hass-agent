@@ -14,6 +14,7 @@ import (
 )
 
 func (agent *Agent) runSensorTracker(ctx context.Context) {
+	log.Debug().Caller().Msg("Starting sensor tracker.")
 	registryPath, err := agent.extraStoragePath("sensorRegistry")
 	if err != nil {
 		log.Debug().Err(err).

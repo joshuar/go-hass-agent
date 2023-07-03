@@ -72,23 +72,8 @@ func Run(options AgentOptions) {
 	agentCtx, cancelFunc, agent := NewAgent(options.ID)
 	defer close(agent.done)
 
-	appConfig := agent.LoadConfig()
 	registrationDone := make(chan struct{})
-	switch {
-	// If the agent isn't registered but the config is valid, set the agent as
-	// registered and continue execution. Required check for versions upgraded
-	// from v1.2.6 and below.
-	case !agent.IsRegistered() && appConfig.Validate() == nil:
-		appConfig.Set("Registered", true)
-		close(registrationDone)
-	// If the app is not registered, run a registration flow
-	case !agent.IsRegistered():
-		log.Info().Msg("Registration required. Starting registration process.")
-		go agent.registrationProcess(agentCtx, "", "", options.Headless, registrationDone)
-	// The app is registered, continue (config check performed later).
-	default:
-		close(registrationDone)
-	}
+	go agent.registrationProcess(agentCtx, "", "", options.Headless, registrationDone)
 
 	var workerWg sync.WaitGroup
 	go func() {
@@ -107,12 +92,15 @@ func Run(options AgentOptions) {
 				defer workerWg.Done()
 				agent.runNotificationsWorker(agentWorkerCtx)
 			}()
-			agent.setupSystemTray(agentWorkerCtx)
+			workerWg.Add(1)
+			go func() {
+				defer workerWg.Done()
+				agent.setupSystemTray(agentWorkerCtx)
+			}()
 		}
 		workerWg.Add(1)
 		go func() {
 			defer workerWg.Done()
-			log.Debug().Caller().Msg("Starting sensor tracker.")
 			agent.runSensorTracker(agentWorkerCtx)
 		}()
 	}()
