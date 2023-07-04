@@ -63,8 +63,8 @@ func (h *HassConfig) GetEntityState(entity string) map[string]interface{} {
 func (h *HassConfig) IsEntityDisabled(entity string) bool {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	if v, ok := h.Entities[entity]; ok {
-		if disabledState, ok := v["disabled"].(bool); !ok {
+	if v, ok := h.Entities[entity]["disabled"]; ok {
+		if disabledState, ok := v.(bool); !ok {
 			return false
 		} else {
 			return disabledState
