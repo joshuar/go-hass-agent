@@ -138,6 +138,7 @@ func (c *agentConfig) Upgrade() error {
 	switch {
 	// * Upgrade host to include scheme for versions < v.1.4.0
 	case semver.Compare(configVersion.(string), "v1.4.0") < 0:
+		log.Debug().Msg("Performing config upgrades for < v1.4.0")
 		host, err := c.Get("host")
 		if err != nil {
 			return err
@@ -161,6 +162,7 @@ func (c *agentConfig) Upgrade() error {
 		fallthrough
 	// * Add ApiURL and WebSocketURL config options for versions < v1.4.3
 	case semver.Compare(configVersion.(string), "v1.4.3") < 0:
+		log.Debug().Msg("Performing config upgrades for < v1.4.3")
 		c.generateAPIURL()
 		c.generateWebsocketURL()
 	}
