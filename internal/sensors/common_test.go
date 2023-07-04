@@ -12,6 +12,7 @@ import (
 
 type mockSensorUpdate struct {
 	mock.Mock
+	state interface{}
 }
 
 func (m *mockSensorUpdate) Attributes() interface{} {
@@ -35,8 +36,7 @@ func (m *mockSensorUpdate) Name() string {
 }
 
 func (m *mockSensorUpdate) State() interface{} {
-	args := m.Called()
-	return args.String(0)
+	return m.state
 }
 
 func (m *mockSensorUpdate) SensorType() hass.SensorType {
