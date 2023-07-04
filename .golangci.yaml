@@ -1,0 +1,37 @@
+# Copyright (c) 2023 Joshua Rich <joshua.rich@gmail.com>
+#
+# This software is released under the MIT License.
+# https://opensource.org/licenses/MIT
+
+linters:
+  enable:
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - typecheck
+    - unused
+    - contextcheck
+    - dupl
+    - funlen
+    - forcetypeassert
+    - goconst
+    - ireturn
+    - nakedret
+  fast: true
+
+linters-settings:
+  dupl:
+    # Tokens count to trigger issue.
+    # Default: 150
+    threshold: 100
+  funlen:
+    # Checks the number of lines in a function.
+    # If lower than 0, disable the check.
+    # Default: 60
+    lines: 60
+    # Checks the number of statements in a function.
+    # If lower than 0, disable the check.
+    # Default: 40
+    statements: 40
