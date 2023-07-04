@@ -8,6 +8,7 @@ package hass
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"sync/atomic"
 	"time"
 
@@ -64,6 +65,10 @@ func tryWebsocketConnect(ctx context.Context, notifyCh chan fyne.Notification, d
 	if err != nil {
 		return nil, err
 	}
+	urlString, ok := url.(string)
+	if !ok {
+		return nil, errors.New("web socket URL is invalid")
+	}
 
 	ctxConnect, cancelConnect := context.WithTimeout(ctx, time.Minute)
 	defer cancelConnect()
@@ -72,7 +77,7 @@ func tryWebsocketConnect(ctx context.Context, notifyCh chan fyne.Notification, d
 
 	retryFunc := func() error {
 		socket, _, err = gws.NewClient(NewWebsocket(ctx, notifyCh, doneCh), &gws.ClientOption{
-			Addr: url.(string),
+			Addr: urlString,
 		})
 		if err != nil {
 			log.Debug().Err(err).Caller().
@@ -109,8 +114,16 @@ func NewWebsocket(ctx context.Context, notifyCh chan fyne.Notification, doneCh c
 	if err != nil {
 		return nil
 	}
+	tokenString, ok := token.(string)
+	if !ok {
+		return nil
+	}
 	webhookID, err := config.FetchPropertyFromContext(ctx, "webhookID")
 	if err != nil {
+		return nil
+	}
+	webhookIDString, ok := webhookID.(string)
+	if !ok {
 		return nil
 	}
 
@@ -118,8 +131,8 @@ func NewWebsocket(ctx context.Context, notifyCh chan fyne.Notification, doneCh c
 	ws := &WebSocket{
 		ReadCh:     make(chan *webSocketData),
 		WriteCh:    make(chan *webSocketData),
-		token:      token.(string),
-		webhookID:  webhookID.(string),
+		token:      tokenString,
+		webhookID:  webhookIDString,
 		cancelFunc: wsCancel,
 		doneCh:     doneCh,
 	}
@@ -200,7 +213,11 @@ func (c *WebSocket) responseHandler(ctx context.Context, notifyCh chan fyne.Noti
 			if r == nil {
 				return
 			}
-			response := r.data.(*websocketResponse)
+			response, ok := r.data.(*websocketResponse)
+			if !ok {
+				log.Debug().Msg("Response is not expected format.")
+				return
+			}
 			atomic.AddUint64(&c.nextID, 1)
 			switch response.Type {
 			case "auth_required":
