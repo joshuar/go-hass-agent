@@ -71,7 +71,7 @@ func (r *nutsdbRegistry) Get(id string) (*registryItem, error) {
 				return err
 			}
 		}); err != nil {
-		return item, err
+		return nil, err
 	}
 	return item, nil
 }

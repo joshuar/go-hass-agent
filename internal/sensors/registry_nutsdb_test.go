@@ -13,6 +13,7 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/storage"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/nutsdb/nutsdb"
 	"github.com/stretchr/testify/assert"
 )
@@ -103,11 +104,13 @@ func Test_nutsdbRegistry_Get(t *testing.T) {
 	r := &nutsdbRegistry{}
 	err := r.Open(ctx, nil)
 	assert.Nil(t, err)
-	fakeMetadata := &sensorMetadata{
-		Registered: true,
-		Disabled:   false,
-	}
-	err = r.Set(registryItem{id: "fakeSensor", data: fakeMetadata})
+	mockItem := registryItem{
+		id: "fakeSensor",
+		data: &sensorMetadata{
+			Registered: true,
+			Disabled:   false,
+		}}
+	err = r.Set(mockItem)
 	assert.Nil(t, err)
 
 	type fields struct {
@@ -120,20 +123,20 @@ func Test_nutsdbRegistry_Get(t *testing.T) {
 		name    string
 		fields  fields
 		args    args
-		want    *sensorMetadata
+		want    *registryItem
 		wantErr bool
 	}{
 		{
 			name:   "existing",
 			fields: fields{db: r.db},
 			args:   args{id: "fakeSensor"},
-			want:   fakeMetadata,
+			want:   &mockItem,
 		},
 		{
 			name:    "nonexisting",
 			fields:  fields{db: r.db},
 			args:    args{id: "noSensor"},
-			want:    &sensorMetadata{},
+			want:    nil,
 			wantErr: true,
 		},
 	}
@@ -143,6 +146,7 @@ func Test_nutsdbRegistry_Get(t *testing.T) {
 				db: tt.fields.db,
 			}
 			got, err := r.Get(tt.args.id)
+			spew.Dump(got)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("nutsdbRegistry.Get() error = %v, wantErr %v", err, tt.wantErr)
 				return
