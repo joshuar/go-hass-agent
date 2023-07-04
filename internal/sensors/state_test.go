@@ -160,7 +160,24 @@ func Test_sensorState_State(t *testing.T) {
 		fields fields
 		want   interface{}
 	}{
-		// TODO: Add test cases.
+		{
+			name: "with state",
+			fields: fields{
+				data: &mockSensorUpdate{
+					state: "aString",
+				},
+			},
+			want: "aString",
+		},
+		{
+			name: "without state",
+			fields: fields{
+				data: &mockSensorUpdate{
+					state: nil,
+				},
+			},
+			want: "Unknown",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -468,6 +485,7 @@ func Test_sensorState_RequestData(t *testing.T) {
 func Test_sensorState_ResponseHandler(t *testing.T) {
 	sensor := new(mockSensorUpdate)
 	sensor.On("ID").Return("default")
+	sensor.On("Name").Return("sensorName")
 
 	registeredResponse := bytes.NewBufferString(`{
 		"data": {
@@ -502,16 +520,16 @@ func Test_sensorState_ResponseHandler(t *testing.T) {
 		"type": "update_sensor_states"
 	  }`)
 	// TODO: fix the format of these responses...
-	// disabledResponse := bytes.NewBufferString(`{
-	// 	"data": [
-	// 		{
-	// 	"battery_state": {
-	// 	  "success": true
-	// 	  "is_disabled": true
-	// 	}
-	// }
-	// 	],
-	// }`)
+	disabledResponse := bytes.NewBufferString(`{
+		"data": [
+			{
+		"battery_state": {
+		  "success": true
+		  "is_disabled": true
+		}
+	}
+		],
+	}`)
 	// unRegisteredResponse := bytes.NewBufferString(`{
 	// 	"battery_charging": {
 	// 	  "success": false,
@@ -547,7 +565,7 @@ func Test_sensorState_ResponseHandler(t *testing.T) {
 			fields: fields{
 				data: sensor,
 				metadata: &sensorMetadata{
-					Registered: true,
+					Registered: false,
 				},
 				DisabledCh: make(chan bool),
 			},
@@ -563,6 +581,28 @@ func Test_sensorState_ResponseHandler(t *testing.T) {
 				DisabledCh: make(chan bool),
 			},
 			args: args{rawResponse: *updatedResponse},
+		},
+		{
+			name: "disabled sensor",
+			fields: fields{
+				data: sensor,
+				metadata: &sensorMetadata{
+					Disabled: false,
+				},
+				DisabledCh: make(chan bool),
+			},
+			args: args{rawResponse: *disabledResponse},
+		},
+		{
+			name: "empty response",
+			fields: fields{
+				data: sensor,
+				metadata: &sensorMetadata{
+					Disabled: false,
+				},
+				DisabledCh: make(chan bool),
+			},
+			args: args{rawResponse: *bytes.NewBuffer(nil)},
 		},
 	}
 	for _, tt := range tests {
