@@ -153,7 +153,7 @@ func TestMarshalSensorRegistration(t *testing.T) {
 				Name:            "name",
 				State:           "state",
 				UniqueID:        "uniqueid",
-				Type:            "sensor",
+				Disabled:        false,
 			},
 		},
 	}

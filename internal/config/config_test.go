@@ -33,6 +33,11 @@ func (m *mockConfig) Validate() error {
 	return args.Error(1)
 }
 
+func (m *mockConfig) Upgrade() error {
+	args := m.Called()
+	return args.Error(1)
+}
+
 func (m *mockConfig) Refresh() error {
 	args := m.Called()
 	return args.Error(1)

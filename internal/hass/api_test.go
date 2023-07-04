@@ -15,26 +15,7 @@ import (
 	"testing"
 
 	"github.com/joshuar/go-hass-agent/internal/config"
-	"github.com/stretchr/testify/mock"
 )
-
-type mockRequest struct {
-	mock.Mock
-}
-
-func (m *mockRequest) RequestType() RequestType {
-	args := m.Called()
-	return args.Get(0).(RequestType)
-}
-
-func (m *mockRequest) RequestData() json.RawMessage {
-	args := m.Called()
-	return args.Get(0).(json.RawMessage)
-}
-
-func (m *mockRequest) ResponseHandler(b bytes.Buffer) {
-	m.Called(b)
-}
 
 func TestMarshalJSON(t *testing.T) {
 	requestData := json.RawMessage(`{"someField": "someValue"}`)
@@ -59,7 +40,7 @@ func TestMarshalJSON(t *testing.T) {
 		{
 			name: "unencrypted request",
 			args: args{request: request},
-			want: []byte(`{"data":{"someField":"someValue"},"type":"update_sensor_states"}`),
+			want: []byte(`{"type":"update_sensor_states","data":{"someField":"someValue"}}`),
 		},
 		{
 			name:    "encrypted request without secret",
@@ -70,7 +51,7 @@ func TestMarshalJSON(t *testing.T) {
 		{
 			name: "encrypted request with secret",
 			args: args{request: encryptedRequest, secret: "fakeSecret"},
-			want: []byte(`{"encrypted_data":{"someField":"someValue"},"type":"encrypted","encrypted":true}`),
+			want: []byte(`{"type":"encrypted","encrypted_data":{"someField":"someValue"},"encrypted":true}`),
 		},
 	}
 	for _, tt := range tests {
@@ -94,30 +75,6 @@ func mockServer(t *testing.T) *httptest.Server {
 	}))
 }
 
-type mockConfig struct {
-	mock.Mock
-}
-
-func (m *mockConfig) Get(property string) (interface{}, error) {
-	args := m.Called(property)
-	return args.String(0), args.Error(1)
-}
-
-func (m *mockConfig) Set(property string, value interface{}) error {
-	args := m.Called(property, value)
-	return args.Error(1)
-}
-
-func (m *mockConfig) Validate() error {
-	args := m.Called()
-	return args.Error(1)
-}
-
-func (m *mockConfig) Refresh() error {
-	args := m.Called()
-	return args.Error(1)
-}
-
 func TestAPIRequest(t *testing.T) {
 	server := mockServer(t)
 	defer server.Close()
@@ -131,7 +88,7 @@ func TestAPIRequest(t *testing.T) {
 	requestData := json.RawMessage(`{"someField": "someValue"}`)
 	request := new(mockRequest)
 	request.On("RequestType").Return(RequestTypeUpdateSensorStates)
-	request.On("RequestData").Return(&requestData)
+	request.On("RequestData").Return(requestData)
 	request.On("ResponseHandler", *bytes.NewBufferString(`{"success":true}`)).Return()
 
 	type args struct {
