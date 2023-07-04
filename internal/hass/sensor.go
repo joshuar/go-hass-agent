@@ -8,6 +8,8 @@ package hass
 // SensorUpdate represents an update for a sensor. It reflects the current state
 // of the sensor at the point in time it is used. It provides a bridge between
 // platform/device and HA implementations of what a sensor is.
+//
+//go:generate mockery --name SensorUpdate
 type SensorUpdate interface {
 	Name() string
 	ID() string
@@ -23,6 +25,8 @@ type SensorUpdate interface {
 
 // Sensor represents a sensor in HA. As an interface, it leaves it up to the
 // underlying struct to provide the appropriate data for this representation.
+//
+//go:generate mockery --name Sensor
 type Sensor interface {
 	SensorUpdate
 	Disabled() bool
