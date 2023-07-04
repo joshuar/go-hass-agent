@@ -43,7 +43,11 @@ type hassConfigProps struct {
 
 func NewHassConfig(ctx context.Context) *HassConfig {
 	c := &HassConfig{}
-	c.Refresh(ctx)
+	if err := c.Refresh(ctx); err != nil {
+		log.Debug().Err(err).
+			Msg("Could not fetch config from Home Assistant.")
+		return nil
+	}
 	return c
 }
 
@@ -59,11 +63,14 @@ func (h *HassConfig) GetEntityState(entity string) map[string]interface{} {
 func (h *HassConfig) IsEntityDisabled(entity string) bool {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	if v, ok := h.hassConfigProps.Entities[entity]; ok {
-		return v["disabled"].(bool)
-	} else {
-		return false
+	if v, ok := h.Entities[entity]; ok {
+		if disabledState, ok := v["disabled"].(bool); !ok {
+			return false
+		} else {
+			return disabledState
+		}
 	}
+	return false
 }
 
 // HassConfig implements hass.Request so that it can be sent as a request to HA

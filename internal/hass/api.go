@@ -85,6 +85,12 @@ func APIRequest(ctx context.Context, request Request) {
 			Msg("Could not fetch api url from agent config.")
 		return
 	}
+	urlString, ok := url.(string)
+	if !ok { // type assertion failed
+		log.Error().Stack().
+			Msg("API URL does not appear to be valid.")
+		return
+	}
 
 	reqJson, err := MarshalJSON(request, secret.(string))
 	if err != nil {
@@ -97,7 +103,7 @@ func APIRequest(ctx context.Context, request Request) {
 	defer cancel()
 
 	err = requests.
-		URL(url.(string)).
+		URL(urlString).
 		BodyBytes(reqJson).
 		ToBytesBuffer(&res).
 		Fetch(requestCtx)
