@@ -24,6 +24,8 @@ const (
 	requestTypeUpdateLocation                            // update_location
 	RequestTypeRegisterSensor                            // register_sensor
 	RequestTypeUpdateSensorStates                        // update_sensor_states
+	websocketPath                 = "/api/websocket"
+	webHookPath                   = "/api/webhook/"
 )
 
 type RequestType int
