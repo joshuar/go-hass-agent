@@ -11,7 +11,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"sync"
-	"time"
 
 	"github.com/perimeterx/marshmallow"
 	"github.com/rs/zerolog/log"
@@ -46,29 +45,6 @@ func NewHassConfig(ctx context.Context) *HassConfig {
 	c := &HassConfig{}
 	c.Refresh(ctx)
 	return c
-}
-
-func (h *HassConfig) Refresh(ctx context.Context) error {
-	APIRequest(ctx, h)
-	return nil
-}
-
-func (h *HassConfig) Upgrade() error {
-	return nil
-}
-
-func (h *HassConfig) updater(ctx context.Context) {
-	ticker := time.NewTicker(time.Minute * 1)
-	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-ticker.C:
-				h.Refresh(ctx)
-			}
-		}
-	}()
 }
 
 func (h *HassConfig) GetEntityState(entity string) map[string]interface{} {
@@ -137,5 +113,15 @@ func (c *HassConfig) Set(property string, value interface{}) error {
 
 func (c *HassConfig) Validate() error {
 	log.Debug().Caller().Msg("Hass configuration has no validation.")
+	return nil
+}
+
+func (h *HassConfig) Refresh(ctx context.Context) error {
+	APIRequest(ctx, h)
+	return nil
+}
+
+func (h *HassConfig) Upgrade() error {
+	log.Debug().Caller().Msg("Hass configuration has no upgrades.")
 	return nil
 }
