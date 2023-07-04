@@ -24,6 +24,13 @@ func (item *registryItem) IsRegistered() bool {
 	return item.data.Registered
 }
 
+func NewRegistryItem(id string) *registryItem {
+	return &registryItem{
+		id:   id,
+		data: new(sensorMetadata),
+	}
+}
+
 type Registry interface {
 	Open(context.Context, fyne.URI) error
 	Get(string) (*registryItem, error)

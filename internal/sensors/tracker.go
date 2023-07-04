@@ -98,8 +98,12 @@ func (tracker *SensorTracker) Update(ctx context.Context, s hass.SensorUpdate) {
 	metadata, err := tracker.registry.Get(s.ID())
 	if err != nil {
 		log.Debug().Err(err).Msg("Error getting tracker metadata from registry.")
+		metadata = NewRegistryItem(s.ID())
 	}
-	tracker.hassConfig.Refresh(ctx)
+	if err := tracker.hassConfig.Refresh(ctx); err != nil {
+		log.Debug().Err(err).
+			Msg("Unable to fetch updated config from Home Assistant")
+	}
 	metadata.data.Disabled = tracker.hassConfig.IsEntityDisabled(s.ID())
 	sensor := &sensorState{
 		data:       s,
