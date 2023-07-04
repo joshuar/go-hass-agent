@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"net/url"
 	"reflect"
-	"strings"
 	"time"
 
 	"fyne.io/fyne/v2"
@@ -66,9 +65,9 @@ func (c *agentConfig) Get(property string) (interface{}, error) {
 	case "version":
 		return c.prefs.StringWithFallback("Version", Version), nil
 	case "websocketURL":
-		return c.generateWebsocketURL(), nil
+		return c.prefs.String("WebSocketURL"), nil
 	case "apiURL":
-		return c.generateAPIURL(), nil
+		return c.prefs.String("ApiURL"), nil
 	case "token":
 		return c.prefs.String("Token"), nil
 	case "webhookID":
@@ -160,15 +159,10 @@ func (c *agentConfig) Upgrade() error {
 		}
 		c.Set("Host", newHost)
 		fallthrough
-	// * Trim trailing slash from host for versions < v1.4.3
+	// * Add ApiURL and WebSocketURL config options for versions < v1.4.3
 	case semver.Compare(configVersion.(string), "v1.4.3") < 0:
-		host, err := c.Get("host")
-		if err != nil {
-			return err
-		}
-		var newHost string
-		newHost = strings.TrimSuffix(host.(string), "/")
-		c.Set("Host", newHost)
+		c.generateAPIURL()
+		c.generateWebsocketURL()
 	}
 
 	c.Set("Version", Version)
@@ -179,38 +173,40 @@ func (c *agentConfig) Upgrade() error {
 	return nil
 }
 
-func (c *agentConfig) generateWebsocketURL() string {
+func (c *agentConfig) generateWebsocketURL() {
 	// TODO: look into websocket http upgrade method
-	var scheme string
 	host := c.prefs.String("Host")
-	u, err := url.Parse(host)
-	if err != nil {
-		log.Debug().Err(err).Msg("Could not parse host into URL.")
-	}
-	switch u.Scheme {
+	url, _ := url.Parse(host)
+	switch url.Scheme {
 	case "https":
-		scheme = "wss://"
+		url.Scheme = "wss"
 	case "http":
 		fallthrough
 	default:
-		scheme = "ws://"
+		url.Scheme = "ws"
 	}
-	return scheme + u.Host + websocketPath
+	url = url.JoinPath(websocketPath)
+
+	c.Set("WebSocketURL", url.String())
 }
 
-func (c *agentConfig) generateAPIURL() string {
+func (c *agentConfig) generateAPIURL() {
 	cloudhookURL := c.prefs.String("CloudhookURL")
 	remoteUIURL := c.prefs.String("RemoteUIURL")
 	webhookID := c.prefs.String("WebhookID")
 	host := c.prefs.String("Host")
+	var apiURL string
 	switch {
 	case cloudhookURL != "":
-		return cloudhookURL
+		apiURL = cloudhookURL
 	case remoteUIURL != "" && webhookID != "":
-		return remoteUIURL + webHookPath + webhookID
+		apiURL = remoteUIURL + webHookPath + webhookID
 	case webhookID != "" && host != "":
-		return host + webHookPath + webhookID
+		url, _ := url.Parse(host)
+		url = url.JoinPath(webHookPath, webhookID)
+		apiURL = url.String()
 	default:
-		return ""
+		apiURL = ""
 	}
+	c.Set("ApiURL", apiURL)
 }

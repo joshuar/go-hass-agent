@@ -65,7 +65,7 @@ func (agent *Agent) registrationWindow(ctx context.Context, registration *hass.R
 	})
 
 	manualServerEntry := widget.NewEntryWithData(registration.Server)
-	manualServerEntry.Validator = newHostPort()
+	manualServerEntry.Validator = hostValidator()
 	manualServerEntry.Disable()
 	manualServerSelect := widget.NewCheck("", func(b bool) {
 		switch b {
@@ -114,11 +114,13 @@ func (agent *Agent) registrationWindow(ctx context.Context, registration *hass.R
 // most importantly, details on the URL that should be used to send subsequent
 // requests to Home Assistant.
 func (agent *Agent) saveRegistration(r *hass.RegistrationResponse, h *hass.RegistrationDetails) {
-	host, _ := h.Server.Get()
-	agent.SetPref("Host", host)
+	providedHost, _ := h.Server.Get()
+	hostURL, _ := url.Parse(providedHost)
+	agent.SetPref("Host", hostURL.String())
+
 	token, _ := h.Token.Get()
 	agent.SetPref("Token", token)
-	agent.SetPref("Version", agent.Version)
+
 	if r.CloudhookURL != "" {
 		agent.SetPref("CloudhookURL", r.CloudhookURL)
 	}
@@ -131,10 +133,15 @@ func (agent *Agent) saveRegistration(r *hass.RegistrationResponse, h *hass.Regis
 	if r.WebhookID != "" {
 		agent.SetPref("WebhookID", r.WebhookID)
 	}
+	agent.SetPref("ApiURL", r.GenerateAPIURL(providedHost))
+	agent.SetPref("WebSocketURL", r.GenerateWebsocketURL(providedHost))
+
 	agent.SetPref("DeviceName", h.Device.DeviceName())
 	agent.SetPref("DeviceID", h.Device.AppID())
 
 	agent.SetPref("Registered", true)
+
+	agent.SetPref("Version", agent.Version)
 
 	registryPath, err := agent.extraStoragePath("sensorRegistry")
 	if err != nil {
@@ -246,13 +253,16 @@ func findServers(ctx context.Context) binding.StringList {
 	return serverList
 }
 
-// newHostPort is a custom fyne validator that will validate a string is a
+// hostValidator is a custom fyne validator that will validate a string is a
 // valid hostname:port combination
-func newHostPort() fyne.StringValidator {
+func hostValidator() fyne.StringValidator {
 	v := validate.New()
 	return func(text string) error {
 		if v.Var(text, "http_url") != nil {
 			return errors.New("you need to specify a valid url")
+		}
+		if _, err := url.Parse(text); err != nil {
+			return errors.New("url is invalid")
 		}
 		return nil
 	}
