@@ -538,7 +538,6 @@ func Test_sensorState_RequestType(t *testing.T) {
 }
 
 func Test_sensorState_RequestData(t *testing.T) {
-	defaultMsg := json.RawMessage(`{"attributes":"","device_class":"Duration","icon":"default","name":"default","state":"default","type":"sensor","unique_id":"default","state_class":"measurement"}`)
 	s := new(mockSensorUpdate)
 	s.On("Attributes").Return("")
 	s.On("Category").Return("")
@@ -559,7 +558,7 @@ func Test_sensorState_RequestData(t *testing.T) {
 	tests := []struct {
 		name   string
 		fields fields
-		want   *json.RawMessage
+		want   json.RawMessage
 	}{
 		{
 			name: "default test",
@@ -567,7 +566,7 @@ func Test_sensorState_RequestData(t *testing.T) {
 				data:     s,
 				metadata: &sensorMetadata{},
 			},
-			want: &defaultMsg,
+			want: json.RawMessage(`{"attributes":"","device_class":"Duration","icon":"default","name":"default","state":"default","type":"sensor","unique_id":"default","state_class":"measurement"}`),
 		},
 	}
 	for _, tt := range tests {
