@@ -18,7 +18,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-type linuxDevice struct {
+type LinuxDevice struct {
 	appName    string
 	appVersion string
 	appID      string
@@ -29,48 +29,48 @@ type linuxDevice struct {
 	machineID  string
 }
 
-func (l *linuxDevice) AppName() string {
+func (l *LinuxDevice) AppName() string {
 	return l.appName
 }
 
-func (l *linuxDevice) AppVersion() string {
+func (l *LinuxDevice) AppVersion() string {
 	return l.appVersion
 }
 
-func (l *linuxDevice) AppID() string {
+func (l *LinuxDevice) AppID() string {
 	return l.appID
 }
 
-func (l *linuxDevice) DeviceName() string {
+func (l *LinuxDevice) DeviceName() string {
 	shortHostname, _, _ := strings.Cut(l.hostname, ".")
 	return shortHostname
 }
 
-func (l *linuxDevice) DeviceID() string {
+func (l *LinuxDevice) DeviceID() string {
 	return l.machineID
 }
 
-func (l *linuxDevice) Manufacturer() string {
+func (l *LinuxDevice) Manufacturer() string {
 	return l.hwVendor
 }
 
-func (l *linuxDevice) Model() string {
+func (l *LinuxDevice) Model() string {
 	return l.hwModel
 }
 
-func (l *linuxDevice) OsName() string {
+func (l *LinuxDevice) OsName() string {
 	return l.osRelease["PRETTY_NAME"]
 }
 
-func (l *linuxDevice) OsVersion() string {
+func (l *LinuxDevice) OsVersion() string {
 	return l.osRelease["VERSION_ID"]
 }
 
-func (l *linuxDevice) SupportsEncryption() bool {
+func (l *LinuxDevice) SupportsEncryption() bool {
 	return false
 }
 
-func (l *linuxDevice) AppData() interface{} {
+func (l *LinuxDevice) AppData() interface{} {
 	return &struct {
 		PushWebsocket bool `json:"push_websocket_channel"`
 	}{
@@ -78,7 +78,7 @@ func (l *linuxDevice) AppData() interface{} {
 	}
 }
 
-func (l *linuxDevice) MarshalJSON() ([]byte, error) {
+func (l *LinuxDevice) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&hass.RegistrationRequest{
 		DeviceID:           l.DeviceID(),
 		AppID:              l.AppID(),
@@ -94,8 +94,8 @@ func (l *linuxDevice) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func NewDevice(ctx context.Context, name string, version string) *linuxDevice {
-	newDevice := &linuxDevice{
+func NewDevice(ctx context.Context, name string, version string) *LinuxDevice {
+	newDevice := &LinuxDevice{
 		appName:    name,
 		appVersion: version,
 	}
