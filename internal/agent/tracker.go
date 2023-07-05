@@ -21,7 +21,7 @@ func (agent *Agent) runSensorTracker(ctx context.Context) {
 			Msg("Unable to store registry on disk, trying in-memory store.")
 	}
 
-	tracker = sensors.NewSensorTracker(ctx, registryPath)
+	tracker = sensors.NewSensorTracker(ctx, registryPath.Path())
 	if tracker == nil {
 		log.Debug().Msg("Unable to create a sensor tracker.")
 		return

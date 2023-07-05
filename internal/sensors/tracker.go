@@ -10,7 +10,6 @@ import (
 	"errors"
 	"sync"
 
-	"fyne.io/fyne/v2"
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/rs/zerolog/log"
@@ -23,9 +22,9 @@ type SensorTracker struct {
 	mu         sync.RWMutex
 }
 
-func NewSensorTracker(ctx context.Context, registryPath fyne.URI) *SensorTracker {
+func NewSensorTracker(ctx context.Context, path string) *SensorTracker {
 	r := &nutsdbRegistry{}
-	err := r.Open(ctx, registryPath)
+	err := r.Open(ctx, path)
 	if err != nil {
 		log.Debug().Err(err).Caller().
 			Msg("Unable to open registry")
