@@ -7,8 +7,6 @@ package sensors
 
 import (
 	"context"
-
-	"fyne.io/fyne/v2"
 )
 
 type RegistryItem struct {
@@ -31,9 +29,9 @@ func NewRegistryItem(id string) *RegistryItem {
 	}
 }
 
-//go:generate mockery --name Registry
+//go:generate mockery --name Registry --inpackage
 type Registry interface {
-	Open(context.Context, fyne.URI) error
+	Open(context.Context, string) error
 	Get(string) (*RegistryItem, error)
 	Set(RegistryItem) error
 	Close() error

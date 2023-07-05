@@ -10,8 +10,8 @@ import (
 	"encoding/json"
 	"os"
 
-	"fyne.io/fyne/v2"
 	"github.com/nutsdb/nutsdb"
+	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -22,22 +22,19 @@ type nutsdbRegistry struct {
 	db *nutsdb.DB
 }
 
-func (r *nutsdbRegistry) Open(ctx context.Context, registryPath fyne.URI) error {
-	var path string
-	if registryPath != nil {
-		path = registryPath.Path()
-	} else {
+func (r *nutsdbRegistry) Open(ctx context.Context, path string) error {
+	if path == "" {
 		tmpDir, err := os.MkdirTemp("", "go-hass-agent-")
 		if err != nil {
 			return err
 		}
 		path = tmpDir
 	}
-	db, err := nutsdb.Open(
+	if db, err := nutsdb.Open(
 		nutsdb.DefaultOptions,
 		nutsdb.WithDir(path),
-	)
-	if err != nil {
+	); err != nil {
+		log.Debug().Msg("bad path")
 		return err
 	} else {
 		r.db = db
