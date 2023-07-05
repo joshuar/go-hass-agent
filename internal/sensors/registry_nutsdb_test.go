@@ -104,7 +104,7 @@ func Test_nutsdbRegistry_Get(t *testing.T) {
 	r := &nutsdbRegistry{}
 	err := r.Open(ctx, nil)
 	assert.Nil(t, err)
-	mockItem := registryItem{
+	mockItem := RegistryItem{
 		id: "fakeSensor",
 		data: &sensorMetadata{
 			Registered: true,
@@ -123,7 +123,7 @@ func Test_nutsdbRegistry_Get(t *testing.T) {
 		name    string
 		fields  fields
 		args    args
-		want    *registryItem
+		want    *RegistryItem
 		wantErr bool
 	}{
 		{
@@ -197,7 +197,7 @@ func Test_nutsdbRegistry_Set(t *testing.T) {
 			r := &nutsdbRegistry{
 				db: tt.fields.db,
 			}
-			if err := r.Set(registryItem{id: tt.args.id, data: tt.args.values}); (err != nil) != tt.wantErr {
+			if err := r.Set(RegistryItem{id: tt.args.id, data: tt.args.values}); (err != nil) != tt.wantErr {
 				t.Errorf("nutsdbRegistry.Set() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

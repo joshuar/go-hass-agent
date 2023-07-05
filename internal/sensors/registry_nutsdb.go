@@ -53,8 +53,8 @@ func (r *nutsdbRegistry) Close() error {
 	}
 }
 
-func (r *nutsdbRegistry) Get(id string) (*registryItem, error) {
-	item := &registryItem{
+func (r *nutsdbRegistry) Get(id string) (*RegistryItem, error) {
+	item := &RegistryItem{
 		id: id,
 		data: &sensorMetadata{
 			Registered: false,
@@ -76,7 +76,7 @@ func (r *nutsdbRegistry) Get(id string) (*registryItem, error) {
 	return item, nil
 }
 
-func (r *nutsdbRegistry) Set(item registryItem) error {
+func (r *nutsdbRegistry) Set(item RegistryItem) error {
 	v, err := json.Marshal(item.data)
 	if err != nil {
 		return err
