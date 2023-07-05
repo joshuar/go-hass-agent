@@ -48,7 +48,7 @@ func (tracker *SensorTracker) add(sensor *sensorState) error {
 	}
 	tracker.sensor[sensor.ID()] = sensor
 	tracker.mu.Unlock()
-	tracker.registry.Set(registryItem{
+	tracker.registry.Set(RegistryItem{
 		data: sensor.metadata,
 		id:   sensor.ID(),
 	})

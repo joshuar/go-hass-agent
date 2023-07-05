@@ -11,29 +11,30 @@ import (
 	"fyne.io/fyne/v2"
 )
 
-type registryItem struct {
+type RegistryItem struct {
 	data *sensorMetadata
 	id   string
 }
 
-func (item *registryItem) IsDisabled() bool {
+func (item *RegistryItem) IsDisabled() bool {
 	return item.data.Disabled
 }
 
-func (item *registryItem) IsRegistered() bool {
+func (item *RegistryItem) IsRegistered() bool {
 	return item.data.Registered
 }
 
-func NewRegistryItem(id string) *registryItem {
-	return &registryItem{
+func NewRegistryItem(id string) *RegistryItem {
+	return &RegistryItem{
 		id:   id,
 		data: new(sensorMetadata),
 	}
 }
 
+//go:generate mockery --name Registry
 type Registry interface {
 	Open(context.Context, fyne.URI) error
-	Get(string) (*registryItem, error)
-	Set(registryItem) error
+	Get(string) (*RegistryItem, error)
+	Set(RegistryItem) error
 	Close() error
 }
