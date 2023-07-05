@@ -8,10 +8,9 @@ package agent
 import (
 	"context"
 
-	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 )
 
-func (agent *Agent) setupDevice(ctx context.Context) hass.DeviceInfo {
+func (agent *Agent) setupDevice(ctx context.Context) *linux.LinuxDevice {
 	return linux.NewDevice(ctx, Name, Version)
 }
