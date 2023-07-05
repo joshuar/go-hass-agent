@@ -44,13 +44,19 @@ func (agent *Agent) setupSystemTray(ctx context.Context) {
 			NewMenuItem(translator.Translate("Report Issue"),
 				func() {
 					url, _ := url.Parse(issueURL)
-					agent.app.OpenURL(url)
+					if err := agent.app.OpenURL(url); err != nil {
+						log.Warn().Err(err).
+							Msgf("Unable to open url %s", url.String())
+					}
 				})
 		menuItemFeatureRequest := fyne.
 			NewMenuItem(translator.Translate("Request Feature"),
 				func() {
 					url, _ := url.Parse(featureRequestURL)
-					agent.app.OpenURL(url)
+					if err := agent.app.OpenURL(url); err != nil {
+						log.Warn().Err(err).
+							Msgf("Unable to open url %s", url.String())
+					}
 				})
 		menuItemSettings := fyne.
 			NewMenuItem(translator.Translate("Settings"), agent.settingsWindow)
@@ -105,11 +111,16 @@ func (agent *Agent) sensorsWindow(ctx context.Context) {
 	hassConfig := hass.NewHassConfig(ctx)
 	s, err := hassConfig.Get("entities")
 	if err != nil {
-		log.Debug().Caller().Err(err).
+		log.Warn().Err(err).
 			Msg("Could not get entities from config.")
 		return
 	}
-	for k := range s.(map[string]map[string]interface{}) {
+	sensorList, ok := s.(map[string]map[string]interface{})
+	if !ok {
+		log.Warn().Err(err).
+			Msg("List of sensors is invalid.")
+	}
+	for k := range sensorList {
 		if state, err := tracker.Get(k); err == nil {
 			entityNames = append(entityNames, k)
 			tableData = append(tableData,
@@ -131,7 +142,11 @@ func (agent *Agent) sensorsWindow(ctx context.Context) {
 			return widget.NewLabel(longestName)
 		},
 		func(i widget.TableCellID, o fyne.CanvasObject) {
-			o.(*widget.Label).SetText(tableData[i.Row][i.Col])
+			label, ok := o.(*widget.Label)
+			if !ok {
+				return
+			}
+			label.SetText(tableData[i.Row][i.Col])
 		})
 	w := agent.app.NewWindow(agent.setTitle("Sensors"))
 	w.SetContent(list)

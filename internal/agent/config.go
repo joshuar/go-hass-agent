@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"reflect"
 	"time"
 
 	"fyne.io/fyne/v2"
@@ -37,12 +36,13 @@ func (agent *Agent) IsRegistered() bool {
 }
 
 func (agent *Agent) SetPref(pref string, value interface{}) {
-	valueType := reflect.ValueOf(value)
-	switch valueType.Kind() {
-	case reflect.String:
-		agent.app.Preferences().SetString(pref, value.(string))
-	case reflect.Bool:
-		agent.app.Preferences().SetBool(pref, value.(bool))
+	if v, ok := value.(string); ok {
+		agent.app.Preferences().SetString(pref, v)
+		return
+	}
+	if v, ok := value.(bool); ok {
+		agent.app.Preferences().SetBool(pref, v)
+		return
 	}
 }
 
@@ -84,17 +84,15 @@ func (c *agentConfig) Get(property string) (interface{}, error) {
 }
 
 func (c *agentConfig) Set(property string, value interface{}) error {
-	valueType := reflect.ValueOf(value)
-	switch valueType.Kind() {
-	case reflect.String:
-		c.prefs.SetString(property, value.(string))
+	if v, ok := value.(string); ok {
+		c.prefs.SetString(property, v)
 		return nil
-	case reflect.Bool:
-		c.prefs.SetBool(property, value.(bool))
-		return nil
-	default:
-		return fmt.Errorf("could not set property %s with value %v", property, value)
 	}
+	if v, ok := value.(bool); ok {
+		c.prefs.SetBool(property, v)
+		return nil
+	}
+	return fmt.Errorf("could not set property %s with value %v", property, value)
 }
 
 func (c *agentConfig) Validate() error {
@@ -135,39 +133,51 @@ func (c *agentConfig) Upgrade() error {
 	if err != nil {
 		return err
 	}
+	versionString, ok := configVersion.(string)
+	if !ok {
+		return errors.New("config version is not a valid value")
+	}
 	switch {
 	// * Upgrade host to include scheme for versions < v.1.4.0
-	case semver.Compare(configVersion.(string), "v1.4.0") < 0:
+	case semver.Compare(versionString, "v1.4.0") < 0:
 		log.Debug().Msg("Performing config upgrades for < v1.4.0")
-		host, err := c.Get("host")
+		hostValue, err := c.Get("host")
 		if err != nil {
 			return err
 		}
-		useTLS, err := c.Get("useTLS")
+		hostString, ok := hostValue.(string)
+		if !ok {
+			return errors.New("upgrade < v.1.4.0: invalid host value")
+		}
+		tlsValue, err := c.Get("useTLS")
 		if err != nil {
 			return err
 		}
-		var newHost string
-		switch useTLS.(type) {
-		case bool:
-			if useTLS.(bool) {
-				newHost = "https://" + host.(string)
-			} else {
-				newHost = "http://" + host.(string)
+		if useTLS, ok := tlsValue.(bool); !ok {
+			hostString = "http://" + hostString
+		} else {
+			switch useTLS {
+			case true:
+				hostString = "https://" + hostString
+			case false:
+				hostString = "http://" + hostString
 			}
-		default:
-			newHost = "http://" + host.(string)
 		}
-		c.Set("Host", newHost)
+		if err := c.Set("Host", hostString); err != nil {
+			return fmt.Errorf("upgrade < v.1.4.0: could not update host: %v", err)
+		}
 		fallthrough
 	// * Add ApiURL and WebSocketURL config options for versions < v1.4.3
-	case semver.Compare(configVersion.(string), "v1.4.3") < 0:
+	case semver.Compare(versionString, "v1.4.3") < 0:
 		log.Debug().Msg("Performing config upgrades for < v1.4.3")
 		c.generateAPIURL()
 		c.generateWebsocketURL()
 	}
 
-	c.Set("Version", Version)
+	if err := c.Set("Version", Version); err != nil {
+		log.Debug().Err(err).
+			Msg("Unable to set new config version.")
+	}
 
 	// ! https://github.com/fyne-io/fyne/issues/3170
 	time.Sleep(110 * time.Millisecond)
@@ -189,7 +199,10 @@ func (c *agentConfig) generateWebsocketURL() {
 	}
 	url = url.JoinPath(websocketPath)
 
-	c.Set("WebSocketURL", url.String())
+	if err := c.Set("WebSocketURL", url.String()); err != nil {
+		log.Debug().Err(err).
+			Msg("Unable to generate web socket URL.")
+	}
 }
 
 func (c *agentConfig) generateAPIURL() {
@@ -210,5 +223,8 @@ func (c *agentConfig) generateAPIURL() {
 	default:
 		apiURL = ""
 	}
-	c.Set("ApiURL", apiURL)
+	if err := c.Set("ApiURL", apiURL); err != nil {
+		log.Debug().Err(err).
+			Msg("Unable to generate API URL.")
+	}
 }
