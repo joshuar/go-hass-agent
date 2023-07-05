@@ -12,6 +12,8 @@ import (
 	"testing"
 
 	"github.com/joshuar/go-hass-agent/internal/hass"
+	"github.com/joshuar/go-hass-agent/internal/hass/mocks"
+	"github.com/stretchr/testify/mock"
 )
 
 func Test_sensorState_DeviceClass(t *testing.T) {
@@ -150,6 +152,15 @@ func Test_sensorState_Name(t *testing.T) {
 }
 
 func Test_sensorState_State(t *testing.T) {
+
+	withState := mocks.NewSensorUpdate(t)
+	withState.On("State", mock.AnythingOfType("string")).
+		Return(func() interface{} {
+			return "aString"
+		})
+	withoutState := mocks.NewSensorUpdate(t)
+	withoutState.On("State").Return(nil)
+
 	type fields struct {
 		data       hass.SensorUpdate
 		metadata   *sensorMetadata
@@ -163,18 +174,14 @@ func Test_sensorState_State(t *testing.T) {
 		{
 			name: "with state",
 			fields: fields{
-				data: &mockSensorUpdate{
-					state: "aString",
-				},
+				data: withState,
 			},
 			want: "aString",
 		},
 		{
 			name: "without state",
 			fields: fields{
-				data: &mockSensorUpdate{
-					state: nil,
-				},
+				data: withoutState,
 			},
 			want: "Unknown",
 		},
@@ -302,6 +309,8 @@ func Test_sensorState_Category(t *testing.T) {
 }
 
 func Test_sensorState_Disabled(t *testing.T) {
+	sensorUpdate := mocks.NewSensorUpdate(t)
+
 	type fields struct {
 		data       hass.SensorUpdate
 		metadata   *sensorMetadata
@@ -312,7 +321,34 @@ func Test_sensorState_Disabled(t *testing.T) {
 		fields fields
 		want   bool
 	}{
-		// TODO: Add test cases.
+		{
+			name: "disabled sensor",
+			fields: fields{
+				data: sensorUpdate,
+				metadata: &sensorMetadata{
+					Disabled: true,
+				},
+			},
+			want: true,
+		},
+		{
+			name: "active sensor",
+			fields: fields{
+				data: sensorUpdate,
+				metadata: &sensorMetadata{
+					Disabled: false,
+				},
+			},
+			want: false,
+		},
+		{
+			name: "no metadata",
+			fields: fields{
+				data:     sensorUpdate,
+				metadata: nil,
+			},
+			want: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -329,6 +365,8 @@ func Test_sensorState_Disabled(t *testing.T) {
 }
 
 func Test_sensorState_Registered(t *testing.T) {
+	sensorUpdate := mocks.NewSensorUpdate(t)
+
 	type fields struct {
 		data       hass.SensorUpdate
 		metadata   *sensorMetadata
@@ -339,7 +377,34 @@ func Test_sensorState_Registered(t *testing.T) {
 		fields fields
 		want   bool
 	}{
-		// TODO: Add test cases.
+		{
+			name: "registered sensor",
+			fields: fields{
+				data: sensorUpdate,
+				metadata: &sensorMetadata{
+					Registered: true,
+				},
+			},
+			want: true,
+		},
+		{
+			name: "unregistered sensor",
+			fields: fields{
+				data: sensorUpdate,
+				metadata: &sensorMetadata{
+					Registered: false,
+				},
+			},
+			want: false,
+		},
+		{
+			name: "no metadata",
+			fields: fields{
+				data:     sensorUpdate,
+				metadata: nil,
+			},
+			want: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -356,6 +421,18 @@ func Test_sensorState_Registered(t *testing.T) {
 }
 
 func Test_sensorState_MarshalJSON(t *testing.T) {
+	aSensorState := mocks.NewSensorUpdate(t)
+	aSensorState.On("Attributes").Return(nil)
+	aSensorState.On("DeviceClass").Return(hass.Duration)
+	aSensorState.On("Icon").Return("icon")
+	aSensorState.On("Name").Return("sensorName")
+	aSensorState.On("State").Return("state")
+	aSensorState.On("SensorType").Return(hass.TypeSensor)
+	aSensorState.On("ID").Return("sensorID")
+	aSensorState.On("Units").Return("unit")
+	aSensorState.On("StateClass").Return(hass.StateMeasurement)
+	aSensorState.On("Category").Return("")
+
 	type fields struct {
 		data       hass.SensorUpdate
 		metadata   *sensorMetadata
@@ -367,7 +444,25 @@ func Test_sensorState_MarshalJSON(t *testing.T) {
 		want    []byte
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		{
+			name: "unregistered sensor",
+			fields: fields{
+				data: aSensorState,
+			},
+			want:    []byte(`{"device_class":"Duration","icon":"icon","name":"sensorName","state":"state","type":"sensor","unique_id":"sensorID","unit_of_measurement":"unit","state_class":"measurement"}`),
+			wantErr: false,
+		},
+		{
+			name: "registered sensor",
+			fields: fields{
+				data: aSensorState,
+				metadata: &sensorMetadata{
+					Registered: true,
+				},
+			},
+			want:    []byte(`{"icon":"icon","state":"state","type":"sensor","unique_id":"sensorID"}`),
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -403,7 +498,19 @@ func Test_sensorState_UnMarshalJSON(t *testing.T) {
 		args    args
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		{
+			name: "valid sensor data",
+			args: args{
+				b: []byte(`{"icon":"icon","state":"state","type":"sensor","unique_id":"sensorID"}`),
+			},
+		},
+		{
+			name: "invalid data",
+			args: args{
+				b: []byte(`{icon":"icon","state":"state","type":"sensor","unique_id":"sensorID"}`),
+			},
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -456,6 +563,13 @@ func Test_sensorState_RequestType(t *testing.T) {
 }
 
 func Test_sensorState_RequestData(t *testing.T) {
+	aSensorState := mocks.NewSensorUpdate(t)
+	aSensorState.On("Attributes").Return(nil)
+	aSensorState.On("Icon").Return("icon")
+	aSensorState.On("State").Return("state")
+	aSensorState.On("SensorType").Return(hass.TypeSensor)
+	aSensorState.On("ID").Return("sensorID")
+
 	type fields struct {
 		data       hass.SensorUpdate
 		metadata   *sensorMetadata
@@ -466,8 +580,16 @@ func Test_sensorState_RequestData(t *testing.T) {
 		fields fields
 		want   json.RawMessage
 	}{
-		// TODO: Add test cases.
-	}
+		{
+			name: "registered sensor",
+			fields: fields{
+				data: aSensorState,
+				metadata: &sensorMetadata{
+					Registered: true,
+				},
+			},
+			want: json.RawMessage([]byte(`{"icon":"icon","state":"state","type":"sensor","unique_id":"sensorID"}`)),
+		}}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			sensor := &sensorState{
@@ -483,7 +605,7 @@ func Test_sensorState_RequestData(t *testing.T) {
 }
 
 func Test_sensorState_ResponseHandler(t *testing.T) {
-	sensor := new(mockSensorUpdate)
+	sensor := mocks.NewSensorUpdate(t)
 	sensor.On("ID").Return("default")
 	sensor.On("Name").Return("sensorName")
 
