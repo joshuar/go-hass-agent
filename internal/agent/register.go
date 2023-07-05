@@ -30,6 +30,12 @@ import (
 // information about both the Home Assistant server and the device running the
 // agent needed to register the agent with Home Assistant.
 func (agent *Agent) newRegistration(ctx context.Context, server, token string) *hass.RegistrationDetails {
+	checkSet := func(value string, pref binding.String) {
+		if err := pref.Set(value); err != nil {
+			log.Warn().Err(err).
+				Msgf("Could not set preference to provided value: %s", value)
+		}
+	}
 	registrationInfo := &hass.RegistrationDetails{
 		Server: binding.NewString(),
 		Token:  binding.NewString(),
@@ -40,10 +46,10 @@ func (agent *Agent) newRegistration(ctx context.Context, server, token string) *
 		log.Warn().Err(err).
 			Msg("Cannot parse provided URL. Ignoring")
 	} else {
-		registrationInfo.Server.Set(u.Host)
+		checkSet(u.Host, registrationInfo.Server)
 	}
 	if token != "" {
-		registrationInfo.Token.Set(token)
+		checkSet(token, registrationInfo.Token)
 	}
 	return registrationInfo
 }
@@ -61,7 +67,10 @@ func (agent *Agent) registrationWindow(ctx context.Context, registration *hass.R
 	tokenSelect.Validator = validation.NewRegexp("[A-Za-z0-9_\\.]+", "Invalid token format")
 
 	autoServerSelect := widget.NewSelect(allServers, func(s string) {
-		registration.Server.Set(s)
+		if err := registration.Server.Set(s); err != nil {
+			log.Debug().Err(err).
+				Msg("Could not set server pref to selected value.")
+		}
 	})
 
 	manualServerEntry := widget.NewEntryWithData(registration.Server)
@@ -183,7 +192,10 @@ func (agent *Agent) registrationProcess(ctx context.Context, server, token strin
 	// registered and continue execution. Required check for versions upgraded
 	// from v1.2.6 and below.
 	if !agent.IsRegistered() && appConfig.Validate() == nil {
-		appConfig.Set("Registered", true)
+		if err := appConfig.Set("Registered", true); err != nil {
+			log.Warn().Err(err).
+				Msg("Unable to set registration as successful.")
+		}
 		close(done)
 	}
 	// If the app is not registered, run a registration flow
@@ -217,7 +229,10 @@ func findServers(ctx context.Context) binding.StringList {
 
 	// add http://localhost:8123 to the list of servers as a fall-back/default
 	// option
-	serverList.Append("http://localhost:8123")
+	if err := serverList.Append("http://localhost:8123"); err != nil {
+		log.Debug().Err(err).
+			Msg("Unable to set a default server.")
+	}
 
 	resolver, err := zeroconf.NewResolver(nil)
 	if err != nil {
@@ -233,7 +248,10 @@ func findServers(ctx context.Context) binding.StringList {
 					}
 				}
 				if server != "" {
-					serverList.Append(server)
+					if err := serverList.Append(server); err != nil {
+						log.Warn().Err(err).
+							Msgf("Unable to add found server %s to server list.", server)
+					}
 				} else {
 					log.Debug().Msgf("Entry %s did not have a base_url value. Not using it.", entry.HostName)
 				}
