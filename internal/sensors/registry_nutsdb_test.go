@@ -11,8 +11,6 @@ import (
 	"reflect"
 	"testing"
 
-	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/storage"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/nutsdb/nutsdb"
 	"github.com/stretchr/testify/assert"
@@ -21,13 +19,12 @@ import (
 func Test_nutsdbRegistry_Open(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	badPath, _ := storage.ParseURI("file:///some/bad/path")
 	type fields struct {
 		db *nutsdb.DB
 	}
 	type args struct {
 		ctx          context.Context
-		registryPath fyne.URI
+		registryPath string
 	}
 	tests := []struct {
 		name    string
@@ -37,12 +34,12 @@ func Test_nutsdbRegistry_Open(t *testing.T) {
 	}{
 		{
 			name:    "successful open",
-			args:    args{ctx: ctx, registryPath: nil},
+			args:    args{ctx: ctx, registryPath: ""},
 			wantErr: false,
 		},
 		{
 			name:    "unsuccessful open",
-			args:    args{ctx: ctx, registryPath: badPath},
+			args:    args{ctx: ctx, registryPath: "/nonexistent"},
 			wantErr: true,
 		},
 	}
@@ -102,7 +99,7 @@ func Test_nutsdbRegistry_Get(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	r := &nutsdbRegistry{}
-	err := r.Open(ctx, nil)
+	err := r.Open(ctx, "")
 	assert.Nil(t, err)
 	mockItem := RegistryItem{
 		id: "fakeSensor",
@@ -162,7 +159,7 @@ func Test_nutsdbRegistry_Set(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	r := &nutsdbRegistry{}
-	err := r.Open(ctx, nil)
+	err := r.Open(ctx, "")
 	assert.Nil(t, err)
 	fakeMetadata := &sensorMetadata{
 		Registered: true,
