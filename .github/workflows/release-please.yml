@@ -19,20 +19,24 @@ jobs:
         with:
           release-type: go
           token: ${{ secrets.GITHUB_TOKEN }}
+
       - uses: actions/checkout@v3
         if: ${{ steps.release_please.outputs.release_created }}
         with:
           fetch-depth: 0
+
       - name: Fetch source
         if: ${{ steps.release_please.outputs.release_created }}
         id: git_fetch
         run: git fetch --force --tags
+
       - name: Setup Go
         if: ${{ steps.release_please.outputs.release_created }}
         id: setup_go
         uses: actions/setup-go@v4
         with:
           go-version: "1.20"
+
       - name: Install Go dependencies
         if: ${{ steps.release_please.outputs.release_created }}
         id: install_go_deps
@@ -40,18 +44,22 @@ jobs:
           go install golang.org/x/tools/cmd/stringer@latest
           go install github.com/fyne-io/fyne-cross@latest
           go install golang.org/x/text/cmd/gotext@latest
+          go install github.com/vektra/mockery/v2@v2.30.1
+
       - name: Install dependencies
         if: ${{ steps.release_please.outputs.release_created }}
         id: install_linux_deps
         run: sudo apt install -y desktop-file-utils gcc libgl1-mesa-dev libegl1-mesa-dev libgles2-mesa-dev libx11-dev xorg-dev
+
       - name: Update VERSION
         if: ${{ steps.release_please.outputs.release_created }}
         id: update_version
         shell: sh
         run: cd internal/agent && printf %s $(git tag | tail -1) > VERSION
-      - uses: goreleaser/goreleaser-action@v4
+
+      - name: Run Go Releaser
+        uses: goreleaser/goreleaser-action@v4
         if: ${{ steps.release_please.outputs.release_created }}
-        name: Run Go Releaser
         id: run_goreleaser
         with:
           distribution: goreleaser
