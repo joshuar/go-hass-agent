@@ -6,6 +6,7 @@
 package agent
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/url"
@@ -122,7 +123,7 @@ func (c *agentConfig) Validate() error {
 	return nil
 }
 
-func (c *agentConfig) Refresh() error {
+func (c *agentConfig) Refresh(ctx context.Context) error {
 	log.Debug().Caller().
 		Msg("Agent config does not support refresh.")
 	return nil
