@@ -10,43 +10,12 @@ import (
 	"errors"
 	"reflect"
 	"testing"
-
-	"github.com/stretchr/testify/mock"
 )
-
-type mockConfig struct {
-	mock.Mock
-}
-
-func (m *mockConfig) Get(property string) (interface{}, error) {
-	args := m.Called(property)
-	return args.String(0), args.Error(1)
-}
-
-func (m *mockConfig) Set(property string, value interface{}) error {
-	args := m.Called(property, value)
-	return args.Error(1)
-}
-
-func (m *mockConfig) Validate() error {
-	args := m.Called()
-	return args.Error(1)
-}
-
-func (m *mockConfig) Upgrade() error {
-	args := m.Called()
-	return args.Error(1)
-}
-
-func (m *mockConfig) Refresh() error {
-	args := m.Called()
-	return args.Error(1)
-}
 
 func TestStoreInContext(t *testing.T) {
 	wantedCtx := context.WithValue(context.Background(),
 		configKey,
-		&mockConfig{})
+		NewMockConfig(t))
 	type args struct {
 		ctx context.Context
 		c   Config
@@ -58,7 +27,7 @@ func TestStoreInContext(t *testing.T) {
 	}{
 		{
 			name: "standard test",
-			args: args{ctx: context.Background(), c: &mockConfig{}},
+			args: args{ctx: context.Background(), c: NewMockConfig(t)},
 			want: wantedCtx,
 		},
 	}
@@ -74,7 +43,7 @@ func TestStoreInContext(t *testing.T) {
 func TestFetchFromContext(t *testing.T) {
 	validCtx := context.WithValue(context.Background(),
 		configKey,
-		&mockConfig{})
+		NewMockConfig(t))
 	invalidCtx := context.Background()
 	type args struct {
 		ctx context.Context
@@ -88,7 +57,7 @@ func TestFetchFromContext(t *testing.T) {
 		{
 			name:    "fetch valid",
 			args:    args{ctx: validCtx},
-			want:    &mockConfig{},
+			want:    NewMockConfig(t),
 			wantErr: false,
 		},
 		{
@@ -113,7 +82,7 @@ func TestFetchFromContext(t *testing.T) {
 }
 
 func TestFetchPropertyFromContext(t *testing.T) {
-	config := new(mockConfig)
+	config := NewMockConfig(t)
 	config.On("Get", "valid").Return("validValue", nil)
 	config.On("Get", "invalid").Return("", errors.New("invalid"))
 
