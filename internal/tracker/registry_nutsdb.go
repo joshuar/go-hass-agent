@@ -74,19 +74,20 @@ func (r *nutsdbRegistry) IsRegistered(id string) bool {
 
 func (r *nutsdbRegistry) SetDisabled(id string, state bool) error {
 	metadata, err := r.get(id)
-	if err != nil && !errors.Is(err, nutsdb.ErrBucketNotFound) {
+	if err != nil && errors.Is(err, nutsdb.ErrBucketNotFound) {
 		return err
 	}
 	if metadata == nil {
 		metadata = new(SensorMetadata)
 	}
 	metadata.Disabled = state
+	spew.Dump(metadata)
 	return r.set(id, metadata)
 }
 
 func (r *nutsdbRegistry) SetRegistered(id string, state bool) error {
 	metadata, err := r.get(id)
-	if err != nil && !errors.Is(err, nutsdb.ErrBucketNotFound) {
+	if err != nil && errors.Is(err, nutsdb.ErrBucketNotFound) {
 		return err
 	}
 	if metadata == nil {
