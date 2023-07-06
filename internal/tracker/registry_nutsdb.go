@@ -7,6 +7,7 @@ package tracker
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 
 	"github.com/nutsdb/nutsdb"
@@ -49,30 +50,68 @@ func (r *nutsdbRegistry) Close() error {
 	}
 }
 
-func (r *nutsdbRegistry) Get(id string) (*RegistryItem, error) {
-	item := NewRegistryItem(id)
+func (r *nutsdbRegistry) IsDisabled(id string) bool {
+	metadata, err := r.get(id)
+	if err != nil {
+		log.Debug().Err(err).
+			Msgf("Could not retrieve disabled state for %s from registry.", id)
+		return false
+	}
+	return metadata.Disabled
+}
+
+func (r *nutsdbRegistry) IsRegistered(id string) bool {
+	metadata, err := r.get(id)
+	if err != nil {
+		log.Debug().Err(err).
+			Msgf("Could not retrieve registered state for %s from registry.", id)
+		return false
+	}
+	return metadata.Registered
+}
+
+func (r *nutsdbRegistry) SetDisabled(id string, state bool) error {
+	metadata, err := r.get(id)
+	if err != nil {
+		return err
+	}
+	metadata.Disabled = state
+	return r.set(id, metadata)
+}
+
+func (r *nutsdbRegistry) SetRegistered(id string, state bool) error {
+	metadata, err := r.get(id)
+	if err != nil {
+		return err
+	}
+	metadata.Registered = state
+	return r.set(id, metadata)
+}
+
+func (r *nutsdbRegistry) get(id string) (*SensorMetadata, error) {
+	data := new(SensorMetadata)
 	if err := r.db.View(
 		func(tx *nutsdb.Tx) error {
 			key := []byte(id)
 			if e, err := tx.Get(registryBucket, key); err != nil {
 				return err
 			} else {
-				return item.UnmarshalJSON(e.Value)
+				return json.Unmarshal(e.Value, data)
 			}
 		}); err != nil {
 		return nil, err
 	}
-	return item, nil
+	return data, nil
 }
 
-func (r *nutsdbRegistry) Set(item RegistryItem) error {
-	v, err := item.MarshalJSON()
+func (r *nutsdbRegistry) set(id string, data *SensorMetadata) error {
+	v, err := json.Marshal(data)
 	if err != nil {
 		return err
 	}
 	if err := r.db.Update(
 		func(tx *nutsdb.Tx) error {
-			if err := tx.Put(registryBucket, []byte(item.ID), v, 0); err != nil {
+			if err := tx.Put(registryBucket, []byte(id), v, 0); err != nil {
 				return err
 			}
 			return nil

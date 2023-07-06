@@ -213,7 +213,7 @@ func TestSensorTracker_Update(t *testing.T) {
 	}
 	type args struct {
 		ctx context.Context
-		s   hass.SensorUpdate
+		s   hass.Sensor
 	}
 	tests := []struct {
 		name   string

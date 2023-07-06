@@ -34,11 +34,10 @@ func (agent *Agent) runSensorTracker(ctx context.Context) {
 		select {
 		case data := <-updateCh:
 			switch data := data.(type) {
-			case hass.SensorUpdate:
+			case hass.Sensor:
 				go sensorTracker.Update(ctx, data)
 			case hass.LocationUpdate:
-				l := hass.MarshalLocationUpdate(data)
-				go hass.APIRequest(ctx, l)
+				go hass.APIRequest(ctx, hass.MarshalLocationUpdate(data))
 			default:
 				log.Debug().Caller().
 					Msgf("Got unexpected status update %v", data)

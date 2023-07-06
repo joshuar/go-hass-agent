@@ -27,30 +27,32 @@ func (_m *MockRegistry) Close() error {
 	return r0
 }
 
-// Get provides a mock function with given fields: _a0
-func (_m *MockRegistry) Get(_a0 string) (*RegistryItem, error) {
+// IsDisabled provides a mock function with given fields: _a0
+func (_m *MockRegistry) IsDisabled(_a0 string) bool {
 	ret := _m.Called(_a0)
 
-	var r0 *RegistryItem
-	var r1 error
-	if rf, ok := ret.Get(0).(func(string) (*RegistryItem, error)); ok {
-		return rf(_a0)
-	}
-	if rf, ok := ret.Get(0).(func(string) *RegistryItem); ok {
+	var r0 bool
+	if rf, ok := ret.Get(0).(func(string) bool); ok {
 		r0 = rf(_a0)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*RegistryItem)
-		}
+		r0 = ret.Get(0).(bool)
 	}
 
-	if rf, ok := ret.Get(1).(func(string) error); ok {
-		r1 = rf(_a0)
+	return r0
+}
+
+// IsRegistered provides a mock function with given fields: _a0
+func (_m *MockRegistry) IsRegistered(_a0 string) bool {
+	ret := _m.Called(_a0)
+
+	var r0 bool
+	if rf, ok := ret.Get(0).(func(string) bool); ok {
+		r0 = rf(_a0)
 	} else {
-		r1 = ret.Error(1)
+		r0 = ret.Get(0).(bool)
 	}
 
-	return r0, r1
+	return r0
 }
 
 // Open provides a mock function with given fields: _a0, _a1
@@ -67,13 +69,27 @@ func (_m *MockRegistry) Open(_a0 context.Context, _a1 string) error {
 	return r0
 }
 
-// Set provides a mock function with given fields: _a0
-func (_m *MockRegistry) Set(_a0 RegistryItem) error {
-	ret := _m.Called(_a0)
+// SetDisabled provides a mock function with given fields: _a0, _a1
+func (_m *MockRegistry) SetDisabled(_a0 string, _a1 bool) error {
+	ret := _m.Called(_a0, _a1)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(RegistryItem) error); ok {
-		r0 = rf(_a0)
+	if rf, ok := ret.Get(0).(func(string, bool) error); ok {
+		r0 = rf(_a0, _a1)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// SetRegistered provides a mock function with given fields: _a0, _a1
+func (_m *MockRegistry) SetRegistered(_a0 string, _a1 bool) error {
+	ret := _m.Called(_a0, _a1)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, bool) error); ok {
+		r0 = rf(_a0, _a1)
 	} else {
 		r0 = ret.Error(0)
 	}
