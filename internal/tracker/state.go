@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-package sensors
+package tracker
 
 import (
 	"bytes"
@@ -18,11 +18,11 @@ import (
 // and whether it is registered/disabled in HA.
 type sensorState struct {
 	data       hass.SensorUpdate
-	metadata   *sensorMetadata
+	metadata   *RegistryItem
 	DisabledCh chan bool
 }
 
-type sensorMetadata struct {
+type SensorMetadata struct {
 	Registered bool `json:"Registered"`
 	Disabled   bool `json:"Disabled"`
 }
@@ -74,19 +74,11 @@ func (s *sensorState) Category() string {
 }
 
 func (s *sensorState) Disabled() bool {
-	if s.metadata != nil {
-		return s.metadata.Disabled
-	} else {
-		return false
-	}
+	return s.metadata.IsDisabled()
 }
 
 func (s *sensorState) Registered() bool {
-	if s.metadata != nil {
-		return s.metadata.Registered
-	} else {
-		return false
-	}
+	return s.metadata.IsRegistered()
 }
 
 func (s *sensorState) MarshalJSON() ([]byte, error) {
@@ -106,7 +98,7 @@ func (s *sensorState) UnMarshalJSON(b []byte) error {
 // sensorState implements hass.Request so its data can be sent to the HA API
 
 func (sensor *sensorState) RequestType() hass.RequestType {
-	if sensor.metadata.Registered {
+	if sensor.Registered() {
 		return hass.RequestTypeUpdateSensorStates
 	}
 	return hass.RequestTypeRegisterSensor
@@ -135,7 +127,7 @@ func (sensor *sensorState) ResponseHandler(rawResponse bytes.Buffer) {
 		response := r.(map[string]interface{})
 		if v, ok := response["success"]; ok {
 			if v.(bool) && !sensor.Registered() {
-				sensor.metadata.Registered = true
+				sensor.metadata.SetRegistered(true)
 				log.Debug().Caller().
 					Msgf("Sensor %s registered in HA.",
 						sensor.Name())
@@ -157,11 +149,19 @@ func (sensor *sensorState) ResponseHandler(rawResponse bytes.Buffer) {
 						sensor.Units())
 			}
 			if _, ok := status["is_disabled"]; ok {
-				sensor.metadata.Disabled = true
+				sensor.metadata.SetDisabled(true)
 				sensor.DisabledCh <- true
 			} else if sensor.Disabled() {
-				sensor.metadata.Disabled = false
+				sensor.metadata.SetDisabled(false)
 			}
 		}
+	}
+}
+
+func newSensorState(s hass.SensorUpdate, m *RegistryItem) *sensorState {
+	return &sensorState{
+		data:       s,
+		metadata:   m,
+		DisabledCh: make(chan bool, 1),
 	}
 }

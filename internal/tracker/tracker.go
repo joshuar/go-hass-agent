@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-package sensors
+package tracker
 
 import (
 	"context"
@@ -22,15 +22,8 @@ type SensorTracker struct {
 }
 
 func NewSensorTracker(ctx context.Context, path string) *SensorTracker {
-	r := &nutsdbRegistry{}
-	err := r.Open(ctx, path)
-	if err != nil {
-		log.Debug().Err(err).Caller().
-			Msg("Unable to open registry")
-		return nil
-	}
 	return &SensorTracker{
-		registry: r,
+		registry: NewNutsDB(ctx, path),
 		sensor:   make(map[string]*sensorState),
 	}
 }
@@ -45,10 +38,7 @@ func (tracker *SensorTracker) add(sensor *sensorState) error {
 	}
 	tracker.sensor[sensor.ID()] = sensor
 	tracker.mu.Unlock()
-	if err := tracker.registry.Set(RegistryItem{
-		data: sensor.metadata,
-		id:   sensor.ID(),
-	}); err != nil {
+	if err := tracker.registry.Set(*sensor.metadata); err != nil {
 		return err
 	}
 	return nil
@@ -91,30 +81,26 @@ func (tracker *SensorTracker) StartWorkers(ctx context.Context, updateCh chan in
 
 // Update will send a sensor update to HA, checking to ensure the sensor is not
 // disabled. It will also update the local registry state based on the response.
-func (tracker *SensorTracker) Update(ctx context.Context, s hass.SensorUpdate) {
+func (tracker *SensorTracker) Update(ctx context.Context, sensorUpdate hass.SensorUpdate) {
 	// Assemble a sensor from the provided sensorUpdate, the HA config (for
 	// disabled status) and the registry (for registered status)
-	metadata, err := tracker.registry.Get(s.ID())
+	metadata, err := tracker.registry.Get(sensorUpdate.ID())
 	if err != nil {
 		log.Debug().Err(err).Msg("Error getting tracker metadata from registry.")
-		metadata = NewRegistryItem(s.ID())
+		metadata = NewRegistryItem(sensorUpdate.ID())
 	}
 	hassConfig := hass.NewHassConfig(ctx)
 	if hassConfig == nil {
 		log.Debug().Err(err).
 			Msg("Unable to fetch updated config from Home Assistant")
 	}
-	metadata.data.Disabled = hassConfig.IsEntityDisabled(s.ID())
-	sensor := &sensorState{
-		data:       s,
-		metadata:   metadata.data,
-		DisabledCh: make(chan bool, 1),
-	}
+	metadata.SetDisabled(hassConfig.IsEntityDisabled(sensorUpdate.ID()))
+	sensor := newSensorState(sensorUpdate, metadata)
 	if !sensor.Disabled() {
 		go hass.APIRequest(ctx, sensor)
-		sensor.metadata.Disabled = <-sensor.DisabledCh
+		sensor.metadata.SetDisabled(<-sensor.DisabledCh)
 		if err := tracker.add(sensor); err != nil {
-			log.Debug().Err(err).Msgf("Error adding sensor %s to registry.", s.ID())
+			log.Debug().Err(err).Msgf("Error adding sensor %s to registry.", sensorUpdate.ID())
 		}
 	}
 }

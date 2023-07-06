@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-package sensors
+package tracker
 
 import (
 	"context"
@@ -101,13 +101,9 @@ func Test_nutsdbRegistry_Get(t *testing.T) {
 	r := &nutsdbRegistry{}
 	err := r.Open(ctx, "")
 	assert.Nil(t, err)
-	mockItem := RegistryItem{
-		id: "fakeSensor",
-		data: &sensorMetadata{
-			Registered: true,
-			Disabled:   false,
-		}}
-	err = r.Set(mockItem)
+	mockItem := NewRegistryItem("fakeSensor")
+	mockItem.SetRegistered(true)
+	err = r.Set(*mockItem)
 	assert.Nil(t, err)
 
 	type fields struct {
@@ -127,7 +123,7 @@ func Test_nutsdbRegistry_Get(t *testing.T) {
 			name:   "existing",
 			fields: fields{db: r.db},
 			args:   args{id: "fakeSensor"},
-			want:   &mockItem,
+			want:   mockItem,
 		},
 		{
 			name:    "nonexisting",
@@ -161,7 +157,7 @@ func Test_nutsdbRegistry_Set(t *testing.T) {
 	r := &nutsdbRegistry{}
 	err := r.Open(ctx, "")
 	assert.Nil(t, err)
-	fakeMetadata := &sensorMetadata{
+	fakeMetadata := &SensorMetadata{
 		Registered: true,
 		Disabled:   false,
 	}
@@ -169,8 +165,8 @@ func Test_nutsdbRegistry_Set(t *testing.T) {
 		db *nutsdb.DB
 	}
 	type args struct {
-		id     string
-		values *sensorMetadata
+		ID     string
+		values *SensorMetadata
 	}
 	tests := []struct {
 		name    string
@@ -181,12 +177,12 @@ func Test_nutsdbRegistry_Set(t *testing.T) {
 		{
 			name:   "add valid data",
 			fields: fields{db: r.db},
-			args:   args{id: "fakeSensor", values: fakeMetadata},
+			args:   args{ID: "fakeSensor", values: fakeMetadata},
 		},
 		{
 			name:   "add defaults",
 			fields: fields{db: r.db},
-			args:   args{id: "fakeSensor", values: &sensorMetadata{}},
+			args:   args{ID: "fakeSensor", values: &SensorMetadata{}},
 		},
 	}
 	for _, tt := range tests {
@@ -194,7 +190,7 @@ func Test_nutsdbRegistry_Set(t *testing.T) {
 			r := &nutsdbRegistry{
 				db: tt.fields.db,
 			}
-			if err := r.Set(RegistryItem{id: tt.args.id, data: tt.args.values}); (err != nil) != tt.wantErr {
+			if err := r.Set(RegistryItem{ID: tt.args.ID, data: tt.args.values}); (err != nil) != tt.wantErr {
 				t.Errorf("nutsdbRegistry.Set() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

@@ -9,7 +9,7 @@ import (
 	"context"
 
 	"github.com/joshuar/go-hass-agent/internal/hass"
-	"github.com/joshuar/go-hass-agent/internal/sensors"
+	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/rs/zerolog/log"
 )
 
@@ -21,13 +21,13 @@ func (agent *Agent) runSensorTracker(ctx context.Context) {
 			Msg("Unable to store registry on disk, trying in-memory store.")
 	}
 
-	tracker = sensors.NewSensorTracker(ctx, registryPath.Path())
-	if tracker == nil {
+	sensorTracker = tracker.NewSensorTracker(ctx, registryPath.Path())
+	if sensorTracker == nil {
 		log.Debug().Msg("Unable to create a sensor tracker.")
 		return
 	}
 	updateCh := make(chan interface{})
-	go tracker.StartWorkers(ctx, updateCh)
+	go sensorTracker.StartWorkers(ctx, updateCh)
 	// Sensors are tracked in a map to handle registration and
 	// disabling/enabling. Updates are sent to Home Assistant.
 	for {
@@ -35,7 +35,7 @@ func (agent *Agent) runSensorTracker(ctx context.Context) {
 		case data := <-updateCh:
 			switch data := data.(type) {
 			case hass.SensorUpdate:
-				go tracker.Update(ctx, data)
+				go sensorTracker.Update(ctx, data)
 			case hass.LocationUpdate:
 				l := hass.MarshalLocationUpdate(data)
 				go hass.APIRequest(ctx, l)

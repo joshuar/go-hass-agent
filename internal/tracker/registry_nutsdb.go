@@ -3,11 +3,10 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-package sensors
+package tracker
 
 import (
 	"context"
-	"encoding/json"
 	"os"
 
 	"github.com/nutsdb/nutsdb"
@@ -51,21 +50,14 @@ func (r *nutsdbRegistry) Close() error {
 }
 
 func (r *nutsdbRegistry) Get(id string) (*RegistryItem, error) {
-	item := &RegistryItem{
-		id: id,
-		data: &sensorMetadata{
-			Registered: false,
-			Disabled:   false,
-		},
-	}
+	item := NewRegistryItem(id)
 	if err := r.db.View(
 		func(tx *nutsdb.Tx) error {
 			key := []byte(id)
 			if e, err := tx.Get(registryBucket, key); err != nil {
 				return err
 			} else {
-				err := json.Unmarshal(e.Value, item.data)
-				return err
+				return item.UnmarshalJSON(e.Value)
 			}
 		}); err != nil {
 		return nil, err
@@ -74,13 +66,13 @@ func (r *nutsdbRegistry) Get(id string) (*RegistryItem, error) {
 }
 
 func (r *nutsdbRegistry) Set(item RegistryItem) error {
-	v, err := json.Marshal(item.data)
+	v, err := item.MarshalJSON()
 	if err != nil {
 		return err
 	}
 	if err := r.db.Update(
 		func(tx *nutsdb.Tx) error {
-			if err := tx.Put(registryBucket, []byte(item.id), v, 0); err != nil {
+			if err := tx.Put(registryBucket, []byte(item.ID), v, 0); err != nil {
 				return err
 			}
 			return nil
@@ -88,4 +80,15 @@ func (r *nutsdbRegistry) Set(item RegistryItem) error {
 		return err
 	}
 	return nil
+}
+
+func NewNutsDB(ctx context.Context, path string) *nutsdbRegistry {
+	r := &nutsdbRegistry{}
+	err := r.Open(ctx, path)
+	if err != nil {
+		log.Debug().Err(err).Caller().
+			Msg("Unable to open registry")
+		return nil
+	}
+	return r
 }
