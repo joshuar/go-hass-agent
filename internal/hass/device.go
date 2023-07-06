@@ -5,6 +5,7 @@
 
 package hass
 
+//go:generate mockery --name DeviceInfo --inpackage
 type DeviceInfo interface {
 	DeviceID() string
 	AppID() string

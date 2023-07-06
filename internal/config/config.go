@@ -10,6 +10,7 @@ import (
 	"errors"
 )
 
+//go:generate mockery --name Config --inpackage
 type Config interface {
 	Get(string) (interface{}, error)
 	Set(string, interface{}) error

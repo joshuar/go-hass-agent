@@ -29,7 +29,7 @@ func TestRegistrationDetails_Validate(t *testing.T) {
 			fields: fields{
 				Server: "localhost",
 				Token:  "abcde.abcde_abcde",
-				Device: new(mockDevice),
+				Device: NewMockDeviceInfo(t),
 			},
 			want: false,
 		},
@@ -38,7 +38,7 @@ func TestRegistrationDetails_Validate(t *testing.T) {
 			fields: fields{
 				Server: "localhost:8123",
 				Token:  "abcde.abcde_abcde",
-				Device: new(mockDevice),
+				Device: NewMockDeviceInfo(t),
 			},
 			want: false,
 		},
@@ -47,7 +47,7 @@ func TestRegistrationDetails_Validate(t *testing.T) {
 			fields: fields{
 				Server: "http://localhost",
 				Token:  "abcde.abcde_abcde",
-				Device: new(mockDevice),
+				Device: NewMockDeviceInfo(t),
 			},
 			want: true,
 		},
@@ -56,7 +56,7 @@ func TestRegistrationDetails_Validate(t *testing.T) {
 			fields: fields{
 				Server: "http://localhost:8123",
 				Token:  "abcde.abcde_abcde",
-				Device: new(mockDevice),
+				Device: NewMockDeviceInfo(t),
 			},
 			want: true,
 		},
@@ -65,7 +65,7 @@ func TestRegistrationDetails_Validate(t *testing.T) {
 			fields: fields{
 				Server: "http://localhost/",
 				Token:  "abcde.abcde_abcde",
-				Device: new(mockDevice),
+				Device: NewMockDeviceInfo(t),
 			},
 			want: true,
 		},
@@ -74,7 +74,7 @@ func TestRegistrationDetails_Validate(t *testing.T) {
 			fields: fields{
 				Server: "asdegasg://localhost//",
 				Token:  "abcde.abcde_abcde",
-				Device: new(mockDevice),
+				Device: NewMockDeviceInfo(t),
 			},
 			want: false,
 		},
