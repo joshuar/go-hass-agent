@@ -16,10 +16,9 @@ import (
 )
 
 type SensorTracker struct {
-	registry   Registry
-	sensor     map[string]*sensorState
-	hassConfig *hass.HassConfig
-	mu         sync.RWMutex
+	registry Registry
+	sensor   map[string]*sensorState
+	mu       sync.RWMutex
 }
 
 func NewSensorTracker(ctx context.Context, path string) *SensorTracker {
@@ -31,9 +30,8 @@ func NewSensorTracker(ctx context.Context, path string) *SensorTracker {
 		return nil
 	}
 	return &SensorTracker{
-		registry:   r,
-		sensor:     make(map[string]*sensorState),
-		hassConfig: hass.NewHassConfig(ctx),
+		registry: r,
+		sensor:   make(map[string]*sensorState),
 	}
 }
 
@@ -99,11 +97,12 @@ func (tracker *SensorTracker) Update(ctx context.Context, s hass.SensorUpdate) {
 		log.Debug().Err(err).Msg("Error getting tracker metadata from registry.")
 		metadata = NewRegistryItem(s.ID())
 	}
-	if err := tracker.hassConfig.Refresh(ctx); err != nil {
+	hassConfig := hass.NewHassConfig(ctx)
+	if hassConfig == nil {
 		log.Debug().Err(err).
 			Msg("Unable to fetch updated config from Home Assistant")
 	}
-	metadata.data.Disabled = tracker.hassConfig.IsEntityDisabled(s.ID())
+	metadata.data.Disabled = hassConfig.IsEntityDisabled(s.ID())
 	sensor := &sensorState{
 		data:       s,
 		metadata:   metadata.data,
