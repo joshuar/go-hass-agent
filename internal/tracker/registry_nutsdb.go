@@ -11,7 +11,6 @@ import (
 	"errors"
 	"os"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/nutsdb/nutsdb"
 	"github.com/rs/zerolog/log"
 )
@@ -81,7 +80,6 @@ func (r *nutsdbRegistry) SetDisabled(id string, state bool) error {
 		metadata = new(SensorMetadata)
 	}
 	metadata.Disabled = state
-	spew.Dump(metadata)
 	return r.set(id, metadata)
 }
 
@@ -94,7 +92,6 @@ func (r *nutsdbRegistry) SetRegistered(id string, state bool) error {
 		metadata = new(SensorMetadata)
 	}
 	metadata.Registered = state
-	spew.Dump(metadata)
 	return r.set(id, metadata)
 }
 
