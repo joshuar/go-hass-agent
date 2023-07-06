@@ -107,10 +107,9 @@ func TestSensorTracker_add(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tracker := &SensorTracker{
-				registry:   tt.fields.registry,
-				sensor:     tt.fields.sensor,
-				hassConfig: tt.fields.hassConfig,
-				mu:         tt.fields.mu,
+				registry: tt.fields.registry,
+				sensor:   tt.fields.sensor,
+				mu:       tt.fields.mu,
 			}
 			if err := tracker.add(tt.args.sensor); (err != nil) != tt.wantErr {
 				t.Errorf("SensorTracker.add() error = %v, wantErr %v", err, tt.wantErr)
@@ -123,10 +122,9 @@ func TestSensorTracker_Get(t *testing.T) {
 	sensors := make(map[string]*sensorState)
 	sensors["existingID"] = &sensorState{}
 	type fields struct {
-		registry   Registry
-		sensor     map[string]*sensorState
-		hassConfig *hass.HassConfig
-		mu         sync.RWMutex
+		registry Registry
+		sensor   map[string]*sensorState
+		mu       sync.RWMutex
 	}
 	type args struct {
 		id string
@@ -162,10 +160,9 @@ func TestSensorTracker_Get(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tracker := &SensorTracker{
-				registry:   tt.fields.registry,
-				sensor:     tt.fields.sensor,
-				hassConfig: tt.fields.hassConfig,
-				mu:         tt.fields.mu,
+				registry: tt.fields.registry,
+				sensor:   tt.fields.sensor,
+				mu:       tt.fields.mu,
 			}
 			got, err := tracker.Get(tt.args.id)
 			if (err != nil) != tt.wantErr {
@@ -181,10 +178,9 @@ func TestSensorTracker_Get(t *testing.T) {
 
 func TestSensorTracker_StartWorkers(t *testing.T) {
 	type fields struct {
-		registry   Registry
-		sensor     map[string]*sensorState
-		hassConfig *hass.HassConfig
-		mu         sync.RWMutex
+		registry Registry
+		sensor   map[string]*sensorState
+		mu       sync.RWMutex
 	}
 	type args struct {
 		ctx      context.Context
@@ -200,10 +196,9 @@ func TestSensorTracker_StartWorkers(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tracker := &SensorTracker{
-				registry:   tt.fields.registry,
-				sensor:     tt.fields.sensor,
-				hassConfig: tt.fields.hassConfig,
-				mu:         tt.fields.mu,
+				registry: tt.fields.registry,
+				sensor:   tt.fields.sensor,
+				mu:       tt.fields.mu,
 			}
 			tracker.StartWorkers(tt.args.ctx, tt.args.updateCh)
 		})
@@ -212,10 +207,9 @@ func TestSensorTracker_StartWorkers(t *testing.T) {
 
 func TestSensorTracker_Update(t *testing.T) {
 	type fields struct {
-		registry   Registry
-		sensor     map[string]*sensorState
-		hassConfig *hass.HassConfig
-		mu         sync.RWMutex
+		registry Registry
+		sensor   map[string]*sensorState
+		mu       sync.RWMutex
 	}
 	type args struct {
 		ctx context.Context
@@ -231,10 +225,9 @@ func TestSensorTracker_Update(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tracker := &SensorTracker{
-				registry:   tt.fields.registry,
-				sensor:     tt.fields.sensor,
-				hassConfig: tt.fields.hassConfig,
-				mu:         tt.fields.mu,
+				registry: tt.fields.registry,
+				sensor:   tt.fields.sensor,
+				mu:       tt.fields.mu,
 			}
 			tracker.Update(tt.args.ctx, tt.args.s)
 		})
