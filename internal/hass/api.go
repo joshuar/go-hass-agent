@@ -30,6 +30,7 @@ const (
 
 type RequestType int
 
+//go:generate mockery --name Request --inpackage
 type Request interface {
 	RequestType() RequestType
 	RequestData() json.RawMessage

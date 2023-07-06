@@ -19,11 +19,11 @@ import (
 
 func TestMarshalJSON(t *testing.T) {
 	requestData := json.RawMessage(`{"someField": "someValue"}`)
-	request := new(mockRequest)
+	request := NewMockRequest(t)
 	request.On("RequestType").Return(RequestTypeUpdateSensorStates)
 	request.On("RequestData").Return(requestData)
 
-	encryptedRequest := new(mockRequest)
+	encryptedRequest := NewMockRequest(t)
 	encryptedRequest.On("RequestType").Return(requestTypeEncrypted)
 	encryptedRequest.On("RequestData").Return(requestData)
 
@@ -79,14 +79,14 @@ func TestAPIRequest(t *testing.T) {
 	server := mockServer(t)
 	defer server.Close()
 
-	mockConfig := &mockConfig{}
+	mockConfig := config.NewMockConfig(t)
 	mockConfig.On("Get", "apiURL").Return(server.URL, nil)
 	mockConfig.On("Get", "secret").Return("", nil)
 
 	mockCtx := config.StoreInContext(context.Background(), mockConfig)
 
 	requestData := json.RawMessage(`{"someField": "someValue"}`)
-	request := new(mockRequest)
+	request := NewMockRequest(t)
 	request.On("RequestType").Return(RequestTypeUpdateSensorStates)
 	request.On("RequestData").Return(requestData)
 	request.On("ResponseHandler", *bytes.NewBufferString(`{"success":true}`)).Return()
