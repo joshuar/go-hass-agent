@@ -17,7 +17,7 @@ import (
 	"fyne.io/fyne/v2/storage"
 	"github.com/joshuar/go-hass-agent/internal/config"
 	"github.com/joshuar/go-hass-agent/internal/linux"
-	"github.com/joshuar/go-hass-agent/internal/sensors"
+	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/joshuar/go-hass-agent/internal/translations"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -29,7 +29,7 @@ var Version string
 
 var translator *translations.Translator
 
-var tracker *sensors.SensorTracker
+var sensorTracker *tracker.SensorTracker
 
 const (
 	Name = "go-hass-agent"

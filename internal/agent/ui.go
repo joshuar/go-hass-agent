@@ -121,7 +121,7 @@ func (agent *Agent) sensorsWindow(ctx context.Context) {
 			Msg("List of sensors is invalid.")
 	}
 	for k := range sensorList {
-		if state, err := tracker.Get(k); err == nil {
+		if state, err := sensorTracker.Get(k); err == nil {
 			entityNames = append(entityNames, k)
 			tableData = append(tableData,
 				[]string{

@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-package sensors
+package tracker
 
 import (
 	"bytes"
@@ -19,7 +19,7 @@ import (
 func Test_sensorState_DeviceClass(t *testing.T) {
 	type fields struct {
 		data       hass.SensorUpdate
-		metadata   *sensorMetadata
+		metadata   *RegistryItem
 		DisabledCh chan bool
 	}
 	tests := []struct {
@@ -46,7 +46,7 @@ func Test_sensorState_DeviceClass(t *testing.T) {
 func Test_sensorState_StateClass(t *testing.T) {
 	type fields struct {
 		data       hass.SensorUpdate
-		metadata   *sensorMetadata
+		metadata   *RegistryItem
 		DisabledCh chan bool
 	}
 	tests := []struct {
@@ -73,7 +73,7 @@ func Test_sensorState_StateClass(t *testing.T) {
 func Test_sensorState_SensorType(t *testing.T) {
 	type fields struct {
 		data       hass.SensorUpdate
-		metadata   *sensorMetadata
+		metadata   *RegistryItem
 		DisabledCh chan bool
 	}
 	tests := []struct {
@@ -100,7 +100,7 @@ func Test_sensorState_SensorType(t *testing.T) {
 func Test_sensorState_Icon(t *testing.T) {
 	type fields struct {
 		data       hass.SensorUpdate
-		metadata   *sensorMetadata
+		metadata   *RegistryItem
 		DisabledCh chan bool
 	}
 	tests := []struct {
@@ -127,7 +127,7 @@ func Test_sensorState_Icon(t *testing.T) {
 func Test_sensorState_Name(t *testing.T) {
 	type fields struct {
 		data       hass.SensorUpdate
-		metadata   *sensorMetadata
+		metadata   *RegistryItem
 		DisabledCh chan bool
 	}
 	tests := []struct {
@@ -163,7 +163,7 @@ func Test_sensorState_State(t *testing.T) {
 
 	type fields struct {
 		data       hass.SensorUpdate
-		metadata   *sensorMetadata
+		metadata   *RegistryItem
 		DisabledCh chan bool
 	}
 	tests := []struct {
@@ -203,7 +203,7 @@ func Test_sensorState_State(t *testing.T) {
 func Test_sensorState_Attributes(t *testing.T) {
 	type fields struct {
 		data       hass.SensorUpdate
-		metadata   *sensorMetadata
+		metadata   *RegistryItem
 		DisabledCh chan bool
 	}
 	tests := []struct {
@@ -230,7 +230,7 @@ func Test_sensorState_Attributes(t *testing.T) {
 func Test_sensorState_ID(t *testing.T) {
 	type fields struct {
 		data       hass.SensorUpdate
-		metadata   *sensorMetadata
+		metadata   *RegistryItem
 		DisabledCh chan bool
 	}
 	tests := []struct {
@@ -257,7 +257,7 @@ func Test_sensorState_ID(t *testing.T) {
 func Test_sensorState_Units(t *testing.T) {
 	type fields struct {
 		data       hass.SensorUpdate
-		metadata   *sensorMetadata
+		metadata   *RegistryItem
 		DisabledCh chan bool
 	}
 	tests := []struct {
@@ -284,7 +284,7 @@ func Test_sensorState_Units(t *testing.T) {
 func Test_sensorState_Category(t *testing.T) {
 	type fields struct {
 		data       hass.SensorUpdate
-		metadata   *sensorMetadata
+		metadata   *RegistryItem
 		DisabledCh chan bool
 	}
 	tests := []struct {
@@ -310,10 +310,12 @@ func Test_sensorState_Category(t *testing.T) {
 
 func Test_sensorState_Disabled(t *testing.T) {
 	sensorUpdate := mocks.NewSensorUpdate(t)
+	disabled := NewRegistryItem("sensorName")
+	disabled.SetDisabled(true)
 
 	type fields struct {
 		data       hass.SensorUpdate
-		metadata   *sensorMetadata
+		metadata   *RegistryItem
 		DisabledCh chan bool
 	}
 	tests := []struct {
@@ -324,20 +326,16 @@ func Test_sensorState_Disabled(t *testing.T) {
 		{
 			name: "disabled sensor",
 			fields: fields{
-				data: sensorUpdate,
-				metadata: &sensorMetadata{
-					Disabled: true,
-				},
+				data:     sensorUpdate,
+				metadata: disabled,
 			},
 			want: true,
 		},
 		{
 			name: "active sensor",
 			fields: fields{
-				data: sensorUpdate,
-				metadata: &sensorMetadata{
-					Disabled: false,
-				},
+				data:     sensorUpdate,
+				metadata: NewRegistryItem("aSensor"),
 			},
 			want: false,
 		},
@@ -366,10 +364,12 @@ func Test_sensorState_Disabled(t *testing.T) {
 
 func Test_sensorState_Registered(t *testing.T) {
 	sensorUpdate := mocks.NewSensorUpdate(t)
+	registered := NewRegistryItem("aSensor")
+	registered.SetRegistered(true)
 
 	type fields struct {
 		data       hass.SensorUpdate
-		metadata   *sensorMetadata
+		metadata   *RegistryItem
 		DisabledCh chan bool
 	}
 	tests := []struct {
@@ -380,20 +380,16 @@ func Test_sensorState_Registered(t *testing.T) {
 		{
 			name: "registered sensor",
 			fields: fields{
-				data: sensorUpdate,
-				metadata: &sensorMetadata{
-					Registered: true,
-				},
+				data:     sensorUpdate,
+				metadata: registered,
 			},
 			want: true,
 		},
 		{
 			name: "unregistered sensor",
 			fields: fields{
-				data: sensorUpdate,
-				metadata: &sensorMetadata{
-					Registered: false,
-				},
+				data:     sensorUpdate,
+				metadata: NewRegistryItem("aSensor"),
 			},
 			want: false,
 		},
@@ -433,9 +429,12 @@ func Test_sensorState_MarshalJSON(t *testing.T) {
 	aSensorState.On("StateClass").Return(hass.StateMeasurement)
 	aSensorState.On("Category").Return("")
 
+	registered := NewRegistryItem("sensorName")
+	registered.SetRegistered(true)
+
 	type fields struct {
 		data       hass.SensorUpdate
-		metadata   *sensorMetadata
+		metadata   *RegistryItem
 		DisabledCh chan bool
 	}
 	tests := []struct {
@@ -455,10 +454,8 @@ func Test_sensorState_MarshalJSON(t *testing.T) {
 		{
 			name: "registered sensor",
 			fields: fields{
-				data: aSensorState,
-				metadata: &sensorMetadata{
-					Registered: true,
-				},
+				data:     aSensorState,
+				metadata: registered,
 			},
 			want:    []byte(`{"icon":"icon","state":"state","type":"sensor","unique_id":"sensorID"}`),
 			wantErr: false,
@@ -486,7 +483,7 @@ func Test_sensorState_MarshalJSON(t *testing.T) {
 func Test_sensorState_UnMarshalJSON(t *testing.T) {
 	type fields struct {
 		data       hass.SensorUpdate
-		metadata   *sensorMetadata
+		metadata   *RegistryItem
 		DisabledCh chan bool
 	}
 	type args struct {
@@ -527,9 +524,13 @@ func Test_sensorState_UnMarshalJSON(t *testing.T) {
 }
 
 func Test_sensorState_RequestType(t *testing.T) {
+	registered := NewRegistryItem("aSensor")
+	registered.SetRegistered(true)
+
+	unregistered := NewRegistryItem("aSensor")
 	type fields struct {
 		data       hass.SensorUpdate
-		metadata   *sensorMetadata
+		metadata   *RegistryItem
 		DisabledCh chan bool
 	}
 	tests := []struct {
@@ -539,12 +540,12 @@ func Test_sensorState_RequestType(t *testing.T) {
 	}{
 		{
 			name:   "unregistered sensor",
-			fields: fields{metadata: &sensorMetadata{Registered: false}},
+			fields: fields{metadata: unregistered},
 			want:   hass.RequestTypeRegisterSensor,
 		},
 		{
 			name:   "registered sensor",
-			fields: fields{metadata: &sensorMetadata{Registered: true}},
+			fields: fields{metadata: registered},
 			want:   hass.RequestTypeUpdateSensorStates,
 		},
 	}
@@ -569,10 +570,12 @@ func Test_sensorState_RequestData(t *testing.T) {
 	aSensorState.On("State").Return("state")
 	aSensorState.On("SensorType").Return(hass.TypeSensor)
 	aSensorState.On("ID").Return("sensorID")
+	registered := NewRegistryItem("aSensor")
+	registered.SetRegistered(true)
 
 	type fields struct {
 		data       hass.SensorUpdate
-		metadata   *sensorMetadata
+		metadata   *RegistryItem
 		DisabledCh chan bool
 	}
 	tests := []struct {
@@ -583,10 +586,8 @@ func Test_sensorState_RequestData(t *testing.T) {
 		{
 			name: "registered sensor",
 			fields: fields{
-				data: aSensorState,
-				metadata: &sensorMetadata{
-					Registered: true,
-				},
+				data:     aSensorState,
+				metadata: registered,
 			},
 			want: json.RawMessage([]byte(`{"icon":"icon","state":"state","type":"sensor","unique_id":"sensorID"}`)),
 		}}
@@ -608,6 +609,10 @@ func Test_sensorState_ResponseHandler(t *testing.T) {
 	sensor := mocks.NewSensorUpdate(t)
 	sensor.On("ID").Return("default")
 	sensor.On("Name").Return("sensorName")
+	registered := NewRegistryItem("aSensor")
+	registered.SetRegistered(true)
+	disabled := NewRegistryItem("aSensor")
+	disabled.SetDisabled(true)
 
 	registeredResponse := bytes.NewBufferString(`{
 		"data": {
@@ -671,7 +676,7 @@ func Test_sensorState_ResponseHandler(t *testing.T) {
 	//   }`)
 	type fields struct {
 		data       hass.SensorUpdate
-		metadata   *sensorMetadata
+		metadata   *RegistryItem
 		DisabledCh chan bool
 	}
 	type args struct {
@@ -685,10 +690,8 @@ func Test_sensorState_ResponseHandler(t *testing.T) {
 		{
 			name: "registered sensor",
 			fields: fields{
-				data: sensor,
-				metadata: &sensorMetadata{
-					Registered: false,
-				},
+				data:       sensor,
+				metadata:   NewRegistryItem("sensorName"),
 				DisabledCh: make(chan bool),
 			},
 			args: args{rawResponse: *registeredResponse},
@@ -696,10 +699,8 @@ func Test_sensorState_ResponseHandler(t *testing.T) {
 		{
 			name: "updated sensor",
 			fields: fields{
-				data: sensor,
-				metadata: &sensorMetadata{
-					Registered: true,
-				},
+				data:       sensor,
+				metadata:   registered,
 				DisabledCh: make(chan bool),
 			},
 			args: args{rawResponse: *updatedResponse},
@@ -707,10 +708,8 @@ func Test_sensorState_ResponseHandler(t *testing.T) {
 		{
 			name: "disabled sensor",
 			fields: fields{
-				data: sensor,
-				metadata: &sensorMetadata{
-					Disabled: false,
-				},
+				data:       sensor,
+				metadata:   NewRegistryItem("sensorName"),
 				DisabledCh: make(chan bool),
 			},
 			args: args{rawResponse: *disabledResponse},
@@ -718,10 +717,8 @@ func Test_sensorState_ResponseHandler(t *testing.T) {
 		{
 			name: "empty response",
 			fields: fields{
-				data: sensor,
-				metadata: &sensorMetadata{
-					Disabled: false,
-				},
+				data:       sensor,
+				metadata:   NewRegistryItem("sensorName"),
 				DisabledCh: make(chan bool),
 			},
 			args: args{rawResponse: *bytes.NewBuffer(nil)},
