@@ -8,8 +8,10 @@ package tracker
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/nutsdb/nutsdb"
 	"github.com/rs/zerolog/log"
 )
@@ -72,8 +74,11 @@ func (r *nutsdbRegistry) IsRegistered(id string) bool {
 
 func (r *nutsdbRegistry) SetDisabled(id string, state bool) error {
 	metadata, err := r.get(id)
-	if err != nil {
+	if err != nil && !errors.Is(err, nutsdb.ErrBucketNotFound) {
 		return err
+	}
+	if metadata == nil {
+		metadata = new(SensorMetadata)
 	}
 	metadata.Disabled = state
 	return r.set(id, metadata)
@@ -81,10 +86,14 @@ func (r *nutsdbRegistry) SetDisabled(id string, state bool) error {
 
 func (r *nutsdbRegistry) SetRegistered(id string, state bool) error {
 	metadata, err := r.get(id)
-	if err != nil {
+	if err != nil && !errors.Is(err, nutsdb.ErrBucketNotFound) {
 		return err
 	}
+	if metadata == nil {
+		metadata = new(SensorMetadata)
+	}
 	metadata.Registered = state
+	spew.Dump(metadata)
 	return r.set(id, metadata)
 }
 
