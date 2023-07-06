@@ -15,7 +15,7 @@ type Config interface {
 	Get(string) (interface{}, error)
 	Set(string, interface{}) error
 	Validate() error
-	Refresh() error
+	Refresh(context.Context) error
 	Upgrade() error
 }
 
