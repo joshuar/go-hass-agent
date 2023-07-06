@@ -8,6 +8,7 @@ package tracker
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/joshuar/go-hass-agent/internal/hass"
@@ -17,14 +18,11 @@ import (
 // sensorState tracks the current state of a sensor, including the sensor value
 // and whether it is registered/disabled in HA.
 type sensorState struct {
-	data       hass.SensorUpdate
-	metadata   *RegistryItem
-	DisabledCh chan bool
-}
-
-type SensorMetadata struct {
-	Registered bool `json:"Registered"`
-	Disabled   bool `json:"Disabled"`
+	data        hass.Sensor
+	disableCh   chan bool
+	errCh       chan error
+	requestData []byte
+	requestType hass.RequestType
 }
 
 // sensorState implements hass.Sensor to represent a sensor in HA.
@@ -73,95 +71,70 @@ func (s *sensorState) Category() string {
 	return s.data.Category()
 }
 
-func (s *sensorState) Disabled() bool {
-	return s.metadata.IsDisabled()
-}
-
-func (s *sensorState) Registered() bool {
-	return s.metadata.IsRegistered()
-}
-
-func (s *sensorState) MarshalJSON() ([]byte, error) {
-	if s.Registered() {
-		m := hass.MarshalSensorUpdate(s)
-		return json.Marshal(m)
-	} else {
-		m := hass.MarshalSensorRegistration(s)
-		return json.Marshal(m)
-	}
-}
-
-func (s *sensorState) UnMarshalJSON(b []byte) error {
-	return json.Unmarshal(b, &s)
-}
-
 // sensorState implements hass.Request so its data can be sent to the HA API
 
 func (sensor *sensorState) RequestType() hass.RequestType {
-	if sensor.Registered() {
-		return hass.RequestTypeUpdateSensorStates
-	}
-	return hass.RequestTypeRegisterSensor
+	return sensor.requestType
 }
 
 func (sensor *sensorState) RequestData() json.RawMessage {
-	data, _ := sensor.MarshalJSON()
-	raw := json.RawMessage(data)
-	return raw
+	return sensor.requestData
 }
 
 func (sensor *sensorState) ResponseHandler(rawResponse bytes.Buffer) {
-	defer close(sensor.DisabledCh)
+	defer close(sensor.disableCh)
 	switch {
 	case rawResponse.Len() == 0 || rawResponse.String() == "{}":
-		log.Debug().Caller().
-			Msgf("No response for %s request. Likely problem with request data.", sensor.Name())
+		sensor.errCh <- fmt.Errorf("no response for %s request. Likely problem with request data", sensor.Name())
+		return
 	default:
 		var r interface{}
 		err := json.Unmarshal(rawResponse.Bytes(), &r)
 		if err != nil {
-			log.Debug().Caller().Err(err).
-				Msg("Could not unmarshal response.")
+			sensor.errCh <- errors.New("could not unmarshal response")
 			return
 		}
 		response := r.(map[string]interface{})
 		if v, ok := response["success"]; ok {
-			if v.(bool) && !sensor.Registered() {
-				sensor.metadata.SetRegistered(true)
-				log.Debug().Caller().
-					Msgf("Sensor %s registered in HA.",
-						sensor.Name())
+			if v.(bool) {
+				close(sensor.errCh)
 			}
 		}
 		if v, ok := response[sensor.ID()]; ok {
 			status := v.(map[string]interface{})
 			if !status["success"].(bool) {
 				hassErr := status["error"].(map[string]interface{})
-				err := fmt.Errorf("%s: %s", hassErr["code"], hassErr["message"])
-				log.Debug().Caller().Err(err).
-					Msgf("Could not update sensor %s.", sensor.Name())
+				sensor.errCh <- fmt.Errorf("code %s: %s", hassErr["code"], hassErr["message"])
 			} else {
-				log.Debug().Caller().
-					Msgf("Sensor %s updated (%s). State is now: %v %s",
-						sensor.Name(),
-						sensor.ID(),
-						sensor.State(),
-						sensor.Units())
+				close(sensor.errCh)
 			}
 			if _, ok := status["is_disabled"]; ok {
-				sensor.metadata.SetDisabled(true)
-				sensor.DisabledCh <- true
-			} else if sensor.Disabled() {
-				sensor.metadata.SetDisabled(false)
+				sensor.disableCh <- true
+			} else {
+				sensor.disableCh <- false
 			}
 		}
 	}
 }
 
-func newSensorState(s hass.SensorUpdate, m *RegistryItem) *sensorState {
-	return &sensorState{
-		data:       s,
-		metadata:   m,
-		DisabledCh: make(chan bool, 1),
+func newSensorState(s hass.Sensor, r Registry) *sensorState {
+	update := &sensorState{
+		data:      s,
+		disableCh: make(chan bool, 1),
+		errCh:     make(chan error, 1),
 	}
+
+	var err error
+	if r.IsRegistered(s.ID()) {
+		update.requestData, err = json.Marshal(hass.MarshalSensorUpdate(s))
+		update.requestType = hass.RequestTypeUpdateSensorStates
+	} else {
+		update.requestData, err = json.Marshal(hass.MarshalSensorRegistration(s))
+		update.requestType = hass.RequestTypeRegisterSensor
+	}
+	if err != nil {
+		log.Debug().Err(err).
+			Msgf("Could not marshal sensor update for %s", s.ID())
+	}
+	return update
 }

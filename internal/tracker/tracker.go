@@ -38,9 +38,6 @@ func (tracker *SensorTracker) add(sensor *sensorState) error {
 	}
 	tracker.sensor[sensor.ID()] = sensor
 	tracker.mu.Unlock()
-	if err := tracker.registry.Set(*sensor.metadata); err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -81,26 +78,58 @@ func (tracker *SensorTracker) StartWorkers(ctx context.Context, updateCh chan in
 
 // Update will send a sensor update to HA, checking to ensure the sensor is not
 // disabled. It will also update the local registry state based on the response.
-func (tracker *SensorTracker) Update(ctx context.Context, sensorUpdate hass.SensorUpdate) {
+func (tracker *SensorTracker) Update(ctx context.Context, sensorUpdate hass.Sensor) {
 	// Assemble a sensor from the provided sensorUpdate, the HA config (for
 	// disabled status) and the registry (for registered status)
-	metadata, err := tracker.registry.Get(sensorUpdate.ID())
-	if err != nil {
-		log.Debug().Err(err).Msg("Error getting tracker metadata from registry.")
-		metadata = NewRegistryItem(sensorUpdate.ID())
-	}
+	// metadata, err := tracker.registry.Get(sensorUpdate.ID())
+	// if err != nil {
+	// 	log.Debug().Err(err).Msg("Error getting tracker metadata from registry.")
+	// 	metadata = NewRegistryItem(sensorUpdate.ID())
+	// }
 	hassConfig := hass.NewHassConfig(ctx)
 	if hassConfig == nil {
-		log.Debug().Err(err).
-			Msg("Unable to fetch updated config from Home Assistant")
+		log.Debug().
+			Msg("Unable to fetch updated config from Home Assistant.")
 	}
-	metadata.SetDisabled(hassConfig.IsEntityDisabled(sensorUpdate.ID()))
-	sensor := newSensorState(sensorUpdate, metadata)
-	if !sensor.Disabled() {
-		go hass.APIRequest(ctx, sensor)
-		sensor.metadata.SetDisabled(<-sensor.DisabledCh)
-		if err := tracker.add(sensor); err != nil {
-			log.Debug().Err(err).Msgf("Error adding sensor %s to registry.", sensorUpdate.ID())
-		}
+	if hassConfig.IsEntityDisabled(sensorUpdate.ID()) {
+		log.Debug().Msgf("Received sensor update for disabled sensor %s.", sensorUpdate.ID())
+	} else {
+		var wg sync.WaitGroup
+		sensor := newSensorState(sensorUpdate, tracker.registry)
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			hass.APIRequest(ctx, sensor)
+		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			tracker.registry.SetDisabled(sensorUpdate.ID(), <-sensor.disableCh)
+		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if err := <-sensor.errCh; err != nil {
+				log.Debug().Err(err).
+					Msgf("Failed to send sensor %s data to Home Assistant", sensorUpdate.Name())
+			} else {
+				if !tracker.registry.IsRegistered(sensorUpdate.ID()) {
+					tracker.registry.SetRegistered(sensorUpdate.ID(), true)
+					log.Debug().Caller().
+						Msgf("Sensor %s registered in HA.",
+							sensor.Name())
+				} else {
+					log.Debug().Caller().
+						Msgf("Sensor %s updated (%s). State is now: %v %s",
+							sensor.Name(),
+							sensor.ID(),
+							sensor.State(),
+							sensor.Units())
+				}
+			}
+		}()
+		// if err := tracker.add(sensor); err != nil {
+		// 	log.Debug().Err(err).Msgf("Error adding sensor %s to registry.", sensorUpdate.ID())
+		// }
 	}
 }
