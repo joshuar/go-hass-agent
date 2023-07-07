@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"encoding/json"
 
+	"github.com/joshuar/go-hass-agent/internal/request"
 	"github.com/rs/zerolog/log"
 )
 
@@ -55,8 +56,8 @@ type locationUpdateInfo struct {
 // locationUpdateInfo implements hass.Request so it can be sent to HA as a
 // request
 
-func (l *locationUpdateInfo) RequestType() RequestType {
-	return requestTypeUpdateLocation
+func (l *locationUpdateInfo) RequestType() request.RequestType {
+	return request.RequestTypeUpdateLocation
 }
 
 func (l *locationUpdateInfo) RequestData() json.RawMessage {

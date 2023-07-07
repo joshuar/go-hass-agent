@@ -10,7 +10,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/joshuar/go-hass-agent/internal/hass"
+	"github.com/joshuar/go-hass-agent/internal/hass/deviceClass"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensorType"
+	"github.com/joshuar/go-hass-agent/internal/hass/stateClass"
 	"github.com/rs/zerolog/log"
 )
 
@@ -35,16 +37,16 @@ func (p *problems) Icon() string {
 	return "mdi:alert"
 }
 
-func (p *problems) SensorType() hass.SensorType {
-	return hass.TypeSensor
+func (p *problems) SensorType() sensorType.SensorType {
+	return sensorType.TypeSensor
 }
 
-func (p *problems) DeviceClass() hass.SensorDeviceClass {
+func (p *problems) DeviceClass() deviceClass.SensorDeviceClass {
 	return 0
 }
 
-func (p *problems) StateClass() hass.SensorStateClass {
-	return hass.StateMeasurement
+func (p *problems) StateClass() stateClass.SensorStateClass {
+	return stateClass.StateMeasurement
 }
 
 func (p *problems) State() interface{} {

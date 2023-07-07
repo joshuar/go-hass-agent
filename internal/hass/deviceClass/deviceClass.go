@@ -3,12 +3,12 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-package hass
+package deviceClass
 
 // This list is taken from:
 // https://developers.home-assistant.io/docs/core/entity/sensor/
 
-//go:generate stringer -type=SensorDeviceClass -output sensorDeviceClassStrings.go -trimprefix Sensor
+//go:generate stringer -type=SensorDeviceClass -output deviceClassStrings.go -trimprefix Sensor
 const (
 	Apparent_power             SensorDeviceClass = iota + 1 // Apparent power
 	Aqi                                                     // Air Quality Index

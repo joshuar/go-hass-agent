@@ -10,7 +10,9 @@ import (
 	"time"
 
 	"github.com/iancoleman/strcase"
-	"github.com/joshuar/go-hass-agent/internal/hass"
+	"github.com/joshuar/go-hass-agent/internal/hass/deviceClass"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensorType"
+	"github.com/joshuar/go-hass-agent/internal/hass/stateClass"
 	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v3/net"
 )
@@ -56,16 +58,16 @@ func (i *networkStatsDetails) Icon() string {
 	}
 }
 
-func (i *networkStatsDetails) SensorType() hass.SensorType {
-	return hass.TypeSensor
+func (i *networkStatsDetails) SensorType() sensorType.SensorType {
+	return sensorType.TypeSensor
 }
 
-func (i *networkStatsDetails) DeviceClass() hass.SensorDeviceClass {
-	return hass.Data_size
+func (i *networkStatsDetails) DeviceClass() deviceClass.SensorDeviceClass {
+	return deviceClass.Data_size
 }
 
-func (i *networkStatsDetails) StateClass() hass.SensorStateClass {
-	return hass.StateTotal
+func (i *networkStatsDetails) StateClass() stateClass.SensorStateClass {
+	return stateClass.StateTotal
 }
 
 func (i *networkStatsDetails) State() interface{} {

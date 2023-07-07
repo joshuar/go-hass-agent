@@ -11,333 +11,26 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/joshuar/go-hass-agent/internal/hass"
-	"github.com/joshuar/go-hass-agent/internal/hass/mocks"
+	"github.com/joshuar/go-hass-agent/internal/hass/deviceClass"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensorType"
+	"github.com/joshuar/go-hass-agent/internal/hass/stateClass"
+	"github.com/joshuar/go-hass-agent/internal/request"
+	"github.com/joshuar/go-hass-agent/internal/tracker/mocks"
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_sensorState_DeviceClass(t *testing.T) {
-	type fields struct {
-		data        hass.Sensor
-		disableCh   chan bool
-		errCh       chan error
-		requestData []byte
-		requestType hass.RequestType
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   hass.SensorDeviceClass
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			s := &sensorState{
-				data:        tt.fields.data,
-				disableCh:   tt.fields.disableCh,
-				errCh:       tt.fields.errCh,
-				requestData: tt.fields.requestData,
-				requestType: tt.fields.requestType,
-			}
-			if got := s.DeviceClass(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("sensorState.DeviceClass() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_sensorState_StateClass(t *testing.T) {
-	type fields struct {
-		data        hass.Sensor
-		disableCh   chan bool
-		errCh       chan error
-		requestData []byte
-		requestType hass.RequestType
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   hass.SensorStateClass
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			s := &sensorState{
-				data:        tt.fields.data,
-				disableCh:   tt.fields.disableCh,
-				errCh:       tt.fields.errCh,
-				requestData: tt.fields.requestData,
-				requestType: tt.fields.requestType,
-			}
-			if got := s.StateClass(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("sensorState.StateClass() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_sensorState_SensorType(t *testing.T) {
-	type fields struct {
-		data        hass.Sensor
-		disableCh   chan bool
-		errCh       chan error
-		requestData []byte
-		requestType hass.RequestType
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   hass.SensorType
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			s := &sensorState{
-				data:        tt.fields.data,
-				disableCh:   tt.fields.disableCh,
-				errCh:       tt.fields.errCh,
-				requestData: tt.fields.requestData,
-				requestType: tt.fields.requestType,
-			}
-			if got := s.SensorType(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("sensorState.SensorType() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_sensorState_Icon(t *testing.T) {
-	type fields struct {
-		data        hass.Sensor
-		disableCh   chan bool
-		errCh       chan error
-		requestData []byte
-		requestType hass.RequestType
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   string
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			s := &sensorState{
-				data:        tt.fields.data,
-				disableCh:   tt.fields.disableCh,
-				errCh:       tt.fields.errCh,
-				requestData: tt.fields.requestData,
-				requestType: tt.fields.requestType,
-			}
-			if got := s.Icon(); got != tt.want {
-				t.Errorf("sensorState.Icon() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_sensorState_Name(t *testing.T) {
-	type fields struct {
-		data        hass.Sensor
-		disableCh   chan bool
-		errCh       chan error
-		requestData []byte
-		requestType hass.RequestType
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   string
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			s := &sensorState{
-				data:        tt.fields.data,
-				disableCh:   tt.fields.disableCh,
-				errCh:       tt.fields.errCh,
-				requestData: tt.fields.requestData,
-				requestType: tt.fields.requestType,
-			}
-			if got := s.Name(); got != tt.want {
-				t.Errorf("sensorState.Name() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_sensorState_State(t *testing.T) {
-	type fields struct {
-		data        hass.Sensor
-		disableCh   chan bool
-		errCh       chan error
-		requestData []byte
-		requestType hass.RequestType
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   interface{}
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			s := &sensorState{
-				data:        tt.fields.data,
-				disableCh:   tt.fields.disableCh,
-				errCh:       tt.fields.errCh,
-				requestData: tt.fields.requestData,
-				requestType: tt.fields.requestType,
-			}
-			if got := s.State(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("sensorState.State() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_sensorState_Attributes(t *testing.T) {
-	type fields struct {
-		data        hass.Sensor
-		disableCh   chan bool
-		errCh       chan error
-		requestData []byte
-		requestType hass.RequestType
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   interface{}
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			s := &sensorState{
-				data:        tt.fields.data,
-				disableCh:   tt.fields.disableCh,
-				errCh:       tt.fields.errCh,
-				requestData: tt.fields.requestData,
-				requestType: tt.fields.requestType,
-			}
-			if got := s.Attributes(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("sensorState.Attributes() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_sensorState_ID(t *testing.T) {
-	type fields struct {
-		data        hass.Sensor
-		disableCh   chan bool
-		errCh       chan error
-		requestData []byte
-		requestType hass.RequestType
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   string
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			s := &sensorState{
-				data:        tt.fields.data,
-				disableCh:   tt.fields.disableCh,
-				errCh:       tt.fields.errCh,
-				requestData: tt.fields.requestData,
-				requestType: tt.fields.requestType,
-			}
-			if got := s.ID(); got != tt.want {
-				t.Errorf("sensorState.ID() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_sensorState_Units(t *testing.T) {
-	type fields struct {
-		data        hass.Sensor
-		disableCh   chan bool
-		errCh       chan error
-		requestData []byte
-		requestType hass.RequestType
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   string
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			s := &sensorState{
-				data:        tt.fields.data,
-				disableCh:   tt.fields.disableCh,
-				errCh:       tt.fields.errCh,
-				requestData: tt.fields.requestData,
-				requestType: tt.fields.requestType,
-			}
-			if got := s.Units(); got != tt.want {
-				t.Errorf("sensorState.Units() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_sensorState_Category(t *testing.T) {
-	type fields struct {
-		data        hass.Sensor
-		disableCh   chan bool
-		errCh       chan error
-		requestData []byte
-		requestType hass.RequestType
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   string
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			s := &sensorState{
-				data:        tt.fields.data,
-				disableCh:   tt.fields.disableCh,
-				errCh:       tt.fields.errCh,
-				requestData: tt.fields.requestData,
-				requestType: tt.fields.requestType,
-			}
-			if got := s.Category(); got != tt.want {
-				t.Errorf("sensorState.Category() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func Test_sensorState_RequestType(t *testing.T) {
 	type fields struct {
-		data        hass.Sensor
+		data        Sensor
 		disableCh   chan bool
 		errCh       chan error
 		requestData []byte
-		requestType hass.RequestType
+		requestType request.RequestType
 	}
 	tests := []struct {
 		name   string
 		fields fields
-		want   hass.RequestType
+		want   request.RequestType
 	}{
 		// TODO: Add test cases.
 	}
@@ -359,11 +52,11 @@ func Test_sensorState_RequestType(t *testing.T) {
 
 func Test_sensorState_RequestData(t *testing.T) {
 	type fields struct {
-		data        hass.Sensor
+		data        Sensor
 		disableCh   chan bool
 		errCh       chan error
 		requestData []byte
-		requestType hass.RequestType
+		requestType request.RequestType
 	}
 	tests := []struct {
 		name   string
@@ -394,11 +87,11 @@ func Test_sensorState_ResponseHandler(t *testing.T) {
 	rSensor.On("Name").Return("sensorName")
 
 	type fields struct {
-		data        hass.Sensor
+		data        Sensor
 		disableCh   chan bool
 		errCh       chan error
 		requestData []byte
-		requestType hass.RequestType
+		requestType request.RequestType
 	}
 	type args struct {
 		rawResponse bytes.Buffer
@@ -472,43 +165,43 @@ func Test_newSensorState(t *testing.T) {
 	rSensor.On("Attributes").Return(nil)
 	rSensor.On("Icon").Return("icon")
 	rSensor.On("State").Return("state")
-	rSensor.On("SensorType").Return(hass.TypeSensor)
+	rSensor.On("SensorType").Return(sensorType.TypeSensor)
 	rSensor.On("ID").Return("registeredID")
 	rState := &sensorState{
 		data:        rSensor,
 		disableCh:   make(chan bool, 1),
 		errCh:       make(chan error, 1),
-		requestType: hass.RequestTypeUpdateSensorStates,
+		requestType: request.RequestTypeUpdateSensorStates,
 	}
-	rState.requestData, err = json.Marshal(hass.MarshalSensorUpdate(rSensor))
+	rState.requestData, err = json.Marshal(MarshalSensorUpdate(rSensor))
 	assert.Nil(t, err)
 
 	uSensor := mocks.NewSensor(t)
 	uSensor.On("Attributes").Return(nil)
-	uSensor.On("DeviceClass").Return(hass.Duration)
+	uSensor.On("DeviceClass").Return(deviceClass.Duration)
 	uSensor.On("Icon").Return("icon")
 	uSensor.On("Name").Return("sensorName")
 	uSensor.On("State").Return("state")
-	uSensor.On("SensorType").Return(hass.TypeSensor)
+	uSensor.On("SensorType").Return(sensorType.TypeSensor)
 	uSensor.On("ID").Return("unRegisteredID")
 	uSensor.On("Units").Return("unit")
-	uSensor.On("StateClass").Return(hass.StateMeasurement)
+	uSensor.On("StateClass").Return(stateClass.StateMeasurement)
 	uSensor.On("Category").Return("")
 	uState := &sensorState{
 		data:        uSensor,
 		disableCh:   make(chan bool, 1),
 		errCh:       make(chan error, 1),
-		requestType: hass.RequestTypeRegisterSensor,
+		requestType: request.RequestTypeRegisterSensor,
 	}
-	uState.requestData, err = json.Marshal(hass.MarshalSensorRegistration(uSensor))
+	uState.requestData, err = json.Marshal(MarshalSensorRegistration(uSensor))
 	assert.Nil(t, err)
 
-	r := NewMockRegistry(t)
+	r := mocks.NewRegistry(t)
 	r.On("IsRegistered", "registeredID").Return(true)
 	r.On("IsRegistered", "unRegisteredID").Return(false)
 
 	type args struct {
-		s hass.Sensor
+		s Sensor
 		r Registry
 	}
 	tests := []struct {

@@ -3,9 +3,9 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-package hass
+package stateClass
 
-//go:generate stringer -type=SensorStateClass -output sensorStateClassStrings.go -linecomment
+//go:generate stringer -type=SensorStateClass -output stateClassStrings.go -linecomment
 const (
 	StateMeasurement     SensorStateClass = iota + 1 // measurement
 	StateTotal                                       // total

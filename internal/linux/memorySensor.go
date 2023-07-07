@@ -11,7 +11,9 @@ import (
 	"time"
 
 	"github.com/iancoleman/strcase"
-	"github.com/joshuar/go-hass-agent/internal/hass"
+	"github.com/joshuar/go-hass-agent/internal/hass/deviceClass"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensorType"
+	"github.com/joshuar/go-hass-agent/internal/hass/stateClass"
 	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v3/mem"
 )
@@ -48,16 +50,16 @@ func (m *memory) Icon() string {
 	return "mdi:memory"
 }
 
-func (m *memory) SensorType() hass.SensorType {
-	return hass.TypeSensor
+func (m *memory) SensorType() sensorType.SensorType {
+	return sensorType.TypeSensor
 }
 
-func (m *memory) DeviceClass() hass.SensorDeviceClass {
-	return hass.Data_size
+func (m *memory) DeviceClass() deviceClass.SensorDeviceClass {
+	return deviceClass.Data_size
 }
 
-func (m *memory) StateClass() hass.SensorStateClass {
-	return hass.StateTotal
+func (m *memory) StateClass() stateClass.SensorStateClass {
+	return stateClass.StateTotal
 }
 
 func (m *memory) State() interface{} {

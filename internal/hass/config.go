@@ -12,8 +12,14 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/joshuar/go-hass-agent/internal/request"
 	"github.com/perimeterx/marshmallow"
 	"github.com/rs/zerolog/log"
+)
+
+const (
+	websocketPath = "/api/websocket"
+	webHookPath   = "/api/webhook/"
 )
 
 type HassConfig struct {
@@ -76,8 +82,8 @@ func (h *HassConfig) IsEntityDisabled(entity string) bool {
 // HassConfig implements hass.Request so that it can be sent as a request to HA
 // to get its data.
 
-func (h *HassConfig) RequestType() RequestType {
-	return requestTypeGetConfig
+func (h *HassConfig) RequestType() request.RequestType {
+	return request.RequestTypeGetConfig
 }
 
 func (h *HassConfig) RequestData() json.RawMessage {
@@ -124,7 +130,7 @@ func (c *HassConfig) Validate() error {
 }
 
 func (h *HassConfig) Refresh(ctx context.Context) error {
-	APIRequest(ctx, h)
+	request.APIRequest(ctx, h)
 	return nil
 }
 

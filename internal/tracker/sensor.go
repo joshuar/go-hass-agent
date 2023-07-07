@@ -3,7 +3,13 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-package hass
+package tracker
+
+import (
+	"github.com/joshuar/go-hass-agent/internal/hass/deviceClass"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensorType"
+	"github.com/joshuar/go-hass-agent/internal/hass/stateClass"
+)
 
 // Sensor represents an update for a sensor. It reflects the current state
 // of the sensor at the point in time it is used. It provides a bridge between
@@ -14,9 +20,9 @@ type Sensor interface {
 	Name() string
 	ID() string
 	Icon() string
-	SensorType() SensorType
-	DeviceClass() SensorDeviceClass
-	StateClass() SensorStateClass
+	SensorType() sensorType.SensorType
+	DeviceClass() deviceClass.SensorDeviceClass
+	StateClass() stateClass.SensorStateClass
 	State() interface{}
 	Units() string
 	Category() string

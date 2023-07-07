@@ -10,8 +10,6 @@ import (
 	"reflect"
 	"sync"
 	"testing"
-
-	"github.com/joshuar/go-hass-agent/internal/hass"
 )
 
 func TestNewSensorTracker(t *testing.T) {
@@ -209,7 +207,7 @@ func TestSensorTracker_Update(t *testing.T) {
 	}
 	type args struct {
 		ctx context.Context
-		s   hass.Sensor
+		s   Sensor
 	}
 	tests := []struct {
 		name   string

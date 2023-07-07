@@ -13,7 +13,9 @@ import (
 
 	"github.com/godbus/dbus/v5"
 	"github.com/iancoleman/strcase"
-	"github.com/joshuar/go-hass-agent/internal/hass"
+	"github.com/joshuar/go-hass-agent/internal/hass/deviceClass"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensorType"
+	"github.com/joshuar/go-hass-agent/internal/hass/stateClass"
 	"github.com/rs/zerolog/log"
 )
 
@@ -157,31 +159,31 @@ func (state *upowerBatteryState) Icon() string {
 	}
 }
 
-func (state *upowerBatteryState) SensorType() hass.SensorType {
-	return hass.TypeSensor
+func (state *upowerBatteryState) SensorType() sensorType.SensorType {
+	return sensorType.TypeSensor
 }
 
-func (state *upowerBatteryState) DeviceClass() hass.SensorDeviceClass {
+func (state *upowerBatteryState) DeviceClass() deviceClass.SensorDeviceClass {
 	switch state.prop.name {
 	case percentage:
-		return hass.SensorBattery
+		return deviceClass.SensorBattery
 	case temperature:
-		return hass.SensorTemperature
+		return deviceClass.SensorTemperature
 	case energyRate:
-		return hass.SensorPower
+		return deviceClass.SensorPower
 	default:
 		return 0
 	}
 }
 
-func (state *upowerBatteryState) StateClass() hass.SensorStateClass {
+func (state *upowerBatteryState) StateClass() stateClass.SensorStateClass {
 	switch state.prop.name {
 	case percentage:
 		fallthrough
 	case temperature:
 		fallthrough
 	case energyRate:
-		return hass.StateMeasurement
+		return stateClass.StateMeasurement
 	default:
 		return 0
 	}
