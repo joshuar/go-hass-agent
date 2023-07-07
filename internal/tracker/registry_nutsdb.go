@@ -128,13 +128,11 @@ func (r *nutsdbRegistry) set(id string, data *SensorMetadata) error {
 	return nil
 }
 
-func NewNutsDB(ctx context.Context, path string) *nutsdbRegistry {
+func NewNutsDB(ctx context.Context, path string) (*nutsdbRegistry, error) {
 	r := &nutsdbRegistry{}
 	err := r.Open(ctx, path)
 	if err != nil {
-		log.Debug().Err(err).Caller().
-			Msg("Unable to open registry")
-		return nil
+		return nil, err
 	}
-	return r
+	return r, nil
 }

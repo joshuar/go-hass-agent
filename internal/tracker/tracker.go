@@ -22,8 +22,14 @@ type SensorTracker struct {
 }
 
 func NewSensorTracker(ctx context.Context, path string) *SensorTracker {
+	db, err := NewNutsDB(ctx, path)
+	if err != nil {
+		log.Debug().Err(err).
+			Msg("Could not open database.")
+		return nil
+	}
 	return &SensorTracker{
-		registry: NewNutsDB(ctx, path),
+		registry: db,
 		sensor:   make(map[string]*sensorState),
 	}
 }
