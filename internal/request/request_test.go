@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-package hass
+package request
 
 import (
 	"bytes"
@@ -24,7 +24,7 @@ func TestMarshalJSON(t *testing.T) {
 	request.On("RequestData").Return(requestData)
 
 	encryptedRequest := NewMockRequest(t)
-	encryptedRequest.On("RequestType").Return(requestTypeEncrypted)
+	encryptedRequest.On("RequestType").Return(RequestTypeEncrypted)
 	encryptedRequest.On("RequestData").Return(requestData)
 
 	type args struct {

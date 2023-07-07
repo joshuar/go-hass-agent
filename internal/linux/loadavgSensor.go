@@ -9,7 +9,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/joshuar/go-hass-agent/internal/hass"
+	"github.com/joshuar/go-hass-agent/internal/hass/deviceClass"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensorType"
+	"github.com/joshuar/go-hass-agent/internal/hass/stateClass"
 	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v3/load"
 )
@@ -57,16 +59,16 @@ func (l *loadavg) Icon() string {
 	return "mdi:chip"
 }
 
-func (l *loadavg) SensorType() hass.SensorType {
-	return hass.TypeSensor
+func (l *loadavg) SensorType() sensorType.SensorType {
+	return sensorType.TypeSensor
 }
 
-func (l *loadavg) DeviceClass() hass.SensorDeviceClass {
+func (l *loadavg) DeviceClass() deviceClass.SensorDeviceClass {
 	return 0
 }
 
-func (l *loadavg) StateClass() hass.SensorStateClass {
-	return hass.StateMeasurement
+func (l *loadavg) StateClass() stateClass.SensorStateClass {
+	return stateClass.StateMeasurement
 }
 
 func (l *loadavg) State() interface{} {

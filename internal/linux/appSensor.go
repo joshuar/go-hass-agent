@@ -12,7 +12,9 @@ import (
 
 	"github.com/godbus/dbus/v5"
 	"github.com/iancoleman/strcase"
-	"github.com/joshuar/go-hass-agent/internal/hass"
+	"github.com/joshuar/go-hass-agent/internal/hass/deviceClass"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensorType"
+	"github.com/joshuar/go-hass-agent/internal/hass/stateClass"
 	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v3/process"
 )
@@ -56,18 +58,18 @@ func (s *appSensor) Icon() string {
 	}
 }
 
-func (s *appSensor) SensorType() hass.SensorType {
-	return hass.TypeSensor
+func (s *appSensor) SensorType() sensorType.SensorType {
+	return sensorType.TypeSensor
 }
 
-func (s *appSensor) DeviceClass() hass.SensorDeviceClass {
+func (s *appSensor) DeviceClass() deviceClass.SensorDeviceClass {
 	return 0
 }
 
-func (s *appSensor) StateClass() hass.SensorStateClass {
+func (s *appSensor) StateClass() stateClass.SensorStateClass {
 	switch s.sensorType {
 	case runningApps:
-		return hass.StateMeasurement
+		return stateClass.StateMeasurement
 	default:
 		return 0
 	}

@@ -11,7 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/joshuar/go-hass-agent/internal/hass"
+	"github.com/joshuar/go-hass-agent/internal/hass/deviceClass"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensorType"
+	"github.com/joshuar/go-hass-agent/internal/hass/stateClass"
 	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v3/disk"
 )
@@ -36,16 +38,16 @@ func (d *diskUsageState) Icon() string {
 	return "mdi:harddisk"
 }
 
-func (d *diskUsageState) SensorType() hass.SensorType {
-	return hass.TypeSensor
+func (d *diskUsageState) SensorType() sensorType.SensorType {
+	return sensorType.TypeSensor
 }
 
-func (d *diskUsageState) DeviceClass() hass.SensorDeviceClass {
+func (d *diskUsageState) DeviceClass() deviceClass.SensorDeviceClass {
 	return 0
 }
 
-func (d *diskUsageState) StateClass() hass.SensorStateClass {
-	return hass.StateTotal
+func (d *diskUsageState) StateClass() stateClass.SensorStateClass {
+	return stateClass.StateTotal
 }
 
 func (d *diskUsageState) State() interface{} {

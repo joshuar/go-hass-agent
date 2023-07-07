@@ -12,7 +12,9 @@ import (
 	"time"
 
 	"github.com/carlmjohnson/requests"
-	"github.com/joshuar/go-hass-agent/internal/hass"
+	"github.com/joshuar/go-hass-agent/internal/hass/deviceClass"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensorType"
+	"github.com/joshuar/go-hass-agent/internal/hass/stateClass"
 	"github.com/lthibault/jitterbug/v2"
 	"github.com/rs/zerolog/log"
 )
@@ -59,15 +61,15 @@ func (a *address) Icon() string {
 	}
 }
 
-func (a *address) SensorType() hass.SensorType {
-	return hass.TypeSensor
+func (a *address) SensorType() sensorType.SensorType {
+	return sensorType.TypeSensor
 }
 
-func (a *address) DeviceClass() hass.SensorDeviceClass {
+func (a *address) DeviceClass() deviceClass.SensorDeviceClass {
 	return 0
 }
 
-func (a *address) StateClass() hass.SensorStateClass {
+func (a *address) StateClass() stateClass.SensorStateClass {
 	return 0
 }
 

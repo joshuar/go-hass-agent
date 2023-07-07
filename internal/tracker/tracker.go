@@ -12,6 +12,7 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass"
+	"github.com/joshuar/go-hass-agent/internal/request"
 	"github.com/rs/zerolog/log"
 )
 
@@ -42,7 +43,7 @@ func (tracker *SensorTracker) add(sensor *sensorState) error {
 		tracker.mu.Unlock()
 		return errors.New("sensor map not initialised")
 	}
-	tracker.sensor[sensor.ID()] = sensor
+	tracker.sensor[sensor.data.ID()] = sensor
 	tracker.mu.Unlock()
 	return nil
 }
@@ -84,7 +85,7 @@ func (tracker *SensorTracker) StartWorkers(ctx context.Context, updateCh chan in
 
 // Update will send a sensor update to HA, checking to ensure the sensor is not
 // disabled. It will also update the local registry state based on the response.
-func (tracker *SensorTracker) Update(ctx context.Context, sensorUpdate hass.Sensor) {
+func (tracker *SensorTracker) Update(ctx context.Context, sensorUpdate Sensor) {
 	// Assemble a sensor from the provided sensorUpdate, the HA config (for
 	// disabled status) and the registry (for registered status)
 	// metadata, err := tracker.registry.Get(sensorUpdate.ID())
@@ -105,7 +106,7 @@ func (tracker *SensorTracker) Update(ctx context.Context, sensorUpdate hass.Sens
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			hass.APIRequest(ctx, sensor)
+			request.APIRequest(ctx, sensor)
 		}()
 		wg.Add(1)
 		go func() {
@@ -123,14 +124,14 @@ func (tracker *SensorTracker) Update(ctx context.Context, sensorUpdate hass.Sens
 					tracker.registry.SetRegistered(sensorUpdate.ID(), true)
 					log.Debug().Caller().
 						Msgf("Sensor %s registered in HA.",
-							sensor.Name())
+							sensor.data.Name())
 				} else {
 					log.Debug().Caller().
 						Msgf("Sensor %s updated (%s). State is now: %v %s",
-							sensor.Name(),
-							sensor.ID(),
-							sensor.State(),
-							sensor.Units())
+							sensor.data.Name(),
+							sensor.data.ID(),
+							sensor.data.State(),
+							sensor.data.Units())
 				}
 			}
 		}()

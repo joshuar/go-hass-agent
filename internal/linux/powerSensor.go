@@ -11,7 +11,9 @@ import (
 
 	"github.com/godbus/dbus/v5"
 	"github.com/iancoleman/strcase"
-	"github.com/joshuar/go-hass-agent/internal/hass"
+	"github.com/joshuar/go-hass-agent/internal/hass/deviceClass"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensorType"
+	"github.com/joshuar/go-hass-agent/internal/hass/stateClass"
 	"github.com/rs/zerolog/log"
 )
 
@@ -53,15 +55,15 @@ func (state *powerSensor) Icon() string {
 	return "mdi:flash"
 }
 
-func (state *powerSensor) SensorType() hass.SensorType {
-	return hass.TypeSensor
+func (state *powerSensor) SensorType() sensorType.SensorType {
+	return sensorType.TypeSensor
 }
 
-func (state *powerSensor) DeviceClass() hass.SensorDeviceClass {
+func (state *powerSensor) DeviceClass() deviceClass.SensorDeviceClass {
 	return 0
 }
 
-func (state *powerSensor) StateClass() hass.SensorStateClass {
+func (state *powerSensor) StateClass() stateClass.SensorStateClass {
 	return 0
 }
 

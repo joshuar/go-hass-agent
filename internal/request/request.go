@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-package hass
+package request
 
 import (
 	"bytes"
@@ -17,15 +17,13 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-//go:generate stringer -type=RequestType -output apiRequestType.go -linecomment
+//go:generate stringer -type=RequestType -output requestType.go -linecomment
 const (
-	requestTypeEncrypted          RequestType = iota + 1 // encrypted
-	requestTypeGetConfig                                 // get_config
-	requestTypeUpdateLocation                            // update_location
+	RequestTypeEncrypted          RequestType = iota + 1 // encrypted
+	RequestTypeGetConfig                                 // get_config
+	RequestTypeUpdateLocation                            // update_location
 	RequestTypeRegisterSensor                            // register_sensor
 	RequestTypeUpdateSensorStates                        // update_sensor_states
-	websocketPath                 = "/api/websocket"
-	webHookPath                   = "/api/webhook/"
 )
 
 type RequestType int
@@ -38,10 +36,10 @@ type Request interface {
 }
 
 func MarshalJSON(request Request, secret string) ([]byte, error) {
-	if request.RequestType() == requestTypeEncrypted {
+	if request.RequestType() == RequestTypeEncrypted {
 		if secret != "" {
 			return json.Marshal(&EncryptedRequest{
-				Type:          requestTypeEncrypted.String(),
+				Type:          RequestTypeEncrypted.String(),
 				Encrypted:     true,
 				EncryptedData: request.RequestData(),
 			})
