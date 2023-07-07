@@ -8,8 +8,7 @@ package agent
 import (
 	"context"
 
-	"github.com/joshuar/go-hass-agent/internal/hass"
-	"github.com/joshuar/go-hass-agent/internal/request"
+	"github.com/joshuar/go-hass-agent/internal/location"
 	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/rs/zerolog/log"
 )
@@ -37,8 +36,8 @@ func (agent *Agent) runSensorTracker(ctx context.Context) {
 			switch data := data.(type) {
 			case tracker.Sensor:
 				go sensorTracker.Update(ctx, data)
-			case hass.LocationUpdate:
-				go request.APIRequest(ctx, hass.MarshalLocationUpdate(data))
+			case location.Update:
+				go location.SendUpdate(ctx, data)
 			default:
 				log.Debug().Caller().
 					Msgf("Got unexpected status update %v", data)
