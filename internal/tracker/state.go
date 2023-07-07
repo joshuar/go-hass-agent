@@ -83,36 +83,59 @@ func (sensor *sensorState) RequestData() json.RawMessage {
 
 func (sensor *sensorState) ResponseHandler(rawResponse bytes.Buffer) {
 	defer close(sensor.disableCh)
-	switch {
-	case rawResponse.Len() == 0 || rawResponse.String() == "{}":
+	if rawResponse.Len() == 0 || rawResponse.String() == "{}" {
 		sensor.errCh <- fmt.Errorf("no response for %s request. Likely problem with request data", sensor.Name())
 		return
-	default:
-		var r interface{}
-		err := json.Unmarshal(rawResponse.Bytes(), &r)
+	}
+	var r interface{}
+	err := json.Unmarshal(rawResponse.Bytes(), &r)
+	if err != nil {
+		sensor.errCh <- errors.New("could not unmarshal response")
+		return
+	}
+	response, err := assertAs[map[string]interface{}](r)
+	if err != nil {
+		sensor.errCh <- err
+		return
+	}
+	if v, ok := response["success"]; ok {
+		success, err := assertAs[bool](v)
 		if err != nil {
-			sensor.errCh <- errors.New("could not unmarshal response")
+			sensor.errCh <- nil
+		} else {
+			if success {
+				close(sensor.errCh)
+			} else {
+				sensor.errCh <- errors.New("unsuccessful update")
+			}
+		}
+	}
+	if v, ok := response[sensor.ID()]; ok {
+		status, err := assertAs[map[string]interface{}](v)
+		if err != nil {
+			sensor.errCh <- err
 			return
 		}
-		response := r.(map[string]interface{})
-		if v, ok := response["success"]; ok {
-			if v.(bool) {
+		success, err := assertAs[bool](status["success"])
+		if err != nil {
+			sensor.errCh <- err
+			return
+		} else {
+			if !success {
+				hassErr, err := assertAs[map[string]interface{}](status["error"])
+				if err != nil {
+					sensor.errCh <- errors.New("unknown error")
+				} else {
+					sensor.errCh <- fmt.Errorf("code %s: %s", hassErr["code"], hassErr["message"])
+				}
+			} else {
 				close(sensor.errCh)
 			}
 		}
-		if v, ok := response[sensor.ID()]; ok {
-			status := v.(map[string]interface{})
-			if !status["success"].(bool) {
-				hassErr := status["error"].(map[string]interface{})
-				sensor.errCh <- fmt.Errorf("code %s: %s", hassErr["code"], hassErr["message"])
-			} else {
-				close(sensor.errCh)
-			}
-			if _, ok := status["is_disabled"]; ok {
-				sensor.disableCh <- true
-			} else {
-				sensor.disableCh <- false
-			}
+		if _, ok := status["is_disabled"]; ok {
+			sensor.disableCh <- true
+		} else {
+			sensor.disableCh <- false
 		}
 	}
 }
@@ -137,4 +160,13 @@ func newSensorState(s hass.Sensor, r Registry) *sensorState {
 			Msgf("Could not marshal sensor update for %s", s.ID())
 	}
 	return update
+}
+
+func assertAs[T any](thing interface{}) (T, error) {
+	if asT, ok := thing.(T); !ok {
+		return *new(T), errors.New("could not assert value")
+	} else {
+		return asT, nil
+	}
+
 }
