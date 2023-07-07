@@ -11,7 +11,6 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 )
 
@@ -48,7 +47,6 @@ func TestNewSensorTracker(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := NewSensorTracker(tt.args.ctx, tt.args.registryPath)
-			spew.Dump(r)
 			if (r == nil) != tt.wantNil {
 				t.Error("NewSensorTracker() = nil, want *SensorTracker")
 			}
