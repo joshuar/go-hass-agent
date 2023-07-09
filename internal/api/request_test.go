@@ -3,10 +3,10 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-package request
+package api
 
 import (
-	"bytes"
+	bytes "bytes"
 	"context"
 	"encoding/json"
 	"net/http"
@@ -75,48 +75,66 @@ func mockServer(t *testing.T) *httptest.Server {
 	}))
 }
 
-func TestAPIRequest(t *testing.T) {
+func TestExecuteRequest(t *testing.T) {
 	server := mockServer(t)
 	defer server.Close()
 
-	mockConfig := config.NewMockConfig(t)
-	mockConfig.On("Get", "apiURL").Return(server.URL, nil)
-	mockConfig.On("Get", "secret").Return("", nil)
+	goodConfig := config.NewMockConfig(t)
+	goodConfig.On("Get", "apiURL").Return(server.URL, nil)
+	goodConfig.On("Get", "secret").Return("", nil)
+	goodCtx := config.StoreInContext(context.Background(), goodConfig)
 
-	mockCtx := config.StoreInContext(context.Background(), mockConfig)
+	responseCh := make(chan Response, 1)
+	defer close(responseCh)
 
 	requestData := json.RawMessage(`{"someField": "someValue"}`)
 	request := NewMockRequest(t)
-	request.On("RequestType").Return(RequestTypeUpdateSensorStates)
+	request.On("RequestType").Return(RequestTypeRegisterSensor)
 	request.On("RequestData").Return(requestData)
-	request.On("ResponseHandler", *bytes.NewBufferString(`{"success":true}`)).Return()
+	request.On("ResponseHandler", *bytes.NewBufferString(`{"success":true}`), responseCh).Return()
+
+	encryptedRequest := NewMockRequest(t)
+	encryptedRequest.On("RequestType").Return(RequestTypeEncrypted)
+	encryptedRequest.On("RequestData").Return(requestData)
+	encryptedRequest.On("ResponseHandler", *bytes.NewBufferString(`{"success":true}`), responseCh).Return()
 
 	type args struct {
-		ctx     context.Context
-		request Request
+		ctx        context.Context
+		request    Request
+		responseCh chan Response
 	}
 	tests := []struct {
-		args args
 		name string
+		args args
 	}{
 		{
-			name: "successful test",
+			name: "successful request",
 			args: args{
-				ctx:     mockCtx,
-				request: Request(request),
+				ctx:        goodCtx,
+				request:    request,
+				responseCh: responseCh,
 			},
 		},
 		{
-			name: "invalid context",
+			name: "bad encrypted request",
 			args: args{
-				ctx:     context.Background(),
-				request: Request(request),
+				ctx:        goodCtx,
+				request:    encryptedRequest,
+				responseCh: responseCh,
+			},
+		},
+		{
+			name: "bad context",
+			args: args{
+				ctx:        context.Background(),
+				request:    request,
+				responseCh: make(chan Response, 1),
 			},
 		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(_ *testing.T) {
-			APIRequest(tt.args.ctx, tt.args.request)
+		t.Run(tt.name, func(t *testing.T) {
+			ExecuteRequest(tt.args.ctx, tt.args.request, tt.args.responseCh)
 		})
 	}
 }

@@ -6,6 +6,7 @@
 package tracker
 
 import (
+	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/hass/deviceClass"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensorType"
 	"github.com/joshuar/go-hass-agent/internal/hass/stateClass"
@@ -29,34 +30,8 @@ type Sensor interface {
 	Attributes() interface{}
 }
 
-// sensorRegistrationInfo is the JSON structure required to register a sensor
-// with HA.
-type sensorRegistrationInfo struct {
-	StateAttributes   interface{} `json:"attributes,omitempty"`
-	DeviceClass       string      `json:"device_class,omitempty"`
-	Icon              string      `json:"icon,omitempty"`
-	Name              string      `json:"name"`
-	State             interface{} `json:"state"`
-	Type              string      `json:"type"`
-	UniqueID          string      `json:"unique_id"`
-	UnitOfMeasurement string      `json:"unit_of_measurement,omitempty"`
-	StateClass        string      `json:"state_class,omitempty"`
-	EntityCategory    string      `json:"entity_category,omitempty"`
-	Disabled          bool        `json:"disabled,omitempty"`
-}
-
-// sensorUpdateInfo is the JSON structure required to update HA with the current
-// sensor state.
-type sensorUpdateInfo struct {
-	StateAttributes interface{} `json:"attributes,omitempty"`
-	Icon            string      `json:"icon,omitempty"`
-	State           interface{} `json:"state"`
-	Type            string      `json:"type"`
-	UniqueID        string      `json:"unique_id"`
-}
-
-func MarshalSensorUpdate(s Sensor) *sensorUpdateInfo {
-	return &sensorUpdateInfo{
+func MarshalSensorUpdate(s Sensor) *hass.SensorUpdateInfo {
+	return &hass.SensorUpdateInfo{
 		StateAttributes: s.Attributes(),
 		Icon:            s.Icon(),
 		State:           s.State(),
@@ -65,8 +40,8 @@ func MarshalSensorUpdate(s Sensor) *sensorUpdateInfo {
 	}
 }
 
-func MarshalSensorRegistration(s Sensor) *sensorRegistrationInfo {
-	return &sensorRegistrationInfo{
+func MarshalSensorRegistration(s Sensor) *hass.SensorRegistrationInfo {
+	return &hass.SensorRegistrationInfo{
 		StateAttributes:   s.Attributes(),
 		DeviceClass:       marshalClass(s.DeviceClass()),
 		Icon:              s.Icon(),

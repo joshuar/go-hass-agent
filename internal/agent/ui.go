@@ -81,7 +81,12 @@ func (agent *Agent) setupSystemTray(ctx context.Context) {
 
 func (agent *Agent) aboutWindow(ctx context.Context) {
 	deviceName, deviceID := agent.DeviceDetails()
-	hassConfig := hass.NewHassConfig(ctx)
+	hassConfig, err := hass.NewHassConfig(ctx)
+	if err != nil {
+		log.Error().Err(err).
+			Msg("Unable to fetch updated config from Home Assistant.")
+		return
+	}
 	hassVersion, _ := hassConfig.Get("version")
 	w := agent.app.NewWindow(agent.setTitle("About"))
 	w.SetContent(container.New(layout.NewVBoxLayout(),
@@ -108,7 +113,12 @@ func (agent *Agent) settingsWindow() {
 func (agent *Agent) sensorsWindow(ctx context.Context) {
 	var tableData [][]string
 	var entityNames []string
-	hassConfig := hass.NewHassConfig(ctx)
+	hassConfig, err := hass.NewHassConfig(ctx)
+	if err != nil {
+		log.Error().Err(err).
+			Msg("Unable to fetch updated config from Home Assistant.")
+		return
+	}
 	s, err := hassConfig.Get("entities")
 	if err != nil {
 		log.Warn().Err(err).
@@ -121,15 +131,16 @@ func (agent *Agent) sensorsWindow(ctx context.Context) {
 			Msg("List of sensors is invalid.")
 	}
 	for k := range sensorList {
-		if state, err := sensorTracker.Get(k); err == nil {
-			entityNames = append(entityNames, k)
-			tableData = append(tableData,
-				[]string{
-					k,
-					fmt.Sprintf("%v %s",
-						state.State(), state.Units()),
-				})
-		}
+		// TODO fetch from hass Config
+		// if state, err := sensorTracker.Get(k); err == nil {
+		entityNames = append(entityNames, k)
+		tableData = append(tableData,
+			[]string{
+				k,
+				fmt.Sprintf("%v %s",
+					"TBA", "TBA"),
+			})
+		// }
 	}
 
 	longestName := longestString(entityNames)

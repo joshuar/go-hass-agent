@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-package request
+package api
 
 import (
 	"bytes"
@@ -14,7 +14,6 @@ import (
 
 	"github.com/carlmjohnson/requests"
 	"github.com/joshuar/go-hass-agent/internal/config"
-	"github.com/rs/zerolog/log"
 )
 
 //go:generate stringer -type=RequestType -output requestType.go -linecomment
@@ -32,7 +31,7 @@ type RequestType int
 type Request interface {
 	RequestType() RequestType
 	RequestData() json.RawMessage
-	ResponseHandler(bytes.Buffer)
+	ResponseHandler(bytes.Buffer, chan Response)
 }
 
 func MarshalJSON(request Request, secret string) ([]byte, error) {
@@ -65,36 +64,49 @@ type EncryptedRequest struct {
 	Encrypted     bool            `json:"encrypted"`
 }
 
-type Response struct {
-	Success bool `json:"success,omitempty"`
-}
-
-func APIRequest(ctx context.Context, request Request) {
+func ExecuteRequest(ctx context.Context, request Request, responseCh chan Response) {
 	var res bytes.Buffer
 
-	secret, err := config.FetchPropertyFromContext(ctx, "secret")
-	if err != nil {
-		log.Error().Stack().Err(err).
-			Msg("Could not fetch secret from agent config.")
-		return
-	}
-	url, err := config.FetchPropertyFromContext(ctx, "apiURL")
-	if err != nil {
-		log.Error().Stack().Err(err).
-			Msg("Could not fetch api url from agent config.")
-		return
-	}
-	urlString, ok := url.(string)
-	if !ok { // type assertion failed
-		log.Error().Stack().
-			Msg("API URL does not appear to be valid.")
-		return
+	var secret string
+	if request.RequestType() == RequestTypeEncrypted {
+		s, err := config.FetchPropertyFromContext(ctx, "secret")
+		if err != nil {
+			responseCh <- NewGenericResponse(err, request.RequestType())
+			return
+		}
+		secretStr, ok := s.(string)
+		if !ok {
+			err = errors.New("secret is invalid")
+		}
+		if secretStr == "" {
+			err = errors.New("secret is empty")
+		}
+		if err != nil {
+			responseCh <- NewGenericResponse(err, request.RequestType())
+			return
+		}
+	} else {
+		secret = ""
 	}
 
-	reqJson, err := MarshalJSON(request, secret.(string))
+	var url string
+	u, err := config.FetchPropertyFromContext(ctx, "apiURL")
 	if err != nil {
-		log.Error().Stack().Err(err).
-			Msg("Unable to format request")
+		responseCh <- NewGenericResponse(err, request.RequestType())
+		return
+	} else {
+		urlString, ok := u.(string)
+		if !ok {
+			err := errors.New("API URL does not appear to be valid")
+			responseCh <- NewGenericResponse(err, request.RequestType())
+			return
+		}
+		url = urlString
+	}
+
+	reqJson, err := MarshalJSON(request, secret)
+	if err != nil {
+		responseCh <- NewGenericResponse(err, request.RequestType())
 		return
 	}
 
@@ -102,15 +114,14 @@ func APIRequest(ctx context.Context, request Request) {
 	defer cancel()
 
 	err = requests.
-		URL(urlString).
+		URL(url).
 		BodyBytes(reqJson).
 		ToBytesBuffer(&res).
 		Fetch(requestCtx)
 	if err != nil {
-		log.Error().Stack().Err(err).
-			Msgf("Unable to send request with body:\n\t%s\n\t", reqJson)
 		cancel()
+		responseCh <- NewGenericResponse(err, request.RequestType())
 		return
 	}
-	request.ResponseHandler(res)
+	request.ResponseHandler(res, responseCh)
 }
