@@ -34,7 +34,7 @@ type Request interface {
 	ResponseHandler(bytes.Buffer, chan Response)
 }
 
-func MarshalJSON(request Request, secret string) ([]byte, error) {
+func marshalJSON(request Request, secret string) ([]byte, error) {
 	if request.RequestType() == RequestTypeEncrypted {
 		if secret != "" {
 			return json.Marshal(&EncryptedRequest{
@@ -85,6 +85,7 @@ func ExecuteRequest(ctx context.Context, request Request, responseCh chan Respon
 			responseCh <- NewGenericResponse(err, request.RequestType())
 			return
 		}
+		secret = secretStr
 	} else {
 		secret = ""
 	}
@@ -104,7 +105,7 @@ func ExecuteRequest(ctx context.Context, request Request, responseCh chan Respon
 		url = urlString
 	}
 
-	reqJson, err := MarshalJSON(request, secret)
+	reqJson, err := marshalJSON(request, secret)
 	if err != nil {
 		responseCh <- NewGenericResponse(err, request.RequestType())
 		return

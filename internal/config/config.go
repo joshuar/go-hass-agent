@@ -50,11 +50,6 @@ func FetchPropertyFromContext(ctx context.Context, property string) (interface{}
 	if err != nil {
 		return nil, err
 	} else {
-		value, err := config.Get(property)
-		if err != nil {
-			return nil, err
-		} else {
-			return value, nil
-		}
+		return config.Get(property)
 	}
 }
