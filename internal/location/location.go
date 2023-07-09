@@ -7,9 +7,11 @@ package location
 
 import (
 	"context"
+	"sync"
 
+	"github.com/joshuar/go-hass-agent/internal/api"
 	"github.com/joshuar/go-hass-agent/internal/hass"
-	"github.com/joshuar/go-hass-agent/internal/request"
+	"github.com/rs/zerolog/log"
 )
 
 // LocationUpdate represents a location update from a platform/device. It
@@ -40,5 +42,23 @@ func MarshalUpdate(l Update) *hass.LocationUpdate {
 }
 
 func SendUpdate(ctx context.Context, l Update) {
-	request.APIRequest(ctx, MarshalUpdate(l))
+	respCh := make(chan api.Response, 1)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		api.ExecuteRequest(ctx, MarshalUpdate(l), respCh)
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		defer close(respCh)
+		response := <-respCh
+		if response.Error() != nil {
+			log.Debug().Err(response.Error()).
+				Msg("Failed to update location.")
+		} else {
+			log.Debug().Msg("Location Updated.")
+		}
+	}()
 }

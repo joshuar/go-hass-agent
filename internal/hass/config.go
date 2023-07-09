@@ -9,10 +9,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sync"
 
-	"github.com/joshuar/go-hass-agent/internal/request"
+	"github.com/joshuar/go-hass-agent/internal/api"
 	"github.com/perimeterx/marshmallow"
 	"github.com/rs/zerolog/log"
 )
@@ -47,14 +48,12 @@ type hassConfigProps struct {
 	Longitude             float64  `json:"longitude"`
 }
 
-func NewHassConfig(ctx context.Context) *HassConfig {
+func NewHassConfig(ctx context.Context) (*HassConfig, error) {
 	c := &HassConfig{}
 	if err := c.Refresh(ctx); err != nil {
-		log.Debug().Err(err).
-			Msg("Could not fetch config from Home Assistant.")
-		return nil
+		return nil, err
 	}
-	return c
+	return c, nil
 }
 
 func (h *HassConfig) GetEntityState(entity string) map[string]interface{} {
@@ -82,29 +81,32 @@ func (h *HassConfig) IsEntityDisabled(entity string) bool {
 // HassConfig implements hass.Request so that it can be sent as a request to HA
 // to get its data.
 
-func (h *HassConfig) RequestType() request.RequestType {
-	return request.RequestTypeGetConfig
+func (h *HassConfig) RequestType() api.RequestType {
+	return api.RequestTypeGetConfig
 }
 
 func (h *HassConfig) RequestData() json.RawMessage {
 	return nil
 }
 
-func (h *HassConfig) ResponseHandler(resp bytes.Buffer) {
+func (h *HassConfig) ResponseHandler(resp bytes.Buffer, respCh chan api.Response) {
 	if resp.Bytes() == nil {
-		log.Debug().
-			Msg("No response returned.")
+		err := errors.New("no response returned")
+		response := api.NewGenericResponse(err, api.RequestTypeGetConfig)
+		respCh <- response
 		return
 	}
 	h.mu.Lock()
 	result, err := marshmallow.Unmarshal(resp.Bytes(), &h.hassConfigProps)
 	if err != nil {
-		log.Debug().Err(err).
-			Msg("Couldn't unmarshal Hass config.")
+		response := api.NewGenericResponse(err, api.RequestTypeGetConfig)
+		respCh <- response
 		return
 	}
 	h.rawConfigProps = result
 	h.mu.Unlock()
+	response := api.NewGenericResponse(nil, api.RequestTypeGetConfig)
+	respCh <- response
 }
 
 // HassConfig implements config.Config
@@ -130,7 +132,19 @@ func (c *HassConfig) Validate() error {
 }
 
 func (h *HassConfig) Refresh(ctx context.Context) error {
-	request.APIRequest(ctx, h)
+	respCh := make(chan api.Response, 1)
+	defer close(respCh)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		api.ExecuteRequest(ctx, h, respCh)
+	}()
+	response := <-respCh
+	if response.Error() != nil {
+		return response.Error()
+	}
+
 	return nil
 }
 
