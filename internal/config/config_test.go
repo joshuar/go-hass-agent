@@ -109,7 +109,7 @@ func TestFetchPropertyFromContext(t *testing.T) {
 		{
 			name:    "test invalid property",
 			args:    args{ctx: validCtx, property: "invalid"},
-			want:    nil,
+			want:    "",
 			wantErr: true,
 		},
 		{
