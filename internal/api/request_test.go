@@ -9,15 +9,18 @@ import (
 	bytes "bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"sync"
 	"testing"
 
 	"github.com/joshuar/go-hass-agent/internal/config"
+	"github.com/stretchr/testify/assert"
 )
 
-func TestMarshalJSON(t *testing.T) {
+func Test_marshalJSON(t *testing.T) {
 	requestData := json.RawMessage(`{"someField": "someValue"}`)
 	request := NewMockRequest(t)
 	request.On("RequestType").Return(RequestTypeUpdateSensorStates)
@@ -56,7 +59,7 @@ func TestMarshalJSON(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := MarshalJSON(tt.args.request, tt.args.secret)
+			got, err := marshalJSON(tt.args.request, tt.args.secret)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("MarshalJSON() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -69,34 +72,95 @@ func TestMarshalJSON(t *testing.T) {
 }
 
 func mockServer(t *testing.T) *httptest.Server {
-	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"success":true}`))
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		req := &UnencryptedRequest{}
+		err := json.NewDecoder(r.Body).Decode(&req)
+		assert.Nil(t, err)
+		switch req.Type {
+		case "register_sensor":
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"success":true}`))
+		case "encrypted":
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"success":true}`))
+		}
 	}))
+}
+
+type req struct {
+	reqType RequestType
+	data    json.RawMessage
+}
+
+func (r *req) RequestType() RequestType {
+	return r.reqType
+}
+
+func (r *req) RequestData() json.RawMessage {
+	return r.data
+}
+
+func (r *req) ResponseHandler(b bytes.Buffer, resp chan Response) {
+	resp <- NewGenericResponse(nil, r.reqType)
+}
+
+type encReq struct {
+}
+
+func (r *encReq) RequestType() RequestType {
+	return RequestTypeEncrypted
+}
+
+func (r *encReq) RequestData() json.RawMessage {
+	return json.RawMessage(`{"someField": "someValue"}`)
+}
+
+func (r *encReq) ResponseHandler(b bytes.Buffer, resp chan Response) {
+	resp <- NewGenericResponse(nil, RequestTypeEncrypted)
+
+}
+
+type testConfig struct {
+	values map[string]string
+}
+
+func (t *testConfig) Get(s string) (interface{}, error) {
+	if value, ok := t.values[s]; !ok {
+		return nil, errors.New("not found")
+	} else {
+		return value, nil
+	}
+}
+
+func (t *testConfig) Set(s string, i interface{}) error {
+	t.values[s] = i.(string)
+	return nil
+}
+
+func (t *testConfig) Validate() error { return nil }
+
+func (t *testConfig) Refresh(ctx context.Context) error { return nil }
+
+func (t *testConfig) Upgrade() error { return nil }
+
+func newTestConfig() *testConfig {
+	return &testConfig{
+		values: make(map[string]string),
+	}
 }
 
 func TestExecuteRequest(t *testing.T) {
 	server := mockServer(t)
 	defer server.Close()
 
-	goodConfig := config.NewMockConfig(t)
-	goodConfig.On("Get", "apiURL").Return(server.URL, nil)
-	goodConfig.On("Get", "secret").Return("", nil)
-	goodCtx := config.StoreInContext(context.Background(), goodConfig)
+	goodMockConfig := newTestConfig()
+	goodMockConfig.Set("apiURL", server.URL)
+	goodMockConfig.Set("secret", "aSecret")
+	goodCtx := config.StoreInContext(context.Background(), goodMockConfig)
 
-	responseCh := make(chan Response, 1)
-	defer close(responseCh)
-
-	requestData := json.RawMessage(`{"someField": "someValue"}`)
-	request := NewMockRequest(t)
-	request.On("RequestType").Return(RequestTypeRegisterSensor)
-	request.On("RequestData").Return(requestData)
-	request.On("ResponseHandler", *bytes.NewBufferString(`{"success":true}`), responseCh).Return()
-
-	encryptedRequest := NewMockRequest(t)
-	encryptedRequest.On("RequestType").Return(RequestTypeEncrypted)
-	encryptedRequest.On("RequestData").Return(requestData)
-	encryptedRequest.On("ResponseHandler", *bytes.NewBufferString(`{"success":true}`), responseCh).Return()
+	badMockConfig := newTestConfig()
+	badMockConfig.Set("apiURL", server.URL)
+	badCtx := config.StoreInContext(context.Background(), badMockConfig)
 
 	type args struct {
 		ctx        context.Context
@@ -104,37 +168,76 @@ func TestExecuteRequest(t *testing.T) {
 		responseCh chan Response
 	}
 	tests := []struct {
-		name string
-		args args
+		name    string
+		args    args
+		wantErr bool
 	}{
 		{
-			name: "successful request",
+			name: "good request",
 			args: args{
 				ctx:        goodCtx,
-				request:    request,
-				responseCh: responseCh,
-			},
-		},
-		{
-			name: "bad encrypted request",
-			args: args{
-				ctx:        goodCtx,
-				request:    encryptedRequest,
-				responseCh: responseCh,
-			},
-		},
-		{
-			name: "bad context",
-			args: args{
-				ctx:        context.Background(),
-				request:    request,
+				request:    &req{reqType: RequestTypeRegisterSensor},
 				responseCh: make(chan Response, 1),
 			},
+			wantErr: false,
+		},
+		{
+			name: "bad encrypted request, missing secret",
+			args: args{
+				ctx:        badCtx,
+				request:    &encReq{},
+				responseCh: make(chan Response, 1),
+			},
+			wantErr: true,
+		},
+		{
+			name: "good encrypted request",
+			args: args{
+				ctx:        goodCtx,
+				request:    &encReq{},
+				responseCh: make(chan Response, 1),
+			},
+			wantErr: false,
+		},
+		{
+			name: "bad context, no config",
+			args: args{
+				ctx:        context.Background(),
+				request:    &req{reqType: RequestTypeRegisterSensor},
+				responseCh: make(chan Response, 1),
+			},
+			wantErr: true,
+		},
+		{
+			name: "bad json",
+			args: args{
+				ctx: goodCtx,
+				request: &req{
+					reqType: RequestTypeRegisterSensor,
+					data:    json.RawMessage(`sdgasghsdag`),
+				},
+				responseCh: make(chan Response, 1),
+			},
+			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ExecuteRequest(tt.args.ctx, tt.args.request, tt.args.responseCh)
+			var wg sync.WaitGroup
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				ExecuteRequest(tt.args.ctx, tt.args.request, tt.args.responseCh)
+			}()
+			// wg.Add(1)
+			// go func() {
+			// 	defer wg.Done()
+			// defer close(tt.args.responseCh)
+			resp := <-tt.args.responseCh
+			if err := resp.Error(); (err != nil) != tt.wantErr {
+				t.Errorf("api.TestExecuteRequest() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			// }()
 		})
 	}
 }

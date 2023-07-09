@@ -13,12 +13,10 @@ type Response interface {
 	Type() RequestType
 }
 
-//go:generate mockery --name SensorRegistrationResponse --inpackage
 type SensorRegistrationResponse interface {
 	Registered() bool
 }
 
-//go:generate mockery --name SensorUpdateResponse --inpackage
 type SensorUpdateResponse interface {
 	Disabled() bool
 }
