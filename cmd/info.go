@@ -19,8 +19,8 @@ var infoCmd = &cobra.Command{
 	Short: "Print details of this device",
 	Long:  "This will show the information that was used to register this device with Home Assistant",
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		setLogging()
-		setDebugging()
+		setLogfileLogging()
+		setLoggingLevel()
 		setProfiling()
 	},
 	Run: func(cmd *cobra.Command, args []string) {

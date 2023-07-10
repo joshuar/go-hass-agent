@@ -14,6 +14,7 @@ import (
 )
 
 var (
+	traceFlag    bool
 	debugFlag    bool
 	debugID      string
 	profileFlag  bool
@@ -30,8 +31,8 @@ var rootCmd = &cobra.Command{
 	
 	It can also receive notifications from Home Assistant.`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		setLogging()
-		setDebugging()
+		setLogfileLogging()
+		setLoggingLevel()
 		setProfiling()
 	},
 	Run: func(cmd *cobra.Command, args []string) {
@@ -49,6 +50,8 @@ func Execute() {
 }
 
 func init() {
+	rootCmd.PersistentFlags().BoolVar(&traceFlag, "trace", false,
+		"trace output (default is false)")
 	rootCmd.PersistentFlags().BoolVar(&debugFlag, "debug", false,
 		"debug output (default is false)")
 	rootCmd.PersistentFlags().BoolVar(&profileFlag, "profile", false,

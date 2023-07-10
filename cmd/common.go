@@ -15,16 +15,20 @@ import (
 	"github.com/rs/zerolog/pkgerrors"
 )
 
-func setLogging() {
+func setLogfileLogging() {
 	zerolog.ErrorStackMarshaler = pkgerrors.MarshalStack
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 }
 
-func setDebugging() {
-	if debugFlag {
+func setLoggingLevel() {
+	switch {
+	case traceFlag:
+		zerolog.SetGlobalLevel(zerolog.TraceLevel)
+		log.Debug().Msg("Trace logging enabled.")
+	case debugFlag:
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 		log.Debug().Msg("Debug logging enabled.")
-	} else {
+	default:
 		zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	}
 	if debugID != "" {
