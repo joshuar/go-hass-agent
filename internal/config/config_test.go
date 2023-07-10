@@ -15,7 +15,7 @@ import (
 func TestStoreInContext(t *testing.T) {
 	wantedCtx := context.WithValue(context.Background(),
 		configKey,
-		NewMockConfig(t))
+		&ConfigMock{})
 	type args struct {
 		ctx context.Context
 		c   Config
@@ -27,7 +27,7 @@ func TestStoreInContext(t *testing.T) {
 	}{
 		{
 			name: "standard test",
-			args: args{ctx: context.Background(), c: NewMockConfig(t)},
+			args: args{ctx: context.Background(), c: &ConfigMock{}},
 			want: wantedCtx,
 		},
 	}
@@ -43,7 +43,7 @@ func TestStoreInContext(t *testing.T) {
 func TestFetchFromContext(t *testing.T) {
 	validCtx := context.WithValue(context.Background(),
 		configKey,
-		NewMockConfig(t))
+		&ConfigMock{})
 	invalidCtx := context.Background()
 	type args struct {
 		ctx context.Context
@@ -57,7 +57,7 @@ func TestFetchFromContext(t *testing.T) {
 		{
 			name:    "fetch valid",
 			args:    args{ctx: validCtx},
-			want:    NewMockConfig(t),
+			want:    &ConfigMock{},
 			wantErr: false,
 		},
 		{
@@ -82,9 +82,18 @@ func TestFetchFromContext(t *testing.T) {
 }
 
 func TestFetchPropertyFromContext(t *testing.T) {
-	config := NewMockConfig(t)
-	config.On("Get", "valid").Return("validValue", nil)
-	config.On("Get", "invalid").Return("", errors.New("invalid"))
+	config := &ConfigMock{
+		GetFunc: func(s string) (interface{}, error) {
+			switch s {
+			case "valid":
+				return "validValue", nil
+			case "invalid":
+				fallthrough
+			default:
+				return "", errors.New("invalid")
+			}
+		},
+	}
 
 	validCtx := context.WithValue(context.Background(),
 		configKey,

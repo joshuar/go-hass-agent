@@ -10,7 +10,7 @@ import (
 	"errors"
 )
 
-//go:generate mockery --name Config --inpackage
+//go:generate moq -out mock_Config_test.go . Config
 type Config interface {
 	Get(string) (interface{}, error)
 	Set(string, interface{}) error
