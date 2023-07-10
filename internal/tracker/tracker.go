@@ -7,6 +7,7 @@ package tracker
 
 import (
 	"context"
+	"errors"
 	"sync"
 
 	"github.com/joshuar/go-hass-agent/internal/api"
@@ -17,8 +18,8 @@ import (
 
 type SensorTracker struct {
 	registry Registry
-	// sensor   map[string]*sensorState
-	mu sync.RWMutex
+	sensor   map[string]Sensor
+	mu       sync.RWMutex
 }
 
 func NewSensorTracker(ctx context.Context, path string) *SensorTracker {
@@ -30,33 +31,32 @@ func NewSensorTracker(ctx context.Context, path string) *SensorTracker {
 	}
 	return &SensorTracker{
 		registry: db,
-		// sensor:   make(map[string]*sensorState),
+		sensor:   make(map[string]Sensor),
 	}
 }
 
-// Add creates a new sensor in the tracker based on a recieved state
-// update.
-// func (tracker *SensorTracker) add(sensor *sensorState) error {
-// 	tracker.mu.Lock()
-// 	if tracker.sensor == nil {
-// 		tracker.mu.Unlock()
-// 		return errors.New("sensor map not initialised")
-// 	}
-// 	tracker.sensor[sensor.data.ID()] = sensor
-// 	tracker.mu.Unlock()
-// 	return nil
-// }
+// Add creates a new sensor in the tracker based on a recieved state update.
+func (tracker *SensorTracker) add(s Sensor) error {
+	tracker.mu.Lock()
+	if tracker.sensor == nil {
+		tracker.mu.Unlock()
+		return errors.New("sensor map not initialised")
+	}
+	tracker.sensor[s.ID()] = s
+	tracker.mu.Unlock()
+	return nil
+}
 
 // Get fetches a sensors current tracked state
-// func (tracker *SensorTracker) Get(id string) (sensorState, error) {
-// 	tracker.mu.RLock()
-// 	defer tracker.mu.RUnlock()
-// 	if tracker.sensor[id] != nil {
-// 		return *tracker.sensor[id], nil
-// 	} else {
-// 		return sensorState{}, errors.New("not found")
-// 	}
-// }
+func (tracker *SensorTracker) Get(id string) (Sensor, error) {
+	tracker.mu.RLock()
+	defer tracker.mu.RUnlock()
+	if tracker.sensor[id] != nil {
+		return tracker.sensor[id], nil
+	} else {
+		return nil, errors.New("not found")
+	}
+}
 
 // StartWorkers will call all the sensor worker functions that have been defined
 // for this device.
@@ -122,6 +122,10 @@ func (tracker *SensorTracker) Update(ctx context.Context, sensorUpdate Sensor) {
 						sensorUpdate.ID(),
 						sensorUpdate.State(),
 						sensorUpdate.Units())
+				if err := tracker.add(sensorUpdate); err != nil {
+					log.Warn().Err(err).
+						Msgf("Unable to add state for sensor %s to tracker.", sensorUpdate.Name())
+				}
 				if response.Type() == api.RequestTypeUpdateSensorStates && response.Disabled() {
 					if err := tracker.registry.SetDisabled(sensorUpdate.ID(), true); err != nil {
 						log.Warn().Err(err).Msgf("Unable to set %s as disabled in registry.", sensorUpdate.Name())
