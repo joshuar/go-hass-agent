@@ -5,7 +5,7 @@
 
 package hass
 
-//go:generate mockery --name DeviceInfo --inpackage
+//go:generate moq -out mock_DeviceInfo_test.go . DeviceInfo
 type DeviceInfo interface {
 	DeviceID() string
 	AppID() string

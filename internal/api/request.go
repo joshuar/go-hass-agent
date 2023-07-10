@@ -27,7 +27,7 @@ const (
 
 type RequestType int
 
-//go:generate mockery --name Request --inpackage
+//go:generate moq -out mock_Request_test.go . Request
 type Request interface {
 	RequestType() RequestType
 	RequestData() json.RawMessage

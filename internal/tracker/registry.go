@@ -9,7 +9,7 @@ import (
 	"context"
 )
 
-//go:generate mockery --name Registry
+//go:generate moq -out mock_Registry_test.go . Registry
 type Registry interface {
 	Open(context.Context, string) error
 	Close() error
