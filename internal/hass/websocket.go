@@ -52,11 +52,11 @@ type websocketResponse struct {
 func StartWebsocket(ctx context.Context, notifyCh chan fyne.Notification, doneCh chan struct{}) {
 	conn, err := tryWebsocketConnect(ctx, notifyCh, doneCh)
 	if err != nil {
-		log.Debug().Err(err).Caller().
+		log.Error().Err(err).
 			Msg("Could not connect to websocket.")
 		return
 	}
-	log.Debug().Caller().Msg("Websocket connection established.")
+	log.Trace().Caller().Msg("Websocket connection established.")
 	go conn.ReadLoop()
 }
 
@@ -80,7 +80,7 @@ func tryWebsocketConnect(ctx context.Context, notifyCh chan fyne.Notification, d
 			Addr: urlString,
 		})
 		if err != nil {
-			log.Debug().Err(err).Caller().
+			log.Error().Err(err).
 				Msg("Could not connect to websocket.")
 			return err
 		}
@@ -142,7 +142,7 @@ func NewWebsocket(ctx context.Context, notifyCh chan fyne.Notification, doneCh c
 }
 
 func (c *WebSocket) OnError(socket *gws.Conn, err error) {
-	log.Debug().Caller().Err(err).
+	log.Error().Err(err).
 		Msg("Error on websocket")
 	c.cancelFunc()
 	close(c.doneCh)
@@ -150,26 +150,26 @@ func (c *WebSocket) OnError(socket *gws.Conn, err error) {
 
 func (c *WebSocket) OnClose(socket *gws.Conn, err error) {
 	if err != nil {
-		log.Debug().Caller().Err(err).
-			Msg("Close error.")
+		log.Error().Err(err).
+			Msg("Error closing websocket.")
 	}
 	c.cancelFunc()
 	close(c.doneCh)
 }
 
 func (c *WebSocket) OnPong(socket *gws.Conn, payload []byte) {
-	log.Debug().Caller().Msg("Recieved pong on websocket")
+	log.Trace().Caller().Msg("Recieved pong on websocket")
 }
 
 func (c *WebSocket) OnOpen(socket *gws.Conn) {
-	log.Debug().Caller().Msg("Websocket opened.")
+	log.Trace().Caller().Msg("Websocket opened.")
 	go func() {
 		ticker := time.NewTicker(PingInterval)
 		for range ticker.C {
-			log.Debug().Caller().
+			log.Trace().Caller().
 				Msg("Sending ping on websocket")
 			if err := socket.SetDeadline(time.Now().Add(2 * PingInterval)); err != nil {
-				log.Debug().Err(err).
+				log.Error().Err(err).
 					Msg("Error setting deadline on websocket.")
 				return
 			}
@@ -193,7 +193,7 @@ func (c *WebSocket) OnMessage(socket *gws.Conn, message *gws.Message) {
 		Success: true,
 	}
 	if err := json.Unmarshal(message.Bytes(), &response); err != nil {
-		log.Debug().Caller().Err(err).
+		log.Error().Err(err).
 			Msgf("Failed to unmarshall response %s.", message.Data.String())
 		return
 	}
@@ -207,7 +207,7 @@ func (c *WebSocket) responseHandler(ctx context.Context, notifyCh chan fyne.Noti
 	for {
 		select {
 		case <-ctx.Done():
-			log.Debug().Caller().Msg("Stopping websocket response handler.")
+			log.Trace().Caller().Msg("Stopping websocket response handler.")
 			return
 		case r := <-c.ReadCh:
 			if r == nil {
@@ -215,13 +215,13 @@ func (c *WebSocket) responseHandler(ctx context.Context, notifyCh chan fyne.Noti
 			}
 			response, ok := r.data.(*websocketResponse)
 			if !ok {
-				log.Debug().Msg("Response is not expected format.")
+				log.Warn().Msg("Websocket response is not an expected format.")
 				return
 			}
 			atomic.AddUint64(&c.nextID, 1)
 			switch response.Type {
 			case "auth_required":
-				log.Debug().Caller().
+				log.Trace().Caller().
 					Msg("Requesting authorisation for websocket.")
 				c.WriteCh <- &webSocketData{
 					conn: r.conn,
@@ -231,7 +231,7 @@ func (c *WebSocket) responseHandler(ctx context.Context, notifyCh chan fyne.Noti
 					}}
 			case "auth_ok":
 				// spew.Dump(response)
-				log.Debug().Caller().
+				log.Trace().Caller().
 					Msg("Registering app for push notifications.")
 				c.WriteCh <- &webSocketData{
 					conn: r.conn,
@@ -246,7 +246,7 @@ func (c *WebSocket) responseHandler(ctx context.Context, notifyCh chan fyne.Noti
 					log.Error().
 						Msgf("Recieved error on websocket, %s: %s.", response.Error.Code, response.Error.Message)
 					if response.Error.Code == "id_reuse" {
-						log.Debug().Caller().
+						log.Warn().
 							Msg("id_reuse error, attempting manual increment.")
 						atomic.AddUint64(&c.nextID, 1)
 					}
@@ -256,11 +256,11 @@ func (c *WebSocket) responseHandler(ctx context.Context, notifyCh chan fyne.Noti
 			case "pong":
 				b, err := json.Marshal(response)
 				if err != nil {
-					log.Debug().Err(err).Msg("Unable to unmarshal.")
+					log.Error().Err(err).Msg("Unable to unmarshal.")
 				}
 				c.OnPong(r.conn, b)
 			default:
-				log.Debug().Caller().Msgf("Received unhandled response %v", r)
+				log.Warn().Caller().Msgf("Unhandled websocket response %v.", r)
 			}
 		}
 	}
@@ -270,18 +270,18 @@ func (c *WebSocket) requestHandler(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			log.Debug().Caller().Msg("Stopping websocket request handler.")
+			log.Trace().Caller().Msg("Stopping websocket request handler.")
 			return
 		case m := <-c.WriteCh:
 			msg, err := json.Marshal(&m.data)
 			if err != nil {
-				log.Debug().Caller().Err(err).
-					Msg("Unable to marshal message.")
+				log.Error().Err(err).
+					Msg("Unable to marshal websocket message.")
 			}
 			err = m.conn.WriteMessage(gws.OpcodeText, msg)
 			if err != nil {
-				log.Debug().Caller().Err(err).
-					Msg("Unable to send message.")
+				log.Error().Err(err).
+					Msg("Unable to send websocket message.")
 			}
 		}
 	}
