@@ -24,7 +24,7 @@ func (agent *Agent) runNotificationsWorker(ctx context.Context) {
 			doneCh = make(chan struct{})
 			hass.StartWebsocket(ctx, notifyCh, doneCh)
 		case <-ctx.Done():
-			log.Debug().Caller().Msg("Stopping notification handler.")
+			log.Debug().Msg("Stopping notification handler.")
 			return
 		case n := <-notifyCh:
 			agent.app.SendNotification(&fyne.Notification{

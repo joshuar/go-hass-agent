@@ -201,7 +201,7 @@ func (c *agentConfig) generateWebsocketURL() {
 	url = url.JoinPath(websocketPath)
 
 	if err := c.Set("WebSocketURL", url.String()); err != nil {
-		log.Debug().Err(err).
+		log.Error().Err(err).
 			Msg("Unable to generate web socket URL.")
 	}
 }
@@ -225,7 +225,7 @@ func (c *agentConfig) generateAPIURL() {
 		apiURL = ""
 	}
 	if err := c.Set("ApiURL", apiURL); err != nil {
-		log.Debug().Err(err).
+		log.Error().Err(err).
 			Msg("Unable to generate API URL.")
 	}
 }
