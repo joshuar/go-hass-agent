@@ -21,14 +21,23 @@ import (
 )
 
 func Test_marshalJSON(t *testing.T) {
-	requestData := json.RawMessage(`{"someField": "someValue"}`)
-	request := NewMockRequest(t)
-	request.On("RequestType").Return(RequestTypeUpdateSensorStates)
-	request.On("RequestData").Return(requestData)
+	mockReq := &RequestMock{
+		RequestDataFunc: func() json.RawMessage {
+			return json.RawMessage(`{"someField": "someValue"}`)
+		},
+		RequestTypeFunc: func() RequestType {
+			return RequestTypeUpdateSensorStates
+		},
+	}
 
-	encryptedRequest := NewMockRequest(t)
-	encryptedRequest.On("RequestType").Return(RequestTypeEncrypted)
-	encryptedRequest.On("RequestData").Return(requestData)
+	mockEncReq := &RequestMock{
+		RequestDataFunc: func() json.RawMessage {
+			return json.RawMessage(`{"someField": "someValue"}`)
+		},
+		RequestTypeFunc: func() RequestType {
+			return RequestTypeEncrypted
+		},
+	}
 
 	type args struct {
 		request Request
@@ -42,18 +51,18 @@ func Test_marshalJSON(t *testing.T) {
 	}{
 		{
 			name: "unencrypted request",
-			args: args{request: request},
+			args: args{request: mockReq},
 			want: []byte(`{"type":"update_sensor_states","data":{"someField":"someValue"}}`),
 		},
 		{
 			name:    "encrypted request without secret",
-			args:    args{request: encryptedRequest},
+			args:    args{request: mockEncReq},
 			want:    nil,
 			wantErr: true,
 		},
 		{
 			name: "encrypted request with secret",
-			args: args{request: encryptedRequest, secret: "fakeSecret"},
+			args: args{request: mockEncReq, secret: "fakeSecret"},
 			want: []byte(`{"type":"encrypted","encrypted_data":{"someField":"someValue"},"encrypted":true}`),
 		},
 	}

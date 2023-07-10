@@ -5,7 +5,7 @@
 
 package api
 
-//go:generate mockery --name Response --inpackage
+//go:generate moq -out mock_Response_test.go . Response
 type Response interface {
 	SensorRegistrationResponse
 	SensorUpdateResponse

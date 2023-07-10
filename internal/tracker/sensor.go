@@ -16,7 +16,7 @@ import (
 // of the sensor at the point in time it is used. It provides a bridge between
 // platform/device and HA implementations of what a sensor is.
 //
-//go:generate mockery --name Sensor
+//go:generate moq -out mock_Sensor_test.go . Sensor
 type Sensor interface {
 	Name() string
 	ID() string
