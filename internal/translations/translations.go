@@ -27,10 +27,10 @@ func NewTranslator() *Translator {
 	t := &Translator{}
 	userLocales, err := locale.GetLocales()
 	if err != nil {
-		log.Warn().Msg("Could not find a suitable locale. Defaulting to English.")
+		log.Warn().Msg("Could not find a suitable locale. Using English.")
 		t.msgPrinter = message.NewPrinter(message.MatchLanguage(language.English.String()))
 	}
-	log.Debug().Caller().Msgf("Setting language to %v.", userLocales)
+	log.Debug().Msgf("Setting language to %v.", userLocales)
 	t.msgPrinter = message.NewPrinter(message.MatchLanguage(userLocales...))
 	return t
 }

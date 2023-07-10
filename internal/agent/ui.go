@@ -34,9 +34,8 @@ func newUI(appID string) fyne.App {
 }
 
 func (agent *Agent) setupSystemTray(ctx context.Context) {
-	log.Debug().Caller().Msg("Creating tray icon.")
 	if desk, ok := agent.app.(desktop.App); ok {
-		log.Debug().Caller().Msg("Running in desktop mode. Setting tray menu.")
+		log.Debug().Msg("Running in desktop mode. Setting tray menu.")
 		menuItemAbout := fyne.NewMenuItem(translator.Translate("About"), func() {
 			agent.aboutWindow(ctx)
 		})
