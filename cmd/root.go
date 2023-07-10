@@ -49,12 +49,12 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.PersistentFlags().BoolVarP(&debugFlag, "debug", "d", false,
+	rootCmd.PersistentFlags().BoolVar(&debugFlag, "debug", false,
 		"debug output (default is false)")
-	rootCmd.PersistentFlags().BoolVarP(&profileFlag, "profile", "p", false,
+	rootCmd.PersistentFlags().BoolVar(&profileFlag, "profile", false,
 		"enable profiling (default is false)")
 	rootCmd.PersistentFlags().StringVar(&debugID, "debugID", "",
 		"specify a custom app ID (for debugging)")
-	rootCmd.PersistentFlags().BoolVarP(&headlessFlag, "terminal", "t", false,
+	rootCmd.PersistentFlags().BoolVar(&headlessFlag, "terminal", false,
 		"run in terminal (without a GUI)")
 }
