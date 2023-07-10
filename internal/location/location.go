@@ -55,7 +55,7 @@ func SendUpdate(ctx context.Context, l Update) {
 		defer close(respCh)
 		response := <-respCh
 		if response.Error() != nil {
-			log.Debug().Err(response.Error()).
+			log.Error().Err(response.Error()).
 				Msg("Failed to update location.")
 		} else {
 			log.Debug().Msg("Location Updated.")
