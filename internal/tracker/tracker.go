@@ -116,7 +116,7 @@ func (tracker *SensorTracker) Update(ctx context.Context, sensorUpdate Sensor) {
 				log.Error().Err(response.Error()).
 					Msgf("Failed to send sensor %s data to Home Assistant", sensorUpdate.Name())
 			} else {
-				log.Debug().Caller().
+				log.Debug().
 					Msgf("Sensor %s updated (%s). State is now: %v %s",
 						sensorUpdate.Name(),
 						sensorUpdate.ID(),
