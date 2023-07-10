@@ -14,16 +14,15 @@ import (
 )
 
 func (agent *Agent) runSensorTracker(ctx context.Context) {
-	log.Debug().Caller().Msg("Starting sensor tracker.")
 	registryPath, err := agent.extraStoragePath("sensorRegistry")
 	if err != nil {
-		log.Debug().Err(err).
-			Msg("Unable to store registry on disk, trying in-memory store.")
+		log.Warn().Err(err).
+			Msg("Unable to store registry on disk, will attempt in-memory store.")
 	}
 
 	sensorTracker = tracker.NewSensorTracker(ctx, registryPath.Path())
 	if sensorTracker == nil {
-		log.Debug().Msg("Unable to create a sensor tracker.")
+		log.Error().Msg("Unable to create a sensor tracker.")
 		return
 	}
 	updateCh := make(chan interface{})
@@ -39,11 +38,11 @@ func (agent *Agent) runSensorTracker(ctx context.Context) {
 			case location.Update:
 				go location.SendUpdate(ctx, data)
 			default:
-				log.Debug().Caller().
+				log.Warn().
 					Msgf("Got unexpected status update %v", data)
 			}
 		case <-ctx.Done():
-			log.Debug().Caller().
+			log.Debug().
 				Msg("Stopping sensor tracking.")
 			return
 		}

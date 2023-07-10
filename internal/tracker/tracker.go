@@ -25,8 +25,8 @@ type SensorTracker struct {
 func NewSensorTracker(ctx context.Context, path string) *SensorTracker {
 	db, err := NewNutsDB(ctx, path)
 	if err != nil {
-		log.Debug().Err(err).
-			Msg("Could not open database.")
+		log.Error().Err(err).
+			Msg("Could not open registry database.")
 		return nil
 	}
 	return &SensorTracker{
@@ -66,7 +66,7 @@ func (tracker *SensorTracker) StartWorkers(ctx context.Context, updateCh chan in
 	// Run all the defined sensor update functions.
 	deviceAPI, err := device.FetchAPIFromContext(ctx)
 	if err != nil {
-		log.Debug().Caller().Err(err).
+		log.Error().Err(err).
 			Msg("Could not fetch sensor workers.")
 		return
 	}
