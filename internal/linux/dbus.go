@@ -68,8 +68,8 @@ func newBus(ctx context.Context, t dbusType) *bus {
 		conn, err = dbus.ConnectSystemBus(dbus.WithContext(ctx))
 	}
 	if err != nil {
-		log.Error().Stack().Err(err).
-			Msg("Could not connect to bus")
+		log.Error().Err(err).
+			Msgf("Could not connect to %s bus.", t.String())
 		return nil
 	} else {
 		bus := &bus{
@@ -102,8 +102,9 @@ type busRequest struct {
 func NewBusRequest(ctx context.Context, busType dbusType) *busRequest {
 	deviceAPI, err := device.FetchAPIFromContext(ctx)
 	if err != nil {
-		log.Debug().Err(err).Caller().
-			Msg("Could not connect to DBus.")
+		log.Error().Err(err).
+			Msg("Could not retrieve device API from context.")
+		return nil
 	}
 	dbusAPI := device.GetAPIEndpoint[*bus](deviceAPI, busType.String())
 	return &busRequest{
@@ -149,7 +150,7 @@ func (r *busRequest) GetProp(prop string) (dbus.Variant, error) {
 		obj := r.bus.conn.Object(r.dest, r.path)
 		res, err := obj.GetProperty(prop)
 		if err != nil {
-			log.Debug().Caller().Err(err).
+			log.Warn().Err(err).
 				Msgf("Unable to retrieve property %s (%s)", prop, r.dest)
 			return dbus.MakeVariant(""), err
 		}
@@ -180,13 +181,12 @@ func (r *busRequest) GetData(method string, args ...interface{}) *dbusData {
 			err = obj.Call(method, 0).Store(&d.data)
 		}
 		if err != nil {
-			log.Debug().Err(err).Caller().
+			log.Warn().Err(err).
 				Msgf("Unable to execute %s on %s (args: %s)", method, r.dest, args)
 		}
 		return d
 	} else {
-		log.Debug().Caller().
-			Msgf("no bus connection")
+		log.Error().Msg("No bus connection.")
 		return d
 	}
 }
@@ -210,7 +210,7 @@ func (r *busRequest) AddWatch(ctx context.Context) error {
 	if err := r.bus.conn.AddMatchSignalContext(ctx, r.match...); err != nil {
 		return err
 	} else {
-		log.Debug().Caller().
+		log.Trace().Caller().
 			Msgf("Adding watch on %s for %s", r.path, r.event)
 		r.bus.matchRequests <- signalMatcher{
 			match:   string(r.path),
@@ -279,8 +279,8 @@ func variantToValue[S any](variant dbus.Variant) S {
 	var value S
 	err := variant.Store(&value)
 	if err != nil {
-		log.Debug().Err(err).
-			Msgf("Unable to convert dbus variant to type.")
+		log.Warn().Err(err).
+			Msgf("Unable to convert dbus variant %v to type %T.", variant, value)
 		return value
 	}
 	return value
