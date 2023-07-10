@@ -131,16 +131,14 @@ func (agent *Agent) sensorsWindow(ctx context.Context) {
 			Msg("List of sensors is invalid.")
 	}
 	for k := range sensorList {
-		// TODO fetch from hass Config
-		// if state, err := sensorTracker.Get(k); err == nil {
-		entityNames = append(entityNames, k)
-		tableData = append(tableData,
-			[]string{
-				k,
-				fmt.Sprintf("%v %s",
-					"TBA", "TBA"),
-			})
-		// }
+		if sensor, err := sensorTracker.Get(k); err == nil {
+			entityNames = append(entityNames, k)
+			tableData = append(tableData,
+				[]string{
+					k,
+					fmt.Sprintf("%v %s", sensor.State(), sensor.Units()),
+				})
+		}
 	}
 
 	longestName := longestString(entityNames)
