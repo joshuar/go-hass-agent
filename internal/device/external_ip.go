@@ -100,7 +100,7 @@ func lookupExternalIPs(ctx context.Context) []*address {
 	ip6 := &address{}
 
 	for host, addr := range ipLookupHosts {
-		log.Debug().Caller().
+		log.Trace().Caller().
 			Msgf("Trying to find external IP addresses with %s", host)
 		for ver, url := range addr {
 			var s string
@@ -108,10 +108,10 @@ func lookupExternalIPs(ctx context.Context) []*address {
 				URL(url).
 				ToString(&s).
 				Fetch(ctx)
-			log.Debug().Caller().
+			log.Trace().Caller().
 				Msgf("Fetching %s address from %s", ver, url)
 			if err != nil {
-				log.Debug().Caller().Err(err).
+				log.Warn().Err(err).
 					Msgf("Unable to retrieve external %s address", ver)
 			} else {
 				s = strings.TrimSpace(s)
@@ -127,7 +127,7 @@ func lookupExternalIPs(ctx context.Context) []*address {
 	}
 	// At this point, we've gone through all IP checkers and not found an
 	// external address
-	log.Debug().Caller().Msg("Couldn't retrieve any external IP address.")
+	log.Warn().Msg("Couldn't retrieve *any* external IP address.")
 	return nil
 }
 
@@ -155,9 +155,9 @@ func ExternalIPUpdater(ctx context.Context, status chan interface{}) {
 		for {
 			select {
 			case <-ctx.Done():
-				return
+				return	
 			case <-ticker.C:
-				log.Debug().Caller().Msg("Checking for external IP update...")
+				log.Trace().Caller().Msg("Checking for external IP update...")
 				updateExternalIP()
 			}
 		}
