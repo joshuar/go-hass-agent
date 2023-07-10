@@ -17,7 +17,6 @@ linters:
     - funlen
     - forcetypeassert
     - goconst
-    - ireturn
     - nakedret
   fast: true
 
