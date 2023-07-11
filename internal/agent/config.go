@@ -8,6 +8,7 @@ package agent
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/url"
 	"time"
 
@@ -23,67 +24,74 @@ const (
 	webHookPath   = "/api/webhook/"
 )
 
-func (agent *Agent) AppConfigVersion() string {
-	return agent.app.Preferences().String("Version")
-}
-
-func (agent *Agent) DeviceDetails() (string, string) {
-	return agent.app.Preferences().String("DeviceName"),
-		agent.app.Preferences().String("DeviceID")
-}
-
-func (agent *Agent) IsRegistered() bool {
-	return agent.app.Preferences().BoolWithFallback("Registered", false)
-}
-
-func (agent *Agent) SetPref(pref string, value interface{}) {
-	if v, ok := value.(string); ok {
-		agent.app.Preferences().SetString(pref, v)
-		return
-	}
-	if v, ok := value.(bool); ok {
-		agent.app.Preferences().SetBool(pref, v)
-		return
-	}
+type config interface {
+	Get(string) (string, error)
+	Set(string, string) error
 }
 
 type agentConfig struct {
-	prefs     fyne.Preferences
-	validator *validator.Validate
+	prefs fyne.Preferences
 }
 
 func (agent *Agent) LoadConfig() *agentConfig {
 	return &agentConfig{
-		prefs:     agent.app.Preferences(),
-		validator: validator.New(),
+		prefs: agent.app.Preferences(),
 	}
 }
 
-func (c *agentConfig) Validate() error {
-	var err error
-
-	if c.validator.Var(c.prefs.String(settings.ApiURL), "required,url") != nil {
-		return errors.New("apiURL does not match either a URL, hostname or hostname:port")
+func (c *agentConfig) Get(key string) (string, error) {
+	value := c.prefs.StringWithFallback(key, "NOTSET")
+	if value == "NOTSET" {
+		return "", errors.New("key not set")
 	}
+	return value, nil
+}
 
-	if c.validator.Var(c.prefs.String(settings.WebsocketURL), "required,url") != nil {
-		return errors.New("websocketURL does not match either a URL, hostname or hostname:port")
-	}
-
-	if err = c.validator.Var(c.prefs.String(settings.Token), "required,ascii"); err != nil {
-		return errors.New("invalid long-lived token format")
-	}
-
-	if err = c.validator.Var(c.prefs.String(settings.WebhookID), "required,ascii"); err != nil {
-		return errors.New("invalid webhookID format")
-	}
-
+func (c *agentConfig) Set(key, value string) error {
+	c.prefs.SetString(key, value)
 	return nil
 }
 
-func (c *agentConfig) Refresh(ctx context.Context) error {
-	log.Debug().Caller().
-		Msg("Agent config does not support refresh.")
+func ValidateConfig(c config) error {
+	validator := validator.New()
+
+	validate := func(key, rules, errMsg string) error {
+		value, err := c.Get(key)
+		if err != nil {
+			return fmt.Errorf("unable to retrieve %s from config", key)
+		}
+		err = validator.Var(value, rules)
+		if err != nil {
+			return errors.New(errMsg)
+		}
+		return nil
+	}
+
+	if err := validate(settings.ApiURL,
+		"required,url",
+		"apiURL does not match either a URL, hostname or hostname:port",
+	); err != nil {
+		return err
+	}
+	if err := validate(settings.WebsocketURL,
+		"required,url",
+		"websocketURL does not match either a URL, hostname or hostname:port",
+	); err != nil {
+		return err
+	}
+	if err := validate(settings.Token,
+		"required,ascii",
+		"invalid long-lived token format",
+	); err != nil {
+		return err
+	}
+	if err := validate(settings.WebhookID,
+		"required,ascii",
+		"invalid webhookID format",
+	); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -161,12 +169,21 @@ func (c *agentConfig) generateAPIURL() {
 	c.prefs.SetString("ApiURL", apiURL)
 }
 
-func (c *agentConfig) StoreSettings(ctx context.Context) context.Context {
+func StoreSettings(ctx context.Context, c config) context.Context {
 	s := settings.NewSettings()
-	s.SetValue(settings.ApiURL, c.prefs.String(settings.ApiURL))
-	s.SetValue(settings.WebsocketURL, c.prefs.String(settings.WebsocketURL))
-	s.SetValue(settings.Secret, c.prefs.String(settings.Secret))
-	s.SetValue(settings.WebhookID, c.prefs.String(settings.WebhookID))
-	s.SetValue(settings.Token, c.prefs.String(settings.Token))
+	set := func(key string) {
+		value, err := c.Get(key)
+		if err != nil {
+			log.Warn().Err(err).Msgf("Unable to retrieve %s from config.", key)
+		}
+		if err := s.SetValue(key, value); err != nil {
+			log.Warn().Err(err).Msgf("Unable to set %s in settings.", key)
+		}
+	}
+	set(settings.ApiURL)
+	set(settings.WebsocketURL)
+	set(settings.Secret)
+	set(settings.WebhookID)
+	set(settings.Token)
 	return settings.StoreInContext(ctx, s)
 }

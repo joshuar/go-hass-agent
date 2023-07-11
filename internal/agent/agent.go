@@ -82,11 +82,11 @@ func Run(options AgentOptions) {
 		if err := appConfig.Upgrade(); err != nil {
 			log.Warn().Err(err).Msg("Could not upgrade config.")
 		}
-		if err := appConfig.Validate(); err != nil {
+		if err := ValidateConfig(appConfig); err != nil {
 			log.Fatal().Err(err).Msg("Invalid config. Cannot start.")
 		}
 		// Store relevant settings from appConfig in a new context for workers
-		agentWorkerCtx := appConfig.StoreSettings(agentCtx)
+		agentWorkerCtx := StoreSettings(agentCtx, appConfig)
 		// Start all the sensor and notification workers as appropriate
 		if !options.Headless {
 			workerWg.Add(1)
@@ -156,6 +156,19 @@ func ShowInfo(options AgentOptions) {
 	deviceName, deviceID := agent.DeviceDetails()
 	log.Info().Msgf("Device Name %s. Device ID %s.", deviceName, deviceID)
 
+}
+
+func (agent *Agent) DeviceDetails() (string, string) {
+	return agent.app.Preferences().String("DeviceName"),
+		agent.app.Preferences().String("DeviceID")
+}
+
+func (agent *Agent) IsRegistered() bool {
+	return agent.app.Preferences().BoolWithFallback("Registered", false)
+}
+
+func (agent *Agent) SetRegistered(value bool) {
+	agent.app.Preferences().SetBool("Registered", value)
 }
 
 func (agent *Agent) extraStoragePath(id string) (fyne.URI, error) {
