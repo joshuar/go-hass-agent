@@ -80,17 +80,16 @@ func (agent *Agent) setupSystemTray(ctx context.Context) {
 
 func (agent *Agent) aboutWindow(ctx context.Context) {
 	deviceName, deviceID := agent.DeviceDetails()
-	hassConfig, err := hass.NewHassConfig(ctx)
+	haVersion, err := hass.GetVersion(ctx)
 	if err != nil {
-		log.Error().Err(err).
-			Msg("Unable to fetch updated config from Home Assistant.")
+		log.Warn().Err(err).
+			Msg("Unable to version of Home Assistant.")
 		return
 	}
-	hassVersion, _ := hassConfig.Get("version")
 	w := agent.app.NewWindow(agent.setTitle("About"))
 	w.SetContent(container.New(layout.NewVBoxLayout(),
 		widget.NewLabel(translator.Translate(
-			"App Version: %s\tHA Version: %s", agent.Version, hassVersion)),
+			"App Version: %s\tHA Version: %s", agent.Version, haVersion)),
 		widget.NewLabel(translator.Translate(
 			"Device Name: "+deviceName)),
 		widget.NewLabel(translator.Translate(
@@ -112,24 +111,18 @@ func (agent *Agent) settingsWindow() {
 func (agent *Agent) sensorsWindow(ctx context.Context) {
 	var tableData [][]string
 	var entityNames []string
-	hassConfig, err := hass.NewHassConfig(ctx)
-	if err != nil {
-		log.Error().Err(err).
-			Msg("Unable to fetch updated config from Home Assistant.")
-		return
-	}
-	s, err := hassConfig.Get("entities")
+	entities, err := hass.GetRegisteredEntities(ctx)
 	if err != nil {
 		log.Warn().Err(err).
-			Msg("Could not get entities from config.")
+			Msg("Could not get registered entities list from Home Assistant.")
 		return
 	}
-	sensorList, ok := s.(map[string]map[string]interface{})
-	if !ok {
-		log.Warn().Err(err).
-			Msg("List of sensors is invalid.")
+	if entities == nil {
+		log.Warn().
+			Msg("No registered entities in Home Assistant.")
+		return
 	}
-	for k := range sensorList {
+	for k := range entities {
 		if sensor, err := sensorTracker.Get(k); err == nil {
 			entityNames = append(entityNames, k)
 			tableData = append(tableData,
@@ -139,9 +132,7 @@ func (agent *Agent) sensorsWindow(ctx context.Context) {
 				})
 		}
 	}
-
 	longestName := longestString(entityNames)
-
 	list := widget.NewTable(
 		func() (int, int) {
 			return len(tableData), len(tableData[0])

@@ -10,12 +10,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"sync"
 
 	"github.com/joshuar/go-hass-agent/internal/api"
 	"github.com/perimeterx/marshmallow"
-	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -23,13 +21,13 @@ const (
 	webHookPath   = "/api/webhook/"
 )
 
-type HassConfig struct {
+type haConfig struct {
 	rawConfigProps map[string]interface{}
-	hassConfigProps
+	haConfigProps
 	mu sync.Mutex
 }
 
-type hassConfigProps struct {
+type haConfigProps struct {
 	Entities   map[string]map[string]interface{} `json:"entities"`
 	UnitSystem struct {
 		Length      string `json:"length"`
@@ -48,48 +46,18 @@ type hassConfigProps struct {
 	Longitude             float64  `json:"longitude"`
 }
 
-func NewHassConfig(ctx context.Context) (*HassConfig, error) {
-	c := &HassConfig{}
-	if err := c.Refresh(ctx); err != nil {
-		return nil, err
-	}
-	return c, nil
-}
-
-func (h *HassConfig) GetEntityState(entity string) map[string]interface{} {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	if v, ok := h.Entities[entity]; ok {
-		return v
-	}
-	return nil
-}
-
-func (h *HassConfig) IsEntityDisabled(entity string) bool {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	if v, ok := h.Entities[entity]["disabled"]; ok {
-		if disabledState, ok := v.(bool); !ok {
-			return false
-		} else {
-			return disabledState
-		}
-	}
-	return false
-}
-
 // HassConfig implements hass.Request so that it can be sent as a request to HA
 // to get its data.
 
-func (h *HassConfig) RequestType() api.RequestType {
+func (h *haConfig) RequestType() api.RequestType {
 	return api.RequestTypeGetConfig
 }
 
-func (h *HassConfig) RequestData() json.RawMessage {
+func (h *haConfig) RequestData() json.RawMessage {
 	return nil
 }
 
-func (h *HassConfig) ResponseHandler(resp bytes.Buffer, respCh chan api.Response) {
+func (h *haConfig) ResponseHandler(resp bytes.Buffer, respCh chan api.Response) {
 	if resp.Bytes() == nil {
 		err := errors.New("no response returned")
 		response := api.NewGenericResponse(err, api.RequestTypeGetConfig)
@@ -97,7 +65,7 @@ func (h *HassConfig) ResponseHandler(resp bytes.Buffer, respCh chan api.Response
 		return
 	}
 	h.mu.Lock()
-	result, err := marshmallow.Unmarshal(resp.Bytes(), &h.hassConfigProps)
+	result, err := marshmallow.Unmarshal(resp.Bytes(), &h.haConfigProps)
 	if err != nil {
 		response := api.NewGenericResponse(err, api.RequestTypeGetConfig)
 		respCh <- response
@@ -109,29 +77,8 @@ func (h *HassConfig) ResponseHandler(resp bytes.Buffer, respCh chan api.Response
 	respCh <- response
 }
 
-// HassConfig implements config.Config
-
-func (c *HassConfig) Get(property string) (interface{}, error) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	if value, ok := c.rawConfigProps[property]; ok {
-		return value, nil
-	} else {
-		return nil, fmt.Errorf("config does not have an option %s", property)
-	}
-}
-
-func (c *HassConfig) Set(property string, value interface{}) error {
-	log.Debug().Caller().Msg("Hass configuration is not settable.")
-	return nil
-}
-
-func (c *HassConfig) Validate() error {
-	log.Debug().Caller().Msg("Hass configuration has no validation.")
-	return nil
-}
-
-func (h *HassConfig) Refresh(ctx context.Context) error {
+func getConfig(ctx context.Context) (*haConfig, error) {
+	h := new(haConfig)
 	respCh := make(chan api.Response, 1)
 	defer close(respCh)
 	var wg sync.WaitGroup
@@ -142,13 +89,40 @@ func (h *HassConfig) Refresh(ctx context.Context) error {
 	}()
 	response := <-respCh
 	if response.Error() != nil {
-		return response.Error()
+		return nil, response.Error()
 	}
-
-	return nil
+	return h, nil
 }
 
-func (h *HassConfig) Upgrade() error {
-	log.Debug().Caller().Msg("Hass configuration has no upgrades.")
-	return nil
+func GetRegisteredEntities(ctx context.Context) (map[string]map[string]interface{}, error) {
+	config, err := getConfig(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return config.Entities, nil
+}
+
+func IsEntityDisabled(ctx context.Context, entity string) (bool, error) {
+	config, err := getConfig(ctx)
+	if err != nil {
+		return false, err
+	}
+	config.mu.Lock()
+	defer config.mu.Unlock()
+	if v, ok := config.Entities[entity]["disabled"]; ok {
+		if disabledState, ok := v.(bool); !ok {
+			return false, nil
+		} else {
+			return disabledState, nil
+		}
+	}
+	return false, nil
+}
+
+func GetVersion(ctx context.Context) (string, error) {
+	config, err := getConfig(ctx)
+	if err != nil {
+		return "", err
+	}
+	return config.Version, nil
 }
