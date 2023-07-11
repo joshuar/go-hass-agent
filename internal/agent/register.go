@@ -15,6 +15,7 @@ import (
 
 	"github.com/grandcat/zeroconf"
 	"github.com/joshuar/go-hass-agent/internal/hass"
+	"github.com/joshuar/go-hass-agent/internal/settings"
 	"github.com/rs/zerolog/log"
 
 	"fyne.io/fyne/v2"
@@ -122,35 +123,35 @@ func (agent *Agent) registrationWindow(ctx context.Context, registration *hass.R
 // request and the successful response in the agent preferences. This includes,
 // most importantly, details on the URL that should be used to send subsequent
 // requests to Home Assistant.
-func (agent *Agent) saveRegistration(r *hass.RegistrationResponse, h *hass.RegistrationDetails) {
+func (agent *Agent) saveRegistration(r *hass.RegistrationResponse, h *hass.RegistrationDetails, c config) {
 	providedHost, _ := h.Server.Get()
 	hostURL, _ := url.Parse(providedHost)
-	agent.SetPref("Host", hostURL.String())
+	c.Set("Host", hostURL.String())
 
 	token, _ := h.Token.Get()
-	agent.SetPref("Token", token)
+	c.Set(settings.Token, token)
 
 	if r.CloudhookURL != "" {
-		agent.SetPref("CloudhookURL", r.CloudhookURL)
+		c.Set("CloudhookURL", r.CloudhookURL)
 	}
 	if r.RemoteUIURL != "" {
-		agent.SetPref("RemoteUIURL", r.RemoteUIURL)
+		c.Set("RemoteUIURL", r.RemoteUIURL)
 	}
 	if r.Secret != "" {
-		agent.SetPref("Secret", r.Secret)
+		c.Set(settings.Secret, r.Secret)
 	}
 	if r.WebhookID != "" {
-		agent.SetPref("WebhookID", r.WebhookID)
+		c.Set(settings.WebhookID, r.WebhookID)
 	}
-	agent.SetPref("ApiURL", r.GenerateAPIURL(providedHost))
-	agent.SetPref("WebSocketURL", r.GenerateWebsocketURL(providedHost))
+	c.Set(settings.ApiURL, r.GenerateAPIURL(providedHost))
+	c.Set(settings.WebsocketURL, r.GenerateWebsocketURL(providedHost))
 
-	agent.SetPref("DeviceName", h.Device.DeviceName())
-	agent.SetPref("DeviceID", h.Device.AppID())
+	c.Set("DeviceName", h.Device.DeviceName())
+	c.Set("DeviceID", h.Device.AppID())
 
-	agent.SetPref("Registered", true)
+	agent.SetRegistered(true)
 
-	agent.SetPref("Version", agent.Version)
+	c.Set("Version", agent.Version)
 
 	registryPath, err := agent.extraStoragePath("sensorRegistry")
 	if err != nil {
@@ -173,7 +174,7 @@ func (agent *Agent) registerWithUI(ctx context.Context, registration *hass.Regis
 	if !registration.Validate() {
 		return nil, errors.New("registration details not complete")
 	}
-	return hass.RegisterWithHass(registration)
+	return hass.RegisterWithHass(ctx, registration)
 }
 
 // registerWithoutUI handles a registration flow without any graphical interface
@@ -183,7 +184,7 @@ func (agent *Agent) registerWithoutUI(ctx context.Context, registration *hass.Re
 		log.Debug().Msg("Registration details not complete.")
 		return nil, errors.New("registration details not complete")
 	}
-	return hass.RegisterWithHass(registration)
+	return hass.RegisterWithHass(ctx, registration)
 }
 
 func (agent *Agent) registrationProcess(ctx context.Context, server, token string, force, headless bool, done chan struct{}) {
@@ -191,7 +192,7 @@ func (agent *Agent) registrationProcess(ctx context.Context, server, token strin
 	// If the agent isn't registered but the config is valid, set the agent as
 	// registered and continue execution. Required check for versions upgraded
 	// from v1.2.6 and below.
-	if !agent.IsRegistered() && appConfig.Validate() == nil {
+	if !agent.IsRegistered() && ValidateConfig(appConfig) == nil {
 		appConfig.prefs.SetBool("Registered", true)
 		close(done)
 	}
@@ -212,7 +213,7 @@ func (agent *Agent) registrationProcess(ctx context.Context, server, token strin
 			log.Fatal().Err(err).Msg("Could not register device with Home Assistant.")
 		}
 
-		agent.saveRegistration(registrationResponse, registration)
+		agent.saveRegistration(registrationResponse, registration, appConfig)
 	}
 
 	close(done)

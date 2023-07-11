@@ -95,7 +95,7 @@ type RegistrationRequest struct {
 	SupportsEncryption bool        `json:"supports_encryption"`
 }
 
-func RegisterWithHass(registration *RegistrationDetails) (*RegistrationResponse, error) {
+func RegisterWithHass(ctx context.Context, registration *RegistrationDetails) (*RegistrationResponse, error) {
 	request, err := registration.Device.MarshalJSON()
 	if err != nil {
 		return nil, err
@@ -109,7 +109,7 @@ func RegisterWithHass(registration *RegistrationDetails) (*RegistrationResponse,
 	url = url.JoinPath("/api/mobile_app/registrations")
 
 	var response *RegistrationResponse
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
 	err = requests.
 		URL(url.String()).

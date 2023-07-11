@@ -6,6 +6,7 @@
 package hass
 
 import (
+	"context"
 	"reflect"
 	"testing"
 
@@ -244,6 +245,7 @@ func TestRegistrationResponse_GenerateWebsocketURL(t *testing.T) {
 
 func TestRegisterWithHass(t *testing.T) {
 	type args struct {
+		ctx          context.Context
 		registration *RegistrationDetails
 	}
 	tests := []struct {
@@ -256,7 +258,7 @@ func TestRegisterWithHass(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := RegisterWithHass(tt.args.registration)
+			got, err := RegisterWithHass(tt.args.ctx, tt.args.registration)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("RegisterWithHass() error = %v, wantErr %v", err, tt.wantErr)
 				return
