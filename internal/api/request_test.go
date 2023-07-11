@@ -16,7 +16,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/joshuar/go-hass-agent/internal/config"
+	"github.com/joshuar/go-hass-agent/internal/settings"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -162,14 +162,14 @@ func TestExecuteRequest(t *testing.T) {
 	server := mockServer(t)
 	defer server.Close()
 
-	goodMockConfig := newTestConfig()
-	goodMockConfig.Set("apiURL", server.URL)
-	goodMockConfig.Set("secret", "aSecret")
-	goodCtx := config.StoreInContext(context.Background(), goodMockConfig)
+	goodSettings := settings.NewSettings()
+	goodSettings.SetValue("apiURL", server.URL)
+	goodSettings.SetValue("secret", "aSecret")
+	goodCtx := settings.StoreInContext(context.Background(), goodSettings)
 
-	badMockConfig := newTestConfig()
-	badMockConfig.Set("apiURL", server.URL)
-	badCtx := config.StoreInContext(context.Background(), badMockConfig)
+	badSettings := settings.NewSettings()
+	badSettings.SetValue("apiURL", server.URL)
+	badCtx := settings.StoreInContext(context.Background(), badSettings)
 
 	type args struct {
 		ctx        context.Context
@@ -236,17 +236,18 @@ func TestExecuteRequest(t *testing.T) {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
+				defer close(tt.args.responseCh)
+				resp := <-tt.args.responseCh
+				if err := resp.Error(); (err != nil) != tt.wantErr {
+					t.Errorf("api.TestExecuteRequest() error = %v, wantErr %v", err, tt.wantErr)
+				}
+			}()
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
 				ExecuteRequest(tt.args.ctx, tt.args.request, tt.args.responseCh)
 			}()
-			// wg.Add(1)
-			// go func() {
-			// 	defer wg.Done()
-			// defer close(tt.args.responseCh)
-			resp := <-tt.args.responseCh
-			if err := resp.Error(); (err != nil) != tt.wantErr {
-				t.Errorf("api.TestExecuteRequest() error = %v, wantErr %v", err, tt.wantErr)
-			}
-			// }()
+			wg.Wait()
 		})
 	}
 }

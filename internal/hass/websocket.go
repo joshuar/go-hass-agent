@@ -8,13 +8,12 @@ package hass
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"sync/atomic"
 	"time"
 
 	"fyne.io/fyne/v2"
 	"github.com/cenkalti/backoff/v4"
-	"github.com/joshuar/go-hass-agent/internal/config"
+	"github.com/joshuar/go-hass-agent/internal/settings"
 	"github.com/rs/zerolog/log"
 
 	"github.com/lxzan/gws"
@@ -61,13 +60,13 @@ func StartWebsocket(ctx context.Context, notifyCh chan fyne.Notification, doneCh
 }
 
 func tryWebsocketConnect(ctx context.Context, notifyCh chan fyne.Notification, doneCh chan struct{}) (*gws.Conn, error) {
-	url, err := config.FetchPropertyFromContext(ctx, "websocketURL")
+	s, err := settings.FetchFromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
-	urlString, ok := url.(string)
-	if !ok {
-		return nil, errors.New("web socket URL is invalid")
+	url, err := s.GetValue("websocketURL")
+	if err != nil {
+		return nil, err
 	}
 
 	ctxConnect, cancelConnect := context.WithTimeout(ctx, time.Minute)
@@ -77,7 +76,7 @@ func tryWebsocketConnect(ctx context.Context, notifyCh chan fyne.Notification, d
 
 	retryFunc := func() error {
 		socket, _, err = gws.NewClient(NewWebsocket(ctx, notifyCh, doneCh), &gws.ClientOption{
-			Addr: urlString,
+			Addr: url,
 		})
 		if err != nil {
 			log.Error().Err(err).
@@ -110,20 +109,17 @@ type WebSocket struct {
 }
 
 func NewWebsocket(ctx context.Context, notifyCh chan fyne.Notification, doneCh chan struct{}) *WebSocket {
-	token, err := config.FetchPropertyFromContext(ctx, "token")
+	s, err := settings.FetchFromContext(ctx)
 	if err != nil {
 		return nil
 	}
-	tokenString, ok := token.(string)
-	if !ok {
-		return nil
-	}
-	webhookID, err := config.FetchPropertyFromContext(ctx, "webhookID")
+
+	token, err := s.GetValue("token")
 	if err != nil {
 		return nil
 	}
-	webhookIDString, ok := webhookID.(string)
-	if !ok {
+	webhookID, err := s.GetValue("webhookID")
+	if err != nil {
 		return nil
 	}
 
@@ -131,8 +127,8 @@ func NewWebsocket(ctx context.Context, notifyCh chan fyne.Notification, doneCh c
 	ws := &WebSocket{
 		ReadCh:     make(chan *webSocketData),
 		WriteCh:    make(chan *webSocketData),
-		token:      tokenString,
-		webhookID:  webhookIDString,
+		token:      token,
+		webhookID:  webhookID,
 		cancelFunc: wsCancel,
 		doneCh:     doneCh,
 	}
