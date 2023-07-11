@@ -9,100 +9,7 @@ import (
 	"context"
 	"reflect"
 	"testing"
-
-	"fyne.io/fyne/v2/data/binding"
-	"github.com/stretchr/testify/assert"
 )
-
-func TestRegistrationDetails_Validate(t *testing.T) {
-	mockDeviceInfo := &DeviceInfoMock{}
-
-	type fields struct {
-		Server string
-		Token  string
-		Device DeviceInfo
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   bool
-	}{
-		{
-			name: "hostname",
-			fields: fields{
-				Server: "localhost",
-				Token:  "abcde.abcde_abcde",
-				Device: mockDeviceInfo,
-			},
-			want: false,
-		},
-		{
-			name: "hostname and port",
-			fields: fields{
-				Server: "localhost:8123",
-				Token:  "abcde.abcde_abcde",
-				Device: mockDeviceInfo,
-			},
-			want: false,
-		},
-		{
-			name: "url",
-			fields: fields{
-				Server: "http://localhost",
-				Token:  "abcde.abcde_abcde",
-				Device: mockDeviceInfo,
-			},
-			want: true,
-		},
-		{
-			name: "url with port",
-			fields: fields{
-				Server: "http://localhost:8123",
-				Token:  "abcde.abcde_abcde",
-				Device: mockDeviceInfo,
-			},
-			want: true,
-		},
-		{
-			name: "url with trailing slash",
-			fields: fields{
-				Server: "http://localhost/",
-				Token:  "abcde.abcde_abcde",
-				Device: mockDeviceInfo,
-			},
-			want: true,
-		},
-		{
-			name: "invalid url",
-			fields: fields{
-				Server: "asdegasg://localhost//",
-				Token:  "abcde.abcde_abcde",
-				Device: mockDeviceInfo,
-			},
-			want: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var err error
-			server := binding.NewString()
-			err = server.Set(tt.fields.Server)
-			assert.Nil(t, err)
-			token := binding.NewString()
-			err = token.Set(tt.fields.Server)
-			assert.Nil(t, err)
-
-			r := &RegistrationDetails{
-				Server: server,
-				Token:  token,
-				Device: tt.fields.Device,
-			}
-			if got := r.Validate(); got != tt.want {
-				t.Errorf("RegistrationDetails.Validate() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
 
 func TestRegistrationResponse_GenerateAPIURL(t *testing.T) {
 	type fields struct {
@@ -246,7 +153,8 @@ func TestRegistrationResponse_GenerateWebsocketURL(t *testing.T) {
 func TestRegisterWithHass(t *testing.T) {
 	type args struct {
 		ctx          context.Context
-		registration *RegistrationDetails
+		registration RegistrationInfo
+		device       DeviceInfo
 	}
 	tests := []struct {
 		name    string
@@ -258,7 +166,7 @@ func TestRegisterWithHass(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := RegisterWithHass(tt.args.ctx, tt.args.registration)
+			got, err := RegisterWithHass(tt.args.ctx, tt.args.registration, tt.args.device)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("RegisterWithHass() error = %v, wantErr %v", err, tt.wantErr)
 				return
