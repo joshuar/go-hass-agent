@@ -7,37 +7,16 @@ package hass
 
 import (
 	"context"
+	"errors"
 	"net/url"
 	"time"
 
-	"fyne.io/fyne/v2/data/binding"
 	"github.com/carlmjohnson/requests"
-	"github.com/go-playground/validator/v10"
 )
 
-type RegistrationDetails struct {
-	Server, Token binding.String
-	Device        DeviceInfo
-}
-
-func (r *RegistrationDetails) Validate() bool {
-	validate := validator.New()
-	check := func(value string, validation string) bool {
-		if err := validate.Var(value, validation); err != nil {
-			return false
-		}
-		return true
-	}
-	if server, _ := r.Server.Get(); !check(server, "required,http_url") {
-		return false
-	}
-	if token, _ := r.Token.Get(); !check(token, "required") {
-		return false
-	}
-	if r.Device == nil {
-		return false
-	}
-	return true
+type RegistrationInfo interface {
+	Server() string
+	Token() string
 }
 
 type RegistrationResponse struct {
@@ -95,25 +74,27 @@ type RegistrationRequest struct {
 	SupportsEncryption bool        `json:"supports_encryption"`
 }
 
-func RegisterWithHass(ctx context.Context, registration *RegistrationDetails) (*RegistrationResponse, error) {
-	request, err := registration.Device.MarshalJSON()
+func RegisterWithHass(ctx context.Context, registration RegistrationInfo, device DeviceInfo) (*RegistrationResponse, error) {
+	request, err := device.MarshalJSON()
 	if err != nil {
 		return nil, err
 	}
-	token, _ := registration.Token.Get()
-	host, _ := registration.Server.Get()
-	url, err := url.Parse(host)
+	url, err := url.Parse(registration.Server())
 	if err != nil {
 		return nil, err
 	}
 	url = url.JoinPath("/api/mobile_app/registrations")
+
+	if registration.Token() == "" {
+		return nil, errors.New("invalid token")
+	}
 
 	var response *RegistrationResponse
 	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
 	err = requests.
 		URL(url.String()).
-		Header("Authorization", "Bearer "+token).
+		Header("Authorization", "Bearer "+registration.Token()).
 		BodyBytes(request).
 		ToJSON(&response).
 		Fetch(ctx)

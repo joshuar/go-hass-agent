@@ -24,33 +24,67 @@ import (
 	"fyne.io/fyne/v2/data/validation"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
-	validate "github.com/go-playground/validator/v10"
+	"github.com/go-playground/validator/v10"
 )
+
+type RegistrationDetails struct {
+	serverBinding, tokenBinding binding.String
+}
+
+func (r *RegistrationDetails) Server() string {
+	if s, err := r.serverBinding.Get(); err != nil {
+		return s
+	}
+	return ""
+}
+
+func (r *RegistrationDetails) Token() string {
+	if s, err := r.tokenBinding.Get(); err != nil {
+		return s
+	}
+	return ""
+}
+
+func (r *RegistrationDetails) Validate() bool {
+	validate := validator.New()
+	check := func(value string, validation string) bool {
+		if err := validate.Var(value, validation); err != nil {
+			return false
+		}
+		return true
+	}
+	if server, _ := r.serverBinding.Get(); !check(server, "required,http_url") {
+		return false
+	}
+	if token, _ := r.tokenBinding.Get(); !check(token, "required") {
+		return false
+	}
+	return true
+}
 
 // newRegistration creates a hass.RegistrationDetails object that contains
 // information about both the Home Assistant server and the device running the
 // agent needed to register the agent with Home Assistant.
-func (agent *Agent) newRegistration(ctx context.Context, server, token string) *hass.RegistrationDetails {
+func newRegistration(server, token string) *RegistrationDetails {
 	checkSet := func(value string, pref binding.String) {
 		if err := pref.Set(value); err != nil {
 			log.Warn().Err(err).
 				Msgf("Could not set preference to provided value: %s", value)
 		}
 	}
-	registrationInfo := &hass.RegistrationDetails{
-		Server: binding.NewString(),
-		Token:  binding.NewString(),
-		Device: agent.setupDevice(ctx),
+	registrationInfo := &RegistrationDetails{
+		serverBinding: binding.NewString(),
+		tokenBinding:  binding.NewString(),
 	}
 	u, err := url.Parse(server)
 	if err != nil {
 		log.Warn().Err(err).
 			Msg("Cannot parse provided URL. Ignoring")
 	} else {
-		checkSet(u.Host, registrationInfo.Server)
+		checkSet(u.Host, registrationInfo.serverBinding)
 	}
 	if token != "" {
-		checkSet(token, registrationInfo.Token)
+		checkSet(token, registrationInfo.tokenBinding)
 	}
 	return registrationInfo
 }
@@ -58,23 +92,23 @@ func (agent *Agent) newRegistration(ctx context.Context, server, token string) *
 // registrationWindow displays a UI to prompt the user for the details needed to
 // complete registration. It will populate with any values that were already
 // provided via the command-line.
-func (agent *Agent) registrationWindow(ctx context.Context, registration *hass.RegistrationDetails, done chan struct{}) {
+func (agent *Agent) registrationWindow(ctx context.Context, registration *RegistrationDetails, done chan struct{}) {
 	s := findServers(ctx)
 	allServers, _ := s.Get()
 
 	w := agent.app.NewWindow(translator.Translate("App Registration"))
 
-	tokenSelect := widget.NewEntryWithData(registration.Token)
+	tokenSelect := widget.NewEntryWithData(registration.tokenBinding)
 	tokenSelect.Validator = validation.NewRegexp("[A-Za-z0-9_\\.]+", "Invalid token format")
 
 	autoServerSelect := widget.NewSelect(allServers, func(s string) {
-		if err := registration.Server.Set(s); err != nil {
+		if err := registration.serverBinding.Set(s); err != nil {
 			log.Debug().Err(err).
 				Msg("Could not set server pref to selected value.")
 		}
 	})
 
-	manualServerEntry := widget.NewEntryWithData(registration.Server)
+	manualServerEntry := widget.NewEntryWithData(registration.serverBinding)
 	manualServerEntry.Validator = hostValidator()
 	manualServerEntry.Disable()
 	manualServerSelect := widget.NewCheck("", func(b bool) {
@@ -123,12 +157,12 @@ func (agent *Agent) registrationWindow(ctx context.Context, registration *hass.R
 // request and the successful response in the agent preferences. This includes,
 // most importantly, details on the URL that should be used to send subsequent
 // requests to Home Assistant.
-func (agent *Agent) saveRegistration(r *hass.RegistrationResponse, h *hass.RegistrationDetails, c config) {
-	providedHost, _ := h.Server.Get()
+func (agent *Agent) saveRegistration(r *hass.RegistrationResponse, h *RegistrationDetails, c config, d hass.DeviceInfo) {
+	providedHost, _ := h.serverBinding.Get()
 	hostURL, _ := url.Parse(providedHost)
 	c.Set("Host", hostURL.String())
 
-	token, _ := h.Token.Get()
+	token, _ := h.tokenBinding.Get()
 	c.Set(settings.Token, token)
 
 	if r.CloudhookURL != "" {
@@ -146,8 +180,8 @@ func (agent *Agent) saveRegistration(r *hass.RegistrationResponse, h *hass.Regis
 	c.Set(settings.ApiURL, r.GenerateAPIURL(providedHost))
 	c.Set(settings.WebsocketURL, r.GenerateWebsocketURL(providedHost))
 
-	c.Set("DeviceName", h.Device.DeviceName())
-	c.Set("DeviceID", h.Device.AppID())
+	c.Set("DeviceName", d.DeviceName())
+	c.Set("DeviceID", d.DeviceID())
 
 	agent.SetRegistered(true)
 
@@ -166,34 +200,13 @@ func (agent *Agent) saveRegistration(r *hass.RegistrationResponse, h *hass.Regis
 	time.Sleep(110 * time.Millisecond)
 }
 
-// registerWithUI handles a registration flow via a graphical interface
-func (agent *Agent) registerWithUI(ctx context.Context, registration *hass.RegistrationDetails) (*hass.RegistrationResponse, error) {
-	done := make(chan struct{})
-	agent.registrationWindow(ctx, registration, done)
-	<-done
-	if !registration.Validate() {
-		return nil, errors.New("registration details not complete")
-	}
-	return hass.RegisterWithHass(ctx, registration)
-}
-
-// registerWithoutUI handles a registration flow without any graphical interface
-// (using values provided via the command-line).
-func (agent *Agent) registerWithoutUI(ctx context.Context, registration *hass.RegistrationDetails) (*hass.RegistrationResponse, error) {
-	if !registration.Validate() {
-		log.Debug().Msg("Registration details not complete.")
-		return nil, errors.New("registration details not complete")
-	}
-	return hass.RegisterWithHass(ctx, registration)
-}
-
 func (agent *Agent) registrationProcess(ctx context.Context, server, token string, force, headless bool, done chan struct{}) {
 	appConfig := agent.LoadConfig()
 	// If the agent isn't registered but the config is valid, set the agent as
 	// registered and continue execution. Required check for versions upgraded
 	// from v1.2.6 and below.
 	if !agent.IsRegistered() && ValidateConfig(appConfig) == nil {
-		appConfig.prefs.SetBool("Registered", true)
+		agent.SetRegistered(true)
 		close(done)
 	}
 	// If the app is not registered, run a registration flow
@@ -201,19 +214,21 @@ func (agent *Agent) registrationProcess(ctx context.Context, server, token strin
 		log.Info().Msg("Registration required. Starting registration process.")
 		// The app is registered, continue (config check performed later).
 
-		registration := agent.newRegistration(ctx, server, token)
-		var registrationResponse *hass.RegistrationResponse
-		var err error
-		if headless {
-			registrationResponse, err = agent.registerWithoutUI(ctx, registration)
-		} else {
-			registrationResponse, err = agent.registerWithUI(ctx, registration)
+		registration := newRegistration(server, token)
+		device := agent.setupDevice(ctx)
+		if !headless {
+			done := make(chan struct{})
+			agent.registrationWindow(ctx, registration, done)
+			<-done
 		}
+		if !registration.Validate() {
+			log.Fatal().Msg("Registration details not valid.")
+		}
+		registrationResponse, err := hass.RegisterWithHass(ctx, registration, device)
 		if err != nil {
-			log.Fatal().Err(err).Msg("Could not register device with Home Assistant.")
+			log.Fatal().Err(err).Msg("Could not register with Home Assistant.")
 		}
-
-		agent.saveRegistration(registrationResponse, registration, appConfig)
+		agent.saveRegistration(registrationResponse, registration, appConfig, device)
 	}
 
 	close(done)
@@ -272,7 +287,7 @@ func findServers(ctx context.Context) binding.StringList {
 // hostValidator is a custom fyne validator that will validate a string is a
 // valid hostname:port combination
 func hostValidator() fyne.StringValidator {
-	v := validate.New()
+	v := validator.New()
 	return func(text string) error {
 		if v.Var(text, "http_url") != nil {
 			return errors.New("you need to specify a valid url")
