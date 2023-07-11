@@ -11,6 +11,14 @@ import (
 	"sync"
 )
 
+const (
+	ApiURL       = "ApiURL"
+	WebsocketURL = "WebSocketURL"
+	Token        = "Token"
+	WebhookID    = "WebhookID"
+	Secret       = "secret"
+)
+
 type Settings struct {
 	mu     sync.RWMutex
 	values map[string]string

@@ -62,19 +62,19 @@ func (agent *Agent) LoadConfig() *agentConfig {
 func (c *agentConfig) Validate() error {
 	var err error
 
-	if c.validator.Var(c.prefs.String("ApiURL"), "required,url") != nil {
+	if c.validator.Var(c.prefs.String(settings.ApiURL), "required,url") != nil {
 		return errors.New("apiURL does not match either a URL, hostname or hostname:port")
 	}
 
-	if c.validator.Var(c.prefs.String("WebSocketURL"), "required,url") != nil {
+	if c.validator.Var(c.prefs.String(settings.WebsocketURL), "required,url") != nil {
 		return errors.New("websocketURL does not match either a URL, hostname or hostname:port")
 	}
 
-	if err = c.validator.Var(c.prefs.String("Token"), "required,ascii"); err != nil {
+	if err = c.validator.Var(c.prefs.String(settings.Token), "required,ascii"); err != nil {
 		return errors.New("invalid long-lived token format")
 	}
 
-	if err = c.validator.Var(c.prefs.String("WebhookID"), "required,ascii"); err != nil {
+	if err = c.validator.Var(c.prefs.String(settings.WebhookID), "required,ascii"); err != nil {
 		return errors.New("invalid webhookID format")
 	}
 
@@ -137,13 +137,13 @@ func (c *agentConfig) generateWebsocketURL() {
 		url.Scheme = "ws"
 	}
 	url = url.JoinPath(websocketPath)
-	c.prefs.SetString("WebSocketURL", url.String())
+	c.prefs.SetString(settings.WebsocketURL, url.String())
 }
 
 func (c *agentConfig) generateAPIURL() {
 	cloudhookURL := c.prefs.String("CloudhookURL")
 	remoteUIURL := c.prefs.String("RemoteUIURL")
-	webhookID := c.prefs.String("WebhookID")
+	webhookID := c.prefs.String(settings.WebhookID)
 	host := c.prefs.String("Host")
 	var apiURL string
 	switch {
@@ -163,10 +163,10 @@ func (c *agentConfig) generateAPIURL() {
 
 func (c *agentConfig) StoreSettings(ctx context.Context) context.Context {
 	s := settings.NewSettings()
-	s.SetValue("apiURL", c.prefs.String("ApiURL"))
-	s.SetValue("webSocketURL", c.prefs.String("WebSocketURL"))
-	s.SetValue("secret", c.prefs.String("Secret"))
-	s.SetValue("webhookID", c.prefs.String("WebHookID"))
-	s.SetValue("token", c.prefs.String("Token"))
+	s.SetValue(settings.ApiURL, c.prefs.String(settings.ApiURL))
+	s.SetValue(settings.WebsocketURL, c.prefs.String(settings.WebsocketURL))
+	s.SetValue(settings.Secret, c.prefs.String(settings.Secret))
+	s.SetValue(settings.WebhookID, c.prefs.String(settings.WebhookID))
+	s.SetValue(settings.Token, c.prefs.String(settings.Token))
 	return settings.StoreInContext(ctx, s)
 }

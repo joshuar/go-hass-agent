@@ -163,12 +163,12 @@ func TestExecuteRequest(t *testing.T) {
 	defer server.Close()
 
 	goodSettings := settings.NewSettings()
-	goodSettings.SetValue("apiURL", server.URL)
-	goodSettings.SetValue("secret", "aSecret")
+	goodSettings.SetValue(settings.ApiURL, server.URL)
+	goodSettings.SetValue(settings.Secret, "aSecret")
 	goodCtx := settings.StoreInContext(context.Background(), goodSettings)
 
 	badSettings := settings.NewSettings()
-	badSettings.SetValue("apiURL", server.URL)
+	badSettings.SetValue(settings.ApiURL, server.URL)
 	badCtx := settings.StoreInContext(context.Background(), badSettings)
 
 	type args struct {
