@@ -67,7 +67,7 @@ type EncryptedRequest struct {
 func ExecuteRequest(ctx context.Context, request Request, responseCh chan Response) {
 	var res bytes.Buffer
 
-	settings, err := settings.FetchFromContext(ctx)
+	settingsStore, err := settings.FetchFromContext(ctx)
 	if err != nil {
 		responseCh <- NewGenericResponse(err, request.RequestType())
 		return
@@ -75,7 +75,7 @@ func ExecuteRequest(ctx context.Context, request Request, responseCh chan Respon
 
 	var secret string
 	if request.RequestType() == RequestTypeEncrypted {
-		s, err := settings.GetValue("secret")
+		s, err := settingsStore.GetValue(settings.Secret)
 		if err != nil {
 			responseCh <- NewGenericResponse(err, request.RequestType())
 			return
@@ -86,7 +86,7 @@ func ExecuteRequest(ctx context.Context, request Request, responseCh chan Respon
 	}
 
 	var url string
-	u, err := settings.GetValue("apiURL")
+	u, err := settingsStore.GetValue(settings.ApiURL)
 	if err != nil {
 		responseCh <- NewGenericResponse(err, request.RequestType())
 		return

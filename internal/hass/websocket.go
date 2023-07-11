@@ -64,7 +64,7 @@ func tryWebsocketConnect(ctx context.Context, notifyCh chan fyne.Notification, d
 	if err != nil {
 		return nil, err
 	}
-	url, err := s.GetValue("websocketURL")
+	url, err := s.GetValue(settings.WebsocketURL)
 	if err != nil {
 		return nil, err
 	}
@@ -114,11 +114,11 @@ func NewWebsocket(ctx context.Context, notifyCh chan fyne.Notification, doneCh c
 		return nil
 	}
 
-	token, err := s.GetValue("token")
+	token, err := s.GetValue(settings.Token)
 	if err != nil {
 		return nil
 	}
-	webhookID, err := s.GetValue("webhookID")
+	webhookID, err := s.GetValue(settings.WebhookID)
 	if err != nil {
 		return nil
 	}
