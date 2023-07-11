@@ -85,59 +85,58 @@ func (tracker *SensorTracker) StartWorkers(ctx context.Context, updateCh chan in
 // Update will send a sensor update to HA, checking to ensure the sensor is not
 // disabled. It will also update the local registry state based on the response.
 func (tracker *SensorTracker) Update(ctx context.Context, sensorUpdate Sensor) {
-	hassConfig, err := hass.NewHassConfig(ctx)
+	isDisabled, err := hass.IsEntityDisabled(ctx, sensorUpdate.ID())
 	if err != nil {
 		log.Warn().Err(err).
-			Msg("Unable to fetch updated config from Home Assistant.")
+			Msgf("Unable to check disabled state for sensor %s in Home Assistant.", sensorUpdate.ID())
 		return
 	}
-	if hassConfig.IsEntityDisabled(sensorUpdate.ID()) {
-		log.Debug().Msgf("Received sensor update for disabled sensor %s.", sensorUpdate.ID())
+	if isDisabled {
+		return
+	}
+	var wg sync.WaitGroup
+	var req api.Request
+	if tracker.registry.IsRegistered(sensorUpdate.ID()) {
+		req = MarshalSensorUpdate(sensorUpdate)
 	} else {
-		var wg sync.WaitGroup
-		var req api.Request
-		if tracker.registry.IsRegistered(sensorUpdate.ID()) {
-			req = MarshalSensorUpdate(sensorUpdate)
+		req = MarshalSensorRegistration(sensorUpdate)
+	}
+	responseCh := make(chan api.Response, 1)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		api.ExecuteRequest(ctx, req, responseCh)
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		defer close(responseCh)
+		response := <-responseCh
+		if response.Error() != nil {
+			log.Error().Err(response.Error()).
+				Msgf("Failed to send sensor %s data to Home Assistant", sensorUpdate.Name())
 		} else {
-			req = MarshalSensorRegistration(sensorUpdate)
-		}
-		responseCh := make(chan api.Response, 1)
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			api.ExecuteRequest(ctx, req, responseCh)
-		}()
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			defer close(responseCh)
-			response := <-responseCh
-			if response.Error() != nil {
-				log.Error().Err(response.Error()).
-					Msgf("Failed to send sensor %s data to Home Assistant", sensorUpdate.Name())
-			} else {
-				log.Debug().
-					Msgf("Sensor %s updated (%s). State is now: %v %s",
-						sensorUpdate.Name(),
-						sensorUpdate.ID(),
-						sensorUpdate.State(),
-						sensorUpdate.Units())
-				if err := tracker.add(sensorUpdate); err != nil {
-					log.Warn().Err(err).
-						Msgf("Unable to add state for sensor %s to tracker.", sensorUpdate.Name())
-				}
-				if response.Type() == api.RequestTypeUpdateSensorStates && response.Disabled() {
-					if err := tracker.registry.SetDisabled(sensorUpdate.ID(), true); err != nil {
-						log.Warn().Err(err).Msgf("Unable to set %s as disabled in registry.", sensorUpdate.Name())
-					}
-				}
-				if response.Type() == api.RequestTypeRegisterSensor && response.Registered() {
-					log.Debug().Msgf("Sensor %s (%s) registered in Home Assistant.", sensorUpdate.Name(), sensorUpdate.ID())
-					if err := tracker.registry.SetRegistered(sensorUpdate.ID(), true); err != nil {
-						log.Warn().Err(err).Msgf("Unable to set %s as registered in registry.", sensorUpdate.Name())
-					}
+			log.Debug().
+				Msgf("Sensor %s updated (%s). State is now: %v %s",
+					sensorUpdate.Name(),
+					sensorUpdate.ID(),
+					sensorUpdate.State(),
+					sensorUpdate.Units())
+			if err := tracker.add(sensorUpdate); err != nil {
+				log.Warn().Err(err).
+					Msgf("Unable to add state for sensor %s to tracker.", sensorUpdate.Name())
+			}
+			if response.Type() == api.RequestTypeUpdateSensorStates && response.Disabled() {
+				if err := tracker.registry.SetDisabled(sensorUpdate.ID(), true); err != nil {
+					log.Warn().Err(err).Msgf("Unable to set %s as disabled in registry.", sensorUpdate.Name())
 				}
 			}
-		}()
-	}
+			if response.Type() == api.RequestTypeRegisterSensor && response.Registered() {
+				log.Debug().Msgf("Sensor %s (%s) registered in Home Assistant.", sensorUpdate.Name(), sensorUpdate.ID())
+				if err := tracker.registry.SetRegistered(sensorUpdate.ID(), true); err != nil {
+					log.Warn().Err(err).Msgf("Unable to set %s as registered in registry.", sensorUpdate.Name())
+				}
+			}
+		}
+	}()
 }
