@@ -15,7 +15,6 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/storage"
-	"github.com/joshuar/go-hass-agent/internal/config"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/joshuar/go-hass-agent/internal/translations"
@@ -86,8 +85,8 @@ func Run(options AgentOptions) {
 		if err := appConfig.Validate(); err != nil {
 			log.Fatal().Err(err).Msg("Invalid config. Cannot start.")
 		}
-		// Store the config in a new context for workers
-		agentWorkerCtx := config.StoreInContext(agentCtx, appConfig)
+		// Store relevant settings from appConfig in a new context for workers
+		agentWorkerCtx := appConfig.StoreSettings(agentCtx)
 		// Start all the sensor and notification workers as appropriate
 		if !options.Headless {
 			workerWg.Add(1)

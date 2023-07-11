@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/carlmjohnson/requests"
-	"github.com/joshuar/go-hass-agent/internal/config"
+	"github.com/joshuar/go-hass-agent/internal/settings"
 )
 
 //go:generate stringer -type=RequestType -output requestType.go -linecomment
@@ -67,42 +67,31 @@ type EncryptedRequest struct {
 func ExecuteRequest(ctx context.Context, request Request, responseCh chan Response) {
 	var res bytes.Buffer
 
+	settings, err := settings.FetchFromContext(ctx)
+	if err != nil {
+		responseCh <- NewGenericResponse(err, request.RequestType())
+		return
+	}
+
 	var secret string
 	if request.RequestType() == RequestTypeEncrypted {
-		s, err := config.FetchPropertyFromContext(ctx, "secret")
+		s, err := settings.GetValue("secret")
 		if err != nil {
 			responseCh <- NewGenericResponse(err, request.RequestType())
 			return
 		}
-		secretStr, ok := s.(string)
-		if !ok {
-			err = errors.New("secret is invalid")
-		}
-		if secretStr == "" {
-			err = errors.New("secret is empty")
-		}
-		if err != nil {
-			responseCh <- NewGenericResponse(err, request.RequestType())
-			return
-		}
-		secret = secretStr
+		secret = s
 	} else {
 		secret = ""
 	}
 
 	var url string
-	u, err := config.FetchPropertyFromContext(ctx, "apiURL")
+	u, err := settings.GetValue("apiURL")
 	if err != nil {
 		responseCh <- NewGenericResponse(err, request.RequestType())
 		return
 	} else {
-		urlString, ok := u.(string)
-		if !ok {
-			err := errors.New("API URL does not appear to be valid")
-			responseCh <- NewGenericResponse(err, request.RequestType())
-			return
-		}
-		url = urlString
+		url = u
 	}
 
 	reqJson, err := marshalJSON(request, secret)

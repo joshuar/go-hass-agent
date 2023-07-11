@@ -192,10 +192,7 @@ func (agent *Agent) registrationProcess(ctx context.Context, server, token strin
 	// registered and continue execution. Required check for versions upgraded
 	// from v1.2.6 and below.
 	if !agent.IsRegistered() && appConfig.Validate() == nil {
-		if err := appConfig.Set("Registered", true); err != nil {
-			log.Warn().Err(err).
-				Msg("Unable to set registration as successful.")
-		}
+		appConfig.prefs.SetBool("Registered", true)
 		close(done)
 	}
 	// If the app is not registered, run a registration flow

@@ -8,12 +8,12 @@ package agent
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/url"
 	"time"
 
 	"fyne.io/fyne/v2"
 	"github.com/go-playground/validator/v10"
+	"github.com/joshuar/go-hass-agent/internal/settings"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/mod/semver"
 )
@@ -59,64 +59,22 @@ func (agent *Agent) LoadConfig() *agentConfig {
 	}
 }
 
-// agentConfig implements config.Config
-
-func (c *agentConfig) Get(property string) (interface{}, error) {
-	switch property {
-	case "version":
-		return c.prefs.StringWithFallback("Version", Version), nil
-	case "websocketURL":
-		return c.prefs.String("WebSocketURL"), nil
-	case "apiURL":
-		return c.prefs.String("ApiURL"), nil
-	case "token":
-		return c.prefs.String("Token"), nil
-	case "webhookID":
-		return c.prefs.String("WebhookID"), nil
-	case "secret":
-		return c.prefs.String("Secret"), nil
-	case "host":
-		return c.prefs.String("Host"), nil
-	case "useTLS":
-		return c.prefs.Bool("UseTLS"), nil
-	default:
-		return nil, fmt.Errorf("unknown config property %s", property)
-	}
-}
-
-func (c *agentConfig) Set(property string, value interface{}) error {
-	if v, ok := value.(string); ok {
-		c.prefs.SetString(property, v)
-		return nil
-	}
-	if v, ok := value.(bool); ok {
-		c.prefs.SetBool(property, v)
-		return nil
-	}
-	return fmt.Errorf("could not set property %s with value %v", property, value)
-}
-
 func (c *agentConfig) Validate() error {
-	var value interface{}
 	var err error
 
-	value, _ = c.Get("apiURL")
-	if c.validator.Var(value, "required,url") != nil {
+	if c.validator.Var(c.prefs.String("ApiURL"), "required,url") != nil {
 		return errors.New("apiURL does not match either a URL, hostname or hostname:port")
 	}
 
-	value, _ = c.Get("websocketURL")
-	if c.validator.Var(value, "required,url") != nil {
+	if c.validator.Var(c.prefs.String("WebSocketURL"), "required,url") != nil {
 		return errors.New("websocketURL does not match either a URL, hostname or hostname:port")
 	}
 
-	value, _ = c.Get("token")
-	if err = c.validator.Var(value, "required,ascii"); err != nil {
+	if err = c.validator.Var(c.prefs.String("Token"), "required,ascii"); err != nil {
 		return errors.New("invalid long-lived token format")
 	}
 
-	value, _ = c.Get("webhookID")
-	if err = c.validator.Var(value, "required,ascii"); err != nil {
+	if err = c.validator.Var(c.prefs.String("WebhookID"), "required,ascii"); err != nil {
 		return errors.New("invalid webhookID format")
 	}
 
@@ -130,55 +88,35 @@ func (c *agentConfig) Refresh(ctx context.Context) error {
 }
 
 func (c *agentConfig) Upgrade() error {
-	configVersion, err := c.Get("version")
-	if err != nil {
-		return err
-	}
-	versionString, ok := configVersion.(string)
-	if !ok {
+	configVersion := c.prefs.String("Version")
+
+	if configVersion == "" {
 		return errors.New("config version is not a valid value")
 	}
 	switch {
 	// * Upgrade host to include scheme for versions < v.1.4.0
-	case semver.Compare(versionString, "v1.4.0") < 0:
+	case semver.Compare(configVersion, "v1.4.0") < 0:
 		log.Debug().Msg("Performing config upgrades for < v1.4.0")
-		hostValue, err := c.Get("host")
-		if err != nil {
-			return err
-		}
-		hostString, ok := hostValue.(string)
-		if !ok {
+		hostString := c.prefs.String("Host")
+		if hostString == "" {
 			return errors.New("upgrade < v.1.4.0: invalid host value")
 		}
-		tlsValue, err := c.Get("useTLS")
-		if err != nil {
-			return err
-		}
-		if useTLS, ok := tlsValue.(bool); !ok {
+		switch c.prefs.Bool("UseTLS") {
+		case true:
+			hostString = "https://" + hostString
+		case false:
 			hostString = "http://" + hostString
-		} else {
-			switch useTLS {
-			case true:
-				hostString = "https://" + hostString
-			case false:
-				hostString = "http://" + hostString
-			}
 		}
-		if err := c.Set("Host", hostString); err != nil {
-			return fmt.Errorf("upgrade < v.1.4.0: could not update host: %v", err)
-		}
+		c.prefs.SetString("Host", hostString)
 		fallthrough
 	// * Add ApiURL and WebSocketURL config options for versions < v1.4.3
-	case semver.Compare(versionString, "v1.4.3") < 0:
+	case semver.Compare(configVersion, "v1.4.3") < 0:
 		log.Debug().Msg("Performing config upgrades for < v1.4.3")
 		c.generateAPIURL()
 		c.generateWebsocketURL()
 	}
 
-	if err := c.Set("Version", Version); err != nil {
-		log.Debug().Err(err).
-			Msg("Unable to set new config version.")
-	}
+	c.prefs.SetString("Version", Version)
 
 	// ! https://github.com/fyne-io/fyne/issues/3170
 	time.Sleep(110 * time.Millisecond)
@@ -199,11 +137,7 @@ func (c *agentConfig) generateWebsocketURL() {
 		url.Scheme = "ws"
 	}
 	url = url.JoinPath(websocketPath)
-
-	if err := c.Set("WebSocketURL", url.String()); err != nil {
-		log.Error().Err(err).
-			Msg("Unable to generate web socket URL.")
-	}
+	c.prefs.SetString("WebSocketURL", url.String())
 }
 
 func (c *agentConfig) generateAPIURL() {
@@ -224,8 +158,15 @@ func (c *agentConfig) generateAPIURL() {
 	default:
 		apiURL = ""
 	}
-	if err := c.Set("ApiURL", apiURL); err != nil {
-		log.Error().Err(err).
-			Msg("Unable to generate API URL.")
-	}
+	c.prefs.SetString("ApiURL", apiURL)
+}
+
+func (c *agentConfig) StoreSettings(ctx context.Context) context.Context {
+	s := settings.NewSettings()
+	s.SetValue("apiURL", c.prefs.String("ApiURL"))
+	s.SetValue("webSocketURL", c.prefs.String("WebSocketURL"))
+	s.SetValue("secret", c.prefs.String("Secret"))
+	s.SetValue("webhookID", c.prefs.String("WebHookID"))
+	s.SetValue("token", c.prefs.String("Token"))
+	return settings.StoreInContext(ctx, s)
 }
