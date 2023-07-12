@@ -9,7 +9,6 @@ import (
 	bytes "bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -127,35 +126,6 @@ func (r *encReq) RequestData() json.RawMessage {
 func (r *encReq) ResponseHandler(b bytes.Buffer, resp chan Response) {
 	resp <- NewGenericResponse(nil, RequestTypeEncrypted)
 
-}
-
-type testConfig struct {
-	values map[string]string
-}
-
-func (t *testConfig) Get(s string) (interface{}, error) {
-	if value, ok := t.values[s]; !ok {
-		return nil, errors.New("not found")
-	} else {
-		return value, nil
-	}
-}
-
-func (t *testConfig) Set(s string, i interface{}) error {
-	t.values[s] = i.(string)
-	return nil
-}
-
-func (t *testConfig) Validate() error { return nil }
-
-func (t *testConfig) Refresh(ctx context.Context) error { return nil }
-
-func (t *testConfig) Upgrade() error { return nil }
-
-func newTestConfig() *testConfig {
-	return &testConfig{
-		values: make(map[string]string),
-	}
 }
 
 func TestExecuteRequest(t *testing.T) {
