@@ -86,9 +86,9 @@
             "fuzzy": true
         },
         {
-            "id": "App Version: {Version}\tHA Version: {HassVersion}",
-            "message": "App Version: {Version}\tHA Version: {HassVersion}",
-            "translation": "App Version: {Version}\tHA Version: {HassVersion}",
+            "id": "App Version: {Version}\tHA Version: {HaVersion}",
+            "message": "App Version: {Version}\tHA Version: {HaVersion}",
+            "translation": "App Version: {Version}\tHA Version: {HaVersion}",
             "translatorComment": "Copied from source.",
             "placeholders": [
                 {
@@ -100,12 +100,12 @@
                     "expr": "agent.Version"
                 },
                 {
-                    "id": "HassVersion",
+                    "id": "HaVersion",
                     "string": "%[2]s",
-                    "type": "interface{}",
-                    "underlyingType": "interface{}",
+                    "type": "string",
+                    "underlyingType": "string",
                     "argNum": 2,
-                    "expr": "hassVersion"
+                    "expr": "haVersion"
                 }
             ],
             "fuzzy": true
