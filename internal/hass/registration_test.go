@@ -7,8 +7,14 @@ package hass
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
+	"net/http"
+	"net/http/httptest"
 	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestRegistrationResponse_GenerateAPIURL(t *testing.T) {
@@ -151,6 +157,39 @@ func TestRegistrationResponse_GenerateWebsocketURL(t *testing.T) {
 }
 
 func TestRegisterWithHass(t *testing.T) {
+	okResponse := &RegistrationResponse{
+		CloudhookURL: "someURL",
+		RemoteUIURL:  "someURL",
+		Secret:       "",
+		WebhookID:    "someID",
+	}
+	okJson, err := json.Marshal(okResponse)
+	assert.Nil(t, err)
+
+	newMockServer := func(t *testing.T) *httptest.Server {
+		return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			w.Write(okJson)
+		}))
+	}
+	mockServer := newMockServer(t)
+
+	mockRegInfo := &RegistrationInfoMock{
+		TokenFunc:  func() string { return "aToken" },
+		ServerFunc: func() string { return mockServer.URL },
+	}
+	mockBadRegInfo := &RegistrationInfoMock{
+		TokenFunc:  func() string { return "aToken" },
+		ServerFunc: func() string { return "notaurl" },
+	}
+
+	mockDevInfo := &DeviceInfoMock{
+		MarshalJSONFunc: func() ([]byte, error) { return []byte(`{"AppName":"aDevice"}`), nil },
+	}
+	mockBadDevInfo := &DeviceInfoMock{
+		MarshalJSONFunc: func() ([]byte, error) { return nil, errors.New("bad device") },
+	}
+
 	type args struct {
 		ctx          context.Context
 		registration RegistrationInfo
@@ -162,7 +201,35 @@ func TestRegisterWithHass(t *testing.T) {
 		want    *RegistrationResponse
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		{
+			name: "successful test",
+			args: args{
+				ctx:          context.Background(),
+				registration: mockRegInfo,
+				device:       mockDevInfo,
+			},
+			want: okResponse,
+		},
+		{
+			name: "bad device",
+			args: args{
+				ctx:          context.Background(),
+				registration: mockRegInfo,
+				device:       mockBadDevInfo,
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "bad server url",
+			args: args{
+				ctx:          context.Background(),
+				registration: mockBadRegInfo,
+				device:       mockDevInfo,
+			},
+			want:    nil,
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

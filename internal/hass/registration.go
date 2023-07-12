@@ -14,6 +14,7 @@ import (
 	"github.com/carlmjohnson/requests"
 )
 
+//go:generate moq -out mock_RegistrationInfo_test.go . RegistrationInfo
 type RegistrationInfo interface {
 	Server() string
 	Token() string
