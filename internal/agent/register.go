@@ -27,6 +27,11 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
+const (
+	explainRegistration = `To register the agent, please enter the relevant details for your Home Assistant
+server (if not auto-detected) and long-lived access token.`
+)
+
 type RegistrationDetails struct {
 	serverBinding, tokenBinding binding.String
 }
@@ -102,7 +107,8 @@ func (agent *Agent) registrationWindow(ctx context.Context, registration *Regist
 	s := findServers(ctx)
 	allServers, _ := s.Get()
 
-	w := agent.app.NewWindow(translator.Translate("App Registration"))
+	agent.mainWindow.SetTitle(translator.Translate("App Registration"))
+	// w := agent.app.NewWindow()
 
 	tokenSelect := widget.NewEntryWithData(registration.tokenBinding)
 	tokenSelect.Validator = validation.NewRegexp("[A-Za-z0-9_\\.]+", "Invalid token format")
@@ -135,28 +141,30 @@ func (agent *Agent) registrationWindow(ctx context.Context, registration *Regist
 		widget.NewFormItem(translator.Translate("Manual Server Entry"), manualServerEntry),
 	)
 	form.OnSubmit = func() {
-		w.Close()
+		agent.mainWindow.Hide()
+		close(done)
 	}
 	form.OnCancel = func() {
+		log.Warn().Msg("Cancelling registration.")
+		close(done)
 		registration = nil
-		w.Close()
+		agent.mainWindow.Close()
 		ctx.Done()
 	}
 
-	w.SetContent(container.New(layout.NewVBoxLayout(),
+	agent.mainWindow.SetContent(container.New(layout.NewVBoxLayout(),
 		widget.NewLabel(
-			translator.Translate(
-				"As an initial step, this app will need to log into your Home Assistant server and register itself.\nPlease enter the relevant details for your Home Assistant server url/port and a long-lived access token.")),
+			translator.Translate(explainRegistration)),
 		form,
 	))
 
-	w.SetOnClosed(func() {
+	agent.mainWindow.SetOnClosed(func() {
+		log.Debug().Msg("Closed")
 		registration = nil
 		close(done)
 	})
 
-	w.Show()
-	w.Close()
+	agent.mainWindow.Show()
 }
 
 // saveRegistration stores the relevant information from the registration
@@ -218,6 +226,7 @@ func (agent *Agent) registrationProcess(ctx context.Context, server, token strin
 	// If the app is not registered, run a registration flow
 	if !agent.IsRegistered() || force {
 		log.Info().Msg("Registration required. Starting registration process.")
+		// agent.showFirstRunWindow(ctx)
 		// The app is registered, continue (config check performed later).
 
 		registration := newRegistration(server, token)
@@ -235,6 +244,7 @@ func (agent *Agent) registrationProcess(ctx context.Context, server, token strin
 			log.Fatal().Err(err).Msg("Could not register with Home Assistant.")
 		}
 		agent.saveRegistration(registrationResponse, registration, appConfig, device)
+		log.Info().Msg("Successfully registered agent.")
 	}
 
 	close(done)
