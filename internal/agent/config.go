@@ -39,6 +39,18 @@ func (agent *Agent) LoadConfig() *agentConfig {
 	}
 }
 
+func (c *agentConfig) WebSocketURL() string {
+	return c.prefs.String(settings.WebsocketURL)
+}
+
+func (c *agentConfig) WebhookID() string {
+	return c.prefs.String(settings.WebhookID)
+}
+
+func (c *agentConfig) Token() string {
+	return c.prefs.String(settings.Token)
+}
+
 func (c *agentConfig) Get(key string) (string, error) {
 	value := c.prefs.StringWithFallback(key, "NOTSET")
 	if value == "NOTSET" {
