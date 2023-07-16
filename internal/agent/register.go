@@ -32,17 +32,23 @@ type RegistrationDetails struct {
 }
 
 func (r *RegistrationDetails) Server() string {
-	if s, err := r.serverBinding.Get(); err != nil {
-		return s
+	var s string
+	var err error
+	if s, err = r.serverBinding.Get(); err != nil {
+		log.Warn().Err(err).Msg("Unable to retrieve server from registration details.")
+		return ""
 	}
-	return ""
+	return s
 }
 
 func (r *RegistrationDetails) Token() string {
-	if s, err := r.tokenBinding.Get(); err != nil {
-		return s
+	var s string
+	var err error
+	if s, err = r.tokenBinding.Get(); err != nil {
+		log.Warn().Err(err).Msg("Unable to retrieve token from registration details.")
+		return ""
 	}
-	return ""
+	return s
 }
 
 func (r *RegistrationDetails) Validate() bool {
