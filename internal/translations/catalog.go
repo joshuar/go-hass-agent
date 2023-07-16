@@ -38,37 +38,42 @@ func init() {
 }
 
 var messageKeyToIndex = map[string]int{
-	"%s: %s":                          14,
 	"About":                           6,
 	"App Registration":                0,
-	"App Version: %s\tHA Version: %s": 12,
-	"As an initial step, this app will need to log into your Home Assistant server and register itself.\nPlease enter the relevant details for your Home Assistant server url/port and a long-lived access token.": 5,
-	"Auto-discovered Servers": 2,
-	"Manual Server Entry":     4,
-	"Ok":                      13,
-	"Quit":                    11,
-	"Report Issue":            7,
-	"Request Feature":         8,
-	"Sensors":                 10,
-	"Settings":                9,
-	"Token":                   1,
-	"Use Custom Server?":      3,
+	"App Version: %s\tHA Version: %s": 15,
+	"Auto-discovered Servers":         2,
+	"First Run":                       12,
+	"Fyne Settings":                   16,
+	"Manual Server Entry":             4,
+	"Ok":                              14,
+	"Quit":                            11,
+	"Report Issue":                    7,
+	"Request Feature":                 8,
+	"Sensors":                         10,
+	"Settings":                        9,
+	"To register the agent, please enter the relevant details for your Home Assistant\nserver (if not auto-detected) and long-lived access token.": 5,
+	"Token":              1,
+	"Use Custom Server?": 3,
+	"Welcome to go-hass-agent. As this is the first run of the agent, a window will be displayed \nfor you to enter registration details. Please enter the required details, \nclick Submit and the agent should start running.": 13,
 }
 
-var enIndex = []uint32{ // 16 elements
+var enIndex = []uint32{ // 18 elements
 	0x00000000, 0x00000011, 0x00000017, 0x0000002f,
-	0x00000042, 0x00000056, 0x00000122, 0x00000128,
-	0x00000135, 0x00000145, 0x0000014e, 0x00000156,
-	0x0000015b, 0x00000180, 0x00000183, 0x00000190,
-} // Size: 88 bytes
+	0x00000042, 0x00000056, 0x000000e2, 0x000000e8,
+	0x000000f5, 0x00000105, 0x0000010e, 0x00000116,
+	0x0000011b, 0x00000125, 0x000001fe, 0x00000201,
+	0x00000226, 0x00000234,
+} // Size: 96 bytes
 
-const enData string = "" + // Size: 400 bytes
+const enData string = "" + // Size: 564 bytes
 	"\x02App Registration\x02Token\x02Auto-discovered Servers\x02Use Custom S" +
-	"erver?\x02Manual Server Entry\x02As an initial step, this app will need " +
-	"to log into your Home Assistant server and register itself.\x0aPlease en" +
-	"ter the relevant details for your Home Assistant server url/port and a l" +
-	"ong-lived access token.\x02About\x02Report Issue\x02Request Feature\x02S" +
-	"ettings\x02Sensors\x02Quit\x02App Version: %[1]s\x09HA Version: %[2]s" +
-	"\x02Ok\x02%[1]s: %[2]s"
+	"erver?\x02Manual Server Entry\x02To register the agent, please enter the" +
+	" relevant details for your Home Assistant\x0aserver (if not auto-detecte" +
+	"d) and long-lived access token.\x02About\x02Report Issue\x02Request Feat" +
+	"ure\x02Settings\x02Sensors\x02Quit\x02First Run\x02Welcome to go-hass-ag" +
+	"ent. As this is the first run of the agent, a window will be displayed " +
+	"\x0afor you to enter registration details. Please enter the required det" +
+	"ails, \x0aclick Submit and the agent should start running.\x02Ok\x02App " +
+	"Version: %[1]s\x09HA Version: %[2]s\x02Fyne Settings"
 
-	// Total table size 488 bytes (0KiB); checksum: A4215158
+	// Total table size 660 bytes (0KiB); checksum: BAF3672C
