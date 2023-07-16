@@ -67,32 +67,35 @@ type EncryptedRequest struct {
 func ExecuteRequest(ctx context.Context, request Request, responseCh chan Response) {
 	var res bytes.Buffer
 
-	settingsStore, err := settings.FetchFromContext(ctx)
-	if err != nil {
-		responseCh <- NewGenericResponse(err, request.RequestType())
-		return
-	}
+	// settingsStore, err := settings.FetchFromContext(ctx)
+	// if err != nil {
+	// 	responseCh <- NewGenericResponse(err, request.RequestType())
+	// 	return
+	// }
 
-	var secret string
-	if request.RequestType() == RequestTypeEncrypted {
-		s, err := settingsStore.GetValue(settings.Secret)
-		if err != nil {
-			responseCh <- NewGenericResponse(err, request.RequestType())
-			return
-		}
-		secret = s
-	} else {
-		secret = ""
-	}
+	// var secret string
+	// if request.RequestType() == RequestTypeEncrypted {
+	// 	s, err := settingsStore.GetValue(settings.Secret)
+	// 	if err != nil {
+	// 		responseCh <- NewGenericResponse(err, request.RequestType())
+	// 		return
+	// 	}
+	// 	secret = s
+	// } else {
+	// 	secret = ""
+	// }
 
-	var url string
-	u, err := settingsStore.GetValue(settings.ApiURL)
-	if err != nil {
-		responseCh <- NewGenericResponse(err, request.RequestType())
-		return
-	} else {
-		url = u
-	}
+	// var url string
+	// u, err := settingsStore.GetValue(settings.ApiURL)
+	// if err != nil {
+	// 	responseCh <- NewGenericResponse(err, request.RequestType())
+	// 	return
+	// } else {
+	// 	url = u
+	// }
+
+	url := settings.GetAPIURL()
+	secret := settings.GetSecret()
 
 	reqJson, err := marshalJSON(request, secret)
 	if err != nil {
