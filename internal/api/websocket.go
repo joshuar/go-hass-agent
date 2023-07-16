@@ -13,7 +13,6 @@ import (
 
 	"fyne.io/fyne/v2"
 	"github.com/cenkalti/backoff/v4"
-	"github.com/joshuar/go-hass-agent/internal/settings"
 	"github.com/rs/zerolog/log"
 
 	"github.com/lxzan/gws"
@@ -48,27 +47,10 @@ type websocketResponse struct {
 	Success bool   `json:"success,omitempty"`
 }
 
-func StartWebsocket(ctx context.Context, notifyCh chan fyne.Notification, doneCh chan struct{}) {
-	conn, err := tryWebsocketConnect(ctx, notifyCh, doneCh)
-	if err != nil {
-		log.Error().Err(err).
-			Msg("Could not connect to websocket.")
-		return
-	}
-	log.Trace().Caller().Msg("Websocket connection established.")
-	go conn.ReadLoop()
-}
+func StartWebsocket(ctx context.Context, settings config, notifyCh chan fyne.Notification, doneCh chan struct{}) {
+	// conn, err := tryWebsocketConnect(ctx, notifyCh, doneCh)
 
-func tryWebsocketConnect(ctx context.Context, notifyCh chan fyne.Notification, doneCh chan struct{}) (*gws.Conn, error) {
-	// s, err := settings.FetchFromContext(ctx)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// url, err := s.GetValue(settings.WebsocketURL)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	url := settings.GetWebSocketURL()
+	url := settings.WebSocketURL()
 
 	ctxConnect, cancelConnect := context.WithTimeout(ctx, time.Minute)
 	defer cancelConnect()
@@ -77,7 +59,7 @@ func tryWebsocketConnect(ctx context.Context, notifyCh chan fyne.Notification, d
 	var err error
 
 	retryFunc := func() error {
-		socket, _, err = gws.NewClient(NewWebsocket(ctx, notifyCh, doneCh), &gws.ClientOption{
+		socket, _, err = gws.NewClient(NewWebsocket(ctx, settings, notifyCh, doneCh), &gws.ClientOption{
 			Addr: url,
 		})
 		if err != nil {
@@ -90,9 +72,12 @@ func tryWebsocketConnect(ctx context.Context, notifyCh chan fyne.Notification, d
 	err = backoff.Retry(retryFunc, backoff.WithContext(backoff.NewExponentialBackOff(), ctxConnect))
 	if err != nil {
 		cancelConnect()
-		return nil, err
+		log.Error().Err(err).
+			Msg("Could not connect to websocket.")
+		return
 	}
-	return socket, nil
+	log.Trace().Caller().Msg("Websocket connection established.")
+	go socket.ReadLoop()
 }
 
 type webSocketData struct {
@@ -110,23 +95,10 @@ type WebSocket struct {
 	nextID     uint64
 }
 
-func NewWebsocket(ctx context.Context, notifyCh chan fyne.Notification, doneCh chan struct{}) *WebSocket {
-	// s, err := settings.FetchFromContext(ctx)
-	// if err != nil {
-	// 	return nil
-	// }
+func NewWebsocket(ctx context.Context, settings config, notifyCh chan fyne.Notification, doneCh chan struct{}) *WebSocket {
 
-	// token, err := s.GetValue(settings.Token)
-	// if err != nil {
-	// 	return nil
-	// }
-	// webhookID, err := s.GetValue(settings.WebhookID)
-	// if err != nil {
-	// 	return nil
-	// }
-
-	token := settings.GetToken()
-	webhookID := settings.GetWebhookID()
+	token := settings.Token()
+	webhookID := settings.WebhookID()
 
 	wsCtx, wsCancel := context.WithCancel(ctx)
 	ws := &WebSocket{
