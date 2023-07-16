@@ -9,7 +9,7 @@ import (
 	"context"
 
 	"fyne.io/fyne/v2"
-	"github.com/joshuar/go-hass-agent/internal/hass"
+	"github.com/joshuar/go-hass-agent/internal/api"
 	"github.com/rs/zerolog/log"
 )
 
@@ -22,12 +22,12 @@ func (agent *Agent) runNotificationsWorker(ctx context.Context, options AgentOpt
 	doneCh := make(chan struct{})
 	notifyCh := make(chan fyne.Notification)
 
-	hass.StartWebsocket(ctx, notifyCh, doneCh)
+	api.StartWebsocket(ctx, notifyCh, doneCh)
 	for {
 		select {
 		case <-doneCh:
 			doneCh = make(chan struct{})
-			hass.StartWebsocket(ctx, notifyCh, doneCh)
+			api.StartWebsocket(ctx, notifyCh, doneCh)
 		case <-ctx.Done():
 			log.Debug().Msg("Stopping notification handler.")
 			return
