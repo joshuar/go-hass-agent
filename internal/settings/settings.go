@@ -9,6 +9,8 @@ import (
 	"context"
 	"errors"
 	"sync"
+
+	"fyne.io/fyne/v2"
 )
 
 const (
@@ -69,4 +71,29 @@ func FetchFromContext(ctx context.Context) (*Settings, error) {
 	} else {
 		return c, nil
 	}
+}
+
+func GetAPIURL() string {
+	app := fyne.CurrentApp()
+	return app.Preferences().String(ApiURL)
+}
+
+func GetWebSocketURL() string {
+	app := fyne.CurrentApp()
+	return app.Preferences().String(WebsocketURL)
+}
+
+func GetToken() string {
+	app := fyne.CurrentApp()
+	return app.Preferences().String(Token)
+}
+
+func GetWebhookID() string {
+	app := fyne.CurrentApp()
+	return app.Preferences().String(WebhookID)
+}
+
+func GetSecret() string {
+	app := fyne.CurrentApp()
+	return app.Preferences().StringWithFallback(Secret, "")
 }

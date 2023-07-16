@@ -60,19 +60,21 @@ func StartWebsocket(ctx context.Context, notifyCh chan fyne.Notification, doneCh
 }
 
 func tryWebsocketConnect(ctx context.Context, notifyCh chan fyne.Notification, doneCh chan struct{}) (*gws.Conn, error) {
-	s, err := settings.FetchFromContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-	url, err := s.GetValue(settings.WebsocketURL)
-	if err != nil {
-		return nil, err
-	}
+	// s, err := settings.FetchFromContext(ctx)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// url, err := s.GetValue(settings.WebsocketURL)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	url := settings.GetWebSocketURL()
 
 	ctxConnect, cancelConnect := context.WithTimeout(ctx, time.Minute)
 	defer cancelConnect()
 
 	var socket *gws.Conn
+	var err error
 
 	retryFunc := func() error {
 		socket, _, err = gws.NewClient(NewWebsocket(ctx, notifyCh, doneCh), &gws.ClientOption{
@@ -109,19 +111,22 @@ type WebSocket struct {
 }
 
 func NewWebsocket(ctx context.Context, notifyCh chan fyne.Notification, doneCh chan struct{}) *WebSocket {
-	s, err := settings.FetchFromContext(ctx)
-	if err != nil {
-		return nil
-	}
+	// s, err := settings.FetchFromContext(ctx)
+	// if err != nil {
+	// 	return nil
+	// }
 
-	token, err := s.GetValue(settings.Token)
-	if err != nil {
-		return nil
-	}
-	webhookID, err := s.GetValue(settings.WebhookID)
-	if err != nil {
-		return nil
-	}
+	// token, err := s.GetValue(settings.Token)
+	// if err != nil {
+	// 	return nil
+	// }
+	// webhookID, err := s.GetValue(settings.WebhookID)
+	// if err != nil {
+	// 	return nil
+	// }
+
+	token := settings.GetToken()
+	webhookID := settings.GetWebhookID()
 
 	wsCtx, wsCancel := context.WithCancel(ctx)
 	ws := &WebSocket{
