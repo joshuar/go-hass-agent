@@ -23,8 +23,11 @@ import (
 )
 
 const (
-	issueURL          = "https://github.com/joshuar/go-hass-agent/issues/new?assignees=joshuar&labels=&template=bug_report.md&title=%5BBUG%5D"
-	featureRequestURL = "https://github.com/joshuar/go-hass-agent/issues/new?assignees=&labels=&template=feature_request.md&title="
+	issueURL          = `https://github.com/joshuar/go-hass-agent/issues/new?assignees=joshuar&labels=&template=bug_report.md&title=%5BBUG%5D`
+	featureRequestURL = `https://github.com/joshuar/go-hass-agent/issues/new?assignees=&labels=&template=feature_request.md&title=`
+	firstRunText      = `Welcome to go-hass-agent. As this is the first run of the agent, a window will be displayed 
+for you to enter registration details. Please enter the required details, 
+click Submit and the agent should start running.`
 )
 
 func newUI(appID string) fyne.App {
@@ -78,6 +81,16 @@ func (agent *Agent) setupSystemTray(ctx context.Context) {
 	}
 }
 
+func (agent *Agent) showFirstRunWindow(ctx context.Context) {
+	w := agent.app.NewWindow(translator.Translate("First Run"))
+	w.SetContent(container.NewVBox(
+		widget.NewLabel(translator.Translate(firstRunText)),
+		widget.NewButton(translator.Translate("Ok"), func() { w.Hide() })))
+	w.CenterOnScreen()
+	w.Show()
+	w.SetMaster()
+}
+
 func (agent *Agent) aboutWindow(ctx context.Context) {
 	deviceName, deviceID := agent.DeviceDetails()
 	haVersion, err := hass.GetVersion(ctx)
@@ -86,7 +99,7 @@ func (agent *Agent) aboutWindow(ctx context.Context) {
 			Msg("Unable to version of Home Assistant.")
 		return
 	}
-	w := agent.app.NewWindow(agent.setTitle("About"))
+	w := agent.app.NewWindow(translator.Translate("About"))
 	w.SetContent(container.New(layout.NewVBoxLayout(),
 		widget.NewLabel(translator.Translate(
 			"App Version: %s\tHA Version: %s", agent.Version, haVersion)),
@@ -103,12 +116,14 @@ func (agent *Agent) aboutWindow(ctx context.Context) {
 }
 
 func (agent *Agent) settingsWindow() {
-	w := agent.app.NewWindow(agent.setTitle("Fyne Settings"))
-	w.SetContent(settings.NewSettings().LoadAppearanceScreen(w))
-	w.Show()
+	agent.mainWindow.SetTitle(translator.Translate("Fyne Settings"))
+	agent.mainWindow.SetContent(settings.NewSettings().LoadAppearanceScreen(agent.mainWindow))
+	agent.mainWindow.Show()
 }
 
 func (agent *Agent) sensorsWindow(ctx context.Context) {
+	config := agent.LoadConfig()
+	ctx = StoreSettings(ctx, config)
 	var tableData [][]string
 	var entityNames []string
 	entities, err := hass.GetRegisteredEntities(ctx)
@@ -147,14 +162,10 @@ func (agent *Agent) sensorsWindow(ctx context.Context) {
 			}
 			label.SetText(tableData[i.Row][i.Col])
 		})
-	w := agent.app.NewWindow(agent.setTitle("Sensors"))
-	w.SetContent(list)
-	w.Resize(fyne.NewSize(480, 640))
-	w.Show()
-}
-
-func (agent *Agent) setTitle(s string) string {
-	return translator.Translate("%s: %s", agent.Name, s)
+	agent.mainWindow.SetTitle(translator.Translate("Sensors"))
+	agent.mainWindow.SetContent(list)
+	agent.mainWindow.Resize(fyne.NewSize(480, 640))
+	agent.mainWindow.Show()
 }
 
 func longestString(a []string) string {
