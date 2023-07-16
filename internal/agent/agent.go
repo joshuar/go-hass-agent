@@ -39,6 +39,7 @@ const (
 // strings such as app name and version.
 type Agent struct {
 	app           fyne.App
+	mainWindow    fyne.Window
 	done          chan struct{}
 	Name, Version string
 }
@@ -57,6 +58,7 @@ func newAgent(appID string) (context.Context, context.CancelFunc, *Agent) {
 		Version: Version,
 		done:    make(chan struct{}),
 	}
+	a.mainWindow = a.app.NewWindow(Name)
 	ctx, cancelfunc := context.WithCancel(context.Background())
 	ctx = linux.SetupContext(ctx)
 	a.setupLogging()
@@ -75,6 +77,7 @@ func Run(options AgentOptions) {
 	go agent.registrationProcess(agentCtx, "", "", options.Register, options.Headless, registrationDone)
 
 	var workerWg sync.WaitGroup
+
 	go func() {
 		<-registrationDone
 		// Load the config. If it is not valid, exit
@@ -86,24 +89,17 @@ func Run(options AgentOptions) {
 			log.Fatal().Err(err).Msg("Invalid config. Cannot start.")
 		}
 		// Store relevant settings from appConfig in a new context for workers
-		agentWorkerCtx := StoreSettings(agentCtx, appConfig)
-		// Start all the sensor and notification workers as appropriate
-		if !options.Headless {
-			workerWg.Add(1)
-			go func() {
-				defer workerWg.Done()
-				agent.runNotificationsWorker(agentWorkerCtx)
-			}()
-			workerWg.Add(1)
-			go func() {
-				defer workerWg.Done()
-				agent.setupSystemTray(agentWorkerCtx)
-			}()
-		}
+		agentCtx = StoreSettings(agentCtx, appConfig)
+		// Start all the sensor workers as appropriate
 		workerWg.Add(1)
 		go func() {
 			defer workerWg.Done()
-			agent.runSensorTracker(agentWorkerCtx)
+			agent.runNotificationsWorker(agentCtx, options)
+		}()
+		workerWg.Add(1)
+		go func() {
+			defer workerWg.Done()
+			agent.runSensorTracker(agentCtx)
 		}()
 	}()
 	agent.handleSignals(cancelFunc)
@@ -111,8 +107,10 @@ func Run(options AgentOptions) {
 
 	// If we are not running in headless mode, show a tray icon
 	if !options.Headless {
+		agent.setupSystemTray(agentCtx)
+		log.Debug().Msg("Starting main UI loop.")
 		agent.app.Run()
-		agent.app.Quit()
+		log.Debug().Msg("Finished UI loop.")
 	}
 	workerWg.Wait()
 	<-agentCtx.Done()
