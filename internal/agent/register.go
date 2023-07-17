@@ -200,7 +200,7 @@ func (agent *Agent) saveRegistration(r *hass.RegistrationResponse, h *Registrati
 
 	c.Set("Version", agent.Version)
 
-	registryPath, err := agent.extraStoragePath("sensorRegistry")
+	registryPath, err := extraStoragePath("sensorRegistry")
 	if err != nil {
 		return
 	} else {
