@@ -9,6 +9,10 @@ import (
 	"context"
 )
 
+const (
+	registryStorageID = "sensorRegistry"
+)
+
 //go:generate moq -out mock_Registry_test.go . Registry
 type Registry interface {
 	Open(context.Context, string) error

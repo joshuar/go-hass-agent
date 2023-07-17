@@ -66,6 +66,8 @@ type EncryptedRequest struct {
 func ExecuteRequest(ctx context.Context, request Request, conf Config, responseCh chan Response) {
 	var res bytes.Buffer
 
+	defer close(responseCh)
+
 	url := conf.ApiURL()
 	secret := conf.Secret()
 

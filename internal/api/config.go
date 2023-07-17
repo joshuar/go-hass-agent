@@ -12,4 +12,5 @@ type Config interface {
 	Token() string
 	ApiURL() string
 	Secret() string
+	NewStorage(string) (string, error)
 }
