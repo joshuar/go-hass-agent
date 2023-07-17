@@ -41,13 +41,13 @@ func MarshalUpdate(l Update) *hass.LocationUpdate {
 	}
 }
 
-func SendUpdate(ctx context.Context, l Update) {
+func SendUpdate(ctx context.Context, c api.Config, l Update) {
 	respCh := make(chan api.Response, 1)
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		api.ExecuteRequest(ctx, MarshalUpdate(l), respCh)
+		api.ExecuteRequest(ctx, MarshalUpdate(l), c, respCh)
 	}()
 	wg.Add(1)
 	go func() {

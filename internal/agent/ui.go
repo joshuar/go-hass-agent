@@ -93,12 +93,13 @@ func (agent *Agent) showFirstRunWindow(ctx context.Context) {
 
 func (agent *Agent) aboutWindow(ctx context.Context) {
 	deviceName, deviceID := agent.DeviceDetails()
-	haVersion, err := hass.GetVersion(ctx)
+	hassConfig, err := hass.GetHassConfig(ctx, agent.LoadConfig())
 	if err != nil {
 		log.Warn().Err(err).
 			Msg("Unable to version of Home Assistant.")
 		return
 	}
+	haVersion := hassConfig.GetVersion()
 	w := agent.app.NewWindow(translator.Translate("About"))
 	w.SetContent(container.New(layout.NewVBoxLayout(),
 		widget.NewLabel(translator.Translate(
@@ -122,16 +123,15 @@ func (agent *Agent) settingsWindow() {
 }
 
 func (agent *Agent) sensorsWindow(ctx context.Context) {
-	config := agent.LoadConfig()
-	ctx = StoreSettings(ctx, config)
 	var tableData [][]string
 	var entityNames []string
-	entities, err := hass.GetRegisteredEntities(ctx)
+	hassConfig, err := hass.GetHassConfig(ctx, agent.LoadConfig())
 	if err != nil {
 		log.Warn().Err(err).
 			Msg("Could not get registered entities list from Home Assistant.")
 		return
 	}
+	entities := hassConfig.GetRegisteredEntities()
 	if entities == nil {
 		log.Warn().
 			Msg("No registered entities in Home Assistant.")

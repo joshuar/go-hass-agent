@@ -47,7 +47,7 @@ type websocketResponse struct {
 	Success bool   `json:"success,omitempty"`
 }
 
-func StartWebsocket(ctx context.Context, settings config, notifyCh chan fyne.Notification, doneCh chan struct{}) {
+func StartWebsocket(ctx context.Context, settings Config, notifyCh chan fyne.Notification, doneCh chan struct{}) {
 	// conn, err := tryWebsocketConnect(ctx, notifyCh, doneCh)
 
 	url := settings.WebSocketURL()
@@ -95,7 +95,7 @@ type WebSocket struct {
 	nextID     uint64
 }
 
-func NewWebsocket(ctx context.Context, settings config, notifyCh chan fyne.Notification, doneCh chan struct{}) *WebSocket {
+func NewWebsocket(ctx context.Context, settings Config, notifyCh chan fyne.Notification, doneCh chan struct{}) *WebSocket {
 
 	token := settings.Token()
 	webhookID := settings.WebhookID()

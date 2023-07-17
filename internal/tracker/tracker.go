@@ -84,8 +84,14 @@ func (tracker *SensorTracker) StartWorkers(ctx context.Context, updateCh chan in
 
 // Update will send a sensor update to HA, checking to ensure the sensor is not
 // disabled. It will also update the local registry state based on the response.
-func (tracker *SensorTracker) Update(ctx context.Context, sensorUpdate Sensor) {
-	isDisabled, err := hass.IsEntityDisabled(ctx, sensorUpdate.ID())
+func (tracker *SensorTracker) Update(ctx context.Context, config api.Config, sensorUpdate Sensor) {
+	hassConfig, err := hass.GetHassConfig(ctx, config)
+	if err != nil {
+		log.Warn().Err(err).
+			Msg("Unable to retrieve config from Home Assistant.")
+		return
+	}
+	isDisabled, err := hassConfig.IsEntityDisabled(sensorUpdate.ID())
 	if err != nil {
 		log.Warn().Err(err).
 			Msgf("Unable to check disabled state for sensor %s in Home Assistant.", sensorUpdate.ID())
@@ -105,7 +111,7 @@ func (tracker *SensorTracker) Update(ctx context.Context, sensorUpdate Sensor) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		api.ExecuteRequest(ctx, req, responseCh)
+		api.ExecuteRequest(ctx, req, config, responseCh)
 	}()
 	wg.Add(1)
 	go func() {

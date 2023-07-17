@@ -6,7 +6,6 @@
 package agent
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"net/url"
@@ -14,14 +13,18 @@ import (
 
 	"fyne.io/fyne/v2"
 	"github.com/go-playground/validator/v10"
-	"github.com/joshuar/go-hass-agent/internal/settings"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/mod/semver"
 )
 
 const (
-	websocketPath = "/api/websocket"
-	webHookPath   = "/api/webhook/"
+	websocketPath    = "/api/websocket"
+	webHookPath      = "/api/webhook/"
+	PrefApiURL       = "ApiURL"
+	PrefWebsocketURL = "WebSocketURL"
+	PrefToken        = "Token"
+	PrefWebhookID    = "WebhookID"
+	PrefSecret       = "secret"
 )
 
 type config interface {
@@ -40,15 +43,23 @@ func (agent *Agent) LoadConfig() *agentConfig {
 }
 
 func (c *agentConfig) WebSocketURL() string {
-	return c.prefs.String(settings.WebsocketURL)
+	return c.prefs.String(PrefWebsocketURL)
 }
 
 func (c *agentConfig) WebhookID() string {
-	return c.prefs.String(settings.WebhookID)
+	return c.prefs.String(PrefWebhookID)
 }
 
 func (c *agentConfig) Token() string {
-	return c.prefs.String(settings.Token)
+	return c.prefs.String(PrefToken)
+}
+
+func (c *agentConfig) ApiURL() string {
+	return c.prefs.String(PrefApiURL)
+}
+
+func (c *agentConfig) Secret() string {
+	return c.prefs.String(PrefSecret)
 }
 
 func (c *agentConfig) Get(key string) (string, error) {
@@ -79,25 +90,25 @@ func ValidateConfig(c config) error {
 		return nil
 	}
 
-	if err := validate(settings.ApiURL,
+	if err := validate(PrefApiURL,
 		"required,url",
 		"apiURL does not match either a URL, hostname or hostname:port",
 	); err != nil {
 		return err
 	}
-	if err := validate(settings.WebsocketURL,
+	if err := validate(PrefWebsocketURL,
 		"required,url",
 		"websocketURL does not match either a URL, hostname or hostname:port",
 	); err != nil {
 		return err
 	}
-	if err := validate(settings.Token,
+	if err := validate(PrefToken,
 		"required,ascii",
 		"invalid long-lived token format",
 	); err != nil {
 		return err
 	}
-	if err := validate(settings.WebhookID,
+	if err := validate(PrefWebhookID,
 		"required,ascii",
 		"invalid webhookID format",
 	); err != nil {
@@ -157,13 +168,13 @@ func (c *agentConfig) generateWebsocketURL() {
 		url.Scheme = "ws"
 	}
 	url = url.JoinPath(websocketPath)
-	c.prefs.SetString(settings.WebsocketURL, url.String())
+	c.prefs.SetString(PrefWebsocketURL, url.String())
 }
 
 func (c *agentConfig) generateAPIURL() {
 	cloudhookURL := c.prefs.String("CloudhookURL")
 	remoteUIURL := c.prefs.String("RemoteUIURL")
-	webhookID := c.prefs.String(settings.WebhookID)
+	webhookID := c.prefs.String(PrefWebhookID)
 	host := c.prefs.String("Host")
 	var apiURL string
 	switch {
@@ -179,23 +190,4 @@ func (c *agentConfig) generateAPIURL() {
 		apiURL = ""
 	}
 	c.prefs.SetString("ApiURL", apiURL)
-}
-
-func StoreSettings(ctx context.Context, c config) context.Context {
-	s := settings.NewSettings()
-	set := func(key string) {
-		value, err := c.Get(key)
-		if err != nil {
-			log.Warn().Err(err).Msgf("Unable to retrieve %s from config.", key)
-		}
-		if err := s.SetValue(key, value); err != nil {
-			log.Warn().Err(err).Msgf("Unable to set %s in settings.", key)
-		}
-	}
-	set(settings.ApiURL)
-	set(settings.WebsocketURL)
-	set(settings.Secret)
-	set(settings.WebhookID)
-	set(settings.Token)
-	return settings.StoreInContext(ctx, s)
 }

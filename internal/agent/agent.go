@@ -88,8 +88,6 @@ func Run(options AgentOptions) {
 		if err := ValidateConfig(appConfig); err != nil {
 			log.Fatal().Err(err).Msg("Invalid config. Cannot start.")
 		}
-		// Store relevant settings from appConfig in a new context for workers
-		agentCtx = StoreSettings(agentCtx, appConfig)
 		// Start all the sensor workers as appropriate
 		workerWg.Add(1)
 		go func() {
@@ -99,7 +97,7 @@ func Run(options AgentOptions) {
 		workerWg.Add(1)
 		go func() {
 			defer workerWg.Done()
-			agent.runSensorTracker(agentCtx)
+			agent.runSensorTracker(agentCtx, appConfig)
 		}()
 	}()
 	agent.handleSignals(cancelFunc)

@@ -15,7 +15,6 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/joshuar/go-hass-agent/internal/settings"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -132,18 +131,20 @@ func TestExecuteRequest(t *testing.T) {
 	server := mockServer(t)
 	defer server.Close()
 
-	goodSettings := settings.NewSettings()
-	goodSettings.SetValue(settings.ApiURL, server.URL)
-	goodSettings.SetValue(settings.Secret, "aSecret")
-	goodCtx := settings.StoreInContext(context.Background(), goodSettings)
+	goodConfig := &ConfigMock{
+		ApiURLFunc: func() string { return server.URL },
+		SecretFunc: func() string { return "aSecret" },
+	}
 
-	badSettings := settings.NewSettings()
-	badSettings.SetValue(settings.ApiURL, server.URL)
-	badCtx := settings.StoreInContext(context.Background(), badSettings)
+	badConfig := &ConfigMock{
+		ApiURLFunc: func() string { return server.URL },
+		SecretFunc: func() string { return "" },
+	}
 
 	type args struct {
 		ctx        context.Context
 		request    Request
+		config     Config
 		responseCh chan Response
 	}
 	tests := []struct {
@@ -154,8 +155,9 @@ func TestExecuteRequest(t *testing.T) {
 		{
 			name: "good request",
 			args: args{
-				ctx:        goodCtx,
+				ctx:        context.Background(),
 				request:    &req{reqType: RequestTypeRegisterSensor},
+				config:     goodConfig,
 				responseCh: make(chan Response, 1),
 			},
 			wantErr: false,
@@ -163,8 +165,9 @@ func TestExecuteRequest(t *testing.T) {
 		{
 			name: "bad encrypted request, missing secret",
 			args: args{
-				ctx:        badCtx,
+				ctx:        context.Background(),
 				request:    &encReq{},
+				config:     badConfig,
 				responseCh: make(chan Response, 1),
 			},
 			wantErr: true,
@@ -172,29 +175,22 @@ func TestExecuteRequest(t *testing.T) {
 		{
 			name: "good encrypted request",
 			args: args{
-				ctx:        goodCtx,
+				ctx:        context.Background(),
 				request:    &encReq{},
+				config:     goodConfig,
 				responseCh: make(chan Response, 1),
 			},
 			wantErr: false,
 		},
 		{
-			name: "bad context, no config",
-			args: args{
-				ctx:        context.Background(),
-				request:    &req{reqType: RequestTypeRegisterSensor},
-				responseCh: make(chan Response, 1),
-			},
-			wantErr: true,
-		},
-		{
 			name: "bad json",
 			args: args{
-				ctx: goodCtx,
+				ctx: context.Background(),
 				request: &req{
 					reqType: RequestTypeRegisterSensor,
 					data:    json.RawMessage(`sdgasghsdag`),
 				},
+				config:     goodConfig,
 				responseCh: make(chan Response, 1),
 			},
 			wantErr: true,
@@ -215,7 +211,7 @@ func TestExecuteRequest(t *testing.T) {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				ExecuteRequest(tt.args.ctx, tt.args.request, tt.args.responseCh)
+				ExecuteRequest(tt.args.ctx, tt.args.request, tt.args.config, tt.args.responseCh)
 			}()
 			wg.Wait()
 		})
