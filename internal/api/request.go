@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/carlmjohnson/requests"
-	"github.com/joshuar/go-hass-agent/internal/settings"
 )
 
 //go:generate stringer -type=RequestType -output requestType.go -linecomment
@@ -64,38 +63,11 @@ type EncryptedRequest struct {
 	Encrypted     bool            `json:"encrypted"`
 }
 
-func ExecuteRequest(ctx context.Context, request Request, responseCh chan Response) {
+func ExecuteRequest(ctx context.Context, request Request, conf Config, responseCh chan Response) {
 	var res bytes.Buffer
 
-	// settingsStore, err := settings.FetchFromContext(ctx)
-	// if err != nil {
-	// 	responseCh <- NewGenericResponse(err, request.RequestType())
-	// 	return
-	// }
-
-	// var secret string
-	// if request.RequestType() == RequestTypeEncrypted {
-	// 	s, err := settingsStore.GetValue(settings.Secret)
-	// 	if err != nil {
-	// 		responseCh <- NewGenericResponse(err, request.RequestType())
-	// 		return
-	// 	}
-	// 	secret = s
-	// } else {
-	// 	secret = ""
-	// }
-
-	// var url string
-	// u, err := settingsStore.GetValue(settings.ApiURL)
-	// if err != nil {
-	// 	responseCh <- NewGenericResponse(err, request.RequestType())
-	// 	return
-	// } else {
-	// 	url = u
-	// }
-
-	url := settings.GetAPIURL()
-	secret := settings.GetSecret()
+	url := conf.ApiURL()
+	secret := conf.Secret()
 
 	reqJson, err := marshalJSON(request, secret)
 	if err != nil {

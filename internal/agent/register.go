@@ -15,7 +15,6 @@ import (
 
 	"github.com/grandcat/zeroconf"
 	"github.com/joshuar/go-hass-agent/internal/hass"
-	"github.com/joshuar/go-hass-agent/internal/settings"
 	"github.com/rs/zerolog/log"
 
 	"fyne.io/fyne/v2"
@@ -177,7 +176,7 @@ func (agent *Agent) saveRegistration(r *hass.RegistrationResponse, h *Registrati
 	c.Set("Host", hostURL.String())
 
 	token, _ := h.tokenBinding.Get()
-	c.Set(settings.Token, token)
+	c.Set(PrefToken, token)
 
 	if r.CloudhookURL != "" {
 		c.Set("CloudhookURL", r.CloudhookURL)
@@ -186,13 +185,13 @@ func (agent *Agent) saveRegistration(r *hass.RegistrationResponse, h *Registrati
 		c.Set("RemoteUIURL", r.RemoteUIURL)
 	}
 	if r.Secret != "" {
-		c.Set(settings.Secret, r.Secret)
+		c.Set(PrefSecret, r.Secret)
 	}
 	if r.WebhookID != "" {
-		c.Set(settings.WebhookID, r.WebhookID)
+		c.Set(PrefWebhookID, r.WebhookID)
 	}
-	c.Set(settings.ApiURL, r.GenerateAPIURL(providedHost))
-	c.Set(settings.WebsocketURL, r.GenerateWebsocketURL(providedHost))
+	c.Set(PrefApiURL, r.GenerateAPIURL(providedHost))
+	c.Set(PrefWebsocketURL, r.GenerateWebsocketURL(providedHost))
 
 	c.Set("DeviceName", d.DeviceName())
 	c.Set("DeviceID", d.DeviceID())

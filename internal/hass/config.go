@@ -77,7 +77,7 @@ func (h *haConfig) ResponseHandler(resp bytes.Buffer, respCh chan api.Response) 
 	respCh <- response
 }
 
-func getConfig(ctx context.Context) (*haConfig, error) {
+func GetHassConfig(ctx context.Context, c api.Config) (*haConfig, error) {
 	h := new(haConfig)
 	respCh := make(chan api.Response, 1)
 	defer close(respCh)
@@ -85,7 +85,7 @@ func getConfig(ctx context.Context) (*haConfig, error) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		api.ExecuteRequest(ctx, h, respCh)
+		api.ExecuteRequest(ctx, h, c, respCh)
 	}()
 	response := <-respCh
 	if response.Error() != nil {
@@ -94,22 +94,14 @@ func getConfig(ctx context.Context) (*haConfig, error) {
 	return h, nil
 }
 
-func GetRegisteredEntities(ctx context.Context) (map[string]map[string]interface{}, error) {
-	config, err := getConfig(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return config.Entities, nil
+func (h *haConfig) GetRegisteredEntities() map[string]map[string]interface{} {
+	return h.Entities
 }
 
-func IsEntityDisabled(ctx context.Context, entity string) (bool, error) {
-	config, err := getConfig(ctx)
-	if err != nil {
-		return false, err
-	}
-	config.mu.Lock()
-	defer config.mu.Unlock()
-	if v, ok := config.Entities[entity]["disabled"]; ok {
+func (h *haConfig) IsEntityDisabled(entity string) (bool, error) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if v, ok := h.Entities[entity]["disabled"]; ok {
 		if disabledState, ok := v.(bool); !ok {
 			return false, nil
 		} else {
@@ -119,10 +111,6 @@ func IsEntityDisabled(ctx context.Context, entity string) (bool, error) {
 	return false, nil
 }
 
-func GetVersion(ctx context.Context) (string, error) {
-	config, err := getConfig(ctx)
-	if err != nil {
-		return "", err
-	}
-	return config.Version, nil
+func (h *haConfig) GetVersion() string {
+	return h.Version
 }

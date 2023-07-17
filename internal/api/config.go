@@ -5,8 +5,11 @@
 
 package api
 
-type config interface {
+//go:generate moq -out mock_Config_test.go . Config
+type Config interface {
 	WebSocketURL() string
 	WebhookID() string
 	Token() string
+	ApiURL() string
+	Secret() string
 }

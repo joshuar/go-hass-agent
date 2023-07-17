@@ -13,7 +13,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func (agent *Agent) runSensorTracker(ctx context.Context) {
+func (agent *Agent) runSensorTracker(ctx context.Context, config *agentConfig) {
 	registryPath, err := agent.extraStoragePath("sensorRegistry")
 	if err != nil {
 		log.Warn().Err(err).
@@ -34,9 +34,9 @@ func (agent *Agent) runSensorTracker(ctx context.Context) {
 		case data := <-updateCh:
 			switch data := data.(type) {
 			case tracker.Sensor:
-				go sensorTracker.Update(ctx, data)
+				go sensorTracker.Update(ctx, config, data)
 			case location.Update:
-				go location.SendUpdate(ctx, data)
+				go location.SendUpdate(ctx, config, data)
 			default:
 				log.Warn().
 					Msgf("Got unexpected status update %v", data)
