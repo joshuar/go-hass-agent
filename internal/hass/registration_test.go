@@ -178,9 +178,13 @@ func TestRegisterWithHass(t *testing.T) {
 		TokenFunc:  func() string { return "aToken" },
 		ServerFunc: func() string { return mockServer.URL },
 	}
-	mockBadRegInfo := &RegistrationInfoMock{
+	mockBadServerInfo := &RegistrationInfoMock{
 		TokenFunc:  func() string { return "aToken" },
 		ServerFunc: func() string { return "notaurl" },
+	}
+	mockBadTokenInfo := &RegistrationInfoMock{
+		TokenFunc:  func() string { return "" },
+		ServerFunc: func() string { return mockServer.URL },
 	}
 
 	mockDevInfo := &DeviceInfoMock{
@@ -224,7 +228,17 @@ func TestRegisterWithHass(t *testing.T) {
 			name: "bad server url",
 			args: args{
 				ctx:          context.Background(),
-				registration: mockBadRegInfo,
+				registration: mockBadServerInfo,
+				device:       mockDevInfo,
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "bad token",
+			args: args{
+				ctx:          context.Background(),
+				registration: mockBadTokenInfo,
 				device:       mockDevInfo,
 			},
 			want:    nil,
