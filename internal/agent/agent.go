@@ -50,7 +50,7 @@ type AgentOptions struct {
 	Headless, Register bool
 }
 
-func newAgent(appID string) (context.Context, context.CancelFunc, *Agent) {
+func newAgent(appID string) *Agent {
 	a := &Agent{
 		app:     newUI(appID),
 		Name:    Name,
@@ -58,9 +58,8 @@ func newAgent(appID string) (context.Context, context.CancelFunc, *Agent) {
 		done:    make(chan struct{}),
 	}
 	a.mainWindow = a.app.NewWindow(Name)
-	ctx, cancelfunc := context.WithCancel(context.Background())
 	a.setupLogging()
-	return ctx, cancelfunc, a
+	return a
 }
 
 // Run is the "main loop" of the agent. It sets up the agent, loads the config
@@ -68,8 +67,10 @@ func newAgent(appID string) (context.Context, context.CancelFunc, *Agent) {
 // publish it to Home Assistant
 func Run(options AgentOptions) {
 	translator = translations.NewTranslator()
-	agentCtx, cancelFunc, agent := newAgent(options.ID)
+	agent := newAgent(options.ID)
 	defer close(agent.done)
+
+	agentCtx, cancelFunc := context.WithCancel(context.Background())
 
 	registrationDone := make(chan struct{})
 	go agent.registrationProcess(agentCtx, "", "", options.Register, options.Headless, registrationDone)
@@ -120,8 +121,10 @@ func Run(options AgentOptions) {
 // UI or non-UI registration flow.
 func Register(options AgentOptions, server, token string) {
 	translator = translations.NewTranslator()
-	agentCtx, cancelFunc, agent := newAgent(options.ID)
+	agent := newAgent(options.ID)
 	defer close(agent.done)
+
+	agentCtx, cancelFunc := context.WithCancel(context.Background())
 
 	// Don't proceed unless the agent is registered and forced is not set
 	if agent.IsRegistered() && !options.Register {
@@ -143,12 +146,12 @@ func Register(options AgentOptions, server, token string) {
 }
 
 func ShowVersion(options AgentOptions) {
-	_, _, agent := newAgent(options.ID)
+	agent := newAgent(options.ID)
 	log.Info().Msgf("%s: %s", agent.Name, agent.Version)
 }
 
 func ShowInfo(options AgentOptions) {
-	_, _, agent := newAgent(options.ID)
+	agent := newAgent(options.ID)
 	deviceName, deviceID := agent.DeviceDetails()
 	log.Info().Msgf("Device Name %s. Device ID %s.", deviceName, deviceID)
 
