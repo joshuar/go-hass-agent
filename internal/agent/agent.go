@@ -129,6 +129,7 @@ func Register(options AgentOptions, server, token string) {
 	// Don't proceed unless the agent is registered and forced is not set
 	if agent.IsRegistered() && !options.Register {
 		log.Warn().Msg("Agent is already registered and forced option not specified, not performing registration.")
+		cancelFunc()
 		return
 	}
 
