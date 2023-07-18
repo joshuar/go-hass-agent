@@ -65,7 +65,11 @@ func (l *screenlock) Category() string {
 }
 
 func (l *screenlock) Attributes() interface{} {
-	return nil
+	return struct {
+		DataSource string `json:"Data Source"`
+	}{
+		DataSource: "D-Bus",
+	}
 }
 
 func ScreenLockUpdater(ctx context.Context, update chan interface{}) {

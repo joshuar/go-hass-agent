@@ -84,7 +84,11 @@ func (l *loadavg) Category() string {
 }
 
 func (l *loadavg) Attributes() interface{} {
-	return nil
+	return struct {
+		DataSource string `json:"Data Source"`
+	}{
+		DataSource: "procfs",
+	}
 }
 
 func LoadAvgUpdater(ctx context.Context, status chan interface{}) {

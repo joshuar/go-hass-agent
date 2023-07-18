@@ -75,7 +75,11 @@ func (m *memory) Category() string {
 }
 
 func (m *memory) Attributes() interface{} {
-	return nil
+	return struct {
+		DataSource string `json:"Data Source"`
+	}{
+		DataSource: "procfs",
+	}
 }
 
 func MemoryUpdater(ctx context.Context, status chan interface{}) {

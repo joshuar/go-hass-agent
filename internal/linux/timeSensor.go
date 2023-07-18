@@ -87,8 +87,10 @@ func (m *timeSensor) Attributes() interface{} {
 	case uptime:
 		return struct {
 			NativeUnit string `json:"native_unit_of_measurement"`
+			DataSource string `json:"Data Source"`
 		}{
 			NativeUnit: "h",
+			DataSource: "procfs",
 		}
 	default:
 		return nil
