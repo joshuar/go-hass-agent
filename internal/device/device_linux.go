@@ -7,7 +7,6 @@ package device
 
 import (
 	"context"
-	"sync"
 
 	"github.com/joshuar/go-hass-agent/internal/linux"
 )
@@ -28,28 +27,4 @@ func SensorWorkers() []func(context.Context, chan interface{}) {
 	workers = append(workers, linux.TimeUpdater)
 	workers = append(workers, linux.ScreenLockUpdater)
 	return workers
-}
-
-type LinuxDeviceAPI struct {
-	dbus map[string]*linux.Bus
-	mu   sync.Mutex
-}
-
-// EndPoint will return the given endpoint as an interface. Use
-// device.GetAPIEndpoint to safely assert the type of the API.
-func (d *LinuxDeviceAPI) EndPoint(e string) interface{} {
-	d.mu.Lock()
-	defer d.mu.Unlock()
-	return d.dbus[e]
-}
-
-// NewDeviceAPI sets up a DeviceAPI struct with appropriate DBus API endpoints.
-func NewDeviceAPI(ctx context.Context) *LinuxDeviceAPI {
-	api := new(LinuxDeviceAPI)
-	api.dbus = make(map[string]*linux.Bus)
-	api.mu.Lock()
-	api.dbus["session"] = linux.NewBus(ctx, linux.SessionBus)
-	api.dbus["system"] = linux.NewBus(ctx, linux.SystemBus)
-	api.mu.Unlock()
-	return api
 }

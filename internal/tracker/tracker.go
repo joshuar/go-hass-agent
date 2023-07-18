@@ -152,7 +152,7 @@ func startWorkers(ctx context.Context, updateCh chan interface{}) {
 	// 		Msg("Could not fetch sensor workers.")
 	// 	return
 	// }
-	workerCtx := api.StoreAPIInContext(ctx, device.NewDeviceAPI(ctx))
+	// workerCtx := api.StoreAPIInContext(ctx, device.NewDeviceAPI(ctx))
 
 	sensorWorkers := device.SensorWorkers()
 	sensorWorkers = append(sensorWorkers, api.ExternalIPUpdater)
@@ -160,7 +160,8 @@ func startWorkers(ctx context.Context, updateCh chan interface{}) {
 		wg.Add(1)
 		go func(worker func(context.Context, chan interface{})) {
 			defer wg.Done()
-			worker(workerCtx, updateCh)
+			// worker(workerCtx, updateCh)
+			worker(ctx, updateCh	)
 		}(worker)
 	}
 	wg.Wait()

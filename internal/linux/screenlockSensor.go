@@ -69,7 +69,7 @@ func (l *screenlock) Attributes() interface{} {
 }
 
 func ScreenLockUpdater(ctx context.Context, update chan interface{}) {
-	err := NewBusRequest(ctx, SessionBus).
+	err := NewBusRequest(SessionBus).
 		Path(screensaverDBusPath).
 		Match([]dbus.MatchOption{
 			dbus.WithMatchObjectPath(screensaverDBusPath),
