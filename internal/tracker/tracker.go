@@ -31,7 +31,6 @@ func RunSensorTracker(ctx context.Context, config api.Config) error {
 	if err != nil {
 		log.Error().Err(err).Msg("Unable to create a sensor tracker.")
 		return err
-		// return
 	}
 	sensorTracker := &SensorTracker{
 		registry: db,
@@ -45,8 +44,6 @@ func RunSensorTracker(ctx context.Context, config api.Config) error {
 	go func() {
 		startWorkers(ctx, updateCh)
 	}()
-	// Sensors are tracked in a map to handle registration and
-	// disabling/enabling. Updates are sent to Home Assistant.
 	wg.Add(1)
 	go func() {
 		trackUpdates(ctx, sensorTracker, config, updateCh)
@@ -149,19 +146,21 @@ func startWorkers(ctx context.Context, updateCh chan interface{}) {
 	var wg sync.WaitGroup
 
 	// Run all the defined sensor update functions.
-	deviceAPI, err := device.FetchAPIFromContext(ctx)
-	if err != nil {
-		log.Error().Err(err).
-			Msg("Could not fetch sensor workers.")
-		return
-	}
-	sensorWorkers := deviceAPI.SensorWorkers()
-	sensorWorkers = append(sensorWorkers, device.ExternalIPUpdater)
+	// deviceAPI, err := device.FetchAPIFromContext(ctx)
+	// if err != nil {
+	// 	log.Error().Err(err).
+	// 		Msg("Could not fetch sensor workers.")
+	// 	return
+	// }
+	workerCtx := api.StoreAPIInContext(ctx, device.NewDeviceAPI(ctx))
+
+	sensorWorkers := device.SensorWorkers()
+	sensorWorkers = append(sensorWorkers, api.ExternalIPUpdater)
 	for _, worker := range sensorWorkers {
 		wg.Add(1)
 		go func(worker func(context.Context, chan interface{})) {
 			defer wg.Done()
-			worker(ctx, updateCh)
+			worker(workerCtx, updateCh)
 		}(worker)
 	}
 	wg.Wait()

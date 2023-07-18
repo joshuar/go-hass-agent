@@ -98,7 +98,7 @@ func marshalPowerStateUpdate(sensor powerProp, group string, v dbus.Variant) *po
 }
 
 func PowerUpater(ctx context.Context, status chan interface{}) {
-	activePowerProfile, err := NewBusRequest(ctx, systemBus).
+	activePowerProfile, err := NewBusRequest(ctx, SystemBus).
 		Path(powerProfilesDBusPath).
 		Destination(powerProfilesDBusDest).
 		GetProp(powerProfilesDBusDest + ".ActiveProfile")
@@ -109,7 +109,7 @@ func PowerUpater(ctx context.Context, status chan interface{}) {
 
 	status <- marshalPowerStateUpdate(profile, powerProfilesDBusPath, activePowerProfile)
 
-	err = NewBusRequest(ctx, systemBus).
+	err = NewBusRequest(ctx, SystemBus).
 		Path(powerProfilesDBusPath).
 		Match([]dbus.MatchOption{
 			dbus.WithMatchObjectPath(powerProfilesDBusPath),
