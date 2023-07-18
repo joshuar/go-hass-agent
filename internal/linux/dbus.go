@@ -13,7 +13,6 @@ import (
 	"sync"
 
 	"github.com/godbus/dbus/v5"
-	"github.com/joshuar/go-hass-agent/internal/api"
 	"github.com/rs/zerolog/log"
 )
 
@@ -99,16 +98,10 @@ type busRequest struct {
 	match        []dbus.MatchOption
 }
 
-func NewBusRequest(ctx context.Context, busType dbusType) *busRequest {
-	deviceAPI, err := api.FetchAPIFromContext(ctx)
-	if err != nil {
-		log.Error().Err(err).
-			Msg("Could not retrieve device API from context.")
-		return nil
-	}
-	dbusAPI := api.GetAPIEndpoint[*Bus](deviceAPI, busType.String())
+func NewBusRequest(busType dbusType) *busRequest {
+	b := dbusAPI.EndPoint(busType)
 	return &busRequest{
-		bus: dbusAPI,
+		bus: b,
 	}
 }
 
@@ -307,7 +300,7 @@ func findPortal() string {
 // that, it will default to using "localhost"
 func GetHostname(ctx context.Context) string {
 	var dBusDest = "org.freedesktop.hostname1"
-	hostnameFromDBus, err := NewBusRequest(ctx, SystemBus).
+	hostnameFromDBus, err := NewBusRequest(SystemBus).
 		Path(dbus.ObjectPath("/org/freedesktop/hostname1")).
 		Destination(dBusDest).
 		GetProp(dBusDest + ".Hostname")
@@ -325,7 +318,7 @@ func GetHardwareDetails(ctx context.Context) (string, string) {
 	var vendor, model string
 	var dBusDest = "org.freedesktop.hostname1"
 	var dBusPath = "/org/freedesktop/hostname1"
-	hwVendorFromDBus, err := NewBusRequest(ctx, SystemBus).
+	hwVendorFromDBus, err := NewBusRequest(SystemBus).
 		Path(dbus.ObjectPath(dBusPath)).
 		Destination(dBusDest).
 		GetProp(dBusDest + ".HardwareVendor")
@@ -339,7 +332,7 @@ func GetHardwareDetails(ctx context.Context) (string, string) {
 	} else {
 		vendor = string(variantToValue[[]uint8](hwVendorFromDBus))
 	}
-	hwModelFromDBus, err := NewBusRequest(ctx, SystemBus).
+	hwModelFromDBus, err := NewBusRequest(SystemBus).
 		Path(dbus.ObjectPath(dBusPath)).
 		Destination(dBusDest).
 		GetProp(dBusDest + ".HardwareVendor")

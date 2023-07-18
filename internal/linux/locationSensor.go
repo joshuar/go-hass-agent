@@ -58,7 +58,7 @@ func (l *linuxLocation) VerticalAccuracy() int {
 }
 
 func LocationUpdater(ctx context.Context, locationInfoCh chan interface{}) {
-	clientPath := NewBusRequest(ctx, SystemBus).
+	clientPath := NewBusRequest(SystemBus).
 		Path(geocluePath).
 		Destination(geoclueInterface).
 		GetData("org.freedesktop.GeoClue2.Manager.GetClient").AsObjectPath()
@@ -68,7 +68,7 @@ func LocationUpdater(ctx context.Context, locationInfoCh chan interface{}) {
 		return
 	}
 
-	err := NewBusRequest(ctx, SystemBus).
+	err := NewBusRequest(SystemBus).
 		Path(clientPath).
 		Destination(geoclueInterface).
 		SetProp("org.freedesktop.GeoClue2.Client.DesktopId",
@@ -79,7 +79,7 @@ func LocationUpdater(ctx context.Context, locationInfoCh chan interface{}) {
 		return
 	}
 
-	err = NewBusRequest(ctx, SystemBus).
+	err = NewBusRequest(SystemBus).
 		Path(clientPath).
 		Destination(geoclueInterface).
 		SetProp("org.freedesktop.GeoClue2.Client.DistanceThreshold",
@@ -90,7 +90,7 @@ func LocationUpdater(ctx context.Context, locationInfoCh chan interface{}) {
 		return
 	}
 
-	err = NewBusRequest(ctx, SystemBus).
+	err = NewBusRequest(SystemBus).
 		Path(clientPath).
 		Destination(geoclueInterface).
 		SetProp("org.freedesktop.GeoClue2.Client.TimeThreshold",
@@ -109,7 +109,7 @@ func LocationUpdater(ctx context.Context, locationInfoCh chan interface{}) {
 		}
 	}
 
-	err = NewBusRequest(ctx, SystemBus).
+	err = NewBusRequest(SystemBus).
 		Path(clientPath).
 		Match([]dbus.MatchOption{
 			dbus.WithMatchObjectPath(clientPath),
@@ -124,7 +124,7 @@ func LocationUpdater(ctx context.Context, locationInfoCh chan interface{}) {
 		return
 	}
 
-	err = NewBusRequest(ctx, SystemBus).
+	err = NewBusRequest(SystemBus).
 		Path(clientPath).
 		Destination(geoclueInterface).
 		Call("org.freedesktop.GeoClue2.Client.Start")
@@ -138,7 +138,7 @@ func LocationUpdater(ctx context.Context, locationInfoCh chan interface{}) {
 		<-ctx.Done()
 		log.Debug().Caller().
 			Msg("Stopping location updater.")
-		err = NewBusRequest(ctx, SystemBus).
+		err = NewBusRequest(SystemBus).
 			Path(clientPath).
 			Destination(geoclueInterface).
 			Call("org.freedesktop.GeoClue2.Client.Stop")
@@ -152,7 +152,7 @@ func LocationUpdater(ctx context.Context, locationInfoCh chan interface{}) {
 
 func newLocation(ctx context.Context, locationPath dbus.ObjectPath) *linuxLocation {
 	getProp := func(prop string) float64 {
-		value, err := NewBusRequest(ctx, SystemBus).
+		value, err := NewBusRequest(SystemBus).
 			Path(locationPath).
 			Destination(geoclueInterface).
 			GetProp("org.freedesktop.GeoClue2.Location." + prop)

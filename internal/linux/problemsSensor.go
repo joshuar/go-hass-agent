@@ -100,13 +100,13 @@ func ProblemsUpdater(ctx context.Context, status chan interface{}) {
 			list: make(map[string]map[string]interface{}),
 		}
 
-		problemList := NewBusRequest(ctx, SystemBus).
+		problemList := NewBusRequest(SystemBus).
 			Path(dBusProblemsDest).
 			Destination(dBusProblemIntr).
 			GetData(dBusProblemIntr + ".GetProblems").AsStringList()
 
 		for _, p := range problemList {
-			problemDetails := NewBusRequest(ctx, SystemBus).
+			problemDetails := NewBusRequest(SystemBus).
 				Path(dBusProblemsDest).
 				Destination(dBusProblemIntr).
 				GetData(dBusProblemIntr+".GetInfo", p, []string{"time", "count", "package", "reason"}).AsStringMap()
