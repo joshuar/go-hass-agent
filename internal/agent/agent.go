@@ -15,7 +15,6 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/storage"
-	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/joshuar/go-hass-agent/internal/translations"
 	"github.com/rs/zerolog"
@@ -60,7 +59,6 @@ func newAgent(appID string) (context.Context, context.CancelFunc, *Agent) {
 	}
 	a.mainWindow = a.app.NewWindow(Name)
 	ctx, cancelfunc := context.WithCancel(context.Background())
-	ctx = linux.SetupContext(ctx)
 	a.setupLogging()
 	return ctx, cancelfunc, a
 }
@@ -97,7 +95,9 @@ func Run(options AgentOptions) {
 		workerWg.Add(1)
 		go func() {
 			defer workerWg.Done()
-			tracker.RunSensorTracker(agentCtx, appConfig)
+			if err := tracker.RunSensorTracker(agentCtx, appConfig); err != nil {
+				log.Warn().Err(err).Msg("Problem starting sensor tracker.")
+			}
 		}()
 	}()
 	agent.handleSignals(cancelFunc)

@@ -120,7 +120,8 @@ func TestSensorTracker_Get(t *testing.T) {
 }
 
 type mockConfig struct {
-	url string
+	url     string
+	storage string
 }
 
 func (c *mockConfig) WebSocketURL() string {
@@ -141,7 +142,15 @@ func (c *mockConfig) Secret() string {
 }
 
 func (c *mockConfig) NewStorage(id string) (string, error) {
-	return os.MkdirTemp("/tmp", "go-hass-agent-test")
+	return c.storage, nil
+}
+
+func NewMockConfig(t *testing.T) *mockConfig {
+	path, err := os.MkdirTemp("/tmp", "go-hass-agent-test")
+	assert.Nil(t, err)
+	return &mockConfig{
+		storage: path,
+	}
 }
 
 func TestSensorTracker_Update(t *testing.T) {
@@ -219,6 +228,11 @@ func TestSensorTracker_Update(t *testing.T) {
 }
 
 // func TestRunSensorTracker(t *testing.T) {
+// 	mockConfig := NewMockConfig(t)
+// 	defer os.RemoveAll(mockConfig.storage)
+
+// 	ctx, cancelfunc := context.WithCancel(context.Background())
+// 	defer cancelfunc()
 
 // 	type args struct {
 // 		ctx    context.Context
@@ -229,58 +243,36 @@ func TestSensorTracker_Update(t *testing.T) {
 // 		args    args
 // 		wantErr bool
 // 	}{
+// 		{
+// 			name: "successful test",
+// 			args: args{
+// 				ctx:    ctx,
+// 				config: mockConfig,
+// 			},
+// 			wantErr: false,
+// 		},
+// 		// 		// {
+// 		// 		// 	name: "successful test, no directory given",
+// 		// 		// 	args: args{
+// 		// 		// 		ctx:  context.Background(),
+// 		// 		// 		path: "",
+// 		// 		// 	},
+// 		// 		// 	wantErr: false,
+// 		// 		// },
+// 		// 		// {
+// 		// 		// 	name: "unsuccessful test, invalid directory",
+// 		// 		// 	args: args{
+// 		// 		// 		ctx:  context.Background(),
+// 		// 		// 		path: "/foo/bar",
+// 		// 		// 	},
+// 		// 		// 	wantErr: true,
+// 		// 		// },
 // 	}
 // 	for _, tt := range tests {
 // 		t.Run(tt.name, func(t *testing.T) {
-// 			RunSensorTracker(tt.args.ctx, tt.args.config)
+// 			if err := RunSensorTracker(tt.args.ctx, tt.args.config); (err != nil) != tt.wantErr {
+// 				t.Errorf("RunSensorTracker() error = %v, wantErr %v", err, tt.wantErr)
+// 			}
 // 		})
 // 	}
 // }
-
-func TestRunSensorTracker(t *testing.T) {
-	mockConfig := &mockConfig{}
-	ctx, cancelfunc := context.WithCancel(context.Background())
-	defer cancelfunc()
-
-	type args struct {
-		ctx    context.Context
-		config api.Config
-	}
-	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-	}{
-		{
-			name: "successful test",
-			args: args{
-				ctx:    ctx,
-				config: mockConfig,
-			},
-			wantErr: false,
-		},
-		// 		// {
-		// 		// 	name: "successful test, no directory given",
-		// 		// 	args: args{
-		// 		// 		ctx:  context.Background(),
-		// 		// 		path: "",
-		// 		// 	},
-		// 		// 	wantErr: false,
-		// 		// },
-		// 		// {
-		// 		// 	name: "unsuccessful test, invalid directory",
-		// 		// 	args: args{
-		// 		// 		ctx:  context.Background(),
-		// 		// 		path: "/foo/bar",
-		// 		// 	},
-		// 		// 	wantErr: true,
-		// 		// },
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if err := RunSensorTracker(tt.args.ctx, tt.args.config); (err != nil) != tt.wantErr {
-				t.Errorf("RunSensorTracker() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}

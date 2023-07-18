@@ -13,19 +13,19 @@ import (
 	"sync"
 
 	"github.com/godbus/dbus/v5"
-	"github.com/joshuar/go-hass-agent/internal/device"
+	"github.com/joshuar/go-hass-agent/internal/api"
 	"github.com/rs/zerolog/log"
 )
 
 //go:generate stringer -type=dbusType -output dbusTypesStringer.go -linecomment
 const (
-	sessionBus dbusType = iota // session
-	systemBus                  // system
+	SessionBus dbusType = iota // session
+	SystemBus                  // system
 )
 
 type dbusType int
 
-type bus struct {
+type Bus struct {
 	conn           *dbus.Conn
 	signals        chan *dbus.Signal
 	signalMatchers map[string]func(*dbus.Signal)
@@ -34,7 +34,7 @@ type bus struct {
 	mu             sync.RWMutex
 }
 
-func (bus *bus) signalHandler(ctx context.Context) {
+func (bus *Bus) signalHandler(ctx context.Context) {
 	bus.conn.Signal(bus.signals)
 	defer bus.conn.RemoveSignal(bus.signals)
 	for {
@@ -57,14 +57,14 @@ func (bus *bus) signalHandler(ctx context.Context) {
 	}
 }
 
-// newBus sets up DBus connections and channels for receiving signals. It creates both a system and session bus connection.
-func newBus(ctx context.Context, t dbusType) *bus {
+// NewBus sets up DBus connections and channels for receiving signals. It creates both a system and session bus connection.
+func NewBus(ctx context.Context, t dbusType) *Bus {
 	var conn *dbus.Conn
 	var err error
 	switch t {
-	case sessionBus:
+	case SessionBus:
 		conn, err = dbus.ConnectSessionBus(dbus.WithContext(ctx))
-	case systemBus:
+	case SystemBus:
 		conn, err = dbus.ConnectSystemBus(dbus.WithContext(ctx))
 	}
 	if err != nil {
@@ -72,7 +72,7 @@ func newBus(ctx context.Context, t dbusType) *bus {
 			Msgf("Could not connect to %s bus.", t.String())
 		return nil
 	} else {
-		bus := &bus{
+		bus := &Bus{
 			conn:           conn,
 			signals:        make(chan *dbus.Signal),
 			signalMatchers: make(map[string]func(*dbus.Signal)),
@@ -91,7 +91,7 @@ type signalMatcher struct {
 
 // busRequest contains properties for building different types of DBus requests
 type busRequest struct {
-	bus          *bus
+	bus          *Bus
 	eventHandler func(*dbus.Signal)
 	path         dbus.ObjectPath
 	event        string
@@ -100,13 +100,13 @@ type busRequest struct {
 }
 
 func NewBusRequest(ctx context.Context, busType dbusType) *busRequest {
-	deviceAPI, err := device.FetchAPIFromContext(ctx)
+	deviceAPI, err := api.FetchAPIFromContext(ctx)
 	if err != nil {
 		log.Error().Err(err).
 			Msg("Could not retrieve device API from context.")
 		return nil
 	}
-	dbusAPI := device.GetAPIEndpoint[*bus](deviceAPI, busType.String())
+	dbusAPI := api.GetAPIEndpoint[*Bus](deviceAPI, busType.String())
 	return &busRequest{
 		bus: dbusAPI,
 	}
@@ -207,6 +207,9 @@ func (r *busRequest) Call(method string, args ...interface{}) error {
 
 // AddWatch adds a DBus watch to the bus with the given options in the builder
 func (r *busRequest) AddWatch(ctx context.Context) error {
+	if r.bus == nil {
+		return errors.New("no bus connection")
+	}
 	if err := r.bus.conn.AddMatchSignalContext(ctx, r.match...); err != nil {
 		return err
 	} else {
@@ -304,7 +307,7 @@ func findPortal() string {
 // that, it will default to using "localhost"
 func GetHostname(ctx context.Context) string {
 	var dBusDest = "org.freedesktop.hostname1"
-	hostnameFromDBus, err := NewBusRequest(ctx, systemBus).
+	hostnameFromDBus, err := NewBusRequest(ctx, SystemBus).
 		Path(dbus.ObjectPath("/org/freedesktop/hostname1")).
 		Destination(dBusDest).
 		GetProp(dBusDest + ".Hostname")
@@ -322,7 +325,7 @@ func GetHardwareDetails(ctx context.Context) (string, string) {
 	var vendor, model string
 	var dBusDest = "org.freedesktop.hostname1"
 	var dBusPath = "/org/freedesktop/hostname1"
-	hwVendorFromDBus, err := NewBusRequest(ctx, systemBus).
+	hwVendorFromDBus, err := NewBusRequest(ctx, SystemBus).
 		Path(dbus.ObjectPath(dBusPath)).
 		Destination(dBusDest).
 		GetProp(dBusDest + ".HardwareVendor")
@@ -336,7 +339,7 @@ func GetHardwareDetails(ctx context.Context) (string, string) {
 	} else {
 		vendor = string(variantToValue[[]uint8](hwVendorFromDBus))
 	}
-	hwModelFromDBus, err := NewBusRequest(ctx, systemBus).
+	hwModelFromDBus, err := NewBusRequest(ctx, SystemBus).
 		Path(dbus.ObjectPath(dBusPath)).
 		Destination(dBusDest).
 		GetProp(dBusDest + ".HardwareVendor")
