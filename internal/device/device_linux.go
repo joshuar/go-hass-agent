@@ -35,6 +35,14 @@ type LinuxDeviceAPI struct {
 	mu   sync.Mutex
 }
 
+// EndPoint will return the given endpoint as an interface. Use
+// device.GetAPIEndpoint to safely assert the type of the API.
+func (d *LinuxDeviceAPI) EndPoint(e string) interface{} {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	return d.dbus[e]
+}
+
 // NewDeviceAPI sets up a DeviceAPI struct with appropriate DBus API endpoints.
 func NewDeviceAPI(ctx context.Context) *LinuxDeviceAPI {
 	api := new(LinuxDeviceAPI)
@@ -44,12 +52,4 @@ func NewDeviceAPI(ctx context.Context) *LinuxDeviceAPI {
 	api.dbus["system"] = linux.NewBus(ctx, linux.SystemBus)
 	api.mu.Unlock()
 	return api
-}
-
-// EndPoint will return the given endpoint as an interface. Use
-// device.GetAPIEndpoint to safely assert the type of the API.
-func (d *LinuxDeviceAPI) EndPoint(e string) interface{} {
-	d.mu.Lock()
-	defer d.mu.Unlock()
-	return d.dbus[e]
 }
