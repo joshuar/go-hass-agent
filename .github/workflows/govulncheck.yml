@@ -7,7 +7,11 @@ jobs:
     runs-on: ubuntu-latest
     name: Run govulncheck
     steps:
-      - id: govulncheck
+      - name: Install dependencies
+        id: install_linux_deps
+        run: sudo apt install -y desktop-file-utils gcc libgl1-mesa-dev libegl1-mesa-dev libgles2-mesa-dev libx11-dev xorg-dev
+
+      - id: Run govulncheck
         uses: golang/govulncheck-action@v1
         with:
           go-version-input: "1.20"
