@@ -25,11 +25,11 @@ jobs:
         id: install_linux_deps
         run: sudo apt install -y desktop-file-utils gcc libgl1-mesa-dev libegl1-mesa-dev libgles2-mesa-dev libx11-dev xorg-dev
 
-      - name: Generate
+      - name: Run go generate
         run: go generate -v ./...
 
-      - name: Build
+      - name: Run go build
         run: go build -v ./...
 
-      - name: Test
+      - name: Run go test
         run: go test -v ./...
