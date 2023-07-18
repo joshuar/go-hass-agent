@@ -20,6 +20,9 @@ var _ Config = &ConfigMock{}
 //			ApiURLFunc: func() string {
 //				panic("mock out the ApiURL method")
 //			},
+//			NewStorageFunc: func(s string) (string, error) {
+//				panic("mock out the NewStorage method")
+//			},
 //			SecretFunc: func() string {
 //				panic("mock out the Secret method")
 //			},
@@ -42,6 +45,9 @@ type ConfigMock struct {
 	// ApiURLFunc mocks the ApiURL method.
 	ApiURLFunc func() string
 
+	// NewStorageFunc mocks the NewStorage method.
+	NewStorageFunc func(s string) (string, error)
+
 	// SecretFunc mocks the Secret method.
 	SecretFunc func() string
 
@@ -59,6 +65,11 @@ type ConfigMock struct {
 		// ApiURL holds details about calls to the ApiURL method.
 		ApiURL []struct {
 		}
+		// NewStorage holds details about calls to the NewStorage method.
+		NewStorage []struct {
+			// S is the s argument value.
+			S string
+		}
 		// Secret holds details about calls to the Secret method.
 		Secret []struct {
 		}
@@ -73,6 +84,7 @@ type ConfigMock struct {
 		}
 	}
 	lockApiURL       sync.RWMutex
+	lockNewStorage   sync.RWMutex
 	lockSecret       sync.RWMutex
 	lockToken        sync.RWMutex
 	lockWebSocketURL sync.RWMutex
@@ -103,6 +115,38 @@ func (mock *ConfigMock) ApiURLCalls() []struct {
 	mock.lockApiURL.RLock()
 	calls = mock.calls.ApiURL
 	mock.lockApiURL.RUnlock()
+	return calls
+}
+
+// NewStorage calls NewStorageFunc.
+func (mock *ConfigMock) NewStorage(s string) (string, error) {
+	if mock.NewStorageFunc == nil {
+		panic("ConfigMock.NewStorageFunc: method is nil but Config.NewStorage was just called")
+	}
+	callInfo := struct {
+		S string
+	}{
+		S: s,
+	}
+	mock.lockNewStorage.Lock()
+	mock.calls.NewStorage = append(mock.calls.NewStorage, callInfo)
+	mock.lockNewStorage.Unlock()
+	return mock.NewStorageFunc(s)
+}
+
+// NewStorageCalls gets all the calls that were made to NewStorage.
+// Check the length with:
+//
+//	len(mockedConfig.NewStorageCalls())
+func (mock *ConfigMock) NewStorageCalls() []struct {
+	S string
+} {
+	var calls []struct {
+		S string
+	}
+	mock.lockNewStorage.RLock()
+	calls = mock.calls.NewStorage
+	mock.lockNewStorage.RUnlock()
 	return calls
 }
 

@@ -82,7 +82,7 @@ func (p networkProp) dbusProp() string {
 }
 
 func getNetProp(ctx context.Context, path dbus.ObjectPath, prop networkProp) (dbus.Variant, error) {
-	return NewBusRequest(ctx, systemBus).
+	return NewBusRequest(ctx, SystemBus).
 		Path(path).
 		Destination(networkManagerObject).
 		GetProp(prop.dbusProp())
@@ -340,20 +340,21 @@ func marshalNetworkStateUpdate(ctx context.Context, sensor networkProp, path dbu
 }
 
 func NetworkConnectionsUpdater(ctx context.Context, status chan interface{}) {
-	connList, err := NewBusRequest(ctx, systemBus).
+	connList, err := NewBusRequest(ctx, SystemBus).
 		Path(networkManagerPath).
 		Destination(networkManagerObject).
 		GetProp(networkManagerObject + ".ActiveConnections")
 	if err != nil {
 		log.Warn().Err(err).
 			Msg("Could not retrieve active connection list.")
+		return
 	}
 	for _, conn := range connList.Value().([]dbus.ObjectPath) {
 		processConnectionState(ctx, conn, status)
 		processConnectionType(ctx, conn, status)
 	}
 
-	err = NewBusRequest(ctx, systemBus).
+	err = NewBusRequest(ctx, SystemBus).
 		Path(networkManagerPath).
 		Match([]dbus.MatchOption{
 			dbus.WithMatchPathNamespace(networkManagerPath),
@@ -445,7 +446,7 @@ func processConnectionState(ctx context.Context, conn dbus.ObjectPath, status ch
 func processConnectionType(ctx context.Context, conn dbus.ObjectPath, status chan interface{}) {
 	getWifiProp := func(path dbus.ObjectPath, prop networkProp) (dbus.Variant, error) {
 		var apPath dbus.ObjectPath
-		ap, err := NewBusRequest(ctx, systemBus).
+		ap, err := NewBusRequest(ctx, SystemBus).
 			Path(path).
 			Destination(networkManagerObject).
 			GetProp(wirelessDeviceObject + ".ActiveAccessPoint")
@@ -458,7 +459,7 @@ func processConnectionType(ctx context.Context, conn dbus.ObjectPath, status cha
 			}
 		}
 
-		return NewBusRequest(ctx, systemBus).
+		return NewBusRequest(ctx, SystemBus).
 			Path(apPath).
 			Destination(networkManagerObject).
 			GetProp(prop.dbusProp())
@@ -534,7 +535,7 @@ func processWifiProps(ctx context.Context, props map[string]dbus.Variant, path d
 }
 
 func deviceToConnection(ctx context.Context, networkDevicePath dbus.ObjectPath) dbus.ObjectPath {
-	variant, err := NewBusRequest(ctx, systemBus).
+	variant, err := NewBusRequest(ctx, SystemBus).
 		Path(networkDevicePath).
 		Destination(networkManagerObject).
 		GetProp(networkManagerObject + ".ActiveConnection")
@@ -555,7 +556,7 @@ func ipConfigToDevice(ctx context.Context, ipConfigPath dbus.ObjectPath, ipConfi
 		configProp = "Ip6Config"
 	}
 
-	deviceList := NewBusRequest(ctx, systemBus).
+	deviceList := NewBusRequest(ctx, SystemBus).
 		Path(networkManagerPath).
 		Destination(networkManagerObject).
 		GetData(networkManagerObject + ".GetDevices").
@@ -567,7 +568,7 @@ func ipConfigToDevice(ctx context.Context, ipConfigPath dbus.ObjectPath, ipConfi
 	}
 	if len(deviceList) > 0 {
 		for _, devicePath := range deviceList {
-			c, err := NewBusRequest(ctx, systemBus).
+			c, err := NewBusRequest(ctx, SystemBus).
 				Path(devicePath).
 				Destination(networkManagerObject).
 				GetProp(deviceObject + "." + configProp)

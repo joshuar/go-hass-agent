@@ -169,7 +169,7 @@ func AppUpdater(ctx context.Context, update chan interface{}) {
 		return
 	}
 
-	err := NewBusRequest(ctx, sessionBus).
+	err := NewBusRequest(ctx, SessionBus).
 		Path(appStateDBusPath).
 		Match([]dbus.MatchOption{
 			dbus.WithMatchObjectPath(appStateDBusPath),
@@ -177,7 +177,7 @@ func AppUpdater(ctx context.Context, update chan interface{}) {
 		}).
 		Event(appStateDBusEvent).
 		Handler(func(_ *dbus.Signal) {
-			if activeAppList := NewBusRequest(ctx, sessionBus).
+			if activeAppList := NewBusRequest(ctx, SessionBus).
 				Path(appStateDBusPath).
 				Destination(portalDest).
 				GetData(appStateDBusMethod).AsVariantMap(); activeAppList != nil {

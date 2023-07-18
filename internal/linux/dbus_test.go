@@ -21,13 +21,13 @@ func Test_newBus(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want *bus
+		want *Bus
 	}{
 		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := newBus(tt.args.ctx, tt.args.t); !reflect.DeepEqual(got, tt.want) {
+			if got := NewBus(tt.args.ctx, tt.args.t); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("newBus() = %v, want %v", got, tt.want)
 			}
 		})
@@ -57,7 +57,7 @@ func TestNewBusRequest(t *testing.T) {
 
 func Test_busRequest_Path(t *testing.T) {
 	type fields struct {
-		bus          *bus
+		bus          *Bus
 		eventHandler func(*dbus.Signal)
 		path         dbus.ObjectPath
 		event        string
@@ -94,7 +94,7 @@ func Test_busRequest_Path(t *testing.T) {
 
 func Test_busRequest_Match(t *testing.T) {
 	type fields struct {
-		bus          *bus
+		bus          *Bus
 		eventHandler func(*dbus.Signal)
 		path         dbus.ObjectPath
 		event        string
@@ -131,7 +131,7 @@ func Test_busRequest_Match(t *testing.T) {
 
 func Test_busRequest_Event(t *testing.T) {
 	type fields struct {
-		bus          *bus
+		bus          *Bus
 		eventHandler func(*dbus.Signal)
 		path         dbus.ObjectPath
 		event        string
@@ -168,7 +168,7 @@ func Test_busRequest_Event(t *testing.T) {
 
 func Test_busRequest_Handler(t *testing.T) {
 	type fields struct {
-		bus          *bus
+		bus          *Bus
 		eventHandler func(*dbus.Signal)
 		path         dbus.ObjectPath
 		event        string
@@ -205,7 +205,7 @@ func Test_busRequest_Handler(t *testing.T) {
 
 func Test_busRequest_Destination(t *testing.T) {
 	type fields struct {
-		bus          *bus
+		bus          *Bus
 		eventHandler func(*dbus.Signal)
 		path         dbus.ObjectPath
 		event        string
@@ -242,7 +242,7 @@ func Test_busRequest_Destination(t *testing.T) {
 
 func Test_busRequest_GetProp(t *testing.T) {
 	type fields struct {
-		bus          *bus
+		bus          *Bus
 		eventHandler func(*dbus.Signal)
 		path         dbus.ObjectPath
 		event        string
@@ -285,7 +285,7 @@ func Test_busRequest_GetProp(t *testing.T) {
 
 func Test_busRequest_SetProp(t *testing.T) {
 	type fields struct {
-		bus          *bus
+		bus          *Bus
 		eventHandler func(*dbus.Signal)
 		path         dbus.ObjectPath
 		event        string
@@ -323,7 +323,7 @@ func Test_busRequest_SetProp(t *testing.T) {
 
 func Test_busRequest_GetData(t *testing.T) {
 	type fields struct {
-		bus          *bus
+		bus          *Bus
 		eventHandler func(*dbus.Signal)
 		path         dbus.ObjectPath
 		event        string
@@ -361,7 +361,7 @@ func Test_busRequest_GetData(t *testing.T) {
 
 func Test_busRequest_Call(t *testing.T) {
 	type fields struct {
-		bus          *bus
+		bus          *Bus
 		eventHandler func(*dbus.Signal)
 		path         dbus.ObjectPath
 		event        string
@@ -399,7 +399,7 @@ func Test_busRequest_Call(t *testing.T) {
 
 func Test_busRequest_AddWatch(t *testing.T) {
 	type fields struct {
-		bus          *bus
+		bus          *Bus
 		eventHandler func(*dbus.Signal)
 		path         dbus.ObjectPath
 		event        string

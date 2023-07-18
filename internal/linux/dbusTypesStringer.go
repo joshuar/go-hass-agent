@@ -8,8 +8,8 @@ func _() {
 	// An "invalid array index" compiler error signifies that the constant values have changed.
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
-	_ = x[sessionBus-0]
-	_ = x[systemBus-1]
+	_ = x[SessionBus-0]
+	_ = x[SystemBus-1]
 }
 
 const _dbusType_name = "sessionsystem"
