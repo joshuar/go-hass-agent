@@ -89,6 +89,13 @@ func marshalPowerStateUpdate(sensor powerProp, group string, v dbus.Variant) *po
 	case profile:
 		value = strings.Trim(v.String(), "\"")
 	}
+	if attributes == nil {
+		attributes = struct {
+			DataSource string `json:"Data Source"`
+		}{
+			DataSource: "D-Bus",
+		}
+	}
 	return &powerSensor{
 		sensorGroup:      group,
 		sensorType:       sensor,

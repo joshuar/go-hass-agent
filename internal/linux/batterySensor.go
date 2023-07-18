@@ -100,19 +100,23 @@ func (b *upowerBattery) marshalBatteryStateUpdate(ctx context.Context, prop batt
 		b.updateProp(ctx, voltage)
 		b.updateProp(ctx, energy)
 		state.attributes = &struct {
-			Voltage float64 `json:"Voltage"`
-			Energy  float64 `json:"Energy"`
+			DataSource string  `json:"Data Source"`
+			Voltage    float64 `json:"Voltage"`
+			Energy     float64 `json:"Energy"`
 		}{
-			Voltage: b.getProp(voltage).(float64),
-			Energy:  b.getProp(energy).(float64),
+			Voltage:    b.getProp(voltage).(float64),
+			Energy:     b.getProp(energy).(float64),
+			DataSource: "D-Bus",
 		}
 	case percentage:
 		fallthrough
 	case batteryLevel:
 		state.attributes = &struct {
-			Type string `json:"Battery Type"`
+			Type       string `json:"Battery Type"`
+			DataSource string `json:"Data Source"`
 		}{
-			Type: stringType(b.getProp(battType).(uint32)),
+			Type:       stringType(b.getProp(battType).(uint32)),
+			DataSource: "D-Bus",
 		}
 	}
 	return state

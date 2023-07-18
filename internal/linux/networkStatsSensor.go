@@ -83,7 +83,13 @@ func (i *networkStatsDetails) Category() string {
 }
 
 func (i *networkStatsDetails) Attributes() interface{} {
-	return i.statAttributes
+	return struct {
+		DataSource string `json:"Data Source"`
+		statAttributes
+	}{
+		DataSource:     "procfs",
+		statAttributes: i.statAttributes,
+	}
 }
 
 func NetworkStatsUpdater(ctx context.Context, status chan interface{}) {

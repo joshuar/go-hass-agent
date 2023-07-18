@@ -63,7 +63,13 @@ func (d *diskUsageState) Category() string {
 }
 
 func (s *diskUsageState) Attributes() interface{} {
-	return s
+	return struct {
+		DataSource string `json:"Data Source"`
+		diskUsageState
+	}{
+		DataSource:     "procfs",
+		diskUsageState: *s,
+	}
 }
 
 func DiskUsageUpdater(ctx context.Context, status chan interface{}) {

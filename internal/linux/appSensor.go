@@ -110,8 +110,8 @@ func (s *appSensor) Category() string {
 func (s *appSensor) Attributes() interface{} {
 	switch s.sensorType {
 	// TODO: profile and improve code to avoid memory leak
-	// case activeApp:
-	// 	return newActiveAppDetails(s.State().(string))
+	case activeApp:
+		return newActiveAppDetails(s.State().(string))
 	case runningApps:
 		return newRunningAppsDetails(s.sensorValue)
 	}
@@ -119,28 +119,31 @@ func (s *appSensor) Attributes() interface{} {
 }
 
 type activeAppDetails struct {
-	Cmd     string `json:"Command Line"`
-	Started string `json:"Started"`
-	Count   int    `json:"Process Count"`
+	// Cmd        string `json:"Command Line"`
+	// Started    string `json:"Started"`
+	// Count      int    `json:"Process Count"`
+	DataSource string `json:"Data Source"`
 }
 
 func newActiveAppDetails(app string) *activeAppDetails {
-	var appProcesses []*process.Process
-	var cmd string
-	var createTime int64
-	appProcesses = findProcesses(getProcessBasename(app))
-	if len(appProcesses) > 0 {
-		cmd, _ = appProcesses[0].Cmdline()
-		createTime, _ = appProcesses[0].CreateTime()
-	}
+	// var appProcesses []*process.Process
+	// var cmd string
+	// var createTime int64
+	// appProcesses = findProcesses(getProcessBasename(app))
+	// if len(appProcesses) > 0 {
+	// 	cmd, _ = appProcesses[0].Cmdline()
+	// 	createTime, _ = appProcesses[0].CreateTime()
+	// }
 	return &activeAppDetails{
-		Cmd:     cmd,
-		Started: time.UnixMilli(createTime).Format(time.RFC3339),
-		Count:   len(appProcesses),
+		// Cmd:        cmd,
+		// Started:    time.UnixMilli(createTime).Format(time.RFC3339),
+		// Count:      len(appProcesses),
+		DataSource: "D-Bus",
 	}
 }
 
 type runningAppsDetails struct {
+	DataSource  string   `json:"Data Source"`
 	RunningApps []string `json:"Running Apps"`
 }
 
@@ -151,6 +154,7 @@ func newRunningAppsDetails(apps map[string]dbus.Variant) *runningAppsDetails {
 			details.RunningApps = append(details.RunningApps, appName)
 		}
 	}
+	details.DataSource = "D-Bus"
 	return details
 }
 

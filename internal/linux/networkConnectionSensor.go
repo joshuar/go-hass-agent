@@ -315,10 +315,12 @@ func marshalNetworkStateUpdate(ctx context.Context, sensor networkProp, path dbu
 			ConnectionType string `json:"Connection Type"`
 			Ipv4           string `json:"IPv4 Address"`
 			Ipv6           string `json:"IPv6 Address"`
+			DataSource     string `json:"Data Source"`
 		}{
 			ConnectionType: connType,
 			Ipv4:           ip4Addr,
 			Ipv6:           ip6Addr,
+			DataSource:     "D-Bus",
 		}
 	case wifiSSID:
 		value = string(variantToValue[[]uint8](v))
@@ -330,6 +332,13 @@ func marshalNetworkStateUpdate(ctx context.Context, sensor networkProp, path dbu
 		value = variantToValue[uint32](v)
 	case wifiStrength:
 		value = variantToValue[uint32](v)
+	}
+	if attributes == nil {
+		attributes = struct {
+			DataSource string `json:"Data Source"`
+		}{
+			DataSource: "D-Bus",
+		}
 	}
 	return &networkSensor{
 		sensorGroup:      group,

@@ -62,7 +62,13 @@ func (p *problems) Category() string {
 }
 
 func (p *problems) Attributes() interface{} {
-	return p.list
+	return struct {
+		ProblemList map[string]map[string]interface{} `json:"Problem List"`
+		DataSource  string                            `json:"Data Source"`
+	}{
+		ProblemList: p.list,
+		DataSource:  "D-Bus",
+	}
 }
 
 func marshalProblemDetails(details map[string]string) map[string]interface{} {
