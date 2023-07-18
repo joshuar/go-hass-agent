@@ -25,11 +25,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      # - name: Fetch source
-      #   if: ${{ steps.release_please.outputs.release_created }}
-      #   id: git_fetch
-      #   run: git fetch --force --tags
-
       - name: Setup Go
         if: ${{ steps.release_please.outputs.release_created }}
         id: setup_go
