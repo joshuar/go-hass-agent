@@ -202,7 +202,6 @@ func TestExecuteRequest(t *testing.T) {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				defer close(tt.args.responseCh)
 				resp := <-tt.args.responseCh
 				if err := resp.Error(); (err != nil) != tt.wantErr {
 					t.Errorf("api.TestExecuteRequest() error = %v, wantErr %v", err, tt.wantErr)
