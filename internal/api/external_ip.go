@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-package device
+package api
 
 import (
 	"context"
@@ -155,7 +155,7 @@ func ExternalIPUpdater(ctx context.Context, status chan interface{}) {
 		for {
 			select {
 			case <-ctx.Done():
-				return	
+				return
 			case <-ticker.C:
 				log.Trace().Caller().Msg("Checking for external IP update...")
 				updateExternalIP()

@@ -30,7 +30,7 @@ type Sensor interface {
 	Attributes() interface{}
 }
 
-func MarshalSensorUpdate(s Sensor) *hass.SensorUpdateInfo {
+func marshalSensorUpdate(s Sensor) *hass.SensorUpdateInfo {
 	return &hass.SensorUpdateInfo{
 		StateAttributes: s.Attributes(),
 		Icon:            s.Icon(),
@@ -40,7 +40,7 @@ func MarshalSensorUpdate(s Sensor) *hass.SensorUpdateInfo {
 	}
 }
 
-func MarshalSensorRegistration(s Sensor) *hass.SensorRegistrationInfo {
+func marshalSensorRegistration(s Sensor) *hass.SensorRegistrationInfo {
 	return &hass.SensorRegistrationInfo{
 		StateAttributes:   s.Attributes(),
 		DeviceClass:       marshalClass(s.DeviceClass()),

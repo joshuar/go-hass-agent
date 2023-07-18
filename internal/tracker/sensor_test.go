@@ -45,7 +45,7 @@ func TestMarshalSensorUpdate(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := MarshalSensorUpdate(tt.args.s); !reflect.DeepEqual(got, tt.want) {
+			if got := marshalSensorUpdate(tt.args.s); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("MarshalSensorUpdate() = %v, want %v", got, tt.want)
 			}
 		})
@@ -93,7 +93,7 @@ func TestMarshalSensorRegistration(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := MarshalSensorRegistration(tt.args.s); !reflect.DeepEqual(got, tt.want) {
+			if got := marshalSensorRegistration(tt.args.s); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("MarshalSensorRegistration() = %v, want %v", got, tt.want)
 			}
 		})

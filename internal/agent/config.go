@@ -62,6 +62,14 @@ func (c *agentConfig) Secret() string {
 	return c.prefs.String(PrefSecret)
 }
 
+func (c *agentConfig) NewStorage(id string) (string, error) {
+	registryPath, err := extraStoragePath(id)
+	if err != nil {
+		return "", err
+	}
+	return registryPath.Path(), nil
+}
+
 func (c *agentConfig) Get(key string) (string, error) {
 	value := c.prefs.StringWithFallback(key, "NOTSET")
 	if value == "NOTSET" {

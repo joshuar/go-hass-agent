@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-package location
+package tracker
 
 import (
 	"context"
@@ -17,7 +17,7 @@ import (
 // LocationUpdate represents a location update from a platform/device. It
 // provides a bridge between the platform/device specific location info and Home
 // Assistant.
-type Update interface {
+type Location interface {
 	Gps() []float64
 	GpsAccuracy() int
 	Battery() int
@@ -27,9 +27,9 @@ type Update interface {
 	VerticalAccuracy() int
 }
 
-// MarshalUpdate will take a LocationUpdate and marshal it into a
+// marshalLocationUpdate will take a LocationUpdate and marshal it into a
 // hass.LocationUpdate that can be sent as a request to HA
-func MarshalUpdate(l Update) *hass.LocationUpdate {
+func marshalLocationUpdate(l Location) *hass.LocationUpdate {
 	return &hass.LocationUpdate{
 		Gps:              l.Gps(),
 		GpsAccuracy:      l.GpsAccuracy(),
@@ -41,18 +41,18 @@ func MarshalUpdate(l Update) *hass.LocationUpdate {
 	}
 }
 
-func SendUpdate(ctx context.Context, c api.Config, l Update) {
+func updateLocation(ctx context.Context, c api.Config, l Location) {
 	respCh := make(chan api.Response, 1)
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		api.ExecuteRequest(ctx, MarshalUpdate(l), c, respCh)
+		api.ExecuteRequest(ctx, marshalLocationUpdate(l), c, respCh)
 	}()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		defer close(respCh)
+		// defer close(respCh)
 		response := <-respCh
 		if response.Error() != nil {
 			log.Error().Err(response.Error()).

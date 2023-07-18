@@ -15,7 +15,6 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/storage"
-	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/joshuar/go-hass-agent/internal/translations"
 	"github.com/rs/zerolog"
@@ -60,7 +59,6 @@ func newAgent(appID string) (context.Context, context.CancelFunc, *Agent) {
 	}
 	a.mainWindow = a.app.NewWindow(Name)
 	ctx, cancelfunc := context.WithCancel(context.Background())
-	ctx = linux.SetupContext(ctx)
 	a.setupLogging()
 	return ctx, cancelfunc, a
 }
@@ -97,7 +95,9 @@ func Run(options AgentOptions) {
 		workerWg.Add(1)
 		go func() {
 			defer workerWg.Done()
-			agent.runSensorTracker(agentCtx, appConfig)
+			if err := tracker.RunSensorTracker(agentCtx, appConfig); err != nil {
+				log.Warn().Err(err).Msg("Problem starting sensor tracker.")
+			}
 		}()
 	}()
 	agent.handleSignals(cancelFunc)
@@ -167,8 +167,9 @@ func (agent *Agent) SetRegistered(value bool) {
 	agent.app.Preferences().SetBool("Registered", value)
 }
 
-func (agent *Agent) extraStoragePath(id string) (fyne.URI, error) {
-	rootPath := agent.app.Storage().RootURI()
+func extraStoragePath(id string) (fyne.URI, error) {
+	agent := fyne.CurrentApp()
+	rootPath := agent.Storage().RootURI()
 	extraPath, err := storage.Child(rootPath, id)
 	if err != nil {
 		return nil, err
@@ -180,7 +181,7 @@ func (agent *Agent) extraStoragePath(id string) (fyne.URI, error) {
 // setupLogging will attempt to create and then write logging to a file. If it
 // cannot do this, logging will only be available on stdout
 func (agent *Agent) setupLogging() {
-	logFile, err := agent.extraStoragePath("go-hass-app.log")
+	logFile, err := extraStoragePath("go-hass-app.log")
 	if err != nil {
 		log.Error().Err(err).
 			Msg("Unable to create a log file. Will only write logs to stdout.")

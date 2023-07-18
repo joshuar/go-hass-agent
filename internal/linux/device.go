@@ -13,7 +13,6 @@ import (
 
 	"git.lukeshu.com/go/libsystemd/sd_id128"
 	"github.com/acobaugh/osrelease"
-	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/rs/zerolog/log"
 )
@@ -134,13 +133,13 @@ func NewDevice(ctx context.Context, name string, version string) *LinuxDevice {
 	return newDevice
 }
 
-func SetupContext(ctx context.Context) context.Context {
-	deviceAPI := NewDeviceAPI(ctx)
-	if deviceAPI == nil {
-		log.Warn().Msg("No DBus connections could be established.")
-		return ctx
-	} else {
-		deviceCtx := device.StoreAPIInContext(ctx, deviceAPI)
-		return deviceCtx
-	}
-}
+// func SetupContext(ctx context.Context) context.Context {
+// 	deviceAPI := api.NewDeviceAPI(ctx)
+// 	if deviceAPI == nil {
+// 		log.Warn().Msg("No DBus connections could be established.")
+// 		return ctx
+// 	} else {
+// 		deviceCtx := api.StoreAPIInContext(ctx, deviceAPI)
+// 		return deviceCtx
+// 	}
+// }
