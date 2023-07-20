@@ -21,7 +21,7 @@ type SensorTracker struct {
 	mu       sync.RWMutex
 }
 
-func RunSensorTracker(ctx context.Context, config api.Config) error {
+func RunSensorTracker(ctx context.Context, config api.Config, trackerCh chan *SensorTracker) {
 	registryPath, err := config.NewStorage("sensorRegistry")
 	if err != nil {
 		log.Warn().Err(err).
@@ -30,13 +30,13 @@ func RunSensorTracker(ctx context.Context, config api.Config) error {
 	db, err := NewNutsDB(ctx, registryPath)
 	if err != nil {
 		log.Error().Err(err).Msg("Unable to create a sensor tracker.")
-		return err
+		close(trackerCh)
 	}
 	sensorTracker := &SensorTracker{
 		registry: db,
 		sensor:   make(map[string]Sensor),
 	}
-
+	trackerCh <- sensorTracker
 	var wg sync.WaitGroup
 	updateCh := make(chan interface{})
 	defer close(updateCh)
@@ -46,10 +46,10 @@ func RunSensorTracker(ctx context.Context, config api.Config) error {
 	}()
 	wg.Add(1)
 	go func() {
-		trackUpdates(ctx, sensorTracker, config, updateCh)
+		sensorTracker.trackUpdates(ctx, config, updateCh)
 	}()
 	wg.Wait()
-	return nil
+	close(trackerCh)
 }
 
 // Add creates a new sensor in the tracker based on a recieved state update.
@@ -77,25 +77,10 @@ func (tracker *SensorTracker) Get(id string) (Sensor, error) {
 
 // updateSensor will send a sensor update to HA, checking to ensure the sensor is not
 // disabled. It will also update the local registry state based on the response.
-func (tracker *SensorTracker) updateSensor(ctx context.Context, config api.Config, sensorUpdate Sensor) {
-	// hassConfig, err := hass.GetHassConfig(ctx, config)
-	// if err != nil {
-	// 	log.Warn().Err(err).
-	// 		Msg("Unable to retrieve config from Home Assistant.")
-	// 	return
-	// }
-	// isDisabled, err := hassConfig.IsEntityDisabled(sensorUpdate.ID())
-	// if err != nil {
-	// 	log.Warn().Err(err).
-	// 		Msgf("Unable to check disabled state for sensor %s in Home Assistant.", sensorUpdate.ID())
-	// 	return
-	// }
-	// if isDisabled {
-	// 	return
-	// }
+func (t *SensorTracker) updateSensor(ctx context.Context, config api.Config, sensorUpdate Sensor) {
 	var wg sync.WaitGroup
 	var req api.Request
-	if tracker.registry.IsRegistered(sensorUpdate.ID()) {
+	if t.registry.IsRegistered(sensorUpdate.ID()) {
 		req = marshalSensorUpdate(sensorUpdate)
 	} else {
 		req = marshalSensorRegistration(sensorUpdate)
@@ -116,18 +101,18 @@ func (tracker *SensorTracker) updateSensor(ctx context.Context, config api.Confi
 					sensorUpdate.ID(),
 					sensorUpdate.State(),
 					sensorUpdate.Units())
-			if err := tracker.add(sensorUpdate); err != nil {
+			if err := t.add(sensorUpdate); err != nil {
 				log.Warn().Err(err).
 					Msgf("Unable to add state for sensor %s to tracker.", sensorUpdate.Name())
 			}
 			if response.Type() == api.RequestTypeUpdateSensorStates && response.Disabled() {
-				if err := tracker.registry.SetDisabled(sensorUpdate.ID(), true); err != nil {
+				if err := t.registry.SetDisabled(sensorUpdate.ID(), true); err != nil {
 					log.Warn().Err(err).Msgf("Unable to set %s as disabled in registry.", sensorUpdate.Name())
 				}
 			}
 			if response.Type() == api.RequestTypeRegisterSensor && response.Registered() {
 				log.Debug().Msgf("Sensor %s (%s) registered in Home Assistant.", sensorUpdate.Name(), sensorUpdate.ID())
-				if err := tracker.registry.SetRegistered(sensorUpdate.ID(), true); err != nil {
+				if err := t.registry.SetRegistered(sensorUpdate.ID(), true); err != nil {
 					log.Warn().Err(err).Msgf("Unable to set %s as registered in registry.", sensorUpdate.Name())
 				}
 			}
@@ -138,6 +123,27 @@ func (tracker *SensorTracker) updateSensor(ctx context.Context, config api.Confi
 		defer wg.Done()
 		api.ExecuteRequest(ctx, req, config, responseCh)
 	}()
+}
+
+func (t *SensorTracker) trackUpdates(ctx context.Context, config api.Config, updateCh chan interface{}) {
+	for {
+		select {
+		case data := <-updateCh:
+			switch data := data.(type) {
+			case Sensor:
+				go t.updateSensor(ctx, config, data)
+			case Location:
+				go updateLocation(ctx, config, data)
+			default:
+				log.Warn().
+					Msgf("Got unexpected status update %v", data)
+			}
+		case <-ctx.Done():
+			log.Debug().
+				Msg("Stopping sensor tracking.")
+			return
+		}
+	}
 }
 
 // startWorkers will call all the sensor worker functions that have been defined
@@ -161,29 +167,8 @@ func startWorkers(ctx context.Context, updateCh chan interface{}) {
 		go func(worker func(context.Context, chan interface{})) {
 			defer wg.Done()
 			// worker(workerCtx, updateCh)
-			worker(ctx, updateCh	)
+			worker(ctx, updateCh)
 		}(worker)
 	}
 	wg.Wait()
-}
-
-func trackUpdates(ctx context.Context, tracker *SensorTracker, config api.Config, updateCh chan interface{}) {
-	for {
-		select {
-		case data := <-updateCh:
-			switch data := data.(type) {
-			case Sensor:
-				go tracker.updateSensor(ctx, config, data)
-			case Location:
-				go updateLocation(ctx, config, data)
-			default:
-				log.Warn().
-					Msgf("Got unexpected status update %v", data)
-			}
-		case <-ctx.Done():
-			log.Debug().
-				Msg("Stopping sensor tracking.")
-			return
-		}
-	}
 }
