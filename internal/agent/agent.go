@@ -49,17 +49,19 @@ type AgentOptions struct {
 	Headless, Register bool
 }
 
-func newAgent(appID string) *Agent {
+func newAgent(appID string, headless bool) *Agent {
 	a := &Agent{
 		app:     newUI(appID),
 		Name:    Name,
 		Version: Version,
 		done:    make(chan struct{}),
 	}
-	a.mainWindow = a.app.NewWindow(Name)
-	a.mainWindow.SetCloseIntercept(func() {
-		a.mainWindow.Hide()
-	})
+	if !headless {
+		a.mainWindow = a.app.NewWindow(Name)
+		a.mainWindow.SetCloseIntercept(func() {
+			a.mainWindow.Hide()
+		})
+	}
 	a.setupLogging()
 	return a
 }
@@ -69,7 +71,7 @@ func newAgent(appID string) *Agent {
 // publish it to Home Assistant
 func Run(options AgentOptions) {
 	translator = translations.NewTranslator()
-	agent := newAgent(options.ID)
+	agent := newAgent(options.ID, options.Headless)
 	defer close(agent.done)
 
 	agentCtx, cancelFunc := context.WithCancel(context.Background())
@@ -128,7 +130,7 @@ func Run(options AgentOptions) {
 // UI or non-UI registration flow.
 func Register(options AgentOptions, server, token string) {
 	translator = translations.NewTranslator()
-	agent := newAgent(options.ID)
+	agent := newAgent(options.ID, options.Headless)
 	defer close(agent.done)
 
 	agentCtx, cancelFunc := context.WithCancel(context.Background())
@@ -154,12 +156,12 @@ func Register(options AgentOptions, server, token string) {
 }
 
 func ShowVersion(options AgentOptions) {
-	agent := newAgent(options.ID)
+	agent := newAgent(options.ID, true)
 	log.Info().Msgf("%s: %s", agent.Name, agent.Version)
 }
 
 func ShowInfo(options AgentOptions) {
-	agent := newAgent(options.ID)
+	agent := newAgent(options.ID, true)
 	deviceName, deviceID := agent.DeviceDetails()
 	log.Info().Msgf("Device Name %s. Device ID %s.", deviceName, deviceID)
 
