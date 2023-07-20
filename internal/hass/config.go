@@ -80,7 +80,6 @@ func (h *haConfig) ResponseHandler(resp bytes.Buffer, respCh chan api.Response) 
 func GetHassConfig(ctx context.Context, c api.Config) (*haConfig, error) {
 	h := new(haConfig)
 	respCh := make(chan api.Response, 1)
-	defer close(respCh)
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
