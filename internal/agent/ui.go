@@ -125,6 +125,10 @@ func (agent *Agent) settingsWindow() {
 func (agent *Agent) sensorsWindow(ctx context.Context) {
 	var tableData [][]string
 	var entityNames []string
+	if sensors == nil {
+		log.Warn().Msg("No sensors available.")
+		return
+	}
 	hassConfig, err := hass.GetHassConfig(ctx, agent.LoadConfig())
 	if err != nil {
 		log.Warn().Err(err).
@@ -134,7 +138,7 @@ func (agent *Agent) sensorsWindow(ctx context.Context) {
 	entities := hassConfig.GetRegisteredEntities()
 	if entities == nil {
 		log.Warn().
-			Msg("No registered entities in Home Assistant.")	
+			Msg("No registered entities in Home Assistant.")
 		return
 	}
 	for k := range entities {
