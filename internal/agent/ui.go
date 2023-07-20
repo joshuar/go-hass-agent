@@ -134,11 +134,11 @@ func (agent *Agent) sensorsWindow(ctx context.Context) {
 	entities := hassConfig.GetRegisteredEntities()
 	if entities == nil {
 		log.Warn().
-			Msg("No registered entities in Home Assistant.")
+			Msg("No registered entities in Home Assistant.")	
 		return
 	}
 	for k := range entities {
-		if sensor, err := sensorTracker.Get(k); err == nil {
+		if sensor, err := sensors.Get(k); err == nil {
 			entityNames = append(entityNames, k)
 			tableData = append(tableData,
 				[]string{

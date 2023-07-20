@@ -26,8 +26,7 @@ import (
 var Version string
 
 var translator *translations.Translator
-
-var sensorTracker *tracker.SensorTracker
+var sensors *tracker.SensorTracker
 
 const (
 	Name = "go-hass-agent"
@@ -58,6 +57,9 @@ func newAgent(appID string) *Agent {
 		done:    make(chan struct{}),
 	}
 	a.mainWindow = a.app.NewWindow(Name)
+	a.mainWindow.SetCloseIntercept(func() {
+		a.mainWindow.Hide()
+	})
 	a.setupLogging()
 	return a
 }
@@ -76,7 +78,7 @@ func Run(options AgentOptions) {
 	go agent.registrationProcess(agentCtx, "", "", options.Register, options.Headless, registrationDone)
 
 	var workerWg sync.WaitGroup
-
+	trackerCh := make(chan *tracker.SensorTracker)
 	go func() {
 		<-registrationDone
 		// Load the config. If it is not valid, exit
@@ -90,15 +92,20 @@ func Run(options AgentOptions) {
 		// Start all the sensor workers as appropriate
 		workerWg.Add(1)
 		go func() {
+			sensors = <-trackerCh
+			if sensors == nil {
+				log.Fatal().Msg("Could not start sensor tracker.")
+			}
+		}()
+		workerWg.Add(1)
+		go func() {
 			defer workerWg.Done()
 			agent.runNotificationsWorker(agentCtx, options)
 		}()
 		workerWg.Add(1)
 		go func() {
 			defer workerWg.Done()
-			if err := tracker.RunSensorTracker(agentCtx, appConfig); err != nil {
-				log.Warn().Err(err).Msg("Problem starting sensor tracker.")
-			}
+			tracker.RunSensorTracker(agentCtx, appConfig, trackerCh)
 		}()
 	}()
 	agent.handleSignals(cancelFunc)
