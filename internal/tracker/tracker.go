@@ -12,6 +12,7 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/api"
 	"github.com/joshuar/go-hass-agent/internal/device"
+	registry "github.com/joshuar/go-hass-agent/internal/tracker/registry/nutsdb"
 	"github.com/rs/zerolog/log"
 )
 
@@ -27,7 +28,7 @@ func RunSensorTracker(ctx context.Context, config api.Config, trackerCh chan *Se
 		log.Warn().Err(err).
 			Msg("Path for sensor registry is not valid, using in-memory registry.")
 	}
-	db, err := NewNutsDB(ctx, registryPath)
+	db, err := registry.NewNutsDB(ctx, registryPath)
 	if err != nil {
 		log.Error().Err(err).Msg("Unable to create a sensor tracker.")
 		close(trackerCh)

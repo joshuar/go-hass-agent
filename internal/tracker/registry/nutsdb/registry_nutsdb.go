@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-package tracker
+package registry
 
 import (
 	"context"
@@ -18,6 +18,11 @@ import (
 const (
 	registryBucket = "sensorRegistryV1"
 )
+
+type SensorMetadata struct {
+	Registered bool `json:"Registered"`
+	Disabled   bool `json:"Disabled"`
+}
 
 type nutsdbRegistry struct {
 	db *nutsdb.DB
