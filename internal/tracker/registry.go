@@ -22,8 +22,3 @@ type Registry interface {
 	IsDisabled(string) bool
 	IsRegistered(string) bool
 }
-
-type SensorMetadata struct {
-	Registered bool `json:"Registered"`
-	Disabled   bool `json:"Disabled"`
-}
