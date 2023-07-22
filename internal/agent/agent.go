@@ -83,9 +83,8 @@ func Run(options AgentOptions) {
 	trackerCh := make(chan *tracker.SensorTracker)
 	go func() {
 		<-registrationDone
-		// Load the config. If it is not valid, exit
 		appConfig := agent.LoadConfig()
-		if err := appConfig.Upgrade(); err != nil {
+		if err := Upgrade(appConfig); err != nil {
 			log.Warn().Err(err).Msg("Could not upgrade config.")
 		}
 		if err := ValidateConfig(appConfig); err != nil {
@@ -116,9 +115,7 @@ func Run(options AgentOptions) {
 	// If we are not running in headless mode, show a tray icon
 	if !options.Headless {
 		agent.setupSystemTray(agentCtx)
-		log.Debug().Msg("Starting main UI loop.")
 		agent.app.Run()
-		log.Debug().Msg("Finished UI loop.")
 	}
 	workerWg.Wait()
 	<-agentCtx.Done()
@@ -148,6 +145,7 @@ func Register(options AgentOptions, server, token string) {
 	agent.handleSignals(cancelFunc)
 	agent.handleShutdown(agentCtx)
 	if !options.Headless {
+		agent.setupSystemTray(agentCtx)
 		agent.app.Run()
 	}
 
