@@ -9,6 +9,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/joshuar/go-hass-agent/internal/tracker/registry"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/mod/semver"
 )
@@ -40,6 +41,17 @@ func Upgrade(c *agentConfig) error {
 		log.Debug().Msg("Performing config upgrades for < v1.4.3")
 		c.generateAPIURL()
 		c.generateWebsocketURL()
+	case semver.Compare(Version, "v3.0.0") < 0:
+		log.Debug().Msg("Performing config upgrades for < v3.0.0.")
+		var err error
+		path, err := c.NewStorage("sensorRegistry")
+		if err != nil {
+			return errors.New("could not get sensor registry path from config")
+		}
+		err = registry.MigrateNuts2Json(path)
+		if err != nil {
+			return errors.New("failed to migrate sensor registry")
+		}
 	}
 
 	c.prefs.SetString("Version", Version)

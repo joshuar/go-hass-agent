@@ -56,74 +56,83 @@ func (r *nutsdbRegistry) Close() error {
 	}
 }
 
-func (r *nutsdbRegistry) IsDisabled(id string) bool {
-	metadata, err := r.get(id)
-	if err != nil {
-		log.Debug().Err(err).
-			Msgf("Could not retrieve disabled state for %s from registry.", id)
-		return false
-	}
-	return metadata.Disabled
+func (r *nutsdbRegistry) IsDisabled(id string) chan bool {
+	valueCh := make(chan bool, 1)
+	go r.get(id, "disabled", valueCh)
+	return valueCh
 }
 
-func (r *nutsdbRegistry) IsRegistered(id string) bool {
-	metadata, err := r.get(id)
-	if err != nil {
-		log.Debug().Err(err).
-			Msgf("Could not retrieve registered state for %s from registry.", id)
-		return false
-	}
-	return metadata.Registered
+func (r *nutsdbRegistry) IsRegistered(id string) chan bool {
+	valueCh := make(chan bool, 1)
+	go r.get(id, "registered", valueCh)
+	return valueCh
 }
 
-func (r *nutsdbRegistry) SetDisabled(id string, state bool) error {
-	metadata, err := r.get(id)
-	if err != nil && errors.Is(err, nutsdb.ErrBucketNotFound) {
-		return err
-	}
-	if metadata == nil {
-		metadata = new(SensorMetadata)
-	}
-	metadata.Disabled = state
-	return r.set(id, metadata)
+func (r *nutsdbRegistry) SetDisabled(id string, value bool) error {
+	return r.set(id, "disabled", value)
 }
 
-func (r *nutsdbRegistry) SetRegistered(id string, state bool) error {
-	metadata, err := r.get(id)
-	if err != nil && errors.Is(err, nutsdb.ErrBucketNotFound) {
-		return err
-	}
-	if metadata == nil {
-		metadata = new(SensorMetadata)
-	}
-	metadata.Registered = state
-	return r.set(id, metadata)
+func (r *nutsdbRegistry) SetRegistered(id string, value bool) error {
+	return r.set(id, "registered", value)
 }
 
-func (r *nutsdbRegistry) get(id string) (*SensorMetadata, error) {
-	data := new(SensorMetadata)
+func (r *nutsdbRegistry) get(id, valueType string, valueCh chan bool) {
+	defer close(valueCh)
 	if err := r.db.View(
 		func(tx *nutsdb.Tx) error {
 			key := []byte(id)
-			if e, err := tx.Get(registryBucket, key); err != nil {
+			entry, err := tx.Get(registryBucket, key)
+			if err != nil && errors.Is(err, nutsdb.ErrBucketNotFound) {
 				return err
-			} else {
-				return json.Unmarshal(e.Value, data)
 			}
+			data := &SensorMetadata{}
+			if entry == nil {
+				return nil
+			}
+			if err := json.Unmarshal(entry.Value, &data); err != nil {
+				return err
+			}
+			switch valueType {
+			case "disabled":
+				valueCh <- data.Disabled
+			case "registered":
+				valueCh <- data.Registered
+			}
+			return nil
 		}); err != nil {
-		return nil, err
+		log.Debug().Err(err).
+			Msgf("Unable to retrieve %s value for %s.", valueType, id)
+		return
 	}
-	return data, nil
 }
 
-func (r *nutsdbRegistry) set(id string, data *SensorMetadata) error {
-	v, err := json.Marshal(data)
-	if err != nil {
-		return err
-	}
+func (r *nutsdbRegistry) set(id, valueType string, value bool) error {
 	if err := r.db.Update(
 		func(tx *nutsdb.Tx) error {
-			if err := tx.Put(registryBucket, []byte(id), v, 0); err != nil {
+			key := []byte(id)
+			var entry *nutsdb.Entry
+			var err error
+			entry, err = tx.Get(registryBucket, key)
+			if err != nil && errors.Is(err, nutsdb.ErrBucketNotFound) {
+				return err
+			}
+			data := &SensorMetadata{}
+			if entry != nil {
+				if err = json.Unmarshal(entry.Value, &data); err != nil {
+					return err
+				}
+			}
+			switch valueType {
+			case "disabled":
+				data.Disabled = value
+			case "registered":
+				data.Registered = value
+			}
+			newData, err := json.Marshal(data)
+			if err != nil {
+				return err
+			}
+			if err := tx.Put(registryBucket, []byte(id), newData, nutsdb.Persistent); err != nil {
 				return err
 			}
 			return nil

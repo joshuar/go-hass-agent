@@ -16,6 +16,18 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+const (
+	registryStorageID = "sensorRegistry"
+)
+
+//go:generate moq -out mock_Registry_test.go . Registry
+type Registry interface {
+	SetDisabled(string, bool) error
+	SetRegistered(string, bool) error
+	IsDisabled(string) chan bool
+	IsRegistered(string) chan bool
+}
+
 type SensorTracker struct {
 	registry Registry
 	sensor   map[string]Sensor
@@ -28,6 +40,7 @@ func RunSensorTracker(ctx context.Context, config api.Config, trackerCh chan *Se
 		log.Warn().Err(err).
 			Msg("Path for sensor registry is not valid, using in-memory registry.")
 	}
+	// db, err := registry.NewJsonFilesRegistry(registryPath)
 	db, err := registry.NewNutsDB(ctx, registryPath)
 	if err != nil {
 		log.Error().Err(err).Msg("Unable to create a sensor tracker.")
@@ -81,9 +94,14 @@ func (tracker *SensorTracker) Get(id string) (Sensor, error) {
 func (t *SensorTracker) updateSensor(ctx context.Context, config api.Config, sensorUpdate Sensor) {
 	var wg sync.WaitGroup
 	var req api.Request
-	if t.registry.IsRegistered(sensorUpdate.ID()) {
+	var registered, ok bool
+	if registered, ok = <-t.registry.IsRegistered(sensorUpdate.ID()); !ok {
+		log.Warn().Msgf("Could not get registered state for %s from registry.", sensorUpdate.ID())
+	}
+	switch registered {
+	case true:
 		req = marshalSensorUpdate(sensorUpdate)
-	} else {
+	case false:
 		req = marshalSensorRegistration(sensorUpdate)
 	}
 	responseCh := make(chan api.Response, 1)
@@ -112,9 +130,10 @@ func (t *SensorTracker) updateSensor(ctx context.Context, config api.Config, sen
 				}
 			}
 			if response.Type() == api.RequestTypeRegisterSensor && response.Registered() {
-				log.Debug().Msgf("Sensor %s (%s) registered in Home Assistant.", sensorUpdate.Name(), sensorUpdate.ID())
 				if err := t.registry.SetRegistered(sensorUpdate.ID(), true); err != nil {
 					log.Warn().Err(err).Msgf("Unable to set %s as registered in registry.", sensorUpdate.Name())
+				} else {
+					log.Debug().Msgf("Sensor %s (%s) registered in Home Assistant.", sensorUpdate.Name(), sensorUpdate.ID())
 				}
 			}
 		}

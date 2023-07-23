@@ -151,7 +151,7 @@ func Test_nutsdbRegistry_IsDisabled(t *testing.T) {
 			r := &nutsdbRegistry{
 				db: tt.fields.db,
 			}
-			if got := r.IsDisabled(tt.args.id); got != tt.want {
+			if got := <-r.IsDisabled(tt.args.id); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("nutsdbRegistry.IsDisabled() = %v, want %v", got, tt.want)
 			}
 		})
@@ -215,8 +215,8 @@ func Test_nutsdbRegistry_IsRegistered(t *testing.T) {
 			r := &nutsdbRegistry{
 				db: tt.fields.db,
 			}
-			if got := r.IsRegistered(tt.args.id); got != tt.want {
-				t.Errorf("nutsdbRegistry.IsRegistered() = %v, want %v", got, tt.want)
+			if got := <-r.IsRegistered(tt.args.id); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("nutsdbRegistry.IsDisabled() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -234,7 +234,7 @@ func Test_nutsdbRegistry_SetDisabled(t *testing.T) {
 	}
 	type args struct {
 		id    string
-		state bool
+		value bool
 	}
 	tests := []struct {
 		name    string
@@ -249,7 +249,7 @@ func Test_nutsdbRegistry_SetDisabled(t *testing.T) {
 			},
 			args: args{
 				id:    "newSensor",
-				state: true,
+				value: true,
 			},
 			wantErr: false,
 		},
@@ -260,7 +260,7 @@ func Test_nutsdbRegistry_SetDisabled(t *testing.T) {
 			},
 			args: args{
 				id:    "existingSensor",
-				state: true,
+				value: true,
 			},
 			wantErr: false,
 		},
@@ -270,7 +270,7 @@ func Test_nutsdbRegistry_SetDisabled(t *testing.T) {
 			r := &nutsdbRegistry{
 				db: tt.fields.db,
 			}
-			if err := r.SetDisabled(tt.args.id, tt.args.state); (err != nil) != tt.wantErr {
+			if err := r.SetDisabled(tt.args.id, tt.args.value); (err != nil) != tt.wantErr {
 				t.Errorf("nutsdbRegistry.SetDisabled() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -289,7 +289,7 @@ func Test_nutsdbRegistry_SetRegistered(t *testing.T) {
 	}
 	type args struct {
 		id    string
-		state bool
+		value bool
 	}
 	tests := []struct {
 		name    string
@@ -304,7 +304,7 @@ func Test_nutsdbRegistry_SetRegistered(t *testing.T) {
 			},
 			args: args{
 				id:    "newSensor",
-				state: true,
+				value: true,
 			},
 			wantErr: false,
 		},
@@ -315,147 +315,18 @@ func Test_nutsdbRegistry_SetRegistered(t *testing.T) {
 			},
 			args: args{
 				id:    "existingSensor",
-				state: true,
+				value: true,
 			},
 			wantErr: false,
-		}}
+		},
+	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := &nutsdbRegistry{
 				db: tt.fields.db,
 			}
-			if err := r.SetRegistered(tt.args.id, tt.args.state); (err != nil) != tt.wantErr {
+			if err := r.SetRegistered(tt.args.id, tt.args.value); (err != nil) != tt.wantErr {
 				t.Errorf("nutsdbRegistry.SetRegistered() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
-
-func Test_nutsdbRegistry_get(t *testing.T) {
-	mockDB, err := NewNutsDB(context.Background(), "")
-	assert.Nil(t, err)
-	defer mockDB.Close()
-	err = mockDB.set("existingSensor", &SensorMetadata{
-		Disabled:   true,
-		Registered: true,
-	})
-	assert.Nil(t, err)
-
-	type fields struct {
-		db *nutsdb.DB
-	}
-	type args struct {
-		id string
-	}
-	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		want    *SensorMetadata
-		wantErr bool
-	}{
-		{
-			name: "existing sensor",
-			fields: fields{
-				db: mockDB.db,
-			},
-			args: args{
-				id: "existingSensor",
-			},
-			want: &SensorMetadata{
-				Disabled:   true,
-				Registered: true,
-			},
-			wantErr: false,
-		},
-		{
-			name: "nonexisting sensor",
-			fields: fields{
-				db: mockDB.db,
-			},
-			args: args{
-				id: "nonExistingSensor",
-			},
-			want:    nil,
-			wantErr: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			r := &nutsdbRegistry{
-				db: tt.fields.db,
-			}
-			got, err := r.get(tt.args.id)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("nutsdbRegistry.get() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("nutsdbRegistry.get() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_nutsdbRegistry_set(t *testing.T) {
-	mockDB, err := NewNutsDB(context.Background(), "")
-	assert.Nil(t, err)
-	defer mockDB.Close()
-	err = mockDB.set("existingSensor", &SensorMetadata{
-		Disabled:   true,
-		Registered: false,
-	})
-	assert.Nil(t, err)
-
-	type fields struct {
-		db *nutsdb.DB
-	}
-	type args struct {
-		id   string
-		data *SensorMetadata
-	}
-	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		wantErr bool
-	}{
-		{
-			name: "existing sensor",
-			fields: fields{
-				db: mockDB.db,
-			},
-			args: args{
-				id: "existingSensor",
-				data: &SensorMetadata{
-					Disabled:   false,
-					Registered: true,
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "nonexisting sensor",
-			fields: fields{
-				db: mockDB.db,
-			},
-			args: args{
-				id: "nonExistingSensor",
-				data: &SensorMetadata{
-					Disabled:   false,
-					Registered: true,
-				},
-			},
-			wantErr: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			r := &nutsdbRegistry{
-				db: tt.fields.db,
-			}
-			if err := r.set(tt.args.id, tt.args.data); (err != nil) != tt.wantErr {
-				t.Errorf("nutsdbRegistry.set() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
