@@ -174,6 +174,11 @@ func TestSensorTracker_Update(t *testing.T) {
 			valueCh <- true
 			return valueCh
 		},
+		IsDisabledFunc: func(s string) chan bool {
+			valueCh := make(chan bool, 1)
+			valueCh <- false
+			return valueCh
+		},
 	}
 
 	mockSensorUpdate := &SensorMock{

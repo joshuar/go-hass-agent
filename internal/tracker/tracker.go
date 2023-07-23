@@ -35,7 +35,7 @@ type SensorTracker struct {
 }
 
 func RunSensorTracker(ctx context.Context, config api.Config, trackerCh chan *SensorTracker) {
-	registryPath, err := config.NewStorage("sensorRegistry")
+	registryPath, err := config.NewStorage(registryStorageID)
 	if err != nil {
 		log.Warn().Err(err).
 			Msg("Path for sensor registry is not valid, using in-memory registry.")
@@ -93,10 +93,10 @@ func (tracker *SensorTracker) Get(id string) (Sensor, error) {
 func (t *SensorTracker) updateSensor(ctx context.Context, config api.Config, sensorUpdate Sensor) {
 	var wg sync.WaitGroup
 	var req api.Request
-	var registered, ok bool
-	if registered, ok = <-t.registry.IsRegistered(sensorUpdate.ID()); !ok {
-		log.Warn().Msgf("Could not get registered state for %s from registry.", sensorUpdate.ID())
+	if disabled := <-t.registry.IsDisabled(sensorUpdate.ID()); disabled {
+		log.Debug().Msgf("Sensor %s is disabled. Ignoring update.", sensorUpdate.ID())
 	}
+	registered := <-t.registry.IsRegistered(sensorUpdate.ID())
 	switch registered {
 	case true:
 		req = marshalSensorUpdate(sensorUpdate)
@@ -107,7 +107,6 @@ func (t *SensorTracker) updateSensor(ctx context.Context, config api.Config, sen
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		// defer close(responseCh)
 		response := <-responseCh
 		if response.Error() != nil {
 			log.Error().Err(response.Error()).
@@ -126,6 +125,8 @@ func (t *SensorTracker) updateSensor(ctx context.Context, config api.Config, sen
 			if response.Type() == api.RequestTypeUpdateSensorStates && response.Disabled() {
 				if err := t.registry.SetDisabled(sensorUpdate.ID(), true); err != nil {
 					log.Warn().Err(err).Msgf("Unable to set %s as disabled in registry.", sensorUpdate.Name())
+				} else {
+					log.Debug().Msgf("Sensor %s set to disabled.", sensorUpdate.Name())
 				}
 			}
 			if response.Type() == api.RequestTypeRegisterSensor && response.Registered() {
@@ -169,15 +170,6 @@ func (t *SensorTracker) trackUpdates(ctx context.Context, config api.Config, upd
 // for this device.
 func startWorkers(ctx context.Context, updateCh chan interface{}) {
 	var wg sync.WaitGroup
-
-	// Run all the defined sensor update functions.
-	// deviceAPI, err := device.FetchAPIFromContext(ctx)
-	// if err != nil {
-	// 	log.Error().Err(err).
-	// 		Msg("Could not fetch sensor workers.")
-	// 	return
-	// }
-	// workerCtx := api.StoreAPIInContext(ctx, device.NewDeviceAPI(ctx))
 
 	sensorWorkers := device.SensorWorkers()
 	sensorWorkers = append(sensorWorkers, api.ExternalIPUpdater)
