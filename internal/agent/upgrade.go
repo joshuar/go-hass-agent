@@ -7,6 +7,7 @@ package agent
 
 import (
 	"errors"
+	"os"
 	"time"
 
 	"github.com/joshuar/go-hass-agent/internal/tracker/registry"
@@ -51,6 +52,9 @@ func Upgrade(c *agentConfig) error {
 		err = registry.MigrateNuts2Json(path)
 		if err != nil {
 			return errors.New("failed to migrate sensor registry")
+		}
+		if err = os.Remove(path + "/0.dat"); err != nil {
+			return errors.New("could not remove old sensor registry")
 		}
 	}
 
