@@ -4,7 +4,6 @@
 package tracker
 
 import (
-	"context"
 	"sync"
 )
 
@@ -18,17 +17,11 @@ var _ Registry = &RegistryMock{}
 //
 //		// make and configure a mocked Registry
 //		mockedRegistry := &RegistryMock{
-//			CloseFunc: func() error {
-//				panic("mock out the Close method")
-//			},
-//			IsDisabledFunc: func(s string) bool {
+//			IsDisabledFunc: func(s string) chan bool {
 //				panic("mock out the IsDisabled method")
 //			},
-//			IsRegisteredFunc: func(s string) bool {
+//			IsRegisteredFunc: func(s string) chan bool {
 //				panic("mock out the IsRegistered method")
-//			},
-//			OpenFunc: func(contextMoqParam context.Context, s string) error {
-//				panic("mock out the Open method")
 //			},
 //			SetDisabledFunc: func(s string, b bool) error {
 //				panic("mock out the SetDisabled method")
@@ -43,17 +36,11 @@ var _ Registry = &RegistryMock{}
 //
 //	}
 type RegistryMock struct {
-	// CloseFunc mocks the Close method.
-	CloseFunc func() error
-
 	// IsDisabledFunc mocks the IsDisabled method.
-	IsDisabledFunc func(s string) bool
+	IsDisabledFunc func(s string) chan bool
 
 	// IsRegisteredFunc mocks the IsRegistered method.
-	IsRegisteredFunc func(s string) bool
-
-	// OpenFunc mocks the Open method.
-	OpenFunc func(contextMoqParam context.Context, s string) error
+	IsRegisteredFunc func(s string) chan bool
 
 	// SetDisabledFunc mocks the SetDisabled method.
 	SetDisabledFunc func(s string, b bool) error
@@ -63,9 +50,6 @@ type RegistryMock struct {
 
 	// calls tracks calls to the methods.
 	calls struct {
-		// Close holds details about calls to the Close method.
-		Close []struct {
-		}
 		// IsDisabled holds details about calls to the IsDisabled method.
 		IsDisabled []struct {
 			// S is the s argument value.
@@ -73,13 +57,6 @@ type RegistryMock struct {
 		}
 		// IsRegistered holds details about calls to the IsRegistered method.
 		IsRegistered []struct {
-			// S is the s argument value.
-			S string
-		}
-		// Open holds details about calls to the Open method.
-		Open []struct {
-			// ContextMoqParam is the contextMoqParam argument value.
-			ContextMoqParam context.Context
 			// S is the s argument value.
 			S string
 		}
@@ -98,43 +75,14 @@ type RegistryMock struct {
 			B bool
 		}
 	}
-	lockClose         sync.RWMutex
 	lockIsDisabled    sync.RWMutex
 	lockIsRegistered  sync.RWMutex
-	lockOpen          sync.RWMutex
 	lockSetDisabled   sync.RWMutex
 	lockSetRegistered sync.RWMutex
 }
 
-// Close calls CloseFunc.
-func (mock *RegistryMock) Close() error {
-	if mock.CloseFunc == nil {
-		panic("RegistryMock.CloseFunc: method is nil but Registry.Close was just called")
-	}
-	callInfo := struct {
-	}{}
-	mock.lockClose.Lock()
-	mock.calls.Close = append(mock.calls.Close, callInfo)
-	mock.lockClose.Unlock()
-	return mock.CloseFunc()
-}
-
-// CloseCalls gets all the calls that were made to Close.
-// Check the length with:
-//
-//	len(mockedRegistry.CloseCalls())
-func (mock *RegistryMock) CloseCalls() []struct {
-} {
-	var calls []struct {
-	}
-	mock.lockClose.RLock()
-	calls = mock.calls.Close
-	mock.lockClose.RUnlock()
-	return calls
-}
-
 // IsDisabled calls IsDisabledFunc.
-func (mock *RegistryMock) IsDisabled(s string) bool {
+func (mock *RegistryMock) IsDisabled(s string) chan bool {
 	if mock.IsDisabledFunc == nil {
 		panic("RegistryMock.IsDisabledFunc: method is nil but Registry.IsDisabled was just called")
 	}
@@ -166,7 +114,7 @@ func (mock *RegistryMock) IsDisabledCalls() []struct {
 }
 
 // IsRegistered calls IsRegisteredFunc.
-func (mock *RegistryMock) IsRegistered(s string) bool {
+func (mock *RegistryMock) IsRegistered(s string) chan bool {
 	if mock.IsRegisteredFunc == nil {
 		panic("RegistryMock.IsRegisteredFunc: method is nil but Registry.IsRegistered was just called")
 	}
@@ -194,42 +142,6 @@ func (mock *RegistryMock) IsRegisteredCalls() []struct {
 	mock.lockIsRegistered.RLock()
 	calls = mock.calls.IsRegistered
 	mock.lockIsRegistered.RUnlock()
-	return calls
-}
-
-// Open calls OpenFunc.
-func (mock *RegistryMock) Open(contextMoqParam context.Context, s string) error {
-	if mock.OpenFunc == nil {
-		panic("RegistryMock.OpenFunc: method is nil but Registry.Open was just called")
-	}
-	callInfo := struct {
-		ContextMoqParam context.Context
-		S               string
-	}{
-		ContextMoqParam: contextMoqParam,
-		S:               s,
-	}
-	mock.lockOpen.Lock()
-	mock.calls.Open = append(mock.calls.Open, callInfo)
-	mock.lockOpen.Unlock()
-	return mock.OpenFunc(contextMoqParam, s)
-}
-
-// OpenCalls gets all the calls that were made to Open.
-// Check the length with:
-//
-//	len(mockedRegistry.OpenCalls())
-func (mock *RegistryMock) OpenCalls() []struct {
-	ContextMoqParam context.Context
-	S               string
-} {
-	var calls []struct {
-		ContextMoqParam context.Context
-		S               string
-	}
-	mock.lockOpen.RLock()
-	calls = mock.calls.Open
-	mock.lockOpen.RUnlock()
 	return calls
 }
 

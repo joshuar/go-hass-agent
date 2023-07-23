@@ -14,7 +14,6 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/joshuar/go-hass-agent/internal/api"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensorType"
 	"github.com/stretchr/testify/assert"
@@ -156,7 +155,6 @@ func NewMockConfig(t *testing.T) *mockConfig {
 func TestSensorTracker_Update(t *testing.T) {
 	mockServer := func(t *testing.T) *httptest.Server {
 		return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			spew.Dump(r)
 			req := &api.UnencryptedRequest{}
 			err := json.NewDecoder(r.Body).Decode(&req)
 			assert.Nil(t, err)
@@ -171,7 +169,11 @@ func TestSensorTracker_Update(t *testing.T) {
 	// defer server.Close()
 
 	mockRegistry := &RegistryMock{
-		IsRegisteredFunc: func(s string) bool { return true },
+		IsRegisteredFunc: func(s string) chan bool {
+			valueCh := make(chan bool, 1)
+			valueCh <- true
+			return valueCh
+		},
 	}
 
 	mockSensorUpdate := &SensorMock{
