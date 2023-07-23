@@ -11,9 +11,7 @@ import (
 
 	"github.com/iancoleman/strcase"
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
-	"github.com/joshuar/go-hass-agent/internal/hass/deviceClass"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensorType"
-	"github.com/joshuar/go-hass-agent/internal/hass/stateClass"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v3/net"
 )
@@ -59,16 +57,16 @@ func (i *networkStatsDetails) Icon() string {
 	}
 }
 
-func (i *networkStatsDetails) SensorType() sensorType.SensorType {
-	return sensorType.TypeSensor
+func (i *networkStatsDetails) SensorType() sensor.SensorType {
+	return sensor.TypeSensor
 }
 
-func (i *networkStatsDetails) DeviceClass() deviceClass.SensorDeviceClass {
-	return deviceClass.Data_size
+func (i *networkStatsDetails) DeviceClass() sensor.SensorDeviceClass {
+	return sensor.Data_size
 }
 
-func (i *networkStatsDetails) StateClass() stateClass.SensorStateClass {
-	return stateClass.StateTotal
+func (i *networkStatsDetails) StateClass() sensor.SensorStateClass {
+	return sensor.StateTotal
 }
 
 func (i *networkStatsDetails) State() interface{} {

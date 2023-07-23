@@ -4,9 +4,7 @@
 package tracker
 
 import (
-	"github.com/joshuar/go-hass-agent/internal/hass/deviceClass"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensorType"
-	"github.com/joshuar/go-hass-agent/internal/hass/stateClass"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"sync"
 )
 
@@ -26,7 +24,7 @@ var _ Sensor = &SensorMock{}
 //			CategoryFunc: func() string {
 //				panic("mock out the Category method")
 //			},
-//			DeviceClassFunc: func() deviceClass.SensorDeviceClass {
+//			DeviceClassFunc: func() sensor.SensorDeviceClass {
 //				panic("mock out the DeviceClass method")
 //			},
 //			IDFunc: func() string {
@@ -38,13 +36,13 @@ var _ Sensor = &SensorMock{}
 //			NameFunc: func() string {
 //				panic("mock out the Name method")
 //			},
-//			SensorTypeFunc: func() sensorType.SensorType {
+//			SensorTypeFunc: func() sensor.SensorType {
 //				panic("mock out the SensorType method")
 //			},
 //			StateFunc: func() interface{} {
 //				panic("mock out the State method")
 //			},
-//			StateClassFunc: func() stateClass.SensorStateClass {
+//			StateClassFunc: func() sensor.SensorStateClass {
 //				panic("mock out the StateClass method")
 //			},
 //			UnitsFunc: func() string {
@@ -64,7 +62,7 @@ type SensorMock struct {
 	CategoryFunc func() string
 
 	// DeviceClassFunc mocks the DeviceClass method.
-	DeviceClassFunc func() deviceClass.SensorDeviceClass
+	DeviceClassFunc func() sensor.SensorDeviceClass
 
 	// IDFunc mocks the ID method.
 	IDFunc func() string
@@ -76,13 +74,13 @@ type SensorMock struct {
 	NameFunc func() string
 
 	// SensorTypeFunc mocks the SensorType method.
-	SensorTypeFunc func() sensorType.SensorType
+	SensorTypeFunc func() sensor.SensorType
 
 	// StateFunc mocks the State method.
 	StateFunc func() interface{}
 
 	// StateClassFunc mocks the StateClass method.
-	StateClassFunc func() stateClass.SensorStateClass
+	StateClassFunc func() sensor.SensorStateClass
 
 	// UnitsFunc mocks the Units method.
 	UnitsFunc func() string
@@ -187,7 +185,7 @@ func (mock *SensorMock) CategoryCalls() []struct {
 }
 
 // DeviceClass calls DeviceClassFunc.
-func (mock *SensorMock) DeviceClass() deviceClass.SensorDeviceClass {
+func (mock *SensorMock) DeviceClass() sensor.SensorDeviceClass {
 	if mock.DeviceClassFunc == nil {
 		panic("SensorMock.DeviceClassFunc: method is nil but Sensor.DeviceClass was just called")
 	}
@@ -295,7 +293,7 @@ func (mock *SensorMock) NameCalls() []struct {
 }
 
 // SensorType calls SensorTypeFunc.
-func (mock *SensorMock) SensorType() sensorType.SensorType {
+func (mock *SensorMock) SensorType() sensor.SensorType {
 	if mock.SensorTypeFunc == nil {
 		panic("SensorMock.SensorTypeFunc: method is nil but Sensor.SensorType was just called")
 	}
@@ -349,7 +347,7 @@ func (mock *SensorMock) StateCalls() []struct {
 }
 
 // StateClass calls StateClassFunc.
-func (mock *SensorMock) StateClass() stateClass.SensorStateClass {
+func (mock *SensorMock) StateClass() sensor.SensorStateClass {
 	if mock.StateClassFunc == nil {
 		panic("SensorMock.StateClassFunc: method is nil but Sensor.StateClass was just called")
 	}

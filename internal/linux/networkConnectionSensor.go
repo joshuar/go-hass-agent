@@ -13,9 +13,7 @@ import (
 
 	"github.com/godbus/dbus/v5"
 	"github.com/iancoleman/strcase"
-	"github.com/joshuar/go-hass-agent/internal/hass/deviceClass"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensorType"
-	"github.com/joshuar/go-hass-agent/internal/hass/stateClass"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/rs/zerolog/log"
 )
 
@@ -215,29 +213,29 @@ func (state *networkSensor) Icon() string {
 	return "mdi:network"
 }
 
-func (state *networkSensor) SensorType() sensorType.SensorType {
-	return sensorType.TypeSensor
+func (state *networkSensor) SensorType() sensor.SensorType {
+	return sensor.TypeSensor
 }
 
-func (state *networkSensor) DeviceClass() deviceClass.SensorDeviceClass {
+func (state *networkSensor) DeviceClass() sensor.SensorDeviceClass {
 	switch state.sensorType {
 	case wifiFrequency:
-		return deviceClass.Frequency
+		return sensor.Frequency
 	case wifiSpeed:
-		return deviceClass.Data_rate
+		return sensor.Data_rate
 	default:
 		return 0
 	}
 }
 
-func (state *networkSensor) StateClass() stateClass.SensorStateClass {
+func (state *networkSensor) StateClass() sensor.SensorStateClass {
 	switch state.sensorType {
 	case wifiFrequency:
 		fallthrough
 	case wifiSpeed:
 		fallthrough
 	case wifiStrength:
-		return stateClass.StateMeasurement
+		return sensor.StateMeasurement
 	default:
 		return 0
 	}

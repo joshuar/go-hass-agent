@@ -179,7 +179,7 @@ func startWorkers(ctx context.Context, updateCh chan interface{}) {
 	var wg sync.WaitGroup
 
 	sensorWorkers := device.SensorWorkers()
-	sensorWorkers = append(sensorWorkers, api.ExternalIPUpdater)
+	sensorWorkers = append(sensorWorkers, device.ExternalIPUpdater)
 	for _, worker := range sensorWorkers {
 		wg.Add(1)
 		go func(worker func(context.Context, chan interface{})) {

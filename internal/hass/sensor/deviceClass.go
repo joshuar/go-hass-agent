@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-package deviceClass
+package sensor
 
 // This list is taken from:
 // https://developers.home-assistant.io/docs/core/entity/sensor/

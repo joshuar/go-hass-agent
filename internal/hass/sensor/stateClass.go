@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-package stateClass
+package sensor
 
 //go:generate stringer -type=SensorStateClass -output stateClassStrings.go -linecomment
 const (

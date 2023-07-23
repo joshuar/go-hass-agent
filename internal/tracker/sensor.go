@@ -6,10 +6,7 @@
 package tracker
 
 import (
-	"github.com/joshuar/go-hass-agent/internal/hass"
-	"github.com/joshuar/go-hass-agent/internal/hass/deviceClass"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensorType"
-	"github.com/joshuar/go-hass-agent/internal/hass/stateClass"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 )
 
 // Sensor represents an update for a sensor. It reflects the current state
@@ -21,17 +18,17 @@ type Sensor interface {
 	Name() string
 	ID() string
 	Icon() string
-	SensorType() sensorType.SensorType
-	DeviceClass() deviceClass.SensorDeviceClass
-	StateClass() stateClass.SensorStateClass
+	SensorType() sensor.SensorType
+	DeviceClass() sensor.SensorDeviceClass
+	StateClass() sensor.SensorStateClass
 	State() interface{}
 	Units() string
 	Category() string
 	Attributes() interface{}
 }
 
-func marshalSensorUpdate(s Sensor) *hass.SensorUpdateInfo {
-	return &hass.SensorUpdateInfo{
+func marshalSensorUpdate(s Sensor) *sensor.SensorUpdateInfo {
+	return &sensor.SensorUpdateInfo{
 		StateAttributes: s.Attributes(),
 		Icon:            s.Icon(),
 		State:           s.State(),
@@ -40,8 +37,8 @@ func marshalSensorUpdate(s Sensor) *hass.SensorUpdateInfo {
 	}
 }
 
-func marshalSensorRegistration(s Sensor) *hass.SensorRegistrationInfo {
-	return &hass.SensorRegistrationInfo{
+func marshalSensorRegistration(s Sensor) *sensor.SensorRegistrationInfo {
+	return &sensor.SensorRegistrationInfo{
 		StateAttributes:   s.Attributes(),
 		DeviceClass:       marshalClass(s.DeviceClass()),
 		Icon:              s.Icon(),

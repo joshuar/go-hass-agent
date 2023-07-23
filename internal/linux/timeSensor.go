@@ -11,9 +11,7 @@ import (
 
 	"github.com/iancoleman/strcase"
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
-	"github.com/joshuar/go-hass-agent/internal/hass/deviceClass"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensorType"
-	"github.com/joshuar/go-hass-agent/internal/hass/stateClass"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v3/host"
 )
@@ -43,24 +41,24 @@ func (m *timeSensor) Icon() string {
 	return "mdi:restart"
 }
 
-func (m *timeSensor) SensorType() sensorType.SensorType {
-	return sensorType.TypeSensor
+func (m *timeSensor) SensorType() sensor.SensorType {
+	return sensor.TypeSensor
 }
 
-func (m *timeSensor) DeviceClass() deviceClass.SensorDeviceClass {
+func (m *timeSensor) DeviceClass() sensor.SensorDeviceClass {
 	switch m.prop {
 	case uptime:
-		return deviceClass.Duration
+		return sensor.Duration
 	case boottime:
-		return deviceClass.Timestamp
+		return sensor.Timestamp
 	}
 	return 0
 }
 
-func (m *timeSensor) StateClass() stateClass.SensorStateClass {
+func (m *timeSensor) StateClass() sensor.SensorStateClass {
 	switch m.prop {
 	case uptime:
-		return stateClass.StateMeasurement
+		return sensor.StateMeasurement
 	default:
 		return 0
 	}

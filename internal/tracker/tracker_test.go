@@ -15,7 +15,7 @@ import (
 	"testing"
 
 	"github.com/joshuar/go-hass-agent/internal/api"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensorType"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -185,7 +185,7 @@ func TestSensorTracker_Update(t *testing.T) {
 		AttributesFunc: func() interface{} { return nil },
 		StateFunc:      func() interface{} { return "aState" },
 		IconFunc:       func() string { return "mdi:icon" },
-		SensorTypeFunc: func() sensorType.SensorType { return sensorType.TypeSensor },
+		SensorTypeFunc: func() sensor.SensorType { return sensor.TypeSensor },
 		IDFunc:         func() string { return "sensorID" },
 		NameFunc:       func() string { return "sensorName" },
 	}
