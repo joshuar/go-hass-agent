@@ -11,6 +11,9 @@ jobs:
         id: install_linux_deps
         run: sudo apt install -y desktop-file-utils gcc libgl1-mesa-dev libegl1-mesa-dev libgles2-mesa-dev libx11-dev xorg-dev
 
+      - name: Run go generate
+        run: go generate -v ./...
+
       - name: Run govulncheck
         id: run_govulncheck
         uses: golang/govulncheck-action@v1
