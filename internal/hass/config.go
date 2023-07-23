@@ -12,7 +12,7 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/joshuar/go-hass-agent/internal/api"
+	"github.com/joshuar/go-hass-agent/internal/hass/api"
 	"github.com/perimeterx/marshmallow"
 )
 

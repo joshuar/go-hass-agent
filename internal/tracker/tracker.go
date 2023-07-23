@@ -10,8 +10,8 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/joshuar/go-hass-agent/internal/api"
 	"github.com/joshuar/go-hass-agent/internal/device"
+	"github.com/joshuar/go-hass-agent/internal/hass/api"
 	registry "github.com/joshuar/go-hass-agent/internal/tracker/registry/jsonFiles"
 	"github.com/rs/zerolog/log"
 )
