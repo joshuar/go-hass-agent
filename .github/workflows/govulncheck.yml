@@ -11,6 +11,12 @@ jobs:
         id: install_linux_deps
         run: sudo apt install -y desktop-file-utils gcc libgl1-mesa-dev libegl1-mesa-dev libgles2-mesa-dev libx11-dev xorg-dev
 
+      - name: Check out source
+        uses: actions/checkout@v3
+        if: ${{ steps.release_please.outputs.release_created }}
+        with:
+          fetch-depth: 0
+
       - name: Update VERSION
         id: update_version
         shell: sh
