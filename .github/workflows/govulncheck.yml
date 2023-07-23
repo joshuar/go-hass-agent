@@ -12,7 +12,6 @@ jobs:
         run: sudo apt install -y desktop-file-utils gcc libgl1-mesa-dev libegl1-mesa-dev libgles2-mesa-dev libx11-dev xorg-dev
 
       - name: Update VERSION
-        if: ${{ steps.release_please.outputs.release_created }}
         id: update_version
         shell: sh
         run: cd internal/agent && printf %s $(git tag | tail -1) > VERSION
