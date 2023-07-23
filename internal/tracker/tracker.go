@@ -122,11 +122,18 @@ func (t *SensorTracker) updateSensor(ctx context.Context, config api.Config, sen
 				log.Warn().Err(err).
 					Msgf("Unable to add state for sensor %s to tracker.", sensorUpdate.Name())
 			}
-			if response.Type() == api.RequestTypeUpdateSensorStates && response.Disabled() {
-				if err := t.registry.SetDisabled(sensorUpdate.ID(), true); err != nil {
-					log.Warn().Err(err).Msgf("Unable to set %s as disabled in registry.", sensorUpdate.Name())
-				} else {
-					log.Debug().Msgf("Sensor %s set to disabled.", sensorUpdate.Name())
+			if response.Type() == api.RequestTypeUpdateSensorStates {
+				switch {
+				case response.Disabled():
+					if err := t.registry.SetDisabled(sensorUpdate.ID(), true); err != nil {
+						log.Warn().Err(err).Msgf("Unable to set %s as disabled in registry.", sensorUpdate.Name())
+					} else {
+						log.Debug().Msgf("Sensor %s set to disabled.", sensorUpdate.Name())
+					}
+				case !response.Disabled() && <-t.registry.IsDisabled(sensorUpdate.ID()):
+					if err := t.registry.SetDisabled(sensorUpdate.ID(), false); err != nil {
+						log.Warn().Err(err).Msgf("Unable to set %s as not disabled in registry.", sensorUpdate.Name())
+					}
 				}
 			}
 			if response.Type() == api.RequestTypeRegisterSensor && response.Registered() {
