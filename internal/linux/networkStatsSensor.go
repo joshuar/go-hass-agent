@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/iancoleman/strcase"
+	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/deviceClass"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensorType"
 	"github.com/joshuar/go-hass-agent/internal/hass/stateClass"
@@ -126,5 +127,5 @@ func NetworkStatsUpdater(ctx context.Context, status chan interface{}) {
 		}
 	}
 
-	pollSensors(ctx, sendNetStats, time.Minute, time.Second*5)
+	helpers.PollSensors(ctx, sendNetStats, time.Minute, time.Second*5)
 }

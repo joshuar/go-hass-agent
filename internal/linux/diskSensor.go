@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/deviceClass"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensorType"
 	"github.com/joshuar/go-hass-agent/internal/hass/stateClass"
@@ -93,5 +94,5 @@ func DiskUsageUpdater(ctx context.Context, status chan interface{}) {
 		}
 	}
 
-	pollSensors(ctx, sendDiskUsageStats, time.Minute, time.Second*5)
+	helpers.PollSensors(ctx, sendDiskUsageStats, time.Minute, time.Second*5)
 }
