@@ -11,7 +11,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/joshuar/go-hass-agent/internal/api"
+	"github.com/joshuar/go-hass-agent/internal/hass/api"
 )
 
 func TestSensorRegistrationInfo_RequestData(t *testing.T) {

@@ -9,7 +9,7 @@ import (
 	"context"
 
 	"fyne.io/fyne/v2"
-	"github.com/joshuar/go-hass-agent/internal/api"
+	"github.com/joshuar/go-hass-agent/internal/hass/api"
 	"github.com/rs/zerolog/log"
 )
 

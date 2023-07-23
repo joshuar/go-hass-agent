@@ -11,7 +11,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/joshuar/go-hass-agent/internal/api"
+	"github.com/joshuar/go-hass-agent/internal/hass/api"
 	"github.com/rs/zerolog/log"
 )
 

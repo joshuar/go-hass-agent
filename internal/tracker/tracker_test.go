@@ -14,7 +14,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/joshuar/go-hass-agent/internal/api"
+	"github.com/joshuar/go-hass-agent/internal/hass/api"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/stretchr/testify/assert"
 )
