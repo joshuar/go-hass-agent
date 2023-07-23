@@ -49,6 +49,9 @@ func Upgrade(c *agentConfig) error {
 		if err != nil {
 			return errors.New("could not get sensor registry path from config")
 		}
+		if _, err := os.Stat(path + "/0.dat"); errors.Is(err, os.ErrNotExist) {
+			return nil
+		}
 		err = registry.MigrateNuts2Json(path)
 		if err != nil {
 			return errors.New("failed to migrate sensor registry")
