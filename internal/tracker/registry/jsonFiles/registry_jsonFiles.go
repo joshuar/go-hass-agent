@@ -129,7 +129,7 @@ func NewJsonFilesRegistry(path string) (*jsonFilesRegistry, error) {
 
 func parseFile(path string) (string, metadata) {
 	sensorID, _ := strings.CutSuffix(filepath.Base(path), ".json")
-	log.Debug().Msgf("Getting information from registry for %s", sensorID)
+	log.Trace().Msgf("Getting information from registry for %s", sensorID)
 	b, err := os.ReadFile(path)
 	if err != nil {
 		log.Warn().Err(err).Msgf("Unable to read contents of %s. Skipping", path)
