@@ -9,9 +9,7 @@ import (
 	"context"
 
 	"github.com/godbus/dbus/v5"
-	"github.com/joshuar/go-hass-agent/internal/hass/deviceClass"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensorType"
-	"github.com/joshuar/go-hass-agent/internal/hass/stateClass"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/rs/zerolog/log"
 )
 
@@ -40,15 +38,15 @@ func (l *screenlock) Icon() string {
 	}
 }
 
-func (l *screenlock) SensorType() sensorType.SensorType {
-	return sensorType.TypeBinary
+func (l *screenlock) SensorType() sensor.SensorType {
+	return sensor.TypeBinary
 }
 
-func (l *screenlock) DeviceClass() deviceClass.SensorDeviceClass {
+func (l *screenlock) DeviceClass() sensor.SensorDeviceClass {
 	return 0
 }
 
-func (l *screenlock) StateClass() stateClass.SensorStateClass {
+func (l *screenlock) StateClass() sensor.SensorStateClass {
 	return 0
 }
 

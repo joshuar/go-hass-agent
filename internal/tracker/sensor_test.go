@@ -9,10 +9,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/joshuar/go-hass-agent/internal/hass"
-	"github.com/joshuar/go-hass-agent/internal/hass/deviceClass"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensorType"
-	"github.com/joshuar/go-hass-agent/internal/hass/stateClass"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 )
 
 func TestMarshalSensorUpdate(t *testing.T) {
@@ -20,7 +17,7 @@ func TestMarshalSensorUpdate(t *testing.T) {
 		AttributesFunc: func() interface{} { return nil },
 		StateFunc:      func() interface{} { return "aState" },
 		IconFunc:       func() string { return "mdi:icon" },
-		SensorTypeFunc: func() sensorType.SensorType { return sensorType.TypeSensor },
+		SensorTypeFunc: func() sensor.SensorType { return sensor.TypeSensor },
 		IDFunc:         func() string { return "sensorID" },
 	}
 	type args struct {
@@ -29,12 +26,12 @@ func TestMarshalSensorUpdate(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want *hass.SensorUpdateInfo
+		want *sensor.SensorUpdateInfo
 	}{
 		{
 			name: "successful marshal",
 			args: args{s: mockSensorUpdate},
-			want: &hass.SensorUpdateInfo{
+			want: &sensor.SensorUpdateInfo{
 				StateAttributes: nil,
 				State:           "aState",
 				Icon:            "mdi:icon",
@@ -57,12 +54,12 @@ func TestMarshalSensorRegistration(t *testing.T) {
 		AttributesFunc:  func() interface{} { return nil },
 		StateFunc:       func() interface{} { return "aState" },
 		IconFunc:        func() string { return "mdi:icon" },
-		SensorTypeFunc:  func() sensorType.SensorType { return sensorType.TypeSensor },
+		SensorTypeFunc:  func() sensor.SensorType { return sensor.TypeSensor },
 		IDFunc:          func() string { return "sensorID" },
-		DeviceClassFunc: func() deviceClass.SensorDeviceClass { return deviceClass.Duration },
+		DeviceClassFunc: func() sensor.SensorDeviceClass { return sensor.Duration },
 		NameFunc:        func() string { return "sensorName" },
 		UnitsFunc:       func() string { return "h" },
-		StateClassFunc:  func() stateClass.SensorStateClass { return stateClass.StateMeasurement },
+		StateClassFunc:  func() sensor.SensorStateClass { return sensor.StateMeasurement },
 		CategoryFunc:    func() string { return "" },
 	}
 
@@ -72,12 +69,12 @@ func TestMarshalSensorRegistration(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want *hass.SensorRegistrationInfo
+		want *sensor.SensorRegistrationInfo
 	}{
 		{
 			name: "successful marshal",
 			args: args{s: mockSensorUpdate},
-			want: &hass.SensorRegistrationInfo{
+			want: &sensor.SensorRegistrationInfo{
 				StateAttributes:   nil,
 				State:             "aState",
 				Icon:              "mdi:icon",

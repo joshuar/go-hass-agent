@@ -11,9 +11,7 @@ import (
 	"time"
 
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
-	"github.com/joshuar/go-hass-agent/internal/hass/deviceClass"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensorType"
-	"github.com/joshuar/go-hass-agent/internal/hass/stateClass"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/rs/zerolog/log"
 )
 
@@ -38,16 +36,16 @@ func (p *problems) Icon() string {
 	return "mdi:alert"
 }
 
-func (p *problems) SensorType() sensorType.SensorType {
-	return sensorType.TypeSensor
+func (p *problems) SensorType() sensor.SensorType {
+	return sensor.TypeSensor
 }
 
-func (p *problems) DeviceClass() deviceClass.SensorDeviceClass {
+func (p *problems) DeviceClass() sensor.SensorDeviceClass {
 	return 0
 }
 
-func (p *problems) StateClass() stateClass.SensorStateClass {
-	return stateClass.StateMeasurement
+func (p *problems) StateClass() sensor.SensorStateClass {
+	return sensor.StateMeasurement
 }
 
 func (p *problems) State() interface{} {

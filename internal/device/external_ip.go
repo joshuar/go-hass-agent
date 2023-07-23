@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-package api
+package device
 
 import (
 	"context"
@@ -12,9 +12,7 @@ import (
 	"time"
 
 	"github.com/carlmjohnson/requests"
-	"github.com/joshuar/go-hass-agent/internal/hass/deviceClass"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensorType"
-	"github.com/joshuar/go-hass-agent/internal/hass/stateClass"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/lthibault/jitterbug/v2"
 	"github.com/rs/zerolog/log"
 )
@@ -61,15 +59,15 @@ func (a *address) Icon() string {
 	}
 }
 
-func (a *address) SensorType() sensorType.SensorType {
-	return sensorType.TypeSensor
+func (a *address) SensorType() sensor.SensorType {
+	return sensor.TypeSensor
 }
 
-func (a *address) DeviceClass() deviceClass.SensorDeviceClass {
+func (a *address) DeviceClass() sensor.SensorDeviceClass {
 	return 0
 }
 
-func (a *address) StateClass() stateClass.SensorStateClass {
+func (a *address) StateClass() sensor.SensorStateClass {
 	return 0
 }
 
