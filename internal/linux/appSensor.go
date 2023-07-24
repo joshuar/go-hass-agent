@@ -35,6 +35,13 @@ type appSensor struct {
 	sensorType  appSensorType
 }
 
+type appState struct {
+	appChan    chan string
+	countCh    chan int
+	currentApp string
+	appCount   int
+}
+
 // appSensor implements hass.SensorUpdate
 
 func (s *appSensor) Name() string {
@@ -107,7 +114,6 @@ func (s *appSensor) Category() string {
 
 func (s *appSensor) Attributes() interface{} {
 	switch s.sensorType {
-	// TODO: profile and improve code to avoid memory leak
 	case activeApp:
 		return newActiveAppDetails(s.State().(string))
 	case runningApps:
@@ -124,6 +130,7 @@ type activeAppDetails struct {
 }
 
 func newActiveAppDetails(app string) *activeAppDetails {
+	// TODO: profile and improve code to avoid memory leak
 	// var appProcesses []*process.Process
 	// var cmd string
 	// var createTime int64
@@ -171,6 +178,23 @@ func AppUpdater(ctx context.Context, update chan interface{}) {
 		return
 	}
 
+	appStateTracker := &appState{
+		appChan: make(chan string),
+		countCh: make(chan int),
+	}
+	go func() {
+		for {
+			select {
+			case app := <-appStateTracker.appChan:
+				appStateTracker.currentApp = app
+			case count := <-appStateTracker.countCh:
+				appStateTracker.appCount = count
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+
 	err := NewBusRequest(SessionBus).
 		Path(appStateDBusPath).
 		Match([]dbus.MatchOption{
@@ -178,13 +202,22 @@ func AppUpdater(ctx context.Context, update chan interface{}) {
 			dbus.WithMatchInterface(appStateDBusInterface),
 		}).
 		Event(appStateDBusEvent).
-		Handler(func(_ *dbus.Signal) {
+		Handler(func(s *dbus.Signal) {
+			log.Trace().Msgf("Recieved signal %v", s)
 			if activeAppList := NewBusRequest(SessionBus).
 				Path(appStateDBusPath).
 				Destination(portalDest).
 				GetData(appStateDBusMethod).AsVariantMap(); activeAppList != nil {
-				update <- marshalAppStateUpdate(runningApps, activeAppList)
-				update <- marshalAppStateUpdate(activeApp, activeAppList)
+				newAppCount := marshalAppStateUpdate(runningApps, activeAppList)
+				newApp := marshalAppStateUpdate(activeApp, activeAppList)
+				if count := newAppCount.State().(int); count != appStateTracker.appCount {
+					appStateTracker.countCh <- count
+					update <- newAppCount
+				}
+				if app := newApp.State().(string); app != appStateTracker.currentApp {
+					appStateTracker.appChan <- app
+					update <- newApp
+				}
 			} else {
 				log.Debug().Caller().
 					Msg("No active apps found.")
