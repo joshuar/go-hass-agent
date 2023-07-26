@@ -16,17 +16,9 @@ import (
 	"github.com/shirou/gopsutil/v3/host"
 )
 
-//go:generate stringer -type=timeProp -output timeSensorProps.go -linecomment
-const (
-	boottime timeProp = iota + 1 // Last Reboot
-	uptime                       // Uptime
-)
-
-type timeProp int
-
 type timeSensor struct {
 	value interface{}
-	prop  timeProp
+	prop  sensorType
 }
 
 func (m *timeSensor) Name() string {

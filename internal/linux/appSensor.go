@@ -17,22 +17,16 @@ import (
 	"github.com/shirou/gopsutil/v3/process"
 )
 
-//go:generate stringer -type=appSensorType -output appSensorProps.go -linecomment
 const (
 	appStateDBusMethod    = "org.freedesktop.impl.portal.Background.GetAppState"
 	appStateDBusPath      = "/org/freedesktop/portal/desktop"
 	appStateDBusInterface = "org.freedesktop.impl.portal.Background"
 	appStateDBusEvent     = "org.freedesktop.impl.portal.Background.RunningApplicationsChanged"
-
-	activeApp   appSensorType = iota // Active App
-	runningApps                      // Running Apps
 )
-
-type appSensorType int
 
 type appSensor struct {
 	sensorValue map[string]dbus.Variant
-	sensorType  appSensorType
+	sensorType  sensorType
 }
 
 type appState struct {
@@ -54,9 +48,9 @@ func (s *appSensor) ID() string {
 
 func (s *appSensor) Icon() string {
 	switch s.sensorType {
-	case runningApps:
+	case appRunning:
 		return "mdi:apps"
-	case activeApp:
+	case appActive:
 		fallthrough
 	default:
 		return "mdi:application"
@@ -73,7 +67,7 @@ func (s *appSensor) DeviceClass() sensor.SensorDeviceClass {
 
 func (s *appSensor) StateClass() sensor.SensorStateClass {
 	switch s.sensorType {
-	case runningApps:
+	case appRunning:
 		return sensor.StateMeasurement
 	default:
 		return 0
@@ -82,13 +76,13 @@ func (s *appSensor) StateClass() sensor.SensorStateClass {
 
 func (s *appSensor) State() interface{} {
 	switch s.sensorType {
-	case activeApp:
+	case appActive:
 		for appName, state := range s.sensorValue {
 			if state.Value().(uint32) == 2 {
 				return appName
 			}
 		}
-	case runningApps:
+	case appRunning:
 		var count int
 		for _, state := range s.sensorValue {
 			if state.Value().(uint32) > 0 {
@@ -102,7 +96,7 @@ func (s *appSensor) State() interface{} {
 
 func (s *appSensor) Units() string {
 	switch s.sensorType {
-	case runningApps:
+	case appRunning:
 		return "apps"
 	}
 	return ""
@@ -114,9 +108,9 @@ func (s *appSensor) Category() string {
 
 func (s *appSensor) Attributes() interface{} {
 	switch s.sensorType {
-	case activeApp:
+	case appActive:
 		return newActiveAppDetails(s.State().(string))
-	case runningApps:
+	case appRunning:
 		return newRunningAppsDetails(s.sensorValue)
 	}
 	return nil
@@ -163,7 +157,7 @@ func newRunningAppsDetails(apps map[string]dbus.Variant) *runningAppsDetails {
 	return details
 }
 
-func marshalAppStateUpdate(t appSensorType, v map[string]dbus.Variant) *appSensor {
+func marshalAppStateUpdate(t sensorType, v map[string]dbus.Variant) *appSensor {
 	return &appSensor{
 		sensorValue: v,
 		sensorType:  t,
@@ -208,8 +202,8 @@ func AppUpdater(ctx context.Context, update chan interface{}) {
 				Path(appStateDBusPath).
 				Destination(portalDest).
 				GetData(appStateDBusMethod).AsVariantMap(); activeAppList != nil {
-				newAppCount := marshalAppStateUpdate(runningApps, activeAppList)
-				newApp := marshalAppStateUpdate(activeApp, activeAppList)
+				newAppCount := marshalAppStateUpdate(appRunning, activeAppList)
+				newApp := marshalAppStateUpdate(appActive, activeAppList)
 				if count := newAppCount.State().(int); count != appStateTracker.appCount {
 					appStateTracker.countCh <- count
 					update <- newAppCount
