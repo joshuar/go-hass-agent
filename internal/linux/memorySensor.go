@@ -17,22 +17,9 @@ import (
 	"github.com/shirou/gopsutil/v3/mem"
 )
 
-//go:generate stringer -type=memoryStat -output memorySensorProps.go -linecomment
-
-const (
-	memoryTotal     memoryStat = iota + 1 // Memory Total
-	memoryAvailable                       // Memory Available
-	memoryUsed                            // Memory Used
-	swapMemoryTotal                       // Swap Memory Total
-	swapMemoryUsed                        // Swap Memory Used
-	swapMemoryFree                        // Swap Memory Free
-)
-
-type memoryStat int
-
 type memory struct {
 	value uint64
-	name  memoryStat
+	name  sensorType
 }
 
 // memory implements hass.SensorUpdate
@@ -84,7 +71,7 @@ func (m *memory) Attributes() interface{} {
 func MemoryUpdater(ctx context.Context, status chan interface{}) {
 
 	sendMemStats := func() {
-		stats := []memoryStat{memoryTotal, memoryAvailable, memoryUsed, swapMemoryTotal, swapMemoryFree}
+		stats := []sensorType{memTotal, memAvail, memUsed, swapTotal, swapFree}
 		var memDetails *mem.VirtualMemoryStat
 		var err error
 		if memDetails, err = mem.VirtualMemoryWithContext(ctx); err != nil {
@@ -95,15 +82,15 @@ func MemoryUpdater(ctx context.Context, status chan interface{}) {
 		for _, stat := range stats {
 			var statValue uint64
 			switch stat {
-			case memoryTotal:
+			case memTotal:
 				statValue = memDetails.Total
-			case memoryAvailable:
+			case memAvail:
 				statValue = memDetails.Available
-			case memoryUsed:
+			case memUsed:
 				statValue = memDetails.Used
-			case swapMemoryTotal:
+			case swapTotal:
 				statValue = memDetails.SwapTotal
-			case swapMemoryFree:
+			case swapFree:
 				statValue = memDetails.SwapFree
 				// case UsedSwapMemory:
 				// 	return m.memStats.SwapCached

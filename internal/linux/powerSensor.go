@@ -15,38 +15,24 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-//go:generate stringer -type=powerProp -output powerSensorProps.go
 const (
-	powerProfilesDBusPath           = "/net/hadess/PowerProfiles"
-	powerProfilesDBusDest           = "net.hadess.PowerProfiles"
-	profile               powerProp = iota + 1
+	powerProfilesDBusPath = "/net/hadess/PowerProfiles"
+	powerProfilesDBusDest = "net.hadess.PowerProfiles"
 )
-
-type powerProp int
 
 type powerSensor struct {
 	sensorValue      interface{}
 	sensorAttributes interface{}
 	sensorGroup      string
-	sensorType       powerProp
+	sensorType       sensorType
 }
 
 func (state *powerSensor) Name() string {
-	switch state.sensorType {
-	case profile:
-		return "Power Profile"
-	default:
-		return state.sensorGroup + " " + strcase.ToDelimited(state.sensorType.String(), ' ')
-	}
+	return state.sensorType.String()
 }
 
 func (state *powerSensor) ID() string {
-	switch state.sensorType {
-	case profile:
-		return "power_profile"
-	default:
-		return state.sensorGroup + "_" + strcase.ToSnake(state.sensorType.String())
-	}
+	return strcase.ToSnake(state.sensorType.String())
 }
 
 func (state *powerSensor) Icon() string {
@@ -81,10 +67,10 @@ func (state *powerSensor) Attributes() interface{} {
 	return state.sensorAttributes
 }
 
-func marshalPowerStateUpdate(sensor powerProp, group string, v dbus.Variant) *powerSensor {
+func marshalPowerStateUpdate(sensor sensorType, group string, v dbus.Variant) *powerSensor {
 	var value, attributes interface{}
 	switch sensor {
-	case profile:
+	case powerProfile:
 		value = strings.Trim(v.String(), "\"")
 	}
 	if attributes == nil {
@@ -112,7 +98,7 @@ func PowerUpater(ctx context.Context, status chan interface{}) {
 		return
 	}
 
-	status <- marshalPowerStateUpdate(profile, powerProfilesDBusPath, activePowerProfile)
+	status <- marshalPowerStateUpdate(powerProfile, powerProfilesDBusPath, activePowerProfile)
 
 	err = NewBusRequest(SystemBus).
 		Path(powerProfilesDBusPath).
@@ -123,10 +109,10 @@ func PowerUpater(ctx context.Context, status chan interface{}) {
 		Handler(func(s *dbus.Signal) {
 			updatedProps := s.Body[1].(map[string]dbus.Variant)
 			for propName, propValue := range updatedProps {
-				var propType powerProp
+				var propType sensorType
 				switch propName {
 				case "ActiveProfile":
-					propType = profile
+					propType = powerProfile
 				default:
 					log.Debug().Msgf("Unhandled property %v changed to %v", propName, propValue)
 				}

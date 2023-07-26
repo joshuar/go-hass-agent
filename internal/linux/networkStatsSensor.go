@@ -16,15 +16,6 @@ import (
 	"github.com/shirou/gopsutil/v3/net"
 )
 
-//go:generate stringer -type=networkStat -output networkStatsSensorProps.go
-
-const (
-	bytesSent networkStat = iota + 1
-	bytesRecv
-)
-
-type networkStat int
-
 type statAttributes struct {
 	Packets    uint64 `json:"Packets"`     // number of packets
 	Errors     uint64 `json:"Errors"`      // total number of errors
@@ -33,13 +24,13 @@ type statAttributes struct {
 }
 
 type networkStatsDetails struct {
-	statType  networkStat
+	statType  sensorType
 	statValue uint64
 	statAttributes
 }
 
 func (i *networkStatsDetails) Name() string {
-	return strcase.ToDelimited(i.statType.String(), ' ')
+	return i.statType.String()
 }
 
 func (i *networkStatsDetails) ID() string {
@@ -94,7 +85,7 @@ func (i *networkStatsDetails) Attributes() interface{} {
 func NetworkStatsUpdater(ctx context.Context, status chan interface{}) {
 
 	sendNetStats := func() {
-		statTypes := []networkStat{bytesRecv, bytesSent}
+		statTypes := []sensorType{bytesRecv, bytesSent}
 		var allInterfaces []net.IOCountersStat
 		var err error
 		if allInterfaces, err = net.IOCountersWithContext(ctx, false); err != nil {

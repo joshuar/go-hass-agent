@@ -17,54 +17,39 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-//go:generate stringer -type=batteryProp -output batterySensorProps.go -linecomment
-
 const (
 	upowerDBusDest         = "org.freedesktop.UPower"
 	upowerDBusPath         = "/org/freedesktop/UPower"
 	upowerGetDevicesMethod = "org.freedesktop.UPower.EnumerateDevices"
-
-	battType     batteryProp = iota + 1 // Battery Type
-	percentage                          // Battery Level
-	temperature                         // Battery Temperature
-	voltage                             // Battery Voltage
-	energy                              // Battery Energy
-	energyRate                          // Battery Power
-	battState                           // Battery State
-	nativePath                          // Battery Path
-	batteryLevel                        // Battery Level
-	model                               // Battery Model
 )
 
-type batteryProp int
-
 type upowerBattery struct {
-	props    map[batteryProp]dbus.Variant
+	props    map[sensorType]dbus.Variant
 	dBusPath dbus.ObjectPath
 }
 
-func (b *upowerBattery) updateProp(ctx context.Context, prop batteryProp) {
+func (b *upowerBattery) updateProp(ctx context.Context, t sensorType) {
 	var p string
-	switch prop {
+	switch t {
 	case battType:
 		p = "Type"
-	case percentage:
+	case battPercentage:
 		p = "Percentage"
-	case temperature:
+	case battTemp:
 		p = "Temperature"
-	case voltage:
+	case battVoltage:
 		p = "Voltage"
-	case energy:
+	case battEnergy:
 		p = "Energy"
-	case energyRate:
+	case battEnergyRate:
 		p = "EnergyRate"
 	case battState:
 		p = "State"
-	case nativePath:
+	case battNativePath:
 		p = "NativePath"
-	case batteryLevel:
+	case battLevel:
 		p = "BatteryLevel"
-	case model:
+	case battModel:
 		p = "Model"
 	}
 	propValue, err := NewBusRequest(SystemBus).
@@ -75,40 +60,40 @@ func (b *upowerBattery) updateProp(ctx context.Context, prop batteryProp) {
 		log.Debug().Caller().
 			Msgf("Could not update property %s. Not found?", p)
 	} else {
-		b.props[prop] = propValue
+		b.props[t] = propValue
 	}
 }
 
-func (b *upowerBattery) getProp(prop batteryProp) interface{} {
-	return b.props[prop].Value()
+func (b *upowerBattery) getProp(t sensorType) interface{} {
+	return b.props[t].Value()
 }
 
-func (b *upowerBattery) marshalBatteryStateUpdate(ctx context.Context, prop batteryProp) *upowerBatteryState {
+func (b *upowerBattery) marshalBatteryStateUpdate(ctx context.Context, t sensorType) *upowerBatteryState {
 	// log.Debug().Caller().Msgf("Marshalling update for %v for battery %v", prop.String(), b.getProp(NativePath).(string))
 	state := &upowerBatteryState{
-		batteryID: b.getProp(nativePath).(string),
-		model:     b.getProp(model).(string),
+		batteryID: b.getProp(battNativePath).(string),
+		model:     b.getProp(battModel).(string),
 		prop: upowerBatteryProp{
-			name:  prop,
-			value: b.getProp(prop),
+			name:  t,
+			value: b.getProp(t),
 		},
 	}
-	switch prop {
-	case energyRate:
-		b.updateProp(ctx, voltage)
-		b.updateProp(ctx, energy)
+	switch t {
+	case battEnergyRate:
+		b.updateProp(ctx, battVoltage)
+		b.updateProp(ctx, battEnergy)
 		state.attributes = &struct {
 			DataSource string  `json:"Data Source"`
 			Voltage    float64 `json:"Voltage"`
 			Energy     float64 `json:"Energy"`
 		}{
-			Voltage:    b.getProp(voltage).(float64),
-			Energy:     b.getProp(energy).(float64),
+			Voltage:    b.getProp(battVoltage).(float64),
+			Energy:     b.getProp(battEnergy).(float64),
 			DataSource: "D-Bus",
 		}
-	case percentage:
+	case battPercentage:
 		fallthrough
-	case batteryLevel:
+	case battLevel:
 		state.attributes = &struct {
 			Type       string `json:"Battery Type"`
 			DataSource string `json:"Data Source"`
@@ -122,7 +107,7 @@ func (b *upowerBattery) marshalBatteryStateUpdate(ctx context.Context, prop batt
 
 type upowerBatteryProp struct {
 	value interface{}
-	name  batteryProp
+	name  sensorType
 }
 
 type upowerBatteryState struct {
@@ -144,13 +129,13 @@ func (state *upowerBatteryState) ID() string {
 
 func (state *upowerBatteryState) Icon() string {
 	switch state.prop.name {
-	case percentage:
+	case battPercentage:
 		if state.prop.value.(float64) >= 95 {
 			return "mdi:battery"
 		} else {
 			return fmt.Sprintf("mdi:battery-%d", int(math.Round(state.prop.value.(float64)/10)*10))
 		}
-	case energyRate:
+	case battEnergyRate:
 		if math.Signbit(state.prop.value.(float64)) {
 			return "mdi:battery-minus"
 		} else {
@@ -167,11 +152,11 @@ func (state *upowerBatteryState) SensorType() sensor.SensorType {
 
 func (state *upowerBatteryState) DeviceClass() sensor.SensorDeviceClass {
 	switch state.prop.name {
-	case percentage:
+	case battPercentage:
 		return sensor.SensorBattery
-	case temperature:
+	case battTemp:
 		return sensor.SensorTemperature
-	case energyRate:
+	case battEnergyRate:
 		return sensor.SensorPower
 	default:
 		return 0
@@ -180,11 +165,11 @@ func (state *upowerBatteryState) DeviceClass() sensor.SensorDeviceClass {
 
 func (state *upowerBatteryState) StateClass() sensor.SensorStateClass {
 	switch state.prop.name {
-	case percentage:
+	case battPercentage:
 		fallthrough
-	case temperature:
+	case battTemp:
 		fallthrough
-	case energyRate:
+	case battEnergyRate:
 		return sensor.StateMeasurement
 	default:
 		return 0
@@ -193,19 +178,19 @@ func (state *upowerBatteryState) StateClass() sensor.SensorStateClass {
 
 func (state *upowerBatteryState) State() interface{} {
 	switch state.prop.name {
-	case voltage:
+	case battVoltage:
 		fallthrough
-	case temperature:
+	case battTemp:
 		fallthrough
-	case energy:
+	case battEnergy:
 		fallthrough
-	case energyRate:
+	case battEnergyRate:
 		fallthrough
-	case percentage:
+	case battPercentage:
 		return state.prop.value.(float64)
 	case battState:
 		return stringState(state.prop.value.(uint32))
-	case batteryLevel:
+	case battLevel:
 		return stringLevel(state.prop.value.(uint32))
 	default:
 		return state.prop.value.(string)
@@ -214,11 +199,11 @@ func (state *upowerBatteryState) State() interface{} {
 
 func (state *upowerBatteryState) Units() string {
 	switch state.prop.name {
-	case percentage:
+	case battPercentage:
 		return "%"
-	case temperature:
+	case battTemp:
 		return "°C"
-	case energyRate:
+	case battEnergyRate:
 		return "W"
 	default:
 		return ""
@@ -317,13 +302,13 @@ func BatteryUpdater(ctx context.Context, status chan interface{}) {
 		batteryTracker[batteryID] = &upowerBattery{
 			dBusPath: v,
 		}
-		batteryTracker[batteryID].props = make(map[batteryProp]dbus.Variant)
-		batteryTracker[batteryID].updateProp(ctx, nativePath)
+		batteryTracker[batteryID].props = make(map[sensorType]dbus.Variant)
+		batteryTracker[batteryID].updateProp(ctx, battNativePath)
 		batteryTracker[batteryID].updateProp(ctx, battType)
-		batteryTracker[batteryID].updateProp(ctx, model)
+		batteryTracker[batteryID].updateProp(ctx, battModel)
 
 		// Standard battery properties as sensors
-		for _, prop := range []batteryProp{battState} {
+		for _, prop := range []sensorType{battState} {
 			batteryTracker[batteryID].updateProp(ctx, prop)
 			stateUpdate := batteryTracker[batteryID].marshalBatteryStateUpdate(ctx, prop)
 			if stateUpdate != nil {
@@ -333,7 +318,7 @@ func BatteryUpdater(ctx context.Context, status chan interface{}) {
 
 		// For some battery types, track additional properties as sensors
 		if batteryTracker[batteryID].getProp(battType).(uint32) == 2 {
-			for _, prop := range []batteryProp{percentage, temperature, energyRate} {
+			for _, prop := range []sensorType{battPercentage, battTemp, battEnergyRate} {
 				batteryTracker[batteryID].updateProp(ctx, prop)
 				stateUpdate := batteryTracker[batteryID].marshalBatteryStateUpdate(ctx, prop)
 				if stateUpdate != nil {
@@ -341,9 +326,9 @@ func BatteryUpdater(ctx context.Context, status chan interface{}) {
 				}
 			}
 		} else {
-			batteryTracker[batteryID].updateProp(ctx, batteryLevel)
-			if batteryTracker[batteryID].getProp(batteryLevel).(uint32) != 1 {
-				stateUpdate := batteryTracker[batteryID].marshalBatteryStateUpdate(ctx, batteryLevel)
+			batteryTracker[batteryID].updateProp(ctx, battLevel)
+			if batteryTracker[batteryID].getProp(battLevel).(uint32) != 1 {
+				stateUpdate := batteryTracker[batteryID].marshalBatteryStateUpdate(ctx, battLevel)
 				if stateUpdate != nil {
 					status <- stateUpdate
 				}
