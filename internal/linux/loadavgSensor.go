@@ -9,60 +9,14 @@ import (
 	"context"
 	"time"
 
-	"github.com/iancoleman/strcase"
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v3/load"
 )
 
-type loadavg struct {
-	load float64
-	name sensorType
-}
-
-func (l *loadavg) Name() string {
-	return l.name.String()
-}
-
-func (l *loadavg) ID() string {
-	return strcase.ToSnake(l.name.String())
-}
-
-func (l *loadavg) Icon() string {
-	return "mdi:chip"
-}
-
-func (l *loadavg) SensorType() sensor.SensorType {
-	return sensor.TypeSensor
-}
-
-func (l *loadavg) DeviceClass() sensor.SensorDeviceClass {
-	return 0
-}
-
-func (l *loadavg) StateClass() sensor.SensorStateClass {
-	return sensor.StateMeasurement
-}
-
-func (l *loadavg) State() interface{} {
-	return l.load
-}
-
-func (l *loadavg) Units() string {
-	return "load"
-}
-
-func (l *loadavg) Category() string {
-	return ""
-}
-
-func (l *loadavg) Attributes() interface{} {
-	return struct {
-		DataSource string `json:"Data Source"`
-	}{
-		DataSource: "procfs",
-	}
+type loadavgSensor struct {
+	linuxSensor
 }
 
 func LoadAvgUpdater(ctx context.Context, status chan interface{}) {
@@ -75,17 +29,24 @@ func LoadAvgUpdater(ctx context.Context, status chan interface{}) {
 				Msg("Problem fetching loadavg stats.")
 			return
 		}
-		status <- &loadavg{
-			load: latest.Load1,
-			name: load1,
-		}
-		status <- &loadavg{
-			load: latest.Load5,
-			name: load5,
-		}
-		status <- &loadavg{
-			load: latest.Load15,
-			name: load15,
+		for _, loadType := range []sensorType{load1, load5, load15} {
+			l := &loadavgSensor{}
+			l.icon = "mdi:chip"
+			l.units = "load"
+			l.source = "procfs"
+			l.stateClass = sensor.StateMeasurement
+			switch loadType {
+			case load1:
+				l.value = latest.Load1
+				l.sensorType = load1
+			case load5:
+				l.value = latest.Load5
+				l.sensorType = load5
+			case load15:
+				l.value = latest.Load15
+				l.sensorType = load15
+			}
+			status <- l
 		}
 	}
 

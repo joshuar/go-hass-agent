@@ -197,7 +197,6 @@ func AppUpdater(ctx context.Context, update chan interface{}) {
 		}).
 		Event(appStateDBusEvent).
 		Handler(func(s *dbus.Signal) {
-			log.Trace().Msgf("Recieved signal %v", s)
 			if activeAppList := NewBusRequest(SessionBus).
 				Path(appStateDBusPath).
 				Destination(portalDest).

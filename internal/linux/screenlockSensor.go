@@ -8,6 +8,7 @@ package linux
 import (
 	"context"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/godbus/dbus/v5"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/rs/zerolog/log"
@@ -18,56 +19,20 @@ const (
 	screensaverDBusInterface = "org.freedesktop.ScreenSaver"
 )
 
-type screenlock struct {
-	locked bool
+type screenlockSensor struct {
+	linuxSensor
 }
 
-func (l *screenlock) Name() string {
-	return "Screen Lock"
-}
-
-func (l *screenlock) ID() string {
-	return "screen_lock"
-}
-
-func (l *screenlock) Icon() string {
-	if l.locked {
+func (s *screenlockSensor) Icon() string {
+	if s.value.(bool) {
 		return "mdi:eye-lock"
 	} else {
 		return "mdi:eye-lock-open"
 	}
 }
 
-func (l *screenlock) SensorType() sensor.SensorType {
+func (s *screenlockSensor) SensorType() sensor.SensorType {
 	return sensor.TypeBinary
-}
-
-func (l *screenlock) DeviceClass() sensor.SensorDeviceClass {
-	return 0
-}
-
-func (l *screenlock) StateClass() sensor.SensorStateClass {
-	return 0
-}
-
-func (l *screenlock) State() interface{} {
-	return l.locked
-}
-
-func (l *screenlock) Units() string {
-	return ""
-}
-
-func (l *screenlock) Category() string {
-	return ""
-}
-
-func (l *screenlock) Attributes() interface{} {
-	return struct {
-		DataSource string `json:"Data Source"`
-	}{
-		DataSource: "D-Bus",
-	}
 }
 
 func ScreenLockUpdater(ctx context.Context, update chan interface{}) {
@@ -79,8 +44,11 @@ func ScreenLockUpdater(ctx context.Context, update chan interface{}) {
 		}).
 		Event("org.freedesktop.ScreenSaver.ActiveChanged").
 		Handler(func(s *dbus.Signal) {
-			lock := new(screenlock)
-			lock.locked = s.Body[0].(bool)
+			lock := &screenlockSensor{}
+			lock.value = s.Body[0].(bool)
+			lock.sensorType = screenLock
+			lock.source = "D-Bus"
+			spew.Dump(lock)
 			update <- lock
 		}).
 		AddWatch(ctx)

@@ -20,57 +20,22 @@ const (
 	dBusProblemIntr  = "org.freedesktop.problems"
 )
 
-type problems struct {
+type problemsSensor struct {
 	list map[string]map[string]interface{}
+	linuxSensor
 }
 
-func (p *problems) Name() string {
-	return "Problems"
-}
-
-func (p *problems) ID() string {
-	return "problems"
-}
-
-func (p *problems) Icon() string {
-	return "mdi:alert"
-}
-
-func (p *problems) SensorType() sensor.SensorType {
-	return sensor.TypeSensor
-}
-
-func (p *problems) DeviceClass() sensor.SensorDeviceClass {
-	return 0
-}
-
-func (p *problems) StateClass() sensor.SensorStateClass {
-	return sensor.StateMeasurement
-}
-
-func (p *problems) State() interface{} {
-	return len(p.list)
-}
-
-func (p *problems) Units() string {
-	return "problems"
-}
-
-func (p *problems) Category() string {
-	return ""
-}
-
-func (p *problems) Attributes() interface{} {
+func (s *problemsSensor) Attributes() interface{} {
 	return struct {
 		ProblemList map[string]map[string]interface{} `json:"Problem List"`
 		DataSource  string                            `json:"Data Source"`
 	}{
-		ProblemList: p.list,
+		ProblemList: s.list,
 		DataSource:  "D-Bus",
 	}
 }
 
-func marshalProblemDetails(details map[string]string) map[string]interface{} {
+func parseProblem(details map[string]string) map[string]interface{} {
 	parsed := make(map[string]interface{})
 	for k, v := range details {
 		switch k {
@@ -101,9 +66,13 @@ func marshalProblemDetails(details map[string]string) map[string]interface{} {
 
 func ProblemsUpdater(ctx context.Context, status chan interface{}) {
 	problems := func() {
-		problems := &problems{
+		problems := &problemsSensor{
 			list: make(map[string]map[string]interface{}),
 		}
+		problems.sensorType = problem
+		problems.icon = "mdi:alert"
+		problems.units = "problems"
+		problems.stateClass = sensor.StateMeasurement
 
 		problemList := NewBusRequest(SystemBus).
 			Path(dBusProblemsDest).
@@ -118,10 +87,11 @@ func ProblemsUpdater(ctx context.Context, status chan interface{}) {
 			if problemDetails == nil {
 				log.Debug().Msg("No problems retrieved.")
 			} else {
-				problems.list[p] = marshalProblemDetails(problemDetails)
+				problems.list[p] = parseProblem(problemDetails)
 			}
 		}
 		if len(problems.list) > 0 {
+			problems.value = len(problems.list)
 			status <- problems
 		}
 	}
