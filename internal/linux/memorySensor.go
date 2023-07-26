@@ -7,64 +7,25 @@ package linux
 
 import (
 	"context"
-	"strings"
 	"time"
 
-	"github.com/iancoleman/strcase"
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v3/mem"
 )
 
-type memory struct {
-	value uint64
-	name  sensorType
+type memorySensor struct {
+	linuxSensor
 }
 
-// memory implements hass.SensorUpdate
-
-func (m *memory) Name() string {
-	return m.name.String()
-}
-
-func (m *memory) ID() string {
-	return strings.ToLower(strcase.ToSnake(m.name.String()))
-}
-
-func (m *memory) Icon() string {
-	return "mdi:memory"
-}
-
-func (m *memory) SensorType() sensor.SensorType {
-	return sensor.TypeSensor
-}
-
-func (m *memory) DeviceClass() sensor.SensorDeviceClass {
-	return sensor.Data_size
-}
-
-func (m *memory) StateClass() sensor.SensorStateClass {
-	return sensor.StateTotal
-}
-
-func (m *memory) State() interface{} {
-	return m.value
-}
-
-func (m *memory) Units() string {
-	return "B"
-}
-
-func (m *memory) Category() string {
-	return ""
-}
-
-func (m *memory) Attributes() interface{} {
+func (s *memorySensor) Attributes() interface{} {
 	return struct {
+		NativeUnit string `json:"native_unit_of_measurement"`
 		DataSource string `json:"Data Source"`
 	}{
-		DataSource: "procfs",
+		NativeUnit: s.units,
+		DataSource: s.source,
 	}
 }
 
@@ -95,9 +56,16 @@ func MemoryUpdater(ctx context.Context, status chan interface{}) {
 				// case UsedSwapMemory:
 				// 	return m.memStats.SwapCached
 			}
-			state := &memory{
-				value: statValue,
-				name:  stat,
+			state := &memorySensor{
+				linuxSensor{
+					value:       statValue,
+					sensorType:  stat,
+					icon:        "mdi:memory",
+					units:       "B",
+					source:      "procfs",
+					deviceClass: sensor.Data_size,
+					stateClass:  sensor.StateTotal,
+				},
 			}
 			status <- state
 		}

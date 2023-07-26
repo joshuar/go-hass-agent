@@ -9,76 +9,33 @@ import (
 	"context"
 	"time"
 
-	"github.com/iancoleman/strcase"
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v3/net"
 )
 
-type statAttributes struct {
+type networkStatsAttributes struct {
 	Packets    uint64 `json:"Packets"`     // number of packets
 	Errors     uint64 `json:"Errors"`      // total number of errors
 	Drops      uint64 `json:"Drops"`       // total number of packets which were dropped
 	FifoErrors uint64 `json:"Fifo Errors"` // total number of FIFO buffers errors
 }
 
-type networkStatsDetails struct {
-	statType  sensorType
-	statValue uint64
-	statAttributes
+type networkStatsSensor struct {
+	linuxSensor
+	networkStatsAttributes
 }
 
-func (i *networkStatsDetails) Name() string {
-	return i.statType.String()
-}
-
-func (i *networkStatsDetails) ID() string {
-	return strcase.ToSnake(i.statType.String())
-}
-
-func (i *networkStatsDetails) Icon() string {
-	switch i.statType {
-	case bytesRecv:
-		return "mdi:download-network"
-	case bytesSent:
-		return "mdi:upload-network"
-	default:
-		return "mdi:help-network"
-	}
-}
-
-func (i *networkStatsDetails) SensorType() sensor.SensorType {
-	return sensor.TypeSensor
-}
-
-func (i *networkStatsDetails) DeviceClass() sensor.SensorDeviceClass {
-	return sensor.Data_size
-}
-
-func (i *networkStatsDetails) StateClass() sensor.SensorStateClass {
-	return sensor.StateTotal
-}
-
-func (i *networkStatsDetails) State() interface{} {
-	return i.statValue
-}
-
-func (i *networkStatsDetails) Units() string {
-	return "B"
-}
-
-func (i *networkStatsDetails) Category() string {
-	return ""
-}
-
-func (i *networkStatsDetails) Attributes() interface{} {
+func (s *networkStatsSensor) Attributes() interface{} {
 	return struct {
+		NativeUnit string `json:"native_unit_of_measurement"`
 		DataSource string `json:"Data Source"`
-		statAttributes
+		networkStatsAttributes
 	}{
-		DataSource:     "procfs",
-		statAttributes: i.statAttributes,
+		NativeUnit:             s.units,
+		DataSource:             "procfs",
+		networkStatsAttributes: s.networkStatsAttributes,
 	}
 }
 
@@ -95,23 +52,28 @@ func NetworkStatsUpdater(ctx context.Context, status chan interface{}) {
 		}
 		for _, interfaceStats := range allInterfaces {
 			for _, stat := range statTypes {
-				details := &networkStatsDetails{}
-				details.statType = stat
+				s := &networkStatsSensor{}
+				s.sensorType = stat
+				s.units = "B"
+				s.deviceClass = sensor.Data_size
+				s.stateClass = sensor.StateTotal
 				switch stat {
 				case bytesRecv:
-					details.statValue = interfaceStats.BytesRecv
-					details.statAttributes.Packets = interfaceStats.PacketsRecv
-					details.statAttributes.Errors = interfaceStats.Errin
-					details.statAttributes.Drops = interfaceStats.Dropin
-					details.statAttributes.FifoErrors = interfaceStats.Fifoin
+					s.value = interfaceStats.BytesRecv
+					s.icon = "mdi:download-network"
+					s.Packets = interfaceStats.PacketsRecv
+					s.Errors = interfaceStats.Errin
+					s.Drops = interfaceStats.Dropin
+					s.FifoErrors = interfaceStats.Fifoin
 				case bytesSent:
-					details.statValue = interfaceStats.BytesSent
-					details.statAttributes.Packets = interfaceStats.PacketsSent
-					details.statAttributes.Errors = interfaceStats.Errout
-					details.statAttributes.Drops = interfaceStats.Dropout
-					details.statAttributes.FifoErrors = interfaceStats.Fifoout
+					s.value = interfaceStats.BytesSent
+					s.icon = "mdi:upload-network"
+					s.Packets = interfaceStats.PacketsSent
+					s.Errors = interfaceStats.Errout
+					s.Drops = interfaceStats.Dropout
+					s.FifoErrors = interfaceStats.Fifoout
 				}
-				status <- details
+				status <- s
 			}
 		}
 	}

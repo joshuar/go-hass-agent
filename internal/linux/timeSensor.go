@@ -9,7 +9,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/iancoleman/strcase"
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/rs/zerolog/log"
@@ -17,87 +16,50 @@ import (
 )
 
 type timeSensor struct {
-	value interface{}
-	prop  sensorType
+	linuxSensor
 }
 
-func (m *timeSensor) Name() string {
-	return m.prop.String()
-}
-
-func (m *timeSensor) ID() string {
-	return strcase.ToSnake(m.prop.String())
-}
-
-func (m *timeSensor) Icon() string {
-	return "mdi:restart"
-}
-
-func (m *timeSensor) SensorType() sensor.SensorType {
-	return sensor.TypeSensor
-}
-
-func (m *timeSensor) DeviceClass() sensor.SensorDeviceClass {
-	switch m.prop {
-	case uptime:
-		return sensor.Duration
-	case boottime:
-		return sensor.Timestamp
-	}
-	return 0
-}
-
-func (m *timeSensor) StateClass() sensor.SensorStateClass {
-	switch m.prop {
-	case uptime:
-		return sensor.StateMeasurement
-	default:
-		return 0
-	}
-}
-
-func (m *timeSensor) State() interface{} {
-	return m.value
-}
-
-func (m *timeSensor) Units() string {
-	switch m.prop {
-	case uptime:
-		return "h"
-	default:
-		return ""
-	}
-}
-
-func (m *timeSensor) Category() string {
-	return "diagnostic"
-}
-
-func (m *timeSensor) Attributes() interface{} {
-	switch m.prop {
+func (s *timeSensor) Attributes() interface{} {
+	switch s.sensorType {
 	case uptime:
 		return struct {
 			NativeUnit string `json:"native_unit_of_measurement"`
 			DataSource string `json:"Data Source"`
 		}{
-			NativeUnit: "h",
+			NativeUnit: s.units,
 			DataSource: "procfs",
 		}
 	default:
-		return nil
+		return struct {
+			DataSource string `json:"Data Source"`
+		}{
+			DataSource: "procfs",
+		}
 	}
 }
 
 func TimeUpdater(ctx context.Context, status chan interface{}) {
 	updateTimes := func() {
 		status <- &timeSensor{
-			prop:  uptime,
-			value: getUptime(ctx),
+			linuxSensor{
+				sensorType:  uptime,
+				value:       getUptime(ctx),
+				diagnostic:  true,
+				units:       "h",
+				icon:        "mdi:restart",
+				deviceClass: sensor.Duration,
+				stateClass:  sensor.StateMeasurement,
+			},
 		}
 
 		status <- &timeSensor{
-			prop:  boottime,
-			value: getBoottime(ctx),
+			linuxSensor{
+				sensorType:  boottime,
+				value:       getBoottime(ctx),
+				diagnostic:  true,
+				icon:        "mdi:restart",
+				deviceClass: sensor.Timestamp,
+			},
 		}
 	}
 

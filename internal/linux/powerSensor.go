@@ -10,8 +10,6 @@ import (
 	"strings"
 
 	"github.com/godbus/dbus/v5"
-	"github.com/iancoleman/strcase"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/rs/zerolog/log"
 )
 
@@ -21,71 +19,20 @@ const (
 )
 
 type powerSensor struct {
-	sensorValue      interface{}
-	sensorAttributes interface{}
-	sensorGroup      string
-	sensorType       sensorType
+	sensorGroup string
+	linuxSensor
 }
 
-func (state *powerSensor) Name() string {
-	return state.sensorType.String()
-}
-
-func (state *powerSensor) ID() string {
-	return strcase.ToSnake(state.sensorType.String())
-}
-
-func (state *powerSensor) Icon() string {
-	return "mdi:flash"
-}
-
-func (state *powerSensor) SensorType() sensor.SensorType {
-	return sensor.TypeSensor
-}
-
-func (state *powerSensor) DeviceClass() sensor.SensorDeviceClass {
-	return 0
-}
-
-func (state *powerSensor) StateClass() sensor.SensorStateClass {
-	return 0
-}
-
-func (state *powerSensor) State() interface{} {
-	return state.sensorValue
-}
-
-func (state *powerSensor) Units() string {
-	return ""
-}
-
-func (state *powerSensor) Category() string {
-	return "diagnostic"
-}
-
-func (state *powerSensor) Attributes() interface{} {
-	return state.sensorAttributes
-}
-
-func marshalPowerStateUpdate(sensor sensorType, group string, v dbus.Variant) *powerSensor {
-	var value, attributes interface{}
-	switch sensor {
-	case powerProfile:
-		value = strings.Trim(v.String(), "\"")
+func newPowerSensor(t sensorType, g string, v dbus.Variant) *powerSensor {
+	s := &powerSensor{
+		sensorGroup: g,
 	}
-	if attributes == nil {
-		attributes = struct {
-			DataSource string `json:"Data Source"`
-		}{
-			DataSource: "D-Bus",
-		}
-	}
-	return &powerSensor{
-		sensorGroup:      group,
-		sensorType:       sensor,
-		sensorValue:      value,
-		sensorAttributes: attributes,
-	}
+	s.value = strings.Trim(v.String(), "\"")
+	s.sensorType = t
+	s.icon = "mdi:flash"
+	s.source = "D-Bus"
+	s.diagnostic = true
+	return s
 }
 
 func PowerUpater(ctx context.Context, status chan interface{}) {
@@ -98,7 +45,7 @@ func PowerUpater(ctx context.Context, status chan interface{}) {
 		return
 	}
 
-	status <- marshalPowerStateUpdate(powerProfile, powerProfilesDBusPath, activePowerProfile)
+	status <- newPowerSensor(powerProfile, powerProfilesDBusPath, activePowerProfile)
 
 	err = NewBusRequest(SystemBus).
 		Path(powerProfilesDBusPath).
@@ -109,16 +56,11 @@ func PowerUpater(ctx context.Context, status chan interface{}) {
 		Handler(func(s *dbus.Signal) {
 			updatedProps := s.Body[1].(map[string]dbus.Variant)
 			for propName, propValue := range updatedProps {
-				var propType sensorType
-				switch propName {
-				case "ActiveProfile":
-					propType = powerProfile
-				default:
+				if propName == "ActiveProfile" {
+					p := newPowerSensor(powerProfile, string(s.Path), activePowerProfile)
+					status <- p
+				} else {
 					log.Debug().Msgf("Unhandled property %v changed to %v", propName, propValue)
-				}
-				if propType != 0 {
-					propState := marshalPowerStateUpdate(propType, string(s.Path), propValue)
-					status <- propState
 				}
 			}
 		}).
