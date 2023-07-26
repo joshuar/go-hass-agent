@@ -43,6 +43,9 @@ const (
 	powerProfile                        // Power Profile
 	boottime                            // Last Reboot
 	uptime                              // Uptime
+	load1                               // CPU load average (1 min)
+	load5                               // CPU load average (5 min)
+	load15                              // CPU load average (15 min)
 )
 
 // sensorType represents the unique type of sensor data being reported. Every

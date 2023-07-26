@@ -9,49 +9,24 @@ import (
 	"context"
 	"time"
 
+	"github.com/iancoleman/strcase"
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v3/load"
 )
 
-const (
-	load1 loadavgStat = iota + 1
-	load5
-	load15
-)
-
-type loadavgStat int
-
 type loadavg struct {
 	load float64
-	name loadavgStat
+	name sensorType
 }
 
 func (l *loadavg) Name() string {
-	switch l.name {
-	case load1:
-		return "CPU load average (1 min)"
-	case load5:
-		return "CPU load average (5 min)"
-	case load15:
-		return "CPU load average (15 min)"
-	default:
-		return "CPU Load Average"
-	}
+	return l.name.String()
 }
 
 func (l *loadavg) ID() string {
-	switch l.name {
-	case load1:
-		return "cpu_load_avg_1_min"
-	case load5:
-		return "cpu_load_avg_5_min"
-	case load15:
-		return "cpu_load_avg_15_min"
-	default:
-		return "cpu_load_avg"
-	}
+	return strcase.ToSnake(l.name.String())
 }
 
 func (l *loadavg) Icon() string {
