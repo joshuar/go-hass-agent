@@ -15,7 +15,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-//go:generate stringer -type=dbusProp -output dbusConnProps.go -linecomment
 const (
 	networkManagerPath     = "/org/freedesktop/NetworkManager"
 	networkManagerObject   = "org.freedesktop.NetworkManager"
