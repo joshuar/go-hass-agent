@@ -8,7 +8,6 @@ package linux
 import (
 	"context"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/godbus/dbus/v5"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/rs/zerolog/log"
@@ -48,7 +47,6 @@ func ScreenLockUpdater(ctx context.Context, update chan interface{}) {
 			lock.value = s.Body[0].(bool)
 			lock.sensorType = screenLock
 			lock.source = "D-Bus"
-			spew.Dump(lock)
 			update <- lock
 		}).
 		AddWatch(ctx)

@@ -491,7 +491,7 @@ func NetworkConnectionsUpdater(ctx context.Context, status chan interface{}) {
 			}
 			obj, ok := s.Body[0].(string)
 			if !ok {
-				log.Debug().Msgf("Unhandled signal body of type %T.", obj)
+				log.Trace().Caller().Msgf("Unhandled signal body of type %T (%v).", obj, s)
 				return
 			}
 			switch obj {
@@ -514,7 +514,7 @@ func NetworkConnectionsUpdater(ctx context.Context, status chan interface{}) {
 			case "org.freedesktop.NetworkManager.Device.Statistics":
 				// no-op, too noisy
 			default:
-				log.Trace().Caller().Msgf("Unhandled signal %v", s)
+				log.Trace().Caller().Msgf("Unhandled object %s.", obj)
 			}
 		}).
 		AddWatch(ctx)
