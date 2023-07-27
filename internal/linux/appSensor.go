@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/godbus/dbus/v5"
-	"github.com/iancoleman/strcase"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v3/process"
@@ -25,8 +24,39 @@ const (
 )
 
 type appSensor struct {
-	sensorValue map[string]dbus.Variant
-	sensorType  sensorType
+	appList map[string]dbus.Variant
+	linuxSensor
+}
+
+func newAppSensor(t sensorType, v map[string]dbus.Variant) *appSensor {
+	s := &appSensor{}
+	s.sensorType = t
+	switch s.sensorType {
+	case appRunning:
+		s.icon = "mdi:apps"
+		s.units = "apps"
+		s.stateClass = sensor.StateMeasurement
+		s.appList = v
+		var count int
+		for _, raw := range v {
+			if appState, ok := raw.Value().(uint32); ok {
+				if appState > 0 {
+					count++
+				}
+			}
+		}
+		s.value = count
+	case appActive:
+		s.icon = "mdi:application"
+		for rawName, rawValue := range v {
+			if appState, ok := rawValue.Value().(uint32); ok {
+				if appState == 2 {
+					s.value = rawName
+				}
+			}
+		}
+	}
+	return s
 }
 
 type appState struct {
@@ -36,82 +66,16 @@ type appState struct {
 	appCount   int
 }
 
-// appSensor implements hass.SensorUpdate
-
-func (s *appSensor) Name() string {
-	return s.sensorType.String()
-}
-
-func (s *appSensor) ID() string {
-	return strings.ToLower(strcase.ToSnake(s.sensorType.String()))
-}
-
-func (s *appSensor) Icon() string {
-	switch s.sensorType {
-	case appRunning:
-		return "mdi:apps"
-	case appActive:
-		fallthrough
-	default:
-		return "mdi:application"
-	}
-}
-
-func (s *appSensor) SensorType() sensor.SensorType {
-	return sensor.TypeSensor
-}
-
-func (s *appSensor) DeviceClass() sensor.SensorDeviceClass {
-	return 0
-}
-
-func (s *appSensor) StateClass() sensor.SensorStateClass {
-	switch s.sensorType {
-	case appRunning:
-		return sensor.StateMeasurement
-	default:
-		return 0
-	}
-}
-
-func (s *appSensor) State() interface{} {
-	switch s.sensorType {
-	case appActive:
-		for appName, state := range s.sensorValue {
-			if state.Value().(uint32) == 2 {
-				return appName
-			}
-		}
-	case appRunning:
-		var count int
-		for _, state := range s.sensorValue {
-			if state.Value().(uint32) > 0 {
-				count++
-			}
-		}
-		return count
-	}
-	return ""
-}
-
-func (s *appSensor) Units() string {
-	switch s.sensorType {
-	case appRunning:
-		return "apps"
-	}
-	return ""
-}
-
-func (s *appSensor) Category() string {
-	return ""
-}
-
 func (s *appSensor) Attributes() interface{} {
 	switch s.sensorType {
 	case appActive:
-		return newActiveAppDetails(s.State().(string))
+		if app, ok := s.State().(string); ok {
+			return newActiveAppDetails(app)
+		} else {
+			return nil
+		}
 	case appRunning:
-		return newRunningAppsDetails(s.sensorValue)
+		return newRunningAppsDetails(s.appList)
 	}
 	return nil
 }
@@ -157,13 +121,6 @@ func newRunningAppsDetails(apps map[string]dbus.Variant) *runningAppsDetails {
 	return details
 }
 
-func marshalAppStateUpdate(t sensorType, v map[string]dbus.Variant) *appSensor {
-	return &appSensor{
-		sensorValue: v,
-		sensorType:  t,
-	}
-}
-
 func AppUpdater(ctx context.Context, update chan interface{}) {
 	portalDest := findPortal()
 	if portalDest == "" {
@@ -196,20 +153,24 @@ func AppUpdater(ctx context.Context, update chan interface{}) {
 			dbus.WithMatchInterface(appStateDBusInterface),
 		}).
 		Event(appStateDBusEvent).
-		Handler(func(s *dbus.Signal) {
+		Handler(func(_ *dbus.Signal) {
 			if activeAppList := NewBusRequest(SessionBus).
 				Path(appStateDBusPath).
 				Destination(portalDest).
 				GetData(appStateDBusMethod).AsVariantMap(); activeAppList != nil {
-				newAppCount := marshalAppStateUpdate(appRunning, activeAppList)
-				newApp := marshalAppStateUpdate(appActive, activeAppList)
-				if count := newAppCount.State().(int); count != appStateTracker.appCount {
-					appStateTracker.countCh <- count
-					update <- newAppCount
+				newAppCount := newAppSensor(appRunning, activeAppList)
+				newApp := newAppSensor(appActive, activeAppList)
+				if count, ok := newAppCount.State().(int); ok {
+					if count != appStateTracker.appCount {
+						appStateTracker.countCh <- count
+						update <- newAppCount
+					}
 				}
-				if app := newApp.State().(string); app != appStateTracker.currentApp {
-					appStateTracker.appChan <- app
-					update <- newApp
+				if app, ok := newApp.State().(string); ok {
+					if app != appStateTracker.currentApp {
+						appStateTracker.appChan <- app
+						update <- newApp
+					}
 				}
 			} else {
 				log.Debug().Caller().
