@@ -17,57 +17,42 @@ import (
 	"github.com/shirou/gopsutil/v3/disk"
 )
 
-type diskUsageState disk.UsageStat
+type diskSensor struct {
+	stats *disk.UsageStat
+	linuxSensor
+}
+
+func newDiskSensor(d *disk.UsageStat) *diskSensor {
+	s := &diskSensor{}
+	s.icon = "mdi:harddisk"
+	s.stateClass = sensor.StateTotal
+	s.units = "%"
+	s.stats = d
+	s.value = math.Round(d.UsedPercent/0.05) * 0.05
+	return s
+}
 
 // diskUsageState implements hass.SensorUpdate
 
-func (d *diskUsageState) Name() string {
-	return "Mountpoint " + d.Path + " Usage"
+func (d *diskSensor) Name() string {
+	return "Mountpoint " + d.stats.Path + " Usage"
 }
 
-func (d *diskUsageState) ID() string {
-	if d.Path == "/" {
+func (d *diskSensor) ID() string {
+	if d.stats.Path == "/" {
 		return "mountpoint_root"
 	} else {
-		return "mountpoint" + strings.ReplaceAll(d.Path, "/", "_")
+		return "mountpoint" + strings.ReplaceAll(d.stats.Path, "/", "_")
 	}
 }
 
-func (d *diskUsageState) Icon() string {
-	return "mdi:harddisk"
-}
-
-func (d *diskUsageState) SensorType() sensor.SensorType {
-	return sensor.TypeSensor
-}
-
-func (d *diskUsageState) DeviceClass() sensor.SensorDeviceClass {
-	return 0
-}
-
-func (d *diskUsageState) StateClass() sensor.SensorStateClass {
-	return sensor.StateTotal
-}
-
-func (d *diskUsageState) State() interface{} {
-	return math.Round(d.UsedPercent/0.05) * 0.05
-}
-
-func (d *diskUsageState) Units() string {
-	return "%"
-}
-
-func (d *diskUsageState) Category() string {
-	return ""
-}
-
-func (s *diskUsageState) Attributes() interface{} {
+func (s *diskSensor) Attributes() interface{} {
 	return struct {
 		DataSource string `json:"Data Source"`
-		diskUsageState
+		Stats      disk.UsageStat
 	}{
-		DataSource:     "procfs",
-		diskUsageState: *s,
+		DataSource: "procfs",
+		Stats:      *s.stats,
 	}
 }
 
@@ -87,8 +72,7 @@ func DiskUsageUpdater(ctx context.Context, status chan interface{}) {
 					Msgf("Failed to get usage info for mountpount %s.", partition.Mountpoint)
 				return
 			}
-			u := diskUsageState(*usage)
-			status <- &u
+			status <- newDiskSensor(usage)
 		}
 	}
 
