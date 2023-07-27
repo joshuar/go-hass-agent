@@ -467,7 +467,7 @@ func (s *networkSensor) Attributes() interface{} {
 func NetworkConnectionsUpdater(ctx context.Context, status chan interface{}) {
 	connList := getActiveConns()
 	if connList == nil {
-		log.Debug().Msg("No active connections.")
+		log.Error().Msg("No active connections.")
 		return
 	}
 	for _, path := range connList {
@@ -482,11 +482,11 @@ func NetworkConnectionsUpdater(ctx context.Context, status chan interface{}) {
 		Event("org.freedesktop.DBus.Properties.PropertiesChanged").
 		Handler(func(s *dbus.Signal) {
 			if !s.Path.IsValid() || s.Path == "/" {
-				log.Debug().Msgf("Invalid D-Bus object path %s.", s.Path)
+				log.Trace().Caller().Msgf("Invalid D-Bus object path %s.", s.Path)
 				return
 			}
 			if len(s.Body) == 0 {
-				log.Debug().Msg("No signal body.")
+				log.Trace().Caller().Msg("No signal body recieved.")
 				return
 			}
 			obj, ok := s.Body[0].(string)
