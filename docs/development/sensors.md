@@ -15,7 +15,7 @@ file for each sensor or sensor group you are adding.
 ## Representing a sensor
 
 For sensor data to be registered and sent to Home Assistant, it needs to meet
-implement the `hass.SensorUpdate` interface. It should satisfy the following
+implement the `tracker.Sensor` interface. It should satisfy the following
 methods.
 
 ```go
@@ -56,21 +56,19 @@ current state or remain constant. Format is "mdi:icon_name".
 
 ### SensorType() hass.SensorType
 
-The `hass.SensorType` for this sensor. Either `TypeSensor` or `TypeBinary`.
+The `sensor.SensorType` for this sensor. Either `TypeSensor` or `TypeBinary`.
 
 ### DeviceClass() hass.SensorDeviceClass
 
-The `hass.SensorDeviceClass` for this sensor. There are many, pick an
-[appropriate
-one](https://developers.home-assistant.io/docs/core/entity/sensor/#available-device-classes)
-for the sensor or return a value of 0 to indicate it has none.
+The `sensor.SensorDeviceClass` for this sensor. There are many, pick an
+appropriate one (see `internal/hass/sensor/deviceClass.go`) for the sensor or
+return a value of 0 to indicate it has none.
 
 ### StateClass() hass.SensorStateClass
 
-The `hass.SensorStateClass` for this sensor. There are a few, pick an
-[appropriate
-one](https://developers.home-assistant.io/docs/core/entity/sensor/#available-state-classes)
-for the sensor or return a value of 0 to indicate it has none.
+The `sensor.SensorStateClass` for this sensor. There are a few, pick an
+appropriate one for the sensor (see `internal/hass/sensor/stateClass.go`) sensor
+return a value of 0 to indicate it has none.
 
 ### State() interface{}
 
@@ -107,20 +105,8 @@ func SensorUpdater(ctx context.Context, updateCh chan interface{})
 Create this function in the `sensors` package, in a file called
 `setup_GOARCH.go`.
 
-The `ctx` parameter will contain the device/platform specific APIs and
-variables. You can retrieve those in the function with:
-
-```go
-	deviceAPI, deviceAPIExists := FromContext(ctx)
-	if !deviceAPIExists {
-		log.Debug().Caller().
-			Msg("Could not connect to DBus to monitor app state.")
-		return
-	}
-```
-
-See [agent/extending](../agent/extending.md) for more details on creating this
-context and loading it with the right information.
+The `ctx` can contain the device/platform specific APIs and
+variables.
 
 The `updateCh` will be the channel you use to send the sensor data that
 implements the `hass.SensorUpdate` interface.
@@ -129,9 +115,9 @@ Within this function, you should create the sensors you want to report to Home
 Assistant and set up a way to send updates. You will want:
 
 - A way to get the sensor data you need. Most likely stored in a struct.
-- Ensure this data struct meets the `hass.SensorUpdate` interface requirements.
+- Ensure this data struct meets the `tracker.Sensor` interface requirements.
 - Pass the data struct through the `updateCh` channel as required where it will be
-tracked and sent to Home Assistant by the agent.
+  tracked and sent to Home Assistant by the agent.
 
 How this is achieved will vary and can be done in any way. For example, the
 battery sensor data is manifested by listening for DBus signals that indicate a
