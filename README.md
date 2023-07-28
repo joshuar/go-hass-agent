@@ -82,7 +82,7 @@ On first-run, **go-hass-agent** will display a window where you will need to ent
 some details, so it can register itself with a Home Assistant instance to be
 able to report sensors and receive notifications.
 
-![Registration Window](docs/agent/registration.png)
+![Registration Window](assets/screenshots/registration.png)
 
 **You will need:**
 
