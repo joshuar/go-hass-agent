@@ -1,7 +1,9 @@
 {
     "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
     "features": {
-        "ghcr.io/devcontainers/features/go:1": {},
+        "ghcr.io/devcontainers/features/go:1": {
+            "version": "1.20.6"
+        },
         "ghcr.io/devcontainers/features/python:1": {
             "version": "3.11.0"
         }
@@ -24,7 +26,8 @@
             "golang.go",
             "premparihar.gotestexplorer",
             "ymotongpoo.licenser",
-            "esbenp.prettier-vscode"
+            "esbenp.prettier-vscode",
+            "aaron-bond.better-comments"
         ]}
       },
     "runArgs": [
