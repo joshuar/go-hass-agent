@@ -10,7 +10,7 @@ set -e
 
 # Install go-hass-agent dependencies
 sudo apt -y update && export DEBIAN_FRONTEND=noninteractive && \
-    sudo apt -y install libgl1-mesa-dev libxi-dev libxcursor-dev libxrandr-dev libxinerama-dev libxxf86vm-dev dbus-x11
+    sudo apt -y install libgl1-mesa-dev libxi-dev libxcursor-dev libxrandr-dev libxinerama-dev libxxf86vm-dev dbus-x11 fish
 cd /workspaces/go-hass-agent && go mod download
 
 # Install goreleaser 
