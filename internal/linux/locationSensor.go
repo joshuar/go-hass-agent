@@ -104,7 +104,7 @@ func LocationUpdater(ctx context.Context, locationInfoCh chan interface{}) {
 	locationUpdateHandler := func(s *dbus.Signal) {
 		if s.Name == "org.freedesktop.GeoClue2.Client.LocationUpdated" {
 			if locationPath, ok := s.Body[1].(dbus.ObjectPath); ok {
-				locationInfoCh <- newLocation(ctx, locationPath)
+				locationInfoCh <- newLocation(locationPath)
 			}
 		}
 	}
@@ -150,7 +150,7 @@ func LocationUpdater(ctx context.Context, locationInfoCh chan interface{}) {
 	}()
 }
 
-func newLocation(ctx context.Context, locationPath dbus.ObjectPath) *linuxLocation {
+func newLocation(locationPath dbus.ObjectPath) *linuxLocation {
 	getProp := func(prop string) float64 {
 		value, err := NewBusRequest(SystemBus).
 			Path(locationPath).
