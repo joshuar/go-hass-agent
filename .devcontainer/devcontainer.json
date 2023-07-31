@@ -22,12 +22,14 @@
         "vscode": {
           "extensions": [
             "vivaxy.vscode-conventional-commits",
+            "brunodavi.conventional-snippets",
             "eamodio.gitlens",
             "golang.go",
             "premparihar.gotestexplorer",
             "ymotongpoo.licenser",
             "esbenp.prettier-vscode",
-            "aaron-bond.better-comments"
+            "aaron-bond.better-comments",
+            "valentjn.vscode-ltex"
         ]}
       },
     "runArgs": [
