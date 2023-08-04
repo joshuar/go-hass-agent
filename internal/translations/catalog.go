@@ -27,7 +27,9 @@ func (d *dictionary) Lookup(key string) (data string, ok bool) {
 
 func init() {
 	dict := map[string]catalog.Dictionary{
+		"de": &dictionary{index: deIndex, data: deData},
 		"en": &dictionary{index: enIndex, data: enData},
+		"fr": &dictionary{index: frIndex, data: frData},
 	}
 	fallback := language.MustParse("en")
 	cat, err := catalog.NewFromMap(dict, catalog.Fallback(fallback))
@@ -57,6 +59,16 @@ var messageKeyToIndex = map[string]int{
 	"Welcome to go-hass-agent. As this is the first run of the agent, a window will be displayed \nfor you to enter registration details. Please enter the required details, \nclick Submit and the agent should start running.": 13,
 }
 
+var deIndex = []uint32{ // 18 elements
+	0x00000000, 0x00000000, 0x00000000, 0x00000000,
+	0x00000000, 0x00000000, 0x00000000, 0x00000000,
+	0x00000000, 0x00000000, 0x00000000, 0x00000000,
+	0x00000000, 0x00000000, 0x00000000, 0x00000000,
+	0x00000000, 0x00000000,
+} // Size: 96 bytes
+
+const deData string = ""
+
 var enIndex = []uint32{ // 18 elements
 	0x00000000, 0x00000011, 0x00000017, 0x0000002f,
 	0x00000042, 0x00000056, 0x000000e2, 0x000000e8,
@@ -76,4 +88,14 @@ const enData string = "" + // Size: 564 bytes
 	"ails, \x0aclick Submit and the agent should start running.\x02Ok\x02App " +
 	"Version: %[1]s\x09HA Version: %[2]s\x02Fyne Settings"
 
-	// Total table size 660 bytes (0KiB); checksum: BAF3672C
+var frIndex = []uint32{ // 18 elements
+	0x00000000, 0x00000000, 0x00000000, 0x00000000,
+	0x00000000, 0x00000000, 0x00000000, 0x00000000,
+	0x00000000, 0x00000000, 0x00000000, 0x00000000,
+	0x00000000, 0x00000000, 0x00000000, 0x00000000,
+	0x00000000, 0x00000000,
+} // Size: 96 bytes
+
+const frData string = ""
+
+// Total table size 852 bytes (0KiB); checksum: 4923FB26

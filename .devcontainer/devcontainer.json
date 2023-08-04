@@ -32,9 +32,8 @@
             "valentjn.vscode-ltex"
         ]}
       },
-    "runArgs": [
-        "--userns=keep-id:uid=1000,gid=1000"
-    ],
-    "containerUser": "vscode",
-    "updateRemoteUserUID": true
+      "containerUser": "vscode",
+      "runArgs": [
+        "--userns=keep-id"
+      ]
 }
