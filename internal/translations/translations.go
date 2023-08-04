@@ -12,7 +12,7 @@ import (
 	"golang.org/x/text/message"
 )
 
-//go:generate gotext -srclang=en update -out=catalog.go -lang=en github.com/joshuar/go-hass-agent
+//go:generate gotext -srclang=en update -out=catalog.go -lang=en,fr,de github.com/joshuar/go-hass-agent
 
 // Translator provides a msgPrinter that can display localised strings for
 // translation of the UI
