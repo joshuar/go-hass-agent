@@ -7,8 +7,10 @@
         "ghcr.io/devcontainers/features/python:1": {
             "version": "3.11.0"
         }
-    },    
-    "appPort": ["8123:8123"],
+    },
+    "appPort": [
+        "8123:8123"
+    ],
     "postCreateCommand": ".devcontainer/postCreate",
     "remoteEnv": {
         "HA_PATH": "/workspaces/go-hass-agent/home-assistant",
@@ -20,20 +22,20 @@
     "shutdownAction": "stopContainer",
     "customizations": {
         "vscode": {
-          "extensions": [
-            "vivaxy.vscode-conventional-commits",
-            "brunodavi.conventional-snippets",
-            "eamodio.gitlens",
-            "golang.go",
-            "premparihar.gotestexplorer",
-            "ymotongpoo.licenser",
-            "esbenp.prettier-vscode",
-            "aaron-bond.better-comments",
-            "valentjn.vscode-ltex"
-        ]}
-      },
-      "containerUser": "vscode",
-      "runArgs": [
+            "extensions": [
+                "vivaxy.vscode-conventional-commits",
+                "brunodavi.conventional-snippets",
+                "golang.go",
+                "premparihar.gotestexplorer",
+                "ymotongpoo.licenser",
+                "esbenp.prettier-vscode",
+                "aaron-bond.better-comments",
+                "valentjn.vscode-ltex"
+            ]
+        }
+    },
+    "containerUser": "vscode",
+    "runArgs": [
         "--userns=keep-id"
-      ]
+    ]
 }
