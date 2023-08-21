@@ -188,6 +188,7 @@ func TestSensorTracker_Update(t *testing.T) {
 		SensorTypeFunc: func() sensor.SensorType { return sensor.TypeSensor },
 		IDFunc:         func() string { return "sensorID" },
 		NameFunc:       func() string { return "sensorName" },
+		UnitsFunc:      func() string { return "units" },
 	}
 
 	mockConfig := &mockConfig{
