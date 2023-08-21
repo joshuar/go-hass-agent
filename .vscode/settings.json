@@ -3,5 +3,8 @@
     "go.lintTool": "golangci-lint",
     "go.lintFlags": [
         "--fast"
-    ]    
+    ],
+    "go.testFlags": [
+        "-v"
+    ]
 }
