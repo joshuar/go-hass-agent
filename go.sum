@@ -324,7 +324,7 @@ github.com/neelance/sourcemap v0.0.0-20200213170602-2833bce08e4c/go.mod h1:Qr6/a
 github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646/go.mod h1:jpp1/29i3P1S/RLdc7JQKbRpFeM1dOBd8T9ki5s+AY8=
 github.com/nicksnyder/go-i18n/v2 v2.1.1/go.mod h1:d++QJC9ZVf7pa48qrsRWhMJ5pSHIPmS3OLqK1niyLxs=
 github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e/go.mod h1:zD1mROLANZcx1PVRCS0qkT7pwLkGfwJo4zjcN/Tysno=
-github.com/nutsdb/nutsdb v0.13.1 h1:Klkl9m+tlPDvrTeqxAFscjyENaMXwj0otAo1e1dEBJE=
+github.com/nutsdb/nutsdb v0.13.1 h1:gTVPTQN2OAckYmMuTjVmnr9i9xQ1MkdYwYlLY2B39Ds=
 github.com/nutsdb/nutsdb v0.13.1/go.mod h1:5ZRl/i3/tXmanXW1pY/LSnS1jp+WbOKGH0A+tx0VNN0=
 github.com/pascaldekloe/goe v0.0.0-20180627143212-57f6aae5913c/go.mod h1:lzWF7FIEvWOWxwDKqyGYQf6ZUaNfKdP144TG7ZOy1lc=
 github.com/pelletier/go-toml v1.9.3/go.mod h1:u1nR/EPcESfeI/szUZKdtJ0xRNbUoANCkoOuaOx1Y+c=
