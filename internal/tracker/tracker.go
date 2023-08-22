@@ -53,9 +53,12 @@ func RunSensorTracker(ctx context.Context, config api.Config, trackerCh chan *Se
 	var wg sync.WaitGroup
 	updateCh := make(chan interface{})
 	defer close(updateCh)
+	sensorWorkers := device.SensorWorkers()
+	sensorWorkers = append(sensorWorkers, device.ExternalIPUpdater)
+
 	wg.Add(1)
 	go func() {
-		startWorkers(ctx, updateCh)
+		startWorkers(ctx, sensorWorkers, updateCh)
 	}()
 	wg.Add(1)
 	go func() {
@@ -176,12 +179,9 @@ func (t *SensorTracker) trackUpdates(ctx context.Context, config api.Config, upd
 
 // startWorkers will call all the sensor worker functions that have been defined
 // for this device.
-func startWorkers(ctx context.Context, updateCh chan interface{}) {
+func startWorkers(ctx context.Context, workers []func(context.Context, chan interface{}), updateCh chan interface{}) {
 	var wg sync.WaitGroup
-
-	sensorWorkers := device.SensorWorkers()
-	sensorWorkers = append(sensorWorkers, device.ExternalIPUpdater)
-	for _, worker := range sensorWorkers {
+	for _, worker := range workers {
 		wg.Add(1)
 		go func(worker func(context.Context, chan interface{})) {
 			defer wg.Done()
