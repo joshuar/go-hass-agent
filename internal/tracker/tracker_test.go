@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"sync"
 	"testing"
 
@@ -160,15 +161,27 @@ func TestSensorTracker_Update(t *testing.T) {
 			assert.Nil(t, err)
 			switch req.Type {
 			case "update_sensor_states":
-				w.WriteHeader(http.StatusOK)
+				switch {
+				case strings.Contains(string(req.Data), "bad"):
+					w.WriteHeader(http.StatusOK)
+					w.Write([]byte(`{"sensorID":{"success":false,"error":{"code":"invalid_format","message": "Unexpected value for type"}}}`))
+				case strings.Contains(string(req.Data), "disabled"):
+					w.WriteHeader(http.StatusOK)
+					w.Write([]byte(`{"sensorID":{"success":true,"is_disabled":true}}`))
+				default:
+					w.WriteHeader(http.StatusOK)
+					w.Write([]byte(`{"sensorID":{"success":true}}`))
+				}
+			case "register_sensor":
+				w.WriteHeader(http.StatusCreated)
 				w.Write([]byte(`{"success":true}`))
 			}
 		}))
 	}
 	server := mockServer(t)
-	// defer server.Close()
+	defer server.Close()
 
-	mockRegistry := &RegistryMock{
+	mockExistingRegistry := &RegistryMock{
 		IsRegisteredFunc: func(s string) chan bool {
 			valueCh := make(chan bool, 1)
 			valueCh <- true
@@ -179,16 +192,63 @@ func TestSensorTracker_Update(t *testing.T) {
 			valueCh <- false
 			return valueCh
 		},
+		SetDisabledFunc: func(s string, b bool) error {
+			return nil
+		},
+	}
+
+	mockNewRegistry := &RegistryMock{
+		IsRegisteredFunc: func(s string) chan bool {
+			valueCh := make(chan bool, 1)
+			valueCh <- false
+			return valueCh
+		},
+		IsDisabledFunc: func(s string) chan bool {
+			valueCh := make(chan bool, 1)
+			valueCh <- false
+			return valueCh
+		},
+		SetDisabledFunc:   func(s string, b bool) error { return nil },
+		SetRegisteredFunc: func(s string, b bool) error { return nil },
 	}
 
 	mockSensorUpdate := &SensorMock{
-		AttributesFunc: func() interface{} { return nil },
-		StateFunc:      func() interface{} { return "aState" },
-		IconFunc:       func() string { return "mdi:icon" },
-		SensorTypeFunc: func() sensor.SensorType { return sensor.TypeSensor },
-		IDFunc:         func() string { return "sensorID" },
-		NameFunc:       func() string { return "sensorName" },
-		UnitsFunc:      func() string { return "units" },
+		AttributesFunc:  func() interface{} { return nil },
+		StateFunc:       func() interface{} { return "goodState" },
+		IconFunc:        func() string { return "mdi:icon" },
+		SensorTypeFunc:  func() sensor.SensorType { return sensor.TypeSensor },
+		IDFunc:          func() string { return "sensorID" },
+		NameFunc:        func() string { return "sensorName" },
+		UnitsFunc:       func() string { return "units" },
+		DeviceClassFunc: func() sensor.SensorDeviceClass { return sensor.Duration },
+		StateClassFunc:  func() sensor.SensorStateClass { return sensor.StateMeasurement },
+		CategoryFunc:    func() string { return "" },
+	}
+
+	mockBadSensorUpdate := &SensorMock{
+		AttributesFunc:  func() interface{} { return nil },
+		StateFunc:       func() interface{} { return "badState" },
+		IconFunc:        func() string { return "mdi:icon" },
+		SensorTypeFunc:  func() sensor.SensorType { return sensor.TypeSensor },
+		IDFunc:          func() string { return "sensorID" },
+		NameFunc:        func() string { return "sensorName" },
+		UnitsFunc:       func() string { return "units" },
+		DeviceClassFunc: func() sensor.SensorDeviceClass { return sensor.Duration },
+		StateClassFunc:  func() sensor.SensorStateClass { return sensor.StateMeasurement },
+		CategoryFunc:    func() string { return "" },
+	}
+
+	mockDisabledSensorUpdate := &SensorMock{
+		AttributesFunc:  func() interface{} { return nil },
+		StateFunc:       func() interface{} { return "disabled" },
+		IconFunc:        func() string { return "mdi:icon" },
+		SensorTypeFunc:  func() sensor.SensorType { return sensor.TypeSensor },
+		IDFunc:          func() string { return "sensorID" },
+		NameFunc:        func() string { return "sensorName" },
+		UnitsFunc:       func() string { return "units" },
+		DeviceClassFunc: func() sensor.SensorDeviceClass { return sensor.Duration },
+		StateClassFunc:  func() sensor.SensorStateClass { return sensor.StateMeasurement },
+		CategoryFunc:    func() string { return "" },
 	}
 
 	mockConfig := &mockConfig{
@@ -214,7 +274,43 @@ func TestSensorTracker_Update(t *testing.T) {
 			name: "successful update",
 			fields: fields{
 				sensor:   make(map[string]Sensor),
-				registry: mockRegistry,
+				registry: mockExistingRegistry,
+			},
+			args: args{
+				ctx:          context.Background(),
+				config:       mockConfig,
+				sensorUpdate: mockSensorUpdate,
+			},
+		},
+		{
+			name: "bad update",
+			fields: fields{
+				sensor:   make(map[string]Sensor),
+				registry: mockExistingRegistry,
+			},
+			args: args{
+				ctx:          context.Background(),
+				config:       mockConfig,
+				sensorUpdate: mockBadSensorUpdate,
+			},
+		},
+		{
+			name: "disabled update",
+			fields: fields{
+				sensor:   make(map[string]Sensor),
+				registry: mockExistingRegistry,
+			},
+			args: args{
+				ctx:          context.Background(),
+				config:       mockConfig,
+				sensorUpdate: mockDisabledSensorUpdate,
+			},
+		},
+		{
+			name: "successful new",
+			fields: fields{
+				sensor:   make(map[string]Sensor),
+				registry: mockNewRegistry,
 			},
 			args: args{
 				ctx:          context.Background(),
@@ -235,52 +331,80 @@ func TestSensorTracker_Update(t *testing.T) {
 	}
 }
 
-// func TestRunSensorTracker(t *testing.T) {
-// 	mockConfig := NewMockConfig(t)
-// 	defer os.RemoveAll(mockConfig.storage)
+func Test_startWorkers(t *testing.T) {
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	updateCh := make(chan interface{})
+	defer close(updateCh)
+	defer cancelFunc()
+	mockWorker := func(context.Context, chan interface{}) {
+		t.Log("worker ran")
+	}
+	w := []func(context.Context, chan interface{}){mockWorker}
 
-// 	ctx, cancelfunc := context.WithCancel(context.Background())
-// 	defer cancelfunc()
+	type args struct {
+		ctx      context.Context
+		workers  []func(context.Context, chan interface{})
+		updateCh chan interface{}
+	}
+	tests := []struct {
+		name string
+		args args
+	}{
+		{
+			name: "default test",
+			args: args{
+				ctx:      ctx,
+				workers:  w,
+				updateCh: updateCh,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			startWorkers(tt.args.ctx, tt.args.workers, tt.args.updateCh)
+		})
+	}
+}
 
-// 	type args struct {
-// 		ctx    context.Context
-// 		config api.Config
-// 	}
-// 	tests := []struct {
-// 		name    string
-// 		args    args
-// 		wantErr bool
-// 	}{
-// 		{
-// 			name: "successful test",
-// 			args: args{
-// 				ctx:    ctx,
-// 				config: mockConfig,
-// 			},
-// 			wantErr: false,
-// 		},
-// 		// 		// {
-// 		// 		// 	name: "successful test, no directory given",
-// 		// 		// 	args: args{
-// 		// 		// 		ctx:  context.Background(),
-// 		// 		// 		path: "",
-// 		// 		// 	},
-// 		// 		// 	wantErr: false,
-// 		// 		// },
-// 		// 		// {
-// 		// 		// 	name: "unsuccessful test, invalid directory",
-// 		// 		// 	args: args{
-// 		// 		// 		ctx:  context.Background(),
-// 		// 		// 		path: "/foo/bar",
-// 		// 		// 	},
-// 		// 		// 	wantErr: true,
-// 		// 		// },
-// 	}
-// 	for _, tt := range tests {
-// 		t.Run(tt.name, func(t *testing.T) {
-// 			if err := RunSensorTracker(tt.args.ctx, tt.args.config); (err != nil) != tt.wantErr {
-// 				t.Errorf("RunSensorTracker() error = %v, wantErr %v", err, tt.wantErr)
-// 			}
-// 		})
-// 	}
-// }
+func TestSensorTracker_trackUpdates(t *testing.T) {
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	updateCh := make(chan interface{})
+	defer close(updateCh)
+	defer cancelFunc()
+
+	type fields struct {
+		registry Registry
+		sensor   map[string]Sensor
+		mu       sync.RWMutex
+	}
+	type args struct {
+		ctx      context.Context
+		config   api.Config
+		updateCh chan interface{}
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+	}{
+		{
+			name: "default test",
+			args: args{
+				ctx:      ctx,
+				config:   NewMockConfig(t),
+				updateCh: updateCh,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tr := &SensorTracker{
+				registry: tt.fields.registry,
+				sensor:   tt.fields.sensor,
+				mu:       tt.fields.mu,
+			}
+			go tr.trackUpdates(tt.args.ctx, tt.args.config, tt.args.updateCh)
+			cancelFunc()
+		})
+	}
+}
