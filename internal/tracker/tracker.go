@@ -150,6 +150,7 @@ func (t *SensorTracker) updateSensor(ctx context.Context, config api.Config, sen
 		defer wg.Done()
 		api.ExecuteRequest(ctx, req, config, responseCh)
 	}()
+	wg.Wait()
 }
 
 func (t *SensorTracker) trackUpdates(ctx context.Context, config api.Config, updateCh chan interface{}) {
