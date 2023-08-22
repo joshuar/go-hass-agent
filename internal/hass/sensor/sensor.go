@@ -189,7 +189,7 @@ func marshalResponse(raw bytes.Buffer) (map[string]interface{}, error) {
 	var r interface{}
 	err := json.Unmarshal(raw.Bytes(), &r)
 	if err != nil {
-		return nil, errors.New("could not unmarshal response")
+		return nil, fmt.Errorf("could not unmarshal response (%s)", raw.String())
 	}
 	response, ok := r.(map[string]interface{})
 	if !ok {
