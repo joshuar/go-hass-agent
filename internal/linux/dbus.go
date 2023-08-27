@@ -269,6 +269,15 @@ func (d *dbusData) AsObjectPath() dbus.ObjectPath {
 	}
 }
 
+// AsRawInterface formats DBus data as a plain interface{}
+func (d *dbusData) AsRawInterface() interface{} {
+	if d.data != nil {
+		return d.data
+	} else {
+		return nil
+	}
+}
+
 // variantToValue converts a dbus.Variant type into the specified Go native
 // type.
 func variantToValue[S any](variant dbus.Variant) S {
