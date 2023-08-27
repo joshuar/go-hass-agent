@@ -49,11 +49,14 @@ func _() {
 	_ = x[load15-39]
 	_ = x[screenLock-40]
 	_ = x[problem-41]
+	_ = x[kernel-42]
+	_ = x[distribution-43]
+	_ = x[version-44]
 }
 
-const _sensorType_name = "Active AppRunning AppsBattery TypeBattery LevelBattery TemperatureBattery VoltageBattery EnergyBattery PowerBattery StateBattery PathBattery LevelBattery ModelMemory TotalMemory AvailableMemory UsedSwap Memory TotalSwap Memory UsedSwap Memory FreeConnection StateConnection IDConnection DeviceConnection TypeConnection IPv4Connection IPv6IPv4 AddressIPv6 AddressWi-Fi SSIDWi-Fi FrequencyWi-Fi Link SpeedWi-Fi Signal StrengthWi-Fi BSSIDBytes SentBytes RecievedPower ProfileLast RebootUptimeCPU load average (1 min)CPU load average (5 min)CPU load average (15 min)Screen LockProblems"
+const _sensorType_name = "Active AppRunning AppsBattery TypeBattery LevelBattery TemperatureBattery VoltageBattery EnergyBattery PowerBattery StateBattery PathBattery LevelBattery ModelMemory TotalMemory AvailableMemory UsedSwap Memory TotalSwap Memory UsedSwap Memory FreeConnection StateConnection IDConnection DeviceConnection TypeConnection IPv4Connection IPv6IPv4 AddressIPv6 AddressWi-Fi SSIDWi-Fi FrequencyWi-Fi Link SpeedWi-Fi Signal StrengthWi-Fi BSSIDBytes SentBytes RecievedPower ProfileLast RebootUptimeCPU load average (1 min)CPU load average (5 min)CPU load average (15 min)Screen LockProblemsKernel VersionDistribution NameDistribution Version"
 
-var _sensorType_index = [...]uint16{0, 10, 22, 34, 47, 66, 81, 95, 108, 121, 133, 146, 159, 171, 187, 198, 215, 231, 247, 263, 276, 293, 308, 323, 338, 350, 362, 372, 387, 403, 424, 435, 445, 459, 472, 483, 489, 513, 537, 562, 573, 581}
+var _sensorType_index = [...]uint16{0, 10, 22, 34, 47, 66, 81, 95, 108, 121, 133, 146, 159, 171, 187, 198, 215, 231, 247, 263, 276, 293, 308, 323, 338, 350, 362, 372, 387, 403, 424, 435, 445, 459, 472, 483, 489, 513, 537, 562, 573, 581, 595, 612, 632}
 
 func (i sensorType) String() string {
 	i -= 1
