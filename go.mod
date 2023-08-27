@@ -51,7 +51,6 @@ require (
 	github.com/srwiley/oksvg v0.0.0-20221011165216-be6e8873101c // indirect
 	github.com/srwiley/rasterx v0.0.0-20220730225603-2ab79fcdd4ef // indirect
 	github.com/tevino/abool v1.2.0 // indirect
-	github.com/tidwall/btree v1.6.0 // indirect
 	github.com/tklauser/go-sysconf v0.3.12 // indirect
 	github.com/tklauser/numcpus v0.6.1 // indirect
 	github.com/xujiajun/mmap-go v1.0.1 // indirect
@@ -79,7 +78,7 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/lthibault/jitterbug/v2 v2.2.2
 	github.com/lxzan/gws v1.6.8
-	github.com/nutsdb/nutsdb v0.13.1
+	github.com/nutsdb/nutsdb v0.13.0
 	github.com/perimeterx/marshmallow v1.1.5
 	github.com/rs/zerolog v1.30.0
 	github.com/spf13/pflag v1.0.5 // indirect
