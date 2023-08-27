@@ -51,6 +51,7 @@ const (
 	kernel                                  // Kernel Version
 	distribution                            // Distribution Name
 	version                                 // Distribution Version
+	users                                   // Current Users
 )
 
 // sensorType represents the unique type of sensor data being reported. Every

@@ -26,6 +26,7 @@ func SensorWorkers() []func(context.Context, chan interface{}) {
 	workers = append(workers, linux.DiskUsageUpdater)
 	workers = append(workers, linux.TimeUpdater)
 	workers = append(workers, linux.ScreenLockUpdater)
+	workers = append(workers, linux.UsersUpdater)
 	workers = append(workers, linux.Versions)
 	return workers
 }
