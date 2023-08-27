@@ -120,7 +120,7 @@ type upowerBatteryState struct {
 // uPowerBatteryState implements hass.SensorUpdate
 
 func (state *upowerBatteryState) Name() string {
-	return state.model + state.prop.name.String()
+	return state.model + " " + state.prop.name.String()
 }
 
 func (state *upowerBatteryState) ID() string {
