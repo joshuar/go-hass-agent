@@ -48,6 +48,9 @@ const (
 	load15                                  // CPU load average (15 min)
 	screenLock                              // Screen Lock
 	problem                                 // Problems
+	kernel                                  // Kernel Version
+	distribution                            // Distribution Name
+	version                                 // Distribution Version
 )
 
 // sensorType represents the unique type of sensor data being reported. Every
