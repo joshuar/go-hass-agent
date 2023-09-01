@@ -69,8 +69,6 @@ require (
 
 require (
 	fyne.io/fyne/v2 v2.3.5
-	git.lukeshu.com/go/libsystemd v0.5.3
-	github.com/acobaugh/osrelease v0.1.0
 	github.com/carlmjohnson/requests v0.23.4
 	github.com/cenkalti/backoff/v4 v4.2.1
 	github.com/grandcat/zeroconf v1.0.0
