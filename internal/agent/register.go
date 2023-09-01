@@ -225,9 +225,6 @@ func (agent *Agent) registrationProcess(ctx context.Context, server, token strin
 	// If the app is not registered, run a registration flow
 	if !agent.IsRegistered() || force {
 		log.Info().Msg("Registration required. Starting registration process.")
-		// agent.showFirstRunWindow(ctx)
-		// The app is registered, continue (config check performed later).
-
 		registration := newRegistration(server, token)
 		device := agent.setupDevice(ctx)
 		if !headless {
