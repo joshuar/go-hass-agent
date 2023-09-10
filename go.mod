@@ -3,18 +3,18 @@ module github.com/joshuar/go-hass-agent
 go 1.20
 
 require (
-	github.com/go-playground/validator/v10 v10.15.1
+	github.com/go-playground/validator/v10 v10.15.3
 	github.com/godbus/dbus/v5 v5.1.0
 	github.com/jeandeaual/go-locale v0.0.0-20220711133428-7de61946b173
-	github.com/shirou/gopsutil/v3 v3.23.7
+	github.com/shirou/gopsutil/v3 v3.23.8
 	github.com/spf13/cobra v1.7.0
 	github.com/stretchr/testify v1.8.4
 	golang.org/x/mod v0.12.0
-	golang.org/x/text v0.12.0
+	golang.org/x/text v0.13.0
 )
 
 require (
-	fyne.io/systray v1.10.1-0.20230602210930-b6a2d6ca2a7b // indirect
+	fyne.io/systray v1.10.1-0.20230722100817-88df1e0ffa9a // indirect
 	github.com/bwmarrin/snowflake v0.3.0 // indirect
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
@@ -30,9 +30,9 @@ require (
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
-	github.com/go-text/typesetting v0.0.0-20230803102845-24e03d8b5372 // indirect
+	github.com/go-text/render v0.0.0-20230619120952-35bccb6164b8 // indirect
+	github.com/go-text/typesetting v0.0.0-20230905121921-abdbcca6e0eb // indirect
 	github.com/gofrs/flock v0.8.1 // indirect
-	github.com/goki/freetype v1.0.1 // indirect
 	github.com/gopherjs/gopherjs v1.17.2 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/jsummers/gobmp v0.0.0-20230614200233-a9de23ed2e25 // indirect
@@ -57,28 +57,28 @@ require (
 	github.com/xujiajun/utils v0.0.0-20220904132955-5f7c5b914235 // indirect
 	github.com/yuin/goldmark v1.5.6 // indirect
 	github.com/yusufpapurcu/wmi v1.2.3 // indirect
-	golang.org/x/crypto v0.12.0 // indirect
-	golang.org/x/image v0.11.0 // indirect
-	golang.org/x/mobile v0.0.0-20230818142238-7088062f872d // indirect
-	golang.org/x/net v0.14.0 // indirect
-	golang.org/x/tools v0.12.1-0.20230818130535-1517d1a3ba60 // indirect
+	golang.org/x/crypto v0.13.0 // indirect
+	golang.org/x/image v0.12.0 // indirect
+	golang.org/x/mobile v0.0.0-20230906132913-2077a3224571 // indirect
+	golang.org/x/net v0.15.0 // indirect
+	golang.org/x/tools v0.13.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	honnef.co/go/js/dom v0.0.0-20230808055721-96db8f4d5e3b // indirect
 )
 
 require (
-	fyne.io/fyne/v2 v2.3.5
+	fyne.io/fyne/v2 v2.4.0
 	github.com/carlmjohnson/requests v0.23.4
 	github.com/cenkalti/backoff/v4 v4.2.1
 	github.com/grandcat/zeroconf v1.0.0
 	github.com/iancoleman/strcase v0.3.0
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/lthibault/jitterbug/v2 v2.2.2
-	github.com/lxzan/gws v1.6.8
+	github.com/lxzan/gws v1.6.10
 	github.com/nutsdb/nutsdb v0.13.0
 	github.com/perimeterx/marshmallow v1.1.5
 	github.com/rs/zerolog v1.30.0
 	github.com/spf13/pflag v1.0.5 // indirect
-	golang.org/x/sys v0.11.0 // indirect
+	golang.org/x/sys v0.12.0 // indirect
 )
