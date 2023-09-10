@@ -27,13 +27,13 @@ func (s *timeSensor) Attributes() interface{} {
 			DataSource string `json:"Data Source"`
 		}{
 			NativeUnit: s.units,
-			DataSource: "procfs",
+			DataSource: "SOURCE_PROCFS",
 		}
 	default:
 		return struct {
 			DataSource string `json:"Data Source"`
 		}{
-			DataSource: "procfs",
+			DataSource: "SOURCE_PROCFS",
 		}
 	}
 }

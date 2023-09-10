@@ -10,6 +10,11 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 )
 
+const (
+	SOURCE_DBUS  = "D-Bus"
+	SOURCE_PROCFS = "ProcFS"
+)
+
 // linuxSensor represents a generic sensor on the Linux platform. Most sensors
 // will be able to use this struct, which satisfies the tracker.Sensor
 // interface, alllowing them to be sent as a sensor to Home Assistant.
