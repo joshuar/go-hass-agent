@@ -163,7 +163,7 @@ func (agent *Agent) sensorsWindow(ctx context.Context) {
 	agent.mainWindow.Show()
 }
 
-func sensorsAsTable(ctx context.Context, config *agentConfig) ([][]string, string) {
+func sensorsAsTable(ctx context.Context, config *fyneConfig) ([][]string, string) {
 	var tableData [][]string
 	var entityNames []string
 	if sensors == nil {

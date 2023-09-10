@@ -170,7 +170,7 @@ func (agent *Agent) registrationWindow(ctx context.Context, registration *Regist
 // request and the successful response in the agent preferences. This includes,
 // most importantly, details on the URL that should be used to send subsequent
 // requests to Home Assistant.
-func (agent *Agent) saveRegistration(r *hass.RegistrationResponse, h *RegistrationDetails, c config, d hass.DeviceInfo) {
+func (agent *Agent) saveRegistration(r *hass.RegistrationResponse, h *RegistrationDetails, c agentConfig, d hass.DeviceInfo) {
 	providedHost, _ := h.serverBinding.Get()
 	hostURL, _ := url.Parse(providedHost)
 	c.Set("Host", hostURL.String())
