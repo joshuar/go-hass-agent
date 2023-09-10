@@ -123,23 +123,64 @@ func (agent *Agent) settingsWindow() {
 }
 
 func (agent *Agent) sensorsWindow(ctx context.Context) {
+	tableData, templateCell := sensorsAsTable(ctx, agent.LoadConfig())
+	if tableData == nil {
+		return
+	}
+	sensorsTable := widget.NewTableWithHeaders(
+		func() (int, int) {
+			return len(tableData), len(tableData[0])
+		},
+		func() fyne.CanvasObject {
+			return widget.NewLabel(templateCell)
+		},
+		func(i widget.TableCellID, o fyne.CanvasObject) {
+			label, ok := o.(*widget.Label)
+			if !ok {
+				return
+			}
+			label.SetText(tableData[i.Row][i.Col])
+		})
+	sensorsTable.ShowHeaderColumn = false
+	sensorsTable.CreateHeader = func() fyne.CanvasObject {
+		return widget.NewLabel("Header")
+	}
+	sensorsTable.UpdateHeader = func(id widget.TableCellID, template fyne.CanvasObject) {
+		label, ok := template.(*widget.Label)
+		if !ok {
+			return
+		}
+		if id.Row == -1 && id.Col == 0 {
+			label.SetText("Sensor")
+		}
+		if id.Row == -1 && id.Col == 1 {
+			label.SetText("Value")
+		}
+	}
+	agent.mainWindow.SetTitle(translator.Translate("Sensors"))
+	agent.mainWindow.SetContent(sensorsTable)
+	agent.mainWindow.Resize(fyne.NewSize(480, 640))
+	agent.mainWindow.Show()
+}
+
+func sensorsAsTable(ctx context.Context, config *agentConfig) ([][]string, string) {
 	var tableData [][]string
 	var entityNames []string
 	if sensors == nil {
 		log.Warn().Msg("No sensors available.")
-		return
+		return nil, ""
 	}
-	hassConfig, err := hass.GetHassConfig(ctx, agent.LoadConfig())
+	hassConfig, err := hass.GetHassConfig(ctx, config)
 	if err != nil {
 		log.Warn().Err(err).
 			Msg("Could not get registered entities list from Home Assistant.")
-		return
+		return nil, ""
 	}
 	entities := hassConfig.GetRegisteredEntities()
 	if entities == nil {
 		log.Warn().
 			Msg("No registered entities in Home Assistant.")
-		return
+		return nil, ""
 	}
 	for k := range entities {
 		if sensor, err := sensors.Get(k); err == nil {
@@ -152,24 +193,7 @@ func (agent *Agent) sensorsWindow(ctx context.Context) {
 		}
 	}
 	longestName := longestString(entityNames)
-	list := widget.NewTable(
-		func() (int, int) {
-			return len(tableData), len(tableData[0])
-		},
-		func() fyne.CanvasObject {
-			return widget.NewLabel(longestName)
-		},
-		func(i widget.TableCellID, o fyne.CanvasObject) {
-			label, ok := o.(*widget.Label)
-			if !ok {
-				return
-			}
-			label.SetText(tableData[i.Row][i.Col])
-		})
-	agent.mainWindow.SetTitle(translator.Translate("Sensors"))
-	agent.mainWindow.SetContent(list)
-	agent.mainWindow.Resize(fyne.NewSize(480, 640))
-	agent.mainWindow.Show()
+	return tableData, longestName
 }
 
 func longestString(a []string) string {
