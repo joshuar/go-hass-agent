@@ -15,6 +15,10 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+const (
+	STATE_UNKNOWN = "unknown"
+)
+
 // SensorRegistrationInfo is the JSON structure required to register a sensor
 // with HA.
 type SensorRegistrationInfo struct {
