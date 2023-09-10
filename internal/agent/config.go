@@ -24,42 +24,42 @@ const (
 	PrefSecret       = "secret"
 )
 
-type config interface {
-	Get(string) (string, error)
-	Set(string, string) error
+type agentConfig interface {
+	Get(string) (interface{}, error)
+	Set(string, interface{}) error
 }
 
-type agentConfig struct {
+type fyneConfig struct {
 	prefs fyne.Preferences
 }
 
-func (agent *Agent) LoadConfig() *agentConfig {
-	return &agentConfig{
+func (agent *Agent) LoadConfig() *fyneConfig {
+	return &fyneConfig{
 		prefs: agent.app.Preferences(),
 	}
 }
 
-func (c *agentConfig) WebSocketURL() string {
+func (c *fyneConfig) WebSocketURL() string {
 	return c.prefs.String(PrefWebsocketURL)
 }
 
-func (c *agentConfig) WebhookID() string {
+func (c *fyneConfig) WebhookID() string {
 	return c.prefs.String(PrefWebhookID)
 }
 
-func (c *agentConfig) Token() string {
+func (c *fyneConfig) Token() string {
 	return c.prefs.String(PrefToken)
 }
 
-func (c *agentConfig) ApiURL() string {
+func (c *fyneConfig) ApiURL() string {
 	return c.prefs.String(PrefApiURL)
 }
 
-func (c *agentConfig) Secret() string {
+func (c *fyneConfig) Secret() string {
 	return c.prefs.String(PrefSecret)
 }
 
-func (c *agentConfig) NewStorage(id string) (string, error) {
+func (c *fyneConfig) NewStorage(id string) (string, error) {
 	registryPath, err := extraStoragePath(id)
 	if err != nil {
 		return "", err
@@ -67,7 +67,7 @@ func (c *agentConfig) NewStorage(id string) (string, error) {
 	return registryPath.Path(), nil
 }
 
-func (c *agentConfig) Get(key string) (string, error) {
+func (c *fyneConfig) Get(key string) (interface{}, error) {
 	value := c.prefs.StringWithFallback(key, "NOTSET")
 	if value == "NOTSET" {
 		return "", errors.New("key not set")
@@ -75,12 +75,12 @@ func (c *agentConfig) Get(key string) (string, error) {
 	return value, nil
 }
 
-func (c *agentConfig) Set(key, value string) error {
-	c.prefs.SetString(key, value)
+func (c *fyneConfig) Set(key string, value interface{}) error {
+	c.prefs.SetString(key, value.(string))
 	return nil
 }
 
-func ValidateConfig(c config) error {
+func ValidateConfig(c agentConfig) error {
 	validator := validator.New()
 
 	validate := func(key, rules, errMsg string) error {
@@ -123,7 +123,7 @@ func ValidateConfig(c config) error {
 	return nil
 }
 
-func (c *agentConfig) generateWebsocketURL() {
+func (c *fyneConfig) generateWebsocketURL() {
 	// TODO: look into websocket http upgrade method
 	host := c.prefs.String("Host")
 	url, _ := url.Parse(host)
@@ -139,7 +139,7 @@ func (c *agentConfig) generateWebsocketURL() {
 	c.prefs.SetString(PrefWebsocketURL, url.String())
 }
 
-func (c *agentConfig) generateAPIURL() {
+func (c *fyneConfig) generateAPIURL() {
 	cloudhookURL := c.prefs.String("CloudhookURL")
 	remoteUIURL := c.prefs.String("RemoteUIURL")
 	webhookID := c.prefs.String(PrefWebhookID)

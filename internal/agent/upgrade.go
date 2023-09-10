@@ -15,7 +15,7 @@ import (
 	"golang.org/x/mod/semver"
 )
 
-func Upgrade(c *agentConfig) error {
+func Upgrade(c *fyneConfig) error {
 	configVersion := c.prefs.String("Version")
 	if configVersion == "" {
 		return errors.New("config version is not a valid value")
