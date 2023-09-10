@@ -51,7 +51,7 @@ func (s *diskSensor) Attributes() interface{} {
 		DataSource string `json:"Data Source"`
 		Stats      disk.UsageStat
 	}{
-		DataSource: "procfs",
+		DataSource: "SOURCE_PROCFS",
 		Stats:      *s.stats,
 	}
 }

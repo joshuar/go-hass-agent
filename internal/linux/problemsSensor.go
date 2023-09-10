@@ -31,7 +31,7 @@ func (s *problemsSensor) Attributes() interface{} {
 		DataSource  string                            `json:"Data Source"`
 	}{
 		ProblemList: s.list,
-		DataSource:  "D-Bus",
+		DataSource:  SOURCE_DBUS,
 	}
 }
 

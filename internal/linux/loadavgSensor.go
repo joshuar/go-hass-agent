@@ -33,7 +33,7 @@ func LoadAvgUpdater(ctx context.Context, status chan interface{}) {
 			l := &loadavgSensor{}
 			l.icon = "mdi:chip"
 			l.units = "load"
-			l.source = "procfs"
+			l.source = "SOURCE_PROCFS"
 			l.stateClass = sensor.StateMeasurement
 			switch loadType {
 			case load1:

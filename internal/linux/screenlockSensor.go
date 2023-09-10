@@ -46,7 +46,7 @@ func ScreenLockUpdater(ctx context.Context, update chan interface{}) {
 			lock := &screenlockSensor{}
 			lock.value = s.Body[0].(bool)
 			lock.sensorType = screenLock
-			lock.source = "D-Bus"
+			lock.source = SOURCE_DBUS
 			update <- lock
 		}).
 		AddWatch(ctx)
