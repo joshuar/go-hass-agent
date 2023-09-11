@@ -93,7 +93,7 @@ func (agent *Agent) showFirstRunWindow(ctx context.Context) {
 
 func (agent *Agent) aboutWindow(ctx context.Context) {
 	deviceName, deviceID := agent.DeviceDetails()
-	hassConfig, err := hass.GetHassConfig(ctx, agent.LoadConfig())
+	hassConfig, err := hass.GetHassConfig(ctx, agent.Config)
 	if err != nil {
 		log.Warn().Err(err).
 			Msg("Unable to version of Home Assistant.")
@@ -123,7 +123,7 @@ func (agent *Agent) settingsWindow() {
 }
 
 func (agent *Agent) sensorsWindow(ctx context.Context) {
-	tableData, templateCell := sensorsAsTable(ctx, agent.LoadConfig())
+	tableData, templateCell := sensorsAsTable(ctx, agent.Config)
 	if tableData == nil {
 		return
 	}
@@ -163,7 +163,7 @@ func (agent *Agent) sensorsWindow(ctx context.Context) {
 	agent.mainWindow.Show()
 }
 
-func sensorsAsTable(ctx context.Context, config *fyneConfig) ([][]string, string) {
+func sensorsAsTable(ctx context.Context, config AgentConfig) ([][]string, string) {
 	var tableData [][]string
 	var entityNames []string
 	if sensors == nil {

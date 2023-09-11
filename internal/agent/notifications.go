@@ -22,12 +22,12 @@ func (agent *Agent) runNotificationsWorker(ctx context.Context, options AgentOpt
 	doneCh := make(chan struct{})
 	notifyCh := make(chan fyne.Notification)
 
-	api.StartWebsocket(ctx, agent.LoadConfig(), notifyCh, doneCh)
+	api.StartWebsocket(ctx, agent.Config, notifyCh, doneCh)
 	for {
 		select {
 		case <-doneCh:
 			doneCh = make(chan struct{})
-			api.StartWebsocket(ctx, agent.LoadConfig(), notifyCh, doneCh)
+			api.StartWebsocket(ctx, agent.Config, notifyCh, doneCh)
 		case <-ctx.Done():
 			log.Debug().Msg("Stopping notification handler.")
 			return

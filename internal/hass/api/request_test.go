@@ -9,12 +9,14 @@ import (
 	bytes "bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
 	"sync"
 	"testing"
 
+	"github.com/joshuar/go-hass-agent/internal/agent/config"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -131,20 +133,42 @@ func TestExecuteRequest(t *testing.T) {
 	server := mockServer(t)
 	defer server.Close()
 
-	goodConfig := &ConfigMock{
-		ApiURLFunc: func() string { return server.URL },
-		SecretFunc: func() string { return "aSecret" },
+	goodConfig := &AgentConfigMock{
+		GetFunc: func(s string, ifaceVal interface{}) error {
+			v := ifaceVal.(*string)
+			switch s {
+			case config.PrefApiURL:
+				*v = server.URL
+				return nil
+			case config.PrefSecret:
+				*v = "aSecret"
+				return nil
+			default:
+				return errors.New("not found")
+			}
+		},
 	}
 
-	badConfig := &ConfigMock{
-		ApiURLFunc: func() string { return server.URL },
-		SecretFunc: func() string { return "" },
+	badConfig := &AgentConfigMock{
+		GetFunc: func(s string, ifaceVal interface{}) error {
+			v := ifaceVal.(*string)
+			switch s {
+			case config.PrefApiURL:
+				*v = server.URL
+				return nil
+			case config.PrefSecret:
+				*v = ""
+				return nil
+			default:
+				return errors.New("not found")
+			}
+		},
 	}
 
 	type args struct {
 		ctx        context.Context
 		request    Request
-		config     Config
+		config     AgentConfig
 		responseCh chan Response
 	}
 	tests := []struct {
