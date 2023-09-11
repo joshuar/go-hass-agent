@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"sort"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -123,23 +124,28 @@ func (agent *Agent) settingsWindow() {
 }
 
 func (agent *Agent) sensorsWindow(ctx context.Context) {
-	tableData, templateCell := sensorsAsTable(ctx, agent.Config)
-	if tableData == nil {
+	sensors := getSensorsAsList(ctx, agent.Config)
+	if sensors == nil {
 		return
 	}
 	sensorsTable := widget.NewTableWithHeaders(
 		func() (int, int) {
-			return len(tableData), len(tableData[0])
+			return len(sensors), 2
 		},
 		func() fyne.CanvasObject {
-			return widget.NewLabel(templateCell)
+			return widget.NewLabel(longestString(sensors))
 		},
 		func(i widget.TableCellID, o fyne.CanvasObject) {
 			label, ok := o.(*widget.Label)
 			if !ok {
 				return
 			}
-			label.SetText(tableData[i.Row][i.Col])
+			switch i.Col {
+			case 0:
+				label.SetText(sensors[i.Row])
+			case 1:
+				label.SetText(getSensorValue(sensors[i.Row]))
+			}
 		})
 	sensorsTable.ShowHeaderColumn = false
 	sensorsTable.CreateHeader = func() fyne.CanvasObject {
@@ -163,39 +169,6 @@ func (agent *Agent) sensorsWindow(ctx context.Context) {
 	agent.mainWindow.Show()
 }
 
-func sensorsAsTable(ctx context.Context, config AgentConfig) ([][]string, string) {
-	var tableData [][]string
-	var entityNames []string
-	if sensors == nil {
-		log.Warn().Msg("No sensors available.")
-		return nil, ""
-	}
-	hassConfig, err := hass.GetHassConfig(ctx, config)
-	if err != nil {
-		log.Warn().Err(err).
-			Msg("Could not get registered entities list from Home Assistant.")
-		return nil, ""
-	}
-	entities := hassConfig.GetRegisteredEntities()
-	if entities == nil {
-		log.Warn().
-			Msg("No registered entities in Home Assistant.")
-		return nil, ""
-	}
-	for k := range entities {
-		if sensor, err := sensors.Get(k); err == nil {
-			entityNames = append(entityNames, k)
-			tableData = append(tableData,
-				[]string{
-					k,
-					fmt.Sprintf("%v %s", sensor.State(), sensor.Units()),
-				})
-		}
-	}
-	longestName := longestString(entityNames)
-	return tableData, longestName
-}
-
 func longestString(a []string) string {
 	var l string
 	if len(a) > 0 {
@@ -211,4 +184,38 @@ func longestString(a []string) string {
 		}
 	}
 	return l
+}
+
+func getSensorsAsList(ctx context.Context, cfg AgentConfig) []string {
+	if sensors == nil {
+		log.Warn().Msg("No sensors available.")
+		return nil
+	}
+	hassConfig, err := hass.GetHassConfig(ctx, cfg)
+	if err != nil {
+		log.Warn().Err(err).
+			Msg("Could not get registered entities list from Home Assistant.")
+		return nil
+	}
+	entities := hassConfig.GetRegisteredEntities()
+	if entities == nil {
+		log.Warn().
+			Msg("No registered entities in Home Assistant.")
+		return nil
+	}
+	sortedEntities := make([]string, 0, len(entities))
+	for k := range entities {
+		if s, err := sensors.Get(k); err == nil && s.State() != nil {
+			sortedEntities = append(sortedEntities, k)
+		}
+	}
+	sort.Strings(sortedEntities)
+	return sortedEntities
+}
+
+func getSensorValue(sensor string) string {
+	if s, err := sensors.Get(sensor); err == nil {
+		return fmt.Sprintf("%v %s", s.State(), s.Units())
+	}
+	return ""
 }
