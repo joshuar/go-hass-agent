@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/godbus/dbus/v5"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestBus_signalHandler(t *testing.T) {
@@ -49,6 +50,17 @@ func TestBus_signalHandler(t *testing.T) {
 }
 
 func TestNewBus(t *testing.T) {
+	ctx := context.TODO()
+	b, err := dbus.ConnectSessionBus(dbus.WithContext(ctx))
+	assert.Nil(t, err)
+	goodBus := &Bus{
+		conn:           b,
+		signals:        make(chan *dbus.Signal),
+		signalMatchers: make(map[string]func(*dbus.Signal)),
+		matchRequests:  make(chan signalMatcher),
+		busType:        SessionBus,
+	}
+
 	type args struct {
 		ctx context.Context
 		t   dbusType
@@ -60,7 +72,8 @@ func TestNewBus(t *testing.T) {
 	}{
 		{
 			name: "session bus",
-			args: args{ctx: context.Background(), t: SessionBus},
+			args: args{ctx: ctx, t: SessionBus},
+			want: goodBus,
 		},
 	}
 	for _, tt := range tests {
