@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/url"
 	"sort"
+	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -163,10 +164,32 @@ func (agent *Agent) sensorsWindow(ctx context.Context) {
 			label.SetText("Value")
 		}
 	}
-	agent.mainWindow.SetTitle(translator.Translate("Sensors"))
-	agent.mainWindow.SetContent(sensorsTable)
-	agent.mainWindow.Resize(fyne.NewSize(480, 640))
-	agent.mainWindow.Show()
+	doneCh := make(chan struct{})
+	go func() {
+		ticker := time.NewTicker(time.Second * 5)
+		for {
+			select {
+			case <-doneCh:
+				return
+			case <-ticker.C:
+				for i, v := range sensors {
+					sensorsTable.UpdateCell(widget.TableCellID{
+						Row: i,
+						Col: 1,
+					}, widget.NewLabel(getSensorValue(v)))
+				}
+				sensorsTable.Refresh()
+			}
+		}
+	}()
+	w := agent.app.NewWindow(translator.Translate("First Run"))
+	w.SetTitle(translator.Translate("Sensors"))
+	w.SetContent(sensorsTable)
+	w.Resize(fyne.NewSize(480, 640))
+	w.SetOnClosed(func() {
+		close(doneCh)
+	})
+	w.Show()
 }
 
 func longestString(a []string) string {
