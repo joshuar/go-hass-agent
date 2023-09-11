@@ -8,13 +8,14 @@ package tracker
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"strings"
 	"sync"
 	"testing"
 
+	"github.com/joshuar/go-hass-agent/internal/agent/config"
 	"github.com/joshuar/go-hass-agent/internal/hass/api"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/stretchr/testify/assert"
@@ -119,39 +120,13 @@ func TestSensorTracker_Get(t *testing.T) {
 	}
 }
 
-type mockConfig struct {
-	url     string
-	storage string
-}
-
-func (c *mockConfig) WebSocketURL() string {
-	return ""
-}
-
-func (c *mockConfig) WebhookID() string {
-	return ""
-}
-func (c *mockConfig) Token() string {
-	return ""
-}
-func (c *mockConfig) ApiURL() string {
-	return c.url
-}
-func (c *mockConfig) Secret() string {
-	return ""
-}
-
-func (c *mockConfig) NewStorage(id string) (string, error) {
-	return c.storage, nil
-}
-
-func NewMockConfig(t *testing.T) *mockConfig {
-	path, err := os.MkdirTemp("/tmp", "go-hass-agent-test")
-	assert.Nil(t, err)
-	return &mockConfig{
-		storage: path,
-	}
-}
+// func NewMockConfig(t *testing.T) *mockConfig {
+// 	path, err := os.MkdirTemp("/tmp", "go-hass-agent-test")
+// 	assert.Nil(t, err)
+// 	return &mockConfig{
+// 		storage: path,
+// 	}
+// }
 
 func TestSensorTracker_Update(t *testing.T) {
 	mockServer := func(t *testing.T) *httptest.Server {
@@ -251,8 +226,20 @@ func TestSensorTracker_Update(t *testing.T) {
 		CategoryFunc:    func() string { return "" },
 	}
 
-	mockConfig := &mockConfig{
-		url: server.URL,
+	mockConfig := &agentConfigMock{
+		GetFunc: func(s string, ifaceVal interface{}) error {
+			v := ifaceVal.(*string)
+			switch s {
+			case config.PrefApiURL:
+				*v = server.URL
+				return nil
+			case config.PrefSecret:
+				*v = ""
+				return nil
+			default:
+				return errors.New("not found")
+			}
+		},
 	}
 
 	type fields struct {
@@ -262,7 +249,7 @@ func TestSensorTracker_Update(t *testing.T) {
 	}
 	type args struct {
 		ctx          context.Context
-		config       api.Config
+		config       agentConfig
 		sensorUpdate Sensor
 	}
 	tests := []struct {
@@ -379,7 +366,7 @@ func TestSensorTracker_trackUpdates(t *testing.T) {
 	}
 	type args struct {
 		ctx      context.Context
-		config   api.Config
+		config   agentConfig
 		updateCh chan interface{}
 	}
 	tests := []struct {
@@ -391,7 +378,7 @@ func TestSensorTracker_trackUpdates(t *testing.T) {
 			name: "default test",
 			args: args{
 				ctx:      ctx,
-				config:   NewMockConfig(t),
+				config:   &agentConfigMock{},
 				updateCh: updateCh,
 			},
 		},

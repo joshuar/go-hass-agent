@@ -13,6 +13,7 @@ import (
 
 	"fyne.io/fyne/v2"
 	"github.com/cenkalti/backoff/v4"
+	"github.com/joshuar/go-hass-agent/internal/agent/config"
 	"github.com/rs/zerolog/log"
 
 	"github.com/lxzan/gws"
@@ -47,10 +48,14 @@ type websocketResponse struct {
 	Success bool   `json:"success,omitempty"`
 }
 
-func StartWebsocket(ctx context.Context, settings Config, notifyCh chan fyne.Notification, doneCh chan struct{}) {
+func StartWebsocket(ctx context.Context, settings AgentConfig, notifyCh chan fyne.Notification, doneCh chan struct{}) {
 	// conn, err := tryWebsocketConnect(ctx, notifyCh, doneCh)
 
-	url := settings.WebSocketURL()
+	var websocketURL string
+	if err := settings.Get(config.PrefWebsocketURL, &websocketURL); err != nil {
+		log.Warn().Err(err).Msg("Could not retrieve websocket URL from config.")
+		return
+	}
 
 	ctxConnect, cancelConnect := context.WithTimeout(ctx, time.Minute)
 	defer cancelConnect()
@@ -60,7 +65,7 @@ func StartWebsocket(ctx context.Context, settings Config, notifyCh chan fyne.Not
 
 	retryFunc := func() error {
 		socket, _, err = gws.NewClient(NewWebsocket(ctx, settings, notifyCh, doneCh), &gws.ClientOption{
-			Addr: url,
+			Addr: websocketURL,
 		})
 		if err != nil {
 			log.Error().Err(err).
@@ -95,10 +100,17 @@ type WebSocket struct {
 	nextID     uint64
 }
 
-func NewWebsocket(ctx context.Context, settings Config, notifyCh chan fyne.Notification, doneCh chan struct{}) *WebSocket {
+func NewWebsocket(ctx context.Context, settings AgentConfig, notifyCh chan fyne.Notification, doneCh chan struct{}) *WebSocket {
 
-	token := settings.Token()
-	webhookID := settings.WebhookID()
+	var token, webhookID string
+	if err := settings.Get(config.PrefToken, &token); err != nil {
+		log.Warn().Err(err).Msg("Could not retrieve token from config.")
+		return nil
+	}
+	if err := settings.Get(config.PrefWebhookID, &webhookID); err != nil {
+		log.Warn().Err(err).Msg("Could not retrieve webhookID from config.")
+		return nil
+	}
 
 	wsCtx, wsCancel := context.WithCancel(ctx)
 	ws := &WebSocket{

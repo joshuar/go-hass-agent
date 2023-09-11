@@ -15,6 +15,7 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/storage"
+	"github.com/joshuar/go-hass-agent/internal/agent/config"
 	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/joshuar/go-hass-agent/internal/translations"
 	"github.com/rs/zerolog"
@@ -36,10 +37,12 @@ const (
 // This includes the data structure for the UI elements and tray and some
 // strings such as app name and version.
 type Agent struct {
-	app           fyne.App
-	mainWindow    fyne.Window
-	done          chan struct{}
-	Name, Version string
+	app        fyne.App
+	mainWindow fyne.Window
+	Config     AgentConfig
+	done       chan struct{}
+	Name       string
+	Version    string
 }
 
 // AgentOptions holds options taken from the command-line that was used to
@@ -55,6 +58,7 @@ func newAgent(appID string, headless bool) *Agent {
 		Name:    Name,
 		Version: Version,
 		done:    make(chan struct{}),
+		Config:  config.NewFyneConfig(),
 	}
 	if !headless {
 		a.mainWindow = a.app.NewWindow(Name)
@@ -83,11 +87,10 @@ func Run(options AgentOptions) {
 	trackerCh := make(chan *tracker.SensorTracker)
 	go func() {
 		<-registrationDone
-		appConfig := agent.LoadConfig()
-		if err := Upgrade(appConfig); err != nil {
+		if err := UpgradeConfig(agent.Config); err != nil {
 			log.Warn().Err(err).Msg("Could not upgrade config.")
 		}
-		if err := ValidateConfig(appConfig); err != nil {
+		if err := ValidateConfig(agent.Config); err != nil {
 			log.Fatal().Err(err).Msg("Invalid config. Cannot start.")
 		}
 		// Start all the sensor workers as appropriate
@@ -106,7 +109,7 @@ func Run(options AgentOptions) {
 		workerWg.Add(1)
 		go func() {
 			defer workerWg.Done()
-			tracker.RunSensorTracker(agentCtx, appConfig, trackerCh)
+			tracker.RunSensorTracker(agentCtx, agent.Config, trackerCh)
 		}()
 	}()
 	agent.handleSignals(cancelFunc)

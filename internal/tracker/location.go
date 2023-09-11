@@ -41,7 +41,7 @@ func marshalLocationUpdate(l Location) *hass.LocationUpdate {
 	}
 }
 
-func updateLocation(ctx context.Context, c api.Config, l Location) {
+func updateLocation(ctx context.Context, c agentConfig, l Location) {
 	respCh := make(chan api.Response, 1)
 	var wg sync.WaitGroup
 	wg.Add(1)

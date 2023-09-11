@@ -5,12 +5,7 @@
 
 package api
 
-//go:generate moq -out mock_Config_test.go . Config
-type Config interface {
-	WebSocketURL() string
-	WebhookID() string
-	Token() string
-	ApiURL() string
-	Secret() string
-	NewStorage(string) (string, error)
+//go:generate moq -out mock_AgentConfig_test.go . AgentConfig
+type AgentConfig interface {
+	Get(string, interface{}) error
 }

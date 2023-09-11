@@ -28,14 +28,20 @@ type Registry interface {
 	IsRegistered(string) chan bool
 }
 
+//go:generate moq -out mock_agentConfig_test.go . agentConfig
+type agentConfig interface {
+	Get(string, interface{}) error
+	StoragePath(string) (string, error)
+}
+
 type SensorTracker struct {
 	registry Registry
 	sensor   map[string]Sensor
 	mu       sync.RWMutex
 }
 
-func RunSensorTracker(ctx context.Context, config api.Config, trackerCh chan *SensorTracker) {
-	registryPath, err := config.NewStorage(registryStorageID)
+func RunSensorTracker(ctx context.Context, config agentConfig, trackerCh chan *SensorTracker) {
+	registryPath, err := config.StoragePath(registryStorageID)
 	if err != nil {
 		log.Warn().Err(err).
 			Msg("Path for sensor registry is not valid, using in-memory registry.")
@@ -93,7 +99,7 @@ func (tracker *SensorTracker) Get(id string) (Sensor, error) {
 
 // updateSensor will send a sensor update to HA, checking to ensure the sensor is not
 // disabled. It will also update the local registry state based on the response.
-func (t *SensorTracker) updateSensor(ctx context.Context, config api.Config, sensorUpdate Sensor) {
+func (t *SensorTracker) updateSensor(ctx context.Context, config agentConfig, sensorUpdate Sensor) {
 	var wg sync.WaitGroup
 	var req api.Request
 	if disabled := <-t.registry.IsDisabled(sensorUpdate.ID()); disabled {
@@ -156,7 +162,7 @@ func (t *SensorTracker) updateSensor(ctx context.Context, config api.Config, sen
 	wg.Wait()
 }
 
-func (t *SensorTracker) trackUpdates(ctx context.Context, config api.Config, updateCh chan interface{}) {
+func (t *SensorTracker) trackUpdates(ctx context.Context, config agentConfig, updateCh chan interface{}) {
 	for {
 		select {
 		case data := <-updateCh:
