@@ -7,6 +7,7 @@ package agent
 
 import (
 	"context"
+	"sync"
 
 	"fyne.io/fyne/v2"
 	"github.com/joshuar/go-hass-agent/internal/hass/api"
@@ -19,23 +20,36 @@ func (agent *Agent) runNotificationsWorker(ctx context.Context, options AgentOpt
 		return
 	}
 
-	doneCh := make(chan struct{})
 	notifyCh := make(chan fyne.Notification)
+	var wg sync.WaitGroup
 
-	api.StartWebsocket(ctx, agent.Config, notifyCh, doneCh)
-	for {
-		select {
-		case <-doneCh:
-			doneCh = make(chan struct{})
-			api.StartWebsocket(ctx, agent.Config, notifyCh, doneCh)
-		case <-ctx.Done():
-			log.Debug().Msg("Stopping notification handler.")
-			return
-		case n := <-notifyCh:
-			agent.app.SendNotification(&fyne.Notification{
-				Title:   n.Title,
-				Content: n.Content,
-			})
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for {
+			select {
+			case <-ctx.Done():
+				log.Debug().Msg("Stopping notification handler.")
+				return
+			case n := <-notifyCh:
+				agent.app.SendNotification(&fyne.Notification{
+					Title:   n.Title,
+					Content: n.Content,
+				})
+			}
 		}
-	}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		restartCh := make(chan struct{})
+		api.StartWebsocket(ctx, agent.Config, notifyCh, restartCh)
+		for range restartCh {
+			log.Debug().Msg("Restarting websocket connection.")
+			api.StartWebsocket(ctx, agent.Config, notifyCh, restartCh)
+		}
+	}()
+
+	wg.Wait()
 }
