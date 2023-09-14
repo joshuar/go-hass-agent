@@ -104,14 +104,12 @@ func newWebsocket(ctx context.Context, settings AgentConfig, notifyCh chan fyne.
 		return nil
 	}
 
-	// wsCtx, wsCancel := context.WithCancel(ctx)
 	ws := &WebSocket{
 		ReadCh:    make(chan *webSocketData),
 		WriteCh:   make(chan *webSocketData),
 		token:     token,
 		webhookID: webhookID,
-		// cancelFunc: wsCancel,
-		doneCh: doneCh,
+		doneCh:    doneCh,
 	}
 	go ws.responseHandler(ctx, notifyCh)
 	go ws.requestHandler(ctx)
@@ -203,7 +201,6 @@ func (c *WebSocket) responseHandler(ctx context.Context, notifyCh chan fyne.Noti
 						AccessToken: c.token,
 					}}
 			case "auth_ok":
-				// spew.Dump(response)
 				log.Trace().Caller().
 					Msg("Registering app for push notifications.")
 				c.WriteCh <- &webSocketData{
