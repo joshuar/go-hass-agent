@@ -1,5 +1,19 @@
 # Changelog
 
+## [3.3.0](https://github.com/joshuar/go-hass-agent/compare/v3.2.0...v3.3.0) (2023-09-14)
+
+
+### Features
+
+* **agent,hass,tracker:** move to interface access to agent config ([9d824ca](https://github.com/joshuar/go-hass-agent/commit/9d824caf099d05b2057ac5af3c986b9a73d5ec37))
+* **agent:** sorted sensors table window and update on scroll ([c44aa2a](https://github.com/joshuar/go-hass-agent/commit/c44aa2a4a988f6b77018e9f21b03076731cb4fe4))
+* **agent:** values update every n seconds on sensors window ([d3428d6](https://github.com/joshuar/go-hass-agent/commit/d3428d62850c9af56b2c78034c25e94a552c3b8d))
+
+
+### Bug Fixes
+
+* **hass:** websocket connection should gracefully handle home assistant disconnects/restarts ([1f74f83](https://github.com/joshuar/go-hass-agent/commit/1f74f8356fbc74130c88b91df0f29b47ad5de6a7))
+
 ## [3.2.0](https://github.com/joshuar/go-hass-agent/compare/v3.1.0...v3.2.0) (2023-09-10)
 
 
