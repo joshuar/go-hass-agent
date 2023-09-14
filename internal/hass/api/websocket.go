@@ -49,22 +49,16 @@ type websocketResponse struct {
 }
 
 func StartWebsocket(ctx context.Context, settings AgentConfig, notifyCh chan fyne.Notification, doneCh chan struct{}) {
-	// conn, err := tryWebsocketConnect(ctx, notifyCh, doneCh)
-
 	var websocketURL string
 	if err := settings.Get(config.PrefWebsocketURL, &websocketURL); err != nil {
 		log.Warn().Err(err).Msg("Could not retrieve websocket URL from config.")
 		return
 	}
-
-	ctxConnect, cancelConnect := context.WithTimeout(ctx, time.Minute)
-	defer cancelConnect()
-
 	var socket *gws.Conn
 	var err error
 
 	retryFunc := func() error {
-		socket, _, err = gws.NewClient(NewWebsocket(ctx, settings, notifyCh, doneCh), &gws.ClientOption{
+		socket, _, err = gws.NewClient(newWebsocket(ctx, settings, notifyCh, doneCh), &gws.ClientOption{
 			Addr: websocketURL,
 		})
 		if err != nil {
@@ -74,9 +68,8 @@ func StartWebsocket(ctx context.Context, settings AgentConfig, notifyCh chan fyn
 		}
 		return nil
 	}
-	err = backoff.Retry(retryFunc, backoff.WithContext(backoff.NewExponentialBackOff(), ctxConnect))
+	err = backoff.Retry(retryFunc, backoff.WithContext(backoff.NewExponentialBackOff(), ctx))
 	if err != nil {
-		cancelConnect()
 		log.Error().Err(err).
 			Msg("Could not connect to websocket.")
 		return
@@ -91,16 +84,15 @@ type webSocketData struct {
 }
 
 type WebSocket struct {
-	ReadCh     chan *webSocketData
-	WriteCh    chan *webSocketData
-	doneCh     chan struct{}
-	cancelFunc context.CancelFunc
-	token      string
-	webhookID  string
-	nextID     uint64
+	ReadCh    chan *webSocketData
+	WriteCh   chan *webSocketData
+	doneCh    chan struct{}
+	token     string
+	webhookID string
+	nextID    uint64
 }
 
-func NewWebsocket(ctx context.Context, settings AgentConfig, notifyCh chan fyne.Notification, doneCh chan struct{}) *WebSocket {
+func newWebsocket(ctx context.Context, settings AgentConfig, notifyCh chan fyne.Notification, doneCh chan struct{}) *WebSocket {
 
 	var token, webhookID string
 	if err := settings.Get(config.PrefToken, &token); err != nil {
@@ -112,33 +104,29 @@ func NewWebsocket(ctx context.Context, settings AgentConfig, notifyCh chan fyne.
 		return nil
 	}
 
-	wsCtx, wsCancel := context.WithCancel(ctx)
+	// wsCtx, wsCancel := context.WithCancel(ctx)
 	ws := &WebSocket{
-		ReadCh:     make(chan *webSocketData),
-		WriteCh:    make(chan *webSocketData),
-		token:      token,
-		webhookID:  webhookID,
-		cancelFunc: wsCancel,
-		doneCh:     doneCh,
+		ReadCh:    make(chan *webSocketData),
+		WriteCh:   make(chan *webSocketData),
+		token:     token,
+		webhookID: webhookID,
+		// cancelFunc: wsCancel,
+		doneCh: doneCh,
 	}
-	go ws.responseHandler(wsCtx, notifyCh)
-	go ws.requestHandler(wsCtx)
+	go ws.responseHandler(ctx, notifyCh)
+	go ws.requestHandler(ctx)
 	return ws
 }
 
 func (c *WebSocket) OnError(socket *gws.Conn, err error) {
 	log.Error().Err(err).
 		Msg("Error on websocket")
-	c.cancelFunc()
-	close(c.doneCh)
+	c.doneCh <- struct{}{}
 }
 
 func (c *WebSocket) OnClose(socket *gws.Conn, err error) {
-	if err != nil {
-		log.Error().Err(err).
-			Msg("Error closing websocket.")
-	}
-	c.cancelFunc()
+	log.Debug().Err(err).Msg("Websocket connection closed.")
+	c.doneCh <- struct{}{}
 	close(c.doneCh)
 }
 
