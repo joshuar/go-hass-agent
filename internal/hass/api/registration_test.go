@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-package hass
+package api
 
 import (
 	"context"
@@ -14,6 +14,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/joshuar/go-hass-agent/internal/agent/config"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -174,17 +175,52 @@ func TestRegisterWithHass(t *testing.T) {
 	}
 	mockServer := newMockServer(t)
 
-	mockRegInfo := &RegistrationInfoMock{
-		TokenFunc:  func() string { return "aToken" },
-		ServerFunc: func() string { return mockServer.URL },
+	goodRegConfig := &AgentConfigMock{
+		GetFunc: func(s string, ifaceVal interface{}) error {
+			v := ifaceVal.(*string)
+			switch s {
+			case config.PrefHost:
+				*v = mockServer.URL
+				return nil
+			case config.PrefToken:
+				*v = "aToken"
+				return nil
+			default:
+				return errors.New("not found")
+			}
+		},
 	}
-	mockBadServerInfo := &RegistrationInfoMock{
-		TokenFunc:  func() string { return "aToken" },
-		ServerFunc: func() string { return "notaurl" },
+
+	badRegServer := &AgentConfigMock{
+		GetFunc: func(s string, ifaceVal interface{}) error {
+			v := ifaceVal.(*string)
+			switch s {
+			case config.PrefHost:
+				*v = "notaurl"
+				return nil
+			case config.PrefToken:
+				*v = "aToken"
+				return nil
+			default:
+				return errors.New("not found")
+			}
+		},
 	}
-	mockBadTokenInfo := &RegistrationInfoMock{
-		TokenFunc:  func() string { return "" },
-		ServerFunc: func() string { return mockServer.URL },
+
+	badRegToken := &AgentConfigMock{
+		GetFunc: func(s string, ifaceVal interface{}) error {
+			v := ifaceVal.(*string)
+			switch s {
+			case config.PrefHost:
+				*v = mockServer.URL
+				return nil
+			case config.PrefToken:
+				*v = ""
+				return nil
+			default:
+				return errors.New("not found")
+			}
+		},
 	}
 
 	mockDevInfo := &DeviceInfoMock{
@@ -195,9 +231,9 @@ func TestRegisterWithHass(t *testing.T) {
 	}
 
 	type args struct {
-		ctx          context.Context
-		registration RegistrationInfo
-		device       DeviceInfo
+		ctx       context.Context
+		regConfig AgentConfig
+		device    DeviceInfo
 	}
 	tests := []struct {
 		name    string
@@ -208,18 +244,18 @@ func TestRegisterWithHass(t *testing.T) {
 		{
 			name: "successful test",
 			args: args{
-				ctx:          context.Background(),
-				registration: mockRegInfo,
-				device:       mockDevInfo,
+				ctx:       context.Background(),
+				regConfig: goodRegConfig,
+				device:    mockDevInfo,
 			},
 			want: okResponse,
 		},
 		{
 			name: "bad device",
 			args: args{
-				ctx:          context.Background(),
-				registration: mockRegInfo,
-				device:       mockBadDevInfo,
+				ctx:       context.Background(),
+				regConfig: goodRegConfig,
+				device:    mockBadDevInfo,
 			},
 			want:    nil,
 			wantErr: true,
@@ -227,9 +263,9 @@ func TestRegisterWithHass(t *testing.T) {
 		{
 			name: "bad server url",
 			args: args{
-				ctx:          context.Background(),
-				registration: mockBadServerInfo,
-				device:       mockDevInfo,
+				ctx:       context.Background(),
+				regConfig: badRegServer,
+				device:    mockDevInfo,
 			},
 			want:    nil,
 			wantErr: true,
@@ -237,9 +273,9 @@ func TestRegisterWithHass(t *testing.T) {
 		{
 			name: "bad token",
 			args: args{
-				ctx:          context.Background(),
-				registration: mockBadTokenInfo,
-				device:       mockDevInfo,
+				ctx:       context.Background(),
+				regConfig: badRegToken,
+				device:    mockDevInfo,
 			},
 			want:    nil,
 			wantErr: true,
@@ -247,7 +283,7 @@ func TestRegisterWithHass(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := RegisterWithHass(tt.args.ctx, tt.args.registration, tt.args.device)
+			got, err := RegisterWithHass(tt.args.ctx, tt.args.regConfig, tt.args.device)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("RegisterWithHass() error = %v, wantErr %v", err, tt.wantErr)
 				return

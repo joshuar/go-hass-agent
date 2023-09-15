@@ -11,7 +11,7 @@ import (
 	"os/user"
 	"strings"
 
-	"github.com/joshuar/go-hass-agent/internal/hass"
+	"github.com/joshuar/go-hass-agent/internal/hass/api"
 	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v3/host"
 )
@@ -78,7 +78,7 @@ func (l *LinuxDevice) AppData() interface{} {
 }
 
 func (l *LinuxDevice) MarshalJSON() ([]byte, error) {
-	return json.Marshal(&hass.RegistrationRequest{
+	return json.Marshal(&api.RegistrationRequest{
 		DeviceID:           l.DeviceID(),
 		AppID:              l.AppID(),
 		AppName:            l.AppName(),

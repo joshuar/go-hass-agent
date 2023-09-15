@@ -15,7 +15,7 @@ import (
 
 	"github.com/grandcat/zeroconf"
 	"github.com/joshuar/go-hass-agent/internal/agent/config"
-	"github.com/joshuar/go-hass-agent/internal/hass"
+	"github.com/joshuar/go-hass-agent/internal/hass/api"
 	"github.com/rs/zerolog/log"
 
 	"fyne.io/fyne/v2"
@@ -70,7 +70,7 @@ func (agent *Agent) registrationWindow(ctx context.Context, done chan struct{}) 
 // request and the successful response in the agent preferences. This includes,
 // most importantly, details on the URL that should be used to send subsequent
 // requests to Home Assistant.
-func (agent *Agent) saveRegistration(r *hass.RegistrationResponse, d hass.DeviceInfo) {
+func (agent *Agent) saveRegistration(r *api.RegistrationResponse, d api.DeviceInfo) {
 	checkFatal := func(err error) {
 		if err != nil {
 			log.Fatal().Err(err).Msg("Could not save registration.")
@@ -150,7 +150,7 @@ func (agent *Agent) registrationProcess(ctx context.Context, server, token strin
 			agent.registrationWindow(ctx, done)
 			<-done
 		}
-		registrationResponse, err := hass.RegisterWithHass(ctx, agent.Config, device)
+		registrationResponse, err := api.RegisterWithHass(ctx, agent.Config, device)
 		if err != nil {
 			log.Fatal().Err(err).Msg("Could not register with Home Assistant.")
 		}
