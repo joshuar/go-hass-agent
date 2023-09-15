@@ -118,7 +118,6 @@ func (agent *Agent) saveRegistration(r *api.RegistrationResponse, d api.DeviceIn
 // will action a registration workflow displaying a GUI for user input of
 // registration details and save the results into the agent config
 func (agent *Agent) registrationProcess(ctx context.Context, server, token string, force, headless bool, done chan struct{}) {
-	// appConfig := agent.LoadConfig()
 	// If the agent isn't registered but the config is valid, set the agent as
 	// registered and continue execution. Required check for versions upgraded
 	// from v1.2.6 and below.
@@ -134,21 +133,25 @@ func (agent *Agent) registrationProcess(ctx context.Context, server, token strin
 				log.Fatal().Msg("Server setting is not valid.")
 			}
 		} else {
-			agent.Config.Set(config.PrefHost, token)
+			if err := agent.Config.Set(config.PrefHost, token); err != nil {
+				log.Fatal().Err(err).Msg("Could not set host preference.")
+			}
 		}
 		if token != "" {
 			if !validateRegistrationSetting("token", token) {
 				log.Fatal().Msg("Token setting is not valid.")
 			}
 		} else {
-			agent.Config.Set(config.PrefToken, token)
+			if err := agent.Config.Set(config.PrefToken, token); err != nil {
+				log.Fatal().Err(err).Msg("Could not set token preference.")
+			}
 		}
 
 		device := agent.setupDevice(ctx)
 		if !headless {
-			done := make(chan struct{})
-			agent.registrationWindow(ctx, done)
-			<-done
+			userInputDone := make(chan struct{})
+			agent.registrationWindow(ctx, userInputDone)
+			<-userInputDone
 		}
 		registrationResponse, err := api.RegisterWithHass(ctx, agent.Config, device)
 		if err != nil {
@@ -196,10 +199,10 @@ func (agent *Agent) serverConfigItems(ctx context.Context) []*widget.FormItem {
 
 	var items []*widget.FormItem
 
-	items = append(items, widget.NewFormItem(translator.Translate("Token"), tokenSelect))
-	items = append(items, widget.NewFormItem(translator.Translate("Auto-discovered Servers"), autoServerSelect))
-	items = append(items, widget.NewFormItem(translator.Translate("Use Custom Server?"), manualServerSelect))
-	items = append(items, widget.NewFormItem(translator.Translate("Manual Server Entry"), manualServerEntry))
+	items = append(items, widget.NewFormItem(translator.Translate("Token"), tokenSelect),
+		widget.NewFormItem(translator.Translate("Auto-discovered Servers"), autoServerSelect),
+		widget.NewFormItem(translator.Translate("Use Custom Server?"), manualServerSelect),
+		widget.NewFormItem(translator.Translate("Manual Server Entry"), manualServerEntry))
 
 	return items
 }
@@ -225,8 +228,8 @@ func (agent *Agent) mqttConfigItems() []*widget.FormItem {
 
 	var items []*widget.FormItem
 
-	items = append(items, widget.NewFormItem(translator.Translate("Use MQTT?"), mqttEnabled))
-	items = append(items, widget.NewFormItem(translator.Translate("MQTT Server"), mqttServerEntry))
+	items = append(items, widget.NewFormItem(translator.Translate("Use MQTT?"), mqttEnabled),
+		widget.NewFormItem(translator.Translate("MQTT Server"), mqttServerEntry))
 
 	return items
 }
@@ -234,7 +237,6 @@ func (agent *Agent) mqttConfigItems() []*widget.FormItem {
 // findServers is a helper function to generate a list of Home Assistant servers
 // via local network auto-discovery.
 func findServers(ctx context.Context) binding.StringList {
-
 	serverList := binding.NewStringList()
 
 	// add http://localhost:8123 to the list of servers as a fall-back/default
