@@ -12,6 +12,8 @@ import (
 	"time"
 
 	"github.com/carlmjohnson/requests"
+	"github.com/joshuar/go-hass-agent/internal/agent/config"
+	"github.com/joshuar/go-hass-agent/internal/hass/api"
 )
 
 //go:generate moq -out mock_RegistrationInfo_test.go . RegistrationInfo
@@ -75,18 +77,24 @@ type RegistrationRequest struct {
 	SupportsEncryption bool        `json:"supports_encryption"`
 }
 
-func RegisterWithHass(ctx context.Context, registration RegistrationInfo, device DeviceInfo) (*RegistrationResponse, error) {
+func RegisterWithHass(ctx context.Context, regConfig api.AgentConfig, device DeviceInfo) (*RegistrationResponse, error) {
 	request, err := device.MarshalJSON()
 	if err != nil {
 		return nil, err
 	}
-	url, err := url.Parse(registration.Server())
+	var serverURL string
+	if err := regConfig.Get(config.PrefHost, &serverURL); err != nil {
+		return nil, errors.New("invalid host")
+	}
+
+	url, err := url.Parse(serverURL)
 	if err != nil {
 		return nil, err
 	}
 	url = url.JoinPath("/api/mobile_app/registrations")
 
-	if registration.Token() == "" {
+	var token string
+	if err := regConfig.Get(config.PrefToken, &token); err != nil || token == "" {
 		return nil, errors.New("invalid token")
 	}
 
@@ -95,7 +103,7 @@ func RegisterWithHass(ctx context.Context, registration RegistrationInfo, device
 	defer cancel()
 	err = requests.
 		URL(url.String()).
-		Header("Authorization", "Bearer "+registration.Token()).
+		Header("Authorization", "Bearer "+token).
 		BodyBytes(request).
 		ToJSON(&response).
 		Fetch(ctx)
