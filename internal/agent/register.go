@@ -172,35 +172,37 @@ func (agent *Agent) registrationWindow(ctx context.Context, registration *Regist
 // most importantly, details on the URL that should be used to send subsequent
 // requests to Home Assistant.
 func (agent *Agent) saveRegistration(r *hass.RegistrationResponse, h *RegistrationDetails, d hass.DeviceInfo) {
+	checkFatal := func(err error) {
+		if err != nil {
+			log.Fatal().Err(err).Msg("Could not save registration.")
+		}
+	}
+
 	providedHost, _ := h.serverBinding.Get()
 	hostURL, _ := url.Parse(providedHost)
-	agent.Config.Set("Host", hostURL.String())
+	checkFatal(agent.Config.Set(config.PrefHost, hostURL.String()))
 
 	token, _ := h.tokenBinding.Get()
-	agent.Config.Set(config.PrefToken, token)
+	checkFatal(agent.Config.Set(config.PrefToken, token))
 
 	if r.CloudhookURL != "" {
-		agent.Config.Set("CloudhookURL", r.CloudhookURL)
+		checkFatal(agent.Config.Set(config.PrefCloudhookURL, r.CloudhookURL))
 	}
 	if r.RemoteUIURL != "" {
-		agent.Config.Set("RemoteUIURL", r.RemoteUIURL)
+		checkFatal(agent.Config.Set(config.PrefRemoteUIURL, r.RemoteUIURL))
 	}
 	if r.Secret != "" {
-		agent.Config.Set(config.PrefSecret, r.Secret)
+		checkFatal(agent.Config.Set(config.PrefSecret, r.Secret))
 	}
 	if r.WebhookID != "" {
-		agent.Config.Set(config.PrefWebhookID, r.WebhookID)
+		checkFatal(agent.Config.Set(config.PrefWebhookID, r.WebhookID))
 	}
-	agent.Config.Set(config.PrefApiURL, r.GenerateAPIURL(providedHost))
-	agent.Config.Set(config.PrefWebsocketURL, r.GenerateWebsocketURL(providedHost))
-
-	agent.Config.Set("DeviceName", d.DeviceName())
-	agent.Config.Set("DeviceID", d.DeviceID())
-
-	agent.Config.Set("Registered", true)
-	// agent.SetRegistered(true)
-
-	agent.Config.Set("Version", agent.Version)
+	checkFatal(agent.Config.Set(config.PrefApiURL, r.GenerateAPIURL(providedHost)))
+	checkFatal(agent.Config.Set(config.PrefWebsocketURL, r.GenerateWebsocketURL(providedHost)))
+	checkFatal(agent.Config.Set(config.PrefDeviceName, d.DeviceName()))
+	checkFatal(agent.Config.Set(config.PrefDeviceID, d.DeviceID()))
+	checkFatal(agent.Config.Set(config.PrefRegistered, true))
+	checkFatal(agent.Config.Set(config.PrefVersion, agent.Version))
 
 	registryPath, err := agent.Config.StoragePath("sensorRegistry")
 	if err != nil {

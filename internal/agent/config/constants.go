@@ -15,4 +15,7 @@ const (
 	PrefSecret       = "secret"
 	PrefVersion      = "Version"
 	PrefHost         = "Host"
+	PrefDeviceName   = "DeviceName"
+	PrefDeviceID     = "DeviceID"
+	PrefRegistered   = "Registered"
 )
