@@ -108,7 +108,6 @@ func (agent *Agent) registrationWindow(ctx context.Context, registration *Regist
 	allServers, _ := s.Get()
 
 	agent.mainWindow.SetTitle(translator.Translate("App Registration"))
-	// w := agent.app.NewWindow()
 
 	tokenSelect := widget.NewEntryWithData(registration.tokenBinding)
 	tokenSelect.Validator = validation.NewRegexp("[A-Za-z0-9_\\.]+", "Invalid token format")
@@ -217,6 +216,10 @@ func (agent *Agent) saveRegistration(r *hass.RegistrationResponse, h *Registrati
 	time.Sleep(110 * time.Millisecond)
 }
 
+// registrationProcess runs through a registration flow. If the agent is already
+// registered, it will exit unless the force parameter is true. Otherwise, it
+// will action a registration workflow displaying a GUI for user input of
+// registration details and save the results into the agent config
 func (agent *Agent) registrationProcess(ctx context.Context, server, token string, force, headless bool, done chan struct{}) {
 	// appConfig := agent.LoadConfig()
 	// If the agent isn't registered but the config is valid, set the agent as
