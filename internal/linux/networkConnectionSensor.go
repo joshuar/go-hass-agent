@@ -16,36 +16,36 @@ import (
 )
 
 const (
-	networkManagerPath     = "/org/freedesktop/NetworkManager"
-	networkManagerObject   = "org.freedesktop.NetworkManager"
-	activeConnectionObject = "org.freedesktop.NetworkManager.Connection.Active"
-	accessPointObject      = "org.freedesktop.NetworkManager.AccessPoint"
-	deviceObject           = "org.freedesktop.NetworkManager.Device"
-	wirelessDeviceObject   = "org.freedesktop.NetworkManager.Device.Wireless"
-	ip4ConfigObject        = "org.freedesktop.NetworkManager.IP4Config"
-	ip6ConfigObject        = "org.freedesktop.NetworkManager.IP6Config"
-	connTypeProp           = "org.freedesktop.NetworkManager.Connection.Active.Type"
-	connIDProp             = "org.freedesktop.NetworkManager.Connection.Active.Id"
-	connStateProp          = "org.freedesktop.NetworkManager.Connection.Active.State"
-	connDevicesProp        = "org.freedesktop.NetworkManager.Connection.Active.Devices"
-	wirelessDeviceProp     = "org.freedesktop.NetworkManager.Device.Wireless.ActiveAccessPoint"
-	connIPv4Prop           = "org.freedesktop.NetworkManager.Connection.Active.Ip4Config"
-	connIPv6Prop           = "org.freedesktop.NetworkManager.Connection.Active.Ip6Config"
-	addrIpv4Prop           = "org.freedesktop.NetworkManager.IP4Config.AddressData"
-	addrIpv6Prop           = "org.freedesktop.NetworkManager.IP6Config.AddressData"
-	wifiSSIDProp           = "org.freedesktop.NetworkManager.AccessPoint.Ssid"
-	wifiFreqProp           = "org.freedesktop.NetworkManager.AccessPoint.Frequency"
-	wifiSpeedProp          = "org.freedesktop.NetworkManager.AccessPoint.MaxBitrate"
-	wifiStrengthProp       = "org.freedesktop.NetworkManager.AccessPoint.Strength"
-	wifiHWAddrProp         = "org.freedesktop.NetworkManager.AccessPoint.HwAddress"
+	dBusNMPath         = "/org/freedesktop/NetworkManager"
+	dBusNMObj          = "org.freedesktop.NetworkManager"
+	dBusObjConn        = "org.freedesktop.NetworkManager.Connection.Active"
+	dBusObjAP          = "org.freedesktop.NetworkManager.AccessPoint"
+	dBusObjDev         = "org.freedesktop.NetworkManager.Device"
+	dBusObjWireless    = "org.freedesktop.NetworkManager.Device.Wireless"
+	dBusObjIP4Cfg      = "org.freedesktop.NetworkManager.IP4Config"
+	dBusObjIP6Cfg      = "org.freedesktop.NetworkManager.IP6Config"
+	dBusPropConnType   = "org.freedesktop.NetworkManager.Connection.Active.Type"
+	dBusPropConnID     = "org.freedesktop.NetworkManager.Connection.Active.Id"
+	dBusPropConnState  = "org.freedesktop.NetworkManager.Connection.Active.State"
+	dBusPropConnDevs   = "org.freedesktop.NetworkManager.Connection.Active.Devices"
+	dBusPropConnAP     = "org.freedesktop.NetworkManager.Device.Wireless.ActiveAccessPoint"
+	dBusPropConnIP4Cfg = "org.freedesktop.NetworkManager.Connection.Active.Ip4Config"
+	dBusPropConnIP6Cfg = "org.freedesktop.NetworkManager.Connection.Active.Ip6Config"
+	dBusPropIP4Addr    = "org.freedesktop.NetworkManager.IP4Config.AddressData"
+	dBusPropIP6Addr    = "org.freedesktop.NetworkManager.IP6Config.AddressData"
+	dBusPropAPSSID     = "org.freedesktop.NetworkManager.AccessPoint.Ssid"
+	dBusPropAPFreq     = "org.freedesktop.NetworkManager.AccessPoint.Frequency"
+	dBusPropAPSpd      = "org.freedesktop.NetworkManager.AccessPoint.MaxBitrate"
+	dBusPropAPStr      = "org.freedesktop.NetworkManager.AccessPoint.Strength"
+	dBusPropAPAddr     = "org.freedesktop.NetworkManager.AccessPoint.HwAddress"
 )
 
 // getActiveConns returns the list of active network connection D-Bus objects.
 func getActiveConns() []dbus.ObjectPath {
 	v, err := NewBusRequest(SystemBus).
-		Path(networkManagerPath).
-		Destination(networkManagerObject).
-		GetProp(networkManagerObject + ".ActiveConnections")
+		Path(dBusNMPath).
+		Destination(dBusNMObj).
+		GetProp(dBusNMObj + ".ActiveConnections")
 	if err != nil {
 		log.Warn().Err(err).
 			Msg("Could not retrieve active connection list.")
@@ -62,15 +62,15 @@ func getActiveConns() []dbus.ObjectPath {
 // getConnType extracts the connection type string from DBus for a given DBus
 // path to a connection object. If it cannot find the type, it returns
 // sensor.STATE_UNKNOWN.
-func getConnType(path dbus.ObjectPath) string {
-	if !path.IsValid() {
-		log.Debug().Msgf("Invalid D-Bus object path %s.", path)
+func getConnType(p dbus.ObjectPath) string {
+	if !p.IsValid() {
+		log.Debug().Msgf("Invalid D-Bus object path %s.", p)
 		return sensor.STATE_UNKNOWN
 	}
 	v, err := NewBusRequest(SystemBus).
-		Path(path).
-		Destination(networkManagerObject).
-		GetProp(connTypeProp)
+		Path(p).
+		Destination(dBusNMObj).
+		GetProp(dBusPropConnType)
 	if err != nil {
 		log.Debug().Err(err).Msg("Could not fetch type of connection.")
 		return sensor.STATE_UNKNOWN
@@ -82,15 +82,15 @@ func getConnType(path dbus.ObjectPath) string {
 // getConnType extracts the connection name string from DBus for a given DBus
 // path to a connection object. If it cannot find the name, it returns
 // sensor.STATE_UNKNOWN.
-func getConnName(path dbus.ObjectPath) string {
-	if !path.IsValid() {
-		log.Debug().Msgf("Invalid D-Bus object path %s.", path)
+func getConnName(p dbus.ObjectPath) string {
+	if !p.IsValid() {
+		log.Debug().Msgf("Invalid D-Bus object path %s.", p)
 		return sensor.STATE_UNKNOWN
 	}
 	variant, err := NewBusRequest(SystemBus).
-		Path(path).
-		Destination(networkManagerObject).
-		GetProp(connIDProp)
+		Path(p).
+		Destination(dBusNMObj).
+		GetProp(dBusPropConnID)
 	if err != nil {
 		log.Error().Err(err).
 			Msg("Could not fetch connection ID")
@@ -102,14 +102,14 @@ func getConnName(path dbus.ObjectPath) string {
 // getConnState extracts and interprets the connection state string from DBus
 // for a given DBus path to a connection object. If it cannot determine the
 // state, it returns sensor.STATE_UNKNOWN.
-func getConnState(path dbus.ObjectPath) string {
+func getConnState(p dbus.ObjectPath) string {
 	state, err := NewBusRequest(SystemBus).
-		Path(path).
-		Destination(networkManagerObject).
-		GetProp(connStateProp)
+		Path(p).
+		Destination(dBusNMObj).
+		GetProp(dBusPropConnState)
 	if err != nil {
 		log.Error().Err(err).
-			Msgf("Invalid connection state %v for network connection %s.", state.Value(), path)
+			Msgf("Invalid connection state %v for network connection %s.", state.Value(), p)
 	} else {
 		switch state.Value().(uint32) {
 		case 4:
@@ -126,20 +126,20 @@ func getConnState(path dbus.ObjectPath) string {
 }
 
 // getConnDevice returns the D-Bus object representing the device for the given connection object.
-func getConnDevice(path dbus.ObjectPath) dbus.ObjectPath {
+func getConnDevice(p dbus.ObjectPath) dbus.ObjectPath {
 	variant, err := NewBusRequest(SystemBus).
-		Path(path).
-		Destination(networkManagerObject).
-		GetProp(connDevicesProp)
+		Path(p).
+		Destination(dBusNMObj).
+		GetProp(dBusPropConnDevs)
 	if err != nil {
 		log.Error().Err(err).
-			Msgf("Unable to fetch device for connection %s.", path)
+			Msgf("Unable to fetch device for connection %s.", p)
 		return sensor.STATE_UNKNOWN
 	} else {
 		// ! this conversion might yield unexpected results
 		devicePath := variantToValue[[]dbus.ObjectPath](variant)[0]
 		if !devicePath.IsValid() {
-			log.Debug().Msgf("Invalid device path for connection %s.", path)
+			log.Debug().Msgf("Invalid device path for connection %s.", p)
 			return sensor.STATE_UNKNOWN
 		}
 		return devicePath
@@ -149,23 +149,23 @@ func getConnDevice(path dbus.ObjectPath) dbus.ObjectPath {
 // getIPAddr extracts the IP address for the given version (4/6) from the given
 // DBus path to an address object. If it cannot find the address, it returns
 // sensor.STATE_UNKNOWN.
-func getIPAddr(connPath dbus.ObjectPath, ver int) string {
-	if !connPath.IsValid() {
-		log.Debug().Msgf("Invalid D-Bus object path %s.", connPath)
+func getIPAddr(p dbus.ObjectPath, ver int) string {
+	if !p.IsValid() {
+		log.Debug().Msgf("Invalid D-Bus object path %s.", p)
 		return sensor.STATE_UNKNOWN
 	}
 	var connProp, addrProp string
 	switch ver {
 	case 4:
-		connProp = connIPv4Prop
-		addrProp = addrIpv4Prop
+		connProp = dBusPropConnIP4Cfg
+		addrProp = dBusPropIP4Addr
 	case 6:
-		connProp = connIPv6Prop
-		addrProp = addrIpv6Prop
+		connProp = dBusPropConnIP6Cfg
+		addrProp = dBusPropIP6Addr
 	}
 	v, err := NewBusRequest(SystemBus).
-		Path(connPath).
-		Destination(networkManagerObject).
+		Path(p).
+		Destination(dBusNMObj).
 		GetProp(connProp)
 	if err != nil {
 		return sensor.STATE_UNKNOWN
@@ -177,7 +177,7 @@ func getIPAddr(connPath dbus.ObjectPath, ver int) string {
 	}
 	v, err = NewBusRequest(SystemBus).
 		Path(addrPath).
-		Destination(networkManagerObject).
+		Destination(dBusNMObj).
 		GetProp(addrProp)
 	if err != nil {
 		return sensor.STATE_UNKNOWN
@@ -199,43 +199,43 @@ func getIPAddr(connPath dbus.ObjectPath, ver int) string {
 
 // getWifiProp will fetch the appropriate value for the given wifi sensor type
 // from D-Bus. If it cannot find the type, it returns sensor.STATE_UNKNOWN.
-func getWifiProp(path dbus.ObjectPath, t sensorType) interface{} {
-	if !path.IsValid() {
-		log.Debug().Msgf("Invalid D-Bus object path %s.", path)
+func getWifiProp(p dbus.ObjectPath, t sensorType) interface{} {
+	if !p.IsValid() {
+		log.Debug().Msgf("Invalid D-Bus object path %s.", p)
 		return sensor.STATE_UNKNOWN
 	}
-	var wifiProp string
+	var prop string
 	switch t {
 	case wifiSSID:
-		wifiProp = wifiSSIDProp
+		prop = dBusPropAPSSID
 	case wifiFrequency:
-		wifiProp = wifiFreqProp
+		prop = dBusPropAPFreq
 	case wifiSpeed:
-		wifiProp = wifiSpeedProp
+		prop = dBusPropAPSpd
 	case wifiStrength:
-		wifiProp = wifiStrengthProp
+		prop = dBusPropAPStr
 	case wifiHWAddress:
-		wifiProp = wifiHWAddrProp
+		prop = dBusPropAPAddr
 	}
-	var apPath dbus.ObjectPath
+	var path dbus.ObjectPath
 	ap, err := NewBusRequest(SystemBus).
-		Path(path).
-		Destination(networkManagerObject).
-		GetProp(wirelessDeviceProp)
+		Path(p).
+		Destination(dBusNMObj).
+		GetProp(dBusPropConnAP)
 	if err != nil {
 		log.Debug().Err(err).Msg("Unable to retrieve wireless device details from D-Bus.")
 		return sensor.STATE_UNKNOWN
 	} else {
-		apPath = dbus.ObjectPath((variantToValue[[]uint8](ap)))
-		if !apPath.IsValid() {
+		path = dbus.ObjectPath((variantToValue[[]uint8](ap)))
+		if !path.IsValid() {
 			log.Debug().Msg("AP D-Bus Path is invalid")
 			return sensor.STATE_UNKNOWN
 		}
 	}
 	v, err := NewBusRequest(SystemBus).
-		Path(apPath).
-		Destination(networkManagerObject).
-		GetProp(wifiProp)
+		Path(path).
+		Destination(dBusNMObj).
+		GetProp(prop)
 	if err != nil {
 		log.Debug().Err(err).Msg("Could not fetch wifi property from D-Bus.")
 		return dbus.MakeVariant(sensor.STATE_UNKNOWN)
@@ -253,8 +253,8 @@ func getWifiProp(path dbus.ObjectPath, t sensorType) interface{} {
 // handleConn will treat the given path as a connection object and create a
 // sensor for the connection state, as well as any additional sensors for the
 // connection type.
-func handleConn(path dbus.ObjectPath, status chan interface{}) {
-	s := newNetworkSensor(path, connectionState, nil)
+func handleConn(p dbus.ObjectPath, status chan interface{}) {
+	s := newNetworkSensor(p, connectionState, nil)
 	if s.sensorGroup == "lo" {
 		log.Trace().Caller().Msgf("Ignoring state update for connection %s.", s.sensorGroup)
 	} else {
@@ -262,7 +262,7 @@ func handleConn(path dbus.ObjectPath, status chan interface{}) {
 	}
 	extraSensors := make(chan *networkSensor)
 	go func() {
-		handleConnType(path, extraSensors)
+		handleConnType(p, extraSensors)
 	}()
 	for p := range extraSensors {
 		status <- p
@@ -272,12 +272,12 @@ func handleConn(path dbus.ObjectPath, status chan interface{}) {
 // handleConnType will treat the given path as a connection object and extra
 // additional sensors based on the type of connection. If the connection type
 // has no additional sensors available, nothing is returned.
-func handleConnType(path dbus.ObjectPath, extraSensors chan *networkSensor) {
+func handleConnType(p dbus.ObjectPath, extraSensors chan *networkSensor) {
 	defer close(extraSensors)
-	connType := getConnType(path)
+	connType := getConnType(p)
 	switch connType {
 	case "802-11-wireless":
-		devicePath := getConnDevice(path)
+		devicePath := getConnDevice(p)
 		if devicePath == sensor.STATE_UNKNOWN {
 			return
 		}
@@ -289,13 +289,13 @@ func handleConnType(path dbus.ObjectPath, extraSensors chan *networkSensor) {
 	case sensor.STATE_UNKNOWN:
 		fallthrough
 	default:
-		log.Trace().Caller().Msgf("Unhandled connection type %s (%s).", connType, path)
+		log.Trace().Caller().Msgf("Unhandled connection type %s (%s).", connType, p)
 	}
 }
 
 // handleProps will treat a list of properties as sensor updates, where the property names
 // and values were recieved directly from D-Bus as a list.
-func handleProps(path dbus.ObjectPath, props map[string]dbus.Variant, status chan interface{}) {
+func handleProps(p dbus.ObjectPath, props map[string]dbus.Variant, status chan interface{}) {
 	var propType sensorType
 	var value interface{}
 	for propName, propValue := range props {
@@ -317,10 +317,10 @@ func handleProps(path dbus.ObjectPath, props map[string]dbus.Variant, status cha
 			value = variantToValue[uint32](propValue)
 		default:
 			log.Trace().Caller().
-				Msgf("Unhandled property %v changed to %v (%s).", propName, propValue, path)
+				Msgf("Unhandled property %v changed to %v (%s).", propName, propValue, p)
 			return
 		}
-		status <- newNetworkSensor(path, propType, value)
+		status <- newNetworkSensor(p, propType, value)
 	}
 
 }
@@ -331,9 +331,9 @@ type networkSensor struct {
 	linuxSensor
 }
 
-func newNetworkSensor(path dbus.ObjectPath, asType sensorType, value interface{}) *networkSensor {
+func newNetworkSensor(p dbus.ObjectPath, asType sensorType, value interface{}) *networkSensor {
 	s := &networkSensor{
-		objectPath: path,
+		objectPath: p,
 	}
 	s.sensorType = asType
 	s.diagnostic = true
@@ -347,7 +347,7 @@ func newNetworkSensor(path dbus.ObjectPath, asType sensorType, value interface{}
 	case wifiFrequency, wifiSSID, wifiSpeed, wifiHWAddress, wifiStrength:
 		s.sensorGroup = "wifi"
 		if value == nil {
-			s.value = getWifiProp(path, s.sensorType)
+			s.value = getWifiProp(p, s.sensorType)
 		}
 	}
 	return s
@@ -474,9 +474,9 @@ func NetworkConnectionsUpdater(ctx context.Context, status chan interface{}) {
 	}
 
 	err := NewBusRequest(SystemBus).
-		Path(networkManagerPath).
+		Path(dBusNMPath).
 		Match([]dbus.MatchOption{
-			dbus.WithMatchPathNamespace(networkManagerPath),
+			dbus.WithMatchPathNamespace(dBusNMPath),
 		}).
 		Event("org.freedesktop.DBus.Properties.PropertiesChanged").
 		Handler(func(s *dbus.Signal) {
@@ -494,21 +494,21 @@ func NetworkConnectionsUpdater(ctx context.Context, status chan interface{}) {
 				return
 			}
 			switch obj {
-			case networkManagerObject:
+			case dBusNMObj:
 				// TODO: handle this object
-			case activeConnectionObject:
+			case dBusObjConn:
 				handleConn(s.Path, status)
-			case deviceObject:
+			case dBusObjDev:
 				// TODO: handle this object
-			case accessPointObject:
+			case dBusObjAP:
 				fallthrough
-			case wirelessDeviceObject:
+			case dBusObjWireless:
 				if updatedProps, ok := s.Body[1].(map[string]dbus.Variant); ok {
 					handleProps(s.Path, updatedProps, status)
 				}
-			case ip4ConfigObject:
+			case dBusObjIP4Cfg:
 				fallthrough
-			case ip6ConfigObject:
+			case dBusObjIP6Cfg:
 				// TODO: handle these objects
 			case "org.freedesktop.NetworkManager.Device.Statistics":
 				// no-op, too noisy
