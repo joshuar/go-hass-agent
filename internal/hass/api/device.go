@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-package hass
+package api
 
 //go:generate moq -out mock_DeviceInfo_test.go . DeviceInfo
 type DeviceInfo interface {

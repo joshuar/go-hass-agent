@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-package hass
+package api
 
 import (
 	"context"
@@ -13,7 +13,11 @@ import (
 
 	"github.com/carlmjohnson/requests"
 	"github.com/joshuar/go-hass-agent/internal/agent/config"
-	"github.com/joshuar/go-hass-agent/internal/hass/api"
+)
+
+const (
+	websocketPath = "/api/websocket"
+	webHookPath   = "/api/webhook/"
 )
 
 //go:generate moq -out mock_RegistrationInfo_test.go . RegistrationInfo
@@ -77,7 +81,7 @@ type RegistrationRequest struct {
 	SupportsEncryption bool        `json:"supports_encryption"`
 }
 
-func RegisterWithHass(ctx context.Context, regConfig api.AgentConfig, device DeviceInfo) (*RegistrationResponse, error) {
+func RegisterWithHass(ctx context.Context, regConfig AgentConfig, device DeviceInfo) (*RegistrationResponse, error) {
 	request, err := device.MarshalJSON()
 	if err != nil {
 		return nil, err

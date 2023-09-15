@@ -16,11 +16,6 @@ import (
 	"github.com/perimeterx/marshmallow"
 )
 
-const (
-	websocketPath = "/api/websocket"
-	webHookPath   = "/api/webhook/"
-)
-
 type haConfig struct {
 	rawConfigProps map[string]interface{}
 	haConfigProps
