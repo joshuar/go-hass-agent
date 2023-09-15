@@ -32,135 +32,35 @@ const (
 server (if not auto-detected) and long-lived access token.`
 )
 
-type RegistrationDetails struct {
-	serverBinding, tokenBinding binding.String
-}
-
-func (r *RegistrationDetails) Server() string {
-	var s string
-	var err error
-	if s, err = r.serverBinding.Get(); err != nil {
-		log.Warn().Err(err).Msg("Unable to retrieve server from registration details.")
-		return ""
-	}
-	return s
-}
-
-func (r *RegistrationDetails) Token() string {
-	var s string
-	var err error
-	if s, err = r.tokenBinding.Get(); err != nil {
-		log.Warn().Err(err).Msg("Unable to retrieve token from registration details.")
-		return ""
-	}
-	return s
-}
-
-func (r *RegistrationDetails) Validate() bool {
-	validate := validator.New()
-	check := func(value string, validation string) bool {
-		if err := validate.Var(value, validation); err != nil {
-			return false
-		}
-		return true
-	}
-	if server, _ := r.serverBinding.Get(); !check(server, "required,http_url") {
-		return false
-	}
-	if token, _ := r.tokenBinding.Get(); !check(token, "required") {
-		return false
-	}
-	return true
-}
-
-// newRegistration creates a hass.RegistrationDetails object that contains
-// information about both the Home Assistant server and the device running the
-// agent needed to register the agent with Home Assistant.
-func newRegistration(server, token string) *RegistrationDetails {
-	checkSet := func(value string, pref binding.String) {
-		if err := pref.Set(value); err != nil {
-			log.Warn().Err(err).
-				Msgf("Could not set preference to provided value: %s", value)
-		}
-	}
-	registrationInfo := &RegistrationDetails{
-		serverBinding: binding.NewString(),
-		tokenBinding:  binding.NewString(),
-	}
-	u, err := url.Parse(server)
-	if err != nil {
-		log.Warn().Err(err).
-			Msg("Cannot parse provided URL. Ignoring")
-	} else {
-		checkSet(u.Host, registrationInfo.serverBinding)
-	}
-	if token != "" {
-		checkSet(token, registrationInfo.tokenBinding)
-	}
-	return registrationInfo
-}
-
 // registrationWindow displays a UI to prompt the user for the details needed to
 // complete registration. It will populate with any values that were already
 // provided via the command-line.
-func (agent *Agent) registrationWindow(ctx context.Context, registration *RegistrationDetails, done chan struct{}) {
-	s := findServers(ctx)
-	allServers, _ := s.Get()
-
+func (agent *Agent) registrationWindow(ctx context.Context, done chan struct{}) {
 	agent.mainWindow.SetTitle(translator.Translate("App Registration"))
 
-	tokenSelect := widget.NewEntryWithData(registration.tokenBinding)
-	tokenSelect.Validator = validation.NewRegexp("[A-Za-z0-9_\\.]+", "Invalid token format")
+	var allFormItems []*widget.FormItem
 
-	autoServerSelect := widget.NewSelect(allServers, func(s string) {
-		if err := registration.serverBinding.Set(s); err != nil {
-			log.Debug().Err(err).
-				Msg("Could not set server pref to selected value.")
-		}
-	})
-
-	manualServerEntry := widget.NewEntryWithData(registration.serverBinding)
-	manualServerEntry.Validator = hostValidator()
-	manualServerEntry.Disable()
-	manualServerSelect := widget.NewCheck("", func(b bool) {
-		switch b {
-		case true:
-			manualServerEntry.Enable()
-			autoServerSelect.Disable()
-		case false:
-			manualServerEntry.Disable()
-			autoServerSelect.Enable()
-		}
-	})
-
-	form := widget.NewForm(
-		widget.NewFormItem(translator.Translate("Token"), tokenSelect),
-		widget.NewFormItem(translator.Translate("Auto-discovered Servers"), autoServerSelect),
-		widget.NewFormItem(translator.Translate("Use Custom Server?"), manualServerSelect),
-		widget.NewFormItem(translator.Translate("Manual Server Entry"), manualServerEntry),
-	)
-	form.OnSubmit = func() {
+	allFormItems = append(allFormItems, agent.serverConfigItems(ctx)...)
+	// allFormItems = append(allFormItems, agent.mqttConfigItems()...)
+	registrationForm := widget.NewForm(allFormItems...)
+	registrationForm.OnSubmit = func() {
 		agent.mainWindow.Hide()
 		close(done)
 	}
-	form.OnCancel = func() {
+	registrationForm.OnCancel = func() {
 		log.Warn().Msg("Cancelling registration.")
 		close(done)
-		registration = nil
 		agent.mainWindow.Close()
 		ctx.Done()
 	}
 
 	agent.mainWindow.SetContent(container.New(layout.NewVBoxLayout(),
-		widget.NewLabel(
-			translator.Translate(explainRegistration)),
-		form,
+		widget.NewLabel(translator.Translate(explainRegistration)),
+		registrationForm,
 	))
 
 	agent.mainWindow.SetOnClosed(func() {
 		log.Debug().Msg("Closed")
-		registration = nil
-		close(done)
 	})
 
 	agent.mainWindow.Show()
@@ -170,19 +70,16 @@ func (agent *Agent) registrationWindow(ctx context.Context, registration *Regist
 // request and the successful response in the agent preferences. This includes,
 // most importantly, details on the URL that should be used to send subsequent
 // requests to Home Assistant.
-func (agent *Agent) saveRegistration(r *hass.RegistrationResponse, h *RegistrationDetails, d hass.DeviceInfo) {
+func (agent *Agent) saveRegistration(r *hass.RegistrationResponse, d hass.DeviceInfo) {
 	checkFatal := func(err error) {
 		if err != nil {
 			log.Fatal().Err(err).Msg("Could not save registration.")
 		}
 	}
-
-	providedHost, _ := h.serverBinding.Get()
-	hostURL, _ := url.Parse(providedHost)
-	checkFatal(agent.Config.Set(config.PrefHost, hostURL.String()))
-
-	token, _ := h.tokenBinding.Get()
-	checkFatal(agent.Config.Set(config.PrefToken, token))
+	var providedHost string
+	checkFatal(agent.Config.Get(config.PrefHost, &providedHost))
+	// hostURL, _ := url.Parse(providedHost)
+	// checkFatal(agent.Config.Set(config.PrefHost, hostURL.String()))
 
 	if r.CloudhookURL != "" {
 		checkFatal(agent.Config.Set(config.PrefCloudhookURL, r.CloudhookURL))
@@ -232,25 +129,106 @@ func (agent *Agent) registrationProcess(ctx context.Context, server, token strin
 	// If the app is not registered, run a registration flow
 	if !agent.IsRegistered() || force {
 		log.Info().Msg("Registration required. Starting registration process.")
-		registration := newRegistration(server, token)
+		if server != "" {
+			if !validateRegistrationSetting("server", server) {
+				log.Fatal().Msg("Server setting is not valid.")
+			}
+		} else {
+			agent.Config.Set(config.PrefHost, token)
+		}
+		if token != "" {
+			if !validateRegistrationSetting("token", token) {
+				log.Fatal().Msg("Token setting is not valid.")
+			}
+		} else {
+			agent.Config.Set(config.PrefToken, token)
+		}
+
 		device := agent.setupDevice(ctx)
 		if !headless {
 			done := make(chan struct{})
-			agent.registrationWindow(ctx, registration, done)
+			agent.registrationWindow(ctx, done)
 			<-done
 		}
-		if !registration.Validate() {
-			log.Fatal().Msg("Registration details not valid.")
-		}
-		registrationResponse, err := hass.RegisterWithHass(ctx, registration, device)
+		registrationResponse, err := hass.RegisterWithHass(ctx, agent.Config, device)
 		if err != nil {
 			log.Fatal().Err(err).Msg("Could not register with Home Assistant.")
 		}
-		agent.saveRegistration(registrationResponse, registration, device)
+		agent.saveRegistration(registrationResponse, device)
 		log.Info().Msg("Successfully registered agent.")
 	}
 
 	close(done)
+}
+
+// serverSelectionForm generates a fyne.CanvasObject consisting of a form for
+// selecting a server to register the agent against
+func (agent *Agent) serverConfigItems(ctx context.Context) []*widget.FormItem {
+	s := findServers(ctx)
+	allServers, _ := s.Get()
+
+	token := binding.BindPreferenceString(config.PrefToken, agent.app.Preferences())
+	server := binding.BindPreferenceString(config.PrefHost, agent.app.Preferences())
+
+	tokenSelect := widget.NewEntryWithData(token)
+	tokenSelect.Validator = validation.NewRegexp("[A-Za-z0-9_\\.]+", "Invalid token format")
+
+	autoServerSelect := widget.NewSelect(allServers, func(s string) {
+		if err := server.Set(s); err != nil {
+			log.Debug().Err(err).
+				Msg("Could not set server pref to selected value.")
+		}
+	})
+
+	manualServerEntry := widget.NewEntryWithData(server)
+	manualServerEntry.Validator = hostValidator()
+	manualServerEntry.Disable()
+	manualServerSelect := widget.NewCheck("", func(b bool) {
+		switch b {
+		case true:
+			manualServerEntry.Enable()
+			autoServerSelect.Disable()
+		case false:
+			manualServerEntry.Disable()
+			autoServerSelect.Enable()
+		}
+	})
+
+	var items []*widget.FormItem
+
+	items = append(items, widget.NewFormItem(translator.Translate("Token"), tokenSelect))
+	items = append(items, widget.NewFormItem(translator.Translate("Auto-discovered Servers"), autoServerSelect))
+	items = append(items, widget.NewFormItem(translator.Translate("Use Custom Server?"), manualServerSelect))
+	items = append(items, widget.NewFormItem(translator.Translate("Manual Server Entry"), manualServerEntry))
+
+	return items
+}
+
+// mqttConfigForm returns a fyne.CanvasObject consisting of a form for
+// configuring the agent to use an MQTT for pub/sub functionality
+func (agent *Agent) mqttConfigItems() []*widget.FormItem {
+
+	mqttServer := binding.BindPreferenceString(config.PrefMQTTServer, agent.app.Preferences())
+
+	mqttServerEntry := widget.NewEntryWithData(mqttServer)
+	mqttServerEntry.Validator = hostValidator()
+	mqttServerEntry.Disable()
+
+	mqttEnabled := widget.NewCheck("", func(b bool) {
+		switch b {
+		case true:
+			mqttServerEntry.Enable()
+		case false:
+			mqttServerEntry.Disable()
+		}
+	})
+
+	var items []*widget.FormItem
+
+	items = append(items, widget.NewFormItem(translator.Translate("Use MQTT?"), mqttEnabled))
+	items = append(items, widget.NewFormItem(translator.Translate("MQTT Server"), mqttServerEntry))
+
+	return items
 }
 
 // findServers is a helper function to generate a list of Home Assistant servers
@@ -301,6 +279,25 @@ func findServers(ctx context.Context) binding.StringList {
 		<-searchCtx.Done()
 	}
 	return serverList
+}
+
+func validateRegistrationSetting(key, value string) bool {
+	validate := validator.New()
+	check := func(value string, validation string) bool {
+		if err := validate.Var(value, validation); err != nil {
+			return false
+		}
+		return true
+	}
+	switch key {
+	case "server":
+		return check(value, "required,http_url")
+	case "token":
+		return check(value, "required")
+	default:
+		log.Warn().Msgf("Unexpected key %s with value %s", key, value)
+		return false
+	}
 }
 
 // hostValidator is a custom fyne validator that will validate a string is a
