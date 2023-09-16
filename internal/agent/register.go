@@ -41,14 +41,13 @@ func (agent *Agent) registrationWindow(ctx context.Context, done chan struct{}) 
 	var allFormItems []*widget.FormItem
 
 	allFormItems = append(allFormItems, agent.serverConfigItems(ctx)...)
-	// allFormItems = append(allFormItems, agent.mqttConfigItems()...)
 	registrationForm := widget.NewForm(allFormItems...)
 	registrationForm.OnSubmit = func() {
 		agent.mainWindow.Hide()
 		close(done)
 	}
 	registrationForm.OnCancel = func() {
-		log.Warn().Msg("Cancelling registration.")
+		log.Warn().Msg("Canceling registration.")
 		close(done)
 		agent.mainWindow.Close()
 		ctx.Done()
@@ -78,8 +77,6 @@ func (agent *Agent) saveRegistration(r *api.RegistrationResponse, d api.DeviceIn
 	}
 	var providedHost string
 	checkFatal(agent.Config.Get(config.PrefHost, &providedHost))
-	// hostURL, _ := url.Parse(providedHost)
-	// checkFatal(agent.Config.Set(config.PrefHost, hostURL.String()))
 
 	if r.CloudhookURL != "" {
 		checkFatal(agent.Config.Set(config.PrefCloudhookURL, r.CloudhookURL))
@@ -118,15 +115,24 @@ func (agent *Agent) saveRegistration(r *api.RegistrationResponse, d api.DeviceIn
 // will action a registration workflow displaying a GUI for user input of
 // registration details and save the results into the agent config
 func (agent *Agent) registrationProcess(ctx context.Context, server, token string, force, headless bool, done chan struct{}) {
-	// If the agent isn't registered but the config is valid, set the agent as
+	var registered bool
+	if err := agent.Config.Get(config.PrefRegistered, &registered); err != nil {
+		log.Fatal().Err(err).Msg("Could not ascertain agent registration status.")
+	}
+	// If the config is valid, but the agent is not registered, set the agent as
 	// registered and continue execution. Required check for versions upgraded
 	// from v1.2.6 and below.
-	if !agent.IsRegistered() && ValidateConfig(agent.Config) == nil {
-		agent.SetRegistered(true)
-		close(done)
+	if ValidateConfig(agent.Config) == nil {
+		if !registered {
+			if err := agent.Config.Set(config.PrefRegistered, true); err != nil {
+				log.Fatal().Err(err).Msg("Could not set registered status.")
+			}
+			close(done)
+		}
 	}
-	// If the app is not registered, run a registration flow
-	if !agent.IsRegistered() || force {
+	// If the agent is not registered (or force registration requested) run a
+	// registration flow
+	if !registered || force {
 		log.Info().Msg("Registration required. Starting registration process.")
 		if server != "" {
 			if !validateRegistrationSetting("server", server) {
@@ -207,33 +213,6 @@ func (agent *Agent) serverConfigItems(ctx context.Context) []*widget.FormItem {
 	return items
 }
 
-// mqttConfigForm returns a fyne.CanvasObject consisting of a form for
-// configuring the agent to use an MQTT for pub/sub functionality
-func (agent *Agent) mqttConfigItems() []*widget.FormItem {
-
-	mqttServer := binding.BindPreferenceString(config.PrefMQTTServer, agent.app.Preferences())
-
-	mqttServerEntry := widget.NewEntryWithData(mqttServer)
-	mqttServerEntry.Validator = hostValidator()
-	mqttServerEntry.Disable()
-
-	mqttEnabled := widget.NewCheck("", func(b bool) {
-		switch b {
-		case true:
-			mqttServerEntry.Enable()
-		case false:
-			mqttServerEntry.Disable()
-		}
-	})
-
-	var items []*widget.FormItem
-
-	items = append(items, widget.NewFormItem(translator.Translate("Use MQTT?"), mqttEnabled),
-		widget.NewFormItem(translator.Translate("MQTT Server"), mqttServerEntry))
-
-	return items
-}
-
 // findServers is a helper function to generate a list of Home Assistant servers
 // via local network auto-discovery.
 func findServers(ctx context.Context) binding.StringList {
@@ -260,7 +239,7 @@ func findServers(ctx context.Context) binding.StringList {
 					}
 				}
 				if server != "" {
-					if err := serverList.Append(server); err != nil {
+					if err = serverList.Append(server); err != nil {
 						log.Warn().Err(err).
 							Msgf("Unable to add found server %s to server list.", server)
 					}
