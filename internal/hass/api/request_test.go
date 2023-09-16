@@ -137,7 +137,7 @@ func TestExecuteRequest(t *testing.T) {
 		GetFunc: func(s string, ifaceVal interface{}) error {
 			v := ifaceVal.(*string)
 			switch s {
-			case config.PrefApiURL:
+			case config.PrefAPIURL:
 				*v = server.URL
 				return nil
 			case config.PrefSecret:
@@ -153,7 +153,7 @@ func TestExecuteRequest(t *testing.T) {
 		GetFunc: func(s string, ifaceVal interface{}) error {
 			v := ifaceVal.(*string)
 			switch s {
-			case config.PrefApiURL:
+			case config.PrefAPIURL:
 				*v = server.URL
 				return nil
 			case config.PrefSecret:

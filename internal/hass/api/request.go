@@ -70,7 +70,7 @@ func ExecuteRequest(ctx context.Context, request Request, conf AgentConfig, resp
 	defer close(responseCh)
 
 	var apiURL, secret string
-	if err := conf.Get(config.PrefApiURL, &apiURL); err != nil {
+	if err := conf.Get(config.PrefAPIURL, &apiURL); err != nil {
 		responseCh <- NewGenericResponse(err, request.RequestType())
 		return
 	}

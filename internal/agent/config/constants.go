@@ -6,7 +6,7 @@
 package config
 
 const (
-	PrefApiURL       = "ApiURL"
+	PrefAPIURL       = "ApiURL"
 	PrefWebsocketURL = "WebSocketURL"
 	PrefCloudhookURL = "CloudhookURL"
 	PrefRemoteUIURL  = "RemoteUIURL"
