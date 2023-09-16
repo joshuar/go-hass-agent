@@ -35,7 +35,7 @@ type AgentConfig interface {
 // ValidateConfig takes an agentConfig and ensures that it meets the minimum
 // requirements for the agent to function correctly
 func ValidateConfig(c AgentConfig) error {
-	validator := validator.New()
+	cfgValidator := validator.New()
 
 	validate := func(key, rules, errMsg string) error {
 		var value string
@@ -43,7 +43,7 @@ func ValidateConfig(c AgentConfig) error {
 		if err != nil {
 			return fmt.Errorf("unable to retrieve %s from config: %v", key, err)
 		}
-		err = validator.Var(value, rules)
+		err = cfgValidator.Var(value, rules)
 		if err != nil {
 			return errors.New(errMsg)
 		}
@@ -124,7 +124,7 @@ func UpgradeConfig(c AgentConfig) error {
 		if err != nil {
 			return errors.New("could not get sensor registry path from config")
 		}
-		if _, err := os.Stat(path + "/0.dat"); errors.Is(err, os.ErrNotExist) {
+		if _, err = os.Stat(path + "/0.dat"); errors.Is(err, os.ErrNotExist) {
 			return nil
 		}
 		err = registry.MigrateNuts2Json(path)
@@ -152,17 +152,15 @@ func generateWebsocketURL(c AgentConfig) error {
 	if err := c.Get(config.PrefHost, &host); err != nil {
 		return err
 	}
-	url, _ := url.Parse(host)
-	switch url.Scheme {
+	baseURL, _ := url.Parse(host)
+	switch baseURL.Scheme {
 	case "https":
-		url.Scheme = "wss"
-	case "http":
-		fallthrough
+		baseURL.Scheme = "wss"
 	default:
-		url.Scheme = "ws"
+		baseURL.Scheme = "ws"
 	}
-	url = url.JoinPath(websocketPath)
-	return c.Set(config.PrefWebsocketURL, url.String())
+	baseURL = baseURL.JoinPath(websocketPath)
+	return c.Set(config.PrefWebsocketURL, baseURL.String())
 }
 
 func generateAPIURL(c AgentConfig) error {
@@ -186,9 +184,9 @@ func generateAPIURL(c AgentConfig) error {
 	case remoteUIURL != "" && webhookID != "":
 		apiURL = remoteUIURL + webHookPath + webhookID
 	case webhookID != "" && host != "":
-		url, _ := url.Parse(host)
-		url = url.JoinPath(webHookPath, webhookID)
-		apiURL = url.String()
+		baseURL, _ := url.Parse(host)
+		baseURL = baseURL.JoinPath(webHookPath, webhookID)
+		apiURL = baseURL.String()
 	default:
 		apiURL = ""
 	}
