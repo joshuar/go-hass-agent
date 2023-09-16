@@ -19,4 +19,6 @@ const (
 	PrefDeviceID     = "DeviceID"
 	PrefRegistered   = "Registered"
 	PrefMQTTServer   = "MQTTServer"
+	PrefMQTTTopic    = "MQTTTopic"
+	PrefMQTTUser     = "MQTTUser"
 )
