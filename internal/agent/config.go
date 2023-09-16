@@ -50,7 +50,7 @@ func ValidateConfig(c AgentConfig) error {
 		return nil
 	}
 
-	if err := validate(config.PrefApiURL,
+	if err := validate(config.PrefAPIURL,
 		"required,url",
 		"apiURL does not match either a URL, hostname or hostname:port",
 	); err != nil {
@@ -190,5 +190,5 @@ func generateAPIURL(c AgentConfig) error {
 	default:
 		apiURL = ""
 	}
-	return c.Set(config.PrefApiURL, apiURL)
+	return c.Set(config.PrefAPIURL, apiURL)
 }

@@ -18,7 +18,7 @@ func TestValidateConfig(t *testing.T) {
 		GetFunc: func(s string, ifaceVal interface{}) error {
 			v := ifaceVal.(*string)
 			switch s {
-			case config.PrefApiURL:
+			case config.PrefAPIURL:
 				*v = "http://localhost:8123"
 				return nil
 			case config.PrefWebsocketURL:
@@ -40,7 +40,7 @@ func TestValidateConfig(t *testing.T) {
 		GetFunc: func(s string, ifaceVal interface{}) error {
 			v := ifaceVal.(*string)
 			switch s {
-			case config.PrefApiURL:
+			case config.PrefAPIURL:
 				*v = "not a url"
 				return nil
 			case config.PrefWebsocketURL:

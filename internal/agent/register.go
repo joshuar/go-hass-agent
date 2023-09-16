@@ -90,7 +90,7 @@ func (agent *Agent) saveRegistration(r *api.RegistrationResponse, d api.DeviceIn
 	if r.WebhookID != "" {
 		checkFatal(agent.Config.Set(config.PrefWebhookID, r.WebhookID))
 	}
-	checkFatal(agent.Config.Set(config.PrefApiURL, r.GenerateAPIURL(providedHost)))
+	checkFatal(agent.Config.Set(config.PrefAPIURL, r.GenerateAPIURL(providedHost)))
 	checkFatal(agent.Config.Set(config.PrefWebsocketURL, r.GenerateWebsocketURL(providedHost)))
 	checkFatal(agent.Config.Set(config.PrefDeviceName, d.DeviceName()))
 	checkFatal(agent.Config.Set(config.PrefDeviceID, d.DeviceID()))
