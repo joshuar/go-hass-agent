@@ -32,10 +32,7 @@ func (agent *Agent) runNotificationsWorker(ctx context.Context, options AgentOpt
 				log.Debug().Msg("Stopping notification handler.")
 				return
 			case n := <-notifyCh:
-				agent.app.SendNotification(&fyne.Notification{
-					Title:   n.Title,
-					Content: n.Content,
-				})
+				agent.UI.DisplayNotification(n.Title, n.Content)
 			}
 		}
 	}()
@@ -44,10 +41,10 @@ func (agent *Agent) runNotificationsWorker(ctx context.Context, options AgentOpt
 	go func() {
 		defer wg.Done()
 		restartCh := make(chan struct{})
-		api.StartWebsocket(ctx, agent.Config, notifyCh, restartCh)
+		api.StartWebsocket(ctx, agent, notifyCh, restartCh)
 		for range restartCh {
 			log.Debug().Msg("Restarting websocket connection.")
-			api.StartWebsocket(ctx, agent.Config, notifyCh, restartCh)
+			api.StartWebsocket(ctx, agent, notifyCh, restartCh)
 		}
 	}()
 

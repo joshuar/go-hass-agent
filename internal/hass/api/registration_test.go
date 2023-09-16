@@ -232,7 +232,7 @@ func TestRegisterWithHass(t *testing.T) {
 
 	type args struct {
 		ctx       context.Context
-		regConfig AgentConfig
+		regConfig Agent
 		device    DeviceInfo
 	}
 	tests := []struct {

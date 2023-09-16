@@ -72,7 +72,7 @@ func (h *haConfig) ResponseHandler(resp bytes.Buffer, respCh chan api.Response) 
 	respCh <- response
 }
 
-func GetHassConfig(ctx context.Context, c api.AgentConfig) (*haConfig, error) {
+func GetHassConfig(ctx context.Context, c api.Agent) (*haConfig, error) {
 	h := new(haConfig)
 	respCh := make(chan api.Response, 1)
 	var wg sync.WaitGroup

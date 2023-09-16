@@ -6,6 +6,6 @@
 package api
 
 //go:generate moq -out mock_AgentConfig_test.go . AgentConfig
-type AgentConfig interface {
-	Get(string, interface{}) error
+type Agent interface {
+	GetConfig(string, interface{}) error
 }

@@ -12,5 +12,5 @@ import (
 )
 
 func (agent *Agent) setupDevice(ctx context.Context) *linux.LinuxDevice {
-	return linux.NewDevice(ctx, Name, Version)
+	return linux.NewDevice(ctx, name, Version)
 }

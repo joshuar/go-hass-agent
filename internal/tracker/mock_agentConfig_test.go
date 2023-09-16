@@ -55,8 +55,8 @@ type agentConfigMock struct {
 	lockStoragePath sync.RWMutex
 }
 
-// Get calls GetFunc.
-func (mock *agentConfigMock) Get(s string, ifaceVal interface{}) error {
+// GetConfig calls GetFunc.
+func (mock *agentConfigMock) GetConfig(s string, ifaceVal interface{}) error {
 	if mock.GetFunc == nil {
 		panic("agentConfigMock.GetFunc: method is nil but agentConfig.Get was just called")
 	}

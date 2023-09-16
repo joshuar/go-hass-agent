@@ -9,7 +9,7 @@ import (
 
 // Ensure, that AgentConfigMock does implement AgentConfig.
 // If this is not the case, regenerate this file with moq.
-var _ AgentConfig = &AgentConfigMock{}
+var _ Agent = &AgentConfigMock{}
 
 // AgentConfigMock is a mock implementation of AgentConfig.
 //
@@ -43,8 +43,8 @@ type AgentConfigMock struct {
 	lockGet sync.RWMutex
 }
 
-// Get calls GetFunc.
-func (mock *AgentConfigMock) Get(s string, ifaceVal interface{}) error {
+// GetConfig calls GetFunc.
+func (mock *AgentConfigMock) GetConfig(s string, ifaceVal interface{}) error {
 	if mock.GetFunc == nil {
 		panic("AgentConfigMock.GetFunc: method is nil but AgentConfig.Get was just called")
 	}
