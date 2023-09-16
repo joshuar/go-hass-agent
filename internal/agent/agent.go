@@ -216,7 +216,7 @@ func (agent *Agent) handleShutdown(ctx context.Context) {
 		for {
 			select {
 			case <-ctx.Done():
-				log.Debug().Msg("Context cancelled.")
+				log.Debug().Msg("Context canceled.")
 				os.Exit(1)
 			case <-agent.done:
 				log.Debug().Msg("Agent done.")
