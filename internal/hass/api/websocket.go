@@ -48,9 +48,9 @@ type websocketResponse struct {
 	Success bool   `json:"success,omitempty"`
 }
 
-func StartWebsocket(ctx context.Context, settings AgentConfig, notifyCh chan fyne.Notification, doneCh chan struct{}) {
+func StartWebsocket(ctx context.Context, settings Agent, notifyCh chan fyne.Notification, doneCh chan struct{}) {
 	var websocketURL string
-	if err := settings.Get(config.PrefWebsocketURL, &websocketURL); err != nil {
+	if err := settings.GetConfig(config.PrefWebsocketURL, &websocketURL); err != nil {
 		log.Warn().Err(err).Msg("Could not retrieve websocket URL from config.")
 		return
 	}
@@ -92,14 +92,14 @@ type WebSocket struct {
 	nextID    uint64
 }
 
-func newWebsocket(ctx context.Context, settings AgentConfig, notifyCh chan fyne.Notification, doneCh chan struct{}) *WebSocket {
+func newWebsocket(ctx context.Context, settings Agent, notifyCh chan fyne.Notification, doneCh chan struct{}) *WebSocket {
 
 	var token, webhookID string
-	if err := settings.Get(config.PrefToken, &token); err != nil {
+	if err := settings.GetConfig(config.PrefToken, &token); err != nil {
 		log.Warn().Err(err).Msg("Could not retrieve token from config.")
 		return nil
 	}
-	if err := settings.Get(config.PrefWebhookID, &webhookID); err != nil {
+	if err := settings.GetConfig(config.PrefWebhookID, &webhookID); err != nil {
 		log.Warn().Err(err).Msg("Could not retrieve webhookID from config.")
 		return nil
 	}

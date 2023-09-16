@@ -8,6 +8,7 @@ package tracker
 import (
 	"context"
 	"errors"
+	"sort"
 	"sync"
 
 	"github.com/joshuar/go-hass-agent/internal/device"
@@ -30,7 +31,7 @@ type Registry interface {
 
 //go:generate moq -out mock_agentConfig_test.go . agentConfig
 type agentConfig interface {
-	Get(string, interface{}) error
+	GetConfig(string, interface{}) error
 	StoragePath(string) (string, error)
 }
 
@@ -95,6 +96,23 @@ func (tracker *SensorTracker) Get(id string) (Sensor, error) {
 	} else {
 		return nil, errors.New("not found")
 	}
+}
+
+func (tracker *SensorTracker) SensorList() []string {
+	tracker.mu.RLock()
+	defer tracker.mu.RUnlock()
+	if tracker.sensor == nil {
+		log.Warn().Msg("No sensors available.")
+		return nil
+	}
+	sortedEntities := make([]string, 0, len(tracker.sensor))
+	for name, sensor := range tracker.sensor {
+		if sensor.State() != nil {
+			sortedEntities = append(sortedEntities, name)
+		}
+	}
+	sort.Strings(sortedEntities)
+	return sortedEntities
 }
 
 // updateSensor will send a sensor update to HA, checking to ensure the sensor is not

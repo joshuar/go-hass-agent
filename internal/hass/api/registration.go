@@ -81,24 +81,24 @@ type RegistrationRequest struct {
 	SupportsEncryption bool        `json:"supports_encryption"`
 }
 
-func RegisterWithHass(ctx context.Context, regConfig AgentConfig, device DeviceInfo) (*RegistrationResponse, error) {
+func RegisterWithHass(ctx context.Context, agent Agent, device DeviceInfo) (*RegistrationResponse, error) {
 	request, err := device.MarshalJSON()
 	if err != nil {
 		return nil, err
 	}
-	var serverURL string
-	if err := regConfig.Get(config.PrefHost, &serverURL); err != nil {
+	var u string
+	if err = agent.GetConfig(config.PrefHost, &u); err != nil {
 		return nil, errors.New("invalid host")
 	}
 
-	url, err := url.Parse(serverURL)
+	serverURL, err := url.Parse(u)
 	if err != nil {
 		return nil, err
 	}
-	url = url.JoinPath("/api/mobile_app/registrations")
+	serverURL = serverURL.JoinPath("/api/mobile_app/registrations")
 
 	var token string
-	if err := regConfig.Get(config.PrefToken, &token); err != nil || token == "" {
+	if err = agent.GetConfig(config.PrefToken, &token); err != nil || token == "" {
 		return nil, errors.New("invalid token")
 	}
 
@@ -106,7 +106,7 @@ func RegisterWithHass(ctx context.Context, regConfig AgentConfig, device DeviceI
 	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
 	err = requests.
-		URL(url.String()).
+		URL(serverURL.String()).
 		Header("Authorization", "Bearer "+token).
 		BodyBytes(request).
 		ToJSON(&response).

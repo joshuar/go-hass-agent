@@ -64,24 +64,24 @@ type EncryptedRequest struct {
 	Encrypted     bool            `json:"encrypted"`
 }
 
-func ExecuteRequest(ctx context.Context, request Request, conf AgentConfig, responseCh chan Response) {
+func ExecuteRequest(ctx context.Context, request Request, agent Agent, responseCh chan Response) {
 	var res bytes.Buffer
 
 	defer close(responseCh)
 
 	var apiURL, secret string
-	if err := conf.Get(config.PrefAPIURL, &apiURL); err != nil {
+	if err := agent.GetConfig(config.PrefAPIURL, &apiURL); err != nil {
 		responseCh <- NewGenericResponse(err, request.RequestType())
 		return
 	}
 	if request.RequestType() == RequestTypeEncrypted {
-		if err := conf.Get(config.PrefSecret, &secret); err != nil {
+		if err := agent.GetConfig(config.PrefSecret, &secret); err != nil {
 			responseCh <- NewGenericResponse(err, request.RequestType())
 			return
 		}
 	}
 
-	reqJson, err := marshalJSON(request, secret)
+	reqJSON, err := marshalJSON(request, secret)
 	if err != nil {
 		responseCh <- NewGenericResponse(err, request.RequestType())
 		return
@@ -92,7 +92,7 @@ func ExecuteRequest(ctx context.Context, request Request, conf AgentConfig, resp
 
 	err = requests.
 		URL(apiURL).
-		BodyBytes(reqJson).
+		BodyBytes(reqJSON).
 		ToBytesBuffer(&res).
 		Fetch(requestCtx)
 	if err != nil {

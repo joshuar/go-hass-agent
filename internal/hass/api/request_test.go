@@ -168,7 +168,7 @@ func TestExecuteRequest(t *testing.T) {
 	type args struct {
 		ctx        context.Context
 		request    Request
-		config     AgentConfig
+		config     Agent
 		responseCh chan Response
 	}
 	tests := []struct {
