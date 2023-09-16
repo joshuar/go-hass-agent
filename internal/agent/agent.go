@@ -8,13 +8,14 @@ package agent
 import (
 	"context"
 	_ "embed"
+	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 	"syscall"
 
 	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/storage"
 	"github.com/joshuar/go-hass-agent/internal/agent/config"
 	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/joshuar/go-hass-agent/internal/translations"
@@ -66,7 +67,6 @@ func newAgent(appID string, headless bool) *Agent {
 			a.mainWindow.Hide()
 		})
 	}
-	a.setupLogging()
 	return a
 }
 
@@ -79,6 +79,7 @@ func Run(options AgentOptions) {
 	defer close(agent.done)
 
 	agentCtx, cancelFunc := context.WithCancel(context.Background())
+	agent.setupLogging(agentCtx)
 
 	registrationDone := make(chan struct{})
 	go agent.registrationProcess(agentCtx, "", "", options.Register, options.Headless, registrationDone)
@@ -136,11 +137,11 @@ func Register(options AgentOptions, server, token string) {
 	agentCtx, cancelFunc := context.WithCancel(context.Background())
 
 	// Don't proceed unless the agent is registered and forced is not set
-	if agent.IsRegistered() && !options.Register {
-		log.Warn().Msg("Agent is already registered and forced option not specified, not performing registration.")
-		cancelFunc()
-		return
-	}
+	// if agent.IsRegistered() && !options.Register {
+	// 	log.Warn().Msg("Agent is already registered and forced option not specified, not performing registration.")
+	// 	cancelFunc()
+	// 	return
+	// }
 
 	registrationDone := make(chan struct{})
 	go agent.registrationProcess(agentCtx, server, token, options.Register, options.Headless, registrationDone)
@@ -163,44 +164,26 @@ func ShowVersion(options AgentOptions) {
 
 func ShowInfo(options AgentOptions) {
 	agent := newAgent(options.ID, true)
-	deviceName, deviceID := agent.DeviceDetails()
-	log.Info().Msgf("Device Name %s. Device ID %s.", deviceName, deviceID)
-
-}
-
-func (agent *Agent) DeviceDetails() (string, string) {
-	return agent.app.Preferences().String("DeviceName"),
-		agent.app.Preferences().String("DeviceID")
-}
-
-func (agent *Agent) IsRegistered() bool {
-	return agent.app.Preferences().BoolWithFallback("Registered", false)
-}
-
-func (agent *Agent) SetRegistered(value bool) {
-	agent.app.Preferences().SetBool("Registered", value)
-}
-
-func extraStoragePath(id string) (fyne.URI, error) {
-	agent := fyne.CurrentApp()
-	rootPath := agent.Storage().RootURI()
-	extraPath, err := storage.Child(rootPath, id)
-	if err != nil {
-		return nil, err
-	} else {
-		return extraPath, nil
+	var info strings.Builder
+	var deviceName, deviceID string
+	if err := agent.Config.Get(config.PrefDeviceName, &deviceName); err == nil && deviceName != "" {
+		fmt.Fprintf(&info, "Device Name %s.", deviceName)
 	}
+	if err := agent.Config.Get(config.PrefDeviceID, &deviceID); err == nil && deviceID != "" {
+		fmt.Fprintf(&info, "Device ID %s.", deviceID)
+	}
+	log.Info().Msg(info.String())
 }
 
 // setupLogging will attempt to create and then write logging to a file. If it
 // cannot do this, logging will only be available on stdout
-func (agent *Agent) setupLogging() {
-	logFile, err := extraStoragePath("go-hass-app.log")
+func (agent *Agent) setupLogging(ctx context.Context) {
+	logFile, err := agent.Config.StoragePath("go-hass-app.log")
 	if err != nil {
 		log.Error().Err(err).
 			Msg("Unable to create a log file. Will only write logs to stdout.")
 	} else {
-		logWriter, err := storage.Writer(logFile)
+		logWriter, err := os.OpenFile(logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0664)
 		if err != nil {
 			log.Error().Err(err).
 				Msg("Unable to open log file for writing.")
@@ -208,6 +191,10 @@ func (agent *Agent) setupLogging() {
 			consoleWriter := zerolog.ConsoleWriter{Out: os.Stdout}
 			multiWriter := zerolog.MultiLevelWriter(consoleWriter, logWriter)
 			log.Logger = log.Output(multiWriter)
+			go func() {
+				<-ctx.Done()
+				logWriter.Close()
+			}()
 		}
 	}
 }
