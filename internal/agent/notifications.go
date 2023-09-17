@@ -16,7 +16,7 @@ import (
 
 func (agent *Agent) runNotificationsWorker(ctx context.Context, options AgentOptions) {
 	if options.Headless {
-		log.Warn().Msg("Running headless, will not register for recieving notifications.")
+		log.Warn().Msg("Running headless, will not register for receiving notifications.")
 		return
 	}
 
