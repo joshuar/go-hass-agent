@@ -201,14 +201,14 @@ func (ui *fyneUI) serverConfigItems(ctx context.Context, t *translations.Transla
 
 func (ui *fyneUI) aboutWindow(ctx context.Context, agent Agent, t *translations.Translator) fyne.Window {
 	var widgets []fyne.CanvasObject
-	// if hassConfig, err := hass.GetHassConfig(ctx, agent); err != nil {
-	// 	widgets = append(widgets, widget.NewLabel(t.Translate(
-	// 		"App Version: %s", agent.AppVersion())))
-	// } else {
-	// 	haVersion := hassConfig.GetVersion()
-	// 	widgets = append(widgets, widget.NewLabel(t.Translate(
-	// 		"App Version: %s\tHA Version: %s", agent.AppVersion(), haVersion)))
-	// }
+	if hassConfig, err := hass.GetHassConfig(ctx, agent); err != nil {
+		widgets = append(widgets, widget.NewLabel(t.Translate(
+			"App Version: %s", agent.AppVersion())))
+	} else {
+		haVersion := hassConfig.GetVersion()
+		widgets = append(widgets, widget.NewLabel(t.Translate(
+			"App Version: %s\tHA Version: %s", agent.AppVersion(), haVersion)))
+	}
 	var deviceName, deviceID string
 	if err := agent.GetConfig(config.PrefDeviceName, &deviceName); err == nil && deviceName != "" {
 		widgets = append(widgets,
