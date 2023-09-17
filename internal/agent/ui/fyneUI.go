@@ -74,6 +74,8 @@ func NewFyneUI(agent Agent, headless bool) *fyneUI {
 	return ui
 }
 
+// DisplayTrayIcon displays an icon in the desktop tray with a menu for
+// controlling the agent and showing other informational windows.
 func (ui *fyneUI) DisplayTrayIcon(ctx context.Context, agent Agent) {
 	if desk, ok := ui.app.(desktop.App); ok {
 		t := translations.NewTranslator()
@@ -121,7 +123,7 @@ func (ui *fyneUI) DisplayTrayIcon(ctx context.Context, agent Agent) {
 	}
 }
 
-// registrationWindow displays a UI to prompt the user for the details needed to
+// DisplayRegistrationWindow displays a UI to prompt the user for the details needed to
 // complete registration. It will populate with any values that were already
 // provided via the command-line.
 func (ui *fyneUI) DisplayRegistrationWindow(ctx context.Context, done chan struct{}) {
@@ -156,49 +158,8 @@ func (ui *fyneUI) DisplayRegistrationWindow(ctx context.Context, done chan struc
 	ui.mainWindow.Show()
 }
 
-// serverSelectionForm generates a fyne.CanvasObject consisting of a form for
-// selecting a server to register the agent against
-func (ui *fyneUI) serverConfigItems(ctx context.Context, t *translations.Translator) []*widget.FormItem {
-	s := hass.FindServers(ctx)
-	allServers, _ := s.Get()
-
-	token := binding.BindPreferenceString(config.PrefToken, ui.app.Preferences())
-	server := binding.BindPreferenceString(config.PrefHost, ui.app.Preferences())
-
-	tokenSelect := widget.NewEntryWithData(token)
-	tokenSelect.Validator = validation.NewRegexp("[A-Za-z0-9_\\.]+", "Invalid token format")
-
-	autoServerSelect := widget.NewSelect(allServers, func(s string) {
-		if err := server.Set(s); err != nil {
-			log.Debug().Err(err).
-				Msg("Could not set server pref to selected value.")
-		}
-	})
-
-	manualServerEntry := widget.NewEntryWithData(server)
-	manualServerEntry.Validator = HostValidator()
-	manualServerEntry.Disable()
-	manualServerSelect := widget.NewCheck("", func(b bool) {
-		switch b {
-		case true:
-			manualServerEntry.Enable()
-			autoServerSelect.Disable()
-		case false:
-			manualServerEntry.Disable()
-			autoServerSelect.Enable()
-		}
-	})
-
-	var items []*widget.FormItem
-
-	items = append(items, widget.NewFormItem(t.Translate("Token"), tokenSelect),
-		widget.NewFormItem(t.Translate("Auto-discovered Servers"), autoServerSelect),
-		widget.NewFormItem(t.Translate("Use Custom Server?"), manualServerSelect),
-		widget.NewFormItem(t.Translate("Manual Server Entry"), manualServerEntry))
-
-	return items
-}
-
+// aboutWindow creates a window that will show some interesting information
+// about the agent, such as version numbers.
 func (ui *fyneUI) aboutWindow(ctx context.Context, agent Agent, t *translations.Translator) fyne.Window {
 	var widgets []fyne.CanvasObject
 	if hassConfig, err := hass.GetHassConfig(ctx, agent); err != nil {
@@ -225,12 +186,17 @@ func (ui *fyneUI) aboutWindow(ctx context.Context, agent Agent, t *translations.
 	return w
 }
 
+// fyneSettingsWindow creates a window that will show the Fyne settings for
+// controlling the look and feel of other windows.
 func (ui *fyneUI) fyneSettingsWindow(t *translations.Translator) fyne.Window {
 	w := ui.app.NewWindow(t.Translate("Fyne Settings"))
 	w.SetContent(settings.NewSettings().LoadAppearanceScreen(w))
 	return w
 }
 
+// sensorsWindow creates a window that displays all of the sensors and their
+// values that are currently tracked by the agent. Values are updated
+// continuously.
 func (ui *fyneUI) sensorsWindow(s Agent, t *translations.Translator) fyne.Window {
 	sensors := s.SensorList()
 	if sensors == nil {
@@ -307,6 +273,8 @@ func (ui *fyneUI) sensorsWindow(s Agent, t *translations.Translator) fyne.Window
 	return w
 }
 
+// agentSettingsWindow creates a window for changing settings related to the
+// agent functionality. Most of these settings will be optional.
 func (ui *fyneUI) agentSettingsWindow(agent Agent, t *translations.Translator) fyne.Window {
 	var allFormItems []*widget.FormItem
 	allFormItems = append(allFormItems, ui.mqttConfigItems(agent, t)...)
@@ -323,8 +291,51 @@ func (ui *fyneUI) agentSettingsWindow(agent Agent, t *translations.Translator) f
 	return w
 }
 
-// mqttConfigForm returns a fyne.CanvasObject consisting of a form for
-// configuring the agent to use an MQTT for pub/sub functionality
+// serverConfigItems generates a list of form item widgets for selecting a
+// server to register the agent against
+func (ui *fyneUI) serverConfigItems(ctx context.Context, t *translations.Translator) []*widget.FormItem {
+	s := hass.FindServers(ctx)
+	allServers, _ := s.Get()
+
+	token := binding.BindPreferenceString(config.PrefToken, ui.app.Preferences())
+	server := binding.BindPreferenceString(config.PrefHost, ui.app.Preferences())
+
+	tokenSelect := widget.NewEntryWithData(token)
+	tokenSelect.Validator = validation.NewRegexp("[A-Za-z0-9_\\.]+", "Invalid token format")
+
+	autoServerSelect := widget.NewSelect(allServers, func(s string) {
+		if err := server.Set(s); err != nil {
+			log.Debug().Err(err).
+				Msg("Could not set server pref to selected value.")
+		}
+	})
+
+	manualServerEntry := widget.NewEntryWithData(server)
+	manualServerEntry.Validator = HostValidator()
+	manualServerEntry.Disable()
+	manualServerSelect := widget.NewCheck("", func(b bool) {
+		switch b {
+		case true:
+			manualServerEntry.Enable()
+			autoServerSelect.Disable()
+		case false:
+			manualServerEntry.Disable()
+			autoServerSelect.Enable()
+		}
+	})
+
+	var items []*widget.FormItem
+
+	items = append(items, widget.NewFormItem(t.Translate("Token"), tokenSelect),
+		widget.NewFormItem(t.Translate("Auto-discovered Servers"), autoServerSelect),
+		widget.NewFormItem(t.Translate("Use Custom Server?"), manualServerSelect),
+		widget.NewFormItem(t.Translate("Manual Server Entry"), manualServerEntry))
+
+	return items
+}
+
+// mqttConfigItems generates a list of for item widgets for configuring the
+// agent to use an MQTT for pub/sub functionality
 func (ui *fyneUI) mqttConfigItems(agent Agent, t *translations.Translator) []*widget.FormItem {
 	mqttServer := binding.BindPreferenceString(config.PrefMQTTServer, ui.app.Preferences())
 	mqttServerEntry := widget.NewEntryWithData(mqttServer)
