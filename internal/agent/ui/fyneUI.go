@@ -22,7 +22,6 @@ import (
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
 	"github.com/go-playground/validator/v10"
-	"github.com/joshuar/go-hass-agent/assets/trayicon"
 	"github.com/joshuar/go-hass-agent/internal/agent/config"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/translations"
@@ -64,7 +63,7 @@ func NewFyneUI(agent Agent, headless bool) *fyneUI {
 	ui := &fyneUI{
 		app: app.NewWithID(agent.AppID()),
 	}
-	ui.app.SetIcon(&trayicon.TrayIcon{})
+	ui.app.SetIcon(&TrayIcon{})
 	if !headless {
 		ui.mainWindow = ui.app.NewWindow(agent.AppName())
 		ui.mainWindow.SetCloseIntercept(func() {

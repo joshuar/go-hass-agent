@@ -6,6 +6,8 @@
 package ui
 
 import (
+	_ "embed"
+
 	"github.com/joshuar/go-hass-agent/internal/tracker"
 )
 
@@ -18,4 +20,17 @@ type Agent interface {
 	SetConfig(string, interface{}) error
 	SensorList() []string
 	SensorValue(string) (tracker.Sensor, error)
+}
+
+//go:embed logo-pretty.png
+var hassIcon []byte
+
+type TrayIcon struct{}
+
+func (icon *TrayIcon) Name() string {
+	return "TrayIcon"
+}
+
+func (icon *TrayIcon) Content() []byte {
+	return hassIcon
 }
