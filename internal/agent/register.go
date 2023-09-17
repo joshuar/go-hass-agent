@@ -8,7 +8,6 @@ package agent
 import (
 	"context"
 	"os"
-	"time"
 
 	"github.com/joshuar/go-hass-agent/internal/agent/config"
 	"github.com/joshuar/go-hass-agent/internal/hass/api"
@@ -57,9 +56,6 @@ func (agent *Agent) saveRegistration(r *api.RegistrationResponse, d api.DeviceIn
 			log.Debug().Err(err).Msg("Could not remove existing registry DB.")
 		}
 	}
-
-	// ! https://github.com/fyne-io/fyne/issues/3170
-	time.Sleep(110 * time.Millisecond)
 }
 
 // registrationProcess runs through a registration flow. If the agent is already
