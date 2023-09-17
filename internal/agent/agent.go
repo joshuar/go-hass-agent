@@ -43,6 +43,7 @@ type Agent struct {
 	Version string
 }
 
+//go:generate moq -out mock_AgentUI_test.go . AgentUI
 type AgentUI interface {
 	DisplayNotification(string, string)
 	DisplayTrayIcon(context.Context, ui.Agent)
@@ -74,8 +75,6 @@ func newAgent(appID string, headless bool) *Agent {
 func Run(options AgentOptions) {
 	agent := newAgent(options.ID, options.Headless)
 	defer close(agent.Done)
-
-	// var sensors *tracker.SensorTracker
 
 	agentCtx, cancelFunc := context.WithCancel(context.Background())
 	agent.setupLogging(agentCtx)
@@ -118,7 +117,6 @@ func Run(options AgentOptions) {
 	// If we are not running in headless mode, show a tray icon
 	if !options.Headless {
 		agent.UI.DisplayTrayIcon(agentCtx, agent)
-		// ui.SetupSystemTray(agentCtx, agent.UI, agent.done, translator)
 		agent.UI.Run()
 	}
 	workerWg.Wait()
@@ -149,8 +147,6 @@ func Register(options AgentOptions, server, token string) {
 	agent.handleShutdown(agentCtx)
 	if !options.Headless {
 		agent.UI.DisplayTrayIcon(agentCtx, agent)
-
-		// ui.SetupSystemTray(agentCtx, agent.UI, agent.done, translator)
 		agent.UI.Run()
 	}
 

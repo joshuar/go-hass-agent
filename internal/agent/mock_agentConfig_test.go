@@ -113,8 +113,8 @@ func (mock *AgentConfigMock) DeleteCalls() []struct {
 	return calls
 }
 
-// GetConfig calls GetFunc.
-func (mock *AgentConfigMock) GetConfig(s string, ifaceVal interface{}) error {
+// Get calls GetFunc.
+func (mock *AgentConfigMock) Get(s string, ifaceVal interface{}) error {
 	if mock.GetFunc == nil {
 		panic("AgentConfigMock.GetFunc: method is nil but AgentConfig.Get was just called")
 	}
