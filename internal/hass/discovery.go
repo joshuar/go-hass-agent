@@ -10,22 +10,17 @@ import (
 	"strings"
 	"time"
 
-	"fyne.io/fyne/v2/data/binding"
 	"github.com/grandcat/zeroconf"
 	"github.com/rs/zerolog/log"
 )
 
 // FindServers is a helper function to generate a list of Home Assistant servers
 // via local network auto-discovery.
-func FindServers(ctx context.Context) binding.StringList {
-	serverList := binding.NewStringList()
+func FindServers(ctx context.Context) []string {
+	var serverList []string
 
 	// add http://localhost:8123 to the list of servers as a fall-back/default
-	// option
-	if err := serverList.Append("http://localhost:8123"); err != nil {
-		log.Debug().Err(err).
-			Msg("Unable to set a default server.")
-	}
+	serverList = append(serverList, "http://localhost:8123")
 
 	resolver, err := zeroconf.NewResolver(nil)
 	if err != nil {
@@ -41,10 +36,7 @@ func FindServers(ctx context.Context) binding.StringList {
 					}
 				}
 				if server != "" {
-					if err = serverList.Append(server); err != nil {
-						log.Warn().Err(err).
-							Msgf("Unable to add found server %s to server list.", server)
-					}
+					serverList = append(serverList, server)
 				} else {
 					log.Debug().Msgf("Entry %s did not have a base_url value. Not using it.", entry.HostName)
 				}

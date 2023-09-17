@@ -47,7 +47,7 @@ type Agent struct {
 type AgentUI interface {
 	DisplayNotification(string, string)
 	DisplayTrayIcon(context.Context, ui.Agent)
-	DisplayRegistrationWindow(context.Context, chan struct{})
+	DisplayRegistrationWindow(context.Context, ui.Agent, chan struct{})
 	Run()
 }
 
