@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"net/url"
 	"os"
-	"time"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/joshuar/go-hass-agent/internal/agent/config"
@@ -139,10 +138,6 @@ func UpgradeConfig(c AgentConfig) error {
 	if err := c.Set(config.PrefVersion, Version); err != nil {
 		return err
 	}
-
-	// ! https://github.com/fyne-io/fyne/issues/3170
-	time.Sleep(110 * time.Millisecond)
-
 	return nil
 }
 
