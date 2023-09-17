@@ -279,6 +279,7 @@ func (ui *fyneUI) sensorsWindow(s Agent, t *translations.Translator) fyne.Window
 			label.SetText("Value")
 		}
 	}
+	// TODO: this is clunky. better way would be use Fyne bindings to sensor values
 	doneCh := make(chan struct{})
 	go func() {
 		ticker := time.NewTicker(time.Second * 5)
