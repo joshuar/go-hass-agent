@@ -105,7 +105,7 @@ func (agent *Agent) registrationProcess(ctx context.Context, server, token strin
 		device := agent.setupDevice(ctx)
 		if !headless {
 			userInputDone := make(chan struct{})
-			agent.ui.DisplayRegistrationWindow(ctx, userInputDone)
+			agent.ui.DisplayRegistrationWindow(ctx, agent, userInputDone)
 			<-userInputDone
 		}
 		registrationResponse, err := api.RegisterWithHass(ctx, agent, device)

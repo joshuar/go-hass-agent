@@ -16,7 +16,6 @@ import (
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/cmd/fyne_settings/settings"
 	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/data/binding"
 	"fyne.io/fyne/v2/data/validation"
 	"fyne.io/fyne/v2/driver/desktop"
 	"fyne.io/fyne/v2/layout"
@@ -125,14 +124,14 @@ func (ui *fyneUI) DisplayTrayIcon(ctx context.Context, agent Agent) {
 // DisplayRegistrationWindow displays a UI to prompt the user for the details needed to
 // complete registration. It will populate with any values that were already
 // provided via the command-line.
-func (ui *fyneUI) DisplayRegistrationWindow(ctx context.Context, done chan struct{}) {
+func (ui *fyneUI) DisplayRegistrationWindow(ctx context.Context, agent Agent, done chan struct{}) {
 	t := translations.NewTranslator()
 
 	ui.mainWindow.SetTitle(t.Translate("App Registration"))
 
 	var allFormItems []*widget.FormItem
 
-	allFormItems = append(allFormItems, ui.serverConfigItems(ctx, t)...)
+	allFormItems = append(allFormItems, ui.serverConfigItems(ctx, agent, t)...)
 	registrationForm := widget.NewForm(allFormItems...)
 	registrationForm.OnSubmit = func() {
 		ui.mainWindow.Hide()
@@ -292,26 +291,21 @@ func (ui *fyneUI) agentSettingsWindow(agent Agent, t *translations.Translator) f
 
 // serverConfigItems generates a list of form item widgets for selecting a
 // server to register the agent against
-func (ui *fyneUI) serverConfigItems(ctx context.Context, t *translations.Translator) []*widget.FormItem {
-	s := hass.FindServers(ctx)
-	allServers, _ := s.Get()
+func (ui *fyneUI) serverConfigItems(ctx context.Context, agent Agent, t *translations.Translator) []*widget.FormItem {
+	allServers := hass.FindServers(ctx)
 
-	token := binding.BindPreferenceString(config.PrefToken, ui.app.Preferences())
-	server := binding.BindPreferenceString(config.PrefHost, ui.app.Preferences())
+	tokenEntry := configEntry(config.PrefToken, agent)
+	tokenEntry.Validator = validation.NewRegexp("[A-Za-z0-9_\\.]+", "Invalid token format")
 
-	tokenSelect := widget.NewEntryWithData(token)
-	tokenSelect.Validator = validation.NewRegexp("[A-Za-z0-9_\\.]+", "Invalid token format")
+	serverEntry := configEntry(config.PrefHost, agent)
+	serverEntry.Validator = hostValidator()
+	serverEntry.Disable()
 
 	autoServerSelect := widget.NewSelect(allServers, func(s string) {
-		if err := server.Set(s); err != nil {
-			log.Debug().Err(err).
-				Msg("Could not set server pref to selected value.")
-		}
+		serverEntry.SetText(s)
 	})
 
-	manualServerEntry := widget.NewEntryWithData(server)
-	manualServerEntry.Validator = HostValidator()
-	manualServerEntry.Disable()
+	manualServerEntry := serverEntry
 	manualServerSelect := widget.NewCheck("", func(b bool) {
 		switch b {
 		case true:
@@ -325,7 +319,7 @@ func (ui *fyneUI) serverConfigItems(ctx context.Context, t *translations.Transla
 
 	var items []*widget.FormItem
 
-	items = append(items, widget.NewFormItem(t.Translate("Token"), tokenSelect),
+	items = append(items, widget.NewFormItem(t.Translate("Token"), tokenEntry),
 		widget.NewFormItem(t.Translate("Auto-discovered Servers"), autoServerSelect),
 		widget.NewFormItem(t.Translate("Use Custom Server?"), manualServerSelect),
 		widget.NewFormItem(t.Translate("Manual Server Entry"), manualServerEntry))
@@ -336,30 +330,24 @@ func (ui *fyneUI) serverConfigItems(ctx context.Context, t *translations.Transla
 // mqttConfigItems generates a list of for item widgets for configuring the
 // agent to use an MQTT for pub/sub functionality
 func (ui *fyneUI) mqttConfigItems(agent Agent, t *translations.Translator) []*widget.FormItem {
-	mqttServer := binding.BindPreferenceString(config.PrefMQTTServer, ui.app.Preferences())
-	mqttServerEntry := widget.NewEntryWithData(mqttServer)
-	mqttServerEntry.Validator = HostValidator()
-	mqttServerEntry.Disable()
+	serverEntry := configEntry(config.PrefMQTTServer, agent)
+	serverEntry.Validator = hostValidator()
+	serverEntry.Disable()
 
-	mqttTopic := binding.BindPreferenceString(config.PrefMQTTTopic, ui.app.Preferences())
-	mqttTopicEntry := widget.NewEntryWithData(mqttTopic)
-	mqttTopicEntry.Disable()
-
-	mqttUser := binding.BindPreferenceString(config.PrefMQTTUser, ui.app.Preferences())
-	mqttUserEntry := widget.NewEntryWithData(mqttUser)
-	mqttUserEntry.Disable()
+	topicEntry := configEntry(config.PrefMQTTTopic, agent)
+	topicEntry.Disable()
 
 	mqttEnabled := widget.NewCheck("", func(b bool) {
 		switch b {
 		case true:
-			mqttServerEntry.Enable()
-			mqttTopicEntry.Enable()
+			serverEntry.Enable()
+			topicEntry.Enable()
 			if err := agent.SetConfig("UseMQTT", true); err != nil {
 				log.Warn().Err(err).Msg("Could not enable MQTT.")
 			}
 		case false:
-			mqttServerEntry.Disable()
-			mqttTopicEntry.Disable()
+			serverEntry.Disable()
+			topicEntry.Disable()
 			if err := agent.SetConfig("UseMQTT", false); err != nil {
 				log.Warn().Err(err).Msg("Could not disable MQTT.")
 			}
@@ -369,10 +357,26 @@ func (ui *fyneUI) mqttConfigItems(agent Agent, t *translations.Translator) []*wi
 	var items []*widget.FormItem
 
 	items = append(items, widget.NewFormItem(t.Translate("Use MQTT?"), mqttEnabled),
-		widget.NewFormItem(t.Translate("MQTT Server"), mqttServerEntry),
-		widget.NewFormItem(t.Translate("MQTT Topic"), mqttTopicEntry))
+		widget.NewFormItem(t.Translate("MQTT Server"), serverEntry),
+		widget.NewFormItem(t.Translate("MQTT Topic"), topicEntry))
 
 	return items
+}
+
+// configEntry creates a form entry widget that is tied to the given config
+// value of the given agent. When the value of the entry widget changes, the
+// corresponding config value will be updated.
+func configEntry(name string, agent Agent) *widget.Entry {
+	entry := widget.NewEntry()
+	entry.OnChanged = func(s string) {
+		if err := agent.SetConfig(name, s); err != nil {
+			log.Warn().Err(err).Msgf("Could not set config entry %s.", name)
+		}
+	}
+	if err := agent.GetConfig(name, &entry.Text); err != nil {
+		log.Warn().Err(err).Msgf("Could not get value of config entry %s.", name)
+	}
+	return entry
 }
 
 func longestString(a []string) string {
@@ -391,7 +395,7 @@ func longestString(a []string) string {
 
 // hostValidator is a custom fyne validator that will validate a string is a
 // valid hostname:port combination
-func HostValidator() fyne.StringValidator {
+func hostValidator() fyne.StringValidator {
 	v := validator.New()
 	return func(text string) error {
 		if v.Var(text, "http_url") != nil {
