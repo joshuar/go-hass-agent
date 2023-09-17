@@ -47,7 +47,7 @@ func (agent *Agent) saveRegistration(r *api.RegistrationResponse, d api.DeviceIn
 	checkFatal(agent.config.Set(config.PrefDeviceName, d.DeviceName()))
 	checkFatal(agent.config.Set(config.PrefDeviceID, d.DeviceID()))
 	checkFatal(agent.config.Set(config.PrefRegistered, true))
-	checkFatal(agent.config.Set(config.PrefVersion, agent.Version))
+	checkFatal(agent.config.Set(config.PrefVersion, agent.version))
 
 	registryPath, err := agent.config.StoragePath("sensorRegistry")
 	if err != nil {
@@ -109,7 +109,7 @@ func (agent *Agent) registrationProcess(ctx context.Context, server, token strin
 		device := agent.setupDevice(ctx)
 		if !headless {
 			userInputDone := make(chan struct{})
-			agent.UI.DisplayRegistrationWindow(ctx, userInputDone)
+			agent.ui.DisplayRegistrationWindow(ctx, userInputDone)
 			<-userInputDone
 		}
 		registrationResponse, err := api.RegisterWithHass(ctx, agent, device)
