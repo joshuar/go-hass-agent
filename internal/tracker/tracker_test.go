@@ -226,8 +226,8 @@ func TestSensorTracker_Update(t *testing.T) {
 		CategoryFunc:    func() string { return "" },
 	}
 
-	mockConfig := &agentConfigMock{
-		GetFunc: func(s string, ifaceVal interface{}) error {
+	mockConfig := &agentMock{
+		GetConfigFunc: func(s string, ifaceVal interface{}) error {
 			v := ifaceVal.(*string)
 			switch s {
 			case config.PrefAPIURL:
@@ -249,7 +249,7 @@ func TestSensorTracker_Update(t *testing.T) {
 	}
 	type args struct {
 		ctx          context.Context
-		config       agentConfig
+		config       agent
 		sensorUpdate Sensor
 	}
 	tests := []struct {
@@ -366,7 +366,7 @@ func TestSensorTracker_trackUpdates(t *testing.T) {
 	}
 	type args struct {
 		ctx      context.Context
-		config   agentConfig
+		config   agent
 		updateCh chan interface{}
 	}
 	tests := []struct {
@@ -378,7 +378,7 @@ func TestSensorTracker_trackUpdates(t *testing.T) {
 			name: "default test",
 			args: args{
 				ctx:      ctx,
-				config:   &agentConfigMock{},
+				config:   &agentMock{},
 				updateCh: updateCh,
 			},
 		},

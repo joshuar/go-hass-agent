@@ -29,8 +29,8 @@ type Registry interface {
 	IsRegistered(string) chan bool
 }
 
-//go:generate moq -out mock_agentConfig_test.go . agentConfig
-type agentConfig interface {
+//go:generate moq -out mock_agent_test.go . agent
+type agent interface {
 	GetConfig(string, interface{}) error
 	StoragePath(string) (string, error)
 }
@@ -41,7 +41,7 @@ type SensorTracker struct {
 	mu       sync.RWMutex
 }
 
-func RunSensorTracker(ctx context.Context, config agentConfig, trackerCh chan *SensorTracker) {
+func RunSensorTracker(ctx context.Context, config agent, trackerCh chan *SensorTracker) {
 	registryPath, err := config.StoragePath(registryStorageID)
 	if err != nil {
 		log.Warn().Err(err).
@@ -117,7 +117,7 @@ func (tracker *SensorTracker) SensorList() []string {
 
 // updateSensor will send a sensor update to HA, checking to ensure the sensor is not
 // disabled. It will also update the local registry state based on the response.
-func (t *SensorTracker) updateSensor(ctx context.Context, config agentConfig, sensorUpdate Sensor) {
+func (t *SensorTracker) updateSensor(ctx context.Context, config agent, sensorUpdate Sensor) {
 	var wg sync.WaitGroup
 	var req api.Request
 	if disabled := <-t.registry.IsDisabled(sensorUpdate.ID()); disabled {
@@ -180,7 +180,7 @@ func (t *SensorTracker) updateSensor(ctx context.Context, config agentConfig, se
 	wg.Wait()
 }
 
-func (t *SensorTracker) trackUpdates(ctx context.Context, config agentConfig, updateCh chan interface{}) {
+func (t *SensorTracker) trackUpdates(ctx context.Context, config agent, updateCh chan interface{}) {
 	for {
 		select {
 		case data := <-updateCh:

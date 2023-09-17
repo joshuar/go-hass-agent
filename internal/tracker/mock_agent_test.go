@@ -7,39 +7,39 @@ import (
 	"sync"
 )
 
-// Ensure, that agentConfigMock does implement agentConfig.
+// Ensure, that agentMock does implement agent.
 // If this is not the case, regenerate this file with moq.
-var _ agentConfig = &agentConfigMock{}
+var _ agent = &agentMock{}
 
-// agentConfigMock is a mock implementation of agentConfig.
+// agentMock is a mock implementation of agent.
 //
-//	func TestSomethingThatUsesagentConfig(t *testing.T) {
+//	func TestSomethingThatUsesagent(t *testing.T) {
 //
-//		// make and configure a mocked agentConfig
-//		mockedagentConfig := &agentConfigMock{
-//			GetFunc: func(s string, ifaceVal interface{}) error {
-//				panic("mock out the Get method")
+//		// make and configure a mocked agent
+//		mockedagent := &agentMock{
+//			GetConfigFunc: func(s string, ifaceVal interface{}) error {
+//				panic("mock out the GetConfig method")
 //			},
 //			StoragePathFunc: func(s string) (string, error) {
 //				panic("mock out the StoragePath method")
 //			},
 //		}
 //
-//		// use mockedagentConfig in code that requires agentConfig
+//		// use mockedagent in code that requires agent
 //		// and then make assertions.
 //
 //	}
-type agentConfigMock struct {
-	// GetFunc mocks the Get method.
-	GetFunc func(s string, ifaceVal interface{}) error
+type agentMock struct {
+	// GetConfigFunc mocks the GetConfig method.
+	GetConfigFunc func(s string, ifaceVal interface{}) error
 
 	// StoragePathFunc mocks the StoragePath method.
 	StoragePathFunc func(s string) (string, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
-		// Get holds details about calls to the Get method.
-		Get []struct {
+		// GetConfig holds details about calls to the GetConfig method.
+		GetConfig []struct {
 			// S is the s argument value.
 			S string
 			// IfaceVal is the ifaceVal argument value.
@@ -51,14 +51,14 @@ type agentConfigMock struct {
 			S string
 		}
 	}
-	lockGet         sync.RWMutex
+	lockGetConfig   sync.RWMutex
 	lockStoragePath sync.RWMutex
 }
 
-// GetConfig calls GetFunc.
-func (mock *agentConfigMock) GetConfig(s string, ifaceVal interface{}) error {
-	if mock.GetFunc == nil {
-		panic("agentConfigMock.GetFunc: method is nil but agentConfig.Get was just called")
+// GetConfig calls GetConfigFunc.
+func (mock *agentMock) GetConfig(s string, ifaceVal interface{}) error {
+	if mock.GetConfigFunc == nil {
+		panic("agentMock.GetConfigFunc: method is nil but agent.GetConfig was just called")
 	}
 	callInfo := struct {
 		S        string
@@ -67,17 +67,17 @@ func (mock *agentConfigMock) GetConfig(s string, ifaceVal interface{}) error {
 		S:        s,
 		IfaceVal: ifaceVal,
 	}
-	mock.lockGet.Lock()
-	mock.calls.Get = append(mock.calls.Get, callInfo)
-	mock.lockGet.Unlock()
-	return mock.GetFunc(s, ifaceVal)
+	mock.lockGetConfig.Lock()
+	mock.calls.GetConfig = append(mock.calls.GetConfig, callInfo)
+	mock.lockGetConfig.Unlock()
+	return mock.GetConfigFunc(s, ifaceVal)
 }
 
-// GetCalls gets all the calls that were made to Get.
+// GetConfigCalls gets all the calls that were made to GetConfig.
 // Check the length with:
 //
-//	len(mockedagentConfig.GetCalls())
-func (mock *agentConfigMock) GetCalls() []struct {
+//	len(mockedagent.GetConfigCalls())
+func (mock *agentMock) GetConfigCalls() []struct {
 	S        string
 	IfaceVal interface{}
 } {
@@ -85,16 +85,16 @@ func (mock *agentConfigMock) GetCalls() []struct {
 		S        string
 		IfaceVal interface{}
 	}
-	mock.lockGet.RLock()
-	calls = mock.calls.Get
-	mock.lockGet.RUnlock()
+	mock.lockGetConfig.RLock()
+	calls = mock.calls.GetConfig
+	mock.lockGetConfig.RUnlock()
 	return calls
 }
 
 // StoragePath calls StoragePathFunc.
-func (mock *agentConfigMock) StoragePath(s string) (string, error) {
+func (mock *agentMock) StoragePath(s string) (string, error) {
 	if mock.StoragePathFunc == nil {
-		panic("agentConfigMock.StoragePathFunc: method is nil but agentConfig.StoragePath was just called")
+		panic("agentMock.StoragePathFunc: method is nil but agent.StoragePath was just called")
 	}
 	callInfo := struct {
 		S string
@@ -110,8 +110,8 @@ func (mock *agentConfigMock) StoragePath(s string) (string, error) {
 // StoragePathCalls gets all the calls that were made to StoragePath.
 // Check the length with:
 //
-//	len(mockedagentConfig.StoragePathCalls())
-func (mock *agentConfigMock) StoragePathCalls() []struct {
+//	len(mockedagent.StoragePathCalls())
+func (mock *agentMock) StoragePathCalls() []struct {
 	S string
 } {
 	var calls []struct {
