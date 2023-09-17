@@ -8,10 +8,10 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"net/http"
 	"sync/atomic"
 	"time"
 
-	"fyne.io/fyne/v2"
 	"github.com/cenkalti/backoff/v4"
 	"github.com/joshuar/go-hass-agent/internal/agent/config"
 	"github.com/rs/zerolog/log"
@@ -48,7 +48,7 @@ type websocketResponse struct {
 	Success bool   `json:"success,omitempty"`
 }
 
-func StartWebsocket(ctx context.Context, settings Agent, notifyCh chan fyne.Notification, doneCh chan struct{}) {
+func StartWebsocket(ctx context.Context, settings Agent, notifyCh chan [2]string, doneCh chan struct{}) {
 	var websocketURL string
 	if err := settings.GetConfig(config.PrefWebsocketURL, &websocketURL); err != nil {
 		log.Warn().Err(err).Msg("Could not retrieve websocket URL from config.")
@@ -58,12 +58,14 @@ func StartWebsocket(ctx context.Context, settings Agent, notifyCh chan fyne.Noti
 	var err error
 
 	retryFunc := func() error {
-		socket, _, err = gws.NewClient(newWebsocket(ctx, settings, notifyCh, doneCh), &gws.ClientOption{
+		var resp *http.Response
+		socket, resp, err = gws.NewClient(newWebsocket(ctx, settings, notifyCh, doneCh), &gws.ClientOption{
 			Addr: websocketURL,
 		})
+		defer resp.Body.Close()
 		if err != nil {
 			log.Error().Err(err).
-				Msg("Could not connect to websocket.")
+				Msgf("Could not connect to websocket (%s).", resp.Status)
 			return err
 		}
 		return nil
@@ -92,8 +94,7 @@ type WebSocket struct {
 	nextID    uint64
 }
 
-func newWebsocket(ctx context.Context, settings Agent, notifyCh chan fyne.Notification, doneCh chan struct{}) *WebSocket {
-
+func newWebsocket(ctx context.Context, settings Agent, notifyCh chan [2]string, doneCh chan struct{}) *WebSocket {
 	var token, webhookID string
 	if err := settings.GetConfig(config.PrefToken, &token); err != nil {
 		log.Warn().Err(err).Msg("Could not retrieve token from config.")
@@ -129,7 +130,7 @@ func (c *WebSocket) OnClose(socket *gws.Conn, err error) {
 }
 
 func (c *WebSocket) OnPong(socket *gws.Conn, payload []byte) {
-	log.Trace().Caller().Msg("Recieved pong on websocket")
+	log.Trace().Caller().Msg("Received pong on websocket")
 }
 
 func (c *WebSocket) OnOpen(socket *gws.Conn) {
@@ -174,7 +175,7 @@ func (c *WebSocket) OnMessage(socket *gws.Conn, message *gws.Message) {
 	}
 }
 
-func (c *WebSocket) responseHandler(ctx context.Context, notifyCh chan fyne.Notification) {
+func (c *WebSocket) responseHandler(ctx context.Context, notifyCh chan [2]string) {
 	for {
 		select {
 		case <-ctx.Done():
@@ -214,7 +215,7 @@ func (c *WebSocket) responseHandler(ctx context.Context, notifyCh chan fyne.Noti
 			case "result":
 				if !response.Success {
 					log.Error().
-						Msgf("Recieved error on websocket, %s: %s.", response.Error.Code, response.Error.Message)
+						Msgf("Received error on websocket, %s: %s.", response.Error.Code, response.Error.Message)
 					if response.Error.Code == "id_reuse" {
 						log.Warn().
 							Msg("id_reuse error, attempting manual increment.")
@@ -222,7 +223,7 @@ func (c *WebSocket) responseHandler(ctx context.Context, notifyCh chan fyne.Noti
 					}
 				}
 			case "event":
-				notifyCh <- *fyne.NewNotification(response.Notification.Title, response.Notification.Message)
+				notifyCh <- [2]string{response.Notification.Title, response.Notification.Message}
 			case "pong":
 				b, err := json.Marshal(response)
 				if err != nil {
