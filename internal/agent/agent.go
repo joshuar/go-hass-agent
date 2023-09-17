@@ -34,13 +34,13 @@ const (
 // This includes the data structure for the UI elements and tray and some
 // strings such as app name and version.
 type Agent struct {
-	UI      AgentUI
+	ui      AgentUI
 	config  AgentConfig
 	sensors *tracker.SensorTracker
-	Done    chan struct{}
-	Name    string
-	ID      string
-	Version string
+	done    chan struct{}
+	name    string
+	id      string
+	version string
 }
 
 //go:generate moq -out mock_AgentUI_test.go . AgentUI
@@ -60,11 +60,11 @@ type AgentOptions struct {
 
 func newAgent(appID string, headless bool) *Agent {
 	a := &Agent{
-		ID:      appID,
-		Version: Version,
-		Done:    make(chan struct{}),
+		id:      appID,
+		version: Version,
+		done:    make(chan struct{}),
 	}
-	a.UI = ui.NewFyneUI(a, headless)
+	a.ui = ui.NewFyneUI(a, headless)
 	a.config = config.NewFyneConfig()
 	return a
 }
@@ -74,7 +74,7 @@ func newAgent(appID string, headless bool) *Agent {
 // publish it to Home Assistant
 func Run(options AgentOptions) {
 	agent := newAgent(options.ID, options.Headless)
-	defer close(agent.Done)
+	defer close(agent.done)
 
 	agentCtx, cancelFunc := context.WithCancel(context.Background())
 	agent.setupLogging(agentCtx)
@@ -116,8 +116,8 @@ func Run(options AgentOptions) {
 
 	// If we are not running in headless mode, show a tray icon
 	if !options.Headless {
-		agent.UI.DisplayTrayIcon(agentCtx, agent)
-		agent.UI.Run()
+		agent.ui.DisplayTrayIcon(agentCtx, agent)
+		agent.ui.Run()
 	}
 	workerWg.Wait()
 	<-agentCtx.Done()
@@ -129,7 +129,7 @@ func Run(options AgentOptions) {
 // UI or non-UI registration flow.
 func Register(options AgentOptions, server, token string) {
 	agent := newAgent(options.ID, options.Headless)
-	defer close(agent.Done)
+	defer close(agent.done)
 
 	agentCtx, cancelFunc := context.WithCancel(context.Background())
 
@@ -146,8 +146,8 @@ func Register(options AgentOptions, server, token string) {
 	agent.handleSignals(cancelFunc)
 	agent.handleShutdown(agentCtx)
 	if !options.Headless {
-		agent.UI.DisplayTrayIcon(agentCtx, agent)
-		agent.UI.Run()
+		agent.ui.DisplayTrayIcon(agentCtx, agent)
+		agent.ui.Run()
 	}
 
 	<-registrationDone
@@ -156,7 +156,7 @@ func Register(options AgentOptions, server, token string) {
 
 func ShowVersion(options AgentOptions) {
 	agent := newAgent(options.ID, true)
-	log.Info().Msgf("%s: %s", agent.Name, agent.Version)
+	log.Info().Msgf("%s: %s", agent.name, agent.version)
 }
 
 func ShowInfo(options AgentOptions) {
@@ -215,7 +215,7 @@ func (agent *Agent) handleShutdown(ctx context.Context) {
 			case <-ctx.Done():
 				log.Debug().Msg("Context canceled.")
 				os.Exit(1)
-			case <-agent.Done:
+			case <-agent.done:
 				log.Debug().Msg("Agent done.")
 				os.Exit(0)
 			}
@@ -226,19 +226,19 @@ func (agent *Agent) handleShutdown(ctx context.Context) {
 // Agent satisfies ui.Agent, tracker.Agent and api.Agent interfaces
 
 func (agent *Agent) AppName() string {
-	return agent.Name
+	return agent.name
 }
 
 func (agent *Agent) AppID() string {
-	return agent.ID
+	return agent.id
 }
 
 func (agent *Agent) AppVersion() string {
-	return agent.Version
+	return agent.version
 }
 
 func (agent *Agent) Stop() {
-	close(agent.Done)
+	close(agent.done)
 }
 
 func (agent *Agent) GetConfig(key string, value interface{}) error {

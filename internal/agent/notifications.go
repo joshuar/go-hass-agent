@@ -32,7 +32,7 @@ func (agent *Agent) runNotificationsWorker(ctx context.Context, options AgentOpt
 				log.Debug().Msg("Stopping notification handler.")
 				return
 			case n := <-notifyCh:
-				agent.UI.DisplayNotification(n.Title, n.Content)
+				agent.ui.DisplayNotification(n.Title, n.Content)
 			}
 		}
 	}()
