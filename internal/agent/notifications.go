@@ -9,7 +9,6 @@ import (
 	"context"
 	"sync"
 
-	"fyne.io/fyne/v2"
 	"github.com/joshuar/go-hass-agent/internal/hass/api"
 	"github.com/rs/zerolog/log"
 )
@@ -20,7 +19,7 @@ func (agent *Agent) runNotificationsWorker(ctx context.Context, options AgentOpt
 		return
 	}
 
-	notifyCh := make(chan fyne.Notification)
+	notifyCh := make(chan [2]string)
 	var wg sync.WaitGroup
 
 	wg.Add(1)
@@ -32,7 +31,7 @@ func (agent *Agent) runNotificationsWorker(ctx context.Context, options AgentOpt
 				log.Debug().Msg("Stopping notification handler.")
 				return
 			case n := <-notifyCh:
-				agent.ui.DisplayNotification(n.Title, n.Content)
+				agent.ui.DisplayNotification(n[0], n[1])
 			}
 		}
 	}()
