@@ -134,6 +134,7 @@ linters:
   enable:
     - bodyclose
     # - depguard
+    - decorder
     - dogsled
     - dupl
     - errcheck
