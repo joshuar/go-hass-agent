@@ -116,7 +116,7 @@ func UpgradeConfig(c AgentConfig) error {
 		if err := generateWebsocketURL(c); err != nil {
 			return err
 		}
-	case semver.Compare(Version, "v3.0.0") < 0:
+	case semver.Compare(version, "v3.0.0") < 0:
 		log.Debug().Msg("Performing config upgrades for < v3.0.0.")
 		var err error
 		path, err := c.StoragePath("sensorRegistry")
@@ -135,7 +135,7 @@ func UpgradeConfig(c AgentConfig) error {
 		}
 	}
 
-	if err := c.Set(config.PrefVersion, Version); err != nil {
+	if err := c.Set(config.PrefVersion, version); err != nil {
 		return err
 	}
 	return nil
