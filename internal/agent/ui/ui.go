@@ -11,6 +11,7 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/tracker"
 )
 
+//go:generate moq -out mock_Agent_test.go . Agent
 type Agent interface {
 	AppVersion() string
 	AppName() string
@@ -22,7 +23,13 @@ type Agent interface {
 	SensorValue(string) (tracker.Sensor, error)
 }
 
-//go:embed logo-pretty.png
+//go:embed assets/issueURL.txt
+var issueURL string
+
+//go:embed assets/featureRequestURL.txt
+var featureRequestURL string
+
+//go:embed assets/logo-pretty.png
 var hassIcon []byte
 
 type TrayIcon struct{}
