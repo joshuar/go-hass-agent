@@ -24,7 +24,7 @@ import (
 
 //go:generate sh -c "printf %s $(git tag | tail -1) > VERSION"
 //go:embed VERSION
-var Version string
+var version string
 
 const (
 	name = "go-hass-agent"
@@ -61,7 +61,7 @@ type AgentOptions struct {
 func newAgent(appID string, headless bool) *Agent {
 	a := &Agent{
 		id:      appID,
-		version: Version,
+		version: version,
 		done:    make(chan struct{}),
 	}
 	a.ui = ui.NewFyneUI(a, headless)
