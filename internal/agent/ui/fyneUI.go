@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"strings"
 	"time"
 
 	"fyne.io/fyne/v2"
@@ -28,8 +29,6 @@ import (
 )
 
 const (
-	issueURL            = `https://github.com/joshuar/go-hass-agent/issues/new?assignees=joshuar&labels=&template=bug_report.md&title=%5BBUG%5D`
-	featureRequestURL   = `https://github.com/joshuar/go-hass-agent/issues/new?assignees=joshuar&labels=&template=feature_request.md&title=`
 	explainRegistration = `To register the agent, please enter the relevant details for your Home Assistant
 server (if not auto-detected) and long-lived access token.`
 )
@@ -51,10 +50,14 @@ func (ui *fyneUI) DisplayNotification(title, message string) {
 }
 
 func (ui *fyneUI) openURL(u string) {
-	dest, _ := url.Parse(u)
-	if err := ui.app.OpenURL(dest); err != nil {
+	if dest, err := url.Parse(strings.TrimSpace(u)); err != nil {
 		log.Warn().Err(err).
-			Msgf("Unable to open url %s", dest.String())
+			Msgf("Unable parse url %s", u)
+	} else {
+		if err := ui.app.OpenURL(dest); err != nil {
+			log.Warn().Err(err).
+				Msgf("Unable to open url %s", dest.String())
+		}
 	}
 }
 
