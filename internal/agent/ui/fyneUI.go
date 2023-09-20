@@ -300,7 +300,7 @@ func (ui *fyneUI) serverConfigItems(ctx context.Context, agent Agent, t *transla
 	tokenEntry.Validator = validation.NewRegexp("[A-Za-z0-9_\\.]+", "Invalid token format")
 
 	serverEntry := configEntry(config.PrefHost, agent)
-	serverEntry.Validator = hostValidator()
+	serverEntry.Validator = httpValidator()
 	serverEntry.Disable()
 
 	autoServerSelect := widget.NewSelect(allServers, func(s string) {
@@ -333,7 +333,7 @@ func (ui *fyneUI) serverConfigItems(ctx context.Context, agent Agent, t *transla
 // agent to use an MQTT for pub/sub functionality
 func (ui *fyneUI) mqttConfigItems(agent Agent, t *translations.Translator) []*widget.FormItem {
 	serverEntry := configEntry(config.PrefMQTTServer, agent)
-	serverEntry.Validator = hostValidator()
+	serverEntry.Validator = httpValidator()
 	serverEntry.Disable()
 
 	topicEntry := configEntry(config.PrefMQTTTopic, agent)
@@ -395,9 +395,9 @@ func longestString(a []string) string {
 	return l
 }
 
-// hostValidator is a custom fyne validator that will validate a string is a
+// httpValidator is a custom fyne validator that will validate a string is a
 // valid hostname:port combination
-func hostValidator() fyne.StringValidator {
+func httpValidator() fyne.StringValidator {
 	v := validator.New()
 	return func(text string) error {
 		if v.Var(text, "http_url") != nil {
