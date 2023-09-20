@@ -296,10 +296,10 @@ func (ui *fyneUI) agentSettingsWindow(agent Agent, t *translations.Translator) f
 func (ui *fyneUI) serverConfigItems(ctx context.Context, agent Agent, t *translations.Translator) []*widget.FormItem {
 	allServers := hass.FindServers(ctx)
 
-	tokenEntry := configEntry(config.PrefToken, agent)
+	tokenEntry := configEntry(config.PrefToken, "ASecretLongLivedToken", agent)
 	tokenEntry.Validator = validation.NewRegexp("[A-Za-z0-9_\\.]+", "Invalid token format")
 
-	serverEntry := configEntry(config.PrefHost, agent)
+	serverEntry := configEntry(config.PrefHost, allServers[0], agent)
 	serverEntry.Validator = httpValidator()
 	serverEntry.Disable()
 
@@ -332,11 +332,11 @@ func (ui *fyneUI) serverConfigItems(ctx context.Context, agent Agent, t *transla
 // mqttConfigItems generates a list of for item widgets for configuring the
 // agent to use an MQTT for pub/sub functionality
 func (ui *fyneUI) mqttConfigItems(agent Agent, t *translations.Translator) []*widget.FormItem {
-	serverEntry := configEntry(config.PrefMQTTServer, agent)
-	serverEntry.Validator = httpValidator()
+	serverEntry := configEntry(config.PrefMQTTServer, "localhost:1883", agent)
+	serverEntry.Validator = hostPortValidator()
 	serverEntry.Disable()
 
-	topicEntry := configEntry(config.PrefMQTTTopic, agent)
+	topicEntry := configEntry(config.PrefMQTTTopic, "homeassistant", agent)
 	topicEntry.Disable()
 
 	mqttEnabled := widget.NewCheck("", func(b bool) {
@@ -368,7 +368,7 @@ func (ui *fyneUI) mqttConfigItems(agent Agent, t *translations.Translator) []*wi
 // configEntry creates a form entry widget that is tied to the given config
 // value of the given agent. When the value of the entry widget changes, the
 // corresponding config value will be updated.
-func configEntry(name string, agent Agent) *widget.Entry {
+func configEntry(name, placeholder string, agent Agent) *widget.Entry {
 	entry := widget.NewEntry()
 	entry.OnChanged = func(s string) {
 		if err := agent.SetConfig(name, s); err != nil {
@@ -376,7 +376,8 @@ func configEntry(name string, agent Agent) *widget.Entry {
 		}
 	}
 	if err := agent.GetConfig(name, &entry.Text); err != nil {
-		log.Warn().Err(err).Msgf("Could not get value of config entry %s.", name)
+		log.Warn().Err(err).Msgf("Could not get value of config entry %s. Using placeholder.", name)
+		entry.SetText(placeholder)
 	}
 	return entry
 }
@@ -396,7 +397,7 @@ func longestString(a []string) string {
 }
 
 // httpValidator is a custom fyne validator that will validate a string is a
-// valid hostname:port combination
+// valid http/https URL
 func httpValidator() fyne.StringValidator {
 	v := validator.New()
 	return func(text string) error {
@@ -405,6 +406,21 @@ func httpValidator() fyne.StringValidator {
 		}
 		if _, err := url.Parse(text); err != nil {
 			return errors.New("url is invalid")
+		}
+		return nil
+	}
+}
+
+// hostPortValidator is a custom fyne validator that will validate a string is a
+// valid hostname:port combination
+func hostPortValidator() fyne.StringValidator {
+	v := validator.New()
+	return func(text string) error {
+		if v.Var(text, "hostname_port") != nil {
+			return errors.New("you need to specify a valid host:port combination")
+		}
+		if _, err := url.Parse(text); err != nil {
+			return errors.New("string is invalid")
 		}
 		return nil
 	}
