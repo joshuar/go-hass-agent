@@ -36,6 +36,7 @@ server (if not auto-detected) and long-lived access token.`
 type fyneUI struct {
 	app        fyne.App
 	mainWindow fyne.Window
+	text       *translations.Translator
 }
 
 func (ui *fyneUI) Run() {
@@ -63,7 +64,8 @@ func (ui *fyneUI) openURL(u string) {
 
 func NewFyneUI(agent Agent, headless bool) *fyneUI {
 	ui := &fyneUI{
-		app: app.NewWithID(agent.AppID()),
+		app:  app.NewWithID(agent.AppID()),
+		text: translations.NewTranslator(),
 	}
 	ui.app.SetIcon(&TrayIcon{})
 	if !headless {
@@ -79,42 +81,41 @@ func NewFyneUI(agent Agent, headless bool) *fyneUI {
 // controlling the agent and showing other informational windows.
 func (ui *fyneUI) DisplayTrayIcon(ctx context.Context, agent Agent) {
 	if desk, ok := ui.app.(desktop.App); ok {
-		t := translations.NewTranslator()
-		menuItemQuit := fyne.NewMenuItem(t.Translate("Quit"), func() {
+		menuItemQuit := fyne.NewMenuItem(ui.text.Translate("Quit"), func() {
 			agent.Stop()
 		})
 		menuItemQuit.IsQuit = true
 		menu := fyne.NewMenu("Main",
-			fyne.NewMenuItem(t.Translate("About"),
+			fyne.NewMenuItem(ui.text.Translate("About"),
 				func() {
-					w := ui.aboutWindow(ctx, agent, t)
+					w := ui.aboutWindow(ctx, agent, ui.text)
 					if w != nil {
 						w.Show()
 					}
 				}),
-			fyne.NewMenuItem(t.Translate("Report Issue"),
+			fyne.NewMenuItem(ui.text.Translate("Report Issue"),
 				func() {
 					ui.openURL(issueURL)
 				}),
-			fyne.NewMenuItem(t.Translate("Request Feature"),
+			fyne.NewMenuItem(ui.text.Translate("Request Feature"),
 				func() {
 					ui.openURL(featureRequestURL)
 				}),
-			fyne.NewMenuItem(t.Translate("Fyne Settings"),
+			fyne.NewMenuItem(ui.text.Translate("Fyne Settings"),
 				func() {
-					w := ui.fyneSettingsWindow(t)
+					w := ui.fyneSettingsWindow(ui.text)
 					w.Show()
 				}),
-			fyne.NewMenuItem(t.Translate("App Settings"),
+			fyne.NewMenuItem(ui.text.Translate("App Settings"),
 				func() {
-					w := ui.agentSettingsWindow(agent, t)
+					w := ui.agentSettingsWindow(agent, ui.text)
 					if w != nil {
 						w.Show()
 					}
 				}),
-			fyne.NewMenuItem(t.Translate("Sensors"),
+			fyne.NewMenuItem(ui.text.Translate("Sensors"),
 				func() {
-					w := ui.sensorsWindow(agent, t)
+					w := ui.sensorsWindow(agent, ui.text)
 					if w != nil {
 						w.Show()
 					}
@@ -128,13 +129,11 @@ func (ui *fyneUI) DisplayTrayIcon(ctx context.Context, agent Agent) {
 // complete registration. It will populate with any values that were already
 // provided via the command-line.
 func (ui *fyneUI) DisplayRegistrationWindow(ctx context.Context, agent Agent, done chan struct{}) {
-	t := translations.NewTranslator()
-
-	ui.mainWindow.SetTitle(t.Translate("App Registration"))
+	ui.mainWindow.SetTitle(ui.text.Translate("App Registration"))
 
 	var allFormItems []*widget.FormItem
 
-	allFormItems = append(allFormItems, ui.serverConfigItems(ctx, agent, t)...)
+	allFormItems = append(allFormItems, ui.serverConfigItems(ctx, agent, ui.text)...)
 	registrationForm := widget.NewForm(allFormItems...)
 	registrationForm.OnSubmit = func() {
 		ui.mainWindow.Hide()
@@ -148,7 +147,7 @@ func (ui *fyneUI) DisplayRegistrationWindow(ctx context.Context, agent Agent, do
 	}
 
 	ui.mainWindow.SetContent(container.New(layout.NewVBoxLayout(),
-		widget.NewLabel(t.Translate(explainRegistration)),
+		widget.NewLabel(ui.text.Translate(explainRegistration)),
 		registrationForm,
 	))
 
