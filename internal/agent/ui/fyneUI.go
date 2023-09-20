@@ -296,10 +296,10 @@ func (ui *fyneUI) agentSettingsWindow(agent Agent, t *translations.Translator) f
 func (ui *fyneUI) serverConfigItems(ctx context.Context, agent Agent, t *translations.Translator) []*widget.FormItem {
 	allServers := hass.FindServers(ctx)
 
-	tokenEntry := configEntry(agent, config.PrefToken, "ASecretLongLivedToken")
+	tokenEntry := configEntry(agent, config.PrefToken, "ASecretLongLivedToken", false)
 	tokenEntry.Validator = validation.NewRegexp("[A-Za-z0-9_\\.]+", "Invalid token format")
 
-	serverEntry := configEntry(agent, config.PrefHost, allServers[0])
+	serverEntry := configEntry(agent, config.PrefHost, allServers[0], false)
 	serverEntry.Validator = httpValidator()
 	serverEntry.Disable()
 
@@ -332,24 +332,33 @@ func (ui *fyneUI) serverConfigItems(ctx context.Context, agent Agent, t *transla
 // mqttConfigItems generates a list of for item widgets for configuring the
 // agent to use an MQTT for pub/sub functionality
 func (ui *fyneUI) mqttConfigItems(agent Agent, t *translations.Translator) []*widget.FormItem {
-	serverEntry := configEntry(agent, config.PrefMQTTServer, "localhost:1883")
+	serverEntry := configEntry(agent, config.PrefMQTTServer, "localhost:1883", false)
 	serverEntry.Validator = hostPortValidator()
 	serverEntry.Disable()
 
-	topicEntry := configEntry(agent, config.PrefMQTTTopic, "homeassistant")
+	topicEntry := configEntry(agent, config.PrefMQTTTopic, "homeassistant", false)
 	topicEntry.Disable()
+
+	userEntry := configEntry(agent, config.PrefMQTTUser, "", false)
+	userEntry.Disable()
+	passwordEntry := configEntry(agent, config.PrefMQTTPassword, "", true)
+	passwordEntry.Disable()
 
 	mqttEnabled := configCheck(agent, config.PrefMQTTEnabled, func(b bool) {
 		switch b {
 		case true:
 			serverEntry.Enable()
 			topicEntry.Enable()
+			userEntry.Enable()
+			passwordEntry.Enable()
 			if err := agent.SetConfig("UseMQTT", true); err != nil {
 				log.Warn().Err(err).Msg("Could not enable MQTT.")
 			}
 		case false:
 			serverEntry.Disable()
 			topicEntry.Disable()
+			userEntry.Disable()
+			passwordEntry.Disable()
 			if err := agent.SetConfig("UseMQTT", false); err != nil {
 				log.Warn().Err(err).Msg("Could not disable MQTT.")
 			}
@@ -360,7 +369,10 @@ func (ui *fyneUI) mqttConfigItems(agent Agent, t *translations.Translator) []*wi
 
 	items = append(items, widget.NewFormItem(t.Translate("Use MQTT?"), mqttEnabled),
 		widget.NewFormItem(t.Translate("MQTT Server"), serverEntry),
-		widget.NewFormItem(t.Translate("MQTT Topic"), topicEntry))
+		widget.NewFormItem(t.Translate("MQTT Topic"), topicEntry),
+		widget.NewFormItem(t.Translate("MQTT User"), userEntry),
+		widget.NewFormItem(t.Translate("MQTT Password"), passwordEntry),
+	)
 
 	return items
 }
@@ -368,8 +380,13 @@ func (ui *fyneUI) mqttConfigItems(agent Agent, t *translations.Translator) []*wi
 // configEntry creates a form entry widget that is tied to the given config
 // value of the given agent. When the value of the entry widget changes, the
 // corresponding config value will be updated.
-func configEntry(agent Agent, name, placeholder string) *widget.Entry {
-	entry := widget.NewEntry()
+func configEntry(agent Agent, name, placeholder string, secret bool) *widget.Entry {
+	var entry *widget.Entry
+	if secret {
+		entry = widget.NewPasswordEntry()
+	} else {
+		entry = widget.NewEntry()
+	}
 	entry.OnChanged = func(s string) {
 		if err := agent.SetConfig(name, s); err != nil {
 			log.Warn().Err(err).Msgf("Could not set config entry %s.", name)
