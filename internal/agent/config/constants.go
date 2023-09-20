@@ -21,4 +21,5 @@ const (
 	PrefMQTTServer   = "MQTTServer"
 	PrefMQTTTopic    = "MQTTTopic"
 	PrefMQTTUser     = "MQTTUser"
+	PrefMQTTEnabled  = "UseMQTT"
 )
