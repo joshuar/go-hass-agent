@@ -30,6 +30,7 @@ func PollSensors(ctx context.Context, updater func(), interval, stdev time.Durat
 		for {
 			select {
 			case <-ctx.Done():
+				wg.Done()
 				return
 			case <-ticker.C:
 				updater()
