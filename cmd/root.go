@@ -35,6 +35,9 @@ var rootCmd = &cobra.Command{
 		logging.SetLogging(traceFlag, debugFlag, profileFlag)
 	},
 	Run: func(cmd *cobra.Command, args []string) {
+		if debugID != "" {
+			appID = debugID
+		}
 		agent.Run(agent.AgentOptions{
 			Headless: headlessFlag,
 			ID:       appID,
