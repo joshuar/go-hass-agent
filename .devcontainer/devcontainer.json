@@ -25,7 +25,8 @@
                 "ymotongpoo.licenser",
                 "esbenp.prettier-vscode",
                 "aaron-bond.better-comments",
-                "valentjn.vscode-ltex"
+                "valentjn.vscode-ltex",
+                "eamodio.gitlens"
             ]
         }
     }
