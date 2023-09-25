@@ -40,5 +40,4 @@ func init() {
 	registerCmd.PersistentFlags().BoolVar(&forcedFlag,
 		"force", false,
 		"Ignore any previous registration and re-register the agent.")
-	rootCmd.AddCommand(registerCmd)
 }
