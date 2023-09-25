@@ -182,7 +182,7 @@ func (t *SensorTracker) updateSensor(ctx context.Context, config agent, sensorUp
 // sensor state update.  It takes any number of sensor state updates of any type
 // and handles them as appropriate.
 func (t *SensorTracker) UpdateSensors(ctx context.Context, sensors ...interface{}) error {
-	g, _ := errgroup.WithContext(context.TODO())
+	g, _ := errgroup.WithContext(ctx)
 	sensorData := make(chan interface{}, len(sensors))
 
 	for i := 0; i < len(sensors); i++ {
