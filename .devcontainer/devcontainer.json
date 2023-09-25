@@ -1,25 +1,20 @@
 {
-    "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+    "dockerComposeFile": "docker-compose.yml",
+    "service": "devcontainer",
+    "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+    "shutdownAction": "stopCompose",
+    "containerUser": "vscode",
     "features": {
-        "ghcr.io/devcontainers/features/go:1": {
-            "version": "1.20.7"
-        },
-        "ghcr.io/devcontainers/features/python:1": {
-            "version": "3.11.0"
-        }
+        "ghcr.io/devcontainers/features/go:1": {},
+        "ghcr.io/devcontainers/features/python:1": {},
     },
-    "appPort": [
-        "8123:8123"
-    ],
-    "postCreateCommand": ".devcontainer/postCreate",
+    "postCreateCommand": ".devcontainer/postCreate.sh",
     "remoteEnv": {
-        "HA_PATH": "/workspaces/go-hass-agent/home-assistant",
         "DISPLAY": "${localEnv:DISPLAY}"
     },
     "mounts": [
         "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind,consistency=cached"
     ],
-    "shutdownAction": "stopContainer",
     "customizations": {
         "vscode": {
             "extensions": [
@@ -33,9 +28,5 @@
                 "valentjn.vscode-ltex"
             ]
         }
-    },
-    "containerUser": "vscode",
-    "runArgs": [
-        "--userns=keep-id"
-    ]
+    }
 }

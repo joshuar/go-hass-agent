@@ -1,0 +1,19 @@
+version: "3.8"
+services:
+  devcontainer:
+    image: mcr.microsoft.com/devcontainers/base:ubuntu
+    volumes:
+      - ../..:/workspaces:cached
+    command: /bin/sh -c "while sleep 1000; do :; done"
+    network_mode: host
+    userns_mode: keep-id
+    user: vscode
+  home-assistant:
+    image: ghcr.io/home-assistant/home-assistant:2023.9.2
+    volumes:
+      - ../deployments/home-assistant/config:/config
+    ports:
+      - 8123:8123
+    restart: on-failure
+    userns_mode: keep-id
+    network_mode: host
