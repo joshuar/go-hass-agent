@@ -7,6 +7,7 @@ package helpers
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/lthibault/jitterbug/v2"
@@ -17,12 +18,14 @@ import (
 // Effectively, `updater()` will get called sometime near `interval`, but not
 // exactly on it. This can help avoid a "thundering herd" problem of sensors all
 // trying to update at the same time.
-func PollSensors(ctx context.Context, updater func(), interval time.Duration, stdev time.Duration) {
+func PollSensors(ctx context.Context, updater func(), interval, stdev time.Duration) {
 	updater()
 	ticker := jitterbug.New(
 		interval,
 		&jitterbug.Norm{Stdev: stdev},
 	)
+	var wg sync.WaitGroup
+	wg.Add(1)
 	go func() {
 		for {
 			select {
@@ -33,4 +36,5 @@ func PollSensors(ctx context.Context, updater func(), interval time.Duration, st
 			}
 		}
 	}()
+	wg.Wait()
 }
