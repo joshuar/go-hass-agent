@@ -99,29 +99,63 @@ To track and send sensor updates to Home Assistant, create a function with the
 following signature:
 
 ```go
-func SensorUpdater(ctx context.Context, updateCh chan interface{})
+func SensorUpdater(context.Context, device.SensorTracker)
 ```
 
-Create this function in the `sensors` package, in a file called
-`setup_GOARCH.go`.
-
-The `ctx` can contain the device/platform specific APIs and
-variables.
-
-The `updateCh` will be the channel you use to send the sensor data that
-implements the `hass.SensorUpdate` interface.
+- The `context.Context` parameter is a context which you should respect a
+  potential cancellation of (see below). It can also contain any device specific
+  context values, such as common API configuration data.
+- The `device.SensorTracker` is an interface with the methods to which you can
+  pass your sensor update.
 
 Within this function, you should create the sensors you want to report to Home
 Assistant and set up a way to send updates. You will want:
 
 - A way to get the sensor data you need. Most likely stored in a struct.
-- Ensure this data struct meets the `tracker.Sensor` interface requirements.
-- Pass the data struct through the `updateCh` channel as required where it will be
-  tracked and sent to Home Assistant by the agent.
+- Ensure this data struct satisfies the `tracker.Sensor` interface requirements.
 
 How this is achieved will vary and can be done in any way. For example, the
-battery sensor data is manifested by listening for DBus signals that indicate a
+battery sensor data is manifested by listening for D-Bus signals that indicate a
 battery property has changed.
+
+You can create as many sensors as you need.
+
+Call the `UpdateSensors(context.Context, ...interface{})` to send your
+sensor data to Home Assistant. You should pass the same context you received as
+a parameter as the first argument. The second variadic argument is all the
+sensors you wish to send updates for.
+
+As mentioned you should respect/expect cancellation of the context received as a
+parameter. You can do this by including code similar to the following in your function:
+
+```go
+go func() {
+	<-ctx.Done
+	...code to clean/finish up on cancellation...
+}
+```
+
+Pseudo Go code of what a complete function would look like:
+
+```go
+func SensorUpdater(ctx context.Context, trkr device.SensorTracker) {
+	...code to set up your sensors...
+
+	for ...some timer, event channel, other loop... {
+		...code to create a sensor object...
+
+		// send your sensor updates
+		trkr.UpdateSensors(ctx, sensor1, sensor2, ..., sensorN)
+	}
+}
+```
+
+### Helper Functions
+
+There are some helper functions that might be useful to you in
+`internal/device/helpers`. For example, the `PollSensors` function can be used
+to update sensors on an interval. It adds a bit of jitter to your
+interval as well to avoid any "thundering herd" problems.
 
 ## Sensor tracking
 
@@ -144,6 +178,6 @@ tracker and will run each `SensorUpdater` function that has been defined.
 ## Examples
 
 See the `apps_linux.go` or `battery_linux.go` files for examples of code
-to track the current/running apps and battery states on Linux. These use DBus
+to track the current/running apps and battery states on Linux. These use D-Bus
 events for tracking the changes. That is only one possible way to get the
 updates; any other method you can think of would probably work as well.
