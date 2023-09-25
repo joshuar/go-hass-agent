@@ -68,7 +68,7 @@ func RunSensorTracker(ctx context.Context, agentConfig agent, trackerCh chan *Se
 
 	wg.Add(1)
 	go func() {
-		startWorkers(ctx, sensorWorkers, device.SensorTracker(sensorTracker))
+		device.StartWorkers(ctx, sensorWorkers, sensorTracker)
 	}()
 	wg.Wait()
 	close(trackerCh)
@@ -188,20 +188,6 @@ func (t *SensorTracker) updateSensor(ctx context.Context, config agent, sensorUp
 		defer wg.Done()
 		api.ExecuteRequest(ctx, req, config, responseCh)
 	}()
-	wg.Wait()
-}
-
-// startWorkers will call all the sensor worker functions that have been defined
-// for this device.
-func startWorkers(ctx context.Context, workers []func(context.Context, device.SensorTracker), tracker device.SensorTracker) {
-	var wg sync.WaitGroup
-	for _, worker := range workers {
-		wg.Add(1)
-		go func(worker func(context.Context, device.SensorTracker)) {
-			defer wg.Done()
-			worker(ctx, tracker)
-		}(worker)
-	}
 	wg.Wait()
 }
 
