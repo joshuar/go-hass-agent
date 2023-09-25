@@ -43,38 +43,38 @@ type SensorTracker struct {
 	mu          sync.RWMutex
 }
 
-// Add creates a new sensor in the tracker based on a recieved state update.
-func (tracker *SensorTracker) add(s Sensor) error {
-	tracker.mu.Lock()
-	if tracker.sensor == nil {
-		tracker.mu.Unlock()
+// Add creates a new sensor in the tracker based on a received state update.
+func (t *SensorTracker) add(s Sensor) error {
+	t.mu.Lock()
+	if t.sensor == nil {
+		t.mu.Unlock()
 		return errors.New("sensor map not initialised")
 	}
-	tracker.sensor[s.ID()] = s
-	tracker.mu.Unlock()
+	t.sensor[s.ID()] = s
+	t.mu.Unlock()
 	return nil
 }
 
 // Get fetches a sensors current tracked state
-func (tracker *SensorTracker) Get(id string) (Sensor, error) {
-	tracker.mu.RLock()
-	defer tracker.mu.RUnlock()
-	if tracker.sensor[id] != nil {
-		return tracker.sensor[id], nil
+func (t *SensorTracker) Get(id string) (Sensor, error) {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	if t.sensor[id] != nil {
+		return t.sensor[id], nil
 	} else {
 		return nil, errors.New("not found")
 	}
 }
 
-func (tracker *SensorTracker) SensorList() []string {
-	tracker.mu.RLock()
-	defer tracker.mu.RUnlock()
-	if tracker.sensor == nil {
+func (t *SensorTracker) SensorList() []string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	if t.sensor == nil {
 		log.Warn().Msg("No sensors available.")
 		return nil
 	}
-	sortedEntities := make([]string, 0, len(tracker.sensor))
-	for name, sensor := range tracker.sensor {
+	sortedEntities := make([]string, 0, len(t.sensor))
+	for name, sensor := range t.sensor {
 		if sensor.State() != nil {
 			sortedEntities = append(sortedEntities, name)
 		}
