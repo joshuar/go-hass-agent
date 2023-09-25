@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/rs/zerolog/log"
@@ -46,18 +47,17 @@ func (d *diskSensor) ID() string {
 	}
 }
 
-func (s *diskSensor) Attributes() interface{} {
+func (d *diskSensor) Attributes() interface{} {
 	return struct {
 		DataSource string `json:"Data Source"`
 		Stats      disk.UsageStat
 	}{
 		DataSource: "SOURCE_PROCFS",
-		Stats:      *s.stats,
+		Stats:      *d.stats,
 	}
 }
 
-func DiskUsageUpdater(ctx context.Context, status chan interface{}) {
-
+func DiskUsageUpdater(ctx context.Context, tracker device.SensorTracker) {
 	sendDiskUsageStats := func() {
 		p, err := disk.PartitionsWithContext(ctx, false)
 		if err != nil {
@@ -65,6 +65,7 @@ func DiskUsageUpdater(ctx context.Context, status chan interface{}) {
 				Msg("Could not retrieve list of physical partitions.")
 			return
 		}
+		var sensors []interface{}
 		for _, partition := range p {
 			usage, err := disk.UsageWithContext(ctx, partition.Mountpoint)
 			if err != nil {
@@ -72,8 +73,9 @@ func DiskUsageUpdater(ctx context.Context, status chan interface{}) {
 					Msgf("Failed to get usage info for mountpount %s.", partition.Mountpoint)
 				return
 			}
-			status <- newDiskSensor(usage)
+			sensors = append(sensors, newDiskSensor(usage))
 		}
+		tracker.UpdateSensors(ctx, sensors...)
 	}
 
 	helpers.PollSensors(ctx, sendDiskUsageStats, time.Minute, time.Second*5)

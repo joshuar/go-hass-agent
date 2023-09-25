@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/godbus/dbus/v5"
+	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v3/process"
@@ -121,7 +122,7 @@ func newRunningAppsDetails(apps map[string]dbus.Variant) *runningAppsDetails {
 	return details
 }
 
-func AppUpdater(ctx context.Context, update chan interface{}) {
+func AppUpdater(ctx context.Context, tracker device.SensorTracker) {
 	portalDest := findPortal()
 	if portalDest == "" {
 		log.Debug().Caller().
@@ -163,13 +164,13 @@ func AppUpdater(ctx context.Context, update chan interface{}) {
 				if count, ok := newAppCount.State().(int); ok {
 					if count != appStateTracker.appCount {
 						appStateTracker.countCh <- count
-						update <- newAppCount
+						tracker.UpdateSensors(ctx, newAppCount)
 					}
 				}
 				if app, ok := newApp.State().(string); ok {
 					if app != appStateTracker.currentApp {
 						appStateTracker.appChan <- app
-						update <- newApp
+						tracker.UpdateSensors(ctx, newApp)
 					}
 				}
 			} else {

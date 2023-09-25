@@ -129,14 +129,14 @@ func lookupExternalIPs(ctx context.Context) []*address {
 	return nil
 }
 
-func ExternalIPUpdater(ctx context.Context, status chan interface{}) {
+func ExternalIPUpdater(ctx context.Context, tracker SensorTracker) {
 	updateExternalIP := func() {
 		requestCtx, cancel := context.WithTimeout(ctx, time.Second*5)
 		defer cancel()
 		ips := lookupExternalIPs(requestCtx)
 		for _, ip := range ips {
 			if ip.addr != nil {
-				status <- ip
+				tracker.UpdateSensors(ctx, ip)
 			}
 		}
 	}

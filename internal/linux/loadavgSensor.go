@@ -9,6 +9,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/rs/zerolog/log"
@@ -19,7 +20,7 @@ type loadavgSensor struct {
 	linuxSensor
 }
 
-func LoadAvgUpdater(ctx context.Context, status chan interface{}) {
+func LoadAvgUpdater(ctx context.Context, tracker device.SensorTracker) {
 
 	sendLoadAvgStats := func() {
 		var latest *load.AvgStat
@@ -29,6 +30,7 @@ func LoadAvgUpdater(ctx context.Context, status chan interface{}) {
 				Msg("Problem fetching loadavg stats.")
 			return
 		}
+		var sensors []interface{}
 		for _, loadType := range []sensorType{load1, load5, load15} {
 			l := &loadavgSensor{}
 			l.icon = "mdi:chip"
@@ -46,8 +48,9 @@ func LoadAvgUpdater(ctx context.Context, status chan interface{}) {
 				l.value = latest.Load15
 				l.sensorType = load15
 			}
-			status <- l
+			sensors = append(sensors, l)
 		}
+		tracker.UpdateSensors(ctx, sensors...)
 	}
 
 	helpers.PollSensors(ctx, sendLoadAvgStats, time.Minute, time.Second*5)

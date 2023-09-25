@@ -11,6 +11,7 @@ import (
 
 	"github.com/godbus/dbus/v5"
 	"github.com/iancoleman/strcase"
+	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/rs/zerolog/log"
 )
@@ -253,19 +254,19 @@ func getWifiProp(p dbus.ObjectPath, t sensorType) interface{} {
 // handleConn will treat the given path as a connection object and create a
 // sensor for the connection state, as well as any additional sensors for the
 // connection type.
-func handleConn(p dbus.ObjectPath, status chan interface{}) {
+func handleConn(ctx context.Context, p dbus.ObjectPath, t device.SensorTracker) {
 	s := newNetworkSensor(p, connectionState, nil)
 	if s.sensorGroup == "lo" {
 		log.Trace().Caller().Msgf("Ignoring state update for connection %s.", s.sensorGroup)
 	} else {
-		status <- s
+		t.UpdateSensors(ctx, s)
 	}
 	extraSensors := make(chan *networkSensor)
 	go func() {
 		handleConnType(p, extraSensors)
 	}()
 	for p := range extraSensors {
-		status <- p
+		t.UpdateSensors(ctx, p)
 	}
 }
 
@@ -295,7 +296,7 @@ func handleConnType(p dbus.ObjectPath, extraSensors chan *networkSensor) {
 
 // handleProps will treat a list of properties as sensor updates, where the property names
 // and values were recieved directly from D-Bus as a list.
-func handleProps(p dbus.ObjectPath, props map[string]dbus.Variant, status chan interface{}) {
+func handleProps(ctx context.Context, p dbus.ObjectPath, props map[string]dbus.Variant, tracker device.SensorTracker) {
 	var propType sensorType
 	var value interface{}
 	for propName, propValue := range props {
@@ -320,7 +321,7 @@ func handleProps(p dbus.ObjectPath, props map[string]dbus.Variant, status chan i
 				Msgf("Unhandled property %v changed to %v (%s).", propName, propValue, p)
 			return
 		}
-		status <- newNetworkSensor(p, propType, value)
+		tracker.UpdateSensors(ctx, newNetworkSensor(p, propType, value))
 	}
 
 }
@@ -463,14 +464,14 @@ func (s *networkSensor) Attributes() interface{} {
 	}
 }
 
-func NetworkConnectionsUpdater(ctx context.Context, status chan interface{}) {
+func NetworkConnectionsUpdater(ctx context.Context, tracker device.SensorTracker) {
 	connList := getActiveConns()
 	if connList == nil {
 		log.Error().Msg("No active connections.")
 		return
 	}
 	for _, path := range connList {
-		handleConn(path, status)
+		handleConn(ctx, path, tracker)
 	}
 
 	err := NewBusRequest(SystemBus).
@@ -497,14 +498,14 @@ func NetworkConnectionsUpdater(ctx context.Context, status chan interface{}) {
 			case dBusNMObj:
 				// TODO: handle this object
 			case dBusObjConn:
-				handleConn(s.Path, status)
+				handleConn(ctx, s.Path, tracker)
 			case dBusObjDev:
 				// TODO: handle this object
 			case dBusObjAP:
 				fallthrough
 			case dBusObjWireless:
 				if updatedProps, ok := s.Body[1].(map[string]dbus.Variant); ok {
-					handleProps(s.Path, updatedProps, status)
+					handleProps(ctx, s.Path, updatedProps, tracker)
 				}
 			case dBusObjIP4Cfg:
 				fallthrough

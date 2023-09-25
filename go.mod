@@ -80,5 +80,6 @@ require (
 	github.com/perimeterx/marshmallow v1.1.5
 	github.com/rs/zerolog v1.30.0
 	github.com/spf13/pflag v1.0.5 // indirect
+	golang.org/x/sync v0.3.0
 	golang.org/x/sys v0.12.0 // indirect
 )
