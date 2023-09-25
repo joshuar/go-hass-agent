@@ -3,17 +3,18 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-package device
+package config
 
 import (
 	"context"
 
+	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 )
 
 // SensorWorkers returns a list of functions to start to enable sensor tracking.
-func SensorWorkers() []func(context.Context, chan interface{}) {
-	var workers []func(context.Context, chan interface{})
+func SensorWorkers() []func(context.Context, device.SensorTracker) {
+	var workers []func(context.Context, device.SensorTracker)
 	workers = append(workers, linux.LocationUpdater)
 	workers = append(workers, linux.BatteryUpdater)
 	workers = append(workers, linux.AppUpdater)

@@ -9,6 +9,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/rs/zerolog/log"
@@ -38,9 +39,10 @@ func (s *timeSensor) Attributes() interface{} {
 	}
 }
 
-func TimeUpdater(ctx context.Context, status chan interface{}) {
+func TimeUpdater(ctx context.Context, tracker device.SensorTracker) {
 	updateTimes := func() {
-		status <- &timeSensor{
+		var sensors []interface{}
+		sensors = append(sensors, &timeSensor{
 			linuxSensor{
 				sensorType:  uptime,
 				value:       getUptime(ctx),
@@ -50,9 +52,7 @@ func TimeUpdater(ctx context.Context, status chan interface{}) {
 				deviceClass: sensor.Duration,
 				stateClass:  sensor.StateMeasurement,
 			},
-		}
-
-		status <- &timeSensor{
+		}, &timeSensor{
 			linuxSensor{
 				sensorType:  boottime,
 				value:       getBoottime(ctx),
@@ -60,7 +60,9 @@ func TimeUpdater(ctx context.Context, status chan interface{}) {
 				icon:        "mdi:restart",
 				deviceClass: sensor.Timestamp,
 			},
-		}
+		})
+
+		tracker.UpdateSensors(ctx, sensors...)
 	}
 
 	helpers.PollSensors(ctx, updateTimes, time.Minute*15, time.Minute)

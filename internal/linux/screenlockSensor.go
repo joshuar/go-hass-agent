@@ -9,6 +9,7 @@ import (
 	"context"
 
 	"github.com/godbus/dbus/v5"
+	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/rs/zerolog/log"
 )
@@ -34,7 +35,7 @@ func (s *screenlockSensor) SensorType() sensor.SensorType {
 	return sensor.TypeBinary
 }
 
-func ScreenLockUpdater(ctx context.Context, update chan interface{}) {
+func ScreenLockUpdater(ctx context.Context, tracker device.SensorTracker) {
 	err := NewBusRequest(SessionBus).
 		Path(screensaverDBusPath).
 		Match([]dbus.MatchOption{
@@ -47,7 +48,7 @@ func ScreenLockUpdater(ctx context.Context, update chan interface{}) {
 			lock.value = s.Body[0].(bool)
 			lock.sensorType = screenLock
 			lock.source = SOURCE_DBUS
-			update <- lock
+			tracker.UpdateSensors(ctx, lock)
 		}).
 		AddWatch(ctx)
 	if err != nil {

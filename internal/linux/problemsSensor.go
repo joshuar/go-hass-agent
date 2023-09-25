@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/rs/zerolog/log"
@@ -64,7 +65,7 @@ func parseProblem(details map[string]string) map[string]interface{} {
 	return parsed
 }
 
-func ProblemsUpdater(ctx context.Context, status chan interface{}) {
+func ProblemsUpdater(ctx context.Context, tracker device.SensorTracker) {
 	problems := func() {
 		problems := &problemsSensor{
 			list: make(map[string]map[string]interface{}),
@@ -92,7 +93,7 @@ func ProblemsUpdater(ctx context.Context, status chan interface{}) {
 		}
 		if len(problems.list) > 0 {
 			problems.value = len(problems.list)
-			status <- problems
+			tracker.UpdateSensors(ctx, problems)
 		}
 	}
 

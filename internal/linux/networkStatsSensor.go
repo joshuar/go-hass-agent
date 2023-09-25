@@ -9,6 +9,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/rs/zerolog/log"
@@ -39,7 +40,7 @@ func (s *networkStatsSensor) Attributes() interface{} {
 	}
 }
 
-func NetworkStatsUpdater(ctx context.Context, status chan interface{}) {
+func NetworkStatsUpdater(ctx context.Context, tracker device.SensorTracker) {
 
 	sendNetStats := func() {
 		statTypes := []sensorType{bytesRecv, bytesSent}
@@ -50,6 +51,7 @@ func NetworkStatsUpdater(ctx context.Context, status chan interface{}) {
 				Msg("Problem fetching network stats.")
 			return
 		}
+		var sensors []interface{}
 		for _, interfaceStats := range allInterfaces {
 			for _, stat := range statTypes {
 				s := &networkStatsSensor{}
@@ -73,8 +75,9 @@ func NetworkStatsUpdater(ctx context.Context, status chan interface{}) {
 					s.Drops = interfaceStats.Dropout
 					s.FifoErrors = interfaceStats.Fifoout
 				}
-				status <- s
+				sensors = append(sensors, s)
 			}
+			tracker.UpdateSensors(ctx, sensors...)
 		}
 	}
 

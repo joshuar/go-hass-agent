@@ -13,6 +13,7 @@ import (
 
 	"github.com/godbus/dbus/v5"
 	"github.com/iancoleman/strcase"
+	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/rs/zerolog/log"
 )
@@ -283,7 +284,7 @@ func stringLevel(l uint32) string {
 	}
 }
 
-func BatteryUpdater(ctx context.Context, status chan interface{}) {
+func BatteryUpdater(ctx context.Context, tracker device.SensorTracker) {
 	batteryList := NewBusRequest(SystemBus).
 		Path(upowerDBusPath).
 		Destination(upowerDBusDest).
@@ -312,7 +313,7 @@ func BatteryUpdater(ctx context.Context, status chan interface{}) {
 			batteryTracker[batteryID].updateProp(ctx, prop)
 			stateUpdate := batteryTracker[batteryID].marshalBatteryStateUpdate(ctx, prop)
 			if stateUpdate != nil {
-				status <- stateUpdate
+				tracker.UpdateSensors(ctx, stateUpdate)
 			}
 		}
 
@@ -322,7 +323,7 @@ func BatteryUpdater(ctx context.Context, status chan interface{}) {
 				batteryTracker[batteryID].updateProp(ctx, prop)
 				stateUpdate := batteryTracker[batteryID].marshalBatteryStateUpdate(ctx, prop)
 				if stateUpdate != nil {
-					status <- stateUpdate
+					tracker.UpdateSensors(ctx, stateUpdate)
 				}
 			}
 		} else {
@@ -330,7 +331,7 @@ func BatteryUpdater(ctx context.Context, status chan interface{}) {
 			if batteryTracker[batteryID].getProp(battLevel).(uint32) != 1 {
 				stateUpdate := batteryTracker[batteryID].marshalBatteryStateUpdate(ctx, battLevel)
 				if stateUpdate != nil {
-					status <- stateUpdate
+					tracker.UpdateSensors(ctx, stateUpdate)
 				}
 			}
 		}
@@ -340,13 +341,14 @@ func BatteryUpdater(ctx context.Context, status chan interface{}) {
 		// if so, update the battery's state in batteryTracker and send the
 		// update back to Home Assistant.
 		err := NewBusRequest(SystemBus).
-			Path(dbus.ObjectPath(v)).
+			Path(v).
 			Match([]dbus.MatchOption{
-				dbus.WithMatchObjectPath(dbus.ObjectPath(v)),
+				dbus.WithMatchObjectPath(v),
 				dbus.WithMatchInterface("org.freedesktop.DBus.Properties"),
 			}).
 			Event("org.freedesktop.DBus.Properties.PropertiesChanged").
 			Handler(func(s *dbus.Signal) {
+				var sensors []interface{}
 				batteryID := string(s.Path)
 				props := s.Body[1].(map[string]dbus.Variant)
 				for propName, propValue := range props {
@@ -357,10 +359,13 @@ func BatteryUpdater(ctx context.Context, status chan interface{}) {
 								Msgf("Updating battery property %v to %v", BatteryProp.String(), propValue.Value())
 							stateUpdate := batteryTracker[batteryID].marshalBatteryStateUpdate(ctx, BatteryProp)
 							if stateUpdate != nil {
-								status <- stateUpdate
+								sensors = append(sensors, stateUpdate)
 							}
 						}
 					}
+				}
+				if len(sensors) > 0 {
+					tracker.UpdateSensors(ctx, sensors...)
 				}
 			}).
 			AddWatch(ctx)

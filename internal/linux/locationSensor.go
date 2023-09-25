@@ -10,6 +10,7 @@ import (
 	"errors"
 
 	"github.com/godbus/dbus/v5"
+	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/rs/zerolog/log"
 )
 
@@ -58,7 +59,7 @@ func (l *linuxLocation) VerticalAccuracy() int {
 	return 0
 }
 
-func LocationUpdater(ctx context.Context, locationInfoCh chan interface{}) {
+func LocationUpdater(ctx context.Context, tracker device.SensorTracker) {
 	var errs []error
 	var path dbus.ObjectPath
 
@@ -71,7 +72,7 @@ func LocationUpdater(ctx context.Context, locationInfoCh chan interface{}) {
 	locationUpdateHandler := func(s *dbus.Signal) {
 		if s.Name == "org.freedesktop.GeoClue2.Client.LocationUpdated" {
 			if locationPath, ok := s.Body[1].(dbus.ObjectPath); ok {
-				locationInfoCh <- newLocation(locationPath)
+				tracker.UpdateSensors(ctx, newLocation(locationPath))
 			}
 		}
 	}

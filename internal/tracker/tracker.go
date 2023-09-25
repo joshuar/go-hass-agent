@@ -8,13 +8,16 @@ package tracker
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sort"
 	"sync"
 
+	"github.com/joshuar/go-hass-agent/internal/config"
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass/api"
 	registry "github.com/joshuar/go-hass-agent/internal/tracker/registry/jsonFiles"
 	"github.com/rs/zerolog/log"
+	"golang.org/x/sync/errgroup"
 )
 
 const (
@@ -36,13 +39,14 @@ type agent interface {
 }
 
 type SensorTracker struct {
-	registry Registry
-	sensor   map[string]Sensor
-	mu       sync.RWMutex
+	registry    Registry
+	agentConfig agent
+	sensor      map[string]Sensor
+	mu          sync.RWMutex
 }
 
-func RunSensorTracker(ctx context.Context, config agent, trackerCh chan *SensorTracker) {
-	registryPath, err := config.StoragePath(registryStorageID)
+func RunSensorTracker(ctx context.Context, agentConfig agent, trackerCh chan *SensorTracker) {
+	registryPath, err := agentConfig.StoragePath(registryStorageID)
 	if err != nil {
 		log.Warn().Err(err).
 			Msg("Path for sensor registry is not valid, using in-memory registry.")
@@ -53,23 +57,18 @@ func RunSensorTracker(ctx context.Context, config agent, trackerCh chan *SensorT
 		close(trackerCh)
 	}
 	sensorTracker := &SensorTracker{
-		registry: db,
-		sensor:   make(map[string]Sensor),
+		registry:    db,
+		sensor:      make(map[string]Sensor),
+		agentConfig: agentConfig,
 	}
 	trackerCh <- sensorTracker
 	var wg sync.WaitGroup
-	updateCh := make(chan interface{})
-	defer close(updateCh)
-	sensorWorkers := device.SensorWorkers()
+	sensorWorkers := config.SensorWorkers()
 	sensorWorkers = append(sensorWorkers, device.ExternalIPUpdater)
 
 	wg.Add(1)
 	go func() {
-		startWorkers(ctx, sensorWorkers, updateCh)
-	}()
-	wg.Add(1)
-	go func() {
-		sensorTracker.trackUpdates(ctx, config, updateCh)
+		startWorkers(ctx, sensorWorkers, device.SensorTracker(sensorTracker))
 	}()
 	wg.Wait()
 	close(trackerCh)
@@ -137,37 +136,49 @@ func (t *SensorTracker) updateSensor(ctx context.Context, config agent, sensorUp
 		response := <-responseCh
 		if response.Error() != nil {
 			log.Error().Err(response.Error()).
-				Msgf("Failed to send sensor %s data to Home Assistant", sensorUpdate.Name())
+				Str("name", sensorUpdate.Name()).
+				Msg("Failed to send sensor data to Home Assistant.")
 		} else {
 			log.Debug().
-				Msgf("Sensor %s updated (%s). State is now: %v %s",
-					sensorUpdate.Name(),
-					sensorUpdate.ID(),
-					sensorUpdate.State(),
-					sensorUpdate.Units())
+				Str("name", sensorUpdate.Name()).
+				Str("id", sensorUpdate.ID()).
+				Str("state", fmt.Sprintf("%v %s", sensorUpdate.State(), sensorUpdate.Units())).
+				Msg("Sensor updated.")
 			if err := t.add(sensorUpdate); err != nil {
 				log.Warn().Err(err).
-					Msgf("Unable to add state for sensor %s to tracker.", sensorUpdate.Name())
+					Str("name", sensorUpdate.Name()).
+					Msg("Unable to add state for sensor to tracker.")
 			}
 			if response.Type() == api.RequestTypeUpdateSensorStates {
 				switch {
 				case response.Disabled():
 					if err := t.registry.SetDisabled(sensorUpdate.ID(), true); err != nil {
-						log.Warn().Err(err).Msgf("Unable to set %s as disabled in registry.", sensorUpdate.Name())
+						log.Warn().Err(err).
+							Str("name", sensorUpdate.Name()).
+							Msg("Unable to set as disabled in registry.")
 					} else {
-						log.Debug().Msgf("Sensor %s set to disabled.", sensorUpdate.Name())
+						log.Debug().
+							Str("name", sensorUpdate.Name()).
+							Msg("Sensor set to disabled.")
 					}
 				case !response.Disabled() && <-t.registry.IsDisabled(sensorUpdate.ID()):
 					if err := t.registry.SetDisabled(sensorUpdate.ID(), false); err != nil {
-						log.Warn().Err(err).Msgf("Unable to set %s as not disabled in registry.", sensorUpdate.Name())
+						log.Warn().Err(err).
+							Str("name", sensorUpdate.Name()).
+							Msg("Unable to set as not disabled in registry.")
 					}
 				}
 			}
 			if response.Type() == api.RequestTypeRegisterSensor && response.Registered() {
 				if err := t.registry.SetRegistered(sensorUpdate.ID(), true); err != nil {
-					log.Warn().Err(err).Msgf("Unable to set %s as registered in registry.", sensorUpdate.Name())
+					log.Warn().Err(err).
+						Str("name", sensorUpdate.Name()).
+						Msg("Unable to set as registered in registry.")
 				} else {
-					log.Debug().Msgf("Sensor %s (%s) registered in Home Assistant.", sensorUpdate.Name(), sensorUpdate.ID())
+					log.Debug().
+						Str("name", sensorUpdate.Name()).
+						Str("id", sensorUpdate.ID()).
+						Msg("Sensor registered in Home Assistant.")
 				}
 			}
 		}
@@ -180,38 +191,46 @@ func (t *SensorTracker) updateSensor(ctx context.Context, config agent, sensorUp
 	wg.Wait()
 }
 
-func (t *SensorTracker) trackUpdates(ctx context.Context, config agent, updateCh chan interface{}) {
-	for {
-		select {
-		case data := <-updateCh:
-			switch data := data.(type) {
-			case Sensor:
-				go t.updateSensor(ctx, config, data)
-			case Location:
-				go updateLocation(ctx, config, data)
-			default:
-				log.Warn().
-					Msgf("Got unexpected status update %v", data)
-			}
-		case <-ctx.Done():
-			log.Debug().
-				Msg("Stopping sensor tracking.")
-			return
-		}
-	}
-}
-
 // startWorkers will call all the sensor worker functions that have been defined
 // for this device.
-func startWorkers(ctx context.Context, workers []func(context.Context, chan interface{}), updateCh chan interface{}) {
+func startWorkers(ctx context.Context, workers []func(context.Context, device.SensorTracker), tracker device.SensorTracker) {
 	var wg sync.WaitGroup
 	for _, worker := range workers {
 		wg.Add(1)
-		go func(worker func(context.Context, chan interface{})) {
+		go func(worker func(context.Context, device.SensorTracker)) {
 			defer wg.Done()
-			// worker(workerCtx, updateCh)
-			worker(ctx, updateCh)
+			worker(ctx, tracker)
 		}(worker)
 	}
 	wg.Wait()
+}
+
+// UpdateSensors is the externally exposed method that devices can use to send a
+// sensor state update.  It takes any number of sensor state updates of any type
+// and handles them as appropriate.
+func (t *SensorTracker) UpdateSensors(ctx context.Context, sensors ...interface{}) error {
+	g, _ := errgroup.WithContext(context.TODO())
+	sensorData := make(chan interface{}, len(sensors))
+
+	for i := 0; i < len(sensors); i++ {
+		sensorData <- sensors[i]
+	}
+
+	g.Go(func() error {
+		var i int
+		for s := range sensorData {
+			switch sensor := s.(type) {
+			case Sensor:
+				t.updateSensor(ctx, t.agentConfig, sensor)
+			case Location:
+				updateLocation(ctx, t.agentConfig, sensor)
+			}
+			i++
+		}
+		log.Trace().Int("sensorsUpdated", i).Msg("Finished updating sensors.")
+		return nil
+	})
+
+	close(sensorData)
+	return g.Wait()
 }

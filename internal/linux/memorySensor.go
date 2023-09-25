@@ -9,6 +9,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/rs/zerolog/log"
@@ -29,7 +30,7 @@ func (s *memorySensor) Attributes() interface{} {
 	}
 }
 
-func MemoryUpdater(ctx context.Context, status chan interface{}) {
+func MemoryUpdater(ctx context.Context, tracker device.SensorTracker) {
 
 	sendMemStats := func() {
 		stats := []sensorType{memTotal, memAvail, memUsed, swapTotal, swapFree}
@@ -40,6 +41,7 @@ func MemoryUpdater(ctx context.Context, status chan interface{}) {
 				Msg("Problem fetching memory stats.")
 			return
 		}
+		var sensors []interface{}
 		for _, stat := range stats {
 			var statValue uint64
 			switch stat {
@@ -67,8 +69,9 @@ func MemoryUpdater(ctx context.Context, status chan interface{}) {
 					stateClass:  sensor.StateTotal,
 				},
 			}
-			status <- state
+			sensors = append(sensors, state)
 		}
+		tracker.UpdateSensors(ctx, sensors...)
 	}
 
 	helpers.PollSensors(ctx, sendMemStats, time.Minute, time.Second*5)

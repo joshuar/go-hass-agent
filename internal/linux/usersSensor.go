@@ -9,6 +9,7 @@ import (
 	"context"
 
 	"github.com/godbus/dbus/v5"
+	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/rs/zerolog/log"
 )
@@ -32,7 +33,7 @@ func (s *usersSensor) Attributes() interface{} {
 	}
 }
 
-func UsersUpdater(ctx context.Context, update chan interface{}) {
+func UsersUpdater(ctx context.Context, tracker device.SensorTracker) {
 	updateUsers := func() {
 		sensor := newUsersSensor()
 		userData := NewBusRequest(SystemBus).
@@ -44,7 +45,7 @@ func UsersUpdater(ctx context.Context, update chan interface{}) {
 		for _, u := range userList {
 			sensor.userNames = append(sensor.userNames, u[1].(string))
 		}
-		update <- sensor
+		tracker.UpdateSensors(ctx, sensor)
 	}
 	updateUsers()
 

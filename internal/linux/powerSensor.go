@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/godbus/dbus/v5"
+	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/rs/zerolog/log"
 )
 
@@ -35,7 +36,7 @@ func newPowerSensor(t sensorType, g string, v dbus.Variant) *powerSensor {
 	return s
 }
 
-func PowerUpater(ctx context.Context, status chan interface{}) {
+func PowerUpater(ctx context.Context, tracker device.SensorTracker) {
 	activePowerProfile, err := NewBusRequest(SystemBus).
 		Path(powerProfilesDBusPath).
 		Destination(powerProfilesDBusDest).
@@ -45,7 +46,7 @@ func PowerUpater(ctx context.Context, status chan interface{}) {
 		return
 	}
 
-	status <- newPowerSensor(powerProfile, powerProfilesDBusPath, activePowerProfile)
+	tracker.UpdateSensors(ctx, newPowerSensor(powerProfile, powerProfilesDBusPath, activePowerProfile))
 
 	err = NewBusRequest(SystemBus).
 		Path(powerProfilesDBusPath).
@@ -57,8 +58,7 @@ func PowerUpater(ctx context.Context, status chan interface{}) {
 			updatedProps := s.Body[1].(map[string]dbus.Variant)
 			for propName, propValue := range updatedProps {
 				if propName == "ActiveProfile" {
-					p := newPowerSensor(powerProfile, string(s.Path), activePowerProfile)
-					status <- p
+					tracker.UpdateSensors(ctx, newPowerSensor(powerProfile, string(s.Path), activePowerProfile))
 				} else {
 					log.Debug().Msgf("Unhandled property %v changed to %v", propName, propValue)
 				}
