@@ -10,19 +10,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func init() {
-	rootCmd.AddCommand(infoCmd)
-}
-
 var infoCmd = &cobra.Command{
 	Use:   "info",
 	Short: "Print details of this device",
 	Long:  "This will show the information that was used to register this device with Home Assistant",
-	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		setLogfileLogging()
-		setLoggingLevel()
-		setProfiling()
-	},
 	Run: func(cmd *cobra.Command, args []string) {
 		agent.ShowInfo(agent.AgentOptions{ID: appID})
 	},

@@ -9,6 +9,7 @@ import (
 	_ "net/http/pprof"
 
 	"github.com/joshuar/go-hass-agent/internal/agent"
+	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
@@ -31,9 +32,7 @@ var rootCmd = &cobra.Command{
 	
 	It can also receive notifications from Home Assistant.`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		setLogfileLogging()
-		setLoggingLevel()
-		setProfiling()
+		logging.SetLogging(traceFlag, debugFlag, profileFlag)
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		agent.Run(agent.AgentOptions{
@@ -60,4 +59,8 @@ func init() {
 		"specify a custom app ID (for debugging)")
 	rootCmd.PersistentFlags().BoolVar(&headlessFlag, "terminal", false,
 		"run in terminal (without a GUI)")
+
+	rootCmd.AddCommand(infoCmd)
+	rootCmd.AddCommand(versionCmd)
+	rootCmd.AddCommand(registerCmd)
 }
