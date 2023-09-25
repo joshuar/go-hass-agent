@@ -15,8 +15,11 @@ import (
 	"sync"
 	"syscall"
 
+	deviceConfig "github.com/joshuar/go-hass-agent/internal/config"
+
 	"github.com/joshuar/go-hass-agent/internal/agent/config"
 	"github.com/joshuar/go-hass-agent/internal/agent/ui"
+	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -83,32 +86,30 @@ func Run(options AgentOptions) {
 	go agent.registrationProcess(agentCtx, "", "", options.Register, options.Headless, registrationDone)
 
 	var workerWg sync.WaitGroup
-	trackerCh := make(chan *tracker.SensorTracker)
 	go func() {
 		<-registrationDone
-		if err := UpgradeConfig(agent.config); err != nil {
-			log.Warn().Err(err).Msg("Could not upgrade config.")
+		var err error
+		if err = UpgradeConfig(agent.config); err != nil {
+			log.Warn().Err(err).Msg("Could not start.")
 		}
-		if err := ValidateConfig(agent.config); err != nil {
-			log.Fatal().Err(err).Msg("Invalid config. Cannot start.")
+		if err = ValidateConfig(agent.config); err != nil {
+			log.Fatal().Err(err).Msg("Could not start.")
 		}
-		// Start all the sensor workers as appropriate
+		if agent.sensors, err = tracker.NewSensorTracker(agent); err != nil {
+			log.Fatal().Err(err).Msg("Could not start.")
+		}
+
+		sensorWorkers := deviceConfig.SensorWorkers()
+		sensorWorkers = append(sensorWorkers, device.ExternalIPUpdater)
+
 		workerWg.Add(1)
 		go func() {
-			agent.sensors = <-trackerCh
-			if agent.sensors == nil {
-				log.Fatal().Msg("Could not start sensor tracker.")
-			}
+			device.StartWorkers(agentCtx, sensorWorkers, agent.sensors)
 		}()
 		workerWg.Add(1)
 		go func() {
 			defer workerWg.Done()
 			agent.runNotificationsWorker(agentCtx, options)
-		}()
-		workerWg.Add(1)
-		go func() {
-			defer workerWg.Done()
-			tracker.RunSensorTracker(agentCtx, agent, trackerCh)
 		}()
 	}()
 	agent.handleSignals(cancelFunc)
