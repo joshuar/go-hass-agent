@@ -43,24 +43,6 @@ type SensorTracker struct {
 	mu          sync.RWMutex
 }
 
-func NewSensorTracker(agentConfig agent) (*SensorTracker, error) {
-	registryPath, err := agentConfig.StoragePath(registryStorageID)
-	if err != nil {
-		log.Warn().Err(err).
-			Msg("Path for sensor registry is not valid, using in-memory registry.")
-	}
-	db, err := registry.NewJsonFilesRegistry(registryPath)
-	if err != nil {
-		return nil, errors.New("unable to create a sensor tracker")
-	}
-	sensorTracker := &SensorTracker{
-		registry:    db,
-		sensor:      make(map[string]Sensor),
-		agentConfig: agentConfig,
-	}
-	return sensorTracker, nil
-}
-
 // Add creates a new sensor in the tracker based on a recieved state update.
 func (tracker *SensorTracker) add(s Sensor) error {
 	tracker.mu.Lock()
@@ -206,4 +188,22 @@ func (t *SensorTracker) UpdateSensors(ctx context.Context, sensors ...interface{
 
 	close(sensorData)
 	return g.Wait()
+}
+
+func NewSensorTracker(agentConfig agent) (*SensorTracker, error) {
+	registryPath, err := agentConfig.StoragePath(registryStorageID)
+	if err != nil {
+		log.Warn().Err(err).
+			Msg("Path for sensor registry is not valid, using in-memory registry.")
+	}
+	db, err := registry.NewJsonFilesRegistry(registryPath)
+	if err != nil {
+		return nil, errors.New("unable to create a sensor tracker")
+	}
+	sensorTracker := &SensorTracker{
+		registry:    db,
+		sensor:      make(map[string]Sensor),
+		agentConfig: agentConfig,
+	}
+	return sensorTracker, nil
 }
