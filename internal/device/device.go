@@ -20,14 +20,22 @@ type SensorTracker interface {
 
 // StartWorkers will call all the sensor worker functions that have been defined
 // for this device.
-func StartWorkers(ctx context.Context, workers []func(context.Context, SensorTracker), tracker SensorTracker) {
-	var wg sync.WaitGroup
-	for _, worker := range workers {
-		wg.Add(1)
-		go func(worker func(context.Context, SensorTracker)) {
-			defer wg.Done()
-			worker(ctx, tracker)
-		}(worker)
+func StartWorkers(ctx context.Context, tracker SensorTracker, workers ...func(context.Context, SensorTracker)) {
+	workerCh := make(chan func(context.Context, SensorTracker), len(workers))
+
+	for i := 0; i < len(workerCh); i++ {
+		workerCh <- workers[i]
 	}
+
+	var wg sync.WaitGroup
+	for _, workerFunc := range workers {
+		wg.Add(1)
+		go func(workerFunc func(context.Context, SensorTracker)) {
+			defer wg.Done()
+			workerFunc(ctx, tracker)
+		}(workerFunc)
+	}
+	
+	close(workerCh)
 	wg.Wait()
 }

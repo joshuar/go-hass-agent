@@ -104,7 +104,7 @@ func Run(options AgentOptions) {
 
 		workerWg.Add(1)
 		go func() {
-			device.StartWorkers(agentCtx, sensorWorkers, agent.sensors)
+			device.StartWorkers(agentCtx, agent.sensors, sensorWorkers...)
 		}()
 		workerWg.Add(1)
 		go func() {
