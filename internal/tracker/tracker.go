@@ -12,8 +12,6 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/joshuar/go-hass-agent/internal/config"
-	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass/api"
 	registry "github.com/joshuar/go-hass-agent/internal/tracker/registry/jsonFiles"
 	"github.com/rs/zerolog/log"
@@ -45,7 +43,7 @@ type SensorTracker struct {
 	mu          sync.RWMutex
 }
 
-func RunSensorTracker(ctx context.Context, agentConfig agent, trackerCh chan *SensorTracker) {
+func NewSensorTracker(agentConfig agent) (*SensorTracker, error) {
 	registryPath, err := agentConfig.StoragePath(registryStorageID)
 	if err != nil {
 		log.Warn().Err(err).
@@ -53,25 +51,14 @@ func RunSensorTracker(ctx context.Context, agentConfig agent, trackerCh chan *Se
 	}
 	db, err := registry.NewJsonFilesRegistry(registryPath)
 	if err != nil {
-		log.Error().Err(err).Msg("Unable to create a sensor tracker.")
-		close(trackerCh)
+		return nil, errors.New("unable to create a sensor tracker")
 	}
 	sensorTracker := &SensorTracker{
 		registry:    db,
 		sensor:      make(map[string]Sensor),
 		agentConfig: agentConfig,
 	}
-	trackerCh <- sensorTracker
-	var wg sync.WaitGroup
-	sensorWorkers := config.SensorWorkers()
-	sensorWorkers = append(sensorWorkers, device.ExternalIPUpdater)
-
-	wg.Add(1)
-	go func() {
-		device.StartWorkers(ctx, sensorWorkers, sensorTracker)
-	}()
-	wg.Wait()
-	close(trackerCh)
+	return sensorTracker, nil
 }
 
 // Add creates a new sensor in the tracker based on a recieved state update.
