@@ -8,8 +8,10 @@
 # Stop on errors
 set -e
 
+sudo apt -y update 
+
 # Install go-hass-agent dependencies
-sudo apt -y update && export DEBIAN_FRONTEND=noninteractive && \
+export DEBIAN_FRONTEND=noninteractive && \
     sudo apt -y install libgl1-mesa-dev libxi-dev libxcursor-dev libxrandr-dev libxinerama-dev libxxf86vm-dev dbus-x11 fish
 cd /workspaces/go-hass-agent && go mod download
 
@@ -22,9 +24,3 @@ go install github.com/fyne-io/fyne-cross@latest
 go install golang.org/x/text/cmd/gotext@latest
 go install github.com/matryer/moq@latest
 
-# Install Home Assistant
-# sudo apt-get install -y python3-pip python3-dev python3-venv autoconf libssl-dev libxml2-dev libxslt1-dev libjpeg-dev libffi-dev libudev-dev zlib1g-dev pkg-config libavformat-dev libavcodec-dev libavdevice-dev libavutil-dev libswscale-dev libavresample-dev libavfilter-dev ffmpeg
-rm -rf ${HA_PATH} && \
-    git clone https://github.com/home-assistant/core.git ${HA_PATH} && \
-    cd ${HA_PATH} && \
-    script/setup
