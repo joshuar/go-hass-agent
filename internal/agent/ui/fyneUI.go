@@ -205,7 +205,12 @@ func (ui *fyneUI) sensorsWindow(s Agent, t *translations.Translator) fyne.Window
 
 	getValue := func(n string) string {
 		if v, err := s.SensorValue(n); err == nil {
-			return fmt.Sprintf("%v %s", v.State(), v.Units())
+			var b strings.Builder
+			fmt.Fprintf(&b, "%v", v.State())
+			if v.Units() != "" {
+				fmt.Fprintf(&b, " %s", v.Units())
+			}
+			return b.String()
 		}
 		return ""
 	}
