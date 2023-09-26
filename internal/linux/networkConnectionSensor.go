@@ -66,7 +66,7 @@ func getActiveConns() []dbus.ObjectPath {
 func getConnType(p dbus.ObjectPath) string {
 	if !p.IsValid() {
 		log.Debug().Msgf("Invalid D-Bus object path %s.", p)
-		return sensor.STATE_UNKNOWN
+		return sensor.StateUnknown
 	}
 	v, err := NewBusRequest(SystemBus).
 		Path(p).
@@ -74,7 +74,7 @@ func getConnType(p dbus.ObjectPath) string {
 		GetProp(dBusPropConnType)
 	if err != nil {
 		log.Debug().Err(err).Msg("Could not fetch type of connection.")
-		return sensor.STATE_UNKNOWN
+		return sensor.StateUnknown
 	} else {
 		return string(variantToValue[[]uint8](v))
 	}
@@ -86,7 +86,7 @@ func getConnType(p dbus.ObjectPath) string {
 func getConnName(p dbus.ObjectPath) string {
 	if !p.IsValid() {
 		log.Debug().Msgf("Invalid D-Bus object path %s.", p)
-		return sensor.STATE_UNKNOWN
+		return sensor.StateUnknown
 	}
 	variant, err := NewBusRequest(SystemBus).
 		Path(p).
@@ -95,7 +95,7 @@ func getConnName(p dbus.ObjectPath) string {
 	if err != nil {
 		log.Error().Err(err).
 			Msg("Could not fetch connection ID")
-		return sensor.STATE_UNKNOWN
+		return sensor.StateUnknown
 	}
 	return string(variantToValue[[]uint8](variant))
 }
@@ -123,7 +123,7 @@ func getConnState(p dbus.ObjectPath) string {
 			return "Activating"
 		}
 	}
-	return sensor.STATE_UNKNOWN
+	return sensor.StateUnknown
 }
 
 // getConnDevice returns the D-Bus object representing the device for the given connection object.
@@ -135,13 +135,13 @@ func getConnDevice(p dbus.ObjectPath) dbus.ObjectPath {
 	if err != nil {
 		log.Error().Err(err).
 			Msgf("Unable to fetch device for connection %s.", p)
-		return sensor.STATE_UNKNOWN
+		return sensor.StateUnknown
 	} else {
 		// ! this conversion might yield unexpected results
 		devicePath := variantToValue[[]dbus.ObjectPath](variant)[0]
 		if !devicePath.IsValid() {
 			log.Debug().Msgf("Invalid device path for connection %s.", p)
-			return sensor.STATE_UNKNOWN
+			return sensor.StateUnknown
 		}
 		return devicePath
 	}
@@ -153,7 +153,7 @@ func getConnDevice(p dbus.ObjectPath) dbus.ObjectPath {
 func getIPAddr(p dbus.ObjectPath, ver int) string {
 	if !p.IsValid() {
 		log.Debug().Msgf("Invalid D-Bus object path %s.", p)
-		return sensor.STATE_UNKNOWN
+		return sensor.StateUnknown
 	}
 	var connProp, addrProp string
 	switch ver {
@@ -169,24 +169,24 @@ func getIPAddr(p dbus.ObjectPath, ver int) string {
 		Destination(dBusNMObj).
 		GetProp(connProp)
 	if err != nil {
-		return sensor.STATE_UNKNOWN
+		return sensor.StateUnknown
 	}
 	addrPath, ok := v.Value().(dbus.ObjectPath)
 	if !ok {
 		log.Debug().Msgf("Cannot process value recieved from D-Bus. Got %T.", addrPath)
-		return sensor.STATE_UNKNOWN
+		return sensor.StateUnknown
 	}
 	v, err = NewBusRequest(SystemBus).
 		Path(addrPath).
 		Destination(dBusNMObj).
 		GetProp(addrProp)
 	if err != nil {
-		return sensor.STATE_UNKNOWN
+		return sensor.StateUnknown
 	}
 	addrs, ok := v.Value().([]map[string]dbus.Variant)
 	if !ok {
 		log.Debug().Msgf("Cannot process value recieved from D-Bus. Got %T.", addrPath)
-		return sensor.STATE_UNKNOWN
+		return sensor.StateUnknown
 	}
 	for _, a := range addrs {
 		ip := net.ParseIP(a["address"].Value().(string))
@@ -195,7 +195,7 @@ func getIPAddr(p dbus.ObjectPath, ver int) string {
 		}
 	}
 	log.Debug().Msg("Could not ascertain IP address.")
-	return sensor.STATE_UNKNOWN
+	return sensor.StateUnknown
 }
 
 // getWifiProp will fetch the appropriate value for the given wifi sensor type
@@ -203,7 +203,7 @@ func getIPAddr(p dbus.ObjectPath, ver int) string {
 func getWifiProp(p dbus.ObjectPath, t sensorType) interface{} {
 	if !p.IsValid() {
 		log.Debug().Msgf("Invalid D-Bus object path %s.", p)
-		return sensor.STATE_UNKNOWN
+		return sensor.StateUnknown
 	}
 	var prop string
 	switch t {
@@ -225,12 +225,12 @@ func getWifiProp(p dbus.ObjectPath, t sensorType) interface{} {
 		GetProp(dBusPropConnAP)
 	if err != nil {
 		log.Debug().Err(err).Msg("Unable to retrieve wireless device details from D-Bus.")
-		return sensor.STATE_UNKNOWN
+		return sensor.StateUnknown
 	} else {
 		path = dbus.ObjectPath((variantToValue[[]uint8](ap)))
 		if !path.IsValid() {
 			log.Debug().Msg("AP D-Bus Path is invalid")
-			return sensor.STATE_UNKNOWN
+			return sensor.StateUnknown
 		}
 	}
 	v, err := NewBusRequest(SystemBus).
@@ -239,7 +239,7 @@ func getWifiProp(p dbus.ObjectPath, t sensorType) interface{} {
 		GetProp(prop)
 	if err != nil {
 		log.Debug().Err(err).Msg("Could not fetch wifi property from D-Bus.")
-		return dbus.MakeVariant(sensor.STATE_UNKNOWN)
+		return dbus.MakeVariant(sensor.StateUnknown)
 	}
 	switch t {
 	case wifiSSID, wifiHWAddress:
@@ -248,7 +248,7 @@ func getWifiProp(p dbus.ObjectPath, t sensorType) interface{} {
 		return variantToValue[uint32](v)
 	}
 
-	return sensor.STATE_UNKNOWN
+	return sensor.StateUnknown
 }
 
 // handleConn will treat the given path as a connection object and create a
@@ -279,7 +279,7 @@ func handleConnType(p dbus.ObjectPath, extraSensors chan *networkSensor) {
 	switch connType {
 	case "802-11-wireless":
 		devicePath := getConnDevice(p)
-		if devicePath == sensor.STATE_UNKNOWN {
+		if devicePath == sensor.StateUnknown {
 			return
 		}
 		wifiProps := []sensorType{wifiSSID, wifiHWAddress, wifiFrequency, wifiSpeed, wifiStrength}
@@ -287,7 +287,7 @@ func handleConnType(p dbus.ObjectPath, extraSensors chan *networkSensor) {
 			s := newNetworkSensor(devicePath, prop, nil)
 			extraSensors <- s
 		}
-	case sensor.STATE_UNKNOWN:
+	case sensor.StateUnknown:
 		fallthrough
 	default:
 		log.Trace().Caller().Msgf("Unhandled connection type %s (%s).", connType, p)

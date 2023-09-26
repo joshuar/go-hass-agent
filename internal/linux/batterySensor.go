@@ -234,14 +234,14 @@ func stringState(state uint32) string {
 	case 6:
 		return "Pending Discharge"
 	default:
-		return sensor.STATE_UNKNOWN
+		return sensor.StateUnknown
 	}
 }
 
 func stringType(t uint32) string {
 	switch t {
 	case 0:
-		return sensor.STATE_UNKNOWN
+		return sensor.StateUnknown
 	case 1:
 		return "Line Power"
 	case 2:
@@ -259,14 +259,14 @@ func stringType(t uint32) string {
 	case 8:
 		return "Phone"
 	default:
-		return sensor.STATE_UNKNOWN
+		return sensor.StateUnknown
 	}
 }
 
 func stringLevel(l uint32) string {
 	switch l {
 	case 0:
-		return sensor.STATE_UNKNOWN
+		return sensor.StateUnknown
 	case 1:
 		return "None"
 	case 3:
@@ -280,7 +280,7 @@ func stringLevel(l uint32) string {
 	case 8:
 		return "Full"
 	default:
-		return sensor.STATE_UNKNOWN
+		return sensor.StateUnknown
 	}
 }
 
