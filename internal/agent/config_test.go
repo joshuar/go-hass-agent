@@ -101,6 +101,7 @@ func TestUpgradeConfig(t *testing.T) {
 		SetFunc: func(s string, ifaceVal interface{}) error {
 			return nil
 		},
+		StoragePathFunc: func(s string) (string, error) { return t.TempDir(), nil },
 	}
 
 	type args struct {
