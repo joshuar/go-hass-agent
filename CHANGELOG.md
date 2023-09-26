@@ -1,5 +1,47 @@
 # Changelog
 
+## [4.0.0](https://github.com/joshuar/go-hass-agent/compare/v3.3.0...v4.0.0) (2023-09-26)
+
+
+### ⚠ BREAKING CHANGES
+
+* **agent,hass,tracker:** split UI into own package and more interface usage
+
+### Features
+
+* **agent,device:** change to a variadic list of sensor workers to start ([c6ddac2](https://github.com/joshuar/go-hass-agent/commit/c6ddac25014ef1b83f54243cb3cf0412aa030507))
+* **agent,tracker:** move device worker init from tracker to agent ([05b3b1b](https://github.com/joshuar/go-hass-agent/commit/05b3b1b4edfde2cd19312bb981d112c72854b977))
+* **agent/config,agent/ui:** add more mqtt prefs. add secret config entry ([28f1ddc](https://github.com/joshuar/go-hass-agent/commit/28f1ddcaa02012597d32aa4ae4dd136678d06bd0))
+* **agent/ui:** add a configCheck function for bool config items ([134c876](https://github.com/joshuar/go-hass-agent/commit/134c876955a0156ea8fcea3aeb7ad9c1dd90aa3e))
+* **agent/ui:** new validator and placeholder functionality ([98d0cf2](https://github.com/joshuar/go-hass-agent/commit/98d0cf2b1e86cb9a23d9b305f8e3401208c28ea2))
+* **agent:** start exposing optional settings for the agent ([dea2cd9](https://github.com/joshuar/go-hass-agent/commit/dea2cd906a63e02bf43034e3b0db27b405c0d37e))
+* **cmd:** clean up logging ([316b357](https://github.com/joshuar/go-hass-agent/commit/316b357cabee8a6a14e48d5216736c609cd32484))
+* **tracker,device,linux:** move to utilising an interface for updating sensor networkStatsSensor ([af4f0aa](https://github.com/joshuar/go-hass-agent/commit/af4f0aac8ac0a1acbdef194010f25b8c59d37548))
+
+
+### Bug Fixes
+
+* **agent,hass:** remove Fyne-isms from notification code ([6fee81f](https://github.com/joshuar/go-hass-agent/commit/6fee81f7724a05cc672014960e186739bc2437df))
+* **agent:** (hopefully) get some memory savings in sensors table display ([8efbd0b](https://github.com/joshuar/go-hass-agent/commit/8efbd0b460fa068e92648c651ed757ac2cac83ff))
+* **agent/ui:** embed tray icon png directly rather than use converted []byte array ([eee1ab1](https://github.com/joshuar/go-hass-agent/commit/eee1ab18b6a46b1f263e3f6de82b40f4f4021622))
+* **agent/ui:** only instatiate translator once for UI ([1863c24](https://github.com/joshuar/go-hass-agent/commit/1863c240ed0b453341de24742fb3ffa38c16ed0c))
+* **agent/ui:** uncomment code that should be used ([a2131d6](https://github.com/joshuar/go-hass-agent/commit/a2131d676833385b09c28821cbd0a71392a6ff24))
+* **agent:** agent struct doesn't need to export any fields ([89fd9e2](https://github.com/joshuar/go-hass-agent/commit/89fd9e29517bef3b2b4b322d511262b3c4edd2e5))
+* **agent:** broken registration flow after recent changes ([c227220](https://github.com/joshuar/go-hass-agent/commit/c2272209bf61c84b55b4a3415fab3c15b51eb59c))
+* **agent:** don't export version global var ([56fa638](https://github.com/joshuar/go-hass-agent/commit/56fa6386b676186ebef6c695f40b692ccc205f2e))
+* **agent:** remove workaround for https://github.com/fyne-io/fyne/issues/3170 ([537e121](https://github.com/joshuar/go-hass-agent/commit/537e1216f8b829ab57410cec245f7dd53390c180))
+* **agent:** rework registration/preferences to properly set agent config ([9fd0002](https://github.com/joshuar/go-hass-agent/commit/9fd0002ef7676e8657f9aedfb245e08ed9796f1c))
+* **cmd:** debugID argument was ignored after recent logging changes ([ffc40d6](https://github.com/joshuar/go-hass-agent/commit/ffc40d60e647199ededb9a6ad5c1c5276f346c68))
+* **device:** don't log transport error when fetching external ip ([c6efde9](https://github.com/joshuar/go-hass-agent/commit/c6efde906622cafb63a7cc3b049154ceec64dc72))
+* **device:** signal waitgroup finish properly ([ba309fa](https://github.com/joshuar/go-hass-agent/commit/ba309fa8a32898a3007117d83349f4b966d87f17))
+* **device:** wrap polling code in waitgroup ([6e203c2](https://github.com/joshuar/go-hass-agent/commit/6e203c2ad1b82d256cb50c69ffefdd7f8d1341fe))
+* **tracker:** use correct context ([8736dc4](https://github.com/joshuar/go-hass-agent/commit/8736dc4d7720f36ef320f37da622394a93c99350))
+
+
+### Code Refactoring
+
+* **agent,hass,tracker:** split UI into own package and more interface usage ([7eb18bb](https://github.com/joshuar/go-hass-agent/commit/7eb18bb065d424332676ed2f4cdc0a97ebf98564))
+
 ## [3.3.0](https://github.com/joshuar/go-hass-agent/compare/v3.2.0...v3.3.0) (2023-09-14)
 
 
