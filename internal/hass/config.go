@@ -6,11 +6,11 @@
 package hass
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"sync"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/api"
 	"github.com/perimeterx/marshmallow"
@@ -52,38 +52,32 @@ func (h *haConfig) RequestData() json.RawMessage {
 	return nil
 }
 
-func (h *haConfig) ResponseHandler(resp bytes.Buffer, respCh chan api.Response) {
-	if resp.Bytes() == nil {
-		err := errors.New("no response returned")
-		response := api.NewGenericResponse(err, api.RequestTypeGetConfig)
-		respCh <- response
+func (h *haConfig) extractConfig(b []byte) {
+	if b == nil {
+		log.Warn().Msg("No config returned.")
 		return
 	}
 	h.mu.Lock()
-	result, err := marshmallow.Unmarshal(resp.Bytes(), &h.haConfigProps)
+	result, err := marshmallow.Unmarshal(b, &h.haConfigProps)
 	if err != nil {
-		response := api.NewGenericResponse(err, api.RequestTypeGetConfig)
-		respCh <- response
-		return
+		log.Warn().Msg("Could not extract config structure.")
 	}
 	h.rawConfigProps = result
 	h.mu.Unlock()
-	response := api.NewGenericResponse(nil, api.RequestTypeGetConfig)
-	respCh <- response
 }
 
-func GetHassConfig(ctx context.Context, c api.Agent) (*haConfig, error) {
+func GetHassConfig(ctx context.Context) (*haConfig, error) {
 	h := new(haConfig)
-	respCh := make(chan api.Response, 1)
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		api.ExecuteRequest(ctx, h, c, respCh)
-	}()
+	respCh := make(chan interface{}, 1)
+	go api.ExecuteRequest(ctx, h, respCh)
 	response := <-respCh
-	if response.Error() != nil {
-		return nil, response.Error()
+	switch r := response.(type) {
+	case []byte:
+		h.extractConfig(response.([]byte))
+	case error:
+		log.Warn().Err(r).Msg("Failed to fetch Home Assistant config.")
+	default:
+		log.Warn().Msgf("Unknown response type %T", r)
 	}
 	return h, nil
 }

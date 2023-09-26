@@ -6,6 +6,9 @@
 package tracker
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 )
 
@@ -25,6 +28,15 @@ type Sensor interface {
 	Units() string
 	Category() string
 	Attributes() interface{}
+}
+
+func prettyPrintState(s Sensor) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "%v", s.State())
+	if s.Units() != "" {
+		fmt.Fprintf(&b, " %s", s.Units())
+	}
+	return b.String()
 }
 
 func marshalSensorUpdate(s Sensor) *sensor.SensorUpdateInfo {
