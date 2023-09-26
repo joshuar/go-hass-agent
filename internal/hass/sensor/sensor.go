@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	STATE_UNKNOWN = "unknown"
+	StateUnknown = "unknown"
 )
 
 // SensorRegistrationInfo is the JSON structure required to register a sensor

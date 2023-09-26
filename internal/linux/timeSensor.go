@@ -73,7 +73,7 @@ func getUptime(ctx context.Context) interface{} {
 	if err != nil {
 		log.Debug().Caller().Err(err).
 			Msg("Failed to retrieve uptime.")
-		return sensor.STATE_UNKNOWN
+		return sensor.StateUnknown
 	}
 	epoch := time.Unix(0, 0)
 	uptime := time.Unix(int64(u), 0)
@@ -85,7 +85,7 @@ func getBoottime(ctx context.Context) string {
 	if err != nil {
 		log.Debug().Caller().Err(err).
 			Msg("Failed to retrieve boottime.")
-		return sensor.STATE_UNKNOWN
+		return sensor.StateUnknown
 	}
 	return time.Unix(int64(u), 0).Format(time.RFC3339)
 }
