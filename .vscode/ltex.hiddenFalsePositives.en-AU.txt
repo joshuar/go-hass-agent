@@ -1,0 +1,2 @@
+{"rule":"UPPERCASE_SENTENCE_START","sentence":"^\\Qgo-hass-agent makes use of \\E(?:Dummy|Ina|Jimmy-)[0-9]+\\Q to generate some of the code.\\E$"}
+{"rule":"UPPERCASE_SENTENCE_START","sentence":"^\\Qgo-hass-agent uses Goreleaser to create packages for Fedora, Arch and Ubuntu and fyne-cross to create packages for Debian.\\E$"}
