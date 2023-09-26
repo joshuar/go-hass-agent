@@ -4,7 +4,6 @@
 package api
 
 import (
-	"bytes"
 	"encoding/json"
 	"sync"
 )
@@ -25,9 +24,6 @@ var _ Request = &RequestMock{}
 //			RequestTypeFunc: func() RequestType {
 //				panic("mock out the RequestType method")
 //			},
-//			ResponseHandlerFunc: func(buffer bytes.Buffer, responseCh chan Response)  {
-//				panic("mock out the ResponseHandler method")
-//			},
 //		}
 //
 //		// use mockedRequest in code that requires Request
@@ -41,9 +37,6 @@ type RequestMock struct {
 	// RequestTypeFunc mocks the RequestType method.
 	RequestTypeFunc func() RequestType
 
-	// ResponseHandlerFunc mocks the ResponseHandler method.
-	ResponseHandlerFunc func(buffer bytes.Buffer, responseCh chan Response)
-
 	// calls tracks calls to the methods.
 	calls struct {
 		// RequestData holds details about calls to the RequestData method.
@@ -52,17 +45,9 @@ type RequestMock struct {
 		// RequestType holds details about calls to the RequestType method.
 		RequestType []struct {
 		}
-		// ResponseHandler holds details about calls to the ResponseHandler method.
-		ResponseHandler []struct {
-			// Buffer is the buffer argument value.
-			Buffer bytes.Buffer
-			// ResponseCh is the responseCh argument value.
-			ResponseCh chan Response
-		}
 	}
-	lockRequestData     sync.RWMutex
-	lockRequestType     sync.RWMutex
-	lockResponseHandler sync.RWMutex
+	lockRequestData sync.RWMutex
+	lockRequestType sync.RWMutex
 }
 
 // RequestData calls RequestDataFunc.
@@ -116,41 +101,5 @@ func (mock *RequestMock) RequestTypeCalls() []struct {
 	mock.lockRequestType.RLock()
 	calls = mock.calls.RequestType
 	mock.lockRequestType.RUnlock()
-	return calls
-}
-
-// ResponseHandler calls ResponseHandlerFunc.
-func (mock *RequestMock) ResponseHandler(buffer bytes.Buffer, responseCh chan Response) {
-	if mock.ResponseHandlerFunc == nil {
-		panic("RequestMock.ResponseHandlerFunc: method is nil but Request.ResponseHandler was just called")
-	}
-	callInfo := struct {
-		Buffer     bytes.Buffer
-		ResponseCh chan Response
-	}{
-		Buffer:     buffer,
-		ResponseCh: responseCh,
-	}
-	mock.lockResponseHandler.Lock()
-	mock.calls.ResponseHandler = append(mock.calls.ResponseHandler, callInfo)
-	mock.lockResponseHandler.Unlock()
-	mock.ResponseHandlerFunc(buffer, responseCh)
-}
-
-// ResponseHandlerCalls gets all the calls that were made to ResponseHandler.
-// Check the length with:
-//
-//	len(mockedRequest.ResponseHandlerCalls())
-func (mock *RequestMock) ResponseHandlerCalls() []struct {
-	Buffer     bytes.Buffer
-	ResponseCh chan Response
-} {
-	var calls []struct {
-		Buffer     bytes.Buffer
-		ResponseCh chan Response
-	}
-	mock.lockResponseHandler.RLock()
-	calls = mock.calls.ResponseHandler
-	mock.lockResponseHandler.RUnlock()
 	return calls
 }

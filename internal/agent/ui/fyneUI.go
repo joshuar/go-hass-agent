@@ -162,7 +162,7 @@ func (ui *fyneUI) DisplayRegistrationWindow(ctx context.Context, agent Agent, do
 // about the agent, such as version numbers.
 func (ui *fyneUI) aboutWindow(ctx context.Context, agent Agent, t *translations.Translator) fyne.Window {
 	var widgets []fyne.CanvasObject
-	if hassConfig, err := hass.GetHassConfig(ctx, agent); err != nil {
+	if hassConfig, err := hass.GetHassConfig(ctx); err != nil {
 		widgets = append(widgets, widget.NewLabel(t.Translate(
 			"App Version: %s", agent.AppVersion())))
 	} else {

@@ -17,9 +17,6 @@ var _ agent = &agentMock{}
 //
 //		// make and configure a mocked agent
 //		mockedagent := &agentMock{
-//			GetConfigFunc: func(s string, ifaceVal interface{}) error {
-//				panic("mock out the GetConfig method")
-//			},
 //			StoragePathFunc: func(s string) (string, error) {
 //				panic("mock out the StoragePath method")
 //			},
@@ -30,65 +27,18 @@ var _ agent = &agentMock{}
 //
 //	}
 type agentMock struct {
-	// GetConfigFunc mocks the GetConfig method.
-	GetConfigFunc func(s string, ifaceVal interface{}) error
-
 	// StoragePathFunc mocks the StoragePath method.
 	StoragePathFunc func(s string) (string, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
-		// GetConfig holds details about calls to the GetConfig method.
-		GetConfig []struct {
-			// S is the s argument value.
-			S string
-			// IfaceVal is the ifaceVal argument value.
-			IfaceVal interface{}
-		}
 		// StoragePath holds details about calls to the StoragePath method.
 		StoragePath []struct {
 			// S is the s argument value.
 			S string
 		}
 	}
-	lockGetConfig   sync.RWMutex
 	lockStoragePath sync.RWMutex
-}
-
-// GetConfig calls GetConfigFunc.
-func (mock *agentMock) GetConfig(s string, ifaceVal interface{}) error {
-	if mock.GetConfigFunc == nil {
-		panic("agentMock.GetConfigFunc: method is nil but agent.GetConfig was just called")
-	}
-	callInfo := struct {
-		S        string
-		IfaceVal interface{}
-	}{
-		S:        s,
-		IfaceVal: ifaceVal,
-	}
-	mock.lockGetConfig.Lock()
-	mock.calls.GetConfig = append(mock.calls.GetConfig, callInfo)
-	mock.lockGetConfig.Unlock()
-	return mock.GetConfigFunc(s, ifaceVal)
-}
-
-// GetConfigCalls gets all the calls that were made to GetConfig.
-// Check the length with:
-//
-//	len(mockedagent.GetConfigCalls())
-func (mock *agentMock) GetConfigCalls() []struct {
-	S        string
-	IfaceVal interface{}
-} {
-	var calls []struct {
-		S        string
-		IfaceVal interface{}
-	}
-	mock.lockGetConfig.RLock()
-	calls = mock.calls.GetConfig
-	mock.lockGetConfig.RUnlock()
-	return calls
 }
 
 // StoragePath calls StoragePathFunc.

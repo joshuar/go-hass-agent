@@ -8,7 +8,6 @@ package tracker
 import (
 	"context"
 	"errors"
-	"fmt"
 	"sort"
 	"sync"
 
@@ -32,8 +31,14 @@ type Registry interface {
 
 //go:generate moq -out mock_agent_test.go . agent
 type agent interface {
-	GetConfig(string, interface{}) error
 	StoragePath(string) (string, error)
+}
+
+//go:generate moq -out mock_apiResponse_test.go . apiResponse
+type apiResponse interface {
+	Registered() bool
+	Disabled() bool
+	Type() api.ResponseType
 }
 
 type SensorTracker struct {
@@ -85,11 +90,12 @@ func (t *SensorTracker) SensorList() []string {
 
 // send will send a sensor update to HA, checking to ensure the sensor is not
 // disabled. It will also update the local registry state based on the response.
-func (t *SensorTracker) send(ctx context.Context, config agent, sensorUpdate Sensor) {
-	var wg sync.WaitGroup
+func (t *SensorTracker) send(ctx context.Context, sensorUpdate Sensor) {
 	var req api.Request
 	if disabled := <-t.registry.IsDisabled(sensorUpdate.ID()); disabled {
-		log.Debug().Msgf("Sensor %s is disabled. Ignoring update.", sensorUpdate.ID())
+		log.Debug().Str("id", sensorUpdate.ID()).
+			Msg("Sensor is disabled. Ignoring update.")
+		return
 	}
 	registered := <-t.registry.IsRegistered(sensorUpdate.ID())
 	switch registered {
@@ -98,71 +104,64 @@ func (t *SensorTracker) send(ctx context.Context, config agent, sensorUpdate Sen
 	case false:
 		req = marshalSensorRegistration(sensorUpdate)
 	}
-	responseCh := make(chan api.Response, 1)
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		response := <-responseCh
-		t.handle(response, sensorUpdate)
-	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		api.ExecuteRequest(ctx, req, config, responseCh)
-	}()
-	wg.Wait()
+	responseCh := make(chan interface{}, 1)
+	go api.ExecuteRequest(ctx, req, responseCh)
+	response := <-responseCh
+	switch r := response.(type) {
+	case apiResponse:
+		t.handle(r, sensorUpdate)
+	case error:
+		log.Warn().Err(r).Str("id", sensorUpdate.ID()).
+			Msg("Failed to send sensor data to Home Assistant.")
+	default:
+		log.Warn().Msgf("Unknown response type %T", r)
+	}
 }
 
 // handle will take the response sent back by the Home Assistant API and run
 // appropriate actions. This includes recording registration or setting disabled
 // status.
-func (t *SensorTracker) handle(response api.Response, sensorUpdate Sensor) {
-	if response.Error() != nil {
-		log.Error().Err(response.Error()).
+func (t *SensorTracker) handle(response apiResponse, sensorUpdate Sensor) {
+	log.Debug().
+		Str("name", sensorUpdate.Name()).
+		Str("id", sensorUpdate.ID()).
+		Str("state", prettyPrintState(sensorUpdate)).
+		Msg("Sensor updated.")
+	if err := t.add(sensorUpdate); err != nil {
+		log.Warn().Err(err).
 			Str("name", sensorUpdate.Name()).
-			Msg("Failed to send sensor data to Home Assistant.")
-	} else {
-		log.Debug().
-			Str("name", sensorUpdate.Name()).
-			Str("id", sensorUpdate.ID()).
-			Str("state", fmt.Sprintf("%v %s", sensorUpdate.State(), sensorUpdate.Units())).
-			Msg("Sensor updated.")
-		if err := t.add(sensorUpdate); err != nil {
-			log.Warn().Err(err).
-				Str("name", sensorUpdate.Name()).
-				Msg("Unable to add state for sensor to tracker.")
-		}
-		if response.Type() == api.RequestTypeUpdateSensorStates {
-			switch {
-			case response.Disabled():
-				if err := t.registry.SetDisabled(sensorUpdate.ID(), true); err != nil {
-					log.Warn().Err(err).
-						Str("name", sensorUpdate.Name()).
-						Msg("Unable to set as disabled in registry.")
-				} else {
-					log.Debug().
-						Str("name", sensorUpdate.Name()).
-						Msg("Sensor set to disabled.")
-				}
-			case !response.Disabled() && <-t.registry.IsDisabled(sensorUpdate.ID()):
-				if err := t.registry.SetDisabled(sensorUpdate.ID(), false); err != nil {
-					log.Warn().Err(err).
-						Str("name", sensorUpdate.Name()).
-						Msg("Unable to set as not disabled in registry.")
-				}
-			}
-		}
-		if response.Type() == api.RequestTypeRegisterSensor && response.Registered() {
-			if err := t.registry.SetRegistered(sensorUpdate.ID(), true); err != nil {
+			Msg("Unable to add state for sensor to tracker.")
+	}
+	if response.Type() == api.ResponseTypeUpdate {
+		switch {
+		case response.Disabled():
+			if err := t.registry.SetDisabled(sensorUpdate.ID(), true); err != nil {
 				log.Warn().Err(err).
 					Str("name", sensorUpdate.Name()).
-					Msg("Unable to set as registered in registry.")
+					Msg("Unable to set as disabled in registry.")
 			} else {
 				log.Debug().
 					Str("name", sensorUpdate.Name()).
-					Str("id", sensorUpdate.ID()).
-					Msg("Sensor registered in Home Assistant.")
+					Msg("Sensor set to disabled.")
 			}
+		case !response.Disabled() && <-t.registry.IsDisabled(sensorUpdate.ID()):
+			if err := t.registry.SetDisabled(sensorUpdate.ID(), false); err != nil {
+				log.Warn().Err(err).
+					Str("name", sensorUpdate.Name()).
+					Msg("Unable to set as not disabled in registry.")
+			}
+		}
+	}
+	if response.Type() == api.ResponseTypeRegistration && response.Registered() {
+		if err := t.registry.SetRegistered(sensorUpdate.ID(), true); err != nil {
+			log.Warn().Err(err).
+				Str("name", sensorUpdate.Name()).
+				Msg("Unable to set as registered in registry.")
+		} else {
+			log.Debug().
+				Str("name", sensorUpdate.Name()).
+				Str("id", sensorUpdate.ID()).
+				Msg("Sensor registered in Home Assistant.")
 		}
 	}
 }
@@ -183,9 +182,9 @@ func (t *SensorTracker) UpdateSensors(ctx context.Context, sensors ...interface{
 		for s := range sensorData {
 			switch sensor := s.(type) {
 			case Sensor:
-				t.send(ctx, t.agentConfig, sensor)
+				t.send(ctx, sensor)
 			case Location:
-				updateLocation(ctx, t.agentConfig, sensor)
+				updateLocation(ctx, sensor)
 			}
 			i++
 		}
@@ -208,9 +207,8 @@ func NewSensorTracker(agentConfig agent) (*SensorTracker, error) {
 		return nil, errors.New("unable to create a sensor tracker")
 	}
 	sensorTracker := &SensorTracker{
-		registry:    db,
-		sensor:      make(map[string]Sensor),
-		agentConfig: agentConfig,
+		registry: db,
+		sensor:   make(map[string]Sensor),
 	}
 	return sensorTracker, nil
 }

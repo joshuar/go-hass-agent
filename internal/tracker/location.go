@@ -7,7 +7,6 @@ package tracker
 
 import (
 	"context"
-	"sync"
 
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/hass/api"
@@ -41,24 +40,16 @@ func marshalLocationUpdate(l Location) *hass.LocationUpdate {
 	}
 }
 
-func updateLocation(ctx context.Context, a agent, l Location) {
-	respCh := make(chan api.Response, 1)
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		api.ExecuteRequest(ctx, marshalLocationUpdate(l), a, respCh)
-	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		// defer close(respCh)
-		response := <-respCh
-		if response.Error() != nil {
-			log.Error().Err(response.Error()).
-				Msg("Failed to update location.")
-		} else {
-			log.Debug().Msg("Location Updated.")
-		}
-	}()
+func updateLocation(ctx context.Context, l Location) {
+	respCh := make(chan interface{}, 1)
+	go api.ExecuteRequest(ctx, marshalLocationUpdate(l), respCh)
+	response := <-respCh
+	switch r := response.(type) {
+	case []byte:
+		log.Debug().Msg("Location Updated.")
+	case error:
+		log.Warn().Err(r).Msg("Failed to update location.")
+	default:
+		log.Warn().Msgf("Unknown response type %T", r)
+	}
 }

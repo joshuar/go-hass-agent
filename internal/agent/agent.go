@@ -16,6 +16,7 @@ import (
 	"syscall"
 
 	deviceConfig "github.com/joshuar/go-hass-agent/internal/config"
+	"github.com/joshuar/go-hass-agent/internal/hass/api"
 
 	"github.com/joshuar/go-hass-agent/internal/agent/config"
 	"github.com/joshuar/go-hass-agent/internal/agent/ui"
@@ -79,22 +80,26 @@ func Run(options AgentOptions) {
 	agent := newAgent(options.ID, options.Headless)
 	defer close(agent.done)
 
-	agentCtx, cancelFunc := context.WithCancel(context.Background())
-	agent.setupLogging(agentCtx)
-
+	agent.setupLogging()
 	registrationDone := make(chan struct{})
-	go agent.registrationProcess(agentCtx, "", "", options.Register, options.Headless, registrationDone)
+	configDone := make(chan struct{})
+
+	go agent.registrationProcess(context.Background(), "", "", options.Register, options.Headless, registrationDone)
 
 	var workerWg sync.WaitGroup
+	var ctx context.Context
+	var cancelFunc context.CancelFunc
 	go func() {
 		<-registrationDone
 		var err error
 		if err = UpgradeConfig(agent.config); err != nil {
-			log.Warn().Err(err).Msg("Could not start.")
+			log.Warn().Err(err).Msg("Could not upgrade config.")
 		}
 		if err = ValidateConfig(agent.config); err != nil {
-			log.Fatal().Err(err).Msg("Could not start.")
+			log.Fatal().Err(err).Msg("Could not validate config.")
 		}
+		ctx, cancelFunc = agent.setupContext()
+		close(configDone)
 		if agent.sensors, err = tracker.NewSensorTracker(agent); err != nil {
 			log.Fatal().Err(err).Msg("Could not start.")
 		}
@@ -104,24 +109,26 @@ func Run(options AgentOptions) {
 
 		workerWg.Add(1)
 		go func() {
-			device.StartWorkers(agentCtx, agent.sensors, sensorWorkers...)
+			device.StartWorkers(ctx, agent.sensors, sensorWorkers...)
 		}()
 		workerWg.Add(1)
 		go func() {
 			defer workerWg.Done()
-			agent.runNotificationsWorker(agentCtx, options)
+			agent.runNotificationsWorker(ctx, options)
 		}()
 	}()
+
+	<-configDone
 	agent.handleSignals(cancelFunc)
-	agent.handleShutdown(agentCtx)
+	agent.handleShutdown(ctx)
 
 	// If we are not running in headless mode, show a tray icon
 	if !options.Headless {
-		agent.ui.DisplayTrayIcon(agentCtx, agent)
+		agent.ui.DisplayTrayIcon(ctx, agent)
 		agent.ui.Run()
 	}
 	workerWg.Wait()
-	<-agentCtx.Done()
+	<-ctx.Done()
 }
 
 // Register runs a registration flow. It either prompts the user for needed
@@ -175,7 +182,7 @@ func ShowInfo(options AgentOptions) {
 
 // setupLogging will attempt to create and then write logging to a file. If it
 // cannot do this, logging will only be available on stdout
-func (agent *Agent) setupLogging(ctx context.Context) {
+func (agent *Agent) setupLogging() {
 	logFile, err := agent.config.StoragePath("go-hass-app.log")
 	if err != nil {
 		log.Error().Err(err).
@@ -189,12 +196,20 @@ func (agent *Agent) setupLogging(ctx context.Context) {
 			consoleWriter := zerolog.ConsoleWriter{Out: os.Stdout}
 			multiWriter := zerolog.MultiLevelWriter(consoleWriter, logWriter)
 			log.Logger = log.Output(multiWriter)
-			go func() {
-				<-ctx.Done()
-				logWriter.Close()
-			}()
 		}
 	}
+}
+
+func (agent *Agent) setupContext() (context.Context, context.CancelFunc) {
+	SharedConfig := &api.APIConfig{}
+	if err := agent.config.Get(config.PrefAPIURL, &SharedConfig.APIURL); err != nil {
+		log.Fatal().Err(err).Msg("Could not export apiURL.")
+	}
+	if err := agent.config.Get(config.PrefSecret, &SharedConfig.Secret); err != nil && SharedConfig.Secret != "NOTSET" {
+		log.Fatal().Err(err).Msg("Could not export secret.")
+	}
+	ctx := api.NewContext(context.Background(), SharedConfig)
+	return context.WithCancel(ctx)
 }
 
 // handleSignals will handle Ctrl-C of the agent
