@@ -128,7 +128,6 @@ func Run(options AgentOptions) {
 		agent.ui.DisplayTrayIcon(ctx, agent)
 	}()
 
-	// If we are not running in headless mode, show a tray icon
 	if !options.Headless {
 		agent.ui.Run()
 	}
