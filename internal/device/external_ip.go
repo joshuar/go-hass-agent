@@ -7,6 +7,7 @@ package device
 
 import (
 	"context"
+	"errors"
 	"net"
 	"strings"
 	"time"
@@ -93,7 +94,6 @@ func (a *address) Attributes() interface{} {
 }
 
 func lookupExternalIPs(ctx context.Context) []*address {
-
 	ip4 := &address{}
 	ip6 := &address{}
 
@@ -109,8 +109,10 @@ func lookupExternalIPs(ctx context.Context) []*address {
 			log.Trace().Caller().
 				Msgf("Fetching %s address from %s", ver, url)
 			if err != nil {
-				log.Warn().Err(err).
-					Msgf("Unable to retrieve external %s address", ver)
+				if !errors.Is(err, requests.ErrTransport) {
+					log.Warn().Err(err).
+						Msgf("Unable to retrieve external %s address", ver)
+				}
 			} else {
 				s = strings.TrimSpace(s)
 				switch ver {
