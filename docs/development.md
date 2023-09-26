@@ -27,15 +27,14 @@ This project makes use of a [Devcontainer](https://containers.dev/) to provide
 some convenience during development.
 
 If using Visual Studio Code, you should be prompted when opening your cloned
-copy of the code to setup the dev container. The container contains a
-installation of Home Assistant that can be used for testing. To start Home
-Assistant, run the _Run Home Assistant Core_ task. Home Assistant should then be
-available on `http://localhost:8123` for testing against.
+copy of the code to set up the dev container. The container contains an
+installation of Home Assistant that can be used for testing. It should be
+started automatically.
 
 Note that while you can also build and run the agent within the container
 environment, this will limit what sensors are reported and may even hinder
 development of new sensors. As such, it is recommended to build and run outside
-of the container. You can still connect to Home Assistant running within the
+the container. You can still connect to Home Assistant running within the
 container, as it is exposed as per above.
 
 ## Building
@@ -54,7 +53,7 @@ packages for Fedora, Arch and Ubuntu and
 [fyne-cross](https://github.com/fyne-io/fyne-cross) to create packages for
 Debian.
 
-To build a "local-only" package with Goreleaser:
+To build a “local-only” package with Goreleaser:
 
 ```shell
 goreleaser release --snapshot --clean
@@ -100,7 +99,7 @@ For some OSes, you might need some code to initialise or create some data source
 or API that the individual sensor fetching code uses. This code should be placed
 in `device/`, using filename suffixes such as `filename_GOOS_GOARCH.go`
 
-For example, on Linux, a DBus connection is used for a lot of the sensor data gathering.
+For example, on Linux, a D-Bus connection is used for a lot of the sensor data gathering.
 
 In such cases, you should pass this through as a value in a context. You can
 create the following function for your platform:
