@@ -80,6 +80,9 @@ func NewFyneUI(agent Agent, headless bool) *fyneUI {
 // DisplayTrayIcon displays an icon in the desktop tray with a menu for
 // controlling the agent and showing other informational windows.
 func (ui *fyneUI) DisplayTrayIcon(ctx context.Context, agent Agent) {
+	if agent.IsHeadless() {
+		return
+	}
 	if desk, ok := ui.app.(desktop.App); ok {
 		menuItemQuit := fyne.NewMenuItem(ui.text.Translate("Quit"), func() {
 			agent.Stop()

@@ -38,13 +38,14 @@ const (
 // This includes the data structure for the UI elements and tray and some
 // strings such as app name and version.
 type Agent struct {
-	ui      AgentUI
-	config  AgentConfig
-	sensors *tracker.SensorTracker
-	done    chan struct{}
-	name    string
-	id      string
-	version string
+	ui       AgentUI
+	config   AgentConfig
+	sensors  *tracker.SensorTracker
+	done     chan struct{}
+	name     string
+	id       string
+	version  string
+	headless bool
 }
 
 //go:generate moq -out mock_AgentUI_test.go . AgentUI
@@ -64,9 +65,10 @@ type AgentOptions struct {
 
 func newAgent(appID string, headless bool) *Agent {
 	a := &Agent{
-		id:      appID,
-		version: version,
-		done:    make(chan struct{}),
+		id:       appID,
+		version:  version,
+		done:     make(chan struct{}),
+		headless: headless,
 	}
 	a.ui = ui.NewFyneUI(a, headless)
 	a.config = config.NewFyneConfig()
@@ -109,6 +111,7 @@ func Run(options AgentOptions) {
 
 		workerWg.Add(1)
 		go func() {
+			defer workerWg.Done()
 			device.StartWorkers(ctx, agent.sensors, sensorWorkers...)
 		}()
 		workerWg.Add(1)
@@ -118,13 +121,15 @@ func Run(options AgentOptions) {
 		}()
 	}()
 
-	<-configDone
-	agent.handleSignals(cancelFunc)
-	agent.handleShutdown(ctx)
+	go func() {
+		<-configDone
+		agent.handleSignals(cancelFunc)
+		agent.handleShutdown(ctx)
+		agent.ui.DisplayTrayIcon(ctx, agent)
+	}()
 
 	// If we are not running in headless mode, show a tray icon
 	if !options.Headless {
-		agent.ui.DisplayTrayIcon(ctx, agent)
 		agent.ui.Run()
 	}
 	workerWg.Wait()
@@ -240,6 +245,10 @@ func (agent *Agent) handleShutdown(ctx context.Context) {
 }
 
 // Agent satisfies ui.Agent, tracker.Agent and api.Agent interfaces
+
+func (agent *Agent) IsHeadless() bool {
+	return agent.headless
+}
 
 func (agent *Agent) AppName() string {
 	return agent.name
