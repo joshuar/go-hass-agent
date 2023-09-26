@@ -3,7 +3,7 @@ before:
     - go mod tidy
     - go generate ./...
     - desktop-file-validate assets/go-hass-agent.desktop
-    - fyne-cross linux -icon assets/trayicon/logo-pretty.png -release -app-version {{.Version}}
+    - fyne-cross linux -icon internal/agent/ui/assets/logo-pretty.png -release -app-version {{.Version}}
 
 changelog:
   use: github-native
