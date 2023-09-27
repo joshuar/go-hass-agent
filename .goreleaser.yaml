@@ -74,7 +74,7 @@ nfpms:
         dst: /usr/share/licenses/go-hass-agent/LICENSE
       - src: README.md
         dst: /usr/share/doc/go-hass-agent/README.md
-      - src: assets/trayicon/logo-pretty.png
+      - src: internal/agent/ui/assets/logo-pretty.png
         dst: /usr/share/pixmaps/go-hass-agent.png
       - src: assets/go-hass-agent.desktop
         dst: /usr/share/applications/go-hass-agent.desktop
