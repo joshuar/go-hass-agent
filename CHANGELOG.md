@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.0.2](https://github.com/joshuar/go-hass-agent/compare/v4.0.1...v4.0.2) (2023-09-27)
+
+
+### Miscellaneous Chores
+
+* release 4.0.2 ([8f116ef](https://github.com/joshuar/go-hass-agent/commit/8f116efc3ba26ca03fad2cbdcc62fca2850f6bc7))
+
 ## [4.0.1](https://github.com/joshuar/go-hass-agent/compare/v4.0.0...v4.0.1) (2023-09-27)
 
 
