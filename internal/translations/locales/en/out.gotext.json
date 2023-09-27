@@ -2,9 +2,117 @@
     "language": "en",
     "messages": [
         {
+            "id": "Quit",
+            "message": "Quit",
+            "translation": "Quit",
+            "translatorComment": "Copied from source.",
+            "fuzzy": true
+        },
+        {
+            "id": "About",
+            "message": "About",
+            "translation": "About",
+            "translatorComment": "Copied from source.",
+            "fuzzy": true
+        },
+        {
+            "id": "Report Issue",
+            "message": "Report Issue",
+            "translation": "Report Issue",
+            "translatorComment": "Copied from source.",
+            "fuzzy": true
+        },
+        {
+            "id": "Request Feature",
+            "message": "Request Feature",
+            "translation": "Request Feature",
+            "translatorComment": "Copied from source.",
+            "fuzzy": true
+        },
+        {
+            "id": "Fyne Settings",
+            "message": "Fyne Settings",
+            "translation": "Fyne Settings",
+            "translatorComment": "Copied from source.",
+            "fuzzy": true
+        },
+        {
+            "id": "App Settings",
+            "message": "App Settings",
+            "translation": "App Settings",
+            "translatorComment": "Copied from source.",
+            "fuzzy": true
+        },
+        {
+            "id": "Sensors",
+            "message": "Sensors",
+            "translation": "Sensors",
+            "translatorComment": "Copied from source.",
+            "fuzzy": true
+        },
+        {
             "id": "App Registration",
             "message": "App Registration",
             "translation": "App Registration",
+            "translatorComment": "Copied from source.",
+            "fuzzy": true
+        },
+        {
+            "id": [
+                "explainRegistration",
+                "To register the agent, please enter the relevant details for your Home Assistant\nserver (if not auto-detected) and long-lived access token."
+            ],
+            "message": "To register the agent, please enter the relevant details for your Home Assistant\nserver (if not auto-detected) and long-lived access token.",
+            "translation": "To register the agent, please enter the relevant details for your Home Assistant\nserver (if not auto-detected) and long-lived access token.",
+            "translatorComment": "Copied from source.",
+            "fuzzy": true
+        },
+        {
+            "id": "App Version: {AppVersion}",
+            "message": "App Version: {AppVersion}",
+            "translation": "App Version: {AppVersion}",
+            "translatorComment": "Copied from source.",
+            "placeholders": [
+                {
+                    "id": "AppVersion",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "agent.AppVersion()"
+                }
+            ],
+            "fuzzy": true
+        },
+        {
+            "id": "App Version: {AppVersion}\tHA Version: {HaVersion}",
+            "message": "App Version: {AppVersion}\tHA Version: {HaVersion}",
+            "translation": "App Version: {AppVersion}\tHA Version: {HaVersion}",
+            "translatorComment": "Copied from source.",
+            "placeholders": [
+                {
+                    "id": "AppVersion",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "agent.AppVersion()"
+                },
+                {
+                    "id": "HaVersion",
+                    "string": "%[2]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 2,
+                    "expr": "haVersion"
+                }
+            ],
+            "fuzzy": true
+        },
+        {
+            "id": "Ok",
+            "message": "Ok",
+            "translation": "Ok",
             "translatorComment": "Copied from source.",
             "fuzzy": true
         },
@@ -37,110 +145,37 @@
             "fuzzy": true
         },
         {
-            "id": [
-                "explainRegistration",
-                "To register the agent, please enter the relevant details for your Home Assistant\nserver (if not auto-detected) and long-lived access token."
-            ],
-            "message": "To register the agent, please enter the relevant details for your Home Assistant\nserver (if not auto-detected) and long-lived access token.",
-            "translation": "To register the agent, please enter the relevant details for your Home Assistant\nserver (if not auto-detected) and long-lived access token.",
+            "id": "Use MQTT?",
+            "message": "Use MQTT?",
+            "translation": "Use MQTT?",
             "translatorComment": "Copied from source.",
             "fuzzy": true
         },
         {
-            "id": "About",
-            "message": "About",
-            "translation": "About",
+            "id": "MQTT Server",
+            "message": "MQTT Server",
+            "translation": "MQTT Server",
             "translatorComment": "Copied from source.",
             "fuzzy": true
         },
         {
-            "id": "Report Issue",
-            "message": "Report Issue",
-            "translation": "Report Issue",
+            "id": "MQTT Topic",
+            "message": "MQTT Topic",
+            "translation": "MQTT Topic",
             "translatorComment": "Copied from source.",
             "fuzzy": true
         },
         {
-            "id": "Request Feature",
-            "message": "Request Feature",
-            "translation": "Request Feature",
+            "id": "MQTT User",
+            "message": "MQTT User",
+            "translation": "MQTT User",
             "translatorComment": "Copied from source.",
             "fuzzy": true
         },
         {
-            "id": "Settings",
-            "message": "Settings",
-            "translation": "Settings",
-            "translatorComment": "Copied from source.",
-            "fuzzy": true
-        },
-        {
-            "id": "Sensors",
-            "message": "Sensors",
-            "translation": "Sensors",
-            "translatorComment": "Copied from source.",
-            "fuzzy": true
-        },
-        {
-            "id": "Quit",
-            "message": "Quit",
-            "translation": "Quit",
-            "translatorComment": "Copied from source.",
-            "fuzzy": true
-        },
-        {
-            "id": "First Run",
-            "message": "First Run",
-            "translation": "First Run",
-            "translatorComment": "Copied from source.",
-            "fuzzy": true
-        },
-        {
-            "id": [
-                "firstRunText",
-                "Welcome to go-hass-agent. As this is the first run of the agent, a window will be displayed \nfor you to enter registration details. Please enter the required details, \nclick Submit and the agent should start running."
-            ],
-            "message": "Welcome to go-hass-agent. As this is the first run of the agent, a window will be displayed \nfor you to enter registration details. Please enter the required details, \nclick Submit and the agent should start running.",
-            "translation": "Welcome to go-hass-agent. As this is the first run of the agent, a window will be displayed \nfor you to enter registration details. Please enter the required details, \nclick Submit and the agent should start running.",
-            "translatorComment": "Copied from source.",
-            "fuzzy": true
-        },
-        {
-            "id": "Ok",
-            "message": "Ok",
-            "translation": "Ok",
-            "translatorComment": "Copied from source.",
-            "fuzzy": true
-        },
-        {
-            "id": "App Version: {Version}\tHA Version: {HaVersion}",
-            "message": "App Version: {Version}\tHA Version: {HaVersion}",
-            "translation": "App Version: {Version}\tHA Version: {HaVersion}",
-            "translatorComment": "Copied from source.",
-            "placeholders": [
-                {
-                    "id": "Version",
-                    "string": "%[1]s",
-                    "type": "string",
-                    "underlyingType": "string",
-                    "argNum": 1,
-                    "expr": "agent.Version"
-                },
-                {
-                    "id": "HaVersion",
-                    "string": "%[2]s",
-                    "type": "string",
-                    "underlyingType": "string",
-                    "argNum": 2,
-                    "expr": "haVersion"
-                }
-            ],
-            "fuzzy": true
-        },
-        {
-            "id": "Fyne Settings",
-            "message": "Fyne Settings",
-            "translation": "Fyne Settings",
+            "id": "MQTT Password",
+            "message": "MQTT Password",
+            "translation": "MQTT Password",
             "translatorComment": "Copied from source.",
             "fuzzy": true
         }
