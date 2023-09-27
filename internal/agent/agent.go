@@ -70,8 +70,9 @@ func newAgent(appID string, headless bool) *Agent {
 		done:     make(chan struct{}),
 		headless: headless,
 	}
-	a.ui = ui.NewFyneUI(a, headless)
+	a.ui = ui.NewFyneUI(a)
 	a.config = config.NewFyneConfig()
+	a.setupLogging()
 	return a
 }
 
@@ -79,21 +80,22 @@ func newAgent(appID string, headless bool) *Agent {
 // then spawns a sensor tracker and the workers to gather sensor data and
 // publish it to Home Assistant
 func Run(options AgentOptions) {
+	var wg sync.WaitGroup
+	var ctx context.Context
+	var cancelFunc context.CancelFunc
+	var err error
+
 	agent := newAgent(options.ID, options.Headless)
 	defer close(agent.done)
 
-	agent.setupLogging()
 	registrationDone := make(chan struct{})
-	configDone := make(chan struct{})
-
 	go agent.registrationProcess(context.Background(), "", "", options.Register, options.Headless, registrationDone)
 
-	var workerWg sync.WaitGroup
-	var ctx context.Context
-	var cancelFunc context.CancelFunc
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		<-registrationDone
-		var err error
+		log.Trace().Msg("Registration check/action done.")
 		if err = UpgradeConfig(agent.config); err != nil {
 			log.Warn().Err(err).Msg("Could not upgrade config.")
 		}
@@ -101,38 +103,33 @@ func Run(options AgentOptions) {
 			log.Fatal().Err(err).Msg("Could not validate config.")
 		}
 		ctx, cancelFunc = agent.setupContext()
-		close(configDone)
-		if agent.sensors, err = tracker.NewSensorTracker(agent); err != nil {
-			log.Fatal().Err(err).Msg("Could not start.")
-		}
+	}()
+	wg.Wait()
+	log.Trace().Msg("Config load/validation done.")
 
+	if agent.sensors, err = tracker.NewSensorTracker(agent); err != nil {
+		log.Fatal().Err(err).Msg("Could not start.")
+	}
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
 		sensorWorkers := deviceConfig.SensorWorkers()
 		sensorWorkers = append(sensorWorkers, device.ExternalIPUpdater)
-
-		workerWg.Add(1)
-		go func() {
-			defer workerWg.Done()
-			device.StartWorkers(ctx, agent.sensors, sensorWorkers...)
-		}()
-		workerWg.Add(1)
-		go func() {
-			defer workerWg.Done()
-			agent.runNotificationsWorker(ctx, options)
-		}()
+		device.StartWorkers(ctx, agent.sensors, sensorWorkers...)
 	}()
-
+	wg.Add(1)
 	go func() {
-		<-configDone
-		agent.handleSignals(cancelFunc)
-		agent.handleShutdown(ctx)
-		agent.ui.DisplayTrayIcon(ctx, agent)
+		defer wg.Done()
+		agent.runNotificationsWorker(ctx, options)
 	}()
 
-	if !options.Headless {
-		agent.ui.Run()
-	}
-	workerWg.Wait()
-	<-ctx.Done()
+	agent.handleSignals(cancelFunc)
+	agent.handleShutdown(ctx)
+	agent.ui.DisplayTrayIcon(ctx, agent)
+	agent.ui.Run()
+
+	wg.Wait()
 }
 
 // Register runs a registration flow. It either prompts the user for needed
