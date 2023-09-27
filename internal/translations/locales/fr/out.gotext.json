@@ -2,8 +2,94 @@
     "language": "fr",
     "messages": [
         {
+            "id": "Quit",
+            "message": "Quit",
+            "translation": ""
+        },
+        {
+            "id": "About",
+            "message": "About",
+            "translation": ""
+        },
+        {
+            "id": "Report Issue",
+            "message": "Report Issue",
+            "translation": ""
+        },
+        {
+            "id": "Request Feature",
+            "message": "Request Feature",
+            "translation": ""
+        },
+        {
+            "id": "Fyne Settings",
+            "message": "Fyne Settings",
+            "translation": ""
+        },
+        {
+            "id": "App Settings",
+            "message": "App Settings",
+            "translation": ""
+        },
+        {
+            "id": "Sensors",
+            "message": "Sensors",
+            "translation": ""
+        },
+        {
             "id": "App Registration",
             "message": "App Registration",
+            "translation": ""
+        },
+        {
+            "id": [
+                "explainRegistration",
+                "To register the agent, please enter the relevant details for your Home Assistant\nserver (if not auto-detected) and long-lived access token."
+            ],
+            "message": "To register the agent, please enter the relevant details for your Home Assistant\nserver (if not auto-detected) and long-lived access token.",
+            "translation": ""
+        },
+        {
+            "id": "App Version: {AppVersion}",
+            "message": "App Version: {AppVersion}",
+            "translation": "",
+            "placeholders": [
+                {
+                    "id": "AppVersion",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "agent.AppVersion()"
+                }
+            ]
+        },
+        {
+            "id": "App Version: {AppVersion}\tHA Version: {HaVersion}",
+            "message": "App Version: {AppVersion}\tHA Version: {HaVersion}",
+            "translation": "",
+            "placeholders": [
+                {
+                    "id": "AppVersion",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "agent.AppVersion()"
+                },
+                {
+                    "id": "HaVersion",
+                    "string": "%[2]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 2,
+                    "expr": "haVersion"
+                }
+            ]
+        },
+        {
+            "id": "Ok",
+            "message": "Ok",
             "translation": ""
         },
         {
@@ -27,87 +113,28 @@
             "translation": ""
         },
         {
-            "id": [
-                "explainRegistration",
-                "To register the agent, please enter the relevant details for your Home Assistant\nserver (if not auto-detected) and long-lived access token."
-            ],
-            "message": "To register the agent, please enter the relevant details for your Home Assistant\nserver (if not auto-detected) and long-lived access token.",
+            "id": "Use MQTT?",
+            "message": "Use MQTT?",
             "translation": ""
         },
         {
-            "id": "About",
-            "message": "About",
+            "id": "MQTT Server",
+            "message": "MQTT Server",
             "translation": ""
         },
         {
-            "id": "Report Issue",
-            "message": "Report Issue",
+            "id": "MQTT Topic",
+            "message": "MQTT Topic",
             "translation": ""
         },
         {
-            "id": "Request Feature",
-            "message": "Request Feature",
+            "id": "MQTT User",
+            "message": "MQTT User",
             "translation": ""
         },
         {
-            "id": "Settings",
-            "message": "Settings",
-            "translation": ""
-        },
-        {
-            "id": "Sensors",
-            "message": "Sensors",
-            "translation": ""
-        },
-        {
-            "id": "Quit",
-            "message": "Quit",
-            "translation": ""
-        },
-        {
-            "id": "First Run",
-            "message": "First Run",
-            "translation": ""
-        },
-        {
-            "id": [
-                "firstRunText",
-                "Welcome to go-hass-agent. As this is the first run of the agent, a window will be displayed \nfor you to enter registration details. Please enter the required details, \nclick Submit and the agent should start running."
-            ],
-            "message": "Welcome to go-hass-agent. As this is the first run of the agent, a window will be displayed \nfor you to enter registration details. Please enter the required details, \nclick Submit and the agent should start running.",
-            "translation": ""
-        },
-        {
-            "id": "Ok",
-            "message": "Ok",
-            "translation": ""
-        },
-        {
-            "id": "App Version: {Version}\tHA Version: {HaVersion}",
-            "message": "App Version: {Version}\tHA Version: {HaVersion}",
-            "translation": "",
-            "placeholders": [
-                {
-                    "id": "Version",
-                    "string": "%[1]s",
-                    "type": "string",
-                    "underlyingType": "string",
-                    "argNum": 1,
-                    "expr": "agent.Version"
-                },
-                {
-                    "id": "HaVersion",
-                    "string": "%[2]s",
-                    "type": "string",
-                    "underlyingType": "string",
-                    "argNum": 2,
-                    "expr": "haVersion"
-                }
-            ]
-        },
-        {
-            "id": "Fyne Settings",
-            "message": "Fyne Settings",
+            "id": "MQTT Password",
+            "message": "MQTT Password",
             "translation": ""
         }
     ]
