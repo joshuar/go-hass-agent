@@ -40,6 +40,7 @@ type fyneUI struct {
 }
 
 func (ui *fyneUI) Run() {
+	log.Trace().Msg("Starting Fyne UI loop.")
 	ui.app.Run()
 }
 
@@ -62,13 +63,13 @@ func (ui *fyneUI) openURL(u string) {
 	}
 }
 
-func NewFyneUI(agent Agent, headless bool) *fyneUI {
+func NewFyneUI(agent Agent) *fyneUI {
 	ui := &fyneUI{
 		app:  app.NewWithID(agent.AppID()),
 		text: translations.NewTranslator(),
 	}
 	ui.app.SetIcon(&TrayIcon{})
-	if !headless {
+	if !agent.IsHeadless() {
 		ui.mainWindow = ui.app.NewWindow(agent.AppName())
 		ui.mainWindow.SetCloseIntercept(func() {
 			ui.mainWindow.Hide()
