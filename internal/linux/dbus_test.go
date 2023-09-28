@@ -8,57 +8,19 @@ package linux
 import (
 	"context"
 	"reflect"
-	"sync"
 	"testing"
 
 	"github.com/godbus/dbus/v5"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestBus_signalHandler(t *testing.T) {
-	type fields struct {
-		conn           *dbus.Conn
-		signals        chan *dbus.Signal
-		signalMatchers map[string]func(*dbus.Signal)
-		matchRequests  chan signalMatcher
-		busType        dbusType
-		mu             sync.RWMutex
-	}
-	type args struct {
-		ctx context.Context
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		args   args
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			bus := &Bus{
-				conn:           tt.fields.conn,
-				signals:        tt.fields.signals,
-				signalMatchers: tt.fields.signalMatchers,
-				matchRequests:  tt.fields.matchRequests,
-				busType:        tt.fields.busType,
-				mu:             tt.fields.mu,
-			}
-			bus.signalHandler(tt.args.ctx)
-		})
-	}
-}
-
 func TestNewBus(t *testing.T) {
 	ctx := context.TODO()
 	b, err := dbus.ConnectSessionBus(dbus.WithContext(ctx))
 	assert.Nil(t, err)
 	goodBus := &Bus{
-		conn:           b,
-		signals:        make(chan *dbus.Signal),
-		signalMatchers: make(map[string]func(*dbus.Signal)),
-		matchRequests:  make(chan signalMatcher),
-		busType:        SessionBus,
+		conn:    b,
+		busType: SessionBus,
 	}
 
 	type args struct {
@@ -442,43 +404,6 @@ func Test_busRequest_Call(t *testing.T) {
 			}
 			if err := r.Call(tt.args.method, tt.args.args...); (err != nil) != tt.wantErr {
 				t.Errorf("busRequest.Call() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
-
-func Test_busRequest_AddWatch(t *testing.T) {
-	type fields struct {
-		bus          *Bus
-		eventHandler func(*dbus.Signal)
-		path         dbus.ObjectPath
-		event        string
-		dest         string
-		match        []dbus.MatchOption
-	}
-	type args struct {
-		ctx context.Context
-	}
-	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		wantErr bool
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			r := &busRequest{
-				bus:          tt.fields.bus,
-				eventHandler: tt.fields.eventHandler,
-				path:         tt.fields.path,
-				event:        tt.fields.event,
-				dest:         tt.fields.dest,
-				match:        tt.fields.match,
-			}
-			if err := r.AddWatch(tt.args.ctx); (err != nil) != tt.wantErr {
-				t.Errorf("busRequest.AddWatch() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
