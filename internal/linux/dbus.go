@@ -25,35 +25,8 @@ const (
 type dbusType int
 
 type Bus struct {
-	conn           *dbus.Conn
-	signals        chan *dbus.Signal
-	signalMatchers map[string]func(*dbus.Signal)
-	matchRequests  chan signalMatcher
-	busType        dbusType
-	mu             sync.RWMutex
-}
-
-func (bus *Bus) signalHandler(ctx context.Context) {
-	bus.conn.Signal(bus.signals)
-	defer bus.conn.RemoveSignal(bus.signals)
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case signal := <-bus.signals:
-			// bus.mu.RLock()
-			// defer bus.mu.Unlock()
-			for matchPath, handlerFunc := range bus.signalMatchers {
-				if strings.Contains(string(signal.Path), matchPath) {
-					handlerFunc(signal)
-				}
-			}
-		case request := <-bus.matchRequests:
-			// bus.mu.Lock()
-			// defer bus.mu.Unlock()
-			bus.signalMatchers[request.match] = request.handler
-		}
-	}
+	conn    *dbus.Conn
+	busType dbusType
 }
 
 // NewBus sets up DBus connections and channels for receiving signals. It creates both a system and session bus connection.
@@ -72,20 +45,11 @@ func NewBus(ctx context.Context, t dbusType) *Bus {
 		return nil
 	} else {
 		bus := &Bus{
-			conn:           conn,
-			signals:        make(chan *dbus.Signal),
-			signalMatchers: make(map[string]func(*dbus.Signal)),
-			matchRequests:  make(chan signalMatcher),
-			busType:        t,
+			conn:    conn,
+			busType: t,
 		}
-		go bus.signalHandler(ctx)
 		return bus
 	}
-}
-
-type signalMatcher struct {
-	handler func(*dbus.Signal)
-	match   string
 }
 
 // busRequest contains properties for building different types of DBus requests
@@ -198,21 +162,37 @@ func (r *busRequest) Call(method string, args ...interface{}) error {
 	}
 }
 
-// AddWatch adds a DBus watch to the bus with the given options in the builder
 func (r *busRequest) AddWatch(ctx context.Context) error {
 	if r.bus == nil {
 		return errors.New("no bus connection")
 	}
 	if err := r.bus.conn.AddMatchSignalContext(ctx, r.match...); err != nil {
 		return err
-	} else {
-		log.Trace().Caller().
-			Msgf("Adding watch on %s for %s", r.path, r.event)
-		r.bus.matchRequests <- signalMatcher{
-			match:   string(r.path),
-			handler: r.eventHandler,
-		}
 	}
+	signalCh := make(chan *dbus.Signal)
+	r.bus.conn.Signal(signalCh)
+	defer r.bus.conn.RemoveSignal(signalCh)
+	log.Trace().
+		Str("path", string(r.path)).
+		Str("dest", r.dest).
+		Str("event", r.event).
+		Msgf("Watching D-Bus signal.")
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case signal := <-signalCh:
+				if strings.Contains(string(signal.Path), string(r.path)) {
+					r.eventHandler(signal)
+				}
+			}
+		}
+	}()
+	wg.Wait()
 	return nil
 }
 
