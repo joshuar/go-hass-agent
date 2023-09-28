@@ -16,7 +16,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-//go:generate stringer -type=dbusType -output dbusTypesStringer.go -linecomment
 const (
 	SessionBus dbusType = iota // session
 	SystemBus                  // system
@@ -40,8 +39,7 @@ func NewBus(ctx context.Context, t dbusType) *Bus {
 		conn, err = dbus.ConnectSystemBus(dbus.WithContext(ctx))
 	}
 	if err != nil {
-		log.Error().Err(err).
-			Msgf("Could not connect to %s bus.", t.String())
+		log.Error().Err(err).Msg("Could not connect to bus.")
 		return nil
 	} else {
 		bus := &Bus{
