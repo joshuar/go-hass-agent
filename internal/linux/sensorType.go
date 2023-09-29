@@ -39,7 +39,7 @@ const (
 	wifiStrength                            // Wi-Fi Signal Strength
 	wifiHWAddress                           // Wi-Fi BSSID
 	bytesSent                               // Bytes Sent
-	bytesRecv                               // Bytes Recieved
+	bytesRecv                               // Bytes Received
 	powerProfile                            // Power Profile
 	boottime                                // Last Reboot
 	uptime                                  // Uptime
