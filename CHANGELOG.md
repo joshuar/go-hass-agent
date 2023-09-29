@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.0.3](https://github.com/joshuar/go-hass-agent/compare/v4.0.2...v4.0.3) (2023-09-27)
+
+
+### Bug Fixes
+
+* **agent:** tray icon not shown ([d2bcc00](https://github.com/joshuar/go-hass-agent/commit/d2bcc00888a1a0cbca6199fd358be26e802936d4))
+
 ## [4.0.2](https://github.com/joshuar/go-hass-agent/compare/v4.0.1...v4.0.2) (2023-09-27)
 
 
