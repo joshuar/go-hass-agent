@@ -1,4 +1,11 @@
-# go-hass-app
+<!--
+ Copyright (c) 2023 Joshua Rich <joshua.rich@gmail.com>
+
+ This software is released under the MIT License.
+ https://opensource.org/licenses/MIT
+-->
+
+# Go Hass Agent
 
 ![MIT](https://img.shields.io/github/license/joshuar/go-hass-agent)
 ![GitHub last commit](https://img.shields.io/github/last-commit/joshuar/go-hass-agent)
@@ -50,8 +57,8 @@ See also the [FAQ](docs/faq.md).
 ## 🤝 Compatibility
 
 Currently, only Linux is supported. Though the code is designed to be extensible
-to other operating systems. See [the development docs](docs/development.md) for
-details on how to extend for other operating systems.
+to other operating systems. See development information in the
+[docs](docs/README.md) for details on how to extend for other operating systems.
 
 ## ⬇️ Installation
 
@@ -65,20 +72,20 @@ distribution:
 - For **Arch**, use the `.tar.zst`.
 
 For other distributions not listed above, you can try the binary, or build it
-yourself from source (see [development](docs/development.md)). Note that while
+yourself from source (see development [docs](docs/README.md)). Note that while
 Go is known for statically compiled binaries that "run anywhere", the Fyne UI
-toolkit used by **go-hass-agent** makes use of shared libraries that may need to
+toolkit used by Go Hass Agent makes use of shared libraries that may need to
 be installed as well.
 
 ## 🖱️ Usage
 
-**go-hass-agent** runs as a tray icon by default. It is operating system,
+Go Hass Agent runs as a tray icon by default. It is operating system,
 distribution and desktop-environment agnostic and should manifest itself in any
 tray of any desktop environment.
 
 ### First-run
 
-On first-run, **go-hass-agent** will display a window where you will need to enter
+On first-run, Go Hass Agent will display a window where you will need to enter
 some details, so it can register itself with a Home Assistant instance to be
 able to report sensors and receive notifications.
 
@@ -89,14 +96,14 @@ able to report sensors and receive notifications.
 - A long-lived access token. You can generate one on your [account profile
   page](https://www.home-assistant.io/docs/authentication/#your-account-profile).
 - The web address (URL) on which a Home Assistant instance can be found.
-  - **go-hass-agent** will try to auto-detect this for you, and you can select it in
+  - Go Hass Agent will try to auto-detect this for you, and you can select it in
     the _Auto-discovered servers_ list. Otherwise, you will need to select _Use
     Custom Server?_, and enter the details manually in _Manual Server Entry_.
 
 When you have entered all the details, click **Submit** and the agent should
 start running and reporting sensors to the Home Assistant instance.
 
-As alternative, you can register **go-hass-agent** on the command-line with by
+As alternative, you can register Go Hass Agent on the command-line with by
 running:
 
 ```shell
@@ -108,7 +115,7 @@ Assistant instance, `_URL_`.
 
 ### Regular Usage
 
-When running, **go-hass-agent** will appear as a device under the [Mobile
+When running, Go Hass Agent will appear as a device under the [Mobile
 App](https://www.home-assistant.io/integrations/mobile_app) integration in your
 Home Assistant instance. It should also report a list of sensors/entities you
 can use in any automations, scripts, dashboards and other parts of Home
@@ -116,24 +123,24 @@ Assistant.
 
 ### Running Headless
 
-**go-hass-agent** can run in a “headless” mode, without any GUI elements, by
+Go Hass Agent can run in a “headless” mode, without any GUI elements, by
 specifying the `-t` or `--terminal` command-line option. On Linux systems, There
 is also a systemd service file that can be used for automatic start-up,
 installed (but not activated by default) in `/usr/lib/systemd/system`.
 
 ## 🧑‍🤝‍🧑 Contributing
 
-### 🏗️ Development
+### Development
 
 I would welcome your contribution! If you find any improvement or issue you want
 to fix, feel free to send a pull request!
 
 Some documentation for development can be found in
-the [development docs](docs/development.md). There is information for developing
-**go-hass-agent** for different operating systems as well as adding additional
+the [docs](docs/README.md). There is information for developing
+Go Hass Agent for different operating systems as well as adding additional
 sensors. This might help anyone to look to contribute, extend or fork this tool.
 
-### 🌐 Translations
+### Translations
 
 While this application does not have many points where text is displayed to
 the end user (logging aside), translation is supported through the `language`
