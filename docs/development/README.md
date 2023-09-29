@@ -5,11 +5,11 @@
  https://opensource.org/licenses/MIT
 -->
 
-# go-hass-agent Development
+# Go Hass Agent Development Notes
 
 ## Build Requirements
 
-**go-hass-agent** has a number of build requirements external to `go.mod` that
+Go Hass Agent has a number of build requirements external to `go.mod` that
 need to be installed:
 
 - [stringer](https://pkg.go.dev/golang.org/x/tools/cmd/stringer).
@@ -39,7 +39,7 @@ container, as it is exposed as per above.
 
 ## Building
 
-**go-hass-agent** makes use of `go generate` to generate some of the code. A typical build process would be:
+Go Hass Agent makes use of `go generate` to generate some of the code. A typical build process would be:
 
 ```shell
 go generate ./...
@@ -48,7 +48,7 @@ go build
 
 ## Packaging
 
-**go-hass-agent** uses [Goreleaser](https://goreleaser.com/intro/) to create
+Go Hass Agent uses [Goreleaser](https://goreleaser.com/intro/) to create
 packages for Fedora, Arch and Ubuntu and
 [fyne-cross](https://github.com/fyne-io/fyne-cross) to create packages for
 Debian.
