@@ -115,6 +115,4 @@ use.
 
 An example can be found in `device/device_linux.go`.
 
-### Adding sensors
 
-See [development/sensors.md](development/sensors.md).

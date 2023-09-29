@@ -15,7 +15,7 @@
   API](https://developer.fyne.io/explore/preferences).
 - `LoadConfig` in `internal/agent/config.go` is responsible for loading the
   config. It will also create a new config (prompting the user for required
-  details via `runRegistrationWorker`) if needed.
+  details via `runRegistrationWorker`) if required.
 
 ### Contexts
 
@@ -28,7 +28,7 @@ timeouts, cancellations as needed). More details in [development](development.md
 - Data updates are left entirely up to the individual sensors and the platform
   the app is running on. For example, on Linux, location and running apps are
   updated as often as the relevant information is published on the user's
-  session DBus. More details about how sensor updates work can be found in
+  session D-Bus. More details about how sensor updates work can be found in
   [development/sensors](development/sensors.md).
 
 ## Notifications
