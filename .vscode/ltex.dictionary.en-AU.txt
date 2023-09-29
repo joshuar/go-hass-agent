@@ -1,2 +1,4 @@
 Fyne
 Hass
+websocket
+variadic

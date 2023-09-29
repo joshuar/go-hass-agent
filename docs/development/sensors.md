@@ -90,7 +90,7 @@ of a device or an empty string for anything else.
 ### Attributes() interface{}
 
 Any additional attributes or state/values you would like to associate with the
-sensor. This should be formatted as a `struct{}` that can be marshaled into
+sensor. This should be formatted as a `struct{}` that can be marshalled into
 valid JSON.
 
 ## Managing sensor updates
@@ -118,7 +118,7 @@ How this is achieved will vary and can be done in any way. For example, the
 battery sensor data is manifested by listening for D-Bus signals that indicate a
 battery property has changed.
 
-You can create as many sensors as you need.
+You can create as many sensors as you require.
 
 Call the `UpdateSensors(context.Context, ...interface{})` to send your
 sensor data to Home Assistant. You should pass the same context you received as
