@@ -102,7 +102,7 @@ func (agent *Agent) registrationProcess(ctx context.Context, server, token strin
 			}
 		}
 
-		device := agent.setupDevice(ctx)
+		device := newDevice(ctx)
 		if !headless {
 			userInputDone := make(chan struct{})
 			agent.ui.DisplayRegistrationWindow(ctx, agent, userInputDone)

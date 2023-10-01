@@ -15,12 +15,11 @@ import (
 	"sync"
 	"syscall"
 
-	deviceConfig "github.com/joshuar/go-hass-agent/internal/config"
+	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass/api"
 
 	"github.com/joshuar/go-hass-agent/internal/agent/config"
 	"github.com/joshuar/go-hass-agent/internal/agent/ui"
-	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -46,14 +45,6 @@ type Agent struct {
 	id       string
 	version  string
 	headless bool
-}
-
-//go:generate moq -out mock_AgentUI_test.go . AgentUI
-type AgentUI interface {
-	DisplayNotification(string, string)
-	DisplayTrayIcon(context.Context, ui.Agent)
-	DisplayRegistrationWindow(context.Context, ui.Agent, chan struct{})
-	Run()
 }
 
 // AgentOptions holds options taken from the command-line that was used to
@@ -114,9 +105,7 @@ func Run(options AgentOptions) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		sensorWorkers := deviceConfig.SensorWorkers()
-		sensorWorkers = append(sensorWorkers, device.ExternalIPUpdater)
-		device.StartWorkers(ctx, agent.sensors, sensorWorkers...)
+		agent.startWorkers(ctx)
 	}()
 	wg.Add(1)
 	go func() {
@@ -280,4 +269,29 @@ func (agent *Agent) SensorList() []string {
 
 func (agent *Agent) SensorValue(id string) (tracker.Sensor, error) {
 	return agent.sensors.Get(id)
+}
+
+// StartWorkers will call all the sensor worker functions that have been defined
+// for this device.
+func (agent *Agent) startWorkers(ctx context.Context) {
+	wokerFuncs := sensorWorkers()
+	wokerFuncs = append(wokerFuncs, device.ExternalIPUpdater)
+
+	workerCh := make(chan func(context.Context, device.SensorTracker), len(wokerFuncs))
+
+	for i := 0; i < len(workerCh); i++ {
+		workerCh <- wokerFuncs[i]
+	}
+
+	var wg sync.WaitGroup
+	for _, workerFunc := range wokerFuncs {
+		wg.Add(1)
+		go func(workerFunc func(context.Context, device.SensorTracker)) {
+			defer wg.Done()
+			workerFunc(ctx, agent.sensors)
+		}(workerFunc)
+	}
+
+	close(workerCh)
+	wg.Wait()
 }
