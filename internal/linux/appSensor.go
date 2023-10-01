@@ -147,7 +147,7 @@ func AppUpdater(ctx context.Context, tracker device.SensorTracker) {
 		}
 	}()
 
-	err := NewBusRequest(SessionBus).
+	err := NewBusRequest(ctx, SessionBus).
 		Path(appStateDBusPath).
 		Match([]dbus.MatchOption{
 			dbus.WithMatchObjectPath(appStateDBusPath),
@@ -155,7 +155,7 @@ func AppUpdater(ctx context.Context, tracker device.SensorTracker) {
 		}).
 		Event(appStateDBusEvent).
 		Handler(func(_ *dbus.Signal) {
-			if activeAppList := NewBusRequest(SessionBus).
+			if activeAppList := NewBusRequest(ctx, SessionBus).
 				Path(appStateDBusPath).
 				Destination(portalDest).
 				GetData(appStateDBusMethod).AsVariantMap(); activeAppList != nil {
@@ -164,13 +164,17 @@ func AppUpdater(ctx context.Context, tracker device.SensorTracker) {
 				if count, ok := newAppCount.State().(int); ok {
 					if count != appStateTracker.appCount {
 						appStateTracker.countCh <- count
-						tracker.UpdateSensors(ctx, newAppCount)
+						if err := tracker.UpdateSensors(ctx, newAppCount); err != nil {
+							log.Error().Err(err).Msg("Could not update active app count.")
+						}
 					}
 				}
 				if app, ok := newApp.State().(string); ok {
 					if app != appStateTracker.currentApp {
 						appStateTracker.appChan <- app
-						tracker.UpdateSensors(ctx, newApp)
+						if err := tracker.UpdateSensors(ctx, newApp); err != nil {
+							log.Error().Err(err).Msg("Could not update active app.")
+						}
 					}
 				}
 			} else {

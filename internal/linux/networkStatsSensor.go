@@ -41,7 +41,6 @@ func (s *networkStatsSensor) Attributes() interface{} {
 }
 
 func NetworkStatsUpdater(ctx context.Context, tracker device.SensorTracker) {
-
 	sendNetStats := func() {
 		statTypes := []sensorType{bytesRecv, bytesSent}
 		var allInterfaces []net.IOCountersStat
@@ -77,7 +76,9 @@ func NetworkStatsUpdater(ctx context.Context, tracker device.SensorTracker) {
 				}
 				sensors = append(sensors, s)
 			}
-			tracker.UpdateSensors(ctx, sensors...)
+			if err := tracker.UpdateSensors(ctx, sensors...); err != nil {
+				log.Error().Err(err).Msg("Could not update network stats sensors.")
+			}
 		}
 	}
 

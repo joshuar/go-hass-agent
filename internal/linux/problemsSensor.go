@@ -56,9 +56,7 @@ func parseProblem(details map[string]string) map[string]interface{} {
 			} else {
 				parsed["count"] = countValue
 			}
-		case "package":
-			fallthrough
-		case "reason":
+		case "package", "reason":
 			parsed[k] = v
 		}
 	}
@@ -75,13 +73,13 @@ func ProblemsUpdater(ctx context.Context, tracker device.SensorTracker) {
 		problems.units = "problems"
 		problems.stateClass = sensor.StateMeasurement
 
-		problemList := NewBusRequest(SystemBus).
+		problemList := NewBusRequest(ctx, SystemBus).
 			Path(dBusProblemsDest).
 			Destination(dBusProblemIntr).
 			GetData(dBusProblemIntr + ".GetProblems").AsStringList()
 
 		for _, p := range problemList {
-			problemDetails := NewBusRequest(SystemBus).
+			problemDetails := NewBusRequest(ctx, SystemBus).
 				Path(dBusProblemsDest).
 				Destination(dBusProblemIntr).
 				GetData(dBusProblemIntr+".GetInfo", p, []string{"time", "count", "package", "reason"}).AsStringMap()
@@ -93,7 +91,9 @@ func ProblemsUpdater(ctx context.Context, tracker device.SensorTracker) {
 		}
 		if len(problems.list) > 0 {
 			problems.value = len(problems.list)
-			tracker.UpdateSensors(ctx, problems)
+			if err := tracker.UpdateSensors(ctx, problems); err != nil {
+				log.Error().Err(err).Msg("Could not update problems sensor.")
+			}
 		}
 	}
 
