@@ -12,16 +12,10 @@ import (
 	"github.com/joshuar/go-hass-agent/cmd"
 )
 
-func main() {
-	ensureNotEUID()
-	cmd.Execute()
-}
-
-// Following is copied from https://git.kernel.org/pub/scm/libs/libcap/libcap.git/tree/goapps/web/web.go
-//
-// ensureNotEUID aborts the program if it is running setuid something,
-// or being invoked by root.
-func ensureNotEUID() {
+func init() {
+	// Following is copied from https://git.kernel.org/pub/scm/libs/libcap/libcap.git/tree/goapps/web/web.go
+	// ensureNotEUID aborts the program if it is running setuid something,
+	// or being invoked by root.
 	euid := syscall.Geteuid()
 	uid := syscall.Getuid()
 	egid := syscall.Getegid()
@@ -29,4 +23,8 @@ func ensureNotEUID() {
 	if uid != euid || gid != egid || uid == 0 {
 		log.Fatalf("go-hass-agent should not be run with additional privileges or as root.")
 	}
+}
+
+func main() {
+	cmd.Execute()
 }
