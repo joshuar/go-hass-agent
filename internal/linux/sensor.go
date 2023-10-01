@@ -11,8 +11,8 @@ import (
 )
 
 const (
-	SOURCE_DBUS  = "D-Bus"
-	SOURCE_PROCFS = "ProcFS"
+	srcDbus   = "D-Bus"
+	srcProcfs = "ProcFS"
 )
 
 // linuxSensor represents a generic sensor on the Linux platform. Most sensors

@@ -454,13 +454,13 @@ func (s *networkSensor) Attributes() interface{} {
 			ConnectionType: getConnType(s.objectPath),
 			Ipv4:           getIPAddr(s.objectPath, 4),
 			Ipv6:           getIPAddr(s.objectPath, 6),
-			DataSource:     SOURCE_DBUS,
+			DataSource:     srcDbus,
 		}
 	}
 	return struct {
 		DataSource string `json:"Data Source"`
 	}{
-		DataSource: SOURCE_DBUS,
+		DataSource: srcDbus,
 	}
 }
 

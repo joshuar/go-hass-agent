@@ -102,7 +102,7 @@ func newActiveAppDetails(app string) *activeAppDetails {
 		// Cmd:        cmd,
 		// Started:    time.UnixMilli(createTime).Format(time.RFC3339),
 		// Count:      len(appProcesses),
-		DataSource: SOURCE_DBUS,
+		DataSource: srcDbus,
 	}
 }
 
@@ -118,7 +118,7 @@ func newRunningAppsDetails(apps map[string]dbus.Variant) *runningAppsDetails {
 			details.RunningApps = append(details.RunningApps, appName)
 		}
 	}
-	details.DataSource = SOURCE_DBUS
+	details.DataSource = srcDbus
 	return details
 }
 
