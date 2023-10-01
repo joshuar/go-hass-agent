@@ -23,14 +23,6 @@ const (
 	webHookPath   = "/api/webhook/"
 )
 
-//go:generate moq -out mock_agentConfig_test.go . AgentConfig
-type AgentConfig interface {
-	Get(string, interface{}) error
-	Set(string, interface{}) error
-	Delete(string) error
-	StoragePath(string) (string, error)
-}
-
 // ValidateConfig takes an agentConfig and ensures that it meets the minimum
 // requirements for the agent to function correctly
 func ValidateConfig(c AgentConfig) error {
