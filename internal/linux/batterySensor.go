@@ -90,7 +90,7 @@ func (b *upowerBattery) marshalBatteryStateUpdate(ctx context.Context, t sensorT
 		}{
 			Voltage:    b.getProp(battVoltage).(float64),
 			Energy:     b.getProp(battEnergy).(float64),
-			DataSource: SOURCE_DBUS,
+			DataSource: srcDbus,
 		}
 	case battPercentage:
 		fallthrough
@@ -100,7 +100,7 @@ func (b *upowerBattery) marshalBatteryStateUpdate(ctx context.Context, t sensorT
 			DataSource string `json:"Data Source"`
 		}{
 			Type:       stringType(b.getProp(battType).(uint32)),
-			DataSource: SOURCE_DBUS,
+			DataSource: srcDbus,
 		}
 	}
 	return state

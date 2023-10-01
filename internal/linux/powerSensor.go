@@ -31,7 +31,7 @@ func newPowerSensor(t sensorType, g string, v dbus.Variant) *powerSensor {
 	s.value = strings.Trim(v.String(), "\"")
 	s.sensorType = t
 	s.icon = "mdi:flash"
-	s.source = SOURCE_DBUS
+	s.source = srcDbus
 	s.diagnostic = true
 	return s
 }

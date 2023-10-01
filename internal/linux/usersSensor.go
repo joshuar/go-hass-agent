@@ -28,7 +28,7 @@ func (s *usersSensor) Attributes() interface{} {
 		DataSource string   `json:"Data Source"`
 		Usernames  []string `json:"Usernames"`
 	}{
-		DataSource: SOURCE_DBUS,
+		DataSource: srcDbus,
 		Usernames:  s.userNames,
 	}
 }
