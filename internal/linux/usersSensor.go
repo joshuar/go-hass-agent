@@ -36,7 +36,7 @@ func (s *usersSensor) Attributes() interface{} {
 func UsersUpdater(ctx context.Context, tracker device.SensorTracker) {
 	updateUsers := func() {
 		sensor := newUsersSensor()
-		userData := NewBusRequest(SystemBus).
+		userData := NewBusRequest(ctx, SystemBus).
 			Path(login1DBusPath).
 			Destination("org.freedesktop.login1").
 			GetData("org.freedesktop.login1.Manager.ListUsers").AsRawInterface()
@@ -45,11 +45,13 @@ func UsersUpdater(ctx context.Context, tracker device.SensorTracker) {
 		for _, u := range userList {
 			sensor.userNames = append(sensor.userNames, u[1].(string))
 		}
-		tracker.UpdateSensors(ctx, sensor)
+		if err := tracker.UpdateSensors(ctx, sensor); err != nil {
+			log.Error().Err(err).Msg("Could not update users sensor.")
+		}
 	}
 	updateUsers()
 
-	err := NewBusRequest(SystemBus).
+	err := NewBusRequest(ctx, SystemBus).
 		Path(login1DBusPath).
 		Match([]dbus.MatchOption{
 			dbus.WithMatchObjectPath(login1DBusPath),

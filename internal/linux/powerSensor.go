@@ -37,7 +37,7 @@ func newPowerSensor(t sensorType, g string, v dbus.Variant) *powerSensor {
 }
 
 func PowerUpater(ctx context.Context, tracker device.SensorTracker) {
-	activePowerProfile, err := NewBusRequest(SystemBus).
+	activePowerProfile, err := NewBusRequest(ctx, SystemBus).
 		Path(powerProfilesDBusPath).
 		Destination(powerProfilesDBusDest).
 		GetProp(powerProfilesDBusDest + ".ActiveProfile")
@@ -46,9 +46,11 @@ func PowerUpater(ctx context.Context, tracker device.SensorTracker) {
 		return
 	}
 
-	tracker.UpdateSensors(ctx, newPowerSensor(powerProfile, powerProfilesDBusPath, activePowerProfile))
+	if err = tracker.UpdateSensors(ctx, newPowerSensor(powerProfile, powerProfilesDBusPath, activePowerProfile)); err != nil {
+		log.Error().Err(err).Msg("Could not update power sensors.")
+	}
 
-	err = NewBusRequest(SystemBus).
+	err = NewBusRequest(ctx, SystemBus).
 		Path(powerProfilesDBusPath).
 		Match([]dbus.MatchOption{
 			dbus.WithMatchObjectPath(powerProfilesDBusPath),
@@ -58,7 +60,9 @@ func PowerUpater(ctx context.Context, tracker device.SensorTracker) {
 			updatedProps := s.Body[1].(map[string]dbus.Variant)
 			for propName, propValue := range updatedProps {
 				if propName == "ActiveProfile" {
-					tracker.UpdateSensors(ctx, newPowerSensor(powerProfile, string(s.Path), activePowerProfile))
+					if err = tracker.UpdateSensors(ctx, newPowerSensor(powerProfile, string(s.Path), activePowerProfile)); err != nil {
+						log.Error().Err(err).Msg("Could not update power sensors.")
+					}
 				} else {
 					log.Debug().Msgf("Unhandled property %v changed to %v", propName, propValue)
 				}

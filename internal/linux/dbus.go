@@ -60,10 +60,13 @@ type busRequest struct {
 	match        []dbus.MatchOption
 }
 
-func NewBusRequest(busType dbusType) *busRequest {
-	b := dbusAPI.EndPoint(busType)
-	return &busRequest{
-		bus: b,
+func NewBusRequest(ctx context.Context, busType dbusType) *busRequest {
+	if bus, ok := getBus(ctx, busType); !ok {
+		return &busRequest{}
+	} else {
+		return &busRequest{
+			bus: bus,
+		}
 	}
 }
 
@@ -287,7 +290,7 @@ func findPortal() string {
 // that, it will default to using "localhost"
 func GetHostname(ctx context.Context) string {
 	var dBusDest = "org.freedesktop.hostname1"
-	hostnameFromDBus, err := NewBusRequest(SystemBus).
+	hostnameFromDBus, err := NewBusRequest(ctx, SystemBus).
 		Path(dbus.ObjectPath("/org/freedesktop/hostname1")).
 		Destination(dBusDest).
 		GetProp(dBusDest + ".Hostname")
@@ -305,7 +308,7 @@ func GetHardwareDetails(ctx context.Context) (string, string) {
 	var vendor, model string
 	var dBusDest = "org.freedesktop.hostname1"
 	var dBusPath = "/org/freedesktop/hostname1"
-	hwVendorFromDBus, err := NewBusRequest(SystemBus).
+	hwVendorFromDBus, err := NewBusRequest(ctx, SystemBus).
 		Path(dbus.ObjectPath(dBusPath)).
 		Destination(dBusDest).
 		GetProp(dBusDest + ".HardwareVendor")
@@ -319,7 +322,7 @@ func GetHardwareDetails(ctx context.Context) (string, string) {
 	} else {
 		vendor = string(variantToValue[[]uint8](hwVendorFromDBus))
 	}
-	hwModelFromDBus, err := NewBusRequest(SystemBus).
+	hwModelFromDBus, err := NewBusRequest(ctx, SystemBus).
 		Path(dbus.ObjectPath(dBusPath)).
 		Destination(dBusDest).
 		GetProp(dBusDest + ".HardwareVendor")

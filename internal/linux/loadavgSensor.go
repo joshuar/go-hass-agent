@@ -21,7 +21,6 @@ type loadavgSensor struct {
 }
 
 func LoadAvgUpdater(ctx context.Context, tracker device.SensorTracker) {
-
 	sendLoadAvgStats := func() {
 		var latest *load.AvgStat
 		var err error
@@ -50,7 +49,9 @@ func LoadAvgUpdater(ctx context.Context, tracker device.SensorTracker) {
 			}
 			sensors = append(sensors, l)
 		}
-		tracker.UpdateSensors(ctx, sensors...)
+		if err := tracker.UpdateSensors(ctx, sensors...); err != nil {
+			log.Error().Err(err).Msg("Could not update load average sensors.")
+		}
 	}
 
 	helpers.PollSensors(ctx, sendLoadAvgStats, time.Minute, time.Second*5)

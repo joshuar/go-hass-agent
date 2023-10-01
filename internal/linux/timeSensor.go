@@ -62,7 +62,9 @@ func TimeUpdater(ctx context.Context, tracker device.SensorTracker) {
 			},
 		})
 
-		tracker.UpdateSensors(ctx, sensors...)
+		if err := tracker.UpdateSensors(ctx, sensors...); err != nil {
+			log.Error().Err(err).Msg("Could not update time sensors.")
+		}
 	}
 
 	helpers.PollSensors(ctx, updateTimes, time.Minute*15, time.Minute)

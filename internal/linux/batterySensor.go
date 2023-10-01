@@ -53,7 +53,7 @@ func (b *upowerBattery) updateProp(ctx context.Context, t sensorType) {
 	case battModel:
 		p = "Model"
 	}
-	propValue, err := NewBusRequest(SystemBus).
+	propValue, err := NewBusRequest(ctx, SystemBus).
 		Path(b.dBusPath).
 		Destination(upowerDBusDest).
 		GetProp("org.freedesktop.UPower.Device." + p)
@@ -70,7 +70,6 @@ func (b *upowerBattery) getProp(t sensorType) interface{} {
 }
 
 func (b *upowerBattery) marshalBatteryStateUpdate(ctx context.Context, t sensorType) *upowerBatteryState {
-	// log.Debug().Caller().Msgf("Marshalling update for %v for battery %v", prop.String(), b.getProp(NativePath).(string))
 	state := &upowerBatteryState{
 		batteryID: b.getProp(battNativePath).(string),
 		model:     b.getProp(battModel).(string),
@@ -92,9 +91,7 @@ func (b *upowerBattery) marshalBatteryStateUpdate(ctx context.Context, t sensorT
 			Energy:     b.getProp(battEnergy).(float64),
 			DataSource: srcDbus,
 		}
-	case battPercentage:
-		fallthrough
-	case battLevel:
+	case battPercentage, battLevel:
 		state.attributes = &struct {
 			Type       string `json:"Battery Type"`
 			DataSource string `json:"Data Source"`
@@ -166,11 +163,7 @@ func (state *upowerBatteryState) DeviceClass() sensor.SensorDeviceClass {
 
 func (state *upowerBatteryState) StateClass() sensor.SensorStateClass {
 	switch state.prop.name {
-	case battPercentage:
-		fallthrough
-	case battTemp:
-		fallthrough
-	case battEnergyRate:
+	case battPercentage, battTemp, battEnergyRate:
 		return sensor.StateMeasurement
 	default:
 		return 0
@@ -179,15 +172,7 @@ func (state *upowerBatteryState) StateClass() sensor.SensorStateClass {
 
 func (state *upowerBatteryState) State() interface{} {
 	switch state.prop.name {
-	case battVoltage:
-		fallthrough
-	case battTemp:
-		fallthrough
-	case battEnergy:
-		fallthrough
-	case battEnergyRate:
-		fallthrough
-	case battPercentage:
+	case battVoltage, battTemp, battEnergy, battEnergyRate, battPercentage:
 		return state.prop.value.(float64)
 	case battState:
 		return stringState(state.prop.value.(uint32))
@@ -285,7 +270,7 @@ func stringLevel(l uint32) string {
 }
 
 func BatteryUpdater(ctx context.Context, tracker device.SensorTracker) {
-	batteryList := NewBusRequest(SystemBus).
+	batteryList := NewBusRequest(ctx, SystemBus).
 		Path(upowerDBusPath).
 		Destination(upowerDBusDest).
 		GetData(upowerGetDevicesMethod).AsObjectPathList()
@@ -297,7 +282,6 @@ func BatteryUpdater(ctx context.Context, tracker device.SensorTracker) {
 
 	batteryTracker := make(map[string]*upowerBattery)
 	for _, v := range batteryList {
-
 		// Track this battery in batteryTracker.
 		batteryID := string(v)
 		batteryTracker[batteryID] = &upowerBattery{
@@ -313,7 +297,9 @@ func BatteryUpdater(ctx context.Context, tracker device.SensorTracker) {
 			batteryTracker[batteryID].updateProp(ctx, prop)
 			stateUpdate := batteryTracker[batteryID].marshalBatteryStateUpdate(ctx, prop)
 			if stateUpdate != nil {
-				tracker.UpdateSensors(ctx, stateUpdate)
+				if err := tracker.UpdateSensors(ctx, stateUpdate); err != nil {
+					log.Error().Err(err).Msg("Could not update battery sensor.")
+				}
 			}
 		}
 
@@ -323,7 +309,9 @@ func BatteryUpdater(ctx context.Context, tracker device.SensorTracker) {
 				batteryTracker[batteryID].updateProp(ctx, prop)
 				stateUpdate := batteryTracker[batteryID].marshalBatteryStateUpdate(ctx, prop)
 				if stateUpdate != nil {
-					tracker.UpdateSensors(ctx, stateUpdate)
+					if err := tracker.UpdateSensors(ctx, stateUpdate); err != nil {
+						log.Error().Err(err).Msg("Could not update battery sensor.")
+					}
 				}
 			}
 		} else {
@@ -331,7 +319,9 @@ func BatteryUpdater(ctx context.Context, tracker device.SensorTracker) {
 			if batteryTracker[batteryID].getProp(battLevel).(uint32) != 1 {
 				stateUpdate := batteryTracker[batteryID].marshalBatteryStateUpdate(ctx, battLevel)
 				if stateUpdate != nil {
-					tracker.UpdateSensors(ctx, stateUpdate)
+					if err := tracker.UpdateSensors(ctx, stateUpdate); err != nil {
+						log.Error().Err(err).Msg("Could not update battery sensor.")
+					}
 				}
 			}
 		}
@@ -340,7 +330,7 @@ func BatteryUpdater(ctx context.Context, tracker device.SensorTracker) {
 		// battery. If a property changes, check it is one we want to track and
 		// if so, update the battery's state in batteryTracker and send the
 		// update back to Home Assistant.
-		err := NewBusRequest(SystemBus).
+		err := NewBusRequest(ctx, SystemBus).
 			Path(v).
 			Match([]dbus.MatchOption{
 				dbus.WithMatchObjectPath(v),
@@ -365,7 +355,9 @@ func BatteryUpdater(ctx context.Context, tracker device.SensorTracker) {
 					}
 				}
 				if len(sensors) > 0 {
-					tracker.UpdateSensors(ctx, sensors...)
+					if err := tracker.UpdateSensors(ctx, sensors...); err != nil {
+						log.Error().Err(err).Msg("Could not update battery sensor.")
+					}
 				}
 			}).
 			AddWatch(ctx)

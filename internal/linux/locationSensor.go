@@ -72,12 +72,14 @@ func LocationUpdater(ctx context.Context, tracker device.SensorTracker) {
 	locationUpdateHandler := func(s *dbus.Signal) {
 		if s.Name == "org.freedesktop.GeoClue2.Client.LocationUpdated" {
 			if locationPath, ok := s.Body[1].(dbus.ObjectPath); ok {
-				tracker.UpdateSensors(ctx, newLocation(locationPath))
+				if err := tracker.UpdateSensors(ctx, newLocation(ctx, locationPath)); err != nil {
+					log.Error().Err(err).Msg("Could not update location.")
+				}
 			}
 		}
 	}
 
-	path = NewBusRequest(SystemBus).
+	path = NewBusRequest(ctx, SystemBus).
 		Path(geocluePath).
 		Destination(geoclueInterface).
 		GetData("org.freedesktop.GeoClue2.Manager.GetClient").AsObjectPath()
@@ -85,25 +87,25 @@ func LocationUpdater(ctx context.Context, tracker device.SensorTracker) {
 		collectError(errors.New("could not set up geoclue client"))
 	}
 
-	collectError(NewBusRequest(SystemBus).
+	collectError(NewBusRequest(ctx, SystemBus).
 		Path(path).
 		Destination(geoclueInterface).
 		SetProp("org.freedesktop.GeoClue2.Client.DesktopId",
 			dbus.MakeVariant(appID)))
 
-	collectError(NewBusRequest(SystemBus).
+	collectError(NewBusRequest(ctx, SystemBus).
 		Path(path).
 		Destination(geoclueInterface).
 		SetProp("org.freedesktop.GeoClue2.Client.DistanceThreshold",
 			dbus.MakeVariant(uint32(0))))
 
-	collectError(NewBusRequest(SystemBus).
+	collectError(NewBusRequest(ctx, SystemBus).
 		Path(path).
 		Destination(geoclueInterface).
 		SetProp("org.freedesktop.GeoClue2.Client.TimeThreshold",
 			dbus.MakeVariant(uint32(0))))
 
-	collectError(NewBusRequest(SystemBus).
+	collectError(NewBusRequest(ctx, SystemBus).
 		Path(path).
 		Match([]dbus.MatchOption{
 			dbus.WithMatchObjectPath(path),
@@ -113,7 +115,7 @@ func LocationUpdater(ctx context.Context, tracker device.SensorTracker) {
 		Handler(locationUpdateHandler).
 		AddWatch(ctx))
 
-	collectError(NewBusRequest(SystemBus).
+	collectError(NewBusRequest(ctx, SystemBus).
 		Path(path).
 		Destination(geoclueInterface).
 		Call("org.freedesktop.GeoClue2.Client.Start"))
@@ -127,7 +129,7 @@ func LocationUpdater(ctx context.Context, tracker device.SensorTracker) {
 		<-ctx.Done()
 		log.Debug().Caller().
 			Msg("Stopping location updater.")
-		err := NewBusRequest(SystemBus).
+		err := NewBusRequest(ctx, SystemBus).
 			Path(path).
 			Destination(geoclueInterface).
 			Call("org.freedesktop.GeoClue2.Client.Stop")
@@ -139,9 +141,9 @@ func LocationUpdater(ctx context.Context, tracker device.SensorTracker) {
 	}()
 }
 
-func newLocation(locationPath dbus.ObjectPath) *linuxLocation {
+func newLocation(ctx context.Context, locationPath dbus.ObjectPath) *linuxLocation {
 	getProp := func(prop string) float64 {
-		value, err := NewBusRequest(SystemBus).
+		value, err := NewBusRequest(ctx, SystemBus).
 			Path(locationPath).
 			Destination(geoclueInterface).
 			GetProp("org.freedesktop.GeoClue2.Location." + prop)

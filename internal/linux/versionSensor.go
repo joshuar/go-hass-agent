@@ -44,5 +44,7 @@ func Versions(ctx context.Context, tracker device.SensorTracker) {
 			source:     "SOURCE_PROCFS",
 		},
 	)
-	tracker.UpdateSensors(ctx, sensors...)
+	if err := tracker.UpdateSensors(ctx, sensors...); err != nil {
+		log.Error().Err(err).Msg("Could not update versions sensors.")
+	}
 }

@@ -276,6 +276,8 @@ func (agent *Agent) SensorValue(id string) (tracker.Sensor, error) {
 func (agent *Agent) startWorkers(ctx context.Context) {
 	wokerFuncs := sensorWorkers()
 	wokerFuncs = append(wokerFuncs, device.ExternalIPUpdater)
+	d := newDevice(ctx)
+	workerCtx := d.Setup(ctx)
 
 	workerCh := make(chan func(context.Context, device.SensorTracker), len(wokerFuncs))
 
@@ -288,7 +290,7 @@ func (agent *Agent) startWorkers(ctx context.Context) {
 		wg.Add(1)
 		go func(workerFunc func(context.Context, device.SensorTracker)) {
 			defer wg.Done()
-			workerFunc(ctx, agent.sensors)
+			workerFunc(workerCtx, agent.sensors)
 		}(workerFunc)
 	}
 

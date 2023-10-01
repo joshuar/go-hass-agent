@@ -31,7 +31,6 @@ func (s *memorySensor) Attributes() interface{} {
 }
 
 func MemoryUpdater(ctx context.Context, tracker device.SensorTracker) {
-
 	sendMemStats := func() {
 		stats := []sensorType{memTotal, memAvail, memUsed, swapTotal, swapFree}
 		var memDetails *mem.VirtualMemoryStat
@@ -71,7 +70,9 @@ func MemoryUpdater(ctx context.Context, tracker device.SensorTracker) {
 			}
 			sensors = append(sensors, state)
 		}
-		tracker.UpdateSensors(ctx, sensors...)
+		if err := tracker.UpdateSensors(ctx, sensors...); err != nil {
+			log.Error().Err(err).Msg("Could not update memory sensors.")
+		}
 	}
 
 	helpers.PollSensors(ctx, sendMemStats, time.Minute, time.Second*5)

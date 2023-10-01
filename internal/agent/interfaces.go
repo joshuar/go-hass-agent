@@ -38,4 +38,5 @@ type AgentUI interface {
 type Device interface {
 	DeviceName() string
 	DeviceID() string
+	Setup(context.Context) context.Context
 }

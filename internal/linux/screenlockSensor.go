@@ -36,7 +36,7 @@ func (s *screenlockSensor) SensorType() sensor.SensorType {
 }
 
 func ScreenLockUpdater(ctx context.Context, tracker device.SensorTracker) {
-	err := NewBusRequest(SessionBus).
+	err := NewBusRequest(ctx, SessionBus).
 		Path(screensaverDBusPath).
 		Match([]dbus.MatchOption{
 			dbus.WithMatchObjectPath(screensaverDBusPath),
@@ -48,7 +48,9 @@ func ScreenLockUpdater(ctx context.Context, tracker device.SensorTracker) {
 			lock.value = s.Body[0].(bool)
 			lock.sensorType = screenLock
 			lock.source = srcDbus
-			tracker.UpdateSensors(ctx, lock)
+			if err := tracker.UpdateSensors(ctx, lock); err != nil {
+				log.Error().Err(err).Msg("Could not update screen lock sensor.")
+			}
 		}).
 		AddWatch(ctx)
 	if err != nil {

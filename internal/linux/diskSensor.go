@@ -75,7 +75,9 @@ func DiskUsageUpdater(ctx context.Context, tracker device.SensorTracker) {
 			}
 			sensors = append(sensors, newDiskSensor(usage))
 		}
-		tracker.UpdateSensors(ctx, sensors...)
+		if err := tracker.UpdateSensors(ctx, sensors...); err != nil {
+			log.Error().Err(err).Msg("Could not update disk usage sensors.")
+		}
 	}
 
 	helpers.PollSensors(ctx, sendDiskUsageStats, time.Minute, time.Second*5)
