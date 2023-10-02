@@ -155,10 +155,6 @@ func (ui *fyneUI) DisplayRegistrationWindow(ctx context.Context, agent Agent, do
 		registrationForm,
 	))
 
-	ui.mainWindow.SetOnClosed(func() {
-		log.Debug().Msg("Closed")
-	})
-
 	ui.mainWindow.Show()
 }
 
@@ -345,9 +341,6 @@ func (ui *fyneUI) mqttConfigItems(agent Agent, t *translations.Translator) []*wi
 	serverEntry.Validator = hostPortValidator()
 	serverEntry.Disable()
 
-	topicEntry := configEntry(agent, config.PrefMQTTTopic, "homeassistant", false)
-	topicEntry.Disable()
-
 	userEntry := configEntry(agent, config.PrefMQTTUser, "", false)
 	userEntry.Disable()
 	passwordEntry := configEntry(agent, config.PrefMQTTPassword, "", true)
@@ -357,7 +350,6 @@ func (ui *fyneUI) mqttConfigItems(agent Agent, t *translations.Translator) []*wi
 		switch b {
 		case true:
 			serverEntry.Enable()
-			topicEntry.Enable()
 			userEntry.Enable()
 			passwordEntry.Enable()
 			if err := agent.SetConfig("UseMQTT", true); err != nil {
@@ -365,7 +357,6 @@ func (ui *fyneUI) mqttConfigItems(agent Agent, t *translations.Translator) []*wi
 			}
 		case false:
 			serverEntry.Disable()
-			topicEntry.Disable()
 			userEntry.Disable()
 			passwordEntry.Disable()
 			if err := agent.SetConfig("UseMQTT", false); err != nil {
@@ -378,7 +369,6 @@ func (ui *fyneUI) mqttConfigItems(agent Agent, t *translations.Translator) []*wi
 
 	items = append(items, widget.NewFormItem(t.Translate("Use MQTT?"), mqttEnabled),
 		widget.NewFormItem(t.Translate("MQTT Server"), serverEntry),
-		widget.NewFormItem(t.Translate("MQTT Topic"), topicEntry),
 		widget.NewFormItem(t.Translate("MQTT User"), userEntry),
 		widget.NewFormItem(t.Translate("MQTT Password"), passwordEntry),
 	)
