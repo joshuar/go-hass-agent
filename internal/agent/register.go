@@ -71,7 +71,7 @@ func (agent *Agent) registrationProcess(ctx context.Context, server, token strin
 	// If the config is valid, but the agent is not registered, set the agent as
 	// registered and continue execution. Required check for versions upgraded
 	// from v1.2.6 and below.
-	if ValidateConfig(agent.config) == nil {
+	if config.ValidateConfig(agent.config) == nil {
 		if !registered {
 			if err := agent.config.Set(config.PrefRegistered, true); err != nil {
 				log.Fatal().Err(err).Msg("Could not set registered status.")

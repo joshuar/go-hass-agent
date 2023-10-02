@@ -7,7 +7,6 @@ package agent
 
 import (
 	"context"
-	_ "embed"
 	"fmt"
 	"os"
 	"os/signal"
@@ -25,10 +24,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-//go:generate sh -c "printf %s $(git tag | tail -1) > VERSION"
-//go:embed VERSION
-var version string
-
 const (
 	name = "go-hass-agent"
 )
@@ -38,7 +33,7 @@ const (
 // strings such as app name and version.
 type Agent struct {
 	ui       AgentUI
-	config   AgentConfig
+	config   config.AgentConfig
 	sensors  *tracker.SensorTracker
 	done     chan struct{}
 	name     string
@@ -57,12 +52,11 @@ type AgentOptions struct {
 func newAgent(appID string, headless bool) *Agent {
 	a := &Agent{
 		id:       appID,
-		version:  version,
 		done:     make(chan struct{}),
 		headless: headless,
 	}
 	a.ui = ui.NewFyneUI(a)
-	a.config = config.NewFyneConfig()
+	a.config = config.New()
 	a.setupLogging()
 	return a
 }
@@ -87,10 +81,10 @@ func Run(options AgentOptions) {
 		defer wg.Done()
 		<-registrationDone
 		log.Trace().Msg("Registration check/action done.")
-		if err = UpgradeConfig(agent.config); err != nil {
+		if err = config.UpgradeConfig(agent.config); err != nil {
 			log.Warn().Err(err).Msg("Could not upgrade config.")
 		}
-		if err = ValidateConfig(agent.config); err != nil {
+		if err = config.ValidateConfig(agent.config); err != nil {
 			log.Fatal().Err(err).Msg("Could not validate config.")
 		}
 		ctx, cancelFunc = agent.setupContext()

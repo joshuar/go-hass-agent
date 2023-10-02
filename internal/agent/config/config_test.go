@@ -3,31 +3,28 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-package agent
+package config
 
 import (
 	"errors"
 	"testing"
-
-	"github.com/joshuar/go-hass-agent/internal/agent/config"
 )
 
 func TestValidateConfig(t *testing.T) {
-
 	validConfig := &AgentConfigMock{
 		GetFunc: func(s string, ifaceVal interface{}) error {
 			v := ifaceVal.(*string)
 			switch s {
-			case config.PrefAPIURL:
+			case PrefAPIURL:
 				*v = "http://localhost:8123"
 				return nil
-			case config.PrefWebsocketURL:
+			case PrefWebsocketURL:
 				*v = "http://localhost:8123"
 				return nil
-			case config.PrefToken:
+			case PrefToken:
 				*v = "123456"
 				return nil
-			case config.PrefWebhookID:
+			case PrefWebhookID:
 				*v = "123456"
 				return nil
 			default:
@@ -40,16 +37,16 @@ func TestValidateConfig(t *testing.T) {
 		GetFunc: func(s string, ifaceVal interface{}) error {
 			v := ifaceVal.(*string)
 			switch s {
-			case config.PrefAPIURL:
+			case PrefAPIURL:
 				*v = "not a url"
 				return nil
-			case config.PrefWebsocketURL:
+			case PrefWebsocketURL:
 				*v = "not a url"
 				return nil
-			case config.PrefToken:
+			case PrefToken:
 				*v = ""
 				return nil
-			case config.PrefWebhookID:
+			case PrefWebhookID:
 				*v = ""
 				return nil
 			default:
@@ -91,7 +88,7 @@ func TestUpgradeConfig(t *testing.T) {
 		GetFunc: func(s string, ifaceVal interface{}) error {
 			v := ifaceVal.(*string)
 			switch s {
-			case config.PrefVersion:
+			case PrefVersion:
 				*v = "v999.0.0"
 				return nil
 			default:
@@ -133,7 +130,7 @@ func Test_generateWebsocketURL(t *testing.T) {
 		GetFunc: func(s string, ifaceVal interface{}) error {
 			v := ifaceVal.(*string)
 			switch s {
-			case config.PrefHost:
+			case PrefHost:
 				*v = "http://localhost:8123"
 				return nil
 			default:
@@ -173,16 +170,16 @@ func Test_generateAPIURL(t *testing.T) {
 		GetFunc: func(s string, ifaceVal interface{}) error {
 			v := ifaceVal.(*string)
 			switch s {
-			case config.PrefHost:
+			case PrefHost:
 				*v = "http://localhost:8123"
 				return nil
-			case config.PrefCloudhookURL:
+			case PrefCloudhookURL:
 				*v = "http://localhost:8123"
 				return nil
-			case config.PrefRemoteUIURL:
+			case PrefRemoteUIURL:
 				*v = "http://localhost:8123"
 				return nil
-			case config.PrefWebhookID:
+			case PrefWebhookID:
 				*v = "123456"
 				return nil
 			default:
