@@ -11,9 +11,9 @@
 !/assets/
 
 # Ignore these files
-internal/agent/VERSION
 home-assistant
 fyne-cross
 dist
 .VSCodeCounter
 go-hass-agent
+internal/agent/config/VERSION

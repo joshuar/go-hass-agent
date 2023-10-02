@@ -11,17 +11,6 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/agent/ui"
 )
 
-// AgentConfig represents the methods that the agent uses to interact with
-// its config. It is effectively a CRUD interface to wherever the configuration
-// is stored.
-//
-//go:generate moq -out mockAgentConfig_test.go . AgentConfig
-type AgentConfig interface {
-	Get(string, interface{}) error
-	Set(string, interface{}) error
-	Delete(string) error
-	StoragePath(string) (string, error)
-}
 
 // AgentUI are the methods required for the agent to display its windows, tray
 // and notifications

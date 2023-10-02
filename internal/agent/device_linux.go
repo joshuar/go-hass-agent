@@ -8,12 +8,13 @@ package agent
 import (
 	"context"
 
+	"github.com/joshuar/go-hass-agent/internal/agent/config"
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 )
 
 func newDevice(ctx context.Context) *linux.LinuxDevice {
-	return linux.NewDevice(ctx, name, version)
+	return linux.NewDevice(ctx, name, config.AppVersion)
 }
 
 // sensorWorkers returns a list of functions to start to enable sensor tracking.

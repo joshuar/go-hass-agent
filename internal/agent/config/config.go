@@ -3,27 +3,45 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-package agent
+package config
 
 import (
+	_ "embed"
+
 	"errors"
 	"fmt"
 	"net/url"
 	"os"
 
 	"github.com/go-playground/validator/v10"
-	"github.com/joshuar/go-hass-agent/internal/agent/config"
+	fyneconfig "github.com/joshuar/go-hass-agent/internal/agent/config/fyneConfig"
 	"github.com/joshuar/go-hass-agent/internal/tracker/registry"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/mod/semver"
 )
+
+// AgentConfig represents the methods that the agent uses to interact with
+// its config. It is effectively a CRUD interface to wherever the configuration
+// is stored.
+//
+//go:generate moq -out mockAgentConfig_test.go . AgentConfig
+type AgentConfig interface {
+	Get(string, interface{}) error
+	Set(string, interface{}) error
+	Delete(string) error
+	StoragePath(string) (string, error)
+}
 
 const (
 	websocketPath = "/api/websocket"
 	webHookPath   = "/api/webhook/"
 )
 
-// ValidateConfig takes an agentConfig and ensures that it meets the minimum
+//go:generate sh -c "printf %s $(git tag | tail -1) > VERSION"
+//go:embed VERSION
+var AppVersion string
+
+// ValidateConfig takes an AgentConfig and ensures that it meets the minimum
 // requirements for the agent to function correctly
 func ValidateConfig(c AgentConfig) error {
 	cfgValidator := validator.New()
@@ -41,25 +59,25 @@ func ValidateConfig(c AgentConfig) error {
 		return nil
 	}
 
-	if err := validate(config.PrefAPIURL,
+	if err := validate(PrefAPIURL,
 		"required,url",
 		"apiURL does not match either a URL, hostname or hostname:port",
 	); err != nil {
 		return err
 	}
-	if err := validate(config.PrefWebsocketURL,
+	if err := validate(PrefWebsocketURL,
 		"required,url",
 		"websocketURL does not match either a URL, hostname or hostname:port",
 	); err != nil {
 		return err
 	}
-	if err := validate(config.PrefToken,
+	if err := validate(PrefToken,
 		"required,ascii",
 		"invalid long-lived token format",
 	); err != nil {
 		return err
 	}
-	if err := validate(config.PrefWebhookID,
+	if err := validate(PrefWebhookID,
 		"required,ascii",
 		"invalid webhookID format",
 	); err != nil {
@@ -69,11 +87,11 @@ func ValidateConfig(c AgentConfig) error {
 	return nil
 }
 
-// UpgradeConfig takes an agentConfig checking and performing various fixes and
+// UpgradeConfig takes an AgentConfig checking and performing various fixes and
 // changes to the agent config as it has evolved in difference versions
 func UpgradeConfig(c AgentConfig) error {
 	var configVersion string
-	if err := c.Get(config.PrefVersion, &configVersion); err != nil {
+	if err := c.Get(PrefVersion, &configVersion); err != nil {
 		return fmt.Errorf("config version is not a valid value (%v)", err)
 	}
 
@@ -82,7 +100,7 @@ func UpgradeConfig(c AgentConfig) error {
 	case semver.Compare(configVersion, "v1.4.0") < 0:
 		log.Debug().Msg("Performing config upgrades for < v1.4.0")
 		var hostString string
-		if err := c.Get(config.PrefHost, &hostString); err != nil {
+		if err := c.Get(PrefHost, &hostString); err != nil {
 			return fmt.Errorf("upgrade < v.1.4.0: invalid host value (%v)", err)
 		}
 		var tlsBool bool
@@ -95,7 +113,7 @@ func UpgradeConfig(c AgentConfig) error {
 		case false:
 			hostString = "http://" + hostString
 		}
-		if err := c.Set(config.PrefHost, hostString); err != nil {
+		if err := c.Set(PrefHost, hostString); err != nil {
 			return err
 		}
 		fallthrough
@@ -108,7 +126,7 @@ func UpgradeConfig(c AgentConfig) error {
 		if err := generateWebsocketURL(c); err != nil {
 			return err
 		}
-	case semver.Compare(version, "v3.0.0") < 0:
+	case semver.Compare(AppVersion, "v3.0.0") < 0:
 		log.Debug().Msg("Performing config upgrades for < v3.0.0.")
 		var err error
 		path, err := c.StoragePath("sensorRegistry")
@@ -127,7 +145,7 @@ func UpgradeConfig(c AgentConfig) error {
 		}
 	}
 
-	if err := c.Set(config.PrefVersion, version); err != nil {
+	if err := c.Set(PrefVersion, AppVersion); err != nil {
 		return err
 	}
 	return nil
@@ -136,7 +154,7 @@ func UpgradeConfig(c AgentConfig) error {
 func generateWebsocketURL(c AgentConfig) error {
 	// TODO: look into websocket http upgrade method
 	var host string
-	if err := c.Get(config.PrefHost, &host); err != nil {
+	if err := c.Get(PrefHost, &host); err != nil {
 		return err
 	}
 	baseURL, _ := url.Parse(host)
@@ -147,21 +165,21 @@ func generateWebsocketURL(c AgentConfig) error {
 		baseURL.Scheme = "ws"
 	}
 	baseURL = baseURL.JoinPath(websocketPath)
-	return c.Set(config.PrefWebsocketURL, baseURL.String())
+	return c.Set(PrefWebsocketURL, baseURL.String())
 }
 
 func generateAPIURL(c AgentConfig) error {
 	var cloudhookURL, remoteUIURL, webhookID, host string
-	if err := c.Get(config.PrefCloudhookURL, &cloudhookURL); err != nil {
+	if err := c.Get(PrefCloudhookURL, &cloudhookURL); err != nil {
 		return err
 	}
-	if err := c.Get(config.PrefRemoteUIURL, &remoteUIURL); err != nil {
+	if err := c.Get(PrefRemoteUIURL, &remoteUIURL); err != nil {
 		return err
 	}
-	if err := c.Get(config.PrefWebhookID, &webhookID); err != nil {
+	if err := c.Get(PrefWebhookID, &webhookID); err != nil {
 		return err
 	}
-	if err := c.Get(config.PrefHost, &host); err != nil {
+	if err := c.Get(PrefHost, &host); err != nil {
 		return err
 	}
 	var apiURL string
@@ -177,5 +195,9 @@ func generateAPIURL(c AgentConfig) error {
 	default:
 		apiURL = ""
 	}
-	return c.Set(config.PrefAPIURL, apiURL)
+	return c.Set(PrefAPIURL, apiURL)
+}
+
+func New() AgentConfig {
+	return fyneconfig.NewFyneConfig()
 }
