@@ -64,18 +64,19 @@ func (ui *fyneUI) openURL(u string) {
 }
 
 func NewFyneUI(agent Agent) *fyneUI {
-	ui := &fyneUI{
-		app:  app.NewWithID(agent.AppID()),
-		text: translations.NewTranslator(),
-	}
-	ui.app.SetIcon(&TrayIcon{})
 	if !agent.IsHeadless() {
+		ui := &fyneUI{
+			app:  app.NewWithID(agent.AppID()),
+			text: translations.NewTranslator(),
+		}
+		ui.app.SetIcon(&TrayIcon{})
 		ui.mainWindow = ui.app.NewWindow(agent.AppName())
 		ui.mainWindow.SetCloseIntercept(func() {
 			ui.mainWindow.Hide()
 		})
+		return ui
 	}
-	return ui
+	return &fyneUI{}
 }
 
 // DisplayTrayIcon displays an icon in the desktop tray with a menu for
