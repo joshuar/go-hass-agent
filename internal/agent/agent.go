@@ -29,12 +29,11 @@ import (
 // This includes the data structure for the UI elements and tray and some
 // strings such as app name and version.
 type Agent struct {
-	ui       ui.AgentUI
-	config   config.AgentConfig
-	sensors  *tracker.SensorTracker
-	done     chan struct{}
-	id       string
-	headless bool
+	ui      ui.AgentUI
+	config  config.AgentConfig
+	sensors *tracker.SensorTracker
+	done    chan struct{}
+	options *AgentOptions
 }
 
 // AgentOptions holds options taken from the command-line that was used to
@@ -44,11 +43,10 @@ type AgentOptions struct {
 	Headless, Register bool
 }
 
-func newAgent(appID string, headless bool) *Agent {
+func newAgent(o *AgentOptions) *Agent {
 	a := &Agent{
-		id:       appID,
-		done:     make(chan struct{}),
-		headless: headless,
+		done:    make(chan struct{}),
+		options: o,
 	}
 	a.ui = fyneui.NewFyneUI(a)
 	a.config = config.New()
@@ -65,7 +63,7 @@ func Run(options AgentOptions) {
 	var cancelFunc context.CancelFunc
 	var err error
 
-	agent := newAgent(options.ID, options.Headless)
+	agent := newAgent(&options)
 	defer close(agent.done)
 
 	registrationDone := make(chan struct{})
@@ -115,7 +113,7 @@ func Run(options AgentOptions) {
 // request to Home Assistant and handles the response. It will handle either a
 // UI or non-UI registration flow.
 func Register(options AgentOptions, server, token string) {
-	agent := newAgent(options.ID, options.Headless)
+	agent := newAgent(&options)
 	defer close(agent.done)
 
 	agentCtx, cancelFunc := context.WithCancel(context.Background())
@@ -146,7 +144,7 @@ func ShowVersion() {
 }
 
 func ShowInfo(options AgentOptions) {
-	agent := newAgent(options.ID, true)
+	agent := newAgent(&options)
 	var info strings.Builder
 	var deviceName, deviceID string
 	if err := agent.GetConfig(config.PrefDeviceName, &deviceName); err == nil && deviceName != "" {
@@ -220,7 +218,7 @@ func (agent *Agent) handleShutdown(ctx context.Context) {
 // Agent satisfies ui.Agent, tracker.Agent and api.Agent interfaces
 
 func (agent *Agent) IsHeadless() bool {
-	return agent.headless
+	return agent.options.Headless
 }
 
 func (agent *Agent) AppName() string {
@@ -228,7 +226,7 @@ func (agent *Agent) AppName() string {
 }
 
 func (agent *Agent) AppID() string {
-	return agent.id
+	return agent.options.ID
 }
 
 func (agent *Agent) AppVersion() string {
