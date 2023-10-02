@@ -14,7 +14,7 @@ import (
 )
 
 func newDevice(ctx context.Context) *linux.LinuxDevice {
-	return linux.NewDevice(ctx, name, config.AppVersion)
+	return linux.NewDevice(ctx, config.AppName, config.AppVersion)
 }
 
 // sensorWorkers returns a list of functions to start to enable sensor tracking.

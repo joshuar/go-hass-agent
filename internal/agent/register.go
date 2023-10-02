@@ -46,7 +46,7 @@ func (agent *Agent) saveRegistration(r *api.RegistrationResponse, d api.DeviceIn
 	checkFatal(agent.config.Set(config.PrefDeviceName, d.DeviceName()))
 	checkFatal(agent.config.Set(config.PrefDeviceID, d.DeviceID()))
 	checkFatal(agent.config.Set(config.PrefRegistered, true))
-	checkFatal(agent.config.Set(config.PrefVersion, agent.version))
+	checkFatal(agent.config.Set(config.PrefVersion, config.AppVersion))
 
 	registryPath, err := agent.config.StoragePath("sensorRegistry")
 	if err != nil {

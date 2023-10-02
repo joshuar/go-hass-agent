@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-package ui
+package fyneui
 
 import (
 	"context"
@@ -23,6 +23,7 @@ import (
 	"fyne.io/fyne/v2/widget"
 	"github.com/go-playground/validator/v10"
 	"github.com/joshuar/go-hass-agent/internal/agent/config"
+	"github.com/joshuar/go-hass-agent/internal/agent/ui"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/translations"
 	"github.com/rs/zerolog/log"
@@ -39,88 +40,88 @@ type fyneUI struct {
 	text       *translations.Translator
 }
 
-func (ui *fyneUI) Run() {
+func (i *fyneUI) Run() {
 	log.Trace().Msg("Starting Fyne UI loop.")
-	ui.app.Run()
+	i.app.Run()
 }
 
-func (ui *fyneUI) DisplayNotification(title, message string) {
-	ui.app.SendNotification(&fyne.Notification{
+func (i *fyneUI) DisplayNotification(title, message string) {
+	i.app.SendNotification(&fyne.Notification{
 		Title:   title,
 		Content: message,
 	})
 }
 
-func (ui *fyneUI) openURL(u string) {
+func (i *fyneUI) openURL(u string) {
 	if dest, err := url.Parse(strings.TrimSpace(u)); err != nil {
 		log.Warn().Err(err).
 			Msgf("Unable parse url %s", u)
 	} else {
-		if err := ui.app.OpenURL(dest); err != nil {
+		if err := i.app.OpenURL(dest); err != nil {
 			log.Warn().Err(err).
 				Msgf("Unable to open url %s", dest.String())
 		}
 	}
 }
 
-func NewFyneUI(agent Agent) *fyneUI {
+func NewFyneUI(agent ui.Agent) *fyneUI {
 	if !agent.IsHeadless() {
-		ui := &fyneUI{
+		i := &fyneUI{
 			app:  app.NewWithID(agent.AppID()),
 			text: translations.NewTranslator(),
 		}
-		ui.app.SetIcon(&TrayIcon{})
-		ui.mainWindow = ui.app.NewWindow(agent.AppName())
-		ui.mainWindow.SetCloseIntercept(func() {
-			ui.mainWindow.Hide()
+		i.app.SetIcon(&ui.TrayIcon{})
+		i.mainWindow = i.app.NewWindow(agent.AppName())
+		i.mainWindow.SetCloseIntercept(func() {
+			i.mainWindow.Hide()
 		})
-		return ui
+		return i
 	}
 	return &fyneUI{}
 }
 
 // DisplayTrayIcon displays an icon in the desktop tray with a menu for
 // controlling the agent and showing other informational windows.
-func (ui *fyneUI) DisplayTrayIcon(ctx context.Context, agent Agent) {
+func (i *fyneUI) DisplayTrayIcon(ctx context.Context, agent ui.Agent) {
 	if agent.IsHeadless() {
 		return
 	}
-	if desk, ok := ui.app.(desktop.App); ok {
-		menuItemQuit := fyne.NewMenuItem(ui.text.Translate("Quit"), func() {
+	if desk, ok := i.app.(desktop.App); ok {
+		menuItemQuit := fyne.NewMenuItem(i.text.Translate("Quit"), func() {
 			agent.Stop()
 		})
 		menuItemQuit.IsQuit = true
 		menu := fyne.NewMenu("Main",
-			fyne.NewMenuItem(ui.text.Translate("About"),
+			fyne.NewMenuItem(i.text.Translate("About"),
 				func() {
-					w := ui.aboutWindow(ctx, agent, ui.text)
+					w := i.aboutWindow(ctx, agent, i.text)
 					if w != nil {
 						w.Show()
 					}
 				}),
-			fyne.NewMenuItem(ui.text.Translate("Report Issue"),
+			fyne.NewMenuItem(i.text.Translate("Report Issue"),
 				func() {
-					ui.openURL(issueURL)
+					i.openURL(ui.IssueURL)
 				}),
-			fyne.NewMenuItem(ui.text.Translate("Request Feature"),
+			fyne.NewMenuItem(i.text.Translate("Request Feature"),
 				func() {
-					ui.openURL(featureRequestURL)
+					i.openURL(ui.FeatureRequestURL)
 				}),
-			fyne.NewMenuItem(ui.text.Translate("Fyne Settings"),
+			fyne.NewMenuItem(i.text.Translate("Fyne Settings"),
 				func() {
-					w := ui.fyneSettingsWindow(ui.text)
+					w := i.fyneSettingsWindow(i.text)
 					w.Show()
 				}),
-			fyne.NewMenuItem(ui.text.Translate("App Settings"),
+			fyne.NewMenuItem(i.text.Translate("App Settings"),
 				func() {
-					w := ui.agentSettingsWindow(agent, ui.text)
+					w := i.agentSettingsWindow(agent, i.text)
 					if w != nil {
 						w.Show()
 					}
 				}),
-			fyne.NewMenuItem(ui.text.Translate("Sensors"),
+			fyne.NewMenuItem(i.text.Translate("Sensors"),
 				func() {
-					w := ui.sensorsWindow(agent, ui.text)
+					w := i.sensorsWindow(agent, i.text)
 					if w != nil {
 						w.Show()
 					}
@@ -133,35 +134,35 @@ func (ui *fyneUI) DisplayTrayIcon(ctx context.Context, agent Agent) {
 // DisplayRegistrationWindow displays a UI to prompt the user for the details needed to
 // complete registration. It will populate with any values that were already
 // provided via the command-line.
-func (ui *fyneUI) DisplayRegistrationWindow(ctx context.Context, agent Agent, done chan struct{}) {
-	ui.mainWindow.SetTitle(ui.text.Translate("App Registration"))
+func (i *fyneUI) DisplayRegistrationWindow(ctx context.Context, agent ui.Agent, done chan struct{}) {
+	i.mainWindow.SetTitle(i.text.Translate("App Registration"))
 
 	var allFormItems []*widget.FormItem
 
-	allFormItems = append(allFormItems, ui.serverConfigItems(ctx, agent, ui.text)...)
+	allFormItems = append(allFormItems, i.serverConfigItems(ctx, agent, i.text)...)
 	registrationForm := widget.NewForm(allFormItems...)
 	registrationForm.OnSubmit = func() {
-		ui.mainWindow.Hide()
+		i.mainWindow.Hide()
 		close(done)
 	}
 	registrationForm.OnCancel = func() {
 		log.Warn().Msg("Canceling registration.")
 		close(done)
-		ui.mainWindow.Close()
+		i.mainWindow.Close()
 		ctx.Done()
 	}
 
-	ui.mainWindow.SetContent(container.New(layout.NewVBoxLayout(),
-		widget.NewLabel(ui.text.Translate(explainRegistration)),
+	i.mainWindow.SetContent(container.New(layout.NewVBoxLayout(),
+		widget.NewLabel(i.text.Translate(explainRegistration)),
 		registrationForm,
 	))
 
-	ui.mainWindow.Show()
+	i.mainWindow.Show()
 }
 
 // aboutWindow creates a window that will show some interesting information
 // about the agent, such as version numbers.
-func (ui *fyneUI) aboutWindow(ctx context.Context, agent Agent, t *translations.Translator) fyne.Window {
+func (i *fyneUI) aboutWindow(ctx context.Context, agent ui.Agent, t *translations.Translator) fyne.Window {
 	var widgets []fyne.CanvasObject
 	if hassConfig, err := hass.GetHassConfig(ctx); err != nil {
 		widgets = append(widgets, widget.NewLabel(t.Translate(
@@ -180,7 +181,7 @@ func (ui *fyneUI) aboutWindow(ctx context.Context, agent Agent, t *translations.
 		widgets = append(widgets,
 			widget.NewLabel(t.Translate("Device ID: "+deviceID)))
 	}
-	w := ui.app.NewWindow(t.Translate("About"))
+	w := i.app.NewWindow(t.Translate("About"))
 	cnt := container.New(layout.NewVBoxLayout(), widgets...)
 	cnt.Add(widget.NewButton(t.Translate("Ok"), func() { w.Close() }))
 	w.SetContent(cnt)
@@ -189,8 +190,8 @@ func (ui *fyneUI) aboutWindow(ctx context.Context, agent Agent, t *translations.
 
 // fyneSettingsWindow creates a window that will show the Fyne settings for
 // controlling the look and feel of other windows.
-func (ui *fyneUI) fyneSettingsWindow(t *translations.Translator) fyne.Window {
-	w := ui.app.NewWindow(t.Translate("Fyne Settings"))
+func (i *fyneUI) fyneSettingsWindow(t *translations.Translator) fyne.Window {
+	w := i.app.NewWindow(t.Translate("Fyne Settings"))
 	w.SetContent(settings.NewSettings().LoadAppearanceScreen(w))
 	return w
 }
@@ -198,14 +199,14 @@ func (ui *fyneUI) fyneSettingsWindow(t *translations.Translator) fyne.Window {
 // sensorsWindow creates a window that displays all of the sensors and their
 // values that are currently tracked by the agent. Values are updated
 // continuously.
-func (ui *fyneUI) sensorsWindow(s Agent, t *translations.Translator) fyne.Window {
-	sensors := s.SensorList()
+func (i *fyneUI) sensorsWindow(agent ui.Agent, t *translations.Translator) fyne.Window {
+	sensors := agent.SensorList()
 	if sensors == nil {
 		return nil
 	}
 
 	getValue := func(n string) string {
-		if v, err := s.SensorValue(n); err == nil {
+		if v, err := agent.SensorValue(n); err == nil {
 			var b strings.Builder
 			fmt.Fprintf(&b, "%v", v.State())
 			if v.Units() != "" {
@@ -270,7 +271,7 @@ func (ui *fyneUI) sensorsWindow(s Agent, t *translations.Translator) fyne.Window
 			}
 		}
 	}()
-	w := ui.app.NewWindow(t.Translate("Sensors"))
+	w := i.app.NewWindow(t.Translate("Sensors"))
 	w.SetContent(sensorsTable)
 	w.Resize(fyne.NewSize(480, 640))
 	w.SetOnClosed(func() {
@@ -281,11 +282,11 @@ func (ui *fyneUI) sensorsWindow(s Agent, t *translations.Translator) fyne.Window
 
 // agentSettingsWindow creates a window for changing settings related to the
 // agent functionality. Most of these settings will be optional.
-func (ui *fyneUI) agentSettingsWindow(agent Agent, t *translations.Translator) fyne.Window {
+func (i *fyneUI) agentSettingsWindow(agent ui.Agent, t *translations.Translator) fyne.Window {
 	var allFormItems []*widget.FormItem
-	allFormItems = append(allFormItems, ui.mqttConfigItems(agent, t)...)
+	allFormItems = append(allFormItems, i.mqttConfigItems(agent, t)...)
 
-	w := ui.app.NewWindow(t.Translate("App Settings"))
+	w := i.app.NewWindow(t.Translate("App Settings"))
 	settingsForm := widget.NewForm(allFormItems...)
 	w.SetContent(container.New(layout.NewVBoxLayout(),
 		settingsForm,
@@ -299,7 +300,7 @@ func (ui *fyneUI) agentSettingsWindow(agent Agent, t *translations.Translator) f
 
 // serverConfigItems generates a list of form item widgets for selecting a
 // server to register the agent against
-func (ui *fyneUI) serverConfigItems(ctx context.Context, agent Agent, t *translations.Translator) []*widget.FormItem {
+func (i *fyneUI) serverConfigItems(ctx context.Context, agent ui.Agent, t *translations.Translator) []*widget.FormItem {
 	allServers := hass.FindServers(ctx)
 
 	tokenEntry := configEntry(agent, config.PrefToken, "ASecretLongLivedToken", false)
@@ -337,7 +338,7 @@ func (ui *fyneUI) serverConfigItems(ctx context.Context, agent Agent, t *transla
 
 // mqttConfigItems generates a list of for item widgets for configuring the
 // agent to use an MQTT for pub/sub functionality
-func (ui *fyneUI) mqttConfigItems(agent Agent, t *translations.Translator) []*widget.FormItem {
+func (i *fyneUI) mqttConfigItems(agent ui.Agent, t *translations.Translator) []*widget.FormItem {
 	serverEntry := configEntry(agent, config.PrefMQTTServer, "localhost:1883", false)
 	serverEntry.Validator = hostPortValidator()
 	serverEntry.Disable()
@@ -380,7 +381,7 @@ func (ui *fyneUI) mqttConfigItems(agent Agent, t *translations.Translator) []*wi
 // configEntry creates a form entry widget that is tied to the given config
 // value of the given agent. When the value of the entry widget changes, the
 // corresponding config value will be updated.
-func configEntry(agent Agent, name, placeholder string, secret bool) *widget.Entry {
+func configEntry(agent ui.Agent, name, placeholder string, secret bool) *widget.Entry {
 	var entry *widget.Entry
 	if secret {
 		entry = widget.NewPasswordEntry()
@@ -402,7 +403,7 @@ func configEntry(agent Agent, name, placeholder string, secret bool) *widget.Ent
 // configCheck creates a form checkbox widget that is tied to the given config
 // value of the given agent. When the value of the entry widget changes, the
 // corresponding config value will be updated.
-func configCheck(agent Agent, name string, checkFn func(bool)) *widget.Check {
+func configCheck(agent ui.Agent, name string, checkFn func(bool)) *widget.Check {
 	entry := widget.NewCheck("", checkFn)
 	if err := agent.GetConfig(name, &entry.Checked); err != nil {
 		log.Warn().Err(err).Msgf("Could not get value of config entry %s. Using placeholder.", name)
