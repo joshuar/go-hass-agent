@@ -6,6 +6,7 @@
 package ui
 
 import (
+	"context"
 	_ "embed"
 
 	"github.com/joshuar/go-hass-agent/internal/tracker"
@@ -24,11 +25,22 @@ type Agent interface {
 	SensorValue(string) (tracker.Sensor, error)
 }
 
+// AgentUI are the methods required for the agent to display its windows, tray
+// and notifications
+//
+//go:generate moq -out mockAgentUI_test.go . AgentUI
+type AgentUI interface {
+	DisplayNotification(string, string)
+	DisplayTrayIcon(context.Context, Agent)
+	DisplayRegistrationWindow(context.Context, Agent, chan struct{})
+	Run()
+}
+
 //go:embed assets/issueURL.txt
-var issueURL string
+var IssueURL string
 
 //go:embed assets/featureRequestURL.txt
-var featureRequestURL string
+var FeatureRequestURL string
 
 //go:embed assets/logo-pretty.png
 var hassIcon []byte

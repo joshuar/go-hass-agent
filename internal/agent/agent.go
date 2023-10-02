@@ -19,26 +19,21 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/agent/config"
 	"github.com/joshuar/go-hass-agent/internal/agent/ui"
+	fyneui "github.com/joshuar/go-hass-agent/internal/agent/ui/fyneUI"
 	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-)
-
-const (
-	name = "go-hass-agent"
 )
 
 // Agent holds the data and structure representing an instance of the agent.
 // This includes the data structure for the UI elements and tray and some
 // strings such as app name and version.
 type Agent struct {
-	ui       AgentUI
+	ui       ui.AgentUI
 	config   config.AgentConfig
 	sensors  *tracker.SensorTracker
 	done     chan struct{}
-	name     string
 	id       string
-	version  string
 	headless bool
 }
 
@@ -55,7 +50,7 @@ func newAgent(appID string, headless bool) *Agent {
 		done:     make(chan struct{}),
 		headless: headless,
 	}
-	a.ui = ui.NewFyneUI(a)
+	a.ui = fyneui.NewFyneUI(a)
 	a.config = config.New()
 	a.setupLogging()
 	return a
@@ -146,9 +141,8 @@ func Register(options AgentOptions, server, token string) {
 	log.Info().Msg("Device registered with Home Assistant.")
 }
 
-func ShowVersion(options AgentOptions) {
-	agent := newAgent(options.ID, true)
-	log.Info().Msgf("%s: %s", agent.name, agent.version)
+func ShowVersion() {
+	log.Info().Msgf("%s: %s", config.AppName, config.AppVersion)
 }
 
 func ShowInfo(options AgentOptions) {
@@ -230,7 +224,7 @@ func (agent *Agent) IsHeadless() bool {
 }
 
 func (agent *Agent) AppName() string {
-	return agent.name
+	return config.AppName
 }
 
 func (agent *Agent) AppID() string {
@@ -238,7 +232,7 @@ func (agent *Agent) AppID() string {
 }
 
 func (agent *Agent) AppVersion() string {
-	return agent.version
+	return config.AppVersion
 }
 
 func (agent *Agent) Stop() {
