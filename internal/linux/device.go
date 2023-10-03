@@ -8,6 +8,7 @@ package linux
 import (
 	"context"
 	"encoding/json"
+	"os"
 	"os/user"
 	"strings"
 	"sync"
@@ -133,7 +134,7 @@ func (l *LinuxDevice) Setup(ctx context.Context) context.Context {
 	return context.WithValue(ctx, linuxCtxKey, newDBusAPI(ctx))
 }
 
-func NewDevice(ctx context.Context, name, version string) *LinuxDevice {
+func NewDevice(name, version string) *LinuxDevice {
 	device := &LinuxDevice{
 		appName:    name,
 		appVersion: version,
@@ -146,12 +147,8 @@ func NewDevice(ctx context.Context, name, version string) *LinuxDevice {
 			Msgf("Could not retrieve distribution details: %v", err.Error())
 	}
 
-	// Try to fetch hostname, vendor, model from DBus. Fall back to
-	// /sys/devices/virtual/dmi/id for vendor and model if DBus doesn't work.
-	// Ref:
-	// https://github.com/ansible/ansible/blob/devel/lib/ansible/module_utils/facts/hardware/linux.py
-	device.hostname = GetHostname(ctx)
-	device.hwVendor, device.hwModel = GetHardwareDetails(ctx)
+	device.hostname = getHostname()
+	device.hwVendor, device.hwModel = getHardwareDetails()
 
 	// Use the current user's username to construct an app ID.
 	currentUser, err := user.Current()
@@ -169,4 +166,35 @@ func NewDevice(ctx context.Context, name, version string) *LinuxDevice {
 	}
 
 	return device
+}
+
+// getHardwareDetails will try to read the vendor and model details them from
+// the /sys filesystem. If that fails, it returns empty strings for these values
+// https://github.com/ansible/ansible/blob/devel/lib/ansible/module_utils/facts/hardware/linux.py
+func getHardwareDetails() (string, string) {
+	var vendor, model string
+	hwVendor, err := os.ReadFile("/sys/devices/virtual/dmi/id/board_vendor")
+	if err != nil {
+		vendor = "Unknown Vendor"
+	} else {
+		vendor = strings.TrimSpace(string(hwVendor))
+	}
+	hwModel, err := os.ReadFile("/sys/devices/virtual/dmi/id/product_name")
+	if err != nil {
+		model = "Unknown Vendor"
+	} else {
+		model = strings.TrimSpace(string(hwModel))
+	}
+	return vendor, model
+}
+
+// getHostname retrieves the hostname of the device running the agent, or
+// localhost if that doesn't work
+func getHostname() string {
+	hostname, err := os.Hostname()
+	if err != nil {
+		log.Warn().Err(err).Msg("Could not retrieve hostname.")
+		return "localhost"
+	}
+	return hostname
 }
