@@ -62,6 +62,7 @@ type busRequest struct {
 
 func NewBusRequest(ctx context.Context, busType dbusType) *busRequest {
 	if bus, ok := getBus(ctx, busType); !ok {
+		log.Warn().Msg("No D-Bus connection present in context.")
 		return &busRequest{}
 	} else {
 		return &busRequest{
@@ -286,55 +287,3 @@ func findPortal() string {
 	}
 }
 
-// GetHostname will try to fetch the hostname of the device from DBus. Failing
-// that, it will default to using "localhost"
-func GetHostname(ctx context.Context) string {
-	var dBusDest = "org.freedesktop.hostname1"
-	hostnameFromDBus, err := NewBusRequest(ctx, SystemBus).
-		Path(dbus.ObjectPath("/org/freedesktop/hostname1")).
-		Destination(dBusDest).
-		GetProp(dBusDest + ".Hostname")
-	if err != nil {
-		return "localhost"
-	} else {
-		return string(variantToValue[[]uint8](hostnameFromDBus))
-	}
-}
-
-// GetHardwareDetails will try to get a hardware vendor and model from DBus.
-// Failing that, it will try to read them from the /sys filesystem. If that
-// fails, it returns empty strings for these values
-func GetHardwareDetails(ctx context.Context) (string, string) {
-	var vendor, model string
-	var dBusDest = "org.freedesktop.hostname1"
-	var dBusPath = "/org/freedesktop/hostname1"
-	hwVendorFromDBus, err := NewBusRequest(ctx, SystemBus).
-		Path(dbus.ObjectPath(dBusPath)).
-		Destination(dBusDest).
-		GetProp(dBusDest + ".HardwareVendor")
-	if err != nil {
-		hwVendor, err := os.ReadFile("/sys/devices/virtual/dmi/id/board_vendor")
-		if err != nil {
-			vendor = "Unknown Vendor"
-		} else {
-			vendor = strings.TrimSpace(string(hwVendor))
-		}
-	} else {
-		vendor = string(variantToValue[[]uint8](hwVendorFromDBus))
-	}
-	hwModelFromDBus, err := NewBusRequest(ctx, SystemBus).
-		Path(dbus.ObjectPath(dBusPath)).
-		Destination(dBusDest).
-		GetProp(dBusDest + ".HardwareVendor")
-	if err != nil {
-		hwModel, err := os.ReadFile("/sys/devices/virtual/dmi/id/product_name")
-		if err != nil {
-			model = "Unknown Vendor"
-		} else {
-			model = strings.TrimSpace(string(hwModel))
-		}
-	} else {
-		model = string(variantToValue[[]uint8](hwModelFromDBus))
-	}
-	return vendor, model
-}
