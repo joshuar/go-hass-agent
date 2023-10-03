@@ -39,11 +39,10 @@ func (agent *Agent) runNotificationsWorker(ctx context.Context, options AgentOpt
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		restartCh := make(chan struct{})
-		api.StartWebsocket(ctx, agent, notifyCh, restartCh)
-		for range restartCh {
-			log.Debug().Msg("Restarting websocket connection.")
+		for {
+			restartCh := make(chan struct{})
 			api.StartWebsocket(ctx, agent, notifyCh, restartCh)
+			<-restartCh
 		}
 	}()
 

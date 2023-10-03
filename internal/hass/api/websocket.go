@@ -59,15 +59,15 @@ func StartWebsocket(ctx context.Context, settings Agent, notifyCh chan [2]string
 
 	retryFunc := func() error {
 		var resp *http.Response
-		socket, resp, err = gws.NewClient(newWebsocket(ctx, settings, notifyCh, doneCh), &gws.ClientOption{
-			Addr: websocketURL,
-		})
-		defer resp.Body.Close()
+		socket, resp, err = gws.NewClient(
+			newWebsocket(ctx, settings, notifyCh, doneCh),
+			&gws.ClientOption{Addr: websocketURL})
 		if err != nil {
 			log.Error().Err(err).
-				Msgf("Could not connect to websocket (%s).", resp.Status)
+				Msg("Could not connect to websocket.")
 			return err
 		}
+		defer resp.Body.Close()
 		return nil
 	}
 	err = backoff.Retry(retryFunc, backoff.WithContext(backoff.NewExponentialBackOff(), ctx))
