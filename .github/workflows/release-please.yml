@@ -50,7 +50,7 @@ jobs:
         if: ${{ steps.release_please.outputs.release_created }}
         id: update_version
         shell: sh
-        run: cd internal/agent && printf %s $(git tag | tail -1) > VERSION
+        run: cd internal/agent/config && printf %s $(git tag | tail -1) > VERSION
 
       - name: Run Go Releaser
         uses: goreleaser/goreleaser-action@v4
