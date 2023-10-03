@@ -159,13 +159,6 @@
             "fuzzy": true
         },
         {
-            "id": "MQTT Topic",
-            "message": "MQTT Topic",
-            "translation": "MQTT Topic",
-            "translatorComment": "Copied from source.",
-            "fuzzy": true
-        },
-        {
             "id": "MQTT User",
             "message": "MQTT User",
             "translation": "MQTT User",
