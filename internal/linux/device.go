@@ -55,13 +55,11 @@ func getBus(ctx context.Context, e dbusType) (*Bus, bool) {
 type LinuxDevice struct {
 	appName    string
 	appVersion string
-	appID      string
-	hostname   string
-	hwVendor   string
-	hwModel    string
-	osRelease  string
-	osVersion  string
-	machineID  string
+}
+
+// Setup returns a new Context that contains the D-Bus API.
+func (l *LinuxDevice) Setup(ctx context.Context) context.Context {
+	return context.WithValue(ctx, linuxCtxKey, newDBusAPI(ctx))
 }
 
 func (l *LinuxDevice) AppName() string {
@@ -73,32 +71,57 @@ func (l *LinuxDevice) AppVersion() string {
 }
 
 func (l *LinuxDevice) AppID() string {
-	return l.appID
+	// Use the current user's username to construct an app ID.
+	currentUser, err := user.Current()
+	if err != nil {
+		log.Warn().Err(err).
+			Msg("Could not retrieve current user details.")
+		return l.appName + "-unknown"
+	}
+	return l.appName + "-" + currentUser.Username
 }
 
 func (l *LinuxDevice) DeviceName() string {
-	shortHostname, _, _ := strings.Cut(l.hostname, ".")
+	shortHostname, _, _ := strings.Cut(getHostname(), ".")
 	return shortHostname
 }
 
 func (l *LinuxDevice) DeviceID() string {
-	return l.machineID
+	machineID, err := host.HostID()
+	if err != nil {
+		log.Warn().Err(err).
+			Msg("Could not retrieve a machine ID")
+		return "unknown"
+	}
+	return machineID
 }
 
 func (l *LinuxDevice) Manufacturer() string {
-	return l.hwVendor
+	return getHWVendor()
 }
 
 func (l *LinuxDevice) Model() string {
-	return l.hwModel
+	return getHWModel()
 }
 
 func (l *LinuxDevice) OsName() string {
-	return l.osRelease
+	_, osRelease, _, err := host.PlatformInformation()
+	if err != nil {
+		log.Warn().Err(err).
+			Msg("Could not retrieve distribution details.")
+		return "Unknown OS"
+	}
+	return osRelease
 }
 
 func (l *LinuxDevice) OsVersion() string {
-	return l.osVersion
+	_, _, osVersion, err := host.PlatformInformation()
+	if err != nil {
+		log.Warn().Err(err).
+			Msg("Could not retrieve version details.")
+		return "Unknown Version"
+	}
+	return osVersion
 }
 
 func (l *LinuxDevice) SupportsEncryption() bool {
@@ -129,63 +152,11 @@ func (l *LinuxDevice) MarshalJSON() ([]byte, error) {
 	})
 }
 
-// Setup returns a new Context that contains the D-Bus API.
-func (l *LinuxDevice) Setup(ctx context.Context) context.Context {
-	return context.WithValue(ctx, linuxCtxKey, newDBusAPI(ctx))
-}
-
 func NewDevice(name, version string) *LinuxDevice {
-	device := &LinuxDevice{
+	return &LinuxDevice{
 		appName:    name,
 		appVersion: version,
 	}
-	var err error
-
-	_, device.osRelease, device.osVersion, err = host.PlatformInformation()
-	if err != nil {
-		log.Fatal().Caller().
-			Msgf("Could not retrieve distribution details: %v", err.Error())
-	}
-
-	device.hostname = getHostname()
-	device.hwVendor, device.hwModel = getHardwareDetails()
-
-	// Use the current user's username to construct an app ID.
-	currentUser, err := user.Current()
-	if err != nil {
-		log.Fatal().Caller().
-			Msgf("Could not retrieve current user details: %v", err.Error())
-	}
-	device.appID = name + "-" + currentUser.Username
-
-	// Generate a semi-random machine ID.
-	device.machineID, err = host.HostID()
-	if err != nil {
-		log.Fatal().Caller().
-			Msgf("Could not retrieve a machine ID: %v", err)
-	}
-
-	return device
-}
-
-// getHardwareDetails will try to read the vendor and model details them from
-// the /sys filesystem. If that fails, it returns empty strings for these values
-// https://github.com/ansible/ansible/blob/devel/lib/ansible/module_utils/facts/hardware/linux.py
-func getHardwareDetails() (string, string) {
-	var vendor, model string
-	hwVendor, err := os.ReadFile("/sys/devices/virtual/dmi/id/board_vendor")
-	if err != nil {
-		vendor = "Unknown Vendor"
-	} else {
-		vendor = strings.TrimSpace(string(hwVendor))
-	}
-	hwModel, err := os.ReadFile("/sys/devices/virtual/dmi/id/product_name")
-	if err != nil {
-		model = "Unknown Vendor"
-	} else {
-		model = strings.TrimSpace(string(hwModel))
-	}
-	return vendor, model
 }
 
 // getHostname retrieves the hostname of the device running the agent, or
@@ -197,4 +168,28 @@ func getHostname() string {
 		return "localhost"
 	}
 	return hostname
+}
+
+// getHWVendor will try to retrieve the vendor from the sysfs filesystem. It
+// will return "Unknown Vendor" if unsuccessful.
+// Reference: https://github.com/ansible/ansible/blob/devel/lib/ansible/module_utils/facts/hardware/linux.py
+func getHWVendor() string {
+	hwVendor, err := os.ReadFile("/sys/devices/virtual/dmi/id/board_vendor")
+	if err != nil {
+		return "Unknown Vendor"
+	} else {
+		return strings.TrimSpace(string(hwVendor))
+	}
+}
+
+// getHWModel will try to retrieve the hardware model from the sysfs filesystem. It
+// will return "Unknown Model" if unsuccessful.
+// Reference: https://github.com/ansible/ansible/blob/devel/lib/ansible/module_utils/facts/hardware/linux.py
+func getHWModel() string {
+	hwModel, err := os.ReadFile("/sys/devices/virtual/dmi/id/product_name")
+	if err != nil {
+		return "Unknown Model"
+	} else {
+		return strings.TrimSpace(string(hwModel))
+	}
 }
