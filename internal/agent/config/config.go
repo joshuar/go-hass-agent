@@ -14,7 +14,7 @@ import (
 	"os"
 
 	"github.com/go-playground/validator/v10"
-	fyneconfig "github.com/joshuar/go-hass-agent/internal/agent/config/fyneConfig"
+	viperconfig "github.com/joshuar/go-hass-agent/internal/agent/config/viperConfig"
 	"github.com/joshuar/go-hass-agent/internal/tracker/registry"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/mod/semver"
@@ -127,6 +127,7 @@ func UpgradeConfig(c AgentConfig) error {
 		if err := generateWebsocketURL(c); err != nil {
 			return err
 		}
+		fallthrough
 	case semver.Compare(AppVersion, "v3.0.0") < 0:
 		log.Debug().Msg("Performing config upgrades for < v3.0.0.")
 		var err error
@@ -143,6 +144,12 @@ func UpgradeConfig(c AgentConfig) error {
 		}
 		if err = os.Remove(path + "/0.dat"); err != nil {
 			return errors.New("could not remove old sensor registry")
+		}
+		fallthrough
+	case semver.Compare(AppVersion, "v5.0.0") < 0:
+		log.Debug().Msg("Performing config upgrades for < v5.0.0.")
+		if err := viperconfig.MigrateFromFyne(); err != nil {
+			return errors.Join(errors.New("failed to migrate Fyne config to Viper"), err)
 		}
 	}
 
@@ -197,8 +204,4 @@ func generateAPIURL(c AgentConfig) error {
 		apiURL = ""
 	}
 	return c.Set(PrefAPIURL, apiURL)
-}
-
-func New() AgentConfig {
-	return fyneconfig.NewFyneConfig()
 }

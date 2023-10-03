@@ -41,11 +41,19 @@ type fyneUI struct {
 }
 
 func (i *fyneUI) Run() {
+	if i.app == nil {
+		log.Warn().Msg("No UI. Likely running headless. Not running Fyne UI loop.")
+		return
+	}
 	log.Trace().Msg("Starting Fyne UI loop.")
 	i.app.Run()
 }
 
 func (i *fyneUI) DisplayNotification(title, message string) {
+	if i.app == nil {
+		log.Warn().Msg("No UI. Cannot display notifications.")
+		return
+	}
 	i.app.SendNotification(&fyne.Notification{
 		Title:   title,
 		Content: message,
@@ -84,6 +92,7 @@ func NewFyneUI(agent ui.Agent) *fyneUI {
 // controlling the agent and showing other informational windows.
 func (i *fyneUI) DisplayTrayIcon(ctx context.Context, agent ui.Agent) {
 	if agent.IsHeadless() {
+		log.Warn().Msg("No UI. Will not display tray icon.")
 		return
 	}
 	if desk, ok := i.app.(desktop.App); ok {
@@ -156,7 +165,7 @@ func (i *fyneUI) DisplayRegistrationWindow(ctx context.Context, agent ui.Agent, 
 		widget.NewLabel(i.text.Translate(explainRegistration)),
 		registrationForm,
 	))
-
+	log.Debug().Msg("Asking user for registration details.")
 	i.mainWindow.Show()
 }
 

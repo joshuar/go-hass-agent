@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"sync"
 	"syscall"
@@ -18,12 +19,15 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/hass/api"
 
 	"github.com/joshuar/go-hass-agent/internal/agent/config"
+	viperconfig "github.com/joshuar/go-hass-agent/internal/agent/config/viperConfig"
 	"github.com/joshuar/go-hass-agent/internal/agent/ui"
 	fyneui "github.com/joshuar/go-hass-agent/internal/agent/ui/fyneUI"
 	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
+
+var configPath = filepath.Join(os.Getenv("HOME"), ".config", "go-hass-agent")
 
 // Agent holds the data and structure representing an instance of the agent.
 // This includes the data structure for the UI elements and tray and some
@@ -44,12 +48,16 @@ type AgentOptions struct {
 }
 
 func newAgent(o *AgentOptions) *Agent {
+	var err error
 	a := &Agent{
 		done:    make(chan struct{}),
 		options: o,
 	}
 	a.ui = fyneui.NewFyneUI(a)
-	a.config = config.New()
+	// a.config = fyneconfig.NewFyneConfig()
+	if a.config, err = viperconfig.New(configPath); err != nil {
+		log.Fatal().Err(err).Msg("Could not open config.")
+	}
 	a.setupLogging()
 	return a
 }
@@ -69,6 +77,7 @@ func Run(options AgentOptions) {
 	registrationDone := make(chan struct{})
 	go agent.registrationProcess(context.Background(), "", "", options.Register, options.Headless, registrationDone)
 
+	configDone := make(chan struct{})
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -81,29 +90,36 @@ func Run(options AgentOptions) {
 			log.Fatal().Err(err).Msg("Could not validate config.")
 		}
 		ctx, cancelFunc = agent.setupContext()
+		agent.handleCancellation(ctx)
+		close(configDone)
 	}()
-	wg.Wait()
-	log.Trace().Msg("Config load/validation done.")
-
-	if agent.sensors, err = tracker.NewSensorTracker(agent); err != nil {
-		log.Fatal().Err(err).Msg("Could not start.")
-	}
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		agent.startWorkers(ctx)
-	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		agent.runNotificationsWorker(ctx, options)
+		<-configDone
+
+		if agent.sensors, err = tracker.NewSensorTracker(agent); err != nil {
+			log.Fatal().Err(err).Msg("Could not start.")
+		}
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			agent.startWorkers(ctx)
+		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			agent.runNotificationsWorker(ctx, options)
+		}()
 	}()
 
-	agent.handleSignals(cancelFunc)
-	agent.handleShutdown(ctx)
+	agent.handleSignals()
+	agent.handleShutdown()
 	agent.ui.DisplayTrayIcon(ctx, agent)
 	agent.ui.Run()
+	defer cancelFunc()
 
 	wg.Wait()
 }
@@ -115,8 +131,7 @@ func Run(options AgentOptions) {
 func Register(options AgentOptions, server, token string) {
 	agent := newAgent(&options)
 	defer close(agent.done)
-
-	agentCtx, cancelFunc := context.WithCancel(context.Background())
+	ctx, _ := agent.setupContext()
 
 	// Don't proceed unless the agent is registered and forced is not set
 	// if agent.IsRegistered() && !options.Register {
@@ -126,12 +141,12 @@ func Register(options AgentOptions, server, token string) {
 	// }
 
 	registrationDone := make(chan struct{})
-	go agent.registrationProcess(agentCtx, server, token, options.Register, options.Headless, registrationDone)
+	go agent.registrationProcess(ctx, server, token, options.Register, options.Headless, registrationDone)
 
-	agent.handleSignals(cancelFunc)
-	agent.handleShutdown(agentCtx)
+	agent.handleSignals()
+	// agent.handleShutdown(ctx)
 	if !options.Headless {
-		agent.ui.DisplayTrayIcon(agentCtx, agent)
+		agent.ui.DisplayTrayIcon(ctx, agent)
 		agent.ui.Run()
 	}
 
@@ -182,36 +197,37 @@ func (agent *Agent) setupContext() (context.Context, context.CancelFunc) {
 		log.Fatal().Err(err).Msg("Could not export apiURL.")
 	}
 	if err := agent.config.Get(config.PrefSecret, &SharedConfig.Secret); err != nil && SharedConfig.Secret != "NOTSET" {
-		log.Fatal().Err(err).Msg("Could not export secret.")
+		log.Debug().Err(err).Msg("Could not export secret.")
 	}
 	ctx := api.NewContext(context.Background(), SharedConfig)
 	return context.WithCancel(ctx)
 }
 
 // handleSignals will handle Ctrl-C of the agent
-func (agent *Agent) handleSignals(cancelFunc context.CancelFunc) {
+func (agent *Agent) handleSignals() {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-c
 		log.Debug().Msg("Ctrl-C pressed.")
-		cancelFunc()
+		close(agent.done)
 	}()
 }
 
 // handleShutdown will handle context cancellation of the agent
-func (agent *Agent) handleShutdown(ctx context.Context) {
+func (agent *Agent) handleShutdown() {
 	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				log.Debug().Msg("Context canceled.")
-				os.Exit(1)
-			case <-agent.done:
-				log.Debug().Msg("Agent done.")
-				os.Exit(0)
-			}
-		}
+		<-agent.done
+		log.Debug().Msg("Agent done.")
+		os.Exit(0)
+	}()
+}
+
+func (agent *Agent) handleCancellation(ctx context.Context) {
+	go func() {
+		<-ctx.Done()
+		log.Debug().Msg("Context canceled.")
+		os.Exit(1)
 	}()
 }
 
