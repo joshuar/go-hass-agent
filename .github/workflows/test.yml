@@ -30,7 +30,6 @@ jobs:
 
       - name: Update VERSION
         id: update_version
-        if: ${{ steps.release_please.outputs.release_created }}
         shell: sh
         run: cd internal/agent/config && printf %s $(git tag | tail -1) > VERSION
 
