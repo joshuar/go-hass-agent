@@ -1,5 +1,17 @@
 # Changelog
 
+## [4.1.1](https://github.com/joshuar/go-hass-agent/compare/v4.1.0...v4.1.1) (2023-10-03)
+
+
+### Bug Fixes
+
+* **linux:** sensor type strings ([29b995c](https://github.com/joshuar/go-hass-agent/commit/29b995c88e0d5ec02ef5eef9e6ebf27e66bdb1ad))
+
+
+### Miscellaneous Chores
+
+* release 4.1.1 ([6d84656](https://github.com/joshuar/go-hass-agent/commit/6d84656bc24b6d8fdd065ddbec32b3cb80ba65bb))
+
 ## [4.1.0](https://github.com/joshuar/go-hass-agent/compare/v4.0.3...v4.1.0) (2023-10-02)
 
 
