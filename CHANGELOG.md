@@ -1,5 +1,20 @@
 # Changelog
 
+## [4.1.0](https://github.com/joshuar/go-hass-agent/compare/v4.0.3...v4.1.0) (2023-10-02)
+
+
+### Features
+
+* **linux:** rewrite D-Bus logic ([fa0e5bc](https://github.com/joshuar/go-hass-agent/commit/fa0e5bc61ace68216b527307f0fdbfaa4c690599))
+* **linux:** simplify D-Bus signal matching ([44a0d74](https://github.com/joshuar/go-hass-agent/commit/44a0d742015473709cd2d58ad0e8d491f5f2cf91))
+
+
+### Bug Fixes
+
+* **agent/ui:** don't do any init of Fyne if running headless ([533a1f2](https://github.com/joshuar/go-hass-agent/commit/533a1f2a24c7c0c6daae05e5ddcacad994b98e11))
+* **agent/ui:** remove unused setting ([90d7ce9](https://github.com/joshuar/go-hass-agent/commit/90d7ce93821024885a6d7eeb47b7694d5c7fc136))
+* **linux:** fix spelling mistake ([3deea46](https://github.com/joshuar/go-hass-agent/commit/3deea466cb2dca64c43788b05974d54584a16747))
+
 ## [4.0.3](https://github.com/joshuar/go-hass-agent/compare/v4.0.2...v4.0.3) (2023-09-27)
 
 
