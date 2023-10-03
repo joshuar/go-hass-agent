@@ -47,10 +47,9 @@ var messageKeyToIndex = map[string]int{
 	"App Version: %s\tHA Version: %s": 10,
 	"Auto-discovered Servers":         13,
 	"Fyne Settings":                   4,
-	"MQTT Password":                   20,
+	"MQTT Password":                   19,
 	"MQTT Server":                     17,
-	"MQTT Topic":                      18,
-	"MQTT User":                       19,
+	"MQTT User":                       18,
 	"Manual Server Entry":             15,
 	"Ok":                              11,
 	"Quit":                            0,
@@ -63,44 +62,44 @@ var messageKeyToIndex = map[string]int{
 	"Use MQTT?":          16,
 }
 
-var deIndex = []uint32{ // 22 elements
+var deIndex = []uint32{ // 21 elements
 	0x00000000, 0x00000000, 0x00000000, 0x00000000,
 	0x00000000, 0x00000000, 0x00000000, 0x00000000,
 	0x00000000, 0x00000000, 0x00000000, 0x00000000,
 	0x00000000, 0x00000000, 0x00000000, 0x00000000,
 	0x00000000, 0x00000000, 0x00000000, 0x00000000,
-	0x00000000, 0x00000000,
-} // Size: 112 bytes
+	0x00000000,
+} // Size: 108 bytes
 
 const deData string = ""
 
-var enIndex = []uint32{ // 22 elements
+var enIndex = []uint32{ // 21 elements
 	0x00000000, 0x00000005, 0x0000000b, 0x00000018,
 	0x00000028, 0x00000036, 0x00000043, 0x0000004b,
 	0x0000005c, 0x000000e8, 0x000000fb, 0x00000120,
 	0x00000123, 0x00000129, 0x00000141, 0x00000154,
-	0x00000168, 0x00000172, 0x0000017e, 0x00000189,
-	0x00000193, 0x000001a1,
-} // Size: 112 bytes
+	0x00000168, 0x00000172, 0x0000017e, 0x00000188,
+	0x00000196,
+} // Size: 108 bytes
 
-const enData string = "" + // Size: 417 bytes
+const enData string = "" + // Size: 406 bytes
 	"\x02Quit\x02About\x02Report Issue\x02Request Feature\x02Fyne Settings" +
 	"\x02App Settings\x02Sensors\x02App Registration\x02To register the agent" +
 	", please enter the relevant details for your Home Assistant\x0aserver (i" +
 	"f not auto-detected) and long-lived access token.\x02App Version: %[1]s" +
 	"\x02App Version: %[1]s\x09HA Version: %[2]s\x02Ok\x02Token\x02Auto-disco" +
 	"vered Servers\x02Use Custom Server?\x02Manual Server Entry\x02Use MQTT?" +
-	"\x02MQTT Server\x02MQTT Topic\x02MQTT User\x02MQTT Password"
+	"\x02MQTT Server\x02MQTT User\x02MQTT Password"
 
-var frIndex = []uint32{ // 22 elements
+var frIndex = []uint32{ // 21 elements
 	0x00000000, 0x00000000, 0x00000000, 0x00000000,
 	0x00000000, 0x00000000, 0x00000000, 0x00000000,
 	0x00000000, 0x00000000, 0x00000000, 0x00000000,
 	0x00000000, 0x00000000, 0x00000000, 0x00000000,
 	0x00000000, 0x00000000, 0x00000000, 0x00000000,
-	0x00000000, 0x00000000,
-} // Size: 112 bytes
+	0x00000000,
+} // Size: 108 bytes
 
 const frData string = ""
 
-// Total table size 753 bytes (0KiB); checksum: E0533B52
+// Total table size 730 bytes (0KiB); checksum: CEFAAC74
