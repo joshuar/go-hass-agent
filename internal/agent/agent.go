@@ -27,8 +27,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-var configPath = filepath.Join(os.Getenv("HOME"), ".config", "go-hass-agent")
-
 // Agent holds the data and structure representing an instance of the agent.
 // This includes the data structure for the UI elements and tray and some
 // strings such as app name and version.
@@ -49,6 +47,7 @@ type AgentOptions struct {
 
 func newAgent(o *AgentOptions) *Agent {
 	var err error
+	var configPath = filepath.Join(os.Getenv("HOME"), ".config", o.ID)
 	a := &Agent{
 		done:    make(chan struct{}),
 		options: o,
