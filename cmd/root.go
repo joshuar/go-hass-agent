@@ -28,9 +28,11 @@ var appID = "com.github.joshuar.go-hass-agent"
 var rootCmd = &cobra.Command{
 	Use:   "go-hass-agent",
 	Short: "A Home Assistant, native app integration for desktop/laptop devices.",
-	Long: `go-hass-agent reports various sensors from a desktop/laptop to a Home Assistant instance. Sensors include the usual system metrics like load average and memory usage as well as things like current active app where possible.
+	Long: `go-hass-agent reports various sensors from a desktop/laptop to a Home Assistant instance.
+Sensors include the usual system metrics like load average and memory usage as well as things like
+current active app where possible.
 	
-	It can also receive notifications from Home Assistant.`,
+It can also receive notifications from Home Assistant.`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		logging.SetLogging(traceFlag, debugFlag, profileFlag)
 	},
