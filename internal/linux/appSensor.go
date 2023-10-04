@@ -125,8 +125,8 @@ func newRunningAppsDetails(apps map[string]dbus.Variant) *runningAppsDetails {
 func AppUpdater(ctx context.Context, tracker device.SensorTracker) {
 	portalDest := findPortal()
 	if portalDest == "" {
-		log.Debug().Caller().
-			Msgf("Unsupported or unknown portal")
+		log.Warn().
+			Msg("Unsupported or unknown portal. App sensors will not run.")
 		return
 	}
 

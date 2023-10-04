@@ -282,8 +282,6 @@ func findPortal() string {
 	case "GNOME":
 		return "org.freedesktop.impl.portal.desktop.kde"
 	default:
-		log.Warn().Msg("Unsupported desktop/window environment.")
 		return ""
 	}
 }
-
