@@ -9,12 +9,6 @@
         "ghcr.io/devcontainers/features/python:1": {},
     },
     "postCreateCommand": ".devcontainer/postCreate.sh",
-    "remoteEnv": {
-        "DISPLAY": "${localEnv:DISPLAY}"
-    },
-    "mounts": [
-        "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind,consistency=cached"
-    ],
     "customizations": {
         "vscode": {
             "extensions": [
