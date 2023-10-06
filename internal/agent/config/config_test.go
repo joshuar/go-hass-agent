@@ -6,6 +6,7 @@
 package config
 
 import (
+	_ "embed"
 	"errors"
 	"testing"
 )
@@ -83,132 +84,82 @@ func TestValidateConfig(t *testing.T) {
 	}
 }
 
-func TestUpgradeConfig(t *testing.T) {
-	validConfig := &AgentConfigMock{
-		GetFunc: func(s string, ifaceVal interface{}) error {
-			v := ifaceVal.(*string)
-			switch s {
-			case PrefVersion:
-				*v = "v999.0.0"
-				return nil
-			default:
-				return errors.New("not found")
-			}
-		},
-		SetFunc: func(s string, ifaceVal interface{}) error {
-			return nil
-		},
-		StoragePathFunc: func(s string) (string, error) { return t.TempDir(), nil },
-	}
-
-	type args struct {
-		c AgentConfig
-	}
-	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-	}{
-		{
-			name:    "valid config",
-			args:    args{c: validConfig},
-			wantErr: false,
-		},
-		// TODO: test each version upgrade?
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if err := UpgradeConfig(tt.args.c); (err != nil) != tt.wantErr {
-				t.Errorf("UpgradeConfig() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
-
 func Test_generateWebsocketURL(t *testing.T) {
-	validConfig := &AgentConfigMock{
-		GetFunc: func(s string, ifaceVal interface{}) error {
-			v := ifaceVal.(*string)
-			switch s {
-			case PrefHost:
-				*v = "http://localhost:8123"
-				return nil
-			default:
-				return errors.New("not found")
-			}
-		},
-		SetFunc: func(s string, ifaceVal interface{}) error {
-			return nil
-		},
-	}
-
 	type args struct {
-		c AgentConfig
+		host string
 	}
 	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
+		name string
+		args args
+		want string
 	}{
 		{
-			name:    "default test",
-			args:    args{c: validConfig},
-			wantErr: false,
+			name: "valid host",
+			args: args{host: "http://localhost:8123"},
+			want: "ws://localhost:8123/api/websocket",
+		},
+		{
+			name: "invalid host",
+			args: args{host: "localhost:8123"},
+			want: "",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := generateWebsocketURL(tt.args.c); (err != nil) != tt.wantErr {
-				t.Errorf("generateWebsocketURL() error = %v, wantErr %v", err, tt.wantErr)
+			if got := generateWebsocketURL(tt.args.host); got != tt.want {
+				t.Errorf("generateWebsocketURL() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
 func Test_generateAPIURL(t *testing.T) {
-	validConfig := &AgentConfigMock{
-		GetFunc: func(s string, ifaceVal interface{}) error {
-			v := ifaceVal.(*string)
-			switch s {
-			case PrefHost:
-				*v = "http://localhost:8123"
-				return nil
-			case PrefCloudhookURL:
-				*v = "http://localhost:8123"
-				return nil
-			case PrefRemoteUIURL:
-				*v = "http://localhost:8123"
-				return nil
-			case PrefWebhookID:
-				*v = "123456"
-				return nil
-			default:
-				return errors.New("not found")
-			}
-		},
-		SetFunc: func(s string, ifaceVal interface{}) error {
-			return nil
-		},
-	}
-
 	type args struct {
-		c AgentConfig
+		host         string
+		cloudhookURL string
+		remoteUIURL  string
+		webhookID    string
 	}
 	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
+		name string
+		args args
+		want string
 	}{
 		{
-			name:    "default test",
-			args:    args{c: validConfig},
-			wantErr: false,
+			name: "host and webhook",
+			args: args{
+				host:      "http://localhost:8123",
+				webhookID: "123",
+			},
+			want: "http://localhost:8123/api/webhook/123",
+		},
+		{
+			name: "cloudhook",
+			args: args{
+				cloudhookURL: "http://localhost:8123",
+			},
+			want: "http://localhost:8123",
+		},
+		{
+			name: "remoteuiurl",
+			args: args{
+				remoteUIURL: "http://localhost:8123",
+				webhookID:   "123",
+			},
+			want: "http://localhost:8123/api/webhook/123",
+		},
+		{
+			name: "host but missing webhook",
+			args: args{
+				host: "http://localhost:8123",
+			},
+			want: "",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := generateAPIURL(tt.args.c); (err != nil) != tt.wantErr {
-				t.Errorf("generateAPIURL() error = %v, wantErr %v", err, tt.wantErr)
+			if got := generateAPIURL(tt.args.host, tt.args.cloudhookURL, tt.args.remoteUIURL, tt.args.webhookID); got != tt.want {
+				t.Errorf("generateAPIURL() = %v, want %v", got, tt.want)
 			}
 		})
 	}

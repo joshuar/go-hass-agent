@@ -7,6 +7,7 @@ package config
 
 import (
 	_ "embed"
+	"path/filepath"
 
 	"errors"
 	"fmt"
@@ -14,6 +15,7 @@ import (
 	"os"
 
 	"github.com/go-playground/validator/v10"
+	fyneconfig "github.com/joshuar/go-hass-agent/internal/agent/config/fyneConfig"
 	viperconfig "github.com/joshuar/go-hass-agent/internal/agent/config/viperConfig"
 	"github.com/joshuar/go-hass-agent/internal/tracker/registry"
 	"github.com/rs/zerolog/log"
@@ -88,120 +90,213 @@ func ValidateConfig(c AgentConfig) error {
 	return nil
 }
 
-// UpgradeConfig takes an AgentConfig checking and performing various fixes and
-// changes to the agent config as it has evolved in difference versions
-func UpgradeConfig(c AgentConfig) error {
+// UpgradeConfig checks for and performs various fixes and
+// changes to the agent config as it has evolved in different versions.
+func UpgradeConfig(path string) error {
 	var configVersion string
-	if err := c.Get(PrefVersion, &configVersion); err != nil {
-		return fmt.Errorf("config version is not a valid value (%v)", err)
+	// retrieve the configVersion, or the version of the app that last read/validated the config.
+	if semver.Compare(AppVersion, "v5.0.0") < 0 {
+		c := fyneconfig.NewFyneConfig()
+		if err := c.Get("Version", &configVersion); err != nil {
+			return errors.New("could not retrieve config version")
+		}
+	} else {
+		c, err := viperconfig.New(path)
+		if err != nil {
+			return errors.New("could not open viper config")
+		}
+		if err := c.Get("Version", &configVersion); err != nil {
+			return errors.New("could not retrieve config version")
+		}
 	}
 
+	// depending on the configVersion, do the appropriate upgrades. Note that
+	// some switch statements will need to fallthrough as some require previous
+	// upgrades to have happened. No doubt at some point, this becomes
+	// intractable and the upgrade path will need to be truncated at some
+	// previous version.
 	switch {
 	// * Upgrade host to include scheme for versions < v.1.4.0
 	case semver.Compare(configVersion, "v1.4.0") < 0:
 		log.Debug().Msg("Performing config upgrades for < v1.4.0")
-		var hostString string
-		if err := c.Get(PrefHost, &hostString); err != nil {
+		c := fyneconfig.NewFyneConfig()
+		var host string
+
+		if err := c.Get("Host", &host); err != nil {
 			return fmt.Errorf("upgrade < v.1.4.0: invalid host value (%v)", err)
 		}
 		var tlsBool bool
 		if err := c.Get("UseTLS", &tlsBool); err != nil {
 			return fmt.Errorf("upgrade < v.1.4.0: invalid TLS value (%v)", err)
 		}
+
 		switch tlsBool {
 		case true:
-			hostString = "https://" + hostString
+			host = "https://" + host
 		case false:
-			hostString = "http://" + hostString
+			host = "http://" + host
 		}
-		if err := c.Set(PrefHost, hostString); err != nil {
+		if err := c.Set("Host", host); err != nil {
 			return err
 		}
 		fallthrough
 	// * Add ApiURL and WebSocketURL config options for versions < v1.4.3
 	case semver.Compare(configVersion, "v1.4.3") < 0:
 		log.Debug().Msg("Performing config upgrades for < v1.4.3")
-		if err := generateAPIURL(c); err != nil {
+		c := fyneconfig.NewFyneConfig()
+		var host, cloudhookURL, remoteUIURL, webhookID string
+
+		if err := c.Get("Host", &host); err != nil {
+			return fmt.Errorf("upgrade < v.1.4.3: invalid host value (%v)", err)
+		}
+		if err := c.Get("CloudHookURL", &cloudhookURL); err != nil {
+			return fmt.Errorf("upgrade < v.1.4.3: invalid cloudhookurl value (%v)", err)
+		}
+		if err := c.Get("RemoteUIURL", &remoteUIURL); err != nil {
+			return fmt.Errorf("upgrade < v.1.4.3: invalid remoteUIURL value (%v)", err)
+		}
+		if err := c.Get("WebhookID", &webhookID); err != nil {
+			return fmt.Errorf("upgrade < v.1.4.3: invalid webhookID value (%v)", err)
+		}
+
+		apiURL := generateAPIURL(host, cloudhookURL, remoteUIURL, webhookID)
+		if apiURL == "" {
+			return errors.New("could not generate apiURL")
+		}
+		if err := c.Set("ApiURL", apiURL); err != nil {
 			return err
 		}
-		if err := generateWebsocketURL(c); err != nil {
+
+		websocketURL := generateWebsocketURL(host)
+		if websocketURL == "" {
+			return errors.New("could not generate websocketURL")
+		}
+		if err := c.Set("WebSocketURL", apiURL); err != nil {
 			return err
 		}
+
 		fallthrough
-	case semver.Compare(AppVersion, "v3.0.0") < 0:
+	// * Switch to jsonFiles registry
+	case semver.Compare(configVersion, "v3.0.0") < 0:
 		log.Debug().Msg("Performing config upgrades for < v3.0.0.")
+		c := fyneconfig.NewFyneConfig()
 		var err error
-		path, err := c.StoragePath("sensorRegistry")
+
+		p, err := c.StoragePath("sensorRegistry")
 		if err != nil {
 			return errors.New("could not get sensor registry path from config")
 		}
-		if _, err = os.Stat(path + "/0.dat"); errors.Is(err, os.ErrNotExist) {
+		if _, err = os.Stat(p + "/0.dat"); errors.Is(err, os.ErrNotExist) {
 			return nil
 		}
-		err = registry.MigrateNuts2Json(path)
+		err = registry.MigrateNuts2Json(p)
 		if err != nil {
-			return errors.New("failed to migrate sensor registry")
+			return errors.Join(errors.New("failed to migrate sensor registry"), err)
 		}
-		if err = os.Remove(path + "/0.dat"); err != nil {
+		if err = os.Remove(p + "/0.dat"); err != nil {
 			return errors.New("could not remove old sensor registry")
 		}
 		fallthrough
-	case semver.Compare(AppVersion, "v5.0.0") < 0:
+	// * Switch to Viper config
+	case semver.Compare(configVersion, "v5.0.0") < 0:
 		log.Debug().Msg("Performing config upgrades for < v5.0.0.")
-		if err := viperconfig.MigrateFromFyne(); err != nil {
+		if err := viperToFyne(path); err != nil {
 			return errors.Join(errors.New("failed to migrate Fyne config to Viper"), err)
 		}
-	}
-
-	if err := c.Set(PrefVersion, AppVersion); err != nil {
-		return err
 	}
 	return nil
 }
 
-func generateWebsocketURL(c AgentConfig) error {
+func generateWebsocketURL(host string) string {
 	// TODO: look into websocket http upgrade method
-	var host string
-	if err := c.Get(PrefHost, &host); err != nil {
-		return err
+	baseURL, err := url.Parse(host)
+	if err != nil {
+		log.Warn().Err(err).Msg("Host string not a URL. Cannot generate websocket URL.")
+		return ""
 	}
-	baseURL, _ := url.Parse(host)
 	switch baseURL.Scheme {
 	case "https":
 		baseURL.Scheme = "wss"
-	default:
+	case "http":
 		baseURL.Scheme = "ws"
+	default:
+		log.Warn().Msg("Unknown URL scheme.")
+		return ""
 	}
 	baseURL = baseURL.JoinPath(websocketPath)
-	return c.Set(PrefWebsocketURL, baseURL.String())
+	return baseURL.String()
 }
 
-func generateAPIURL(c AgentConfig) error {
-	var cloudhookURL, remoteUIURL, webhookID, host string
-	if err := c.Get(PrefCloudhookURL, &cloudhookURL); err != nil {
-		return err
-	}
-	if err := c.Get(PrefRemoteUIURL, &remoteUIURL); err != nil {
-		return err
-	}
-	if err := c.Get(PrefWebhookID, &webhookID); err != nil {
-		return err
-	}
-	if err := c.Get(PrefHost, &host); err != nil {
-		return err
-	}
-	var apiURL string
+func generateAPIURL(host, cloudhookURL, remoteUIURL, webhookID string) string {
 	switch {
 	case cloudhookURL != "":
-		apiURL = cloudhookURL
+		return cloudhookURL
 	case remoteUIURL != "" && webhookID != "":
-		apiURL = remoteUIURL + webHookPath + webhookID
+		baseURL, _ := url.Parse(remoteUIURL)
+		baseURL = baseURL.JoinPath(webHookPath, webhookID)
+		return baseURL.String()
 	case webhookID != "" && host != "":
 		baseURL, _ := url.Parse(host)
 		baseURL = baseURL.JoinPath(webHookPath, webhookID)
-		apiURL = baseURL.String()
+		return baseURL.String()
 	default:
-		apiURL = ""
+		return ""
 	}
-	return c.Set(PrefAPIURL, apiURL)
+}
+
+type pref struct {
+	fyne  string
+	viper string
+}
+
+var (
+	prefs = map[string]pref{
+		"PrefAPIURL":       {fyne: "ApiURL", viper: "hass.apiurl"},
+		"PrefWebsocketURL": {fyne: "WebSocketURL", viper: "hass.websocketurl"},
+		"PrefCloudhookURL": {fyne: "CloudhookURL", viper: "hass.cloudhookurl"},
+		"PrefRemoteUIURL":  {fyne: "RemoteUIURL", viper: "hass.remoteuiurl"},
+		"PrefToken":        {fyne: "Token", viper: "hass.token"},
+		"PrefWebhookID":    {fyne: "WebhookID", viper: "hass.webhookid"},
+		"PrefSecret":       {fyne: "secret", viper: "hass.secret"},
+		"PrefHost":         {fyne: "Host", viper: "hass.host"},
+		"PrefVersion":      {fyne: "Version", viper: "agent.version"},
+		"PrefDeviceName":   {fyne: "DeviceName", viper: "device.name"},
+		"PrefDeviceID":     {fyne: "DeviceID", viper: "device.id"},
+	}
+)
+
+func viperToFyne(configPath string) error {
+	var err error
+	fs, err := os.Stat(filepath.Join(configPath, "go-hass-agent.toml"))
+	if fs != nil && err == nil {
+		log.Debug().Msg("Config already migrated. Not doing anything.")
+		return nil
+	}
+	if err != nil && !os.IsNotExist(err) {
+		return errors.Join(errors.New("filesystem error"), err)
+	}
+
+	v, err := viperconfig.New(configPath)
+	if err != nil {
+		return errors.New("could not open viper config")
+	}
+
+	f := fyneconfig.NewFyneConfig()
+
+	for _, m := range prefs {
+		var err error
+		var value string
+		log.Debug().
+			Str("from", m.fyne).Str("to", m.viper).
+			Msg("Migrating preference.")
+		if err = f.Get(m.fyne, &value); err != nil && value != "NOTSET" {
+			return errors.Join(errors.New("fyne config error"), err)
+		}
+		if value != "NOTSET" {
+			if err = v.Set(m.viper, value); err != nil {
+				return errors.Join(errors.New("viper config error"), err)
+			}
+		}
+	}
+	return v.Set("hass.registered", true)
 }
