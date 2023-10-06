@@ -55,6 +55,7 @@ var AppVersion string
 // ValidateConfig takes an AgentConfig and ensures that it meets the minimum
 // requirements for the agent to function correctly
 func ValidateConfig(c AgentConfig) error {
+	log.Debug().Msg("Running ValidateConfig.")
 	cfgValidator := validator.New()
 
 	validate := func(key, rules, errMsg string) error {
@@ -101,23 +102,24 @@ func ValidateConfig(c AgentConfig) error {
 // UpgradeConfig checks for and performs various fixes and
 // changes to the agent config as it has evolved in different versions.
 func UpgradeConfig(path string) error {
+	log.Debug().Msg("Running UpgradeConfig.")
 	var configVersion string
 	// retrieve the configVersion, or the version of the app that last read/validated the config.
 	if semver.Compare(AppVersion, "v5.0.0") < 0 {
-		c := fyneconfig.NewFyneConfig()
-		if err := c.Get("Version", &configVersion); err != nil {
+		fc := fyneconfig.NewFyneConfig()
+		if err := fc.Get("Version", &configVersion); err != nil {
 			return &ConfigFileNotFoundError{
 				Err: errors.New("could not retrieve config version"),
 			}
 		}
 	} else {
-		c, err := viperconfig.New(path)
+		vc, err := viperconfig.New(path)
 		if err != nil {
 			return &ConfigFileNotFoundError{
 				Err: errors.New("could not open viper config"),
 			}
 		}
-		if err := c.Get("Version", &configVersion); err != nil {
+		if err := vc.Get("Version", &configVersion); err != nil {
 			return &ConfigFileNotFoundError{
 				Err: errors.New("could not retrieve config version"),
 			}
@@ -129,18 +131,19 @@ func UpgradeConfig(path string) error {
 	// upgrades to have happened. No doubt at some point, this becomes
 	// intractable and the upgrade path will need to be truncated at some
 	// previous version.
+	log.Debug().Msgf("Checking for upgrades needed for config version %s.", configVersion)
 	switch {
 	// * Upgrade host to include scheme for versions < v.1.4.0
 	case semver.Compare(configVersion, "v1.4.0") < 0:
 		log.Debug().Msg("Performing config upgrades for < v1.4.0")
-		c := fyneconfig.NewFyneConfig()
+		fc := fyneconfig.NewFyneConfig()
 		var host string
 
-		if err := c.Get("Host", &host); err != nil {
+		if err := fc.Get("Host", &host); err != nil {
 			return fmt.Errorf("upgrade < v.1.4.0: invalid host value (%v)", err)
 		}
 		var tlsBool bool
-		if err := c.Get("UseTLS", &tlsBool); err != nil {
+		if err := fc.Get("UseTLS", &tlsBool); err != nil {
 			return fmt.Errorf("upgrade < v.1.4.0: invalid TLS value (%v)", err)
 		}
 
@@ -150,26 +153,26 @@ func UpgradeConfig(path string) error {
 		case false:
 			host = "http://" + host
 		}
-		if err := c.Set("Host", host); err != nil {
+		if err := fc.Set("Host", host); err != nil {
 			return err
 		}
 		fallthrough
 	// * Add ApiURL and WebSocketURL config options for versions < v1.4.3
 	case semver.Compare(configVersion, "v1.4.3") < 0:
 		log.Debug().Msg("Performing config upgrades for < v1.4.3")
-		c := fyneconfig.NewFyneConfig()
+		fc := fyneconfig.NewFyneConfig()
 		var host, cloudhookURL, remoteUIURL, webhookID string
 
-		if err := c.Get("Host", &host); err != nil {
+		if err := fc.Get("Host", &host); err != nil {
 			return fmt.Errorf("upgrade < v.1.4.3: invalid host value (%v)", err)
 		}
-		if err := c.Get("CloudHookURL", &cloudhookURL); err != nil {
+		if err := fc.Get("CloudHookURL", &cloudhookURL); err != nil {
 			return fmt.Errorf("upgrade < v.1.4.3: invalid cloudhookurl value (%v)", err)
 		}
-		if err := c.Get("RemoteUIURL", &remoteUIURL); err != nil {
+		if err := fc.Get("RemoteUIURL", &remoteUIURL); err != nil {
 			return fmt.Errorf("upgrade < v.1.4.3: invalid remoteUIURL value (%v)", err)
 		}
-		if err := c.Get("WebhookID", &webhookID); err != nil {
+		if err := fc.Get("WebhookID", &webhookID); err != nil {
 			return fmt.Errorf("upgrade < v.1.4.3: invalid webhookID value (%v)", err)
 		}
 
@@ -177,7 +180,7 @@ func UpgradeConfig(path string) error {
 		if apiURL == "" {
 			return errors.New("could not generate apiURL")
 		}
-		if err := c.Set("ApiURL", apiURL); err != nil {
+		if err := fc.Set("ApiURL", apiURL); err != nil {
 			return err
 		}
 
@@ -185,7 +188,7 @@ func UpgradeConfig(path string) error {
 		if websocketURL == "" {
 			return errors.New("could not generate websocketURL")
 		}
-		if err := c.Set("WebSocketURL", apiURL); err != nil {
+		if err := fc.Set("WebSocketURL", apiURL); err != nil {
 			return err
 		}
 
@@ -193,10 +196,10 @@ func UpgradeConfig(path string) error {
 	// * Switch to jsonFiles registry
 	case semver.Compare(configVersion, "v3.0.0") < 0:
 		log.Debug().Msg("Performing config upgrades for < v3.0.0.")
-		c := fyneconfig.NewFyneConfig()
+		fc := fyneconfig.NewFyneConfig()
 		var err error
 
-		p, err := c.StoragePath("sensorRegistry")
+		p, err := fc.StoragePath("sensorRegistry")
 		if err != nil {
 			return errors.New("could not get sensor registry path from config")
 		}
@@ -220,8 +223,8 @@ func UpgradeConfig(path string) error {
 		}
 		// migrate registry directory. This is non-critical, entities will be
 		// re-registered if this fails.
-		f := fyneconfig.NewFyneConfig()
-		oldReg, err := f.StoragePath("sensorRegistry")
+		fc := fyneconfig.NewFyneConfig()
+		oldReg, err := fc.StoragePath("sensorRegistry")
 		newReg := filepath.Join(path, "sensorRegistry")
 		if err != nil {
 			log.Warn().Err(err).Msg("Unable to retrieve old storage path. Registry will not be migrated.")
@@ -304,12 +307,12 @@ func viperToFyne(configPath string) error {
 		return errors.Join(errors.New("filesystem error"), err)
 	}
 
-	v, err := viperconfig.New(configPath)
+	vc, err := viperconfig.New(configPath)
 	if err != nil {
 		return errors.New("could not open viper config")
 	}
 
-	f := fyneconfig.NewFyneConfig()
+	fc := fyneconfig.NewFyneConfig()
 
 	for _, m := range prefs {
 		var err error
@@ -317,14 +320,14 @@ func viperToFyne(configPath string) error {
 		log.Debug().
 			Str("from", m.fyne).Str("to", m.viper).
 			Msg("Migrating preference.")
-		if err = f.Get(m.fyne, &value); err != nil && value != "NOTSET" {
+		if err = fc.Get(m.fyne, &value); err != nil && value != "NOTSET" {
 			return errors.Join(errors.New("fyne config error"), err)
 		}
 		if value != "NOTSET" {
-			if err = v.Set(m.viper, value); err != nil {
+			if err = vc.Set(m.viper, value); err != nil {
 				return errors.Join(errors.New("viper config error"), err)
 			}
 		}
 	}
-	return v.Set("hass.registered", true)
+	return vc.Set("hass.registered", true)
 }
