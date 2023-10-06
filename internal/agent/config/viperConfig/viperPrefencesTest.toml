@@ -1,0 +1,14 @@
+[agent]
+version = 'v4.1.1'
+
+[device]
+id = '974cb4d1-5124-4174-a8a3-0b86c113f3c4'
+name = 'whiteward'
+
+[hass]
+apiurl = 'http://localhost:8123/api/webhook/d091f4878b58d80327c5c30258f8e78fdb64882e149b8e5932994de3f3bbbbef'
+host = 'http://localhost:8123'
+registered = true
+token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiI5Yzk5YjYyMzgxNTE0N2E1YmNhODBmNzgyOTFjMDkzYSIsImlhdCI6MTY5NjQ1OTc5NSwiZXhwIjoyMDExODE5Nzk1fQ.Jmxs18WLAVFMGHgLPjBIIkso29vPLxeIfrlDqO-wM7w'
+webhookid = 'd091f4878b58d80327c5c30258f8e78fdb64882e149b8e5932994de3f3bbbbef'
+websocketurl = 'ws://localhost:8123/api/websocket'

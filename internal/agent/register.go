@@ -62,7 +62,7 @@ func (agent *Agent) saveRegistration(r *api.RegistrationResponse, d api.DeviceIn
 // registered, it will exit unless the force parameter is true. Otherwise, it
 // will action a registration workflow displaying a GUI for user input of
 // registration details and save the results into the agent config
-func (agent *Agent) registrationProcess(ctx context.Context, server, token string, force, headless bool, done chan struct{}) {
+func (agent *Agent) registrationProcess(ctx context.Context, server, token string, force, headless bool) {
 	var registered bool
 	if err := agent.config.Get(config.PrefRegistered, &registered); err != nil {
 		log.Fatal().Err(err).Msg("Could not ascertain agent registration status.")
@@ -76,7 +76,7 @@ func (agent *Agent) registrationProcess(ctx context.Context, server, token strin
 			if err := agent.config.Set(config.PrefRegistered, true); err != nil {
 				log.Fatal().Err(err).Msg("Could not set registered status.")
 			}
-			close(done)
+			return
 		}
 	}
 	// If the agent is not registered (or force registration requested) run a
@@ -115,8 +115,6 @@ func (agent *Agent) registrationProcess(ctx context.Context, server, token strin
 		agent.saveRegistration(registrationResponse, device)
 		log.Info().Msg("Successfully registered agent.")
 	}
-
-	close(done)
 }
 
 func validateRegistrationSetting(key, value string) bool {

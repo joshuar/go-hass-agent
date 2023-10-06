@@ -53,7 +53,9 @@ func newAgent(o *AgentOptions) *Agent {
 		options: o,
 	}
 	a.ui = fyneui.NewFyneUI(a)
-	// a.config = fyneconfig.NewFyneConfig()
+	if err = config.UpgradeConfig(configPath); err != nil {
+		log.Fatal().Err(err).Msg("Could not upgrade config.")
+	}
 	if a.config, err = viperconfig.New(configPath); err != nil {
 		log.Fatal().Err(err).Msg("Could not open config.")
 	}
@@ -73,30 +75,33 @@ func Run(options AgentOptions) {
 	agent := newAgent(&options)
 	defer close(agent.done)
 
-	registrationDone := make(chan struct{})
-	go agent.registrationProcess(context.Background(), "", "", options.Register, options.Headless, registrationDone)
-
-	configDone := make(chan struct{})
-	wg.Add(1)
+	var regWait sync.WaitGroup
+	regWait.Add(1)
 	go func() {
-		defer wg.Done()
-		<-registrationDone
-		log.Trace().Msg("Registration check/action done.")
-		if err = config.UpgradeConfig(agent.config); err != nil {
-			log.Warn().Err(err).Msg("Could not upgrade config.")
-		}
+		defer regWait.Done()
+		agent.registrationProcess(context.Background(), "", "", options.Register, options.Headless)
+	}()
+
+	var cfgWait sync.WaitGroup
+	cfgWait.Add(1)
+	go func() {
+		defer cfgWait.Done()
+		regWait.Wait()
 		if err = config.ValidateConfig(agent.config); err != nil {
 			log.Fatal().Err(err).Msg("Could not validate config.")
 		}
+		log.Trace().Msg("Config validation done.")
+		if err = agent.SetConfig(config.PrefVersion, agent.AppVersion()); err != nil {
+			log.Warn().Err(err).Msg("Unable to set config version to app version.")
+		}
 		ctx, cancelFunc = agent.setupContext()
 		agent.handleCancellation(ctx)
-		close(configDone)
 	}()
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		<-configDone
+		cfgWait.Wait()
 
 		if agent.sensors, err = tracker.NewSensorTracker(agent); err != nil {
 			log.Fatal().Err(err).Msg("Could not start.")
@@ -131,25 +136,21 @@ func Register(options AgentOptions, server, token string) {
 	agent := newAgent(&options)
 	defer close(agent.done)
 	ctx, _ := agent.setupContext()
+	agent.handleCancellation(ctx)
 
-	// Don't proceed unless the agent is registered and forced is not set
-	// if agent.IsRegistered() && !options.Register {
-	// 	log.Warn().Msg("Agent is already registered and forced option not specified, not performing registration.")
-	// 	cancelFunc()
-	// 	return
-	// }
-
-	registrationDone := make(chan struct{})
-	go agent.registrationProcess(ctx, server, token, options.Register, options.Headless, registrationDone)
+	var regWait sync.WaitGroup
+	regWait.Add(1)
+	go func() {
+		defer regWait.Done()
+		agent.registrationProcess(ctx, server, token, options.Register, options.Headless)
+	}()
 
 	agent.handleSignals()
-	// agent.handleShutdown(ctx)
-	if !options.Headless {
-		agent.ui.DisplayTrayIcon(ctx, agent)
-		agent.ui.Run()
-	}
+	agent.handleShutdown()
+	agent.ui.DisplayTrayIcon(ctx, agent)
+	agent.ui.Run()
 
-	<-registrationDone
+	regWait.Wait()
 	log.Info().Msg("Device registered with Home Assistant.")
 }
 
