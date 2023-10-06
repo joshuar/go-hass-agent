@@ -214,8 +214,22 @@ func UpgradeConfig(path string) error {
 	// * Switch to Viper config
 	case semver.Compare(configVersion, "v5.0.0") < 0:
 		log.Debug().Msg("Performing config upgrades for < v5.0.0.")
+		// migrate config values
 		if err := viperToFyne(path); err != nil {
 			return errors.Join(errors.New("failed to migrate Fyne config to Viper"), err)
+		}
+		// migrate registry directory. This is non-critical, entities will be
+		// re-registered if this fails.
+		f := fyneconfig.NewFyneConfig()
+		oldReg, err := f.StoragePath("sensorRegistry")
+		newReg := filepath.Join(path, "sensorRegistry")
+		if err != nil {
+			log.Warn().Err(err).Msg("Unable to retrieve old storage path. Registry will not be migrated.")
+			return nil
+		}
+		if err := os.Rename(oldReg, newReg); err != nil {
+			log.Warn().Err(err).Msg("failed to migrate registry")
+			return nil
 		}
 	}
 	return nil
