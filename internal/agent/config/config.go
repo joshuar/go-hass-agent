@@ -34,6 +34,14 @@ type AgentConfig interface {
 	StoragePath(string) (string, error)
 }
 
+type ConfigFileNotFoundError struct {
+	Err error
+}
+
+func (e *ConfigFileNotFoundError) Error() string {
+	return e.Err.Error()
+}
+
 const (
 	websocketPath = "/api/websocket"
 	webHookPath   = "/api/webhook/"
@@ -98,15 +106,21 @@ func UpgradeConfig(path string) error {
 	if semver.Compare(AppVersion, "v5.0.0") < 0 {
 		c := fyneconfig.NewFyneConfig()
 		if err := c.Get("Version", &configVersion); err != nil {
-			return errors.New("could not retrieve config version")
+			return &ConfigFileNotFoundError{
+				Err: errors.New("could not retrieve config version"),
+			}
 		}
 	} else {
 		c, err := viperconfig.New(path)
 		if err != nil {
-			return errors.New("could not open viper config")
+			return &ConfigFileNotFoundError{
+				Err: errors.New("could not open viper config"),
+			}
 		}
 		if err := c.Get("Version", &configVersion); err != nil {
-			return errors.New("could not retrieve config version")
+			return &ConfigFileNotFoundError{
+				Err: errors.New("could not retrieve config version"),
+			}
 		}
 	}
 

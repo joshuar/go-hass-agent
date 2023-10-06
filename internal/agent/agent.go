@@ -54,7 +54,9 @@ func newAgent(o *AgentOptions) *Agent {
 	}
 	a.ui = fyneui.NewFyneUI(a)
 	if err = config.UpgradeConfig(configPath); err != nil {
-		log.Fatal().Err(err).Msg("Could not upgrade config.")
+		if _, ok := err.(*config.ConfigFileNotFoundError); !ok {
+			log.Fatal().Err(err).Msg("Could not upgrade config.")
+		}
 	}
 	if a.config, err = viperconfig.New(configPath); err != nil {
 		log.Fatal().Err(err).Msg("Could not open config.")
