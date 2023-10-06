@@ -230,9 +230,12 @@ func UpgradeConfig(path string) error {
 			log.Warn().Err(err).Msg("Unable to retrieve old storage path. Registry will not be migrated.")
 			return nil
 		}
-		if err := os.Rename(oldReg, newReg); err != nil {
-			log.Warn().Err(err).Msg("failed to migrate registry")
-			return nil
+		_, err = os.Stat(oldReg)
+		if !os.IsNotExist(err) {
+			if err := os.Rename(oldReg, newReg); err != nil {
+				log.Warn().Err(err).Msg("failed to migrate registry")
+				return nil
+			}
 		}
 	}
 	return nil
