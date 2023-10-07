@@ -54,7 +54,7 @@ func ScreenLockUpdater(ctx context.Context, tracker device.SensorTracker) {
 		}).
 		AddWatch(ctx)
 	if err != nil {
-		log.Debug().Caller().Err(err).
-			Msg("Failed to create screen lock DBus watch.")
+		log.Warn().Err(err).
+			Msg("Could not poll D-Bus for screen lock. Screen lock sensor will not run.")
 	}
 }

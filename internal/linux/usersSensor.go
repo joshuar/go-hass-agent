@@ -40,13 +40,16 @@ func UsersUpdater(ctx context.Context, tracker device.SensorTracker) {
 			Path(login1DBusPath).
 			Destination("org.freedesktop.login1").
 			GetData("org.freedesktop.login1.Manager.ListUsers").AsRawInterface()
-		userList := userData.([][]interface{})
-		sensor.value = len(userList)
-		for _, u := range userList {
-			sensor.userNames = append(sensor.userNames, u[1].(string))
-		}
-		if err := tracker.UpdateSensors(ctx, sensor); err != nil {
-			log.Error().Err(err).Msg("Could not update users sensor.")
+		if userList, ok := userData.([][]interface{}); !ok {
+			return
+		} else {
+			sensor.value = len(userList)
+			for _, u := range userList {
+				sensor.userNames = append(sensor.userNames, u[1].(string))
+			}
+			if err := tracker.UpdateSensors(ctx, sensor); err != nil {
+				log.Error().Err(err).Msg("Could not update users sensor.")
+			}
 		}
 	}
 	updateUsers()
@@ -67,8 +70,8 @@ func UsersUpdater(ctx context.Context, tracker device.SensorTracker) {
 		}).
 		AddWatch(ctx)
 	if err != nil {
-		log.Debug().Caller().Err(err).
-			Msg("Failed to create user D-Bus watch.")
+		log.Warn().Err(err).
+			Msg("Failed to create user D-Bus watch. Users sensor will not run.")
 	}
 }
 
