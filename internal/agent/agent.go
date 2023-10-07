@@ -135,16 +135,16 @@ func Run(options AgentOptions) {
 // request to Home Assistant and handles the response. It will handle either a
 // UI or non-UI registration flow.
 func Register(options AgentOptions, server, token string) {
+	var ctx context.Context
+
 	agent := newAgent(&options)
 	defer close(agent.done)
-	ctx, _ := agent.setupContext()
-	agent.handleCancellation(ctx)
 
 	var regWait sync.WaitGroup
 	regWait.Add(1)
 	go func() {
 		defer regWait.Done()
-		agent.registrationProcess(ctx, server, token, options.Register, options.Headless)
+		agent.registrationProcess(context.Background(), server, token, options.Register, options.Headless)
 	}()
 
 	agent.handleSignals()
