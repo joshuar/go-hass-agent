@@ -20,6 +20,7 @@ func Versions(ctx context.Context, tracker device.SensorTracker) {
 	if err != nil {
 		log.Debug().Err(err).Caller().
 			Msg("Failed to retrieve host info.")
+		return
 	}
 	var sensors []interface{}
 	sensors = append(sensors,

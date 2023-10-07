@@ -275,8 +275,8 @@ func BatteryUpdater(ctx context.Context, tracker device.SensorTracker) {
 		Destination(upowerDBusDest).
 		GetData(upowerGetDevicesMethod).AsObjectPathList()
 	if batteryList == nil {
-		log.Debug().Caller().
-			Msg("Unable to get any battery devices from DBus.")
+		log.Warn().
+			Msg("Unable to get any battery devices from D-Bus. Battery sensor will not run.")
 		return
 	}
 

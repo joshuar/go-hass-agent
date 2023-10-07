@@ -461,7 +461,8 @@ func (s *networkSensor) Attributes() interface{} {
 func NetworkConnectionsUpdater(ctx context.Context, tracker device.SensorTracker) {
 	connList := getActiveConns(ctx)
 	if connList == nil {
-		log.Error().Msg("No active connections.")
+		log.Warn().
+			Msg("Could not retrieve active connections from D-Bus. Will not run network connections sensor.")
 		return
 	}
 	for _, path := range connList {

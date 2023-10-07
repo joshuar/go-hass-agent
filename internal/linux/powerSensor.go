@@ -42,7 +42,7 @@ func PowerUpater(ctx context.Context, tracker device.SensorTracker) {
 		Destination(powerProfilesDBusDest).
 		GetProp(powerProfilesDBusDest + ".ActiveProfile")
 	if err != nil {
-		log.Debug().Err(err).Msg("Cannot retrieve a power profile from DBus.")
+		log.Debug().Err(err).Msg("Cannot retrieve a power profile from D-Bus. Will not run power sensor.")
 		return
 	}
 
