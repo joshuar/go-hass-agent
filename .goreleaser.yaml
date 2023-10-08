@@ -84,7 +84,7 @@ nfpms:
         dst: /usr/share/pixmaps/go-hass-agent.png
       - src: assets/go-hass-agent.desktop
         dst: /usr/share/applications/go-hass-agent.desktop
-      - src: assets/systemd/go-hass-agent.service
+      - src: init/go-hass-agent.service
         dst: /usr/lib/systemd/user/go-hass-agent.service
     rpm:
       compression: lzma
