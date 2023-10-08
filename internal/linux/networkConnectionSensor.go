@@ -73,7 +73,7 @@ func getActiveConns(ctx context.Context) []dbus.ObjectPath {
 // sensor.STATE_UNKNOWN.
 func getConnType(ctx context.Context, p dbus.ObjectPath) string {
 	if !p.IsValid() {
-		log.Debug().Msgf("Invalid D-Bus object path %s.", p)
+		log.Trace().Str("path", string(p)).Msg("Invalid D-Bus object path.")
 		return sensor.StateUnknown
 	}
 	v, err := NewBusRequest(ctx, SystemBus).
@@ -81,7 +81,7 @@ func getConnType(ctx context.Context, p dbus.ObjectPath) string {
 		Destination(dBusNMObj).
 		GetProp(dBusPropConnType)
 	if err != nil {
-		log.Debug().Err(err).Msg("Could not fetch type of connection.")
+		log.Trace().Err(err).Msg("Could not fetch type of connection.")
 		return sensor.StateUnknown
 	} else {
 		return string(variantToValue[[]uint8](v))
@@ -208,10 +208,12 @@ func getIPAddr(ctx context.Context, p dbus.ObjectPath, ver int) string {
 // getWifiProp will fetch the appropriate value for the given wifi sensor type
 // from D-Bus. If it cannot find the type, it returns sensor.STATE_UNKNOWN.
 func getWifiProp(ctx context.Context, p dbus.ObjectPath, t sensorType) interface{} {
+	log.Info().Msg("in wifi prop")
 	if !p.IsValid() {
 		log.Debug().Msgf("Invalid D-Bus object path %s.", p)
 		return sensor.StateUnknown
 	}
+	log.Info().Msg("HERE")
 	var prop string
 	switch t {
 	case wifiSSID:
@@ -263,7 +265,7 @@ func getWifiProp(ctx context.Context, p dbus.ObjectPath, t sensorType) interface
 // connection type.
 func handleConn(ctx context.Context, p dbus.ObjectPath, t device.SensorTracker) error {
 	s := newNetworkSensor(ctx, p, connectionState, nil)
-	if s.sensorGroup == "lo" {
+	if s.sensorGroup == "lo" || s.ID() == "unknown_connection_state" {
 		log.Trace().Caller().Msgf("Ignoring state update for connection %s.", s.sensorGroup)
 	} else {
 		return t.UpdateSensors(ctx, s)
@@ -317,10 +319,10 @@ func handleProps(ctx context.Context, p dbus.ObjectPath, props map[string]dbus.V
 		switch propName {
 		case "Ssid":
 			propType = wifiSSID
-			value = variantToValue[[]uint8](propValue)
+			value = variantToValue[string](propValue)
 		case "HwAddress":
 			propType = wifiHWAddress
-			value = variantToValue[[]uint8](propValue)
+			value = variantToValue[string](propValue)
 		case "Frequency":
 			propType = wifiFrequency
 			value = variantToValue[uint32](propValue)
@@ -331,13 +333,14 @@ func handleProps(ctx context.Context, p dbus.ObjectPath, props map[string]dbus.V
 			propType = wifiStrength
 			value = variantToValue[uint32](propValue)
 		default:
-			log.Trace().Caller().
-				Msgf("Unhandled property %v changed to %v (%s).", propName, propValue, p)
+			log.Trace().
+				Str("prop", propName).Interface("value", propValue).Str("path", string(p)).
+				Msg("Unhandled property.")
 			return
 		}
 		if err := tracker.UpdateSensors(ctx, newNetworkSensor(ctx, p, propType, value)); err != nil {
 			log.Error().Err(err).Str("prop", propName).
-				Msg("Could not update connection property")
+				Msg("Could not update property.")
 		}
 	}
 }
@@ -363,14 +366,17 @@ func newNetworkSensor(ctx context.Context, p dbus.ObjectPath, asType sensorType,
 		if value == nil {
 			s.value = getConnState(ctx, s.objectPath)
 		}
+		log.Trace().Str("id", s.ID()).Msg("Getting IP address details.")
 		s.attributes.Ipv4 = getIPAddr(ctx, s.objectPath, 4)
 		s.attributes.Ipv6 = getIPAddr(ctx, s.objectPath, 6)
+		log.Trace().Str("id", s.ID()).Msg("Getting connection type.")
 		s.attributes.ConnectionType = getConnType(ctx, s.objectPath)
 	case wifiFrequency, wifiSSID, wifiSpeed, wifiHWAddress, wifiStrength:
 		s.sensorGroup = "wifi"
-		if value == nil {
-			s.value = getWifiProp(ctx, p, s.sensorType)
-		}
+		// if value == nil {
+		// 	log.Trace().Str("id", s.ID()).Msg("Fetching Wi-Fi property.")
+		// 	s.value = getWifiProp(ctx, p, s.sensorType)
+		// }
 	}
 	return s
 }
@@ -480,16 +486,18 @@ func NetworkConnectionsUpdater(ctx context.Context, tracker device.SensorTracker
 		Event("org.freedesktop.DBus.Properties.PropertiesChanged").
 		Handler(func(s *dbus.Signal) {
 			if !s.Path.IsValid() || s.Path == "/" {
-				log.Trace().Caller().Msgf("Invalid D-Bus object path %s.", s.Path)
+				log.Trace().Str("path", string(s.Path)).
+					Msg("Invalid D-Bus object path.")
 				return
 			}
 			if len(s.Body) == 0 {
-				log.Trace().Caller().Msg("No signal body received.")
+				log.Trace().Msg("No signal body received.")
 				return
 			}
 			obj, ok := s.Body[0].(string)
 			if !ok {
-				log.Trace().Caller().Msgf("Unhandled signal body of type %T (%v).", obj, s)
+				log.Trace().Type("type", obj).Interface("value", s.Body).
+					Msg("Unhandled signal.")
 				return
 			}
 			switch obj {
@@ -497,7 +505,7 @@ func NetworkConnectionsUpdater(ctx context.Context, tracker device.SensorTracker
 				// TODO: handle this object
 			case dBusObjConn:
 				if err := handleConn(ctx, s.Path, tracker); err != nil {
-					log.Error().Err(err).Str("dBusPath", string(s.Path)).
+					log.Error().Err(err).Str("path", string(s.Path)).
 						Msg("Could not process connection.")
 				}
 			case dBusObjDev:
@@ -511,7 +519,8 @@ func NetworkConnectionsUpdater(ctx context.Context, tracker device.SensorTracker
 			case "org.freedesktop.NetworkManager.Device.Statistics":
 				// no-op, too noisy
 			default:
-				log.Trace().Caller().Msgf("Unhandled object %s.", obj)
+				log.Trace().Str("value", obj).
+					Msg("Unhandled object.")
 			}
 		}).
 		AddWatch(ctx)
