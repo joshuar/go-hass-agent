@@ -86,18 +86,14 @@ func (agent *Agent) registrationProcess(ctx context.Context, server, token strin
 		if server != "" {
 			if !validateRegistrationSetting("server", server) {
 				log.Fatal().Msg("Server setting is not valid.")
-			}
-		} else {
-			if err := agent.config.Set(config.PrefHost, token); err != nil {
+			} else if err := agent.config.Set(config.PrefHost, server); err != nil {
 				log.Fatal().Err(err).Msg("Could not set host preference.")
 			}
 		}
 		if token != "" {
 			if !validateRegistrationSetting("token", token) {
 				log.Fatal().Msg("Token setting is not valid.")
-			}
-		} else {
-			if err := agent.config.Set(config.PrefToken, token); err != nil {
+			} else if err := agent.config.Set(config.PrefToken, token); err != nil {
 				log.Fatal().Err(err).Msg("Could not set token preference.")
 			}
 		}
