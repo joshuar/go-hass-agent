@@ -205,61 +205,6 @@ func getIPAddr(ctx context.Context, p dbus.ObjectPath, ver int) string {
 	return sensor.StateUnknown
 }
 
-// getWifiProp will fetch the appropriate value for the given wifi sensor type
-// from D-Bus. If it cannot find the type, it returns sensor.STATE_UNKNOWN.
-func getWifiProp(ctx context.Context, p dbus.ObjectPath, t sensorType) interface{} {
-	log.Info().Msg("in wifi prop")
-	if !p.IsValid() {
-		log.Debug().Msgf("Invalid D-Bus object path %s.", p)
-		return sensor.StateUnknown
-	}
-	log.Info().Msg("HERE")
-	var prop string
-	switch t {
-	case wifiSSID:
-		prop = dBusPropAPSSID
-	case wifiFrequency:
-		prop = dBusPropAPFreq
-	case wifiSpeed:
-		prop = dBusPropAPSpd
-	case wifiStrength:
-		prop = dBusPropAPStr
-	case wifiHWAddress:
-		prop = dBusPropAPAddr
-	}
-	var path dbus.ObjectPath
-	ap, err := NewBusRequest(ctx, SystemBus).
-		Path(p).
-		Destination(dBusNMObj).
-		GetProp(dBusPropConnAP)
-	if err != nil {
-		log.Debug().Err(err).Msg("Unable to retrieve wireless device details from D-Bus.")
-		return sensor.StateUnknown
-	} else {
-		path = dbus.ObjectPath((variantToValue[[]uint8](ap)))
-		if !path.IsValid() {
-			log.Debug().Msg("AP D-Bus Path is invalid")
-			return sensor.StateUnknown
-		}
-	}
-	v, err := NewBusRequest(ctx, SystemBus).
-		Path(path).
-		Destination(dBusNMObj).
-		GetProp(prop)
-	if err != nil {
-		log.Debug().Err(err).Msg("Could not fetch wifi property from D-Bus.")
-		return dbus.MakeVariant(sensor.StateUnknown)
-	}
-	switch t {
-	case wifiSSID, wifiHWAddress:
-		return string(variantToValue[[]uint8](v))
-	case wifiFrequency, wifiSpeed, wifiStrength:
-		return variantToValue[uint32](v)
-	}
-
-	return sensor.StateUnknown
-}
-
 // handleConn will treat the given path as a connection object and create a
 // sensor for the connection state, as well as any additional sensors for the
 // connection type.
@@ -334,7 +279,7 @@ func handleProps(ctx context.Context, p dbus.ObjectPath, props map[string]dbus.V
 			value = variantToValue[uint32](propValue)
 		default:
 			log.Trace().
-				Str("prop", propName).Interface("value", propValue).Str("path", string(p)).
+				Str("prop", propName).Interface("value", propValue.Value()).Str("path", string(p)).
 				Msg("Unhandled property.")
 			return
 		}
@@ -373,10 +318,6 @@ func newNetworkSensor(ctx context.Context, p dbus.ObjectPath, asType sensorType,
 		s.attributes.ConnectionType = getConnType(ctx, s.objectPath)
 	case wifiFrequency, wifiSSID, wifiSpeed, wifiHWAddress, wifiStrength:
 		s.sensorGroup = "wifi"
-		// if value == nil {
-		// 	log.Trace().Str("id", s.ID()).Msg("Fetching Wi-Fi property.")
-		// 	s.value = getWifiProp(ctx, p, s.sensorType)
-		// }
 	}
 	return s
 }
