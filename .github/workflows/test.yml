@@ -26,7 +26,7 @@ jobs:
 
       - name: Install dependencies
         id: install_linux_deps
-        run: sudo apt install -y desktop-file-utils gcc libgl1-mesa-dev libegl1-mesa-dev libgles2-mesa-dev libx11-dev xorg-dev
+        run: export DEBIAN_FRONTEND=noninteractive && sudo apt -y update && apt install -y desktop-file-utils gcc libgl1-mesa-dev libegl1-mesa-dev libgles2-mesa-dev libx11-dev xorg-dev
 
       - name: Update VERSION
         id: update_version
