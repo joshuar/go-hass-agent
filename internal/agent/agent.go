@@ -19,7 +19,6 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/hass/api"
 
 	"github.com/joshuar/go-hass-agent/internal/agent/config"
-	viperconfig "github.com/joshuar/go-hass-agent/internal/agent/config/viperConfig"
 	"github.com/joshuar/go-hass-agent/internal/agent/ui"
 	fyneui "github.com/joshuar/go-hass-agent/internal/agent/ui/fyneUI"
 	"github.com/joshuar/go-hass-agent/internal/tracker"
@@ -58,7 +57,7 @@ func newAgent(o *AgentOptions) *Agent {
 			log.Fatal().Err(err).Msg("Could not upgrade config.")
 		}
 	}
-	if a.config, err = viperconfig.New(configPath); err != nil {
+	if a.config, err = config.New(configPath); err != nil {
 		log.Fatal().Err(err).Msg("Could not open config.")
 	}
 	a.setupLogging()
