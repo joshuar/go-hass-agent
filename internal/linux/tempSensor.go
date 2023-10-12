@@ -34,7 +34,7 @@ func (s *tempSensor) Name() string {
 }
 
 func (s *tempSensor) ID() string {
-	return s.id
+	return "temp_" + s.id
 }
 
 func (s *tempSensor) Attributes() interface{} {
