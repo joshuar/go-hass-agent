@@ -34,7 +34,7 @@ func LoadAvgUpdater(ctx context.Context, tracker device.SensorTracker) {
 			l := &loadavgSensor{}
 			l.icon = "mdi:chip"
 			l.units = "load"
-			l.source = "SOURCE_PROCFS"
+			l.source = srcProcfs
 			l.stateClass = sensor.StateMeasurement
 			switch loadType {
 			case load1:

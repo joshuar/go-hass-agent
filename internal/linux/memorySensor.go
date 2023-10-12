@@ -63,7 +63,7 @@ func MemoryUpdater(ctx context.Context, tracker device.SensorTracker) {
 					sensorType:  stat,
 					icon:        "mdi:memory",
 					units:       "B",
-					source:      "SOURCE_PROCFS",
+					source:      srcProcfs,
 					deviceClass: sensor.Data_size,
 					stateClass:  sensor.StateTotal,
 				},

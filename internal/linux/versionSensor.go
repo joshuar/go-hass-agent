@@ -29,20 +29,20 @@ func Versions(ctx context.Context, tracker device.SensorTracker) {
 			value:      info.KernelVersion,
 			diagnostic: true,
 			icon:       "mdi:chip",
-			source:     "SOURCE_PROCFS",
+			source:     srcProcfs,
 		}, &linuxSensor{
 			sensorType: distribution,
 			value:      cases.Title(language.English).String(info.Platform),
 			diagnostic: true,
 			icon:       "mdi:linux",
-			source:     "SOURCE_PROCFS",
+			source:     srcProcfs,
 		},
 		&linuxSensor{
 			sensorType: version,
 			value:      info.PlatformVersion,
 			diagnostic: true,
 			icon:       "mdi:numeric",
-			source:     "SOURCE_PROCFS",
+			source:     srcProcfs,
 		},
 	)
 	if err := tracker.UpdateSensors(ctx, sensors...); err != nil {
