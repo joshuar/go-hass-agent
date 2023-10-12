@@ -90,7 +90,7 @@ func NewFyneUI(agent ui.Agent) *fyneUI {
 
 // DisplayTrayIcon displays an icon in the desktop tray with a menu for
 // controlling the agent and showing other informational windows.
-func (i *fyneUI) DisplayTrayIcon(ctx context.Context, agent ui.Agent) {
+func (i *fyneUI) DisplayTrayIcon(agent ui.Agent) {
 	if agent.IsHeadless() {
 		log.Warn().Msg("No UI. Will not display tray icon.")
 		return
@@ -103,7 +103,7 @@ func (i *fyneUI) DisplayTrayIcon(ctx context.Context, agent ui.Agent) {
 		menu := fyne.NewMenu("Main",
 			fyne.NewMenuItem(i.text.Translate("About"),
 				func() {
-					w := i.aboutWindow(ctx, agent, i.text)
+					w := i.aboutWindow(agent, i.text)
 					if w != nil {
 						w.Show()
 					}
@@ -171,16 +171,10 @@ func (i *fyneUI) DisplayRegistrationWindow(ctx context.Context, agent ui.Agent, 
 
 // aboutWindow creates a window that will show some interesting information
 // about the agent, such as version numbers.
-func (i *fyneUI) aboutWindow(ctx context.Context, agent ui.Agent, t *translations.Translator) fyne.Window {
+func (i *fyneUI) aboutWindow(agent ui.Agent, t *translations.Translator) fyne.Window {
 	var widgets []fyne.CanvasObject
-	if hassConfig, err := hass.GetHassConfig(ctx); err != nil {
-		widgets = append(widgets, widget.NewLabel(t.Translate(
-			"App Version: %s", agent.AppVersion())))
-	} else {
-		haVersion := hassConfig.GetVersion()
-		widgets = append(widgets, widget.NewLabel(t.Translate(
-			"App Version: %s\tHA Version: %s", agent.AppVersion(), haVersion)))
-	}
+	widgets = append(widgets, widget.NewLabel(t.Translate(
+		"App Version: %s", agent.AppVersion())))
 	var deviceName, deviceID string
 	if err := agent.GetConfig(config.PrefDeviceName, &deviceName); err == nil && deviceName != "" {
 		widgets = append(widgets,

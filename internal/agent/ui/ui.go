@@ -31,7 +31,7 @@ type Agent interface {
 //go:generate moq -out mockAgentUI_test.go . AgentUI
 type AgentUI interface {
 	DisplayNotification(string, string)
-	DisplayTrayIcon(context.Context, Agent)
+	DisplayTrayIcon(Agent)
 	DisplayRegistrationWindow(context.Context, Agent, chan struct{})
 	Run()
 }

@@ -123,7 +123,7 @@ func Run(options AgentOptions) {
 
 	agent.handleSignals()
 	agent.handleShutdown()
-	agent.ui.DisplayTrayIcon(ctx, agent)
+	agent.ui.DisplayTrayIcon(agent)
 	agent.ui.Run()
 	defer cancelFunc()
 
@@ -135,8 +135,6 @@ func Run(options AgentOptions) {
 // request to Home Assistant and handles the response. It will handle either a
 // UI or non-UI registration flow.
 func Register(options AgentOptions, server, token string) {
-	var ctx context.Context
-
 	agent := newAgent(&options)
 	defer close(agent.done)
 
@@ -149,7 +147,7 @@ func Register(options AgentOptions, server, token string) {
 
 	agent.handleSignals()
 	agent.handleShutdown()
-	agent.ui.DisplayTrayIcon(ctx, agent)
+	agent.ui.DisplayTrayIcon(agent)
 	agent.ui.Run()
 
 	regWait.Wait()
