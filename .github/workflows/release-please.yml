@@ -25,6 +25,13 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Install/Cache dependencies
+        if: ${{ steps.release_please.outputs.release_created }}
+        id: cache_pkg_deps
+        uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+          packages: desktop-file-utils gcc libgl1-mesa-dev libegl1-mesa-dev libgles2-mesa-dev libx11-dev xorg-dev
+
       - name: Setup Go
         if: ${{ steps.release_please.outputs.release_created }}
         id: setup_go
@@ -40,11 +47,6 @@ jobs:
           go install github.com/fyne-io/fyne-cross@latest
           go install golang.org/x/text/cmd/gotext@latest
           go install github.com/matryer/moq@latest
-
-      - name: Install library dependencies
-        if: ${{ steps.release_please.outputs.release_created }}
-        id: install_linux_deps
-        run: sudo apt install -y desktop-file-utils gcc libgl1-mesa-dev libegl1-mesa-dev libgles2-mesa-dev libx11-dev xorg-dev
 
       - name: Update VERSION
         if: ${{ steps.release_please.outputs.release_created }}
