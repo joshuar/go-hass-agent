@@ -76,6 +76,7 @@ func Run(options AgentOptions) {
 	agent := newAgent(&options)
 	defer close(agent.done)
 
+	// Pre-flight: check if agent is registered. If not, run registration flow.
 	var regWait sync.WaitGroup
 	regWait.Add(1)
 	go func() {
@@ -83,10 +84,12 @@ func Run(options AgentOptions) {
 		agent.registrationProcess(context.Background(), "", "", options.Register, options.Headless)
 	}()
 
+	// Pre-flight: validate config and use to populate context values.
 	var cfgWait sync.WaitGroup
 	cfgWait.Add(1)
 	go func() {
 		defer cfgWait.Done()
+		// Wait until registration check is done
 		regWait.Wait()
 		if err = config.ValidateConfig(agent.config); err != nil {
 			log.Fatal().Err(err).Msg("Could not validate config.")
@@ -99,9 +102,11 @@ func Run(options AgentOptions) {
 		agent.handleCancellation(ctx)
 	}()
 
+	// Start main work goroutines
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+		// Wait until the config is validated and context is set up
 		cfgWait.Wait()
 
 		if agent.sensors, err = tracker.NewSensorTracker(agent); err != nil {
