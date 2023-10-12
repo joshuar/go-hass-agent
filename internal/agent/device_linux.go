@@ -34,6 +34,7 @@ func sensorWorkers() []func(context.Context, device.SensorTracker) {
 		linux.TimeUpdater,
 		linux.ScreenLockUpdater,
 		linux.UsersUpdater,
-		linux.Versions)
+		linux.Versions,
+		linux.TempUpdater)
 	return workers
 }
