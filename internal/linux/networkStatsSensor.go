@@ -35,7 +35,7 @@ func (s *networkStatsSensor) Attributes() interface{} {
 		networkStatsAttributes
 	}{
 		NativeUnit:             s.units,
-		DataSource:             "SOURCE_PROCFS",
+		DataSource:             srcProcfs,
 		networkStatsAttributes: s.networkStatsAttributes,
 	}
 }
