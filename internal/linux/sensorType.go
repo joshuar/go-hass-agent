@@ -52,6 +52,7 @@ const (
 	distribution                            // Distribution Name
 	version                                 // Distribution Version
 	users                                   // Current Users
+	deviceTemp                              // Temperature
 )
 
 // sensorType represents the unique type of sensor data being reported. Every
