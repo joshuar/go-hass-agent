@@ -22,7 +22,10 @@
                 "aaron-bond.better-comments",
                 "valentjn.vscode-ltex",
                 "eamodio.gitlens"
-            ]
+            ],
+            "settings": {
+                "terminal.integrated.defaultProfile.linux": "fish"
+            }
         }
     }
 }
