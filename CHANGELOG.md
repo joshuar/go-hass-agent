@@ -1,5 +1,41 @@
 # Changelog
 
+## [5.0.0](https://github.com/joshuar/go-hass-agent/compare/v4.1.1...v5.0.0) (2023-10-12)
+
+
+### ⚠ BREAKING CHANGES
+
+* **agent:** switch to config powered by Viper
+
+### Features
+
+* **agent:** improve config upgrade and validation ([31561e0](https://github.com/joshuar/go-hass-agent/commit/31561e02dbae01b70e09f8b6b4065c7a1a5b0dfd))
+* **agent:** migrate registry as part of Fyne to Viper config migration ([e347c94](https://github.com/joshuar/go-hass-agent/commit/e347c948de18b42bd5382f5c840b8e1315e9cb7c))
+* **agent:** switch to config powered by Viper ([cd27058](https://github.com/joshuar/go-hass-agent/commit/cd2705870ce2149d81dc7345c6356d6642e15e18))
+* **build:** add a Dockerfile ([1e0bc96](https://github.com/joshuar/go-hass-agent/commit/1e0bc969db009642ec765d51e8e31d8da39cd3dd))
+* **linux:** add temperature sensors ([4815197](https://github.com/joshuar/go-hass-agent/commit/4815197df3af66dde03ca466dd6c9d1132489597))
+* **linux:** simplify getting hostname and hardware details ([ddff4e2](https://github.com/joshuar/go-hass-agent/commit/ddff4e27f84e16d0870f0236018bd0afe8127117))
+
+
+### Bug Fixes
+
+* **agent,hass:** fix logic around retrying websocket connection ([6603e06](https://github.com/joshuar/go-hass-agent/commit/6603e061f6887851cd0a8439093bb25a20b8abe4))
+* **agent/config:** don't try to migrate already migrated registry ([035430a](https://github.com/joshuar/go-hass-agent/commit/035430a6d0f6f2f6c1aaf6224fb6be513e84efa1))
+* **agent/register:** avoid unnecessary config validation ([9ce8a4b](https://github.com/joshuar/go-hass-agent/commit/9ce8a4be8fc14e8c185c8e98d13bd247d9393d27))
+* **agent/ui:** remove broken HA version display ([4705a35](https://github.com/joshuar/go-hass-agent/commit/4705a35cc732cf985adcb2229ef2f873ee4d0f6c))
+* **agent:** broken registration validation flow ([e3ef8f2](https://github.com/joshuar/go-hass-agent/commit/e3ef8f20bb9181d660b996079e078fe925b47183))
+* **agent:** command-line registration flow ([d63752e](https://github.com/joshuar/go-hass-agent/commit/d63752e9f567ceab3338658e47cb558777aa0de6))
+* **agent:** continue if config upgrade fails because config does not exist ([c116a8d](https://github.com/joshuar/go-hass-agent/commit/c116a8d5108ae50e6c43e86e8a3cfbb67ee7eadc))
+* **agent:** don't use context for linux device creation ([a0d8bb1](https://github.com/joshuar/go-hass-agent/commit/a0d8bb145690556a7c00d68e8c19ae24e4b9952b))
+* **agent:** remove the need to import custom viper package in agent package ([833e78c](https://github.com/joshuar/go-hass-agent/commit/833e78c65104ccb54841256df9bcecd763019bdf))
+* **agent:** use command-line debugid for config path if specified ([3f8b688](https://github.com/joshuar/go-hass-agent/commit/3f8b6880916e204cfede939c54ec95d2fc5017a1))
+* **cmd:** wrap long description onto multiple lines ([f2de9fd](https://github.com/joshuar/go-hass-agent/commit/f2de9fd14617ec0aa42ad42d24b9fb620a651360))
+* **linux:** add "temp_" prefix to temp sensor entity ids ([c6480f3](https://github.com/joshuar/go-hass-agent/commit/c6480f3195fcd8e06b83acabd798985649b29ca6))
+* **linux:** better handling of unavailable sensors ([f070be7](https://github.com/joshuar/go-hass-agent/commit/f070be7910aab099e90de4a4e5ee714cd6363502))
+* **linux:** clean up network connections sensor ([78dc843](https://github.com/joshuar/go-hass-agent/commit/78dc8434596c4d8dc8447cb090ab29bcec42f4dc))
+* **linux:** show warning if app sensors could not be enabled ([737f4ed](https://github.com/joshuar/go-hass-agent/commit/737f4ed38e339d5c81c21ab75bfb26544a0499dd))
+* **linux:** use string constant for procfs source attribute ([9521449](https://github.com/joshuar/go-hass-agent/commit/952144968b015067d8b1b62d239ddf29e73a92ca))
+
 ## [4.1.1](https://github.com/joshuar/go-hass-agent/compare/v4.1.0...v4.1.1) (2023-10-03)
 
 
