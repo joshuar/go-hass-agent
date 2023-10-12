@@ -22,6 +22,16 @@ import (
 	"golang.org/x/mod/semver"
 )
 
+const (
+	websocketPath = "/api/websocket"
+	webHookPath   = "/api/webhook/"
+	AppName       = "go-hass-agent"
+)
+
+//go:generate sh -c "printf %s $(git tag | tail -1) > VERSION"
+//go:embed VERSION
+var AppVersion string
+
 // AgentConfig represents the methods that the agent uses to interact with
 // its config. It is effectively a CRUD interface to wherever the configuration
 // is stored.
@@ -34,6 +44,10 @@ type AgentConfig interface {
 	StoragePath(string) (string, error)
 }
 
+func New(configPath string) (AgentConfig, error) {
+	return viperconfig.New(configPath)
+}
+
 type ConfigFileNotFoundError struct {
 	Err error
 }
@@ -41,16 +55,6 @@ type ConfigFileNotFoundError struct {
 func (e *ConfigFileNotFoundError) Error() string {
 	return e.Err.Error()
 }
-
-const (
-	websocketPath = "/api/websocket"
-	webHookPath   = "/api/webhook/"
-	AppName       = "go-hass-agent"
-)
-
-//go:generate sh -c "printf %s $(git tag | tail -1) > VERSION"
-//go:embed VERSION
-var AppVersion string
 
 // ValidateConfig takes an AgentConfig and ensures that it meets the minimum
 // requirements for the agent to function correctly
