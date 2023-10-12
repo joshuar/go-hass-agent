@@ -24,7 +24,7 @@ var _ AgentUI = &AgentUIMock{}
 //			DisplayRegistrationWindowFunc: func(contextMoqParam context.Context, agent Agent, valCh chan struct{})  {
 //				panic("mock out the DisplayRegistrationWindow method")
 //			},
-//			DisplayTrayIconFunc: func(contextMoqParam context.Context, agent Agent)  {
+//			DisplayTrayIconFunc: func(agent Agent)  {
 //				panic("mock out the DisplayTrayIcon method")
 //			},
 //			RunFunc: func()  {
@@ -44,7 +44,7 @@ type AgentUIMock struct {
 	DisplayRegistrationWindowFunc func(contextMoqParam context.Context, agent Agent, valCh chan struct{})
 
 	// DisplayTrayIconFunc mocks the DisplayTrayIcon method.
-	DisplayTrayIconFunc func(contextMoqParam context.Context, agent Agent)
+	DisplayTrayIconFunc func(agent Agent)
 
 	// RunFunc mocks the Run method.
 	RunFunc func()
@@ -69,8 +69,6 @@ type AgentUIMock struct {
 		}
 		// DisplayTrayIcon holds details about calls to the DisplayTrayIcon method.
 		DisplayTrayIcon []struct {
-			// ContextMoqParam is the contextMoqParam argument value.
-			ContextMoqParam context.Context
 			// Agent is the agent argument value.
 			Agent Agent
 		}
@@ -161,21 +159,19 @@ func (mock *AgentUIMock) DisplayRegistrationWindowCalls() []struct {
 }
 
 // DisplayTrayIcon calls DisplayTrayIconFunc.
-func (mock *AgentUIMock) DisplayTrayIcon(contextMoqParam context.Context, agent Agent) {
+func (mock *AgentUIMock) DisplayTrayIcon(agent Agent) {
 	if mock.DisplayTrayIconFunc == nil {
 		panic("AgentUIMock.DisplayTrayIconFunc: method is nil but AgentUI.DisplayTrayIcon was just called")
 	}
 	callInfo := struct {
-		ContextMoqParam context.Context
-		Agent           Agent
+		Agent Agent
 	}{
-		ContextMoqParam: contextMoqParam,
-		Agent:           agent,
+		Agent: agent,
 	}
 	mock.lockDisplayTrayIcon.Lock()
 	mock.calls.DisplayTrayIcon = append(mock.calls.DisplayTrayIcon, callInfo)
 	mock.lockDisplayTrayIcon.Unlock()
-	mock.DisplayTrayIconFunc(contextMoqParam, agent)
+	mock.DisplayTrayIconFunc(agent)
 }
 
 // DisplayTrayIconCalls gets all the calls that were made to DisplayTrayIcon.
@@ -183,12 +179,10 @@ func (mock *AgentUIMock) DisplayTrayIcon(contextMoqParam context.Context, agent 
 //
 //	len(mockedAgentUI.DisplayTrayIconCalls())
 func (mock *AgentUIMock) DisplayTrayIconCalls() []struct {
-	ContextMoqParam context.Context
-	Agent           Agent
+	Agent Agent
 } {
 	var calls []struct {
-		ContextMoqParam context.Context
-		Agent           Agent
+		Agent Agent
 	}
 	mock.lockDisplayTrayIcon.RLock()
 	calls = mock.calls.DisplayTrayIcon
