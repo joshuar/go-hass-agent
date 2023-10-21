@@ -1,3 +1,5 @@
 Podman
 go-hass-agent
 ABRT
+Hass
+Fyne

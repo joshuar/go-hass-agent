@@ -31,6 +31,16 @@ builds:
       post:
         - fyne-cross linux -icon internal/agent/ui/assets/logo-pretty.png -release -app-version {{.RawVersion}}
 
+signs:
+- cmd: cosign
+  stdin: '{{ .Env.COSIGN_PWD }}'
+  args:
+  - "sign-blob"
+  - "--key=cosign.key"
+  - "--output-signature=${signature}"
+  - "${artifact}"
+  - "--yes" # needed on cosign 2.0.0+
+  artifacts: all
 
 archives:
   - format: binary
