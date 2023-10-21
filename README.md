@@ -77,6 +77,17 @@ Go is known for statically compiled binaries that "run anywhere", the Fyne UI
 toolkit used by Go Hass Agent makes use of shared libraries that may need to
 be installed as well.
 
+Package signatures can be verified with
+[cosign](https://github.com/sigstore/cosign). To verify a package, you'll need
+the [cosign.pub](cosign.pub) public key and the `.sig` file (downloaded from
+[releases](https://github.com/joshuar/go-hass-agent/releases)) that matches the
+package you want to verify. To verify a package, a command similar to the
+following for the `rpm` package can be used:
+
+```shell
+cosign verify-blob -key cosign.pub -signature go-hass-agent-*.rpm.sig go-hass-agent-*.rpm
+```
+
 ## 🖱️ Usage
 
 Go Hass Agent runs as a tray icon by default. It is operating system,
