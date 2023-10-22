@@ -30,7 +30,6 @@ jobs:
           go install golang.org/x/text/cmd/gotext@latest
           go install github.com/matryer/moq@latest
 
-
       - name: Update VERSION
         id: update_version
         shell: sh
