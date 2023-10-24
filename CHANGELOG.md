@@ -1,5 +1,12 @@
 # Changelog
 
+## [5.0.1](https://github.com/joshuar/go-hass-agent/compare/v5.0.0...v5.0.1) (2023-10-24)
+
+
+### Bug Fixes
+
+* **agent,hass,device:** better clean-up on agent quit/cancellation ([ec7a7e0](https://github.com/joshuar/go-hass-agent/commit/ec7a7e08e892c866a917cc11ba4bec984cd47e27))
+
 ## [5.0.0](https://github.com/joshuar/go-hass-agent/compare/v4.1.1...v5.0.0) (2023-10-12)
 
 
