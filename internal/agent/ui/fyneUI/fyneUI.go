@@ -35,9 +35,8 @@ server (if not auto-detected) and long-lived access token.`
 )
 
 type fyneUI struct {
-	app        fyne.App
-	mainWindow fyne.Window
-	text       *translations.Translator
+	app  fyne.App
+	text *translations.Translator
 }
 
 func (i *fyneUI) Run() {
@@ -79,10 +78,6 @@ func NewFyneUI(agent ui.Agent) *fyneUI {
 			text: translations.NewTranslator(),
 		}
 		i.app.SetIcon(&ui.TrayIcon{})
-		i.mainWindow = i.app.NewWindow(agent.AppName())
-		i.mainWindow.SetCloseIntercept(func() {
-			i.mainWindow.Hide()
-		})
 		return i
 	}
 	return &fyneUI{}
@@ -97,6 +92,7 @@ func (i *fyneUI) DisplayTrayIcon(agent ui.Agent) {
 	}
 	if desk, ok := i.app.(desktop.App); ok {
 		menuItemQuit := fyne.NewMenuItem(i.text.Translate("Quit"), func() {
+			i.app.Quit()
 			agent.Stop()
 		})
 		menuItemQuit.IsQuit = true
@@ -144,29 +140,29 @@ func (i *fyneUI) DisplayTrayIcon(agent ui.Agent) {
 // complete registration. It will populate with any values that were already
 // provided via the command-line.
 func (i *fyneUI) DisplayRegistrationWindow(ctx context.Context, agent ui.Agent, done chan struct{}) {
-	i.mainWindow.SetTitle(i.text.Translate("App Registration"))
+	w := i.app.NewWindow(i.text.Translate("App Registration"))
 
 	var allFormItems []*widget.FormItem
 
 	allFormItems = append(allFormItems, i.serverConfigItems(ctx, agent, i.text)...)
 	registrationForm := widget.NewForm(allFormItems...)
 	registrationForm.OnSubmit = func() {
-		i.mainWindow.Hide()
+		w.Close()
 		close(done)
 	}
 	registrationForm.OnCancel = func() {
 		log.Warn().Msg("Canceling registration.")
 		close(done)
-		i.mainWindow.Close()
+		w.Close()
 		ctx.Done()
 	}
 
-	i.mainWindow.SetContent(container.New(layout.NewVBoxLayout(),
+	w.SetContent(container.New(layout.NewVBoxLayout(),
 		widget.NewLabel(i.text.Translate(explainRegistration)),
 		registrationForm,
 	))
 	log.Debug().Msg("Asking user for registration details.")
-	i.mainWindow.Show()
+	w.Show()
 }
 
 // aboutWindow creates a window that will show some interesting information
