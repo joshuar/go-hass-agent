@@ -74,7 +74,6 @@ func Run(options AgentOptions) {
 	var err error
 
 	agent := newAgent(&options)
-	defer close(agent.done)
 
 	// Pre-flight: check if agent is registered. If not, run registration flow.
 	var regWait sync.WaitGroup
@@ -99,7 +98,6 @@ func Run(options AgentOptions) {
 			log.Warn().Err(err).Msg("Unable to set config version to app version.")
 		}
 		ctx, cancelFunc = agent.setupContext()
-		agent.handleCancellation(ctx)
 	}()
 
 	// Start main work goroutines
@@ -125,13 +123,22 @@ func Run(options AgentOptions) {
 		}()
 	}()
 
-	agent.handleSignals()
-	agent.handleShutdown()
+	go func() {
+		<-agent.done
+		log.Debug().Msg("Agent done.")
+		cancelFunc()
+	}()
+
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		defer close(agent.done)
+		<-c
+		log.Debug().Msg("Ctrl-C pressed.")
+	}()
+
 	agent.ui.DisplayTrayIcon(agent)
 	agent.ui.Run()
-	defer cancelFunc()
-
-	wg.Wait()
 }
 
 // Register runs a registration flow. It either prompts the user for needed
@@ -227,14 +234,6 @@ func (agent *Agent) handleShutdown() {
 	}()
 }
 
-func (agent *Agent) handleCancellation(ctx context.Context) {
-	go func() {
-		<-ctx.Done()
-		log.Debug().Msg("Context canceled.")
-		os.Exit(1)
-	}()
-}
-
 // Agent satisfies ui.Agent, tracker.Agent and api.Agent interfaces
 
 func (agent *Agent) IsHeadless() bool {
@@ -254,6 +253,7 @@ func (agent *Agent) AppVersion() string {
 }
 
 func (agent *Agent) Stop() {
+	log.Debug().Msg("Stopping agent.")
 	close(agent.done)
 }
 

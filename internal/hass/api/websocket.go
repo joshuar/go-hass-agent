@@ -48,7 +48,7 @@ type websocketResponse struct {
 	Success bool   `json:"success,omitempty"`
 }
 
-func StartWebsocket(ctx context.Context, settings Agent, notifyCh chan [2]string, doneCh chan struct{}) {
+func StartWebsocket(ctx context.Context, settings Agent, notifyCh chan [2]string) {
 	var websocketURL string
 	if err := settings.GetConfig(config.PrefWebsocketURL, &websocketURL); err != nil {
 		log.Warn().Err(err).Msg("Could not retrieve websocket URL from config.")
@@ -60,7 +60,7 @@ func StartWebsocket(ctx context.Context, settings Agent, notifyCh chan [2]string
 	retryFunc := func() error {
 		var resp *http.Response
 		socket, resp, err = gws.NewClient(
-			newWebsocket(ctx, settings, notifyCh, doneCh),
+			newWebsocket(ctx, settings, notifyCh),
 			&gws.ClientOption{Addr: websocketURL})
 		if err != nil {
 			log.Error().Err(err).
@@ -77,7 +77,11 @@ func StartWebsocket(ctx context.Context, settings Agent, notifyCh chan [2]string
 		return
 	}
 	log.Trace().Caller().Msg("Websocket connection established.")
-	go socket.ReadLoop()
+	go func() {
+		<-ctx.Done()
+		socket.WriteClose(1000, nil)
+	}()
+	socket.ReadLoop()
 }
 
 type webSocketData struct {
@@ -94,7 +98,7 @@ type WebSocket struct {
 	nextID    uint64
 }
 
-func newWebsocket(ctx context.Context, settings Agent, notifyCh chan [2]string, doneCh chan struct{}) *WebSocket {
+func newWebsocket(ctx context.Context, settings Agent, notifyCh chan [2]string) *WebSocket {
 	var token, webhookID string
 	if err := settings.GetConfig(config.PrefToken, &token); err != nil {
 		log.Warn().Err(err).Msg("Could not retrieve token from config.")
@@ -110,23 +114,24 @@ func newWebsocket(ctx context.Context, settings Agent, notifyCh chan [2]string, 
 		WriteCh:   make(chan *webSocketData),
 		token:     token,
 		webhookID: webhookID,
-		doneCh:    doneCh,
+		doneCh:    make(chan struct{}),
 	}
-	go ws.responseHandler(ctx, notifyCh)
-	go ws.requestHandler(ctx)
+	go func() {
+		<-ctx.Done()
+		close(ws.doneCh)
+	}()
+	go ws.responseHandler(notifyCh)
+	go ws.requestHandler()
 	return ws
 }
 
 func (c *WebSocket) OnError(socket *gws.Conn, err error) {
 	log.Error().Err(err).
 		Msg("Error on websocket")
-	c.doneCh <- struct{}{}
 }
 
 func (c *WebSocket) OnClose(socket *gws.Conn, err error) {
 	log.Debug().Err(err).Msg("Websocket connection closed.")
-	c.doneCh <- struct{}{}
-	close(c.doneCh)
 }
 
 func (c *WebSocket) OnPong(socket *gws.Conn, payload []byte) {
@@ -137,20 +142,25 @@ func (c *WebSocket) OnOpen(socket *gws.Conn) {
 	log.Trace().Caller().Msg("Websocket opened.")
 	go func() {
 		ticker := time.NewTicker(PingInterval)
-		for range ticker.C {
-			log.Trace().Caller().
-				Msg("Sending ping on websocket")
-			if err := socket.SetDeadline(time.Now().Add(2 * PingInterval)); err != nil {
-				log.Error().Err(err).
-					Msg("Error setting deadline on websocket.")
+		for {
+			select {
+			case <-c.doneCh:
 				return
-			}
-			c.WriteCh <- &webSocketData{
-				conn: socket,
-				data: &websocketMsg{
-					Type: "ping",
-					ID:   atomic.LoadUint64(&c.nextID),
-				},
+			case <-ticker.C:
+				log.Trace().Caller().
+					Msg("Sending ping on websocket")
+				if err := socket.SetDeadline(time.Now().Add(2 * PingInterval)); err != nil {
+					log.Error().Err(err).
+						Msg("Error setting deadline on websocket.")
+					return
+				}
+				c.WriteCh <- &webSocketData{
+					conn: socket,
+					data: &websocketMsg{
+						Type: "ping",
+						ID:   atomic.LoadUint64(&c.nextID),
+					},
+				}
 			}
 		}
 	}()
@@ -175,10 +185,10 @@ func (c *WebSocket) OnMessage(socket *gws.Conn, message *gws.Message) {
 	}
 }
 
-func (c *WebSocket) responseHandler(ctx context.Context, notifyCh chan [2]string) {
+func (c *WebSocket) responseHandler(notifyCh chan [2]string) {
 	for {
 		select {
-		case <-ctx.Done():
+		case <-c.doneCh:
 			log.Trace().Caller().Msg("Stopping websocket response handler.")
 			return
 		case r := <-c.ReadCh:
@@ -237,10 +247,10 @@ func (c *WebSocket) responseHandler(ctx context.Context, notifyCh chan [2]string
 	}
 }
 
-func (c *WebSocket) requestHandler(ctx context.Context) {
+func (c *WebSocket) requestHandler() {
 	for {
 		select {
-		case <-ctx.Done():
+		case <-c.doneCh:
 			log.Trace().Caller().Msg("Stopping websocket request handler.")
 			return
 		case m := <-c.WriteCh:
