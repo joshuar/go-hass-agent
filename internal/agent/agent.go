@@ -129,13 +129,7 @@ func Run(options AgentOptions) {
 		cancelFunc()
 	}()
 
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		defer close(agent.done)
-		<-c
-		log.Debug().Msg("Ctrl-C pressed.")
-	}()
+	agent.handleSignals()
 
 	agent.ui.DisplayTrayIcon(agent)
 	agent.ui.Run()
@@ -156,8 +150,13 @@ func Register(options AgentOptions, server, token string) {
 		agent.registrationProcess(context.Background(), server, token, options.Register, options.Headless)
 	}()
 
+	go func() {
+		<-agent.done
+		log.Debug().Msg("Agent done.")
+	}()
+
 	agent.handleSignals()
-	agent.handleShutdown()
+
 	agent.ui.DisplayTrayIcon(agent)
 	agent.ui.Run()
 
@@ -219,18 +218,9 @@ func (agent *Agent) handleSignals() {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
+		defer close(agent.done)
 		<-c
 		log.Debug().Msg("Ctrl-C pressed.")
-		close(agent.done)
-	}()
-}
-
-// handleShutdown will handle context cancellation of the agent
-func (agent *Agent) handleShutdown() {
-	go func() {
-		<-agent.done
-		log.Debug().Msg("Agent done.")
-		os.Exit(0)
 	}()
 }
 
