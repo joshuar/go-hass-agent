@@ -1,5 +1,12 @@
 # Changelog
 
+## [5.0.2](https://github.com/joshuar/go-hass-agent/compare/v5.0.1...v5.0.2) (2023-10-28)
+
+
+### Bug Fixes
+
+* **agent:** should wait for waitgroups ([8c711a0](https://github.com/joshuar/go-hass-agent/commit/8c711a0bd87dda4ce0d42e02bd5776cccfe55bbc))
+
 ## [5.0.1](https://github.com/joshuar/go-hass-agent/compare/v5.0.0...v5.0.1) (2023-10-24)
 
 
