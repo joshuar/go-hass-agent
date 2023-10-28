@@ -133,6 +133,7 @@ func Run(options AgentOptions) {
 
 	agent.ui.DisplayTrayIcon(agent)
 	agent.ui.Run()
+	wg.Wait()
 }
 
 // Register runs a registration flow. It either prompts the user for needed
