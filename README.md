@@ -135,12 +135,18 @@ Dockerfile that you can use to build an image can be found
 You can build an image with a command like the following (using Podman):
 
 ```shell
-cat Dockerfile | podman build --build-arg --build-arg version='x.x.x' --network host --tag go-hass-agent -
+cat Dockerfile | podman build --build-arg version='x.x.x' --network host --tag go-hass-agent -
 ```
 
 The `--build-arg version=x.x.x` is required and the version should correspond to
-a [release](releases/). Once the image is built, run it with a command like
-the following (using Podman):
+a [release](releases/). Once the image is built, first register the agent with
+Home Assistant:
+
+```shell
+podman run --rm --hostname hass-container --volume /proc:/host/proc:ro --volume /sys:/host/sys:ro --volume /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket:ro --volume /run/user/1000/bus:/run/user/1000/bus:ro --volume ~/go-hass-agent:/home/go-hass-agent:U --network host --userns keep-id go-hass-agent register --server some.server:port --token longlivedtoken
+```
+
+Once registered, run the agent with:
 
 ```shell
 podman run --rm --hostname hass-container --volume /proc:/host/proc:ro --volume /sys:/host/sys:ro --volume /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket:ro --volume /run/user/1000/bus:/run/user/1000/bus:ro --volume ~/go-hass-agent:/home/go-hass-agent:U --network host --userns keep-id go-hass-agent
