@@ -114,6 +114,8 @@ able to report sensors and receive notifications.
 When you have entered all the details, click **Submit** and the agent should
 start running and reporting sensors to the Home Assistant instance.
 
+### Running "Headless"
+
 As alternative, you can register Go Hass Agent on the command-line with by
 running:
 
@@ -123,6 +125,30 @@ go-hass-agent register --token _TOKEN_ --server _URL_
 
 You will need to provide a long-lived token `_TOKEN_` and the URL of your Home
 Assistant instance, `_URL_`.
+
+### Running in a container
+
+There is rough support for running Go Hass Agent within a container. A
+Dockerfile that you can use to build an image can be found
+[here](build/package/Dockerfile). 
+
+You can build an image with a command like the following (using Podman):
+
+```shell
+cat Dockerfile | podman build --build-arg --build-arg version='x.x.x' --network host --tag go-hass-agent -
+```
+
+The `--build-arg version=x.x.x` is required and the version should correspond to
+a [release](releases/). Once the image is built, run it with a command like
+the following (using Podman):
+
+```shell
+podman run --rm --hostname hass-container --volume /proc:/host/proc:ro --volume /sys:/host/sys:ro --volume /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket:ro --volume /run/user/1000/bus:/run/user/1000/bus:ro --volume ~/go-hass-agent:/home/go-hass-agent:U --network host --userns keep-id go-hass-agent
+```
+
+You can change `~/go-hass-agent` to whatever volume you want to use to store the agent config
+and registry. The D-Bus volumes are optional, not specifying them will mean
+sensors that rely on a D-Bus connection will not show up. 
 
 ### Regular Usage
 
