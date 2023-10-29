@@ -10,7 +10,7 @@ services:
     userns_mode: keep-id
     user: vscode
   home-assistant:
-    image: ghcr.io/home-assistant/home-assistant:2023.10.1
+    image: ghcr.io/home-assistant/home-assistant:2023.10.5
     volumes:
       - ../deployments/home-assistant/config:/config
     environment:
