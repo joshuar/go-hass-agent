@@ -173,12 +173,7 @@ func (r *busRequest) AddWatch(ctx context.Context) error {
 	}
 	signalCh := make(chan *dbus.Signal)
 	r.bus.conn.Signal(signalCh)
-	defer r.bus.conn.RemoveSignal(signalCh)
-	log.Trace().
-		Str("path", string(r.path)).
-		Str("dest", r.dest).
-		Str("event", r.event).
-		Msgf("Watching D-Bus signal.")
+	// defer r.bus.conn.RemoveSignal(signalCh)
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
@@ -186,6 +181,18 @@ func (r *busRequest) AddWatch(ctx context.Context) error {
 		for {
 			select {
 			case <-ctx.Done():
+				if err := r.bus.conn.RemoveMatchSignal(r.match...); err != nil {
+					log.Warn().Err(err).
+						Str("path", string(r.path)).
+						Str("dest", r.dest).
+						Str("event", r.event).
+						Msg("Failed to remove D-Bus watch.")
+				}
+				log.Debug().
+					Str("path", string(r.path)).
+					Str("dest", r.dest).
+					Str("event", r.event).
+					Msgf("Stopped D-Bus watch.")
 				return
 			case signal := <-signalCh:
 				if strings.Contains(string(signal.Path), string(r.path)) {
@@ -194,7 +201,30 @@ func (r *busRequest) AddWatch(ctx context.Context) error {
 			}
 		}
 	}()
-	wg.Wait()
+	log.Debug().
+		Str("path", string(r.path)).
+		Str("dest", r.dest).
+		Str("event", r.event).
+		Msgf("Added D-Bus watch.")
+	go func() {
+		defer r.bus.conn.RemoveSignal(signalCh)
+		wg.Wait()
+	}()
+	return nil
+}
+
+func (r *busRequest) RemoveWatch(ctx context.Context) error {
+	if r.bus == nil {
+		return errors.New("no bus connection")
+	}
+	if err := r.bus.conn.RemoveMatchSignalContext(ctx, r.match...); err != nil {
+		return err
+	}
+	log.Trace().
+		Str("path", string(r.path)).
+		Str("dest", r.dest).
+		Str("event", r.event).
+		Msgf("Removed D-Bus signal.")
 	return nil
 }
 
