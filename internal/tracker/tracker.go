@@ -185,6 +185,8 @@ func (t *SensorTracker) UpdateSensors(ctx context.Context, sensors ...interface{
 				t.send(ctx, sensor)
 			case Location:
 				updateLocation(ctx, sensor)
+			default:
+				log.Warn().Msgf("Unknown sensor received %v", sensor)
 			}
 			i++
 		}
