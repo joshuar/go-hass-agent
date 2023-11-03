@@ -41,24 +41,26 @@ func _() {
 	_ = x[wifiHWAddress-31]
 	_ = x[bytesSent-32]
 	_ = x[bytesRecv-33]
-	_ = x[powerProfile-34]
-	_ = x[boottime-35]
-	_ = x[uptime-36]
-	_ = x[load1-37]
-	_ = x[load5-38]
-	_ = x[load15-39]
-	_ = x[screenLock-40]
-	_ = x[problem-41]
-	_ = x[kernel-42]
-	_ = x[distribution-43]
-	_ = x[version-44]
-	_ = x[users-45]
-	_ = x[deviceTemp-46]
+	_ = x[bytesTx-34]
+	_ = x[bytesRx-35]
+	_ = x[powerProfile-36]
+	_ = x[boottime-37]
+	_ = x[uptime-38]
+	_ = x[load1-39]
+	_ = x[load5-40]
+	_ = x[load15-41]
+	_ = x[screenLock-42]
+	_ = x[problem-43]
+	_ = x[kernel-44]
+	_ = x[distribution-45]
+	_ = x[version-46]
+	_ = x[users-47]
+	_ = x[deviceTemp-48]
 }
 
-const _sensorType_name = "Active AppRunning AppsBattery TypeBattery LevelBattery TemperatureBattery VoltageBattery EnergyBattery PowerBattery StateBattery PathBattery LevelBattery ModelMemory TotalMemory AvailableMemory UsedSwap Memory TotalSwap Memory UsedSwap Memory FreeConnection StateConnection IDConnection DeviceConnection TypeConnection IPv4Connection IPv6IPv4 AddressIPv6 AddressWi-Fi SSIDWi-Fi FrequencyWi-Fi Link SpeedWi-Fi Signal StrengthWi-Fi BSSIDBytes SentBytes ReceivedPower ProfileLast RebootUptimeCPU load average (1 min)CPU load average (5 min)CPU load average (15 min)Screen LockProblemsKernel VersionDistribution NameDistribution VersionCurrent UsersTemperature"
+const _sensorType_name = "Active AppRunning AppsBattery TypeBattery LevelBattery TemperatureBattery VoltageBattery EnergyBattery PowerBattery StateBattery PathBattery LevelBattery ModelMemory TotalMemory AvailableMemory UsedSwap Memory TotalSwap Memory UsedSwap Memory FreeConnection StateConnection IDConnection DeviceConnection TypeConnection IPv4Connection IPv6IPv4 AddressIPv6 AddressWi-Fi SSIDWi-Fi FrequencyWi-Fi Link SpeedWi-Fi Signal StrengthWi-Fi BSSIDBytes SentBytes ReceivedUpload ThroughputDownload ThroughputPower ProfileLast RebootUptimeCPU load average (1 min)CPU load average (5 min)CPU load average (15 min)Screen LockProblemsKernel VersionDistribution NameDistribution VersionCurrent UsersTemperature"
 
-var _sensorType_index = [...]uint16{0, 10, 22, 34, 47, 66, 81, 95, 108, 121, 133, 146, 159, 171, 187, 198, 215, 231, 247, 263, 276, 293, 308, 323, 338, 350, 362, 372, 387, 403, 424, 435, 445, 459, 472, 483, 489, 513, 537, 562, 573, 581, 595, 612, 632, 645, 656}
+var _sensorType_index = [...]uint16{0, 10, 22, 34, 47, 66, 81, 95, 108, 121, 133, 146, 159, 171, 187, 198, 215, 231, 247, 263, 276, 293, 308, 323, 338, 350, 362, 372, 387, 403, 424, 435, 445, 459, 476, 495, 508, 519, 525, 549, 573, 598, 609, 617, 631, 648, 668, 681, 692}
 
 func (i sensorType) String() string {
 	i -= 1
