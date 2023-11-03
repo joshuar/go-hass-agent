@@ -40,6 +40,8 @@ const (
 	wifiHWAddress                           // Wi-Fi BSSID
 	bytesSent                               // Bytes Sent
 	bytesRecv                               // Bytes Received
+	bytesTx                                 // Upload Throughput
+	bytesRx                                 // Download Throughput
 	powerProfile                            // Power Profile
 	boottime                                // Last Reboot
 	uptime                                  // Uptime

@@ -7,50 +7,211 @@ package linux
 
 import (
 	"context"
-	"net"
+	"strings"
+	"sync"
 
 	"github.com/godbus/dbus/v5"
 	"github.com/iancoleman/strcase"
 	"github.com/joshuar/go-hass-agent/internal/device"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/rs/zerolog/log"
-	"golang.org/x/sync/errgroup"
 )
 
+//go:generate stringer -type=connState -output networkConnectionStates.go -linecomment
 const (
-	dBusNMPath         = "/org/freedesktop/NetworkManager"
-	dBusNMObj          = "org.freedesktop.NetworkManager"
-	dBusObjConn        = "org.freedesktop.NetworkManager.Connection.Active"
-	dBusObjAP          = "org.freedesktop.NetworkManager.AccessPoint"
-	dBusObjDev         = "org.freedesktop.NetworkManager.Device"
-	dBusObjWireless    = "org.freedesktop.NetworkManager.Device.Wireless"
-	dBusObjIP4Cfg      = "org.freedesktop.NetworkManager.IP4Config"
-	dBusObjIP6Cfg      = "org.freedesktop.NetworkManager.IP6Config"
-	dBusPropConnType   = "org.freedesktop.NetworkManager.Connection.Active.Type"
-	dBusPropConnID     = "org.freedesktop.NetworkManager.Connection.Active.Id"
-	dBusPropConnState  = "org.freedesktop.NetworkManager.Connection.Active.State"
-	dBusPropConnDevs   = "org.freedesktop.NetworkManager.Connection.Active.Devices"
-	dBusPropConnAP     = "org.freedesktop.NetworkManager.Device.Wireless.ActiveAccessPoint"
-	dBusPropConnIP4Cfg = "org.freedesktop.NetworkManager.Connection.Active.Ip4Config"
-	dBusPropConnIP6Cfg = "org.freedesktop.NetworkManager.Connection.Active.Ip6Config"
-	dBusPropIP4Addr    = "org.freedesktop.NetworkManager.IP4Config.AddressData"
-	dBusPropIP6Addr    = "org.freedesktop.NetworkManager.IP6Config.AddressData"
-	dBusPropAPSSID     = "org.freedesktop.NetworkManager.AccessPoint.Ssid"
-	dBusPropAPFreq     = "org.freedesktop.NetworkManager.AccessPoint.Frequency"
-	dBusPropAPSpd      = "org.freedesktop.NetworkManager.AccessPoint.MaxBitrate"
-	dBusPropAPStr      = "org.freedesktop.NetworkManager.AccessPoint.Strength"
-	dBusPropAPAddr     = "org.freedesktop.NetworkManager.AccessPoint.HwAddress"
+	connUnknown      connState = iota // Unknown
+	connActivating                    // Activating
+	connOnline                        // Online
+	connDeactivating                  // Deactivating
+	connOffline                       // Offline
+
+	iconUnknown      // mdi:help-network
+	iconActivating   // mdi:plus-network
+	iconOnline       // mdi:network
+	iconDeactivating // mdi:network-minus
+	iconOffline      // mdi:network-off
+
+	dBusNMPath = "/org/freedesktop/NetworkManager"
+	dBusNMObj  = "org.freedesktop.NetworkManager"
 )
 
-type connAttributes struct {
+type connState uint32
+
+type connections struct {
+	list map[dbus.ObjectPath]*connection
+	mu   sync.Mutex
+}
+
+type connection struct {
+	name   string
+	state  connState
+	attrs  *connectionAttributes
+	doneCh chan struct{}
+	linuxSensor
+}
+
+type connectionAttributes struct {
 	ConnectionType string `json:"Connection Type,omitempty"`
 	Ipv4           string `json:"IPv4 Address,omitempty"`
+	IPv4Mask       int    `json:"IPv4 Mask,omitempty"`
 	Ipv6           string `json:"IPv6 Address,omitempty"`
+	IPv6Mask       int    `json:"IPv6 Mask,omitempty"`
 	DataSource     string `json:"Data Source"`
 }
 
-// getActiveConns returns the list of active network connection D-Bus objects.
-func getActiveConns(ctx context.Context) []dbus.ObjectPath {
+func (c *connection) Name() string {
+	return c.name + " Connection State"
+}
+
+func (c *connection) ID() string {
+	return strcase.ToSnake(c.name) + "_connection_state"
+}
+
+func (c *connection) Icon() string {
+	i := c.state + 5
+	return i.String()
+}
+
+func (c *connection) Attributes() interface{} {
+	return c.attrs
+}
+
+func (c *connection) State() interface{} {
+	return c.state.String()
+}
+
+func (c *connection) monitorConnectionState(ctx context.Context, updateCh chan interface{}, p dbus.ObjectPath) {
+	log.Debug().Str("path", string(p)).Str("connection", c.name).
+		Msg("Monitoring connection state.")
+	err := NewBusRequest(ctx, SystemBus).
+		Path(p).
+		Match([]dbus.MatchOption{
+			dbus.WithMatchPathNamespace(dBusNMPath + "/ActiveConnection"),
+		}).
+		Event(dBusNMObj + ".Connection.Active.StateChanged").
+		Handler(func(s *dbus.Signal) {
+			props, ok := s.Body[1].(map[string]dbus.Variant)
+			if ok {
+				state, ok := props["State"]
+				if ok {
+					c.state = variantToValue[connState](state)
+					updateCh <- c
+					if variantToValue[uint32](state) == 4 {
+						close(c.doneCh)
+					}
+				}
+			}
+		}).
+		AddWatch(ctx)
+	if err != nil {
+		log.Error().Err(err).
+			Msg("Failed to create network connections D-Bus watch.")
+	}
+}
+
+func (c *connection) monitorAddresses(ctx context.Context, updateCh chan interface{}, p dbus.ObjectPath) {
+	r := NewBusRequest(ctx, SystemBus).
+		Path(p).
+		Destination(dBusNMObj)
+	propBase := dBusNMObj + ".Connection.Active"
+	v, _ := r.GetProp(propBase + ".Ip4Config")
+	if !v.Signature().Empty() {
+		c.attrs.Ipv4, c.attrs.IPv4Mask = getAddr(ctx, 4, variantToValue[dbus.ObjectPath](v))
+	}
+	v, _ = r.GetProp(propBase + ".Ip6Config")
+	if !v.Signature().Empty() {
+		c.attrs.Ipv6, c.attrs.IPv6Mask = getAddr(ctx, 6, variantToValue[dbus.ObjectPath](v))
+	}
+	err := NewBusRequest(ctx, SystemBus).
+		Path(p).
+		Match([]dbus.MatchOption{
+			dbus.WithMatchPathNamespace(dBusNMPath + "/ActiveConnection"),
+			dbus.WithMatchArg0Namespace("org.freedesktop.NetworkManager.Connection.Active"),
+		}).
+		Event("org.freedesktop.DBus.Properties.PropertiesChanged").
+		Handler(func(s *dbus.Signal) {
+			props, ok := s.Body[1].(map[string]dbus.Variant)
+			if ok {
+				p, ok := props["Ip4Config"]
+				if ok {
+					c.attrs.Ipv4, c.attrs.IPv4Mask = getAddr(ctx, 4, p.Value().(dbus.ObjectPath))
+					updateCh <- c
+				}
+				p, ok = props["Ip6Config"]
+				if ok {
+					c.attrs.Ipv6, c.attrs.IPv6Mask = getAddr(ctx, 6, p.Value().(dbus.ObjectPath))
+					updateCh <- c
+				}
+			}
+		}).
+		AddWatch(ctx)
+	if err != nil {
+		log.Error().Err(err).
+			Msg("Failed to create network connections D-Bus watch.")
+	}
+}
+
+func newConnection(ctx context.Context, updateCh chan interface{}, p dbus.ObjectPath) *connection {
+	c := &connection{
+		attrs: &connectionAttributes{
+			DataSource: srcDbus,
+		},
+		doneCh: make(chan struct{}),
+	}
+	c.sensorType = connectionState
+
+	r := NewBusRequest(ctx, SystemBus).
+		Path(p).
+		Destination(dBusNMObj)
+	propBase := dBusNMObj + ".Connection.Active"
+	v, _ := r.GetProp(propBase + ".Id")
+	if !v.Signature().Empty() {
+		c.name = variantToValue[string](v)
+	}
+	v, _ = r.GetProp(propBase + ".State")
+	if !v.Signature().Empty() {
+		c.state = variantToValue[connState](v)
+	}
+	v, _ = r.GetProp(propBase + ".Type")
+	if !v.Signature().Empty() {
+		c.attrs.ConnectionType = variantToValue[string](v)
+	}
+	connCtx, cancelFunc := context.WithCancel(ctx)
+	c.monitorConnectionState(connCtx, updateCh, p)
+	c.monitorAddresses(connCtx, updateCh, p)
+	switch c.attrs.ConnectionType {
+	case "802-11-wireless":
+		getWifiProperties(connCtx, updateCh, p)
+	}
+	go func() {
+		<-c.doneCh
+		cancelFunc()
+	}()
+	return c
+}
+
+func getAddr(ctx context.Context, ver int, path dbus.ObjectPath) (addr string, mask int) {
+	if path == "/" {
+		return
+	}
+	var connProp string
+	switch ver {
+	case 4:
+		connProp = dBusNMObj + ".IP4Config"
+	case 6:
+		connProp = dBusNMObj + ".IP6Config"
+	}
+	v, err := NewBusRequest(ctx, SystemBus).
+		Path(path).
+		Destination(dBusNMObj).
+		GetProp(connProp + ".AddressData")
+	if err != nil {
+		return
+	}
+	a := variantToValue[[]map[string]dbus.Variant](v)
+	return variantToValue[string](a[0]["address"]), variantToValue[int](a[0]["prefix"])
+}
+
+func getActiveConnections(ctx context.Context, updateCh chan interface{}) {
 	v, err := NewBusRequest(ctx, SystemBus).
 		Path(dBusNMPath).
 		Destination(dBusNMObj).
@@ -58,415 +219,64 @@ func getActiveConns(ctx context.Context) []dbus.ObjectPath {
 	if err != nil {
 		log.Warn().Err(err).
 			Msg("Could not retrieve active connection list.")
-		return nil
-	}
-	if l, ok := v.Value().([]dbus.ObjectPath); !ok {
-		log.Warn().Msgf("Could not interpret active connection list, got %T", l)
-	} else {
-		return l
-	}
-	return nil
-}
-
-// getConnType extracts the connection type string from DBus for a given DBus
-// path to a connection object. If it cannot find the type, it returns
-// sensor.STATE_UNKNOWN.
-func getConnType(ctx context.Context, p dbus.ObjectPath) string {
-	if !p.IsValid() {
-		log.Trace().Str("path", string(p)).Msg("Invalid D-Bus object path.")
-		return sensor.StateUnknown
-	}
-	v, err := NewBusRequest(ctx, SystemBus).
-		Path(p).
-		Destination(dBusNMObj).
-		GetProp(dBusPropConnType)
-	if err != nil {
-		log.Trace().Err(err).Msg("Could not fetch type of connection.")
-		return sensor.StateUnknown
-	} else {
-		return string(variantToValue[[]uint8](v))
-	}
-}
-
-// getConnType extracts the connection name string from DBus for a given DBus
-// path to a connection object. If it cannot find the name, it returns
-// sensor.STATE_UNKNOWN.
-func getConnName(ctx context.Context, p dbus.ObjectPath) string {
-	if !p.IsValid() {
-		log.Debug().Msgf("Invalid D-Bus object path %s.", p)
-		return sensor.StateUnknown
-	}
-	variant, err := NewBusRequest(ctx, SystemBus).
-		Path(p).
-		Destination(dBusNMObj).
-		GetProp(dBusPropConnID)
-	if err != nil {
-		log.Error().Err(err).
-			Msg("Could not fetch connection ID")
-		return sensor.StateUnknown
-	}
-	return string(variantToValue[[]uint8](variant))
-}
-
-// getConnState extracts and interprets the connection state string from DBus
-// for a given DBus path to a connection object. If it cannot determine the
-// state, it returns sensor.STATE_UNKNOWN.
-func getConnState(ctx context.Context, p dbus.ObjectPath) string {
-	state, err := NewBusRequest(ctx, SystemBus).
-		Path(p).
-		Destination(dBusNMObj).
-		GetProp(dBusPropConnState)
-	if err != nil {
-		log.Error().Err(err).
-			Msgf("Invalid connection state %v for network connection %s.", state.Value(), p)
-	} else {
-		switch state.Value().(uint32) {
-		case 4:
-			return "Offline"
-		case 3:
-			return "Deactivating"
-		case 2:
-			return "Online"
-		case 1:
-			return "Activating"
-		}
-	}
-	return sensor.StateUnknown
-}
-
-// getConnDevice returns the D-Bus object representing the device for the given connection object.
-func getConnDevice(ctx context.Context, p dbus.ObjectPath) dbus.ObjectPath {
-	variant, err := NewBusRequest(ctx, SystemBus).
-		Path(p).
-		Destination(dBusNMObj).
-		GetProp(dBusPropConnDevs)
-	if err != nil {
-		log.Error().Err(err).
-			Msgf("Unable to fetch device for connection %s.", p)
-		return sensor.StateUnknown
-	} else {
-		// ! this conversion might yield unexpected results
-		devicePath := variantToValue[[]dbus.ObjectPath](variant)[0]
-		if !devicePath.IsValid() {
-			log.Debug().Msgf("Invalid device path for connection %s.", p)
-			return sensor.StateUnknown
-		}
-		return devicePath
-	}
-}
-
-// getIPAddr extracts the IP address for the given version (4/6) from the given
-// DBus path to an address object. If it cannot find the address, it returns
-// sensor.STATE_UNKNOWN.
-func getIPAddr(ctx context.Context, p dbus.ObjectPath, ver int) string {
-	if !p.IsValid() {
-		log.Debug().Msgf("Invalid D-Bus object path %s.", p)
-		return sensor.StateUnknown
-	}
-	var connProp, addrProp string
-	switch ver {
-	case 4:
-		connProp = dBusPropConnIP4Cfg
-		addrProp = dBusPropIP4Addr
-	case 6:
-		connProp = dBusPropConnIP6Cfg
-		addrProp = dBusPropIP6Addr
-	}
-	v, err := NewBusRequest(ctx, SystemBus).
-		Path(p).
-		Destination(dBusNMObj).
-		GetProp(connProp)
-	if err != nil {
-		return sensor.StateUnknown
-	}
-	addrPath, ok := v.Value().(dbus.ObjectPath)
-	if !ok {
-		log.Debug().Msgf("Cannot process value received from D-Bus. Got %T.", addrPath)
-		return sensor.StateUnknown
-	}
-	v, err = NewBusRequest(ctx, SystemBus).
-		Path(addrPath).
-		Destination(dBusNMObj).
-		GetProp(addrProp)
-	if err != nil {
-		return sensor.StateUnknown
-	}
-	addrs, ok := v.Value().([]map[string]dbus.Variant)
-	if !ok {
-		log.Debug().Msgf("Cannot process value received from D-Bus. Got %T.", addrPath)
-		return sensor.StateUnknown
-	}
-	for _, a := range addrs {
-		ip := net.ParseIP(a["address"].Value().(string))
-		if ip.IsGlobalUnicast() {
-			return ip.String()
-		}
-	}
-	return sensor.StateUnknown
-}
-
-// handleConn will treat the given path as a connection object and create a
-// sensor for the connection state, as well as any additional sensors for the
-// connection type.
-func handleConn(ctx context.Context, p dbus.ObjectPath, t device.SensorTracker) error {
-	s := newNetworkSensor(ctx, p, connectionState, nil)
-	if s.sensorGroup == "lo" || s.ID() == "unknown_connection_state" {
-		log.Trace().Caller().Msgf("Ignoring state update for connection %s.", s.sensorGroup)
-	} else {
-		return t.UpdateSensors(ctx, s)
-	}
-
-	extraSensors := make(chan *networkSensor)
-	go func() {
-		handleConnType(ctx, p, extraSensors)
-	}()
-
-	g, _ := errgroup.WithContext(ctx)
-	g.Go(func() error {
-		for p := range extraSensors {
-			return t.UpdateSensors(ctx, p)
-		}
-		return nil
-	})
-	return g.Wait()
-}
-
-// handleConnType will treat the given path as a connection object and extra
-// additional sensors based on the type of connection. If the connection type
-// has no additional sensors available, nothing is returned.
-func handleConnType(ctx context.Context, p dbus.ObjectPath, extraSensors chan *networkSensor) {
-	defer close(extraSensors)
-	connType := getConnType(ctx, p)
-	switch connType {
-	case "802-11-wireless":
-		devicePath := getConnDevice(ctx, p)
-		if devicePath == sensor.StateUnknown {
-			return
-		}
-		wifiProps := []sensorType{wifiSSID, wifiHWAddress, wifiFrequency, wifiSpeed, wifiStrength}
-		for _, prop := range wifiProps {
-			s := newNetworkSensor(ctx, devicePath, prop, nil)
-			extraSensors <- s
-		}
-	// case sensor.StateUnknown:
-	// 	fallthrough
-	default:
-		log.Trace().Caller().Msgf("Unhandled connection type %s (%s).", connType, p)
-	}
-}
-
-// handleProps will treat a list of properties as sensor updates, where the property names
-// and values were received directly from D-Bus as a list.
-func handleProps(ctx context.Context, p dbus.ObjectPath, props map[string]dbus.Variant, tracker device.SensorTracker) {
-	var propType sensorType
-	var value interface{}
-	for propName, propValue := range props {
-		switch propName {
-		case "Ssid":
-			propType = wifiSSID
-			value = variantToValue[string](propValue)
-		case "HwAddress":
-			propType = wifiHWAddress
-			value = variantToValue[string](propValue)
-		case "Frequency":
-			propType = wifiFrequency
-			value = variantToValue[uint32](propValue)
-		case "Bitrate":
-			propType = wifiSpeed
-			value = variantToValue[uint32](propValue)
-		case "Strength":
-			propType = wifiStrength
-			value = variantToValue[uint32](propValue)
-		default:
-			log.Trace().
-				Str("prop", propName).Interface("value", propValue.Value()).Str("path", string(p)).
-				Msg("Unhandled property.")
-			return
-		}
-		if err := tracker.UpdateSensors(ctx, newNetworkSensor(ctx, p, propType, value)); err != nil {
-			log.Error().Err(err).Str("prop", propName).
-				Msg("Could not update property.")
-		}
-	}
-}
-
-type networkSensor struct {
-	attributes  connAttributes
-	sensorGroup string
-	objectPath  dbus.ObjectPath
-	linuxSensor
-}
-
-func newNetworkSensor(ctx context.Context, p dbus.ObjectPath, asType sensorType, value interface{}) *networkSensor {
-	s := &networkSensor{
-		objectPath: p,
-	}
-	s.sensorType = asType
-	s.diagnostic = true
-	s.value = value
-	s.attributes.DataSource = srcDbus
-	switch s.sensorType {
-	case connectionState:
-		s.sensorGroup = getConnName(ctx, s.objectPath)
-		if value == nil {
-			s.value = getConnState(ctx, s.objectPath)
-		}
-		log.Trace().Str("id", s.ID()).Msg("Getting IP address details.")
-		s.attributes.Ipv4 = getIPAddr(ctx, s.objectPath, 4)
-		s.attributes.Ipv6 = getIPAddr(ctx, s.objectPath, 6)
-		log.Trace().Str("id", s.ID()).Msg("Getting connection type.")
-		s.attributes.ConnectionType = getConnType(ctx, s.objectPath)
-	case wifiFrequency, wifiSSID, wifiSpeed, wifiHWAddress, wifiStrength:
-		s.sensorGroup = "wifi"
-	}
-	return s
-}
-
-func (s *networkSensor) Name() string {
-	if s.sensorType == connectionState {
-		return s.sensorGroup + " State"
-	}
-	return s.sensorType.String()
-}
-
-func (s *networkSensor) ID() string {
-	if s.sensorType == connectionState {
-		return strcase.ToSnake(s.sensorGroup) + "_connection_state"
-	}
-	return strcase.ToSnake(s.sensorType.String())
-}
-
-func (s *networkSensor) Icon() string {
-	switch s.sensorType {
-	case wifiSSID, wifiHWAddress, wifiFrequency, wifiSpeed:
-		return "mdi:wifi"
-	case connectionState:
-		switch s.value {
-		case "Online":
-			return "mdi:network"
-		case "Offline":
-			return "mdi:network-off"
-		case "Activating":
-			return "mdi:plus-network"
-		case "Deactivating":
-			return "mdi:minus-network"
-		default:
-			return "mdi:help-network"
-		}
-	case wifiStrength:
-		switch s := s.value.(uint32); {
-		case s <= 25:
-			return "mdi:wifi-strength-1"
-		case s > 25 && s <= 50:
-			return "mdi:wifi-strength-2"
-		case s > 50 && s <= 75:
-			return "mdi:wifi-strength-3"
-		case s > 75:
-			return "mdi:wifi-strength-4"
-		}
-	}
-	return "mdi:network"
-}
-
-func (s *networkSensor) DeviceClass() sensor.SensorDeviceClass {
-	switch s.sensorType {
-	case wifiFrequency:
-		return sensor.Frequency
-	case wifiSpeed:
-		return sensor.Data_rate
-	default:
-		return 0
-	}
-}
-
-func (s *networkSensor) StateClass() sensor.SensorStateClass {
-	switch s.sensorType {
-	case wifiFrequency, wifiSpeed, wifiStrength:
-		return sensor.StateMeasurement
-	default:
-		return 0
-	}
-}
-
-func (s *networkSensor) Units() string {
-	switch s.sensorType {
-	case wifiFrequency:
-		return "MHz"
-	case wifiSpeed:
-		return "kB/s"
-	case wifiStrength:
-		return "%"
-	default:
-		return ""
-	}
-}
-
-func (s *networkSensor) Attributes() interface{} {
-	return s.attributes
-}
-
-func NetworkConnectionsUpdater(ctx context.Context, tracker device.SensorTracker) {
-	connList := getActiveConns(ctx)
-	if connList == nil {
-		log.Warn().
-			Msg("Could not retrieve active connections from D-Bus. Will not run network connections sensor.")
 		return
 	}
-	for _, path := range connList {
-		if err := handleConn(ctx, path, tracker); err != nil {
-			log.Error().Err(err).Str("dBusPath", string(path)).
-				Msg("Could not process connection.")
-		}
+	paths := variantToValue[[]dbus.ObjectPath](v)
+
+	c := &connections{
+		list: make(map[dbus.ObjectPath]*connection),
 	}
 
+	for _, p := range paths {
+		c.list[p] = newConnection(ctx, updateCh, p)
+		updateCh <- c.list[p]
+	}
+	monitorActiveConnections(ctx, updateCh, c)
+}
+
+func monitorActiveConnections(ctx context.Context, updateCh chan interface{}, conns *connections) {
 	err := NewBusRequest(ctx, SystemBus).
 		Path(dBusNMPath).
 		Match([]dbus.MatchOption{
-			dbus.WithMatchPathNamespace(dBusNMPath),
+			dbus.WithMatchPathNamespace(dBusNMPath + "/ActiveConnection"),
+			dbus.WithMatchArg(0, dBusNMObj+".Connection.Active"),
 		}).
 		Event("org.freedesktop.DBus.Properties.PropertiesChanged").
 		Handler(func(s *dbus.Signal) {
-			if !s.Path.IsValid() || s.Path == "/" {
-				log.Trace().Str("path", string(s.Path)).
-					Msg("Invalid D-Bus object path.")
+			if !strings.Contains(string(s.Path), dBusNMPath+"/ActiveConnection") {
 				return
 			}
-			if len(s.Body) == 0 {
-				log.Trace().Msg("No signal body received.")
-				return
-			}
-			obj, ok := s.Body[0].(string)
+			_, ok := conns.list[s.Path]
 			if !ok {
-				log.Trace().Type("type", obj).Interface("value", s.Body).
-					Msg("Unhandled signal.")
-				return
-			}
-			switch obj {
-			case dBusNMObj:
-				// TODO: handle this object
-			case dBusObjConn:
-				if err := handleConn(ctx, s.Path, tracker); err != nil {
-					log.Error().Err(err).Str("path", string(s.Path)).
-						Msg("Could not process connection.")
-				}
-			case dBusObjDev:
-				// TODO: handle this object
-			case dBusObjAP, dBusObjWireless:
-				if updatedProps, ok := s.Body[1].(map[string]dbus.Variant); ok {
-					handleProps(ctx, s.Path, updatedProps, tracker)
-				}
-			case dBusObjIP4Cfg, dBusObjIP6Cfg:
-				// TODO: handle these objects
-			case "org.freedesktop.NetworkManager.Device.Statistics":
-				// no-op, too noisy
-			default:
-				log.Trace().Str("value", obj).
-					Msg("Unhandled object.")
+				conns.list[s.Path] = newConnection(ctx, updateCh, s.Path)
+				updateCh <- conns.list[s.Path]
 			}
 		}).
 		AddWatch(ctx)
 	if err != nil {
 		log.Error().Err(err).
-			Msg("Failed to create network connections DBus watch.")
+			Msg("Failed to create connection state change D-Bus watch.")
 	}
+}
+
+func NetworkConnectionsUpdater(ctx context.Context, tracker device.SensorTracker) {
+	var wg sync.WaitGroup
+	sensorCh := make(chan interface{})
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case s := <-sensorCh:
+				if err := tracker.UpdateSensors(ctx, s); err != nil {
+					log.Error().Err(err).
+						Msg("Could not update property.")
+				}
+			}
+		}
+	}()
+	getActiveConnections(ctx, sensorCh)
+	wg.Wait()
 }
