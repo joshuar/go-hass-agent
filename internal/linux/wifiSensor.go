@@ -17,11 +17,13 @@ var wifiProps = map[string]*wifiSensor{
 	"Ssid": {
 		linuxSensor: linuxSensor{
 			sensorType: wifiSSID,
+			diagnostic: true,
 		},
 	},
 	"HwAddress": {
 		linuxSensor: linuxSensor{
 			sensorType: wifiHWAddress,
+			diagnostic: true,
 		},
 	},
 	"MaxBitrate": {
@@ -30,6 +32,7 @@ var wifiProps = map[string]*wifiSensor{
 			units:       "kB/s",
 			deviceClass: sensor.Data_rate,
 			stateClass:  sensor.StateMeasurement,
+			diagnostic:  true,
 		},
 	},
 	"Frequency": {
@@ -38,6 +41,7 @@ var wifiProps = map[string]*wifiSensor{
 			units:       "MHz",
 			deviceClass: sensor.Frequency,
 			stateClass:  sensor.StateMeasurement,
+			diagnostic:  true,
 		},
 	},
 	"Strength": {
@@ -45,6 +49,7 @@ var wifiProps = map[string]*wifiSensor{
 			sensorType: wifiStrength,
 			units:      "%",
 			stateClass: sensor.StateMeasurement,
+			diagnostic: true,
 		},
 	},
 }
