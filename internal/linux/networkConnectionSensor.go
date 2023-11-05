@@ -208,8 +208,8 @@ func getAddr(ctx context.Context, ver int, path dbus.ObjectPath) (addr string, m
 	if err != nil {
 		return
 	}
-	if !v.Signature().Empty() {
-		a := variantToValue[[]map[string]dbus.Variant](v)
+	a := variantToValue[[]map[string]dbus.Variant](v)
+	if len(a) > 0 {
 		return variantToValue[string](a[0]["address"]), variantToValue[int](a[0]["prefix"])
 	} else {
 		return "", 0
