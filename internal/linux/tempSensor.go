@@ -52,7 +52,7 @@ func (s *tempSensor) Attributes() interface{} {
 }
 
 func TempUpdater(ctx context.Context, tracker device.SensorTracker) {
-	update := func() {
+	update := func(_ time.Duration) {
 		rawTemps, err := host.SensorsTemperaturesWithContext(ctx)
 		sensorMap := make(map[string]*tempSensor)
 		var sensors []interface{}

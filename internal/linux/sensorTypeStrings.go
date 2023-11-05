@@ -41,8 +41,8 @@ func _() {
 	_ = x[wifiHWAddress-31]
 	_ = x[bytesSent-32]
 	_ = x[bytesRecv-33]
-	_ = x[bytesTx-34]
-	_ = x[bytesRx-35]
+	_ = x[bytesSentRate-34]
+	_ = x[bytesRecvRate-35]
 	_ = x[powerProfile-36]
 	_ = x[boottime-37]
 	_ = x[uptime-38]
@@ -58,9 +58,9 @@ func _() {
 	_ = x[deviceTemp-48]
 }
 
-const _sensorType_name = "Active AppRunning AppsBattery TypeBattery LevelBattery TemperatureBattery VoltageBattery EnergyBattery PowerBattery StateBattery PathBattery LevelBattery ModelMemory TotalMemory AvailableMemory UsedSwap Memory TotalSwap Memory UsedSwap Memory FreeConnection StateConnection IDConnection DeviceConnection TypeConnection IPv4Connection IPv6IPv4 AddressIPv6 AddressWi-Fi SSIDWi-Fi FrequencyWi-Fi Link SpeedWi-Fi Signal StrengthWi-Fi BSSIDBytes SentBytes ReceivedUpload ThroughputDownload ThroughputPower ProfileLast RebootUptimeCPU load average (1 min)CPU load average (5 min)CPU load average (15 min)Screen LockProblemsKernel VersionDistribution NameDistribution VersionCurrent UsersTemperature"
+const _sensorType_name = "Active AppRunning AppsBattery TypeBattery LevelBattery TemperatureBattery VoltageBattery EnergyBattery PowerBattery StateBattery PathBattery LevelBattery ModelMemory TotalMemory AvailableMemory UsedSwap Memory TotalSwap Memory UsedSwap Memory FreeConnection StateConnection IDConnection DeviceConnection TypeConnection IPv4Connection IPv6IPv4 AddressIPv6 AddressWi-Fi SSIDWi-Fi FrequencyWi-Fi Link SpeedWi-Fi Signal StrengthWi-Fi BSSIDBytes SentBytes ReceivedBytes Sent ThroughputBytes Received ThroughputPower ProfileLast RebootUptimeCPU load average (1 min)CPU load average (5 min)CPU load average (15 min)Screen LockProblemsKernel VersionDistribution NameDistribution VersionCurrent UsersTemperature"
 
-var _sensorType_index = [...]uint16{0, 10, 22, 34, 47, 66, 81, 95, 108, 121, 133, 146, 159, 171, 187, 198, 215, 231, 247, 263, 276, 293, 308, 323, 338, 350, 362, 372, 387, 403, 424, 435, 445, 459, 476, 495, 508, 519, 525, 549, 573, 598, 609, 617, 631, 648, 668, 681, 692}
+var _sensorType_index = [...]uint16{0, 10, 22, 34, 47, 66, 81, 95, 108, 121, 133, 146, 159, 171, 187, 198, 215, 231, 247, 263, 276, 293, 308, 323, 338, 350, 362, 372, 387, 403, 424, 435, 445, 459, 480, 505, 518, 529, 535, 559, 583, 608, 619, 627, 641, 658, 678, 691, 702}
 
 func (i sensorType) String() string {
 	i -= 1

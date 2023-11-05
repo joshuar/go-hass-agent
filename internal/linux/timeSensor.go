@@ -40,7 +40,7 @@ func (s *timeSensor) Attributes() interface{} {
 }
 
 func TimeUpdater(ctx context.Context, tracker device.SensorTracker) {
-	updateTimes := func() {
+	updateTimes := func(_ time.Duration) {
 		var sensors []interface{}
 		sensors = append(sensors, &timeSensor{
 			linuxSensor{

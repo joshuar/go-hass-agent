@@ -21,7 +21,7 @@ type loadavgSensor struct {
 }
 
 func LoadAvgUpdater(ctx context.Context, tracker device.SensorTracker) {
-	sendLoadAvgStats := func() {
+	sendLoadAvgStats := func(_ time.Duration) {
 		var latest *load.AvgStat
 		var err error
 		if latest, err = load.AvgWithContext(ctx); err != nil {

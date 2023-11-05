@@ -64,7 +64,7 @@ func parseProblem(details map[string]string) map[string]interface{} {
 }
 
 func ProblemsUpdater(ctx context.Context, tracker device.SensorTracker) {
-	problems := func() {
+	problems := func(_ time.Duration) {
 		problems := &problemsSensor{
 			list: make(map[string]map[string]interface{}),
 		}
