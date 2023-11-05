@@ -208,8 +208,12 @@ func getAddr(ctx context.Context, ver int, path dbus.ObjectPath) (addr string, m
 	if err != nil {
 		return
 	}
-	a := variantToValue[[]map[string]dbus.Variant](v)
-	return variantToValue[string](a[0]["address"]), variantToValue[int](a[0]["prefix"])
+	if !v.Signature().Empty() {
+		a := variantToValue[[]map[string]dbus.Variant](v)
+		return variantToValue[string](a[0]["address"]), variantToValue[int](a[0]["prefix"])
+	} else {
+		return "", 0
+	}
 }
 
 func getActiveConnections(ctx context.Context, updateCh chan interface{}) {
