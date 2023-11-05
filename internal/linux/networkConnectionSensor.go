@@ -158,6 +158,7 @@ func newConnection(ctx context.Context, updateCh chan interface{}, p dbus.Object
 		doneCh: make(chan struct{}),
 	}
 	c.sensorType = connectionState
+	c.diagnostic = true
 
 	r := NewBusRequest(ctx, SystemBus).
 		Path(p).
