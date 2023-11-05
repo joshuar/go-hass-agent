@@ -85,31 +85,6 @@
             "fuzzy": true
         },
         {
-            "id": "App Version: {AppVersion}\tHA Version: {HaVersion}",
-            "message": "App Version: {AppVersion}\tHA Version: {HaVersion}",
-            "translation": "App Version: {AppVersion}\tHA Version: {HaVersion}",
-            "translatorComment": "Copied from source.",
-            "placeholders": [
-                {
-                    "id": "AppVersion",
-                    "string": "%[1]s",
-                    "type": "string",
-                    "underlyingType": "string",
-                    "argNum": 1,
-                    "expr": "agent.AppVersion()"
-                },
-                {
-                    "id": "HaVersion",
-                    "string": "%[2]s",
-                    "type": "string",
-                    "underlyingType": "string",
-                    "argNum": 2,
-                    "expr": "haVersion"
-                }
-            ],
-            "fuzzy": true
-        },
-        {
             "id": "Ok",
             "message": "Ok",
             "translation": "Ok",
