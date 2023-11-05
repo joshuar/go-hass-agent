@@ -71,6 +71,7 @@ func NetworkStatsUpdater(ctx context.Context, tracker device.SensorTracker) {
 			sensorType:  bytesRecvRate,
 			deviceClass: sensor.Data_rate,
 			stateClass:  sensor.StateMeasurement,
+			source:      srcProcfs,
 		},
 	}
 	bytesTxRate := &netIORateSensor{
@@ -80,6 +81,7 @@ func NetworkStatsUpdater(ctx context.Context, tracker device.SensorTracker) {
 			sensorType:  bytesSentRate,
 			deviceClass: sensor.Data_rate,
 			stateClass:  sensor.StateMeasurement,
+			source:      srcProcfs,
 		},
 	}
 
