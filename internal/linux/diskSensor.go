@@ -58,7 +58,7 @@ func (d *diskSensor) Attributes() interface{} {
 }
 
 func DiskUsageUpdater(ctx context.Context, tracker device.SensorTracker) {
-	sendDiskUsageStats := func() {
+	sendDiskUsageStats := func(_ time.Duration) {
 		p, err := disk.PartitionsWithContext(ctx, false)
 		if err != nil {
 			log.Debug().Err(err).

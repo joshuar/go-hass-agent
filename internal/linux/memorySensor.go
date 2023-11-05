@@ -31,7 +31,7 @@ func (s *memorySensor) Attributes() interface{} {
 }
 
 func MemoryUpdater(ctx context.Context, tracker device.SensorTracker) {
-	sendMemStats := func() {
+	sendMemStats := func(_ time.Duration) {
 		stats := []sensorType{memTotal, memAvail, memUsed, swapTotal, swapFree}
 		var memDetails *mem.VirtualMemoryStat
 		var err error
