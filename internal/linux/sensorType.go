@@ -55,8 +55,7 @@ const (
 	version                                 // Distribution Version
 	users                                   // Current Users
 	deviceTemp                              // Temperature
-	isSuspended                             // Suspended
-	isShutdown                              // Powered Off
+	powerState                              // Power State
 )
 
 // sensorType represents the unique type of sensor data being reported. Every
