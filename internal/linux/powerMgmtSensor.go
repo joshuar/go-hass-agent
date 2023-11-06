@@ -35,6 +35,10 @@ func (s *powerMgmtSensor) Icon() string {
 }
 
 func PowerMgmtUpdater(ctx context.Context, tracker device.SensorTracker) {
+	if err := tracker.UpdateSensors(ctx, newPowerMgmtSensor(isShutdown, false), newPowerMgmtSensor(isSuspended, false)); err != nil {
+		log.Error().Err(err).Msg("Could not update power management sensors.")
+	}
+
 	r := NewBusRequest(ctx, SystemBus).
 		Path("/org/freedesktop/login1").
 		Match([]dbus.MatchOption{
