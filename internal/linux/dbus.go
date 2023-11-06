@@ -26,28 +26,36 @@ type dbusType int
 type Bus struct {
 	conn    *dbus.Conn
 	busType dbusType
+	wg      sync.WaitGroup
 }
 
 // NewBus sets up DBus connections and channels for receiving signals. It creates both a system and session bus connection.
 func NewBus(ctx context.Context, t dbusType) *Bus {
 	var conn *dbus.Conn
 	var err error
+	dbusCtx, cancelFunc := context.WithCancel(context.Background())
 	switch t {
 	case SessionBus:
-		conn, err = dbus.ConnectSessionBus(dbus.WithContext(ctx))
+		conn, err = dbus.ConnectSessionBus(dbus.WithContext(dbusCtx))
 	case SystemBus:
-		conn, err = dbus.ConnectSystemBus(dbus.WithContext(ctx))
+		conn, err = dbus.ConnectSystemBus(dbus.WithContext(dbusCtx))
 	}
 	if err != nil {
 		log.Error().Err(err).Msg("Could not connect to bus.")
+		cancelFunc()
 		return nil
-	} else {
-		bus := &Bus{
-			conn:    conn,
-			busType: t,
-		}
-		return bus
 	}
+	b := &Bus{
+		conn:    conn,
+		busType: t,
+	}
+	go func() {
+		defer conn.Close()
+		defer cancelFunc()
+		<-ctx.Done()
+		b.wg.Wait()
+	}()
+	return b
 }
 
 // busRequest contains properties for building different types of DBus requests
@@ -173,7 +181,7 @@ func (r *busRequest) AddWatch(ctx context.Context) error {
 	}
 	signalCh := make(chan *dbus.Signal)
 	r.bus.conn.Signal(signalCh)
-	// defer r.bus.conn.RemoveSignal(signalCh)
+	r.bus.wg.Add(1)
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
@@ -187,6 +195,7 @@ func (r *busRequest) AddWatch(ctx context.Context) error {
 						Str("dest", r.dest).
 						Str("event", r.event).
 						Msg("Failed to remove D-Bus watch.")
+					return
 				}
 				log.Debug().
 					Str("path", string(r.path)).
@@ -207,8 +216,8 @@ func (r *busRequest) AddWatch(ctx context.Context) error {
 		Str("event", r.event).
 		Msgf("Added D-Bus watch.")
 	go func() {
-		defer r.bus.conn.RemoveSignal(signalCh)
 		wg.Wait()
+		r.bus.wg.Done()
 	}()
 	return nil
 }
