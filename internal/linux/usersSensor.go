@@ -63,8 +63,8 @@ func UsersUpdater(ctx context.Context, tracker device.SensorTracker) {
 		Event("org.freedesktop.DBus.Properties.PropertiesChanged").
 		Handler(func(s *dbus.Signal) {
 			switch s.Name {
-			case "org.freedesktop.login1.Manager.SessionNew":
-			case "org.freedesktop.login1.Manager.SessionRemoved":
+			case "org.freedesktop.login1.Manager.SessionNew",
+				"org.freedesktop.login1.Manager.SessionRemoved":
 				updateUsers()
 			}
 		}).
