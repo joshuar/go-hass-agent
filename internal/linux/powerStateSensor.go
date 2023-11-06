@@ -68,7 +68,7 @@ func PowerStateUpdater(ctx context.Context, tracker device.SensorTracker) {
 		AddWatch(ctx)
 	if err != nil {
 		log.Warn().Err(err).
-			Msg("Failed to create user D-Bus watch. Will not track powered off state.")
+			Msg("Failed to create user D-Bus watch. Will not track power state.")
 	}
 }
 
