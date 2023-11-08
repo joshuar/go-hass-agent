@@ -7,7 +7,8 @@
 
 ## Linux
 
-> [!NOTE] The following list shows all **potential** sensors the agent can
+> [!NOTE] 
+> The following list shows all **potential** sensors the agent can
 > report. In some cases, the **actual** sensors reported will be less due to
 > lack of support or missing hardware.
 
