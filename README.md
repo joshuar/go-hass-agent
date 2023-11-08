@@ -34,8 +34,10 @@ This app will add some sensors to a Home Assistant instance:
 - Screen lock.
 - Problems detected by ABRT.
 
-The code can be extended to add additional sensors. See the [development
-docs](docs/development.md) for details.
+A full list of sensors can be found in the [docs](docs/sensors.md).
+
+The code can be extended to add additional sensors. See the [development docs](docs/development.md) 
+for details.
 
 ## 🤔 Use-cases
 
