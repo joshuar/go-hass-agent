@@ -1,5 +1,31 @@
 # Changelog
 
+## [5.1.0](https://github.com/joshuar/go-hass-agent/compare/v5.0.2...v5.1.0) (2023-11-08)
+
+
+### Features
+
+* **build:** better container support ([ada30ec](https://github.com/joshuar/go-hass-agent/commit/ada30ec115f2ed4531beb78159b6f5a6199649a3))
+* **linux:** add sensors for tracking shutdown/suspend state via D-Bus ([cbcb8b5](https://github.com/joshuar/go-hass-agent/commit/cbcb8b516743013f2596bd93c1c3ccd6f6692eae))
+* **linux:** change power management sensor to power state sensor ([820a23f](https://github.com/joshuar/go-hass-agent/commit/820a23f8fa9d09657fefa71d5b2fd6a9d7e4b583))
+* **linux:** network transfer rate sensors ([851b517](https://github.com/joshuar/go-hass-agent/commit/851b517eb20f27929f1eec42cedb750276de3317))
+* **linux:** rework network connections sensor code ([a6f8dfb](https://github.com/joshuar/go-hass-agent/commit/a6f8dfbb51925d48d99a384785352cc780ae361a))
+* **tracker:** log a warning if an unknown sensor has been sent ([09604b2](https://github.com/joshuar/go-hass-agent/commit/09604b2997de1850f8c873c77113ed34e9a6e907))
+
+
+### Bug Fixes
+
+* **linux:** add datasource to network transfer rates sensors ([043c8a4](https://github.com/joshuar/go-hass-agent/commit/043c8a437c7d6a1021a42137a282d90e9e1fc3c8))
+* **linux:** better check for no address for connection ([6c66a67](https://github.com/joshuar/go-hass-agent/commit/6c66a67b53aea674823902d60fd7cd0facacdf9b))
+* **linux:** clean up D-Bus connection and signals on shutdown ([c815184](https://github.com/joshuar/go-hass-agent/commit/c815184b1cfd6b557936107563344a5a586800a4))
+* **linux:** correct tracking of user sessions created/removed ([7f7e01b](https://github.com/joshuar/go-hass-agent/commit/7f7e01bce7d17616f5ce10f24e6775f9b1cef060))
+* **linux:** fix name of power state sensor in warning message ([136da9c](https://github.com/joshuar/go-hass-agent/commit/136da9cb0ddd383dad35626e69718f5c2189aa2d))
+* **linux:** follow android app and treat wifi sensors as diagnostics ([f06cbc4](https://github.com/joshuar/go-hass-agent/commit/f06cbc43ff86ee224985a058c80bdaf2369fb10f))
+* **linux:** handle no address for network connection sensor ([254ad19](https://github.com/joshuar/go-hass-agent/commit/254ad19a0a0dad43a351b27c34dbfaceceb604cd))
+* **linux:** make AddWatch non-blocking, add more logging ([053a86b](https://github.com/joshuar/go-hass-agent/commit/053a86b10f5a8e7930d6639697039b7f6e554db6))
+* **linux:** network connection sensor state should be diagnostic ([3b42944](https://github.com/joshuar/go-hass-agent/commit/3b429440e2241cee76903396c8726113cdd9cd39))
+* **linux:** set values of power management sensors on startup ([7ac5304](https://github.com/joshuar/go-hass-agent/commit/7ac53045703e4681be74f6df44d5300a9053b7b6))
+
 ## [5.0.2](https://github.com/joshuar/go-hass-agent/compare/v5.0.1...v5.0.2) (2023-10-28)
 
 
