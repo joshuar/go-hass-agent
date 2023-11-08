@@ -3,3 +3,4 @@ go-hass-agent
 ABRT
 Hass
 Fyne
+ProcFS
