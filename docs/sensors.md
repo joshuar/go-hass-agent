@@ -20,7 +20,7 @@
 | Battery Temp | The current battery temperature | D-Bus | | 
 | Battery Power | The battery current power draw | D-Bus | Voltage, Energy consumption, where reported |
 | Battery Level/Percentage | The current battery capacity | D-Bus | |
-| Battery State | The current battery state (e.g., charging/discharging) | | 
+| Battery State | The current battery state (e.g., charging/discharging) | D-Bus | | 
 | Memory Total | Total memory on the system | ProcFS | |
 | Memory Available | Memory available/free | ProcFS | |
 | Memory Used | Memory used | ProcFS | |
@@ -49,7 +49,7 @@
 | Distribution Version | Version of the running distribution | ProcFS | |
 | Current Users | Count of active users on the system | D-Bus | List of usernames | 
 | Screen Lock State | Current state of screen lock | D-Bus | |
-| Power State | Power state of device (e.g., suspended, powered on/off) | | 
+| Power State | Power state of device (e.g., suspended, powered on/off) | D-Bus | | 
 | Problems | Count of any problems logged to the ABRT daemon | D-Bus |  Problem details |
 | Device/Component Temperature(s) | Any reported temperature from each device/component | ProcFS |  |
 
