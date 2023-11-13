@@ -14,8 +14,6 @@ ENV HOST_PROC=/host/proc
 RUN dnf -y install https://github.com/joshuar/go-hass-agent/releases/download/v$version/go-hass-agent-$version-1.x86_64.rpm
 RUN dnf -y install dbus
 
-RUN useradd -ms /bin/bash go-hass-agent -G wheel
-RUN echo "%wheel ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/999-custom
 USER go-hass-agent
 WORKDIR /home/go-hass-agent
 

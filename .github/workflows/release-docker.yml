@@ -1,0 +1,35 @@
+# Copyright (c) 2023 Joshua Rich <joshua.rich@gmail.com>
+#
+# This software is released under the MIT License.
+# https://opensource.org/licenses/MIT
+
+name: Create and publish a Docker image
+
+on:
+  push:
+    branches: ['release']
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  context:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Build
+      id: build
+      uses: cloudposse/github-action-docker-build-push@main
+      with:
+        registry: ${{ env.REGISTRY }}
+        organization: "${{ github.event.repository.owner.login }}"
+        repository: "${{ github.event.repository.name }}"
+        login: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+        platforms: linux/amd64
+  outputs:
+    image: ${{ steps.build.outputs.image }}
+    tag: ${{ steps.build.outputs.tag }}
