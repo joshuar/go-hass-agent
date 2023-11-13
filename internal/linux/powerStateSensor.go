@@ -48,7 +48,6 @@ func PowerStateUpdater(ctx context.Context, tracker device.SensorTracker) {
 		Match([]dbus.MatchOption{
 			dbus.WithMatchInterface("org.freedesktop.login1.Manager"),
 		}).
-		Event("org.freedesktop.DBus.Properties.PropertiesChanged").
 		Handler(func(s *dbus.Signal) {
 			switch s.Name {
 			case "org.freedesktop.login1.Manager.PrepareForSleep":
