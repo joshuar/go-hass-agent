@@ -9,16 +9,40 @@
 
 ## Build Requirements
 
-Go Hass Agent has a number of build requirements external to `go.mod` that
-need to be installed:
+In addition to a Go installation, Go Hass Agent needs a few other Go tools installed:
 
-- [stringer](https://pkg.go.dev/golang.org/x/tools/cmd/stringer).
-  - Typically installed with `go install golang.org/x/tools/cmd/stringer@latest`.
-- [fyne-cross](https://github.com/fyne-io/fyne-cross).
-  - Typically installed with `go install github.com/fyne-io/fyne-cross@latest`
-- [gotext](https://cs.opensource.google/go/x/text)
-  - Typically installed with `go install golang.org/x/text/cmd/gotext@latest`
-- [goreleaser](https://goreleaser.com/install/).
+```shell
+# goreleaser is used to create release artifacts
+go install github.com/goreleaser/goreleaser@latest
+# fyne-cross is used build some artifacts that goreleaser doesn't
+go install github.com/fyne-io/fyne-cross@latest
+# stringer auto-generates some String() methods
+go install golang.org/x/tools/cmd/stringer@latest
+# gotext is used for translations
+go install golang.org/x/text/cmd/gotext@latest
+# moq is used for unit tests
+go install github.com/matryer/moq@latest
+```
+
+The Fyne UI toolkit that is used by Go Hass Agent also requires some development libraries installed:
+
+For Red Hat/RPM distributions:
+
+  - `libglvnd-glx`
+  - `libX11`
+  - `libXrandr`
+  - `libXxf86vm`
+  - `libXi`
+  - `libXcursor`
+  - `libXinerama`
+
+For Debian/DEB distributions:
+
+  - `libgl1`
+  - `libxi6`
+  - `libxcursor1`
+  - `libxrandr2`
+  - `libxinerama1`
 
 ## Development Environment
 
