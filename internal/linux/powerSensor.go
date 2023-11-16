@@ -70,7 +70,7 @@ func PowerUpater(ctx context.Context, tracker device.SensorTracker) {
 		}).
 		AddWatch(ctx)
 	if err != nil {
-		log.Debug().Caller().Err(err).
+		log.Debug().Err(err).
 			Msg("Failed to create power state DBus watch.")
 	}
 }
