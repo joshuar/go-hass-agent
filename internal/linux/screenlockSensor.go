@@ -35,21 +35,41 @@ func (s *screenlockSensor) SensorType() sensor.SensorType {
 	return sensor.TypeBinary
 }
 
+func newScreenlockEvent(v bool) *screenlockSensor {
+	return &screenlockSensor{
+		linuxSensor: linuxSensor{
+			sensorType: screenLock,
+			source:     srcDbus,
+			value:      v,
+		},
+	}
+}
+
 func ScreenLockUpdater(ctx context.Context, tracker device.SensorTracker) {
-	err := NewBusRequest(ctx, SessionBus).
-		Path(screensaverDBusPath).
+	path := getSessionPath(ctx)
+	if path == "" {
+		log.Warn().Msg("Could not ascertain user session from D-Bus. Cannot monitor screen lock state.")
+		return
+	}
+	err := NewBusRequest(ctx, SystemBus).
+		Path(path).
 		Match([]dbus.MatchOption{
-			dbus.WithMatchObjectPath(screensaverDBusPath),
-			dbus.WithMatchInterface(screensaverDBusInterface),
+			dbus.WithMatchPathNamespace("/org/freedesktop/login1"),
+			dbus.WithMatchInterface("org.freedesktop.DBus.Properties"),
 		}).
-		Event("org.freedesktop.ScreenSaver.ActiveChanged").
+		Event("org.freedesktop.DBus.Properties.PropertiesChanged").
 		Handler(func(s *dbus.Signal) {
-			lock := &screenlockSensor{}
-			lock.value = s.Body[0].(bool)
-			lock.sensorType = screenLock
-			lock.source = srcDbus
-			if err := tracker.UpdateSensors(ctx, lock); err != nil {
-				log.Error().Err(err).Msg("Could not update screen lock sensor.")
+			props, ok := s.Body[1].(map[string]dbus.Variant)
+			if !ok {
+				log.Warn().Str("signal", s.Name).Interface("body", s.Body).
+					Msg("Unexpected signal body")
+				return
+			}
+			if v, ok := props["LockedHint"]; ok {
+				lock := newScreenlockEvent(variantToValue[bool](v))
+				if err := tracker.UpdateSensors(ctx, lock); err != nil {
+					log.Error().Err(err).Msg("Could not update screen lock sensor.")
+				}
 			}
 		}).
 		AddWatch(ctx)

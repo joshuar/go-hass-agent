@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"os/user"
 	"strings"
 	"sync"
 
@@ -76,6 +77,17 @@ func NewBusRequest(ctx context.Context, busType dbusType) *busRequest {
 		return &busRequest{
 			bus: bus,
 		}
+	}
+}
+
+func NewBusRequest2(ctx context.Context, busType dbusType) *busRequest {
+	if b := NewBus(ctx, busType); b != nil {
+		return &busRequest{
+			bus: b,
+		}
+	} else {
+		log.Warn().Msg("No D-Bus connection present in context.")
+		return &busRequest{}
 	}
 }
 
@@ -297,6 +309,24 @@ func (d *dbusData) AsRawInterface() interface{} {
 	} else {
 		return nil
 	}
+}
+
+func getSessionPath(ctx context.Context) dbus.ObjectPath {
+	u, err := user.Current()
+	if err != nil {
+		return ""
+	}
+	sessions := NewBusRequest(ctx, SystemBus).
+		Path("/org/freedesktop/login1").
+		Destination("org.freedesktop.login1").
+		GetData("org.freedesktop.login1.Manager.ListSessions").
+		AsRawInterface()
+	for _, s := range sessions.([][]interface{}) {
+		if s[2].(string) == u.Username {
+			return s[4].(dbus.ObjectPath)
+		}
+	}
+	return ""
 }
 
 // variantToValue converts a dbus.Variant type into the specified Go native
