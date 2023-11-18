@@ -1,5 +1,17 @@
 # Changelog
 
+## [5.1.1](https://github.com/joshuar/go-hass-agent/compare/v5.1.0...v5.1.1) (2023-11-18)
+
+
+### Bug Fixes
+
+* **hass:** better handling of potential nil values ([71667e7](https://github.com/joshuar/go-hass-agent/commit/71667e750da753ccb0ba610267fdf78eb6c402ed))
+* **linux:** alternative approach to tracking screen lock state ([be67e53](https://github.com/joshuar/go-hass-agent/commit/be67e5381912868d0fe9a91d45fdf374bcbdaf33))
+* **linux:** ensure power state is sent immediately ([70d60d5](https://github.com/joshuar/go-hass-agent/commit/70d60d5d758383ad1a56a64824a3ac4aeff1eb10))
+* **linux:** remove call trace on log message ([a79058b](https://github.com/joshuar/go-hass-agent/commit/a79058bbf2045b5957e72a0028f5d82bc2db5e7f))
+* **linux:** return a nil dbus.Variant if prop not retrieved ([6db5c79](https://github.com/joshuar/go-hass-agent/commit/6db5c79a95c2e6dce26407d3f2cd93e37a5c05a5))
+* **linux:** simplify watch for screen lock sensor ([d7c4399](https://github.com/joshuar/go-hass-agent/commit/d7c43999b7955f4cccb25964dd95c4f7c359ba45))
+
 ## [5.1.0](https://github.com/joshuar/go-hass-agent/compare/v5.0.2...v5.1.0) (2023-11-08)
 
 
