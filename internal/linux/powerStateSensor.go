@@ -28,7 +28,7 @@ func (s *powerStateSensor) Icon() string {
 }
 
 func PowerStateUpdater(ctx context.Context, tracker device.SensorTracker) {
-	sensorCh := make(chan interface{})
+	sensorCh := make(chan interface{}, 1)
 	go func() {
 		defer close(sensorCh)
 		<-ctx.Done()
@@ -48,6 +48,7 @@ func PowerStateUpdater(ctx context.Context, tracker device.SensorTracker) {
 		Match([]dbus.MatchOption{
 			dbus.WithMatchInterface("org.freedesktop.login1.Manager"),
 		}).
+		Event("org.freedesktop.DBus.Properties.PropertiesChanged").
 		Handler(func(s *dbus.Signal) {
 			switch s.Name {
 			case "org.freedesktop.login1.Manager.PrepareForSleep":
