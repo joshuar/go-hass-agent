@@ -53,10 +53,6 @@ func ScreenLockUpdater(ctx context.Context, tracker device.SensorTracker) {
 	}
 	err := NewBusRequest(ctx, SystemBus).
 		Path(path).
-		Match([]dbus.MatchOption{
-			dbus.WithMatchPathNamespace("/org/freedesktop/login1"),
-			dbus.WithMatchInterface("org.freedesktop.DBus.Properties"),
-		}).
 		Event("org.freedesktop.DBus.Properties.PropertiesChanged").
 		Handler(func(s *dbus.Signal) {
 			props, ok := s.Body[1].(map[string]dbus.Variant)
