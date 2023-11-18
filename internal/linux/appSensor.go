@@ -7,14 +7,11 @@ package linux
 
 import (
 	"context"
-	"strings"
-	"time"
 
 	"github.com/godbus/dbus/v5"
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/rs/zerolog/log"
-	"github.com/shirou/gopsutil/v3/process"
 )
 
 const (
@@ -70,8 +67,8 @@ type appState struct {
 func (s *appSensor) Attributes() interface{} {
 	switch s.sensorType {
 	case appActive:
-		if app, ok := s.State().(string); ok {
-			return newActiveAppDetails(app)
+		if _, ok := s.State().(string); ok {
+			return newActiveAppDetails()
 		} else {
 			return nil
 		}
@@ -82,26 +79,11 @@ func (s *appSensor) Attributes() interface{} {
 }
 
 type activeAppDetails struct {
-	// Cmd        string `json:"Command Line"`
-	// Started    string `json:"Started"`
-	// Count      int    `json:"Process Count"`
 	DataSource string `json:"Data Source"`
 }
 
-func newActiveAppDetails(app string) *activeAppDetails {
-	// TODO: profile and improve code to avoid memory leak
-	// var appProcesses []*process.Process
-	// var cmd string
-	// var createTime int64
-	// appProcesses = findProcesses(getProcessBasename(app))
-	// if len(appProcesses) > 0 {
-	// 	cmd, _ = appProcesses[0].Cmdline()
-	// 	createTime, _ = appProcesses[0].CreateTime()
-	// }
+func newActiveAppDetails() *activeAppDetails {
 	return &activeAppDetails{
-		// Cmd:        cmd,
-		// Started:    time.UnixMilli(createTime).Format(time.RFC3339),
-		// Count:      len(appProcesses),
 		DataSource: srcDbus,
 	}
 }
@@ -187,28 +169,4 @@ func AppUpdater(ctx context.Context, tracker device.SensorTracker) {
 		log.Debug().Caller().Err(err).
 			Msg("Failed to create active app DBus watch.")
 	}
-}
-
-func findProcesses(name string) []*process.Process {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*500)
-	defer cancel()
-	allProcesses, err := process.ProcessesWithContext(ctx)
-	if err != nil {
-		log.Debug().Caller().
-			Msg("Unable to retrieve processes list.")
-		cancel()
-		return nil
-	}
-	var matchedProcesses []*process.Process
-	for _, p := range allProcesses {
-		if n, _ := p.Name(); strings.Contains(n, name) {
-			matchedProcesses = append(matchedProcesses, p)
-		}
-	}
-	return matchedProcesses
-}
-
-func getProcessBasename(name string) string {
-	s := strings.Split(name, ".")
-	return s[len(s)-1]
 }
