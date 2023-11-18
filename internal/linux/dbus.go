@@ -131,11 +131,11 @@ func (r *busRequest) GetProp(prop string) (dbus.Variant, error) {
 		if err != nil {
 			log.Warn().Err(err).
 				Msgf("Unable to retrieve property %s (%s)", prop, r.dest)
-			return dbus.MakeVariant(""), err
+			return dbus.MakeVariant(nil), err
 		}
 		return res, nil
 	} else {
-		return dbus.MakeVariant(""), errors.New("no bus connection")
+		return dbus.MakeVariant(nil), errors.New("no bus connection")
 	}
 }
 
