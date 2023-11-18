@@ -18,9 +18,9 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-var ipLookupHosts = map[string]map[string]string{
-	"icanhazip": {"IPv4": "https://4.icanhazip.com", "IPv6": "https://6.icanhazip.com"},
-	"ipify":     {"IPv4": "https://api.ipify.org", "IPv6": "https://api6.ipify.org"},
+var ipLookupHosts = map[string]map[int]string{
+	"icanhazip": {4: "https://4.icanhazip.com", 6: "https://6.icanhazip.com"},
+	"ipify":     {4: "https://api.ipify.org", 6: "https://api6.ipify.org"},
 }
 
 type address struct {
@@ -93,52 +93,44 @@ func (a *address) Attributes() interface{} {
 	}
 }
 
-func lookupExternalIPs(ctx context.Context) []*address {
-	ip4 := &address{}
-	ip6 := &address{}
-
+func lookupExternalIPs(ctx context.Context, ver int) chan *address {
+	addrCh := make(chan *address, 1)
+	defer close(addrCh)
 	for host, addr := range ipLookupHosts {
-		log.Trace().Caller().
-			Msgf("Trying to find external IP addresses with %s", host)
-		for ver, url := range addr {
-			var s string
-			err := requests.
-				URL(url).
-				ToString(&s).
-				Fetch(ctx)
-			log.Trace().Caller().
-				Msgf("Fetching %s address from %s", ver, url)
-			if err != nil {
-				if !errors.Is(err, requests.ErrTransport) {
-					log.Warn().Err(err).
-						Msgf("Unable to retrieve external %s address", ver)
-				}
-			} else {
-				s = strings.TrimSpace(s)
-				switch ver {
-				case "IPv4":
-					ip4.addr = net.ParseIP(s)
-				case "IPv6":
-					ip6.addr = net.ParseIP(s)
-				}
+		log.Trace().Msgf("Trying to find external IP addresses with %s", host)
+		var s string
+		err := requests.
+			URL(addr[ver]).
+			ToString(&s).
+			Fetch(ctx)
+		log.Trace().Msgf("Fetching v%d address from %s", ver, addr[ver])
+		if err != nil {
+			if !errors.Is(err, requests.ErrTransport) {
+				log.Warn().Err(err).
+					Msgf("Error retrieving external v%d address with %s.", ver, addr[ver])
+			}
+		} else {
+			s = strings.TrimSpace(s)
+			if a := net.ParseIP(s); a != nil {
+				log.Trace().Msgf("Found address %s with %s.", a.String(), addr[ver])
+				addrCh <- &address{addr: a}
+				return addrCh
 			}
 		}
-		return []*address{ip4, ip6}
 	}
-	// At this point, we've gone through all IP checkers and not found an
-	// external address
-	log.Warn().Msg("Couldn't retrieve *any* external IP address.")
-	return nil
+	return addrCh
 }
 
 func ExternalIPUpdater(ctx context.Context, tracker SensorTracker) {
 	updateExternalIP := func() {
-		requestCtx, cancel := context.WithTimeout(ctx, time.Second*5)
+		requestCtx, cancel := context.WithTimeout(ctx, time.Second*15)
 		defer cancel()
-		ips := lookupExternalIPs(requestCtx)
-		for _, ip := range ips {
-			if ip.addr != nil {
-				tracker.UpdateSensors(ctx, ip)
+		for _, ver := range []int{4, 6} {
+			ip := <-lookupExternalIPs(requestCtx, ver)
+			if ip != nil {
+				if err := tracker.UpdateSensors(ctx, ip); err != nil {
+					log.Error().Err(err).Msgf("Could not update external v%d IP address.", ver)
+				}
 			}
 		}
 	}
