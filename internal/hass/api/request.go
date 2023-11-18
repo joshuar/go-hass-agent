@@ -38,6 +38,9 @@ type Request interface {
 }
 
 func marshalJSON(request Request, secret string) ([]byte, error) {
+	if request == nil {
+		return nil, errors.New("nil request")
+	}
 	if request.RequestType() == RequestTypeEncrypted {
 		if secret != "" && secret != "NOTSET" {
 			return json.Marshal(&EncryptedRequest{
