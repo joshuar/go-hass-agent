@@ -13,6 +13,7 @@ import (
 
 	"github.com/carlmjohnson/requests"
 	"github.com/joshuar/go-hass-agent/internal/agent/config"
+	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -50,7 +51,11 @@ func (rr *RegistrationResponse) GenerateAPIURL(host string) string {
 
 func (rr *RegistrationResponse) GenerateWebsocketURL(host string) string {
 	// TODO: look into websocket http upgrade method
-	u, _ := url.Parse(host)
+	u, err := url.Parse(host)
+	if err != nil {
+		log.Warn().Err(err).Msg("Could not parse URL.")
+		return ""
+	}
 	switch u.Scheme {
 	case "https":
 		u.Scheme = "wss"
