@@ -31,6 +31,10 @@ type upowerBattery struct {
 
 func (b *upowerBattery) updateProp(ctx context.Context, t sensorType) {
 	var p string
+	if !b.dBusPath.IsValid() {
+		log.Warn().Msg("No D-Bus path for battery.")
+		return
+	}
 	switch t {
 	case battType:
 		p = "Type"
@@ -60,22 +64,38 @@ func (b *upowerBattery) updateProp(ctx context.Context, t sensorType) {
 	if err != nil {
 		log.Debug().Caller().
 			Msgf("Could not update property %s. Not found?", p)
-	} else {
-		b.props[t] = propValue
+	} else if propValue.Value() != nil {
+		b.setValue(t, propValue)
 	}
 }
 
-func (b *upowerBattery) getProp(t sensorType) interface{} {
-	return b.props[t].Value()
+func (b *upowerBattery) getValue(t sensorType) interface{} {
+	if b != nil {
+		if v, ok := b.props[t]; ok {
+			return v.Value()
+		}
+	}
+	return nil
+}
+
+func (b *upowerBattery) setValue(t sensorType, v dbus.Variant) {
+	if b != nil {
+		if _, ok := b.props[t]; ok {
+			b.props[t] = v
+		}
+	}
 }
 
 func (b *upowerBattery) marshalBatteryStateUpdate(ctx context.Context, t sensorType) *upowerBatteryState {
+	if b == nil {
+		return nil
+	}
 	state := &upowerBatteryState{
-		batteryID: b.getProp(battNativePath).(string),
-		model:     b.getProp(battModel).(string),
+		batteryID: b.getValue(battNativePath).(string),
+		model:     b.getValue(battModel).(string),
 		prop: upowerBatteryProp{
 			name:  t,
-			value: b.getProp(t),
+			value: b.getValue(t),
 		},
 	}
 	switch t {
@@ -87,8 +107,8 @@ func (b *upowerBattery) marshalBatteryStateUpdate(ctx context.Context, t sensorT
 			Voltage    float64 `json:"Voltage"`
 			Energy     float64 `json:"Energy"`
 		}{
-			Voltage:    b.getProp(battVoltage).(float64),
-			Energy:     b.getProp(battEnergy).(float64),
+			Voltage:    b.getValue(battVoltage).(float64),
+			Energy:     b.getValue(battEnergy).(float64),
 			DataSource: srcDbus,
 		}
 	case battPercentage, battLevel:
@@ -96,11 +116,23 @@ func (b *upowerBattery) marshalBatteryStateUpdate(ctx context.Context, t sensorT
 			Type       string `json:"Battery Type"`
 			DataSource string `json:"Data Source"`
 		}{
-			Type:       stringType(b.getProp(battType).(uint32)),
+			Type:       stringType(b.getValue(battType).(uint32)),
 			DataSource: srcDbus,
 		}
 	}
 	return state
+}
+
+func newBattery(ctx context.Context, path dbus.ObjectPath) *upowerBattery {
+	b := &upowerBattery{
+		dBusPath: path,
+		props:    make(map[sensorType]dbus.Variant),
+	}
+	b.updateProp(ctx, battNativePath)
+	b.updateProp(ctx, battType)
+	b.updateProp(ctx, battModel)
+	b.updateProp(ctx, battState)
+	return b
 }
 
 type upowerBatteryProp struct {
@@ -274,53 +306,38 @@ func BatteryUpdater(ctx context.Context, tracker device.SensorTracker) {
 		Path(upowerDBusPath).
 		Destination(upowerDBusDest).
 		GetData(upowerGetDevicesMethod).AsObjectPathList()
-	if batteryList == nil {
+	if len(batteryList) == 0 {
 		log.Warn().
 			Msg("Unable to get any battery devices from D-Bus. Battery sensor will not run.")
 		return
 	}
-
-	batteryTracker := make(map[string]*upowerBattery)
-	for _, v := range batteryList {
+	for _, path := range batteryList {
 		// Track this battery in batteryTracker.
-		batteryID := string(v)
-		batteryTracker[batteryID] = &upowerBattery{
-			dBusPath: v,
-		}
-		batteryTracker[batteryID].props = make(map[sensorType]dbus.Variant)
-		batteryTracker[batteryID].updateProp(ctx, battNativePath)
-		batteryTracker[batteryID].updateProp(ctx, battType)
-		batteryTracker[batteryID].updateProp(ctx, battModel)
+		battery := newBattery(ctx, path)
 
-		// Standard battery properties as sensors
-		for _, prop := range []sensorType{battState} {
-			batteryTracker[batteryID].updateProp(ctx, prop)
-			stateUpdate := batteryTracker[batteryID].marshalBatteryStateUpdate(ctx, prop)
-			if stateUpdate != nil {
-				if err := tracker.UpdateSensors(ctx, stateUpdate); err != nil {
-					log.Error().Err(err).Msg("Could not update battery sensor.")
-				}
+		// Track state
+		if stateUpdate := battery.marshalBatteryStateUpdate(ctx, battState); stateUpdate != nil {
+			if err := tracker.UpdateSensors(ctx, stateUpdate); err != nil {
+				log.Error().Err(err).Msgf("Could not update battery %s.", battState.String())
 			}
 		}
 
 		// For some battery types, track additional properties as sensors
-		if batteryTracker[batteryID].getProp(battType).(uint32) == 2 {
+		if battery.getValue(battType).(uint32) == 2 {
 			for _, prop := range []sensorType{battPercentage, battTemp, battEnergyRate} {
-				batteryTracker[batteryID].updateProp(ctx, prop)
-				stateUpdate := batteryTracker[batteryID].marshalBatteryStateUpdate(ctx, prop)
-				if stateUpdate != nil {
+				battery.updateProp(ctx, prop)
+				if stateUpdate := battery.marshalBatteryStateUpdate(ctx, prop); stateUpdate != nil {
 					if err := tracker.UpdateSensors(ctx, stateUpdate); err != nil {
-						log.Error().Err(err).Msg("Could not update battery sensor.")
+						log.Error().Err(err).Msgf("Could not update battery %s.", prop.String())
 					}
 				}
 			}
 		} else {
-			batteryTracker[batteryID].updateProp(ctx, battLevel)
-			if batteryTracker[batteryID].getProp(battLevel).(uint32) != 1 {
-				stateUpdate := batteryTracker[batteryID].marshalBatteryStateUpdate(ctx, battLevel)
-				if stateUpdate != nil {
+			battery.updateProp(ctx, battLevel)
+			if battery.getValue(battLevel).(uint32) != 1 {
+				if stateUpdate := battery.marshalBatteryStateUpdate(ctx, battLevel); stateUpdate != nil {
 					if err := tracker.UpdateSensors(ctx, stateUpdate); err != nil {
-						log.Error().Err(err).Msg("Could not update battery sensor.")
+						log.Error().Err(err).Msgf("Could not update battery %s.", battLevel.String())
 					}
 				}
 			}
@@ -331,24 +348,22 @@ func BatteryUpdater(ctx context.Context, tracker device.SensorTracker) {
 		// if so, update the battery's state in batteryTracker and send the
 		// update back to Home Assistant.
 		err := NewBusRequest(ctx, SystemBus).
-			Path(v).
+			Path(path).
 			Match([]dbus.MatchOption{
-				dbus.WithMatchObjectPath(v),
+				dbus.WithMatchObjectPath(path),
 				dbus.WithMatchInterface("org.freedesktop.DBus.Properties"),
 			}).
 			Event("org.freedesktop.DBus.Properties.PropertiesChanged").
 			Handler(func(s *dbus.Signal) {
 				var sensors []interface{}
-				batteryID := string(s.Path)
 				props := s.Body[1].(map[string]dbus.Variant)
 				for propName, propValue := range props {
-					for BatteryProp := range batteryTracker[batteryID].props {
+					for BatteryProp := range battery.props {
 						if propName == BatteryProp.String() {
-							batteryTracker[batteryID].props[BatteryProp] = propValue
+							battery.props[BatteryProp] = propValue
 							log.Debug().Caller().
 								Msgf("Updating battery property %v to %v", BatteryProp.String(), propValue.Value())
-							stateUpdate := batteryTracker[batteryID].marshalBatteryStateUpdate(ctx, BatteryProp)
-							if stateUpdate != nil {
+							if stateUpdate := battery.marshalBatteryStateUpdate(ctx, BatteryProp); stateUpdate != nil {
 								sensors = append(sensors, stateUpdate)
 							}
 						}
