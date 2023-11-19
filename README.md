@@ -166,13 +166,6 @@ Home Assistant instance. It should also report a list of sensors/entities you
 can use in any automations, scripts, dashboards and other parts of Home
 Assistant.
 
-### Running Headless
-
-Go Hass Agent can run in a “headless” mode, without any GUI elements, by
-specifying the `-t` or `--terminal` command-line option. On Linux systems, There
-is also a systemd service file that can be used for automatic start-up,
-installed (but not activated by default) in `/usr/lib/systemd/system`.
-
 ## 🧑‍🤝‍🧑 Contributing
 
 ### Development
