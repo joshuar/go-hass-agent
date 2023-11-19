@@ -1,5 +1,12 @@
 # Changelog
 
+## [5.1.2](https://github.com/joshuar/go-hass-agent/compare/v5.1.1...v5.1.2) (2023-11-19)
+
+
+### Miscellaneous Chores
+
+* release 5.1.2 ([abf0a85](https://github.com/joshuar/go-hass-agent/commit/abf0a850bf7f200a63d249e14a6acb697d575dfd))
+
 ## [5.1.1](https://github.com/joshuar/go-hass-agent/compare/v5.1.0...v5.1.1) (2023-11-18)
 
 
