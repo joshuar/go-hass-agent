@@ -10,6 +10,7 @@ import (
 
 	"github.com/godbus/dbus/v5"
 	"github.com/joshuar/go-hass-agent/internal/device"
+	"github.com/joshuar/go-hass-agent/pkg/dbushelpers"
 	"github.com/rs/zerolog/log"
 )
 
@@ -79,14 +80,14 @@ func LocationUpdater(ctx context.Context, tracker device.SensorTracker) {
 		}
 	}
 
-	clientPath := NewBusRequest(ctx, SystemBus).
+	clientPath := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
 		Path(geocluePath).
 		Destination(geoclueInterface).GetData(getClientCall).AsObjectPath()
 	if !clientPath.IsValid() {
 		log.Error().Msg("Could not set up a geoclue client.")
 		return
 	}
-	locationRequest := NewBusRequest(ctx, SystemBus).Path(clientPath).Destination(geoclueInterface)
+	locationRequest := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).Path(clientPath).Destination(geoclueInterface)
 
 	if err := locationRequest.SetProp(desktopIDProp, dbus.MakeVariant(appID)); err != nil {
 		log.Error().Err(err).Msg("Could not set a geoclue client id.")
@@ -117,7 +118,7 @@ func LocationUpdater(ctx context.Context, tracker device.SensorTracker) {
 		}
 	}()
 
-	err := NewBusRequest(ctx, SystemBus).
+	err := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
 		Path(clientPath).
 		Match([]dbus.MatchOption{
 			dbus.WithMatchObjectPath(clientPath),
@@ -133,7 +134,7 @@ func LocationUpdater(ctx context.Context, tracker device.SensorTracker) {
 
 func newLocation(ctx context.Context, locationPath dbus.ObjectPath) *linuxLocation {
 	getProp := func(prop string) float64 {
-		value, err := NewBusRequest(ctx, SystemBus).
+		value, err := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
 			Path(locationPath).
 			Destination(geoclueInterface).
 			GetProp("org.freedesktop.GeoClue2.Location." + prop)

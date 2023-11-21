@@ -13,6 +13,7 @@ import (
 	"github.com/godbus/dbus/v5"
 	"github.com/iancoleman/strcase"
 	"github.com/joshuar/go-hass-agent/internal/device"
+	"github.com/joshuar/go-hass-agent/pkg/dbushelpers"
 	"github.com/rs/zerolog/log"
 )
 
@@ -82,7 +83,7 @@ func (c *connection) State() interface{} {
 func (c *connection) monitorConnectionState(ctx context.Context, updateCh chan interface{}, p dbus.ObjectPath) {
 	log.Debug().Str("path", string(p)).Str("connection", c.name).
 		Msg("Monitoring connection state.")
-	err := NewBusRequest(ctx, SystemBus).
+	err := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
 		Path(p).
 		Match([]dbus.MatchOption{
 			dbus.WithMatchPathNamespace(dBusNMPath + "/ActiveConnection"),
@@ -93,9 +94,9 @@ func (c *connection) monitorConnectionState(ctx context.Context, updateCh chan i
 			if ok {
 				state, ok := props["State"]
 				if ok {
-					c.state = variantToValue[connState](state)
+					c.state = dbushelpers.VariantToValue[connState](state)
 					updateCh <- c
-					if variantToValue[uint32](state) == 4 {
+					if dbushelpers.VariantToValue[uint32](state) == 4 {
 						close(c.doneCh)
 					}
 				}
@@ -109,19 +110,19 @@ func (c *connection) monitorConnectionState(ctx context.Context, updateCh chan i
 }
 
 func (c *connection) monitorAddresses(ctx context.Context, updateCh chan interface{}, p dbus.ObjectPath) {
-	r := NewBusRequest(ctx, SystemBus).
+	r := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
 		Path(p).
 		Destination(dBusNMObj)
 	propBase := dBusNMObj + ".Connection.Active"
 	v, _ := r.GetProp(propBase + ".Ip4Config")
 	if !v.Signature().Empty() {
-		c.attrs.Ipv4, c.attrs.IPv4Mask = getAddr(ctx, 4, variantToValue[dbus.ObjectPath](v))
+		c.attrs.Ipv4, c.attrs.IPv4Mask = getAddr(ctx, 4, dbushelpers.VariantToValue[dbus.ObjectPath](v))
 	}
 	v, _ = r.GetProp(propBase + ".Ip6Config")
 	if !v.Signature().Empty() {
-		c.attrs.Ipv6, c.attrs.IPv6Mask = getAddr(ctx, 6, variantToValue[dbus.ObjectPath](v))
+		c.attrs.Ipv6, c.attrs.IPv6Mask = getAddr(ctx, 6, dbushelpers.VariantToValue[dbus.ObjectPath](v))
 	}
-	err := NewBusRequest(ctx, SystemBus).
+	err := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
 		Path(p).
 		Match([]dbus.MatchOption{
 			dbus.WithMatchPathNamespace(dBusNMPath + "/ActiveConnection"),
@@ -160,21 +161,21 @@ func newConnection(ctx context.Context, updateCh chan interface{}, p dbus.Object
 	c.sensorType = connectionState
 	c.diagnostic = true
 
-	r := NewBusRequest(ctx, SystemBus).
+	r := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
 		Path(p).
 		Destination(dBusNMObj)
 	propBase := dBusNMObj + ".Connection.Active"
 	v, _ := r.GetProp(propBase + ".Id")
 	if !v.Signature().Empty() {
-		c.name = variantToValue[string](v)
+		c.name = dbushelpers.VariantToValue[string](v)
 	}
 	v, _ = r.GetProp(propBase + ".State")
 	if !v.Signature().Empty() {
-		c.state = variantToValue[connState](v)
+		c.state = dbushelpers.VariantToValue[connState](v)
 	}
 	v, _ = r.GetProp(propBase + ".Type")
 	if !v.Signature().Empty() {
-		c.attrs.ConnectionType = variantToValue[string](v)
+		c.attrs.ConnectionType = dbushelpers.VariantToValue[string](v)
 	}
 	connCtx, cancelFunc := context.WithCancel(ctx)
 	c.monitorConnectionState(connCtx, updateCh, p)
@@ -201,23 +202,23 @@ func getAddr(ctx context.Context, ver int, path dbus.ObjectPath) (addr string, m
 	case 6:
 		connProp = dBusNMObj + ".IP6Config"
 	}
-	v, err := NewBusRequest(ctx, SystemBus).
+	v, err := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
 		Path(path).
 		Destination(dBusNMObj).
 		GetProp(connProp + ".AddressData")
 	if err != nil {
 		return
 	}
-	a := variantToValue[[]map[string]dbus.Variant](v)
+	a := dbushelpers.VariantToValue[[]map[string]dbus.Variant](v)
 	if len(a) > 0 {
-		return variantToValue[string](a[0]["address"]), variantToValue[int](a[0]["prefix"])
+		return dbushelpers.VariantToValue[string](a[0]["address"]), dbushelpers.VariantToValue[int](a[0]["prefix"])
 	} else {
 		return "", 0
 	}
 }
 
 func getActiveConnections(ctx context.Context, updateCh chan interface{}) {
-	v, err := NewBusRequest(ctx, SystemBus).
+	v, err := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
 		Path(dBusNMPath).
 		Destination(dBusNMObj).
 		GetProp(dBusNMObj + ".ActiveConnections")
@@ -226,7 +227,7 @@ func getActiveConnections(ctx context.Context, updateCh chan interface{}) {
 			Msg("Could not retrieve active connection list.")
 		return
 	}
-	paths := variantToValue[[]dbus.ObjectPath](v)
+	paths := dbushelpers.VariantToValue[[]dbus.ObjectPath](v)
 
 	c := &connections{
 		list: make(map[dbus.ObjectPath]*connection),
@@ -240,7 +241,7 @@ func getActiveConnections(ctx context.Context, updateCh chan interface{}) {
 }
 
 func monitorActiveConnections(ctx context.Context, updateCh chan interface{}, conns *connections) {
-	err := NewBusRequest(ctx, SystemBus).
+	err := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
 		Path(dBusNMPath).
 		Match([]dbus.MatchOption{
 			dbus.WithMatchPathNamespace(dBusNMPath + "/ActiveConnection"),

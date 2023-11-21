@@ -15,6 +15,7 @@ import (
 	"github.com/iancoleman/strcase"
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/pkg/dbushelpers"
 	"github.com/rs/zerolog/log"
 )
 
@@ -57,7 +58,7 @@ func (b *upowerBattery) updateProp(ctx context.Context, t sensorType) {
 	case battModel:
 		p = "Model"
 	}
-	propValue, err := NewBusRequest(ctx, SystemBus).
+	propValue, err := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
 		Path(b.dBusPath).
 		Destination(upowerDBusDest).
 		GetProp("org.freedesktop.UPower.Device." + p)
@@ -302,7 +303,7 @@ func stringLevel(l uint32) string {
 }
 
 func BatteryUpdater(ctx context.Context, tracker device.SensorTracker) {
-	batteryList := NewBusRequest(ctx, SystemBus).
+	batteryList := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
 		Path(upowerDBusPath).
 		Destination(upowerDBusDest).
 		GetData(upowerGetDevicesMethod).AsObjectPathList()
@@ -347,7 +348,7 @@ func BatteryUpdater(ctx context.Context, tracker device.SensorTracker) {
 		// battery. If a property changes, check it is one we want to track and
 		// if so, update the battery's state in batteryTracker and send the
 		// update back to Home Assistant.
-		err := NewBusRequest(ctx, SystemBus).
+		err := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
 			Path(path).
 			Match([]dbus.MatchOption{
 				dbus.WithMatchObjectPath(path),

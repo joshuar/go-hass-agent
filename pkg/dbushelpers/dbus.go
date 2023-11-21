@@ -3,12 +3,11 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-package linux
+package dbushelpers
 
 import (
 	"context"
 	"errors"
-	"os"
 	"os/user"
 	"strings"
 	"sync"
@@ -311,7 +310,7 @@ func (d *dbusData) AsRawInterface() interface{} {
 	}
 }
 
-func getSessionPath(ctx context.Context) dbus.ObjectPath {
+func GetSessionPath(ctx context.Context) dbus.ObjectPath {
 	u, err := user.Current()
 	if err != nil {
 		return ""
@@ -329,9 +328,9 @@ func getSessionPath(ctx context.Context) dbus.ObjectPath {
 	return ""
 }
 
-// variantToValue converts a dbus.Variant type into the specified Go native
+// VariantToValue converts a dbus.Variant type into the specified Go native
 // type.
-func variantToValue[S any](variant dbus.Variant) S {
+func VariantToValue[S any](variant dbus.Variant) S {
 	var value S
 	err := variant.Store(&value)
 	if err != nil {
@@ -340,17 +339,4 @@ func variantToValue[S any](variant dbus.Variant) S {
 		return value
 	}
 	return value
-}
-
-// findPortal is a helper function to work out which portal interface should be
-// used for getting information on running apps.
-func findPortal() string {
-	switch os.Getenv("XDG_CURRENT_DESKTOP") {
-	case "KDE":
-		return "org.freedesktop.impl.portal.desktop.kde"
-	case "GNOME":
-		return "org.freedesktop.impl.portal.desktop.kde"
-	default:
-		return ""
-	}
 }

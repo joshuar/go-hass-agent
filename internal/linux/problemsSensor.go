@@ -13,6 +13,7 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/pkg/dbushelpers"
 	"github.com/rs/zerolog/log"
 )
 
@@ -73,13 +74,13 @@ func ProblemsUpdater(ctx context.Context, tracker device.SensorTracker) {
 		problems.units = "problems"
 		problems.stateClass = sensor.StateMeasurement
 
-		problemList := NewBusRequest(ctx, SystemBus).
+		problemList := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
 			Path(dBusProblemsDest).
 			Destination(dBusProblemIntr).
 			GetData(dBusProblemIntr + ".GetProblems").AsStringList()
 
 		for _, p := range problemList {
-			problemDetails := NewBusRequest(ctx, SystemBus).
+			problemDetails := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
 				Path(dBusProblemsDest).
 				Destination(dBusProblemIntr).
 				GetData(dBusProblemIntr+".GetInfo", p, []string{"time", "count", "package", "reason"}).AsStringMap()

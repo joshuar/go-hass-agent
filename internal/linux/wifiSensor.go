@@ -10,6 +10,7 @@ import (
 
 	"github.com/godbus/dbus/v5"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/pkg/dbushelpers"
 	"github.com/rs/zerolog/log"
 )
 
@@ -96,20 +97,20 @@ func (w *wifiSensor) Icon() string {
 // relevant WiFi properties that are to be represented as sensors.
 func getWifiProperties(ctx context.Context, updateCh chan interface{}, p dbus.ObjectPath) {
 	// get the devices associated with this connection
-	v, _ := NewBusRequest(ctx, SystemBus).
+	v, _ := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
 		Path(p).
 		Destination(dBusNMObj).
 		GetProp(dBusNMObj + ".Connection.Active.Devices")
 	if !v.Signature().Empty() {
-		for _, d := range variantToValue[[]dbus.ObjectPath](v) {
+		for _, d := range dbushelpers.VariantToValue[[]dbus.ObjectPath](v) {
 			// for each device, get the access point it is currently associated with
-			v, _ := NewBusRequest(ctx, SystemBus).
+			v, _ := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
 				Path(d).
 				Destination(dBusNMObj).
 				GetProp(dBusNMObj + ".Device.Wireless.ActiveAccessPoint")
-			ap := variantToValue[dbus.ObjectPath](v)
+			ap := dbushelpers.VariantToValue[dbus.ObjectPath](v)
 			if !v.Signature().Empty() {
-				r := NewBusRequest(ctx, SystemBus).
+				r := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
 					Path(ap).
 					Destination(dBusNMObj)
 				propBase := dBusNMObj + ".AccessPoint"
@@ -129,7 +130,7 @@ func getWifiProperties(ctx context.Context, updateCh chan interface{}, p dbus.Ob
 }
 
 func monitorWifiProperties(ctx context.Context, updateCh chan interface{}, p dbus.ObjectPath) {
-	err := NewBusRequest(ctx, SystemBus).
+	err := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
 		Path(p).
 		Match([]dbus.MatchOption{
 			dbus.WithMatchDestination(dBusNMObj + ".AccessPoint"),
