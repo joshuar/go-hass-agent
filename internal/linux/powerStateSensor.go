@@ -10,6 +10,7 @@ import (
 
 	"github.com/godbus/dbus/v5"
 	"github.com/joshuar/go-hass-agent/internal/device"
+	"github.com/joshuar/go-hass-agent/pkg/dbushelpers"
 	"github.com/rs/zerolog/log"
 )
 
@@ -43,7 +44,7 @@ func PowerStateUpdater(ctx context.Context, tracker device.SensorTracker) {
 
 	sensorCh <- newPowerState("Powered On")
 
-	err := NewBusRequest(ctx, SystemBus).
+	err := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
 		Path("/org/freedesktop/login1").
 		Match([]dbus.MatchOption{
 			dbus.WithMatchInterface("org.freedesktop.login1.Manager"),

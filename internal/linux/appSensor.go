@@ -11,6 +11,7 @@ import (
 	"github.com/godbus/dbus/v5"
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/pkg/dbushelpers"
 	"github.com/rs/zerolog/log"
 )
 
@@ -96,7 +97,7 @@ type runningAppsDetails struct {
 func newRunningAppsDetails(apps map[string]dbus.Variant) *runningAppsDetails {
 	details := new(runningAppsDetails)
 	for appName, state := range apps {
-		if variantToValue[uint32](state) > 0 {
+		if dbushelpers.VariantToValue[uint32](state) > 0 {
 			details.RunningApps = append(details.RunningApps, appName)
 		}
 	}
@@ -129,7 +130,7 @@ func AppUpdater(ctx context.Context, tracker device.SensorTracker) {
 		}
 	}()
 
-	err := NewBusRequest(ctx, SessionBus).
+	err := dbushelpers.NewBusRequest(ctx, dbushelpers.SessionBus).
 		Path(appStateDBusPath).
 		Match([]dbus.MatchOption{
 			dbus.WithMatchObjectPath(appStateDBusPath),
@@ -137,7 +138,7 @@ func AppUpdater(ctx context.Context, tracker device.SensorTracker) {
 		}).
 		Event(appStateDBusEvent).
 		Handler(func(_ *dbus.Signal) {
-			if activeAppList := NewBusRequest(ctx, SessionBus).
+			if activeAppList := dbushelpers.NewBusRequest(ctx, dbushelpers.SessionBus).
 				Path(appStateDBusPath).
 				Destination(portalDest).
 				GetData(appStateDBusMethod).AsVariantMap(); activeAppList != nil {

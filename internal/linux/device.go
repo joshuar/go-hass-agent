@@ -11,46 +11,13 @@ import (
 	"os"
 	"os/user"
 	"strings"
-	"sync"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/api"
+	"github.com/joshuar/go-hass-agent/pkg/dbushelpers"
+
 	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v3/host"
 )
-
-type dBusAPI struct {
-	dbus map[dbusType]*Bus
-	mu   sync.Mutex
-}
-
-func newDBusAPI(ctx context.Context) *dBusAPI {
-	a := &dBusAPI{}
-	a.dbus = make(map[dbusType]*Bus)
-	a.mu.Lock()
-	a.dbus[SessionBus] = NewBus(ctx, SessionBus)
-	a.dbus[SystemBus] = NewBus(ctx, SystemBus)
-	a.mu.Unlock()
-	return a
-}
-
-// key is an unexported type for keys defined in this package.
-// This prevents collisions with keys defined in other packages.
-type key int
-
-// linuxCtxKey is the key for dbusAPI values in Contexts. It is unexported;
-// clients use Setup and getBus instead of using this key directly.
-var linuxCtxKey key
-
-// getBus retrieves the D-Bus API object from the context
-func getBus(ctx context.Context, e dbusType) (*Bus, bool) {
-	b, ok := ctx.Value(linuxCtxKey).(*dBusAPI)
-	if !ok {
-		return nil, false
-	}
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	return b.dbus[e], true
-}
 
 type LinuxDevice struct {
 	appName    string
@@ -59,7 +26,7 @@ type LinuxDevice struct {
 
 // Setup returns a new Context that contains the D-Bus API.
 func (l *LinuxDevice) Setup(ctx context.Context) context.Context {
-	return context.WithValue(ctx, linuxCtxKey, newDBusAPI(ctx))
+	return dbushelpers.Setup(ctx)
 }
 
 func (l *LinuxDevice) AppName() string {
@@ -191,5 +158,18 @@ func getHWModel() string {
 		return "Unknown Model"
 	} else {
 		return strings.TrimSpace(string(hwModel))
+	}
+}
+
+// findPortal is a helper function to work out which portal interface should be
+// used for getting information on running apps.
+func findPortal() string {
+	switch os.Getenv("XDG_CURRENT_DESKTOP") {
+	case "KDE":
+		return "org.freedesktop.impl.portal.desktop.kde"
+	case "GNOME":
+		return "org.freedesktop.impl.portal.desktop.kde"
+	default:
+		return ""
 	}
 }

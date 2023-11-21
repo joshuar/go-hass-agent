@@ -11,6 +11,7 @@ import (
 	"github.com/godbus/dbus/v5"
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/pkg/dbushelpers"
 	"github.com/rs/zerolog/log"
 )
 
@@ -46,12 +47,12 @@ func newScreenlockEvent(v bool) *screenlockSensor {
 }
 
 func ScreenLockUpdater(ctx context.Context, tracker device.SensorTracker) {
-	path := getSessionPath(ctx)
+	path := dbushelpers.GetSessionPath(ctx)
 	if path == "" {
 		log.Warn().Msg("Could not ascertain user session from D-Bus. Cannot monitor screen lock state.")
 		return
 	}
-	err := NewBusRequest(ctx, SystemBus).
+	err := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
 		Path(path).
 		Event("org.freedesktop.DBus.Properties.PropertiesChanged").
 		Handler(func(s *dbus.Signal) {
@@ -62,7 +63,7 @@ func ScreenLockUpdater(ctx context.Context, tracker device.SensorTracker) {
 				return
 			}
 			if v, ok := props["LockedHint"]; ok {
-				lock := newScreenlockEvent(variantToValue[bool](v))
+				lock := newScreenlockEvent(dbushelpers.VariantToValue[bool](v))
 				if err := tracker.UpdateSensors(ctx, lock); err != nil {
 					log.Error().Err(err).Msg("Could not update screen lock sensor.")
 				}

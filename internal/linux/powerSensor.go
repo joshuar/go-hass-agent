@@ -11,6 +11,7 @@ import (
 
 	"github.com/godbus/dbus/v5"
 	"github.com/joshuar/go-hass-agent/internal/device"
+	"github.com/joshuar/go-hass-agent/pkg/dbushelpers"
 	"github.com/rs/zerolog/log"
 )
 
@@ -37,7 +38,7 @@ func newPowerSensor(t sensorType, g string, v dbus.Variant) *powerSensor {
 }
 
 func PowerUpater(ctx context.Context, tracker device.SensorTracker) {
-	activePowerProfile, err := NewBusRequest(ctx, SystemBus).
+	activePowerProfile, err := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
 		Path(powerProfilesDBusPath).
 		Destination(powerProfilesDBusDest).
 		GetProp(powerProfilesDBusDest + ".ActiveProfile")
@@ -50,7 +51,7 @@ func PowerUpater(ctx context.Context, tracker device.SensorTracker) {
 		log.Error().Err(err).Msg("Could not update power sensors.")
 	}
 
-	err = NewBusRequest(ctx, SystemBus).
+	err = dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
 		Path(powerProfilesDBusPath).
 		Match([]dbus.MatchOption{
 			dbus.WithMatchObjectPath(powerProfilesDBusPath),
