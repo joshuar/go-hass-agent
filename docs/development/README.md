@@ -24,25 +24,10 @@ go install golang.org/x/text/cmd/gotext@latest
 go install github.com/matryer/moq@latest
 ```
 
-The Fyne UI toolkit that is used by Go Hass Agent also requires some development libraries installed:
+The Fyne UI toolkit that is used by Go Hass Agent also requires some development
+libraries installed. See the [Fyne prerequisites](https://developer.fyne.io/started/#prerequisites)
+ documentation for what you need to install. 
 
-For Red Hat/RPM distributions:
-
-  - `libglvnd-glx`
-  - `libX11`
-  - `libXrandr`
-  - `libXxf86vm`
-  - `libXi`
-  - `libXcursor`
-  - `libXinerama`
-
-For Debian/DEB distributions:
-
-  - `libgl1`
-  - `libxi6`
-  - `libxcursor1`
-  - `libxrandr2`
-  - `libxinerama1`
 
 ## Development Environment
 
