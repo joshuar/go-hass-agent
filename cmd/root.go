@@ -7,6 +7,7 @@ package cmd
 
 import (
 	_ "net/http/pprof"
+	"os"
 
 	"github.com/joshuar/go-hass-agent/internal/agent"
 	"github.com/joshuar/go-hass-agent/internal/logging"
@@ -62,10 +63,15 @@ func init() {
 		"enable profiling (default is false)")
 	rootCmd.PersistentFlags().StringVar(&debugID, "debugid", "",
 		"specify a custom app ID (for debugging)")
-	rootCmd.PersistentFlags().BoolVar(&headlessFlag, "terminal", false,
+	rootCmd.PersistentFlags().BoolVar(&headlessFlag, "terminal", defaultHeadless(),
 		"run in terminal (without a GUI)")
 
 	rootCmd.AddCommand(infoCmd)
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(registerCmd)
+}
+
+func defaultHeadless() bool {
+	_, v := os.LookupEnv("DISPLAY")
+	return !v
 }
