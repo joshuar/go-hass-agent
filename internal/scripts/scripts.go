@@ -56,17 +56,17 @@ func (s *script) Run() {
 	}
 }
 
-// Schedule retrieves the cron schedule that the script should be run on.73
+// Schedule retrieves the cron schedule that the script should be run on.
 func (s *script) Schedule() string {
 	return s.schedule
 }
 
-// Path returns the path to the script on disk
+// Path returns the path to the script on disk.
 func (s *script) Path() string {
 	return s.path
 }
 
-// NewScript returns a new script object that can scheduled with the joib
+// NewScript returns a new script object that can scheduled with the job
 // scheduler by the agent.
 func NewScript(p string) *script {
 	s := &script{
@@ -177,6 +177,8 @@ func (s *scriptSensor) Attributes() interface{} {
 	return s.SensorAttributes
 }
 
+// FindScripts locates scripts and returns a slice of scripts that the agent can
+// run.
 func FindScripts(path string) ([]*script, error) {
 	var scripts []*script
 	files, err := filepath.Glob(path + "/*")
