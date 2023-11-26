@@ -15,13 +15,14 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/joshuar/go-hass-agent/internal/device"
-	"github.com/joshuar/go-hass-agent/internal/hass/api"
-
 	"github.com/joshuar/go-hass-agent/internal/agent/config"
 	"github.com/joshuar/go-hass-agent/internal/agent/ui"
 	fyneui "github.com/joshuar/go-hass-agent/internal/agent/ui/fyneUI"
+	"github.com/joshuar/go-hass-agent/internal/device"
+	"github.com/joshuar/go-hass-agent/internal/hass/api"
+	"github.com/joshuar/go-hass-agent/internal/scripts"
 	"github.com/joshuar/go-hass-agent/internal/tracker"
+	"github.com/robfig/cron/v3"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
@@ -115,6 +116,11 @@ func Run(options AgentOptions) {
 		go func() {
 			defer wg.Done()
 			agent.startWorkers(ctx)
+		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			agent.runScripts(ctx)
 		}()
 		wg.Add(1)
 		go func() {
@@ -293,4 +299,76 @@ func (agent *Agent) startWorkers(ctx context.Context) {
 
 	close(workerCh)
 	wg.Wait()
+}
+
+func (agent *Agent) runScripts(ctx context.Context) {
+	scriptPath, err := agent.config.StoragePath("scripts")
+	if err != nil {
+		log.Error().Err(err).Msg("Could not retrieve script path from config.")
+		return
+	}
+	allScripts, err := scripts.FindScripts(scriptPath)
+	if err != nil || len(allScripts) == 0 {
+		log.Error().Err(err).Msg("Could not find any script files.")
+		return
+	}
+	c := cron.New()
+	var outCh []<-chan tracker.Sensor
+	for _, s := range allScripts {
+		schedule := s.Schedule()
+		if schedule != "" {
+			_, err := c.AddJob(schedule, s)
+			if err != nil {
+				log.Warn().Err(err).Str("script", s.Path()).
+					Msg("Unable to schedule script.")
+				break
+			}
+			outCh = append(outCh, s.Output)
+			log.Debug().Str("schedule", schedule).Str("script", s.Path()).
+				Msg("Added script sensor.")
+		}
+	}
+	log.Debug().Msg("Starting cron scheduler for script sensors.")
+	c.Start()
+	go func() {
+		for s := range mergeSensorCh(ctx, outCh...) {
+			if err := agent.sensors.UpdateSensors(ctx, s); err != nil {
+				log.Error().Err(err).Msg("Could not update script sensor.")
+			}
+		}
+	}()
+	<-ctx.Done()
+	log.Debug().Msg("Stopping cron scheduler for script sensors.")
+	cronCtx := c.Stop()
+	<-cronCtx.Done()
+}
+
+func mergeSensorCh(ctx context.Context, sensorCh ...<-chan tracker.Sensor) <-chan tracker.Sensor {
+	var wg sync.WaitGroup
+	out := make(chan tracker.Sensor)
+
+	// Start an output goroutine for each input channel in sensorCh.  output
+	// copies values from c to out until c is closed, then calls wg.Done.
+	output := func(c <-chan tracker.Sensor) {
+		defer wg.Done()
+		for n := range c {
+			select {
+			case out <- n:
+			case <-ctx.Done():
+				return
+			}
+		}
+	}
+	wg.Add(len(sensorCh))
+	for _, c := range sensorCh {
+		go output(c)
+	}
+
+	// Start a goroutine to close out once all the output goroutines are
+	// done.  This must start after the wg.Add call.
+	go func() {
+		wg.Wait()
+		close(out)
+	}()
+	return out
 }

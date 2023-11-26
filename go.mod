@@ -90,6 +90,7 @@ require (
 	github.com/lxzan/gws v1.6.14
 	github.com/nutsdb/nutsdb v0.13.0
 	github.com/perimeterx/marshmallow v1.1.5
+	github.com/robfig/cron/v3 v3.0.1
 	github.com/rs/zerolog v1.31.0
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/spf13/viper v1.17.0
