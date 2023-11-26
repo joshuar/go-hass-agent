@@ -274,7 +274,7 @@ func (agent *Agent) SensorValue(id string) (tracker.Sensor, error) {
 	return agent.sensors.Get(id)
 }
 
-// StartWorkers will call all the sensor worker functions that have been defined
+// startWorkers will call all the sensor worker functions that have been defined
 // for this device.
 func (agent *Agent) startWorkers(ctx context.Context) {
 	wokerFuncs := sensorWorkers()
@@ -301,6 +301,10 @@ func (agent *Agent) startWorkers(ctx context.Context) {
 	wg.Wait()
 }
 
+// runScripts will retrieve all scripts that the agent can run and queue them up
+// to be run on their defined schedule using the cron scheduler. It also sets up
+// a channel to receive script output and send appropriate sensor objects to the
+// tracker.
 func (agent *Agent) runScripts(ctx context.Context) {
 	scriptPath, err := agent.config.StoragePath("scripts")
 	if err != nil {
