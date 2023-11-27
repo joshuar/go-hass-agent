@@ -3,33 +3,30 @@
 # This software is released under the MIT License.
 # https://opensource.org/licenses/MIT
 
-name: Create and publish a Docker image
-
+name: build-container
 on:
-  push:
-    branches: ['release']
 
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  # publish on releases, e.g. v2.1.13 (image tagged as "2.1.13" - "v" prefix is removed)
+  release:
+    types: [ published ]
+
+  # publish on pushes to the main branch (image tagged as "latest")
+  push:
+    branches:
+      - master
 
 jobs:
-  context:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v3
+  docker_publish:
+    runs-on: "ubuntu-20.04"
 
-    - name: Build
-      id: build
-      uses: cloudposse/github-action-docker-build-push@main
-      with:
-        registry: ${{ env.REGISTRY }}
-        organization: "${{ github.event.repository.owner.login }}"
-        repository: "${{ github.event.repository.name }}"
-        login: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-        platforms: linux/amd64
-  outputs:
-    image: ${{ steps.build.outputs.image }}
-    tag: ${{ steps.build.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v2
+        id: checkout
+
+      - name: Build and publish a Docker image for ${{ github.repository }}
+        uses: macbre/push-to-ghcr@master
+        id: build
+        with:
+          image_name: ${{ github.repository }}  # it will be lowercased internally
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          dockerfile: build/package/Dockerfile
