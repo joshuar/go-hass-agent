@@ -1,5 +1,14 @@
 # Changelog
 
+## [5.2.0](https://github.com/joshuar/go-hass-agent/compare/v5.1.2...v5.2.0) (2023-11-27)
+
+
+### Features
+
+* **agent:** add script sensors ([ece4ddd](https://github.com/joshuar/go-hass-agent/commit/ece4ddda986179000cf4f423286bafb2a732f9d9))
+* **cmd:** auto-detect whether to run in headless mode or not ([7c77032](https://github.com/joshuar/go-hass-agent/commit/7c77032ee9eb4b3b705944ed4c921b4f44cb213d))
+* **scripts:** support TOML output ([2a67c32](https://github.com/joshuar/go-hass-agent/commit/2a67c32d2dbdfd38ede23679220aa19681a3dad4))
+
 ## [5.1.2](https://github.com/joshuar/go-hass-agent/compare/v5.1.1...v5.1.2) (2023-11-19)
 
 
