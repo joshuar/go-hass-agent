@@ -61,14 +61,16 @@ The `sensor.SensorType` for this sensor. Either `TypeSensor` or `TypeBinary`.
 ### DeviceClass() hass.SensorDeviceClass
 
 The `sensor.SensorDeviceClass` for this sensor. There are many, pick an
-appropriate one (see `internal/hass/sensor/deviceClass.go`) for the sensor or
-return a value of 0 to indicate it has none.
+appropriate one (see 
+[`internal/hass/sensor/deviceClass.go`](../../internal/hass/sensor/deviceClass.go))
+for the sensor or return a value of 0 to indicate it has none.
 
 ### StateClass() hass.SensorStateClass
 
 The `sensor.SensorStateClass` for this sensor. There are a few, pick an
-appropriate one for the sensor (see `internal/hass/sensor/stateClass.go`) sensor
-return a value of 0 to indicate it has none.
+appropriate one for the sensor (see
+[`internal/hass/sensor/stateClass.go`](../../internal/hass/sensor/stateClass.go))
+sensor return a value of 0 to indicate it has none.
 
 ### State() interface{}
 

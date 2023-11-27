@@ -56,3 +56,6 @@
 
 [^1]: Only updated when currently connected to a Wi-Fi network. 
 
+## Scripts (All Platforms)
+
+All platforms can also utilise scripts to create custom sensors. See [scripts](scripts.md).
