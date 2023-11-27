@@ -33,6 +33,7 @@ This app will add some sensors to a Home Assistant instance:
 - Power profile.
 - Screen lock.
 - Problems detected by ABRT.
+- User-specified [script](docs/scripts.md) output.
 
 A full list of sensors can be found in the [docs](docs/sensors.md).
 
