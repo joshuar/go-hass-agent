@@ -15,6 +15,7 @@ import (
 	"github.com/iancoleman/strcase"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/tracker"
+	"github.com/pelletier/go-toml/v2"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v3"
 )
@@ -104,18 +105,22 @@ func (o *scriptOutput) Unmarshal(b []byte) error {
 	if err == nil {
 		return nil
 	}
+	err = toml.Unmarshal(b, &o)
+	if err == nil {
+		return nil
+	}
 	return errors.New("could not unmarshal script output")
 }
 
 type scriptSensor struct {
-	SensorName        string      `json:"sensor_name" yaml:"sensor_name"`
-	SensorIcon        string      `json:"sensor_icon" yaml:"sensor_icon"`
-	SensorDeviceClass string      `json:"sensor_device_class,omitempty" yaml:"sensor_device_class,omitempty"`
-	SensorStateClass  string      `json:"sensor_state_class,omitempty" yaml:"sensor_state_class,omitempty"`
-	SensorStateType   string      `json:"sensor_type,omitempty" yaml:"sensor_type,omitempty"`
-	SensorState       interface{} `json:"sensor_state" yaml:"sensor_state"`
-	SensorUnits       string      `json:"sensor_units,omitempty" yaml:"sensor_units,omitempty"`
-	SensorAttributes  interface{} `json:"sensor_attributes,omitempty" yaml:"sensor_attributes,omitempty"`
+	SensorName        string      `json:"sensor_name" yaml:"sensor_name" toml:"sensor_name"`
+	SensorIcon        string      `json:"sensor_icon" yaml:"sensor_icon" toml:"sensor_icon"`
+	SensorDeviceClass string      `json:"sensor_device_class,omitempty" yaml:"sensor_device_class,omitempty" toml:"sensor_device_class,omitempty"`
+	SensorStateClass  string      `json:"sensor_state_class,omitempty" yaml:"sensor_state_class,omitempty" toml:"sensor_state_class,omitempty"`
+	SensorStateType   string      `json:"sensor_type,omitempty" yaml:"sensor_type,omitempty" toml:"sensor_type,omitempty"`
+	SensorState       interface{} `json:"sensor_state" yaml:"sensor_state" toml:"sensor_state"`
+	SensorUnits       string      `json:"sensor_units,omitempty" yaml:"sensor_units,omitempty" toml:"sensor_units,omitempty"`
+	SensorAttributes  interface{} `json:"sensor_attributes,omitempty" yaml:"sensor_attributes,omitempty" toml:"sensor_attributes,omitempty"`
 }
 
 func (s *scriptSensor) Name() string {
