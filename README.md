@@ -44,16 +44,21 @@ for details.
 
 As examples of some of the things that can be done with the data published by this app:
 
-- Change your lighting depending on what active/running apps are on your
-  laptop/desktop. For example, you could set your lights dim or activate a scene
+- Change your lighting depending on:
+  - What active/running apps are on your laptop/desktop. For example, you could set your lights dim or activate a scene
   when you are gaming.
+  - Whether your screen is locked or the device is shutdown/suspended.
 - With your laptop plugged into a smart plug that is also controlled by Home
-  Assistant, turn the smart plug on/off based on the battery charge to
+  Assistant, turn the smart plug on/off based on the battery charge. This can
   force a full charge/discharge cycle of the battery, extending its life over
   leaving it constantly charged.
 - Like on mobile devices, create automations based on the location of your
   laptop running this app.
-- Receive notifications from Home Assistant on your desktop/laptop.
+- Monitor network the data transfer amount from the device, useful where network
+  data might be capped. 
+- Monitor CPU load, disk usage and any temperature sensors emitted from the device.
+- Receive notifications from Home Assistant on your desktop/laptop. Potentially
+  based on or utilising any of the data above.
 
 See also the [FAQ](docs/faq.md).
 
@@ -117,17 +122,27 @@ able to report sensors and receive notifications.
 When you have entered all the details, click **Submit** and the agent should
 start running and reporting sensors to the Home Assistant instance.
 
-### Running "Headless"
+### Running “Headless”
 
-As alternative, you can register Go Hass Agent on the command-line with by
+Go Hass Agent will automatically detect if there is no GUI available and run in
+a “headless” mode with no UI. Registration will need to be completed manually as
+a first step in such environments.
+
+You can register Go Hass Agent on the command-line with by
 running:
 
 ```shell
-go-hass-agent register --token _TOKEN_ --server _URL_
+go-hass-agent --terminal register --token _TOKEN_ --server _URL_
 ```
 
 You will need to provide a long-lived token `_TOKEN_` and the URL of your Home
 Assistant instance, `_URL_`.
+
+Once registered, running Go Hass Agent again with no options should start
+tracking and sending sensor data to Home Assistant. 
+
+If desired, headless mode can be forced, even in graphical environments, by
+specifying the `--terminal` command-line option.
 
 ### Running in a container
 
