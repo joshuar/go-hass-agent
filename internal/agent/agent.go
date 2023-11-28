@@ -312,8 +312,12 @@ func (agent *Agent) runScripts(ctx context.Context) {
 		return
 	}
 	allScripts, err := scripts.FindScripts(scriptPath)
-	if err != nil || len(allScripts) == 0 {
+	switch {
+	case err != nil:
 		log.Error().Err(err).Msg("Could not find any script files.")
+		return
+	case len(allScripts) == 0:
+		log.Debug().Err(err).Msg("Could not find any script files.")
 		return
 	}
 	c := cron.New()
