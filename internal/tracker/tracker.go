@@ -88,12 +88,7 @@ func (t *SensorTracker) send(ctx context.Context, sensorUpdate Sensor) {
 		return
 	}
 	registered := <-t.registry.IsRegistered(sensorUpdate.ID())
-	switch registered {
-	case true:
-		req = marshalSensorUpdate(sensorUpdate)
-	case false:
-		req = marshalSensorRegistration(sensorUpdate)
-	}
+	req = marshallSensorState(sensorUpdate, registered)
 	responseCh := make(chan interface{}, 1)
 	go api.ExecuteRequest(ctx, req, responseCh)
 	response := <-responseCh

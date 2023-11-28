@@ -39,30 +39,23 @@ func prettyPrintState(s Sensor) string {
 	return b.String()
 }
 
-func marshalSensorUpdate(s Sensor) *sensor.SensorUpdateInfo {
-	return &sensor.SensorUpdateInfo{
-		StateAttributes: s.Attributes(),
-		Icon:            s.Icon(),
-		State:           s.State(),
-		Type:            marshalClass(s.SensorType()),
-		UniqueID:        s.ID(),
+func marshallSensorState(state Sensor, registered bool) *sensor.SensorState {
+	s := &sensor.SensorState{}
+	s.StateAttributes = state.Attributes()
+	s.Icon = state.Icon()
+	s.State = state.State()
+	s.Type = marshalClass(state.SensorType())
+	s.UniqueID = state.ID()
+	s.Registered = registered
+	if !s.Registered {
+		s.Name = state.Name()
+		s.DeviceClass = marshalClass(state.DeviceClass())
+		s.StateClass = marshalClass(state.StateClass())
+		s.UnitOfMeasurement = state.Units()
+		s.EntityCategory = state.Category()
+		s.Disabled = false
 	}
-}
-
-func marshalSensorRegistration(s Sensor) *sensor.SensorRegistrationInfo {
-	return &sensor.SensorRegistrationInfo{
-		StateAttributes:   s.Attributes(),
-		DeviceClass:       marshalClass(s.DeviceClass()),
-		Icon:              s.Icon(),
-		Name:              s.Name(),
-		State:             s.State(),
-		Type:              marshalClass(s.SensorType()),
-		UniqueID:          s.ID(),
-		UnitOfMeasurement: s.Units(),
-		StateClass:        marshalClass(s.StateClass()),
-		EntityCategory:    s.Category(),
-		Disabled:          false,
-	}
+	return s
 }
 
 type ComparableStringer interface {
