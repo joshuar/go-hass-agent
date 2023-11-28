@@ -68,9 +68,7 @@ func (h *haConfig) extractConfig(b []byte) {
 
 func GetHassConfig(ctx context.Context) (*haConfig, error) {
 	h := new(haConfig)
-	respCh := make(chan interface{}, 1)
-	go api.ExecuteRequest(ctx, h, respCh)
-	response := <-respCh
+	response := <-api.ExecuteRequest(ctx, h)
 	switch r := response.(type) {
 	case []byte:
 		h.extractConfig(response.([]byte))
