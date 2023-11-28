@@ -107,25 +107,26 @@ func TestExecuteRequest(t *testing.T) {
 			return RequestTypeUpdateSensorStates
 		},
 	}
-	responseCh := make(chan interface{}, 1)
-
 	type args struct {
-		ctx        context.Context
-		request    Request
-		responseCh chan interface{}
+		ctx     context.Context
+		request Request
 	}
 	tests := []struct {
 		name string
 		args args
+		want chan interface{}
 	}{
 		{
 			name: "default test",
-			args: args{ctx: ctx, request: mockReq, responseCh: responseCh},
+			args: args{ctx: ctx, request: mockReq},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ExecuteRequest(tt.args.ctx, tt.args.request, tt.args.responseCh)
+			ExecuteRequest(tt.args.ctx, tt.args.request)
+			// if got := ExecuteRequest(tt.args.ctx, tt.args.request); !reflect.DeepEqual(got, tt.want) {
+			// 	t.Errorf("ExecuteRequest() = %v, want %v", got, tt.want)
+			// }
 		})
 	}
 }
