@@ -17,21 +17,12 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-const (
-	registryStorageID = "sensorRegistry"
-)
-
 //go:generate moq -out mock_Registry_test.go . Registry
 type Registry interface {
 	SetDisabled(string, bool) error
 	SetRegistered(string, bool) error
 	IsDisabled(string) chan bool
 	IsRegistered(string) chan bool
-}
-
-//go:generate moq -out mock_agent_test.go . agent
-type agent interface {
-	StoragePath(string) (string, error)
 }
 
 //go:generate moq -out mock_apiResponse_test.go . apiResponse
@@ -42,10 +33,9 @@ type apiResponse interface {
 }
 
 type SensorTracker struct {
-	registry    Registry
-	agentConfig agent
-	sensor      map[string]Sensor
-	mu          sync.RWMutex
+	registry Registry
+	sensor   map[string]Sensor
+	mu       sync.RWMutex
 }
 
 // Add creates a new sensor in the tracker based on a received state update.
@@ -198,12 +188,7 @@ func (t *SensorTracker) UpdateSensors(ctx context.Context, sensors ...interface{
 	return g.Wait()
 }
 
-func NewSensorTracker(agentConfig agent) (*SensorTracker, error) {
-	registryPath, err := agentConfig.StoragePath(registryStorageID)
-	if err != nil {
-		log.Warn().Err(err).
-			Msg("Path for sensor registry is not valid, using in-memory registry.")
-	}
+func NewSensorTracker(registryPath string) (*SensorTracker, error) {
 	db, err := registry.NewJsonFilesRegistry(registryPath)
 	if err != nil {
 		return nil, errors.New("unable to create a sensor tracker")

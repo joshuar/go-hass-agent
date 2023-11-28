@@ -27,6 +27,10 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+const (
+	registryStorageID = "sensorRegistry"
+)
+
 // Agent holds the data and structure representing an instance of the agent.
 // This includes the data structure for the UI elements and tray and some
 // strings such as app name and version.
@@ -108,7 +112,12 @@ func Run(options AgentOptions) {
 		// Wait until the config is validated and context is set up
 		cfgWait.Wait()
 
-		if agent.sensors, err = tracker.NewSensorTracker(agent); err != nil {
+		registryPath, err := agent.config.StoragePath(registryStorageID)
+		if err != nil {
+			log.Warn().Err(err).
+				Msg("Path for sensor registry is not valid, using in-memory registry.")
+		}
+		if agent.sensors, err = tracker.NewSensorTracker(registryPath); err != nil {
 			log.Fatal().Err(err).Msg("Could not start.")
 		}
 
