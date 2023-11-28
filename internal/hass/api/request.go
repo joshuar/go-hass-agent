@@ -70,18 +70,19 @@ type EncryptedRequest struct {
 	Encrypted     bool            `json:"encrypted"`
 }
 
-func ExecuteRequest(ctx context.Context, request Request, responseCh chan interface{}) {
+func ExecuteRequest(ctx context.Context, request Request) chan interface{} {
+	responseCh := make(chan interface{}, 1)
 	defer close(responseCh)
 	cfg, ok := FromContext(ctx)
 	if !ok {
 		responseCh <- errors.New("no config found in context")
-		return
+		return responseCh
 	}
 
 	reqJSON, err := marshalJSON(request, cfg.Secret)
 	if err != nil {
 		responseCh <- err
-		return
+		return responseCh
 	}
 
 	requestCtx, cancel := context.WithTimeout(ctx, time.Second)
@@ -100,17 +101,15 @@ func ExecuteRequest(ctx context.Context, request Request, responseCh chan interf
 		if err != nil {
 			cancel()
 			responseCh <- err
-			return
 		} else {
 			response, err := parseResponse(request.RequestType(), &rBuf)
 			if err != nil {
 				responseCh <- err
-				return
 			} else {
 				responseCh <- response
-				return
 			}
 		}
 	}()
 	wg.Wait()
+	return responseCh
 }

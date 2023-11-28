@@ -41,9 +41,7 @@ func marshalLocationUpdate(l Location) *hass.LocationUpdate {
 }
 
 func updateLocation(ctx context.Context, l Location) {
-	respCh := make(chan interface{}, 1)
-	go api.ExecuteRequest(ctx, marshalLocationUpdate(l), respCh)
-	response := <-respCh
+	response := <-api.ExecuteRequest(ctx, marshalLocationUpdate(l))
 	switch r := response.(type) {
 	case []byte:
 		log.Debug().Msg("Location Updated.")

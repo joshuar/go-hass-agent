@@ -89,9 +89,7 @@ func (t *SensorTracker) send(ctx context.Context, sensorUpdate Sensor) {
 	}
 	registered := <-t.registry.IsRegistered(sensorUpdate.ID())
 	req = marshallSensorState(sensorUpdate, registered)
-	responseCh := make(chan interface{}, 1)
-	go api.ExecuteRequest(ctx, req, responseCh)
-	response := <-responseCh
+	response := <-api.ExecuteRequest(ctx, req)
 	switch r := response.(type) {
 	case apiResponse:
 		t.handle(r, sensorUpdate)
