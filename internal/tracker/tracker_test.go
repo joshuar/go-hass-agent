@@ -51,10 +51,9 @@ func TestSensorTracker_add(t *testing.T) {
 	}
 
 	type fields struct {
-		registry    Registry
-		agentConfig agent
-		sensor      map[string]Sensor
-		mu          sync.RWMutex
+		registry Registry
+		sensor   map[string]Sensor
+		mu       sync.RWMutex
 	}
 	type args struct {
 		s Sensor
@@ -82,10 +81,9 @@ func TestSensorTracker_add(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tr := &SensorTracker{
-				registry:    tt.fields.registry,
-				agentConfig: tt.fields.agentConfig,
-				sensor:      tt.fields.sensor,
-				mu:          tt.fields.mu,
+				registry: tt.fields.registry,
+				sensor:   tt.fields.sensor,
+				mu:       tt.fields.mu,
 			}
 			if err := tr.add(tt.args.s); (err != nil) != tt.wantErr {
 				t.Errorf("SensorTracker.add() error = %v, wantErr %v", err, tt.wantErr)
@@ -100,10 +98,9 @@ func TestSensorTracker_Get(t *testing.T) {
 	mockMap["sensorID"] = mockSensor
 
 	type fields struct {
-		registry    Registry
-		agentConfig agent
-		sensor      map[string]Sensor
-		mu          sync.RWMutex
+		registry Registry
+		sensor   map[string]Sensor
+		mu       sync.RWMutex
 	}
 	type args struct {
 		id string
@@ -132,10 +129,9 @@ func TestSensorTracker_Get(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tr := &SensorTracker{
-				registry:    tt.fields.registry,
-				agentConfig: tt.fields.agentConfig,
-				sensor:      tt.fields.sensor,
-				mu:          tt.fields.mu,
+				registry: tt.fields.registry,
+				sensor:   tt.fields.sensor,
+				mu:       tt.fields.mu,
 			}
 			got, err := tr.Get(tt.args.id)
 			if (err != nil) != tt.wantErr {
@@ -157,10 +153,9 @@ func TestSensorTracker_SensorList(t *testing.T) {
 	mockMap["sensorID"] = mockSensor
 
 	type fields struct {
-		registry    Registry
-		agentConfig agent
-		sensor      map[string]Sensor
-		mu          sync.RWMutex
+		registry Registry
+		sensor   map[string]Sensor
+		mu       sync.RWMutex
 	}
 	tests := []struct {
 		name   string
@@ -180,10 +175,9 @@ func TestSensorTracker_SensorList(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tr := &SensorTracker{
-				registry:    tt.fields.registry,
-				agentConfig: tt.fields.agentConfig,
-				sensor:      tt.fields.sensor,
-				mu:          tt.fields.mu,
+				registry: tt.fields.registry,
+				sensor:   tt.fields.sensor,
+				mu:       tt.fields.mu,
 			}
 			if got := tr.SensorList(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("SensorTracker.SensorList() = %v, want %v", got, tt.want)
@@ -265,10 +259,9 @@ func TestSensorTracker_send(t *testing.T) {
 	}
 
 	type fields struct {
-		registry    Registry
-		agentConfig agent
-		sensor      map[string]Sensor
-		mu          sync.RWMutex
+		registry Registry
+		sensor   map[string]Sensor
+		mu       sync.RWMutex
 	}
 	type args struct {
 		ctx          context.Context
@@ -298,10 +291,9 @@ func TestSensorTracker_send(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tr := &SensorTracker{
-				registry:    tt.fields.registry,
-				agentConfig: tt.fields.agentConfig,
-				sensor:      tt.fields.sensor,
-				mu:          tt.fields.mu,
+				registry: tt.fields.registry,
+				sensor:   tt.fields.sensor,
+				mu:       tt.fields.mu,
 			}
 			tr.send(tt.args.ctx, tt.args.sensorUpdate)
 		})
@@ -382,10 +374,9 @@ func TestSensorTracker_handle(t *testing.T) {
 	}
 
 	type fields struct {
-		registry    Registry
-		agentConfig agent
-		sensor      map[string]Sensor
-		mu          sync.RWMutex
+		registry Registry
+		sensor   map[string]Sensor
+		mu       sync.RWMutex
 	}
 	type args struct {
 		response     apiResponse
@@ -415,10 +406,9 @@ func TestSensorTracker_handle(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tr := &SensorTracker{
-				registry:    tt.fields.registry,
-				agentConfig: tt.fields.agentConfig,
-				sensor:      tt.fields.sensor,
-				mu:          tt.fields.mu,
+				registry: tt.fields.registry,
+				sensor:   tt.fields.sensor,
+				mu:       tt.fields.mu,
 			}
 			tr.handle(tt.args.response, tt.args.sensorUpdate)
 		})
@@ -473,10 +463,9 @@ func TestSensorTracker_UpdateSensors(t *testing.T) {
 	many = append(many, mockUpdate, mockUpdate, mockUpdate)
 
 	type fields struct {
-		registry    Registry
-		agentConfig agent
-		sensor      map[string]Sensor
-		mu          sync.RWMutex
+		registry Registry
+		sensor   map[string]Sensor
+		mu       sync.RWMutex
 	}
 	type args struct {
 		ctx     context.Context
@@ -507,10 +496,9 @@ func TestSensorTracker_UpdateSensors(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tr := &SensorTracker{
-				registry:    tt.fields.registry,
-				agentConfig: tt.fields.agentConfig,
-				sensor:      tt.fields.sensor,
-				mu:          tt.fields.mu,
+				registry: tt.fields.registry,
+				sensor:   tt.fields.sensor,
+				mu:       tt.fields.mu,
 			}
 			if err := tr.UpdateSensors(tt.args.ctx, tt.args.sensors...); (err != nil) != tt.wantErr {
 				t.Errorf("SensorTracker.UpdateSensors() error = %v, wantErr %v", err, tt.wantErr)
@@ -520,11 +508,8 @@ func TestSensorTracker_UpdateSensors(t *testing.T) {
 }
 
 func TestNewSensorTracker(t *testing.T) {
-	agentCfg := &agentMock{
-		StoragePathFunc: func(s string) (string, error) { return t.TempDir(), nil },
-	}
 	type args struct {
-		agentConfig agent
+		registryPath string
 	}
 	tests := []struct {
 		name    string
@@ -534,12 +519,12 @@ func TestNewSensorTracker(t *testing.T) {
 	}{
 		{
 			name: "default test",
-			args: args{agentConfig: agentCfg},
+			args: args{registryPath: t.TempDir()},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := NewSensorTracker(tt.args.agentConfig)
+			_, err := NewSensorTracker(tt.args.registryPath)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewSensorTracker() error = %v, wantErr %v", err, tt.wantErr)
 				return
