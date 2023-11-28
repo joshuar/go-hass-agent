@@ -19,31 +19,11 @@ const (
 // SensorRegistrationInfo is the JSON structure required to register a sensor
 // with HA.
 type SensorRegistrationInfo struct {
-	State             interface{} `json:"state"`
-	StateAttributes   interface{} `json:"attributes,omitempty"`
-	UniqueID          string      `json:"unique_id"`
-	Type              string      `json:"type"`
-	Name              string      `json:"name"`
-	UnitOfMeasurement string      `json:"unit_of_measurement,omitempty"`
-	StateClass        string      `json:"state_class,omitempty"`
-	EntityCategory    string      `json:"entity_category,omitempty"`
-	Icon              string      `json:"icon,omitempty"`
-	DeviceClass       string      `json:"device_class,omitempty"`
-	Disabled          bool        `json:"disabled,omitempty"`
-}
-
-func (reg *SensorRegistrationInfo) RequestType() api.RequestType {
-	return api.RequestTypeRegisterSensor
-}
-
-func (reg *SensorRegistrationInfo) RequestData() json.RawMessage {
-	data, err := json.Marshal(reg)
-	if err != nil {
-		log.Debug().Err(err).
-			Msg("Unable to marshal sensor to json.")
-		return nil
-	}
-	return data
+	Name              string `json:"name,omitempty"`
+	UnitOfMeasurement string `json:"unit_of_measurement,omitempty"`
+	StateClass        string `json:"state_class,omitempty"`
+	EntityCategory    string `json:"entity_category,omitempty"`
+	DeviceClass       string `json:"device_class,omitempty"`
 }
 
 // SensorUpdateInfo is the JSON structure required to update HA with the current
@@ -56,12 +36,23 @@ type SensorUpdateInfo struct {
 	UniqueID        string      `json:"unique_id"`
 }
 
-func (upd *SensorUpdateInfo) RequestType() api.RequestType {
-	return api.RequestTypeUpdateSensorStates
+type SensorState struct {
+	SensorUpdateInfo
+	SensorRegistrationInfo
+	Disabled   bool `json:"disabled,omitempty"`
+	Registered bool `json:"-"`
 }
 
-func (upd *SensorUpdateInfo) RequestData() json.RawMessage {
-	data, err := json.Marshal(upd)
+func (s *SensorState) RequestType() api.RequestType {
+	if s.Registered {
+		return api.RequestTypeUpdateSensorStates
+	} else {
+		return api.RequestTypeRegisterSensor
+	}
+}
+
+func (s *SensorState) RequestData() json.RawMessage {
+	data, err := json.Marshal(s)
 	if err != nil {
 		log.Debug().Err(err).
 			Msg("Unable to marshal sensor to json.")
