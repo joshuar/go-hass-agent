@@ -1,5 +1,25 @@
 # Changelog
 
+## [5.3.0](https://github.com/joshuar/go-hass-agent/compare/v5.2.0...v5.3.0) (2023-12-02)
+
+
+### Features
+
+* **dbushelpers:** simpler signal removal logic ([b185320](https://github.com/joshuar/go-hass-agent/commit/b1853203e366f322339bee42e5d01d8a60082069))
+
+
+### Bug Fixes
+
+* **agent:** better logging around finding scripts ([bcf41f9](https://github.com/joshuar/go-hass-agent/commit/bcf41f919ef34c12fdbfa785dec2e12bb6b7b7b9))
+* **dbushelpers:** remove not useful debug log messages ([a78118c](https://github.com/joshuar/go-hass-agent/commit/a78118cb20b2751fc3481e3b7e69f8faea70a751))
+* **linux:** adjust power state D-Bus watch ([d1eefeb](https://github.com/joshuar/go-hass-agent/commit/d1eefeb9e65882ffa137be0c0d89e537a8836f4c))
+* **linux:** clean up active app D-Bus watch ([6380b6b](https://github.com/joshuar/go-hass-agent/commit/6380b6bfc81a1b2c3f9b8174701bfe61639368cf))
+* **linux:** clean up location sensor D-Bus watch ([6fad74e](https://github.com/joshuar/go-hass-agent/commit/6fad74eb8469753b2cc4bce5149ce1894ce007ef))
+* **linux:** clean up users D-Bus watch ([fd14a16](https://github.com/joshuar/go-hass-agent/commit/fd14a1675469662ea35a49adf7162561c1e0c23c))
+* **linux:** improved network connection sensor detection and error handling ([f456b55](https://github.com/joshuar/go-hass-agent/commit/f456b55dc2cd425a40489125e79c7a15e15b6e0e))
+* **linux:** power profile sensor reporting incorrect state ([5591998](https://github.com/joshuar/go-hass-agent/commit/55919983626dd1fa18e36f3384689b9eff5e59dc))
+* **linux:** screen lock sensor improved logic and error checking ([dfa1123](https://github.com/joshuar/go-hass-agent/commit/dfa112390d63e095bc6efdd741d3848be33ba860))
+
 ## [5.2.0](https://github.com/joshuar/go-hass-agent/compare/v5.1.2...v5.2.0) (2023-11-27)
 
 
