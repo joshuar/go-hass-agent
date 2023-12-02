@@ -9,7 +9,6 @@ import (
 	"context"
 	"errors"
 	"os/user"
-	"strings"
 	"sync"
 
 	"github.com/godbus/dbus/v5"
@@ -17,8 +16,9 @@ import (
 )
 
 const (
-	SessionBus dbusType = iota // session
-	SystemBus                  // system
+	SessionBus        dbusType = iota // session
+	SystemBus                         // system
+	PropChangedSignal = "org.freedesktop.DBus.Properties.PropertiesChanged"
 )
 
 type dbusType int
@@ -200,14 +200,8 @@ func (r *busRequest) AddWatch(ctx context.Context) error {
 		for {
 			select {
 			case <-ctx.Done():
-				if err := r.bus.conn.RemoveMatchSignal(r.match...); err != nil {
-					log.Warn().Err(err).
-						Str("path", string(r.path)).
-						Str("dest", r.dest).
-						Str("event", r.event).
-						Msg("Failed to remove D-Bus watch.")
-					return
-				}
+				r.bus.conn.RemoveSignal(signalCh)
+				close(signalCh)
 				log.Debug().
 					Str("path", string(r.path)).
 					Str("dest", r.dest).
@@ -215,9 +209,7 @@ func (r *busRequest) AddWatch(ctx context.Context) error {
 					Msgf("Stopped D-Bus watch.")
 				return
 			case signal := <-signalCh:
-				if strings.Contains(string(signal.Path), string(r.path)) {
-					r.eventHandler(signal)
-				}
+				r.eventHandler(signal)
 			}
 		}
 	}()
