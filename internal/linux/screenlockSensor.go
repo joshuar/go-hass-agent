@@ -15,11 +15,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-const (
-	screensaverDBusPath      = "/org/freedesktop/ScreenSaver"
-	screensaverDBusInterface = "org.freedesktop.ScreenSaver"
-)
-
 type screenlockSensor struct {
 	linuxSensor
 }
@@ -53,12 +48,21 @@ func ScreenLockUpdater(ctx context.Context, tracker device.SensorTracker) {
 		return
 	}
 	err := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
-		Path(path).
-		Event("org.freedesktop.DBus.Properties.PropertiesChanged").
+		Match([]dbus.MatchOption{
+			dbus.WithMatchObjectPath(path),
+		}).
 		Handler(func(s *dbus.Signal) {
+			if s.Name != dbushelpers.PropChangedSignal || s.Path != path {
+				return
+			}
+			if len(s.Body) <= 1 {
+				log.Debug().Caller().Interface("body", s.Body).Msg("Unexpected body length.")
+				return
+			}
 			props, ok := s.Body[1].(map[string]dbus.Variant)
 			if !ok {
-				log.Warn().Str("signal", s.Name).Interface("body", s.Body).
+				log.Debug().Caller().
+					Str("signal", s.Name).Interface("body", s.Body).
 					Msg("Unexpected signal body")
 				return
 			}
