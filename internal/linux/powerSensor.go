@@ -7,7 +7,6 @@ package linux
 
 import (
 	"context"
-	"strings"
 
 	"github.com/godbus/dbus/v5"
 	"github.com/joshuar/go-hass-agent/internal/device"
@@ -21,15 +20,12 @@ const (
 )
 
 type powerSensor struct {
-	sensorGroup string
 	linuxSensor
 }
 
-func newPowerSensor(t sensorType, g string, v dbus.Variant) *powerSensor {
-	s := &powerSensor{
-		sensorGroup: g,
-	}
-	s.value = strings.Trim(v.String(), "\"")
+func newPowerSensor(t sensorType, v dbus.Variant) *powerSensor {
+	s := &powerSensor{}
+	s.value = dbushelpers.VariantToValue[string](v)
 	s.sensorType = t
 	s.icon = "mdi:flash"
 	s.source = srcDbus
@@ -47,21 +43,34 @@ func PowerUpater(ctx context.Context, tracker device.SensorTracker) {
 		return
 	}
 
-	if err = tracker.UpdateSensors(ctx, newPowerSensor(powerProfile, powerProfilesDBusPath, activePowerProfile)); err != nil {
+	if err = tracker.UpdateSensors(ctx, newPowerSensor(powerProfile, activePowerProfile)); err != nil {
 		log.Error().Err(err).Msg("Could not update power sensors.")
 	}
 
 	err = dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
-		Path(powerProfilesDBusPath).
 		Match([]dbus.MatchOption{
+			dbus.WithMatchInterface(powerProfilesDBusDest),
 			dbus.WithMatchObjectPath(powerProfilesDBusPath),
+			dbus.WithMatchMember("ActiveProfile"),
 		}).
-		Event("org.freedesktop.DBus.Properties.PropertiesChanged").
 		Handler(func(s *dbus.Signal) {
-			updatedProps := s.Body[1].(map[string]dbus.Variant)
+			if s.Name != dbushelpers.PropChangedSignal || s.Path != powerProfilesDBusPath {
+				return
+			}
+			if len(s.Body) <= 1 {
+				log.Debug().Caller().Interface("body", s.Body).Msg("Unexpected body length.")
+				return
+			}
+			updatedProps, ok := s.Body[1].(map[string]dbus.Variant)
+			if !ok {
+				log.Debug().Caller().
+					Str("signal", s.Name).Interface("body", s.Body).
+					Msg("Unexpected signal body")
+				return
+			}
 			for propName, propValue := range updatedProps {
 				if propName == "ActiveProfile" {
-					if err = tracker.UpdateSensors(ctx, newPowerSensor(powerProfile, string(s.Path), activePowerProfile)); err != nil {
+					if err = tracker.UpdateSensors(ctx, newPowerSensor(powerProfile, propValue)); err != nil {
 						log.Error().Err(err).Msg("Could not update power sensors.")
 					}
 				} else {
