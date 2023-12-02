@@ -31,8 +31,10 @@ const (
 	iconDeactivating // mdi:network-minus
 	iconOffline      // mdi:network-off
 
-	dBusNMPath = "/org/freedesktop/NetworkManager"
-	dBusNMObj  = "org.freedesktop.NetworkManager"
+	dBusNMPath           = "/org/freedesktop/NetworkManager"
+	dBusNMObj            = "org.freedesktop.NetworkManager"
+	dbusNMActiveConnPath = dBusNMPath + "/ActiveConnection"
+	dbusNMActiveConnIntr = dBusNMObj + ".Connection.Active"
 )
 
 type connState uint32
@@ -84,12 +86,19 @@ func (c *connection) monitorConnectionState(ctx context.Context, updateCh chan i
 	log.Debug().Str("path", string(p)).Str("connection", c.name).
 		Msg("Monitoring connection state.")
 	err := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
-		Path(p).
 		Match([]dbus.MatchOption{
-			dbus.WithMatchPathNamespace(dBusNMPath + "/ActiveConnection"),
+			dbus.WithMatchObjectPath(dbusNMActiveConnPath),
+			dbus.WithMatchInterface(dbusNMActiveConnIntr),
+			dbus.WithMatchMember("StateChanged"),
 		}).
-		Event(dBusNMObj + ".Connection.Active.StateChanged").
 		Handler(func(s *dbus.Signal) {
+			if s.Path != p {
+				return
+			}
+			if len(s.Body) <= 1 {
+				log.Debug().Caller().Interface("body", s.Body).Msg("Unexpected body length.")
+				return
+			}
 			props, ok := s.Body[1].(map[string]dbus.Variant)
 			if ok {
 				state, ok := props["State"]
@@ -113,23 +122,27 @@ func (c *connection) monitorAddresses(ctx context.Context, updateCh chan interfa
 	r := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
 		Path(p).
 		Destination(dBusNMObj)
-	propBase := dBusNMObj + ".Connection.Active"
-	v, _ := r.GetProp(propBase + ".Ip4Config")
+	v, _ := r.GetProp(dbusNMActiveConnIntr + ".Ip4Config")
 	if !v.Signature().Empty() {
 		c.attrs.Ipv4, c.attrs.IPv4Mask = getAddr(ctx, 4, dbushelpers.VariantToValue[dbus.ObjectPath](v))
 	}
-	v, _ = r.GetProp(propBase + ".Ip6Config")
+	v, _ = r.GetProp(dbusNMActiveConnIntr + ".Ip6Config")
 	if !v.Signature().Empty() {
 		c.attrs.Ipv6, c.attrs.IPv6Mask = getAddr(ctx, 6, dbushelpers.VariantToValue[dbus.ObjectPath](v))
 	}
 	err := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
-		Path(p).
 		Match([]dbus.MatchOption{
-			dbus.WithMatchPathNamespace(dBusNMPath + "/ActiveConnection"),
-			dbus.WithMatchArg0Namespace("org.freedesktop.NetworkManager.Connection.Active"),
+			dbus.WithMatchObjectPath(dbusNMActiveConnPath),
+			dbus.WithMatchInterface(dbusNMActiveConnIntr),
 		}).
-		Event("org.freedesktop.DBus.Properties.PropertiesChanged").
 		Handler(func(s *dbus.Signal) {
+			if s.Path != p {
+				return
+			}
+			if len(s.Body) <= 1 {
+				log.Debug().Caller().Interface("body", s.Body).Msg("Unexpected body length.")
+				return
+			}
 			props, ok := s.Body[1].(map[string]dbus.Variant)
 			if ok {
 				p, ok := props["Ip4Config"]
@@ -164,16 +177,15 @@ func newConnection(ctx context.Context, updateCh chan interface{}, p dbus.Object
 	r := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
 		Path(p).
 		Destination(dBusNMObj)
-	propBase := dBusNMObj + ".Connection.Active"
-	v, _ := r.GetProp(propBase + ".Id")
+	v, _ := r.GetProp(dbusNMActiveConnIntr + ".Id")
 	if !v.Signature().Empty() {
 		c.name = dbushelpers.VariantToValue[string](v)
 	}
-	v, _ = r.GetProp(propBase + ".State")
+	v, _ = r.GetProp(dbusNMActiveConnIntr + ".State")
 	if !v.Signature().Empty() {
 		c.state = dbushelpers.VariantToValue[connState](v)
 	}
-	v, _ = r.GetProp(propBase + ".Type")
+	v, _ = r.GetProp(dbusNMActiveConnIntr + ".Type")
 	if !v.Signature().Empty() {
 		c.attrs.ConnectionType = dbushelpers.VariantToValue[string](v)
 	}
@@ -209,12 +221,16 @@ func getAddr(ctx context.Context, ver int, path dbus.ObjectPath) (addr string, m
 	if err != nil {
 		return
 	}
-	a := dbushelpers.VariantToValue[[]map[string]dbus.Variant](v)
-	if len(a) > 0 {
-		return dbushelpers.VariantToValue[string](a[0]["address"]), dbushelpers.VariantToValue[int](a[0]["prefix"])
-	} else {
-		return "", 0
+	addrDetails := dbushelpers.VariantToValue[[]map[string]dbus.Variant](v)
+	var address string
+	var prefix int
+	if len(addrDetails) > 0 {
+		address = dbushelpers.VariantToValue[string](addrDetails[0]["address"])
+		prefix = dbushelpers.VariantToValue[int](addrDetails[0]["prefix"])
+		log.Debug().Str("path", string(path)).Str("address", address).Int("prefix", prefix).
+			Msg("Retrieved address.")
 	}
+	return address, prefix
 }
 
 func getActiveConnections(ctx context.Context, updateCh chan interface{}) {
@@ -242,14 +258,12 @@ func getActiveConnections(ctx context.Context, updateCh chan interface{}) {
 
 func monitorActiveConnections(ctx context.Context, updateCh chan interface{}, conns *connections) {
 	err := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
-		Path(dBusNMPath).
 		Match([]dbus.MatchOption{
-			dbus.WithMatchPathNamespace(dBusNMPath + "/ActiveConnection"),
-			dbus.WithMatchArg(0, dBusNMObj+".Connection.Active"),
+			dbus.WithMatchPathNamespace(dbusNMActiveConnPath),
+			dbus.WithMatchArg(0, dbusNMActiveConnIntr),
 		}).
-		Event("org.freedesktop.DBus.Properties.PropertiesChanged").
 		Handler(func(s *dbus.Signal) {
-			if !strings.Contains(string(s.Path), dBusNMPath+"/ActiveConnection") {
+			if !strings.Contains(string(s.Path), dbusNMActiveConnPath) {
 				return
 			}
 			_, ok := conns.list[s.Path]
