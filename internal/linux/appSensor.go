@@ -131,12 +131,11 @@ func AppUpdater(ctx context.Context, tracker device.SensorTracker) {
 	}()
 
 	err := dbushelpers.NewBusRequest(ctx, dbushelpers.SessionBus).
-		Path(appStateDBusPath).
 		Match([]dbus.MatchOption{
 			dbus.WithMatchObjectPath(appStateDBusPath),
 			dbus.WithMatchInterface(appStateDBusInterface),
+			dbus.WithMatchMember("RunningApplicationsChanged"),
 		}).
-		Event(appStateDBusEvent).
 		Handler(func(_ *dbus.Signal) {
 			if activeAppList := dbushelpers.NewBusRequest(ctx, dbushelpers.SessionBus).
 				Path(appStateDBusPath).
