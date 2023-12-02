@@ -119,12 +119,11 @@ func LocationUpdater(ctx context.Context, tracker device.SensorTracker) {
 	}()
 
 	err := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
-		Path(clientPath).
 		Match([]dbus.MatchOption{
 			dbus.WithMatchObjectPath(clientPath),
 			dbus.WithMatchInterface(clientInterface),
+			dbus.WithMatchMember("LocationUpdated"),
 		}).
-		Event(locationUpdatedSignal).
 		Handler(locationUpdateHandler).
 		AddWatch(ctx)
 	if err != nil {
