@@ -131,12 +131,14 @@ func getWifiProperties(ctx context.Context, updateCh chan interface{}, p dbus.Ob
 
 func monitorWifiProperties(ctx context.Context, updateCh chan interface{}, p dbus.ObjectPath) {
 	err := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
-		Path(p).
 		Match([]dbus.MatchOption{
-			dbus.WithMatchDestination(dBusNMObj + ".AccessPoint"),
+			dbus.WithMatchObjectPath(p),
 		}).
-		Event("org.freedesktop.DBus.Properties.PropertiesChanged").
 		Handler(func(s *dbus.Signal) {
+			if len(s.Body) <= 1 {
+				log.Debug().Caller().Interface("body", s.Body).Msg("Unexpected body length.")
+				return
+			}
 			props, ok := s.Body[1].(map[string]dbus.Variant)
 			if ok {
 				for k, v := range props {
