@@ -56,12 +56,10 @@ func UsersUpdater(ctx context.Context, tracker device.SensorTracker) {
 	updateUsers()
 
 	err := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
-		Path(login1DBusPath).
 		Match([]dbus.MatchOption{
 			dbus.WithMatchObjectPath(login1DBusPath),
 			dbus.WithMatchInterface("org.freedesktop.DBus.Properties"),
 		}).
-		Event("org.freedesktop.DBus.Properties.PropertiesChanged").
 		Handler(func(s *dbus.Signal) {
 			switch s.Name {
 			case "org.freedesktop.login1.Manager.SessionNew",
