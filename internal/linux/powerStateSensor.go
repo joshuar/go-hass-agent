@@ -45,11 +45,10 @@ func PowerStateUpdater(ctx context.Context, tracker device.SensorTracker) {
 	sensorCh <- newPowerState("Powered On")
 
 	err := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
-		Path("/org/freedesktop/login1").
 		Match([]dbus.MatchOption{
+			dbus.WithMatchObjectPath("/org/freedesktop/login1"),
 			dbus.WithMatchInterface("org.freedesktop.login1.Manager"),
 		}).
-		Event("org.freedesktop.DBus.Properties.PropertiesChanged").
 		Handler(func(s *dbus.Signal) {
 			switch s.Name {
 			case "org.freedesktop.login1.Manager.PrepareForSleep":
