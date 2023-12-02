@@ -202,22 +202,12 @@ func (r *busRequest) AddWatch(ctx context.Context) error {
 			case <-ctx.Done():
 				r.bus.conn.RemoveSignal(signalCh)
 				close(signalCh)
-				log.Debug().
-					Str("path", string(r.path)).
-					Str("dest", r.dest).
-					Str("event", r.event).
-					Msgf("Stopped D-Bus watch.")
 				return
 			case signal := <-signalCh:
 				r.eventHandler(signal)
 			}
 		}
 	}()
-	log.Debug().
-		Str("path", string(r.path)).
-		Str("dest", r.dest).
-		Str("event", r.event).
-		Msgf("Added D-Bus watch.")
 	go func() {
 		wg.Wait()
 		r.bus.wg.Done()
