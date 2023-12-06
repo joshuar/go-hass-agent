@@ -70,13 +70,13 @@ func (b *upowerBattery) updateProp(ctx context.Context, t sensorType) {
 	}
 }
 
-func (b *upowerBattery) getValue(t sensorType) interface{} {
+func (b *upowerBattery) getValue(t sensorType) dbus.Variant {
 	if b != nil {
 		if v, ok := b.props[t]; ok {
-			return v.Value()
+			return v
 		}
 	}
-	return nil
+	return dbus.MakeVariant("")
 }
 
 func (b *upowerBattery) setValue(t sensorType, v dbus.Variant) {
@@ -91,9 +91,14 @@ func (b *upowerBattery) marshalBatteryStateUpdate(ctx context.Context, t sensorT
 	if b == nil {
 		return nil
 	}
+	id := dbushelpers.VariantToValue[string](b.getValue(battNativePath))
+	if id == "" {
+		log.Warn().Msg("Battery does not have a usable path. Will not monitor.")
+		return nil
+	}
 	state := &upowerBatteryState{
-		batteryID: b.getValue(battNativePath).(string),
-		model:     b.getValue(battModel).(string),
+		batteryID: id,
+		model:     dbushelpers.VariantToValue[string](b.getValue(battModel)),
 		prop: upowerBatteryProp{
 			name:  t,
 			value: b.getValue(t),
@@ -108,8 +113,8 @@ func (b *upowerBattery) marshalBatteryStateUpdate(ctx context.Context, t sensorT
 			Voltage    float64 `json:"Voltage"`
 			Energy     float64 `json:"Energy"`
 		}{
-			Voltage:    b.getValue(battVoltage).(float64),
-			Energy:     b.getValue(battEnergy).(float64),
+			Voltage:    dbushelpers.VariantToValue[float64](b.getValue(battVoltage)),
+			Energy:     dbushelpers.VariantToValue[float64](b.getValue(battEnergy)),
 			DataSource: srcDbus,
 		}
 	case battPercentage, battLevel:
@@ -117,7 +122,7 @@ func (b *upowerBattery) marshalBatteryStateUpdate(ctx context.Context, t sensorT
 			Type       string `json:"Battery Type"`
 			DataSource string `json:"Data Source"`
 		}{
-			Type:       stringType(b.getValue(battType).(uint32)),
+			Type:       battTypeAsString(dbushelpers.VariantToValue[uint32](b.getValue(battType))),
 			DataSource: srcDbus,
 		}
 	}
@@ -208,9 +213,9 @@ func (state *upowerBatteryState) State() interface{} {
 	case battVoltage, battTemp, battEnergy, battEnergyRate, battPercentage:
 		return state.prop.value.(float64)
 	case battState:
-		return stringState(state.prop.value.(uint32))
+		return battStateAsString(state.prop.value.(uint32))
 	case battLevel:
-		return stringLevel(state.prop.value.(uint32))
+		return battLevelAsString(state.prop.value.(uint32))
 	default:
 		return state.prop.value.(string)
 	}
@@ -237,7 +242,7 @@ func (state *upowerBatteryState) Attributes() interface{} {
 	return state.attributes
 }
 
-func stringState(state uint32) string {
+func battStateAsString(state uint32) string {
 	switch state {
 	case 1:
 		return "Charging"
@@ -256,7 +261,7 @@ func stringState(state uint32) string {
 	}
 }
 
-func stringType(t uint32) string {
+func battTypeAsString(t uint32) string {
 	switch t {
 	case 0:
 		return sensor.StateUnknown
@@ -281,7 +286,7 @@ func stringType(t uint32) string {
 	}
 }
 
-func stringLevel(l uint32) string {
+func battLevelAsString(l uint32) string {
 	switch l {
 	case 0:
 		return sensor.StateUnknown
@@ -324,7 +329,7 @@ func BatteryUpdater(ctx context.Context, tracker device.SensorTracker) {
 		}
 
 		// For some battery types, track additional properties as sensors
-		if battery.getValue(battType).(uint32) == 2 {
+		if dbushelpers.VariantToValue[uint32](battery.getValue(battType)) == 2 {
 			for _, prop := range []sensorType{battPercentage, battTemp, battEnergyRate} {
 				battery.updateProp(ctx, prop)
 				if stateUpdate := battery.marshalBatteryStateUpdate(ctx, prop); stateUpdate != nil {
@@ -335,7 +340,7 @@ func BatteryUpdater(ctx context.Context, tracker device.SensorTracker) {
 			}
 		} else {
 			battery.updateProp(ctx, battLevel)
-			if battery.getValue(battLevel).(uint32) != 1 {
+			if dbushelpers.VariantToValue[uint32](battery.getValue(battLevel)) != 1 {
 				if stateUpdate := battery.marshalBatteryStateUpdate(ctx, battLevel); stateUpdate != nil {
 					if err := tracker.UpdateSensors(ctx, stateUpdate); err != nil {
 						log.Error().Err(err).Msgf("Could not update battery %s.", battLevel.String())
