@@ -310,8 +310,9 @@ func GetSessionPath(ctx context.Context) dbus.ObjectPath {
 	return ""
 }
 
-// VariantToValue converts a dbus.Variant type into the specified Go native
-// type.
+// VariantToValue converts a dbus.Variant interface{} value into the specified
+// Go native type. If the value is nil, then the return value will be the
+// default value of the specified type.
 func VariantToValue[S any](variant dbus.Variant) S {
 	var value S
 	err := variant.Store(&value)
