@@ -1,5 +1,12 @@
 # Changelog
 
+## [5.3.1](https://github.com/joshuar/go-hass-agent/compare/v5.3.0...v5.3.1) (2023-12-06)
+
+
+### Bug Fixes
+
+* **linux:** protect against nil value panic in batterySensor ([94af4da](https://github.com/joshuar/go-hass-agent/commit/94af4daca7ebe4c71a2dffde05480b8618ccc8ad))
+
 ## [5.3.0](https://github.com/joshuar/go-hass-agent/compare/v5.2.0...v5.3.0) (2023-12-02)
 
 
