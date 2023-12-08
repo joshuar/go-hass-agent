@@ -295,11 +295,7 @@ func (agent *Agent) startWorkers(ctx context.Context) {
 	var outCh []<-chan tracker.Sensor
 
 	for i := 0; i < len(workerFuncs); i++ {
-		// wg.Add(1)
-		// go func(outCh []<-chan tracker.Sensor, workerFunc func(context.Context) chan tracker.Sensor) {
-		// defer wg.Done()
 		outCh = append(outCh, workerFuncs[i](workerCtx))
-		// }(outCh, workerFuncs[i])
 	}
 
 	log.Debug().Msg("Listening for sensor updates.")
