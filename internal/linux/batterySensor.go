@@ -122,7 +122,7 @@ func (b *upowerBattery) marshalBatteryStateUpdate(ctx context.Context, t sensorT
 			Type       string `json:"Battery Type"`
 			DataSource string `json:"Data Source"`
 		}{
-			Type:       battTypeAsString(dbushelpers.VariantToValue[uint32](b.getValue(battType))),
+			Type:       batteryType(dbushelpers.VariantToValue[uint32](b.getValue(battType))).String(),
 			DataSource: srcDbus,
 		}
 	}
@@ -209,15 +209,20 @@ func (state *upowerBatteryState) StateClass() sensor.SensorStateClass {
 }
 
 func (state *upowerBatteryState) State() interface{} {
-	switch state.prop.name {
+	propType := state.prop.name
+	rawValue := state.prop.value
+	if rawValue == nil {
+		return sensor.StateUnknown
+	}
+	switch propType {
 	case battVoltage, battTemp, battEnergy, battEnergyRate, battPercentage:
-		return state.prop.value.(float64)
+		return rawValue.(float64)
 	case battState:
-		return battStateAsString(state.prop.value.(uint32))
+		return rawValue.(battChargeState).String()
 	case battLevel:
-		return battLevelAsString(state.prop.value.(uint32))
+		return rawValue.(batteryLevel).String()
 	default:
-		return state.prop.value.(string)
+		return rawValue.(string)
 	}
 }
 
@@ -240,71 +245,6 @@ func (state *upowerBatteryState) Category() string {
 
 func (state *upowerBatteryState) Attributes() interface{} {
 	return state.attributes
-}
-
-func battStateAsString(state uint32) string {
-	switch state {
-	case 1:
-		return "Charging"
-	case 2:
-		return "Discharging"
-	case 3:
-		return "Empty"
-	case 4:
-		return "Fully Charged"
-	case 5:
-		return "Pending Charge"
-	case 6:
-		return "Pending Discharge"
-	default:
-		return sensor.StateUnknown
-	}
-}
-
-func battTypeAsString(t uint32) string {
-	switch t {
-	case 0:
-		return sensor.StateUnknown
-	case 1:
-		return "Line Power"
-	case 2:
-		return "Battery"
-	case 3:
-		return "Ups"
-	case 4:
-		return "Monitor"
-	case 5:
-		return "Mouse"
-	case 6:
-		return "Keyboard"
-	case 7:
-		return "Pda"
-	case 8:
-		return "Phone"
-	default:
-		return sensor.StateUnknown
-	}
-}
-
-func battLevelAsString(l uint32) string {
-	switch l {
-	case 0:
-		return sensor.StateUnknown
-	case 1:
-		return "None"
-	case 3:
-		return "Low"
-	case 4:
-		return "Critical"
-	case 6:
-		return "Normal"
-	case 7:
-		return "High"
-	case 8:
-		return "Full"
-	default:
-		return sensor.StateUnknown
-	}
 }
 
 func BatteryUpdater(ctx context.Context) chan tracker.Sensor {
