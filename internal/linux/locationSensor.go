@@ -9,7 +9,7 @@ import (
 	"context"
 
 	"github.com/godbus/dbus/v5"
-	"github.com/joshuar/go-hass-agent/internal/device"
+	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/joshuar/go-hass-agent/pkg/dbushelpers"
 	"github.com/rs/zerolog/log"
 )
@@ -69,13 +69,12 @@ func (l *linuxLocation) VerticalAccuracy() int {
 	return 0
 }
 
-func LocationUpdater(ctx context.Context, tracker device.SensorTracker) {
+func LocationUpdater(ctx context.Context) chan tracker.Location {
+	sensorCh := make(chan tracker.Location, 1)
 	locationUpdateHandler := func(s *dbus.Signal) {
 		if s.Name == locationUpdatedSignal {
 			if locationPath, ok := s.Body[1].(dbus.ObjectPath); ok {
-				if err := tracker.UpdateSensors(ctx, newLocation(ctx, locationPath)); err != nil {
-					log.Error().Err(err).Msg("Could not update location.")
-				}
+				sensorCh <- newLocation(ctx, locationPath)
 			}
 		}
 	}
@@ -85,13 +84,15 @@ func LocationUpdater(ctx context.Context, tracker device.SensorTracker) {
 		Destination(geoclueInterface).GetData(getClientCall).AsObjectPath()
 	if !clientPath.IsValid() {
 		log.Error().Msg("Could not set up a geoclue client.")
-		return
+		close(sensorCh)
+		return sensorCh
 	}
 	locationRequest := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).Path(clientPath).Destination(geoclueInterface)
 
 	if err := locationRequest.SetProp(desktopIDProp, dbus.MakeVariant(appID)); err != nil {
 		log.Error().Err(err).Msg("Could not set a geoclue client id.")
-		return
+		close(sensorCh)
+		return sensorCh
 	}
 
 	if err := locationRequest.SetProp(distanceThresholdProp, dbus.MakeVariant(uint32(0))); err != nil {
@@ -104,19 +105,11 @@ func LocationUpdater(ctx context.Context, tracker device.SensorTracker) {
 
 	if err := locationRequest.Call(startCall); err != nil {
 		log.Warn().Err(err).Msg("Could not start geoclue client.")
-		return
+		close(sensorCh)
+		return sensorCh
 	}
 
 	log.Debug().Msg("Tracking location with geoclue.")
-
-	go func() {
-		<-ctx.Done()
-		err := locationRequest.Call(stopCall)
-		if err != nil {
-			log.Debug().Caller().Err(err).Msg("Failed to stop location updater.")
-			return
-		}
-	}()
 
 	err := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
 		Match([]dbus.MatchOption{
@@ -129,6 +122,17 @@ func LocationUpdater(ctx context.Context, tracker device.SensorTracker) {
 	if err != nil {
 		log.Error().Err(err).Msg("Could not watch for geoclue updates.")
 	}
+
+	go func() {
+		defer close(sensorCh)
+		<-ctx.Done()
+		err := locationRequest.Call(stopCall)
+		if err != nil {
+			log.Debug().Caller().Err(err).Msg("Failed to stop location updater.")
+			return
+		}
+	}()
+	return sensorCh
 }
 
 func newLocation(ctx context.Context, locationPath dbus.ObjectPath) *linuxLocation {

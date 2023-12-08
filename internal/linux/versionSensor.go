@@ -8,44 +8,43 @@ package linux
 import (
 	"context"
 
-	"github.com/joshuar/go-hass-agent/internal/device"
+	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v3/host"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
 
-func Versions(ctx context.Context, tracker device.SensorTracker) {
+func Versions(ctx context.Context) chan tracker.Sensor {
+	sensorCh := make(chan tracker.Sensor, 3)
+	defer close(sensorCh)
 	info, err := host.InfoWithContext(ctx)
 	if err != nil {
 		log.Debug().Err(err).Caller().
 			Msg("Failed to retrieve host info.")
-		return
+		close(sensorCh)
+		return sensorCh
 	}
-	var sensors []interface{}
-	sensors = append(sensors,
-		&linuxSensor{
-			sensorType: kernel,
-			value:      info.KernelVersion,
-			diagnostic: true,
-			icon:       "mdi:chip",
-			source:     srcProcfs,
-		}, &linuxSensor{
-			sensorType: distribution,
-			value:      cases.Title(language.English).String(info.Platform),
-			diagnostic: true,
-			icon:       "mdi:linux",
-			source:     srcProcfs,
-		},
-		&linuxSensor{
-			sensorType: version,
-			value:      info.PlatformVersion,
-			diagnostic: true,
-			icon:       "mdi:numeric",
-			source:     srcProcfs,
-		},
-	)
-	if err := tracker.UpdateSensors(ctx, sensors...); err != nil {
-		log.Error().Err(err).Msg("Could not update versions sensors.")
+	sensorCh <- &linuxSensor{
+		sensorType: kernel,
+		value:      info.KernelVersion,
+		diagnostic: true,
+		icon:       "mdi:chip",
+		source:     srcProcfs,
 	}
+	sensorCh <- &linuxSensor{
+		sensorType: distribution,
+		value:      cases.Title(language.English).String(info.Platform),
+		diagnostic: true,
+		icon:       "mdi:linux",
+		source:     srcProcfs,
+	}
+	sensorCh <- &linuxSensor{
+		sensorType: version,
+		value:      info.PlatformVersion,
+		diagnostic: true,
+		icon:       "mdi:numeric",
+		source:     srcProcfs,
+	}
+	return sensorCh
 }

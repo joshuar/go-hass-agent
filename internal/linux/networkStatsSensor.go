@@ -9,9 +9,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v3/net"
 )
@@ -45,7 +45,8 @@ type netIORateSensor struct {
 	lastValue uint64
 }
 
-func NetworkStatsUpdater(ctx context.Context, tracker device.SensorTracker) {
+func NetworkStatsUpdater(ctx context.Context) chan tracker.Sensor {
+	sensorCh := make(chan tracker.Sensor)
 	bytesRx := &netIOSensor{
 		linuxSensor: linuxSensor{
 			units:       "B",
@@ -86,8 +87,6 @@ func NetworkStatsUpdater(ctx context.Context, tracker device.SensorTracker) {
 	}
 
 	sendNetStats := func(delta time.Duration) {
-		var sensors []interface{}
-
 		netIO, err := net.IOCountersWithContext(ctx, false)
 		if err != nil {
 			log.Debug().Err(err).Caller().
@@ -99,27 +98,29 @@ func NetworkStatsUpdater(ctx context.Context, tracker device.SensorTracker) {
 		bytesRx.Errors = netIO[0].Errin
 		bytesRx.Drops = netIO[0].Dropin
 		bytesRx.FifoErrors = netIO[0].Fifoin
+		sensorCh <- bytesRx
 
 		bytesTx.value = netIO[0].BytesSent
 		bytesTx.Packets = netIO[0].PacketsSent
 		bytesTx.Errors = netIO[0].Errout
 		bytesTx.Drops = netIO[0].Dropout
 		bytesTx.FifoErrors = netIO[0].Fifoout
-
-		sensors = append(sensors, bytesRx, bytesTx)
+		sensorCh <- bytesTx
 
 		if uint64(delta.Seconds()) > 0 && bytesRxRate.lastValue != 0 {
 			bytesRxRate.value = (netIO[0].BytesRecv - bytesRxRate.lastValue) / uint64(delta.Seconds())
 			bytesTxRate.value = (netIO[0].BytesSent - bytesTxRate.lastValue) / uint64(delta.Seconds())
-			sensors = append(sensors, bytesRxRate, bytesTxRate)
+			sensorCh <- bytesRxRate
+			sensorCh <- bytesTxRate
 		}
 		bytesRxRate.lastValue = netIO[0].BytesRecv
 		bytesTxRate.lastValue = netIO[0].BytesSent
-
-		if err := tracker.UpdateSensors(ctx, sensors...); err != nil {
-			log.Error().Err(err).Msg("Could not update network stats sensors.")
-		}
 	}
 
-	helpers.PollSensors(ctx, sendNetStats, 5*time.Second, time.Second*1)
+	go helpers.PollSensors(ctx, sendNetStats, 5*time.Second, time.Second*1)
+	go func() {
+		defer close(sensorCh)
+		<-ctx.Done()
+	}()
+	return sensorCh
 }

@@ -286,27 +286,42 @@ func (agent *Agent) SensorValue(id string) (tracker.Sensor, error) {
 // startWorkers will call all the sensor worker functions that have been defined
 // for this device.
 func (agent *Agent) startWorkers(ctx context.Context) {
-	wokerFuncs := sensorWorkers()
-	wokerFuncs = append(wokerFuncs, device.ExternalIPUpdater)
+	workerFuncs := sensorWorkers()
+	workerFuncs = append(workerFuncs, device.ExternalIPUpdater)
 	d := newDevice(ctx)
 	workerCtx := d.Setup(ctx)
 
-	workerCh := make(chan func(context.Context, device.SensorTracker), len(wokerFuncs))
-
-	for i := 0; i < len(workerCh); i++ {
-		workerCh <- wokerFuncs[i]
-	}
-
 	var wg sync.WaitGroup
-	for _, workerFunc := range wokerFuncs {
-		wg.Add(1)
-		go func(workerFunc func(context.Context, device.SensorTracker)) {
-			defer wg.Done()
-			workerFunc(workerCtx, agent.sensors)
-		}(workerFunc)
+	var outCh []<-chan tracker.Sensor
+
+	for i := 0; i < len(workerFuncs); i++ {
+		// wg.Add(1)
+		// go func(outCh []<-chan tracker.Sensor, workerFunc func(context.Context) chan tracker.Sensor) {
+		// defer wg.Done()
+		outCh = append(outCh, workerFuncs[i](workerCtx))
+		// }(outCh, workerFuncs[i])
 	}
 
-	close(workerCh)
+	log.Debug().Msg("Listening for sensor updates.")
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for s := range mergeSensorCh(ctx, outCh...) {
+			if err := agent.sensors.UpdateSensors(ctx, s); err != nil {
+				log.Error().Err(err).Msg("Could not update sensor.")
+			}
+		}
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for l := range locationWorker()(workerCtx) {
+			if err := agent.sensors.UpdateSensors(ctx, l); err != nil {
+				log.Error().Err(err).Msg("Could not update sensor.")
+			}
+		}
+	}()
+
 	wg.Wait()
 }
 

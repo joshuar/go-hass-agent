@@ -14,6 +14,7 @@ import (
 
 	"github.com/carlmjohnson/requests"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/lthibault/jitterbug/v2"
 	"github.com/rs/zerolog/log"
 )
@@ -121,16 +122,15 @@ func lookupExternalIPs(ctx context.Context, ver int) chan *address {
 	return addrCh
 }
 
-func ExternalIPUpdater(ctx context.Context, tracker SensorTracker) {
+func ExternalIPUpdater(ctx context.Context) chan tracker.Sensor {
+	sensorCh := make(chan tracker.Sensor, 1)
 	updateExternalIP := func() {
 		requestCtx, cancel := context.WithTimeout(ctx, time.Second*15)
 		defer cancel()
 		for _, ver := range []int{4, 6} {
 			ip := <-lookupExternalIPs(requestCtx, ver)
 			if ip != nil {
-				if err := tracker.UpdateSensors(ctx, ip); err != nil {
-					log.Error().Err(err).Msgf("Could not update external v%d IP address.", ver)
-				}
+				sensorCh <- ip
 			}
 		}
 	}
@@ -147,6 +147,7 @@ func ExternalIPUpdater(ctx context.Context, tracker SensorTracker) {
 		for {
 			select {
 			case <-ctx.Done():
+				close(sensorCh)
 				return
 			case <-ticker.C:
 				log.Trace().Caller().Msg("Checking for external IP update...")
@@ -154,4 +155,5 @@ func ExternalIPUpdater(ctx context.Context, tracker SensorTracker) {
 			}
 		}
 	}()
+	return sensorCh
 }

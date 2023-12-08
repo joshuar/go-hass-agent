@@ -9,7 +9,7 @@ import (
 	"context"
 
 	"github.com/godbus/dbus/v5"
-	"github.com/joshuar/go-hass-agent/internal/device"
+	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/joshuar/go-hass-agent/pkg/dbushelpers"
 	"github.com/rs/zerolog/log"
 )
@@ -33,19 +33,19 @@ func newPowerSensor(t sensorType, v dbus.Variant) *powerSensor {
 	return s
 }
 
-func PowerUpater(ctx context.Context, tracker device.SensorTracker) {
+func PowerUpater(ctx context.Context) chan tracker.Sensor {
+	sensorCh := make(chan tracker.Sensor, 1)
 	activePowerProfile, err := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
 		Path(powerProfilesDBusPath).
 		Destination(powerProfilesDBusDest).
 		GetProp(powerProfilesDBusDest + ".ActiveProfile")
 	if err != nil {
 		log.Debug().Err(err).Msg("Cannot retrieve a power profile from D-Bus. Will not run power sensor.")
-		return
+		close(sensorCh)
+		return sensorCh
 	}
 
-	if err = tracker.UpdateSensors(ctx, newPowerSensor(powerProfile, activePowerProfile)); err != nil {
-		log.Error().Err(err).Msg("Could not update power sensors.")
-	}
+	sensorCh <- newPowerSensor(powerProfile, activePowerProfile)
 
 	err = dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
 		Match([]dbus.MatchOption{
@@ -70,9 +70,7 @@ func PowerUpater(ctx context.Context, tracker device.SensorTracker) {
 			}
 			for propName, propValue := range updatedProps {
 				if propName == "ActiveProfile" {
-					if err = tracker.UpdateSensors(ctx, newPowerSensor(powerProfile, propValue)); err != nil {
-						log.Error().Err(err).Msg("Could not update power sensors.")
-					}
+					sensorCh <- newPowerSensor(powerProfile, propValue)
 				} else {
 					log.Debug().Msgf("Unhandled property %v changed to %v", propName, propValue)
 				}
@@ -81,6 +79,13 @@ func PowerUpater(ctx context.Context, tracker device.SensorTracker) {
 		AddWatch(ctx)
 	if err != nil {
 		log.Debug().Err(err).
-			Msg("Failed to create power state DBus watch.")
+			Msg("Failed to create power state D-Bus watch.")
+		close(sensorCh)
+		return sensorCh
 	}
+	go func() {
+		defer close(sensorCh)
+		<-ctx.Done()
+	}()
+	return sensorCh
 }

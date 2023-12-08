@@ -11,9 +11,9 @@ import (
 	"time"
 
 	"github.com/iancoleman/strcase"
-	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v3/host"
 	"golang.org/x/text/cases"
@@ -51,11 +51,11 @@ func (s *tempSensor) Attributes() interface{} {
 	}
 }
 
-func TempUpdater(ctx context.Context, tracker device.SensorTracker) {
+func TempUpdater(ctx context.Context) chan tracker.Sensor {
+	sensorCh := make(chan tracker.Sensor)
 	update := func(_ time.Duration) {
 		rawTemps, err := host.SensorsTemperaturesWithContext(ctx)
 		sensorMap := make(map[string]*tempSensor)
-		var sensors []interface{}
 		if err != nil {
 			log.Warn().Err(err).Msg("Could not fetch temperatures.")
 		}
@@ -78,12 +78,14 @@ func TempUpdater(ctx context.Context, tracker device.SensorTracker) {
 			sensorMap[newSensor.id] = newSensor
 		}
 		for _, v := range sensorMap {
-			sensors = append(sensors, v)
-		}
-		if err := tracker.UpdateSensors(ctx, sensors...); err != nil {
-			log.Error().Err(err).Msg("Could not update network stats sensors.")
+			sensorCh <- v
 		}
 	}
 
-	helpers.PollSensors(ctx, update, time.Minute, time.Second*5)
+	go helpers.PollSensors(ctx, update, time.Minute, time.Second*5)
+	go func() {
+		defer close(sensorCh)
+		<-ctx.Done()
+	}()
+	return sensorCh
 }

@@ -12,7 +12,7 @@ import (
 
 	"github.com/godbus/dbus/v5"
 	"github.com/iancoleman/strcase"
-	"github.com/joshuar/go-hass-agent/internal/device"
+	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/joshuar/go-hass-agent/pkg/dbushelpers"
 	"github.com/rs/zerolog/log"
 )
@@ -82,7 +82,7 @@ func (c *connection) State() interface{} {
 	return c.state.String()
 }
 
-func (c *connection) monitorConnectionState(ctx context.Context, updateCh chan interface{}, p dbus.ObjectPath) {
+func (c *connection) monitorConnectionState(ctx context.Context, sensorCh chan tracker.Sensor, p dbus.ObjectPath) {
 	log.Debug().Str("path", string(p)).Str("connection", c.name).
 		Msg("Monitoring connection state.")
 	err := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
@@ -104,7 +104,7 @@ func (c *connection) monitorConnectionState(ctx context.Context, updateCh chan i
 				state, ok := props["State"]
 				if ok {
 					c.state = dbushelpers.VariantToValue[connState](state)
-					updateCh <- c
+					sensorCh <- c
 					if dbushelpers.VariantToValue[uint32](state) == 4 {
 						close(c.doneCh)
 					}
@@ -118,7 +118,7 @@ func (c *connection) monitorConnectionState(ctx context.Context, updateCh chan i
 	}
 }
 
-func (c *connection) monitorAddresses(ctx context.Context, updateCh chan interface{}, p dbus.ObjectPath) {
+func (c *connection) monitorAddresses(ctx context.Context, sensorCh chan tracker.Sensor, p dbus.ObjectPath) {
 	r := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
 		Path(p).
 		Destination(dBusNMObj)
@@ -148,12 +148,12 @@ func (c *connection) monitorAddresses(ctx context.Context, updateCh chan interfa
 				p, ok := props["Ip4Config"]
 				if ok {
 					c.attrs.Ipv4, c.attrs.IPv4Mask = getAddr(ctx, 4, p.Value().(dbus.ObjectPath))
-					updateCh <- c
+					sensorCh <- c
 				}
 				p, ok = props["Ip6Config"]
 				if ok {
 					c.attrs.Ipv6, c.attrs.IPv6Mask = getAddr(ctx, 6, p.Value().(dbus.ObjectPath))
-					updateCh <- c
+					sensorCh <- c
 				}
 			}
 		}).
@@ -164,7 +164,7 @@ func (c *connection) monitorAddresses(ctx context.Context, updateCh chan interfa
 	}
 }
 
-func newConnection(ctx context.Context, updateCh chan interface{}, p dbus.ObjectPath) *connection {
+func newConnection(ctx context.Context, sensorCh chan tracker.Sensor, p dbus.ObjectPath) *connection {
 	c := &connection{
 		attrs: &connectionAttributes{
 			DataSource: srcDbus,
@@ -190,11 +190,11 @@ func newConnection(ctx context.Context, updateCh chan interface{}, p dbus.Object
 		c.attrs.ConnectionType = dbushelpers.VariantToValue[string](v)
 	}
 	connCtx, cancelFunc := context.WithCancel(ctx)
-	c.monitorConnectionState(connCtx, updateCh, p)
-	c.monitorAddresses(connCtx, updateCh, p)
+	c.monitorConnectionState(connCtx, sensorCh, p)
+	c.monitorAddresses(connCtx, sensorCh, p)
 	switch c.attrs.ConnectionType {
 	case "802-11-wireless":
-		getWifiProperties(connCtx, updateCh, p)
+		getWifiProperties(connCtx, sensorCh, p)
 	}
 	go func() {
 		<-c.doneCh
@@ -233,7 +233,7 @@ func getAddr(ctx context.Context, ver int, path dbus.ObjectPath) (addr string, m
 	return address, prefix
 }
 
-func getActiveConnections(ctx context.Context, updateCh chan interface{}) {
+func getActiveConnections(ctx context.Context, sensorCh chan tracker.Sensor) {
 	v, err := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
 		Path(dBusNMPath).
 		Destination(dBusNMObj).
@@ -250,13 +250,13 @@ func getActiveConnections(ctx context.Context, updateCh chan interface{}) {
 	}
 
 	for _, p := range paths {
-		c.list[p] = newConnection(ctx, updateCh, p)
-		updateCh <- c.list[p]
+		c.list[p] = newConnection(ctx, sensorCh, p)
+		sensorCh <- c.list[p]
 	}
-	monitorActiveConnections(ctx, updateCh, c)
+	monitorActiveConnections(ctx, sensorCh, c)
 }
 
-func monitorActiveConnections(ctx context.Context, updateCh chan interface{}, conns *connections) {
+func monitorActiveConnections(ctx context.Context, sensorCh chan tracker.Sensor, conns *connections) {
 	err := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
 		Match([]dbus.MatchOption{
 			dbus.WithMatchPathNamespace(dbusNMActiveConnPath),
@@ -268,8 +268,8 @@ func monitorActiveConnections(ctx context.Context, updateCh chan interface{}, co
 			}
 			_, ok := conns.list[s.Path]
 			if !ok {
-				conns.list[s.Path] = newConnection(ctx, updateCh, s.Path)
-				updateCh <- conns.list[s.Path]
+				conns.list[s.Path] = newConnection(ctx, sensorCh, s.Path)
+				sensorCh <- conns.list[s.Path]
 			}
 		}).
 		AddWatch(ctx)
@@ -279,24 +279,12 @@ func monitorActiveConnections(ctx context.Context, updateCh chan interface{}, co
 	}
 }
 
-func NetworkConnectionsUpdater(ctx context.Context, tracker device.SensorTracker) {
-	var wg sync.WaitGroup
-	sensorCh := make(chan interface{})
-	wg.Add(1)
+func NetworkConnectionsUpdater(ctx context.Context) chan tracker.Sensor {
+	sensorCh := make(chan tracker.Sensor)
+	go getActiveConnections(ctx, sensorCh)
 	go func() {
-		defer wg.Done()
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case s := <-sensorCh:
-				if err := tracker.UpdateSensors(ctx, s); err != nil {
-					log.Error().Err(err).
-						Msg("Could not update property.")
-				}
-			}
-		}
+		defer close(sensorCh)
+		<-ctx.Done()
 	}()
-	getActiveConnections(ctx, sensorCh)
-	wg.Wait()
+	return sensorCh
 }

@@ -9,8 +9,8 @@ import (
 	"context"
 
 	"github.com/godbus/dbus/v5"
-	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/joshuar/go-hass-agent/pkg/dbushelpers"
 	"github.com/rs/zerolog/log"
 )
@@ -34,7 +34,8 @@ func (s *usersSensor) Attributes() interface{} {
 	}
 }
 
-func UsersUpdater(ctx context.Context, tracker device.SensorTracker) {
+func UsersUpdater(ctx context.Context) chan tracker.Sensor {
+	sensorCh := make(chan tracker.Sensor, 1)
 	updateUsers := func() {
 		sensor := newUsersSensor()
 		userData := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
@@ -48,9 +49,7 @@ func UsersUpdater(ctx context.Context, tracker device.SensorTracker) {
 			for _, u := range userList {
 				sensor.userNames = append(sensor.userNames, u[1].(string))
 			}
-			if err := tracker.UpdateSensors(ctx, sensor); err != nil {
-				log.Error().Err(err).Msg("Could not update users sensor.")
-			}
+			sensorCh <- sensor
 		}
 	}
 	updateUsers()
@@ -71,7 +70,14 @@ func UsersUpdater(ctx context.Context, tracker device.SensorTracker) {
 	if err != nil {
 		log.Warn().Err(err).
 			Msg("Failed to create user D-Bus watch. Users sensor will not run.")
+		close(sensorCh)
+		return sensorCh
 	}
+	go func() {
+		defer close(sensorCh)
+		<-ctx.Done()
+	}()
+	return sensorCh
 }
 
 func newUsersSensor() *usersSensor {

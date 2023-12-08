@@ -9,9 +9,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v3/load"
 )
@@ -20,7 +20,8 @@ type loadavgSensor struct {
 	linuxSensor
 }
 
-func LoadAvgUpdater(ctx context.Context, tracker device.SensorTracker) {
+func LoadAvgUpdater(ctx context.Context) chan tracker.Sensor {
+	sensorCh := make(chan tracker.Sensor, 3)
 	sendLoadAvgStats := func(_ time.Duration) {
 		var latest *load.AvgStat
 		var err error
@@ -29,7 +30,6 @@ func LoadAvgUpdater(ctx context.Context, tracker device.SensorTracker) {
 				Msg("Problem fetching loadavg stats.")
 			return
 		}
-		var sensors []interface{}
 		for _, loadType := range []sensorType{load1, load5, load15} {
 			l := &loadavgSensor{}
 			l.icon = "mdi:chip"
@@ -47,12 +47,14 @@ func LoadAvgUpdater(ctx context.Context, tracker device.SensorTracker) {
 				l.value = latest.Load15
 				l.sensorType = load15
 			}
-			sensors = append(sensors, l)
-		}
-		if err := tracker.UpdateSensors(ctx, sensors...); err != nil {
-			log.Error().Err(err).Msg("Could not update load average sensors.")
+			sensorCh <- l
 		}
 	}
 
-	helpers.PollSensors(ctx, sendLoadAvgStats, time.Minute, time.Second*5)
+	go helpers.PollSensors(ctx, sendLoadAvgStats, time.Minute, time.Second*5)
+	go func() {
+		defer close(sensorCh)
+		<-ctx.Done()
+	}()
+	return sensorCh
 }

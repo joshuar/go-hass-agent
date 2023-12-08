@@ -19,16 +19,16 @@ import (
 // exactly on it. This can help avoid a "thundering herd" problem of sensors all
 // trying to update at the same time.
 func PollSensors(ctx context.Context, updater func(time.Duration), interval, stdev time.Duration) {
-	lastTick := time.Now()
-	updater(time.Since(lastTick))
-	ticker := jitterbug.New(
-		interval,
-		&jitterbug.Norm{Stdev: stdev},
-	)
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+		lastTick := time.Now()
+		updater(time.Since(lastTick))
+		ticker := jitterbug.New(
+			interval,
+			&jitterbug.Norm{Stdev: stdev},
+		)
 		for {
 			select {
 			case <-ctx.Done():
