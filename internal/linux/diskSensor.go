@@ -11,9 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v3/disk"
 )
@@ -57,7 +57,8 @@ func (d *diskSensor) Attributes() interface{} {
 	}
 }
 
-func DiskUsageUpdater(ctx context.Context, tracker device.SensorTracker) {
+func DiskUsageUpdater(ctx context.Context) chan tracker.Sensor {
+	sensorCh := make(chan tracker.Sensor)
 	sendDiskUsageStats := func(_ time.Duration) {
 		p, err := disk.PartitionsWithContext(ctx, false)
 		if err != nil {
@@ -65,7 +66,6 @@ func DiskUsageUpdater(ctx context.Context, tracker device.SensorTracker) {
 				Msg("Could not retrieve list of physical partitions.")
 			return
 		}
-		var sensors []interface{}
 		for _, partition := range p {
 			usage, err := disk.UsageWithContext(ctx, partition.Mountpoint)
 			if err != nil {
@@ -73,12 +73,14 @@ func DiskUsageUpdater(ctx context.Context, tracker device.SensorTracker) {
 					Msgf("Failed to get usage info for mountpount %s.", partition.Mountpoint)
 				return
 			}
-			sensors = append(sensors, newDiskSensor(usage))
-		}
-		if err := tracker.UpdateSensors(ctx, sensors...); err != nil {
-			log.Error().Err(err).Msg("Could not update disk usage sensors.")
+			sensorCh <- newDiskSensor(usage)
 		}
 	}
 
-	helpers.PollSensors(ctx, sendDiskUsageStats, time.Minute, time.Second*5)
+	go helpers.PollSensors(ctx, sendDiskUsageStats, time.Minute, time.Second*5)
+	go func() {
+		defer close(sensorCh)
+		<-ctx.Done()
+	}()
+	return sensorCh
 }

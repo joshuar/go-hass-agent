@@ -9,9 +9,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v3/mem"
 )
@@ -30,7 +30,8 @@ func (s *memorySensor) Attributes() interface{} {
 	}
 }
 
-func MemoryUpdater(ctx context.Context, tracker device.SensorTracker) {
+func MemoryUpdater(ctx context.Context) chan tracker.Sensor {
+	sensorCh := make(chan tracker.Sensor)
 	sendMemStats := func(_ time.Duration) {
 		stats := []sensorType{memTotal, memAvail, memUsed, swapTotal, swapFree}
 		var memDetails *mem.VirtualMemoryStat
@@ -40,7 +41,6 @@ func MemoryUpdater(ctx context.Context, tracker device.SensorTracker) {
 				Msg("Problem fetching memory stats.")
 			return
 		}
-		var sensors []interface{}
 		for _, stat := range stats {
 			var statValue uint64
 			switch stat {
@@ -68,12 +68,14 @@ func MemoryUpdater(ctx context.Context, tracker device.SensorTracker) {
 					stateClass:  sensor.StateTotal,
 				},
 			}
-			sensors = append(sensors, state)
-		}
-		if err := tracker.UpdateSensors(ctx, sensors...); err != nil {
-			log.Error().Err(err).Msg("Could not update memory sensors.")
+			sensorCh <- state
 		}
 	}
 
-	helpers.PollSensors(ctx, sendMemStats, time.Minute, time.Second*5)
+	go helpers.PollSensors(ctx, sendMemStats, time.Minute, time.Second*5)
+	go func() {
+		defer close(sensorCh)
+		<-ctx.Done()
+	}()
+	return sensorCh
 }

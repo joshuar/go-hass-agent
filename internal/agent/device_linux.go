@@ -9,8 +9,8 @@ import (
 	"context"
 
 	"github.com/joshuar/go-hass-agent/internal/agent/config"
-	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/tracker"
 )
 
 func newDevice(_ context.Context) *linux.LinuxDevice {
@@ -18,10 +18,9 @@ func newDevice(_ context.Context) *linux.LinuxDevice {
 }
 
 // sensorWorkers returns a list of functions to start to enable sensor tracking.
-func sensorWorkers() []func(context.Context, device.SensorTracker) {
-	var workers []func(context.Context, device.SensorTracker)
+func sensorWorkers() []func(context.Context) chan tracker.Sensor {
+	var workers []func(context.Context) chan tracker.Sensor
 	workers = append(workers,
-		linux.LocationUpdater,
 		linux.BatteryUpdater,
 		linux.AppUpdater,
 		linux.NetworkConnectionsUpdater,
@@ -38,4 +37,8 @@ func sensorWorkers() []func(context.Context, device.SensorTracker) {
 		linux.TempUpdater,
 		linux.PowerStateUpdater)
 	return workers
+}
+
+func locationWorker() func(context.Context) chan tracker.Location {
+	return linux.LocationUpdater
 }

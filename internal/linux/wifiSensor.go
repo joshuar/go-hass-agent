@@ -10,6 +10,7 @@ import (
 
 	"github.com/godbus/dbus/v5"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/joshuar/go-hass-agent/pkg/dbushelpers"
 	"github.com/rs/zerolog/log"
 )
@@ -95,7 +96,7 @@ func (w *wifiSensor) Icon() string {
 
 // getWifiProperties will initially fetch and then monitor for changes of
 // relevant WiFi properties that are to be represented as sensors.
-func getWifiProperties(ctx context.Context, updateCh chan interface{}, p dbus.ObjectPath) {
+func getWifiProperties(ctx context.Context, sensorCh chan tracker.Sensor, p dbus.ObjectPath) {
 	// get the devices associated with this connection
 	v, _ := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
 		Path(p).
@@ -120,16 +121,16 @@ func getWifiProperties(ctx context.Context, updateCh chan interface{}, p dbus.Ob
 					if !v.Signature().Empty() {
 						p.value = v.Value()
 						wifiProps[k] = p
-						updateCh <- p
+						sensorCh <- p
 					}
 				}
-				monitorWifiProperties(ctx, updateCh, ap)
+				monitorWifiProperties(ctx, sensorCh, ap)
 			}
 		}
 	}
 }
 
-func monitorWifiProperties(ctx context.Context, updateCh chan interface{}, p dbus.ObjectPath) {
+func monitorWifiProperties(ctx context.Context, sensorCh chan tracker.Sensor, p dbus.ObjectPath) {
 	err := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
 		Match([]dbus.MatchOption{
 			dbus.WithMatchObjectPath(p),
@@ -145,7 +146,7 @@ func monitorWifiProperties(ctx context.Context, updateCh chan interface{}, p dbu
 					prop, ok := wifiProps[k]
 					if ok {
 						prop.value = v.Value()
-						updateCh <- prop
+						sensorCh <- prop
 					}
 				}
 			}

@@ -9,8 +9,8 @@ import (
 	"context"
 
 	"github.com/godbus/dbus/v5"
-	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/joshuar/go-hass-agent/pkg/dbushelpers"
 	"github.com/rs/zerolog/log"
 )
@@ -41,11 +41,13 @@ func newScreenlockEvent(v bool) *screenlockSensor {
 	}
 }
 
-func ScreenLockUpdater(ctx context.Context, tracker device.SensorTracker) {
+func ScreenLockUpdater(ctx context.Context) chan tracker.Sensor {
+	sensorCh := make(chan tracker.Sensor, 1)
 	path := dbushelpers.GetSessionPath(ctx)
 	if path == "" {
 		log.Warn().Msg("Could not ascertain user session from D-Bus. Cannot monitor screen lock state.")
-		return
+		close(sensorCh)
+		return sensorCh
 	}
 	err := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
 		Match([]dbus.MatchOption{
@@ -67,15 +69,19 @@ func ScreenLockUpdater(ctx context.Context, tracker device.SensorTracker) {
 				return
 			}
 			if v, ok := props["LockedHint"]; ok {
-				lock := newScreenlockEvent(dbushelpers.VariantToValue[bool](v))
-				if err := tracker.UpdateSensors(ctx, lock); err != nil {
-					log.Error().Err(err).Msg("Could not update screen lock sensor.")
-				}
+				sensorCh <- newScreenlockEvent(dbushelpers.VariantToValue[bool](v))
 			}
 		}).
 		AddWatch(ctx)
 	if err != nil {
 		log.Warn().Err(err).
 			Msg("Could not poll D-Bus for screen lock. Screen lock sensor will not run.")
+		close(sensorCh)
+		return sensorCh
 	}
+	go func() {
+		defer close(sensorCh)
+		<-ctx.Done()
+	}()
+	return sensorCh
 }

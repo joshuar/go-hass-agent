@@ -9,9 +9,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v3/host"
 )
@@ -39,10 +39,10 @@ func (s *timeSensor) Attributes() interface{} {
 	}
 }
 
-func TimeUpdater(ctx context.Context, tracker device.SensorTracker) {
+func TimeUpdater(ctx context.Context) chan tracker.Sensor {
+	sensorCh := make(chan tracker.Sensor, 2)
 	updateTimes := func(_ time.Duration) {
-		var sensors []interface{}
-		sensors = append(sensors, &timeSensor{
+		sensorCh <- &timeSensor{
 			linuxSensor{
 				sensorType:  uptime,
 				value:       getUptime(ctx),
@@ -52,7 +52,8 @@ func TimeUpdater(ctx context.Context, tracker device.SensorTracker) {
 				deviceClass: sensor.Duration,
 				stateClass:  sensor.StateMeasurement,
 			},
-		}, &timeSensor{
+		}
+		sensorCh <- &timeSensor{
 			linuxSensor{
 				sensorType:  boottime,
 				value:       getBoottime(ctx),
@@ -60,14 +61,15 @@ func TimeUpdater(ctx context.Context, tracker device.SensorTracker) {
 				icon:        "mdi:restart",
 				deviceClass: sensor.Timestamp,
 			},
-		})
-
-		if err := tracker.UpdateSensors(ctx, sensors...); err != nil {
-			log.Error().Err(err).Msg("Could not update time sensors.")
 		}
 	}
 
-	helpers.PollSensors(ctx, updateTimes, time.Minute*15, time.Minute)
+	go helpers.PollSensors(ctx, updateTimes, time.Minute*15, time.Minute)
+	go func() {
+		defer close(sensorCh)
+		<-ctx.Done()
+	}()
+	return sensorCh
 }
 
 func getUptime(ctx context.Context) interface{} {

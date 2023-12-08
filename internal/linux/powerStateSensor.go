@@ -9,7 +9,7 @@ import (
 	"context"
 
 	"github.com/godbus/dbus/v5"
-	"github.com/joshuar/go-hass-agent/internal/device"
+	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/joshuar/go-hass-agent/pkg/dbushelpers"
 	"github.com/rs/zerolog/log"
 )
@@ -28,19 +28,8 @@ func (s *powerStateSensor) Icon() string {
 	return "mdi:power-on"
 }
 
-func PowerStateUpdater(ctx context.Context, tracker device.SensorTracker) {
-	sensorCh := make(chan interface{}, 1)
-	go func() {
-		defer close(sensorCh)
-		<-ctx.Done()
-	}()
-	go func() {
-		for sensor := range sensorCh {
-			if err := tracker.UpdateSensors(ctx, sensor); err != nil {
-				log.Error().Err(err).Msg("Could not update power state sensor.")
-			}
-		}
-	}()
+func PowerStateUpdater(ctx context.Context) chan tracker.Sensor {
+	sensorCh := make(chan tracker.Sensor, 1)
 
 	sensorCh <- newPowerState("Powered On")
 
@@ -69,7 +58,15 @@ func PowerStateUpdater(ctx context.Context, tracker device.SensorTracker) {
 	if err != nil {
 		log.Warn().Err(err).
 			Msg("Failed to create user D-Bus watch. Will not track power state.")
+		close(sensorCh)
+		return sensorCh
 	}
+
+	go func() {
+		defer close(sensorCh)
+		<-ctx.Done()
+	}()
+	return sensorCh
 }
 
 func newPowerState(state string) *powerStateSensor {

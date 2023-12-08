@@ -9,8 +9,8 @@ import (
 	"context"
 
 	"github.com/godbus/dbus/v5"
-	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/joshuar/go-hass-agent/pkg/dbushelpers"
 	"github.com/rs/zerolog/log"
 )
@@ -105,12 +105,14 @@ func newRunningAppsDetails(apps map[string]dbus.Variant) *runningAppsDetails {
 	return details
 }
 
-func AppUpdater(ctx context.Context, tracker device.SensorTracker) {
+func AppUpdater(ctx context.Context) chan tracker.Sensor {
+	sensorCh := make(chan tracker.Sensor)
 	portalDest := findPortal()
 	if portalDest == "" {
 		log.Warn().
 			Msg("Unsupported or unknown portal. App sensors will not run.")
-		return
+		close(sensorCh)
+		return sensorCh
 	}
 
 	appStateTracker := &appState{
@@ -146,17 +148,13 @@ func AppUpdater(ctx context.Context, tracker device.SensorTracker) {
 				if count, ok := newAppCount.State().(int); ok {
 					if count != appStateTracker.appCount {
 						appStateTracker.countCh <- count
-						if err := tracker.UpdateSensors(ctx, newAppCount); err != nil {
-							log.Error().Err(err).Msg("Could not update active app count.")
-						}
+						sensorCh <- newAppCount
 					}
 				}
 				if app, ok := newApp.State().(string); ok {
 					if app != appStateTracker.currentApp {
 						appStateTracker.appChan <- app
-						if err := tracker.UpdateSensors(ctx, newApp); err != nil {
-							log.Error().Err(err).Msg("Could not update active app.")
-						}
+						sensorCh <- newApp
 					}
 				}
 			} else {
@@ -168,5 +166,12 @@ func AppUpdater(ctx context.Context, tracker device.SensorTracker) {
 	if err != nil {
 		log.Debug().Caller().Err(err).
 			Msg("Failed to create active app DBus watch.")
+		close(sensorCh)
+		return sensorCh
 	}
+	go func() {
+		defer close(sensorCh)
+		<-ctx.Done()
+	}()
+	return sensorCh
 }

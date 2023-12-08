@@ -80,13 +80,13 @@ would be `bool` (for `TypeBinary`), `float`, `int`, or `string`.
 ### Units() string
 
 What units the state should be represented as. If you have defined a
-SensorDeviceClass for this sensor, that will likely dictate the units you should
+`SensorDeviceClass` for this sensor, that will likely dictate the units you should
 use.
 
 ### Category() string
 
 This affects how the sensor is displayed in the interface. Generally, return
-"diagnostic" for an entity exposing some configuration parameter or diagnostics
+“diagnostic” for an entity exposing some configuration parameter or diagnostics
 of a device or an empty string for anything else.
 
 ### Attributes() interface{}
@@ -101,14 +101,13 @@ To track and send sensor updates to Home Assistant, create a function with the
 following signature:
 
 ```go
-func SensorUpdater(context.Context, device.SensorTracker)
+func SensorUpdater(context.Context) chan tracker.Sensor
 ```
 
 - The `context.Context` parameter is a context which you should respect a
   potential cancellation of (see below). It can also contain any device specific
   context values, such as common API configuration data.
-- The `device.SensorTracker` is an interface with the methods to which you can
-  pass your sensor update.
+- The `tracker.Sensor` return value is a channel of sensor values to be updated.
 
 Within this function, you should create the sensors you want to report to Home
 Assistant and set up a way to send updates. You will want:
@@ -122,32 +121,37 @@ battery property has changed.
 
 You can create as many sensors as you require.
 
-Call the `UpdateSensors(context.Context, ...interface{})` to send your
-sensor data to Home Assistant. You should pass the same context you received as
-a parameter as the first argument. The second variadic argument is all the
-sensors you wish to send updates for.
+Create a `chan tracker.Sensor` and return this from the updater function. Then,
+whenever you have a sensor update, send it via the created channel.
 
 As mentioned you should respect/expect cancellation of the context received as a
 parameter. You can do this by including code similar to the following in your function:
 
 ```go
 go func() {
+	// Likely you'll want to clean up the sensor channel...
+	// defer close(chan tracker.Sensor)
 	<-ctx.Done
-	...code to clean/finish up on cancellation...
+	// any additional clean up code can go here...
 }
 ```
 
 Pseudo Go code of what a complete function would look like:
 
 ```go
-func SensorUpdater(ctx context.Context, trkr device.SensorTracker) {
+func SensorUpdater(ctx context.Context) chan tracker.Sensor {
+	sensorCh := make(chan tracker.Sensor, 1)
 	...code to set up your sensors...
 
 	for ...some timer, event channel, other loop... {
 		...code to create a sensor object...
 
 		// send your sensor updates
-		trkr.UpdateSensors(ctx, sensor1, sensor2, ..., sensorN)
+		sensorCh <- sensor
+	}
+	go func() {
+		defer close(sensorCh)
+		<-ctx.Done()
 	}
 }
 ```
@@ -157,7 +161,7 @@ func SensorUpdater(ctx context.Context, trkr device.SensorTracker) {
 There are some helper functions that might be useful to you in
 `internal/device/helpers`. For example, the `PollSensors` function can be used
 to update sensors on an interval. It adds a bit of jitter to your
-interval as well to avoid any "thundering herd" problems.
+interval as well to avoid any “thundering herd” problems.
 
 ## Sensor tracking
 

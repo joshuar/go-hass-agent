@@ -13,8 +13,8 @@ import (
 
 	"github.com/godbus/dbus/v5"
 	"github.com/iancoleman/strcase"
-	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/joshuar/go-hass-agent/pkg/dbushelpers"
 	"github.com/rs/zerolog/log"
 )
@@ -307,7 +307,8 @@ func battLevelAsString(l uint32) string {
 	}
 }
 
-func BatteryUpdater(ctx context.Context, tracker device.SensorTracker) {
+func BatteryUpdater(ctx context.Context) chan tracker.Sensor {
+	sensorCh := make(chan tracker.Sensor)
 	batteryList := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
 		Path(upowerDBusPath).
 		Destination(upowerDBusDest).
@@ -315,17 +316,17 @@ func BatteryUpdater(ctx context.Context, tracker device.SensorTracker) {
 	if len(batteryList) == 0 {
 		log.Warn().
 			Msg("Unable to get any battery devices from D-Bus. Battery sensor will not run.")
-		return
+		close(sensorCh)
+		return sensorCh
 	}
+
 	for _, path := range batteryList {
 		// Track this battery in batteryTracker.
 		battery := newBattery(ctx, path)
 
 		// Track state
 		if stateUpdate := battery.marshalBatteryStateUpdate(ctx, battState); stateUpdate != nil {
-			if err := tracker.UpdateSensors(ctx, stateUpdate); err != nil {
-				log.Error().Err(err).Msgf("Could not update battery %s.", battState.String())
-			}
+			sensorCh <- stateUpdate
 		}
 
 		// For some battery types, track additional properties as sensors
@@ -333,18 +334,14 @@ func BatteryUpdater(ctx context.Context, tracker device.SensorTracker) {
 			for _, prop := range []sensorType{battPercentage, battTemp, battEnergyRate} {
 				battery.updateProp(ctx, prop)
 				if stateUpdate := battery.marshalBatteryStateUpdate(ctx, prop); stateUpdate != nil {
-					if err := tracker.UpdateSensors(ctx, stateUpdate); err != nil {
-						log.Error().Err(err).Msgf("Could not update battery %s.", prop.String())
-					}
+					sensorCh <- stateUpdate
 				}
 			}
 		} else {
 			battery.updateProp(ctx, battLevel)
 			if dbushelpers.VariantToValue[uint32](battery.getValue(battLevel)) != 1 {
 				if stateUpdate := battery.marshalBatteryStateUpdate(ctx, battLevel); stateUpdate != nil {
-					if err := tracker.UpdateSensors(ctx, stateUpdate); err != nil {
-						log.Error().Err(err).Msgf("Could not update battery %s.", battLevel.String())
-					}
+					sensorCh <- stateUpdate
 				}
 			}
 		}
@@ -361,7 +358,6 @@ func BatteryUpdater(ctx context.Context, tracker device.SensorTracker) {
 			}).
 			Event("org.freedesktop.DBus.Properties.PropertiesChanged").
 			Handler(func(s *dbus.Signal) {
-				var sensors []interface{}
 				props := s.Body[1].(map[string]dbus.Variant)
 				for propName, propValue := range props {
 					for BatteryProp := range battery.props {
@@ -370,14 +366,9 @@ func BatteryUpdater(ctx context.Context, tracker device.SensorTracker) {
 							log.Debug().Caller().
 								Msgf("Updating battery property %v to %v", BatteryProp.String(), propValue.Value())
 							if stateUpdate := battery.marshalBatteryStateUpdate(ctx, BatteryProp); stateUpdate != nil {
-								sensors = append(sensors, stateUpdate)
+								sensorCh <- stateUpdate
 							}
 						}
-					}
-				}
-				if len(sensors) > 0 {
-					if err := tracker.UpdateSensors(ctx, sensors...); err != nil {
-						log.Error().Err(err).Msg("Could not update battery sensor.")
 					}
 				}
 			}).
@@ -385,6 +376,13 @@ func BatteryUpdater(ctx context.Context, tracker device.SensorTracker) {
 		if err != nil {
 			log.Debug().Caller().Err(err).
 				Msg("Failed to create DBus battery property watch.")
+			close(sensorCh)
+			return sensorCh
 		}
 	}
+	go func() {
+		defer close(sensorCh)
+		<-ctx.Done()
+	}()
+	return sensorCh
 }

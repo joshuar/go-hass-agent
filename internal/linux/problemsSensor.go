@@ -10,9 +10,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/joshuar/go-hass-agent/pkg/dbushelpers"
 	"github.com/rs/zerolog/log"
 )
@@ -64,7 +64,8 @@ func parseProblem(details map[string]string) map[string]interface{} {
 	return parsed
 }
 
-func ProblemsUpdater(ctx context.Context, tracker device.SensorTracker) {
+func ProblemsUpdater(ctx context.Context) chan tracker.Sensor {
+	sensorCh := make(chan tracker.Sensor)
 	problems := func(_ time.Duration) {
 		problems := &problemsSensor{
 			list: make(map[string]map[string]interface{}),
@@ -92,11 +93,14 @@ func ProblemsUpdater(ctx context.Context, tracker device.SensorTracker) {
 		}
 		if len(problems.list) > 0 {
 			problems.value = len(problems.list)
-			if err := tracker.UpdateSensors(ctx, problems); err != nil {
-				log.Error().Err(err).Msg("Could not update problems sensor.")
-			}
+			sensorCh <- problems
 		}
 	}
 
-	helpers.PollSensors(ctx, problems, time.Minute*15, time.Minute)
+	go helpers.PollSensors(ctx, problems, time.Minute*15, time.Minute)
+	go func() {
+		defer close(sensorCh)
+		<-ctx.Done()
+	}()
+	return sensorCh
 }
