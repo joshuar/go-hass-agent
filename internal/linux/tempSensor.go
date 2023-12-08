@@ -55,7 +55,7 @@ func TempUpdater(ctx context.Context) chan tracker.Sensor {
 	sensorCh := make(chan tracker.Sensor)
 	update := func(_ time.Duration) {
 		rawTemps, err := host.SensorsTemperaturesWithContext(ctx)
-		sensorMap := make(map[string]*tempSensor)
+		sensorMap := make(map[string]*tempSensor, len(rawTemps))
 		if err != nil {
 			log.Warn().Err(err).Msg("Could not fetch temperatures.")
 		}
