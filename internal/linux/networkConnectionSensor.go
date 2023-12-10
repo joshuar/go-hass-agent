@@ -280,11 +280,12 @@ func monitorActiveConnections(ctx context.Context, sensorCh chan tracker.Sensor,
 }
 
 func NetworkConnectionsUpdater(ctx context.Context) chan tracker.Sensor {
-	sensorCh := make(chan tracker.Sensor)
+	sensorCh := make(chan tracker.Sensor, 1)
 	go getActiveConnections(ctx, sensorCh)
 	go func() {
 		defer close(sensorCh)
 		<-ctx.Done()
+		log.Debug().Msg("Stopped network connection state sensors.")
 	}()
 	return sensorCh
 }

@@ -101,6 +101,7 @@ func ProblemsUpdater(ctx context.Context) chan tracker.Sensor {
 	go func() {
 		defer close(sensorCh)
 		<-ctx.Done()
+		log.Debug().Msg("Stopped problems sensor.")
 	}()
 	return sensorCh
 }

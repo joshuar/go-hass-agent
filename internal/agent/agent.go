@@ -302,7 +302,7 @@ func (agent *Agent) startWorkers(ctx context.Context) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		for s := range mergeSensorCh(ctx, outCh...) {
+		for s := range tracker.MergeSensorCh(ctx, outCh...) {
 			if err := agent.sensors.UpdateSensors(ctx, s); err != nil {
 				log.Error().Err(err).Msg("Could not update sensor.")
 			}
@@ -359,7 +359,7 @@ func (agent *Agent) runScripts(ctx context.Context) {
 	log.Debug().Msg("Starting cron scheduler for script sensors.")
 	c.Start()
 	go func() {
-		for s := range mergeSensorCh(ctx, outCh...) {
+		for s := range tracker.MergeSensorCh(ctx, outCh...) {
 			if err := agent.sensors.UpdateSensors(ctx, s); err != nil {
 				log.Error().Err(err).Msg("Could not update script sensor.")
 			}
@@ -369,34 +369,4 @@ func (agent *Agent) runScripts(ctx context.Context) {
 	log.Debug().Msg("Stopping cron scheduler for script sensors.")
 	cronCtx := c.Stop()
 	<-cronCtx.Done()
-}
-
-func mergeSensorCh(ctx context.Context, sensorCh ...<-chan tracker.Sensor) <-chan tracker.Sensor {
-	var wg sync.WaitGroup
-	out := make(chan tracker.Sensor)
-
-	// Start an output goroutine for each input channel in sensorCh.  output
-	// copies values from c to out until c is closed, then calls wg.Done.
-	output := func(c <-chan tracker.Sensor) {
-		defer wg.Done()
-		for n := range c {
-			select {
-			case out <- n:
-			case <-ctx.Done():
-				return
-			}
-		}
-	}
-	wg.Add(len(sensorCh))
-	for _, c := range sensorCh {
-		go output(c)
-	}
-
-	// Start a goroutine to close out once all the output goroutines are
-	// done.  This must start after the wg.Add call.
-	go func() {
-		wg.Wait()
-		close(out)
-	}()
-	return out
 }

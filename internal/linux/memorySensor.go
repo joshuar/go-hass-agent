@@ -76,6 +76,7 @@ func MemoryUpdater(ctx context.Context) chan tracker.Sensor {
 	go func() {
 		defer close(sensorCh)
 		<-ctx.Done()
+		log.Debug().Msg("Stopped memory usage sensors.")
 	}()
 	return sensorCh
 }

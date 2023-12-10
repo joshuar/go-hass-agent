@@ -82,6 +82,7 @@ func ScreenLockUpdater(ctx context.Context) chan tracker.Sensor {
 	go func() {
 		defer close(sensorCh)
 		<-ctx.Done()
+		log.Debug().Msg("Stopped screen lock sensor.")
 	}()
 	return sensorCh
 }
