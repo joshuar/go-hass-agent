@@ -65,7 +65,7 @@ func parseProblem(details map[string]string) map[string]interface{} {
 }
 
 func ProblemsUpdater(ctx context.Context) chan tracker.Sensor {
-	sensorCh := make(chan tracker.Sensor)
+	sensorCh := make(chan tracker.Sensor, 1)
 	problems := func(_ time.Duration) {
 		problems := &problemsSensor{
 			list: make(map[string]map[string]interface{}),

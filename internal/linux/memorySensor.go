@@ -31,7 +31,7 @@ func (s *memorySensor) Attributes() interface{} {
 }
 
 func MemoryUpdater(ctx context.Context) chan tracker.Sensor {
-	sensorCh := make(chan tracker.Sensor)
+	sensorCh := make(chan tracker.Sensor, 5)
 	sendMemStats := func(_ time.Duration) {
 		stats := []sensorType{memTotal, memAvail, memUsed, swapTotal, swapFree}
 		var memDetails *mem.VirtualMemoryStat

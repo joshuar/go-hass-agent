@@ -52,7 +52,7 @@ func (s *tempSensor) Attributes() interface{} {
 }
 
 func TempUpdater(ctx context.Context) chan tracker.Sensor {
-	sensorCh := make(chan tracker.Sensor)
+	sensorCh := make(chan tracker.Sensor, 1)
 	update := func(_ time.Duration) {
 		rawTemps, err := host.SensorsTemperaturesWithContext(ctx)
 		sensorMap := make(map[string]*tempSensor, len(rawTemps))

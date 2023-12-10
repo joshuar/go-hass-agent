@@ -46,7 +46,7 @@ type netIORateSensor struct {
 }
 
 func NetworkStatsUpdater(ctx context.Context) chan tracker.Sensor {
-	sensorCh := make(chan tracker.Sensor)
+	sensorCh := make(chan tracker.Sensor, 2)
 	bytesRx := &netIOSensor{
 		linuxSensor: linuxSensor{
 			units:       "B",
