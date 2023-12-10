@@ -13,9 +13,9 @@ import (
 	"time"
 
 	"github.com/carlmjohnson/requests"
+	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/tracker"
-	"github.com/lthibault/jitterbug/v2"
 	"github.com/rs/zerolog/log"
 )
 
@@ -124,7 +124,7 @@ func lookupExternalIPs(ctx context.Context, ver int) chan *address {
 
 func ExternalIPUpdater(ctx context.Context) chan tracker.Sensor {
 	sensorCh := make(chan tracker.Sensor, 1)
-	updateExternalIP := func() {
+	updateExternalIP := func(_ time.Duration) {
 		requestCtx, cancel := context.WithTimeout(ctx, time.Second*15)
 		defer cancel()
 		for _, ver := range []int{4, 6} {
@@ -134,26 +134,10 @@ func ExternalIPUpdater(ctx context.Context) chan tracker.Sensor {
 			}
 		}
 	}
-
-	// Set up a ticker with the interval specified to check if the external IPs
-	// have changed.
-	ticker := jitterbug.New(
-		time.Minute*5,
-		&jitterbug.Norm{Stdev: time.Second * 30},
-	)
-
-	updateExternalIP()
+	go helpers.PollSensors(ctx, updateExternalIP, 5*time.Minute, 30*time.Second)
 	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				close(sensorCh)
-				return
-			case <-ticker.C:
-				log.Trace().Caller().Msg("Checking for external IP update...")
-				updateExternalIP()
-			}
-		}
+		defer close(sensorCh)
+		<-ctx.Done()
 	}()
 	return sensorCh
 }
