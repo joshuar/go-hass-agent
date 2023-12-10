@@ -33,7 +33,7 @@ func newPowerSensor(t sensorType, v dbus.Variant) *powerSensor {
 	return s
 }
 
-func PowerUpater(ctx context.Context) chan tracker.Sensor {
+func PowerProfileUpater(ctx context.Context) chan tracker.Sensor {
 	sensorCh := make(chan tracker.Sensor, 1)
 	activePowerProfile, err := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
 		Path(powerProfilesDBusPath).
@@ -86,6 +86,7 @@ func PowerUpater(ctx context.Context) chan tracker.Sensor {
 	go func() {
 		defer close(sensorCh)
 		<-ctx.Done()
+		log.Debug().Msg(("Stopped power profile sensor."))
 	}()
 	return sensorCh
 }

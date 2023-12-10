@@ -248,7 +248,7 @@ func (state *upowerBatteryState) Attributes() interface{} {
 }
 
 func BatteryUpdater(ctx context.Context) chan tracker.Sensor {
-	sensorCh := make(chan tracker.Sensor)
+	sensorCh := make(chan tracker.Sensor, 1)
 	batteryList := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
 		Path(upowerDBusPath).
 		Destination(upowerDBusDest).
@@ -323,6 +323,7 @@ func BatteryUpdater(ctx context.Context) chan tracker.Sensor {
 	go func() {
 		defer close(sensorCh)
 		<-ctx.Done()
+		log.Debug().Msg("Stopped battery sensors.")
 	}()
 	return sensorCh
 }

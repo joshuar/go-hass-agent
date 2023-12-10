@@ -86,6 +86,7 @@ func TempUpdater(ctx context.Context) chan tracker.Sensor {
 	go func() {
 		defer close(sensorCh)
 		<-ctx.Done()
+		log.Debug().Msg("Stopped temp sensors.")
 	}()
 	return sensorCh
 }
