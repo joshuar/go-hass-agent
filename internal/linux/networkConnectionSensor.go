@@ -7,8 +7,8 @@ package linux
 
 import (
 	"context"
+	"slices"
 	"strings"
-	"sync"
 
 	"github.com/godbus/dbus/v5"
 	"github.com/iancoleman/strcase"
@@ -39,16 +39,11 @@ const (
 
 type connState uint32
 
-type connections struct {
-	list map[dbus.ObjectPath]*connection
-	mu   sync.Mutex
-}
-
 type connection struct {
-	name   string
-	state  connState
-	attrs  *connectionAttributes
-	doneCh chan struct{}
+	name  string
+	state connState
+	attrs *connectionAttributes
+	path  dbus.ObjectPath
 	linuxSensor
 }
 
@@ -105,9 +100,9 @@ func (c *connection) monitorConnectionState(ctx context.Context, sensorCh chan t
 				if ok {
 					c.state = dbushelpers.VariantToValue[connState](state)
 					sensorCh <- c
-					if dbushelpers.VariantToValue[uint32](state) == 4 {
-						close(c.doneCh)
-					}
+					// if dbushelpers.VariantToValue[uint32](state) == 4 {
+					// 	close(c.doneCh)
+					// }
 				}
 			}
 		}).
@@ -164,12 +159,27 @@ func (c *connection) monitorAddresses(ctx context.Context, sensorCh chan tracker
 	}
 }
 
-func newConnection(ctx context.Context, sensorCh chan tracker.Sensor, p dbus.ObjectPath) *connection {
+func (c *connection) monitor(ctx context.Context, sensorCh chan tracker.Sensor) {
+	connCtx, _ := context.WithCancel(ctx)
+	c.monitorConnectionState(connCtx, sensorCh, c.path)
+	c.monitorAddresses(connCtx, sensorCh, c.path)
+	switch c.attrs.ConnectionType {
+	case "802-11-wireless":
+		getWifiProperties(connCtx, sensorCh, c.path)
+	}
+	// go func() {
+	// 	<-c.doneCh
+	// 	cancelFunc()
+	// }()
+}
+
+func newConnection(ctx context.Context, p dbus.ObjectPath) *connection {
 	c := &connection{
 		attrs: &connectionAttributes{
 			DataSource: srcDbus,
 		},
-		doneCh: make(chan struct{}),
+		// doneCh: make(chan struct{}),
+		path: p,
 	}
 	c.sensorType = connectionState
 	c.diagnostic = true
@@ -189,17 +199,6 @@ func newConnection(ctx context.Context, sensorCh chan tracker.Sensor, p dbus.Obj
 	if !v.Signature().Empty() {
 		c.attrs.ConnectionType = dbushelpers.VariantToValue[string](v)
 	}
-	connCtx, cancelFunc := context.WithCancel(ctx)
-	c.monitorConnectionState(connCtx, sensorCh, p)
-	c.monitorAddresses(connCtx, sensorCh, p)
-	switch c.attrs.ConnectionType {
-	case "802-11-wireless":
-		getWifiProperties(connCtx, sensorCh, p)
-	}
-	go func() {
-		<-c.doneCh
-		cancelFunc()
-	}()
 	return c
 }
 
@@ -233,7 +232,7 @@ func getAddr(ctx context.Context, ver int, path dbus.ObjectPath) (addr string, m
 	return address, prefix
 }
 
-func getActiveConnections(ctx context.Context, sensorCh chan tracker.Sensor) {
+func getActiveConnections(ctx context.Context) []dbus.ObjectPath {
 	v, err := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
 		Path(dBusNMPath).
 		Destination(dBusNMObj).
@@ -241,22 +240,12 @@ func getActiveConnections(ctx context.Context, sensorCh chan tracker.Sensor) {
 	if err != nil {
 		log.Warn().Err(err).
 			Msg("Could not retrieve active connection list.")
-		return
+		return nil
 	}
-	paths := dbushelpers.VariantToValue[[]dbus.ObjectPath](v)
-
-	c := &connections{
-		list: make(map[dbus.ObjectPath]*connection),
-	}
-
-	for _, p := range paths {
-		c.list[p] = newConnection(ctx, sensorCh, p)
-		sensorCh <- c.list[p]
-	}
-	monitorActiveConnections(ctx, sensorCh, c)
+	return dbushelpers.VariantToValue[[]dbus.ObjectPath](v)
 }
 
-func monitorActiveConnections(ctx context.Context, sensorCh chan tracker.Sensor, conns *connections) {
+func monitorActiveConnections(ctx context.Context, sensorCh chan tracker.Sensor, conns []dbus.ObjectPath) {
 	err := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
 		Match([]dbus.MatchOption{
 			dbus.WithMatchPathNamespace(dbusNMActiveConnPath),
@@ -266,10 +255,11 @@ func monitorActiveConnections(ctx context.Context, sensorCh chan tracker.Sensor,
 			if !strings.Contains(string(s.Path), dbusNMActiveConnPath) {
 				return
 			}
-			_, ok := conns.list[s.Path]
-			if !ok {
-				conns.list[s.Path] = newConnection(ctx, sensorCh, s.Path)
-				sensorCh <- conns.list[s.Path]
+			if !slices.Contains(conns, s.Path) {
+				conn := newConnection(ctx, s.Path)
+				conn.monitor(ctx, sensorCh)
+				conns = append(conns, s.Path)
+				sensorCh <- conn
 			}
 		}).
 		AddWatch(ctx)
@@ -280,8 +270,16 @@ func monitorActiveConnections(ctx context.Context, sensorCh chan tracker.Sensor,
 }
 
 func NetworkConnectionsUpdater(ctx context.Context) chan tracker.Sensor {
-	sensorCh := make(chan tracker.Sensor, 1)
-	go getActiveConnections(ctx, sensorCh)
+	sensorCh := make(chan tracker.Sensor)
+
+	conns := getActiveConnections(ctx)
+	go func() {
+		for _, p := range conns {
+			conn := newConnection(ctx, p)
+			conn.monitor(ctx, sensorCh)
+		}
+	}()
+	go monitorActiveConnections(ctx, sensorCh, conns)
 	go func() {
 		defer close(sensorCh)
 		<-ctx.Done()
