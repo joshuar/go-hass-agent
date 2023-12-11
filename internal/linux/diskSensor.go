@@ -42,9 +42,8 @@ func (d *diskSensor) Name() string {
 func (d *diskSensor) ID() string {
 	if d.stats.Path == "/" {
 		return "mountpoint_root"
-	} else {
-		return "mountpoint" + strings.ReplaceAll(d.stats.Path, "/", "_")
 	}
+	return "mountpoint" + strings.ReplaceAll(d.stats.Path, "/", "_")
 }
 
 func (d *diskSensor) Attributes() any {
