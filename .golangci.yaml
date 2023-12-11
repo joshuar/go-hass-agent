@@ -9,18 +9,17 @@ linters-settings:
     # See https://github.com/mgechev/revive#command-line-flags
     # Defaults to unlimited.
     max-open-files: 512
+    enable-all-rules: true
+    ignore-generated-header: false
+    rules:
+      - name: line-length-limit
+        disabled: true
+      - name: add-constant
+        disabled: true
   gocyclo:
     # Minimal code complexity to report.
     # Default: 30 (but we recommend 10-20)
-    min-complexity: 50
-  # depguard:
-  #   list-type: blacklist
-  #   packages:
-  #     # logging is allowed only by logutils.Log, logrus
-  #     # is allowed to use only in logutils package
-  #     - github.com/sirupsen/logrus
-  #   packages-with-error-message:
-  #     - github.com/sirupsen/logrus: "logging is allowed only by logutils.Log"
+    min-complexity: 20
   dupl:
     threshold: 100
   funlen:
@@ -42,17 +41,9 @@ linters-settings:
       - octalLiteral
       - whyNoLint
       - wrapperFunc
-  # goimports:
-  #   local-prefixes: github.com/joshuar/go-hass-agent
   govet:
+    enable-all: true
     check-shadowing: true
-    settings:
-      printf:
-        funcs:
-          - (github.com/golangci/golangci-lint/pkg/logutils.Log).Infof
-          - (github.com/golangci/golangci-lint/pkg/logutils.Log).Warnf
-          - (github.com/golangci/golangci-lint/pkg/logutils.Log).Errorf
-          - (github.com/golangci/golangci-lint/pkg/logutils.Log).Fatalf
   lll:
     line-length: 140
   misspell:
@@ -62,110 +53,53 @@ linters-settings:
     allow-unused: false # report any unused nolint directives
     require-explanation: false # don't require an explanation for nolint directives
     require-specific: false # don't require nolint directives to be specific about which linter is being skipped
-  gosec:
-    # To select a subset of rules to run.
-    # Available rules: https://github.com/securego/gosec#available-rules
-    includes:
-      - G101
-      - G102
-      - G103
-      - G104
-      - G106
-      - G107
-      - G108
-      - G109
-      - G110
-      - G201
-      - G202
-      - G203
-      - G204
-      - G301
-      - G302
-      - G303
-      - G304
-      - G305
-      - G306
-      - G307
-      - G401
-      - G402
-      - G403
-      - G404
-      - G501
-      - G502
-      - G503
-      - G504
-      - G505
-      - G601
-    # To specify a set of rules to explicitly exclude.
-    # Available rules: https://github.com/securego/gosec#available-rules
-    excludes:
-      - G101
-      - G102
-      - G103
-      - G104
-      - G106
-      - G107
-      - G108
-      - G109
-      - G110
-      - G201
-      - G202
-      - G203
-      - G204
-      - G301
-      - G302
-      - G303
-      - G304
-      - G305
-      - G306
-      - G307
-      - G401
-      - G402
-      - G403
-      - G404
-      - G501
-      - G502
-      - G503
-      - G504
-      - G505
-      - G601
 linters:
   disable-all: true
   enable:
     - bodyclose
-    # - depguard
     - decorder
     - dogsled
     - dupl
     - errcheck
+    - errchkjson
     - exportloopref
+    - forcetypeassert
     - funlen
+    - gci
     - goconst
     - gocritic
     - gocyclo
+    - godot
     - gofmt
     - goimports
     - goprintffuncname
     - gosec
     - gosimple
     - govet
+    - inamedparam
     - ineffassign
     - lll
+    - mirror
     - misspell
     - nakedret
+    - nestif
+    - nilerr
+    - nilnil
     - noctx
     - nolintlint
+    - revive
+    - reassign
     - staticcheck
-    # - structcheck
     - stylecheck
     - typecheck
     - unconvert
     - unparam
     - unused
-    # - varcheck
+    - usestdlibvars
+    - wastedassign
     - whitespace
-    # - deadcode
     - bodyclose
+    - zerologlint
 
 issues:
   # Excluding configuration per-path, per-linter, per-text and per-source
