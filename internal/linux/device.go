@@ -14,7 +14,6 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/hass/api"
 	"github.com/joshuar/go-hass-agent/pkg/dbushelpers"
-
 	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v3/host"
 )
@@ -127,7 +126,7 @@ func NewDevice(name, version string) *LinuxDevice {
 }
 
 // getHostname retrieves the hostname of the device running the agent, or
-// localhost if that doesn't work
+// localhost if that doesn't work.
 func getHostname() string {
 	hostname, err := os.Hostname()
 	if err != nil {
