@@ -18,25 +18,27 @@ import (
 	"github.com/shirou/gopsutil/v3/host"
 )
 
-type LinuxDevice struct {
+type Device struct {
 	appName    string
 	appVersion string
+	hostname   string
+	deviceID   string
 }
 
 // Setup returns a new Context that contains the D-Bus API.
-func (l *LinuxDevice) Setup(ctx context.Context) context.Context {
+func (l *Device) Setup(ctx context.Context) context.Context {
 	return dbushelpers.Setup(ctx)
 }
 
-func (l *LinuxDevice) AppName() string {
+func (l *Device) AppName() string {
 	return l.appName
 }
 
-func (l *LinuxDevice) AppVersion() string {
+func (l *Device) AppVersion() string {
 	return l.appVersion
 }
 
-func (l *LinuxDevice) AppID() string {
+func (l *Device) AppID() string {
 	// Use the current user's username to construct an app ID.
 	currentUser, err := user.Current()
 	if err != nil {
@@ -47,30 +49,24 @@ func (l *LinuxDevice) AppID() string {
 	return l.appName + "-" + currentUser.Username
 }
 
-func (l *LinuxDevice) DeviceName() string {
-	shortHostname, _, _ := strings.Cut(getHostname(), ".")
+func (l *Device) DeviceName() string {
+	shortHostname, _, _ := strings.Cut(l.hostname, ".")
 	return shortHostname
 }
 
-func (l *LinuxDevice) DeviceID() string {
-	machineID, err := host.HostID()
-	if err != nil {
-		log.Warn().Err(err).
-			Msg("Could not retrieve a machine ID")
-		return "unknown"
-	}
-	return machineID
+func (l *Device) DeviceID() string {
+	return l.deviceID
 }
 
-func (l *LinuxDevice) Manufacturer() string {
+func (l *Device) Manufacturer() string {
 	return getHWVendor()
 }
 
-func (l *LinuxDevice) Model() string {
+func (l *Device) Model() string {
 	return getHWModel()
 }
 
-func (l *LinuxDevice) OsName() string {
+func (l *Device) OsName() string {
 	_, osRelease, _, err := host.PlatformInformation()
 	if err != nil {
 		log.Warn().Err(err).
@@ -80,7 +76,7 @@ func (l *LinuxDevice) OsName() string {
 	return osRelease
 }
 
-func (l *LinuxDevice) OsVersion() string {
+func (l *Device) OsVersion() string {
 	_, _, osVersion, err := host.PlatformInformation()
 	if err != nil {
 		log.Warn().Err(err).
@@ -90,11 +86,11 @@ func (l *LinuxDevice) OsVersion() string {
 	return osVersion
 }
 
-func (l *LinuxDevice) SupportsEncryption() bool {
+func (l *Device) SupportsEncryption() bool {
 	return false
 }
 
-func (l *LinuxDevice) AppData() interface{} {
+func (l *Device) AppData() interface{} {
 	return &struct {
 		PushWebsocket bool `json:"push_websocket_channel"`
 	}{
@@ -102,7 +98,7 @@ func (l *LinuxDevice) AppData() interface{} {
 	}
 }
 
-func (l *LinuxDevice) MarshalJSON() ([]byte, error) {
+func (l *Device) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&api.RegistrationRequest{
 		DeviceID:           l.DeviceID(),
 		AppID:              l.AppID(),
@@ -118,10 +114,20 @@ func (l *LinuxDevice) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func NewDevice(name, version string) *LinuxDevice {
-	return &LinuxDevice{
+func NewDevice(name, version string) *Device {
+	var deviceID string
+	var err error
+	deviceID, err = host.HostID()
+	if err != nil {
+		log.Warn().Err(err).
+			Msg("Could not retrieve a machine ID")
+		deviceID = "unknown"
+	}
+	return &Device{
 		appName:    name,
 		appVersion: version,
+		deviceID:   deviceID,
+		hostname:   getHostname(),
 	}
 }
 
@@ -130,7 +136,7 @@ func NewDevice(name, version string) *LinuxDevice {
 func getHostname() string {
 	hostname, err := os.Hostname()
 	if err != nil {
-		log.Warn().Err(err).Msg("Could not retrieve hostname.")
+		log.Warn().Err(err).Msg("Could not retrieve hostname. Using 'localhost'.")
 		return "localhost"
 	}
 	return hostname
@@ -143,9 +149,8 @@ func getHWVendor() string {
 	hwVendor, err := os.ReadFile("/sys/devices/virtual/dmi/id/board_vendor")
 	if err != nil {
 		return "Unknown Vendor"
-	} else {
-		return strings.TrimSpace(string(hwVendor))
 	}
+	return strings.TrimSpace(string(hwVendor))
 }
 
 // getHWModel will try to retrieve the hardware model from the sysfs filesystem. It
@@ -155,9 +160,8 @@ func getHWModel() string {
 	hwModel, err := os.ReadFile("/sys/devices/virtual/dmi/id/product_name")
 	if err != nil {
 		return "Unknown Model"
-	} else {
-		return strings.TrimSpace(string(hwModel))
 	}
+	return strings.TrimSpace(string(hwModel))
 }
 
 // findPortal is a helper function to work out which portal interface should be
