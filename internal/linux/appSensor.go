@@ -88,9 +88,8 @@ func (a *activeAppSensor) Attributes() interface{} {
 		return &activeAppSensorAttributes{
 			DataSource: srcDbus,
 		}
-	} else {
-		return nil
 	}
+	return nil
 }
 
 func (a *activeAppSensor) app() string {
