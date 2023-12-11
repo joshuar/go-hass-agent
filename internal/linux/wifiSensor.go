@@ -63,13 +63,29 @@ type wifiSensor struct {
 func (w *wifiSensor) State() interface{} {
 	switch w.sensorType {
 	case wifiSSID:
-		return string(w.value.([]uint8))
+		if value, ok := w.value.([]uint8); ok {
+			return string(value)
+		} else {
+			return sensor.StateUnknown
+		}
 	case wifiHWAddress:
-		return w.value.(string)
+		if value, ok := w.value.(string); ok {
+			return value
+		} else {
+			return sensor.StateUnknown
+		}
 	case wifiFrequency, wifiSpeed:
-		return w.value.(uint32)
+		if value, ok := w.value.(uint32); ok {
+			return value
+		} else {
+			return sensor.StateUnknown
+		}
 	case wifiStrength:
-		return w.value.(uint8)
+		if value, ok := w.value.(uint8); ok {
+			return value
+		} else {
+			return sensor.StateUnknown
+		}
 	default:
 		return sensor.StateUnknown
 	}
@@ -80,14 +96,18 @@ func (w *wifiSensor) Icon() string {
 	case wifiSSID, wifiHWAddress, wifiFrequency, wifiSpeed:
 		return "mdi:wifi"
 	case wifiStrength:
-		switch s := w.value.(uint8); {
-		case s <= 25:
+		value, ok := w.value.(uint8)
+		if !ok {
+			return "mdi:wifi-strength-alert-outline"
+		}
+		switch {
+		case value <= 25:
 			return "mdi:wifi-strength-1"
-		case s > 25 && s <= 50:
+		case value > 25 && value <= 50:
 			return "mdi:wifi-strength-2"
-		case s > 50 && s <= 75:
+		case value > 50 && value <= 75:
 			return "mdi:wifi-strength-3"
-		case s > 75:
+		case value > 75:
 			return "mdi:wifi-strength-4"
 		}
 	}
