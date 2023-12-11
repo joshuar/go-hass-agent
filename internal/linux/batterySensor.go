@@ -166,13 +166,21 @@ func (state *upowerBatteryState) ID() string {
 func (state *upowerBatteryState) Icon() string {
 	switch state.prop.name {
 	case battPercentage:
-		if state.prop.value.(float64) >= 95 {
+		pc, ok := state.prop.value.(float64)
+		if !ok {
+			return "mdi:battery-unknown"
+		}
+		if pc >= 95 {
 			return "mdi:battery"
 		} else {
-			return fmt.Sprintf("mdi:battery-%d", int(math.Round(state.prop.value.(float64)/10)*10))
+			return fmt.Sprintf("mdi:battery-%d", int(math.Round(pc/10)*10))
 		}
 	case battEnergyRate:
-		if math.Signbit(state.prop.value.(float64)) {
+		er, ok := state.prop.value.(float64)
+		if !ok {
+			return "mdi:battery"
+		}
+		if math.Signbit(er) {
 			return "mdi:battery-minus"
 		} else {
 			return "mdi:battery-plus"
@@ -216,13 +224,29 @@ func (state *upowerBatteryState) State() interface{} {
 	}
 	switch propType {
 	case battVoltage, battTemp, battEnergy, battEnergyRate, battPercentage:
-		return rawValue.(float64)
+		if value, ok := rawValue.(float64); !ok {
+			return sensor.StateUnknown
+		} else {
+			return value
+		}
 	case battState:
-		return rawValue.(battChargeState).String()
+		if value, ok := rawValue.(battChargeState); !ok {
+			return sensor.StateUnknown
+		} else {
+			return value.String()
+		}
 	case battLevel:
-		return rawValue.(batteryLevel).String()
+		if value, ok := rawValue.(batteryLevel); !ok {
+			return sensor.StateUnknown
+		} else {
+			return value.String()
+		}
 	default:
-		return rawValue.(string)
+		if value, ok := rawValue.(string); !ok {
+			return sensor.StateUnknown
+		} else {
+			return value
+		}
 	}
 }
 
