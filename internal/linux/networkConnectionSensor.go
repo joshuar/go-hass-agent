@@ -222,7 +222,7 @@ func newConnection(ctx context.Context, p dbus.ObjectPath) *connection {
 		path: p,
 	}
 	c.sensorType = connectionState
-	c.diagnostic = true
+	c.isDiagnostic = true
 
 	r := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
 		Path(p).

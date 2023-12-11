@@ -79,10 +79,10 @@ func PowerStateUpdater(ctx context.Context) chan tracker.Sensor {
 func newPowerState(state string) *powerStateSensor {
 	return &powerStateSensor{
 		linuxSensor: linuxSensor{
-			sensorType: powerState,
-			value:      state,
-			source:     srcDbus,
-			diagnostic: true,
+			sensorType:   powerState,
+			value:        state,
+			source:       srcDbus,
+			isDiagnostic: true,
 		},
 	}
 }

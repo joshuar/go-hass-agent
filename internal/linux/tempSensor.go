@@ -52,7 +52,7 @@ func (s *tempSensor) Attributes() any {
 
 func newTempSensor(t host.TemperatureStat) *tempSensor {
 	s := &tempSensor{}
-	s.diagnostic = true
+	s.isDiagnostic = true
 	s.deviceClass = sensor.SensorTemperature
 	s.stateClass = sensor.StateMeasurement
 	s.units = "°C"

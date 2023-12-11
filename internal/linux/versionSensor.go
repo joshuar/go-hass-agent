@@ -26,25 +26,25 @@ func Versions(ctx context.Context) chan tracker.Sensor {
 		return sensorCh
 	}
 	sensorCh <- &linuxSensor{
-		sensorType: kernel,
-		value:      info.KernelVersion,
-		diagnostic: true,
-		icon:       "mdi:chip",
-		source:     srcProcfs,
+		sensorType:   kernel,
+		value:        info.KernelVersion,
+		isDiagnostic: true,
+		icon:         "mdi:chip",
+		source:       srcProcfs,
 	}
 	sensorCh <- &linuxSensor{
-		sensorType: distribution,
-		value:      cases.Title(language.English).String(info.Platform),
-		diagnostic: true,
-		icon:       "mdi:linux",
-		source:     srcProcfs,
+		sensorType:   distribution,
+		value:        cases.Title(language.English).String(info.Platform),
+		isDiagnostic: true,
+		icon:         "mdi:linux",
+		source:       srcProcfs,
 	}
 	sensorCh <- &linuxSensor{
-		sensorType: version,
-		value:      info.PlatformVersion,
-		diagnostic: true,
-		icon:       "mdi:numeric",
-		source:     srcProcfs,
+		sensorType:   version,
+		value:        info.PlatformVersion,
+		isDiagnostic: true,
+		icon:         "mdi:numeric",
+		source:       srcProcfs,
 	}
 	return sensorCh
 }

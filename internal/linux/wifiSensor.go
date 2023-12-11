@@ -18,40 +18,40 @@ import (
 var wifiProps = map[string]*wifiSensor{
 	"Ssid": {
 		linuxSensor: linuxSensor{
-			sensorType: wifiSSID,
-			diagnostic: true,
+			sensorType:   wifiSSID,
+			isDiagnostic: true,
 		},
 	},
 	"HwAddress": {
 		linuxSensor: linuxSensor{
-			sensorType: wifiHWAddress,
-			diagnostic: true,
+			sensorType:   wifiHWAddress,
+			isDiagnostic: true,
 		},
 	},
 	"MaxBitrate": {
 		linuxSensor: linuxSensor{
-			sensorType:  wifiSpeed,
-			units:       "kB/s",
-			deviceClass: sensor.Data_rate,
-			stateClass:  sensor.StateMeasurement,
-			diagnostic:  true,
+			sensorType:   wifiSpeed,
+			units:        "kB/s",
+			deviceClass:  sensor.Data_rate,
+			stateClass:   sensor.StateMeasurement,
+			isDiagnostic: true,
 		},
 	},
 	"Frequency": {
 		linuxSensor: linuxSensor{
-			sensorType:  wifiFrequency,
-			units:       "MHz",
-			deviceClass: sensor.Frequency,
-			stateClass:  sensor.StateMeasurement,
-			diagnostic:  true,
+			sensorType:   wifiFrequency,
+			units:        "MHz",
+			deviceClass:  sensor.Frequency,
+			stateClass:   sensor.StateMeasurement,
+			isDiagnostic: true,
 		},
 	},
 	"Strength": {
 		linuxSensor: linuxSensor{
-			sensorType: wifiStrength,
-			units:      "%",
-			stateClass: sensor.StateMeasurement,
-			diagnostic: true,
+			sensorType:   wifiStrength,
+			units:        "%",
+			stateClass:   sensor.StateMeasurement,
+			isDiagnostic: true,
 		},
 	},
 }
