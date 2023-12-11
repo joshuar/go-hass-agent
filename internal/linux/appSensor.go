@@ -22,87 +22,100 @@ const (
 	appStateDBusEvent     = "org.freedesktop.impl.portal.Background.RunningApplicationsChanged"
 )
 
-type appSensor struct {
+type runningAppsSensor struct {
 	appList map[string]dbus.Variant
 	linuxSensor
 }
 
-func newAppSensor(t sensorType, v map[string]dbus.Variant) *appSensor {
-	s := &appSensor{}
-	s.sensorType = t
-	switch s.sensorType {
-	case appRunning:
-		s.icon = "mdi:apps"
-		s.units = "apps"
-		s.stateClass = sensor.StateMeasurement
-		s.appList = v
-		var count int
-		for _, raw := range v {
-			if appState, ok := raw.Value().(uint32); ok {
-				if appState > 0 {
-					count++
-				}
-			}
-		}
-		s.value = count
-	case appActive:
-		s.icon = "mdi:application"
-		for rawName, rawValue := range v {
-			if appState, ok := rawValue.Value().(uint32); ok {
-				if appState == 2 {
-					s.value = rawName
-				}
-			}
-		}
-	}
-	return s
-}
-
-type appState struct {
-	appChan    chan string
-	countCh    chan int
-	currentApp string
-	appCount   int
-}
-
-func (s *appSensor) Attributes() interface{} {
-	switch s.sensorType {
-	case appActive:
-		if _, ok := s.State().(string); ok {
-			return newActiveAppDetails()
-		} else {
-			return nil
-		}
-	case appRunning:
-		return newRunningAppsDetails(s.appList)
-	}
-	return nil
-}
-
-type activeAppDetails struct {
-	DataSource string `json:"Data Source"`
-}
-
-func newActiveAppDetails() *activeAppDetails {
-	return &activeAppDetails{
-		DataSource: srcDbus,
-	}
-}
-
-type runningAppsDetails struct {
+type runningAppsSensorAttributes struct {
 	DataSource  string   `json:"Data Source"`
 	RunningApps []string `json:"Running Apps"`
 }
 
-func newRunningAppsDetails(apps map[string]dbus.Variant) *runningAppsDetails {
-	details := new(runningAppsDetails)
-	for appName, state := range apps {
+func (r *runningAppsSensor) Attributes() interface{} {
+	attrs := &runningAppsSensorAttributes{}
+	for appName, state := range r.appList {
 		if dbushelpers.VariantToValue[uint32](state) > 0 {
-			details.RunningApps = append(details.RunningApps, appName)
+			attrs.RunningApps = append(attrs.RunningApps, appName)
 		}
 	}
-	details.DataSource = srcDbus
-	return details
+	attrs.DataSource = srcDbus
+	return attrs
+}
+
+func (r *runningAppsSensor) count() int {
+	if count, ok := r.State().(int); ok {
+		return count
+	}
+	return -1
+}
+
+func (r *runningAppsSensor) update(l map[string]dbus.Variant, s chan tracker.Sensor) {
+	var count int
+	r.appList = l
+	for _, raw := range l {
+		if appState, ok := raw.Value().(uint32); ok {
+			if appState > 0 {
+				count++
+			}
+		}
+	}
+	if r.count() != count {
+		r.value = count
+		s <- r
+	}
+}
+
+func newRunningAppsSensor() *runningAppsSensor {
+	s := &runningAppsSensor{}
+	s.sensorType = appRunning
+	s.icon = "mdi:apps"
+	s.units = "apps"
+	s.stateClass = sensor.StateMeasurement
+	return s
+}
+
+type activeAppSensor struct {
+	linuxSensor
+}
+
+type activeAppSensorAttributes struct {
+	DataSource string `json:"Data Source"`
+}
+
+func (a *activeAppSensor) Attributes() interface{} {
+	if _, ok := a.value.(string); ok {
+		return &activeAppSensorAttributes{
+			DataSource: srcDbus,
+		}
+	} else {
+		return nil
+	}
+}
+
+func (a *activeAppSensor) app() string {
+	if app, ok := a.State().(string); ok {
+		return app
+	}
+	return ""
+}
+
+func (a *activeAppSensor) update(l map[string]dbus.Variant, s chan tracker.Sensor) {
+	for app, v := range l {
+		if appState, ok := v.Value().(uint32); ok {
+			if appState == 2 && a.app() != app {
+				a.value = app
+				s <- a
+			}
+		}
+	}
+}
+
+func newActiveAppSensor() *activeAppSensor {
+	s := &activeAppSensor{}
+	s.sensorType = appActive
+	s.icon = "mdi:application"
+	return s
 }
 
 func AppUpdater(ctx context.Context) chan tracker.Sensor {
@@ -114,23 +127,8 @@ func AppUpdater(ctx context.Context) chan tracker.Sensor {
 		close(sensorCh)
 		return sensorCh
 	}
-
-	appStateTracker := &appState{
-		appChan: make(chan string),
-		countCh: make(chan int),
-	}
-	go func() {
-		for {
-			select {
-			case app := <-appStateTracker.appChan:
-				appStateTracker.currentApp = app
-			case count := <-appStateTracker.countCh:
-				appStateTracker.appCount = count
-			case <-ctx.Done():
-				return
-			}
-		}
-	}()
+	activeApp := newActiveAppSensor()
+	runningApps := newRunningAppsSensor()
 
 	err := dbushelpers.NewBusRequest(ctx, dbushelpers.SessionBus).
 		Match([]dbus.MatchOption{
@@ -139,27 +137,13 @@ func AppUpdater(ctx context.Context) chan tracker.Sensor {
 			dbus.WithMatchMember("RunningApplicationsChanged"),
 		}).
 		Handler(func(_ *dbus.Signal) {
-			if activeAppList := dbushelpers.NewBusRequest(ctx, dbushelpers.SessionBus).
+			appList := dbushelpers.NewBusRequest(ctx, dbushelpers.SessionBus).
 				Path(appStateDBusPath).
 				Destination(portalDest).
-				GetData(appStateDBusMethod).AsVariantMap(); activeAppList != nil {
-				newAppCount := newAppSensor(appRunning, activeAppList)
-				newApp := newAppSensor(appActive, activeAppList)
-				if count, ok := newAppCount.State().(int); ok {
-					if count != appStateTracker.appCount {
-						appStateTracker.countCh <- count
-						sensorCh <- newAppCount
-					}
-				}
-				if app, ok := newApp.State().(string); ok {
-					if app != appStateTracker.currentApp {
-						appStateTracker.appChan <- app
-						sensorCh <- newApp
-					}
-				}
-			} else {
-				log.Debug().Caller().
-					Msg("No active apps found.")
+				GetData(appStateDBusMethod).AsVariantMap()
+			if appList != nil {
+				activeApp.update(appList, sensorCh)
+				runningApps.update(appList, sensorCh)
 			}
 		}).
 		AddWatch(ctx)
@@ -167,7 +151,6 @@ func AppUpdater(ctx context.Context) chan tracker.Sensor {
 		log.Debug().Caller().Err(err).
 			Msg("Failed to create active app DBus watch.")
 		close(sensorCh)
-		return sensorCh
 	}
 	go func() {
 		defer close(sensorCh)
