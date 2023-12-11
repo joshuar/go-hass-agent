@@ -20,7 +20,11 @@ type screenlockSensor struct {
 }
 
 func (s *screenlockSensor) Icon() string {
-	if s.value.(bool) {
+	state, ok := s.value.(bool)
+	if !ok {
+		return "mdi:lock-alert"
+	}
+	if state {
 		return "mdi:eye-lock"
 	} else {
 		return "mdi:eye-lock-open"
