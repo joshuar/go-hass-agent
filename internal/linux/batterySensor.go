@@ -298,7 +298,11 @@ func BatteryUpdater(ctx context.Context) chan tracker.Sensor {
 			}).
 			Event("org.freedesktop.DBus.Properties.PropertiesChanged").
 			Handler(func(s *dbus.Signal) {
-				props := s.Body[1].(map[string]dbus.Variant)
+				props, ok := s.Body[1].(map[string]dbus.Variant)
+				if !ok {
+					log.Debug().Msg("Could not map received signal to battery properties.")
+					return
+				}
 				for propName, propValue := range props {
 					for BatteryProp := range battery.props {
 						if propName == BatteryProp.String() {
