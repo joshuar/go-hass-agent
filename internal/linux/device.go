@@ -23,6 +23,8 @@ type Device struct {
 	appVersion string
 	hostname   string
 	deviceID   string
+	hwVendor   string
+	hwModel    string
 }
 
 // Setup returns a new Context that contains the D-Bus API.
@@ -59,11 +61,11 @@ func (l *Device) DeviceID() string {
 }
 
 func (l *Device) Manufacturer() string {
-	return getHWVendor()
+	return l.hwVendor
 }
 
 func (l *Device) Model() string {
-	return getHWModel()
+	return l.hwModel
 }
 
 func (l *Device) OsName() string {
@@ -115,20 +117,26 @@ func (l *Device) MarshalJSON() ([]byte, error) {
 }
 
 func NewDevice(name, version string) *Device {
-	var deviceID string
-	var err error
-	deviceID, err = host.HostID()
-	if err != nil {
-		log.Warn().Err(err).
-			Msg("Could not retrieve a machine ID")
-		deviceID = "unknown"
-	}
 	return &Device{
 		appName:    name,
 		appVersion: version,
-		deviceID:   deviceID,
+		deviceID:   getDeviceID(),
 		hostname:   getHostname(),
+		hwVendor:   getHWVendor(),
+		hwModel:    getHWModel(),
 	}
+}
+
+// getDeviceID retrieves the unique host ID of the device running the agent, or
+// unknown if that doesn't work.
+func getDeviceID() string {
+	deviceID, err := host.HostID()
+	if err != nil {
+		log.Warn().Err(err).
+			Msg("Could not retrieve a machine ID")
+		return "unknown"
+	}
+	return deviceID
 }
 
 // getHostname retrieves the hostname of the device running the agent, or
