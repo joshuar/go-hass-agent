@@ -19,13 +19,19 @@ type powerStateSensor struct {
 }
 
 func (s *powerStateSensor) Icon() string {
-	switch s.value.(string) {
-	case "Suspended":
-		return "mdi:power-sleep"
-	case "Powered Off":
-		return "mdi:power-off"
+	state, ok := s.value.(string)
+	if !ok {
+		return "mdi:power-on"
+	} else {
+		switch state {
+		case "Suspended":
+			return "mdi:power-sleep"
+		case "Powered Off":
+			return "mdi:power-off"
+		default:
+			return "mdi:power-on"
+		}
 	}
-	return "mdi:power-on"
 }
 
 func PowerStateUpdater(ctx context.Context) chan tracker.Sensor {
