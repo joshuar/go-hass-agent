@@ -146,7 +146,7 @@ func newLocation(ctx context.Context, locationPath dbus.ObjectPath) *linuxLocati
 				Msgf("Could not retrieve %s.", prop)
 			return 0
 		} else {
-			return value.Value().(float64)
+			return dbushelpers.VariantToValue[float64](value)
 		}
 	}
 	return &linuxLocation{
