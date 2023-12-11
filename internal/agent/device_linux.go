@@ -13,7 +13,7 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/tracker"
 )
 
-func newDevice(_ context.Context) *linux.LinuxDevice {
+func newDevice(_ context.Context) *linux.Device {
 	return linux.NewDevice(config.AppName, config.AppVersion)
 }
 
