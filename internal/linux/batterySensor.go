@@ -151,6 +151,7 @@ type upowerBatteryState struct {
 	prop       upowerBatteryProp
 	batteryID  string
 	model      string
+	linuxSensor
 }
 
 // uPowerBatteryState implements hass.SensorUpdate
@@ -188,10 +189,6 @@ func (state *upowerBatteryState) Icon() string {
 	default:
 		return "mdi:battery"
 	}
-}
-
-func (state *upowerBatteryState) SensorType() sensor.SensorType {
-	return sensor.TypeSensor
 }
 
 func (state *upowerBatteryState) DeviceClass() sensor.SensorDeviceClass {
