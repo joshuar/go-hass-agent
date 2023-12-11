@@ -24,9 +24,10 @@ type linuxSensor struct {
 	units  string
 	source string
 	sensorType
-	diagnostic  bool
-	deviceClass sensor.SensorDeviceClass
-	stateClass  sensor.SensorStateClass
+	isBinary     bool
+	isDiagnostic bool
+	deviceClass  sensor.SensorDeviceClass
+	stateClass   sensor.SensorStateClass
 }
 
 // linuxSensor satisfies the tracker.Sensor interface, allowing it to be sent as
@@ -34,11 +35,11 @@ type linuxSensor struct {
 // by embedding linuxSensor in another struct and defining the needed function.
 
 func (l *linuxSensor) Name() string {
-	return l.String()
+	return l.sensorType.String()
 }
 
 func (l *linuxSensor) ID() string {
-	return strcase.ToSnake(l.String())
+	return strcase.ToSnake(l.sensorType.String())
 }
 
 func (l *linuxSensor) State() any {
@@ -46,11 +47,14 @@ func (l *linuxSensor) State() any {
 }
 
 func (l *linuxSensor) SensorType() sensor.SensorType {
+	if l.isBinary {
+		return sensor.TypeBinary
+	}
 	return sensor.TypeSensor
 }
 
 func (l *linuxSensor) Category() string {
-	if l.diagnostic {
+	if l.isDiagnostic {
 		return "diagnostic"
 	}
 	return ""

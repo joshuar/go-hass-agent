@@ -9,7 +9,6 @@ import (
 	"context"
 
 	"github.com/godbus/dbus/v5"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/joshuar/go-hass-agent/pkg/dbushelpers"
 	"github.com/rs/zerolog/log"
@@ -31,14 +30,11 @@ func (s *screenlockSensor) Icon() string {
 	}
 }
 
-func (s *screenlockSensor) SensorType() sensor.SensorType {
-	return sensor.TypeBinary
-}
-
 func newScreenlockEvent(v bool) *screenlockSensor {
 	return &screenlockSensor{
 		linuxSensor: linuxSensor{
 			sensorType: screenLock,
+			isBinary:   true,
 			source:     srcDbus,
 			value:      v,
 		},

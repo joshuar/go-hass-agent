@@ -29,7 +29,7 @@ func newPowerSensor(t sensorType, v dbus.Variant) *powerSensor {
 	s.sensorType = t
 	s.icon = "mdi:flash"
 	s.source = srcDbus
-	s.diagnostic = true
+	s.isDiagnostic = true
 	return s
 }
 

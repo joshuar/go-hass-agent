@@ -44,22 +44,22 @@ func TimeUpdater(ctx context.Context) chan tracker.Sensor {
 	updateTimes := func(_ time.Duration) {
 		sensorCh <- &timeSensor{
 			linuxSensor{
-				sensorType:  uptime,
-				value:       getUptime(ctx),
-				diagnostic:  true,
-				units:       "h",
-				icon:        "mdi:restart",
-				deviceClass: sensor.Duration,
-				stateClass:  sensor.StateMeasurement,
+				sensorType:   uptime,
+				value:        getUptime(ctx),
+				isDiagnostic: true,
+				units:        "h",
+				icon:         "mdi:restart",
+				deviceClass:  sensor.Duration,
+				stateClass:   sensor.StateMeasurement,
 			},
 		}
 		sensorCh <- &timeSensor{
 			linuxSensor{
-				sensorType:  boottime,
-				value:       getBoottime(ctx),
-				diagnostic:  true,
-				icon:        "mdi:restart",
-				deviceClass: sensor.Timestamp,
+				sensorType:   boottime,
+				value:        getBoottime(ctx),
+				isDiagnostic: true,
+				icon:         "mdi:restart",
+				deviceClass:  sensor.Timestamp,
 			},
 		}
 	}
