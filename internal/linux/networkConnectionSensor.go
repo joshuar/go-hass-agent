@@ -95,19 +95,17 @@ func (c *connection) monitorConnectionState(ctx context.Context) chan tracker.Se
 				log.Debug().Caller().Interface("body", s.Body).Msg("Unexpected body length.")
 				return
 			}
-			props, ok := s.Body[1].(map[string]dbus.Variant)
-			if ok {
-				state, ok := props["State"]
-				if ok {
+			if props, ok := s.Body[1].(map[string]dbus.Variant); ok {
+				if state, ok := props["State"]; ok {
 					currentState := dbushelpers.VariantToValue[connState](state)
-					if c.state != currentState {
-						c.state = currentState
-						sensorCh <- c
-					}
-					if dbushelpers.VariantToValue[uint32](state) == 4 {
+					switch {
+					case currentState == 4:
 						log.Debug().Str("connection", c.Name()).Str("path", string(c.path)).
 							Msg("Unmonitoring connection state.")
 						close(sensorCh)
+					case currentState != c.state:
+						c.state = currentState
+						sensorCh <- c
 					}
 				}
 			}
