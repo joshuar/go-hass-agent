@@ -20,7 +20,7 @@ type memorySensor struct {
 	linuxSensor
 }
 
-func (s *memorySensor) Attributes() interface{} {
+func (s *memorySensor) Attributes() any {
 	return struct {
 		NativeUnit string `json:"native_unit_of_measurement"`
 		DataSource string `json:"Data Source"`

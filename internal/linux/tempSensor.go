@@ -21,10 +21,10 @@ import (
 )
 
 type tempSensor struct {
-	linuxSensor
-	id   string
 	high float64
 	crit float64
+	id   string
+	linuxSensor
 }
 
 func (s *tempSensor) Name() string {
@@ -36,7 +36,7 @@ func (s *tempSensor) ID() string {
 	return "temp_" + s.id
 }
 
-func (s *tempSensor) Attributes() interface{} {
+func (s *tempSensor) Attributes() any {
 	return struct {
 		NativeUnit string  `json:"native_unit_of_measurement"`
 		DataSource string  `json:"Data Source"`

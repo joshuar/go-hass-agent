@@ -142,12 +142,12 @@ func newBattery(ctx context.Context, path dbus.ObjectPath) *upowerBattery {
 }
 
 type upowerBatteryProp struct {
-	value interface{}
+	value any
 	name  sensorType
 }
 
 type upowerBatteryState struct {
-	attributes interface{}
+	attributes any
 	prop       upowerBatteryProp
 	batteryID  string
 	model      string
@@ -213,7 +213,7 @@ func (state *upowerBatteryState) StateClass() sensor.SensorStateClass {
 	}
 }
 
-func (state *upowerBatteryState) State() interface{} {
+func (state *upowerBatteryState) State() any {
 	propType := state.prop.name
 	rawValue := state.prop.value
 	if rawValue == nil {
@@ -264,7 +264,7 @@ func (state *upowerBatteryState) Category() string {
 	return "diagnostic"
 }
 
-func (state *upowerBatteryState) Attributes() interface{} {
+func (state *upowerBatteryState) Attributes() any {
 	return state.attributes
 }
 

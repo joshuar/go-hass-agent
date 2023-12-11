@@ -32,7 +32,7 @@ type runningAppsSensorAttributes struct {
 	RunningApps []string `json:"Running Apps"`
 }
 
-func (r *runningAppsSensor) Attributes() interface{} {
+func (r *runningAppsSensor) Attributes() any {
 	attrs := &runningAppsSensorAttributes{}
 	for appName, state := range r.appList {
 		if dbushelpers.VariantToValue[uint32](state) > 0 {
@@ -83,7 +83,7 @@ type activeAppSensorAttributes struct {
 	DataSource string `json:"Data Source"`
 }
 
-func (a *activeAppSensor) Attributes() interface{} {
+func (a *activeAppSensor) Attributes() any {
 	if _, ok := a.value.(string); ok {
 		return &activeAppSensorAttributes{
 			DataSource: srcDbus,

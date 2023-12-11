@@ -47,7 +47,7 @@ func (d *diskSensor) ID() string {
 	}
 }
 
-func (d *diskSensor) Attributes() interface{} {
+func (d *diskSensor) Attributes() any {
 	return struct {
 		DataSource string `json:"Data Source"`
 		Stats      disk.UsageStat

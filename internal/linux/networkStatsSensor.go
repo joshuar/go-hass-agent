@@ -28,7 +28,7 @@ type netIOSensor struct {
 	netIOStats
 }
 
-func (s *netIOSensor) Attributes() interface{} {
+func (s *netIOSensor) Attributes() any {
 	return struct {
 		NativeUnit string `json:"native_unit_of_measurement"`
 		DataSource string `json:"Data Source"`
