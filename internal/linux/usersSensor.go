@@ -37,7 +37,7 @@ func (s *usersSensor) Attributes() interface{} {
 func UsersUpdater(ctx context.Context) chan tracker.Sensor {
 	sensorCh := make(chan tracker.Sensor, 1)
 	updateUsers := func() {
-		sensor := newUsersSensor()
+		s := newUsersSensor()
 		userData := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
 			Path(login1DBusPath).
 			Destination("org.freedesktop.login1").
@@ -45,13 +45,13 @@ func UsersUpdater(ctx context.Context) chan tracker.Sensor {
 		if userList, ok := userData.([][]interface{}); !ok {
 			return
 		} else {
-			sensor.value = len(userList)
+			s.value = len(userList)
 			for _, u := range userList {
 				if user, ok := u[1].(string); ok {
-					sensor.userNames = append(sensor.userNames, user)
+					s.userNames = append(s.userNames, user)
 				}
 			}
-			sensorCh <- sensor
+			sensorCh <- s
 		}
 	}
 	updateUsers()
