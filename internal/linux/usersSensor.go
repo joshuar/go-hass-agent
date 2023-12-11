@@ -47,7 +47,9 @@ func UsersUpdater(ctx context.Context) chan tracker.Sensor {
 		} else {
 			sensor.value = len(userList)
 			for _, u := range userList {
-				sensor.userNames = append(sensor.userNames, u[1].(string))
+				if user, ok := u[1].(string); ok {
+					sensor.userNames = append(sensor.userNames, user)
+				}
 			}
 			sensorCh <- sensor
 		}
