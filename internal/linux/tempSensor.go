@@ -22,7 +22,6 @@ import (
 
 type tempSensor struct {
 	linuxSensor
-	idx  int
 	id   string
 	high float64
 	crit float64
@@ -51,34 +50,37 @@ func (s *tempSensor) Attributes() interface{} {
 	}
 }
 
+func newTempSensor(t host.TemperatureStat) *tempSensor {
+	s := &tempSensor{}
+	s.diagnostic = true
+	s.deviceClass = sensor.SensorTemperature
+	s.stateClass = sensor.StateMeasurement
+	s.units = "°C"
+	s.sensorType = deviceTemp
+	s.value = t.Temperature
+	s.high = t.High
+	s.crit = t.Critical
+	return s
+}
+
 func TempUpdater(ctx context.Context) chan tracker.Sensor {
 	sensorCh := make(chan tracker.Sensor, 1)
 	update := func(_ time.Duration) {
 		rawTemps, err := host.SensorsTemperaturesWithContext(ctx)
-		sensorMap := make(map[string]*tempSensor, len(rawTemps))
+		idCounter := make(map[string]int)
 		if err != nil {
 			log.Warn().Err(err).Msg("Could not fetch temperatures.")
 		}
 		for _, temp := range rawTemps {
-			newSensor := &tempSensor{}
-			newSensor.diagnostic = true
-			newSensor.deviceClass = sensor.SensorTemperature
-			newSensor.stateClass = sensor.StateMeasurement
-			newSensor.units = "°C"
-			newSensor.value = temp.Temperature
-			newSensor.high = temp.High
-			newSensor.crit = temp.Critical
-			newSensor.sensorType = deviceTemp
-			if existingSensor, ok := sensorMap[temp.SensorKey]; ok {
-				existingSensor.idx++
-				newSensor.id = fmt.Sprintf("%s_%d", temp.SensorKey, existingSensor.idx)
+			s := newTempSensor(temp)
+			if _, ok := idCounter[temp.SensorKey]; ok {
+				idCounter[s.id]++
+				s.id = fmt.Sprintf("%s_%d", temp.SensorKey, idCounter[s.id])
 			} else {
-				newSensor.id = temp.SensorKey
+				s.id = temp.SensorKey
+				idCounter[temp.SensorKey] = 0
 			}
-			sensorMap[newSensor.id] = newSensor
-		}
-		for _, v := range sensorMap {
-			sensorCh <- v
+			sensorCh <- s
 		}
 	}
 
