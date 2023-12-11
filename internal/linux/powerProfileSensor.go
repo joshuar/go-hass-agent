@@ -33,7 +33,7 @@ func newPowerSensor(t sensorType, v dbus.Variant) *powerSensor {
 	return s
 }
 
-func PowerProfileUpater(ctx context.Context) chan tracker.Sensor {
+func PowerProfileUpdater(ctx context.Context) chan tracker.Sensor {
 	sensorCh := make(chan tracker.Sensor, 1)
 	activePowerProfile, err := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
 		Path(powerProfilesDBusPath).

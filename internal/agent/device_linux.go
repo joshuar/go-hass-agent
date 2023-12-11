@@ -25,7 +25,7 @@ func sensorWorkers() []func(context.Context) chan tracker.Sensor {
 		linux.AppUpdater,
 		linux.NetworkConnectionsUpdater,
 		linux.NetworkStatsUpdater,
-		linux.PowerProfileUpater,
+		linux.PowerProfileUpdater,
 		linux.ProblemsUpdater,
 		linux.MemoryUpdater,
 		linux.LoadAvgUpdater,
