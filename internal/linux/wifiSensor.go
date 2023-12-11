@@ -96,7 +96,8 @@ func (w *wifiSensor) Icon() string {
 
 // getWifiProperties will initially fetch and then monitor for changes of
 // relevant WiFi properties that are to be represented as sensors.
-func getWifiProperties(ctx context.Context, sensorCh chan tracker.Sensor, p dbus.ObjectPath) {
+func getWifiProperties(ctx context.Context, p dbus.ObjectPath) <-chan tracker.Sensor {
+	var outCh []<-chan tracker.Sensor
 	// get the devices associated with this connection
 	v, _ := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
 		Path(p).
@@ -115,22 +116,29 @@ func getWifiProperties(ctx context.Context, sensorCh chan tracker.Sensor, p dbus
 					Path(ap).
 					Destination(dBusNMObj)
 				propBase := dBusNMObj + ".AccessPoint"
-				for k, p := range wifiProps {
-					// for the associated access point, get the wifi properties as sensors
-					v, _ = r.GetProp(propBase + "." + k)
-					if !v.Signature().Empty() {
-						p.value = v.Value()
-						wifiProps[k] = p
-						sensorCh <- p
+				go func() {
+					sensorCh := make(chan tracker.Sensor, 1)
+					defer close(sensorCh)
+					outCh = append(outCh, sensorCh)
+					for k, p := range wifiProps {
+						// for the associated access point, get the wifi properties as sensors
+						v, _ = r.GetProp(propBase + "." + k)
+						if !v.Signature().Empty() {
+							p.value = v.Value()
+							wifiProps[k] = p
+							sensorCh <- p
+						}
 					}
-				}
-				monitorWifiProperties(ctx, sensorCh, ap)
+				}()
+				outCh = append(outCh, monitorWifiProperties(ctx, ap))
 			}
 		}
 	}
+	return tracker.MergeSensorCh(ctx, outCh...)
 }
 
-func monitorWifiProperties(ctx context.Context, sensorCh chan tracker.Sensor, p dbus.ObjectPath) {
+func monitorWifiProperties(ctx context.Context, p dbus.ObjectPath) chan tracker.Sensor {
+	sensorCh := make(chan tracker.Sensor, 1)
 	err := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
 		Match([]dbus.MatchOption{
 			dbus.WithMatchObjectPath(p),
@@ -142,18 +150,26 @@ func monitorWifiProperties(ctx context.Context, sensorCh chan tracker.Sensor, p 
 			}
 			props, ok := s.Body[1].(map[string]dbus.Variant)
 			if ok {
-				for k, v := range props {
-					prop, ok := wifiProps[k]
-					if ok {
-						prop.value = v.Value()
-						sensorCh <- prop
+				go func() {
+					for k, v := range props {
+						prop, ok := wifiProps[k]
+						if ok {
+							prop.value = v.Value()
+							sensorCh <- prop
+						}
 					}
-				}
+				}()
 			}
 		}).
 		AddWatch(ctx)
 	if err != nil {
 		log.Error().Err(err).
 			Msg("Failed to create WiFi property D-Bus watch.")
+		close(sensorCh)
 	}
+	go func() {
+		defer close(sensorCh)
+		<-ctx.Done()
+	}()
+	return sensorCh
 }
