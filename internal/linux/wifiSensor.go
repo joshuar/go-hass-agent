@@ -60,7 +60,7 @@ type wifiSensor struct {
 	linuxSensor
 }
 
-func (w *wifiSensor) State() interface{} {
+func (w *wifiSensor) State() any {
 	switch w.sensorType {
 	case wifiSSID:
 		if value, ok := w.value.([]uint8); ok {

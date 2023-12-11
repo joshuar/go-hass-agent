@@ -19,7 +19,7 @@ const (
 // will be able to use this struct, which satisfies the tracker.Sensor
 // interface, alllowing them to be sent as a sensor to Home Assistant.
 type linuxSensor struct {
-	value  interface{}
+	value  any
 	icon   string
 	units  string
 	source string
@@ -41,7 +41,7 @@ func (l *linuxSensor) ID() string {
 	return strcase.ToSnake(l.String())
 }
 
-func (l *linuxSensor) State() interface{} {
+func (l *linuxSensor) State() any {
 	return l.value
 }
 
@@ -72,7 +72,7 @@ func (l *linuxSensor) Units() string {
 	return l.units
 }
 
-func (l *linuxSensor) Attributes() interface{} {
+func (l *linuxSensor) Attributes() any {
 	if l.source != "" {
 		return struct {
 			DataSource string `json:"Data Source"`

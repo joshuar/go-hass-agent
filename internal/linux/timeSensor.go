@@ -20,7 +20,7 @@ type timeSensor struct {
 	linuxSensor
 }
 
-func (s *timeSensor) Attributes() interface{} {
+func (s *timeSensor) Attributes() any {
 	switch s.sensorType {
 	case uptime:
 		return struct {
@@ -73,7 +73,7 @@ func TimeUpdater(ctx context.Context) chan tracker.Sensor {
 	return sensorCh
 }
 
-func getUptime(ctx context.Context) interface{} {
+func getUptime(ctx context.Context) any {
 	u, err := host.UptimeWithContext(ctx)
 	if err != nil {
 		log.Debug().Caller().Err(err).

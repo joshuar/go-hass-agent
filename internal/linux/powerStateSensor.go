@@ -87,7 +87,7 @@ func newPowerState(state string) *powerStateSensor {
 	}
 }
 
-func assertTruthiness(v interface{}) bool {
+func assertTruthiness(v any) bool {
 	if isTrue, ok := v.(bool); ok && isTrue {
 		return true
 	}

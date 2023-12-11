@@ -69,11 +69,11 @@ func (c *connection) Icon() string {
 	return i.String()
 }
 
-func (c *connection) Attributes() interface{} {
+func (c *connection) Attributes() any {
 	return c.attrs
 }
 
-func (c *connection) State() interface{} {
+func (c *connection) State() any {
 	return c.state.String()
 }
 

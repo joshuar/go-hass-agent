@@ -39,9 +39,9 @@ func (s *usersSensor) updateUsers(ctx context.Context) {
 		Path(login1DBusPath).
 		Destination("org.freedesktop.login1").
 		GetData("org.freedesktop.login1.Manager.ListUsers").AsRawInterface()
-	var userList [][]interface{}
+	var userList [][]any
 	var ok bool
-	if userList, ok = userData.([][]interface{}); !ok {
+	if userList, ok = userData.([][]any); !ok {
 		return
 	}
 	s.value = len(userList)

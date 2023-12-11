@@ -90,7 +90,7 @@ func (l *Device) SupportsEncryption() bool {
 	return false
 }
 
-func (l *Device) AppData() interface{} {
+func (l *Device) AppData() any {
 	return &struct {
 		PushWebsocket bool `json:"push_websocket_channel"`
 	}{

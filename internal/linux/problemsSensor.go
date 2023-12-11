@@ -23,22 +23,22 @@ const (
 )
 
 type problemsSensor struct {
-	list map[string]map[string]interface{}
+	list map[string]map[string]any
 	linuxSensor
 }
 
-func (s *problemsSensor) Attributes() interface{} {
+func (s *problemsSensor) Attributes() any {
 	return struct {
-		ProblemList map[string]map[string]interface{} `json:"Problem List"`
-		DataSource  string                            `json:"Data Source"`
+		ProblemList map[string]map[string]any `json:"Problem List"`
+		DataSource  string                    `json:"Data Source"`
 	}{
 		ProblemList: s.list,
 		DataSource:  srcDbus,
 	}
 }
 
-func parseProblem(details map[string]string) map[string]interface{} {
-	parsed := make(map[string]interface{})
+func parseProblem(details map[string]string) map[string]any {
+	parsed := make(map[string]any)
 	for k, v := range details {
 		switch k {
 		case "time":
@@ -68,7 +68,7 @@ func ProblemsUpdater(ctx context.Context) chan tracker.Sensor {
 	sensorCh := make(chan tracker.Sensor, 1)
 	problems := func(_ time.Duration) {
 		problems := &problemsSensor{
-			list: make(map[string]map[string]interface{}),
+			list: make(map[string]map[string]any),
 		}
 		problems.sensorType = problem
 		problems.icon = "mdi:alert"
