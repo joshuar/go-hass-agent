@@ -10,9 +10,18 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-
-	"github.com/rs/zerolog/log"
 )
+
+type SensorResponseBody struct {
+	Error    SensorError `json:"error,omitempty"`
+	Success  bool        `json:"success"`
+	Disabled bool        `json:"is_disabled,omitempty"`
+}
+
+type SensorError struct {
+	ErrorCode string `json:"code"`
+	ErrorMsg  string `json:"message"`
+}
 
 type SensorResponse struct {
 	responseType ResponseType
@@ -47,37 +56,16 @@ func parseRegistrationResponse(buf *bytes.Buffer) (*SensorResponse, error) {
 }
 
 func parseUpdateResponse(buf *bytes.Buffer) (*SensorResponse, error) {
-	r, err := parseAsMap(buf)
+	var r map[string]SensorResponseBody
+	err := json.Unmarshal(buf.Bytes(), &r)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not unmarshal response (%s)", buf.String())
 	}
-	for k, v := range r {
-		log.Trace().Str("id", k).Msg("Parsing response for sensor.")
-		r, err := assertAs[map[string]any](v)
-		if err != nil {
-			return nil, err
+	for sensorID, v := range r {
+		if !v.Success {
+			return nil, fmt.Errorf("sensor %s, code %s: %s", sensorID, v.Error.ErrorCode, v.Error.ErrorMsg)
 		}
-		if _, ok := r["success"]; ok {
-			if success, err := assertAs[bool](r["success"]); err != nil || !success {
-				if err != nil {
-					return nil, err
-				}
-				log.Trace().Str("id", k).Msg("Unsuccessful response.")
-				responseErr, err := assertAs[map[string]any](r["error"])
-				if err != nil {
-					return nil, errors.New("unknown error")
-				} else {
-					return nil, fmt.Errorf("code %s: %s", responseErr["code"], responseErr["message"])
-				}
-			}
-		}
-		if _, ok := r["is_disabled"]; ok {
-			log.Trace().Str("id", k).Bool("disabled", true).Msg("Successful response.")
-			return &SensorResponse{disabled: true, responseType: ResponseTypeUpdate}, nil
-		} else {
-			log.Trace().Str("id", k).Bool("disabled", false).Msg("Successful response.")
-			return &SensorResponse{disabled: false, responseType: ResponseTypeUpdate}, nil
-		}
+		return &SensorResponse{disabled: v.Disabled, responseType: ResponseTypeUpdate}, nil
 	}
 	return nil, errors.New("unknown response structure")
 }
@@ -97,23 +85,31 @@ func parseResponse(t RequestType, buf *bytes.Buffer) (any, error) {
 	}
 }
 
-func parseAsMap(buf *bytes.Buffer) (map[string]any, error) {
-	var r any
-	err := json.Unmarshal(buf.Bytes(), &r)
-	if err != nil {
-		return nil, fmt.Errorf("could not unmarshal response (%s)", buf.String())
+func parseAsMap(t any) (map[string]any, error) {
+	switch v := t.(type) {
+	case *bytes.Buffer:
+		var r map[string]any
+		err := json.Unmarshal(v.Bytes(), &r)
+		if err != nil {
+			return nil, fmt.Errorf("could not unmarshal response (%s)", v.String())
+		}
+		return r, nil
+	case any:
+		r, err := assertAs[map[string]any](v)
+		if err != nil {
+			return nil, err
+		}
+		return r, nil
+	default:
+		return nil, errors.New("unsupported type")
 	}
-	rMap, ok := r.(map[string]any)
-	if !ok {
-		return nil, errors.New("could not parse response as map")
-	}
-	return rMap, nil
 }
 
 func assertAs[T any](thing any) (T, error) {
-	if asT, ok := thing.(T); !ok {
+	var asT T
+	var ok bool
+	if asT, ok = thing.(T); !ok {
 		return *new(T), errors.New("could not assert value")
-	} else {
-		return asT, nil
 	}
+	return asT, nil
 }
