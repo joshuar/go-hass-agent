@@ -94,7 +94,7 @@ func (s *netIORateSensor) Icon() string {
 }
 
 func (s *netIORateSensor) update(d time.Duration, b uint64) {
-	if d.Seconds() > 0 && s.lastValue != 0 {
+	if uint64(d.Seconds()) > 0 && s.lastValue != 0 {
 		s.value = (b - s.lastValue) / uint64(d.Seconds())
 	}
 	s.lastValue = b
