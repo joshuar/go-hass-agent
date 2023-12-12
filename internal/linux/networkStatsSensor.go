@@ -16,7 +16,7 @@ import (
 	"github.com/shirou/gopsutil/v3/net"
 )
 
-type netIOStats struct {
+type netIOSensorAttributes struct {
 	Packets    uint64 `json:"Packets"`     // number of packets
 	Errors     uint64 `json:"Errors"`      // total number of errors
 	Drops      uint64 `json:"Drops"`       // total number of packets which were dropped
@@ -25,18 +25,56 @@ type netIOStats struct {
 
 type netIOSensor struct {
 	linuxSensor
-	netIOStats
+	netIOSensorAttributes
 }
 
 func (s *netIOSensor) Attributes() any {
 	return struct {
 		NativeUnit string `json:"native_unit_of_measurement"`
 		DataSource string `json:"Data Source"`
-		netIOStats
+		netIOSensorAttributes
 	}{
-		NativeUnit: s.units,
-		DataSource: srcProcfs,
-		netIOStats: s.netIOStats,
+		NativeUnit:            s.units,
+		DataSource:            srcProcfs,
+		netIOSensorAttributes: s.netIOSensorAttributes,
+	}
+}
+
+func (s *netIOSensor) Icon() string {
+	switch s.sensorType {
+	case bytesRecv:
+		return "mdi:download-network"
+	case bytesSent:
+		return "mdi:upload-network"
+	}
+	return "mdi:help-network"
+}
+
+func (s *netIOSensor) update(c *net.IOCountersStat) {
+	switch s.sensorType {
+	case bytesRecv:
+		s.value = c.BytesRecv
+		s.Packets = c.PacketsRecv
+		s.Errors = c.Errin
+		s.Drops = c.Dropin
+		s.FifoErrors = c.Fifoin
+	case bytesSent:
+		s.value = c.BytesSent
+		s.Packets = c.PacketsSent
+		s.Errors = c.Errout
+		s.Drops = c.Dropout
+		s.FifoErrors = c.Fifoout
+	}
+}
+
+func newNetIOSensor(t sensorType) *netIOSensor {
+	return &netIOSensor{
+		linuxSensor: linuxSensor{
+			units:       "B",
+			sensorType:  t,
+			deviceClass: sensor.Data_size,
+			stateClass:  sensor.StateMeasurement,
+		},
 	}
 }
 
@@ -45,46 +83,41 @@ type netIORateSensor struct {
 	lastValue uint64
 }
 
+func (s *netIORateSensor) Icon() string {
+	switch s.sensorType {
+	case bytesRecvRate:
+		return "mdi:transfer-down"
+	case bytesSentRate:
+		return "mdi:transfer-up"
+	}
+	return "mdi:help-network"
+}
+
+func (s *netIORateSensor) update(d time.Duration, b uint64) {
+	if d.Seconds() > 0 && s.lastValue != 0 {
+		s.value = (b - s.lastValue) / uint64(d.Seconds())
+	}
+	s.lastValue = b
+}
+
+func newNetIORateSensor(t sensorType) *netIORateSensor {
+	return &netIORateSensor{
+		linuxSensor: linuxSensor{
+			units:       "B/s",
+			sensorType:  t,
+			deviceClass: sensor.Data_rate,
+			stateClass:  sensor.StateMeasurement,
+			source:      srcProcfs,
+		},
+	}
+}
+
 func NetworkStatsUpdater(ctx context.Context) chan tracker.Sensor {
 	sensorCh := make(chan tracker.Sensor, 2)
-	bytesRx := &netIOSensor{
-		linuxSensor: linuxSensor{
-			units:       "B",
-			icon:        "mdi:download-network",
-			sensorType:  bytesRecv,
-			deviceClass: sensor.Data_size,
-			stateClass:  sensor.StateMeasurement,
-		},
-	}
-	bytesTx := &netIOSensor{
-		linuxSensor: linuxSensor{
-			units:       "B",
-			icon:        "mdi:upload-network",
-			sensorType:  bytesSent,
-			deviceClass: sensor.Data_size,
-			stateClass:  sensor.StateMeasurement,
-		},
-	}
-	bytesRxRate := &netIORateSensor{
-		linuxSensor: linuxSensor{
-			units:       "B/s",
-			icon:        "mdi:transfer-down",
-			sensorType:  bytesRecvRate,
-			deviceClass: sensor.Data_rate,
-			stateClass:  sensor.StateMeasurement,
-			source:      srcProcfs,
-		},
-	}
-	bytesTxRate := &netIORateSensor{
-		linuxSensor: linuxSensor{
-			units:       "B/s",
-			icon:        "mdi:transfer-up",
-			sensorType:  bytesSentRate,
-			deviceClass: sensor.Data_rate,
-			stateClass:  sensor.StateMeasurement,
-			source:      srcProcfs,
-		},
-	}
+	bytesRx := newNetIOSensor(bytesRecv)
+	bytesTx := newNetIOSensor(bytesSent)
+	bytesRxRate := newNetIORateSensor(bytesRecvRate)
+	bytesTxRate := newNetIORateSensor(bytesSentRate)
 
 	sendNetStats := func(delta time.Duration) {
 		netIO, err := net.IOCountersWithContext(ctx, false)
@@ -93,28 +126,16 @@ func NetworkStatsUpdater(ctx context.Context) chan tracker.Sensor {
 				Msg("Problem fetching network stats.")
 			return
 		}
-		bytesRx.value = netIO[0].BytesRecv
-		bytesRx.Packets = netIO[0].PacketsRecv
-		bytesRx.Errors = netIO[0].Errin
-		bytesRx.Drops = netIO[0].Dropin
-		bytesRx.FifoErrors = netIO[0].Fifoin
-		sensorCh <- bytesRx
 
-		bytesTx.value = netIO[0].BytesSent
-		bytesTx.Packets = netIO[0].PacketsSent
-		bytesTx.Errors = netIO[0].Errout
-		bytesTx.Drops = netIO[0].Dropout
-		bytesTx.FifoErrors = netIO[0].Fifoout
+		bytesRx.update(&netIO[0])
+		sensorCh <- bytesRx
+		bytesTx.update(&netIO[0])
 		sensorCh <- bytesTx
 
-		if uint64(delta.Seconds()) > 0 && bytesRxRate.lastValue != 0 {
-			bytesRxRate.value = (netIO[0].BytesRecv - bytesRxRate.lastValue) / uint64(delta.Seconds())
-			bytesTxRate.value = (netIO[0].BytesSent - bytesTxRate.lastValue) / uint64(delta.Seconds())
-			sensorCh <- bytesRxRate
-			sensorCh <- bytesTxRate
-		}
-		bytesRxRate.lastValue = netIO[0].BytesRecv
-		bytesTxRate.lastValue = netIO[0].BytesSent
+		bytesRxRate.update(delta, netIO[0].BytesRecv)
+		sensorCh <- bytesRxRate
+		bytesTxRate.update(delta, netIO[0].BytesSent)
+		sensorCh <- bytesTxRate
 	}
 
 	go helpers.PollSensors(ctx, sendNetStats, 5*time.Second, time.Second*1)
