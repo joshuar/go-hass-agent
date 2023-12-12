@@ -9,35 +9,71 @@ import (
 	"context"
 
 	"github.com/godbus/dbus/v5"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/joshuar/go-hass-agent/pkg/dbushelpers"
 	"github.com/rs/zerolog/log"
 )
 
+const (
+	suspend powerSignal = iota
+	shutdown
+)
+
+type powerSignal int
+
 type powerStateSensor struct {
 	linuxSensor
+	signal powerSignal
+}
+
+func (s *powerStateSensor) State() any {
+	b, ok := s.value.(bool)
+	if !ok {
+		return sensor.StateUnknown
+	}
+	if b {
+		switch s.signal {
+		case suspend:
+			return "Suspended"
+		case shutdown:
+			return "Powered Off"
+		}
+	}
+	return "Powered On"
 }
 
 func (s *powerStateSensor) Icon() string {
-	state, ok := s.value.(string)
+	str, ok := s.State().(string)
 	if !ok {
+		str = ""
+	}
+	switch str {
+	case "Suspended":
+		return "mdi:power-sleep"
+	case "Powered Off":
+		return "mdi:power-off"
+	default:
 		return "mdi:power-on"
-	} else {
-		switch state {
-		case "Suspended":
-			return "mdi:power-sleep"
-		case "Powered Off":
-			return "mdi:power-off"
-		default:
-			return "mdi:power-on"
-		}
+	}
+}
+
+func newPowerState(s powerSignal, v any) *powerStateSensor {
+	return &powerStateSensor{
+		signal: s,
+		linuxSensor: linuxSensor{
+			sensorType:   powerState,
+			value:        v,
+			source:       srcDbus,
+			isDiagnostic: true,
+		},
 	}
 }
 
 func PowerStateUpdater(ctx context.Context) chan tracker.Sensor {
 	sensorCh := make(chan tracker.Sensor, 1)
 
-	sensorCh <- newPowerState("Powered On")
+	sensorCh <- newPowerState(shutdown, false)
 
 	err := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
 		Match([]dbus.MatchOption{
@@ -47,17 +83,9 @@ func PowerStateUpdater(ctx context.Context) chan tracker.Sensor {
 		Handler(func(s *dbus.Signal) {
 			switch s.Name {
 			case "org.freedesktop.login1.Manager.PrepareForSleep":
-				if assertTruthiness(s.Body[0]) {
-					sensorCh <- newPowerState("Suspended")
-				} else {
-					sensorCh <- newPowerState("Powered On")
-				}
+				sensorCh <- newPowerState(suspend, s.Body[0])
 			case "org.freedesktop.login1.Manager.PrepareForShutdown":
-				if assertTruthiness(s.Body[0]) {
-					sensorCh <- newPowerState("Powered Off")
-				} else {
-					sensorCh <- newPowerState("Powered On")
-				}
+				sensorCh <- newPowerState(shutdown, s.Body[0])
 			}
 		}).
 		AddWatch(ctx)
@@ -74,22 +102,4 @@ func PowerStateUpdater(ctx context.Context) chan tracker.Sensor {
 		log.Debug().Msg("Stopped power state sensor.")
 	}()
 	return sensorCh
-}
-
-func newPowerState(state string) *powerStateSensor {
-	return &powerStateSensor{
-		linuxSensor: linuxSensor{
-			sensorType:   powerState,
-			value:        state,
-			source:       srcDbus,
-			isDiagnostic: true,
-		},
-	}
-}
-
-func assertTruthiness(v any) bool {
-	if isTrue, ok := v.(bool); ok && isTrue {
-		return true
-	}
-	return false
 }
