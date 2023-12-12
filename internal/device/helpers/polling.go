@@ -20,24 +20,29 @@ import (
 // trying to update at the same time.
 func PollSensors(ctx context.Context, updater func(time.Duration), interval, stdev time.Duration) {
 	var wg sync.WaitGroup
+	lastTick := time.Now()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		lastTick := time.Now()
 		updater(time.Since(lastTick))
-		ticker := jitterbug.New(
-			interval,
-			&jitterbug.Norm{Stdev: stdev},
-		)
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case t := <-ticker.C:
-				updater(time.Since(lastTick))
-				lastTick = t
-			}
-		}
 	}()
 	wg.Wait()
+	ticker := jitterbug.New(
+		interval,
+		&jitterbug.Norm{Stdev: stdev},
+	)
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case t := <-ticker.C:
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				updater(time.Since(lastTick))
+			}()
+			wg.Wait()
+			lastTick = t
+		}
+	}
 }
