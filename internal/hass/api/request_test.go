@@ -114,7 +114,7 @@ func TestExecuteRequest(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want chan interface{}
+		want chan any
 	}{
 		{
 			name: "default test",

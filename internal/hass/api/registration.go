@@ -73,17 +73,17 @@ func (rr *RegistrationResponse) GenerateWebsocketURL(host string) string {
 }
 
 type RegistrationRequest struct {
-	AppData            interface{} `json:"app_data,omitempty"`
-	DeviceID           string      `json:"device_id"`
-	AppID              string      `json:"app_id"`
-	AppName            string      `json:"app_name"`
-	AppVersion         string      `json:"app_version"`
-	DeviceName         string      `json:"device_name"`
-	Manufacturer       string      `json:"manufacturer"`
-	Model              string      `json:"model"`
-	OsName             string      `json:"os_name"`
-	OsVersion          string      `json:"os_version"`
-	SupportsEncryption bool        `json:"supports_encryption"`
+	AppData            any    `json:"app_data,omitempty"`
+	DeviceID           string `json:"device_id"`
+	AppID              string `json:"app_id"`
+	AppName            string `json:"app_name"`
+	AppVersion         string `json:"app_version"`
+	DeviceName         string `json:"device_name"`
+	Manufacturer       string `json:"manufacturer"`
+	Model              string `json:"model"`
+	OsName             string `json:"os_name"`
+	OsVersion          string `json:"os_version"`
+	SupportsEncryption bool   `json:"supports_encryption"`
 }
 
 func RegisterWithHass(ctx context.Context, agent Agent, device DeviceInfo) (*RegistrationResponse, error) {

@@ -53,7 +53,7 @@ func parseUpdateResponse(buf *bytes.Buffer) (*SensorResponse, error) {
 	}
 	for k, v := range r {
 		log.Trace().Str("id", k).Msg("Parsing response for sensor.")
-		r, err := assertAs[map[string]interface{}](v)
+		r, err := assertAs[map[string]any](v)
 		if err != nil {
 			return nil, err
 		}
@@ -63,7 +63,7 @@ func parseUpdateResponse(buf *bytes.Buffer) (*SensorResponse, error) {
 					return nil, err
 				}
 				log.Trace().Str("id", k).Msg("Unsuccessful response.")
-				responseErr, err := assertAs[map[string]interface{}](r["error"])
+				responseErr, err := assertAs[map[string]any](r["error"])
 				if err != nil {
 					return nil, errors.New("unknown error")
 				} else {
@@ -82,7 +82,7 @@ func parseUpdateResponse(buf *bytes.Buffer) (*SensorResponse, error) {
 	return nil, errors.New("unknown response structure")
 }
 
-func parseResponse(t RequestType, buf *bytes.Buffer) (interface{}, error) {
+func parseResponse(t RequestType, buf *bytes.Buffer) (any, error) {
 	switch t {
 	case RequestTypeUpdateLocation:
 		return buf.Bytes(), nil
@@ -97,20 +97,20 @@ func parseResponse(t RequestType, buf *bytes.Buffer) (interface{}, error) {
 	}
 }
 
-func parseAsMap(buf *bytes.Buffer) (map[string]interface{}, error) {
-	var r interface{}
+func parseAsMap(buf *bytes.Buffer) (map[string]any, error) {
+	var r any
 	err := json.Unmarshal(buf.Bytes(), &r)
 	if err != nil {
 		return nil, fmt.Errorf("could not unmarshal response (%s)", buf.String())
 	}
-	rMap, ok := r.(map[string]interface{})
+	rMap, ok := r.(map[string]any)
 	if !ok {
 		return nil, errors.New("could not parse response as map")
 	}
 	return rMap, nil
 }
 
-func assertAs[T any](thing interface{}) (T, error) {
+func assertAs[T any](thing any) (T, error) {
 	if asT, ok := thing.(T); !ok {
 		return *new(T), errors.New("could not assert value")
 	} else {

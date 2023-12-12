@@ -49,7 +49,7 @@ func marshalJSON(request Request, secret string) ([]byte, error) {
 				EncryptedData: request.RequestData(),
 			})
 		} else {
-			return nil, errors.New("encrypted request recieved without secret")
+			return nil, errors.New("encrypted request received without secret")
 		}
 	} else {
 		return json.Marshal(&UnencryptedRequest{
@@ -70,8 +70,8 @@ type EncryptedRequest struct {
 	Encrypted     bool            `json:"encrypted"`
 }
 
-func ExecuteRequest(ctx context.Context, request Request) chan interface{} {
-	responseCh := make(chan interface{}, 1)
+func ExecuteRequest(ctx context.Context, request Request) chan any {
+	responseCh := make(chan any, 1)
 	defer close(responseCh)
 	cfg, ok := FromContext(ctx)
 	if !ok {

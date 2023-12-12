@@ -24,7 +24,7 @@ func FindServers(ctx context.Context) []string {
 
 	resolver, err := zeroconf.NewResolver(nil)
 	if err != nil {
-		log.Debug().Err(err).Msg("Failed to initialize resolver.")
+		log.Debug().Err(err).Msg("Failed to initialise resolver.")
 	} else {
 		entries := make(chan *zeroconf.ServiceEntry)
 		go func(results <-chan *zeroconf.ServiceEntry) {

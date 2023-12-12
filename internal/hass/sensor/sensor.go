@@ -29,11 +29,11 @@ type SensorRegistrationInfo struct {
 // SensorUpdateInfo is the JSON structure required to update HA with the current
 // sensor state.
 type SensorUpdateInfo struct {
-	StateAttributes interface{} `json:"attributes,omitempty"`
-	State           interface{} `json:"state"`
-	Icon            string      `json:"icon,omitempty"`
-	Type            string      `json:"type"`
-	UniqueID        string      `json:"unique_id"`
+	StateAttributes any    `json:"attributes,omitempty"`
+	State           any    `json:"state"`
+	Icon            string `json:"icon,omitempty"`
+	Type            string `json:"type"`
+	UniqueID        string `json:"unique_id"`
 }
 
 type SensorState struct {

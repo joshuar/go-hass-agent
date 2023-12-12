@@ -10,20 +10,19 @@ import (
 	"encoding/json"
 	"sync"
 
-	"github.com/rs/zerolog/log"
-
 	"github.com/joshuar/go-hass-agent/internal/hass/api"
 	"github.com/perimeterx/marshmallow"
+	"github.com/rs/zerolog/log"
 )
 
 type haConfig struct {
-	rawConfigProps map[string]interface{}
+	rawConfigProps map[string]any
 	haConfigProps
 	mu sync.Mutex
 }
 
 type haConfigProps struct {
-	Entities   map[string]map[string]interface{} `json:"entities"`
+	Entities   map[string]map[string]any `json:"entities"`
 	UnitSystem struct {
 		Length      string `json:"length"`
 		Mass        string `json:"mass"`
@@ -80,7 +79,7 @@ func GetHassConfig(ctx context.Context) (*haConfig, error) {
 	return h, nil
 }
 
-func (h *haConfig) GetRegisteredEntities() map[string]map[string]interface{} {
+func (h *haConfig) GetRegisteredEntities() map[string]map[string]any {
 	return h.Entities
 }
 
