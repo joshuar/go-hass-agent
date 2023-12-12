@@ -176,7 +176,7 @@ func TestRegisterWithHass(t *testing.T) {
 	mockServer := newMockServer(t)
 
 	goodRegConfig := &AgentConfigMock{
-		GetFunc: func(s string, ifaceVal interface{}) error {
+		GetFunc: func(s string, ifaceVal any) error {
 			v := ifaceVal.(*string)
 			switch s {
 			case config.PrefHost:
@@ -192,7 +192,7 @@ func TestRegisterWithHass(t *testing.T) {
 	}
 
 	badRegServer := &AgentConfigMock{
-		GetFunc: func(s string, ifaceVal interface{}) error {
+		GetFunc: func(s string, ifaceVal any) error {
 			v := ifaceVal.(*string)
 			switch s {
 			case config.PrefHost:
@@ -208,7 +208,7 @@ func TestRegisterWithHass(t *testing.T) {
 	}
 
 	badRegToken := &AgentConfigMock{
-		GetFunc: func(s string, ifaceVal interface{}) error {
+		GetFunc: func(s string, ifaceVal any) error {
 			v := ifaceVal.(*string)
 			switch s {
 			case config.PrefHost:

@@ -14,9 +14,8 @@ import (
 
 	"github.com/cenkalti/backoff/v4"
 	"github.com/joshuar/go-hass-agent/internal/agent/config"
-	"github.com/rs/zerolog/log"
-
 	"github.com/lxzan/gws"
+	"github.com/rs/zerolog/log"
 )
 
 const PingInterval = time.Minute
@@ -30,7 +29,7 @@ type websocketMsg struct {
 }
 
 type websocketResponse struct {
-	Result interface{} `json:"result,omitempty"`
+	Result any `json:"result,omitempty"`
 	Error  struct {
 		Code    string `json:"code"`
 		Message string `json:"message"`
@@ -38,11 +37,11 @@ type websocketResponse struct {
 	Type         string `json:"type"`
 	HAVersion    string `json:"ha_version,omitempty"`
 	Notification struct {
-		Data      interface{} `json:"data,omitempty"`
-		Message   string      `json:"message"`
-		Title     string      `json:"title,omitempty"`
-		ConfirmID string      `json:"confirm_id,omitempty"`
-		Target    []string    `json:"target,omitempty"`
+		Data      any      `json:"data,omitempty"`
+		Message   string   `json:"message"`
+		Title     string   `json:"title,omitempty"`
+		ConfirmID string   `json:"confirm_id,omitempty"`
+		Target    []string `json:"target,omitempty"`
 	} `json:"event,omitempty"`
 	ID      uint64 `json:"id,omitempty"`
 	Success bool   `json:"success,omitempty"`
@@ -86,7 +85,7 @@ func StartWebsocket(ctx context.Context, settings Agent, notifyCh chan [2]string
 
 type webSocketData struct {
 	conn *gws.Conn
-	data interface{}
+	data any
 }
 
 type WebSocket struct {
