@@ -18,7 +18,7 @@ run on its own schedule, specified using a Cron-like syntax.
 
 ## Requirements
 
-- Scripts need to be put in `$HOME/.config/com.github.joshuar.go-hass-agent-debug/scripts/`. You can use symlinks.
+- Scripts need to be put in `$HOME/.config/com.github.joshuar.go-hass-agent/scripts/`. You can use symlinks.
 - Script files need to be executable by the user running Go Hass Agent.
 - Scripts need to run without any user interaction. 
 - Scripts need to output either valid JSON, YAML or TOML. See [Output Format](#output-format) for details. 
