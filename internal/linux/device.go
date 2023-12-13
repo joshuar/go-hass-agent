@@ -175,11 +175,12 @@ func getHWModel() string {
 // findPortal is a helper function to work out which portal interface should be
 // used for getting information on running apps.
 func findPortal() string {
-	switch os.Getenv("XDG_CURRENT_DESKTOP") {
-	case "KDE":
+	desktop := os.Getenv("XDG_CURRENT_DESKTOP")
+	switch {
+	case strings.Contains(desktop, "KDE"):
 		return "org.freedesktop.impl.portal.desktop.kde"
-	case "GNOME":
-		return "org.freedesktop.impl.portal.desktop.kde"
+	case strings.Contains(desktop, "GNOME"):
+		return "org.freedesktop.impl.portal.desktop.gtk"
 	default:
 		return ""
 	}
