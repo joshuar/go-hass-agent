@@ -1,5 +1,41 @@
 # Changelog
 
+## [6.0.0](https://github.com/joshuar/go-hass-agent/compare/v5.3.1...v6.0.0) (2023-12-13)
+
+
+### ⚠ BREAKING CHANGES
+
+* **agent:** drop upgrade support for versions < 3.0.0
+* **dbushelpers:** improve code safety and logic
+* **agent,linux:** return a channel for sensor updates from updater funcs
+
+### Features
+
+* **agent:** drop upgrade support for versions &lt; 3.0.0 ([a33167e](https://github.com/joshuar/go-hass-agent/commit/a33167e297ebcf253520f42692a92695816e246d))
+* **dbushelpers:** improve code safety and logic ([c033587](https://github.com/joshuar/go-hass-agent/commit/c033587bdf66783fb01c3452eb9980259518d146))
+* **hass/api:** rework sensor response parsing to simplify code ([bc935e5](https://github.com/joshuar/go-hass-agent/commit/bc935e5d649d8f0fb1a584aeb721204ba36dde97))
+
+
+### Bug Fixes
+
+* **linux,agent:** spelling of PowerProfileUpdater function ([f5a63b8](https://github.com/joshuar/go-hass-agent/commit/f5a63b88bdb100d12a0e748da5174cc8dce8edaa))
+* **linux:** batterySensor should inherit linuxSensor ([f1d09ca](https://github.com/joshuar/go-hass-agent/commit/f1d09ca9e3a4361238b445e0c2c9837905dcb1bf))
+* **linux:** ensure type assertion is checked ([dc312f5](https://github.com/joshuar/go-hass-agent/commit/dc312f52259c9732fe2f34f9f378fee569b1b9c2))
+* **linux:** more type assertion checks ([46ab539](https://github.com/joshuar/go-hass-agent/commit/46ab5396e763d43f99aee30a6ba403f8ae625a2d))
+* **linux:** portal detection ([e3b2606](https://github.com/joshuar/go-hass-agent/commit/e3b2606cdad6fa8f94712f8b9f19da8a5197f35f))
+* **linux:** protect against divide by zero in networkStatsSensor ([b79d0b2](https://github.com/joshuar/go-hass-agent/commit/b79d0b2f285fcfec4a03176b19400f49fd4e0d90))
+* **linux:** protect against error in type assertion for batterySensor ([8eff883](https://github.com/joshuar/go-hass-agent/commit/8eff8830ef4ce8e2c53145087c19821f63a96d6d))
+* **linux:** protect type assertion for username list generation ([3a3e4af](https://github.com/joshuar/go-hass-agent/commit/3a3e4af69a236d4dd522bf04f93bebba8e7e7e2d))
+* **linux:** protect type assertions for wifi sensors ([c3e85ac](https://github.com/joshuar/go-hass-agent/commit/c3e85acd29289c01d0c23c7d2a14dd3bd94d79c4))
+* **linux:** type assertion check for generating power state icon ([f1f0099](https://github.com/joshuar/go-hass-agent/commit/f1f0099ea9dada78135051a519dcab1b0c7d0851))
+* **linux:** type assertion check for generating screen lock icon ([50cd304](https://github.com/joshuar/go-hass-agent/commit/50cd3042c0b6dc50dd49c57d36e3d4ec585c68d0))
+* **linux:** variable shadows import ([860b6a8](https://github.com/joshuar/go-hass-agent/commit/860b6a8a12d870da1cf773d69ffcc1832e3dea69))
+
+
+### Code Refactoring
+
+* **agent,linux:** return a channel for sensor updates from updater funcs ([c64c369](https://github.com/joshuar/go-hass-agent/commit/c64c36959b05925549520d533faaf9731b3dbb96))
+
 ## [5.3.1](https://github.com/joshuar/go-hass-agent/compare/v5.3.0...v5.3.1) (2023-12-06)
 
 
