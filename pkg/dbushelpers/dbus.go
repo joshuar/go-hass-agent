@@ -326,8 +326,8 @@ func GetSessionPath(ctx context.Context) dbus.ObjectPath {
 	}
 	for _, s := range allSessions {
 		if thisUser, ok := s[2].(string); ok && thisUser == u.Username {
-			if p, ok := s[4].(string); ok {
-				return dbus.ObjectPath(p)
+			if p, ok := s[4].(dbus.ObjectPath); ok {
+				return p
 			}
 		}
 	}
