@@ -13,7 +13,6 @@ require (
 	github.com/jeandeaual/go-locale v0.0.0-20220711133428-7de61946b173
 	github.com/lthibault/jitterbug/v2 v2.2.2
 	github.com/lxzan/gws v1.7.0
-	github.com/nutsdb/nutsdb v1.0.1
 	github.com/pelletier/go-toml/v2 v2.1.1
 	github.com/perimeterx/marshmallow v1.1.5
 	github.com/robfig/cron/v3 v3.0.1
@@ -30,9 +29,6 @@ require (
 
 require (
 	fyne.io/systray v1.10.1-0.20231115130155-104f5ef7839e // indirect
-	github.com/antlabs/stl v0.0.1 // indirect
-	github.com/antlabs/timer v0.0.11 // indirect
-	github.com/bwmarrin/snowflake v0.3.0 // indirect
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/fredbi/uri v1.0.0 // indirect
@@ -48,7 +44,6 @@ require (
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-text/render v0.0.0-20230619120952-35bccb6164b8 // indirect
 	github.com/go-text/typesetting v0.0.0-20230616162802-9c17dd34aa4a // indirect
-	github.com/gofrs/flock v0.8.1 // indirect
 	github.com/gopherjs/gopherjs v1.17.2 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
@@ -77,11 +72,8 @@ require (
 	github.com/srwiley/rasterx v0.0.0-20220730225603-2ab79fcdd4ef // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/tevino/abool v1.2.0 // indirect
-	github.com/tidwall/btree v1.6.0 // indirect
 	github.com/tklauser/go-sysconf v0.3.12 // indirect
 	github.com/tklauser/numcpus v0.6.1 // indirect
-	github.com/xujiajun/mmap-go v1.0.1 // indirect
-	github.com/xujiajun/utils v0.0.0-20220904132955-5f7c5b914235 // indirect
 	github.com/yuin/goldmark v1.5.5 // indirect
 	github.com/yusufpapurcu/wmi v1.2.3 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
