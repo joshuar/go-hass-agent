@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.0.1](https://github.com/joshuar/go-hass-agent/compare/v6.0.0...v6.0.1) (2023-12-13)
+
+
+### Bug Fixes
+
+* **linux:** screen lock sensor type casting issue ([a975f04](https://github.com/joshuar/go-hass-agent/commit/a975f04edc23f483313caf7dfac34b47a2b342d1))
+
 ## [6.0.0](https://github.com/joshuar/go-hass-agent/compare/v5.3.1...v6.0.0) (2023-12-13)
 
 
