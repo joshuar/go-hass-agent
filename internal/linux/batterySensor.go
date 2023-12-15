@@ -152,32 +152,30 @@ func (state *upowerBatterySensor) StateClass() sensor.SensorStateClass {
 }
 
 func (state *upowerBatterySensor) State() any {
-	propType := state.sensorType
-	rawValue := state.value
-	if rawValue == nil {
+	if state.value == nil {
 		return sensor.StateUnknown
 	}
-	switch propType {
+	switch state.sensorType {
 	case battVoltage, battTemp, battEnergy, battEnergyRate, battPercentage:
-		if value, ok := rawValue.(float64); !ok {
+		if value, ok := state.value.(float64); !ok {
 			return sensor.StateUnknown
 		} else {
 			return value
 		}
 	case battState:
-		if value, ok := rawValue.(battChargeState); !ok {
+		if value, ok := state.value.(battChargeState); !ok {
 			return sensor.StateUnknown
 		} else {
 			return value.String()
 		}
 	case battLevel:
-		if value, ok := rawValue.(batteryLevel); !ok {
+		if value, ok := state.value.(batteryLevel); !ok {
 			return sensor.StateUnknown
 		} else {
 			return value.String()
 		}
 	default:
-		if value, ok := rawValue.(string); !ok {
+		if value, ok := state.value.(string); !ok {
 			return sensor.StateUnknown
 		} else {
 			return value
