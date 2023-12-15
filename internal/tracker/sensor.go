@@ -26,10 +26,10 @@ type Sensor interface {
 	SensorType() sensor.SensorType
 	DeviceClass() sensor.SensorDeviceClass
 	StateClass() sensor.SensorStateClass
-	State() interface{}
+	State() any
 	Units() string
 	Category() string
-	Attributes() interface{}
+	Attributes() any
 }
 
 func prettyPrintState(s Sensor) string {
