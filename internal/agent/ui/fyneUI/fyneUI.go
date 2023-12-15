@@ -117,13 +117,13 @@ func (i *fyneUI) DisplayTrayIcon(agent ui.Agent) {
 					w := i.fyneSettingsWindow(i.text)
 					w.Show()
 				}),
-			fyne.NewMenuItem(i.text.Translate("App Settings"),
-				func() {
-					w := i.agentSettingsWindow(agent, i.text)
-					if w != nil {
-						w.Show()
-					}
-				}),
+			// fyne.NewMenuItem(i.text.Translate("App Settings"),
+			// 	func() {
+			// 		w := i.agentSettingsWindow(agent, i.text)
+			// 		if w != nil {
+			// 			w.Show()
+			// 		}
+			// 	}),
 			fyne.NewMenuItem(i.text.Translate("Sensors"),
 				func() {
 					w := i.sensorsWindow(agent, i.text)
@@ -298,7 +298,7 @@ func (i *fyneUI) agentSettingsWindow(agent ui.Agent, t *translations.Translator)
 }
 
 // serverConfigItems generates a list of form item widgets for selecting a
-// server to register the agent against
+// server to register the agent against.
 func (i *fyneUI) serverConfigItems(ctx context.Context, agent ui.Agent, t *translations.Translator) []*widget.FormItem {
 	allServers := hass.FindServers(ctx)
 
@@ -336,7 +336,7 @@ func (i *fyneUI) serverConfigItems(ctx context.Context, agent ui.Agent, t *trans
 }
 
 // mqttConfigItems generates a list of for item widgets for configuring the
-// agent to use an MQTT for pub/sub functionality
+// agent to use an MQTT for pub/sub functionality.
 func (i *fyneUI) mqttConfigItems(agent ui.Agent, t *translations.Translator) []*widget.FormItem {
 	serverEntry := configEntry(agent, config.PrefMQTTServer, "localhost:1883", false)
 	serverEntry.Validator = hostPortValidator()
@@ -426,7 +426,7 @@ func longestString(a []string) string {
 }
 
 // httpValidator is a custom fyne validator that will validate a string is a
-// valid http/https URL
+// valid http/https URL.
 func httpValidator() fyne.StringValidator {
 	v := validator.New()
 	return func(text string) error {
@@ -441,7 +441,7 @@ func httpValidator() fyne.StringValidator {
 }
 
 // hostPortValidator is a custom fyne validator that will validate a string is a
-// valid hostname:port combination
+// valid hostname:port combination.
 func hostPortValidator() fyne.StringValidator {
 	v := validator.New()
 	return func(text string) error {
