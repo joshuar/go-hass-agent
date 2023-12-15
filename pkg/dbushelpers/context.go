@@ -38,7 +38,7 @@ func Setup(ctx context.Context) context.Context {
 	return context.WithValue(ctx, linuxCtxKey, NewDBusAPI(ctx))
 }
 
-// getBus retrieves the D-Bus API object from the context
+// getBus retrieves the D-Bus API object from the context.
 func getBus(ctx context.Context, e dbusType) (*Bus, bool) {
 	b, ok := ctx.Value(linuxCtxKey).(*dBusAPI)
 	if !ok {
