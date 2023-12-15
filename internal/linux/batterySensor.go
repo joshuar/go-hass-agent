@@ -7,6 +7,7 @@ package linux
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"strings"
@@ -21,134 +22,87 @@ import (
 
 const (
 	upowerDBusDest         = "org.freedesktop.UPower"
+	upowerDBusDeviceDest   = upowerDBusDest + ".Device"
 	upowerDBusPath         = "/org/freedesktop/UPower"
 	upowerGetDevicesMethod = "org.freedesktop.UPower.EnumerateDevices"
 )
 
 type upowerBattery struct {
-	props    map[sensorType]dbus.Variant
-	dBusPath dbus.ObjectPath
+	id, model string
+	dBusPath  dbus.ObjectPath
+	battType  batteryType
+	sensors   []sensorType
 }
 
-func (b *upowerBattery) updateProp(ctx context.Context, t sensorType) {
-	var p string
+// getProp retrieves the property from D-Bus that matches the given battery sensor type.
+func (b *upowerBattery) getProp(ctx context.Context, t sensorType) (dbus.Variant, error) {
 	if !b.dBusPath.IsValid() {
-		log.Warn().Msg("No D-Bus path for battery.")
-		return
+		return dbus.MakeVariant(""), errors.New("invalid battery path")
 	}
-	switch t {
-	case battType:
-		p = "Type"
-	case battPercentage:
-		p = "Percentage"
-	case battTemp:
-		p = "Temperature"
-	case battVoltage:
-		p = "Voltage"
-	case battEnergy:
-		p = "Energy"
-	case battEnergyRate:
-		p = "EnergyRate"
-	case battState:
-		p = "State"
-	case battNativePath:
-		p = "NativePath"
-	case battLevel:
-		p = "BatteryLevel"
-	case battModel:
-		p = "Model"
-	}
-	propValue, err := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
+	dBusProp := sensorTypeToDBusProp(t)
+	return dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
 		Path(b.dBusPath).
 		Destination(upowerDBusDest).
-		GetProp("org.freedesktop.UPower.Device." + p)
-	if err != nil {
-		log.Debug().Caller().
-			Msgf("Could not update property %s. Not found?", p)
-	} else if propValue.Value() != nil {
-		b.setValue(t, propValue)
-	}
+		GetProp(dBusProp)
 }
 
-func (b *upowerBattery) getValue(t sensorType) dbus.Variant {
-	if b != nil {
-		if v, ok := b.props[t]; ok {
-			return v
+// getSensors retrieves the sensors passed in for a given battery.
+func (b *upowerBattery) getSensors(ctx context.Context, sensors ...sensorType) chan *upowerBatterySensor {
+	sensorCh := make(chan *upowerBatterySensor, len(sensors))
+	for _, s := range sensors {
+		value, err := b.getProp(ctx, s)
+		if err != nil {
+			log.Warn().Err(err).Str("battery", string(b.dBusPath)).Str("sensor", s.String()).Msg("Could not retrieve battery sensor.")
+			continue
 		}
+		sensorCh <- newBatterySensor(ctx, b, s, value)
 	}
-	return dbus.MakeVariant("")
-}
-
-func (b *upowerBattery) setValue(t sensorType, v dbus.Variant) {
-	if b != nil {
-		if _, ok := b.props[t]; ok {
-			b.props[t] = v
-		}
-	}
-}
-
-func (b *upowerBattery) marshalBatteryStateUpdate(ctx context.Context, t sensorType) *upowerBatteryState {
-	if b == nil {
-		return nil
-	}
-	id := dbushelpers.VariantToValue[string](b.getValue(battNativePath))
-	if id == "" {
-		log.Warn().Msg("Battery does not have a usable path. Will not monitor.")
-		return nil
-	}
-	state := &upowerBatteryState{
-		batteryID: id,
-		model:     dbushelpers.VariantToValue[string](b.getValue(battModel)),
-		prop: upowerBatteryProp{
-			name:  t,
-			value: b.getValue(t),
-		},
-	}
-	switch t {
-	case battEnergyRate:
-		b.updateProp(ctx, battVoltage)
-		b.updateProp(ctx, battEnergy)
-		state.attributes = &struct {
-			DataSource string  `json:"Data Source"`
-			Voltage    float64 `json:"Voltage"`
-			Energy     float64 `json:"Energy"`
-		}{
-			Voltage:    dbushelpers.VariantToValue[float64](b.getValue(battVoltage)),
-			Energy:     dbushelpers.VariantToValue[float64](b.getValue(battEnergy)),
-			DataSource: srcDbus,
-		}
-	case battPercentage, battLevel:
-		state.attributes = &struct {
-			Type       string `json:"Battery Type"`
-			DataSource string `json:"Data Source"`
-		}{
-			Type:       batteryType(dbushelpers.VariantToValue[uint32](b.getValue(battType))).String(),
-			DataSource: srcDbus,
-		}
-	}
-	return state
+	close(sensorCh)
+	return sensorCh
 }
 
 func newBattery(ctx context.Context, path dbus.ObjectPath) *upowerBattery {
 	b := &upowerBattery{
 		dBusPath: path,
-		props:    make(map[sensorType]dbus.Variant),
 	}
-	b.updateProp(ctx, battNativePath)
-	b.updateProp(ctx, battType)
-	b.updateProp(ctx, battModel)
-	b.updateProp(ctx, battState)
+
+	// Get the battery type. Depending on the value, additional sensors will be added.
+	battType, err := b.getProp(ctx, battType)
+	if err != nil {
+		log.Warn().Err(err).Msg("Could not determine battery type.")
+		return nil
+	}
+	b.battType = dbushelpers.VariantToValue[batteryType](battType)
+
+	// use the native path D-Bus property for the battery id.
+	id, err := b.getProp(ctx, battNativePath)
+	if err != nil {
+		log.Warn().Err(err).Str("battery", string(b.dBusPath)).Msg("Battery does not have a usable path. Can not monitor sensors.")
+		return nil
+	}
+	b.id = dbushelpers.VariantToValue[string](id)
+
+	model, err := b.getProp(ctx, battModel)
+	if err != nil {
+		log.Warn().Err(err).Str("battery", string(b.dBusPath)).Msg("Could not determine battery model.")
+	}
+	b.model = dbushelpers.VariantToValue[string](model)
+
+	// At a minimum, monitor the battery type and the charging state.
+	b.sensors = append(b.sensors, battState)
+
+	if dbushelpers.VariantToValue[uint32](battType) == 2 {
+		// Battery has charge percentage, temp and charging rate sensors
+		b.sensors = append(b.sensors, battPercentage, battTemp, battEnergyRate)
+	} else {
+		// Battery has a textual level sensor
+		b.sensors = append(b.sensors, battLevel, battPercentage)
+	}
 	return b
 }
 
-type upowerBatteryProp struct {
-	value any
-	name  sensorType
-}
-
-type upowerBatteryState struct {
+type upowerBatterySensor struct {
 	attributes any
-	prop       upowerBatteryProp
 	batteryID  string
 	model      string
 	linuxSensor
@@ -156,43 +110,27 @@ type upowerBatteryState struct {
 
 // uPowerBatteryState implements hass.SensorUpdate
 
-func (state *upowerBatteryState) Name() string {
-	return state.model + " " + state.prop.name.String()
+func (state *upowerBatterySensor) Name() string {
+	return state.model + " " + state.sensorType.String()
 }
 
-func (state *upowerBatteryState) ID() string {
-	return state.batteryID + "_" + strings.ToLower(strcase.ToSnake(state.prop.name.String()))
+func (state *upowerBatterySensor) ID() string {
+	return state.batteryID + "_" + strings.ToLower(strcase.ToSnake(state.sensorType.String()))
 }
 
-func (state *upowerBatteryState) Icon() string {
-	switch state.prop.name {
+func (state *upowerBatterySensor) Icon() string {
+	switch state.sensorType {
 	case battPercentage:
-		pc, ok := state.prop.value.(float64)
-		if !ok {
-			return "mdi:battery-unknown"
-		}
-		if pc >= 95 {
-			return "mdi:battery"
-		} else {
-			return fmt.Sprintf("mdi:battery-%d", int(math.Round(pc/10)*10))
-		}
+		return battPcToIcon(state.value)
 	case battEnergyRate:
-		er, ok := state.prop.value.(float64)
-		if !ok {
-			return "mdi:battery"
-		}
-		if math.Signbit(er) {
-			return "mdi:battery-minus"
-		} else {
-			return "mdi:battery-plus"
-		}
+		return battErToIcon(state.value)
 	default:
 		return "mdi:battery"
 	}
 }
 
-func (state *upowerBatteryState) DeviceClass() sensor.SensorDeviceClass {
-	switch state.prop.name {
+func (state *upowerBatterySensor) DeviceClass() sensor.SensorDeviceClass {
+	switch state.sensorType {
 	case battPercentage:
 		return sensor.SensorBattery
 	case battTemp:
@@ -204,8 +142,8 @@ func (state *upowerBatteryState) DeviceClass() sensor.SensorDeviceClass {
 	}
 }
 
-func (state *upowerBatteryState) StateClass() sensor.SensorStateClass {
-	switch state.prop.name {
+func (state *upowerBatterySensor) StateClass() sensor.SensorStateClass {
+	switch state.sensorType {
 	case battPercentage, battTemp, battEnergyRate:
 		return sensor.StateMeasurement
 	default:
@@ -213,9 +151,9 @@ func (state *upowerBatteryState) StateClass() sensor.SensorStateClass {
 	}
 }
 
-func (state *upowerBatteryState) State() any {
-	propType := state.prop.name
-	rawValue := state.prop.value
+func (state *upowerBatterySensor) State() any {
+	propType := state.sensorType
+	rawValue := state.value
 	if rawValue == nil {
 		return sensor.StateUnknown
 	}
@@ -247,8 +185,8 @@ func (state *upowerBatteryState) State() any {
 	}
 }
 
-func (state *upowerBatteryState) Units() string {
-	switch state.prop.name {
+func (state *upowerBatterySensor) Units() string {
+	switch state.sensorType {
 	case battPercentage:
 		return "%"
 	case battTemp:
@@ -260,52 +198,85 @@ func (state *upowerBatteryState) Units() string {
 	}
 }
 
-func (state *upowerBatteryState) Category() string {
-	return "diagnostic"
-}
-
-func (state *upowerBatteryState) Attributes() any {
+func (state *upowerBatterySensor) Attributes() any {
 	return state.attributes
 }
 
+func (state *upowerBatterySensor) generateAttributes(ctx context.Context, b *upowerBattery) {
+	switch state.sensorType {
+	case battEnergyRate:
+		voltage, err := b.getProp(ctx, battVoltage)
+		if err != nil {
+			log.Warn().Err(err).Str("battery", string(b.dBusPath)).Msg("Could not retrieve battery voltage.")
+		}
+		energy, err := b.getProp(ctx, battEnergy)
+		if err != nil {
+			log.Warn().Err(err).Str("battery", string(b.dBusPath)).Msg("Could not retrieve battery energy.")
+		}
+		state.attributes = &struct {
+			DataSource string  `json:"Data Source"`
+			Voltage    float64 `json:"Voltage"`
+			Energy     float64 `json:"Energy"`
+		}{
+			Voltage:    dbushelpers.VariantToValue[float64](voltage),
+			Energy:     dbushelpers.VariantToValue[float64](energy),
+			DataSource: srcDbus,
+		}
+	case battPercentage, battLevel:
+		state.attributes = &struct {
+			Type       string `json:"Battery Type"`
+			DataSource string `json:"Data Source"`
+		}{
+			Type:       b.battType.String(),
+			DataSource: srcDbus,
+		}
+	}
+}
+
+func newBatterySensor(ctx context.Context, b *upowerBattery, t sensorType, v dbus.Variant) *upowerBatterySensor {
+	s := &upowerBatterySensor{
+		batteryID: b.id,
+		model:     b.model,
+	}
+	s.sensorType = t
+	s.value = v.Value()
+	s.isDiagnostic = true
+	s.generateAttributes(ctx, b)
+	return s
+}
+
 func BatteryUpdater(ctx context.Context) chan tracker.Sensor {
+	// D-Bus uses different names for the battery sensors we send to Home
+	// Assistant. This map allows conversion between the two.
+	dBusPropToSensor := map[string]sensorType{
+		"Energy":       battEnergy,
+		"EnergyRate":   battEnergyRate,
+		"Voltage":      battVoltage,
+		"Percentage":   battPercentage,
+		"Temperatute":  battTemp,
+		"State":        battState,
+		"BatteryLevel": battLevel,
+	}
+
 	sensorCh := make(chan tracker.Sensor, 1)
-	batteryList := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
-		Path(upowerDBusPath).
-		Destination(upowerDBusDest).
-		GetData(upowerGetDevicesMethod).AsObjectPathList()
-	if len(batteryList) == 0 {
+	batteries := getBatteries(ctx)
+	if len(batteries) < 1 {
 		log.Warn().
 			Msg("Unable to get any battery devices from D-Bus. Battery sensor will not run.")
 		close(sensorCh)
 		return sensorCh
 	}
 
-	for _, path := range batteryList {
+	for _, path := range batteries {
 		// Track this battery in batteryTracker.
 		battery := newBattery(ctx, path)
 
-		// Track state
-		if stateUpdate := battery.marshalBatteryStateUpdate(ctx, battState); stateUpdate != nil {
-			sensorCh <- stateUpdate
-		}
-
-		// For some battery types, track additional properties as sensors
-		if dbushelpers.VariantToValue[uint32](battery.getValue(battType)) == 2 {
-			for _, prop := range []sensorType{battPercentage, battTemp, battEnergyRate} {
-				battery.updateProp(ctx, prop)
-				if stateUpdate := battery.marshalBatteryStateUpdate(ctx, prop); stateUpdate != nil {
-					sensorCh <- stateUpdate
-				}
+		// Send its current state as sensors.
+		go func() {
+			for s := range battery.getSensors(ctx, battery.sensors...) {
+				sensorCh <- s
 			}
-		} else {
-			battery.updateProp(ctx, battLevel)
-			if dbushelpers.VariantToValue[uint32](battery.getValue(battLevel)) != 1 {
-				if stateUpdate := battery.marshalBatteryStateUpdate(ctx, battLevel); stateUpdate != nil {
-					sensorCh <- stateUpdate
-				}
-			}
-		}
+		}()
 
 		// Create a DBus signal match to watch for property changes for this
 		// battery. If a property changes, check it is one we want to track and
@@ -319,21 +290,21 @@ func BatteryUpdater(ctx context.Context) chan tracker.Sensor {
 			}).
 			Event("org.freedesktop.DBus.Properties.PropertiesChanged").
 			Handler(func(s *dbus.Signal) {
+				if s.Path != path {
+					return
+				}
+				if len(s.Body) == 0 {
+					log.Debug().Msg("Received battery state change signal but not properties sent.")
+					return
+				}
 				props, ok := s.Body[1].(map[string]dbus.Variant)
 				if !ok {
 					log.Debug().Msg("Could not map received signal to battery properties.")
 					return
 				}
 				for propName, propValue := range props {
-					for BatteryProp := range battery.props {
-						if propName == BatteryProp.String() {
-							battery.props[BatteryProp] = propValue
-							log.Debug().Caller().
-								Msgf("Updating battery property %v to %v", BatteryProp.String(), propValue.Value())
-							if stateUpdate := battery.marshalBatteryStateUpdate(ctx, BatteryProp); stateUpdate != nil {
-								sensorCh <- stateUpdate
-							}
-						}
+					if s, ok := dBusPropToSensor[propName]; ok {
+						sensorCh <- newBatterySensor(ctx, battery, s, propValue)
 					}
 				}
 			}).
@@ -351,4 +322,63 @@ func BatteryUpdater(ctx context.Context) chan tracker.Sensor {
 		log.Debug().Msg("Stopped battery sensors.")
 	}()
 	return sensorCh
+}
+
+// getBatteries is a helper function to retrieve all of the known batteries
+// connected to the system.
+func getBatteries(ctx context.Context) []dbus.ObjectPath {
+	return dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
+		Path(upowerDBusPath).
+		Destination(upowerDBusDest).
+		GetData(upowerGetDevicesMethod).AsObjectPathList()
+}
+
+// sensorTypeToDBusProp is a helper function to generate the correct D-Bus
+// property for the given sensor.
+func sensorTypeToDBusProp(t sensorType) string {
+	switch t {
+	case battType:
+		return upowerDBusDeviceDest + ".Type"
+	case battPercentage:
+		return upowerDBusDeviceDest + ".Percentage"
+	case battTemp:
+		return upowerDBusDeviceDest + ".Temperature"
+	case battVoltage:
+		return upowerDBusDeviceDest + ".Voltage"
+	case battEnergy:
+		return upowerDBusDeviceDest + ".Energy"
+	case battEnergyRate:
+		return upowerDBusDeviceDest + ".EnergyRate"
+	case battState:
+		return upowerDBusDeviceDest + ".State"
+	case battNativePath:
+		return upowerDBusDeviceDest + ".NativePath"
+	case battLevel:
+		return upowerDBusDeviceDest + ".BatteryLevel"
+	case battModel:
+		return upowerDBusDeviceDest + ".Model"
+	}
+	return ""
+}
+
+func battPcToIcon(v any) string {
+	pc, ok := v.(float64)
+	if !ok {
+		return "mdi:battery-unknown"
+	}
+	if pc >= 95 {
+		return "mdi:battery"
+	}
+	return fmt.Sprintf("mdi:battery-%d", int(math.Round(pc/10)*10))
+}
+
+func battErToIcon(v any) string {
+	er, ok := v.(float64)
+	if !ok {
+		return "mdi:battery"
+	}
+	if math.Signbit(er) {
+		return "mdi:battery-minus"
+	}
+	return "mdi:battery-plus"
 }
