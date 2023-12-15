@@ -27,7 +27,7 @@ type Location interface {
 }
 
 // marshalLocationUpdate will take a LocationUpdate and marshal it into a
-// hass.LocationUpdate that can be sent as a request to HA
+// hass.LocationUpdate that can be sent as a request to HA.
 func marshalLocationUpdate(l Location) *hass.LocationUpdate {
 	return &hass.LocationUpdate{
 		Gps:              l.Gps(),

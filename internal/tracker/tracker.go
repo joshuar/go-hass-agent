@@ -50,7 +50,7 @@ func (t *SensorTracker) add(s Sensor) error {
 	return nil
 }
 
-// Get fetches a sensors current tracked state
+// Get fetches a sensors current tracked state.
 func (t *SensorTracker) Get(id string) (Sensor, error) {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
@@ -152,9 +152,9 @@ func (t *SensorTracker) handle(response apiResponse, sensorUpdate Sensor) {
 // UpdateSensors is the externally exposed method that devices can use to send a
 // sensor state update.  It takes any number of sensor state updates of any type
 // and handles them as appropriate.
-func (t *SensorTracker) UpdateSensors(ctx context.Context, sensors ...interface{}) error {
+func (t *SensorTracker) UpdateSensors(ctx context.Context, sensors ...any) error {
 	g, _ := errgroup.WithContext(ctx)
-	sensorData := make(chan interface{}, len(sensors))
+	sensorData := make(chan any, len(sensors))
 
 	for i := 0; i < len(sensors); i++ {
 		sensorData <- sensors[i]
