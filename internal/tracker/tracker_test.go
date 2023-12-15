@@ -147,7 +147,7 @@ func TestSensorTracker_Get(t *testing.T) {
 
 func TestSensorTracker_SensorList(t *testing.T) {
 	mockSensor := &SensorMock{
-		StateFunc: func() interface{} { return "aState" },
+		StateFunc: func() any { return "aState" },
 	}
 	mockMap := make(map[string]Sensor)
 	mockMap["sensorID"] = mockSensor
@@ -197,8 +197,8 @@ func TestSensorTracker_send(t *testing.T) {
 		IDFunc:         func() string { return "updateID" },
 		NameFunc:       func() string { return "Update Sensor" },
 		UnitsFunc:      func() string { return "" },
-		StateFunc:      func() interface{} { return "aState" },
-		AttributesFunc: func() interface{} { return nil },
+		StateFunc:      func() any { return "aState" },
+		AttributesFunc: func() any { return nil },
 		IconFunc:       func() string { return "anIcon" },
 		SensorTypeFunc: func() sensor.SensorType { return sensor.TypeSensor },
 	}
@@ -206,8 +206,8 @@ func TestSensorTracker_send(t *testing.T) {
 		IDFunc:          func() string { return "regID" },
 		NameFunc:        func() string { return "Registration Sensor" },
 		UnitsFunc:       func() string { return "" },
-		StateFunc:       func() interface{} { return "aState" },
-		AttributesFunc:  func() interface{} { return nil },
+		StateFunc:       func() any { return "aState" },
+		AttributesFunc:  func() any { return nil },
 		IconFunc:        func() string { return "anIcon" },
 		SensorTypeFunc:  func() sensor.SensorType { return sensor.TypeSensor },
 		DeviceClassFunc: func() sensor.SensorDeviceClass { return sensor.Duration },
@@ -218,8 +218,8 @@ func TestSensorTracker_send(t *testing.T) {
 		IDFunc:          func() string { return "disabledID" },
 		NameFunc:        func() string { return "Update Sensor" },
 		UnitsFunc:       func() string { return "" },
-		StateFunc:       func() interface{} { return "aState" },
-		AttributesFunc:  func() interface{} { return nil },
+		StateFunc:       func() any { return "aState" },
+		AttributesFunc:  func() any { return nil },
 		IconFunc:        func() string { return "anIcon" },
 		SensorTypeFunc:  func() sensor.SensorType { return sensor.TypeSensor },
 		DeviceClassFunc: func() sensor.SensorDeviceClass { return sensor.Duration },
@@ -305,8 +305,8 @@ func TestSensorTracker_handle(t *testing.T) {
 		IDFunc:         func() string { return "updateID" },
 		NameFunc:       func() string { return "Update Sensor" },
 		UnitsFunc:      func() string { return "" },
-		StateFunc:      func() interface{} { return "aState" },
-		AttributesFunc: func() interface{} { return nil },
+		StateFunc:      func() any { return "aState" },
+		AttributesFunc: func() any { return nil },
 		IconFunc:       func() string { return "anIcon" },
 		SensorTypeFunc: func() sensor.SensorType { return sensor.TypeSensor },
 	}
@@ -318,8 +318,8 @@ func TestSensorTracker_handle(t *testing.T) {
 		IDFunc:          func() string { return "regID" },
 		NameFunc:        func() string { return "Registration Sensor" },
 		UnitsFunc:       func() string { return "" },
-		StateFunc:       func() interface{} { return "aState" },
-		AttributesFunc:  func() interface{} { return nil },
+		StateFunc:       func() any { return "aState" },
+		AttributesFunc:  func() any { return nil },
 		IconFunc:        func() string { return "anIcon" },
 		SensorTypeFunc:  func() sensor.SensorType { return sensor.TypeSensor },
 		DeviceClassFunc: func() sensor.SensorDeviceClass { return sensor.Duration },
@@ -334,8 +334,8 @@ func TestSensorTracker_handle(t *testing.T) {
 		IDFunc:         func() string { return "disabledID" },
 		NameFunc:       func() string { return "Disabled Sensor" },
 		UnitsFunc:      func() string { return "" },
-		StateFunc:      func() interface{} { return "aState" },
-		AttributesFunc: func() interface{} { return nil },
+		StateFunc:      func() any { return "aState" },
+		AttributesFunc: func() any { return nil },
 		IconFunc:       func() string { return "anIcon" },
 		SensorTypeFunc: func() sensor.SensorType { return sensor.TypeSensor },
 	}
@@ -426,8 +426,8 @@ func TestSensorTracker_UpdateSensors(t *testing.T) {
 		IDFunc:         func() string { return "updateID" },
 		NameFunc:       func() string { return "Update Sensor" },
 		UnitsFunc:      func() string { return "" },
-		StateFunc:      func() interface{} { return "aState" },
-		AttributesFunc: func() interface{} { return nil },
+		StateFunc:      func() any { return "aState" },
+		AttributesFunc: func() any { return nil },
 		IconFunc:       func() string { return "anIcon" },
 		SensorTypeFunc: func() sensor.SensorType { return sensor.TypeSensor },
 	}
@@ -458,7 +458,7 @@ func TestSensorTracker_UpdateSensors(t *testing.T) {
 			return nil
 		},
 	}
-	var single, many []interface{}
+	var single, many []any
 	single = append(single, mockUpdate)
 	many = append(many, mockUpdate, mockUpdate, mockUpdate)
 
@@ -469,7 +469,7 @@ func TestSensorTracker_UpdateSensors(t *testing.T) {
 	}
 	type args struct {
 		ctx     context.Context
-		sensors []interface{}
+		sensors []any
 	}
 	tests := []struct {
 		name    string
