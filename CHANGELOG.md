@@ -1,5 +1,13 @@
 # Changelog
 
+## [6.0.2](https://github.com/joshuar/go-hass-agent/compare/v6.0.1...v6.0.2) (2023-12-16)
+
+
+### Bug Fixes
+
+* **agent:** remove unused app settings for MQTT for now ([274d4dc](https://github.com/joshuar/go-hass-agent/commit/274d4dcf69d8715194ec6333454ca4df571c8737))
+* **linux:** rework batterySensor code to reduce complexity and improve safety ([a1349a6](https://github.com/joshuar/go-hass-agent/commit/a1349a6db07bbc15f1b7b623ac254290ae594273))
+
 ## [6.0.1](https://github.com/joshuar/go-hass-agent/compare/v6.0.0...v6.0.1) (2023-12-13)
 
 
