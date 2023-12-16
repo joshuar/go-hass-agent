@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/godbus/dbus/v5"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNewBus(t *testing.T) {
@@ -21,20 +22,31 @@ func TestNewBus(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want *Bus
+		want dbusType
 	}{
-		// TODO: Add test cases.
+		{
+			name: "session bus",
+			args: args{ctx: context.TODO(), t: SessionBus},
+			want: SessionBus,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := NewBus(tt.args.ctx, tt.args.t); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewBus() = %v, want %v", got, tt.want)
+			if got := NewBus(tt.args.ctx, tt.args.t); !reflect.DeepEqual(got.busType, tt.want) || got.conn == nil {
+				t.Errorf("NewBus() = %v, want %v", got.conn, tt.want)
 			}
 		})
 	}
 }
 
 func TestNewBusRequest(t *testing.T) {
+	ctx := Setup(context.TODO())
+	bus, ok := getBus(ctx, SessionBus)
+	assert.True(t, ok)
+	wantRequest := &busRequest{
+		bus: bus,
+	}
+
 	type args struct {
 		ctx     context.Context
 		busType dbusType
@@ -44,7 +56,11 @@ func TestNewBusRequest(t *testing.T) {
 		args args
 		want *busRequest
 	}{
-		// TODO: Add test cases.
+		{
+			name: "session request",
+			args: args{ctx: ctx, busType: SessionBus},
+			want: wantRequest,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
