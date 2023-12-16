@@ -289,9 +289,7 @@ func BatteryUpdater(ctx context.Context) chan tracker.Sensor {
 		}()
 
 		// Create a DBus signal match to watch for property changes for this
-		// battery. If a property changes, check it is one we want to track and
-		// if so, update the battery's state in batteryTracker and send the
-		// update back to Home Assistant.
+		// battery.
 		err := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
 			Path(path).
 			Match([]dbus.MatchOption{
@@ -312,11 +310,13 @@ func BatteryUpdater(ctx context.Context) chan tracker.Sensor {
 					log.Debug().Msg("Could not map received signal to battery properties.")
 					return
 				}
-				for propName, propValue := range props {
-					if s, ok := dBusPropToSensor[propName]; ok {
-						sensorCh <- newBatterySensor(ctx, battery, s, propValue)
+				go func() {
+					for propName, propValue := range props {
+						if s, ok := dBusPropToSensor[propName]; ok {
+							sensorCh <- newBatterySensor(ctx, battery, s, propValue)
+						}
 					}
-				}
+				}()
 			}).
 			AddWatch(ctx)
 		if err != nil {
