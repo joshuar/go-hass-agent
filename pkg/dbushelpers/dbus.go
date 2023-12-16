@@ -70,7 +70,7 @@ type busRequest struct {
 
 func NewBusRequest(ctx context.Context, busType dbusType) *busRequest {
 	if bus, ok := getBus(ctx, busType); !ok {
-		log.Warn().Msg("No D-Bus connection present in context.")
+		log.Debug().Msg("No D-Bus connection present in context.")
 		return &busRequest{}
 	} else {
 		return &busRequest{
@@ -85,7 +85,7 @@ func NewBusRequest2(ctx context.Context, busType dbusType) *busRequest {
 			bus: b,
 		}
 	} else {
-		log.Warn().Msg("No D-Bus connection present in context.")
+		log.Debug().Msg("No D-Bus connection present in context.")
 		return &busRequest{}
 	}
 }
@@ -130,7 +130,7 @@ func (r *busRequest) GetProp(prop string) (dbus.Variant, error) {
 	obj := r.bus.conn.Object(r.dest, r.path)
 	res, err := obj.GetProperty(prop)
 	if err != nil {
-		log.Warn().Err(err).
+		log.Debug().Err(err).
 			Msgf("Unable to retrieve property %s (%s)", prop, r.dest)
 		return dbus.MakeVariant(""), err
 	}
@@ -161,7 +161,7 @@ func (r *busRequest) GetData(method string, args ...any) *dbusData {
 		err = obj.Call(method, 0).Store(&d.data)
 	}
 	if err != nil {
-		log.Warn().Err(err).
+		log.Debug().Err(err).
 			Msgf("Unable to execute %s on %s (args: %s)", method, r.dest, args)
 	}
 	return d
@@ -238,7 +238,7 @@ func (d *dbusData) AsVariantMap() map[string]dbus.Variant {
 	wanted := make(map[string]dbus.Variant)
 	data, ok := d.data.(map[string]any)
 	if !ok {
-		log.Warn().Msgf("Could not represent D-Bus data as %T.", wanted)
+		log.Debug().Msgf("Could not represent D-Bus data as %T.", wanted)
 		return wanted
 	}
 	for k, v := range data {
@@ -254,7 +254,7 @@ func (d *dbusData) AsStringMap() map[string]string {
 	}
 	data, ok := d.data.(map[string]string)
 	if !ok {
-		log.Warn().Msgf("Could not represent D-Bus data as %T.", data)
+		log.Debug().Msgf("Could not represent D-Bus data as %T.", data)
 		return make(map[string]string)
 	}
 	return data
@@ -269,7 +269,7 @@ func (d *dbusData) AsObjectPathList() []dbus.ObjectPath {
 	var ok bool
 	data, ok = d.data.([]dbus.ObjectPath)
 	if !ok {
-		log.Warn().Msgf("Could not represent D-Bus data as %T.", data)
+		log.Debug().Msgf("Could not represent D-Bus data as %T.", data)
 	}
 	return data
 }
@@ -283,7 +283,7 @@ func (d *dbusData) AsStringList() []string {
 	var ok bool
 	data, ok = d.data.([]string)
 	if !ok {
-		log.Warn().Msgf("Could not represent D-Bus data as %T.", data)
+		log.Debug().Msgf("Could not represent D-Bus data as %T.", data)
 	}
 	return data
 }
@@ -297,7 +297,7 @@ func (d *dbusData) AsObjectPath() dbus.ObjectPath {
 	var ok bool
 	data, ok = d.data.(dbus.ObjectPath)
 	if !ok {
-		log.Warn().Msgf("Could not represent D-Bus data as %T.", data)
+		log.Debug().Msgf("Could not represent D-Bus data as %T.", data)
 	}
 	return data
 }
@@ -341,7 +341,7 @@ func VariantToValue[S any](variant dbus.Variant) S {
 	var value S
 	err := variant.Store(&value)
 	if err != nil {
-		log.Warn().Err(err).
+		log.Debug().Err(err).
 			Msgf("Unable to convert dbus variant %v to type %T.", variant, value)
 		return value
 	}
