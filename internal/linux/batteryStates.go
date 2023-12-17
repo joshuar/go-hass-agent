@@ -7,12 +7,13 @@ package linux
 
 //go:generate stringer -type=battChargeState -output batteryStatesStrings.go -linecomment
 const (
-	stateCharging         battChargeState = iota + 1 // Charging
-	stateDischarging                                 // Discharging
-	stateEmpty                                       // Empty
-	stateFullyCharged                                // Fully Charged
-	statePendingCharge                               // Pending Charge
-	statePendingDischarge                            // Pending Discharge
+	stateUnknown          battChargeState = iota // Unknown
+	stateCharging                                // Charging
+	stateDischarging                             // Discharging
+	stateEmpty                                   // Empty
+	stateFullyCharged                            // Fully Charged
+	statePendingCharge                           // Pending Charge
+	statePendingDischarge                        // Pending Discharge
 )
 
 type battChargeState uint32

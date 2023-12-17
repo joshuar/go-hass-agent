@@ -71,8 +71,8 @@ func (b *upowerBattery) getProp(ctx context.Context, t sensorType) (dbus.Variant
 }
 
 // getSensors retrieves the sensors passed in for a given battery.
-func (b *upowerBattery) getSensors(ctx context.Context, sensors ...sensorType) chan *upowerBatterySensor {
-	sensorCh := make(chan *upowerBatterySensor, len(sensors))
+func (b *upowerBattery) getSensors(ctx context.Context, sensors ...sensorType) chan tracker.Sensor {
+	sensorCh := make(chan tracker.Sensor, len(sensors))
 	for _, s := range sensors {
 		value, err := b.getProp(ctx, s)
 		if err != nil {
@@ -120,7 +120,7 @@ func newBattery(ctx context.Context, path dbus.ObjectPath) *upowerBattery {
 		b.sensors = append(b.sensors, battPercentage, battTemp, battEnergyRate)
 	} else {
 		// Battery has a textual level sensor
-		b.sensors = append(b.sensors, battLevel, battPercentage)
+		b.sensors = append(b.sensors, battLevel)
 	}
 	return b
 }
@@ -187,16 +187,16 @@ func (s *upowerBatterySensor) State() any {
 			return value
 		}
 	case battState:
-		if value, ok := s.value.(battChargeState); !ok {
+		if value, ok := s.value.(uint32); !ok {
 			return sensor.StateUnknown
 		} else {
-			return value.String()
+			return battChargeState(value).String()
 		}
 	case battLevel:
-		if value, ok := s.value.(batteryLevel); !ok {
+		if value, ok := s.value.(uint32); !ok {
 			return sensor.StateUnknown
 		} else {
-			return value.String()
+			return batteryLevel(value).String()
 		}
 	default:
 		if value, ok := s.value.(string); !ok {
@@ -268,70 +268,20 @@ func newBatterySensor(ctx context.Context, b *upowerBattery, t sensorType, v dbu
 }
 
 func BatteryUpdater(ctx context.Context) chan tracker.Sensor {
-	sensorCh := make(chan tracker.Sensor, 1)
 	batteries := getBatteries(ctx)
 	if len(batteries) < 1 {
 		log.Warn().
 			Msg("Unable to get any battery devices from D-Bus. Battery sensor will not run.")
-		close(sensorCh)
-		return sensorCh
+		return nil
 	}
+
+	var sensorCh []<-chan tracker.Sensor
 
 	for _, path := range batteries {
-		// Track this battery in batteryTracker.
 		battery := newBattery(ctx, path)
-
-		// Send its current state as sensors.
-		go func() {
-			for s := range battery.getSensors(ctx, battery.sensors...) {
-				sensorCh <- s
-			}
-		}()
-
-		// Create a DBus signal match to watch for property changes for this
-		// battery.
-		err := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
-			Path(path).
-			Match([]dbus.MatchOption{
-				dbus.WithMatchObjectPath(path),
-				dbus.WithMatchInterface("org.freedesktop.DBus.Properties"),
-			}).
-			Event("org.freedesktop.DBus.Properties.PropertiesChanged").
-			Handler(func(s *dbus.Signal) {
-				if s.Path != path {
-					return
-				}
-				if len(s.Body) == 0 {
-					log.Debug().Msg("Received battery state change signal but not properties sent.")
-					return
-				}
-				props, ok := s.Body[1].(map[string]dbus.Variant)
-				if !ok {
-					log.Debug().Msg("Could not map received signal to battery properties.")
-					return
-				}
-				go func() {
-					for propName, propValue := range props {
-						if s, ok := dBusPropToSensor[propName]; ok {
-							sensorCh <- newBatterySensor(ctx, battery, s, propValue)
-						}
-					}
-				}()
-			}).
-			AddWatch(ctx)
-		if err != nil {
-			log.Debug().Caller().Err(err).
-				Msg("Failed to create DBus battery property watch.")
-			close(sensorCh)
-			return sensorCh
-		}
+		sensorCh = append(sensorCh, battery.getSensors(ctx, battery.sensors...), monitorBattery(ctx, battery))
 	}
-	go func() {
-		defer close(sensorCh)
-		<-ctx.Done()
-		log.Debug().Msg("Stopped battery sensors.")
-	}()
-	return sensorCh
+	return tracker.MergeSensorCh(ctx, sensorCh...)
 }
 
 // getBatteries is a helper function to retrieve all of the known batteries
@@ -341,6 +291,53 @@ func getBatteries(ctx context.Context) []dbus.ObjectPath {
 		Path(upowerDBusPath).
 		Destination(upowerDBusDest).
 		GetData(upowerGetDevicesMethod).AsObjectPathList()
+}
+
+func monitorBattery(ctx context.Context, battery *upowerBattery) chan tracker.Sensor {
+	sensorCh := make(chan tracker.Sensor, 1)
+
+	// Create a DBus signal match to watch for property changes for this
+	// battery.
+	err := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
+		Match([]dbus.MatchOption{
+			dbus.WithMatchObjectPath(battery.dBusPath),
+			dbus.WithMatchInterface("org.freedesktop.DBus.Properties"),
+		}).
+		Event("org.freedesktop.DBus.Properties.PropertiesChanged").
+		Handler(func(s *dbus.Signal) {
+			if s.Path != battery.dBusPath {
+				return
+			}
+			if len(s.Body) == 0 {
+				log.Debug().Msg("Received battery state change signal but not properties sent.")
+				return
+			}
+			props, ok := s.Body[1].(map[string]dbus.Variant)
+			if !ok {
+				log.Debug().Msg("Could not map received signal to battery properties.")
+				return
+			}
+			go func() {
+				for propName, propValue := range props {
+					if s, ok := dBusPropToSensor[propName]; ok {
+						sensorCh <- newBatterySensor(ctx, battery, s, propValue)
+					}
+				}
+			}()
+		}).
+		AddWatch(ctx)
+	if err != nil {
+		log.Debug().Caller().Err(err).
+			Msg("Failed to create DBus battery property watch.")
+		close(sensorCh)
+		return sensorCh
+	}
+	go func() {
+		defer close(sensorCh)
+		<-ctx.Done()
+		log.Debug().Str("battery", battery.id).Msg("Stopped monitoring battery.")
+	}()
+	return sensorCh
 }
 
 func battPcToIcon(v any) string {

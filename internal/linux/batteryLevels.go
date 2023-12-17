@@ -7,12 +7,15 @@ package linux
 
 //go:generate stringer -type=batteryLevel -output batteryLevelsStrings.go -linecomment
 const (
-	batteryLevelNone batteryLevel = iota + 1 // None
-	batteryLevelLow                          // Low
-	batteryLevelCrit                         // Critical
-	batteryLevelNorm                         // Normal
-	batteryLevelHigh                         // High
-	batteryLevelFull                         // Full
+	batteryLevelUnknown batteryLevel = iota // Unknown
+	batteryLevelNone                        // None
+	_
+	batteryLevelLow  // Low
+	batteryLevelCrit // Critical
+	_
+	batteryLevelNorm // Normal
+	batteryLevelHigh // High
+	batteryLevelFull // Full
 )
 
 type batteryLevel uint32
