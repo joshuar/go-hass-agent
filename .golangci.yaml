@@ -116,6 +116,7 @@ issues:
         - gochecknoinits
         - stylecheck
         - staticcheck
+  fix: true
 
 run:
   timeout: 5m
