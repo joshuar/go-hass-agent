@@ -4,12 +4,22 @@
     "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
     "shutdownAction": "stopCompose",
     "containerUser": "vscode",
-    "containerEnv": { "TZ": "${localEnv:TZ:Australia/Brisbane}" },
+    "containerEnv": { 
+        "TZ": "${localEnv:TZ:Australia/Brisbane}", 
+        "DBUS_SESSION_BUS_ADDRESS": "${localEnv:DBUS_SESSION_BUS_ADDRESS}"
+    },
     "features": {
         "ghcr.io/devcontainers/features/go:1": {},
         "ghcr.io/devcontainers/features/python:1": {}
     },
     "postCreateCommand": ".devcontainer/postCreate.sh",
+    "postStartCommand": {
+        "dbus-system": "sudo service dbus start"
+        // "dbus-session": "export DBUS_SESSION_BUS_ADDRESS=$(dbus-daemon --session --print-address)"
+    },
+    "remoteEnv": {
+        "DBUS_SESSION_BUS_ADDRESS": "${containerEnv:DBUS_SESSION_BUS_ADDRESS}"
+    },
     "customizations": {
         "vscode": {
             "extensions": [

@@ -1,16 +1,17 @@
 version: "3.8"
 services:
   devcontainer:
-    image: mcr.microsoft.com/devcontainers/base:ubuntu
+    build: 
+      dockerfile: Dockerfile
     volumes:
       - ../..:/workspaces:cached
       - /etc/localtime:/etc/localtime:ro,cached
-    command: /bin/sh -c "while sleep 1000; do :; done"
     network_mode: host
     userns_mode: keep-id
     user: vscode
+    command: dbus-run-session -- sleep infinity
   home-assistant:
-    image: ghcr.io/home-assistant/home-assistant:2023.12.1
+    image: ghcr.io/home-assistant/home-assistant:2023.12.3
     volumes:
       - ../deployments/home-assistant/config:/config
     environment:
