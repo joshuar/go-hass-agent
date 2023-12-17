@@ -8,9 +8,8 @@ package logging
 import (
 	"fmt"
 	"net/http"
-	"os"
-
 	_ "net/http/pprof"
+	"os"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
