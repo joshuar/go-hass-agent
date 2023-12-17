@@ -78,7 +78,7 @@ func marshalClass[C ComparableStringer](class C) string {
 	}
 }
 
-func MergeSensorCh(ctx context.Context, sensorCh ...<-chan Sensor) <-chan Sensor {
+func MergeSensorCh(ctx context.Context, sensorCh ...<-chan Sensor) chan Sensor {
 	var wg sync.WaitGroup
 	out := make(chan Sensor)
 
@@ -86,6 +86,9 @@ func MergeSensorCh(ctx context.Context, sensorCh ...<-chan Sensor) <-chan Sensor
 	// copies values from c to out until c is closed, then calls wg.Done.
 	output := func(c <-chan Sensor) {
 		defer wg.Done()
+		if c == nil {
+			return
+		}
 		for n := range c {
 			select {
 			case out <- n:
