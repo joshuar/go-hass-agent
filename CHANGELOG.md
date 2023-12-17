@@ -1,5 +1,14 @@
 # Changelog
 
+## [6.0.3](https://github.com/joshuar/go-hass-agent/compare/v6.0.2...v6.0.3) (2023-12-17)
+
+
+### Bug Fixes
+
+* **dbushelpers:** adjust logging levels for soft errors ([1966408](https://github.com/joshuar/go-hass-agent/commit/1966408be6ab5226ea89e92199270eae7f9b2601))
+* **linux:** correct batteryLevels and batteryStates values for batterySensor ([2c53790](https://github.com/joshuar/go-hass-agent/commit/2c53790465f641c7efb44f1fa3f4f334630aa212))
+* **tracker:** more flexible channel return ([5b890f1](https://github.com/joshuar/go-hass-agent/commit/5b890f167b472bd8280b8d90079fa4c1e2f28e1b))
+
 ## [6.0.2](https://github.com/joshuar/go-hass-agent/compare/v6.0.1...v6.0.2) (2023-12-16)
 
 
