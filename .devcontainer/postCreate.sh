@@ -8,12 +8,7 @@
 # Stop on errors
 set -e
 
-sudo apt -y update 
-
-# Install go-hass-agent dependencies
-export DEBIAN_FRONTEND=noninteractive && \
-    sudo apt -y install gcc libgl1-mesa-dev xorg-dev dbus-x11 desktop-file-utils fish
-cd /workspaces/go-hass-agent && go mod download
+cd /workspaces/go-hass-agent && go mod tidy
 
 # Install goreleaser 
 go install github.com/goreleaser/goreleaser@latest
@@ -23,4 +18,3 @@ go install golang.org/x/tools/cmd/stringer@latest
 go install github.com/fyne-io/fyne-cross@latest
 go install golang.org/x/text/cmd/gotext@latest
 go install github.com/matryer/moq@latest
-
