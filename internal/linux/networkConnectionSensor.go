@@ -281,7 +281,7 @@ func getActiveConnections(ctx context.Context) []dbus.ObjectPath {
 		Destination(dBusNMObj).
 		GetProp(dBusNMObj + ".ActiveConnections")
 	if err != nil {
-		log.Warn().Err(err).
+		log.Debug().Err(err).
 			Msg("Could not retrieve active connection list.")
 		return nil
 	}

@@ -69,7 +69,7 @@ func TempUpdater(ctx context.Context) chan tracker.Sensor {
 		rawTemps, err := host.SensorsTemperaturesWithContext(ctx)
 		idCounter := make(map[string]int)
 		if err != nil {
-			log.Warn().Err(err).Msg("Could not fetch temperatures.")
+			log.Warn().Err(err).Msg("Could not fetch some temperatures.")
 		}
 		for _, temp := range rawTemps {
 			s := newTempSensor(temp)
