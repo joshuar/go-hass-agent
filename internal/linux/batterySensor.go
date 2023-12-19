@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"math"
 	"strings"
+	"sync"
 
 	"github.com/godbus/dbus/v5"
 	"github.com/iancoleman/strcase"
@@ -271,20 +272,49 @@ func newBatterySensor(ctx context.Context, b *upowerBattery, t sensorType, v dbu
 	return s
 }
 
+type batteryTracker struct {
+	batteryList map[dbus.ObjectPath]context.CancelFunc
+	mu          sync.Mutex
+}
+
+func (t *batteryTracker) track(ctx context.Context, p dbus.ObjectPath) <-chan tracker.Sensor {
+	battCtx, cancelFunc := context.WithCancel(ctx)
+	t.mu.Lock()
+	t.batteryList[p] = cancelFunc
+	t.mu.Unlock()
+	battery := newBattery(ctx, p)
+	return tracker.MergeSensorCh(battCtx, battery.getSensors(battCtx, battery.sensors...), monitorBattery(battCtx, battery))
+}
+
+func (t *batteryTracker) remove(p dbus.ObjectPath) {
+	if cancelFunc, ok := t.batteryList[p]; ok {
+		cancelFunc()
+		t.mu.Lock()
+		delete(t.batteryList, p)
+		t.mu.Unlock()
+	}
+}
+
+func newBatteryTracker() *batteryTracker {
+	return &batteryTracker{
+		batteryList: make(map[dbus.ObjectPath]context.CancelFunc),
+	}
+}
+
 func BatteryUpdater(ctx context.Context) chan tracker.Sensor {
+	batteryTracker := newBatteryTracker()
 	var sensorCh []<-chan tracker.Sensor
 
 	// Get a list of all current connected batteries and monitor them.
 	batteries := getBatteries(ctx)
 	if len(batteries) > 0 {
 		for _, path := range batteries {
-			battery := newBattery(ctx, path)
-			sensorCh = append(sensorCh, battery.getSensors(ctx, battery.sensors...), monitorBattery(ctx, battery))
+			sensorCh = append(sensorCh, batteryTracker.track(ctx, path))
 		}
 	}
 
 	// Monitor for battery added/removed signals.
-	sensorCh = append(sensorCh, monitorBatteryChanges(ctx))
+	sensorCh = append(sensorCh, monitorBatteryChanges(ctx, batteryTracker))
 
 	return tracker.MergeSensorCh(ctx, sensorCh...)
 }
@@ -347,8 +377,7 @@ func monitorBattery(ctx context.Context, battery *upowerBattery) <-chan tracker.
 
 // monitorBatteryChanges monitors for battery devices being added/removed from
 // the system and will start/stop monitory each battery as appropriate.
-func monitorBatteryChanges(ctx context.Context) <-chan tracker.Sensor {
-	battList := make(map[dbus.ObjectPath]context.CancelFunc)
+func monitorBatteryChanges(ctx context.Context, t *batteryTracker) <-chan tracker.Sensor {
 	sensorCh := make(chan tracker.Sensor, 1)
 	err := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
 		Match([]dbus.MatchOption{
@@ -367,19 +396,13 @@ func monitorBatteryChanges(ctx context.Context) <-chan tracker.Sensor {
 			}
 			switch s.Name {
 			case "org.freedesktop.UPower.DeviceAdded":
-				battCtx, cancelFunc := context.WithCancel(ctx)
-				battList[batteryPath] = cancelFunc
-				battery := newBattery(battCtx, batteryPath)
 				go func() {
-					for s := range tracker.MergeSensorCh(battCtx, battery.getSensors(battCtx, battery.sensors...), monitorBattery(battCtx, battery)) {
+					for s := range t.track(ctx, batteryPath) {
 						sensorCh <- s
 					}
 				}()
 			case "org.freedesktop.UPower.DeviceRemoved":
-				if cancelFunc, ok := battList[batteryPath]; ok {
-					cancelFunc()
-					delete(battList, batteryPath)
-				}
+				t.remove(batteryPath)
 			}
 		}).
 		AddWatch(ctx)
