@@ -88,25 +88,27 @@ func (c *connection) monitorConnectionState(ctx context.Context) chan tracker.Se
 			dbus.WithMatchMember("StateChanged"),
 		}).
 		Handler(func(s *dbus.Signal) {
-			if s.Path != c.path {
+			if s.Path != c.path || len(s.Body) <= 1 {
+				log.Trace().Caller().Msg("Not my signal or empty signal body.")
 				return
 			}
-			if len(s.Body) <= 1 {
-				log.Debug().Caller().Interface("body", s.Body).Msg("Unexpected body length.")
+			var props map[string]dbus.Variant
+			var ok bool
+			if props, ok = s.Body[1].(map[string]dbus.Variant); !ok {
+				log.Trace().Caller().
+					Msgf("Could not cast signal body, got %T, want %T", s.Body, props)
 				return
 			}
-			if props, ok := s.Body[1].(map[string]dbus.Variant); ok {
-				if state, ok := props["State"]; ok {
-					currentState := dbushelpers.VariantToValue[connState](state)
-					switch {
-					case currentState == 4:
-						log.Debug().Str("connection", c.Name()).Str("path", string(c.path)).
-							Msg("Unmonitoring connection state.")
-						close(sensorCh)
-					case currentState != c.state:
-						c.state = currentState
-						sensorCh <- c
-					}
+			if state, ok := props["State"]; ok {
+				currentState := dbushelpers.VariantToValue[connState](state)
+				switch {
+				case currentState == 4:
+					log.Debug().Str("connection", c.Name()).Str("path", string(c.path)).
+						Msg("Unmonitoring connection state.")
+					close(sensorCh)
+				case currentState != c.state:
+					c.state = currentState
+					sensorCh <- c
 				}
 			}
 		}).
@@ -143,36 +145,37 @@ func (c *connection) monitorAddresses(ctx context.Context) chan tracker.Sensor {
 			dbus.WithMatchInterface(dbusNMActiveConnIntr),
 		}).
 		Handler(func(s *dbus.Signal) {
-			if s.Path != c.path {
+			if s.Path != c.path || len(s.Body) <= 1 {
+				log.Trace().Caller().Msg("Not my signal or empty signal body.")
 				return
 			}
-			if len(s.Body) <= 1 {
-				log.Debug().Caller().Interface("body", s.Body).Msg("Unexpected body length.")
+			var props map[string]dbus.Variant
+			var ok bool
+			if props, ok = s.Body[1].(map[string]dbus.Variant); !ok {
+				log.Trace().Caller().
+					Msgf("Could not cast signal body, got %T, want %T", s.Body, props)
 				return
 			}
-			props, ok := s.Body[1].(map[string]dbus.Variant)
-			if ok {
-				go func() {
-					for k, v := range props {
-						switch k {
-						case "Ip4Config":
-							addr, mask := getAddr(ctx, 4, dbushelpers.VariantToValue[dbus.ObjectPath](v))
-							if addr != c.attrs.Ipv4 {
-								c.attrs.Ipv4 = addr
-								c.attrs.IPv4Mask = mask
-								sensorCh <- c
-							}
-						case "Ip6Config":
-							addr, mask := getAddr(ctx, 6, dbushelpers.VariantToValue[dbus.ObjectPath](v))
-							if addr != c.attrs.Ipv6 {
-								c.attrs.Ipv6 = addr
-								c.attrs.IPv6Mask = mask
-								sensorCh <- c
-							}
+			go func() {
+				for k, v := range props {
+					switch k {
+					case "Ip4Config":
+						addr, mask := getAddr(ctx, 4, dbushelpers.VariantToValue[dbus.ObjectPath](v))
+						if addr != c.attrs.Ipv4 {
+							c.attrs.Ipv4 = addr
+							c.attrs.IPv4Mask = mask
+							sensorCh <- c
+						}
+					case "Ip6Config":
+						addr, mask := getAddr(ctx, 6, dbushelpers.VariantToValue[dbus.ObjectPath](v))
+						if addr != c.attrs.Ipv6 {
+							c.attrs.Ipv6 = addr
+							c.attrs.IPv6Mask = mask
+							sensorCh <- c
 						}
 					}
-				}()
-			}
+				}
+			}()
 		}).
 		AddWatch(ctx)
 	if err != nil {
@@ -244,7 +247,7 @@ func newConnection(ctx context.Context, p dbus.ObjectPath) *connection {
 
 func getAddr(ctx context.Context, ver int, path dbus.ObjectPath) (addr string, mask int) {
 	if path == "/" {
-		return
+		return "", 0
 	}
 	var connProp string
 	switch ver {
@@ -258,7 +261,7 @@ func getAddr(ctx context.Context, ver int, path dbus.ObjectPath) (addr string, m
 		Destination(dBusNMObj).
 		GetProp(connProp + ".AddressData")
 	if err != nil {
-		return
+		return "", 0
 	}
 	addrDetails := dbushelpers.VariantToValue[[]map[string]dbus.Variant](v)
 	var address string
