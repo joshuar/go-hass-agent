@@ -85,6 +85,8 @@ func (b *upowerBattery) getSensors(ctx context.Context, sensors ...sensorType) c
 	return sensorCh
 }
 
+// newBattery creates a battery object that will have a number of properties to
+// be treated as sensors in Home Assistant.
 func newBattery(ctx context.Context, path dbus.ObjectPath) *upowerBattery {
 	b := &upowerBattery{
 		dBusPath: path,
@@ -255,6 +257,8 @@ func (s *upowerBatterySensor) generateAttributes(ctx context.Context, b *upowerB
 	}
 }
 
+// newBatterySensor creates a new sensor for Home Assistant from a battery
+// property.
 func newBatterySensor(ctx context.Context, b *upowerBattery, t sensorType, v dbus.Variant) *upowerBatterySensor {
 	s := &upowerBatterySensor{
 		batteryID: b.id,
@@ -268,19 +272,20 @@ func newBatterySensor(ctx context.Context, b *upowerBattery, t sensorType, v dbu
 }
 
 func BatteryUpdater(ctx context.Context) chan tracker.Sensor {
-	batteries := getBatteries(ctx)
-	if len(batteries) < 1 {
-		log.Warn().
-			Msg("Unable to get any battery devices from D-Bus. Battery sensor will not run.")
-		return nil
-	}
-
 	var sensorCh []<-chan tracker.Sensor
 
-	for _, path := range batteries {
-		battery := newBattery(ctx, path)
-		sensorCh = append(sensorCh, battery.getSensors(ctx, battery.sensors...), monitorBattery(ctx, battery))
+	// Get a list of all current connected batteries and monitor them.
+	batteries := getBatteries(ctx)
+	if len(batteries) > 0 {
+		for _, path := range batteries {
+			battery := newBattery(ctx, path)
+			sensorCh = append(sensorCh, battery.getSensors(ctx, battery.sensors...), monitorBattery(ctx, battery))
+		}
 	}
+
+	// Monitor for battery added/removed signals.
+	sensorCh = append(sensorCh, monitorBatteryChanges(ctx))
+
 	return tracker.MergeSensorCh(ctx, sensorCh...)
 }
 
@@ -293,9 +298,12 @@ func getBatteries(ctx context.Context) []dbus.ObjectPath {
 		GetData(upowerGetDevicesMethod).AsObjectPathList()
 }
 
-func monitorBattery(ctx context.Context, battery *upowerBattery) chan tracker.Sensor {
+// monitorBattery will monitor a battery device for any property changes and
+// send these as sensors.
+func monitorBattery(ctx context.Context, battery *upowerBattery) <-chan tracker.Sensor {
+	log.Debug().Str("battery", battery.id).
+		Msg("Monitoring battery.")
 	sensorCh := make(chan tracker.Sensor, 1)
-
 	// Create a DBus signal match to watch for property changes for this
 	// battery.
 	err := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
@@ -303,18 +311,14 @@ func monitorBattery(ctx context.Context, battery *upowerBattery) chan tracker.Se
 			dbus.WithMatchObjectPath(battery.dBusPath),
 			dbus.WithMatchInterface("org.freedesktop.DBus.Properties"),
 		}).
-		Event("org.freedesktop.DBus.Properties.PropertiesChanged").
+		Event(dbushelpers.PropChangedSignal).
 		Handler(func(s *dbus.Signal) {
-			if s.Path != battery.dBusPath {
-				return
-			}
-			if len(s.Body) == 0 {
-				log.Debug().Msg("Received battery state change signal but not properties sent.")
+			if s.Path != battery.dBusPath || len(s.Body) == 0 {
+				log.Trace().Caller().Msg("Not my signal or empty signal body.")
 				return
 			}
 			props, ok := s.Body[1].(map[string]dbus.Variant)
 			if !ok {
-				log.Debug().Msg("Could not map received signal to battery properties.")
 				return
 			}
 			go func() {
@@ -327,6 +331,59 @@ func monitorBattery(ctx context.Context, battery *upowerBattery) chan tracker.Se
 		}).
 		AddWatch(ctx)
 	if err != nil {
+		log.Debug().Err(err).Str("battery", battery.id).
+			Msg("Could not monitor D-Bus for battery properties.")
+		close(sensorCh)
+		return sensorCh
+	}
+	go func() {
+		defer close(sensorCh)
+		<-ctx.Done()
+		log.Debug().Str("battery", battery.id).
+			Msg("Stopped monitoring battery.")
+	}()
+	return sensorCh
+}
+
+// monitorBatteryChanges monitors for battery devices being added/removed from
+// the system and will start/stop monitory each battery as appropriate.
+func monitorBatteryChanges(ctx context.Context) <-chan tracker.Sensor {
+	battList := make(map[dbus.ObjectPath]context.CancelFunc)
+	sensorCh := make(chan tracker.Sensor, 1)
+	err := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
+		Match([]dbus.MatchOption{
+			dbus.WithMatchObjectPath(upowerDBusPath),
+			dbus.WithMatchInterface(upowerDBusDest),
+		}).
+		Handler(func(s *dbus.Signal) {
+			if !strings.Contains(s.Name, upowerDBusDest) {
+				log.Trace().Caller().Msg("Not my signal.")
+				return
+			}
+			var batteryPath dbus.ObjectPath
+			var ok bool
+			if batteryPath, ok = s.Body[0].(dbus.ObjectPath); !ok {
+				return
+			}
+			switch s.Name {
+			case "org.freedesktop.UPower.DeviceAdded":
+				battCtx, cancelFunc := context.WithCancel(ctx)
+				battList[batteryPath] = cancelFunc
+				battery := newBattery(battCtx, batteryPath)
+				go func() {
+					for s := range tracker.MergeSensorCh(battCtx, battery.getSensors(battCtx, battery.sensors...), monitorBattery(battCtx, battery)) {
+						sensorCh <- s
+					}
+				}()
+			case "org.freedesktop.UPower.DeviceRemoved":
+				if cancelFunc, ok := battList[batteryPath]; ok {
+					cancelFunc()
+					delete(battList, batteryPath)
+				}
+			}
+		}).
+		AddWatch(ctx)
+	if err != nil {
 		log.Debug().Caller().Err(err).
 			Msg("Failed to create DBus battery property watch.")
 		close(sensorCh)
@@ -335,7 +392,6 @@ func monitorBattery(ctx context.Context, battery *upowerBattery) chan tracker.Se
 	go func() {
 		defer close(sensorCh)
 		<-ctx.Done()
-		log.Debug().Str("battery", battery.id).Msg("Stopped monitoring battery.")
 	}()
 	return sensorCh
 }
