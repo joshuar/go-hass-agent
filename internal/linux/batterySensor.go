@@ -138,6 +138,9 @@ type upowerBatterySensor struct {
 // uPowerBatteryState implements hass.SensorUpdate
 
 func (s *upowerBatterySensor) Name() string {
+	if s.model == "" {
+		return s.batteryID + " " + s.sensorType.String()
+	}
 	return s.model + " " + s.sensorType.String()
 }
 
