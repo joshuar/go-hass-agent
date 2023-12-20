@@ -37,15 +37,22 @@ type metadata struct {
 }
 
 func (j *jsonFilesRegistry) get(id string, valueType state) bool {
+	var meta metadata
+	var value any
+	var ok bool
+	if value, ok = j.sensors.Load(id); !ok {
+		log.Warn().Str("sensor", id).Msg("Sensor metadata not found.")
+		return false
+	}
+	if meta, ok = value.(metadata); !ok {
+		log.Warn().Str("sensor", id).Msg("Invalid sensor metadata.")
+		return false
+	}
 	switch valueType {
 	case disabledState:
-		if value, ok := j.sensors.Load(id); ok {
-			return value.(metadata).Disabled
-		}
+		return meta.Disabled
 	case registeredState:
-		if value, ok := j.sensors.Load(id); ok {
-			return value.(metadata).Registered
-		}
+		return meta.Registered
 	}
 	return false
 }
@@ -67,9 +74,12 @@ func (j *jsonFilesRegistry) IsRegistered(id string) chan bool {
 func (j *jsonFilesRegistry) set(id string, valueType state, value bool) error {
 	var m metadata
 	if v, ok := j.sensors.Load(id); !ok {
-		log.Warn().Msgf("Sensor %s not found in registry. Will add value as new.", id)
+		log.Warn().Str("sensor", id).Msg("Sensor not found in registry. Will add as new.")
 	} else {
-		m = v.(metadata)
+		var ok bool
+		if m, ok = v.(metadata); !ok {
+			log.Warn().Str("sensor", id).Msg("Sensor metadata invalid. Ignoring.")
+		}
 	}
 	switch valueType {
 	case disabledState:
@@ -87,16 +97,21 @@ func (j *jsonFilesRegistry) set(id string, valueType state, value bool) error {
 }
 
 func (j *jsonFilesRegistry) write(id string) error {
+	var v any
+	var m metadata
+	var ok bool
 	path := j.path + "/" + id + ".json"
-	if v, ok := j.sensors.Load(id); ok {
-		m := v.(metadata)
-		b, err := json.Marshal(m)
-		if err != nil {
-			return err
-		}
-		return os.WriteFile(path, b, 0600)
+	if v, ok = j.sensors.Load(id); !ok {
+		return errors.New("not found")
 	}
-	return errors.New("not found")
+	if m, ok = v.(metadata); !ok {
+		return errors.New("invalid metadata")
+	}
+	b, err := json.Marshal(m)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, b, 0600)
 }
 
 func (j *jsonFilesRegistry) SetDisabled(id string, value bool) error {
