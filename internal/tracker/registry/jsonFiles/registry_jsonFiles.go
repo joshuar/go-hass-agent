@@ -41,7 +41,8 @@ func (j *jsonFilesRegistry) get(id string, valueType state) bool {
 	var value any
 	var ok bool
 	if value, ok = j.sensors.Load(id); !ok {
-		log.Warn().Str("sensor", id).Msg("Sensor metadata not found.")
+		log.Warn().Str("sensor", id).Str("metadata", valueType.String()).
+			Msg("Sensor metadata not found.")
 		return false
 	}
 	if meta, ok = value.(metadata); !ok {
@@ -78,7 +79,8 @@ func (j *jsonFilesRegistry) set(id string, valueType state, value bool) error {
 	} else {
 		var ok bool
 		if m, ok = v.(metadata); !ok {
-			log.Warn().Str("sensor", id).Msg("Sensor metadata invalid. Ignoring.")
+			log.Warn().Str("sensor", id).Str("metadata", valueType.String()).
+				Msg("Sensor metadata invalid. Ignoring.")
 		}
 	}
 	switch valueType {
