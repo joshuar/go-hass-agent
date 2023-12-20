@@ -7,10 +7,10 @@ package agent
 
 import (
 	"context"
-	"os"
 
 	"github.com/joshuar/go-hass-agent/internal/agent/config"
 	"github.com/joshuar/go-hass-agent/internal/hass/api"
+	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/rs/zerolog/log"
 
 	"github.com/go-playground/validator/v10"
@@ -47,22 +47,13 @@ func (agent *Agent) saveRegistration(r *api.RegistrationResponse, d api.DeviceIn
 	checkFatal(agent.config.Set(config.PrefDeviceID, d.DeviceID()))
 	checkFatal(agent.config.Set(config.PrefRegistered, true))
 	checkFatal(agent.config.Set(config.PrefVersion, config.AppVersion))
-
-	registryPath, err := agent.config.StoragePath("sensorRegistry")
-	if err != nil {
-		return
-	} else {
-		if err := os.RemoveAll(registryPath); err != nil {
-			log.Debug().Err(err).Msg("Could not remove existing registry DB.")
-		}
-	}
 }
 
 // registrationProcess runs through a registration flow. If the agent is already
 // registered, it will exit unless the force parameter is true. Otherwise, it
 // will action a registration workflow displaying a GUI for user input of
 // registration details and save the results into the agent config
-func (agent *Agent) registrationProcess(ctx context.Context, server, token string, force, headless bool) {
+func (agent *Agent) registrationProcess(ctx context.Context, t *tracker.SensorTracker, server, token string, force, headless bool) {
 	var registered bool
 	if err := agent.config.Get(config.PrefRegistered, &registered); err != nil {
 		log.Fatal().Err(err).Msg("Could not ascertain agent registration status.")
@@ -109,6 +100,9 @@ func (agent *Agent) registrationProcess(ctx context.Context, server, token strin
 			log.Fatal().Err(err).Msg("Could not register with Home Assistant.")
 		}
 		agent.saveRegistration(registrationResponse, device)
+		if force {
+			t.Reset()
+		}
 		log.Info().Msg("Successfully registered agent.")
 	}
 }

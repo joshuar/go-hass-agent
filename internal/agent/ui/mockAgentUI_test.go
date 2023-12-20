@@ -24,7 +24,7 @@ var _ AgentUI = &AgentUIMock{}
 //			DisplayRegistrationWindowFunc: func(contextMoqParam context.Context, agent Agent, valCh chan struct{})  {
 //				panic("mock out the DisplayRegistrationWindow method")
 //			},
-//			DisplayTrayIconFunc: func(agent Agent)  {
+//			DisplayTrayIconFunc: func(agent Agent, sensorTracker SensorTracker)  {
 //				panic("mock out the DisplayTrayIcon method")
 //			},
 //			RunFunc: func()  {
@@ -44,7 +44,7 @@ type AgentUIMock struct {
 	DisplayRegistrationWindowFunc func(contextMoqParam context.Context, agent Agent, valCh chan struct{})
 
 	// DisplayTrayIconFunc mocks the DisplayTrayIcon method.
-	DisplayTrayIconFunc func(agent Agent)
+	DisplayTrayIconFunc func(agent Agent, sensorTracker SensorTracker)
 
 	// RunFunc mocks the Run method.
 	RunFunc func()
@@ -71,6 +71,8 @@ type AgentUIMock struct {
 		DisplayTrayIcon []struct {
 			// Agent is the agent argument value.
 			Agent Agent
+			// SensorTracker is the sensorTracker argument value.
+			SensorTracker SensorTracker
 		}
 		// Run holds details about calls to the Run method.
 		Run []struct {
@@ -159,19 +161,21 @@ func (mock *AgentUIMock) DisplayRegistrationWindowCalls() []struct {
 }
 
 // DisplayTrayIcon calls DisplayTrayIconFunc.
-func (mock *AgentUIMock) DisplayTrayIcon(agent Agent) {
+func (mock *AgentUIMock) DisplayTrayIcon(agent Agent, sensorTracker SensorTracker) {
 	if mock.DisplayTrayIconFunc == nil {
 		panic("AgentUIMock.DisplayTrayIconFunc: method is nil but AgentUI.DisplayTrayIcon was just called")
 	}
 	callInfo := struct {
-		Agent Agent
+		Agent         Agent
+		SensorTracker SensorTracker
 	}{
-		Agent: agent,
+		Agent:         agent,
+		SensorTracker: sensorTracker,
 	}
 	mock.lockDisplayTrayIcon.Lock()
 	mock.calls.DisplayTrayIcon = append(mock.calls.DisplayTrayIcon, callInfo)
 	mock.lockDisplayTrayIcon.Unlock()
-	mock.DisplayTrayIconFunc(agent)
+	mock.DisplayTrayIconFunc(agent, sensorTracker)
 }
 
 // DisplayTrayIconCalls gets all the calls that were made to DisplayTrayIcon.
@@ -179,10 +183,12 @@ func (mock *AgentUIMock) DisplayTrayIcon(agent Agent) {
 //
 //	len(mockedAgentUI.DisplayTrayIconCalls())
 func (mock *AgentUIMock) DisplayTrayIconCalls() []struct {
-	Agent Agent
+	Agent         Agent
+	SensorTracker SensorTracker
 } {
 	var calls []struct {
-		Agent Agent
+		Agent         Agent
+		SensorTracker SensorTracker
 	}
 	mock.lockDisplayTrayIcon.RLock()
 	calls = mock.calls.DisplayTrayIcon

@@ -21,8 +21,11 @@ type Agent interface {
 	Stop()
 	GetConfig(string, interface{}) error
 	SetConfig(string, interface{}) error
+}
+
+type SensorTracker interface {
 	SensorList() []string
-	SensorValue(string) (tracker.Sensor, error)
+	Get(string) (tracker.Sensor, error)
 }
 
 // AgentUI are the methods required for the agent to display its windows, tray
@@ -31,7 +34,7 @@ type Agent interface {
 //go:generate moq -out mockAgentUI_test.go . AgentUI
 type AgentUI interface {
 	DisplayNotification(string, string)
-	DisplayTrayIcon(Agent)
+	DisplayTrayIcon(Agent, SensorTracker)
 	DisplayRegistrationWindow(context.Context, Agent, chan struct{})
 	Run()
 }

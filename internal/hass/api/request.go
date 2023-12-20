@@ -70,7 +70,7 @@ type EncryptedRequest struct {
 	Encrypted     bool            `json:"encrypted"`
 }
 
-func ExecuteRequest(ctx context.Context, request Request) chan any {
+func ExecuteRequest(ctx context.Context, request Request) <-chan any {
 	responseCh := make(chan any, 1)
 	defer close(responseCh)
 	cfg, ok := FromContext(ctx)

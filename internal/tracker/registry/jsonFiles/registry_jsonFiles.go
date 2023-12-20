@@ -14,6 +14,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/rs/zerolog/log"
 )
 
@@ -79,6 +80,7 @@ func (j *jsonFilesRegistry) set(id string, valueType state, value bool) error {
 	j.sensors.Store(id, m)
 	err := j.write(id)
 	if err != nil {
+		spew.Dump(err)
 		return err
 	}
 	return nil
@@ -92,7 +94,7 @@ func (j *jsonFilesRegistry) write(id string) error {
 		if err != nil {
 			return err
 		}
-		return os.WriteFile(path, b, 0644)
+		return os.WriteFile(path, b, 0600)
 	}
 	return errors.New("not found")
 }
@@ -103,6 +105,10 @@ func (j *jsonFilesRegistry) SetDisabled(id string, value bool) error {
 
 func (j *jsonFilesRegistry) SetRegistered(id string, value bool) error {
 	return j.set(id, registeredState, value)
+}
+
+func (j *jsonFilesRegistry) Path() string {
+	return j.path
 }
 
 func NewJsonFilesRegistry(path string) (*jsonFilesRegistry, error) {
@@ -120,8 +126,8 @@ func NewJsonFilesRegistry(path string) (*jsonFilesRegistry, error) {
 	}
 	go func() {
 		for _, filename := range files {
-			sensorID, metadata := parseFile(filename)
-			reg.sensors.Store(sensorID, metadata)
+			id, meta := parseFile(filename)
+			reg.sensors.Store(id, meta)
 		}
 	}()
 	return reg, nil
