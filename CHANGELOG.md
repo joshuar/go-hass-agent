@@ -1,5 +1,21 @@
 # Changelog
 
+## [6.1.0](https://github.com/joshuar/go-hass-agent/compare/v6.0.3...v6.1.0) (2023-12-20)
+
+
+### Features
+
+* **linux:** monitor for battery devices being added/removed ([bde0b2e](https://github.com/joshuar/go-hass-agent/commit/bde0b2ea43d4be530665cef3837b0201daa94bb4))
+
+
+### Bug Fixes
+
+* **linux:** adjust log levels for some messages ([514bf31](https://github.com/joshuar/go-hass-agent/commit/514bf3121de74fdb371f04b7f7712661e17cb717))
+* **linux:** better detection of screenlock D-Bus signal ([fe10af0](https://github.com/joshuar/go-hass-agent/commit/fe10af033c83560b2c15f1c1d5bf58046ed9ab7c))
+* **linux:** better naming of battery sensors ([e5f67a1](https://github.com/joshuar/go-hass-agent/commit/e5f67a14521a95a5308d6c929d9631c34dc59d4e))
+* **linux:** ensure initially added battery devices are tracked correctly ([20c2574](https://github.com/joshuar/go-hass-agent/commit/20c2574dd9b1a80b51f0e189cbe57369c0b78085))
+* **tracker/registry:** better type safety ([ce1afe1](https://github.com/joshuar/go-hass-agent/commit/ce1afe10e6adbf52a288daa7c39383773a94c08c))
+
 ## [6.0.3](https://github.com/joshuar/go-hass-agent/compare/v6.0.2...v6.0.3) (2023-12-17)
 
 
