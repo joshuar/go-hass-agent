@@ -7,6 +7,7 @@ package linux
 
 import (
 	"context"
+	"strings"
 
 	"github.com/godbus/dbus/v5"
 	"github.com/joshuar/go-hass-agent/internal/tracker"
@@ -25,9 +26,8 @@ func (s *screenlockSensor) Icon() string {
 	}
 	if state {
 		return "mdi:eye-lock"
-	} else {
-		return "mdi:eye-lock-open"
 	}
+	return "mdi:eye-lock-open"
 }
 
 func newScreenlockEvent(v bool) *screenlockSensor {
@@ -43,27 +43,18 @@ func newScreenlockEvent(v bool) *screenlockSensor {
 
 func ScreenLockUpdater(ctx context.Context) chan tracker.Sensor {
 	sensorCh := make(chan tracker.Sensor, 1)
-	path := dbushelpers.GetSessionPath(ctx)
-	if path == "" {
-		log.Warn().Msg("Could not ascertain user session from D-Bus. Cannot monitor screen lock state.")
-		close(sensorCh)
-		return sensorCh
-	}
 	err := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
 		Match([]dbus.MatchOption{
-			dbus.WithMatchObjectPath(path),
+			dbus.WithMatchPathNamespace("/org/freedesktop/login1/session"),
 		}).
 		Handler(func(s *dbus.Signal) {
-			if s.Name != dbushelpers.PropChangedSignal || s.Path != path {
-				return
-			}
-			if len(s.Body) <= 1 {
-				log.Debug().Caller().Interface("body", s.Body).Msg("Unexpected body length.")
+			if s.Name != dbushelpers.PropChangedSignal || !strings.Contains(string(s.Path), "/org/freedesktop/login1/session") || len(s.Body) <= 1 {
+				log.Trace().Caller().Msg("Not my signal or empty signal body.")
 				return
 			}
 			props, ok := s.Body[1].(map[string]dbus.Variant)
 			if !ok {
-				log.Debug().Caller().
+				log.Trace().Caller().
 					Str("signal", s.Name).Interface("body", s.Body).
 					Msg("Unexpected signal body")
 				return
