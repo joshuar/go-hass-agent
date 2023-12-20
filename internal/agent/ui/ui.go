@@ -23,6 +23,7 @@ type Agent interface {
 	SetConfig(string, interface{}) error
 }
 
+//go:generate moq -out mock_SensorTracker_test.go . SensorTracker
 type SensorTracker interface {
 	SensorList() []string
 	Get(string) (tracker.Sensor, error)
