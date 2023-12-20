@@ -85,21 +85,21 @@ func NewFyneUI(agent ui.Agent) *fyneUI {
 
 // DisplayTrayIcon displays an icon in the desktop tray with a menu for
 // controlling the agent and showing other informational windows.
-func (i *fyneUI) DisplayTrayIcon(agent ui.Agent) {
-	if agent.IsHeadless() {
+func (i *fyneUI) DisplayTrayIcon(a ui.Agent, t ui.SensorTracker) {
+	if a.IsHeadless() {
 		log.Warn().Msg("No UI. Will not display tray icon.")
 		return
 	}
 	if desk, ok := i.app.(desktop.App); ok {
 		menuItemQuit := fyne.NewMenuItem(i.text.Translate("Quit"), func() {
 			i.app.Quit()
-			agent.Stop()
+			a.Stop()
 		})
 		menuItemQuit.IsQuit = true
 		menu := fyne.NewMenu("Main",
 			fyne.NewMenuItem(i.text.Translate("About"),
 				func() {
-					w := i.aboutWindow(agent, i.text)
+					w := i.aboutWindow(a, i.text)
 					if w != nil {
 						w.Show()
 					}
@@ -126,7 +126,7 @@ func (i *fyneUI) DisplayTrayIcon(agent ui.Agent) {
 			// 	}),
 			fyne.NewMenuItem(i.text.Translate("Sensors"),
 				func() {
-					w := i.sensorsWindow(agent, i.text)
+					w := i.sensorsWindow(a, t, i.text)
 					if w != nil {
 						w.Show()
 					}
@@ -198,14 +198,14 @@ func (i *fyneUI) fyneSettingsWindow(t *translations.Translator) fyne.Window {
 // sensorsWindow creates a window that displays all of the sensors and their
 // values that are currently tracked by the agent. Values are updated
 // continuously.
-func (i *fyneUI) sensorsWindow(agent ui.Agent, t *translations.Translator) fyne.Window {
-	sensors := agent.SensorList()
+func (i *fyneUI) sensorsWindow(a ui.Agent, t ui.SensorTracker, l *translations.Translator) fyne.Window {
+	sensors := t.SensorList()
 	if sensors == nil {
 		return nil
 	}
 
 	getValue := func(n string) string {
-		if v, err := agent.SensorValue(n); err == nil {
+		if v, err := t.Get(n); err == nil {
 			var b strings.Builder
 			fmt.Fprintf(&b, "%v", v.State())
 			if v.Units() != "" {
@@ -270,7 +270,7 @@ func (i *fyneUI) sensorsWindow(agent ui.Agent, t *translations.Translator) fyne.
 			}
 		}
 	}()
-	w := i.app.NewWindow(t.Translate("Sensors"))
+	w := i.app.NewWindow(l.Translate("Sensors"))
 	w.SetContent(sensorsTable)
 	w.Resize(fyne.NewSize(480, 640))
 	w.SetOnClosed(func() {

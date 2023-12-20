@@ -8,6 +8,8 @@ package tracker
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
 	"sort"
 	"sync"
 
@@ -23,6 +25,7 @@ type Registry interface {
 	SetRegistered(string, bool) error
 	IsDisabled(string) chan bool
 	IsRegistered(string) chan bool
+	Path() string
 }
 
 //go:generate moq -out mock_apiResponse_test.go . apiResponse
@@ -35,7 +38,7 @@ type apiResponse interface {
 type SensorTracker struct {
 	registry Registry
 	sensor   map[string]Sensor
-	mu       sync.RWMutex
+	mu       sync.Mutex
 }
 
 // Add creates a new sensor in the tracker based on a received state update.
@@ -52,8 +55,8 @@ func (t *SensorTracker) add(s Sensor) error {
 
 // Get fetches a sensors current tracked state.
 func (t *SensorTracker) Get(id string) (Sensor, error) {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
+	t.mu.Lock()
+	defer t.mu.Unlock()
 	if t.sensor[id] != nil {
 		return t.sensor[id], nil
 	} else {
@@ -62,8 +65,8 @@ func (t *SensorTracker) Get(id string) (Sensor, error) {
 }
 
 func (t *SensorTracker) SensorList() []string {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
+	t.mu.Lock()
+	defer t.mu.Unlock()
 	if t.sensor == nil {
 		log.Warn().Msg("No sensors available.")
 		return nil
@@ -181,10 +184,22 @@ func (t *SensorTracker) UpdateSensors(ctx context.Context, sensors ...any) error
 	return g.Wait()
 }
 
-func NewSensorTracker(registryPath string) (*SensorTracker, error) {
+func (t *SensorTracker) Reset() {
+	var err error
+	if err = os.RemoveAll(t.registry.Path()); err != nil {
+		log.Warn().Err(err).Msg("Could not remove existing registry DB.")
+	}
+	if t.registry, err = registry.NewJsonFilesRegistry(t.registry.Path()); err != nil {
+		log.Warn().Err(err).Msg("Could not recreate registry.")
+	}
+	t.sensor = nil
+}
+
+func NewSensorTracker(id string) (*SensorTracker, error) {
+	registryPath := filepath.Join(os.Getenv("HOME"), ".config", id, "sensorRegistry")
 	db, err := registry.NewJsonFilesRegistry(registryPath)
 	if err != nil {
-		return nil, errors.New("unable to create a sensor tracker")
+		return nil, err
 	}
 	sensorTracker := &SensorTracker{
 		registry: db,

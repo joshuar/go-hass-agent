@@ -13,7 +13,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func (agent *Agent) runNotificationsWorker(ctx context.Context, options AgentOptions) {
+func (agent *Agent) runNotificationsWorker(ctx context.Context, options Options) {
 	if options.Headless {
 		log.Warn().Msg("Running headless, will not register for receiving notifications.")
 		return

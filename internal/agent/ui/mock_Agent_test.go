@@ -4,7 +4,6 @@
 package ui
 
 import (
-	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"sync"
 )
 
@@ -32,12 +31,6 @@ var _ Agent = &AgentMock{}
 //			},
 //			IsHeadlessFunc: func() bool {
 //				panic("mock out the IsHeadless method")
-//			},
-//			SensorListFunc: func() []string {
-//				panic("mock out the SensorList method")
-//			},
-//			SensorValueFunc: func(s string) (tracker.Sensor, error) {
-//				panic("mock out the SensorValue method")
 //			},
 //			SetConfigFunc: func(s string, ifaceVal interface{}) error {
 //				panic("mock out the SetConfig method")
@@ -67,12 +60,6 @@ type AgentMock struct {
 	// IsHeadlessFunc mocks the IsHeadless method.
 	IsHeadlessFunc func() bool
 
-	// SensorListFunc mocks the SensorList method.
-	SensorListFunc func() []string
-
-	// SensorValueFunc mocks the SensorValue method.
-	SensorValueFunc func(s string) (tracker.Sensor, error)
-
 	// SetConfigFunc mocks the SetConfig method.
 	SetConfigFunc func(s string, ifaceVal interface{}) error
 
@@ -100,14 +87,6 @@ type AgentMock struct {
 		// IsHeadless holds details about calls to the IsHeadless method.
 		IsHeadless []struct {
 		}
-		// SensorList holds details about calls to the SensorList method.
-		SensorList []struct {
-		}
-		// SensorValue holds details about calls to the SensorValue method.
-		SensorValue []struct {
-			// S is the s argument value.
-			S string
-		}
 		// SetConfig holds details about calls to the SetConfig method.
 		SetConfig []struct {
 			// S is the s argument value.
@@ -119,15 +98,13 @@ type AgentMock struct {
 		Stop []struct {
 		}
 	}
-	lockAppID       sync.RWMutex
-	lockAppName     sync.RWMutex
-	lockAppVersion  sync.RWMutex
-	lockGetConfig   sync.RWMutex
-	lockIsHeadless  sync.RWMutex
-	lockSensorList  sync.RWMutex
-	lockSensorValue sync.RWMutex
-	lockSetConfig   sync.RWMutex
-	lockStop        sync.RWMutex
+	lockAppID      sync.RWMutex
+	lockAppName    sync.RWMutex
+	lockAppVersion sync.RWMutex
+	lockGetConfig  sync.RWMutex
+	lockIsHeadless sync.RWMutex
+	lockSetConfig  sync.RWMutex
+	lockStop       sync.RWMutex
 }
 
 // AppID calls AppIDFunc.
@@ -271,65 +248,6 @@ func (mock *AgentMock) IsHeadlessCalls() []struct {
 	mock.lockIsHeadless.RLock()
 	calls = mock.calls.IsHeadless
 	mock.lockIsHeadless.RUnlock()
-	return calls
-}
-
-// SensorList calls SensorListFunc.
-func (mock *AgentMock) SensorList() []string {
-	if mock.SensorListFunc == nil {
-		panic("AgentMock.SensorListFunc: method is nil but Agent.SensorList was just called")
-	}
-	callInfo := struct {
-	}{}
-	mock.lockSensorList.Lock()
-	mock.calls.SensorList = append(mock.calls.SensorList, callInfo)
-	mock.lockSensorList.Unlock()
-	return mock.SensorListFunc()
-}
-
-// SensorListCalls gets all the calls that were made to SensorList.
-// Check the length with:
-//
-//	len(mockedAgent.SensorListCalls())
-func (mock *AgentMock) SensorListCalls() []struct {
-} {
-	var calls []struct {
-	}
-	mock.lockSensorList.RLock()
-	calls = mock.calls.SensorList
-	mock.lockSensorList.RUnlock()
-	return calls
-}
-
-// SensorValue calls SensorValueFunc.
-func (mock *AgentMock) SensorValue(s string) (tracker.Sensor, error) {
-	if mock.SensorValueFunc == nil {
-		panic("AgentMock.SensorValueFunc: method is nil but Agent.SensorValue was just called")
-	}
-	callInfo := struct {
-		S string
-	}{
-		S: s,
-	}
-	mock.lockSensorValue.Lock()
-	mock.calls.SensorValue = append(mock.calls.SensorValue, callInfo)
-	mock.lockSensorValue.Unlock()
-	return mock.SensorValueFunc(s)
-}
-
-// SensorValueCalls gets all the calls that were made to SensorValue.
-// Check the length with:
-//
-//	len(mockedAgent.SensorValueCalls())
-func (mock *AgentMock) SensorValueCalls() []struct {
-	S string
-} {
-	var calls []struct {
-		S string
-	}
-	mock.lockSensorValue.RLock()
-	calls = mock.calls.SensorValue
-	mock.lockSensorValue.RUnlock()
 	return calls
 }
 

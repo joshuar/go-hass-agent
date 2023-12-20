@@ -41,7 +41,7 @@ It can also receive notifications from Home Assistant.`,
 		if debugID != "" {
 			appID = debugID
 		}
-		agent.Run(agent.AgentOptions{
+		agent.Run(agent.Options{
 			Headless: headlessFlag,
 			ID:       appID,
 		})

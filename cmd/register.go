@@ -22,7 +22,7 @@ var registerCmd = &cobra.Command{
 	Short: "Register this device with Home Assistant",
 	Long:  `Register will attempt to register this device with Home Assistant. A URL for a Home Assistant instance and long-lived access token can be provided if known beforehand.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		agent.Register(agent.AgentOptions{
+		agent.Register(agent.Options{
 			Headless: headlessFlag,
 			Register: forcedFlag,
 			ID:       appID,
