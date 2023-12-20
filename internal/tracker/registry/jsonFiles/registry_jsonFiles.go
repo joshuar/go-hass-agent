@@ -14,7 +14,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/rs/zerolog/log"
 )
 
@@ -92,7 +91,6 @@ func (j *jsonFilesRegistry) set(id string, valueType state, value bool) error {
 	j.sensors.Store(id, m)
 	err := j.write(id)
 	if err != nil {
-		spew.Dump(err)
 		return err
 	}
 	return nil
@@ -128,7 +126,7 @@ func (j *jsonFilesRegistry) Path() string {
 	return j.path
 }
 
-func NewJsonFilesRegistry(path string) (*jsonFilesRegistry, error) {
+func NewJSONFilesRegistry(path string) (*jsonFilesRegistry, error) {
 	reg := &jsonFilesRegistry{
 		sensors: sync.Map{},
 		path:    path,

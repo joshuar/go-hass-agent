@@ -322,7 +322,7 @@ func TestNewJsonFilesRegistry(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := NewJsonFilesRegistry(tt.args.path)
+			_, err := NewJSONFilesRegistry(tt.args.path)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewJsonFilesRegistry() error = %v, wantErr %v", err, tt.wantErr)
 				return
