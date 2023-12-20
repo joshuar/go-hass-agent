@@ -115,12 +115,13 @@ func Run(options Options) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			agent.startWorkers(ctx, t)
+			startWorkers(ctx, t)
 		}()
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			agent.runScripts(ctx, t)
+			scriptPath := filepath.Join(os.Getenv("HOME"), ".config", agent.options.ID, "scripts")
+			runScripts(ctx, scriptPath, t)
 		}()
 		wg.Add(1)
 		go func() {
@@ -269,13 +270,9 @@ func (agent *Agent) SetConfig(key string, value interface{}) error {
 	return agent.config.Set(key, value)
 }
 
-func (agent *Agent) StoragePath(path string) (string, error) {
-	return agent.config.StoragePath(path)
-}
-
 // startWorkers will call all the sensor worker functions that have been defined
 // for this device.
-func (agent *Agent) startWorkers(ctx context.Context, t *tracker.SensorTracker) {
+func startWorkers(ctx context.Context, t *tracker.SensorTracker) {
 	workerFuncs := sensorWorkers()
 	workerFuncs = append(workerFuncs, device.ExternalIPUpdater)
 	d := newDevice(ctx)
@@ -315,13 +312,8 @@ func (agent *Agent) startWorkers(ctx context.Context, t *tracker.SensorTracker) 
 // to be run on their defined schedule using the cron scheduler. It also sets up
 // a channel to receive script output and send appropriate sensor objects to the
 // tracker.
-func (agent *Agent) runScripts(ctx context.Context, t *tracker.SensorTracker) {
-	scriptPath, err := agent.config.StoragePath("scripts")
-	if err != nil {
-		log.Error().Err(err).Msg("Could not retrieve script path from config.")
-		return
-	}
-	allScripts, err := scripts.FindScripts(scriptPath)
+func runScripts(ctx context.Context, path string, t *tracker.SensorTracker) {
+	allScripts, err := scripts.FindScripts(path)
 	switch {
 	case err != nil:
 		log.Error().Err(err).Msg("Error getting scripts.")
