@@ -19,6 +19,8 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+var basePath = filepath.Join(os.Getenv("HOME"), ".config")
+
 //go:generate moq -out mock_Registry_test.go . Registry
 type Registry interface {
 	SetDisabled(string, bool) error
@@ -189,15 +191,15 @@ func (t *SensorTracker) Reset() {
 	if err = os.RemoveAll(t.registry.Path()); err != nil {
 		log.Warn().Err(err).Msg("Could not remove existing registry DB.")
 	}
-	if t.registry, err = registry.NewJsonFilesRegistry(t.registry.Path()); err != nil {
+	if t.registry, err = registry.NewJSONFilesRegistry(t.registry.Path()); err != nil {
 		log.Warn().Err(err).Msg("Could not recreate registry.")
 	}
 	t.sensor = nil
 }
 
 func NewSensorTracker(id string) (*SensorTracker, error) {
-	registryPath := filepath.Join(os.Getenv("HOME"), ".config", id, "sensorRegistry")
-	db, err := registry.NewJsonFilesRegistry(registryPath)
+	registryPath := filepath.Join(basePath, id, "sensorRegistry")
+	db, err := registry.NewJSONFilesRegistry(registryPath)
 	if err != nil {
 		return nil, err
 	}

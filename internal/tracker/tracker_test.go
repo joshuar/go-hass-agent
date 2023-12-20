@@ -10,6 +10,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"reflect"
 	"sync"
 	"testing"
@@ -53,7 +55,7 @@ func TestSensorTracker_add(t *testing.T) {
 	type fields struct {
 		registry Registry
 		sensor   map[string]Sensor
-		mu       sync.RWMutex
+		mu       sync.Mutex
 	}
 	type args struct {
 		s Sensor
@@ -100,7 +102,7 @@ func TestSensorTracker_Get(t *testing.T) {
 	type fields struct {
 		registry Registry
 		sensor   map[string]Sensor
-		mu       sync.RWMutex
+		mu       sync.Mutex
 	}
 	type args struct {
 		id string
@@ -155,7 +157,7 @@ func TestSensorTracker_SensorList(t *testing.T) {
 	type fields struct {
 		registry Registry
 		sensor   map[string]Sensor
-		mu       sync.RWMutex
+		mu       sync.Mutex
 	}
 	tests := []struct {
 		name   string
@@ -261,7 +263,7 @@ func TestSensorTracker_send(t *testing.T) {
 	type fields struct {
 		registry Registry
 		sensor   map[string]Sensor
-		mu       sync.RWMutex
+		mu       sync.Mutex
 	}
 	type args struct {
 		ctx          context.Context
@@ -376,7 +378,7 @@ func TestSensorTracker_handle(t *testing.T) {
 	type fields struct {
 		registry Registry
 		sensor   map[string]Sensor
-		mu       sync.RWMutex
+		mu       sync.Mutex
 	}
 	type args struct {
 		response     apiResponse
@@ -465,7 +467,7 @@ func TestSensorTracker_UpdateSensors(t *testing.T) {
 	type fields struct {
 		registry Registry
 		sensor   map[string]Sensor
-		mu       sync.RWMutex
+		mu       sync.Mutex
 	}
 	type args struct {
 		ctx     context.Context
@@ -508,8 +510,11 @@ func TestSensorTracker_UpdateSensors(t *testing.T) {
 }
 
 func TestNewSensorTracker(t *testing.T) {
+	testID := "go-hass-agent-test"
+	basePath = t.TempDir()
+	assert.Nil(t, os.Mkdir(filepath.Join(basePath, testID), 0755))
 	type args struct {
-		registryPath string
+		id string
 	}
 	tests := []struct {
 		name    string
@@ -519,12 +524,12 @@ func TestNewSensorTracker(t *testing.T) {
 	}{
 		{
 			name: "default test",
-			args: args{registryPath: t.TempDir()},
+			args: args{id: testID},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := NewSensorTracker(tt.args.registryPath)
+			_, err := NewSensorTracker(tt.args.id)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewSensorTracker() error = %v, wantErr %v", err, tt.wantErr)
 				return
