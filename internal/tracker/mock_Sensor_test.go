@@ -18,7 +18,7 @@ var _ Sensor = &SensorMock{}
 //
 //		// make and configure a mocked Sensor
 //		mockedSensor := &SensorMock{
-//			AttributesFunc: func() interface{} {
+//			AttributesFunc: func() any {
 //				panic("mock out the Attributes method")
 //			},
 //			CategoryFunc: func() string {
@@ -39,7 +39,7 @@ var _ Sensor = &SensorMock{}
 //			SensorTypeFunc: func() sensor.SensorType {
 //				panic("mock out the SensorType method")
 //			},
-//			StateFunc: func() interface{} {
+//			StateFunc: func() any {
 //				panic("mock out the State method")
 //			},
 //			StateClassFunc: func() sensor.SensorStateClass {
@@ -56,7 +56,7 @@ var _ Sensor = &SensorMock{}
 //	}
 type SensorMock struct {
 	// AttributesFunc mocks the Attributes method.
-	AttributesFunc func() interface{}
+	AttributesFunc func() any
 
 	// CategoryFunc mocks the Category method.
 	CategoryFunc func() string
@@ -77,7 +77,7 @@ type SensorMock struct {
 	SensorTypeFunc func() sensor.SensorType
 
 	// StateFunc mocks the State method.
-	StateFunc func() interface{}
+	StateFunc func() any
 
 	// StateClassFunc mocks the StateClass method.
 	StateClassFunc func() sensor.SensorStateClass
@@ -131,7 +131,7 @@ type SensorMock struct {
 }
 
 // Attributes calls AttributesFunc.
-func (mock *SensorMock) Attributes() interface{} {
+func (mock *SensorMock) Attributes() any {
 	if mock.AttributesFunc == nil {
 		panic("SensorMock.AttributesFunc: method is nil but Sensor.Attributes was just called")
 	}
@@ -320,7 +320,7 @@ func (mock *SensorMock) SensorTypeCalls() []struct {
 }
 
 // State calls StateFunc.
-func (mock *SensorMock) State() interface{} {
+func (mock *SensorMock) State() any {
 	if mock.StateFunc == nil {
 		panic("SensorMock.StateFunc: method is nil but Sensor.State was just called")
 	}
