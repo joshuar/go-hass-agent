@@ -56,7 +56,7 @@ jobs:
 
       - name: install cosign
         id: install_cosign
-        uses: sigstore/cosign-installer@v3.1.1
+        uses: sigstore/cosign-installer@v3.3.0
         with:
           cosign-release: 'v2.2.0'
 
