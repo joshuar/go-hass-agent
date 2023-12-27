@@ -6,12 +6,11 @@
 name: build-container
 
 env:
-  NAME: "example"
   REGISTRY: ghcr.io/${{ github.repository_owner }}
 
 on:
   release:
-    types: [ published ]
+    types: [ created ]
   # push:
   #   branches:
   #     - master
