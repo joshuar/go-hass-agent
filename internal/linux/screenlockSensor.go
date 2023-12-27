@@ -42,25 +42,32 @@ func newScreenlockEvent(v bool) *screenlockSensor {
 }
 
 func ScreenLockUpdater(ctx context.Context) chan tracker.Sensor {
-	sensorCh := make(chan tracker.Sensor, 1)
+	sensorCh := make(chan tracker.Sensor)
 	err := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
 		Match([]dbus.MatchOption{
 			dbus.WithMatchPathNamespace("/org/freedesktop/login1/session"),
 		}).
 		Handler(func(s *dbus.Signal) {
-			if s.Name != dbushelpers.PropChangedSignal || !strings.Contains(string(s.Path), "/org/freedesktop/login1/session") || len(s.Body) <= 1 {
+			if !strings.Contains(string(s.Path), "/org/freedesktop/login1/session") || len(s.Body) <= 1 {
 				log.Trace().Caller().Msg("Not my signal or empty signal body.")
 				return
 			}
-			props, ok := s.Body[1].(map[string]dbus.Variant)
-			if !ok {
-				log.Trace().Caller().
-					Str("signal", s.Name).Interface("body", s.Body).
-					Msg("Unexpected signal body")
-				return
-			}
-			if v, ok := props["LockedHint"]; ok {
-				sensorCh <- newScreenlockEvent(dbushelpers.VariantToValue[bool](v))
+			switch s.Name {
+			case dbushelpers.PropChangedSignal:
+				props, ok := s.Body[1].(map[string]dbus.Variant)
+				if !ok {
+					log.Trace().Caller().
+						Str("signal", s.Name).Interface("body", s.Body).
+						Msg("Unexpected signal body")
+					return
+				}
+				if v, ok := props["LockedHint"]; ok {
+					sensorCh <- newScreenlockEvent(dbushelpers.VariantToValue[bool](v))
+				}
+			case "org.freedesktop.login1.Session.Lock":
+				sensorCh <- newScreenlockEvent(true)
+			case "org.freedesktop.login1.Session.Unlock":
+				sensorCh <- newScreenlockEvent(false)
 			}
 		}).
 		AddWatch(ctx)
@@ -70,10 +77,11 @@ func ScreenLockUpdater(ctx context.Context) chan tracker.Sensor {
 		close(sensorCh)
 		return sensorCh
 	}
+	log.Trace().Msg("Started screen lock sensor.")
 	go func() {
 		defer close(sensorCh)
 		<-ctx.Done()
-		log.Debug().Msg("Stopped screen lock sensor.")
+		log.Trace().Msg("Stopped screen lock sensor.")
 	}()
 	return sensorCh
 }
