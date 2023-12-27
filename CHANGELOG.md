@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.1.1](https://github.com/joshuar/go-hass-agent/compare/v6.1.0...v6.1.1) (2023-12-27)
+
+
+### Bug Fixes
+
+* **linux:** capture more possible screen lock events ([775a9ab](https://github.com/joshuar/go-hass-agent/commit/775a9ab64ce0c01747a930311a2231b01e10d325))
+
 ## [6.1.0](https://github.com/joshuar/go-hass-agent/compare/v6.0.3...v6.1.0) (2023-12-20)
 
 
