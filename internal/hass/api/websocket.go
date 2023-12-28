@@ -28,6 +28,18 @@ type websocketMsg struct {
 	SupportConfirm bool   `json:"support_confirm,omitempty"`
 }
 
+func (m *websocketMsg) send(conn *gws.Conn) error {
+	msg, err := json.Marshal(&m)
+	if err != nil {
+		return err
+	}
+	err = conn.WriteMessage(gws.OpcodeText, msg)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 type websocketResponse struct {
 	Result any `json:"result,omitempty"`
 	Error  struct {
@@ -59,7 +71,7 @@ func StartWebsocket(ctx context.Context, settings Agent, notifyCh chan [2]string
 	retryFunc := func() error {
 		var resp *http.Response
 		socket, resp, err = gws.NewClient(
-			newWebsocket(ctx, settings, notifyCh),
+			newWebsocket(settings, notifyCh),
 			&gws.ClientOption{Addr: websocketURL})
 		if err != nil {
 			log.Error().Err(err).
@@ -76,6 +88,7 @@ func StartWebsocket(ctx context.Context, settings Agent, notifyCh chan [2]string
 		return
 	}
 	log.Trace().Caller().Msg("Websocket connection established.")
+
 	go func() {
 		<-ctx.Done()
 		socket.WriteClose(1000, nil)
@@ -83,21 +96,15 @@ func StartWebsocket(ctx context.Context, settings Agent, notifyCh chan [2]string
 	socket.ReadLoop()
 }
 
-type webSocketData struct {
-	conn *gws.Conn
-	data any
-}
-
 type WebSocket struct {
-	ReadCh    chan *webSocketData
-	WriteCh   chan *webSocketData
+	notifyCh  chan [2]string
 	doneCh    chan struct{}
 	token     string
 	webhookID string
 	nextID    uint64
 }
 
-func newWebsocket(ctx context.Context, settings Agent, notifyCh chan [2]string) *WebSocket {
+func newWebsocket(settings Agent, notifyCh chan [2]string) *WebSocket {
 	var token, webhookID string
 	if err := settings.GetConfig(config.PrefToken, &token); err != nil {
 		log.Warn().Err(err).Msg("Could not retrieve token from config.")
@@ -109,63 +116,60 @@ func newWebsocket(ctx context.Context, settings Agent, notifyCh chan [2]string) 
 	}
 
 	ws := &WebSocket{
-		ReadCh:    make(chan *webSocketData),
-		WriteCh:   make(chan *webSocketData),
+		notifyCh:  notifyCh,
+		doneCh:    make(chan struct{}),
 		token:     token,
 		webhookID: webhookID,
-		doneCh:    make(chan struct{}),
 	}
-	go func() {
-		<-ctx.Done()
-		close(ws.doneCh)
-	}()
-	go ws.responseHandler(notifyCh)
-	go ws.requestHandler()
 	return ws
 }
 
-func (c *WebSocket) OnError(socket *gws.Conn, err error) {
+func (c *WebSocket) newAuthMsg() *websocketMsg {
+	return &websocketMsg{
+		Type:        "auth",
+		AccessToken: c.token,
+	}
+}
+
+func (c *WebSocket) newRegistrationMsg() *websocketMsg {
+	return &websocketMsg{
+		Type:           "mobile_app/push_notification_channel",
+		ID:             atomic.LoadUint64(&c.nextID),
+		WebHookID:      c.webhookID,
+		SupportConfirm: false,
+	}
+}
+
+func (c *WebSocket) newPingMsg() *websocketMsg {
+	return &websocketMsg{
+		Type: "ping",
+		ID:   atomic.LoadUint64(&c.nextID),
+	}
+}
+
+func (c *WebSocket) OnError(_ *gws.Conn, err error) {
 	log.Error().Err(err).
 		Msg("Error on websocket")
 }
 
-func (c *WebSocket) OnClose(socket *gws.Conn, err error) {
-	log.Debug().Err(err).Msg("Websocket connection closed.")
+func (c *WebSocket) OnClose(_ *gws.Conn, err error) {
+	if err.Error() != "" {
+		log.Error().Err(err).Msg("Websocket connection closed with error.")
+	}
+	close(c.doneCh)
 }
 
-func (c *WebSocket) OnPong(socket *gws.Conn, payload []byte) {
+func (c *WebSocket) OnPong(_ *gws.Conn, payload []byte) {
 	log.Trace().Caller().Msg("Received pong on websocket")
 }
 
 func (c *WebSocket) OnOpen(socket *gws.Conn) {
 	log.Trace().Caller().Msg("Websocket opened.")
-	go func() {
-		ticker := time.NewTicker(PingInterval)
-		for {
-			select {
-			case <-c.doneCh:
-				return
-			case <-ticker.C:
-				log.Trace().Caller().
-					Msg("Sending ping on websocket")
-				if err := socket.SetDeadline(time.Now().Add(2 * PingInterval)); err != nil {
-					log.Error().Err(err).
-						Msg("Error setting deadline on websocket.")
-					return
-				}
-				c.WriteCh <- &webSocketData{
-					conn: socket,
-					data: &websocketMsg{
-						Type: "ping",
-						ID:   atomic.LoadUint64(&c.nextID),
-					},
-				}
-			}
-		}
-	}()
+	go c.keepAlive(socket)
 }
 
 func (c *WebSocket) OnPing(socket *gws.Conn, payload []byte) {
+	log.Trace().Msg("Received ping on websocket.")
 }
 
 func (c *WebSocket) OnMessage(socket *gws.Conn, message *gws.Message) {
@@ -178,90 +182,65 @@ func (c *WebSocket) OnMessage(socket *gws.Conn, message *gws.Message) {
 			Msgf("Failed to unmarshall response %s.", message.Data.String())
 		return
 	}
-	c.ReadCh <- &webSocketData{
-		conn: socket,
-		data: response,
+	atomic.AddUint64(&c.nextID, 1)
+	var r *websocketMsg
+	switch response.Type {
+	case "event":
+		c.notifyCh <- [2]string{response.Notification.Title, response.Notification.Message}
+	case "result":
+		if !response.Success {
+			log.Error().
+				Msgf("Received error on websocket, %s: %s.", response.Error.Code, response.Error.Message)
+			if response.Error.Code == "id_reuse" {
+				log.Warn().
+					Msg("id_reuse error, attempting manual increment.")
+				atomic.AddUint64(&c.nextID, 1)
+			}
+		}
+	case "auth_required":
+		log.Trace().Caller().
+			Msg("Requesting authorisation for websocket.")
+		r = c.newAuthMsg()
+	case "auth_ok":
+		log.Trace().Caller().
+			Msg("Registering app for push notifications.")
+		r = c.newRegistrationMsg()
+	case "pong":
+		b, err := json.Marshal(response)
+		if err != nil {
+			log.Error().Err(err).Msg("Unable to unmarshal.")
+		}
+		c.OnPong(socket, b)
+	default:
+		log.Warn().Caller().Msgf("Unhandled websocket response %v.", response.Type)
 	}
-}
-
-func (c *WebSocket) responseHandler(notifyCh chan [2]string) {
-	for {
-		select {
-		case <-c.doneCh:
-			log.Trace().Caller().Msg("Stopping websocket response handler.")
-			return
-		case r := <-c.ReadCh:
-			if r == nil {
-				return
-			}
-			response, ok := r.data.(*websocketResponse)
-			if !ok {
-				log.Warn().Msg("Websocket response is not an expected format.")
-				return
-			}
-			atomic.AddUint64(&c.nextID, 1)
-			switch response.Type {
-			case "auth_required":
-				log.Trace().Caller().
-					Msg("Requesting authorisation for websocket.")
-				c.WriteCh <- &webSocketData{
-					conn: r.conn,
-					data: &websocketMsg{
-						Type:        "auth",
-						AccessToken: c.token,
-					}}
-			case "auth_ok":
-				log.Trace().Caller().
-					Msg("Registering app for push notifications.")
-				c.WriteCh <- &webSocketData{
-					conn: r.conn,
-					data: &websocketMsg{
-						Type:           "mobile_app/push_notification_channel",
-						ID:             atomic.LoadUint64(&c.nextID),
-						WebHookID:      c.webhookID,
-						SupportConfirm: false,
-					}}
-			case "result":
-				if !response.Success {
-					log.Error().
-						Msgf("Received error on websocket, %s: %s.", response.Error.Code, response.Error.Message)
-					if response.Error.Code == "id_reuse" {
-						log.Warn().
-							Msg("id_reuse error, attempting manual increment.")
-						atomic.AddUint64(&c.nextID, 1)
-					}
-				}
-			case "event":
-				notifyCh <- [2]string{response.Notification.Title, response.Notification.Message}
-			case "pong":
-				b, err := json.Marshal(response)
-				if err != nil {
-					log.Error().Err(err).Msg("Unable to unmarshal.")
-				}
-				c.OnPong(r.conn, b)
-			default:
-				log.Warn().Caller().Msgf("Unhandled websocket response %v.", r)
-			}
+	if r != nil {
+		err := r.send(socket)
+		if err != nil {
+			log.Error().Err(err).
+				Msg("Unable to send websocket message.")
 		}
 	}
 }
 
-func (c *WebSocket) requestHandler() {
+func (c *WebSocket) keepAlive(conn *gws.Conn) {
+	ticker := time.NewTicker(PingInterval)
 	for {
 		select {
 		case <-c.doneCh:
-			log.Trace().Caller().Msg("Stopping websocket request handler.")
 			return
-		case m := <-c.WriteCh:
-			msg, err := json.Marshal(&m.data)
-			if err != nil {
+		case <-ticker.C:
+			log.Trace().Caller().
+				Msg("Sending ping on websocket")
+			if err := conn.SetDeadline(time.Now().Add(2 * PingInterval)); err != nil {
 				log.Error().Err(err).
-					Msg("Unable to marshal websocket message.")
+					Msg("Error setting deadline on websocket.")
+				return
 			}
-			err = m.conn.WriteMessage(gws.OpcodeText, msg)
-			if err != nil {
+			msg := c.newPingMsg()
+			if err := msg.send(conn); err != nil {
 				log.Error().Err(err).
-					Msg("Unable to send websocket message.")
+					Msg("Error sending ping.")
 			}
 		}
 	}
