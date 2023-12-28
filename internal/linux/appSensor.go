@@ -7,6 +7,7 @@ package linux
 
 import (
 	"context"
+	"sync"
 
 	"github.com/godbus/dbus/v5"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
@@ -24,6 +25,7 @@ const (
 
 type runningAppsSensor struct {
 	appList map[string]dbus.Variant
+	mu      sync.Mutex
 	linuxSensor
 }
 
@@ -34,11 +36,13 @@ type runningAppsSensorAttributes struct {
 
 func (r *runningAppsSensor) Attributes() any {
 	attrs := &runningAppsSensorAttributes{}
+	r.mu.Lock()
 	for appName, state := range r.appList {
 		if dbushelpers.VariantToValue[uint32](state) > 0 {
 			attrs.RunningApps = append(attrs.RunningApps, appName)
 		}
 	}
+	r.mu.Unlock()
 	attrs.DataSource = srcDbus
 	return attrs
 }
@@ -52,6 +56,7 @@ func (r *runningAppsSensor) count() int {
 
 func (r *runningAppsSensor) update(l map[string]dbus.Variant, s chan tracker.Sensor) {
 	var count int
+	r.mu.Lock()
 	r.appList = l
 	for _, raw := range l {
 		if appState, ok := raw.Value().(uint32); ok {
@@ -60,6 +65,7 @@ func (r *runningAppsSensor) update(l map[string]dbus.Variant, s chan tracker.Sen
 			}
 		}
 	}
+	r.mu.Unlock()
 	if r.count() != count {
 		r.value = count
 		s <- r
