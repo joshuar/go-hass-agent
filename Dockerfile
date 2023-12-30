@@ -2,14 +2,12 @@
 # 
 # This software is released under the MIT License.
 # https://opensource.org/licenses/MIT
-FROM fedora:latest
+FROM golang:1.21
 
 WORKDIR /usr/src/go-hass-agent
 
-RUN sudo dnf -y --setopt=tsflags=nodocs install golang gcc \
-    libXcursor-devel libXrandr-devel mesa-libGL-devel \
-    libXi-devel libXinerama-devel libXxf86vm-devel && \
-    dnf clean all
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt update && apt -y install golang gcc libgl1-mesa-dev xorg-dev && rm -rf /var/lib/apt/lists/*
 
 # pre-copy/cache go.mod for pre-downloading dependencies and only redownloading them in subsequent builds if they change
 COPY go.mod go.sum ./
@@ -20,6 +18,6 @@ RUN go install github.com/matryer/moq@latest
 RUN go install golang.org/x/tools/cmd/stringer@latest
 RUN go install golang.org/x/text/cmd/gotext@latest
 RUN go generate ./...
-RUN go build -v -o /usr/bin/go-hass-agent
+RUN go build -v -o /go/bin/go-hass-agent
 
 CMD ["go-hass-agent", "--terminal"]
