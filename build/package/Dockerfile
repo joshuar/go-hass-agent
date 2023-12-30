@@ -4,17 +4,22 @@
 # https://opensource.org/licenses/MIT
 FROM fedora:latest
 
-ARG version
+WORKDIR /usr/src/go-hass-agent
 
-VOLUME [ "/host", "/home/go-hass-agent" ]
+RUN sudo dnf -y --setopt=tsflags=nodocs install golang gcc \
+    libXcursor-devel libXrandr-devel mesa-libGL-devel \
+    libXi-devel libXinerama-devel libXxf86vm-devel && \
+    dnf clean all
 
-ENV HOST_SYS=/host/sys
-ENV HOST_PROC=/host/proc
+# pre-copy/cache go.mod for pre-downloading dependencies and only redownloading them in subsequent builds if they change
+COPY go.mod go.sum ./
+RUN go mod download && go mod verify
 
-RUN dnf -y install https://github.com/joshuar/go-hass-agent/releases/download/v$version/go-hass-agent-$version-1.x86_64.rpm
-RUN dnf -y install dbus
+COPY . .
+RUN go install github.com/matryer/moq@latest
+RUN go install golang.org/x/tools/cmd/stringer@latest
+RUN go install golang.org/x/text/cmd/gotext@latest
+RUN go generate ./...
+RUN go build -v -o /usr/bin/go-hass-agent
 
-USER go-hass-agent
-WORKDIR /home/go-hass-agent
-
-ENTRYPOINT [ "/usr/bin/go-hass-agent", "--terminal" ]
+CMD ["go-hass-agent", "--terminal"]
