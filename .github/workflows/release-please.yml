@@ -13,14 +13,15 @@ jobs:
   release_please:
     runs-on: ubuntu-latest
     steps:
-      - uses: google-github-actions/release-please-action@v3
+      - name: Run release please
+        uses: google-github-actions/release-please-action@v3
         id: release_please
-        name: Run release please
         with:
           release-type: go
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - uses: actions/checkout@v3
+      - name: Checkout source
+        uses: actions/checkout@v3
         if: ${{ steps.release_please.outputs.release_created }}
         with:
           fetch-depth: 0
@@ -58,7 +59,7 @@ jobs:
         id: install_cosign
         uses: sigstore/cosign-installer@v3.3.0
         with:
-          cosign-release: 'v2.2.0'
+          cosign-release: 'v2.2.2'
 
       - name: Run Go Releaser
         uses: goreleaser/goreleaser-action@v4
