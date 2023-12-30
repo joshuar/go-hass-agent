@@ -6,6 +6,7 @@ FROM golang:1.21
 
 WORKDIR /usr/src/go-hass-agent
 
+# https://developer.fyne.io/started/#prerequisites
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt update && apt -y install golang gcc libgl1-mesa-dev xorg-dev && rm -rf /var/lib/apt/lists/*
 
@@ -14,10 +15,14 @@ COPY go.mod go.sum ./
 RUN go mod download && go mod verify
 
 COPY . .
+
+# needed go packages to build from source
 RUN go install github.com/matryer/moq@latest
 RUN go install golang.org/x/tools/cmd/stringer@latest
 RUN go install golang.org/x/text/cmd/gotext@latest
+
 RUN go generate ./...
 RUN go build -v -o /go/bin/go-hass-agent
 
+# user can override this, for example, for gui mode (with appropriate volume mounts)
 CMD ["go-hass-agent", "--terminal"]
