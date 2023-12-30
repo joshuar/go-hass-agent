@@ -6,14 +6,17 @@
 name: build-container
 
 env:
-  REGISTRY: ghcr.io/${{ github.repository_owner }}
+  REGISTRY: ghcr.io
+  REGISTRY_USER: ${{ github.actor }}
+  REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+  IMAGE: ${{ github.repository }}
 
 on:
   release:
     types: [ created ]
-  # push:
-  #   branches:
-  #     - master
+  push:
+    branches:
+      - main
 
 permissions:
   contents: read
@@ -21,59 +24,67 @@ permissions:
 
 jobs:
   build-push-image:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
 
       - name: Install/Cache dependencies
-        id: cache_pkg_deps
         uses: awalsh128/cache-apt-pkgs-action@latest
         with:
           packages: qemu-user-static
 
+      - name: Update VERSION
+        id: update_version
+        shell: sh
+        run: cd internal/agent/config && printf %s $(git tag | tail -1) > VERSION
+
       - name: Build container image
+        id: build_image
         uses: redhat-actions/buildah-build@v2
         with:
           archs: amd64
           # context: build/package
-          image: joshuar/go-hass-agent
-          tags: latest
-          containerfiles: build/package/Dockerfile
+          image: ${{ env.IMAGE }}
+          tags: latest ${{ github.sha }}
+          containerfiles: Dockerfile
           layers: false
           oci: true
 
       - name: Push to Container Registry
+        id: push_image
         uses: redhat-actions/push-to-registry@v2
-        # The id is unused right now, will be used in the next steps
-        id: push
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-          image: joshuar/go-hass-agent
+          username: ${{ env.REGISTRY_USER }}
+          password: ${{ env.REGISTRY_PASSWORD }}
+          image: ${{ env.IMAGE }}
           registry: ${{ env.REGISTRY }}
-          tags: latest
-        env:
-          REGISTRY: ghcr.io/${{ github.repository_owner }}
+          tags: ${{ steps.build_image.outputs.tags }}
       
       - name: Login to Container Registry
         uses: redhat-actions/podman-login@v1
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
           registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ env.REGISTRY_USER }}
+          password: ${{ env.REGISTRY_PASSWORD }}
 
-      - uses: sigstore/cosign-installer@v3.3.0
+      - name: Check and install cosign
+        uses: sigstore/cosign-installer@v3.3.0
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
-          cosign-release: 'v2.2.0'
+          cosign-release: 'v2.2.2'
 
-      - name: Sign container image
+      - name: Sign image with a key
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
-          cosign sign -y --key env://COSIGN_PWD ${{ env.REGISTRY }}/joshuar/go-hass-agent@${{ steps.push.outputs.digest }}
+          images=""
+          for tag in ${TAGS}; do
+            images+="${tag}@${DIGEST} "
+          done
+          cosign --verbose=true sign --yes --key cosign.key ${images}
         env:
-          COSIGN_EXPERIMENTAL: false
-          COSIGN_PWD: ${{ secrets.COSIGN_PWD }}
+          TAGS: ${{ steps.build_image.outputs.tags }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PWD }}
+          DIGEST: ${{ steps.build_image.outputs.digest }}
