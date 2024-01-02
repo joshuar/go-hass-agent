@@ -41,7 +41,7 @@ type fyneUI struct {
 
 func (i *fyneUI) Run() {
 	if i.app == nil {
-		log.Warn().Msg("No UI. Likely running headless. Not running Fyne UI loop.")
+		log.Warn().Msg("No supported windowing environment. Will not run UI elements.")
 		return
 	}
 	log.Trace().Msg("Starting Fyne UI loop.")
@@ -50,7 +50,6 @@ func (i *fyneUI) Run() {
 
 func (i *fyneUI) DisplayNotification(title, message string) {
 	if i.app == nil {
-		log.Warn().Msg("No UI. Cannot display notifications.")
 		return
 	}
 	i.app.SendNotification(&fyne.Notification{
@@ -87,7 +86,6 @@ func NewFyneUI(agent ui.Agent) *fyneUI {
 // controlling the agent and showing other informational windows.
 func (i *fyneUI) DisplayTrayIcon(a ui.Agent, t ui.SensorTracker) {
 	if a.IsHeadless() {
-		log.Warn().Msg("No UI. Will not display tray icon.")
 		return
 	}
 	if desk, ok := i.app.(desktop.App); ok {
