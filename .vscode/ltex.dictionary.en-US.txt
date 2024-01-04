@@ -4,3 +4,4 @@ ABRT
 Hass
 Fyne
 ProcFS
+cron
