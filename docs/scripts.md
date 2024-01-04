@@ -9,8 +9,8 @@
 
 Go Hass Agent supports utilising scripts to create sensors. In this way, you can
 extend the sensors presented to Home Assistant by the agent. Note that as the
-agent is a "mobile app" in Home Assistant, any script sensors will be associated
-with the Go Hass Agent device in Home Asssistant. 
+agent is a “mobile app” in Home Assistant, any script sensors will be associated
+with the Go Hass Agent device in Home Assistant. 
 
 Each script run by the agent can create one or more sensors and each script can
 run on its own schedule, specified using a Cron-like syntax.
@@ -41,13 +41,14 @@ Icon](https://pictogrammers.github.io/@mdi/font/2.0.46/) representing the
 current state. It can be changed dynamically based on the current state or
 remain constant. Format is `mdi:icon_name`.
 - `sensor_state`: the current value of the sensor. For numerical states, without
-  the units. Otherwise a string or bool (for binary sensors).
+  the units. Otherwise, a *string* or *boolean* (for binary sensors). 
+  - **Note:** for a binary sensor, do not enclose the `true`/`false` in quotes.
 
 The following optional fields can also be specified, which help control the display in Home Assistant.
 
 - `sensor_units`: the units for the state value.  
 - `sensor_type`: the *type* of sensor. If this is a binary sensor with a boolean
-  value, set this to *"binary"*. Else, do not set this field.
+  value, set this to *“binary”*. Else, do not set this field.
 - `sensor_device_class`: a Home Assistant [Device Class](https://developers.home-assistant.io/docs/core/entity/sensor/#available-device-classes)
 for the sensor, which will dictate how it will be displayed in Home Assistant.
 There are many, pick an appropriate one (see
@@ -121,6 +122,12 @@ sensor_state = 3
 sensor_state_class = 'measurement'
 ```
 
+For a binary sensor, the output should have `sensor_type` set to “binary” and the `sensor_state` as `true` or `false`
+(without quotes). As an example in compressed JSON format:
+
+```json
+{"schedule":"@every 10s","sensors":[{"sensor_name":"random 4","sensor_type":"binary","sensor_icon":"mdi:dice-3","sensor_state":false}]}
+```
 
 ## Schedule
 
@@ -137,7 +144,7 @@ Or a pre-defined schedule:
 - `@monthly`.
 - `@yearly`.
 
-However, more cron-like formats are supported:
+However, more cron formats are supported:
 
 - `"30 * * * *"`: every hour on the half hour.
 - `"30 3-6,20-23 * * *"`: in the range 3-6am, 8-11pm.
@@ -147,4 +154,4 @@ However, more cron-like formats are supported:
 
 ## Security
 
-Running scripts can be dangerous, especially if the script does not have robust error-handling or whose origin is untrusted or unknown. Go Hass Agent makes no attempt to do any analysis or sanitisation of script output, other than ensuring the output is a [valid supported format](#output-format). As such, ensure you trust and understand what the script does and all possible outputs that the script can produce. Scripts are run by the agent and have the permissions of the user running the agent. Script output is sent to your Home Assistant instance. 
+Running scripts can be dangerous, especially if the script does not have robust error-handling or whose origin is untrusted or unknown. Go Hass Agent makes no attempt to do any analysis or sanitisation of script output, other than ensuring the output is a [supported format](#output-format). As such, ensure you trust and understand what the script does and all possible outputs that the script can produce. Scripts are run by the agent and have the permissions of the user running the agent. Script output is sent to your Home Assistant instance. 
