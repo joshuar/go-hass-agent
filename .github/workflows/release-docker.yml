@@ -61,6 +61,8 @@ jobs:
           image: ${{ env.IMAGE }}
           registry: ${{ env.REGISTRY }}
           tags: ${{ steps.build_image.outputs.tags }}
+          extra-args: |
+            --disable-content-trust
       
       - name: Login to Container Registry
         uses: redhat-actions/podman-login@v1
@@ -79,12 +81,7 @@ jobs:
       - name: Sign image with a key
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
-          images=""
-          for tag in ${TAGS}; do
-            images+="${tag}@${DIGEST} "
-          done
-          cosign --verbose=true sign --yes --key cosign.key ${images}
+          cosign --verbose=true sign --yes --key cosign.key \
+            ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ github.sha }}
         env:
-          TAGS: ${{ steps.build_image.outputs.tags }}
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PWD }}
-          DIGEST: ${{ steps.build_image.outputs.digest }}
