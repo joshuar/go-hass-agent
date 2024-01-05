@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-package linux
+package problems
 
 import (
 	"context"
@@ -12,6 +12,7 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/joshuar/go-hass-agent/pkg/dbushelpers"
 	"github.com/rs/zerolog/log"
@@ -24,7 +25,7 @@ const (
 
 type problemsSensor struct {
 	list map[string]map[string]any
-	linuxSensor
+	linux.Sensor
 }
 
 func (s *problemsSensor) Attributes() any {
@@ -33,7 +34,7 @@ func (s *problemsSensor) Attributes() any {
 		DataSource  string                    `json:"Data Source"`
 	}{
 		ProblemList: s.list,
-		DataSource:  srcDbus,
+		DataSource:  linux.DataSrcDbus,
 	}
 }
 
@@ -64,16 +65,16 @@ func parseProblem(details map[string]string) map[string]any {
 	return parsed
 }
 
-func ProblemsUpdater(ctx context.Context) chan tracker.Sensor {
+func Updater(ctx context.Context) chan tracker.Sensor {
 	sensorCh := make(chan tracker.Sensor, 1)
 	problems := func(_ time.Duration) {
 		problems := &problemsSensor{
 			list: make(map[string]map[string]any),
 		}
-		problems.sensorType = problem
-		problems.icon = "mdi:alert"
-		problems.units = "problems"
-		problems.stateClass = sensor.StateMeasurement
+		problems.SensorTypeValue = linux.SensorProblem
+		problems.IconString = "mdi:alert"
+		problems.UnitsString = "problems"
+		problems.StateClassValue = sensor.StateMeasurement
 
 		problemList := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
 			Path(dBusProblemsDest).
@@ -92,7 +93,7 @@ func ProblemsUpdater(ctx context.Context) chan tracker.Sensor {
 			}
 		}
 		if len(problems.list) > 0 {
-			problems.value = len(problems.list)
+			problems.Value = len(problems.list)
 			sensorCh <- problems
 		}
 	}

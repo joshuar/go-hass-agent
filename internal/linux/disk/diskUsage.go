@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-package linux
+package disk
 
 import (
 	"context"
@@ -13,6 +13,7 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v3/disk"
@@ -20,16 +21,16 @@ import (
 
 type diskSensor struct {
 	stats *disk.UsageStat
-	linuxSensor
+	linux.Sensor
 }
 
 func newDiskSensor(d *disk.UsageStat) *diskSensor {
 	s := &diskSensor{}
-	s.icon = "mdi:harddisk"
-	s.stateClass = sensor.StateTotal
-	s.units = "%"
+	s.IconString = "mdi:harddisk"
+	s.StateClassValue = sensor.StateTotal
+	s.UnitsString = "%"
 	s.stats = d
-	s.value = math.Round(d.UsedPercent/0.05) * 0.05
+	s.Value = math.Round(d.UsedPercent/0.05) * 0.05
 	return s
 }
 
@@ -51,12 +52,12 @@ func (d *diskSensor) Attributes() any {
 		DataSource string `json:"Data Source"`
 		Stats      disk.UsageStat
 	}{
-		DataSource: srcProcfs,
+		DataSource: linux.DataSrcProcfs,
 		Stats:      *d.stats,
 	}
 }
 
-func DiskUsageUpdater(ctx context.Context) chan tracker.Sensor {
+func UsageUpdater(ctx context.Context) chan tracker.Sensor {
 	sensorCh := make(chan tracker.Sensor, 1)
 	sendDiskUsageStats := func(_ time.Duration) {
 		p, err := disk.PartitionsWithContext(ctx, false)

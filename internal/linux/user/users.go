@@ -3,13 +3,14 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-package linux
+package user
 
 import (
 	"context"
 
 	"github.com/godbus/dbus/v5"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/joshuar/go-hass-agent/pkg/dbushelpers"
 	"github.com/rs/zerolog/log"
@@ -21,7 +22,7 @@ const (
 
 type usersSensor struct {
 	userNames []string
-	linuxSensor
+	linux.Sensor
 }
 
 func (s *usersSensor) Attributes() any {
@@ -29,7 +30,7 @@ func (s *usersSensor) Attributes() any {
 		DataSource string   `json:"Data Source"`
 		Usernames  []string `json:"Usernames"`
 	}{
-		DataSource: srcDbus,
+		DataSource: linux.DataSrcDbus,
 		Usernames:  s.userNames,
 	}
 }
@@ -44,7 +45,7 @@ func (s *usersSensor) updateUsers(ctx context.Context) {
 	if userList, ok = userData.([][]any); !ok {
 		return
 	}
-	s.value = len(userList)
+	s.Value = len(userList)
 	var users []string
 	for _, u := range userList {
 		if user, ok := u[1].(string); ok {
@@ -56,14 +57,14 @@ func (s *usersSensor) updateUsers(ctx context.Context) {
 
 func newUsersSensor() *usersSensor {
 	s := &usersSensor{}
-	s.sensorType = users
-	s.units = "users"
-	s.icon = "mdi:account"
-	s.stateClass = sensor.StateMeasurement
+	s.SensorTypeValue = linux.SensorUsers
+	s.UnitsString = "users"
+	s.IconString = "mdi:account"
+	s.StateClassValue = sensor.StateMeasurement
 	return s
 }
 
-func UsersUpdater(ctx context.Context) chan tracker.Sensor {
+func Updater(ctx context.Context) chan tracker.Sensor {
 	sensorCh := make(chan tracker.Sensor, 1)
 	u := newUsersSensor()
 	u.updateUsers(ctx)

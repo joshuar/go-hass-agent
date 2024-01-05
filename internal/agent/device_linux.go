@@ -10,6 +10,18 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/agent/config"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/linux/apps"
+	"github.com/joshuar/go-hass-agent/internal/linux/battery"
+	"github.com/joshuar/go-hass-agent/internal/linux/cpu"
+	"github.com/joshuar/go-hass-agent/internal/linux/disk"
+	"github.com/joshuar/go-hass-agent/internal/linux/location"
+	"github.com/joshuar/go-hass-agent/internal/linux/mem"
+	"github.com/joshuar/go-hass-agent/internal/linux/net"
+	"github.com/joshuar/go-hass-agent/internal/linux/power"
+	"github.com/joshuar/go-hass-agent/internal/linux/problems"
+	"github.com/joshuar/go-hass-agent/internal/linux/system"
+	"github.com/joshuar/go-hass-agent/internal/linux/time"
+	"github.com/joshuar/go-hass-agent/internal/linux/user"
 	"github.com/joshuar/go-hass-agent/internal/tracker"
 )
 
@@ -21,24 +33,25 @@ func newDevice(_ context.Context) *linux.Device {
 func sensorWorkers() []func(context.Context) chan tracker.Sensor {
 	var workers []func(context.Context) chan tracker.Sensor
 	workers = append(workers,
-		linux.BatteryUpdater,
-		linux.AppUpdater,
-		linux.NetworkConnectionsUpdater,
-		linux.NetworkStatsUpdater,
-		linux.PowerProfileUpdater,
-		linux.ProblemsUpdater,
-		linux.MemoryUpdater,
-		linux.LoadAvgUpdater,
-		linux.DiskUsageUpdater,
-		linux.TimeUpdater,
-		linux.ScreenLockUpdater,
-		linux.UsersUpdater,
-		linux.Versions,
-		linux.TempUpdater,
-		linux.PowerStateUpdater)
+		battery.Updater,
+		apps.Updater,
+		net.ConnectionsUpdater,
+		net.RatesUpdater,
+		problems.Updater,
+		mem.Updater,
+		cpu.LoadAvgUpdater,
+		disk.UsageUpdater,
+		time.Updater,
+		power.ScreenLockUpdater,
+		power.PowerStateUpdater,
+		power.PowerProfileUpdater,
+		user.Updater,
+		system.Versions,
+		system.TempUpdater,
+	)
 	return workers
 }
 
 func locationWorker() func(context.Context) chan tracker.Location {
-	return linux.LocationUpdater
+	return location.Updater
 }

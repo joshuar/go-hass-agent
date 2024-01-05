@@ -3,13 +3,14 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-package linux
+package net
 
 import (
 	"context"
 
 	"github.com/godbus/dbus/v5"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/joshuar/go-hass-agent/pkg/dbushelpers"
 	"github.com/rs/zerolog/log"
@@ -17,71 +18,71 @@ import (
 
 var wifiProps = map[string]*wifiSensor{
 	"Ssid": {
-		linuxSensor: linuxSensor{
-			sensorType:   wifiSSID,
-			isDiagnostic: true,
+		Sensor: linux.Sensor{
+			SensorTypeValue: linux.SensorWifiSSID,
+			IsDiagnostic:    true,
 		},
 	},
 	"HwAddress": {
-		linuxSensor: linuxSensor{
-			sensorType:   wifiHWAddress,
-			isDiagnostic: true,
+		Sensor: linux.Sensor{
+			SensorTypeValue: linux.SensorWifiHWAddress,
+			IsDiagnostic:    true,
 		},
 	},
 	"MaxBitrate": {
-		linuxSensor: linuxSensor{
-			sensorType:   wifiSpeed,
-			units:        "kB/s",
-			deviceClass:  sensor.Data_rate,
-			stateClass:   sensor.StateMeasurement,
-			isDiagnostic: true,
+		Sensor: linux.Sensor{
+			SensorTypeValue:  linux.SensorWifiSpeed,
+			UnitsString:      "kB/s",
+			DeviceClassValue: sensor.Data_rate,
+			StateClassValue:  sensor.StateMeasurement,
+			IsDiagnostic:     true,
 		},
 	},
 	"Frequency": {
-		linuxSensor: linuxSensor{
-			sensorType:   wifiFrequency,
-			units:        "MHz",
-			deviceClass:  sensor.Frequency,
-			stateClass:   sensor.StateMeasurement,
-			isDiagnostic: true,
+		Sensor: linux.Sensor{
+			SensorTypeValue:  linux.SensorWifiFrequency,
+			UnitsString:      "MHz",
+			DeviceClassValue: sensor.Frequency,
+			StateClassValue:  sensor.StateMeasurement,
+			IsDiagnostic:     true,
 		},
 	},
 	"Strength": {
-		linuxSensor: linuxSensor{
-			sensorType:   wifiStrength,
-			units:        "%",
-			stateClass:   sensor.StateMeasurement,
-			isDiagnostic: true,
+		Sensor: linux.Sensor{
+			SensorTypeValue: linux.SensorWifiStrength,
+			UnitsString:     "%",
+			StateClassValue: sensor.StateMeasurement,
+			IsDiagnostic:    true,
 		},
 	},
 }
 
 type wifiSensor struct {
-	linuxSensor
+	linux.Sensor
 }
 
 func (w *wifiSensor) State() any {
-	switch w.sensorType {
-	case wifiSSID:
-		if value, ok := w.value.([]uint8); ok {
+	switch w.SensorTypeValue {
+	case linux.SensorWifiSSID:
+		if value, ok := w.Value.([]uint8); ok {
 			return string(value)
 		} else {
 			return sensor.StateUnknown
 		}
-	case wifiHWAddress:
-		if value, ok := w.value.(string); ok {
+	case linux.SensorWifiHWAddress:
+		if value, ok := w.Value.(string); ok {
 			return value
 		} else {
 			return sensor.StateUnknown
 		}
-	case wifiFrequency, wifiSpeed:
-		if value, ok := w.value.(uint32); ok {
+	case linux.SensorWifiFrequency, linux.SensorWifiSpeed:
+		if value, ok := w.Value.(uint32); ok {
 			return value
 		} else {
 			return sensor.StateUnknown
 		}
-	case wifiStrength:
-		if value, ok := w.value.(uint8); ok {
+	case linux.SensorWifiStrength:
+		if value, ok := w.Value.(uint8); ok {
 			return value
 		} else {
 			return sensor.StateUnknown
@@ -92,11 +93,11 @@ func (w *wifiSensor) State() any {
 }
 
 func (w *wifiSensor) Icon() string {
-	switch w.sensorType {
-	case wifiSSID, wifiHWAddress, wifiFrequency, wifiSpeed:
+	switch w.SensorTypeValue {
+	case linux.SensorWifiSSID, linux.SensorWifiHWAddress, linux.SensorWifiFrequency, linux.SensorWifiSpeed:
 		return "mdi:wifi"
-	case wifiStrength:
-		value, ok := w.value.(uint8)
+	case linux.SensorWifiStrength:
+		value, ok := w.Value.(uint8)
 		if !ok {
 			return "mdi:wifi-strength-alert-outline"
 		}
@@ -144,7 +145,7 @@ func getWifiProperties(ctx context.Context, p dbus.ObjectPath) <-chan tracker.Se
 						// for the associated access point, get the wifi properties as sensors
 						v, _ = r.GetProp(propBase + "." + k)
 						if !v.Signature().Empty() {
-							p.value = v.Value()
+							p.Value = v.Value()
 							wifiProps[k] = p
 							sensorCh <- p
 						}
@@ -174,7 +175,7 @@ func monitorWifiProperties(ctx context.Context, p dbus.ObjectPath) chan tracker.
 					for k, v := range props {
 						prop, ok := wifiProps[k]
 						if ok {
-							prop.value = v.Value()
+							prop.Value = v.Value()
 							sensorCh <- prop
 						}
 					}

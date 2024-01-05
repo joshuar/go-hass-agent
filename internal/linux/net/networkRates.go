@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-package linux
+package net
 
 import (
 	"context"
@@ -11,6 +11,7 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v3/net"
@@ -24,7 +25,7 @@ type netIOSensorAttributes struct {
 }
 
 type netIOSensor struct {
-	linuxSensor
+	linux.Sensor
 	netIOSensorAttributes
 }
 
@@ -34,32 +35,32 @@ func (s *netIOSensor) Attributes() any {
 		DataSource string `json:"Data Source"`
 		netIOSensorAttributes
 	}{
-		NativeUnit:            s.units,
-		DataSource:            srcProcfs,
+		NativeUnit:            s.UnitsString,
+		DataSource:            linux.DataSrcProcfs,
 		netIOSensorAttributes: s.netIOSensorAttributes,
 	}
 }
 
 func (s *netIOSensor) Icon() string {
-	switch s.sensorType {
-	case bytesRecv:
+	switch s.SensorTypeValue {
+	case linux.SensorBytesRecv:
 		return "mdi:download-network"
-	case bytesSent:
+	case linux.SensorBytesSent:
 		return "mdi:upload-network"
 	}
 	return "mdi:help-network"
 }
 
 func (s *netIOSensor) update(c *net.IOCountersStat) {
-	switch s.sensorType {
-	case bytesRecv:
-		s.value = c.BytesRecv
+	switch s.SensorTypeValue {
+	case linux.SensorBytesRecv:
+		s.Value = c.BytesRecv
 		s.Packets = c.PacketsRecv
 		s.Errors = c.Errin
 		s.Drops = c.Dropin
 		s.FifoErrors = c.Fifoin
-	case bytesSent:
-		s.value = c.BytesSent
+	case linux.SensorBytesSent:
+		s.Value = c.BytesSent
 		s.Packets = c.PacketsSent
 		s.Errors = c.Errout
 		s.Drops = c.Dropout
@@ -67,27 +68,27 @@ func (s *netIOSensor) update(c *net.IOCountersStat) {
 	}
 }
 
-func newNetIOSensor(t sensorType) *netIOSensor {
+func newNetIOSensor(t linux.SensorTypeValue) *netIOSensor {
 	return &netIOSensor{
-		linuxSensor: linuxSensor{
-			units:       "B",
-			sensorType:  t,
-			deviceClass: sensor.Data_size,
-			stateClass:  sensor.StateMeasurement,
+		Sensor: linux.Sensor{
+			UnitsString:      "B",
+			SensorTypeValue:  t,
+			DeviceClassValue: sensor.Data_size,
+			StateClassValue:  sensor.StateMeasurement,
 		},
 	}
 }
 
 type netIORateSensor struct {
-	linuxSensor
+	linux.Sensor
 	lastValue uint64
 }
 
 func (s *netIORateSensor) Icon() string {
-	switch s.sensorType {
-	case bytesRecvRate:
+	switch s.SensorTypeValue {
+	case linux.SensorBytesRecvRate:
 		return "mdi:transfer-down"
-	case bytesSentRate:
+	case linux.SensorBytesSentRate:
 		return "mdi:transfer-up"
 	}
 	return "mdi:help-network"
@@ -95,29 +96,29 @@ func (s *netIORateSensor) Icon() string {
 
 func (s *netIORateSensor) update(d time.Duration, b uint64) {
 	if uint64(d.Seconds()) > 0 && s.lastValue != 0 {
-		s.value = (b - s.lastValue) / uint64(d.Seconds())
+		s.Value = (b - s.lastValue) / uint64(d.Seconds())
 	}
 	s.lastValue = b
 }
 
-func newNetIORateSensor(t sensorType) *netIORateSensor {
+func newNetIORateSensor(t linux.SensorTypeValue) *netIORateSensor {
 	return &netIORateSensor{
-		linuxSensor: linuxSensor{
-			units:       "B/s",
-			sensorType:  t,
-			deviceClass: sensor.Data_rate,
-			stateClass:  sensor.StateMeasurement,
-			source:      srcProcfs,
+		Sensor: linux.Sensor{
+			UnitsString:      "B/s",
+			SensorTypeValue:  t,
+			DeviceClassValue: sensor.Data_rate,
+			StateClassValue:  sensor.StateMeasurement,
+			SensorSrc:        linux.DataSrcProcfs,
 		},
 	}
 }
 
-func NetworkStatsUpdater(ctx context.Context) chan tracker.Sensor {
+func RatesUpdater(ctx context.Context) chan tracker.Sensor {
 	sensorCh := make(chan tracker.Sensor, 2)
-	bytesRx := newNetIOSensor(bytesRecv)
-	bytesTx := newNetIOSensor(bytesSent)
-	bytesRxRate := newNetIORateSensor(bytesRecvRate)
-	bytesTxRate := newNetIORateSensor(bytesSentRate)
+	bytesRx := newNetIOSensor(linux.SensorBytesRecv)
+	bytesTx := newNetIOSensor(linux.SensorBytesSent)
+	bytesRxRate := newNetIORateSensor(linux.SensorBytesRecvRate)
+	bytesTxRate := newNetIORateSensor(linux.SensorBytesSentRate)
 
 	sendNetStats := func(delta time.Duration) {
 		netIO, err := net.IOCountersWithContext(ctx, false)

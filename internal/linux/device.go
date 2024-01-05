@@ -172,9 +172,9 @@ func getHWModel() string {
 	return strings.TrimSpace(string(hwModel))
 }
 
-// findPortal is a helper function to work out which portal interface should be
+// FindPortal is a helper function to work out which portal interface should be
 // used for getting information on running apps.
-func findPortal() string {
+func FindPortal() string {
 	desktop := os.Getenv("XDG_CURRENT_DESKTOP")
 	switch {
 	case strings.Contains(desktop, "KDE"):

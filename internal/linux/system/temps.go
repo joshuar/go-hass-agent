@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-package linux
+package system
 
 import (
 	"context"
@@ -13,6 +13,7 @@ import (
 	"github.com/iancoleman/strcase"
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v3/host"
@@ -24,7 +25,7 @@ type tempSensor struct {
 	high float64
 	crit float64
 	id   string
-	linuxSensor
+	linux.Sensor
 }
 
 func (s *tempSensor) Name() string {
@@ -43,8 +44,8 @@ func (s *tempSensor) Attributes() any {
 		HighThresh float64 `json:"High Temperature Threshold"`
 		CritThresh float64 `json:"Critical Temperature Threshold"`
 	}{
-		NativeUnit: s.units,
-		DataSource: srcProcfs,
+		NativeUnit: s.UnitsString,
+		DataSource: linux.DataSrcProcfs,
 		HighThresh: s.high,
 		CritThresh: s.crit,
 	}
@@ -52,12 +53,12 @@ func (s *tempSensor) Attributes() any {
 
 func newTempSensor(t host.TemperatureStat) *tempSensor {
 	s := &tempSensor{}
-	s.isDiagnostic = true
-	s.deviceClass = sensor.SensorTemperature
-	s.stateClass = sensor.StateMeasurement
-	s.units = "°C"
-	s.sensorType = deviceTemp
-	s.value = t.Temperature
+	s.IsDiagnostic = true
+	s.DeviceClassValue = sensor.SensorTemperature
+	s.StateClassValue = sensor.StateMeasurement
+	s.UnitsString = "°C"
+	s.SensorTypeValue = linux.SensorDeviceTemp
+	s.Value = t.Temperature
 	s.high = t.High
 	s.crit = t.Critical
 	return s

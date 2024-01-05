@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-package linux
+package net
 
 import (
 	"context"
@@ -12,6 +12,7 @@ import (
 
 	"github.com/godbus/dbus/v5"
 	"github.com/iancoleman/strcase"
+	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/joshuar/go-hass-agent/pkg/dbushelpers"
 	"github.com/rs/zerolog/log"
@@ -44,7 +45,7 @@ type connection struct {
 	state connState
 	attrs *connectionAttributes
 	path  dbus.ObjectPath
-	linuxSensor
+	linux.Sensor
 }
 
 type connectionAttributes struct {
@@ -219,13 +220,13 @@ func (c *connection) monitor(ctx context.Context) <-chan tracker.Sensor {
 func newConnection(ctx context.Context, p dbus.ObjectPath) *connection {
 	c := &connection{
 		attrs: &connectionAttributes{
-			DataSource: srcDbus,
+			DataSource: linux.DataSrcDbus,
 		},
 		// doneCh: make(chan struct{}),
 		path: p,
 	}
-	c.sensorType = connectionState
-	c.isDiagnostic = true
+	c.SensorTypeValue = linux.SensorConnectionState
+	c.IsDiagnostic = true
 
 	r := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
 		Path(p).
@@ -334,6 +335,6 @@ func monitorActiveConnections(ctx context.Context) chan tracker.Sensor {
 	return sensorCh
 }
 
-func NetworkConnectionsUpdater(ctx context.Context) chan tracker.Sensor {
+func ConnectionsUpdater(ctx context.Context) chan tracker.Sensor {
 	return monitorActiveConnections(ctx)
 }
