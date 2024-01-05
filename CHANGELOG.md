@@ -1,5 +1,13 @@
 # Changelog
 
+## [6.1.2](https://github.com/joshuar/go-hass-agent/compare/v6.1.1...v6.1.2) (2024-01-04)
+
+
+### Bug Fixes
+
+* **agent:** improve warning messages about windowing/UI environment ([222c3ab](https://github.com/joshuar/go-hass-agent/commit/222c3abe2b672ddc29c8d49910d2e4f280ad8e5a))
+* **linux:** protect against potential map read/write race condition ([26be3af](https://github.com/joshuar/go-hass-agent/commit/26be3afd63831d618cd2c28507940afeade05353))
+
 ## [6.1.1](https://github.com/joshuar/go-hass-agent/compare/v6.1.0...v6.1.1) (2023-12-27)
 
 
