@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-package linux
+package time
 
 import (
 	"context"
@@ -11,55 +11,56 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v3/host"
 )
 
 type timeSensor struct {
-	linuxSensor
+	linux.Sensor
 }
 
 func (s *timeSensor) Attributes() any {
-	switch s.sensorType {
-	case uptime:
+	switch s.SensorTypeValue {
+	case linux.SensorUptime:
 		return struct {
 			NativeUnit string `json:"native_unit_of_measurement"`
 			DataSource string `json:"Data Source"`
 		}{
-			NativeUnit: s.units,
-			DataSource: srcProcfs,
+			NativeUnit: s.UnitsString,
+			DataSource: linux.DataSrcProcfs,
 		}
 	default:
 		return struct {
 			DataSource string `json:"Data Source"`
 		}{
-			DataSource: srcProcfs,
+			DataSource: linux.DataSrcProcfs,
 		}
 	}
 }
 
-func TimeUpdater(ctx context.Context) chan tracker.Sensor {
+func Updater(ctx context.Context) chan tracker.Sensor {
 	sensorCh := make(chan tracker.Sensor, 2)
 	updateTimes := func(_ time.Duration) {
 		sensorCh <- &timeSensor{
-			linuxSensor{
-				sensorType:   uptime,
-				value:        getUptime(ctx),
-				isDiagnostic: true,
-				units:        "h",
-				icon:         "mdi:restart",
-				deviceClass:  sensor.Duration,
-				stateClass:   sensor.StateMeasurement,
+			linux.Sensor{
+				SensorTypeValue:  linux.SensorUptime,
+				Value:            getUptime(ctx),
+				IsDiagnostic:     true,
+				UnitsString:      "h",
+				IconString:       "mdi:restart",
+				DeviceClassValue: sensor.Duration,
+				StateClassValue:  sensor.StateMeasurement,
 			},
 		}
 		sensorCh <- &timeSensor{
-			linuxSensor{
-				sensorType:   boottime,
-				value:        getBoottime(ctx),
-				isDiagnostic: true,
-				icon:         "mdi:restart",
-				deviceClass:  sensor.Timestamp,
+			linux.Sensor{
+				SensorTypeValue:  linux.SensorBoottime,
+				Value:            getBoottime(ctx),
+				IsDiagnostic:     true,
+				IconString:       "mdi:restart",
+				DeviceClassValue: sensor.Timestamp,
 			},
 		}
 	}

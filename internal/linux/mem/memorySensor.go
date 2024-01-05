@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-package linux
+package mem
 
 import (
 	"context"
@@ -11,13 +11,14 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v3/mem"
 )
 
 type memorySensor struct {
-	linuxSensor
+	linux.Sensor
 }
 
 func (s *memorySensor) Attributes() any {
@@ -25,15 +26,15 @@ func (s *memorySensor) Attributes() any {
 		NativeUnit string `json:"native_unit_of_measurement"`
 		DataSource string `json:"Data Source"`
 	}{
-		NativeUnit: s.units,
-		DataSource: s.source,
+		NativeUnit: s.UnitsString,
+		DataSource: s.SensorSrc,
 	}
 }
 
-func MemoryUpdater(ctx context.Context) chan tracker.Sensor {
+func Updater(ctx context.Context) chan tracker.Sensor {
 	sensorCh := make(chan tracker.Sensor, 5)
 	sendMemStats := func(_ time.Duration) {
-		stats := []sensorType{memTotal, memAvail, memUsed, swapTotal, swapFree}
+		stats := []linux.SensorTypeValue{linux.SensorMemTotal, linux.SensorMemAvail, linux.SensorMemUsed, linux.SensorSwapTotal, linux.SensorSwapFree}
 		var memDetails *mem.VirtualMemoryStat
 		var err error
 		if memDetails, err = mem.VirtualMemoryWithContext(ctx); err != nil {
@@ -44,28 +45,28 @@ func MemoryUpdater(ctx context.Context) chan tracker.Sensor {
 		for _, stat := range stats {
 			var statValue uint64
 			switch stat {
-			case memTotal:
+			case linux.SensorMemTotal:
 				statValue = memDetails.Total
-			case memAvail:
+			case linux.SensorMemAvail:
 				statValue = memDetails.Available
-			case memUsed:
+			case linux.SensorMemUsed:
 				statValue = memDetails.Used
-			case swapTotal:
+			case linux.SensorSwapTotal:
 				statValue = memDetails.SwapTotal
-			case swapFree:
+			case linux.SensorSwapFree:
 				statValue = memDetails.SwapFree
 				// case UsedSwapMemory:
 				// 	return m.memStats.SwapCached
 			}
 			state := &memorySensor{
-				linuxSensor{
-					value:       statValue,
-					sensorType:  stat,
-					icon:        "mdi:memory",
-					units:       "B",
-					source:      srcProcfs,
-					deviceClass: sensor.Data_size,
-					stateClass:  sensor.StateTotal,
+				linux.Sensor{
+					Value:            statValue,
+					SensorTypeValue:  stat,
+					IconString:       "mdi:memory",
+					UnitsString:      "B",
+					SensorSrc:        linux.DataSrcProcfs,
+					DeviceClassValue: sensor.Data_size,
+					StateClassValue:  sensor.StateTotal,
 				},
 			}
 			sensorCh <- state

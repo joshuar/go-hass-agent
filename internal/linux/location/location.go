@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-package linux
+package location
 
 import (
 	"context"
@@ -69,7 +69,7 @@ func (l *linuxLocation) VerticalAccuracy() int {
 	return 0
 }
 
-func LocationUpdater(ctx context.Context) chan tracker.Location {
+func Updater(ctx context.Context) chan tracker.Location {
 	sensorCh := make(chan tracker.Location, 1)
 	locationUpdateHandler := func(s *dbus.Signal) {
 		if s.Name == locationUpdatedSignal {

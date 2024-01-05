@@ -3,24 +3,25 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-package linux
+package power
 
 import (
 	"context"
 	"strings"
 
 	"github.com/godbus/dbus/v5"
+	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/joshuar/go-hass-agent/pkg/dbushelpers"
 	"github.com/rs/zerolog/log"
 )
 
 type screenlockSensor struct {
-	linuxSensor
+	linux.Sensor
 }
 
 func (s *screenlockSensor) Icon() string {
-	state, ok := s.value.(bool)
+	state, ok := s.Value.(bool)
 	if !ok {
 		return "mdi:lock-alert"
 	}
@@ -32,11 +33,11 @@ func (s *screenlockSensor) Icon() string {
 
 func newScreenlockEvent(v bool) *screenlockSensor {
 	return &screenlockSensor{
-		linuxSensor: linuxSensor{
-			sensorType: screenLock,
-			isBinary:   true,
-			source:     srcDbus,
-			value:      v,
+		Sensor: linux.Sensor{
+			SensorTypeValue: linux.SensorScreenLock,
+			IsBinary:        true,
+			SensorSrc:       linux.DataSrcDbus,
+			Value:           v,
 		},
 	}
 }

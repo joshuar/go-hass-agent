@@ -3,12 +3,13 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-package linux
+package power
 
 import (
 	"context"
 
 	"github.com/godbus/dbus/v5"
+	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/joshuar/go-hass-agent/pkg/dbushelpers"
 	"github.com/rs/zerolog/log"
@@ -20,16 +21,16 @@ const (
 )
 
 type powerSensor struct {
-	linuxSensor
+	linux.Sensor
 }
 
-func newPowerSensor(t sensorType, v dbus.Variant) *powerSensor {
+func newPowerSensor(t linux.SensorTypeValue, v dbus.Variant) *powerSensor {
 	s := &powerSensor{}
-	s.value = dbushelpers.VariantToValue[string](v)
-	s.sensorType = t
-	s.icon = "mdi:flash"
-	s.source = srcDbus
-	s.isDiagnostic = true
+	s.Value = dbushelpers.VariantToValue[string](v)
+	s.SensorTypeValue = t
+	s.IconString = "mdi:flash"
+	s.SensorSrc = linux.DataSrcDbus
+	s.IsDiagnostic = true
 	return s
 }
 
@@ -45,7 +46,7 @@ func PowerProfileUpdater(ctx context.Context) chan tracker.Sensor {
 		return sensorCh
 	}
 
-	sensorCh <- newPowerSensor(powerProfile, activePowerProfile)
+	sensorCh <- newPowerSensor(linux.SensorPowerProfile, activePowerProfile)
 
 	err = dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
 		Match([]dbus.MatchOption{
@@ -70,7 +71,7 @@ func PowerProfileUpdater(ctx context.Context) chan tracker.Sensor {
 			}
 			for propName, propValue := range updatedProps {
 				if propName == "ActiveProfile" {
-					sensorCh <- newPowerSensor(powerProfile, propValue)
+					sensorCh <- newPowerSensor(linux.SensorPowerProfile, propValue)
 				} else {
 					log.Debug().Msgf("Unhandled property %v changed to %v", propName, propValue)
 				}

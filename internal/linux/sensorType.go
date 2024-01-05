@@ -5,60 +5,60 @@
 
 package linux
 
-//go:generate stringer -type=sensorType -output sensorTypeStrings.go -linecomment
+//go:generate stringer -type=SensorTypeValue -output sensorTypeStrings.go -linecomment
 const (
-	appActive         sensorType = iota + 1 // Active App
-	appRunning                              // Running Apps
-	battType                                // Battery Type
-	battPercentage                          // Battery Level
-	battTemp                                // Battery Temperature
-	battVoltage                             // Battery Voltage
-	battEnergy                              // Battery Energy
-	battEnergyRate                          // Battery Power
-	battState                               // Battery State
-	battNativePath                          // Battery Path
-	battLevel                               // Battery Level
-	battModel                               // Battery Model
-	memTotal                                // Memory Total
-	memAvail                                // Memory Available
-	memUsed                                 // Memory Used
-	swapTotal                               // Swap Memory Total
-	swapUsed                                // Swap Memory Used
-	swapFree                                // Swap Memory Free
-	connectionState                         // Connection State
-	connectionID                            // Connection ID
-	connectionDevices                       // Connection Device
-	connectionType                          // Connection Type
-	connectionIPv4                          // Connection IPv4
-	connectionIPv6                          // Connection IPv6
-	addressIPv4                             // IPv4 Address
-	addressIPv6                             // IPv6 Address
-	wifiSSID                                // Wi-Fi SSID
-	wifiFrequency                           // Wi-Fi Frequency
-	wifiSpeed                               // Wi-Fi Link Speed
-	wifiStrength                            // Wi-Fi Signal Strength
-	wifiHWAddress                           // Wi-Fi BSSID
-	bytesSent                               // Bytes Sent
-	bytesRecv                               // Bytes Received
-	bytesSentRate                           // Bytes Sent Throughput
-	bytesRecvRate                           // Bytes Received Throughput
-	powerProfile                            // Power Profile
-	boottime                                // Last Reboot
-	uptime                                  // Uptime
-	load1                                   // CPU load average (1 min)
-	load5                                   // CPU load average (5 min)
-	load15                                  // CPU load average (15 min)
-	screenLock                              // Screen Lock
-	problem                                 // Problems
-	kernel                                  // Kernel Version
-	distribution                            // Distribution Name
-	version                                 // Distribution Version
-	users                                   // Current Users
-	deviceTemp                              // Temperature
-	powerState                              // Power State
+	SensorAppActive         SensorTypeValue = iota + 1 // Active App
+	SensorAppRunning                                   // Running Apps
+	SensorBattType                                     // Battery Type
+	SensorBattPercentage                               // Battery Level
+	SensorBattTemp                                     // Battery Temperature
+	SensorBattVoltage                                  // Battery Voltage
+	SensorBattEnergy                                   // Battery Energy
+	SensorBattEnergyRate                               // Battery Power
+	SensorBattState                                    // Battery State
+	SensorBattNativePath                               // Battery Path
+	SensorBattLevel                                    // Battery Level
+	SensorBattModel                                    // Battery Model
+	SensorMemTotal                                     // Memory Total
+	SensorMemAvail                                     // Memory Available
+	SensorMemUsed                                      // Memory Used
+	SensorSwapTotal                                    // Swap Memory Total
+	SensorSwapUsed                                     // Swap Memory Used
+	SensorSwapFree                                     // Swap Memory Free
+	SensorConnectionState                              // Connection State
+	SensorConnectionID                                 // Connection ID
+	SensorConnectionDevices                            // Connection Device
+	SensorConnectionType                               // Connection Type
+	SensorConnectionIPv4                               // Connection IPv4
+	SensorConnectionIPv6                               // Connection IPv6
+	SensorAddressIPv4                                  // IPv4 Address
+	SensorAddressIPv6                                  // IPv6 Address
+	SensorWifiSSID                                     // Wi-Fi SSID
+	SensorWifiFrequency                                // Wi-Fi Frequency
+	SensorWifiSpeed                                    // Wi-Fi Link Speed
+	SensorWifiStrength                                 // Wi-Fi Signal Strength
+	SensorWifiHWAddress                                // Wi-Fi BSSID
+	SensorBytesSent                                    // Bytes Sent
+	SensorBytesRecv                                    // Bytes Received
+	SensorBytesSentRate                                // Bytes Sent Throughput
+	SensorBytesRecvRate                                // Bytes Received Throughput
+	SensorPowerProfile                                 // Power Profile
+	SensorBoottime                                     // Last Reboot
+	SensorUptime                                       // Uptime
+	SensorLoad1                                        // CPU load average (1 min)
+	SensorLoad5                                        // CPU load average (5 min)
+	SensorLoad15                                       // CPU load average (15 min)
+	SensorScreenLock                                   // Screen Lock
+	SensorProblem                                      // Problems
+	SensorKernel                                       // Kernel Version
+	SensorDistribution                                 // Distribution Name
+	SensorVersion                                      // Distribution Version
+	SensorUsers                                        // Current Users
+	SensorDeviceTemp                                   // Temperature
+	SensorPowerState                                   // Power State
 )
 
-// sensorType represents the unique type of sensor data being reported. Every
-// sensor will have a different type. A sensorType maps to an entity in Home
+// SensorTypeValue represents the unique type of sensor data being reported. Every
+// sensor will have a different type. A SensorTypeValue maps to an entity in Home
 // Assistant.
-type sensorType int
+type SensorTypeValue int

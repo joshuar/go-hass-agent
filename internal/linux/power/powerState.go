@@ -3,13 +3,14 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-package linux
+package power
 
 import (
 	"context"
 
 	"github.com/godbus/dbus/v5"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/joshuar/go-hass-agent/pkg/dbushelpers"
 	"github.com/rs/zerolog/log"
@@ -23,12 +24,12 @@ const (
 type powerSignal int
 
 type powerStateSensor struct {
-	linuxSensor
+	linux.Sensor
 	signal powerSignal
 }
 
 func (s *powerStateSensor) State() any {
-	b, ok := s.value.(bool)
+	b, ok := s.Value.(bool)
 	if !ok {
 		return sensor.StateUnknown
 	}
@@ -61,11 +62,11 @@ func (s *powerStateSensor) Icon() string {
 func newPowerState(s powerSignal, v any) *powerStateSensor {
 	return &powerStateSensor{
 		signal: s,
-		linuxSensor: linuxSensor{
-			sensorType:   powerState,
-			value:        v,
-			source:       srcDbus,
-			isDiagnostic: true,
+		Sensor: linux.Sensor{
+			SensorTypeValue: linux.SensorPowerState,
+			Value:           v,
+			SensorSrc:       linux.DataSrcDbus,
+			IsDiagnostic:    true,
 		},
 	}
 }

@@ -11,77 +11,77 @@ import (
 )
 
 const (
-	srcDbus   = "D-Bus"
-	srcProcfs = "ProcFS"
+	DataSrcDbus   = "D-Bus"
+	DataSrcProcfs = "ProcFS"
 )
 
-// linuxSensor represents a generic sensor on the Linux platform. Most sensors
+// Sensor represents a generic sensor on the Linux platform. Most sensors
 // will be able to use this struct, which satisfies the tracker.Sensor
 // interface, alllowing them to be sent as a sensor to Home Assistant.
-type linuxSensor struct {
-	value  any
-	icon   string
-	units  string
-	source string
-	sensorType
-	isBinary     bool
-	isDiagnostic bool
-	deviceClass  sensor.SensorDeviceClass
-	stateClass   sensor.SensorStateClass
+type Sensor struct {
+	Value       any
+	IconString  string
+	UnitsString string
+	SensorSrc   string
+	SensorTypeValue
+	IsBinary         bool
+	IsDiagnostic     bool
+	DeviceClassValue sensor.SensorDeviceClass
+	StateClassValue  sensor.SensorStateClass
 }
 
 // linuxSensor satisfies the tracker.Sensor interface, allowing it to be sent as
 // a sensor update to Home Assistant. Any of the methods below can be overridden
 // by embedding linuxSensor in another struct and defining the needed function.
 
-func (l *linuxSensor) Name() string {
-	return l.sensorType.String()
+func (l *Sensor) Name() string {
+	return l.SensorTypeValue.String()
 }
 
-func (l *linuxSensor) ID() string {
-	return strcase.ToSnake(l.sensorType.String())
+func (l *Sensor) ID() string {
+	return strcase.ToSnake(l.SensorTypeValue.String())
 }
 
-func (l *linuxSensor) State() any {
-	return l.value
+func (l *Sensor) State() any {
+	return l.Value
 }
 
-func (l *linuxSensor) SensorType() sensor.SensorType {
-	if l.isBinary {
+func (l *Sensor) SensorType() sensor.SensorType {
+	if l.IsBinary {
 		return sensor.TypeBinary
 	}
 	return sensor.TypeSensor
 }
 
-func (l *linuxSensor) Category() string {
-	if l.isDiagnostic {
+func (l *Sensor) Category() string {
+	if l.IsDiagnostic {
 		return "diagnostic"
 	}
 	return ""
 }
 
-func (l *linuxSensor) DeviceClass() sensor.SensorDeviceClass {
-	return l.deviceClass
+func (l *Sensor) DeviceClass() sensor.SensorDeviceClass {
+	return l.DeviceClassValue
 }
 
-func (l *linuxSensor) StateClass() sensor.SensorStateClass {
-	return l.stateClass
+func (l *Sensor) StateClass() sensor.SensorStateClass {
+	return l.StateClassValue
 }
 
-func (l *linuxSensor) Icon() string {
-	return l.icon
+func (l *Sensor) Icon() string {
+	return l.IconString
 }
 
-func (l *linuxSensor) Units() string {
-	return l.units
+func (l *Sensor) Units() string {
+	return l.UnitsString
 }
 
-func (l *linuxSensor) Attributes() any {
-	if l.source != "" {
+func (l *Sensor) Attributes() any {
+	if l.SensorSrc != "" {
 		return struct {
 			DataSource string `json:"Data Source"`
 		}{
-			DataSource: l.source,
+			DataSource: l.SensorSrc,
 		}
 	}
 	return nil
