@@ -24,5 +24,9 @@ RUN go install golang.org/x/text/cmd/gotext@latest
 RUN go generate ./...
 RUN go build -v -o /go/bin/go-hass-agent
 
-# user can override this, for example, for gui mode (with appropriate volume mounts)
-CMD ["go-hass-agent", "--terminal"]
+RUN useradd -ms /bin/bash gouser
+USER gouser
+WORKDIR /home/gouser
+
+ENTRYPOINT ["go-hass-agent"]
+CMD ["--terminal"]
