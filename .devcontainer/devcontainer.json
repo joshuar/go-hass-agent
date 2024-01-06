@@ -31,7 +31,8 @@
                 "esbenp.prettier-vscode",
                 "aaron-bond.better-comments",
                 "valentjn.vscode-ltex",
-                "eamodio.gitlens"
+                "eamodio.gitlens",
+                "github.vscode-github-actions"
             ],
             "settings": {
                 "terminal.integrated.defaultProfile.linux": "fish"
