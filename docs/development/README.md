@@ -55,7 +55,7 @@ go generate ./...
 go build
 ```
 
-## Packaging
+### Packages
 
 Go Hass Agent uses [Goreleaser](https://goreleaser.com/intro/) to create
 packages for Fedora, Arch and Ubuntu and
@@ -80,6 +80,16 @@ fyne-cross linux -icon assets/trayicon/logo-pretty.png -release
 ```
 
 The `.tar.xz` will be available under `fyne-cross/dist/linux-amd64/`.
+
+### Container Images
+
+A Dockerfile that you can use to build an image can be found [here](../../Dockerfile). 
+
+You can build an image with a command like the following (using Podman):
+
+```shell
+podman build --file ./Dockerfile --network host --tag go-hass-agent
+```
 
 ## Committing Code
 

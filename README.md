@@ -70,6 +70,8 @@ to other operating systems. See development information in the
 
 ## ⬇️ Installation
 
+### Packages
+
 Head over to the [releases](https://github.com/joshuar/go-hass-agent/releases)
 page and download the appropriate package for your operating system and/or
 distribution:
@@ -95,6 +97,13 @@ following for the `rpm` package can be used:
 ```shell
 cosign verify-blob --key cosign.pub --signature go-hass-agent-*.rpm.sig go-hass-agent-*.rpm
 ```
+
+### Container
+
+Container images are available on
+[ghcr.io](https://github.com/joshuar/go-hass-agent/pkgs/container/go-hass-agent).
+Note that it is recommended to use an image tagged with the latest release version over
+the latest container image, which might be unstable. 
 
 ## 🖱️ Usage
 
@@ -146,33 +155,24 @@ specifying the `--terminal` command-line option.
 
 ### Running in a container
 
-There is rough support for running Go Hass Agent within a container. A
-Dockerfile that you can use to build an image can be found
-[here](build/package/Dockerfile). 
+There is rough support for running Go Hass Agent within a container. Pre-built
+images [are available](https://github.com/joshuar/go-hass-agent/pkgs/container/go-hass-agent).
 
-You can build an image with a command like the following (using Podman):
-
-```shell
-cat Dockerfile | podman build --build-arg version='x.x.x' --network host --tag go-hass-agent -
-```
-
-The `--build-arg version=x.x.x` is required and the version should correspond to
-a [release](releases/). Once the image is built, first register the agent with
-Home Assistant:
+To register the agent running in a container, run the following:
 
 ```shell
-podman run --rm --hostname hass-container --volume /proc:/host/proc:ro --volume /sys:/host/sys:ro --volume /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket:ro --volume /run/user/1000/bus:/run/user/1000/bus:ro --volume ~/go-hass-agent:/home/go-hass-agent:U --network host --userns keep-id go-hass-agent register --server some.server:port --token longlivedtoken
+podman run --hostname hass-container --volume /proc:/host/proc:ro --volume /sys:/host/sys:ro --volume /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket:ro --volume /run/user/1000/bus:/run/user/1000/bus:ro --volume ~/go-hass-agent:/home/go-hass-agent:U --network host --userns keep-id go-hass-agent register --server some.server:port --token longlivedtoken
 ```
 
 Once registered, run the agent with:
 
 ```shell
-podman run --rm --hostname hass-container --volume /proc:/host/proc:ro --volume /sys:/host/sys:ro --volume /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket:ro --volume /run/user/1000/bus:/run/user/1000/bus:ro --volume ~/go-hass-agent:/home/go-hass-agent:U --network host --userns keep-id go-hass-agent
+podman run --hostname hass-container --volume /proc:/host/proc:ro --volume /sys:/host/sys:ro --volume /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket:ro --volume /run/user/1000/bus:/run/user/1000/bus:ro --volume ~/go-hass-agent:/home/go-hass-agent:U --network host --userns keep-id go-hass-agent
 ```
 
 You can change `~/go-hass-agent` to whatever volume you want to use to store the agent config
-and registry. The D-Bus volumes are optional, not specifying them will mean
-sensors that rely on a D-Bus connection will not show up. 
+and registry. All of the volume mounts are optional, but functionality and the
+sensors reported will be severely limited without them. 
 
 ### Regular Usage
 
