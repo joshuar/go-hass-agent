@@ -161,18 +161,35 @@ images [are available](https://github.com/joshuar/go-hass-agent/pkgs/container/g
 To register the agent running in a container, run the following:
 
 ```shell
-podman run --hostname hass-container --volume /proc:/host/proc:ro --volume /sys:/host/sys:ro --volume /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket:ro --volume /run/user/1000/bus:/run/user/1000/bus:ro --volume ~/go-hass-agent:/home/go-hass-agent:U --network host --userns keep-id go-hass-agent register --server some.server:port --token longlivedtoken
+podman run --rm --hostname go-hass-agent-container \
+  --network host --userns keep-id \
+  --volume ~/go-hass-agent:/home/gouser:U \
+  ghcr.io/joshuar/go-hass-agent register \
+  --server https://some.server:port \
+  --token longlivedtoken
 ```
+
+Adjust the `--server` and `--token` values as appropriate.
 
 Once registered, run the agent with:
 
 ```shell
-podman run --hostname hass-container --volume /proc:/host/proc:ro --volume /sys:/host/sys:ro --volume /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket:ro --volume /run/user/1000/bus:/run/user/1000/bus:ro --volume ~/go-hass-agent:/home/go-hass-agent:U --network host --userns keep-id go-hass-agent
+podman run --hostname go-hass-agent-container --name my-go-hass-agent \
+  --network host --userns keep-id \
+  --volume ~/go-hass-agent:/home/gouser:U \
+  --volume /proc:/host/proc:ro --volume /sys:/host/sys:ro \
+  --volume /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket:ro \
+  --volume /run/user/1000/bus:/run/user/1000/bus:ro \
+  ghcr.io/joshuar/go-hass-agent
 ```
 
-You can change `~/go-hass-agent` to whatever volume you want to use to store the agent config
-and registry. All of the volume mounts are optional, but functionality and the
-sensors reported will be severely limited without them. 
+You can change the volume mount `~/go-hass-agent` to whatever volume you want to
+use to store the agent config and registry. Change the value passed to `--name`
+to a unique name for your running container and `--hostname` for the hostname
+that will be presented to Home Assistant during registration.
+
+All of the other volume mounts are optional, but functionality and the sensors
+reported will be severely limited without them. 
 
 ### Regular Usage
 
