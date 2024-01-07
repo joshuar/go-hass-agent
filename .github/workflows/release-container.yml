@@ -82,6 +82,8 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           cosign --verbose=true sign --yes --key cosign.key \
-            ${{ env.REGISTRY }}/${{ env.IMAGE }}:latest
+            -a "repo=${{ github.repository }}"
+            -a "ref=${{ github.ref }}"
+            ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ steps.push_image.outputs.digest }}
         env:
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PWD }}
