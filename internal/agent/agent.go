@@ -7,11 +7,9 @@ package agent
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/signal"
 	"path/filepath"
-	"strings"
 	"sync"
 	"syscall"
 
@@ -157,19 +155,6 @@ func Register(options Options, server, token string) {
 
 func ShowVersion() {
 	log.Info().Msgf("%s: %s", config.AppName, config.AppVersion)
-}
-
-func ShowInfo(options Options) {
-	agent := newAgent(&options)
-	var info strings.Builder
-	var deviceName, deviceID string
-	if err := agent.GetConfig(config.PrefDeviceName, &deviceName); err == nil && deviceName != "" {
-		fmt.Fprintf(&info, "Device Name %s.", deviceName)
-	}
-	if err := agent.GetConfig(config.PrefDeviceID, &deviceID); err == nil && deviceID != "" {
-		fmt.Fprintf(&info, "Device ID %s.", deviceID)
-	}
-	log.Info().Msg(info.String())
 }
 
 // setupLogging will attempt to create and then write logging to a file. If it
