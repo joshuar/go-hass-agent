@@ -19,10 +19,6 @@ linters-settings:
     # Minimal code complexity to report.
     # Default: 30 (but we recommend 10-20)
     min-complexity: 20
-  gofmt:
-    rewrite-rules:
-      - pattern: 'interface{}'
-        replacement: 'any'
   dupl:
     threshold: 100
   funlen:
@@ -73,7 +69,6 @@ linters:
     - gocritic
     - gocyclo
     - godot
-    - gofmt
     - goimports
     - goprintffuncname
     - gosec
