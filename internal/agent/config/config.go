@@ -53,7 +53,7 @@ func New(configPath string) (Config, error) {
 	cfg.Get(PrefRegistered, &registered)
 	if registered {
 		if err = UpgradeConfig(cfg); err != nil {
-			if _, ok := err.(*ConfigFileNotFoundError); !ok {
+			if _, ok := err.(*FileNotFoundError); !ok {
 				return nil, errors.New("could not upgrade config")
 			}
 		}
@@ -64,12 +64,28 @@ func New(configPath string) (Config, error) {
 	return cfg, nil
 }
 
-type ConfigFileNotFoundError struct {
-	Err error
+type FileNotFoundError struct {
+	error
 }
 
-func (e *ConfigFileNotFoundError) Error() string {
-	return e.Err.Error()
+func (e FileNotFoundError) Unwrap() error {
+	return e.error
+}
+
+type InvalidFormatError struct {
+	error
+}
+
+func (e InvalidFormatError) Unwrap() error {
+	return e.error
+}
+
+type UpgradeError struct {
+	error
+}
+
+func (e UpgradeError) Unwrap() error {
+	return e.error
 }
 
 // ValidateConfig takes an AgentConfig and ensures that it meets the minimum
@@ -82,11 +98,11 @@ func ValidateConfig(c Config) error {
 		var value string
 		err := c.Get(key, &value)
 		if err != nil {
-			return fmt.Errorf("unable to retrieve %s from config: %v", key, err)
+			return &InvalidFormatError{error: fmt.Errorf("unable to retrieve %s from config: %v", key, err)}
 		}
 		err = cfgValidator.Var(value, rules)
 		if err != nil {
-			return errors.New(errMsg)
+			return &InvalidFormatError{error: errors.New(errMsg)}
 		}
 		return nil
 	}
@@ -128,15 +144,11 @@ func UpgradeConfig(vc Config) error {
 	if semver.Compare(AppVersion, "v5.0.0") < 0 {
 		fc := fyneconfig.NewFyneConfig()
 		if err := fc.Get("Version", &configVersion); err != nil {
-			return &ConfigFileNotFoundError{
-				Err: errors.New("could not retrieve config version"),
-			}
+			return &FileNotFoundError{error: err}
 		}
 	} else {
 		if err := vc.Get("Version", &configVersion); err != nil {
-			return &ConfigFileNotFoundError{
-				Err: errors.New("could not retrieve config version"),
-			}
+			return &FileNotFoundError{error: err}
 		}
 	}
 
@@ -147,16 +159,19 @@ func UpgradeConfig(vc Config) error {
 	// previous version.
 	log.Debug().Msgf("Checking for upgrades needed for config version %s.", configVersion)
 	switch {
-	// * minimum upgradeable version
+	// * Minimum upgradeable version.
 	case semver.Compare(configVersion, "v3.0.0") < 0:
-		log.Warn().Msg("Cannot upgrade versions < v3.0.0. Please remove the config directory and start fresh to continue.")
-		return errors.New("upgrade not possible")
-	// * Switch to Viper config
+		return &UpgradeError{
+			error: errors.New("cannot upgrade versions < v3.0.0. Please remove the config directory and start fresh to continue"),
+		}
+	// * Switch to Viper config.
 	case semver.Compare(configVersion, "v5.0.0") < 0:
 		log.Debug().Msg("Performing config upgrades for < v5.0.0.")
 		// migrate config values
 		if err := viperToFyne(vc.Path()); err != nil {
-			return errors.Join(errors.New("failed to migrate Fyne config to Viper"), err)
+			return &UpgradeError{
+				error: errors.Join(errors.New("failed to migrate Fyne config to Viper"), err),
+			}
 		}
 		// migrate registry directory. This is non-critical, entities will be
 		// re-registered if this fails.
