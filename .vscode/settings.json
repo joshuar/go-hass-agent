@@ -1,0 +1,7 @@
+{
+    "conventionalCommits.scopes": [
+        "github",
+        "agent",
+        "vscode"
+    ]
+}
