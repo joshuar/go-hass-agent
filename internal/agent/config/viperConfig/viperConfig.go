@@ -30,7 +30,7 @@ type ViperConfig struct {
 // passed in value needs to be one of the supported values, either a string or
 // bool reference. If the key is not set or the type of the passed in value is
 // unsupported, the returned error will be non-nil.
-func (c *ViperConfig) Get(key string, value interface{}) error {
+func (c *ViperConfig) Get(key string, value any) error {
 	switch v := value.(type) {
 	case *string:
 		*v = c.store.GetString(key)
@@ -48,7 +48,7 @@ func (c *ViperConfig) Get(key string, value interface{}) error {
 // Set will assign the passed in value to the passed in key in the config. If
 // there is a problem setting the value or the key does not exist, it will
 // return a non-nil error.
-func (c *ViperConfig) Set(key string, value interface{}) error {
+func (c *ViperConfig) Set(key string, value any) error {
 	c.store.Set(key, value)
 	if err := c.store.WriteConfigAs(filepath.Join(c.path, configFile)); err != nil {
 		log.Error().Err(err).Msg("Problem writing config file.")
