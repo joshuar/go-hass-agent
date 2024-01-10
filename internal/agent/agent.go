@@ -52,13 +52,8 @@ func newAgent(o *Options) *Agent {
 		options: o,
 	}
 	a.ui = fyneui.NewFyneUI(a)
-	if err = config.UpgradeConfig(configPath); err != nil {
-		if _, ok := err.(*config.ConfigFileNotFoundError); !ok {
-			log.Fatal().Err(err).Msg("Could not upgrade config.")
-		}
-	}
 	if a.config, err = config.New(configPath); err != nil {
-		log.Fatal().Err(err).Msg("Could not open config.")
+		log.Fatal().Err(err).Msg("Could not load config.")
 	}
 	a.setupLogging()
 	return a
@@ -87,47 +82,28 @@ func Run(options Options) {
 		defer regWait.Done()
 		agent.registrationProcess(context.Background(), t, "", "", options.Register, options.Headless)
 	}()
-
-	// Pre-flight: validate config and use to populate context values.
-	var cfgWait sync.WaitGroup
-	cfgWait.Add(1)
-	go func() {
-		defer cfgWait.Done()
-		// Wait until registration check is done
-		regWait.Wait()
-		if err = config.ValidateConfig(agent.config); err != nil {
-			log.Fatal().Err(err).Msg("Could not validate config.")
-		}
-		log.Trace().Msg("Config validation done.")
-		if err = agent.SetConfig(config.PrefVersion, agent.AppVersion()); err != nil {
-			log.Warn().Err(err).Msg("Unable to set config version to app version.")
-		}
-		ctx, cancelFunc = agent.setupContext()
-	}()
+	regWait.Wait()
+	if err = agent.SetConfig(config.PrefVersion, agent.AppVersion()); err != nil {
+		log.Warn().Err(err).Msg("Unable to set config version to app version.")
+	}
+	ctx, cancelFunc = agent.setupContext()
 
 	// Start main work goroutines
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		// Wait until the config is validated and context is set up
-		cfgWait.Wait()
-
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			startWorkers(ctx, t)
-		}()
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			scriptPath := filepath.Join(os.Getenv("HOME"), ".config", agent.options.ID, "scripts")
-			runScripts(ctx, scriptPath, t)
-		}()
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			agent.runNotificationsWorker(ctx, options)
-		}()
+		startWorkers(ctx, t)
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		scriptPath := filepath.Join(os.Getenv("HOME"), ".config", agent.options.ID, "scripts")
+		runScripts(ctx, scriptPath, t)
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		agent.runNotificationsWorker(ctx, options)
 	}()
 
 	go func() {
@@ -149,7 +125,6 @@ func Run(options Options) {
 // UI or non-UI registration flow.
 func Register(options Options, server, token string) {
 	agent := newAgent(&options)
-	defer close(agent.done)
 	var err error
 
 	var t *tracker.SensorTracker
@@ -176,6 +151,7 @@ func Register(options Options, server, token string) {
 	agent.ui.Run()
 
 	regWait.Wait()
+	close(agent.done)
 	log.Info().Msg("Device registered with Home Assistant.")
 }
 

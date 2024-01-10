@@ -36,14 +36,31 @@ var AppVersion string
 //
 //go:generate moq -out mockAgentConfig_test.go . AgentConfig
 type AgentConfig interface {
-	Get(string, interface{}) error
-	Set(string, interface{}) error
+	Get(string, any) error
+	Set(string, any) error
 	Delete(string) error
 	StoragePath(string) (string, error)
 }
 
 func New(configPath string) (AgentConfig, error) {
-	return viperconfig.New(configPath)
+	var cfg AgentConfig
+	var err error
+	if err = UpgradeConfig(configPath); err != nil {
+		if _, ok := err.(*ConfigFileNotFoundError); !ok {
+			return nil, errors.New("could not upgrade config")
+		}
+	}
+	if cfg, err = viperconfig.New(configPath); err != nil {
+		return nil, err
+	}
+	var registered bool
+	cfg.Get(PrefRegistered, &registered)
+	if registered {
+		if err = ValidateConfig(cfg); err != nil {
+			return nil, errors.New("could not validate config")
+		}
+	}
+	return cfg, nil
 }
 
 type ConfigFileNotFoundError struct {
@@ -57,7 +74,7 @@ func (e *ConfigFileNotFoundError) Error() string {
 // ValidateConfig takes an AgentConfig and ensures that it meets the minimum
 // requirements for the agent to function correctly
 func ValidateConfig(c AgentConfig) error {
-	log.Debug().Msg("Running ValidateConfig.")
+	log.Debug().Msg("Validating config.")
 	cfgValidator := validator.New()
 
 	validate := func(key, rules, errMsg string) error {
@@ -104,7 +121,7 @@ func ValidateConfig(c AgentConfig) error {
 // UpgradeConfig checks for and performs various fixes and
 // changes to the agent config as it has evolved in different versions.
 func UpgradeConfig(path string) error {
-	log.Debug().Msg("Running UpgradeConfig.")
+	log.Debug().Msg("Checking for config upgrades.")
 	var configVersion string
 	// retrieve the configVersion, or the version of the app that last read/validated the config.
 	if semver.Compare(AppVersion, "v5.0.0") < 0 {
