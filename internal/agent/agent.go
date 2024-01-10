@@ -44,7 +44,7 @@ type Options struct {
 
 func newAgent(o *Options) *Agent {
 	var err error
-	var configPath = filepath.Join(os.Getenv("HOME"), ".config", o.ID)
+	configPath := filepath.Join(os.Getenv("HOME"), ".config", o.ID)
 	a := &Agent{
 		done:    make(chan struct{}),
 		options: o,
@@ -80,28 +80,31 @@ func Run(options Options) {
 		defer regWait.Done()
 		agent.registrationProcess(context.Background(), t, "", "", options.Register, options.Headless)
 	}()
-	regWait.Wait()
-	if err = agent.SetConfig(config.PrefVersion, agent.AppVersion()); err != nil {
-		log.Warn().Err(err).Msg("Unable to set config version to app version.")
-	}
-	ctx, cancelFunc = agent.setupContext()
 
-	// Start main work goroutines
-	wg.Add(1)
 	go func() {
-		defer wg.Done()
-		startWorkers(ctx, t)
-	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		scriptPath := filepath.Join(os.Getenv("HOME"), ".config", agent.options.ID, "scripts")
-		runScripts(ctx, scriptPath, t)
-	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		agent.runNotificationsWorker(ctx, options)
+		regWait.Wait()
+		if err = agent.SetConfig(config.PrefVersion, agent.AppVersion()); err != nil {
+			log.Warn().Err(err).Msg("Unable to set config version to app version.")
+		}
+		ctx, cancelFunc = agent.setupContext()
+
+		// Start main work goroutines
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			startWorkers(ctx, t)
+		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			scriptPath := filepath.Join(os.Getenv("HOME"), ".config", agent.options.ID, "scripts")
+			runScripts(ctx, scriptPath, t)
+		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			agent.runNotificationsWorker(ctx, options)
+		}()
 	}()
 
 	go func() {
@@ -165,7 +168,7 @@ func (agent *Agent) setupLogging() {
 		log.Error().Err(err).
 			Msg("Unable to create a log file. Will only write logs to stdout.")
 	} else {
-		logWriter, err := os.OpenFile(logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0664)
+		logWriter, err := os.OpenFile(logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 		if err != nil {
 			log.Error().Err(err).
 				Msg("Unable to open log file for writing.")
