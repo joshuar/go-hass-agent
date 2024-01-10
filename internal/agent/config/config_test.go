@@ -12,7 +12,7 @@ import (
 )
 
 func TestValidateConfig(t *testing.T) {
-	validConfig := &AgentConfigMock{
+	validConfig := &ConfigMock{
 		GetFunc: func(s string, ifaceVal interface{}) error {
 			v := ifaceVal.(*string)
 			switch s {
@@ -34,7 +34,7 @@ func TestValidateConfig(t *testing.T) {
 		},
 	}
 
-	invalidConfig := &AgentConfigMock{
+	invalidConfig := &ConfigMock{
 		GetFunc: func(s string, ifaceVal interface{}) error {
 			v := ifaceVal.(*string)
 			switch s {
@@ -57,7 +57,7 @@ func TestValidateConfig(t *testing.T) {
 	}
 
 	type args struct {
-		c AgentConfig
+		c Config
 	}
 	tests := []struct {
 		name    string

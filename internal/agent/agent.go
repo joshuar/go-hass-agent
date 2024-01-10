@@ -30,7 +30,7 @@ import (
 // strings such as app name and version.
 type Agent struct {
 	ui      ui.AgentUI
-	config  config.AgentConfig
+	config  config.Config
 	done    chan struct{}
 	options *Options
 }

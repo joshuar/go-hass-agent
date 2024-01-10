@@ -58,6 +58,10 @@ func (c *FyneConfig) Delete(key string) error {
 	return nil
 }
 
+func (c *FyneConfig) Path() string {
+	return ""
+}
+
 func (c *FyneConfig) StoragePath(id string) (string, error) {
 	agent := fyne.CurrentApp()
 	rootPath := agent.Storage().RootURI()

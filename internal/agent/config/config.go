@@ -30,32 +30,33 @@ const (
 //go:embed VERSION
 var AppVersion string
 
-// AgentConfig represents the methods that the agent uses to interact with
+// Config represents the methods that the agent uses to interact with
 // its config. It is effectively a CRUD interface to wherever the configuration
 // is stored.
 //
-//go:generate moq -out mockAgentConfig_test.go . AgentConfig
-type AgentConfig interface {
+//go:generate moq -out mockConfig_test.go . Config
+type Config interface {
 	Get(string, any) error
 	Set(string, any) error
 	Delete(string) error
+	Path() string
 	StoragePath(string) (string, error)
 }
 
-func New(configPath string) (AgentConfig, error) {
-	var cfg AgentConfig
+func New(configPath string) (Config, error) {
+	var cfg Config
 	var err error
-	if err = UpgradeConfig(configPath); err != nil {
-		if _, ok := err.(*ConfigFileNotFoundError); !ok {
-			return nil, errors.New("could not upgrade config")
-		}
-	}
 	if cfg, err = viperconfig.New(configPath); err != nil {
 		return nil, err
 	}
 	var registered bool
 	cfg.Get(PrefRegistered, &registered)
 	if registered {
+		if err = UpgradeConfig(cfg); err != nil {
+			if _, ok := err.(*ConfigFileNotFoundError); !ok {
+				return nil, errors.New("could not upgrade config")
+			}
+		}
 		if err = ValidateConfig(cfg); err != nil {
 			return nil, errors.New("could not validate config")
 		}
@@ -73,7 +74,7 @@ func (e *ConfigFileNotFoundError) Error() string {
 
 // ValidateConfig takes an AgentConfig and ensures that it meets the minimum
 // requirements for the agent to function correctly
-func ValidateConfig(c AgentConfig) error {
+func ValidateConfig(c Config) error {
 	log.Debug().Msg("Validating config.")
 	cfgValidator := validator.New()
 
@@ -120,7 +121,7 @@ func ValidateConfig(c AgentConfig) error {
 
 // UpgradeConfig checks for and performs various fixes and
 // changes to the agent config as it has evolved in different versions.
-func UpgradeConfig(path string) error {
+func UpgradeConfig(vc Config) error {
 	log.Debug().Msg("Checking for config upgrades.")
 	var configVersion string
 	// retrieve the configVersion, or the version of the app that last read/validated the config.
@@ -132,12 +133,6 @@ func UpgradeConfig(path string) error {
 			}
 		}
 	} else {
-		vc, err := viperconfig.New(path)
-		if err != nil {
-			return &ConfigFileNotFoundError{
-				Err: errors.New("could not open viper config"),
-			}
-		}
 		if err := vc.Get("Version", &configVersion); err != nil {
 			return &ConfigFileNotFoundError{
 				Err: errors.New("could not retrieve config version"),
@@ -160,14 +155,14 @@ func UpgradeConfig(path string) error {
 	case semver.Compare(configVersion, "v5.0.0") < 0:
 		log.Debug().Msg("Performing config upgrades for < v5.0.0.")
 		// migrate config values
-		if err := viperToFyne(path); err != nil {
+		if err := viperToFyne(vc.Path()); err != nil {
 			return errors.Join(errors.New("failed to migrate Fyne config to Viper"), err)
 		}
 		// migrate registry directory. This is non-critical, entities will be
 		// re-registered if this fails.
 		fc := fyneconfig.NewFyneConfig()
 		oldReg, err := fc.StoragePath("sensorRegistry")
-		newReg := filepath.Join(path, "sensorRegistry")
+		newReg := filepath.Join(vc.Path(), "sensorRegistry")
 		if err != nil {
 			log.Warn().Err(err).Msg("Unable to retrieve old storage path. Registry will not be migrated.")
 			return nil
