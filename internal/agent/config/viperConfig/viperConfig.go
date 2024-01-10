@@ -64,6 +64,11 @@ func (c *ViperConfig) Delete(key string) error {
 	return nil
 }
 
+// Path returns the filesystem path to the config.
+func (c *ViperConfig) Path() string {
+	return c.path
+}
+
 // StoragePath returns a full path on the filesystem whose trailing path will be
 // the given id.
 func (c *ViperConfig) StoragePath(id string) (string, error) {
