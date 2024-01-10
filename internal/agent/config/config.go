@@ -174,6 +174,11 @@ func UpgradeConfig(vc Config) error {
 				return nil
 			}
 		}
+		fallthrough
+	default:
+		if err := vc.Set(PrefVersion, AppVersion); err != nil {
+			log.Warn().Err(err).Msg("Unable to set config version to app version.")
+		}
 	}
 	return nil
 }
