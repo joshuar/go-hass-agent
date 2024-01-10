@@ -66,7 +66,6 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&headlessFlag, "terminal", defaultHeadless(),
 		"run in terminal (without a GUI)")
 
-	rootCmd.AddCommand(infoCmd)
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(registerCmd)
 }
