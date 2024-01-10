@@ -1,21 +1,24 @@
 ---
 name: Bug report
-about: Create a report to help us improve
+about: Create a report to help improve go-hass-agent
 title: "[BUG]"
 labels: ''
 assignees: joshuar
 
 ---
 
+**Go Hass Agent Version**
+Retrieve with `go-hass-agent version`.
+
 **Describe the bug**
 A clear and concise description of what the bug is.
 
 **To Reproduce**
 Steps to reproduce the behavior:
-1. Go to '…'
-2. Click on '…'
-3. Scroll down to '…'
-4. See error
+1. Do X.
+2. Do Y.
+3. …
+4. See error.
 
 **Expected behavior**
 A clear and concise description of what you expected to happen.
@@ -37,9 +40,9 @@ go-hass-agent --debug
 *(While I have made efforts to not log sensitive information, please check the log before uploading to GitHub and remove any information you do not want to share).*
 
 **Desktop (please complete the following information):**
- - OS: [e.g., iOS]
- - Browser [e.g., chrome, safari]
- - Version [e.g., 22]
+ - OS: [e.g., Linux]
+ - Distribution [for Linux, e.g., Fedora]
+ - Version [e.g., 11]
 
 **Additional context**
 Add any other context about the problem here.
