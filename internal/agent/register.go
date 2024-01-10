@@ -59,17 +59,7 @@ func (agent *Agent) registrationProcess(ctx context.Context, t *tracker.SensorTr
 		log.Fatal().Err(err).Msg("Could not ascertain agent registration status.")
 	}
 	log.Debug().Msgf("Registration status is %v", registered)
-	// If the config is valid, but the agent is not registered, set the agent as
-	// registered and continue execution. Required check for versions upgraded
-	// from v1.2.6 and below.
-	if !registered {
-		if config.ValidateConfig(agent.config) == nil {
-			if err := agent.config.Set(config.PrefRegistered, true); err != nil {
-				log.Fatal().Err(err).Msg("Could not set registered status.")
-			}
-			return
-		}
-	}
+
 	// If the agent is not registered (or force registration requested) run a
 	// registration flow
 	if !registered || force {
@@ -102,6 +92,9 @@ func (agent *Agent) registrationProcess(ctx context.Context, t *tracker.SensorTr
 		agent.saveRegistration(registrationResponse, device)
 		if force {
 			t.Reset()
+		}
+		if err = config.ValidateConfig(agent.config); err != nil {
+			log.Fatal().Err(err).Msg("Could not validate config after registration.")
 		}
 		log.Info().Msg("Successfully registered agent.")
 	}
