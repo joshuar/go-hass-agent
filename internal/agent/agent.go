@@ -83,23 +83,23 @@ func Run(options Options) {
 
 	go func() {
 		regWait.Wait()
-		if err = agent.SetConfig(config.PrefVersion, agent.AppVersion()); err != nil {
-			log.Warn().Err(err).Msg("Unable to set config version to app version.")
-		}
+
 		ctx, cancelFunc = agent.setupContext()
 
-		// Start main work goroutines
+		// Start worker funcs for sensors.
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			startWorkers(ctx, t)
 		}()
+		// Start any scripts.
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			scriptPath := filepath.Join(os.Getenv("HOME"), ".config", agent.options.ID, "scripts")
 			runScripts(ctx, scriptPath, t)
 		}()
+		// Listen for notifications from Home Assistant.
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -209,16 +209,8 @@ func (agent *Agent) IsHeadless() bool {
 	return agent.options.Headless
 }
 
-func (agent *Agent) AppName() string {
-	return config.AppName
-}
-
 func (agent *Agent) AppID() string {
 	return agent.options.ID
-}
-
-func (agent *Agent) AppVersion() string {
-	return config.AppVersion
 }
 
 func (agent *Agent) Stop() {
