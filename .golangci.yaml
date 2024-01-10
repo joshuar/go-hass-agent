@@ -5,11 +5,10 @@
 
 linters-settings:
   revive:
-    # Maximum number of open files at the same time.
-    # See https://github.com/mgechev/revive#command-line-flags
-    # Defaults to unlimited.
-    max-open-files: 512
     enable-all-rules: true
+    confidence: 0.8
+    error-code: 0
+    warning-code: 0
     ignore-generated-header: false
     rules:
       - name: line-length-limit

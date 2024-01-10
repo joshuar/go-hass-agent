@@ -3,5 +3,15 @@
         "github",
         "agent",
         "vscode"
-    ]
+    ],
+    "go.lintTool": "golangci-lint",
+    "go.lintFlags": [
+        "--fast"
+    ],
+    "gopls": { "ui.semanticTokens": true },
+    "editor.defaultFormatter": "golang.go",
+    "editor.codeActionsOnSave": {
+        "source.organizeImports": "explicit",
+        "source.fixAll": "explicit"
+    }
 }
