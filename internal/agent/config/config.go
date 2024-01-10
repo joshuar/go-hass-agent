@@ -73,7 +73,7 @@ func (e *ConfigFileNotFoundError) Error() string {
 }
 
 // ValidateConfig takes an AgentConfig and ensures that it meets the minimum
-// requirements for the agent to function correctly
+// requirements for the agent to function correctly.
 func ValidateConfig(c Config) error {
 	log.Debug().Msg("Validating config.")
 	cfgValidator := validator.New()
