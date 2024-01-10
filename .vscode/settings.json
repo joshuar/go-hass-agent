@@ -2,7 +2,8 @@
     "conventionalCommits.scopes": [
         "github",
         "agent",
-        "vscode"
+        "vscode",
+        "ui"
     ],
     "go.lintTool": "golangci-lint",
     "go.lintFlags": [
