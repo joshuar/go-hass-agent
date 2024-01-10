@@ -15,12 +15,10 @@ import (
 //go:generate moq -out mock_Agent_test.go . Agent
 type Agent interface {
 	IsHeadless() bool
-	AppVersion() string
-	AppName() string
 	AppID() string
 	Stop()
-	GetConfig(string, interface{}) error
-	SetConfig(string, interface{}) error
+	GetConfig(string, any) error
+	SetConfig(string, any) error
 }
 
 //go:generate moq -out mock_SensorTracker_test.go . SensorTracker
@@ -51,10 +49,10 @@ var hassIcon []byte
 
 type TrayIcon struct{}
 
-func (icon *TrayIcon) Name() string {
+func (i *TrayIcon) Name() string {
 	return "TrayIcon"
 }
 
-func (icon *TrayIcon) Content() []byte {
+func (i *TrayIcon) Content() []byte {
 	return hassIcon
 }

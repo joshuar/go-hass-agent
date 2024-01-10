@@ -168,7 +168,7 @@ func (i *fyneUI) DisplayRegistrationWindow(ctx context.Context, agent ui.Agent, 
 func (i *fyneUI) aboutWindow(agent ui.Agent, t *translations.Translator) fyne.Window {
 	var widgets []fyne.CanvasObject
 	widgets = append(widgets, widget.NewLabel(t.Translate(
-		"App Version: %s", agent.AppVersion())))
+		"App Version: %s", config.AppVersion)))
 	var deviceName, deviceID string
 	if err := agent.GetConfig(config.PrefDeviceName, &deviceName); err == nil && deviceName != "" {
 		widgets = append(widgets,
