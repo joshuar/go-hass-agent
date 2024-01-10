@@ -162,8 +162,8 @@ To register the agent running in a container, run the following:
 
 ```shell
 podman run --rm --hostname go-hass-agent-container \
-  --network host --userns keep-id \
-  --volume ~/go-hass-agent:/home/gouser:U \
+  --network host \
+  --volume go-hass-agent:/home/gouser \
   ghcr.io/joshuar/go-hass-agent register \
   --server https://some.server:port \
   --token longlivedtoken
@@ -175,20 +175,19 @@ Once registered, run the agent with:
 
 ```shell
 podman run --hostname go-hass-agent-container --name my-go-hass-agent \
-  --network host --userns keep-id \
-  --volume ~/go-hass-agent:/home/gouser:U \
+  --network host \
+  --volume go-hass-agent:/home/gouser \
   --volume /proc:/host/proc:ro --volume /sys:/host/sys:ro \
   --volume /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket:ro \
   --volume /run/user/1000/bus:/run/user/1000/bus:ro \
   ghcr.io/joshuar/go-hass-agent
 ```
 
-You can change the volume mount `~/go-hass-agent` to whatever volume you want to
-use to store the agent config and registry. Change the value passed to `--name`
-to a unique name for your running container and `--hostname` for the hostname
-that will be presented to Home Assistant during registration.
+Change the value passed to `--name` to a unique name for your running container
+and `--hostname` for the hostname that will be presented to Home Assistant
+during registration.
 
-All of the other volume mounts are optional, but functionality and the sensors
+All the other volume mounts are optional, but functionality and the sensors
 reported will be severely limited without them. 
 
 ### Regular Usage
