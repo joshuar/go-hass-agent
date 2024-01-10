@@ -3,7 +3,8 @@
         "github",
         "agent",
         "vscode",
-        "ui"
+        "ui",
+        "README"
     ],
     "go.lintTool": "golangci-lint",
     "go.lintFlags": [
