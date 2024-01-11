@@ -240,21 +240,20 @@ type pref struct {
 	viper string
 }
 
-var prefs = map[string]pref{
-	"PrefAPIURL":       {fyne: "ApiURL", viper: "hass.apiurl"},
-	"PrefWebsocketURL": {fyne: "WebSocketURL", viper: "hass.websocketurl"},
-	"PrefCloudhookURL": {fyne: "CloudhookURL", viper: "hass.cloudhookurl"},
-	"PrefRemoteUIURL":  {fyne: "RemoteUIURL", viper: "hass.remoteuiurl"},
-	"PrefToken":        {fyne: "Token", viper: "hass.token"},
-	"PrefWebhookID":    {fyne: "WebhookID", viper: "hass.webhookid"},
-	"PrefSecret":       {fyne: "secret", viper: "hass.secret"},
-	"PrefHost":         {fyne: "Host", viper: "hass.host"},
-	"PrefVersion":      {fyne: "Version", viper: "agent.version"},
-	"PrefDeviceName":   {fyne: "DeviceName", viper: "device.name"},
-	"PrefDeviceID":     {fyne: "DeviceID", viper: "device.id"},
-}
-
 func viperToFyne(configPath string) error {
+	prefs := map[string]pref{
+		"PrefAPIURL":       {fyne: "ApiURL", viper: "hass.apiurl"},
+		"PrefWebsocketURL": {fyne: "WebSocketURL", viper: "hass.websocketurl"},
+		"PrefCloudhookURL": {fyne: "CloudhookURL", viper: "hass.cloudhookurl"},
+		"PrefRemoteUIURL":  {fyne: "RemoteUIURL", viper: "hass.remoteuiurl"},
+		"PrefToken":        {fyne: "Token", viper: "hass.token"},
+		"PrefWebhookID":    {fyne: "WebhookID", viper: "hass.webhookid"},
+		"PrefSecret":       {fyne: "secret", viper: "hass.secret"},
+		"PrefHost":         {fyne: "Host", viper: "hass.host"},
+		"PrefVersion":      {fyne: "Version", viper: "agent.version"},
+		"PrefDeviceName":   {fyne: "DeviceName", viper: "device.name"},
+		"PrefDeviceID":     {fyne: "DeviceID", viper: "device.id"},
+	}
 	var err error
 	fs, err := os.Stat(filepath.Join(configPath, "go-hass-agent.toml"))
 	if fs != nil && err == nil {
