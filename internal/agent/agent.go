@@ -38,7 +38,7 @@ type Agent struct {
 // Options holds options taken from the command-line that was used to
 // invoke go-hass-agent that are relevant for agent functionality.
 type Options struct {
-	ID                 string
+	ID, Server, Token  string
 	Headless, Register bool
 }
 
@@ -50,7 +50,7 @@ func newAgent(o *Options) *Agent {
 		options: o,
 	}
 	a.ui = fyneui.NewFyneUI(a)
-	if a.config, err = config.New(configPath); err != nil {
+	if a.config, err = config.Load(configPath); err != nil {
 		log.Fatal().Err(err).Msg("Could not load config.")
 	}
 	a.setupLogging()
@@ -78,7 +78,7 @@ func Run(options Options) {
 	regWait.Add(1)
 	go func() {
 		defer regWait.Done()
-		agent.registrationProcess(context.Background(), t, "", "", options.Register, options.Headless)
+		agent.checkRegistration(t, agent.config)
 	}()
 
 	go func() {
@@ -124,7 +124,7 @@ func Run(options Options) {
 // information or parses what is already provided. It will send a registration
 // request to Home Assistant and handles the response. It will handle either a
 // UI or non-UI registration flow.
-func Register(options Options, server, token string) {
+func Register(options Options) {
 	agent := newAgent(&options)
 	var err error
 
@@ -138,7 +138,7 @@ func Register(options Options, server, token string) {
 	regWait.Add(1)
 	go func() {
 		defer regWait.Done()
-		agent.registrationProcess(context.Background(), t, server, token, options.Register, options.Headless)
+		agent.checkRegistration(t, agent.config)
 	}()
 
 	go func() {

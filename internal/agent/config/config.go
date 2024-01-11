@@ -43,7 +43,7 @@ type Config interface {
 	StoragePath(string) (string, error)
 }
 
-func New(configPath string) (Config, error) {
+func Load(configPath string) (Config, error) {
 	var cfg Config
 	var err error
 	if cfg, err = viperconfig.New(configPath); err != nil {
