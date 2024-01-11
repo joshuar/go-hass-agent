@@ -25,8 +25,10 @@ var registerCmd = &cobra.Command{
 		agent.Register(agent.Options{
 			Headless: headlessFlag,
 			Register: forcedFlag,
+			Server:   serverFlag,
+			Token:    tokenFlag,
 			ID:       appID,
-		}, serverFlag, tokenFlag)
+		})
 	},
 }
 
