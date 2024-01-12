@@ -13,6 +13,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/joshuar/go-hass-agent/internal/agent/config"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -95,10 +96,11 @@ func Test_marshalJSON(t *testing.T) {
 func TestExecuteRequest(t *testing.T) {
 	mockServer := mockServer(t)
 	defer mockServer.Close()
-	mockConfig := &APIConfig{
-		APIURL: mockServer.URL,
-	}
-	ctx := NewContext(context.TODO(), mockConfig)
+	cfg, err := config.Load(t.TempDir())
+	assert.Nil(t, err)
+	err = cfg.Set(config.PrefAPIURL, mockServer.URL)
+	assert.Nil(t, err)
+	ctx := config.EmbedInContext(context.TODO(), cfg)
 	mockReq := &RequestMock{
 		RequestDataFunc: func() json.RawMessage {
 			return json.RawMessage(`{"someField": "someValue"}`)
