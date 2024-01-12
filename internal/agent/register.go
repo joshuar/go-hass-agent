@@ -7,6 +7,7 @@ package agent
 
 import (
 	"context"
+	"net/url"
 
 	"github.com/joshuar/go-hass-agent/internal/agent/config"
 	"github.com/joshuar/go-hass-agent/internal/hass/api"
@@ -20,7 +21,7 @@ import (
 // request and the successful response in the agent preferences. This includes,
 // most importantly, details on the URL that should be used to send subsequent
 // requests to Home Assistant.
-func saveRegistration(cfg config.Config, r *api.RegistrationResponse, d api.DeviceInfo) {
+func saveRegistration(cfg config.Config, resp *api.RegistrationResponse, dev api.DeviceInfo) {
 	checkFatal := func(err error) {
 		if err != nil {
 			log.Fatal().Err(err).Msg("Could not save registration.")
@@ -29,22 +30,22 @@ func saveRegistration(cfg config.Config, r *api.RegistrationResponse, d api.Devi
 	var providedHost string
 	checkFatal(cfg.Get(config.PrefHost, &providedHost))
 
-	if r.CloudhookURL != "" {
-		checkFatal(cfg.Set(config.PrefCloudhookURL, r.CloudhookURL))
+	if resp.CloudhookURL != "" {
+		checkFatal(cfg.Set(config.PrefCloudhookURL, resp.CloudhookURL))
 	}
-	if r.RemoteUIURL != "" {
-		checkFatal(cfg.Set(config.PrefRemoteUIURL, r.RemoteUIURL))
+	if resp.RemoteUIURL != "" {
+		checkFatal(cfg.Set(config.PrefRemoteUIURL, resp.RemoteUIURL))
 	}
-	if r.Secret != "" {
-		checkFatal(cfg.Set(config.PrefSecret, r.Secret))
+	if resp.Secret != "" {
+		checkFatal(cfg.Set(config.PrefSecret, resp.Secret))
 	}
-	if r.WebhookID != "" {
-		checkFatal(cfg.Set(config.PrefWebhookID, r.WebhookID))
+	if resp.WebhookID != "" {
+		checkFatal(cfg.Set(config.PrefWebhookID, resp.WebhookID))
 	}
-	checkFatal(cfg.Set(config.PrefAPIURL, r.GenerateAPIURL(providedHost)))
-	checkFatal(cfg.Set(config.PrefWebsocketURL, r.GenerateWebsocketURL(providedHost)))
-	checkFatal(cfg.Set(config.PrefDeviceName, d.DeviceName()))
-	checkFatal(cfg.Set(config.PrefDeviceID, d.DeviceID()))
+	checkFatal(cfg.Set(config.PrefAPIURL, generateAPIURL(providedHost, resp)))
+	checkFatal(cfg.Set(config.PrefWebsocketURL, generateWebsocketURL(providedHost)))
+	checkFatal(cfg.Set(config.PrefDeviceName, dev.DeviceName()))
+	checkFatal(cfg.Set(config.PrefDeviceID, dev.DeviceID()))
 	checkFatal(cfg.Set(config.PrefRegistered, true))
 	checkFatal(cfg.Set(config.PrefVersion, config.AppVersion))
 }
@@ -119,4 +120,42 @@ func validRegistrationSetting(key, value string) bool {
 		log.Warn().Msgf("Unexpected key %s with value %s", key, value)
 		return false
 	}
+}
+
+func generateAPIURL(host string, resp *api.RegistrationResponse) string {
+	switch {
+	case resp.CloudhookURL != "":
+		return resp.CloudhookURL
+	case resp.RemoteUIURL != "" && resp.WebhookID != "":
+		return resp.RemoteUIURL + api.WebHookPath + resp.WebhookID
+	case resp.WebhookID != "":
+		u, _ := url.Parse(host)
+		u = u.JoinPath(api.WebHookPath, resp.WebhookID)
+		return u.String()
+	default:
+		return ""
+	}
+}
+
+func generateWebsocketURL(host string) string {
+	// TODO: look into websocket http upgrade method
+	u, err := url.Parse(host)
+	if err != nil {
+		log.Warn().Err(err).Msg("Could not parse URL.")
+		return ""
+	}
+	switch u.Scheme {
+	case "https":
+		u.Scheme = "wss"
+	case "http":
+		u.Scheme = "ws"
+	case "ws":
+		// nothing to do
+	case "wss":
+		// nothing to do
+	default:
+		u.Scheme = "ws"
+	}
+	u = u.JoinPath(api.WebsocketPath)
+	return u.String()
 }
