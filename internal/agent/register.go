@@ -20,7 +20,7 @@ import (
 // request and the successful response in the agent preferences. This includes,
 // most importantly, details on the URL that should be used to send subsequent
 // requests to Home Assistant.
-func (agent *Agent) saveRegistration(cfg config.Config, r *api.RegistrationResponse, d api.DeviceInfo) {
+func saveRegistration(cfg config.Config, r *api.RegistrationResponse, d api.DeviceInfo) {
 	checkFatal := func(err error) {
 		if err != nil {
 			log.Fatal().Err(err).Msg("Could not save registration.")
@@ -80,7 +80,7 @@ func (agent *Agent) performRegistration(ctx context.Context, cfg config.Config) 
 	if err != nil {
 		log.Fatal().Err(err).Msg("Could not register with Home Assistant.")
 	}
-	agent.saveRegistration(cfg, resp, device)
+	saveRegistration(cfg, resp, device)
 	if err = config.ValidateConfig(cfg); err != nil {
 		log.Fatal().Err(err).Msg("Could not validate config after registration.")
 	}
