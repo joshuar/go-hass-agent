@@ -15,7 +15,6 @@ import (
 
 	"github.com/adrg/xdg"
 	"github.com/joshuar/go-hass-agent/internal/agent/config"
-	"github.com/joshuar/go-hass-agent/internal/agent/ui"
 	fyneui "github.com/joshuar/go-hass-agent/internal/agent/ui/fyneUI"
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/scripts"
@@ -29,22 +28,22 @@ import (
 // This includes the data structure for the UI elements and tray and some
 // strings such as app name and version.
 type Agent struct {
-	ui      ui.AgentUI
+	ui      UI
 	done    chan struct{}
-	options *Options
+	Options *Options
 }
 
 // Options holds options taken from the command-line that was used to
 // invoke go-hass-agent that are relevant for agent functionality.
 type Options struct {
-	ID, Server, Token  string
-	Headless, Register bool
+	ID, Server, Token       string
+	Headless, ForceRegister bool
 }
 
 func newAgent(o *Options) *Agent {
 	a := &Agent{
 		done:    make(chan struct{}),
-		options: o,
+		Options: o,
 	}
 	a.ui = fyneui.NewFyneUI(a)
 	a.setupLogging()
@@ -96,7 +95,7 @@ func Run(options Options) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			scriptPath := filepath.Join(xdg.ConfigHome, agent.options.ID, "scripts")
+			scriptPath := filepath.Join(xdg.ConfigHome, agent.Options.ID, "scripts")
 			runScripts(ctx, scriptPath, trk)
 		}()
 		// Listen for notifications from Home Assistant.
@@ -146,7 +145,6 @@ func Register(options Options) {
 		defer regWait.Done()
 		agent.checkRegistration(trk, cfg)
 	}()
-
 	go func() {
 		<-agent.done
 		log.Debug().Msg("Agent done.")
@@ -201,11 +199,11 @@ func (agent *Agent) handleSignals() {
 // Agent satisfies ui.Agent, tracker.Agent and api.Agent interfaces
 
 func (agent *Agent) IsHeadless() bool {
-	return agent.options.Headless
+	return agent.Options.Headless
 }
 
 func (agent *Agent) AppID() string {
-	return agent.options.ID
+	return agent.Options.ID
 }
 
 func (agent *Agent) Stop() {
