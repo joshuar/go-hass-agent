@@ -16,7 +16,7 @@ import (
 type Device interface {
 	DeviceName() string
 	DeviceID() string
-	Setup(context.Context) context.Context
+	Setup(ctx context.Context) context.Context
 }
 
 // UI are the methods required for the agent to display its windows, tray
@@ -24,8 +24,8 @@ type Device interface {
 //
 //go:generate moq -out mockAgentUI_test.go . AgentUI
 type UI interface {
-	DisplayNotification(string, string)
-	DisplayTrayIcon(ui.Agent, config.Config, ui.SensorTracker)
-	DisplayRegistrationWindow(context.Context, *string, *string, chan struct{})
+	DisplayNotification(title, message string)
+	DisplayTrayIcon(agent ui.Agent, cfg config.Config, trk ui.SensorTracker)
+	DisplayRegistrationWindow(ctx context.Context, server, token *string, doneCh chan struct{})
 	Run()
 }

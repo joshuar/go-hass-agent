@@ -28,7 +28,7 @@ type AgentOptions interface {
 //go:generate moq -out mock_SensorTracker_test.go . SensorTracker
 type SensorTracker interface {
 	SensorList() []string
-	Get(string) (tracker.Sensor, error)
+	Get(key string) (tracker.Sensor, error)
 }
 
 //go:embed assets/issueURL.txt
