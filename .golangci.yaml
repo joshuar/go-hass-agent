@@ -64,7 +64,6 @@ linters:
     - exportloopref
     - forcetypeassert
     - funlen
-    - gci
     - goconst
     - gocritic
     - gocyclo
