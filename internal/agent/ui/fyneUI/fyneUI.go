@@ -84,7 +84,7 @@ func NewFyneUI(agent ui.Agent) *fyneUI {
 
 // DisplayTrayIcon displays an icon in the desktop tray with a menu for
 // controlling the agent and showing other informational windows.
-func (i *fyneUI) DisplayTrayIcon(a ui.Agent, t ui.SensorTracker) {
+func (i *fyneUI) DisplayTrayIcon(a ui.Agent, cfg config.Config, t ui.SensorTracker) {
 	if a.IsHeadless() {
 		return
 	}
@@ -97,7 +97,7 @@ func (i *fyneUI) DisplayTrayIcon(a ui.Agent, t ui.SensorTracker) {
 		menu := fyne.NewMenu("Main",
 			fyne.NewMenuItem(i.text.Translate("About"),
 				func() {
-					w := i.aboutWindow(a, i.text)
+					w := i.aboutWindow(cfg, i.text)
 					if w != nil {
 						w.Show()
 					}
@@ -137,12 +137,12 @@ func (i *fyneUI) DisplayTrayIcon(a ui.Agent, t ui.SensorTracker) {
 // DisplayRegistrationWindow displays a UI to prompt the user for the details needed to
 // complete registration. It will populate with any values that were already
 // provided via the command-line.
-func (i *fyneUI) DisplayRegistrationWindow(ctx context.Context, agent ui.Agent, done chan struct{}) {
+func (i *fyneUI) DisplayRegistrationWindow(ctx context.Context, agent ui.Agent, cfg config.Config, done chan struct{}) {
 	w := i.app.NewWindow(i.text.Translate("App Registration"))
 
 	var allFormItems []*widget.FormItem
 
-	allFormItems = append(allFormItems, i.serverConfigItems(ctx, agent, i.text)...)
+	allFormItems = append(allFormItems, i.serverConfigItems(ctx, agent, cfg, i.text)...)
 	registrationForm := widget.NewForm(allFormItems...)
 	registrationForm.OnSubmit = func() {
 		w.Close()
@@ -165,16 +165,16 @@ func (i *fyneUI) DisplayRegistrationWindow(ctx context.Context, agent ui.Agent, 
 
 // aboutWindow creates a window that will show some interesting information
 // about the agent, such as version numbers.
-func (i *fyneUI) aboutWindow(agent ui.Agent, t *translations.Translator) fyne.Window {
+func (i *fyneUI) aboutWindow(cfg config.Config, t *translations.Translator) fyne.Window {
 	var widgets []fyne.CanvasObject
 	widgets = append(widgets, widget.NewLabel(t.Translate(
 		"App Version: %s", config.AppVersion)))
 	var deviceName, deviceID string
-	if err := agent.GetConfig(config.PrefDeviceName, &deviceName); err == nil && deviceName != "" {
+	if err := cfg.Get(config.PrefDeviceName, &deviceName); err == nil && deviceName != "" {
 		widgets = append(widgets,
 			widget.NewLabel(t.Translate("Device Name: "+deviceName)))
 	}
-	if err := agent.GetConfig(config.PrefDeviceID, &deviceID); err == nil && deviceID != "" {
+	if err := cfg.Get(config.PrefDeviceID, &deviceID); err == nil && deviceID != "" {
 		widgets = append(widgets,
 			widget.NewLabel(t.Translate("Device ID: "+deviceID)))
 	}
@@ -281,7 +281,7 @@ func (i *fyneUI) sensorsWindow(a ui.Agent, t ui.SensorTracker, l *translations.T
 // agent functionality. Most of these settings will be optional.
 func (i *fyneUI) agentSettingsWindow(agent ui.Agent, t *translations.Translator) fyne.Window {
 	var allFormItems []*widget.FormItem
-	allFormItems = append(allFormItems, i.mqttConfigItems(agent, t)...)
+	// allFormItems = append(allFormItems, i.mqttConfigItems(agent, t)...)
 
 	w := i.app.NewWindow(t.Translate("App Settings"))
 	settingsForm := widget.NewForm(allFormItems...)
@@ -297,13 +297,13 @@ func (i *fyneUI) agentSettingsWindow(agent ui.Agent, t *translations.Translator)
 
 // serverConfigItems generates a list of form item widgets for selecting a
 // server to register the agent against.
-func (i *fyneUI) serverConfigItems(ctx context.Context, agent ui.Agent, t *translations.Translator) []*widget.FormItem {
+func (i *fyneUI) serverConfigItems(ctx context.Context, agent ui.Agent, cfg config.Config, t *translations.Translator) []*widget.FormItem {
 	allServers := hass.FindServers(ctx)
 
-	tokenEntry := configEntry(agent, config.PrefToken, "ASecretLongLivedToken", false)
+	tokenEntry := configEntry(agent, cfg, config.PrefToken, "ASecretLongLivedToken", false)
 	tokenEntry.Validator = validation.NewRegexp("[A-Za-z0-9_\\.]+", "Invalid token format")
 
-	serverEntry := configEntry(agent, config.PrefHost, allServers[0], false)
+	serverEntry := configEntry(agent, cfg, config.PrefHost, allServers[0], false)
 	serverEntry.Validator = httpValidator()
 	serverEntry.Disable()
 
@@ -335,50 +335,50 @@ func (i *fyneUI) serverConfigItems(ctx context.Context, agent ui.Agent, t *trans
 
 // mqttConfigItems generates a list of for item widgets for configuring the
 // agent to use an MQTT for pub/sub functionality.
-func (i *fyneUI) mqttConfigItems(agent ui.Agent, t *translations.Translator) []*widget.FormItem {
-	serverEntry := configEntry(agent, config.PrefMQTTServer, "localhost:1883", false)
-	serverEntry.Validator = hostPortValidator()
-	serverEntry.Disable()
+// func (i *fyneUI) mqttConfigItems(agent ui.Agent, t *translations.Translator) []*widget.FormItem {
+// 	serverEntry := configEntry(agent, config.PrefMQTTServer, "localhost:1883", false)
+// 	serverEntry.Validator = hostPortValidator()
+// 	serverEntry.Disable()
 
-	userEntry := configEntry(agent, config.PrefMQTTUser, "", false)
-	userEntry.Disable()
-	passwordEntry := configEntry(agent, config.PrefMQTTPassword, "", true)
-	passwordEntry.Disable()
+// 	userEntry := configEntry(agent, config.PrefMQTTUser, "", false)
+// 	userEntry.Disable()
+// 	passwordEntry := configEntry(agent, config.PrefMQTTPassword, "", true)
+// 	passwordEntry.Disable()
 
-	mqttEnabled := configCheck(agent, config.PrefMQTTEnabled, func(b bool) {
-		switch b {
-		case true:
-			serverEntry.Enable()
-			userEntry.Enable()
-			passwordEntry.Enable()
-			if err := agent.SetConfig("UseMQTT", true); err != nil {
-				log.Warn().Err(err).Msg("Could not enable MQTT.")
-			}
-		case false:
-			serverEntry.Disable()
-			userEntry.Disable()
-			passwordEntry.Disable()
-			if err := agent.SetConfig("UseMQTT", false); err != nil {
-				log.Warn().Err(err).Msg("Could not disable MQTT.")
-			}
-		}
-	})
+// 	mqttEnabled := configCheck(agent, config.PrefMQTTEnabled, func(b bool) {
+// 		switch b {
+// 		case true:
+// 			serverEntry.Enable()
+// 			userEntry.Enable()
+// 			passwordEntry.Enable()
+// 			if err := agent.SetConfig("UseMQTT", true); err != nil {
+// 				log.Warn().Err(err).Msg("Could not enable MQTT.")
+// 			}
+// 		case false:
+// 			serverEntry.Disable()
+// 			userEntry.Disable()
+// 			passwordEntry.Disable()
+// 			if err := agent.SetConfig("UseMQTT", false); err != nil {
+// 				log.Warn().Err(err).Msg("Could not disable MQTT.")
+// 			}
+// 		}
+// 	})
 
-	var items []*widget.FormItem
+// 	var items []*widget.FormItem
 
-	items = append(items, widget.NewFormItem(t.Translate("Use MQTT?"), mqttEnabled),
-		widget.NewFormItem(t.Translate("MQTT Server"), serverEntry),
-		widget.NewFormItem(t.Translate("MQTT User"), userEntry),
-		widget.NewFormItem(t.Translate("MQTT Password"), passwordEntry),
-	)
+// 	items = append(items, widget.NewFormItem(t.Translate("Use MQTT?"), mqttEnabled),
+// 		widget.NewFormItem(t.Translate("MQTT Server"), serverEntry),
+// 		widget.NewFormItem(t.Translate("MQTT User"), userEntry),
+// 		widget.NewFormItem(t.Translate("MQTT Password"), passwordEntry),
+// 	)
 
-	return items
-}
+// 	return items
+// }
 
 // configEntry creates a form entry widget that is tied to the given config
 // value of the given agent. When the value of the entry widget changes, the
 // corresponding config value will be updated.
-func configEntry(agent ui.Agent, name, placeholder string, secret bool) *widget.Entry {
+func configEntry(agent ui.Agent, cfg config.Config, name, placeholder string, secret bool) *widget.Entry {
 	var entry *widget.Entry
 	if secret {
 		entry = widget.NewPasswordEntry()
@@ -386,11 +386,11 @@ func configEntry(agent ui.Agent, name, placeholder string, secret bool) *widget.
 		entry = widget.NewEntry()
 	}
 	entry.OnChanged = func(s string) {
-		if err := agent.SetConfig(name, s); err != nil {
+		if err := cfg.Set(name, s); err != nil {
 			log.Warn().Err(err).Msgf("Could not set config entry %s.", name)
 		}
 	}
-	if err := agent.GetConfig(name, &entry.Text); err != nil {
+	if err := cfg.Get(name, &entry.Text); err != nil {
 		log.Warn().Err(err).Msgf("Could not get value of config entry %s. Using placeholder.", name)
 		entry.SetText(placeholder)
 	}
@@ -400,14 +400,14 @@ func configEntry(agent ui.Agent, name, placeholder string, secret bool) *widget.
 // configCheck creates a form checkbox widget that is tied to the given config
 // value of the given agent. When the value of the entry widget changes, the
 // corresponding config value will be updated.
-func configCheck(agent ui.Agent, name string, checkFn func(bool)) *widget.Check {
-	entry := widget.NewCheck("", checkFn)
-	if err := agent.GetConfig(name, &entry.Checked); err != nil {
-		log.Warn().Err(err).Msgf("Could not get value of config entry %s. Using placeholder.", name)
-		entry.SetChecked(false)
-	}
-	return entry
-}
+// func configCheck(agent ui.Agent, name string, checkFn func(bool)) *widget.Check {
+// 	entry := widget.NewCheck("", checkFn)
+// 	if err := agent.GetConfig(name, &entry.Checked); err != nil {
+// 		log.Warn().Err(err).Msgf("Could not get value of config entry %s. Using placeholder.", name)
+// 		entry.SetChecked(false)
+// 	}
+// 	return entry
+// }
 
 func longestString(a []string) string {
 	var l string

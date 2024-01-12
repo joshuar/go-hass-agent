@@ -86,13 +86,13 @@ type RegistrationRequest struct {
 	SupportsEncryption bool   `json:"supports_encryption"`
 }
 
-func RegisterWithHass(ctx context.Context, agent Agent, device DeviceInfo) (*RegistrationResponse, error) {
+func RegisterWithHass(ctx context.Context, cfg config.Config, device DeviceInfo) (*RegistrationResponse, error) {
 	request, err := device.MarshalJSON()
 	if err != nil {
 		return nil, err
 	}
 	var u string
-	if err = agent.GetConfig(config.PrefHost, &u); err != nil {
+	if err = cfg.Get(config.PrefHost, &u); err != nil {
 		return nil, errors.New("invalid host")
 	}
 
@@ -103,7 +103,7 @@ func RegisterWithHass(ctx context.Context, agent Agent, device DeviceInfo) (*Reg
 	serverURL = serverURL.JoinPath("/api/mobile_app/registrations")
 
 	var token string
-	if err = agent.GetConfig(config.PrefToken, &token); err != nil || token == "" {
+	if err = cfg.Get(config.PrefToken, &token); err != nil || token == "" {
 		return nil, errors.New("invalid token")
 	}
 

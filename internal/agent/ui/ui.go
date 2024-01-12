@@ -9,6 +9,7 @@ import (
 	"context"
 	_ "embed"
 
+	"github.com/joshuar/go-hass-agent/internal/agent/config"
 	"github.com/joshuar/go-hass-agent/internal/tracker"
 )
 
@@ -17,8 +18,6 @@ type Agent interface {
 	IsHeadless() bool
 	AppID() string
 	Stop()
-	GetConfig(string, any) error
-	SetConfig(string, any) error
 }
 
 //go:generate moq -out mock_SensorTracker_test.go . SensorTracker
@@ -33,8 +32,8 @@ type SensorTracker interface {
 //go:generate moq -out mockAgentUI_test.go . AgentUI
 type AgentUI interface {
 	DisplayNotification(string, string)
-	DisplayTrayIcon(Agent, SensorTracker)
-	DisplayRegistrationWindow(context.Context, Agent, chan struct{})
+	DisplayTrayIcon(Agent, config.Config, SensorTracker)
+	DisplayRegistrationWindow(context.Context, Agent, config.Config, chan struct{})
 	Run()
 }
 

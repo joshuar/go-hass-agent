@@ -13,11 +13,11 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/adrg/xdg"
 	"github.com/joshuar/go-hass-agent/internal/agent/config"
 	"github.com/joshuar/go-hass-agent/internal/agent/ui"
 	fyneui "github.com/joshuar/go-hass-agent/internal/agent/ui/fyneUI"
 	"github.com/joshuar/go-hass-agent/internal/device"
-	"github.com/joshuar/go-hass-agent/internal/hass/api"
 	"github.com/joshuar/go-hass-agent/internal/scripts"
 	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/robfig/cron/v3"
@@ -30,7 +30,6 @@ import (
 // strings such as app name and version.
 type Agent struct {
 	ui      ui.AgentUI
-	config  config.Config
 	done    chan struct{}
 	options *Options
 }
@@ -43,16 +42,11 @@ type Options struct {
 }
 
 func newAgent(o *Options) *Agent {
-	var err error
-	configPath := filepath.Join(os.Getenv("HOME"), ".config", o.ID)
 	a := &Agent{
 		done:    make(chan struct{}),
 		options: o,
 	}
 	a.ui = fyneui.NewFyneUI(a)
-	if a.config, err = config.Load(configPath); err != nil {
-		log.Fatal().Err(err).Msg("Could not load config.")
-	}
 	a.setupLogging()
 	return a
 }
@@ -68,8 +62,14 @@ func Run(options Options) {
 
 	agent := newAgent(&options)
 
-	var t *tracker.SensorTracker
-	if t, err = tracker.NewSensorTracker(agent.AppID()); err != nil {
+	var cfg config.Config
+	configPath := filepath.Join(xdg.ConfigHome, options.ID)
+	if cfg, err = config.Load(configPath); err != nil {
+		log.Fatal().Err(err).Msg("Could not load config.")
+	}
+
+	var trk *tracker.SensorTracker
+	if trk, err = tracker.NewSensorTracker(agent.AppID()); err != nil {
 		log.Fatal().Err(err).Msg("Could not start sensor tracker.")
 	}
 
@@ -78,32 +78,32 @@ func Run(options Options) {
 	regWait.Add(1)
 	go func() {
 		defer regWait.Done()
-		agent.checkRegistration(t, agent.config)
+		agent.checkRegistration(trk, cfg)
 	}()
 
 	go func() {
 		regWait.Wait()
 
-		ctx, cancelFunc = agent.setupContext()
+		ctx, cancelFunc = agent.setupContext(cfg)
 
 		// Start worker funcs for sensors.
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			startWorkers(ctx, t)
+			startWorkers(ctx, trk)
 		}()
 		// Start any scripts.
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			scriptPath := filepath.Join(os.Getenv("HOME"), ".config", agent.options.ID, "scripts")
-			runScripts(ctx, scriptPath, t)
+			scriptPath := filepath.Join(xdg.ConfigHome, agent.options.ID, "scripts")
+			runScripts(ctx, scriptPath, trk)
 		}()
 		// Listen for notifications from Home Assistant.
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			agent.runNotificationsWorker(ctx, options)
+			agent.runNotificationsWorker(ctx, cfg, options)
 		}()
 	}()
 
@@ -115,7 +115,7 @@ func Run(options Options) {
 
 	agent.handleSignals()
 
-	agent.ui.DisplayTrayIcon(agent, t)
+	agent.ui.DisplayTrayIcon(agent, cfg, trk)
 	agent.ui.Run()
 	wg.Wait()
 }
@@ -128,8 +128,14 @@ func Register(options Options) {
 	agent := newAgent(&options)
 	var err error
 
-	var t *tracker.SensorTracker
-	if t, err = tracker.NewSensorTracker(agent.AppID()); err != nil {
+	var cfg config.Config
+	configPath := filepath.Join(xdg.ConfigHome, options.ID)
+	if cfg, err = config.Load(configPath); err != nil {
+		log.Fatal().Err(err).Msg("Could not load config.")
+	}
+
+	var trk *tracker.SensorTracker
+	if trk, err = tracker.NewSensorTracker(agent.AppID()); err != nil {
 		close(agent.done)
 		log.Fatal().Err(err).Msg("Could not start sensor tracker.")
 	}
@@ -138,7 +144,7 @@ func Register(options Options) {
 	regWait.Add(1)
 	go func() {
 		defer regWait.Done()
-		agent.checkRegistration(t, agent.config)
+		agent.checkRegistration(trk, cfg)
 	}()
 
 	go func() {
@@ -148,7 +154,7 @@ func Register(options Options) {
 
 	agent.handleSignals()
 
-	agent.ui.DisplayTrayIcon(agent, t)
+	agent.ui.DisplayTrayIcon(agent, cfg, trk)
 	agent.ui.Run()
 
 	regWait.Wait()
@@ -163,33 +169,22 @@ func ShowVersion() {
 // setupLogging will attempt to create and then write logging to a file. If it
 // cannot do this, logging will only be available on stdout
 func (agent *Agent) setupLogging() {
-	logFile, err := agent.config.StoragePath("go-hass-app.log")
+	logFile := filepath.Join(xdg.StateHome, "go-hass-app.log")
+	logWriter, err := os.OpenFile(logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
 		log.Error().Err(err).
-			Msg("Unable to create a log file. Will only write logs to stdout.")
+			Msg("Unable to open log file for writing.")
 	} else {
-		logWriter, err := os.OpenFile(logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
-		if err != nil {
-			log.Error().Err(err).
-				Msg("Unable to open log file for writing.")
-		} else {
-			consoleWriter := zerolog.ConsoleWriter{Out: os.Stdout}
-			multiWriter := zerolog.MultiLevelWriter(consoleWriter, logWriter)
-			log.Logger = log.Output(multiWriter)
-		}
+		consoleWriter := zerolog.ConsoleWriter{Out: os.Stdout}
+		multiWriter := zerolog.MultiLevelWriter(consoleWriter, logWriter)
+		log.Logger = log.Output(multiWriter)
 	}
 }
 
-func (agent *Agent) setupContext() (context.Context, context.CancelFunc) {
-	c := &api.APIConfig{}
-	if err := agent.config.Get(config.PrefAPIURL, &c.APIURL); err != nil {
-		log.Fatal().Err(err).Msg("Could not export apiURL.")
-	}
-	if err := agent.config.Get(config.PrefSecret, &c.Secret); err != nil && c.Secret != "NOTSET" {
-		log.Debug().Err(err).Msg("Could not export secret.")
-	}
-	ctx := api.NewContext(context.Background(), c)
-	return context.WithCancel(ctx)
+func (agent *Agent) setupContext(cfg config.Config) (context.Context, context.CancelFunc) {
+	baseCtx, cancelFunc := context.WithCancel(context.Background())
+	agentCtx := config.EmbedInContext(baseCtx, cfg)
+	return agentCtx, cancelFunc
 }
 
 // handleSignals will handle Ctrl-C of the agent
@@ -216,14 +211,6 @@ func (agent *Agent) AppID() string {
 func (agent *Agent) Stop() {
 	log.Debug().Msg("Stopping agent.")
 	close(agent.done)
-}
-
-func (agent *Agent) GetConfig(key string, value interface{}) error {
-	return agent.config.Get(key, value)
-}
-
-func (agent *Agent) SetConfig(key string, value interface{}) error {
-	return agent.config.Set(key, value)
 }
 
 // startWorkers will call all the sensor worker functions that have been defined

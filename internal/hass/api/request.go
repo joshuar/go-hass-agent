@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/carlmjohnson/requests"
+	"github.com/joshuar/go-hass-agent/internal/agent/config"
 )
 
 //go:generate stringer -type=RequestType,ResponseType -output apiTypes.go -linecomment
@@ -28,8 +29,10 @@ const (
 	ResponseTypeUpdate                               // update
 )
 
-type RequestType int
-type ResponseType int
+type (
+	RequestType  int
+	ResponseType int
+)
 
 //go:generate moq -out mock_Request_test.go . Request
 type Request interface {
@@ -73,14 +76,23 @@ type EncryptedRequest struct {
 func ExecuteRequest(ctx context.Context, request Request) <-chan any {
 	responseCh := make(chan any, 1)
 	defer close(responseCh)
-	cfg, ok := FromContext(ctx)
-	if !ok {
+
+	var cfg config.Config
+	if cfg = config.FetchFromContext(ctx); cfg == nil {
 		responseCh <- errors.New("no config found in context")
 		return responseCh
 	}
 
-	reqJSON, err := marshalJSON(request, cfg.Secret)
+	var secret string
+	cfg.Get(config.PrefSecret, &secret)
+	reqJSON, err := marshalJSON(request, secret)
 	if err != nil {
+		responseCh <- err
+		return responseCh
+	}
+
+	var url string
+	if err := cfg.Get(config.PrefAPIURL, &url); err != nil {
 		responseCh <- err
 		return responseCh
 	}
@@ -94,7 +106,7 @@ func ExecuteRequest(ctx context.Context, request Request) <-chan any {
 		defer wg.Done()
 		var rBuf bytes.Buffer
 		err = requests.
-			URL(cfg.APIURL).
+			URL(url).
 			BodyBytes(reqJSON).
 			ToBytesBuffer(&rBuf).
 			Fetch(requestCtx)
