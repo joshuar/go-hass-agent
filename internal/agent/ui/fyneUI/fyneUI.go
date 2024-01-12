@@ -17,6 +17,7 @@ import (
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/cmd/fyne_settings/settings"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/data/binding"
 	"fyne.io/fyne/v2/data/validation"
 	"fyne.io/fyne/v2/driver/desktop"
 	"fyne.io/fyne/v2/layout"
@@ -137,12 +138,12 @@ func (i *fyneUI) DisplayTrayIcon(a ui.Agent, cfg config.Config, t ui.SensorTrack
 // DisplayRegistrationWindow displays a UI to prompt the user for the details needed to
 // complete registration. It will populate with any values that were already
 // provided via the command-line.
-func (i *fyneUI) DisplayRegistrationWindow(ctx context.Context, agent ui.Agent, cfg config.Config, done chan struct{}) {
+func (i *fyneUI) DisplayRegistrationWindow(ctx context.Context, server, token *string, done chan struct{}) {
 	w := i.app.NewWindow(i.text.Translate("App Registration"))
 
 	var allFormItems []*widget.FormItem
 
-	allFormItems = append(allFormItems, serverConfigItems(ctx, agent, cfg, i.text)...)
+	allFormItems = append(allFormItems, registrationFields(ctx, server, token, i.text)...)
 	registrationForm := widget.NewForm(allFormItems...)
 	registrationForm.OnSubmit = func() {
 		w.Close()
@@ -295,15 +296,21 @@ func (i *fyneUI) agentSettingsWindow(agent ui.Agent, t *translations.Translator)
 	return w
 }
 
-// serverConfigItems generates a list of form item widgets for selecting a
+// registrationFields generates a list of form item widgets for selecting a
 // server to register the agent against.
-func serverConfigItems(ctx context.Context, agent ui.Agent, cfg config.Config, t *translations.Translator) []*widget.FormItem {
+func registrationFields(ctx context.Context, server, token *string, t *translations.Translator) []*widget.FormItem {
 	allServers := hass.FindServers(ctx)
 
-	tokenEntry := configEntry(cfg, config.PrefToken, "ASecretLongLivedToken", false)
+	if *token == "" {
+		*token = "ASecretLongLivedToken"
+	}
+	tokenEntry := configEntry(token, false)
 	tokenEntry.Validator = validation.NewRegexp("[A-Za-z0-9_\\.]+", "Invalid token format")
 
-	serverEntry := configEntry(cfg, config.PrefHost, allServers[0], false)
+	if *server == "" {
+		*server = allServers[0]
+	}
+	serverEntry := configEntry(server, false)
 	serverEntry.Validator = httpValidator()
 	serverEntry.Disable()
 
@@ -378,23 +385,13 @@ func serverConfigItems(ctx context.Context, agent ui.Agent, cfg config.Config, t
 // configEntry creates a form entry widget that is tied to the given config
 // value of the given agent. When the value of the entry widget changes, the
 // corresponding config value will be updated.
-func configEntry(cfg config.Config, name, placeholder string, secret bool) *widget.Entry {
-	var entry *widget.Entry
+func configEntry(value *string, secret bool) *widget.Entry {
+	boundEntry := binding.BindString(value)
+	entryWidget := widget.NewEntryWithData(boundEntry)
 	if secret {
-		entry = widget.NewPasswordEntry()
-	} else {
-		entry = widget.NewEntry()
+		entryWidget.Password = true
 	}
-	entry.OnChanged = func(s string) {
-		if err := cfg.Set(name, s); err != nil {
-			log.Warn().Err(err).Msgf("Could not set config entry %s.", name)
-		}
-	}
-	if err := cfg.Get(name, &entry.Text); err != nil {
-		log.Warn().Err(err).Msgf("Could not get value of config entry %s. Using placeholder.", name)
-		entry.SetText(placeholder)
-	}
-	return entry
+	return entryWidget
 }
 
 // configCheck creates a form checkbox widget that is tied to the given config

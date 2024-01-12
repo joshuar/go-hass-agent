@@ -21,14 +21,12 @@ import (
 // request and the successful response in the agent preferences. This includes,
 // most importantly, details on the URL that should be used to send subsequent
 // requests to Home Assistant.
-func saveRegistration(cfg config.Config, resp *api.RegistrationResponse, dev api.DeviceInfo) {
+func saveRegistration(cfg config.Config, server string, resp *api.RegistrationResponse, dev api.DeviceInfo) {
 	checkFatal := func(err error) {
 		if err != nil {
 			log.Fatal().Err(err).Msg("Could not save registration.")
 		}
 	}
-	var providedHost string
-	checkFatal(cfg.Get(config.PrefHost, &providedHost))
 
 	if resp.CloudhookURL != "" {
 		checkFatal(cfg.Set(config.PrefCloudhookURL, resp.CloudhookURL))
@@ -42,8 +40,8 @@ func saveRegistration(cfg config.Config, resp *api.RegistrationResponse, dev api
 	if resp.WebhookID != "" {
 		checkFatal(cfg.Set(config.PrefWebhookID, resp.WebhookID))
 	}
-	checkFatal(cfg.Set(config.PrefAPIURL, generateAPIURL(providedHost, resp)))
-	checkFatal(cfg.Set(config.PrefWebsocketURL, generateWebsocketURL(providedHost)))
+	checkFatal(cfg.Set(config.PrefAPIURL, generateAPIURL(server, resp)))
+	checkFatal(cfg.Set(config.PrefWebsocketURL, generateWebsocketURL(server)))
 	checkFatal(cfg.Set(config.PrefDeviceName, dev.DeviceName()))
 	checkFatal(cfg.Set(config.PrefDeviceID, dev.DeviceID()))
 	checkFatal(cfg.Set(config.PrefRegistered, true))
@@ -54,29 +52,38 @@ func saveRegistration(cfg config.Config, resp *api.RegistrationResponse, dev api
 // registered, it will exit unless the force parameter is true. Otherwise, it
 // will action a registration workflow displaying a GUI for user input of
 // registration details and save the results into the agent config.
-func (agent *Agent) performRegistration(ctx context.Context, cfg config.Config) {
+func (agent *Agent) performRegistration(ctx context.Context, server, token string, cfg config.Config) {
 	log.Info().Msg("Registration required. Starting registration process.")
-	if !validRegistrationSetting("server", agent.options.Server) || !validRegistrationSetting("token", agent.options.Token) {
-		log.Fatal().Msg("Cannot register, invalid host and/or token.")
-	}
-	if err := cfg.Set(config.PrefHost, agent.options.Server); err != nil {
-		log.Fatal().Err(err).Msg("Could not set host preference.")
-	}
-	if err := cfg.Set(config.PrefToken, agent.options.Token); err != nil {
-		log.Fatal().Err(err).Msg("Could not set token preference.")
-	}
 
-	device := newDevice(ctx)
-	if !agent.options.Headless {
+	// Display a window asking for registration details for non-headless usage.
+	if !agent.Options.Headless {
 		userInputDone := make(chan struct{})
-		agent.ui.DisplayRegistrationWindow(ctx, agent, cfg, userInputDone)
+		agent.ui.DisplayRegistrationWindow(ctx, &server, &token, userInputDone)
 		<-userInputDone
 	}
-	resp, err := api.RegisterWithHass(ctx, agent.options.Server, agent.options.Token, device)
+
+	// Validate provided registration details.
+	if !validRegistrationSetting("server", server) || !validRegistrationSetting("token", token) {
+		log.Fatal().Msg("Cannot register, invalid host and/or token.")
+	}
+
+	// Register with Home Assistant.
+	device := newDevice(ctx)
+	resp, err := api.RegisterWithHass(ctx, server, token, device)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Could not register with Home Assistant.")
 	}
-	saveRegistration(cfg, resp, device)
+
+	// Write registration details to config.
+	saveRegistration(cfg, server, resp, device)
+	if err = cfg.Set(config.PrefHost, server); err != nil {
+		log.Fatal().Err(err).Msg("Could not set host preference.")
+	}
+	if err = cfg.Set(config.PrefToken, token); err != nil {
+		log.Fatal().Err(err).Msg("Could not set token preference.")
+	}
+
+	// Ensure new config is valid.
 	if err = config.ValidateConfig(cfg); err != nil {
 		log.Fatal().Err(err).Msg("Could not validate config after registration.")
 	}
@@ -92,9 +99,9 @@ func (agent *Agent) checkRegistration(t *tracker.SensorTracker, c config.Config)
 
 	// If the agent is not registered (or force registration requested) run a
 	// registration flow
-	if !registered || agent.options.Register {
-		agent.performRegistration(context.Background(), c)
-		if agent.options.Register {
+	if !registered || agent.Options.ForceRegister {
+		agent.performRegistration(context.Background(), agent.Options.Server, agent.Options.Token, c)
+		if agent.Options.ForceRegister {
 			t.Reset()
 		}
 	}
