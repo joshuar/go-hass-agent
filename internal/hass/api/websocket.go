@@ -41,22 +41,21 @@ func (m *websocketMsg) send(conn *gws.Conn) error {
 }
 
 type websocketResponse struct {
-	Result any `json:"result,omitempty"`
-	Error  struct {
-		Code    string `json:"code"`
-		Message string `json:"message"`
-	} `json:"error,omitempty"`
-	Type         string `json:"type"`
-	HAVersion    string `json:"ha_version,omitempty"`
-	Notification struct {
-		Data      any      `json:"data,omitempty"`
-		Message   string   `json:"message"`
-		Title     string   `json:"title,omitempty"`
-		ConfirmID string   `json:"confirm_id,omitempty"`
-		Target    []string `json:"target,omitempty"`
-	} `json:"event,omitempty"`
-	ID      uint64 `json:"id,omitempty"`
-	Success bool   `json:"success,omitempty"`
+	Result       any                   `json:"result,omitempty"`
+	Error        ResponseError         `json:"error,omitempty"`
+	Type         string                `json:"type"`
+	HAVersion    string                `json:"ha_version,omitempty"`
+	Notification websocketNotification `json:"event,omitempty"`
+	ID           uint64                `json:"id,omitempty"`
+	Success      bool                  `json:"success,omitempty"`
+}
+
+type websocketNotification struct {
+	Data      any      `json:"data,omitempty"`
+	Message   string   `json:"message"`
+	Title     string   `json:"title,omitempty"`
+	ConfirmID string   `json:"confirm_id,omitempty"`
+	Target    []string `json:"target,omitempty"`
 }
 
 func StartWebsocket(ctx context.Context, notifyCh chan [2]string) {
@@ -196,8 +195,8 @@ func (c *WebSocket) OnMessage(socket *gws.Conn, message *gws.Message) {
 	case "result":
 		if !response.Success {
 			log.Error().
-				Msgf("Received error on websocket, %s: %s.", response.Error.Code, response.Error.Message)
-			if response.Error.Code == "id_reuse" {
+				Msgf("Received error on websocket, %s: %s.", response.Error.ErrorCode, response.Error.ErrorMsg)
+			if response.Error.ErrorCode == "id_reuse" {
 				log.Warn().
 					Msg("id_reuse error, attempting manual increment.")
 				atomic.AddUint64(&c.nextID, 1)
