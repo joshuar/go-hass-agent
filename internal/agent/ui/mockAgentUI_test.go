@@ -5,6 +5,7 @@ package ui
 
 import (
 	"context"
+	"github.com/joshuar/go-hass-agent/internal/agent/config"
 	"sync"
 )
 
@@ -21,10 +22,10 @@ var _ AgentUI = &AgentUIMock{}
 //			DisplayNotificationFunc: func(s1 string, s2 string)  {
 //				panic("mock out the DisplayNotification method")
 //			},
-//			DisplayRegistrationWindowFunc: func(contextMoqParam context.Context, agent Agent, valCh chan struct{})  {
+//			DisplayRegistrationWindowFunc: func(contextMoqParam context.Context, agent Agent, configMoqParam config.Config, valCh chan struct{})  {
 //				panic("mock out the DisplayRegistrationWindow method")
 //			},
-//			DisplayTrayIconFunc: func(agent Agent, sensorTracker SensorTracker)  {
+//			DisplayTrayIconFunc: func(agent Agent, configMoqParam config.Config, sensorTracker SensorTracker)  {
 //				panic("mock out the DisplayTrayIcon method")
 //			},
 //			RunFunc: func()  {
@@ -41,10 +42,10 @@ type AgentUIMock struct {
 	DisplayNotificationFunc func(s1 string, s2 string)
 
 	// DisplayRegistrationWindowFunc mocks the DisplayRegistrationWindow method.
-	DisplayRegistrationWindowFunc func(contextMoqParam context.Context, agent Agent, valCh chan struct{})
+	DisplayRegistrationWindowFunc func(contextMoqParam context.Context, agent Agent, configMoqParam config.Config, valCh chan struct{})
 
 	// DisplayTrayIconFunc mocks the DisplayTrayIcon method.
-	DisplayTrayIconFunc func(agent Agent, sensorTracker SensorTracker)
+	DisplayTrayIconFunc func(agent Agent, configMoqParam config.Config, sensorTracker SensorTracker)
 
 	// RunFunc mocks the Run method.
 	RunFunc func()
@@ -64,6 +65,8 @@ type AgentUIMock struct {
 			ContextMoqParam context.Context
 			// Agent is the agent argument value.
 			Agent Agent
+			// ConfigMoqParam is the configMoqParam argument value.
+			ConfigMoqParam config.Config
 			// ValCh is the valCh argument value.
 			ValCh chan struct{}
 		}
@@ -71,6 +74,8 @@ type AgentUIMock struct {
 		DisplayTrayIcon []struct {
 			// Agent is the agent argument value.
 			Agent Agent
+			// ConfigMoqParam is the configMoqParam argument value.
+			ConfigMoqParam config.Config
 			// SensorTracker is the sensorTracker argument value.
 			SensorTracker SensorTracker
 		}
@@ -121,23 +126,25 @@ func (mock *AgentUIMock) DisplayNotificationCalls() []struct {
 }
 
 // DisplayRegistrationWindow calls DisplayRegistrationWindowFunc.
-func (mock *AgentUIMock) DisplayRegistrationWindow(contextMoqParam context.Context, agent Agent, valCh chan struct{}) {
+func (mock *AgentUIMock) DisplayRegistrationWindow(contextMoqParam context.Context, agent Agent, configMoqParam config.Config, valCh chan struct{}) {
 	if mock.DisplayRegistrationWindowFunc == nil {
 		panic("AgentUIMock.DisplayRegistrationWindowFunc: method is nil but AgentUI.DisplayRegistrationWindow was just called")
 	}
 	callInfo := struct {
 		ContextMoqParam context.Context
 		Agent           Agent
+		ConfigMoqParam  config.Config
 		ValCh           chan struct{}
 	}{
 		ContextMoqParam: contextMoqParam,
 		Agent:           agent,
+		ConfigMoqParam:  configMoqParam,
 		ValCh:           valCh,
 	}
 	mock.lockDisplayRegistrationWindow.Lock()
 	mock.calls.DisplayRegistrationWindow = append(mock.calls.DisplayRegistrationWindow, callInfo)
 	mock.lockDisplayRegistrationWindow.Unlock()
-	mock.DisplayRegistrationWindowFunc(contextMoqParam, agent, valCh)
+	mock.DisplayRegistrationWindowFunc(contextMoqParam, agent, configMoqParam, valCh)
 }
 
 // DisplayRegistrationWindowCalls gets all the calls that were made to DisplayRegistrationWindow.
@@ -147,11 +154,13 @@ func (mock *AgentUIMock) DisplayRegistrationWindow(contextMoqParam context.Conte
 func (mock *AgentUIMock) DisplayRegistrationWindowCalls() []struct {
 	ContextMoqParam context.Context
 	Agent           Agent
+	ConfigMoqParam  config.Config
 	ValCh           chan struct{}
 } {
 	var calls []struct {
 		ContextMoqParam context.Context
 		Agent           Agent
+		ConfigMoqParam  config.Config
 		ValCh           chan struct{}
 	}
 	mock.lockDisplayRegistrationWindow.RLock()
@@ -161,21 +170,23 @@ func (mock *AgentUIMock) DisplayRegistrationWindowCalls() []struct {
 }
 
 // DisplayTrayIcon calls DisplayTrayIconFunc.
-func (mock *AgentUIMock) DisplayTrayIcon(agent Agent, sensorTracker SensorTracker) {
+func (mock *AgentUIMock) DisplayTrayIcon(agent Agent, configMoqParam config.Config, sensorTracker SensorTracker) {
 	if mock.DisplayTrayIconFunc == nil {
 		panic("AgentUIMock.DisplayTrayIconFunc: method is nil but AgentUI.DisplayTrayIcon was just called")
 	}
 	callInfo := struct {
-		Agent         Agent
-		SensorTracker SensorTracker
+		Agent          Agent
+		ConfigMoqParam config.Config
+		SensorTracker  SensorTracker
 	}{
-		Agent:         agent,
-		SensorTracker: sensorTracker,
+		Agent:          agent,
+		ConfigMoqParam: configMoqParam,
+		SensorTracker:  sensorTracker,
 	}
 	mock.lockDisplayTrayIcon.Lock()
 	mock.calls.DisplayTrayIcon = append(mock.calls.DisplayTrayIcon, callInfo)
 	mock.lockDisplayTrayIcon.Unlock()
-	mock.DisplayTrayIconFunc(agent, sensorTracker)
+	mock.DisplayTrayIconFunc(agent, configMoqParam, sensorTracker)
 }
 
 // DisplayTrayIconCalls gets all the calls that were made to DisplayTrayIcon.
@@ -183,12 +194,14 @@ func (mock *AgentUIMock) DisplayTrayIcon(agent Agent, sensorTracker SensorTracke
 //
 //	len(mockedAgentUI.DisplayTrayIconCalls())
 func (mock *AgentUIMock) DisplayTrayIconCalls() []struct {
-	Agent         Agent
-	SensorTracker SensorTracker
+	Agent          Agent
+	ConfigMoqParam config.Config
+	SensorTracker  SensorTracker
 } {
 	var calls []struct {
-		Agent         Agent
-		SensorTracker SensorTracker
+		Agent          Agent
+		ConfigMoqParam config.Config
+		SensorTracker  SensorTracker
 	}
 	mock.lockDisplayTrayIcon.RLock()
 	calls = mock.calls.DisplayTrayIcon

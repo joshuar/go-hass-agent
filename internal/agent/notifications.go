@@ -9,11 +9,12 @@ import (
 	"context"
 	"sync"
 
+	"github.com/joshuar/go-hass-agent/internal/agent/config"
 	"github.com/joshuar/go-hass-agent/internal/hass/api"
 	"github.com/rs/zerolog/log"
 )
 
-func (agent *Agent) runNotificationsWorker(ctx context.Context, options Options) {
+func (agent *Agent) runNotificationsWorker(ctx context.Context, cfg config.Config, options Options) {
 	if options.Headless {
 		log.Warn().Msg("Will not send notifications as there is no supported windowing environment.")
 		return
@@ -45,7 +46,7 @@ func (agent *Agent) runNotificationsWorker(ctx context.Context, options Options)
 				log.Debug().Msg("Stopping websocket.")
 				return
 			default:
-				api.StartWebsocket(ctx, agent, notifyCh)
+				api.StartWebsocket(ctx, cfg, notifyCh)
 			}
 		}
 	}()

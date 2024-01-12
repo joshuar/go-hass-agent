@@ -73,10 +73,10 @@ func (agent *Agent) performRegistration(ctx context.Context, cfg config.Config) 
 	device := newDevice(ctx)
 	if !agent.options.Headless {
 		userInputDone := make(chan struct{})
-		agent.ui.DisplayRegistrationWindow(ctx, agent, userInputDone)
+		agent.ui.DisplayRegistrationWindow(ctx, agent, cfg, userInputDone)
 		<-userInputDone
 	}
-	resp, err := api.RegisterWithHass(ctx, agent, device)
+	resp, err := api.RegisterWithHass(ctx, cfg, device)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Could not register with Home Assistant.")
 	}

@@ -232,7 +232,7 @@ func TestRegisterWithHass(t *testing.T) {
 
 	type args struct {
 		ctx       context.Context
-		regConfig Agent
+		cfg config.Config
 		device    DeviceInfo
 	}
 	tests := []struct {
@@ -245,7 +245,7 @@ func TestRegisterWithHass(t *testing.T) {
 			name: "successful test",
 			args: args{
 				ctx:       context.Background(),
-				regConfig: goodRegConfig,
+				cfg: goodRegConfig,
 				device:    mockDevInfo,
 			},
 			want: okResponse,
@@ -254,7 +254,7 @@ func TestRegisterWithHass(t *testing.T) {
 			name: "bad device",
 			args: args{
 				ctx:       context.Background(),
-				regConfig: goodRegConfig,
+				cfg: goodRegConfig,
 				device:    mockBadDevInfo,
 			},
 			want:    nil,
@@ -264,7 +264,7 @@ func TestRegisterWithHass(t *testing.T) {
 			name: "bad server url",
 			args: args{
 				ctx:       context.Background(),
-				regConfig: badRegServer,
+				cfg: badRegServer,
 				device:    mockDevInfo,
 			},
 			want:    nil,
@@ -274,7 +274,7 @@ func TestRegisterWithHass(t *testing.T) {
 			name: "bad token",
 			args: args{
 				ctx:       context.Background(),
-				regConfig: badRegToken,
+				cfg: badRegToken,
 				device:    mockDevInfo,
 			},
 			want:    nil,
@@ -283,7 +283,7 @@ func TestRegisterWithHass(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := RegisterWithHass(tt.args.ctx, tt.args.regConfig, tt.args.device)
+			got, err := RegisterWithHass(tt.args.ctx, tt.args.cfg, tt.args.device)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("RegisterWithHass() error = %v, wantErr %v", err, tt.wantErr)
 				return
