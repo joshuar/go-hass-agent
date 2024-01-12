@@ -13,12 +13,12 @@ import (
 )
 
 type SensorResponseBody struct {
-	Error    SensorError `json:"error,omitempty"`
+	Error    ResponseError `json:"error,omitempty"`
 	Success  bool        `json:"success"`
 	Disabled bool        `json:"is_disabled,omitempty"`
 }
 
-type SensorError struct {
+type ResponseError struct {
 	ErrorCode string `json:"code"`
 	ErrorMsg  string `json:"message"`
 }

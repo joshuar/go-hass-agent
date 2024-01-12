@@ -6,7 +6,8 @@
         "ui",
         "README",
         "go",
-        "all"
+        "all",
+        "hass/api"
     ],
     "go.lintTool": "golangci-lint",
     "go.lintFlags": [
