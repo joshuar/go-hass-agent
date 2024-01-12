@@ -11,65 +11,20 @@ import (
 	"time"
 
 	"github.com/carlmjohnson/requests"
-	"github.com/rs/zerolog/log"
 )
 
 const (
-	websocketPath    = "/api/websocket"
-	webHookPath      = "/api/webhook/"
+	WebsocketPath    = "/api/websocket"
+	WebHookPath      = "/api/webhook/"
 	registrationPath = "/api/mobile_app/registrations"
 	authHeader       = "Authorization"
 )
-
-//go:generate moq -out mock_RegistrationInfo_test.go . RegistrationInfo
-type RegistrationInfo interface {
-	Server() string
-	Token() string
-}
 
 type RegistrationResponse struct {
 	CloudhookURL string `json:"cloudhook_url"`
 	RemoteUIURL  string `json:"remote_ui_url"`
 	Secret       string `json:"secret"`
 	WebhookID    string `json:"webhook_id"`
-}
-
-func (rr *RegistrationResponse) GenerateAPIURL(host string) string {
-	switch {
-	case rr.CloudhookURL != "":
-		return rr.CloudhookURL
-	case rr.RemoteUIURL != "" && rr.WebhookID != "":
-		return rr.RemoteUIURL + webHookPath + rr.WebhookID
-	case rr.WebhookID != "":
-		u, _ := url.Parse(host)
-		u = u.JoinPath(webHookPath, rr.WebhookID)
-		return u.String()
-	default:
-		return ""
-	}
-}
-
-func (rr *RegistrationResponse) GenerateWebsocketURL(host string) string {
-	// TODO: look into websocket http upgrade method
-	u, err := url.Parse(host)
-	if err != nil {
-		log.Warn().Err(err).Msg("Could not parse URL.")
-		return ""
-	}
-	switch u.Scheme {
-	case "https":
-		u.Scheme = "wss"
-	case "http":
-		u.Scheme = "ws"
-	case "ws":
-		// nothing to do
-	case "wss":
-		// nothing to do
-	default:
-		u.Scheme = "ws"
-	}
-	u = u.JoinPath(websocketPath)
-	return u.String()
 }
 
 type RegistrationRequest struct {
