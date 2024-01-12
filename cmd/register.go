@@ -13,7 +13,6 @@ import (
 var (
 	serverFlag, tokenFlag string
 	forcedFlag            bool
-	args                  []string
 )
 
 // registerCmd represents the register command
@@ -22,13 +21,14 @@ var registerCmd = &cobra.Command{
 	Short: "Register this device with Home Assistant",
 	Long:  `Register will attempt to register this device with Home Assistant. A URL for a Home Assistant instance and long-lived access token can be provided if known beforehand.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		agent.Register(agent.Options{
+		agent := agent.New(&agent.Options{
 			Headless:      headlessFlag,
 			ForceRegister: forcedFlag,
 			Server:        serverFlag,
 			Token:         tokenFlag,
 			ID:            appID,
 		})
+		agent.Run(cmd.Name())
 	},
 }
 
