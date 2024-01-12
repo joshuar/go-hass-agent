@@ -40,7 +40,7 @@ type Options struct {
 	Headless, ForceRegister bool
 }
 
-func newAgent(o *Options) *Agent {
+func New(o *Options) *Agent {
 	a := &Agent{
 		done:    make(chan struct{}),
 		Options: o,
@@ -53,16 +53,14 @@ func newAgent(o *Options) *Agent {
 // Run is the "main loop" of the agent. It sets up the agent, loads the config
 // then spawns a sensor tracker and the workers to gather sensor data and
 // publish it to Home Assistant.
-func Run(options Options) {
+func (agent *Agent) Run(cmd string) {
 	var wg sync.WaitGroup
 	var ctx context.Context
 	var cancelFunc context.CancelFunc
 	var err error
 
-	agent := newAgent(&options)
-
 	var cfg config.Config
-	configPath := filepath.Join(xdg.ConfigHome, options.ID)
+	configPath := filepath.Join(xdg.ConfigHome, agent.Options.ID)
 	if cfg, err = config.Load(configPath); err != nil {
 		log.Fatal().Err(err).Msg("Could not load config.")
 	}
@@ -80,31 +78,33 @@ func Run(options Options) {
 		agent.checkRegistration(trk, cfg)
 	}()
 
-	go func() {
-		regWait.Wait()
+	if cmd == "go-hass-agent" {
+		go func() {
+			regWait.Wait()
 
-		ctx, cancelFunc = agent.setupContext(cfg)
+			ctx, cancelFunc = agent.setupContext(cfg)
 
-		// Start worker funcs for sensors.
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			startWorkers(ctx, trk)
+			// Start worker funcs for sensors.
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				startWorkers(ctx, trk)
+			}()
+			// Start any scripts.
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				scriptPath := filepath.Join(xdg.ConfigHome, agent.Options.ID, "scripts")
+				runScripts(ctx, scriptPath, trk)
+			}()
+			// Listen for notifications from Home Assistant.
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				agent.runNotificationsWorker(ctx, *agent.Options)
+			}()
 		}()
-		// Start any scripts.
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			scriptPath := filepath.Join(xdg.ConfigHome, agent.Options.ID, "scripts")
-			runScripts(ctx, scriptPath, trk)
-		}()
-		// Listen for notifications from Home Assistant.
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			agent.runNotificationsWorker(ctx, options)
-		}()
-	}()
+	}
 
 	go func() {
 		<-agent.done
@@ -117,47 +117,6 @@ func Run(options Options) {
 	agent.ui.DisplayTrayIcon(agent, cfg, trk)
 	agent.ui.Run()
 	wg.Wait()
-}
-
-// Register runs a registration flow. It either prompts the user for needed
-// information or parses what is already provided. It will send a registration
-// request to Home Assistant and handles the response. It will handle either a
-// UI or non-UI registration flow.
-func Register(options Options) {
-	agent := newAgent(&options)
-	var err error
-
-	var cfg config.Config
-	configPath := filepath.Join(xdg.ConfigHome, options.ID)
-	if cfg, err = config.Load(configPath); err != nil {
-		log.Fatal().Err(err).Msg("Could not load config.")
-	}
-
-	var trk *tracker.SensorTracker
-	if trk, err = tracker.NewSensorTracker(agent.AppID()); err != nil {
-		close(agent.done)
-		log.Fatal().Err(err).Msg("Could not start sensor tracker.")
-	}
-
-	var regWait sync.WaitGroup
-	regWait.Add(1)
-	go func() {
-		defer regWait.Done()
-		agent.checkRegistration(trk, cfg)
-	}()
-	go func() {
-		<-agent.done
-		log.Debug().Msg("Agent done.")
-	}()
-
-	agent.handleSignals()
-
-	agent.ui.DisplayTrayIcon(agent, cfg, trk)
-	agent.ui.Run()
-
-	regWait.Wait()
-	close(agent.done)
-	log.Info().Msg("Device registered with Home Assistant.")
 }
 
 func ShowVersion() {
