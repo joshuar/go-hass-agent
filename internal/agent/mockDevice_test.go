@@ -24,7 +24,7 @@ var _ Device = &DeviceMock{}
 //			DeviceNameFunc: func() string {
 //				panic("mock out the DeviceName method")
 //			},
-//			SetupFunc: func(contextMoqParam context.Context) context.Context {
+//			SetupFunc: func(ctx context.Context) context.Context {
 //				panic("mock out the Setup method")
 //			},
 //		}
@@ -41,7 +41,7 @@ type DeviceMock struct {
 	DeviceNameFunc func() string
 
 	// SetupFunc mocks the Setup method.
-	SetupFunc func(contextMoqParam context.Context) context.Context
+	SetupFunc func(ctx context.Context) context.Context
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -53,8 +53,8 @@ type DeviceMock struct {
 		}
 		// Setup holds details about calls to the Setup method.
 		Setup []struct {
-			// ContextMoqParam is the contextMoqParam argument value.
-			ContextMoqParam context.Context
+			// Ctx is the ctx argument value.
+			Ctx context.Context
 		}
 	}
 	lockDeviceID   sync.RWMutex
@@ -117,19 +117,19 @@ func (mock *DeviceMock) DeviceNameCalls() []struct {
 }
 
 // Setup calls SetupFunc.
-func (mock *DeviceMock) Setup(contextMoqParam context.Context) context.Context {
+func (mock *DeviceMock) Setup(ctx context.Context) context.Context {
 	if mock.SetupFunc == nil {
 		panic("DeviceMock.SetupFunc: method is nil but Device.Setup was just called")
 	}
 	callInfo := struct {
-		ContextMoqParam context.Context
+		Ctx context.Context
 	}{
-		ContextMoqParam: contextMoqParam,
+		Ctx: ctx,
 	}
 	mock.lockSetup.Lock()
 	mock.calls.Setup = append(mock.calls.Setup, callInfo)
 	mock.lockSetup.Unlock()
-	return mock.SetupFunc(contextMoqParam)
+	return mock.SetupFunc(ctx)
 }
 
 // SetupCalls gets all the calls that were made to Setup.
@@ -137,10 +137,10 @@ func (mock *DeviceMock) Setup(contextMoqParam context.Context) context.Context {
 //
 //	len(mockedDevice.SetupCalls())
 func (mock *DeviceMock) SetupCalls() []struct {
-	ContextMoqParam context.Context
+	Ctx context.Context
 } {
 	var calls []struct {
-		ContextMoqParam context.Context
+		Ctx context.Context
 	}
 	mock.lockSetup.RLock()
 	calls = mock.calls.Setup

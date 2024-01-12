@@ -12,7 +12,7 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/agent/ui"
 )
 
-//go:generate moq -out mockDevice.go . Device
+//go:generate moq -out mockDevice_test.go . Device
 type Device interface {
 	DeviceName() string
 	DeviceID() string
@@ -22,7 +22,7 @@ type Device interface {
 // UI are the methods required for the agent to display its windows, tray
 // and notifications
 //
-//go:generate moq -out mockAgentUI_test.go . AgentUI
+//go:generate moq -out mockUI_test.go . UI
 type UI interface {
 	DisplayNotification(title, message string)
 	DisplayTrayIcon(agent ui.Agent, cfg config.Config, trk ui.SensorTracker)
