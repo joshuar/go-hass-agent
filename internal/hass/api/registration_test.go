@@ -14,7 +14,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/joshuar/go-hass-agent/internal/agent/config"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -164,64 +163,31 @@ func TestRegisterWithHass(t *testing.T) {
 		Secret:       "",
 		WebhookID:    "someID",
 	}
-	okJson, err := json.Marshal(okResponse)
+	okJSON, err := json.Marshal(okResponse)
+	assert.Nil(t, err)
+
+	notokResponse := &RegistrationResponse{
+		CloudhookURL: "",
+		RemoteUIURL:  "",
+		Secret:       "",
+		WebhookID:    "",
+	}
+	notokJSON, err := json.Marshal(notokResponse)
 	assert.Nil(t, err)
 
 	newMockServer := func(t *testing.T) *httptest.Server {
 		return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusOK)
-			w.Write(okJson)
+			token := r.Header.Get(authHeader)
+			if token != "Bearer" {
+				w.WriteHeader(http.StatusOK)
+				w.Write(okJSON)
+			} else {
+				w.WriteHeader(http.StatusBadRequest)
+				w.Write(notokJSON)
+			}
 		}))
 	}
 	mockServer := newMockServer(t)
-
-	goodRegConfig := &AgentConfigMock{
-		GetFunc: func(s string, ifaceVal any) error {
-			v := ifaceVal.(*string)
-			switch s {
-			case config.PrefHost:
-				*v = mockServer.URL
-				return nil
-			case config.PrefToken:
-				*v = "aToken"
-				return nil
-			default:
-				return errors.New("not found")
-			}
-		},
-	}
-
-	badRegServer := &AgentConfigMock{
-		GetFunc: func(s string, ifaceVal any) error {
-			v := ifaceVal.(*string)
-			switch s {
-			case config.PrefHost:
-				*v = "notaurl"
-				return nil
-			case config.PrefToken:
-				*v = "aToken"
-				return nil
-			default:
-				return errors.New("not found")
-			}
-		},
-	}
-
-	badRegToken := &AgentConfigMock{
-		GetFunc: func(s string, ifaceVal any) error {
-			v := ifaceVal.(*string)
-			switch s {
-			case config.PrefHost:
-				*v = mockServer.URL
-				return nil
-			case config.PrefToken:
-				*v = ""
-				return nil
-			default:
-				return errors.New("not found")
-			}
-		},
-	}
 
 	mockDevInfo := &DeviceInfoMock{
 		MarshalJSONFunc: func() ([]byte, error) { return []byte(`{"AppName":"aDevice"}`), nil },
@@ -231,9 +197,10 @@ func TestRegisterWithHass(t *testing.T) {
 	}
 
 	type args struct {
-		ctx       context.Context
-		cfg config.Config
-		device    DeviceInfo
+		ctx    context.Context
+		server string
+		token  string
+		device DeviceInfo
 	}
 	tests := []struct {
 		name    string
@@ -244,18 +211,20 @@ func TestRegisterWithHass(t *testing.T) {
 		{
 			name: "successful test",
 			args: args{
-				ctx:       context.Background(),
-				cfg: goodRegConfig,
-				device:    mockDevInfo,
+				ctx:    context.Background(),
+				server: mockServer.URL,
+				token:  "aToken",
+				device: mockDevInfo,
 			},
 			want: okResponse,
 		},
 		{
 			name: "bad device",
 			args: args{
-				ctx:       context.Background(),
-				cfg: goodRegConfig,
-				device:    mockBadDevInfo,
+				ctx:    context.Background(),
+				server: mockServer.URL,
+				token:  "aToken",
+				device: mockBadDevInfo,
 			},
 			want:    nil,
 			wantErr: true,
@@ -263,9 +232,10 @@ func TestRegisterWithHass(t *testing.T) {
 		{
 			name: "bad server url",
 			args: args{
-				ctx:       context.Background(),
-				cfg: badRegServer,
-				device:    mockDevInfo,
+				ctx:    context.Background(),
+				server: "notAURL",
+				token:  "aToken",
+				device: mockDevInfo,
 			},
 			want:    nil,
 			wantErr: true,
@@ -273,9 +243,10 @@ func TestRegisterWithHass(t *testing.T) {
 		{
 			name: "bad token",
 			args: args{
-				ctx:       context.Background(),
-				cfg: badRegToken,
-				device:    mockDevInfo,
+				ctx:    context.Background(),
+				server: mockServer.URL,
+				token:  "",
+				device: mockDevInfo,
 			},
 			want:    nil,
 			wantErr: true,
@@ -283,7 +254,7 @@ func TestRegisterWithHass(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := RegisterWithHass(tt.args.ctx, tt.args.cfg, tt.args.device)
+			got, err := RegisterWithHass(tt.args.ctx, tt.args.server, tt.args.token, tt.args.device)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("RegisterWithHass() error = %v, wantErr %v", err, tt.wantErr)
 				return
