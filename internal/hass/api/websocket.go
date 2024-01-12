@@ -59,7 +59,13 @@ type websocketResponse struct {
 	Success bool   `json:"success,omitempty"`
 }
 
-func StartWebsocket(ctx context.Context, cfg config.Config, notifyCh chan [2]string) {
+func StartWebsocket(ctx context.Context, notifyCh chan [2]string) {
+	cfg := config.FetchFromContext(ctx)
+	if cfg == nil {
+		log.Warn().Msg("Cannot retrieve config. Cannot listen for notifications.")
+		return
+	}
+
 	var websocketURL string
 	if err := cfg.Get(config.PrefWebsocketURL, &websocketURL); err != nil {
 		log.Warn().Err(err).Msg("Could not retrieve websocket URL from config.")

@@ -5,7 +5,8 @@
         "vscode",
         "ui",
         "README",
-        "go"
+        "go",
+        "all"
     ],
     "go.lintTool": "golangci-lint",
     "go.lintFlags": [

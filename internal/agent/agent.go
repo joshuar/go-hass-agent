@@ -103,7 +103,7 @@ func Run(options Options) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			agent.runNotificationsWorker(ctx, cfg, options)
+			agent.runNotificationsWorker(ctx, options)
 		}()
 	}()
 
