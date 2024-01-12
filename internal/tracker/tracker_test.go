@@ -16,6 +16,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/joshuar/go-hass-agent/internal/agent/config"
 	"github.com/joshuar/go-hass-agent/internal/hass/api"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/stretchr/testify/assert"
@@ -191,10 +192,11 @@ func TestSensorTracker_SensorList(t *testing.T) {
 func TestSensorTracker_send(t *testing.T) {
 	mockServer := mockServer(t)
 	defer mockServer.Close()
-	mockConfig := &api.APIConfig{
-		APIURL: mockServer.URL,
-	}
-	ctx := api.NewContext(context.TODO(), mockConfig)
+	cfg, err := config.Load(t.TempDir())
+	assert.Nil(t, err)
+	err = cfg.Set(config.PrefAPIURL, mockServer.URL)
+	assert.Nil(t, err)
+	ctx := config.EmbedInContext(context.TODO(), cfg)
 	mockUpdate := &SensorMock{
 		IDFunc:         func() string { return "updateID" },
 		NameFunc:       func() string { return "Update Sensor" },
@@ -420,10 +422,12 @@ func TestSensorTracker_handle(t *testing.T) {
 func TestSensorTracker_UpdateSensors(t *testing.T) {
 	mockServer := mockServer(t)
 	defer mockServer.Close()
-	mockConfig := &api.APIConfig{
-		APIURL: mockServer.URL,
-	}
-	ctx := api.NewContext(context.TODO(), mockConfig)
+	cfg, err := config.Load(t.TempDir())
+	assert.Nil(t, err)
+	err = cfg.Set(config.PrefAPIURL, mockServer.URL)
+	assert.Nil(t, err)
+	ctx := config.EmbedInContext(context.TODO(), cfg)
+
 	mockUpdate := &SensorMock{
 		IDFunc:         func() string { return "updateID" },
 		NameFunc:       func() string { return "Update Sensor" },
@@ -512,7 +516,7 @@ func TestSensorTracker_UpdateSensors(t *testing.T) {
 func TestNewSensorTracker(t *testing.T) {
 	testID := "go-hass-agent-test"
 	basePath = t.TempDir()
-	assert.Nil(t, os.Mkdir(filepath.Join(basePath, testID), 0755))
+	assert.Nil(t, os.Mkdir(filepath.Join(basePath, testID), 0o755))
 	type args struct {
 		id string
 	}
