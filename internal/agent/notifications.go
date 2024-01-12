@@ -13,8 +13,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func (agent *Agent) runNotificationsWorker(ctx context.Context, options Options) {
-	if options.Headless {
+func (agent *Agent) runNotificationsWorker(ctx context.Context) {
+	if agent.IsHeadless() {
 		log.Warn().Msg("Will not send notifications as there is no supported windowing environment.")
 		return
 	}
