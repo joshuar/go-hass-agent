@@ -7,18 +7,18 @@ package api
 
 import (
 	"context"
-	"errors"
 	"net/url"
 	"time"
 
 	"github.com/carlmjohnson/requests"
-	"github.com/joshuar/go-hass-agent/internal/agent/config"
 	"github.com/rs/zerolog/log"
 )
 
 const (
-	websocketPath = "/api/websocket"
-	webHookPath   = "/api/webhook/"
+	websocketPath    = "/api/websocket"
+	webHookPath      = "/api/webhook/"
+	registrationPath = "/api/mobile_app/registrations"
+	authHeader       = "Authorization"
 )
 
 //go:generate moq -out mock_RegistrationInfo_test.go . RegistrationInfo
@@ -86,33 +86,24 @@ type RegistrationRequest struct {
 	SupportsEncryption bool   `json:"supports_encryption"`
 }
 
-func RegisterWithHass(ctx context.Context, cfg config.Config, device DeviceInfo) (*RegistrationResponse, error) {
+func RegisterWithHass(ctx context.Context, server, token string, device DeviceInfo) (*RegistrationResponse, error) {
 	request, err := device.MarshalJSON()
 	if err != nil {
 		return nil, err
 	}
-	var u string
-	if err = cfg.Get(config.PrefHost, &u); err != nil {
-		return nil, errors.New("invalid host")
-	}
 
-	serverURL, err := url.Parse(u)
+	serverURL, err := url.Parse(server)
 	if err != nil {
 		return nil, err
 	}
-	serverURL = serverURL.JoinPath("/api/mobile_app/registrations")
-
-	var token string
-	if err = cfg.Get(config.PrefToken, &token); err != nil || token == "" {
-		return nil, errors.New("invalid token")
-	}
+	serverURL = serverURL.JoinPath(registrationPath)
 
 	var response *RegistrationResponse
 	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
 	err = requests.
 		URL(serverURL.String()).
-		Header("Authorization", "Bearer "+token).
+		Header(authHeader, "Bearer "+token).
 		BodyBytes(request).
 		ToJSON(&response).
 		Fetch(ctx)

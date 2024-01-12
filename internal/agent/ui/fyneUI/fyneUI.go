@@ -142,7 +142,7 @@ func (i *fyneUI) DisplayRegistrationWindow(ctx context.Context, agent ui.Agent, 
 
 	var allFormItems []*widget.FormItem
 
-	allFormItems = append(allFormItems, i.serverConfigItems(ctx, agent, cfg, i.text)...)
+	allFormItems = append(allFormItems, serverConfigItems(ctx, agent, cfg, i.text)...)
 	registrationForm := widget.NewForm(allFormItems...)
 	registrationForm.OnSubmit = func() {
 		w.Close()
@@ -297,13 +297,13 @@ func (i *fyneUI) agentSettingsWindow(agent ui.Agent, t *translations.Translator)
 
 // serverConfigItems generates a list of form item widgets for selecting a
 // server to register the agent against.
-func (i *fyneUI) serverConfigItems(ctx context.Context, agent ui.Agent, cfg config.Config, t *translations.Translator) []*widget.FormItem {
+func serverConfigItems(ctx context.Context, agent ui.Agent, cfg config.Config, t *translations.Translator) []*widget.FormItem {
 	allServers := hass.FindServers(ctx)
 
-	tokenEntry := configEntry(agent, cfg, config.PrefToken, "ASecretLongLivedToken", false)
+	tokenEntry := configEntry(cfg, config.PrefToken, "ASecretLongLivedToken", false)
 	tokenEntry.Validator = validation.NewRegexp("[A-Za-z0-9_\\.]+", "Invalid token format")
 
-	serverEntry := configEntry(agent, cfg, config.PrefHost, allServers[0], false)
+	serverEntry := configEntry(cfg, config.PrefHost, allServers[0], false)
 	serverEntry.Validator = httpValidator()
 	serverEntry.Disable()
 
@@ -378,7 +378,7 @@ func (i *fyneUI) serverConfigItems(ctx context.Context, agent ui.Agent, cfg conf
 // configEntry creates a form entry widget that is tied to the given config
 // value of the given agent. When the value of the entry widget changes, the
 // corresponding config value will be updated.
-func configEntry(agent ui.Agent, cfg config.Config, name, placeholder string, secret bool) *widget.Entry {
+func configEntry(cfg config.Config, name, placeholder string, secret bool) *widget.Entry {
 	var entry *widget.Entry
 	if secret {
 		entry = widget.NewPasswordEntry()

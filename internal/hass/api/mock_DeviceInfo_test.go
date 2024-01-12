@@ -17,7 +17,7 @@ var _ DeviceInfo = &DeviceInfoMock{}
 //
 //		// make and configure a mocked DeviceInfo
 //		mockedDeviceInfo := &DeviceInfoMock{
-//			AppDataFunc: func() interface{} {
+//			AppDataFunc: func() any {
 //				panic("mock out the AppData method")
 //			},
 //			AppIDFunc: func() string {
@@ -61,7 +61,7 @@ var _ DeviceInfo = &DeviceInfoMock{}
 //	}
 type DeviceInfoMock struct {
 	// AppDataFunc mocks the AppData method.
-	AppDataFunc func() interface{}
+	AppDataFunc func() any
 
 	// AppIDFunc mocks the AppID method.
 	AppIDFunc func() string
@@ -150,7 +150,7 @@ type DeviceInfoMock struct {
 }
 
 // AppData calls AppDataFunc.
-func (mock *DeviceInfoMock) AppData() interface{} {
+func (mock *DeviceInfoMock) AppData() any {
 	if mock.AppDataFunc == nil {
 		panic("DeviceInfoMock.AppDataFunc: method is nil but DeviceInfo.AppData was just called")
 	}

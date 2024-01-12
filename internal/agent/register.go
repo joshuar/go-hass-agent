@@ -55,19 +55,14 @@ func saveRegistration(cfg config.Config, r *api.RegistrationResponse, d api.Devi
 // registration details and save the results into the agent config.
 func (agent *Agent) performRegistration(ctx context.Context, cfg config.Config) {
 	log.Info().Msg("Registration required. Starting registration process.")
-	if agent.options.Server != "" {
-		if !validateRegistrationSetting("server", agent.options.Server) {
-			log.Fatal().Msg("Server setting is not valid.")
-		} else if err := cfg.Set(config.PrefHost, agent.options.Server); err != nil {
-			log.Fatal().Err(err).Msg("Could not set host preference.")
-		}
+	if !validRegistrationSetting("server", agent.options.Server) || !validRegistrationSetting("token", agent.options.Token) {
+		log.Fatal().Msg("Cannot register, invalid host and/or token.")
 	}
-	if agent.options.Token != "" {
-		if !validateRegistrationSetting("token", agent.options.Token) {
-			log.Fatal().Msg("Token setting is not valid.")
-		} else if err := cfg.Set(config.PrefToken, agent.options.Token); err != nil {
-			log.Fatal().Err(err).Msg("Could not set token preference.")
-		}
+	if err := cfg.Set(config.PrefHost, agent.options.Server); err != nil {
+		log.Fatal().Err(err).Msg("Could not set host preference.")
+	}
+	if err := cfg.Set(config.PrefToken, agent.options.Token); err != nil {
+		log.Fatal().Err(err).Msg("Could not set token preference.")
 	}
 
 	device := newDevice(ctx)
@@ -76,7 +71,7 @@ func (agent *Agent) performRegistration(ctx context.Context, cfg config.Config) 
 		agent.ui.DisplayRegistrationWindow(ctx, agent, cfg, userInputDone)
 		<-userInputDone
 	}
-	resp, err := api.RegisterWithHass(ctx, cfg, device)
+	resp, err := api.RegisterWithHass(ctx, agent.options.Server, agent.options.Token, device)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Could not register with Home Assistant.")
 	}
@@ -104,7 +99,10 @@ func (agent *Agent) checkRegistration(t *tracker.SensorTracker, c config.Config)
 	}
 }
 
-func validateRegistrationSetting(key, value string) bool {
+func validRegistrationSetting(key, value string) bool {
+	if value == "" {
+		return false
+	}
 	validate := validator.New()
 	check := func(value string, validation string) bool {
 		if err := validate.Var(value, validation); err != nil {
