@@ -17,6 +17,7 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/agent/config"
 	fyneui "github.com/joshuar/go-hass-agent/internal/agent/ui/fyneUI"
 	"github.com/joshuar/go-hass-agent/internal/device"
+	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/scripts"
 	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/robfig/cron/v3"
@@ -173,18 +174,18 @@ func startWorkers(ctx context.Context, trk *tracker.SensorTracker) {
 	go func() {
 		defer wg.Done()
 		for s := range tracker.MergeSensorCh(ctx, outCh...) {
-			if err := trk.UpdateSensors(ctx, s); err != nil {
-				log.Error().Err(err).Msg("Could not update sensor.")
-			}
+			go func(s tracker.Sensor) {
+				trk.UpdateSensors(ctx, s)
+			}(s)
 		}
 	}()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		for l := range locationWorker()(workerCtx) {
-			if err := trk.UpdateSensors(ctx, l); err != nil {
-				log.Error().Err(err).Msg("Could not update sensor.")
-			}
+			go func(l *hass.LocationData) {
+				trk.UpdateSensors(ctx, l)
+			}(l)
 		}
 	}()
 
@@ -225,9 +226,9 @@ func runScripts(ctx context.Context, path string, trk *tracker.SensorTracker) {
 	c.Start()
 	go func() {
 		for s := range tracker.MergeSensorCh(ctx, outCh...) {
-			if err := trk.UpdateSensors(ctx, s); err != nil {
-				log.Error().Err(err).Msg("Could not update script sensor.")
-			}
+			go func(s tracker.Sensor) {
+				trk.UpdateSensors(ctx, s)
+			}(s)
 		}
 	}()
 	<-ctx.Done()
