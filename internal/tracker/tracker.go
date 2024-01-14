@@ -13,10 +13,10 @@ import (
 	"sort"
 	"sync"
 
+	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/hass/api"
 	registry "github.com/joshuar/go-hass-agent/internal/tracker/registry/jsonFiles"
 	"github.com/rs/zerolog/log"
-	"golang.org/x/sync/errgroup"
 )
 
 var basePath = filepath.Join(os.Getenv("HOME"), ".config")
@@ -157,33 +157,15 @@ func (t *SensorTracker) handle(response apiResponse, sensorUpdate Sensor) {
 // UpdateSensors is the externally exposed method that devices can use to send a
 // sensor state update.  It takes any number of sensor state updates of any type
 // and handles them as appropriate.
-func (t *SensorTracker) UpdateSensors(ctx context.Context, sensors ...any) error {
-	g, _ := errgroup.WithContext(ctx)
-	sensorData := make(chan any, len(sensors))
-
-	for i := 0; i < len(sensors); i++ {
-		sensorData <- sensors[i]
+func (t *SensorTracker) UpdateSensors(ctx context.Context, s any) {
+	switch sensor := s.(type) {
+	case Sensor:
+		t.send(ctx, sensor)
+	case *hass.LocationData:
+		updateLocation(ctx, sensor)
+	default:
+		log.Warn().Msgf("Unknown sensor received %v", sensor)
 	}
-
-	g.Go(func() error {
-		var i int
-		for s := range sensorData {
-			switch sensor := s.(type) {
-			case Sensor:
-				t.send(ctx, sensor)
-			case Location:
-				updateLocation(ctx, sensor)
-			default:
-				log.Warn().Msgf("Unknown sensor received %v", sensor)
-			}
-			i++
-		}
-		log.Trace().Int("sensorsUpdated", i).Msg("Finished updating sensors.")
-		return nil
-	})
-
-	close(sensorData)
-	return g.Wait()
 }
 
 func (t *SensorTracker) Reset() {
