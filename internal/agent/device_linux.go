@@ -9,6 +9,7 @@ import (
 	"context"
 
 	"github.com/joshuar/go-hass-agent/internal/agent/config"
+	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/linux/apps"
 	"github.com/joshuar/go-hass-agent/internal/linux/battery"
@@ -52,6 +53,6 @@ func sensorWorkers() []func(context.Context) chan tracker.Sensor {
 	return workers
 }
 
-func locationWorker() func(context.Context) chan tracker.Location {
+func locationWorker() func(context.Context) chan *hass.LocationData {
 	return location.Updater
 }

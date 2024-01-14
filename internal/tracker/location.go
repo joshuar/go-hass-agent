@@ -13,35 +13,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// LocationUpdate represents a location update from a platform/device. It
-// provides a bridge between the platform/device specific location info and Home
-// Assistant.
-type Location interface {
-	Gps() []float64
-	GpsAccuracy() int
-	Battery() int
-	Speed() int
-	Altitude() int
-	Course() int
-	VerticalAccuracy() int
-}
-
-// marshalLocationUpdate will take a LocationUpdate and marshal it into a
-// hass.LocationUpdate that can be sent as a request to HA.
-func marshalLocationUpdate(l Location) *hass.LocationUpdate {
-	return &hass.LocationUpdate{
-		Gps:              l.Gps(),
-		GpsAccuracy:      l.GpsAccuracy(),
-		Battery:          l.Battery(),
-		Speed:            l.Speed(),
-		Altitude:         l.Altitude(),
-		Course:           l.Course(),
-		VerticalAccuracy: l.VerticalAccuracy(),
-	}
-}
-
-func updateLocation(ctx context.Context, l Location) {
-	response := <-api.ExecuteRequest(ctx, marshalLocationUpdate(l))
+func updateLocation(ctx context.Context, l *hass.LocationData) {
+	response := <-api.ExecuteRequest(ctx, l)
 	switch r := response.(type) {
 	case []byte:
 		log.Debug().Msg("Location Updated.")
