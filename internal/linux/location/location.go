@@ -9,7 +9,7 @@ import (
 	"context"
 
 	"github.com/godbus/dbus/v5"
-	"github.com/joshuar/go-hass-agent/internal/tracker"
+	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/pkg/dbushelpers"
 	"github.com/rs/zerolog/log"
 )
@@ -31,46 +31,8 @@ const (
 	locationUpdatedSignal = "org.freedesktop.GeoClue2.Client.LocationUpdated"
 )
 
-type linuxLocation struct {
-	latitude  float64
-	longitude float64
-	accuracy  float64
-	speed     float64
-	altitude  float64
-}
-
-// linuxLocation implements hass.LocationUpdate
-
-func (l *linuxLocation) Gps() []float64 {
-	return []float64{l.latitude, l.longitude}
-}
-
-func (l *linuxLocation) GpsAccuracy() int {
-	return int(l.accuracy)
-}
-
-func (l *linuxLocation) Battery() int {
-	return 0
-}
-
-func (l *linuxLocation) Speed() int {
-	return int(l.speed)
-}
-
-func (l *linuxLocation) Altitude() int {
-	return int(l.altitude)
-}
-
-func (l *linuxLocation) Course() int {
-	return 0
-}
-
-func (l *linuxLocation) VerticalAccuracy() int {
-	return 0
-}
-
-func Updater(ctx context.Context) chan tracker.Location {
-	sensorCh := make(chan tracker.Location, 1)
+func Updater(ctx context.Context) chan *hass.LocationData {
+	sensorCh := make(chan *hass.LocationData, 1)
 	locationUpdateHandler := func(s *dbus.Signal) {
 		if s.Name == locationUpdatedSignal {
 			if locationPath, ok := s.Body[1].(dbus.ObjectPath); ok {
@@ -135,7 +97,7 @@ func Updater(ctx context.Context) chan tracker.Location {
 	return sensorCh
 }
 
-func newLocation(ctx context.Context, locationPath dbus.ObjectPath) *linuxLocation {
+func newLocation(ctx context.Context, locationPath dbus.ObjectPath) *hass.LocationData {
 	getProp := func(prop string) float64 {
 		value, err := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
 			Path(locationPath).
@@ -149,11 +111,10 @@ func newLocation(ctx context.Context, locationPath dbus.ObjectPath) *linuxLocati
 			return dbushelpers.VariantToValue[float64](value)
 		}
 	}
-	return &linuxLocation{
-		latitude:  getProp("Latitude"),
-		longitude: getProp("Longitude"),
-		accuracy:  getProp("Accuracy"),
-		speed:     getProp("Speed"),
-		altitude:  getProp("Altitude"),
+	return &hass.LocationData{
+		Gps:         []float64{getProp("Latitude"), getProp("Longitude")},
+		GpsAccuracy: int(getProp("Accuracy")),
+		Speed:       int(getProp("Speed")),
+		Altitude:    int(getProp("Altitude")),
 	}
 }
