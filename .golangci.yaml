@@ -16,14 +16,14 @@ linters-settings:
       - name: add-constant
         disabled: true
   gocyclo:
-    # Minimal code complexity to report.
-    # Default: 30 (but we recommend 10-20)
-    min-complexity: 20
+    min-complexity: 15
+  goimports:
+    local-prefixes: github.com/joshuar/go-hass-agent
   dupl:
     threshold: 100
   funlen:
-    lines: 180
-    statements: 100
+    lines: 100
+    statements: 50
   goconst:
     min-len: 2
     min-occurrences: 3
