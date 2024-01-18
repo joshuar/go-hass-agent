@@ -2,9 +2,7 @@ before:
   hooks:
     - go mod tidy
     - desktop-file-validate assets/go-hass-agent.desktop
-
 report_sizes: true
-
 changelog:
   use: github-native
   sort: asc
@@ -13,7 +11,6 @@ changelog:
     exclude:
       - "^docs:"
       - typo
-
 builds:
   - env:
       - CGO_ENABLED=1
@@ -30,7 +27,6 @@ builds:
         - go generate ./...
       post:
         - fyne-cross linux -icon internal/agent/ui/assets/logo-pretty.png -release -app-version {{.RawVersion}}
-
 signs:
 - cmd: cosign
   stdin: '{{ .Env.COSIGN_PWD }}'
@@ -41,14 +37,11 @@ signs:
   - "${artifact}"
   - "--yes" # needed on cosign 2.0.0+
   artifacts: all
-
 archives:
   - format: binary
-
 release:
   extra_files:
     - glob: fyne-cross/dist/linux-amd64/go-hass-agent.tar.xz
-
 nfpms:
   - id: go-hass-agent
     package_name: go-hass-agent
