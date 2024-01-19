@@ -8,7 +8,7 @@ jobs:
     steps:
       - name: Checkout
         id: checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install/Cache dependencies
         id: cache_pkg_deps
