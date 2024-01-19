@@ -31,5 +31,11 @@
         "editor.codeActionsOnSave": {
             "source.organizeImports": true,
         },
-    },    
+    },
+    "[go][go.mod]": {
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": "explicit"
+        }
+    },
+    
 }
