@@ -1,5 +1,21 @@
 # Changelog
 
+## [6.2.0](https://github.com/joshuar/go-hass-agent/compare/v6.1.2...v6.2.0) (2024-01-14)
+
+
+### Features
+
+* **agent:** :fire: remove unused and unnecessary info command ([dcc0a31](https://github.com/joshuar/go-hass-agent/commit/dcc0a316e4b62b881da1eef3f30810f196ca57e8))
+* **agent:** :sparkles: add error types for use by config code ([961f98f](https://github.com/joshuar/go-hass-agent/commit/961f98f73f3591691d6ceb1d36ecd7dd49cb8a94))
+* **agent:** :sparkles: Allow embedding config interface in context ([058950d](https://github.com/joshuar/go-hass-agent/commit/058950d91e580d5eb2ece9d57589bcab87650497))
+* **agent:** :zap: simplify config upgrade and validation process ([7fcf14b](https://github.com/joshuar/go-hass-agent/commit/7fcf14bdc8087d8760ce88f9137eea4c72e78457))
+
+
+### Bug Fixes
+
+* **agent:** :building_construction: wrap workers, scripts and notifications in goroutine with waitgroup ([e593dff](https://github.com/joshuar/go-hass-agent/commit/e593dff2f936eeccff721eff9818dff5321244df))
+* **container:** ensure agent runs as a non-privleged user inside a container ([1a3168f](https://github.com/joshuar/go-hass-agent/commit/1a3168f45fc218ebabd5a68dd9f37171bc10cd86))
+
 ## [6.1.2](https://github.com/joshuar/go-hass-agent/compare/v6.1.1...v6.1.2) (2024-01-04)
 
 
