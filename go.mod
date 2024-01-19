@@ -6,7 +6,7 @@ require (
 	fyne.io/fyne/v2 v2.4.2
 	github.com/carlmjohnson/requests v0.23.5
 	github.com/cenkalti/backoff/v4 v4.2.1
-	github.com/go-playground/validator/v10 v10.16.0
+	github.com/go-playground/validator/v10 v10.17.0
 	github.com/godbus/dbus/v5 v5.1.0
 	github.com/grandcat/zeroconf v1.0.0
 	github.com/iancoleman/strcase v0.3.0
