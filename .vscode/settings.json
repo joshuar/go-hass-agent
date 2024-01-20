@@ -18,7 +18,13 @@
     ],
     "gopls": { 
         "ui.semanticTokens": true,
-        "formatting.gofumpt": true 
+        "ui.noSemanticString": true,  // delegates string syntax highlighting to vscode
+        "ui.noSemanticNumber": true,  // delegates number syntax highlighting to vscode
+        "formatting.gofumpt": true,
+        "ui.diagnostic.analyses": {
+            "fieldalignment": true, // Disable the unreachable analyzer.
+            "unusedvariable": true
+        }
     },
     "go.useLanguageServer": true,
     "[go]": {
