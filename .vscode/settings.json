@@ -9,7 +9,8 @@
         "all",
         "hass/api",
         "tracker",
-        "devcontainer"
+        "devcontainer",
+        "linux/hwmon"
     ],
     "go.lintTool": "golangci-lint",
     "go.lintFlags": [
@@ -24,6 +25,7 @@
         "editor.formatOnSave": true,
         "editor.codeActionsOnSave": {
             "source.organizeImports": true,
+            "source.fixAll": true
         },
     },
     "[go.mod]": {
