@@ -46,6 +46,7 @@ type Chip struct {
 // Attributes, which are additional measurements like max/min/avg of the value.
 type Sensor struct {
 	chip, label, name string
+	scaleFactor       float64
 	value             float64
 	stype             SensorType
 	Attributes        []Attribute
@@ -53,7 +54,7 @@ type Sensor struct {
 
 // Value returns the sensor value.
 func (s *Sensor) Value() float64 {
-	return s.value
+	return s.value / s.scaleFactor
 }
 
 // Name returns a name for the sensor. It will be derived from the chip name
@@ -68,7 +69,7 @@ func (s *Sensor) Name() string {
 // String will format the sensor name and value as a string.
 func (s *Sensor) String() string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "%s: %.f [%s]", s.Name(), s.value, s.stype)
+	fmt.Fprintf(&b, "%s: %.2f [%s]", s.Name(), s.Value(), s.stype)
 	for i, a := range s.Attributes {
 		if i == 0 {
 			fmt.Fprintf(&b, " (")
@@ -99,16 +100,18 @@ func (s *Sensor) update(d details) error {
 		if err != nil {
 			return err
 		}
-		s.Attributes = append(s.Attributes, Attribute{Name: d.suffix, Value: v})
+		s.Attributes = append(s.Attributes, Attribute{Name: d.suffix, Value: v / s.scaleFactor})
 	}
 	return nil
 }
 
 func newSensor(chip, name string) *Sensor {
+	t, s := getType(name)
 	return &Sensor{
-		chip:  chip,
-		name:  name,
-		stype: getType(name),
+		chip:        chip,
+		name:        name,
+		stype:       t,
+		scaleFactor: s,
 	}
 }
 
@@ -121,7 +124,7 @@ type Attribute struct {
 
 // String will format the attribute name and value as a string.
 func (a *Attribute) String() string {
-	return fmt.Sprintf("%s: %.f", a.Name, a.Value)
+	return fmt.Sprintf("%s: %.2f", a.Name, a.Value)
 }
 
 type details struct {
@@ -261,28 +264,28 @@ func getValue(p string) (string, error) {
 	return strings.TrimSpace(string(b)), nil
 }
 
-func getType(n string) SensorType {
+func getType(n string) (SensorType, float64) {
 	switch {
 	case strings.Contains(n, "temp"):
-		return Temp
+		return Temp, 1000
 	case strings.Contains(n, "fan"):
-		return Fan
+		return Fan, 1
 	case strings.Contains(n, "in"):
-		return Voltage
+		return Voltage, 1000
 	case strings.Contains(n, "pwm"):
-		return PWM
+		return PWM, 1
 	case strings.Contains(n, "curr"):
-		return Current
+		return Current, 1
 	case strings.Contains(n, "power"):
-		return Power
+		return Power, 1000
 	case strings.Contains(n, "energy"):
-		return Energy
+		return Energy, 1000
 	case strings.Contains(n, "humidity"):
-		return Humidity
+		return Humidity, 1
 	case strings.Contains(n, "freq"):
-		return Frequency
+		return Frequency, 1000
 	default:
-		return Unknown
+		return Unknown, 1
 	}
 }
 
