@@ -5,3 +5,5 @@ Hass
 Fyne
 ProcFS
 cron
+fyne-cross
+goreleaser
