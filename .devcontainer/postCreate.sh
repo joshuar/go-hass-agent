@@ -1,11 +1,5 @@
 #!/usr/bin/env bash
 
-# Copyright (c) 2023 Joshua Rich <joshua.rich@gmail.com>
-# 
-# This software is released under the MIT License.
-# https://opensource.org/licenses/MIT
-
-# Stop on errors
 set -e
 
 cd /workspaces/go-hass-agent && go mod tidy
