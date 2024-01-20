@@ -295,20 +295,13 @@ func GetAllSensors() []Sensor {
 		return nil
 	}
 
-	var wg sync.WaitGroup
 	var sensors []Sensor
 
 	for _, f := range files {
 		c, _ := processChip(filepath.Join(hwmonPath, f.Name()))
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for chip := range c {
-				sensors = append(sensors, chip.Sensors...)
-			}
-		}()
+		chip := <-c
+		sensors = append(sensors, chip.Sensors...)
 	}
 
-	wg.Wait()
 	return sensors
 }
