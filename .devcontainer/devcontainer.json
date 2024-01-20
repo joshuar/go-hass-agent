@@ -4,35 +4,30 @@
     "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
     "shutdownAction": "stopCompose",
     "containerUser": "vscode",
-    "containerEnv": { 
-        "TZ": "${localEnv:TZ:Australia/Brisbane}", 
-        "DBUS_SESSION_BUS_ADDRESS": "${localEnv:DBUS_SESSION_BUS_ADDRESS}"
+    "containerEnv": {
+        "TZ": "${localEnv:TZ:Australia/Brisbane}"
     },
     "features": {
-        "ghcr.io/devcontainers/features/go:1": {},
-        "ghcr.io/devcontainers/features/python:1": {}
+        "ghcr.io/devcontainers/features/go:1": {}
     },
     "postCreateCommand": ".devcontainer/postCreate.sh",
     "postStartCommand": {
-        "dbus-system": "sudo service dbus start"
-        // "dbus-session": "export DBUS_SESSION_BUS_ADDRESS=$(dbus-daemon --session --print-address)"
-    },
-    "remoteEnv": {
-        "DBUS_SESSION_BUS_ADDRESS": "${containerEnv:DBUS_SESSION_BUS_ADDRESS}"
+        "dbus-system": "sudo service dbus start",
+        "dbus-session": "export DBUS_SESSION_BUS_ADDRESS=$(dbus-daemon --fork --config-file=/usr/share/dbus-1/session.conf --print-address)"
     },
     "customizations": {
         "vscode": {
             "extensions": [
                 "vivaxy.vscode-conventional-commits",
-                "brunodavi.conventional-snippets",
                 "golang.go",
-                "premparihar.gotestexplorer",
                 "ymotongpoo.licenser",
                 "esbenp.prettier-vscode",
                 "aaron-bond.better-comments",
                 "valentjn.vscode-ltex",
                 "eamodio.gitlens",
-                "github.vscode-github-actions"
+                "github.vscode-github-actions",
+                "DavidAnson.vscode-markdownlint",
+                "redhat.vscode-yaml"
             ],
             "settings": {
                 "terminal.integrated.defaultProfile.linux": "fish"
