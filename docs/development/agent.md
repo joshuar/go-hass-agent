@@ -48,18 +48,18 @@ All supported operating systems need to have code that satisfies the
 
 ```go
 type DeviceInfo interface {
-	DeviceID() string
-	AppID() string
-	AppName() string
-	AppVersion() string
-	DeviceName() string
-	Manufacturer() string
-	Model() string
-	OsName() string
-	OsVersion() string
-	SupportsEncryption() bool
-	AppData() interface{}
-	MarshalJSON() ([]byte, error)
+  DeviceID() string
+  AppID() string
+  AppName() string
+  AppVersion() string
+  DeviceName() string
+  Manufacturer() string
+  Model() string
+  OsName() string
+  OsVersion() string
+  SupportsEncryption() bool
+  AppData() interface{}
+  MarshalJSON() ([]byte, error)
 }
 ```
 
@@ -75,9 +75,9 @@ interface:
 
 ```go
 type Device interface {
-	DeviceName() string
-	DeviceID() string
-	Setup(context.Context) context.Context
+  DeviceName() string
+  DeviceID() string
+  Setup(context.Context) context.Context
 }
 ```
 
@@ -89,8 +89,8 @@ interfaces.
 initialising any APIs. For example on Linux, this function sets up D-Bus
 connections. By passing through a context, you can add context values containing
 any data that will be needed by the operating system code and return the new
-"loaded up" context. Again, on Linux, this function creates and then stores the
-D-Bus connections in a context value for later use by sensor code. The
+context. Again, on Linux, this function creates and then stores the D-Bus
+connections in a context value for later use by sensor code. The
 `internal/linux/device.go` contains the code that does this.
 
 Ideally the operating system code would expose a `NewDevice` function that

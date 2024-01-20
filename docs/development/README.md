@@ -26,8 +26,7 @@ go install github.com/matryer/moq@latest
 
 The Fyne UI toolkit that is used by Go Hass Agent also requires some development
 libraries installed. See the [Fyne prerequisites](https://developer.fyne.io/started/#prerequisites)
- documentation for what you need to install. 
-
+ documentation for what you need to install.
 
 ## Development Environment
 
@@ -48,7 +47,8 @@ container, as it is exposed as per above.
 
 ## Building
 
-Go Hass Agent makes use of `go generate` to generate some of the code. A typical build process would be:
+Go Hass Agent makes use of `go generate` to generate some of the code. A typical
+build process would be:
 
 ```shell
 go generate ./...
@@ -57,12 +57,12 @@ go build
 
 ### Packages
 
-Go Hass Agent uses [Goreleaser](https://goreleaser.com/intro/) to create
-packages for Fedora, Arch and Ubuntu and
+Go Hass Agent uses [goreleaser](https://goreleaser.com/intro/) to create
+packages for Fedora, Arch, and Ubuntu and
 [fyne-cross](https://github.com/fyne-io/fyne-cross) to create packages for
 Debian.
 
-To build a “local-only” package with Goreleaser:
+To build a “local-only” package with `goreleaser`:
 
 ```shell
 goreleaser release --snapshot --clean
@@ -70,10 +70,10 @@ goreleaser release --snapshot --clean
 
 Packages will be available under the `dist/` folder.
 
-See the [Goreleaser docs](https://goreleaser.com/quick-start/) for more commands
+See the [goreleaser docs](https://goreleaser.com/quick-start/) for more commands
 and information.
 
-To build a package for Debian with fyne-cross:
+To build a package for Debian with `fyne-cross`:
 
 ```shell
 fyne-cross linux -icon assets/trayicon/logo-pretty.png -release
@@ -83,7 +83,7 @@ The `.tar.xz` will be available under `fyne-cross/dist/linux-amd64/`.
 
 ### Container Images
 
-A Dockerfile that you can use to build an image can be found [here](../../Dockerfile). 
+A Dockerfile that you can use to build an image can be found [here](../../Dockerfile).
 
 You can build an image with a command like the following (using Podman):
 
@@ -133,5 +133,3 @@ throughout the code wherever a context is passed and available for retrieval and
 use.
 
 An example can be found in `device/device_linux.go`.
-
-

@@ -20,16 +20,16 @@ methods.
 
 ```go
 type SensorUpdate interface {
-	Name() string
-	ID() string
-	Icon() string
-	SensorType() SensorType
-	DeviceClass() SensorDeviceClass
-	StateClass() SensorStateClass
-	State() interface{}
-	Units() string
-	Category() string
-	Attributes() interface{}
+  Name() string
+  ID() string
+  Icon() string
+  SensorType() SensorType
+  DeviceClass() SensorDeviceClass
+  StateClass() SensorStateClass
+  State() interface{}
+  Units() string
+  Category() string
+  Attributes() interface{}
 }
 ```
 
@@ -38,7 +38,7 @@ type SensorUpdate interface {
 A friendly name for this sensor. It will be what is shown in the Home Assistant
 UI for the sensor.
 
-An example would be "My Network Sensor".
+An example would be “My Network Sensor”.
 
 ### ID() string
 
@@ -46,13 +46,13 @@ A unique ID for the sensor. This is used by Home Assistant to identify this
 particular sensor and store its state data in its database. This should be
 unique and never change. It should be formatted as snake case and all lowercase.
 
-An example would be "my_network_sensor_1".
+An example would be “my_network_sensor_1”.
 
 ### Icon() string
 
 The [Material Design Icon](https://pictogrammers.github.io/@mdi/font/2.0.46/)
 representing the current state. It can be changed dynamically based on the
-current state or remain constant. Format is "mdi:icon_name".
+current state or remain constant. Format is “mdi:icon_name”.
 
 ### SensorType() hass.SensorType
 
@@ -129,10 +129,10 @@ parameter. You can do this by including code similar to the following in your fu
 
 ```go
 go func() {
-	// Likely you'll want to clean up the sensor channel...
-	// defer close(chan tracker.Sensor)
-	<-ctx.Done
-	// any additional clean up code can go here...
+  // Likely you'll want to clean up the sensor channel...
+  // defer close(chan tracker.Sensor)
+  <-ctx.Done
+  // any additional clean up code can go here...
 }
 ```
 
@@ -140,19 +140,17 @@ Pseudo Go code of what a complete function would look like:
 
 ```go
 func SensorUpdater(ctx context.Context) chan tracker.Sensor {
-	sensorCh := make(chan tracker.Sensor, 1)
-	...code to set up your sensors...
-
-	for ...some timer, event channel, other loop... {
-		...code to create a sensor object...
-
-		// send your sensor updates
-		sensorCh <- sensor
-	}
-	go func() {
-		defer close(sensorCh)
-		<-ctx.Done()
-	}
+  sensorCh := make(chan tracker.Sensor, 1)
+  ...code to set up your sensors...
+  for ...some timer, event channel, other loop... {
+    ...code to create a sensor object...
+    // send your sensor updates
+    sensorCh <- sensor
+  }
+  go func() {
+    defer close(sensorCh)
+    <-ctx.Done()
+  }
 }
 ```
 
@@ -171,10 +169,10 @@ function, that should be created for each operating system:
 
 ```go
 func SetupSensors() *SensorInfo {
-	sensorInfo := NewSensorInfo()
-	sensorInfo.Add("Some name", SensorUpdater)
-	// add each SensorUpdater function here
-	return sensorInfo
+  sensorInfo := NewSensorInfo()
+  sensorInfo.Add("Some name", SensorUpdater)
+  // add each SensorUpdater function here
+  return sensorInfo
 }
 ```
 
