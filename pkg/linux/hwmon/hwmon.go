@@ -45,11 +45,11 @@ type Chip struct {
 // a name. The Sensor will also have a value. It may also have zero or more
 // Attributes, which are additional measurements like max/min/avg of the value.
 type Sensor struct {
-	chip, label, name string
-	scaleFactor       float64
-	value             float64
-	stype             SensorType
-	Attributes        []Attribute
+	chip, label, id, units string
+	scaleFactor            float64
+	value                  float64
+	stype                  SensorType
+	Attributes             []Attribute
 }
 
 // Value returns the sensor value.
@@ -63,13 +63,18 @@ func (s *Sensor) Name() string {
 	if s.label != "" {
 		return s.chip + " " + s.label
 	}
-	return s.chip + " " + s.name
+	return s.chip + " " + s.id
 }
 
-// String will format the sensor name and value as a string.
+// Units returns the units for the value of this sensor.
+func (s *Sensor) Units() string {
+	return s.units
+}
+
+// String will format the sensor name and value as a pretty string.
 func (s *Sensor) String() string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "%s: %.2f [%s]", s.Name(), s.Value(), s.stype)
+	fmt.Fprintf(&b, "%s: %.2f %s [%s]", s.Name(), s.Value(), s.Units(), s.stype)
 	for i, a := range s.Attributes {
 		if i == 0 {
 			fmt.Fprintf(&b, " (")
@@ -86,7 +91,7 @@ func (s *Sensor) String() string {
 }
 
 func (s *Sensor) update(d details) error {
-	switch d.suffix {
+	switch d.item {
 	case "input":
 		v, err := strconv.ParseFloat(d.value, 64)
 		if err != nil {
@@ -100,18 +105,19 @@ func (s *Sensor) update(d details) error {
 		if err != nil {
 			return err
 		}
-		s.Attributes = append(s.Attributes, Attribute{Name: d.suffix, Value: v / s.scaleFactor})
+		s.Attributes = append(s.Attributes, Attribute{Name: d.item, Value: v / s.scaleFactor})
 	}
 	return nil
 }
 
 func newSensor(chip, name string) *Sensor {
-	t, s := getType(name)
+	t, f, u := parseType(name)
 	return &Sensor{
 		chip:        chip,
-		name:        name,
+		id:          name,
 		stype:       t,
-		scaleFactor: s,
+		scaleFactor: f,
+		units:       u,
 	}
 }
 
@@ -122,27 +128,61 @@ type Attribute struct {
 	Value float64
 }
 
-// String will format the attribute name and value as a string.
+// String will format the attribute name and value as a pretty string.
 func (a *Attribute) String() string {
 	return fmt.Sprintf("%s: %.2f", a.Name, a.Value)
 }
 
 type details struct {
-	prefix string
-	suffix string
-	value  string
+	id    string
+	item  string
+	value string
 }
 
-func getSensorDetails(path, file string) (*details, error) {
-	pfx, sfx, ok := strings.Cut(file, "_")
+func getDetails(path, file string) (*details, error) {
+	i, t, ok := strings.Cut(file, "_")
 	if !ok {
 		return nil, fmt.Errorf("%s: not a sensor file", file)
 	}
-	strValue, err := getValue(filepath.Join(path, file))
+	v, err := getValue(filepath.Join(path, file))
 	if err != nil {
 		return nil, err
 	}
-	return &details{prefix: pfx, suffix: sfx, value: strValue}, nil
+	return &details{id: i, item: t, value: v}, nil
+}
+
+func getValue(p string) (string, error) {
+	var b []byte
+	var err error
+	if b, err = os.ReadFile(p); err != nil {
+		return "unknown", err
+	}
+	return strings.TrimSpace(string(b)), nil
+}
+
+func parseType(n string) (sensorType SensorType, scaleFactor float64, units string) {
+	switch {
+	case strings.Contains(n, "temp"):
+		return Temp, 1000, "°C"
+	case strings.Contains(n, "fan"):
+		return Fan, 1, "rpm"
+	case strings.Contains(n, "in"):
+		return Voltage, 1000, "V"
+	case strings.Contains(n, "pwm"):
+		return PWM, 1, "Hz"
+	case strings.Contains(n, "curr"):
+		return Current, 1, "A"
+	case strings.Contains(n, "power"):
+		return Power, 1000, "W"
+	case strings.Contains(n, "energy"):
+		return Energy, 1000, "J"
+	case strings.Contains(n, "humidity"):
+		return Humidity, 1, "%"
+	case strings.Contains(n, "freq"):
+		return Frequency, 1000, "Hz"
+	default:
+		return Unknown, 1, ""
+	}
 }
 
 func processSensors(path string) (sensorCh <-chan Sensor, errCh <-chan error) {
@@ -174,10 +214,10 @@ func processSensors(path string) (sensorCh <-chan Sensor, errCh <-chan error) {
 		defer wg.Done()
 		for d := range dc {
 			mu.Lock()
-			if _, ok := smap[d.prefix]; !ok {
-				smap[d.prefix] = newSensor(namePrefix, d.prefix)
+			if _, ok := smap[d.id]; !ok {
+				smap[d.id] = newSensor(namePrefix, d.id)
 			}
-			if err := smap[d.prefix].update(d); err != nil {
+			if err := smap[d.id].update(d); err != nil {
 				errc <- err
 			}
 			mu.Unlock()
@@ -193,7 +233,7 @@ func processSensors(path string) (sensorCh <-chan Sensor, errCh <-chan error) {
 			wgFiles.Add(1)
 			go func(f fs.DirEntry) {
 				defer wgFiles.Done()
-				d, _ := getSensorDetails(path, f.Name())
+				d, _ := getDetails(path, f.Name())
 				if d != nil {
 					dc <- *d
 				}
@@ -253,40 +293,6 @@ func processChip(path string) (chipCh <-chan Chip, errCh <-chan error) {
 		close(errc)
 	}()
 	return chipc, errc
-}
-
-func getValue(p string) (string, error) {
-	var b []byte
-	var err error
-	if b, err = os.ReadFile(p); err != nil {
-		return "unknown", err
-	}
-	return strings.TrimSpace(string(b)), nil
-}
-
-func getType(n string) (SensorType, float64) {
-	switch {
-	case strings.Contains(n, "temp"):
-		return Temp, 1000
-	case strings.Contains(n, "fan"):
-		return Fan, 1
-	case strings.Contains(n, "in"):
-		return Voltage, 1000
-	case strings.Contains(n, "pwm"):
-		return PWM, 1
-	case strings.Contains(n, "curr"):
-		return Current, 1
-	case strings.Contains(n, "power"):
-		return Power, 1000
-	case strings.Contains(n, "energy"):
-		return Energy, 1000
-	case strings.Contains(n, "humidity"):
-		return Humidity, 1
-	case strings.Contains(n, "freq"):
-		return Frequency, 1000
-	default:
-		return Unknown, 1
-	}
 }
 
 // GetAllSensors returns a slice of Sensor objects, representing all detected
