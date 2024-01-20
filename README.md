@@ -37,7 +37,7 @@ This app will add some sensors to a Home Assistant instance:
 
 A full list of sensors can be found in the [docs](docs/sensors.md).
 
-The code can be extended to add additional sensors. See the [development docs](docs/development.md) 
+The code can be extended to add additional sensors. See the [development docs](docs/development.md)
 for details.
 
 ## 🤔 Use-cases
@@ -55,7 +55,7 @@ As examples of some of the things that can be done with the data published by th
 - Like on mobile devices, create automations based on the location of your
   laptop running this app.
 - Monitor network the data transfer amount from the device, useful where network
-  data might be capped. 
+  data might be capped.
 - Monitor CPU load, disk usage and any temperature sensors emitted from the device.
 - Receive notifications from Home Assistant on your desktop/laptop. Potentially
   based on or utilising any of the data above.
@@ -76,20 +76,20 @@ Head over to the [releases](https://github.com/joshuar/go-hass-agent/releases)
 page and download the appropriate package for your operating system and/or
 distribution:
 
-- For **Fedora**, use the `.rpm`.
-- For **Ubuntu**, use the `.deb`.
-- For **Debian**, use the `.tar.xz`.
-- For **Arch**, use the `.tar.zst`.
+- **Fedora**: use the `.rpm`.
+- **Ubuntu**: use the `.deb`.
+- **Debian**: use the `.tar.xz`.
+- **Arch**: use the `.tar.zst`.
 
-For other distributions not listed above, you can try the binary, or build it
+Other distributions not listed above, you can try the binary, or build it
 yourself from source (see development [docs](docs/README.md)). Note that while
-Go is known for statically compiled binaries that "run anywhere", the Fyne UI
+Go is known for statically compiled binaries that “run anywhere”, the Fyne UI
 toolkit used by Go Hass Agent makes use of shared libraries that may need to
 be installed as well.
 
 Package signatures can be verified with
 [cosign](https://github.com/sigstore/cosign). To verify a package, you'll need
-the [cosign.pub](cosign.pub) public key and the `.sig` file (downloaded from
+to download [cosign.pub](cosign.pub) public key and the `.sig` file (downloaded from
 [releases](https://github.com/joshuar/go-hass-agent/releases)) that matches the
 package you want to verify. To verify a package, a command similar to the
 following for the `rpm` package can be used:
@@ -103,7 +103,7 @@ cosign verify-blob --key cosign.pub --signature go-hass-agent-*.rpm.sig go-hass-
 Container images are available on
 [ghcr.io](https://github.com/joshuar/go-hass-agent/pkgs/container/go-hass-agent).
 Note that it is recommended to use an image tagged with the latest release version over
-the latest container image, which might be unstable. 
+the latest container image, which might be unstable.
 
 ## 🖱️ Usage
 
@@ -148,7 +148,7 @@ You will need to provide a long-lived token `_TOKEN_` and the URL of your Home
 Assistant instance, `_URL_`.
 
 Once registered, running Go Hass Agent again with no options should start
-tracking and sending sensor data to Home Assistant. 
+tracking and sending sensor data to Home Assistant.
 
 If desired, headless mode can be forced, even in graphical environments, by
 specifying the `--terminal` command-line option.
@@ -188,7 +188,7 @@ and `--hostname` for the hostname that will be presented to Home Assistant
 during registration.
 
 All the other volume mounts are optional, but functionality and the sensors
-reported will be severely limited without them. 
+reported will be severely limited without them.
 
 ### Regular Usage
 
