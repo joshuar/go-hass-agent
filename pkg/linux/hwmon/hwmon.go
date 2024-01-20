@@ -45,11 +45,14 @@ type Chip struct {
 // a name. The Sensor will also have a value. It may also have zero or more
 // Attributes, which are additional measurements like max/min/avg of the value.
 type Sensor struct {
-	chip, label, id, units string
-	scaleFactor            float64
-	value                  float64
-	stype                  SensorType
-	Attributes             []Attribute
+	chip        string
+	label       string
+	id          string
+	units       string
+	Attributes  []Attribute
+	scaleFactor float64
+	value       float64
+	stype       SensorType
 }
 
 // Value returns the sensor value.
