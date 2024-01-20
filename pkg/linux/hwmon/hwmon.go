@@ -7,6 +7,7 @@ package hwmon
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -26,15 +27,10 @@ const (
 	Power
 	Energy
 	Humidity
+	Frequency
 )
 
 type SensorType int
-
-type details struct {
-	prefix string
-	suffix string
-	value  string
-}
 
 // Chip represents a sensor chip exposed by the Linux kernel hardware monitoring
 // API. These are retrieved from the directories in the sysfs /sys/devices tree
@@ -88,12 +84,12 @@ func (s *Sensor) String() string {
 	return b.String()
 }
 
-func (s *Sensor) update(d details) {
+func (s *Sensor) update(d details) error {
 	switch d.suffix {
 	case "input":
 		v, err := strconv.ParseFloat(d.value, 64)
 		if err != nil {
-			break
+			return err
 		}
 		s.value = v
 	case "label":
@@ -101,10 +97,11 @@ func (s *Sensor) update(d details) {
 	default:
 		v, err := strconv.ParseFloat(d.value, 64)
 		if err != nil {
-			break
+			return err
 		}
 		s.Attributes = append(s.Attributes, Attribute{Name: d.suffix, Value: v})
 	}
+	return nil
 }
 
 func newSensor(chip, name string) *Sensor {
@@ -127,15 +124,35 @@ func (a *Attribute) String() string {
 	return fmt.Sprintf("%s: %.f", a.Name, a.Value)
 }
 
+type details struct {
+	prefix string
+	suffix string
+	value  string
+}
+
+func getSensorDetails(path, file string) (*details, error) {
+	pfx, sfx, ok := strings.Cut(file, "_")
+	if !ok {
+		return nil, fmt.Errorf("%s: not a sensor file", file)
+	}
+	strValue, err := getValue(filepath.Join(path, file))
+	if err != nil {
+		return nil, err
+	}
+	return &details{prefix: pfx, suffix: sfx, value: strValue}, nil
+}
+
 func processSensors(path string) (sensorCh <-chan Sensor, errCh <-chan error) {
 	c := make(chan Sensor)
-	dc := make(chan details)
 	errc := make(chan error, 1)
+	smap := make(map[string]*Sensor)
+	var wg sync.WaitGroup
 
 	files, err := os.ReadDir(path)
 	if err != nil {
 		errc <- err
 		close(c)
+		close(errc)
 		return c, errc
 	}
 
@@ -143,43 +160,54 @@ func processSensors(path string) (sensorCh <-chan Sensor, errCh <-chan error) {
 	if err != nil {
 		errc <- err
 		close(c)
+		close(errc)
 		return c, errc
 	}
 
-	smap := make(map[string]*Sensor)
+	dc := make(chan details)
+	var mu sync.Mutex
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		for d := range dc {
+			mu.Lock()
 			if _, ok := smap[d.prefix]; !ok {
 				smap[d.prefix] = newSensor(namePrefix, d.prefix)
 			}
-			smap[d.prefix].update(d)
+			if err := smap[d.prefix].update(d); err != nil {
+				errc <- err
+			}
+			mu.Unlock()
 		}
 	}()
 
-	var wg sync.WaitGroup
-	for _, f := range files {
-		wg.Add(1)
-		go func(f os.DirEntry) {
-			defer wg.Done()
-			pfx, sfx, ok := strings.Cut(f.Name(), "_")
-			if !ok {
-				return
-			}
-			strValue, err := getValue(filepath.Join(path, f.Name()))
-			if err != nil {
-				return
-			}
-			dc <- details{prefix: pfx, suffix: sfx, value: strValue}
-		}(f)
-	}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		defer close(dc)
+		var wgFiles sync.WaitGroup
+		for _, f := range files {
+			wgFiles.Add(1)
+			go func(f fs.DirEntry) {
+				defer wgFiles.Done()
+				d, _ := getSensorDetails(path, f.Name())
+				if d != nil {
+					dc <- *d
+				}
+			}(f)
+			wgFiles.Wait()
+		}
+	}()
+
 	go func() {
 		wg.Wait()
+		mu.Lock()
 		for _, s := range smap {
-			if s.name != "" {
-				c <- *s
-			}
+			c <- *s
 		}
+		mu.Unlock()
 		close(c)
+		close(errc)
 	}()
 	return c, errc
 }
@@ -200,7 +228,7 @@ func processChip(path string) (chipCh <-chan Chip, errCh <-chan error) {
 	}
 
 	var wg sync.WaitGroup
-	s, _ := processSensors(path)
+	s, e := processSensors(path)
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -208,10 +236,18 @@ func processChip(path string) (chipCh <-chan Chip, errCh <-chan error) {
 			c.Sensors = append(c.Sensors, sensor)
 		}
 	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for err := range e {
+			errc <- err
+		}
+	}()
 	go func() {
 		wg.Wait()
 		chipc <- c
 		close(chipc)
+		close(errc)
 	}()
 	return chipc, errc
 }
@@ -243,6 +279,8 @@ func getType(n string) SensorType {
 		return Energy
 	case strings.Contains(n, "humidity"):
 		return Humidity
+	case strings.Contains(n, "freq"):
+		return Frequency
 	default:
 		return Unknown
 	}
@@ -257,23 +295,20 @@ func GetAllSensors() []Sensor {
 		return nil
 	}
 
+	var wg sync.WaitGroup
 	var sensors []Sensor
 
-	var wg sync.WaitGroup
-
 	for _, f := range files {
+		c, _ := processChip(filepath.Join(hwmonPath, f.Name()))
 		wg.Add(1)
-		c, errc := processChip(filepath.Join(hwmonPath, f.Name()))
 		go func() {
-			select {
-			case err := <-errc:
-				println(err)
-			case chip := <-c:
+			defer wg.Done()
+			for chip := range c {
 				sensors = append(sensors, chip.Sensors...)
-				wg.Done()
 			}
 		}()
 	}
+
 	wg.Wait()
 	return sensors
 }
