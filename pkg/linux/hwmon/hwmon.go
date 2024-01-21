@@ -52,7 +52,7 @@ type Sensor struct {
 	Attributes  []Attribute
 	scaleFactor float64
 	value       float64
-	stype       SensorType
+	SensorType  SensorType
 }
 
 // Value returns the sensor value.
@@ -77,7 +77,7 @@ func (s *Sensor) Units() string {
 // String will format the sensor name and value as a pretty string.
 func (s *Sensor) String() string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "%s: %.2f %s [%s]", s.Name(), s.Value(), s.Units(), s.stype)
+	fmt.Fprintf(&b, "%s: %.2f %s [%s]", s.Name(), s.Value(), s.Units(), s.SensorType)
 	for i, a := range s.Attributes {
 		if i == 0 {
 			fmt.Fprintf(&b, " (")
@@ -118,7 +118,7 @@ func newSensor(chip, name string) *Sensor {
 	return &Sensor{
 		chip:        chip,
 		id:          name,
-		stype:       t,
+		SensorType:  t,
 		scaleFactor: f,
 		units:       u,
 	}
