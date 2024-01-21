@@ -11,6 +11,7 @@ import (
 
 	"github.com/iancoleman/strcase"
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/joshuar/go-hass-agent/pkg/linux/hwmon"
@@ -57,6 +58,10 @@ func newHWSensor(s *hwmon.Sensor) *hwSensor {
 	}
 	hw.Value = s.Value()
 	hw.UnitsString = s.Units()
+	i, d := parseSensorType(s.SensorType.String())
+	hw.IconString = i
+	hw.DeviceClassValue = d
+	hw.StateClassValue = sensor.StateMeasurement
 	hw.IsDiagnostic = true
 	for _, a := range s.Attributes {
 		hw.ExtraAttrs[a.Name] = a.Value
@@ -81,4 +86,27 @@ func HWSensorUpdater(ctx context.Context) chan tracker.Sensor {
 		log.Debug().Msg("Stopped temp sensors.")
 	}()
 	return sensorCh
+}
+
+func parseSensorType(t string) (icon string, deviceclass sensor.SensorDeviceClass) {
+	switch t {
+	case "Temp":
+		return "mdi:thermometer", sensor.SensorTemperature
+	case "Fan":
+		return "mdi:turbine", 0
+	case "Power":
+		return "mdi:zap", sensor.SensorPower
+	case "Voltage":
+		return "mdi:lightning-bolt", sensor.Voltage
+	case "Energy":
+		return "mdi:lightning-bolt", sensor.Energy
+	case "Current":
+		return "mdi:current-ac", sensor.Current
+	case "Frequency", "PWM":
+		return "mdi:sawtooth-wave", sensor.Frequency
+	case "Humidity":
+		return "mdi:water-percent", sensor.Humidity
+	default:
+		return "mdi:chip", 0
+	}
 }
