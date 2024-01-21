@@ -1,5 +1,25 @@
 # Changelog
 
+## [6.3.0](https://github.com/joshuar/go-hass-agent/compare/v6.2.0...v6.3.0) (2024-01-21)
+
+
+### Features
+
+* **linux:** :sparkles: switch to using hwmon package to get hardware sensors ([a8360c2](https://github.com/joshuar/go-hass-agent/commit/a8360c2c7408e8272725f52580059a49c11bb4ac))
+* **linux/hwmon:** :sparkles: add a hwmon package to retrieve all hardware sensors from the kernel ([cf50826](https://github.com/joshuar/go-hass-agent/commit/cf508266438a70c8545ed64e5ae921484cdde993))
+* **linux/hwmon:** :sparkles: add an example usage ([174840f](https://github.com/joshuar/go-hass-agent/commit/174840f1334305d9b858df9834e2bed7717f212a))
+* **linux/hwmon:** :sparkles: add units output to sensors ([8663945](https://github.com/joshuar/go-hass-agent/commit/8663945f4c69c7573d0ab6ae42d9916b843ead46))
+* **linux/hwmon:** :sparkles: apply appropriate scale to sensor values ([bdf3e82](https://github.com/joshuar/go-hass-agent/commit/bdf3e8252a887a1b900f88c45b499b2735e42f16))
+* **linux/hwmon:** :sparkles: expose sensor type ([ad970be](https://github.com/joshuar/go-hass-agent/commit/ad970be87753013af7610646ae740bb012584e33))
+* **vscode:** :sparkles: add additional conventional commit scopes ([b7d439c](https://github.com/joshuar/go-hass-agent/commit/b7d439c2eb86d935fa1343c98937bf6e4e8688c9))
+
+
+### Bug Fixes
+
+* **linux/hwmon:** :bug: remove race condition when fetching sensors ([1262c3f](https://github.com/joshuar/go-hass-agent/commit/1262c3f46a8907f04aa83fa0ab0aa02b2d769707))
+* **linux/hwmon:** :zap: improve hwmon code ([dee17e4](https://github.com/joshuar/go-hass-agent/commit/dee17e43a26e66ff9dde92f4c41a0abba2c213d3))
+* **linux/hwmon:** :zap: reduce struct memory usage ([3f452f6](https://github.com/joshuar/go-hass-agent/commit/3f452f65e004b4adec67f8a7ccb9cdeffebeed6b))
+
 ## [6.2.0](https://github.com/joshuar/go-hass-agent/compare/v6.1.2...v6.2.0) (2024-01-14)
 
 
