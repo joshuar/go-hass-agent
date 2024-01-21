@@ -18,11 +18,13 @@ func _() {
 	_ = x[Energy-8]
 	_ = x[Humidity-9]
 	_ = x[Frequency-10]
+	_ = x[Alarm-11]
+	_ = x[Intrusion-12]
 }
 
-const _SensorType_name = "UnknownTempFanVoltagePWMCurrentPowerEnergyHumidityFrequency"
+const _SensorType_name = "UnknownTempFanVoltagePWMCurrentPowerEnergyHumidityFrequencyAlarmIntrusion"
 
-var _SensorType_index = [...]uint8{0, 7, 11, 14, 21, 24, 31, 36, 42, 50, 59}
+var _SensorType_index = [...]uint8{0, 7, 11, 14, 21, 24, 31, 36, 42, 50, 59, 64, 73}
 
 func (i SensorType) String() string {
 	i -= 1
