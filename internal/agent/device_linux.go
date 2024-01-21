@@ -48,7 +48,8 @@ func sensorWorkers() []func(context.Context) chan tracker.Sensor {
 		power.PowerProfileUpdater,
 		user.Updater,
 		system.Versions,
-		system.TempUpdater,
+		// system.TempUpdater,
+		system.HWSensorUpdater,
 	)
 	return workers
 }
