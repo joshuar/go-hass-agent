@@ -1,0 +1,84 @@
+// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
+//
+// This software is released under the MIT License.
+// https://opensource.org/licenses/MIT
+
+package system
+
+import (
+	"context"
+	"time"
+
+	"github.com/iancoleman/strcase"
+	"github.com/joshuar/go-hass-agent/internal/device/helpers"
+	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/tracker"
+	"github.com/joshuar/go-hass-agent/pkg/linux/hwmon"
+	"github.com/rs/zerolog/log"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
+)
+
+type hwSensor struct {
+	ExtraAttrs map[string]float64
+	hwType     string
+	name       string
+	linux.Sensor
+}
+
+func (s *hwSensor) Name() string {
+	c := cases.Title(language.AmericanEnglish)
+	return c.String(strcase.ToDelimited(s.name+"_"+s.hwType, ' '))
+}
+
+func (s *hwSensor) ID() string {
+	return strcase.ToSnake(s.hwType + "_" + s.name)
+}
+
+func (s *hwSensor) Attributes() any {
+	return struct {
+		Attributes map[string]float64 `json:"Extra Attributes,omitempty"`
+		NativeUnit string             `json:"native_unit_of_measurement"`
+		DataSource string             `json:"Data Source"`
+		SensorType string             `json:"Sensor Type"`
+	}{
+		NativeUnit: s.UnitsString,
+		DataSource: linux.DataSrcSysfs,
+		SensorType: s.hwType,
+		Attributes: s.ExtraAttrs,
+	}
+}
+
+func newHWSensor(s *hwmon.Sensor) *hwSensor {
+	hw := &hwSensor{
+		name:       s.Name(),
+		hwType:     s.SensorType.String(),
+		ExtraAttrs: make(map[string]float64),
+	}
+	hw.Value = s.Value()
+	hw.UnitsString = s.Units()
+	hw.IsDiagnostic = true
+	for _, a := range s.Attributes {
+		hw.ExtraAttrs[a.Name] = a.Value
+	}
+	return hw
+}
+
+func HWSensorUpdater(ctx context.Context) chan tracker.Sensor {
+	sensorCh := make(chan tracker.Sensor, 1)
+	update := func(_ time.Duration) {
+		allSensors := hwmon.GetAllSensors()
+		for _, s := range allSensors {
+			sensor := newHWSensor(&s)
+			sensorCh <- sensor
+		}
+	}
+
+	go helpers.PollSensors(ctx, update, time.Minute, time.Second*5)
+	go func() {
+		defer close(sensorCh)
+		<-ctx.Done()
+		log.Debug().Msg("Stopped temp sensors.")
+	}()
+	return sensorCh
+}

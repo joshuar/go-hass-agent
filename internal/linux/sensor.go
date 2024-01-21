@@ -13,6 +13,7 @@ import (
 const (
 	DataSrcDbus   = "D-Bus"
 	DataSrcProcfs = "ProcFS"
+	DataSrcSysfs  = "SysFS"
 )
 
 // Sensor represents a generic sensor on the Linux platform. Most sensors
