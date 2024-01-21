@@ -17,8 +17,8 @@ import (
 
 type runningAppsSensor struct {
 	appList map[string]dbus.Variant
-	mu      sync.Mutex
 	linux.Sensor
+	mu sync.Mutex
 }
 
 type runningAppsSensorAttributes struct {

@@ -41,20 +41,20 @@ const (
 type connState uint32
 
 type connection struct {
-	name  string
-	state connState
 	attrs *connectionAttributes
+	name  string
 	path  dbus.ObjectPath
 	linux.Sensor
+	state connState
 }
 
 type connectionAttributes struct {
 	ConnectionType string `json:"Connection Type,omitempty"`
 	Ipv4           string `json:"IPv4 Address,omitempty"`
-	IPv4Mask       int    `json:"IPv4 Mask,omitempty"`
 	Ipv6           string `json:"IPv6 Address,omitempty"`
-	IPv6Mask       int    `json:"IPv6 Mask,omitempty"`
 	DataSource     string `json:"Data Source"`
+	IPv4Mask       int    `json:"IPv4 Mask,omitempty"`
+	IPv6Mask       int    `json:"IPv6 Mask,omitempty"`
 }
 
 func (c *connection) Name() string {

@@ -55,10 +55,11 @@ var dBusPropToSensor = map[string]linux.SensorTypeValue{
 }
 
 type upowerBattery struct {
-	id, model string
-	dBusPath  dbus.ObjectPath
-	battType  batteryType
-	sensors   []linux.SensorTypeValue
+	id       string
+	model    string
+	dBusPath dbus.ObjectPath
+	sensors  []linux.SensorTypeValue
+	battType batteryType
 }
 
 // getProp retrieves the property from D-Bus that matches the given battery sensor type.
