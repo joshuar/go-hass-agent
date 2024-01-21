@@ -7,6 +7,8 @@ package system
 
 import (
 	"context"
+	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/iancoleman/strcase"
@@ -29,7 +31,11 @@ type hwSensor struct {
 
 func (s *hwSensor) Name() string {
 	c := cases.Title(language.AmericanEnglish)
-	return c.String(strcase.ToDelimited(s.name+"_"+s.hwType, ' '))
+	if s.hwType == hwmon.Alarm.String() {
+		return c.String(s.name)
+	}
+	return s.name + " " + s.hwType
+	// return c.String(strcase.ToDelimited(s.name+"_"+s.hwType, ' '))
 }
 
 func (s *hwSensor) ID() string {
@@ -39,7 +45,7 @@ func (s *hwSensor) ID() string {
 func (s *hwSensor) Attributes() any {
 	return struct {
 		Attributes map[string]float64 `json:"Extra Attributes,omitempty"`
-		NativeUnit string             `json:"native_unit_of_measurement"`
+		NativeUnit string             `json:"native_unit_of_measurement,omitempty"`
 		DataSource string             `json:"Data Source"`
 		SensorType string             `json:"Sensor Type"`
 	}{
@@ -56,13 +62,27 @@ func newHWSensor(s *hwmon.Sensor) *hwSensor {
 		hwType:     s.SensorType.String(),
 		ExtraAttrs: make(map[string]float64),
 	}
+	hw.IsDiagnostic = true
+	if hw.hwType == hwmon.Alarm.String() || hw.hwType == hwmon.Intrusion.String() {
+		if v, err := strconv.ParseBool(fmt.Sprint(int(s.Value()))); err != nil {
+			hw.Value = false
+		} else {
+			hw.Value = v
+		}
+		if hw.Value.(bool) {
+			hw.IconString = "mdi:alarm-light"
+		} else {
+			hw.IconString = "mdi:alarm-light-off"
+		}
+		hw.IsBinary = true
+		return hw
+	}
 	hw.Value = s.Value()
 	hw.UnitsString = s.Units()
 	i, d := parseSensorType(s.SensorType.String())
 	hw.IconString = i
 	hw.DeviceClassValue = d
 	hw.StateClassValue = sensor.StateMeasurement
-	hw.IsDiagnostic = true
 	for _, a := range s.Attributes {
 		hw.ExtraAttrs[a.Name] = a.Value
 	}
@@ -95,7 +115,7 @@ func parseSensorType(t string) (icon string, deviceclass sensor.SensorDeviceClas
 	case "Fan":
 		return "mdi:turbine", 0
 	case "Power":
-		return "mdi:zap", sensor.SensorPower
+		return "mdi:flash", sensor.SensorPower
 	case "Voltage":
 		return "mdi:lightning-bolt", sensor.Voltage
 	case "Energy":
