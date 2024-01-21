@@ -12,14 +12,15 @@ import (
 	"time"
 
 	"github.com/iancoleman/strcase"
+	"github.com/rs/zerolog/log"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
+
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/joshuar/go-hass-agent/pkg/linux/hwmon"
-	"github.com/rs/zerolog/log"
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
 )
 
 type hwSensor struct {
@@ -29,13 +30,38 @@ type hwSensor struct {
 	linux.Sensor
 }
 
+func (s *hwSensor) asBool(h *hwmon.Sensor) {
+	if v, err := strconv.ParseBool(fmt.Sprint(int(h.Value()))); err != nil {
+		s.Value = false
+	} else {
+		s.Value = v
+	}
+	if s.Value.(bool) {
+		s.IconString = "mdi:alarm-light"
+	} else {
+		s.IconString = "mdi:alarm-light-off"
+	}
+	s.IsBinary = true
+}
+
+func (s *hwSensor) asFloat(h *hwmon.Sensor) {
+	s.Value = h.Value()
+	s.UnitsString = h.Units()
+	i, d := parseSensorType(h.SensorType.String())
+	s.IconString = i
+	s.DeviceClassValue = d
+	s.StateClassValue = sensor.StateMeasurement
+	for _, a := range h.Attributes {
+		s.ExtraAttrs[a.Name] = a.Value
+	}
+}
+
 func (s *hwSensor) Name() string {
 	c := cases.Title(language.AmericanEnglish)
 	if s.hwType == hwmon.Alarm.String() {
 		return c.String(s.name)
 	}
 	return s.name + " " + s.hwType
-	// return c.String(strcase.ToDelimited(s.name+"_"+s.hwType, ' '))
 }
 
 func (s *hwSensor) ID() string {
@@ -63,28 +89,11 @@ func newHWSensor(s *hwmon.Sensor) *hwSensor {
 		ExtraAttrs: make(map[string]float64),
 	}
 	hw.IsDiagnostic = true
-	if hw.hwType == hwmon.Alarm.String() || hw.hwType == hwmon.Intrusion.String() {
-		if v, err := strconv.ParseBool(fmt.Sprint(int(s.Value()))); err != nil {
-			hw.Value = false
-		} else {
-			hw.Value = v
-		}
-		if hw.Value.(bool) {
-			hw.IconString = "mdi:alarm-light"
-		} else {
-			hw.IconString = "mdi:alarm-light-off"
-		}
-		hw.IsBinary = true
-		return hw
-	}
-	hw.Value = s.Value()
-	hw.UnitsString = s.Units()
-	i, d := parseSensorType(s.SensorType.String())
-	hw.IconString = i
-	hw.DeviceClassValue = d
-	hw.StateClassValue = sensor.StateMeasurement
-	for _, a := range s.Attributes {
-		hw.ExtraAttrs[a.Name] = a.Value
+	switch hw.hwType {
+	case hwmon.Alarm.String(), hwmon.Intrusion.String():
+		hw.asBool(s)
+	default:
+		hw.asFloat(s)
 	}
 	return hw
 }
