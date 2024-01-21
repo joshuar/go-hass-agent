@@ -12,7 +12,7 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/tracker"
-	"github.com/joshuar/go-hass-agent/pkg/dbushelpers"
+	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 	"github.com/rs/zerolog/log"
 )
 
@@ -36,7 +36,7 @@ func (s *usersSensor) Attributes() any {
 }
 
 func (s *usersSensor) updateUsers(ctx context.Context) {
-	userData := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
+	userData := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
 		Path(login1DBusPath).
 		Destination("org.freedesktop.login1").
 		GetData("org.freedesktop.login1.Manager.ListUsers").AsRawInterface()
@@ -70,7 +70,7 @@ func Updater(ctx context.Context) chan tracker.Sensor {
 	u.updateUsers(ctx)
 	sensorCh <- u
 
-	err := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
+	err := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
 		Match([]dbus.MatchOption{
 			dbus.WithMatchObjectPath(login1DBusPath),
 			dbus.WithMatchInterface("org.freedesktop.DBus.Properties"),

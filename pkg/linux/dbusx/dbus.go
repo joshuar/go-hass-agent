@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-package dbushelpers
+package dbusx
 
 import (
 	"context"
@@ -29,7 +29,8 @@ type Bus struct {
 	wg      sync.WaitGroup
 }
 
-// NewBus sets up DBus connections and channels for receiving signals. It creates both a system and session bus connection.
+// NewBus sets up DBus connections and channels for receiving signals. It
+// creates both a system and session bus connection.
 func NewBus(ctx context.Context, t dbusType) *Bus {
 	var conn *dbus.Conn
 	var err error

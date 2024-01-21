@@ -12,7 +12,7 @@ import (
 	"github.com/godbus/dbus/v5"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/tracker"
-	"github.com/joshuar/go-hass-agent/pkg/dbushelpers"
+	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 	"github.com/rs/zerolog/log"
 )
 
@@ -44,7 +44,7 @@ func newScreenlockEvent(v bool) *screenlockSensor {
 
 func ScreenLockUpdater(ctx context.Context) chan tracker.Sensor {
 	sensorCh := make(chan tracker.Sensor)
-	err := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
+	err := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
 		Match([]dbus.MatchOption{
 			dbus.WithMatchPathNamespace("/org/freedesktop/login1/session"),
 		}).
@@ -54,7 +54,7 @@ func ScreenLockUpdater(ctx context.Context) chan tracker.Sensor {
 				return
 			}
 			switch s.Name {
-			case dbushelpers.PropChangedSignal:
+			case dbusx.PropChangedSignal:
 				props, ok := s.Body[1].(map[string]dbus.Variant)
 				if !ok {
 					log.Trace().Caller().
@@ -63,7 +63,7 @@ func ScreenLockUpdater(ctx context.Context) chan tracker.Sensor {
 					return
 				}
 				if v, ok := props["LockedHint"]; ok {
-					sensorCh <- newScreenlockEvent(dbushelpers.VariantToValue[bool](v))
+					sensorCh <- newScreenlockEvent(dbusx.VariantToValue[bool](v))
 				}
 			case "org.freedesktop.login1.Session.Lock":
 				sensorCh <- newScreenlockEvent(true)

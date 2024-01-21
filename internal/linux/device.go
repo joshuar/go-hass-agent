@@ -13,7 +13,7 @@ import (
 	"strings"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/api"
-	"github.com/joshuar/go-hass-agent/pkg/dbushelpers"
+	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v3/host"
 )
@@ -29,7 +29,7 @@ type Device struct {
 
 // Setup returns a new Context that contains the D-Bus API.
 func (l *Device) Setup(ctx context.Context) context.Context {
-	return dbushelpers.Setup(ctx)
+	return dbusx.Setup(ctx)
 }
 
 func (l *Device) AppName() string {

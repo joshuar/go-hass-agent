@@ -12,7 +12,7 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/tracker"
-	"github.com/joshuar/go-hass-agent/pkg/dbushelpers"
+	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
 type runningAppsSensor struct {
@@ -30,7 +30,7 @@ func (r *runningAppsSensor) Attributes() any {
 	attrs := &runningAppsSensorAttributes{}
 	r.mu.Lock()
 	for appName, state := range r.appList {
-		if dbushelpers.VariantToValue[uint32](state) > 0 {
+		if dbusx.VariantToValue[uint32](state) > 0 {
 			attrs.RunningApps = append(attrs.RunningApps, appName)
 		}
 	}

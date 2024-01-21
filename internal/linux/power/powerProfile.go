@@ -11,7 +11,7 @@ import (
 	"github.com/godbus/dbus/v5"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/tracker"
-	"github.com/joshuar/go-hass-agent/pkg/dbushelpers"
+	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 	"github.com/rs/zerolog/log"
 )
 
@@ -26,7 +26,7 @@ type powerSensor struct {
 
 func newPowerSensor(t linux.SensorTypeValue, v dbus.Variant) *powerSensor {
 	s := &powerSensor{}
-	s.Value = dbushelpers.VariantToValue[string](v)
+	s.Value = dbusx.VariantToValue[string](v)
 	s.SensorTypeValue = t
 	s.IconString = "mdi:flash"
 	s.SensorSrc = linux.DataSrcDbus
@@ -36,7 +36,7 @@ func newPowerSensor(t linux.SensorTypeValue, v dbus.Variant) *powerSensor {
 
 func PowerProfileUpdater(ctx context.Context) chan tracker.Sensor {
 	sensorCh := make(chan tracker.Sensor, 1)
-	activePowerProfile, err := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
+	activePowerProfile, err := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
 		Path(powerProfilesDBusPath).
 		Destination(powerProfilesDBusDest).
 		GetProp(powerProfilesDBusDest + ".ActiveProfile")
@@ -48,14 +48,14 @@ func PowerProfileUpdater(ctx context.Context) chan tracker.Sensor {
 
 	sensorCh <- newPowerSensor(linux.SensorPowerProfile, activePowerProfile)
 
-	err = dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
+	err = dbusx.NewBusRequest(ctx, dbusx.SystemBus).
 		Match([]dbus.MatchOption{
 			dbus.WithMatchInterface(powerProfilesDBusDest),
 			dbus.WithMatchObjectPath(powerProfilesDBusPath),
 			dbus.WithMatchMember("ActiveProfile"),
 		}).
 		Handler(func(s *dbus.Signal) {
-			if s.Name != dbushelpers.PropChangedSignal || s.Path != powerProfilesDBusPath {
+			if s.Name != dbusx.PropChangedSignal || s.Path != powerProfilesDBusPath {
 				return
 			}
 			if len(s.Body) <= 1 {

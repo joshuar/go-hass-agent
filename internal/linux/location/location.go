@@ -10,7 +10,7 @@ import (
 
 	"github.com/godbus/dbus/v5"
 	"github.com/joshuar/go-hass-agent/internal/hass"
-	"github.com/joshuar/go-hass-agent/pkg/dbushelpers"
+	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 	"github.com/rs/zerolog/log"
 )
 
@@ -41,7 +41,7 @@ func Updater(ctx context.Context) chan *hass.LocationData {
 		}
 	}
 
-	clientPath := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
+	clientPath := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
 		Path(geocluePath).
 		Destination(geoclueInterface).GetData(getClientCall).AsObjectPath()
 	if !clientPath.IsValid() {
@@ -49,7 +49,7 @@ func Updater(ctx context.Context) chan *hass.LocationData {
 		close(sensorCh)
 		return sensorCh
 	}
-	locationRequest := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).Path(clientPath).Destination(geoclueInterface)
+	locationRequest := dbusx.NewBusRequest(ctx, dbusx.SystemBus).Path(clientPath).Destination(geoclueInterface)
 
 	if err := locationRequest.SetProp(desktopIDProp, dbus.MakeVariant(appID)); err != nil {
 		log.Error().Err(err).Msg("Could not set a geoclue client id.")
@@ -73,7 +73,7 @@ func Updater(ctx context.Context) chan *hass.LocationData {
 
 	log.Debug().Msg("Tracking location with geoclue.")
 
-	err := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
+	err := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
 		Match([]dbus.MatchOption{
 			dbus.WithMatchObjectPath(clientPath),
 			dbus.WithMatchInterface(clientInterface),
@@ -99,7 +99,7 @@ func Updater(ctx context.Context) chan *hass.LocationData {
 
 func newLocation(ctx context.Context, locationPath dbus.ObjectPath) *hass.LocationData {
 	getProp := func(prop string) float64 {
-		value, err := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
+		value, err := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
 			Path(locationPath).
 			Destination(geoclueInterface).
 			GetProp("org.freedesktop.GeoClue2.Location." + prop)
@@ -108,7 +108,7 @@ func newLocation(ctx context.Context, locationPath dbus.ObjectPath) *hass.Locati
 				Msgf("Could not retrieve %s.", prop)
 			return 0
 		} else {
-			return dbushelpers.VariantToValue[float64](value)
+			return dbusx.VariantToValue[float64](value)
 		}
 	}
 	return &hass.LocationData{
