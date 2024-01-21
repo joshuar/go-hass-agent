@@ -22,6 +22,7 @@
         "ui.noSemanticString": true,  // delegates string syntax highlighting to vscode
         "ui.noSemanticNumber": true,  // delegates number syntax highlighting to vscode
         "formatting.gofumpt": true,
+        "formatting.local": "github.com/joshuar/go-hass-agent",
         "ui.diagnostic.analyses": {
             "fieldalignment": true, // Disable the unreachable analyzer.
             "unusedvariable": true
@@ -31,20 +32,15 @@
     "[go]": {
         "editor.formatOnSave": true,
         "editor.codeActionsOnSave": {
-            "source.organizeImports": "explicit",
-            "source.fixAll": "explicit"
+            "source.organizeImports": "always",
+            "source.fixAll": "always"
         },
     },
     "[go.mod]": {
         "editor.formatOnSave": true,
         "editor.codeActionsOnSave": {
-            "source.organizeImports": "explicit"
+            "source.organizeImports": "always"
         },
-    },
-    "[go][go.mod]": {
-        "editor.codeActionsOnSave": {
-            "source.organizeImports": "explicit"
-        }
     },
     "ltex.language": "en-AU"
 }
