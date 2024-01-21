@@ -18,7 +18,7 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/tracker"
-	"github.com/joshuar/go-hass-agent/pkg/dbushelpers"
+	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 	"github.com/rs/zerolog/log"
 )
 
@@ -66,7 +66,7 @@ func (b *upowerBattery) getProp(ctx context.Context, t linux.SensorTypeValue) (d
 	if !b.dBusPath.IsValid() {
 		return dbus.MakeVariant(""), errors.New("invalid battery path")
 	}
-	return dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
+	return dbusx.NewBusRequest(ctx, dbusx.SystemBus).
 		Path(b.dBusPath).
 		Destination(upowerDBusDest).
 		GetProp(dBusSensorToProps[t])
@@ -100,7 +100,7 @@ func newBattery(ctx context.Context, path dbus.ObjectPath) *upowerBattery {
 		log.Warn().Err(err).Msg("Could not determine battery type.")
 		return nil
 	}
-	b.battType = dbushelpers.VariantToValue[batteryType](battType)
+	b.battType = dbusx.VariantToValue[batteryType](battType)
 
 	// use the native path D-Bus property for the battery id.
 	id, err := b.getProp(ctx, linux.SensorBattNativePath)
@@ -108,18 +108,18 @@ func newBattery(ctx context.Context, path dbus.ObjectPath) *upowerBattery {
 		log.Warn().Err(err).Str("battery", string(b.dBusPath)).Msg("Battery does not have a usable path. Can not monitor sensors.")
 		return nil
 	}
-	b.id = dbushelpers.VariantToValue[string](id)
+	b.id = dbusx.VariantToValue[string](id)
 
 	model, err := b.getProp(ctx, linux.SensorBattModel)
 	if err != nil {
 		log.Warn().Err(err).Str("battery", string(b.dBusPath)).Msg("Could not determine battery model.")
 	}
-	b.model = dbushelpers.VariantToValue[string](model)
+	b.model = dbusx.VariantToValue[string](model)
 
 	// At a minimum, monitor the battery type and the charging state.
 	b.sensors = append(b.sensors, linux.SensorBattState)
 
-	if dbushelpers.VariantToValue[uint32](battType) == 2 {
+	if dbusx.VariantToValue[uint32](battType) == 2 {
 		// Battery has charge percentage, temp and charging rate sensors
 		b.sensors = append(b.sensors, linux.SensorBattPercentage, linux.SensorBattTemp, linux.SensorBattEnergyRate)
 	} else {
@@ -247,8 +247,8 @@ func (s *upowerBatterySensor) generateAttributes(ctx context.Context, b *upowerB
 			Voltage    float64 `json:"Voltage"`
 			Energy     float64 `json:"Energy"`
 		}{
-			Voltage:    dbushelpers.VariantToValue[float64](voltage),
-			Energy:     dbushelpers.VariantToValue[float64](energy),
+			Voltage:    dbusx.VariantToValue[float64](voltage),
+			Energy:     dbusx.VariantToValue[float64](energy),
 			DataSource: linux.DataSrcDbus,
 		}
 	case linux.SensorBattPercentage, linux.SensorBattLevel:
@@ -326,7 +326,7 @@ func Updater(ctx context.Context) chan tracker.Sensor {
 // getBatteries is a helper function to retrieve all of the known batteries
 // connected to the system.
 func getBatteries(ctx context.Context) []dbus.ObjectPath {
-	return dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
+	return dbusx.NewBusRequest(ctx, dbusx.SystemBus).
 		Path(upowerDBusPath).
 		Destination(upowerDBusDest).
 		GetData(upowerGetDevicesMethod).AsObjectPathList()
@@ -340,12 +340,12 @@ func monitorBattery(ctx context.Context, battery *upowerBattery) <-chan tracker.
 	sensorCh := make(chan tracker.Sensor, 1)
 	// Create a DBus signal match to watch for property changes for this
 	// battery.
-	err := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
+	err := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
 		Match([]dbus.MatchOption{
 			dbus.WithMatchObjectPath(battery.dBusPath),
 			dbus.WithMatchInterface("org.freedesktop.DBus.Properties"),
 		}).
-		Event(dbushelpers.PropChangedSignal).
+		Event(dbusx.PropChangedSignal).
 		Handler(func(s *dbus.Signal) {
 			if s.Path != battery.dBusPath || len(s.Body) == 0 {
 				log.Trace().Caller().Msg("Not my signal or empty signal body.")
@@ -383,7 +383,7 @@ func monitorBattery(ctx context.Context, battery *upowerBattery) <-chan tracker.
 // the system and will start/stop monitory each battery as appropriate.
 func monitorBatteryChanges(ctx context.Context, t *batteryTracker) <-chan tracker.Sensor {
 	sensorCh := make(chan tracker.Sensor, 1)
-	err := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
+	err := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
 		Match([]dbus.MatchOption{
 			dbus.WithMatchObjectPath(upowerDBusPath),
 			dbus.WithMatchInterface(upowerDBusDest),

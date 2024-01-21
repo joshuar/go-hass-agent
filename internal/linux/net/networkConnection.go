@@ -14,7 +14,7 @@ import (
 	"github.com/iancoleman/strcase"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/tracker"
-	"github.com/joshuar/go-hass-agent/pkg/dbushelpers"
+	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 	"github.com/rs/zerolog/log"
 )
 
@@ -82,7 +82,7 @@ func (c *connection) monitorConnectionState(ctx context.Context) chan tracker.Se
 	log.Debug().Str("connection", c.Name()).Str("path", string(c.path)).
 		Msg("Monitoring connection state.")
 	sensorCh := make(chan tracker.Sensor, 1)
-	err := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
+	err := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
 		Match([]dbus.MatchOption{
 			dbus.WithMatchObjectPath(dbusNMActiveConnPath),
 			dbus.WithMatchInterface(dbusNMActiveConnIntr),
@@ -101,7 +101,7 @@ func (c *connection) monitorConnectionState(ctx context.Context) chan tracker.Se
 				return
 			}
 			if state, ok := props["State"]; ok {
-				currentState := dbushelpers.VariantToValue[connState](state)
+				currentState := dbusx.VariantToValue[connState](state)
 				switch {
 				case currentState == 4:
 					log.Debug().Str("connection", c.Name()).Str("path", string(c.path)).
@@ -127,20 +127,20 @@ func (c *connection) monitorAddresses(ctx context.Context) chan tracker.Sensor {
 		Msg("Monitoring address changes.")
 	sensorCh := make(chan tracker.Sensor, 1)
 	go func() {
-		r := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
+		r := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
 			Path(c.path).
 			Destination(dBusNMObj)
 		v, _ := r.GetProp(dbusNMActiveConnIntr + ".Ip4Config")
 		if !v.Signature().Empty() {
-			c.attrs.Ipv4, c.attrs.IPv4Mask = getAddr(ctx, 4, dbushelpers.VariantToValue[dbus.ObjectPath](v))
+			c.attrs.Ipv4, c.attrs.IPv4Mask = getAddr(ctx, 4, dbusx.VariantToValue[dbus.ObjectPath](v))
 		}
 		v, _ = r.GetProp(dbusNMActiveConnIntr + ".Ip6Config")
 		if !v.Signature().Empty() {
-			c.attrs.Ipv6, c.attrs.IPv6Mask = getAddr(ctx, 6, dbushelpers.VariantToValue[dbus.ObjectPath](v))
+			c.attrs.Ipv6, c.attrs.IPv6Mask = getAddr(ctx, 6, dbusx.VariantToValue[dbus.ObjectPath](v))
 		}
 		sensorCh <- c
 	}()
-	err := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
+	err := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
 		Match([]dbus.MatchOption{
 			dbus.WithMatchObjectPath(dbusNMActiveConnPath),
 			dbus.WithMatchInterface(dbusNMActiveConnIntr),
@@ -161,14 +161,14 @@ func (c *connection) monitorAddresses(ctx context.Context) chan tracker.Sensor {
 				for k, v := range props {
 					switch k {
 					case "Ip4Config":
-						addr, mask := getAddr(ctx, 4, dbushelpers.VariantToValue[dbus.ObjectPath](v))
+						addr, mask := getAddr(ctx, 4, dbusx.VariantToValue[dbus.ObjectPath](v))
 						if addr != c.attrs.Ipv4 {
 							c.attrs.Ipv4 = addr
 							c.attrs.IPv4Mask = mask
 							sensorCh <- c
 						}
 					case "Ip6Config":
-						addr, mask := getAddr(ctx, 6, dbushelpers.VariantToValue[dbus.ObjectPath](v))
+						addr, mask := getAddr(ctx, 6, dbusx.VariantToValue[dbus.ObjectPath](v))
 						if addr != c.attrs.Ipv6 {
 							c.attrs.Ipv6 = addr
 							c.attrs.IPv6Mask = mask
@@ -228,20 +228,20 @@ func newConnection(ctx context.Context, p dbus.ObjectPath) *connection {
 	c.SensorTypeValue = linux.SensorConnectionState
 	c.IsDiagnostic = true
 
-	r := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
+	r := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
 		Path(p).
 		Destination(dBusNMObj)
 	v, _ := r.GetProp(dbusNMActiveConnIntr + ".Id")
 	if !v.Signature().Empty() {
-		c.name = dbushelpers.VariantToValue[string](v)
+		c.name = dbusx.VariantToValue[string](v)
 	}
 	v, _ = r.GetProp(dbusNMActiveConnIntr + ".State")
 	if !v.Signature().Empty() {
-		c.state = dbushelpers.VariantToValue[connState](v)
+		c.state = dbusx.VariantToValue[connState](v)
 	}
 	v, _ = r.GetProp(dbusNMActiveConnIntr + ".Type")
 	if !v.Signature().Empty() {
-		c.attrs.ConnectionType = dbushelpers.VariantToValue[string](v)
+		c.attrs.ConnectionType = dbusx.VariantToValue[string](v)
 	}
 	return c
 }
@@ -257,19 +257,19 @@ func getAddr(ctx context.Context, ver int, path dbus.ObjectPath) (addr string, m
 	case 6:
 		connProp = dBusNMObj + ".IP6Config"
 	}
-	v, err := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
+	v, err := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
 		Path(path).
 		Destination(dBusNMObj).
 		GetProp(connProp + ".AddressData")
 	if err != nil {
 		return "", 0
 	}
-	addrDetails := dbushelpers.VariantToValue[[]map[string]dbus.Variant](v)
+	addrDetails := dbusx.VariantToValue[[]map[string]dbus.Variant](v)
 	var address string
 	var prefix int
 	if len(addrDetails) > 0 {
-		address = dbushelpers.VariantToValue[string](addrDetails[0]["address"])
-		prefix = dbushelpers.VariantToValue[int](addrDetails[0]["prefix"])
+		address = dbusx.VariantToValue[string](addrDetails[0]["address"])
+		prefix = dbusx.VariantToValue[int](addrDetails[0]["prefix"])
 		log.Debug().Str("path", string(path)).Str("address", address).Int("prefix", prefix).
 			Msg("Retrieved address.")
 	}
@@ -277,7 +277,7 @@ func getAddr(ctx context.Context, ver int, path dbus.ObjectPath) (addr string, m
 }
 
 func getActiveConnections(ctx context.Context) []dbus.ObjectPath {
-	v, err := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
+	v, err := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
 		Path(dBusNMPath).
 		Destination(dBusNMObj).
 		GetProp(dBusNMObj + ".ActiveConnections")
@@ -286,7 +286,7 @@ func getActiveConnections(ctx context.Context) []dbus.ObjectPath {
 			Msg("Could not retrieve active connection list.")
 		return nil
 	}
-	return dbushelpers.VariantToValue[[]dbus.ObjectPath](v)
+	return dbusx.VariantToValue[[]dbus.ObjectPath](v)
 }
 
 func monitorActiveConnections(ctx context.Context) chan tracker.Sensor {
@@ -308,7 +308,7 @@ func monitorActiveConnections(ctx context.Context) chan tracker.Sensor {
 		go handleConn(p)
 	}
 
-	err := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
+	err := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
 		Match([]dbus.MatchOption{
 			dbus.WithMatchPathNamespace(dbusNMActiveConnPath),
 			dbus.WithMatchArg(0, dbusNMActiveConnIntr),

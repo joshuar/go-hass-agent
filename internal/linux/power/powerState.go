@@ -12,7 +12,7 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/tracker"
-	"github.com/joshuar/go-hass-agent/pkg/dbushelpers"
+	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 	"github.com/rs/zerolog/log"
 )
 
@@ -76,7 +76,7 @@ func PowerStateUpdater(ctx context.Context) chan tracker.Sensor {
 
 	sensorCh <- newPowerState(shutdown, false)
 
-	err := dbushelpers.NewBusRequest(ctx, dbushelpers.SystemBus).
+	err := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
 		Match([]dbus.MatchOption{
 			dbus.WithMatchObjectPath("/org/freedesktop/login1"),
 			dbus.WithMatchInterface("org.freedesktop.login1.Manager"),
