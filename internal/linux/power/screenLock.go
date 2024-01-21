@@ -65,6 +65,9 @@ func ScreenLockUpdater(ctx context.Context) chan tracker.Sensor {
 				if v, ok := props["LockedHint"]; ok {
 					sensorCh <- newScreenlockEvent(dbusx.VariantToValue[bool](v))
 				}
+				if v, ok := props["IdleHint"]; ok {
+					sensorCh <- newScreenlockEvent(dbusx.VariantToValue[bool](v))
+				}
 			case "org.freedesktop.login1.Session.Lock":
 				sensorCh <- newScreenlockEvent(true)
 			case "org.freedesktop.login1.Session.Unlock":
