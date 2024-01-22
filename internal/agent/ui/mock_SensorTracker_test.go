@@ -18,7 +18,7 @@ var _ SensorTracker = &SensorTrackerMock{}
 //
 //		// make and configure a mocked SensorTracker
 //		mockedSensorTracker := &SensorTrackerMock{
-//			GetFunc: func(s string) (tracker.Sensor, error) {
+//			GetFunc: func(key string) (tracker.Sensor, error) {
 //				panic("mock out the Get method")
 //			},
 //			SensorListFunc: func() []string {
@@ -32,7 +32,7 @@ var _ SensorTracker = &SensorTrackerMock{}
 //	}
 type SensorTrackerMock struct {
 	// GetFunc mocks the Get method.
-	GetFunc func(s string) (tracker.Sensor, error)
+	GetFunc func(key string) (tracker.Sensor, error)
 
 	// SensorListFunc mocks the SensorList method.
 	SensorListFunc func() []string
@@ -41,8 +41,8 @@ type SensorTrackerMock struct {
 	calls struct {
 		// Get holds details about calls to the Get method.
 		Get []struct {
-			// S is the s argument value.
-			S string
+			// Key is the key argument value.
+			Key string
 		}
 		// SensorList holds details about calls to the SensorList method.
 		SensorList []struct {
@@ -53,19 +53,19 @@ type SensorTrackerMock struct {
 }
 
 // Get calls GetFunc.
-func (mock *SensorTrackerMock) Get(s string) (tracker.Sensor, error) {
+func (mock *SensorTrackerMock) Get(key string) (tracker.Sensor, error) {
 	if mock.GetFunc == nil {
 		panic("SensorTrackerMock.GetFunc: method is nil but SensorTracker.Get was just called")
 	}
 	callInfo := struct {
-		S string
+		Key string
 	}{
-		S: s,
+		Key: key,
 	}
 	mock.lockGet.Lock()
 	mock.calls.Get = append(mock.calls.Get, callInfo)
 	mock.lockGet.Unlock()
-	return mock.GetFunc(s)
+	return mock.GetFunc(key)
 }
 
 // GetCalls gets all the calls that were made to Get.
@@ -73,10 +73,10 @@ func (mock *SensorTrackerMock) Get(s string) (tracker.Sensor, error) {
 //
 //	len(mockedSensorTracker.GetCalls())
 func (mock *SensorTrackerMock) GetCalls() []struct {
-	S string
+	Key string
 } {
 	var calls []struct {
-		S string
+		Key string
 	}
 	mock.lockGet.RLock()
 	calls = mock.calls.Get

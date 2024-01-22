@@ -23,11 +23,12 @@ import (
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
 	"github.com/go-playground/validator/v10"
+	"github.com/rs/zerolog/log"
+
 	"github.com/joshuar/go-hass-agent/internal/agent/config"
 	"github.com/joshuar/go-hass-agent/internal/agent/ui"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/translations"
-	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -40,12 +41,16 @@ type fyneUI struct {
 	text *translations.Translator
 }
 
-func (i *fyneUI) Run() {
+func (i *fyneUI) Run(doneCh chan struct{}) {
 	if i.app == nil {
 		log.Warn().Msg("No supported windowing environment. Will not run UI elements.")
 		return
 	}
 	log.Trace().Msg("Starting Fyne UI loop.")
+	go func() {
+		<-doneCh
+		i.app.Quit()
+	}()
 	i.app.Run()
 }
 
@@ -72,26 +77,19 @@ func (i *fyneUI) openURL(u string) {
 }
 
 func NewFyneUI(agent ui.Agent) *fyneUI {
-	if !agent.IsHeadless() {
-		i := &fyneUI{
-			app:  app.NewWithID(agent.AppID()),
-			text: translations.NewTranslator(),
-		}
-		i.app.SetIcon(&ui.TrayIcon{})
-		return i
+	i := &fyneUI{
+		app:  app.NewWithID(agent.AppID()),
+		text: translations.NewTranslator(),
 	}
-	return &fyneUI{}
+	i.app.SetIcon(&ui.TrayIcon{})
+	return i
 }
 
 // DisplayTrayIcon displays an icon in the desktop tray with a menu for
 // controlling the agent and showing other informational windows.
 func (i *fyneUI) DisplayTrayIcon(a ui.Agent, cfg config.Config, t ui.SensorTracker) {
-	if a.IsHeadless() {
-		return
-	}
 	if desk, ok := i.app.(desktop.App); ok {
 		menuItemQuit := fyne.NewMenuItem(i.text.Translate("Quit"), func() {
-			i.app.Quit()
 			a.Stop()
 		})
 		menuItemQuit.IsQuit = true
