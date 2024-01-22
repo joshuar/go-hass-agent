@@ -1,5 +1,14 @@
 # Changelog
 
+## [6.3.1](https://github.com/joshuar/go-hass-agent/compare/v6.3.0...v6.3.1) (2024-01-22)
+
+
+### Bug Fixes
+
+* **linux:** :sparkles: ensure sensors have appropriate icon, device class and state class ([1756f2c](https://github.com/joshuar/go-hass-agent/commit/1756f2c2601578f5a9524e5c68aab392dcd231d6))
+* **linux:** :sparkles: support new sensor types exposed via hwmon ([eadacba](https://github.com/joshuar/go-hass-agent/commit/eadacba7ac4e8c69153a0292732e844b267a36e0))
+* **linux/hwmon:** :sparkles: expose alarm and intrusion as separate sensors ([5e19a48](https://github.com/joshuar/go-hass-agent/commit/5e19a48ed7312c644446291f5fbb52edc667cbf4))
+
 ## [6.3.0](https://github.com/joshuar/go-hass-agent/compare/v6.2.0...v6.3.0) (2024-01-21)
 
 
