@@ -7,10 +7,11 @@
 
 # Go Hass Agent
 
+![Maintained](https://img.shields.io/badge/Maintained%3F-yes-green.svg)
 ![MIT](https://img.shields.io/github/license/joshuar/go-hass-agent)
-![GitHub last commit](https://img.shields.io/github/last-commit/joshuar/go-hass-agent)
+![GitHub last
+commit](https://img.shields.io/github/last-commit/joshuar/go-hass-agent)
 [![Go Report Card](https://goreportcard.com/badge/github.com/joshuar/go-hass-agent?style=flat-square)](https://goreportcard.com/report/github.com/joshuar/go-hass-agent)
-[![Go Reference](https://pkg.go.dev/badge/github.com/joshuar/go-hass-agent.svg)](https://pkg.go.dev/github.com/joshuar/go-hass-agent)
 [![Release](https://img.shields.io/github/release/joshuar/go-hass-agent?style=flat-square)](https://github.com/joshuar/go-hass-agent/releases/latest)
 
 A [Home Assistant](https://www.home-assistant.io/), [native app
