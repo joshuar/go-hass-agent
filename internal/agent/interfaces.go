@@ -27,5 +27,5 @@ type UI interface {
 	DisplayNotification(title, message string)
 	DisplayTrayIcon(agent ui.Agent, cfg config.Config, trk ui.SensorTracker)
 	DisplayRegistrationWindow(ctx context.Context, server, token *string, doneCh chan struct{})
-	Run()
+	Run(doneCh chan struct{})
 }

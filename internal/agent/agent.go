@@ -14,15 +14,16 @@ import (
 	"syscall"
 
 	"github.com/adrg/xdg"
+	"github.com/robfig/cron/v3"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
+
 	"github.com/joshuar/go-hass-agent/internal/agent/config"
 	fyneui "github.com/joshuar/go-hass-agent/internal/agent/ui/fyneUI"
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/scripts"
 	"github.com/joshuar/go-hass-agent/internal/tracker"
-	"github.com/robfig/cron/v3"
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 )
 
 // Agent holds the data and structure representing an instance of the agent.
@@ -46,7 +47,9 @@ func New(o *Options) *Agent {
 		done:    make(chan struct{}),
 		Options: o,
 	}
-	a.ui = fyneui.NewFyneUI(a)
+	if !a.Options.Headless {
+		a.ui = fyneui.NewFyneUI(a)
+	}
 	setupLogging()
 	return a
 }
@@ -84,6 +87,11 @@ func (agent *Agent) Run(cmd string) {
 			regWait.Wait()
 
 			ctx, cancelFunc = setupContext(cfg)
+			go func() {
+				<-agent.done
+				log.Debug().Msg("Agent done.")
+				cancelFunc()
+			}()
 
 			// Start worker funcs for sensors.
 			wg.Add(1)
@@ -99,29 +107,53 @@ func (agent *Agent) Run(cmd string) {
 				runScripts(ctx, scriptPath, trk)
 			}()
 			// Listen for notifications from Home Assistant.
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				agent.runNotificationsWorker(ctx)
-			}()
+			if !agent.IsHeadless() {
+				wg.Add(1)
+				go func() {
+					defer wg.Done()
+					agent.runNotificationsWorker(ctx)
+				}()
+			}
 		}()
 	}
 
-	go func() {
-		<-agent.done
-		log.Debug().Msg("Agent done.")
-		cancelFunc()
-	}()
-
 	agent.handleSignals()
 
-	agent.ui.DisplayTrayIcon(agent, cfg, trk)
-	agent.ui.Run()
+	if !agent.IsHeadless() {
+		agent.ui.DisplayTrayIcon(agent, cfg, trk)
+		agent.ui.Run(agent.done)
+	}
 	wg.Wait()
 }
 
-func ShowVersion() {
-	log.Info().Msgf("%s: %s", config.AppName, config.AppVersion)
+func (agent *Agent) Register() {
+	var wg sync.WaitGroup
+	var err error
+
+	var cfg config.Config
+	configPath := filepath.Join(xdg.ConfigHome, agent.AppID())
+	if cfg, err = config.Load(configPath); err != nil {
+		log.Fatal().Err(err).Msg("Could not load config.")
+	}
+
+	var trk *tracker.SensorTracker
+	if trk, err = tracker.NewSensorTracker(agent.AppID()); err != nil {
+		log.Fatal().Err(err).Msg("Could not start sensor tracker.")
+	}
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		agent.checkRegistration(trk, cfg)
+	}()
+
+	go func() {
+		wg.Wait()
+		log.Debug().Msg("Registration complete.")
+		agent.Stop()
+	}()
+
+	agent.ui.Run(agent.done)
 }
 
 // handleSignals will handle Ctrl-C of the agent.
@@ -165,13 +197,14 @@ func startWorkers(ctx context.Context, trk *tracker.SensorTracker) {
 	var wg sync.WaitGroup
 	var outCh []<-chan tracker.Sensor
 
+	log.Debug().Msg("Starting worker funcs.")
 	for i := 0; i < len(workerFuncs); i++ {
 		outCh = append(outCh, workerFuncs[i](workerCtx))
 	}
 
-	log.Debug().Msg("Listening for sensor updates.")
 	wg.Add(1)
 	go func() {
+		log.Debug().Msg("Listening for sensor updates.")
 		defer wg.Done()
 		for s := range tracker.MergeSensorCh(ctx, outCh...) {
 			go func(s tracker.Sensor) {
@@ -181,6 +214,7 @@ func startWorkers(ctx context.Context, trk *tracker.SensorTracker) {
 	}()
 	wg.Add(1)
 	go func() {
+		log.Debug().Msg("Listening for location updates.")
 		defer wg.Done()
 		for l := range locationWorker()(workerCtx) {
 			go func(l *hass.LocationData) {
@@ -248,7 +282,7 @@ func setupContext(cfg config.Config) (context.Context, context.CancelFunc) {
 }
 
 // setupLogging will attempt to create and then write logging to a file. If it
-// cannot do this, logging will only be available on stdout
+// cannot do this, logging will only be available on stdout.
 func setupLogging() {
 	logFile := filepath.Join(xdg.StateHome, "go-hass-app.log")
 	logWriter, err := os.OpenFile(logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)

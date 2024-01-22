@@ -6,8 +6,9 @@
 package cmd
 
 import (
-	"github.com/joshuar/go-hass-agent/internal/agent"
 	"github.com/spf13/cobra"
+
+	"github.com/joshuar/go-hass-agent/internal/agent"
 )
 
 var (
@@ -21,6 +22,9 @@ var registerCmd = &cobra.Command{
 	Short: "Register this device with Home Assistant",
 	Long:  `Register will attempt to register this device with Home Assistant. A URL for a Home Assistant instance and long-lived access token can be provided if known beforehand.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		if debugID != "" {
+			appID = debugID
+		}
 		agent := agent.New(&agent.Options{
 			Headless:      headlessFlag,
 			ForceRegister: forcedFlag,
@@ -28,7 +32,7 @@ var registerCmd = &cobra.Command{
 			Token:         tokenFlag,
 			ID:            appID,
 		})
-		agent.Run(cmd.Name())
+		agent.Register()
 	},
 }
 

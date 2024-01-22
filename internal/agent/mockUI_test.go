@@ -29,7 +29,7 @@ var _ UI = &UIMock{}
 //			DisplayTrayIconFunc: func(agent ui.Agent, cfg config.Config, trk ui.SensorTracker)  {
 //				panic("mock out the DisplayTrayIcon method")
 //			},
-//			RunFunc: func()  {
+//			RunFunc: func(doneCh chan struct{})  {
 //				panic("mock out the Run method")
 //			},
 //		}
@@ -49,7 +49,7 @@ type UIMock struct {
 	DisplayTrayIconFunc func(agent ui.Agent, cfg config.Config, trk ui.SensorTracker)
 
 	// RunFunc mocks the Run method.
-	RunFunc func()
+	RunFunc func(doneCh chan struct{})
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -82,6 +82,8 @@ type UIMock struct {
 		}
 		// Run holds details about calls to the Run method.
 		Run []struct {
+			// DoneCh is the doneCh argument value.
+			DoneCh chan struct{}
 		}
 	}
 	lockDisplayNotification       sync.RWMutex
@@ -211,16 +213,19 @@ func (mock *UIMock) DisplayTrayIconCalls() []struct {
 }
 
 // Run calls RunFunc.
-func (mock *UIMock) Run() {
+func (mock *UIMock) Run(doneCh chan struct{}) {
 	if mock.RunFunc == nil {
 		panic("UIMock.RunFunc: method is nil but UI.Run was just called")
 	}
 	callInfo := struct {
-	}{}
+		DoneCh chan struct{}
+	}{
+		DoneCh: doneCh,
+	}
 	mock.lockRun.Lock()
 	mock.calls.Run = append(mock.calls.Run, callInfo)
 	mock.lockRun.Unlock()
-	mock.RunFunc()
+	mock.RunFunc(doneCh)
 }
 
 // RunCalls gets all the calls that were made to Run.
@@ -228,8 +233,10 @@ func (mock *UIMock) Run() {
 //
 //	len(mockedUI.RunCalls())
 func (mock *UIMock) RunCalls() []struct {
+	DoneCh chan struct{}
 } {
 	var calls []struct {
+		DoneCh chan struct{}
 	}
 	mock.lockRun.RLock()
 	calls = mock.calls.Run

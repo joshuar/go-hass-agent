@@ -9,15 +9,13 @@ import (
 	"context"
 	"sync"
 
-	"github.com/joshuar/go-hass-agent/internal/hass/api"
 	"github.com/rs/zerolog/log"
+
+	"github.com/joshuar/go-hass-agent/internal/hass/api"
 )
 
 func (agent *Agent) runNotificationsWorker(ctx context.Context) {
-	if agent.IsHeadless() {
-		log.Warn().Msg("Will not send notifications as there is no supported windowing environment.")
-		return
-	}
+	log.Debug().Msg("Listening for notifications.")
 
 	notifyCh := make(chan [2]string)
 	var wg sync.WaitGroup

@@ -20,9 +20,6 @@ var _ Agent = &AgentMock{}
 //			AppIDFunc: func() string {
 //				panic("mock out the AppID method")
 //			},
-//			IsHeadlessFunc: func() bool {
-//				panic("mock out the IsHeadless method")
-//			},
 //			StopFunc: func()  {
 //				panic("mock out the Stop method")
 //			},
@@ -36,9 +33,6 @@ type AgentMock struct {
 	// AppIDFunc mocks the AppID method.
 	AppIDFunc func() string
 
-	// IsHeadlessFunc mocks the IsHeadless method.
-	IsHeadlessFunc func() bool
-
 	// StopFunc mocks the Stop method.
 	StopFunc func()
 
@@ -47,16 +41,12 @@ type AgentMock struct {
 		// AppID holds details about calls to the AppID method.
 		AppID []struct {
 		}
-		// IsHeadless holds details about calls to the IsHeadless method.
-		IsHeadless []struct {
-		}
 		// Stop holds details about calls to the Stop method.
 		Stop []struct {
 		}
 	}
-	lockAppID      sync.RWMutex
-	lockIsHeadless sync.RWMutex
-	lockStop       sync.RWMutex
+	lockAppID sync.RWMutex
+	lockStop  sync.RWMutex
 }
 
 // AppID calls AppIDFunc.
@@ -83,33 +73,6 @@ func (mock *AgentMock) AppIDCalls() []struct {
 	mock.lockAppID.RLock()
 	calls = mock.calls.AppID
 	mock.lockAppID.RUnlock()
-	return calls
-}
-
-// IsHeadless calls IsHeadlessFunc.
-func (mock *AgentMock) IsHeadless() bool {
-	if mock.IsHeadlessFunc == nil {
-		panic("AgentMock.IsHeadlessFunc: method is nil but Agent.IsHeadless was just called")
-	}
-	callInfo := struct {
-	}{}
-	mock.lockIsHeadless.Lock()
-	mock.calls.IsHeadless = append(mock.calls.IsHeadless, callInfo)
-	mock.lockIsHeadless.Unlock()
-	return mock.IsHeadlessFunc()
-}
-
-// IsHeadlessCalls gets all the calls that were made to IsHeadless.
-// Check the length with:
-//
-//	len(mockedAgent.IsHeadlessCalls())
-func (mock *AgentMock) IsHeadlessCalls() []struct {
-} {
-	var calls []struct {
-	}
-	mock.lockIsHeadless.RLock()
-	calls = mock.calls.IsHeadless
-	mock.lockIsHeadless.RUnlock()
 	return calls
 }
 
