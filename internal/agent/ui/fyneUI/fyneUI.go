@@ -34,6 +34,7 @@ import (
 const (
 	explainRegistration = `To register the agent, please enter the relevant details for your Home Assistant
 server (if not auto-detected) and long-lived access token.`
+	restartNote = `Please restart the agent to use changed settings.`
 )
 
 type fyneUI struct {
@@ -64,16 +65,10 @@ func (i *fyneUI) DisplayNotification(title, message string) {
 	})
 }
 
-func (i *fyneUI) openURL(u string) {
-	if dest, err := url.Parse(strings.TrimSpace(u)); err != nil {
-		log.Warn().Err(err).
-			Msgf("Unable parse url %s", u)
-	} else {
-		if err := i.app.OpenURL(dest); err != nil {
-			log.Warn().Err(err).
-				Msgf("Unable to open url %s", dest.String())
-		}
-	}
+// Translate takes the input string and outputs a translated string for the
+// language under which the agent is running.
+func (i *fyneUI) Translate(text string) string {
+	return i.text.Translate(text)
 }
 
 func NewFyneUI(agent ui.Agent) *fyneUI {
@@ -89,45 +84,39 @@ func NewFyneUI(agent ui.Agent) *fyneUI {
 // controlling the agent and showing other informational windows.
 func (i *fyneUI) DisplayTrayIcon(a ui.Agent, cfg config.Config, t ui.SensorTracker) {
 	if desk, ok := i.app.(desktop.App); ok {
-		menuItemQuit := fyne.NewMenuItem(i.text.Translate("Quit"), func() {
+		// About menu item.
+		menuItemAbout := fyne.NewMenuItem(i.Translate("About"),
+			func() {
+				i.aboutWindow().Show()
+			})
+		// Sensors menu item.
+		menuItemSensors := fyne.NewMenuItem(i.Translate("Sensors"),
+			func() {
+				i.sensorsWindow(a, t).Show()
+			})
+
+		// Settings menu and submenu items.
+		settingsMenu := fyne.NewMenuItem(i.Translate("Settings"), nil)
+		settingsMenu.ChildMenu = fyne.NewMenu("",
+			fyne.NewMenuItem(i.Translate("App"),
+				func() {
+					i.agentSettingsWindow(cfg).Show()
+				}),
+			fyne.NewMenuItem(i.text.Translate("Fyne"),
+				func() {
+					i.fyneSettingsWindow().Show()
+				}),
+		)
+		// Quit menu item.
+		menuItemQuit := fyne.NewMenuItem(i.Translate("Quit"), func() {
 			a.Stop()
 		})
 		menuItemQuit.IsQuit = true
-		menu := fyne.NewMenu("Main",
-			fyne.NewMenuItem(i.text.Translate("About"),
-				func() {
-					w := i.aboutWindow(cfg, i.text)
-					if w != nil {
-						w.Show()
-					}
-				}),
-			fyne.NewMenuItem(i.text.Translate("Report Issue"),
-				func() {
-					i.openURL(ui.IssueURL)
-				}),
-			fyne.NewMenuItem(i.text.Translate("Request Feature"),
-				func() {
-					i.openURL(ui.FeatureRequestURL)
-				}),
-			fyne.NewMenuItem(i.text.Translate("Fyne Settings"),
-				func() {
-					w := i.fyneSettingsWindow(i.text)
-					w.Show()
-				}),
-			// fyne.NewMenuItem(i.text.Translate("App Settings"),
-			// 	func() {
-			// 		w := i.agentSettingsWindow(agent, i.text)
-			// 		if w != nil {
-			// 			w.Show()
-			// 		}
-			// 	}),
-			fyne.NewMenuItem(i.text.Translate("Sensors"),
-				func() {
-					w := i.sensorsWindow(a, t, i.text)
-					if w != nil {
-						w.Show()
-					}
-				}),
+
+		menu := fyne.NewMenu("",
+			menuItemAbout,
+			menuItemSensors,
+			settingsMenu,
 			menuItemQuit)
 		desk.SetSystemTrayMenu(menu)
 	}
@@ -137,11 +126,11 @@ func (i *fyneUI) DisplayTrayIcon(a ui.Agent, cfg config.Config, t ui.SensorTrack
 // complete registration. It will populate with any values that were already
 // provided via the command-line.
 func (i *fyneUI) DisplayRegistrationWindow(ctx context.Context, server, token *string, done chan struct{}) {
-	w := i.app.NewWindow(i.text.Translate("App Registration"))
+	w := i.app.NewWindow(i.Translate("App Registration"))
 
 	var allFormItems []*widget.FormItem
 
-	allFormItems = append(allFormItems, registrationFields(ctx, server, token, i.text)...)
+	allFormItems = append(allFormItems, i.registrationFields(ctx, server, token)...)
 	registrationForm := widget.NewForm(allFormItems...)
 	registrationForm.OnSubmit = func() {
 		w.Close()
@@ -155,7 +144,7 @@ func (i *fyneUI) DisplayRegistrationWindow(ctx context.Context, server, token *s
 	}
 
 	w.SetContent(container.New(layout.NewVBoxLayout(),
-		widget.NewLabel(i.text.Translate(explainRegistration)),
+		widget.NewLabel(i.Translate(explainRegistration)),
 		registrationForm,
 	))
 	log.Debug().Msg("Asking user for registration details.")
@@ -164,38 +153,62 @@ func (i *fyneUI) DisplayRegistrationWindow(ctx context.Context, server, token *s
 
 // aboutWindow creates a window that will show some interesting information
 // about the agent, such as version numbers.
-func (i *fyneUI) aboutWindow(cfg config.Config, t *translations.Translator) fyne.Window {
-	var widgets []fyne.CanvasObject
-	widgets = append(widgets, widget.NewLabel(t.Translate(
-		"App Version: %s", config.AppVersion)))
-	var deviceName, deviceID string
-	if err := cfg.Get(config.PrefDeviceName, &deviceName); err == nil && deviceName != "" {
-		widgets = append(widgets,
-			widget.NewLabel(t.Translate("Device Name: "+deviceName)))
-	}
-	if err := cfg.Get(config.PrefDeviceID, &deviceID); err == nil && deviceID != "" {
-		widgets = append(widgets,
-			widget.NewLabel(t.Translate("Device ID: "+deviceID)))
-	}
-	w := i.app.NewWindow(t.Translate("About"))
-	cnt := container.New(layout.NewVBoxLayout(), widgets...)
-	cnt.Add(widget.NewButton(t.Translate("Ok"), func() { w.Close() }))
-	w.SetContent(cnt)
+func (i *fyneUI) aboutWindow() fyne.Window {
+	c := container.NewCenter(container.NewVBox(
+		widget.NewLabelWithStyle("Go Hass Agent "+config.AppVersion, fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+		widget.NewLabel(""), // balance the header on the tutorial screen we leave blank on this content
+		container.NewHBox(
+			widget.NewHyperlink("website", parseURL(ui.AppURL)),
+			widget.NewLabel("-"),
+			widget.NewHyperlink("request feature", parseURL(ui.FeatureRequestURL)),
+			widget.NewLabel("-"),
+			widget.NewHyperlink("report issue", parseURL(ui.IssueURL)),
+		),
+	))
+
+	w := i.app.NewWindow(i.Translate("About"))
+	w.SetContent(c)
 	return w
 }
 
 // fyneSettingsWindow creates a window that will show the Fyne settings for
 // controlling the look and feel of other windows.
-func (i *fyneUI) fyneSettingsWindow(t *translations.Translator) fyne.Window {
-	w := i.app.NewWindow(t.Translate("Fyne Settings"))
+func (i *fyneUI) fyneSettingsWindow() fyne.Window {
+	w := i.app.NewWindow(i.Translate("Fyne Settings"))
 	w.SetContent(settings.NewSettings().LoadAppearanceScreen(w))
+	return w
+}
+
+// agentSettingsWindow creates a window for changing settings related to the
+// agent functionality. Most of these settings will be optional.
+func (i *fyneUI) agentSettingsWindow(cfg config.Config) fyne.Window {
+	mqttSettings := config.LoadMQTTPrefs(cfg)
+
+	var allFormItems []*widget.FormItem
+	allFormItems = append(allFormItems, i.mqttConfigItems(mqttSettings)...)
+
+	w := i.app.NewWindow(i.Translate("App Settings"))
+	settingsForm := widget.NewForm(allFormItems...)
+	settingsForm.OnSubmit = func() {
+		mqttSettings.Save(cfg)
+		log.Debug().Msg("Saved settings.")
+	}
+	settingsForm.OnCancel = func() {
+		w.Close()
+		log.Debug().Msg("No settings saved.")
+	}
+	settingsForm.SubmitText = i.Translate("Save")
+	w.SetContent(container.New(layout.NewVBoxLayout(),
+		widget.NewLabelWithStyle(i.Translate(restartNote), fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+		settingsForm,
+	))
 	return w
 }
 
 // sensorsWindow creates a window that displays all of the sensors and their
 // values that are currently tracked by the agent. Values are updated
 // continuously.
-func (i *fyneUI) sensorsWindow(a ui.Agent, t ui.SensorTracker, l *translations.Translator) fyne.Window {
+func (i *fyneUI) sensorsWindow(a ui.Agent, t ui.SensorTracker) fyne.Window {
 	sensors := t.SensorList()
 	if sensors == nil {
 		return nil
@@ -267,7 +280,7 @@ func (i *fyneUI) sensorsWindow(a ui.Agent, t ui.SensorTracker, l *translations.T
 			}
 		}
 	}()
-	w := i.app.NewWindow(l.Translate("Sensors"))
+	w := i.app.NewWindow(i.Translate("Sensors"))
 	w.SetContent(sensorsTable)
 	w.Resize(fyne.NewSize(480, 640))
 	w.SetOnClosed(func() {
@@ -276,27 +289,9 @@ func (i *fyneUI) sensorsWindow(a ui.Agent, t ui.SensorTracker, l *translations.T
 	return w
 }
 
-// agentSettingsWindow creates a window for changing settings related to the
-// agent functionality. Most of these settings will be optional.
-func (i *fyneUI) agentSettingsWindow(agent ui.Agent, t *translations.Translator) fyne.Window {
-	var allFormItems []*widget.FormItem
-	// allFormItems = append(allFormItems, i.mqttConfigItems(agent, t)...)
-
-	w := i.app.NewWindow(t.Translate("App Settings"))
-	settingsForm := widget.NewForm(allFormItems...)
-	w.SetContent(container.New(layout.NewVBoxLayout(),
-		settingsForm,
-		widget.NewLabel("Changes will be saved automatically."),
-	))
-	w.SetOnClosed(func() {
-		log.Debug().Msg("Closed")
-	})
-	return w
-}
-
 // registrationFields generates a list of form item widgets for selecting a
 // server to register the agent against.
-func registrationFields(ctx context.Context, server, token *string, t *translations.Translator) []*widget.FormItem {
+func (i *fyneUI) registrationFields(ctx context.Context, server, token *string) []*widget.FormItem {
 	allServers := hass.FindServers(ctx)
 
 	if *token == "" {
@@ -330,55 +325,52 @@ func registrationFields(ctx context.Context, server, token *string, t *translati
 
 	var items []*widget.FormItem
 
-	items = append(items, widget.NewFormItem(t.Translate("Token"), tokenEntry),
-		widget.NewFormItem(t.Translate("Auto-discovered Servers"), autoServerSelect),
-		widget.NewFormItem(t.Translate("Use Custom Server?"), manualServerSelect),
-		widget.NewFormItem(t.Translate("Manual Server Entry"), manualServerEntry))
+	items = append(items, widget.NewFormItem(i.Translate("Token"), tokenEntry),
+		widget.NewFormItem(i.Translate("Auto-discovered Servers"), autoServerSelect),
+		widget.NewFormItem(i.Translate("Use Custom Server?"), manualServerSelect),
+		widget.NewFormItem(i.Translate("Manual Server Entry"), manualServerEntry))
 
 	return items
 }
 
 // mqttConfigItems generates a list of for item widgets for configuring the
 // agent to use an MQTT for pub/sub functionality.
-// func (i *fyneUI) mqttConfigItems(agent ui.Agent, t *translations.Translator) []*widget.FormItem {
-// 	serverEntry := configEntry(agent, config.PrefMQTTServer, "localhost:1883", false)
-// 	serverEntry.Validator = hostPortValidator()
-// 	serverEntry.Disable()
+func (i *fyneUI) mqttConfigItems(m *config.MQTTPrefs) []*widget.FormItem {
+	serverEntry := configEntry(&m.Server, false)
+	serverEntry.Validator = hostPortValidator()
+	serverEntry.Disable()
 
-// 	userEntry := configEntry(agent, config.PrefMQTTUser, "", false)
-// 	userEntry.Disable()
-// 	passwordEntry := configEntry(agent, config.PrefMQTTPassword, "", true)
-// 	passwordEntry.Disable()
+	userEntry := configEntry(&m.User, false)
+	userEntry.Disable()
 
-// 	mqttEnabled := configCheck(agent, config.PrefMQTTEnabled, func(b bool) {
-// 		switch b {
-// 		case true:
-// 			serverEntry.Enable()
-// 			userEntry.Enable()
-// 			passwordEntry.Enable()
-// 			if err := agent.SetConfig("UseMQTT", true); err != nil {
-// 				log.Warn().Err(err).Msg("Could not enable MQTT.")
-// 			}
-// 		case false:
-// 			serverEntry.Disable()
-// 			userEntry.Disable()
-// 			passwordEntry.Disable()
-// 			if err := agent.SetConfig("UseMQTT", false); err != nil {
-// 				log.Warn().Err(err).Msg("Could not disable MQTT.")
-// 			}
-// 		}
-// 	})
+	passwordEntry := configEntry(&m.Password, true)
+	passwordEntry.Disable()
 
-// 	var items []*widget.FormItem
+	mqttEnabled := configCheck(&m.Enabled, func(b bool) {
+		switch b {
+		case true:
+			serverEntry.Enable()
+			userEntry.Enable()
+			passwordEntry.Enable()
+			m.Enabled = true
+		case false:
+			serverEntry.Disable()
+			userEntry.Disable()
+			passwordEntry.Disable()
+			m.Enabled = false
+		}
+	})
 
-// 	items = append(items, widget.NewFormItem(t.Translate("Use MQTT?"), mqttEnabled),
-// 		widget.NewFormItem(t.Translate("MQTT Server"), serverEntry),
-// 		widget.NewFormItem(t.Translate("MQTT User"), userEntry),
-// 		widget.NewFormItem(t.Translate("MQTT Password"), passwordEntry),
-// 	)
+	var items []*widget.FormItem
 
-// 	return items
-// }
+	items = append(items, widget.NewFormItem(i.Translate("Use MQTT?"), mqttEnabled),
+		widget.NewFormItem(i.Translate("MQTT Server"), serverEntry),
+		widget.NewFormItem(i.Translate("MQTT User"), userEntry),
+		widget.NewFormItem(i.Translate("MQTT Password"), passwordEntry),
+	)
+
+	return items
+}
 
 // configEntry creates a form entry widget that is tied to the given config
 // value of the given agent. When the value of the entry widget changes, the
@@ -395,15 +387,15 @@ func configEntry(value *string, secret bool) *widget.Entry {
 // configCheck creates a form checkbox widget that is tied to the given config
 // value of the given agent. When the value of the entry widget changes, the
 // corresponding config value will be updated.
-// func configCheck(agent ui.Agent, name string, checkFn func(bool)) *widget.Check {
-// 	entry := widget.NewCheck("", checkFn)
-// 	if err := agent.GetConfig(name, &entry.Checked); err != nil {
-// 		log.Warn().Err(err).Msgf("Could not get value of config entry %s. Using placeholder.", name)
-// 		entry.SetChecked(false)
-// 	}
-// 	return entry
-// }
+func configCheck(value *bool, checkFn func(bool)) *widget.Check {
+	entry := widget.NewCheck("", checkFn)
+	entry.SetChecked(*value)
+	return entry
+}
 
+// longestString returns the longest string of a slice of strings. This can be
+// used as a placeholder in Fyne containers to ensure there is enough space to
+// display any of the strings in the slice.
 func longestString(a []string) string {
 	var l string
 	if len(a) > 0 {
@@ -446,4 +438,14 @@ func hostPortValidator() fyne.StringValidator {
 		}
 		return nil
 	}
+}
+
+// parseURL takes a URL as a string and parses it as a url.URL.
+func parseURL(u string) *url.URL {
+	dest, err := url.Parse(strings.TrimSpace(u))
+	if err != nil {
+		log.Warn().Err(err).
+			Msgf("Unable parse url %s", u)
+	}
+	return dest
 }

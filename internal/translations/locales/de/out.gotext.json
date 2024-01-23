@@ -2,38 +2,33 @@
     "language": "de",
     "messages": [
         {
-            "id": "Quit",
-            "message": "Quit",
-            "translation": ""
-        },
-        {
             "id": "About",
             "message": "About",
             "translation": ""
         },
         {
-            "id": "Report Issue",
-            "message": "Report Issue",
-            "translation": ""
-        },
-        {
-            "id": "Request Feature",
-            "message": "Request Feature",
-            "translation": ""
-        },
-        {
-            "id": "Fyne Settings",
-            "message": "Fyne Settings",
-            "translation": ""
-        },
-        {
-            "id": "App Settings",
-            "message": "App Settings",
-            "translation": ""
-        },
-        {
             "id": "Sensors",
             "message": "Sensors",
+            "translation": ""
+        },
+        {
+            "id": "Settings",
+            "message": "Settings",
+            "translation": ""
+        },
+        {
+            "id": "App",
+            "message": "App",
+            "translation": ""
+        },
+        {
+            "id": "Fyne",
+            "message": "Fyne",
+            "translation": ""
+        },
+        {
+            "id": "Quit",
+            "message": "Quit",
             "translation": ""
         },
         {
@@ -50,23 +45,26 @@
             "translation": ""
         },
         {
-            "id": "App Version: {AppVersion}",
-            "message": "App Version: {AppVersion}",
-            "translation": "",
-            "placeholders": [
-                {
-                    "id": "AppVersion",
-                    "string": "%[1]s",
-                    "type": "string",
-                    "underlyingType": "string",
-                    "argNum": 1,
-                    "expr": "agent.AppVersion()"
-                }
-            ]
+            "id": "Fyne Settings",
+            "message": "Fyne Settings",
+            "translation": ""
         },
         {
-            "id": "Ok",
-            "message": "Ok",
+            "id": "App Settings",
+            "message": "App Settings",
+            "translation": ""
+        },
+        {
+            "id": "Save",
+            "message": "Save",
+            "translation": ""
+        },
+        {
+            "id": [
+                "restartNote",
+                "Please restart the agent to use changed settings."
+            ],
+            "message": "Please restart the agent to use changed settings.",
             "translation": ""
         },
         {

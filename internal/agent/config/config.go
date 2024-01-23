@@ -14,10 +14,11 @@ import (
 	"path/filepath"
 
 	"github.com/go-playground/validator/v10"
-	fyneconfig "github.com/joshuar/go-hass-agent/internal/agent/config/fyneConfig"
-	viperconfig "github.com/joshuar/go-hass-agent/internal/agent/config/viperConfig"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/mod/semver"
+
+	fyneconfig "github.com/joshuar/go-hass-agent/internal/agent/config/fyneConfig"
+	viperconfig "github.com/joshuar/go-hass-agent/internal/agent/config/viperConfig"
 )
 
 const (
