@@ -71,9 +71,9 @@ func (i *fyneUI) Translate(text string) string {
 	return i.text.Translate(text)
 }
 
-func NewFyneUI(agent ui.Agent) *fyneUI {
+func NewFyneUI(id string) *fyneUI {
 	i := &fyneUI{
-		app:  app.NewWithID(agent.AppID()),
+		app:  app.NewWithID(id),
 		text: translations.NewTranslator(),
 	}
 	i.app.SetIcon(&ui.TrayIcon{})
@@ -182,9 +182,10 @@ func (i *fyneUI) fyneSettingsWindow() fyne.Window {
 // agentSettingsWindow creates a window for changing settings related to the
 // agent functionality. Most of these settings will be optional.
 func (i *fyneUI) agentSettingsWindow(cfg config.Config) fyne.Window {
-	mqttSettings := config.LoadMQTTPrefs(cfg)
-
 	var allFormItems []*widget.FormItem
+
+	// MQTT settings
+	mqttSettings := config.LoadMQTTPrefs(cfg)
 	allFormItems = append(allFormItems, i.mqttConfigItems(mqttSettings)...)
 
 	w := i.app.NewWindow(i.Translate("App Settings"))
@@ -337,7 +338,7 @@ func (i *fyneUI) registrationFields(ctx context.Context, server, token *string) 
 // agent to use an MQTT for pub/sub functionality.
 func (i *fyneUI) mqttConfigItems(m *config.MQTTPrefs) []*widget.FormItem {
 	serverEntry := configEntry(&m.Server, false)
-	serverEntry.Validator = hostPortValidator()
+	serverEntry.Validator = httpValidator()
 	serverEntry.Disable()
 
 	userEntry := configEntry(&m.User, false)

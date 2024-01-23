@@ -48,7 +48,7 @@ func New(o *Options) *Agent {
 		Options: o,
 	}
 	if !a.Options.Headless {
-		a.ui = fyneui.NewFyneUI(a)
+		a.ui = fyneui.NewFyneUI(a.Options.ID)
 	}
 	setupLogging()
 	return a
@@ -57,22 +57,8 @@ func New(o *Options) *Agent {
 // Run is the "main loop" of the agent. It sets up the agent, loads the config
 // then spawns a sensor tracker and the workers to gather sensor data and
 // publish it to Home Assistant.
-func (agent *Agent) Run(cmd string) {
+func (agent *Agent) Run(c string, cfg config.Config, trk SensorTracker) {
 	var wg sync.WaitGroup
-	var ctx context.Context
-	var cancelFunc context.CancelFunc
-	var err error
-
-	var cfg config.Config
-	configPath := filepath.Join(xdg.ConfigHome, agent.AppID())
-	if cfg, err = config.Load(configPath); err != nil {
-		log.Fatal().Err(err).Msg("Could not load config.")
-	}
-
-	var trk *tracker.SensorTracker
-	if trk, err = tracker.NewSensorTracker(agent.AppID()); err != nil {
-		log.Fatal().Err(err).Msg("Could not start sensor tracker.")
-	}
 
 	// Pre-flight: check if agent is registered. If not, run registration flow.
 	var regWait sync.WaitGroup
@@ -82,11 +68,11 @@ func (agent *Agent) Run(cmd string) {
 		agent.checkRegistration(trk, cfg)
 	}()
 
-	if cmd == "go-hass-agent" {
+	if c == "go-hass-agent" {
 		go func() {
 			regWait.Wait()
 
-			ctx, cancelFunc = setupContext(cfg)
+			ctx, cancelFunc := setupContext(cfg)
 			go func() {
 				<-agent.done
 				log.Debug().Msg("Agent done.")
@@ -126,20 +112,8 @@ func (agent *Agent) Run(cmd string) {
 	wg.Wait()
 }
 
-func (agent *Agent) Register() {
+func (agent *Agent) Register(cfg config.Config, trk SensorTracker) {
 	var wg sync.WaitGroup
-	var err error
-
-	var cfg config.Config
-	configPath := filepath.Join(xdg.ConfigHome, agent.AppID())
-	if cfg, err = config.Load(configPath); err != nil {
-		log.Fatal().Err(err).Msg("Could not load config.")
-	}
-
-	var trk *tracker.SensorTracker
-	if trk, err = tracker.NewSensorTracker(agent.AppID()); err != nil {
-		log.Fatal().Err(err).Msg("Could not start sensor tracker.")
-	}
 
 	wg.Add(1)
 	go func() {
@@ -188,7 +162,7 @@ func (agent *Agent) Stop() {
 
 // startWorkers will call all the sensor worker functions that have been defined
 // for this device.
-func startWorkers(ctx context.Context, trk *tracker.SensorTracker) {
+func startWorkers(ctx context.Context, trk SensorTracker) {
 	workerFuncs := sensorWorkers()
 	workerFuncs = append(workerFuncs, device.ExternalIPUpdater)
 	d := newDevice(ctx)
@@ -230,7 +204,7 @@ func startWorkers(ctx context.Context, trk *tracker.SensorTracker) {
 // to be run on their defined schedule using the cron scheduler. It also sets up
 // a channel to receive script output and send appropriate sensor objects to the
 // tracker.
-func runScripts(ctx context.Context, path string, trk *tracker.SensorTracker) {
+func runScripts(ctx context.Context, path string, trk SensorTracker) {
 	allScripts, err := scripts.FindScripts(path)
 	switch {
 	case err != nil:
