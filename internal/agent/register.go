@@ -13,7 +13,6 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/agent/config"
 	"github.com/joshuar/go-hass-agent/internal/hass/api"
-	"github.com/joshuar/go-hass-agent/internal/tracker"
 
 	"github.com/go-playground/validator/v10"
 )
@@ -91,7 +90,7 @@ func (agent *Agent) performRegistration(ctx context.Context, server, token strin
 	log.Info().Msg("Successfully registered agent.")
 }
 
-func (agent *Agent) checkRegistration(t *tracker.SensorTracker, c config.Config) {
+func (agent *Agent) checkRegistration(t SensorTracker, c config.Config) {
 	var registered bool
 	if err := c.Get(config.PrefRegistered, &registered); err != nil {
 		log.Fatal().Err(err).Msg("Could not ascertain agent registration status.")

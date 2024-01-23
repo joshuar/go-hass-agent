@@ -8,24 +8,27 @@ package cmd
 import (
 	_ "net/http/pprof"
 	"os"
+	"path/filepath"
 
-	"github.com/joshuar/go-hass-agent/internal/agent"
-	"github.com/joshuar/go-hass-agent/internal/logging"
+	"github.com/adrg/xdg"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
+
+	"github.com/joshuar/go-hass-agent/internal/agent"
+	"github.com/joshuar/go-hass-agent/internal/agent/config"
+	"github.com/joshuar/go-hass-agent/internal/logging"
+	"github.com/joshuar/go-hass-agent/internal/tracker"
 )
 
 var (
 	traceFlag    bool
 	debugFlag    bool
-	debugID      string
+	appID        string
 	profileFlag  bool
 	headlessFlag bool
 )
 
-var appID = "com.github.joshuar.go-hass-agent"
-
-// rootCmd represents the base command when called without any subcommands
+// rootCmd represents the base command when called without any subcommands.
 var rootCmd = &cobra.Command{
 	Use:   "go-hass-agent",
 	Short: "A Home Assistant, native app integration for desktop/laptop devices.",
@@ -38,14 +41,21 @@ It can also receive notifications from Home Assistant.`,
 		logging.SetLogging(traceFlag, debugFlag, profileFlag)
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		if debugID != "" {
-			appID = debugID
-		}
 		agent := agent.New(&agent.Options{
 			Headless: headlessFlag,
 			ID:       appID,
 		})
-		agent.Run(cmd.Name())
+		var err error
+		var cfg config.Config
+		configPath := filepath.Join(xdg.ConfigHome, agent.AppID())
+		if cfg, err = config.Load(configPath); err != nil {
+			log.Fatal().Err(err).Msg("Could not load config.")
+		}
+		var trk *tracker.SensorTracker
+		if trk, err = tracker.NewSensorTracker(agent.AppID()); err != nil {
+			log.Fatal().Err(err).Msg("Could not start sensor tracker.")
+		}
+		agent.Run(cmd.Name(), cfg, trk)
 	},
 }
 
@@ -62,7 +72,7 @@ func init() {
 		"debug output (default is false)")
 	rootCmd.PersistentFlags().BoolVar(&profileFlag, "profile", false,
 		"enable profiling (default is false)")
-	rootCmd.PersistentFlags().StringVar(&debugID, "debugid", "",
+	rootCmd.PersistentFlags().StringVar(&appID, "appid", "com.github.joshuar.go-hass-agent",
 		"specify a custom app ID (for debugging)")
 	rootCmd.PersistentFlags().BoolVar(&headlessFlag, "terminal", defaultHeadless(),
 		"run in terminal (without a GUI)")
