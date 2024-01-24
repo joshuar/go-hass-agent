@@ -11,7 +11,8 @@
         "tracker",
         "devcontainer",
         "linux/hwmon",
-        "linux"
+        "linux",
+        "config"
     ],
     "go.lintTool": "golangci-lint",
     "go.lintFlags": [
