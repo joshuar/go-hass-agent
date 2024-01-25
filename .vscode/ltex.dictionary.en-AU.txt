@@ -2,3 +2,4 @@ Fyne
 Hass
 websocket
 variadic
+inode
