@@ -9,7 +9,6 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
-	"net/url"
 	"os"
 	"path/filepath"
 
@@ -37,11 +36,11 @@ var AppVersion string
 //
 //go:generate moq -out mockConfig_test.go . Config
 type Config interface {
-	Get(string, any) error
-	Set(string, any) error
-	Delete(string) error
+	Get(key string, value any) error
+	Set(key string, value any) error
+	Delete(key string) error
 	Path() string
-	StoragePath(string) (string, error)
+	StoragePath(path string) (string, error)
 }
 
 func Load(configPath string) (Config, error) {
@@ -51,7 +50,10 @@ func Load(configPath string) (Config, error) {
 		return nil, err
 	}
 	var registered bool
-	cfg.Get(PrefRegistered, &registered)
+	err = cfg.Get(PrefRegistered, &registered)
+	if err != nil {
+		log.Debug().Err(err).Msg("Registration status not found.")
+	}
 	if registered {
 		if err = UpgradeConfig(cfg); err != nil {
 			if _, ok := err.(*FileNotFoundError); !ok {
@@ -197,43 +199,6 @@ func UpgradeConfig(vc Config) error {
 		}
 	}
 	return nil
-}
-
-func generateWebsocketURL(host string) string {
-	// TODO: look into websocket http upgrade method
-	baseURL, err := url.Parse(host)
-	if err != nil {
-		log.Warn().Err(err).Msg("Host string not a URL. Cannot generate websocket URL.")
-		return ""
-	}
-	switch baseURL.Scheme {
-	case "https":
-		baseURL.Scheme = "wss"
-	case "http":
-		baseURL.Scheme = "ws"
-	default:
-		log.Warn().Msg("Unknown URL scheme.")
-		return ""
-	}
-	baseURL = baseURL.JoinPath(websocketPath)
-	return baseURL.String()
-}
-
-func generateAPIURL(host, cloudhookURL, remoteUIURL, webhookID string) string {
-	switch {
-	case cloudhookURL != "":
-		return cloudhookURL
-	case remoteUIURL != "" && webhookID != "":
-		baseURL, _ := url.Parse(remoteUIURL)
-		baseURL = baseURL.JoinPath(webHookPath, webhookID)
-		return baseURL.String()
-	case webhookID != "" && host != "":
-		baseURL, _ := url.Parse(host)
-		baseURL = baseURL.JoinPath(webHookPath, webhookID)
-		return baseURL.String()
-	default:
-		return ""
-	}
 }
 
 type pref struct {
