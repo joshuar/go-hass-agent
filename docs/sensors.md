@@ -29,8 +29,8 @@
 | Swap Total | Total swap on the system | ProcFS | |
 | Swap Available | Swap available/free | ProcFS | |
 | Swap Used | Swap used | ProcFS | |
-| Per Mountpoint Usage | % usage of mountpoint | ProcFS |  Filesystem type, bytes/inode total/free/used |
-| Connection State (per-connection) | The current state of each network connection | D-Bus | Connection type (e.g., wired/wireless/vpn), IP addresses |
+| Per Mountpoint Usage | % usage of mount point | ProcFS |  Filesystem type, bytes/inode total/free/used |
+| Connection State (per-connection) | The current state of each network connection | D-Bus | Connection type (e.g., wired/wireless/VPN), IP addresses |
 | Wi-Fi SSID[^1] | The SSID of the Wi-Fi network | D-Bus | |
 | Wi-Fi Frequency[^1] | The frequency band of the Wi-Fi network | D-Bus | |
 | Wi-Fi Speed[^1] | The network speed of the Wi-Fi network | D-Bus | |
@@ -53,7 +53,7 @@
 | Screen Lock State | Current state of screen lock | D-Bus | |
 | Power State | Power state of device (e.g., suspended, powered on/off) | D-Bus | |
 | Problems | Count of any problems logged to the ABRT daemon | D-Bus |  Problem details |
-| Device/Component Temperature(s) | Any reported temperature from each device/component | ProcFS |  |
+| Device/Component Sensors(s) | Any reported hardware sensors (temp, fan speed, voltage, etc.) from each device/component, as extracted from the `/sys/class/hwmon` file system. | SysFS |  |
 
 [^1]: Only updated when currently connected to a Wi-Fi network.
 
