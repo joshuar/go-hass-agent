@@ -24,15 +24,13 @@ import (
 func runWorkers(ctx context.Context, trk SensorTracker) {
 	workerFuncs := sensorWorkers()
 	workerFuncs = append(workerFuncs, device.ExternalIPUpdater)
-	d := newDevice(ctx)
-	workerCtx := d.Setup(ctx)
 
 	var wg sync.WaitGroup
 	var outCh []<-chan tracker.Sensor
 
 	log.Debug().Msg("Starting worker funcs.")
 	for i := 0; i < len(workerFuncs); i++ {
-		outCh = append(outCh, workerFuncs[i](workerCtx))
+		outCh = append(outCh, workerFuncs[i](ctx))
 	}
 
 	wg.Add(1)
@@ -49,7 +47,7 @@ func runWorkers(ctx context.Context, trk SensorTracker) {
 	go func() {
 		log.Debug().Msg("Listening for location updates.")
 		defer wg.Done()
-		for l := range locationWorker()(workerCtx) {
+		for l := range locationWorker()(ctx) {
 			go func(l *hass.LocationData) {
 				trk.UpdateSensors(ctx, l)
 			}(l)

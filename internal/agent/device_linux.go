@@ -24,6 +24,7 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/linux/time"
 	"github.com/joshuar/go-hass-agent/internal/linux/user"
 	"github.com/joshuar/go-hass-agent/internal/tracker"
+	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
 func newDevice(_ context.Context) *linux.Device {
@@ -56,4 +57,9 @@ func sensorWorkers() []func(context.Context) chan tracker.Sensor {
 
 func locationWorker() func(context.Context) chan *hass.LocationData {
 	return location.Updater
+}
+
+// Setup returns a new Context that contains the D-Bus API.
+func setupDeviceContext(ctx context.Context) context.Context {
+	return dbusx.Setup(ctx)
 }

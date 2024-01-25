@@ -68,6 +68,8 @@ func (agent *Agent) Run(c string, cfg config.Config, trk SensorTracker) {
 			regWait.Wait()
 
 			ctx, cancelFunc := setupContext(cfg)
+			runnerCtx := setupDeviceContext(ctx)
+
 			go func() {
 				<-agent.done
 				log.Debug().Msg("Agent done.")
@@ -78,7 +80,7 @@ func (agent *Agent) Run(c string, cfg config.Config, trk SensorTracker) {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				runWorkers(ctx, trk)
+				runWorkers(runnerCtx, trk)
 			}()
 			// Start any scripts.
 			wg.Add(1)

@@ -6,16 +6,15 @@
 package linux
 
 import (
-	"context"
 	"encoding/json"
 	"os"
 	"os/user"
 	"strings"
 
-	"github.com/joshuar/go-hass-agent/internal/hass/api"
-	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v3/host"
+
+	"github.com/joshuar/go-hass-agent/internal/hass/api"
 )
 
 type Device struct {
@@ -25,11 +24,6 @@ type Device struct {
 	deviceID   string
 	hwVendor   string
 	hwModel    string
-}
-
-// Setup returns a new Context that contains the D-Bus API.
-func (l *Device) Setup(ctx context.Context) context.Context {
-	return dbusx.Setup(ctx)
 }
 
 func (l *Device) AppName() string {
