@@ -25,6 +25,8 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/rs/zerolog/log"
 
+	mqttconfig "github.com/joshuar/go-hass-anything/v3/pkg/config"
+
 	"github.com/joshuar/go-hass-agent/internal/agent/config"
 	"github.com/joshuar/go-hass-agent/internal/agent/ui"
 	"github.com/joshuar/go-hass-agent/internal/hass"
@@ -185,14 +187,36 @@ func (i *fyneUI) agentSettingsWindow(cfg config.Config) fyne.Window {
 	var allFormItems []*widget.FormItem
 
 	// MQTT settings
-	mqttSettings := config.LoadMQTTPrefs(cfg)
-	allFormItems = append(allFormItems, i.mqttConfigItems(mqttSettings)...)
+	mqttconfig.PreferencesFile = "mqtt.toml"
+	mqSettings, err := mqttconfig.LoadPreferences(cfg.Path())
+	if err != nil {
+		log.Warn().Err(err).Msg("No MQTT settings found. Showing defaults.")
+		mqttconfig.SavePreferences(cfg.Path())
+		mqSettings, _ = mqttconfig.LoadPreferences(cfg.Path())
+	}
+	var mqEnabled bool
+	err = cfg.Get(config.PrefMQTTEnabled, &mqEnabled)
+	if err != nil {
+		log.Warn().Err(err).Msg("Could not retrieve enabled status for MQTT.")
+	}
+
+	allFormItems = append(allFormItems, i.mqttConfigItems(&mqEnabled, mqSettings)...)
 
 	w := i.app.NewWindow(i.Translate("App Settings"))
 	settingsForm := widget.NewForm(allFormItems...)
 	settingsForm.OnSubmit = func() {
-		mqttSettings.Save(cfg)
-		log.Debug().Msg("Saved settings.")
+		err := mqttconfig.SavePreferences(cfg.Path(),
+			mqttconfig.MQTTServer(mqSettings.MQTTServer),
+			mqttconfig.MQTTUser(mqSettings.MQTTUser),
+			mqttconfig.MQTTPassword(mqSettings.MQTTPassword),
+		)
+		if err != nil {
+			log.Warn().Err(err).Msg("Problem saving MQTT settings.")
+		}
+		err = cfg.Set(config.PrefMQTTEnabled, &mqEnabled)
+		if err != nil {
+			log.Warn().Err(err).Msg("Problem saving MQTT enabled status.")
+		}
 	}
 	settingsForm.OnCancel = func() {
 		w.Close()
@@ -336,29 +360,29 @@ func (i *fyneUI) registrationFields(ctx context.Context, server, token *string) 
 
 // mqttConfigItems generates a list of for item widgets for configuring the
 // agent to use an MQTT for pub/sub functionality.
-func (i *fyneUI) mqttConfigItems(m *config.MQTTPrefs) []*widget.FormItem {
-	serverEntry := configEntry(&m.Server, false)
+func (i *fyneUI) mqttConfigItems(e *bool, m *mqttconfig.Preferences) []*widget.FormItem {
+	serverEntry := configEntry(&m.MQTTServer, false)
 	serverEntry.Validator = httpValidator()
 	serverEntry.Disable()
 
-	userEntry := configEntry(&m.User, false)
+	userEntry := configEntry(&m.MQTTUser, false)
 	userEntry.Disable()
 
-	passwordEntry := configEntry(&m.Password, true)
+	passwordEntry := configEntry(&m.MQTTPassword, true)
 	passwordEntry.Disable()
 
-	mqttEnabled := configCheck(&m.Enabled, func(b bool) {
+	mqttEnabled := configCheck(e, func(b bool) {
 		switch b {
 		case true:
 			serverEntry.Enable()
 			userEntry.Enable()
 			passwordEntry.Enable()
-			m.Enabled = true
+			*e = true
 		case false:
 			serverEntry.Disable()
 			userEntry.Disable()
 			passwordEntry.Disable()
-			m.Enabled = false
+			*e = false
 		}
 	})
 
