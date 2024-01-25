@@ -12,7 +12,8 @@
         "devcontainer",
         "linux/hwmon",
         "linux",
-        "config"
+        "config",
+        "scripts"
     ],
     "go.lintTool": "golangci-lint",
     "go.lintFlags": [

@@ -13,17 +13,18 @@ import (
 	"path/filepath"
 
 	"github.com/iancoleman/strcase"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
-	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/pelletier/go-toml/v2"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v3"
+
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/tracker"
 )
 
 type script struct {
+	Output   chan tracker.Sensor
 	path     string
 	schedule string
-	Output   chan tracker.Sensor
 }
 
 func (s *script) execute() (*scriptOutput, error) {
@@ -52,8 +53,8 @@ func (s *script) Run() {
 		return
 	}
 
-	for _, sensor := range output.Sensors {
-		s.Output <- sensor
+	for _, o := range output.Sensors {
+		s.Output <- o
 	}
 }
 
@@ -113,14 +114,14 @@ func (o *scriptOutput) Unmarshal(b []byte) error {
 }
 
 type scriptSensor struct {
+	SensorState       any `json:"sensor_state" yaml:"sensor_state" toml:"sensor_state"`
+	SensorAttributes  any `json:"sensor_attributes,omitempty" yaml:"sensor_attributes,omitempty" toml:"sensor_attributes,omitempty"`
 	SensorName        string      `json:"sensor_name" yaml:"sensor_name" toml:"sensor_name"`
 	SensorIcon        string      `json:"sensor_icon" yaml:"sensor_icon" toml:"sensor_icon"`
 	SensorDeviceClass string      `json:"sensor_device_class,omitempty" yaml:"sensor_device_class,omitempty" toml:"sensor_device_class,omitempty"`
 	SensorStateClass  string      `json:"sensor_state_class,omitempty" yaml:"sensor_state_class,omitempty" toml:"sensor_state_class,omitempty"`
 	SensorStateType   string      `json:"sensor_type,omitempty" yaml:"sensor_type,omitempty" toml:"sensor_type,omitempty"`
-	SensorState       interface{} `json:"sensor_state" yaml:"sensor_state" toml:"sensor_state"`
 	SensorUnits       string      `json:"sensor_units,omitempty" yaml:"sensor_units,omitempty" toml:"sensor_units,omitempty"`
-	SensorAttributes  interface{} `json:"sensor_attributes,omitempty" yaml:"sensor_attributes,omitempty" toml:"sensor_attributes,omitempty"`
 }
 
 func (s *scriptSensor) Name() string {
@@ -166,7 +167,7 @@ func (s *scriptSensor) StateClass() sensor.SensorStateClass {
 	}
 }
 
-func (s *scriptSensor) State() interface{} {
+func (s *scriptSensor) State() any {
 	return s.SensorState
 }
 
@@ -178,7 +179,7 @@ func (s *scriptSensor) Category() string {
 	return ""
 }
 
-func (s *scriptSensor) Attributes() interface{} {
+func (s *scriptSensor) Attributes() any {
 	return s.SensorAttributes
 }
 
@@ -203,5 +204,5 @@ func isExecutable(filename string) bool {
 	if err != nil {
 		return false
 	}
-	return fi.Mode().Perm()&0111 != 0
+	return fi.Mode().Perm()&0o111 != 0
 }
