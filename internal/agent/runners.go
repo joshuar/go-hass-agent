@@ -12,6 +12,10 @@ import (
 	"github.com/robfig/cron/v3"
 	"github.com/rs/zerolog/log"
 
+	mqtthass "github.com/joshuar/go-hass-anything/v3/pkg/hass"
+	mqttapi "github.com/joshuar/go-hass-anything/v3/pkg/mqtt"
+
+	"github.com/joshuar/go-hass-agent/internal/agent/config"
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/hass/api"
@@ -102,6 +106,9 @@ func runScripts(ctx context.Context, path string, trk SensorTracker) {
 	<-cronCtx.Done()
 }
 
+// runNotificationsWorker will run a goroutine that is listening for
+// notification messages from Home Assistant on a websocket connection. Any
+// received notifications will be dipslayed on the device running the agent.
 func (agent *Agent) runNotificationsWorker(ctx context.Context) {
 	log.Debug().Msg("Listening for notifications.")
 
@@ -137,4 +144,44 @@ func (agent *Agent) runNotificationsWorker(ctx context.Context) {
 	}()
 
 	wg.Wait()
+}
+
+// runMQTTWorker will set up a connection to MQTT and listen on topics for
+// controlling this device from Home Assistant.
+func (agent *Agent) runMQTTWorker(ctx context.Context) {
+	cfg := config.FetchFromContext(ctx)
+
+	c, err := mqttapi.NewMQTTClient(cfg.Path())
+	if err != nil {
+		log.Error().Err(err).Msg("Could not start MQTT client.")
+		return
+	}
+	d := agent.newMQTTDevice(ctx)
+	if err := mqtthass.Register(d, c); err != nil {
+		log.Error().Err(err).Msg("Failed to register app!")
+		return
+	}
+	if err := mqtthass.Subscribe(d, c); err != nil {
+		log.Error().Err(err).Msg("Could not activate subscriptions.")
+	}
+	log.Debug().Msg("Listening for events on MQTT.")
+
+	<-ctx.Done()
+}
+
+func (agent *Agent) resetMQTTWorker(ctx context.Context) {
+	cfg := config.FetchFromContext(ctx)
+
+	c, err := mqttapi.NewMQTTClient(cfg.Path())
+	if err != nil {
+		log.Error().Err(err).Msg("Could not start MQTT client.")
+		return
+	}
+
+	log.Info().Msgf("Clearing agent data from Home Assistant.")
+	d := agent.newMQTTDevice(ctx)
+
+	if err := mqtthass.UnRegister(d, c); err != nil {
+		log.Error().Err(err).Msg("Failed to unregister app!")
+	}
 }
