@@ -2,9 +2,12 @@
 # 
 # This software is released under the MIT License.
 # https://opensource.org/licenses/MIT
-FROM golang:1.21
+FROM docker.io/golang:1.21
 
 WORKDIR /usr/src/go-hass-agent
+
+# copy the src to the workdir
+ADD . .
 
 # add dpkg filters
 RUN cp assets/dpkg-filters /etc/dpkg/dpkg.cfg.d/container-filters
@@ -12,9 +15,6 @@ RUN cp assets/dpkg-filters /etc/dpkg/dpkg.cfg.d/container-filters
 # https://developer.fyne.io/started/#prerequisites
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get -y install gcc pkg-config libgl1-mesa-dev xorg-dev && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
-
-# copy the src to the workdir
-ADD . .
 
 # install build dependencies
 RUN go install github.com/matryer/moq@latest && \
