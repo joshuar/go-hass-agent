@@ -64,7 +64,9 @@ func (agent *Agent) Run(c string, cfg config.Config, trk SensorTracker) {
 	}()
 
 	if c == "go-hass-agent" {
+		wg.Add(1)
 		go func() {
+			defer wg.Done()
 			regWait.Wait()
 
 			ctx, cancelFunc := setupContext(cfg)
@@ -116,6 +118,7 @@ func (agent *Agent) Run(c string, cfg config.Config, trk SensorTracker) {
 		agent.ui.Run(agent.done)
 	}
 	wg.Wait()
+	log.Debug().Msg("here")
 }
 
 func (agent *Agent) Register(cfg config.Config, trk SensorTracker) {
