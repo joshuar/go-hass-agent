@@ -29,11 +29,6 @@ jobs:
         with:
           packages: qemu-user-static
 
-      - name: Update VERSION
-        id: update_version
-        shell: sh
-        run: cd internal/agent/config && printf %s $(git tag | tail -1) > VERSION
-
       - name: Build container image
         id: build_image
         uses: redhat-actions/buildah-build@v2
