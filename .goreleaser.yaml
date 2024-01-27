@@ -1,6 +1,5 @@
 before:
   hooks:
-    - go mod tidy
     - desktop-file-validate assets/go-hass-agent.desktop
 report_sizes: true
 changelog:
