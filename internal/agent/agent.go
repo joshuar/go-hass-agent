@@ -127,13 +127,11 @@ func (agent *Agent) Register(cfg config.Config, trk SensorTracker) {
 		agent.checkRegistration(trk, cfg)
 	}()
 
-	go func() {
-		wg.Wait()
-		log.Debug().Msg("Registration complete.")
-		agent.Stop()
-	}()
-
-	agent.ui.Run(agent.done)
+	if !agent.IsHeadless() {
+		agent.ui.Run(agent.done)
+	}
+	wg.Wait()
+	agent.Stop()
 }
 
 // handleSignals will handle Ctrl-C of the agent.
