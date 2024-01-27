@@ -10,8 +10,7 @@ on:
   release:
     types: [ created ]
   push:
-    branches: [ $default-branch ]
-    tags: [ 'v*.*.*' ]    
+    branches: [ main ]
 
 permissions:
   contents: read
