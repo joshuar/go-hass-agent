@@ -6,6 +6,9 @@ FROM golang:1.21
 
 WORKDIR /usr/src/go-hass-agent
 
+# add dpkg filters
+RUN cp assets/dpkg-filters /etc/dpkg/dpkg.cfg.d/container-filters
+
 # https://developer.fyne.io/started/#prerequisites
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get -y install gcc pkg-config libgl1-mesa-dev xorg-dev && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
@@ -25,7 +28,7 @@ RUN go generate ./... && \
   rm -fr /usr/src/go-hass-agent
 
 # remove fyne build dependencies
-RUN apt-get -y remove gcc pkg-config libgl1-mesa-dev xorg-dev
+RUN apt-get -y remove gcc pkg-config libgl1-mesa-dev xorg-dev && apt-get -y autoremove
 
 # create a user to run the agent
 RUN useradd -ms /bin/bash gouser
