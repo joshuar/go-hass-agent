@@ -89,6 +89,15 @@ func (agent *Agent) Run(c string, cfg config.Config, trk SensorTracker) {
 				scriptPath := filepath.Join(xdg.ConfigHome, agent.AppID(), "scripts")
 				runScripts(ctx, scriptPath, trk)
 			}()
+			// Start the mqtt client
+			var mqttEnabled bool
+			if err := cfg.Get(config.PrefMQTTEnabled, &mqttEnabled); mqttEnabled && err == nil {
+				wg.Add(1)
+				go func() {
+					defer wg.Done()
+					agent.runMQTTWorker(runnerCtx)
+				}()
+			}
 			// Listen for notifications from Home Assistant.
 			if !agent.IsHeadless() {
 				wg.Add(1)

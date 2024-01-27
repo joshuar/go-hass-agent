@@ -103,6 +103,8 @@ func (agent *Agent) checkRegistration(t SensorTracker, c config.Config) {
 		if agent.Options.ForceRegister {
 			t.Reset()
 		}
+	} else {
+		log.Debug().Msg("Agent already registered.")
 	}
 }
 

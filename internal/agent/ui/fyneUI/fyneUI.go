@@ -187,7 +187,6 @@ func (i *fyneUI) agentSettingsWindow(cfg config.Config) fyne.Window {
 	var allFormItems []*widget.FormItem
 
 	// MQTT settings
-	mqttconfig.PreferencesFile = "mqtt.toml"
 	mqSettings, err := mqttconfig.LoadPreferences(cfg.Path())
 	if err != nil {
 		log.Warn().Err(err).Msg("No MQTT settings found. Showing defaults.")
@@ -362,7 +361,7 @@ func (i *fyneUI) registrationFields(ctx context.Context, server, token *string) 
 // agent to use an MQTT for pub/sub functionality.
 func (i *fyneUI) mqttConfigItems(e *bool, m *mqttconfig.Preferences) []*widget.FormItem {
 	serverEntry := configEntry(&m.MQTTServer, false)
-	serverEntry.Validator = httpValidator()
+	serverEntry.Validator = hostPortValidator()
 	serverEntry.Disable()
 
 	userEntry := configEntry(&m.MQTTUser, false)
@@ -458,9 +457,9 @@ func hostPortValidator() fyne.StringValidator {
 		if v.Var(text, "hostname_port") != nil {
 			return errors.New("you need to specify a valid host:port combination")
 		}
-		if _, err := url.Parse(text); err != nil {
-			return errors.New("string is invalid")
-		}
+		// if _, err := url.Parse(text); err != nil {
+		// 	return errors.New("string is invalid")
+		// }
 		return nil
 	}
 }
