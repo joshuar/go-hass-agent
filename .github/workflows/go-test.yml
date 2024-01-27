@@ -1,6 +1,8 @@
 name: go test
 
-on: [push]
+on:
+  push:
+    branches: [ main ]
 
 jobs:
   build:
