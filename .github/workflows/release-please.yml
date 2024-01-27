@@ -2,7 +2,7 @@ name: release-please
 
 on:
   push:
-    branches: [ $default-branch ]
+    branches: [ main ]
 
 permissions:
   contents: write
