@@ -30,6 +30,9 @@ RUN go generate ./... && \
 # remove fyne build dependencies
 RUN apt-get -y remove gcc pkg-config libgl1-mesa-dev xorg-dev && apt-get -y autoremove
 
+# reinstall minimum libraries for running
+RUN apt-get -y update && apt-get -y install libx11-6 libgl1-mesa-glx && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
+
 # create a user to run the agent
 RUN useradd -ms /bin/bash gouser
 USER gouser
