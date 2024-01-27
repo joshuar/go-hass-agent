@@ -30,7 +30,7 @@ jobs:
         with:
           packages: qemu-user-static
 
-      - name: Docker Metadata
+      - name: Get Docker metadata
         id: docker_metadata
         uses: docker/metadata-action@v4
         with:
