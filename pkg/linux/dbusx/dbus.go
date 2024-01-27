@@ -233,7 +233,7 @@ type dbusData struct {
 
 // AsVariantMap formats DBus data as a map[string]dbus.Variant.
 func (d *dbusData) AsVariantMap() map[string]dbus.Variant {
-	if d.data == nil {
+	if d == nil {
 		return nil
 	}
 	wanted := make(map[string]dbus.Variant)
@@ -250,7 +250,7 @@ func (d *dbusData) AsVariantMap() map[string]dbus.Variant {
 
 // AsStringMap formats DBus data as a map[string]string.
 func (d *dbusData) AsStringMap() map[string]string {
-	if d.data == nil {
+	if d == nil {
 		return nil
 	}
 	data, ok := d.data.(map[string]string)
@@ -263,7 +263,7 @@ func (d *dbusData) AsStringMap() map[string]string {
 
 // AsObjectPathList formats DBus data as a []dbus.ObjectPath.
 func (d *dbusData) AsObjectPathList() []dbus.ObjectPath {
-	if d.data == nil {
+	if d == nil {
 		return nil
 	}
 	var data []dbus.ObjectPath
@@ -277,7 +277,7 @@ func (d *dbusData) AsObjectPathList() []dbus.ObjectPath {
 
 // AsStringList formats DBus data as a []string.
 func (d *dbusData) AsStringList() []string {
-	if d.data == nil {
+	if d == nil {
 		return nil
 	}
 	var data []string
@@ -291,7 +291,7 @@ func (d *dbusData) AsStringList() []string {
 
 // AsObjectPath formats DBus data as a dbus.ObjectPath.
 func (d *dbusData) AsObjectPath() dbus.ObjectPath {
-	if d.data == nil {
+	if d == nil {
 		return dbus.ObjectPath("")
 	}
 	var data dbus.ObjectPath
@@ -305,7 +305,7 @@ func (d *dbusData) AsObjectPath() dbus.ObjectPath {
 
 // AsRawInterface formats DBus data as a plain interface{}.
 func (d *dbusData) AsRawInterface() any {
-	if d.data != nil {
+	if d != nil {
 		return d.data
 	}
 	return nil
