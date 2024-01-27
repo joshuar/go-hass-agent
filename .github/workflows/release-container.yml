@@ -10,8 +10,8 @@ on:
   release:
     types: [ created ]
   push:
-    branches:
-      - main
+    branches: [ $default-branch ]
+    tags: [ 'v*.*.*' ]    
 
 permissions:
   contents: read
@@ -31,6 +31,22 @@ jobs:
         with:
           packages: qemu-user-static
 
+      - name: Docker Metadata
+        id: docker_metadata
+        uses: docker/metadata-action@v4
+        with:
+          images: |
+            ${{ env.IMAGE }}
+          tags: |
+            type=edge
+            type=sha
+            type=ref,event=branch
+            type=ref,event=pr
+            type=schedule
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}},enable=${{ !startsWith(github.ref, 'refs/tags/v0.') }}
+
       - name: Build container image
         id: build_image
         uses: redhat-actions/buildah-build@v2
@@ -38,7 +54,8 @@ jobs:
           archs: amd64
           # context: build/package
           image: ${{ env.IMAGE }}
-          tags: latest ${{ github.sha }}
+          tags: ${{ steps.docker_metadata.outputs.tags }}
+          labels: ${{ steps.docker_metadata.outputs.labels }}
           containerfiles: Dockerfile
           layers: false
           oci: true
