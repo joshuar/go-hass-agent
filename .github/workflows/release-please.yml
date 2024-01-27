@@ -49,12 +49,6 @@ jobs:
           go install golang.org/x/text/cmd/gotext@latest
           go install github.com/matryer/moq@latest
 
-      - name: Update VERSION
-        if: ${{ steps.release_please.outputs.release_created }}
-        id: update_version
-        shell: sh
-        run: cd internal/agent/config && printf %s $(git tag | tail -1) > VERSION
-
       - name: install cosign
         id: install_cosign
         uses: sigstore/cosign-installer@v3.3.0
