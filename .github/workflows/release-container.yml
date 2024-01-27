@@ -23,6 +23,8 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Install/Cache dependencies
         uses: awalsh128/cache-apt-pkgs-action@latest

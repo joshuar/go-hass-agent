@@ -13,7 +13,8 @@
         "linux/hwmon",
         "linux",
         "config",
-        "scripts"
+        "scripts",
+        "container"
     ],
     "go.lintTool": "golangci-lint",
     "go.lintFlags": [
