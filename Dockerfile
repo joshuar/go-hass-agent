@@ -8,22 +8,28 @@ WORKDIR /usr/src/go-hass-agent
 
 # https://developer.fyne.io/started/#prerequisites
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt update && apt -y install golang gcc libgl1-mesa-dev xorg-dev && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get -y install gcc libgl1-mesa-dev xorg-dev && rm -rf /var/lib/apt/lists/*
 
-# pre-copy/cache go.mod for pre-downloading dependencies and only redownloading them in subsequent builds if they change
-COPY go.mod go.sum ./
-RUN go mod download && go mod verify
+# copy the src to the workdir
+ADD . .
 
-COPY . .
+# install build dependencies
+RUN go install github.com/matryer/moq@latest && \
+  go install golang.org/x/tools/cmd/stringer@latest && \
+  go install golang.org/x/text/cmd/gotext@latest
 
-# needed go packages to build from source
-RUN go install github.com/matryer/moq@latest
-RUN go install golang.org/x/tools/cmd/stringer@latest
-RUN go install golang.org/x/text/cmd/gotext@latest
+# create the VERSION file
+WORKDIR /usr/src/go-hass-agent/internal/agent/config
+RUN printf %s $(git tag | tail -1) > VERSION
 
-RUN go generate ./...
-RUN go build -v -o /go/bin/go-hass-agent
+WORKDIR /usr/src/go-hass-agent
 
+# build the binary
+RUN go generate ./... && \
+  go build -v -o /go/bin/go-hass-agent && \
+  rm -fr /usr/src/go-hass-agent
+
+# create a user to run the agent
 RUN useradd -ms /bin/bash gouser
 USER gouser
 WORKDIR /home/gouser
