@@ -1,4 +1,4 @@
-// Copyright (c) 2023 Joshua Rich <joshua.rich@gmail.com>
+// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
 //
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
@@ -13,8 +13,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/joshuar/go-hass-agent/internal/agent/config"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/joshuar/go-hass-agent/internal/agent/config"
 )
 
 func mockServer(t *testing.T) *httptest.Server {

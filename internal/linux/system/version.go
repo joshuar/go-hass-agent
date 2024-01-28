@@ -1,4 +1,4 @@
-// Copyright (c) 2023 Joshua Rich <joshua.rich@gmail.com>
+// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
 //
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
@@ -8,12 +8,13 @@ package system
 import (
 	"context"
 
-	"github.com/joshuar/go-hass-agent/internal/linux"
-	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v3/host"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
+
+	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/tracker"
 )
 
 func Versions(ctx context.Context) chan tracker.Sensor {

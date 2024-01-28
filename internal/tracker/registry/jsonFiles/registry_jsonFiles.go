@@ -1,4 +1,4 @@
-// Copyright (c) 2023 Joshua Rich <joshua.rich@gmail.com>
+// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
 //
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
@@ -111,7 +111,7 @@ func (j *jsonFilesRegistry) write(id string) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(path, b, 0600)
+	return os.WriteFile(path, b, 0o600)
 }
 
 func (j *jsonFilesRegistry) SetDisabled(id string, value bool) error {
@@ -131,7 +131,7 @@ func NewJSONFilesRegistry(path string) (*jsonFilesRegistry, error) {
 		sensors: sync.Map{},
 		path:    path,
 	}
-	pathErr := os.Mkdir(path, 0755)
+	pathErr := os.Mkdir(path, 0o755)
 	if pathErr != nil && !errors.Is(pathErr, fs.ErrExist) {
 		return nil, pathErr
 	}

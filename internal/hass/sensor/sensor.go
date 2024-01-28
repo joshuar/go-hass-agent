@@ -1,4 +1,4 @@
-// Copyright (c) 2023 Joshua Rich <joshua.rich@gmail.com>
+// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
 //
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
@@ -8,8 +8,9 @@ package sensor
 import (
 	"encoding/json"
 
-	"github.com/joshuar/go-hass-agent/internal/hass/api"
 	"github.com/rs/zerolog/log"
+
+	"github.com/joshuar/go-hass-agent/internal/hass/api"
 )
 
 const (

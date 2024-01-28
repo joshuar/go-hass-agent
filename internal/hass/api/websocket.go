@@ -1,4 +1,4 @@
-// Copyright (c) 2023 Joshua Rich <joshua.rich@gmail.com>
+// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
 //
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
@@ -13,9 +13,10 @@ import (
 	"time"
 
 	"github.com/cenkalti/backoff/v4"
-	"github.com/joshuar/go-hass-agent/internal/agent/config"
 	"github.com/lxzan/gws"
 	"github.com/rs/zerolog/log"
+
+	"github.com/joshuar/go-hass-agent/internal/agent/config"
 )
 
 const PingInterval = time.Minute
