@@ -7,6 +7,7 @@ package agent
 
 import (
 	"context"
+	"path/filepath"
 	"sync"
 
 	"github.com/robfig/cron/v3"
@@ -150,6 +151,7 @@ func (agent *Agent) runNotificationsWorker(ctx context.Context) {
 // controlling this device from Home Assistant.
 func runMQTTWorker(ctx context.Context) {
 	cfg := config.FetchFromContext(ctx)
+	registry := filepath.Join(cfg.Path(), "mqttRegistry")
 
 	c, err := mqttapi.NewMQTTClient(cfg.Path())
 	if err != nil {
@@ -157,7 +159,7 @@ func runMQTTWorker(ctx context.Context) {
 		return
 	}
 	o := newMQTTObject(ctx)
-	if err := mqtthass.Register(o, c); err != nil {
+	if err := mqtthass.Register(registry, o, c); err != nil {
 		log.Error().Err(err).Msg("Failed to register app!")
 		return
 	}
@@ -171,6 +173,7 @@ func runMQTTWorker(ctx context.Context) {
 
 func resetMQTTWorker(ctx context.Context) {
 	cfg := config.FetchFromContext(ctx)
+	registry := filepath.Join(cfg.Path(), "mqttRegistry")
 
 	c, err := mqttapi.NewMQTTClient(cfg.Path())
 	if err != nil {
@@ -181,7 +184,7 @@ func resetMQTTWorker(ctx context.Context) {
 	log.Info().Msgf("Clearing agent data from Home Assistant.")
 	d := newMQTTObject(ctx)
 
-	if err := mqtthass.UnRegister(d, c); err != nil {
+	if err := mqtthass.UnRegister(registry, d, c); err != nil {
 		log.Error().Err(err).Msg("Failed to unregister app!")
 	}
 }
