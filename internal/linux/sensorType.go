@@ -50,6 +50,7 @@ const (
 	SensorLoad1                                        // CPU load average (1 min)
 	SensorLoad5                                        // CPU load average (5 min)
 	SensorLoad15                                       // CPU load average (15 min)
+	SensorCPUPc                                        // CPU Usage
 	SensorScreenLock                                   // Screen Lock
 	SensorProblem                                      // Problems
 	SensorKernel                                       // Kernel Version
