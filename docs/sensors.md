@@ -26,9 +26,11 @@
 | Memory Total | Total memory on the system | ProcFS | |
 | Memory Available | Memory available/free | ProcFS | |
 | Memory Used | Memory used | ProcFS | |
+| Memory Usage | Total memory usage % | ProcFS | |
 | Swap Total | Total swap on the system | ProcFS | |
 | Swap Available | Swap available/free | ProcFS | |
 | Swap Used | Swap used | ProcFS | |
+| Swap Usage | Swap memory usage % | ProcFS | |
 | Per Mountpoint Usage | % usage of mount point | ProcFS |  Filesystem type, bytes/inode total/free/used |
 | Connection State (per-connection) | The current state of each network connection | D-Bus | Connection type (e.g., wired/wireless/VPN), IP addresses |
 | Wi-Fi SSID[^1] | The SSID of the Wi-Fi network | D-Bus | |
@@ -43,6 +45,7 @@
 | Load Average 1min | 1min load average | ProcFS |  |
 | Load Average 5min | 5min load average | ProcFS |  |
 | Load Average 15min | 15min load average | ProcFS |  |
+| CPU Usage | Total CPU Usage % | ProcFS | |
 | Power Profile | The current power profile as set by the power-profiles-daemon | D-Bus | |
 | Boot Time | Date/Time of last system boot | ProcFS |  |
 | Uptime | System uptime | ProcFS | |
