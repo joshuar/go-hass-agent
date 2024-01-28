@@ -1,4 +1,4 @@
-// Copyright (c) 2023 Joshua Rich <joshua.rich@gmail.com>
+// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
 //
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
@@ -14,8 +14,8 @@ import (
 
 type SensorResponseBody struct {
 	Error    ResponseError `json:"error,omitempty"`
-	Success  bool        `json:"success"`
-	Disabled bool        `json:"is_disabled,omitempty"`
+	Success  bool          `json:"success"`
+	Disabled bool          `json:"is_disabled,omitempty"`
 }
 
 type ResponseError struct {

@@ -1,4 +1,4 @@
-// Copyright (c) 2023 Joshua Rich <joshua.rich@gmail.com>
+// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
 //
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
@@ -114,14 +114,14 @@ func (o *scriptOutput) Unmarshal(b []byte) error {
 }
 
 type scriptSensor struct {
-	SensorState       any `json:"sensor_state" yaml:"sensor_state" toml:"sensor_state"`
-	SensorAttributes  any `json:"sensor_attributes,omitempty" yaml:"sensor_attributes,omitempty" toml:"sensor_attributes,omitempty"`
-	SensorName        string      `json:"sensor_name" yaml:"sensor_name" toml:"sensor_name"`
-	SensorIcon        string      `json:"sensor_icon" yaml:"sensor_icon" toml:"sensor_icon"`
-	SensorDeviceClass string      `json:"sensor_device_class,omitempty" yaml:"sensor_device_class,omitempty" toml:"sensor_device_class,omitempty"`
-	SensorStateClass  string      `json:"sensor_state_class,omitempty" yaml:"sensor_state_class,omitempty" toml:"sensor_state_class,omitempty"`
-	SensorStateType   string      `json:"sensor_type,omitempty" yaml:"sensor_type,omitempty" toml:"sensor_type,omitempty"`
-	SensorUnits       string      `json:"sensor_units,omitempty" yaml:"sensor_units,omitempty" toml:"sensor_units,omitempty"`
+	SensorState       any    `json:"sensor_state" yaml:"sensor_state" toml:"sensor_state"`
+	SensorAttributes  any    `json:"sensor_attributes,omitempty" yaml:"sensor_attributes,omitempty" toml:"sensor_attributes,omitempty"`
+	SensorName        string `json:"sensor_name" yaml:"sensor_name" toml:"sensor_name"`
+	SensorIcon        string `json:"sensor_icon" yaml:"sensor_icon" toml:"sensor_icon"`
+	SensorDeviceClass string `json:"sensor_device_class,omitempty" yaml:"sensor_device_class,omitempty" toml:"sensor_device_class,omitempty"`
+	SensorStateClass  string `json:"sensor_state_class,omitempty" yaml:"sensor_state_class,omitempty" toml:"sensor_state_class,omitempty"`
+	SensorStateType   string `json:"sensor_type,omitempty" yaml:"sensor_type,omitempty" toml:"sensor_type,omitempty"`
+	SensorUnits       string `json:"sensor_units,omitempty" yaml:"sensor_units,omitempty" toml:"sensor_units,omitempty"`
 }
 
 func (s *scriptSensor) Name() string {

@@ -1,4 +1,4 @@
-// Copyright (c) 2023 Joshua Rich <joshua.rich@gmail.com>
+// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
 //
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
@@ -11,12 +11,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/rs/zerolog/log"
+	"github.com/shirou/gopsutil/v3/disk"
+
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/tracker"
-	"github.com/rs/zerolog/log"
-	"github.com/shirou/gopsutil/v3/disk"
 )
 
 type diskSensor struct {

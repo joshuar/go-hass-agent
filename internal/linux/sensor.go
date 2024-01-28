@@ -1,4 +1,4 @@
-// Copyright (c) 2023 Joshua Rich <joshua.rich@gmail.com>
+// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
 //
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
@@ -7,6 +7,7 @@ package linux
 
 import (
 	"github.com/iancoleman/strcase"
+
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 )
 

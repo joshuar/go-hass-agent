@@ -1,4 +1,4 @@
-// Copyright (c) 2023 Joshua Rich <joshua.rich@gmail.com>
+// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
 //
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
@@ -13,10 +13,11 @@ import (
 	"sort"
 	"sync"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/hass/api"
 	registry "github.com/joshuar/go-hass-agent/internal/tracker/registry/jsonFiles"
-	"github.com/rs/zerolog/log"
 )
 
 var basePath = filepath.Join(os.Getenv("HOME"), ".config")

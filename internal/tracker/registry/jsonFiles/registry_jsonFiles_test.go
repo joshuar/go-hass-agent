@@ -1,4 +1,4 @@
-// Copyright (c) 2023 Joshua Rich <joshua.rich@gmail.com>
+// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
 //
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
@@ -341,7 +341,7 @@ func Test_parseFile(t *testing.T) {
 	defer os.RemoveAll(goodPath)
 
 	goodFilePath := goodPath + "/good.json"
-	err = os.WriteFile(goodFilePath, []byte(`{"Registered":true,"Disabled":false}`), 0644)
+	err = os.WriteFile(goodFilePath, []byte(`{"Registered":true,"Disabled":false}`), 0o644)
 	assert.Nil(t, err)
 
 	type args struct {
