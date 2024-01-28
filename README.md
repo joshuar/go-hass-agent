@@ -20,6 +20,8 @@ for desktop/laptop devices.
 
 ## 🎉 Features
 
+### 📈 Sensors
+
 This app will add some sensors to a Home Assistant instance:
 
 - Device location.
@@ -40,6 +42,12 @@ A full list of sensors can be found in the [docs](docs/sensors.md).
 
 The code can be extended to add additional sensors. See the [development docs](docs/development.md)
 for details.
+
+### 🕹️ Controls (via MQTT)
+
+If you have Home Assistant configured with
+[MQTT](https://www.home-assistant.io/integrations/mqtt/), you can set up Go Hass
+Agent to respond to commands from Home Assistant. See the [docs](docs/mqtt.md).
 
 ## 🤔 Use-cases
 
@@ -71,7 +79,7 @@ to other operating systems. See development information in the
 
 ## ⬇️ Installation
 
-### Packages
+### 📦 Packages
 
 Head over to the [releases](https://github.com/joshuar/go-hass-agent/releases)
 page and download the appropriate package for your operating system and/or
@@ -99,7 +107,7 @@ following for the `rpm` package can be used:
 cosign verify-blob --key cosign.pub --signature go-hass-agent-*.rpm.sig go-hass-agent-*.rpm
 ```
 
-### Container
+### 🚢 Container
 
 Container images are available on
 [ghcr.io](https://github.com/joshuar/go-hass-agent/pkgs/container/go-hass-agent).
