@@ -11,7 +11,7 @@ services:
     user: vscode
     command: dbus-run-session -- sleep infinity
   home-assistant:
-    image: ghcr.io/home-assistant/home-assistant:2024.1.4
+    image: ghcr.io/home-assistant/home-assistant:2024.1.5
     volumes:
       - ../deployments/home-assistant/config:/config
     environment:
@@ -19,3 +19,16 @@ services:
     restart: on-failure
     userns_mode: keep-id
     network_mode: host
+  mosquitto:
+    image: docker.io/eclipse-mosquitto:2.0.18
+    volumes:
+      - ../deployments/mosquitto/config:/mosquitto/config:cached
+      - ../deployments/mosquitto/data:/mosquitto/data
+      - ../deployments/mosquitto/log:/mosquitto/log
+      - /etc/localtime:/etc/localtime:ro,cached
+    ports:
+      - 1883:1883
+      - 8883:8883
+    restart: on-failure
+    network_mode: host
+    userns_mode: keep-id

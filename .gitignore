@@ -1,20 +1,32 @@
-# Don't ignore these files
-!.gitignore
-!*.go
-!translations/**/*.json
-!*.yml
-!*.yaml
+# Allowlisting gitignore template for GO projects prevents us
+# from adding various unwanted local files, such as generated
+# files, developer configurations or IDE-specific files etc.
+#
+# Recommended: Go.AllowList.gitignore
+
+# Ignore everything
+*
+
+# But not these files...
+!/.gitignore
+!/.vscode/**/*
+!/.github/**/*
+!/.devcontainer/**/*
+!.golangci.yaml
+!.goreleaser.yaml
+
+!/assets/**/*
+
 !*.md
+!*.go
 !go.sum
 !go.mod
-!tools/
-!/assets/
+!cosign.*
+!Dockerfile
 
-# Ignore these files
-home-assistant
-fyne-cross
-dist
-.VSCodeCounter
-go-hass-agent
-internal/agent/config/VERSION
-internal/agent/config/viperConfig/go-hass-agent.toml
+!LICENSE
+!deployments/mosquitto/config/mosquitto.conf.example
+
+# ...even if they are in subdirectories
+!*/
+
