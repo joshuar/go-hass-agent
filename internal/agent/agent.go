@@ -97,7 +97,7 @@ func (agent *Agent) Run(c string, cfg config.Config, trk SensorTracker) {
 				wg.Add(1)
 				go func() {
 					defer wg.Done()
-					agent.runMQTTWorker(runnerCtx)
+					runMQTTWorker(runnerCtx)
 				}()
 			}
 			// Listen for notifications from Home Assistant.
@@ -118,7 +118,6 @@ func (agent *Agent) Run(c string, cfg config.Config, trk SensorTracker) {
 		agent.ui.Run(agent.done)
 	}
 	wg.Wait()
-	log.Debug().Msg("here")
 }
 
 func (agent *Agent) Register(cfg config.Config, trk SensorTracker) {

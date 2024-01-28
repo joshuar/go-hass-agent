@@ -148,7 +148,7 @@ func (agent *Agent) runNotificationsWorker(ctx context.Context) {
 
 // runMQTTWorker will set up a connection to MQTT and listen on topics for
 // controlling this device from Home Assistant.
-func (agent *Agent) runMQTTWorker(ctx context.Context) {
+func runMQTTWorker(ctx context.Context) {
 	cfg := config.FetchFromContext(ctx)
 
 	c, err := mqttapi.NewMQTTClient(cfg.Path())
@@ -156,12 +156,12 @@ func (agent *Agent) runMQTTWorker(ctx context.Context) {
 		log.Error().Err(err).Msg("Could not start MQTT client.")
 		return
 	}
-	d := agent.newMQTTDevice(ctx)
-	if err := mqtthass.Register(d, c); err != nil {
+	o := newMQTTObject(ctx)
+	if err := mqtthass.Register(o, c); err != nil {
 		log.Error().Err(err).Msg("Failed to register app!")
 		return
 	}
-	if err := mqtthass.Subscribe(d, c); err != nil {
+	if err := mqtthass.Subscribe(o, c); err != nil {
 		log.Error().Err(err).Msg("Could not activate subscriptions.")
 	}
 	log.Debug().Msg("Listening for events on MQTT.")
@@ -169,7 +169,7 @@ func (agent *Agent) runMQTTWorker(ctx context.Context) {
 	<-ctx.Done()
 }
 
-func (agent *Agent) resetMQTTWorker(ctx context.Context) {
+func resetMQTTWorker(ctx context.Context) {
 	cfg := config.FetchFromContext(ctx)
 
 	c, err := mqttapi.NewMQTTClient(cfg.Path())
@@ -179,7 +179,7 @@ func (agent *Agent) resetMQTTWorker(ctx context.Context) {
 	}
 
 	log.Info().Msgf("Clearing agent data from Home Assistant.")
-	d := agent.newMQTTDevice(ctx)
+	d := newMQTTObject(ctx)
 
 	if err := mqtthass.UnRegister(d, c); err != nil {
 		log.Error().Err(err).Msg("Failed to unregister app!")

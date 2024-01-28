@@ -13,31 +13,29 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/agent/config"
 )
 
-type mqttDevice struct {
-	configs map[string]*mqtthass.EntityConfig
+type mqttObj struct {
+	entities map[string]*mqtthass.EntityConfig
 }
 
-func (d *mqttDevice) Name() string {
+func (o *mqttObj) Name() string {
 	return config.AppName
 }
 
-func (d *mqttDevice) Configuration() []*mqttapi.Msg {
+func (o *mqttObj) Configuration() []*mqttapi.Msg {
 	var msgs []*mqttapi.Msg
-
-	for id, c := range d.configs {
+	for id, c := range o.entities {
 		if msg, err := mqtthass.MarshalConfig(c); err != nil {
 			log.Error().Err(err).Msgf("Failed to marshal payload for %s.", id)
 		} else {
 			msgs = append(msgs, msg)
 		}
 	}
-
 	return msgs
 }
 
-func (d *mqttDevice) Subscriptions() []*mqttapi.Subscription {
+func (o *mqttObj) Subscriptions() []*mqttapi.Subscription {
 	var subs []*mqttapi.Subscription
-	for _, v := range d.configs {
+	for _, v := range o.entities {
 		if v.CommandCallback != nil {
 			if sub, err := mqtthass.MarshalSubscription(v); err != nil {
 				log.Error().Err(err).Str("entity", v.Entity.Name).
@@ -50,6 +48,6 @@ func (d *mqttDevice) Subscriptions() []*mqttapi.Subscription {
 	return subs
 }
 
-func (d *mqttDevice) States() []*mqttapi.Msg {
+func (o *mqttObj) States() []*mqttapi.Msg {
 	return nil
 }
