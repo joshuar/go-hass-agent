@@ -24,6 +24,7 @@ const (
 	websocketPath = "/api/websocket"
 	webHookPath   = "/api/webhook/"
 	AppName       = "go-hass-agent"
+	AppURL        = "https://github.com/joshuar/go-hass-agent"
 )
 
 //go:generate sh -c "printf %s $(git tag | tail -1) > VERSION"
