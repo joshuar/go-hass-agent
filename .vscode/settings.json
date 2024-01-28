@@ -15,7 +15,8 @@
         "config",
         "scripts",
         "container",
-        "linux/dbusx"
+        "linux/dbusx",
+        "SECURITY"
     ],
     "go.lintTool": "golangci-lint",
     "go.lintFlags": [
