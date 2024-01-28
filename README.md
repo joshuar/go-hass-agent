@@ -201,11 +201,12 @@ reported will be severely limited without them.
 
 ### Regular Usage
 
-When running, Go Hass Agent will appear as a device under the [Mobile
-App](https://www.home-assistant.io/integrations/mobile_app) integration in your
-Home Assistant instance. It should also report a list of sensors/entities you
-can use in any automations, scripts, dashboards and other parts of Home
-Assistant.
+When running, Go Hass Agent will appear as a device under the Mobile App
+integration in your Home Assistant instance. It should also report a list of
+sensors/entities you can use in any automations, scripts, dashboards and other
+parts of Home Assistant.
+
+[![Open your Home Assistant instance and show an integration.](https://my.home-assistant.io/badges/integration.svg)](https://my.home-assistant.io/redirect/integration/?domain=mobile_app)
 
 ## 🧑‍🤝‍🧑 Contributing
 
