@@ -9,12 +9,13 @@ import (
 	"context"
 	"time"
 
+	"github.com/rs/zerolog/log"
+	"github.com/shirou/gopsutil/v3/load"
+
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/tracker"
-	"github.com/rs/zerolog/log"
-	"github.com/shirou/gopsutil/v3/load"
 )
 
 type loadavgSensor struct {

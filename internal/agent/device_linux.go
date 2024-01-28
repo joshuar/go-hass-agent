@@ -42,6 +42,7 @@ func sensorWorkers() []func(context.Context) chan tracker.Sensor {
 		problems.Updater,
 		mem.Updater,
 		cpu.LoadAvgUpdater,
+		cpu.UsageUpdater,
 		disk.UsageUpdater,
 		time.Updater,
 		power.ScreenLockUpdater,
