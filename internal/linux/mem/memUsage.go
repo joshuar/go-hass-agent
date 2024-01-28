@@ -9,13 +9,24 @@ import (
 	"context"
 	"time"
 
+	"github.com/rs/zerolog/log"
+	"github.com/shirou/gopsutil/v3/mem"
+
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/tracker"
-	"github.com/rs/zerolog/log"
-	"github.com/shirou/gopsutil/v3/mem"
 )
+
+var stats = []linux.SensorTypeValue{
+	linux.SensorMemTotal,
+	linux.SensorMemAvail,
+	linux.SensorMemUsed,
+	linux.SensorMemPc,
+	linux.SensorSwapTotal,
+	linux.SensorSwapFree,
+	linux.SensorSwapPc,
+}
 
 type memorySensor struct {
 	linux.Sensor
@@ -34,7 +45,6 @@ func (s *memorySensor) Attributes() any {
 func Updater(ctx context.Context) chan tracker.Sensor {
 	sensorCh := make(chan tracker.Sensor, 5)
 	sendMemStats := func(_ time.Duration) {
-		stats := []linux.SensorTypeValue{linux.SensorMemTotal, linux.SensorMemAvail, linux.SensorMemUsed, linux.SensorSwapTotal, linux.SensorSwapFree}
 		var memDetails *mem.VirtualMemoryStat
 		var err error
 		if memDetails, err = mem.VirtualMemoryWithContext(ctx); err != nil {
@@ -43,30 +53,16 @@ func Updater(ctx context.Context) chan tracker.Sensor {
 			return
 		}
 		for _, stat := range stats {
-			var statValue uint64
-			switch stat {
-			case linux.SensorMemTotal:
-				statValue = memDetails.Total
-			case linux.SensorMemAvail:
-				statValue = memDetails.Available
-			case linux.SensorMemUsed:
-				statValue = memDetails.Used
-			case linux.SensorSwapTotal:
-				statValue = memDetails.SwapTotal
-			case linux.SensorSwapFree:
-				statValue = memDetails.SwapFree
-				// case UsedSwapMemory:
-				// 	return m.memStats.SwapCached
-			}
+			value, unit, deviceClass, stateClass := parseSensorType(stat, memDetails)
 			state := &memorySensor{
 				linux.Sensor{
-					Value:            statValue,
+					Value:            value,
 					SensorTypeValue:  stat,
 					IconString:       "mdi:memory",
-					UnitsString:      "B",
+					UnitsString:      unit,
 					SensorSrc:        linux.DataSrcProcfs,
-					DeviceClassValue: sensor.Data_size,
-					StateClassValue:  sensor.StateTotal,
+					DeviceClassValue: deviceClass,
+					StateClassValue:  stateClass,
 				},
 			}
 			sensorCh <- state
@@ -80,4 +76,25 @@ func Updater(ctx context.Context) chan tracker.Sensor {
 		log.Debug().Msg("Stopped memory usage sensors.")
 	}()
 	return sensorCh
+}
+
+func parseSensorType(t linux.SensorTypeValue, d *mem.VirtualMemoryStat) (value any, unit string, deviceClass sensor.SensorDeviceClass, stateClass sensor.SensorStateClass) {
+	switch t {
+	case linux.SensorMemTotal:
+		return d.Total, "B", sensor.Data_size, sensor.StateTotal
+	case linux.SensorMemAvail:
+		return d.Available, "B", sensor.Data_size, sensor.StateTotal
+	case linux.SensorMemUsed:
+		return d.Used, "B", sensor.Data_size, sensor.StateTotal
+	case linux.SensorMemPc:
+		return float64(d.Used) / float64(d.Total) * 100, "%", 0, sensor.StateMeasurement
+	case linux.SensorSwapTotal:
+		return d.SwapTotal, "B", sensor.Data_size, sensor.StateTotal
+	case linux.SensorSwapFree:
+		return d.SwapFree, "B", sensor.Data_size, sensor.StateTotal
+	case linux.SensorSwapPc:
+		return float64(d.SwapCached) / float64(d.SwapTotal) * 100, "%", 0, sensor.StateMeasurement
+	default:
+		return sensor.StateUnknown, "", 0, 0
+	}
 }

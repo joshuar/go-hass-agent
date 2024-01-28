@@ -22,9 +22,11 @@ const (
 	SensorMemTotal                                     // Memory Total
 	SensorMemAvail                                     // Memory Available
 	SensorMemUsed                                      // Memory Used
+	SensorMemPc                                        // Memory Usage
 	SensorSwapTotal                                    // Swap Memory Total
 	SensorSwapUsed                                     // Swap Memory Used
 	SensorSwapFree                                     // Swap Memory Free
+	SensorSwapPc                                       // Swap Usage
 	SensorConnectionState                              // Connection State
 	SensorConnectionID                                 // Connection ID
 	SensorConnectionDevices                            // Connection Device
