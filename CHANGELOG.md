@@ -1,5 +1,27 @@
 # Changelog
 
+## [6.4.0](https://github.com/joshuar/go-hass-agent/compare/v6.3.1...v6.4.0) (2024-01-29)
+
+
+### Features
+
+* **agent:** :art: MQTT agent adjustments ([b094c4a](https://github.com/joshuar/go-hass-agent/commit/b094c4a081db82c628e72097f8bacc4c039ffa50))
+* **agent:** :sparkles: control the agent via MQTT ([5756092](https://github.com/joshuar/go-hass-agent/commit/5756092f3b76f3cd2ec10e24d6bdf85c38f767bf))
+* **agent:** :sparkles: map mqtt settings to go-hass-agent package settings ([a3dee24](https://github.com/joshuar/go-hass-agent/commit/a3dee246feb333a2e3edcb5e25d3e118bccd110f))
+* **cmd,agent:** :sparkles: agent rework ([8ab63e2](https://github.com/joshuar/go-hass-agent/commit/8ab63e2b9ff128f7ed887be0b37f7aff22a35e6d))
+* **config:** :sparkles: Export an AppURL config option ([0076019](https://github.com/joshuar/go-hass-agent/commit/0076019e15c67aede3ad6d80f156102deb0ea020))
+* **linux:** :sparkles: add CPU Usage % sensor ([6fdb91b](https://github.com/joshuar/go-hass-agent/commit/6fdb91be740542ae2c7c35c89f65b3bf6c417bff))
+* **linux:** :sparkles: add memory and swap usage % sensors ([3a7ca08](https://github.com/joshuar/go-hass-agent/commit/3a7ca08ed36d6e2338fe3ab79d6037879a67c4fe))
+* **ui,agent,config:** :sparkles: UI overhaul ([ded576b](https://github.com/joshuar/go-hass-agent/commit/ded576b44825e9f5d64494440af3bc99afe58ce0))
+
+
+### Bug Fixes
+
+* **agent:** :art: device context abstraction ([878438b](https://github.com/joshuar/go-hass-agent/commit/878438b3920bb5cf20567a9a670001546e86cdf4))
+* **agent:** :bug: correct registration logic ([569091d](https://github.com/joshuar/go-hass-agent/commit/569091d2c74f8388439b851e260c85f6bd978e0b))
+* **agent:** :bug: fix race condition where agent exits before workers start ([1976238](https://github.com/joshuar/go-hass-agent/commit/1976238d1835fcf336bf991d567ae5c7cf910ced))
+* **linux/dbusx:** :bug: check nil struct not attribute ([ed4d3be](https://github.com/joshuar/go-hass-agent/commit/ed4d3bef0275f78d96376d96e083c7260c82ac2c))
+
 ## [6.3.1](https://github.com/joshuar/go-hass-agent/compare/v6.3.0...v6.3.1) (2024-01-22)
 
 
