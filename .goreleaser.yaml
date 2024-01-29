@@ -1,6 +1,7 @@
 before:
   hooks:
     - desktop-file-validate assets/go-hass-agent.desktop
+    - go generate ./...
 report_sizes: true
 changelog:
   use: github-native
@@ -22,8 +23,6 @@ builds:
       # - arm
       # - arm64
     hooks:
-      pre:
-        - go generate ./...
       post:
         - fyne-cross linux -icon internal/agent/ui/assets/logo-pretty.png -release -app-version {{.RawVersion}}
 signs:

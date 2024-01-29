@@ -17,19 +17,19 @@ var _ Config = &ConfigMock{}
 //
 //		// make and configure a mocked Config
 //		mockedConfig := &ConfigMock{
-//			DeleteFunc: func(s string) error {
+//			DeleteFunc: func(key string) error {
 //				panic("mock out the Delete method")
 //			},
-//			GetFunc: func(s string, ifaceVal any) error {
+//			GetFunc: func(key string, value any) error {
 //				panic("mock out the Get method")
 //			},
 //			PathFunc: func() string {
 //				panic("mock out the Path method")
 //			},
-//			SetFunc: func(s string, ifaceVal any) error {
+//			SetFunc: func(key string, value any) error {
 //				panic("mock out the Set method")
 //			},
-//			StoragePathFunc: func(s string) (string, error) {
+//			StoragePathFunc: func(path string) (string, error) {
 //				panic("mock out the StoragePath method")
 //			},
 //		}
@@ -40,48 +40,48 @@ var _ Config = &ConfigMock{}
 //	}
 type ConfigMock struct {
 	// DeleteFunc mocks the Delete method.
-	DeleteFunc func(s string) error
+	DeleteFunc func(key string) error
 
 	// GetFunc mocks the Get method.
-	GetFunc func(s string, ifaceVal any) error
+	GetFunc func(key string, value any) error
 
 	// PathFunc mocks the Path method.
 	PathFunc func() string
 
 	// SetFunc mocks the Set method.
-	SetFunc func(s string, ifaceVal any) error
+	SetFunc func(key string, value any) error
 
 	// StoragePathFunc mocks the StoragePath method.
-	StoragePathFunc func(s string) (string, error)
+	StoragePathFunc func(path string) (string, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
 		// Delete holds details about calls to the Delete method.
 		Delete []struct {
-			// S is the s argument value.
-			S string
+			// Key is the key argument value.
+			Key string
 		}
 		// Get holds details about calls to the Get method.
 		Get []struct {
-			// S is the s argument value.
-			S string
-			// IfaceVal is the ifaceVal argument value.
-			IfaceVal any
+			// Key is the key argument value.
+			Key string
+			// Value is the value argument value.
+			Value any
 		}
 		// Path holds details about calls to the Path method.
 		Path []struct {
 		}
 		// Set holds details about calls to the Set method.
 		Set []struct {
-			// S is the s argument value.
-			S string
-			// IfaceVal is the ifaceVal argument value.
-			IfaceVal any
+			// Key is the key argument value.
+			Key string
+			// Value is the value argument value.
+			Value any
 		}
 		// StoragePath holds details about calls to the StoragePath method.
 		StoragePath []struct {
-			// S is the s argument value.
-			S string
+			// Path is the path argument value.
+			Path string
 		}
 	}
 	lockDelete      sync.RWMutex
@@ -92,19 +92,19 @@ type ConfigMock struct {
 }
 
 // Delete calls DeleteFunc.
-func (mock *ConfigMock) Delete(s string) error {
+func (mock *ConfigMock) Delete(key string) error {
 	if mock.DeleteFunc == nil {
 		panic("ConfigMock.DeleteFunc: method is nil but Config.Delete was just called")
 	}
 	callInfo := struct {
-		S string
+		Key string
 	}{
-		S: s,
+		Key: key,
 	}
 	mock.lockDelete.Lock()
 	mock.calls.Delete = append(mock.calls.Delete, callInfo)
 	mock.lockDelete.Unlock()
-	return mock.DeleteFunc(s)
+	return mock.DeleteFunc(key)
 }
 
 // DeleteCalls gets all the calls that were made to Delete.
@@ -112,10 +112,10 @@ func (mock *ConfigMock) Delete(s string) error {
 //
 //	len(mockedConfig.DeleteCalls())
 func (mock *ConfigMock) DeleteCalls() []struct {
-	S string
+	Key string
 } {
 	var calls []struct {
-		S string
+		Key string
 	}
 	mock.lockDelete.RLock()
 	calls = mock.calls.Delete
@@ -124,21 +124,21 @@ func (mock *ConfigMock) DeleteCalls() []struct {
 }
 
 // Get calls GetFunc.
-func (mock *ConfigMock) Get(s string, ifaceVal any) error {
+func (mock *ConfigMock) Get(key string, value any) error {
 	if mock.GetFunc == nil {
 		panic("ConfigMock.GetFunc: method is nil but Config.Get was just called")
 	}
 	callInfo := struct {
-		S        string
-		IfaceVal any
+		Key   string
+		Value any
 	}{
-		S:        s,
-		IfaceVal: ifaceVal,
+		Key:   key,
+		Value: value,
 	}
 	mock.lockGet.Lock()
 	mock.calls.Get = append(mock.calls.Get, callInfo)
 	mock.lockGet.Unlock()
-	return mock.GetFunc(s, ifaceVal)
+	return mock.GetFunc(key, value)
 }
 
 // GetCalls gets all the calls that were made to Get.
@@ -146,12 +146,12 @@ func (mock *ConfigMock) Get(s string, ifaceVal any) error {
 //
 //	len(mockedConfig.GetCalls())
 func (mock *ConfigMock) GetCalls() []struct {
-	S        string
-	IfaceVal any
+	Key   string
+	Value any
 } {
 	var calls []struct {
-		S        string
-		IfaceVal any
+		Key   string
+		Value any
 	}
 	mock.lockGet.RLock()
 	calls = mock.calls.Get
@@ -187,21 +187,21 @@ func (mock *ConfigMock) PathCalls() []struct {
 }
 
 // Set calls SetFunc.
-func (mock *ConfigMock) Set(s string, ifaceVal any) error {
+func (mock *ConfigMock) Set(key string, value any) error {
 	if mock.SetFunc == nil {
 		panic("ConfigMock.SetFunc: method is nil but Config.Set was just called")
 	}
 	callInfo := struct {
-		S        string
-		IfaceVal any
+		Key   string
+		Value any
 	}{
-		S:        s,
-		IfaceVal: ifaceVal,
+		Key:   key,
+		Value: value,
 	}
 	mock.lockSet.Lock()
 	mock.calls.Set = append(mock.calls.Set, callInfo)
 	mock.lockSet.Unlock()
-	return mock.SetFunc(s, ifaceVal)
+	return mock.SetFunc(key, value)
 }
 
 // SetCalls gets all the calls that were made to Set.
@@ -209,12 +209,12 @@ func (mock *ConfigMock) Set(s string, ifaceVal any) error {
 //
 //	len(mockedConfig.SetCalls())
 func (mock *ConfigMock) SetCalls() []struct {
-	S        string
-	IfaceVal any
+	Key   string
+	Value any
 } {
 	var calls []struct {
-		S        string
-		IfaceVal any
+		Key   string
+		Value any
 	}
 	mock.lockSet.RLock()
 	calls = mock.calls.Set
@@ -223,19 +223,19 @@ func (mock *ConfigMock) SetCalls() []struct {
 }
 
 // StoragePath calls StoragePathFunc.
-func (mock *ConfigMock) StoragePath(s string) (string, error) {
+func (mock *ConfigMock) StoragePath(path string) (string, error) {
 	if mock.StoragePathFunc == nil {
 		panic("ConfigMock.StoragePathFunc: method is nil but Config.StoragePath was just called")
 	}
 	callInfo := struct {
-		S string
+		Path string
 	}{
-		S: s,
+		Path: path,
 	}
 	mock.lockStoragePath.Lock()
 	mock.calls.StoragePath = append(mock.calls.StoragePath, callInfo)
 	mock.lockStoragePath.Unlock()
-	return mock.StoragePathFunc(s)
+	return mock.StoragePathFunc(path)
 }
 
 // StoragePathCalls gets all the calls that were made to StoragePath.
@@ -243,10 +243,10 @@ func (mock *ConfigMock) StoragePath(s string) (string, error) {
 //
 //	len(mockedConfig.StoragePathCalls())
 func (mock *ConfigMock) StoragePathCalls() []struct {
-	S string
+	Path string
 } {
 	var calls []struct {
-		S string
+		Path string
 	}
 	mock.lockStoragePath.RLock()
 	calls = mock.calls.StoragePath
