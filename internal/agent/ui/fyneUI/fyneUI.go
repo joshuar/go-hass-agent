@@ -36,7 +36,10 @@ import (
 const (
 	explainRegistration = `To register the agent, please enter the relevant details for your Home Assistant
 server (if not auto-detected) and long-lived access token.`
-	restartNote = `Please restart the agent to use changed settings.`
+	restartNote           = `Please restart the agent to use changed settings.`
+	errMsgInvalidURL      = `You need to specify a valid http(s)://host:port.`
+	errMsgInvalidURI      = `You need to specify a valid scheme://host:port.`
+	errMsgInvalidHostPort = `You need to specify a valid host:port combination.`
 )
 
 type fyneUI struct {
@@ -361,14 +364,20 @@ func (i *fyneUI) registrationFields(ctx context.Context, server, token *string) 
 // agent to use an MQTT for pub/sub functionality.
 func (i *fyneUI) mqttConfigItems(e *bool, m *mqttconfig.Preferences) []*widget.FormItem {
 	serverEntry := configEntry(&m.MQTTServer, false)
-	serverEntry.Validator = hostPortValidator()
+	serverEntry.Validator = uriValidator()
 	serverEntry.Disable()
+	serverFormItem := widget.NewFormItem(i.Translate("MQTT Server"), serverEntry)
+	serverFormItem.HintText = config.PrefMQTTServerHelp
 
 	userEntry := configEntry(&m.MQTTUser, false)
 	userEntry.Disable()
+	userFormItem := widget.NewFormItem(i.Translate("MQTT User"), userEntry)
+	userFormItem.HintText = config.PrefMQTTUserHelp
 
 	passwordEntry := configEntry(&m.MQTTPassword, true)
 	passwordEntry.Disable()
+	passwordFormItem := widget.NewFormItem(i.Translate("MQTT Password"), passwordEntry)
+	passwordFormItem.HintText = config.PrefMQTTPasswordHelp
 
 	mqttEnabled := configCheck(e, func(b bool) {
 		switch b {
@@ -388,9 +397,9 @@ func (i *fyneUI) mqttConfigItems(e *bool, m *mqttconfig.Preferences) []*widget.F
 	var items []*widget.FormItem
 
 	items = append(items, widget.NewFormItem(i.Translate("Use MQTT?"), mqttEnabled),
-		widget.NewFormItem(i.Translate("MQTT Server"), serverEntry),
-		widget.NewFormItem(i.Translate("MQTT User"), userEntry),
-		widget.NewFormItem(i.Translate("MQTT Password"), passwordEntry),
+		serverFormItem,
+		userFormItem,
+		passwordFormItem,
 	)
 
 	return items
@@ -402,6 +411,7 @@ func (i *fyneUI) mqttConfigItems(e *bool, m *mqttconfig.Preferences) []*widget.F
 func configEntry(value *string, secret bool) *widget.Entry {
 	boundEntry := binding.BindString(value)
 	entryWidget := widget.NewEntryWithData(boundEntry)
+	entryWidget.Wrapping = fyne.TextWrapWord
 	if secret {
 		entryWidget.Password = true
 	}
@@ -440,10 +450,25 @@ func httpValidator() fyne.StringValidator {
 	v := validator.New()
 	return func(text string) error {
 		if v.Var(text, "http_url") != nil {
-			return errors.New("you need to specify a valid url")
+			return errors.New(errMsgInvalidURL)
 		}
 		if _, err := url.Parse(text); err != nil {
-			return errors.New("url is invalid")
+			return errors.New(errMsgInvalidURL)
+		}
+		return nil
+	}
+}
+
+// uriValidator is a custom fyne validator that will validate a string is a
+// valid http/https URL.
+func uriValidator() fyne.StringValidator {
+	v := validator.New()
+	return func(text string) error {
+		if v.Var(text, "uri") != nil {
+			return errors.New(errMsgInvalidURI)
+		}
+		if _, err := url.Parse(text); err != nil {
+			return errors.New(errMsgInvalidURI)
 		}
 		return nil
 	}
@@ -451,11 +476,18 @@ func httpValidator() fyne.StringValidator {
 
 // hostPortValidator is a custom fyne validator that will validate a string is a
 // valid hostname:port combination.
-func hostPortValidator() fyne.StringValidator {
+func hostPortValidator(msg string) fyne.StringValidator {
+	var errMsg error
+	if msg != "" {
+		errMsg = errors.New(msg)
+	} else {
+		errMsg = errors.New(errMsgInvalidHostPort)
+	}
+
 	v := validator.New()
 	return func(text string) error {
 		if v.Var(text, "hostname_port") != nil {
-			return errors.New("you need to specify a valid host:port combination")
+			return errMsg
 		}
 		// if _, err := url.Parse(text); err != nil {
 		// 	return errors.New("string is invalid")
