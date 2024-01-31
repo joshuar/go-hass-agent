@@ -7,6 +7,8 @@ package agent
 
 import (
 	"context"
+	"os"
+	"strings"
 
 	MQTT "github.com/eclipse/paho.mqtt.golang"
 	"github.com/godbus/dbus/v5"
@@ -20,11 +22,13 @@ import (
 )
 
 const (
-	dbusDest           = "org.freedesktop.login1"
-	dbusLockMethod     = dbusDest + ".Session.Lock"
-	dbusUnlockMethod   = dbusDest + ".Session.UnLock"
-	dbusRebootMethod   = dbusDest + ".Manager.Reboot"
-	dbusPowerOffMethod = dbusDest + ".Manager.PowerOff"
+	dbusSessionDest    = "org.freedesktop.login1"
+	dbusSessionLockMethod     = dbusSessionDest + ".Session.Lock"
+	dbusSessionUnlockMethod   = dbusSessionDest + ".Session.UnLock"
+	dbusSessionRebootMethod   = dbusSessionDest + ".Manager.Reboot"
+	dbusSessionPowerOffMethod = dbusSessionDest + ".Manager.PowerOff"
+
+	dbusEmptyScreensaverMessage = ""
 )
 
 func newMQTTObject(ctx context.Context) *mqttObj {
@@ -37,8 +41,15 @@ func newMQTTObject(ctx context.Context) *mqttObj {
 			WithDeviceInfo(mqttDevice())
 	}
 
-	dbusCall := func(ctx context.Context, path dbus.ObjectPath, dest, method string, args ...any) error {
+	systemDbusCall := func(ctx context.Context, path dbus.ObjectPath, dest, method string, args ...any) error {
 		return dbusx.NewBusRequest(ctx, dbusx.SystemBus).
+			Path(path).
+			Destination(dest).
+			Call(method, args...)
+	}
+
+	sessionDbusCall := func(ctx context.Context, path dbus.ObjectPath, dest, method string, args ...any) error {
+		return dbusx.NewBusRequest(ctx, dbusx.SessionBus).
 			Path(path).
 			Destination(dest).
 			Call(method, args...)
@@ -46,10 +57,29 @@ func newMQTTObject(ctx context.Context) *mqttObj {
 
 	sessionPath := dbusx.GetSessionPath(ctx)
 	entities := make(map[string]*mqtthass.EntityConfig)
+	entities["lock_screensaver"] = baseEntity("lock_screensaver").
+		WithIcon("mdi:eye-lock").
+		WithCommandCallback(func(_ MQTT.Client, _ MQTT.Message) {
+			dbusScreensaverDest, dbusScreensaverPath, dbusScreensaverMsg := GetDesktopEnvScreensaverConfig();
+			if dbusScreensaverPath == "" {
+				log.Warn().Msg("Could not determine screensaver method.")
+				return
+			}
+			dbusScreensaverLockMethod := dbusScreensaverDest + ".Lock"
+			var err error
+			if dbusScreensaverMsg != nil {
+				err = sessionDbusCall(ctx, dbus.ObjectPath(dbusScreensaverPath), dbusScreensaverDest, dbusScreensaverLockMethod, dbusScreensaverMsg)
+			} else {
+				err = sessionDbusCall(ctx, dbus.ObjectPath(dbusScreensaverPath), dbusScreensaverDest, dbusScreensaverLockMethod)
+			}
+			if err != nil {
+				log.Warn().Err(err).Msg("Could not lock screensaver.")
+			}
+		})
 	entities["lock_session"] = baseEntity("lock_session").
 		WithIcon("mdi:eye-lock").
 		WithCommandCallback(func(_ MQTT.Client, _ MQTT.Message) {
-			err := dbusCall(ctx, sessionPath, dbusDest, dbusLockMethod)
+			err := systemDbusCall(ctx, sessionPath, dbusSessionDest, dbusSessionLockMethod)
 			if err != nil {
 				log.Warn().Err(err).Msg("Could not lock session.")
 			}
@@ -57,7 +87,7 @@ func newMQTTObject(ctx context.Context) *mqttObj {
 	entities["unlock_session"] = baseEntity("unlock_session").
 		WithIcon("mdi:eye-lock-open").
 		WithCommandCallback(func(_ MQTT.Client, _ MQTT.Message) {
-			err := dbusCall(ctx, sessionPath, dbusDest, dbusUnlockMethod)
+			err := systemDbusCall(ctx, sessionPath, dbusSessionDest, dbusSessionUnlockMethod)
 			if err != nil {
 				log.Warn().Err(err).Msg("Could not unlock session.")
 			}
@@ -65,7 +95,7 @@ func newMQTTObject(ctx context.Context) *mqttObj {
 	entities["reboot"] = baseEntity("reboot").
 		WithIcon("mdi:restart").
 		WithCommandCallback(func(_ MQTT.Client, _ MQTT.Message) {
-			err := dbusCall(ctx, dbus.ObjectPath("/org/freedesktop/login1"), dbusDest, dbusRebootMethod, true)
+			err := systemDbusCall(ctx, dbus.ObjectPath("/org/freedesktop/login1"), dbusSessionDest, dbusSessionRebootMethod, true)
 			if err != nil {
 				log.Warn().Err(err).Msg("Could not reboot session.")
 			}
@@ -73,7 +103,7 @@ func newMQTTObject(ctx context.Context) *mqttObj {
 	entities["poweroff"] = baseEntity("poweroff").
 		WithIcon("mdi:power").
 		WithCommandCallback(func(_ MQTT.Client, _ MQTT.Message) {
-			err := dbusCall(ctx, dbus.ObjectPath("/org/freedesktop/login1"), dbusDest, dbusPowerOffMethod, true)
+			err := systemDbusCall(ctx, dbus.ObjectPath("/org/freedesktop/login1"), dbusSessionDest, dbusSessionPowerOffMethod, true)
 			if err != nil {
 				log.Warn().Err(err).Msg("Could not power off session.")
 			}
@@ -92,5 +122,20 @@ func mqttDevice() *mqtthass.Device {
 		Manufacturer: dev.Manufacturer(),
 		Model:        dev.Model(),
 		Identifiers:  []string{dev.DeviceID()},
+	}
+}
+
+func GetDesktopEnvScreensaverConfig() (string, string, *string) {
+	desktop := os.Getenv("XDG_CURRENT_DESKTOP")
+	switch {
+	case strings.Contains(desktop, "KDE"):
+		return "org.freedesktop.ScreenSaver", "/ScreenSaver", nil
+	case strings.Contains(desktop, "GNOME"):
+		return "org.gnome.ScreenSaver", "/org/gnome/ScreenSaver", nil
+	case strings.Contains(desktop, "Cinnamon"):
+		msg := dbusEmptyScreensaverMessage
+		return "org.cinnamon.ScreenSaver", "/org/cinnamon/ScreenSaver", &msg
+	default:
+		return "", "", nil
 	}
 }
