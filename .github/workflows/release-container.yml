@@ -47,6 +47,13 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}},enable=${{ !startsWith(github.ref, 'refs/tags/v0.') }}
 
+      - uses: cardinalby/git-get-release-action@v1
+        id: release_metadata
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          latest: true    
+
       - name: Build container image
         id: build_image
         uses: redhat-actions/buildah-build@v2
@@ -54,7 +61,7 @@ jobs:
           archs: amd64
           # context: build/package
           image: ${{ env.IMAGE }}
-          tags: ${{ steps.docker_metadata.outputs.tags }}
+          tags: ${{ steps.docker_metadata.outputs.tags }} ${{ steps.release_metadata.outputs.name }}
           labels: ${{ steps.docker_metadata.outputs.labels }}
           containerfiles: Dockerfile
           layers: false
