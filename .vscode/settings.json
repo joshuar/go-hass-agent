@@ -6,7 +6,6 @@
         "ui",
         "README",
         "go",
-        "all",
         "hass/api",
         "tracker",
         "devcontainer",
@@ -18,6 +17,7 @@
         "linux/dbusx",
         "SECURITY"
     ],
+    "conventionalCommits.lineBreak": "\\n",
     "go.lintTool": "golangci-lint",
     "go.lintFlags": [
         "--fast"

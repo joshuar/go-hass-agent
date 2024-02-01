@@ -32,7 +32,8 @@
                 "aaron-bond.better-comments",
                 "valentjn.vscode-ltex",
                 "eamodio.gitlens",
-                "github.vscode-github-actions"
+                "github.vscode-github-actions",
+                "joshbolduc.commitlint"
             ],
             "settings": {
                 "terminal.integrated.defaultProfile.linux": "fish"
