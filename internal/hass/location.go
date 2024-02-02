@@ -31,7 +31,9 @@ func (l *LocationData) RequestType() api.RequestType {
 }
 
 func (l *LocationData) RequestData() json.RawMessage {
-	data, _ := json.Marshal(l)
-	raw := json.RawMessage(data)
-	return raw
+	data, err := json.Marshal(l)
+	if err != nil {
+		return nil
+	}
+	return json.RawMessage(data)
 }

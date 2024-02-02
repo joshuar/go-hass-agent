@@ -25,33 +25,34 @@ func FindServers(ctx context.Context) []string {
 	resolver, err := zeroconf.NewResolver(nil)
 	if err != nil {
 		log.Debug().Err(err).Msg("Failed to initialise resolver.")
-	} else {
-		entries := make(chan *zeroconf.ServiceEntry)
-		go func(results <-chan *zeroconf.ServiceEntry) {
-			for entry := range results {
-				var server string
-				for _, t := range entry.Text {
-					if value, found := strings.CutPrefix(t, "base_url="); found {
-						server = value
-					}
-				}
-				if server != "" {
-					serverList = append(serverList, server)
-				} else {
-					log.Debug().Msgf("Entry %s did not have a base_url value. Not using it.", entry.HostName)
+		return serverList
+	}
+	entries := make(chan *zeroconf.ServiceEntry)
+	go func(results <-chan *zeroconf.ServiceEntry) {
+		for entry := range results {
+			var server string
+			for _, t := range entry.Text {
+				if value, found := strings.CutPrefix(t, "base_url="); found {
+					server = value
 				}
 			}
-		}(entries)
-
-		log.Info().Msg("Looking for Home Assistant instances on the network...")
-		searchCtx, searchCancel := context.WithTimeout(ctx, time.Second*5)
-		defer searchCancel()
-		err = resolver.Browse(searchCtx, "_home-assistant._tcp", "local.", entries)
-		if err != nil {
-			log.Debug().Err(err).Msg("Failed to browse")
+			if server != "" {
+				serverList = append(serverList, server)
+			} else {
+				log.Debug().Msgf("Entry %s did not have a base_url value. Not using it.", entry.HostName)
+			}
 		}
+	}(entries)
 
-		<-searchCtx.Done()
+	log.Info().Msg("Looking for Home Assistant instances on the network...")
+	searchCtx, searchCancel := context.WithTimeout(ctx, time.Second*5)
+	defer searchCancel()
+	err = resolver.Browse(searchCtx, "_home-assistant._tcp", "local.", entries)
+	if err != nil {
+		log.Debug().Err(err).Msg("Failed to browse")
 	}
+
+	<-searchCtx.Done()
+
 	return serverList
 }
