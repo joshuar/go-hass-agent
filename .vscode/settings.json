@@ -15,7 +15,8 @@
         "scripts",
         "container",
         "linux/dbusx",
-        "SECURITY"
+        "SECURITY",
+        "preferences"
     ],
     "conventionalCommits.lineBreak": "\\n",
     "go.lintTool": "golangci-lint",
