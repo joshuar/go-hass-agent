@@ -225,8 +225,7 @@ func Save(setters ...Preference) error {
 	}
 
 	if err := validatePreferences(prefs); err != nil {
-		err := showValidationErrors(err)
-		return err
+		return showValidationErrors(err)
 	}
 
 	file := filepath.Join(preferencesPath, preferencesFile)
@@ -243,11 +242,7 @@ func set(prefs *Preferences, setters ...Preference) error {
 			return setPref(prefs)
 		})
 	}
-
-	if err := g.Wait(); err != nil {
-		return err
-	}
-	return nil
+	return g.Wait()
 }
 
 func write(prefs *Preferences, file string) error {
