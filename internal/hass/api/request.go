@@ -45,22 +45,20 @@ func marshalJSON(request Request, secret string) ([]byte, error) {
 	if request == nil {
 		return nil, errors.New("nil request")
 	}
-	if request.RequestType() == RequestTypeEncrypted {
-		if secret != "" && secret != "NOTSET" {
-			return json.Marshal(&EncryptedRequest{
-				Type:          RequestTypeEncrypted.String(),
-				Encrypted:     true,
-				EncryptedData: request.RequestData(),
-			})
-		} else {
-			return nil, errors.New("encrypted request received without secret")
-		}
-	} else {
+	if request.RequestType() != RequestTypeEncrypted {
 		return json.Marshal(&UnencryptedRequest{
 			Type: request.RequestType().String(),
 			Data: request.RequestData(),
 		})
 	}
+	if secret != "" && secret != "NOTSET" {
+		return json.Marshal(&EncryptedRequest{
+			Type:          RequestTypeEncrypted.String(),
+			Encrypted:     true,
+			EncryptedData: request.RequestData(),
+		})
+	}
+	return nil, errors.New("encrypted request received without secret")
 }
 
 type UnencryptedRequest struct {
