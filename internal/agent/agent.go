@@ -14,11 +14,10 @@ import (
 	"syscall"
 
 	"github.com/adrg/xdg"
-	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
-	"github.com/joshuar/go-hass-agent/internal/agent/config"
 	fyneui "github.com/joshuar/go-hass-agent/internal/agent/ui/fyneUI"
+	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
 // Agent holds the data and structure representing an instance of the agent.
@@ -45,14 +44,13 @@ func New(o *Options) *Agent {
 	if !a.Options.Headless {
 		a.ui = fyneui.NewFyneUI(a.Options.ID)
 	}
-	setupLogging()
 	return a
 }
 
 // Run is the "main loop" of the agent. It sets up the agent, loads the config
 // then spawns a sensor tracker and the workers to gather sensor data and
 // publish it to Home Assistant.
-func (agent *Agent) Run(c string, cfg config.Config, trk SensorTracker) {
+func (agent *Agent) Run(c string, prefs *preferences.Preferences, trk SensorTracker) {
 	var wg sync.WaitGroup
 
 	// Pre-flight: check if agent is registered. If not, run registration flow.
@@ -60,7 +58,7 @@ func (agent *Agent) Run(c string, cfg config.Config, trk SensorTracker) {
 	regWait.Add(1)
 	go func() {
 		defer regWait.Done()
-		agent.checkRegistration(trk, cfg)
+		agent.checkRegistration(trk, prefs)
 	}()
 
 	if c == "go-hass-agent" {
@@ -69,7 +67,7 @@ func (agent *Agent) Run(c string, cfg config.Config, trk SensorTracker) {
 			defer wg.Done()
 			regWait.Wait()
 
-			ctx, cancelFunc := setupContext(cfg)
+			ctx, cancelFunc := setupContext(prefs)
 			runnerCtx := setupDeviceContext(ctx)
 
 			go func() {
@@ -92,8 +90,7 @@ func (agent *Agent) Run(c string, cfg config.Config, trk SensorTracker) {
 				runScripts(ctx, scriptPath, trk)
 			}()
 			// Start the mqtt client
-			var mqttEnabled bool
-			if err := cfg.Get(config.PrefMQTTEnabled, &mqttEnabled); mqttEnabled && err == nil {
+			if prefs.MQTTEnabled {
 				wg.Add(1)
 				go func() {
 					defer wg.Done()
@@ -114,19 +111,19 @@ func (agent *Agent) Run(c string, cfg config.Config, trk SensorTracker) {
 	agent.handleSignals()
 
 	if !agent.IsHeadless() {
-		agent.ui.DisplayTrayIcon(agent, cfg, trk)
+		agent.ui.DisplayTrayIcon(agent, trk)
 		agent.ui.Run(agent.done)
 	}
 	wg.Wait()
 }
 
-func (agent *Agent) Register(cfg config.Config, trk SensorTracker) {
+func (agent *Agent) Register(prefs *preferences.Preferences, trk SensorTracker) {
 	var wg sync.WaitGroup
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		agent.checkRegistration(trk, cfg)
+		agent.checkRegistration(trk, prefs)
 	}()
 
 	if !agent.IsHeadless() {
@@ -170,23 +167,8 @@ func (agent *Agent) Stop() {
 // from any functions that inherit this context. This is used early in the agent
 // start up to ensure all subsequent functionality can access config details as
 // needed.
-func setupContext(cfg config.Config) (context.Context, context.CancelFunc) {
+func setupContext(prefs *preferences.Preferences) (context.Context, context.CancelFunc) {
 	baseCtx, cancelFunc := context.WithCancel(context.Background())
-	agentCtx := config.EmbedInContext(baseCtx, cfg)
+	agentCtx := preferences.EmbedInContext(baseCtx, prefs)
 	return agentCtx, cancelFunc
-}
-
-// setupLogging will attempt to create and then write logging to a file. If it
-// cannot do this, logging will only be available on stdout.
-func setupLogging() {
-	logFile := filepath.Join(xdg.StateHome, "go-hass-app.log")
-	logWriter, err := os.OpenFile(logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
-	if err != nil {
-		log.Error().Err(err).
-			Msg("Unable to open log file for writing.")
-	} else {
-		consoleWriter := zerolog.ConsoleWriter{Out: os.Stdout}
-		multiWriter := zerolog.MultiLevelWriter(consoleWriter, logWriter)
-		log.Logger = log.Output(multiWriter)
-	}
 }

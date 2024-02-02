@@ -11,8 +11,8 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/joshuar/go-hass-agent/internal/agent/config"
 	"github.com/joshuar/go-hass-agent/internal/hass/api"
+	"github.com/joshuar/go-hass-agent/internal/preferences"
 
 	"github.com/go-playground/validator/v10"
 )
@@ -21,38 +21,28 @@ import (
 // request and the successful response in the agent preferences. This includes,
 // most importantly, details on the URL that should be used to send subsequent
 // requests to Home Assistant.
-func saveRegistration(cfg config.Config, server string, resp *api.RegistrationResponse, dev api.DeviceInfo) {
-	checkFatal := func(err error) {
-		if err != nil {
-			log.Fatal().Err(err).Msg("Could not save registration.")
-		}
-	}
-
-	if resp.CloudhookURL != "" {
-		checkFatal(cfg.Set(config.PrefCloudhookURL, resp.CloudhookURL))
-	}
-	if resp.RemoteUIURL != "" {
-		checkFatal(cfg.Set(config.PrefRemoteUIURL, resp.RemoteUIURL))
-	}
-	if resp.Secret != "" {
-		checkFatal(cfg.Set(config.PrefSecret, resp.Secret))
-	}
-	if resp.WebhookID != "" {
-		checkFatal(cfg.Set(config.PrefWebhookID, resp.WebhookID))
-	}
-	checkFatal(cfg.Set(config.PrefAPIURL, generateAPIURL(server, resp)))
-	checkFatal(cfg.Set(config.PrefWebsocketURL, generateWebsocketURL(server)))
-	checkFatal(cfg.Set(config.PrefDeviceName, dev.DeviceName()))
-	checkFatal(cfg.Set(config.PrefDeviceID, dev.DeviceID()))
-	checkFatal(cfg.Set(config.PrefRegistered, true))
-	checkFatal(cfg.Set(config.PrefVersion, config.AppVersion))
+func saveRegistration(server, token string, resp *api.RegistrationResponse, dev api.DeviceInfo) error {
+	return preferences.Save(
+		preferences.Host(server),
+		preferences.Token(token),
+		preferences.CloudhookURL(resp.CloudhookURL),
+		preferences.RemoteUIURL(resp.RemoteUIURL),
+		preferences.WebhookID(resp.WebhookID),
+		preferences.Secret(resp.Secret),
+		preferences.RestAPIURL(generateAPIURL(server, resp)),
+		preferences.WebsocketURL(generateWebsocketURL(server)),
+		preferences.Name(dev.DeviceName()),
+		preferences.ID(dev.DeviceID()),
+		preferences.Version(preferences.AppVersion),
+		preferences.Registered(true),
+	)
 }
 
 // performRegistration runs through a registration flow. If the agent is already
 // registered, it will exit unless the force parameter is true. Otherwise, it
 // will action a registration workflow displaying a GUI for user input of
 // registration details and save the results into the agent config.
-func (agent *Agent) performRegistration(ctx context.Context, server, token string, cfg config.Config) {
+func (agent *Agent) performRegistration(ctx context.Context, server, token string) {
 	log.Info().Msg("Registration required. Starting registration process.")
 
 	// Display a window asking for registration details for non-headless usage.
@@ -75,33 +65,20 @@ func (agent *Agent) performRegistration(ctx context.Context, server, token strin
 	}
 
 	// Write registration details to config.
-	saveRegistration(cfg, server, resp, device)
-	if err = cfg.Set(config.PrefHost, server); err != nil {
-		log.Fatal().Err(err).Msg("Could not set host preference.")
-	}
-	if err = cfg.Set(config.PrefToken, token); err != nil {
-		log.Fatal().Err(err).Msg("Could not set token preference.")
+	if err := saveRegistration(server, token, resp, device); err != nil {
+		log.Fatal().Err(err).Msg("Could not save registration.")
 	}
 
-	// Ensure new config is valid.
-	if err = config.ValidateConfig(cfg); err != nil {
-		log.Fatal().Err(err).Msg("Could not validate config after registration.")
-	}
 	log.Info().Msg("Successfully registered agent.")
 }
 
-func (agent *Agent) checkRegistration(t SensorTracker, c config.Config) {
-	var registered bool
-	if err := c.Get(config.PrefRegistered, &registered); err != nil {
-		log.Fatal().Err(err).Msg("Could not ascertain agent registration status.")
-	}
-
+func (agent *Agent) checkRegistration(trk SensorTracker, prefs *preferences.Preferences) {
 	// If the agent is not registered (or force registration requested) run a
 	// registration flow
-	if !registered || agent.Options.ForceRegister {
-		agent.performRegistration(context.Background(), agent.Options.Server, agent.Options.Token, c)
+	if !prefs.Registered || agent.Options.ForceRegister {
+		agent.performRegistration(context.Background(), agent.Options.Server, agent.Options.Token)
 		if agent.Options.ForceRegister {
-			t.Reset()
+			trk.Reset()
 		}
 	} else {
 		log.Debug().Msg("Agent already registered.")

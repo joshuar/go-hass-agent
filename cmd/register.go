@@ -13,7 +13,8 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/joshuar/go-hass-agent/internal/agent"
-	"github.com/joshuar/go-hass-agent/internal/agent/config"
+	"github.com/joshuar/go-hass-agent/internal/logging"
+	"github.com/joshuar/go-hass-agent/internal/preferences"
 	"github.com/joshuar/go-hass-agent/internal/tracker"
 )
 
@@ -27,25 +28,33 @@ var registerCmd = &cobra.Command{
 	Use:   "register",
 	Short: "Register this device with Home Assistant",
 	Long:  `Register will attempt to register this device with Home Assistant. A URL for a Home Assistant instance and long-lived access token can be provided if known beforehand.`,
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		logging.SetLoggingLevel(traceFlag, debugFlag, profileFlag)
+		logging.SetLogFile()
+	},
 	Run: func(cmd *cobra.Command, args []string) {
 		agent := agent.New(&agent.Options{
 			Headless:      headlessFlag,
 			ForceRegister: forcedFlag,
 			Server:        serverFlag,
 			Token:         tokenFlag,
-			ID:            appID,
+			ID:            AppID,
 		})
 		var err error
-		var cfg config.Config
-		configPath := filepath.Join(xdg.ConfigHome, agent.AppID())
-		if cfg, err = config.Load(configPath); err != nil {
-			log.Fatal().Err(err).Msg("Could not load config.")
-		}
+
 		var trk *tracker.SensorTracker
 		if trk, err = tracker.NewSensorTracker(agent.AppID()); err != nil {
 			log.Fatal().Err(err).Msg("Could not start sensor tracker.")
 		}
-		agent.Register(cfg, trk)
+
+		preferences.SetPath(filepath.Join(xdg.ConfigHome, agent.AppID()))
+		var prefs *preferences.Preferences
+		prefs, err = preferences.Load()
+		if err != nil {
+			log.Fatal().Err(err).Msg("Could not load preferences.")
+		}
+
+		agent.Register(prefs, trk)
 	},
 }
 

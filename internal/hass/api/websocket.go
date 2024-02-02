@@ -16,7 +16,7 @@ import (
 	"github.com/lxzan/gws"
 	"github.com/rs/zerolog/log"
 
-	"github.com/joshuar/go-hass-agent/internal/agent/config"
+	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
 const PingInterval = time.Minute
@@ -60,25 +60,20 @@ type websocketNotification struct {
 }
 
 func StartWebsocket(ctx context.Context, notifyCh chan [2]string) {
-	cfg := config.FetchFromContext(ctx)
-	if cfg == nil {
-		log.Warn().Msg("Cannot retrieve config. Cannot listen for notifications.")
-		return
-	}
-
-	var websocketURL string
-	if err := cfg.Get(config.PrefWebsocketURL, &websocketURL); err != nil {
-		log.Warn().Err(err).Msg("Could not retrieve websocket URL from config.")
-		return
-	}
-	var socket *gws.Conn
+	var prefs *preferences.Preferences
 	var err error
+	var socket *gws.Conn
+
+	prefs, err = preferences.Load()
+	if err != nil {
+		log.Error().Err(err).Msg("Could not load preferences.")
+	}
 
 	retryFunc := func() error {
 		var resp *http.Response
 		socket, resp, err = gws.NewClient(
-			newWebsocket(cfg, notifyCh),
-			&gws.ClientOption{Addr: websocketURL})
+			newWebsocket(prefs, notifyCh),
+			&gws.ClientOption{Addr: prefs.WebsocketURL})
 		if err != nil {
 			log.Error().Err(err).
 				Msg("Could not connect to websocket.")
@@ -110,22 +105,12 @@ type WebSocket struct {
 	nextID    uint64
 }
 
-func newWebsocket(cfg config.Config, notifyCh chan [2]string) *WebSocket {
-	var token, webhookID string
-	if err := cfg.Get(config.PrefToken, &token); err != nil {
-		log.Warn().Err(err).Msg("Could not retrieve token from config.")
-		return nil
-	}
-	if err := cfg.Get(config.PrefWebhookID, &webhookID); err != nil {
-		log.Warn().Err(err).Msg("Could not retrieve webhookID from config.")
-		return nil
-	}
-
+func newWebsocket(prefs *preferences.Preferences, notifyCh chan [2]string) *WebSocket {
 	ws := &WebSocket{
 		notifyCh:  notifyCh,
 		doneCh:    make(chan struct{}),
-		token:     token,
-		webhookID: webhookID,
+		token:     prefs.Token,
+		webhookID: prefs.WebhookID,
 	}
 	return ws
 }

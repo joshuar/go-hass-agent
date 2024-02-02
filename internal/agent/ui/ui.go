@@ -23,6 +23,13 @@ type SensorTracker interface {
 	Get(key string) (tracker.Sensor, error)
 }
 
+type MQTTPreferences struct {
+	Server   string
+	User     string
+	Password string
+	Enabled  bool
+}
+
 //go:embed assets/appURL.txt
 var AppURL string
 

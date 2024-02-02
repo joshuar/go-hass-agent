@@ -16,8 +16,11 @@ import (
 	"github.com/rs/zerolog/log"
 	"golang.org/x/mod/semver"
 
+	mqttconfig "github.com/joshuar/go-hass-anything/v3/pkg/config"
+
 	fyneconfig "github.com/joshuar/go-hass-agent/internal/agent/config/fyneConfig"
 	viperconfig "github.com/joshuar/go-hass-agent/internal/agent/config/viperConfig"
+	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
 const (
@@ -254,4 +257,57 @@ func viperToFyne(configPath string) error {
 		}
 	}
 	return vc.Set("hass.registered", true)
+}
+
+func Migrate(cfg Config) error {
+	var err error
+
+	var version string
+	cfg.Get(PrefVersion, &version)
+	var apiurl string
+	cfg.Get(PrefAPIURL, &apiurl)
+	var registered bool
+	cfg.Get(PrefRegistered, &registered)
+	var deviceID, deviceName string
+	cfg.Get(PrefDeviceID, &deviceID)
+	cfg.Get(PrefDeviceName, &deviceName)
+	var host, token string
+	cfg.Get(PrefHost, &host)
+	cfg.Get(PrefToken, &token)
+	var websocketurl string
+	cfg.Get(PrefWebsocketURL, &websocketurl)
+	var webhookid string
+	cfg.Get(PrefWebhookID, &webhookid)
+	var cloudhookurl, remoteuiurl string
+	cfg.Get(PrefCloudhookURL, &cloudhookurl)
+	cfg.Get(PrefRemoteUIURL, &remoteuiurl)
+	var mqtt bool
+	cfg.Get(PrefMQTTEnabled, &mqtt)
+
+	var mqttCfg *mqttconfig.Preferences
+	if mqtt {
+		mqttconfig.SetPath(cfg.Path())
+		mqttCfg, err = mqttconfig.LoadPreferences()
+		if err != nil {
+			log.Fatal().Err(err).Msg("Could not fetch MQTT preferences.")
+		}
+	}
+
+	return preferences.Save(
+		preferences.Version(version),
+		preferences.RestAPIURL(apiurl),
+		preferences.Registered(registered),
+		preferences.ID(deviceID),
+		preferences.Name(deviceName),
+		preferences.Host(host),
+		preferences.Token(token),
+		preferences.WebsocketURL(websocketurl),
+		preferences.WebhookID(webhookid),
+		preferences.CloudhookURL(cloudhookurl),
+		preferences.RemoteUIURL(remoteuiurl),
+		preferences.MQTTEnabled(mqtt),
+		preferences.MQTTServer(mqttCfg.Server),
+		preferences.MQTTUser(mqttCfg.User),
+		preferences.MQTTPassword(mqttCfg.Password),
+	)
 }
