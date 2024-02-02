@@ -12,6 +12,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
+	"github.com/joshuar/go-hass-agent/cmd/text"
 	"github.com/joshuar/go-hass-agent/internal/agent"
 	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
@@ -27,7 +28,7 @@ var (
 var registerCmd = &cobra.Command{
 	Use:   "register",
 	Short: "Register this device with Home Assistant",
-	Long:  `Register will attempt to register this device with Home Assistant. A URL for a Home Assistant instance and long-lived access token can be provided if known beforehand.`,
+	Long:  text.RegisterCmdLongText,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		logging.SetLoggingLevel(traceFlag, debugFlag, profileFlag)
 		logging.SetLogFile()

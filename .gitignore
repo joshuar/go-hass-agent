@@ -18,6 +18,7 @@
 !/assets/**/*
 
 !*.md
+!*.txt
 !*.go
 !go.sum
 !go.mod
@@ -30,3 +31,5 @@
 # ...even if they are in subdirectories
 !*/
 
+dist/
+fyne-cross/
