@@ -14,6 +14,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
+	"github.com/joshuar/go-hass-agent/cmd/text"
 	"github.com/joshuar/go-hass-agent/internal/agent"
 	"github.com/joshuar/go-hass-agent/internal/agent/config"
 	"github.com/joshuar/go-hass-agent/internal/logging"
@@ -33,11 +34,7 @@ var (
 var rootCmd = &cobra.Command{
 	Use:   "go-hass-agent",
 	Short: "A Home Assistant, native app integration for desktop/laptop devices.",
-	Long: `go-hass-agent reports various sensors from a desktop/laptop to a Home Assistant instance.
-Sensors include the usual system metrics like load average and memory usage as well as things like
-current active app where possible.
-	
-It can also receive notifications from Home Assistant.`,
+	Long:  text.RootCmdLongText,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		logging.SetLoggingLevel(traceFlag, debugFlag, profileFlag)
 		logging.SetLogFile()
