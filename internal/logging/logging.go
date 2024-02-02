@@ -10,7 +10,9 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"path/filepath"
 
+	"github.com/adrg/xdg"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/rs/zerolog/pkgerrors"
@@ -35,8 +37,8 @@ func setProfiling() {
 	}()
 }
 
-// SetLogging sets an appropriate log level and enables profiling if requested.
-func SetLogging(trace, debug, profile bool) {
+// SetLoggingLevel sets an appropriate log level and enables profiling if requested.
+func SetLoggingLevel(trace, debug, profile bool) {
 	switch {
 	case trace:
 		zerolog.SetGlobalLevel(zerolog.TraceLevel)
@@ -49,5 +51,20 @@ func SetLogging(trace, debug, profile bool) {
 	}
 	if profile {
 		setProfiling()
+	}
+}
+
+// SetLogFile will attempt to create and then write logging to a file. If it
+// cannot do this, logging will only be available on stdout.
+func SetLogFile() {
+	logFile := filepath.Join(xdg.StateHome, "go-hass-app.log")
+	logWriter, err := os.OpenFile(logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	if err != nil {
+		log.Error().Err(err).
+			Msg("Unable to open log file for writing.")
+	} else {
+		consoleWriter := zerolog.ConsoleWriter{Out: os.Stdout}
+		multiWriter := zerolog.MultiLevelWriter(consoleWriter, logWriter)
+		log.Logger = log.Output(multiWriter)
 	}
 }

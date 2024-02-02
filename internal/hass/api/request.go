@@ -15,7 +15,7 @@ import (
 
 	"github.com/carlmjohnson/requests"
 
-	"github.com/joshuar/go-hass-agent/internal/agent/config"
+	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
 //go:generate stringer -type=RequestType,ResponseType -output apiTypes.go -linecomment
@@ -78,22 +78,10 @@ func ExecuteRequest(ctx context.Context, request Request) <-chan any {
 	responseCh := make(chan any, 1)
 	defer close(responseCh)
 
-	var cfg config.Config
-	if cfg = config.FetchFromContext(ctx); cfg == nil {
-		responseCh <- errors.New("no config found in context")
-		return responseCh
-	}
+	prefs := preferences.FetchFromContext(ctx)
 
-	var secret string
-	cfg.Get(config.PrefSecret, &secret)
-	reqJSON, err := marshalJSON(request, secret)
+	reqJSON, err := marshalJSON(request, prefs.Secret)
 	if err != nil {
-		responseCh <- err
-		return responseCh
-	}
-
-	var url string
-	if err := cfg.Get(config.PrefAPIURL, &url); err != nil {
 		responseCh <- err
 		return responseCh
 	}
@@ -107,7 +95,7 @@ func ExecuteRequest(ctx context.Context, request Request) <-chan any {
 		defer wg.Done()
 		var rBuf bytes.Buffer
 		err = requests.
-			URL(url).
+			URL(prefs.RestAPIURL).
 			BodyBytes(reqJSON).
 			ToBytesBuffer(&rBuf).
 			Fetch(requestCtx)

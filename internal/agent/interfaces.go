@@ -8,7 +8,6 @@ package agent
 import (
 	"context"
 
-	"github.com/joshuar/go-hass-agent/internal/agent/config"
 	"github.com/joshuar/go-hass-agent/internal/agent/ui"
 	"github.com/joshuar/go-hass-agent/internal/tracker"
 )
@@ -26,7 +25,7 @@ type Device interface {
 //go:generate moq -out mockUI_test.go . UI
 type UI interface {
 	DisplayNotification(title, message string)
-	DisplayTrayIcon(agent ui.Agent, cfg config.Config, trk ui.SensorTracker)
+	DisplayTrayIcon(agent ui.Agent, trk ui.SensorTracker)
 	DisplayRegistrationWindow(ctx context.Context, server, token *string, doneCh chan struct{})
 	Run(doneCh chan struct{})
 }

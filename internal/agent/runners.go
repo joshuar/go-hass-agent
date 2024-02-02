@@ -16,10 +16,10 @@ import (
 	mqtthass "github.com/joshuar/go-hass-anything/v3/pkg/hass"
 	mqttapi "github.com/joshuar/go-hass-anything/v3/pkg/mqtt"
 
-	"github.com/joshuar/go-hass-agent/internal/agent/config"
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/hass/api"
+	"github.com/joshuar/go-hass-agent/internal/preferences"
 	"github.com/joshuar/go-hass-agent/internal/scripts"
 	"github.com/joshuar/go-hass-agent/internal/tracker"
 )
@@ -150,10 +150,13 @@ func (agent *Agent) runNotificationsWorker(ctx context.Context) {
 // runMQTTWorker will set up a connection to MQTT and listen on topics for
 // controlling this device from Home Assistant.
 func runMQTTWorker(ctx context.Context) {
-	cfg := config.FetchFromContext(ctx)
-	registry := filepath.Join(cfg.Path(), "mqttRegistry")
+	prefs := preferences.FetchFromContext(ctx)
+	mqttprefs := &preferences.MQTTPreferences{
+		Prefs: &prefs,
+	}
+	registry := filepath.Join(preferences.GetPath(), "mqttRegistry")
 
-	c, err := mqttapi.NewMQTTClient(cfg.Path())
+	c, err := mqttapi.NewMQTTClient(mqttprefs)
 	if err != nil {
 		log.Error().Err(err).Msg("Could not start MQTT client.")
 		return
@@ -172,10 +175,13 @@ func runMQTTWorker(ctx context.Context) {
 }
 
 func resetMQTTWorker(ctx context.Context) {
-	cfg := config.FetchFromContext(ctx)
-	registry := filepath.Join(cfg.Path(), "mqttRegistry")
+	prefs := preferences.FetchFromContext(ctx)
+	mqttprefs := &preferences.MQTTPreferences{
+		Prefs: &prefs,
+	}
+	registry := filepath.Join(preferences.GetPath(), "mqttRegistry")
 
-	c, err := mqttapi.NewMQTTClient(cfg.Path())
+	c, err := mqttapi.NewMQTTClient(mqttprefs)
 	if err != nil {
 		log.Error().Err(err).Msg("Could not start MQTT client.")
 		return
