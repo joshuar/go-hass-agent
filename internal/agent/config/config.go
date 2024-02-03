@@ -260,6 +260,12 @@ func viperToFyne(configPath string) error {
 }
 
 func Migrate(cfg Config) error {
+	configFile := filepath.Join(cfg.Path(), "go-hass-agent.toml")
+	if _, err := os.Stat(configFile); os.IsNotExist(err) {
+		log.Debug().Msg("No config to migrate.")
+		return nil
+	}
+
 	var err error
 
 	var version string

@@ -50,7 +50,7 @@ func New(o *Options) *Agent {
 // Run is the "main loop" of the agent. It sets up the agent, loads the config
 // then spawns a sensor tracker and the workers to gather sensor data and
 // publish it to Home Assistant.
-func (agent *Agent) Run(prefs *preferences.Preferences, trk SensorTracker) {
+func (agent *Agent) Run(trk SensorTracker) {
 	var wg sync.WaitGroup
 
 	// Pre-flight: check if agent is registered. If not, run registration flow.
@@ -58,7 +58,9 @@ func (agent *Agent) Run(prefs *preferences.Preferences, trk SensorTracker) {
 	regWait.Add(1)
 	go func() {
 		defer regWait.Done()
-		agent.checkRegistration(trk, prefs)
+		if err := agent.checkRegistration(trk); err != nil {
+			log.Fatal().Err(err).Msg("Error checking registration status.")
+		}
 	}()
 
 	wg.Add(1)
@@ -66,6 +68,11 @@ func (agent *Agent) Run(prefs *preferences.Preferences, trk SensorTracker) {
 		defer wg.Done()
 		regWait.Wait()
 
+		var err error
+		prefs, err := preferences.Load()
+		if err != nil {
+			log.Fatal().Err(err).Msg("Could not load preferences.")
+		}
 		ctx, cancelFunc := setupContext(prefs)
 		runnerCtx := setupDeviceContext(ctx)
 
@@ -115,13 +122,15 @@ func (agent *Agent) Run(prefs *preferences.Preferences, trk SensorTracker) {
 	wg.Wait()
 }
 
-func (agent *Agent) Register(prefs *preferences.Preferences, trk SensorTracker) {
+func (agent *Agent) Register(trk SensorTracker) {
 	var wg sync.WaitGroup
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		agent.checkRegistration(trk, prefs)
+		if err := agent.checkRegistration(trk); err != nil {
+			log.Fatal().Err(err).Msg("Error checking registration status.")
+		}
 	}()
 
 	if !agent.IsHeadless() {
