@@ -31,8 +31,8 @@ func saveRegistration(server, token string, resp *api.RegistrationResponse, dev 
 		preferences.Secret(resp.Secret),
 		preferences.RestAPIURL(generateAPIURL(server, resp)),
 		preferences.WebsocketURL(generateWebsocketURL(server)),
-		preferences.Name(dev.DeviceName()),
-		preferences.ID(dev.DeviceID()),
+		preferences.DeviceName(dev.DeviceName()),
+		preferences.DeviceID(dev.DeviceID()),
 		preferences.Version(preferences.AppVersion),
 		preferences.Registered(true),
 	)

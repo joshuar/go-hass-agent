@@ -30,8 +30,8 @@ type Preferences struct {
 	Version      string `toml:"agent.version" validate:"required"`
 	Host         string `toml:"registration.host" validate:"required,http_url"`
 	Token        string `toml:"registration.token" validate:"required,ascii"`
-	ID           string `toml:"device.id" validate:"required,ascii"`
-	Name         string `toml:"device.name" validate:"required,hostname"`
+	DeviceID     string `toml:"device.id" validate:"required,ascii"`
+	DeviceName   string `toml:"device.name" validate:"required,hostname"`
 	RestAPIURL   string `toml:"hass.apiurl,omitempty" validate:"http_url,required_without=CloudhookURL RemoteUIURL"`
 	CloudhookURL string `toml:"hass.cloudhookurl,omitempty" validate:"omitempty,http_url"`
 	WebsocketURL string `toml:"hass.websocketurl" validate:"required,url"`
@@ -78,16 +78,16 @@ func Version(version string) Preference {
 	}
 }
 
-func ID(id string) Preference {
+func DeviceID(id string) Preference {
 	return func(p *Preferences) error {
-		p.ID = id
+		p.DeviceID = id
 		return nil
 	}
 }
 
-func Name(name string) Preference {
+func DeviceName(name string) Preference {
 	return func(p *Preferences) error {
-		p.Name = name
+		p.DeviceName = name
 		return nil
 	}
 }
