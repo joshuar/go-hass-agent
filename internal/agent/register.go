@@ -7,7 +7,9 @@ package agent
 
 import (
 	"context"
+	"errors"
 	"net/url"
+	"os"
 
 	"github.com/rs/zerolog/log"
 
@@ -42,7 +44,7 @@ func saveRegistration(server, token string, resp *api.RegistrationResponse, dev 
 // registered, it will exit unless the force parameter is true. Otherwise, it
 // will action a registration workflow displaying a GUI for user input of
 // registration details and save the results into the agent config.
-func (agent *Agent) performRegistration(ctx context.Context, server, token string) {
+func (agent *Agent) performRegistration(ctx context.Context, server, token string) error {
 	log.Info().Msg("Registration required. Starting registration process.")
 
 	// Display a window asking for registration details for non-headless usage.
@@ -54,35 +56,44 @@ func (agent *Agent) performRegistration(ctx context.Context, server, token strin
 
 	// Validate provided registration details.
 	if !validRegistrationSetting("server", server) || !validRegistrationSetting("token", token) {
-		log.Fatal().Msg("Cannot register, invalid host and/or token.")
+		return errors.New("cannot register, invalid host and/or token")
 	}
 
 	// Register with Home Assistant.
 	device := newDevice(ctx)
 	resp, err := api.RegisterWithHass(ctx, server, token, device)
 	if err != nil {
-		log.Fatal().Err(err).Msg("Could not register with Home Assistant.")
+		return errors.New("could not register with Home Assistant")
 	}
 
 	// Write registration details to config.
 	if err := saveRegistration(server, token, resp, device); err != nil {
-		log.Fatal().Err(err).Msg("Could not save registration.")
+		return errors.New("could not save registration")
 	}
 
 	log.Info().Msg("Successfully registered agent.")
+	return nil
 }
 
-func (agent *Agent) checkRegistration(trk SensorTracker, prefs *preferences.Preferences) {
+func (agent *Agent) checkRegistration(trk SensorTracker) error {
+	prefs, err := preferences.Load()
+	if err != nil && !os.IsNotExist(err) {
+		return errors.New("could not load preferences")
+	}
+
 	// If the agent is not registered (or force registration requested) run a
 	// registration flow
 	if !prefs.Registered || agent.Options.ForceRegister {
-		agent.performRegistration(context.Background(), agent.Options.Server, agent.Options.Token)
+		if err := agent.performRegistration(context.Background(), agent.Options.Server, agent.Options.Token); err != nil {
+			return err
+		}
 		if agent.Options.ForceRegister {
 			trk.Reset()
 		}
 	} else {
 		log.Debug().Msg("Agent already registered.")
 	}
+	return nil
 }
 
 func validRegistrationSetting(key, value string) bool {

@@ -6,16 +6,12 @@
 package cmd
 
 import (
-	"path/filepath"
-
-	"github.com/adrg/xdg"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/joshuar/go-hass-agent/cmd/text"
 	"github.com/joshuar/go-hass-agent/internal/agent"
 	"github.com/joshuar/go-hass-agent/internal/logging"
-	"github.com/joshuar/go-hass-agent/internal/preferences"
 	"github.com/joshuar/go-hass-agent/internal/tracker"
 )
 
@@ -48,14 +44,7 @@ var registerCmd = &cobra.Command{
 			log.Fatal().Err(err).Msg("Could not start sensor tracker.")
 		}
 
-		preferences.SetPath(filepath.Join(xdg.ConfigHome, agent.AppID()))
-		var prefs *preferences.Preferences
-		prefs, err = preferences.Load()
-		if err != nil {
-			log.Fatal().Err(err).Msg("Could not load preferences.")
-		}
-
-		agent.Register(prefs, trk)
+		agent.Register(trk)
 	},
 }
 
