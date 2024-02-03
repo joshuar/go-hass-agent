@@ -35,7 +35,7 @@ import (
 const (
 	explainRegistration = `To register the agent, please enter the relevant details for your Home Assistant
 server (if not auto-detected) and long-lived access token.`
-	restartNote           = `Please restart the agent to use changed settings.`
+	restartNote           = `Please restart the agent to use changed preferences.`
 	errMsgInvalidURL      = `You need to specify a valid http(s)://host:port.`
 	errMsgInvalidURI      = `You need to specify a valid scheme://host:port.`
 	errMsgInvalidHostPort = `You need to specify a valid host:port combination.`
@@ -86,7 +86,7 @@ func NewFyneUI(id string) *fyneUI {
 
 // DisplayTrayIcon displays an icon in the desktop tray with a menu for
 // controlling the agent and showing other informational windows.
-func (i *fyneUI) DisplayTrayIcon(a ui.Agent, t ui.SensorTracker) {
+func (i *fyneUI) DisplayTrayIcon(agent ui.Agent, trk ui.SensorTracker) {
 	if desk, ok := i.app.(desktop.App); ok {
 		// About menu item.
 		menuItemAbout := fyne.NewMenuItem(i.Translate("About"),
@@ -96,24 +96,20 @@ func (i *fyneUI) DisplayTrayIcon(a ui.Agent, t ui.SensorTracker) {
 		// Sensors menu item.
 		menuItemSensors := fyne.NewMenuItem(i.Translate("Sensors"),
 			func() {
-				i.sensorsWindow(a, t).Show()
+				i.sensorsWindow(trk).Show()
 			})
 
 		// Settings menu and submenu items.
-		settingsMenu := fyne.NewMenuItem(i.Translate("Settings"), nil)
+		settingsMenu := fyne.NewMenuItem(i.Translate("Preferences"), nil)
 		settingsMenu.ChildMenu = fyne.NewMenu("",
 			fyne.NewMenuItem(i.Translate("App"),
-				func() {
-					i.agentSettingsWindow().Show()
-				}),
+				func() { i.agentSettingsWindow().Show() }),
 			fyne.NewMenuItem(i.text.Translate("Fyne"),
-				func() {
-					i.fyneSettingsWindow().Show()
-				}),
+				func() { i.fyneSettingsWindow().Show() }),
 		)
 		// Quit menu item.
 		menuItemQuit := fyne.NewMenuItem(i.Translate("Quit"), func() {
-			a.Stop()
+			agent.Stop()
 		})
 		menuItemQuit.IsQuit = true
 
@@ -160,7 +156,7 @@ func (i *fyneUI) DisplayRegistrationWindow(ctx context.Context, server, token *s
 func (i *fyneUI) aboutWindow() fyne.Window {
 	c := container.NewCenter(container.NewVBox(
 		widget.NewLabelWithStyle("Go Hass Agent "+config.AppVersion, fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
-		widget.NewLabel(""), // balance the header on the tutorial screen we leave blank on this content
+		widget.NewLabel(""),
 		container.NewHBox(
 			widget.NewHyperlink("website", parseURL(ui.AppURL)),
 			widget.NewLabel("-"),
@@ -178,7 +174,7 @@ func (i *fyneUI) aboutWindow() fyne.Window {
 // fyneSettingsWindow creates a window that will show the Fyne settings for
 // controlling the look and feel of other windows.
 func (i *fyneUI) fyneSettingsWindow() fyne.Window {
-	w := i.app.NewWindow(i.Translate("Fyne Settings"))
+	w := i.app.NewWindow(i.Translate("Fyne Preferences"))
 	w.SetContent(settings.NewSettings().LoadAppearanceScreen(w))
 	return w
 }
@@ -203,7 +199,7 @@ func (i *fyneUI) agentSettingsWindow() fyne.Window {
 	}
 	allFormItems = append(allFormItems, i.mqttConfigItems(mqttPrefs)...)
 
-	w := i.app.NewWindow(i.Translate("App Settings"))
+	w := i.app.NewWindow(i.Translate("App Preferences"))
 	settingsForm := widget.NewForm(allFormItems...)
 	settingsForm.OnSubmit = func() {
 		err := preferences.Save(
@@ -213,12 +209,14 @@ func (i *fyneUI) agentSettingsWindow() fyne.Window {
 			preferences.MQTTPassword(mqttPrefs.Password),
 		)
 		if err != nil {
-			log.Warn().Err(err).Msg("Problem saving MQTT settings.")
+			log.Warn().Err(err).Msg("Could not save MQTT preferences.")
+			return
 		}
+		log.Info().Msg("Saved MQTT preferences.")
 	}
 	settingsForm.OnCancel = func() {
 		w.Close()
-		log.Debug().Msg("No settings saved.")
+		log.Info().Msg("No MQTT preferences saved.")
 	}
 	settingsForm.SubmitText = i.Translate("Save")
 	w.SetContent(container.New(layout.NewVBoxLayout(),
@@ -231,7 +229,7 @@ func (i *fyneUI) agentSettingsWindow() fyne.Window {
 // sensorsWindow creates a window that displays all of the sensors and their
 // values that are currently tracked by the agent. Values are updated
 // continuously.
-func (i *fyneUI) sensorsWindow(a ui.Agent, t ui.SensorTracker) fyne.Window {
+func (i *fyneUI) sensorsWindow(t ui.SensorTracker) fyne.Window {
 	sensors := t.SensorList()
 	if sensors == nil {
 		return nil
