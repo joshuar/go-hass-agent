@@ -206,28 +206,17 @@ integration in your Home Assistant instance. It should also report a list of
 sensors/entities you can use in any automations, scripts, dashboards and other
 parts of Home Assistant.
 
-[![Open your Home Assistant instance and show an integration.](https://my.home-assistant.io/badges/integration.svg)](https://my.home-assistant.io/redirect/integration/?domain=mobile_app)
+[![Open your Home Assistant instance to the mobile_app integration.](https://my.home-assistant.io/badges/integration.svg)](https://my.home-assistant.io/redirect/integration/?domain=mobile_app)
 
-## 🧑‍🤝‍🧑 Contributing
+## Issues, Feature Requests, Contributing
 
-### Development
-
-I would welcome your contribution! If you find any improvement or issue you want
-to fix, feel free to send a pull request!
-
-Some documentation for development can be found in
-the [docs](docs/README.md). There is information for developing
-Go Hass Agent for different operating systems as well as adding additional
-sensors. This might help anyone to look to contribute, extend or fork this tool.
-
-### Translations
-
-While this application does not have many points where text is displayed to
-the end user (logging aside), translation is supported through the `language`
-and `message` packages that are part of
-[golang.org/x/text](https://pkg.go.dev/golang.org/x/text).
-
-I would welcome pull requests for translations!
+- Found an issue? Please [report
+  it](https://github.com/joshuar/go-hass-agent/issues/new?assignees=joshuar&labels=&template=bug_report.md&title=%5BBUG%5D)!
+- Have a suggestion for a feature? Want a particular sensor/measurement added?
+  Submit a [feature
+  request](https://github.com/joshuar/go-hass-agent/issues/new?assignees=joshuar&labels=&template=feature_request.md&title=)!
+- Want to help develop Go Hass Agent? See the [contributing
+  guidelines](CONTRIBUTING.md).
 
 ## 🙌 Acknowledgements
 
