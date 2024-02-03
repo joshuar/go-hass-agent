@@ -284,9 +284,10 @@ func Migrate(cfg Config) error {
 	var mqtt bool
 	cfg.Get(PrefMQTTEnabled, &mqtt)
 
-	var mqttCfg *mqttconfig.Preferences
+	mqttCfg := &mqttconfig.Preferences{}
 	if mqtt {
 		mqttconfig.SetPath(cfg.Path())
+		mqttconfig.SetFile("mqtt-config.toml")
 		mqttCfg, err = mqttconfig.LoadPreferences()
 		if err != nil {
 			log.Fatal().Err(err).Msg("Could not fetch MQTT preferences.")
