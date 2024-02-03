@@ -88,11 +88,6 @@
             "translation": ""
         },
         {
-            "id": "Use MQTT?",
-            "message": "Use MQTT?",
-            "translation": ""
-        },
-        {
             "id": "MQTT Server",
             "message": "MQTT Server",
             "translation": ""
@@ -105,6 +100,11 @@
         {
             "id": "MQTT Password",
             "message": "MQTT Password",
+            "translation": ""
+        },
+        {
+            "id": "Use MQTT?",
+            "message": "Use MQTT?",
             "translation": ""
         }
     ]
