@@ -61,7 +61,7 @@ jobs:
           archs: amd64
           # context: build/package
           image: ${{ env.IMAGE }}
-          tags: ${{ steps.docker_metadata.outputs.tags }} ${{ steps.release_metadata.outputs.name }}
+          tags: ${{ steps.docker_metadata.outputs.tags }} ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ steps.release_metadata.outputs.name }}
           labels: ${{ steps.docker_metadata.outputs.labels }}
           containerfiles: Dockerfile
           layers: false
