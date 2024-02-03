@@ -52,7 +52,7 @@ var rootCmd = &cobra.Command{
 			log.Fatal().Err(err).Msg("Could not load config.")
 		}
 		preferences.SetPath(filepath.Join(xdg.ConfigHome, agent.AppID()))
-		if err := config.Migrate(cfg); err != nil {
+		if err = config.Migrate(cfg); err != nil {
 			log.Fatal().Err(err).Msg("Could not migrate config.")
 		}
 		var prefs *preferences.Preferences
@@ -66,7 +66,7 @@ var rootCmd = &cobra.Command{
 			log.Fatal().Err(err).Msg("Could not start sensor tracker.")
 		}
 
-		agent.Run(cmd.Name(), prefs, trk)
+		agent.Run(prefs, trk)
 	},
 }
 
