@@ -120,13 +120,6 @@
             "fuzzy": true
         },
         {
-            "id": "Use MQTT?",
-            "message": "Use MQTT?",
-            "translation": "Use MQTT?",
-            "translatorComment": "Copied from source.",
-            "fuzzy": true
-        },
-        {
             "id": "MQTT Server",
             "message": "MQTT Server",
             "translation": "MQTT Server",
@@ -144,6 +137,13 @@
             "id": "MQTT Password",
             "message": "MQTT Password",
             "translation": "MQTT Password",
+            "translatorComment": "Copied from source.",
+            "fuzzy": true
+        },
+        {
+            "id": "Use MQTT?",
+            "message": "Use MQTT?",
+            "translation": "Use MQTT?",
             "translatorComment": "Copied from source.",
             "fuzzy": true
         }

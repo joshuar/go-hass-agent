@@ -47,9 +47,9 @@ var messageKeyToIndex = map[string]int{
 	"Auto-discovered Servers": 13,
 	"Fyne":                    4,
 	"Fyne Settings":           8,
-	"MQTT Password":           19,
-	"MQTT Server":             17,
-	"MQTT User":               18,
+	"MQTT Password":           18,
+	"MQTT Server":             16,
+	"MQTT User":               17,
 	"Manual Server Entry":     15,
 	"Please restart the agent to use changed settings.": 11,
 	"Quit":     5,
@@ -59,7 +59,7 @@ var messageKeyToIndex = map[string]int{
 	"To register the agent, please enter the relevant details for your Home Assistant\nserver (if not auto-detected) and long-lived access token.": 7,
 	"Token":              12,
 	"Use Custom Server?": 14,
-	"Use MQTT?":          16,
+	"Use MQTT?":          19,
 }
 
 var deIndex = []uint32{ // 21 elements
@@ -78,7 +78,7 @@ var enIndex = []uint32{ // 21 elements
 	0x0000001b, 0x00000020, 0x00000025, 0x00000036,
 	0x000000c2, 0x000000d0, 0x000000dd, 0x000000e2,
 	0x00000114, 0x0000011a, 0x00000132, 0x00000145,
-	0x00000159, 0x00000163, 0x0000016f, 0x00000179,
+	0x00000159, 0x00000165, 0x0000016f, 0x0000017d,
 	0x00000187,
 } // Size: 108 bytes
 
@@ -88,8 +88,8 @@ const enData string = "" + // Size: 391 bytes
 	" Home Assistant\x0aserver (if not auto-detected) and long-lived access t" +
 	"oken.\x02Fyne Settings\x02App Settings\x02Save\x02Please restart the age" +
 	"nt to use changed settings.\x02Token\x02Auto-discovered Servers\x02Use C" +
-	"ustom Server?\x02Manual Server Entry\x02Use MQTT?\x02MQTT Server\x02MQTT" +
-	" User\x02MQTT Password"
+	"ustom Server?\x02Manual Server Entry\x02MQTT Server\x02MQTT User\x02MQTT" +
+	" Password\x02Use MQTT?"
 
 var frIndex = []uint32{ // 21 elements
 	0x00000000, 0x00000000, 0x00000000, 0x00000000,
@@ -102,4 +102,4 @@ var frIndex = []uint32{ // 21 elements
 
 const frData string = ""
 
-// Total table size 715 bytes (0KiB); checksum: 1D84AA00
+// Total table size 715 bytes (0KiB); checksum: 1150E872
