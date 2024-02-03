@@ -50,7 +50,7 @@ func New(o *Options) *Agent {
 // Run is the "main loop" of the agent. It sets up the agent, loads the config
 // then spawns a sensor tracker and the workers to gather sensor data and
 // publish it to Home Assistant.
-func (agent *Agent) Run(c string, prefs *preferences.Preferences, trk SensorTracker) {
+func (agent *Agent) Run(prefs *preferences.Preferences, trk SensorTracker) {
 	var wg sync.WaitGroup
 
 	// Pre-flight: check if agent is registered. If not, run registration flow.
@@ -61,52 +61,50 @@ func (agent *Agent) Run(c string, prefs *preferences.Preferences, trk SensorTrac
 		agent.checkRegistration(trk, prefs)
 	}()
 
-	if c == "go-hass-agent" {
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		regWait.Wait()
+
+		ctx, cancelFunc := setupContext(prefs)
+		runnerCtx := setupDeviceContext(ctx)
+
+		go func() {
+			<-agent.done
+			log.Debug().Msg("Agent done.")
+			cancelFunc()
+		}()
+
+		// Start worker funcs for sensors.
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			regWait.Wait()
-
-			ctx, cancelFunc := setupContext(prefs)
-			runnerCtx := setupDeviceContext(ctx)
-
-			go func() {
-				<-agent.done
-				log.Debug().Msg("Agent done.")
-				cancelFunc()
-			}()
-
-			// Start worker funcs for sensors.
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				runWorkers(runnerCtx, trk)
-			}()
-			// Start any scripts.
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				scriptPath := filepath.Join(xdg.ConfigHome, agent.AppID(), "scripts")
-				runScripts(ctx, scriptPath, trk)
-			}()
-			// Start the mqtt client
-			if prefs.MQTTEnabled {
-				wg.Add(1)
-				go func() {
-					defer wg.Done()
-					runMQTTWorker(runnerCtx)
-				}()
-			}
-			// Listen for notifications from Home Assistant.
-			if !agent.IsHeadless() {
-				wg.Add(1)
-				go func() {
-					defer wg.Done()
-					agent.runNotificationsWorker(ctx)
-				}()
-			}
+			runWorkers(runnerCtx, trk)
 		}()
-	}
+		// Start any scripts.
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			scriptPath := filepath.Join(xdg.ConfigHome, agent.AppID(), "scripts")
+			runScripts(ctx, scriptPath, trk)
+		}()
+		// Start the mqtt client
+		if prefs.MQTTEnabled {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				runMQTTWorker(runnerCtx)
+			}()
+		}
+		// Listen for notifications from Home Assistant.
+		if !agent.IsHeadless() {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				agent.runNotificationsWorker(ctx)
+			}()
+		}
+	}()
 
 	agent.handleSignals()
 
