@@ -1,4 +1,4 @@
-name: build-container
+name: Build a container
 
 env:
   REGISTRY: ghcr.io
