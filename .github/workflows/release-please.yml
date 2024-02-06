@@ -51,7 +51,7 @@ jobs:
       - name: install cosign
         if: ${{ steps.release_please.outputs.release_created }}
         id: install_cosign
-        uses: sigstore/cosign-installer@v3.3.0
+        uses: sigstore/cosign-installer@v3.4.0
         with:
           cosign-release: 'v2.2.2'
 
