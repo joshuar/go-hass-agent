@@ -94,10 +94,16 @@ jobs:
 
       - name: Sign image with a key
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          DIGEST: ${{ steps.push_image.outputs.digest }}
+          TAGS: ${{ steps.docker_metadata.outputs.tags }} ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ steps.release_metadata.outputs.name }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PWD }}
         run: |
+          images=""
+          for tag in ${TAGS}; do
+            images+="${tag}@${DIGEST} "
+          done
           cosign --verbose=true sign --yes --key cosign.key \
             -a "repo=${{ github.repository }}" \
             -a "ref=${{ github.ref }}" \
-            ${{ env.REGISTRY }}/${{ env.IMAGE }}@${{ steps.push_image.outputs.digest }}
-        env:
-          COSIGN_PASSWORD: ${{ secrets.COSIGN_PWD }}
+            ${images}
