@@ -1,5 +1,20 @@
 # Changelog
 
+## [6.5.0](https://github.com/joshuar/go-hass-agent/compare/v6.4.0...v6.5.0) (2024-02-06)
+
+
+### Features
+
+* :sparkles: major config rewrite ([680bee1](https://github.com/joshuar/go-hass-agent/commit/680bee1b074c4a65fee4f2312b8003a5129148c4))
+* **cmd:** :art: move long command descriptions to embedded text files ([58c2305](https://github.com/joshuar/go-hass-agent/commit/58c2305b776057a5f4ce0e3c7f945d230d746c23))
+
+
+### Bug Fixes
+
+* :bug: registration flow for new install ([f71d7c6](https://github.com/joshuar/go-hass-agent/commit/f71d7c61f0deb96842b2f6d99b93290fb6c5c5af))
+* **agent:** :bug: check for mqtt enabled ([8c2e5f0](https://github.com/joshuar/go-hass-agent/commit/8c2e5f065051ad90fcaa2ba7ac1a825d5f74f991))
+* **config:** :bug: handle mqtt config migration quirk ([c4824f3](https://github.com/joshuar/go-hass-agent/commit/c4824f36bc4c3cfc917861c80c408a1598c95ab7))
+
 ## [6.4.0](https://github.com/joshuar/go-hass-agent/compare/v6.3.1...v6.4.0) (2024-01-29)
 
 
