@@ -17,9 +17,6 @@ var _ Agent = &AgentMock{}
 //
 //		// make and configure a mocked Agent
 //		mockedAgent := &AgentMock{
-//			AppIDFunc: func() string {
-//				panic("mock out the AppID method")
-//			},
 //			StopFunc: func()  {
 //				panic("mock out the Stop method")
 //			},
@@ -30,50 +27,16 @@ var _ Agent = &AgentMock{}
 //
 //	}
 type AgentMock struct {
-	// AppIDFunc mocks the AppID method.
-	AppIDFunc func() string
-
 	// StopFunc mocks the Stop method.
 	StopFunc func()
 
 	// calls tracks calls to the methods.
 	calls struct {
-		// AppID holds details about calls to the AppID method.
-		AppID []struct {
-		}
 		// Stop holds details about calls to the Stop method.
 		Stop []struct {
 		}
 	}
-	lockAppID sync.RWMutex
-	lockStop  sync.RWMutex
-}
-
-// AppID calls AppIDFunc.
-func (mock *AgentMock) AppID() string {
-	if mock.AppIDFunc == nil {
-		panic("AgentMock.AppIDFunc: method is nil but Agent.AppID was just called")
-	}
-	callInfo := struct {
-	}{}
-	mock.lockAppID.Lock()
-	mock.calls.AppID = append(mock.calls.AppID, callInfo)
-	mock.lockAppID.Unlock()
-	return mock.AppIDFunc()
-}
-
-// AppIDCalls gets all the calls that were made to AppID.
-// Check the length with:
-//
-//	len(mockedAgent.AppIDCalls())
-func (mock *AgentMock) AppIDCalls() []struct {
-} {
-	var calls []struct {
-	}
-	mock.lockAppID.RLock()
-	calls = mock.calls.AppID
-	mock.lockAppID.RUnlock()
-	return calls
+	lockStop sync.RWMutex
 }
 
 // Stop calls StopFunc.

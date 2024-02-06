@@ -16,9 +16,9 @@
             "fuzzy": true
         },
         {
-            "id": "Settings",
-            "message": "Settings",
-            "translation": "Settings",
+            "id": "Preferences",
+            "message": "Preferences",
+            "translation": "Preferences",
             "translatorComment": "Copied from source.",
             "fuzzy": true
         },
@@ -61,16 +61,16 @@
             "fuzzy": true
         },
         {
-            "id": "Fyne Settings",
-            "message": "Fyne Settings",
-            "translation": "Fyne Settings",
+            "id": "Fyne Preferences",
+            "message": "Fyne Preferences",
+            "translation": "Fyne Preferences",
             "translatorComment": "Copied from source.",
             "fuzzy": true
         },
         {
-            "id": "App Settings",
-            "message": "App Settings",
-            "translation": "App Settings",
+            "id": "App Preferences",
+            "message": "App Preferences",
+            "translation": "App Preferences",
             "translatorComment": "Copied from source.",
             "fuzzy": true
         },
@@ -84,10 +84,10 @@
         {
             "id": [
                 "restartNote",
-                "Please restart the agent to use changed settings."
+                "Please restart the agent to use changed preferences."
             ],
-            "message": "Please restart the agent to use changed settings.",
-            "translation": "Please restart the agent to use changed settings.",
+            "message": "Please restart the agent to use changed preferences.",
+            "translation": "Please restart the agent to use changed preferences.",
             "translatorComment": "Copied from source.",
             "fuzzy": true
         },

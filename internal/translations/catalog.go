@@ -42,20 +42,20 @@ func init() {
 var messageKeyToIndex = map[string]int{
 	"About":                   0,
 	"App":                     3,
+	"App Preferences":         9,
 	"App Registration":        6,
-	"App Settings":            9,
 	"Auto-discovered Servers": 13,
 	"Fyne":                    4,
-	"Fyne Settings":           8,
+	"Fyne Preferences":        8,
 	"MQTT Password":           18,
 	"MQTT Server":             16,
 	"MQTT User":               17,
 	"Manual Server Entry":     15,
-	"Please restart the agent to use changed settings.": 11,
-	"Quit":     5,
-	"Save":     10,
-	"Sensors":  1,
-	"Settings": 2,
+	"Please restart the agent to use changed preferences.": 11,
+	"Preferences": 2,
+	"Quit":        5,
+	"Save":        10,
+	"Sensors":     1,
 	"To register the agent, please enter the relevant details for your Home Assistant\nserver (if not auto-detected) and long-lived access token.": 7,
 	"Token":              12,
 	"Use Custom Server?": 14,
@@ -74,22 +74,22 @@ var deIndex = []uint32{ // 21 elements
 const deData string = ""
 
 var enIndex = []uint32{ // 21 elements
-	0x00000000, 0x00000006, 0x0000000e, 0x00000017,
-	0x0000001b, 0x00000020, 0x00000025, 0x00000036,
-	0x000000c2, 0x000000d0, 0x000000dd, 0x000000e2,
-	0x00000114, 0x0000011a, 0x00000132, 0x00000145,
-	0x00000159, 0x00000165, 0x0000016f, 0x0000017d,
-	0x00000187,
+	0x00000000, 0x00000006, 0x0000000e, 0x0000001a,
+	0x0000001e, 0x00000023, 0x00000028, 0x00000039,
+	0x000000c5, 0x000000d6, 0x000000e6, 0x000000eb,
+	0x00000120, 0x00000126, 0x0000013e, 0x00000151,
+	0x00000165, 0x00000171, 0x0000017b, 0x00000189,
+	0x00000193,
 } // Size: 108 bytes
 
-const enData string = "" + // Size: 391 bytes
-	"\x02About\x02Sensors\x02Settings\x02App\x02Fyne\x02Quit\x02App Registrat" +
-	"ion\x02To register the agent, please enter the relevant details for your" +
-	" Home Assistant\x0aserver (if not auto-detected) and long-lived access t" +
-	"oken.\x02Fyne Settings\x02App Settings\x02Save\x02Please restart the age" +
-	"nt to use changed settings.\x02Token\x02Auto-discovered Servers\x02Use C" +
-	"ustom Server?\x02Manual Server Entry\x02MQTT Server\x02MQTT User\x02MQTT" +
-	" Password\x02Use MQTT?"
+const enData string = "" + // Size: 403 bytes
+	"\x02About\x02Sensors\x02Preferences\x02App\x02Fyne\x02Quit\x02App Regist" +
+	"ration\x02To register the agent, please enter the relevant details for y" +
+	"our Home Assistant\x0aserver (if not auto-detected) and long-lived acces" +
+	"s token.\x02Fyne Preferences\x02App Preferences\x02Save\x02Please restar" +
+	"t the agent to use changed preferences.\x02Token\x02Auto-discovered Serv" +
+	"ers\x02Use Custom Server?\x02Manual Server Entry\x02MQTT Server\x02MQTT " +
+	"User\x02MQTT Password\x02Use MQTT?"
 
 var frIndex = []uint32{ // 21 elements
 	0x00000000, 0x00000000, 0x00000000, 0x00000000,
@@ -102,4 +102,4 @@ var frIndex = []uint32{ // 21 elements
 
 const frData string = ""
 
-// Total table size 715 bytes (0KiB); checksum: 1150E872
+// Total table size 727 bytes (0KiB); checksum: 4C189FE6

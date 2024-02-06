@@ -12,8 +12,8 @@
             "translation": ""
         },
         {
-            "id": "Settings",
-            "message": "Settings",
+            "id": "Preferences",
+            "message": "Preferences",
             "translation": ""
         },
         {
@@ -45,13 +45,13 @@
             "translation": ""
         },
         {
-            "id": "Fyne Settings",
-            "message": "Fyne Settings",
+            "id": "Fyne Preferences",
+            "message": "Fyne Preferences",
             "translation": ""
         },
         {
-            "id": "App Settings",
-            "message": "App Settings",
+            "id": "App Preferences",
+            "message": "App Preferences",
             "translation": ""
         },
         {
@@ -62,9 +62,9 @@
         {
             "id": [
                 "restartNote",
-                "Please restart the agent to use changed settings."
+                "Please restart the agent to use changed preferences."
             ],
-            "message": "Please restart the agent to use changed settings.",
+            "message": "Please restart the agent to use changed preferences.",
             "translation": ""
         },
         {
