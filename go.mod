@@ -17,7 +17,7 @@ require (
 	github.com/pelletier/go-toml/v2 v2.1.1
 	github.com/perimeterx/marshmallow v1.1.5
 	github.com/robfig/cron/v3 v3.0.1
-	github.com/rs/zerolog v1.31.0
+	github.com/rs/zerolog v1.32.0
 	github.com/shirou/gopsutil/v3 v3.24.1
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/viper v1.18.2
