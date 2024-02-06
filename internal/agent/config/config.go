@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/adrg/xdg"
 	"github.com/go-playground/validator/v10"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/mod/semver"
@@ -287,8 +288,11 @@ func Migrate(cfg Config) error {
 	var cloudhookurl, remoteuiurl string
 	cfg.Get(PrefCloudhookURL, &cloudhookurl)
 	cfg.Get(PrefRemoteUIURL, &remoteuiurl)
+
 	var mqtt bool
-	cfg.Get(PrefMQTTEnabled, &mqtt)
+	if _, err = os.Stat(filepath.Join(xdg.ConfigHome, "go-hass-anything", "go-hass-agent", "config.toml")); err == nil {
+		mqtt = true
+	}
 
 	mqttCfg := &mqttconfig.Preferences{}
 	if mqtt {
