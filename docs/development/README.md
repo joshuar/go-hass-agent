@@ -36,8 +36,11 @@ some convenience during development.
 
 If using Visual Studio Code, you should be prompted when opening your cloned
 copy of the code to set up the dev container. The container contains an
-installation of Home Assistant that can be used for testing. It should be
-started automatically.
+installation of Home Assistant and Mosquitto (MQTT broker) that can be used for
+testing. They should be started automatically.
+
+- Home Assistant will be listening on <http://localhost:8123>.
+- Mosquitto will be listening on <http://localhost:1833>.
 
 Note that while you can also build and run the agent within the container
 environment, this will limit what sensors are reported and may even hinder
