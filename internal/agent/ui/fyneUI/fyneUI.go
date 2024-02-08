@@ -19,6 +19,7 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/data/binding"
 	"fyne.io/fyne/v2/data/validation"
+	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/driver/desktop"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
@@ -209,9 +210,11 @@ func (i *fyneUI) agentSettingsWindow() fyne.Window {
 			preferences.MQTTPassword(mqttPrefs.Password),
 		)
 		if err != nil {
+			dialog.ShowError(err, w)
 			log.Warn().Err(err).Msg("Could not save MQTT preferences.")
 			return
 		}
+		dialog.ShowInformation("Saved", "MQTT Preferences have been saved.", w)
 		log.Info().Msg("Saved MQTT preferences.")
 	}
 	settingsForm.OnCancel = func() {
