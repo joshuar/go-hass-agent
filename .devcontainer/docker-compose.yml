@@ -11,7 +11,7 @@ services:
     user: vscode
     command: dbus-run-session -- sleep infinity
   home-assistant:
-    image: ghcr.io/home-assistant/home-assistant:2024.1.5
+    image: ghcr.io/home-assistant/home-assistant:2024.2.0
     volumes:
       - ../deployments/home-assistant/config:/config
     environment:
