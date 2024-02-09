@@ -26,7 +26,6 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/rs/zerolog/log"
 
-	"github.com/joshuar/go-hass-agent/internal/agent/config"
 	"github.com/joshuar/go-hass-agent/internal/agent/ui"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
@@ -110,6 +109,7 @@ func (i *fyneUI) DisplayTrayIcon(agent ui.Agent, trk ui.SensorTracker) {
 		)
 		// Quit menu item.
 		menuItemQuit := fyne.NewMenuItem(i.Translate("Quit"), func() {
+			log.Debug().Msg("User requested stop agent.")
 			agent.Stop()
 		})
 		menuItemQuit.IsQuit = true
@@ -156,7 +156,7 @@ func (i *fyneUI) DisplayRegistrationWindow(ctx context.Context, server, token *s
 // about the agent, such as version numbers.
 func (i *fyneUI) aboutWindow() fyne.Window {
 	c := container.NewCenter(container.NewVBox(
-		widget.NewLabelWithStyle("Go Hass Agent "+config.AppVersion, fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+		widget.NewLabelWithStyle("Go Hass Agent "+preferences.AppVersion, fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewLabel(""),
 		container.NewHBox(
 			widget.NewHyperlink("website", parseURL(ui.AppURL)),
@@ -364,17 +364,17 @@ func (i *fyneUI) mqttConfigItems(prefs *ui.MQTTPreferences) []*widget.FormItem {
 	serverEntry.Validator = uriValidator()
 	serverEntry.Disable()
 	serverFormItem := widget.NewFormItem(i.Translate("MQTT Server"), serverEntry)
-	serverFormItem.HintText = config.PrefMQTTServerHelp
+	serverFormItem.HintText = ui.MQTTServerHelp
 
 	userEntry := configEntry(&prefs.User, false)
 	userEntry.Disable()
 	userFormItem := widget.NewFormItem(i.Translate("MQTT User"), userEntry)
-	userFormItem.HintText = config.PrefMQTTUserHelp
+	userFormItem.HintText = ui.MQTTUserHelp
 
 	passwordEntry := configEntry(&prefs.Password, true)
 	passwordEntry.Disable()
 	passwordFormItem := widget.NewFormItem(i.Translate("MQTT Password"), passwordEntry)
-	passwordFormItem.HintText = config.PrefMQTTPasswordHelp
+	passwordFormItem.HintText = ui.MQTTPasswordHelp
 
 	mqttEnabled := configCheck(&prefs.Enabled, func(b bool) {
 		switch b {

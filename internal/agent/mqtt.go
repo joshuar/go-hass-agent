@@ -10,7 +10,7 @@ import (
 	mqttapi "github.com/joshuar/go-hass-anything/v3/pkg/mqtt"
 	"github.com/rs/zerolog/log"
 
-	"github.com/joshuar/go-hass-agent/internal/agent/config"
+	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
 type mqttObj struct {
@@ -18,7 +18,7 @@ type mqttObj struct {
 }
 
 func (o *mqttObj) Name() string {
-	return config.AppName
+	return preferences.AppName
 }
 
 func (o *mqttObj) Configuration() []*mqttapi.Msg {

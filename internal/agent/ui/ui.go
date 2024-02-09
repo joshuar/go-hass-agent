@@ -38,6 +38,15 @@ var IssueURL string
 //go:embed assets/featureRequestURL.txt
 var FeatureRequestURL string
 
+//go:embed assets/mqttServerHelp.txt
+var MQTTServerHelp string
+
+//go:embed assets/mqttUserHelp.txt
+var MQTTUserHelp string
+
+//go:embed assets/mqttPasswordHelp.txt
+var MQTTPasswordHelp string
+
 //go:embed assets/logo-pretty.png
 var hassIcon []byte
 
