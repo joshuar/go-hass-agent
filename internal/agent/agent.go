@@ -109,7 +109,7 @@ func (agent *Agent) Run(trk SensorTracker) {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				agent.runNotificationsWorker(ctx)
+				agent.runNotificationsWorker(runnerCtx)
 			}()
 		}
 	}()
