@@ -31,23 +31,24 @@ var (
 )
 
 type Preferences struct {
-	mu           *sync.Mutex
-	Version      string `toml:"agent.version" validate:"required"`
-	Host         string `toml:"registration.host" validate:"required,http_url"`
-	Token        string `toml:"registration.token" validate:"required,ascii"`
-	DeviceID     string `toml:"device.id" validate:"required,ascii"`
-	DeviceName   string `toml:"device.name" validate:"required,hostname"`
-	RestAPIURL   string `toml:"hass.apiurl,omitempty" validate:"http_url,required_without=CloudhookURL RemoteUIURL"`
-	CloudhookURL string `toml:"hass.cloudhookurl,omitempty" validate:"omitempty,http_url"`
-	WebsocketURL string `toml:"hass.websocketurl" validate:"required,url"`
-	WebhookID    string `toml:"hass.webhookid" validate:"required,ascii"`
-	RemoteUIURL  string `toml:"hass.remoteuiurl,omitempty" validate:"omitempty,http_url"`
-	Secret       string `toml:"hass.secret,omitempty" validate:"omitempty"`
-	MQTTPassword string `toml:"mqtt.password,omitempty" validate:"omitempty"`
-	MQTTUser     string `toml:"mqtt.user,omitempty" validate:"omitempty"`
-	MQTTServer   string `toml:"mqtt.server,omitempty" validate:"omitempty,uri"`
-	Registered   bool   `toml:"hass.registered" validate:"boolean"`
-	MQTTEnabled  bool   `toml:"mqtt.enabled" validate:"boolean"`
+	mu             *sync.Mutex
+	Version        string `toml:"agent.version" validate:"required"`
+	Host           string `toml:"registration.host" validate:"required,http_url"`
+	Token          string `toml:"registration.token" validate:"required,ascii"`
+	DeviceID       string `toml:"device.id" validate:"required,ascii"`
+	DeviceName     string `toml:"device.name" validate:"required,hostname"`
+	RestAPIURL     string `toml:"hass.apiurl,omitempty" validate:"http_url,required_without=CloudhookURL RemoteUIURL"`
+	CloudhookURL   string `toml:"hass.cloudhookurl,omitempty" validate:"omitempty,http_url"`
+	WebsocketURL   string `toml:"hass.websocketurl" validate:"required,url"`
+	WebhookID      string `toml:"hass.webhookid" validate:"required,ascii"`
+	RemoteUIURL    string `toml:"hass.remoteuiurl,omitempty" validate:"omitempty,http_url"`
+	Secret         string `toml:"hass.secret,omitempty" validate:"omitempty"`
+	MQTTPassword   string `toml:"mqtt.password,omitempty" validate:"omitempty"`
+	MQTTUser       string `toml:"mqtt.user,omitempty" validate:"omitempty"`
+	MQTTServer     string `toml:"mqtt.server,omitempty" validate:"omitempty,uri"`
+	Registered     bool   `toml:"hass.registered" validate:"boolean"`
+	MQTTEnabled    bool   `toml:"mqtt.enabled" validate:"boolean"`
+	MQTTRegistered bool   `toml:"mqtt.registered" validate:"boolean"`
 }
 
 type Preference func(*Preferences) error
@@ -184,6 +185,13 @@ func MQTTUser(user string) Preference {
 func MQTTPassword(password string) Preference {
 	return func(p *Preferences) error {
 		p.MQTTPassword = password
+		return nil
+	}
+}
+
+func MQTTRegistered(status bool) Preference {
+	return func(p *Preferences) error {
+		p.MQTTRegistered = status
 		return nil
 	}
 }

@@ -6,8 +6,8 @@
 package agent
 
 import (
-	mqtthass "github.com/joshuar/go-hass-anything/v3/pkg/hass"
-	mqttapi "github.com/joshuar/go-hass-anything/v3/pkg/mqtt"
+	mqtthass "github.com/joshuar/go-hass-anything/v5/pkg/hass"
+	mqttapi "github.com/joshuar/go-hass-anything/v5/pkg/mqtt"
 	"github.com/rs/zerolog/log"
 
 	"github.com/joshuar/go-hass-agent/internal/preferences"
