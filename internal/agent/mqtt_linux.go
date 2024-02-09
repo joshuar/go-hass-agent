@@ -55,17 +55,17 @@ func newMQTTObject(ctx context.Context) *mqttObj {
 			Call(method, args...)
 	}
 
+	dbusScreensaverDest, dbusScreensaverPath, dbusScreensaverMsg := GetDesktopEnvScreensaverConfig()
+	dbusScreensaverLockMethod := dbusScreensaverDest + ".Lock"
+
 	sessionPath := dbusx.GetSessionPath(ctx)
 	entities := make(map[string]*mqtthass.EntityConfig)
 	entities["lock_screensaver"] = baseEntity("lock_screensaver").
 		WithIcon("mdi:eye-lock").
 		WithCommandCallback(func(_ MQTT.Client, _ MQTT.Message) {
-			dbusScreensaverDest, dbusScreensaverPath, dbusScreensaverMsg := GetDesktopEnvScreensaverConfig()
 			if dbusScreensaverPath == "" {
 				log.Warn().Msg("Could not determine screensaver method.")
-				return
 			}
-			dbusScreensaverLockMethod := dbusScreensaverDest + ".Lock"
 			var err error
 			if dbusScreensaverMsg != nil {
 				err = sessionDbusCall(ctx, dbus.ObjectPath(dbusScreensaverPath), dbusScreensaverDest, dbusScreensaverLockMethod, dbusScreensaverMsg)
