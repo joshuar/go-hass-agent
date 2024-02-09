@@ -7,14 +7,13 @@ package agent
 
 import (
 	"context"
-	"path/filepath"
 	"sync"
 
 	"github.com/robfig/cron/v3"
 	"github.com/rs/zerolog/log"
 
-	mqtthass "github.com/joshuar/go-hass-anything/v3/pkg/hass"
-	mqttapi "github.com/joshuar/go-hass-anything/v3/pkg/mqtt"
+	mqtthass "github.com/joshuar/go-hass-anything/v5/pkg/hass"
+	mqttapi "github.com/joshuar/go-hass-anything/v5/pkg/mqtt"
 
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass"
@@ -154,17 +153,21 @@ func runMQTTWorker(ctx context.Context) {
 	mqttprefs := &preferences.MQTTPreferences{
 		Prefs: &prefs,
 	}
-	registry := filepath.Join(preferences.GetPath(), "mqttRegistry")
 
-	c, err := mqttapi.NewMQTTClient(mqttprefs)
+	c, err := mqttapi.NewMQTTClient(ctx, mqttprefs)
 	if err != nil {
 		log.Error().Err(err).Msg("Could not start MQTT client.")
 		return
 	}
 	o := newMQTTObject(ctx)
-	if err := mqtthass.Register(registry, o, c); err != nil {
-		log.Error().Err(err).Msg("Failed to register app!")
-		return
+	if !prefs.MQTTRegistered {
+		log.Debug().Msg("Registering agent with MQTT.")
+		if err := mqtthass.Register(o, c); err != nil {
+			log.Error().Err(err).Msg("Failed to register app!")
+			return
+		} else {
+			preferences.Save(preferences.MQTTRegistered(true))
+		}
 	}
 	if err := mqtthass.Subscribe(o, c); err != nil {
 		log.Error().Err(err).Msg("Could not activate subscriptions.")
@@ -179,9 +182,8 @@ func resetMQTTWorker(ctx context.Context) {
 	mqttprefs := &preferences.MQTTPreferences{
 		Prefs: &prefs,
 	}
-	registry := filepath.Join(preferences.GetPath(), "mqttRegistry")
 
-	c, err := mqttapi.NewMQTTClient(mqttprefs)
+	c, err := mqttapi.NewMQTTClient(ctx, mqttprefs)
 	if err != nil {
 		log.Error().Err(err).Msg("Could not start MQTT client.")
 		return
@@ -190,7 +192,11 @@ func resetMQTTWorker(ctx context.Context) {
 	log.Info().Msgf("Clearing agent data from Home Assistant.")
 	d := newMQTTObject(ctx)
 
-	if err := mqtthass.UnRegister(registry, d, c); err != nil {
-		log.Error().Err(err).Msg("Failed to unregister app!")
+	if prefs.MQTTRegistered {
+		if err := mqtthass.UnRegister(d, c); err != nil {
+			log.Error().Err(err).Msg("Failed to unregister app!")
+		} else {
+			preferences.Save(preferences.MQTTRegistered(false))
+		}
 	}
 }
