@@ -8,7 +8,6 @@ package agent
 import (
 	"context"
 
-	"github.com/joshuar/go-hass-agent/internal/agent/config"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/linux/apps"
@@ -23,12 +22,13 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/linux/system"
 	"github.com/joshuar/go-hass-agent/internal/linux/time"
 	"github.com/joshuar/go-hass-agent/internal/linux/user"
+	"github.com/joshuar/go-hass-agent/internal/preferences"
 	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
 func newDevice(_ context.Context) *linux.Device {
-	return linux.NewDevice(config.AppName, config.AppVersion)
+	return linux.NewDevice(preferences.AppName, preferences.AppVersion)
 }
 
 // sensorWorkers returns a list of functions to start to enable sensor tracking.

@@ -8,17 +8,13 @@ package cmd
 import (
 	_ "net/http/pprof"
 	"os"
-	"path/filepath"
 
-	"github.com/adrg/xdg"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/joshuar/go-hass-agent/cmd/text"
 	"github.com/joshuar/go-hass-agent/internal/agent"
-	"github.com/joshuar/go-hass-agent/internal/agent/config"
 	"github.com/joshuar/go-hass-agent/internal/logging"
-	"github.com/joshuar/go-hass-agent/internal/preferences"
 	"github.com/joshuar/go-hass-agent/internal/tracker"
 )
 
@@ -46,15 +42,6 @@ var rootCmd = &cobra.Command{
 		})
 		var err error
 
-		var cfg config.Config
-		configPath := filepath.Join(xdg.ConfigHome, agent.AppID())
-		if cfg, err = config.Load(configPath); err != nil {
-			log.Fatal().Err(err).Msg("Could not load config.")
-		}
-		preferences.SetPath(filepath.Join(xdg.ConfigHome, agent.AppID()))
-		if err = config.Migrate(cfg); err != nil {
-			log.Fatal().Err(err).Msg("Could not migrate config.")
-		}
 		var trk *tracker.SensorTracker
 		if trk, err = tracker.NewSensorTracker(agent.AppID()); err != nil {
 			log.Fatal().Err(err).Msg("Could not start sensor tracker.")

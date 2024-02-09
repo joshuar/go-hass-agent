@@ -16,13 +16,13 @@ import (
 
 	mqtthass "github.com/joshuar/go-hass-anything/v3/pkg/hass"
 
-	"github.com/joshuar/go-hass-agent/internal/agent/config"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/preferences"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
 const (
-	dbusSessionDest    = "org.freedesktop.login1"
+	dbusSessionDest           = "org.freedesktop.login1"
 	dbusSessionLockMethod     = dbusSessionDest + ".Session.Lock"
 	dbusSessionUnlockMethod   = dbusSessionDest + ".Session.UnLock"
 	dbusSessionRebootMethod   = dbusSessionDest + ".Manager.Reboot"
@@ -60,7 +60,7 @@ func newMQTTObject(ctx context.Context) *mqttObj {
 	entities["lock_screensaver"] = baseEntity("lock_screensaver").
 		WithIcon("mdi:eye-lock").
 		WithCommandCallback(func(_ MQTT.Client, _ MQTT.Message) {
-			dbusScreensaverDest, dbusScreensaverPath, dbusScreensaverMsg := GetDesktopEnvScreensaverConfig();
+			dbusScreensaverDest, dbusScreensaverPath, dbusScreensaverMsg := GetDesktopEnvScreensaverConfig()
 			if dbusScreensaverPath == "" {
 				log.Warn().Msg("Could not determine screensaver method.")
 				return
@@ -114,10 +114,10 @@ func newMQTTObject(ctx context.Context) *mqttObj {
 }
 
 func mqttDevice() *mqtthass.Device {
-	dev := linux.NewDevice(config.AppName, config.AppVersion)
+	dev := linux.NewDevice(preferences.AppName, preferences.AppVersion)
 	return &mqtthass.Device{
 		Name:         dev.DeviceName(),
-		URL:          config.AppURL,
+		URL:          preferences.AppURL,
 		SWVersion:    dev.OsVersion(),
 		Manufacturer: dev.Manufacturer(),
 		Model:        dev.Model(),

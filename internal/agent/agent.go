@@ -52,6 +52,7 @@ func New(o *Options) *Agent {
 // publish it to Home Assistant.
 func (agent *Agent) Run(trk SensorTracker) {
 	var wg sync.WaitGroup
+	preferences.SetPath(filepath.Join(xdg.ConfigHome, agent.AppID()))
 
 	// Pre-flight: check if agent is registered. If not, run registration flow.
 	var regWait sync.WaitGroup
@@ -93,7 +94,7 @@ func (agent *Agent) Run(trk SensorTracker) {
 		go func() {
 			defer wg.Done()
 			scriptPath := filepath.Join(xdg.ConfigHome, agent.AppID(), "scripts")
-			runScripts(ctx, scriptPath, trk)
+			runScripts(runnerCtx, scriptPath, trk)
 		}()
 		// Start the mqtt client
 		if prefs.MQTTEnabled {

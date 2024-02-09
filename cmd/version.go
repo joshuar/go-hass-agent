@@ -9,13 +9,13 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
-	"github.com/joshuar/go-hass-agent/internal/agent/config"
+	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
 var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print the version number",
 	Run: func(cmd *cobra.Command, args []string) {
-		log.Info().Msgf("%s: %s", config.AppName, config.AppVersion)
+		log.Info().Msgf("%s: %s", preferences.AppName, preferences.AppVersion)
 	},
 }

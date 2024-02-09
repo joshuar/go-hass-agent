@@ -18,10 +18,22 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/joshuar/go-hass-agent/internal/agent/config"
 	"github.com/joshuar/go-hass-agent/internal/hass/api"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
+
+var defaultTestPrefs = []preferences.Preference{
+	preferences.Token("testToken"),
+	preferences.CloudhookURL(""),
+	preferences.RemoteUIURL(""),
+	preferences.WebhookID("testID"),
+	preferences.Secret(""),
+	preferences.DeviceName("testDevice"),
+	preferences.DeviceID("testID"),
+	preferences.Version("6.4.0"),
+	preferences.Registered(true),
+}
 
 func mockServer(t *testing.T) *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -193,11 +205,20 @@ func TestSensorTracker_SensorList(t *testing.T) {
 func TestSensorTracker_send(t *testing.T) {
 	mockServer := mockServer(t)
 	defer mockServer.Close()
-	cfg, err := config.Load(t.TempDir())
+
+	preferences.SetPath(t.TempDir())
+	prefs := defaultTestPrefs
+	prefs = append(prefs,
+		preferences.Host(mockServer.URL),
+		preferences.RestAPIURL(mockServer.URL),
+		preferences.WebsocketURL(mockServer.URL),
+	)
+	err := preferences.Save(prefs...)
 	assert.Nil(t, err)
-	err = cfg.Set(config.PrefAPIURL, mockServer.URL)
+	p, err := preferences.Load()
 	assert.Nil(t, err)
-	ctx := config.EmbedInContext(context.TODO(), cfg)
+	ctx := preferences.EmbedInContext(context.TODO(), p)
+
 	mockUpdate := &SensorMock{
 		IDFunc:         func() string { return "updateID" },
 		NameFunc:       func() string { return "Update Sensor" },

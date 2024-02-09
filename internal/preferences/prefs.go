@@ -16,6 +16,11 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+var (
+	AppName = "go-hass-agent"
+	AppURL  = "https://github.com/joshuar/go-hass-agent"
+)
+
 //go:generate sh -c "printf %s $(git tag | tail -1) > VERSION"
 //go:embed VERSION
 var AppVersion string
