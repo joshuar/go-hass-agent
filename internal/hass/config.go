@@ -10,19 +10,12 @@ import (
 	"encoding/json"
 	"sync"
 
-	"github.com/perimeterx/marshmallow"
 	"github.com/rs/zerolog/log"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/api"
 )
 
-type config struct {
-	rawProperties map[string]any
-	properties
-	mu sync.Mutex
-}
-
-type properties struct {
+type Config struct {
 	Entities              map[string]map[string]any `json:"entities"`
 	UnitSystem            units                     `json:"unit_system"`
 	ConfigDir             string                    `json:"config_dir"`
@@ -34,6 +27,7 @@ type properties struct {
 	Elevation             int                       `json:"elevation"`
 	Latitude              float64                   `json:"latitude"`
 	Longitude             float64                   `json:"longitude"`
+	mu                    sync.Mutex                `json:"-"`
 }
 
 type units struct {
@@ -46,19 +40,15 @@ type units struct {
 // HassConfig implements hass.Request so that it can be sent as a request to HA
 // to get its data.
 
-func (c *config) RequestType() api.RequestType {
+func (c *Config) RequestType() api.RequestType {
 	return api.RequestTypeGetConfig
 }
 
-func (c *config) RequestData() json.RawMessage {
+func (c *Config) RequestData() json.RawMessage {
 	return nil
 }
 
-func (c *config) GetRegisteredEntities() map[string]map[string]any {
-	return c.Entities
-}
-
-func (c *config) IsEntityDisabled(entity string) (bool, error) {
+func (c *Config) IsEntityDisabled(entity string) (bool, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if v, ok := c.Entities[entity]["disabled"]; ok {
@@ -71,26 +61,21 @@ func (c *config) IsEntityDisabled(entity string) (bool, error) {
 	return false, nil
 }
 
-func (c *config) GetVersion() string {
-	return c.Version
-}
-
-func (c *config) extractConfig(b []byte) {
+func (c *Config) extractConfig(b []byte) {
 	if b == nil {
 		log.Warn().Msg("No config returned.")
 		return
 	}
 	c.mu.Lock()
-	result, err := marshmallow.Unmarshal(b, &c.properties)
+	err := json.Unmarshal(b, &c)
 	if err != nil {
 		log.Warn().Msg("Could not extract config structure.")
 	}
-	c.rawProperties = result
 	c.mu.Unlock()
 }
 
-func GetConfig(ctx context.Context) (*config, error) {
-	h := new(config)
+func GetConfig(ctx context.Context) (*Config, error) {
+	h := new(Config)
 	response := <-api.ExecuteRequest(ctx, h)
 	switch r := response.(type) {
 	case []byte:
