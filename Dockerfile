@@ -2,7 +2,7 @@
 # 
 # This software is released under the MIT License.
 # https://opensource.org/licenses/MIT
-FROM docker.io/golang:1.21
+FROM docker.io/golang:1.22
 
 WORKDIR /usr/src/go-hass-agent
 
