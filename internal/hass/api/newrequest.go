@@ -6,50 +6,74 @@
 package api
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
+	"fmt"
 	"sync"
 	"time"
 
-	"github.com/carlmjohnson/requests"
+	"github.com/rs/zerolog/log"
+
+	"github.com/go-resty/resty/v2"
 )
 
-var (
-	ErrMalformedRequest  = errors.New("malformed request body")
-	ErrMalformedResponse = errors.New("could not parse response body")
-	ErrFailedResponse    = errors.New("response failed")
-)
-
-type Request2 interface {
-	URL() string
+type Authenticated interface {
 	Auth() string
-	Body() json.RawMessage
+}
+
+type Encrypted interface {
+	Secret() string
+}
+
+type GetRequest interface {
+	URL() string
+	ResponseBody() any
+}
+
+type PostRequest interface {
+	GetRequest
+	RequestBody() json.RawMessage
+}
+
+type APIError struct {
+	Message    string `json:"message,omitempty"`
+	Code       int    `json:"code,omitempty"`
+	StatusCode int    `json:"-"`
+}
+
+func (e *APIError) Error() string {
+	if e.Code != 0 {
+		return fmt.Sprintf("%d: %s", e.Code, e.Message)
+	} else {
+		return e.Message
+	}
+}
+
+func NewAPIError(code int, msg string) *APIError {
+	return &APIError{
+		Code:    code,
+		Message: msg,
+	}
 }
 
 type Response struct {
-	Error error
-	Body  json.RawMessage
+	Error *APIError
+	Body  any
 }
 
-func ExecuteRequest2(ctx context.Context, req Request2) <-chan Response {
+// ExecuteRequest sends an API request to Home Assistant. It supports either the
+// REST or WebSocket API. By default and at a minimum, request are sent as GET
+// requests and need to satisfy the GetRequest interface. To send a POST,
+// satisfy the PostRequest interface. To add authentication where required,
+// satisfy the Auth interface. To send an encrypted request, satisfy the Secret
+// interface.
+func ExecuteRequest2(ctx context.Context, req any) <-chan Response {
 	responseCh := make(chan Response, 1)
 	defer close(responseCh)
 
-	r := requests.
-		URL(req.URL()).
-		Header("Authorization", "Bearer "+req.Auth())
-
-	if req.Body() != nil {
-		reqJSON, err := json.Marshal(req.Body())
-		if err != nil {
-			responseCh <- Response{
-				Error: ErrMalformedRequest,
-			}
-			return responseCh
-		}
-		r = r.BodyBytes(reqJSON).ContentType("application/json")
+	client := resty.New()
+	if a, ok := req.(Authenticated); ok {
+		client = client.SetAuthToken(a.Auth())
 	}
 
 	requestCtx, cancel := context.WithTimeout(ctx, time.Second)
@@ -59,37 +83,59 @@ func ExecuteRequest2(ctx context.Context, req Request2) <-chan Response {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		var rBuf bytes.Buffer
-		rErr := make(map[string]any)
-		err := r.
-			ToBytesBuffer(&rBuf).
-			ErrorJSON(&rErr).
-			Fetch(requestCtx)
-		if len(rErr) != 0 {
-			cancel()
-			responseCh <- Response{
-				Error: errors.New(rErr["message"].(string)),
-			}
-			return
+		response := Response{}
+		var responseErr *APIError
+		var resp *resty.Response
+		var err error
+		switch r := req.(type) {
+		case PostRequest:
+			log.Trace().
+				Str("method", "POST").
+				Str("url", r.URL()).
+				RawJSON("body", r.RequestBody()).
+				Time("sent_at", time.Now()).
+				Msg("Sending request.")
+			resp, err = client.R().
+				SetContext(requestCtx).
+				SetResult(r.ResponseBody()).
+				SetBody(r.RequestBody()).
+				SetError(&responseErr).
+				Post(r.URL())
+			response.Body = r.ResponseBody()
+		case GetRequest:
+			log.Trace().
+				Str("method", "GET").
+				Str("url", r.URL()).
+				Time("sent_at", time.Now()).
+				Msg("Sending request.")
+			resp, err = client.R().
+				SetContext(requestCtx).
+				SetResult(r.ResponseBody()).
+				SetError(&responseErr).
+				Get(r.URL())
+			response.Body = r.ResponseBody()
 		}
 		if err != nil {
 			cancel()
-			responseCh <- Response{
-				Error: err,
-			}
+			response.Error = NewAPIError(0, err.Error())
+			responseCh <- response
 			return
 		}
-		var respJSON json.RawMessage
-		err = json.Unmarshal(rBuf.Bytes(), &respJSON)
-		if err != nil {
-			responseCh <- Response{
-				Error: errors.Join(ErrMalformedResponse, err),
-			}
-		} else {
-			responseCh <- Response{
-				Body: respJSON,
-			}
+		log.Trace().Err(err).
+			Int("statuscode", resp.StatusCode()).
+			Str("status", resp.Status()).
+			Str("protocol", resp.Proto()).
+			Dur("time", resp.Time()).
+			Time("recieved_at", resp.ReceivedAt()).
+			RawJSON("body", resp.Body()).Msg("Response recieved.")
+		if resp.StatusCode() != 200 && resp.StatusCode() != 201 {
+			cancel()
+			responseErr.StatusCode = resp.StatusCode()
+			response.Error = responseErr
+			responseCh <- response
+			return
 		}
+		responseCh <- response
 	}()
 	wg.Wait()
 	return responseCh

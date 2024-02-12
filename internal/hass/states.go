@@ -7,7 +7,6 @@ package hass
 
 import (
 	"context"
-	"encoding/json"
 	"time"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/api"
@@ -39,9 +38,7 @@ func (e *EntityState) Auth() string {
 	return prefs.Token
 }
 
-func (e *EntityState) Body() json.RawMessage {
-	return nil
-}
+func (e *EntityState) ResponseBody() any { return e }
 
 func GetEntityState(sensorType, entityID string) (*EntityState, error) {
 	entity := &EntityState{
@@ -52,11 +49,7 @@ func GetEntityState(sensorType, entityID string) (*EntityState, error) {
 	if resp.Error != nil {
 		return nil, resp.Error
 	}
-	err := json.Unmarshal(resp.Body, &entity)
-	if err != nil {
-		return nil, err
-	}
-	return entity, nil
+	return resp.Body.(*EntityState), nil
 }
 
 type EntityStates []EntityState
@@ -77,9 +70,7 @@ func (e *EntityStates) Auth() string {
 	return prefs.Token
 }
 
-func (e *EntityStates) Body() json.RawMessage {
-	return nil
-}
+func (e *EntityStates) ResponseBody() any { return e }
 
 func GetAllEntityStates() (*EntityStates, error) {
 	entities := &EntityStates{}
@@ -87,9 +78,5 @@ func GetAllEntityStates() (*EntityStates, error) {
 	if resp.Error != nil {
 		return nil, resp.Error
 	}
-	err := json.Unmarshal(resp.Body, &entities)
-	if err != nil {
-		return nil, err
-	}
-	return entities, nil
+	return resp.Body.(*EntityStates), nil
 }

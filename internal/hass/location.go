@@ -6,9 +6,13 @@
 package hass
 
 import (
+	"context"
 	"encoding/json"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/joshuar/go-hass-agent/internal/hass/api"
+	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
 // LocationData represents the location information that can be sent to HA
@@ -23,17 +27,40 @@ type LocationData struct {
 	VerticalAccuracy int       `json:"vertical_accuracy,omitempty"`
 }
 
-// locationUpdateInfo implements hass.Request so it can be sent to HA as a
-// request
-
-func (l *LocationData) RequestType() api.RequestType {
-	return api.RequestTypeUpdateLocation
+type locationRequest struct {
+	Data     *LocationData  `json:"data"`
+	Response map[string]any `json:"-"`
+	Type     string         `json:"type"`
 }
 
-func (l *LocationData) RequestData() json.RawMessage {
+func (l *locationRequest) URL() string {
+	prefs, err := preferences.Load()
+	if err != nil {
+		return ""
+	}
+	return prefs.RestAPIURL
+}
+
+func (l *locationRequest) RequestBody() json.RawMessage {
 	data, err := json.Marshal(l)
 	if err != nil {
 		return nil
 	}
 	return json.RawMessage(data)
+}
+
+func (l *locationRequest) ResponseBody() any { return l.Response }
+
+func UpdateLocation(ctx context.Context, l *LocationData) error {
+	req := &locationRequest{
+		Type:     "update_location",
+		Data:     l,
+		Response: make(map[string]any),
+	}
+	resp := <-api.ExecuteRequest2(ctx, req)
+	if resp.Error != nil {
+		return resp.Error
+	}
+	log.Debug().Msg("location updated")
+	return nil
 }
