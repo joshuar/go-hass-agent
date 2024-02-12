@@ -163,7 +163,7 @@ func (t *SensorTracker) UpdateSensors(ctx context.Context, s any) {
 	case Sensor:
 		t.send(ctx, sensor)
 	case *hass.LocationData:
-		updateLocation(ctx, sensor)
+		hass.UpdateLocation(ctx, sensor)
 	default:
 		log.Warn().Msgf("Unknown sensor received %v", sensor)
 	}
