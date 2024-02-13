@@ -56,8 +56,8 @@ func SetLoggingLevel(trace, debug, profile bool) {
 
 // SetLogFile will attempt to create and then write logging to a file. If it
 // cannot do this, logging will only be available on stdout.
-func SetLogFile() {
-	logFile := filepath.Join(xdg.StateHome, "go-hass-app.log")
+func SetLogFile(filename string) {
+	logFile := filepath.Join(xdg.StateHome, filename)
 	logWriter, err := os.OpenFile(logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
 		log.Error().Err(err).

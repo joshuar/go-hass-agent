@@ -27,7 +27,7 @@ var registerCmd = &cobra.Command{
 	Long:  text.RegisterCmdLongText,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		logging.SetLoggingLevel(traceFlag, debugFlag, profileFlag)
-		logging.SetLogFile()
+		logging.SetLogFile("go-hass-agent.log")
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		agent := agent.New(&agent.Options{
