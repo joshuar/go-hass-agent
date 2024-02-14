@@ -17,14 +17,11 @@ var _ Registry = &RegistryMock{}
 //
 //		// make and configure a mocked Registry
 //		mockedRegistry := &RegistryMock{
-//			IsDisabledFunc: func(sensor string) chan bool {
+//			IsDisabledFunc: func(sensor string) bool {
 //				panic("mock out the IsDisabled method")
 //			},
-//			IsRegisteredFunc: func(sensor string) chan bool {
+//			IsRegisteredFunc: func(sensor string) bool {
 //				panic("mock out the IsRegistered method")
-//			},
-//			PathFunc: func() string {
-//				panic("mock out the Path method")
 //			},
 //			SetDisabledFunc: func(sensor string, state bool) error {
 //				panic("mock out the SetDisabled method")
@@ -40,13 +37,10 @@ var _ Registry = &RegistryMock{}
 //	}
 type RegistryMock struct {
 	// IsDisabledFunc mocks the IsDisabled method.
-	IsDisabledFunc func(sensor string) chan bool
+	IsDisabledFunc func(sensor string) bool
 
 	// IsRegisteredFunc mocks the IsRegistered method.
-	IsRegisteredFunc func(sensor string) chan bool
-
-	// PathFunc mocks the Path method.
-	PathFunc func() string
+	IsRegisteredFunc func(sensor string) bool
 
 	// SetDisabledFunc mocks the SetDisabled method.
 	SetDisabledFunc func(sensor string, state bool) error
@@ -66,9 +60,6 @@ type RegistryMock struct {
 			// Sensor is the sensor argument value.
 			Sensor string
 		}
-		// Path holds details about calls to the Path method.
-		Path []struct {
-		}
 		// SetDisabled holds details about calls to the SetDisabled method.
 		SetDisabled []struct {
 			// Sensor is the sensor argument value.
@@ -86,13 +77,12 @@ type RegistryMock struct {
 	}
 	lockIsDisabled    sync.RWMutex
 	lockIsRegistered  sync.RWMutex
-	lockPath          sync.RWMutex
 	lockSetDisabled   sync.RWMutex
 	lockSetRegistered sync.RWMutex
 }
 
 // IsDisabled calls IsDisabledFunc.
-func (mock *RegistryMock) IsDisabled(sensor string) chan bool {
+func (mock *RegistryMock) IsDisabled(sensor string) bool {
 	if mock.IsDisabledFunc == nil {
 		panic("RegistryMock.IsDisabledFunc: method is nil but Registry.IsDisabled was just called")
 	}
@@ -124,7 +114,7 @@ func (mock *RegistryMock) IsDisabledCalls() []struct {
 }
 
 // IsRegistered calls IsRegisteredFunc.
-func (mock *RegistryMock) IsRegistered(sensor string) chan bool {
+func (mock *RegistryMock) IsRegistered(sensor string) bool {
 	if mock.IsRegisteredFunc == nil {
 		panic("RegistryMock.IsRegisteredFunc: method is nil but Registry.IsRegistered was just called")
 	}
@@ -152,33 +142,6 @@ func (mock *RegistryMock) IsRegisteredCalls() []struct {
 	mock.lockIsRegistered.RLock()
 	calls = mock.calls.IsRegistered
 	mock.lockIsRegistered.RUnlock()
-	return calls
-}
-
-// Path calls PathFunc.
-func (mock *RegistryMock) Path() string {
-	if mock.PathFunc == nil {
-		panic("RegistryMock.PathFunc: method is nil but Registry.Path was just called")
-	}
-	callInfo := struct {
-	}{}
-	mock.lockPath.Lock()
-	mock.calls.Path = append(mock.calls.Path, callInfo)
-	mock.lockPath.Unlock()
-	return mock.PathFunc()
-}
-
-// PathCalls gets all the calls that were made to Path.
-// Check the length with:
-//
-//	len(mockedRegistry.PathCalls())
-func (mock *RegistryMock) PathCalls() []struct {
-} {
-	var calls []struct {
-	}
-	mock.lockPath.RLock()
-	calls = mock.calls.Path
-	mock.lockPath.RUnlock()
 	return calls
 }
 

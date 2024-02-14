@@ -7,15 +7,13 @@ package sensor
 
 import (
 	"context"
-	"os"
-	"path/filepath"
 	"reflect"
 	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
-	registry "github.com/joshuar/go-hass-agent/internal/hass/sensor/registry/jsonFiles"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor/registry"
 )
 
 func TestSensorTracker_add(t *testing.T) {
@@ -50,9 +48,8 @@ func TestSensorTracker_add(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tr := &SensorTracker{
-				registry: tt.fields.registry,
-				sensor:   tt.fields.sensor,
-				mu:       tt.fields.mu,
+				sensor: tt.fields.sensor,
+				mu:     tt.fields.mu,
 			}
 			if err := tr.add(tt.args.s); (err != nil) != tt.wantErr {
 				t.Errorf("SensorTracker.add() error = %v, wantErr %v", err, tt.wantErr)
@@ -97,9 +94,8 @@ func TestSensorTracker_Get(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tr := &SensorTracker{
-				registry: tt.fields.registry,
-				sensor:   tt.fields.sensor,
-				mu:       tt.fields.mu,
+				sensor: tt.fields.sensor,
+				mu:     tt.fields.mu,
 			}
 			got, err := tr.Get(tt.args.id)
 			if (err != nil) != tt.wantErr {
@@ -140,9 +136,8 @@ func TestSensorTracker_SensorList(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tr := &SensorTracker{
-				registry: tt.fields.registry,
-				sensor:   tt.fields.sensor,
-				mu:       tt.fields.mu,
+				sensor: tt.fields.sensor,
+				mu:     tt.fields.mu,
 			}
 			if got := tr.SensorList(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("SensorTracker.SensorList() = %v, want %v", got, tt.want)
@@ -152,148 +147,93 @@ func TestSensorTracker_SensorList(t *testing.T) {
 }
 
 func TestSensorTracker_UpdateSensor(t *testing.T) {
-	registry, err := registry.NewJSONFilesRegistry(t.TempDir())
+	// set up a fake sensor tracker
+	mockMap := make(map[string]Details)
+	// set up a fake registry with sensors
+	registry.SetPath(t.TempDir())
+	reg, err := registry.Load()
 	assert.Nil(t, err)
 
-	mockMap := make(map[string]Details)
+	// updated sensor with new state
+	updatedSensor := mockSensor
+	updatedSensor.StateFunc = func() any { return "newState" }
 	mockMap["mock_sensor"] = &mockSensor
-	
+	err = reg.SetRegistered("mock_sensor", true)
+	assert.Nil(t, err)
+
+	// new sensor
+	newSensor := mockSensor
+	newSensor.IDFunc = func() string { return "new_sensor" }
+	newSensor.StateFunc = func() any { return "newState" }
+
+	// disabled sensor
+	disabledSensor := mockSensor
+	disabledSensor.IDFunc = func() string { return "disabled_sensor" }
+	mockMap["disabled_sensor"] = &disabledSensor
+	err = reg.SetDisabled("disabled_sensor", true)
+	assert.Nil(t, err)
+	err = reg.SetRegistered("disabled_sensor", true)
+	assert.Nil(t, err)
+	// a new state update for the disabled sensor
+	newDisabledSensor := disabledSensor
+	newDisabledSensor.StateFunc = func() any { return "disabledState" }
+
 	type fields struct {
-		registry Registry
-		sensor   map[string]Details
-		mu       sync.Mutex
+		sensor map[string]Details
+		mu     sync.Mutex
 	}
 	type args struct {
 		ctx context.Context
+		reg Registry
 		upd Details
 	}
 	tests := []struct {
 		name   string
 		fields fields
 		args   args
+		want   string
 	}{
-		// TODO: Add test cases.
+		{
+			name:   "disabled sensor",
+			fields: fields{sensor: mockMap},
+			args:   args{ctx: context.TODO(), reg: reg, upd: &newDisabledSensor},
+			want:   "mockState",
+		},
+		// {
+		// 	name:   "new sensor",
+		// 	fields: fields{sensor: mockMap},
+		// 	args:   args{ctx: context.TODO(), reg: reg, upd: &newSensor},
+		// 	want:   "newState",
+		// },
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tr := &SensorTracker{
-				registry: tt.fields.registry,
-				sensor:   tt.fields.sensor,
-				mu:       tt.fields.mu,
+				sensor: tt.fields.sensor,
+				mu:     tt.fields.mu,
 			}
-			tr.UpdateSensor(tt.args.ctx, tt.args.upd)
-		})
-	}
-}
-
-func TestSensorTracker_handleUpdates(t *testing.T) {
-	type fields struct {
-		registry Registry
-		sensor   map[string]Details
-		mu       sync.Mutex
-	}
-	type args struct {
-		r *UpdateResponse
-	}
-	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		wantErr bool
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tr := &SensorTracker{
-				registry: tt.fields.registry,
-				sensor:   tt.fields.sensor,
-				mu:       tt.fields.mu,
-			}
-			if err := tr.handleUpdates(tt.args.r); (err != nil) != tt.wantErr {
-				t.Errorf("SensorTracker.handleUpdates() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
-
-func TestSensorTracker_handleRegistration(t *testing.T) {
-	type fields struct {
-		registry Registry
-		sensor   map[string]Details
-		mu       sync.Mutex
-	}
-	type args struct {
-		r *RegistrationResponse
-		s string
-	}
-	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		wantErr bool
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tr := &SensorTracker{
-				registry: tt.fields.registry,
-				sensor:   tt.fields.sensor,
-				mu:       tt.fields.mu,
-			}
-			if err := tr.handleRegistration(tt.args.r, tt.args.s); (err != nil) != tt.wantErr {
-				t.Errorf("SensorTracker.handleRegistration() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
-
-func TestSensorTracker_Reset(t *testing.T) {
-	type fields struct {
-		registry Registry
-		sensor   map[string]Details
-		mu       sync.Mutex
-	}
-	tests := []struct {
-		name   string
-		fields fields
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tr := &SensorTracker{
-				registry: tt.fields.registry,
-				sensor:   tt.fields.sensor,
-				mu:       tt.fields.mu,
-			}
-			tr.Reset()
+			tr.UpdateSensor(tt.args.ctx, tt.args.reg, tt.args.upd)
+			assert.Equal(t, tr.sensor[tt.args.upd.ID()].State(), tt.want)
 		})
 	}
 }
 
 func TestNewSensorTracker(t *testing.T) {
-	testID := "go-hass-agent-test"
-	basePath = t.TempDir()
-	assert.Nil(t, os.Mkdir(filepath.Join(basePath, testID), 0o755))
 	type args struct {
 		id string
 	}
 	tests := []struct {
 		name    string
-		args    args
 		want    *SensorTracker
 		wantErr bool
 	}{
 		{
 			name: "default test",
-			args: args{id: testID},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := NewSensorTracker(tt.args.id)
+			_, err := NewSensorTracker()
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewSensorTracker() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -342,6 +282,96 @@ func TestMergeSensorCh(t *testing.T) {
 			if got := MergeSensorCh(tt.args.ctx, tt.args.sensorCh...); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("MergeSensorCh() = %v, want %v", got, tt.want)
 			}
+		})
+	}
+}
+
+func TestSensorTracker_handleUpdates(t *testing.T) {
+	type fields struct {
+		sensor map[string]Details
+		mu     sync.Mutex
+	}
+	type args struct {
+		reg Registry
+		r   *UpdateResponse
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tr := &SensorTracker{
+				sensor: tt.fields.sensor,
+				mu:     tt.fields.mu,
+			}
+			if err := tr.handleUpdates(tt.args.reg, tt.args.r); (err != nil) != tt.wantErr {
+				t.Errorf("SensorTracker.handleUpdates() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestSensorTracker_handleRegistration(t *testing.T) {
+	type fields struct {
+		sensor map[string]Details
+		mu     sync.Mutex
+	}
+	type args struct {
+		reg Registry
+		r   *RegistrationResponse
+		s   string
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tr := &SensorTracker{
+				sensor: tt.fields.sensor,
+				mu:     tt.fields.mu,
+			}
+			if err := tr.handleRegistration(tt.args.reg, tt.args.r, tt.args.s); (err != nil) != tt.wantErr {
+				t.Errorf("SensorTracker.handleRegistration() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestSensorTracker_Reset(t *testing.T) {
+	mockMap := make(map[string]Details)
+	mockMap["mock_sensor"] = &mockSensor
+
+	type fields struct {
+		sensor map[string]Details
+		mu     sync.Mutex
+	}
+	tests := []struct {
+		name   string
+		fields fields
+	}{
+		{
+			name:   "default",
+			fields: fields{sensor: mockMap},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tr := &SensorTracker{
+				sensor: tt.fields.sensor,
+				mu:     tt.fields.mu,
+			}
+			tr.Reset()
+			assert.Nil(t, tr.sensor)
 		})
 	}
 }

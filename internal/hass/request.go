@@ -149,7 +149,7 @@ func ExecuteRequest(ctx context.Context, req any) <-chan Response {
 			Dur("time", resp.Time()).
 			Time("received_at", resp.ReceivedAt()).
 			RawJSON("body", resp.Body()).Msg("Response received.")
-		if resp.StatusCode() != 200 && resp.StatusCode() != 201 {
+		if resp.IsError() {
 			cancel()
 			responseErr.StatusCode = resp.StatusCode()
 			response.Error = responseErr
