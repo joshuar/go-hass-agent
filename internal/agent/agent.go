@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/adrg/xdg"
 	"github.com/go-resty/resty/v2"
@@ -180,6 +181,7 @@ func (agent *Agent) Stop() {
 func setupContext(prefs *preferences.Preferences) (context.Context, context.CancelFunc) {
 	baseCtx, cancelFunc := context.WithCancel(context.Background())
 	agentCtx := hass.ContextSetURL(baseCtx, prefs.RestAPIURL)
-	agentCtx = hass.ContextSetClient(agentCtx, resty.New())
+	r := resty.New().SetTimeout(1 * time.Second)
+	agentCtx = hass.ContextSetClient(agentCtx, r)
 	return agentCtx, cancelFunc
 }
