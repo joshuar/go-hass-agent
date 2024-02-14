@@ -3,11 +3,12 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-package api
+package hass
 
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -15,6 +16,12 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/go-resty/resty/v2"
+)
+
+var (
+	ErrInvalidURL        = errors.New("invalid URL")
+	ErrResponseMalformed = errors.New("malformed response")
+	ErrNoPrefs           = errors.New("loading preferences failed")
 )
 
 type Authenticated interface {
@@ -26,7 +33,6 @@ type Encrypted interface {
 }
 
 type GetRequest interface {
-	URL() string
 	ResponseBody() any
 }
 
@@ -37,19 +43,19 @@ type PostRequest interface {
 
 type APIError struct {
 	Message    string `json:"message,omitempty"`
-	Code       int    `json:"code,omitempty"`
+	Code       string `json:"code,omitempty"`
 	StatusCode int    `json:"-"`
 }
 
 func (e *APIError) Error() string {
-	if e.Code != 0 {
-		return fmt.Sprintf("%d: %s", e.Code, e.Message)
+	if e.Code != "" {
+		return fmt.Sprintf("%s: %s", e.Code, e.Message)
 	} else {
 		return e.Message
 	}
 }
 
-func NewAPIError(code int, msg string) *APIError {
+func NewAPIError(code, msg string) *APIError {
 	return &APIError{
 		Code:    code,
 		Message: msg,
@@ -67,13 +73,24 @@ type Response struct {
 // satisfy the PostRequest interface. To add authentication where required,
 // satisfy the Auth interface. To send an encrypted request, satisfy the Secret
 // interface.
-func ExecuteRequest2(ctx context.Context, req any) <-chan Response {
+func ExecuteRequest(ctx context.Context, req any) <-chan Response {
 	responseCh := make(chan Response, 1)
 	defer close(responseCh)
 
-	client := resty.New()
-	if a, ok := req.(Authenticated); ok {
-		client = client.SetAuthToken(a.Auth())
+	url := ContextGetURL(ctx)
+	if url == "" {
+		responseCh <- Response{
+			Error: NewAPIError("", ErrInvalidURL.Error()),
+		}
+		return responseCh
+	}
+
+	client := ContextGetClient(ctx)
+	if client == nil {
+		responseCh <- Response{
+			Error: NewAPIError("", "invalid client"),
+		}
+		return responseCh
 	}
 
 	requestCtx, cancel := context.WithTimeout(ctx, time.Second)
@@ -83,41 +100,45 @@ func ExecuteRequest2(ctx context.Context, req any) <-chan Response {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		response := Response{}
 		var responseErr *APIError
 		var resp *resty.Response
 		var err error
+		response := Response{}
+		cl := client.R().
+			SetContext(requestCtx).
+			SetError(&responseErr)
+		if a, ok := req.(Authenticated); ok {
+			cl = cl.SetAuthToken(a.Auth())
+		}
 		switch r := req.(type) {
 		case PostRequest:
 			log.Trace().
 				Str("method", "POST").
-				Str("url", r.URL()).
+				Str("url", url).
 				RawJSON("body", r.RequestBody()).
 				Time("sent_at", time.Now()).
 				Msg("Sending request.")
-			resp, err = client.R().
-				SetContext(requestCtx).
-				SetResult(r.ResponseBody()).
+			result := r.ResponseBody()
+			resp, err = cl.
+				SetResult(result).
 				SetBody(r.RequestBody()).
-				SetError(&responseErr).
-				Post(r.URL())
-			response.Body = r.ResponseBody()
+				Post(url)
+			response.Body = result
 		case GetRequest:
 			log.Trace().
 				Str("method", "GET").
-				Str("url", r.URL()).
+				Str("url", url).
 				Time("sent_at", time.Now()).
 				Msg("Sending request.")
-			resp, err = client.R().
-				SetContext(requestCtx).
-				SetResult(r.ResponseBody()).
-				SetError(&responseErr).
-				Get(r.URL())
-			response.Body = r.ResponseBody()
+			result := r.ResponseBody()
+			resp, err = cl.
+				SetResult(result).
+				Get(url)
+			response.Body = result
 		}
 		if err != nil {
 			cancel()
-			response.Error = NewAPIError(0, err.Error())
+			response.Error = NewAPIError("", err.Error())
 			responseCh <- response
 			return
 		}
@@ -126,8 +147,8 @@ func ExecuteRequest2(ctx context.Context, req any) <-chan Response {
 			Str("status", resp.Status()).
 			Str("protocol", resp.Proto()).
 			Dur("time", resp.Time()).
-			Time("recieved_at", resp.ReceivedAt()).
-			RawJSON("body", resp.Body()).Msg("Response recieved.")
+			Time("received_at", resp.ReceivedAt()).
+			RawJSON("body", resp.Body()).Msg("Response received.")
 		if resp.StatusCode() != 200 && resp.StatusCode() != 201 {
 			cancel()
 			responseErr.StatusCode = resp.StatusCode()

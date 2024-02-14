@@ -13,7 +13,6 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
-	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
@@ -118,8 +117,8 @@ func (w *wifiSensor) Icon() string {
 
 // getWifiProperties will initially fetch and then monitor for changes of
 // relevant WiFi properties that are to be represented as sensors.
-func getWifiProperties(ctx context.Context, p dbus.ObjectPath) <-chan tracker.Sensor {
-	var outCh []<-chan tracker.Sensor
+func getWifiProperties(ctx context.Context, p dbus.ObjectPath) <-chan sensor.Details {
+	var outCh []<-chan sensor.Details
 	// get the devices associated with this connection
 	v, _ := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
 		Path(p).
@@ -139,7 +138,7 @@ func getWifiProperties(ctx context.Context, p dbus.ObjectPath) <-chan tracker.Se
 					Destination(dBusNMObj)
 				propBase := dBusNMObj + ".AccessPoint"
 				go func() {
-					sensorCh := make(chan tracker.Sensor, 1)
+					sensorCh := make(chan sensor.Details, 1)
 					defer close(sensorCh)
 					outCh = append(outCh, sensorCh)
 					for k, p := range wifiProps {
@@ -156,11 +155,11 @@ func getWifiProperties(ctx context.Context, p dbus.ObjectPath) <-chan tracker.Se
 			}
 		}
 	}
-	return tracker.MergeSensorCh(ctx, outCh...)
+	return sensor.MergeSensorCh(ctx, outCh...)
 }
 
-func monitorWifiProperties(ctx context.Context, p dbus.ObjectPath) chan tracker.Sensor {
-	sensorCh := make(chan tracker.Sensor, 1)
+func monitorWifiProperties(ctx context.Context, p dbus.ObjectPath) chan sensor.Details {
+	sensorCh := make(chan sensor.Details, 1)
 	err := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
 		Match([]dbus.MatchOption{
 			dbus.WithMatchObjectPath(p),

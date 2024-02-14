@@ -15,7 +15,6 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
-	"github.com/joshuar/go-hass-agent/internal/tracker"
 )
 
 type netIOSensorAttributes struct {
@@ -114,8 +113,8 @@ func newNetIORateSensor(t linux.SensorTypeValue) *netIORateSensor {
 	}
 }
 
-func RatesUpdater(ctx context.Context) chan tracker.Sensor {
-	sensorCh := make(chan tracker.Sensor, 2)
+func RatesUpdater(ctx context.Context) chan sensor.Details {
+	sensorCh := make(chan sensor.Details, 2)
 	bytesRx := newNetIOSensor(linux.SensorBytesRecv)
 	bytesTx := newNetIOSensor(linux.SensorBytesSent)
 	bytesRxRate := newNetIORateSensor(linux.SensorBytesRecvRate)

@@ -12,8 +12,8 @@ import (
 	"github.com/godbus/dbus/v5"
 	"github.com/rs/zerolog/log"
 
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
-	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
@@ -43,8 +43,8 @@ func newScreenlockEvent(v bool) *screenlockSensor {
 	}
 }
 
-func ScreenLockUpdater(ctx context.Context) chan tracker.Sensor {
-	sensorCh := make(chan tracker.Sensor)
+func ScreenLockUpdater(ctx context.Context) chan sensor.Details {
+	sensorCh := make(chan sensor.Details)
 	err := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
 		Match([]dbus.MatchOption{
 			dbus.WithMatchPathNamespace("/org/freedesktop/login1/session"),

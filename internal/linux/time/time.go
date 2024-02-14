@@ -15,7 +15,6 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
-	"github.com/joshuar/go-hass-agent/internal/tracker"
 )
 
 type timeSensor struct {
@@ -41,8 +40,8 @@ func (s *timeSensor) Attributes() any {
 	}
 }
 
-func Updater(ctx context.Context) chan tracker.Sensor {
-	sensorCh := make(chan tracker.Sensor, 2)
+func Updater(ctx context.Context) chan sensor.Details {
+	sensorCh := make(chan sensor.Details, 2)
 	updateTimes := func(_ time.Duration) {
 		sensorCh <- &timeSensor{
 			linux.Sensor{

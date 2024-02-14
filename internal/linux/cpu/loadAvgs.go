@@ -15,15 +15,14 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
-	"github.com/joshuar/go-hass-agent/internal/tracker"
 )
 
 type loadavgSensor struct {
 	linux.Sensor
 }
 
-func LoadAvgUpdater(ctx context.Context) chan tracker.Sensor {
-	sensorCh := make(chan tracker.Sensor, 3)
+func LoadAvgUpdater(ctx context.Context) chan sensor.Details {
+	sensorCh := make(chan sensor.Details, 3)
 	sendLoadAvgStats := func(_ time.Duration) {
 		var latest *load.AvgStat
 		var err error

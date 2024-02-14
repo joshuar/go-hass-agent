@@ -15,7 +15,6 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
-	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
@@ -66,8 +65,8 @@ func parseProblem(details map[string]string) map[string]any {
 	return parsed
 }
 
-func Updater(ctx context.Context) chan tracker.Sensor {
-	sensorCh := make(chan tracker.Sensor, 1)
+func Updater(ctx context.Context) chan sensor.Details {
+	sensorCh := make(chan sensor.Details, 1)
 	problems := func(_ time.Duration) {
 		problems := &problemsSensor{
 			list: make(map[string]map[string]any),

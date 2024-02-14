@@ -18,11 +18,10 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
-	"github.com/joshuar/go-hass-agent/internal/tracker"
 )
 
 type script struct {
-	Output   chan tracker.Sensor
+	Output   chan sensor.Details
 	path     string
 	schedule string
 }
@@ -73,7 +72,7 @@ func (s *script) Path() string {
 func NewScript(p string) *script {
 	s := &script{
 		path:   p,
-		Output: make(chan tracker.Sensor),
+		Output: make(chan sensor.Details),
 	}
 	o, err := s.execute()
 	if err != nil {

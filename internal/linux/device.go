@@ -6,15 +6,12 @@
 package linux
 
 import (
-	"encoding/json"
 	"os"
 	"os/user"
 	"strings"
 
 	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v3/host"
-
-	"github.com/joshuar/go-hass-agent/internal/hass/api"
 )
 
 type Device struct {
@@ -92,22 +89,6 @@ func (l *Device) AppData() any {
 	}{
 		PushWebsocket: true,
 	}
-}
-
-func (l *Device) MarshalJSON() ([]byte, error) {
-	return json.Marshal(&api.RegistrationRequest{
-		DeviceID:           l.DeviceID(),
-		AppID:              l.AppID(),
-		AppName:            l.AppName(),
-		AppVersion:         l.AppVersion(),
-		DeviceName:         l.DeviceName(),
-		Manufacturer:       l.Manufacturer(),
-		Model:              l.Model(),
-		OsName:             l.OsName(),
-		OsVersion:          l.OsVersion(),
-		SupportsEncryption: l.SupportsEncryption(),
-		AppData:            l.AppData(),
-	})
 }
 
 func NewDevice(name, version string) *Device {

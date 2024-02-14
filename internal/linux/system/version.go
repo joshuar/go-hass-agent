@@ -13,12 +13,12 @@ import (
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
-	"github.com/joshuar/go-hass-agent/internal/tracker"
 )
 
-func Versions(ctx context.Context) chan tracker.Sensor {
-	sensorCh := make(chan tracker.Sensor, 3)
+func Versions(ctx context.Context) chan sensor.Details {
+	sensorCh := make(chan sensor.Details, 3)
 	defer close(sensorCh)
 	info, err := host.InfoWithContext(ctx)
 	if err != nil {

@@ -15,7 +15,7 @@ file for each sensor or sensor group you are adding.
 ## Representing a sensor
 
 For sensor data to be registered and sent to Home Assistant, it needs to meet
-implement the `tracker.Sensor` interface. It should satisfy the following
+implement the `sensor.Sensor` interface. It should satisfy the following
 methods.
 
 ```go
@@ -101,19 +101,19 @@ To track and send sensor updates to Home Assistant, create a function with the
 following signature:
 
 ```go
-func SensorUpdater(context.Context) chan tracker.Sensor
+func SensorUpdater(context.Context) chan sensor.Sensor
 ```
 
 - The `context.Context` parameter is a context which you should respect a
   potential cancellation of (see below). It can also contain any device specific
   context values, such as common API configuration data.
-- The `tracker.Sensor` return value is a channel of sensor values to be updated.
+- The `sensor.Sensor` return value is a channel of sensor values to be updated.
 
 Within this function, you should create the sensors you want to report to Home
 Assistant and set up a way to send updates. You will want:
 
 - A way to get the sensor data you need. Most likely stored in a struct.
-- Ensure this data struct satisfies the `tracker.Sensor` interface requirements.
+- Ensure this data struct satisfies the `sensor.Sensor` interface requirements.
 
 How this is achieved will vary and can be done in any way. For example, the
 battery sensor data is manifested by listening for D-Bus signals that indicate a
@@ -121,7 +121,7 @@ battery property has changed.
 
 You can create as many sensors as you require.
 
-Create a `chan tracker.Sensor` and return this from the updater function. Then,
+Create a `chan sensor.Sensor` and return this from the updater function. Then,
 whenever you have a sensor update, send it via the created channel.
 
 As mentioned you should respect/expect cancellation of the context received as a
@@ -130,7 +130,7 @@ parameter. You can do this by including code similar to the following in your fu
 ```go
 go func() {
   // Likely you'll want to clean up the sensor channel...
-  // defer close(chan tracker.Sensor)
+  // defer close(chan sensor.Sensor)
   <-ctx.Done
   // any additional clean up code can go here...
 }
@@ -139,8 +139,8 @@ go func() {
 Pseudo Go code of what a complete function would look like:
 
 ```go
-func SensorUpdater(ctx context.Context) chan tracker.Sensor {
-  sensorCh := make(chan tracker.Sensor, 1)
+func SensorUpdater(ctx context.Context) chan sensor.Sensor {
+  sensorCh := make(chan sensor.Sensor, 1)
   ...code to set up your sensors...
   for ...some timer, event channel, other loop... {
     ...code to create a sensor object...
