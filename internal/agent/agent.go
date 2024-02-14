@@ -14,9 +14,11 @@ import (
 	"syscall"
 
 	"github.com/adrg/xdg"
+	"github.com/go-resty/resty/v2"
 	"github.com/rs/zerolog/log"
 
 	fyneui "github.com/joshuar/go-hass-agent/internal/agent/ui/fyneUI"
+	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
@@ -177,6 +179,7 @@ func (agent *Agent) Stop() {
 // needed.
 func setupContext(prefs *preferences.Preferences) (context.Context, context.CancelFunc) {
 	baseCtx, cancelFunc := context.WithCancel(context.Background())
-	agentCtx := preferences.EmbedInContext(baseCtx, prefs)
+	agentCtx := hass.ContextSetURL(baseCtx, prefs.RestAPIURL)
+	agentCtx = hass.ContextSetClient(agentCtx, resty.New())
 	return agentCtx, cancelFunc
 }

@@ -7,8 +7,9 @@ package apps
 
 import (
 	"github.com/godbus/dbus/v5"
+
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
-	"github.com/joshuar/go-hass-agent/internal/tracker"
 )
 
 type activeAppSensor struct {
@@ -35,7 +36,7 @@ func (a *activeAppSensor) app() string {
 	return ""
 }
 
-func (a *activeAppSensor) update(l map[string]dbus.Variant, s chan tracker.Sensor) {
+func (a *activeAppSensor) update(l map[string]dbus.Variant, s chan sensor.Details) {
 	for app, v := range l {
 		if appState, ok := v.Value().(uint32); ok {
 			if appState == 2 && a.app() != app {

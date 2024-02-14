@@ -15,7 +15,6 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
-	"github.com/joshuar/go-hass-agent/internal/tracker"
 )
 
 var stats = []linux.SensorTypeValue{
@@ -42,8 +41,8 @@ func (s *memorySensor) Attributes() any {
 	}
 }
 
-func Updater(ctx context.Context) chan tracker.Sensor {
-	sensorCh := make(chan tracker.Sensor, 5)
+func Updater(ctx context.Context) chan sensor.Details {
+	sensorCh := make(chan sensor.Details, 5)
 	sendMemStats := func(_ time.Duration) {
 		var memDetails *mem.VirtualMemoryStat
 		var err error

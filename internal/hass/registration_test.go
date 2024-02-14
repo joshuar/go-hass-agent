@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-package api
+package hass
 
 import (
 	"context"
@@ -38,7 +38,7 @@ func TestRegisterWithHass(t *testing.T) {
 
 	newMockServer := func(t *testing.T) *httptest.Server {
 		return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			token := r.Header.Get(authHeader)
+			token := r.Header.Get("Bearer")
 			if token != "Bearer" {
 				w.WriteHeader(http.StatusOK)
 				w.Write(okJSON)

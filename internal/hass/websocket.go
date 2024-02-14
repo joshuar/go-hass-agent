@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-package api
+package hass
 
 import (
 	"context"
@@ -43,7 +43,7 @@ func (m *websocketMsg) send(conn *gws.Conn) error {
 
 type websocketResponse struct {
 	Result       any                   `json:"result,omitempty"`
-	Error        ResponseError         `json:"error,omitempty"`
+	Error        APIError              `json:"error,omitempty"`
 	Type         string                `json:"type"`
 	HAVersion    string                `json:"ha_version,omitempty"`
 	Notification websocketNotification `json:"event,omitempty"`
@@ -181,8 +181,8 @@ func (c *WebSocket) OnMessage(socket *gws.Conn, message *gws.Message) {
 	case "result":
 		if !response.Success {
 			log.Error().
-				Msgf("Received error on websocket, %s: %s.", response.Error.ErrorCode, response.Error.ErrorMsg)
-			if response.Error.ErrorCode == "id_reuse" {
+				Msgf("Received error on websocket, %s: %s.", response.Error.Code, response.Error.Message)
+			if response.Error.Code == "id_reuse" {
 				log.Warn().
 					Msg("id_reuse error, attempting manual increment.")
 				atomic.AddUint64(&c.nextID, 1)

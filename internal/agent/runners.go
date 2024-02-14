@@ -17,10 +17,9 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass"
-	"github.com/joshuar/go-hass-agent/internal/hass/api"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 	"github.com/joshuar/go-hass-agent/internal/scripts"
-	"github.com/joshuar/go-hass-agent/internal/tracker"
 )
 
 // runWorkers will call all the sensor worker functions that have been defined
@@ -30,7 +29,7 @@ func runWorkers(ctx context.Context, trk SensorTracker) {
 	workerFuncs = append(workerFuncs, device.ExternalIPUpdater)
 
 	var wg sync.WaitGroup
-	var outCh []<-chan tracker.Sensor
+	var outCh []<-chan sensor.Details
 
 	log.Debug().Msg("Starting worker funcs.")
 	for i := 0; i < len(workerFuncs); i++ {
@@ -41,9 +40,9 @@ func runWorkers(ctx context.Context, trk SensorTracker) {
 	go func() {
 		log.Debug().Msg("Listening for sensor updates.")
 		defer wg.Done()
-		for s := range tracker.MergeSensorCh(ctx, outCh...) {
-			go func(s tracker.Sensor) {
-				trk.UpdateSensors(ctx, s)
+		for s := range sensor.MergeSensorCh(ctx, outCh...) {
+			go func(s sensor.Details) {
+				trk.UpdateSensor(ctx, s)
 			}(s)
 		}
 	}()
@@ -53,7 +52,7 @@ func runWorkers(ctx context.Context, trk SensorTracker) {
 		defer wg.Done()
 		for l := range locationWorker()(ctx) {
 			go func(l *hass.LocationData) {
-				trk.UpdateSensors(ctx, l)
+				hass.UpdateLocation(ctx, l)
 			}(l)
 		}
 	}()
@@ -64,7 +63,7 @@ func runWorkers(ctx context.Context, trk SensorTracker) {
 // runScripts will retrieve all scripts that the agent can run and queue them up
 // to be run on their defined schedule using the cron scheduler. It also sets up
 // a channel to receive script output and send appropriate sensor objects to the
-// tracker.
+// sensor.
 func runScripts(ctx context.Context, path string, trk SensorTracker) {
 	allScripts, err := scripts.FindScripts(path)
 	switch {
@@ -76,7 +75,7 @@ func runScripts(ctx context.Context, path string, trk SensorTracker) {
 		return
 	}
 	c := cron.New()
-	var outCh []<-chan tracker.Sensor
+	var outCh []<-chan sensor.Details
 	for _, s := range allScripts {
 		schedule := s.Schedule()
 		if schedule != "" {
@@ -94,9 +93,9 @@ func runScripts(ctx context.Context, path string, trk SensorTracker) {
 	log.Debug().Msg("Starting cron scheduler for script sensors.")
 	c.Start()
 	go func() {
-		for s := range tracker.MergeSensorCh(ctx, outCh...) {
-			go func(s tracker.Sensor) {
-				trk.UpdateSensors(ctx, s)
+		for s := range sensor.MergeSensorCh(ctx, outCh...) {
+			go func(s sensor.Details) {
+				trk.UpdateSensor(ctx, s)
 			}(s)
 		}
 	}()
@@ -138,7 +137,7 @@ func (agent *Agent) runNotificationsWorker(ctx context.Context) {
 				log.Debug().Msg("Stopping websocket.")
 				return
 			default:
-				api.StartWebsocket(ctx, notifyCh)
+				hass.StartWebsocket(ctx, notifyCh)
 			}
 		}
 	}()

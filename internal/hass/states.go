@@ -9,25 +9,16 @@ import (
 	"context"
 	"time"
 
-	"github.com/joshuar/go-hass-agent/internal/hass/api"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
 type EntityState struct {
 	LastChanged time.Time      `json:"last_changed"`
-	LastUpdated time.Time      `json:"last_updated,omitifempty"`
+	LastUpdated time.Time      `json:"last_updated,omitempty"`
 	State       any            `json:"state"`
-	Attributes  map[string]any `json:"attributes,omitifempty"`
+	Attributes  map[string]any `json:"attributes,omitempty"`
 	EntityID    string         `json:"entity_id"`
 	sensorType  string         `json:"-"`
-}
-
-func (e *EntityState) URL() string {
-	prefs, err := preferences.Load()
-	if err != nil {
-		return ""
-	}
-	return prefs.Host + "/api/states/" + e.sensorType + "." + prefs.DeviceName + "_" + e.EntityID
 }
 
 func (e *EntityState) Auth() string {
@@ -40,16 +31,28 @@ func (e *EntityState) Auth() string {
 
 func (e *EntityState) ResponseBody() any { return e }
 
-func GetEntityState(sensorType, entityID string) (*EntityState, error) {
+func GetEntityState(ctx context.Context, sensorType, entityID string) (*EntityState, error) {
+	prefs, err := preferences.Load()
+	if err != nil {
+		return nil, ErrNoPrefs
+	}
+	url := prefs.Host + "/api/states/" + sensorType + "." + prefs.DeviceName + "_" + entityID
+	ctx = ContextSetURL(ctx, url)
+
 	entity := &EntityState{
 		EntityID:   entityID,
 		sensorType: sensorType,
 	}
-	resp := <-api.ExecuteRequest2(context.TODO(), entity)
+	resp := <-ExecuteRequest(context.TODO(), entity)
 	if resp.Error != nil {
 		return nil, resp.Error
 	}
-	return resp.Body.(*EntityState), nil
+	var e *EntityState
+	var ok bool
+	if e, ok = resp.Body.(*EntityState); !ok {
+		return nil, ErrResponseMalformed
+	}
+	return e, nil
 }
 
 type EntityStates []EntityState
@@ -73,10 +76,14 @@ func (e *EntityStates) Auth() string {
 func (e *EntityStates) ResponseBody() any { return e }
 
 func GetAllEntityStates() (*EntityStates, error) {
-	entities := &EntityStates{}
-	resp := <-api.ExecuteRequest2(context.TODO(), entities)
+	resp := <-ExecuteRequest(context.TODO(), &EntityStates{})
 	if resp.Error != nil {
 		return nil, resp.Error
 	}
-	return resp.Body.(*EntityStates), nil
+	var entities *EntityStates
+	var ok bool
+	if entities, ok = resp.Body.(*EntityStates); !ok {
+		return nil, ErrResponseMalformed
+	}
+	return entities, nil
 }

@@ -8,7 +8,7 @@ package ui
 import (
 	_ "embed"
 
-	"github.com/joshuar/go-hass-agent/internal/tracker"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 )
 
 //go:generate moq -out mock_Agent_test.go . Agent
@@ -19,7 +19,7 @@ type Agent interface {
 //go:generate moq -out mock_SensorTracker_test.go . SensorTracker
 type SensorTracker interface {
 	SensorList() []string
-	Get(key string) (tracker.Sensor, error)
+	Get(key string) (sensor.Details, error)
 }
 
 type MQTTPreferences struct {

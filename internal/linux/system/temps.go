@@ -19,7 +19,6 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
-	"github.com/joshuar/go-hass-agent/internal/tracker"
 )
 
 type tempSensor struct {
@@ -65,8 +64,8 @@ func newTempSensor(t host.TemperatureStat) *tempSensor {
 	return s
 }
 
-func TempUpdater(ctx context.Context) chan tracker.Sensor {
-	sensorCh := make(chan tracker.Sensor, 1)
+func TempUpdater(ctx context.Context) chan sensor.Details {
+	sensorCh := make(chan sensor.Details, 1)
 	update := func(_ time.Duration) {
 		rawTemps, err := host.SensorsTemperaturesWithContext(ctx)
 		idCounter := make(map[string]int)

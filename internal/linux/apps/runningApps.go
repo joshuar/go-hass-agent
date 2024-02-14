@@ -9,9 +9,9 @@ import (
 	"sync"
 
 	"github.com/godbus/dbus/v5"
+
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
-	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
@@ -46,7 +46,7 @@ func (r *runningAppsSensor) count() int {
 	return -1
 }
 
-func (r *runningAppsSensor) update(l map[string]dbus.Variant, s chan tracker.Sensor) {
+func (r *runningAppsSensor) update(l map[string]dbus.Variant, s chan sensor.Details) {
 	var count int
 	r.mu.Lock()
 	r.appList = l

@@ -18,7 +18,7 @@ const (
 )
 
 // Sensor represents a generic sensor on the Linux platform. Most sensors
-// will be able to use this struct, which satisfies the tracker.Sensor
+// will be able to use this struct, which satisfies the sensor.Sensor
 // interface, alllowing them to be sent as a sensor to Home Assistant.
 type Sensor struct {
 	Value       any
@@ -32,7 +32,7 @@ type Sensor struct {
 	StateClassValue  sensor.SensorStateClass
 }
 
-// linuxSensor satisfies the tracker.Sensor interface, allowing it to be sent as
+// linuxSensor satisfies the sensor.Sensor interface, allowing it to be sent as
 // a sensor update to Home Assistant. Any of the methods below can be overridden
 // by embedding linuxSensor in another struct and defining the needed function.
 

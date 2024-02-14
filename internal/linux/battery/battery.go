@@ -19,7 +19,6 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
-	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
@@ -75,8 +74,8 @@ func (b *upowerBattery) getProp(ctx context.Context, t linux.SensorTypeValue) (d
 }
 
 // getSensors retrieves the sensors passed in for a given battery.
-func (b *upowerBattery) getSensors(ctx context.Context, sensors ...linux.SensorTypeValue) chan tracker.Sensor {
-	sensorCh := make(chan tracker.Sensor, len(sensors))
+func (b *upowerBattery) getSensors(ctx context.Context, sensors ...linux.SensorTypeValue) chan sensor.Details {
+	sensorCh := make(chan sensor.Details, len(sensors))
 	for _, s := range sensors {
 		value, err := b.getProp(ctx, s)
 		if err != nil {
@@ -283,13 +282,13 @@ type batteryTracker struct {
 	mu          sync.Mutex
 }
 
-func (t *batteryTracker) track(ctx context.Context, p dbus.ObjectPath) <-chan tracker.Sensor {
+func (t *batteryTracker) track(ctx context.Context, p dbus.ObjectPath) <-chan sensor.Details {
 	battCtx, cancelFunc := context.WithCancel(ctx)
 	t.mu.Lock()
 	t.batteryList[p] = cancelFunc
 	t.mu.Unlock()
 	battery := newBattery(ctx, p)
-	return tracker.MergeSensorCh(battCtx, battery.getSensors(battCtx, battery.sensors...), monitorBattery(battCtx, battery))
+	return sensor.MergeSensorCh(battCtx, battery.getSensors(battCtx, battery.sensors...), monitorBattery(battCtx, battery))
 }
 
 func (t *batteryTracker) remove(p dbus.ObjectPath) {
@@ -307,9 +306,9 @@ func newBatteryTracker() *batteryTracker {
 	}
 }
 
-func Updater(ctx context.Context) chan tracker.Sensor {
+func Updater(ctx context.Context) chan sensor.Details {
 	batteryTracker := newBatteryTracker()
-	var sensorCh []<-chan tracker.Sensor
+	var sensorCh []<-chan sensor.Details
 
 	// Get a list of all current connected batteries and monitor them.
 	batteries := getBatteries(ctx)
@@ -322,7 +321,7 @@ func Updater(ctx context.Context) chan tracker.Sensor {
 	// Monitor for battery added/removed signals.
 	sensorCh = append(sensorCh, monitorBatteryChanges(ctx, batteryTracker))
 
-	return tracker.MergeSensorCh(ctx, sensorCh...)
+	return sensor.MergeSensorCh(ctx, sensorCh...)
 }
 
 // getBatteries is a helper function to retrieve all of the known batteries
@@ -336,10 +335,10 @@ func getBatteries(ctx context.Context) []dbus.ObjectPath {
 
 // monitorBattery will monitor a battery device for any property changes and
 // send these as sensors.
-func monitorBattery(ctx context.Context, battery *upowerBattery) <-chan tracker.Sensor {
+func monitorBattery(ctx context.Context, battery *upowerBattery) <-chan sensor.Details {
 	log.Debug().Str("battery", battery.id).
 		Msg("Monitoring battery.")
-	sensorCh := make(chan tracker.Sensor, 1)
+	sensorCh := make(chan sensor.Details, 1)
 	// Create a DBus signal match to watch for property changes for this
 	// battery.
 	err := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
@@ -383,8 +382,8 @@ func monitorBattery(ctx context.Context, battery *upowerBattery) <-chan tracker.
 
 // monitorBatteryChanges monitors for battery devices being added/removed from
 // the system and will start/stop monitory each battery as appropriate.
-func monitorBatteryChanges(ctx context.Context, t *batteryTracker) <-chan tracker.Sensor {
-	sensorCh := make(chan tracker.Sensor, 1)
+func monitorBatteryChanges(ctx context.Context, t *batteryTracker) <-chan sensor.Details {
+	sensorCh := make(chan sensor.Details, 1)
 	err := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
 		Match([]dbus.MatchOption{
 			dbus.WithMatchObjectPath(upowerDBusPath),
