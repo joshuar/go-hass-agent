@@ -7,6 +7,7 @@ package agent
 
 import (
 	"context"
+	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -181,7 +182,15 @@ func (agent *Agent) Stop() {
 func setupContext(prefs *preferences.Preferences) (context.Context, context.CancelFunc) {
 	baseCtx, cancelFunc := context.WithCancel(context.Background())
 	agentCtx := hass.ContextSetURL(baseCtx, prefs.RestAPIURL)
-	r := resty.New().SetTimeout(1 * time.Second)
+	r := resty.New().
+		SetTimeout(1 * time.Second).
+		AddRetryCondition(
+			// RetryConditionFunc type is for retry condition function
+			// input: non-nil Response OR request execution error
+			func(r *resty.Response, err error) bool {
+				return r.StatusCode() == http.StatusTooManyRequests
+			},
+		)
 	agentCtx = hass.ContextSetClient(agentCtx, r)
 	return agentCtx, cancelFunc
 }
