@@ -14,6 +14,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/joshuar/go-hass-agent/internal/hass"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor/registry"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 
 	"github.com/go-playground/validator/v10"
@@ -89,6 +90,7 @@ func (agent *Agent) checkRegistration(trk SensorTracker) error {
 		}
 		if agent.Options.ForceRegister {
 			trk.Reset()
+			registry.Reset()
 		}
 	} else {
 		log.Debug().Msg("Agent already registered.")

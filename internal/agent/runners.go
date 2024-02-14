@@ -24,7 +24,7 @@ import (
 
 // runWorkers will call all the sensor worker functions that have been defined
 // for this device.
-func runWorkers(ctx context.Context, trk SensorTracker) {
+func runWorkers(ctx context.Context, trk SensorTracker, reg sensor.Registry) {
 	workerFuncs := sensorWorkers()
 	workerFuncs = append(workerFuncs, device.ExternalIPUpdater)
 
@@ -42,7 +42,7 @@ func runWorkers(ctx context.Context, trk SensorTracker) {
 		defer wg.Done()
 		for s := range sensor.MergeSensorCh(ctx, outCh...) {
 			go func(s sensor.Details) {
-				trk.UpdateSensor(ctx, s)
+				trk.UpdateSensor(ctx, reg, s)
 			}(s)
 		}
 	}()
@@ -64,7 +64,7 @@ func runWorkers(ctx context.Context, trk SensorTracker) {
 // to be run on their defined schedule using the cron scheduler. It also sets up
 // a channel to receive script output and send appropriate sensor objects to the
 // sensor.
-func runScripts(ctx context.Context, path string, trk SensorTracker) {
+func runScripts(ctx context.Context, path string, trk SensorTracker, reg sensor.Registry) {
 	allScripts, err := scripts.FindScripts(path)
 	switch {
 	case err != nil:
@@ -95,7 +95,7 @@ func runScripts(ctx context.Context, path string, trk SensorTracker) {
 	go func() {
 		for s := range sensor.MergeSensorCh(ctx, outCh...) {
 			go func(s sensor.Details) {
-				trk.UpdateSensor(ctx, s)
+				trk.UpdateSensor(ctx, reg, s)
 			}(s)
 		}
 	}()

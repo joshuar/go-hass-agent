@@ -9,8 +9,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
@@ -18,24 +16,19 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/joshuar/go-hass-agent/internal/hass"
-	registry "github.com/joshuar/go-hass-agent/internal/hass/sensor/registry/jsonFiles"
 )
-
-var basePath = filepath.Join(os.Getenv("HOME"), ".config")
 
 //go:generate moq -out mock_Registry_test.go . Registry
 type Registry interface {
 	SetDisabled(sensor string, state bool) error
 	SetRegistered(sensor string, state bool) error
-	IsDisabled(sensor string) chan bool
-	IsRegistered(sensor string) chan bool
-	Path() string
+	IsDisabled(sensor string) bool
+	IsRegistered(sensor string) bool
 }
 
 type SensorTracker struct {
-	registry Registry
-	sensor   map[string]Details
-	mu       sync.Mutex
+	sensor map[string]Details
+	mu     sync.Mutex
 }
 
 // Add creates a new sensor in the tracker based on a received state update.
@@ -80,14 +73,14 @@ func (t *SensorTracker) SensorList() []string {
 
 // UpdateSensor will UpdateSensor a sensor update to HA, checking to ensure the sensor is not
 // disabled. It will also update the local registry state based on the response.
-func (t *SensorTracker) UpdateSensor(ctx context.Context, upd Details) {
-	if disabled := <-t.registry.IsDisabled(upd.ID()); disabled {
+func (t *SensorTracker) UpdateSensor(ctx context.Context, reg Registry, upd Details) {
+	if reg.IsDisabled(upd.ID()) {
 		log.Debug().Str("id", upd.ID()).
 			Msg("Sensor is disabled. Ignoring update.")
 		return
 	}
 	var r any
-	if <-t.registry.IsRegistered(upd.ID()) {
+	if reg.IsRegistered(upd.ID()) {
 		r = UpdateRequest(SensorState(upd))
 	} else {
 		r = RegistrationRequest(SensorRegistration(upd))
@@ -100,7 +93,7 @@ func (t *SensorTracker) UpdateSensor(ctx context.Context, upd Details) {
 	}
 	switch r := resp.Body.(type) {
 	case *UpdateResponse:
-		if err := t.handleUpdates(r); err != nil {
+		if err := t.handleUpdates(reg, r); err != nil {
 			log.Warn().Err(err).Msg("Sensor update unsuccessful.")
 		} else {
 			log.Debug().
@@ -115,7 +108,7 @@ func (t *SensorTracker) UpdateSensor(ctx context.Context, upd Details) {
 			}
 		}
 	case *RegistrationResponse:
-		if err := t.handleRegistration(r, upd.ID()); err != nil {
+		if err := t.handleRegistration(reg, r, upd.ID()); err != nil {
 			log.Warn().Err(err).Str("id", upd.Name()).Msg("Unable to register ")
 		}
 		log.Debug().
@@ -129,13 +122,13 @@ func (t *SensorTracker) UpdateSensor(ctx context.Context, upd Details) {
 	}
 }
 
-func (t *SensorTracker) handleUpdates(r *UpdateResponse) error {
+func (t *SensorTracker) handleUpdates(reg Registry, r *UpdateResponse) error {
 	for sensor, details := range *r {
 		if !details.Success {
 			return fmt.Errorf("%d: %s", details.Error.Code, details.Error.Message)
 		}
-		if <-t.registry.IsDisabled(sensor) != details.Disabled {
-			if err := t.registry.SetDisabled(sensor, details.Disabled); err != nil {
+		if reg.IsDisabled(sensor) != details.Disabled {
+			if err := reg.SetDisabled(sensor, details.Disabled); err != nil {
 				log.Warn().Err(err).Str("id", sensor).Msg("Could not set disabled status in registry.")
 			} else {
 				log.Info().Str("id", sensor).Msg("Sensor disabled.")
@@ -145,33 +138,20 @@ func (t *SensorTracker) handleUpdates(r *UpdateResponse) error {
 	return nil
 }
 
-func (t *SensorTracker) handleRegistration(r *RegistrationResponse, s string) error {
+func (t *SensorTracker) handleRegistration(reg Registry, r *RegistrationResponse, s string) error {
 	if !r.Success {
 		return errors.New("registration unsuccessful")
 	}
-	return t.registry.SetRegistered(s, true)
+	return reg.SetRegistered(s, true)
 }
 
 func (t *SensorTracker) Reset() {
-	var err error
-	if err = os.RemoveAll(t.registry.Path()); err != nil {
-		log.Warn().Err(err).Msg("Could not remove existing registry DB.")
-	}
-	if t.registry, err = registry.NewJSONFilesRegistry(t.registry.Path()); err != nil {
-		log.Warn().Err(err).Msg("Could not recreate registry.")
-	}
 	t.sensor = nil
 }
 
-func NewSensorTracker(id string) (*SensorTracker, error) {
-	registryPath := filepath.Join(basePath, id, "sensorRegistry")
-	db, err := registry.NewJSONFilesRegistry(registryPath)
-	if err != nil {
-		return nil, err
-	}
+func NewSensorTracker() (*SensorTracker, error) {
 	sensorTracker := &SensorTracker{
-		registry: db,
-		sensor:   make(map[string]Details),
+		sensor: make(map[string]Details),
 	}
 	return sensorTracker, nil
 }

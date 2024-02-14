@@ -8,7 +8,6 @@ package hass
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -50,12 +49,8 @@ func TestRegisterWithHass(t *testing.T) {
 	}
 	mockServer := newMockServer(t)
 
-	mockDevInfo := &DeviceInfoMock{
-		MarshalJSONFunc: func() ([]byte, error) { return []byte(`{"AppName":"aDevice"}`), nil },
-	}
-	mockBadDevInfo := &DeviceInfoMock{
-		MarshalJSONFunc: func() ([]byte, error) { return nil, errors.New("bad device") },
-	}
+	mockDevInfo := &DeviceInfoMock{}
+	mockBadDevInfo := &DeviceInfoMock{}
 
 	type args struct {
 		ctx    context.Context

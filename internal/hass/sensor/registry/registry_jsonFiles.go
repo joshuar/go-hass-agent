@@ -14,11 +14,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/adrg/xdg"
 	"github.com/rs/zerolog/log"
 )
-
-var registryPath = filepath.Join(xdg.ConfigHome, "sensorRegistry")
 
 //go:generate stringer -type=state -output metadataStates.go -linecomment
 const (
@@ -58,20 +55,6 @@ func (j *jsonFilesRegistry) get(id string, valueType state) bool {
 		return meta.Registered
 	}
 	return false
-}
-
-func (j *jsonFilesRegistry) IsDisabled(id string) chan bool {
-	valueCh := make(chan bool, 1)
-	defer close(valueCh)
-	valueCh <- j.get(id, disabledState)
-	return valueCh
-}
-
-func (j *jsonFilesRegistry) IsRegistered(id string) chan bool {
-	valueCh := make(chan bool, 1)
-	defer close(valueCh)
-	valueCh <- j.get(id, registeredState)
-	return valueCh
 }
 
 func (j *jsonFilesRegistry) set(id string, valueType state, value bool) error {
@@ -117,6 +100,14 @@ func (j *jsonFilesRegistry) write(id string) error {
 	return os.WriteFile(path, b, 0o600)
 }
 
+func (j *jsonFilesRegistry) IsDisabled(id string) bool {
+	return j.get(id, disabledState)
+}
+
+func (j *jsonFilesRegistry) IsRegistered(id string) bool {
+	return j.get(id, registeredState)
+}
+
 func (j *jsonFilesRegistry) SetDisabled(id string, value bool) error {
 	return j.set(id, disabledState, value)
 }
@@ -125,20 +116,16 @@ func (j *jsonFilesRegistry) SetRegistered(id string, value bool) error {
 	return j.set(id, registeredState, value)
 }
 
-func (j *jsonFilesRegistry) Path() string {
-	return j.path
-}
-
-func NewJSONFilesRegistry(path string) (*jsonFilesRegistry, error) {
+func Load() (*jsonFilesRegistry, error) {
 	reg := &jsonFilesRegistry{
 		sensors: sync.Map{},
-		path:    path,
+		path:    registryPath,
 	}
-	pathErr := os.Mkdir(path, 0o755)
+	pathErr := os.Mkdir(registryPath, 0o755)
 	if pathErr != nil && !errors.Is(pathErr, fs.ErrExist) {
 		return nil, pathErr
 	}
-	files, err := filepath.Glob(path + "/*.json")
+	files, err := filepath.Glob(registryPath + "/*.json")
 	if err != nil {
 		return nil, err
 	}
