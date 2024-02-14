@@ -93,9 +93,6 @@ func ExecuteRequest(ctx context.Context, req any) <-chan Response {
 		return responseCh
 	}
 
-	requestCtx, cancel := context.WithTimeout(ctx, time.Second)
-	defer cancel()
-
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
@@ -105,7 +102,7 @@ func ExecuteRequest(ctx context.Context, req any) <-chan Response {
 		var err error
 		response := Response{}
 		cl := client.R().
-			SetContext(requestCtx).
+			SetContext(ctx).
 			SetError(&responseErr)
 		if a, ok := req.(Authenticated); ok {
 			cl = cl.SetAuthToken(a.Auth())
@@ -137,7 +134,6 @@ func ExecuteRequest(ctx context.Context, req any) <-chan Response {
 			response.Body = result
 		}
 		if err != nil {
-			cancel()
 			response.Error = NewAPIError("", err.Error())
 			responseCh <- response
 			return
@@ -150,7 +146,6 @@ func ExecuteRequest(ctx context.Context, req any) <-chan Response {
 			Time("received_at", resp.ReceivedAt()).
 			RawJSON("body", resp.Body()).Msg("Response received.")
 		if resp.IsError() {
-			cancel()
 			responseErr.StatusCode = resp.StatusCode()
 			response.Error = responseErr
 			responseCh <- response
