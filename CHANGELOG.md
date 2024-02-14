@@ -1,5 +1,36 @@
 # Changelog
 
+## [7.0.0](https://github.com/joshuar/go-hass-agent/compare/v6.5.0...v7.0.0) (2024-02-14)
+
+
+### ⚠ BREAKING CHANGES
+
+* major requests refactor
+* Legacy agent config package has been removed and replaced with preferences package. This breaks upgrades from all versions besides the last release in the previous major version series. **Users upgrading from older releases should first upgrade to the latest version of the last major release before this release, then upgrade to this release.**
+
+### Features
+
+* :alembic: add ability to run a trace/heap/cpu profile over execution lifetime ([43681ba](https://github.com/joshuar/go-hass-agent/commit/43681baafaeea738bc565a382a49615a14fdb797))
+* :recycle: rework sensor registry to abstract from sensor tracker ([9fa68bf](https://github.com/joshuar/go-hass-agent/commit/9fa68bf4c714aca28e205fc873059515b2e90bc1))
+* **agent:** :arrow_up: update for latest go-hass-anything ([db884fe](https://github.com/joshuar/go-hass-agent/commit/db884fe25c249e21fb5a19e91a4ed1b3e3dfcc69))
+* **hass:** :sparkles: new functions to retrieve entities from Home Assistant ([a3d0fc6](https://github.com/joshuar/go-hass-agent/commit/a3d0fc66c500f77d9ed2442a237669dfb91b6545))
+* **hass:** :sparkles: utilise new ExecuteRequest function ([dff2e83](https://github.com/joshuar/go-hass-agent/commit/dff2e835fc42594a8b5523f5d2f4e5cb2ec2c86d))
+* remove config and replace with preferences ([630d4e6](https://github.com/joshuar/go-hass-agent/commit/630d4e61c074c9d3bf10de23b9bc77eaa0715ae5))
+* **ui:** :lipstick: show dialogs for success/failure of saving preferences ([a2ab9c2](https://github.com/joshuar/go-hass-agent/commit/a2ab9c25b768246f0b4432d7f7308c9bb5414b51))
+* **ui:** :sparkles: show extra details in about window ([e8277cc](https://github.com/joshuar/go-hass-agent/commit/e8277cc4ff2526bfb6155f918e618050a5a55372))
+
+
+### Bug Fixes
+
+* :sparkles: log file name set in cmd package ([11c4dd1](https://github.com/joshuar/go-hass-agent/commit/11c4dd1a73c52a2438547b6289215350d1b7767e))
+* :zap: only retry if the server is overloaded by default ([1b4dfb3](https://github.com/joshuar/go-hass-agent/commit/1b4dfb3bb12060cb311c96e75ece778fe4b6caf1))
+* **agent:** :bug: pass appropriate context to runners ([d96a4e5](https://github.com/joshuar/go-hass-agent/commit/d96a4e55bfdb489bc41d1874012e490ec0dd1fa4))
+
+
+### Code Refactoring
+
+* major requests refactor ([45d6148](https://github.com/joshuar/go-hass-agent/commit/45d6148997b47b266cc5a19ce1791343c0a550aa))
+
 ## [6.5.0](https://github.com/joshuar/go-hass-agent/compare/v6.4.0...v6.5.0) (2024-02-06)
 
 
