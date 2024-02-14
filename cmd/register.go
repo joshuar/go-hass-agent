@@ -6,13 +6,18 @@
 package cmd
 
 import (
+	"path/filepath"
+
+	"github.com/adrg/xdg"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/joshuar/go-hass-agent/cmd/text"
 	"github.com/joshuar/go-hass-agent/internal/agent"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor/registry"
 	"github.com/joshuar/go-hass-agent/internal/logging"
+	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
 var (
@@ -39,8 +44,10 @@ var registerCmd = &cobra.Command{
 		})
 		var err error
 
+		registry.SetPath(filepath.Join(xdg.ConfigHome, agent.AppID(), "sensorRegistry"))
+		preferences.SetPath(filepath.Join(xdg.ConfigHome, agent.AppID()))
 		var trk *sensor.SensorTracker
-		if trk, err = sensor.NewSensorTracker(agent.AppID()); err != nil {
+		if trk, err = sensor.NewSensorTracker(); err != nil {
 			log.Fatal().Err(err).Msg("Could not start sensor sensor.")
 		}
 

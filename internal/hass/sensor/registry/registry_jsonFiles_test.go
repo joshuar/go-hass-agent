@@ -95,7 +95,7 @@ func Test_jsonFilesRegistry_IsDisabled(t *testing.T) {
 				sensors: tt.fields.sensors,
 				path:    tt.fields.path,
 			}
-			if got := <-j.IsDisabled(tt.args.id); !reflect.DeepEqual(got, tt.want) {
+			if got := j.IsDisabled(tt.args.id); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("jsonFilesRegistry.IsDisabled() = %v, want %v", got, tt.want)
 			}
 		})
@@ -132,7 +132,7 @@ func Test_jsonFilesRegistry_IsRegistered(t *testing.T) {
 				sensors: tt.fields.sensors,
 				path:    tt.fields.path,
 			}
-			if got := <-j.IsRegistered(tt.args.id); !reflect.DeepEqual(got, tt.want) {
+			if got := j.IsRegistered(tt.args.id); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("jsonFilesRegistry.IsRegistered() = %v, want %v", got, tt.want)
 			}
 		})
@@ -296,33 +296,21 @@ func Test_jsonFilesRegistry_SetRegistered(t *testing.T) {
 }
 
 func TestNewJsonFilesRegistry(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "go-hass-agent-test-*")
-	assert.Nil(t, err)
-	defer os.RemoveAll(tmpDir)
+	SetPath(t.TempDir())
 
-	type args struct {
-		path string
-	}
 	tests := []struct {
 		name    string
-		args    args
 		want    *jsonFilesRegistry
 		wantErr bool
 	}{
 		{
-			name:    "successful",
-			args:    args{path: tmpDir},
+			name:    "default",
 			wantErr: false,
-		},
-		{
-			name:    "unsuccessful",
-			args:    args{path: "/this/does/not/exist"},
-			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := NewJSONFilesRegistry(tt.args.path)
+			_, err := Load()
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewJsonFilesRegistry() error = %v, wantErr %v", err, tt.wantErr)
 				return

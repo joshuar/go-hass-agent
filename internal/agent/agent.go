@@ -19,6 +19,7 @@ import (
 
 	fyneui "github.com/joshuar/go-hass-agent/internal/agent/ui/fyneUI"
 	"github.com/joshuar/go-hass-agent/internal/hass"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
@@ -52,9 +53,8 @@ func New(o *Options) *Agent {
 // Run is the "main loop" of the agent. It sets up the agent, loads the config
 // then spawns a sensor tracker and the workers to gather sensor data and
 // publish it to Home Assistant.
-func (agent *Agent) Run(trk SensorTracker) {
+func (agent *Agent) Run(trk SensorTracker, reg sensor.Registry) {
 	var wg sync.WaitGroup
-	preferences.SetPath(filepath.Join(xdg.ConfigHome, agent.AppID()))
 
 	// Pre-flight: check if agent is registered. If not, run registration flow.
 	var regWait sync.WaitGroup
@@ -89,14 +89,14 @@ func (agent *Agent) Run(trk SensorTracker) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			runWorkers(runnerCtx, trk)
+			runWorkers(runnerCtx, trk, reg)
 		}()
 		// Start any scripts.
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			scriptPath := filepath.Join(xdg.ConfigHome, agent.AppID(), "scripts")
-			runScripts(runnerCtx, scriptPath, trk)
+			runScripts(runnerCtx, scriptPath, trk, reg)
 		}()
 		// Start the mqtt client
 		if prefs.MQTTEnabled {
