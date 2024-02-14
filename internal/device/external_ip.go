@@ -17,7 +17,6 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
-	"github.com/joshuar/go-hass-agent/internal/tracker"
 )
 
 var ipLookupHosts = map[string]map[int]string{
@@ -123,8 +122,8 @@ func lookupExternalIPs(ctx context.Context, ver int) chan *address {
 	return addrCh
 }
 
-func ExternalIPUpdater(ctx context.Context) chan tracker.Sensor {
-	sensorCh := make(chan tracker.Sensor, 1)
+func ExternalIPUpdater(ctx context.Context) chan sensor.Details {
+	sensorCh := make(chan sensor.Details, 1)
 	updateExternalIP := func(_ time.Duration) {
 		requestCtx, cancel := context.WithTimeout(ctx, time.Second*15)
 		defer cancel()

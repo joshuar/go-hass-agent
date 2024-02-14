@@ -11,8 +11,8 @@ import (
 	"github.com/godbus/dbus/v5"
 	"github.com/rs/zerolog/log"
 
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
-	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
@@ -35,8 +35,8 @@ func newPowerSensor(t linux.SensorTypeValue, v dbus.Variant) *powerSensor {
 	return s
 }
 
-func PowerProfileUpdater(ctx context.Context) chan tracker.Sensor {
-	sensorCh := make(chan tracker.Sensor, 1)
+func PowerProfileUpdater(ctx context.Context) chan sensor.Details {
+	sensorCh := make(chan sensor.Details, 1)
 	activePowerProfile, err := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
 		Path(powerProfilesDBusPath).
 		Destination(powerProfilesDBusDest).

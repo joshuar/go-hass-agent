@@ -14,8 +14,8 @@ import (
 	"github.com/iancoleman/strcase"
 	"github.com/rs/zerolog/log"
 
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
-	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
@@ -79,10 +79,10 @@ func (c *connection) State() any {
 	return c.state.String()
 }
 
-func (c *connection) monitorConnectionState(ctx context.Context) chan tracker.Sensor {
+func (c *connection) monitorConnectionState(ctx context.Context) chan sensor.Details {
 	log.Debug().Str("connection", c.Name()).Str("path", string(c.path)).
 		Msg("Monitoring connection state.")
-	sensorCh := make(chan tracker.Sensor, 1)
+	sensorCh := make(chan sensor.Details, 1)
 	err := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
 		Match([]dbus.MatchOption{
 			dbus.WithMatchObjectPath(dbusNMActiveConnPath),
@@ -123,10 +123,10 @@ func (c *connection) monitorConnectionState(ctx context.Context) chan tracker.Se
 	return sensorCh
 }
 
-func (c *connection) monitorAddresses(ctx context.Context) chan tracker.Sensor {
+func (c *connection) monitorAddresses(ctx context.Context) chan sensor.Details {
 	log.Debug().Str("connection", c.Name()).Str("path", string(c.path)).
 		Msg("Monitoring address changes.")
-	sensorCh := make(chan tracker.Sensor, 1)
+	sensorCh := make(chan sensor.Details, 1)
 	go func() {
 		r := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
 			Path(c.path).
@@ -194,13 +194,13 @@ func (c *connection) monitorAddresses(ctx context.Context) chan tracker.Sensor {
 	return sensorCh
 }
 
-func (c *connection) monitor(ctx context.Context) <-chan tracker.Sensor {
+func (c *connection) monitor(ctx context.Context) <-chan sensor.Details {
 	log.Debug().Str("connection", c.Name()).Str("path", string(c.path)).
 		Msg("Monitoring connection.")
-	var outCh []<-chan tracker.Sensor
+	var outCh []<-chan sensor.Details
 	connCtx, cancelFunc := context.WithCancel(ctx)
 	go func() {
-		sensorCh := make(chan tracker.Sensor, 1)
+		sensorCh := make(chan sensor.Details, 1)
 		defer close(sensorCh)
 		outCh = append(outCh, sensorCh)
 		for s := range c.monitorConnectionState(connCtx) {
@@ -215,7 +215,7 @@ func (c *connection) monitor(ctx context.Context) <-chan tracker.Sensor {
 	case "802-11-wireless":
 		outCh = append(outCh, getWifiProperties(connCtx, c.path))
 	}
-	return tracker.MergeSensorCh(ctx, outCh...)
+	return sensor.MergeSensorCh(ctx, outCh...)
 }
 
 func newConnection(ctx context.Context, p dbus.ObjectPath) *connection {
@@ -290,8 +290,8 @@ func getActiveConnections(ctx context.Context) []dbus.ObjectPath {
 	return dbusx.VariantToValue[[]dbus.ObjectPath](v)
 }
 
-func monitorActiveConnections(ctx context.Context) chan tracker.Sensor {
-	sensorCh := make(chan tracker.Sensor, 1)
+func monitorActiveConnections(ctx context.Context) chan sensor.Details {
+	sensorCh := make(chan sensor.Details, 1)
 	conns := getActiveConnections(ctx)
 
 	handleConn := func(path dbus.ObjectPath) {
@@ -336,6 +336,6 @@ func monitorActiveConnections(ctx context.Context) chan tracker.Sensor {
 	return sensorCh
 }
 
-func ConnectionsUpdater(ctx context.Context) chan tracker.Sensor {
+func ConnectionsUpdater(ctx context.Context) chan sensor.Details {
 	return monitorActiveConnections(ctx)
 }

@@ -8,9 +8,11 @@ package hass
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"sync"
 
-	"github.com/joshuar/go-hass-agent/internal/hass/api"
+	"github.com/go-resty/resty/v2"
+
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
@@ -49,14 +51,6 @@ func (c *Config) IsEntityDisabled(entity string) (bool, error) {
 	return false, nil
 }
 
-func (c *Config) URL() string {
-	prefs, err := preferences.Load()
-	if err != nil {
-		return ""
-	}
-	return prefs.RestAPIURL
-}
-
 func (c *Config) RequestBody() json.RawMessage {
 	return json.RawMessage(`{ "type": "get_config" }`)
 }
@@ -64,11 +58,22 @@ func (c *Config) RequestBody() json.RawMessage {
 func (c *Config) ResponseBody() any { return c }
 
 func GetConfig(ctx context.Context) (*Config, error) {
-	c := new(Config)
+	prefs, err := preferences.Load()
+	if err != nil {
+		return nil, errors.New("could not load preferences")
+	}
+	ctx = ContextSetURL(ctx, prefs.RestAPIURL)
+	ctx = ContextSetClient(ctx, resty.New())
 
-	resp := <-api.ExecuteRequest2(ctx, c)
+	resp := <-ExecuteRequest(ctx, new(Config))
 	if resp.Error != nil {
 		return nil, resp.Error
 	}
-	return resp.Body.(*Config), nil
+
+	var config *Config
+	var ok bool
+	if config, ok = resp.Body.(*Config); !ok {
+		return nil, ErrResponseMalformed
+	}
+	return config, nil
 }

@@ -9,7 +9,7 @@ import (
 	"context"
 
 	"github.com/joshuar/go-hass-agent/internal/agent/ui"
-	"github.com/joshuar/go-hass-agent/internal/tracker"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 )
 
 //go:generate moq -out mockDevice_test.go . Device
@@ -33,7 +33,7 @@ type UI interface {
 //go:generate moq -out mockSensorTracker_test.go . SensorTracker
 type SensorTracker interface {
 	SensorList() []string
-	UpdateSensors(ctx context.Context, sensor any)
-	Get(key string) (tracker.Sensor, error)
+	UpdateSensor(ctx context.Context, sensor sensor.Details)
+	Get(key string) (sensor.Details, error)
 	Reset()
 }

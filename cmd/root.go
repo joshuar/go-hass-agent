@@ -14,8 +14,8 @@ import (
 
 	"github.com/joshuar/go-hass-agent/cmd/text"
 	"github.com/joshuar/go-hass-agent/internal/agent"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/logging"
-	"github.com/joshuar/go-hass-agent/internal/tracker"
 )
 
 var (
@@ -42,9 +42,9 @@ var rootCmd = &cobra.Command{
 		})
 		var err error
 
-		var trk *tracker.SensorTracker
-		if trk, err = tracker.NewSensorTracker(agent.AppID()); err != nil {
-			log.Fatal().Err(err).Msg("Could not start sensor tracker.")
+		var trk *sensor.SensorTracker
+		if trk, err = sensor.NewSensorTracker(agent.AppID()); err != nil {
+			log.Fatal().Err(err).Msg("Could not start sensor sensor.")
 		}
 
 		agent.Run(trk)

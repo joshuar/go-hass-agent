@@ -8,13 +8,13 @@ package agent
 import (
 	"testing"
 
-	"github.com/joshuar/go-hass-agent/internal/hass/api"
+	"github.com/joshuar/go-hass-agent/internal/hass"
 )
 
 func TestRegistrationResponse_GenerateAPIURL(t *testing.T) {
 	type args struct {
 		host string
-		resp *api.RegistrationResponse
+		resp *hass.RegistrationResponse
 	}
 	tests := []struct {
 		name string
@@ -25,7 +25,7 @@ func TestRegistrationResponse_GenerateAPIURL(t *testing.T) {
 			name: "valid cloudhookurl",
 			args: args{
 				host: "http://localhost",
-				resp: &api.RegistrationResponse{
+				resp: &hass.RegistrationResponse{
 					CloudhookURL: "http://localhost/cloudhook",
 				},
 			},
@@ -35,28 +35,28 @@ func TestRegistrationResponse_GenerateAPIURL(t *testing.T) {
 			name: "valid remoteuiurl",
 			args: args{
 				host: "http://localhost",
-				resp: &api.RegistrationResponse{
+				resp: &hass.RegistrationResponse{
 					RemoteUIURL: "http://localhost/remoteuiurl",
 					WebhookID:   "foobar",
 				},
 			},
-			want: "http://localhost/remoteuiurl" + api.WebHookPath + "foobar",
+			want: "http://localhost/remoteuiurl" + hass.WebHookPath + "foobar",
 		},
 		{
 			name: "webhookid only",
 			args: args{
 				host: "http://localhost",
-				resp: &api.RegistrationResponse{
+				resp: &hass.RegistrationResponse{
 					WebhookID: "foobar",
 				},
 			},
-			want: "http://localhost" + api.WebHookPath + "foobar",
+			want: "http://localhost" + hass.WebHookPath + "foobar",
 		},
 		{
 			name: "all defined cloudhookurl",
 			args: args{
 				host: "http://localhost",
-				resp: &api.RegistrationResponse{
+				resp: &hass.RegistrationResponse{
 					CloudhookURL: "http://localhost/cloudhook",
 					RemoteUIURL:  "http://localhost/remoteuiurl",
 					WebhookID:    "foobar",
@@ -96,7 +96,7 @@ func TestRegistrationResponse_GenerateWebsocketURL(t *testing.T) {
 			args: args{
 				host: "http://localhost",
 			},
-			want: "ws://localhost" + api.WebsocketPath,
+			want: "ws://localhost" + hass.WebsocketPath,
 		},
 		{
 			name:   "wss conversion",
@@ -104,7 +104,7 @@ func TestRegistrationResponse_GenerateWebsocketURL(t *testing.T) {
 			args: args{
 				host: "https://localhost",
 			},
-			want: "wss://localhost" + api.WebsocketPath,
+			want: "wss://localhost" + hass.WebsocketPath,
 		},
 		{
 			name:   "ws",
@@ -112,7 +112,7 @@ func TestRegistrationResponse_GenerateWebsocketURL(t *testing.T) {
 			args: args{
 				host: "ws://localhost",
 			},
-			want: "ws://localhost" + api.WebsocketPath,
+			want: "ws://localhost" + hass.WebsocketPath,
 		},
 		{
 			name:   "wss",
@@ -120,7 +120,7 @@ func TestRegistrationResponse_GenerateWebsocketURL(t *testing.T) {
 			args: args{
 				host: "wss://localhost",
 			},
-			want: "wss://localhost" + api.WebsocketPath,
+			want: "wss://localhost" + hass.WebsocketPath,
 		},
 	}
 	for _, tt := range tests {

@@ -15,15 +15,14 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
-	"github.com/joshuar/go-hass-agent/internal/tracker"
 )
 
 type cpuUsageSensor struct {
 	linux.Sensor
 }
 
-func UsageUpdater(ctx context.Context) chan tracker.Sensor {
-	sensorCh := make(chan tracker.Sensor)
+func UsageUpdater(ctx context.Context) chan sensor.Details {
+	sensorCh := make(chan sensor.Details)
 	sendCPUUsage := func(d time.Duration) {
 		usage, err := cpu.Percent(d, false)
 		if err != nil {

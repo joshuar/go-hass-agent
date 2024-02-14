@@ -13,7 +13,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/joshuar/go-hass-agent/internal/hass/api"
+	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 
 	"github.com/go-playground/validator/v10"
@@ -23,7 +23,7 @@ import (
 // request and the successful response in the agent preferences. This includes,
 // most importantly, details on the URL that should be used to send subsequent
 // requests to Home Assistant.
-func saveRegistration(server, token string, resp *api.RegistrationResponse, dev api.DeviceInfo) error {
+func saveRegistration(server, token string, resp *hass.RegistrationResponse, dev hass.DeviceInfo) error {
 	return preferences.Save(
 		preferences.Host(server),
 		preferences.Token(token),
@@ -61,7 +61,7 @@ func (agent *Agent) performRegistration(ctx context.Context, server, token strin
 
 	// Register with Home Assistant.
 	device := newDevice(ctx)
-	resp, err := api.RegisterWithHass(ctx, server, token, device)
+	resp, err := hass.RegisterWithHass(ctx, server, token, device)
 	if err != nil {
 		return errors.New("could not register with Home Assistant")
 	}
@@ -118,15 +118,15 @@ func validRegistrationSetting(key, value string) bool {
 	}
 }
 
-func generateAPIURL(host string, resp *api.RegistrationResponse) string {
+func generateAPIURL(host string, resp *hass.RegistrationResponse) string {
 	switch {
 	case resp.CloudhookURL != "":
 		return resp.CloudhookURL
 	case resp.RemoteUIURL != "" && resp.WebhookID != "":
-		return resp.RemoteUIURL + api.WebHookPath + resp.WebhookID
+		return resp.RemoteUIURL + hass.WebHookPath + resp.WebhookID
 	case resp.WebhookID != "":
 		u, _ := url.Parse(host)
-		u = u.JoinPath(api.WebHookPath, resp.WebhookID)
+		u = u.JoinPath(hass.WebHookPath, resp.WebhookID)
 		return u.String()
 	default:
 		return ""
@@ -152,6 +152,6 @@ func generateWebsocketURL(host string) string {
 	default:
 		u.Scheme = "ws"
 	}
-	u = u.JoinPath(api.WebsocketPath)
+	u = u.JoinPath(hass.WebsocketPath)
 	return u.String()
 }

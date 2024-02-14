@@ -14,8 +14,11 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/adrg/xdg"
 	"github.com/rs/zerolog/log"
 )
+
+var registryPath = filepath.Join(xdg.ConfigHome, "sensorRegistry")
 
 //go:generate stringer -type=state -output metadataStates.go -linecomment
 const (

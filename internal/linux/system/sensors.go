@@ -19,7 +19,6 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
-	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/joshuar/go-hass-agent/pkg/linux/hwmon"
 )
 
@@ -98,8 +97,8 @@ func newHWSensor(s *hwmon.Sensor) *hwSensor {
 	return hw
 }
 
-func HWSensorUpdater(ctx context.Context) chan tracker.Sensor {
-	sensorCh := make(chan tracker.Sensor, 1)
+func HWSensorUpdater(ctx context.Context) chan sensor.Details {
+	sensorCh := make(chan sensor.Details, 1)
 	update := func(_ time.Duration) {
 		allSensors := hwmon.GetAllSensors()
 		for _, s := range allSensors {

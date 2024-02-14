@@ -10,8 +10,8 @@ import (
 
 	"github.com/godbus/dbus/v5"
 
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
-	"github.com/joshuar/go-hass-agent/internal/tracker"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 
 	"github.com/rs/zerolog/log"
@@ -24,8 +24,8 @@ const (
 	appStateDBusEvent     = "org.freedesktop.impl.portal.Background.RunningApplicationsChanged"
 )
 
-func Updater(ctx context.Context) chan tracker.Sensor {
-	sensorCh := make(chan tracker.Sensor)
+func Updater(ctx context.Context) chan sensor.Details {
+	sensorCh := make(chan sensor.Details)
 	portalDest := linux.FindPortal()
 	if portalDest == "" {
 		log.Warn().
