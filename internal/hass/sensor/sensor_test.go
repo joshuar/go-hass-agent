@@ -127,54 +127,7 @@ func Test_request_RequestBody(t *testing.T) {
 	}
 }
 
-func Test_request_ResponseBody(t *testing.T) {
-	var stateData, registrationData []byte
-	var err error
-	stateData, err = json.Marshal(newSensorState(&mockSensor))
-	assert.Nil(t, err)
-	registrationData, err = json.Marshal(newSensorRegistration(&mockSensor))
-	assert.Nil(t, err)
-
-	type fields struct {
-		RequestType string
-		Data        json.RawMessage
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   any
-	}{
-		{
-			name: "update",
-			fields: fields{
-				RequestType: requestTypeUpdate,
-				Data:        stateData,
-			},
-			want: &UpdateResponse{},
-		},
-		{
-			name: "registration",
-			fields: fields{
-				RequestType: requestTypeRegister,
-				Data:        registrationData,
-			},
-			want: &RegistrationResponse{},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			r := &request{
-				RequestType: tt.fields.RequestType,
-				Data:        tt.fields.Data,
-			}
-			if got := r.ResponseBody(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("request.ResponseBody() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestUpdateRequest(t *testing.T) {
+func TestNewUpdateRequest(t *testing.T) {
 	data, err := json.Marshal([]*sensorState{newSensorState(&mockSensor)})
 	assert.Nil(t, err)
 
@@ -197,14 +150,14 @@ func TestUpdateRequest(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := UpdateRequest(tt.args.s...); !reflect.DeepEqual(got, tt.want) {
+			if got := NewUpdateRequest(tt.args.s...); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("UpdateRequest() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func TestRegistrationRequest(t *testing.T) {
+func TestNewRegistrationRequest(t *testing.T) {
 	data, err := json.Marshal(newSensorRegistration(&mockSensor))
 	assert.Nil(t, err)
 
@@ -227,7 +180,7 @@ func TestRegistrationRequest(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := RegistrationRequest(tt.args.s); !reflect.DeepEqual(got, tt.want) {
+			if got := NewRegistrationRequest(tt.args.s); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("RegistrationRequest() = %v, want %v", got, tt.want)
 			}
 		})

@@ -17,6 +17,12 @@ import (
 )
 
 type Config struct {
+	err     error
+	Details *ConfigEntries
+	mu      sync.Mutex
+}
+
+type ConfigEntries struct {
 	Entities              map[string]map[string]any `json:"entities"`
 	UnitSystem            units                     `json:"unit_system"`
 	ConfigDir             string                    `json:"config_dir"`
@@ -28,7 +34,6 @@ type Config struct {
 	Elevation             int                       `json:"elevation"`
 	Latitude              float64                   `json:"latitude"`
 	Longitude             float64                   `json:"longitude"`
-	mu                    sync.Mutex                `json:"-"`
 }
 
 type units struct {
@@ -41,7 +46,7 @@ type units struct {
 func (c *Config) IsEntityDisabled(entity string) (bool, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if v, ok := c.Entities[entity]["disabled"]; ok {
+	if v, ok := c.Details.Entities[entity]["disabled"]; ok {
 		if disabledState, ok := v.(bool); !ok {
 			return false, nil
 		} else {
@@ -51,11 +56,23 @@ func (c *Config) IsEntityDisabled(entity string) (bool, error) {
 	return false, nil
 }
 
-func (c *Config) RequestBody() json.RawMessage {
-	return json.RawMessage(`{ "type": "get_config" }`)
+func (c *Config) UnmarshalJSON(b []byte) error {
+	return json.Unmarshal(b, &c.Details)
 }
 
-func (c *Config) ResponseBody() any { return c }
+func (c *Config) StoreError(e error) {
+	c.err = e
+}
+
+func (c *Config) Error() string {
+	return c.err.Error()
+}
+
+type configRequest struct{}
+
+func (c *configRequest) RequestBody() json.RawMessage {
+	return json.RawMessage(`{ "type": "get_config" }`)
+}
 
 func GetConfig(ctx context.Context) (*Config, error) {
 	prefs, err := preferences.Load()
@@ -65,15 +82,13 @@ func GetConfig(ctx context.Context) (*Config, error) {
 	ctx = ContextSetURL(ctx, prefs.RestAPIURL)
 	ctx = ContextSetClient(ctx, resty.New())
 
-	resp := <-ExecuteRequest(ctx, new(Config))
-	if resp.Error != nil {
-		return nil, resp.Error
+	req := &configRequest{}
+	resp := &Config{}
+
+	ExecuteRequest(ctx, req, resp)
+	if errors.Is(resp, &APIError{}) {
+		return nil, resp
 	}
 
-	var config *Config
-	var ok bool
-	if config, ok = resp.Body.(*Config); !ok {
-		return nil, ErrResponseMalformed
-	}
-	return config, nil
+	return resp, nil
 }

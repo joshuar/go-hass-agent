@@ -7,7 +7,6 @@ package sensor
 
 import (
 	"encoding/json"
-	"strings"
 )
 
 const (
@@ -91,19 +90,7 @@ func (r *request) RequestBody() json.RawMessage {
 	return json.RawMessage(data)
 }
 
-func (r *request) ResponseBody() any {
-	if strings.Contains(r.RequestType, requestTypeUpdate) {
-		resp := make(UpdateResponse)
-		return &resp
-	}
-	if strings.Contains(r.RequestType, requestTypeRegister) {
-		return &RegistrationResponse{}
-	}
-	resp := make(map[string]any)
-	return &resp
-}
-
-func UpdateRequest(s ...SensorState) *request {
+func NewUpdateRequest(s ...SensorState) *request {
 	var updates []*sensorState
 	for _, u := range s {
 		updates = append(updates, newSensorState(u))
@@ -118,7 +105,7 @@ func UpdateRequest(s ...SensorState) *request {
 	}
 }
 
-func RegistrationRequest(s SensorRegistration) *request {
+func NewRegistrationRequest(s SensorRegistration) *request {
 	data, err := json.Marshal(newSensorRegistration(s))
 	if err != nil {
 		return nil
@@ -140,16 +127,56 @@ type details struct {
 	Code    int    `json:"code,omitempty"`
 }
 
-type UpdateResponse map[string]*response
+type updateResponse struct {
+	Body map[string]*response
+	err  error
+}
 
-type RegistrationResponse response
+func (u *updateResponse) UnmarshalJSON(b []byte) error {
+	return json.Unmarshal(b, &u.Body)
+}
+
+func (u *updateResponse) StoreError(e error) {
+	u.err = e
+}
+
+func (u *updateResponse) Error() string {
+	return u.err.Error()
+}
+
+func NewUpdateResponse() *updateResponse {
+	return &updateResponse{
+		Body: make(map[string]*response),
+	}
+}
+
+type registrationResponse struct {
+	err  error
+	Body response
+}
+
+func (r *registrationResponse) UnmarshalJSON(b []byte) error {
+	return json.Unmarshal(b, &r.Body)
+}
+
+func (r *registrationResponse) StoreError(e error) {
+	r.err = e
+}
+
+func (r *registrationResponse) Error() string {
+	return r.err.Error()
+}
+
+func NewRegistrationResponse() *registrationResponse {
+	return &registrationResponse{}
+}
 
 type comparableStringer interface {
 	comparable
 	String() string
 }
 
-func returnZero[T any](s ...T) T {
+func returnZero[T any](c ...T) T {
 	var zero T
 	return zero
 }
