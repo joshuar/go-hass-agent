@@ -26,13 +26,13 @@ type Registry interface {
 	IsRegistered(sensor string) bool
 }
 
-type SensorTracker struct {
+type Tracker struct {
 	sensor map[string]Details
 	mu     sync.Mutex
 }
 
 // Add creates a new sensor in the tracker based on a received state update.
-func (t *SensorTracker) add(s Details) error {
+func (t *Tracker) add(s Details) error {
 	t.mu.Lock()
 	if t.sensor == nil {
 		t.mu.Unlock()
@@ -44,7 +44,7 @@ func (t *SensorTracker) add(s Details) error {
 }
 
 // Get fetches a sensors current tracked state.
-func (t *SensorTracker) Get(id string) (Details, error) {
+func (t *Tracker) Get(id string) (Details, error) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	if t.sensor[id] != nil {
@@ -54,7 +54,7 @@ func (t *SensorTracker) Get(id string) (Details, error) {
 	}
 }
 
-func (t *SensorTracker) SensorList() []string {
+func (t *Tracker) SensorList() []string {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	if t.sensor == nil {
@@ -73,7 +73,7 @@ func (t *SensorTracker) SensorList() []string {
 
 // UpdateSensor will UpdateSensor a sensor update to HA, checking to ensure the sensor is not
 // disabled. It will also update the local registry state based on the response.
-func (t *SensorTracker) UpdateSensor(ctx context.Context, reg Registry, upd Details) {
+func (t *Tracker) UpdateSensor(ctx context.Context, reg Registry, upd Details) {
 	if reg.IsDisabled(upd.ID()) {
 		log.Debug().Str("id", upd.ID()).
 			Msg("Sensor is disabled. Ignoring update.")
@@ -94,7 +94,7 @@ func (t *SensorTracker) UpdateSensor(ctx context.Context, reg Registry, upd Deta
 	handleResponse(resp, t, upd, reg)
 }
 
-func handleResponse(resp hass.Response, trk *SensorTracker, upd Details, reg Registry) {
+func handleResponse(resp hass.Response, trk *Tracker, upd Details, reg Registry) {
 	switch r := resp.Body.(type) {
 	case *UpdateResponse:
 		if err := handleUpdates(reg, r); err != nil {
@@ -149,12 +149,12 @@ func handleRegistration(reg Registry, r *RegistrationResponse, s string) error {
 	return reg.SetRegistered(s, true)
 }
 
-func (t *SensorTracker) Reset() {
+func (t *Tracker) Reset() {
 	t.sensor = nil
 }
 
-func NewSensorTracker() (*SensorTracker, error) {
-	sensorTracker := &SensorTracker{
+func NewTracker() (*Tracker, error) {
+	sensorTracker := &Tracker{
 		sensor: make(map[string]Details),
 	}
 	return sensorTracker, nil

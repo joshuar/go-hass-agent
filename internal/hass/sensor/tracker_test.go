@@ -11,9 +11,10 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/registry"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestSensorTracker_add(t *testing.T) {
@@ -47,7 +48,7 @@ func TestSensorTracker_add(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tr := &SensorTracker{
+			tr := &Tracker{
 				sensor: tt.fields.sensor,
 				mu:     tt.fields.mu,
 			}
@@ -93,7 +94,7 @@ func TestSensorTracker_Get(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tr := &SensorTracker{
+			tr := &Tracker{
 				sensor: tt.fields.sensor,
 				mu:     tt.fields.mu,
 			}
@@ -135,7 +136,7 @@ func TestSensorTracker_SensorList(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tr := &SensorTracker{
+			tr := &Tracker{
 				sensor: tt.fields.sensor,
 				mu:     tt.fields.mu,
 			}
@@ -210,7 +211,7 @@ func TestSensorTracker_UpdateSensor(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tr := &SensorTracker{
+			tr := &Tracker{
 				sensor: tt.fields.sensor,
 				mu:     tt.fields.mu,
 			}
@@ -226,7 +227,7 @@ func TestNewSensorTracker(t *testing.T) {
 	}
 	tests := []struct {
 		name    string
-		want    *SensorTracker
+		want    *Tracker
 		wantErr bool
 	}{
 		{
@@ -235,7 +236,7 @@ func TestNewSensorTracker(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := NewSensorTracker()
+			_, err := NewTracker()
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewSensorTracker() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -307,7 +308,7 @@ func TestSensorTracker_Reset(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tr := &SensorTracker{
+			tr := &Tracker{
 				sensor: tt.fields.sensor,
 				mu:     tt.fields.mu,
 			}
@@ -363,7 +364,7 @@ func Test_handleRegistration(t *testing.T) {
 func Test_handleResponse(t *testing.T) {
 	type args struct {
 		resp hass.Response
-		trk  *SensorTracker
+		trk  *Tracker
 		upd  Details
 		reg  Registry
 	}
