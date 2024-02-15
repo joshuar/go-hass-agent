@@ -42,31 +42,36 @@ func Updater(ctx context.Context) chan *hass.LocationData {
 		}
 	}
 
-	clientPath := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
+	clientReq := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
 		Path(geocluePath).
-		Destination(geoclueInterface).GetData(getClientCall).AsObjectPath()
-	if !clientPath.IsValid() {
-		log.Error().Msg("Could not set up a geoclue client.")
+		Destination(geoclueInterface)
+
+	var clientPath dbus.ObjectPath
+	var err error
+
+	clientPath, err = dbusx.GetData[dbus.ObjectPath](clientReq, getClientCall)
+	if !clientPath.IsValid() || err != nil {
+		log.Error().Err(err).Msg("Could not set up a geoclue client.")
 		close(sensorCh)
 		return sensorCh
 	}
 	locationRequest := dbusx.NewBusRequest(ctx, dbusx.SystemBus).Path(clientPath).Destination(geoclueInterface)
 
-	if err := locationRequest.SetProp(desktopIDProp, dbus.MakeVariant(appID)); err != nil {
+	if err = dbusx.SetProp(locationRequest, desktopIDProp, appID); err != nil {
 		log.Error().Err(err).Msg("Could not set a geoclue client id.")
 		close(sensorCh)
 		return sensorCh
 	}
 
-	if err := locationRequest.SetProp(distanceThresholdProp, dbus.MakeVariant(uint32(0))); err != nil {
+	if err = dbusx.SetProp(locationRequest, distanceThresholdProp, uint32(0)); err != nil {
 		log.Warn().Err(err).Msg("Could not set distance threshold for geoclue requests.")
 	}
 
-	if err := locationRequest.SetProp(timeThresholdProp, dbus.MakeVariant(uint32(0))); err != nil {
+	if err = dbusx.SetProp(locationRequest, timeThresholdProp, uint32(0)); err != nil {
 		log.Warn().Err(err).Msg("Could not set time threshold for geoclue requests.")
 	}
 
-	if err := locationRequest.Call(startCall); err != nil {
+	if err = locationRequest.Call(startCall); err != nil {
 		log.Warn().Err(err).Msg("Could not start geoclue client.")
 		close(sensorCh)
 		return sensorCh
@@ -74,7 +79,7 @@ func Updater(ctx context.Context) chan *hass.LocationData {
 
 	log.Debug().Msg("Tracking location with geoclue.")
 
-	err := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
+	err = dbusx.NewBusRequest(ctx, dbusx.SystemBus).
 		Match([]dbus.MatchOption{
 			dbus.WithMatchObjectPath(clientPath),
 			dbus.WithMatchInterface(clientInterface),
@@ -100,16 +105,16 @@ func Updater(ctx context.Context) chan *hass.LocationData {
 
 func newLocation(ctx context.Context, locationPath dbus.ObjectPath) *hass.LocationData {
 	getProp := func(prop string) float64 {
-		value, err := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
+		req := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
 			Path(locationPath).
-			Destination(geoclueInterface).
-			GetProp("org.freedesktop.GeoClue2.Location." + prop)
+			Destination(geoclueInterface)
+		value, err := dbusx.GetProp[float64](req, "org.freedesktop.GeoClue2.Location."+prop)
 		if err != nil {
 			log.Debug().Caller().Err(err).
 				Msgf("Could not retrieve %s.", prop)
 			return 0
 		} else {
-			return dbusx.VariantToValue[float64](value)
+			return value
 		}
 	}
 	return &hass.LocationData{

@@ -128,16 +128,20 @@ func (c *connection) monitorAddresses(ctx context.Context) chan sensor.Details {
 		Msg("Monitoring address changes.")
 	sensorCh := make(chan sensor.Details, 1)
 	go func() {
-		r := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
+		req := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
 			Path(c.path).
 			Destination(dBusNMObj)
-		v, _ := r.GetProp(dbusNMActiveConnIntr + ".Ip4Config")
-		if !v.Signature().Empty() {
-			c.attrs.Ipv4, c.attrs.IPv4Mask = getAddr(ctx, 4, dbusx.VariantToValue[dbus.ObjectPath](v))
+		v, err := dbusx.GetProp[dbus.ObjectPath](req, dbusNMActiveConnIntr+".Ip4Config")
+		if err != nil {
+			log.Warn().Err(err).Msg("Could not retrieve IPv4 address.")
+		} else {
+			c.attrs.Ipv4, c.attrs.IPv4Mask = getAddr(ctx, 4, v)
 		}
-		v, _ = r.GetProp(dbusNMActiveConnIntr + ".Ip6Config")
-		if !v.Signature().Empty() {
-			c.attrs.Ipv6, c.attrs.IPv6Mask = getAddr(ctx, 6, dbusx.VariantToValue[dbus.ObjectPath](v))
+		v, err = dbusx.GetProp[dbus.ObjectPath](req, dbusNMActiveConnIntr+".Ip6Config")
+		if err != nil {
+			log.Warn().Err(err).Msg("Could not retrieve IPv6 address.")
+		} else {
+			c.attrs.Ipv6, c.attrs.IPv6Mask = getAddr(ctx, 6, v)
 		}
 		sensorCh <- c
 	}()
@@ -229,20 +233,21 @@ func newConnection(ctx context.Context, p dbus.ObjectPath) *connection {
 	c.SensorTypeValue = linux.SensorConnectionState
 	c.IsDiagnostic = true
 
-	r := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
+	req := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
 		Path(p).
 		Destination(dBusNMObj)
-	v, _ := r.GetProp(dbusNMActiveConnIntr + ".Id")
-	if !v.Signature().Empty() {
-		c.name = dbusx.VariantToValue[string](v)
+	var err error
+	c.name, err = dbusx.GetProp[string](req, dbusNMActiveConnIntr+".Id")
+	if err != nil {
+		log.Warn().Err(err).Msg("Could not retrieve connection ID.")
 	}
-	v, _ = r.GetProp(dbusNMActiveConnIntr + ".State")
-	if !v.Signature().Empty() {
-		c.state = dbusx.VariantToValue[connState](v)
+	c.state, err = dbusx.GetProp[connState](req, dbusNMActiveConnIntr+".State")
+	if err != nil {
+		log.Warn().Err(err).Msg("Could not retrieve connection state.")
 	}
-	v, _ = r.GetProp(dbusNMActiveConnIntr + ".Type")
-	if !v.Signature().Empty() {
-		c.attrs.ConnectionType = dbusx.VariantToValue[string](v)
+	c.attrs.ConnectionType, err = dbusx.GetProp[string](req, dbusNMActiveConnIntr+".Type")
+	if err != nil {
+		log.Warn().Err(err).Msg("Could not retrieve connection type.")
 	}
 	return c
 }
@@ -258,14 +263,13 @@ func getAddr(ctx context.Context, ver int, path dbus.ObjectPath) (addr string, m
 	case 6:
 		connProp = dBusNMObj + ".IP6Config"
 	}
-	v, err := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
+	req := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
 		Path(path).
-		Destination(dBusNMObj).
-		GetProp(connProp + ".AddressData")
+		Destination(dBusNMObj)
+	addrDetails, err := dbusx.GetProp[[]map[string]dbus.Variant](req, connProp+".AddressData")
 	if err != nil {
 		return "", 0
 	}
-	addrDetails := dbusx.VariantToValue[[]map[string]dbus.Variant](v)
 	var address string
 	var prefix int
 	if len(addrDetails) > 0 {
@@ -278,16 +282,16 @@ func getAddr(ctx context.Context, ver int, path dbus.ObjectPath) (addr string, m
 }
 
 func getActiveConnections(ctx context.Context) []dbus.ObjectPath {
-	v, err := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
+	req := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
 		Path(dBusNMPath).
-		Destination(dBusNMObj).
-		GetProp(dBusNMObj + ".ActiveConnections")
+		Destination(dBusNMObj)
+	v, err := dbusx.GetProp[[]dbus.ObjectPath](req, dBusNMObj+".ActiveConnections")
 	if err != nil {
 		log.Debug().Err(err).
 			Msg("Could not retrieve active connection list.")
 		return nil
 	}
-	return dbusx.VariantToValue[[]dbus.ObjectPath](v)
+	return v
 }
 
 func monitorActiveConnections(ctx context.Context) chan sensor.Details {
