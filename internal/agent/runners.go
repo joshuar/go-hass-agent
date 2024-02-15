@@ -42,7 +42,16 @@ func runWorkers(ctx context.Context, trk SensorTracker, reg sensor.Registry) {
 		defer wg.Done()
 		for s := range sensor.MergeSensorCh(ctx, outCh...) {
 			go func(s sensor.Details) {
-				trk.UpdateSensor(ctx, reg, s)
+				if err := trk.UpdateSensor(ctx, reg, s); err != nil {
+					log.Warn().Err(err).Str("id", s.ID()).Msg("Update failed.")
+				} else {
+					log.Debug().
+						Str("name", s.Name()).
+						Str("id", s.ID()).
+						Interface("state", s.State()).
+						Str("units", s.Units()).
+						Msg("Sensor updated.")
+				}
 			}(s)
 		}
 	}()
@@ -52,7 +61,9 @@ func runWorkers(ctx context.Context, trk SensorTracker, reg sensor.Registry) {
 		defer wg.Done()
 		for l := range locationWorker()(ctx) {
 			go func(l *hass.LocationData) {
-				hass.UpdateLocation(ctx, l)
+				if err := hass.UpdateLocation(ctx, l); err != nil {
+					log.Warn().Err(err).Msg("Location update failed.")
+				}
 			}(l)
 		}
 	}()
@@ -95,7 +106,16 @@ func runScripts(ctx context.Context, path string, trk SensorTracker, reg sensor.
 	go func() {
 		for s := range sensor.MergeSensorCh(ctx, outCh...) {
 			go func(s sensor.Details) {
-				trk.UpdateSensor(ctx, reg, s)
+				if err := trk.UpdateSensor(ctx, reg, s); err != nil {
+					log.Warn().Err(err).Str("id", s.ID()).Msg("Update sensor failed.")
+				} else {
+					log.Debug().
+						Str("name", s.Name()).
+						Str("id", s.ID()).
+						Interface("state", s.State()).
+						Str("units", s.Units()).
+						Msg("Sensor updated.")
+				}
 			}(s)
 		}
 	}()
@@ -162,10 +182,11 @@ func runMQTTWorker(ctx context.Context) {
 	if !prefs.MQTTRegistered {
 		log.Debug().Msg("Registering agent with MQTT.")
 		if err := mqtthass.Register(o, c); err != nil {
-			log.Error().Err(err).Msg("Failed to register app!")
+			log.Error().Err(err).Msg("Failed to register with MQTT.")
 			return
-		} else {
-			preferences.Save(preferences.MQTTRegistered(true))
+		}
+		if err := preferences.Save(preferences.MQTTRegistered(true)); err != nil {
+			log.Error().Err(err).Msg("Failed to save MQTT registration.")
 		}
 	}
 	if err := mqtthass.Subscribe(o, c); err != nil {
@@ -195,7 +216,9 @@ func resetMQTTWorker(ctx context.Context) {
 		if err := mqtthass.UnRegister(d, c); err != nil {
 			log.Error().Err(err).Msg("Failed to unregister app!")
 		} else {
-			preferences.Save(preferences.MQTTRegistered(false))
+			if err := preferences.Save(preferences.MQTTRegistered(false)); err != nil {
+				log.Error().Err(err).Msg("Failed to save MQTT registration.")
+			}
 		}
 	}
 }

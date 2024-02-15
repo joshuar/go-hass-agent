@@ -6,6 +6,7 @@
 package registry
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 
@@ -14,6 +15,11 @@ import (
 )
 
 var registryPath = filepath.Join(xdg.ConfigHome, "sensorRegistry")
+
+var (
+	ErrNotFound        = errors.New("sensor not found")
+	ErrInvalidMetadata = errors.New("invalid sensor metadata")
+)
 
 func SetPath(path string) {
 	registryPath = path

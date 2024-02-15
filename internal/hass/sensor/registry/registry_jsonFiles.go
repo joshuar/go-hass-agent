@@ -79,6 +79,11 @@ func (j *jsonFilesRegistry) set(id string, valueType state, value bool) error {
 	if err != nil {
 		return err
 	}
+	log.Debug().
+		Str("id", id).
+		Str("metadata", valueType.String()).
+		Bool("value", value).
+		Msg("Sensor metadata saved.")
 	return nil
 }
 
@@ -88,10 +93,10 @@ func (j *jsonFilesRegistry) write(id string) error {
 	var ok bool
 	path := j.path + "/" + id + ".json"
 	if v, ok = j.sensors.Load(id); !ok {
-		return errors.New("not found")
+		return ErrNotFound
 	}
 	if m, ok = v.(metadata); !ok {
-		return errors.New("invalid metadata")
+		return ErrInvalidMetadata
 	}
 	b, err := json.Marshal(m)
 	if err != nil {

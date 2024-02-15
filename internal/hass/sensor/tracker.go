@@ -10,10 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
-	"strings"
 	"sync"
-
-	"github.com/rs/zerolog/log"
 
 	"github.com/joshuar/go-hass-agent/internal/hass"
 )
@@ -58,7 +55,6 @@ func (t *Tracker) SensorList() []string {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	if t.sensor == nil {
-		log.Warn().Msg("No sensors available.")
 		return nil
 	}
 	sortedEntities := make([]string, 0, len(t.sensor))
@@ -73,11 +69,9 @@ func (t *Tracker) SensorList() []string {
 
 // UpdateSensor will UpdateSensor a sensor update to HA, checking to ensure the sensor is not
 // disabled. It will also update the local registry state based on the response.
-func (t *Tracker) UpdateSensor(ctx context.Context, reg Registry, upd Details) {
+func (t *Tracker) UpdateSensor(ctx context.Context, reg Registry, upd Details) error {
 	if reg.IsDisabled(upd.ID()) {
-		log.Debug().Str("id", upd.ID()).
-			Msg("Sensor is disabled. Ignoring update.")
-		return
+		return nil
 	}
 	var r any
 	if reg.IsRegistered(upd.ID()) {
@@ -87,55 +81,47 @@ func (t *Tracker) UpdateSensor(ctx context.Context, reg Registry, upd Details) {
 	}
 	resp := <-hass.ExecuteRequest(ctx, r)
 	if resp.Error != nil {
-		err := fmt.Errorf("%d: %s", resp.Error.StatusCode, resp.Error.Message)
-		log.Warn().Err(err).Str("id", upd.ID()).
-			Msg("Failed to send sensor data to Home Assistant.")
+		return wrapErr(upd.ID(), resp.Error)
 	}
-	handleResponse(resp, t, upd, reg)
+	if err := handleResponse(resp, t, upd, reg); err != nil {
+		return wrapErr(upd.ID(), err)
+	}
+	return nil
 }
 
-func handleResponse(resp hass.Response, trk *Tracker, upd Details, reg Registry) {
+func handleResponse(resp hass.Response, trk *Tracker, upd Details, reg Registry) error {
 	switch r := resp.Body.(type) {
 	case *UpdateResponse:
 		if err := handleUpdates(reg, r); err != nil {
-			log.Warn().Err(err).Msg("Sensor update unsuccessful.")
-		} else {
-			log.Debug().
-				Str("name", upd.Name()).
-				Str("id", upd.ID()).
-				Str("state", prettyPrintState(upd)).
-				Msg("Sensor updated.")
-			if err := trk.add(upd); err != nil {
-				log.Warn().Err(err).
-					Str("name", upd.Name()).
-					Msg("Unable to add state for sensor to tracker.")
-			}
+			return err
+		}
+		if err := trk.add(upd); err != nil {
+			return err
 		}
 	case *RegistrationResponse:
 		if err := handleRegistration(reg, r, upd.ID()); err != nil {
-			log.Warn().Err(err).Str("id", upd.Name()).Msg("Unable to register ")
+			return err
 		}
-		log.Debug().
-			Str("name", upd.Name()).
-			Str("id", upd.ID()).
-			Msg("Sensor registered.")
 	default:
-		log.Warn().Interface("response", r).
-			Str("id", upd.ID()).
-			Msg("Unhandled response from Home Assistant.")
+		return errors.New("unhandled response")
 	}
+	return nil
 }
 
 func handleUpdates(reg Registry, r *UpdateResponse) error {
 	for sensor, details := range *r {
+		if details == nil {
+			return errors.New("empty response")
+		}
 		if !details.Success {
-			return fmt.Errorf("%d: %s", details.Error.Code, details.Error.Message)
+			if details.Error != nil {
+				return fmt.Errorf("%d: %s", details.Error.Code, details.Error.Message)
+			}
+			return errors.New("update unsuccessful")
 		}
 		if reg.IsDisabled(sensor) != details.Disabled {
 			if err := reg.SetDisabled(sensor, details.Disabled); err != nil {
-				log.Warn().Err(err).Str("id", sensor).Msg("Could not set disabled status in registry.")
-			} else {
-				log.Info().Str("id", sensor).Msg("Sensor disabled.")
+				return fmt.Errorf("could no set disabled status: %w", err)
 			}
 		}
 	}
@@ -158,15 +144,6 @@ func NewTracker() (*Tracker, error) {
 		sensor: make(map[string]Details),
 	}
 	return sensorTracker, nil
-}
-
-func prettyPrintState(s Details) string {
-	var b strings.Builder
-	fmt.Fprintf(&b, "%v", s.State())
-	if s.Units() != "" {
-		fmt.Fprintf(&b, " %s", s.Units())
-	}
-	return b.String()
 }
 
 func MergeSensorCh(ctx context.Context, sensorCh ...<-chan Details) chan Details {
@@ -200,4 +177,8 @@ func MergeSensorCh(ctx context.Context, sensorCh ...<-chan Details) chan Details
 		close(out)
 	}()
 	return out
+}
+
+func wrapErr(sensorID string, e error) error {
+	return fmt.Errorf("%s update failed: %w", sensorID, e)
 }

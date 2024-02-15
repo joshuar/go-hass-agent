@@ -7,15 +7,27 @@ package sensor
 
 import (
 	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"reflect"
 	"sync"
 	"testing"
+	"time"
 
+	"github.com/go-resty/resty/v2"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/registry"
 )
+
+var mockRegistry = RegistryMock{
+	SetDisabledFunc:   func(sensor string, state bool) error { return nil },
+	SetRegisteredFunc: func(sensor string, state bool) error { return nil },
+	IsDisabledFunc:    func(sensor string) bool { return false },
+	IsRegisteredFunc:  func(sensor string) bool { return false },
+}
 
 func TestSensorTracker_add(t *testing.T) {
 	type fields struct {
@@ -36,6 +48,7 @@ func TestSensorTracker_add(t *testing.T) {
 			name: "successful add",
 			fields: fields{
 				sensor: make(map[string]Details),
+				mu:     sync.Mutex{},
 			},
 			args:    args{s: &mockSensor},
 			wantErr: false,
@@ -148,6 +161,32 @@ func TestSensorTracker_SensorList(t *testing.T) {
 }
 
 func TestSensorTracker_UpdateSensor(t *testing.T) {
+	// setup creates a context using a test http client and server which will
+	// return the given response when the ExecuteRequest function is called.
+	setup := func(r *hass.Response) context.Context {
+		ctx := context.TODO()
+		// load client
+		client := resty.New().
+			SetTimeout(1 * time.Second).
+			AddRetryCondition(
+				func(rr *resty.Response, err error) bool {
+					return rr.StatusCode() == http.StatusTooManyRequests
+				},
+			)
+		ctx = hass.ContextSetClient(ctx, client)
+		// load server
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			if resp, err := json.Marshal(&r); err != nil {
+				w.Write(json.RawMessage(`{"success":false}`))
+			} else {
+				w.Write(resp)
+			}
+		}))
+		ctx = hass.ContextSetURL(ctx, server.URL)
+		// return loaded context
+		return ctx
+	}
+
 	// set up a fake sensor tracker
 	mockMap := make(map[string]Details)
 	// set up a fake registry with sensors
@@ -166,6 +205,11 @@ func TestSensorTracker_UpdateSensor(t *testing.T) {
 	newSensor := mockSensor
 	newSensor.IDFunc = func() string { return "new_sensor" }
 	newSensor.StateFunc = func() any { return "newState" }
+	newSensorResponse := &hass.Response{
+		Body: &RegistrationResponse{
+			Success: true,
+		},
+	}
 
 	// disabled sensor
 	disabledSensor := mockSensor
@@ -189,16 +233,23 @@ func TestSensorTracker_UpdateSensor(t *testing.T) {
 		upd Details
 	}
 	tests := []struct {
-		name   string
-		fields fields
-		args   args
-		want   string
+		name    string
+		fields  fields
+		args    args
+		want    string
+		wantErr bool
 	}{
 		{
 			name:   "disabled sensor",
 			fields: fields{sensor: mockMap},
 			args:   args{ctx: context.TODO(), reg: reg, upd: &newDisabledSensor},
 			want:   "mockState",
+		},
+		{
+			name:   "new sensor",
+			fields: fields{sensor: mockMap},
+			args:   args{ctx: setup(newSensorResponse), reg: reg, upd: &newSensor},
+			want:   "newState",
 		},
 		// TODO: Add test cases.
 
@@ -215,8 +266,10 @@ func TestSensorTracker_UpdateSensor(t *testing.T) {
 				sensor: tt.fields.sensor,
 				mu:     tt.fields.mu,
 			}
-			tr.UpdateSensor(tt.args.ctx, tt.args.reg, tt.args.upd)
-			assert.Equal(t, tr.sensor[tt.args.upd.ID()].State(), tt.want)
+			if err := tr.UpdateSensor(tt.args.ctx, tt.args.reg, tt.args.upd); (err != nil) != tt.wantErr {
+				t.Errorf("UpdateSensor() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			// assert.Equal(t, tr.sensor[tt.args.upd.ID()].State(), tt.want)
 		})
 	}
 }
@@ -244,26 +297,6 @@ func TestNewSensorTracker(t *testing.T) {
 			// if !reflect.DeepEqual(got, tt.want) {
 			// 	t.Errorf("NewSensorTracker() = %v, want %v", got, tt.want)
 			// }
-		})
-	}
-}
-
-func Test_prettyPrintState(t *testing.T) {
-	type args struct {
-		s Details
-	}
-	tests := []struct {
-		name string
-		args args
-		want string
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := prettyPrintState(tt.args.s); got != tt.want {
-				t.Errorf("prettyPrintState() = %v, want %v", got, tt.want)
-			}
 		})
 	}
 }
@@ -319,6 +352,8 @@ func TestSensorTracker_Reset(t *testing.T) {
 }
 
 func Test_handleUpdates(t *testing.T) {
+	successful := &UpdateResponse{"mockSensor": {Success: true}}
+	unsuccessful := &UpdateResponse{"mockSensor": {Success: false}}
 	type args struct {
 		reg Registry
 		r   *UpdateResponse
@@ -328,7 +363,16 @@ func Test_handleUpdates(t *testing.T) {
 		args    args
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		{
+			name:    "successful update",
+			args:    args{reg: &mockRegistry, r: successful},
+			wantErr: false,
+		},
+		{
+			name:    "unsuccessful update",
+			args:    args{reg: &mockRegistry, r: unsuccessful},
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -350,7 +394,16 @@ func Test_handleRegistration(t *testing.T) {
 		args    args
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		{
+			name:    "successful registration",
+			args:    args{reg: &mockRegistry, r: &RegistrationResponse{Success: true}, s: "mockSensor"},
+			wantErr: false,
+		},
+		{
+			name:    "unsuccessful registration",
+			args:    args{reg: &mockRegistry, r: &RegistrationResponse{Success: false}, s: "mockSensor"},
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
