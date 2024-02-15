@@ -67,10 +67,10 @@ func (b *upowerBattery) getProp(ctx context.Context, t linux.SensorTypeValue) (d
 	if !b.dBusPath.IsValid() {
 		return dbus.MakeVariant(""), errors.New("invalid battery path")
 	}
-	return dbusx.NewBusRequest(ctx, dbusx.SystemBus).
+	req := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
 		Path(b.dBusPath).
-		Destination(upowerDBusDest).
-		GetProp(dBusSensorToProps[t])
+		Destination(upowerDBusDest)
+	return dbusx.GetProp[dbus.Variant](req, dBusSensorToProps[t])
 }
 
 // getSensors retrieves the sensors passed in for a given battery.
@@ -327,10 +327,14 @@ func Updater(ctx context.Context) chan sensor.Details {
 // getBatteries is a helper function to retrieve all of the known batteries
 // connected to the system.
 func getBatteries(ctx context.Context) []dbus.ObjectPath {
-	return dbusx.NewBusRequest(ctx, dbusx.SystemBus).
+	req := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
 		Path(upowerDBusPath).
-		Destination(upowerDBusDest).
-		GetData(upowerGetDevicesMethod).AsObjectPathList()
+		Destination(upowerDBusDest)
+	batteryList, err := dbusx.GetData[[]dbus.ObjectPath](req, upowerGetDevicesMethod)
+	if err != nil {
+		log.Warn().Err(err).Msg("Could not retrieve battery list.")
+	}
+	return batteryList
 }
 
 // monitorBattery will monitor a battery device for any property changes and

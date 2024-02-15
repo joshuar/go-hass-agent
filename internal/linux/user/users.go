@@ -36,18 +36,17 @@ func (s *usersSensor) Attributes() any {
 }
 
 func (s *usersSensor) updateUsers(ctx context.Context) {
-	userData := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
+	req := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
 		Path(login1DBusPath).
-		Destination("org.freedesktop.login1").
-		GetData("org.freedesktop.login1.Manager.ListUsers").AsRawInterface()
-	var userList [][]any
-	var ok bool
-	if userList, ok = userData.([][]any); !ok {
-		return
+		Destination("org.freedesktop.login1")
+
+	userData, err := dbusx.GetData[[][]any](req, "org.freedesktop.login1.Manager.ListUsers")
+	if err != nil {
+		log.Warn().Err(err).Msg("Could not retrieve users from D-Bus.")
 	}
-	s.Value = len(userList)
+	s.Value = len(userData)
 	var users []string
-	for _, u := range userList {
+	for _, u := range userData {
 		if user, ok := u[1].(string); ok {
 			users = append(users, user)
 		}

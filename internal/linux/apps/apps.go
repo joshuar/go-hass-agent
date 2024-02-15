@@ -36,6 +36,10 @@ func Updater(ctx context.Context) chan sensor.Details {
 	activeApp := newActiveAppSensor()
 	runningApps := newRunningAppsSensor()
 
+	appListReq := dbusx.NewBusRequest(ctx, dbusx.SessionBus).
+		Path(appStateDBusPath).
+		Destination(portalDest)
+
 	err := dbusx.NewBusRequest(ctx, dbusx.SessionBus).
 		Match([]dbus.MatchOption{
 			dbus.WithMatchObjectPath(appStateDBusPath),
@@ -43,10 +47,10 @@ func Updater(ctx context.Context) chan sensor.Details {
 			dbus.WithMatchMember("RunningApplicationsChanged"),
 		}).
 		Handler(func(_ *dbus.Signal) {
-			appList := dbusx.NewBusRequest(ctx, dbusx.SessionBus).
-				Path(appStateDBusPath).
-				Destination(portalDest).
-				GetData(appStateDBusMethod).AsVariantMap()
+			appList, err := dbusx.GetData[map[string]dbus.Variant](appListReq, appStateDBusMethod)
+			if err != nil {
+				log.Warn().Err(err).Msg("Could not retrieve app list from D-Bus.")
+			}
 			if appList != nil {
 				activeApp.update(appList, sensorCh)
 				runningApps.update(appList, sensorCh)

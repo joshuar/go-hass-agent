@@ -76,17 +76,18 @@ func Updater(ctx context.Context) chan sensor.Details {
 		problems.UnitsString = "problems"
 		problems.StateClassValue = sensor.StateMeasurement
 
-		problemList := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
+		req := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
 			Path(dBusProblemsDest).
-			Destination(dBusProblemIntr).
-			GetData(dBusProblemIntr + ".GetProblems").AsStringList()
+			Destination(dBusProblemIntr)
+
+		problemList, err := dbusx.GetData[[]string](req, dBusProblemIntr+".GetProblems")
+		if err != nil {
+			log.Warn().Err(err).Msg("Could not retrieve problem list.")
+		}
 
 		for _, p := range problemList {
-			problemDetails := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
-				Path(dBusProblemsDest).
-				Destination(dBusProblemIntr).
-				GetData(dBusProblemIntr+".GetInfo", p, []string{"time", "count", "package", "reason"}).AsStringMap()
-			if problemDetails == nil {
+			problemDetails, err := dbusx.GetData[map[string]string](req, dBusProblemIntr+".GetInfo", p, []string{"time", "count", "package", "reason"})
+			if problemDetails == nil || err != nil {
 				log.Debug().Msg("No problems retrieved.")
 			} else {
 				problems.list[p] = parseProblem(problemDetails)

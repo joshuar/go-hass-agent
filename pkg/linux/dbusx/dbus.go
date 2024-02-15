@@ -122,50 +122,50 @@ func (r *busRequest) Destination(d string) *busRequest {
 	return r
 }
 
-// GetProp fetches the specified property from DBus with the options specified
-// in the builder.
-func (r *busRequest) GetProp(prop string) (dbus.Variant, error) {
-	if r.bus == nil {
-		return dbus.MakeVariant(""), errors.New("no bus connection")
+// GetProp uses the given request builder to fetch the specified property from
+// D-Bus as the given type. If the property cannot be retrieved, a non-nil error
+// is returned.
+func GetProp[P any](req *busRequest, prop string) (P, error) {
+	var value P
+	if req == nil {
+		return value, errors.New("no bus connection")
 	}
-	obj := r.bus.conn.Object(r.dest, r.path)
+	obj := req.bus.conn.Object(req.dest, req.path)
 	res, err := obj.GetProperty(prop)
 	if err != nil {
 		log.Debug().Err(err).
-			Msgf("Unable to retrieve property %s (%s)", prop, r.dest)
-		return dbus.MakeVariant(""), err
+			Msgf("Unable to retrieve property %s (%s)", prop, req.dest)
+		return value, err
 	}
-	return res, nil
+	return VariantToValue[P](res), nil
 }
 
 // SetProp sets the specific property to the specified value.
-func (r *busRequest) SetProp(prop string, value dbus.Variant) error {
-	if r.bus != nil {
-		obj := r.bus.conn.Object(r.dest, r.path)
-		return obj.SetProperty(prop, value)
+func SetProp[P any](req *busRequest, prop string, value P) error {
+	if req == nil {
+		return errors.New("no bus connection")
 	}
-	return errors.New("no bus connection")
+	v := dbus.MakeVariant(value)
+	obj := req.bus.conn.Object(req.dest, req.path)
+	return obj.SetProperty(prop, v)
 }
 
-// GetData fetches DBus data from the given method in the builder.
-func (r *busRequest) GetData(method string, args ...any) *dbusData {
-	if r.bus == nil {
-		log.Error().Msg("No bus connection.")
-		return nil
+// GetData uses the given request builder to fetch D-Bus data from the given
+// method, as the provided type. If there is an error or the result cannot be
+// stored in the given type, it will return an non-nil error.
+func GetData[D any](req *busRequest, method string, args ...any) (D, error) {
+	var data D
+	if req == nil {
+		return data, errors.New("no bus connection")
 	}
-	d := new(dbusData)
-	obj := r.bus.conn.Object(r.dest, r.path)
+	obj := req.bus.conn.Object(req.dest, req.path)
 	var err error
 	if args != nil {
-		err = obj.Call(method, 0, args...).Store(&d.data)
+		err = obj.Call(method, 0, args...).Store(&data)
 	} else {
-		err = obj.Call(method, 0).Store(&d.data)
+		err = obj.Call(method, 0).Store(&data)
 	}
-	if err != nil {
-		log.Debug().Err(err).
-			Msgf("Unable to execute %s on %s (args: %s)", method, r.dest, args)
-	}
-	return d
+	return data, err
 }
 
 // Call executes the given method in the builder and returns the error state.
@@ -227,105 +227,20 @@ func (r *busRequest) RemoveWatch(ctx context.Context) error {
 	return nil
 }
 
-type dbusData struct {
-	data any
-}
-
-// AsVariantMap formats DBus data as a map[string]dbus.Variant.
-func (d *dbusData) AsVariantMap() map[string]dbus.Variant {
-	if d == nil {
-		return nil
-	}
-	wanted := make(map[string]dbus.Variant)
-	data, ok := d.data.(map[string]any)
-	if !ok {
-		log.Debug().Msgf("Could not represent D-Bus data as %T.", wanted)
-		return wanted
-	}
-	for k, v := range data {
-		wanted[k] = dbus.MakeVariant(v)
-	}
-	return wanted
-}
-
-// AsStringMap formats DBus data as a map[string]string.
-func (d *dbusData) AsStringMap() map[string]string {
-	if d == nil {
-		return nil
-	}
-	data, ok := d.data.(map[string]string)
-	if !ok {
-		log.Debug().Msgf("Could not represent D-Bus data as %T.", data)
-		return make(map[string]string)
-	}
-	return data
-}
-
-// AsObjectPathList formats DBus data as a []dbus.ObjectPath.
-func (d *dbusData) AsObjectPathList() []dbus.ObjectPath {
-	if d == nil {
-		return nil
-	}
-	var data []dbus.ObjectPath
-	var ok bool
-	data, ok = d.data.([]dbus.ObjectPath)
-	if !ok {
-		log.Debug().Msgf("Could not represent D-Bus data as %T.", data)
-	}
-	return data
-}
-
-// AsStringList formats DBus data as a []string.
-func (d *dbusData) AsStringList() []string {
-	if d == nil {
-		return nil
-	}
-	var data []string
-	var ok bool
-	data, ok = d.data.([]string)
-	if !ok {
-		log.Debug().Msgf("Could not represent D-Bus data as %T.", data)
-	}
-	return data
-}
-
-// AsObjectPath formats DBus data as a dbus.ObjectPath.
-func (d *dbusData) AsObjectPath() dbus.ObjectPath {
-	if d == nil {
-		return dbus.ObjectPath("")
-	}
-	var data dbus.ObjectPath
-	var ok bool
-	data, ok = d.data.(dbus.ObjectPath)
-	if !ok {
-		log.Debug().Msgf("Could not represent D-Bus data as %T.", data)
-	}
-	return data
-}
-
-// AsRawInterface formats DBus data as a plain interface{}.
-func (d *dbusData) AsRawInterface() any {
-	if d != nil {
-		return d.data
-	}
-	return nil
-}
-
 func GetSessionPath(ctx context.Context) dbus.ObjectPath {
 	u, err := user.Current()
 	if err != nil {
 		return ""
 	}
-	sessions := NewBusRequest(ctx, SystemBus).
+	req := NewBusRequest(ctx, SystemBus).
 		Path("/org/freedesktop/login1").
-		Destination("org.freedesktop.login1").
-		GetData("org.freedesktop.login1.Manager.ListSessions").
-		AsRawInterface()
-	allSessions, ok := sessions.([][]any)
-	if !ok {
+		Destination("org.freedesktop.login1")
+
+	sessions, err := GetData[[][]any](req, "org.freedesktop.login1.Manager.ListSessions")
+	if err != nil {
 		return ""
 	}
-	for _, s := range allSessions {
+	for _, s := range sessions {
 		if thisUser, ok := s[2].(string); ok && thisUser == u.Username {
 			if p, ok := s[4].(dbus.ObjectPath); ok {
 				return p
