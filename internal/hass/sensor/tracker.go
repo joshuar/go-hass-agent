@@ -91,9 +91,13 @@ func (t *SensorTracker) UpdateSensor(ctx context.Context, reg Registry, upd Deta
 		log.Warn().Err(err).Str("id", upd.ID()).
 			Msg("Failed to send sensor data to Home Assistant.")
 	}
+	handleResponse(resp, t, upd, reg)
+}
+
+func handleResponse(resp hass.Response, trk *SensorTracker, upd Details, reg Registry) {
 	switch r := resp.Body.(type) {
 	case *UpdateResponse:
-		if err := t.handleUpdates(reg, r); err != nil {
+		if err := handleUpdates(reg, r); err != nil {
 			log.Warn().Err(err).Msg("Sensor update unsuccessful.")
 		} else {
 			log.Debug().
@@ -101,14 +105,14 @@ func (t *SensorTracker) UpdateSensor(ctx context.Context, reg Registry, upd Deta
 				Str("id", upd.ID()).
 				Str("state", prettyPrintState(upd)).
 				Msg("Sensor updated.")
-			if err := t.add(upd); err != nil {
+			if err := trk.add(upd); err != nil {
 				log.Warn().Err(err).
 					Str("name", upd.Name()).
 					Msg("Unable to add state for sensor to tracker.")
 			}
 		}
 	case *RegistrationResponse:
-		if err := t.handleRegistration(reg, r, upd.ID()); err != nil {
+		if err := handleRegistration(reg, r, upd.ID()); err != nil {
 			log.Warn().Err(err).Str("id", upd.Name()).Msg("Unable to register ")
 		}
 		log.Debug().
@@ -122,7 +126,7 @@ func (t *SensorTracker) UpdateSensor(ctx context.Context, reg Registry, upd Deta
 	}
 }
 
-func (t *SensorTracker) handleUpdates(reg Registry, r *UpdateResponse) error {
+func handleUpdates(reg Registry, r *UpdateResponse) error {
 	for sensor, details := range *r {
 		if !details.Success {
 			return fmt.Errorf("%d: %s", details.Error.Code, details.Error.Message)
@@ -138,7 +142,7 @@ func (t *SensorTracker) handleUpdates(reg Registry, r *UpdateResponse) error {
 	return nil
 }
 
-func (t *SensorTracker) handleRegistration(reg Registry, r *RegistrationResponse, s string) error {
+func handleRegistration(reg Registry, r *RegistrationResponse, s string) error {
 	if !r.Success {
 		return errors.New("registration unsuccessful")
 	}
