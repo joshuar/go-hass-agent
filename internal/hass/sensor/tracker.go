@@ -73,15 +73,18 @@ func (t *Tracker) UpdateSensor(ctx context.Context, reg Registry, upd Details) e
 	if reg.IsDisabled(upd.ID()) {
 		return nil
 	}
-	var r any
+	var req hass.PostRequest
+	var resp hass.Response
 	if reg.IsRegistered(upd.ID()) {
-		r = UpdateRequest(SensorState(upd))
+		req = NewUpdateRequest(SensorState(upd))
+		resp = NewUpdateResponse()
 	} else {
-		r = RegistrationRequest(SensorRegistration(upd))
+		req = NewRegistrationRequest(SensorRegistration(upd))
+		resp = NewRegistrationResponse()
 	}
-	resp := <-hass.ExecuteRequest(ctx, r)
-	if resp.Error != nil {
-		return wrapErr(upd.ID(), resp.Error)
+	hass.ExecuteRequest(ctx, req, resp)
+	if errors.Is(resp, &hass.APIError{}) {
+		return wrapErr(upd.ID(), resp)
 	}
 	if err := handleResponse(resp, t, upd, reg); err != nil {
 		return wrapErr(upd.ID(), err)
@@ -90,15 +93,15 @@ func (t *Tracker) UpdateSensor(ctx context.Context, reg Registry, upd Details) e
 }
 
 func handleResponse(resp hass.Response, trk *Tracker, upd Details, reg Registry) error {
-	switch r := resp.Body.(type) {
-	case *UpdateResponse:
+	switch r := resp.(type) {
+	case *updateResponse:
 		if err := handleUpdates(reg, r); err != nil {
 			return err
 		}
 		if err := trk.add(upd); err != nil {
 			return err
 		}
-	case *RegistrationResponse:
+	case *registrationResponse:
 		if err := handleRegistration(reg, r, upd.ID()); err != nil {
 			return err
 		}
@@ -108,8 +111,8 @@ func handleResponse(resp hass.Response, trk *Tracker, upd Details, reg Registry)
 	return nil
 }
 
-func handleUpdates(reg Registry, r *UpdateResponse) error {
-	for sensor, details := range *r {
+func handleUpdates(reg Registry, r *updateResponse) error {
+	for sensor, details := range r.Body {
 		if details == nil {
 			return errors.New("empty response")
 		}
@@ -128,8 +131,8 @@ func handleUpdates(reg Registry, r *UpdateResponse) error {
 	return nil
 }
 
-func handleRegistration(reg Registry, r *RegistrationResponse, s string) error {
-	if !r.Success {
+func handleRegistration(reg Registry, r *registrationResponse, s string) error {
+	if !r.Body.Success {
 		return errors.New("registration unsuccessful")
 	}
 	return reg.SetRegistered(s, true)

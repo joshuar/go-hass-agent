@@ -20,27 +20,15 @@ import (
 
 var (
 	ErrInvalidURL        = errors.New("invalid URL")
+	ErrInvalidClient     = errors.New("invalid client")
 	ErrResponseMalformed = errors.New("malformed response")
 	ErrNoPrefs           = errors.New("loading preferences failed")
 )
 
-type Authenticated interface {
-	Auth() string
-}
-
-type Encrypted interface {
-	Secret() string
-}
-
-type GetRequest interface {
-	ResponseBody() any
-}
-
-type PostRequest interface {
-	GetRequest
-	RequestBody() json.RawMessage
-}
-
+// APIError represents an error returned either by the HTTP layer or by the Home
+// Assistant API. The StatusCode reflects the HTTP status code returned while
+// Message and Code are additional and optional values returned from the Home
+// Assistant API.
 type APIError struct {
 	Message    string `json:"message,omitempty"`
 	Code       string `json:"code,omitempty"`
@@ -50,21 +38,34 @@ type APIError struct {
 func (e *APIError) Error() string {
 	if e.Code != "" {
 		return fmt.Sprintf("%s: %s", e.Code, e.Message)
-	} else {
-		return e.Message
 	}
+	return e.Message
 }
 
-func NewAPIError(code, msg string) *APIError {
-	return &APIError{
-		Code:    code,
-		Message: msg,
-	}
+// GetRequest is a HTTP GET request.
+type GetRequest any
+
+// PostRequest is a HTTP POST request with the request body provided by Body().
+type PostRequest interface {
+	RequestBody() json.RawMessage
 }
 
-type Response struct {
-	Error *APIError
-	Body  any
+// Authenticated represents a request that requires passing an authentication
+// header with the value returned by Auth().
+type Authenticated interface {
+	Auth() string
+}
+
+// Encrypted represents a request that should be encrypted with the secret
+// provided by Secret().
+type Encrypted interface {
+	Secret() string
+}
+
+type Response interface {
+	StoreError(e error)
+	error
+	json.Unmarshaler
 }
 
 // ExecuteRequest sends an API request to Home Assistant. It supports either the
@@ -73,24 +74,17 @@ type Response struct {
 // satisfy the PostRequest interface. To add authentication where required,
 // satisfy the Auth interface. To send an encrypted request, satisfy the Secret
 // interface.
-func ExecuteRequest(ctx context.Context, req any) <-chan Response {
-	responseCh := make(chan Response, 1)
-	defer close(responseCh)
-
+func ExecuteRequest(ctx context.Context, request any, response Response) {
 	url := ContextGetURL(ctx)
 	if url == "" {
-		responseCh <- Response{
-			Error: NewAPIError("", ErrInvalidURL.Error()),
-		}
-		return responseCh
+		response.StoreError(ErrInvalidURL)
+		return
 	}
 
 	client := ContextGetClient(ctx)
 	if client == nil {
-		responseCh <- Response{
-			Error: NewAPIError("", "invalid client"),
-		}
-		return responseCh
+		response.StoreError(ErrInvalidClient)
+		return
 	}
 
 	var wg sync.WaitGroup
@@ -100,14 +94,13 @@ func ExecuteRequest(ctx context.Context, req any) <-chan Response {
 		var responseErr *APIError
 		var resp *resty.Response
 		var err error
-		response := Response{}
 		cl := client.R().
 			SetContext(ctx).
 			SetError(&responseErr)
-		if a, ok := req.(Authenticated); ok {
+		if a, ok := request.(Authenticated); ok {
 			cl = cl.SetAuthToken(a.Auth())
 		}
-		switch r := req.(type) {
+		switch r := request.(type) {
 		case PostRequest:
 			log.Trace().
 				Str("method", "POST").
@@ -115,27 +108,20 @@ func ExecuteRequest(ctx context.Context, req any) <-chan Response {
 				RawJSON("body", r.RequestBody()).
 				Time("sent_at", time.Now()).
 				Msg("Sending request.")
-			result := r.ResponseBody()
 			resp, err = cl.
-				SetResult(result).
 				SetBody(r.RequestBody()).
 				Post(url)
-			response.Body = result
 		case GetRequest:
 			log.Trace().
 				Str("method", "GET").
 				Str("url", url).
 				Time("sent_at", time.Now()).
 				Msg("Sending request.")
-			result := r.ResponseBody()
 			resp, err = cl.
-				SetResult(result).
 				Get(url)
-			response.Body = result
 		}
 		if err != nil {
-			response.Error = NewAPIError("", err.Error())
-			responseCh <- response
+			response.StoreError(err)
 			return
 		}
 		log.Trace().Err(err).
@@ -146,13 +132,13 @@ func ExecuteRequest(ctx context.Context, req any) <-chan Response {
 			Time("received_at", resp.ReceivedAt()).
 			RawJSON("body", resp.Body()).Msg("Response received.")
 		if resp.IsError() {
-			responseErr.StatusCode = resp.StatusCode()
-			response.Error = responseErr
-			responseCh <- response
+			err := fmt.Errorf("%s (StatusCode: %d)", responseErr.Error(), resp.StatusCode())
+			response.StoreError(err)
 			return
 		}
-		responseCh <- response
+		if err := response.UnmarshalJSON(resp.Body()); err != nil {
+			response.StoreError(errors.Join(ErrResponseMalformed, err))
+		}
 	}()
 	wg.Wait()
-	return responseCh
 }

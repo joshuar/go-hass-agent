@@ -7,7 +7,10 @@ package hass
 
 import (
 	"context"
+	"encoding/json"
 	"time"
+
+	"github.com/go-resty/resty/v2"
 
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
@@ -18,10 +21,11 @@ type EntityState struct {
 	State       any            `json:"state"`
 	Attributes  map[string]any `json:"attributes,omitempty"`
 	EntityID    string         `json:"entity_id"`
-	sensorType  string         `json:"-"`
 }
 
-func (e *EntityState) Auth() string {
+type EntityStateRequest struct{}
+
+func (e *EntityStateRequest) Auth() string {
 	prefs, err := preferences.Load()
 	if err != nil {
 		return ""
@@ -29,43 +33,50 @@ func (e *EntityState) Auth() string {
 	return prefs.Token
 }
 
-func (e *EntityState) ResponseBody() any { return e }
+type EntityStateResponse struct {
+	State *EntityState
+	err   error
+}
 
-func GetEntityState(ctx context.Context, sensorType, entityID string) (*EntityState, error) {
+func (e *EntityStateResponse) StoreError(err error) {
+	e.err = err
+}
+
+func (e *EntityStateResponse) Error() string {
+	return e.err.Error()
+}
+
+func (e *EntityStateResponse) UnmarshalJSON(b []byte) error {
+	return json.Unmarshal(b, e.State)
+}
+
+func GetEntityState(sensorType, entityID string) (*EntityStateResponse, error) {
+	ctx := context.TODO()
 	prefs, err := preferences.Load()
 	if err != nil {
 		return nil, ErrNoPrefs
 	}
 	url := prefs.Host + "/api/states/" + sensorType + "." + prefs.DeviceName + "_" + entityID
 	ctx = ContextSetURL(ctx, url)
+	ctx = ContextSetClient(ctx, resty.New())
 
-	entity := &EntityState{
-		EntityID:   entityID,
-		sensorType: sensorType,
+	req := &EntityStateRequest{}
+	resp := &EntityStateResponse{}
+	ExecuteRequest(ctx, req, resp)
+	if resp.Error() != "" {
+		return nil, resp
 	}
-	resp := <-ExecuteRequest(context.TODO(), entity)
-	if resp.Error != nil {
-		return nil, resp.Error
-	}
-	var e *EntityState
-	var ok bool
-	if e, ok = resp.Body.(*EntityState); !ok {
-		return nil, ErrResponseMalformed
-	}
-	return e, nil
+	return resp, nil
 }
 
-type EntityStates []EntityState
+type EntityStatesRequest struct{}
 
-func (e *EntityStates) URL() string {
-	prefs, err := preferences.Load()
-	if err != nil {
-		return ""
-	}
-	return prefs.Host + "/api/states"
+type EntityStatesResponse struct {
+	err    error
+	States []EntityStateResponse
 }
 
-func (e *EntityStates) Auth() string {
+func (e *EntityStatesResponse) Auth() string {
 	prefs, err := preferences.Load()
 	if err != nil {
 		return ""
@@ -73,17 +84,33 @@ func (e *EntityStates) Auth() string {
 	return prefs.Token
 }
 
-func (e *EntityStates) ResponseBody() any { return e }
+func (e *EntityStatesResponse) StoreError(err error) {
+	e.err = err
+}
 
-func GetAllEntityStates() (*EntityStates, error) {
-	resp := <-ExecuteRequest(context.TODO(), &EntityStates{})
-	if resp.Error != nil {
-		return nil, resp.Error
+func (e *EntityStatesResponse) Error() string {
+	return e.err.Error()
+}
+
+func (e *EntityStatesResponse) UnmarshalJSON(b []byte) error {
+	return json.Unmarshal(b, &e.States)
+}
+
+func GetAllEntityStates() (*EntityStatesResponse, error) {
+	ctx := context.TODO()
+	prefs, err := preferences.Load()
+	if err != nil {
+		return nil, ErrNoPrefs
 	}
-	var entities *EntityStates
-	var ok bool
-	if entities, ok = resp.Body.(*EntityStates); !ok {
-		return nil, ErrResponseMalformed
+	url := prefs.Host + "/api/states/"
+	ctx = ContextSetURL(ctx, url)
+	ctx = ContextSetClient(ctx, resty.New())
+
+	req := &EntityStatesRequest{}
+	resp := &EntityStatesResponse{}
+	ExecuteRequest(ctx, req, resp)
+	if resp.Error() != "" {
+		return nil, resp
 	}
-	return entities, nil
+	return resp, nil
 }

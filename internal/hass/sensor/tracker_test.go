@@ -206,7 +206,7 @@ func TestSensorTracker_UpdateSensor(t *testing.T) {
 	newSensor.IDFunc = func() string { return "new_sensor" }
 	newSensor.StateFunc = func() any { return "newState" }
 	newSensorResponse := &hass.Response{
-		Body: &RegistrationResponse{
+		Body: &registrationResponse{
 			Success: true,
 		},
 	}
@@ -352,11 +352,11 @@ func TestSensorTracker_Reset(t *testing.T) {
 }
 
 func Test_handleUpdates(t *testing.T) {
-	successful := &UpdateResponse{"mockSensor": {Success: true}}
-	unsuccessful := &UpdateResponse{"mockSensor": {Success: false}}
+	successful := &updateResponse{"mockSensor": {Success: true}}
+	unsuccessful := &updateResponse{"mockSensor": {Success: false}}
 	type args struct {
 		reg Registry
-		r   *UpdateResponse
+		r   *updateResponse
 	}
 	tests := []struct {
 		name    string
@@ -386,7 +386,7 @@ func Test_handleUpdates(t *testing.T) {
 func Test_handleRegistration(t *testing.T) {
 	type args struct {
 		reg Registry
-		r   *RegistrationResponse
+		r   *registrationResponse
 		s   string
 	}
 	tests := []struct {
@@ -396,12 +396,12 @@ func Test_handleRegistration(t *testing.T) {
 	}{
 		{
 			name:    "successful registration",
-			args:    args{reg: &mockRegistry, r: &RegistrationResponse{Success: true}, s: "mockSensor"},
+			args:    args{reg: &mockRegistry, r: &registrationResponse{Success: true}, s: "mockSensor"},
 			wantErr: false,
 		},
 		{
 			name:    "unsuccessful registration",
-			args:    args{reg: &mockRegistry, r: &RegistrationResponse{Success: false}, s: "mockSensor"},
+			args:    args{reg: &mockRegistry, r: &registrationResponse{Success: false}, s: "mockSensor"},
 			wantErr: true,
 		},
 	}

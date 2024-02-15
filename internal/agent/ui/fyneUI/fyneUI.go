@@ -155,11 +155,11 @@ func (i *fyneUI) DisplayRegistrationWindow(ctx context.Context, server, token *s
 // aboutWindow creates a window that will show some interesting information
 // about the agent, such as version numbers.
 func (i *fyneUI) aboutWindow() fyne.Window {
-	haCfg := getHAConfig()
+	config := getHAConfig()
 	c := container.NewCenter(container.NewVBox(
 		widget.NewLabelWithStyle("Go Hass Agent "+preferences.AppVersion, fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
-		widget.NewLabelWithStyle("Home Assistant "+haCfg.Version, fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
-		widget.NewLabelWithStyle("Tracking "+fmt.Sprintf("%d", len(haCfg.Entities))+" Entities", fyne.TextAlignCenter, fyne.TextStyle{Italic: true}),
+		widget.NewLabelWithStyle("Home Assistant "+config.Details.Version, fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+		widget.NewLabelWithStyle("Tracking "+fmt.Sprintf("%d", len(config.Details.Entities))+" Entities", fyne.TextAlignCenter, fyne.TextStyle{Italic: true}),
 		widget.NewLabel(""),
 		container.NewHBox(
 			widget.NewHyperlink("website", parseURL(ui.AppURL)),

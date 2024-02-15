@@ -8,6 +8,7 @@ package hass
 import (
 	"context"
 	"encoding/json"
+	"errors"
 
 	"github.com/rs/zerolog/log"
 )
@@ -29,9 +30,8 @@ type LocationData struct {
 }
 
 type locationRequest struct {
-	Data     *LocationData  `json:"data"`
-	Response map[string]any `json:"-"`
-	Type     string         `json:"type"`
+	Data *LocationData `json:"data"`
+	Type string        `json:"type"`
 }
 
 func (l *locationRequest) RequestBody() json.RawMessage {
@@ -42,18 +42,32 @@ func (l *locationRequest) RequestBody() json.RawMessage {
 	return json.RawMessage(data)
 }
 
-func (l *locationRequest) ResponseBody() any { return l.Response }
+type locationResponse struct {
+	err error
+}
+
+func (l *locationResponse) UnmarshalJSON(b []byte) error {
+	return nil
+}
+
+func (l *locationResponse) StoreError(e error) {
+	l.err = e
+}
+
+func (l *locationResponse) Error() string {
+	return l.err.Error()
+}
 
 func UpdateLocation(ctx context.Context, l *LocationData) error {
 	req := &locationRequest{
-		Type:     requestTypeLocation,
-		Data:     l,
-		Response: make(map[string]any),
+		Type: requestTypeLocation,
+		Data: l,
 	}
-	resp := <-ExecuteRequest(ctx, req)
-	if resp.Error != nil {
-		return resp.Error
+	resp := &locationResponse{}
+	ExecuteRequest(ctx, req, resp)
+	if errors.Is(resp, &APIError{}) {
+		return resp
 	}
-	log.Debug().Msg("location updated")
+	log.Debug().Msg("Location updated")
 	return nil
 }

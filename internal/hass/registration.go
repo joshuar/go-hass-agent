@@ -89,7 +89,7 @@ func newRegistrationRequest(d DeviceInfo, t string) *registrationRequest {
 }
 
 func RegisterWithHass(ctx context.Context, server, token string, device DeviceInfo) (*RegistrationResponse, error) {
-	req := newRegistrationRequest(device, token)
+	// req := newRegistrationRequest(device, token)
 
 	serverURL, err := url.Parse(server)
 	if err != nil {
@@ -100,14 +100,15 @@ func RegisterWithHass(ctx context.Context, server, token string, device DeviceIn
 
 	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
-	resp := <-ExecuteRequest(ctx, req)
-	if resp.Error != nil {
-		return nil, resp.Error
-	}
-	var details *RegistrationResponse
-	var ok bool
-	if details, ok = resp.Body.(*RegistrationResponse); !ok {
-		return nil, ErrResponseMalformed
-	}
-	return details, nil
+	return nil, nil
+	// resp := <-ExecuteRequest(ctx, req)
+	// if resp.Error != nil {
+	// 	return nil, resp.Error
+	// }
+	// var details *RegistrationResponse
+	// var ok bool
+	// if details, ok = resp.Body.(*RegistrationResponse); !ok {
+	// 	return nil, ErrResponseMalformed
+	// }
+	// return details, nil
 }
