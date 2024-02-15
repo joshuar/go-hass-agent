@@ -78,8 +78,8 @@ var rootCmd = &cobra.Command{
 		}
 
 		preferences.SetPath(filepath.Join(xdg.ConfigHome, agent.AppID()))
-		var trk *sensor.SensorTracker
-		if trk, err = sensor.NewSensorTracker(); err != nil {
+		var trk *sensor.Tracker
+		if trk, err = sensor.NewTracker(); err != nil {
 			log.Fatal().Err(err).Msg("Could not start sensor sensor.")
 		}
 
