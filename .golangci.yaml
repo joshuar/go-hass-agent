@@ -5,7 +5,7 @@
 
 linters-settings:
   revive:
-    # enable-all-rules: true
+    enable-all-rules: true
     confidence: 0.8
     ignore-generated-header: false
     rules:
