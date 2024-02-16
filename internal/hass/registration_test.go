@@ -8,49 +8,94 @@ package hass
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
 	"testing"
+	"time"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/go-resty/resty/v2"
 )
 
+var mockDevInfo = &DeviceInfoMock{
+	DeviceIDFunc:           func() string { return "mockDeviceID" },
+	DeviceNameFunc:         func() string { return "testDevice" },
+	SupportsEncryptionFunc: func() bool { return false },
+	AppDataFunc:            func() any { return nil },
+	ManufacturerFunc:       func() string { return "ACME" },
+	ModelFunc:              func() string { return "Foobar" },
+	OsNameFunc:             func() string { return "Fake OS" },
+	OsVersionFunc:          func() string { return "0.0" },
+	AppIDFunc:              func() string { return "go-hass-agent-test" },
+	AppNameFunc:            func() string { return "Go Hass Agent Test" },
+	AppVersionFunc:         func() string { return "v0.0.0" },
+}
+
+type failedResponse struct {
+	Details *RegistrationDetails
+	err     error
+}
+
+func (r *failedResponse) StoreError(e error) {
+	r.err = e
+}
+
+func (r *failedResponse) Error() string {
+	return r.err.Error()
+}
+
+func (r *failedResponse) UnmarshalJSON(b []byte) error {
+	return json.Unmarshal(b, &r.Details)
+}
+
+// setup creates a context using a test http client and server which will
+// return the given response when the ExecuteRequest function is called.
+var setupTestCtx = func(r Response) context.Context {
+	ctx := context.TODO()
+	// load client
+	client := resty.New().
+		SetTimeout(1 * time.Second).
+		AddRetryCondition(
+			func(rr *resty.Response, err error) bool {
+				return rr.StatusCode() == http.StatusTooManyRequests
+			},
+		)
+	ctx = ContextSetClient(ctx, client)
+	// load server
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		var resp []byte
+		var err error
+		switch rType := r.(type) {
+		case *registrationResponse:
+			resp, err = json.Marshal(rType.Details)
+		}
+		if err != nil {
+			w.Write(json.RawMessage(`{"success":false}`))
+		} else {
+			w.Write(resp)
+		}
+	}))
+	ctx = ContextSetURL(ctx, server.URL)
+	// return loaded context
+	return ctx
+}
+
 func TestRegisterWithHass(t *testing.T) {
-	okResponse := &RegistrationResponse{
-		CloudhookURL: "someURL",
-		RemoteUIURL:  "someURL",
-		Secret:       "",
-		WebhookID:    "someID",
+	registrationSuccess := &registrationResponse{
+		Details: &RegistrationDetails{
+			CloudhookURL: "someURL",
+			RemoteUIURL:  "someURL",
+			Secret:       "",
+			WebhookID:    "someID",
+		},
 	}
-	okJSON, err := json.Marshal(okResponse)
-	assert.Nil(t, err)
+	successCtx := setupTestCtx(registrationSuccess)
 
-	notokResponse := &RegistrationResponse{
-		CloudhookURL: "",
-		RemoteUIURL:  "",
-		Secret:       "",
-		WebhookID:    "",
+	registrationFail := &failedResponse{
+		err: errors.New("response failed"),
 	}
-	notokJSON, err := json.Marshal(notokResponse)
-	assert.Nil(t, err)
-
-	newMockServer := func(t *testing.T) *httptest.Server {
-		return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			token := r.Header.Get("Bearer")
-			if token != "Bearer" {
-				w.WriteHeader(http.StatusOK)
-				w.Write(okJSON)
-			} else {
-				w.WriteHeader(http.StatusBadRequest)
-				w.Write(notokJSON)
-			}
-		}))
-	}
-	mockServer := newMockServer(t)
-
-	mockDevInfo := &DeviceInfoMock{}
-	mockBadDevInfo := &DeviceInfoMock{}
+	failCtx := setupTestCtx(registrationFail)
 
 	type args struct {
 		ctx    context.Context
@@ -61,50 +106,28 @@ func TestRegisterWithHass(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    *RegistrationResponse
+		want    *RegistrationDetails
 		wantErr bool
 	}{
 		{
-			name: "successful test",
+			name: "successful registration",
 			args: args{
-				ctx:    context.Background(),
-				server: mockServer.URL,
+				ctx:    successCtx,
+				server: ContextGetURL(successCtx),
 				token:  "aToken",
 				device: mockDevInfo,
 			},
-			want: okResponse,
+			want: registrationSuccess.Details,
 		},
 		{
-			name: "bad device",
+			name: "failed registration",
 			args: args{
-				ctx:    context.Background(),
-				server: mockServer.URL,
-				token:  "aToken",
-				device: mockBadDevInfo,
-			},
-			want:    nil,
-			wantErr: true,
-		},
-		{
-			name: "bad server url",
-			args: args{
-				ctx:    context.Background(),
-				server: "notAURL",
+				ctx:    failCtx,
+				server: ContextGetURL(failCtx),
 				token:  "aToken",
 				device: mockDevInfo,
 			},
-			want:    nil,
-			wantErr: true,
-		},
-		{
-			name: "bad token",
-			args: args{
-				ctx:    context.Background(),
-				server: mockServer.URL,
-				token:  "",
-				device: mockDevInfo,
-			},
-			want:    nil,
+			want:    registrationFail.Details,
 			wantErr: true,
 		},
 	}

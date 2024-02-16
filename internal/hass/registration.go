@@ -33,7 +33,7 @@ type DeviceInfo interface {
 	AppData() any
 }
 
-type RegistrationResponse struct {
+type RegistrationDetails struct {
 	CloudhookURL string `json:"cloudhook_url"`
 	RemoteUIURL  string `json:"remote_ui_url"`
 	Secret       string `json:"secret"`
@@ -67,8 +67,21 @@ func (r *registrationRequest) RequestBody() json.RawMessage {
 	return data
 }
 
-func (r *registrationRequest) ResponseBody() any {
-	return &RegistrationResponse{}
+type registrationResponse struct {
+	Details *RegistrationDetails
+	err     error
+}
+
+func (r *registrationResponse) StoreError(err error) {
+	r.err = err
+}
+
+func (r *registrationResponse) Error() string {
+	return r.err.Error()
+}
+
+func (r *registrationResponse) UnmarshalJSON(b []byte) error {
+	return json.Unmarshal(b, &r.Details)
 }
 
 func newRegistrationRequest(d DeviceInfo, t string) *registrationRequest {
@@ -88,8 +101,9 @@ func newRegistrationRequest(d DeviceInfo, t string) *registrationRequest {
 	}
 }
 
-func RegisterWithHass(ctx context.Context, server, token string, device DeviceInfo) (*RegistrationResponse, error) {
-	// req := newRegistrationRequest(device, token)
+func RegisterWithHass(ctx context.Context, server, token string, device DeviceInfo) (*RegistrationDetails, error) {
+	req := newRegistrationRequest(device, token)
+	resp := &registrationResponse{}
 
 	serverURL, err := url.Parse(server)
 	if err != nil {
@@ -100,15 +114,11 @@ func RegisterWithHass(ctx context.Context, server, token string, device DeviceIn
 
 	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
-	return nil, nil
-	// resp := <-ExecuteRequest(ctx, req)
-	// if resp.Error != nil {
-	// 	return nil, resp.Error
-	// }
-	// var details *RegistrationResponse
-	// var ok bool
-	// if details, ok = resp.Body.(*RegistrationResponse); !ok {
-	// 	return nil, ErrResponseMalformed
-	// }
-	// return details, nil
+
+	ExecuteRequest(ctx, req, resp)
+	if resp.err != nil {
+		return nil, resp
+	}
+
+	return resp.Details, nil
 }

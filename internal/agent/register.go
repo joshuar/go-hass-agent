@@ -24,7 +24,7 @@ import (
 // request and the successful response in the agent preferences. This includes,
 // most importantly, details on the URL that should be used to send subsequent
 // requests to Home Assistant.
-func saveRegistration(server, token string, resp *hass.RegistrationResponse, dev hass.DeviceInfo) error {
+func saveRegistration(server, token string, resp *hass.RegistrationDetails, dev hass.DeviceInfo) error {
 	return preferences.Save(
 		preferences.Host(server),
 		preferences.Token(token),
@@ -120,7 +120,7 @@ func validRegistrationSetting(key, value string) bool {
 	}
 }
 
-func generateAPIURL(host string, resp *hass.RegistrationResponse) string {
+func generateAPIURL(host string, resp *hass.RegistrationDetails) string {
 	switch {
 	case resp.CloudhookURL != "":
 		return resp.CloudhookURL
