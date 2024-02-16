@@ -12,6 +12,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
@@ -33,8 +34,8 @@ var wifiProps = map[string]*wifiSensor{
 		Sensor: linux.Sensor{
 			SensorTypeValue:  linux.SensorWifiSpeed,
 			UnitsString:      "kB/s",
-			DeviceClassValue: sensor.Data_rate,
-			StateClassValue:  sensor.StateMeasurement,
+			DeviceClassValue: types.DeviceClassDataRate,
+			StateClassValue:  types.StateClassMeasurement,
 			IsDiagnostic:     true,
 		},
 	},
@@ -42,8 +43,8 @@ var wifiProps = map[string]*wifiSensor{
 		Sensor: linux.Sensor{
 			SensorTypeValue:  linux.SensorWifiFrequency,
 			UnitsString:      "MHz",
-			DeviceClassValue: sensor.Frequency,
-			StateClassValue:  sensor.StateMeasurement,
+			DeviceClassValue: types.DeviceClassFrequency,
+			StateClassValue:  types.StateClassMeasurement,
 			IsDiagnostic:     true,
 		},
 	},
@@ -51,7 +52,7 @@ var wifiProps = map[string]*wifiSensor{
 		Sensor: linux.Sensor{
 			SensorTypeValue: linux.SensorWifiStrength,
 			UnitsString:     "%",
-			StateClassValue: sensor.StateMeasurement,
+			StateClassValue: types.StateClassMeasurement,
 			IsDiagnostic:    true,
 		},
 	},

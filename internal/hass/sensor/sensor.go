@@ -7,6 +7,8 @@ package sensor
 
 import (
 	"encoding/json"
+
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 )
 
 const (
@@ -20,7 +22,7 @@ type SensorState interface {
 	ID() string
 	Icon() string
 	State() any
-	SensorType() SensorType
+	SensorType() types.SensorClass
 	Units() string
 	Attributes() any
 }
@@ -29,8 +31,8 @@ type SensorState interface {
 type SensorRegistration interface {
 	SensorState
 	Name() string
-	DeviceClass() SensorDeviceClass
-	StateClass() SensorStateClass
+	DeviceClass() types.DeviceClass
+	StateClass() types.StateClass
 	Category() string
 }
 

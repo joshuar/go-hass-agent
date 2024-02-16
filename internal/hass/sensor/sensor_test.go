@@ -11,6 +11,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 )
 
 var mockSensor = SensorRegistrationMock{
@@ -18,11 +20,11 @@ var mockSensor = SensorRegistrationMock{
 	StateFunc:       func() any { return "mockState" },
 	AttributesFunc:  func() any { return nil },
 	IconFunc:        func() string { return "mdi:mock-icon" },
-	SensorTypeFunc:  func() SensorType { return TypeSensor },
+	SensorTypeFunc:  func() types.SensorClass { return types.Sensor },
 	NameFunc:        func() string { return "Mock Sensor" },
 	UnitsFunc:       func() string { return "mockUnit" },
-	StateClassFunc:  func() SensorStateClass { return StateMeasurement },
-	DeviceClassFunc: func() SensorDeviceClass { return SensorTemperature },
+	StateClassFunc:  func() types.StateClass { return types.StateClassMeasurement },
+	DeviceClassFunc: func() types.DeviceClass { return types.DeviceClassTemperature },
 	CategoryFunc:    func() string { return "" },
 }
 
@@ -41,7 +43,7 @@ func Test_newSensorState(t *testing.T) {
 			want: &sensorState{
 				UniqueID: "mock_sensor",
 				Icon:     "mdi:mock-icon",
-				Type:     marshalClass(TypeSensor),
+				Type:     marshalClass(types.Sensor),
 				State:    "mockState",
 			},
 		},
@@ -71,13 +73,13 @@ func Test_newSensorRegistration(t *testing.T) {
 				sensorState: &sensorState{
 					UniqueID: "mock_sensor",
 					Icon:     "mdi:mock-icon",
-					Type:     marshalClass(TypeSensor),
+					Type:     marshalClass(types.Sensor),
 					State:    "mockState",
 				},
 				Name:              "Mock Sensor",
 				UnitOfMeasurement: "mockUnit",
-				StateClass:        marshalClass(StateMeasurement),
-				DeviceClass:       marshalClass(SensorTemperature),
+				StateClass:        marshalClass(types.StateClassMeasurement),
+				DeviceClass:       marshalClass(types.DeviceClassTemperature),
 			},
 		},
 	}
@@ -189,7 +191,7 @@ func TestNewRegistrationRequest(t *testing.T) {
 
 func Test_marshalClass(t *testing.T) {
 	type args struct {
-		class SensorDeviceClass
+		class types.DeviceClass
 	}
 	tests := []struct {
 		name string
@@ -198,7 +200,7 @@ func Test_marshalClass(t *testing.T) {
 	}{
 		{
 			name: "device class",
-			args: args{class: SensorTemperature},
+			args: args{class: types.DeviceClassTemperature},
 			want: "Temperature",
 		},
 	}

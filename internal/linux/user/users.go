@@ -12,6 +12,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
@@ -59,7 +60,7 @@ func newUsersSensor() *usersSensor {
 	s.SensorTypeValue = linux.SensorUsers
 	s.UnitsString = "users"
 	s.IconString = "mdi:account"
-	s.StateClassValue = sensor.StateMeasurement
+	s.StateClassValue = types.StateClassMeasurement
 	return s
 }
 

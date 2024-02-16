@@ -4,6 +4,7 @@
 package sensor
 
 import (
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"sync"
 )
 
@@ -26,7 +27,7 @@ var _ SensorState = &SensorStateMock{}
 //			IconFunc: func() string {
 //				panic("mock out the Icon method")
 //			},
-//			SensorTypeFunc: func() SensorType {
+//			SensorTypeFunc: func() types.SensorClass {
 //				panic("mock out the SensorType method")
 //			},
 //			StateFunc: func() any {
@@ -52,7 +53,7 @@ type SensorStateMock struct {
 	IconFunc func() string
 
 	// SensorTypeFunc mocks the SensorType method.
-	SensorTypeFunc func() SensorType
+	SensorTypeFunc func() types.SensorClass
 
 	// StateFunc mocks the State method.
 	StateFunc func() any
@@ -171,7 +172,7 @@ func (mock *SensorStateMock) IconCalls() []struct {
 }
 
 // SensorType calls SensorTypeFunc.
-func (mock *SensorStateMock) SensorType() SensorType {
+func (mock *SensorStateMock) SensorType() types.SensorClass {
 	if mock.SensorTypeFunc == nil {
 		panic("SensorStateMock.SensorTypeFunc: method is nil but SensorState.SensorType was just called")
 	}

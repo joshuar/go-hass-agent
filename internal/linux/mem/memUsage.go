@@ -14,6 +14,7 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 )
 
@@ -77,22 +78,22 @@ func Updater(ctx context.Context) chan sensor.Details {
 	return sensorCh
 }
 
-func parseSensorType(t linux.SensorTypeValue, d *mem.VirtualMemoryStat) (value any, unit string, deviceClass sensor.SensorDeviceClass, stateClass sensor.SensorStateClass) {
+func parseSensorType(t linux.SensorTypeValue, d *mem.VirtualMemoryStat) (value any, unit string, deviceClass types.DeviceClass, stateClass types.StateClass) {
 	switch t {
 	case linux.SensorMemTotal:
-		return d.Total, "B", sensor.Data_size, sensor.StateTotal
+		return d.Total, "B", types.DeviceClassDataSize, types.StateClassTotal
 	case linux.SensorMemAvail:
-		return d.Available, "B", sensor.Data_size, sensor.StateTotal
+		return d.Available, "B", types.DeviceClassDataSize, types.StateClassTotal
 	case linux.SensorMemUsed:
-		return d.Used, "B", sensor.Data_size, sensor.StateTotal
+		return d.Used, "B", types.DeviceClassDataSize, types.StateClassTotal
 	case linux.SensorMemPc:
-		return float64(d.Used) / float64(d.Total) * 100, "%", 0, sensor.StateMeasurement
+		return float64(d.Used) / float64(d.Total) * 100, "%", 0, types.StateClassMeasurement
 	case linux.SensorSwapTotal:
-		return d.SwapTotal, "B", sensor.Data_size, sensor.StateTotal
+		return d.SwapTotal, "B", types.DeviceClassDataSize, types.StateClassTotal
 	case linux.SensorSwapFree:
-		return d.SwapFree, "B", sensor.Data_size, sensor.StateTotal
+		return d.SwapFree, "B", types.DeviceClassDataSize, types.StateClassTotal
 	case linux.SensorSwapPc:
-		return float64(d.SwapCached) / float64(d.SwapTotal) * 100, "%", 0, sensor.StateMeasurement
+		return float64(d.SwapCached) / float64(d.SwapTotal) * 100, "%", 0, types.StateClassMeasurement
 	default:
 		return sensor.StateUnknown, "", 0, 0
 	}

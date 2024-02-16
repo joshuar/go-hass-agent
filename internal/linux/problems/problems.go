@@ -14,6 +14,7 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
@@ -74,7 +75,7 @@ func Updater(ctx context.Context) chan sensor.Details {
 		problems.SensorTypeValue = linux.SensorProblem
 		problems.IconString = "mdi:alert"
 		problems.UnitsString = "problems"
-		problems.StateClassValue = sensor.StateMeasurement
+		problems.StateClassValue = types.StateClassMeasurement
 
 		req := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
 			Path(dBusProblemsDest).

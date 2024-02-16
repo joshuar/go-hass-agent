@@ -17,6 +17,7 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 )
 
 var ipLookupHosts = map[string]map[int]string{
@@ -61,15 +62,15 @@ func (a *address) Icon() string {
 	}
 }
 
-func (a *address) SensorType() sensor.SensorType {
-	return sensor.TypeSensor
+func (a *address) SensorType() types.SensorClass {
+	return types.Sensor
 }
 
-func (a *address) DeviceClass() sensor.SensorDeviceClass {
+func (a *address) DeviceClass() types.DeviceClass {
 	return 0
 }
 
-func (a *address) StateClass() sensor.SensorStateClass {
+func (a *address) StateClass() types.StateClass {
 	return 0
 }
 

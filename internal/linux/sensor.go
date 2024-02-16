@@ -8,7 +8,7 @@ package linux
 import (
 	"github.com/iancoleman/strcase"
 
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 )
 
 const (
@@ -28,8 +28,8 @@ type Sensor struct {
 	SensorTypeValue
 	IsBinary         bool
 	IsDiagnostic     bool
-	DeviceClassValue sensor.SensorDeviceClass
-	StateClassValue  sensor.SensorStateClass
+	DeviceClassValue types.DeviceClass
+	StateClassValue  types.StateClass
 }
 
 // linuxSensor satisfies the sensor.Sensor interface, allowing it to be sent as
@@ -48,11 +48,11 @@ func (l *Sensor) State() any {
 	return l.Value
 }
 
-func (l *Sensor) SensorType() sensor.SensorType {
+func (l *Sensor) SensorType() types.SensorClass {
 	if l.IsBinary {
-		return sensor.TypeBinary
+		return types.BinarySensor
 	}
-	return sensor.TypeSensor
+	return types.Sensor
 }
 
 func (l *Sensor) Category() string {
@@ -62,11 +62,11 @@ func (l *Sensor) Category() string {
 	return ""
 }
 
-func (l *Sensor) DeviceClass() sensor.SensorDeviceClass {
+func (l *Sensor) DeviceClass() types.DeviceClass {
 	return l.DeviceClassValue
 }
 
-func (l *Sensor) StateClass() sensor.SensorStateClass {
+func (l *Sensor) StateClass() types.StateClass {
 	return l.StateClassValue
 }
 

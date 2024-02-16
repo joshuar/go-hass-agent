@@ -14,6 +14,7 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 )
 
@@ -36,7 +37,7 @@ func LoadAvgUpdater(ctx context.Context) chan sensor.Details {
 			l.IconString = "mdi:chip"
 			l.UnitsString = "load"
 			l.SensorSrc = linux.DataSrcProcfs
-			l.StateClassValue = sensor.StateMeasurement
+			l.StateClassValue = types.StateClassMeasurement
 			switch loadType {
 			case linux.SensorLoad1:
 				l.Value = latest.Load1

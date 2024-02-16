@@ -18,6 +18,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 )
 
 type script struct {
@@ -135,17 +136,17 @@ func (s *scriptSensor) Icon() string {
 	return s.SensorIcon
 }
 
-func (s *scriptSensor) SensorType() sensor.SensorType {
+func (s *scriptSensor) SensorType() types.SensorClass {
 	switch s.SensorStateType {
 	case "binary":
-		return sensor.TypeBinary
+		return types.BinarySensor
 	default:
-		return sensor.TypeSensor
+		return types.Sensor
 	}
 }
 
-func (s *scriptSensor) DeviceClass() sensor.SensorDeviceClass {
-	for d := sensor.Apparent_power; d <= sensor.Wind_speed; d++ {
+func (s *scriptSensor) DeviceClass() types.DeviceClass {
+	for d := types.DeviceClassApparentPower; d <= types.DeviceClassWindSpeed; d++ {
 		if s.SensorDeviceClass == d.String() {
 			return d
 		}
@@ -153,14 +154,14 @@ func (s *scriptSensor) DeviceClass() sensor.SensorDeviceClass {
 	return 0
 }
 
-func (s *scriptSensor) StateClass() sensor.SensorStateClass {
+func (s *scriptSensor) StateClass() types.StateClass {
 	switch s.SensorStateClass {
 	case "measurement":
-		return sensor.StateMeasurement
+		return types.StateClassMeasurement
 	case "total":
-		return sensor.StateTotal
+		return types.StateClassTotal
 	case "total_increasing":
-		return sensor.StateTotalIncreasing
+		return types.StateClassTotalIncreasing
 	default:
 		return 0
 	}

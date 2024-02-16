@@ -11,6 +11,7 @@ import (
 	"github.com/godbus/dbus/v5"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
@@ -69,6 +70,6 @@ func newRunningAppsSensor() *runningAppsSensor {
 	s.SensorTypeValue = linux.SensorAppRunning
 	s.IconString = "mdi:apps"
 	s.UnitsString = "apps"
-	s.StateClassValue = sensor.StateMeasurement
+	s.StateClassValue = types.StateClassMeasurement
 	return s
 }

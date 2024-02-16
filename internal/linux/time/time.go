@@ -14,6 +14,7 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 )
 
@@ -50,8 +51,8 @@ func Updater(ctx context.Context) chan sensor.Details {
 				IsDiagnostic:     true,
 				UnitsString:      "h",
 				IconString:       "mdi:restart",
-				DeviceClassValue: sensor.Duration,
-				StateClassValue:  sensor.StateMeasurement,
+				DeviceClassValue: types.DeviceClassDuration,
+				StateClassValue:  types.StateClassMeasurement,
 			},
 		}
 		sensorCh <- &timeSensor{
@@ -60,7 +61,7 @@ func Updater(ctx context.Context) chan sensor.Details {
 				Value:            getBoottime(ctx),
 				IsDiagnostic:     true,
 				IconString:       "mdi:restart",
-				DeviceClassValue: sensor.Timestamp,
+				DeviceClassValue: types.DeviceClassTimestamp,
 			},
 		}
 	}
