@@ -10,7 +10,6 @@ import (
 	"net"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/go-resty/resty/v2"
 	"github.com/rs/zerolog/log"
 
@@ -129,7 +128,6 @@ func ExternalIPUpdater(ctx context.Context) chan sensor.Details {
 	updateExternalIP := func(_ time.Duration) {
 		for _, ver := range []int{4, 6} {
 			if ip := lookupExternalIPs(client, ver); ip != nil {
-				spew.Dump(ip)
 				sensorCh <- ip
 			}
 		}
