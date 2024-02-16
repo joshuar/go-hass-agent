@@ -1,8 +1,8 @@
 ---
 name: Bug report
 about: Create a report to help improve go-hass-agent
-title: "[BUG]"
-labels: ''
+title: "[BUG]: "
+labels: '['bug']'
 assignees: joshuar
 
 ---
