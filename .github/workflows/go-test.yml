@@ -24,7 +24,7 @@ jobs:
         id: setup_go
         uses: actions/setup-go@v5
         with:
-          go-version: '^1.21'        
+          go-version: '^1.22'        
 
       - name: Install Go dependencies
         id: install_go_deps
@@ -44,4 +44,12 @@ jobs:
 
       - name: Run go test
         id: go_test
-        run: dbus-launch --exit-with-session go test -skip '.*[bB]us.*' -v ./...
+        run: go test -v -coverprofile=coverage.txt ./...
+
+      - name: Upload Coverage
+        uses: codecov/codecov-action@v3
+        continue-on-error: true
+        with:
+          token: ${{secrets.CODECOV_TOKEN}}
+          file: ./coverage.txt
+          fail_ci_if_error: false
