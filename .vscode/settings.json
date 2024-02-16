@@ -19,7 +19,8 @@
         "preferences",
         "cmd",
         "hass",
-        "dbusx"
+        "dbusx",
+        "device"
     ],
     "conventionalCommits.lineBreak": "\\n",
     "go.lintTool": "golangci-lint",
