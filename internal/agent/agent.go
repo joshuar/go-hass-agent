@@ -7,16 +7,13 @@ package agent
 
 import (
 	"context"
-	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"sync"
 	"syscall"
-	"time"
 
 	"github.com/adrg/xdg"
-	"github.com/go-resty/resty/v2"
 	"github.com/rs/zerolog/log"
 
 	fyneui "github.com/joshuar/go-hass-agent/internal/agent/ui/fyneUI"
@@ -182,15 +179,6 @@ func (agent *Agent) Stop() {
 func setupContext(prefs *preferences.Preferences) (context.Context, context.CancelFunc) {
 	baseCtx, cancelFunc := context.WithCancel(context.Background())
 	agentCtx := hass.ContextSetURL(baseCtx, prefs.RestAPIURL)
-	r := resty.New().
-		SetTimeout(1 * time.Second).
-		AddRetryCondition(
-			// RetryConditionFunc type is for retry condition function
-			// input: non-nil Response OR request execution error
-			func(r *resty.Response, err error) bool {
-				return r.StatusCode() == http.StatusTooManyRequests
-			},
-		)
-	agentCtx = hass.ContextSetClient(agentCtx, r)
+	agentCtx = hass.ContextSetClient(agentCtx, hass.NewDefaultHTTPClient())
 	return agentCtx, cancelFunc
 }
