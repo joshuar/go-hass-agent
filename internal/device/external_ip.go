@@ -7,12 +7,11 @@ package device
 
 import (
 	"context"
-	"errors"
 	"net"
-	"strings"
 	"time"
 
-	"github.com/carlmjohnson/requests"
+	"github.com/davecgh/go-spew/spew"
+	"github.com/go-resty/resty/v2"
 	"github.com/rs/zerolog/log"
 
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
@@ -95,42 +94,42 @@ func (a *address) Attributes() interface{} {
 	}
 }
 
-func lookupExternalIPs(ctx context.Context, ver int) chan *address {
-	addrCh := make(chan *address, 1)
-	defer close(addrCh)
+func lookupExternalIPs(client *resty.Client, ver int) *address {
 	for host, addr := range ipLookupHosts {
 		log.Trace().Msgf("Trying to find external IP addresses with %s", host)
-		var s string
-		err := requests.
-			URL(addr[ver]).
-			ToString(&s).
-			Fetch(ctx)
-		log.Trace().Msgf("Fetching v%d address from %s", ver, addr[ver])
+		log.Trace().
+			Str("method", "GET").
+			Str("url", addr[ver]).
+			Time("sent_at", time.Now()).
+			Msg("Fetching external IP.")
+		resp, err := client.R().Get(addr[ver])
 		if err != nil {
-			if !errors.Is(err, requests.ErrTransport) {
-				log.Warn().Err(err).
-					Msgf("Error retrieving external v%d address with %s.", ver, addr[ver])
-			}
+			log.Warn().Err(err).
+				Msgf("Error retrieving external v%d address with %s.", ver, addr[ver])
 		} else {
-			s = strings.TrimSpace(s)
-			if a := net.ParseIP(s); a != nil {
-				log.Trace().Msgf("Found address %s with %s.", a.String(), addr[ver])
-				addrCh <- &address{addr: a}
-				return addrCh
+			log.Trace().Err(err).
+				Int("statuscode", resp.StatusCode()).
+				Str("status", resp.Status()).
+				Str("protocol", resp.Proto()).
+				Dur("time", resp.Time()).
+				Time("received_at", resp.ReceivedAt()).
+				Str("body", string(resp.Body())).Msg("Response received.")
+			if a := net.ParseIP(string(resp.Body())); a != nil {
+				return &address{addr: a}
 			}
 		}
 	}
-	return addrCh
+	return nil
 }
 
 func ExternalIPUpdater(ctx context.Context) chan sensor.Details {
-	sensorCh := make(chan sensor.Details, 1)
+	sensorCh := make(chan sensor.Details)
+	client := resty.New().SetTimeout(15 * time.Second)
+
 	updateExternalIP := func(_ time.Duration) {
-		requestCtx, cancel := context.WithTimeout(ctx, time.Second*15)
-		defer cancel()
 		for _, ver := range []int{4, 6} {
-			ip := <-lookupExternalIPs(requestCtx, ver)
-			if ip != nil {
+			if ip := lookupExternalIPs(client, ver); ip != nil {
+				spew.Dump(ip)
 				sensorCh <- ip
 			}
 		}
