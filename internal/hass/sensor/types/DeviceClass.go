@@ -10,52 +10,52 @@ package types
 
 //go:generate stringer -type=DeviceClass -output DeviceClass_generated.go -linecomment
 const (
-	DeviceClassApparentPower          DeviceClass = iota + 1 // Apparent Power
-	DeviceClassAqi                                           // Air Quality Index
-	DeviceClassAtmosphericPressure                           // Atmospheric Pressure
-	DeviceClassBattery                                       // Battery Percent
-	DeviceClassCarbonDioxide                                 // Carbon Dioxide Concentration.
-	DeviceClassCarbonMonoxide                                // Carbon Monoxide Concentration
-	DeviceClassCurrent                                       // Current
-	DeviceClassDataRate                                      // Data Rate
-	DeviceClassDataSize                                      // Data Size
-	DeviceClassDate                                          // Date
-	DeviceClassDistance                                      // Distance
-	DeviceClassDuration                                      // Time Period
-	DeviceClassEnergyStorage                                 // Stored Energy
-	DeviceClassEnum                                          // Predefined State
-	DeviceClassFrequency                                     // Frequency
-	DeviceClassGas                                           // Gas Volume
-	DeviceClassHumidity                                      // Relative Humidity
-	DeviceClassIlluminance                                   // Light Level
-	DeviceClassIrradiance                                    // Irradiance
-	DeviceClassMoisture                                      // Moisture
-	DeviceClassMonetary                                      // Monetary Value
-	DeviceClassNitrogenDioxide                               // Nitrogen Dioxide Concentration
-	DeviceClassNitrogenMonoxide                              // Nitrogen Monoxide Concentration
-	DeviceClassNitrousOxide                                  // Nitrous Oxide Concentration
-	DeviceClassOzone                                         // Ozone Concentration
-	DeviceClassPm1                                           // PM1 Concentration
-	DeviceClassPm25                                          // PM2.5 Concentration
-	DeviceClassPm10                                          // PM10 Concentration
-	DeviceClassPowerFactor                                   // Power Factor
-	DeviceClassPower                                         // Power
-	DeviceClassPrecipitation                                 // Accumulated Precipitation
-	DeviceClassPrecipitationIntensity                        // Precipitation Intensity
-	DeviceClassPressure                                      // Pressure
-	DeviceClassReactivePower                                 // Reactive Power
-	DeviceClassSignalStrength                                // Signal Strength
-	DeviceClassSoundPressure                                 // Sound Pressure
-	DeviceClassSpeed                                         // Speed
-	DeviceClassSulphurDioxide                                // Sulphure Dioxide Concentration
-	DeviceClassTemperature                                   // Temperature
-	DeviceClassTimestamp                                     // Timestamp
-	DeviceClassVOC                                           // VOC Concentration
-	DeviceClassVoltage                                       // Voltage
-	DeviceClassVolume                                        // Volume
-	DeviceClassWater                                         // Water Consumption
-	DeviceClassWeight                                        // Mass
-	DeviceClassWindSpeed                                     // Wind speed
+	DeviceClassApparentPower          DeviceClass = iota + 1 // apparent_power
+	DeviceClassAqi                                           // aqi
+	DeviceClassAtmosphericPressure                           // atmospheric_pressure
+	DeviceClassBattery                                       // battery
+	DeviceClassCarbonDioxide                                 // carbon_dioxide
+	DeviceClassCarbonMonoxide                                // carbon_monoxide
+	DeviceClassCurrent                                       // current
+	DeviceClassDataRate                                      // data_rate
+	DeviceClassDataSize                                      // data_size
+	DeviceClassDate                                          // date
+	DeviceClassDistance                                      // distance
+	DeviceClassDuration                                      // duration
+	DeviceClassEnergyStorage                                 // energy_storage
+	DeviceClassEnum                                          // enum
+	DeviceClassFrequency                                     // frequency
+	DeviceClassGas                                           // gas
+	DeviceClassHumidity                                      // humidity
+	DeviceClassIlluminance                                   // illuminance
+	DeviceClassIrradiance                                    // irradiance
+	DeviceClassMoisture                                      // moisture
+	DeviceClassMonetary                                      // monetary
+	DeviceClassNitrogenDioxide                               // nitrogen_dioxide
+	DeviceClassNitrogenMonoxide                              // nitrogen_monoxide
+	DeviceClassNitrousOxide                                  // nitrous_oxide
+	DeviceClassOzone                                         // ozone
+	DeviceClassPm1                                           // pm1
+	DeviceClassPm25                                          // pm25
+	DeviceClassPm10                                          // pm10
+	DeviceClassPowerFactor                                   // power_factor
+	DeviceClassPower                                         // power
+	DeviceClassPrecipitation                                 // precipitation
+	DeviceClassPrecipitationIntensity                        // precipitation_intensity
+	DeviceClassPressure                                      // pressure
+	DeviceClassReactivePower                                 // reactive_power
+	DeviceClassSignalStrength                                // signal_strength
+	DeviceClassSoundPressure                                 // sound_pressure
+	DeviceClassSpeed                                         // speed
+	DeviceClassSulphurDioxide                                // sulphure_dioxide
+	DeviceClassTemperature                                   // temperature
+	DeviceClassTimestamp                                     // timestamp
+	DeviceClassVOC                                           // voc
+	DeviceClassVoltage                                       // voltage
+	DeviceClassVolume                                        // volume
+	DeviceClassWater                                         // water
+	DeviceClassWeight                                        // weight
+	DeviceClassWindSpeed                                     // wind_speed
 )
 
 // SensorDeviceClass reflects the HA device class of the sensor.
