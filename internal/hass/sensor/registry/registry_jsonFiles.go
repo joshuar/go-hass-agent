@@ -126,7 +126,7 @@ func Load() (*jsonFilesRegistry, error) {
 		sensors: sync.Map{},
 		path:    registryPath,
 	}
-	pathErr := os.Mkdir(registryPath, 0o755)
+	pathErr := os.MkdirAll(registryPath, 0o755)
 	if pathErr != nil && !errors.Is(pathErr, fs.ErrExist) {
 		return nil, pathErr
 	}
