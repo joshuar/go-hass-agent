@@ -14,6 +14,7 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 )
 
@@ -73,8 +74,8 @@ func newNetIOSensor(t linux.SensorTypeValue) *netIOSensor {
 		Sensor: linux.Sensor{
 			UnitsString:      "B",
 			SensorTypeValue:  t,
-			DeviceClassValue: sensor.Data_size,
-			StateClassValue:  sensor.StateMeasurement,
+			DeviceClassValue: types.DeviceClassDataSize,
+			StateClassValue:  types.StateClassMeasurement,
 		},
 	}
 }
@@ -106,8 +107,8 @@ func newNetIORateSensor(t linux.SensorTypeValue) *netIORateSensor {
 		Sensor: linux.Sensor{
 			UnitsString:      "B/s",
 			SensorTypeValue:  t,
-			DeviceClassValue: sensor.Data_rate,
-			StateClassValue:  sensor.StateMeasurement,
+			DeviceClassValue: types.DeviceClassDataRate,
+			StateClassValue:  types.StateClassMeasurement,
 			SensorSrc:        linux.DataSrcProcfs,
 		},
 	}

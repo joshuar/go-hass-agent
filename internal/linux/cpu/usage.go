@@ -14,6 +14,7 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 )
 
@@ -32,7 +33,7 @@ func UsageUpdater(ctx context.Context) chan sensor.Details {
 		s.IconString = "mdi:chip"
 		s.UnitsString = "%"
 		s.SensorSrc = linux.DataSrcProcfs
-		s.StateClassValue = sensor.StateMeasurement
+		s.StateClassValue = types.StateClassMeasurement
 		s.Value = usage[0]
 		s.SensorTypeValue = linux.SensorCPUPc
 

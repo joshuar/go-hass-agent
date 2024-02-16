@@ -18,6 +18,7 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/pkg/linux/hwmon"
 )
@@ -49,7 +50,7 @@ func (s *hwSensor) asFloat(h *hwmon.Sensor) {
 	i, d := parseSensorType(h.SensorType.String())
 	s.IconString = i
 	s.DeviceClassValue = d
-	s.StateClassValue = sensor.StateMeasurement
+	s.StateClassValue = types.StateClassMeasurement
 	for _, a := range h.Attributes {
 		s.ExtraAttrs[a.Name] = a.Value
 	}
@@ -116,24 +117,24 @@ func HWSensorUpdater(ctx context.Context) chan sensor.Details {
 	return sensorCh
 }
 
-func parseSensorType(t string) (icon string, deviceclass sensor.SensorDeviceClass) {
+func parseSensorType(t string) (icon string, deviceclass types.DeviceClass) {
 	switch t {
 	case "Temp":
-		return "mdi:thermometer", sensor.SensorTemperature
+		return "mdi:thermometer", types.DeviceClassTemperature
 	case "Fan":
 		return "mdi:turbine", 0
 	case "Power":
-		return "mdi:flash", sensor.SensorPower
+		return "mdi:flash", types.DeviceClassPower
 	case "Voltage":
-		return "mdi:lightning-bolt", sensor.Voltage
+		return "mdi:lightning-bolt", types.DeviceClassVoltage
 	case "Energy":
-		return "mdi:lightning-bolt", sensor.Energy
+		return "mdi:lightning-bolt", types.DeviceClassEnergyStorage
 	case "Current":
-		return "mdi:current-ac", sensor.Current
+		return "mdi:current-ac", types.DeviceClassCurrent
 	case "Frequency", "PWM":
-		return "mdi:sawtooth-wave", sensor.Frequency
+		return "mdi:sawtooth-wave", types.DeviceClassFrequency
 	case "Humidity":
-		return "mdi:water-percent", sensor.Humidity
+		return "mdi:water-percent", types.DeviceClassHumidity
 	default:
 		return "mdi:chip", 0
 	}

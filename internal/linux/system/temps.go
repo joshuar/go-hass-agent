@@ -18,14 +18,15 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 )
 
 type tempSensor struct {
+	id string
+	linux.Sensor
 	high float64
 	crit float64
-	id   string
-	linux.Sensor
 }
 
 func (s *tempSensor) Name() string {
@@ -54,8 +55,8 @@ func (s *tempSensor) Attributes() any {
 func newTempSensor(t host.TemperatureStat) *tempSensor {
 	s := &tempSensor{}
 	s.IsDiagnostic = true
-	s.DeviceClassValue = sensor.SensorTemperature
-	s.StateClassValue = sensor.StateMeasurement
+	s.DeviceClassValue = types.DeviceClassTemperature
+	s.StateClassValue = types.StateClassMeasurement
 	s.UnitsString = "°C"
 	s.SensorTypeValue = linux.SensorDeviceTemp
 	s.Value = t.Temperature

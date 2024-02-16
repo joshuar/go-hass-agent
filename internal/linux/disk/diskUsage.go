@@ -16,6 +16,7 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 )
 
@@ -27,7 +28,7 @@ type diskSensor struct {
 func newDiskSensor(d *disk.UsageStat) *diskSensor {
 	s := &diskSensor{}
 	s.IconString = "mdi:harddisk"
-	s.StateClassValue = sensor.StateTotal
+	s.StateClassValue = types.StateClassTotal
 	s.UnitsString = "%"
 	s.stats = d
 	s.Value = math.Round(d.UsedPercent/0.05) * 0.05

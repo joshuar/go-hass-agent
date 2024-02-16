@@ -18,6 +18,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
@@ -161,23 +162,23 @@ func (s *upowerBatterySensor) Icon() string {
 	}
 }
 
-func (s *upowerBatterySensor) DeviceClass() sensor.SensorDeviceClass {
+func (s *upowerBatterySensor) DeviceClass() types.DeviceClass {
 	switch s.SensorTypeValue {
 	case linux.SensorBattPercentage:
-		return sensor.SensorBattery
+		return types.DeviceClassBattery
 	case linux.SensorBattTemp:
-		return sensor.SensorTemperature
+		return types.DeviceClassTemperature
 	case linux.SensorBattEnergyRate:
-		return sensor.SensorPower
+		return types.DeviceClassPower
 	default:
 		return 0
 	}
 }
 
-func (s *upowerBatterySensor) StateClass() sensor.SensorStateClass {
+func (s *upowerBatterySensor) StateClass() types.StateClass {
 	switch s.SensorTypeValue {
 	case linux.SensorBattPercentage, linux.SensorBattTemp, linux.SensorBattEnergyRate:
-		return sensor.StateMeasurement
+		return types.StateClassMeasurement
 	default:
 		return 0
 	}
