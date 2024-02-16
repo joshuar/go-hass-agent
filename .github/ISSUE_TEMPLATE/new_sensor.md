@@ -4,7 +4,6 @@ about: Suggest additional sensor/sensors for Go Hass Agent
 title: '[SENSOR]: '
 labels: '['enhancement']'
 assignees: ''
-
 ---
 
 **What are the sensors you would like to see in Go Hass Agent? What do they measure? Why are they useful? How would you use them in Home Assistant?**
