@@ -18,7 +18,8 @@
         "SECURITY",
         "preferences",
         "cmd",
-        "hass"
+        "hass",
+        "dbusx"
     ],
     "conventionalCommits.lineBreak": "\\n",
     "go.lintTool": "golangci-lint",

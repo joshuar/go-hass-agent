@@ -21,6 +21,8 @@ const (
 	PropChangedSignal = "org.freedesktop.DBus.Properties.PropertiesChanged"
 )
 
+var ErrNoBus = errors.New("no D-Bus connection")
+
 type dbusType int
 
 type Bus struct {
@@ -29,9 +31,9 @@ type Bus struct {
 	wg      sync.WaitGroup
 }
 
-// NewBus sets up DBus connections and channels for receiving signals. It
+// NewBus sets up D-Bus connections and channels for receiving signals. It
 // creates both a system and session bus connection.
-func NewBus(ctx context.Context, t dbusType) *Bus {
+func NewBus(ctx context.Context, t dbusType) (*Bus, error) {
 	var conn *dbus.Conn
 	var err error
 	dbusCtx, cancelFunc := context.WithCancel(context.Background())
@@ -42,9 +44,8 @@ func NewBus(ctx context.Context, t dbusType) *Bus {
 		conn, err = dbus.ConnectSystemBus(dbus.WithContext(dbusCtx))
 	}
 	if err != nil {
-		log.Error().Err(err).Msg("Could not connect to bus.")
 		cancelFunc()
-		return nil
+		return nil, err
 	}
 	b := &Bus{
 		conn:    conn,
@@ -56,10 +57,10 @@ func NewBus(ctx context.Context, t dbusType) *Bus {
 		<-ctx.Done()
 		b.wg.Wait()
 	}()
-	return b
+	return b, nil
 }
 
-// busRequest contains properties for building different types of DBus requests.
+// busRequest contains properties for building different types of D-Bus requests.
 type busRequest struct {
 	bus          *Bus
 	eventHandler func(*dbus.Signal)
@@ -69,6 +70,10 @@ type busRequest struct {
 	match        []dbus.MatchOption
 }
 
+// NewBusRequest creates a new busRequest builder on the specified bus type
+// (either a system or session bus). If it cannot connect to the specified bus,
+// it will still return a busRequest object. Further builder functions should
+// check whether there is a valid bus if appropriate.
 func NewBusRequest(ctx context.Context, busType dbusType) *busRequest {
 	if bus, ok := getBus(ctx, busType); !ok {
 		log.Debug().Msg("No D-Bus connection present in context.")
@@ -80,42 +85,31 @@ func NewBusRequest(ctx context.Context, busType dbusType) *busRequest {
 	}
 }
 
-func NewBusRequest2(ctx context.Context, busType dbusType) *busRequest {
-	if b := NewBus(ctx, busType); b != nil {
-		return &busRequest{
-			bus: b,
-		}
-	} else {
-		log.Debug().Msg("No D-Bus connection present in context.")
-		return &busRequest{}
-	}
-}
-
-// Path defines the DBus path on which a request will operate.
+// Path defines the D-Bus path on which a request will operate.
 func (r *busRequest) Path(p dbus.ObjectPath) *busRequest {
 	r.path = p
 	return r
 }
 
-// Match defines DBus routing match rules on which a request will operate.
+// Match defines D-Bus routing match rules on which a request will operate.
 func (r *busRequest) Match(m []dbus.MatchOption) *busRequest {
 	r.match = m
 	return r
 }
 
-// Event defines an event on which a DBus request should match.
+// Event defines an event on which a D-Bus request should match.
 func (r *busRequest) Event(e string) *busRequest {
 	r.event = e
 	return r
 }
 
-// Handler defines a function that will handle a matched DBus signal.
+// Handler defines a function that will handle a matched D-Bus signal.
 func (r *busRequest) Handler(h func(*dbus.Signal)) *busRequest {
 	r.eventHandler = h
 	return r
 }
 
-// Destination defines the location/interface on a given DBus path for a request
+// Destination defines the location/interface on a given D-Bus path for a request
 // to operate.
 func (r *busRequest) Destination(d string) *busRequest {
 	r.dest = d
@@ -128,7 +122,7 @@ func (r *busRequest) Destination(d string) *busRequest {
 func GetProp[P any](req *busRequest, prop string) (P, error) {
 	var value P
 	if req == nil {
-		return value, errors.New("no bus connection")
+		return value, ErrNoBus
 	}
 	obj := req.bus.conn.Object(req.dest, req.path)
 	res, err := obj.GetProperty(prop)
@@ -143,7 +137,7 @@ func GetProp[P any](req *busRequest, prop string) (P, error) {
 // SetProp sets the specific property to the specified value.
 func SetProp[P any](req *busRequest, prop string, value P) error {
 	if req == nil {
-		return errors.New("no bus connection")
+		return ErrNoBus
 	}
 	v := dbus.MakeVariant(value)
 	obj := req.bus.conn.Object(req.dest, req.path)
@@ -156,7 +150,7 @@ func SetProp[P any](req *busRequest, prop string, value P) error {
 func GetData[D any](req *busRequest, method string, args ...any) (D, error) {
 	var data D
 	if req == nil {
-		return data, errors.New("no bus connection")
+		return data, ErrNoBus
 	}
 	obj := req.bus.conn.Object(req.dest, req.path)
 	var err error
@@ -171,7 +165,7 @@ func GetData[D any](req *busRequest, method string, args ...any) (D, error) {
 // Call executes the given method in the builder and returns the error state.
 func (r *busRequest) Call(method string, args ...any) error {
 	if r.bus == nil {
-		return errors.New("no bus connection")
+		return ErrNoBus
 	}
 	obj := r.bus.conn.Object(r.dest, r.path)
 	if args != nil {
@@ -182,7 +176,7 @@ func (r *busRequest) Call(method string, args ...any) error {
 
 func (r *busRequest) AddWatch(ctx context.Context) error {
 	if r.bus == nil {
-		return errors.New("no bus connection")
+		return ErrNoBus
 	}
 	if err := r.bus.conn.AddMatchSignalContext(ctx, r.match...); err != nil {
 		return err
@@ -214,7 +208,7 @@ func (r *busRequest) AddWatch(ctx context.Context) error {
 
 func (r *busRequest) RemoveWatch(ctx context.Context) error {
 	if r.bus == nil {
-		return errors.New("no bus connection")
+		return ErrNoBus
 	}
 	if err := r.bus.conn.RemoveMatchSignalContext(ctx, r.match...); err != nil {
 		return err
