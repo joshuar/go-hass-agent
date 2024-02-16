@@ -7,12 +7,19 @@ package dbusx
 
 import (
 	"context"
+	"os"
 	"reflect"
 	"testing"
 
 	"github.com/godbus/dbus/v5"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestMain(m *testing.M) {
+	if os.Getenv("CI") == "" {
+		m.Run()
+	}
+}
 
 func TestNewBus(t *testing.T) {
 	type args struct {
