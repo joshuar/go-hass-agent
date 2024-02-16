@@ -4,7 +4,6 @@ about: Create a report to help improve go-hass-agent
 title: "[BUG]: "
 labels: '['bug']'
 assignees: joshuar
-
 ---
 
 **Go Hass Agent Version**
