@@ -8,6 +8,8 @@ package dbusx
 import (
 	"context"
 	"sync"
+
+	"github.com/rs/zerolog/log"
 )
 
 type dBusAPI struct {
@@ -19,8 +21,14 @@ func NewDBusAPI(ctx context.Context) *dBusAPI {
 	a := &dBusAPI{}
 	a.dbus = make(map[dbusType]*Bus)
 	a.mu.Lock()
-	a.dbus[SessionBus] = NewBus(ctx, SessionBus)
-	a.dbus[SystemBus] = NewBus(ctx, SystemBus)
+	for _, b := range []dbusType{SessionBus, SystemBus} {
+		bus, err := NewBus(ctx, b)
+		if err != nil {
+			log.Warn().Err(err).Msg("Could not connect to D-Bus.")
+		} else {
+			a.dbus[b] = bus
+		}
+	}
 	a.mu.Unlock()
 	return a
 }
