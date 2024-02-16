@@ -1,8 +1,8 @@
 ---
 name: Feature request
 about: Suggest an idea for go-hass-agent
-title: ''
-labels: ''
+title: '[FEATURE REQUEST]: '
+labels: '['enhancement']'
 assignees: ''
 
 ---
