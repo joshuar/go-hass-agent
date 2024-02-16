@@ -64,7 +64,7 @@ func (agent *Agent) performRegistration(ctx context.Context, server, token strin
 	device := newDevice(ctx)
 	resp, err := hass.RegisterWithHass(ctx, server, token, device)
 	if err != nil {
-		return errors.New("could not register with Home Assistant")
+		return err
 	}
 
 	// Write registration details to config.

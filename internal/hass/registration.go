@@ -111,9 +111,7 @@ func RegisterWithHass(ctx context.Context, server, token string, device DeviceIn
 	}
 	serverURL = serverURL.JoinPath(registrationPath)
 	ctx = ContextSetURL(ctx, serverURL.String())
-
-	ctx, cancel := context.WithTimeout(ctx, time.Minute)
-	defer cancel()
+	ctx = ContextSetClient(ctx, NewDefaultHTTPClient().SetTimeout(time.Minute))
 
 	ExecuteRequest(ctx, req, resp)
 	if resp.err != nil {

@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -134,4 +135,16 @@ func ExecuteRequest(ctx context.Context, request any, response Response) {
 	if err := response.UnmarshalJSON(resp.Body()); err != nil {
 		response.StoreError(errors.Join(ErrResponseMalformed, err))
 	}
+}
+
+func NewDefaultHTTPClient() *resty.Client {
+	return resty.New().
+		SetTimeout(1 * time.Second).
+		AddRetryCondition(
+			// RetryConditionFunc type is for retry condition function
+			// input: non-nil Response OR request execution error
+			func(r *resty.Response, err error) bool {
+				return r.StatusCode() == http.StatusTooManyRequests
+			},
+		)
 }
