@@ -56,9 +56,9 @@ func _() {
 	_ = x[DeviceClassWindSpeed-46]
 }
 
-const _DeviceClass_name = "Apparent PowerAir Quality IndexAtmospheric PressureBattery PercentCarbon Dioxide Concentration.Carbon Monoxide ConcentrationCurrentData RateData SizeDateDistanceTime PeriodStored EnergyPredefined StateFrequencyGas VolumeRelative HumidityLight LevelIrradianceMoistureMonetary ValueNitrogen Dioxide ConcentrationNitrogen Monoxide ConcentrationNitrous Oxide ConcentrationOzone ConcentrationPM1 ConcentrationPM2.5 ConcentrationPM10 ConcentrationPower FactorPowerAccumulated PrecipitationPrecipitation IntensityPressureReactive PowerSignal StrengthSound PressureSpeedSulphure Dioxide ConcentrationTemperatureTimestampVOC ConcentrationVoltageVolumeWater ConsumptionMassWind speed"
+const _DeviceClass_name = "apparent_poweraqiatmospheric_pressurebatterycarbon_dioxidecarbon_monoxidecurrentdata_ratedata_sizedatedistancedurationenergy_storageenumfrequencygashumidityilluminanceirradiancemoisturemonetarynitrogen_dioxidenitrogen_monoxidenitrous_oxideozonepm1pm25pm10power_factorpowerprecipitationprecipitation_intensitypressurereactive_powersignal_strengthsound_pressurespeedsulphure_dioxidetemperaturetimestampvocvoltagevolumewaterweightwind_speed"
 
-var _DeviceClass_index = [...]uint16{0, 14, 31, 51, 66, 95, 124, 131, 140, 149, 153, 161, 172, 185, 201, 210, 220, 237, 248, 258, 266, 280, 310, 341, 368, 387, 404, 423, 441, 453, 458, 483, 506, 514, 528, 543, 557, 562, 592, 603, 612, 629, 636, 642, 659, 663, 673}
+var _DeviceClass_index = [...]uint16{0, 14, 17, 37, 44, 58, 73, 80, 89, 98, 102, 110, 118, 132, 136, 145, 148, 156, 167, 177, 185, 193, 209, 226, 239, 244, 247, 251, 255, 267, 272, 285, 308, 316, 330, 345, 359, 364, 380, 391, 400, 403, 410, 416, 421, 427, 437}
 
 func (i DeviceClass) String() string {
 	i -= 1
