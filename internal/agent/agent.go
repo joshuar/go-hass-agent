@@ -6,7 +6,6 @@
 package agent
 
 import (
-	"context"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -19,7 +18,6 @@ import (
 	fyneui "github.com/joshuar/go-hass-agent/internal/agent/ui/fyneUI"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
-	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
 // Agent holds the data and structure representing an instance of the agent.
@@ -70,12 +68,11 @@ func (agent *Agent) Run(trk SensorTracker, reg sensor.Registry) {
 		defer wg.Done()
 		regWait.Wait()
 
-		var err error
-		prefs, err := preferences.Load()
-		if err != nil {
-			log.Fatal().Err(err).Msg("Could not load preferences.")
+		ctx, cancelFunc := hass.NewContext()
+		if ctx == nil {
+			log.Error().Msg("Unable to create context.")
+			return
 		}
-		ctx, cancelFunc := setupContext(prefs)
 		runnerCtx := setupDeviceContext(ctx)
 
 		go func() {
@@ -98,13 +95,11 @@ func (agent *Agent) Run(trk SensorTracker, reg sensor.Registry) {
 			runScripts(runnerCtx, scriptPath, trk, reg)
 		}()
 		// Start the mqtt client
-		if prefs.MQTTEnabled {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				runMQTTWorker(runnerCtx)
-			}()
-		}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			runMQTTWorker(runnerCtx)
+		}()
 		// Listen for notifications from Home Assistant.
 		if !agent.IsHeadless() {
 			wg.Add(1)
@@ -170,15 +165,4 @@ func (agent *Agent) AppID() string {
 func (agent *Agent) Stop() {
 	log.Debug().Msg("Stopping agent.")
 	close(agent.done)
-}
-
-// setupContext embeds the config object in a context which allows access to it
-// from any functions that inherit this context. This is used early in the agent
-// start up to ensure all subsequent functionality can access config details as
-// needed.
-func setupContext(prefs *preferences.Preferences) (context.Context, context.CancelFunc) {
-	baseCtx, cancelFunc := context.WithCancel(context.Background())
-	agentCtx := hass.ContextSetURL(baseCtx, prefs.RestAPIURL)
-	agentCtx = hass.ContextSetClient(agentCtx, hass.NewDefaultHTTPClient())
-	return agentCtx, cancelFunc
 }

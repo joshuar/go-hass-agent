@@ -9,6 +9,8 @@ import (
 	"context"
 
 	"github.com/go-resty/resty/v2"
+
+	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
 type contextKey string
@@ -42,4 +44,15 @@ func ContextGetClient(ctx context.Context) *resty.Client {
 		return nil
 	}
 	return url
+}
+
+func NewContext() (context.Context, context.CancelFunc) {
+	prefs, err := preferences.Load()
+	if err != nil {
+		return nil, nil
+	}
+	baseCtx, cancelFunc := context.WithCancel(context.Background())
+	hassCtx := ContextSetURL(baseCtx, prefs.RestAPIURL)
+	hassCtx = ContextSetClient(hassCtx, NewDefaultHTTPClient())
+	return hassCtx, cancelFunc
 }

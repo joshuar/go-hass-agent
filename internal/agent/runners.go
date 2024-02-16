@@ -169,6 +169,9 @@ func (agent *Agent) runNotificationsWorker(ctx context.Context) {
 // controlling this device from Home Assistant.
 func runMQTTWorker(ctx context.Context) {
 	prefs := preferences.FetchFromContext(ctx)
+	if !prefs.MQTTEnabled {
+		return
+	}
 	mqttprefs := &preferences.MQTTPreferences{
 		Prefs: &prefs,
 	}
