@@ -14,7 +14,7 @@ import (
 func TestRegistrationResponse_GenerateAPIURL(t *testing.T) {
 	type args struct {
 		host string
-		resp *hass.RegistrationResponse
+		resp *hass.RegistrationDetails
 	}
 	tests := []struct {
 		name string
@@ -25,7 +25,7 @@ func TestRegistrationResponse_GenerateAPIURL(t *testing.T) {
 			name: "valid cloudhookurl",
 			args: args{
 				host: "http://localhost",
-				resp: &hass.RegistrationResponse{
+				resp: &hass.RegistrationDetails{
 					CloudhookURL: "http://localhost/cloudhook",
 				},
 			},
@@ -35,7 +35,7 @@ func TestRegistrationResponse_GenerateAPIURL(t *testing.T) {
 			name: "valid remoteuiurl",
 			args: args{
 				host: "http://localhost",
-				resp: &hass.RegistrationResponse{
+				resp: &hass.RegistrationDetails{
 					RemoteUIURL: "http://localhost/remoteuiurl",
 					WebhookID:   "foobar",
 				},
@@ -46,7 +46,7 @@ func TestRegistrationResponse_GenerateAPIURL(t *testing.T) {
 			name: "webhookid only",
 			args: args{
 				host: "http://localhost",
-				resp: &hass.RegistrationResponse{
+				resp: &hass.RegistrationDetails{
 					WebhookID: "foobar",
 				},
 			},
@@ -56,7 +56,7 @@ func TestRegistrationResponse_GenerateAPIURL(t *testing.T) {
 			name: "all defined cloudhookurl",
 			args: args{
 				host: "http://localhost",
-				resp: &hass.RegistrationResponse{
+				resp: &hass.RegistrationDetails{
 					CloudhookURL: "http://localhost/cloudhook",
 					RemoteUIURL:  "http://localhost/remoteuiurl",
 					WebhookID:    "foobar",
