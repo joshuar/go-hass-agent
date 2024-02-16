@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -87,58 +86,52 @@ func ExecuteRequest(ctx context.Context, request any, response Response) {
 		return
 	}
 
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		var responseErr *APIError
-		var resp *resty.Response
-		var err error
-		cl := client.R().
-			SetContext(ctx).
-			SetError(&responseErr)
-		if a, ok := request.(Authenticated); ok {
-			cl = cl.SetAuthToken(a.Auth())
-		}
-		switch r := request.(type) {
-		case PostRequest:
-			log.Trace().
-				Str("method", "POST").
-				Str("url", url).
-				RawJSON("body", r.RequestBody()).
-				Time("sent_at", time.Now()).
-				Msg("Sending request.")
-			resp, err = cl.
-				SetBody(r.RequestBody()).
-				Post(url)
-		case GetRequest:
-			log.Trace().
-				Str("method", "GET").
-				Str("url", url).
-				Time("sent_at", time.Now()).
-				Msg("Sending request.")
-			resp, err = cl.
-				Get(url)
-		}
-		if err != nil {
-			response.StoreError(err)
-			return
-		}
-		log.Trace().Err(err).
-			Int("statuscode", resp.StatusCode()).
-			Str("status", resp.Status()).
-			Str("protocol", resp.Proto()).
-			Dur("time", resp.Time()).
-			Time("received_at", resp.ReceivedAt()).
-			RawJSON("body", resp.Body()).Msg("Response received.")
-		if resp.IsError() {
-			err := fmt.Errorf("%s (StatusCode: %d)", responseErr.Error(), resp.StatusCode())
-			response.StoreError(err)
-			return
-		}
-		if err := response.UnmarshalJSON(resp.Body()); err != nil {
-			response.StoreError(errors.Join(ErrResponseMalformed, err))
-		}
-	}()
-	wg.Wait()
+	var responseErr *APIError
+	var resp *resty.Response
+	var err error
+	cl := client.R().
+		SetContext(ctx).
+		SetError(&responseErr)
+	if a, ok := request.(Authenticated); ok {
+		cl = cl.SetAuthToken(a.Auth())
+	}
+	switch r := request.(type) {
+	case PostRequest:
+		log.Trace().
+			Str("method", "POST").
+			Str("url", url).
+			RawJSON("body", r.RequestBody()).
+			Time("sent_at", time.Now()).
+			Msg("Sending request.")
+		resp, err = cl.
+			SetBody(r.RequestBody()).
+			Post(url)
+	case GetRequest:
+		log.Trace().
+			Str("method", "GET").
+			Str("url", url).
+			Time("sent_at", time.Now()).
+			Msg("Sending request.")
+		resp, err = cl.
+			Get(url)
+	}
+	if err != nil {
+		response.StoreError(err)
+		return
+	}
+	log.Trace().Err(err).
+		Int("statuscode", resp.StatusCode()).
+		Str("status", resp.Status()).
+		Str("protocol", resp.Proto()).
+		Dur("time", resp.Time()).
+		Time("received_at", resp.ReceivedAt()).
+		RawJSON("body", resp.Body()).Msg("Response received.")
+	if resp.IsError() {
+		err := fmt.Errorf("%s (StatusCode: %d)", responseErr.Error(), resp.StatusCode())
+		response.StoreError(err)
+		return
+	}
+	if err := response.UnmarshalJSON(resp.Body()); err != nil {
+		response.StoreError(errors.Join(ErrResponseMalformed, err))
+	}
 }
