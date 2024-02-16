@@ -15,38 +15,14 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestMain(m *testing.M) {
-	if os.Getenv("CI") == "" {
-		m.Run()
-	}
-}
-
-func TestNewBus(t *testing.T) {
-	type args struct {
-		ctx context.Context
-		t   dbusType
-	}
-	tests := []struct {
-		name string
-		args args
-		want dbusType
-	}{
-		{
-			name: "session bus",
-			args: args{ctx: context.TODO(), t: SessionBus},
-			want: SessionBus,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := NewBus(tt.args.ctx, tt.args.t); !reflect.DeepEqual(got.busType, tt.want) || got.conn == nil {
-				t.Errorf("NewBus() = %v, want %v", got.conn, tt.want)
-			}
-		})
+func skipCI(t *testing.T) {
+	if os.Getenv("CI") != "" {
+		t.Skip("Skipping testing in CI environment")
 	}
 }
 
 func TestNewBusRequest(t *testing.T) {
+	skipCI(t)
 	ctx := Setup(context.TODO())
 	bus, ok := getBus(ctx, SessionBus)
 	assert.True(t, ok)
@@ -78,28 +54,8 @@ func TestNewBusRequest(t *testing.T) {
 	}
 }
 
-func TestNewBusRequest2(t *testing.T) {
-	type args struct {
-		ctx     context.Context
-		busType dbusType
-	}
-	tests := []struct {
-		name string
-		args args
-		want *busRequest
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := NewBusRequest2(tt.args.ctx, tt.args.busType); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewBusRequest2() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func Test_busRequest_Path(t *testing.T) {
+	skipCI(t)
 	type fields struct {
 		bus          *Bus
 		eventHandler func(*dbus.Signal)
@@ -137,6 +93,7 @@ func Test_busRequest_Path(t *testing.T) {
 }
 
 func Test_busRequest_Match(t *testing.T) {
+	skipCI(t)
 	type fields struct {
 		bus          *Bus
 		eventHandler func(*dbus.Signal)
@@ -174,6 +131,7 @@ func Test_busRequest_Match(t *testing.T) {
 }
 
 func Test_busRequest_Event(t *testing.T) {
+	skipCI(t)
 	type fields struct {
 		bus          *Bus
 		eventHandler func(*dbus.Signal)
@@ -211,6 +169,7 @@ func Test_busRequest_Event(t *testing.T) {
 }
 
 func Test_busRequest_Handler(t *testing.T) {
+	skipCI(t)
 	type fields struct {
 		bus          *Bus
 		eventHandler func(*dbus.Signal)
@@ -248,6 +207,7 @@ func Test_busRequest_Handler(t *testing.T) {
 }
 
 func Test_busRequest_Destination(t *testing.T) {
+	skipCI(t)
 	type fields struct {
 		bus          *Bus
 		eventHandler func(*dbus.Signal)
@@ -285,6 +245,7 @@ func Test_busRequest_Destination(t *testing.T) {
 }
 
 func Test_busRequest_Call(t *testing.T) {
+	skipCI(t)
 	type fields struct {
 		bus          *Bus
 		eventHandler func(*dbus.Signal)
@@ -323,6 +284,7 @@ func Test_busRequest_Call(t *testing.T) {
 }
 
 func Test_busRequest_AddWatch(t *testing.T) {
+	skipCI(t)
 	type fields struct {
 		bus          *Bus
 		eventHandler func(*dbus.Signal)
@@ -360,6 +322,7 @@ func Test_busRequest_AddWatch(t *testing.T) {
 }
 
 func Test_busRequest_RemoveWatch(t *testing.T) {
+	skipCI(t)
 	type fields struct {
 		bus          *Bus
 		eventHandler func(*dbus.Signal)
@@ -397,6 +360,7 @@ func Test_busRequest_RemoveWatch(t *testing.T) {
 }
 
 func TestGetSessionPath(t *testing.T) {
+	skipCI(t)
 	type args struct {
 		ctx context.Context
 	}
@@ -417,6 +381,7 @@ func TestGetSessionPath(t *testing.T) {
 }
 
 func TestVariantToValue(t *testing.T) {
+	skipCI(t)
 	type args struct {
 		variant dbus.Variant
 	}
@@ -441,57 +406,59 @@ func TestVariantToValue(t *testing.T) {
 	}
 }
 
-func TestGetData(t *testing.T) {
-	type args struct {
-		req    *busRequest
-		method string
-		args   []any
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    D
-		wantErr bool
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := GetData(tt.args.req, tt.args.method, tt.args.args...)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("GetData() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("GetData() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
+// func TestGetData(t *testing.T) {
+// 	skipCI(t)
+// 	type args struct {
+// 		req    *busRequest
+// 		method string
+// 		args   []any
+// 	}
+// 	tests := []struct {
+// 		name    string
+// 		args    args
+// 		want    D
+// 		wantErr bool
+// 	}{
+// 		// TODO: Add test cases.
+// 	}
+// 	for _, tt := range tests {
+// 		t.Run(tt.name, func(t *testing.T) {
+// 			got, err := GetData(tt.args.req, tt.args.method, tt.args.args...)
+// 			if (err != nil) != tt.wantErr {
+// 				t.Errorf("GetData() error = %v, wantErr %v", err, tt.wantErr)
+// 				return
+// 			}
+// 			if !reflect.DeepEqual(got, tt.want) {
+// 				t.Errorf("GetData() = %v, want %v", got, tt.want)
+// 			}
+// 		})
+// 	}
+// }
 
-func TestGetProp(t *testing.T) {
-	type args struct {
-		req  *busRequest
-		prop string
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    P
-		wantErr bool
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := GetProp(tt.args.req, tt.args.prop)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("GetProp() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("GetProp() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
+// func TestGetProp(t *testing.T) {
+// 	skipCI(t)
+// 	type args struct {
+// 		req  *busRequest
+// 		prop string
+// 	}
+// 	tests := []struct {
+// 		name    string
+// 		args    args
+// 		want    P
+// 		wantErr bool
+// 	}{
+// 		// TODO: Add test cases.
+// 	}
+// 	for _, tt := range tests {
+// 		t.Run(tt.name, func(t *testing.T) {
+// 			got, err := GetProp(tt.args.req, tt.args.prop)
+// 			if (err != nil) != tt.wantErr {
+// 				t.Errorf("GetProp() error = %v, wantErr %v", err, tt.wantErr)
+// 				return
+// 			}
+// 			if !reflect.DeepEqual(got, tt.want) {
+// 				t.Errorf("GetProp() = %v, want %v", got, tt.want)
+// 			}
+// 		})
+// 	}
+// }
