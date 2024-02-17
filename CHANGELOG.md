@@ -1,5 +1,50 @@
 # Changelog
 
+## [7.0.0](https://github.com/joshuar/go-hass-agent/compare/v6.5.0...v7.0.0) (2024-02-17)
+
+
+### ⚠ BREAKING CHANGES
+
+* **dbusx:** The dbusx package now uses Go generics for some functions, to combine both fetching or setting a value or property as the required type.
+* Major refactor of requests code with internal breaking changes. Migrate from `requests` package to `resty` package. This allows exposing more details about the response from Home Assistant, providing cleaner response handling code. In addition, refactor code to migrate tracker and request code into the hass package, keeping the sensor code as a distinct package for now.
+* Legacy agent config package has been removed and replaced with preferences package. This breaks upgrades from all versions besides the last release in the previous major version series. **Users upgrading from older releases should first upgrade to the latest version of the last major release before this release, then upgrade to this release.**
+
+### Features
+
+* :alembic: add ability to run a trace/heap/cpu profile over execution lifetime ([9b73cd8](https://github.com/joshuar/go-hass-agent/commit/9b73cd8094159788f9bd14d95037bbd0a96deab4))
+* :recycle: rework sensor registry to abstract from sensor tracker ([a88a04a](https://github.com/joshuar/go-hass-agent/commit/a88a04a9ab73cf918761cb7c42d75dda43e58eea))
+* **agent:** :arrow_up: update for latest go-hass-anything ([db884fe](https://github.com/joshuar/go-hass-agent/commit/db884fe25c249e21fb5a19e91a4ed1b3e3dfcc69))
+* **dbusx:** use generics to simplify dbusx usage ([45335c4](https://github.com/joshuar/go-hass-agent/commit/45335c4cf5b761bd4fd1789d6fe154cb644f95f6))
+* **device:** :sparkles: migrate external ip checker to resty package ([4894fef](https://github.com/joshuar/go-hass-agent/commit/4894fefe72b1e4894832276545ff2629e49ce392))
+* **hass:** :sparkles: API response rewrite ([a979728](https://github.com/joshuar/go-hass-agent/commit/a979728ee48ed7cf1bdfb6671fe7b2c7935edf2b))
+* **hass:** :sparkles: new functions to retrieve entities from Home Assistant ([a3d0fc6](https://github.com/joshuar/go-hass-agent/commit/a3d0fc66c500f77d9ed2442a237669dfb91b6545))
+* **hass:** :sparkles: utilise new ExecuteRequest function ([dff2e83](https://github.com/joshuar/go-hass-agent/commit/dff2e835fc42594a8b5523f5d2f4e5cb2ec2c86d))
+* remove config and replace with preferences ([630d4e6](https://github.com/joshuar/go-hass-agent/commit/630d4e61c074c9d3bf10de23b9bc77eaa0715ae5))
+* **ui:** :lipstick: show dialogs for success/failure of saving preferences ([a2ab9c2](https://github.com/joshuar/go-hass-agent/commit/a2ab9c25b768246f0b4432d7f7308c9bb5414b51))
+* **ui:** :sparkles: show extra details in about window ([e8277cc](https://github.com/joshuar/go-hass-agent/commit/e8277cc4ff2526bfb6155f918e618050a5a55372))
+
+
+### Bug Fixes
+
+* :sparkles: log file name set in cmd package ([11c4dd1](https://github.com/joshuar/go-hass-agent/commit/11c4dd1a73c52a2438547b6289215350d1b7767e))
+* :zap: only retry if the server is overloaded by default ([23f214f](https://github.com/joshuar/go-hass-agent/commit/23f214f4aaa1bea6908598af9db56705f43f80eb))
+* **agent,hass:** :bug: fix registration flow ([486890c](https://github.com/joshuar/go-hass-agent/commit/486890cf57724725941b9e98844b5365efc599cd))
+* **agent:** :bug: pass appropriate context to runners ([d96a4e5](https://github.com/joshuar/go-hass-agent/commit/d96a4e55bfdb489bc41d1874012e490ec0dd1fa4))
+* **agent:** :recycle: clean up context creation in agent ([cad5d56](https://github.com/joshuar/go-hass-agent/commit/cad5d561f7c2f2dde6ccfa149a7d2ce933e6c4f5))
+* **device:** :bug: remove spew ([8b81d77](https://github.com/joshuar/go-hass-agent/commit/8b81d77c37d58568933da5924868e4d35caa49a0))
+* **hass:** :bug: ensure registry directory is created if it does not exist ([e33a4d4](https://github.com/joshuar/go-hass-agent/commit/e33a4d4bc0b8455e017ebfc18553f47823650da2))
+* **hass:** :bug: fix naming of device class values presented to Home Assistant ([ad4a73a](https://github.com/joshuar/go-hass-agent/commit/ad4a73a0648d122cf1a7b97ba05f03771b1e19d8))
+
+
+### Performance Improvements
+
+* **hass:** :zap: remove unneccesary goroutine usage for ExecuteRequest ([8505455](https://github.com/joshuar/go-hass-agent/commit/8505455ab4f059bce0fa03d3684925516bf45223))
+
+
+### Code Refactoring
+
+* major requests refactor ([24097f3](https://github.com/joshuar/go-hass-agent/commit/24097f34c040dc5a79b78eba727557917da39419))
+
 ## [6.5.0](https://github.com/joshuar/go-hass-agent/compare/v6.4.0...v6.5.0) (2024-02-06)
 
 
