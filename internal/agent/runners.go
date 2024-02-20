@@ -168,12 +168,15 @@ func (agent *Agent) runNotificationsWorker(ctx context.Context) {
 // runMQTTWorker will set up a connection to MQTT and listen on topics for
 // controlling this device from Home Assistant.
 func runMQTTWorker(ctx context.Context) {
-	prefs := preferences.FetchFromContext(ctx)
+	prefs, err := preferences.Load()
+	if err != nil {
+		log.Error().Err(err).Msg("Could not load MQTT preferences.")
+	}
 	if !prefs.MQTTEnabled {
 		return
 	}
 	mqttprefs := &preferences.MQTTPreferences{
-		Prefs: &prefs,
+		Prefs: prefs,
 	}
 
 	c, err := mqttapi.NewMQTTClient(ctx, mqttprefs)
