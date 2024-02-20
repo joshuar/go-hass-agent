@@ -201,7 +201,7 @@ func Test_marshalClass(t *testing.T) {
 		{
 			name: "device class",
 			args: args{class: types.DeviceClassTemperature},
-			want: "Temperature",
+			want: "temperature",
 		},
 	}
 	for _, tt := range tests {
