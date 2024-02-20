@@ -1,5 +1,12 @@
 # Changelog
 
+## [7.0.1](https://github.com/joshuar/go-hass-agent/compare/v7.0.0...v7.0.1) (2024-02-20)
+
+
+### Bug Fixes
+
+* **agent:** :bug: load preferences from file to get MQTT preferences ([6f92a75](https://github.com/joshuar/go-hass-agent/commit/6f92a7572da11d7bf1bde2b6f277268a58f5b3b2))
+
 ## [7.0.0](https://github.com/joshuar/go-hass-agent/compare/v6.5.0...v7.0.0) (2024-02-17)
 
 
