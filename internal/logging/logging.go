@@ -68,3 +68,9 @@ func SetLogFile(filename string) {
 		log.Logger = log.Output(multiWriter)
 	}
 }
+
+// Reset will remove the log file.
+func Reset() error {
+	logFile := filepath.Join(xdg.StateHome, "go-hass-agent.log")
+	return os.Remove(logFile)
+}

@@ -6,6 +6,7 @@
 package agent
 
 import (
+	"errors"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -165,4 +166,14 @@ func (agent *Agent) AppID() string {
 func (agent *Agent) Stop() {
 	log.Debug().Msg("Stopping agent.")
 	close(agent.done)
+}
+
+func (agent *Agent) Reset() error {
+	ctx, _ := hass.NewContext()
+	if ctx == nil {
+		return errors.New("unable to create a context")
+	}
+	runnerCtx := setupDeviceContext(ctx)
+	resetMQTTWorker(runnerCtx)
+	return nil
 }

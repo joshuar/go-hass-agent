@@ -9,6 +9,7 @@ import (
 	"context"
 
 	"github.com/go-resty/resty/v2"
+	"github.com/rs/zerolog/log"
 
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
@@ -49,6 +50,7 @@ func ContextGetClient(ctx context.Context) *resty.Client {
 func NewContext() (context.Context, context.CancelFunc) {
 	prefs, err := preferences.Load()
 	if err != nil {
+		log.Warn().Err(err).Msg("Could not create context.")
 		return nil, nil
 	}
 	baseCtx, cancelFunc := context.WithCancel(context.Background())

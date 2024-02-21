@@ -245,6 +245,11 @@ func Save(setters ...Preference) error {
 	return write(prefs, file)
 }
 
+// Reset will remove the preferences directory.
+func Reset() error {
+	return os.RemoveAll(preferencesPath)
+}
+
 func set(prefs *Preferences, setters ...Preference) error {
 	g := new(errgroup.Group)
 	for _, setter := range setters {

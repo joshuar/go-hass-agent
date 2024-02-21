@@ -12,3 +12,6 @@ var RegisterCmdLongText string
 
 //go:embed rootLong.txt
 var RootCmdLongText string
+
+//go:embed resetLong.txt
+var ResetCmdLongText string
