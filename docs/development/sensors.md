@@ -12,26 +12,38 @@
 Platform/device sensor code belongs under `GOARCH/`. Ideally, create a new `.go`
 file for each sensor or sensor group you are adding.
 
-## Representing a sensor
+## Representing data as a sensor
 
-For sensor data to be registered and sent to Home Assistant, it needs to meet
-implement the `sensor.Sensor` interface. It should satisfy the following
-methods.
+For data to be sent to Home Assistant, it needs to implement a few interfaces.
+
+Firstly, the data should satisfy the `sensor.SensorState` interface, which represents the minimum data required to be sent to Home Assistant when the data changes:
 
 ```go
-type SensorUpdate interface {
-  Name() string
-  ID() string
-  Icon() string
-  SensorType() SensorType
-  DeviceClass() SensorDeviceClass
-  StateClass() SensorStateClass
-  State() interface{}
-  Units() string
-  Category() string
-  Attributes() interface{}
+type SensorState interface {
+	ID() string
+	Icon() string
+	State() any
+	SensorType() types.SensorClass
+	Units() string
+	Attributes() any
 }
 ```
+
+Initially however, the sensor will need to be registered with Home Assistant and needs to satisfy the `sensor.SensorRegistration` interface:
+
+```go
+type SensorRegistration interface {
+	SensorState
+	Name() string
+	DeviceClass() types.DeviceClass
+	StateClass() types.StateClass
+	Category() string
+}
+```
+
+The recommended approach is to define your own custom type (usually a `struct`) that satisfies both of these interfaces.
+
+An explanation of the methods follows.
 
 ### Name() string
 
@@ -50,27 +62,32 @@ An example would be “my_network_sensor_1”.
 
 ### Icon() string
 
-The [Material Design Icon](https://pictogrammers.github.io/@mdi/font/2.0.46/)
+The [Material Design Icon](https://pictogrammers.com/library/mdi/)
 representing the current state. It can be changed dynamically based on the
 current state or remain constant. Format is “mdi:icon_name”.
 
-### SensorType() hass.SensorType
+### SensorType() types.SensorClass
 
-The `sensor.SensorType` for this sensor. Either `TypeSensor` or `TypeBinary`.
+The type of sensor. This is either `types.Sensor` (mapping to a [Home Assistant
+Sensor Entity](https://developers.home-assistant.io/docs/core/entity/sensor)) or
+`types.Binary` (mapping to a [Home Assistant Binary Sensor
+Entity](https://developers.home-assistant.io/docs/core/entity/binary-sensor)).
 
-### DeviceClass() hass.SensorDeviceClass
+### DeviceClass() types.DeviceClass
 
-The `sensor.SensorDeviceClass` for this sensor. There are many, pick an
-appropriate one (see 
-[`internal/hass/sensor/deviceClass.go`](../../internal/hass/sensor/deviceClass.go))
-for the sensor or return a value of 0 to indicate it has none.
+The device class for this sensor, which reflects the type of measurement it is
+recording. This maps to the [Home Assistant Device
+Classes](https://developers.home-assistant.io/docs/core/entity/sensor#available-device-classes),
+such as “temperature”, “data_size”, “speed” etc. See also [source
+code](../../internal/hass/sensor/types/DeviceClass.go).
 
-### StateClass() hass.SensorStateClass
+### StateClass() types.StateClass
 
-The `sensor.SensorStateClass` for this sensor. There are a few, pick an
-appropriate one for the sensor (see
-[`internal/hass/sensor/stateClass.go`](../../internal/hass/sensor/stateClass.go))
-sensor return a value of 0 to indicate it has none.
+For the values, what kind of state they represent, such as an instataneous
+measurement, an increasing/decreasing value, etc. This maps to the [Home
+Assistant State
+Classes](https://developers.home-assistant.io/docs/core/entity/sensor#available-state-classes).
+See also [source code](../../internal/hass/sensor/types/StateClass.go).
 
 ### State() interface{}
 
@@ -79,9 +96,8 @@ would be `bool` (for `TypeBinary`), `float`, `int`, or `string`.
 
 ### Units() string
 
-What units the state should be represented as. If you have defined a
-`SensorDeviceClass` for this sensor, that will likely dictate the units you should
-use.
+What units the state should be represented as. Generally, if this sensor has a
+[device class](#deviceclass-typesdeviceclass), that will define the units. 
 
 ### Category() string
 
@@ -101,28 +117,24 @@ To track and send sensor updates to Home Assistant, create a function with the
 following signature:
 
 ```go
-func SensorUpdater(context.Context) chan sensor.Sensor
+func SensorUpdater(context.Context) chan sensor.Details
 ```
 
 - The `context.Context` parameter is a context which you should respect a
   potential cancellation of (see below). It can also contain any device specific
   context values, such as common API configuration data.
-- The `sensor.Sensor` return value is a channel of sensor values to be updated.
+- The `sensor.Details` is a catch-all interface that could be either a
+  `sensor.SensorState` or `sensor.SensorRegistration`. If you custom type
+  satisfies those interfaces, it can be passed out through this channel.
 
 Within this function, you should create the sensors you want to report to Home
-Assistant and set up a way to send updates. You will want:
+Assistant and set up a way to send updates. How this is achieved will vary and
+can be done in any way. For example, the battery sensor data for Linux is
+manifested by listening for D-Bus signals that indicate a battery property has
+changed.
 
-- A way to get the sensor data you need. Most likely stored in a struct.
-- Ensure this data struct satisfies the `sensor.Sensor` interface requirements.
-
-How this is achieved will vary and can be done in any way. For example, the
-battery sensor data is manifested by listening for D-Bus signals that indicate a
-battery property has changed.
-
-You can create as many sensors as you require.
-
-Create a `chan sensor.Sensor` and return this from the updater function. Then,
-whenever you have a sensor update, send it via the created channel.
+You can create as many sensors as you require. Whenever you have a sensor
+update, send it via the `sensor.Details` channel.
 
 As mentioned you should respect/expect cancellation of the context received as a
 parameter. You can do this by including code similar to the following in your function:
@@ -139,8 +151,8 @@ go func() {
 Pseudo Go code of what a complete function would look like:
 
 ```go
-func SensorUpdater(ctx context.Context) chan sensor.Sensor {
-  sensorCh := make(chan sensor.Sensor, 1)
+func SensorUpdater(ctx context.Context) chan sensor.Details {
+  sensorCh := make(chan sensor.Details, 1)
   ...code to set up your sensors...
   for ...some timer, event channel, other loop... {
     ...code to create a sensor object...
@@ -163,25 +175,29 @@ interval as well to avoid any “thundering herd” problems.
 
 ## Sensor tracking
 
-To have your sensors tracked by the agent, you should add the `SensorUpdater`
-function to the `device.SensorInfo` struct. You can do this in the following
-function, that should be created for each operating system:
+To have your sensors tracked by the agent, the updater function needs to be
+added to the list of these functions returned by the platform-specific
+`sensorWorkers()` function. It has the following signature:
 
 ```go
-func SetupSensors() *SensorInfo {
-  sensorInfo := NewSensorInfo()
-  sensorInfo.Add("Some name", SensorUpdater)
-  // add each SensorUpdater function here
-  return sensorInfo
-}
+sensorWorkers() []func(context.Context) chan sensor.Details
 ```
 
-This function will be called once by the agent when setting up its sensor
-tracker and will run each `SensorUpdater` function that has been defined.
+An example for Linux can be found in the [source
+code](../../internal/agent/device_linux.go). This is called by the agent code to
+retrieve the list of updater functions, that the agent then executes in its own
+goroutine. Each updater function then runs for the lifetime of the agent,
+sending updates via the `sensor.Details` channel back to the agent, which
+handles tracking internally and forwarding to Home Assistant.
+
 
 ## Examples
 
-See the `apps_linux.go` or `battery_linux.go` files for examples of code
-to track the current/running apps and battery states on Linux. These use D-Bus
-events for tracking the changes. That is only one possible way to get the
-updates; any other method you can think of would probably work as well.
+### Linux
+
+- A reusable, common struct is implemented that satisfies the
+  `sensor.SensorState` and `Sensor.SensorRegistration` interfaces in
+  [interal/linux/sensor.go](../../internal/linux/sensor.go).
+- Each sensor then encapsulates this common struct and uses it as appropriate
+  for its needs. As an example see the load averages sensors in
+  [internal/linux/cpu/loadavgs.go](../../internal/linux/cpu/loadAvgs.go).

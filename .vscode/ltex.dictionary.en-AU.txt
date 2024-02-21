@@ -3,3 +3,4 @@ Hass
 websocket
 variadic
 inode
+goroutine
