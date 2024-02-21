@@ -12,3 +12,4 @@ go install golang.org/x/tools/cmd/stringer@latest
 go install github.com/fyne-io/fyne-cross@latest
 go install golang.org/x/text/cmd/gotext@latest
 go install github.com/matryer/moq@latest
+go install github.com/spf13/cobra-cli@latest
