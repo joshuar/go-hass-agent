@@ -171,6 +171,7 @@ func runMQTTWorker(ctx context.Context) {
 	prefs, err := preferences.Load()
 	if err != nil {
 		log.Error().Err(err).Msg("Could not load MQTT preferences.")
+		return
 	}
 	if !prefs.MQTTEnabled {
 		return
@@ -204,21 +205,27 @@ func runMQTTWorker(ctx context.Context) {
 }
 
 func resetMQTTWorker(ctx context.Context) {
-	prefs := preferences.FetchFromContext(ctx)
-	mqttprefs := &preferences.MQTTPreferences{
-		Prefs: &prefs,
-	}
-
-	c, err := mqttapi.NewMQTTClient(ctx, mqttprefs)
+	prefs, err := preferences.Load()
 	if err != nil {
-		log.Error().Err(err).Msg("Could not start MQTT client.")
+		log.Error().Err(err).Msg("Could not load MQTT preferences.")
+		return
+	}
+	if !prefs.MQTTEnabled {
 		return
 	}
 
-	log.Info().Msgf("Clearing agent data from Home Assistant.")
-	d := newMQTTObject(ctx)
-
 	if prefs.MQTTRegistered {
+		mqttprefs := &preferences.MQTTPreferences{
+			Prefs: prefs,
+		}
+
+		c, err := mqttapi.NewMQTTClient(ctx, mqttprefs)
+		if err != nil {
+			log.Error().Err(err).Msg("Could not start MQTT client.")
+			return
+		}
+
+		d := newMQTTObject(ctx)
 		if err := mqtthass.UnRegister(d, c); err != nil {
 			log.Error().Err(err).Msg("Failed to unregister app!")
 		} else {

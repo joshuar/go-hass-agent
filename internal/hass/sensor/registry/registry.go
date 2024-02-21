@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 
 	"github.com/adrg/xdg"
-	"github.com/rs/zerolog/log"
 )
 
 var registryPath = filepath.Join(xdg.ConfigHome, "sensorRegistry")
@@ -29,11 +28,6 @@ func GetPath() string {
 	return registryPath
 }
 
-func Reset() {
-	var err error
-	if err = os.RemoveAll(registryPath); err != nil {
-		log.Warn().Err(err).Msg("Could not remove existing registry.")
-		return
-	}
-	log.Info().Msg("Registry reset.")
+func Reset() error {
+	return os.RemoveAll(registryPath)
 }
