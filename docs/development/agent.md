@@ -59,7 +59,6 @@ type DeviceInfo interface {
   OsVersion() string
   SupportsEncryption() bool
   AppData() interface{}
-  MarshalJSON() ([]byte, error)
 }
 ```
 
