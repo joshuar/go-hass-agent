@@ -197,7 +197,7 @@ handles tracking internally and forwarding to Home Assistant.
 
 - A reusable, common struct is implemented that satisfies the
   `sensor.SensorState` and `Sensor.SensorRegistration` interfaces in
-  [interal/linux/sensor.go](../../internal/linux/sensor.go).
+  [internal/linux/sensor.go](../../internal/linux/sensor.go).
 - Each sensor then encapsulates this common struct and uses it as appropriate
   for its needs. As an example see the load averages sensors in
   [internal/linux/cpu/loadavgs.go](../../internal/linux/cpu/loadAvgs.go).
