@@ -124,19 +124,17 @@ func TestContextGetClient(t *testing.T) {
 }
 
 func TestNewContext(t *testing.T) {
+	mockServer := "http://test.host:9999"
 	preferences.SetPath(t.TempDir())
-
-	testServer := "http://test.host:9999"
-
 	preferences.Save(
-		preferences.Host(testServer),
+		preferences.Host(mockServer),
 		preferences.Token("testToken"),
 		preferences.CloudhookURL(""),
 		preferences.RemoteUIURL(""),
 		preferences.WebhookID("testID"),
 		preferences.Secret(""),
-		preferences.RestAPIURL(testServer),
-		preferences.WebsocketURL(testServer),
+		preferences.RestAPIURL(mockServer),
+		preferences.WebsocketURL(mockServer),
 		preferences.DeviceName("testDevice"),
 		preferences.DeviceID("testID"),
 		preferences.Version("6.4.0"),
@@ -148,7 +146,7 @@ func TestNewContext(t *testing.T) {
 	}{
 		{
 			name:    "successful test",
-			wantURL: testServer,
+			wantURL: mockServer,
 		},
 	}
 	for _, tt := range tests {
