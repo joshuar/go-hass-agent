@@ -15,7 +15,8 @@
         "cmd",
         "hass",
         "dbusx",
-        "device"
+        "device",
+        "codecov"
     ],
     "conventionalCommits.lineBreak": "\\n",
     "go.lintTool": "golangci-lint",

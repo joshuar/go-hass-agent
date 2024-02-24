@@ -1,0 +1,5 @@
+ignore:
+  - "mock*.go" # generated with moq
+  - "*_generated.go" # generated with stringer 
+  - "*_test.go" # tests
+  - "internal/hass/sensor/types" # all generated
