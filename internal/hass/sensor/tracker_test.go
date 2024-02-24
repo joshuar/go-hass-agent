@@ -188,6 +188,32 @@ func TestNewSensorTracker(t *testing.T) {
 }
 
 func TestMergeSensorCh(t *testing.T) {
+	testCtx, cancelFunc := context.WithCancel(context.TODO())
+	go func() {
+		time.Sleep(5 * time.Second)
+		cancelFunc()
+	}()
+
+	sensor1 := mockSensor
+	sensor1.IDFunc = func() string {
+		return "sensor1"
+	}
+	ch1 := make(chan Details)
+	go func() {
+		ch1 <- &sensor1
+		close(ch1)
+	}()
+
+	sensor2 := mockSensor
+	sensor1.IDFunc = func() string {
+		return "sensor2"
+	}
+	ch2 := make(chan Details)
+	go func() {
+		ch2 <- &sensor2
+		close(ch2)
+	}()
+
 	type args struct {
 		ctx      context.Context
 		sensorCh []<-chan Details
@@ -195,13 +221,22 @@ func TestMergeSensorCh(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want chan Details
+		want []Details
 	}{
-		// TODO: Add test cases.
+		{
+			name: "send two sensors in two different channels",
+			args: args{ctx: testCtx, sensorCh: []<-chan Details{ch1, ch2}},
+			want: []Details{&sensor1, &sensor2},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := MergeSensorCh(tt.args.ctx, tt.args.sensorCh...); !reflect.DeepEqual(got, tt.want) {
+			got := MergeSensorCh(tt.args.ctx, tt.args.sensorCh...)
+			var want []Details
+			for s := range got {
+				want = append(want, s)
+			}
+			if !reflect.DeepEqual(want, tt.want) {
 				t.Errorf("MergeSensorCh() = %v, want %v", got, tt.want)
 			}
 		})
@@ -236,69 +271,6 @@ func TestSensorTracker_Reset(t *testing.T) {
 		})
 	}
 }
-
-// func Test_handleUpdates(t *testing.T) {
-// 	successful := &updateResponse{"mockSensor": {Success: true}}
-// 	unsuccessful := &updateResponse{"mockSensor": {Success: false}}
-// 	type args struct {
-// 		reg Registry
-// 		r   *updateResponse
-// 	}
-// 	tests := []struct {
-// 		name    string
-// 		args    args
-// 		wantErr bool
-// 	}{
-// 		{
-// 			name:    "successful update",
-// 			args:    args{reg: &mockRegistry, r: successful},
-// 			wantErr: false,
-// 		},
-// 		{
-// 			name:    "unsuccessful update",
-// 			args:    args{reg: &mockRegistry, r: unsuccessful},
-// 			wantErr: true,
-// 		},
-// 	}
-// 	for _, tt := range tests {
-// 		t.Run(tt.name, func(t *testing.T) {
-// 			if err := handleUpdates(tt.args.reg, tt.args.r); (err != nil) != tt.wantErr {
-// 				t.Errorf("handleUpdates() error = %v, wantErr %v", err, tt.wantErr)
-// 			}
-// 		})
-// 	}
-// }
-
-// func Test_handleRegistration(t *testing.T) {
-// 	type args struct {
-// 		reg Registry
-// 		r   *registrationResponse
-// 		s   string
-// 	}
-// 	tests := []struct {
-// 		name    string
-// 		args    args
-// 		wantErr bool
-// 	}{
-// 		{
-// 			name:    "successful registration",
-// 			args:    args{reg: &mockRegistry, r: &registrationResponse{Success: true}, s: "mockSensor"},
-// 			wantErr: false,
-// 		},
-// 		{
-// 			name:    "unsuccessful registration",
-// 			args:    args{reg: &mockRegistry, r: &registrationResponse{Success: false}, s: "mockSensor"},
-// 			wantErr: true,
-// 		},
-// 	}
-// 	for _, tt := range tests {
-// 		t.Run(tt.name, func(t *testing.T) {
-// 			if err := handleRegistration(tt.args.reg, tt.args.r, tt.args.s); (err != nil) != tt.wantErr {
-// 				t.Errorf("handleRegistration() error = %v, wantErr %v", err, tt.wantErr)
-// 			}
-// 		})
-// 	}
-// }
 
 func Test_handleResponse(t *testing.T) {
 	type args struct {
