@@ -55,6 +55,29 @@ There is a significant discrepancy in permissions between the device running Go 
 
 Go Hass Agent runs under a user account on a device. So the above controls will only work where that user has permissions to run the underlying actions on that device. Home Assistant does not currently offer any fine-grained access control for controls like the above. So any Home Assistant user will be able to run any of the controls. This means that a Home Assistant user not associated with the device user running the agent can use the exposed controls to issue potentially disruptive actions on a device that another user is accessing.
 
+## Arbitrary D-BUS commands
+
+The agent subscribes to the MQTT topic `gohassagent/dbus` on the configured MQTT broker and listens for
+JSON messages of the below format, which will be accordingly dispatched to the systems
+[d-bus](https://www.freedesktop.org/wiki/Software/dbus/).
+
+```json
+{
+  "bus": "session",
+  "path": "/org/cinnamon/ScreenSaver",
+  "method": "org.cinnamon.ScreenSaver.Lock",
+  "destination": "org.cinnamon.ScreenSaver",
+  "args": [
+    ""
+  ]
+}
+```
+
+This can be used to trigger arbitrary d-bus commands on the system where the agent runs on,
+by using any MQTT client such as Home Assistants
+[`mqtt.publish`](https://www.home-assistant.io/integrations/mqtt/#service-mqttpublish) service.
+
+
 ## Implementation Details
 
 ### Linux

@@ -23,6 +23,11 @@ const (
 
 var ErrNoBus = errors.New("no D-Bus connection")
 
+var DbusTypeMap = map[string]dbusType{
+	"session": 0,
+	"system": 1,
+}
+
 type dbusType int
 
 type Bus struct {
