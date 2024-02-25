@@ -197,8 +197,13 @@ func runMQTTWorker(ctx context.Context) {
 		}
 	}
 	if err := mqtthass.Subscribe(o, c); err != nil {
-		log.Error().Err(err).Msg("Could not activate subscriptions.")
+		log.Error().Err(err).Msg("Could not activate entity subscriptions.")
 	}
+
+	if err := c.Subscribe(newDbusSubscription(ctx)); err != nil {
+		log.Error().Err(err).Msg("Could not activate dbus subscription.")
+	}
+
 	log.Debug().Msg("Listening for events on MQTT.")
 
 	<-ctx.Done()
