@@ -1,5 +1,13 @@
 # Changelog
 
+## [7.1.0](https://github.com/joshuar/go-hass-agent/compare/v7.0.1...v7.1.0) (2024-02-26)
+
+
+### Features
+
+* **agent:** :sparkles: add agent reset command ([853ee60](https://github.com/joshuar/go-hass-agent/commit/853ee60449a41213e0784b23687d0cd1f7ecdb74))
+* **agent:** arbitrary dbus commands via MQTT (thanks [@jaynis](https://github.com/jaynis)!) ([7204181](https://github.com/joshuar/go-hass-agent/commit/7204181b746ee9602f83af02ef428cf98ed37a60))
+
 ## [7.0.1](https://github.com/joshuar/go-hass-agent/compare/v7.0.0...v7.0.1) (2024-02-20)
 
 
