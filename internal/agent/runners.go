@@ -176,11 +176,8 @@ func runMQTTWorker(ctx context.Context) {
 	if !prefs.MQTTEnabled {
 		return
 	}
-	mqttprefs := &preferences.MQTTPreferences{
-		Prefs: prefs,
-	}
 
-	c, err := mqttapi.NewMQTTClient(ctx, mqttprefs)
+	c, err := mqttapi.NewMQTTClient(ctx, prefs)
 	if err != nil {
 		log.Error().Err(err).Msg("Could not start MQTT client.")
 		return
@@ -220,11 +217,7 @@ func resetMQTTWorker(ctx context.Context) {
 	}
 
 	if prefs.MQTTRegistered {
-		mqttprefs := &preferences.MQTTPreferences{
-			Prefs: prefs,
-		}
-
-		c, err := mqttapi.NewMQTTClient(ctx, mqttprefs)
+		c, err := mqttapi.NewMQTTClient(ctx, prefs)
 		if err != nil {
 			log.Error().Err(err).Msg("Could not start MQTT client.")
 			return

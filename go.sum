@@ -253,6 +253,8 @@ github.com/jeandeaual/go-locale v0.0.0-20240204043739-672d8d016d9a/go.mod h1:ecP
 github.com/josephspurrier/goversioninfo v1.4.0/go.mod h1:JWzv5rKQr+MmW+LvM412ToT/IkYDZjaclF2pKDss8IY=
 github.com/joshuar/go-hass-anything/v5 v5.0.0 h1:RYPqgoZXfM7EJ9r0MZ6e3pmGnw610JPkIEi5WX6rkkM=
 github.com/joshuar/go-hass-anything/v5 v5.0.0/go.mod h1:HBzVNZ8uhaRRP10g8mEJcX4zX4MC6UC/nugHUZlnmlQ=
+github.com/joshuar/go-hass-anything/v5 v5.0.1 h1:3C9WgM+XfNBlI9lGDiHTJ/sOAAp7sUwVSzsb2FjQmEE=
+github.com/joshuar/go-hass-anything/v5 v5.0.1/go.mod h1:HBzVNZ8uhaRRP10g8mEJcX4zX4MC6UC/nugHUZlnmlQ=
 github.com/json-iterator/go v1.1.11/go.mod h1:KdQUCv79m/52Kvf8AW2vK1V8akMuk1QjK/uOdHXbAo4=
 github.com/jstemmer/go-junit-report v0.0.0-20190106144839-af01ea7f8024/go.mod h1:6v2b51hI/fHJwM22ozAgKL4VKDeJcHhJFhtBdhmNjmU=
 github.com/jstemmer/go-junit-report v0.9.1/go.mod h1:Brl9GWCQeLvo8nXZwPNNblvFj/XSXhF0NWZEnDohbsk=
