@@ -196,10 +196,10 @@ func (i *fyneUI) agentSettingsWindow() fyne.Window {
 
 	// MQTT settings
 	mqttPrefs := &ui.MQTTPreferences{
-		Enabled:  prefs.MQTTEnabled,
-		Server:   prefs.MQTTServer,
-		User:     prefs.MQTTUser,
-		Password: prefs.MQTTPassword,
+		Enabled:  prefs.GetMQTTEnabled(),
+		Server:   prefs.GetMQTTServer(),
+		User:     prefs.GetMQTTUser(),
+		Password: prefs.GetMQTTPassword(),
 	}
 	allFormItems = append(allFormItems, i.mqttConfigItems(mqttPrefs)...)
 

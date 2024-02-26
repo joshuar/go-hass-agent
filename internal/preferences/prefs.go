@@ -196,6 +196,27 @@ func SetMQTTRegistered(status bool) Preference {
 	}
 }
 
+func (p *Preferences) GetMQTTEnabled() bool {
+	return p.MQTTEnabled
+}
+
+// MQTTServer returns the broker URI from the preferences.
+func (p *Preferences) GetMQTTServer() string {
+	return p.MQTTServer
+}
+
+// MQTTUser returns any username required for connecting to the broker from the
+// preferences.
+func (p *Preferences) GetMQTTUser() string {
+	return p.MQTTUser
+}
+
+// MQTTPassword returns any password required for connecting to the broker from the
+// preferences.
+func (p *Preferences) GetMQTTPassword() string {
+	return p.MQTTPassword
+}
+
 func defaultPreferences() *Preferences {
 	return &Preferences{
 		Version:      AppVersion,
