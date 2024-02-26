@@ -6,12 +6,18 @@ services:
     volumes:
       - ../..:/workspaces:cached
       - /etc/localtime:/etc/localtime:ro,cached
+      - /run/dbus/system_bus_socket:/run/dbus/system_bus_socket
+      - /run/user/1000/bus:/run/user/1000/bus
     network_mode: host
     userns_mode: keep-id
     user: vscode
-    command: dbus-run-session -- sleep infinity
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - seccomp:unconfined
+    command: sleep infinity
   home-assistant:
-    image: ghcr.io/home-assistant/home-assistant:2024.2.0
+    image: ghcr.io/home-assistant/home-assistant:2024.2.3
     volumes:
       - ../deployments/home-assistant/config:/config
     environment:
