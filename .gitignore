@@ -9,7 +9,8 @@
 
 # But not these files...
 !/.gitignore
-!/.vscode/**/*
+!/.vscode/launch.json
+!/.vscode/ltex.dictionary.*.txt
 !/.github/**/*
 !/.devcontainer/**/*
 !.golangci.yaml
