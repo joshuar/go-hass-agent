@@ -26,18 +26,18 @@ import (
 // requests to Home Assistant.
 func saveRegistration(server, token string, resp *hass.RegistrationDetails, dev hass.DeviceInfo) error {
 	return preferences.Save(
-		preferences.Host(server),
-		preferences.Token(token),
-		preferences.CloudhookURL(resp.CloudhookURL),
-		preferences.RemoteUIURL(resp.RemoteUIURL),
-		preferences.WebhookID(resp.WebhookID),
-		preferences.Secret(resp.Secret),
-		preferences.RestAPIURL(generateAPIURL(server, resp)),
-		preferences.WebsocketURL(generateWebsocketURL(server)),
-		preferences.DeviceName(dev.DeviceName()),
-		preferences.DeviceID(dev.DeviceID()),
-		preferences.Version(preferences.AppVersion),
-		preferences.Registered(true),
+		preferences.SetHost(server),
+		preferences.SetToken(token),
+		preferences.SetCloudhookURL(resp.CloudhookURL),
+		preferences.SetRemoteUIURL(resp.RemoteUIURL),
+		preferences.SetWebhookID(resp.WebhookID),
+		preferences.SetSecret(resp.Secret),
+		preferences.SetRestAPIURL(generateAPIURL(server, resp)),
+		preferences.SetWebsocketURL(generateWebsocketURL(server)),
+		preferences.SetDeviceName(dev.DeviceName()),
+		preferences.SetDeviceID(dev.DeviceID()),
+		preferences.SetVersion(preferences.AppVersion),
+		preferences.SetRegistered(true),
 	)
 }
 

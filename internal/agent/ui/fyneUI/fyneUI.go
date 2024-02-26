@@ -207,10 +207,10 @@ func (i *fyneUI) agentSettingsWindow() fyne.Window {
 	settingsForm := widget.NewForm(allFormItems...)
 	settingsForm.OnSubmit = func() {
 		err := preferences.Save(
-			preferences.MQTTEnabled(mqttPrefs.Enabled),
-			preferences.MQTTServer(mqttPrefs.Server),
-			preferences.MQTTUser(mqttPrefs.User),
-			preferences.MQTTPassword(mqttPrefs.Password),
+			preferences.SetMQTTEnabled(mqttPrefs.Enabled),
+			preferences.SetMQTTServer(mqttPrefs.Server),
+			preferences.SetMQTTUser(mqttPrefs.User),
+			preferences.SetMQTTPassword(mqttPrefs.Password),
 		)
 		if err != nil {
 			dialog.ShowError(err, w)

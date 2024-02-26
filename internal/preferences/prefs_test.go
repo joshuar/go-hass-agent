@@ -33,7 +33,7 @@ func TestSetPath(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			SetPath(tt.args.path)
-			assert.Equal(t, GetPath(), testPath)
+			assert.Equal(t, Path(), testPath)
 		})
 	}
 }
@@ -55,7 +55,7 @@ func TestSetFile(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			SetFile(tt.args.name)
-			assert.Equal(t, GetFile(), testName)
+			assert.Equal(t, File(), testName)
 		})
 	}
 }
@@ -72,7 +72,7 @@ func TestGetPath(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := GetPath(); got != tt.want {
+			if got := Path(); got != tt.want {
 				t.Errorf("GetPath() = %v, want %v", got, tt.want)
 			}
 		})
@@ -91,7 +91,7 @@ func TestGetFile(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := GetFile(); got != tt.want {
+			if got := File(); got != tt.want {
 				t.Errorf("GetFile() = %v, want %v", got, tt.want)
 			}
 		})
@@ -111,7 +111,7 @@ func TestVersion(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := Version(tt.args.version); !reflect.DeepEqual(got, tt.want) {
+			if got := SetVersion(tt.args.version); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Version() = %v, want %v", got, tt.want)
 			}
 		})
@@ -131,7 +131,7 @@ func TestDeviceID(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := DeviceID(tt.args.id); !reflect.DeepEqual(got, tt.want) {
+			if got := SetDeviceID(tt.args.id); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("DeviceID() = %v, want %v", got, tt.want)
 			}
 		})
@@ -151,7 +151,7 @@ func TestDeviceName(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := DeviceName(tt.args.name); !reflect.DeepEqual(got, tt.want) {
+			if got := SetDeviceName(tt.args.name); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("DeviceName() = %v, want %v", got, tt.want)
 			}
 		})
@@ -171,7 +171,7 @@ func TestRestAPIURL(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := RestAPIURL(tt.args.url); !reflect.DeepEqual(got, tt.want) {
+			if got := SetRestAPIURL(tt.args.url); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("RestAPIURL() = %v, want %v", got, tt.want)
 			}
 		})
@@ -191,7 +191,7 @@ func TestCloudhookURL(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := CloudhookURL(tt.args.url); !reflect.DeepEqual(got, tt.want) {
+			if got := SetCloudhookURL(tt.args.url); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("CloudhookURL() = %v, want %v", got, tt.want)
 			}
 		})
@@ -211,7 +211,7 @@ func TestRemoteUIURL(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := RemoteUIURL(tt.args.url); !reflect.DeepEqual(got, tt.want) {
+			if got := SetRemoteUIURL(tt.args.url); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("RemoteUIURL() = %v, want %v", got, tt.want)
 			}
 		})
@@ -231,7 +231,7 @@ func TestSecret(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := Secret(tt.args.secret); !reflect.DeepEqual(got, tt.want) {
+			if got := SetSecret(tt.args.secret); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Secret() = %v, want %v", got, tt.want)
 			}
 		})
@@ -251,7 +251,7 @@ func TestHost(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := Host(tt.args.host); !reflect.DeepEqual(got, tt.want) {
+			if got := SetHost(tt.args.host); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Host() = %v, want %v", got, tt.want)
 			}
 		})
@@ -271,7 +271,7 @@ func TestToken(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := Token(tt.args.token); !reflect.DeepEqual(got, tt.want) {
+			if got := SetToken(tt.args.token); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Token() = %v, want %v", got, tt.want)
 			}
 		})
@@ -291,7 +291,7 @@ func TestWebhookID(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := WebhookID(tt.args.id); !reflect.DeepEqual(got, tt.want) {
+			if got := SetWebhookID(tt.args.id); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("WebhookID() = %v, want %v", got, tt.want)
 			}
 		})
@@ -311,7 +311,7 @@ func TestWebsocketURL(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := WebsocketURL(tt.args.url); !reflect.DeepEqual(got, tt.want) {
+			if got := SetWebsocketURL(tt.args.url); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("WebsocketURL() = %v, want %v", got, tt.want)
 			}
 		})
@@ -331,7 +331,7 @@ func TestRegistered(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := Registered(tt.args.status); !reflect.DeepEqual(got, tt.want) {
+			if got := SetRegistered(tt.args.status); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Registered() = %v, want %v", got, tt.want)
 			}
 		})
@@ -351,7 +351,7 @@ func TestMQTTEnabled(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := MQTTEnabled(tt.args.status); !reflect.DeepEqual(got, tt.want) {
+			if got := SetMQTTEnabled(tt.args.status); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("MQTTEnabled() = %v, want %v", got, tt.want)
 			}
 		})
@@ -371,7 +371,7 @@ func TestMQTTServer(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := MQTTServer(tt.args.server); !reflect.DeepEqual(got, tt.want) {
+			if got := SetMQTTServer(tt.args.server); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("MQTTServer() = %v, want %v", got, tt.want)
 			}
 		})
@@ -391,7 +391,7 @@ func TestMQTTUser(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := MQTTUser(tt.args.user); !reflect.DeepEqual(got, tt.want) {
+			if got := SetMQTTUser(tt.args.user); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("MQTTUser() = %v, want %v", got, tt.want)
 			}
 		})
@@ -411,7 +411,7 @@ func TestMQTTPassword(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := MQTTPassword(tt.args.password); !reflect.DeepEqual(got, tt.want) {
+			if got := SetMQTTPassword(tt.args.password); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("MQTTPassword() = %v, want %v", got, tt.want)
 			}
 		})
@@ -497,23 +497,23 @@ func TestSave(t *testing.T) {
 	testServer := "http://test.host:9999"
 
 	requiredPrefs := []Preference{
-		Host(testServer),
-		Token("testToken"),
-		CloudhookURL(""),
-		RemoteUIURL(""),
-		WebhookID("testID"),
-		Secret(""),
-		RestAPIURL(testServer),
-		WebsocketURL(testServer),
-		DeviceName("testDevice"),
-		DeviceID("testID"),
-		Version("6.4.0"),
-		Registered(true),
+		SetHost(testServer),
+		SetToken("testToken"),
+		SetCloudhookURL(""),
+		SetRemoteUIURL(""),
+		SetWebhookID("testID"),
+		SetSecret(""),
+		SetRestAPIURL(testServer),
+		SetWebsocketURL(testServer),
+		SetDeviceName("testDevice"),
+		SetDeviceID("testID"),
+		SetVersion("6.4.0"),
+		SetRegistered(true),
 	}
 
 	missingPrefs := []Preference{
-		Host(testServer),
-		Token("testToken"),
+		SetHost(testServer),
+		SetToken("testToken"),
 	}
 
 	type args struct {

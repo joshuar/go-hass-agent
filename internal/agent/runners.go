@@ -192,7 +192,7 @@ func runMQTTWorker(ctx context.Context) {
 			log.Error().Err(err).Msg("Failed to register with MQTT.")
 			return
 		}
-		if err := preferences.Save(preferences.MQTTRegistered(true)); err != nil {
+		if err := preferences.Save(preferences.SetMQTTRegistered(true)); err != nil {
 			log.Error().Err(err).Msg("Failed to save MQTT registration.")
 		}
 	}
@@ -234,7 +234,7 @@ func resetMQTTWorker(ctx context.Context) {
 		if err := mqtthass.UnRegister(d, c); err != nil {
 			log.Error().Err(err).Msg("Failed to unregister app!")
 		} else {
-			if err := preferences.Save(preferences.MQTTRegistered(false)); err != nil {
+			if err := preferences.Save(preferences.SetMQTTRegistered(false)); err != nil {
 				log.Error().Err(err).Msg("Failed to save MQTT registration.")
 			}
 		}
