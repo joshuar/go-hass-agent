@@ -65,131 +65,131 @@ func SetFile(name string) {
 	preferencesFile = name
 }
 
-// GetPath returns the current path to the preferences file. Use GetFile to
+// Path returns the current path to the preferences file. Use GetFile to
 // retrieve the filename.
-func GetPath() string {
+func Path() string {
 	return preferencesPath
 }
 
-// GetFile returns the filename of the preferences file. Use GetPath to retrieve
+// File returns the filename of the preferences file. Use GetPath to retrieve
 // its path.
-func GetFile() string {
+func File() string {
 	return preferencesFile
 }
 
-func Version(version string) Preference {
+func SetVersion(version string) Preference {
 	return func(p *Preferences) error {
 		p.Version = version
 		return nil
 	}
 }
 
-func DeviceID(id string) Preference {
+func SetDeviceID(id string) Preference {
 	return func(p *Preferences) error {
 		p.DeviceID = id
 		return nil
 	}
 }
 
-func DeviceName(name string) Preference {
+func SetDeviceName(name string) Preference {
 	return func(p *Preferences) error {
 		p.DeviceName = name
 		return nil
 	}
 }
 
-func RestAPIURL(url string) Preference {
+func SetRestAPIURL(url string) Preference {
 	return func(p *Preferences) error {
 		p.RestAPIURL = url
 		return nil
 	}
 }
 
-func CloudhookURL(url string) Preference {
+func SetCloudhookURL(url string) Preference {
 	return func(p *Preferences) error {
 		p.CloudhookURL = url
 		return nil
 	}
 }
 
-func RemoteUIURL(url string) Preference {
+func SetRemoteUIURL(url string) Preference {
 	return func(p *Preferences) error {
 		p.RemoteUIURL = url
 		return nil
 	}
 }
 
-func Secret(secret string) Preference {
+func SetSecret(secret string) Preference {
 	return func(p *Preferences) error {
 		p.Secret = secret
 		return nil
 	}
 }
 
-func Host(host string) Preference {
+func SetHost(host string) Preference {
 	return func(p *Preferences) error {
 		p.Host = host
 		return nil
 	}
 }
 
-func Token(token string) Preference {
+func SetToken(token string) Preference {
 	return func(p *Preferences) error {
 		p.Token = token
 		return nil
 	}
 }
 
-func WebhookID(id string) Preference {
+func SetWebhookID(id string) Preference {
 	return func(p *Preferences) error {
 		p.WebhookID = id
 		return nil
 	}
 }
 
-func WebsocketURL(url string) Preference {
+func SetWebsocketURL(url string) Preference {
 	return func(p *Preferences) error {
 		p.WebsocketURL = url
 		return nil
 	}
 }
 
-func Registered(status bool) Preference {
+func SetRegistered(status bool) Preference {
 	return func(p *Preferences) error {
 		p.Registered = status
 		return nil
 	}
 }
 
-func MQTTEnabled(status bool) Preference {
+func SetMQTTEnabled(status bool) Preference {
 	return func(p *Preferences) error {
 		p.MQTTEnabled = status
 		return nil
 	}
 }
 
-func MQTTServer(server string) Preference {
+func SetMQTTServer(server string) Preference {
 	return func(p *Preferences) error {
 		p.MQTTServer = server
 		return nil
 	}
 }
 
-func MQTTUser(user string) Preference {
+func SetMQTTUser(user string) Preference {
 	return func(p *Preferences) error {
 		p.MQTTUser = user
 		return nil
 	}
 }
 
-func MQTTPassword(password string) Preference {
+func SetMQTTPassword(password string) Preference {
 	return func(p *Preferences) error {
 		p.MQTTPassword = password
 		return nil
 	}
 }
 
-func MQTTRegistered(status bool) Preference {
+func SetMQTTRegistered(status bool) Preference {
 	return func(p *Preferences) error {
 		p.MQTTRegistered = status
 		return nil
@@ -198,8 +198,14 @@ func MQTTRegistered(status bool) Preference {
 
 func defaultPreferences() *Preferences {
 	return &Preferences{
-		Version: AppVersion,
-		mu:      &sync.Mutex{},
+		Version:      AppVersion,
+		Host:         "http://localhost:8123",
+		WebsocketURL: "http://localhost:8123",
+		Token:        "replaceMe",
+		WebhookID:    "replaceMe",
+		Registered:   false,
+		MQTTEnabled:  false,
+		mu:           &sync.Mutex{},
 	}
 }
 

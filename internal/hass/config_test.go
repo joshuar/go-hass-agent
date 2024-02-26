@@ -220,18 +220,18 @@ func TestGetConfig(t *testing.T) {
 	}))
 	preferences.SetPath(t.TempDir())
 	preferences.Save(
-		preferences.Host(mockServer.URL),
-		preferences.Token("testToken"),
-		preferences.CloudhookURL(""),
-		preferences.RemoteUIURL(""),
-		preferences.WebhookID("testID"),
-		preferences.Secret(""),
-		preferences.RestAPIURL(mockServer.URL),
-		preferences.WebsocketURL(mockServer.URL),
-		preferences.DeviceName("testDevice"),
-		preferences.DeviceID("testID"),
-		preferences.Version("6.4.0"),
-		preferences.Registered(true),
+		preferences.SetHost(mockServer.URL),
+		preferences.SetToken("testToken"),
+		preferences.SetCloudhookURL(""),
+		preferences.SetRemoteUIURL(""),
+		preferences.SetWebhookID("testID"),
+		preferences.SetSecret(""),
+		preferences.SetRestAPIURL(mockServer.URL),
+		preferences.SetWebsocketURL(mockServer.URL),
+		preferences.SetDeviceName("testDevice"),
+		preferences.SetDeviceID("testID"),
+		preferences.SetVersion("6.4.0"),
+		preferences.SetRegistered(true),
 	)
 	type args struct {
 		ctx context.Context

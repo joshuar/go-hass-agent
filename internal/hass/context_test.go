@@ -127,18 +127,18 @@ func TestNewContext(t *testing.T) {
 	mockServer := "http://test.host:9999"
 	preferences.SetPath(t.TempDir())
 	preferences.Save(
-		preferences.Host(mockServer),
-		preferences.Token("testToken"),
-		preferences.CloudhookURL(""),
-		preferences.RemoteUIURL(""),
-		preferences.WebhookID("testID"),
-		preferences.Secret(""),
-		preferences.RestAPIURL(mockServer),
-		preferences.WebsocketURL(mockServer),
-		preferences.DeviceName("testDevice"),
-		preferences.DeviceID("testID"),
-		preferences.Version("6.4.0"),
-		preferences.Registered(true),
+		preferences.SetHost(mockServer),
+		preferences.SetToken("testToken"),
+		preferences.SetCloudhookURL(""),
+		preferences.SetRemoteUIURL(""),
+		preferences.SetWebhookID("testID"),
+		preferences.SetSecret(""),
+		preferences.SetRestAPIURL(mockServer),
+		preferences.SetWebsocketURL(mockServer),
+		preferences.SetDeviceName("testDevice"),
+		preferences.SetDeviceID("testID"),
+		preferences.SetVersion("6.4.0"),
+		preferences.SetRegistered(true),
 	)
 	tests := []struct {
 		name    string
