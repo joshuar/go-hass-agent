@@ -5,7 +5,9 @@
     "shutdownAction": "stopCompose",
     "containerUser": "vscode",
     "containerEnv": { 
-        "TZ": "${localEnv:TZ:Australia/Brisbane}"
+        "TZ": "${localEnv:TZ:Australia/Brisbane}",
+        "DISPLAY": ":0",
+        "XAUTHORITY": "/tmp/.Xauthority"
     },
     "remoteEnv": {
         "DBUS_SESSION_BUS_ADDRESS": "${localEnv:DBUS_SESSION_BUS_ADDRESS}"
