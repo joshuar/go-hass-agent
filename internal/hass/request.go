@@ -100,7 +100,6 @@ func ExecuteRequest(ctx context.Context, request any, response Response) {
 	case PostRequest:
 		log.Trace().
 			Str("method", "POST").
-			Str("url", url).
 			RawJSON("body", r.RequestBody()).
 			Time("sent_at", time.Now()).
 			Msg("Sending request.")
@@ -110,7 +109,6 @@ func ExecuteRequest(ctx context.Context, request any, response Response) {
 	case GetRequest:
 		log.Trace().
 			Str("method", "GET").
-			Str("url", url).
 			Time("sent_at", time.Now()).
 			Msg("Sending request.")
 		resp, err = cl.
