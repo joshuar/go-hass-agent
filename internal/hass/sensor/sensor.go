@@ -140,10 +140,7 @@ func (u *updateResponse) UnmarshalJSON(b []byte) error {
 }
 
 func (u *updateResponse) StoreError(e error) {
-	if e != nil {
-		u.err = e
-	}
-	u.err = errors.New("unknown error")
+	u.err = e
 }
 
 func (u *updateResponse) Error() string {
@@ -153,6 +150,7 @@ func (u *updateResponse) Error() string {
 func NewUpdateResponse() *updateResponse {
 	return &updateResponse{
 		Body: make(map[string]*response),
+		err:  errors.New(""),
 	}
 }
 
@@ -174,7 +172,9 @@ func (r *registrationResponse) Error() string {
 }
 
 func NewRegistrationResponse() *registrationResponse {
-	return &registrationResponse{}
+	return &registrationResponse{
+		err: errors.New(""),
+	}
 }
 
 type comparableStringer interface {

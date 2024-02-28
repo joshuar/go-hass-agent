@@ -126,8 +126,12 @@ func ExecuteRequest(ctx context.Context, request any, response Response) {
 		Time("received_at", resp.ReceivedAt()).
 		RawJSON("body", resp.Body()).Msg("Response received.")
 	if resp.IsError() {
-		err := fmt.Errorf("%s (StatusCode: %d)", responseErr.Error(), resp.StatusCode())
-		response.StoreError(err)
+		if responseErr != nil {
+			err := fmt.Errorf("%s (StatusCode: %d)", responseErr.Error(), resp.StatusCode())
+			response.StoreError(err)
+		} else {
+			response.StoreError(errors.New(resp.Status()))
+		}
 		return
 	}
 	if err := response.UnmarshalJSON(resp.Body()); err != nil {

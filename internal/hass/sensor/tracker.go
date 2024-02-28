@@ -83,7 +83,7 @@ func (t *Tracker) UpdateSensor(ctx context.Context, reg Registry, upd Details) e
 		resp = NewRegistrationResponse()
 	}
 	hass.ExecuteRequest(ctx, req, resp)
-	if errors.Is(resp, &hass.APIError{}) {
+	if errors.Is(resp, &hass.APIError{}) || resp.Error() != "" {
 		return wrapErr(upd.ID(), resp)
 	}
 	if err := handleResponse(resp, t, upd, reg); err != nil {
