@@ -34,6 +34,8 @@ It is recommended to use [Visual Studio Code](https://code.visualstudio.com/).
 This project makes use of a [Devcontainer](https://containers.dev/) to provide
 some convenience during development.
 
+[![Open in Dev Containers](https://img.shields.io/static/v1?label=Dev%20Containers&message=Open&color=blue&logo=visualstudiocode)](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/joshuar/go-hass-agent)
+
 If using Visual Studio Code, you should be prompted when opening your cloned
 copy of the code to set up the dev container. The container contains an
 installation of Home Assistant and Mosquitto (MQTT broker) that can be used for
