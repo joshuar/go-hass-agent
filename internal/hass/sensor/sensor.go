@@ -7,6 +7,7 @@ package sensor
 
 import (
 	"encoding/json"
+	"errors"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 )
@@ -139,7 +140,10 @@ func (u *updateResponse) UnmarshalJSON(b []byte) error {
 }
 
 func (u *updateResponse) StoreError(e error) {
-	u.err = e
+	if e != nil {
+		u.err = e
+	}
+	u.err = errors.New("unknown error")
 }
 
 func (u *updateResponse) Error() string {
