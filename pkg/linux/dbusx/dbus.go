@@ -25,7 +25,7 @@ var ErrNoBus = errors.New("no D-Bus connection")
 
 var DbusTypeMap = map[string]dbusType{
 	"session": 0,
-	"system": 1,
+	"system":  1,
 }
 
 type dbusType int
@@ -126,7 +126,7 @@ func (r *busRequest) Destination(d string) *busRequest {
 // is returned.
 func GetProp[P any](req *busRequest, prop string) (P, error) {
 	var value P
-	if req == nil {
+	if req == nil || req.bus == nil {
 		return value, ErrNoBus
 	}
 	obj := req.bus.conn.Object(req.dest, req.path)
@@ -141,7 +141,7 @@ func GetProp[P any](req *busRequest, prop string) (P, error) {
 
 // SetProp sets the specific property to the specified value.
 func SetProp[P any](req *busRequest, prop string, value P) error {
-	if req == nil {
+	if req == nil || req.bus == nil {
 		return ErrNoBus
 	}
 	v := dbus.MakeVariant(value)
@@ -154,7 +154,7 @@ func SetProp[P any](req *busRequest, prop string, value P) error {
 // stored in the given type, it will return an non-nil error.
 func GetData[D any](req *busRequest, method string, args ...any) (D, error) {
 	var data D
-	if req == nil {
+	if req == nil || req.bus == nil {
 		return data, ErrNoBus
 	}
 	obj := req.bus.conn.Object(req.dest, req.path)
