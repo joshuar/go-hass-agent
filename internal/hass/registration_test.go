@@ -99,8 +99,7 @@ func TestRegisterWithHass(t *testing.T) {
 
 	type args struct {
 		ctx    context.Context
-		server string
-		token  string
+		input  *RegistrationInput
 		device DeviceInfo
 	}
 	tests := []struct {
@@ -112,9 +111,11 @@ func TestRegisterWithHass(t *testing.T) {
 		{
 			name: "successful registration",
 			args: args{
-				ctx:    successCtx,
-				server: ContextGetURL(successCtx),
-				token:  "aToken",
+				ctx: successCtx,
+				input: &RegistrationInput{
+					Server: ContextGetURL(successCtx),
+					Token:  "aToken",
+				},
 				device: mockDevInfo,
 			},
 			want: registrationSuccess.Details,
@@ -122,9 +123,11 @@ func TestRegisterWithHass(t *testing.T) {
 		{
 			name: "failed registration",
 			args: args{
-				ctx:    failCtx,
-				server: ContextGetURL(failCtx),
-				token:  "aToken",
+				ctx: failCtx,
+				input: &RegistrationInput{
+					Server: ContextGetURL(failCtx),
+					Token:  "aToken",
+				},
 				device: mockDevInfo,
 			},
 			want:    registrationFail.Details,
@@ -133,7 +136,7 @@ func TestRegisterWithHass(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := RegisterWithHass(tt.args.ctx, tt.args.server, tt.args.token, tt.args.device)
+			got, err := RegisterWithHass(tt.args.ctx, tt.args.input, tt.args.device)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("RegisterWithHass() error = %v, wantErr %v", err, tt.wantErr)
 				return
