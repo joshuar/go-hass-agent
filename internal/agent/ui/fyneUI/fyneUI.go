@@ -344,6 +344,7 @@ func (i *fyneUI) registrationFields(ctx context.Context, input *hass.Registratio
 	autoServerSelect := widget.NewSelect(allServers, func(s string) {
 		serverEntry.SetText(s)
 	})
+	autoServerSelect.SetSelectedIndex(0)
 
 	manualServerEntry := serverEntry
 	manualServerSelect := widget.NewCheck("", func(b bool) {
