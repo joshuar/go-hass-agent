@@ -68,14 +68,18 @@ func (s *Sensor) Value() float64 {
 // Name returns a name for the sensor. It will be derived from the chip name
 // plus either any label, else name of the sensor itself.
 func (s *Sensor) Name() string {
-	if s.SensorType == Alarm {
-		c := cases.Title(language.AmericanEnglish)
-		return c.String(s.chip + " " + s.id + " " + s.label)
+	c := cases.Title(language.AmericanEnglish)
+	chipFormatted := c.String(strings.ReplaceAll(s.chip, "_", " "))
+	idFormatted := c.String(s.id)
+	labelFormatted := c.String(s.label)
+	switch {
+	case s.SensorType == Alarm:
+		return chipFormatted + " " + idFormatted + " " + labelFormatted
+	case s.label != "":
+		return chipFormatted + " " + labelFormatted
+	default:
+		return chipFormatted + " " + idFormatted
 	}
-	if s.label != "" {
-		return s.chip + " " + s.label
-	}
-	return s.chip + " " + s.id
 }
 
 // Units returns the units for the value of this sensor.
@@ -129,9 +133,9 @@ func (s *Sensor) update(d details) error {
 	return nil
 }
 
-func newSensor(chip string, details *details) *Sensor {
+func newSensor(chip string, details *details) Sensor {
 	t, f, u := parseType(details)
-	s := &Sensor{
+	s := Sensor{
 		chip:        chip,
 		id:          details.id,
 		SensorType:  t,
@@ -212,7 +216,7 @@ func parseType(d *details) (sensorType SensorType, scaleFactor float64, units st
 func processSensors(path string) (sensorCh <-chan Sensor, errCh <-chan error) {
 	c := make(chan Sensor)
 	errc := make(chan error, 1)
-	smap := make(map[string]*Sensor)
+	smap := make(map[string]Sensor)
 	var wg sync.WaitGroup
 
 	files, err := os.ReadDir(path)
@@ -243,8 +247,11 @@ func processSensors(path string) (sensorCh <-chan Sensor, errCh <-chan error) {
 			if _, ok := smap[id]; !ok {
 				smap[id] = s
 			}
-			if err := smap[id].update(d); err != nil {
+			oldsensor := smap[id]
+			if err := oldsensor.update(d); err != nil {
 				errc <- err
+			} else {
+				smap[id] = oldsensor
 			}
 			mu.Unlock()
 		}
@@ -272,7 +279,7 @@ func processSensors(path string) (sensorCh <-chan Sensor, errCh <-chan error) {
 		wg.Wait()
 		mu.Lock()
 		for _, s := range smap {
-			c <- *s
+			c <- s
 		}
 		mu.Unlock()
 		close(c)
