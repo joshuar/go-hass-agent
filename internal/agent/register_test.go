@@ -13,8 +13,9 @@ import (
 
 func TestRegistrationResponse_GenerateAPIURL(t *testing.T) {
 	type args struct {
-		host string
-		resp *hass.RegistrationDetails
+		host       string
+		ignoreURLs bool
+		resp       *hass.RegistrationDetails
 	}
 	tests := []struct {
 		name string
@@ -67,7 +68,7 @@ func TestRegistrationResponse_GenerateAPIURL(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := generateAPIURL(tt.args.host, tt.args.resp); got != tt.want {
+			if got := generateAPIURL(tt.args.host, tt.args.ignoreURLs, tt.args.resp); got != tt.want {
 				t.Errorf("RegistrationResponse.GenerateAPIURL() = %v, want %v", got, tt.want)
 			}
 		})

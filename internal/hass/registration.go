@@ -8,8 +8,11 @@ package hass
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/url"
 	"time"
+
+	"github.com/go-playground/validator/v10"
 )
 
 const (
@@ -31,6 +34,17 @@ type DeviceInfo interface {
 	OsVersion() string
 	SupportsEncryption() bool
 	AppData() any
+}
+
+type RegistrationInput struct {
+	Server           string `validate:"required,http_url"`
+	Token            string `validate:"required"`
+	IgnoreOutputURLs bool   `validate:"boolean"`
+}
+
+func (i *RegistrationInput) Validate() error {
+	validate := validator.New(validator.WithRequiredStructEnabled())
+	return validate.Struct(i)
 }
 
 type RegistrationDetails struct {
@@ -67,23 +81,6 @@ func (r *registrationRequest) RequestBody() json.RawMessage {
 	return data
 }
 
-type registrationResponse struct {
-	Details *RegistrationDetails
-	err     error
-}
-
-func (r *registrationResponse) StoreError(err error) {
-	r.err = err
-}
-
-func (r *registrationResponse) Error() string {
-	return r.err.Error()
-}
-
-func (r *registrationResponse) UnmarshalJSON(b []byte) error {
-	return json.Unmarshal(b, &r.Details)
-}
-
 func newRegistrationRequest(d DeviceInfo, t string) *registrationRequest {
 	return &registrationRequest{
 		DeviceID:           d.DeviceID(),
@@ -101,11 +98,34 @@ func newRegistrationRequest(d DeviceInfo, t string) *registrationRequest {
 	}
 }
 
-func RegisterWithHass(ctx context.Context, server, token string, device DeviceInfo) (*RegistrationDetails, error) {
-	req := newRegistrationRequest(device, token)
-	resp := &registrationResponse{}
+type registrationResponse struct {
+	Details *RegistrationDetails
+	err     error
+}
 
-	serverURL, err := url.Parse(server)
+func (r *registrationResponse) StoreError(err error) {
+	r.err = err
+}
+
+func (r *registrationResponse) Error() string {
+	return r.err.Error()
+}
+
+func (r *registrationResponse) UnmarshalJSON(b []byte) error {
+	return json.Unmarshal(b, &r.Details)
+}
+
+func newRegistrationResponse() *registrationResponse {
+	return &registrationResponse{
+		err: errors.New(""),
+	}
+}
+
+func RegisterWithHass(ctx context.Context, input *RegistrationInput, device DeviceInfo) (*RegistrationDetails, error) {
+	req := newRegistrationRequest(device, input.Token)
+	resp := newRegistrationResponse()
+
+	serverURL, err := url.Parse(input.Server)
 	if err != nil {
 		return nil, err
 	}
@@ -114,9 +134,8 @@ func RegisterWithHass(ctx context.Context, server, token string, device DeviceIn
 	ctx = ContextSetClient(ctx, NewDefaultHTTPClient().SetTimeout(time.Minute))
 
 	ExecuteRequest(ctx, req, resp)
-	if resp.err != nil {
+	if errors.Is(resp, &APIError{}) || resp.Error() != "" {
 		return nil, resp
 	}
-
 	return resp.Details, nil
 }

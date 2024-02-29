@@ -126,12 +126,11 @@ func (i *fyneUI) DisplayTrayIcon(agent ui.Agent, trk ui.SensorTracker) {
 // DisplayRegistrationWindow displays a UI to prompt the user for the details needed to
 // complete registration. It will populate with any values that were already
 // provided via the command-line.
-func (i *fyneUI) DisplayRegistrationWindow(ctx context.Context, server, token *string, done chan struct{}) {
+func (i *fyneUI) DisplayRegistrationWindow(ctx context.Context, input *hass.RegistrationInput, done chan struct{}) {
 	w := i.app.NewWindow(i.Translate("App Registration"))
 
 	var allFormItems []*widget.FormItem
-
-	allFormItems = append(allFormItems, i.registrationFields(ctx, server, token)...)
+	allFormItems = append(allFormItems, i.registrationFields(ctx, input)...)
 	registrationForm := widget.NewForm(allFormItems...)
 	registrationForm.OnSubmit = func() {
 		w.Close()
@@ -144,11 +143,13 @@ func (i *fyneUI) DisplayRegistrationWindow(ctx context.Context, server, token *s
 		ctx.Done()
 	}
 
-	w.SetContent(container.New(layout.NewVBoxLayout(),
-		widget.NewLabel(i.Translate(explainRegistration)),
+	c := container.NewVBox(
+		widget.NewLabelWithStyle(i.Translate(explainRegistration), fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+		widget.NewLabel(""),
 		registrationForm,
-	))
-	log.Debug().Msg("Asking user for registration details.")
+	)
+
+	w.SetContent(c)
 	w.Show()
 }
 
@@ -157,9 +158,15 @@ func (i *fyneUI) DisplayRegistrationWindow(ctx context.Context, server, token *s
 func (i *fyneUI) aboutWindow() fyne.Window {
 	config := getHAConfig()
 	c := container.NewCenter(container.NewVBox(
-		widget.NewLabelWithStyle("Go Hass Agent "+preferences.AppVersion, fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
-		widget.NewLabelWithStyle("Home Assistant "+config.Details.Version, fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
-		widget.NewLabelWithStyle("Tracking "+fmt.Sprintf("%d", len(config.Details.Entities))+" Entities", fyne.TextAlignCenter, fyne.TextStyle{Italic: true}),
+		widget.NewLabelWithStyle("Go Hass Agent "+preferences.AppVersion,
+			fyne.TextAlignCenter,
+			fyne.TextStyle{Bold: true}),
+		widget.NewLabelWithStyle("Home Assistant "+config.Details.Version,
+			fyne.TextAlignCenter,
+			fyne.TextStyle{Bold: true}),
+		widget.NewLabelWithStyle("Tracking "+fmt.Sprintf("%d", len(config.Details.Entities))+" Entities",
+			fyne.TextAlignCenter,
+			fyne.TextStyle{Italic: true}),
 		widget.NewLabel(""),
 		container.NewHBox(
 			widget.NewHyperlink("website", parseURL(ui.AppURL)),
@@ -318,19 +325,19 @@ func (i *fyneUI) sensorsWindow(t ui.SensorTracker) fyne.Window {
 
 // registrationFields generates a list of form item widgets for selecting a
 // server to register the agent against.
-func (i *fyneUI) registrationFields(ctx context.Context, server, token *string) []*widget.FormItem {
+func (i *fyneUI) registrationFields(ctx context.Context, input *hass.RegistrationInput) []*widget.FormItem {
 	allServers := hass.FindServers(ctx)
 
-	if *token == "" {
-		*token = "ASecretLongLivedToken"
+	if input.Token == "" {
+		input.Token = "ASecretLongLivedToken"
 	}
-	tokenEntry := configEntry(token, false)
+	tokenEntry := configEntry(&input.Token, false)
 	tokenEntry.Validator = validation.NewRegexp("[A-Za-z0-9_\\.]+", "Invalid token format")
 
-	if *server == "" {
-		*server = allServers[0]
+	if input.Server == "" {
+		input.Server = allServers[0]
 	}
-	serverEntry := configEntry(server, false)
+	serverEntry := configEntry(&input.Server, false)
 	serverEntry.Validator = httpValidator()
 	serverEntry.Disable()
 
@@ -350,14 +357,37 @@ func (i *fyneUI) registrationFields(ctx context.Context, server, token *string) 
 		}
 	})
 
-	var items []*widget.FormItem
+	ignoreURLsSelect := widget.NewCheck("", func(b bool) {
+		switch b {
+		case true:
+			input.IgnoreOutputURLs = true
+		case false:
+			input.IgnoreOutputURLs = false
+		}
+	})
 
-	items = append(items, widget.NewFormItem(i.Translate("Token"), tokenEntry),
-		widget.NewFormItem(i.Translate("Auto-discovered Servers"), autoServerSelect),
-		widget.NewFormItem(i.Translate("Use Custom Server?"), manualServerSelect),
-		widget.NewFormItem(i.Translate("Manual Server Entry"), manualServerEntry))
-
-	return items
+	return []*widget.FormItem{
+		{
+			Text:     i.Translate("Token"),
+			HintText: i.Translate("The long-lived access token generated in Home Assistant."),
+			Widget:   tokenEntry,
+		},
+		{
+			Text:     i.Translate("Auto-discovered Servers"),
+			HintText: i.Translate("These are the Home Assistant servers that were detected on the local network."),
+			Widget:   autoServerSelect,
+		},
+		{
+			Text:     i.Translate("Use Custom Server?"),
+			HintText: i.Translate("Select this option to enter a server manually below."), Widget: manualServerSelect,
+		},
+		{Text: i.Translate("Manual Server Entry"), Widget: manualServerEntry},
+		{
+			Text:     i.Translate("Ignore returned URLs?"),
+			HintText: i.Translate("Override Home Assistant and use server chosen (above) for API access."),
+			Widget:   ignoreURLsSelect,
+		},
+	}
 }
 
 // mqttConfigItems generates a list of for item widgets for configuring the
@@ -411,7 +441,7 @@ func (i *fyneUI) mqttConfigItems(prefs *ui.MQTTPreferences) []*widget.FormItem {
 func configEntry(value *string, secret bool) *widget.Entry {
 	boundEntry := binding.BindString(value)
 	entryWidget := widget.NewEntryWithData(boundEntry)
-	entryWidget.Wrapping = fyne.TextWrapWord
+	// entryWidget.Wrapping = fyne.TextWrapWord
 	if secret {
 		entryWidget.Password = true
 	}

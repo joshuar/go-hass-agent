@@ -6,6 +6,7 @@ package agent
 import (
 	"context"
 	"github.com/joshuar/go-hass-agent/internal/agent/ui"
+	"github.com/joshuar/go-hass-agent/internal/hass"
 	"sync"
 )
 
@@ -22,7 +23,7 @@ var _ UI = &UIMock{}
 //			DisplayNotificationFunc: func(title string, message string)  {
 //				panic("mock out the DisplayNotification method")
 //			},
-//			DisplayRegistrationWindowFunc: func(ctx context.Context, server *string, token *string, doneCh chan struct{})  {
+//			DisplayRegistrationWindowFunc: func(ctx context.Context, input *hass.RegistrationInput, doneCh chan struct{})  {
 //				panic("mock out the DisplayRegistrationWindow method")
 //			},
 //			DisplayTrayIconFunc: func(agent ui.Agent, trk ui.SensorTracker)  {
@@ -42,7 +43,7 @@ type UIMock struct {
 	DisplayNotificationFunc func(title string, message string)
 
 	// DisplayRegistrationWindowFunc mocks the DisplayRegistrationWindow method.
-	DisplayRegistrationWindowFunc func(ctx context.Context, server *string, token *string, doneCh chan struct{})
+	DisplayRegistrationWindowFunc func(ctx context.Context, input *hass.RegistrationInput, doneCh chan struct{})
 
 	// DisplayTrayIconFunc mocks the DisplayTrayIcon method.
 	DisplayTrayIconFunc func(agent ui.Agent, trk ui.SensorTracker)
@@ -63,10 +64,8 @@ type UIMock struct {
 		DisplayRegistrationWindow []struct {
 			// Ctx is the ctx argument value.
 			Ctx context.Context
-			// Server is the server argument value.
-			Server *string
-			// Token is the token argument value.
-			Token *string
+			// Input is the input argument value.
+			Input *hass.RegistrationInput
 			// DoneCh is the doneCh argument value.
 			DoneCh chan struct{}
 		}
@@ -126,25 +125,23 @@ func (mock *UIMock) DisplayNotificationCalls() []struct {
 }
 
 // DisplayRegistrationWindow calls DisplayRegistrationWindowFunc.
-func (mock *UIMock) DisplayRegistrationWindow(ctx context.Context, server *string, token *string, doneCh chan struct{}) {
+func (mock *UIMock) DisplayRegistrationWindow(ctx context.Context, input *hass.RegistrationInput, doneCh chan struct{}) {
 	if mock.DisplayRegistrationWindowFunc == nil {
 		panic("UIMock.DisplayRegistrationWindowFunc: method is nil but UI.DisplayRegistrationWindow was just called")
 	}
 	callInfo := struct {
 		Ctx    context.Context
-		Server *string
-		Token  *string
+		Input  *hass.RegistrationInput
 		DoneCh chan struct{}
 	}{
 		Ctx:    ctx,
-		Server: server,
-		Token:  token,
+		Input:  input,
 		DoneCh: doneCh,
 	}
 	mock.lockDisplayRegistrationWindow.Lock()
 	mock.calls.DisplayRegistrationWindow = append(mock.calls.DisplayRegistrationWindow, callInfo)
 	mock.lockDisplayRegistrationWindow.Unlock()
-	mock.DisplayRegistrationWindowFunc(ctx, server, token, doneCh)
+	mock.DisplayRegistrationWindowFunc(ctx, input, doneCh)
 }
 
 // DisplayRegistrationWindowCalls gets all the calls that were made to DisplayRegistrationWindow.
@@ -153,14 +150,12 @@ func (mock *UIMock) DisplayRegistrationWindow(ctx context.Context, server *strin
 //	len(mockedUI.DisplayRegistrationWindowCalls())
 func (mock *UIMock) DisplayRegistrationWindowCalls() []struct {
 	Ctx    context.Context
-	Server *string
-	Token  *string
+	Input  *hass.RegistrationInput
 	DoneCh chan struct{}
 } {
 	var calls []struct {
 		Ctx    context.Context
-		Server *string
-		Token  *string
+		Input  *hass.RegistrationInput
 		DoneCh chan struct{}
 	}
 	mock.lockDisplayRegistrationWindow.RLock()

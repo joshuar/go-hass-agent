@@ -16,24 +16,22 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/registry"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
-
-	"github.com/go-playground/validator/v10"
 )
 
 // saveRegistration stores the relevant information from the registration
 // request and the successful response in the agent preferences. This includes,
 // most importantly, details on the URL that should be used to send subsequent
 // requests to Home Assistant.
-func saveRegistration(server, token string, resp *hass.RegistrationDetails, dev hass.DeviceInfo) error {
+func saveRegistration(input *hass.RegistrationInput, resp *hass.RegistrationDetails, dev hass.DeviceInfo) error {
 	return preferences.Save(
-		preferences.SetHost(server),
-		preferences.SetToken(token),
+		preferences.SetHost(input.Server),
+		preferences.SetToken(input.Token),
 		preferences.SetCloudhookURL(resp.CloudhookURL),
 		preferences.SetRemoteUIURL(resp.RemoteUIURL),
 		preferences.SetWebhookID(resp.WebhookID),
 		preferences.SetSecret(resp.Secret),
-		preferences.SetRestAPIURL(generateAPIURL(server, resp)),
-		preferences.SetWebsocketURL(generateWebsocketURL(server)),
+		preferences.SetRestAPIURL(generateAPIURL(input.Server, input.IgnoreOutputURLs, resp)),
+		preferences.SetWebsocketURL(generateWebsocketURL(input.Server)),
 		preferences.SetDeviceName(dev.DeviceName()),
 		preferences.SetDeviceID(dev.DeviceID()),
 		preferences.SetVersion(preferences.AppVersion),
@@ -48,27 +46,33 @@ func saveRegistration(server, token string, resp *hass.RegistrationDetails, dev 
 func (agent *Agent) performRegistration(ctx context.Context, server, token string) error {
 	log.Info().Msg("Registration required. Starting registration process.")
 
+	input := &hass.RegistrationInput{
+		Server: server,
+		Token:  token,
+	}
+
 	// Display a window asking for registration details for non-headless usage.
 	if !agent.Options.Headless {
 		userInputDone := make(chan struct{})
-		agent.ui.DisplayRegistrationWindow(ctx, &server, &token, userInputDone)
+		agent.ui.DisplayRegistrationWindow(ctx, input, userInputDone)
 		<-userInputDone
 	}
 
 	// Validate provided registration details.
-	if !validRegistrationSetting("server", server) || !validRegistrationSetting("token", token) {
+	if input.Validate() != nil {
+		// if !validRegistrationSetting("server", input.Server) || !validRegistrationSetting("token", token) {
 		return errors.New("cannot register, invalid host and/or token")
 	}
 
 	// Register with Home Assistant.
 	device := newDevice(ctx)
-	resp, err := hass.RegisterWithHass(ctx, server, token, device)
+	resp, err := hass.RegisterWithHass(ctx, input, device)
 	if err != nil {
 		return err
 	}
 
 	// Write registration details to config.
-	if err := saveRegistration(server, token, resp, device); err != nil {
+	if err := saveRegistration(input, resp, device); err != nil {
 		return errors.New("could not save registration")
 	}
 
@@ -81,57 +85,34 @@ func (agent *Agent) checkRegistration(trk SensorTracker) error {
 	if err != nil && !os.IsNotExist(err) {
 		return errors.New("could not load preferences")
 	}
-
-	// If the agent is not registered (or force registration requested) run a
-	// registration flow
-	if !prefs.Registered || agent.Options.ForceRegister {
-		if err := agent.performRegistration(context.Background(), agent.Options.Server, agent.Options.Token); err != nil {
-			return err
-		}
-		if agent.Options.ForceRegister {
-			trk.Reset()
-			registry.Reset()
-		}
-	} else {
+	if prefs.Registered && !agent.Options.ForceRegister {
 		log.Debug().Msg("Agent already registered.")
+		return nil
+	}
+
+	// Agent is not registered or forced registration requested.
+	if err := agent.performRegistration(context.Background(), agent.Options.Server, agent.Options.Token); err != nil {
+		return err
+	}
+	if agent.Options.ForceRegister {
+		trk.Reset()
+		if err := registry.Reset(); err != nil {
+			log.Warn().Err(err).Msg("Problem resetting registry.")
+		}
 	}
 	return nil
 }
 
-func validRegistrationSetting(key, value string) bool {
-	if value == "" {
-		return false
-	}
-	validate := validator.New()
-	check := func(value string, validation string) bool {
-		if err := validate.Var(value, validation); err != nil {
-			return false
-		}
-		return true
-	}
-	switch key {
-	case "server":
-		return check(value, "required,http_url")
-	case "token":
-		return check(value, "required")
-	default:
-		log.Warn().Msgf("Unexpected key %s with value %s", key, value)
-		return false
-	}
-}
-
-func generateAPIURL(host string, resp *hass.RegistrationDetails) string {
+func generateAPIURL(host string, ignoreURLs bool, resp *hass.RegistrationDetails) string {
 	switch {
-	case resp.CloudhookURL != "":
+	case resp.CloudhookURL != "" && !ignoreURLs:
 		return resp.CloudhookURL
-	case resp.RemoteUIURL != "" && resp.WebhookID != "":
+	case resp.RemoteUIURL != "" && resp.WebhookID != "" && !ignoreURLs:
 		return resp.RemoteUIURL + hass.WebHookPath + resp.WebhookID
-	case resp.WebhookID != "":
+	default:
 		u, _ := url.Parse(host)
 		u = u.JoinPath(hass.WebHookPath, resp.WebhookID)
 		return u.String()
-	default:
-		return ""
 	}
 }
 

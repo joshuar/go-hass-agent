@@ -9,6 +9,7 @@ import (
 	"context"
 
 	"github.com/joshuar/go-hass-agent/internal/agent/ui"
+	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 )
 
@@ -26,14 +27,14 @@ type Device interface {
 type UI interface {
 	DisplayNotification(title, message string)
 	DisplayTrayIcon(agent ui.Agent, trk ui.SensorTracker)
-	DisplayRegistrationWindow(ctx context.Context, server, token *string, doneCh chan struct{})
+	DisplayRegistrationWindow(ctx context.Context, input *hass.RegistrationInput, doneCh chan struct{})
 	Run(doneCh chan struct{})
 }
 
 //go:generate moq -out mockSensorTracker_test.go . SensorTracker
 type SensorTracker interface {
 	SensorList() []string
-	UpdateSensor(ctx context.Context, reg sensor.Registry, sensor sensor.Details) error
+	UpdateSensor(ctx context.Context, reg sensor.Registry, details sensor.Details) error
 	Get(key string) (sensor.Details, error)
 	Reset()
 }
