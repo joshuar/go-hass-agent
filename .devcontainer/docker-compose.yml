@@ -18,7 +18,7 @@ services:
       - seccomp:unconfined
     command: sleep infinity
   home-assistant:
-    image: ghcr.io/home-assistant/home-assistant:2024.2.3
+    image: ghcr.io/home-assistant/home-assistant:2024.2.5
     volumes:
       - ../deployments/home-assistant/config:/config
     environment:
