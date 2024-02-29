@@ -56,15 +56,14 @@
                     "editor.codeActionsOnSave": {
                         "source.organizeImports": "always",
                         "source.fixAll": "always"
-                    },
+                    }
                 },
                 "[go.mod]": {
                     "editor.formatOnSave": true,
                     "editor.codeActionsOnSave": {
                         "source.organizeImports": "always"
-                    },
-                },
-                "ltex.language": "en-AU"
+                    }
+                }
             }
         }
     }
