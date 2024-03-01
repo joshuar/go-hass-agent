@@ -141,11 +141,11 @@ func ExecuteRequest(ctx context.Context, request any, response Response) {
 
 func NewDefaultHTTPClient() *resty.Client {
 	return resty.New().
-		SetTimeout(1 * time.Second).
+		SetTimeout(30 * time.Second).
 		AddRetryCondition(
 			// RetryConditionFunc type is for retry condition function
 			// input: non-nil Response OR request execution error
-			func(r *resty.Response, err error) bool {
+			func(r *resty.Response, _ error) bool {
 				return r.StatusCode() == http.StatusTooManyRequests
 			},
 		)
