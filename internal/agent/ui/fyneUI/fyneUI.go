@@ -442,7 +442,6 @@ func (i *fyneUI) mqttConfigItems(prefs *ui.MQTTPreferences) []*widget.FormItem {
 func configEntry(value *string, secret bool) *widget.Entry {
 	boundEntry := binding.BindString(value)
 	entryWidget := widget.NewEntryWithData(boundEntry)
-	// entryWidget.Wrapping = fyne.TextWrapWord
 	if secret {
 		entryWidget.Password = true
 	}
