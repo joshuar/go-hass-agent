@@ -28,7 +28,7 @@ var _ SensorTracker = &SensorTrackerMock{}
 //			SensorListFunc: func() []string {
 //				panic("mock out the SensorList method")
 //			},
-//			UpdateSensorFunc: func(ctx context.Context, reg sensor.Registry, sensorMoqParam sensor.Details) error {
+//			UpdateSensorFunc: func(ctx context.Context, reg sensor.Registry, details sensor.Details) error {
 //				panic("mock out the UpdateSensor method")
 //			},
 //		}
@@ -48,7 +48,7 @@ type SensorTrackerMock struct {
 	SensorListFunc func() []string
 
 	// UpdateSensorFunc mocks the UpdateSensor method.
-	UpdateSensorFunc func(ctx context.Context, reg sensor.Registry, sensorMoqParam sensor.Details) error
+	UpdateSensorFunc func(ctx context.Context, reg sensor.Registry, details sensor.Details) error
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -69,8 +69,8 @@ type SensorTrackerMock struct {
 			Ctx context.Context
 			// Reg is the reg argument value.
 			Reg sensor.Registry
-			// SensorMoqParam is the sensorMoqParam argument value.
-			SensorMoqParam sensor.Details
+			// Details is the details argument value.
+			Details sensor.Details
 		}
 	}
 	lockGet          sync.RWMutex
@@ -166,23 +166,23 @@ func (mock *SensorTrackerMock) SensorListCalls() []struct {
 }
 
 // UpdateSensor calls UpdateSensorFunc.
-func (mock *SensorTrackerMock) UpdateSensor(ctx context.Context, reg sensor.Registry, sensorMoqParam sensor.Details) error {
+func (mock *SensorTrackerMock) UpdateSensor(ctx context.Context, reg sensor.Registry, details sensor.Details) error {
 	if mock.UpdateSensorFunc == nil {
 		panic("SensorTrackerMock.UpdateSensorFunc: method is nil but SensorTracker.UpdateSensor was just called")
 	}
 	callInfo := struct {
-		Ctx            context.Context
-		Reg            sensor.Registry
-		SensorMoqParam sensor.Details
+		Ctx     context.Context
+		Reg     sensor.Registry
+		Details sensor.Details
 	}{
-		Ctx:            ctx,
-		Reg:            reg,
-		SensorMoqParam: sensorMoqParam,
+		Ctx:     ctx,
+		Reg:     reg,
+		Details: details,
 	}
 	mock.lockUpdateSensor.Lock()
 	mock.calls.UpdateSensor = append(mock.calls.UpdateSensor, callInfo)
 	mock.lockUpdateSensor.Unlock()
-	return mock.UpdateSensorFunc(ctx, reg, sensorMoqParam)
+	return mock.UpdateSensorFunc(ctx, reg, details)
 }
 
 // UpdateSensorCalls gets all the calls that were made to UpdateSensor.
@@ -190,14 +190,14 @@ func (mock *SensorTrackerMock) UpdateSensor(ctx context.Context, reg sensor.Regi
 //
 //	len(mockedSensorTracker.UpdateSensorCalls())
 func (mock *SensorTrackerMock) UpdateSensorCalls() []struct {
-	Ctx            context.Context
-	Reg            sensor.Registry
-	SensorMoqParam sensor.Details
+	Ctx     context.Context
+	Reg     sensor.Registry
+	Details sensor.Details
 } {
 	var calls []struct {
-		Ctx            context.Context
-		Reg            sensor.Registry
-		SensorMoqParam sensor.Details
+		Ctx     context.Context
+		Reg     sensor.Registry
+		Details sensor.Details
 	}
 	mock.lockUpdateSensor.RLock()
 	calls = mock.calls.UpdateSensor
