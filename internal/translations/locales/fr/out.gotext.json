@@ -73,8 +73,18 @@
             "translation": ""
         },
         {
+            "id": "The long-lived access token generated in Home Assistant.",
+            "message": "The long-lived access token generated in Home Assistant.",
+            "translation": ""
+        },
+        {
             "id": "Auto-discovered Servers",
             "message": "Auto-discovered Servers",
+            "translation": ""
+        },
+        {
+            "id": "These are the Home Assistant servers that were detected on the local network.",
+            "message": "These are the Home Assistant servers that were detected on the local network.",
             "translation": ""
         },
         {
@@ -83,8 +93,23 @@
             "translation": ""
         },
         {
+            "id": "Select this option to enter a server manually below.",
+            "message": "Select this option to enter a server manually below.",
+            "translation": ""
+        },
+        {
             "id": "Manual Server Entry",
             "message": "Manual Server Entry",
+            "translation": ""
+        },
+        {
+            "id": "Ignore returned URLs?",
+            "message": "Ignore returned URLs?",
+            "translation": ""
+        },
+        {
+            "id": "Override Home Assistant and use server chosen (above) for API access.",
+            "message": "Override Home Assistant and use server chosen (above) for API access.",
             "translation": ""
         },
         {

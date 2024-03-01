@@ -99,9 +99,23 @@
             "fuzzy": true
         },
         {
+            "id": "The long-lived access token generated in Home Assistant.",
+            "message": "The long-lived access token generated in Home Assistant.",
+            "translation": "The long-lived access token generated in Home Assistant.",
+            "translatorComment": "Copied from source.",
+            "fuzzy": true
+        },
+        {
             "id": "Auto-discovered Servers",
             "message": "Auto-discovered Servers",
             "translation": "Auto-discovered Servers",
+            "translatorComment": "Copied from source.",
+            "fuzzy": true
+        },
+        {
+            "id": "These are the Home Assistant servers that were detected on the local network.",
+            "message": "These are the Home Assistant servers that were detected on the local network.",
+            "translation": "These are the Home Assistant servers that were detected on the local network.",
             "translatorComment": "Copied from source.",
             "fuzzy": true
         },
@@ -113,9 +127,30 @@
             "fuzzy": true
         },
         {
+            "id": "Select this option to enter a server manually below.",
+            "message": "Select this option to enter a server manually below.",
+            "translation": "Select this option to enter a server manually below.",
+            "translatorComment": "Copied from source.",
+            "fuzzy": true
+        },
+        {
             "id": "Manual Server Entry",
             "message": "Manual Server Entry",
             "translation": "Manual Server Entry",
+            "translatorComment": "Copied from source.",
+            "fuzzy": true
+        },
+        {
+            "id": "Ignore returned URLs?",
+            "message": "Ignore returned URLs?",
+            "translation": "Ignore returned URLs?",
+            "translatorComment": "Copied from source.",
+            "fuzzy": true
+        },
+        {
+            "id": "Override Home Assistant and use server chosen (above) for API access.",
+            "message": "Override Home Assistant and use server chosen (above) for API access.",
+            "translation": "Override Home Assistant and use server chosen (above) for API access.",
             "translatorComment": "Copied from source.",
             "fuzzy": true
         },

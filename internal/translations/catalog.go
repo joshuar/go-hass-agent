@@ -44,62 +44,74 @@ var messageKeyToIndex = map[string]int{
 	"App":                     3,
 	"App Preferences":         9,
 	"App Registration":        6,
-	"Auto-discovered Servers": 13,
+	"Auto-discovered Servers": 14,
 	"Fyne":                    4,
 	"Fyne Preferences":        8,
-	"MQTT Password":           18,
-	"MQTT Server":             16,
-	"MQTT User":               17,
-	"Manual Server Entry":     15,
-	"Please restart the agent to use changed preferences.": 11,
+	"Ignore returned URLs?":   19,
+	"MQTT Password":           23,
+	"MQTT Server":             21,
+	"MQTT User":               22,
+	"Manual Server Entry":     18,
+	"Override Home Assistant and use server chosen (above) for API access.": 20,
+	"Please restart the agent to use changed preferences.":                  11,
 	"Preferences": 2,
 	"Quit":        5,
 	"Save":        10,
-	"Sensors":     1,
+	"Select this option to enter a server manually below.": 17,
+	"Sensors": 1,
+	"The long-lived access token generated in Home Assistant.":                                                                                     13,
+	"These are the Home Assistant servers that were detected on the local network.":                                                                15,
 	"To register the agent, please enter the relevant details for your Home Assistant\nserver (if not auto-detected) and long-lived access token.": 7,
 	"Token":              12,
-	"Use Custom Server?": 14,
-	"Use MQTT?":          19,
+	"Use Custom Server?": 16,
+	"Use MQTT?":          24,
 }
 
-var deIndex = []uint32{ // 21 elements
+var deIndex = []uint32{ // 26 elements
 	0x00000000, 0x00000000, 0x00000000, 0x00000000,
 	0x00000000, 0x00000000, 0x00000000, 0x00000000,
 	0x00000000, 0x00000000, 0x00000000, 0x00000000,
 	0x00000000, 0x00000000, 0x00000000, 0x00000000,
 	0x00000000, 0x00000000, 0x00000000, 0x00000000,
-	0x00000000,
-} // Size: 108 bytes
+	0x00000000, 0x00000000, 0x00000000, 0x00000000,
+	0x00000000, 0x00000000,
+} // Size: 128 bytes
 
 const deData string = ""
 
-var enIndex = []uint32{ // 21 elements
+var enIndex = []uint32{ // 26 elements
 	0x00000000, 0x00000006, 0x0000000e, 0x0000001a,
 	0x0000001e, 0x00000023, 0x00000028, 0x00000039,
 	0x000000c5, 0x000000d6, 0x000000e6, 0x000000eb,
-	0x00000120, 0x00000126, 0x0000013e, 0x00000151,
-	0x00000165, 0x00000171, 0x0000017b, 0x00000189,
-	0x00000193,
-} // Size: 108 bytes
+	0x00000120, 0x00000126, 0x0000015f, 0x00000177,
+	0x000001c5, 0x000001d8, 0x0000020d, 0x00000221,
+	0x00000237, 0x0000027d, 0x00000289, 0x00000293,
+	0x000002a1, 0x000002ab,
+} // Size: 128 bytes
 
-const enData string = "" + // Size: 403 bytes
+const enData string = "" + // Size: 683 bytes
 	"\x02About\x02Sensors\x02Preferences\x02App\x02Fyne\x02Quit\x02App Regist" +
 	"ration\x02To register the agent, please enter the relevant details for y" +
 	"our Home Assistant\x0aserver (if not auto-detected) and long-lived acces" +
 	"s token.\x02Fyne Preferences\x02App Preferences\x02Save\x02Please restar" +
-	"t the agent to use changed preferences.\x02Token\x02Auto-discovered Serv" +
-	"ers\x02Use Custom Server?\x02Manual Server Entry\x02MQTT Server\x02MQTT " +
-	"User\x02MQTT Password\x02Use MQTT?"
+	"t the agent to use changed preferences.\x02Token\x02The long-lived acces" +
+	"s token generated in Home Assistant.\x02Auto-discovered Servers\x02These" +
+	" are the Home Assistant servers that were detected on the local network." +
+	"\x02Use Custom Server?\x02Select this option to enter a server manually " +
+	"below.\x02Manual Server Entry\x02Ignore returned URLs?\x02Override Home " +
+	"Assistant and use server chosen (above) for API access.\x02MQTT Server" +
+	"\x02MQTT User\x02MQTT Password\x02Use MQTT?"
 
-var frIndex = []uint32{ // 21 elements
+var frIndex = []uint32{ // 26 elements
 	0x00000000, 0x00000000, 0x00000000, 0x00000000,
 	0x00000000, 0x00000000, 0x00000000, 0x00000000,
 	0x00000000, 0x00000000, 0x00000000, 0x00000000,
 	0x00000000, 0x00000000, 0x00000000, 0x00000000,
 	0x00000000, 0x00000000, 0x00000000, 0x00000000,
-	0x00000000,
-} // Size: 108 bytes
+	0x00000000, 0x00000000, 0x00000000, 0x00000000,
+	0x00000000, 0x00000000,
+} // Size: 128 bytes
 
 const frData string = ""
 
-// Total table size 727 bytes (0KiB); checksum: 4C189FE6
+// Total table size 1067 bytes (1KiB); checksum: 41953004
