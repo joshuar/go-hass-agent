@@ -16,6 +16,7 @@
         "hass",
         "dbusx",
         "device",
-        "codecov"
+        "codecov",
+        "translations"
     ],
 }

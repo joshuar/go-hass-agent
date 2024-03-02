@@ -30,14 +30,14 @@ var (
 // Message and Code are additional and optional values returned from the Home
 // Assistant API.
 type APIError struct {
+	Code       any    `json:"code,omitempty"`
 	Message    string `json:"message,omitempty"`
-	Code       string `json:"code,omitempty"`
 	StatusCode int    `json:"-"`
 }
 
 func (e *APIError) Error() string {
-	if e.Code != "" {
-		return fmt.Sprintf("%s: %s", e.Code, e.Message)
+	if e.Code != nil {
+		return fmt.Sprintf("%v: %s", e.Code, e.Message)
 	}
 	return e.Message
 }
@@ -124,7 +124,8 @@ func ExecuteRequest(ctx context.Context, request any, response Response) {
 		Str("protocol", resp.Proto()).
 		Dur("time", resp.Time()).
 		Time("received_at", resp.ReceivedAt()).
-		RawJSON("body", resp.Body()).Msg("Response received.")
+		RawJSON("body", resp.Body()).
+		Msg("Response received.")
 	if resp.IsError() {
 		if responseErr != nil {
 			err := fmt.Errorf("%s (StatusCode: %d)", responseErr.Error(), resp.StatusCode())
