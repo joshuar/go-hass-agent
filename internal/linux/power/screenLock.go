@@ -51,14 +51,14 @@ func ScreenLockUpdater(ctx context.Context) chan sensor.Details {
 		}).
 		Handler(func(s *dbus.Signal) {
 			if !strings.Contains(string(s.Path), "/org/freedesktop/login1/session") || len(s.Body) <= 1 {
-				log.Trace().Caller().Msg("Not my signal or empty signal body.")
+				log.Trace().Str("runner", "power").Msg("Not my signal or empty signal body.")
 				return
 			}
 			switch s.Name {
 			case dbusx.PropChangedSignal:
 				props, ok := s.Body[1].(map[string]dbus.Variant)
 				if !ok {
-					log.Trace().Caller().
+					log.Trace().Str("runner", "power").
 						Str("signal", s.Name).Interface("body", s.Body).
 						Msg("Unexpected signal body")
 					return

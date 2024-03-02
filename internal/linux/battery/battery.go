@@ -354,7 +354,7 @@ func monitorBattery(ctx context.Context, battery *upowerBattery) <-chan sensor.D
 		Event(dbusx.PropChangedSignal).
 		Handler(func(s *dbus.Signal) {
 			if s.Path != battery.dBusPath || len(s.Body) == 0 {
-				log.Trace().Caller().Msg("Not my signal or empty signal body.")
+				log.Trace().Str("runner", "battery").Msg("Not my signal or empty signal body.")
 				return
 			}
 			props, ok := s.Body[1].(map[string]dbus.Variant)
@@ -396,7 +396,7 @@ func monitorBatteryChanges(ctx context.Context, t *batteryTracker) <-chan sensor
 		}).
 		Handler(func(s *dbus.Signal) {
 			if !strings.Contains(s.Name, upowerDBusDest) {
-				log.Trace().Caller().Msg("Not my signal.")
+				log.Trace().Str("runner", "battery").Msg("Not my signal.")
 				return
 			}
 			var batteryPath dbus.ObjectPath

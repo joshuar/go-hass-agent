@@ -91,14 +91,13 @@ func (c *connection) monitorConnectionState(ctx context.Context) chan sensor.Det
 		}).
 		Handler(func(s *dbus.Signal) {
 			if s.Path != c.path || len(s.Body) <= 1 {
-				log.Trace().Caller().Msg("Not my signal or empty signal body.")
+				log.Trace().Str("runner", "net").Msg("Not my signal or empty signal body.")
 				return
 			}
 			var props map[string]dbus.Variant
 			var ok bool
 			if props, ok = s.Body[1].(map[string]dbus.Variant); !ok {
-				log.Trace().Caller().
-					Msgf("Could not cast signal body, got %T, want %T", s.Body, props)
+				log.Trace().Str("runner", "net").Msgf("Could not cast signal body, got %T, want %T", s.Body, props)
 				return
 			}
 			if state, ok := props["State"]; ok {
@@ -152,14 +151,13 @@ func (c *connection) monitorAddresses(ctx context.Context) chan sensor.Details {
 		}).
 		Handler(func(s *dbus.Signal) {
 			if s.Path != c.path || len(s.Body) <= 1 {
-				log.Trace().Caller().Msg("Not my signal or empty signal body.")
+				log.Trace().Str("runner", "net").Msg("Not my signal or empty signal body.")
 				return
 			}
 			var props map[string]dbus.Variant
 			var ok bool
 			if props, ok = s.Body[1].(map[string]dbus.Variant); !ok {
-				log.Trace().Caller().
-					Msgf("Could not cast signal body, got %T, want %T", s.Body, props)
+				log.Trace().Str("runner", "net").Msgf("Could not cast signal body, got %T, want %T", s.Body, props)
 				return
 			}
 			go func() {
