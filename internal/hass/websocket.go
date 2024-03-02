@@ -88,7 +88,7 @@ func StartWebsocket(ctx context.Context, notifyCh chan [2]string) {
 			Msg("Could not connect to websocket.")
 		return
 	}
-	log.Trace().Caller().Msg("Websocket connection established.")
+	log.Trace().Msg("Websocket connection established.")
 
 	go func() {
 		<-ctx.Done()
@@ -150,16 +150,16 @@ func (c *WebSocket) OnClose(_ *gws.Conn, err error) {
 	close(c.doneCh)
 }
 
-func (c *WebSocket) OnPong(_ *gws.Conn, payload []byte) {
-	log.Trace().Caller().Msg("Received pong on websocket")
+func (c *WebSocket) OnPong(_ *gws.Conn, _ []byte) {
+	log.Trace().Msg("Received pong on websocket")
 }
 
 func (c *WebSocket) OnOpen(socket *gws.Conn) {
-	log.Trace().Caller().Msg("Websocket opened.")
+	log.Trace().Msg("Websocket opened.")
 	go c.keepAlive(socket)
 }
 
-func (c *WebSocket) OnPing(socket *gws.Conn, payload []byte) {
+func (c *WebSocket) OnPing(_ *gws.Conn, _ []byte) {
 	log.Trace().Msg("Received ping on websocket.")
 }
 
@@ -189,12 +189,10 @@ func (c *WebSocket) OnMessage(socket *gws.Conn, message *gws.Message) {
 			}
 		}
 	case "auth_required":
-		log.Trace().Caller().
-			Msg("Requesting authorisation for websocket.")
+		log.Trace().Msg("Requesting authorisation for websocket.")
 		r = c.newAuthMsg()
 	case "auth_ok":
-		log.Trace().Caller().
-			Msg("Registering app for push notifications.")
+		log.Trace().Msg("Registering app for push notifications.")
 		r = c.newRegistrationMsg()
 	case "pong":
 		b, err := json.Marshal(response)
@@ -203,7 +201,7 @@ func (c *WebSocket) OnMessage(socket *gws.Conn, message *gws.Message) {
 		}
 		c.OnPong(socket, b)
 	default:
-		log.Warn().Caller().Msgf("Unhandled websocket response %v.", response.Type)
+		log.Warn().Msgf("Unhandled websocket response %v.", response.Type)
 	}
 	if r != nil {
 		err := r.send(socket)
@@ -221,7 +219,7 @@ func (c *WebSocket) keepAlive(conn *gws.Conn) {
 		case <-c.doneCh:
 			return
 		case <-ticker.C:
-			log.Trace().Caller().
+			log.Trace().Str("runner", "websocket").
 				Msg("Sending ping on websocket")
 			if err := conn.SetDeadline(time.Now().Add(2 * PingInterval)); err != nil {
 				log.Error().Err(err).
