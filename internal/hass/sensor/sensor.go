@@ -126,8 +126,8 @@ type response struct {
 }
 
 type details struct {
+	Code    any    `json:"code,omitempty"`
 	Message string `json:"message,omitempty"`
-	Code    int    `json:"code,omitempty"`
 }
 
 type updateResponse struct {
