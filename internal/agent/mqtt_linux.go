@@ -22,14 +22,60 @@ import (
 )
 
 const (
-	dbusSessionDest           = "org.freedesktop.login1"
-	dbusSessionLockMethod     = dbusSessionDest + ".Session.Lock"
-	dbusSessionUnlockMethod   = dbusSessionDest + ".Session.UnLock"
-	dbusSessionRebootMethod   = dbusSessionDest + ".Manager.Reboot"
-	dbusSessionPowerOffMethod = dbusSessionDest + ".Manager.PowerOff"
+	dbusSessionDest            = "org.freedesktop.login1"
+	dbusSessionLockMethod      = dbusSessionDest + ".Session.Lock"
+	dbusSessionUnlockMethod    = dbusSessionDest + ".Session.UnLock"
+	dbusSessionRebootMethod    = dbusSessionDest + ".Manager.Reboot"
+	dbusSessionSuspendMethod   = dbusSessionDest + ".Manager.Suspend"
+	dbusSessionHibernateMethod = dbusSessionDest + ".Manager.Hibernate"
+	dbusSessionPowerOffMethod  = dbusSessionDest + ".Manager.PowerOff"
 
 	dbusEmptyScreensaverMessage = ""
 )
+
+type commandConfig struct {
+	name   string
+	icon   string
+	path   dbus.ObjectPath
+	method string
+}
+
+var commands = map[string]commandConfig{
+	"lock_session": {
+		name:   "lock",
+		icon:   "mdi:eye-lock",
+		method: dbusSessionLockMethod,
+	},
+	"unlock_session": {
+		name:   "unlock",
+		icon:   "mdi:eye-lock-open",
+		method: dbusSessionUnlockMethod,
+	},
+	"reboot": {
+		name:   "reboot",
+		icon:   "mdi:restart",
+		path:   dbus.ObjectPath("/org/freedesktop/login1"),
+		method: dbusSessionRebootMethod,
+	},
+	"suspend": {
+		name:   "suspend",
+		icon:   "mdi:power-sleep",
+		path:   dbus.ObjectPath("/org/freedesktop/login1"),
+		method: dbusSessionSuspendMethod,
+	},
+	"hibernate": {
+		name:   "hibernate",
+		icon:   "mdi:power-sleep",
+		path:   dbus.ObjectPath("/org/freedesktop/login1"),
+		method: dbusSessionHibernateMethod,
+	},
+	"poweroff": {
+		name:   "power off",
+		icon:   "mdi:power",
+		path:   dbus.ObjectPath("/org/freedesktop/login1"),
+		method: dbusSessionPowerOffMethod,
+	},
+}
 
 func newMQTTObject(ctx context.Context) *mqttObj {
 	appName := "go_hass_agent"
@@ -76,38 +122,27 @@ func newMQTTObject(ctx context.Context) *mqttObj {
 				log.Warn().Err(err).Msg("Could not lock screensaver.")
 			}
 		})
-	entities["lock_session"] = baseEntity("lock_session").
-		WithIcon("mdi:eye-lock").
-		WithCommandCallback(func(_ MQTT.Client, _ MQTT.Message) {
-			err := systemDbusCall(ctx, sessionPath, dbusSessionDest, dbusSessionLockMethod)
-			if err != nil {
-				log.Warn().Err(err).Msg("Could not lock session.")
+	for k, v := range commands {
+		var callback func(MQTT.Client, MQTT.Message)
+		if v.path == "" {
+			callback = func(_ MQTT.Client, _ MQTT.Message) {
+				err := systemDbusCall(ctx, sessionPath, dbusSessionDest, v.method)
+				if err != nil {
+					log.Warn().Err(err).Msgf("Could not %s session.", v.name)
+				}
 			}
-		})
-	entities["unlock_session"] = baseEntity("unlock_session").
-		WithIcon("mdi:eye-lock-open").
-		WithCommandCallback(func(_ MQTT.Client, _ MQTT.Message) {
-			err := systemDbusCall(ctx, sessionPath, dbusSessionDest, dbusSessionUnlockMethod)
-			if err != nil {
-				log.Warn().Err(err).Msg("Could not unlock session.")
+		} else {
+			callback = func(_ MQTT.Client, _ MQTT.Message) {
+				err := systemDbusCall(ctx, v.path, dbusSessionDest, v.method, true)
+				if err != nil {
+					log.Warn().Err(err).Msg("Could not power off session.")
+				}
 			}
-		})
-	entities["reboot"] = baseEntity("reboot").
-		WithIcon("mdi:restart").
-		WithCommandCallback(func(_ MQTT.Client, _ MQTT.Message) {
-			err := systemDbusCall(ctx, dbus.ObjectPath("/org/freedesktop/login1"), dbusSessionDest, dbusSessionRebootMethod, true)
-			if err != nil {
-				log.Warn().Err(err).Msg("Could not reboot session.")
-			}
-		})
-	entities["poweroff"] = baseEntity("poweroff").
-		WithIcon("mdi:power").
-		WithCommandCallback(func(_ MQTT.Client, _ MQTT.Message) {
-			err := systemDbusCall(ctx, dbus.ObjectPath("/org/freedesktop/login1"), dbusSessionDest, dbusSessionPowerOffMethod, true)
-			if err != nil {
-				log.Warn().Err(err).Msg("Could not power off session.")
-			}
-		})
+		}
+		entities[k] = baseEntity(k).
+			WithIcon(v.icon).
+			WithCommandCallback(callback)
+	}
 	return &mqttObj{
 		entities: entities,
 	}
