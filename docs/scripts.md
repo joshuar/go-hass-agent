@@ -18,9 +18,12 @@ run on its own schedule, specified using a Cron-like syntax.
 
 ## Requirements
 
-- Scripts need to be put in
-  `$HOME/.config/com.github.joshuar.go-hass-agent/scripts/`. You can use
-  symlinks.
+- Scripts need to be put in `CONFIG_HOME/go-hass-agent/scripts/` where
+  `CONFIG_HOME` will be:
+  - `~/.config` for Linux.
+  - `~/Library/Application Support` for OSX.
+  - `LocalAppData` for Windows.
+- You can use symlinks, if supported by your Operating System.
 - Script files need to be executable by the user running Go Hass Agent.
 - Scripts need to run without any user interaction.
 - Scripts need to output either valid JSON, YAML or TOML. See [Output
