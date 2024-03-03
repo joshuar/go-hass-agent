@@ -121,6 +121,15 @@ func TestRegisterWithHass(t *testing.T) {
 			want: registrationSuccess.Details,
 		},
 		{
+			name: "invalid input",
+			args: args{
+				ctx:    successCtx,
+				input:  &RegistrationInput{},
+				device: mockDevInfo,
+			},
+			wantErr: true,
+		},
+		{
 			name: "failed registration",
 			args: args{
 				ctx: failCtx,
@@ -143,6 +152,46 @@ func TestRegisterWithHass(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("RegisterWithHass() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestRegistrationInput_Validate(t *testing.T) {
+	type fields struct {
+		Server           string
+		Token            string
+		IgnoreOutputURLs bool
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		wantErr bool
+	}{
+		{
+			name:   "valid",
+			fields: fields{Server: "http://localhost:8123", Token: "anyString"},
+		},
+		{
+			name:    "invalid: host",
+			fields:  fields{Server: "localhost:8123", Token: "anyString"},
+			wantErr: true,
+		},
+		{
+			name:    "invalid: missing token",
+			fields:  fields{Server: "http://localhost:8123"},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			i := &RegistrationInput{
+				Server:           tt.fields.Server,
+				Token:            tt.fields.Token,
+				IgnoreOutputURLs: tt.fields.IgnoreOutputURLs,
+			}
+			if err := i.Validate(); (err != nil) != tt.wantErr {
+				t.Errorf("RegistrationInput.Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
