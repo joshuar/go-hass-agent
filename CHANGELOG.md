@@ -1,5 +1,24 @@
 # Changelog
 
+## [7.2.0](https://github.com/joshuar/go-hass-agent/compare/v7.1.0...v7.2.0) (2024-03-03)
+
+
+### Features
+
+* **agent:** :sparkles: add suspend and hibernate control via MQTT ([f1678ea](https://github.com/joshuar/go-hass-agent/commit/f1678ea83a03dfe32460e7eddd958d16a7e2d8a4))
+* **agent:** :sparkles: allow overriding URL for API requests ([3d1c9d9](https://github.com/joshuar/go-hass-agent/commit/3d1c9d9d1c266d315e5418deeaa5a16928255432))
+* **agent:** :sparkles: set the auto-detected server to a default value for convienience ([f39ef5b](https://github.com/joshuar/go-hass-agent/commit/f39ef5b0b1c0d99eb612fff0e473c374e5254fad))
+
+
+### Bug Fixes
+
+* **dbusx:** :bug: avoid nil pointer access when busRequest exists but bus conn doesn't ([6f69316](https://github.com/joshuar/go-hass-agent/commit/6f69316d0540ce05aa882281bc3bdf63c4111903))
+* **hass:** :bug: handle APIError or HTTP Error response more gracefully ([68b18dc](https://github.com/joshuar/go-hass-agent/commit/68b18dc016cf4335a8b50751c757096b1cf0cd11))
+* **hass:** :bug: handle uunknown error ([103ebeb](https://github.com/joshuar/go-hass-agent/commit/103ebebf4445fe07ceed46af792395324fa690df))
+* **hass:** :bug: support string or int code return for API errors ([c0ebed7](https://github.com/joshuar/go-hass-agent/commit/c0ebed7a7b260f713089e01e3b4d1efc7e971165))
+* **hass:** :lock: don't show the URL in trace logging output ([aac3ef8](https://github.com/joshuar/go-hass-agent/commit/aac3ef83245e6bdb8146a58661fd5d09bf8f7da3))
+* **hass:** :zap: increase request timeout to a more realistic time to wait for requests to complete ([4a48ab3](https://github.com/joshuar/go-hass-agent/commit/4a48ab31f4e856771bedb31e608bd530db78cad9))
+
 ## [7.1.0](https://github.com/joshuar/go-hass-agent/compare/v7.0.1...v7.1.0) (2024-02-26)
 
 
