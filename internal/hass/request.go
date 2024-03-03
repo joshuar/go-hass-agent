@@ -13,7 +13,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/rs/zerolog/log"
 
 	"github.com/go-resty/resty/v2"
@@ -99,7 +98,6 @@ func ExecuteRequest(ctx context.Context, request any, response Response) {
 		response.StoreError(ErrInvalidClient)
 		return
 	}
-	spew.Dump(response)
 
 	var responseErr *APIError
 	var resp *resty.Response
