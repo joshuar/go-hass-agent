@@ -19,7 +19,7 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
-const PingInterval = time.Minute
+const pingInterval = time.Minute
 
 type websocketMsg struct {
 	Type           string `json:"type"`
@@ -97,7 +97,7 @@ func StartWebsocket(ctx context.Context, notifyCh chan [2]string) {
 	socket.ReadLoop()
 }
 
-type WebSocket struct {
+type webSocket struct {
 	notifyCh  chan [2]string
 	doneCh    chan struct{}
 	token     string
@@ -105,8 +105,8 @@ type WebSocket struct {
 	nextID    uint64
 }
 
-func newWebsocket(prefs *preferences.Preferences, notifyCh chan [2]string) *WebSocket {
-	ws := &WebSocket{
+func newWebsocket(prefs *preferences.Preferences, notifyCh chan [2]string) *webSocket {
+	ws := &webSocket{
 		notifyCh:  notifyCh,
 		doneCh:    make(chan struct{}),
 		token:     prefs.Token,
@@ -115,14 +115,14 @@ func newWebsocket(prefs *preferences.Preferences, notifyCh chan [2]string) *WebS
 	return ws
 }
 
-func (c *WebSocket) newAuthMsg() *websocketMsg {
+func (c *webSocket) newAuthMsg() *websocketMsg {
 	return &websocketMsg{
 		Type:        "auth",
 		AccessToken: c.token,
 	}
 }
 
-func (c *WebSocket) newRegistrationMsg() *websocketMsg {
+func (c *webSocket) newRegistrationMsg() *websocketMsg {
 	return &websocketMsg{
 		Type:           "mobile_app/push_notification_channel",
 		ID:             atomic.LoadUint64(&c.nextID),
@@ -131,39 +131,39 @@ func (c *WebSocket) newRegistrationMsg() *websocketMsg {
 	}
 }
 
-func (c *WebSocket) newPingMsg() *websocketMsg {
+func (c *webSocket) newPingMsg() *websocketMsg {
 	return &websocketMsg{
 		Type: "ping",
 		ID:   atomic.LoadUint64(&c.nextID),
 	}
 }
 
-func (c *WebSocket) OnError(_ *gws.Conn, err error) {
+func (c *webSocket) OnError(_ *gws.Conn, err error) {
 	log.Error().Err(err).
 		Msg("Error on websocket")
 }
 
-func (c *WebSocket) OnClose(_ *gws.Conn, err error) {
+func (c *webSocket) OnClose(_ *gws.Conn, err error) {
 	if err.Error() != "" {
 		log.Error().Err(err).Msg("Websocket connection closed with error.")
 	}
 	close(c.doneCh)
 }
 
-func (c *WebSocket) OnPong(_ *gws.Conn, _ []byte) {
+func (c *webSocket) OnPong(_ *gws.Conn, _ []byte) {
 	log.Trace().Msg("Received pong on websocket")
 }
 
-func (c *WebSocket) OnOpen(socket *gws.Conn) {
+func (c *webSocket) OnOpen(socket *gws.Conn) {
 	log.Trace().Msg("Websocket opened.")
 	go c.keepAlive(socket)
 }
 
-func (c *WebSocket) OnPing(_ *gws.Conn, _ []byte) {
+func (c *webSocket) OnPing(_ *gws.Conn, _ []byte) {
 	log.Trace().Msg("Received ping on websocket.")
 }
 
-func (c *WebSocket) OnMessage(socket *gws.Conn, message *gws.Message) {
+func (c *webSocket) OnMessage(socket *gws.Conn, message *gws.Message) {
 	defer message.Close()
 	response := &websocketResponse{
 		Success: true,
@@ -212,8 +212,8 @@ func (c *WebSocket) OnMessage(socket *gws.Conn, message *gws.Message) {
 	}
 }
 
-func (c *WebSocket) keepAlive(conn *gws.Conn) {
-	ticker := time.NewTicker(PingInterval)
+func (c *webSocket) keepAlive(conn *gws.Conn) {
+	ticker := time.NewTicker(pingInterval)
 	for {
 		select {
 		case <-c.doneCh:
@@ -221,7 +221,7 @@ func (c *WebSocket) keepAlive(conn *gws.Conn) {
 		case <-ticker.C:
 			log.Trace().Str("runner", "websocket").
 				Msg("Sending ping on websocket")
-			if err := conn.SetDeadline(time.Now().Add(2 * PingInterval)); err != nil {
+			if err := conn.SetDeadline(time.Now().Add(2 * pingInterval)); err != nil {
 				log.Error().Err(err).
 					Msg("Error setting deadline on websocket.")
 				return
