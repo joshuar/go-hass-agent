@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/rs/zerolog/log"
 
 	"github.com/go-resty/resty/v2"
@@ -23,6 +24,10 @@ var (
 	ErrInvalidClient     = errors.New("invalid client")
 	ErrResponseMalformed = errors.New("malformed response")
 	ErrNoPrefs           = errors.New("loading preferences failed")
+	defaultTimeout       = 30 * time.Second
+	defaultRetry         = func(r *resty.Response, _ error) bool {
+		return r.StatusCode() == http.StatusTooManyRequests
+	}
 )
 
 // APIError represents an error returned either by the HTTP layer or by the Home
@@ -36,16 +41,22 @@ type APIError struct {
 }
 
 func (e *APIError) Error() string {
-	if e.Code != nil {
+	switch {
+	case e.Code != nil:
 		return fmt.Sprintf("%v: %s", e.Code, e.Message)
+	case e.StatusCode > 0:
+		return fmt.Sprintf("Status: %d", e.StatusCode)
+	default:
+		return e.Message
 	}
-	return e.Message
 }
 
 // GetRequest is a HTTP GET request.
 type GetRequest any
 
 // PostRequest is a HTTP POST request with the request body provided by Body().
+//
+//go:generate moq -out mock_PostRequest_test.go . PostRequest
 type PostRequest interface {
 	RequestBody() json.RawMessage
 }
@@ -62,6 +73,7 @@ type Encrypted interface {
 	Secret() string
 }
 
+//go:generate moq -out mock_Response_test.go . Response
 type Response interface {
 	StoreError(e error)
 	error
@@ -75,6 +87,7 @@ type Response interface {
 // satisfy the Auth interface. To send an encrypted request, satisfy the Secret
 // interface.
 func ExecuteRequest(ctx context.Context, request any, response Response) {
+	// TODO: handle nil response here
 	url := ContextGetURL(ctx)
 	if url == "" {
 		response.StoreError(ErrInvalidURL)
@@ -86,6 +99,7 @@ func ExecuteRequest(ctx context.Context, request any, response Response) {
 		response.StoreError(ErrInvalidClient)
 		return
 	}
+	spew.Dump(response)
 
 	var responseErr *APIError
 	var resp *resty.Response
@@ -142,12 +156,6 @@ func ExecuteRequest(ctx context.Context, request any, response Response) {
 
 func NewDefaultHTTPClient() *resty.Client {
 	return resty.New().
-		SetTimeout(30 * time.Second).
-		AddRetryCondition(
-			// RetryConditionFunc type is for retry condition function
-			// input: non-nil Response OR request execution error
-			func(r *resty.Response, _ error) bool {
-				return r.StatusCode() == http.StatusTooManyRequests
-			},
-		)
+		SetTimeout(defaultTimeout).
+		AddRetryCondition(defaultRetry)
 }
