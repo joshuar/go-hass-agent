@@ -19,4 +19,5 @@
         "codecov",
         "translations"
     ],
+    "go.testFlags": ["-v"]
 }

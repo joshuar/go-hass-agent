@@ -24,30 +24,34 @@ for desktop/laptop devices.
 
 This app will add some sensors to a Home Assistant instance:
 
+
 - Device location.
 - Current active application and list of running applications.
+- Current active user count (and list of usernames).
 - Battery status (for example, laptop battery and any peripherals).
 - Network status (for example, network connection status, internal and external
   IP addresses and Wi-Fi details where relevant).
+- Network transfer rates.
 - Memory and swap usage (total/free/used).
 - Disk usage.
 - Load Averages.
 - Uptime.
-- Power profile.
-- Screen lock.
-- Problems detected by ABRT.
+- Current power profile (Linux only)
+- Screen lock status.
+- Hardware sensors (temps, fan speeds, alarm status).
+- Problems detected by ABRT (Linux only).
 - User-specified [script](docs/scripts.md) output.
 
 A full list of sensors can be found in the [docs](docs/sensors.md).
-
-The code can be extended to add additional sensors. See the [development docs](docs/development.md)
-for details.
 
 ### 🕹️ Controls (via MQTT)
 
 If you have Home Assistant configured with
 [MQTT](https://www.home-assistant.io/integrations/mqtt/), you can set up Go Hass
 Agent to respond to commands from Home Assistant. See the [docs](docs/mqtt.md).
+A number of power related commands (suspend, poweroff, lock screen), among
+others, are built-in and any arbitrary D-Bus call can be called via a service
+call in Home Assistant.
 
 ## 🤔 Use-cases
 
