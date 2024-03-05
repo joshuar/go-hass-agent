@@ -18,6 +18,10 @@ A [Home Assistant](https://www.home-assistant.io/), [native app
 integration](https://developers.home-assistant.io/docs/api/native-app-integration)
 for desktop/laptop devices.
 
+> [!NOTE]  
+> Development and communication on issues will slow down during March 2024, picking back up in April 2024,
+> as the developer will be on holidays. 
+
 ## 🎉 Features
 
 ### 📈 Sensors
