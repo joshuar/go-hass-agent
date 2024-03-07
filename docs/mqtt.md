@@ -51,9 +51,12 @@ service call.
 | Control | What it does |
 |--------|------------------|
 | Lock Screen | Locks the session for the user running Go Hass Agent |
-| UnLock Screen | Unlocks the session for the user running Go Hass Agent |
-| Power Off | Will power off the device running Go Hass Agent |
-| Reboot | Will reboot the device running Go Hass Agent |
+| Unlock Screen | Unlocks the session for the user running Go Hass Agent |
+| Lock Screensaver | Lock the “screensaver” of the session for the user running Go Hass Agent |
+| Suspend | Will (instantly) suspend (the system state is saved to RAM and the CPU is turned off) the device running Go Hass Agent |
+| Hibernate | Will (instantly) hibernate (the system state is saved to disk and the machine is powered down) the device running Go Hass Agent | 
+| Power Off | Will (instantly) power off the device running Go Hass Agent |
+| Reboot | Will (instantly) reboot the device running Go Hass Agent |
 
 ## Security
 
