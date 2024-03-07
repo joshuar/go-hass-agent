@@ -12,7 +12,13 @@ If Home Assistant is connected to
 Go Hass Agent to connect to MQTT, which will then allow you to run some commands
 from Home Assistant to control the device running the agent.
 
-**Control via MQTT is not enabled by default.**
+> [!NOTE]  
+> Control via MQTT is not enabled by default.
+
+> [!IMPORTANT]  
+> Go Hass Agent requires the MQTT broker is configured with persistence enabled
+> to support retained messages. See your broker's documentation for configuring
+> persistence. 
 
 To configure the agent to connect to MQTT:
 
