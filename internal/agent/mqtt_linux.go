@@ -160,7 +160,7 @@ func mqttDevice() *mqtthass.Device {
 	}
 }
 
-func GetDesktopEnvScreensaverConfig() (string, string, *string) {
+func GetDesktopEnvScreensaverConfig() (dest, path string, msg *string) {
 	desktop := os.Getenv("XDG_CURRENT_DESKTOP")
 	switch {
 	case strings.Contains(desktop, "KDE"):
@@ -170,6 +170,9 @@ func GetDesktopEnvScreensaverConfig() (string, string, *string) {
 	case strings.Contains(desktop, "Cinnamon"):
 		msg := dbusEmptyScreensaverMessage
 		return "org.cinnamon.ScreenSaver", "/org/cinnamon/ScreenSaver", &msg
+	case strings.Contains(desktop, "XFCE"):
+		msg := dbusEmptyScreensaverMessage
+		return "org.xfce.ScreenSaver", "/org/cinnamon/ScreenSaver", &msg
 	default:
 		return "", "", nil
 	}
