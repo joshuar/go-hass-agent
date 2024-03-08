@@ -172,7 +172,7 @@ func GetDesktopEnvScreensaverConfig() (dest, path string, msg *string) {
 		return "org.cinnamon.ScreenSaver", "/org/cinnamon/ScreenSaver", &msg
 	case strings.Contains(desktop, "XFCE"):
 		msg := dbusEmptyScreensaverMessage
-		return "org.xfce.ScreenSaver", "/org/cinnamon/ScreenSaver", &msg
+		return "org.xfce.ScreenSaver", "/", &msg
 	default:
 		return "", "", nil
 	}
