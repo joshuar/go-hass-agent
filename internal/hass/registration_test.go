@@ -8,7 +8,6 @@ package hass
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -34,15 +33,6 @@ var mockDevInfo = &DeviceInfoMock{
 
 type failedResponse struct {
 	Details *RegistrationDetails
-	err     error
-}
-
-func (r *failedResponse) StoreError(e error) {
-	r.err = e
-}
-
-func (r *failedResponse) Error() string {
-	return r.err.Error()
 }
 
 func (r *failedResponse) UnmarshalJSON(b []byte) error {
@@ -92,9 +82,7 @@ func TestRegisterWithHass(t *testing.T) {
 	}
 	successCtx := setupTestCtx(registrationSuccess)
 
-	registrationFail := &failedResponse{
-		err: errors.New("response failed"),
-	}
+	registrationFail := &failedResponse{}
 	failCtx := setupTestCtx(registrationFail)
 
 	type args struct {

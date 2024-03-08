@@ -66,7 +66,6 @@ func TestConfig_IsEntityDisabled(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := &Config{
-				err:     tt.fields.err,
 				Details: tt.fields.Details,
 				mu:      tt.fields.mu,
 			}
@@ -118,67 +117,11 @@ func TestConfig_UnmarshalJSON(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := &Config{
-				err:     tt.fields.err,
 				Details: tt.fields.Details,
 				mu:      tt.fields.mu,
 			}
 			if err := c.UnmarshalJSON(tt.args.b); (err != nil) != tt.wantErr {
 				t.Errorf("Config.UnmarshalJSON() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
-
-func TestConfig_StoreError(t *testing.T) {
-	type fields struct {
-		err     error
-		Details *ConfigEntries
-		mu      sync.Mutex
-	}
-	type args struct {
-		e error
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		args   args
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			c := &Config{
-				err:     tt.fields.err,
-				Details: tt.fields.Details,
-				mu:      tt.fields.mu,
-			}
-			c.StoreError(tt.args.e)
-		})
-	}
-}
-
-func TestConfig_Error(t *testing.T) {
-	type fields struct {
-		err     error
-		Details *ConfigEntries
-		mu      sync.Mutex
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   string
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			c := &Config{
-				err:     tt.fields.err,
-				Details: tt.fields.Details,
-				mu:      tt.fields.mu,
-			}
-			if got := c.Error(); got != tt.want {
-				t.Errorf("Config.Error() = %v, want %v", got, tt.want)
 			}
 		})
 	}

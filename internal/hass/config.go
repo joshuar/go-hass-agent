@@ -17,7 +17,6 @@ import (
 )
 
 type Config struct {
-	err     error
 	Details *ConfigEntries
 	mu      sync.Mutex
 }
@@ -60,14 +59,6 @@ func (c *Config) UnmarshalJSON(b []byte) error {
 	return json.Unmarshal(b, &c.Details)
 }
 
-func (c *Config) StoreError(e error) {
-	c.err = e
-}
-
-func (c *Config) Error() string {
-	return c.err.Error()
-}
-
 type configRequest struct{}
 
 func (c *configRequest) RequestBody() json.RawMessage {
@@ -85,9 +76,8 @@ func GetConfig(ctx context.Context) (*Config, error) {
 	req := &configRequest{}
 	resp := &Config{}
 
-	ExecuteRequest(ctx, req, resp)
-	if errors.Is(resp, &APIError{}) {
-		return nil, resp
+	if err := ExecuteRequest(ctx, req, resp); err != nil {
+		return nil, err
 	}
 
 	return resp, nil

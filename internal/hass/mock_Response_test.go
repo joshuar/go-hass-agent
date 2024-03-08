@@ -17,12 +17,6 @@ var _ Response = &ResponseMock{}
 //
 //		// make and configure a mocked Response
 //		mockedResponse := &ResponseMock{
-//			ErrorFunc: func() string {
-//				panic("mock out the Error method")
-//			},
-//			StoreErrorFunc: func(e error)  {
-//				panic("mock out the StoreError method")
-//			},
 //			UnmarshalJSONFunc: func(bytes []byte) error {
 //				panic("mock out the UnmarshalJSON method")
 //			},
@@ -33,93 +27,18 @@ var _ Response = &ResponseMock{}
 //
 //	}
 type ResponseMock struct {
-	// ErrorFunc mocks the Error method.
-	ErrorFunc func() string
-
-	// StoreErrorFunc mocks the StoreError method.
-	StoreErrorFunc func(e error)
-
 	// UnmarshalJSONFunc mocks the UnmarshalJSON method.
 	UnmarshalJSONFunc func(bytes []byte) error
 
 	// calls tracks calls to the methods.
 	calls struct {
-		// Error holds details about calls to the Error method.
-		Error []struct {
-		}
-		// StoreError holds details about calls to the StoreError method.
-		StoreError []struct {
-			// E is the e argument value.
-			E error
-		}
 		// UnmarshalJSON holds details about calls to the UnmarshalJSON method.
 		UnmarshalJSON []struct {
 			// Bytes is the bytes argument value.
 			Bytes []byte
 		}
 	}
-	lockError         sync.RWMutex
-	lockStoreError    sync.RWMutex
 	lockUnmarshalJSON sync.RWMutex
-}
-
-// Error calls ErrorFunc.
-func (mock *ResponseMock) Error() string {
-	if mock.ErrorFunc == nil {
-		panic("ResponseMock.ErrorFunc: method is nil but Response.Error was just called")
-	}
-	callInfo := struct {
-	}{}
-	mock.lockError.Lock()
-	mock.calls.Error = append(mock.calls.Error, callInfo)
-	mock.lockError.Unlock()
-	return mock.ErrorFunc()
-}
-
-// ErrorCalls gets all the calls that were made to Error.
-// Check the length with:
-//
-//	len(mockedResponse.ErrorCalls())
-func (mock *ResponseMock) ErrorCalls() []struct {
-} {
-	var calls []struct {
-	}
-	mock.lockError.RLock()
-	calls = mock.calls.Error
-	mock.lockError.RUnlock()
-	return calls
-}
-
-// StoreError calls StoreErrorFunc.
-func (mock *ResponseMock) StoreError(e error) {
-	if mock.StoreErrorFunc == nil {
-		panic("ResponseMock.StoreErrorFunc: method is nil but Response.StoreError was just called")
-	}
-	callInfo := struct {
-		E error
-	}{
-		E: e,
-	}
-	mock.lockStoreError.Lock()
-	mock.calls.StoreError = append(mock.calls.StoreError, callInfo)
-	mock.lockStoreError.Unlock()
-	mock.StoreErrorFunc(e)
-}
-
-// StoreErrorCalls gets all the calls that were made to StoreError.
-// Check the length with:
-//
-//	len(mockedResponse.StoreErrorCalls())
-func (mock *ResponseMock) StoreErrorCalls() []struct {
-	E error
-} {
-	var calls []struct {
-		E error
-	}
-	mock.lockStoreError.RLock()
-	calls = mock.calls.StoreError
-	mock.lockStoreError.RUnlock()
-	return calls
 }
 
 // UnmarshalJSON calls UnmarshalJSONFunc.

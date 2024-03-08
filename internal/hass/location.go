@@ -8,7 +8,6 @@ package hass
 import (
 	"context"
 	"encoding/json"
-	"errors"
 
 	"github.com/rs/zerolog/log"
 )
@@ -42,20 +41,10 @@ func (l *locationRequest) RequestBody() json.RawMessage {
 	return json.RawMessage(data)
 }
 
-type locationResponse struct {
-	err error
-}
+type locationResponse struct{}
 
-func (l *locationResponse) UnmarshalJSON(b []byte) error {
+func (l *locationResponse) UnmarshalJSON(_ []byte) error {
 	return nil
-}
-
-func (l *locationResponse) StoreError(e error) {
-	l.err = e
-}
-
-func (l *locationResponse) Error() string {
-	return l.err.Error()
 }
 
 func UpdateLocation(ctx context.Context, l *LocationData) error {
@@ -64,9 +53,8 @@ func UpdateLocation(ctx context.Context, l *LocationData) error {
 		Data: l,
 	}
 	resp := &locationResponse{}
-	ExecuteRequest(ctx, req, resp)
-	if errors.Is(resp, &APIError{}) {
-		return resp
+	if err := ExecuteRequest(ctx, req, resp); err != nil {
+		return err
 	}
 	log.Debug().Msg("Location updated")
 	return nil

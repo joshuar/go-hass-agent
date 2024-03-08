@@ -74,8 +74,6 @@ type Encrypted interface {
 
 //go:generate moq -out mock_Response_test.go . Response
 type Response interface {
-	StoreError(e error)
-	error
 	json.Unmarshaler
 }
 
@@ -85,18 +83,16 @@ type Response interface {
 // satisfy the PostRequest interface. To add authentication where required,
 // satisfy the Auth interface. To send an encrypted request, satisfy the Secret
 // interface.
-func ExecuteRequest(ctx context.Context, request any, response Response) {
+func ExecuteRequest(ctx context.Context, request any, response Response) error {
 	// TODO: handle nil response here
 	url := ContextGetURL(ctx)
 	if url == "" {
-		response.StoreError(ErrInvalidURL)
-		return
+		return ErrInvalidURL
 	}
 
 	client := ContextGetClient(ctx)
 	if client == nil {
-		response.StoreError(ErrInvalidClient)
-		return
+		return ErrInvalidClient
 	}
 
 	var responseErr *APIError
@@ -127,8 +123,7 @@ func ExecuteRequest(ctx context.Context, request any, response Response) {
 			Get(url)
 	}
 	if err != nil {
-		response.StoreError(err)
-		return
+		return err
 	}
 	log.Trace().Err(err).
 		Int("statuscode", resp.StatusCode()).
@@ -140,16 +135,19 @@ func ExecuteRequest(ctx context.Context, request any, response Response) {
 		Msg("Response received.")
 	if resp.IsError() {
 		if responseErr != nil {
-			err := fmt.Errorf("%s (StatusCode: %d)", responseErr.Error(), resp.StatusCode())
-			response.StoreError(err)
+			responseErr.StatusCode = resp.StatusCode()
+			return responseErr
 		} else {
-			response.StoreError(errors.New(resp.Status()))
+			return &APIError{
+				StatusCode: resp.StatusCode(),
+				Message:    resp.Status(),
+			}
 		}
-		return
 	}
 	if err := response.UnmarshalJSON(resp.Body()); err != nil {
-		response.StoreError(errors.Join(ErrResponseMalformed, err))
+		return errors.Join(ErrResponseMalformed, err)
 	}
+	return nil
 }
 
 func NewDefaultHTTPClient() *resty.Client {
