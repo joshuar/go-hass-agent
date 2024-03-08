@@ -7,7 +7,6 @@ package sensor
 
 import (
 	"encoding/json"
-	"errors"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 )
@@ -132,30 +131,19 @@ type details struct {
 
 type updateResponse struct {
 	Body map[string]*response
-	err  error
 }
 
 func (u *updateResponse) UnmarshalJSON(b []byte) error {
 	return json.Unmarshal(b, &u.Body)
 }
 
-func (u *updateResponse) StoreError(e error) {
-	u.err = e
-}
-
-func (u *updateResponse) Error() string {
-	return u.err.Error()
-}
-
 func NewUpdateResponse() *updateResponse {
 	return &updateResponse{
 		Body: make(map[string]*response),
-		err:  errors.New(""),
 	}
 }
 
 type registrationResponse struct {
-	err  error
 	Body response
 }
 
@@ -163,18 +151,8 @@ func (r *registrationResponse) UnmarshalJSON(b []byte) error {
 	return json.Unmarshal(b, &r.Body)
 }
 
-func (r *registrationResponse) StoreError(e error) {
-	r.err = e
-}
-
-func (r *registrationResponse) Error() string {
-	return r.err.Error()
-}
-
 func NewRegistrationResponse() *registrationResponse {
-	return &registrationResponse{
-		err: errors.New(""),
-	}
+	return &registrationResponse{}
 }
 
 type comparableStringer interface {

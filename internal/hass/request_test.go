@@ -8,7 +8,6 @@ package hass
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -62,23 +61,6 @@ func TestAPIError_Error(t *testing.T) {
 	}
 }
 
-type mockResponse struct {
-	Body any
-	err  error
-}
-
-func (m *mockResponse) UnmarshalJSON(b []byte) error {
-	return json.Unmarshal(b, &m.Body)
-}
-
-func (m *mockResponse) StoreError(e error) {
-	m.err = e
-}
-
-func (m *mockResponse) Error() string {
-	return m.err.Error()
-}
-
 func TestExecuteRequest(t *testing.T) {
 	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
@@ -97,10 +79,23 @@ func TestExecuteRequest(t *testing.T) {
 	goodPostReq := PostRequestMock{
 		RequestBodyFunc: func() json.RawMessage { return json.RawMessage(`{"field":"value"}`) },
 	}
+	goodPostResp := &ResponseMock{
+		UnmarshalJSONFunc: func(bytes []byte) error { return nil },
+	}
+
+	goodGetResp := &ResponseMock{
+		UnmarshalJSONFunc: func(bytes []byte) error { return nil },
+	}
 
 	badPostReq := PostRequestMock{
 		RequestBodyFunc: func() json.RawMessage { return json.RawMessage(`{"field":"value"}`) },
 	}
+
+	// badPostResp := &APIError{
+	// 	StatusCode: 400,
+	// 	Code:       "not_registered",
+	// 	Message:    "Entity is not registered",
+	// }
 
 	type args struct {
 		ctx      context.Context
@@ -111,50 +106,56 @@ func TestExecuteRequest(t *testing.T) {
 		name    string
 		args    args
 		wantErr bool
-		want    Response
+		want    error
 	}{
 		{
 			name:    "invalid URL",
-			args:    args{ctx: context.TODO(), response: &mockResponse{err: errors.New("")}},
+			args:    args{ctx: context.TODO(), response: &ResponseMock{}},
 			wantErr: true,
-			want:    &mockResponse{err: ErrInvalidURL},
+			want:    ErrInvalidURL,
 		},
 		{
 			name:    "invalid Client",
-			args:    args{ctx: ContextSetURL(context.TODO(), mockServer.URL), response: &mockResponse{err: errors.New("")}},
+			args:    args{ctx: ContextSetURL(context.TODO(), mockServer.URL), response: &ResponseMock{}},
 			wantErr: true,
-			want:    &mockResponse{err: ErrInvalidClient},
+			want:    ErrInvalidClient,
 		},
 		{
 			name: "goodPost",
-			args: args{ctx: ContextSetURL(ctx, mockServer.URL+"/goodPost"), request: goodPostReq, response: &mockResponse{err: errors.New("")}},
-			want: &mockResponse{err: errors.New("")},
+			args: args{ctx: ContextSetURL(ctx, mockServer.URL+"/goodPost"), request: goodPostReq, response: goodPostResp},
+			want: nil,
 		},
 		{
 			name: "goodGet",
-			args: args{ctx: ContextSetURL(ctx, mockServer.URL+"/goodGet"), request: "anything", response: &mockResponse{err: errors.New("")}},
-			want: &mockResponse{err: errors.New("")},
+			args: args{ctx: ContextSetURL(ctx, mockServer.URL+"/goodGet"), request: "anything", response: goodGetResp},
+			want: nil,
 		},
 		{
 			name: "badPost",
-			args: args{ctx: ContextSetURL(ctx, mockServer.URL+"/badPost"), request: badPostReq, response: &mockResponse{err: errors.New("")}},
-			want: &mockResponse{err: errors.New("400 Bad Request")},
+			args: args{ctx: ContextSetURL(ctx, mockServer.URL+"/badPost"), request: badPostReq, response: &ResponseMock{}},
+			want: &APIError{
+				StatusCode: 400,
+				Message:    "400 Bad Request",
+			},
 		},
 		{
 			name: "badGet",
-			args: args{ctx: ContextSetURL(ctx, mockServer.URL+"/badGet"), request: "anything", response: &mockResponse{err: errors.New("")}},
-			want: &mockResponse{err: errors.New("400 Bad Request")},
+			args: args{ctx: ContextSetURL(ctx, mockServer.URL+"/badGet"), request: "anything", response: &ResponseMock{}},
+			want: &APIError{
+				StatusCode: 400,
+				Message:    "400 Bad Request",
+			},
 		},
 		// {
 		// 	name: "badData",
-		// 	args: args{ctx: ContextSetURL(ctx, mockServer.URL+"/badData"), request: badPostReq, response: &mockResponse{err: errors.New("")}},
-		// 	want: &mockResponse{err: errors.New("400 Bad Request")},
+		// 	args: args{ctx: ContextSetURL(ctx, mockServer.URL+"/badData"), request: badPostReq, response: &ResponseMock{}},
+		// 	want: badPostResp,
 		// },
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ExecuteRequest(tt.args.ctx, tt.args.request, tt.args.response)
-			assert.Equal(t, tt.args.response.Error(), tt.want.Error())
+			got := ExecuteRequest(tt.args.ctx, tt.args.request, tt.args.response)
+			assert.Equal(t, tt.want, got)
 			// TODO: mock API level responses and test those
 		})
 	}

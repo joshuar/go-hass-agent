@@ -368,6 +368,16 @@ func TestTracker_UpdateSensor(t *testing.T) {
 	err = reg.SetRegistered(updatedSensor.IDFunc(), true)
 	assert.Nil(t, err)
 
+	unregisteredSensor := mockSensor
+	unregisteredSensorResponse := NewUpdateResponse()
+	unregisteredSensorResponse.Body[updatedSensor.IDFunc()] = &response{
+		Success: false,
+		Error: &details{
+			Code:    "not_registered",
+			Message: "Entity is not registered",
+		},
+	}
+
 	type fields struct {
 		sensor map[string]Details
 		mu     sync.Mutex
@@ -401,6 +411,12 @@ func TestTracker_UpdateSensor(t *testing.T) {
 			fields: fields{sensor: mockMap},
 			args:   args{ctx: setup(updatedSensorResponse), reg: reg, upd: &updatedSensor},
 			want:   "newState",
+		},
+		{
+			name:    "unregistered sensor",
+			fields:  fields{sensor: mockMap},
+			args:    args{ctx: setup(unregisteredSensorResponse), reg: reg, upd: &unregisteredSensor},
+			wantErr: true,
 		},
 	}
 	for _, tt := range tests {

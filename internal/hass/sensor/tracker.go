@@ -15,6 +15,11 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/hass"
 )
 
+var (
+	ErrUnsuccessful = errors.New("unsuccessful request")
+	ErrUnhandled    = errors.New("unhandled response")
+)
+
 //go:generate moq -out mock_Registry_test.go . Registry
 type Registry interface {
 	SetDisabled(sensor string, state bool) error
@@ -82,9 +87,8 @@ func (t *Tracker) UpdateSensor(ctx context.Context, reg Registry, upd Details) e
 		req = NewRegistrationRequest(SensorRegistration(upd))
 		resp = NewRegistrationResponse()
 	}
-	hass.ExecuteRequest(ctx, req, resp)
-	if errors.Is(resp, &hass.APIError{}) || resp.Error() != "" {
-		return wrapErr(upd.ID(), resp)
+	if err := hass.ExecuteRequest(ctx, req, resp); err != nil {
+		return wrapErr(upd.ID(), err)
 	}
 	if err := handleResponse(resp, t, upd, reg); err != nil {
 		return wrapErr(upd.ID(), err)
@@ -106,7 +110,7 @@ func handleResponse(resp hass.Response, trk *Tracker, upd Details, reg Registry)
 			return err
 		}
 	default:
-		return errors.New("unhandled response")
+		return ErrUnhandled
 	}
 	return nil
 }
@@ -114,17 +118,17 @@ func handleResponse(resp hass.Response, trk *Tracker, upd Details, reg Registry)
 func handleUpdates(reg Registry, r *updateResponse) error {
 	for sensor, details := range r.Body {
 		if details == nil {
-			return errors.New("empty response")
+			return ErrUnhandled
 		}
 		if !details.Success {
 			if details.Error != nil {
 				return fmt.Errorf("%d: %s", details.Error.Code, details.Error.Message)
 			}
-			return errors.New("update unsuccessful")
+			return ErrUnsuccessful
 		}
 		if reg.IsDisabled(sensor) != details.Disabled {
 			if err := reg.SetDisabled(sensor, details.Disabled); err != nil {
-				return fmt.Errorf("could no set disabled status: %w", err)
+				return fmt.Errorf("could not set disabled status: %w", err)
 			}
 		}
 	}
@@ -133,7 +137,7 @@ func handleUpdates(reg Registry, r *updateResponse) error {
 
 func handleRegistration(reg Registry, r *registrationResponse, s string) error {
 	if !r.Body.Success {
-		return errors.New("registration unsuccessful")
+		return ErrUnsuccessful
 	}
 	return reg.SetRegistered(s, true)
 }

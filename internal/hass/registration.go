@@ -8,7 +8,6 @@ package hass
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"net/url"
 	"time"
 
@@ -100,15 +99,6 @@ func newRegistrationRequest(d DeviceInfo, t string) *registrationRequest {
 
 type registrationResponse struct {
 	Details *RegistrationDetails
-	err     error
-}
-
-func (r *registrationResponse) StoreError(err error) {
-	r.err = err
-}
-
-func (r *registrationResponse) Error() string {
-	return r.err.Error()
 }
 
 func (r *registrationResponse) UnmarshalJSON(b []byte) error {
@@ -116,9 +106,7 @@ func (r *registrationResponse) UnmarshalJSON(b []byte) error {
 }
 
 func newRegistrationResponse() *registrationResponse {
-	return &registrationResponse{
-		err: errors.New(""),
-	}
+	return &registrationResponse{}
 }
 
 func RegisterWithHass(ctx context.Context, input *RegistrationInput, device DeviceInfo) (*RegistrationDetails, error) {
@@ -133,9 +121,8 @@ func RegisterWithHass(ctx context.Context, input *RegistrationInput, device Devi
 	ctx = ContextSetURL(ctx, serverURL.String())
 	ctx = ContextSetClient(ctx, NewDefaultHTTPClient().SetTimeout(time.Minute))
 
-	ExecuteRequest(ctx, req, resp)
-	if errors.Is(resp, &APIError{}) || resp.Error() != "" {
-		return nil, resp
+	if err := ExecuteRequest(ctx, req, resp); err != nil {
+		return nil, err
 	}
 	return resp.Details, nil
 }

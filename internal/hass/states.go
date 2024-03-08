@@ -35,15 +35,6 @@ func (e *EntityStateRequest) Auth() string {
 
 type EntityStateResponse struct {
 	State *EntityState
-	err   error
-}
-
-func (e *EntityStateResponse) StoreError(err error) {
-	e.err = err
-}
-
-func (e *EntityStateResponse) Error() string {
-	return e.err.Error()
 }
 
 func (e *EntityStateResponse) UnmarshalJSON(b []byte) error {
@@ -62,9 +53,8 @@ func GetEntityState(sensorType, entityID string) (*EntityStateResponse, error) {
 
 	req := &EntityStateRequest{}
 	resp := &EntityStateResponse{}
-	ExecuteRequest(ctx, req, resp)
-	if resp.Error() != "" {
-		return nil, resp
+	if err := ExecuteRequest(ctx, req, resp); err != nil {
+		return nil, err
 	}
 	return resp, nil
 }
@@ -72,7 +62,6 @@ func GetEntityState(sensorType, entityID string) (*EntityStateResponse, error) {
 type EntityStatesRequest struct{}
 
 type EntityStatesResponse struct {
-	err    error
 	States []EntityStateResponse
 }
 
@@ -82,14 +71,6 @@ func (e *EntityStatesResponse) Auth() string {
 		return ""
 	}
 	return prefs.Token
-}
-
-func (e *EntityStatesResponse) StoreError(err error) {
-	e.err = err
-}
-
-func (e *EntityStatesResponse) Error() string {
-	return e.err.Error()
 }
 
 func (e *EntityStatesResponse) UnmarshalJSON(b []byte) error {
@@ -108,9 +89,8 @@ func GetAllEntityStates() (*EntityStatesResponse, error) {
 
 	req := &EntityStatesRequest{}
 	resp := &EntityStatesResponse{}
-	ExecuteRequest(ctx, req, resp)
-	if resp.Error() != "" {
-		return nil, resp
+	if err := ExecuteRequest(ctx, req, resp); err != nil {
+		return nil, err
 	}
 	return resp, nil
 }
