@@ -131,7 +131,8 @@ func runScripts(ctx context.Context, path string, trk SensorTracker, reg sensor.
 func (agent *Agent) runNotificationsWorker(ctx context.Context) {
 	log.Debug().Msg("Listening for notifications.")
 
-	notifyCh := make(chan [2]string)
+	notifyCh := hass.StartWebsocket(ctx)
+
 	var wg sync.WaitGroup
 
 	wg.Add(1)
@@ -143,21 +144,7 @@ func (agent *Agent) runNotificationsWorker(ctx context.Context) {
 				log.Debug().Msg("Stopping notification handler.")
 				return
 			case n := <-notifyCh:
-				agent.ui.DisplayNotification(n[0], n[1])
-			}
-		}
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		for {
-			select {
-			case <-ctx.Done():
-				log.Debug().Msg("Stopping websocket.")
-				return
-			default:
-				hass.StartWebsocket(ctx, notifyCh)
+				agent.ui.DisplayNotification(n)
 			}
 		}
 	}()

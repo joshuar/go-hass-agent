@@ -22,6 +22,11 @@ type SensorTracker interface {
 	Get(key string) (sensor.Details, error)
 }
 
+type Notification interface {
+	GetTitle() string
+	GetMessage() string
+}
+
 type MQTTPreferences struct {
 	Server   string
 	User     string

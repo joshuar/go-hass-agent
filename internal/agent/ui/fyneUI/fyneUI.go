@@ -59,13 +59,13 @@ func (i *fyneUI) Run(doneCh chan struct{}) {
 	i.app.Run()
 }
 
-func (i *fyneUI) DisplayNotification(title, message string) {
+func (i *fyneUI) DisplayNotification(n ui.Notification) {
 	if i.app == nil {
 		return
 	}
 	i.app.SendNotification(&fyne.Notification{
-		Title:   title,
-		Content: message,
+		Title:   n.GetTitle(),
+		Content: n.GetMessage(),
 	})
 }
 

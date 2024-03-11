@@ -25,7 +25,7 @@ type Device interface {
 //
 //go:generate moq -out mockUI_test.go . UI
 type UI interface {
-	DisplayNotification(title, message string)
+	DisplayNotification(n ui.Notification)
 	DisplayTrayIcon(agent ui.Agent, trk ui.SensorTracker)
 	DisplayRegistrationWindow(ctx context.Context, input *hass.RegistrationInput, doneCh chan struct{})
 	Run(doneCh chan struct{})
