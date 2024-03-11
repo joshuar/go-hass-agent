@@ -59,12 +59,19 @@ type websocketNotification struct {
 	Target    []string `json:"target,omitempty"`
 }
 
-func StartWebsocket(ctx context.Context, notifyCh chan [2]string) {
-	var prefs *preferences.Preferences
-	var err error
-	var socket *gws.Conn
+func (n *websocketNotification) GetTitle() string {
+	return n.Title
+}
 
-	prefs, err = preferences.Load()
+func (n *websocketNotification) GetMessage() string {
+	return n.Message
+}
+
+func StartWebsocket(ctx context.Context) chan *websocketNotification {
+	var socket *gws.Conn
+	notifyCh := make(chan *websocketNotification)
+
+	prefs, err := preferences.Load()
 	if err != nil {
 		log.Error().Err(err).Msg("Could not load preferences.")
 	}
@@ -82,30 +89,39 @@ func StartWebsocket(ctx context.Context, notifyCh chan [2]string) {
 		defer resp.Body.Close()
 		return nil
 	}
-	err = backoff.Retry(retryFunc, backoff.WithContext(backoff.NewExponentialBackOff(), ctx))
-	if err != nil {
-		log.Error().Err(err).
-			Msg("Could not connect to websocket.")
-		return
-	}
-	log.Trace().Msg("Websocket connection established.")
 
 	go func() {
-		<-ctx.Done()
-		socket.WriteClose(1000, nil)
+		for {
+			select {
+			case <-ctx.Done():
+				if socket != nil {
+					socket.WriteClose(1000, nil)
+				}
+			default:
+				err = backoff.Retry(retryFunc, backoff.WithContext(backoff.NewExponentialBackOff(), ctx))
+				if err != nil {
+					log.Error().Err(err).
+						Msg("Could not connect to websocket.")
+					return
+				}
+				log.Trace().Msg("Websocket connection established.")
+				socket.ReadLoop()
+			}
+		}
 	}()
-	socket.ReadLoop()
+
+	return notifyCh
 }
 
 type webSocket struct {
-	notifyCh  chan [2]string
+	notifyCh  chan *websocketNotification
 	doneCh    chan struct{}
 	token     string
 	webhookID string
 	nextID    uint64
 }
 
-func newWebsocket(prefs *preferences.Preferences, notifyCh chan [2]string) *webSocket {
+func newWebsocket(prefs *preferences.Preferences, notifyCh chan *websocketNotification) *webSocket {
 	ws := &webSocket{
 		notifyCh:  notifyCh,
 		doneCh:    make(chan struct{}),
@@ -177,7 +193,7 @@ func (c *webSocket) OnMessage(socket *gws.Conn, message *gws.Message) {
 	var r *websocketMsg
 	switch response.Type {
 	case "event":
-		c.notifyCh <- [2]string{response.Notification.Title, response.Notification.Message}
+		c.notifyCh <- &response.Notification
 	case "result":
 		if !response.Success {
 			log.Error().
