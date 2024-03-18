@@ -20,7 +20,7 @@ var _ UI = &UIMock{}
 //
 //		// make and configure a mocked UI
 //		mockedUI := &UIMock{
-//			DisplayNotificationFunc: func(title string, message string)  {
+//			DisplayNotificationFunc: func(n ui.Notification)  {
 //				panic("mock out the DisplayNotification method")
 //			},
 //			DisplayRegistrationWindowFunc: func(ctx context.Context, input *hass.RegistrationInput, doneCh chan struct{})  {
@@ -40,7 +40,7 @@ var _ UI = &UIMock{}
 //	}
 type UIMock struct {
 	// DisplayNotificationFunc mocks the DisplayNotification method.
-	DisplayNotificationFunc func(title string, message string)
+	DisplayNotificationFunc func(n ui.Notification)
 
 	// DisplayRegistrationWindowFunc mocks the DisplayRegistrationWindow method.
 	DisplayRegistrationWindowFunc func(ctx context.Context, input *hass.RegistrationInput, doneCh chan struct{})
@@ -55,10 +55,8 @@ type UIMock struct {
 	calls struct {
 		// DisplayNotification holds details about calls to the DisplayNotification method.
 		DisplayNotification []struct {
-			// Title is the title argument value.
-			Title string
-			// Message is the message argument value.
-			Message string
+			// N is the n argument value.
+			N ui.Notification
 		}
 		// DisplayRegistrationWindow holds details about calls to the DisplayRegistrationWindow method.
 		DisplayRegistrationWindow []struct {
@@ -89,21 +87,19 @@ type UIMock struct {
 }
 
 // DisplayNotification calls DisplayNotificationFunc.
-func (mock *UIMock) DisplayNotification(title string, message string) {
+func (mock *UIMock) DisplayNotification(n ui.Notification) {
 	if mock.DisplayNotificationFunc == nil {
 		panic("UIMock.DisplayNotificationFunc: method is nil but UI.DisplayNotification was just called")
 	}
 	callInfo := struct {
-		Title   string
-		Message string
+		N ui.Notification
 	}{
-		Title:   title,
-		Message: message,
+		N: n,
 	}
 	mock.lockDisplayNotification.Lock()
 	mock.calls.DisplayNotification = append(mock.calls.DisplayNotification, callInfo)
 	mock.lockDisplayNotification.Unlock()
-	mock.DisplayNotificationFunc(title, message)
+	mock.DisplayNotificationFunc(n)
 }
 
 // DisplayNotificationCalls gets all the calls that were made to DisplayNotification.
@@ -111,12 +107,10 @@ func (mock *UIMock) DisplayNotification(title string, message string) {
 //
 //	len(mockedUI.DisplayNotificationCalls())
 func (mock *UIMock) DisplayNotificationCalls() []struct {
-	Title   string
-	Message string
+	N ui.Notification
 } {
 	var calls []struct {
-		Title   string
-		Message string
+		N ui.Notification
 	}
 	mock.lockDisplayNotification.RLock()
 	calls = mock.calls.DisplayNotification

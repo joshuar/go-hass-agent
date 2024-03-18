@@ -46,6 +46,7 @@ func sensorWorkers() []func(context.Context) chan sensor.Details {
 		disk.UsageUpdater,
 		time.Updater,
 		power.ScreenLockUpdater,
+		power.LaptopLidUpdater,
 		power.PowerStateUpdater,
 		power.PowerProfileUpdater,
 		user.Updater,

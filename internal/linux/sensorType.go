@@ -52,6 +52,7 @@ const (
 	SensorLoad15                                       // CPU load average (15 min)
 	SensorCPUPc                                        // CPU Usage
 	SensorScreenLock                                   // Screen Lock
+	SensorLaptopLid                                    // Laptop Lid
 	SensorProblem                                      // Problems
 	SensorKernel                                       // Kernel Version
 	SensorDistribution                                 // Distribution Name

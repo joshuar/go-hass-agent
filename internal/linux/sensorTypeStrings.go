@@ -53,18 +53,19 @@ func _() {
 	_ = x[SensorLoad15-43]
 	_ = x[SensorCPUPc-44]
 	_ = x[SensorScreenLock-45]
-	_ = x[SensorProblem-46]
-	_ = x[SensorKernel-47]
-	_ = x[SensorDistribution-48]
-	_ = x[SensorVersion-49]
-	_ = x[SensorUsers-50]
-	_ = x[SensorDeviceTemp-51]
-	_ = x[SensorPowerState-52]
+	_ = x[SensorLaptopLid-46]
+	_ = x[SensorProblem-47]
+	_ = x[SensorKernel-48]
+	_ = x[SensorDistribution-49]
+	_ = x[SensorVersion-50]
+	_ = x[SensorUsers-51]
+	_ = x[SensorDeviceTemp-52]
+	_ = x[SensorPowerState-53]
 }
 
-const _SensorTypeValue_name = "Active AppRunning AppsBattery TypeBattery LevelBattery TemperatureBattery VoltageBattery EnergyBattery PowerBattery StateBattery PathBattery LevelBattery ModelMemory TotalMemory AvailableMemory UsedMemory UsageSwap Memory TotalSwap Memory UsedSwap Memory FreeSwap UsageConnection StateConnection IDConnection DeviceConnection TypeConnection IPv4Connection IPv6IPv4 AddressIPv6 AddressWi-Fi SSIDWi-Fi FrequencyWi-Fi Link SpeedWi-Fi Signal StrengthWi-Fi BSSIDBytes SentBytes ReceivedBytes Sent ThroughputBytes Received ThroughputPower ProfileLast RebootUptimeCPU load average (1 min)CPU load average (5 min)CPU load average (15 min)CPU UsageScreen LockProblemsKernel VersionDistribution NameDistribution VersionCurrent UsersTemperaturePower State"
+const _SensorTypeValue_name = "Active AppRunning AppsBattery TypeBattery LevelBattery TemperatureBattery VoltageBattery EnergyBattery PowerBattery StateBattery PathBattery LevelBattery ModelMemory TotalMemory AvailableMemory UsedMemory UsageSwap Memory TotalSwap Memory UsedSwap Memory FreeSwap UsageConnection StateConnection IDConnection DeviceConnection TypeConnection IPv4Connection IPv6IPv4 AddressIPv6 AddressWi-Fi SSIDWi-Fi FrequencyWi-Fi Link SpeedWi-Fi Signal StrengthWi-Fi BSSIDBytes SentBytes ReceivedBytes Sent ThroughputBytes Received ThroughputPower ProfileLast RebootUptimeCPU load average (1 min)CPU load average (5 min)CPU load average (15 min)CPU UsageScreen LockLaptop LidProblemsKernel VersionDistribution NameDistribution VersionCurrent UsersTemperaturePower State"
 
-var _SensorTypeValue_index = [...]uint16{0, 10, 22, 34, 47, 66, 81, 95, 108, 121, 133, 146, 159, 171, 187, 198, 210, 227, 243, 259, 269, 285, 298, 315, 330, 345, 360, 372, 384, 394, 409, 425, 446, 457, 467, 481, 502, 527, 540, 551, 557, 581, 605, 630, 639, 650, 658, 672, 689, 709, 722, 733, 744}
+var _SensorTypeValue_index = [...]uint16{0, 10, 22, 34, 47, 66, 81, 95, 108, 121, 133, 146, 159, 171, 187, 198, 210, 227, 243, 259, 269, 285, 298, 315, 330, 345, 360, 372, 384, 394, 409, 425, 446, 457, 467, 481, 502, 527, 540, 551, 557, 581, 605, 630, 639, 650, 660, 668, 682, 699, 719, 732, 743, 754}
 
 func (i SensorTypeValue) String() string {
 	i -= 1
