@@ -4,7 +4,7 @@ go 1.22.0
 
 require (
 	fyne.io/fyne/v2 v2.4.4
-	github.com/cenkalti/backoff/v4 v4.2.1
+	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/eclipse/paho.mqtt.golang v1.4.3
 	github.com/go-playground/validator/v10 v10.19.0
 	github.com/godbus/dbus/v5 v5.1.0
