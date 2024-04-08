@@ -12,8 +12,8 @@ import (
 	"github.com/robfig/cron/v3"
 	"github.com/rs/zerolog/log"
 
-	mqtthass "github.com/joshuar/go-hass-anything/v5/pkg/hass"
-	mqttapi "github.com/joshuar/go-hass-anything/v5/pkg/mqtt"
+	mqtthass "github.com/joshuar/go-hass-anything/v6/pkg/hass"
+	mqttapi "github.com/joshuar/go-hass-anything/v6/pkg/mqtt"
 
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass"
@@ -172,7 +172,7 @@ func runMQTTWorker(ctx context.Context) {
 	o := newMQTTObject(ctx)
 	if !prefs.MQTTRegistered {
 		log.Debug().Msg("Registering agent with MQTT.")
-		if err := mqtthass.Register(o, c); err != nil {
+		if err := mqtthass.Register(c, o); err != nil {
 			log.Error().Err(err).Msg("Failed to register with MQTT.")
 			return
 		}
@@ -211,7 +211,7 @@ func resetMQTTWorker(ctx context.Context) {
 		}
 
 		d := newMQTTObject(ctx)
-		if err := mqtthass.UnRegister(d, c); err != nil {
+		if err := mqtthass.UnRegister(c, d); err != nil {
 			log.Error().Err(err).Msg("Failed to unregister app!")
 		} else {
 			if err := preferences.Save(preferences.SetMQTTRegistered(false)); err != nil {
