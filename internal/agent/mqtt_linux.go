@@ -14,7 +14,7 @@ import (
 	"github.com/godbus/dbus/v5"
 	"github.com/rs/zerolog/log"
 
-	mqtthass "github.com/joshuar/go-hass-anything/v5/pkg/hass"
+	mqtthass "github.com/joshuar/go-hass-anything/v6/pkg/hass"
 
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
@@ -81,7 +81,7 @@ func newMQTTObject(ctx context.Context) *mqttObj {
 	appName := "go_hass_agent"
 
 	baseEntity := func(entityID string) *mqtthass.EntityConfig {
-		return mqtthass.NewEntityByID(entityID, appName).
+		return mqtthass.NewEntityByID(entityID, appName, "homeassistant").
 			AsButton().
 			WithDefaultOriginInfo().
 			WithDeviceInfo(mqttDevice())
