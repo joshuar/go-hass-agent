@@ -1,5 +1,25 @@
 # Changelog
 
+## [7.3.0](https://github.com/joshuar/go-hass-agent/compare/v7.2.0...v7.3.0) (2024-04-09)
+
+
+### Features
+
+* **agent:** :sparkles: add support for screensaver control under Xfce desktop ([78e560c](https://github.com/joshuar/go-hass-agent/commit/78e560c86244189fd5f82a58b830a8702d327893))
+* **agent:** :sparkles: support stateless MQTT ([a8e886a](https://github.com/joshuar/go-hass-agent/commit/a8e886a3105c016b4821979651be79a908d1b354))
+* **linux:** added laptop lid sensor ([0d92428](https://github.com/joshuar/go-hass-agent/commit/0d92428de0d19166575a0b75c314425dcb9e592f))
+
+
+### Bug Fixes
+
+* **agent:** :bug: correct D-Bus path for Xfce screensaver control ([9650059](https://github.com/joshuar/go-hass-agent/commit/9650059e1f34e5310e3400cc5dd94a638eeee900))
+
+
+### Performance Improvements
+
+* **agent:** :zap: improve reliability and error handling of websocket connection ([344e78a](https://github.com/joshuar/go-hass-agent/commit/344e78a732e75c6168fb2fe3f894e5c79392b8e0))
+* **hass:** :sparkles: rework request error handling ([1d9d372](https://github.com/joshuar/go-hass-agent/commit/1d9d372df059975cfa4b567c1087e100914f2197))
+
 ## [7.2.0](https://github.com/joshuar/go-hass-agent/compare/v7.1.0...v7.2.0) (2024-03-03)
 
 
