@@ -10,7 +10,7 @@ require (
 	github.com/godbus/dbus/v5 v5.1.0
 	github.com/grandcat/zeroconf v1.0.0
 	github.com/iancoleman/strcase v0.3.0
-	github.com/jeandeaual/go-locale v0.0.0-20240204043739-672d8d016d9a
+	github.com/jeandeaual/go-locale v0.0.0-20240223122105-ce5225dcaa49
 	github.com/lthibault/jitterbug/v2 v2.2.2
 	github.com/lxzan/gws v1.8.1
 	github.com/pelletier/go-toml/v2 v2.2.0
@@ -19,7 +19,7 @@ require (
 	github.com/shirou/gopsutil/v3 v3.24.3
 	github.com/spf13/cobra v1.8.0
 	github.com/stretchr/testify v1.9.0
-	golang.org/x/sync v0.6.0
+	golang.org/x/sync v0.7.0
 	golang.org/x/text v0.14.0
 	gopkg.in/yaml.v3 v3.0.1
 )
