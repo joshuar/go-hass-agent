@@ -18,7 +18,7 @@ run on its own schedule, specified using a Cron-like syntax.
 
 ## Requirements
 
-- Scripts need to be put in `CONFIG_HOME/go-hass-agent/scripts/` where
+- Scripts need to be put in `CONFIG_HOME/com.github.joshuar.go-hass-agent/scripts/` where
   `CONFIG_HOME` will be:
   - `~/.config` for Linux.
   - `~/Library/Application Support` for OSX.
