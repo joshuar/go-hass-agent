@@ -217,6 +217,11 @@ func (p *Preferences) GetMQTTPassword() string {
 	return p.MQTTPassword
 }
 
+// GetTopicPrefix returns the prefix for topics on MQTT.
+func (p *Preferences) GetTopicPrefix() string {
+	return "homeassistant"
+}
+
 func defaultPreferences() *Preferences {
 	return &Preferences{
 		Version:      AppVersion,

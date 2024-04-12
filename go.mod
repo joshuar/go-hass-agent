@@ -51,7 +51,7 @@ require (
 	github.com/go-text/typesetting v0.1.0 // indirect
 	github.com/gopherjs/gopherjs v1.17.2 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/joshuar/go-hass-anything/v6 v6.0.0
+	github.com/joshuar/go-hass-anything/v7 v7.0.0
 	github.com/jsummers/gobmp v0.0.0-20151104160322-e2ba15ffa76e // indirect
 	github.com/klauspost/compress v1.17.5 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect

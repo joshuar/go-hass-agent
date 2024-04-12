@@ -14,7 +14,7 @@ import (
 	"github.com/godbus/dbus/v5"
 	"github.com/rs/zerolog/log"
 
-	mqtthass "github.com/joshuar/go-hass-anything/v6/pkg/hass"
+	mqtthass "github.com/joshuar/go-hass-anything/v7/pkg/hass"
 
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/preferences"

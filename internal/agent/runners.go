@@ -12,8 +12,7 @@ import (
 	"github.com/robfig/cron/v3"
 	"github.com/rs/zerolog/log"
 
-	mqtthass "github.com/joshuar/go-hass-anything/v6/pkg/hass"
-	mqttapi "github.com/joshuar/go-hass-anything/v6/pkg/mqtt"
+	mqttapi "github.com/joshuar/go-hass-anything/v7/pkg/mqtt"
 
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass"
@@ -164,28 +163,12 @@ func runMQTTWorker(ctx context.Context) {
 		return
 	}
 
-	c, err := mqttapi.NewMQTTClient(ctx, prefs)
+	o := newMQTTObject(ctx)
+
+	_, err = mqttapi.NewClient(ctx, prefs, o)
 	if err != nil {
 		log.Error().Err(err).Msg("Could not start MQTT client.")
 		return
-	}
-	o := newMQTTObject(ctx)
-	if !prefs.MQTTRegistered {
-		log.Debug().Msg("Registering agent with MQTT.")
-		if err := mqtthass.Register(c, o); err != nil {
-			log.Error().Err(err).Msg("Failed to register with MQTT.")
-			return
-		}
-		if err := preferences.Save(preferences.SetMQTTRegistered(true)); err != nil {
-			log.Error().Err(err).Msg("Failed to save MQTT registration.")
-		}
-	}
-	if err := mqtthass.Subscribe(o, c); err != nil {
-		log.Error().Err(err).Msg("Could not activate entity subscriptions.")
-	}
-
-	if err := c.Subscribe(newDbusSubscription(ctx)); err != nil {
-		log.Error().Err(err).Msg("Could not activate dbus subscription.")
 	}
 
 	log.Debug().Msg("Listening for events on MQTT.")
@@ -203,20 +186,15 @@ func resetMQTTWorker(ctx context.Context) {
 		return
 	}
 
-	if prefs.MQTTRegistered {
-		c, err := mqttapi.NewMQTTClient(ctx, prefs)
-		if err != nil {
-			log.Error().Err(err).Msg("Could not start MQTT client.")
-			return
-		}
+	o := newMQTTObject(ctx)
 
-		d := newMQTTObject(ctx)
-		if err := mqtthass.UnRegister(c, d); err != nil {
-			log.Error().Err(err).Msg("Failed to unregister app!")
-		} else {
-			if err := preferences.Save(preferences.SetMQTTRegistered(false)); err != nil {
-				log.Error().Err(err).Msg("Failed to save MQTT registration.")
-			}
-		}
+	c, err := mqttapi.NewClient(ctx, prefs, o)
+	if err != nil {
+		log.Error().Err(err).Msg("Could not start MQTT client.")
+		return
+	}
+
+	if err := c.Unpublish(o.Configuration()...); err != nil {
+		log.Error().Err(err).Msg("Failed to reset MQTT.")
 	}
 }

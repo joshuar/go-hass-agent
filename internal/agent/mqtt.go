@@ -6,8 +6,8 @@
 package agent
 
 import (
-	mqtthass "github.com/joshuar/go-hass-anything/v6/pkg/hass"
-	mqttapi "github.com/joshuar/go-hass-anything/v6/pkg/mqtt"
+	mqtthass "github.com/joshuar/go-hass-anything/v7/pkg/hass"
+	mqttapi "github.com/joshuar/go-hass-anything/v7/pkg/mqtt"
 	"github.com/rs/zerolog/log"
 
 	"github.com/joshuar/go-hass-agent/internal/preferences"
@@ -51,4 +51,3 @@ func (o *mqttObj) Subscriptions() []*mqttapi.Subscription {
 func (o *mqttObj) States() []*mqttapi.Msg {
 	return nil
 }
-
