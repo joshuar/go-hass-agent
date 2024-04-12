@@ -14,7 +14,7 @@ import (
 
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 
-	mqttapi "github.com/joshuar/go-hass-anything/v6/pkg/mqtt"
+	mqttapi "github.com/joshuar/go-hass-anything/v7/pkg/mqtt"
 
 	MQTT "github.com/eclipse/paho.mqtt.golang"
 )
