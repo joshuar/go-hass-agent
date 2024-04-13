@@ -102,14 +102,14 @@ func (c *connection) monitorConnectionState(ctx context.Context) chan sensor.Det
 			}
 			if state, ok := props["State"]; ok {
 				currentState := dbusx.VariantToValue[connState](state)
-				switch {
-				case currentState == 4:
+				if currentState != c.state {
+					c.state = currentState
+					sensorCh <- c
+				}
+				if currentState == 4 {
 					log.Debug().Str("connection", c.Name()).Str("path", string(c.path)).
 						Msg("Unmonitoring connection state.")
 					close(sensorCh)
-				case currentState != c.state:
-					c.state = currentState
-					sensorCh <- c
 				}
 			}
 		}).
