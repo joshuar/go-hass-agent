@@ -13,7 +13,7 @@ import (
 
 	"github.com/adrg/xdg"
 	"github.com/pelletier/go-toml/v2"
-	"golang.org/x/sync/errgroup"
+	"github.com/sourcegraph/conc/pool"
 )
 
 var (
@@ -283,16 +283,16 @@ func Reset() error {
 }
 
 func set(prefs *Preferences, setters ...Preference) error {
-	g := new(errgroup.Group)
+	p := pool.New().WithErrors()
 	for _, setter := range setters {
 		setPref := setter
-		g.Go(func() error {
+		p.Go(func() error {
 			prefs.mu.Lock()
 			defer prefs.mu.Unlock()
 			return setPref(prefs)
 		})
 	}
-	return g.Wait()
+	return p.Wait()
 }
 
 func write(prefs *Preferences, file string) error {
