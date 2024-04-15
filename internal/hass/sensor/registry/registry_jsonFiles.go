@@ -7,8 +7,6 @@ package registry
 
 import (
 	"encoding/json"
-	"errors"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -121,27 +119,27 @@ func (j *jsonFilesRegistry) SetRegistered(id string, value bool) error {
 	return j.set(id, registeredState, value)
 }
 
-func Load() (*jsonFilesRegistry, error) {
-	reg := &jsonFilesRegistry{
-		sensors: sync.Map{},
-		path:    registryPath,
-	}
-	pathErr := os.MkdirAll(registryPath, 0o755)
-	if pathErr != nil && !errors.Is(pathErr, fs.ErrExist) {
-		return nil, pathErr
-	}
-	files, err := filepath.Glob(registryPath + "/*.json")
-	if err != nil {
-		return nil, err
-	}
-	go func() {
-		for _, filename := range files {
-			id, meta := parseFile(filename)
-			reg.sensors.Store(id, meta)
-		}
-	}()
-	return reg, nil
-}
+// func Load() (*jsonFilesRegistry, error) {
+// 	reg := &jsonFilesRegistry{
+// 		sensors: sync.Map{},
+// 		path:    registryPath,
+// 	}
+// 	pathErr := os.MkdirAll(registryPath, 0o755)
+// 	if pathErr != nil && !errors.Is(pathErr, fs.ErrExist) {
+// 		return nil, pathErr
+// 	}
+// 	files, err := filepath.Glob(registryPath + "/*.json")
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	go func() {
+// 		for _, filename := range files {
+// 			id, meta := parseFile(filename)
+// 			reg.sensors.Store(id, meta)
+// 		}
+// 	}()
+// 	return reg, nil
+// }
 
 func parseFile(path string) (string, metadata) {
 	sensorID, _ := strings.CutSuffix(filepath.Base(path), ".json")
