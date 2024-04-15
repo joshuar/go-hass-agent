@@ -29,7 +29,7 @@ func Updater(ctx context.Context) chan sensor.Details {
 	portalDest := linux.FindPortal()
 	if portalDest == "" {
 		log.Warn().
-			Msg("Unsupported or unknown portal. App sensors will not run.")
+			Msg("Unable to monitor for active applications. No app tracking available.")
 		close(sensorCh)
 		return sensorCh
 	}
@@ -59,7 +59,7 @@ func Updater(ctx context.Context) chan sensor.Details {
 		AddWatch(ctx)
 	if err != nil {
 		log.Debug().Caller().Err(err).
-			Msg("Failed to create active app DBus watch.")
+			Msg("Failed to create active app D-Bus watch.")
 		close(sensorCh)
 	}
 	go func() {
