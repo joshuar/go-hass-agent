@@ -193,7 +193,10 @@ func FindScripts(path string) ([]*script, error) {
 	}
 	for _, s := range files {
 		if isExecutable(s) {
-			scripts = append(scripts, NewScript(s))
+			script := NewScript(s)
+			if script != nil {
+				scripts = append(scripts, script)
+			}
 		}
 	}
 	return scripts, nil
