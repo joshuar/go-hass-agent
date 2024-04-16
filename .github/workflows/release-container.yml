@@ -87,7 +87,7 @@ jobs:
           password: ${{ env.REGISTRY_PASSWORD }}
 
       - name: Check and install cosign
-        uses: sigstore/cosign-installer@v3.4.0
+        uses: sigstore/cosign-installer@v3.5.0
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
           cosign-release: 'v2.2.2'
