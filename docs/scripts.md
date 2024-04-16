@@ -29,6 +29,12 @@ run on its own schedule, specified using a Cron-like syntax.
 - Scripts need to output either valid JSON, YAML or TOML. See [Output
   Format](#output-format) for details.
 
+## Supported Scripting Languages
+
+Any typical scripting language that can be invoked with a shebang can be used
+for scripts. All scripts do not need to be written in the same language. So or
+the typical shells can be used such as Bash, Sh, Zsh, Fish, Elvish. Scripting
+languages such as Python, Perl and Ruby can also be used.  
 
 ## Output Format
 
