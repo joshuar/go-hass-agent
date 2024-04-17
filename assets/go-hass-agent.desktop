@@ -10,3 +10,4 @@ Terminal=false
 Categories=System;Monitor;TrayIcon;
 StartupNotify=true
 Keywords=home;assistant;hass;
+OnlyShowIn=GNOME;XFCE;KDE;
