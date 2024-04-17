@@ -1,5 +1,23 @@
 # Changelog
 
+## [7.3.1](https://github.com/joshuar/go-hass-agent/compare/v7.3.0...v7.3.1) (2024-04-17)
+
+
+### Bug Fixes
+
+* **agent:** :bug: ensure .desktop file is valid and keep previous change for desktop environment display ([1aa6fef](https://github.com/joshuar/go-hass-agent/commit/1aa6feffe42065e0d9baf45320cfe4e35c7d98e6))
+* **agent:** :bug: ensure agent shows up in the menus of more desktop environments ([9e93473](https://github.com/joshuar/go-hass-agent/commit/9e9347399f90b3d3c5c649b55f817568c56fcb5e))
+* **agent:** :bug: reconnect to MQTT on disconnect and fix issue with MQTT commands not working ([cfce533](https://github.com/joshuar/go-hass-agent/commit/cfce53368c73fc335ca578b2666245594b449815))
+* **hass:** :sparkles: switch registry implementations to fix unregisterable sensors ([c31b06c](https://github.com/joshuar/go-hass-agent/commit/c31b06c574fc149c0498f2cdcd87c3e953085058))
+* **linux:** :loud_sound: better warning message when app sensors cannot run ([c640bac](https://github.com/joshuar/go-hass-agent/commit/c640bac0a5502a07bc2b84bcd30c154c2af74c99))
+* **linux:** sending offline event when interface goes offline ([8ed1a8a](https://github.com/joshuar/go-hass-agent/commit/8ed1a8a619ece8f280b96324316faf3b8c609a7a))
+* **scripts:** :bug: prevent invalid script causing agent crash ([07d3e0e](https://github.com/joshuar/go-hass-agent/commit/07d3e0ea36a4a3836641e4585964a4278bbed62a))
+
+
+### Performance Improvements
+
+* **preferences:** :zap: replace golang.org/x/sync/errgroup with github.com/sourcegraph/conc/pool ([1c814ae](https://github.com/joshuar/go-hass-agent/commit/1c814aea86a9f5c9af39f39f24f02805b54d1833))
+
 ## [7.3.0](https://github.com/joshuar/go-hass-agent/compare/v7.2.0...v7.3.0) (2024-04-09)
 
 
