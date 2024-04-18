@@ -28,6 +28,7 @@ require (
 	github.com/dolthub/maphash v0.1.0 // indirect
 	github.com/gorilla/websocket v1.5.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
+	github.com/mandykoh/go-parallel v0.1.0 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
 	go.uber.org/multierr v1.9.0 // indirect
 	golang.org/x/sync v0.7.0 // indirect
@@ -59,6 +60,7 @@ require (
 	github.com/klauspost/compress v1.17.5 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
+	github.com/mandykoh/prism v0.35.2
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/miekg/dns v1.1.27 // indirect

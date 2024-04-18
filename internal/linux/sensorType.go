@@ -60,6 +60,8 @@ const (
 	SensorUsers                                        // Current Users
 	SensorDeviceTemp                                   // Temperature
 	SensorPowerState                                   // Power State
+	SensorAccentColor                                  // Accent Color
+	SensorColorScheme                                  // Color Scheme Type
 )
 
 // SensorTypeValue represents the unique type of sensor data being reported. Every
