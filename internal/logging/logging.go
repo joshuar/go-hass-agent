@@ -58,10 +58,14 @@ func SetLoggingLevel(trace, debug, profile bool) {
 // cannot do this, logging will only be available on stdout.
 func SetLogFile(filename string) {
 	logFile := filepath.Join(xdg.StateHome, filename)
+	if err := checkPath(xdg.StateHome); err != nil {
+		log.Warn().Err(err).Msg("Unable to create directory for log file storage. Will not log to disk.")
+		return
+	}
 	logWriter, err := os.OpenFile(logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
-		log.Error().Err(err).
-			Msg("Unable to open log file for writing.")
+		log.Warn().Err(err).
+			Msg("Unable to open log file for writing. Will not log to disk.")
 	} else {
 		consoleWriter := zerolog.ConsoleWriter{Out: os.Stdout}
 		multiWriter := zerolog.MultiLevelWriter(consoleWriter, logWriter)
@@ -73,4 +77,12 @@ func SetLogFile(filename string) {
 func Reset() error {
 	logFile := filepath.Join(xdg.StateHome, "go-hass-agent.log")
 	return os.Remove(logFile)
+}
+
+func checkPath(path string) error {
+	_, err := os.Stat(path)
+	if os.IsNotExist(err) {
+		return os.MkdirAll(path, os.ModePerm)
+	}
+	return nil
 }
