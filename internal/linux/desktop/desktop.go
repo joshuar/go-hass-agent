@@ -35,7 +35,7 @@ func Updater(ctx context.Context) chan sensor.Details {
 	portalDest := linux.FindPortal()
 	if portalDest == "" {
 		log.Warn().
-			Msg("Unable to monitor for active applications. No app tracking available.")
+			Msg("Unable to monitor for desktop settings. No accent color/theme tracking available.")
 		close(sensorCh)
 		return sensorCh
 	}
