@@ -14,6 +14,7 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/linux/apps"
 	"github.com/joshuar/go-hass-agent/internal/linux/battery"
 	"github.com/joshuar/go-hass-agent/internal/linux/cpu"
+	"github.com/joshuar/go-hass-agent/internal/linux/desktop"
 	"github.com/joshuar/go-hass-agent/internal/linux/disk"
 	"github.com/joshuar/go-hass-agent/internal/linux/location"
 	"github.com/joshuar/go-hass-agent/internal/linux/mem"
@@ -53,6 +54,7 @@ func sensorWorkers() []func(context.Context) chan sensor.Details {
 		system.Versions,
 		// system.TempUpdater,
 		system.HWSensorUpdater,
+		desktop.Updater,
 	)
 	return workers
 }
