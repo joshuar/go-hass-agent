@@ -53,7 +53,6 @@ func sensorWorkers() []func(context.Context) chan sensor.Details {
 		power.PowerProfileUpdater,
 		user.Updater,
 		system.Versions,
-		// system.TempUpdater,
 		system.HWSensorUpdater,
 		desktop.Updater,
 	)
