@@ -115,7 +115,7 @@ func newNetIORateSensor(t linux.SensorTypeValue) *netIORateSensor {
 }
 
 func RatesUpdater(ctx context.Context) chan sensor.Details {
-	sensorCh := make(chan sensor.Details, 2)
+	sensorCh := make(chan sensor.Details)
 	bytesRx := newNetIOSensor(linux.SensorBytesRecv)
 	bytesTx := newNetIOSensor(linux.SensorBytesSent)
 	bytesRxRate := newNetIORateSensor(linux.SensorBytesRecvRate)
@@ -130,14 +130,21 @@ func RatesUpdater(ctx context.Context) chan sensor.Details {
 		}
 
 		bytesRx.update(&netIO[0])
-		sensorCh <- bytesRx
+		go func() {
+			sensorCh <- bytesRx
+		}()
 		bytesTx.update(&netIO[0])
-		sensorCh <- bytesTx
-
+		go func() {
+			sensorCh <- bytesTx
+		}()
 		bytesRxRate.update(delta, netIO[0].BytesRecv)
-		sensorCh <- bytesRxRate
+		go func() {
+			sensorCh <- bytesRxRate
+		}()
 		bytesTxRate.update(delta, netIO[0].BytesSent)
-		sensorCh <- bytesTxRate
+		go func() {
+			sensorCh <- bytesTxRate
+		}()
 	}
 
 	go helpers.PollSensors(ctx, sendNetStats, 5*time.Second, time.Second*1)
