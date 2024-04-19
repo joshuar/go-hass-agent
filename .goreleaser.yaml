@@ -1,7 +1,7 @@
 before:
   hooks:
     - desktop-file-validate assets/go-hass-agent.desktop
-    - go generate ./...
+    # - go generate ./...
 report_sizes: true
 changelog:
   use: github-native
@@ -22,9 +22,13 @@ builds:
       - amd64
       # - arm
       # - arm64
+    goarm:
+      - 7
+    goamd64:
+      - v3
     hooks:
       post:
-        - fyne-cross linux -icon internal/agent/ui/assets/logo-pretty.png -release -app-version {{.RawVersion}}
+        - fyne-cross linux -arch=amd64,arm -icon internal/agent/ui/assets/logo-pretty.png -release -app-version {{.RawVersion}}
 signs:
 - cmd: cosign
   stdin: '{{ .Env.COSIGN_PWD }}'
@@ -40,6 +44,7 @@ archives:
 release:
   extra_files:
     - glob: fyne-cross/dist/linux-amd64/go-hass-agent.tar.xz
+    - glob: fyne-cross/dist/linux-arm/go-hass-agent.tar.xz
 nfpms:
   - id: go-hass-agent
     package_name: go-hass-agent

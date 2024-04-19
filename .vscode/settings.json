@@ -18,7 +18,8 @@
         "device",
         "codecov",
         "translations",
-        "logging"
+        "logging",
+        "linux/proc"
     ],
     "go.testFlags": ["-v"]
 }
