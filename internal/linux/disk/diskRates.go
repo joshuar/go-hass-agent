@@ -145,7 +145,7 @@ func newDevice(dev string) *sensors {
 
 func IOUpdater(ctx context.Context) chan sensor.Details {
 	sensorCh := make(chan sensor.Details)
-	newStats, err := diskstats.ReadDiskstats()
+	newStats, err := diskstats.ReadDiskStats()
 	if err != nil {
 		log.Warn().Err(err).Msg("Error reading disk stats from procfs. Will not send disk rate sensors.")
 		close(sensorCh)
@@ -156,18 +156,21 @@ func IOUpdater(ctx context.Context) chan sensor.Details {
 		devices[dev] = newDevice(dev)
 	}
 	diskIOstats := func(delta time.Duration) {
-		newStats, err := diskstats.ReadDiskstats()
+		newStats, err := diskstats.ReadDiskStats()
 		if err != nil {
 			log.Warn().Err(err).Msg("Error reading disk stats from procfs.")
 		}
 		for dev, stats := range newStats {
+			// add any new devices
 			if _, ok := devices[dev]; !ok {
 				devices[dev] = newDevice(dev)
 			}
+			// update the stats for this device
 			devices[dev].totalReads.update(stats, delta)
 			devices[dev].totalWrites.update(stats, delta)
 			devices[dev].readRate.update(stats, delta)
 			devices[dev].writeRate.update(stats, delta)
+			// send the stats to Home Assistant
 			go func(d string) {
 				sensorCh <- devices[d].totalReads
 			}(dev)
