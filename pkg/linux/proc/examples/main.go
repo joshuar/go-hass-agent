@@ -6,16 +6,23 @@
 package main
 
 import (
-	"github.com/davecgh/go-spew/spew"
-	"github.com/rs/zerolog/log"
+	"fmt"
+	"log/slog"
+	"os"
 
 	diskstats "github.com/joshuar/go-hass-agent/pkg/linux/proc"
 )
 
 func main() {
-	stats, err := diskstats.ReadDiskstats()
+	allStats, err := diskstats.ReadDiskStats()
 	if err != nil {
-		log.Fatal().Err(err).Msg("Could not read.")
+		slog.Error("Failed to read /proc/stats", "error", err)
+		os.Exit(-1)
 	}
-	spew.Dump(stats)
+	for dev, stats := range allStats {
+		fmt.Fprintf(os.Stdout, "Device: %s\n", dev)
+		for k, v := range stats {
+			fmt.Fprintf(os.Stdout, "\t%s: %d\n", k.String(), v)
+		}
+	}
 }
