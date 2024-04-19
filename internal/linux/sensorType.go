@@ -62,6 +62,10 @@ const (
 	SensorPowerState                                   // Power State
 	SensorAccentColor                                  // Accent Color
 	SensorColorScheme                                  // Color Scheme Type
+	SensorDiskReads                                    // Disk Reads
+	SensorDiskWrites                                   // Disk Writes
+	SensorDiskReadRate                                 // Disk Read Rate
+	SensorDiskWriteRate                                // Disk Write Rate
 )
 
 // SensorTypeValue represents the unique type of sensor data being reported. Every
