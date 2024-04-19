@@ -17,7 +17,8 @@
         "dbusx",
         "device",
         "codecov",
-        "translations"
+        "translations",
+        "logging"
     ],
     "go.testFlags": ["-v"]
 }
