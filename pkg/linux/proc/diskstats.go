@@ -6,6 +6,7 @@
 package diskstats
 
 import (
+	"errors"
 	"os"
 	"slices"
 	"strconv"
@@ -35,9 +36,14 @@ const (
 	TotalTimeFlushing                          // Total milliseconds spent flushing
 )
 
+var ErrDeviceNotFound = errors.New("device not found in diskstats")
+
 type DiskStat int
 
-func ReadDiskstats() (map[string]map[DiskStat]uint64, error) {
+// ReadDiskStats reads /proc/diskstats and returns a map of devices, which in
+// turn contains a map of disk stats for the given device. If there was a
+// problem reading /proc/diskstats, a non-nil error will be returned.
+func ReadDiskStats() (map[string]map[DiskStat]uint64, error) {
 	data, err := os.ReadFile("/proc/diskstats")
 	if err != nil {
 		return nil, err
@@ -67,6 +73,21 @@ func ReadDiskstats() (map[string]map[DiskStat]uint64, error) {
 			}
 			stats[device][stat] = readVal
 		}
+	}
+	return stats, nil
+}
+
+// DeviceStats will retrieve the stats for the given device. If the device is
+// not found, it will return an ErrDeviceNotFound error or another error as
+// appropriate for any failure.
+func DeviceStats(device string) (map[DiskStat]uint64, error) {
+	allStats, err := ReadDiskStats()
+	if err != nil {
+		return nil, err
+	}
+	stats, ok := allStats[device]
+	if !ok {
+		return nil, ErrDeviceNotFound
 	}
 	return stats, nil
 }
