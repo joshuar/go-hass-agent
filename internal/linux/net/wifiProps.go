@@ -17,47 +17,6 @@ import (
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
-var wifiProps = map[string]*wifiSensor{
-	"Ssid": {
-		Sensor: linux.Sensor{
-			SensorTypeValue: linux.SensorWifiSSID,
-			IsDiagnostic:    true,
-		},
-	},
-	"HwAddress": {
-		Sensor: linux.Sensor{
-			SensorTypeValue: linux.SensorWifiHWAddress,
-			IsDiagnostic:    true,
-		},
-	},
-	"MaxBitrate": {
-		Sensor: linux.Sensor{
-			SensorTypeValue:  linux.SensorWifiSpeed,
-			UnitsString:      "kB/s",
-			DeviceClassValue: types.DeviceClassDataRate,
-			StateClassValue:  types.StateClassMeasurement,
-			IsDiagnostic:     true,
-		},
-	},
-	"Frequency": {
-		Sensor: linux.Sensor{
-			SensorTypeValue:  linux.SensorWifiFrequency,
-			UnitsString:      "MHz",
-			DeviceClassValue: types.DeviceClassFrequency,
-			StateClassValue:  types.StateClassMeasurement,
-			IsDiagnostic:     true,
-		},
-	},
-	"Strength": {
-		Sensor: linux.Sensor{
-			SensorTypeValue: linux.SensorWifiStrength,
-			UnitsString:     "%",
-			StateClassValue: types.StateClassMeasurement,
-			IsDiagnostic:    true,
-		},
-	},
-}
-
 type wifiSensor struct {
 	linux.Sensor
 }
@@ -116,10 +75,59 @@ func (w *wifiSensor) Icon() string {
 	return "mdi:network"
 }
 
-// getWifiProperties will initially fetch and then monitor for changes of
+func newWifiSensor(sensorType string) *wifiSensor {
+	switch sensorType {
+	case "Ssid":
+		return &wifiSensor{
+			Sensor: linux.Sensor{
+				SensorTypeValue: linux.SensorWifiSSID,
+				IsDiagnostic:    true,
+			},
+		}
+	case "HwAddress":
+		return &wifiSensor{
+			Sensor: linux.Sensor{
+				SensorTypeValue: linux.SensorWifiHWAddress,
+				IsDiagnostic:    true,
+			},
+		}
+	case "MaxBitrate":
+		return &wifiSensor{
+			Sensor: linux.Sensor{
+				SensorTypeValue:  linux.SensorWifiSpeed,
+				UnitsString:      "kB/s",
+				DeviceClassValue: types.DeviceClassDataRate,
+				StateClassValue:  types.StateClassMeasurement,
+				IsDiagnostic:     true,
+			},
+		}
+	case "Frequency":
+		return &wifiSensor{
+			Sensor: linux.Sensor{
+				SensorTypeValue:  linux.SensorWifiFrequency,
+				UnitsString:      "MHz",
+				DeviceClassValue: types.DeviceClassFrequency,
+				StateClassValue:  types.StateClassMeasurement,
+				IsDiagnostic:     true,
+			},
+		}
+	case "Strength":
+		return &wifiSensor{
+			Sensor: linux.Sensor{
+				SensorTypeValue: linux.SensorWifiStrength,
+				UnitsString:     "%",
+				StateClassValue: types.StateClassMeasurement,
+				IsDiagnostic:    true,
+			},
+		}
+	}
+	return nil
+}
+
+// monitorWifi will initially fetch and then monitor for changes of
 // relevant WiFi properties that are to be represented as sensors.
-func getWifiProperties(ctx context.Context, p dbus.ObjectPath) <-chan sensor.Details {
-	var outCh []<-chan sensor.Details
+func monitorWifi(ctx context.Context, p dbus.ObjectPath) <-chan sensor.Details {
+	outCh := make(chan sensor.Details)
 	req := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
 		Path(p).
 		Destination(dBusNMObj)
@@ -137,29 +145,32 @@ func getWifiProperties(ctx context.Context, p dbus.ObjectPath) <-chan sensor.Det
 			continue
 		}
 		propBase := dBusNMObj + ".AccessPoint"
+		for _, prop := range []string{"Ssid", "HwAddress", "MaxBitrate", "Frequency", "Strength"} {
+			// for the associated access point, get the wifi properties as sensors
+			value, err := dbusx.GetProp[any](req.Path(ap), propBase+"."+prop)
+			if err != nil {
+				log.Warn().Err(err).Msgf("Could not get Wi-Fi property %s.", prop)
+				continue
+			}
+			wifiSensor := newWifiSensor(prop)
+			wifiSensor.Value = value
+			// send the wifi property as a sensor
+			go func() {
+				outCh <- wifiSensor
+			}()
+		}
+		// monitor for changes in the wifi properties for this device
 		go func() {
-			sensorCh := make(chan sensor.Details, 1)
-			defer close(sensorCh)
-			outCh = append(outCh, sensorCh)
-			for k, p := range wifiProps {
-				// for the associated access point, get the wifi properties as sensors
-				value, err := dbusx.GetProp[any](req.Path(ap), propBase+"."+k)
-				if err != nil {
-					log.Warn().Err(err).Msgf("Could not get wifi property %s.", k)
-					continue
-				}
-				p.Value = value
-				wifiProps[k] = p
-				sensorCh <- p
+			for s := range monitorWifiProps(ctx, ap) {
+				outCh <- s
 			}
 		}()
-		outCh = append(outCh, monitorWifiProperties(ctx, ap))
 	}
-	return sensor.MergeSensorCh(ctx, outCh...)
+	return outCh
 }
 
-func monitorWifiProperties(ctx context.Context, p dbus.ObjectPath) chan sensor.Details {
-	sensorCh := make(chan sensor.Details, 1)
+func monitorWifiProps(ctx context.Context, p dbus.ObjectPath) chan sensor.Details {
+	sensorCh := make(chan sensor.Details)
 	err := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
 		Match([]dbus.MatchOption{
 			dbus.WithMatchObjectPath(p),
@@ -173,11 +184,13 @@ func monitorWifiProperties(ctx context.Context, p dbus.ObjectPath) chan sensor.D
 			if ok {
 				go func() {
 					for k, v := range props {
-						prop, ok := wifiProps[k]
-						if ok {
-							prop.Value = v.Value()
-							sensorCh <- prop
+						wifiSensor := newWifiSensor(k)
+						if wifiSensor == nil {
+							log.Debug().Msgf("Could not determine Wi-Fi sensor type for %s.", k)
+							return
 						}
+						wifiSensor.Value = v.Value()
+						sensorCh <- wifiSensor
 					}
 				}()
 			}

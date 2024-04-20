@@ -6,6 +6,9 @@
 package linux
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/iancoleman/strcase"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
@@ -87,4 +90,23 @@ func (l *Sensor) Attributes() any {
 		}
 	}
 	return nil
+}
+
+func (l *Sensor) String() string {
+	var s strings.Builder
+	fmt.Fprintf(&s, "Name: %s (ID: %s)", l.Name(), l.ID())
+	if l.DeviceClass() > 0 {
+		fmt.Fprintf(&s, " Device Class: %s", l.DeviceClass().String())
+	}
+	if l.StateClass() > 0 {
+		fmt.Fprintf(&s, " State Class: %s", l.DeviceClass().String())
+	}
+	fmt.Fprintf(&s, " Value: %v", l.Value)
+	if l.UnitsString != "" {
+		fmt.Fprintf(&s, " %s", l.UnitsString)
+	}
+	if l.Attributes() != nil {
+		fmt.Fprintf(&s, " Attributes: %v", l.Attributes())
+	}
+	return s.String()
 }
