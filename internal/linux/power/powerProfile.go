@@ -35,8 +35,8 @@ func newPowerSensor(t linux.SensorTypeValue, v dbus.Variant) *powerSensor {
 	return s
 }
 
-func PowerProfileUpdater(ctx context.Context) chan sensor.Details {
-	sensorCh := make(chan sensor.Details, 1)
+func ProfileUpdater(ctx context.Context) chan sensor.Details {
+	sensorCh := make(chan sensor.Details)
 	req := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
 		Path(powerProfilesDBusPath).
 		Destination(powerProfilesDBusDest)
@@ -47,7 +47,9 @@ func PowerProfileUpdater(ctx context.Context) chan sensor.Details {
 		return sensorCh
 	}
 
-	sensorCh <- newPowerSensor(linux.SensorPowerProfile, activePowerProfile)
+	go func() {
+		sensorCh <- newPowerSensor(linux.SensorPowerProfile, activePowerProfile)
+	}()
 
 	err = dbusx.NewBusRequest(ctx, dbusx.SystemBus).
 		Match([]dbus.MatchOption{
