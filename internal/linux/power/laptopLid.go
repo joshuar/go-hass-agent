@@ -17,6 +17,13 @@ import (
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
+const (
+	loginBasePath    = "/org/freedesktop/login1"
+	sessionPath      = loginBasePath + "/session"
+	managerInterface = "org.freedesktop.login1.Manager"
+	lidClosedProp    = "LidClosed"
+)
+
 type laptopLidSensor struct {
 	linux.Sensor
 }
@@ -45,13 +52,26 @@ func newLaptopLidEvent(v bool) *laptopLidSensor {
 
 func LaptopLidUpdater(ctx context.Context) chan sensor.Details {
 	sensorCh := make(chan sensor.Details)
+
+	req := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
+		Path(loginBasePath).
+		Destination(managerInterface)
+
+	if v, err := dbusx.GetProp[bool](req, lidClosedProp); err != nil {
+		log.Warn().Err(err).Msg("Could not retrieve lid status from D-Bus. Not tracking status.")
+	} else {
+		go func() {
+			sensorCh <- newLaptopLidEvent(v)
+		}()
+	}
+
 	err := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
 		Match([]dbus.MatchOption{
-			dbus.WithMatchObjectPath("/org/freedesktop/login1/session"),
-			dbus.WithMatchInterface("org.freedesktop.login1.Manager"),
+			dbus.WithMatchObjectPath(sessionPath),
+			dbus.WithMatchInterface(managerInterface),
 		}).
 		Handler(func(s *dbus.Signal) {
-			if !strings.Contains(string(s.Path), "/org/freedesktop/login1") || len(s.Body) <= 1 {
+			if !strings.Contains(string(s.Path), loginBasePath) || len(s.Body) <= 1 {
 				log.Trace().Str("runner", "power").Msg("Not my signal or empty signal body.")
 				return
 			}
@@ -64,11 +84,10 @@ func LaptopLidUpdater(ctx context.Context) chan sensor.Details {
 						Msg("Unexpected signal body")
 					return
 				}
-				if v, ok := props["LidClosed"]; ok {
+				if v, ok := props[lidClosedProp]; ok {
 					sensorCh <- newLaptopLidEvent(!dbusx.VariantToValue[bool](v))
 				}
 			}
-
 		}).
 		AddWatch(ctx)
 	if err != nil {
