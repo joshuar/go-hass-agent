@@ -129,6 +129,7 @@ func newDiskIORateSensor(device string, sensorType linux.SensorTypeValue) *diskI
 			StateClassValue:  types.StateClassMeasurement,
 			UnitsString:      "KB/s",
 			SensorTypeValue:  sensorType,
+			IsDiagnostic:     true,
 		},
 	}
 	return s
