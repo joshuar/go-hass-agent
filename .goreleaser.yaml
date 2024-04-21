@@ -1,7 +1,7 @@
 before:
   hooks:
     - desktop-file-validate assets/go-hass-agent.desktop
-    # - go generate ./...
+    - go generate ./...
 report_sizes: true
 changelog:
   use: github-native
