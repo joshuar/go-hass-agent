@@ -97,20 +97,19 @@ type scriptOutput struct {
 // format it as either JSON or YAML. If successful, this format can then be used
 // as a sensor.
 func (o *scriptOutput) Unmarshal(b []byte) error {
-	var err error
-	err = json.Unmarshal(b, &o)
-	if err == nil {
+	jsonErr := json.Unmarshal(b, &o)
+	if jsonErr == nil {
 		return nil
 	}
-	err = yaml.Unmarshal(b, &o)
-	if err == nil {
+	yamlErr := yaml.Unmarshal(b, &o)
+	if yamlErr == nil {
 		return nil
 	}
-	err = toml.Unmarshal(b, &o)
-	if err == nil {
+	tomlErr := toml.Unmarshal(b, &o)
+	if tomlErr == nil {
 		return nil
 	}
-	return errors.New("could not unmarshal script output")
+	return errors.Join(jsonErr, yamlErr, tomlErr)
 }
 
 type scriptSensor struct {
