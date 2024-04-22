@@ -58,11 +58,11 @@ func (r *runningAppsSensor) update(l map[string]dbus.Variant, s chan sensor.Deta
 			}
 		}
 	}
-	r.mu.Unlock()
 	if r.count() != count {
 		r.Value = count
 		s <- r
 	}
+	r.mu.Unlock()
 }
 
 func newRunningAppsSensor() *runningAppsSensor {
