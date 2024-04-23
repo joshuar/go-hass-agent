@@ -14,16 +14,18 @@ changelog:
 builds:
   - env:
       - CGO_ENABLED=1
+      - >-
+          {{- if eq .Arch "arm"}}CC=arm-linux-gnueabihf-gcc{{- end }}
     goos:
       - linux
       # - windows
       # - darwin
     goarch:
       - amd64
-      # - arm
-      # - arm64
-    goarm:
-      - 7
+      - arm
+      - arm64
+    # goarm:
+    #   - 7
     goamd64:
       - v3
     hooks:
