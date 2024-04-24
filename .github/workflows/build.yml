@@ -40,7 +40,7 @@ jobs:
           echo "::notice title=App Version::${APPVERSION}"
 
       - name: Add ${{ matrix.arch }} package repos
-        if: ${{ matrix.arch }} != "amd64"
+        if: ${{ matrix.arch }} != amd64
         id: enable_multiarch
         run: |
           source .env.${{ matrix.arch }}
@@ -105,7 +105,6 @@ jobs:
           go build -o dist/go-hass-agent-${{ matrix.arch }}
         env:
           CGO_ENABLED: 1
-          GOARCH: ${{ matrix.arch }}
           MATRIX_ARCH: ${{ matrix.arch }}
 
       # - name: Build with fyne-cross
@@ -118,7 +117,7 @@ jobs:
       - name: Create package 
         id: nfpm_package
         run: |
-          export NFPM_ARCH=$(go env GOARCH)$(go env GOARM)
+          source .env.${{ matrix.arch }}
           nfpm package --config .nfpm.yaml --packager rpm --target dist
           nfpm package --config .nfpm.yaml --packager deb --target dist
           nfpm package --config .nfpm.yaml --packager archlinux --target dist
@@ -141,6 +140,7 @@ jobs:
           COSIGN_PWD: ${{ secrets.COSIGN_PWD }}
 
       - name: Upload build artifacts
+        id: upload_artifacts
         if: ! ${{ steps.release_please.outputs.release_created }}
         uses: actions/upload-artifact@v4
         with:
@@ -148,6 +148,7 @@ jobs:
           path: dist/*.{rpm,deb,zst,sig} fync-cross/dist/linux-${{ matrix.arch }}/*.{tar.xz,sig}
 
       - name: Upload release artifacts
+        id: upload_release
         if: ${{ steps.release_please.outputs.release_created }}
         run: >
           gh release upload ${{ steps.release_please.outputs.tag_name }} 
