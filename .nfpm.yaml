@@ -12,6 +12,7 @@ description: |
 vendor: org.github.joshuar
 homepage: https://github.com/joshuar/go-hass-app
 license: MIT
+arch: ${NFPM_ARCH}
 # changelog: CHANGELOG.md
 contents:
   - src: dist/go-hass-agent-${GOARCH}

@@ -28,11 +28,16 @@ jobs:
           fetch-depth: 0
 
       - name: set app version
-        run: echo "APPVERSION=$(git describe --tags --abbrev=0)-$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+        run: | 
+          echo "APPVERSION=$(git describe --tags --abbrev=0)-$(git rev-parse --short HEAD)" >> $GITHUB_ENV
 
       # - name: set app version for release
       #   if: ${{ steps.release_please.outputs.release_created }}
       #   run: echo "APPVERSION=${{ steps.release_please.outputs.tag_name }}" >> $GITHUB_ENV
+
+      - name: show app version
+        run: | 
+          echo "::notice title=App Version::${APPVERSION}"
 
       - name: Add ${{ matrix.arch }} package repos
         if: ${{ matrix.arch }} != "amd64"
@@ -41,7 +46,7 @@ jobs:
           source .env.${{ matrix.arch }}
           sudo dpkg --add-architecture ${PKG_ARCH}
           sudo sed -i 's|^deb\s|deb [arch=amd64] |g' /etc/apt/sources.list
-          sudo cat << EOF >> /etc/apt/sources.list
+          sudo tee -a /etc/apt/sources.list << EOF
           deb [arch=${PKG_ARCH}] http://ports.ubuntu.com/ubuntu-ports/ jammy main
           #deb-src http://ports.ubuntu.com/ubuntu-ports/ jammy main
           deb [arch=${PKG_ARCH}] http://ports.ubuntu.com/ubuntu-ports/ jammy-updates main
@@ -51,16 +56,16 @@ jobs:
           EOF
 
       - name: Install build dependencies
-        # if: ${{ steps.release_please.outputs.release_created }}
         id: install_packages
         run: >
             source .env.${{ matrix.arch }} && 
             sudo apt-get update && sudo apt-get -y install
-            desktop-file-utils gcc ${COMPILER_PKG}
+            desktop-file-utils gcc ${CC_PKG}
             libgl1-mesa-dev:${PKG_ARCH} xserver-xorg-dev:${PKG_ARCH} 
             libxcursor-dev:${PKG_ARCH} libxrandr-dev:${PKG_ARCH}
             libxinerama-dev:${PKG_ARCH} libxi-dev:${PKG_ARCH}
-            libgl1-mesa-dev:${PKG_ARCH}
+            libgl1-mesa-dev:${PKG_ARCH} libxxf86vm-dev:${PKG_ARCH} 
+            > ${RUNNER_TEMP}/dpkg.log
         env:
           DEBIAN_FRONTEND: noninteractive
   
@@ -76,14 +81,12 @@ jobs:
       #       libgl-dev:arm64 libx11-dev:arm64 libxrandr-dev:arm64 libxxf86vm-dev:arm64 libxi-dev:arm64 libxcursor-dev:arm64 libxinerama-dev:arm64 libxkbcommon-dev:arm64
 
       - name: Setup Go
-        # if: ${{ steps.release_please.outputs.release_created }}
         id: setup_go
         uses: actions/setup-go@v5
         with:
           go-version: '^1.22'
 
       - name: Install Go dependencies
-        # if: ${{ steps.release_please.outputs.release_created }}
         id: install_go_deps
         run: |
           go install golang.org/x/tools/cmd/stringer@latest
@@ -97,28 +100,28 @@ jobs:
         id: build_binary
         run: |
           source .env.${{ matrix.arch }}
+          echo ARCH: ${MATRIX_ARCH} CC: ${CC} GOARCH: ${GOARCH} PKG_CONFIG_PATH: ${PKG_CONFIG_PATH}
           go generate ./...
           go build -o dist/go-hass-agent-${{ matrix.arch }}
         env:
           CGO_ENABLED: 1
           GOARCH: ${{ matrix.arch }}
+          MATRIX_ARCH: ${{ matrix.arch }}
 
-      - name: Build with fyne-cross
-        # if: ${{ steps.release_please.outputs.release_created }}
-        id: build_fyne_cross
-        run: >
-          fyne-cross linux -arch=${{ matrix.arch }}
-          -icon internal/agent/ui/assets/logo-pretty.png
-          -release
+      # - name: Build with fyne-cross
+      #   id: build_fyne_cross
+      #   run: >
+      #     fyne-cross linux -arch=${{ matrix.arch }}
+      #     -icon internal/agent/ui/assets/logo-pretty.png
+      #     -release
 
       - name: Create package 
         id: nfpm_package
         run: |
+          export NFPM_ARCH=$(go env GOARCH)$(go env GOARM)
           nfpm package --config .nfpm.yaml --packager rpm --target dist
           nfpm package --config .nfpm.yaml --packager deb --target dist
-          nfpm package --config .nfpm.yaml --packager arch --target dist
-        env:
-          GOARCH: ${{ matrix.arch }}
+          nfpm package --config .nfpm.yaml --packager archlinux --target dist
 
       - name: Install cosign
         # if: ${{ steps.release_please.outputs.release_created }}
@@ -130,32 +133,25 @@ jobs:
       - name: Sign artifacts with cosign
         id: cosign_sign
         run: >
-          cosign --verbose=true sign --yes --key cosign.key
-          dist/*.{rpm,deb,zst} fync-cross/dist/linux-${{ matrix.arch }}/*.tar.xz
+          for artifact in dist/*.{rpm,deb,zst} fync-cross/dist/linux-${{ matrix.arch }}/*.tar.xz; do
+            echo Signing ${artifact}
+            cosign --verbose=true sign-blob --yes --key cosign.key --output-signature=${artifact}.sig ${artifact}
+          done
         env:
           COSIGN_PWD: ${{ secrets.COSIGN_PWD }}
 
       - name: Upload build artifacts
+        if: ! ${{ steps.release_please.outputs.release_created }}
         uses: actions/upload-artifact@v4
         with:
-          name: my-artifact
-          path: my_files.tar          
+          name: ${APPVERSION}
+          path: dist/*.{rpm,deb,zst,sig} fync-cross/dist/linux-${{ matrix.arch }}/*.{tar.xz,sig}
 
       - name: Upload release artifacts
         if: ${{ steps.release_please.outputs.release_created }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: >
           gh release upload ${{ steps.release_please.outputs.tag_name }} 
           dist/*.{rpm,deb,zst,sig} fync-cross/dist/linux-${{ matrix.arch }}/*.{tar.xz,sig}            
-      # - name: Run Go Releaser
-      #   uses: goreleaser/goreleaser-action@v5
-      #   if: ${{ steps.release_please.outputs.release_created }}
-      #   id: run_goreleaser
-      #   with:
-      #     distribution: goreleaser
-      #     version: latest
-      #     args: release --clean
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      #     COSIGN_PWD: ${{ secrets.COSIGN_PWD }}
+        env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  
