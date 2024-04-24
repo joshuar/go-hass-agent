@@ -74,26 +74,20 @@ jobs:
         uses: google-github-actions/release-please-action@v4
         id: release_please
         with:
-          release-type: go
           token: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Checkout source
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: set app version
+      - name: Set app version
         run: | 
           echo "APPVERSION=$(git describe --tags --abbrev=0)-$(git rev-parse --short HEAD)" >> $GITHUB_ENV
-
-      - name: set app version for release
+      - name: Set app version for release
         if: ${{ steps.release_please.outputs.release_created }}
         run: echo "APPVERSION=${{ steps.release_please.outputs.tag_name }}" >> $GITHUB_ENV
-
-      - name: show app version
+      - name: Show app version
         run: | 
           echo "::notice title=App Version::${APPVERSION}"
-
       - name: Add ${{ matrix.arch }} package repos
         if: ${{ matrix.arch != 'amd64' }}
         id: enable_multiarch
@@ -109,7 +103,6 @@ jobs:
           deb [arch=${PKG_ARCH}] http://ports.ubuntu.com/ubuntu-ports/ jammy-security main
           #deb-src http://ports.ubuntu.com/ubuntu-ports/ jammy-security main
           EOF
-
       - name: Install build dependencies
         id: install_packages
         run: >
@@ -123,7 +116,6 @@ jobs:
             > ${RUNNER_TEMP}/apt-install.log
         env:
           DEBIAN_FRONTEND: noninteractive
-  
       # - name: Install/Cache build dependencies
       #   # if: ${{ steps.release_please.outputs.release_created }}
       #   id: cache_pkg_deps
@@ -134,13 +126,11 @@ jobs:
       #       libgl-dev:amd64 libx11-dev:amd64 libxrandr-dev:amd64 libxxf86vm-dev:amd64 libxi-dev:amd64 libxcursor-dev:amd64 libxinerama-dev:amd64 libxkbcommon-dev:amd64
       #       libgl-dev:armhf libx11-dev:armhf libxrandr-dev:armhf libxxf86vm-dev:armhf libxi-dev:armhf libxcursor-dev:armhf libxinerama-dev:armhf libxkbcommon-dev:armhf
       #       libgl-dev:arm64 libx11-dev:arm64 libxrandr-dev:arm64 libxxf86vm-dev:arm64 libxi-dev:arm64 libxcursor-dev:arm64 libxinerama-dev:arm64 libxkbcommon-dev:arm64
-
       - name: Setup Go
         id: setup_go
         uses: actions/setup-go@v5
         with:
           go-version: '^1.22'
-
       - name: Install Go dependencies
         id: install_go_deps
         run: |
@@ -149,7 +139,6 @@ jobs:
           go install golang.org/x/text/cmd/gotext@latest
           go install github.com/matryer/moq@latest
           go install github.com/goreleaser/nfpm/v2/cmd/nfpm@latest
-
       - name: Build ${{ matrix.arch }} binary
         # if: ${{ steps.release_please.outputs.release_created }}
         id: build_binary
@@ -161,14 +150,12 @@ jobs:
         env:
           CGO_ENABLED: 1
           MATRIX_ARCH: ${{ matrix.arch }}
-
       # - name: Build with fyne-cross
       #   id: build_fyne_cross
       #   run: >
       #     fyne-cross linux -arch=${{ matrix.arch }}
       #     -icon internal/agent/ui/assets/logo-pretty.png
       #     -release
-
       - name: Create package 
         id: nfpm_package
         run: |
@@ -176,14 +163,12 @@ jobs:
           nfpm package --config .nfpm.yaml --packager rpm --target dist
           nfpm package --config .nfpm.yaml --packager deb --target dist
           nfpm package --config .nfpm.yaml --packager archlinux --target dist
-
       - name: Install cosign
         # if: ${{ steps.release_please.outputs.release_created }}
         id: cosign_install
         uses: sigstore/cosign-installer@v3.5.0
         with:
           cosign-release: 'v2.2.2'
-
       - name: Sign artifacts with cosign
         id: cosign_sign
         run: |
@@ -195,7 +180,6 @@ jobs:
           done
         env:
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PWD }}
-
       - name: Upload build artifacts
         id: upload_artifacts
         if: ${{ ! steps.release_please.outputs.release_created }}
@@ -203,7 +187,6 @@ jobs:
         with:
           name: ${APPVERSION}
           path: dist/*.{rpm,deb,zst,sig} fyne-cross/dist/linux-${{ matrix.arch }}/*.{tar.xz,sig}
-
       - name: Upload release artifacts
         id: upload_release
         if: ${{ steps.release_please.outputs.release_created }}
