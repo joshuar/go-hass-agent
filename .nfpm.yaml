@@ -1,0 +1,46 @@
+# nfpm example configuration file
+#
+# check https://nfpm.goreleaser.com/configuration for detailed usage
+#
+name: "go-hass-agent"
+version: ${APPVERSION}
+section: "default"
+priority: "extra"
+maintainer: Joshua Rich <joshua.rich@gmail.com>
+description: |
+  A Home Assistant, native app for desktop/laptop devices.
+vendor: org.github.joshuar
+homepage: https://github.com/joshuar/go-hass-app
+license: MIT
+# changelog: CHANGELOG.md
+contents:
+  - src: dist/go-hass-agent-${GOARCH}
+    dst: /usr/bin/go-hass-agent
+    expand: true
+  - src: LICENSE
+    dst: /usr/share/licenses/go-hass-agent/LICENSE
+  - src: README.md
+    dst: /usr/share/doc/go-hass-agent/README.md
+  - src: internal/agent/ui/assets/logo-pretty.png
+    dst: /usr/share/pixmaps/go-hass-agent.png
+  - src: assets/go-hass-agent.desktop
+    dst: /usr/share/applications/go-hass-agent.desktop
+  - src: init/go-hass-agent.service
+    dst: /usr/lib/systemd/user/go-hass-agent.service
+overrides:
+  rpm:
+    depends:
+      - libglvnd-glx
+      - libX11
+      - libXrandr
+      - libXxf86vm
+      - libXi
+      - libXcursor
+      - libXinerama
+  deb:
+    depends:
+      - libgl1
+      - libxi6
+      - libxcursor1
+      - libxrandr2
+      - libxinerama1
