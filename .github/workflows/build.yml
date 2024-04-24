@@ -1,0 +1,161 @@
+name: Build Release
+
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [amd64,arm,arm64]  
+    steps:
+      # - name: Run release please
+      #   uses: google-github-actions/release-please-action@v4
+      #   id: release_please
+      #   with:
+      #     release-type: go
+      #     token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: set app version
+        run: echo "APPVERSION=$(git describe --tags --abbrev=0)-$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+
+      # - name: set app version for release
+      #   if: ${{ steps.release_please.outputs.release_created }}
+      #   run: echo "APPVERSION=${{ steps.release_please.outputs.tag_name }}" >> $GITHUB_ENV
+
+      - name: Add ${{ matrix.arch }} package repos
+        if: ${{ matrix.arch }} != "amd64"
+        id: enable_multiarch
+        run: |
+          source .env.${{ matrix.arch }}
+          sudo dpkg --add-architecture ${PKG_ARCH}
+          sudo sed -i 's|^deb\s|deb [arch=amd64] |g' /etc/apt/sources.list
+          sudo cat << EOF >> /etc/apt/sources.list
+          deb [arch=${PKG_ARCH}] http://ports.ubuntu.com/ubuntu-ports/ jammy main
+          #deb-src http://ports.ubuntu.com/ubuntu-ports/ jammy main
+          deb [arch=${PKG_ARCH}] http://ports.ubuntu.com/ubuntu-ports/ jammy-updates main
+          #deb-src http://ports.ubuntu.com/ubuntu-ports/ jammy-updates main
+          deb [arch=${PKG_ARCH}] http://ports.ubuntu.com/ubuntu-ports/ jammy-security main
+          #deb-src http://ports.ubuntu.com/ubuntu-ports/ jammy-security main
+          EOF
+
+      - name: Install build dependencies
+        # if: ${{ steps.release_please.outputs.release_created }}
+        id: install_packages
+        run: >
+            source .env.${{ matrix.arch }} && 
+            sudo apt-get update && sudo apt-get -y install
+            desktop-file-utils gcc ${COMPILER_PKG}
+            libgl1-mesa-dev:${PKG_ARCH} xserver-xorg-dev:${PKG_ARCH} 
+            libxcursor-dev:${PKG_ARCH} libxrandr-dev:${PKG_ARCH}
+            libxinerama-dev:${PKG_ARCH} libxi-dev:${PKG_ARCH}
+            libgl1-mesa-dev:${PKG_ARCH}
+        env:
+          DEBIAN_FRONTEND: noninteractive
+  
+      # - name: Install/Cache build dependencies
+      #   # if: ${{ steps.release_please.outputs.release_created }}
+      #   id: cache_pkg_deps
+      #   uses: awalsh128/cache-apt-pkgs-action@latest
+      #   with:
+      #     packages: >
+      #       desktop-file-utils gcc gcc-arm-none-eabi gcc-arm-linux-gnueabihf gcc-aarch64-linux-gnu
+      #       libgl-dev:amd64 libx11-dev:amd64 libxrandr-dev:amd64 libxxf86vm-dev:amd64 libxi-dev:amd64 libxcursor-dev:amd64 libxinerama-dev:amd64 libxkbcommon-dev:amd64
+      #       libgl-dev:armhf libx11-dev:armhf libxrandr-dev:armhf libxxf86vm-dev:armhf libxi-dev:armhf libxcursor-dev:armhf libxinerama-dev:armhf libxkbcommon-dev:armhf
+      #       libgl-dev:arm64 libx11-dev:arm64 libxrandr-dev:arm64 libxxf86vm-dev:arm64 libxi-dev:arm64 libxcursor-dev:arm64 libxinerama-dev:arm64 libxkbcommon-dev:arm64
+
+      - name: Setup Go
+        # if: ${{ steps.release_please.outputs.release_created }}
+        id: setup_go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '^1.22'
+
+      - name: Install Go dependencies
+        # if: ${{ steps.release_please.outputs.release_created }}
+        id: install_go_deps
+        run: |
+          go install golang.org/x/tools/cmd/stringer@latest
+          go install github.com/fyne-io/fyne-cross@latest
+          go install golang.org/x/text/cmd/gotext@latest
+          go install github.com/matryer/moq@latest
+          go install github.com/goreleaser/nfpm/v2/cmd/nfpm@latest
+
+      - name: Build ${{ matrix.arch }} binary
+        # if: ${{ steps.release_please.outputs.release_created }}
+        id: build_binary
+        run: |
+          source .env.${{ matrix.arch }}
+          go generate ./...
+          go build -o dist/go-hass-agent-${{ matrix.arch }}
+        env:
+          CGO_ENABLED: 1
+          GOARCH: ${{ matrix.arch }}
+
+      - name: Build with fyne-cross
+        # if: ${{ steps.release_please.outputs.release_created }}
+        id: build_fyne_cross
+        run: >
+          fyne-cross linux -arch=${{ matrix.arch }}
+          -icon internal/agent/ui/assets/logo-pretty.png
+          -release
+
+      - name: Create package 
+        id: nfpm_package
+        run: |
+          nfpm package --config .nfpm.yaml --packager rpm --target dist
+          nfpm package --config .nfpm.yaml --packager deb --target dist
+          nfpm package --config .nfpm.yaml --packager arch --target dist
+        env:
+          GOARCH: ${{ matrix.arch }}
+
+      - name: Install cosign
+        # if: ${{ steps.release_please.outputs.release_created }}
+        id: cosign_install
+        uses: sigstore/cosign-installer@v3.5.0
+        with:
+          cosign-release: 'v2.2.2'
+
+      - name: Sign artifacts with cosign
+        id: cosign_sign
+        run: >
+          cosign --verbose=true sign --yes --key cosign.key
+          dist/*.{rpm,deb,zst} fync-cross/dist/linux-${{ matrix.arch }}/*.tar.xz
+        env:
+          COSIGN_PWD: ${{ secrets.COSIGN_PWD }}
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: my-artifact
+          path: my_files.tar          
+
+      - name: Upload release artifacts
+        if: ${{ steps.release_please.outputs.release_created }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: >
+          gh release upload ${{ steps.release_please.outputs.tag_name }} 
+          dist/*.{rpm,deb,zst,sig} fync-cross/dist/linux-${{ matrix.arch }}/*.{tar.xz,sig}            
+      # - name: Run Go Releaser
+      #   uses: goreleaser/goreleaser-action@v5
+      #   if: ${{ steps.release_please.outputs.release_created }}
+      #   id: run_goreleaser
+      #   with:
+      #     distribution: goreleaser
+      #     version: latest
+      #     args: release --clean
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #     COSIGN_PWD: ${{ secrets.COSIGN_PWD }}
