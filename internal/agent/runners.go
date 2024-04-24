@@ -25,7 +25,7 @@ import (
 // for this device.
 func runWorkers(ctx context.Context, trk SensorTracker, reg sensor.Registry) {
 	workerFuncs := sensorWorkers()
-	workerFuncs = append(workerFuncs, device.ExternalIPUpdater)
+	workerFuncs = append(workerFuncs, device.ExternalIPUpdater, device.VersionUpdater)
 
 	var wg sync.WaitGroup
 	var outCh []<-chan sensor.Details
