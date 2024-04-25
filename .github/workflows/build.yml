@@ -79,9 +79,10 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Set app version
+      - name: Set up environment
         run: | 
           echo "APPVERSION=$(git describe --tags --abbrev=0)-$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+          echo "BUILD_ENV=build/env.${{ matrix.arch }}" >> $GITHUB_ENV
       - name: Set app version for release
         if: ${{ steps.release_please.outputs.release_created }}
         run: echo "APPVERSION=${{ steps.release_please.outputs.tag_name }}" >> $GITHUB_ENV
@@ -92,7 +93,7 @@ jobs:
         if: ${{ matrix.arch != 'amd64' }}
         id: enable_multiarch
         run: |
-          source .env.${{ matrix.arch }}
+          source ${BUILD_ENV}
           sudo dpkg --add-architecture ${PKG_ARCH}
           sudo sed -i 's|^deb\s|deb [arch=amd64] |g' /etc/apt/sources.list
           sudo tee -a /etc/apt/sources.list << EOF
@@ -106,7 +107,7 @@ jobs:
       - name: Install build dependencies
         id: install_packages
         run: >
-            source .env.${{ matrix.arch }} && 
+            source ${BUILD_ENV} && 
             sudo apt-get update > ${RUNNER_TEMP}/apt-update.log &&  
             sudo apt-get -y install desktop-file-utils gcc ${CC_PKG}
             libgl1-mesa-dev:${PKG_ARCH} xserver-xorg-dev:${PKG_ARCH} 
@@ -143,7 +144,7 @@ jobs:
         # if: ${{ steps.release_please.outputs.release_created }}
         id: build_binary
         run: |
-          source .env.${{ matrix.arch }}
+          source ${BUILD_ENV}
           echo ARCH: ${MATRIX_ARCH} CC: ${CC} GOARCH: ${GOARCH} PKG_CONFIG_PATH: ${PKG_CONFIG_PATH}
           go generate ./...
           go build -o dist/go-hass-agent-${{ matrix.arch }}
@@ -156,10 +157,10 @@ jobs:
       #     fyne-cross linux -arch=${{ matrix.arch }}
       #     -icon internal/agent/ui/assets/logo-pretty.png
       #     -release
-      - name: Create package 
+      - name: Create packages 
         id: nfpm_package
         run: |
-          source .env.${{ matrix.arch }}
+          source ${BUILD_ENV}
           nfpm package --config .nfpm.yaml --packager rpm --target dist
           nfpm package --config .nfpm.yaml --packager deb --target dist
           nfpm package --config .nfpm.yaml --packager archlinux --target dist
@@ -186,7 +187,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${APPVERSION}
-          path: dist/*.{rpm,deb,zst,sig} fyne-cross/dist/linux-${{ matrix.arch }}/*.{tar.xz,sig}
+          path: |
+            dist/*.{rpm,deb,zst,sig} 
+            fyne-cross/dist/linux-${{ matrix.arch }}/*.{tar.xz,sig}
       - name: Upload release artifacts
         id: upload_release
         if: ${{ steps.release_please.outputs.release_created }}
