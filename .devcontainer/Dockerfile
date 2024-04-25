@@ -1,5 +1,8 @@
 FROM mcr.microsoft.com/devcontainers/base:ubuntu
-# Install the xz-utils package
 RUN sudo apt-get -y update  && export DEBIAN_FRONTEND=noninteractive && \
-    sudo apt-get -y install gcc libgl1-mesa-dev xorg-dev dbus-x11 desktop-file-utils fish micro mosquitto-clients && \
-    rm -rf /var/lib/apt/lists/* /var/cache/apt/*
+    sudo apt-get -y install desktop-file-utils gcc \
+        libgl1-mesa-dev xserver-xorg-dev \
+        libxcursor-dev libxrandr-dev \
+        libxinerama-dev libxi-dev \
+        libgl1-mesa-dev libxxf86vm-dev && \
+        rm -rf /var/lib/apt/lists/* /var/cache/apt/*
