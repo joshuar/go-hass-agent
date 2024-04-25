@@ -16,7 +16,7 @@
 !.golangci.yaml
 !.goreleaser.yaml
 !.nfpm.yaml
-!.env.*
+!build/env.*
 !codecov.yml
 
 !/assets/**/*
