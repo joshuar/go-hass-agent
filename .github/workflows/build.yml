@@ -29,11 +29,6 @@ jobs:
             > ${RUNNER_TEMP}/dpkg.log
         env:
           DEBIAN_FRONTEND: noninteractive
-      # - name: Install/Cache dependencies
-      #   id: cache_pkg_deps
-      #   uses: awalsh128/cache-apt-pkgs-action@latest
-      #   with:
-      #     packages: desktop-file-utils gcc libgl1-mesa-dev libegl1-mesa-dev libgles2-mesa-dev libx11-dev xorg-dev dbus-x11
       - name: Set up Go
         id: setup_go
         uses: actions/setup-go@v5
@@ -117,16 +112,6 @@ jobs:
             > ${RUNNER_TEMP}/apt-install.log
         env:
           DEBIAN_FRONTEND: noninteractive
-      # - name: Install/Cache build dependencies
-      #   # if: ${{ steps.release_please.outputs.release_created }}
-      #   id: cache_pkg_deps
-      #   uses: awalsh128/cache-apt-pkgs-action@latest
-      #   with:
-      #     packages: >
-      #       desktop-file-utils gcc gcc-arm-none-eabi gcc-arm-linux-gnueabihf gcc-aarch64-linux-gnu
-      #       libgl-dev:amd64 libx11-dev:amd64 libxrandr-dev:amd64 libxxf86vm-dev:amd64 libxi-dev:amd64 libxcursor-dev:amd64 libxinerama-dev:amd64 libxkbcommon-dev:amd64
-      #       libgl-dev:armhf libx11-dev:armhf libxrandr-dev:armhf libxxf86vm-dev:armhf libxi-dev:armhf libxcursor-dev:armhf libxinerama-dev:armhf libxkbcommon-dev:armhf
-      #       libgl-dev:arm64 libx11-dev:arm64 libxrandr-dev:arm64 libxxf86vm-dev:arm64 libxi-dev:arm64 libxcursor-dev:arm64 libxinerama-dev:arm64 libxkbcommon-dev:arm64
       - name: Setup Go
         id: setup_go
         uses: actions/setup-go@v5
@@ -141,7 +126,6 @@ jobs:
           go install github.com/matryer/moq@latest
           go install github.com/goreleaser/nfpm/v2/cmd/nfpm@latest
       - name: Build ${{ matrix.arch }} binary
-        # if: ${{ steps.release_please.outputs.release_created }}
         id: build_binary
         run: |
           source ${BUILD_ENV}
@@ -198,4 +182,91 @@ jobs:
           dist/*.{rpm,deb,zst,sig} fyne-cross/dist/linux-${{ matrix.arch }}/*.{tar.xz,sig}            
         env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  
+
+  build_container:
+    runs-on: ubuntu-20.04
+    env:
+      REGISTRY: ghcr.io
+      REGISTRY_USER: ${{ github.actor }}
+      REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+      IMAGE: ${{ github.repository }}    
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install/Cache dependencies
+        uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+          packages: qemu-user-static
+      - name: Get Docker metadata
+        id: docker_metadata
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE }}
+          tags: |
+            type=raw,value=latest
+            type=edge
+            type=sha
+            type=ref,event=branch
+            type=ref,event=pr
+            type=schedule
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}},enable=${{ !startsWith(github.ref, 'refs/tags/v0.') }}
+      - uses: cardinalby/git-get-release-action@v1
+        id: release_metadata
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          latest: true    
+      - name: Build container image
+        id: build_image
+        uses: redhat-actions/buildah-build@v2
+        with:
+          archs: amd64
+          image: ${{ env.IMAGE }}
+          tags: ${{ steps.docker_metadata.outputs.tags }} ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ steps.release_metadata.outputs.name }}
+          labels: ${{ steps.docker_metadata.outputs.labels }}
+          containerfiles: Dockerfile
+          layers: false
+          oci: true
+      - name: Push to Container Registry
+        id: push_image
+        uses: redhat-actions/push-to-registry@v2
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        with:
+          username: ${{ env.REGISTRY_USER }}
+          password: ${{ env.REGISTRY_PASSWORD }}
+          tags: ${{ steps.build_image.outputs.tags }}
+          extra-args: |
+            --disable-content-trust
+      - name: Login to Container Registry
+        uses: redhat-actions/podman-login@v1
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ env.REGISTRY_USER }}
+          password: ${{ env.REGISTRY_PASSWORD }}
+      - name: Check and install cosign
+        uses: sigstore/cosign-installer@v3.5.0
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        with:
+          cosign-release: 'v2.2.2'
+      - name: Sign image with a key
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          DIGEST: ${{ steps.push_image.outputs.digest }}
+          TAGS: ${{ steps.docker_metadata.outputs.tags }} ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ steps.release_metadata.outputs.name }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PWD }}
+        run: |
+          images=""
+          for tag in ${TAGS}; do
+            images+="${tag}@${DIGEST} "
+          done
+          cosign --verbose=true sign --yes --key cosign.key \
+            -a "repo=${{ github.repository }}" \
+            -a "ref=${{ github.ref }}" \
+            ${images}
+            
