@@ -1,4 +1,4 @@
-name: Build Release
+name: Build
 
 on:
   push:
@@ -151,12 +151,12 @@ jobs:
         env:
           CGO_ENABLED: 1
           MATRIX_ARCH: ${{ matrix.arch }}
-      # - name: Build with fyne-cross
-      #   id: build_fyne_cross
-      #   run: >
-      #     fyne-cross linux -arch=${{ matrix.arch }}
-      #     -icon internal/agent/ui/assets/logo-pretty.png
-      #     -release
+      - name: Build with fyne-cross
+        id: build_fyne_cross
+        run: >
+          fyne-cross linux -arch=${{ matrix.arch }}
+          -icon internal/agent/ui/assets/logo-pretty.png
+          -release
       - name: Create packages 
         id: nfpm_package
         run: |
@@ -188,8 +188,8 @@ jobs:
         with:
           name: ${APPVERSION}
           path: |
-            dist/*.{rpm,deb,zst,sig} 
-            fyne-cross/dist/linux-${{ matrix.arch }}/*.{tar.xz,sig}
+            dist 
+            fyne-cross/dist/linux-${{ matrix.arch }}
       - name: Upload release artifacts
         id: upload_release
         if: ${{ steps.release_please.outputs.release_created }}
