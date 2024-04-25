@@ -155,6 +155,7 @@ jobs:
         id: build_fyne_cross
         run: >
           fyne-cross linux -arch=${{ matrix.arch }}
+          -name go-hass-agent
           -icon internal/agent/ui/assets/logo-pretty.png
           -release
       - name: Create packages 
@@ -165,7 +166,6 @@ jobs:
           nfpm package --config .nfpm.yaml --packager deb --target dist
           nfpm package --config .nfpm.yaml --packager archlinux --target dist
       - name: Install cosign
-        # if: ${{ steps.release_please.outputs.release_created }}
         id: cosign_install
         uses: sigstore/cosign-installer@v3.5.0
         with:
@@ -186,7 +186,7 @@ jobs:
         if: ${{ ! steps.release_please.outputs.release_created }}
         uses: actions/upload-artifact@v4
         with:
-          name: ${APPVERSION}
+          name: build-${{ matrix.arch }}-${{ github.sha }}
           path: |
             dist 
             fyne-cross/dist/linux-${{ matrix.arch }}
