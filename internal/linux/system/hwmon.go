@@ -101,10 +101,17 @@ func newHWSensor(s *hwmon.Sensor) *hwSensor {
 func HWSensorUpdater(ctx context.Context) chan sensor.Details {
 	sensorCh := make(chan sensor.Details, 1)
 	update := func(_ time.Duration) {
-		allSensors := hwmon.GetAllSensors()
+		allSensors, err := hwmon.GetAllSensors()
+		if err != nil && len(allSensors) > 0 {
+			log.Warn().Err(err).Msg("Errors fetching some chip/sensor values from hwmon API.")
+		}
+		if err != nil && len(allSensors) == 0 {
+			log.Warn().Err(err).Msg("Could not retrieve any chip/sensor values from hwmon API.")
+			return
+		}
 		for _, s := range allSensors {
-			sensor := newHWSensor(&s)
-			sensorCh <- sensor
+			hwSensor := newHWSensor(s)
+			sensorCh <- hwSensor
 		}
 	}
 

@@ -7,13 +7,13 @@ package hwmon
 
 import (
 	"fmt"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
 
+	"github.com/sourcegraph/conc/pool"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
@@ -42,7 +42,63 @@ type SensorType int
 // under /sys/class/hwmon/hwmon*.
 type Chip struct {
 	Name    string
-	Sensors []Sensor
+	Sensors []*Sensor
+	chipID  int
+}
+
+func (c *Chip) update(newID int) {
+	c.chipID = newID
+	c.Name += " " + strconv.Itoa(c.chipID)
+	for i := range c.Sensors {
+		c.Sensors[i].chip = c.Name
+	}
+}
+
+func processChip(path string) (*Chip, error) {
+	n, err := getFileContents(filepath.Join(path, "name"))
+	if err != nil {
+		return nil, err
+	}
+
+	c := &Chip{
+		Name: n,
+	}
+
+	sensors, err := getSensors(path)
+	c.Sensors = sensors
+
+	return c, err
+}
+
+// GetAllChips will return a slice of Chips containing their sensors. If there
+// are any errors in parsing chip or sensor values, it will return a non-nill
+// composite error as well.
+func GetAllChips() ([]*Chip, error) {
+	var chips []*Chip
+
+	files, err := os.ReadDir(hwmonPath)
+	if err != nil {
+		return nil, err
+	}
+
+	p := pool.New().WithErrors()
+	lastID := make(map[string]int)
+	var mu sync.Mutex
+	for _, f := range files {
+		p.Go(func() error {
+			chip, err := processChip(filepath.Join(hwmonPath, f.Name()))
+			mu.Lock()
+			defer mu.Unlock()
+			if _, ok := lastID[chip.Name]; ok {
+				lastID[chip.Name]++
+			}
+			chip.update(lastID[chip.Name])
+			chips = append(chips, chip)
+			return err
+		})
+	}
+	err = p.Wait()
+	return chips, err
 }
 
 // Sensor represents a single sensor exposed by a sensor chip. A Sensor may have
@@ -73,7 +129,7 @@ func (s *Sensor) Name() string {
 	idFormatted := c.String(s.id)
 	labelFormatted := c.String(s.label)
 	switch {
-	case s.SensorType == Alarm:
+	case s.SensorType == Alarm || s.SensorType == Intrusion:
 		return chipFormatted + " " + idFormatted + " " + labelFormatted
 	case s.label != "":
 		return chipFormatted + " " + labelFormatted
@@ -106,43 +162,42 @@ func (s *Sensor) String() string {
 	return b.String()
 }
 
-func (s *Sensor) update(d details) error {
+func (s *Sensor) updateFromFile(file *sensorFile) error {
 	switch {
-	case d.item == "label":
-		s.label = d.value
-	case d.item == "input":
-		v, err := strconv.ParseFloat(d.value, 64)
+	case file.sensorAttr == "label":
+		l, err := file.getValueAsString()
+		if err != nil {
+			return err
+		}
+		s.label = l
+	case file.sensorAttr == "input":
+		v, err := file.getValueAsFloat()
 		if err != nil {
 			return err
 		}
 		s.value = v
-	case strings.Contains(d.item, "alarm"):
-		v, err := strconv.ParseFloat(d.value, 64)
+	case strings.Contains(file.sensorAttr, "alarm"):
+		v, err := file.getValueAsFloat()
 		if err != nil {
 			return err
 		}
-		s.label = strings.ReplaceAll(d.item, "_", " ")
 		s.value = v
+		s.label = "alarm"
+	case strings.Contains(file.sensorAttr, "intrusion"):
+		v, err := file.getValueAsFloat()
+		if err != nil {
+			return err
+		}
+		s.value = v
+		s.label = "intrusion"
 	default:
-		v, err := strconv.ParseFloat(d.value, 64)
+		v, err := file.getValueAsFloat()
 		if err != nil {
 			return err
 		}
-		s.Attributes = append(s.Attributes, Attribute{Name: d.item, Value: v / s.scaleFactor})
+		s.Attributes = append(s.Attributes, Attribute{Name: file.sensorAttr, Value: v / s.scaleFactor})
 	}
 	return nil
-}
-
-func newSensor(chip string, details *details) Sensor {
-	t, f, u := parseType(details)
-	s := Sensor{
-		chip:        chip,
-		id:          details.id,
-		SensorType:  t,
-		scaleFactor: f,
-		units:       u,
-	}
-	return s
 }
 
 // Attribute represents an attribute of a sensor, like its max, min or average
@@ -157,193 +212,140 @@ func (a *Attribute) String() string {
 	return fmt.Sprintf("%s: %.3f", a.Name, a.Value)
 }
 
-type details struct {
-	id    string
-	item  string
-	value string
+type sensorFile struct {
+	path       string
+	filename   string
+	sensorType string
+	sensorAttr string
 }
 
-func getDetails(path, file string) (*details, error) {
-	i, t, ok := strings.Cut(file, "_")
-	if !ok {
-		return nil, fmt.Errorf("%s: not a sensor file", file)
-	}
-	v, err := getValue(filepath.Join(path, file))
+func (f *sensorFile) getValueAsString() (string, error) {
+	return getFileContents(filepath.Join(f.path, f.filename))
+}
+
+func (f *sensorFile) getValueAsFloat() (float64, error) {
+	strValue, err := getFileContents(filepath.Join(f.path, f.filename))
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
-	return &details{id: i, item: t, value: v}, nil
+	return strconv.ParseFloat(strValue, 64)
 }
 
-func getValue(p string) (string, error) {
-	var b []byte
-	var err error
-	if b, err = os.ReadFile(p); err != nil {
-		return "unknown", err
-	}
-	return strings.TrimSpace(string(b)), nil
-}
-
-func parseType(d *details) (sensorType SensorType, scaleFactor float64, units string) {
+func (f *sensorFile) getSensorType() (sensorType SensorType, scaleFactor float64, units string) {
 	switch {
-	case strings.Contains(d.item, "intrusion"):
+	case strings.Contains(f.sensorAttr, "intrusion"):
 		return Intrusion, 1, ""
-	case strings.Contains(d.item, "alarm"):
+	case strings.Contains(f.sensorAttr, "alarm"):
 		return Alarm, 1, ""
-	case strings.Contains(d.id, "temp"):
+	case strings.Contains(f.sensorType, "temp"):
 		return Temp, 1000, "°C"
-	case strings.Contains(d.id, "fan"):
+	case strings.Contains(f.sensorType, "fan"):
 		return Fan, 1, "rpm"
-	case strings.Contains(d.id, "in"):
+	case strings.Contains(f.sensorType, "in"):
 		return Voltage, 1000, "V"
-	case strings.Contains(d.id, "pwm"):
+	case strings.Contains(f.sensorType, "pwm"):
 		return PWM, 1, "Hz"
-	case strings.Contains(d.id, "curr"):
+	case strings.Contains(f.sensorType, "curr"):
 		return Current, 1, "A"
-	case strings.Contains(d.id, "power"):
+	case strings.Contains(f.sensorType, "power"):
 		return Power, 1000, "W"
-	case strings.Contains(d.id, "energy"):
+	case strings.Contains(f.sensorType, "energy"):
 		return Energy, 1000, "J"
-	case strings.Contains(d.id, "humidity"):
+	case strings.Contains(f.sensorType, "humidity"):
 		return Humidity, 1, "%"
-	case strings.Contains(d.id, "freq"):
+	case strings.Contains(f.sensorType, "freq"):
 		return Frequency, 1000, "Hz"
 	default:
 		return Unknown, 1, ""
 	}
 }
 
-func processSensors(path string) (sensorCh <-chan Sensor, errCh <-chan error) {
-	c := make(chan Sensor)
-	errc := make(chan error, 1)
-	smap := make(map[string]Sensor)
-	var wg sync.WaitGroup
-
+func getSensors(path string) ([]*Sensor, error) {
 	files, err := os.ReadDir(path)
 	if err != nil {
-		errc <- err
-		close(c)
-		close(errc)
-		return c, errc
+		return nil, err
 	}
 
-	namePrefix, err := getValue(filepath.Join(path, "name"))
+	// retrieve the chip name
+	chip, err := getFileContents(filepath.Join(path, "name"))
 	if err != nil {
-		errc <- err
-		close(c)
-		close(errc)
-		return c, errc
+		return nil, err
 	}
 
-	dc := make(chan details)
+	// gather all valid sensor files
+	var allSensorFiles []*sensorFile
+	for _, f := range files {
+		// ignore directories
+		if f.IsDir() {
+			continue
+		}
+		// ignore files that can't be parsed as a sensor
+		sensorType, sensorAttr, ok := strings.Cut(f.Name(), "_")
+		if !ok {
+			continue
+		}
+		allSensorFiles = append(allSensorFiles, &sensorFile{
+			path:       path,
+			filename:   f.Name(),
+			sensorType: sensorType,
+			sensorAttr: sensorAttr,
+		})
+	}
+
+	// generate a map of allSensors from the files.
+	allSensors := make(map[string]*Sensor)
 	var mu sync.Mutex
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		for d := range dc {
-			s := newSensor(namePrefix, &d)
-			id := s.SensorType.String() + "_" + s.id
+	genSensorsPool := pool.New().WithErrors()
+	for _, sensorFile := range allSensorFiles {
+		genSensorsPool.Go(func() error {
+			t, sf, u := sensorFile.getSensorType()
+			trackerID := sensorFile.sensorType + "_" + t.String()
 			mu.Lock()
-			if _, ok := smap[id]; !ok {
-				smap[id] = s
+			defer mu.Unlock()
+			// if this sensor is already tracked, update it from the sensorFile contents
+			if _, ok := allSensors[trackerID]; ok {
+				return allSensors[trackerID].updateFromFile(sensorFile)
 			}
-			oldsensor := smap[id]
-			if err := oldsensor.update(d); err != nil {
-				errc <- err
-			} else {
-				smap[id] = oldsensor
+			// otherwise, its a new sensor, start tracking it
+			allSensors[trackerID] = &Sensor{
+				chip:        chip,
+				id:          sensorFile.sensorType,
+				SensorType:  t,
+				scaleFactor: sf,
+				units:       u,
 			}
-			mu.Unlock()
-		}
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		defer close(dc)
-		var wgFiles sync.WaitGroup
-		for _, f := range files {
-			wgFiles.Add(1)
-			go func(f fs.DirEntry) {
-				defer wgFiles.Done()
-				d, _ := getDetails(path, f.Name())
-				if d != nil {
-					dc <- *d
-				}
-			}(f)
-			wgFiles.Wait()
-		}
-	}()
-
-	go func() {
-		wg.Wait()
-		mu.Lock()
-		for _, s := range smap {
-			c <- s
-		}
-		mu.Unlock()
-		close(c)
-		close(errc)
-	}()
-	return c, errc
-}
-
-func processChip(path string) (chipCh <-chan Chip, errCh <-chan error) {
-	chipc := make(chan Chip, 1)
-	errc := make(chan error, 1)
-
-	n, err := getValue(filepath.Join(path, "name"))
-	if err != nil {
-		errc <- err
-		close(chipc)
-		return chipc, errc
+			return allSensors[trackerID].updateFromFile(sensorFile)
+		})
 	}
-
-	c := Chip{
-		Name: n,
+	err = genSensorsPool.Wait()
+	var s []*Sensor
+	for _, sensor := range allSensors {
+		s = append(s, sensor)
 	}
-
-	var wg sync.WaitGroup
-	s, e := processSensors(path)
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		for sensor := range s {
-			c.Sensors = append(c.Sensors, sensor)
-		}
-	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		for err := range e {
-			errc <- err
-		}
-	}()
-	go func() {
-		wg.Wait()
-		chipc <- c
-		close(chipc)
-		close(errc)
-	}()
-	return chipc, errc
+	return s, err
 }
 
 // GetAllSensors returns a slice of Sensor objects, representing all detected
-// chip sensors found on the host.
-func GetAllSensors() []Sensor {
-	files, err := os.ReadDir(hwmonPath)
-	if err != nil {
-		println(err)
-		return nil
-	}
+// chip sensors found on the host. If there were any errors in fetching chips or
+// chip sensors, it will also return a non-nill composite error.
+func GetAllSensors() ([]*Sensor, error) {
+	var sensors []*Sensor
 
-	var sensors []Sensor
-
-	for _, f := range files {
-		c, _ := processChip(filepath.Join(hwmonPath, f.Name()))
-		chip := <-c
+	chips, err := GetAllChips()
+	for _, chip := range chips {
 		sensors = append(sensors, chip.Sensors...)
 	}
 
-	return sensors
+	return sensors, err
+}
+
+// getFileContents retrieves the contents of the given file as a string. If the
+// contents cannot be read, it will return "unknown" and an error.
+func getFileContents(p string) (string, error) {
+	var b []byte
+	var err error
+	if b, err = os.ReadFile(p); err != nil {
+		return "unknown", err
+	}
+	return strings.TrimSpace(string(b)), nil
 }
