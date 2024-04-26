@@ -32,7 +32,14 @@ func main() {
 	if err = trace.Start(trc); err != nil {
 		log.Fatal().Err(err).Msg("Could not start trace profiling.")
 	}
-	for _, s := range hwmon.GetAllSensors() {
+	sensors, err := hwmon.GetAllSensors()
+	if err != nil && len(sensors) > 0 {
+		log.Warn().Err(err).Msg("Errors fetching some chip/sensor values.")
+	}
+	if err != nil && len(sensors) == 0 {
+		log.Fatal().Err(err).Msg("Could not retrieve any chip/sensor values.")
+	}
+	for _, s := range sensors {
 		println(s.String())
 	}
 
