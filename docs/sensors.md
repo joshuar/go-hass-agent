@@ -16,8 +16,11 @@
 
 | Sensor | What it measures | Source | Extra Attributes | Update Frequency |
 |--------|------------------|--------|-------------------|-------------------|
+| Agent Version | The version of Go Hass Agent |  | | On agent start. |
 | Active App | Currently active (focused) application | D-Bus | | When app changes. |
 | Running Apps | Count of all running applications | D-Bus | The application names | When running apps count changes. | 
+| Accent Color  | The hex code representing the accent color of the desktop environment in use. | D-Bus | | When accent color changes. | 
+| Theme Type  | Whether a dark or light desktop theme is detected. | D-Bus | | When desktop theme changes. | 
 | Battery Type | The type of battery (e.g., UPS, line power) | D-Bus | | On battery addeded/removed. |
 | Battery Temp | The current battery temperature | D-Bus | | When temp changes. |
 | Battery Power | The battery current power draw | D-Bus | Voltage, Energy consumption, where reported | When voltage changes. |
@@ -31,7 +34,8 @@
 | Swap Available | Swap available/free | ProcFS | | ~Every minute |
 | Swap Used | Swap used | ProcFS | | ~Every minute |
 | Swap Usage | Swap memory usage % | ProcFS | | ~Every minute |
-| Per Mountpoint Usage | % usage of mount point | ProcFS |  Filesystem type, bytes/inode total/free/used | ~Every minute |
+| Per Mountpoint Usage | % usage of mount point. | ProcFS |  Filesystem type, bytes/inode total/free/used. | ~Every minute. |
+| Device total read/writes and rates | Count of read/writes, Rate (in KB/s) of reads/writes, to the device. | ProcFS | | ~Every 5 seconds. |
 | Connection State (per-connection) | The current state of each network connection | D-Bus | Connection type (e.g., wired/wireless/VPN), IP addresses | When connections change. |
 | Wi-Fi SSID[^1] | The SSID of the Wi-Fi network | D-Bus | | When SSID changes. |
 | Wi-Fi Frequency[^1] | The frequency band of the Wi-Fi network | D-Bus | | When frequency changes. | 
