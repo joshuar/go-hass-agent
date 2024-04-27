@@ -112,6 +112,7 @@ type Sensor struct {
 	label       string
 	id          string
 	units       string
+	SysFSPath   string
 	Attributes  []Attribute
 	scaleFactor float64
 	value       float64
@@ -160,7 +161,7 @@ func (s *Sensor) Units() string {
 // String will format the sensor name and value as a pretty string.
 func (s *Sensor) String() string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "%s: %.3f %s [%s] (id: %s)", s.Name(), s.Value(), s.Units(), s.SensorType, s.ID())
+	fmt.Fprintf(&b, "%s: %.3f %s [%s] (id: %s, path: %s)", s.Name(), s.Value(), s.Units(), s.SensorType, s.ID(), s.SysFSPath)
 	for i, a := range s.Attributes {
 		if i == 0 {
 			fmt.Fprintf(&b, " (")
@@ -335,6 +336,7 @@ func getSensors(path string) ([]*Sensor, error) {
 				deviceModel: deviceModel,
 				id:          sensorFile.sensorType,
 				SensorType:  t,
+				SysFSPath:   path,
 				scaleFactor: sf,
 				units:       u,
 			}
