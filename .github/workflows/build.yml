@@ -92,8 +92,8 @@ jobs:
         run: |
           source ${BUILD_ENV}
           echo ARCH: ${MATRIX_ARCH} CC: ${CC} GOARCH: ${GOARCH} PKG_CONFIG_PATH: ${PKG_CONFIG_PATH}
-          go generate ./...
-          go build -o dist/go-hass-agent-${{ matrix.arch }}
+          go generate -v ./...
+          go build -v -o dist/go-hass-agent-${{ matrix.arch }}
         env:
           CGO_ENABLED: 1
           MATRIX_ARCH: ${{ matrix.arch }}
