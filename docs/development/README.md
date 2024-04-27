@@ -12,9 +12,9 @@
 In addition to a Go installation, Go Hass Agent needs a few other Go tools installed:
 
 ```shell
-# goreleaser is used to create release artifacts
-go install github.com/goreleaser/goreleaser@latest
-# fyne-cross is used build some artifacts that goreleaser doesn't
+# nfpm is used to create linux distro packages
+go install github.com/goreleaser/nfpm/v2/cmd/nfpm@latest
+# fyne-cross is used build for older linux distributions
 go install github.com/fyne-io/fyne-cross@latest
 # stringer auto-generates some String() methods
 go install golang.org/x/tools/cmd/stringer@latest
@@ -56,35 +56,57 @@ Go Hass Agent makes use of `go generate` to generate some of the code. A typical
 build process would be:
 
 ```shell
+source build/env.amd64
 go generate ./...
 go build
 ```
 
 ### Packages
 
-Go Hass Agent uses [goreleaser](https://goreleaser.com/intro/) to create
+Go Hass Agent uses [nfpm](https://nfpm.goreleaser.com/) to create
 packages for Fedora, Arch, and Ubuntu and
 [fyne-cross](https://github.com/fyne-io/fyne-cross) to create packages for
-Debian.
+Debian and Linux distributions with older libraries.
 
-To build a “local-only” package with `goreleaser`:
+To build packages:
 
 ```shell
-goreleaser release --snapshot --clean
+source build/env.amd64
+nfpm package --config .nfpm.yaml --packager rpm --target dist
+nfpm package --config .nfpm.yaml --packager deb --target dist
+nfpm package --config .nfpm.yaml --packager archlinux --target dist
 ```
 
 Packages will be available under the `dist/` folder.
 
-See the [goreleaser docs](https://goreleaser.com/quick-start/) for more commands
-and information.
-
 To build a package for Debian with `fyne-cross`:
 
 ```shell
-fyne-cross linux -icon assets/trayicon/logo-pretty.png -release
+source build/env.amd64
+fyne-cross linux -arch=${PKG_ARCH} -name go-hass-agent -icon assets/trayicon/logo-pretty.png -release
 ```
 
-The `.tar.xz` will be available under `fyne-cross/dist/linux-amd64/`.
+The `.tar.xz` will be available under `fyne-cross/dist/linux-${PKG_ARCH}/`.
+
+### Other Architectures
+
+Go Hass Agent can also be built for **arm** and **arm64** with
+cross-compilation. **This is only supported on Ubuntu as the host for
+cross-compiles**. To build for a different architecture, replace the `source
+build/env.amd64` in the above snippets with one of the following:
+
+```shell
+source build/env.arm # for arm
+source build/env.arm64 # for arm64
+```
+
+You will need to have the appropriate cross-compiler and libraries installed
+first. See the [.github/workflows/build.yml](../../.github/workflows/build.yml) file
+for how to configure and install dependencies for cross-compilation on Ubuntu.
+
+> [!NOTE]
+> The devcontainer has all the necessary compilers and libraries
+> installed for cross-compilation.
 
 ### Container Images
 
