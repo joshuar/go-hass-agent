@@ -1,8 +1,11 @@
 name: Build
 
 on:
-  push:
-    branches: [ main ]
+  workflow_run:
+    workflows: ["test"]
+    branches: [main]
+    types:
+      - completed
 
 permissions:
   contents: write
@@ -10,17 +13,25 @@ permissions:
   packages: write
 
 jobs:
-  build:
+  check_release:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        arch: [amd64,arm,arm64]  
+    outputs:
+      release_created: ${{ steps.release_please.outputs.release_created }}
+      release_tag: ${{ steps.release_please.outputs.tag_name }}
     steps:
       - name: Run release please
         uses: google-github-actions/release-please-action@v4
         id: release_please
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+  build:
+    needs: check_release
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [amd64,arm,arm64]  
+    steps:
       - name: Checkout source
         uses: actions/checkout@v4
         with:
@@ -30,8 +41,8 @@ jobs:
           echo "APPVERSION=$(git describe --tags --abbrev=0)-$(git rev-parse --short HEAD)" >> $GITHUB_ENV
           echo "BUILD_ENV=build/env.${{ matrix.arch }}" >> $GITHUB_ENV
       - name: Set app version for release
-        if: ${{ steps.release_please.outputs.release_created }}
-        run: echo "APPVERSION=${{ steps.release_please.outputs.tag_name }}" >> $GITHUB_ENV
+        if: ${{ needs.check_release.outputs.release_created }}
+        run: echo "APPVERSION=${{ needs.check_release.outputs.release_tag }}" >> $GITHUB_ENV
       - name: Show app version
         run: | 
           echo "::notice title=App Version::${APPVERSION}"
@@ -118,7 +129,7 @@ jobs:
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PWD }}
       - name: Upload build artifacts
         id: upload_artifacts
-        if: ${{ ! steps.release_please.outputs.release_created }}
+        if: ${{ ! needs.check_release.outputs.release_created }}
         uses: actions/upload-artifact@v4
         with:
           name: build-${{ matrix.arch }}-${{ github.sha }}
@@ -127,14 +138,15 @@ jobs:
             fyne-cross/dist/linux-${{ matrix.arch }}
       - name: Upload release artifacts
         id: upload_release
-        if: ${{ steps.release_please.outputs.release_created }}
+        if: ${{ needs.check_release.outputs.release_created }}
         run: >
-          gh release upload ${{ steps.release_please.outputs.tag_name }} 
+          gh release upload ${{ needs.check_release.outputs.release_tag }} 
           dist/*.{rpm,deb,zst,sig} fyne-cross/dist/linux-${{ matrix.arch }}/*.{tar.xz,sig}            
         env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build_container:
+    needs: check_release
     runs-on: ubuntu-20.04
     env:
       REGISTRY: ghcr.io
