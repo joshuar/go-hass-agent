@@ -43,9 +43,6 @@ jobs:
       - name: Set app version for release
         if: ${{ needs.check_release.outputs.release_created }}
         run: echo "APPVERSION=${{ needs.check_release.outputs.release_tag }}" >> $GITHUB_ENV
-      - name: Show app version
-        run: | 
-          echo "::notice title=App Version::${APPVERSION}"
       - name: Add ${{ matrix.arch }} package repos
         if: ${{ matrix.arch != 'amd64' }}
         id: enable_multiarch
