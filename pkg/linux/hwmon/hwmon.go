@@ -36,17 +36,24 @@ const (
 	Intrusion
 )
 
+// SensorType represents the type of sensor. For example, a temp sensor, a fan
+// sensor, etc.
 type SensorType int
 
 // Chip represents a sensor chip exposed by the Linux kernel hardware monitoring
 // API. These are retrieved from the directories in the sysfs /sys/devices tree
 // under /sys/class/hwmon/hwmon*.
 type Chip struct {
-	Name    string
+	// Name is the descriptive label for the chip, if any.
+	Name string
+	// Sensors is a slice of all sensors exposed by this chip.
 	Sensors []*Sensor
 	chipID  int
 }
 
+// update ensures the chip name is unique. This is needed for some drivers that
+// duplicate chip names (for example drivetemp, which exposes any temperature
+// sensors for disk drives with each drive having the chip name "drivetemp").
 func (c *Chip) update(newID int) {
 	c.chipID = newID
 	c.Name += " " + strconv.Itoa(c.chipID)
@@ -112,7 +119,10 @@ type Sensor struct {
 	label       string
 	id          string
 	units       string
-	SysFSPath   string
+	// SysFSPath is the base path under the hwmon tree in /sys that contains this sensor.
+	SysFSPath string
+	// Attributes is a slice of additional attributes, such as max, min, crit
+	// values for the sensor.
 	Attributes  []Attribute
 	scaleFactor float64
 	value       float64
@@ -146,6 +156,8 @@ func (s *Sensor) Name() string {
 	}
 }
 
+// ID returns a string that can be used as a unique identifier for this sensor.
+// It combines the chip name and sensor id from hwmon to create a unique string.
 func (s *Sensor) ID() string {
 	if s.SensorType == Alarm || s.SensorType == Intrusion {
 		return strcase.ToSnake(s.chip + "_" + s.id + "_" + s.SensorType.String())
