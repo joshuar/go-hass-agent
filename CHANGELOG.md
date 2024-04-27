@@ -1,5 +1,32 @@
 # Changelog
 
+## [8.0.0](https://github.com/joshuar/go-hass-agent/compare/v7.3.1...v8.0.0) (2024-04-27)
+
+
+### ⚠ BREAKING CHANGES
+
+* **linux:** When more than one chip exposed by the hwmon userspace API have the same name, the agent was not treating them as unique. This commit fixes the code to ensure every chip gets its own sensors. This unfortunately required changing the naming format of all chips, so will result in new sensors being recorded in Home Assistant.
+
+### Features
+
+* **device:** :sparkles: add an agent version sensor ([92be2e1](https://github.com/joshuar/go-hass-agent/commit/92be2e1392354096b9e892827a5c8a36ed32fb99))
+* **linux:** :sparkles: add Linux device IO rate sensors ([1011ea3](https://github.com/joshuar/go-hass-agent/commit/1011ea368fe78fa42b36a5c3de556780faef55d3))
+* **linux:** :sparkles: add sensors for accent color and color scheme type ([50c2eab](https://github.com/joshuar/go-hass-agent/commit/50c2eab4951eef19c5591eba1832362c5faaad24))
+* **linux/hwmon:** :lipstick: better hwmon sensor naming ([ae5aa9e](https://github.com/joshuar/go-hass-agent/commit/ae5aa9e7d0a0a2e45638237d209e55b04853da6d))
+* **linux/hwmon:** :sparkles: expose the sysfs path for the hwmon sensor ([4a198fa](https://github.com/joshuar/go-hass-agent/commit/4a198fafb24ec0f2c25a9dff7a14f6dd8b94f024))
+
+
+### Bug Fixes
+
+* **linux:** :bug: disk IO rate sensors should be marked as diagnostic sensors ([8ae0ffe](https://github.com/joshuar/go-hass-agent/commit/8ae0ffee348b9378e4ae34a8e871639b69b641c7))
+* **linux:** :bug: send lid state sensor on startup ([b1e2aea](https://github.com/joshuar/go-hass-agent/commit/b1e2aeaa8c9b9a2463a22771d8783182dfbaeb4c))
+* **linux:** :pencil2: fix warning message if desktop sensors are unavailable ([1005e35](https://github.com/joshuar/go-hass-agent/commit/1005e357c3b076b272019ed350217def7cdad1fa))
+* **linux:** :zap: improve lock handling for running apps sensor ([ed50a68](https://github.com/joshuar/go-hass-agent/commit/ed50a685ef5e7f54a939f498240a04a29c92230c))
+* **linux:** :zap: rework network sensor code to attempt to avoid race conditions ([e91f389](https://github.com/joshuar/go-hass-agent/commit/e91f38929f037fbc989e96e1b58e898eedad8b97))
+* **linux:** handle hwmon chips with the same name ([16f56dd](https://github.com/joshuar/go-hass-agent/commit/16f56dda42ca9d3d525c2d0d59446549a7a7c5b0))
+* **logging:** :bug: try to create the directory for log file storage. change error msgs to warn if cannot ([596f6e4](https://github.com/joshuar/go-hass-agent/commit/596f6e4e6d05684ef883901d9659d6469721c3cb))
+* **scripts:** :art: capture and return script parser errors ([949bef5](https://github.com/joshuar/go-hass-agent/commit/949bef5483eb39f9a2627dc4c27ae6ba9865f647))
+
 ## [7.3.1](https://github.com/joshuar/go-hass-agent/compare/v7.3.0...v7.3.1) (2024-04-17)
 
 
