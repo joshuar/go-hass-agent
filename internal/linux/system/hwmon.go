@@ -25,20 +25,19 @@ type hwSensor struct {
 	hwType     string
 	name       string
 	id         string
+	path       string
 	linux.Sensor
 }
 
 func (s *hwSensor) asBool(h *hwmon.Sensor) {
-	if v, err := strconv.ParseBool(fmt.Sprint(int(h.Value()))); err != nil {
-		s.Value = false
-	} else {
-		s.Value = v
-	}
-	if s.Value.(bool) {
+	// we don't care if the value cannot be parsed, treat it as false
+	value, _ := strconv.ParseBool(fmt.Sprint(int(h.Value())))
+	if value {
 		s.IconString = "mdi:alarm-light"
 	} else {
 		s.IconString = "mdi:alarm-light-off"
 	}
+	s.Value = value
 	s.IsBinary = true
 }
 
@@ -68,11 +67,13 @@ func (s *hwSensor) Attributes() any {
 		NativeUnit string             `json:"native_unit_of_measurement,omitempty"`
 		DataSource string             `json:"Data Source"`
 		SensorType string             `json:"Sensor Type"`
+		HWMonPath  string             `json:"SysFS Path"`
 	}{
 		NativeUnit: s.UnitsString,
 		DataSource: linux.DataSrcSysfs,
 		SensorType: s.hwType,
 		Attributes: s.ExtraAttrs,
+		HWMonPath:  s.path,
 	}
 }
 
@@ -81,6 +82,7 @@ func newHWSensor(s *hwmon.Sensor) *hwSensor {
 		name:       s.Name(),
 		id:         s.ID(),
 		hwType:     s.SensorType.String(),
+		path:       s.SysFSPath,
 		ExtraAttrs: make(map[string]float64),
 	}
 	hw.IsDiagnostic = true
