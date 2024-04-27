@@ -96,11 +96,11 @@ jobs:
           MATRIX_ARCH: ${{ matrix.arch }}
       - name: Build with fyne-cross
         id: build_fyne_cross
-        run: >
-          fyne-cross linux -arch=${{ matrix.arch }}
-          -name go-hass-agent
-          -icon internal/agent/ui/assets/logo-pretty.png
-          -release
+        run: |
+          fyne-cross linux -arch=${{ matrix.arch }} -name go-hass-agent \
+            -icon internal/agent/ui/assets/logo-pretty.png -release
+          mv fyne-cross/dist/linux-${{ matrix.arch }}/go-hass-agent.tar.xz \
+            fyne-cross/dist/linux-${{ matrix.arch }}/go-hass-agent-${{ matrix.arch }}.tar.xz
       - name: Create packages 
         id: nfpm_package
         run: |
@@ -137,8 +137,8 @@ jobs:
         id: upload_release
         if: ${{ needs.check_release.outputs.release_created }}
         run: >
-          gh release upload ${{ needs.check_release.outputs.release_tag }} 
-          dist/*.{rpm,deb,zst,sig} fyne-cross/dist/linux-${{ matrix.arch }}/*.{tar.xz,sig}            
+          gh release upload ${{ needs.check_release.outputs.release_tag }} dist/*.{rpm,deb,zst,sig} 
+          gh release upload ${{ needs.check_release.outputs.release_tag }} fyne-cross/dist/linux-${{ matrix.arch }}/*            
         env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
