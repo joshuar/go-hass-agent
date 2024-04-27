@@ -13,6 +13,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/iancoleman/strcase"
 	"github.com/sourcegraph/conc/pool"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -107,6 +108,7 @@ func GetAllChips() ([]*Chip, error) {
 // Attributes, which are additional measurements like max/min/avg of the value.
 type Sensor struct {
 	chip        string
+	deviceModel string
 	label       string
 	id          string
 	units       string
@@ -125,7 +127,12 @@ func (s *Sensor) Value() float64 {
 // plus either any label, else name of the sensor itself.
 func (s *Sensor) Name() string {
 	c := cases.Title(language.AmericanEnglish)
-	chipFormatted := c.String(strings.ReplaceAll(s.chip, "_", " "))
+	var chipFormatted string
+	if s.deviceModel != "" {
+		chipFormatted = s.deviceModel
+	} else {
+		chipFormatted = c.String(strings.ReplaceAll(s.chip, "_", " "))
+	}
 	idFormatted := c.String(s.id)
 	labelFormatted := c.String(s.label)
 	switch {
@@ -138,6 +145,13 @@ func (s *Sensor) Name() string {
 	}
 }
 
+func (s *Sensor) ID() string {
+	if s.SensorType == Alarm || s.SensorType == Intrusion {
+		return strcase.ToSnake(s.chip + "_" + s.id + "_" + s.SensorType.String())
+	}
+	return strcase.ToSnake(s.chip + "_" + s.id)
+}
+
 // Units returns the units for the value of this sensor.
 func (s *Sensor) Units() string {
 	return s.units
@@ -146,7 +160,7 @@ func (s *Sensor) Units() string {
 // String will format the sensor name and value as a pretty string.
 func (s *Sensor) String() string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "%s: %.3f %s [%s]", s.Name(), s.Value(), s.Units(), s.SensorType)
+	fmt.Fprintf(&b, "%s: %.3f %s [%s] (id: %s)", s.Name(), s.Value(), s.Units(), s.SensorType, s.ID())
 	for i, a := range s.Attributes {
 		if i == 0 {
 			fmt.Fprintf(&b, " (")
@@ -272,6 +286,15 @@ func getSensors(path string) ([]*Sensor, error) {
 		return nil, err
 	}
 
+	var deviceModel string
+	fh, err := os.Stat(filepath.Join(path, "device", "model"))
+	if err == nil && fh.Mode().IsRegular() {
+		m, err := getFileContents(filepath.Join(path, "device", "model"))
+		if err == nil {
+			deviceModel = m
+		}
+	}
+
 	// gather all valid sensor files
 	var allSensorFiles []*sensorFile
 	for _, f := range files {
@@ -309,6 +332,7 @@ func getSensors(path string) ([]*Sensor, error) {
 			// otherwise, its a new sensor, start tracking it
 			allSensors[trackerID] = &Sensor{
 				chip:        chip,
+				deviceModel: deviceModel,
 				id:          sensorFile.sensorType,
 				SensorType:  t,
 				scaleFactor: sf,

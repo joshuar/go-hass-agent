@@ -11,10 +11,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/iancoleman/strcase"
 	"github.com/rs/zerolog/log"
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
 
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
@@ -27,6 +24,7 @@ type hwSensor struct {
 	ExtraAttrs map[string]float64
 	hwType     string
 	name       string
+	id         string
 	linux.Sensor
 }
 
@@ -57,15 +55,11 @@ func (s *hwSensor) asFloat(h *hwmon.Sensor) {
 }
 
 func (s *hwSensor) Name() string {
-	c := cases.Title(language.AmericanEnglish)
-	if s.hwType == hwmon.Alarm.String() {
-		return c.String(s.name)
-	}
-	return s.name + " " + s.hwType
+	return s.name
 }
 
 func (s *hwSensor) ID() string {
-	return strcase.ToSnake(s.hwType + "_" + s.name)
+	return s.id
 }
 
 func (s *hwSensor) Attributes() any {
@@ -85,6 +79,7 @@ func (s *hwSensor) Attributes() any {
 func newHWSensor(s *hwmon.Sensor) *hwSensor {
 	hw := &hwSensor{
 		name:       s.Name(),
+		id:         s.ID(),
 		hwType:     s.SensorType.String(),
 		ExtraAttrs: make(map[string]float64),
 	}
