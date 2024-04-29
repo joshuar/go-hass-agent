@@ -42,28 +42,32 @@ func (s *timeSensor) Attributes() any {
 }
 
 func Updater(ctx context.Context) chan sensor.Details {
-	sensorCh := make(chan sensor.Details, 2)
+	sensorCh := make(chan sensor.Details)
 	updateTimes := func(_ time.Duration) {
-		sensorCh <- &timeSensor{
-			linux.Sensor{
-				SensorTypeValue:  linux.SensorUptime,
-				Value:            getUptime(ctx),
-				IsDiagnostic:     true,
-				UnitsString:      "h",
-				IconString:       "mdi:restart",
-				DeviceClassValue: types.DeviceClassDuration,
-				StateClassValue:  types.StateClassMeasurement,
-			},
-		}
-		sensorCh <- &timeSensor{
-			linux.Sensor{
-				SensorTypeValue:  linux.SensorBoottime,
-				Value:            getBoottime(ctx),
-				IsDiagnostic:     true,
-				IconString:       "mdi:restart",
-				DeviceClassValue: types.DeviceClassTimestamp,
-			},
-		}
+		go func() {
+			sensorCh <- &timeSensor{
+				linux.Sensor{
+					SensorTypeValue:  linux.SensorUptime,
+					Value:            getUptime(ctx),
+					IsDiagnostic:     true,
+					UnitsString:      "h",
+					IconString:       "mdi:restart",
+					DeviceClassValue: types.DeviceClassDuration,
+					StateClassValue:  types.StateClassMeasurement,
+				},
+			}
+		}()
+		go func() {
+			sensorCh <- &timeSensor{
+				linux.Sensor{
+					SensorTypeValue:  linux.SensorBoottime,
+					Value:            getBoottime(ctx),
+					IsDiagnostic:     true,
+					IconString:       "mdi:restart",
+					DeviceClassValue: types.DeviceClassTimestamp,
+				},
+			}
+		}()
 	}
 
 	go helpers.PollSensors(ctx, updateTimes, time.Minute*15, time.Minute)
