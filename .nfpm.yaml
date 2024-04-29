@@ -32,12 +32,11 @@ overrides:
   rpm:
     depends:
       - libglvnd-glx
+      - libglvnd
       - libX11
-      - libXrandr
-      - libXxf86vm
-      - libXi
-      - libXcursor
-      - libXinerama
+      - libXext
+      - libxcb
+      - libXau
   deb:
     depends:
       - libgl1
@@ -45,3 +44,18 @@ overrides:
       - libxcursor1
       - libxrandr2
       - libxinerama1
+  archlinux:
+    depends:
+      - libglvnd
+      - libx11
+      - libxrandr
+      - libxxf86vm
+      - libxi
+      - libxcursor
+      - libxinerama
+      - libxcb
+      - libxext
+      - libxrender
+      - libxfixes
+      - libxau
+      - libxdmcp
