@@ -27,14 +27,15 @@ import (
 )
 
 var (
-	traceFlag    bool
-	debugFlag    bool
-	AppID        string
-	profileFlag  bool
-	cpuProfile   string
-	heapProfile  string
-	headlessFlag bool
-	traceProfile string
+	traceFlag     bool
+	debugFlag     bool
+	AppID         string
+	profileFlag   bool
+	cpuProfile    string
+	heapProfile   string
+	headlessFlag  bool
+	traceProfile  string
+	noLogFileFlag bool
 )
 
 // rootCmd represents the base command when called without any subcommands.
@@ -43,8 +44,13 @@ var rootCmd = &cobra.Command{
 	Short: "A Home Assistant, native app integration for desktop/laptop devices.",
 	Long:  text.RootCmdLongText,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		fmt.Println("here")
 		logging.SetLoggingLevel(traceFlag, debugFlag, profileFlag)
-		logging.SetLogFile("go-hass-agent.log")
+		fmt.Println("here")
+		if !noLogFileFlag {
+			logging.SetLogFile("go-hass-agent.log")
+		}
+		log.Info().Msg("here")
 		if cpuProfile != "" {
 			f, err := os.Create(cpuProfile)
 			if err != nil {
@@ -121,6 +127,8 @@ func init() {
 		"trace output (default is false)")
 	rootCmd.PersistentFlags().BoolVar(&debugFlag, "debug", false,
 		"debug output (default is false)")
+	rootCmd.PersistentFlags().BoolVar(&noLogFileFlag, "no-log-file", false,
+		"don't write to a log file (default is false)")
 	rootCmd.PersistentFlags().BoolVar(&profileFlag, "profile", false,
 		"enable profiling (default is false)")
 	rootCmd.PersistentFlags().StringVar(&cpuProfile, "cpu-profile", "",
