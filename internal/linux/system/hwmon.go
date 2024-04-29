@@ -96,7 +96,7 @@ func newHWSensor(s *hwmon.Sensor) *hwSensor {
 }
 
 func HWSensorUpdater(ctx context.Context) chan sensor.Details {
-	sensorCh := make(chan sensor.Details, 1)
+	sensorCh := make(chan sensor.Details)
 	update := func(_ time.Duration) {
 		allSensors, err := hwmon.GetAllSensors()
 		if err != nil && len(allSensors) > 0 {
