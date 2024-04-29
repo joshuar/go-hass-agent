@@ -59,7 +59,7 @@ func (d *diskSensor) Attributes() any {
 }
 
 func UsageUpdater(ctx context.Context) chan sensor.Details {
-	sensorCh := make(chan sensor.Details, 1)
+	sensorCh := make(chan sensor.Details)
 	sendDiskUsageStats := func(_ time.Duration) {
 		p, err := disk.PartitionsWithContext(ctx, false)
 		if err != nil {
@@ -68,13 +68,15 @@ func UsageUpdater(ctx context.Context) chan sensor.Details {
 			return
 		}
 		for _, partition := range p {
-			usage, err := disk.UsageWithContext(ctx, partition.Mountpoint)
-			if err != nil {
-				log.Debug().Err(err).
-					Msgf("Failed to get usage info for mountpount %s.", partition.Mountpoint)
-				return
-			}
-			sensorCh <- newDiskSensor(usage)
+			go func(partition disk.PartitionStat) {
+				usage, err := disk.UsageWithContext(ctx, partition.Mountpoint)
+				if err != nil {
+					log.Debug().Err(err).
+						Msgf("Failed to get usage info for mountpount %s.", partition.Mountpoint)
+					return
+				}
+				sensorCh <- newDiskSensor(usage)
+			}(partition)
 		}
 	}
 
