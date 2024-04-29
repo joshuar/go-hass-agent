@@ -11,7 +11,6 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v3/mem"
-	"github.com/sourcegraph/conc/pool"
 
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
@@ -60,10 +59,8 @@ func Updater(ctx context.Context) chan sensor.Details {
 			)
 		}
 
-		p := pool.New()
-
 		for _, stat := range stats {
-			p.Go(func() {
+			go func(stat linux.SensorTypeValue) {
 				value, unit, deviceClass, stateClass := parseSensorType(stat, memDetails)
 				state := &memorySensor{
 					linux.Sensor{
@@ -77,9 +74,8 @@ func Updater(ctx context.Context) chan sensor.Details {
 					},
 				}
 				sensorCh <- state
-			})
+			}(stat)
 		}
-		p.Wait()
 	}
 
 	go helpers.PollSensors(ctx, sendMemStats, time.Minute, time.Second*5)
