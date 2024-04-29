@@ -65,10 +65,12 @@ func newUsersSensor() *usersSensor {
 }
 
 func Updater(ctx context.Context) chan sensor.Details {
-	sensorCh := make(chan sensor.Details, 1)
+	sensorCh := make(chan sensor.Details)
 	u := newUsersSensor()
 	u.updateUsers(ctx)
-	sensorCh <- u
+	go func() {
+		sensorCh <- u
+	}()
 
 	err := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
 		Match([]dbus.MatchOption{
@@ -80,6 +82,9 @@ func Updater(ctx context.Context) chan sensor.Details {
 			case "org.freedesktop.login1.Manager.SessionNew",
 				"org.freedesktop.login1.Manager.SessionRemoved":
 				u.updateUsers(ctx)
+				go func() {
+					sensorCh <- u
+				}()
 			}
 		}).
 		AddWatch(ctx)
