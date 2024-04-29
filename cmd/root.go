@@ -44,13 +44,10 @@ var rootCmd = &cobra.Command{
 	Short: "A Home Assistant, native app integration for desktop/laptop devices.",
 	Long:  text.RootCmdLongText,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		fmt.Println("here")
 		logging.SetLoggingLevel(traceFlag, debugFlag, profileFlag)
-		fmt.Println("here")
 		if !noLogFileFlag {
 			logging.SetLogFile("go-hass-agent.log")
 		}
-		log.Info().Msg("here")
 		if cpuProfile != "" {
 			f, err := os.Create(cpuProfile)
 			if err != nil {
