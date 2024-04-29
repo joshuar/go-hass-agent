@@ -11,22 +11,13 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v3/mem"
+	"github.com/sourcegraph/conc/pool"
 
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 )
-
-var stats = []linux.SensorTypeValue{
-	linux.SensorMemTotal,
-	linux.SensorMemAvail,
-	linux.SensorMemUsed,
-	linux.SensorMemPc,
-	linux.SensorSwapTotal,
-	linux.SensorSwapFree,
-	linux.SensorSwapPc,
-}
 
 type memorySensor struct {
 	linux.Sensor
@@ -43,7 +34,7 @@ func (s *memorySensor) Attributes() any {
 }
 
 func Updater(ctx context.Context) chan sensor.Details {
-	sensorCh := make(chan sensor.Details, 5)
+	sensorCh := make(chan sensor.Details)
 	sendMemStats := func(_ time.Duration) {
 		var memDetails *mem.VirtualMemoryStat
 		var err error
@@ -52,21 +43,43 @@ func Updater(ctx context.Context) chan sensor.Details {
 				Msg("Problem fetching memory stats.")
 			return
 		}
-		for _, stat := range stats {
-			value, unit, deviceClass, stateClass := parseSensorType(stat, memDetails)
-			state := &memorySensor{
-				linux.Sensor{
-					Value:            value,
-					SensorTypeValue:  stat,
-					IconString:       "mdi:memory",
-					UnitsString:      unit,
-					SensorSrc:        linux.DataSrcProcfs,
-					DeviceClassValue: deviceClass,
-					StateClassValue:  stateClass,
-				},
-			}
-			sensorCh <- state
+
+		// Memory stats to track as sensors.
+		stats := []linux.SensorTypeValue{
+			linux.SensorMemTotal,
+			linux.SensorMemAvail,
+			linux.SensorMemUsed,
+			linux.SensorMemPc,
 		}
+		// If this system has swap enabled, track swap stats as sensors as well.
+		if memDetails.SwapTotal > 0 {
+			stats = append(stats,
+				linux.SensorSwapTotal,
+				linux.SensorSwapFree,
+				linux.SensorSwapPc,
+			)
+		}
+
+		p := pool.New()
+
+		for _, stat := range stats {
+			p.Go(func() {
+				value, unit, deviceClass, stateClass := parseSensorType(stat, memDetails)
+				state := &memorySensor{
+					linux.Sensor{
+						Value:            value,
+						SensorTypeValue:  stat,
+						IconString:       "mdi:memory",
+						UnitsString:      unit,
+						SensorSrc:        linux.DataSrcProcfs,
+						DeviceClassValue: deviceClass,
+						StateClassValue:  stateClass,
+					},
+				}
+				sensorCh <- state
+			})
+		}
+		p.Wait()
 	}
 
 	go helpers.PollSensors(ctx, sendMemStats, time.Minute, time.Second*5)
