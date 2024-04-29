@@ -112,10 +112,9 @@ func newDiskIOSensor(device string, sensorType linux.SensorTypeValue) *diskIOSen
 	s := &diskIOSensor{
 		device: device,
 		Sensor: linux.Sensor{
-			DeviceClassValue: types.DeviceClassDataSize,
-			StateClassValue:  types.StateClassTotalIncreasing,
-			SensorTypeValue:  sensorType,
-			IsDiagnostic:     true,
+			StateClassValue: types.StateClassTotalIncreasing,
+			SensorTypeValue: sensorType,
+			IsDiagnostic:    true,
 		},
 	}
 	return s
