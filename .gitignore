@@ -9,7 +9,7 @@
 
 # But not these files...
 !/.gitignore
-!/.vscode/launch.json
+!/.vscode/*.json
 !/.vscode/ltex.dictionary.*.txt
 !/.github/**/*
 !/.devcontainer/**/*
