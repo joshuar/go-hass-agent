@@ -15,8 +15,8 @@ deb [arch=armhf,arm64] http://ports.ubuntu.com/ubuntu-ports/ jammy-security main
 EOF
 RUN sudo apt-get -y update
 ENV DEBIAN_FRONTEND=noninteractive
-RUN sudo apt-get -y install desktop-file-utils gcc gcc-arm-linux-gnueabihf gcc-aarch64-linux-gnu
+RUN sudo apt-get -y install desktop-file-utils micro fish gcc gcc-arm-linux-gnueabihf gcc-aarch64-linux-gnu
 RUN sudo apt-get -y install libgl1-mesa-dev:armhf xserver-xorg-dev:armhf libxcursor-dev:armhf libxrandr-dev:armhf libxinerama-dev:armhf libxi-dev:armhf libgl1-mesa-dev:armhf libxxf86vm-dev:armhf  
 RUN sudo apt-get -y install libgl1-mesa-dev:arm64 xserver-xorg-dev:arm64 libxcursor-dev:arm64 libxrandr-dev:arm64 libxinerama-dev:arm64 libxi-dev:arm64 libgl1-mesa-dev:arm64 libxxf86vm-dev:arm64
-RUN sudo apt-get -y install libgl1-mesa-dev:amd64 xserver-xorg-dev:amd64 libxcursor-dev:amd64 libxrandr-dev:amd64 libxinerama-dev:amd64 libxi-dev:amd64 libgl1-mesa-dev:amd64 libxxf86vm-dev:amd64 \
+RUN sudo apt-get -y install libgl1-mesa-dev:amd64 xserver-xorg-dev:amd64 libxcursor-dev:amd64 libxrandr-dev:amd64 libxinerama-dev:amd64 libxi-dev:amd64 libgl1-mesa-dev:amd64 libxxf86vm-dev:amd64
 RUN sudo rm -rf /var/lib/apt/lists/* /var/cache/apt/*
