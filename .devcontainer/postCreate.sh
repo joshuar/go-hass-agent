@@ -2,8 +2,6 @@
 
 set -e
 
-cd /workspaces/go-hass-agent && go mod tidy
-
 # Install go build packages
 go install golang.org/x/tools/cmd/stringer@latest
 go install github.com/fyne-io/fyne-cross@latest
