@@ -7,6 +7,7 @@ package system
 
 import (
 	"context"
+	"sync"
 
 	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v3/host"
@@ -18,8 +19,7 @@ import (
 )
 
 func Versions(ctx context.Context) chan sensor.Details {
-	sensorCh := make(chan sensor.Details, 3)
-	defer close(sensorCh)
+	sensorCh := make(chan sensor.Details)
 	info, err := host.InfoWithContext(ctx)
 	if err != nil {
 		log.Debug().Err(err).Caller().
@@ -27,26 +27,43 @@ func Versions(ctx context.Context) chan sensor.Details {
 		close(sensorCh)
 		return sensorCh
 	}
-	sensorCh <- &linux.Sensor{
-		SensorTypeValue: linux.SensorKernel,
-		Value:           info.KernelVersion,
-		IsDiagnostic:    true,
-		IconString:      "mdi:chip",
-		SensorSrc:       linux.DataSrcProcfs,
-	}
-	sensorCh <- &linux.Sensor{
-		SensorTypeValue: linux.SensorDistribution,
-		Value:           cases.Title(language.English).String(info.Platform),
-		IsDiagnostic:    true,
-		IconString:      "mdi:linux",
-		SensorSrc:       linux.DataSrcProcfs,
-	}
-	sensorCh <- &linux.Sensor{
-		SensorTypeValue: linux.SensorVersion,
-		Value:           info.PlatformVersion,
-		IsDiagnostic:    true,
-		IconString:      "mdi:numeric",
-		SensorSrc:       linux.DataSrcProcfs,
-	}
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		sensorCh <- &linux.Sensor{
+			SensorTypeValue: linux.SensorKernel,
+			Value:           info.KernelVersion,
+			IsDiagnostic:    true,
+			IconString:      "mdi:chip",
+			SensorSrc:       linux.DataSrcProcfs,
+		}
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		sensorCh <- &linux.Sensor{
+			SensorTypeValue: linux.SensorDistribution,
+			Value:           cases.Title(language.English).String(info.Platform),
+			IsDiagnostic:    true,
+			IconString:      "mdi:linux",
+			SensorSrc:       linux.DataSrcProcfs,
+		}
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		sensorCh <- &linux.Sensor{
+			SensorTypeValue: linux.SensorVersion,
+			Value:           info.PlatformVersion,
+			IsDiagnostic:    true,
+			IconString:      "mdi:numeric",
+			SensorSrc:       linux.DataSrcProcfs,
+		}
+	}()
+	go func() {
+		defer close(sensorCh)
+		wg.Wait()
+	}()
 	return sensorCh
 }
