@@ -19,6 +19,10 @@ import (
 	diskstats "github.com/joshuar/go-hass-agent/pkg/linux/proc"
 )
 
+const (
+	diskRateUnits = "kB/s"
+)
+
 type diskIOSensor struct {
 	stats  map[diskstats.DiskStat]uint64
 	device string
@@ -65,12 +69,12 @@ func (s *diskIOSensor) Attributes() any {
 	case linux.SensorDiskReadRate:
 		return &diskIOSensorAttributes{
 			DataSource: linux.DataSrcProcfs,
-			NativeUnit: "KB/s",
+			NativeUnit: diskRateUnits,
 		}
 	case linux.SensorDiskWriteRate:
 		return &diskIOSensorAttributes{
 			DataSource: linux.DataSrcProcfs,
-			NativeUnit: "KB/s",
+			NativeUnit: diskRateUnits,
 		}
 	}
 	return nil
@@ -126,7 +130,7 @@ func newDiskIORateSensor(device string, sensorType linux.SensorTypeValue) *diskI
 		Sensor: linux.Sensor{
 			DeviceClassValue: types.DeviceClassDataRate,
 			StateClassValue:  types.StateClassMeasurement,
-			UnitsString:      "KB/s",
+			UnitsString:      diskRateUnits,
 			SensorTypeValue:  sensorType,
 			IsDiagnostic:     true,
 		},
