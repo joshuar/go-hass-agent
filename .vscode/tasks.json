@@ -11,7 +11,8 @@
         "presentation": {
           "reveal": "always",
           "panel": "new"
-        }
+        },
+        "problemMatcher": []
       },
       {
         "label": "View Log: Mosquitto",
