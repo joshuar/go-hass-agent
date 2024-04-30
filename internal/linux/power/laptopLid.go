@@ -19,7 +19,6 @@ import (
 
 const (
 	loginBasePath    = "/org/freedesktop/login1"
-	sessionPath      = loginBasePath + "/session"
 	managerInterface = "org.freedesktop.login1.Manager"
 	lidClosedProp    = "LidClosed"
 )
@@ -64,6 +63,7 @@ func LaptopLidUpdater(ctx context.Context) chan sensor.Details {
 			sensorCh <- newLaptopLidEvent(v)
 		}()
 	}
+	sessionPath := dbusx.GetSessionPath(ctx)
 
 	err := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
 		Match([]dbus.MatchOption{
