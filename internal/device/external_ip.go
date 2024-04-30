@@ -72,7 +72,7 @@ func (a *address) StateClass() types.StateClass {
 	return 0
 }
 
-func (a *address) State() interface{} {
+func (a *address) State() any {
 	return a.addr.String()
 }
 
@@ -84,7 +84,7 @@ func (a *address) Category() string {
 	return "diagnostic"
 }
 
-func (a *address) Attributes() interface{} {
+func (a *address) Attributes() any {
 	now := time.Now()
 	return &struct {
 		LastUpdated string `json:"Last Updated"`
@@ -103,7 +103,7 @@ func lookupExternalIPs(client *resty.Client, ver int) *address {
 			Msg("Fetching external IP.")
 		resp, err := client.R().Get(addr[ver])
 		if err != nil {
-			log.Warn().Err(err).
+			log.Trace().Err(err).
 				Msgf("Error retrieving external v%d address with %s.", ver, addr[ver])
 		} else {
 			log.Trace().Err(err).
