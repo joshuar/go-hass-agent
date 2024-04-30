@@ -18,10 +18,10 @@ import (
 )
 
 const (
-	dbusControlTopic = "gohassagent/dbus"
+	dbusCommandTopic = "gohassagent/dbus"
 )
 
-type dbusControlMsg struct {
+type dbusCommandMsg struct {
 	Bus            string          `json:"bus"`
 	Destination    string          `json:"destination"`
 	Path           dbus.ObjectPath `json:"path"`
@@ -30,10 +30,10 @@ type dbusControlMsg struct {
 	UseSessionPath bool            `json:"useSessionPath"`
 }
 
-func NewDBusControlSubscription(ctx context.Context) *mqttapi.Subscription {
+func NewDBusCommandSubscription(ctx context.Context) *mqttapi.Subscription {
 	return &mqttapi.Subscription{
 		Callback: func(_ MQTT.Client, msg MQTT.Message) {
-			var dbusMsg dbusControlMsg
+			var dbusMsg dbusCommandMsg
 
 			if err := json.Unmarshal(msg.Payload(), &dbusMsg); err != nil {
 				log.Warn().Err(err).Msg("could not unmarshal dbus MQTT message")
@@ -55,7 +55,7 @@ func NewDBusControlSubscription(ctx context.Context) *mqttapi.Subscription {
 				Str("destination", dbusMsg.Destination).
 				Str("path", string(dbusMsg.Path)).
 				Str("method", dbusMsg.Method).
-				Msg("Dispatching D-Bus MQTT message")
+				Msg("Dispatching D-Bus command to MQTT.")
 
 			err := dbusx.NewBusRequest(ctx, dbusType).
 				Path(dbusMsg.Path).
@@ -70,6 +70,6 @@ func NewDBusControlSubscription(ctx context.Context) *mqttapi.Subscription {
 					Msg("Error dispatching D-Bus command.")
 			}
 		},
-		Topic: dbusControlTopic,
+		Topic: dbusCommandTopic,
 	}
 }
