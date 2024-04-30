@@ -14,7 +14,7 @@ import (
 )
 
 type mqttObj struct {
-	entities map[string]*mqtthass.EntityConfig
+	entities []*mqtthass.EntityConfig
 }
 
 func (o *mqttObj) Name() string {
@@ -23,9 +23,9 @@ func (o *mqttObj) Name() string {
 
 func (o *mqttObj) Configuration() []*mqttapi.Msg {
 	var msgs []*mqttapi.Msg
-	for id, c := range o.entities {
+	for _, c := range o.entities {
 		if msg, err := mqtthass.MarshalConfig(c); err != nil {
-			log.Error().Err(err).Msgf("Failed to marshal payload for %s.", id)
+			log.Error().Err(err).Msg("Failed to marshal payload for entity.")
 		} else {
 			msgs = append(msgs, msg)
 		}
