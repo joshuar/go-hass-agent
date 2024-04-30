@@ -14,7 +14,8 @@ import (
 )
 
 type mqttObj struct {
-	entities []*mqtthass.EntityConfig
+	entities      []*mqtthass.EntityConfig
+	subscriptions []*mqttapi.Subscription
 }
 
 func (o *mqttObj) Name() string {
@@ -44,6 +45,9 @@ func (o *mqttObj) Subscriptions() []*mqttapi.Subscription {
 				subs = append(subs, sub)
 			}
 		}
+	}
+	if len(o.subscriptions) > 0 {
+		subs = append(subs, o.subscriptions...)
 	}
 	return subs
 }
