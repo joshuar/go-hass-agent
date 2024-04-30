@@ -27,7 +27,7 @@ func newMQTTObject(ctx context.Context) *mqttObj {
 	entities = append(entities, power.NewPowerControl(ctx)...)
 
 	// Add subscription for issuing D-Bus commands to the Linux device.
-	subscriptions = append(subscriptions, system.NewDBusControlSubscription(ctx))
+	subscriptions = append(subscriptions, system.NewDBusCommandSubscription(ctx))
 
 	return &mqttObj{
 		entities:      entities,
