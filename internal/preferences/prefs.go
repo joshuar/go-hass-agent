@@ -18,8 +18,9 @@ import (
 )
 
 var (
-	AppName = "go-hass-agent"
-	AppURL  = "https://github.com/joshuar/go-hass-agent"
+	AppName         = "go-hass-agent"
+	AppURL          = "https://github.com/joshuar/go-hass-agent"
+	MQTTTopicPrefix = "homeassistant"
 )
 
 //go:generate sh -c "printf %s $(git tag | tail -1) > VERSION"

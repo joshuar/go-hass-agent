@@ -6,6 +6,8 @@
 package agent
 
 import (
+	"context"
+
 	mqtthass "github.com/joshuar/go-hass-anything/v7/pkg/hass"
 	mqttapi "github.com/joshuar/go-hass-anything/v7/pkg/mqtt"
 	"github.com/rs/zerolog/log"
@@ -14,6 +16,7 @@ import (
 )
 
 type mqttObj struct {
+	msgCh         chan mqttapi.Msg
 	entities      []*mqtthass.EntityConfig
 	subscriptions []*mqttapi.Subscription
 }
@@ -54,4 +57,18 @@ func (o *mqttObj) Subscriptions() []*mqttapi.Subscription {
 
 func (o *mqttObj) States() []*mqttapi.Msg {
 	return nil
+}
+
+func (o *mqttObj) Run(ctx context.Context, client *mqttapi.Client) {
+	for {
+		select {
+		case msg := <-o.msgCh:
+			if err := client.Publish(&msg); err != nil {
+				log.Warn().Err(err).Msg("Unable to publish message to MQTT.")
+			}
+		case <-ctx.Done():
+			close(o.msgCh)
+			return
+		}
+	}
 }
