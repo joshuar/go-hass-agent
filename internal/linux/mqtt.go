@@ -12,9 +12,16 @@ import (
 )
 
 func NewButton(entityID string) *mqtthass.EntityConfig {
-	return mqtthass.NewEntityByID(entityID, preferences.AppName, "homeassistant").
+	return mqtthass.NewEntityByID(entityID, preferences.AppName, preferences.MQTTTopicPrefix).
 		AsButton().
-		WithDefaultOriginInfo().
+		WithOriginInfo(preferences.MQTTOrigin()).
+		WithDeviceInfo(mqttDevice())
+}
+
+func NewSlider(entityID string, step, min, max float64) *mqtthass.EntityConfig {
+	return mqtthass.NewEntityByID(entityID, preferences.AppName, preferences.MQTTTopicPrefix).
+		AsNumber(step, min, max, mqtthass.NumberSlider).
+		WithOriginInfo(preferences.MQTTOrigin()).
 		WithDeviceInfo(mqttDevice())
 }
 

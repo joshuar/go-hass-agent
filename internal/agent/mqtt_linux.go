@@ -11,6 +11,7 @@ import (
 	mqtthass "github.com/joshuar/go-hass-anything/v7/pkg/hass"
 	mqttapi "github.com/joshuar/go-hass-anything/v7/pkg/mqtt"
 
+	"github.com/joshuar/go-hass-agent/internal/linux/media"
 	"github.com/joshuar/go-hass-agent/internal/linux/power"
 	"github.com/joshuar/go-hass-agent/internal/linux/system"
 )
@@ -21,10 +22,14 @@ func newMQTTObject(ctx context.Context) *mqttObj {
 	var entities []*mqtthass.EntityConfig
 	var subscriptions []*mqttapi.Subscription
 
+	msgCh := make(chan mqttapi.Msg)
+
 	// Add screensaver/screenlock control.
 	entities = append(entities, power.NewScreenLockControl(ctx))
 	// Add power controls (poweroff, reboot, suspend, etc.).
 	entities = append(entities, power.NewPowerControl(ctx)...)
+	// Add volume control
+	entities = append(entities, media.VolumeControl(ctx, msgCh)...)
 
 	// Add subscription for issuing D-Bus commands to the Linux device.
 	subscriptions = append(subscriptions, system.NewDBusCommandSubscription(ctx))
@@ -32,5 +37,6 @@ func newMQTTObject(ctx context.Context) *mqttObj {
 	return &mqttObj{
 		entities:      entities,
 		subscriptions: subscriptions,
+		msgCh:         msgCh,
 	}
 }

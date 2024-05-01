@@ -165,11 +165,15 @@ func runMQTTWorker(ctx context.Context) {
 
 	o := newMQTTObject(ctx)
 
-	_, err = mqttapi.NewClient(ctx, prefs, o)
+	client, err := mqttapi.NewClient(ctx, prefs, o)
 	if err != nil {
 		log.Error().Err(err).Msg("Could not start MQTT client.")
 		return
 	}
+
+	go func() {
+		o.Run(ctx, client)
+	}()
 
 	log.Debug().Msg("Listening for events on MQTT.")
 
