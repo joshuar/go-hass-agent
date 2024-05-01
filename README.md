@@ -53,6 +53,11 @@ A number of power related commands (suspend, poweroff, lock screen), among
 others, are built-in and any arbitrary D-Bus call can be called via a service
 call in Home Assistant.
 
+### And More…
+
+Check out [what I'm working
+on](https://github.com/joshuar/go-hass-agent/discussions/150) for future releases.
+
 ## 🤔 Use-cases
 
 As examples of some of the things that can be done with the data published by this app:
