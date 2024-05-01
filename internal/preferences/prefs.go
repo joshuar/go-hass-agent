@@ -12,6 +12,7 @@ import (
 	"sync"
 
 	"github.com/adrg/xdg"
+	mqtthass "github.com/joshuar/go-hass-anything/v7/pkg/hass"
 	"github.com/pelletier/go-toml/v2"
 	"github.com/sourcegraph/conc/pool"
 )
@@ -313,4 +314,13 @@ func checkPath(path string) error {
 		return os.MkdirAll(path, os.ModePerm)
 	}
 	return nil
+}
+
+// MQTTOrigin defines Go Hass Agent as the origin for MQTT functionality.
+func MQTTOrigin() *mqtthass.Origin {
+	return &mqtthass.Origin{
+		Name:    AppName,
+		Version: AppVersion,
+		URL:     AppURL,
+	}
 }
