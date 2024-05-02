@@ -66,3 +66,32 @@ go-hass-agent --register --force
 5. The agent will go through the initial registration steps. It should report
    that registration was successful.
 6. Restart the agent.
+
+## Q: I want to run the agent on a server, as a service, without a GUI. Can I do this?
+
+Yes. The packages install a systemd service file that can be enabled and used to
+run the agent as a service. 
+
+You will still need to register the agent manually before starting as a service.
+See the command for registration in the [README](../README.md#running-headless).
+
+You will also need to ensure your user has “lingering” enabled.  Run `loginctl
+list-users` and check that your user has **LINGER** set to “yes”. If not, run
+`loginctl enable-linger`.
+
+Once you have registered the agent and enabled lingering for your user. Enable
+the service and start it:
+
+```shell
+systemctl --user enable go-hass-agent
+systemctl --user start go-hass-agent
+```
+
+You can check the status with `systemctl --user status go-hass-agent`. The agent
+should start with every boot.
+
+For other init systems, consult their documentation on how to enable and run
+user services.
+
+
+
