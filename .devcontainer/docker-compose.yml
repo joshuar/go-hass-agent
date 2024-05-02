@@ -10,7 +10,6 @@ services:
       - /run/user/1000/bus:/run/user/1000/bus
       - ${HOME}/.Xauthority:/tmp/.Xauthority
     network_mode: host
-    userns_mode: keep-id
     user: vscode
     cap_add:
       - SYS_PTRACE
@@ -24,7 +23,6 @@ services:
     environment:
       - "TZ=${TZ}"
     restart: on-failure
-    userns_mode: keep-id
     network_mode: host
   mosquitto:
     image: docker.io/eclipse-mosquitto:2.0.18
@@ -38,4 +36,3 @@ services:
       - 8883:8883
     restart: on-failure
     network_mode: host
-    userns_mode: keep-id
