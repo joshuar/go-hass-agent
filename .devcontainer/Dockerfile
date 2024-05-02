@@ -14,7 +14,7 @@ deb [arch=armhf,arm64] http://ports.ubuntu.com/ubuntu-ports/ jammy-security main
 #deb-src [arch=armhf,arm64] http://ports.ubuntu.com/ubuntu-ports/ jammy-security main
 EOF
 RUN sudo apt-get -y update
-ENV DEBIAN_FRONTEND=noninteractive
+ARG DEBIAN_FRONTEND noninteractive
 RUN sudo apt-get -y install desktop-file-utils micro fish mosquitto-clients gcc gcc-arm-linux-gnueabihf gcc-aarch64-linux-gnu
 RUN sudo apt-get -y install libgl1-mesa-dev:armhf xserver-xorg-dev:armhf libxcursor-dev:armhf libxrandr-dev:armhf libxinerama-dev:armhf libxi-dev:armhf libgl1-mesa-dev:armhf libxxf86vm-dev:armhf  
 RUN sudo apt-get -y install libgl1-mesa-dev:arm64 xserver-xorg-dev:arm64 libxcursor-dev:arm64 libxrandr-dev:arm64 libxinerama-dev:arm64 libxi-dev:arm64 libgl1-mesa-dev:arm64 libxxf86vm-dev:arm64
