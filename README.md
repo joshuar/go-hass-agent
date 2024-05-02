@@ -174,6 +174,9 @@ tracking and sending sensor data to Home Assistant.
 If desired, headless mode can be forced, even in graphical environments, by
 specifying the `--terminal` command-line option.
 
+If you want to run Go Hass Agent as a service on a headless machine, see the
+[FAQ](docs/faq.md#q-i-want-to-run-the-agent-on-a-server-as-a-service-without-a-gui-can-i-do-this). 
+
 ### Running in a container
 
 There is rough support for running Go Hass Agent within a container. Pre-built
