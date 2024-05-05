@@ -10,36 +10,41 @@ import (
 	"os"
 	"strings"
 
-	MQTT "github.com/eclipse/paho.mqtt.golang"
+	"github.com/eclipse/paho.golang/paho"
 	"github.com/godbus/dbus/v5"
-	mqtthass "github.com/joshuar/go-hass-anything/v7/pkg/hass"
+	mqtthass "github.com/joshuar/go-hass-anything/v9/pkg/hass"
 
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/preferences"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 
 	"github.com/rs/zerolog/log"
 )
 
-func NewScreenLockControl(ctx context.Context) *mqtthass.EntityConfig {
+func NewScreenLockControl(ctx context.Context) *mqtthass.ButtonEntity {
 	dbusScreensaverDest, dbusScreensaverPath, dbusScreensaverMsg := getDesktopEnvScreensaverConfig()
 	dbusScreensaverLockMethod := dbusScreensaverDest + ".Lock"
+	device := linux.MQTTDevice()
 
-	return linux.NewButton("lock_screensaver").
-		WithIcon("mdi:eye-lock").
-		WithCommandCallback(func(_ MQTT.Client, _ MQTT.Message) {
-			if dbusScreensaverPath == "" {
-				log.Warn().Msg("Could not determine screensaver method.")
-			}
-			var err error
-			if dbusScreensaverMsg != nil {
-				err = sessionDBusCall(ctx, dbus.ObjectPath(dbusScreensaverPath), dbusScreensaverDest, dbusScreensaverLockMethod, dbusScreensaverMsg)
-			} else {
-				err = sessionDBusCall(ctx, dbus.ObjectPath(dbusScreensaverPath), dbusScreensaverDest, dbusScreensaverLockMethod)
-			}
-			if err != nil {
-				log.Warn().Err(err).Msg("Could not lock screensaver.")
-			}
-		})
+	return mqtthass.AsButton(
+		mqtthass.NewEntity(preferences.AppName, "Lock Screensaver", device.Name+"_lock_screensaver").
+			WithOriginInfo(preferences.MQTTOrigin()).
+			WithDeviceInfo(device).
+			WithIcon("mdi:eye-lock").
+			WithCommandCallback(func(_ *paho.Publish) {
+				if dbusScreensaverPath == "" {
+					log.Warn().Msg("Could not determine screensaver method.")
+				}
+				var err error
+				if dbusScreensaverMsg != nil {
+					err = sessionDBusCall(ctx, dbus.ObjectPath(dbusScreensaverPath), dbusScreensaverDest, dbusScreensaverLockMethod, dbusScreensaverMsg)
+				} else {
+					err = sessionDBusCall(ctx, dbus.ObjectPath(dbusScreensaverPath), dbusScreensaverDest, dbusScreensaverLockMethod)
+				}
+				if err != nil {
+					log.Warn().Err(err).Msg("Could not lock screensaver.")
+				}
+			}))
 }
 
 func getDesktopEnvScreensaverConfig() (dest, path string, msg *string) {

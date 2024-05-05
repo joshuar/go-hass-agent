@@ -8,12 +8,13 @@ package power
 import (
 	"context"
 
-	MQTT "github.com/eclipse/paho.mqtt.golang"
+	"github.com/eclipse/paho.golang/paho"
 	"github.com/godbus/dbus/v5"
-	mqtthass "github.com/joshuar/go-hass-anything/v7/pkg/hass"
+	mqtthass "github.com/joshuar/go-hass-anything/v9/pkg/hass"
 	"github.com/rs/zerolog/log"
 
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/preferences"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
@@ -36,65 +37,70 @@ type commandConfig struct {
 
 var commands = map[string]commandConfig{
 	"lock_session": {
-		name:   "lock",
+		name:   "Lock Session",
 		icon:   "mdi:eye-lock",
 		method: dbusSessionLockMethod,
 	},
 	"unlock_session": {
-		name:   "unlock",
+		name:   "Unlock Session",
 		icon:   "mdi:eye-lock-open",
 		method: dbusSessionUnlockMethod,
 	},
 	"reboot": {
-		name:   "reboot",
+		name:   "Reboot",
 		icon:   "mdi:restart",
 		path:   dbus.ObjectPath("/org/freedesktop/login1"),
 		method: dbusSessionRebootMethod,
 	},
 	"suspend": {
-		name:   "suspend",
+		name:   "Suspend",
 		icon:   "mdi:power-sleep",
 		path:   dbus.ObjectPath("/org/freedesktop/login1"),
 		method: dbusSessionSuspendMethod,
 	},
 	"hibernate": {
-		name:   "hibernate",
+		name:   "Hibernate",
 		icon:   "mdi:power-sleep",
 		path:   dbus.ObjectPath("/org/freedesktop/login1"),
 		method: dbusSessionHibernateMethod,
 	},
-	"poweroff": {
-		name:   "power off",
+	"power_off": {
+		name:   "Power Off",
 		icon:   "mdi:power",
 		path:   dbus.ObjectPath("/org/freedesktop/login1"),
 		method: dbusSessionPowerOffMethod,
 	},
 }
 
-func NewPowerControl(ctx context.Context) []*mqtthass.EntityConfig {
-	var entities []*mqtthass.EntityConfig
+func NewPowerControl(ctx context.Context) []*mqtthass.ButtonEntity {
+	var entities []*mqtthass.ButtonEntity
+	device := linux.MQTTDevice()
 	sessionPath := dbusx.GetSessionPath(ctx)
 
 	for k, v := range commands {
-		var callback func(MQTT.Client, MQTT.Message)
+		var callback func(p *paho.Publish)
 		if v.path == "" {
-			callback = func(_ MQTT.Client, _ MQTT.Message) {
+			callback = func(_ *paho.Publish) {
 				err := systemDBusCall(ctx, sessionPath, dbusSessionDest, v.method)
 				if err != nil {
 					log.Warn().Err(err).Msgf("Could not %s session.", v.name)
 				}
 			}
 		} else {
-			callback = func(_ MQTT.Client, _ MQTT.Message) {
+			callback = func(_ *paho.Publish) {
 				err := systemDBusCall(ctx, v.path, dbusSessionDest, v.method, true)
 				if err != nil {
 					log.Warn().Err(err).Msg("Could not power off session.")
 				}
 			}
 		}
-		entities = append(entities, linux.NewButton(k).
-			WithIcon(v.icon).
-			WithCommandCallback(callback))
+		entities = append(entities,
+			mqtthass.AsButton(
+				mqtthass.NewEntity(preferences.AppName, v.name, device.Name+"_"+k).
+					WithOriginInfo(preferences.MQTTOrigin()).
+					WithDeviceInfo(device).
+					WithIcon(v.icon).
+					WithCommandCallback(callback)))
 	}
 	return entities
 }

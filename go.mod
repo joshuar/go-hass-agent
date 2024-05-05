@@ -5,7 +5,7 @@ go 1.22.0
 require (
 	fyne.io/fyne/v2 v2.4.5
 	github.com/cenkalti/backoff/v4 v4.3.0
-	github.com/eclipse/paho.mqtt.golang v1.4.3
+	github.com/eclipse/paho.golang v0.21.0
 	github.com/go-playground/validator/v10 v10.19.0
 	github.com/godbus/dbus/v5 v5.1.0
 	github.com/grandcat/zeroconf v1.0.0
@@ -27,11 +27,10 @@ require (
 require (
 	github.com/dolthub/maphash v0.1.0 // indirect
 	github.com/gorilla/websocket v1.5.1 // indirect
-	github.com/kr/text v0.2.0 // indirect
 	github.com/mandykoh/go-parallel v0.1.0 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
 	go.uber.org/multierr v1.9.0 // indirect
-	golang.org/x/sync v0.7.0 // indirect
+	golang.org/x/exp v0.0.0-20240416160154-fe59bbe5cc7f // indirect
 )
 
 require (
@@ -55,7 +54,7 @@ require (
 	github.com/go-text/typesetting v0.1.0 // indirect
 	github.com/gopherjs/gopherjs v1.17.2 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/joshuar/go-hass-anything/v7 v7.2.0
+	github.com/joshuar/go-hass-anything/v9 v9.1.0
 	github.com/jsummers/gobmp v0.0.0-20151104160322-e2ba15ffa76e // indirect
 	github.com/klauspost/compress v1.17.5 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect

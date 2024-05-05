@@ -12,7 +12,7 @@ import (
 	"github.com/robfig/cron/v3"
 	"github.com/rs/zerolog/log"
 
-	mqttapi "github.com/joshuar/go-hass-anything/v7/pkg/mqtt"
+	mqttapi "github.com/joshuar/go-hass-anything/v9/pkg/mqtt"
 
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass"
@@ -163,19 +163,40 @@ func runMQTTWorker(ctx context.Context) {
 		return
 	}
 
-	o := newMQTTObject(ctx)
-
-	client, err := mqttapi.NewClient(ctx, prefs, o)
-	if err != nil {
-		log.Error().Err(err).Msg("Could not start MQTT client.")
+	// Create an MQTT device for this operating system and run its Setup.
+	mqttDevice := newMQTTDevice(ctx)
+	if err := mqttDevice.Setup(ctx); err != nil {
+		log.Error().Err(err).Msg("Could not set up device MQTT functionality.")
 		return
 	}
 
-	go func() {
-		o.Run(ctx, client)
-	}()
+	// Create a new connection to the MQTT broker. This will also publish the
+	// device subscriptions.
+	client, err := mqttapi.NewClient(ctx, prefs, mqttDevice.Subscriptions(), mqttDevice.Configs())
+	if err != nil {
+		log.Error().Err(err).Msg("Could not connect to MQTT broker.")
+		return
+	}
 
-	log.Debug().Msg("Listening for events on MQTT.")
+	// Publish the device configs.
+	log.Debug().Msg("Publishing configs.")
+	if err := client.Publish(mqttDevice.Configs()...); err != nil {
+		log.Error().Err(err).Msg("Failed to publish configuration messages.")
+	}
+
+	go func() {
+		log.Debug().Msg("Listening for messages to publish to MQTT.")
+		for {
+			select {
+			case msg := <-mqttDevice.Msgs():
+				if err := client.Publish(msg); err != nil {
+					log.Warn().Err(err).Msg("Unable to publish message to MQTT.")
+				}
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
 
 	<-ctx.Done()
 }
@@ -190,15 +211,15 @@ func resetMQTTWorker(ctx context.Context) {
 		return
 	}
 
-	o := newMQTTObject(ctx)
+	mqttDevice := newMQTTDevice(ctx)
 
-	c, err := mqttapi.NewClient(ctx, prefs, o)
+	c, err := mqttapi.NewClient(ctx, prefs, nil, nil)
 	if err != nil {
-		log.Error().Err(err).Msg("Could not start MQTT client.")
+		log.Error().Err(err).Msg("Could not connect to MQTT broker.")
 		return
 	}
 
-	if err := c.Unpublish(o.Configuration()...); err != nil {
+	if err := c.Unpublish(mqttDevice.Configs()...); err != nil {
 		log.Error().Err(err).Msg("Failed to reset MQTT.")
 	}
 }

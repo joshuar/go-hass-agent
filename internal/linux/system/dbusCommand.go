@@ -9,9 +9,9 @@ import (
 	"context"
 	"encoding/json"
 
-	MQTT "github.com/eclipse/paho.mqtt.golang"
+	"github.com/eclipse/paho.golang/paho"
 	"github.com/godbus/dbus/v5"
-	mqttapi "github.com/joshuar/go-hass-anything/v7/pkg/mqtt"
+	mqttapi "github.com/joshuar/go-hass-anything/v9/pkg/mqtt"
 	"github.com/rs/zerolog/log"
 
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
@@ -32,10 +32,10 @@ type dbusCommandMsg struct {
 
 func NewDBusCommandSubscription(ctx context.Context) *mqttapi.Subscription {
 	return &mqttapi.Subscription{
-		Callback: func(_ MQTT.Client, msg MQTT.Message) {
+		Callback: func(p *paho.Publish) {
 			var dbusMsg dbusCommandMsg
 
-			if err := json.Unmarshal(msg.Payload(), &dbusMsg); err != nil {
+			if err := json.Unmarshal(p.Payload, &dbusMsg); err != nil {
 				log.Warn().Err(err).Msg("could not unmarshal dbus MQTT message")
 				return
 			}
