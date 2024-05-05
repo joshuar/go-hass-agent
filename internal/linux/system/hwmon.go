@@ -7,8 +7,6 @@ package system
 
 import (
 	"context"
-	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -30,14 +28,12 @@ type hwSensor struct {
 }
 
 func (s *hwSensor) asBool(h *hwmon.Sensor) {
-	// we don't care if the value cannot be parsed, treat it as false
-	value, _ := strconv.ParseBool(fmt.Sprint(int(h.Value())))
-	if value {
+	s.Value = h.Value()
+	if v, ok := s.Value.(bool); ok && v {
 		s.IconString = "mdi:alarm-light"
 	} else {
 		s.IconString = "mdi:alarm-light-off"
 	}
-	s.Value = value
 	s.IsBinary = true
 }
 
@@ -97,6 +93,8 @@ func newHWSensor(s *hwmon.Sensor) *hwSensor {
 
 func HWSensorUpdater(ctx context.Context) chan sensor.Details {
 	sensorCh := make(chan sensor.Details)
+
+	// update will fetch all hardware sensors and send them to Home Assistant.
 	update := func(_ time.Duration) {
 		allSensors, err := hwmon.GetAllSensors()
 		if err != nil && len(allSensors) > 0 {
@@ -107,11 +105,19 @@ func HWSensorUpdater(ctx context.Context) chan sensor.Details {
 			return
 		}
 		for _, s := range allSensors {
-			hwSensor := newHWSensor(s)
-			sensorCh <- hwSensor
+			go func(s *hwmon.Sensor) {
+				hwSensor := newHWSensor(s)
+				sensorCh <- hwSensor
+			}(s)
 		}
 	}
 
+	// send all sensors as an initial update
+	go func() {
+		update(0)
+	}()
+
+	// continue sending sensors on an interval
 	go helpers.PollSensors(ctx, update, time.Minute, time.Second*5)
 	go func() {
 		defer close(sensorCh)

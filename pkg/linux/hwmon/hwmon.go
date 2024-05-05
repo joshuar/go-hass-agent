@@ -14,6 +14,7 @@ import (
 	"sync"
 
 	"github.com/iancoleman/strcase"
+	"github.com/rs/zerolog/log"
 	"github.com/sourcegraph/conc/pool"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -44,22 +45,9 @@ type SensorType int
 // API. These are retrieved from the directories in the sysfs /sys/devices tree
 // under /sys/class/hwmon/hwmon*.
 type Chip struct {
-	// Name is the descriptive label for the chip, if any.
-	Name string
-	// Sensors is a slice of all sensors exposed by this chip.
+	Name    string
+	id      string
 	Sensors []*Sensor
-	chipID  int
-}
-
-// update ensures the chip name is unique. This is needed for some drivers that
-// duplicate chip names (for example drivetemp, which exposes any temperature
-// sensors for disk drives with each drive having the chip name "drivetemp").
-func (c *Chip) update(newID int) {
-	c.chipID = newID
-	c.Name += " " + strconv.Itoa(c.chipID)
-	for i := range c.Sensors {
-		c.Sensors[i].chip = c.Name
-	}
 }
 
 func processChip(path string) (*Chip, error) {
@@ -70,6 +58,7 @@ func processChip(path string) (*Chip, error) {
 
 	c := &Chip{
 		Name: n,
+		id:   filepath.Base(path),
 	}
 
 	sensors, err := getSensors(path)
@@ -90,17 +79,9 @@ func GetAllChips() ([]*Chip, error) {
 	}
 
 	p := pool.New().WithErrors()
-	lastID := make(map[string]int)
-	var mu sync.Mutex
 	for _, f := range files {
 		p.Go(func() error {
 			chip, err := processChip(filepath.Join(hwmonPath, f.Name()))
-			mu.Lock()
-			defer mu.Unlock()
-			if _, ok := lastID[chip.Name]; ok {
-				lastID[chip.Name]++
-			}
-			chip.update(lastID[chip.Name])
 			chips = append(chips, chip)
 			return err
 		})
@@ -114,7 +95,8 @@ func GetAllChips() ([]*Chip, error) {
 // a name. The Sensor will also have a value. It may also have zero or more
 // Attributes, which are additional measurements like max/min/avg of the value.
 type Sensor struct {
-	chip        string
+	chipLabel   string
+	chipID      string
 	deviceModel string
 	label       string
 	id          string
@@ -125,44 +107,100 @@ type Sensor struct {
 	// values for the sensor.
 	Attributes  []Attribute
 	scaleFactor float64
-	value       float64
 	SensorType  SensorType
 }
 
-// Value returns the sensor value.
-func (s *Sensor) Value() float64 {
-	return s.value / s.scaleFactor
-}
-
-// Name returns a name for the sensor. It will be derived from the chip name
-// plus either any label, else name of the sensor itself.
-func (s *Sensor) Name() string {
-	c := cases.Title(language.AmericanEnglish)
-	var chipFormatted string
-	if s.deviceModel != "" {
-		chipFormatted = s.deviceModel
-	} else {
-		chipFormatted = c.String(strings.ReplaceAll(s.chip, "_", " "))
-	}
-	idFormatted := c.String(s.id)
-	labelFormatted := c.String(s.label)
-	switch {
-	case s.SensorType == Alarm || s.SensorType == Intrusion:
-		return chipFormatted + " " + idFormatted + " " + labelFormatted
-	case s.label != "":
-		return chipFormatted + " " + labelFormatted
+// Value returns the sensor value. This will be either a bool for alarm and
+// intrusion sensors, or a float64 for all other types of sensors.
+func (s *Sensor) Value() any {
+	var path string
+	switch s.SensorType {
+	case Alarm:
+		path = filepath.Join(s.SysFSPath, s.id+"_alarm")
+		value, err := getValueAsBool(path)
+		if err != nil {
+			log.Debug().Err(err).Str("sensor", s.Name()).Msg("Problem fetching sensor value.")
+			return nil
+		}
+		return value
+	case Intrusion:
+		path = filepath.Join(s.SysFSPath, s.id+"_intrusion")
+		value, err := getValueAsBool(path)
+		if err != nil {
+			log.Debug().Err(err).Str("sensor", s.Name()).Msg("Problem fetching sensor value.")
+			return nil
+		}
+		return value
 	default:
-		return chipFormatted + " " + idFormatted
+		path = filepath.Join(s.SysFSPath, s.id+"_input")
+		value, err := getValueAsFloat(path)
+		if err != nil {
+			log.Debug().Err(err).Str("sensor", s.Name()).Msg("Problem fetching sensor value.")
+			return 0.0
+		}
+		return value / s.scaleFactor
 	}
 }
 
-// ID returns a string that can be used as a unique identifier for this sensor.
-// It combines the chip name and sensor id from hwmon to create a unique string.
-func (s *Sensor) ID() string {
-	if s.SensorType == Alarm || s.SensorType == Intrusion {
-		return strcase.ToSnake(s.chip + "_" + s.id + "_" + s.SensorType.String())
+// Name returns a formatted string as the name for the sensor. It will be
+// derived from the chip name plus either any label, else name of the sensor
+// itself.
+func (s *Sensor) Name() string {
+	capitaliser := cases.Title(language.English)
+	var name strings.Builder
+	if s.deviceModel != "" {
+		name.WriteString(s.deviceModel)
+	} else {
+		name.WriteString("Hardware Sensor")
+		if s.chipLabel != "" {
+			name.WriteString(" ")
+			name.WriteString(capitaliser.String(strings.ReplaceAll(s.chipLabel, "_", " ")))
+		}
 	}
-	return strcase.ToSnake(s.chip + "_" + s.id)
+	name.WriteString(" ")
+	if s.SensorType == Alarm || s.SensorType == Intrusion {
+		if !strings.Contains(s.id, "_") {
+			name.WriteString(capitaliser.String(s.id))
+			name.WriteString(" ")
+		}
+		name.WriteString(capitaliser.String(s.label))
+	} else {
+		if s.label != "" {
+			name.WriteString(capitaliser.String(s.label))
+		} else {
+			name.WriteString(capitaliser.String(s.id))
+		}
+	}
+	return name.String()
+}
+
+// Chip returns a formatted string for identifying the chip to which this sensor
+// belongs.
+func (s *Sensor) Chip() string {
+	if s.deviceModel != "" {
+		return s.deviceModel
+	}
+	if s.chipLabel != "" {
+		return s.chipLabel
+	}
+	return s.chipID
+}
+
+// ID returns a formatted string that can be used as a unique identifier for
+// this sensor. This will be some combination of the chip and sensor details, as
+// appropriate.
+func (s *Sensor) ID() string {
+	var id strings.Builder
+	id.WriteString(s.chipID)
+	id.WriteString("_")
+	id.WriteString(s.chipLabel)
+	id.WriteString("_")
+	id.WriteString(s.id)
+	if s.SensorType == Alarm || s.SensorType == Intrusion {
+		id.WriteString("_")
+		id.WriteString(s.SensorType.String())
+	}
+	return strcase.ToSnake(id.String())
 }
 
 // Units returns the units for the value of this sensor.
@@ -173,7 +211,7 @@ func (s *Sensor) Units() string {
 // String will format the sensor name and value as a pretty string.
 func (s *Sensor) String() string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "%s: %.3f %s [%s] (id: %s, path: %s)", s.Name(), s.Value(), s.Units(), s.SensorType, s.ID(), s.SysFSPath)
+	fmt.Fprintf(&b, "%s: %v %s [%s] (id: %s, path: %s, chip: %s)", s.Name(), s.Value(), s.Units(), s.SensorType, s.ID(), s.SysFSPath, s.Chip())
 	for i, a := range s.Attributes {
 		if i == 0 {
 			fmt.Fprintf(&b, " (")
@@ -190,35 +228,26 @@ func (s *Sensor) String() string {
 }
 
 func (s *Sensor) updateFromFile(file *sensorFile) error {
+	path := filepath.Join(file.path, file.filename)
 	switch {
+	case file.sensorAttr == "input":
 	case file.sensorAttr == "label":
-		l, err := file.getValueAsString()
+		l, err := getValueAsString(path)
 		if err != nil {
 			return err
 		}
 		s.label = l
-	case file.sensorAttr == "input":
-		v, err := file.getValueAsFloat()
-		if err != nil {
-			return err
-		}
-		s.value = v
 	case strings.Contains(file.sensorAttr, "alarm"):
-		v, err := file.getValueAsFloat()
-		if err != nil {
-			return err
+		if b, _, ok := strings.Cut(file.sensorAttr, "_"); ok {
+			s.label = file.sensorType + " " + b + " Alarm"
+			s.id += "_" + b
+		} else {
+			s.label = "Alarm"
 		}
-		s.value = v
-		s.label = "alarm"
 	case strings.Contains(file.sensorAttr, "intrusion"):
-		v, err := file.getValueAsFloat()
-		if err != nil {
-			return err
-		}
-		s.value = v
 		s.label = "intrusion"
 	default:
-		v, err := file.getValueAsFloat()
+		v, err := getValueAsFloat(path)
 		if err != nil {
 			return err
 		}
@@ -244,18 +273,6 @@ type sensorFile struct {
 	filename   string
 	sensorType string
 	sensorAttr string
-}
-
-func (f *sensorFile) getValueAsString() (string, error) {
-	return getFileContents(filepath.Join(f.path, f.filename))
-}
-
-func (f *sensorFile) getValueAsFloat() (float64, error) {
-	strValue, err := getFileContents(filepath.Join(f.path, f.filename))
-	if err != nil {
-		return 0, err
-	}
-	return strconv.ParseFloat(strValue, 64)
 }
 
 func (f *sensorFile) getSensorType() (sensorType SensorType, scaleFactor float64, units string) {
@@ -294,10 +311,12 @@ func getSensors(path string) ([]*Sensor, error) {
 	}
 
 	// retrieve the chip name
-	chip, err := getFileContents(filepath.Join(path, "name"))
-	if err != nil {
-		return nil, err
+	var chipLabel, chipID string
+	l, err := getFileContents(filepath.Join(path, "name"))
+	if err == nil {
+		chipLabel = l
 	}
+	chipID = filepath.Base(path)
 
 	var deviceModel string
 	fh, err := os.Stat(filepath.Join(path, "device", "model"))
@@ -344,7 +363,8 @@ func getSensors(path string) ([]*Sensor, error) {
 			}
 			// otherwise, its a new sensor, start tracking it
 			allSensors[trackerID] = &Sensor{
-				chip:        chip,
+				chipLabel:   chipLabel,
+				chipID:      chipID,
 				deviceModel: deviceModel,
 				id:          sensorFile.sensorType,
 				SensorType:  t,
@@ -386,4 +406,24 @@ func getFileContents(p string) (string, error) {
 		return "unknown", err
 	}
 	return strings.TrimSpace(string(b)), nil
+}
+
+func getValueAsString(p string) (string, error) {
+	return getFileContents(p)
+}
+
+func getValueAsFloat(p string) (float64, error) {
+	strValue, err := getFileContents(p)
+	if err != nil {
+		return 0, err
+	}
+	return strconv.ParseFloat(strValue, 64)
+}
+
+func getValueAsBool(p string) (bool, error) {
+	strValue, err := getFileContents(p)
+	if err != nil {
+		return false, err
+	}
+	return strconv.ParseBool(strValue)
 }
