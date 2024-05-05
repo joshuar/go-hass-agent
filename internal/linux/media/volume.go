@@ -9,26 +9,28 @@ import (
 	"context"
 	"strconv"
 
-	MQTT "github.com/eclipse/paho.mqtt.golang"
 	"mrogalski.eu/go/pulseaudio"
 
-	mqtthass "github.com/joshuar/go-hass-anything/v7/pkg/hass"
-	mqttapi "github.com/joshuar/go-hass-anything/v7/pkg/mqtt"
+	"github.com/eclipse/paho.golang/paho"
+	mqtthass "github.com/joshuar/go-hass-anything/v9/pkg/hass"
+	mqttapi "github.com/joshuar/go-hass-anything/v9/pkg/mqtt"
 
 	"github.com/rs/zerolog/log"
 
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
 type audioDevice struct {
 	pulseAudio *pulseaudio.Client
-	topics     *mqtthass.Topics
-	msgCh      chan mqttapi.Msg
-	volume     float64
+	stateTopic string
+	msgCh      chan *mqttapi.Msg
+	volume     int
 }
 
-func VolumeControl(ctx context.Context, msgCh chan mqttapi.Msg) []*mqtthass.EntityConfig {
-	var entities []*mqtthass.EntityConfig
+func VolumeControl(ctx context.Context, msgCh chan *mqttapi.Msg) *mqtthass.NumberEntity[int] {
+	device := linux.MQTTDevice()
+
 	client, err := pulseaudio.NewClient()
 	if err != nil {
 		log.Warn().Err(err).Msg("Unable to connect to Pulseaudio. Volume control will be unavailable.")
@@ -40,12 +42,21 @@ func VolumeControl(ctx context.Context, msgCh chan mqttapi.Msg) []*mqtthass.Enti
 		msgCh:      msgCh,
 	}
 
-	volCtrl := linux.NewSlider("volume", 1, 0, 100).
-		WithIcon("mdi:knob").
-		WithCommandCallback(audioDev.parseVolume).
-		WithValueTemplate("{{ value_json.value }}")
-	audioDev.topics = volCtrl.GetTopics()
-	entities = append(entities, volCtrl)
+	volCtrl := mqtthass.AsNumber(
+		mqtthass.NewEntity(preferences.AppName, "Volume", device.Name+"_volume").
+			WithOriginInfo(preferences.MQTTOrigin()).
+			WithDeviceInfo(device).
+			WithIcon("mdi:knob").
+			WithCommandCallback(audioDev.parseVolume).
+			WithValueTemplate("{{ value_json.value }}"),
+		1, 0, 100, mqtthass.NumberSlider)
+	audioDev.stateTopic = volCtrl.StateTopic
+	// muteCtl := linux.NewToggle("volume_mute").
+	// 	WithIcon("mdi:volume-mute").
+	// 	WithCommandCallback(audioDev.parseVolume).
+	// 	WithValueTemplate("{{ value_json.value }}")
+	// audioDev.topics = volCtrl.GetTopics()
+	// entities = append(entities, volCtrl)
 
 	if _, err := audioDev.getVolume(); err != nil {
 		log.Warn().Err(err).Msg("Could not get volume.")
@@ -58,7 +69,6 @@ func VolumeControl(ctx context.Context, msgCh chan mqttapi.Msg) []*mqtthass.Enti
 		events, err := client.Updates()
 		if err != nil {
 			log.Warn().Err(err).Msg("Cannot monitor Pulseaudio.")
-			entities = nil
 			return
 		}
 		log.Debug().Msg("Monitoring pulseaudio for events.")
@@ -77,23 +87,25 @@ func VolumeControl(ctx context.Context, msgCh chan mqttapi.Msg) []*mqtthass.Enti
 			}
 		}
 	}()
-	return entities
+	return volCtrl
 }
 
 func (d *audioDevice) getVolume() (bool, error) {
-	newVol, err := d.pulseAudio.Volume()
+	v, err := d.pulseAudio.Volume()
+	newVol := int(v * 100)
 	if err != nil {
 		return false, err
 	}
-	if newVol != float32(d.volume) {
-		d.volume = float64(newVol * 100)
+	if newVol != d.volume {
+		d.volume = newVol
 		return true, nil
 	}
 	return false, nil
 }
 
-func (d *audioDevice) setVolume(v float64) error {
-	if err := d.pulseAudio.SetVolume(float32(v)); err != nil {
+func (d *audioDevice) setVolume(v int) error {
+	newVol := float32(v) / 100
+	if err := d.pulseAudio.SetVolume(newVol); err != nil {
 		return err
 	}
 	d.volume = v
@@ -101,16 +113,16 @@ func (d *audioDevice) setVolume(v float64) error {
 }
 
 func (d *audioDevice) publishVolume() {
-	msg := mqttapi.NewMsg(d.topics.State, []byte(`{ "value": `+strconv.FormatFloat(d.volume, 'f', -1, 64)+` }`))
-	d.msgCh <- *msg
+	msg := mqttapi.NewMsg(d.stateTopic, []byte(`{ "value": `+strconv.Itoa(d.volume)+` }`))
+	d.msgCh <- msg
 }
 
-func (d *audioDevice) parseVolume(_ MQTT.Client, msg MQTT.Message) {
-	if newValue, err := strconv.ParseFloat(string(msg.Payload()), 64); err != nil {
+func (d *audioDevice) parseVolume(p *paho.Publish) {
+	if newValue, err := strconv.Atoi(string(p.Payload)); err != nil {
 		log.Warn().Err(err).Msg("Could not parse new volume level.")
 	} else {
-		log.Trace().Float64("volume", newValue).Msg("Received volume change from Home Assistant.")
-		if err := d.setVolume(newValue / 100); err != nil {
+		log.Trace().Int("volume", newValue).Msg("Received volume change from Home Assistant.")
+		if err := d.setVolume(newValue); err != nil {
 			log.Warn().Err(err).Msg("Could not set volume level.")
 			return
 		}

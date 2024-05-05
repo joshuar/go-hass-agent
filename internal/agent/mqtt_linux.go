@@ -8,35 +8,110 @@ package agent
 import (
 	"context"
 
-	mqtthass "github.com/joshuar/go-hass-anything/v7/pkg/hass"
-	mqttapi "github.com/joshuar/go-hass-anything/v7/pkg/mqtt"
+	mqtthass "github.com/joshuar/go-hass-anything/v9/pkg/hass"
+	mqttapi "github.com/joshuar/go-hass-anything/v9/pkg/mqtt"
+	"github.com/rs/zerolog/log"
 
 	"github.com/joshuar/go-hass-agent/internal/linux/media"
 	"github.com/joshuar/go-hass-agent/internal/linux/power"
 	"github.com/joshuar/go-hass-agent/internal/linux/system"
 )
 
-// newMQTTObject creates an MQTT object for the agent to use for this operating
-// system (Linux).
-func newMQTTObject(ctx context.Context) *mqttObj {
-	var entities []*mqtthass.EntityConfig
-	var subscriptions []*mqttapi.Subscription
+type linuxMQTTDevice struct {
+	msgs     chan *mqttapi.Msg
+	sensors  []*mqtthass.SensorEntity
+	buttons  []*mqtthass.ButtonEntity
+	numbers  []*mqtthass.NumberEntity[int]
+	switches []*mqtthass.SwitchEntity
+	controls []*mqttapi.Subscription
+}
 
-	msgCh := make(chan mqttapi.Msg)
+func (d *linuxMQTTDevice) Subscriptions() []*mqttapi.Subscription {
+	var subs []*mqttapi.Subscription
 
-	// Add screensaver/screenlock control.
-	entities = append(entities, power.NewScreenLockControl(ctx))
-	// Add power controls (poweroff, reboot, suspend, etc.).
-	entities = append(entities, power.NewPowerControl(ctx)...)
-	// Add volume control
-	entities = append(entities, media.VolumeControl(ctx, msgCh)...)
-
-	// Add subscription for issuing D-Bus commands to the Linux device.
-	subscriptions = append(subscriptions, system.NewDBusCommandSubscription(ctx))
-
-	return &mqttObj{
-		entities:      entities,
-		subscriptions: subscriptions,
-		msgCh:         msgCh,
+	for _, button := range d.buttons {
+		if sub, err := button.MarshalSubscription(); err != nil {
+			log.Warn().Err(err).Str("entity", button.Name).Msg("Could not create subscription.")
+		} else {
+			subs = append(subs, sub)
+		}
 	}
+	for _, number := range d.numbers {
+		if sub, err := number.MarshalSubscription(); err != nil {
+			log.Warn().Err(err).Str("entity", number.Name).Msg("Could not create subscription.")
+		} else {
+			subs = append(subs, sub)
+		}
+	}
+	for _, sw := range d.switches {
+		if sub, err := sw.MarshalSubscription(); err != nil {
+			log.Warn().Err(err).Str("entity", sw.Name).Msg("Could not create subscription.")
+		} else {
+			subs = append(subs, sub)
+		}
+	}
+
+	subs = append(subs, d.controls...)
+
+	return subs
+}
+
+func (d *linuxMQTTDevice) Configs() []*mqttapi.Msg {
+	var configs []*mqttapi.Msg
+
+	for _, sensor := range d.sensors {
+		if sub, err := sensor.MarshalConfig(); err != nil {
+			log.Warn().Err(err).Str("entity", sensor.Name).Msg("Could not create subscription.")
+		} else {
+			configs = append(configs, sub)
+		}
+	}
+	for _, button := range d.buttons {
+		if sub, err := button.MarshalConfig(); err != nil {
+			log.Warn().Err(err).Str("entity", button.Name).Msg("Could not create subscription.")
+		} else {
+			configs = append(configs, sub)
+		}
+	}
+	for _, number := range d.numbers {
+		if sub, err := number.MarshalConfig(); err != nil {
+			log.Warn().Err(err).Str("entity", number.Name).Msg("Could not create subscription.")
+		} else {
+			configs = append(configs, sub)
+		}
+	}
+	for _, sw := range d.switches {
+		if sub, err := sw.MarshalConfig(); err != nil {
+			log.Warn().Err(err).Str("entity", sw.Name).Msg("Could not create subscription.")
+		} else {
+			configs = append(configs, sub)
+		}
+	}
+
+	return configs
+}
+
+func (d *linuxMQTTDevice) Msgs() chan *mqttapi.Msg {
+	return d.msgs
+}
+
+func (d *linuxMQTTDevice) Setup(_ context.Context) error {
+	return nil
+}
+
+func newMQTTDevice(ctx context.Context) *linuxMQTTDevice {
+	dev := &linuxMQTTDevice{
+		msgs: make(chan *mqttapi.Msg),
+	}
+
+	// Add the power controls (suspend, resume, poweroff, etc.).
+	dev.buttons = append(dev.buttons, power.NewPowerControl(ctx)...)
+	// Add the screen lock controls.
+	dev.buttons = append(dev.buttons, power.NewScreenLockControl(ctx))
+	// Add the volume controls.
+	dev.numbers = append(dev.numbers, media.VolumeControl(ctx, dev.Msgs()))
+	// Add the D-Bus command action.
+	dev.controls = append(dev.controls, system.NewDBusCommandSubscription(ctx))
+
+	return dev
 }

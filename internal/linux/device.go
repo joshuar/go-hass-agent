@@ -10,8 +10,11 @@ import (
 	"os/user"
 	"strings"
 
+	mqtthass "github.com/joshuar/go-hass-anything/v9/pkg/hass"
 	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v3/host"
+
+	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
 type Device struct {
@@ -99,6 +102,18 @@ func NewDevice(name, version string) *Device {
 		hostname:   getHostname(),
 		hwVendor:   getHWVendor(),
 		hwModel:    getHWModel(),
+	}
+}
+
+func MQTTDevice() *mqtthass.Device {
+	dev := NewDevice(preferences.AppName, preferences.AppVersion)
+	return &mqtthass.Device{
+		Name:         dev.DeviceName(),
+		URL:          preferences.AppURL,
+		SWVersion:    dev.OsVersion(),
+		Manufacturer: dev.Manufacturer(),
+		Model:        dev.Model(),
+		Identifiers:  []string{dev.DeviceID()},
 	}
 }
 

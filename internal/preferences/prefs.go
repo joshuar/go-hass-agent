@@ -12,7 +12,7 @@ import (
 	"sync"
 
 	"github.com/adrg/xdg"
-	mqtthass "github.com/joshuar/go-hass-anything/v7/pkg/hass"
+	mqtthass "github.com/joshuar/go-hass-anything/v9/pkg/hass"
 	"github.com/pelletier/go-toml/v2"
 	"github.com/sourcegraph/conc/pool"
 )
