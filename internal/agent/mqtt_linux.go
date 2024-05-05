@@ -109,7 +109,9 @@ func newMQTTDevice(ctx context.Context) *linuxMQTTDevice {
 	// Add the screen lock controls.
 	dev.buttons = append(dev.buttons, power.NewScreenLockControl(ctx))
 	// Add the volume controls.
-	dev.numbers = append(dev.numbers, media.VolumeControl(ctx, dev.Msgs()))
+	volEntity, muteEntity := media.VolumeControl(ctx, dev.Msgs())
+	dev.numbers = append(dev.numbers, volEntity)
+	dev.switches = append(dev.switches, muteEntity)
 	// Add the D-Bus command action.
 	dev.controls = append(dev.controls, system.NewDBusCommandSubscription(ctx))
 
