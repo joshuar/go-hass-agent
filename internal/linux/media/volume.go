@@ -12,7 +12,6 @@ import (
 
 	"mrogalski.eu/go/pulseaudio"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/eclipse/paho.golang/paho"
 	mqtthass "github.com/joshuar/go-hass-anything/v9/pkg/hass"
 	mqttapi "github.com/joshuar/go-hass-anything/v9/pkg/mqtt"
@@ -61,7 +60,6 @@ func VolumeControl(ctx context.Context, msgCh chan *mqttapi.Msg) (*mqtthass.Numb
 			WithStateCallback(audioDev.muteStateCallback).
 			WithValueTemplate("{{ value }}"),
 		true)
-	spew.Dump(audioDev.muteEntity)
 
 	if _, err := audioDev.getVolume(); err != nil {
 		log.Warn().Err(err).Msg("Could not get volume.")
@@ -172,7 +170,6 @@ func (d *audioDevice) muteStateCallback(_ ...any) (json.RawMessage, error) {
 }
 
 func (d *audioDevice) muteCommandCallback(p *paho.Publish) {
-	spew.Dump(p)
 	state := string(p.Payload)
 	switch state {
 	case "ON":
