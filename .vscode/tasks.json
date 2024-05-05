@@ -6,7 +6,7 @@
       {
         "label": "MQTT: Watch 'homeassistant/#'",
         "type": "shell",
-        "command": "mosquitto_sub -h 127.0.0.1 -v -t \"homeassistant/#\"",
+        "command": "mosquitto_sub -h mosquitto -v -t \"homeassistant/#\"",
         "group": "none",
         "presentation": {
           "reveal": "always",
