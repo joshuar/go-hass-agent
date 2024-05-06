@@ -61,9 +61,6 @@ func VolumeControl(ctx context.Context, msgCh chan *mqttapi.Msg) (*mqtthass.Numb
 			WithValueTemplate("{{ value }}"),
 		true)
 
-	if _, err := audioDev.getVolume(); err != nil {
-		log.Warn().Err(err).Msg("Could not get volume.")
-	}
 	go func() {
 		audioDev.publishVolume()
 		audioDev.publishMute()
