@@ -16,7 +16,7 @@ require (
 	github.com/pelletier/go-toml/v2 v2.2.1
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/rs/zerolog v1.32.0
-	github.com/shirou/gopsutil/v3 v3.24.3
+	github.com/shirou/gopsutil/v3 v3.24.4
 	github.com/sourcegraph/conc v0.3.0
 	github.com/spf13/cobra v1.8.0
 	github.com/stretchr/testify v1.9.0
@@ -79,7 +79,7 @@ require (
 	golang.org/x/image v0.11.0 // indirect
 	golang.org/x/mobile v0.0.0-20230531173138-3c911d8e3eda // indirect
 	golang.org/x/net v0.23.0 // indirect
-	golang.org/x/sys v0.18.0 // indirect
+	golang.org/x/sys v0.19.0 // indirect
 	honnef.co/go/js/dom v0.0.0-20210725211120-f030747120f2 // indirect
 	mrogalski.eu/go/pulseaudio v0.0.0-20240327130323-384e01075e6e
 )
