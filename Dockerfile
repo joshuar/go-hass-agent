@@ -10,10 +10,21 @@ WORKDIR /usr/src/go-hass-agent
 ADD . .
 
 # add dpkg filters
-RUN cp assets/dpkg-filters /etc/dpkg/dpkg.cfg.d/container-filters
+COPY <<EOF /etc/dpkg/dpkg.cfg.d/excludes
+# Drop all man pages
+path-exclude=/usr/share/man/*
+# Drop all translations
+path-exclude=/usr/share/locale/*/LC_MESSAGES/*.mo
+# Drop all documentation ...
+path-exclude=/usr/share/doc/*
+# ... except copyright files ...
+path-include=/usr/share/doc/*/copyright
+# ... and Debian changelogs for native & non-native packages
+path-include=/usr/share/doc/*/changelog.*
+EOF
 
 # https://developer.fyne.io/started/#prerequisites
-ENV DEBIAN_FRONTEND=noninteractive
+ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get -y install gcc pkg-config libgl1-mesa-dev xorg-dev && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
 
 # install build dependencies
@@ -23,7 +34,7 @@ RUN go install github.com/matryer/moq@latest && \
 
 # build the binary
 RUN go generate ./... && \
-  go build -v -o /go/bin/go-hass-agent && \
+  go build -o /go/bin/go-hass-agent && \
   go clean -cache -modcache && \
   rm -fr /usr/src/go-hass-agent
 
@@ -31,7 +42,7 @@ RUN go generate ./... && \
 RUN apt-get -y remove gcc pkg-config libgl1-mesa-dev xorg-dev && apt-get -y autoremove
 
 # reinstall minimum libraries for running
-RUN apt-get -y update && apt-get -y install libx11-6 libgl1-mesa-glx && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
+RUN apt-get -y update && apt-get -y install libx11-6 libgl1-mesa-glx dbus-x11 && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
 
 # create a user to run the agent
 RUN useradd -ms /bin/bash gouser
