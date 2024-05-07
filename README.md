@@ -33,7 +33,7 @@ This app will add some sensors to a Home Assistant instance:
   IP addresses and Wi-Fi details where relevant).
 - Network transfer rates.
 - Memory and swap usage (total/free/used).
-- Disk usage.
+- Disk space usage and IO counts/rates.
 - Load Averages.
 - Uptime.
 - Current power profile (Linux only)

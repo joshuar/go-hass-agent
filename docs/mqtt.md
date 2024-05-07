@@ -57,6 +57,8 @@ service call.
 | Hibernate | Will (instantly) hibernate (the system state is saved to disk and the machine is powered down) the device running Go Hass Agent | 
 | Power Off | Will (instantly) power off the device running Go Hass Agent |
 | Reboot | Will (instantly) reboot the device running Go Hass Agent |
+| Volume Control | Adjust the volume on the default audio output device |
+| Volume Mute | Mute/Unmute the default audio output device |
 
 ## Security
 
