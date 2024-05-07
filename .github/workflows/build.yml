@@ -184,9 +184,9 @@ jobs:
       - name: Build container image
         id: build_image
         run: |
-          for t in ${{ steps.docker_metadata.outputs.tags }}; do tags="${tags} --tag ${t}"; done
+          for t in ${DOCKER_METADATA_OUPUT_TAGS}; do tags="${tags} --tag ${t}"; done
           tags="${tags} --tag ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ env.APPVERSION }}"
-          for l in ${{ steps.docker_metadata.outputs.labels }}; do labels="${labels} --label ${l}"; done
+          for l in ${DOCKER_METADATA_OUTPUT_LABELS}; do labels="${labels} --label ${l}"; done
           podman build --file Dockerfile ${labels} ${tags}
 
         # uses: redhat-actions/buildah-build@v2
