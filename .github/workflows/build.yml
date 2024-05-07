@@ -145,6 +145,12 @@ jobs:
   build_container:
     needs: check_release
     runs-on: ubuntu-20.04
+    # strategy:
+    #   matrix:
+    #     platform:
+    #       - linux/amd64
+    #       - linux/arm/v7
+    #       - linux/arm64
     env:
       REGISTRY: ghcr.io
       IMAGE: ${{ github.repository }}    
@@ -156,9 +162,13 @@ jobs:
       - name: Set up environment
         run: | 
           echo "APPVERSION=$(git describe --tags --abbrev=0)-$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+          # platform=${{ matrix.platform }}
+          # echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
       - name: Set app version for release
         if: ${{ needs.check_release.outputs.release_created }}
         run: echo "APPVERSION=${{ needs.check_release.outputs.release_tag }}" >> $GITHUB_ENV
+      # - name: Set up QEMU
+      #   uses: docker/setup-qemu-action@v3
       - name: Log in to the Container registry
         id: registry_login
         uses: docker/login-action@v3
@@ -193,11 +203,11 @@ jobs:
           labels: ${{ steps.docker_metadata.outputs.labels }}
       - name: Check and install cosign
         uses: sigstore/cosign-installer@v3.5.0
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        # if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
           cosign-release: 'v2.2.2'
       - name: Sign image with a key
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        # if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
           DIGEST: ${{ steps.build_image.outputs.digest }}
           TAGS: ${{ steps.docker_metadata.outputs.tags }}
