@@ -121,6 +121,7 @@ func newDiskIOSensor(device diskstats.Device, sensorType linux.SensorTypeValue) 
 		Sensor: linux.Sensor{
 			StateClassValue: types.StateClassTotalIncreasing,
 			SensorTypeValue: sensorType,
+			UnitsString:     diskCountUnits,
 		},
 	}
 	if device.ID != "total" {
