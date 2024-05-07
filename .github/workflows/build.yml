@@ -164,7 +164,7 @@ jobs:
       - name: Install/Cache dependencies
         run: |
           sudo apt-get update > ${RUNNER_TEMP}/apt-update.log &&  
-          sudo apt-get -y install qemu-user-static >  ${RUNNER_TEMP}/apt-install.log
+          sudo apt-get -y install qemu-user-static podman >  ${RUNNER_TEMP}/apt-install.log
       - name: Get Docker metadata
         id: docker_metadata
         uses: docker/metadata-action@v5
@@ -183,15 +183,21 @@ jobs:
             type=semver,pattern={{major}},enable=${{ !startsWith(github.ref, 'refs/tags/v0.') }}
       - name: Build container image
         id: build_image
-        uses: redhat-actions/buildah-build@v2
-        with:
-          archs: amd64
-          image: ${{ env.IMAGE }}
-          tags: ${{ steps.docker_metadata.outputs.tags }} ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ env.APPVERSION }}
-          labels: ${{ steps.docker_metadata.outputs.labels }}
-          containerfiles: Dockerfile
-          layers: false
-          oci: true
+        run: |
+          for t in ${{ steps.docker_metadata.outputs.tags }}; do tags="${tags} --tag ${t}"; done
+          tags="${tags} --tag ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ env.APPVERSION }}"
+          for l in ${{ steps.docker_metadata.outputs.labels }}; do labels="${labels} --label ${l}"; done
+          podman build --file Dockerfile ${labels} ${tags}
+
+        # uses: redhat-actions/buildah-build@v2
+        # with:
+        #   archs: amd64
+        #   image: ${{ env.IMAGE }}
+        #   tags: ${{ steps.docker_metadata.outputs.tags }} ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ env.APPVERSION }}
+        #   labels: ${{ steps.docker_metadata.outputs.labels }}
+        #   containerfiles: Dockerfile
+        #   layers: false
+        #   oci: true
       - name: Push to Container Registry
         id: push_image
         uses: redhat-actions/push-to-registry@v2
