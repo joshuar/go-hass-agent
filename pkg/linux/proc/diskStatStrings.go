@@ -8,33 +8,32 @@ func _() {
 	// An "invalid array index" compiler error signifies that the constant values have changed.
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
-	_ = x[TotalReads-3]
-	_ = x[TotalReadsMerged-4]
-	_ = x[TotalSectorsRead-5]
-	_ = x[TotalTimeReading-6]
-	_ = x[TotalWrites-7]
-	_ = x[TotalWritesMerged-8]
-	_ = x[TotalSectorsWritten-9]
-	_ = x[TotalTimeWriting-10]
-	_ = x[ActiveIOs-11]
-	_ = x[ActiveIOTime-12]
-	_ = x[ActiveIOTimeWeighted-13]
-	_ = x[TotalDiscardsCompleted-14]
-	_ = x[TotalDiscardsMerged-15]
-	_ = x[TotalSectorsDiscarded-16]
-	_ = x[TotalTimeDiscarding-17]
-	_ = x[TotalFlushRequests-18]
-	_ = x[TotalTimeFlushing-19]
+	_ = x[TotalReads-0]
+	_ = x[TotalReadsMerged-1]
+	_ = x[TotalSectorsRead-2]
+	_ = x[TotalTimeReading-3]
+	_ = x[TotalWrites-4]
+	_ = x[TotalWritesMerged-5]
+	_ = x[TotalSectorsWritten-6]
+	_ = x[TotalTimeWriting-7]
+	_ = x[ActiveIOs-8]
+	_ = x[ActiveIOTime-9]
+	_ = x[ActiveIOTimeWeighted-10]
+	_ = x[TotalDiscardsCompleted-11]
+	_ = x[TotalDiscardsMerged-12]
+	_ = x[TotalSectorsDiscarded-13]
+	_ = x[TotalTimeDiscarding-14]
+	_ = x[TotalFlushRequests-15]
+	_ = x[TotalTimeFlushing-16]
 }
 
 const _DiskStat_name = "Total reads completedTotal reads mergedTotal sectors readTotal milliseconds spent readingTotal writes completedTotal writes mergedTotal sectors writtenTotal milliseconds spent writingI/Os currently in progressMilliseconds elapsed spent doing I/OsMilliseconds elapsed spent doing I/Os (weighted)Total discards completedTotal discards mergedTotal sectors discardedTotal milliseconds spent discardingTotal flush requests completedTotal milliseconds spent flushing"
 
 var _DiskStat_index = [...]uint16{0, 21, 39, 57, 89, 111, 130, 151, 183, 209, 246, 294, 318, 339, 362, 397, 427, 460}
 
-func (i DiskStat) String() string {
-	i -= 3
-	if i < 0 || i >= DiskStat(len(_DiskStat_index)-1) {
-		return "DiskStat(" + strconv.FormatInt(int64(i+3), 10) + ")"
+func (i Stat) String() string {
+	if i < 0 || i >= Stat(len(_DiskStat_index)-1) {
+		return "DiskStat(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
 	return _DiskStat_name[_DiskStat_index[i]:_DiskStat_index[i+1]]
 }

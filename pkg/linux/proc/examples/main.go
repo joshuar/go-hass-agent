@@ -14,7 +14,7 @@ import (
 )
 
 func main() {
-	allStats, err := diskstats.ReadDiskStats()
+	allStats, err := diskstats.ReadDiskStatsFromSysFS()
 	if err != nil {
 		slog.Error("Failed to read /proc/stats", "error", err)
 		os.Exit(-1)
