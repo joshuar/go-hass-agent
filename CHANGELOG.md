@@ -1,5 +1,46 @@
 # Changelog
 
+## [9.0.0](https://github.com/joshuar/go-hass-agent/compare/v8.0.0...v9.0.0) (2024-05-07)
+
+
+### ⚠ BREAKING CHANGES
+
+* **linux:** This commit changes the disk IO sensors so they are sourced from SysFS. This allows better filtering of devices to avoid creating sensors for partitions and other virtual devices. There should only be sensors created for physical disks, mdadm disks and device-mapper disks. Where possible, an attribute is available containing the model name of the disk. Additionally, a sensor will be created for total read/write counts and rates for all physical disks (excluding mdadm/device-mapper). Some entity IDs may have changed so be sure to check automations and dashboards and adjust as necessary.
+* **linux/hwmon:** This is another refactoring of the hardware sensor (hwmon) parsing code. This hsould handle duplicate devices and generate unique sensors for all of them. As a result entities in Home Assistant will be renamed (again) which may break any automations and other functionality using the current names.
+* This commit is a major refactoring of the MQTT functionality coinciding with changes to the underlying library that powers it. **MQTT entities have been renamed, which will result in some breakage of automations and features in Home Assistant.** No functionality has been lost however, and this change will make it easier to add additional controls and features powered by MQTT to Go Hass Agent.
+
+### Features
+
+* **agent:** :sparkles: add a `--no-log-file` command-line option to not write a log file ([59f2ce5](https://github.com/joshuar/go-hass-agent/commit/59f2ce53a16c023ab4eabc4df329ab109b4b671c))
+* **linux:** :sparkles: add a volume mute switch ([3b8eb54](https://github.com/joshuar/go-hass-agent/commit/3b8eb54fcab8a80c1bfaa9f3d4443164b230e988))
+* **linux:** :sparkles: add volume level control ([cac7077](https://github.com/joshuar/go-hass-agent/commit/cac70771e118250fb7fbbe8ba633e278a52288b7))
+* **linux:** :sparkles: don't send swap sensors if there is no swap enabled ([f8508e2](https://github.com/joshuar/go-hass-agent/commit/f8508e209a863b7de67cae4b29260ca9354ed962))
+* **linux:** improved disk IO sensors ([179f94e](https://github.com/joshuar/go-hass-agent/commit/179f94ebc3065e67d7422847f29d33ae8b7bd79d))
+* **preferences:** :sparkles: add a function to return MQTT origin info for use in MQTT code ([2ab73bb](https://github.com/joshuar/go-hass-agent/commit/2ab73bba80a52eee9c6d869c179329172e72c3d0))
+
+
+### Bug Fixes
+
+* **agent:** :fire: remove testing commands ([6bd339d](https://github.com/joshuar/go-hass-agent/commit/6bd339def5b370d5771f068bed55e8a6e3d57609))
+* **linux:** :bug: correct string version of disk rate units ([85a4164](https://github.com/joshuar/go-hass-agent/commit/85a41641f327d0c0000f0f317feea7aae74c197b))
+* **linux:** :bug: disk reads/writes sensors should not use data size device class ([46f47bd](https://github.com/joshuar/go-hass-agent/commit/46f47bdedcd6f2a7bedca4d51c8d42d75dcf75c6))
+* **linux:** :bug: don't block sending initial power state sensor update ([5e2100a](https://github.com/joshuar/go-hass-agent/commit/5e2100abd3246b679616657ecf6d01cea198144d))
+* **linux:** :bug: don't block sending user sensor updates ([d6a982d](https://github.com/joshuar/go-hass-agent/commit/d6a982dd4091f23206e4ac7a7353886bd0ed9d7c))
+* **linux:** :bug: ensure disk read/write count sensors have correct units ([da4f805](https://github.com/joshuar/go-hass-agent/commit/da4f805e61b15481661cdb78ba6b4ae110b36da5))
+* **linux:** :bug: fix broken D-Bus control ([a49fce1](https://github.com/joshuar/go-hass-agent/commit/a49fce14b83079e6e06efebfadc65b7c0d9fae73))
+* **linux:** :fire: remove spews (debugging) ([5e6aeb6](https://github.com/joshuar/go-hass-agent/commit/5e6aeb61ddd7a798e2ee2a268162b6452f9a2a7d))
+* **linux:** :zap: ensure sending version sensors doesn't block ([838fd1e](https://github.com/joshuar/go-hass-agent/commit/838fd1e82bf440bf04225268350c3e0be5cdb488))
+* **linux:** :zap: use unbuffered channel for disk usage sensors ([9b8b50a](https://github.com/joshuar/go-hass-agent/commit/9b8b50a5d34a71cbc2519c81b0e4e36d310edd8b))
+* **linux:** :zap: use unbuffered channel for hardware sensor updates ([d4bbee2](https://github.com/joshuar/go-hass-agent/commit/d4bbee22fcd4262e1524997869789fdc8dcf0f50))
+* **linux:** :zap: use unbuffered channel for time sensors ([13bf514](https://github.com/joshuar/go-hass-agent/commit/13bf51409ca27395bee476c9e64251c64c7b36d0))
+* **linux/hwmon:** refactor sensor parsing (again) ([de865f1](https://github.com/joshuar/go-hass-agent/commit/de865f1ee8f89117581875796deb78efb585b9a8))
+* **linux/proc:** :bug: fix stringer generation ([b0e5dc8](https://github.com/joshuar/go-hass-agent/commit/b0e5dc82d8362993aa2c986de195c8f9493839b5))
+
+
+### Code Refactoring
+
+* major MQTT functionality refactor ([decd825](https://github.com/joshuar/go-hass-agent/commit/decd825a6b07897513a12bebbaa188ad1746620b))
+
 ## [8.0.0](https://github.com/joshuar/go-hass-agent/compare/v7.3.1...v8.0.0) (2024-04-27)
 
 
