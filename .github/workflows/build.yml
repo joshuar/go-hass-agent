@@ -182,13 +182,14 @@ jobs:
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}},enable=${{ !startsWith(github.ref, 'refs/tags/v0.') }}
+            type=raw,value=${{ env.APPVERSION }}
       - name: Build container image
         id: build_image
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
-          tags: ${{ steps.docker_metadata.outputs.tags }} --tag ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ env.APPVERSION }}
+          tags: ${{ steps.docker_metadata.outputs.tags }}
           labels: ${{ steps.docker_metadata.outputs.labels }}
       - name: Check and install cosign
         uses: sigstore/cosign-installer@v3.5.0
@@ -199,7 +200,7 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
           DIGEST: ${{ steps.build_image.outputs.digest }}
-          TAGS: ${{ steps.docker_metadata.outputs.tags }} ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ env.APPVERSION }}
+          TAGS: ${{ steps.docker_metadata.outputs.tags }}
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PWD }}
         run: |
           images=""
