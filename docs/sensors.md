@@ -35,7 +35,7 @@
 | Swap Used | Swap used | ProcFS | | ~Every minute |
 | Swap Usage | Swap memory usage % | ProcFS | | ~Every minute |
 | Per Mountpoint Usage | % usage of mount point. | ProcFS |  Filesystem type, bytes/inode total/free/used. | ~Every minute. |
-| Device total read/writes and rates | Count of read/writes, Rate (in KB/s) of reads/writes, to the device. | ProcFS | | ~Every 5 seconds. |
+| Device total read/writes and rates | Count of read/writes, Rate (in KB/s) of reads/writes, to the device. | SysFS | | ~Every 5 seconds. |
 | Connection State (per-connection) | The current state of each network connection | D-Bus | Connection type (e.g., wired/wireless/VPN), IP addresses | When connections change. |
 | Wi-Fi SSID[^1] | The SSID of the Wi-Fi network | D-Bus | | When SSID changes. |
 | Wi-Fi Frequency[^1] | The frequency band of the Wi-Fi network | D-Bus | | When frequency changes. | 
