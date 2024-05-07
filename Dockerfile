@@ -10,6 +10,7 @@ WORKDIR /usr/src/go-hass-agent
 ADD . .
 
 # add dpkg filters
+RUN mkdir -p /etc/dpkg/dpkg.cfg.d
 COPY <<EOF /etc/dpkg/dpkg.cfg.d/excludes
 # Drop all man pages
 path-exclude=/usr/share/man/*
