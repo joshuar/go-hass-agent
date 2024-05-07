@@ -11,33 +11,26 @@ ADD . .
 
 # add dpkg filters
 RUN mkdir -p /etc/dpkg/dpkg.cfg.d
-COPY <<EOF /etc/dpkg/dpkg.cfg.d/excludes
-# Drop all man pages
-path-exclude=/usr/share/man/*
-# Drop all translations
-path-exclude=/usr/share/locale/*/LC_MESSAGES/*.mo
-# Drop all documentation ...
-path-exclude=/usr/share/doc/*
-# ... except copyright files ...
-path-include=/usr/share/doc/*/copyright
-# ... and Debian changelogs for native & non-native packages
-path-include=/usr/share/doc/*/changelog.*
-EOF
+COPY build/container/dpkg-excludes /etc/dpkg/dpkg.cfg.d 
 
 # https://developer.fyne.io/started/#prerequisites
 ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get -y install gcc pkg-config libgl1-mesa-dev xorg-dev && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
 
 # install build dependencies
-RUN go install github.com/matryer/moq@latest && \
-  go install golang.org/x/tools/cmd/stringer@latest && \
-  go install golang.org/x/text/cmd/gotext@latest
+RUN <<EOF
+go install github.com/matryer/moq@latest
+go install golang.org/x/tools/cmd/stringer@latest
+go install golang.org/x/text/cmd/gotext@latest
+EOF
 
 # build the binary
-RUN go generate ./... && \
-  go build -o /go/bin/go-hass-agent && \
-  go clean -cache -modcache && \
-  rm -fr /usr/src/go-hass-agent
+RUN <<EOF
+go generate ./...
+go build -o /go/bin/go-hass-agent
+go clean -cache -modcache
+rm -fr /usr/src/go-hass-agent
+EOF
 
 # remove fyne build dependencies
 RUN apt-get -y remove gcc pkg-config libgl1-mesa-dev xorg-dev && apt-get -y autoremove

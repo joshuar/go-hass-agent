@@ -17,6 +17,7 @@
 !.goreleaser.yaml
 !.nfpm.yaml
 !build/env.*
+!build/container/*
 !codecov.yml
 
 !/assets/**/*
