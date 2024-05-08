@@ -136,7 +136,7 @@ jobs:
       - name: Upload release artifacts
         id: upload_release
         if: ${{ needs.check_release.outputs.release_created }}
-        run: >
+        run: |
           gh release upload ${{ needs.check_release.outputs.release_tag }} dist/*.{rpm,deb,zst,sig} 
           gh release upload ${{ needs.check_release.outputs.release_tag }} fyne-cross/dist/linux-${{ matrix.arch }}/*            
         env:
