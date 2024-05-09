@@ -1,0 +1,19 @@
+name: Analysis
+
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  nilaway:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Nil panic checks
+        uses: qbaware/nilaway-action@v0
+        with:
+          package-to-scan: .          
