@@ -17,8 +17,8 @@ import (
 	"github.com/sourcegraph/conc/pool"
 )
 
-var (
-	AppName         = "go-hass-agent"
+const (
+	AppName         = "Go Hass Agent"
 	AppURL          = "https://github.com/joshuar/go-hass-agent"
 	MQTTTopicPrefix = "homeassistant"
 )
