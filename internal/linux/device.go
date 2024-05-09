@@ -10,10 +10,10 @@ import (
 	"os/user"
 	"strings"
 
+	"github.com/gofrs/uuid/v5"
 	"github.com/jaypipes/ghw"
 	mqtthass "github.com/joshuar/go-hass-anything/v9/pkg/hass"
 	"github.com/rs/zerolog/log"
-	"github.com/shirou/gopsutil/v3/host"
 
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 	"github.com/joshuar/go-hass-agent/pkg/linux/whichdistro"
@@ -121,16 +121,15 @@ func MQTTDevice() *mqtthass.Device {
 	}
 }
 
-// getDeviceID retrieves the unique host ID of the device running the agent, or
-// unknown if that doesn't work.
+// getDeviceID create a new device ID. It will be a randomly generated UUIDv4.
 func getDeviceID() string {
-	deviceID, err := host.HostID()
+	deviceID, err := uuid.NewV4()
 	if err != nil {
 		log.Warn().Err(err).
 			Msg("Could not retrieve a machine ID")
 		return "unknown"
 	}
-	return deviceID
+	return deviceID.String()
 }
 
 // getHostname retrieves the hostname of the device running the agent, or
