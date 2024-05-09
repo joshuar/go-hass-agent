@@ -58,6 +58,7 @@ require (
 	github.com/go-resty/resty/v2 v2.12.0
 	github.com/go-text/render v0.1.0 // indirect
 	github.com/go-text/typesetting v0.1.0 // indirect
+	github.com/gofrs/uuid/v5 v5.1.0
 	github.com/gopherjs/gopherjs v1.17.2 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jaypipes/ghw v0.12.0
