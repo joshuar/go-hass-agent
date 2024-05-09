@@ -10,7 +10,7 @@ import (
 	"os"
 )
 
-const (
+var (
 	OSReleaseFile    = "/etc/os-release"
 	OSReleaseAltFile = "/usr/lib/os-release"
 )
