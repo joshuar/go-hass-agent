@@ -10,20 +10,24 @@ import (
 	"os/user"
 	"strings"
 
+	"github.com/jaypipes/ghw"
 	mqtthass "github.com/joshuar/go-hass-anything/v9/pkg/hass"
 	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v3/host"
 
 	"github.com/joshuar/go-hass-agent/internal/preferences"
+	"github.com/joshuar/go-hass-agent/pkg/linux/whichdistro"
 )
 
 type Device struct {
-	appName    string
-	appVersion string
-	hostname   string
-	deviceID   string
-	hwVendor   string
-	hwModel    string
+	appName       string
+	appVersion    string
+	hostname      string
+	deviceID      string
+	hwVendor      string
+	hwModel       string
+	distro        string
+	distroVersion string
 }
 
 func (l *Device) AppName() string {
@@ -63,23 +67,11 @@ func (l *Device) Model() string {
 }
 
 func (l *Device) OsName() string {
-	_, osRelease, _, err := host.PlatformInformation()
-	if err != nil {
-		log.Warn().Err(err).
-			Msg("Could not retrieve distribution details.")
-		return "Unknown OS"
-	}
-	return osRelease
+	return l.distro
 }
 
 func (l *Device) OsVersion() string {
-	_, _, osVersion, err := host.PlatformInformation()
-	if err != nil {
-		log.Warn().Err(err).
-			Msg("Could not retrieve version details.")
-		return "Unknown Version"
-	}
-	return osVersion
+	return l.distroVersion
 }
 
 func (l *Device) SupportsEncryption() bool {
@@ -95,14 +87,26 @@ func (l *Device) AppData() any {
 }
 
 func NewDevice(name, version string) *Device {
-	return &Device{
+	dev := &Device{
 		appName:    name,
 		appVersion: version,
 		deviceID:   getDeviceID(),
 		hostname:   getHostname(),
-		hwVendor:   getHWVendor(),
-		hwModel:    getHWModel(),
 	}
+
+	osReleaseInfo, err := whichdistro.GetOSRelease()
+	if err != nil {
+		log.Warn().Err(err).Msg("Could not read /etc/os-release. Contact your distro vendor to implement this file.")
+		dev.distro = "Unknown Distro"
+		dev.distroVersion = "Unknown Version"
+	} else {
+		dev.distro = osReleaseInfo["ID"]
+		dev.distroVersion = osReleaseInfo["VERSION_ID"]
+	}
+
+	dev.hwModel, dev.hwVendor = getHWProductInfo()
+
+	return dev
 }
 
 func MQTTDevice() *mqtthass.Device {
@@ -140,26 +144,13 @@ func getHostname() string {
 	return hostname
 }
 
-// getHWVendor will try to retrieve the vendor from the sysfs filesystem. It
-// will return "Unknown Vendor" if unsuccessful.
-// Reference: https://github.com/ansible/ansible/blob/devel/lib/ansible/module_utils/facts/hardware/linux.py
-func getHWVendor() string {
-	hwVendor, err := os.ReadFile("/sys/devices/virtual/dmi/id/board_vendor")
+func getHWProductInfo() (model, vendor string) {
+	product, err := ghw.Product(ghw.WithDisableWarnings())
 	if err != nil {
-		return "Unknown Vendor"
+		log.Warn().Err(err).Msg("Could not retrieve hardware information.")
+		return "Unknown Product", "Unknown Vendor"
 	}
-	return strings.TrimSpace(string(hwVendor))
-}
-
-// getHWModel will try to retrieve the hardware model from the sysfs filesystem. It
-// will return "Unknown Model" if unsuccessful.
-// Reference: https://github.com/ansible/ansible/blob/devel/lib/ansible/module_utils/facts/hardware/linux.py
-func getHWModel() string {
-	hwModel, err := os.ReadFile("/sys/devices/virtual/dmi/id/product_name")
-	if err != nil {
-		return "Unknown Model"
-	}
-	return strings.TrimSpace(string(hwModel))
+	return product.Name, product.Vendor
 }
 
 // FindPortal is a helper function to work out which portal interface should be
