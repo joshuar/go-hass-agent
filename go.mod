@@ -25,19 +25,25 @@ require (
 )
 
 require (
+	github.com/StackExchange/wmi v1.2.1 // indirect
 	github.com/dolthub/maphash v0.1.0 // indirect
+	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/gorilla/websocket v1.5.1 // indirect
+	github.com/jaypipes/pcidb v1.0.0 // indirect
 	github.com/mandykoh/go-parallel v0.1.0 // indirect
+	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
 	go.uber.org/multierr v1.9.0 // indirect
 	golang.org/x/exp v0.0.0-20240416160154-fe59bbe5cc7f // indirect
+	gopkg.in/yaml.v2 v2.4.0 // indirect
+	howett.net/plist v1.0.0 // indirect
 )
 
 require (
 	fyne.io/systray v1.10.1-0.20231115130155-104f5ef7839e // indirect
 	github.com/adrg/xdg v0.4.0
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
-	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
+	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/fredbi/uri v1.0.0 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/fyne-io/gl-js v0.0.0-20220119005834-d2da28d9ccfe // indirect
@@ -54,6 +60,7 @@ require (
 	github.com/go-text/typesetting v0.1.0 // indirect
 	github.com/gopherjs/gopherjs v1.17.2 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
+	github.com/jaypipes/ghw v0.12.0
 	github.com/joshuar/go-hass-anything/v9 v9.1.0
 	github.com/jsummers/gobmp v0.0.0-20151104160322-e2ba15ffa76e // indirect
 	github.com/klauspost/compress v1.17.5 // indirect
