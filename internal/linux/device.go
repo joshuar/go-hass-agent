@@ -7,10 +7,10 @@ package linux
 
 import (
 	"os"
-	"os/user"
 	"strings"
 
 	"github.com/gofrs/uuid/v5"
+	"github.com/iancoleman/strcase"
 	"github.com/jaypipes/ghw"
 	mqtthass "github.com/joshuar/go-hass-anything/v9/pkg/hass"
 	"github.com/rs/zerolog/log"
@@ -39,14 +39,7 @@ func (l *Device) AppVersion() string {
 }
 
 func (l *Device) AppID() string {
-	// Use the current user's username to construct an app ID.
-	currentUser, err := user.Current()
-	if err != nil {
-		log.Warn().Err(err).
-			Msg("Could not retrieve current user details.")
-		return l.appName + "-unknown"
-	}
-	return l.appName + "-" + currentUser.Username
+	return strcase.ToSnake(l.appName)
 }
 
 func (l *Device) DeviceName() string {
