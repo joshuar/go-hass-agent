@@ -71,19 +71,19 @@ func (r *ResetCmd) Run(ctx *Context) error {
 	preferences.SetPath(filepath.Join(xdg.ConfigHome, a.AppID()))
 	// Reset agent.
 	if err := a.Reset(); err != nil {
-		log.Warn().Err(err).Msg("Could not reset agent.")
+		return err
 	}
 	// Reset registry.
 	if err := registry.Reset(); err != nil {
-		log.Warn().Err(err).Msg("Could not reset registry.")
+		return err
 	}
 	// Reset preferences.
 	if err := preferences.Reset(); err != nil {
-		log.Warn().Err(err).Msg("Could not reset preferences.")
+		return err
 	}
 	// Reset the log.
 	if err := logging.Reset(); err != nil {
-		log.Warn().Err(err).Msg("Could not remove log file.")
+		return err
 	}
 	log.Info().Msg("Reset complete (refer to any warnings, if any, above.)")
 	return nil
@@ -172,7 +172,7 @@ var CLI struct {
 	Run      RunCmd        `cmd:"" help:"Run Go Hass Agent."`
 	Reset    ResetCmd      `cmd:"" help:"Reset Go Hass Agent."`
 	Version  VersionCmd    `cmd:"" help:"Show the Go Hass Agent version."`
-	AppID    string        `name:"appid" help:"Specify a custom app id (for debugging)."`
+	AppID    string        `name:"appid" default:"${defaultAppID}" help:"Specify a custom app id (for debugging)."`
 	LogLevel logLevel      `name:"log-level" help:"Set logging level."`
 	Register RegisterCmd   `cmd:"" help:"Register with Home Assistant."`
 	Profile  profileFlag   `help:"Enable profiling."`
@@ -196,7 +196,7 @@ func init() {
 func main() {
 	kong.Name(preferences.AppName)
 	kong.Description(preferences.AppDescription)
-	ctx := kong.Parse(&CLI, kong.Bind())
+	ctx := kong.Parse(&CLI, kong.Bind(), kong.Vars{"defaultAppID": preferences.AppID})
 	err := ctx.Run(&Context{Headless: CLI.Headless, Profile: CLI.Profile, AppID: CLI.AppID})
 	ctx.FatalIfErrorf(err)
 }
