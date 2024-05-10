@@ -8,7 +8,7 @@ Wants=network-online.target
 After=network-online.target
 
 [Service]
-ExecStart=/usr/bin/go-hass-agent --terminal
+ExecStart=/usr/bin/go-hass-agent --terminal run
 Type=simple
 
 [Install]
