@@ -18,7 +18,6 @@ require (
 	github.com/rs/zerolog v1.32.0
 	github.com/shirou/gopsutil/v3 v3.24.4
 	github.com/sourcegraph/conc v0.3.0
-	github.com/spf13/cobra v1.8.0
 	github.com/stretchr/testify v1.9.0
 	golang.org/x/text v0.15.0
 	gopkg.in/yaml.v3 v3.0.1
@@ -61,7 +60,6 @@ require (
 	github.com/go-text/typesetting v0.1.0 // indirect
 	github.com/gofrs/uuid/v5 v5.1.0
 	github.com/gopherjs/gopherjs v1.17.2 // indirect
-	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jaypipes/ghw v0.12.0
 	github.com/joshuar/go-hass-anything/v9 v9.1.0
 	github.com/jsummers/gobmp v0.0.0-20151104160322-e2ba15ffa76e // indirect
@@ -76,7 +74,6 @@ require (
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/power-devops/perfstat v0.0.0-20221212215047-62379fc7944b // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
-	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/srwiley/oksvg v0.0.0-20221011165216-be6e8873101c // indirect
 	github.com/srwiley/rasterx v0.0.0-20220730225603-2ab79fcdd4ef // indirect
 	github.com/tevino/abool v1.2.0 // indirect
