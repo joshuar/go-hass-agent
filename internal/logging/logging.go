@@ -23,7 +23,7 @@ func init() {
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 }
 
-func setProfiling() {
+func SetProfiling() {
 	go func() {
 		for i := 6060; i < 6070; i++ {
 			log.Debug().
@@ -38,19 +38,16 @@ func setProfiling() {
 }
 
 // SetLoggingLevel sets an appropriate log level and enables profiling if requested.
-func SetLoggingLevel(trace, debug, profile bool) {
-	switch {
-	case trace:
+func SetLoggingLevel(level string) {
+	switch level {
+	case "trace":
 		zerolog.SetGlobalLevel(zerolog.TraceLevel)
 		log.Debug().Msg("Trace logging enabled.")
-	case debug:
+	case "debug":
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 		log.Debug().Msg("Debug logging enabled.")
 	default:
 		zerolog.SetGlobalLevel(zerolog.InfoLevel)
-	}
-	if profile {
-		setProfiling()
 	}
 }
 
