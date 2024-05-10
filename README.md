@@ -236,11 +236,11 @@ parts of Home Assistant.
 ## Versioning
 
 This project follows [semantic versioning](https://semver.org/). Given a version number
-MAJOR.MINOR.PATCH, the gist of it is:
+`MAJOR`.`MINOR`.`PATCH`, the gist of it is:
 
-    A MAJOR number change means breaking changes from the previous release
-    A MINOR number change means significant changes and new features have been added, but not breaking changes 
-    A PATCH number change indicate minor changes and bug fixes
+- A `MAJOR` number change means breaking changes from the previous release.
+- A `MINOR` number change means significant changes and new features have been added, but not breaking changes. 
+- A `PATCH` number change indicate minor changes and bug fixes.
 
 ## 🙌 Acknowledgements
 
