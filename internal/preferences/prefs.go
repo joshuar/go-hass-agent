@@ -22,6 +22,7 @@ const (
 	AppURL          = "https://github.com/joshuar/go-hass-agent"
 	MQTTTopicPrefix = "homeassistant"
 	LogFile         = "go-hass-agent.log"
+	AppDescription  = "A Home Assistant, native app for desktop/laptop devices."
 )
 
 //go:generate sh -c "printf %s $(git tag | tail -1) > VERSION"

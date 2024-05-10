@@ -3,6 +3,8 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
+// revive:disable:unused-receiver
+
 package main
 
 import (
@@ -52,6 +54,14 @@ type Context struct {
 
 type ResetCmd struct{}
 
+func (r *ResetCmd) Help() string {
+	return `
+Reset will unregister go-hass-agent from MQTT (if in use), delete the
+configuration directory and remove the log file. Use this prior to calling the
+register command to start fresh.
+`
+}
+
 func (r *ResetCmd) Run(ctx *Context) error {
 	a := agent.New(&agent.Options{
 		Headless: ctx.Headless,
@@ -92,6 +102,15 @@ type RegisterCmd struct {
 	Force  bool   `help:"Force registration."`
 }
 
+func (r *RegisterCmd) Help() string {
+	return `
+Register will attempt to register this device with Home Assistant. Registration
+will default to an interactive UI if possible. Details can be provided for
+non-interactive registration via the server (--server) and token (--token)
+flags. The UI can be explicitly disabled via the --terminal flag.
+`
+}
+
 func (r *RegisterCmd) Run(ctx *Context) error {
 	a := agent.New(&agent.Options{
 		Headless:      ctx.Headless,
@@ -114,6 +133,17 @@ func (r *RegisterCmd) Run(ctx *Context) error {
 }
 
 type RunCmd struct{}
+
+func (r *RunCmd) Help() string {
+	return `
+Go Hass Agent reports various device sensors and measurements to, and can
+receive desktop notifications from, Home Assistant. It can optionally provide
+control of the device via MQTT. It runs as a tray icon application or without
+any GUI in a headless mode, processing and sending/receiving data automatically.
+The tray icon, if available, provides some actions to configure settings and
+show reported sensors/measurements.
+`
+}
 
 func (r *RunCmd) Run(ctx *Context) error {
 	a := agent.New(&agent.Options{
@@ -139,9 +169,9 @@ func (r *RunCmd) Run(ctx *Context) error {
 }
 
 var CLI struct {
-	Run      RunCmd        `cmd:"" help:"Run the Agent."`
-	Reset    ResetCmd      `cmd:"" help:"Reset Agent."`
-	Version  VersionCmd    `cmd:"" help:"Show Agent Version."`
+	Run      RunCmd        `cmd:"" help:"Run Go Hass Agent."`
+	Reset    ResetCmd      `cmd:"" help:"Reset Go Hass Agent."`
+	Version  VersionCmd    `cmd:"" help:"Show the Go Hass Agent version."`
 	AppID    string        `name:"appid" help:"Specify a custom app id (for debugging)."`
 	LogLevel logLevel      `name:"log-level" help:"Set logging level."`
 	Register RegisterCmd   `cmd:"" help:"Register with Home Assistant."`
@@ -164,8 +194,9 @@ func init() {
 }
 
 func main() {
-	ctx := kong.Parse(&CLI, kong.Bind())
 	kong.Name(preferences.AppName)
+	kong.Description(preferences.AppDescription)
+	ctx := kong.Parse(&CLI, kong.Bind())
 	err := ctx.Run(&Context{Headless: CLI.Headless, Profile: CLI.Profile, AppID: CLI.AppID})
 	ctx.FatalIfErrorf(err)
 }
