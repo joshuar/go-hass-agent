@@ -6,8 +6,6 @@
 package logging
 
 import (
-	"fmt"
-	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"path/filepath"
@@ -21,20 +19,6 @@ import (
 func init() {
 	zerolog.ErrorStackMarshaler = pkgerrors.MarshalStack
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
-}
-
-func SetProfiling() {
-	go func() {
-		for i := 6060; i < 6070; i++ {
-			log.Debug().
-				Msgf("Starting profiler web interface on localhost:" + fmt.Sprint(i))
-			err := http.ListenAndServe("localhost:"+fmt.Sprint(i), nil)
-			if err != nil {
-				log.Debug().Err(err).
-					Msg("Trouble starting profiler, trying again.")
-			}
-		}
-	}()
 }
 
 // SetLoggingLevel sets an appropriate log level and enables profiling if requested.

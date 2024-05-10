@@ -8,6 +8,7 @@
 package main
 
 import (
+	"errors"
 	"path/filepath"
 	"syscall"
 
@@ -30,11 +31,10 @@ func (d logLevel) AfterApply() error {
 	return nil
 }
 
-type profileFlag bool
+type profileFlags logging.ProfileFlags
 
-func (d profileFlag) AfterApply() error {
-	logging.SetProfiling()
-	return nil
+func (d profileFlags) AfterApply() error {
+	return logging.StartProfiling(logging.ProfileFlags(d))
 }
 
 type noLogFileFlag bool
@@ -47,8 +47,8 @@ func (d noLogFileFlag) AfterApply() error {
 }
 
 type Context struct {
+	Profile  profileFlags
 	AppID    string
-	Profile  profileFlag
 	Headless bool
 }
 
@@ -172,10 +172,10 @@ var CLI struct {
 	Run      RunCmd        `cmd:"" help:"Run Go Hass Agent."`
 	Reset    ResetCmd      `cmd:"" help:"Reset Go Hass Agent."`
 	Version  VersionCmd    `cmd:"" help:"Show the Go Hass Agent version."`
+	Profile  profileFlags  `help:"Enable profiling."`
 	AppID    string        `name:"appid" default:"${defaultAppID}" help:"Specify a custom app id (for debugging)."`
 	LogLevel logLevel      `name:"log-level" help:"Set logging level."`
 	Register RegisterCmd   `cmd:"" help:"Register with Home Assistant."`
-	Profile  profileFlag   `help:"Enable profiling."`
 	NoLog    noLogFileFlag `help:"Don't write to a log file."`
 	Headless bool          `name:"terminal" help:"Run without a GUI."`
 }
@@ -198,5 +198,8 @@ func main() {
 	kong.Description(preferences.AppDescription)
 	ctx := kong.Parse(&CLI, kong.Bind(), kong.Vars{"defaultAppID": preferences.AppID})
 	err := ctx.Run(&Context{Headless: CLI.Headless, Profile: CLI.Profile, AppID: CLI.AppID})
+	if CLI.Profile != nil {
+		errors.Join(logging.StopProfiling(logging.ProfileFlags(CLI.Profile)), err)
+	}
 	ctx.FatalIfErrorf(err)
 }
