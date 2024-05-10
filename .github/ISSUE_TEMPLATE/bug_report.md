@@ -29,9 +29,9 @@ If applicable, add screenshots to help explain your problem.
 **Logs**
 A log will be very helpful to look into this bug report. To get the log:
 
-1. Run `go-hass-agent` from a terminal or command-line with the `--debug` flag:
+1. Run `go-hass-agent` from a terminal or command-line with the `--log-level debug` flag set:
 ```shell
-go-hass-agent --debug
+go-hass-agent --log-level debug run
 ```
 2. Try to reproduce the issue.
 3. After you have reproduced the issue, please (compress and) attach the `go-hass-agent.log` file found in the following location:
