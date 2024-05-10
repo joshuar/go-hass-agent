@@ -44,4 +44,4 @@ USER gouser
 WORKDIR /home/gouser
 
 ENTRYPOINT ["go-hass-agent"]
-CMD ["--terminal"]
+CMD ["--terminal", "run"]
