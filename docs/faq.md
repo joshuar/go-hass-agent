@@ -41,9 +41,9 @@ the agent needs to change. There is unfortunately, no way for the agent to
 rename existing sensors in Home Assistant, so you end up with both the old and
 new sensors showing, and only the new sensors updating.
 
-You can remove the old sensors manually, under Developer Tools->Statistics in
+You can remove the old sensors manually, under Developer Tools→Statistics in
 Home Assistant, for example. The list should contain sensors that are no longer
-"provided" by the agent. Or you can wait until they age out of the Home
+“provided” by the agent. Or you can wait until they age out of the Home
 Assistant long-term statistics database automatically.
 
 ## Q: Can I reset the agent (start from new)?
@@ -52,7 +52,7 @@ Yes. You can reset the agent so that it will re-register with Home Assistant and
 act as a new device. To do this:
 
 1. Shut down the agent if it is running.
-2. In Home Assistant, navigate to **Settings->Devices & Services** and click on the
+2. In Home Assistant, navigate to **Settings→Devices & Services** and click on the
    **Mobile App** integration.
 3. Locate the agent entry in the list of mobile devices, click the context menu
    (three vertical dots), and choose ***Delete***.
@@ -60,7 +60,7 @@ act as a new device. To do this:
 
 ```shell
 # add --terminal --server someserver --token sometoken for non graphical registration
-go-hass-agent --register --force 
+go-hass-agent register --force 
 ```
 
 5. The agent will go through the initial registration steps. It should report
