@@ -23,7 +23,8 @@ type loadavgSensor struct {
 }
 
 func LoadAvgUpdater(ctx context.Context) chan sensor.Details {
-	sensorCh := make(chan sensor.Details, 3)
+	sensorCh := make(chan sensor.Details)
+
 	sendLoadAvgStats := func(_ time.Duration) {
 		var latest *load.AvgStat
 		var err error
@@ -49,9 +50,16 @@ func LoadAvgUpdater(ctx context.Context) chan sensor.Details {
 				l.Value = latest.Load15
 				l.SensorTypeValue = linux.SensorLoad15
 			}
-			sensorCh <- l
+			go func() {
+				sensorCh <- l
+			}()
 		}
 	}
+
+	// Send load averages on start up.
+	go func() {
+		sendLoadAvgStats(0)
+	}()
 
 	go helpers.PollSensors(ctx, sendLoadAvgStats, time.Minute, time.Second*5)
 	go func() {
