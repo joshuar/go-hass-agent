@@ -156,17 +156,22 @@ func (i *fyneUI) DisplayRegistrationWindow(ctx context.Context, input *hass.Regi
 // aboutWindow creates a window that will show some interesting information
 // about the agent, such as version numbers.
 func (i *fyneUI) aboutWindow() fyne.Window {
-	config := getHAConfig()
-	c := container.NewCenter(container.NewVBox(
-		widget.NewLabelWithStyle("Go Hass Agent "+preferences.AppVersion,
-			fyne.TextAlignCenter,
-			fyne.TextStyle{Bold: true}),
-		widget.NewLabelWithStyle("Home Assistant "+config.Details.Version,
-			fyne.TextAlignCenter,
-			fyne.TextStyle{Bold: true}),
-		widget.NewLabelWithStyle("Tracking "+fmt.Sprintf("%d", len(config.Details.Entities))+" Entities",
-			fyne.TextAlignCenter,
-			fyne.TextStyle{Italic: true}),
+	var widgets []fyne.CanvasObject
+	widgets = append(widgets, widget.NewLabelWithStyle("Go Hass Agent "+preferences.AppVersion,
+		fyne.TextAlignCenter,
+		fyne.TextStyle{Bold: true}))
+
+	if config := getHAConfig(); config != nil {
+		widgets = append(widgets,
+			widget.NewLabelWithStyle("Home Assistant "+config.Details.Version,
+				fyne.TextAlignCenter,
+				fyne.TextStyle{Bold: true}),
+			widget.NewLabelWithStyle("Tracking "+fmt.Sprintf("%d", len(config.Details.Entities))+" Entities",
+				fyne.TextAlignCenter,
+				fyne.TextStyle{Italic: true}),
+		)
+	}
+	widgets = append(widgets,
 		widget.NewLabel(""),
 		container.NewHBox(
 			widget.NewHyperlink("website", parseURL(ui.AppURL)),
@@ -175,8 +180,8 @@ func (i *fyneUI) aboutWindow() fyne.Window {
 			widget.NewLabel("-"),
 			widget.NewHyperlink("report issue", parseURL(ui.IssueURL)),
 		),
-	))
-
+	)
+	c := container.NewCenter(container.NewVBox(widgets...))
 	w := i.app.NewWindow(i.Translate("About"))
 	w.SetContent(c)
 	return w
