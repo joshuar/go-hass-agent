@@ -63,6 +63,9 @@ func ReadDiskStatsFromProcFS() (map[Device]map[Stat]uint64, error) {
 
 	stats := make(map[Device]map[Stat]uint64)
 	lines := strings.Split(string(data), "\n")
+	if lines == nil {
+		return nil, errors.New("could not split into lines")
+	}
 	for _, line := range lines[:len(lines)-1] {
 		fields := strings.Split(line, " ")
 		fields = slices.DeleteFunc(fields, func(n string) bool {
