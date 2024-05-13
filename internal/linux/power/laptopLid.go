@@ -52,10 +52,23 @@ func newLaptopLidEvent(v bool) *laptopLidSensor {
 func LaptopLidUpdater(ctx context.Context) chan sensor.Details {
 	sensorCh := make(chan sensor.Details)
 
+	// Check if we have a lid. If we don't just exit.
+	lidIsPresent, err := dbusx.GetProp[bool](dbusx.NewBusRequest(ctx, dbusx.SystemBus).
+		Path("/org/freedesktop/UPower").
+		Destination("org.freedesktop.UPower"),
+		"LidIsPresent",
+	)
+	if err != nil || !lidIsPresent {
+		close(sensorCh)
+		return sensorCh
+	}
+
+	// Our base D-Bus request for lid status.
 	req := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
 		Path(loginBasePath).
 		Destination(managerInterface)
 
+	// Fetch the current lid state and send as a sensor.
 	if v, err := dbusx.GetProp[bool](req, lidClosedProp); err != nil {
 		log.Warn().Err(err).Msg("Could not retrieve lid status from D-Bus. Not tracking status.")
 	} else {
@@ -63,9 +76,10 @@ func LaptopLidUpdater(ctx context.Context) chan sensor.Details {
 			sensorCh <- newLaptopLidEvent(v)
 		}()
 	}
-	sessionPath := dbusx.GetSessionPath(ctx)
 
-	err := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
+	// Set up a D-Bus watch for lid state changes.
+	sessionPath := dbusx.GetSessionPath(ctx)
+	err = dbusx.NewBusRequest(ctx, dbusx.SystemBus).
 		Match([]dbus.MatchOption{
 			dbus.WithMatchObjectPath(sessionPath),
 			dbus.WithMatchInterface(managerInterface),
