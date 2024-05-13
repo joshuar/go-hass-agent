@@ -152,7 +152,7 @@ func TestNewUpdateRequest(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := NewUpdateRequest(tt.args.s...); !reflect.DeepEqual(got, tt.want) {
+			if got, _ := NewUpdateRequest(tt.args.s...); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("UpdateRequest() = %v, want %v", got, tt.want)
 			}
 		})
@@ -182,7 +182,7 @@ func TestNewRegistrationRequest(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := NewRegistrationRequest(tt.args.s); !reflect.DeepEqual(got, tt.want) {
+			if got, _ := NewRegistrationRequest(tt.args.s); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("RegistrationRequest() = %v, want %v", got, tt.want)
 			}
 		})
