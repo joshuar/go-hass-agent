@@ -91,7 +91,7 @@ func (b *upowerBattery) getSensors(ctx context.Context, sensors ...linux.SensorT
 
 // newBattery creates a battery object that will have a number of properties to
 // be treated as sensors in Home Assistant.
-func newBattery(ctx context.Context, path dbus.ObjectPath) *upowerBattery {
+func newBattery(ctx context.Context, path dbus.ObjectPath) (*upowerBattery, error) {
 	b := &upowerBattery{
 		dBusPath: path,
 	}
@@ -99,16 +99,14 @@ func newBattery(ctx context.Context, path dbus.ObjectPath) *upowerBattery {
 	// Get the battery type. Depending on the value, additional sensors will be added.
 	battType, err := b.getProp(ctx, linux.SensorBattType)
 	if err != nil {
-		log.Warn().Err(err).Msg("Could not determine battery type.")
-		return nil
+		return nil, fmt.Errorf("could not determine battery type: %v", err)
 	}
 	b.battType = dbusx.VariantToValue[batteryType](battType)
 
 	// use the native path D-Bus property for the battery id.
 	id, err := b.getProp(ctx, linux.SensorBattNativePath)
 	if err != nil {
-		log.Warn().Err(err).Str("battery", string(b.dBusPath)).Msg("Battery does not have a usable path. Can not monitor sensors.")
-		return nil
+		return nil, fmt.Errorf("could not retrieve battery path in D-Bus: %v", err)
 	}
 	b.id = dbusx.VariantToValue[string](id)
 
@@ -128,7 +126,7 @@ func newBattery(ctx context.Context, path dbus.ObjectPath) *upowerBattery {
 		// Battery has a textual level sensor
 		b.sensors = append(b.sensors, linux.SensorBattLevel)
 	}
-	return b
+	return b, nil
 }
 
 type upowerBatterySensor struct {
@@ -284,11 +282,15 @@ type batteryTracker struct {
 }
 
 func (t *batteryTracker) track(ctx context.Context, p dbus.ObjectPath) <-chan sensor.Details {
+	battery, err := newBattery(ctx, p)
+	if err != nil {
+		log.Warn().Err(err).Msg("Cannot monitory battery.")
+		return nil
+	}
 	battCtx, cancelFunc := context.WithCancel(ctx)
 	t.mu.Lock()
 	t.batteryList[p] = cancelFunc
 	t.mu.Unlock()
-	battery := newBattery(ctx, p)
 	return sensor.MergeSensorCh(battCtx, battery.getSensors(battCtx, battery.sensors...), monitorBattery(battCtx, battery))
 }
 
