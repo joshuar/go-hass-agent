@@ -92,30 +92,30 @@ func (r *request) RequestBody() json.RawMessage {
 	return json.RawMessage(data)
 }
 
-func NewUpdateRequest(s ...SensorState) *request {
+func NewUpdateRequest(s ...SensorState) (*request, error) {
 	var updates []*sensorState
 	for _, u := range s {
 		updates = append(updates, newSensorState(u))
 	}
 	data, err := json.Marshal(updates)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 	return &request{
 		Data:        data,
 		RequestType: requestTypeUpdate,
-	}
+	}, nil
 }
 
-func NewRegistrationRequest(s SensorRegistration) *request {
+func NewRegistrationRequest(s SensorRegistration) (*request, error) {
 	data, err := json.Marshal(newSensorRegistration(s))
 	if err != nil {
-		return nil
+		return nil, err
 	}
 	return &request{
 		Data:        data,
 		RequestType: requestTypeRegister,
-	}
+	}, nil
 }
 
 type response struct {

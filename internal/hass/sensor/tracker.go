@@ -80,12 +80,16 @@ func (t *Tracker) UpdateSensor(ctx context.Context, reg Registry, upd Details) e
 	}
 	var req hass.PostRequest
 	var resp hass.Response
+	var err error
 	if reg.IsRegistered(upd.ID()) {
-		req = NewUpdateRequest(SensorState(upd))
+		req, err = NewUpdateRequest(SensorState(upd))
 		resp = NewUpdateResponse()
 	} else {
-		req = NewRegistrationRequest(SensorRegistration(upd))
+		req, err = NewRegistrationRequest(SensorRegistration(upd))
 		resp = NewRegistrationResponse()
+	}
+	if err != nil {
+		return wrapErr(upd.ID(), err)
 	}
 	if err := hass.ExecuteRequest(ctx, req, resp); err != nil {
 		return wrapErr(upd.ID(), err)
