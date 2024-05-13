@@ -545,11 +545,13 @@ func getHAConfig() *hass.Config {
 	prefs, err := preferences.Load()
 	if err != nil {
 		log.Warn().Err(err).Msg("Could not load preferences.")
+		return nil
 	}
 	ctx := preferences.EmbedInContext(context.TODO(), prefs)
 	haCfg, err := hass.GetConfig(ctx)
 	if err != nil {
 		log.Warn().Err(err).Msg("Could not fetch HA config.")
+		return nil
 	}
 	return haCfg
 }
