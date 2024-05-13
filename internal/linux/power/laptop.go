@@ -7,6 +7,7 @@ package power
 
 import (
 	"context"
+	"path/filepath"
 	"strings"
 
 	"github.com/godbus/dbus/v5"
@@ -85,29 +86,10 @@ func LaptopUpdater(ctx context.Context) chan sensor.Details {
 		return sensorCh
 	}
 
-	req := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
-		Path(loginBasePath).
-		Destination(loginBaseInterface)
-	if v, err := dbusx.GetProp[bool](req, dockedProp); err != nil {
-		log.Warn().Err(err).Msg("Could not retrieve dock status from D-Bus.")
-	} else {
-		go func() {
-			sensorCh <- newLaptopEvent(dockedProp, v)
-		}()
-	}
-	if v, err := dbusx.GetProp[bool](req, lidClosedProp); err != nil {
-		log.Warn().Err(err).Msg("Could not retrieve lid status from D-Bus.")
-	} else {
-		go func() {
-			sensorCh <- newLaptopEvent(lidClosedProp, v)
-		}()
-	}
-	if v, err := dbusx.GetProp[bool](req, externalPowerProp); err != nil {
-		log.Warn().Err(err).Msg("Could not retrieve power status from D-Bus.")
-	} else {
-		go func() {
-			sensorCh <- newLaptopEvent(externalPowerProp, v)
-		}()
+	for _, prop := range []string{dockedProp, lidClosedProp, externalPowerProp} {
+		go func(p string) {
+			sendLaptopPropState(ctx, p, sensorCh)
+		}(prop)
 	}
 
 	sessionPath := dbusx.GetSessionPath(ctx)
@@ -118,15 +100,11 @@ func LaptopUpdater(ctx context.Context) chan sensor.Details {
 		}).
 		Handler(func(s *dbus.Signal) {
 			if !strings.Contains(string(s.Path), loginBasePath) || len(s.Body) <= 1 {
-				log.Trace().Str("runner", "power").Msg("Not my signal or empty signal body.")
 				return
 			}
 			if s.Name == dbusx.PropChangedSignal {
 				props, ok := s.Body[1].(map[string]dbus.Variant)
 				if !ok {
-					log.Trace().Str("runner", "power").
-						Str("signal", s.Name).Interface("body", s.Body).
-						Msg("Unexpected signal body")
 					return
 				}
 				for k, v := range props {
@@ -149,8 +127,7 @@ func LaptopUpdater(ctx context.Context) chan sensor.Details {
 		}).
 		AddWatch(ctx)
 	if err != nil {
-		log.Warn().Err(err).
-			Msg("Could not poll D-Bus for laptop states.")
+		log.Warn().Err(err).Msg("Could not poll D-Bus for laptop states. Won't report dock/lid/external power state.")
 		close(sensorCh)
 		return sensorCh
 	}
@@ -161,4 +138,17 @@ func LaptopUpdater(ctx context.Context) chan sensor.Details {
 		log.Trace().Msg("Stopped laptop state sensor.")
 	}()
 	return sensorCh
+}
+
+func sendLaptopPropState(ctx context.Context, prop string, outCh chan sensor.Details) {
+	var state bool
+	var err error
+	req := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
+		Path(loginBasePath).
+		Destination(loginBaseInterface)
+	if state, err = dbusx.GetProp[bool](req, prop); err != nil {
+		log.Debug().Err(err).Str("prop", filepath.Ext(prop)).Msg("Could not retrieve laptop property from D-Bus.")
+		return
+	}
+	outCh <- newLaptopEvent(prop, state)
 }
