@@ -30,8 +30,8 @@ func TestNewDevice(t *testing.T) {
 	baseDev.hwModel, baseDev.hwVendor = getHWProductInfo()
 
 	withoutOSRelease := baseDev
-	withoutOSRelease.distro = "Unknown Distro"
-	withoutOSRelease.distroVersion = "Unknown Version"
+	withoutOSRelease.distro = unknownDistro
+	withoutOSRelease.distroVersion = unknownDistroVersion
 
 	osReleaseInfo, err := whichdistro.GetOSRelease()
 	assert.Nil(t, err)
