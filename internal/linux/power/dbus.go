@@ -9,4 +9,5 @@ const (
 	loginBasePath      = "/org/freedesktop/login1"
 	loginBaseInterface = "org.freedesktop.login1"
 	managerInterface   = loginBaseInterface + ".Manager"
+	sessionInterface   = loginBaseInterface + ".Session"
 )
