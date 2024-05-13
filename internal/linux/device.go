@@ -19,6 +19,13 @@ import (
 	"github.com/joshuar/go-hass-agent/pkg/linux/whichdistro"
 )
 
+const (
+	unknownVendor        = "Unknown Vendor"
+	unknownModel         = "Unknown Model"
+	unknownDistro        = "Unknown Distro"
+	unknownDistroVersion = "Unknown Version"
+)
+
 type Device struct {
 	appName       string
 	appVersion    string
@@ -90,8 +97,8 @@ func NewDevice(name, version string) *Device {
 	osReleaseInfo, err := whichdistro.GetOSRelease()
 	if err != nil {
 		log.Warn().Err(err).Msg("Could not read /etc/os-release. Contact your distro vendor to implement this file.")
-		dev.distro = "Unknown Distro"
-		dev.distroVersion = "Unknown Version"
+		dev.distro = unknownDistro
+		dev.distroVersion = unknownDistroVersion
 	} else {
 		dev.distro = osReleaseInfo["ID"]
 		dev.distroVersion = osReleaseInfo["VERSION_ID"]
@@ -136,13 +143,27 @@ func getHostname() string {
 	return hostname
 }
 
+// getHWProductInfo retrieves the model and vendor of the machine. If these
+// cannot be retrieved or cannot be found, they will be set to default unknown
+// strings.
 func getHWProductInfo() (model, vendor string) {
 	product, err := ghw.Product(ghw.WithDisableWarnings())
 	if err != nil {
 		log.Warn().Err(err).Msg("Could not retrieve hardware information.")
-		return "Unknown Product", "Unknown Vendor"
+		return unknownModel, unknownVendor
 	}
 	return product.Name, product.Vendor
+}
+
+// Chassis will return the chassis type of the machine, such as "desktop" or
+// "laptop". If this cannot be retrieved, it will return "unknown".
+func Chassis() string {
+	chassisInfo, err := ghw.Chassis(ghw.WithDisableWarnings())
+	if err != nil {
+		log.Warn().Err(err).Msg("Could not determine chassis type.")
+		return "unknown"
+	}
+	return chassisInfo.Type
 }
 
 // FindPortal is a helper function to work out which portal interface should be
