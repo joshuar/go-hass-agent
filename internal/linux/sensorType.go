@@ -52,7 +52,7 @@ const (
 	SensorLoad15                                       // CPU load average (15 min)
 	SensorCPUPc                                        // CPU Usage
 	SensorScreenLock                                   // Screen Lock
-	SensorLaptopLid                                    // Laptop Lid
+	SensorLidClosed                                    // Lid Closed
 	SensorProblem                                      // Problems
 	SensorKernel                                       // Kernel Version
 	SensorDistribution                                 // Distribution Name
@@ -66,6 +66,8 @@ const (
 	SensorDiskWrites                                   // Disk Writes
 	SensorDiskReadRate                                 // Disk Read Rate
 	SensorDiskWriteRate                                // Disk Write Rate
+	SensorDocked                                       // Docked State
+	SensorExternalPower                                // External Power Connected
 )
 
 // SensorTypeValue represents the unique type of sensor data being reported. Every
