@@ -142,15 +142,17 @@ func getAccentColor(value any) string {
 
 func newAccentColorSensor(accent string) *desktopSettingSensor {
 	s := &desktopSettingSensor{}
+	s.IsDiagnostic = true
+	s.IconString = "mdi:palette"
 	s.SensorSrc = linux.DataSrcDbus
 	s.SensorTypeValue = linux.SensorAccentColor
 	s.Value = accent
-	s.IconString = "mdi:palette"
 	return s
 }
 
 func newColorSchemeSensor(scheme string) *desktopSettingSensor {
 	s := &desktopSettingSensor{}
+	s.IsDiagnostic = true
 	s.SensorSrc = linux.DataSrcDbus
 	s.SensorTypeValue = linux.SensorColorScheme
 	s.Value = scheme
