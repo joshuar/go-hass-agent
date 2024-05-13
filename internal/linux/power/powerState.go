@@ -19,6 +19,9 @@ import (
 const (
 	suspend powerSignal = iota
 	shutdown
+
+	sleepSignal    = managerInterface + ".PrepareForSleep"
+	shutdownSignal = managerInterface + ".PrepareForShutdown"
 )
 
 type powerSignal int
@@ -80,15 +83,19 @@ func StateUpdater(ctx context.Context) chan sensor.Details {
 
 	err := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
 		Match([]dbus.MatchOption{
-			dbus.WithMatchObjectPath("/org/freedesktop/login1"),
-			dbus.WithMatchInterface("org.freedesktop.login1.Manager"),
+			dbus.WithMatchObjectPath(loginBasePath),
+			dbus.WithMatchInterface(managerInterface),
 		}).
 		Handler(func(s *dbus.Signal) {
 			switch s.Name {
-			case "org.freedesktop.login1.Manager.PrepareForSleep":
-				sensorCh <- newPowerState(suspend, s.Body[0])
-			case "org.freedesktop.login1.Manager.PrepareForShutdown":
-				sensorCh <- newPowerState(shutdown, s.Body[0])
+			case sleepSignal:
+				go func() {
+					sensorCh <- newPowerState(suspend, s.Body[0])
+				}()
+			case shutdownSignal:
+				go func() {
+					sensorCh <- newPowerState(shutdown, s.Body[0])
+				}()
 			}
 		}).
 		AddWatch(ctx)
