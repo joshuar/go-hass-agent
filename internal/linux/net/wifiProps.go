@@ -149,10 +149,14 @@ func monitorWifi(ctx context.Context, p dbus.ObjectPath) <-chan sensor.Details {
 			// for the associated access point, get the wifi properties as sensors
 			value, err := dbusx.GetProp[any](req.Path(ap), propBase+"."+prop)
 			if err != nil {
-				log.Warn().Err(err).Msgf("Could not get Wi-Fi property %s.", prop)
+				log.Warn().Err(err).Str("prop", prop).Msg("Could not get Wi-Fi property %s.")
 				continue
 			}
 			wifiSensor := newWifiSensor(prop)
+			if wifiSensor == nil {
+				log.Warn().Str("prop", prop).Msg("Unknown wifi property.")
+				continue
+			}
 			wifiSensor.Value = value
 			// send the wifi property as a sensor
 			go func() {
