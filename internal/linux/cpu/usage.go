@@ -24,6 +24,7 @@ type cpuUsageSensor struct {
 
 func UsageUpdater(ctx context.Context) chan sensor.Details {
 	sensorCh := make(chan sensor.Details)
+
 	sendCPUUsage := func(d time.Duration) {
 		usage, err := cpu.Percent(d, false)
 		if err != nil {
@@ -37,8 +38,15 @@ func UsageUpdater(ctx context.Context) chan sensor.Details {
 		s.Value = usage[0]
 		s.SensorTypeValue = linux.SensorCPUPc
 
-		sensorCh <- s
+		go func() {
+			sensorCh <- s
+		}()
 	}
+
+	// Send CPU usage on start.
+	go func() {
+		sendCPUUsage(0)
+	}()
 
 	go helpers.PollSensors(ctx, sendCPUUsage, time.Second*10, time.Second)
 	go func() {
