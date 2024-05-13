@@ -111,13 +111,17 @@ func NewDevice(name, version string) *Device {
 
 func MQTTDevice() *mqtthass.Device {
 	dev := NewDevice(preferences.AppName, preferences.AppVersion)
+	prefs, err := preferences.Load()
+	if err != nil {
+		log.Warn().Err(err).Msg("Could not retrieve preferences.")
+	}
 	return &mqtthass.Device{
 		Name:         dev.DeviceName(),
 		URL:          preferences.AppURL,
 		SWVersion:    dev.OsVersion(),
 		Manufacturer: dev.Manufacturer(),
 		Model:        dev.Model(),
-		Identifiers:  []string{dev.DeviceID()},
+		Identifiers:  []string{prefs.DeviceID},
 	}
 }
 
