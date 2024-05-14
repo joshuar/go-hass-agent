@@ -37,13 +37,17 @@ overrides:
       - libXext
       - libxcb
       - libXau
+      - dbus-x11
   deb:
     depends:
-      - libgl1
-      - libxi6
-      - libxcursor1
-      - libxrandr2
-      - libxinerama1
+      - libgl1 
+      - libx11-6 
+      - libglx0 
+      - libglvnd0 
+      - libxcb1 
+      - libxau6 
+      - libxdmcp6 
+      - dbus-x11
   archlinux:
     depends:
       - libglvnd
