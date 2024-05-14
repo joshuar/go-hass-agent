@@ -37,6 +37,7 @@ func VolumeControl(ctx context.Context, msgCh chan *mqttapi.Msg) (*mqtthass.Numb
 		log.Warn().Err(err).Msg("Unable to connect to Pulseaudio. Volume control will be unavailable.")
 		return nil, nil
 	}
+	log.Debug().Msg("Connected to pulseaudio.")
 
 	audioDev := &audioDevice{
 		pulseAudio: client,
@@ -75,11 +76,13 @@ func VolumeControl(ctx context.Context, msgCh chan *mqttapi.Msg) (*mqtthass.Numb
 		log.Debug().Msg("Monitoring pulseaudio for events.")
 		for {
 			select {
+			case <-ctx.Done():
+				log.Debug().Msg("Closing pulseaudio connection.")
+				client.Close()
+				return
 			case <-events:
 				audioDev.publishVolume()
 				audioDev.publishMute()
-			case <-ctx.Done():
-				return
 			}
 		}
 	}()
