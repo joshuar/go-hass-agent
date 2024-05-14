@@ -125,6 +125,11 @@ func (c *connection) monitorConnectionState(ctx context.Context) chan sensor.Det
 			Msg("Failed to create network connections D-Bus watch.")
 		close(sensorCh)
 	}
+	go func() {
+		defer close(sensorCh)
+		<-ctx.Done()
+		log.Debug().Str("connection", c.name).Msg("Unmonitoring connection state.")
+	}()
 	return sensorCh
 }
 
@@ -182,8 +187,7 @@ func (c *connection) monitorAddresses(ctx context.Context) chan sensor.Details {
 	go func() {
 		defer close(sensorCh)
 		<-ctx.Done()
-		log.Debug().Str("connection", c.Name()).Str("path", string(c.path)).
-			Msg("Unmonitoring address changes.")
+		log.Debug().Str("connection", c.name).Msg("Unmonitoring address changes.")
 	}()
 	return sensorCh
 }
@@ -238,10 +242,15 @@ func newConnection(ctx context.Context, p dbus.ObjectPath) <-chan sensor.Details
 
 	// monitor connection state changes
 	go func() {
-		for s := range c.monitorConnectionState(connCtx) {
-			connCh <- s
+		for {
+			select {
+			case <-ctx.Done():
+				connCancel()
+				return
+			case s := <-c.monitorConnectionState(connCtx):
+				connCh <- s
+			}
 		}
-		connCancel()
 	}()
 
 	// monitor address changes
