@@ -25,13 +25,6 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
-type logLevel string
-
-func (d logLevel) AfterApply() error {
-	logging.SetLoggingLevel(string(d))
-	return nil
-}
-
 type profileFlags logging.ProfileFlags
 
 func (d profileFlags) AfterApply() error {
@@ -175,7 +168,7 @@ var CLI struct {
 	Version  VersionCmd    `cmd:"" help:"Show the Go Hass Agent version."`
 	Profile  profileFlags  `help:"Enable profiling."`
 	AppID    string        `name:"appid" default:"${defaultAppID}" help:"Specify a custom app id (for debugging)."`
-	LogLevel logLevel      `name:"log-level" help:"Set logging level."`
+	LogLevel string        `name:"log-level" help:"Set logging level."`
 	Register RegisterCmd   `cmd:"" help:"Register with Home Assistant."`
 	NoLog    noLogFileFlag `help:"Don't write to a log file."`
 	Headless bool          `name:"terminal" help:"Run without a GUI."`
@@ -198,6 +191,7 @@ func main() {
 	kong.Name(preferences.AppName)
 	kong.Description(preferences.AppDescription)
 	ctx := kong.Parse(&CLI, kong.Bind(), kong.Vars{"defaultAppID": preferences.AppID})
+	logging.SetLoggingLevel(CLI.LogLevel)
 	checkHeadless()
 	err := ctx.Run(&Context{Headless: CLI.Headless, Profile: CLI.Profile, AppID: CLI.AppID})
 	if CLI.Profile != nil {
