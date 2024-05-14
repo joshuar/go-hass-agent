@@ -1,0 +1,295 @@
+// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
+//
+// This software is released under the MIT License.
+// https://opensource.org/licenses/MIT
+
+package linux
+
+import (
+	"reflect"
+	"testing"
+
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
+)
+
+func TestSensor_Name(t *testing.T) {
+	type fields struct {
+		Value            any
+		IconString       string
+		UnitsString      string
+		SensorSrc        string
+		SensorTypeValue  SensorTypeValue
+		IsBinary         bool
+		IsDiagnostic     bool
+		DeviceClassValue types.DeviceClass
+		StateClassValue  types.StateClass
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   string
+	}{
+		{
+			name:   "known sensor type",
+			fields: fields{SensorTypeValue: SensorAppActive},
+			want:   "Active App",
+		},
+		{
+			name: "unset sensor type",
+			want: "Unknown Sensor",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			l := &Sensor{
+				Value:            tt.fields.Value,
+				IconString:       tt.fields.IconString,
+				UnitsString:      tt.fields.UnitsString,
+				SensorSrc:        tt.fields.SensorSrc,
+				SensorTypeValue:  tt.fields.SensorTypeValue,
+				IsBinary:         tt.fields.IsBinary,
+				IsDiagnostic:     tt.fields.IsDiagnostic,
+				DeviceClassValue: tt.fields.DeviceClassValue,
+				StateClassValue:  tt.fields.StateClassValue,
+			}
+			if got := l.Name(); got != tt.want {
+				t.Errorf("Sensor.Name() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestSensor_ID(t *testing.T) {
+	type fields struct {
+		Value            any
+		IconString       string
+		UnitsString      string
+		SensorSrc        string
+		SensorTypeValue  SensorTypeValue
+		IsBinary         bool
+		IsDiagnostic     bool
+		DeviceClassValue types.DeviceClass
+		StateClassValue  types.StateClass
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   string
+	}{
+		{
+			name:   "known sensor type",
+			fields: fields{SensorTypeValue: SensorAppActive},
+			want:   "active_app",
+		},
+		{
+			name: "unset sensor type",
+			want: "unknown_sensor",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			l := &Sensor{
+				Value:            tt.fields.Value,
+				IconString:       tt.fields.IconString,
+				UnitsString:      tt.fields.UnitsString,
+				SensorSrc:        tt.fields.SensorSrc,
+				SensorTypeValue:  tt.fields.SensorTypeValue,
+				IsBinary:         tt.fields.IsBinary,
+				IsDiagnostic:     tt.fields.IsDiagnostic,
+				DeviceClassValue: tt.fields.DeviceClassValue,
+				StateClassValue:  tt.fields.StateClassValue,
+			}
+			if got := l.ID(); got != tt.want {
+				t.Errorf("Sensor.ID() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestSensor_State(t *testing.T) {
+	type fields struct {
+		Value            any
+		IconString       string
+		UnitsString      string
+		SensorSrc        string
+		SensorTypeValue  SensorTypeValue
+		IsBinary         bool
+		IsDiagnostic     bool
+		DeviceClassValue types.DeviceClass
+		StateClassValue  types.StateClass
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   any
+	}{
+		{
+			name:   "known value",
+			fields: fields{Value: "someValue"},
+			want:   "someValue",
+		},
+		{
+			name: "unset value",
+			want: nil,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			l := &Sensor{
+				Value:            tt.fields.Value,
+				IconString:       tt.fields.IconString,
+				UnitsString:      tt.fields.UnitsString,
+				SensorSrc:        tt.fields.SensorSrc,
+				SensorTypeValue:  tt.fields.SensorTypeValue,
+				IsBinary:         tt.fields.IsBinary,
+				IsDiagnostic:     tt.fields.IsDiagnostic,
+				DeviceClassValue: tt.fields.DeviceClassValue,
+				StateClassValue:  tt.fields.StateClassValue,
+			}
+			if got := l.State(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Sensor.State() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestSensor_SensorType(t *testing.T) {
+	type fields struct {
+		Value            any
+		IconString       string
+		UnitsString      string
+		SensorSrc        string
+		SensorTypeValue  SensorTypeValue
+		IsBinary         bool
+		IsDiagnostic     bool
+		DeviceClassValue types.DeviceClass
+		StateClassValue  types.StateClass
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   types.SensorClass
+	}{
+		{
+			name: "default type",
+			want: types.Sensor,
+		},
+		{
+			name:   "binary type",
+			fields: fields{IsBinary: true},
+			want:   types.BinarySensor,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			l := &Sensor{
+				Value:            tt.fields.Value,
+				IconString:       tt.fields.IconString,
+				UnitsString:      tt.fields.UnitsString,
+				SensorSrc:        tt.fields.SensorSrc,
+				SensorTypeValue:  tt.fields.SensorTypeValue,
+				IsBinary:         tt.fields.IsBinary,
+				IsDiagnostic:     tt.fields.IsDiagnostic,
+				DeviceClassValue: tt.fields.DeviceClassValue,
+				StateClassValue:  tt.fields.StateClassValue,
+			}
+			if got := l.SensorType(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Sensor.SensorType() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestSensor_Category(t *testing.T) {
+	type fields struct {
+		Value            any
+		IconString       string
+		UnitsString      string
+		SensorSrc        string
+		SensorTypeValue  SensorTypeValue
+		IsBinary         bool
+		IsDiagnostic     bool
+		DeviceClassValue types.DeviceClass
+		StateClassValue  types.StateClass
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   string
+	}{
+		{
+			name: "default category",
+			want: "",
+		},
+		{
+			name:   "diagnostic category",
+			fields: fields{IsDiagnostic: true},
+			want:   "diagnostic",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			l := &Sensor{
+				Value:            tt.fields.Value,
+				IconString:       tt.fields.IconString,
+				UnitsString:      tt.fields.UnitsString,
+				SensorSrc:        tt.fields.SensorSrc,
+				SensorTypeValue:  tt.fields.SensorTypeValue,
+				IsBinary:         tt.fields.IsBinary,
+				IsDiagnostic:     tt.fields.IsDiagnostic,
+				DeviceClassValue: tt.fields.DeviceClassValue,
+				StateClassValue:  tt.fields.StateClassValue,
+			}
+			if got := l.Category(); got != tt.want {
+				t.Errorf("Sensor.Category() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestSensor_Attributes(t *testing.T) {
+	type fields struct {
+		Value            any
+		IconString       string
+		UnitsString      string
+		SensorSrc        string
+		SensorTypeValue  SensorTypeValue
+		IsBinary         bool
+		IsDiagnostic     bool
+		DeviceClassValue types.DeviceClass
+		StateClassValue  types.StateClass
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   any
+	}{
+		{
+			name:   "with source",
+			fields: fields{SensorSrc: DataSrcProcfs},
+			want: struct {
+				DataSource string `json:"Data Source"`
+			}{
+				DataSource: DataSrcProcfs,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			l := &Sensor{
+				Value:            tt.fields.Value,
+				IconString:       tt.fields.IconString,
+				UnitsString:      tt.fields.UnitsString,
+				SensorSrc:        tt.fields.SensorSrc,
+				SensorTypeValue:  tt.fields.SensorTypeValue,
+				IsBinary:         tt.fields.IsBinary,
+				IsDiagnostic:     tt.fields.IsDiagnostic,
+				DeviceClassValue: tt.fields.DeviceClassValue,
+				StateClassValue:  tt.fields.StateClassValue,
+			}
+			if got := l.Attributes(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Sensor.Attributes() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
