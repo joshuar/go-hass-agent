@@ -78,7 +78,7 @@ func ScreenLockUpdater(ctx context.Context) chan sensor.Details {
 		AddWatch(ctx)
 	if err != nil {
 		log.Warn().Err(err).
-			Msg("Could not poll D-Bus for screen lock. Screen lock sensor will not run.")
+			Msg("Unable to monitor for screen lock state.")
 		close(sensorCh)
 		return sensorCh
 	}
