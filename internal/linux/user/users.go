@@ -66,11 +66,8 @@ func newUsersSensor() *usersSensor {
 
 func Updater(ctx context.Context) chan sensor.Details {
 	sensorCh := make(chan sensor.Details)
+
 	u := newUsersSensor()
-	u.updateUsers(ctx)
-	go func() {
-		sensorCh <- u
-	}()
 
 	err := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
 		Match([]dbus.MatchOption{
@@ -94,6 +91,13 @@ func Updater(ctx context.Context) chan sensor.Details {
 		close(sensorCh)
 		return sensorCh
 	}
+
+	// Send an initial sensor update.
+	u.updateUsers(ctx)
+	go func() {
+		sensorCh <- u
+	}()
+
 	go func() {
 		defer close(sensorCh)
 		<-ctx.Done()
