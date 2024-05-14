@@ -24,7 +24,7 @@ func NewDBusAPI(ctx context.Context) *dBusAPI {
 	for _, b := range []dbusType{SessionBus, SystemBus} {
 		bus, err := NewBus(ctx, b)
 		if err != nil {
-			log.Warn().Err(err).Msg("Could not connect to D-Bus.")
+			log.Warn().Err(err).Msg("Could not connect to D-Bus bus.")
 		} else {
 			a.dbus[b] = bus
 		}

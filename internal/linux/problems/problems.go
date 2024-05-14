@@ -83,7 +83,8 @@ func Updater(ctx context.Context) chan sensor.Details {
 
 		problemList, err := dbusx.GetData[[]string](req, dBusProblemIntr+".GetProblems")
 		if err != nil {
-			log.Warn().Err(err).Msg("Could not retrieve problem list.")
+			log.Debug().Err(err).Msg("Unable to retrieve list of ABRT problems.")
+			return
 		}
 
 		for _, p := range problemList {

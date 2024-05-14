@@ -335,7 +335,7 @@ func getBatteries(ctx context.Context) []dbus.ObjectPath {
 		Destination(upowerDBusDest)
 	batteryList, err := dbusx.GetData[[]dbus.ObjectPath](req, upowerGetDevicesMethod)
 	if err != nil {
-		log.Warn().Err(err).Msg("Could not retrieve battery list.")
+		return nil
 	}
 	return batteryList
 }
@@ -419,8 +419,8 @@ func monitorBatteryChanges(ctx context.Context, t *batteryTracker) <-chan sensor
 		}).
 		AddWatch(ctx)
 	if err != nil {
-		log.Debug().Caller().Err(err).
-			Msg("Failed to create DBus battery property watch.")
+		log.Warn().Err(err).
+			Msg("Unable to monitor for battery events.")
 		close(sensorCh)
 		return sensorCh
 	}

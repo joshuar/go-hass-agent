@@ -97,7 +97,7 @@ func StateUpdater(ctx context.Context) chan sensor.Details {
 		AddWatch(ctx)
 	if err != nil {
 		log.Warn().Err(err).
-			Msg("Failed to create user D-Bus watch. Will not track power state.")
+			Msg("Unable to monitor power state.")
 		close(sensorCh)
 		return sensorCh
 	}

@@ -87,7 +87,7 @@ func Updater(ctx context.Context) chan sensor.Details {
 		AddWatch(ctx)
 	if err != nil {
 		log.Warn().Err(err).
-			Msg("Failed to create user D-Bus watch. Users sensor will not run.")
+			Msg("Unable to monitor for user login/logout.")
 		close(sensorCh)
 		return sensorCh
 	}
