@@ -18,7 +18,12 @@ import (
 )
 
 const (
-	login1DBusPath = "/org/freedesktop/login1"
+	loginBasePath        = "/org/freedesktop/login1"
+	loginBaseInterface   = "org.freedesktop.login1"
+	managerInterface     = loginBaseInterface + ".Manager"
+	sessionAddedSignal   = managerInterface + ".SessionNew"
+	sessionRemovedSignal = managerInterface + ".SessionRemoved"
+	listUsersMethod      = managerInterface + ".ListUsers"
 )
 
 type usersSensor struct {
@@ -38,10 +43,10 @@ func (s *usersSensor) Attributes() any {
 
 func (s *usersSensor) updateUsers(ctx context.Context) {
 	req := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
-		Path(login1DBusPath).
-		Destination("org.freedesktop.login1")
+		Path(loginBasePath).
+		Destination(loginBaseInterface)
 
-	userData, err := dbusx.GetData[[][]any](req, "org.freedesktop.login1.Manager.ListUsers")
+	userData, err := dbusx.GetData[[][]any](req, listUsersMethod)
 	if err != nil {
 		log.Warn().Err(err).Msg("Could not retrieve users from D-Bus.")
 	}
@@ -71,13 +76,12 @@ func Updater(ctx context.Context) chan sensor.Details {
 
 	err := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
 		Match([]dbus.MatchOption{
-			dbus.WithMatchObjectPath(login1DBusPath),
-			dbus.WithMatchInterface("org.freedesktop.DBus.Properties"),
+			dbus.WithMatchObjectPath(loginBasePath),
+			dbus.WithMatchInterface(dbusx.PropInterface),
 		}).
 		Handler(func(s *dbus.Signal) {
 			switch s.Name {
-			case "org.freedesktop.login1.Manager.SessionNew",
-				"org.freedesktop.login1.Manager.SessionRemoved":
+			case sessionAddedSignal, sessionRemovedSignal:
 				u.updateUsers(ctx)
 				go func() {
 					sensorCh <- u
