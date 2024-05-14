@@ -23,9 +23,9 @@ go build -o /go/bin/go-hass-agent
 # rm -fr /usr/src/go-hass-agent
 EOF
 
-FROM docker.io/golang:1.22
+FROM ubuntu
 # copy binary over from builder stage
-COPY --from=builder /go/bin/go-hass-agent /go/bin/go-hass-agent
+COPY --from=builder /go/bin/go-hass-agent /usr/bin/go-hass-agent
 # reinstall minimum libraries for running
 RUN mkdir /etc/dpkg/dpkg.conf.d
 COPY <<EOF /etc/dpkg/dpkg.conf.d/excludes
@@ -40,11 +40,12 @@ path-include=/usr/share/doc/*/copyright
 # ... and Debian changelogs for native & non-native packages
 path-include=/usr/share/doc/*/changelog.*
 EOF
-RUN apt-get -y update && apt-get -y install libx11-6 libgl1-mesa-glx dbus-x11 && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
-# create a user to run the agent
-RUN useradd -ms /bin/bash gouser
-USER gouser
-WORKDIR /home/gouser
+RUN <<EOF
+export DEBIAN_FRONTEND=noninteractive
+apt-get -y update 
+apt-get -y install libgl1 libx11-6 libglx0 libglvnd0 libxcb1 libxau6 libxdmcp6 dbus-x11 
+rm -rf /var/lib/apt/lists/* /var/cache/apt/*
+EOF
 # set up run entrypoint/cmd
 ENTRYPOINT ["go-hass-agent"]
 CMD ["--terminal"]
