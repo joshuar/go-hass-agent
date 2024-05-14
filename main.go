@@ -9,6 +9,7 @@ package main
 
 import (
 	"errors"
+	"os"
 	"path/filepath"
 	"syscall"
 
@@ -197,9 +198,19 @@ func main() {
 	kong.Name(preferences.AppName)
 	kong.Description(preferences.AppDescription)
 	ctx := kong.Parse(&CLI, kong.Bind(), kong.Vars{"defaultAppID": preferences.AppID})
+	checkHeadless()
 	err := ctx.Run(&Context{Headless: CLI.Headless, Profile: CLI.Profile, AppID: CLI.AppID})
 	if CLI.Profile != nil {
-		errors.Join(logging.StopProfiling(logging.ProfileFlags(CLI.Profile)), err)
+		err = errors.Join(logging.StopProfiling(logging.ProfileFlags(CLI.Profile)), err)
 	}
 	ctx.FatalIfErrorf(err)
+}
+
+func checkHeadless() {
+	if os.Getenv("DISPLAY") == "" {
+		if !CLI.Headless {
+			log.Warn().Msg("DISPLAY not set, running in headless mode by default (specify --terminal to suppress this warning).")
+		}
+		CLI.Headless = true
+	}
 }
