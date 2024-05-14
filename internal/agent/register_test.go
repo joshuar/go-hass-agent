@@ -6,9 +6,17 @@
 package agent
 
 import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/joshuar/go-hass-agent/internal/hass"
+	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
 func TestRegistrationResponse_GenerateAPIURL(t *testing.T) {
@@ -128,6 +136,74 @@ func TestRegistrationResponse_GenerateWebsocketURL(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := generateWebsocketURL(tt.args.host); got != tt.want {
 				t.Errorf("RegistrationResponse.GenerateWebsocketURL() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestAgent_performRegistration(t *testing.T) {
+	preferences.SetPath(t.TempDir())
+
+	mockGoodReponse := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mockResponse, err := json.Marshal(&hass.RegistrationDetails{WebhookID: "someID"})
+		assert.Nil(t, err)
+		fmt.Fprintf(w, string(mockResponse))
+	}))
+	mockBadResponse := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mockResponse, err := json.Marshal(&hass.RegistrationDetails{})
+		assert.Nil(t, err)
+		fmt.Fprintf(w, string(mockResponse))
+	}))
+
+	type fields struct {
+		ui      UI
+		done    chan struct{}
+		Options *Options
+	}
+	type args struct {
+		ctx    context.Context
+		server string
+		token  string
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		{
+			name:   "successful test",
+			args:   args{ctx: context.Background(), server: mockGoodReponse.URL, token: "someToken"},
+			fields: fields{Options: &Options{Headless: true}},
+		},
+		{
+			name:    "missing server",
+			args:    args{ctx: context.Background(), token: "someToken"},
+			fields:  fields{Options: &Options{Headless: true}},
+			wantErr: true,
+		},
+		{
+			name:    "missing token",
+			args:    args{ctx: context.Background(), server: mockGoodReponse.URL},
+			fields:  fields{Options: &Options{Headless: true}},
+			wantErr: true,
+		},
+		{
+			name:    "bad response",
+			args:    args{ctx: context.Background(), server: mockBadResponse.URL},
+			fields:  fields{Options: &Options{Headless: true}},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			agent := &Agent{
+				ui:      tt.fields.ui,
+				done:    tt.fields.done,
+				Options: tt.fields.Options,
+			}
+			if err := agent.performRegistration(tt.args.ctx, tt.args.server, tt.args.token); (err != nil) != tt.wantErr {
+				t.Errorf("Agent.performRegistration() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
