@@ -187,7 +187,7 @@ To register the agent running in a container, run the following:
 ```shell
 podman run --rm --hostname go-hass-agent-container \
   --network host \
-  --volume go-hass-agent:/home/gouser \
+  --volume go-hass-agent:/home/ubuntu \
   ghcr.io/joshuar/go-hass-agent register \
   --server https://some.server:port \
   --token longlivedtoken
@@ -200,7 +200,7 @@ Once registered, run the agent with:
 ```shell
 podman run --hostname go-hass-agent-container --name my-go-hass-agent \
   --network host \
-  --volume go-hass-agent:/home/gouser \
+  --volume go-hass-agent:/home/ubuntu \
   --volume /proc:/host/proc:ro --volume /sys:/host/sys:ro \
   --volume /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket:ro \
   --volume /run/user/1000/bus:/run/user/1000/bus:ro \
