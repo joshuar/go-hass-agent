@@ -351,7 +351,7 @@ func monitorBattery(ctx context.Context, battery *upowerBattery) <-chan sensor.D
 	err := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
 		Match([]dbus.MatchOption{
 			dbus.WithMatchObjectPath(battery.dBusPath),
-			dbus.WithMatchInterface("org.freedesktop.DBus.Properties"),
+			dbus.WithMatchInterface(dbusx.PropInterface),
 		}).
 		Event(dbusx.PropChangedSignal).
 		Handler(func(s *dbus.Signal) {

@@ -16,9 +16,15 @@ import (
 )
 
 const (
-	SessionBus        dbusType = iota // session
-	SystemBus                         // system
-	PropChangedSignal = "org.freedesktop.DBus.Properties.PropertiesChanged"
+	SessionBus dbusType = iota // session
+	SystemBus                  // system
+
+	PropInterface         = "org.freedesktop.DBus.Properties"
+	PropChangedSignal     = PropInterface + ".PropertiesChanged"
+	loginBasePath         = "/org/freedesktop/login1"
+	loginBaseInterface    = "org.freedesktop.login1"
+	loginManagerInterface = loginBaseInterface + ".Manager"
+	listSessionsMethod    = loginManagerInterface + ".ListSessions"
 )
 
 var ErrNoBus = errors.New("no D-Bus connection")
@@ -232,10 +238,10 @@ func GetSessionPath(ctx context.Context) dbus.ObjectPath {
 		return ""
 	}
 	req := NewBusRequest(ctx, SystemBus).
-		Path("/org/freedesktop/login1").
-		Destination("org.freedesktop.login1")
+		Path(loginBasePath).
+		Destination(loginBaseInterface)
 
-	sessions, err := GetData[[][]any](req, "org.freedesktop.login1.Manager.ListSessions")
+	sessions, err := GetData[[][]any](req, listSessionsMethod)
 	if err != nil {
 		return ""
 	}
