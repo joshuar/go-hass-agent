@@ -8,6 +8,7 @@ func _() {
 	// An "invalid array index" compiler error signifies that the constant values have changed.
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
+	_ = x[SensorUnknown-0]
 	_ = x[SensorAppActive-1]
 	_ = x[SensorAppRunning-2]
 	_ = x[SensorBattType-3]
@@ -71,14 +72,13 @@ func _() {
 	_ = x[SensorExternalPower-61]
 }
 
-const _SensorTypeValue_name = "Active AppRunning AppsBattery TypeBattery LevelBattery TemperatureBattery VoltageBattery EnergyBattery PowerBattery StateBattery PathBattery LevelBattery ModelMemory TotalMemory AvailableMemory UsedMemory UsageSwap Memory TotalSwap Memory UsedSwap Memory FreeSwap UsageConnection StateConnection IDConnection DeviceConnection TypeConnection IPv4Connection IPv6IPv4 AddressIPv6 AddressWi-Fi SSIDWi-Fi FrequencyWi-Fi Link SpeedWi-Fi Signal StrengthWi-Fi BSSIDBytes SentBytes ReceivedBytes Sent ThroughputBytes Received ThroughputPower ProfileLast RebootUptimeCPU load average (1 min)CPU load average (5 min)CPU load average (15 min)CPU UsageScreen LockLid ClosedProblemsKernel VersionDistribution NameDistribution VersionCurrent UsersTemperaturePower StateAccent ColorColor Scheme TypeDisk ReadsDisk WritesDisk Read RateDisk Write RateDocked StateExternal Power Connected"
+const _SensorTypeValue_name = "Unknown SensorActive AppRunning AppsBattery TypeBattery LevelBattery TemperatureBattery VoltageBattery EnergyBattery PowerBattery StateBattery PathBattery LevelBattery ModelMemory TotalMemory AvailableMemory UsedMemory UsageSwap Memory TotalSwap Memory UsedSwap Memory FreeSwap UsageConnection StateConnection IDConnection DeviceConnection TypeConnection IPv4Connection IPv6IPv4 AddressIPv6 AddressWi-Fi SSIDWi-Fi FrequencyWi-Fi Link SpeedWi-Fi Signal StrengthWi-Fi BSSIDBytes SentBytes ReceivedBytes Sent ThroughputBytes Received ThroughputPower ProfileLast RebootUptimeCPU load average (1 min)CPU load average (5 min)CPU load average (15 min)CPU UsageScreen LockLid ClosedProblemsKernel VersionDistribution NameDistribution VersionCurrent UsersTemperaturePower StateAccent ColorColor Scheme TypeDisk ReadsDisk WritesDisk Read RateDisk Write RateDocked StateExternal Power Connected"
 
-var _SensorTypeValue_index = [...]uint16{0, 10, 22, 34, 47, 66, 81, 95, 108, 121, 133, 146, 159, 171, 187, 198, 210, 227, 243, 259, 269, 285, 298, 315, 330, 345, 360, 372, 384, 394, 409, 425, 446, 457, 467, 481, 502, 527, 540, 551, 557, 581, 605, 630, 639, 650, 660, 668, 682, 699, 719, 732, 743, 754, 766, 783, 793, 804, 818, 833, 845, 869}
+var _SensorTypeValue_index = [...]uint16{0, 14, 24, 36, 48, 61, 80, 95, 109, 122, 135, 147, 160, 173, 185, 201, 212, 224, 241, 257, 273, 283, 299, 312, 329, 344, 359, 374, 386, 398, 408, 423, 439, 460, 471, 481, 495, 516, 541, 554, 565, 571, 595, 619, 644, 653, 664, 674, 682, 696, 713, 733, 746, 757, 768, 780, 797, 807, 818, 832, 847, 859, 883}
 
 func (i SensorTypeValue) String() string {
-	i -= 1
 	if i < 0 || i >= SensorTypeValue(len(_SensorTypeValue_index)-1) {
-		return "SensorTypeValue(" + strconv.FormatInt(int64(i+1), 10) + ")"
+		return "SensorTypeValue(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
 	return _SensorTypeValue_name[_SensorTypeValue_index[i]:_SensorTypeValue_index[i+1]]
 }
