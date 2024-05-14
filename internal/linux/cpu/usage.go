@@ -37,10 +37,7 @@ func UsageUpdater(ctx context.Context) chan sensor.Details {
 		s.StateClassValue = types.StateClassMeasurement
 		s.Value = usage[0]
 		s.SensorTypeValue = linux.SensorCPUPc
-
-		go func() {
-			sensorCh <- s
-		}()
+		sensorCh <- s
 	}
 
 	// Send CPU usage on start.
