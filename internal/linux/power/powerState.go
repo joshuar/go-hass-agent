@@ -77,10 +77,6 @@ func newPowerState(s powerSignal, v any) *powerStateSensor {
 func StateUpdater(ctx context.Context) chan sensor.Details {
 	sensorCh := make(chan sensor.Details)
 
-	go func() {
-		sensorCh <- newPowerState(shutdown, false)
-	}()
-
 	err := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
 		Match([]dbus.MatchOption{
 			dbus.WithMatchObjectPath(loginBasePath),
@@ -105,6 +101,11 @@ func StateUpdater(ctx context.Context) chan sensor.Details {
 		close(sensorCh)
 		return sensorCh
 	}
+
+	// Send an initial sensor update.
+	go func() {
+		sensorCh <- newPowerState(shutdown, false)
+	}()
 
 	go func() {
 		defer close(sensorCh)
