@@ -21,6 +21,19 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/scripts"
 )
 
+// Worker represents an object that is responsible for retrieving and returning
+// sensors. Workers have a Name and Description for display and logging
+// purposes. A worker will have a Sensors function that will return a list of
+// sensors, including their latest values. A worker will also have a Updates
+// function that returns a channel on which updates to its sensors will be
+// published.
+type Worker interface {
+	Name() string
+	Description() string
+	Sensors(ctx context.Context) []sensor.Details
+	Updates(ctx context.Context) <-chan sensor.Details
+}
+
 // runWorkers will call all the sensor worker functions that have been defined
 // for this device.
 func runWorkers(ctx context.Context, trk SensorTracker, reg sensor.Registry) {
@@ -35,35 +48,48 @@ func runWorkers(ctx context.Context, trk SensorTracker, reg sensor.Registry) {
 		outCh = append(outCh, workerFuncs[i](ctx))
 	}
 
+	sensorUpdates := sensor.MergeSensorCh(ctx, outCh...)
 	wg.Add(1)
 	go func() {
 		log.Debug().Msg("Listening for sensor updates.")
 		defer wg.Done()
-		for s := range sensor.MergeSensorCh(ctx, outCh...) {
-			go func(s sensor.Details) {
-				if err := trk.UpdateSensor(ctx, reg, s); err != nil {
-					log.Warn().Err(err).Str("id", s.ID()).Msg("Update failed.")
-				} else {
-					log.Debug().
-						Str("name", s.Name()).
-						Str("id", s.ID()).
-						Interface("state", s.State()).
-						Str("units", s.Units()).
-						Msg("Sensor updated.")
-				}
-			}(s)
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case s := <-sensorUpdates:
+				go func(s sensor.Details) {
+					if err := trk.UpdateSensor(ctx, reg, s); err != nil {
+						log.Warn().Err(err).Str("id", s.ID()).Msg("Update failed.")
+					} else {
+						log.Debug().
+							Str("name", s.Name()).
+							Str("id", s.ID()).
+							Interface("state", s.State()).
+							Str("units", s.Units()).
+							Msg("Sensor updated.")
+					}
+				}(s)
+			}
 		}
 	}()
+
+	locationUpdates := locationWorker()(ctx)
 	wg.Add(1)
 	go func() {
 		log.Debug().Msg("Listening for location updates.")
 		defer wg.Done()
-		for l := range locationWorker()(ctx) {
-			go func(l *hass.LocationData) {
-				if err := hass.UpdateLocation(ctx, l); err != nil {
-					log.Warn().Err(err).Msg("Location update failed.")
-				}
-			}(l)
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case l := <-locationUpdates:
+				go func(l *hass.LocationData) {
+					if err := hass.UpdateLocation(ctx, l); err != nil {
+						log.Warn().Err(err).Msg("Location update failed.")
+					}
+				}(l)
+			}
 		}
 	}()
 
@@ -163,16 +189,19 @@ func runMQTTWorker(ctx context.Context) {
 		return
 	}
 
+	mqttCtx, mqttCancel := context.WithCancel(ctx)
+	defer mqttCancel()
+
 	// Create an MQTT device for this operating system and run its Setup.
-	mqttDevice := newMQTTDevice(ctx)
-	if err := mqttDevice.Setup(ctx); err != nil {
+	mqttDevice := newMQTTDevice(mqttCtx)
+	if err := mqttDevice.Setup(mqttCtx); err != nil {
 		log.Error().Err(err).Msg("Could not set up device MQTT functionality.")
 		return
 	}
 
 	// Create a new connection to the MQTT broker. This will also publish the
 	// device subscriptions.
-	client, err := mqttapi.NewClient(ctx, prefs, mqttDevice.Subscriptions(), mqttDevice.Configs())
+	client, err := mqttapi.NewClient(mqttCtx, prefs, mqttDevice.Subscriptions(), mqttDevice.Configs())
 	if err != nil {
 		log.Error().Err(err).Msg("Could not connect to MQTT broker.")
 		return
@@ -193,6 +222,8 @@ func runMQTTWorker(ctx context.Context) {
 					log.Warn().Err(err).Msg("Unable to publish message to MQTT.")
 				}
 			case <-ctx.Done():
+				mqttCancel()
+				log.Debug().Msg("Stopped listening for messages to publish to MQTT.")
 				return
 			}
 		}
