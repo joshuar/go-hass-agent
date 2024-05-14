@@ -115,5 +115,10 @@ func newMQTTDevice(ctx context.Context) *linuxMQTTDevice {
 	// Add the D-Bus command action.
 	dev.controls = append(dev.controls, system.NewDBusCommandSubscription(ctx))
 
+	go func() {
+		defer close(dev.msgs)
+		<-ctx.Done()
+	}()
+
 	return dev
 }
