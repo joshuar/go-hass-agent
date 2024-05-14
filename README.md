@@ -204,7 +204,7 @@ podman run --hostname go-hass-agent-container --name my-go-hass-agent \
   --volume /proc:/host/proc:ro --volume /sys:/host/sys:ro \
   --volume /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket:ro \
   --volume /run/user/1000/bus:/run/user/1000/bus:ro \
-  ghcr.io/joshuar/go-hass-agent
+  ghcr.io/joshuar/go-hass-agent run
 ```
 
 Change the value passed to `--name` to a unique name for your running container
