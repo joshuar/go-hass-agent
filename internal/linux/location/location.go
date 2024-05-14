@@ -12,38 +12,39 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/joshuar/go-hass-agent/internal/hass"
+	"github.com/joshuar/go-hass-agent/internal/preferences"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
 const (
-	appID            = "org.joshuar.go-hass-agent"
-	geoclueInterface = "org.freedesktop.GeoClue2"
-	clientInterface  = geoclueInterface + ".Client"
-	geocluePath      = "/org/freedesktop/GeoClue2/Manager"
-
-	startCall     = "org.freedesktop.GeoClue2.Client.Start"
-	stopCall      = "org.freedesktop.GeoClue2.Client.Stop"
-	getClientCall = "org.freedesktop.GeoClue2.Manager.GetClient"
-
-	desktopIDProp         = "org.freedesktop.GeoClue2.Client.DesktopId"
-	distanceThresholdProp = "org.freedesktop.GeoClue2.Client.DistanceThreshold"
-	timeThresholdProp     = "org.freedesktop.GeoClue2.Client.TimeThreshold"
-
-	locationUpdatedSignal = "org.freedesktop.GeoClue2.Client.LocationUpdated"
+	managerPath           = "/org/freedesktop/GeoClue2/Manager"
+	geoclueInterface      = "org.freedesktop.GeoClue2"
+	clientInterface       = geoclueInterface + ".Client"
+	managerInterface      = geoclueInterface + ".Manager"
+	locationInterface     = geoclueInterface + ".Location"
+	startCall             = clientInterface + ".Start"
+	stopCall              = clientInterface + ".Stop"
+	getClientCall         = managerInterface + ".GetClient"
+	desktopIDProp         = clientInterface + ".DesktopId"
+	distanceThresholdProp = clientInterface + ".DistanceThreshold"
+	timeThresholdProp     = clientInterface + ".TimeThreshold"
+	locationUpdatedSignal = clientInterface + ".LocationUpdated"
 )
 
 func Updater(ctx context.Context) chan *hass.LocationData {
-	sensorCh := make(chan *hass.LocationData, 1)
+	sensorCh := make(chan *hass.LocationData)
 	locationUpdateHandler := func(s *dbus.Signal) {
 		if s.Name == locationUpdatedSignal {
 			if locationPath, ok := s.Body[1].(dbus.ObjectPath); ok {
-				sensorCh <- newLocation(ctx, locationPath)
+				go func() {
+					sensorCh <- newLocation(ctx, locationPath)
+				}()
 			}
 		}
 	}
 
 	clientReq := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
-		Path(geocluePath).
+		Path(managerPath).
 		Destination(geoclueInterface)
 
 	var clientPath dbus.ObjectPath
@@ -57,7 +58,7 @@ func Updater(ctx context.Context) chan *hass.LocationData {
 	}
 	locationRequest := dbusx.NewBusRequest(ctx, dbusx.SystemBus).Path(clientPath).Destination(geoclueInterface)
 
-	if err = dbusx.SetProp(locationRequest, desktopIDProp, appID); err != nil {
+	if err = dbusx.SetProp(locationRequest, desktopIDProp, preferences.AppID); err != nil {
 		log.Error().Err(err).Msg("Could not set a geoclue client id.")
 		close(sensorCh)
 		return sensorCh
@@ -108,14 +109,13 @@ func newLocation(ctx context.Context, locationPath dbus.ObjectPath) *hass.Locati
 		req := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
 			Path(locationPath).
 			Destination(geoclueInterface)
-		value, err := dbusx.GetProp[float64](req, "org.freedesktop.GeoClue2.Location."+prop)
+		value, err := dbusx.GetProp[float64](req, locationInterface+"."+prop)
 		if err != nil {
 			log.Debug().Caller().Err(err).
 				Msgf("Could not retrieve %s.", prop)
 			return 0
-		} else {
-			return value
 		}
+		return value
 	}
 	return &hass.LocationData{
 		Gps:         []float64{getProp("Latitude"), getProp("Longitude")},
