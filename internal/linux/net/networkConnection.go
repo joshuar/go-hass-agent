@@ -340,7 +340,6 @@ func (t *connectionTracker) Tracked(path dbus.ObjectPath) bool {
 
 func ConnectionsUpdater(ctx context.Context) chan sensor.Details {
 	sensorCh := make(chan sensor.Details)
-
 	tracker := &connectionTracker{
 		list: getActiveConnections(ctx),
 	}
@@ -353,11 +352,6 @@ func ConnectionsUpdater(ctx context.Context) chan sensor.Details {
 			}
 			tracker.Untrack(path)
 		}()
-	}
-
-	// monitor all current active connections
-	for _, path := range tracker.list {
-		handleConn(path)
 	}
 
 	// watch for any connection activations/deactivations
@@ -377,13 +371,18 @@ func ConnectionsUpdater(ctx context.Context) chan sensor.Details {
 		}).
 		AddWatch(ctx)
 	if err != nil {
-		log.Error().Err(err).
-			Msg("Failed to create connection state change D-Bus watch.")
+		log.Warn().Err(err).Msg("Unable to monitor for network connection state changes.")
 		close(sensorCh)
 	}
+
+	// monitor all current active connections
+	for _, path := range tracker.list {
+		handleConn(path)
+	}
+
 	go func() {
-		defer close(sensorCh)
 		<-ctx.Done()
+		log.Debug().Msg("Stopped network connection monitoring.")
 	}()
 	return sensorCh
 }
