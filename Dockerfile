@@ -48,4 +48,4 @@ rm -rf /var/lib/apt/lists/* /var/cache/apt/*
 EOF
 # set up run entrypoint/cmd
 ENTRYPOINT ["go-hass-agent"]
-CMD ["--terminal"]
+CMD ["--terminal", "run"]
