@@ -31,7 +31,17 @@ A log will be very helpful to look into this bug report. To get the log:
 
 1. Run `go-hass-agent` from a terminal or command-line with the `--log-level debug` flag set:
 ```shell
-go-hass-agent --log-level debug run
+# for package/binary installs:
+go-hass-agent --log-level=debug run
+# for containers:
+# (adjust options as appropriate)
+podman run --hostname go-hass-agent-container --name my-go-hass-agent \
+  --network host \
+  --volume go-hass-agent:/home/ubuntu \
+  --volume /proc:/host/proc:ro --volume /sys:/host/sys:ro \
+  --volume /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket:ro \
+  --volume /run/user/1000/bus:/run/user/1000/bus:ro \
+  ghcr.io/joshuar/go-hass-agent --log-level=debug run
 ```
 2. Try to reproduce the issue.
 3. After you have reproduced the issue, please (compress and) attach the `go-hass-agent.log` file found in the following location:
