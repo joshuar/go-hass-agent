@@ -24,14 +24,14 @@
                 "vivaxy.vscode-conventional-commits",
                 "brunodavi.conventional-snippets",
                 "golang.go",
-                "premparihar.gotestexplorer",
                 "ymotongpoo.licenser",
                 "esbenp.prettier-vscode",
                 "aaron-bond.better-comments",
                 "valentjn.vscode-ltex",
                 "eamodio.gitlens",
                 "github.vscode-github-actions",
-                "joshbolduc.commitlint"
+                "joshbolduc.commitlint",
+                "tamasfe.even-better-toml"
             ],
             "settings": {
                 "terminal.integrated.defaultProfile.linux": "fish",
