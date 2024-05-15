@@ -48,7 +48,6 @@ linters-settings:
       - wrapperFunc
   govet:
     enable-all: true
-    check-shadowing: true
   lll:
     line-length: 140
   misspell:
@@ -103,6 +102,13 @@ linters:
     - whitespace
     - bodyclose
     - zerologlint
+
+issues:
+  exclude-rules:
+    - path: '(.+)_test\.go'
+      linters:
+        - govet
+      text: "pointer bytes could be"
 
 run:
   timeout: 5m
