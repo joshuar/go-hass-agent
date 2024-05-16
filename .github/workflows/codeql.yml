@@ -9,12 +9,14 @@ on:
     - cron: '11 0 * * 5'
   workflow_dispatch:
 
+permissions:
+  actions: read
+  contents: read
+
 jobs:
   analyze:
     permissions:
       security-events: write
-      actions: read
-      contents: read
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
