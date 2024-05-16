@@ -15,19 +15,19 @@ import (
 //go:generate gotext -srclang=en update -out=catalog.go -lang=en,fr,de github.com/joshuar/go-hass-agent
 
 // Translator provides a msgPrinter that can display localised strings for
-// translation of the UI
+// translation of the UI.
 type Translator struct {
 	msgPrinter *message.Printer
 }
 
 // NewTranslator creates a new Translator in the locale of the system. Strings
-// translater by this Translator instance will be localised if a translation is
+// translator by this Translator instance will be localised if a translation is
 // available.
 func NewTranslator() *Translator {
 	t := &Translator{}
 	userLocales, err := locale.GetLocales()
 	if err != nil {
-		log.Warn().Msg("Could not find a suitable locale. Using English.")
+		log.Warn().Err(err).Msg("Could not find any installed locales. Using English.")
 		t.msgPrinter = message.NewPrinter(message.MatchLanguage(language.English.String()))
 	}
 	log.Debug().Msgf("Setting language to %v.", userLocales)
@@ -37,6 +37,6 @@ func NewTranslator() *Translator {
 
 // Translate will take a string defined in English and apply the appropriate
 // translation (if available) of the defined Translator.
-func (t *Translator) Translate(key string, args ...interface{}) string {
+func (t *Translator) Translate(key string, args ...any) string {
 	return t.msgPrinter.Sprintf(key, args...)
 }
