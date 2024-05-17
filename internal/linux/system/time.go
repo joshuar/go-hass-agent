@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-package time
+package system
 
 import (
 	"context"
@@ -41,7 +41,7 @@ func (s *timeSensor) Attributes() any {
 	}
 }
 
-func Updater(ctx context.Context) chan sensor.Details {
+func UptimeUpdater(ctx context.Context) chan sensor.Details {
 	sensorCh := make(chan sensor.Details)
 	updateTimes := func(_ time.Duration) {
 		go func() {
