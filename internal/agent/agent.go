@@ -3,6 +3,8 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
+// revive:disable:unused-receiver
+
 package agent
 
 import (

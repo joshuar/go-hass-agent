@@ -5,6 +5,7 @@ package agent
 
 import (
 	"context"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"sync"
 )
 
@@ -27,6 +28,9 @@ var _ Device = &DeviceMock{}
 //			SetupFunc: func(ctx context.Context) context.Context {
 //				panic("mock out the Setup method")
 //			},
+//			UpdatesFunc: func() chan sensor.Details {
+//				panic("mock out the Updates method")
+//			},
 //		}
 //
 //		// use mockedDevice in code that requires Device
@@ -43,6 +47,9 @@ type DeviceMock struct {
 	// SetupFunc mocks the Setup method.
 	SetupFunc func(ctx context.Context) context.Context
 
+	// UpdatesFunc mocks the Updates method.
+	UpdatesFunc func() chan sensor.Details
+
 	// calls tracks calls to the methods.
 	calls struct {
 		// DeviceID holds details about calls to the DeviceID method.
@@ -56,10 +63,14 @@ type DeviceMock struct {
 			// Ctx is the ctx argument value.
 			Ctx context.Context
 		}
+		// Updates holds details about calls to the Updates method.
+		Updates []struct {
+		}
 	}
 	lockDeviceID   sync.RWMutex
 	lockDeviceName sync.RWMutex
 	lockSetup      sync.RWMutex
+	lockUpdates    sync.RWMutex
 }
 
 // DeviceID calls DeviceIDFunc.
@@ -145,5 +156,32 @@ func (mock *DeviceMock) SetupCalls() []struct {
 	mock.lockSetup.RLock()
 	calls = mock.calls.Setup
 	mock.lockSetup.RUnlock()
+	return calls
+}
+
+// Updates calls UpdatesFunc.
+func (mock *DeviceMock) Updates() chan sensor.Details {
+	if mock.UpdatesFunc == nil {
+		panic("DeviceMock.UpdatesFunc: method is nil but Device.Updates was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockUpdates.Lock()
+	mock.calls.Updates = append(mock.calls.Updates, callInfo)
+	mock.lockUpdates.Unlock()
+	return mock.UpdatesFunc()
+}
+
+// UpdatesCalls gets all the calls that were made to Updates.
+// Check the length with:
+//
+//	len(mockedDevice.UpdatesCalls())
+func (mock *DeviceMock) UpdatesCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockUpdates.RLock()
+	calls = mock.calls.Updates
+	mock.lockUpdates.RUnlock()
 	return calls
 }

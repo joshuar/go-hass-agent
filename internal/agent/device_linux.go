@@ -7,6 +7,7 @@ package agent
 
 import (
 	"context"
+	"time"
 
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
@@ -22,11 +23,25 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/linux/power"
 	"github.com/joshuar/go-hass-agent/internal/linux/problems"
 	"github.com/joshuar/go-hass-agent/internal/linux/system"
-	"github.com/joshuar/go-hass-agent/internal/linux/time"
 	"github.com/joshuar/go-hass-agent/internal/linux/user"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
+
+type Controller interface {
+	Sensors() []sensor.Details
+}
+
+type Polling interface {
+	Controller
+	Interval() time.Duration
+	Jitter() time.Duration
+}
+
+type Events interface {
+	Controller
+	Events(ctx context.Context) chan sensor.Details
+}
 
 func newDevice(_ context.Context) *linux.Device {
 	return linux.NewDevice(preferences.AppName, preferences.AppVersion)
@@ -46,14 +61,15 @@ func sensorWorkers() []func(context.Context) chan sensor.Details {
 		cpu.UsageUpdater,
 		disk.UsageUpdater,
 		disk.IOUpdater,
-		time.Updater,
 		power.ScreenLockUpdater,
 		power.LaptopUpdater,
 		power.StateUpdater,
 		power.ProfileUpdater,
+		power.IdleUpdater,
 		user.Updater,
 		system.Versions,
 		system.HWSensorUpdater,
+		system.UptimeUpdater,
 		desktop.Updater,
 	)
 	return workers
