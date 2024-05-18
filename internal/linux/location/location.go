@@ -33,72 +33,83 @@ const (
 
 func Updater(ctx context.Context) chan *hass.LocationData {
 	sensorCh := make(chan *hass.LocationData)
-	locationUpdateHandler := func(s *dbus.Signal) {
-		if s.Name == locationUpdatedSignal {
-			if locationPath, ok := s.Body[1].(dbus.ObjectPath); ok {
-				go func() {
-					sensorCh <- newLocation(ctx, locationPath)
-				}()
-			}
-		}
-	}
 
+	// The process to watch for location updates via D-Bus is tedious...
+
+	// Get a new client for setting up a location watch.
 	clientReq := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
 		Path(managerPath).
 		Destination(geoclueInterface)
 
 	var clientPath dbus.ObjectPath
 	var err error
-
 	clientPath, err = dbusx.GetData[dbus.ObjectPath](clientReq, getClientCall)
 	if !clientPath.IsValid() || err != nil {
 		log.Error().Err(err).Msg("Could not set up a geoclue client.")
 		close(sensorCh)
 		return sensorCh
 	}
+	// Create a reusable busRequest for the remaining setup steps.
 	locationRequest := dbusx.NewBusRequest(ctx, dbusx.SystemBus).Path(clientPath).Destination(geoclueInterface)
 
+	// Set our client ID.
 	if err = dbusx.SetProp(locationRequest, desktopIDProp, preferences.AppID); err != nil {
 		log.Error().Err(err).Msg("Could not set a geoclue client id.")
 		close(sensorCh)
 		return sensorCh
 	}
 
+	// Set a distance threshold.
 	if err = dbusx.SetProp(locationRequest, distanceThresholdProp, uint32(0)); err != nil {
 		log.Warn().Err(err).Msg("Could not set distance threshold for geoclue requests.")
 	}
 
+	// Set a time threshold.
 	if err = dbusx.SetProp(locationRequest, timeThresholdProp, uint32(0)); err != nil {
 		log.Warn().Err(err).Msg("Could not set time threshold for geoclue requests.")
 	}
 
+	// Request to start tracking location updates.
 	if err = locationRequest.Call(startCall); err != nil {
 		log.Warn().Err(err).Msg("Could not start geoclue client.")
 		close(sensorCh)
 		return sensorCh
 	}
 
+	// Start our watch for the location update messages.
+	eventCh, err := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
+		Watch(ctx, dbusx.Watch{
+			Path:      string(clientPath),
+			Interface: clientInterface,
+			Names:     []string{"LocationUpdated"},
+		})
+	if err != nil {
+		log.Debug().Caller().Err(err).
+			Msg("Failed to create location D-Bus watch.")
+		close(sensorCh)
+	}
 	log.Debug().Msg("Tracking location with geoclue.")
 
-	err = dbusx.NewBusRequest(ctx, dbusx.SystemBus).
-		Match([]dbus.MatchOption{
-			dbus.WithMatchObjectPath(clientPath),
-			dbus.WithMatchInterface(clientInterface),
-			dbus.WithMatchMember("LocationUpdated"),
-		}).
-		Handler(locationUpdateHandler).
-		AddWatch(ctx)
-	if err != nil {
-		log.Error().Err(err).Msg("Could not watch for geoclue updates.")
-	}
-
+	// Listen for the location updates and dispatch them as location sensor
+	// updates.
 	go func() {
 		defer close(sensorCh)
-		<-ctx.Done()
-		err := locationRequest.Call(stopCall)
-		if err != nil {
-			log.Debug().Caller().Err(err).Msg("Failed to stop location updater.")
-			return
+		for {
+			select {
+			case <-ctx.Done():
+				err := locationRequest.Call(stopCall)
+				if err != nil {
+					log.Debug().Caller().Err(err).Msg("Failed to stop location updater.")
+					return
+				}
+				return
+			case event := <-eventCh:
+				if locationPath, ok := event.Content[1].(dbus.ObjectPath); ok {
+					go func() {
+						sensorCh <- newLocation(ctx, locationPath)
+					}()
+				}
+			}
 		}
 	}()
 	return sensorCh
