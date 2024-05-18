@@ -33,39 +33,42 @@ func Updater(ctx context.Context) chan sensor.Details {
 		close(sensorCh)
 		return sensorCh
 	}
-	activeApp := newActiveAppSensor()
-	runningApps := newRunningAppsSensor()
 
-	appListReq := dbusx.NewBusRequest(ctx, dbusx.SessionBus).
-		Path(appStateDBusPath).
-		Destination(portalDest)
-
-	err := dbusx.NewBusRequest(ctx, dbusx.SessionBus).
-		Match([]dbus.MatchOption{
-			dbus.WithMatchObjectPath(appStateDBusPath),
-			dbus.WithMatchInterface(appStateDBusInterface),
-			dbus.WithMatchMember("RunningApplicationsChanged"),
-		}).
-		Handler(func(_ *dbus.Signal) {
-			appList, err := dbusx.GetData[map[string]dbus.Variant](appListReq, appStateDBusMethod)
-			if err != nil {
-				log.Warn().Err(err).Msg("Could not retrieve app list from D-Bus.")
-			}
-			if appList != nil {
-				activeApp.update(appList, sensorCh)
-				runningApps.update(appList, sensorCh)
-			}
-		}).
-		AddWatch(ctx)
+	eventCh, err := dbusx.NewBusRequest(ctx, dbusx.SessionBus).
+		Watch(ctx, dbusx.Watch{
+			Path:      appStateDBusPath,
+			Interface: appStateDBusInterface,
+			Name:      "RunningApplicationsChanged",
+		})
 	if err != nil {
 		log.Debug().Caller().Err(err).
 			Msg("Failed to create active app D-Bus watch.")
 		close(sensorCh)
 	}
+
 	go func() {
 		defer close(sensorCh)
-		<-ctx.Done()
-		log.Debug().Msg("Stopped app sensor.")
+		activeApp := newActiveAppSensor()
+		runningApps := newRunningAppsSensor()
+		appListReq := dbusx.NewBusRequest(ctx, dbusx.SessionBus).
+			Path(appStateDBusPath).
+			Destination(portalDest)
+		for {
+			select {
+			case <-ctx.Done():
+				log.Debug().Msg("Stopped app sensor.")
+				return
+			case <-eventCh:
+				appList, err := dbusx.GetData[map[string]dbus.Variant](appListReq, appStateDBusMethod)
+				if err != nil {
+					log.Warn().Err(err).Msg("Could not retrieve app list from D-Bus.")
+				}
+				if appList != nil {
+					activeApp.update(appList, sensorCh)
+					runningApps.update(appList, sensorCh)
+				}
+			}
+		}
 	}()
 	return sensorCh
 }
