@@ -98,15 +98,15 @@ func (i *fyneUI) DisplayTrayIcon(agent ui.Agent, trk ui.SensorTracker) {
 			func() {
 				i.sensorsWindow(trk).Show()
 			})
-
-		// Settings menu and submenu items.
-		settingsMenu := fyne.NewMenuItem(i.Translate("Preferences"), nil)
-		settingsMenu.ChildMenu = fyne.NewMenu("",
-			fyne.NewMenuItem(i.Translate("App"),
-				func() { i.agentSettingsWindow().Show() }),
-			fyne.NewMenuItem(i.text.Translate("Fyne"),
-				func() { i.fyneSettingsWindow().Show() }),
-		)
+		// Preferences/Settings items.
+		menuItemAppPrefs := fyne.NewMenuItem(i.Translate("App Settings"),
+			func() {
+				i.agentSettingsWindow().Show()
+			})
+		menuItemFynePrefs := fyne.NewMenuItem(i.text.Translate("Fyne"),
+			func() {
+				i.fyneSettingsWindow().Show()
+			})
 		// Quit menu item.
 		menuItemQuit := fyne.NewMenuItem(i.Translate("Quit"), func() {
 			log.Debug().Msg("User requested stop agent.")
@@ -117,7 +117,8 @@ func (i *fyneUI) DisplayTrayIcon(agent ui.Agent, trk ui.SensorTracker) {
 		menu := fyne.NewMenu("",
 			menuItemAbout,
 			menuItemSensors,
-			settingsMenu,
+			menuItemAppPrefs,
+			menuItemFynePrefs,
 			menuItemQuit)
 		desk.SetSystemTrayMenu(menu)
 	}
