@@ -1,5 +1,12 @@
 # Changelog
 
+## [9.1.1](https://github.com/joshuar/go-hass-agent/compare/v9.1.0...v9.1.1) (2024-05-18)
+
+
+### Bug Fixes
+
+* **agent:** :ambulance: fix unavailable location sensor causing crashes ([a9a54ac](https://github.com/joshuar/go-hass-agent/commit/a9a54ac324ce5490a788dcfcaa93e0c7f3292262))
+
 ## [9.1.0](https://github.com/joshuar/go-hass-agent/compare/v9.0.0...v9.1.0) (2024-05-18)
 
 
