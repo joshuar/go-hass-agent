@@ -38,7 +38,7 @@ func Updater(ctx context.Context) chan sensor.Details {
 		Watch(ctx, dbusx.Watch{
 			Path:      appStateDBusPath,
 			Interface: appStateDBusInterface,
-			Name:      "RunningApplicationsChanged",
+			Names:     []string{"RunningApplicationsChanged"},
 		})
 	if err != nil {
 		log.Debug().Caller().Err(err).

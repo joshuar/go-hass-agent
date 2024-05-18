@@ -70,7 +70,7 @@ func ProfileUpdater(ctx context.Context) chan sensor.Details {
 
 	events, err := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
 		Watch(ctx, dbusx.Watch{
-			Name:      dbusx.PropChangedSignal,
+			Names:     []string{dbusx.PropChangedSignal},
 			Interface: dbusx.PropInterface,
 			Path:      powerProfilesPath,
 		})
