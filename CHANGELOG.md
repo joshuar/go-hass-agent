@@ -1,5 +1,51 @@
 # Changelog
 
+## [9.1.0](https://github.com/joshuar/go-hass-agent/compare/v9.0.0...v9.1.0) (2024-05-18)
+
+
+### Features
+
+* **agent:** :building_construction: start creating the framework for more efficient sensor updates ([2b98a89](https://github.com/joshuar/go-hass-agent/commit/2b98a893c04fa711248bd0cf7dbb4170f88d822b))
+* **agent:** :sparkles: initial migration from cobra to kong ([e93f733](https://github.com/joshuar/go-hass-agent/commit/e93f7335056b0ebb445b92dd3764b3ee472a54f8))
+* **dbusx:** :sparkles: new function for simpler watch creation ([91cd040](https://github.com/joshuar/go-hass-agent/commit/91cd040771c0983c14510101a26264a118f66c45))
+* **linux:** :sparkles: detect machine chassis type ([c5ac91a](https://github.com/joshuar/go-hass-agent/commit/c5ac91ae5e3f241c19fb32d938d18bad9d19849d))
+* **linux:** :sparkles: new improved laptop sensors for lid closed state, docked state and external power connected state ([c6ca2b6](https://github.com/joshuar/go-hass-agent/commit/c6ca2b6ed3a8ab096fa7ace571e0880ed963dd19))
+
+
+### Bug Fixes
+
+* **agent:** :bug: enable more profiling options ([0717f92](https://github.com/joshuar/go-hass-agent/commit/0717f92f8d8ad7a6d5327230ba6cf0e364dc93d4))
+* **agent:** :bug: ensure a default app ID is set when not specified ([e5c7265](https://github.com/joshuar/go-hass-agent/commit/e5c7265be4ee3e149fbd01dc78fd95988544338c))
+* **agent:** :bug: ensure log level is set appropriately on start ([a00c742](https://github.com/joshuar/go-hass-agent/commit/a00c742da99cf7a19054c0ded51d94219716cf45))
+* **agent:** :bug: if no GUI detected, default to running headless (and show a warning) ([6f9469d](https://github.com/joshuar/go-hass-agent/commit/6f9469dd0721da5a0f5bdc871ff27268b49ca69f))
+* **agent:** :bug: if we cannot fetch the Home Assistant config, don't display its details on about window ([2241450](https://github.com/joshuar/go-hass-agent/commit/22414503e01f1ffae094c45855b155623dd2fab5))
+* **agent:** :bug: return nil if cannot fetch Home Assistant config ([e731aa2](https://github.com/joshuar/go-hass-agent/commit/e731aa2dd4316ea791e06e54e7c71fbf724332fd))
+* **agent:** :lipstick: merge the preferences submenu back into the main menu of the tray icon ([097c35e](https://github.com/joshuar/go-hass-agent/commit/097c35e482e9b837622f397653e001439028178d))
+* **agent:** :zap: better handling of sensor channels ([f3724df](https://github.com/joshuar/go-hass-agent/commit/f3724dfae7f5daee8fe27fc240e0d6cfd18bbe83))
+* **container:** :bug: use correct run command in container ([2f42ee8](https://github.com/joshuar/go-hass-agent/commit/2f42ee8691560beca7f69271c28027ff97a73216))
+* **container:** :sparkles: better container defaults (and docs updates to match) ([e9a3cb7](https://github.com/joshuar/go-hass-agent/commit/e9a3cb7e897d7fd1c1fd8eff9d4ea5e27231ad19))
+* **hass:** :bug: catch potential nil panic from error condition and handle appropriately ([a7a6dec](https://github.com/joshuar/go-hass-agent/commit/a7a6dec5c6e0febd5251910e804c820f3fdb76ba))
+* **linux:** :bug: avoid sending on closed channel ([cbf95fc](https://github.com/joshuar/go-hass-agent/commit/cbf95fcc549529735202ba6ea622a4a178acfc20))
+* **linux:** :bug: better problematic battery handling to avoid nil panics ([cda8403](https://github.com/joshuar/go-hass-agent/commit/cda84037227025d18caa8e99c0128ba3045482c9))
+* **linux:** :bug: detect and warn on unrecognised wifi properties ([6e12013](https://github.com/joshuar/go-hass-agent/commit/6e12013117801c1c075896683e069188ed3713df))
+* **linux:** :bug: keep device id constant for MQTT ([fcea433](https://github.com/joshuar/go-hass-agent/commit/fcea43394012131894b3b9c24a4788e9d84037ff))
+* **linux:** :bug: power profile sensor should work again ([73f71d2](https://github.com/joshuar/go-hass-agent/commit/73f71d2169623a767695f6ae6a7b7f871a9f9cd3))
+* **linux:** :bug: shutdown connection state monitor gracefully ([db2d165](https://github.com/joshuar/go-hass-agent/commit/db2d165cf6ce82e8fcec21661923923ac3966e35))
+* **linux:** :bug: source distro information from /etc/os-release for registration ([a8d76c6](https://github.com/joshuar/go-hass-agent/commit/a8d76c6a177837b7641db6d5601902a0efd0ccb4))
+* **linux:** :fire: remove deprecated channel close ([ab277af](https://github.com/joshuar/go-hass-agent/commit/ab277af063aa3e154e3fb60d8d48da3c026a3839))
+* **linux:** :fire: remove unreleased idle sensor updater ([28d23e3](https://github.com/joshuar/go-hass-agent/commit/28d23e3338226648787a2622ea4e5a7a9b23e4ae))
+* **linux:** :lock: as per recommendations, don't use the actual device id, generate a random one ([5d69005](https://github.com/joshuar/go-hass-agent/commit/5d690059415b404f870f6822700283363ac0352e))
+* **linux:** :zap: detect if we have a lid, don't bother monitoring if we don't ([61c64b6](https://github.com/joshuar/go-hass-agent/commit/61c64b66d7bc65e99563d429a7a29247e9781256))
+* **linux:** :zap: gracefully close pulseaudio connection on shutdown ([8df123e](https://github.com/joshuar/go-hass-agent/commit/8df123eb697f32941b8966d115be807b2d5d2acc))
+* **linux:** :zap: gracefully shutdown mqtt message channel ([8d06d9e](https://github.com/joshuar/go-hass-agent/commit/8d06d9ecc518dc6fb850380fa115ecca4afd3710))
+* **linux/proc:** :bug: handle unable to split /proc/diskstats ([7300ac9](https://github.com/joshuar/go-hass-agent/commit/7300ac9a05d2d17e68028fd2616b34f7f8e94547))
+
+
+### Performance Improvements
+
+* **linux:** :zap: send cpu load/usage state on start ([a1ea881](https://github.com/joshuar/go-hass-agent/commit/a1ea881daf51578b814204896b485bbec0a41c32))
+* **linux:** :zap: utilise new D-Bus helper function for watching app state ([fe41e91](https://github.com/joshuar/go-hass-agent/commit/fe41e918fb12fbea7ad669c539559e4ff537bd46))
+
 ## [9.0.0](https://github.com/joshuar/go-hass-agent/compare/v8.0.0...v9.0.0) (2024-05-07)
 
 
