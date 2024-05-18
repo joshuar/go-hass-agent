@@ -8,13 +8,16 @@ package dbusx
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os/user"
+	"strings"
 	"sync"
 
 	"github.com/godbus/dbus/v5"
 	"github.com/rs/zerolog/log"
 )
 
+//go:generate stringer -type=dbusType -output busType_strings.go
 const (
 	SessionBus dbusType = iota // session
 	SystemBus                  // system
@@ -35,6 +38,24 @@ var DbusTypeMap = map[string]dbusType{
 }
 
 type dbusType int
+
+type Trigger struct {
+	Signal  string
+	Path    string
+	Content []any
+}
+
+type Watch struct {
+	Path      string
+	Interface string
+	Name      string
+}
+
+type Properties struct {
+	Interface   string
+	Changed     map[string]dbus.Variant
+	Invalidated []string
+}
 
 type Bus struct {
 	conn    *dbus.Conn
@@ -138,9 +159,7 @@ func GetProp[P any](req *busRequest, prop string) (P, error) {
 	obj := req.bus.conn.Object(req.dest, req.path)
 	res, err := obj.GetProperty(prop)
 	if err != nil {
-		log.Debug().Err(err).
-			Msgf("Unable to retrieve property %s (%s)", prop, req.dest)
-		return value, err
+		return value, fmt.Errorf("unable to retrieve property %s from %s: %w", prop, req.dest, err)
 	}
 	return VariantToValue[P](res), nil
 }
@@ -180,9 +199,57 @@ func (r *busRequest) Call(method string, args ...any) error {
 	}
 	obj := r.bus.conn.Object(r.dest, r.path)
 	if args != nil {
-		return obj.Call(method, 0, args...).Err
+		return r.busRequestError("call could not retrieve object", obj.Call(method, 0, args...).Err)
 	}
 	return obj.Call(method, 0).Err
+}
+
+// Watch takes a given busRequest and will create watch for signal events with
+// the given watch conditions. It will send any signal events via the returned
+// channel. Typically, this is used to react when a certain property or signal
+// with a given path and on a given interface, changes. The data returned in the
+// channel will contain the signal (or property) that triggered the match, the
+// path and the contents (what values actually changed).
+func (r *busRequest) Watch(ctx context.Context, watchConditions Watch) (chan Trigger, error) {
+	var matchers []dbus.MatchOption
+	matchers = append(matchers,
+		dbus.WithMatchObjectPath(dbus.ObjectPath(watchConditions.Path)),
+		dbus.WithMatchInterface(watchConditions.Interface),
+	)
+	if err := r.bus.conn.AddMatchSignalContext(ctx, matchers...); err != nil {
+		return nil, r.busRequestError("unable to add watch conditions", err)
+	}
+	signalCh := make(chan *dbus.Signal)
+	outCh := make(chan Trigger)
+	r.bus.conn.Signal(signalCh)
+	r.bus.wg.Add(1)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for {
+			select {
+			case <-ctx.Done():
+				r.bus.conn.RemoveSignal(signalCh)
+				close(signalCh)
+				close(outCh)
+				return
+			case signal := <-signalCh:
+				if signal.Path == dbus.ObjectPath(watchConditions.Path) && strings.Contains(signal.Name, watchConditions.Name) {
+					outCh <- Trigger{
+						Signal:  signal.Name,
+						Path:    string(signal.Path),
+						Content: signal.Body,
+					}
+				}
+			}
+		}
+	}()
+	go func() {
+		wg.Wait()
+		r.bus.wg.Done()
+	}()
+	return outCh, nil
 }
 
 func (r *busRequest) AddWatch(ctx context.Context) error {
@@ -222,7 +289,7 @@ func (r *busRequest) RemoveWatch(ctx context.Context) error {
 		return ErrNoBus
 	}
 	if err := r.bus.conn.RemoveMatchSignalContext(ctx, r.match...); err != nil {
-		return err
+		return r.busRequestError("unable to remove watch", err)
 	}
 	log.Trace().
 		Str("path", string(r.path)).
@@ -230,6 +297,12 @@ func (r *busRequest) RemoveWatch(ctx context.Context) error {
 		Str("event", r.event).
 		Msgf("Removed D-Bus signal.")
 	return nil
+}
+
+// busRequestError wraps a lower level error while creating a busRequest into
+// something more understandable.
+func (r *busRequest) busRequestError(msg string, err error) error {
+	return fmt.Errorf("%s: %s (%w)", r.bus.busType.String(), msg, err)
 }
 
 func GetSessionPath(ctx context.Context) dbus.ObjectPath {
@@ -253,6 +326,31 @@ func GetSessionPath(ctx context.Context) dbus.ObjectPath {
 		}
 	}
 	return ""
+}
+
+// ParsePropertiesChanged treats the given signal body as matching the canonical
+// org.freedesktop.DBus.PropertiesChanged signature and will parse it into a
+// Properties structure that is easier to use. Adapted from
+// https://github.com/godbus/dbus/issues/201
+func ParsePropertiesChanged(v []any) (*Properties, error) {
+	props := &Properties{}
+	var ok bool
+	if len(v) != 3 {
+		return nil, errors.New("signal contents do not appear to represent changed properties")
+	}
+	props.Interface, ok = v[0].(string)
+	if !ok {
+		return nil, errors.New("could not parse interface name")
+	}
+	props.Changed, ok = v[1].(map[string]dbus.Variant)
+	if !ok {
+		return nil, errors.New("could not parse changed properteis")
+	}
+	props.Invalidated, ok = v[2].([]string)
+	if !ok {
+		return nil, errors.New("could not parse invalidated properties")
+	}
+	return props, nil
 }
 
 // VariantToValue converts a dbus.Variant interface{} value into the specified
