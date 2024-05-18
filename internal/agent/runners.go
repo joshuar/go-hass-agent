@@ -74,22 +74,16 @@ func runWorkers(ctx context.Context, trk SensorTracker, reg sensor.Registry) {
 		}
 	}()
 
-	locationUpdates := locationWorker()(ctx)
 	wg.Add(1)
 	go func() {
 		log.Debug().Msg("Listening for location updates.")
 		defer wg.Done()
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case l := <-locationUpdates:
-				go func(l *hass.LocationData) {
-					if err := hass.UpdateLocation(ctx, l); err != nil {
-						log.Warn().Err(err).Msg("Location update failed.")
-					}
-				}(l)
-			}
+		for l := range locationWorker()(ctx) {
+			go func(l *hass.LocationData) {
+				if err := hass.UpdateLocation(ctx, l); err != nil {
+					log.Warn().Err(err).Msg("Location update failed.")
+				}
+			}(l)
 		}
 	}()
 
