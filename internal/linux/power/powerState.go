@@ -8,7 +8,6 @@ package power
 import (
 	"context"
 
-	"github.com/godbus/dbus/v5"
 	"github.com/rs/zerolog/log"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
@@ -77,40 +76,45 @@ func newPowerState(s powerSignal, v any) *powerStateSensor {
 func StateUpdater(ctx context.Context) chan sensor.Details {
 	sensorCh := make(chan sensor.Details)
 
-	err := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
-		Match([]dbus.MatchOption{
-			dbus.WithMatchObjectPath(loginBasePath),
-			dbus.WithMatchInterface(managerInterface),
-		}).
-		Handler(func(s *dbus.Signal) {
-			switch s.Name {
-			case sleepSignal:
-				go func() {
-					sensorCh <- newPowerState(suspend, s.Body[0])
-				}()
-			case shutdownSignal:
-				go func() {
-					sensorCh <- newPowerState(shutdown, s.Body[0])
-				}()
-			}
-		}).
-		AddWatch(ctx)
+	events, err := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
+		Watch(ctx, dbusx.Watch{
+			Names:     []string{sleepSignal, shutdownSignal},
+			Interface: managerInterface,
+			Path:      loginBasePath,
+		})
 	if err != nil {
-		log.Warn().Err(err).
-			Msg("Unable to monitor power state.")
+		log.Debug().Err(err).
+			Msg("Failed to create power state D-Bus watch.")
 		close(sensorCh)
 		return sensorCh
 	}
+
+	go func() {
+		defer close(sensorCh)
+		for {
+			select {
+			case <-ctx.Done():
+				log.Debug().Msg("Stopped power state sensor.")
+				return
+			case event := <-events:
+				switch event.Signal {
+				case sleepSignal:
+					go func() {
+						sensorCh <- newPowerState(suspend, event.Content[0])
+					}()
+				case shutdownSignal:
+					go func() {
+						sensorCh <- newPowerState(shutdown, event.Content[0])
+					}()
+				}
+			}
+		}
+	}()
 
 	// Send an initial sensor update.
 	go func() {
 		sensorCh <- newPowerState(shutdown, false)
 	}()
 
-	go func() {
-		defer close(sensorCh)
-		<-ctx.Done()
-		log.Debug().Msg("Stopped power state sensor.")
-	}()
 	return sensorCh
 }
