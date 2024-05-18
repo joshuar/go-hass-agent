@@ -76,7 +76,7 @@ func ProfileUpdater(ctx context.Context) chan sensor.Details {
 		})
 	if err != nil {
 		log.Debug().Err(err).
-			Msg("Failed to create power state D-Bus watch.")
+			Msg("Failed to create power profile D-Bus watch.")
 		close(sensorCh)
 		return sensorCh
 	}
