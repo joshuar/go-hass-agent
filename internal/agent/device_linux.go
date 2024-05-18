@@ -28,19 +28,23 @@ import (
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
-type Controller interface {
+// Sensors interface represents a list of related sensors.
+type Sensors interface {
 	Sensors() []sensor.Details
 }
 
+// Polling interface represents sensors that are generated on some poll interval.
 type Polling interface {
-	Controller
+	Sensors
 	Interval() time.Duration
 	Jitter() time.Duration
 }
 
-type Events interface {
-	Controller
-	Events(ctx context.Context) chan sensor.Details
+// DBus interface represents sensors that are generated on D-Bus events.
+type DBus interface {
+	Sensors
+	Watch(ctx context.Context) dbusx.Watch
+	Events(ctx context.Context, eventCh chan dbusx.Trigger) chan sensor.Details
 }
 
 func newDevice(_ context.Context) *linux.Device {
@@ -65,7 +69,6 @@ func sensorWorkers() []func(context.Context) chan sensor.Details {
 		power.LaptopUpdater,
 		power.StateUpdater,
 		power.ProfileUpdater,
-		power.IdleUpdater,
 		user.Updater,
 		system.Versions,
 		system.HWSensorUpdater,
