@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"os/user"
+	"slices"
 	"strings"
 	"sync"
 
@@ -48,7 +49,7 @@ type Trigger struct {
 type Watch struct {
 	Path      string
 	Interface string
-	Name      string
+	Names     []string
 }
 
 type Properties struct {
@@ -235,12 +236,28 @@ func (r *busRequest) Watch(ctx context.Context, watchConditions Watch) (chan Tri
 				close(outCh)
 				return
 			case signal := <-signalCh:
-				if signal.Path == dbus.ObjectPath(watchConditions.Path) && strings.Contains(signal.Name, watchConditions.Name) {
-					outCh <- Trigger{
-						Signal:  signal.Name,
-						Path:    string(signal.Path),
-						Content: signal.Body,
-					}
+				// If this signal is not for our path, ignore.
+				if signal.Path != dbus.ObjectPath(watchConditions.Path) {
+					continue
+				}
+				// If this signal does not match at least one of the names we
+				// are interested in, ignore.
+				if !slices.ContainsFunc(watchConditions.Names, func(name string) bool {
+					return strings.Contains(signal.Name, name)
+				}) {
+					continue
+				}
+				// We have a match! Send the signal details back to the client
+				// for further processing.
+				log.Trace().
+					Str("path", watchConditions.Path).
+					Str("interface", watchConditions.Interface).
+					Strs("names", watchConditions.Names).
+					Msg("Dispatching D-Bus trigger.")
+				outCh <- Trigger{
+					Signal:  signal.Name,
+					Path:    string(signal.Path),
+					Content: signal.Body,
 				}
 			}
 		}
