@@ -103,7 +103,7 @@ func (i *fyneUI) DisplayTrayIcon(agent ui.Agent, trk ui.SensorTracker) {
 			func() {
 				i.agentSettingsWindow().Show()
 			})
-		menuItemFynePrefs := fyne.NewMenuItem(i.text.Translate("Fyne"),
+		menuItemFynePrefs := fyne.NewMenuItem(i.text.Translate("Fyne Settings"),
 			func() {
 				i.fyneSettingsWindow().Show()
 			})
