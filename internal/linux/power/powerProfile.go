@@ -17,9 +17,13 @@ import (
 )
 
 const (
-	powerProfilesDBusPath = "/net/hadess/PowerProfiles"
-	powerProfilesDBusDest = "net.hadess.PowerProfiles"
+	powerProfilesPath      = "/net/hadess/PowerProfiles"
+	powerProfilesDest      = "net.hadess.PowerProfiles"
+	powerProfilesInterface = "org.freedesktop.Upower.PowerProfiles"
+	activeProfileProp      = "ActiveProfile"
 )
+
+type sensors struct{}
 
 type powerSensor struct {
 	linux.Sensor
@@ -35,52 +39,41 @@ func newPowerSensor(t linux.SensorTypeValue, v dbus.Variant) *powerSensor {
 	return s
 }
 
+func (s *sensors) Sensors(ctx context.Context) []sensor.Details {
+	var sensors []sensor.Details
+	req := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
+		Path(powerProfilesPath).
+		Destination(powerProfilesDest)
+	profile, err := dbusx.GetProp[dbus.Variant](req, powerProfilesDest+"."+activeProfileProp)
+	if err != nil {
+		log.Debug().Err(err).Msg("Cannot retrieve a power profile from D-Bus.")
+		return nil
+	}
+	return append(sensors, newPowerSensor(linux.SensorPowerProfile, profile))
+}
+
 func ProfileUpdater(ctx context.Context) chan sensor.Details {
 	sensorCh := make(chan sensor.Details)
-	req := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
-		Path(powerProfilesDBusPath).
-		Destination(powerProfilesDBusDest)
-	activePowerProfile, err := dbusx.GetProp[dbus.Variant](req, powerProfilesDBusDest+".ActiveProfile")
-	if err != nil {
-		log.Debug().Err(err).Msg("Cannot retrieve a power profile from D-Bus. Will not run power sensor.")
+
+	s := &sensors{}
+	sensors := s.Sensors(ctx)
+	if len(sensors) < 1 {
+		log.Debug().Msg("No power profile detected. Not monitoring power profiles")
 		close(sensorCh)
 		return sensorCh
 	}
-
 	go func() {
-		sensorCh <- newPowerSensor(linux.SensorPowerProfile, activePowerProfile)
+		for _, sensor := range sensors {
+			sensorCh <- sensor
+		}
 	}()
 
-	err = dbusx.NewBusRequest(ctx, dbusx.SystemBus).
-		Match([]dbus.MatchOption{
-			dbus.WithMatchInterface(powerProfilesDBusDest),
-			dbus.WithMatchObjectPath(powerProfilesDBusPath),
-			dbus.WithMatchMember("ActiveProfile"),
-		}).
-		Handler(func(s *dbus.Signal) {
-			if s.Name != dbusx.PropChangedSignal || s.Path != powerProfilesDBusPath {
-				return
-			}
-			if len(s.Body) <= 1 {
-				log.Debug().Caller().Interface("body", s.Body).Msg("Unexpected body length.")
-				return
-			}
-			updatedProps, ok := s.Body[1].(map[string]dbus.Variant)
-			if !ok {
-				log.Debug().Caller().
-					Str("signal", s.Name).Interface("body", s.Body).
-					Msg("Unexpected signal body")
-				return
-			}
-			for propName, propValue := range updatedProps {
-				if propName == "ActiveProfile" {
-					sensorCh <- newPowerSensor(linux.SensorPowerProfile, propValue)
-				} else {
-					log.Debug().Msgf("Unhandled property %v changed to %v", propName, propValue)
-				}
-			}
-		}).
-		AddWatch(ctx)
+	events, err := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
+		Watch(ctx, dbusx.Watch{
+			Name:      dbusx.PropChangedSignal,
+			Interface: dbusx.PropInterface,
+			Path:      powerProfilesPath,
+		})
 	if err != nil {
 		log.Debug().Err(err).
 			Msg("Failed to create power state D-Bus watch.")
@@ -89,8 +82,21 @@ func ProfileUpdater(ctx context.Context) chan sensor.Details {
 	}
 	go func() {
 		defer close(sensorCh)
-		<-ctx.Done()
-		log.Debug().Msg(("Stopped power profile sensor."))
+		for {
+			select {
+			case <-ctx.Done():
+				log.Debug().Msg(("Stopped power profile sensor."))
+				return
+			case event := <-events:
+				props, err := dbusx.ParsePropertiesChanged(event.Content)
+				if err != nil {
+					log.Warn().Err(err).Msg("Did not understand received trigger.")
+				}
+				if profile, profileChanged := props.Changed[activeProfileProp]; profileChanged {
+					sensorCh <- newPowerSensor(linux.SensorPowerProfile, profile)
+				}
+			}
+		}
 	}()
 	return sensorCh
 }
