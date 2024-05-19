@@ -54,5 +54,9 @@ func getBus(ctx context.Context, e dbusType) (*Bus, bool) {
 	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	return b.dbus[e], true
+	if bus, busExists := b.dbus[e]; !busExists {
+		return nil, false
+	} else {
+		return bus, true
+	}
 }
