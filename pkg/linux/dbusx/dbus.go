@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"os/user"
-	"slices"
 	"strings"
 	"sync"
 
@@ -31,7 +30,10 @@ const (
 	listSessionsMethod    = loginManagerInterface + ".ListSessions"
 )
 
-var ErrNoBus = errors.New("no D-Bus connection")
+var (
+	ErrNoBus    = errors.New("no D-Bus connection")
+	ErrNoBusCtx = errors.New("no D-Bus connection in context")
+)
 
 var DbusTypeMap = map[string]dbusType{
 	"session": 0,
@@ -47,15 +49,23 @@ type Trigger struct {
 }
 
 type Watch struct {
-	Path      string
-	Interface string
-	Names     []string
+	Args          map[int]string
+	Path          string
+	PathNamespace string
+	Interface     string
+	Names         []string
+	Bus           dbusType
 }
 
 type Properties struct {
 	Interface   string
 	Changed     map[string]dbus.Variant
 	Invalidated []string
+}
+
+type Values[T any] struct {
+	New T
+	Old T
 }
 
 type Bus struct {
@@ -205,25 +215,41 @@ func (r *busRequest) Call(method string, args ...any) error {
 	return obj.Call(method, 0).Err
 }
 
-// Watch takes a given busRequest and will create watch for signal events with
-// the given watch conditions. It will send any signal events via the returned
-// channel. Typically, this is used to react when a certain property or signal
-// with a given path and on a given interface, changes. The data returned in the
-// channel will contain the signal (or property) that triggered the match, the
-// path and the contents (what values actually changed).
-func (r *busRequest) Watch(ctx context.Context, watchConditions Watch) (chan Trigger, error) {
+// WatchBus will set up a channel on which D-Bus messages matching the given
+// rules can be monitored. Typically, this is used to react when a certain
+// property or signal with a given path and on a given interface, changes. The
+// data returned in the channel will contain the signal (or property) that
+// triggered the match, the path and the contents (what values actually
+// changed).
+func WatchBus(ctx context.Context, conditions *Watch) (chan Trigger, error) {
+	bus, ok := getBus(ctx, conditions.Bus)
+	if !ok {
+		return nil, ErrNoBusCtx
+	}
 	var matchers []dbus.MatchOption
-	matchers = append(matchers,
-		dbus.WithMatchObjectPath(dbus.ObjectPath(watchConditions.Path)),
-		dbus.WithMatchInterface(watchConditions.Interface),
-	)
-	if err := r.bus.conn.AddMatchSignalContext(ctx, matchers...); err != nil {
-		return nil, r.busRequestError("unable to add watch conditions", err)
+	switch {
+	case conditions.Path != "":
+		matchers = append(matchers, dbus.WithMatchObjectPath(dbus.ObjectPath(conditions.Path)))
+	case conditions.PathNamespace != "":
+		matchers = append(matchers, dbus.WithMatchPathNamespace(dbus.ObjectPath(conditions.PathNamespace)))
+	case conditions.Args != nil:
+		for arg, value := range conditions.Args {
+			matchers = append(matchers, dbus.WithMatchArg(arg, value))
+		}
+	case conditions.Interface != "":
+		matchers = append(matchers, dbus.WithMatchInterface(conditions.Interface))
+	case len(conditions.Names) != 0:
+		for _, name := range conditions.Names {
+			matchers = append(matchers, dbus.WithMatchMember(name))
+		}
+	}
+	if err := bus.conn.AddMatchSignalContext(ctx, matchers...); err != nil {
+		return nil, fmt.Errorf("unable to add watch conditions (%w)", err)
 	}
 	signalCh := make(chan *dbus.Signal)
 	outCh := make(chan Trigger)
-	r.bus.conn.Signal(signalCh)
-	r.bus.wg.Add(1)
+	bus.conn.Signal(signalCh)
+	bus.wg.Add(1)
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
@@ -231,28 +257,32 @@ func (r *busRequest) Watch(ctx context.Context, watchConditions Watch) (chan Tri
 		for {
 			select {
 			case <-ctx.Done():
-				r.bus.conn.RemoveSignal(signalCh)
-				close(signalCh)
+				bus.conn.RemoveSignal(signalCh)
 				close(outCh)
 				return
 			case signal := <-signalCh:
-				// If this signal is not for our path, ignore.
-				if signal.Path != dbus.ObjectPath(watchConditions.Path) {
+				// If the signal is empty, ignore.
+				if signal == nil {
 					continue
 				}
-				// If this signal does not match at least one of the names we
-				// are interested in, ignore.
-				if !slices.ContainsFunc(watchConditions.Names, func(name string) bool {
-					return strings.Contains(signal.Name, name)
-				}) {
-					continue
+				// If this signal is not for our path, ignore.
+				if conditions.Path != "" {
+					if string(signal.Path) != conditions.Path {
+						continue
+					}
+				}
+				if conditions.PathNamespace != "" {
+					if !strings.HasPrefix(string(signal.Path), conditions.PathNamespace) {
+						continue
+					}
 				}
 				// We have a match! Send the signal details back to the client
 				// for further processing.
 				log.Trace().
-					Str("path", watchConditions.Path).
-					Str("interface", watchConditions.Interface).
-					Strs("names", watchConditions.Names).
+					Str("path", conditions.Path).
+					Str("interface", conditions.Interface).
+					Strs("names", conditions.Names).
+					Interface("signal", signal).
 					Msg("Dispatching D-Bus trigger.")
 				outCh <- Trigger{
 					Signal:  signal.Name,
@@ -264,7 +294,7 @@ func (r *busRequest) Watch(ctx context.Context, watchConditions Watch) (chan Tri
 	}()
 	go func() {
 		wg.Wait()
-		r.bus.wg.Done()
+		bus.wg.Done()
 	}()
 	return outCh, nil
 }
@@ -368,6 +398,26 @@ func ParsePropertiesChanged(v []any) (*Properties, error) {
 		return nil, errors.New("could not parse invalidated properties")
 	}
 	return props, nil
+}
+
+// ParseValueChange treats the given signal body as matching a value change of a
+// property from an old value to a new value. It will parse the signal body into
+// a Value object with old/new values of the given type.
+func ParseValueChange[T any](v []any) (*Values[T], error) {
+	values := &Values[T]{}
+	var ok bool
+	if len(v) != 2 {
+		return nil, errors.New("signal contents do not appear to represent a value change")
+	}
+	values.New, ok = v[0].(T)
+	if !ok {
+		return nil, errors.New("could not parse new value")
+	}
+	values.Old, ok = v[1].(T)
+	if !ok {
+		return nil, errors.New("could not parse old value")
+	}
+	return values, nil
 }
 
 // VariantToValue converts a dbus.Variant interface{} value into the specified
