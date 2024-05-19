@@ -7,8 +7,9 @@ package user
 
 import (
 	"context"
+	"strings"
 
-	"github.com/godbus/dbus/v5"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/rs/zerolog/log"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
@@ -21,9 +22,9 @@ const (
 	loginBasePath        = "/org/freedesktop/login1"
 	loginBaseInterface   = "org.freedesktop.login1"
 	managerInterface     = loginBaseInterface + ".Manager"
-	sessionAddedSignal   = managerInterface + ".SessionNew"
-	sessionRemovedSignal = managerInterface + ".SessionRemoved"
-	listUsersMethod      = managerInterface + ".ListUsers"
+	sessionAddedSignal   = "SessionNew"
+	sessionRemovedSignal = "SessionRemoved"
+	listSessionsMethod   = managerInterface + ".ListSessions"
 )
 
 type usersSensor struct {
@@ -45,15 +46,15 @@ func (s *usersSensor) updateUsers(ctx context.Context) {
 	req := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
 		Path(loginBasePath).
 		Destination(loginBaseInterface)
-
-	userData, err := dbusx.GetData[[][]any](req, listUsersMethod)
+	userData, err := dbusx.GetData[[][]any](req, listSessionsMethod)
 	if err != nil {
 		log.Warn().Err(err).Msg("Could not retrieve users from D-Bus.")
+		return
 	}
 	s.Value = len(userData)
 	var users []string
 	for _, u := range userData {
-		if user, ok := u[1].(string); ok {
+		if user, ok := u[2].(string); ok {
 			users = append(users, user)
 		}
 	}
@@ -74,38 +75,43 @@ func Updater(ctx context.Context) chan sensor.Details {
 
 	u := newUsersSensor()
 
-	err := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
-		Match([]dbus.MatchOption{
-			dbus.WithMatchObjectPath(loginBasePath),
-			dbus.WithMatchInterface(dbusx.PropInterface),
-		}).
-		Handler(func(s *dbus.Signal) {
-			switch s.Name {
-			case sessionAddedSignal, sessionRemovedSignal:
-				u.updateUsers(ctx)
-				go func() {
-					sensorCh <- u
-				}()
-			}
-		}).
-		AddWatch(ctx)
+	events, err := dbusx.WatchBus(ctx, &dbusx.Watch{
+		Bus:       dbusx.SystemBus,
+		Names:     []string{sessionAddedSignal, sessionRemovedSignal},
+		Interface: managerInterface,
+		Path:      loginBasePath,
+	})
 	if err != nil {
-		log.Warn().Err(err).
-			Msg("Unable to monitor for user login/logout.")
+		log.Debug().Err(err).
+			Msg("Failed to create active users D-Bus watch.")
 		close(sensorCh)
 		return sensorCh
 	}
 
-	// Send an initial sensor update.
-	u.updateUsers(ctx)
 	go func() {
+		defer close(sensorCh)
+		for {
+			select {
+			case <-ctx.Done():
+				log.Debug().Msg("Stopped users sensors.")
+				return
+			case event := <-events:
+				spew.Dump(event)
+				if !strings.Contains(event.Signal, sessionAddedSignal) && !strings.Contains(event.Signal, sessionRemovedSignal) {
+					continue
+				}
+				go func() {
+					u.updateUsers(ctx)
+					sensorCh <- u
+				}()
+			}
+		}
+	}()
+	// Send an initial sensor update.
+	go func() {
+		u.updateUsers(ctx)
 		sensorCh <- u
 	}()
 
-	go func() {
-		defer close(sensorCh)
-		<-ctx.Done()
-		log.Debug().Msg("Stopped users sensors.")
-	}()
 	return sensorCh
 }
