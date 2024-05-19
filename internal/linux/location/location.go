@@ -77,12 +77,12 @@ func Updater(ctx context.Context) chan *hass.LocationData {
 	}
 
 	// Start our watch for the location update messages.
-	eventCh, err := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
-		Watch(ctx, dbusx.Watch{
-			Path:      string(clientPath),
-			Interface: clientInterface,
-			Names:     []string{"LocationUpdated"},
-		})
+	eventCh, err := dbusx.WatchBus(ctx, &dbusx.Watch{
+		Bus:       dbusx.SystemBus,
+		Path:      string(clientPath),
+		Interface: clientInterface,
+		Names:     []string{"LocationUpdated"},
+	})
 	if err != nil {
 		log.Debug().Caller().Err(err).
 			Msg("Failed to create location D-Bus watch.")
