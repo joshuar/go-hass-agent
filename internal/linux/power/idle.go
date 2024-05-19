@@ -10,10 +10,8 @@ package power
 import (
 	"context"
 	"path/filepath"
-	"strings"
 	"time"
 
-	"github.com/godbus/dbus/v5"
 	"github.com/rs/zerolog/log"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
@@ -22,10 +20,11 @@ import (
 )
 
 const (
-	idleIcon     = "mdi:sleep"
-	notIdleIcon  = "mdi:sleep-off"
-	idleProp     = managerInterface + ".IdleHint"
-	idleTimeProp = managerInterface + ".IdleSinceHint"
+	idleIcon    = "mdi:sleep"
+	notIdleIcon = "mdi:sleep-off"
+
+	idleProp     = managerInterface + "." + sessionIdleProp
+	idleTimeProp = managerInterface + "." + sessionIdleTimeProp
 )
 
 type idleSensor struct {
@@ -56,68 +55,80 @@ func (s *idleSensor) Attributes() any {
 	}
 }
 
+func newIdleSensor(ctx context.Context) *idleSensor {
+	s := &idleSensor{
+		Sensor: linux.Sensor{
+			SensorTypeValue: linux.SensorIdleState,
+			IsBinary:        true,
+		},
+	}
+	var idleState bool
+	var idleTime int64
+	var err error
+	req := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
+		Path(loginBasePath).
+		Destination(loginBaseInterface)
+	if idleState, err = dbusx.GetProp[bool](req, idleProp); err != nil {
+		log.Debug().Err(err).Str("prop", filepath.Ext(idleProp)).Msg("Could not retrieve property from D-Bus.")
+		return nil
+	}
+	s.Value = idleState
+	idleTime, _ = dbusx.GetProp[int64](req, idleProp)
+	s.idleTime = idleTime
+	return s
+}
+
 func IdleUpdater(ctx context.Context) chan sensor.Details {
 	sensorCh := make(chan sensor.Details)
-	currentState := &idleSensor{}
-	currentState.SensorTypeValue = linux.SensorIdleState
+	idleSensor := newIdleSensor(ctx)
 
-	err := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
-		Match([]dbus.MatchOption{
-			dbus.WithMatchObjectPath(loginBasePath),
-			dbus.WithMatchInterface(managerInterface),
-		}).
-		Handler(func(s *dbus.Signal) {
-			if !strings.Contains(string(s.Path), loginBasePath) || len(s.Body) <= 1 {
-				return
-			}
-			if s.Name == dbusx.PropChangedSignal {
-				props, ok := s.Body[1].(map[string]dbus.Variant)
-				if !ok {
-					return
-				}
-				for k, v := range props {
-					switch k {
-					case idleProp:
-						currentState.Value = dbusx.VariantToValue[bool](v)
-						sensorCh <- currentState
-					case idleTimeProp:
-						currentState.idleTime = dbusx.VariantToValue[int64](v)
-						sensorCh <- currentState
-					}
-				}
-			}
-		}).
-		AddWatch(ctx)
+	sessionPath := dbusx.GetSessionPath(ctx)
+
+	events, err := dbusx.WatchBus(ctx, &dbusx.Watch{
+		Bus:       dbusx.SystemBus,
+		Names:     []string{sessionIdleProp, sessionIdleTimeProp},
+		Interface: sessionInterface,
+		Path:      string(sessionPath),
+	})
 	if err != nil {
-		log.Warn().Err(err).
-			Msg("Unable to monitor power state.")
+		log.Debug().Err(err).
+			Msg("Failed to create idle time D-Bus watch.")
 		close(sensorCh)
 		return sensorCh
 	}
 
-	// Send an initial sensor update.
-	go func(s *idleSensor) {
-		var idleState bool
-		var idleTime int64
-		var err error
-		req := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
-			Path(loginBasePath).
-			Destination(loginBaseInterface)
-		if idleState, err = dbusx.GetProp[bool](req, idleProp); err != nil {
-			log.Debug().Err(err).Str("prop", filepath.Ext(idleProp)).Msg("Could not retrieve property from D-Bus.")
-			return
-		}
-		s.Value = idleState
-		idleTime, _ = dbusx.GetProp[int64](req, idleProp)
-		s.idleTime = idleTime
-		sensorCh <- s
-	}(currentState)
-
 	go func() {
 		defer close(sensorCh)
-		<-ctx.Done()
-		log.Debug().Msg("Stopped idle state sensor.")
+		for {
+			select {
+			case <-ctx.Done():
+				log.Debug().Msg("Stopped idle state sensor.")
+				return
+			case event := <-events:
+				if event.Signal == dbusx.PropChangedSignal {
+					props, err := dbusx.ParsePropertiesChanged(event.Content)
+					if err != nil {
+						log.Warn().Err(err).Msg("Did not understand received trigger.")
+						continue
+					}
+					if state, idleChanged := props.Changed[sessionIdleProp]; idleChanged {
+						idleSensor.Value = dbusx.VariantToValue[bool](state)
+						sensorCh <- idleSensor
+					}
+					if state, timeChanged := props.Changed[sessionIdleTimeProp]; timeChanged {
+						idleSensor.idleTime = dbusx.VariantToValue[int64](state)
+						sensorCh <- idleSensor
+					}
+				}
+			}
+		}
 	}()
+
+	// Send an initial sensor update.
+	go func() {
+		sensorCh <- newIdleSensor(ctx)
+	}()
+
 	return sensorCh
 }
 

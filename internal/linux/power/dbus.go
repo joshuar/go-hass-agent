@@ -14,4 +14,6 @@ const (
 	sessionLockSignal   = "Lock"
 	sessionUnlockSignal = "Unlock"
 	sessionLockedProp   = "LockedHint"
+	sessionIdleProp     = "IdleHint"
+	sessionIdleTimeProp = "IdleSinceHint"
 )
