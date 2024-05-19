@@ -141,11 +141,14 @@ func monitorConnection(ctx context.Context, p dbus.ObjectPath) <-chan sensor.Det
 	// process updates and handle cancellation
 	connCtx, connCancel := context.WithCancel(ctx)
 	go func() {
-		defer connCancel()
 		defer close(sensorCh)
 		defer close(updateCh)
 		for {
 			select {
+			case <-connCtx.Done():
+				log.Debug().Str("connection", c.Name()).Str("path", string(c.path)).
+					Msg("Connection deactivated.")
+				return
 			case <-ctx.Done():
 				log.Debug().Str("connection", c.Name()).Str("path", string(c.path)).
 					Msg("Stopped monitoring connection.")
@@ -184,6 +187,7 @@ func monitorConnection(ctx context.Context, p dbus.ObjectPath) <-chan sensor.Det
 
 	// monitor state changes
 	go func() {
+		defer connCancel()
 		for state := range monitorConnectionState(connCtx, string(c.path)) {
 			updateCh <- state
 		}
