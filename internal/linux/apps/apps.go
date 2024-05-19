@@ -34,12 +34,12 @@ func Updater(ctx context.Context) chan sensor.Details {
 		return sensorCh
 	}
 
-	eventCh, err := dbusx.NewBusRequest(ctx, dbusx.SessionBus).
-		Watch(ctx, dbusx.Watch{
-			Path:      appStateDBusPath,
-			Interface: appStateDBusInterface,
-			Names:     []string{"RunningApplicationsChanged"},
-		})
+	eventCh, err := dbusx.WatchBus(ctx, &dbusx.Watch{
+		Bus:       dbusx.SessionBus,
+		Path:      appStateDBusPath,
+		Interface: appStateDBusInterface,
+		Names:     []string{"RunningApplicationsChanged"},
+	})
 	if err != nil {
 		log.Debug().Caller().Err(err).
 			Msg("Failed to create active app D-Bus watch.")
