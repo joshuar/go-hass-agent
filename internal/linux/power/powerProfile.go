@@ -68,12 +68,12 @@ func ProfileUpdater(ctx context.Context) chan sensor.Details {
 		}
 	}()
 
-	events, err := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
-		Watch(ctx, dbusx.Watch{
-			Names:     []string{dbusx.PropChangedSignal},
-			Interface: dbusx.PropInterface,
-			Path:      powerProfilesPath,
-		})
+	events, err := dbusx.WatchBus(ctx, &dbusx.Watch{
+		Bus:       dbusx.SystemBus,
+		Names:     []string{dbusx.PropChangedSignal},
+		Interface: dbusx.PropInterface,
+		Path:      powerProfilesPath,
+	})
 	if err != nil {
 		log.Debug().Err(err).
 			Msg("Failed to create power profile D-Bus watch.")
@@ -91,6 +91,7 @@ func ProfileUpdater(ctx context.Context) chan sensor.Details {
 				props, err := dbusx.ParsePropertiesChanged(event.Content)
 				if err != nil {
 					log.Warn().Err(err).Msg("Did not understand received trigger.")
+					continue
 				}
 				if profile, profileChanged := props.Changed[activeProfileProp]; profileChanged {
 					sensorCh <- newPowerSensor(linux.SensorPowerProfile, profile)

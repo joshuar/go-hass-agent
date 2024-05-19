@@ -7,9 +7,7 @@ package power
 
 import (
 	"context"
-	"strings"
 
-	"github.com/godbus/dbus/v5"
 	"github.com/rs/zerolog/log"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
@@ -45,48 +43,48 @@ func newScreenlockEvent(v bool) *screenlockSensor {
 
 func ScreenLockUpdater(ctx context.Context) chan sensor.Details {
 	sensorCh := make(chan sensor.Details)
-	err := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
-		Match([]dbus.MatchOption{
-			dbus.WithMatchPathNamespace("/org/freedesktop/login1/session"),
-		}).
-		Handler(func(s *dbus.Signal) {
-			if !strings.Contains(string(s.Path), "/org/freedesktop/login1/session") || len(s.Body) <= 1 {
-				log.Trace().Str("runner", "power").Msg("Not my signal or empty signal body.")
-				return
-			}
-			switch s.Name {
-			case dbusx.PropChangedSignal:
-				props, ok := s.Body[1].(map[string]dbus.Variant)
-				if !ok {
-					log.Trace().Str("runner", "power").
-						Str("signal", s.Name).Interface("body", s.Body).
-						Msg("Unexpected signal body")
-					return
-				}
-				if v, ok := props["LockedHint"]; ok {
-					sensorCh <- newScreenlockEvent(dbusx.VariantToValue[bool](v))
-				}
-				if v, ok := props["IdleHint"]; ok {
-					sensorCh <- newScreenlockEvent(dbusx.VariantToValue[bool](v))
-				}
-			case "org.freedesktop.login1.Session.Lock":
-				sensorCh <- newScreenlockEvent(true)
-			case "org.freedesktop.login1.Session.Unlock":
-				sensorCh <- newScreenlockEvent(false)
-			}
-		}).
-		AddWatch(ctx)
+
+	sessionPath := dbusx.GetSessionPath(ctx)
+
+	events, err := dbusx.WatchBus(ctx, &dbusx.Watch{
+		Bus:       dbusx.SystemBus,
+		Names:     []string{sessionLockSignal, sessionUnlockSignal, sessionLockedProp},
+		Interface: sessionInterface,
+		Path:      string(sessionPath),
+	})
 	if err != nil {
-		log.Warn().Err(err).
-			Msg("Unable to monitor for screen lock state.")
+		log.Debug().Err(err).
+			Msg("Failed to create screen lock state D-Bus watch.")
 		close(sensorCh)
 		return sensorCh
 	}
+
 	log.Trace().Msg("Started screen lock sensor.")
 	go func() {
 		defer close(sensorCh)
-		<-ctx.Done()
-		log.Trace().Msg("Stopped screen lock sensor.")
+		for {
+			select {
+			case <-ctx.Done():
+				log.Trace().Msg("Stopped screen lock sensor.")
+				return
+			case event := <-events:
+				switch event.Signal {
+				case dbusx.PropChangedSignal:
+					props, err := dbusx.ParsePropertiesChanged(event.Content)
+					if err != nil {
+						log.Warn().Err(err).Msg("Did not understand received trigger.")
+						continue
+					}
+					if state, lockChanged := props.Changed[sessionLockedProp]; lockChanged {
+						sensorCh <- newScreenlockEvent(dbusx.VariantToValue[bool](state))
+					}
+				case sessionLockSignal:
+					sensorCh <- newScreenlockEvent(true)
+				case sessionUnlockSignal:
+					sensorCh <- newScreenlockEvent(false)
+				}
+			}
+		}
 	}()
 	return sensorCh
 }

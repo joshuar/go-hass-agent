@@ -6,8 +6,12 @@
 package power
 
 const (
-	loginBasePath      = "/org/freedesktop/login1"
-	loginBaseInterface = "org.freedesktop.login1"
-	managerInterface   = loginBaseInterface + ".Manager"
-	sessionInterface   = loginBaseInterface + ".Session"
+	loginBasePath       = "/org/freedesktop/login1"
+	loginSessionPath    = loginBasePath + "/Session"
+	loginBaseInterface  = "org.freedesktop.login1"
+	managerInterface    = loginBaseInterface + ".Manager"
+	sessionInterface    = loginBaseInterface + ".Session"
+	sessionLockSignal   = "Lock"
+	sessionUnlockSignal = "Unlock"
+	sessionLockedProp   = "LockedHint"
 )
