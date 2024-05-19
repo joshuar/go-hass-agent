@@ -28,6 +28,11 @@ const (
 	upowerDBusDeviceDest   = upowerDBusDest + ".Device"
 	upowerDBusPath         = "/org/freedesktop/UPower"
 	upowerGetDevicesMethod = "org.freedesktop.UPower.EnumerateDevices"
+
+	deviceAddedSignal   = "DeviceAdded"
+	deviceRemovedSignal = "DeviceRemoved"
+
+	batteryIcon = "mdi:battery"
 )
 
 // dBusSensorToProps is a map of battery sensors to their D-Bus properties.
@@ -156,7 +161,7 @@ func (s *upowerBatterySensor) Icon() string {
 	case linux.SensorBattEnergyRate:
 		return battErToIcon(s.Value)
 	default:
-		return "mdi:battery"
+		return batteryIcon
 	}
 }
 
@@ -390,43 +395,45 @@ func monitorBattery(ctx context.Context, battery *upowerBattery) <-chan sensor.D
 // monitorBatteryChanges monitors for battery devices being added/removed from
 // the system and will start/stop monitory each battery as appropriate.
 func monitorBatteryChanges(ctx context.Context, t *batteryTracker) <-chan sensor.Details {
-	sensorCh := make(chan sensor.Details, 1)
-	err := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
-		Match([]dbus.MatchOption{
-			dbus.WithMatchObjectPath(upowerDBusPath),
-			dbus.WithMatchInterface(upowerDBusDest),
-		}).
-		Handler(func(s *dbus.Signal) {
-			if !strings.Contains(s.Name, upowerDBusDest) {
-				log.Trace().Str("runner", "battery").Msg("Not my signal.")
-				return
-			}
-			var batteryPath dbus.ObjectPath
-			var ok bool
-			if batteryPath, ok = s.Body[0].(dbus.ObjectPath); !ok {
-				return
-			}
-			switch s.Name {
-			case "org.freedesktop.UPower.DeviceAdded":
-				go func() {
-					for s := range t.track(ctx, batteryPath) {
-						sensorCh <- s
-					}
-				}()
-			case "org.freedesktop.UPower.DeviceRemoved":
-				t.remove(batteryPath)
-			}
-		}).
-		AddWatch(ctx)
+	sensorCh := make(chan sensor.Details)
+
+	events, err := dbusx.WatchBus(ctx, &dbusx.Watch{
+		Bus:       dbusx.SystemBus,
+		Names:     []string{deviceAddedSignal, deviceRemovedSignal},
+		Interface: upowerDBusDest,
+		Path:      upowerDBusPath,
+	})
 	if err != nil {
-		log.Warn().Err(err).
-			Msg("Unable to monitor for battery events.")
+		log.Debug().Err(err).
+			Msg("Failed to create battery state D-Bus watch.")
 		close(sensorCh)
 		return sensorCh
 	}
+
 	go func() {
 		defer close(sensorCh)
-		<-ctx.Done()
+		for {
+			select {
+			case <-ctx.Done():
+				log.Debug().Msg("Stopped monitoring for batteries.")
+				return
+			case event := <-events:
+				batteryPath, validBatteryPath := event.Content[0].(dbus.ObjectPath)
+				if !validBatteryPath {
+					continue
+				}
+				switch {
+				case strings.Contains(event.Signal, deviceAddedSignal):
+					go func() {
+						for s := range t.track(ctx, batteryPath) {
+							sensorCh <- s
+						}
+					}()
+				case strings.Contains(event.Signal, deviceRemovedSignal):
+					t.remove(batteryPath)
+				}
+			}
+		}
 	}()
 	return sensorCh
 }
@@ -437,15 +444,15 @@ func battPcToIcon(v any) string {
 		return "mdi:battery-unknown"
 	}
 	if pc >= 95 {
-		return "mdi:battery"
+		return batteryIcon
 	}
-	return fmt.Sprintf("mdi:battery-%d", int(math.Round(pc/10)*10))
+	return fmt.Sprintf("%s-%d", batteryIcon, int(math.Round(pc/10)*10))
 }
 
 func battErToIcon(v any) string {
 	er, ok := v.(float64)
 	if !ok {
-		return "mdi:battery"
+		return batteryIcon
 	}
 	if math.Signbit(er) {
 		return "mdi:battery-minus"
