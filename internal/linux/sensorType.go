@@ -69,6 +69,7 @@ const (
 	SensorDiskWriteRate                            // Disk Write Rate
 	SensorDocked                                   // Docked State
 	SensorExternalPower                            // External Power Connected
+	SensorIdleState                                // Idle
 )
 
 // SensorTypeValue represents the unique type of sensor data being reported. Every
