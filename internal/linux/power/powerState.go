@@ -19,8 +19,8 @@ const (
 	suspend powerSignal = iota
 	shutdown
 
-	sleepSignal    = managerInterface + ".PrepareForSleep"
-	shutdownSignal = managerInterface + ".PrepareForShutdown"
+	sleepSignal    = "PrepareForSleep"
+	shutdownSignal = "PrepareForShutdown"
 )
 
 type powerSignal int
@@ -76,12 +76,12 @@ func newPowerState(s powerSignal, v any) *powerStateSensor {
 func StateUpdater(ctx context.Context) chan sensor.Details {
 	sensorCh := make(chan sensor.Details)
 
-	events, err := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
-		Watch(ctx, dbusx.Watch{
-			Names:     []string{sleepSignal, shutdownSignal},
-			Interface: managerInterface,
-			Path:      loginBasePath,
-		})
+	events, err := dbusx.WatchBus(ctx, &dbusx.Watch{
+		Bus:       dbusx.SystemBus,
+		Names:     []string{sleepSignal, shutdownSignal},
+		Interface: managerInterface,
+		Path:      loginBasePath,
+	})
 	if err != nil {
 		log.Debug().Err(err).
 			Msg("Failed to create power state D-Bus watch.")
