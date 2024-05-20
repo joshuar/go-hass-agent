@@ -146,7 +146,7 @@ func monitorWifi(ctx context.Context, p dbus.ObjectPath) <-chan sensor.Details {
 		Path(p).
 		Destination(dBusNMObj)
 	// get the devices associated with this connection
-	wifiDevices, err := dbusx.GetProp[[]dbus.ObjectPath](req, dBusNMObj+".Connection.Active.Devices")
+	wifiDevices, err := dbusx.GetProp[[]dbus.ObjectPath](req, dbusNMActiveConnIntr+".Devices")
 	if err != nil {
 		log.Warn().Err(err).Msg("Could not retrieve active wireless devices.")
 		return nil
