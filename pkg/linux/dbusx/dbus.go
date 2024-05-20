@@ -57,6 +57,27 @@ type Watch struct {
 	Bus           dbusType
 }
 
+func (w *Watch) Parse() []dbus.MatchOption {
+	var matchers []dbus.MatchOption
+	switch {
+	case w.Path != "":
+		matchers = append(matchers, dbus.WithMatchObjectPath(dbus.ObjectPath(w.Path)))
+	case w.PathNamespace != "":
+		matchers = append(matchers, dbus.WithMatchPathNamespace(dbus.ObjectPath(w.PathNamespace)))
+	case w.Args != nil:
+		for arg, value := range w.Args {
+			matchers = append(matchers, dbus.WithMatchArg(arg, value))
+		}
+	case w.Interface != "":
+		matchers = append(matchers, dbus.WithMatchInterface(w.Interface))
+	case len(w.Names) != 0:
+		for _, name := range w.Names {
+			matchers = append(matchers, dbus.WithMatchMember(name))
+		}
+	}
+	return matchers
+}
+
 type Properties struct {
 	Interface   string
 	Changed     map[string]dbus.Variant
@@ -68,15 +89,15 @@ type Values[T any] struct {
 	Old T
 }
 
-type Bus struct {
+type bus struct {
 	conn    *dbus.Conn
 	busType dbusType
 	wg      sync.WaitGroup
 }
 
-// NewBus sets up D-Bus connections and channels for receiving signals. It
+// newBus sets up D-Bus connections and channels for receiving signals. It
 // creates both a system and session bus connection.
-func NewBus(ctx context.Context, t dbusType) (*Bus, error) {
+func newBus(ctx context.Context, t dbusType) (*bus, error) {
 	var conn *dbus.Conn
 	var err error
 	dbusCtx, cancelFunc := context.WithCancel(context.Background())
@@ -90,7 +111,7 @@ func NewBus(ctx context.Context, t dbusType) (*Bus, error) {
 		cancelFunc()
 		return nil, err
 	}
-	b := &Bus{
+	b := &bus{
 		conn:    conn,
 		busType: t,
 	}
@@ -103,9 +124,9 @@ func NewBus(ctx context.Context, t dbusType) (*Bus, error) {
 	return b, nil
 }
 
-// busRequest contains properties for building different types of D-Bus requests.
-type busRequest struct {
-	bus          *Bus
+// BusRequest contains properties for building different types of D-Bus requests.
+type BusRequest struct {
+	bus          *bus
 	eventHandler func(*dbus.Signal)
 	path         dbus.ObjectPath
 	event        string
@@ -117,56 +138,69 @@ type busRequest struct {
 // (either a system or session bus). If it cannot connect to the specified bus,
 // it will still return a busRequest object. Further builder functions should
 // check whether there is a valid bus if appropriate.
-func NewBusRequest(ctx context.Context, busType dbusType) *busRequest {
+func NewBusRequest(ctx context.Context, busType dbusType) *BusRequest {
 	if bus, ok := getBus(ctx, busType); !ok {
 		log.Debug().Msg("No D-Bus connection present in context.")
-		return &busRequest{}
+		return &BusRequest{}
 	} else {
-		return &busRequest{
+		return &BusRequest{
 			bus: bus,
 		}
 	}
 }
 
 // Path defines the D-Bus path on which a request will operate.
-func (r *busRequest) Path(p dbus.ObjectPath) *busRequest {
+func (r *BusRequest) Path(p dbus.ObjectPath) *BusRequest {
 	r.path = p
 	return r
 }
 
 // Match defines D-Bus routing match rules on which a request will operate.
-func (r *busRequest) Match(m []dbus.MatchOption) *busRequest {
+func (r *BusRequest) Match(m []dbus.MatchOption) *BusRequest {
 	r.match = m
 	return r
 }
 
 // Event defines an event on which a D-Bus request should match.
-func (r *busRequest) Event(e string) *busRequest {
+func (r *BusRequest) Event(e string) *BusRequest {
 	r.event = e
 	return r
 }
 
 // Handler defines a function that will handle a matched D-Bus signal.
-func (r *busRequest) Handler(h func(*dbus.Signal)) *busRequest {
+func (r *BusRequest) Handler(h func(*dbus.Signal)) *BusRequest {
 	r.eventHandler = h
 	return r
 }
 
 // Destination defines the location/interface on a given D-Bus path for a request
 // to operate.
-func (r *busRequest) Destination(d string) *busRequest {
+func (r *BusRequest) Destination(d string) *BusRequest {
 	r.dest = d
 	return r
+}
+
+// Call executes the given method in the builder and returns the error state.
+func (r *BusRequest) Call(method string, args ...any) error {
+	if r.bus == nil {
+		return ErrNoBus
+	}
+	obj := r.bus.conn.Object(r.dest, r.path)
+	if args != nil {
+		return fmt.Errorf("%s: call could not retrieve object (%w)", r.bus.busType.String(), obj.Call(method, 0, args...).Err)
+	}
+	return obj.Call(method, 0).Err
 }
 
 // GetProp uses the given request builder to fetch the specified property from
 // D-Bus as the given type. If the property cannot be retrieved, a non-nil error
 // is returned.
-func GetProp[P any](req *busRequest, prop string) (P, error) {
+func GetProp[P any](req *BusRequest, prop string) (P, error) {
 	var value P
 	if req == nil || req.bus == nil {
 		return value, ErrNoBus
 	}
+	log.Trace().Str("path", string(req.path)).Str("dest", req.dest).Str("property", prop).Msgf("Requesting property (as %T).", value)
 	obj := req.bus.conn.Object(req.dest, req.path)
 	res, err := obj.GetProperty(prop)
 	if err != nil {
@@ -176,7 +210,7 @@ func GetProp[P any](req *busRequest, prop string) (P, error) {
 }
 
 // SetProp sets the specific property to the specified value.
-func SetProp[P any](req *busRequest, prop string, value P) error {
+func SetProp[P any](req *BusRequest, prop string, value P) error {
 	if req == nil || req.bus == nil {
 		return ErrNoBus
 	}
@@ -188,7 +222,7 @@ func SetProp[P any](req *busRequest, prop string, value P) error {
 // GetData uses the given request builder to fetch D-Bus data from the given
 // method, as the provided type. If there is an error or the result cannot be
 // stored in the given type, it will return an non-nil error.
-func GetData[D any](req *busRequest, method string, args ...any) (D, error) {
+func GetData[D any](req *BusRequest, method string, args ...any) (D, error) {
 	var data D
 	if req == nil || req.bus == nil {
 		return data, ErrNoBus
@@ -203,18 +237,6 @@ func GetData[D any](req *busRequest, method string, args ...any) (D, error) {
 	return data, err
 }
 
-// Call executes the given method in the builder and returns the error state.
-func (r *busRequest) Call(method string, args ...any) error {
-	if r.bus == nil {
-		return ErrNoBus
-	}
-	obj := r.bus.conn.Object(r.dest, r.path)
-	if args != nil {
-		return r.busRequestError("call could not retrieve object", obj.Call(method, 0, args...).Err)
-	}
-	return obj.Call(method, 0).Err
-}
-
 // WatchBus will set up a channel on which D-Bus messages matching the given
 // rules can be monitored. Typically, this is used to react when a certain
 // property or signal with a given path and on a given interface, changes. The
@@ -226,26 +248,12 @@ func WatchBus(ctx context.Context, conditions *Watch) (chan Trigger, error) {
 	if !ok {
 		return nil, ErrNoBusCtx
 	}
-	var matchers []dbus.MatchOption
-	switch {
-	case conditions.Path != "":
-		matchers = append(matchers, dbus.WithMatchObjectPath(dbus.ObjectPath(conditions.Path)))
-	case conditions.PathNamespace != "":
-		matchers = append(matchers, dbus.WithMatchPathNamespace(dbus.ObjectPath(conditions.PathNamespace)))
-	case conditions.Args != nil:
-		for arg, value := range conditions.Args {
-			matchers = append(matchers, dbus.WithMatchArg(arg, value))
-		}
-	case conditions.Interface != "":
-		matchers = append(matchers, dbus.WithMatchInterface(conditions.Interface))
-	case len(conditions.Names) != 0:
-		for _, name := range conditions.Names {
-			matchers = append(matchers, dbus.WithMatchMember(name))
-		}
-	}
+
+	matchers := conditions.Parse()
 	if err := bus.conn.AddMatchSignalContext(ctx, matchers...); err != nil {
 		return nil, fmt.Errorf("unable to add watch conditions (%w)", err)
 	}
+
 	signalCh := make(chan *dbus.Signal)
 	outCh := make(chan Trigger)
 	bus.conn.Signal(signalCh)
@@ -299,59 +307,6 @@ func WatchBus(ctx context.Context, conditions *Watch) (chan Trigger, error) {
 	return outCh, nil
 }
 
-func (r *busRequest) AddWatch(ctx context.Context) error {
-	if r.bus == nil {
-		return ErrNoBus
-	}
-	if err := r.bus.conn.AddMatchSignalContext(ctx, r.match...); err != nil {
-		return err
-	}
-	signalCh := make(chan *dbus.Signal)
-	r.bus.conn.Signal(signalCh)
-	r.bus.wg.Add(1)
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		for {
-			select {
-			case <-ctx.Done():
-				r.bus.conn.RemoveSignal(signalCh)
-				close(signalCh)
-				return
-			case signal := <-signalCh:
-				r.eventHandler(signal)
-			}
-		}
-	}()
-	go func() {
-		wg.Wait()
-		r.bus.wg.Done()
-	}()
-	return nil
-}
-
-func (r *busRequest) RemoveWatch(ctx context.Context) error {
-	if r.bus == nil {
-		return ErrNoBus
-	}
-	if err := r.bus.conn.RemoveMatchSignalContext(ctx, r.match...); err != nil {
-		return r.busRequestError("unable to remove watch", err)
-	}
-	log.Trace().
-		Str("path", string(r.path)).
-		Str("dest", r.dest).
-		Str("event", r.event).
-		Msgf("Removed D-Bus signal.")
-	return nil
-}
-
-// busRequestError wraps a lower level error while creating a busRequest into
-// something more understandable.
-func (r *busRequest) busRequestError(msg string, err error) error {
-	return fmt.Errorf("%s: %s (%w)", r.bus.busType.String(), msg, err)
-}
-
 func GetSessionPath(ctx context.Context) dbus.ObjectPath {
 	u, err := user.Current()
 	if err != nil {
@@ -377,7 +332,8 @@ func GetSessionPath(ctx context.Context) dbus.ObjectPath {
 
 // ParsePropertiesChanged treats the given signal body as matching the canonical
 // org.freedesktop.DBus.PropertiesChanged signature and will parse it into a
-// Properties structure that is easier to use. Adapted from
+// Properties structure that is easier to use. If the signal body cannot be
+// parsed an error will be returned with details of the problem. Adapted from
 // https://github.com/godbus/dbus/issues/201
 func ParsePropertiesChanged(v []any) (*Properties, error) {
 	props := &Properties{}
@@ -402,7 +358,9 @@ func ParsePropertiesChanged(v []any) (*Properties, error) {
 
 // ParseValueChange treats the given signal body as matching a value change of a
 // property from an old value to a new value. It will parse the signal body into
-// a Value object with old/new values of the given type.
+// a Value object with old/new values of the given type. If there was a problem
+// parsing the signal body, an error will be returned with details of the
+// problem.
 func ParseValueChange[T any](v []any) (*Values[T], error) {
 	values := &Values[T]{}
 	var ok bool
@@ -420,8 +378,8 @@ func ParseValueChange[T any](v []any) (*Values[T], error) {
 	return values, nil
 }
 
-// VariantToValue converts a dbus.Variant interface{} value into the specified
-// Go native type. If the value is nil, then the return value will be the
+// VariantToValue converts a dbus.Variant value into the specified Go type. If
+// the value is nil or it cannot be converted, then the return value will be the
 // default value of the specified type.
 func VariantToValue[S any](variant dbus.Variant) S {
 	var value S
