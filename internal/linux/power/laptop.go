@@ -8,9 +8,8 @@ package power
 import (
 	"context"
 	"path/filepath"
-	"strings"
+	"slices"
 
-	"github.com/godbus/dbus/v5"
 	"github.com/rs/zerolog/log"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
@@ -23,6 +22,8 @@ const (
 	lidClosedProp     = managerInterface + ".LidClosed"
 	externalPowerProp = managerInterface + ".OnExternalPower"
 )
+
+var laptopPropList = []string{dockedProp, lidClosedProp, externalPowerProp}
 
 type laptopSensor struct {
 	prop string
@@ -86,56 +87,47 @@ func LaptopUpdater(ctx context.Context) chan sensor.Details {
 		return sensorCh
 	}
 
-	for _, prop := range []string{dockedProp, lidClosedProp, externalPowerProp} {
+	for _, prop := range laptopPropList {
 		go func(p string) {
 			sendLaptopPropState(ctx, p, sensorCh)
 		}(prop)
 	}
 
 	sessionPath := dbusx.GetSessionPath(ctx)
-	err := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
-		Match([]dbus.MatchOption{
-			dbus.WithMatchObjectPath(sessionPath),
-			dbus.WithMatchInterface(managerInterface),
-		}).
-		Handler(func(s *dbus.Signal) {
-			if !strings.Contains(string(s.Path), loginBasePath) || len(s.Body) <= 1 {
-				return
-			}
-			if s.Name == dbusx.PropChangedSignal {
-				props, ok := s.Body[1].(map[string]dbus.Variant)
-				if !ok {
-					return
-				}
-				for k, v := range props {
-					switch k {
-					case dockedProp:
-						go func(state dbus.Variant) {
-							sensorCh <- newLaptopEvent(dockedProp, dbusx.VariantToValue[bool](state))
-						}(v)
-					case lidClosedProp:
-						go func(state dbus.Variant) {
-							sensorCh <- newLaptopEvent(lidClosedProp, dbusx.VariantToValue[bool](state))
-						}(v)
-					case externalPowerProp:
-						go func(state dbus.Variant) {
-							sensorCh <- newLaptopEvent(externalPowerProp, dbusx.VariantToValue[bool](state))
-						}(v)
-					}
-				}
-			}
-		}).
-		AddWatch(ctx)
+
+	events, err := dbusx.WatchBus(ctx, &dbusx.Watch{
+		Bus:       dbusx.SystemBus,
+		Names:     []string{dbusx.PropChangedSignal},
+		Interface: managerInterface,
+		Path:      string(sessionPath),
+	})
 	if err != nil {
-		log.Warn().Err(err).Msg("Could not poll D-Bus for laptop states. Won't report dock/lid/external power state.")
+		log.Debug().Err(err).
+			Msg("Failed to create laptop sensors D-Bus watch.")
 		close(sensorCh)
 		return sensorCh
 	}
-	log.Trace().Msg("Started laptop state sensor.")
+
 	go func() {
 		defer close(sensorCh)
-		<-ctx.Done()
-		log.Trace().Msg("Stopped laptop state sensor.")
+		for {
+			select {
+			case <-ctx.Done():
+				log.Debug().Msg("Stopped laptop state sensor.")
+				return
+			case event := <-events:
+				props, err := dbusx.ParsePropertiesChanged(event.Content)
+				if err != nil {
+					log.Warn().Err(err).Msg("Did not understand received trigger.")
+					continue
+				}
+				for prop, value := range props.Changed {
+					if slices.Contains(laptopPropList, prop) {
+						sensorCh <- newLaptopEvent(prop, dbusx.VariantToValue[bool](value))
+					}
+				}
+			}
+		}
 	}()
 	return sensorCh
 }
