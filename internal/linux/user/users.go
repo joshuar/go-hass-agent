@@ -43,10 +43,7 @@ func (s *usersSensor) Attributes() any {
 }
 
 func (s *usersSensor) updateUsers(ctx context.Context) {
-	req := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
-		Path(loginBasePath).
-		Destination(loginBaseInterface)
-	userData, err := dbusx.GetData[[][]any](req, listSessionsMethod)
+	userData, err := dbusx.GetData[[][]any](ctx, dbusx.SystemBus, loginBasePath, loginBaseInterface, listSessionsMethod)
 	if err != nil {
 		log.Warn().Err(err).Msg("Could not retrieve users from D-Bus.")
 		return

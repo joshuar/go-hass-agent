@@ -102,28 +102,25 @@ func newConnection(ctx context.Context, path dbus.ObjectPath) *connection {
 	}
 
 	// fetch properties for the connection
-	req := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
-		Path(path).
-		Destination(dBusNMObj)
 	var err error
-	c.name, err = dbusx.GetProp[string](req, dbusNMActiveConnIntr+".Id")
+	c.name, err = dbusx.GetProp[string](ctx, dbusx.SystemBus, string(path), dBusNMObj, dbusNMActiveConnIntr+".Id")
 	if err != nil {
 		log.Warn().Err(err).Msg("Could not retrieve connection ID.")
 	}
-	c.state, err = dbusx.GetProp[connState](req, dbusNMActiveConnIntr+".State")
+	c.state, err = dbusx.GetProp[connState](ctx, dbusx.SystemBus, string(path), dBusNMObj, dbusNMActiveConnIntr+".State")
 	if err != nil {
 		log.Warn().Err(err).Msg("Could not retrieve connection state.")
 	}
-	c.attrs.ConnectionType, err = dbusx.GetProp[string](req, dbusNMActiveConnIntr+".Type")
+	c.attrs.ConnectionType, err = dbusx.GetProp[string](ctx, dbusx.SystemBus, string(path), dBusNMObj, dbusNMActiveConnIntr+".Type")
 	if err != nil {
 		log.Warn().Err(err).Msg("Could not retrieve connection type.")
 	}
-	ip4ConfigPath, err := dbusx.GetProp[dbus.ObjectPath](req, dbusNMActiveConnIntr+".Ip4Config")
+	ip4ConfigPath, err := dbusx.GetProp[dbus.ObjectPath](ctx, dbusx.SystemBus, string(path), dBusNMObj, dbusNMActiveConnIntr+".Ip4Config")
 	if err != nil {
 		log.Warn().Err(err).Str("connection", c.name).Msg("Could not fetch IPv4 address.")
 	}
 	c.attrs.Ipv4, c.attrs.IPv4Mask = getAddr(ctx, 4, ip4ConfigPath)
-	ip6ConfigPath, err := dbusx.GetProp[dbus.ObjectPath](req, dbusNMActiveConnIntr+".Ip6Config")
+	ip6ConfigPath, err := dbusx.GetProp[dbus.ObjectPath](ctx, dbusx.SystemBus, string(path), dBusNMObj, dbusNMActiveConnIntr+".Ip6Config")
 	if err != nil {
 		log.Warn().Err(err).Str("connection", c.name).Msg("Could not fetch IPv4 address.")
 	}
@@ -314,10 +311,7 @@ func getAddr(ctx context.Context, ver int, path dbus.ObjectPath) (addr string, m
 	case 6:
 		connProp = dBusNMObj + ".IP6Config"
 	}
-	req := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
-		Path(path).
-		Destination(dBusNMObj)
-	addrDetails, err := dbusx.GetProp[[]map[string]dbus.Variant](req, connProp+".AddressData")
+	addrDetails, err := dbusx.GetProp[[]map[string]dbus.Variant](ctx, dbusx.SystemBus, string(path), dBusNMObj, connProp+".AddressData")
 	if err != nil {
 		return "", 0
 	}
@@ -333,10 +327,7 @@ func getAddr(ctx context.Context, ver int, path dbus.ObjectPath) (addr string, m
 }
 
 func getActiveConnections(ctx context.Context) []dbus.ObjectPath {
-	req := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
-		Path(dBusNMPath).
-		Destination(dBusNMObj)
-	v, err := dbusx.GetProp[[]dbus.ObjectPath](req, dBusNMObj+".ActiveConnections")
+	v, err := dbusx.GetProp[[]dbus.ObjectPath](ctx, dbusx.SystemBus, dBusNMPath, dBusNMObj, dBusNMObj+".ActiveConnections")
 	if err != nil {
 		log.Debug().Err(err).
 			Msg("Could not retrieve active connection list.")

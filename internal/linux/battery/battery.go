@@ -73,10 +73,7 @@ func (b *upowerBattery) getProp(ctx context.Context, t linux.SensorTypeValue) (d
 	if !b.dBusPath.IsValid() {
 		return dbus.MakeVariant(""), errors.New("invalid battery path")
 	}
-	req := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
-		Path(b.dBusPath).
-		Destination(upowerDBusDest)
-	return dbusx.GetProp[dbus.Variant](req, dBusSensorToProps[t])
+	return dbusx.GetProp[dbus.Variant](ctx, dbusx.SystemBus, string(b.dBusPath), upowerDBusDest, dBusSensorToProps[t])
 }
 
 // getSensors retrieves the sensors passed in for a given battery.
@@ -100,7 +97,6 @@ func newBattery(ctx context.Context, path dbus.ObjectPath) (*upowerBattery, erro
 	b := &upowerBattery{
 		dBusPath: path,
 	}
-
 
 	// Get the battery type. Depending on the value, additional sensors will be added.
 	battType, err := b.getProp(ctx, linux.SensorBattType)
@@ -337,10 +333,7 @@ func Updater(ctx context.Context) chan sensor.Details {
 // getBatteries is a helper function to retrieve all of the known batteries
 // connected to the system.
 func getBatteries(ctx context.Context) ([]dbus.ObjectPath, error) {
-	req := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
-		Path(upowerDBusPath).
-		Destination(upowerDBusDest)
-	batteryList, err := dbusx.GetData[[]dbus.ObjectPath](req, upowerGetDevicesMethod)
+	batteryList, err := dbusx.GetData[[]dbus.ObjectPath](ctx, dbusx.SystemBus, upowerDBusPath, upowerDBusDest, upowerGetDevicesMethod)
 	if err != nil {
 		return nil, err
 	}

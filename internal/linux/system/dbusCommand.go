@@ -57,10 +57,7 @@ func NewDBusCommandSubscription(ctx context.Context) *mqttapi.Subscription {
 				Str("method", dbusMsg.Method).
 				Msg("Dispatching D-Bus command to MQTT.")
 
-			err := dbusx.NewBusRequest(ctx, dbusType).
-				Path(dbusMsg.Path).
-				Destination(dbusMsg.Destination).
-				Call(dbusMsg.Method, dbusMsg.Args...)
+			err := dbusx.Call(ctx, dbusType, string(dbusMsg.Path), dbusMsg.Destination, dbusMsg.Method, dbusMsg.Args...)
 			if err != nil {
 				log.Warn().Err(err).
 					Str("bus", dbusMsg.Bus).

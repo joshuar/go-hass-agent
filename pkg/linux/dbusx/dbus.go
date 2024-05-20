@@ -124,117 +124,80 @@ func newBus(ctx context.Context, t dbusType) (*bus, error) {
 	return b, nil
 }
 
-// BusRequest contains properties for building different types of D-Bus requests.
-type BusRequest struct {
-	bus          *bus
-	eventHandler func(*dbus.Signal)
-	path         dbus.ObjectPath
-	event        string
-	dest         string
-	match        []dbus.MatchOption
-}
-
-// NewBusRequest creates a new busRequest builder on the specified bus type
-// (either a system or session bus). If it cannot connect to the specified bus,
-// it will still return a busRequest object. Further builder functions should
-// check whether there is a valid bus if appropriate.
-func NewBusRequest(ctx context.Context, busType dbusType) *BusRequest {
-	if bus, ok := getBus(ctx, busType); !ok {
-		log.Debug().Msg("No D-Bus connection present in context.")
-		return &BusRequest{}
-	} else {
-		return &BusRequest{
-			bus: bus,
-		}
+// Call will call the given method, at the given path and interface, with the
+// given args on the given bus. If the call fails or cannot be executed, a
+// non-nil error will be returned. Call does not return any data. For fetching
+// data from the bus, see GetData. For retrieving the value of a property, see
+// GetProp.
+func Call(ctx context.Context, bus dbusType, path, dest, method string, args ...any) error {
+	busObj, ok := getBus(ctx, bus)
+	if !ok {
+		return ErrNoBusCtx
 	}
-}
-
-// Path defines the D-Bus path on which a request will operate.
-func (r *BusRequest) Path(p dbus.ObjectPath) *BusRequest {
-	r.path = p
-	return r
-}
-
-// Match defines D-Bus routing match rules on which a request will operate.
-func (r *BusRequest) Match(m []dbus.MatchOption) *BusRequest {
-	r.match = m
-	return r
-}
-
-// Event defines an event on which a D-Bus request should match.
-func (r *BusRequest) Event(e string) *BusRequest {
-	r.event = e
-	return r
-}
-
-// Handler defines a function that will handle a matched D-Bus signal.
-func (r *BusRequest) Handler(h func(*dbus.Signal)) *BusRequest {
-	r.eventHandler = h
-	return r
-}
-
-// Destination defines the location/interface on a given D-Bus path for a request
-// to operate.
-func (r *BusRequest) Destination(d string) *BusRequest {
-	r.dest = d
-	return r
-}
-
-// Call executes the given method in the builder and returns the error state.
-func (r *BusRequest) Call(method string, args ...any) error {
-	if r.bus == nil {
-		return ErrNoBus
-	}
-	obj := r.bus.conn.Object(r.dest, r.path)
+	obj := busObj.conn.Object(dest, dbus.ObjectPath(path))
 	if args != nil {
-		return fmt.Errorf("%s: call could not retrieve object (%w)", r.bus.busType.String(), obj.Call(method, 0, args...).Err)
+		return fmt.Errorf("%s: call could not retrieve object (%w)", bus.String(), obj.Call(method, 0, args...).Err)
+	}
+	err := obj.Call(method, 0).Err
+	if err != nil {
+		return fmt.Errorf("%s: unable to call method %s (args: %v): %w", bus.String(), method, args, err)
 	}
 	return obj.Call(method, 0).Err
 }
 
-// GetProp uses the given request builder to fetch the specified property from
-// D-Bus as the given type. If the property cannot be retrieved, a non-nil error
-// is returned.
-func GetProp[P any](req *BusRequest, prop string) (P, error) {
+// GetProp retrieves the value of the specified property from D-Bus as the given
+// type. If the property cannot be retrieved, a non-nil error is returned.
+func GetProp[P any](ctx context.Context, bus dbusType, path, dest, prop string) (P, error) {
 	var value P
-	if req == nil || req.bus == nil {
-		return value, ErrNoBus
+	busObj, ok := getBus(ctx, bus)
+	if !ok {
+		return value, ErrNoBusCtx
 	}
-	log.Trace().Str("path", string(req.path)).Str("dest", req.dest).Str("property", prop).Msgf("Requesting property (as %T).", value)
-	obj := req.bus.conn.Object(req.dest, req.path)
+	log.Trace().Str("path", path).Str("dest", dest).Str("property", prop).Msgf("Requesting property (as %T).", value)
+	obj := busObj.conn.Object(dest, dbus.ObjectPath(path))
 	res, err := obj.GetProperty(prop)
 	if err != nil {
-		return value, fmt.Errorf("unable to retrieve property %s from %s: %w", prop, req.dest, err)
+		return value, fmt.Errorf("%s: unable to retrieve property %s from %s: %w", bus.String(), prop, dest, err)
 	}
 	return VariantToValue[P](res), nil
 }
 
 // SetProp sets the specific property to the specified value.
-func SetProp[P any](req *BusRequest, prop string, value P) error {
-	if req == nil || req.bus == nil {
-		return ErrNoBus
+func SetProp[P any](ctx context.Context, bus dbusType, path, dest, prop string, value P) error {
+	busObj, ok := getBus(ctx, bus)
+	if !ok {
+		return ErrNoBusCtx
 	}
 	v := dbus.MakeVariant(value)
-	obj := req.bus.conn.Object(req.dest, req.path)
-	return obj.SetProperty(prop, v)
+	obj := busObj.conn.Object(dest, dbus.ObjectPath(path))
+	err := obj.SetProperty(prop, v)
+	if err != nil {
+		return fmt.Errorf("%s: unable to set property %s (%s) to %v: %w", bus.String(), prop, dest, value, err)
+	}
+	return nil
 }
 
-// GetData uses the given request builder to fetch D-Bus data from the given
-// method, as the provided type. If there is an error or the result cannot be
-// stored in the given type, it will return an non-nil error.
-func GetData[D any](req *BusRequest, method string, args ...any) (D, error) {
+// GetData fetches data using the given method from D-Bus, as the provided type.
+// If there is an error or the result cannot be stored in the given type, it
+// will return an non-nil error. To execute a method, see Call. To get the value
+// of a property, see GetProp.
+func GetData[D any](ctx context.Context, bus dbusType, path, dest, method string, args ...any) (D, error) {
 	var data D
-	if req == nil || req.bus == nil {
-		return data, ErrNoBus
+	busObj, ok := getBus(ctx, bus)
+	if !ok {
+		return data, ErrNoBusCtx
 	}
-	obj := req.bus.conn.Object(req.dest, req.path)
+	obj := busObj.conn.Object(dest, dbus.ObjectPath(path))
 	var err error
 	if args != nil {
 		err = obj.Call(method, 0, args...).Store(&data)
 	} else {
 		err = obj.Call(method, 0).Store(&data)
 	}
-	return data, err
+	if err != nil {
+		return data, fmt.Errorf("%s: unable to get data %s from %s: %w", bus.String(), method, dest, err)
+	}
+	return data, nil
 }
 
 // WatchBus will set up a channel on which D-Bus messages matching the given
@@ -312,11 +275,7 @@ func GetSessionPath(ctx context.Context) dbus.ObjectPath {
 	if err != nil {
 		return ""
 	}
-	req := NewBusRequest(ctx, SystemBus).
-		Path(loginBasePath).
-		Destination(loginBaseInterface)
-
-	sessions, err := GetData[[][]any](req, listSessionsMethod)
+	sessions, err := GetData[[][]any](ctx, SystemBus, loginBasePath, loginBaseInterface, listSessionsMethod)
 	if err != nil {
 		return ""
 	}
