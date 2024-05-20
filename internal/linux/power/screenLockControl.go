@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/eclipse/paho.golang/paho"
-	"github.com/godbus/dbus/v5"
 	mqtthass "github.com/joshuar/go-hass-anything/v9/pkg/hass"
 
 	"github.com/joshuar/go-hass-agent/internal/linux"
@@ -37,9 +36,9 @@ func NewScreenLockControl(ctx context.Context) *mqtthass.ButtonEntity {
 				}
 				var err error
 				if dbusScreensaverMsg != nil {
-					err = sessionDBusCall(ctx, dbus.ObjectPath(dbusScreensaverPath), dbusScreensaverDest, dbusScreensaverLockMethod, dbusScreensaverMsg)
+					err = dbusx.Call(ctx, dbusx.SessionBus, dbusScreensaverPath, dbusScreensaverDest, dbusScreensaverLockMethod, dbusScreensaverMsg)
 				} else {
-					err = sessionDBusCall(ctx, dbus.ObjectPath(dbusScreensaverPath), dbusScreensaverDest, dbusScreensaverLockMethod)
+					err = dbusx.Call(ctx, dbusx.SessionBus, dbusScreensaverPath, dbusScreensaverDest, dbusScreensaverLockMethod)
 				}
 				if err != nil {
 					log.Warn().Err(err).Msg("Could not lock screensaver.")
@@ -63,11 +62,4 @@ func getDesktopEnvScreensaverConfig() (dest, path string, msg *string) {
 	default:
 		return "", "", nil
 	}
-}
-
-func sessionDBusCall(ctx context.Context, path dbus.ObjectPath, dest, method string, args ...any) error {
-	return dbusx.NewBusRequest(ctx, dbusx.SessionBus).
-		Path(path).
-		Destination(dest).
-		Call(method, args...)
 }

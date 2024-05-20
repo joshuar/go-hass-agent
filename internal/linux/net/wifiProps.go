@@ -142,25 +142,22 @@ func newWifiSensor(sensorType string) *wifiSensor {
 // relevant WiFi properties that are to be represented as sensors.
 func monitorWifi(ctx context.Context, p dbus.ObjectPath) <-chan sensor.Details {
 	outCh := make(chan sensor.Details)
-	req := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
-		Path(p).
-		Destination(dBusNMObj)
 	// get the devices associated with this connection
-	wifiDevices, err := dbusx.GetProp[[]dbus.ObjectPath](req, dbusNMActiveConnIntr+".Devices")
+	wifiDevices, err := dbusx.GetProp[[]dbus.ObjectPath](ctx, dbusx.SystemBus, string(p), dBusNMObj, dbusNMActiveConnIntr+".Devices")
 	if err != nil {
 		log.Warn().Err(err).Msg("Could not retrieve active wireless devices.")
 		return nil
 	}
 	for _, d := range wifiDevices {
 		// for each device, get the access point it is currently associated with
-		ap, err := dbusx.GetProp[dbus.ObjectPath](req.Path(d), accessPointProp)
+		ap, err := dbusx.GetProp[dbus.ObjectPath](ctx, dbusx.SystemBus, string(d), dBusNMObj, accessPointProp)
 		if err != nil {
 			log.Warn().Err(err).Msg("Could not ascertain access point.")
 			continue
 		}
 		for _, prop := range wifiPropList {
 			// for the associated access point, get the wifi properties as sensors
-			value, err := dbusx.GetProp[any](req.Path(ap), accessPointInterface+"."+prop)
+			value, err := dbusx.GetProp[any](ctx, dbusx.SystemBus, string(ap), dBusNMObj, accessPointInterface+"."+prop)
 			if err != nil {
 				log.Warn().Err(err).Str("prop", prop).Msg("Could not get Wi-Fi property %s.")
 				continue

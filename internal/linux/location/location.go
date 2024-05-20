@@ -36,41 +36,34 @@ func Updater(ctx context.Context) chan *hass.LocationData {
 
 	// The process to watch for location updates via D-Bus is tedious...
 
-	// Get a new client for setting up a location watch.
-	clientReq := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
-		Path(managerPath).
-		Destination(geoclueInterface)
-
 	var clientPath dbus.ObjectPath
 	var err error
-	clientPath, err = dbusx.GetData[dbus.ObjectPath](clientReq, getClientCall)
+	clientPath, err = dbusx.GetData[dbus.ObjectPath](ctx, dbusx.SystemBus, managerPath, geoclueInterface, getClientCall)
 	if !clientPath.IsValid() || err != nil {
 		log.Error().Err(err).Msg("Could not set up a geoclue client.")
 		close(sensorCh)
 		return sensorCh
 	}
-	// Create a reusable busRequest for the remaining setup steps.
-	locationRequest := dbusx.NewBusRequest(ctx, dbusx.SystemBus).Path(clientPath).Destination(geoclueInterface)
 
 	// Set our client ID.
-	if err = dbusx.SetProp(locationRequest, desktopIDProp, preferences.AppID); err != nil {
+	if err = dbusx.SetProp(ctx, dbusx.SystemBus, string(clientPath), geoclueInterface, desktopIDProp, preferences.AppID); err != nil {
 		log.Error().Err(err).Msg("Could not set a geoclue client id.")
 		close(sensorCh)
 		return sensorCh
 	}
 
 	// Set a distance threshold.
-	if err = dbusx.SetProp(locationRequest, distanceThresholdProp, uint32(0)); err != nil {
+	if err = dbusx.SetProp(ctx, dbusx.SystemBus, string(clientPath), geoclueInterface, distanceThresholdProp, uint32(0)); err != nil {
 		log.Warn().Err(err).Msg("Could not set distance threshold for geoclue requests.")
 	}
 
 	// Set a time threshold.
-	if err = dbusx.SetProp(locationRequest, timeThresholdProp, uint32(0)); err != nil {
+	if err = dbusx.SetProp(ctx, dbusx.SystemBus, string(clientPath), geoclueInterface, timeThresholdProp, uint32(0)); err != nil {
 		log.Warn().Err(err).Msg("Could not set time threshold for geoclue requests.")
 	}
 
 	// Request to start tracking location updates.
-	if err = locationRequest.Call(startCall); err != nil {
+	if err = dbusx.Call(ctx, dbusx.SystemBus, string(clientPath), geoclueInterface, startCall); err != nil {
 		log.Warn().Err(err).Msg("Could not start geoclue client.")
 		close(sensorCh)
 		return sensorCh
@@ -97,7 +90,7 @@ func Updater(ctx context.Context) chan *hass.LocationData {
 		for {
 			select {
 			case <-ctx.Done():
-				err := locationRequest.Call(stopCall)
+				err := dbusx.Call(ctx, dbusx.SystemBus, string(clientPath), geoclueInterface, stopCall)
 				if err != nil {
 					log.Debug().Caller().Err(err).Msg("Failed to stop location updater.")
 					return
@@ -117,10 +110,7 @@ func Updater(ctx context.Context) chan *hass.LocationData {
 
 func newLocation(ctx context.Context, locationPath dbus.ObjectPath) *hass.LocationData {
 	getProp := func(prop string) float64 {
-		req := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
-			Path(locationPath).
-			Destination(geoclueInterface)
-		value, err := dbusx.GetProp[float64](req, locationInterface+"."+prop)
+		value, err := dbusx.GetProp[float64](ctx, dbusx.SystemBus, string(locationPath), geoclueInterface, locationInterface+"."+prop)
 		if err != nil {
 			log.Debug().Caller().Err(err).
 				Msgf("Could not retrieve %s.", prop)

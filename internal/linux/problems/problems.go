@@ -77,18 +77,18 @@ func Updater(ctx context.Context) chan sensor.Details {
 		problems.UnitsString = "problems"
 		problems.StateClassValue = types.StateClassMeasurement
 
-		req := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
-			Path(dBusProblemsDest).
-			Destination(dBusProblemIntr)
-
-		problemList, err := dbusx.GetData[[]string](req, dBusProblemIntr+".GetProblems")
+		problemList, err := dbusx.GetData[[]string](ctx, dbusx.SystemBus, dBusProblemsDest, dBusProblemIntr, dBusProblemIntr+".GetProblems")
 		if err != nil {
 			log.Debug().Err(err).Msg("Unable to retrieve list of ABRT problems.")
 			return
 		}
 
 		for _, p := range problemList {
-			problemDetails, err := dbusx.GetData[map[string]string](req, dBusProblemIntr+".GetInfo", p, []string{"time", "count", "package", "reason"})
+			problemDetails, err := dbusx.GetData[map[string]string](ctx,
+				dbusx.SystemBus,
+				dBusProblemsDest,
+				dBusProblemIntr,
+				dBusProblemIntr+".GetInfo", p, []string{"time", "count", "package", "reason"})
 			if problemDetails == nil || err != nil {
 				log.Debug().Msg("No problems retrieved.")
 			} else {

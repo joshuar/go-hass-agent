@@ -65,15 +65,12 @@ func newIdleSensor(ctx context.Context) *idleSensor {
 	var idleState bool
 	var idleTime int64
 	var err error
-	req := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
-		Path(loginBasePath).
-		Destination(loginBaseInterface)
-	if idleState, err = dbusx.GetProp[bool](req, idleProp); err != nil {
+	if idleState, err = dbusx.GetProp[bool](ctx, dbusx.SystemBus, loginBasePath, loginBaseInterface, idleProp); err != nil {
 		log.Debug().Err(err).Str("prop", filepath.Ext(idleProp)).Msg("Could not retrieve property from D-Bus.")
 		return nil
 	}
 	s.Value = idleState
-	idleTime, _ = dbusx.GetProp[int64](req, idleTimeProp)
+	idleTime, _ = dbusx.GetProp[int64](ctx, dbusx.SystemBus, loginBasePath, loginBaseInterface, idleTimeProp)
 	s.idleTime = idleTime
 	return s
 }

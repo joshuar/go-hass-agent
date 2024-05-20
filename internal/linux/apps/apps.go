@@ -50,16 +50,13 @@ func Updater(ctx context.Context) chan sensor.Details {
 		defer close(sensorCh)
 		activeApp := newActiveAppSensor()
 		runningApps := newRunningAppsSensor()
-		appListReq := dbusx.NewBusRequest(ctx, dbusx.SessionBus).
-			Path(appStateDBusPath).
-			Destination(portalDest)
 		for {
 			select {
 			case <-ctx.Done():
 				log.Debug().Msg("Stopped app sensor.")
 				return
 			case <-eventCh:
-				appList, err := dbusx.GetData[map[string]dbus.Variant](appListReq, appStateDBusMethod)
+				appList, err := dbusx.GetData[map[string]dbus.Variant](ctx, dbusx.SessionBus, appStateDBusPath, portalDest, appStateDBusMethod)
 				if err != nil {
 					log.Warn().Err(err).Msg("Could not retrieve app list from D-Bus.")
 				}

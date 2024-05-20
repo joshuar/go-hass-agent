@@ -41,10 +41,7 @@ func newPowerSensor(t linux.SensorTypeValue, v dbus.Variant) *powerSensor {
 
 func (s *sensors) Sensors(ctx context.Context) []sensor.Details {
 	var sensors []sensor.Details
-	req := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
-		Path(powerProfilesPath).
-		Destination(powerProfilesDest)
-	profile, err := dbusx.GetProp[dbus.Variant](req, powerProfilesDest+"."+activeProfileProp)
+	profile, err := dbusx.GetProp[dbus.Variant](ctx, dbusx.SystemBus, powerProfilesPath, powerProfilesDest, powerProfilesDest+"."+activeProfileProp)
 	if err != nil {
 		log.Debug().Err(err).Msg("Cannot retrieve a power profile from D-Bus.")
 		return nil

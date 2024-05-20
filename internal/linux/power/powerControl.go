@@ -9,7 +9,6 @@ import (
 	"context"
 
 	"github.com/eclipse/paho.golang/paho"
-	"github.com/godbus/dbus/v5"
 	mqtthass "github.com/joshuar/go-hass-anything/v9/pkg/hass"
 	"github.com/rs/zerolog/log"
 
@@ -30,7 +29,7 @@ const (
 type commandConfig struct {
 	name   string
 	icon   string
-	path   dbus.ObjectPath
+	path   string
 	method string
 }
 
@@ -48,25 +47,25 @@ var commands = map[string]commandConfig{
 	"reboot": {
 		name:   "Reboot",
 		icon:   "mdi:restart",
-		path:   dbus.ObjectPath(loginBasePath),
+		path:   loginBasePath,
 		method: dbusSessionRebootMethod,
 	},
 	"suspend": {
 		name:   "Suspend",
 		icon:   "mdi:power-sleep",
-		path:   dbus.ObjectPath(loginBasePath),
+		path:   loginBasePath,
 		method: dbusSessionSuspendMethod,
 	},
 	"hibernate": {
 		name:   "Hibernate",
 		icon:   "mdi:power-sleep",
-		path:   dbus.ObjectPath(loginBasePath),
+		path:   loginBasePath,
 		method: dbusSessionHibernateMethod,
 	},
 	"power_off": {
 		name:   "Power Off",
 		icon:   "mdi:power",
-		path:   dbus.ObjectPath(loginBasePath),
+		path:   loginBasePath,
 		method: dbusSessionPowerOffMethod,
 	},
 }
@@ -80,14 +79,14 @@ func NewPowerControl(ctx context.Context) []*mqtthass.ButtonEntity {
 		var callback func(p *paho.Publish)
 		if v.path == "" {
 			callback = func(_ *paho.Publish) {
-				err := systemDBusCall(ctx, sessionPath, loginBaseInterface, v.method)
+				err := dbusx.Call(ctx, dbusx.SystemBus, string(sessionPath), loginBaseInterface, v.method)
 				if err != nil {
 					log.Warn().Err(err).Msgf("Could not %s session.", v.name)
 				}
 			}
 		} else {
 			callback = func(_ *paho.Publish) {
-				err := systemDBusCall(ctx, v.path, loginBaseInterface, v.method, true)
+				err := dbusx.Call(ctx, dbusx.SystemBus, v.path, loginBaseInterface, v.method, true)
 				if err != nil {
 					log.Warn().Err(err).Msg("Could not power off session.")
 				}
@@ -102,11 +101,4 @@ func NewPowerControl(ctx context.Context) []*mqtthass.ButtonEntity {
 					WithCommandCallback(callback)))
 	}
 	return entities
-}
-
-func systemDBusCall(ctx context.Context, path dbus.ObjectPath, dest, method string, args ...any) error {
-	return dbusx.NewBusRequest(ctx, dbusx.SystemBus).
-		Path(path).
-		Destination(dest).
-		Call(method, args...)
 }

@@ -165,10 +165,10 @@ func newColorSchemeSensor(ctx context.Context, scheme string) *desktopSettingSen
 func getProp(ctx context.Context, prop string) string {
 	var value dbus.Variant
 	var err error
-	settingsReq := dbusx.NewBusRequest(ctx, dbusx.SessionBus).
-		Path(desktopPortalPath).
-		Destination(desktopPortalInterface)
-	if value, err = dbusx.GetData[dbus.Variant](settingsReq,
+	if value, err = dbusx.GetData[dbus.Variant](ctx,
+		dbusx.SessionBus,
+		desktopPortalPath,
+		desktopPortalInterface,
 		settingsPortalInterface+".Read",
 		"org.freedesktop.appearance",
 		prop); err != nil {

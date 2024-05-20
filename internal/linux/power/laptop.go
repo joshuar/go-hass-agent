@@ -135,10 +135,7 @@ func LaptopUpdater(ctx context.Context) chan sensor.Details {
 func sendLaptopPropState(ctx context.Context, prop string, outCh chan sensor.Details) {
 	var state bool
 	var err error
-	req := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
-		Path(loginBasePath).
-		Destination(loginBaseInterface)
-	if state, err = dbusx.GetProp[bool](req, prop); err != nil {
+	if state, err = dbusx.GetProp[bool](ctx, dbusx.SystemBus, loginBasePath, loginBaseInterface, prop); err != nil {
 		log.Debug().Err(err).Str("prop", filepath.Ext(prop)).Msg("Could not retrieve laptop property from D-Bus.")
 		return
 	}
