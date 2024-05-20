@@ -101,6 +101,7 @@ func newBattery(ctx context.Context, path dbus.ObjectPath) (*upowerBattery, erro
 		dBusPath: path,
 	}
 
+
 	// Get the battery type. Depending on the value, additional sensors will be added.
 	battType, err := b.getProp(ctx, linux.SensorBattType)
 	if err != nil {
@@ -157,9 +158,9 @@ func (s *upowerBatterySensor) ID() string {
 func (s *upowerBatterySensor) Icon() string {
 	switch s.SensorTypeValue {
 	case linux.SensorBattPercentage:
-		return battPcToIcon(s.Value)
+		return batteryPercentIcon(s.Value)
 	case linux.SensorBattEnergyRate:
-		return battErToIcon(s.Value)
+		return batteryChargeIcon(s.Value)
 	default:
 		return batteryIcon
 	}
@@ -319,11 +320,12 @@ func Updater(ctx context.Context) chan sensor.Details {
 	var sensorCh []<-chan sensor.Details
 
 	// Get a list of all current connected batteries and monitor them.
-	batteries := getBatteries(ctx)
-	if len(batteries) > 0 {
-		for _, path := range batteries {
-			sensorCh = append(sensorCh, batteryTracker.track(ctx, path))
-		}
+	batteries, err := getBatteries(ctx)
+	if err != nil {
+		log.Warn().Err(err).Msg("Could not retrieve battery list. Cannot find any existing batteries.")
+	}
+	for _, path := range batteries {
+		sensorCh = append(sensorCh, batteryTracker.track(ctx, path))
 	}
 
 	// Monitor for battery added/removed signals.
@@ -334,60 +336,56 @@ func Updater(ctx context.Context) chan sensor.Details {
 
 // getBatteries is a helper function to retrieve all of the known batteries
 // connected to the system.
-func getBatteries(ctx context.Context) []dbus.ObjectPath {
+func getBatteries(ctx context.Context) ([]dbus.ObjectPath, error) {
 	req := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
 		Path(upowerDBusPath).
 		Destination(upowerDBusDest)
 	batteryList, err := dbusx.GetData[[]dbus.ObjectPath](req, upowerGetDevicesMethod)
 	if err != nil {
-		return nil
+		return nil, err
 	}
-	return batteryList
+	return batteryList, nil
 }
 
 // monitorBattery will monitor a battery device for any property changes and
 // send these as sensors.
 func monitorBattery(ctx context.Context, battery *upowerBattery) <-chan sensor.Details {
-	log.Debug().Str("battery", battery.id).
-		Msg("Monitoring battery.")
-	sensorCh := make(chan sensor.Details, 1)
+	log.Debug().Str("battery", battery.id).Msg("Monitoring battery.")
+	sensorCh := make(chan sensor.Details)
 	// Create a DBus signal match to watch for property changes for this
 	// battery.
-	err := dbusx.NewBusRequest(ctx, dbusx.SystemBus).
-		Match([]dbus.MatchOption{
-			dbus.WithMatchObjectPath(battery.dBusPath),
-			dbus.WithMatchInterface(dbusx.PropInterface),
-		}).
-		Event(dbusx.PropChangedSignal).
-		Handler(func(s *dbus.Signal) {
-			if s.Path != battery.dBusPath || len(s.Body) == 0 {
-				log.Trace().Str("runner", "battery").Msg("Not my signal or empty signal body.")
-				return
-			}
-			props, ok := s.Body[1].(map[string]dbus.Variant)
-			if !ok {
-				return
-			}
-			go func() {
-				for propName, propValue := range props {
-					if s, ok := dBusPropToSensor[propName]; ok {
-						sensorCh <- newBatterySensor(ctx, battery, s, propValue)
-					}
-				}
-			}()
-		}).
-		AddWatch(ctx)
+	events, err := dbusx.WatchBus(ctx, &dbusx.Watch{
+		Bus:       dbusx.SystemBus,
+		Names:     []string{dbusx.PropChangedSignal},
+		Path:      string(battery.dBusPath),
+		Interface: dbusx.PropInterface,
+	})
 	if err != nil {
-		log.Debug().Err(err).Str("battery", battery.id).
-			Msg("Could not monitor D-Bus for battery properties.")
+		log.Debug().Err(err).
+			Msg("Failed to create battery props D-Bus watch.")
 		close(sensorCh)
 		return sensorCh
 	}
 	go func() {
 		defer close(sensorCh)
-		<-ctx.Done()
-		log.Debug().Str("battery", battery.id).
-			Msg("Stopped monitoring battery.")
+		for {
+			select {
+			case <-ctx.Done():
+				log.Debug().Str("battery", battery.id).Msg("Stopped monitoring battery.")
+				return
+			case event := <-events:
+				props, err := dbusx.ParsePropertiesChanged(event.Content)
+				if err != nil {
+					log.Warn().Err(err).Msg("Did not understand received trigger.")
+					continue
+				}
+				for prop, value := range props.Changed {
+					if s, ok := dBusPropToSensor[prop]; ok {
+						sensorCh <- newBatterySensor(ctx, battery, s, value)
+					}
+				}
+			}
+		}
 	}()
 	return sensorCh
 }
@@ -438,10 +436,10 @@ func monitorBatteryChanges(ctx context.Context, t *batteryTracker) <-chan sensor
 	return sensorCh
 }
 
-func battPcToIcon(v any) string {
+func batteryPercentIcon(v any) string {
 	pc, ok := v.(float64)
 	if !ok {
-		return "mdi:battery-unknown"
+		return batteryIcon + "-unknown"
 	}
 	if pc >= 95 {
 		return batteryIcon
@@ -449,13 +447,13 @@ func battPcToIcon(v any) string {
 	return fmt.Sprintf("%s-%d", batteryIcon, int(math.Round(pc/10)*10))
 }
 
-func battErToIcon(v any) string {
+func batteryChargeIcon(v any) string {
 	er, ok := v.(float64)
 	if !ok {
 		return batteryIcon
 	}
 	if math.Signbit(er) {
-		return "mdi:battery-minus"
+		return batteryIcon + "-minus"
 	}
-	return "mdi:battery-plus"
+	return batteryIcon + "-plus"
 }
