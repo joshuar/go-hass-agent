@@ -13,16 +13,16 @@ import (
 )
 
 type dBusAPI struct {
-	dbus map[dbusType]*Bus
+	dbus map[dbusType]*bus
 	mu   sync.Mutex
 }
 
-func NewDBusAPI(ctx context.Context) *dBusAPI {
+func newDBusAPI(ctx context.Context) *dBusAPI {
 	a := &dBusAPI{}
-	a.dbus = make(map[dbusType]*Bus)
+	a.dbus = make(map[dbusType]*bus)
 	a.mu.Lock()
 	for _, b := range []dbusType{SessionBus, SystemBus} {
-		bus, err := NewBus(ctx, b)
+		bus, err := newBus(ctx, b)
 		if err != nil {
 			log.Warn().Err(err).Msg("Could not connect to D-Bus bus.")
 		} else {
@@ -43,11 +43,11 @@ var linuxCtxKey key
 
 // Setup returns a new Context that contains the D-Bus API.
 func Setup(ctx context.Context) context.Context {
-	return context.WithValue(ctx, linuxCtxKey, NewDBusAPI(ctx))
+	return context.WithValue(ctx, linuxCtxKey, newDBusAPI(ctx))
 }
 
 // getBus retrieves the D-Bus API object from the context.
-func getBus(ctx context.Context, e dbusType) (*Bus, bool) {
+func getBus(ctx context.Context, e dbusType) (*bus, bool) {
 	b, ok := ctx.Value(linuxCtxKey).(*dBusAPI)
 	if !ok {
 		return nil, false
