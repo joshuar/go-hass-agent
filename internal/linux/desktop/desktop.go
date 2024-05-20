@@ -8,6 +8,7 @@ package desktop
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/godbus/dbus/v5"
@@ -21,9 +22,13 @@ import (
 )
 
 const (
-	desktopPortalPath              = "/org/freedesktop/portal/desktop"
-	desktopPortalSettingsInterface = "org.freedesktop.impl.portal.Settings"
-	desktopPortalSettingsSignal    = "org.freedesktop.impl.portal.Settings.SettingChanged"
+	portalInterface         = "org.freedesktop.portal"
+	desktopPortalPath       = "/org/freedesktop/portal/desktop"
+	desktopPortalInterface  = portalInterface + ".Desktop"
+	settingsPortalInterface = portalInterface + ".Settings"
+	settingsChangedSignal   = "SettingChanged"
+	colorSchemeProp         = "color-scheme"
+	accentColorProp         = "accent-color"
 )
 
 type desktopSettingSensor struct {
@@ -40,76 +45,67 @@ func Updater(ctx context.Context) chan sensor.Details {
 		return sensorCh
 	}
 
-	reqCtx, cancelReq := context.WithTimeout(ctx, 15*time.Second)
-	defer cancelReq()
-	settingsReq := dbusx.NewBusRequest(reqCtx, dbusx.SessionBus).
-		Path(desktopPortalPath).
-		Destination("org.freedesktop.portal.Desktop")
-	go func() {
-		if v, err := dbusx.GetData[dbus.Variant](settingsReq,
-			"org.freedesktop.portal.Settings.Read",
-			"org.freedesktop.appearance",
-			"accent-color"); err != nil {
-			log.Warn().Err(err).Msg("Could not retrieve accent color from D-Bus.")
-		} else {
-			s := getAccentColor(v)
-			sensorCh <- newAccentColorSensor(s)
-		}
-	}()
-	go func() {
-		if v, err := dbusx.GetData[dbus.Variant](settingsReq,
-			"org.freedesktop.portal.Settings.Read",
-			"org.freedesktop.appearance",
-			"color-scheme"); err != nil {
-			log.Warn().Err(err).Msg("Could not retrieve color scheme type from D-Bus.")
-		} else {
-			s := getColorSchemePref(v)
-			sensorCh <- newColorSchemeSensor(s)
-		}
-	}()
-
-	err := dbusx.NewBusRequest(ctx, dbusx.SessionBus).
-		Match([]dbus.MatchOption{
-			dbus.WithMatchObjectPath(desktopPortalPath),
-			dbus.WithMatchInterface(desktopPortalSettingsInterface),
-		}).
-		Handler(func(s *dbus.Signal) {
-			if s.Name != desktopPortalSettingsSignal {
-				return
-			}
-			prop, ok := s.Body[1].(string)
-			if !ok {
-				return
-			}
-			switch prop {
-			case "color-scheme":
-				s := getColorSchemePref(s.Body[2])
-				sensorCh <- newColorSchemeSensor(s)
-			case "accent-color":
-				s := getAccentColor(s.Body[2])
-				sensorCh <- newAccentColorSensor(s)
-			}
-		}).
-		AddWatch(ctx)
+	// Watch for accent color/scheme changes.
+	events, err := dbusx.WatchBus(ctx, &dbusx.Watch{
+		Bus:       dbusx.SessionBus,
+		Names:     []string{settingsChangedSignal},
+		Interface: settingsPortalInterface,
+		Path:      desktopPortalPath,
+	})
 	if err != nil {
-		log.Debug().Caller().Err(err).
-			Msg("Failed to create desktop settings D-Bus watch.")
+		log.Debug().Err(err).
+			Msg("Failed to create idle time D-Bus watch.")
 		close(sensorCh)
+		return sensorCh
 	}
 	go func() {
 		defer close(sensorCh)
-		<-ctx.Done()
-		log.Debug().Msg("Stopped desktop settings sensors.")
+		for {
+			select {
+			case <-ctx.Done():
+				log.Debug().Msg("Stopped desktop settings sensors.")
+				return
+			case event := <-events:
+				if !strings.Contains(event.Signal, settingsChangedSignal) {
+					continue
+				}
+				prop, ok := event.Content[1].(string)
+				if !ok {
+					log.Warn().Msg("Didn't understand changed property.")
+					continue
+				}
+				value, ok := event.Content[2].(dbus.Variant)
+				if !ok {
+					log.Warn().Msg("Didn't understand changed property value.")
+					continue
+				}
+				switch prop {
+				case colorSchemeProp:
+					s := parseColorScheme(value)
+					sensorCh <- newColorSchemeSensor(ctx, s)
+				case accentColorProp:
+					s := parseAccentColor(value)
+					sensorCh <- newAccentColorSensor(ctx, s)
+				}
+			}
+		}
 	}()
+
+	// Send current values as sensors.
+	reqCtx, cancelReq := context.WithTimeout(ctx, 15*time.Second)
+	defer cancelReq()
+	go func() {
+		sensorCh <- newAccentColorSensor(reqCtx, "")
+	}()
+	go func() {
+		sensorCh <- newColorSchemeSensor(reqCtx, "")
+	}()
+
 	return sensorCh
 }
 
-func getColorSchemePref(value any) string {
-	v, ok := value.(dbus.Variant)
-	if !ok {
-		return sensor.StateUnknown
-	}
-	scheme := dbusx.VariantToValue[uint32](v)
+func parseColorScheme(value dbus.Variant) string {
+	scheme := dbusx.VariantToValue[uint32](value)
 	switch scheme {
 	case 1:
 		return "dark"
@@ -120,15 +116,9 @@ func getColorSchemePref(value any) string {
 	}
 }
 
-func getAccentColor(value any) string {
-	v, ok := value.(dbus.Variant)
-	if !ok {
-		return sensor.StateUnknown
-	}
-	values := dbusx.VariantToValue[[]any](v)
-
+func parseAccentColor(value dbus.Variant) string {
+	values := dbusx.VariantToValue[[]any](value)
 	rgb := make([]uint8, 3)
-
 	for i, v := range values {
 		if val, ok := v.(float64); !ok {
 			continue
@@ -136,11 +126,13 @@ func getAccentColor(value any) string {
 			rgb[i] = srgb.To8Bit(float32(val))
 		}
 	}
-
 	return fmt.Sprintf("#%02x%02x%02x", rgb[0], rgb[1], rgb[2])
 }
 
-func newAccentColorSensor(accent string) *desktopSettingSensor {
+func newAccentColorSensor(ctx context.Context, accent string) *desktopSettingSensor {
+	if accent == "" {
+		accent = getProp(ctx, accentColorProp)
+	}
 	s := &desktopSettingSensor{}
 	s.IsDiagnostic = true
 	s.IconString = "mdi:palette"
@@ -150,7 +142,10 @@ func newAccentColorSensor(accent string) *desktopSettingSensor {
 	return s
 }
 
-func newColorSchemeSensor(scheme string) *desktopSettingSensor {
+func newColorSchemeSensor(ctx context.Context, scheme string) *desktopSettingSensor {
+	if scheme == "" {
+		scheme = getProp(ctx, colorSchemeProp)
+	}
 	s := &desktopSettingSensor{}
 	s.IsDiagnostic = true
 	s.SensorSrc = linux.DataSrcDbus
@@ -165,4 +160,26 @@ func newColorSchemeSensor(scheme string) *desktopSettingSensor {
 		s.IconString = "mdi:theme-light-dark"
 	}
 	return s
+}
+
+func getProp(ctx context.Context, prop string) string {
+	var value dbus.Variant
+	var err error
+	settingsReq := dbusx.NewBusRequest(ctx, dbusx.SessionBus).
+		Path(desktopPortalPath).
+		Destination(desktopPortalInterface)
+	if value, err = dbusx.GetData[dbus.Variant](settingsReq,
+		settingsPortalInterface+".Read",
+		"org.freedesktop.appearance",
+		prop); err != nil {
+		log.Warn().Err(err).Msg("Could not retrieve accent color from D-Bus.")
+		return sensor.StateUnknown
+	}
+	switch prop {
+	case accentColorProp:
+		return parseAccentColor(value)
+	case colorSchemeProp:
+		return parseColorScheme(value)
+	}
+	return sensor.StateUnknown
 }
