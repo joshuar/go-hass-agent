@@ -73,7 +73,7 @@ func newIdleSensor(ctx context.Context) *idleSensor {
 		return nil
 	}
 	s.Value = idleState
-	idleTime, _ = dbusx.GetProp[int64](req, idleProp)
+	idleTime, _ = dbusx.GetProp[int64](req, idleTimeProp)
 	s.idleTime = idleTime
 	return s
 }
