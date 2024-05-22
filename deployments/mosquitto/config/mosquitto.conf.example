@@ -1,6 +1,3 @@
-persistence true
-persistence_location /mosquitto/data/
-
 user mosquitto
 
 # unencrypted only on localhost
