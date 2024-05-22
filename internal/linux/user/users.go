@@ -9,7 +9,6 @@ import (
 	"context"
 	"strings"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/rs/zerolog/log"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
@@ -93,7 +92,6 @@ func Updater(ctx context.Context) chan sensor.Details {
 				log.Debug().Msg("Stopped users sensors.")
 				return
 			case event := <-events:
-				spew.Dump(event)
 				if !strings.Contains(event.Signal, sessionAddedSignal) && !strings.Contains(event.Signal, sessionRemovedSignal) {
 					continue
 				}
