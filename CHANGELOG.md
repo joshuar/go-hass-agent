@@ -1,5 +1,39 @@
 # Changelog
 
+## [9.2.0](https://github.com/joshuar/go-hass-agent/compare/v9.1.1...v9.2.0) (2024-05-23)
+
+
+### Features
+
+* **dbusx:** :art: improved new WatchBus function with more support for native D-Bus match types ([6066daa](https://github.com/joshuar/go-hass-agent/commit/6066daaf673a67d01c9def418b0cb592477da4b8))
+* **linux:** :sparkles: add desktop session idle sensor ([1bd5d08](https://github.com/joshuar/go-hass-agent/commit/1bd5d08098d58bc1174a3264445ae3bcbf3cb921))
+* **linux:** :sparkles: migrate to different pulseaudio library ([e5c576c](https://github.com/joshuar/go-hass-agent/commit/e5c576cbe2c5161082be33ff8834ac15f92bf0b4))
+
+
+### Bug Fixes
+
+* **agent:** :arrow_up: update go-hass-anything to fix authentication issues with MQTT ([51d5f54](https://github.com/joshuar/go-hass-agent/commit/51d5f54db4076da97ffd56199f4e0d4b97ec07ad))
+* **dbusx:** :bug: better protection against nil pointer exception in bus connection from context retrieval ([8ddf562](https://github.com/joshuar/go-hass-agent/commit/8ddf56247e6ee9fc7b9aedf9a2db48ac050d0e06))
+* **linux:** :bug: request correct idleTime property ([312179f](https://github.com/joshuar/go-hass-agent/commit/312179f50a50c410f4857dda9d7b2ef98e5b652f))
+* **linux:** :fire: remove spew ([d454883](https://github.com/joshuar/go-hass-agent/commit/d45488394b84e3a8d11e3a212013516f08eca4da))
+* **linux:** :label: add idle sensor type ([36c8319](https://github.com/joshuar/go-hass-agent/commit/36c83192dbf803ec319025d87089ff1f3546409c))
+* **ui:** :lipstick: Fyne -&gt; Fyne Settings ([42b8c76](https://github.com/joshuar/go-hass-agent/commit/42b8c769e31cd7721642acfa862b31d677ef8e1e))
+
+
+### Performance Improvements
+
+* **dbusx:** :sparkles: support checking if multiple properties/signals have changed in a single watch ([473a1ba](https://github.com/joshuar/go-hass-agent/commit/473a1ba6ffb585409b7f1d2d0d817cd48f8185e2))
+* **linux:** :zap: all power sensors using D-Bus use new dbusx.WatchBus function ([03ab63e](https://github.com/joshuar/go-hass-agent/commit/03ab63e6f7fca3b1f3dc0886486e7c7e7cc5edde))
+* **linux:** :zap: complete migration of battery sensor code to dbusx.WatchBus ([0055e56](https://github.com/joshuar/go-hass-agent/commit/0055e5653009d548be181109758123520b9582c6))
+* **linux:** :zap: rework battery sensor to use new dbusx.WatchBus function ([77b172a](https://github.com/joshuar/go-hass-agent/commit/77b172a55cf396b567eb99c9175eef71eed40d83))
+* **linux:** :zap: rework desktop preferences sensors to use dbusx.WatchBus function ([46f6aaa](https://github.com/joshuar/go-hass-agent/commit/46f6aaae858dfbcddc335883a3683db0303b1f32))
+* **linux:** :zap: rework laptop sensors to use dbusx.WatchBus ([942d089](https://github.com/joshuar/go-hass-agent/commit/942d089318bcd405dde4b12391ae92c1796435a8))
+* **linux:** :zap: rework network sensors to use new dbusx.WatchBus function ([485a1e6](https://github.com/joshuar/go-hass-agent/commit/485a1e6c2560eda64bc0a49a4d1e993a1cd5d463))
+* **linux:** :zap: rework wifi properties sensors to use dbusx.WatchBus function ([d5189ce](https://github.com/joshuar/go-hass-agent/commit/d5189cec086e9bf085526ea192229ba8b0c1c5e7))
+* **linux:** :zap: use new D-Bus watch method for location updates ([a441579](https://github.com/joshuar/go-hass-agent/commit/a441579e345cf12f48508cbf388350e28f4e83b8))
+* **linux:** :zap: use new D-Bus watch method for power state updates ([dabed9f](https://github.com/joshuar/go-hass-agent/commit/dabed9f7b148157d8ea53e570bd4cbdbb1577567))
+* **linux:** :zap: user session tracking sensor use new dbusx.WatchBus function ([4b7adc2](https://github.com/joshuar/go-hass-agent/commit/4b7adc23b5ebc270a5d86f34b2add8e30cbdf352))
+
 ## [9.1.1](https://github.com/joshuar/go-hass-agent/compare/v9.1.0...v9.1.1) (2024-05-18)
 
 
