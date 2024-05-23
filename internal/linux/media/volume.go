@@ -10,8 +10,6 @@ import (
 	"encoding/json"
 	"strconv"
 
-	"mrogalski.eu/go/pulseaudio"
-
 	"github.com/eclipse/paho.golang/paho"
 	mqtthass "github.com/joshuar/go-hass-anything/v9/pkg/hass"
 	mqttapi "github.com/joshuar/go-hass-anything/v9/pkg/mqtt"
@@ -20,10 +18,11 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
+	pulseaudiox "github.com/joshuar/go-hass-agent/pkg/linux/pulseaudio"
 )
 
 type audioDevice struct {
-	pulseAudio *pulseaudio.Client
+	pulseAudio *pulseaudiox.PulseAudioClient
 	msgCh      chan *mqttapi.Msg
 	muteEntity *mqtthass.SwitchEntity
 	volEntity  *mqtthass.NumberEntity[int]
@@ -32,7 +31,7 @@ type audioDevice struct {
 func VolumeControl(ctx context.Context, msgCh chan *mqttapi.Msg) (*mqtthass.NumberEntity[int], *mqtthass.SwitchEntity) {
 	device := linux.MQTTDevice()
 
-	client, err := pulseaudio.NewClient()
+	client, err := pulseaudiox.NewPulseClient(ctx)
 	if err != nil {
 		log.Warn().Err(err).Msg("Unable to connect to Pulseaudio. Volume control will be unavailable.")
 		return nil, nil
@@ -56,6 +55,8 @@ func VolumeControl(ctx context.Context, msgCh chan *mqttapi.Msg) (*mqtthass.Numb
 
 	audioDev.muteEntity = mqtthass.AsSwitch(
 		mqtthass.NewEntity(preferences.AppName, "Mute", device.Name+"_mute").
+			WithOriginInfo(preferences.MQTTOrigin()).
+			WithDeviceInfo(device).
 			WithIcon("mdi:volume-mute").
 			WithCommandCallback(audioDev.muteCommandCallback).
 			WithStateCallback(audioDev.muteStateCallback).
@@ -63,69 +64,60 @@ func VolumeControl(ctx context.Context, msgCh chan *mqttapi.Msg) (*mqtthass.Numb
 		true)
 
 	go func() {
+		log.Debug().Msg("Monitoring pulseaudio for events.")
 		audioDev.publishVolume()
 		audioDev.publishMute()
-	}()
-
-	go func() {
-		events, err := client.Updates()
-		if err != nil {
-			log.Warn().Err(err).Msg("Cannot monitor Pulseaudio.")
-			return
-		}
-		log.Debug().Msg("Monitoring pulseaudio for events.")
 		for {
 			select {
 			case <-ctx.Done():
 				log.Debug().Msg("Closing pulseaudio connection.")
-				client.Close()
 				return
-			case <-events:
-				audioDev.publishVolume()
-				audioDev.publishMute()
+			case <-client.EventCh:
+				repl, err := client.GetState()
+				if err != nil {
+					log.Debug().Err(err).Msg("Failed to parse pulseaudio state.")
+					continue
+				}
+				volPct := pulseaudiox.ParseVolume(repl)
+				switch {
+				case repl.Mute != client.Mute:
+					audioDev.publishMute()
+					audioDev.pulseAudio.Mute = repl.Mute
+				case volPct != client.Vol:
+					audioDev.pulseAudio.Vol = volPct
+					audioDev.publishVolume()
+				}
 			}
 		}
 	}()
 	return audioDev.volEntity, audioDev.muteEntity
 }
 
-func (d *audioDevice) getVolume() (int, error) {
-	v, err := d.pulseAudio.Volume()
-	if err != nil {
-		return 0, err
-	}
-	return int(v * 100), nil
-}
-
-func (d *audioDevice) setVolume(v int) error {
-	newVol := float32(v) / 100
-	return d.pulseAudio.SetVolume(newVol)
-}
-
 func (d *audioDevice) publishVolume() {
 	msg, err := d.volEntity.MarshalState()
 	if err != nil {
-		log.Warn().Err(err).Msg("Could not retrieve current volume.")
+		log.Debug().Err(err).Msg("Could not retrieve current volume.")
 		return
 	}
 	d.msgCh <- msg
 }
 
 func (d *audioDevice) volStateCallback(_ ...any) (json.RawMessage, error) {
-	vol, err := d.getVolume()
+	vol, err := d.pulseAudio.GetVolume()
+	log.Trace().Int("volume", int(vol)).Msg("Publishing volume change.")
 	if err != nil {
 		return json.RawMessage(`{ "value": 0 }`), err
 	}
-	return json.RawMessage(`{ "value": ` + strconv.Itoa(vol) + ` }`), nil
+	return json.RawMessage(`{ "value": ` + strconv.FormatFloat(vol, 'f', 0, 64) + ` }`), nil
 }
 
 func (d *audioDevice) volCommandCallback(p *paho.Publish) {
 	if newValue, err := strconv.Atoi(string(p.Payload)); err != nil {
-		log.Warn().Err(err).Msg("Could not parse new volume level.")
+		log.Debug().Err(err).Msg("Could not parse new volume level.")
 	} else {
 		log.Trace().Int("volume", newValue).Msg("Received volume change from Home Assistant.")
-		if err := d.setVolume(newValue); err != nil {
-			log.Warn().Err(err).Msg("Could not set volume level.")
+		if err := d.pulseAudio.SetVolume(float64(newValue)); err != nil {
+			log.Debug().Err(err).Msg("Could not set volume level.")
 			return
 		}
 		go func() {
@@ -143,21 +135,21 @@ func (d *audioDevice) setMute(v bool) {
 		err = d.pulseAudio.SetMute(false)
 	}
 	if err != nil {
-		log.Warn().Err(err).Msg("Could not set mute state.")
+		log.Debug().Err(err).Msg("Could not set mute state.")
 	}
 }
 
 func (d *audioDevice) publishMute() {
 	msg, err := d.muteEntity.MarshalState()
 	if err != nil {
-		log.Warn().Msg("Could not retrieve mute state.")
+		log.Debug().Msg("Could not retrieve mute state.")
 	} else {
 		d.msgCh <- msg
 	}
 }
 
 func (d *audioDevice) muteStateCallback(_ ...any) (json.RawMessage, error) {
-	muteState, err := d.pulseAudio.Mute()
+	muteState, err := d.pulseAudio.GetMute()
 	if err != nil {
 		return json.RawMessage(`OFF`), err
 	}
