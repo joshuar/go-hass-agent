@@ -1,0 +1,67 @@
+name: Run CodeQL
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '11 0 * * 5'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  analyze:
+    permissions:
+      security-events: write
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ 'go' ]
+    steps:
+    - uses: GitHubSecurityLab/actions-permissions/monitor@v1
+      with:
+        config: ${{ vars.PERMISSIONS_CONFIG }}
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: Install build dependencies
+      id: install_packages
+      run: >
+          sudo apt-get update && sudo apt-get -y install
+          desktop-file-utils gcc
+          libgl1-mesa-dev xserver-xorg-dev 
+          libxcursor-dev libxrandr-dev
+          libxinerama-dev libxi-dev
+          libgl1-mesa-dev libxxf86vm-dev 
+          > ${RUNNER_TEMP}/dpkg.log
+      env:
+        DEBIAN_FRONTEND: noninteractive
+    - name: Setup Go
+      id: setup_go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '^1.22'
+    - name: Install Go dependencies
+      id: install_go_deps
+      run: |
+        go install golang.org/x/tools/cmd/stringer@latest
+        go install golang.org/x/text/cmd/gotext@latest
+        go install github.com/matryer/moq@latest
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v3
+      with:
+        languages: ${{ matrix.language }}
+    - name: Run go generate
+      id: go_generate
+      run: go generate -v ./...
+    - name: Run go build
+      id: go_build
+      run: go build -v       
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3

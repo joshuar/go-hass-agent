@@ -28,7 +28,7 @@ var _ Device = &DeviceMock{}
 //			SetupFunc: func(ctx context.Context) context.Context {
 //				panic("mock out the Setup method")
 //			},
-//			UpdatesFunc: func(ctx context.Context) chan sensor.Details {
+//			UpdatesFunc: func() chan sensor.Details {
 //				panic("mock out the Updates method")
 //			},
 //		}
@@ -48,7 +48,7 @@ type DeviceMock struct {
 	SetupFunc func(ctx context.Context) context.Context
 
 	// UpdatesFunc mocks the Updates method.
-	UpdatesFunc func(ctx context.Context) chan sensor.Details
+	UpdatesFunc func() chan sensor.Details
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -65,8 +65,6 @@ type DeviceMock struct {
 		}
 		// Updates holds details about calls to the Updates method.
 		Updates []struct {
-			// Ctx is the ctx argument value.
-			Ctx context.Context
 		}
 	}
 	lockDeviceID   sync.RWMutex
@@ -162,19 +160,16 @@ func (mock *DeviceMock) SetupCalls() []struct {
 }
 
 // Updates calls UpdatesFunc.
-func (mock *DeviceMock) Updates(ctx context.Context) chan sensor.Details {
+func (mock *DeviceMock) Updates() chan sensor.Details {
 	if mock.UpdatesFunc == nil {
 		panic("DeviceMock.UpdatesFunc: method is nil but Device.Updates was just called")
 	}
 	callInfo := struct {
-		Ctx context.Context
-	}{
-		Ctx: ctx,
-	}
+	}{}
 	mock.lockUpdates.Lock()
 	mock.calls.Updates = append(mock.calls.Updates, callInfo)
 	mock.lockUpdates.Unlock()
-	return mock.UpdatesFunc(ctx)
+	return mock.UpdatesFunc()
 }
 
 // UpdatesCalls gets all the calls that were made to Updates.
@@ -182,10 +177,8 @@ func (mock *DeviceMock) Updates(ctx context.Context) chan sensor.Details {
 //
 //	len(mockedDevice.UpdatesCalls())
 func (mock *DeviceMock) UpdatesCalls() []struct {
-	Ctx context.Context
 } {
 	var calls []struct {
-		Ctx context.Context
 	}
 	mock.lockUpdates.RLock()
 	calls = mock.calls.Updates
