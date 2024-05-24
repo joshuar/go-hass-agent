@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/davecgh/go-spew/spew"
+
 	pulseaudiox "github.com/joshuar/go-hass-agent/pkg/linux/pulseaudio"
 )
 
@@ -19,16 +21,17 @@ func main() {
 		panic(err)
 	}
 
-	err = client.SetVolume(20)
-	if err != nil {
-		panic(err)
-	}
+	// err = client.SetVolume(20)
+	// if err != nil {
+	// 	panic(err)
+	// }
 	for {
 		<-client.EventCh
 		repl, err := client.GetState()
 		if err != nil {
 			slog.Error("failed to parse reply: %w", err)
 		}
+		spew.Dump(repl)
 		volPct := pulseaudiox.ParseVolume(repl)
 		switch {
 		case repl.Mute != client.Mute:
