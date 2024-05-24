@@ -18,7 +18,7 @@ type Device interface {
 	DeviceName() string
 	DeviceID() string
 	Setup(ctx context.Context) context.Context
-	Updates(ctx context.Context) chan sensor.Details
+	Updates() chan sensor.Details
 }
 
 // UI are the methods required for the agent to display its windows, tray
