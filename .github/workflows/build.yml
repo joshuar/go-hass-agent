@@ -25,7 +25,7 @@ jobs:
         with:
           config: ${{ vars.PERMISSIONS_CONFIG }}
       - name: Run release please
-        uses: google-github-actions/release-please-action@v4
+        uses: googleapis/release-please-action@v4
         id: release_please
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
