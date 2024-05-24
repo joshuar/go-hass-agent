@@ -9,31 +9,26 @@ import (
 	"context"
 	"sync"
 
-	"github.com/rs/zerolog/log"
-	"github.com/shirou/gopsutil/v3/host"
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
-
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 )
 
-func Versions(ctx context.Context) chan sensor.Details {
+func InfoUpdater(_ context.Context) chan sensor.Details {
 	sensorCh := make(chan sensor.Details)
-	info, err := host.InfoWithContext(ctx)
-	if err != nil {
-		log.Debug().Err(err).Caller().
-			Msg("Failed to retrieve host info.")
-		close(sensorCh)
-		return sensorCh
-	}
+
+	// Get distribution name and version.
+	distro, distroVersion := linux.GetDistroDetails()
+
+	// Get kernel version.
+	kernelVersion := linux.GetKernelVersion()
+
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		sensorCh <- &linux.Sensor{
 			SensorTypeValue: linux.SensorKernel,
-			Value:           info.KernelVersion,
+			Value:           kernelVersion,
 			IsDiagnostic:    true,
 			IconString:      "mdi:chip",
 			SensorSrc:       linux.DataSrcProcfs,
@@ -44,7 +39,7 @@ func Versions(ctx context.Context) chan sensor.Details {
 		defer wg.Done()
 		sensorCh <- &linux.Sensor{
 			SensorTypeValue: linux.SensorDistribution,
-			Value:           cases.Title(language.English).String(info.Platform),
+			Value:           distro,
 			IsDiagnostic:    true,
 			IconString:      "mdi:linux",
 			SensorSrc:       linux.DataSrcProcfs,
@@ -55,7 +50,7 @@ func Versions(ctx context.Context) chan sensor.Details {
 		defer wg.Done()
 		sensorCh <- &linux.Sensor{
 			SensorTypeValue: linux.SensorVersion,
-			Value:           info.PlatformVersion,
+			Value:           distroVersion,
 			IsDiagnostic:    true,
 			IconString:      "mdi:numeric",
 			SensorSrc:       linux.DataSrcProcfs,

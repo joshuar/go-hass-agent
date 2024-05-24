@@ -21,6 +21,7 @@
 !codecov.yml
 
 !/assets/**/*
+!**/testdata/*
 
 !*.md
 !*.txt

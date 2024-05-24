@@ -10,6 +10,7 @@ package linux
 import (
 	"os"
 	"strings"
+	"syscall"
 
 	"github.com/gofrs/uuid/v5"
 	"github.com/iancoleman/strcase"
@@ -95,19 +96,8 @@ func NewDevice(name, version string) *Device {
 		deviceID:   getDeviceID(),
 		hostname:   getHostname(),
 	}
-
-	osReleaseInfo, err := whichdistro.GetOSRelease()
-	if err != nil {
-		log.Warn().Err(err).Msg("Could not read /etc/os-release. Contact your distro vendor to implement this file.")
-		dev.distro = unknownDistro
-		dev.distroVersion = unknownDistroVersion
-	} else {
-		dev.distro = osReleaseInfo["ID"]
-		dev.distroVersion = osReleaseInfo["VERSION_ID"]
-	}
-
+	dev.distro, dev.distroVersion = GetDistroID()
 	dev.hwModel, dev.hwVendor = getHWProductInfo()
-
 	return dev
 }
 
@@ -184,4 +174,68 @@ func FindPortal() string {
 	default:
 		return ""
 	}
+}
+
+// GetDistroID will retrieve the distribution ID and version ID. These are
+// suitable for usage as part of identifiers and variables. See also
+// GetDistroDetails.
+func GetDistroID() (id, versionid string) {
+	var distroName, distroVersion string
+	osReleaseInfo, err := whichdistro.GetOSRelease()
+	if err != nil {
+		log.Warn().Err(err).Msg("Could not read /etc/os-release. Contact your distro vendor to implement this file.")
+		return unknownDistro, unknownDistroVersion
+	}
+	if v, ok := osReleaseInfo.GetValue("ID"); !ok {
+		distroName = unknownDistro
+	} else {
+		distroName = v
+	}
+	if v, ok := osReleaseInfo.GetValue("VERSION_ID"); !ok {
+		distroVersion = unknownDistroVersion
+	} else {
+		distroVersion = v
+	}
+	return distroName, distroVersion
+}
+
+// GetDistroDetails will retrieve the distribution name and version. The values
+// are pretty-printed and may not be suitable for usage as identifiers and
+// variables. See also GetDistroID.
+func GetDistroDetails() (name, version string) {
+	var distroName, distroVersion string
+	osReleaseInfo, err := whichdistro.GetOSRelease()
+	if err != nil {
+		log.Warn().Err(err).Msg("Could not read /etc/os-release. Contact your distro vendor to implement this file.")
+		return unknownDistro, unknownDistroVersion
+	}
+	if v, ok := osReleaseInfo.GetValue("NAME"); !ok {
+		distroName = unknownDistro
+	} else {
+		distroName = v
+	}
+	if v, ok := osReleaseInfo.GetValue("VERSION"); !ok {
+		distroVersion = unknownDistroVersion
+	} else {
+		distroVersion = v
+	}
+	return distroName, distroVersion
+}
+
+// GetKernelVersion will retrieve the kernel version.
+func GetKernelVersion() string {
+	var utsname syscall.Utsname
+	var versionBytes []byte
+	err := syscall.Uname(&utsname)
+	if err != nil {
+		log.Warn().Err(err).Msg("Could not retrieve kernel version.")
+		return "Unknown"
+	}
+	for _, v := range utsname.Release {
+		if v == 0 {
+			continue
+		}
+		versionBytes = append(versionBytes, uint8(v))
+	}
+	return string(versionBytes)
 }
