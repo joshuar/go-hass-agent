@@ -8,6 +8,11 @@ package whichdistro
 import (
 	"bytes"
 	"os"
+	"strconv"
+)
+
+const (
+	UnknownValue = "Unknown"
 )
 
 var (
@@ -15,12 +20,16 @@ var (
 	OSReleaseAltFile = "/usr/lib/os-release"
 )
 
+// OSRelease is a map of the OS Release file keys and values. See the
+// os-release(5) manpage for information on what keys and their values might be
+// available.
+type OSRelease map[string]string
+
 // GetOSRelease will fetch the OS Release info from the canonical file
-// locations. The data will be formatted as a map[string]string. If the OS
-// Release info cannot be read, an error will be returned containing details of
-// why.
-func GetOSRelease() (map[string]string, error) {
-	info := make(map[string]string)
+// locations. If the OS Release info cannot be read, an error will be returned
+// containing details of why.
+func GetOSRelease() (OSRelease, error) {
+	info := make(OSRelease)
 	file, err := readOSRelease()
 	if err != nil {
 		return nil, err
@@ -50,4 +59,18 @@ func readOSRelease() ([]byte, error) {
 		return contents, nil
 	}
 	return nil, err
+}
+
+// GetValue will retrieve the value of the given key from an OSRelease map. It
+// will perform some cleanup on the raw value to make it easier to use.
+func (r OSRelease) GetValue(key string) (value string, ok bool) {
+	if v, ok := r[key]; !ok {
+		return UnknownValue, false
+	} else {
+		value, err := strconv.Unquote(v)
+		if err != nil {
+			return UnknownValue, false
+		}
+		return value, true
+	}
 }
