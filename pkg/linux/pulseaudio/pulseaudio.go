@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/jfreymuth/pulse/proto"
 )
 
@@ -75,6 +76,7 @@ func NewPulseClient(ctx context.Context) (*PulseAudioClient, error) {
 
 	// Callback function to be used when a Pulseaudio event occurs.
 	client.Callback = func(val any) {
+		spew.Dump(val)
 		switch val := val.(type) {
 		case *proto.SubscribeEvent:
 			if val.Event.GetType() == proto.EventChange && val.Event.GetFacility() == proto.EventSink {
