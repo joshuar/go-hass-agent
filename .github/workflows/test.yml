@@ -3,6 +3,8 @@ name: Test
 on:
   push:
     branches: [ main ]
+  pull_request:
+      branches: [ main ]
 
 permissions:
   contents: read
@@ -11,9 +13,6 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: GitHubSecurityLab/actions-permissions/monitor@v1
-        with:
-          config: ${{ vars.PERMISSIONS_CONFIG }}
       - name: Checkout
         id: checkout
         uses: actions/checkout@v4
@@ -60,3 +59,25 @@ jobs:
           token: ${{secrets.CODECOV_TOKEN}}
           file: ./coverage.txt
           fail_ci_if_error: false
+          name: golangci-lint
+
+  golangci:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read # Use with `only-new-issues` option.
+    steps:
+      - uses: step-security/harden-runner@a4aa98b93cab29d9b1101a6143fb8bce00e2eac4 # v2.7.1
+        with:
+          egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
+      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
+      - uses: actions/setup-go@cdcb36043654635271a94b9a6d1392de5bb323a7 # v5.0.1
+        with:
+          cache: false # golangci-lint maintains its own cache
+      - name: set golangci-lint version # keep in sync with tools/go.mod
+        run: |
+          echo "GOLANGCI_LINT_VERSION=$(cd tools; go list -m -f '{{ .Version }}' github.com/golangci/golangci-lint)" >> "$GITHUB_ENV"
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@a4f60bb28d35aeee14e6880718e0c85ff1882e64 # v6.0.1
+        with:
+          version: ${{ env.GOLANGCI_LINT_VERSION }}
+          only-new-issues: true
