@@ -8,6 +8,12 @@ on:
   schedule:
     - cron: '38 13 * * 4'
 
+permissions:
+  contents: read
+
+env:
+  GO_VERSION: 1.22    
+
 jobs:
   analyze:
     name: Analyze (${{ matrix.language }})
@@ -17,7 +23,6 @@ jobs:
       security-events: write
       packages: read
       actions: read
-      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -48,7 +53,7 @@ jobs:
       id: setup_go
       uses: actions/setup-go@v5
       with:
-        go-version: '^1.22'
+        go-version: ${{ env.GO_VERSION }}
     - name: Install Go dependencies
       id: install_go_deps
       run: |
@@ -62,10 +67,13 @@ jobs:
         build-mode: ${{ matrix.build-mode }}
         packs: githubsecuritylab/codeql-${{ matrix.language }}-queries        
     - if: matrix.build-mode == 'manual'
-      shell: bash
-      run: |
-        go generate ./...
-        go build
+      name: Install Mage
+      uses: magefile/mage-action@v3
+      with:
+        install-only: true
+    - if: matrix.build-mode == 'manual'
+      name: Build with Mage
+      run: mage -d build/magefiles -w . build:full          
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3
       with:
