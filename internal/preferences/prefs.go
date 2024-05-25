@@ -8,7 +8,6 @@
 package preferences
 
 import (
-	_ "embed"
 	"os"
 	"path/filepath"
 	"sync"
@@ -30,9 +29,10 @@ const (
 	LogFile           = "go-hass-agent.log"
 )
 
-//go:generate sh -c "printf %s $(git tag | tail -1) > VERSION"
-//go:embed VERSION
-var AppVersion string
+var (
+	gitVersion, gitCommit, gitTreeState, buildDate string
+	AppVersion                                     = gitVersion
+)
 
 var (
 	preferencesPath = filepath.Join(xdg.ConfigHome, "go-hass-agent")
@@ -45,7 +45,7 @@ type Preferences struct {
 	Host           string `toml:"registration.host" validate:"required,http_url"`
 	Token          string `toml:"registration.token" validate:"required,ascii"`
 	DeviceID       string `toml:"device.id" validate:"required,ascii"`
-	DeviceName     string `toml:"device.name" validate:"required,hostname"`
+	DeviceName     string `toml:"device.name" validate:"required,ascii"`
 	RestAPIURL     string `toml:"hass.apiurl,omitempty" validate:"http_url,required_without=CloudhookURL RemoteUIURL"`
 	CloudhookURL   string `toml:"hass.cloudhookurl,omitempty" validate:"omitempty,http_url"`
 	WebsocketURL   string `toml:"hass.websocketurl" validate:"required,url"`
