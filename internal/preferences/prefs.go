@@ -20,12 +20,14 @@ import (
 )
 
 const (
-	AppName         = "Go Hass Agent"
-	AppURL          = "https://github.com/joshuar/go-hass-agent"
-	AppDescription  = "A Home Assistant, native app for desktop/laptop devices."
-	AppID           = "com.github.joshuar.go-hass-agent"
-	MQTTTopicPrefix = "homeassistant"
-	LogFile         = "go-hass-agent.log"
+	AppName           = "Go Hass Agent"
+	AppURL            = "https://github.com/joshuar/go-hass-agent"
+	FeatureRequestURL = AppURL + "/issues/new?assignees=joshuar&labels=&template=feature_request.md&title="
+	IssueURL          = AppURL + "/issues/new?assignees=joshuar&labels=&template=bug_report.md&title=%5BBUG%5D"
+	AppDescription    = "A Home Assistant, native app for desktop/laptop devices."
+	AppID             = "com.github.joshuar.go-hass-agent"
+	MQTTTopicPrefix   = "homeassistant"
+	LogFile           = "go-hass-agent.log"
 )
 
 //go:generate sh -c "printf %s $(git tag | tail -1) > VERSION"
