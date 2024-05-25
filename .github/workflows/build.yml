@@ -10,6 +10,9 @@ on:
 permissions:
   contents: read
 
+env:
+  GO_VERSION: 1.22
+
 jobs:
   check_release:
     permissions:
@@ -21,9 +24,6 @@ jobs:
       release_created: ${{ steps.release_please.outputs.release_created }}
       release_tag: ${{ steps.release_please.outputs.tag_name }}
     steps:
-      - uses: GitHubSecurityLab/actions-permissions/monitor@v1
-        with:
-          config: ${{ vars.PERMISSIONS_CONFIG }}
       - name: Run release please
         uses: googleapis/release-please-action@v4
         id: release_please
@@ -38,9 +38,6 @@ jobs:
       matrix:
         arch: [amd64,arm,arm64]  
     steps:
-      - uses: GitHubSecurityLab/actions-permissions/monitor@v1
-        with:
-          config: ${{ vars.PERMISSIONS_CONFIG }}
       - name: Checkout source
         uses: actions/checkout@v4
         with:
@@ -84,7 +81,7 @@ jobs:
         id: setup_go
         uses: actions/setup-go@v5
         with:
-          go-version: '^1.22'
+          go-version: ${{ env.GO_VERSION }}
       - name: Install Go dependencies
         id: install_go_deps
         run: |
