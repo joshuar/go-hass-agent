@@ -25,7 +25,6 @@
 !**/testdata/*
 
 !*.md
-!*.txt
 !*.go
 !go.sum
 !go.mod
