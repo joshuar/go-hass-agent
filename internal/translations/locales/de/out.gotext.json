@@ -12,18 +12,13 @@
             "translation": ""
         },
         {
-            "id": "Preferences",
-            "message": "Preferences",
+            "id": "App Settings",
+            "message": "App Settings",
             "translation": ""
         },
         {
-            "id": "App",
-            "message": "App",
-            "translation": ""
-        },
-        {
-            "id": "Fyne",
-            "message": "Fyne",
+            "id": "Fyne Settings",
+            "message": "Fyne Settings",
             "translation": ""
         },
         {
@@ -37,10 +32,7 @@
             "translation": ""
         },
         {
-            "id": [
-                "explainRegistration",
-                "To register the agent, please enter the relevant details for your Home Assistant\nserver (if not auto-detected) and long-lived access token."
-            ],
+            "id": "To register the agent, please enter the relevant details for your Home Assistant\nserver (if not auto-detected) and long-lived access token.",
             "message": "To register the agent, please enter the relevant details for your Home Assistant\nserver (if not auto-detected) and long-lived access token.",
             "translation": ""
         },
@@ -60,10 +52,7 @@
             "translation": ""
         },
         {
-            "id": [
-                "restartNote",
-                "Please restart the agent to use changed preferences."
-            ],
+            "id": "Please restart the agent to use changed preferences.",
             "message": "Please restart the agent to use changed preferences.",
             "translation": ""
         },
