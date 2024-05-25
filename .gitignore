@@ -14,13 +14,13 @@
 !/.github/**/*
 !/.devcontainer/**/*
 !.golangci.yaml
-!.goreleaser.yaml
 !.nfpm.yaml
 !build/env.*
 !build/container/*
 !codecov.yml
 
 !/assets/**/*
+!/internal/agent/ui/assets/*
 !**/testdata/*
 
 !*.md
