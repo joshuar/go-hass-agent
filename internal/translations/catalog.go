@@ -41,77 +41,76 @@ func init() {
 
 var messageKeyToIndex = map[string]int{
 	"About":                   0,
-	"App":                     3,
-	"App Preferences":         9,
-	"App Registration":        6,
-	"Auto-discovered Servers": 14,
-	"Fyne":                    4,
-	"Fyne Preferences":        8,
-	"Ignore returned URLs?":   19,
-	"MQTT Password":           23,
-	"MQTT Server":             21,
-	"MQTT User":               22,
-	"Manual Server Entry":     18,
-	"Override Home Assistant and use server chosen (above) for API access.": 20,
-	"Please restart the agent to use changed preferences.":                  11,
-	"Preferences": 2,
-	"Quit":        5,
-	"Save":        10,
-	"Select this option to enter a server manually below.": 17,
+	"App Preferences":         8,
+	"App Registration":        5,
+	"App Settings":            2,
+	"Auto-discovered Servers": 13,
+	"Fyne Preferences":        7,
+	"Fyne Settings":           3,
+	"Ignore returned URLs?":   18,
+	"MQTT Password":           22,
+	"MQTT Server":             20,
+	"MQTT User":               21,
+	"Manual Server Entry":     17,
+	"Override Home Assistant and use server chosen (above) for API access.": 19,
+	"Please restart the agent to use changed preferences.":                  10,
+	"Quit": 4,
+	"Save": 9,
+	"Select this option to enter a server manually below.": 16,
 	"Sensors": 1,
-	"The long-lived access token generated in Home Assistant.":                                                                                     13,
-	"These are the Home Assistant servers that were detected on the local network.":                                                                15,
-	"To register the agent, please enter the relevant details for your Home Assistant\nserver (if not auto-detected) and long-lived access token.": 7,
-	"Token":              12,
-	"Use Custom Server?": 16,
-	"Use MQTT?":          24,
+	"The long-lived access token generated in Home Assistant.":                                                                                     12,
+	"These are the Home Assistant servers that were detected on the local network.":                                                                14,
+	"To register the agent, please enter the relevant details for your Home Assistant\nserver (if not auto-detected) and long-lived access token.": 6,
+	"Token":              11,
+	"Use Custom Server?": 15,
+	"Use MQTT?":          23,
 }
 
-var deIndex = []uint32{ // 26 elements
+var deIndex = []uint32{ // 25 elements
 	0x00000000, 0x00000000, 0x00000000, 0x00000000,
 	0x00000000, 0x00000000, 0x00000000, 0x00000000,
 	0x00000000, 0x00000000, 0x00000000, 0x00000000,
 	0x00000000, 0x00000000, 0x00000000, 0x00000000,
 	0x00000000, 0x00000000, 0x00000000, 0x00000000,
 	0x00000000, 0x00000000, 0x00000000, 0x00000000,
-	0x00000000, 0x00000000,
-} // Size: 128 bytes
+	0x00000000,
+} // Size: 124 bytes
 
 const deData string = ""
 
-var enIndex = []uint32{ // 26 elements
-	0x00000000, 0x00000006, 0x0000000e, 0x0000001a,
-	0x0000001e, 0x00000023, 0x00000028, 0x00000039,
-	0x000000c5, 0x000000d6, 0x000000e6, 0x000000eb,
-	0x00000120, 0x00000126, 0x0000015f, 0x00000177,
-	0x000001c5, 0x000001d8, 0x0000020d, 0x00000221,
-	0x00000237, 0x0000027d, 0x00000289, 0x00000293,
-	0x000002a1, 0x000002ab,
-} // Size: 128 bytes
+var enIndex = []uint32{ // 25 elements
+	0x00000000, 0x00000006, 0x0000000e, 0x0000001b,
+	0x00000029, 0x0000002e, 0x0000003f, 0x000000cb,
+	0x000000dc, 0x000000ec, 0x000000f1, 0x00000126,
+	0x0000012c, 0x00000165, 0x0000017d, 0x000001cb,
+	0x000001de, 0x00000213, 0x00000227, 0x0000023d,
+	0x00000283, 0x0000028f, 0x00000299, 0x000002a7,
+	0x000002b1,
+} // Size: 124 bytes
 
-const enData string = "" + // Size: 683 bytes
-	"\x02About\x02Sensors\x02Preferences\x02App\x02Fyne\x02Quit\x02App Regist" +
-	"ration\x02To register the agent, please enter the relevant details for y" +
-	"our Home Assistant\x0aserver (if not auto-detected) and long-lived acces" +
-	"s token.\x02Fyne Preferences\x02App Preferences\x02Save\x02Please restar" +
-	"t the agent to use changed preferences.\x02Token\x02The long-lived acces" +
-	"s token generated in Home Assistant.\x02Auto-discovered Servers\x02These" +
-	" are the Home Assistant servers that were detected on the local network." +
-	"\x02Use Custom Server?\x02Select this option to enter a server manually " +
-	"below.\x02Manual Server Entry\x02Ignore returned URLs?\x02Override Home " +
-	"Assistant and use server chosen (above) for API access.\x02MQTT Server" +
-	"\x02MQTT User\x02MQTT Password\x02Use MQTT?"
+const enData string = "" + // Size: 689 bytes
+	"\x02About\x02Sensors\x02App Settings\x02Fyne Settings\x02Quit\x02App Reg" +
+	"istration\x02To register the agent, please enter the relevant details fo" +
+	"r your Home Assistant\x0aserver (if not auto-detected) and long-lived ac" +
+	"cess token.\x02Fyne Preferences\x02App Preferences\x02Save\x02Please res" +
+	"tart the agent to use changed preferences.\x02Token\x02The long-lived ac" +
+	"cess token generated in Home Assistant.\x02Auto-discovered Servers\x02Th" +
+	"ese are the Home Assistant servers that were detected on the local netwo" +
+	"rk.\x02Use Custom Server?\x02Select this option to enter a server manual" +
+	"ly below.\x02Manual Server Entry\x02Ignore returned URLs?\x02Override Ho" +
+	"me Assistant and use server chosen (above) for API access.\x02MQTT Serve" +
+	"r\x02MQTT User\x02MQTT Password\x02Use MQTT?"
 
-var frIndex = []uint32{ // 26 elements
+var frIndex = []uint32{ // 25 elements
 	0x00000000, 0x00000000, 0x00000000, 0x00000000,
 	0x00000000, 0x00000000, 0x00000000, 0x00000000,
 	0x00000000, 0x00000000, 0x00000000, 0x00000000,
 	0x00000000, 0x00000000, 0x00000000, 0x00000000,
 	0x00000000, 0x00000000, 0x00000000, 0x00000000,
 	0x00000000, 0x00000000, 0x00000000, 0x00000000,
-	0x00000000, 0x00000000,
-} // Size: 128 bytes
+	0x00000000,
+} // Size: 124 bytes
 
 const frData string = ""
 
-// Total table size 1067 bytes (1KiB); checksum: 41953004
+// Total table size 1061 bytes (1KiB); checksum: B9C99F7E
