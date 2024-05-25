@@ -24,6 +24,10 @@ jobs:
       release_created: ${{ steps.release_please.outputs.release_created }}
       release_tag: ${{ steps.release_please.outputs.tag_name }}
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@a4aa98b93cab29d9b1101a6143fb8bce00e2eac4 # v1
+        with:
+          egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs      
       - name: Run release please
         uses: googleapis/release-please-action@v4
         id: release_please
@@ -38,6 +42,10 @@ jobs:
       matrix:
         arch: [amd64,arm,arm64]  
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@a4aa98b93cab29d9b1101a6143fb8bce00e2eac4 # v1
+        with:
+          egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs      
       - name: Checkout source
         uses: actions/checkout@v4
         with:
