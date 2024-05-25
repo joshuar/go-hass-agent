@@ -16,6 +16,7 @@
 !.golangci.yaml
 !.nfpm.yaml
 !build/env.*
+!build/scripts/*
 !build/container/*
 !codecov.yml
 
