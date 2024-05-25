@@ -32,15 +32,6 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/translations"
 )
 
-const (
-	explainRegistration = `To register the agent, please enter the relevant details for your Home Assistant
-server (if not auto-detected) and long-lived access token.`
-	restartNote           = `Please restart the agent to use changed preferences.`
-	errMsgInvalidURL      = `You need to specify a valid http(s)://host:port.`
-	errMsgInvalidURI      = `You need to specify a valid scheme://host:port.`
-	errMsgInvalidHostPort = `You need to specify a valid host:port combination.`
-)
-
 type fyneUI struct {
 	app  fyne.App
 	text *translations.Translator
@@ -145,7 +136,7 @@ func (i *fyneUI) DisplayRegistrationWindow(ctx context.Context, input *hass.Regi
 	}
 
 	c := container.NewVBox(
-		widget.NewLabelWithStyle(i.Translate(explainRegistration), fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+		widget.NewLabelWithStyle(i.Translate(ui.RegistrationInfoString), fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewLabel(""),
 		registrationForm,
 	)
@@ -175,11 +166,11 @@ func (i *fyneUI) aboutWindow() fyne.Window {
 	widgets = append(widgets,
 		widget.NewLabel(""),
 		container.NewHBox(
-			widget.NewHyperlink("website", parseURL(ui.AppURL)),
+			widget.NewHyperlink("website", parseURL(preferences.AppURL)),
 			widget.NewLabel("-"),
-			widget.NewHyperlink("request feature", parseURL(ui.FeatureRequestURL)),
+			widget.NewHyperlink("request feature", parseURL(preferences.FeatureRequestURL)),
 			widget.NewLabel("-"),
-			widget.NewHyperlink("report issue", parseURL(ui.IssueURL)),
+			widget.NewHyperlink("report issue", parseURL(preferences.IssueURL)),
 		),
 	)
 	c := container.NewCenter(container.NewVBox(widgets...))
@@ -239,7 +230,7 @@ func (i *fyneUI) agentSettingsWindow() fyne.Window {
 	}
 	settingsForm.SubmitText = i.Translate("Save")
 	w.SetContent(container.New(layout.NewVBoxLayout(),
-		widget.NewLabelWithStyle(i.Translate(restartNote), fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+		widget.NewLabelWithStyle(i.Translate(ui.PrefsRestartMsgString), fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		settingsForm,
 	))
 	return w
@@ -404,17 +395,17 @@ func (i *fyneUI) mqttConfigItems(prefs *ui.MQTTPreferences) []*widget.FormItem {
 	serverEntry.Validator = uriValidator()
 	serverEntry.Disable()
 	serverFormItem := widget.NewFormItem(i.Translate("MQTT Server"), serverEntry)
-	serverFormItem.HintText = ui.MQTTServerHelp
+	serverFormItem.HintText = ui.MQTTServerInfoString
 
 	userEntry := configEntry(&prefs.User, false)
 	userEntry.Disable()
 	userFormItem := widget.NewFormItem(i.Translate("MQTT User"), userEntry)
-	userFormItem.HintText = ui.MQTTUserHelp
+	userFormItem.HintText = ui.MQTTUserInfoString
 
 	passwordEntry := configEntry(&prefs.Password, true)
 	passwordEntry.Disable()
 	passwordFormItem := widget.NewFormItem(i.Translate("MQTT Password"), passwordEntry)
-	passwordFormItem.HintText = ui.MQTTPasswordHelp
+	passwordFormItem.HintText = ui.MQTTPasswordInfoString
 
 	mqttEnabled := configCheck(&prefs.Enabled, func(b bool) {
 		switch b {
@@ -486,10 +477,10 @@ func httpValidator() fyne.StringValidator {
 	v := validator.New()
 	return func(text string) error {
 		if v.Var(text, "http_url") != nil {
-			return errors.New(errMsgInvalidURL)
+			return errors.New(ui.InvalidURLMsgString)
 		}
 		if _, err := url.Parse(text); err != nil {
-			return errors.New(errMsgInvalidURL)
+			return errors.New(ui.InvalidURLMsgString)
 		}
 		return nil
 	}
@@ -501,10 +492,10 @@ func uriValidator() fyne.StringValidator {
 	v := validator.New()
 	return func(text string) error {
 		if v.Var(text, "uri") != nil {
-			return errors.New(errMsgInvalidURI)
+			return errors.New(ui.InvalidURIMsgString)
 		}
 		if _, err := url.Parse(text); err != nil {
-			return errors.New(errMsgInvalidURI)
+			return errors.New(ui.InvalidURIMsgString)
 		}
 		return nil
 	}
@@ -517,7 +508,7 @@ func hostPortValidator(msg string) fyne.StringValidator {
 	if msg != "" {
 		errMsg = errors.New(msg)
 	} else {
-		errMsg = errors.New(errMsgInvalidHostPort)
+		errMsg = errors.New(ui.InvalidHostPortMsgString)
 	}
 
 	v := validator.New()

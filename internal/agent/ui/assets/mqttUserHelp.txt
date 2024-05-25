@@ -1,1 +1,0 @@
-Optional username to authenticate with the broker.

@@ -33,35 +33,3 @@ type MQTTPreferences struct {
 	Password string
 	Enabled  bool
 }
-
-//go:embed assets/appURL.txt
-var AppURL string
-
-//go:embed assets/issueURL.txt
-var IssueURL string
-
-//go:embed assets/featureRequestURL.txt
-var FeatureRequestURL string
-
-//go:embed assets/mqttServerHelp.txt
-var MQTTServerHelp string
-
-//go:embed assets/mqttUserHelp.txt
-var MQTTUserHelp string
-
-//go:embed assets/mqttPasswordHelp.txt
-var MQTTPasswordHelp string
-
-//go:embed assets/logo-pretty.png
-var hassIcon []byte
-
-// TrayIcon satisfies the fyne.Resource interface to represent the tray icon.
-type TrayIcon struct{}
-
-func (i *TrayIcon) Name() string {
-	return "TrayIcon"
-}
-
-func (i *TrayIcon) Content() []byte {
-	return hassIcon
-}
