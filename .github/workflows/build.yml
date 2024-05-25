@@ -52,39 +52,18 @@ jobs:
           fetch-depth: 0
       - name: Set up environment
         run: | 
-          echo "APPVERSION=$(git describe --tags --abbrev=0)-$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+          # echo "APPVERSION=$(git describe --tags --abbrev=0)-$(git rev-parse --short HEAD)" >> $GITHUB_ENV
           echo "BUILD_ENV=build/env.${{ matrix.arch }}" >> $GITHUB_ENV
-      - name: Set app version for release
-        if: ${{ needs.check_release.outputs.release_created }}
-        run: echo "APPVERSION=${{ needs.check_release.outputs.release_tag }}" >> $GITHUB_ENV
+      # - name: Set app version for release
+      #   if: ${{ needs.check_release.outputs.release_created }}
+      #   run: echo "APPVERSION=${{ needs.check_release.outputs.release_tag }}" >> $GITHUB_ENV
       - name: Add ${{ matrix.arch }} package repos
         if: ${{ matrix.arch != 'amd64' }}
         id: enable_multiarch
-        run: |
-          source ${BUILD_ENV}
-          sudo dpkg --add-architecture ${PKG_ARCH}
-          sudo sed -i 's|^deb\s|deb [arch=amd64] |g' /etc/apt/sources.list
-          sudo tee -a /etc/apt/sources.list << EOF
-          deb [arch=${PKG_ARCH}] http://ports.ubuntu.com/ubuntu-ports/ jammy main
-          #deb-src http://ports.ubuntu.com/ubuntu-ports/ jammy main
-          deb [arch=${PKG_ARCH}] http://ports.ubuntu.com/ubuntu-ports/ jammy-updates main
-          #deb-src http://ports.ubuntu.com/ubuntu-ports/ jammy-updates main
-          deb [arch=${PKG_ARCH}] http://ports.ubuntu.com/ubuntu-ports/ jammy-security main
-          #deb-src http://ports.ubuntu.com/ubuntu-ports/ jammy-security main
-          EOF
+        run: build/scripts/enable-multiarch
       - name: Install build dependencies
         id: install_packages
-        run: >
-            source ${BUILD_ENV} && 
-            sudo apt-get update > ${RUNNER_TEMP}/apt-update.log &&  
-            sudo apt-get -y install desktop-file-utils gcc ${CC_PKG}
-            libgl1-mesa-dev:${PKG_ARCH} xserver-xorg-dev:${PKG_ARCH} 
-            libxcursor-dev:${PKG_ARCH} libxrandr-dev:${PKG_ARCH}
-            libxinerama-dev:${PKG_ARCH} libxi-dev:${PKG_ARCH}
-            libgl1-mesa-dev:${PKG_ARCH} libxxf86vm-dev:${PKG_ARCH} 
-            > ${RUNNER_TEMP}/apt-install.log
-        env:
-          DEBIAN_FRONTEND: noninteractive
+        run: build/scripts/install-deps
       - name: Setup Go
         id: setup_go
         uses: actions/setup-go@v5
@@ -94,22 +73,24 @@ jobs:
         id: install_go_deps
         run: |
           go install golang.org/x/tools/cmd/stringer@latest
-          go install github.com/fyne-io/fyne-cross@latest
           go install golang.org/x/text/cmd/gotext@latest
           go install github.com/matryer/moq@latest
-          go install github.com/goreleaser/nfpm/v2/cmd/nfpm@latest
+          go install github.com/goreleaser/nfpm/v2/cmd/nfpm@latest  
+          go install github.com/fyne-io/fyne-cross@latest
       - name: Build ${{ matrix.arch }} binary
         id: build_binary
+        shell: bash
         run: |
           source ${BUILD_ENV}
           echo ARCH: ${MATRIX_ARCH} CC: ${CC} GOARCH: ${GOARCH} PKG_CONFIG_PATH: ${PKG_CONFIG_PATH}
           go generate -v ./...
-          go build -v -o dist/go-hass-agent-${{ matrix.arch }}
+          go build -ldflags "${LDFLAGS}" -v -o dist/go-hass-agent-${{ matrix.arch }}
         env:
           CGO_ENABLED: 1
           MATRIX_ARCH: ${{ matrix.arch }}
       - name: Build with fyne-cross
         id: build_fyne_cross
+        shell: bash
         run: |
           fyne-cross linux -arch=${{ matrix.arch }} -name go-hass-agent \
             -icon internal/agent/ui/assets/logo-pretty.png -release
@@ -117,6 +98,7 @@ jobs:
             fyne-cross/dist/linux-${{ matrix.arch }}/go-hass-agent-${{ matrix.arch }}.tar.xz
       - name: Create packages 
         id: nfpm_package
+        shell: bash
         run: |
           source ${BUILD_ENV}
           nfpm package --config .nfpm.yaml --packager rpm --target dist
@@ -129,6 +111,7 @@ jobs:
           cosign-release: 'v2.2.2'
       - name: Sign artifacts with cosign
         id: cosign_sign
+        shell: bash
         run: |
           shopt -s nullglob
           echo Need to sign dist/*.{rpm,deb,zst} fyne-cross/dist/linux-${{ matrix.arch }}/*.tar.xz

@@ -25,38 +25,24 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Set up environment
+        run: | 
+          # echo "APPVERSION=$(git describe --tags --abbrev=0)-$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+          echo "BUILD_ENV=build/env.amd64" >> $GITHUB_ENV
       - name: Install build dependencies
         id: install_packages
-        run: >
-            sudo apt-get update && sudo apt-get -y install
-            desktop-file-utils gcc
-            libgl1-mesa-dev xserver-xorg-dev 
-            libxcursor-dev libxrandr-dev
-            libxinerama-dev libxi-dev
-            libgl1-mesa-dev libxxf86vm-dev 
-            > ${RUNNER_TEMP}/dpkg.log
-        env:
-          DEBIAN_FRONTEND: noninteractive
+        run: build/scripts/install-deps
       - name: Set up Go
         id: setup_go
         uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
-      - name: Install Go dependencies
-        id: install_go_deps
-        run: |
-          go install golang.org/x/tools/cmd/stringer@latest
-          go install golang.org/x/text/cmd/gotext@latest
-          go install github.com/matryer/moq@latest
-      - name: Run go generate
-        id: go_generate
-        run: go generate -v ./...
-      - name: Run go build
-        id: go_build
-        run: go build -v       
-      - name: Run go test
-        id: go_test
-        run: go test -v -coverprofile=coverage.txt ./...
+      - name: Install Mage
+        uses: magefile/mage-action@v3
+        with:
+          install-only: true
+      - name: Run tests
+        run: mage -d build/magefiles -w . tests:test          
         continue-on-error: true
       - name: Upload Coverage
         id: upload_coverage
@@ -66,7 +52,6 @@ jobs:
           token: ${{secrets.CODECOV_TOKEN}}
           file: ./coverage.txt
           fail_ci_if_error: false
-          name: golangci-lint
 
   golangci:
     runs-on: ubuntu-latest
@@ -81,20 +66,15 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: false # golangci-lint maintains its own cache
-      - name: Install Go dependencies
-        id: install_go_deps
-        run: |
-          go install golang.org/x/tools/cmd/stringer@latest
-          go install golang.org/x/text/cmd/gotext@latest
-          go install github.com/matryer/moq@latest
-      - name: Run go generate
-        id: go_generate
-        run: go generate -v ./...
-      - name: set golangci-lint version # keep in sync with tools/go.mod
-        run: |
-          echo "GOLANGCI_LINT_VERSION=$(cd tools; go list -m -f '{{ .Version }}' github.com/golangci/golangci-lint)" >> "$GITHUB_ENV"
+      - name: Set up environment
+        run: | 
+          # echo "APPVERSION=$(git describe --tags --abbrev=0)-$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+          echo "BUILD_ENV=build/env.amd64" >> $GITHUB_ENV
+      - name: Install build dependencies
+        id: install_packages
+        run: build/scripts/install-deps
       - name: golangci-lint
         uses: golangci/golangci-lint-action@a4f60bb28d35aeee14e6880718e0c85ff1882e64 # v6.0.1
         with:
-          version: ${{ env.GOLANGCI_LINT_VERSION }}
           only-new-issues: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
