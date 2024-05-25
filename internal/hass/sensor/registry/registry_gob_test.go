@@ -6,9 +6,11 @@
 package registry
 
 import (
+	"path/filepath"
 	"sync"
 	"testing"
 
+	"github.com/adrg/xdg"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -295,6 +297,7 @@ func TestLoad(t *testing.T) {
 				t.Errorf("Load() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+			registryPath = filepath.Join(xdg.ConfigHome, "sensorRegistry")
 		})
 	}
 }
