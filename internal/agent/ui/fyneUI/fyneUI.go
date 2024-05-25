@@ -15,6 +15,7 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
+	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/cmd/fyne_settings/settings"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/data/binding"
@@ -149,9 +150,15 @@ func (i *fyneUI) DisplayRegistrationWindow(ctx context.Context, input *hass.Regi
 // about the agent, such as version numbers.
 func (i *fyneUI) aboutWindow() fyne.Window {
 	var widgets []fyne.CanvasObject
-	widgets = append(widgets, widget.NewLabelWithStyle("Go Hass Agent "+preferences.AppVersion,
-		fyne.TextAlignCenter,
-		fyne.TextStyle{Bold: true}))
+
+	icon := canvas.NewImageFromResource(&ui.TrayIcon{})
+	icon.FillMode = canvas.ImageFillOriginal
+
+	widgets = append(widgets,
+		icon,
+		widget.NewLabelWithStyle("Go Hass Agent "+preferences.AppVersion,
+			fyne.TextAlignCenter,
+			fyne.TextStyle{Bold: true}))
 
 	if config := getHAConfig(); config != nil {
 		widgets = append(widgets,
@@ -165,11 +172,9 @@ func (i *fyneUI) aboutWindow() fyne.Window {
 	}
 	widgets = append(widgets,
 		widget.NewLabel(""),
-		container.NewHBox(
+		container.NewGridWithColumns(3,
 			widget.NewHyperlink("website", parseURL(preferences.AppURL)),
-			widget.NewLabel("-"),
 			widget.NewHyperlink("request feature", parseURL(preferences.FeatureRequestURL)),
-			widget.NewLabel("-"),
 			widget.NewHyperlink("report issue", parseURL(preferences.IssueURL)),
 		),
 	)
