@@ -11,6 +11,7 @@ permissions:
 
 env:
   GO_VERSION: 1.22
+  ARCH: amd64
 
 jobs:
   test:
@@ -27,8 +28,7 @@ jobs:
           fetch-depth: 0
       - name: Set up environment
         run: | 
-          # echo "APPVERSION=$(git describe --tags --abbrev=0)-$(git rev-parse --short HEAD)" >> $GITHUB_ENV
-          echo "BUILD_ENV=build/env.amd64" >> $GITHUB_ENV
+          echo "BUILD_ENV=build/env.$ARCH" >> $GITHUB_ENV
       - name: Install build dependencies
         id: install_packages
         run: build/scripts/install-deps
@@ -68,8 +68,7 @@ jobs:
           cache: false # golangci-lint maintains its own cache
       - name: Set up environment
         run: | 
-          # echo "APPVERSION=$(git describe --tags --abbrev=0)-$(git rev-parse --short HEAD)" >> $GITHUB_ENV
-          echo "BUILD_ENV=build/env.amd64" >> $GITHUB_ENV
+          echo "BUILD_ENV=build/env.$ARCH" >> $GITHUB_ENV
       - name: Install build dependencies
         id: install_packages
         run: build/scripts/install-deps
