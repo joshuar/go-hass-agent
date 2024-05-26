@@ -1,6 +1,3 @@
-//go:build mage
-// +build mage
-
 // Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
 //
 // This software is released under the MIT License.
