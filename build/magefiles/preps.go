@@ -56,11 +56,11 @@ func (Preps) Deps(arch string) error {
 		var cmd string
 		var args []string
 		if isRoot() {
-			cmd = "sudo"
-			args = []string{script, arch}
-		} else {
 			cmd = script
 			args = []string{arch}
+		} else {
+			cmd = "sudo"
+			args = []string{script, arch}
 		}
 		if err := sh.RunV(cmd, args...); err != nil {
 			return err
