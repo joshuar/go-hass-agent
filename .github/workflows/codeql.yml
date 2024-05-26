@@ -45,17 +45,17 @@ jobs:
       uses: actions/setup-go@v5
       with:
         go-version: ${{ env.GO_VERSION }}
+    - if: matrix.build-mode == 'manual'
+      name: Install Mage
+      uses: magefile/mage-action@v3
+      with:
+        install-only: true
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v3
       with:
         languages: ${{ matrix.language }}
         build-mode: ${{ matrix.build-mode }}
         packs: githubsecuritylab/codeql-${{ matrix.language }}-queries
-    - if: matrix.build-mode == 'manual'
-      name: Install Mage
-      uses: magefile/mage-action@v3
-      with:
-        install-only: true
     - if: matrix.build-mode == 'manual'
       name: Build with Mage
       run: mage ${MAGEARGS} build:ci ${ARCH}
