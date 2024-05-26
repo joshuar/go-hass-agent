@@ -2,30 +2,24 @@
 # 
 # This software is released under the MIT License.
 # https://opensource.org/licenses/MIT
+
+# Default to an amd64 build
+ARG BUILD_ARCH=amd64
+
 FROM docker.io/golang:1.22 AS builder
 WORKDIR /usr/src/go-hass-agent
 # copy the src to the workdir
 ADD . .
-# https://developer.fyne.io/started/#prerequisites
-ARG DEBIAN_FRONTEND=noninteractive
-RUN apt-get update && apt-get -y install gcc pkg-config libgl1-mesa-dev xorg-dev
+# install mage
+RUN go install github.com/magefile/mage@latest
 # install build dependencies
-RUN <<EOF
-go install github.com/matryer/moq@latest
-go install golang.org/x/tools/cmd/stringer@latest
-go install golang.org/x/text/cmd/gotext@latest
-EOF
+RUN mage -v -d build/magefiles -w . preps:deps amd64
 # build the binary
-RUN <<EOF
-go generate ./...
-go build -o /go/bin/go-hass-agent
-# go clean -cache -modcache
-# rm -fr /usr/src/go-hass-agent
-EOF
+RUN mage -v -d build/magefiles -w . build:full amd64
 
 FROM ubuntu
 # copy binary over from builder stage
-COPY --from=builder /go/bin/go-hass-agent /usr/bin/go-hass-agent
+COPY --from=builder /usr/src/go-hass-agent/dist/go-hass-agent-amd64 /usr/bin/go-hass-agent
 # reinstall minimum libraries for running
 RUN mkdir /etc/dpkg/dpkg.conf.d
 COPY <<EOF /etc/dpkg/dpkg.conf.d/excludes
