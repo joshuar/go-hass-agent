@@ -31,7 +31,7 @@ case $1 in
 esac
 
 function privexe {
-    if [ $(whoami) -ne 'root' ]; then
+    if [ $(whoami) != 'root' ]; then
         sudo ${@}
     else
 	    ${@}
