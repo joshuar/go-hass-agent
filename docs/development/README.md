@@ -9,24 +9,10 @@
 
 ## Build Requirements
 
-In addition to a Go installation, Go Hass Agent needs a few other Go tools installed:
+Go Hass Agent uses [Mage](https://magefile.org/) for development. Make sure you
+follow the instructions on the Mage website to install Mage. If you are using
+the devcontainer (see below), this is already installed.
 
-```shell
-# nfpm is used to create linux distro packages
-go install github.com/goreleaser/nfpm/v2/cmd/nfpm@latest
-# fyne-cross is used build for older linux distributions
-go install github.com/fyne-io/fyne-cross@latest
-# stringer auto-generates some String() methods
-go install golang.org/x/tools/cmd/stringer@latest
-# gotext is used for translations
-go install golang.org/x/text/cmd/gotext@latest
-# moq is used for unit tests
-go install github.com/matryer/moq@latest
-```
-
-The Fyne UI toolkit that is used by Go Hass Agent also requires some development
-libraries installed. See the [Fyne prerequisites](https://developer.fyne.io/started/#prerequisites)
- documentation for what you need to install.
 
 ## Development Environment
 
@@ -52,14 +38,21 @@ container, as it is exposed as per above.
 
 ## Building
 
-Go Hass Agent makes use of `go generate` to generate some of the code. A typical
-build process would be:
+Use the following mage invocation in the project root directory:
 
 ```shell
-source build/env.amd64
-go generate ./...
-go build
+mage -v -d build/magefiles -w . build:full amd64
 ```
+
+This will:
+
+- Run `go mod tidy`.
+- Run `go fmt ./...`.
+- Run `go generate ./...`.
+- Build a binary and place it in `dist/go-hass-agent-amd64`.
+
+To just build a binary, replace `build:full` with `build:fast` in the mage
+invocation above.
 
 ### Packages
 
@@ -68,41 +61,33 @@ packages for Fedora, Arch, and Ubuntu and
 [fyne-cross](https://github.com/fyne-io/fyne-cross) to create packages for
 Debian and Linux distributions with older libraries.
 
-To build packages:
+To build packages, use the following invocations:
 
 ```shell
-source build/env.amd64
-nfpm package --config .nfpm.yaml --packager rpm --target dist
-nfpm package --config .nfpm.yaml --packager deb --target dist
-nfpm package --config .nfpm.yaml --packager archlinux --target dist
+mage -v -d build/magefiles -w . package:nfpm amd64
+mage -v -d build/magefiles -w . package:fyneCross amd64
 ```
 
-Packages will be available under the `dist/` folder.
+The above mage actions will install the necessary tooling for packaging, if
+needed. 
 
-To build a package for Debian with `fyne-cross`:
+Packages built with `nfpm` will be available under the `dist/` folder.
+Packages built with `fyne-cross` will be available under `fyne-cross/dist/linux-amd64/`.
 
-```shell
-source build/env.amd64
-fyne-cross linux -arch=${PKG_ARCH} -name go-hass-agent -icon assets/trayicon/logo-pretty.png -release
-```
-
-The `.tar.xz` will be available under `fyne-cross/dist/linux-${PKG_ARCH}/`.
 
 ### Other Architectures
 
 Go Hass Agent can also be built for **arm** and **arm64** with
 cross-compilation. **This is only supported on Ubuntu as the host for
-cross-compiles**. To build for a different architecture, replace the `source
-build/env.amd64` in the above snippets with one of the following:
+cross-compiles**. To build for a different architecture, first install the
+appropriate package dependencies: 
 
 ```shell
-source build/env.arm # for arm
-source build/env.arm64 # for arm64
+mage -v -d build/magefiles -w . preps:deps arm # or arm64
 ```
 
-You will need to have the appropriate cross-compiler and libraries installed
-first. See the [.github/workflows/build.yml](../../.github/workflows/build.yml) file
-for how to configure and install dependencies for cross-compilation on Ubuntu.
+Then the above commands for building and packaging need to just replace `amd64`
+with with either `arm` or `arm64`.
 
 > [!NOTE]
 > The devcontainer has all the necessary compilers and libraries
