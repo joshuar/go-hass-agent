@@ -13,15 +13,15 @@ case $1 in
         ccpkg=(gcc)
         ;;
     arm)
-        pkgarch=(armhf)
+        pkgarch=(armhf amd64)
         ccpkg=(gcc gcc-arm-linux-gnueabihf)
         ;;
     arm64)
-        pkgarch=(arm64)
+        pkgarch=(arm64 amd64)
         ccpkg=(gcc gcc-aarch64-linux-gnu)
         ;;
     all)
-        pkgarch=(amd64 armhf arm64)
+        pkgarch=(armhf arm64 amd64)
         ccpkg=(gcc gcc-arm-linux-gnueabihf gcc-aarch64-linux-gnu)
         ;;
     *)
