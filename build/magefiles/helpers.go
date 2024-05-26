@@ -1,6 +1,3 @@
-//go:build mage
-// +build mage
-
 // Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
 //
 // This software is released under the MIT License.
@@ -9,8 +6,9 @@
 package main
 
 import (
-	"fmt"
+	"errors"
 	"log/slog"
+	"os"
 	"os/exec"
 	"strings"
 
@@ -21,26 +19,30 @@ const (
 	pkgBase = "github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
-// ------------------------------------------------------------
-// Helper Functions
-// ------------------------------------------------------------
+var ErrNotCI = errors.New("not in CI environment")
 
-// FoundOrInstalled checks for existence then installs a file if it's not there
+// isCI checks whether we are currently running as part of a CI pipeline (i.e.
+// in a GitHub runner).
+func isCI() bool {
+	return os.Getenv("CI") != ""
+}
+
+// FoundOrInstalled checks for existence then installs a file if it's not there.
 func FoundOrInstalled(executableName, installURL string) (isInstalled bool) {
 	_, missing := exec.LookPath(executableName)
 	if missing != nil {
-		fmt.Printf("installing %v...\n", executableName)
+		slog.Info("Installing build tool...", "tool", executableName, "url", installURL)
 		err := sh.Run("go", "install", installURL)
 		if err != nil {
-			fmt.Printf("Could not install %v, skipping...\n", executableName)
+			slog.Warn("Could not install tool, skipping...", "tool", executableName)
 			return false
 		}
-		fmt.Printf("%v installed...\n", executableName)
+		slog.Info("Tool installed...", "tool", executableName)
 	}
 	return true
 }
 
-// GetFlags gets all the compile flags to set the version and stuff
+// GetFlags gets all the compile flags to set the version and stuff.
 func GetFlags() string {
 	var flags strings.Builder
 	flags.WriteString("-X " + pkgBase + ".gitVersion=" + GitVersion())
@@ -51,6 +53,7 @@ func GetFlags() string {
 	return flags.String()
 }
 
+// GitVersion returns a string that can be used as a version string.
 func GitVersion() string {
 	version, err := sh.Output("git", "describe", "--tags", "--always", "--dirty")
 	if err != nil {
@@ -70,6 +73,7 @@ func GitHash() string {
 	return hash
 }
 
+// BuildDate returns the build date.
 func BuildDate() string {
 	date, err := sh.Output("git", "log", "--date=iso8601-strict", "-1", "--pretty=%ct")
 	if err != nil {
@@ -79,15 +83,29 @@ func BuildDate() string {
 	return date
 }
 
-func buildProject(arch string) error {
-	slog.Info("Running go mod download...")
-	if err := sh.RunV("go", "mod", "download"); err != nil {
-		return err
+// GenerateEnv will create a map[string]string containing environment variables
+// and their values necessary for building the package on the given
+// architecture.
+func GenerateEnv(arch string) map[string]string {
+	envMap := make(map[string]string)
+	version := GitVersion()
+	if version == "unknown" || version == "" {
+		slog.Warn("Could not retrieve version.")
 	}
+	envMap["APPVERSION"] = version
 
-	slog.Info("Running go build...")
-	if err := sh.RunV("go", "build", "-ldflags="+GetFlags(), "-o", "go-hass-agent-"+arch); err != nil {
-		return err
+	envMap["CGO_ENABLED"] = "1"
+
+	switch arch {
+	case "arm":
+		envMap["CC"] = "arm-linux-gnueabihf-gcc"
+		envMap["PKG_CONFIG_PATH"] = "/usr/lib/arm-linux-gnueabihf/pkgconfig"
+		envMap["GOARCH"] = "arm"
+		envMap["GOARM"] = "7"
+	case "arm64":
+		envMap["CC"] = "aarch64-linux-gnu-gcc"
+		envMap["PKG_CONFIG_PATH"] = "/usr/lib/aarch64-linux-gnu/pkgconfig"
+		envMap["GOARCH"] = "arm64"
 	}
-	return nil
+	return envMap
 }

@@ -1,6 +1,3 @@
-//go:build mage
-// +build mage
-
 // Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
 //
 // This software is released under the MIT License.
@@ -9,8 +6,8 @@
 package main
 
 import (
-	"errors"
 	"fmt"
+	"log/slog"
 
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
@@ -18,39 +15,40 @@ import (
 
 type Preps mg.Namespace
 
-// Tidy runs go mod tidy to update the go.mod and go.sum files
+var generators = map[string]string{
+	"moq":      "github.com/matryer/moq@latest",
+	"gotext":   "golang.org/x/text/cmd/gotext@latest",
+	"stringer": "golang.org/x/tools/cmd/stringer@latest",
+}
+
+// Tidy runs go mod tidy to update the go.mod and go.sum files.
 func (Preps) Tidy() error {
-	fmt.Println("Running go mod tidy...")
-	if err := sh.Run("go", "mod", "tidy"); err != nil {
-		return err
-	}
-	return nil
+	slog.Info("Running go mod tidy...")
+	return sh.Run("go", "mod", "tidy")
 }
 
-// Format prettifies your code in a standard way to prevent arguments over curly braces
+// Format prettifies your code in a standard way to prevent arguments over curly braces.
 func (Preps) Format() error {
-	fmt.Println("Running go fmt...")
-	if err := sh.RunV("go", "fmt", "./..."); err != nil {
-		return err
-	}
-	return nil
+	slog.Info("Running go fmt...")
+	return sh.RunV("go", "fmt", "./...")
 }
 
-// Generate ensures all machine-generated files (gotext, stringer, moq, etc.) are up to date
+// Generate ensures all machine-generated files (gotext, stringer, moq, etc.) are up to date.
 func (Preps) Generate() error {
-	if !FoundOrInstalled("moq", "github.com/matryer/moq@latest") {
-		return errors.New("unable to install moq")
-	}
-	if !FoundOrInstalled("gotext", "golang.org/x/text/cmd/gotext@latest") {
-		return errors.New("unable to install gotext")
-	}
-	if !FoundOrInstalled("stringer", "golang.org/x/tools/cmd/stringer@latest") {
-		return errors.New("unable to install stringer")
+	for tool, url := range generators {
+		if !FoundOrInstalled(tool, url) {
+			return fmt.Errorf("unable to install %s", tool)
+		}
 	}
 
-	fmt.Println("Running go generate...")
-	if err := sh.RunV("go", "generate", "-v", "./..."); err != nil {
+	slog.Info("Running go generate...")
+	return sh.RunV("go", "generate", "-v", "./...")
+}
+
+// BuildDeps installs build dependencies.
+func (Preps) Deps(arch string) error {
+	if err := sh.RunV("build/scripts/enable-multiarch", arch); err != nil {
 		return err
 	}
-	return nil
+	return sh.RunV("build/scripts/install-deps", arch)
 }
