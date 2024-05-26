@@ -5,14 +5,47 @@
 # This software is released under the MIT License.
 # https://opensource.org/licenses/MIT
 
-test -e ${BUILD_ENV} || exit -1
+set -e
+
+case $1 in
+    amd64)
+        pkgarch=(amd64)
+        ccpkg=(gcc)
+        ;;
+    arm)
+        pkgarch=(armhf)
+        ccpkg=(gcc gcc-arm-linux-gnueabihf)
+        ;;
+    arm64)
+        pkgarch=(arm64)
+        ccpkg=(gcc gcc-aarch64-linux-gnu)
+        ;;
+    all)
+        pkgarch=(amd64 armhf arm64)
+        ccpkg=(gcc gcc-arm-linux-gnueabihf gcc-aarch64-linux-gnu)
+        ;;
+    *)
+        echo "No arch specified"
+        exit -1
+        ;;
+esac
+
+function privexe {
+    if [ $(whoami) -ne 'root' ]; then
+        sudo ${@}
+    else
+	    ${@}
+    fi
+} 
 
 DEBIAN_FRONTEND=noninteractive
 
-source ${BUILD_ENV}
-sudo apt-get update
-sudo apt-get -y install desktop-file-utils gcc ${CC_PKG} \
-    libgl1-mesa-dev:${PKG_ARCH} xserver-xorg-dev:${PKG_ARCH} \
-    libxcursor-dev:${PKG_ARCH} libxrandr-dev:${PKG_ARCH} \
-    libxinerama-dev:${PKG_ARCH} libxi-dev:${PKG_ARCH} \
-    libgl1-mesa-dev:${PKG_ARCH} libxxf86vm-dev:${PKG_ARCH}
+privexe apt-get update
+privexe apt-get -y install desktop-file-utils ${ccpkg[@]:0}
+for arch in "${pkgarch[@]}"; do 
+   privexe apt-get -y install \
+        libgl1-mesa-dev:${arch} xserver-xorg-dev:${arch} \
+        libxcursor-dev:${arch} libxrandr-dev:${arch} \
+        libxinerama-dev:${arch} libxi-dev:${arch} \
+        libgl1-mesa-dev:${arch} libxxf86vm-dev:${arch}
+done
