@@ -102,25 +102,23 @@ func BuildDate() string {
 // architecture.
 func GenerateEnv(arch string) map[string]string {
 	envMap := make(map[string]string)
+
+	envMap["NFPM_ARCH"] = arch
+	envMap["CGO_ENABLED"] = "1"
+
 	version := GitVersion()
 	if version == "unknown" || version == "" {
 		slog.Warn("Could not retrieve version.")
 	}
 	envMap["APPVERSION"] = version
 
-	envMap["CGO_ENABLED"] = "1"
-
 	switch arch {
-	case "amd64":
-		envMap["NFPM_ARCH"] = arch
 	case "arm":
-		envMap["NFPM_ARCH"] = "arm7"
 		envMap["CC"] = "arm-linux-gnueabihf-gcc"
 		envMap["PKG_CONFIG_PATH"] = "/usr/lib/arm-linux-gnueabihf/pkgconfig"
 		envMap["GOARCH"] = "arm"
 		envMap["GOARM"] = "7"
 	case "arm64":
-		envMap["NFPM_ARCH"] = arch
 		envMap["CC"] = "aarch64-linux-gnu-gcc"
 		envMap["PKG_CONFIG_PATH"] = "/usr/lib/aarch64-linux-gnu/pkgconfig"
 		envMap["GOARCH"] = arch
