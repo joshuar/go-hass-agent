@@ -28,7 +28,7 @@ esac
 
 function privexe {
     if [ $(whoami) != 'root' ]; then
-        sudo ${@}
+        sudo "$*"
     else
 	    ${@}
     fi
