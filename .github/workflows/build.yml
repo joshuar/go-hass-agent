@@ -12,6 +12,7 @@ permissions:
 
 env:
   GO_VERSION: 1.22
+  MAGEARGS: "-v -d build/magefiles -w ."
 
 jobs:
   check_release:
@@ -27,7 +28,7 @@ jobs:
       - name: Harden Runner
         uses: step-security/harden-runner@a4aa98b93cab29d9b1101a6143fb8bce00e2eac4 # v1
         with:
-          egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs      
+          egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
       - name: Run release please
         uses: googleapis/release-please-action@v4
         id: release_please
@@ -40,70 +41,29 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        arch: [amd64,arm,arm64]  
+        arch: [amd64,arm,arm64]
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@a4aa98b93cab29d9b1101a6143fb8bce00e2eac4 # v1
         with:
-          egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs      
+          egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
       - name: Checkout source
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Set up environment
-        run: | 
-          # echo "APPVERSION=$(git describe --tags --abbrev=0)-$(git rev-parse --short HEAD)" >> $GITHUB_ENV
-          echo "BUILD_ENV=build/env.${{ matrix.arch }}" >> $GITHUB_ENV
-      # - name: Set app version for release
-      #   if: ${{ needs.check_release.outputs.release_created }}
-      #   run: echo "APPVERSION=${{ needs.check_release.outputs.release_tag }}" >> $GITHUB_ENV
-      - name: Add ${{ matrix.arch }} package repos
-        if: ${{ matrix.arch != 'amd64' }}
-        id: enable_multiarch
-        run: build/scripts/enable-multiarch
-      - name: Install build dependencies
-        id: install_packages
-        run: build/scripts/install-deps
       - name: Setup Go
         id: setup_go
         uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
-      - name: Install Go dependencies
-        id: install_go_deps
-        run: |
-          go install golang.org/x/tools/cmd/stringer@latest
-          go install golang.org/x/text/cmd/gotext@latest
-          go install github.com/matryer/moq@latest
-          go install github.com/goreleaser/nfpm/v2/cmd/nfpm@latest  
-          go install github.com/fyne-io/fyne-cross@latest
-      - name: Build ${{ matrix.arch }} binary
-        id: build_binary
-        shell: bash
-        run: |
-          source ${BUILD_ENV}
-          echo ARCH: ${MATRIX_ARCH} CC: ${CC} GOARCH: ${GOARCH} PKG_CONFIG_PATH: ${PKG_CONFIG_PATH}
-          go generate -v ./...
-          go build -ldflags "${LDFLAGS}" -v -o dist/go-hass-agent-${{ matrix.arch }}
-        env:
-          CGO_ENABLED: 1
-          MATRIX_ARCH: ${{ matrix.arch }}
-      - name: Build with fyne-cross
-        id: build_fyne_cross
-        shell: bash
-        run: |
-          fyne-cross linux -arch=${{ matrix.arch }} -name go-hass-agent \
-            -icon internal/agent/ui/assets/logo-pretty.png -release
-          mv fyne-cross/dist/linux-${{ matrix.arch }}/go-hass-agent.tar.xz \
-            fyne-cross/dist/linux-${{ matrix.arch }}/go-hass-agent-${{ matrix.arch }}.tar.xz
-      - name: Create packages 
-        id: nfpm_package
-        shell: bash
-        run: |
-          source ${BUILD_ENV}
-          nfpm package --config .nfpm.yaml --packager rpm --target dist
-          nfpm package --config .nfpm.yaml --packager deb --target dist
-          nfpm package --config .nfpm.yaml --packager archlinux --target dist
+      - name: Install Mage
+        uses: magefile/mage-action@v3
+        with:
+          install-only: true
+      - name: Build with Mage
+        run: mage ${MAGEARGS} build:ci ${{ matrix.arch }}
+      - name: Package with Mage
+        run: mage ${MAGEARGS} package:ci ${{ matrix.arch }}
       - name: Install cosign
         id: cosign_install
         uses: sigstore/cosign-installer@v3.5.0
@@ -128,14 +88,14 @@ jobs:
         with:
           name: build-${{ matrix.arch }}-${{ github.sha }}
           path: |
-            dist 
+            dist
             fyne-cross/dist/linux-${{ matrix.arch }}
       - name: Upload release artifacts
         id: upload_release
         if: ${{ needs.check_release.outputs.release_created }}
         run: |
-          gh release upload ${{ needs.check_release.outputs.release_tag }} dist/*.{rpm,deb,zst,sig} 
-          gh release upload ${{ needs.check_release.outputs.release_tag }} fyne-cross/dist/linux-${{ matrix.arch }}/*            
+          gh release upload ${{ needs.check_release.outputs.release_tag }} dist/*.{rpm,deb,zst,sig}
+          gh release upload ${{ needs.check_release.outputs.release_tag }} fyne-cross/dist/linux-${{ matrix.arch }}/*
         env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -153,7 +113,7 @@ jobs:
     #       - linux/arm64
     env:
       REGISTRY: ghcr.io
-      IMAGE: ${{ github.repository }}    
+      IMAGE: ${{ github.repository }}
     steps:
       - uses: GitHubSecurityLab/actions-permissions/monitor@v1
         with:
@@ -163,7 +123,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Set up environment
-        run: | 
+        run: |
           echo "APPVERSION=$(git describe --tags --abbrev=0)-$(git rev-parse --short HEAD)" >> $GITHUB_ENV
           # platform=${{ matrix.platform }}
           # echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
@@ -224,4 +184,3 @@ jobs:
             -a "repo=${{ github.repository }}" \
             -a "ref=${{ github.ref }}" \
             ${images}
-            

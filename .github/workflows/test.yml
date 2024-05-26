@@ -12,6 +12,7 @@ permissions:
 env:
   GO_VERSION: 1.22
   ARCH: amd64
+  MAGEARGS: "-v -d build/magefiles -w ."
 
 jobs:
   test:
@@ -20,18 +21,12 @@ jobs:
       - name: Harden Runner
         uses: step-security/harden-runner@a4aa98b93cab29d9b1101a6143fb8bce00e2eac4 # v1
         with:
-          egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs      
+          egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
       - name: Checkout
         id: checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Set up environment
-        run: | 
-          echo "BUILD_ENV=build/env.$ARCH" >> $GITHUB_ENV
-      - name: Install build dependencies
-        id: install_packages
-        run: build/scripts/install-deps
       - name: Set up Go
         id: setup_go
         uses: actions/setup-go@v5
@@ -42,7 +37,7 @@ jobs:
         with:
           install-only: true
       - name: Run tests
-        run: mage -d build/magefiles -w . tests:test          
+        run: mage ${MAGEARGS} tests:ci ${ARCH}
         continue-on-error: true
       - name: Upload Coverage
         id: upload_coverage
@@ -66,12 +61,12 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: false # golangci-lint maintains its own cache
-      - name: Set up environment
-        run: | 
-          echo "BUILD_ENV=build/env.$ARCH" >> $GITHUB_ENV
-      - name: Install build dependencies
-        id: install_packages
-        run: build/scripts/install-deps
+      - name: Install Mage
+        uses: magefile/mage-action@v3
+        with:
+          install-only: true
+      - name: Install build deps
+        run: mage ${MAGEARGS} preps:deps ${ARCH}
       - name: golangci-lint
         uses: golangci/golangci-lint-action@a4f60bb28d35aeee14e6880718e0c85ff1882e64 # v6.0.1
         with:

@@ -13,7 +13,8 @@ permissions:
 
 env:
   GO_VERSION: 1.22
-  ARCH: amd64    
+  ARCH: amd64
+  MAGEARGS: -v -d build/magefiles -w .
 
 jobs:
   analyze:
@@ -34,14 +35,11 @@ jobs:
     - name: Harden Runner
       uses: step-security/harden-runner@a4aa98b93cab29d9b1101a6143fb8bce00e2eac4 # v1
       with:
-        egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs      
+        egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
     - name: Checkout repository
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
-    - name: Set up environment
-      run: | 
-        echo "BUILD_ENV=build/env.$ARCH" >> $GITHUB_ENV
     - name: Install build dependencies
       id: install_packages
       run: build/scripts/install-deps
@@ -55,7 +53,7 @@ jobs:
       with:
         languages: ${{ matrix.language }}
         build-mode: ${{ matrix.build-mode }}
-        packs: githubsecuritylab/codeql-${{ matrix.language }}-queries        
+        packs: githubsecuritylab/codeql-${{ matrix.language }}-queries
     - if: matrix.build-mode == 'manual'
       name: Install Mage
       uses: magefile/mage-action@v3
@@ -63,7 +61,7 @@ jobs:
         install-only: true
     - if: matrix.build-mode == 'manual'
       name: Build with Mage
-      run: mage -d build/magefiles -w . build:full ${ARCH}        
+      run: mage ${MAGEARGS} build:full ${ARCH}
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3
       with:
