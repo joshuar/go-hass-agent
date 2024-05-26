@@ -47,11 +47,11 @@ func (Package) Nfpm(arch string) error {
 // FyneCross builds packages using fyne-cross.
 func (Package) FyneCross(arch string) error {
 	if !FoundOrInstalled("fyne-cross", "github.com/fyne-io/fyne-cross@latest") {
-		return errors.New("unable to install nfpm")
+		return errors.New("unable to install fyne-cross")
 	}
 
 	if err := fyneCrossCmd("-arch", arch); err != nil {
-		return err
+		slog.Warn("fyne-cross finished but with errors. Continuing anyway...", "error", err.Error())
 	}
 	return sh.Copy(
 		"fyne-cross/dist/linux-"+arch+"/go-hass-agent-"+arch+".tar.xz",
