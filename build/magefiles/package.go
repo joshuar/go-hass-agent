@@ -50,16 +50,13 @@ func (Package) FyneCross(arch string) error {
 		return errors.New("unable to install nfpm")
 	}
 
-	if err := fyneCrossCmd("-arch=", arch); err != nil {
+	if err := fyneCrossCmd("-arch", arch); err != nil {
 		return err
 	}
-	if err := sh.Copy(
+	return sh.Copy(
 		"fyne-cross/dist/linux-"+arch+"/go-hass-agent-"+arch+".tar.xz",
 		"fyne-cross/dist/linux-"+arch+"/go-hass-agent.tar.xz",
-	); err != nil {
-		return err
-	}
-	return nil
+	)
 }
 
 // CI builds all packages as part of the CI pipeline.
