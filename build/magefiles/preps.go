@@ -21,6 +21,11 @@ var generators = map[string]string{
 	"stringer": "golang.org/x/tools/cmd/stringer@latest",
 }
 
+var scripts = []string{
+	"build/scripts/enable-multiarch",
+	"build/scripts/install-deps",
+}
+
 // Tidy runs go mod tidy to update the go.mod and go.sum files.
 func (Preps) Tidy() error {
 	slog.Info("Running go mod tidy...")
@@ -47,8 +52,19 @@ func (Preps) Generate() error {
 
 // BuildDeps installs build dependencies.
 func (Preps) Deps(arch string) error {
-	if err := sh.RunV("build/scripts/enable-multiarch", arch); err != nil {
-		return err
+	for _, script := range scripts {
+		var cmd string
+		var args []string
+		if isRoot() {
+			cmd = "sudo"
+			args = []string{script, arch}
+		} else {
+			cmd = script
+			args = []string{arch}
+		}
+		if err := sh.RunV(cmd, args...); err != nil {
+			return err
+		}
 	}
-	return sh.RunV("build/scripts/install-deps", arch)
+	return nil
 }
