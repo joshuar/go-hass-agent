@@ -111,15 +111,19 @@ func GenerateEnv(arch string) map[string]string {
 	envMap["CGO_ENABLED"] = "1"
 
 	switch arch {
+	case "amd64":
+		envMap["NFPM_ARCH"] = arch
 	case "arm":
+		envMap["NFPM_ARCH"] = "arm7"
 		envMap["CC"] = "arm-linux-gnueabihf-gcc"
 		envMap["PKG_CONFIG_PATH"] = "/usr/lib/arm-linux-gnueabihf/pkgconfig"
 		envMap["GOARCH"] = "arm"
 		envMap["GOARM"] = "7"
 	case "arm64":
+		envMap["NFPM_ARCH"] = arch
 		envMap["CC"] = "aarch64-linux-gnu-gcc"
 		envMap["PKG_CONFIG_PATH"] = "/usr/lib/aarch64-linux-gnu/pkgconfig"
-		envMap["GOARCH"] = "arm64"
+		envMap["GOARCH"] = arch
 	}
 	return envMap
 }
