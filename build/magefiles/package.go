@@ -16,7 +16,7 @@ import (
 
 type Package mg.Namespace
 
-const iconPath = "internal/agent/ui/assets/logo-pretty.png"
+const iconPath = "internal/agent/ui/assets/go-hass-agent.png"
 
 var (
 	pkgformats   = []string{"rpm", "deb", "archlinux"}
