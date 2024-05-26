@@ -26,21 +26,14 @@ case $1 in
         ;;
 esac
 
-function privexe {
-    if [ $(whoami) != 'root' ]; then
-        sudo "$*"
-    else
-	    ${@}
-    fi
-} 
 function join_by { local IFS="$1"; shift; echo "$*"; }
 
-privexe sed -i 's|^deb\s|deb [arch=amd64] |g' /etc/apt/sources.list
+sed -i 's|^deb\s|deb [arch=amd64] |g' /etc/apt/sources.list
 for arch in "${pkgarch[@]}"; do 
-    privexe dpkg --add-architecture ${arch}
+    dpkg --add-architecture ${arch}
 done
 archs=$(join_by , "${pkgarch[@]}")
-priexe tee -a /etc/apt/sources.list << EOF
+tee -a /etc/apt/sources.list << EOF
 deb [arch=${archs}] http://ports.ubuntu.com/ubuntu-ports/ jammy main
 #deb-src [arch=${archs}] http://ports.ubuntu.com/ubuntu-ports/ jammy main
 deb [arch=${archs}] http://ports.ubuntu.com/ubuntu-ports/ jammy-updates main

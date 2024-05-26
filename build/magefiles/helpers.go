@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"syscall"
 
 	"github.com/magefile/mage/sh"
 )
@@ -25,6 +26,19 @@ var ErrNotCI = errors.New("not in CI environment")
 // in a GitHub runner).
 func isCI() bool {
 	return os.Getenv("CI") != ""
+}
+
+// isRoot checks whether we are running as the root user or with elevated
+// privileges.
+func isRoot() bool {
+	euid := syscall.Geteuid()
+	uid := syscall.Getuid()
+	egid := syscall.Getegid()
+	gid := syscall.Getgid()
+	if uid != euid || gid != egid || uid == 0 {
+		return true
+	}
+	return false
 }
 
 // FoundOrInstalled checks for existence then installs a file if it's not there.

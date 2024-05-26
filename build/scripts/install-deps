@@ -30,20 +30,12 @@ case $1 in
         ;;
 esac
 
-function privexe {
-    if [ $(whoami) != 'root' ]; then
-        sudo "$*"
-    else
-	    ${@}
-    fi
-} 
-
 DEBIAN_FRONTEND=noninteractive
 
-privexe apt-get update
-privexe apt-get -y install desktop-file-utils ${ccpkg[@]:0}
+apt-get update
+apt-get -y install desktop-file-utils ${ccpkg[@]:0}
 for arch in "${pkgarch[@]}"; do 
-   privexe apt-get -y install \
+   apt-get -y install \
         libgl1-mesa-dev:${arch} xserver-xorg-dev:${arch} \
         libxcursor-dev:${arch} libxrandr-dev:${arch} \
         libxinerama-dev:${arch} libxi-dev:${arch} \
