@@ -64,9 +64,8 @@ func buildProject(arch string) error {
 		return errors.Join(ErrBuildFailed, err)
 	}
 
+	output := "dist/go-hass-agent-" + arch
+
 	slog.Info("Running go build...")
-	if err := sh.RunWithV(envMap, "go", "build", "-ldflags="+ldflags); err != nil {
-		return errors.Join(ErrBuildFailed, err)
-	}
-	return sh.Copy("dist/go-hass-agent-"+arch, "go-hass-agent")
+	return sh.RunWithV(envMap, "go", "build", "-ldflags="+ldflags, "-o", output)
 }
