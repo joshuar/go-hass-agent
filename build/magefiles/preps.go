@@ -7,7 +7,8 @@ package main
 
 import (
 	"fmt"
-	"log/slog"
+	"os"
+	"runtime"
 
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
@@ -21,20 +22,15 @@ var generators = map[string]string{
 	"stringer": "golang.org/x/tools/cmd/stringer@latest",
 }
 
-var scripts = []string{
-	"build/scripts/enable-multiarch",
-	"build/scripts/install-deps",
-}
-
 // Tidy runs go mod tidy to update the go.mod and go.sum files.
 func (Preps) Tidy() error {
-	slog.Info("Running go mod tidy...")
+	fmt.Println("Running go mod tidy...")
 	return sh.Run("go", "mod", "tidy")
 }
 
 // Format prettifies your code in a standard way to prevent arguments over curly braces.
 func (Preps) Format() error {
-	slog.Info("Running go fmt...")
+	fmt.Println("Running go fmt...")
 	return sh.RunV("go", "fmt", "./...")
 }
 
@@ -46,24 +42,25 @@ func (Preps) Generate() error {
 		}
 	}
 
-	slog.Info("Running go generate...")
+	fmt.Println("Running go generate...")
 	return sh.RunV("go", "generate", "-v", "./...")
 }
 
 // BuildDeps installs build dependencies.
-func (Preps) Deps(arch string) error {
-	for _, script := range scripts {
-		var cmd string
-		var args []string
-		if isRoot() {
-			cmd = script
-			args = []string{arch}
-		} else {
-			cmd = "sudo"
-			args = []string{script, arch}
+func (Preps) Deps() error {
+	if v, ok := os.LookupEnv("TARGETARCH"); ok {
+		targetArch = v
+	}
+	if targetArch != "" && targetArch != runtime.GOARCH {
+		if err := SudoWrap("build/scripts/enable-multiarch", targetArch); err != nil {
+			return fmt.Errorf("unable to enable multiarch for %s: %w", targetArch, err)
 		}
-		if err := sh.RunV(cmd, args...); err != nil {
-			return err
+		if err := SudoWrap("build/scripts/install-deps", targetArch, runtime.GOARCH); err != nil {
+			return fmt.Errorf("unable to enable multiarch for %s: %w", targetArch, err)
+		}
+	} else {
+		if err := SudoWrap("build/scripts/install-deps", runtime.GOARCH); err != nil {
+			return fmt.Errorf("unable to enable multiarch for %s: %w", targetArch, err)
 		}
 	}
 	return nil

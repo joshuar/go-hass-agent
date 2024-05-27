@@ -4,7 +4,7 @@
 # https://opensource.org/licenses/MIT
 
 ARG GO_VERSION=1.22
-FROM docker.io/golang:${GO_VERSION} AS builder
+FROM docker.io/golang:$GO_VERSION AS builder
 WORKDIR /usr/src/go-hass-agent
 
 ARG TARGETARCH
@@ -14,13 +14,13 @@ ADD . .
 # install mage
 RUN go install github.com/magefile/mage@latest
 # install build dependencies
-RUN mage -v -d build/magefiles -w . preps:deps ${TARGETARCH}}
+RUN mage -v -d build/magefiles -w . preps:deps
 # build the binary
-RUN mage -v -d build/magefiles -w . build:full ${TARGETARCH}}
+RUN mage -v -d build/magefiles -w . build:full
 
 FROM ubuntu
 # copy binary over from builder stage
-COPY --from=builder /usr/src/go-hass-agent/dist/go-hass-agent-${TARGETARCH} /usr/bin/go-hass-agent
+COPY --from=builder /usr/src/go-hass-agent/dist/go-hass-agent-$TARGETARCH /usr/bin/go-hass-agent
 # reinstall minimum libraries for running
 RUN mkdir /etc/dpkg/dpkg.conf.d
 COPY <<EOF /etc/dpkg/dpkg.conf.d/excludes

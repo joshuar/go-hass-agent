@@ -7,7 +7,7 @@ package main
 
 import (
 	"errors"
-	"log/slog"
+	"fmt"
 
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
@@ -18,8 +18,8 @@ type Build mg.Namespace
 var ErrBuildFailed = errors.New("build failed")
 
 // Full runs all prep steps and then builds the binary.
-func (Build) Full(arch string) error {
-	slog.Info("Starting full build", "arch", arch)
+func (Build) Full() error {
+	fmt.Println("Starting full build.")
 
 	// Make everything nice, neat, and proper
 	mg.Deps(Preps.Tidy)
@@ -29,32 +29,28 @@ func (Build) Full(arch string) error {
 	// Record all licenses in a registry
 	mg.Deps(Checks.Licenses)
 
-	return buildProject(arch)
+	return buildProject()
 }
 
 // Fast just builds the binary and does not run any prep steps. It will fail if
 // the prep steps have not run.
-func (Build) Fast(arch string) error {
-	return buildProject(arch)
+func (Build) Fast() error {
+	return buildProject()
 }
 
-func (b Build) CI(arch string) error {
+func (b Build) CI() error {
 	if !isCI() {
 		return ErrNotCI
 	}
-	arch, err := validateArch(arch)
-	if err != nil {
-		return err
-	}
 
-	mg.SerialDeps(mg.F(Preps.Deps, arch))
+	mg.SerialDeps(Preps.Deps)
 
-	mg.SerialDeps(mg.F(b.Full, arch))
+	mg.SerialDeps(b.Full)
 	return nil
 }
 
-func buildProject(arch string) error {
-	envMap, err := GenerateEnv(arch)
+func buildProject() error {
+	envMap, err := GenerateEnv()
 	if err != nil {
 		return errors.Join(ErrBuildFailed, err)
 	}
@@ -64,8 +60,10 @@ func buildProject(arch string) error {
 		return errors.Join(ErrBuildFailed, err)
 	}
 
-	output := "dist/go-hass-agent-" + arch
+	output := "dist/go-hass-agent-" + targetArch
 
-	slog.Info("Running go build...")
+	fmt.Println("Running go build...")
+	fmt.Println("Output binary", output)
+	fmt.Println("Additional ldflags", ldflags)
 	return sh.RunWithV(envMap, "go", "build", "-ldflags="+ldflags, "-o", output)
 }

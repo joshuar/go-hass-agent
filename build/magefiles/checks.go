@@ -6,7 +6,7 @@
 package main
 
 import (
-	"log/slog"
+	"fmt"
 	"os"
 
 	"github.com/magefile/mage/mg"
@@ -21,13 +21,13 @@ type Checks mg.Namespace
 
 // Lint runs various static checkers to ensure you follow The Rules(tm).
 func (Checks) Lint() error {
-	slog.Info("Running linter (go vet)...")
+	fmt.Println("Running linter (go vet)...")
 	if err := sh.RunV("golangci-lint", "run"); err != nil {
-		slog.Warn("linter had problems")
+		fmt.Println("WARN: linter had problems")
 	}
 
 	if FoundOrInstalled("staticcheck", "honnef.co/go/tools/cmd/staticcheck@latest") {
-		slog.Info("Running linter (staticcheck)...")
+		fmt.Println("Running linter (staticcheck)...")
 		if err := sh.RunV("staticcheck", "-f", "stylish", "./..."); err != nil {
 			return err
 		}
@@ -38,7 +38,7 @@ func (Checks) Lint() error {
 
 // Licenses pulls down any dependent project licenses, checking for "forbidden ones".
 func (Checks) Licenses() error {
-	slog.Info("Running go-licenses...")
+	fmt.Println("Running go-licenses...")
 
 	// Make the directory for the license files
 	err := os.MkdirAll("licenses", os.ModePerm)

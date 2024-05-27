@@ -5,5 +5,9 @@
 
 package main
 
+import "runtime"
+
 // Default sets the default target for Mage
 // var Default = Build.All
+
+var targetArch = runtime.GOARCH

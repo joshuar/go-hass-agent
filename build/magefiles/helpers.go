@@ -8,9 +8,10 @@ package main
 import (
 	"errors"
 	"fmt"
-	"log/slog"
 	"os"
 	"os/exec"
+	"runtime"
+	"slices"
 	"strings"
 	"syscall"
 
@@ -42,17 +43,23 @@ func isRoot() bool {
 	return false
 }
 
+// SudoWrap will "wrap" the given command with sudo if needed.
+func SudoWrap(cmd string, args ...string) error {
+	if isRoot() {
+		return sh.RunV(cmd, args...)
+	}
+	return sh.RunV("sudo", slices.Concat([]string{cmd}, args)...)
+}
+
 // FoundOrInstalled checks for existence then installs a file if it's not there.
 func FoundOrInstalled(executableName, installURL string) (isInstalled bool) {
 	_, missing := exec.LookPath(executableName)
 	if missing != nil {
-		slog.Info("Installing build tool...", "tool", executableName, "url", installURL)
+		fmt.Println("Installing tool", executableName, "from url", installURL)
 		err := sh.Run("go", "install", installURL)
 		if err != nil {
-			slog.Warn("Could not install tool, skipping...", "tool", executableName)
 			return false
 		}
-		slog.Info("Tool installed...", "tool", executableName)
 	}
 	return true
 }
@@ -115,41 +122,47 @@ func BuildDate() (string, error) {
 // GenerateEnv will create a map[string]string containing environment variables
 // and their values necessary for building the package on the given
 // architecture.
-func GenerateEnv(arch string) (map[string]string, error) {
+func GenerateEnv() (map[string]string, error) {
 	envMap := make(map[string]string)
 
-	envMap["NFPM_ARCH"] = arch
+	// CGO_ENABLED is required.
 	envMap["CGO_ENABLED"] = "1"
 
+	// Set APPVERSION to current version.
 	version, err := Version()
 	if err != nil {
 		return nil, fmt.Errorf("could not generate environment: %w", err)
 	}
 	envMap["APPVERSION"] = version
 
-	switch arch {
-	case "arm":
-		envMap["CC"] = "arm-linux-gnueabihf-gcc"
-		envMap["PKG_CONFIG_PATH"] = "/usr/lib/arm-linux-gnueabihf/pkgconfig"
-		envMap["GOARCH"] = "arm"
-		envMap["GOARM"] = "7"
-	case "arm64":
-		envMap["CC"] = "aarch64-linux-gnu-gcc"
-		envMap["PKG_CONFIG_PATH"] = "/usr/lib/aarch64-linux-gnu/pkgconfig"
-		envMap["GOARCH"] = arch
+	// Set NFPM_ARCH so that nfpm knows how to package for this arch.
+	envMap["NFPM_ARCH"] = targetArch
+
+	// Get the value of TARGETARCH (if set) from the environment, which
+	// indicates cross-compilation has been requested.
+	if v, ok := os.LookupEnv("TARGETARCH"); ok {
+		targetArch = v
+	}
+	if targetArch != "" && targetArch != runtime.GOARCH {
+		fmt.Println("Cross compilation request from host arch", runtime.GOARCH, "to target arch", targetArch)
+
+		// Update NFPM_ARCH tro the target arch.
+		envMap["NFPM_ARCH"] = targetArch
+
+		// Set additional build-related variables based on the target arch.
+		switch targetArch {
+		case "arm":
+			envMap["CC"] = "arm-linux-gnueabihf-gcc"
+			envMap["PKG_CONFIG_PATH"] = "/usr/lib/arm-linux-gnueabihf/pkgconfig"
+			envMap["GOARCH"] = "arm"
+			envMap["GOARM"] = "7"
+		case "arm64":
+			envMap["CC"] = "aarch64-linux-gnu-gcc"
+			envMap["PKG_CONFIG_PATH"] = "/usr/lib/aarch64-linux-gnu/pkgconfig"
+			envMap["GOARCH"] = "arm64"
+		default:
+			return nil, fmt.Errorf("unsupport target architecture: %s", targetArch)
+		}
 	}
 	return envMap, nil
-}
-
-func validateArch(arch string) (string, error) {
-	switch arch {
-	case "amd64", "linux/amd64":
-		return "amd64", nil
-	case "arm", "linux/arm/6", "linux/arm/7":
-		return "arm", nil
-	case "arm64", "linux/arm64":
-		return "arm64", nil
-	default:
-		return "", errors.New("unsupported arch")
-	}
 }
