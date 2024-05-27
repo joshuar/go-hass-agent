@@ -6,6 +6,7 @@
 package main
 
 import (
+	"fmt"
 	"log/slog"
 
 	"github.com/magefile/mage/mg"
@@ -16,8 +17,13 @@ type Tests mg.Namespace
 
 // Test runs go test on the project.
 func (Tests) Test() error {
+	ldflags, err := GetFlags()
+	if err != nil {
+		return fmt.Errorf("cannot run test: %w", err)
+	}
+
 	slog.Info("Running go test...")
-	return sh.RunV("go", "test", "-ldflags="+GetFlags(), "-coverprofile=coverage.txt", "-v", "./...")
+	return sh.RunV("go", "test", "-ldflags="+ldflags, "-coverprofile=coverage.txt", "-v", "./...")
 }
 
 // Benchmark runs go test -bench on the project.
@@ -30,6 +36,10 @@ func (Tests) Benchmark() error {
 func (t Tests) CI(arch string) error {
 	if !isCI() {
 		return ErrNotCI
+	}
+	arch, err := validateArch(arch)
+	if err != nil {
+		return err
 	}
 
 	mg.SerialDeps(mg.F(Preps.Deps, arch))

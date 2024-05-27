@@ -50,9 +50,9 @@ func (Checks) Licenses() error {
 	if FoundOrInstalled("go-licenses", "github.com/google/go-licenses@latest") {
 		// The header sets the columns for the contents
 		csvHeader := "Package,URL,License\n"
-		csvContents := ""
 
-		if csvContents, err = sh.Output("go-licenses", "csv", "--ignore=github.com/joshuar", "./..."); err != nil {
+		csvContents, err := sh.Output("go-licenses", "report", "--ignore=github.com/joshuar", "./...")
+		if err != nil {
 			return err
 		}
 

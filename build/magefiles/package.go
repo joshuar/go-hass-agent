@@ -7,6 +7,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
 	"slices"
 
@@ -28,10 +29,13 @@ var (
 
 // Nfpm builds packages using nfpm.
 func (Package) Nfpm(arch string) error {
-	envMap := GenerateEnv(arch)
-
 	if !FoundOrInstalled("nfpm", "github.com/goreleaser/nfpm/v2/cmd/nfpm@latest") {
 		return errors.New("unable to install nfpm")
+	}
+
+	envMap, err := GenerateEnv(arch)
+	if err != nil {
+		return fmt.Errorf("unable to run nfpm: %w", err)
 	}
 
 	for _, pkgformat := range pkgformats {
@@ -63,6 +67,10 @@ func (Package) FyneCross(arch string) error {
 func (p Package) CI(arch string) error {
 	if !isCI() {
 		return ErrNotCI
+	}
+	arch, err := validateArch(arch)
+	if err != nil {
+		return err
 	}
 
 	mg.Deps(mg.F(p.Nfpm, arch))

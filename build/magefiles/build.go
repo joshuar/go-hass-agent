@@ -6,6 +6,7 @@
 package main
 
 import (
+	"errors"
 	"log/slog"
 
 	"github.com/magefile/mage/mg"
@@ -13,6 +14,8 @@ import (
 )
 
 type Build mg.Namespace
+
+var ErrBuildFailed = errors.New("build failed")
 
 // Full runs all prep steps and then builds the binary.
 func (Build) Full(arch string) error {
@@ -39,6 +42,10 @@ func (b Build) CI(arch string) error {
 	if !isCI() {
 		return ErrNotCI
 	}
+	arch, err := validateArch(arch)
+	if err != nil {
+		return err
+	}
 
 	mg.SerialDeps(mg.F(Preps.Deps, arch))
 
@@ -47,8 +54,19 @@ func (b Build) CI(arch string) error {
 }
 
 func buildProject(arch string) error {
-	envMap := GenerateEnv(arch)
+	envMap, err := GenerateEnv(arch)
+	if err != nil {
+		return errors.Join(ErrBuildFailed, err)
+	}
+
+	ldflags, err := GetFlags()
+	if err != nil {
+		return errors.Join(ErrBuildFailed, err)
+	}
 
 	slog.Info("Running go build...")
-	return sh.RunWithV(envMap, "go", "build", "-ldflags="+GetFlags(), "-o", "dist/go-hass-agent-"+arch)
+	if err := sh.RunWithV(envMap, "go", "build", "-ldflags="+ldflags); err != nil {
+		return errors.Join(ErrBuildFailed, err)
+	}
+	return sh.Copy("dist/go-hass-agent-"+arch, "go-hass-agent")
 }
