@@ -3,23 +3,26 @@
 # This software is released under the MIT License.
 # https://opensource.org/licenses/MIT
 
+ARG GO_VERSION=1.22
+
+FROM docker.io/golang:${GO_VERSION} AS builder
+WORKDIR /usr/src/go-hass-agent
+
 # Default to an amd64 build
 ARG BUILD_ARCH=amd64
 
-FROM docker.io/golang:1.22 AS builder
-WORKDIR /usr/src/go-hass-agent
 # copy the src to the workdir
 ADD . .
 # install mage
 RUN go install github.com/magefile/mage@latest
 # install build dependencies
-RUN mage -v -d build/magefiles -w . preps:deps amd64
+RUN mage -v -d build/magefiles -w . preps:deps ${BUILD_ARCH}
 # build the binary
-RUN mage -v -d build/magefiles -w . build:full amd64
+RUN mage -v -d build/magefiles -w . build:full ${BUILD_ARCH}
 
 FROM ubuntu
 # copy binary over from builder stage
-COPY --from=builder /usr/src/go-hass-agent/dist/go-hass-agent-amd64 /usr/bin/go-hass-agent
+COPY --from=builder /usr/src/go-hass-agent/dist/go-hass-agent-* /usr/bin/go-hass-agent
 # reinstall minimum libraries for running
 RUN mkdir /etc/dpkg/dpkg.conf.d
 COPY <<EOF /etc/dpkg/dpkg.conf.d/excludes

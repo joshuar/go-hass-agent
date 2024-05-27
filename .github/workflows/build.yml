@@ -167,6 +167,7 @@ jobs:
           platforms: ${{ matrix.platform }}
           build-args: |
             BUILD_ARCH=${{ matrix.platform }}
+            GO_VERSION=${GO_VERSION}
       - name: Check and install cosign
         uses: sigstore/cosign-installer@v3.5.0
         with:
