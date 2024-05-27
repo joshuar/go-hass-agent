@@ -19,7 +19,9 @@
         "codecov",
         "translations",
         "logging",
-        "linux/proc"
+        "linux/proc",
+        "git",
+        "mage"
     ],
     "go.testFlags": ["-v"]
 }

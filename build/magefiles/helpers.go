@@ -7,6 +7,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
 	"os"
 	"os/exec"
@@ -57,58 +58,72 @@ func FoundOrInstalled(executableName, installURL string) (isInstalled bool) {
 }
 
 // GetFlags gets all the compile flags to set the version and stuff.
-func GetFlags() string {
+func GetFlags() (string, error) {
+	var version, hash, date string
+	var err error
+	if version, err = Version(); err != nil {
+		return "", fmt.Errorf("failed to retrieve version from git: %w", err)
+	}
+	if hash, err = GitHash(); err != nil {
+		return "", fmt.Errorf("failed to retrieve hash from git: %w", err)
+	}
+	if date, err = BuildDate(); err != nil {
+		return "", fmt.Errorf("failed to retrieve build date from git: %w", err)
+	}
+
 	var flags strings.Builder
-	flags.WriteString("-X " + pkgBase + ".gitVersion=" + GitVersion())
+	flags.WriteString("-X " + pkgBase + ".gitVersion=" + version)
 	flags.WriteString(" ")
-	flags.WriteString("-X " + pkgBase + ".gitCommit=" + GitHash())
+	flags.WriteString("-X " + pkgBase + ".gitCommit=" + hash)
 	flags.WriteString(" ")
-	flags.WriteString("-X " + pkgBase + ".buildDate=" + BuildDate())
-	return flags.String()
+	flags.WriteString("-X " + pkgBase + ".buildDate=" + date)
+	return flags.String(), nil
 }
 
-// GitVersion returns a string that can be used as a version string.
-func GitVersion() string {
+// Version returns a string that can be used as a version string.
+func Version() (string, error) {
+	// Use the version already set in the environment (i.e., by the CI run).
+	if version, ok := os.LookupEnv("APPVERSION"); ok {
+		return version, nil
+	}
+	// Else, derive a version from git.
 	version, err := sh.Output("git", "describe", "--tags", "--always", "--dirty")
 	if err != nil {
-		slog.Warn("failed to retrieve git version", "error", err.Error())
-		return "unknown"
+		return "", err
 	}
-	return version
+	return version, nil
 }
 
 // hash returns the git hash for the current repo or "" if none.
-func GitHash() string {
+func GitHash() (string, error) {
 	hash, err := sh.Output("git", "rev-parse", "--short", "HEAD")
 	if err != nil {
-		slog.Warn("failed to retrieve git hash", "error", err.Error())
-		return "HEAD"
+		return "", err
 	}
-	return hash
+	return hash, nil
 }
 
 // BuildDate returns the build date.
-func BuildDate() string {
+func BuildDate() (string, error) {
 	date, err := sh.Output("git", "log", "--date=iso8601-strict", "-1", "--pretty=%ct")
 	if err != nil {
-		slog.Warn("failed to retrieve build date", "error", err.Error())
-		return "unknown"
+		return "", err
 	}
-	return date
+	return date, nil
 }
 
 // GenerateEnv will create a map[string]string containing environment variables
 // and their values necessary for building the package on the given
 // architecture.
-func GenerateEnv(arch string) map[string]string {
+func GenerateEnv(arch string) (map[string]string, error) {
 	envMap := make(map[string]string)
 
 	envMap["NFPM_ARCH"] = arch
 	envMap["CGO_ENABLED"] = "1"
 
-	version := GitVersion()
-	if version == "unknown" || version == "" {
-		slog.Warn("Could not retrieve version.")
+	version, err := Version()
+	if err != nil {
+		return nil, fmt.Errorf("could not generate environment: %w", err)
 	}
 	envMap["APPVERSION"] = version
 
@@ -123,5 +138,18 @@ func GenerateEnv(arch string) map[string]string {
 		envMap["PKG_CONFIG_PATH"] = "/usr/lib/aarch64-linux-gnu/pkgconfig"
 		envMap["GOARCH"] = arch
 	}
-	return envMap
+	return envMap, nil
+}
+
+func validateArch(arch string) (string, error) {
+	switch arch {
+	case "amd64", "linux/amd64":
+		return "amd64", nil
+	case "arm", "linux/arm/6", "linux/arm/7":
+		return "arm", nil
+	case "arm64", "linux/arm64":
+		return "arm64", nil
+	default:
+		return "", errors.New("unsupported arch")
+	}
 }
