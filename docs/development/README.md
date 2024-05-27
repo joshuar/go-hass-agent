@@ -41,7 +41,7 @@ container, as it is exposed as per above.
 Use the following mage invocation in the project root directory:
 
 ```shell
-mage -v -d build/magefiles -w . build:full amd64
+mage -d build/magefiles -w . build:full
 ```
 
 This will:
@@ -64,8 +64,8 @@ Debian and Linux distributions with older libraries.
 To build packages, use the following invocations:
 
 ```shell
-mage -v -d build/magefiles -w . package:nfpm amd64
-mage -v -d build/magefiles -w . package:fyneCross amd64
+mage -v -d build/magefiles -w . package:nfpm
+mage -v -d build/magefiles -w . package:fyneCross
 ```
 
 The above mage actions will install the necessary tooling for packaging, if
@@ -79,15 +79,21 @@ Packages built with `fyne-cross` will be available under `fyne-cross/dist/linux-
 
 Go Hass Agent can also be built for **arm** and **arm64** with
 cross-compilation. **This is only supported on Ubuntu as the host for
-cross-compiles**. To build for a different architecture, first install the
-appropriate package dependencies: 
+cross-compiles**. To build for a different architecture, set the `TARGETARCH`
+environment variable:
 
 ```shell
-mage -v -d build/magefiles -w . preps:deps arm # or arm64
+export TARGETARCH=arm # or arm64
 ```
 
-Then the above commands for building and packaging need to just replace `amd64`
-with with either `arm` or `arm64`.
+Install the target architecture libraries for cross-compilation:
+
+
+```shell
+mage -d build/magefiles -w . preps:deps
+```
+
+Then the commands for building and packaging above should work as expected.
 
 > [!NOTE]
 > The devcontainer has all the necessary compilers and libraries

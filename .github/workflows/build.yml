@@ -12,7 +12,7 @@ permissions:
 
 env:
   GO_VERSION: 1.22
-  MAGEARGS: "-v -d build/magefiles -w ."
+  MAGEARGS: -d build/magefiles -w .
 
 jobs:
   check_release:
@@ -64,9 +64,13 @@ jobs:
         with:
           install-only: true
       - name: Build with Mage
-        run: mage ${MAGEARGS} build:ci ${{ matrix.arch }}
+        run: mage ${MAGEARGS} build:ci 
+        env:
+          TARGETARCH: ${{ matrix.arch }}
       - name: Package with Mage
-        run: mage ${MAGEARGS} package:ci ${{ matrix.arch }}
+        run: mage ${MAGEARGS} package:ci
+        env:
+          TARGETARCH: ${{ matrix.arch }}
       - name: Install cosign
         id: cosign_install
         uses: sigstore/cosign-installer@v3.5.0

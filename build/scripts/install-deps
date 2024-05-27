@@ -7,34 +7,11 @@
 
 set -e
 
-case $1 in
-    amd64)
-        pkgarch=(amd64)
-        ccpkg=(gcc)
-        ;;
-    arm)
-        pkgarch=(armhf amd64)
-        ccpkg=(gcc gcc-arm-linux-gnueabihf)
-        ;;
-    arm64)
-        pkgarch=(arm64 amd64)
-        ccpkg=(gcc gcc-aarch64-linux-gnu)
-        ;;
-    all)
-        pkgarch=(armhf arm64 amd64)
-        ccpkg=(gcc gcc-arm-linux-gnueabihf gcc-aarch64-linux-gnu)
-        ;;
-    *)
-        echo "No arch specified"
-        exit -1
-        ;;
-esac
-
 DEBIAN_FRONTEND=noninteractive
 
 apt-get update
-apt-get -y install desktop-file-utils ${ccpkg[@]:0}
-for arch in "${pkgarch[@]}"; do 
+apt-get -y install desktop-file-utils gcc
+for arch in "$@"; do 
    apt-get -y install \
         libgl1-mesa-dev:${arch} xserver-xorg-dev:${arch} \
         libxcursor-dev:${arch} libxrandr-dev:${arch} \

@@ -8,7 +8,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"log/slog"
 	"slices"
 
 	"github.com/magefile/mage/mg"
@@ -28,18 +27,18 @@ var (
 )
 
 // Nfpm builds packages using nfpm.
-func (Package) Nfpm(arch string) error {
+func (Package) Nfpm() error {
 	if !FoundOrInstalled("nfpm", "github.com/goreleaser/nfpm/v2/cmd/nfpm@latest") {
 		return errors.New("unable to install nfpm")
 	}
 
-	envMap, err := GenerateEnv(arch)
+	envMap, err := GenerateEnv()
 	if err != nil {
 		return fmt.Errorf("unable to run nfpm: %w", err)
 	}
 
 	for _, pkgformat := range pkgformats {
-		slog.Info("Building package with nfpm...", "format", pkgformat)
+		fmt.Println("Building package with nfpm in format:", pkgformat)
 		args := slices.Concat(nfpmBaseArgs, []string{"--packager", pkgformat})
 		if err := sh.RunWithV(envMap, "nfpm", args...); err != nil {
 			return err
@@ -49,32 +48,28 @@ func (Package) Nfpm(arch string) error {
 }
 
 // FyneCross builds packages using fyne-cross.
-func (Package) FyneCross(arch string) error {
+func (Package) FyneCross() error {
 	if !FoundOrInstalled("fyne-cross", "github.com/fyne-io/fyne-cross@latest") {
 		return errors.New("unable to install fyne-cross")
 	}
 
-	if err := fyneCrossCmd("-arch", arch); err != nil {
-		slog.Warn("fyne-cross finished but with errors. Continuing anyway...", "error", err.Error())
+	if err := fyneCrossCmd("-arch", targetArch); err != nil {
+		fmt.Println("fyne-cross finished but with errors. Continuing anyway.", "Error was:", err.Error())
 	}
 	return sh.Copy(
-		"fyne-cross/dist/linux-"+arch+"/go-hass-agent-"+arch+".tar.xz",
-		"fyne-cross/dist/linux-"+arch+"/go-hass-agent.tar.xz",
+		"fyne-cross/dist/linux-"+targetArch+"/go-hass-agent-"+targetArch+".tar.xz",
+		"fyne-cross/dist/linux-"+targetArch+"/go-hass-agent.tar.xz",
 	)
 }
 
 // CI builds all packages as part of the CI pipeline.
-func (p Package) CI(arch string) error {
+func (p Package) CI() error {
 	if !isCI() {
 		return ErrNotCI
 	}
-	arch, err := validateArch(arch)
-	if err != nil {
-		return err
-	}
 
-	mg.Deps(mg.F(p.Nfpm, arch))
-	mg.Deps(mg.F(p.FyneCross, arch))
+	mg.Deps(p.Nfpm)
+	mg.Deps(p.FyneCross)
 
 	return nil
 }
