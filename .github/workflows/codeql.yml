@@ -50,6 +50,8 @@ jobs:
       uses: magefile/mage-action@v3
       with:
         install-only: true
+    - name: Install build deps
+      run: mage ${MAGEARGS} preps:deps ${ARCH}
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v3
       with:
@@ -58,7 +60,7 @@ jobs:
         packs: githubsecuritylab/codeql-${{ matrix.language }}-queries
     - if: matrix.build-mode == 'manual'
       name: Build with Mage
-      run: mage ${MAGEARGS} build:ci ${ARCH}
+      run: mage ${MAGEARGS} build:full ${ARCH}
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3
       with:
