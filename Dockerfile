@@ -1,10 +1,10 @@
 # Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-# 
+#
 # This software is released under the MIT License.
 # https://opensource.org/licenses/MIT
 
-ARG GO_VERSION=1.22
-FROM golang:$GO_VERSION AS builder
+# ARG GO_VERSION=1.22
+FROM golang:1.22 AS builder
 WORKDIR /usr/src/go-hass-agent
 
 ARG TARGETARCH
@@ -37,8 +37,8 @@ path-include=/usr/share/doc/*/changelog.*
 EOF
 RUN <<EOF
 export DEBIAN_FRONTEND=noninteractive
-apt-get -y update 
-apt-get -y install libgl1 libx11-6 libglx0 libglvnd0 libxcb1 libxau6 libxdmcp6 dbus-x11 
+apt-get -y update
+apt-get -y install libgl1 libx11-6 libglx0 libglvnd0 libxcb1 libxau6 libxdmcp6 dbus-x11
 rm -rf /var/lib/apt/lists/* /var/cache/apt/*
 EOF
 # set up run entrypoint/cmd
