@@ -4,7 +4,7 @@
 # https://opensource.org/licenses/MIT
 
 ARG GO_VERSION=1.22
-FROM docker.io/golang:$GO_VERSION AS builder
+FROM golang:$GO_VERSION AS builder
 WORKDIR /usr/src/go-hass-agent
 
 ARG TARGETARCH
