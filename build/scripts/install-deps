@@ -11,10 +11,13 @@ DEBIAN_FRONTEND=noninteractive
 
 apt-get update
 apt-get -y install desktop-file-utils gcc
-for arch in "$@"; do 
-   apt-get -y install \
-        libgl1-mesa-dev:${arch} xserver-xorg-dev:${arch} \
-        libxcursor-dev:${arch} libxrandr-dev:${arch} \
-        libxinerama-dev:${arch} libxi-dev:${arch} \
-        libgl1-mesa-dev:${arch} libxxf86vm-dev:${arch}
+for arch in "$@"; do
+        if [ "$arch" == "arm" ]; then
+                arch="armhf"
+        fi
+        apt-get -y install \
+                libgl1-mesa-dev:${arch} xserver-xorg-dev:${arch} \
+                libxcursor-dev:${arch} libxrandr-dev:${arch} \
+                libxinerama-dev:${arch} libxi-dev:${arch} \
+                libgl1-mesa-dev:${arch} libxxf86vm-dev:${arch}
 done
