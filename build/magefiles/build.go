@@ -7,7 +7,7 @@ package main
 
 import (
 	"errors"
-	"fmt"
+	"log/slog"
 
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
@@ -19,7 +19,7 @@ var ErrBuildFailed = errors.New("build failed")
 
 // Full runs all prep steps and then builds the binary.
 func (Build) Full() error {
-	fmt.Println("Starting full build.")
+	slog.Info("Starting full build.")
 
 	// Make everything nice, neat, and proper
 	mg.Deps(Preps.Tidy)
@@ -62,8 +62,6 @@ func buildProject() error {
 
 	output := "dist/go-hass-agent-" + targetArch
 
-	fmt.Println("Running go build...")
-	fmt.Println("Output binary", output)
-	fmt.Println("Additional ldflags", ldflags)
+	slog.Info("Running go build...", "output", output, "ldflags", ldflags)
 	return sh.RunWithV(envMap, "go", "build", "-ldflags="+ldflags, "-o", output)
 }
