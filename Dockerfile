@@ -7,8 +7,6 @@
 FROM golang:1.22 AS builder
 WORKDIR /usr/src/go-hass-agent
 
-ARG TARGETARCH
-
 # copy the src to the workdir
 ADD . .
 # install mage
@@ -19,6 +17,8 @@ RUN mage -v -d build/magefiles -w . preps:deps
 RUN mage -v -d build/magefiles -w . build:full
 
 FROM ubuntu
+# import TARGETARCH
+ARG TARGETARCH
 # copy binary over from builder stage
 COPY --from=builder /usr/src/go-hass-agent/dist/go-hass-agent-$TARGETARCH /usr/bin/go-hass-agent
 # reinstall minimum libraries for running
