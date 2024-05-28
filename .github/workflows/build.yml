@@ -12,7 +12,7 @@ permissions:
 
 env:
   GO_VERSION: 1.22
-  MAGEARGS: -d build/magefiles -w .
+  MAGEARGS: -v -d build/magefiles -w .
 
 jobs:
   check_release:
