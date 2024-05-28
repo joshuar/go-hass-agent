@@ -7,10 +7,10 @@ updates:
       interval: "weekly"
 
   # Maintain dependencies for build tools
-  # - package-ecosystem: "gomod"
-  #   directory: "/tools"
-  #   schedule:
-  #     interval: "weekly"
+  - package-ecosystem: "gomod"
+    directory: "/tools"
+    schedule:
+      interval: "weekly"
 
   # Maintain dependencies for GitHub Actions
   - package-ecosystem: "github-actions"
