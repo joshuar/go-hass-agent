@@ -7,6 +7,7 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
 
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
@@ -21,13 +22,13 @@ func (Tests) Test() error {
 		return fmt.Errorf("cannot run test: %w", err)
 	}
 
-	fmt.Println("Running go test...")
+	slog.Info("Running go test...")
 	return sh.RunV("go", "test", "-ldflags="+ldflags, "-coverprofile=coverage.txt", "-v", "./...")
 }
 
 // Benchmark runs go test -bench on the project.
 func (Tests) Benchmark() error {
-	fmt.Println("Running go test -bench...")
+	slog.Info("Running go test -bench...")
 	return sh.RunV("go", "test", "-bench=.", "./...")
 }
 

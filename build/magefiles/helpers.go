@@ -8,6 +8,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/exec"
 	"runtime"
@@ -55,7 +56,7 @@ func SudoWrap(cmd string, args ...string) error {
 func FoundOrInstalled(executableName, installURL string) (isInstalled bool) {
 	_, missing := exec.LookPath(executableName)
 	if missing != nil {
-		fmt.Println("Installing tool", executableName, "from url", installURL)
+		slog.Info("Installing tool.", "tool", executableName, "url", installURL)
 		err := sh.Run("go", "install", installURL)
 		if err != nil {
 			return false
@@ -144,7 +145,7 @@ func GenerateEnv() (map[string]string, error) {
 		targetArch = v
 	}
 	if targetArch != "" && targetArch != runtime.GOARCH {
-		fmt.Println("Cross compilation request from host arch", runtime.GOARCH, "to target arch", targetArch)
+		slog.Info("Cross compilation requested.", "host", runtime.GOARCH, "target", targetArch)
 
 		// Update NFPM_ARCH tro the target arch.
 		envMap["NFPM_ARCH"] = targetArch

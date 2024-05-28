@@ -8,6 +8,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"slices"
 
 	"github.com/magefile/mage/mg"
@@ -38,7 +39,7 @@ func (Package) Nfpm() error {
 	}
 
 	for _, pkgformat := range pkgformats {
-		fmt.Println("Building package with nfpm in format:", pkgformat)
+		slog.Info("Building package with nfpm.", "format", pkgformat)
 		args := slices.Concat(nfpmBaseArgs, []string{"--packager", pkgformat})
 		if err := sh.RunWithV(envMap, "nfpm", args...); err != nil {
 			return err
@@ -54,7 +55,7 @@ func (Package) FyneCross() error {
 	}
 
 	if err := fyneCrossCmd("-arch", targetArch); err != nil {
-		fmt.Println("fyne-cross finished but with errors. Continuing anyway.", "Error was:", err.Error())
+		slog.Warn("fyne-cross finished but with errors. Continuing anyway.", "error", err.Error())
 	}
 	return sh.Copy(
 		"fyne-cross/dist/linux-"+targetArch+"/go-hass-agent-"+targetArch+".tar.xz",

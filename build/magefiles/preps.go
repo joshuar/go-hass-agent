@@ -7,6 +7,7 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"runtime"
 
@@ -24,13 +25,13 @@ var generators = map[string]string{
 
 // Tidy runs go mod tidy to update the go.mod and go.sum files.
 func (Preps) Tidy() error {
-	fmt.Println("Running go mod tidy...")
+	slog.Info("Running go mod tidy...")
 	return sh.Run("go", "mod", "tidy")
 }
 
 // Format prettifies your code in a standard way to prevent arguments over curly braces.
 func (Preps) Format() error {
-	fmt.Println("Running go fmt...")
+	slog.Info("Running go fmt...")
 	return sh.RunV("go", "fmt", "./...")
 }
 
@@ -42,7 +43,7 @@ func (Preps) Generate() error {
 		}
 	}
 
-	fmt.Println("Running go generate...")
+	slog.Info("Running go generate...")
 	return sh.RunV("go", "generate", "-v", "./...")
 }
 
