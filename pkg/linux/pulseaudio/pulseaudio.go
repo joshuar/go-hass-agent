@@ -10,8 +10,12 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"os"
+	"path"
 
 	"github.com/jfreymuth/pulse/proto"
+
+	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
 // PulseAudioClient represents a connection to PulseAudio. It will have an event
@@ -46,6 +50,7 @@ func NewPulseClient(ctx context.Context) (*PulseAudioClient, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not connect to pulseaudio: %w", err)
 	}
+
 	c := &PulseAudioClient{
 		client:  client,
 		conn:    conn,
@@ -53,8 +58,15 @@ func NewPulseClient(ctx context.Context) (*PulseAudioClient, error) {
 		doneCh:  make(chan struct{}, 1),
 	}
 	// Set client properties.
-	props := proto.PropList{}
-	err = c.client.Request(&proto.SetClientName{Props: props}, nil)
+	props := proto.PropList{
+		"media.name":                 proto.PropListString(preferences.AppName),
+		"application.name":           proto.PropListString(path.Base(os.Args[0])),
+		"application.icon_name":      proto.PropListString("audio-x-generic"),
+		"application.process.id":     proto.PropListString(fmt.Sprintf("%d", os.Getpid())),
+		"application.process.binary": proto.PropListString(os.Args[0]),
+		"window.x11.display":         proto.PropListString(os.Getenv("DISPLAY")),
+	}
+	err = c.client.Request(&proto.SetClientName{Props: props}, &proto.SetClientNameReply{})
 	if err != nil {
 		return nil, fmt.Errorf("could not send client info: %w", err)
 	}
@@ -74,7 +86,7 @@ func NewPulseClient(ctx context.Context) (*PulseAudioClient, error) {
 	c.Vol = volPct
 
 	// Callback function to be used when a Pulseaudio event occurs.
-	client.Callback = func(val any) {
+	c.client.Callback = func(val any) {
 		switch val := val.(type) {
 		case *proto.SubscribeEvent:
 			if val.Event.GetType() == proto.EventChange && val.Event.GetFacility() == proto.EventSink {
