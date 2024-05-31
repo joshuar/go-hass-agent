@@ -10,7 +10,7 @@ WORKDIR /usr/src/go-hass-agent
 # copy the src to the workdir
 ADD . .
 # install mage
-RUN go install github.com/magefile/mage@latest
+RUN go install github.com/magefile/mage@v1.15.0
 # install build dependencies
 RUN mage -v -d build/magefiles -w . preps:deps
 # build the binary
