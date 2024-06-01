@@ -54,13 +54,21 @@ func (Package) FyneCross() error {
 		return errors.New("unable to install fyne-cross")
 	}
 
-	if err := fyneCrossCmd("-arch", targetArch); err != nil {
+	envMap, err := GenerateEnv()
+	if err != nil {
+		return fmt.Errorf("unable to run nfpm: %w", err)
+	}
+
+	if err := sh.RunWithV(envMap, "fyne-cross", "linux", "-name", "go-hass-agent", "-icon", iconPath, "-release", "-arch", targetArch); err != nil {
 		slog.Warn("fyne-cross finished but with errors. Continuing anyway.", "error", err.Error())
 	}
-	return sh.Copy(
+	if err := sh.Copy(
 		"fyne-cross/dist/linux-"+targetArch+"/go-hass-agent-"+targetArch+".tar.xz",
 		"fyne-cross/dist/linux-"+targetArch+"/go-hass-agent.tar.xz",
-	)
+	); err != nil {
+		return err
+	}
+	return sh.Rm("fyne-cross/dist/linux-" + targetArch + "/go-hass-agent.tar.xz")
 }
 
 // CI builds all packages as part of the CI pipeline.
