@@ -1,5 +1,18 @@
 # Changelog
 
+## [9.3.0](https://github.com/joshuar/go-hass-agent/compare/v9.2.0...v9.3.0) (2024-06-01)
+
+
+### Features
+
+* **ui:** :sparkles: use a new icon and clean up text in UI ([01bd2f3](https://github.com/joshuar/go-hass-agent/commit/01bd2f30fe48be59959a9a5108cdebf675eae6a7))
+
+
+### Bug Fixes
+
+* **linux:** :bug: actually report correct distribution, distribution and kernel version as sensors ([6db5082](https://github.com/joshuar/go-hass-agent/commit/6db5082472f2d528ca30bb65ee58e777064a360c))
+* **ui:** :bug: embed correct icon ([6f9f412](https://github.com/joshuar/go-hass-agent/commit/6f9f412d456ac87c976a16e7d5e0859f08d0986b))
+
 ## [9.2.0](https://github.com/joshuar/go-hass-agent/compare/v9.1.1...v9.2.0) (2024-05-23)
 
 
