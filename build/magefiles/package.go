@@ -59,7 +59,12 @@ func (Package) FyneCross() error {
 		return fmt.Errorf("unable to run nfpm: %w", err)
 	}
 
-	if err := sh.RunWithV(envMap, "fyne-cross", "linux", "-name", "go-hass-agent", "-icon", iconPath, "-release", "-arch", targetArch); err != nil {
+	if err := sh.RunWithV(envMap,
+		"fyne-cross", "linux",
+		"-name", "go-hass-agent",
+		"-icon", iconPath,
+		"-release",
+		"-arch", targetArch); err != nil {
 		slog.Warn("fyne-cross finished but with errors. Continuing anyway.", "error", err.Error())
 	}
 	if err := sh.Copy(
