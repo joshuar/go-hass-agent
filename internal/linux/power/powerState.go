@@ -73,22 +73,21 @@ func newPowerState(s powerSignal, v any) *powerStateSensor {
 	}
 }
 
-func StateUpdater(ctx context.Context) chan sensor.Details {
-	sensorCh := make(chan sensor.Details)
+type stateWorker struct{}
 
-	events, err := dbusx.WatchBus(ctx, &dbusx.Watch{
+func (w *stateWorker) Setup(ctx context.Context) *dbusx.Watch {
+	return &dbusx.Watch{
 		Bus:       dbusx.SystemBus,
 		Names:     []string{sleepSignal, shutdownSignal},
 		Interface: managerInterface,
 		Path:      loginBasePath,
-	})
-	if err != nil {
-		log.Debug().Err(err).
-			Msg("Failed to create power state D-Bus watch.")
-		close(sensorCh)
-		return sensorCh
 	}
+}
 
+func (w *stateWorker) Watch(ctx context.Context, triggerCh chan dbusx.Trigger) chan sensor.Details {
+	sensorCh := make(chan sensor.Details)
+
+	// Watch for state changes.
 	go func() {
 		defer close(sensorCh)
 		for {
@@ -96,7 +95,7 @@ func StateUpdater(ctx context.Context) chan sensor.Details {
 			case <-ctx.Done():
 				log.Debug().Msg("Stopped power state sensor.")
 				return
-			case event := <-events:
+			case event := <-triggerCh:
 				switch event.Signal {
 				case sleepSignal:
 					go func() {
@@ -111,10 +110,29 @@ func StateUpdater(ctx context.Context) chan sensor.Details {
 		}
 	}()
 
-	// Send an initial sensor update.
+	// Send an initial state update (on, not suspended).
 	go func() {
-		sensorCh <- newPowerState(shutdown, false)
+		sensors, _ := w.Sensors(ctx)
+		for _, s := range sensors {
+			sensorCh <- s
+		}
 	}()
 
 	return sensorCh
+}
+
+// Sensors returns the current sensors states. Assuming that if this is called,
+// then the machine is obviously running and not suspended, otherwise this
+// couldn't be called?
+func (w *stateWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
+	return []sensor.Details{newPowerState(shutdown, false)}, nil
+}
+
+func NewStateWorker() (*linux.SensorWorker, error) {
+	return &linux.SensorWorker{
+			WorkerName: "Power State Sensor",
+			WorkerDesc: "Sensor to track the current power state of the device.",
+			Value:      &stateWorker{},
+		},
+		nil
 }

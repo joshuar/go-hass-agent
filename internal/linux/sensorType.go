@@ -3,6 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
+//nolint:all
 package linux
 
 //go:generate stringer -type=SensorTypeValue -output sensorTypeStrings.go -linecomment

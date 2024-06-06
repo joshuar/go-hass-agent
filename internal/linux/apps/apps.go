@@ -7,6 +7,8 @@ package apps
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
 	"github.com/godbus/dbus/v5"
 
@@ -24,48 +26,89 @@ const (
 	appStateDBusEvent     = "org.freedesktop.impl.portal.Background.RunningApplicationsChanged"
 )
 
-func Updater(ctx context.Context) chan sensor.Details {
-	sensorCh := make(chan sensor.Details)
-	portalDest := linux.FindPortal()
-	if portalDest == "" {
-		log.Warn().
-			Msg("Unable to monitor for active applications. No app tracking available.")
-		close(sensorCh)
-		return sensorCh
-	}
+type worker struct {
+	activeApp   *activeAppSensor
+	runningApps *runningAppsSensor
+	portalDest  string
+}
 
-	eventCh, err := dbusx.WatchBus(ctx, &dbusx.Watch{
+func (w *worker) Setup(_ context.Context) *dbusx.Watch {
+	return &dbusx.Watch{
 		Bus:       dbusx.SessionBus,
 		Path:      appStateDBusPath,
 		Interface: appStateDBusInterface,
 		Names:     []string{"RunningApplicationsChanged"},
-	})
-	if err != nil {
-		log.Debug().Caller().Err(err).
-			Msg("Failed to create active app D-Bus watch.")
-		close(sensorCh)
+	}
+}
+
+func (w *worker) Watch(ctx context.Context, triggerCh chan dbusx.Trigger) chan sensor.Details {
+	sensorCh := make(chan sensor.Details)
+
+	sendSensors := func(ctx context.Context, sensorCh chan sensor.Details) {
+		appSensors, err := w.Sensors(ctx)
+		if err != nil {
+			log.Warn().Err(err).Msg("Failed to update app sensors.")
+			return
+		}
+		for _, s := range appSensors {
+			sensorCh <- s
+		}
 	}
 
+	// Watch for active app changes.
 	go func() {
 		defer close(sensorCh)
-		activeApp := newActiveAppSensor()
-		runningApps := newRunningAppsSensor()
 		for {
 			select {
 			case <-ctx.Done():
 				log.Debug().Msg("Stopped app sensor.")
 				return
-			case <-eventCh:
-				appList, err := dbusx.GetData[map[string]dbus.Variant](ctx, dbusx.SessionBus, appStateDBusPath, portalDest, appStateDBusMethod)
-				if err != nil {
-					log.Warn().Err(err).Msg("Could not retrieve app list from D-Bus.")
-				}
-				if appList != nil {
-					activeApp.update(appList, sensorCh)
-					runningApps.update(appList, sensorCh)
-				}
+			case <-triggerCh:
+				sendSensors(ctx, sensorCh)
 			}
 		}
 	}()
+
+	// Send an initial update.
+	go func() {
+		sendSensors(ctx, sensorCh)
+	}()
+
 	return sensorCh
+}
+
+func (w *worker) Sensors(ctx context.Context) ([]sensor.Details, error) {
+	var sensors []sensor.Details
+	appList, err := dbusx.GetData[map[string]dbus.Variant](ctx, dbusx.SessionBus, appStateDBusPath, w.portalDest, appStateDBusMethod)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve app list from D-Bus: %w", err)
+	}
+	if appList != nil {
+		if s := w.activeApp.update(appList); s != nil {
+			sensors = append(sensors, s)
+		}
+		if s := w.runningApps.update(appList); s != nil {
+			sensors = append(sensors, s)
+		}
+	}
+	return sensors, nil
+}
+
+func NewAppWorker() (*linux.SensorWorker, error) {
+	// If we cannot find a portal interface, we cannot monitor the active app.
+	portalDest := linux.FindPortal()
+	if portalDest == "" {
+		return nil, errors.New("unable to monitor for active applications: no portal present")
+	}
+
+	return &linux.SensorWorker{
+			WorkerName: "App Sensors",
+			WorkerDesc: "Sensors to track the active app and total number of running apps.",
+			Value: &worker{
+				portalDest:  portalDest,
+				activeApp:   newActiveAppSensor(),
+				runningApps: newRunningAppsSensor(),
+			},
+		},
+		nil
 }

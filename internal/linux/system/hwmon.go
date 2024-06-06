@@ -7,11 +7,11 @@ package system
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
@@ -91,40 +91,34 @@ func newHWSensor(s *hwmon.Sensor) *hwSensor {
 	return hw
 }
 
-func HWSensorUpdater(ctx context.Context) chan sensor.Details {
-	sensorCh := make(chan sensor.Details)
+type hwMonWorker struct{}
 
-	// update will fetch all hardware sensors and send them to Home Assistant.
-	update := func(_ time.Duration) {
-		allSensors, err := hwmon.GetAllSensors()
-		if err != nil && len(allSensors) > 0 {
-			log.Warn().Err(err).Msg("Errors fetching some chip/sensor values from hwmon API.")
-		}
-		if err != nil && len(allSensors) == 0 {
-			log.Warn().Err(err).Msg("Could not retrieve any chip/sensor values from hwmon API.")
-			return
-		}
-		for _, s := range allSensors {
-			go func(s *hwmon.Sensor) {
-				hwSensor := newHWSensor(s)
-				sensorCh <- hwSensor
-			}(s)
-		}
+func (w *hwMonWorker) Interval() time.Duration { return time.Minute }
+
+func (w *hwMonWorker) Jitter() time.Duration { return 5 * time.Second }
+
+func (w *hwMonWorker) Sensors(_ context.Context, _ time.Duration) ([]sensor.Details, error) {
+	var sensors []sensor.Details
+	hwmonSensors, err := hwmon.GetAllSensors()
+	if err != nil && len(hwmonSensors) > 0 {
+		log.Warn().Err(err).Msg("Errors fetching some chip/sensor values from hwmon API.")
 	}
+	if err != nil && len(hwmonSensors) == 0 {
+		return nil, fmt.Errorf("could not retrieve hwmon sensor details: %w", err)
+	}
+	for _, s := range hwmonSensors {
+		sensors = append(sensors, newHWSensor(s))
+	}
+	return sensors, nil
+}
 
-	// send all sensors as an initial update
-	go func() {
-		update(0)
-	}()
-
-	// continue sending sensors on an interval
-	go helpers.PollSensors(ctx, update, time.Minute, time.Second*5)
-	go func() {
-		defer close(sensorCh)
-		<-ctx.Done()
-		log.Debug().Msg("Stopped temp sensors.")
-	}()
-	return sensorCh
+func NewHWMonWorker() (*linux.SensorWorker, error) {
+	return &linux.SensorWorker{
+			WorkerName: "HWMon Sensors",
+			WorkerDesc: "Sensors from the hwmon kernel interface (chip temps, fan speeds, etc.)",
+			Value:      &hwMonWorker{},
+		},
+		nil
 }
 
 func parseSensorType(t string) (icon string, deviceclass types.DeviceClass) {

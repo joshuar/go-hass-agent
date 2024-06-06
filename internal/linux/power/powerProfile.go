@@ -7,6 +7,7 @@ package power
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/godbus/dbus/v5"
 	"github.com/rs/zerolog/log"
@@ -23,8 +24,6 @@ const (
 	activeProfileProp      = "ActiveProfile"
 )
 
-type sensors struct{}
-
 type powerSensor struct {
 	linux.Sensor
 }
@@ -39,44 +38,33 @@ func newPowerSensor(t linux.SensorTypeValue, v dbus.Variant) *powerSensor {
 	return s
 }
 
-func (s *sensors) Sensors(ctx context.Context) []sensor.Details {
-	var sensors []sensor.Details
-	profile, err := dbusx.GetProp[dbus.Variant](ctx, dbusx.SystemBus, powerProfilesPath, powerProfilesDest, powerProfilesDest+"."+activeProfileProp)
-	if err != nil {
-		log.Debug().Err(err).Msg("Cannot retrieve a power profile from D-Bus.")
-		return nil
-	}
-	return append(sensors, newPowerSensor(linux.SensorPowerProfile, profile))
-}
+type profileWorker struct{}
 
-func ProfileUpdater(ctx context.Context) chan sensor.Details {
-	sensorCh := make(chan sensor.Details)
-
-	s := &sensors{}
-	sensors := s.Sensors(ctx)
-	if len(sensors) < 1 {
-		log.Debug().Msg("No power profile detected. Not monitoring power profiles")
-		close(sensorCh)
-		return sensorCh
-	}
-	go func() {
-		for _, sensor := range sensors {
-			sensorCh <- sensor
-		}
-	}()
-
-	events, err := dbusx.WatchBus(ctx, &dbusx.Watch{
+func (w *profileWorker) Setup(ctx context.Context) *dbusx.Watch {
+	return &dbusx.Watch{
 		Bus:       dbusx.SystemBus,
 		Names:     []string{dbusx.PropChangedSignal},
 		Interface: dbusx.PropInterface,
 		Path:      powerProfilesPath,
-	})
-	if err != nil {
-		log.Debug().Err(err).
-			Msg("Failed to create power profile D-Bus watch.")
+	}
+}
+
+func (w *profileWorker) Watch(ctx context.Context, triggerCh chan dbusx.Trigger) chan sensor.Details {
+	sensorCh := make(chan sensor.Details)
+
+	// Check for power profile support, exit if not available. Otherwise, send
+	// an initial update.
+	if s, err := w.Sensors(ctx); err != nil {
+		log.Warn().Err(err).Msg("Cannot monitor power profile.")
 		close(sensorCh)
 		return sensorCh
+	} else {
+		go func() {
+			sensorCh <- s[0]
+		}()
 	}
+
+	// Watch for power profile changes.
 	go func() {
 		defer close(sensorCh)
 		for {
@@ -84,7 +72,7 @@ func ProfileUpdater(ctx context.Context) chan sensor.Details {
 			case <-ctx.Done():
 				log.Debug().Msg(("Stopped power profile sensor."))
 				return
-			case event := <-events:
+			case event := <-triggerCh:
 				props, err := dbusx.ParsePropertiesChanged(event.Content)
 				if err != nil {
 					log.Warn().Err(err).Msg("Did not understand received trigger.")
@@ -96,5 +84,23 @@ func ProfileUpdater(ctx context.Context) chan sensor.Details {
 			}
 		}
 	}()
+
 	return sensorCh
+}
+
+func (w *profileWorker) Sensors(ctx context.Context) ([]sensor.Details, error) {
+	profile, err := dbusx.GetProp[dbus.Variant](ctx, dbusx.SystemBus, powerProfilesPath, powerProfilesDest, powerProfilesDest+"."+activeProfileProp)
+	if err != nil {
+		return nil, fmt.Errorf("cannot retrieve a power profile from D-Bus: %w", err)
+	}
+	return []sensor.Details{newPowerSensor(linux.SensorPowerProfile, profile)}, nil
+}
+
+func NewProfileWorker() (*linux.SensorWorker, error) {
+	return &linux.SensorWorker{
+			WorkerName: "Power Profile Sensor",
+			WorkerDesc: "Sensor to track the current power profile.",
+			Value:      &profileWorker{},
+		},
+		nil
 }

@@ -7,15 +7,19 @@ package net
 
 import (
 	"context"
+	"fmt"
 	"time"
 
-	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v3/net"
 
-	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+)
+
+const (
+	countUnit = "B"
+	rateUnit  = "B/s"
 )
 
 type netIOSensorAttributes struct {
@@ -72,7 +76,7 @@ func (s *netIOSensor) update(c *net.IOCountersStat) {
 func newNetIOSensor(t linux.SensorTypeValue) *netIOSensor {
 	return &netIOSensor{
 		Sensor: linux.Sensor{
-			UnitsString:      "B",
+			UnitsString:      countUnit,
 			SensorTypeValue:  t,
 			DeviceClassValue: types.DeviceClassDataSize,
 			StateClassValue:  types.StateClassMeasurement,
@@ -105,7 +109,7 @@ func (s *netIORateSensor) update(d time.Duration, b uint64) {
 func newNetIORateSensor(t linux.SensorTypeValue) *netIORateSensor {
 	return &netIORateSensor{
 		Sensor: linux.Sensor{
-			UnitsString:      "B/s",
+			UnitsString:      rateUnit,
 			SensorTypeValue:  t,
 			DeviceClassValue: types.DeviceClassDataRate,
 			StateClassValue:  types.StateClassMeasurement,
@@ -114,44 +118,40 @@ func newNetIORateSensor(t linux.SensorTypeValue) *netIORateSensor {
 	}
 }
 
-func RatesUpdater(ctx context.Context) chan sensor.Details {
-	sensorCh := make(chan sensor.Details)
-	bytesRx := newNetIOSensor(linux.SensorBytesRecv)
-	bytesTx := newNetIOSensor(linux.SensorBytesSent)
-	bytesRxRate := newNetIORateSensor(linux.SensorBytesRecvRate)
-	bytesTxRate := newNetIORateSensor(linux.SensorBytesSentRate)
+type ratesWorker struct {
+	bytesRx, bytesTx         *netIOSensor
+	bytesRxRate, bytesTxRate *netIORateSensor
+}
 
-	sendNetStats := func(delta time.Duration) {
-		netIO, err := net.IOCountersWithContext(ctx, false)
-		if err != nil {
-			log.Debug().Err(err).Caller().
-				Msg("Problem fetching network stats.")
-			return
-		}
+func (w *ratesWorker) Interval() time.Duration { return 5 * time.Second }
 
-		bytesRx.update(&netIO[0])
-		go func() {
-			sensorCh <- bytesRx
-		}()
-		bytesTx.update(&netIO[0])
-		go func() {
-			sensorCh <- bytesTx
-		}()
-		bytesRxRate.update(delta, netIO[0].BytesRecv)
-		go func() {
-			sensorCh <- bytesRxRate
-		}()
-		bytesTxRate.update(delta, netIO[0].BytesSent)
-		go func() {
-			sensorCh <- bytesTxRate
-		}()
+func (w *ratesWorker) Jitter() time.Duration { return time.Second }
+
+func (w *ratesWorker) Sensors(ctx context.Context, d time.Duration) ([]sensor.Details, error) {
+	// Retrieve new stats.
+	netIO, err := net.IOCountersWithContext(ctx, false)
+	if err != nil {
+		return nil, fmt.Errorf("problem fetching network stats: %w", err)
 	}
+	// Update all sensors.
+	w.bytesRx.update(&netIO[0])
+	w.bytesTx.update(&netIO[0])
+	w.bytesRxRate.update(d, netIO[0].BytesRecv)
+	w.bytesTxRate.update(d, netIO[0].BytesSent)
+	// Return sensors with new values.
+	return []sensor.Details{w.bytesRx, w.bytesTx, w.bytesRxRate, w.bytesTxRate}, nil
+}
 
-	go helpers.PollSensors(ctx, sendNetStats, 5*time.Second, time.Second*1)
-	go func() {
-		defer close(sensorCh)
-		<-ctx.Done()
-		log.Debug().Msg("Stopped network stats sensors.")
-	}()
-	return sensorCh
+func NewRatesWorker() (*linux.SensorWorker, error) {
+	return &linux.SensorWorker{
+			WorkerName: "Network Rates Sensors",
+			WorkerDesc: "Network transfer amount and speed sensors.",
+			Value: &ratesWorker{
+				bytesRx:     newNetIOSensor(linux.SensorBytesRecv),
+				bytesTx:     newNetIOSensor(linux.SensorBytesSent),
+				bytesRxRate: newNetIORateSensor(linux.SensorBytesRecvRate),
+				bytesTxRate: newNetIORateSensor(linux.SensorBytesSentRate),
+			},
+		},
+		nil
 }

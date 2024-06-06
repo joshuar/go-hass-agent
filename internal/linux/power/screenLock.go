@@ -7,6 +7,7 @@ package power
 
 import (
 	"context"
+	"errors"
 
 	"github.com/rs/zerolog/log"
 
@@ -41,25 +42,20 @@ func newScreenlockEvent(v bool) *screenlockSensor {
 	}
 }
 
-func ScreenLockUpdater(ctx context.Context) chan sensor.Details {
-	sensorCh := make(chan sensor.Details)
+type screenLockWorker struct{}
 
+func (w *screenLockWorker) Setup(ctx context.Context) *dbusx.Watch {
 	sessionPath := dbusx.GetSessionPath(ctx)
-
-	events, err := dbusx.WatchBus(ctx, &dbusx.Watch{
+	return &dbusx.Watch{
 		Bus:       dbusx.SystemBus,
 		Names:     []string{sessionLockSignal, sessionUnlockSignal, sessionLockedProp},
 		Interface: sessionInterface,
 		Path:      string(sessionPath),
-	})
-	if err != nil {
-		log.Debug().Err(err).
-			Msg("Failed to create screen lock state D-Bus watch.")
-		close(sensorCh)
-		return sensorCh
 	}
+}
 
-	log.Trace().Msg("Started screen lock sensor.")
+func (w *screenLockWorker) Watch(ctx context.Context, triggerCh chan dbusx.Trigger) chan sensor.Details {
+	sensorCh := make(chan sensor.Details)
 	go func() {
 		defer close(sensorCh)
 		for {
@@ -67,7 +63,7 @@ func ScreenLockUpdater(ctx context.Context) chan sensor.Details {
 			case <-ctx.Done():
 				log.Trace().Msg("Stopped screen lock sensor.")
 				return
-			case event := <-events:
+			case event := <-triggerCh:
 				switch event.Signal {
 				case dbusx.PropChangedSignal:
 					props, err := dbusx.ParsePropertiesChanged(event.Content)
@@ -87,4 +83,18 @@ func ScreenLockUpdater(ctx context.Context) chan sensor.Details {
 		}
 	}()
 	return sensorCh
+}
+
+// TODO: retrieve the current screen lock state when called.
+func (w *screenLockWorker) Sensors(ctx context.Context) ([]sensor.Details, error) {
+	return nil, errors.New("unimplemented")
+}
+
+func NewScreenLockWorker() (*linux.SensorWorker, error) {
+	return &linux.SensorWorker{
+			WorkerName: "Screen Lock Sensor",
+			WorkerDesc: "Sensor to track whether the screen is currently locked.",
+			Value:      &screenLockWorker{},
+		},
+		nil
 }

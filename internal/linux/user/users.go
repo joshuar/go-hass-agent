@@ -66,23 +66,21 @@ func newUsersSensor() *usersSensor {
 	return s
 }
 
-func Updater(ctx context.Context) chan sensor.Details {
-	sensorCh := make(chan sensor.Details)
+type worker struct {
+	sensor *usersSensor
+}
 
-	u := newUsersSensor()
-
-	events, err := dbusx.WatchBus(ctx, &dbusx.Watch{
+func (w *worker) Setup(_ context.Context) *dbusx.Watch {
+	return &dbusx.Watch{
 		Bus:       dbusx.SystemBus,
 		Names:     []string{sessionAddedSignal, sessionRemovedSignal},
 		Interface: managerInterface,
 		Path:      loginBasePath,
-	})
-	if err != nil {
-		log.Debug().Err(err).
-			Msg("Failed to create active users D-Bus watch.")
-		close(sensorCh)
-		return sensorCh
 	}
+}
+
+func (w *worker) Watch(ctx context.Context, triggerCh chan dbusx.Trigger) chan sensor.Details {
+	sensorCh := make(chan sensor.Details)
 
 	go func() {
 		defer close(sensorCh)
@@ -91,22 +89,39 @@ func Updater(ctx context.Context) chan sensor.Details {
 			case <-ctx.Done():
 				log.Debug().Msg("Stopped users sensors.")
 				return
-			case event := <-events:
+			case event := <-triggerCh:
 				if !strings.Contains(event.Signal, sessionAddedSignal) && !strings.Contains(event.Signal, sessionRemovedSignal) {
 					continue
 				}
 				go func() {
-					u.updateUsers(ctx)
-					sensorCh <- u
+					w.sensor.updateUsers(ctx)
+					sensorCh <- w.sensor
 				}()
 			}
 		}
 	}()
+
 	// Send an initial sensor update.
 	go func() {
-		u.updateUsers(ctx)
-		sensorCh <- u
+		w.sensor.updateUsers(ctx)
+		sensorCh <- w.sensor
 	}()
 
 	return sensorCh
+}
+
+func (w *worker) Sensors(ctx context.Context) ([]sensor.Details, error) {
+	w.sensor.updateUsers(ctx)
+	return []sensor.Details{w.sensor}, nil
+}
+
+func NewUserWorker() (*linux.SensorWorker, error) {
+	return &linux.SensorWorker{
+			WorkerName: "User count sensor",
+			WorkerDesc: "Sensors for number of logged in users.",
+			Value: &worker{
+				sensor: newUsersSensor(),
+			},
+		},
+		nil
 }

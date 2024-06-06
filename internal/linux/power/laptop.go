@@ -7,6 +7,7 @@ package power
 
 import (
 	"context"
+	"errors"
 	"path/filepath"
 	"slices"
 
@@ -79,34 +80,21 @@ func newLaptopEvent(prop string, state bool) *laptopSensor {
 	return sensorEvent
 }
 
-func LaptopUpdater(ctx context.Context) chan sensor.Details {
-	sensorCh := make(chan sensor.Details)
+type laptopWorker struct{}
 
-	if linux.Chassis() != "laptop" {
-		close(sensorCh)
-		return sensorCh
-	}
-
-	for _, prop := range laptopPropList {
-		go func(p string) {
-			sendLaptopPropState(ctx, p, sensorCh)
-		}(prop)
-	}
-
+func (w *laptopWorker) Setup(ctx context.Context) *dbusx.Watch {
 	sessionPath := dbusx.GetSessionPath(ctx)
 
-	events, err := dbusx.WatchBus(ctx, &dbusx.Watch{
+	return &dbusx.Watch{
 		Bus:       dbusx.SystemBus,
 		Names:     []string{dbusx.PropChangedSignal},
 		Interface: managerInterface,
 		Path:      string(sessionPath),
-	})
-	if err != nil {
-		log.Debug().Err(err).
-			Msg("Failed to create laptop sensors D-Bus watch.")
-		close(sensorCh)
-		return sensorCh
 	}
+}
+
+func (w *laptopWorker) Watch(ctx context.Context, triggerCh chan dbusx.Trigger) chan sensor.Details {
+	sensorCh := make(chan sensor.Details)
 
 	go func() {
 		defer close(sensorCh)
@@ -115,7 +103,7 @@ func LaptopUpdater(ctx context.Context) chan sensor.Details {
 			case <-ctx.Done():
 				log.Debug().Msg("Stopped laptop state sensor.")
 				return
-			case event := <-events:
+			case event := <-triggerCh:
 				props, err := dbusx.ParsePropertiesChanged(event.Content)
 				if err != nil {
 					log.Warn().Err(err).Msg("Did not understand received trigger.")
@@ -129,15 +117,43 @@ func LaptopUpdater(ctx context.Context) chan sensor.Details {
 			}
 		}
 	}()
+
+	// Send an initial update.
+	go func() {
+		sensors, err := w.Sensors(ctx)
+		if err != nil {
+			log.Warn().Err(err).Msg("Could not get initial sensor updates.")
+		}
+		for _, s := range sensors {
+			sensorCh <- s
+		}
+	}()
 	return sensorCh
 }
 
-func sendLaptopPropState(ctx context.Context, prop string, outCh chan sensor.Details) {
-	var state bool
-	var err error
-	if state, err = dbusx.GetProp[bool](ctx, dbusx.SystemBus, loginBasePath, loginBaseInterface, prop); err != nil {
-		log.Debug().Err(err).Str("prop", filepath.Ext(prop)).Msg("Could not retrieve laptop property from D-Bus.")
-		return
+func (w *laptopWorker) Sensors(ctx context.Context) ([]sensor.Details, error) {
+	var sensors []sensor.Details
+	for _, prop := range laptopPropList {
+		var state bool
+		var err error
+		if state, err = dbusx.GetProp[bool](ctx, dbusx.SystemBus, loginBasePath, loginBaseInterface, prop); err != nil {
+			log.Debug().Err(err).Str("prop", filepath.Ext(prop)).Msg("Could not retrieve laptop property from D-Bus.")
+			continue
+		}
+		sensors = append(sensors, newLaptopEvent(prop, state))
 	}
-	outCh <- newLaptopEvent(prop, state)
+	return sensors, nil
+}
+
+func NewLaptopWorker() (*linux.SensorWorker, error) {
+	if linux.Chassis() != "laptop" {
+		return nil, errors.New("unsupported hardware for laptop sensor monitoring")
+	}
+
+	return &linux.SensorWorker{
+			WorkerName: "Laptop State Sensors",
+			WorkerDesc: "Sensors for laptop lid, dock and external power states.",
+			Value:      &laptopWorker{},
+		},
+		nil
 }
