@@ -7,9 +7,6 @@
 
 # Go Hass Agent Docs
 
-- [FAQ](faq.md).
-- [Scripts](scripts.md).
-
 ## Development
 
 - [General Development Notes](development/README.md).

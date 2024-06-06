@@ -13,12 +13,10 @@
 !/.vscode/ltex.dictionary.*.txt
 !/.github/**/*
 !/.devcontainer/**/*
-!.golangci.yaml
-!.nfpm.yaml
-!build/env.*
-!build/scripts/*
-!build/container/*
-!codecov.yml
+!/*.yaml
+!/*.yml
+!/*.json
+!build/*
 
 !/assets/**/*
 !/internal/agent/ui/assets/*
@@ -37,5 +35,6 @@
 # ...even if they are in subdirectories
 !*/
 
+# always ignore these
 dist/
 fyne-cross/
