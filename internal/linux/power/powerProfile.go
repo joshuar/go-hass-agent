@@ -3,6 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
+//revive:disable:unused-receiver
 package power
 
 import (
@@ -40,7 +41,7 @@ func newPowerSensor(t linux.SensorTypeValue, v dbus.Variant) *powerSensor {
 
 type profileWorker struct{}
 
-func (w *profileWorker) Setup(ctx context.Context) *dbusx.Watch {
+func (w *profileWorker) Setup(_ context.Context) *dbusx.Watch {
 	return &dbusx.Watch{
 		Bus:       dbusx.SystemBus,
 		Names:     []string{dbusx.PropChangedSignal},
@@ -54,15 +55,15 @@ func (w *profileWorker) Watch(ctx context.Context, triggerCh chan dbusx.Trigger)
 
 	// Check for power profile support, exit if not available. Otherwise, send
 	// an initial update.
-	if s, err := w.Sensors(ctx); err != nil {
+	s, err := w.Sensors(ctx)
+	if err != nil {
 		log.Warn().Err(err).Msg("Cannot monitor power profile.")
 		close(sensorCh)
 		return sensorCh
-	} else {
-		go func() {
-			sensorCh <- s[0]
-		}()
 	}
+	go func() {
+		sensorCh <- s[0]
+	}()
 
 	// Watch for power profile changes.
 	go func() {
@@ -89,7 +90,11 @@ func (w *profileWorker) Watch(ctx context.Context, triggerCh chan dbusx.Trigger)
 }
 
 func (w *profileWorker) Sensors(ctx context.Context) ([]sensor.Details, error) {
-	profile, err := dbusx.GetProp[dbus.Variant](ctx, dbusx.SystemBus, powerProfilesPath, powerProfilesDest, powerProfilesDest+"."+activeProfileProp)
+	profile, err := dbusx.GetProp[dbus.Variant](ctx,
+		dbusx.SystemBus,
+		powerProfilesPath,
+		powerProfilesDest,
+		powerProfilesDest+"."+activeProfileProp)
 	if err != nil {
 		return nil, fmt.Errorf("cannot retrieve a power profile from D-Bus: %w", err)
 	}

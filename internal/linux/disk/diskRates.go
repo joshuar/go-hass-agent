@@ -3,6 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
+//revive:disable:unused-receiver
 package disk
 
 import (
@@ -165,14 +166,12 @@ type ioWorker struct {
 // addDevice adds a new device to the tracker map. If sthe device is already
 // being tracked, it will not be added again. The bool return indicates whether
 // a device was added (true) or not (false).
-func (w *ioWorker) addDevice(dev diskstats.Device) bool {
+func (w *ioWorker) addDevice(dev diskstats.Device) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	if _, ok := w.devices[dev]; !ok {
 		w.devices[dev] = newDevice(dev)
-		return true
 	}
-	return false
 }
 
 // updateDevice will update a tracked device's stats. For rates, it will

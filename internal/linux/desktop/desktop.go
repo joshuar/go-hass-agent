@@ -3,6 +3,8 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
+//revive:disable:unused-receiver
+//nolint:misspell
 package desktop
 
 import (
@@ -38,7 +40,7 @@ type desktopSettingSensor struct {
 
 type worker struct{}
 
-func (w *worker) Setup(ctx context.Context) *dbusx.Watch {
+func (w *worker) Setup(_ context.Context) *dbusx.Watch {
 	return &dbusx.Watch{
 		Bus:       dbusx.SessionBus,
 		Names:     []string{settingsChangedSignal},
@@ -136,11 +138,11 @@ func parseAccentColor(value dbus.Variant) string {
 	values := dbusx.VariantToValue[[]any](value)
 	rgb := make([]uint8, 3)
 	for i, v := range values {
-		if val, ok := v.(float64); !ok {
+		val, ok := v.(float64)
+		if !ok {
 			continue
-		} else {
-			rgb[i] = srgb.To8Bit(float32(val))
 		}
+		rgb[i] = srgb.To8Bit(float32(val))
 	}
 	return fmt.Sprintf("#%02x%02x%02x", rgb[0], rgb[1], rgb[2])
 }
