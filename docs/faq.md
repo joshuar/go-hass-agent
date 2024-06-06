@@ -16,6 +16,20 @@ precision_ if desired). This is useful for sensors whose native unit is not very
 human-friendly. For example the memory sensors report values in bytes (B), whereas
 you may wish to change the unit of measurement to gigabytes (GB).
 
+## Q: Can I disable some sensors?
+
+The agent itself does not currently support disabling individual sensors.
+However, you can disable the corresponding sensor entity in Home Assistant, and
+the agent will stop sending updates for it. 
+
+To disable a sensor entity, In the [customisation
+options](https://www.home-assistant.io/docs/configuration/customizing-devices/)
+for a sensor/entity, toggle the *Enabled* switch. The agent will automatically
+detect the disabled state and send/not send updates as appropriate.
+
+Note that while the agent will stop sending updates for a disabled sensor, it
+will not stop gathering the raw data for the sensor.
+
 ## Q: The GUI windows are too small/too big. How can I change the size?
 
 See [Scaling](https://developer.fyne.io/architecture/scaling) in the Fyne
