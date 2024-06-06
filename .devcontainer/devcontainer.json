@@ -30,7 +30,11 @@
                 "valentjn.vscode-ltex",
                 "github.vscode-github-actions",
                 "joshbolduc.commitlint",
-                "tamasfe.even-better-toml"
+                "tamasfe.even-better-toml",
+                "yzhang.markdown-all-in-one",
+                "DavidAnson.vscode-markdownlint",
+                "bierner.markdown-emoji",
+                "bierner.emojisense"
             ],
             "settings": {
                 "terminal.integrated.defaultProfile.linux": "fish",
