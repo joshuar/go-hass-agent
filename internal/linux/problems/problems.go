@@ -7,12 +7,12 @@ package problems
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"time"
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
@@ -66,46 +66,50 @@ func parseProblem(details map[string]string) map[string]any {
 	return parsed
 }
 
-func Updater(ctx context.Context) chan sensor.Details {
-	sensorCh := make(chan sensor.Details, 1)
-	problems := func(_ time.Duration) {
-		problems := &problemsSensor{
-			list: make(map[string]map[string]any),
-		}
-		problems.SensorTypeValue = linux.SensorProblem
-		problems.IconString = "mdi:alert"
-		problems.UnitsString = "problems"
-		problems.StateClassValue = types.StateClassMeasurement
+type worker struct{}
 
-		problemList, err := dbusx.GetData[[]string](ctx, dbusx.SystemBus, dBusProblemsDest, dBusProblemIntr, dBusProblemIntr+".GetProblems")
-		if err != nil {
-			log.Debug().Err(err).Msg("Unable to retrieve list of ABRT problems.")
-			return
-		}
+func (w *worker) Interval() time.Duration { return 15 * time.Minute }
 
-		for _, p := range problemList {
-			problemDetails, err := dbusx.GetData[map[string]string](ctx,
-				dbusx.SystemBus,
-				dBusProblemsDest,
-				dBusProblemIntr,
-				dBusProblemIntr+".GetInfo", p, []string{"time", "count", "package", "reason"})
-			if problemDetails == nil || err != nil {
-				log.Debug().Msg("No problems retrieved.")
-			} else {
-				problems.list[p] = parseProblem(problemDetails)
-			}
-		}
-		if len(problems.list) > 0 {
-			problems.Value = len(problems.list)
-			sensorCh <- problems
-		}
+func (w *worker) Jitter() time.Duration { return time.Minute }
+
+func (w *worker) Sensors(ctx context.Context, _ time.Duration) ([]sensor.Details, error) {
+	problems := &problemsSensor{
+		list: make(map[string]map[string]any),
+	}
+	problems.SensorTypeValue = linux.SensorProblem
+	problems.IconString = "mdi:alert"
+	problems.UnitsString = "problems"
+	problems.StateClassValue = types.StateClassMeasurement
+
+	problemList, err := dbusx.GetData[[]string](ctx, dbusx.SystemBus, dBusProblemsDest, dBusProblemIntr, dBusProblemIntr+".GetProblems")
+	if err != nil {
+		return nil, fmt.Errorf("unable to retrieve the list of ABRT problems: %w", err)
 	}
 
-	go helpers.PollSensors(ctx, problems, time.Minute*15, time.Minute)
-	go func() {
-		defer close(sensorCh)
-		<-ctx.Done()
-		log.Debug().Msg("Stopped problems sensor.")
-	}()
-	return sensorCh
+	for _, p := range problemList {
+		problemDetails, err := dbusx.GetData[map[string]string](ctx,
+			dbusx.SystemBus,
+			dBusProblemsDest,
+			dBusProblemIntr,
+			dBusProblemIntr+".GetInfo", p, []string{"time", "count", "package", "reason"})
+		if problemDetails == nil || err != nil {
+			log.Debug().Msg("No problems retrieved.")
+		} else {
+			problems.list[p] = parseProblem(problemDetails)
+		}
+	}
+	if len(problems.list) > 0 {
+		problems.Value = len(problems.list)
+		return []sensor.Details{problems}, nil
+	}
+	return nil, nil
+}
+
+func NewProblemsWorker() (*linux.SensorWorker, error) {
+	return &linux.SensorWorker{
+			WorkerName: "ABRT Problems Sensor",
+			WorkerDesc: "Count of problems detected by ABRT (with details in sensor attributes).",
+			Value:      &worker{},
+		},
+		nil
 }

@@ -47,9 +47,10 @@ func (r *runningAppsSensor) count() int {
 	return -1
 }
 
-func (r *runningAppsSensor) update(l map[string]dbus.Variant, s chan sensor.Details) {
+func (r *runningAppsSensor) update(l map[string]dbus.Variant) sensor.Details {
 	var count int
 	r.mu.Lock()
+	defer r.mu.Unlock()
 	r.appList = l
 	for _, raw := range l {
 		if appState, ok := raw.Value().(uint32); ok {
@@ -60,9 +61,9 @@ func (r *runningAppsSensor) update(l map[string]dbus.Variant, s chan sensor.Deta
 	}
 	if r.count() != count {
 		r.Value = count
-		s <- r
+		return r
 	}
-	r.mu.Unlock()
+	return nil
 }
 
 func newRunningAppsSensor() *runningAppsSensor {

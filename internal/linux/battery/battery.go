@@ -311,25 +311,6 @@ func newBatteryTracker() *batteryTracker {
 	}
 }
 
-func Updater(ctx context.Context) chan sensor.Details {
-	batteryTracker := newBatteryTracker()
-	var sensorCh []<-chan sensor.Details
-
-	// Get a list of all current connected batteries and monitor them.
-	batteries, err := getBatteries(ctx)
-	if err != nil {
-		log.Warn().Err(err).Msg("Could not retrieve battery list. Cannot find any existing batteries.")
-	}
-	for _, path := range batteries {
-		sensorCh = append(sensorCh, batteryTracker.track(ctx, path))
-	}
-
-	// Monitor for battery added/removed signals.
-	sensorCh = append(sensorCh, monitorBatteryChanges(ctx, batteryTracker))
-
-	return sensor.MergeSensorCh(ctx, sensorCh...)
-}
-
 // getBatteries is a helper function to retrieve all of the known batteries
 // connected to the system.
 func getBatteries(ctx context.Context) ([]dbus.ObjectPath, error) {
@@ -449,4 +430,39 @@ func batteryChargeIcon(v any) string {
 		return batteryIcon + "-minus"
 	}
 	return batteryIcon + "-plus"
+}
+
+type worker struct{}
+
+// TODO: implement initial battery sensor retrieval.
+func (w *worker) Sensors(ctx context.Context) ([]sensor.Details, error) {
+	return nil, errors.New("unimplemented")
+}
+
+func (w *worker) Events(ctx context.Context) chan sensor.Details {
+	batteryTracker := newBatteryTracker()
+	var sensorCh []<-chan sensor.Details
+
+	// Get a list of all current connected batteries and monitor them.
+	batteries, err := getBatteries(ctx)
+	if err != nil {
+		log.Warn().Err(err).Msg("Could not retrieve battery list. Cannot find any existing batteries.")
+	}
+	for _, path := range batteries {
+		sensorCh = append(sensorCh, batteryTracker.track(ctx, path))
+	}
+
+	// Monitor for battery added/removed signals.
+	sensorCh = append(sensorCh, monitorBatteryChanges(ctx, batteryTracker))
+
+	return sensor.MergeSensorCh(ctx, sensorCh...)
+}
+
+func NewBatteryWorker() (*linux.SensorWorker, error) {
+	return &linux.SensorWorker{
+			WorkerName: "Battery Sensors",
+			WorkerDesc: "Sensors to track connected battery states.",
+			Value:      &worker{},
+		},
+		nil
 }

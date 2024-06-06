@@ -30,22 +30,31 @@ import (
 type Worker interface {
 	Name() string
 	Description() string
-	Sensors(ctx context.Context) []sensor.Details
-	Updates(ctx context.Context) <-chan sensor.Details
+	Sensors(ctx context.Context) ([]sensor.Details, error)
+	Updates(ctx context.Context) (<-chan sensor.Details, error)
 }
 
 // runWorkers will call all the sensor worker functions that have been defined
 // for this device.
 func runWorkers(ctx context.Context, trk SensorTracker, reg sensor.Registry) {
-	workerFuncs := sensorWorkers()
-	workerFuncs = append(workerFuncs, device.ExternalIPUpdater, device.VersionUpdater)
+	workers := sensorWorkers()
+	workers = append(workers, device.NewExternalIPUpdaterWorker(), device.NewVersionWorker())
 
 	var wg sync.WaitGroup
 	var outCh []<-chan sensor.Details
+	var cancelFuncs []context.CancelFunc
 
 	log.Debug().Msg("Starting worker funcs.")
-	for i := 0; i < len(workerFuncs); i++ {
-		outCh = append(outCh, workerFuncs[i](ctx))
+	for i := 0; i < len(workers); i++ {
+		workerCtx, cancelFunc := context.WithCancel(ctx)
+		cancelFuncs = append(cancelFuncs, cancelFunc)
+		log.Debug().Str("name", workers[i].Name()).Str("description", workers[i].Description()).Msg("Starting sensor worker.")
+		workerCh, err := workers[i].Updates(workerCtx)
+		if err != nil {
+			log.Warn().Err(err).Str("name", workers[i].Name()).Msg("Could not start worker.")
+			continue
+		}
+		outCh = append(outCh, workerCh)
 	}
 
 	sensorUpdates := sensor.MergeSensorCh(ctx, outCh...)
@@ -53,24 +62,26 @@ func runWorkers(ctx context.Context, trk SensorTracker, reg sensor.Registry) {
 	go func() {
 		log.Debug().Msg("Listening for sensor updates.")
 		defer wg.Done()
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case s := <-sensorUpdates:
-				go func(s sensor.Details) {
-					if err := trk.UpdateSensor(ctx, reg, s); err != nil {
-						log.Warn().Err(err).Str("id", s.ID()).Msg("Update failed.")
-					} else {
-						log.Debug().
-							Str("name", s.Name()).
-							Str("id", s.ID()).
-							Interface("state", s.State()).
-							Str("units", s.Units()).
-							Msg("Sensor updated.")
-					}
-				}(s)
-			}
+		for s := range sensorUpdates {
+			go func(s sensor.Details) {
+				if err := trk.UpdateSensor(ctx, reg, s); err != nil {
+					log.Warn().Err(err).Str("id", s.ID()).Msg("Update failed.")
+				} else {
+					log.Debug().
+						Str("name", s.Name()).
+						Str("id", s.ID()).
+						Interface("state", s.State()).
+						Str("units", s.Units()).
+						Msg("Sensor updated.")
+				}
+			}(s)
+		}
+	}()
+
+	go func() {
+		<-ctx.Done()
+		for _, c := range cancelFuncs {
+			c()
 		}
 	}()
 

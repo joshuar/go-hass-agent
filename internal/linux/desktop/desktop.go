@@ -7,6 +7,7 @@ package desktop
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -35,29 +36,20 @@ type desktopSettingSensor struct {
 	linux.Sensor
 }
 
-func Updater(ctx context.Context) chan sensor.Details {
-	sensorCh := make(chan sensor.Details)
-	portalDest := linux.FindPortal()
-	if portalDest == "" {
-		log.Warn().
-			Msg("Unable to monitor for desktop settings. No accent color/theme tracking available.")
-		close(sensorCh)
-		return sensorCh
-	}
+type worker struct{}
 
-	// Watch for accent color/scheme changes.
-	events, err := dbusx.WatchBus(ctx, &dbusx.Watch{
+func (w *worker) Setup(ctx context.Context) *dbusx.Watch {
+	return &dbusx.Watch{
 		Bus:       dbusx.SessionBus,
 		Names:     []string{settingsChangedSignal},
 		Interface: settingsPortalInterface,
 		Path:      desktopPortalPath,
-	})
-	if err != nil {
-		log.Debug().Err(err).
-			Msg("Failed to create idle time D-Bus watch.")
-		close(sensorCh)
-		return sensorCh
 	}
+}
+
+func (w *worker) Watch(ctx context.Context, triggerCh chan dbusx.Trigger) chan sensor.Details {
+	sensorCh := make(chan sensor.Details)
+
 	go func() {
 		defer close(sensorCh)
 		for {
@@ -65,7 +57,7 @@ func Updater(ctx context.Context) chan sensor.Details {
 			case <-ctx.Done():
 				log.Debug().Msg("Stopped desktop settings sensors.")
 				return
-			case event := <-events:
+			case event := <-triggerCh:
 				if !strings.Contains(event.Signal, settingsChangedSignal) {
 					continue
 				}
@@ -90,18 +82,42 @@ func Updater(ctx context.Context) chan sensor.Details {
 			}
 		}
 	}()
+	// Send an initial update.
+	go func() {
+		sensors, err := w.Sensors(ctx)
+		if err != nil {
+			log.Warn().Err(err).Msg("Could not get initial sensor updates.")
+		}
+		for _, s := range sensors {
+			sensorCh <- s
+		}
+	}()
+	return sensorCh
+}
 
-	// Send current values as sensors.
+func (w *worker) Sensors(ctx context.Context) ([]sensor.Details, error) {
+	var sensors []sensor.Details
 	reqCtx, cancelReq := context.WithTimeout(ctx, 15*time.Second)
 	defer cancelReq()
-	go func() {
-		sensorCh <- newAccentColorSensor(reqCtx, "")
-	}()
-	go func() {
-		sensorCh <- newColorSchemeSensor(reqCtx, "")
-	}()
+	sensors = append(sensors,
+		newAccentColorSensor(reqCtx, ""),
+		newColorSchemeSensor(reqCtx, ""))
+	return sensors, nil
+}
 
-	return sensorCh
+func NewDesktopWorker() (*linux.SensorWorker, error) {
+	// If we cannot find a portal interface, we cannot monitor desktop settings.
+	portalDest := linux.FindPortal()
+	if portalDest == "" {
+		return nil, errors.New("unable to monitor for desktop settings: no portal present")
+	}
+
+	return &linux.SensorWorker{
+			WorkerName: "Desktop Preferences Sensors",
+			WorkerDesc: "The desktop theme type (light/dark) and accent color.",
+			Value:      &worker{},
+		},
+		nil
 }
 
 func parseColorScheme(value dbus.Variant) string {

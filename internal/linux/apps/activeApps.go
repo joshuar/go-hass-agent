@@ -16,19 +16,6 @@ type activeAppSensor struct {
 	linux.Sensor
 }
 
-type activeAppSensorAttributes struct {
-	DataSource string `json:"Data Source"`
-}
-
-func (a *activeAppSensor) Attributes() any {
-	if _, ok := a.Value.(string); ok {
-		return &activeAppSensorAttributes{
-			DataSource: linux.DataSrcDbus,
-		}
-	}
-	return nil
-}
-
 func (a *activeAppSensor) app() string {
 	if app, ok := a.State().(string); ok {
 		return app
@@ -36,19 +23,21 @@ func (a *activeAppSensor) app() string {
 	return ""
 }
 
-func (a *activeAppSensor) update(l map[string]dbus.Variant, s chan sensor.Details) {
+func (a *activeAppSensor) update(l map[string]dbus.Variant) sensor.Details {
 	for app, v := range l {
 		if appState, ok := v.Value().(uint32); ok {
 			if appState == 2 && a.app() != app {
 				a.Value = app
-				s <- a
+				return a
 			}
 		}
 	}
+	return nil
 }
 
 func newActiveAppSensor() *activeAppSensor {
 	s := &activeAppSensor{}
+	s.SensorSrc = linux.DataSrcDbus
 	s.SensorTypeValue = linux.SensorAppActive
 	s.IconString = "mdi:application"
 	return s

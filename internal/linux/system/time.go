@@ -12,7 +12,6 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v3/host"
 
-	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
@@ -41,11 +40,15 @@ func (s *timeSensor) Attributes() any {
 	}
 }
 
-func UptimeUpdater(ctx context.Context) chan sensor.Details {
-	sensorCh := make(chan sensor.Details)
-	updateTimes := func(_ time.Duration) {
-		go func() {
-			sensorCh <- &timeSensor{
+type timeWorker struct{}
+
+func (w *timeWorker) Interval() time.Duration { return 15 * time.Minute }
+
+func (w *timeWorker) Jitter() time.Duration { return time.Minute }
+
+func (w *timeWorker) Sensors(ctx context.Context, _ time.Duration) ([]sensor.Details, error) {
+	return []sensor.Details{
+			&timeSensor{
 				linux.Sensor{
 					SensorTypeValue:  linux.SensorUptime,
 					Value:            getUptime(ctx),
@@ -55,10 +58,8 @@ func UptimeUpdater(ctx context.Context) chan sensor.Details {
 					DeviceClassValue: types.DeviceClassDuration,
 					StateClassValue:  types.StateClassMeasurement,
 				},
-			}
-		}()
-		go func() {
-			sensorCh <- &timeSensor{
+			},
+			&timeSensor{
 				linux.Sensor{
 					SensorTypeValue:  linux.SensorBoottime,
 					Value:            getBoottime(ctx),
@@ -66,17 +67,18 @@ func UptimeUpdater(ctx context.Context) chan sensor.Details {
 					IconString:       "mdi:restart",
 					DeviceClassValue: types.DeviceClassTimestamp,
 				},
-			}
-		}()
-	}
+			},
+		},
+		nil
+}
 
-	go helpers.PollSensors(ctx, updateTimes, time.Minute*15, time.Minute)
-	go func() {
-		defer close(sensorCh)
-		<-ctx.Done()
-		log.Debug().Msg("Stopped time sensors.")
-	}()
-	return sensorCh
+func NewTimeWorker() (*linux.SensorWorker, error) {
+	return &linux.SensorWorker{
+			WorkerName: "Time Sensors",
+			WorkerDesc: "Sensors for uptime and boottime.",
+			Value:      &timeWorker{},
+		},
+		nil
 }
 
 func getUptime(ctx context.Context) any {

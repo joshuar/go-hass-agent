@@ -15,52 +15,48 @@ import (
 
 type version string
 
-func (v *version) Name() string {
-	return "Go Hass Agent Version"
+func (v *version) Name() string { return "Go Hass Agent Version" }
+
+func (v *version) ID() string { return "agent_version" }
+
+func (v *version) Icon() string { return "mdi:face-agent" }
+
+func (v *version) SensorType() types.SensorClass { return types.Sensor }
+
+func (v *version) DeviceClass() types.DeviceClass { return 0 }
+
+func (v *version) StateClass() types.StateClass { return 0 }
+
+func (v *version) State() any { return preferences.AppVersion }
+
+func (v *version) Units() string { return "" }
+
+func (v *version) Category() string { return "diagnostic" }
+
+func (v *version) Attributes() any { return nil }
+
+type versionWorker struct{}
+
+func (w *versionWorker) Name() string { return "Go Hass Agent Version Sensor" }
+
+func (w *versionWorker) Description() string {
+	return "Sensor displays the current Go Hass Agent version."
 }
 
-func (v *version) ID() string {
-	return "agent_version"
+func (w *versionWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
+	return []sensor.Details{new(version)}, nil
 }
 
-func (v *version) Icon() string {
-	return "mdi:face-agent"
-}
-
-func (v *version) SensorType() types.SensorClass {
-	return types.Sensor
-}
-
-func (v *version) DeviceClass() types.DeviceClass {
-	return 0
-}
-
-func (v *version) StateClass() types.StateClass {
-	return 0
-}
-
-func (v *version) State() any {
-	return preferences.AppVersion
-}
-
-func (v *version) Units() string {
-	return ""
-}
-
-func (v *version) Category() string {
-	return "diagnostic"
-}
-
-func (v *version) Attributes() any {
-	return nil
-}
-
-func VersionUpdater(_ context.Context) chan sensor.Details {
+func (w *versionWorker) Updates(ctx context.Context) (<-chan sensor.Details, error) {
 	sensorCh := make(chan sensor.Details)
-	v := new(version)
+	s, _ := w.Sensors(ctx)
 	go func() {
 		defer close(sensorCh)
-		sensorCh <- v
+		sensorCh <- s[0]
 	}()
-	return sensorCh
+	return sensorCh, nil
+}
+
+func NewVersionWorker() *versionWorker {
+	return &versionWorker{}
 }

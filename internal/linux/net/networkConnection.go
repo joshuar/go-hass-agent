@@ -7,6 +7,7 @@ package net
 
 import (
 	"context"
+	"errors"
 	"slices"
 	"sync"
 
@@ -342,43 +343,44 @@ type address struct {
 	mask    int
 }
 
-type connectionTracker struct {
+type connectionsWorker struct {
 	list []dbus.ObjectPath
 	mu   sync.Mutex
 }
 
-func (t *connectionTracker) Track(path dbus.ObjectPath) {
-	t.mu.Lock()
-	t.list = append(t.list, path)
-	t.mu.Unlock()
+func (w *connectionsWorker) track(path dbus.ObjectPath) {
+	w.mu.Lock()
+	w.list = append(w.list, path)
+	w.mu.Unlock()
 }
 
-func (t *connectionTracker) Untrack(path dbus.ObjectPath) {
-	t.mu.Lock()
-	t.list = slices.DeleteFunc(t.list, func(p dbus.ObjectPath) bool {
+func (w *connectionsWorker) untrack(path dbus.ObjectPath) {
+	w.mu.Lock()
+	w.list = slices.DeleteFunc(w.list, func(p dbus.ObjectPath) bool {
 		return path == p
 	})
-	t.mu.Unlock()
+	w.mu.Unlock()
 }
 
-func (t *connectionTracker) Tracked(path dbus.ObjectPath) bool {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	return slices.Contains(t.list, path)
+func (w *connectionsWorker) isTracked(path dbus.ObjectPath) bool {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return slices.Contains(w.list, path)
 }
 
-func ConnectionsUpdater(ctx context.Context) chan sensor.Details {
+func (w *connectionsWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
+	return nil, errors.New("unimplemented")
+}
+
+func (w *connectionsWorker) Events(ctx context.Context) chan sensor.Details {
 	sensorCh := make(chan sensor.Details)
-	tracker := &connectionTracker{
-		list: getActiveConnections(ctx),
-	}
-
+	w.list = getActiveConnections(ctx)
 	handleConn := func(path dbus.ObjectPath) {
 		go func() {
 			for s := range monitorConnection(ctx, path) {
 				sensorCh <- s
 			}
-			tracker.Untrack(path)
+			w.untrack(path)
 		}()
 	}
 
@@ -414,8 +416,8 @@ func ConnectionsUpdater(ctx context.Context) chan sensor.Details {
 					}
 				}
 				// Track all activating/new connections.
-				if !tracker.Tracked(connectionPath) {
-					tracker.Track(connectionPath)
+				if !w.isTracked(connectionPath) {
+					w.track(connectionPath)
 					handleConn(connectionPath)
 				}
 			}
@@ -423,9 +425,18 @@ func ConnectionsUpdater(ctx context.Context) chan sensor.Details {
 	}()
 
 	// monitor all current active connections
-	for _, path := range tracker.list {
+	for _, path := range w.list {
 		handleConn(path)
 	}
 
 	return sensorCh
+}
+
+func NewConnectionWorker() (*linux.SensorWorker, error) {
+	return &linux.SensorWorker{
+			WorkerName: "Network Connection Sensors",
+			WorkerDesc: "Sensors to track network connection states and other connection specific properties.",
+			Value:      &connectionsWorker{},
+		},
+		nil
 }

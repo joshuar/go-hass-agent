@@ -7,10 +7,10 @@ package agent
 
 import (
 	"context"
-	"time"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/joshuar/go-hass-agent/internal/hass"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/linux/apps"
 	"github.com/joshuar/go-hass-agent/internal/linux/battery"
@@ -28,23 +28,27 @@ import (
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
-// Sensors interface represents a list of related sensors.
-type Sensors interface {
-	Sensors() []sensor.Details
-}
-
-// Polling interface represents sensors that are generated on some poll interval.
-type Polling interface {
-	Sensors
-	Interval() time.Duration
-	Jitter() time.Duration
-}
-
-// DBus interface represents sensors that are generated on D-Bus events.
-type DBus interface {
-	Sensors
-	Watch(ctx context.Context) dbusx.Watch
-	Events(ctx context.Context, eventCh chan dbusx.Trigger) chan sensor.Details
+var workers = []func() (*linux.SensorWorker, error){
+	apps.NewAppWorker,
+	battery.NewBatteryWorker,
+	cpu.NewLoadAvgWorker,
+	cpu.NewUsageWorker,
+	desktop.NewDesktopWorker,
+	disk.NewIOWorker,
+	disk.NewUsageWorker,
+	mem.NewUsageWorker,
+	net.NewConnectionWorker,
+	net.NewRatesWorker,
+	power.NewLaptopWorker,
+	power.NewProfileWorker,
+	power.NewStateWorker,
+	power.NewScreenLockWorker,
+	problems.NewProblemsWorker,
+	// power.IdleUpdater,
+	system.NewHWMonWorker,
+	system.NewInfoWorker,
+	system.NewTimeWorker,
+	user.NewUserWorker,
 }
 
 func newDevice(_ context.Context) *linux.Device {
@@ -52,31 +56,17 @@ func newDevice(_ context.Context) *linux.Device {
 }
 
 // sensorWorkers returns a list of functions to start to enable sensor tracking.
-func sensorWorkers() []func(context.Context) chan sensor.Details {
-	var workers []func(context.Context) chan sensor.Details
-	workers = append(workers,
-		battery.Updater,
-		apps.Updater,
-		net.ConnectionsUpdater,
-		net.RatesUpdater,
-		problems.Updater,
-		mem.Updater,
-		cpu.LoadAvgUpdater,
-		cpu.UsageUpdater,
-		disk.UsageUpdater,
-		disk.IOUpdater,
-		power.ScreenLockUpdater,
-		power.LaptopUpdater,
-		power.StateUpdater,
-		power.ProfileUpdater,
-		power.IdleUpdater,
-		user.Updater,
-		system.InfoUpdater,
-		system.HWSensorUpdater,
-		system.UptimeUpdater,
-		desktop.Updater,
-	)
-	return workers
+func sensorWorkers() []Worker {
+	var activeWorkers []Worker
+	for _, w := range workers {
+		worker, err := w()
+		if err != nil {
+			log.Warn().Err(err).Msg("Could not activate a worker.")
+			continue
+		}
+		activeWorkers = append(activeWorkers, worker)
+	}
+	return activeWorkers
 }
 
 func locationWorker() func(context.Context) chan *hass.LocationData {
