@@ -51,17 +51,19 @@
 <!-- Table of Contents -->
 - [:star2: About the Project](#star2-about-the-project)
   - [:dart: Features](#dart-features)
-    - [📈 Sensors](#-sensors)
-    - [🕹️ Controls (via MQTT)](#️-controls-via-mqtt)
+    - [📈 Sensors (by Operating System)](#-sensors-by-operating-system)
+      - [:penguin: Linux](#penguin-linux)
+    - [:robot: Script Sensors (All Platforms)](#robot-script-sensors-all-platforms)
+    - [:bus: Control via MQTT (All Platforms)](#bus-control-via-mqtt-all-platforms)
   - [🤔 Use-cases](#-use-cases)
-  - [Versioning](#versioning)
+  - [🗒️ Versioning](#️-versioning)
 - [:toolbox: Getting Started](#toolbox-getting-started)
   - [🤝 Compatibility](#-compatibility)
   - [:gear: Installation](#gear-installation)
     - [📦 Packages](#-packages)
     - [🚢 Container](#-container)
 - [:eyes: Usage](#eyes-usage)
-  - [First-run](#first-run)
+  - [🔛 First-run](#-first-run)
   - [Running “Headless”](#running-headless)
   - [Running in a container](#running-in-a-container)
   - [Regular Usage](#regular-usage)
@@ -94,37 +96,73 @@
 <!-- Features -->
 ### :dart: Features
 
-#### 📈 Sensors
+#### 📈 Sensors (by Operating System)
 
-This app will add some sensors to a Home Assistant instance:
+> [!NOTE]
+> The following list shows all **potential** sensors the agent can
+> report. In some cases, the **actual** sensors reported will be less due to
+> lack of support in the system configuration or missing hardware.
 
-- Device location.
-- Current active application and list of running applications.
-- Current active user count (and list of usernames).
-- Battery status (for example, laptop battery and any peripherals).
-- Network status (for example, network connection status, internal and external
-  IP addresses and Wi-Fi details where relevant).
-- Network transfer rates.
-- Memory and swap usage (total/free/used).
-- Disk space usage and IO counts/rates.
-- Load Averages.
-- Uptime.
-- Current power profile (Linux only)
-- Screen lock status.
-- Hardware sensors (temps, fan speeds, alarm status).
-- Problems detected by ABRT (Linux only).
-- User-specified [script](docs/scripts.md) output.
+##### :penguin: Linux
 
-A full list of sensors can be found in the [docs](docs/sensors.md).
+| Sensor | What it measures | Source | Extra Attributes | Update Frequency |
+|--------|------------------|--------|-------------------|-------------------|
+| Agent Version | The version of Go Hass Agent |  | | On agent start. |
+| Active App | Currently active (focused) application | D-Bus | | When app changes. |
+| Running Apps | Count of all running applications | D-Bus | The application names | When running apps count changes. | 
+| Accent Color  | The hex code representing the accent color of the desktop environment in use. | D-Bus | | When accent color changes. | 
+| Theme Type  | Whether a dark or light desktop theme is detected. | D-Bus | | When desktop theme changes. | 
+| Battery Type | The type of battery (e.g., UPS, line power) | D-Bus | | On battery addeded/removed. |
+| Battery Temp | The current battery temperature | D-Bus | | When temp changes. |
+| Battery Power | The battery current power draw | D-Bus | Voltage, Energy consumption, where reported | When voltage changes. |
+| Battery Level/Percentage | The current battery capacity | D-Bus | | When level changes. |
+| Battery State | The current battery state (e.g., charging/discharging) | D-Bus | | When state changes. |
+| Memory Total | Total memory on the system | ProcFS | | ~Every minute |
+| Memory Available | Memory available/free | ProcFS | | ~Every minute |
+| Memory Used | Memory used | ProcFS | | ~Every minute |
+| Memory Usage | Total memory usage % | ProcFS | | ~Every minute |
+| Swap Total | Total swap on the system | ProcFS | | ~Every minute |
+| Swap Available | Swap available/free | ProcFS | | ~Every minute |
+| Swap Used | Swap used | ProcFS | | ~Every minute |
+| Swap Usage | Swap memory usage % | ProcFS | | ~Every minute |
+| Per Mountpoint Usage | % usage of mount point. | ProcFS |  Filesystem type, bytes/inode total/free/used. | ~Every minute. |
+| Device total read/writes and rates | Count of read/writes, Rate (in KB/s) of reads/writes, to the device. | SysFS | | ~Every 5 seconds. |
+| Connection State (per-connection) | The current state of each network connection | D-Bus | Connection type (e.g., wired/wireless/VPN), IP addresses | When connections change. |
+| Wi-Fi SSID[^1] | The SSID of the Wi-Fi network | D-Bus | | When SSID changes. |
+| Wi-Fi Frequency[^1] | The frequency band of the Wi-Fi network | D-Bus | | When frequency changes. | 
+| Wi-Fi Speed[^1] | The network speed of the Wi-Fi network | D-Bus | | When speed changes. |
+| Wi-Fi Strength[^1] | The strength of the signal of the Wi-Fi network | D-Bus | | When strength changes. |
+| Wi-Fi BSSID[^1] | The BSSID of the Wi-Fi network | D-Bus | | When BSSID changes. |
+| Bytes Received | Total bytes received | ProcFS | Packet count, drops, errors | ~Every 5 seconds. |
+| Bytes Sent | Total bytes sent | ProcFS | Packet count, drops, errors | ~Every 5 seconds. |
+| Bytes Received Rate | Current received transfer rate  | ProcFS | | ~Every 5 seconds. |
+| Bytes Sent Rate | Current sent transfer rate | ProcFS | | ~Every 5 seconds. |
+| Load Average 1min | 1min load average | ProcFS |  | ~Every 1 minute. |
+| Load Average 5min | 5min load average | ProcFS |  | ~Every 1 minute. |
+| Load Average 15min | 15min load average | ProcFS |  | ~Every 1 minute. |
+| CPU Usage | Total CPU Usage % | ProcFS | | ~Every 10 seconds. |
+| Power Profile | The current power profile as set by the power-profiles-daemon | D-Bus | | When profile changes. |
+| Boot Time | Date/Time of last system boot | ProcFS |  | ~Every 15 minutes. |
+| Uptime | System uptime | ProcFS | | ~Every 15 minutes. |
+| Kernel Version | Version of the currently running kernel | ProcFS | | On agent start. |
+| Distribution Name | Name of the running distribution (e.g., Fedora, Ubuntu) | ProcFS | | On agent start. |
+| Distribution Version | Version of the running distribution | ProcFS | | On agent start. |
+| Current Users | Count of active users on the system | D-Bus | List of usernames | When user count changes. |
+| Screen Lock State | Current state of screen lock | D-Bus | | When screen lock changes. |
+| Power State | Power state of device (e.g., suspended, powered on/off) | D-Bus | | When power state changes. |
+| Problems | Count of any problems logged to the ABRT daemon | D-Bus |  Problem details | ~Every 15 minutes |
+| Device/Component Sensors(s) | Any reported hardware sensors (temp, fan speed, voltage, etc.) from each device/component, as extracted from the `/sys/class/hwmon` file system. | SysFS |  | ~Every 1 minute. |
 
-#### 🕹️ Controls (via MQTT)
+[^1]: Only updated when currently connected to a Wi-Fi network.
 
-If you have Home Assistant configured with
-[MQTT](https://www.home-assistant.io/integrations/mqtt/), you can set up Go Hass
-Agent to respond to commands from Home Assistant. See the [docs](docs/mqtt.md).
-A number of power related commands (suspend, poweroff, lock screen), among
-others, are built-in and any arbitrary D-Bus call can be called via a service
-call in Home Assistant.
+#### :robot: Script Sensors (All Platforms)
+
+All platforms can also utilise scripts to create custom sensors. See [scripts](#script-sensors).
+
+#### :bus: Control via MQTT (All Platforms)
+
+Where Home Assistant is connected to MQTT, Go Hass Agent can add some controls
+for various system features. See [Control via MQTT](#control-via-mqtt).
 
 ### 🤔 Use-cases
 
@@ -148,7 +186,7 @@ this app:
 - Receive notifications from Home Assistant on your desktop/laptop. Potentially
   based on or utilising any of the data above.
 
-### Versioning
+### 🗒️ Versioning
 
 This project follows [semantic versioning](https://semver.org/). Given a version
 number `MAJOR`.`MINOR`.`PATCH`, the gist of it is:
@@ -215,7 +253,7 @@ Go Hass Agent runs as a tray icon by default. It is operating system,
 distribution and desktop-environment agnostic and should manifest itself in any
 tray of any desktop environment.
 
-### First-run
+### 🔛 First-run
 
 On first-run, Go Hass Agent will display a window where you will need to enter
 some details, so it can register itself with a Home Assistant instance to be
