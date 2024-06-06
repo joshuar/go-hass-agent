@@ -103,7 +103,7 @@
 
 > [!NOTE]
 > The following list shows all **potential** sensors the agent can
-> report. In some cases, the **actual** sensors reported will be less due to
+> report. In some cases, the **actual** sensors reported may be less due to
 > lack of support in the system configuration or missing hardware.
 
 ##### :penguin: Linux
@@ -730,7 +730,7 @@ and act as a new device. To do this:
   - Yes. The packages install a systemd service file that can be enabled and
 used to run the agent as a service.
   - You will still need to register the agent manually before starting as a service.
-See the command for registration in the [README](../README.md#running-headless).
+See the command for registration in the [README](#running-headless).
   - You will also need to ensure your user has “lingering” enabled.  Run `loginctl
 list-users` and check that your user has **LINGER** set to “yes”. If not, run
 `loginctl enable-linger`.
