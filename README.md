@@ -199,7 +199,7 @@ number `MAJOR`.`MINOR`.`PATCH`, the gist of it is:
   added, but not breaking changes.
 - A `PATCH` number change indicate minor changes and bug fixes.
 
-[:arrow_up: Back to Top](#-table-of-contents)
+[:arrow_up: Back to Top](#notebook_with_decorative_cover-table-of-contents)
 
 <!-- Getting Started -->
 ## :toolbox: Getting Started
@@ -251,7 +251,7 @@ Container images are available on
 Note that it is recommended to use an image tagged with the latest release
 version over the latest container image, which might be unstable.
 
-[:arrow_up: Back to Top](#-table-of-contents)
+[:arrow_up: Back to Top](#notebook_with_decorative_cover-table-of-contents)
 
 <!-- Usage -->
 ## :eyes: Usage
@@ -633,7 +633,7 @@ of the controls. This means that a Home Assistant user not associated with the
 device user running the agent can use the exposed controls to issue potentially
 disruptive actions on a device that another user is accessing.
 
-[:arrow_up: Back to Top](#-table-of-contents)
+[:arrow_up: Back to Top](#notebook_with_decorative_cover-table-of-contents)
 
 <!-- Roadmap -->
 ## :compass: Roadmap
@@ -642,7 +642,7 @@ Check out [what I'm working
 on](https://github.com/joshuar/go-hass-agent/discussions/150) for future
 releases.
 
-[:arrow_up: Back to Top](#-table-of-contents)
+[:arrow_up: Back to Top](#notebook_with_decorative_cover-table-of-contents)
 
 <!-- Contributing -->
 ## :wave: Contributing
@@ -660,7 +660,7 @@ releases.
 
 Please read the [Code of Conduct](https://github.com/joshuar/go-hass-agent/blob/master/CODE_OF_CONDUCT.md)
 
-[:arrow_up: Back to Top](#-table-of-contents)
+[:arrow_up: Back to Top](#notebook_with_decorative_cover-table-of-contents)
 
 <!-- FAQ -->
 ## :grey_question: FAQ
@@ -742,7 +742,7 @@ should start with every boot.
   - For other init systems, consult their documentation on how to enable and run
 user services.
 
-[:arrow_up: Back to Top](#-table-of-contents)
+[:arrow_up: Back to Top](#notebook_with_decorative_cover-table-of-contents)
 
 <!-- Acknowledgments -->
 ## :gem: Acknowledgements
@@ -750,11 +750,11 @@ user services.
 - [Home Assistant](https://home-assistant.io).
 - This [Awesome README Template](https://github.com/Louis3797/awesome-readme-template).
 
-[:arrow_up: Back to Top](#-table-of-contents)
+[:arrow_up: Back to Top](#notebook_with_decorative_cover-table-of-contents)
 
 <!-- License -->
 ## :warning: License
 
 [MIT](LICENSE)
 
-[:arrow_up: Back to Top](#-table-of-contents)
+[:arrow_up: Back to Top](#notebook_with_decorative_cover-table-of-contents)
