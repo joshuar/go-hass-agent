@@ -3,6 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
+//revive:disable:unused-receiver
 package battery
 
 import (
@@ -435,7 +436,7 @@ func batteryChargeIcon(v any) string {
 type worker struct{}
 
 // TODO: implement initial battery sensor retrieval.
-func (w *worker) Sensors(ctx context.Context) ([]sensor.Details, error) {
+func (w *worker) Sensors(_ context.Context) ([]sensor.Details, error) {
 	return nil, errors.New("unimplemented")
 }
 
