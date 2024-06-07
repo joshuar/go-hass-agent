@@ -7,6 +7,7 @@ package registry
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -29,5 +30,10 @@ func GetPath() string {
 }
 
 func Reset() error {
-	return os.RemoveAll(registryPath)
+	err := os.RemoveAll(registryPath)
+	if err != nil {
+		return fmt.Errorf("failed to remove registry: %w", err)
+	}
+
+	return nil
 }
