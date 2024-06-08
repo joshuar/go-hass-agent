@@ -78,21 +78,26 @@ func newIdleSensor(ctx context.Context) (*idleSensor, error) {
 	}
 
 	newSensor.Value = idleState
+
 	idleTime, err = dbusx.GetProp[int64](ctx, dbusx.SystemBus, loginBasePath, loginBaseInterface, idleTimeProp)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve idle time: %w", err)
 	}
+
 	newSensor.idleTime = idleTime
 
 	return newSensor, nil
 }
 
+//nolint:exhaustruct
 func IdleUpdater(ctx context.Context) chan sensor.Details {
 	sensorCh := make(chan sensor.Details)
+
 	idleSensor, err := newIdleSensor(ctx)
 	if err != nil {
 		log.Debug().Err(err).Msg("Cannot create idle sensor.")
 		close(sensorCh)
+
 		return sensorCh
 	}
 
@@ -108,27 +113,33 @@ func IdleUpdater(ctx context.Context) chan sensor.Details {
 		log.Debug().Err(err).
 			Msg("Failed to create idle time D-Bus watch.")
 		close(sensorCh)
+
 		return sensorCh
 	}
 
 	go func() {
 		defer close(sensorCh)
+
 		for {
 			select {
 			case <-ctx.Done():
 				log.Debug().Msg("Stopped idle state sensor.")
+
 				return
 			case event := <-events:
 				if event.Signal == dbusx.PropChangedSignal {
 					props, err := dbusx.ParsePropertiesChanged(event.Content)
 					if err != nil {
 						log.Warn().Err(err).Msg("Did not understand received trigger.")
+
 						continue
 					}
+
 					if state, idleChanged := props.Changed[sessionIdleProp]; idleChanged {
 						idleSensor.Value = dbusx.VariantToValue[bool](state)
 						sensorCh <- idleSensor
 					}
+
 					if state, timeChanged := props.Changed[sessionIdleTimeProp]; timeChanged {
 						idleSensor.idleTime = dbusx.VariantToValue[int64](state)
 						sensorCh <- idleSensor
@@ -155,5 +166,6 @@ func IdleUpdater(ctx context.Context) chan sensor.Details {
 func idleTime(current int64) float64 {
 	epoch := time.Unix(0, 0)
 	uptime := time.Unix(current/idleSF, 0)
+
 	return uptime.Sub(epoch).Seconds()
 }

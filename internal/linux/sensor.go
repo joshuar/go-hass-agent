@@ -58,6 +58,7 @@ func (l *Sensor) SensorType() types.SensorClass {
 	if l.IsBinary {
 		return types.BinarySensor
 	}
+
 	return types.Sensor
 }
 
@@ -65,6 +66,7 @@ func (l *Sensor) Category() string {
 	if l.IsDiagnostic {
 		return "diagnostic"
 	}
+
 	return ""
 }
 
@@ -92,6 +94,7 @@ func (l *Sensor) Attributes() any {
 			DataSource: l.SensorSrc,
 		}
 	}
+
 	return nil
 }
 
@@ -99,18 +102,24 @@ func (l *Sensor) String() string {
 	var sensorStr strings.Builder
 
 	fmt.Fprintf(&sensorStr, "Name: %s (ID: %s)", l.Name(), l.ID())
+
 	if l.DeviceClass() > 0 {
 		fmt.Fprintf(&sensorStr, " Device Class: %s", l.DeviceClass().String())
 	}
+
 	if l.StateClass() > 0 {
 		fmt.Fprintf(&sensorStr, " State Class: %s", l.DeviceClass().String())
 	}
+
 	fmt.Fprintf(&sensorStr, " Value: %v", l.Value)
+
 	if l.UnitsString != "" {
 		fmt.Fprintf(&sensorStr, " %s", l.UnitsString)
 	}
+
 	if l.Attributes() != nil {
 		fmt.Fprintf(&sensorStr, " Attributes: %v", l.Attributes())
 	}
+
 	return sensorStr.String()
 }

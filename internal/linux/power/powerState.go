@@ -44,6 +44,7 @@ func (s *powerStateSensor) State() any {
 			return "Powered Off"
 		}
 	}
+
 	return "Powered On"
 }
 
@@ -99,6 +100,7 @@ func (w *stateWorker) Watch(ctx context.Context, triggerCh chan dbusx.Trigger) c
 			select {
 			case <-ctx.Done():
 				log.Debug().Msg("Stopped power state sensor.")
+
 				return
 			case event := <-triggerCh:
 				switch event.Signal {

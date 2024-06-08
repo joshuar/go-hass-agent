@@ -25,6 +25,7 @@ func TestSensor_Name(t *testing.T) {
 		DeviceClassValue types.DeviceClass
 		StateClassValue  types.StateClass
 	}
+
 	tests := []struct {
 		name   string
 		want   string
@@ -72,6 +73,7 @@ func TestSensor_ID(t *testing.T) {
 		DeviceClassValue types.DeviceClass
 		StateClassValue  types.StateClass
 	}
+
 	tests := []struct {
 		name   string
 		want   string
@@ -119,6 +121,7 @@ func TestSensor_State(t *testing.T) {
 		DeviceClassValue types.DeviceClass
 		StateClassValue  types.StateClass
 	}
+
 	tests := []struct {
 		want   any
 		name   string
@@ -166,6 +169,7 @@ func TestSensor_SensorType(t *testing.T) {
 		DeviceClassValue types.DeviceClass
 		StateClassValue  types.StateClass
 	}
+
 	tests := []struct {
 		name   string
 		fields fields
@@ -181,6 +185,7 @@ func TestSensor_SensorType(t *testing.T) {
 			want:   types.BinarySensor,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			sensor := &Sensor{
@@ -213,6 +218,7 @@ func TestSensor_Category(t *testing.T) {
 		DeviceClassValue types.DeviceClass
 		StateClassValue  types.StateClass
 	}
+
 	tests := []struct {
 		name   string
 		want   string
@@ -228,6 +234,7 @@ func TestSensor_Category(t *testing.T) {
 			want:   "diagnostic",
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			sensor := &Sensor{
@@ -260,6 +267,7 @@ func TestSensor_Attributes(t *testing.T) {
 		DeviceClassValue types.DeviceClass
 		StateClassValue  types.StateClass
 	}
+
 	tests := []struct {
 		want   any
 		name   string
@@ -269,7 +277,7 @@ func TestSensor_Attributes(t *testing.T) {
 			name:   "with source",
 			fields: fields{SensorSrc: DataSrcProcfs},
 			want: struct {
-				DataSource string `json:"Data Source"`
+				DataSource string `json:"data_source"`
 			}{
 				DataSource: DataSrcProcfs,
 			},

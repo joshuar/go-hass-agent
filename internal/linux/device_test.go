@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//nolint:paralleltest,dupl
+//nolint:paralleltest,dupl,exhaustruct
 package linux
 
 import (
@@ -26,26 +26,34 @@ func compareDevice(t *testing.T, got, want *Device) bool {
 	switch {
 	case !reflect.DeepEqual(got.appName, want.appName):
 		t.Error("appName does not match")
+
 		return false
 	case !reflect.DeepEqual(got.appVersion, want.appVersion):
 		t.Error("appVersion does not match")
+
 		return false
 	case !reflect.DeepEqual(got.distro, want.distro):
 		t.Error("distro does not match")
+
 		return false
 	case !reflect.DeepEqual(got.distroVersion, want.distroVersion):
 		t.Error("distroVersion does not match")
+
 		return false
 	case !reflect.DeepEqual(got.hostname, want.hostname):
 		t.Error("hostname does not match")
+
 		return false
 	case !reflect.DeepEqual(got.hwModel, want.hwModel):
 		t.Error("hwModel does not match")
+
 		return false
 	case !reflect.DeepEqual(got.hwVendor, want.hwVendor):
 		t.Error("hwVendor does not match")
+
 		return false
 	}
+
 	return true
 }
 
@@ -55,20 +63,26 @@ func compareMQTTDevice(t *testing.T, got, want *mqtthass.Device) bool {
 	switch {
 	case !reflect.DeepEqual(got.Name, want.Name):
 		t.Error("name does not match")
+
 		return false
 	case !reflect.DeepEqual(got.URL, want.URL):
 		t.Error("URL does not match")
+
 		return false
 	case !reflect.DeepEqual(got.SWVersion, want.SWVersion):
 		t.Error("SWVersion does not match")
+
 		return false
 	case !reflect.DeepEqual(got.Manufacturer, want.Manufacturer):
 		t.Error("Manufacturer does not match")
+
 		return false
 	case !reflect.DeepEqual(got.Model, want.Model):
 		t.Error("Model does not match")
+
 		return false
 	}
+
 	return true
 }
 
@@ -96,6 +110,7 @@ func TestNewDevice(t *testing.T) {
 		version        string
 		osReleaseFiles []string
 	}
+
 	tests := []struct {
 		want *Device
 		name string
@@ -120,13 +135,16 @@ func TestNewDevice(t *testing.T) {
 			want: &withoutOSRelease,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			whichdistro.OSReleaseFile = tt.args.osReleaseFiles[0]
 			whichdistro.OSReleaseAltFile = tt.args.osReleaseFiles[1]
+
 			if got := NewDevice(tt.args.name, tt.args.version); !compareDevice(t, got, tt.want) {
 				t.Errorf("NewDevice() = %v, want %v", got, tt.want)
 			}
+
 			whichdistro.OSReleaseFile = origOSRelease
 			whichdistro.OSReleaseAltFile = origAltOSRelease
 		})
@@ -152,6 +170,7 @@ func TestMQTTDevice(t *testing.T) {
 			want: mqttDev,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := MQTTDevice(); !compareMQTTDevice(t, got, tt.want) {
@@ -166,6 +185,7 @@ func TestFindPortal(t *testing.T) {
 	type args struct {
 		setup func()
 	}
+
 	tests := []struct {
 		name    string
 		args    args
@@ -195,15 +215,19 @@ func TestFindPortal(t *testing.T) {
 			wantErr: true,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.args.setup()
+
 			got, err := FindPortal()
 			if got != tt.want {
 				t.Errorf("FindPortal() = %v, want %v", got, tt.want)
 			}
+
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Load() error = %v, wantErr %v", err, tt.wantErr)
+
 				return
 			}
 		})
@@ -242,10 +266,12 @@ func TestGetDistroID(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			whichdistro.OSReleaseFile = tt.osReleaseFile
+
 			gotID, gotVersionid := GetDistroID()
 			if gotID != tt.wantID {
 				t.Errorf("GetDistroID() gotId = %v, want %v", gotID, tt.wantID)
 			}
+
 			if gotVersionid != tt.wantVersionid {
 				t.Errorf("GetDistroID() gotVersionid = %v, want %v", gotVersionid, tt.wantVersionid)
 			}
@@ -285,10 +311,12 @@ func TestGetDistroDetails(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			whichdistro.OSReleaseFile = tt.osReleaseFile
+
 			gotName, gotVersion := GetDistroDetails()
 			if gotName != tt.wantName {
 				t.Errorf("GetDistroDetails() gotName = %v, want %v", gotName, tt.wantName)
 			}
+
 			if gotVersion != tt.wantVersion {
 				t.Errorf("GetDistroDetails() gotVersion = %v, want %v", gotVersion, tt.wantVersion)
 			}

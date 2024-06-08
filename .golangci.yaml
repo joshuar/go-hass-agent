@@ -3,7 +3,167 @@
 # This software is released under the MIT License.
 # https://opensource.org/licenses/MIT
 
+output:
+  sort-results: true
+  sort-order:
+    - linter
+    - severity
+    - file
+  show-stats: true
+
+linters:
+  disable-all: true
+  enable:
+    - asasalint
+    - asciicheck
+    - bidichk
+    - bodyclose
+    - canonicalheader
+    - containedctx
+    - contextcheck
+    - copyloopvar
+    - cyclop
+    - decorder
+    # - depguard
+    - dogsled
+    - dupl
+    - dupword
+    - durationcheck
+    - err113
+    - errcheck
+    - errchkjson
+    - errname
+    - errorlint
+    - exhaustive
+    - exhaustruct
+    - exportloopref
+    - fatcontext
+    - forbidigo
+    - forcetypeassert
+    - funlen
+    # - gci
+    - ginkgolinter
+    - gocheckcompilerdirectives
+    # - gochecknoglobals
+    - gochecknoinits
+    - gochecksumtype
+    - gocognit
+    - goconst
+    # - gocritic
+    - gocyclo
+    - godot
+    - godox
+    - gofmt
+    - gofumpt
+    - goheader
+    - goimports
+    - gomoddirectives
+    - gomodguard
+    - goprintffuncname
+    - gosec
+    - gosimple
+    - gosmopolitan
+    - govet
+    - grouper
+    - importas
+    - inamedparam
+    - ineffassign
+    - interfacebloat
+    - intrange
+    - lll
+    - loggercheck
+    - maintidx
+    - makezero
+    - mirror
+    - misspell
+    - mnd
+    - musttag
+    - nakedret
+    - nestif
+    - nilerr
+    - nilnil
+    - nlreturn
+    - noctx
+    - nolintlint
+    # - nonamedreturns
+    - nosprintfhostport
+    - paralleltest
+    - perfsprint
+    - prealloc
+    - predeclared
+    - promlinter
+    - protogetter
+    - reassign
+    - revive
+    - rowserrcheck
+    - sloglint
+    - spancheck
+    - sqlclosecheck
+    - staticcheck
+    - stylecheck
+    - tagalign
+    - tagliatelle
+    - tenv
+    - testableexamples
+    - testifylint
+    # - testpackage
+    - thelper
+    - tparallel
+    - typecheck
+    - unconvert
+    - unparam
+    - unused
+    - usestdlibvars
+    - varnamelen
+    - wastedassign
+    - whitespace
+    - wrapcheck
+    - wsl
+    - zerologlint
+  # presets:
+  #   - bugs
+  #   - comment
+  #   - complexity
+  #   - error
+  #   - format
+  #   # - import
+  #   - metalinter
+  #   - module
+  #   - performance
+  #   - sql
+  #   - style
+  #   - test
+  #   - unused
+
+issues:
+  exclude-rules:
+    - path: '(.+)_test\.go'
+      text: "pointer bytes could be"
+    - path: '(.+)_test\.go'
+      text: "literal copies lock value"
+    - linters:
+      - lll
+      source: "^//go:generate "
+
+severity:
+  default-severity: "@linter"
+  case-sensitive: false
+
 linters-settings:
+  errcheck:
+    check-blank: true
+    check-type-assertions: true
+  tagliatelle:
+    case:
+      rules:
+        json: snake
+  varnamelen:
+    ignore-names:
+      - err
+      - wg
+      - tt
+      - id
+      - ok
   revive:
     enable-all-rules: true
     confidence: 0.8
@@ -20,6 +180,8 @@ linters-settings:
       - name: cognitive-complexity
         disabled: true
       - name: cyclomatic
+        disabled: true
+      - name: unused-receiver
         disabled: true
   gocyclo:
     min-complexity: 15
@@ -56,60 +218,3 @@ linters-settings:
     allow-unused: false # report any unused nolint directives
     require-explanation: false # don't require an explanation for nolint directives
     require-specific: false # don't require nolint directives to be specific about which linter is being skipped
-linters:
-  disable-all: true
-  enable:
-    - bodyclose
-    - decorder
-    - dogsled
-    - dupl
-    - errcheck
-    - errchkjson
-    - exportloopref
-    - forcetypeassert
-    - funlen
-    - goconst
-    - gocritic
-    - gocyclo
-    - godot
-    - gofumpt
-    - goimports
-    - goprintffuncname
-    - gosec
-    - gosimple
-    - govet
-    - inamedparam
-    - ineffassign
-    - lll
-    - mirror
-    - misspell
-    - nakedret
-    - nestif
-    - nilerr
-    - nilnil
-    - noctx
-    - nolintlint
-    - revive
-    - reassign
-    - staticcheck
-    - stylecheck
-    - typecheck
-    - unconvert
-    - unparam
-    - unused
-    - usestdlibvars
-    - wastedassign
-    - whitespace
-    - bodyclose
-    - zerologlint
-
-issues:
-  exclude-rules:
-    - path: '(.+)_test\.go'
-      linters:
-        - govet
-      text: "pointer bytes could be"
-
-run:
-  timeout: 5m
-  tests: false

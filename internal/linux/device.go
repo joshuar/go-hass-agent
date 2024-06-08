@@ -57,6 +57,7 @@ func (l *Device) AppID() string {
 
 func (l *Device) DeviceName() string {
 	shortHostname, _, _ := strings.Cut(l.hostname, ".")
+
 	return shortHostname
 }
 
@@ -92,6 +93,7 @@ func (l *Device) AppData() any {
 	}
 }
 
+//nolint:exhaustruct
 func NewDevice(name, version string) *Device {
 	dev := &Device{
 		appName:    name,
@@ -101,15 +103,19 @@ func NewDevice(name, version string) *Device {
 	}
 	dev.distro, dev.distroVersion = GetDistroID()
 	dev.hwModel, dev.hwVendor = getHWProductInfo()
+
 	return dev
 }
 
+//nolint:exhaustruct
 func MQTTDevice() *mqtthass.Device {
 	dev := NewDevice(preferences.AppName, preferences.AppVersion)
+
 	prefs, err := preferences.Load()
 	if err != nil {
 		log.Warn().Err(err).Msg("Could not retrieve preferences.")
 	}
+
 	return &mqtthass.Device{
 		Name:         dev.DeviceName(),
 		URL:          preferences.AppURL,
@@ -126,8 +132,10 @@ func getDeviceID() string {
 	if err != nil {
 		log.Warn().Err(err).
 			Msg("Could not retrieve a machine ID")
+
 		return "unknown"
 	}
+
 	return deviceID.String()
 }
 
@@ -137,8 +145,10 @@ func getHostname() string {
 	hostname, err := os.Hostname()
 	if err != nil {
 		log.Warn().Err(err).Msg("Could not retrieve hostname. Using 'localhost'.")
+
 		return "localhost"
 	}
+
 	return hostname
 }
 
@@ -149,8 +159,10 @@ func getHWProductInfo() (model, vendor string) {
 	product, err := ghw.Product(ghw.WithDisableWarnings())
 	if err != nil {
 		log.Warn().Err(err).Msg("Could not retrieve hardware information.")
+
 		return unknownModel, unknownVendor
 	}
+
 	return product.Name, product.Vendor
 }
 
@@ -160,8 +172,10 @@ func Chassis() string {
 	chassisInfo, err := ghw.Chassis(ghw.WithDisableWarnings())
 	if err != nil {
 		log.Warn().Err(err).Msg("Could not determine chassis type.")
+
 		return "unknown"
 	}
+
 	return chassisInfo.Type
 }
 
@@ -185,21 +199,26 @@ func FindPortal() (string, error) {
 // GetDistroDetails.
 func GetDistroID() (id, versionid string) {
 	var distroName, distroVersion string
+
 	osReleaseInfo, err := whichdistro.GetOSRelease()
 	if err != nil {
 		log.Warn().Err(err).Msg("Could not read /etc/os-release. Contact your distro vendor to implement this file.")
+
 		return unknownDistro, unknownDistroVersion
 	}
+
 	if v, ok := osReleaseInfo.GetValue("ID"); !ok {
 		distroName = unknownDistro
 	} else {
 		distroName = v
 	}
+
 	if v, ok := osReleaseInfo.GetValue("VERSION_ID"); !ok {
 		distroVersion = unknownDistroVersion
 	} else {
 		distroVersion = v
 	}
+
 	return distroName, distroVersion
 }
 
@@ -208,21 +227,26 @@ func GetDistroID() (id, versionid string) {
 // variables. See also GetDistroID.
 func GetDistroDetails() (name, version string) {
 	var distroName, distroVersion string
+
 	osReleaseInfo, err := whichdistro.GetOSRelease()
 	if err != nil {
 		log.Warn().Err(err).Msg("Could not read /etc/os-release. Contact your distro vendor to implement this file.")
+
 		return unknownDistro, unknownDistroVersion
 	}
+
 	if v, ok := osReleaseInfo.GetValue("NAME"); !ok {
 		distroName = unknownDistro
 	} else {
 		distroName = v
 	}
+
 	if v, ok := osReleaseInfo.GetValue("VERSION"); !ok {
 		distroVersion = unknownDistroVersion
 	} else {
 		distroVersion = v
 	}
+
 	return distroName, distroVersion
 }
 
@@ -231,18 +255,23 @@ func GetDistroDetails() (name, version string) {
 //nolint:prealloc
 func GetKernelVersion() string {
 	var utsname syscall.Utsname
+
 	var versionBytes []byte
 
 	err := syscall.Uname(&utsname)
 	if err != nil {
 		log.Warn().Err(err).Msg("Could not retrieve kernel version.")
+
 		return "Unknown"
 	}
+
 	for _, v := range utsname.Release {
 		if v == 0 {
 			continue
 		}
+
 		versionBytes = append(versionBytes, uint8(v))
 	}
+
 	return string(versionBytes)
 }
