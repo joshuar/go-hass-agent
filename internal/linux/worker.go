@@ -103,6 +103,7 @@ func (w *SensorWorker) Sensors(ctx context.Context) ([]sensor.Details, error) {
 
 		return sensors, nil
 	}
+
 	return nil, ErrUnknownWorker
 }
 
@@ -120,8 +121,10 @@ func (w *SensorWorker) Updates(ctx context.Context) (<-chan sensor.Details, erro
 			sensors, err := worker.Sensors(ctx, d)
 			if err != nil {
 				log.Warn().Err(err).Msg("Unable to retrieve sensors.")
+
 				return
 			}
+
 			for _, s := range sensors {
 				outCh <- s
 			}
@@ -134,8 +137,10 @@ func (w *SensorWorker) Updates(ctx context.Context) (<-chan sensor.Details, erro
 		eventCh, err := dbusx.WatchBus(ctx, worker.Setup(ctx))
 		if err != nil {
 			close(outCh)
+
 			return outCh, fmt.Errorf("could not set up watch for worker: %w", err)
 		}
+
 		go func() {
 			defer close(outCh)
 
@@ -154,11 +159,14 @@ func (w *SensorWorker) Updates(ctx context.Context) (<-chan sensor.Details, erro
 	case oneShotType:
 		go func() {
 			defer close(outCh)
+
 			sensors, err := worker.Sensors(ctx)
 			if err != nil {
 				log.Warn().Err(err).Msg("Unable to retrieve sensors.")
+
 				return
 			}
+
 			for _, s := range sensors {
 				outCh <- s
 			}
@@ -166,5 +174,6 @@ func (w *SensorWorker) Updates(ctx context.Context) (<-chan sensor.Details, erro
 	default:
 		return nil, ErrUnknownWorker
 	}
+
 	return outCh, nil
 }

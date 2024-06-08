@@ -28,6 +28,7 @@ func (s *screenlockSensor) Icon() string {
 	if state {
 		return "mdi:eye-lock"
 	}
+
 	return "mdi:eye-lock-open"
 }
 
@@ -48,6 +49,7 @@ type screenLockWorker struct{}
 //nolint:exhaustruct
 func (w *screenLockWorker) Setup(ctx context.Context) *dbusx.Watch {
 	sessionPath := dbusx.GetSessionPath(ctx)
+
 	return &dbusx.Watch{
 		Bus:       dbusx.SystemBus,
 		Names:     []string{sessionLockSignal, sessionUnlockSignal, sessionLockedProp},
@@ -65,6 +67,7 @@ func (w *screenLockWorker) Watch(ctx context.Context, triggerCh chan dbusx.Trigg
 			select {
 			case <-ctx.Done():
 				log.Trace().Msg("Stopped screen lock sensor.")
+
 				return
 			case event := <-triggerCh:
 				switch event.Signal {
@@ -87,6 +90,7 @@ func (w *screenLockWorker) Watch(ctx context.Context, triggerCh chan dbusx.Trigg
 			}
 		}
 	}()
+
 	return sensorCh
 }
 

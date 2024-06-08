@@ -62,6 +62,7 @@ func (w *profileWorker) Watch(ctx context.Context, triggerCh chan dbusx.Trigger)
 	if err != nil {
 		log.Warn().Err(err).Msg("Cannot monitor power profile.")
 		close(sensorCh)
+
 		return sensorCh
 	}
 
@@ -77,6 +78,7 @@ func (w *profileWorker) Watch(ctx context.Context, triggerCh chan dbusx.Trigger)
 			select {
 			case <-ctx.Done():
 				log.Debug().Msg(("Stopped power profile sensor."))
+
 				return
 			case event := <-triggerCh:
 				props, err := dbusx.ParsePropertiesChanged(event.Content)
@@ -105,6 +107,7 @@ func (w *profileWorker) Sensors(ctx context.Context) ([]sensor.Details, error) {
 	if err != nil {
 		return nil, fmt.Errorf("cannot retrieve a power profile from D-Bus: %w", err)
 	}
+
 	return []sensor.Details{newPowerSensor(linux.SensorPowerProfile, profile)}, nil
 }
 

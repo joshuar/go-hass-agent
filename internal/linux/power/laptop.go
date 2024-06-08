@@ -61,6 +61,7 @@ func (s *laptopSensor) Icon() string {
 			return "mdi:battery"
 		}
 	}
+
 	return "mdi:help"
 }
 
@@ -84,6 +85,7 @@ func newLaptopEvent(prop string, state bool) *laptopSensor {
 	case externalPowerProp:
 		sensorEvent.SensorTypeValue = linux.SensorExternalPower
 	}
+
 	return sensorEvent
 }
 
@@ -111,6 +113,7 @@ func (w *laptopWorker) Watch(ctx context.Context, triggerCh chan dbusx.Trigger) 
 			select {
 			case <-ctx.Done():
 				log.Debug().Msg("Stopped laptop state sensor.")
+
 				return
 			case event := <-triggerCh:
 				props, err := dbusx.ParsePropertiesChanged(event.Content)
@@ -140,6 +143,7 @@ func (w *laptopWorker) Watch(ctx context.Context, triggerCh chan dbusx.Trigger) 
 			sensorCh <- s
 		}
 	}()
+
 	return sensorCh
 }
 

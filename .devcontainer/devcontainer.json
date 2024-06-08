@@ -34,7 +34,8 @@
                 "yzhang.markdown-all-in-one",
                 "DavidAnson.vscode-markdownlint",
                 "bierner.markdown-emoji",
-                "bierner.emojisense"
+                "bierner.emojisense",
+                "redhat.vscode-yaml"
             ],
             "settings": {
                 "terminal.integrated.defaultProfile.linux": "fish",
