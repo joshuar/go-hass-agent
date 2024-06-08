@@ -166,6 +166,7 @@ func Chassis() string {
 // used for getting information on running apps.
 func FindPortal() string {
 	desktop := os.Getenv("XDG_CURRENT_DESKTOP")
+
 	switch {
 	case strings.Contains(desktop, "KDE"):
 		return "org.freedesktop.impl.portal.desktop.kde"
@@ -223,9 +224,12 @@ func GetDistroDetails() (name, version string) {
 }
 
 // GetKernelVersion will retrieve the kernel version.
+//
+//nolint:prealloc
 func GetKernelVersion() string {
 	var utsname syscall.Utsname
 	var versionBytes []byte
+
 	err := syscall.Uname(&utsname)
 	if err != nil {
 		log.Warn().Err(err).Msg("Could not retrieve kernel version.")
