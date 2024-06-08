@@ -91,9 +91,10 @@ func (r *VersionCmd) Run(_ *Context) error {
 }
 
 type RegisterCmd struct {
-	Server string `help:"Home Assistant server."`
-	Token  string `help:"Personal Access Token."`
-	Force  bool   `help:"Force registration."`
+	Server     string `help:"Home Assistant server."`
+	Token      string `help:"Personal Access Token."`
+	Force      bool   `help:"Force registration."`
+	IgnoreURLs bool   `help:"Ignore URLs returned by Home Assistant and use provided server for access."`
 }
 
 func (r *RegisterCmd) Help() string {
@@ -109,6 +110,7 @@ func (r *RegisterCmd) Run(ctx *Context) error {
 	a := agent.New(&agent.Options{
 		Headless:      ctx.Headless,
 		ForceRegister: r.Force,
+		IgnoreURLs:    r.IgnoreURLs,
 		Server:        r.Server,
 		Token:         r.Token,
 		ID:            ctx.AppID,

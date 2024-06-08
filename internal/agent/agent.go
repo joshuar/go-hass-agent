@@ -35,8 +35,8 @@ type Agent struct {
 // Options holds options taken from the command-line that was used to
 // invoke go-hass-agent that are relevant for agent functionality.
 type Options struct {
-	ID, Server, Token       string
-	Headless, ForceRegister bool
+	ID, Server, Token                   string
+	Headless, ForceRegister, IgnoreURLs bool
 }
 
 func New(o *Options) *Agent {
