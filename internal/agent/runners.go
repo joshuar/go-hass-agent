@@ -43,38 +43,43 @@ func runWorkers(ctx context.Context, trk SensorTracker, reg sensor.Registry) {
 	workers := sensorWorkers()
 	workers = append(workers, device.NewExternalIPUpdaterWorker(), device.NewVersionWorker())
 
-	var outCh []<-chan sensor.Details
-	var cancelFuncs []context.CancelFunc
+	outCh := make([]<-chan sensor.Details, 0, len(workers))
+
+	cancelFuncs := make([]context.CancelFunc, 0, len(workers))
 
 	log.Debug().Msg("Starting worker funcs.")
-	for i := 0; i < len(workers); i++ {
+	for worker := range len(workers) {
 		workerCtx, cancelFunc := context.WithCancel(ctx)
 		cancelFuncs = append(cancelFuncs, cancelFunc)
-		log.Debug().Str("name", workers[i].Name()).Str("description", workers[i].Description()).Msg("Starting sensor worker.")
-		workerCh, err := workers[i].Updates(workerCtx)
+
+		log.Debug().Str("name", workers[worker].Name()).Str("description", workers[worker].Description()).Msg("Starting sensor worker.")
+
+		workerCh, err := workers[worker].Updates(workerCtx)
 		if err != nil {
-			log.Warn().Err(err).Str("name", workers[i].Name()).Msg("Could not start worker.")
+			log.Warn().Err(err).Str("name", workers[worker].Name()).Msg("Could not start worker.")
+
 			continue
 		}
+
 		outCh = append(outCh, workerCh)
 	}
 
 	sensorUpdates := sensor.MergeSensorCh(ctx, outCh...)
 	go func() {
 		log.Debug().Msg("Listening for sensor updates.")
-		for s := range sensorUpdates {
-			go func(s sensor.Details) {
-				if err := trk.UpdateSensor(ctx, reg, s); err != nil {
-					log.Warn().Err(err).Str("id", s.ID()).Msg("Update failed.")
+		for update := range sensorUpdates {
+			go func(update sensor.Details) {
+				if err := trk.UpdateSensor(ctx, reg, update); err != nil {
+					log.Warn().Err(err).Str("id", update.ID()).Msg("Update failed.")
 				} else {
 					log.Debug().
-						Str("name", s.Name()).
-						Str("id", s.ID()).
-						Interface("state", s.State()).
-						Str("units", s.Units()).
+						Str("name", update.Name()).
+						Str("id", update.ID()).
+						Interface("state", update.State()).
+						Str("units", update.Units()).
 						Msg("Sensor updated.")
 				}
-			}(s)
+			}(update)
 		}
 	}()
 
@@ -92,6 +97,7 @@ func runWorkers(ctx context.Context, trk SensorTracker, reg sensor.Registry) {
 // sensor.
 func runScripts(ctx context.Context, path string, trk SensorTracker, reg sensor.Registry) {
 	allScripts, err := scripts.FindScripts(path)
+
 	switch {
 	case err != nil:
 		log.Error().Err(err).Msg("Error getting scripts.")
@@ -100,43 +106,48 @@ func runScripts(ctx context.Context, path string, trk SensorTracker, reg sensor.
 		log.Debug().Msg("Could not find any script files.")
 		return
 	}
-	c := cron.New()
-	var outCh []<-chan sensor.Details
-	for _, s := range allScripts {
-		schedule := s.Schedule()
+
+	scheduler := cron.New()
+
+	outCh := make([]<-chan sensor.Details, 0, len(allScripts))
+
+	for _, script := range allScripts {
+		schedule := script.Schedule()
 		if schedule != "" {
-			_, err := c.AddJob(schedule, s)
+			_, err := scheduler.AddJob(schedule, script)
 			if err != nil {
-				log.Warn().Err(err).Str("script", s.Path()).
+				log.Warn().Err(err).Str("script", script.Path()).
 					Msg("Unable to schedule script.")
+
 				break
 			}
-			outCh = append(outCh, s.Output)
-			log.Debug().Str("schedule", schedule).Str("script", s.Path()).
+
+			outCh = append(outCh, script.Output)
+			log.Debug().Str("schedule", schedule).Str("script", script.Path()).
 				Msg("Added script sensor.")
 		}
 	}
 	log.Debug().Msg("Starting cron scheduler for script sensors.")
-	c.Start()
+	scheduler.Start()
 	go func() {
-		for s := range sensor.MergeSensorCh(ctx, outCh...) {
-			go func(s sensor.Details) {
-				if err := trk.UpdateSensor(ctx, reg, s); err != nil {
-					log.Warn().Err(err).Str("id", s.ID()).Msg("Update sensor failed.")
+		for scriptUpdates := range sensor.MergeSensorCh(ctx, outCh...) {
+			go func(update sensor.Details) {
+				if err := trk.UpdateSensor(ctx, reg, update); err != nil {
+					log.Warn().Err(err).Str("id", update.ID()).Msg("Update sensor failed.")
 				} else {
 					log.Debug().
-						Str("name", s.Name()).
-						Str("id", s.ID()).
-						Interface("state", s.State()).
-						Str("units", s.Units()).
+						Str("name", update.Name()).
+						Str("id", update.ID()).
+						Interface("state", update.State()).
+						Str("units", update.Units()).
 						Msg("Sensor updated.")
 				}
-			}(s)
+			}(scriptUpdates)
 		}
 	}()
 	<-ctx.Done()
 	log.Debug().Msg("Stopping cron scheduler for script sensors.")
-	cronCtx := c.Stop()
+	cronCtx := scheduler.Stop()
 	<-cronCtx.Done()
 }
 
@@ -153,6 +164,7 @@ func (agent *Agent) runNotificationsWorker(ctx context.Context) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+
 		for {
 			select {
 			case <-ctx.Done():
@@ -205,6 +217,7 @@ func runMQTTWorker(ctx context.Context) {
 
 	go func() {
 		log.Debug().Msg("Listening for messages to publish to MQTT.")
+
 		for {
 			select {
 			case msg := <-mqttDevice.Msgs():
@@ -234,13 +247,13 @@ func resetMQTTWorker(ctx context.Context) {
 
 	mqttDevice := newMQTTDevice(ctx)
 
-	c, err := mqttapi.NewClient(ctx, prefs, nil, nil)
+	client, err := mqttapi.NewClient(ctx, prefs, nil, nil)
 	if err != nil {
 		log.Error().Err(err).Msg("Could not connect to MQTT broker.")
 		return
 	}
 
-	if err := c.Unpublish(mqttDevice.Configs()...); err != nil {
+	if err := client.Unpublish(mqttDevice.Configs()...); err != nil {
 		log.Error().Err(err).Msg("Failed to reset MQTT.")
 	}
 }
