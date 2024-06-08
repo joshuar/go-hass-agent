@@ -48,6 +48,7 @@ func runWorkers(ctx context.Context, trk SensorTracker, reg sensor.Registry) {
 	cancelFuncs := make([]context.CancelFunc, 0, len(workers))
 
 	log.Debug().Msg("Starting worker funcs.")
+
 	for worker := range len(workers) {
 		workerCtx, cancelFunc := context.WithCancel(ctx)
 		cancelFuncs = append(cancelFuncs, cancelFunc)
@@ -67,6 +68,7 @@ func runWorkers(ctx context.Context, trk SensorTracker, reg sensor.Registry) {
 	sensorUpdates := sensor.MergeSensorCh(ctx, outCh...)
 	go func() {
 		log.Debug().Msg("Listening for sensor updates.")
+
 		for update := range sensorUpdates {
 			go func(update sensor.Details) {
 				if err := trk.UpdateSensor(ctx, reg, update); err != nil {
@@ -85,6 +87,7 @@ func runWorkers(ctx context.Context, trk SensorTracker, reg sensor.Registry) {
 
 	go func() {
 		<-ctx.Done()
+
 		for _, c := range cancelFuncs {
 			c()
 		}
@@ -129,6 +132,7 @@ func runScripts(ctx context.Context, path string, trk SensorTracker, reg sensor.
 	}
 	log.Debug().Msg("Starting cron scheduler for script sensors.")
 	scheduler.Start()
+
 	go func() {
 		for scriptUpdates := range sensor.MergeSensorCh(ctx, outCh...) {
 			go func(update sensor.Details) {
@@ -162,6 +166,7 @@ func (agent *Agent) runNotificationsWorker(ctx context.Context) {
 	var wg sync.WaitGroup
 
 	wg.Add(1)
+
 	go func() {
 		defer wg.Done()
 
