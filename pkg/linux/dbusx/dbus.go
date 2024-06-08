@@ -31,8 +31,15 @@ const (
 )
 
 var (
-	ErrNoBus    = errors.New("no D-Bus connection")
-	ErrNoBusCtx = errors.New("no D-Bus connection in context")
+	ErrNoBus          = errors.New("no D-Bus connection")
+	ErrNoBusCtx       = errors.New("no D-Bus connection in context")
+	ErrNotPropChanged = errors.New("signal contents do not appear to represent changed properties")
+	ErrParseInterface = errors.New("could not parse interface name")
+	ErrParseNewProps  = errors.New("could not parse changed properties")
+	ErrParseOldProps  = errors.New("could not parse invalidated properties")
+	ErrNotValChanged  = errors.New("signal contents do not appear to represent a value change")
+	ErrParseNewVal    = errors.New("could not parse new value")
+	ErrParseOldVal    = errors.New("could not parse old value")
 )
 
 var DbusTypeMap = map[string]dbusType{
@@ -59,6 +66,7 @@ type Watch struct {
 
 func (w *Watch) Parse() []dbus.MatchOption {
 	var matchers []dbus.MatchOption
+
 	switch {
 	case w.Path != "":
 		matchers = append(matchers, dbus.WithMatchObjectPath(dbus.ObjectPath(w.Path)))
@@ -75,6 +83,7 @@ func (w *Watch) Parse() []dbus.MatchOption {
 			matchers = append(matchers, dbus.WithMatchMember(name))
 		}
 	}
+
 	return matchers
 }
 
@@ -97,31 +106,42 @@ type bus struct {
 
 // newBus sets up D-Bus connections and channels for receiving signals. It
 // creates both a system and session bus connection.
-func newBus(ctx context.Context, t dbusType) (*bus, error) {
+//
+//nolint:contextcheck
+func newBus(ctx context.Context, busType dbusType) (*bus, error) {
 	var conn *dbus.Conn
+
 	var err error
+
 	dbusCtx, cancelFunc := context.WithCancel(context.Background())
-	switch t {
+
+	switch busType {
 	case SessionBus:
 		conn, err = dbus.ConnectSessionBus(dbus.WithContext(dbusCtx))
 	case SystemBus:
 		conn, err = dbus.ConnectSystemBus(dbus.WithContext(dbusCtx))
 	}
+
 	if err != nil {
 		cancelFunc()
-		return nil, err
+
+		return nil, fmt.Errorf("could not connect to bus: %w", err)
 	}
-	b := &bus{
+
+	bus := &bus{
 		conn:    conn,
-		busType: t,
+		busType: busType,
+		wg:      sync.WaitGroup{},
 	}
+
 	go func() {
 		defer conn.Close()
 		defer cancelFunc()
 		<-ctx.Done()
-		b.wg.Wait()
+		bus.wg.Wait()
 	}()
-	return b, nil
+
+	return bus, nil
 }
 
 // Call will call the given method, at the given path and interface, with the
@@ -134,14 +154,17 @@ func Call(ctx context.Context, bus dbusType, path, dest, method string, args ...
 	if !ok {
 		return ErrNoBusCtx
 	}
+
 	obj := busObj.conn.Object(dest, dbus.ObjectPath(path))
 	if args != nil {
 		return fmt.Errorf("%s: call could not retrieve object (%w)", bus.String(), obj.Call(method, 0, args...).Err)
 	}
+
 	err := obj.Call(method, 0).Err
 	if err != nil {
 		return fmt.Errorf("%s: unable to call method %s (args: %v): %w", bus.String(), method, args, err)
 	}
+
 	return obj.Call(method, 0).Err
 }
 
@@ -149,16 +172,20 @@ func Call(ctx context.Context, bus dbusType, path, dest, method string, args ...
 // type. If the property cannot be retrieved, a non-nil error is returned.
 func GetProp[P any](ctx context.Context, bus dbusType, path, dest, prop string) (P, error) {
 	var value P
+
 	busObj, ok := getBus(ctx, bus)
 	if !ok {
 		return value, ErrNoBusCtx
 	}
+
 	log.Trace().Str("path", path).Str("dest", dest).Str("property", prop).Msgf("Requesting property (as %T).", value)
 	obj := busObj.conn.Object(dest, dbus.ObjectPath(path))
+
 	res, err := obj.GetProperty(prop)
 	if err != nil {
 		return value, fmt.Errorf("%s: unable to retrieve property %s from %s: %w", bus.String(), prop, dest, err)
 	}
+
 	return VariantToValue[P](res), nil
 }
 
@@ -168,12 +195,15 @@ func SetProp[P any](ctx context.Context, bus dbusType, path, dest, prop string, 
 	if !ok {
 		return ErrNoBusCtx
 	}
+
 	v := dbus.MakeVariant(value)
 	obj := busObj.conn.Object(dest, dbus.ObjectPath(path))
+
 	err := obj.SetProperty(prop, v)
 	if err != nil {
 		return fmt.Errorf("%s: unable to set property %s (%s) to %v: %w", bus.String(), prop, dest, value, err)
 	}
+
 	return nil
 }
 
@@ -183,20 +213,26 @@ func SetProp[P any](ctx context.Context, bus dbusType, path, dest, prop string, 
 // of a property, see GetProp.
 func GetData[D any](ctx context.Context, bus dbusType, path, dest, method string, args ...any) (D, error) {
 	var data D
+
+	var err error
+
 	busObj, ok := getBus(ctx, bus)
 	if !ok {
 		return data, ErrNoBusCtx
 	}
+
 	obj := busObj.conn.Object(dest, dbus.ObjectPath(path))
-	var err error
+
 	if args != nil {
 		err = obj.Call(method, 0, args...).Store(&data)
 	} else {
 		err = obj.Call(method, 0).Store(&data)
 	}
+
 	if err != nil {
 		return data, fmt.Errorf("%s: unable to get data %s from %s: %w", bus.String(), method, dest, err)
 	}
+
 	return data, nil
 }
 
@@ -206,7 +242,11 @@ func GetData[D any](ctx context.Context, bus dbusType, path, dest, method string
 // data returned in the channel will contain the signal (or property) that
 // triggered the match, the path and the contents (what values actually
 // changed).
+//
+//nolint:cyclop
 func WatchBus(ctx context.Context, conditions *Watch) (chan Trigger, error) {
+	var wg sync.WaitGroup
+
 	bus, ok := getBus(ctx, conditions.Bus)
 	if !ok {
 		return nil, ErrNoBusCtx
@@ -219,17 +259,21 @@ func WatchBus(ctx context.Context, conditions *Watch) (chan Trigger, error) {
 
 	signalCh := make(chan *dbus.Signal)
 	outCh := make(chan Trigger)
+
 	bus.conn.Signal(signalCh)
 	bus.wg.Add(1)
-	var wg sync.WaitGroup
+
 	wg.Add(1)
+
 	go func() {
 		defer wg.Done()
+
 		for {
 			select {
 			case <-ctx.Done():
 				bus.conn.RemoveSignal(signalCh)
 				close(outCh)
+
 				return
 			case signal := <-signalCh:
 				// If the signal is empty, ignore.
@@ -242,6 +286,7 @@ func WatchBus(ctx context.Context, conditions *Watch) (chan Trigger, error) {
 						continue
 					}
 				}
+
 				if conditions.PathNamespace != "" {
 					if !strings.HasPrefix(string(signal.Path), conditions.PathNamespace) {
 						continue
@@ -263,29 +308,34 @@ func WatchBus(ctx context.Context, conditions *Watch) (chan Trigger, error) {
 			}
 		}
 	}()
+
 	go func() {
 		wg.Wait()
 		bus.wg.Done()
 	}()
+
 	return outCh, nil
 }
 
 func GetSessionPath(ctx context.Context) dbus.ObjectPath {
-	u, err := user.Current()
+	usr, err := user.Current()
 	if err != nil {
 		return ""
 	}
+
 	sessions, err := GetData[[][]any](ctx, SystemBus, loginBasePath, loginBaseInterface, listSessionsMethod)
 	if err != nil {
 		return ""
 	}
+
 	for _, s := range sessions {
-		if thisUser, ok := s[2].(string); ok && thisUser == u.Username {
+		if thisUser, ok := s[2].(string); ok && thisUser == usr.Username {
 			if p, ok := s[4].(dbus.ObjectPath); ok {
 				return p
 			}
 		}
 	}
+
 	return ""
 }
 
@@ -294,24 +344,32 @@ func GetSessionPath(ctx context.Context) dbus.ObjectPath {
 // Properties structure that is easier to use. If the signal body cannot be
 // parsed an error will be returned with details of the problem. Adapted from
 // https://github.com/godbus/dbus/issues/201
-func ParsePropertiesChanged(v []any) (*Properties, error) {
+//
+//nolint:exhaustruct,mnd
+func ParsePropertiesChanged(propsChanged []any) (*Properties, error) {
 	props := &Properties{}
+
 	var ok bool
-	if len(v) != 3 {
-		return nil, errors.New("signal contents do not appear to represent changed properties")
+
+	if len(propsChanged) != 3 {
+		return nil, ErrNotPropChanged
 	}
-	props.Interface, ok = v[0].(string)
+
+	props.Interface, ok = propsChanged[0].(string)
 	if !ok {
-		return nil, errors.New("could not parse interface name")
+		return nil, ErrParseInterface
 	}
-	props.Changed, ok = v[1].(map[string]dbus.Variant)
+
+	props.Changed, ok = propsChanged[1].(map[string]dbus.Variant)
 	if !ok {
-		return nil, errors.New("could not parse changed properteis")
+		return nil, ErrParseNewProps
 	}
-	props.Invalidated, ok = v[2].([]string)
+
+	props.Invalidated, ok = propsChanged[2].([]string)
 	if !ok {
-		return nil, errors.New("could not parse invalidated properties")
+		return nil, ErrParseOldProps
 	}
+
 	return props, nil
 }
 
@@ -320,20 +378,27 @@ func ParsePropertiesChanged(v []any) (*Properties, error) {
 // a Value object with old/new values of the given type. If there was a problem
 // parsing the signal body, an error will be returned with details of the
 // problem.
-func ParseValueChange[T any](v []any) (*Values[T], error) {
+//
+//nolint:exhaustruct,mnd
+func ParseValueChange[T any](valueChanged []any) (*Values[T], error) {
 	values := &Values[T]{}
+
 	var ok bool
-	if len(v) != 2 {
-		return nil, errors.New("signal contents do not appear to represent a value change")
+
+	if len(valueChanged) != 2 {
+		return nil, ErrNotValChanged
 	}
-	values.New, ok = v[0].(T)
+
+	values.New, ok = valueChanged[0].(T)
 	if !ok {
-		return nil, errors.New("could not parse new value")
+		return nil, ErrParseNewVal
 	}
-	values.Old, ok = v[1].(T)
+
+	values.Old, ok = valueChanged[1].(T)
 	if !ok {
-		return nil, errors.New("could not parse old value")
+		return nil, ErrParseOldVal
 	}
+
 	return values, nil
 }
 
@@ -342,11 +407,14 @@ func ParseValueChange[T any](v []any) (*Values[T], error) {
 // default value of the specified type.
 func VariantToValue[S any](variant dbus.Variant) S {
 	var value S
+
 	err := variant.Store(&value)
 	if err != nil {
 		log.Debug().Err(err).
 			Msgf("Unable to convert dbus variant %v to type %T.", variant, value)
+
 		return value
 	}
+
 	return value
 }
