@@ -24,15 +24,22 @@ type Translator struct {
 // translator by this Translator instance will be localised if a translation is
 // available.
 func NewTranslator() *Translator {
-	t := &Translator{}
+	var msgPrinter *message.Printer
+
 	userLocales, err := locale.GetLocales()
 	if err != nil {
 		log.Warn().Err(err).Msg("Could not find any installed locales. Using English.")
-		t.msgPrinter = message.NewPrinter(message.MatchLanguage(language.English.String()))
+
+		msgPrinter = message.NewPrinter(message.MatchLanguage(language.English.String()))
+	} else {
+		log.Debug().Msgf("Setting language to %v.", userLocales)
+
+		msgPrinter = message.NewPrinter(message.MatchLanguage(userLocales...))
 	}
-	log.Debug().Msgf("Setting language to %v.", userLocales)
-	t.msgPrinter = message.NewPrinter(message.MatchLanguage(userLocales...))
-	return t
+
+	return &Translator{
+		msgPrinter: msgPrinter,
+	}
 }
 
 // Translate will take a string defined in English and apply the appropriate
