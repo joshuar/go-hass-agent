@@ -8,6 +8,7 @@
 package preferences
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
@@ -29,6 +30,7 @@ const (
 	LogFile           = "go-hass-agent.log"
 )
 
+//nolint:unused
 var (
 	gitVersion, gitCommit, gitTreeState, buildDate string
 	AppVersion                                     = gitVersion
@@ -39,6 +41,7 @@ var (
 	preferencesFile = "preferences.toml"
 )
 
+//nolint:tagalign
 type Preferences struct {
 	mu             *sync.Mutex
 	Version        string `toml:"agent.version" validate:"required"`
@@ -89,6 +92,7 @@ func File() string {
 func SetVersion(version string) Preference {
 	return func(p *Preferences) error {
 		p.Version = version
+
 		return nil
 	}
 }
@@ -96,6 +100,7 @@ func SetVersion(version string) Preference {
 func SetDeviceID(id string) Preference {
 	return func(p *Preferences) error {
 		p.DeviceID = id
+
 		return nil
 	}
 }
@@ -103,6 +108,7 @@ func SetDeviceID(id string) Preference {
 func SetDeviceName(name string) Preference {
 	return func(p *Preferences) error {
 		p.DeviceName = name
+
 		return nil
 	}
 }
@@ -110,6 +116,7 @@ func SetDeviceName(name string) Preference {
 func SetRestAPIURL(url string) Preference {
 	return func(p *Preferences) error {
 		p.RestAPIURL = url
+
 		return nil
 	}
 }
@@ -117,6 +124,7 @@ func SetRestAPIURL(url string) Preference {
 func SetCloudhookURL(url string) Preference {
 	return func(p *Preferences) error {
 		p.CloudhookURL = url
+
 		return nil
 	}
 }
@@ -124,6 +132,7 @@ func SetCloudhookURL(url string) Preference {
 func SetRemoteUIURL(url string) Preference {
 	return func(p *Preferences) error {
 		p.RemoteUIURL = url
+
 		return nil
 	}
 }
@@ -131,6 +140,7 @@ func SetRemoteUIURL(url string) Preference {
 func SetSecret(secret string) Preference {
 	return func(p *Preferences) error {
 		p.Secret = secret
+
 		return nil
 	}
 }
@@ -138,6 +148,7 @@ func SetSecret(secret string) Preference {
 func SetHost(host string) Preference {
 	return func(p *Preferences) error {
 		p.Host = host
+
 		return nil
 	}
 }
@@ -145,6 +156,7 @@ func SetHost(host string) Preference {
 func SetToken(token string) Preference {
 	return func(p *Preferences) error {
 		p.Token = token
+
 		return nil
 	}
 }
@@ -152,6 +164,7 @@ func SetToken(token string) Preference {
 func SetWebhookID(id string) Preference {
 	return func(p *Preferences) error {
 		p.WebhookID = id
+
 		return nil
 	}
 }
@@ -159,6 +172,7 @@ func SetWebhookID(id string) Preference {
 func SetWebsocketURL(url string) Preference {
 	return func(p *Preferences) error {
 		p.WebsocketURL = url
+
 		return nil
 	}
 }
@@ -166,6 +180,7 @@ func SetWebsocketURL(url string) Preference {
 func SetRegistered(status bool) Preference {
 	return func(p *Preferences) error {
 		p.Registered = status
+
 		return nil
 	}
 }
@@ -173,6 +188,7 @@ func SetRegistered(status bool) Preference {
 func SetMQTTEnabled(status bool) Preference {
 	return func(p *Preferences) error {
 		p.MQTTEnabled = status
+
 		return nil
 	}
 }
@@ -180,6 +196,7 @@ func SetMQTTEnabled(status bool) Preference {
 func SetMQTTServer(server string) Preference {
 	return func(p *Preferences) error {
 		p.MQTTServer = server
+
 		return nil
 	}
 }
@@ -187,6 +204,7 @@ func SetMQTTServer(server string) Preference {
 func SetMQTTUser(user string) Preference {
 	return func(p *Preferences) error {
 		p.MQTTUser = user
+
 		return nil
 	}
 }
@@ -194,6 +212,7 @@ func SetMQTTUser(user string) Preference {
 func SetMQTTPassword(password string) Preference {
 	return func(p *Preferences) error {
 		p.MQTTPassword = password
+
 		return nil
 	}
 }
@@ -201,6 +220,7 @@ func SetMQTTPassword(password string) Preference {
 func SetMQTTRegistered(status bool) Preference {
 	return func(p *Preferences) error {
 		p.MQTTRegistered = status
+
 		return nil
 	}
 }
@@ -231,6 +251,7 @@ func (p *Preferences) GetTopicPrefix() string {
 	return "homeassistant"
 }
 
+//nolint:exhaustruct
 func defaultPreferences() *Preferences {
 	return &Preferences{
 		Version:      AppVersion,
@@ -252,13 +273,14 @@ func Load() (*Preferences, error) {
 
 	b, err := os.ReadFile(file)
 	if err != nil {
-		return prefs, err
+		return prefs, fmt.Errorf("could not read preferences file: %w", err)
 	}
 
 	err = toml.Unmarshal(b, &prefs)
 	if err != nil {
-		return prefs, err
+		return prefs, fmt.Errorf("could not parse preferences file: %w", err)
 	}
+
 	return prefs, nil
 }
 
@@ -274,6 +296,7 @@ func Save(setters ...Preference) error {
 	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
+
 	if err := set(prefs, setters...); err != nil {
 		return err
 	}
@@ -283,44 +306,66 @@ func Save(setters ...Preference) error {
 	}
 
 	file := filepath.Join(preferencesPath, preferencesFile)
+
 	return write(prefs, file)
 }
 
 // Reset will remove the preferences directory.
 func Reset() error {
-	return os.RemoveAll(preferencesPath)
+	err := os.RemoveAll(preferencesPath)
+	if err != nil {
+		return fmt.Errorf("unable to reset preferences: %w", err)
+	}
+
+	return nil
 }
 
 func set(prefs *Preferences, setters ...Preference) error {
-	p := pool.New().WithErrors()
+	taskPool := pool.New().WithErrors()
+
 	for _, setter := range setters {
 		setPref := setter
-		p.Go(func() error {
+
+		taskPool.Go(func() error {
 			prefs.mu.Lock()
 			defer prefs.mu.Unlock()
+
 			return setPref(prefs)
 		})
 	}
-	return p.Wait()
+
+	err := taskPool.Wait()
+	if err != nil {
+		return fmt.Errorf("problem detected setting preferences: %w", err)
+	}
+
+	return nil
 }
 
+//nolint:mnd
 func write(prefs *Preferences, file string) error {
 	b, err := toml.Marshal(prefs)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to format preferences: %w", err)
 	}
+
 	err = os.WriteFile(file, b, 0o600)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to write preferences file: %w", err)
 	}
+
 	return nil
 }
 
 func checkPath(path string) error {
 	_, err := os.Stat(path)
 	if os.IsNotExist(err) {
-		return os.MkdirAll(path, os.ModePerm)
+		err := os.MkdirAll(path, os.ModePerm)
+		if err != nil {
+			return fmt.Errorf("unable to create new directory: %w", err)
+		}
 	}
+
 	return nil
 }
 

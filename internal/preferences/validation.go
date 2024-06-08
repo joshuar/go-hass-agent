@@ -10,21 +10,30 @@ import (
 	"fmt"
 
 	"github.com/go-playground/validator/v10"
-	"github.com/rs/zerolog/log"
 )
+
+var ErrInternalValidationFailed = errors.New("internal validation error")
 
 func validatePreferences(prefs *Preferences) error {
 	validate := validator.New(validator.WithRequiredStructEnabled())
-	return validate.Struct(prefs)
+
+	err := validate.Struct(prefs)
+	if err != nil {
+		return fmt.Errorf("validation failed: %w", err)
+	}
+
+	return nil
 }
 
+//nolint:err113,errorlint,wsl
 func showValidationErrors(e error) error {
 	validationErrors, ok := e.(validator.ValidationErrors)
 	if !ok {
-		return errors.New("unable to assert as validation errors")
+		return ErrInternalValidationFailed
 	}
 
 	var allErrors error
+
 	for _, err := range validationErrors {
 		// Namespace:       err.Namespace(),
 		// Field:           err.Field(),
@@ -38,11 +47,8 @@ func showValidationErrors(e error) error {
 		// Param:           err.Param(),
 		// Message:         err.Error(),
 
-		log.Error().
-			Str("preference", err.Field()).
-			Err(errors.New(err.Error())).
-			Msg("Validation failed.")
 		allErrors = errors.Join(allErrors, fmt.Errorf("%s: %s", err.Field(), err.Error()))
 	}
+
 	return allErrors
 }
