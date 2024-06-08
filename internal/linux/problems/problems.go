@@ -20,6 +20,11 @@ import (
 )
 
 const (
+	problemInterval = 15 * time.Minute
+	problemJitter   = time.Minute
+)
+
+const (
 	dBusProblemsDest = "/org/freedesktop/problems"
 	dBusProblemIntr  = "org.freedesktop.problems"
 )
@@ -31,8 +36,8 @@ type problemsSensor struct {
 
 func (s *problemsSensor) Attributes() any {
 	return struct {
-		ProblemList map[string]map[string]any `json:"Problem List"`
-		DataSource  string                    `json:"Data Source"`
+		ProblemList map[string]map[string]any `json:"problem_list"`
+		DataSource  string                    `json:"data_source"`
 	}{
 		ProblemList: s.list,
 		DataSource:  linux.DataSrcDbus,
@@ -41,37 +46,38 @@ func (s *problemsSensor) Attributes() any {
 
 func parseProblem(details map[string]string) map[string]any {
 	parsed := make(map[string]any)
-	for k, v := range details {
-		switch k {
+
+	for key, value := range details {
+		switch key {
 		case "time":
-			timeValue, err := strconv.ParseInt(v, 10, 64)
+			timeValue, err := strconv.ParseInt(value, 10, 64)
 			if err != nil {
-				log.Debug().Err(err).Msg("Could not parse problem time.")
 				parsed["time"] = 0
 			} else {
 				parsed["time"] = time.Unix(timeValue, 0).Format(time.RFC3339)
 			}
 		case "count":
-			countValue, err := strconv.Atoi(v)
+			countValue, err := strconv.Atoi(value)
 			if err != nil {
-				log.Debug().Err(err).Msg("Could not parse problem count.")
 				parsed["count"] = 0
 			} else {
 				parsed["count"] = countValue
 			}
 		case "package", "reason":
-			parsed[k] = v
+			parsed[key] = value
 		}
 	}
+
 	return parsed
 }
 
 type worker struct{}
 
-func (w *worker) Interval() time.Duration { return 15 * time.Minute }
+func (w *worker) Interval() time.Duration { return problemInterval }
 
-func (w *worker) Jitter() time.Duration { return time.Minute }
+func (w *worker) Jitter() time.Duration { return problemJitter }
 
+//nolint:exhaustruct
 func (w *worker) Sensors(ctx context.Context, _ time.Duration) ([]sensor.Details, error) {
 	problems := &problemsSensor{
 		list: make(map[string]map[string]any),
@@ -86,22 +92,25 @@ func (w *worker) Sensors(ctx context.Context, _ time.Duration) ([]sensor.Details
 		return nil, fmt.Errorf("unable to retrieve the list of ABRT problems: %w", err)
 	}
 
-	for _, p := range problemList {
+	for _, problem := range problemList {
 		problemDetails, err := dbusx.GetData[map[string]string](ctx,
 			dbusx.SystemBus,
 			dBusProblemsDest,
 			dBusProblemIntr,
-			dBusProblemIntr+".GetInfo", p, []string{"time", "count", "package", "reason"})
+			dBusProblemIntr+".GetInfo", problem, []string{"time", "count", "package", "reason"})
 		if problemDetails == nil || err != nil {
 			log.Debug().Msg("No problems retrieved.")
 		} else {
-			problems.list[p] = parseProblem(problemDetails)
+			problems.list[problem] = parseProblem(problemDetails)
 		}
 	}
+
 	if len(problems.list) > 0 {
 		problems.Value = len(problems.list)
+
 		return []sensor.Details{problems}, nil
 	}
+
 	return nil, nil
 }
 

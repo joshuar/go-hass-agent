@@ -17,29 +17,37 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/linux"
 )
 
+const (
+	usageUpdateInterval = 10 * time.Second
+	usageUpdateJitter   = time.Second
+)
+
 type cpuUsageSensor struct {
 	linux.Sensor
 }
 
 type usageWorker struct{}
 
-func (w *usageWorker) Interval() time.Duration { return 10 * time.Second }
+func (w *usageWorker) Interval() time.Duration { return usageUpdateInterval }
 
-func (w *usageWorker) Jitter() time.Duration { return time.Second }
+func (w *usageWorker) Jitter() time.Duration { return usageUpdateJitter }
 
+//nolint:exhaustruct
 func (w *usageWorker) Sensors(ctx context.Context, d time.Duration) ([]sensor.Details, error) {
 	usage, err := cpu.PercentWithContext(ctx, d, false)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve CPU usage: %w", err)
 	}
-	s := &cpuUsageSensor{}
-	s.IconString = "mdi:chip"
-	s.UnitsString = "%"
-	s.SensorSrc = linux.DataSrcProcfs
-	s.StateClassValue = types.StateClassMeasurement
-	s.Value = usage[0]
-	s.SensorTypeValue = linux.SensorCPUPc
-	return []sensor.Details{s}, nil
+
+	newSensor := &cpuUsageSensor{}
+	newSensor.IconString = "mdi:chip"
+	newSensor.UnitsString = "%"
+	newSensor.SensorSrc = linux.DataSrcProcfs
+	newSensor.StateClassValue = types.StateClassMeasurement
+	newSensor.Value = usage[0]
+	newSensor.SensorTypeValue = linux.SensorCPUPc
+
+	return []sensor.Details{newSensor}, nil
 }
 
 func NewUsageWorker() (*linux.SensorWorker, error) {

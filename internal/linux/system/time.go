@@ -17,23 +17,29 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/linux"
 )
 
+const (
+	uptimeInterval = 15 * time.Minute
+	uptimeJitter   = time.Minute
+)
+
 type timeSensor struct {
 	linux.Sensor
 }
 
+//nolint:exhaustive
 func (s *timeSensor) Attributes() any {
 	switch s.SensorTypeValue {
 	case linux.SensorUptime:
 		return struct {
 			NativeUnit string `json:"native_unit_of_measurement"`
-			DataSource string `json:"Data Source"`
+			DataSource string `json:"data_source"`
 		}{
 			NativeUnit: s.UnitsString,
 			DataSource: linux.DataSrcProcfs,
 		}
 	default:
 		return struct {
-			DataSource string `json:"Data Source"`
+			DataSource string `json:"data_source"`
 		}{
 			DataSource: linux.DataSrcProcfs,
 		}
@@ -42,10 +48,11 @@ func (s *timeSensor) Attributes() any {
 
 type timeWorker struct{}
 
-func (w *timeWorker) Interval() time.Duration { return 15 * time.Minute }
+func (w *timeWorker) Interval() time.Duration { return uptimeInterval }
 
-func (w *timeWorker) Jitter() time.Duration { return time.Minute }
+func (w *timeWorker) Jitter() time.Duration { return uptimeJitter }
 
+//nolint:exhaustruct
 func (w *timeWorker) Sensors(ctx context.Context, _ time.Duration) ([]sensor.Details, error) {
 	return []sensor.Details{
 			&timeSensor{
@@ -82,23 +89,28 @@ func NewTimeWorker() (*linux.SensorWorker, error) {
 }
 
 func getUptime(ctx context.Context) any {
-	u, err := host.UptimeWithContext(ctx)
+	value, err := host.UptimeWithContext(ctx)
 	if err != nil {
 		log.Debug().Caller().Err(err).
 			Msg("Failed to retrieve uptime.")
+
 		return sensor.StateUnknown
 	}
+
 	epoch := time.Unix(0, 0)
-	uptime := time.Unix(int64(u), 0)
+	uptime := time.Unix(int64(value), 0)
+
 	return uptime.Sub(epoch).Hours()
 }
 
 func getBoottime(ctx context.Context) string {
-	u, err := host.BootTimeWithContext(ctx)
+	value, err := host.BootTimeWithContext(ctx)
 	if err != nil {
 		log.Debug().Caller().Err(err).
 			Msg("Failed to retrieve boottime.")
+
 		return sensor.StateUnknown
 	}
-	return time.Unix(int64(u), 0).Format(time.RFC3339)
+
+	return time.Unix(int64(value), 0).Format(time.RFC3339)
 }

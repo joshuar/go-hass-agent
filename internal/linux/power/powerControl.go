@@ -33,6 +33,7 @@ type commandConfig struct {
 	method string
 }
 
+//nolint:exhaustruct
 var commands = map[string]commandConfig{
 	"lock_session": {
 		name:   "Lock Session",
@@ -71,34 +72,36 @@ var commands = map[string]commandConfig{
 }
 
 func NewPowerControl(ctx context.Context) []*mqtthass.ButtonEntity {
-	var entities []*mqtthass.ButtonEntity
+	entities := make([]*mqtthass.ButtonEntity, 0, len(commands))
 	device := linux.MQTTDevice()
 	sessionPath := dbusx.GetSessionPath(ctx)
 
-	for k, v := range commands {
+	for cmdName, cmdInfo := range commands {
 		var callback func(p *paho.Publish)
-		if v.path == "" {
+		if cmdInfo.path == "" {
 			callback = func(_ *paho.Publish) {
-				err := dbusx.Call(ctx, dbusx.SystemBus, string(sessionPath), loginBaseInterface, v.method)
+				err := dbusx.Call(ctx, dbusx.SystemBus, string(sessionPath), loginBaseInterface, cmdInfo.method)
 				if err != nil {
-					log.Warn().Err(err).Msgf("Could not %s session.", v.name)
+					log.Warn().Err(err).Msgf("Could not %s session.", cmdInfo.name)
 				}
 			}
 		} else {
 			callback = func(_ *paho.Publish) {
-				err := dbusx.Call(ctx, dbusx.SystemBus, v.path, loginBaseInterface, v.method, true)
+				err := dbusx.Call(ctx, dbusx.SystemBus, cmdInfo.path, loginBaseInterface, cmdInfo.method, true)
 				if err != nil {
 					log.Warn().Err(err).Msg("Could not power off session.")
 				}
 			}
 		}
+
 		entities = append(entities,
 			mqtthass.AsButton(
-				mqtthass.NewEntity(preferences.AppName, v.name, device.Name+"_"+k).
+				mqtthass.NewEntity(preferences.AppName, cmdInfo.name, device.Name+"_"+cmdName).
 					WithOriginInfo(preferences.MQTTOrigin()).
 					WithDeviceInfo(device).
-					WithIcon(v.icon).
+					WithIcon(cmdInfo.icon).
 					WithCommandCallback(callback)))
 	}
+
 	return entities
 }

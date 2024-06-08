@@ -14,6 +14,7 @@ import (
 
 type infoWorker struct{}
 
+//nolint:exhaustruct
 func (w *infoWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
 	// Get distribution name and version.
 	distro, distroVersion := linux.GetDistroDetails()

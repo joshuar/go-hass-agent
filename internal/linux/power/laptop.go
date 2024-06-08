@@ -24,7 +24,11 @@ const (
 	externalPowerProp = managerInterface + ".OnExternalPower"
 )
 
-var laptopPropList = []string{dockedProp, lidClosedProp, externalPowerProp}
+var (
+	laptopPropList = []string{dockedProp, lidClosedProp, externalPowerProp}
+
+	ErrUnsupportedHardware = errors.New("unsupported hardware for laptop sensor monitoring")
+)
 
 type laptopSensor struct {
 	prop string
@@ -36,6 +40,7 @@ func (s *laptopSensor) Icon() string {
 	if !ok {
 		return "mdi:alert"
 	}
+
 	switch s.prop {
 	case dockedProp:
 		if state {
@@ -59,6 +64,7 @@ func (s *laptopSensor) Icon() string {
 	return "mdi:help"
 }
 
+//nolint:exhaustruct
 func newLaptopEvent(prop string, state bool) *laptopSensor {
 	sensorEvent := &laptopSensor{
 		prop: prop,
@@ -69,6 +75,7 @@ func newLaptopEvent(prop string, state bool) *laptopSensor {
 			Value:        state,
 		},
 	}
+
 	switch prop {
 	case dockedProp:
 		sensorEvent.SensorTypeValue = linux.SensorDocked
@@ -82,6 +89,7 @@ func newLaptopEvent(prop string, state bool) *laptopSensor {
 
 type laptopWorker struct{}
 
+//nolint:exhaustruct
 func (w *laptopWorker) Setup(ctx context.Context) *dbusx.Watch {
 	sessionPath := dbusx.GetSessionPath(ctx)
 
@@ -98,6 +106,7 @@ func (w *laptopWorker) Watch(ctx context.Context, triggerCh chan dbusx.Trigger) 
 
 	go func() {
 		defer close(sensorCh)
+
 		for {
 			select {
 			case <-ctx.Done():
@@ -107,8 +116,10 @@ func (w *laptopWorker) Watch(ctx context.Context, triggerCh chan dbusx.Trigger) 
 				props, err := dbusx.ParsePropertiesChanged(event.Content)
 				if err != nil {
 					log.Warn().Err(err).Msg("Did not understand received trigger.")
+
 					continue
 				}
+
 				for prop, value := range props.Changed {
 					if slices.Contains(laptopPropList, prop) {
 						sensorCh <- newLaptopEvent(prop, dbusx.VariantToValue[bool](value))
@@ -124,6 +135,7 @@ func (w *laptopWorker) Watch(ctx context.Context, triggerCh chan dbusx.Trigger) 
 		if err != nil {
 			log.Warn().Err(err).Msg("Could not get initial sensor updates.")
 		}
+
 		for _, s := range sensors {
 			sensorCh <- s
 		}
@@ -132,22 +144,25 @@ func (w *laptopWorker) Watch(ctx context.Context, triggerCh chan dbusx.Trigger) 
 }
 
 func (w *laptopWorker) Sensors(ctx context.Context) ([]sensor.Details, error) {
-	var sensors []sensor.Details
+	sensors := make([]sensor.Details, 0, len(laptopPropList))
+
 	for _, prop := range laptopPropList {
-		var state bool
-		var err error
-		if state, err = dbusx.GetProp[bool](ctx, dbusx.SystemBus, loginBasePath, loginBaseInterface, prop); err != nil {
+		state, err := dbusx.GetProp[bool](ctx, dbusx.SystemBus, loginBasePath, loginBaseInterface, prop)
+		if err != nil {
 			log.Debug().Err(err).Str("prop", filepath.Ext(prop)).Msg("Could not retrieve laptop property from D-Bus.")
+
 			continue
 		}
+
 		sensors = append(sensors, newLaptopEvent(prop, state))
 	}
+
 	return sensors, nil
 }
 
 func NewLaptopWorker() (*linux.SensorWorker, error) {
 	if linux.Chassis() != "laptop" {
-		return nil, errors.New("unsupported hardware for laptop sensor monitoring")
+		return nil, ErrUnsupportedHardware
 	}
 
 	return &linux.SensorWorker{

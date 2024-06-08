@@ -19,6 +19,15 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/linux"
 )
 
+const (
+	scaleFactor = 100
+
+	updateInterval = time.Minute
+	updateJitter   = 5 * time.Second
+)
+
+var ErrUnknownSensor = errors.New("unknown sensor")
+
 type memorySensor struct {
 	linux.Sensor
 }
@@ -26,71 +35,71 @@ type memorySensor struct {
 func (s *memorySensor) Attributes() any {
 	return struct {
 		NativeUnit string `json:"native_unit_of_measurement"`
-		DataSource string `json:"Data Source"`
+		DataSource string `json:"data_source"`
 	}{
 		NativeUnit: s.UnitsString,
 		DataSource: s.SensorSrc,
 	}
 }
 
+//nolint:exhaustive,exhaustruct
 func newMemoryUsageSensor(sensorType linux.SensorTypeValue, stats *mem.VirtualMemoryStat) (*memorySensor, error) {
-	s := &memorySensor{}
+	newSensor := &memorySensor{}
 
-	s.SensorTypeValue = sensorType
-	s.IconString = "mdi:memory"
-	s.SensorSrc = linux.DataSrcSysfs
+	newSensor.SensorTypeValue = sensorType
+	newSensor.IconString = "mdi:memory"
+	newSensor.SensorSrc = linux.DataSrcSysfs
 
-	switch s.SensorTypeValue {
+	switch newSensor.SensorTypeValue {
 	case linux.SensorMemTotal:
-		s.Value = stats.Total
-		s.UnitsString = "B"
-		s.DeviceClassValue = types.DeviceClassDataSize
-		s.StateClassValue = types.StateClassTotal
+		newSensor.Value = stats.Total
+		newSensor.UnitsString = "B"
+		newSensor.DeviceClassValue = types.DeviceClassDataSize
+		newSensor.StateClassValue = types.StateClassTotal
 	case linux.SensorMemAvail:
-		s.Value = stats.Available
-		s.UnitsString = "B"
-		s.DeviceClassValue = types.DeviceClassDataSize
-		s.StateClassValue = types.StateClassTotal
+		newSensor.Value = stats.Available
+		newSensor.UnitsString = "B"
+		newSensor.DeviceClassValue = types.DeviceClassDataSize
+		newSensor.StateClassValue = types.StateClassTotal
 	case linux.SensorMemUsed:
-		s.Value = stats.Used
-		s.UnitsString = "B"
-		s.DeviceClassValue = types.DeviceClassDataSize
-		s.StateClassValue = types.StateClassTotal
+		newSensor.Value = stats.Used
+		newSensor.UnitsString = "B"
+		newSensor.DeviceClassValue = types.DeviceClassDataSize
+		newSensor.StateClassValue = types.StateClassTotal
 	case linux.SensorMemPc:
-		s.Value = float64(stats.Used) / float64(stats.Total) * 100
-		s.UnitsString = "%"
-		s.StateClassValue = types.StateClassMeasurement
+		newSensor.Value = float64(stats.Used) / float64(stats.Total) * scaleFactor
+		newSensor.UnitsString = "%"
+		newSensor.StateClassValue = types.StateClassMeasurement
 	case linux.SensorSwapTotal:
-		s.Value = stats.SwapTotal
-		s.UnitsString = "B"
-		s.DeviceClassValue = types.DeviceClassDataSize
-		s.StateClassValue = types.StateClassTotal
+		newSensor.Value = stats.SwapTotal
+		newSensor.UnitsString = "B"
+		newSensor.DeviceClassValue = types.DeviceClassDataSize
+		newSensor.StateClassValue = types.StateClassTotal
 	case linux.SensorSwapFree:
-		s.Value = stats.SwapFree
-		s.UnitsString = "B"
-		s.DeviceClassValue = types.DeviceClassDataSize
-		s.StateClassValue = types.StateClassTotal
+		newSensor.Value = stats.SwapFree
+		newSensor.UnitsString = "B"
+		newSensor.DeviceClassValue = types.DeviceClassDataSize
+		newSensor.StateClassValue = types.StateClassTotal
 	case linux.SensorSwapPc:
-		s.Value = float64(stats.SwapCached) / float64(stats.SwapTotal) * 100
-		s.UnitsString = "%"
-		s.StateClassValue = types.StateClassMeasurement
+		newSensor.Value = float64(stats.SwapCached) / float64(stats.SwapTotal) * scaleFactor
+		newSensor.UnitsString = "%"
+		newSensor.StateClassValue = types.StateClassMeasurement
 	default:
-		return nil, errors.New("unknown memory stat")
+		return nil, ErrUnknownSensor
 	}
-	return s, nil
+
+	return newSensor, nil
 }
 
 type usageWorker struct{}
 
-func (w *usageWorker) Interval() time.Duration { return time.Minute }
+func (w *usageWorker) Interval() time.Duration { return updateInterval }
 
-func (w *usageWorker) Jitter() time.Duration { return 5 * time.Second }
+func (w *usageWorker) Jitter() time.Duration { return updateJitter }
 
 func (w *usageWorker) Sensors(ctx context.Context, _ time.Duration) ([]sensor.Details, error) {
-	var sensors []sensor.Details
-	var memDetails *mem.VirtualMemoryStat
-	var err error
-	if memDetails, err = mem.VirtualMemoryWithContext(ctx); err != nil {
+	memDetails, err := mem.VirtualMemoryWithContext(ctx)
+	if err != nil {
 		return nil, fmt.Errorf("problem fetching memory stats: %w", err)
 	}
 
@@ -110,14 +119,19 @@ func (w *usageWorker) Sensors(ctx context.Context, _ time.Duration) ([]sensor.De
 		)
 	}
 
+	sensors := make([]sensor.Details, 0, len(stats))
+
 	for _, stat := range stats {
-		s, err := newMemoryUsageSensor(stat, memDetails)
+		memSensor, err := newMemoryUsageSensor(stat, memDetails)
 		if err != nil {
 			log.Warn().Err(err).Msg("Could not retrieve memory usage stat.")
+
 			continue
 		}
-		sensors = append(sensors, s)
+
+		sensors = append(sensors, memSensor)
 	}
+
 	return sensors, nil
 }
 

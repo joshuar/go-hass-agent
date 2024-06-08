@@ -167,9 +167,10 @@ func TestFindPortal(t *testing.T) {
 		setup func()
 	}
 	tests := []struct {
-		name string
-		args args
-		want string
+		name    string
+		args    args
+		want    string
+		wantErr bool
 	}{
 		{
 			name: "KDE",
@@ -190,14 +191,20 @@ func TestFindPortal(t *testing.T) {
 			args: args{
 				setup: func() { os.Setenv("XDG_CURRENT_DESKTOP", "UNKNOWN") },
 			},
-			want: "",
+			want:    "",
+			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.args.setup()
-			if got := FindPortal(); got != tt.want {
+			got, err := FindPortal()
+			if got != tt.want {
 				t.Errorf("FindPortal() = %v, want %v", got, tt.want)
+			}
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Load() error = %v, wantErr %v", err, tt.wantErr)
+				return
 			}
 		})
 	}

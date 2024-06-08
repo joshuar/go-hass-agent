@@ -8,6 +8,7 @@
 package linux
 
 import (
+	"errors"
 	"os"
 	"strings"
 	"syscall"
@@ -28,6 +29,8 @@ const (
 	unknownDistro        = "Unknown Distro"
 	unknownDistroVersion = "Unknown Version"
 )
+
+var ErrDesktopPortalMissing = errors.New("no portal present")
 
 type Device struct {
 	appName       string
@@ -164,16 +167,16 @@ func Chassis() string {
 
 // FindPortal is a helper function to work out which portal interface should be
 // used for getting information on running apps.
-func FindPortal() string {
+func FindPortal() (string, error) {
 	desktop := os.Getenv("XDG_CURRENT_DESKTOP")
 
 	switch {
 	case strings.Contains(desktop, "KDE"):
-		return "org.freedesktop.impl.portal.desktop.kde"
+		return "org.freedesktop.impl.portal.desktop.kde", nil
 	case strings.Contains(desktop, "GNOME"):
-		return "org.freedesktop.impl.portal.desktop.gtk"
+		return "org.freedesktop.impl.portal.desktop.gtk", nil
 	default:
-		return ""
+		return "", ErrDesktopPortalMissing
 	}
 }
 
