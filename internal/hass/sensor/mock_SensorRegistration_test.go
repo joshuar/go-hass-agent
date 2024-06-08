@@ -10,7 +10,7 @@ import (
 
 // Ensure, that SensorRegistrationMock does implement SensorRegistration.
 // If this is not the case, regenerate this file with moq.
-var _ SensorRegistration = &SensorRegistrationMock{}
+var _ Registration = &SensorRegistrationMock{}
 
 // SensorRegistrationMock is a mock implementation of SensorRegistration.
 //

@@ -10,7 +10,7 @@ import (
 
 // Ensure, that SensorStateMock does implement SensorState.
 // If this is not the case, regenerate this file with moq.
-var _ SensorState = &SensorStateMock{}
+var _ State = &SensorStateMock{}
 
 // SensorStateMock is a mock implementation of SensorState.
 //

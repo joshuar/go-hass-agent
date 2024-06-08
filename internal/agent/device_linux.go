@@ -10,7 +10,6 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/linux/apps"
 	"github.com/joshuar/go-hass-agent/internal/linux/battery"
@@ -28,6 +27,7 @@ import (
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
+// workers is the list of sensor workers supported on Linux.
 var workers = []func() (*linux.SensorWorker, error){
 	apps.NewAppWorker,
 	battery.NewBatteryWorker,
@@ -36,6 +36,7 @@ var workers = []func() (*linux.SensorWorker, error){
 	desktop.NewDesktopWorker,
 	disk.NewIOWorker,
 	disk.NewUsageWorker,
+	location.NewLocationWorker,
 	mem.NewUsageWorker,
 	net.NewConnectionWorker,
 	net.NewRatesWorker,
@@ -55,7 +56,8 @@ func newDevice(_ context.Context) *linux.Device {
 	return linux.NewDevice(preferences.AppName, preferences.AppVersion)
 }
 
-// sensorWorkers returns a list of functions to start to enable sensor tracking.
+// sensorWorkers initialises the list of workers for sensors and returns those
+// that are supported on this device.
 func sensorWorkers() []Worker {
 	var activeWorkers []Worker
 	for _, w := range workers {
@@ -69,11 +71,7 @@ func sensorWorkers() []Worker {
 	return activeWorkers
 }
 
-func locationWorker() func(context.Context) chan *hass.LocationData {
-	return location.Updater
-}
-
-// Setup returns a new Context that contains the D-Bus API.
+// setupDeviceContext returns a new Context that contains the D-Bus API.
 func setupDeviceContext(ctx context.Context) context.Context {
 	return dbusx.Setup(ctx)
 }

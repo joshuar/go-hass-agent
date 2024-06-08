@@ -3,23 +3,18 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
+//nolint:exhaustruct,paralleltest,wsl
+//revive:disable:unused-receiver
 package sensor
 
 import (
 	"context"
-	"encoding/json"
-	"net/http"
-	"net/http/httptest"
 	"reflect"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/go-resty/resty/v2"
 	"github.com/stretchr/testify/assert"
-
-	"github.com/joshuar/go-hass-agent/internal/hass"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor/registry"
 )
 
 var mockRegistry = RegistryMock{
@@ -29,19 +24,19 @@ var mockRegistry = RegistryMock{
 	IsRegisteredFunc:  func(sensor string) bool { return false },
 }
 
+//nolint:copylocks
 func TestSensorTracker_add(t *testing.T) {
 	type fields struct {
-		registry Registry
-		sensor   map[string]Details
-		mu       sync.Mutex
+		sensor map[string]Details
+		mu     sync.Mutex
 	}
 	type args struct {
 		s Details
 	}
 	tests := []struct {
+		args    args
 		name    string
 		fields  fields
-		args    args
 		wantErr bool
 	}{
 		{
@@ -77,18 +72,17 @@ func TestSensorTracker_Get(t *testing.T) {
 	mockMap["mock_sensor"] = &mockSensor
 
 	type fields struct {
-		registry Registry
-		sensor   map[string]Details
-		mu       sync.Mutex
+		sensor map[string]Details
+		mu     sync.Mutex
 	}
 	type args struct {
 		id string
 	}
 	tests := []struct {
+		want    Details
 		name    string
 		fields  fields
 		args    args
-		want    Details
 		wantErr bool
 	}{
 		{
@@ -128,9 +122,8 @@ func TestSensorTracker_SensorList(t *testing.T) {
 	mockMap["mock_sensor"] = &mockSensor
 
 	type fields struct {
-		registry Registry
-		sensor   map[string]Details
-		mu       sync.Mutex
+		sensor map[string]Details
+		mu     sync.Mutex
 	}
 	tests := []struct {
 		name   string
@@ -161,12 +154,9 @@ func TestSensorTracker_SensorList(t *testing.T) {
 }
 
 func TestNewSensorTracker(t *testing.T) {
-	type args struct {
-		id string
-	}
 	tests := []struct {
-		name    string
 		want    *Tracker
+		name    string
 		wantErr bool
 	}{
 		{
@@ -268,168 +258,6 @@ func TestSensorTracker_Reset(t *testing.T) {
 			}
 			tr.Reset()
 			assert.Nil(t, tr.sensor)
-		})
-	}
-}
-
-func Test_handleResponse(t *testing.T) {
-	type args struct {
-		resp hass.Response
-		trk  *Tracker
-		upd  Details
-		reg  Registry
-	}
-	tests := []struct {
-		name string
-		args args
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			handleResponse(tt.args.resp, tt.args.trk, tt.args.upd, tt.args.reg)
-		})
-	}
-}
-
-func TestTracker_UpdateSensor(t *testing.T) {
-	// setup creates a context using a test http client and server which will
-	// return the given response when the ExecuteRequest function is called.
-	setup := func(r hass.Response) context.Context {
-		ctx := context.TODO()
-		// load client
-		client := resty.New().
-			SetTimeout(1 * time.Second).
-			AddRetryCondition(
-				func(rr *resty.Response, err error) bool {
-					return rr.StatusCode() == http.StatusTooManyRequests
-				},
-			)
-		ctx = hass.ContextSetClient(ctx, client)
-		// load server
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-			var resp []byte
-			var err error
-			switch rType := r.(type) {
-			case *updateResponse:
-				resp, err = json.Marshal(rType.Body)
-			case *registrationResponse:
-				resp, err = json.Marshal(rType.Body)
-			}
-			if err != nil {
-				w.Write(json.RawMessage(`{"success":false}`))
-			} else {
-				w.Write(resp)
-			}
-		}))
-		ctx = hass.ContextSetURL(ctx, server.URL)
-		// return loaded context
-		return ctx
-	}
-
-	// set up a fake sensor tracker
-	mockMap := make(map[string]Details)
-	// set up a fake registry with sensors
-	registry.SetPath(t.TempDir())
-	reg, err := registry.Load()
-	assert.Nil(t, err)
-
-	// test: disabled sensor
-	// - has a old state
-	// - has a new state that SHOULD NOT be set
-	oldDisabledSensor := mockSensor
-	oldDisabledSensor.IDFunc = func() string { return "disabled_sensor" }
-	mockMap[oldDisabledSensor.IDFunc()] = &oldDisabledSensor
-	err = reg.SetDisabled(oldDisabledSensor.IDFunc(), true)
-	assert.Nil(t, err)
-	err = reg.SetRegistered(oldDisabledSensor.IDFunc(), true)
-	assert.Nil(t, err)
-	// a new state update for the disabled sensor
-	newDisabledSensor := oldDisabledSensor
-	newDisabledSensor.StateFunc = func() any { return "disabledState" }
-
-	// test: new sensor
-	// - does not exist in registry
-	newSensor := mockSensor
-	newSensor.IDFunc = func() string { return "new_sensor" }
-	newSensor.StateFunc = func() any { return "newState" }
-	newSensorResponse := NewRegistrationResponse()
-	newSensorResponse.Body = response{Success: true}
-
-	// test: updated sensor
-	// - does not exist in registry
-	updatedSensor := mockSensor
-	updatedSensor.StateFunc = func() any { return "newState" }
-	updatedSensorResponse := NewUpdateResponse()
-	updatedSensorResponse.Body[updatedSensor.IDFunc()] = &response{Success: true}
-	mockMap[updatedSensor.IDFunc()] = &updatedSensor
-	err = reg.SetDisabled(updatedSensor.IDFunc(), false)
-	assert.Nil(t, err)
-	err = reg.SetRegistered(updatedSensor.IDFunc(), true)
-	assert.Nil(t, err)
-
-	unregisteredSensor := mockSensor
-	unregisteredSensorResponse := NewUpdateResponse()
-	unregisteredSensorResponse.Body[updatedSensor.IDFunc()] = &response{
-		Success: false,
-		Error: &details{
-			Code:    "not_registered",
-			Message: "Entity is not registered",
-		},
-	}
-
-	type fields struct {
-		sensor map[string]Details
-		mu     sync.Mutex
-	}
-	type args struct {
-		ctx context.Context
-		reg Registry
-		upd Details
-	}
-	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		wantErr bool
-		want    string
-	}{
-		{
-			name:   "disabled sensor",
-			fields: fields{sensor: mockMap},
-			args:   args{ctx: context.TODO(), reg: reg, upd: &newDisabledSensor},
-			want:   "mockState",
-		},
-		{
-			name:   "new sensor",
-			fields: fields{sensor: mockMap},
-			args:   args{ctx: setup(newSensorResponse), reg: reg, upd: &newSensor},
-			want:   "newState",
-		},
-		{
-			name:   "updated sensor",
-			fields: fields{sensor: mockMap},
-			args:   args{ctx: setup(updatedSensorResponse), reg: reg, upd: &updatedSensor},
-			want:   "newState",
-		},
-		{
-			name:    "unregistered sensor",
-			fields:  fields{sensor: mockMap},
-			args:    args{ctx: setup(unregisteredSensorResponse), reg: reg, upd: &unregisteredSensor},
-			wantErr: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tr := &Tracker{
-				sensor: tt.fields.sensor,
-				mu:     tt.fields.mu,
-			}
-			if err := tr.UpdateSensor(tt.args.ctx, tt.args.reg, tt.args.upd); (err != nil) != tt.wantErr {
-				t.Errorf("Tracker.UpdateSensor() error = %v, wantErr %v", err, tt.wantErr)
-			}
-			// TODO: also test the tracker has the right state
-			// assert.Equal(t, tr.sensor[tt.args.upd.ID()].State(), tt.want)
 		})
 	}
 }
