@@ -8,6 +8,7 @@ package diskstats
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -48,39 +49,51 @@ type Device struct {
 	Model     string `json:"device_model,omitempty"`
 }
 
-var ErrDeviceNotFound = errors.New("device not found in diskstats")
+var (
+	ErrDeviceNotFound = errors.New("device not found in diskstats")
+	ErrSplitFailed    = errors.New("could not split into lines")
+)
 
 // ReadDiskStatsFromProcFS reads /proc/diskstats and returns a map of devices,
 // which in turn contains a map of disk stats for the given device. If there was
 // a problem reading /proc/diskstats, a non-nil error will be returned. Note
 // that /proc/diskstats contains all block devices, all virtual devices, and all
 // partitons.
+//
+//nolint:mnd
 func ReadDiskStatsFromProcFS() (map[Device]map[Stat]uint64, error) {
 	data, err := os.ReadFile("/proc/diskstats")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to read /proc/disktats: %w", err)
 	}
 
 	stats := make(map[Device]map[Stat]uint64)
 	lines := strings.Split(string(data), "\n")
+
 	if lines == nil {
-		return nil, errors.New("could not split into lines")
+		return nil, ErrSplitFailed
 	}
+
 	for _, line := range lines[:len(lines)-1] {
 		fields := strings.Split(line, " ")
 		fields = slices.DeleteFunc(fields, func(n string) bool {
 			return n == ""
 		})
 		device := Device{
-			ID: fields[2],
+			ID:        fields[2],
+			SysFSPath: "",
+			Model:     "",
 		}
 		stats[device] = make(map[Stat]uint64)
-		for i, f := range fields {
+
+		for i, field := range fields {
 			if i < 3 {
 				continue
 			}
+
 			stat := Stat(i - 3)
-			readVal, err := strconv.ParseUint(f, 10, 64)
+
+			readVal, err := strconv.ParseUint(field, 10, 64)
 			if err != nil {
 				log.Warn().
 					Err(err).
@@ -88,9 +101,11 @@ func ReadDiskStatsFromProcFS() (map[Device]map[Stat]uint64, error) {
 					Str("device", device.ID).
 					Msg("Unable to read disk stat.")
 			}
+
 			stats[device][stat] = readVal
 		}
 	}
+
 	return stats, nil
 }
 
@@ -99,15 +114,23 @@ func ReadDiskStatsFromProcFS() (map[Device]map[Stat]uint64, error) {
 // stats for the given device. It will filter out stats for some virtual
 // devices. It also returns a "total" device containing the sum for each
 // statistic from all devices.
+//
+//nolint:cyclop
 func ReadDiskStatsFromSysFS() (map[Device]map[Stat]uint64, error) {
 	allDevices := make(map[Device]map[Stat]uint64)
 
 	devices, err := filepath.Glob("/sys/block/*/stat")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to read files under /sys/block/*/stat: %w", err)
 	}
-	total := Device{ID: "total"}
+
+	total := Device{
+		ID:        "total",
+		SysFSPath: "",
+		Model:     "",
+	}
 	totalStats := make(map[Stat]uint64)
+
 	for _, dev := range devices {
 		// Convert the device path into the id by removing the leading and
 		// trailing path elements.
@@ -118,9 +141,11 @@ func ReadDiskStatsFromSysFS() (map[Device]map[Stat]uint64, error) {
 		if strings.HasPrefix(id, "loop") || strings.HasPrefix(id, "ram") {
 			continue
 		}
+
 		device := Device{
 			ID:        id,
 			SysFSPath: "/sys/block/" + id,
+			Model:     "",
 		}
 		// Try to read the model from the appropriate file. Otherwise just leave
 		// it empty.
@@ -131,13 +156,16 @@ func ReadDiskStatsFromSysFS() (map[Device]map[Stat]uint64, error) {
 		data, err := os.ReadFile(dev)
 		if err != nil {
 			log.Warn().Err(err).Str("device", id).Msg("Unable to read stats for device.")
+
 			continue
 		}
 		// Parse the stats file fields into the relevant stats.
 		stats := make(map[Stat]uint64)
 		fields := bytes.Fields(data)
+
 		for i, field := range fields {
 			stat := Stat(i)
+
 			readVal, err := strconv.ParseUint(string(field), 10, 64)
 			if err != nil {
 				log.Warn().
@@ -146,16 +174,19 @@ func ReadDiskStatsFromSysFS() (map[Device]map[Stat]uint64, error) {
 					Str("id", dev).
 					Msg("Unable to parse device stat.")
 			}
+
 			stats[stat] = readVal
 			// Don't include virtual devices in totals
 			if strings.HasPrefix(id, "dm") || strings.HasPrefix(id, "md") {
 				continue
 			}
+
 			totalStats[stat] += readVal
 		}
 		// Add this device to the device stats map.
 		allDevices[device] = stats
 	}
+
 	allDevices[total] = totalStats
 
 	return allDevices, nil
@@ -169,10 +200,12 @@ func DeviceStats(device string) (map[Stat]uint64, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	for k, v := range allStats {
 		if k.ID == device {
 			return v, nil
 		}
 	}
+
 	return nil, ErrDeviceNotFound
 }
