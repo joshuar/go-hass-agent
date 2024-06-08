@@ -35,6 +35,7 @@ type wifiSensor struct {
 	linux.Sensor
 }
 
+//nolint:exhaustive
 func (w *wifiSensor) State() any {
 	switch w.SensorTypeValue {
 	case linux.SensorWifiSSID:
@@ -66,6 +67,7 @@ func (w *wifiSensor) State() any {
 	}
 }
 
+//nolint:exhaustive,mnd
 func (w *wifiSensor) Icon() string {
 	switch w.SensorTypeValue {
 	case linux.SensorWifiSSID, linux.SensorWifiHWAddress, linux.SensorWifiFrequency, linux.SensorWifiSpeed:
@@ -75,6 +77,7 @@ func (w *wifiSensor) Icon() string {
 		if !ok {
 			return "mdi:wifi-strength-alert-outline"
 		}
+
 		switch {
 		case value <= 25:
 			return "mdi:wifi-strength-1"
@@ -86,9 +89,11 @@ func (w *wifiSensor) Icon() string {
 			return "mdi:wifi-strength-4"
 		}
 	}
+
 	return "mdi:network"
 }
 
+//nolint:exhaustruct
 func newWifiSensor(sensorType string) *wifiSensor {
 	switch sensorType {
 	case ssidProp:
@@ -135,6 +140,7 @@ func newWifiSensor(sensorType string) *wifiSensor {
 			},
 		}
 	}
+
 	return nil
 }
 
@@ -146,28 +152,37 @@ func monitorWifi(ctx context.Context, p dbus.ObjectPath) <-chan sensor.Details {
 	wifiDevices, err := dbusx.GetProp[[]dbus.ObjectPath](ctx, dbusx.SystemBus, string(p), dBusNMObj, dbusNMActiveConnIntr+".Devices")
 	if err != nil {
 		log.Warn().Err(err).Msg("Could not retrieve active wireless devices.")
+
 		return nil
 	}
+
 	for _, d := range wifiDevices {
 		// for each device, get the access point it is currently associated with
-		ap, err := dbusx.GetProp[dbus.ObjectPath](ctx, dbusx.SystemBus, string(d), dBusNMObj, accessPointProp)
+		accessPointPath, err := dbusx.GetProp[dbus.ObjectPath](ctx, dbusx.SystemBus, string(d), dBusNMObj, accessPointProp)
 		if err != nil {
 			log.Warn().Err(err).Msg("Could not ascertain access point.")
+
 			continue
 		}
+
 		for _, prop := range wifiPropList {
 			// for the associated access point, get the wifi properties as sensors
-			value, err := dbusx.GetProp[any](ctx, dbusx.SystemBus, string(ap), dBusNMObj, accessPointInterface+"."+prop)
+			value, err := dbusx.GetProp[any](ctx, dbusx.SystemBus, string(accessPointPath), dBusNMObj, accessPointInterface+"."+prop)
 			if err != nil {
 				log.Warn().Err(err).Str("prop", prop).Msg("Could not get Wi-Fi property %s.")
+
 				continue
 			}
+
 			wifiSensor := newWifiSensor(prop)
 			if wifiSensor == nil {
 				log.Warn().Str("prop", prop).Msg("Unknown wifi property.")
+
 				continue
 			}
+
 			wifiSensor.Value = value
+
 			// send the wifi property as a sensor
 			go func() {
 				outCh <- wifiSensor
@@ -175,42 +190,49 @@ func monitorWifi(ctx context.Context, p dbus.ObjectPath) <-chan sensor.Details {
 		}
 		// monitor for changes in the wifi properties for this device
 		go func() {
-			for s := range monitorWifiProps(ctx, ap) {
+			for s := range monitorWifiProps(ctx, accessPointPath) {
 				outCh <- s
 			}
 		}()
 	}
+
 	return outCh
 }
 
-func monitorWifiProps(ctx context.Context, p dbus.ObjectPath) chan sensor.Details {
+//nolint:exhaustruct
+func monitorWifiProps(ctx context.Context, propPath dbus.ObjectPath) chan sensor.Details {
 	sensorCh := make(chan sensor.Details)
 
 	events, err := dbusx.WatchBus(ctx, &dbusx.Watch{
 		Bus:   dbusx.SystemBus,
 		Names: wifiPropList,
-		Path:  string(p),
+		Path:  string(propPath),
 	})
 	if err != nil {
 		log.Debug().Err(err).
 			Msg("Failed to create wifi properties D-Bus watch.")
 		close(sensorCh)
+
 		return sensorCh
 	}
 
 	go func() {
 		defer close(sensorCh)
+
 		for {
 			select {
 			case <-ctx.Done():
 				log.Debug().Msg("Unmonitoring wifi properties.")
+
 				return
 			case event := <-events:
 				props, err := dbusx.ParsePropertiesChanged(event.Content)
 				if err != nil {
 					log.Warn().Err(err).Msg("Did not understand received trigger.")
+
 					continue
 				}
+
 				for prop, value := range props.Changed {
 					if slices.Contains(wifiPropList, prop) {
 						wifiSensor := newWifiSensor(prop)

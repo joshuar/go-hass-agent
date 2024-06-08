@@ -20,13 +20,16 @@ import (
 const (
 	countUnit = "B"
 	rateUnit  = "B/s"
+
+	rateInterval = 5 * time.Second
+	rateJitter   = time.Second
 )
 
 type netIOSensorAttributes struct {
-	Packets    uint64 `json:"Packets"`     // number of packets
-	Errors     uint64 `json:"Errors"`      // total number of errors
-	Drops      uint64 `json:"Drops"`       // total number of packets which were dropped
-	FifoErrors uint64 `json:"Fifo Errors"` // total number of FIFO buffers errors
+	Packets    uint64 `json:"packets"`     // number of packets
+	Errors     uint64 `json:"errors"`      // total number of errors
+	Drops      uint64 `json:"drops"`       // total number of packets which were dropped
+	FifoErrors uint64 `json:"fifo_errors"` // total number of FIFO buffers errors
 }
 
 type netIOSensor struct {
@@ -37,7 +40,7 @@ type netIOSensor struct {
 func (s *netIOSensor) Attributes() any {
 	return struct {
 		NativeUnit string `json:"native_unit_of_measurement"`
-		DataSource string `json:"Data Source"`
+		DataSource string `json:"data_source"`
 		netIOSensorAttributes
 	}{
 		NativeUnit:            s.UnitsString,
@@ -46,6 +49,7 @@ func (s *netIOSensor) Attributes() any {
 	}
 }
 
+//nolint:exhaustive
 func (s *netIOSensor) Icon() string {
 	switch s.SensorTypeValue {
 	case linux.SensorBytesRecv:
@@ -53,26 +57,29 @@ func (s *netIOSensor) Icon() string {
 	case linux.SensorBytesSent:
 		return "mdi:upload-network"
 	}
+
 	return "mdi:help-network"
 }
 
-func (s *netIOSensor) update(c *net.IOCountersStat) {
+//nolint:exhaustive
+func (s *netIOSensor) update(counters *net.IOCountersStat) {
 	switch s.SensorTypeValue {
 	case linux.SensorBytesRecv:
-		s.Value = c.BytesRecv
-		s.Packets = c.PacketsRecv
-		s.Errors = c.Errin
-		s.Drops = c.Dropin
-		s.FifoErrors = c.Fifoin
+		s.Value = counters.BytesRecv
+		s.Packets = counters.PacketsRecv
+		s.Errors = counters.Errin
+		s.Drops = counters.Dropin
+		s.FifoErrors = counters.Fifoin
 	case linux.SensorBytesSent:
-		s.Value = c.BytesSent
-		s.Packets = c.PacketsSent
-		s.Errors = c.Errout
-		s.Drops = c.Dropout
-		s.FifoErrors = c.Fifoout
+		s.Value = counters.BytesSent
+		s.Packets = counters.PacketsSent
+		s.Errors = counters.Errout
+		s.Drops = counters.Dropout
+		s.FifoErrors = counters.Fifoout
 	}
 }
 
+//nolint:exhaustruct
 func newNetIOSensor(t linux.SensorTypeValue) *netIOSensor {
 	return &netIOSensor{
 		Sensor: linux.Sensor{
@@ -89,6 +96,7 @@ type netIORateSensor struct {
 	lastValue uint64
 }
 
+//nolint:exhaustive
 func (s *netIORateSensor) Icon() string {
 	switch s.SensorTypeValue {
 	case linux.SensorBytesRecvRate:
@@ -96,6 +104,7 @@ func (s *netIORateSensor) Icon() string {
 	case linux.SensorBytesSentRate:
 		return "mdi:transfer-up"
 	}
+
 	return "mdi:help-network"
 }
 
@@ -103,9 +112,11 @@ func (s *netIORateSensor) update(d time.Duration, b uint64) {
 	if uint64(d.Seconds()) > 0 && s.lastValue != 0 {
 		s.Value = (b - s.lastValue) / uint64(d.Seconds())
 	}
+
 	s.lastValue = b
 }
 
+//nolint:exhaustruct
 func newNetIORateSensor(t linux.SensorTypeValue) *netIORateSensor {
 	return &netIORateSensor{
 		Sensor: linux.Sensor{
@@ -123,11 +134,11 @@ type ratesWorker struct {
 	bytesRxRate, bytesTxRate *netIORateSensor
 }
 
-func (w *ratesWorker) Interval() time.Duration { return 5 * time.Second }
+func (w *ratesWorker) Interval() time.Duration { return rateInterval }
 
-func (w *ratesWorker) Jitter() time.Duration { return time.Second }
+func (w *ratesWorker) Jitter() time.Duration { return rateJitter }
 
-func (w *ratesWorker) Sensors(ctx context.Context, d time.Duration) ([]sensor.Details, error) {
+func (w *ratesWorker) Sensors(ctx context.Context, duration time.Duration) ([]sensor.Details, error) {
 	// Retrieve new stats.
 	netIO, err := net.IOCountersWithContext(ctx, false)
 	if err != nil {
@@ -136,8 +147,8 @@ func (w *ratesWorker) Sensors(ctx context.Context, d time.Duration) ([]sensor.De
 	// Update all sensors.
 	w.bytesRx.update(&netIO[0])
 	w.bytesTx.update(&netIO[0])
-	w.bytesRxRate.update(d, netIO[0].BytesRecv)
-	w.bytesTxRate.update(d, netIO[0].BytesSent)
+	w.bytesRxRate.update(duration, netIO[0].BytesRecv)
+	w.bytesTxRate.update(duration, netIO[0].BytesSent)
 	// Return sensors with new values.
 	return []sensor.Details{w.bytesRx, w.bytesTx, w.bytesRxRate, w.bytesTxRate}, nil
 }

@@ -31,11 +31,12 @@ type powerStateSensor struct {
 }
 
 func (s *powerStateSensor) State() any {
-	b, ok := s.Value.(bool)
+	boolVal, ok := s.Value.(bool)
 	if !ok {
 		return sensor.StateUnknown
 	}
-	if b {
+
+	if boolVal {
 		switch s.signal {
 		case suspend:
 			return "Suspended"
@@ -51,6 +52,7 @@ func (s *powerStateSensor) Icon() string {
 	if !ok {
 		str = ""
 	}
+
 	switch str {
 	case "Suspended":
 		return "mdi:power-sleep"
@@ -61,12 +63,13 @@ func (s *powerStateSensor) Icon() string {
 	}
 }
 
-func newPowerState(s powerSignal, v any) *powerStateSensor {
+//nolint:exhaustruct
+func newPowerState(signalName powerSignal, signalValue any) *powerStateSensor {
 	return &powerStateSensor{
-		signal: s,
+		signal: signalName,
 		Sensor: linux.Sensor{
 			SensorTypeValue: linux.SensorPowerState,
-			Value:           v,
+			Value:           signalValue,
 			SensorSrc:       linux.DataSrcDbus,
 			IsDiagnostic:    true,
 		},
@@ -75,7 +78,8 @@ func newPowerState(s powerSignal, v any) *powerStateSensor {
 
 type stateWorker struct{}
 
-func (w *stateWorker) Setup(ctx context.Context) *dbusx.Watch {
+//nolint:exhaustruct
+func (w *stateWorker) Setup(_ context.Context) *dbusx.Watch {
 	return &dbusx.Watch{
 		Bus:       dbusx.SystemBus,
 		Names:     []string{sleepSignal, shutdownSignal},
@@ -90,6 +94,7 @@ func (w *stateWorker) Watch(ctx context.Context, triggerCh chan dbusx.Trigger) c
 	// Watch for state changes.
 	go func() {
 		defer close(sensorCh)
+
 		for {
 			select {
 			case <-ctx.Done():
@@ -112,7 +117,13 @@ func (w *stateWorker) Watch(ctx context.Context, triggerCh chan dbusx.Trigger) c
 
 	// Send an initial state update (on, not suspended).
 	go func() {
-		sensors, _ := w.Sensors(ctx)
+		sensors, err := w.Sensors(ctx)
+		if err != nil {
+			log.Debug().Err(err).Msg("Failed to retrieve sensors.")
+
+			return
+		}
+
 		for _, s := range sensors {
 			sensorCh <- s
 		}

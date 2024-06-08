@@ -18,6 +18,11 @@ import (
 	"github.com/joshuar/go-hass-agent/pkg/linux/hwmon"
 )
 
+const (
+	hwMonInterval = time.Minute
+	hwMonJitter   = 5 * time.Second
+)
+
 type hwSensor struct {
 	ExtraAttrs map[string]float64
 	hwType     string
@@ -27,24 +32,26 @@ type hwSensor struct {
 	linux.Sensor
 }
 
-func (s *hwSensor) asBool(h *hwmon.Sensor) {
-	s.Value = h.Value()
+func (s *hwSensor) asBool(details *hwmon.Sensor) {
+	s.Value = details.Value()
 	if v, ok := s.Value.(bool); ok && v {
 		s.IconString = "mdi:alarm-light"
 	} else {
 		s.IconString = "mdi:alarm-light-off"
 	}
+
 	s.IsBinary = true
 }
 
-func (s *hwSensor) asFloat(h *hwmon.Sensor) {
-	s.Value = h.Value()
-	s.UnitsString = h.Units()
-	i, d := parseSensorType(h.SensorType.String())
+func (s *hwSensor) asFloat(details *hwmon.Sensor) {
+	s.Value = details.Value()
+	s.UnitsString = details.Units()
+	i, d := parseSensorType(details.SensorType.String())
 	s.IconString = i
 	s.DeviceClassValue = d
 	s.StateClassValue = types.StateClassMeasurement
-	for _, a := range h.Attributes {
+
+	for _, a := range details.Attributes {
 		s.ExtraAttrs[a.Name] = a.Value
 	}
 }
@@ -59,11 +66,11 @@ func (s *hwSensor) ID() string {
 
 func (s *hwSensor) Attributes() any {
 	return struct {
-		Attributes map[string]float64 `json:"Extra Attributes,omitempty"`
+		Attributes map[string]float64 `json:"extra_attributes,omitempty"`
 		NativeUnit string             `json:"native_unit_of_measurement,omitempty"`
-		DataSource string             `json:"Data Source"`
-		SensorType string             `json:"Sensor Type"`
-		HWMonPath  string             `json:"SysFS Path"`
+		DataSource string             `json:"data_source"`
+		SensorType string             `json:"sensor_type"`
+		HWMonPath  string             `json:"sysfs_path"`
 	}{
 		NativeUnit: s.UnitsString,
 		DataSource: linux.DataSrcSysfs,
@@ -73,42 +80,49 @@ func (s *hwSensor) Attributes() any {
 	}
 }
 
-func newHWSensor(s *hwmon.Sensor) *hwSensor {
-	hw := &hwSensor{
-		name:       s.Name(),
-		id:         s.ID(),
-		hwType:     s.SensorType.String(),
-		path:       s.SysFSPath,
+//nolint:exhaustruct
+func newHWSensor(details *hwmon.Sensor) *hwSensor {
+	newSensor := &hwSensor{
+		name:       details.Name(),
+		id:         details.ID(),
+		hwType:     details.SensorType.String(),
+		path:       details.SysFSPath,
 		ExtraAttrs: make(map[string]float64),
 	}
-	hw.IsDiagnostic = true
-	switch hw.hwType {
+	newSensor.IsDiagnostic = true
+
+	switch newSensor.hwType {
 	case hwmon.Alarm.String(), hwmon.Intrusion.String():
-		hw.asBool(s)
+		newSensor.asBool(details)
 	default:
-		hw.asFloat(s)
+		newSensor.asFloat(details)
 	}
-	return hw
+
+	return newSensor
 }
 
 type hwMonWorker struct{}
 
-func (w *hwMonWorker) Interval() time.Duration { return time.Minute }
+func (w *hwMonWorker) Interval() time.Duration { return hwMonInterval }
 
-func (w *hwMonWorker) Jitter() time.Duration { return 5 * time.Second }
+func (w *hwMonWorker) Jitter() time.Duration { return hwMonJitter }
 
 func (w *hwMonWorker) Sensors(_ context.Context, _ time.Duration) ([]sensor.Details, error) {
-	var sensors []sensor.Details
 	hwmonSensors, err := hwmon.GetAllSensors()
+	sensors := make([]sensor.Details, 0, len(hwmonSensors))
+
 	if err != nil && len(hwmonSensors) > 0 {
 		log.Warn().Err(err).Msg("Errors fetching some chip/sensor values from hwmon API.")
 	}
+
 	if err != nil && len(hwmonSensors) == 0 {
 		return nil, fmt.Errorf("could not retrieve hwmon sensor details: %w", err)
 	}
+
 	for _, s := range hwmonSensors {
 		sensors = append(sensors, newHWSensor(s))
 	}
+
 	return sensors, nil
 }
 

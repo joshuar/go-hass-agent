@@ -23,12 +23,14 @@ type runningAppsSensor struct {
 }
 
 type runningAppsSensorAttributes struct {
-	DataSource  string   `json:"Data Source"`
-	RunningApps []string `json:"Running Apps"`
+	DataSource  string   `json:"data_source"`
+	RunningApps []string `json:"running_apps"`
 }
 
+//nolint:exhaustruct
 func (r *runningAppsSensor) Attributes() any {
 	attrs := &runningAppsSensorAttributes{}
+
 	r.mu.Lock()
 	for appName, state := range r.appList {
 		if dbusx.VariantToValue[uint32](state) > 0 {
@@ -36,7 +38,9 @@ func (r *runningAppsSensor) Attributes() any {
 		}
 	}
 	r.mu.Unlock()
+
 	attrs.DataSource = linux.DataSrcDbus
+
 	return attrs
 }
 
@@ -44,33 +48,41 @@ func (r *runningAppsSensor) count() int {
 	if count, ok := r.State().(int); ok {
 		return count
 	}
+
 	return -1
 }
 
-func (r *runningAppsSensor) update(l map[string]dbus.Variant) sensor.Details {
+func (r *runningAppsSensor) update(apps map[string]dbus.Variant) sensor.Details {
 	var count int
+
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.appList = l
-	for _, raw := range l {
-		if appState, ok := raw.Value().(uint32); ok {
+	r.appList = apps
+
+	for _, appState := range apps {
+		if appState, ok := appState.Value().(uint32); ok {
 			if appState > 0 {
 				count++
 			}
 		}
 	}
+
 	if r.count() != count {
 		r.Value = count
+
 		return r
 	}
+
 	return nil
 }
 
+//nolint:exhaustruct
 func newRunningAppsSensor() *runningAppsSensor {
-	s := &runningAppsSensor{}
-	s.SensorTypeValue = linux.SensorAppRunning
-	s.IconString = "mdi:apps"
-	s.UnitsString = "apps"
-	s.StateClassValue = types.StateClassMeasurement
-	return s
+	newSensor := &runningAppsSensor{}
+	newSensor.SensorTypeValue = linux.SensorAppRunning
+	newSensor.IconString = "mdi:apps"
+	newSensor.UnitsString = "apps"
+	newSensor.StateClassValue = types.StateClassMeasurement
+
+	return newSensor
 }

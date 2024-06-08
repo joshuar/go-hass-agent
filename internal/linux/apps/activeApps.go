@@ -20,6 +20,7 @@ func (a *activeAppSensor) app() string {
 	if app, ok := a.State().(string); ok {
 		return app
 	}
+
 	return ""
 }
 
@@ -28,17 +29,21 @@ func (a *activeAppSensor) update(l map[string]dbus.Variant) sensor.Details {
 		if appState, ok := v.Value().(uint32); ok {
 			if appState == 2 && a.app() != app {
 				a.Value = app
+
 				return a
 			}
 		}
 	}
+
 	return nil
 }
 
+//nolint:exhaustruct
 func newActiveAppSensor() *activeAppSensor {
-	s := &activeAppSensor{}
-	s.SensorSrc = linux.DataSrcDbus
-	s.SensorTypeValue = linux.SensorAppActive
-	s.IconString = "mdi:application"
-	return s
+	newSensor := &activeAppSensor{}
+	newSensor.SensorSrc = linux.DataSrcDbus
+	newSensor.SensorTypeValue = linux.SensorAppActive
+	newSensor.IconString = "mdi:application"
+
+	return newSensor
 }

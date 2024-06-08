@@ -27,7 +27,7 @@ type dbusCommandMsg struct {
 	Path           dbus.ObjectPath `json:"path"`
 	Method         string          `json:"method"`
 	Args           []any           `json:"args"`
-	UseSessionPath bool            `json:"useSessionPath"`
+	UseSessionPath bool            `json:"use_session_path"`
 }
 
 func NewDBusCommandSubscription(ctx context.Context) *mqttapi.Subscription {
@@ -37,6 +37,7 @@ func NewDBusCommandSubscription(ctx context.Context) *mqttapi.Subscription {
 
 			if err := json.Unmarshal(p.Payload, &dbusMsg); err != nil {
 				log.Warn().Err(err).Msg("could not unmarshal dbus MQTT message")
+
 				return
 			}
 
@@ -47,6 +48,7 @@ func NewDBusCommandSubscription(ctx context.Context) *mqttapi.Subscription {
 			dbusType, ok := dbusx.DbusTypeMap[dbusMsg.Bus]
 			if !ok {
 				log.Warn().Msg("unsupported dbus type")
+
 				return
 			}
 

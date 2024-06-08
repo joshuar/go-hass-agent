@@ -7,7 +7,6 @@ package net
 
 import (
 	"context"
-	"errors"
 	"slices"
 	"sync"
 
@@ -57,12 +56,12 @@ type connection struct {
 }
 
 type connectionAttributes struct {
-	ConnectionType string `json:"Connection Type,omitempty"`
-	Ipv4           string `json:"IPv4 Address,omitempty"`
-	Ipv6           string `json:"IPv6 Address,omitempty"`
-	DataSource     string `json:"Data Source"`
-	IPv4Mask       int    `json:"IPv4 Mask,omitempty"`
-	IPv6Mask       int    `json:"IPv6 Mask,omitempty"`
+	ConnectionType string `json:"connection_type,omitempty"`
+	Ipv4           string `json:"ipv4_address,omitempty"`
+	Ipv6           string `json:"ipv6_address,omitempty"`
+	DataSource     string `json:"data_source"`
+	IPv4Mask       int    `json:"ipv4_mask,omitempty"`
+	IPv6Mask       int    `json:"ipv6_mask,omitempty"`
 }
 
 func (c *connection) Name() string {
@@ -73,10 +72,12 @@ func (c *connection) ID() string {
 	return strcase.ToSnake(c.name) + "_connection_state"
 }
 
+//nolint:mnd
 func (c *connection) Icon() string {
 	c.mu.Lock()
 	i := c.state + 5
 	c.mu.Unlock()
+
 	return i.String()
 }
 
@@ -87,11 +88,13 @@ func (c *connection) Attributes() any {
 func (c *connection) State() any {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+
 	return c.state.String()
 }
 
+//nolint:exhaustruct,mnd
 func newConnection(ctx context.Context, path dbus.ObjectPath) *connection {
-	c := &connection{
+	newConnection := &connection{
 		path: path,
 		Sensor: linux.Sensor{
 			SensorTypeValue: linux.SensorConnectionState,
@@ -104,114 +107,132 @@ func newConnection(ctx context.Context, path dbus.ObjectPath) *connection {
 
 	// fetch properties for the connection
 	var err error
-	c.name, err = dbusx.GetProp[string](ctx, dbusx.SystemBus, string(path), dBusNMObj, dbusNMActiveConnIntr+".Id")
+
+	newConnection.name, err = dbusx.GetProp[string](ctx, dbusx.SystemBus, string(path), dBusNMObj, dbusNMActiveConnIntr+".Id")
 	if err != nil {
 		log.Warn().Err(err).Msg("Could not retrieve connection ID.")
 	}
-	c.state, err = dbusx.GetProp[connState](ctx, dbusx.SystemBus, string(path), dBusNMObj, dbusNMActiveConnIntr+".State")
+
+	newConnection.state, err = dbusx.GetProp[connState](ctx, dbusx.SystemBus, string(path), dBusNMObj, dbusNMActiveConnIntr+".State")
 	if err != nil {
 		log.Warn().Err(err).Msg("Could not retrieve connection state.")
 	}
-	c.attrs.ConnectionType, err = dbusx.GetProp[string](ctx, dbusx.SystemBus, string(path), dBusNMObj, dbusNMActiveConnIntr+".Type")
+
+	newConnection.attrs.ConnectionType, err = dbusx.GetProp[string](ctx,
+		dbusx.SystemBus, string(path), dBusNMObj, dbusNMActiveConnIntr+".Type")
 	if err != nil {
 		log.Warn().Err(err).Msg("Could not retrieve connection type.")
 	}
+
 	ip4ConfigPath, err := dbusx.GetProp[dbus.ObjectPath](ctx, dbusx.SystemBus, string(path), dBusNMObj, dbusNMActiveConnIntr+".Ip4Config")
 	if err != nil {
-		log.Warn().Err(err).Str("connection", c.name).Msg("Could not fetch IPv4 address.")
+		log.Warn().Err(err).Str("connection", newConnection.name).Msg("Could not fetch IPv4 address.")
 	}
-	c.attrs.Ipv4, c.attrs.IPv4Mask = getAddr(ctx, 4, ip4ConfigPath)
+
+	newConnection.attrs.Ipv4, newConnection.attrs.IPv4Mask = getAddr(ctx, 4, ip4ConfigPath)
+
 	ip6ConfigPath, err := dbusx.GetProp[dbus.ObjectPath](ctx, dbusx.SystemBus, string(path), dBusNMObj, dbusNMActiveConnIntr+".Ip6Config")
 	if err != nil {
-		log.Warn().Err(err).Str("connection", c.name).Msg("Could not fetch IPv4 address.")
+		log.Warn().Err(err).Str("connection", newConnection.name).Msg("Could not fetch IPv4 address.")
 	}
-	c.attrs.Ipv6, c.attrs.IPv6Mask = getAddr(ctx, 6, ip6ConfigPath)
-	return c
+
+	newConnection.attrs.Ipv6, newConnection.attrs.IPv6Mask = getAddr(ctx, 6, ip6ConfigPath)
+
+	return newConnection
 }
 
+//nolint:mnd
 func monitorConnection(ctx context.Context, p dbus.ObjectPath) <-chan sensor.Details {
 	sensorCh := make(chan sensor.Details)
 	updateCh := make(chan any)
 
 	// create a new connection sensor
-	c := newConnection(ctx, p)
+	conn := newConnection(ctx, p)
 
 	// process updates and handle cancellation
 	connCtx, connCancel := context.WithCancel(ctx)
+
 	go func() {
 		defer close(sensorCh)
 		defer close(updateCh)
+
 		for {
 			select {
 			case <-connCtx.Done():
-				log.Debug().Str("connection", c.Name()).Str("path", string(c.path)).
+				log.Debug().Str("connection", conn.Name()).Str("path", string(conn.path)).
 					Msg("Connection deactivated.")
+
 				return
 			case <-ctx.Done():
-				log.Debug().Str("connection", c.Name()).Str("path", string(c.path)).
+				log.Debug().Str("connection", conn.Name()).Str("path", string(conn.path)).
 					Msg("Stopped monitoring connection.")
+
 				return
 			case u := <-updateCh:
-				c.mu.Lock()
+				conn.mu.Lock()
 				switch update := u.(type) {
 				case connState:
-					if c.state != update {
-						c.state = update
+					if conn.state != update {
+						conn.state = update
 					}
 				case address:
 					if update.class == 4 {
-						if c.attrs.Ipv4 != update.address {
-							c.attrs.Ipv4 = update.address
-							c.attrs.IPv4Mask = update.mask
+						if conn.attrs.Ipv4 != update.address {
+							conn.attrs.Ipv4 = update.address
+							conn.attrs.IPv4Mask = update.mask
 						}
 					}
+
 					if update.class == 6 {
-						if c.attrs.Ipv6 != update.address {
-							c.attrs.Ipv6 = update.address
-							c.attrs.IPv6Mask = update.mask
+						if conn.attrs.Ipv6 != update.address {
+							conn.attrs.Ipv6 = update.address
+							conn.attrs.IPv6Mask = update.mask
 						}
 					}
 				}
-				sensorCh <- c
-				c.mu.Unlock()
+				sensorCh <- conn
+				conn.mu.Unlock()
 			}
 		}
 	}()
 
 	// send the initial connection state as a sensor
 	go func() {
-		sensorCh <- c
+		sensorCh <- conn
 	}()
 
 	// monitor state changes
 	go func() {
 		defer connCancel()
-		for state := range monitorConnectionState(connCtx, string(c.path)) {
+
+		for state := range monitorConnectionState(connCtx, string(conn.path)) {
 			updateCh <- state
 		}
 	}()
 
 	// monitor address changes
 	go func() {
-		for addr := range monitorAddresses(connCtx, string(c.path)) {
+		for addr := range monitorAddresses(connCtx, string(conn.path)) {
 			updateCh <- addr
 		}
 	}()
 
 	// monitor for additional states depending on the type of connection
-	switch c.attrs.ConnectionType {
+	switch conn.attrs.ConnectionType {
 	case "802-11-wireless":
 		go func() {
-			for s := range monitorWifi(connCtx, c.path) {
+			for s := range monitorWifi(connCtx, conn.path) {
 				sensorCh <- s
 			}
 		}()
 	}
 
-	log.Debug().Str("connection", c.Name()).Msg("Monitoring connection.")
+	log.Debug().Str("connection", conn.Name()).Msg("Monitoring connection.")
+
 	return sensorCh
 }
 
+//nolint:exhaustruct,mnd
 func monitorConnectionState(ctx context.Context, path string) chan connState {
 	stateCh := make(chan connState)
 
@@ -225,38 +246,48 @@ func monitorConnectionState(ctx context.Context, path string) chan connState {
 		log.Debug().Err(err).Str("path", path).
 			Msg("Failed to create connection state D-Bus watch.")
 		close(stateCh)
+
 		return stateCh
 	}
 
 	log.Debug().Str("path", path).Msg("Monitoring connection state.")
+
 	go func() {
 		defer close(stateCh)
+
 		for {
 			select {
 			case <-ctx.Done():
 				log.Debug().Str("path", path).Msg("Unmonitoring connection state.")
+
 				return
 			case event := <-events:
 				props, err := dbusx.ParsePropertiesChanged(event.Content)
 				if err != nil {
 					continue
 				}
+
 				stateProp, stateChanged := props.Changed["State"]
 				if !stateChanged {
 					continue
 				}
+
 				currentState := dbusx.VariantToValue[connState](stateProp)
 				stateCh <- currentState
+
 				if currentState == 4 {
 					log.Debug().Str("path", path).Msg("Unmonitoring connection state.")
+
 					return
 				}
 			}
 		}
 	}()
+
 	return stateCh
 }
 
+//nolint:exhaustruct,mnd
 func monitorAddresses(ctx context.Context, path string) chan address {
 	sensorCh := make(chan address)
 
@@ -270,26 +301,32 @@ func monitorAddresses(ctx context.Context, path string) chan address {
 		log.Debug().Err(err).
 			Msg("Failed to create address changes D-Bus watch.")
 		close(sensorCh)
+
 		return sensorCh
 	}
 
 	log.Debug().Str("path", path).Msg("Monitoring address changes.")
+
 	go func() {
 		defer close(sensorCh)
+
 		for {
 			select {
 			case <-ctx.Done():
 				log.Debug().Str("path", path).Msg("Unmonitoring address changes.")
+
 				return
 			case event := <-events:
 				props, err := dbusx.ParsePropertiesChanged(event.Content)
 				if err != nil {
 					continue
 				}
+
 				if ipv4Change, ipv4Changed := props.Changed[ipv4ConfigProp]; ipv4Changed {
 					addr, mask := getAddr(ctx, 4, dbusx.VariantToValue[dbus.ObjectPath](ipv4Change))
 					sensorCh <- address{address: addr, mask: mask, class: 4}
 				}
+
 				if ipv6Change, ipv6Changed := props.Changed[ipv6ConfigProp]; ipv6Changed {
 					addr, mask := getAddr(ctx, 4, dbusx.VariantToValue[dbus.ObjectPath](ipv6Change))
 					sensorCh <- address{address: addr, mask: mask, class: 6}
@@ -301,40 +338,50 @@ func monitorAddresses(ctx context.Context, path string) chan address {
 	return sensorCh
 }
 
+//nolint:mnd
 func getAddr(ctx context.Context, ver int, path dbus.ObjectPath) (addr string, mask int) {
 	if path == "/" {
 		return "", 0
 	}
+
 	var connProp string
+
 	switch ver {
 	case 4:
 		connProp = dBusNMObj + ".IP4Config"
 	case 6:
 		connProp = dBusNMObj + ".IP6Config"
 	}
+
 	addrDetails, err := dbusx.GetProp[[]map[string]dbus.Variant](ctx, dbusx.SystemBus, string(path), dBusNMObj, connProp+".AddressData")
 	if err != nil {
 		return "", 0
 	}
+
 	var address string
+
 	var prefix int
+
 	if len(addrDetails) > 0 {
 		address = dbusx.VariantToValue[string](addrDetails[0]["address"])
 		prefix = dbusx.VariantToValue[int](addrDetails[0]["prefix"])
 		log.Debug().Str("path", string(path)).Str("address", address).Int("prefix", prefix).
 			Msg("Retrieved address.")
 	}
+
 	return address, prefix
 }
 
 func getActiveConnections(ctx context.Context) []dbus.ObjectPath {
-	v, err := dbusx.GetProp[[]dbus.ObjectPath](ctx, dbusx.SystemBus, dBusNMPath, dBusNMObj, dBusNMObj+".ActiveConnections")
+	connectionPaths, err := dbusx.GetProp[[]dbus.ObjectPath](ctx, dbusx.SystemBus, dBusNMPath, dBusNMObj, dBusNMObj+".ActiveConnections")
 	if err != nil {
 		log.Debug().Err(err).
 			Msg("Could not retrieve active connection list.")
+
 		return nil
 	}
-	return v
+
+	return connectionPaths
 }
 
 type address struct {
@@ -365,13 +412,15 @@ func (w *connectionsWorker) untrack(path dbus.ObjectPath) {
 func (w *connectionsWorker) isTracked(path dbus.ObjectPath) bool {
 	w.mu.Lock()
 	defer w.mu.Unlock()
+
 	return slices.Contains(w.list, path)
 }
 
 func (w *connectionsWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
-	return nil, errors.New("unimplemented")
+	return nil, linux.ErrUnimplemented
 }
 
+//nolint:exhaustruct,mnd
 func (w *connectionsWorker) Events(ctx context.Context) chan sensor.Details {
 	sensorCh := make(chan sensor.Details)
 	w.list = getActiveConnections(ctx)
@@ -380,6 +429,7 @@ func (w *connectionsWorker) Events(ctx context.Context) chan sensor.Details {
 			for s := range monitorConnection(ctx, path) {
 				sensorCh <- s
 			}
+
 			w.untrack(path)
 		}()
 	}
@@ -395,16 +445,20 @@ func (w *connectionsWorker) Events(ctx context.Context) chan sensor.Details {
 		log.Debug().Err(err).
 			Msg("Failed to create network connections D-Bus watch.")
 		close(sensorCh)
+
 		return sensorCh
 	}
 
 	go func() {
 		log.Debug().Msg("Monitoring for network connection changes.")
+
 		defer close(sensorCh)
+
 		for {
 			select {
 			case <-ctx.Done():
 				log.Debug().Msg("Stopped network connection monitoring.")
+
 				return
 			case event := <-events:
 				connectionPath := dbus.ObjectPath(event.Path)
@@ -432,6 +486,7 @@ func (w *connectionsWorker) Events(ctx context.Context) chan sensor.Details {
 	return sensorCh
 }
 
+//nolint:exhaustruct
 func NewConnectionWorker() (*linux.SensorWorker, error) {
 	return &linux.SensorWorker{
 			WorkerName: "Network Connection Sensors",

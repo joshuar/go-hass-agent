@@ -9,7 +9,6 @@ package desktop
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -32,6 +31,8 @@ const (
 	settingsChangedSignal   = "SettingChanged"
 	colorSchemeProp         = "color-scheme"
 	accentColorProp         = "accent-color"
+
+	reqTimeout = 15 * time.Second
 )
 
 type desktopSettingSensor struct {
@@ -40,6 +41,7 @@ type desktopSettingSensor struct {
 
 type worker struct{}
 
+//nolint:exhaustruct
 func (w *worker) Setup(_ context.Context) *dbusx.Watch {
 	return &dbusx.Watch{
 		Bus:       dbusx.SessionBus,
@@ -54,25 +56,32 @@ func (w *worker) Watch(ctx context.Context, triggerCh chan dbusx.Trigger) chan s
 
 	go func() {
 		defer close(sensorCh)
+
 		for {
 			select {
 			case <-ctx.Done():
 				log.Debug().Msg("Stopped desktop settings sensors.")
+
 				return
 			case event := <-triggerCh:
 				if !strings.Contains(event.Signal, settingsChangedSignal) {
 					continue
 				}
+
 				prop, ok := event.Content[1].(string)
 				if !ok {
 					log.Warn().Msg("Didn't understand changed property.")
+
 					continue
 				}
+
 				value, ok := event.Content[2].(dbus.Variant)
 				if !ok {
 					log.Warn().Msg("Didn't understand changed property value.")
+
 					continue
 				}
+
 				switch prop {
 				case colorSchemeProp:
 					s := parseColorScheme(value)
@@ -90,28 +99,34 @@ func (w *worker) Watch(ctx context.Context, triggerCh chan dbusx.Trigger) chan s
 		if err != nil {
 			log.Warn().Err(err).Msg("Could not get initial sensor updates.")
 		}
+
 		for _, s := range sensors {
 			sensorCh <- s
 		}
 	}()
+
 	return sensorCh
 }
 
+//nolint:mnd
 func (w *worker) Sensors(ctx context.Context) ([]sensor.Details, error) {
-	var sensors []sensor.Details
-	reqCtx, cancelReq := context.WithTimeout(ctx, 15*time.Second)
+	reqCtx, cancelReq := context.WithTimeout(ctx, reqTimeout)
 	defer cancelReq()
+
+	sensors := make([]sensor.Details, 0, 2)
+
 	sensors = append(sensors,
 		newAccentColorSensor(reqCtx, ""),
 		newColorSchemeSensor(reqCtx, ""))
+
 	return sensors, nil
 }
 
 func NewDesktopWorker() (*linux.SensorWorker, error) {
 	// If we cannot find a portal interface, we cannot monitor desktop settings.
-	portalDest := linux.FindPortal()
-	if portalDest == "" {
-		return nil, errors.New("unable to monitor for desktop settings: no portal present")
+	_, err := linux.FindPortal()
+	if err != nil {
+		return nil, fmt.Errorf("unable to monitor for desktop settings: %w", err)
 	}
 
 	return &linux.SensorWorker{
@@ -122,6 +137,7 @@ func NewDesktopWorker() (*linux.SensorWorker, error) {
 		nil
 }
 
+//nolint:mnd
 func parseColorScheme(value dbus.Variant) string {
 	scheme := dbusx.VariantToValue[uint32](value)
 	switch scheme {
@@ -134,70 +150,83 @@ func parseColorScheme(value dbus.Variant) string {
 	}
 }
 
+//nolint:mnd
 func parseAccentColor(value dbus.Variant) string {
 	values := dbusx.VariantToValue[[]any](value)
 	rgb := make([]uint8, 3)
-	for i, v := range values {
+
+	for colour, v := range values {
 		val, ok := v.(float64)
 		if !ok {
 			continue
 		}
-		rgb[i] = srgb.To8Bit(float32(val))
+
+		rgb[colour] = srgb.To8Bit(float32(val))
 	}
+
 	return fmt.Sprintf("#%02x%02x%02x", rgb[0], rgb[1], rgb[2])
 }
 
+//nolint:exhaustruct
 func newAccentColorSensor(ctx context.Context, accent string) *desktopSettingSensor {
 	if accent == "" {
 		accent = getProp(ctx, accentColorProp)
 	}
-	s := &desktopSettingSensor{}
-	s.IsDiagnostic = true
-	s.IconString = "mdi:palette"
-	s.SensorSrc = linux.DataSrcDbus
-	s.SensorTypeValue = linux.SensorAccentColor
-	s.Value = accent
-	return s
+
+	newSensor := &desktopSettingSensor{}
+	newSensor.IsDiagnostic = true
+	newSensor.IconString = "mdi:palette"
+	newSensor.SensorSrc = linux.DataSrcDbus
+	newSensor.SensorTypeValue = linux.SensorAccentColor
+	newSensor.Value = accent
+
+	return newSensor
 }
 
+//nolint:exhaustruct
 func newColorSchemeSensor(ctx context.Context, scheme string) *desktopSettingSensor {
 	if scheme == "" {
 		scheme = getProp(ctx, colorSchemeProp)
 	}
-	s := &desktopSettingSensor{}
-	s.IsDiagnostic = true
-	s.SensorSrc = linux.DataSrcDbus
-	s.SensorTypeValue = linux.SensorColorScheme
-	s.Value = scheme
+
+	newSensor := &desktopSettingSensor{}
+	newSensor.IsDiagnostic = true
+	newSensor.SensorSrc = linux.DataSrcDbus
+	newSensor.SensorTypeValue = linux.SensorColorScheme
+	newSensor.Value = scheme
+
 	switch scheme {
 	case "dark":
-		s.IconString = "mdi:weather-night"
+		newSensor.IconString = "mdi:weather-night"
 	case "light":
-		s.IconString = "mdi:weather-sunny"
+		newSensor.IconString = "mdi:weather-sunny"
 	default:
-		s.IconString = "mdi:theme-light-dark"
+		newSensor.IconString = "mdi:theme-light-dark"
 	}
-	return s
+
+	return newSensor
 }
 
 func getProp(ctx context.Context, prop string) string {
-	var value dbus.Variant
-	var err error
-	if value, err = dbusx.GetData[dbus.Variant](ctx,
+	value, err := dbusx.GetData[dbus.Variant](ctx,
 		dbusx.SessionBus,
 		desktopPortalPath,
 		desktopPortalInterface,
 		settingsPortalInterface+".Read",
 		"org.freedesktop.appearance",
-		prop); err != nil {
+		prop)
+	if err != nil {
 		log.Warn().Err(err).Msg("Could not retrieve accent color from D-Bus.")
+
 		return sensor.StateUnknown
 	}
+
 	switch prop {
 	case accentColorProp:
 		return parseAccentColor(value)
 	case colorSchemeProp:
 		return parseColorScheme(value)
 	}
+
 	return sensor.StateUnknown
 }

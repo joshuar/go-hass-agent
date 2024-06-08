@@ -20,6 +20,9 @@ import (
 const (
 	loadAvgIcon = "mdi:chip"
 	loadAvgUnit = "load"
+
+	loadAvgUpdateInterval = time.Minute
+	loadAvgUpdateJitter   = 5 * time.Second
 )
 
 type loadavgSensor struct {
@@ -28,37 +31,41 @@ type loadavgSensor struct {
 
 type loadAvgsSensorWorker struct{}
 
-func (w *loadAvgsSensorWorker) Interval() time.Duration { return time.Minute }
+func (w *loadAvgsSensorWorker) Interval() time.Duration { return loadAvgUpdateInterval }
 
-func (w *loadAvgsSensorWorker) Jitter() time.Duration { return 5 * time.Second }
+func (w *loadAvgsSensorWorker) Jitter() time.Duration { return loadAvgUpdateJitter }
 
+//nolint:exhaustive,exhaustruct,mnd
 func (w *loadAvgsSensorWorker) Sensors(ctx context.Context, _ time.Duration) ([]sensor.Details, error) {
-	var sensors []sensor.Details
+	sensors := make([]sensor.Details, 0, 3)
 
-	latest, err := load.AvgWithContext(ctx)
+	loadAvgs, err := load.AvgWithContext(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("problem fetching load averages: %w", err)
 	}
 
 	for _, loadType := range []linux.SensorTypeValue{linux.SensorLoad1, linux.SensorLoad5, linux.SensorLoad15} {
-		l := &loadavgSensor{}
-		l.IconString = loadAvgIcon
-		l.UnitsString = loadAvgUnit
-		l.SensorSrc = linux.DataSrcProcfs
-		l.StateClassValue = types.StateClassMeasurement
+		newSensor := &loadavgSensor{}
+		newSensor.IconString = loadAvgIcon
+		newSensor.UnitsString = loadAvgUnit
+		newSensor.SensorSrc = linux.DataSrcProcfs
+		newSensor.StateClassValue = types.StateClassMeasurement
+
 		switch loadType {
 		case linux.SensorLoad1:
-			l.Value = latest.Load1
-			l.SensorTypeValue = linux.SensorLoad1
+			newSensor.Value = loadAvgs.Load1
+			newSensor.SensorTypeValue = linux.SensorLoad1
 		case linux.SensorLoad5:
-			l.Value = latest.Load5
-			l.SensorTypeValue = linux.SensorLoad5
+			newSensor.Value = loadAvgs.Load5
+			newSensor.SensorTypeValue = linux.SensorLoad5
 		case linux.SensorLoad15:
-			l.Value = latest.Load15
-			l.SensorTypeValue = linux.SensorLoad15
+			newSensor.Value = loadAvgs.Load15
+			newSensor.SensorTypeValue = linux.SensorLoad15
 		}
-		sensors = append(sensors, l)
+
+		sensors = append(sensors, newSensor)
 	}
+
 	return sensors, nil
 }
 

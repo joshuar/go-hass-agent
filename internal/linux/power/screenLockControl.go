@@ -34,12 +34,15 @@ func NewScreenLockControl(ctx context.Context) *mqtthass.ButtonEntity {
 				if dbusScreensaverPath == "" {
 					log.Warn().Msg("Could not determine screensaver method.")
 				}
+
 				var err error
+
 				if dbusScreensaverMsg != nil {
 					err = dbusx.Call(ctx, dbusx.SessionBus, dbusScreensaverPath, dbusScreensaverDest, dbusScreensaverLockMethod, dbusScreensaverMsg)
 				} else {
 					err = dbusx.Call(ctx, dbusx.SessionBus, dbusScreensaverPath, dbusScreensaverDest, dbusScreensaverLockMethod)
 				}
+
 				if err != nil {
 					log.Warn().Err(err).Msg("Could not lock screensaver.")
 				}
@@ -48,6 +51,7 @@ func NewScreenLockControl(ctx context.Context) *mqtthass.ButtonEntity {
 
 func getDesktopEnvScreensaverConfig() (dest, path string, msg *string) {
 	desktop := os.Getenv("XDG_CURRENT_DESKTOP")
+
 	switch {
 	case strings.Contains(desktop, "KDE"):
 		return "org.freedesktop.ScreenSaver", "/ScreenSaver", nil

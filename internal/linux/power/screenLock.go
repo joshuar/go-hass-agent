@@ -7,7 +7,6 @@ package power
 
 import (
 	"context"
-	"errors"
 
 	"github.com/rs/zerolog/log"
 
@@ -25,25 +24,28 @@ func (s *screenlockSensor) Icon() string {
 	if !ok {
 		return "mdi:lock-alert"
 	}
+
 	if state {
 		return "mdi:eye-lock"
 	}
 	return "mdi:eye-lock-open"
 }
 
-func newScreenlockEvent(v bool) *screenlockSensor {
+//nolint:exhaustruct
+func newScreenlockEvent(value bool) *screenlockSensor {
 	return &screenlockSensor{
 		Sensor: linux.Sensor{
 			SensorTypeValue: linux.SensorScreenLock,
 			IsBinary:        true,
 			SensorSrc:       linux.DataSrcDbus,
-			Value:           v,
+			Value:           value,
 		},
 	}
 }
 
 type screenLockWorker struct{}
 
+//nolint:exhaustruct
 func (w *screenLockWorker) Setup(ctx context.Context) *dbusx.Watch {
 	sessionPath := dbusx.GetSessionPath(ctx)
 	return &dbusx.Watch{
@@ -58,6 +60,7 @@ func (w *screenLockWorker) Watch(ctx context.Context, triggerCh chan dbusx.Trigg
 	sensorCh := make(chan sensor.Details)
 	go func() {
 		defer close(sensorCh)
+
 		for {
 			select {
 			case <-ctx.Done():
@@ -69,8 +72,10 @@ func (w *screenLockWorker) Watch(ctx context.Context, triggerCh chan dbusx.Trigg
 					props, err := dbusx.ParsePropertiesChanged(event.Content)
 					if err != nil {
 						log.Warn().Err(err).Msg("Did not understand received trigger.")
+
 						continue
 					}
+
 					if state, lockChanged := props.Changed[sessionLockedProp]; lockChanged {
 						sensorCh <- newScreenlockEvent(dbusx.VariantToValue[bool](state))
 					}
@@ -86,8 +91,8 @@ func (w *screenLockWorker) Watch(ctx context.Context, triggerCh chan dbusx.Trigg
 }
 
 // TODO: retrieve the current screen lock state when called.
-func (w *screenLockWorker) Sensors(ctx context.Context) ([]sensor.Details, error) {
-	return nil, errors.New("unimplemented")
+func (w *screenLockWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
+	return nil, linux.ErrUnimplemented
 }
 
 func NewScreenLockWorker() (*linux.SensorWorker, error) {

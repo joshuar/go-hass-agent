@@ -7,7 +7,6 @@ package apps
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/godbus/dbus/v5"
@@ -32,6 +31,7 @@ type worker struct {
 	portalDest  string
 }
 
+//nolint:exhaustruct
 func (w *worker) Setup(_ context.Context) *dbusx.Watch {
 	return &dbusx.Watch{
 		Bus:       dbusx.SessionBus,
@@ -48,8 +48,10 @@ func (w *worker) Watch(ctx context.Context, triggerCh chan dbusx.Trigger) chan s
 		appSensors, err := w.Sensors(ctx)
 		if err != nil {
 			log.Warn().Err(err).Msg("Failed to update app sensors.")
+
 			return
 		}
+
 		for _, s := range appSensors {
 			sensorCh <- s
 		}
@@ -58,10 +60,12 @@ func (w *worker) Watch(ctx context.Context, triggerCh chan dbusx.Trigger) chan s
 	// Watch for active app changes.
 	go func() {
 		defer close(sensorCh)
+
 		for {
 			select {
 			case <-ctx.Done():
 				log.Debug().Msg("Stopped app sensor.")
+
 				return
 			case <-triggerCh:
 				sendSensors(ctx, sensorCh)
@@ -79,26 +83,30 @@ func (w *worker) Watch(ctx context.Context, triggerCh chan dbusx.Trigger) chan s
 
 func (w *worker) Sensors(ctx context.Context) ([]sensor.Details, error) {
 	var sensors []sensor.Details
+
 	appList, err := dbusx.GetData[map[string]dbus.Variant](ctx, dbusx.SessionBus, appStateDBusPath, w.portalDest, appStateDBusMethod)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve app list from D-Bus: %w", err)
 	}
+
 	if appList != nil {
 		if s := w.activeApp.update(appList); s != nil {
 			sensors = append(sensors, s)
 		}
+
 		if s := w.runningApps.update(appList); s != nil {
 			sensors = append(sensors, s)
 		}
 	}
+
 	return sensors, nil
 }
 
 func NewAppWorker() (*linux.SensorWorker, error) {
 	// If we cannot find a portal interface, we cannot monitor the active app.
-	portalDest := linux.FindPortal()
-	if portalDest == "" {
-		return nil, errors.New("unable to monitor for active applications: no portal present")
+	portalDest, err := linux.FindPortal()
+	if err != nil {
+		return nil, fmt.Errorf("unable to monitor for active applications: %w", err)
 	}
 
 	return &linux.SensorWorker{

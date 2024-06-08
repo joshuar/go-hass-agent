@@ -7,6 +7,7 @@ package user
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/rs/zerolog/log"
@@ -33,43 +34,51 @@ type usersSensor struct {
 
 func (s *usersSensor) Attributes() any {
 	return struct {
-		DataSource string   `json:"Data Source"`
-		Usernames  []string `json:"Usernames"`
+		DataSource string   `json:"data_source"`
+		Usernames  []string `json:"usernames"`
 	}{
 		DataSource: linux.DataSrcDbus,
 		Usernames:  s.userNames,
 	}
 }
 
-func (s *usersSensor) updateUsers(ctx context.Context) {
+func (s *usersSensor) updateUsers(ctx context.Context) error {
 	userData, err := dbusx.GetData[[][]any](ctx, dbusx.SystemBus, loginBasePath, loginBaseInterface, listSessionsMethod)
 	if err != nil {
-		log.Warn().Err(err).Msg("Could not retrieve users from D-Bus.")
-		return
+		return fmt.Errorf("could not retrieve users from D-Bus: %w", err)
 	}
+
 	s.Value = len(userData)
+
 	var users []string
+
 	for _, u := range userData {
 		if user, ok := u[2].(string); ok {
 			users = append(users, user)
 		}
 	}
+
 	s.userNames = users
+
+	return nil
 }
 
+//nolint:exhaustruct
 func newUsersSensor() *usersSensor {
-	s := &usersSensor{}
-	s.SensorTypeValue = linux.SensorUsers
-	s.UnitsString = "users"
-	s.IconString = "mdi:account"
-	s.StateClassValue = types.StateClassMeasurement
-	return s
+	userSensor := &usersSensor{}
+	userSensor.SensorTypeValue = linux.SensorUsers
+	userSensor.UnitsString = "users"
+	userSensor.IconString = "mdi:account"
+	userSensor.StateClassValue = types.StateClassMeasurement
+
+	return userSensor
 }
 
 type worker struct {
 	sensor *usersSensor
 }
 
+//nolint:exhaustruct
 func (w *worker) Setup(_ context.Context) *dbusx.Watch {
 	return &dbusx.Watch{
 		Bus:       dbusx.SystemBus,
@@ -82,37 +91,45 @@ func (w *worker) Setup(_ context.Context) *dbusx.Watch {
 func (w *worker) Watch(ctx context.Context, triggerCh chan dbusx.Trigger) chan sensor.Details {
 	sensorCh := make(chan sensor.Details)
 
+	sendUpdate := func() {
+		err := w.sensor.updateUsers(ctx)
+		if err != nil {
+			log.Debug().Err(err).Msg("Update failed.")
+
+			return
+		}
+		sensorCh <- w.sensor
+	}
+
 	go func() {
 		defer close(sensorCh)
+
 		for {
 			select {
 			case <-ctx.Done():
 				log.Debug().Msg("Stopped users sensors.")
+
 				return
 			case event := <-triggerCh:
 				if !strings.Contains(event.Signal, sessionAddedSignal) && !strings.Contains(event.Signal, sessionRemovedSignal) {
 					continue
 				}
-				go func() {
-					w.sensor.updateUsers(ctx)
-					sensorCh <- w.sensor
-				}()
+
+				go sendUpdate()
 			}
 		}
 	}()
 
 	// Send an initial sensor update.
-	go func() {
-		w.sensor.updateUsers(ctx)
-		sensorCh <- w.sensor
-	}()
+	go sendUpdate()
 
 	return sensorCh
 }
 
 func (w *worker) Sensors(ctx context.Context) ([]sensor.Details, error) {
-	w.sensor.updateUsers(ctx)
-	return []sensor.Details{w.sensor}, nil
+	err := w.sensor.updateUsers(ctx)
+
+	return []sensor.Details{w.sensor}, err
 }
 
 func NewUserWorker() (*linux.SensorWorker, error) {

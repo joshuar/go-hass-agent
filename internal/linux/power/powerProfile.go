@@ -29,18 +29,21 @@ type powerSensor struct {
 	linux.Sensor
 }
 
-func newPowerSensor(t linux.SensorTypeValue, v dbus.Variant) *powerSensor {
-	s := &powerSensor{}
-	s.Value = dbusx.VariantToValue[string](v)
-	s.SensorTypeValue = t
-	s.IconString = "mdi:flash"
-	s.SensorSrc = linux.DataSrcDbus
-	s.IsDiagnostic = true
-	return s
+//nolint:exhaustruct
+func newPowerSensor(sensorType linux.SensorTypeValue, sensorValue dbus.Variant) *powerSensor {
+	newSensor := &powerSensor{}
+	newSensor.Value = dbusx.VariantToValue[string](sensorValue)
+	newSensor.SensorTypeValue = sensorType
+	newSensor.IconString = "mdi:flash"
+	newSensor.SensorSrc = linux.DataSrcDbus
+	newSensor.IsDiagnostic = true
+
+	return newSensor
 }
 
 type profileWorker struct{}
 
+//nolint:exhaustruct
 func (w *profileWorker) Setup(_ context.Context) *dbusx.Watch {
 	return &dbusx.Watch{
 		Bus:       dbusx.SystemBus,
@@ -55,19 +58,21 @@ func (w *profileWorker) Watch(ctx context.Context, triggerCh chan dbusx.Trigger)
 
 	// Check for power profile support, exit if not available. Otherwise, send
 	// an initial update.
-	s, err := w.Sensors(ctx)
+	sensors, err := w.Sensors(ctx)
 	if err != nil {
 		log.Warn().Err(err).Msg("Cannot monitor power profile.")
 		close(sensorCh)
 		return sensorCh
 	}
+
 	go func() {
-		sensorCh <- s[0]
+		sensorCh <- sensors[0]
 	}()
 
 	// Watch for power profile changes.
 	go func() {
 		defer close(sensorCh)
+
 		for {
 			select {
 			case <-ctx.Done():
@@ -77,8 +82,10 @@ func (w *profileWorker) Watch(ctx context.Context, triggerCh chan dbusx.Trigger)
 				props, err := dbusx.ParsePropertiesChanged(event.Content)
 				if err != nil {
 					log.Warn().Err(err).Msg("Did not understand received trigger.")
+
 					continue
 				}
+
 				if profile, profileChanged := props.Changed[activeProfileProp]; profileChanged {
 					sensorCh <- newPowerSensor(linux.SensorPowerProfile, profile)
 				}

@@ -9,7 +9,7 @@ package power
 
 import (
 	"context"
-	"path/filepath"
+	"fmt"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -25,6 +25,8 @@ const (
 
 	idleProp     = managerInterface + "." + sessionIdleProp
 	idleTimeProp = managerInterface + "." + sessionIdleTimeProp
+
+	idleSF = 1000
 )
 
 type idleSensor struct {
@@ -37,6 +39,7 @@ func (s *idleSensor) Icon() string {
 	if !ok {
 		return notIdleIcon
 	}
+
 	switch state {
 	case true:
 		return idleIcon
@@ -47,37 +50,51 @@ func (s *idleSensor) Icon() string {
 
 func (s *idleSensor) Attributes() any {
 	return struct {
-		DataSource string  `json:"Data Source"`
-		Seconds    float64 `json:"Duration"`
+		DataSource string  `json:"data_source"`
+		Seconds    float64 `json:"duration"`
 	}{
 		DataSource: linux.DataSrcDbus,
 		Seconds:    idleTime(s.idleTime),
 	}
 }
 
-func newIdleSensor(ctx context.Context) *idleSensor {
-	s := &idleSensor{
+//nolint:exhaustruct
+func newIdleSensor(ctx context.Context) (*idleSensor, error) {
+	newSensor := &idleSensor{
 		Sensor: linux.Sensor{
 			SensorTypeValue: linux.SensorIdleState,
 			IsBinary:        true,
 		},
 	}
+
 	var idleState bool
+
 	var idleTime int64
+
 	var err error
+
 	if idleState, err = dbusx.GetProp[bool](ctx, dbusx.SystemBus, loginBasePath, loginBaseInterface, idleProp); err != nil {
-		log.Debug().Err(err).Str("prop", filepath.Ext(idleProp)).Msg("Could not retrieve property from D-Bus.")
-		return nil
+		return nil, fmt.Errorf("could not retrieve idle state: %w", err)
 	}
-	s.Value = idleState
-	idleTime, _ = dbusx.GetProp[int64](ctx, dbusx.SystemBus, loginBasePath, loginBaseInterface, idleTimeProp)
-	s.idleTime = idleTime
-	return s
+
+	newSensor.Value = idleState
+	idleTime, err = dbusx.GetProp[int64](ctx, dbusx.SystemBus, loginBasePath, loginBaseInterface, idleTimeProp)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve idle time: %w", err)
+	}
+	newSensor.idleTime = idleTime
+
+	return newSensor, nil
 }
 
 func IdleUpdater(ctx context.Context) chan sensor.Details {
 	sensorCh := make(chan sensor.Details)
-	idleSensor := newIdleSensor(ctx)
+	idleSensor, err := newIdleSensor(ctx)
+	if err != nil {
+		log.Debug().Err(err).Msg("Cannot create idle sensor.")
+		close(sensorCh)
+		return sensorCh
+	}
 
 	sessionPath := dbusx.GetSessionPath(ctx)
 
@@ -123,7 +140,13 @@ func IdleUpdater(ctx context.Context) chan sensor.Details {
 
 	// Send an initial sensor update.
 	go func() {
-		sensorCh <- newIdleSensor(ctx)
+		idleSensor, err := newIdleSensor(ctx)
+		if err != nil {
+			log.Debug().Err(err).Msg("Cannot start idle sensor.")
+
+			return
+		}
+		sensorCh <- idleSensor
 	}()
 
 	return sensorCh
@@ -131,6 +154,6 @@ func IdleUpdater(ctx context.Context) chan sensor.Details {
 
 func idleTime(current int64) float64 {
 	epoch := time.Unix(0, 0)
-	uptime := time.Unix(current/1000, 0)
+	uptime := time.Unix(current/idleSF, 0)
 	return uptime.Sub(epoch).Seconds()
 }

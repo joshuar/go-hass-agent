@@ -25,6 +25,9 @@ import (
 const (
 	diskRateUnits  = "kB/s"
 	diskCountUnits = "requests"
+
+	ratesUpdateInterval = 5 * time.Second
+	ratesUpdateJitter   = time.Second
 )
 
 type diskIOSensor struct {
@@ -35,12 +38,12 @@ type diskIOSensor struct {
 }
 
 type diskIOSensorAttributes struct {
-	DataSource string `json:"Data Source"`
+	DataSource string `json:"data_source"`
 	NativeUnit string `json:"native_unit_of_measurement,omitempty"`
-	Model      string `json:"Device Model,omitempty"`
-	SysFSPath  string `json:"SysFS Path,omitempty"`
-	Sectors    uint64 `json:"Total Sectors,omitempty"`
-	Time       uint64 `json:"Total Milliseconds,omitempty"`
+	Model      string `json:"device_model,omitempty"`
+	SysFSPath  string `json:"sysfs_path,omitempty"`
+	Sectors    uint64 `json:"total_sectors,omitempty"`
+	Time       uint64 `json:"total_milliseconds,omitempty"`
 }
 
 type sensors struct {
@@ -52,6 +55,7 @@ type sensors struct {
 
 func (s *diskIOSensor) Name() string {
 	r := []rune(s.device.ID)
+
 	return string(append([]rune{unicode.ToUpper(r[0])}, r[1:]...)) + " " + s.SensorTypeValue.String()
 }
 
@@ -59,6 +63,7 @@ func (s *diskIOSensor) ID() string {
 	return s.device.ID + "_" + strcase.ToSnake(s.SensorTypeValue.String())
 }
 
+//nolint:exhaustive,exhaustruct
 func (s *diskIOSensor) Attributes() any {
 	// Common attributes for all disk IO sensors
 	attrs := &diskIOSensorAttributes{
@@ -66,24 +71,30 @@ func (s *diskIOSensor) Attributes() any {
 		Model:      s.device.Model,
 		SysFSPath:  s.device.SysFSPath,
 	}
+
 	switch s.SensorTypeValue {
 	case linux.SensorDiskReads:
 		attrs.Sectors = s.stats[diskstats.TotalSectorsRead]
 		attrs.Time = s.stats[diskstats.TotalTimeReading]
 		attrs.NativeUnit = diskCountUnits
+
 		return attrs
 	case linux.SensorDiskWrites:
 		attrs.Sectors = s.stats[diskstats.TotalSectorsWritten]
 		attrs.Time = s.stats[diskstats.TotalTimeWriting]
 		attrs.NativeUnit = diskCountUnits
+
 		return attrs
 	case linux.SensorDiskReadRate, linux.SensorDiskWriteRate:
 		attrs.NativeUnit = diskRateUnits
+
 		return attrs
 	}
+
 	return nil
 }
 
+//nolint:exhaustive
 func (s *diskIOSensor) Icon() string {
 	switch s.SensorTypeValue {
 	case linux.SensorDiskReads, linux.SensorDiskReadRate:
@@ -91,12 +102,16 @@ func (s *diskIOSensor) Icon() string {
 	case linux.SensorDiskWrites, linux.SensorDiskWriteRate:
 		return "mdi:file-download"
 	}
+
 	return "mdi:file"
 }
 
+//nolint:exhaustive,mnd
 func (s *diskIOSensor) update(stats map[diskstats.Stat]uint64, delta time.Duration) {
 	s.stats = stats
+
 	var curr uint64
+
 	switch s.SensorTypeValue {
 	case linux.SensorDiskReads:
 		s.Value = s.stats[diskstats.TotalReads]
@@ -107,17 +122,20 @@ func (s *diskIOSensor) update(stats map[diskstats.Stat]uint64, delta time.Durati
 	case linux.SensorDiskWriteRate:
 		curr = s.stats[diskstats.TotalSectorsWritten]
 	}
+
 	if s.SensorTypeValue == linux.SensorDiskReadRate || s.SensorTypeValue == linux.SensorDiskWriteRate {
 		if uint64(delta.Seconds()) > 0 {
 			log.Trace().Msgf("%s IO rate calc: (%d - %d) / uint64(%d) / 2", s.device, curr, s.prev, uint64(delta.Seconds()))
 			s.Value = (curr - s.prev) / uint64(delta.Seconds()) / 2
 		}
+
 		s.prev = curr
 	}
 }
 
+//nolint:exhaustruct
 func newDiskIOSensor(device diskstats.Device, sensorType linux.SensorTypeValue) *diskIOSensor {
-	s := &diskIOSensor{
+	newSensor := &diskIOSensor{
 		device: device,
 		Sensor: linux.Sensor{
 			StateClassValue: types.StateClassTotalIncreasing,
@@ -126,13 +144,15 @@ func newDiskIOSensor(device diskstats.Device, sensorType linux.SensorTypeValue) 
 		},
 	}
 	if device.ID != "total" {
-		s.IsDiagnostic = true
+		newSensor.IsDiagnostic = true
 	}
-	return s
+
+	return newSensor
 }
 
+//nolint:exhaustruct
 func newDiskIORateSensor(device diskstats.Device, sensorType linux.SensorTypeValue) *diskIOSensor {
-	s := &diskIOSensor{
+	newSensor := &diskIOSensor{
 		device: device,
 		Sensor: linux.Sensor{
 			DeviceClassValue: types.DeviceClassDataRate,
@@ -142,9 +162,10 @@ func newDiskIORateSensor(device diskstats.Device, sensorType linux.SensorTypeVal
 		},
 	}
 	if device.ID != "total" {
-		s.IsDiagnostic = true
+		newSensor.IsDiagnostic = true
 	}
-	return s
+
+	return newSensor
 }
 
 func newDevice(dev diskstats.Device) *sensors {
@@ -169,6 +190,7 @@ type ioWorker struct {
 func (w *ioWorker) addDevice(dev diskstats.Device) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
+
 	if _, ok := w.devices[dev]; !ok {
 		w.devices[dev] = newDevice(dev)
 	}
@@ -189,6 +211,7 @@ func (w *ioWorker) updateDevice(dev diskstats.Device, stats map[diskstats.Stat]u
 func (w *ioWorker) deviceSensors(dev diskstats.Device) []sensor.Details {
 	w.mu.Lock()
 	defer w.mu.Unlock()
+
 	return []sensor.Details{
 		w.devices[dev].totalReads,
 		w.devices[dev].totalWrites,
@@ -197,27 +220,31 @@ func (w *ioWorker) deviceSensors(dev diskstats.Device) []sensor.Details {
 	}
 }
 
-func (w *ioWorker) Interval() time.Duration { return 5 * time.Second }
+func (w *ioWorker) Interval() time.Duration { return ratesUpdateInterval }
 
-func (w *ioWorker) Jitter() time.Duration { return time.Second }
+func (w *ioWorker) Jitter() time.Duration { return ratesUpdateJitter }
 
-func (w *ioWorker) Sensors(_ context.Context, d time.Duration) ([]sensor.Details, error) {
-	var sensors []sensor.Details
-	newStats, err := diskstats.ReadDiskStatsFromSysFS()
+func (w *ioWorker) Sensors(_ context.Context, duration time.Duration) ([]sensor.Details, error) {
+	stats, err := diskstats.ReadDiskStatsFromSysFS()
 	if err != nil {
 		return nil, fmt.Errorf("error reading disk stats from %s: %w", linux.DataSrcSysfs, err)
 	}
-	for dev, stats := range newStats {
+
+	sensors := make([]sensor.Details, 0, len(stats))
+
+	for dev, stats := range stats {
 		// Add device (if it isn't already tracked).
 		w.addDevice(dev)
 		// Update the stats.
-		w.updateDevice(dev, stats, d)
+		w.updateDevice(dev, stats, duration)
 		// Append its sensors.
 		sensors = append(sensors, w.deviceSensors(dev)...)
 	}
+
 	return sensors, nil
 }
 
+//nolint:exhaustruct
 func NewIOWorker() (*linux.SensorWorker, error) {
 	worker := &ioWorker{
 		devices: make(map[diskstats.Device]*sensors),
@@ -227,6 +254,7 @@ func NewIOWorker() (*linux.SensorWorker, error) {
 	if err != nil {
 		log.Warn().Err(err).Msg("Error reading disk stats from procfs. Will not send disk rate sensors.")
 	}
+
 	for dev := range newStats {
 		worker.addDevice(dev)
 	}
