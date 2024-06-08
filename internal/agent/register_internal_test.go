@@ -3,6 +3,8 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
+//nolint:exhaustruct,paralleltest,wsl
+//revive:disable:unused-receiver
 package agent
 
 import (
@@ -13,7 +15,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
@@ -21,14 +23,15 @@ import (
 
 func TestRegistrationResponse_GenerateAPIURL(t *testing.T) {
 	type args struct {
+		resp       *hass.RegistrationDetails
 		host       string
 		ignoreURLs bool
-		resp       *hass.RegistrationDetails
 	}
 	tests := []struct {
-		name string
-		args args
-		want string
+		name    string
+		want    string
+		args    args
+		wantErr bool
 	}{
 		{
 			name: "valid cloudhookurl",
@@ -76,8 +79,13 @@ func TestRegistrationResponse_GenerateAPIURL(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := generateAPIURL(tt.args.host, tt.args.ignoreURLs, tt.args.resp); got != tt.want {
+			got, err := generateAPIURL(tt.args.host, tt.args.ignoreURLs, tt.args.resp)
+			if got != tt.want {
 				t.Errorf("RegistrationResponse.GenerateAPIURL() = %v, want %v", got, tt.want)
+			}
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Load() error = %v, wantErr %v", err, tt.wantErr)
+				return
 			}
 		})
 	}
@@ -94,10 +102,11 @@ func TestRegistrationResponse_GenerateWebsocketURL(t *testing.T) {
 		host string
 	}
 	tests := []struct {
-		name   string
-		fields fields
-		args   args
-		want   string
+		name    string
+		fields  fields
+		args    args
+		want    string
+		wantErr bool
 	}{
 		{
 			name:   "ws conversion",
@@ -134,25 +143,36 @@ func TestRegistrationResponse_GenerateWebsocketURL(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := generateWebsocketURL(tt.args.host); got != tt.want {
+			got, err := generateWebsocketURL(tt.args.host)
+			if got != tt.want {
 				t.Errorf("RegistrationResponse.GenerateWebsocketURL() = %v, want %v", got, tt.want)
+			}
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Load() error = %v, wantErr %v", err, tt.wantErr)
+				return
 			}
 		})
 	}
 }
 
+//nolint:containedctx
+//revive:disable:function-length
 func TestAgent_performRegistration(t *testing.T) {
 	preferences.SetPath(t.TempDir())
+	// set a fake version as it normally gets generated on build.
+	preferences.AppVersion = "v0.0.0"
 
-	mockGoodReponse := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mockGoodReponse := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		mockResponse, err := json.Marshal(&hass.RegistrationDetails{WebhookID: "someID"})
-		assert.Nil(t, err)
-		fmt.Fprintf(w, string(mockResponse))
+		require.NoError(t, err)
+		_, err = fmt.Fprint(w, string(mockResponse))
+		require.NoError(t, err)
 	}))
-	mockBadResponse := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mockBadResponse := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		mockResponse, err := json.Marshal(&hass.RegistrationDetails{})
-		assert.Nil(t, err)
-		fmt.Fprintf(w, string(mockResponse))
+		require.NoError(t, err)
+		_, err = fmt.Fprint(w, string(mockResponse))
+		require.NoError(t, err)
 	}))
 
 	type fields struct {
@@ -161,37 +181,48 @@ func TestAgent_performRegistration(t *testing.T) {
 		Options *Options
 	}
 	type args struct {
-		ctx    context.Context
-		server string
-		token  string
+		ctx context.Context
 	}
 	tests := []struct {
-		name    string
 		fields  fields
 		args    args
+		name    string
 		wantErr bool
 	}{
 		{
-			name:   "successful test",
-			args:   args{ctx: context.Background(), server: mockGoodReponse.URL, token: "someToken"},
-			fields: fields{Options: &Options{Headless: true}},
+			name: "successful test",
+			args: args{ctx: context.Background()},
+			fields: fields{Options: &Options{
+				Headless: true,
+				Server:   mockGoodReponse.URL,
+				Token:    "someToken",
+			}},
 		},
 		{
-			name:    "missing server",
-			args:    args{ctx: context.Background(), token: "someToken"},
-			fields:  fields{Options: &Options{Headless: true}},
+			name: "missing server",
+			args: args{ctx: context.Background()},
+			fields: fields{Options: &Options{
+				Headless: true,
+				Token:    "someToken",
+			}},
 			wantErr: true,
 		},
 		{
-			name:    "missing token",
-			args:    args{ctx: context.Background(), server: mockGoodReponse.URL},
-			fields:  fields{Options: &Options{Headless: true}},
+			name: "missing token",
+			args: args{ctx: context.Background()},
+			fields: fields{Options: &Options{
+				Headless: true,
+				Server:   mockGoodReponse.URL,
+			}},
 			wantErr: true,
 		},
 		{
-			name:    "bad response",
-			args:    args{ctx: context.Background(), server: mockBadResponse.URL},
-			fields:  fields{Options: &Options{Headless: true}},
+			name: "bad response",
+			args: args{ctx: context.Background()},
+			fields: fields{Options: &Options{
+				Headless: true,
+				Server:   mockBadResponse.URL,
+			}},
 			wantErr: true,
 		},
 	}
@@ -202,7 +233,7 @@ func TestAgent_performRegistration(t *testing.T) {
 				done:    tt.fields.done,
 				Options: tt.fields.Options,
 			}
-			if err := agent.performRegistration(tt.args.ctx, tt.args.server, tt.args.token); (err != nil) != tt.wantErr {
+			if err := agent.performRegistration(tt.args.ctx); (err != nil) != tt.wantErr {
 				t.Errorf("Agent.performRegistration() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
