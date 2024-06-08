@@ -3,6 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
+//revive:disable:unused-receiver
 package power
 
 import (
@@ -94,7 +95,7 @@ func (w *screenLockWorker) Watch(ctx context.Context, triggerCh chan dbusx.Trigg
 	return sensorCh
 }
 
-// TODO: retrieve the current screen lock state when called.
+// ?: retrieve the current screen lock state when called.
 func (w *screenLockWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
 	return nil, linux.ErrUnimplemented
 }

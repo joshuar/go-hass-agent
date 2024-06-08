@@ -4,7 +4,6 @@
 // https://opensource.org/licenses/MIT
 
 // revive:disable:unused-receiver
-
 package power
 
 import (
@@ -89,7 +88,7 @@ func newIdleSensor(ctx context.Context) (*idleSensor, error) {
 	return newSensor, nil
 }
 
-//nolint:exhaustruct
+//nolint:cyclop,exhaustruct
 func IdleUpdater(ctx context.Context) chan sensor.Details {
 	sensorCh := make(chan sensor.Details)
 
