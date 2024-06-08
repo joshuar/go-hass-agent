@@ -21,16 +21,19 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/scripts"
 )
 
-// Worker represents an object that is responsible for retrieving and returning
-// sensors. Workers have a Name and Description for display and logging
-// purposes. A worker will have a Sensors function that will return a list of
-// sensors, including their latest values. A worker will also have a Updates
-// function that returns a channel on which updates to its sensors will be
-// published.
+// Worker represents an object that is responsible for controlling the
+// publishing of one or more sensors.
 type Worker interface {
+	// Name is the collective name of the sensors this worker controls.
 	Name() string
+	// Description is a longer text of what particular sensors are gathered and
+	// where from.
 	Description() string
+	// Sensors returns an array of the current value of all sensors, or a
+	// non-nil error if this is not possible.
 	Sensors(ctx context.Context) ([]sensor.Details, error)
+	// Updates returns a channel on which updates to sensors will be published,
+	// when they become available.
 	Updates(ctx context.Context) (<-chan sensor.Details, error)
 }
 
@@ -40,7 +43,6 @@ func runWorkers(ctx context.Context, trk SensorTracker, reg sensor.Registry) {
 	workers := sensorWorkers()
 	workers = append(workers, device.NewExternalIPUpdaterWorker(), device.NewVersionWorker())
 
-	var wg sync.WaitGroup
 	var outCh []<-chan sensor.Details
 	var cancelFuncs []context.CancelFunc
 
@@ -58,10 +60,8 @@ func runWorkers(ctx context.Context, trk SensorTracker, reg sensor.Registry) {
 	}
 
 	sensorUpdates := sensor.MergeSensorCh(ctx, outCh...)
-	wg.Add(1)
 	go func() {
 		log.Debug().Msg("Listening for sensor updates.")
-		defer wg.Done()
 		for s := range sensorUpdates {
 			go func(s sensor.Details) {
 				if err := trk.UpdateSensor(ctx, reg, s); err != nil {
@@ -84,21 +84,6 @@ func runWorkers(ctx context.Context, trk SensorTracker, reg sensor.Registry) {
 			c()
 		}
 	}()
-
-	wg.Add(1)
-	go func() {
-		log.Debug().Msg("Listening for location updates.")
-		defer wg.Done()
-		for l := range locationWorker()(ctx) {
-			go func(l *hass.LocationData) {
-				if err := hass.UpdateLocation(ctx, l); err != nil {
-					log.Warn().Err(err).Msg("Location update failed.")
-				}
-			}(l)
-		}
-	}()
-
-	wg.Wait()
 }
 
 // runScripts will retrieve all scripts that the agent can run and queue them up
@@ -199,7 +184,7 @@ func runMQTTWorker(ctx context.Context) {
 
 	// Create an MQTT device for this operating system and run its Setup.
 	mqttDevice := newMQTTDevice(mqttCtx)
-	if err := mqttDevice.Setup(mqttCtx); err != nil {
+	if err = mqttDevice.Setup(mqttCtx); err != nil {
 		log.Error().Err(err).Msg("Could not set up device MQTT functionality.")
 		return
 	}

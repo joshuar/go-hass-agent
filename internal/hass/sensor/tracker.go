@@ -16,8 +16,10 @@ import (
 )
 
 var (
-	ErrUnsuccessful = errors.New("unsuccessful request")
-	ErrUnhandled    = errors.New("unhandled response")
+	ErrRespFailed      = errors.New("unsuccessful request")
+	ErrRespUnknown     = errors.New("unhandled response")
+	ErrTrackerNotReady = errors.New("tracker not ready")
+	ErrSensorNotFound  = errors.New("sensor not found in tracker")
 )
 
 //go:generate moq -out mock_Registry_test.go . Registry
@@ -34,13 +36,13 @@ type Tracker struct {
 }
 
 // Add creates a new sensor in the tracker based on a received state update.
-func (t *Tracker) add(s Details) error {
+func (t *Tracker) add(sensor Details) error {
 	t.mu.Lock()
 	if t.sensor == nil {
 		t.mu.Unlock()
-		return errors.New("sensor map not initialised")
+		return ErrTrackerNotReady
 	}
-	t.sensor[s.ID()] = s
+	t.sensor[sensor.ID()] = sensor
 	t.mu.Unlock()
 	return nil
 }
@@ -51,9 +53,8 @@ func (t *Tracker) Get(id string) (Details, error) {
 	defer t.mu.Unlock()
 	if t.sensor[id] != nil {
 		return t.sensor[id], nil
-	} else {
-		return nil, errors.New("not found")
 	}
+	return nil, ErrSensorNotFound
 }
 
 func (t *Tracker) SensorList() []string {
@@ -62,7 +63,9 @@ func (t *Tracker) SensorList() []string {
 	if t.sensor == nil {
 		return nil
 	}
+
 	sortedEntities := make([]string, 0, len(t.sensor))
+
 	for name, sensor := range t.sensor {
 		if sensor.State() != nil {
 			sortedEntities = append(sortedEntities, name)
@@ -75,19 +78,7 @@ func (t *Tracker) SensorList() []string {
 // UpdateSensor will UpdateSensor a sensor update to HA, checking to ensure the sensor is not
 // disabled. It will also update the local registry state based on the response.
 func (t *Tracker) UpdateSensor(ctx context.Context, reg Registry, upd Details) error {
-	if reg.IsDisabled(upd.ID()) {
-		return nil
-	}
-	var req hass.PostRequest
-	var resp hass.Response
-	var err error
-	if reg.IsRegistered(upd.ID()) {
-		req, err = NewUpdateRequest(SensorState(upd))
-		resp = NewUpdateResponse()
-	} else {
-		req, err = NewRegistrationRequest(SensorRegistration(upd))
-		resp = NewRegistrationResponse()
-	}
+	req, resp, err := NewRequest(reg, upd)
 	if err != nil {
 		return wrapErr(upd.ID(), err)
 	}
@@ -100,35 +91,38 @@ func (t *Tracker) UpdateSensor(ctx context.Context, reg Registry, upd Details) e
 	return nil
 }
 
-func handleResponse(resp hass.Response, trk *Tracker, upd Details, reg Registry) error {
-	switch r := resp.(type) {
+func handleResponse(respIntr hass.Response, trk *Tracker, upd Details, reg Registry) error {
+	switch resp := respIntr.(type) {
 	case *updateResponse:
-		if err := handleUpdates(reg, r); err != nil {
+		if err := handleUpdates(reg, resp); err != nil {
 			return err
 		}
 		if err := trk.add(upd); err != nil {
 			return err
 		}
 	case *registrationResponse:
-		if err := handleRegistration(reg, r, upd.ID()); err != nil {
+		if err := handleRegistration(reg, resp, upd.ID()); err != nil {
 			return err
 		}
+	case *locationResponse:
+		return nil
 	default:
-		return ErrUnhandled
+		return ErrRespUnknown
 	}
 	return nil
 }
 
+//nolint:err113
 func handleUpdates(reg Registry, r *updateResponse) error {
 	for sensor, details := range r.Body {
 		if details == nil {
-			return ErrUnhandled
+			return ErrRespUnknown
 		}
 		if !details.Success {
 			if details.Error != nil {
 				return fmt.Errorf("%d: %s", details.Error.Code, details.Error.Message)
 			}
-			return ErrUnsuccessful
+			return ErrRespFailed
 		}
 		if reg.IsDisabled(sensor) != details.Disabled {
 			if err := reg.SetDisabled(sensor, details.Disabled); err != nil {
@@ -141,7 +135,7 @@ func handleUpdates(reg Registry, r *updateResponse) error {
 
 func handleRegistration(reg Registry, r *registrationResponse, s string) error {
 	if !r.Body.Success {
-		return ErrUnsuccessful
+		return ErrRespFailed
 	}
 	return reg.SetRegistered(s, true)
 }
@@ -153,22 +147,25 @@ func (t *Tracker) Reset() {
 func NewTracker() (*Tracker, error) {
 	sensorTracker := &Tracker{
 		sensor: make(map[string]Details),
+		mu:     sync.Mutex{},
 	}
 	return sensorTracker, nil
 }
 
 func MergeSensorCh(ctx context.Context, sensorCh ...<-chan Details) chan Details {
 	var wg sync.WaitGroup
+
 	out := make(chan Details)
 
 	// Start an output goroutine for each input channel in sensorCh.  output
 	// copies values from c to out until c is closed, then calls wg.Done.
-	output := func(c <-chan Details) {
+	output := func(sensorOutCh <-chan Details) {
 		defer wg.Done()
-		if c == nil {
+		if sensorOutCh == nil {
 			return
 		}
-		for n := range c {
+
+		for n := range sensorOutCh {
 			select {
 			case out <- n:
 			case <-ctx.Done():
@@ -176,7 +173,9 @@ func MergeSensorCh(ctx context.Context, sensorCh ...<-chan Details) chan Details
 			}
 		}
 	}
+
 	wg.Add(len(sensorCh))
+
 	for _, c := range sensorCh {
 		go output(c)
 	}
