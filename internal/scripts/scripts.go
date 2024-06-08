@@ -8,6 +8,7 @@ package scripts
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -21,23 +22,28 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 )
 
-type script struct {
+type Script struct {
 	Output   chan sensor.Details
 	path     string
 	schedule string
 }
 
-func (s *script) execute() (*scriptOutput, error) {
+//nolint:exhaustruct
+func (s *Script) execute() (*scriptOutput, error) {
 	cmd := exec.Command(s.path)
-	o, err := cmd.Output()
+
+	out, err := cmd.Output()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not execute script: %w", err)
 	}
+
 	output := &scriptOutput{}
-	err = output.Unmarshal(o)
+
+	err = output.Unmarshal(out)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not parse script output: %w", err)
 	}
+
 	return output, nil
 }
 
@@ -45,11 +51,12 @@ func (s *script) execute() (*scriptOutput, error) {
 // its specified schedule. It is implemented to satisfy the cron package
 // interface, so the script can be treated as a cron job. Run will execute the
 // script, collect the output and send it through a channel as a sensor object.
-func (s *script) Run() {
+func (s *Script) Run() {
 	output, err := s.execute()
 	if err != nil {
 		log.Warn().Err(err).Str("script", s.path).
 			Msg("Could not run script.")
+
 		return
 	}
 
@@ -59,35 +66,42 @@ func (s *script) Run() {
 }
 
 // Schedule retrieves the cron schedule that the script should be run on.
-func (s *script) Schedule() string {
+func (s *Script) Schedule() string {
 	return s.schedule
 }
 
 // Path returns the path to the script on disk.
-func (s *script) Path() string {
+func (s *Script) Path() string {
 	return s.path
 }
 
 // NewScript returns a new script object that can scheduled with the job
 // scheduler by the agent.
-func NewScript(p string) *script {
-	s := &script{
-		path:   p,
-		Output: make(chan sensor.Details),
+func NewScript(path string) *Script {
+	script := &Script{
+		path:     path,
+		schedule: "",
+		Output:   make(chan sensor.Details),
 	}
-	o, err := s.execute()
+
+	out, err := script.execute()
 	if err != nil {
-		log.Warn().Err(err).Str("script", p).
+		log.Warn().Err(err).Str("script", path).
 			Msg("Cannot run script")
+
 		return nil
 	}
-	s.schedule = o.Schedule
-	return s
+
+	script.schedule = out.Schedule
+
+	return script
 }
 
 // scriptOutput represents the output from a script. The output must be
 // formatted as either valid JSON or YAML. This output is used to define a
 // sensor in Home Assistant.
+//
+//nolint:tagalign
 type scriptOutput struct {
 	Schedule string          `json:"schedule" yaml:"schedule"`
 	Sensors  []*scriptSensor `json:"sensors" yaml:"sensors"`
@@ -96,22 +110,26 @@ type scriptOutput struct {
 // Unmarshal will attempt to take the raw output from a script execution and
 // format it as either JSON or YAML. If successful, this format can then be used
 // as a sensor.
-func (o *scriptOutput) Unmarshal(b []byte) error {
-	jsonErr := json.Unmarshal(b, &o)
+func (o *scriptOutput) Unmarshal(scriptOutput []byte) error {
+	jsonErr := json.Unmarshal(scriptOutput, &o)
 	if jsonErr == nil {
 		return nil
 	}
-	yamlErr := yaml.Unmarshal(b, &o)
+
+	yamlErr := yaml.Unmarshal(scriptOutput, &o)
 	if yamlErr == nil {
 		return nil
 	}
-	tomlErr := toml.Unmarshal(b, &o)
+
+	tomlErr := toml.Unmarshal(scriptOutput, &o)
 	if tomlErr == nil {
 		return nil
 	}
+
 	return errors.Join(jsonErr, yamlErr, tomlErr)
 }
 
+//nolint:tagalign
 type scriptSensor struct {
 	SensorState       any    `json:"sensor_state" yaml:"sensor_state" toml:"sensor_state"`
 	SensorAttributes  any    `json:"sensor_attributes,omitempty" yaml:"sensor_attributes,omitempty" toml:"sensor_attributes,omitempty"`
@@ -150,6 +168,7 @@ func (s *scriptSensor) DeviceClass() types.DeviceClass {
 			return d
 		}
 	}
+
 	return 0
 }
 
@@ -184,12 +203,14 @@ func (s *scriptSensor) Attributes() any {
 
 // FindScripts locates scripts and returns a slice of scripts that the agent can
 // run.
-func FindScripts(path string) ([]*script, error) {
-	var scripts []*script
+func FindScripts(path string) ([]*Script, error) {
+	var scripts []*Script
+
 	files, err := filepath.Glob(path + "/*")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not search for scripts: %w", err)
 	}
+
 	for _, s := range files {
 		if isExecutable(s) {
 			script := NewScript(s)
@@ -198,6 +219,7 @@ func FindScripts(path string) ([]*script, error) {
 			}
 		}
 	}
+
 	return scripts, nil
 }
 
@@ -206,5 +228,6 @@ func isExecutable(filename string) bool {
 	if err != nil {
 		return false
 	}
+
 	return fi.Mode().Perm()&0o111 != 0
 }
