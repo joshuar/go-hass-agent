@@ -6,6 +6,7 @@
 package linux
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -19,6 +20,8 @@ const (
 	DataSrcProcfs = "ProcFS"
 	DataSrcSysfs  = "SysFS"
 )
+
+var ErrUnimplemented = errors.New("unimplemented functionality")
 
 // Sensor represents a generic sensor on the Linux platform. Most sensors
 // will be able to use this struct, which satisfies the sensor.Sensor
@@ -84,7 +87,7 @@ func (l *Sensor) Units() string {
 func (l *Sensor) Attributes() any {
 	if l.SensorSrc != "" {
 		return struct {
-			DataSource string `json:"Data Source"`
+			DataSource string `json:"data_source"`
 		}{
 			DataSource: l.SensorSrc,
 		}
@@ -93,20 +96,21 @@ func (l *Sensor) Attributes() any {
 }
 
 func (l *Sensor) String() string {
-	var s strings.Builder
-	fmt.Fprintf(&s, "Name: %s (ID: %s)", l.Name(), l.ID())
+	var sensorStr strings.Builder
+
+	fmt.Fprintf(&sensorStr, "Name: %s (ID: %s)", l.Name(), l.ID())
 	if l.DeviceClass() > 0 {
-		fmt.Fprintf(&s, " Device Class: %s", l.DeviceClass().String())
+		fmt.Fprintf(&sensorStr, " Device Class: %s", l.DeviceClass().String())
 	}
 	if l.StateClass() > 0 {
-		fmt.Fprintf(&s, " State Class: %s", l.DeviceClass().String())
+		fmt.Fprintf(&sensorStr, " State Class: %s", l.DeviceClass().String())
 	}
-	fmt.Fprintf(&s, " Value: %v", l.Value)
+	fmt.Fprintf(&sensorStr, " Value: %v", l.Value)
 	if l.UnitsString != "" {
-		fmt.Fprintf(&s, " %s", l.UnitsString)
+		fmt.Fprintf(&sensorStr, " %s", l.UnitsString)
 	}
 	if l.Attributes() != nil {
-		fmt.Fprintf(&s, " Attributes: %v", l.Attributes())
+		fmt.Fprintf(&sensorStr, " Attributes: %v", l.Attributes())
 	}
-	return s.String()
+	return sensorStr.String()
 }

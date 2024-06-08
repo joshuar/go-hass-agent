@@ -3,6 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
+//nolint:paralleltest,dupl
 package linux
 
 import (
@@ -13,54 +14,58 @@ import (
 	"testing"
 
 	mqtthass "github.com/joshuar/go-hass-anything/v9/pkg/hass"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 	"github.com/joshuar/go-hass-agent/pkg/linux/whichdistro"
 )
 
-func compareDevice(t *testing.T, a, b *Device) bool {
+func compareDevice(t *testing.T, got, want *Device) bool {
+	t.Helper()
+
 	switch {
-	case !reflect.DeepEqual(a.appName, b.appName):
+	case !reflect.DeepEqual(got.appName, want.appName):
 		t.Error("appName does not match")
 		return false
-	case !reflect.DeepEqual(a.appVersion, b.appVersion):
+	case !reflect.DeepEqual(got.appVersion, want.appVersion):
 		t.Error("appVersion does not match")
 		return false
-	case !reflect.DeepEqual(a.distro, b.distro):
+	case !reflect.DeepEqual(got.distro, want.distro):
 		t.Error("distro does not match")
 		return false
-	case !reflect.DeepEqual(a.distroVersion, b.distroVersion):
+	case !reflect.DeepEqual(got.distroVersion, want.distroVersion):
 		t.Error("distroVersion does not match")
 		return false
-	case !reflect.DeepEqual(a.hostname, b.hostname):
+	case !reflect.DeepEqual(got.hostname, want.hostname):
 		t.Error("hostname does not match")
 		return false
-	case !reflect.DeepEqual(a.hwModel, b.hwModel):
+	case !reflect.DeepEqual(got.hwModel, want.hwModel):
 		t.Error("hwModel does not match")
 		return false
-	case !reflect.DeepEqual(a.hwVendor, b.hwVendor):
+	case !reflect.DeepEqual(got.hwVendor, want.hwVendor):
 		t.Error("hwVendor does not match")
 		return false
 	}
 	return true
 }
 
-func compareMQTTDevice(t *testing.T, a, b *mqtthass.Device) bool {
+func compareMQTTDevice(t *testing.T, got, want *mqtthass.Device) bool {
+	t.Helper()
+
 	switch {
-	case !reflect.DeepEqual(a.Name, b.Name):
+	case !reflect.DeepEqual(got.Name, want.Name):
 		t.Error("name does not match")
 		return false
-	case !reflect.DeepEqual(a.URL, b.URL):
+	case !reflect.DeepEqual(got.URL, want.URL):
 		t.Error("URL does not match")
 		return false
-	case !reflect.DeepEqual(a.SWVersion, b.SWVersion):
+	case !reflect.DeepEqual(got.SWVersion, want.SWVersion):
 		t.Error("SWVersion does not match")
 		return false
-	case !reflect.DeepEqual(a.Manufacturer, b.Manufacturer):
+	case !reflect.DeepEqual(got.Manufacturer, want.Manufacturer):
 		t.Error("Manufacturer does not match")
 		return false
-	case !reflect.DeepEqual(a.Model, b.Model):
+	case !reflect.DeepEqual(got.Model, want.Model):
 		t.Error("Model does not match")
 		return false
 	}
@@ -92,9 +97,9 @@ func TestNewDevice(t *testing.T) {
 		osReleaseFiles []string
 	}
 	tests := []struct {
+		want *Device
 		name string
 		args args
-		want *Device
 	}{
 		{
 			name: "with OS Release",
@@ -139,8 +144,8 @@ func TestMQTTDevice(t *testing.T) {
 		Identifiers:  []string{dev.DeviceID()},
 	}
 	tests := []struct {
-		name string
 		want *mqtthass.Device
+		name string
 	}{
 		{
 			name: "default",
@@ -156,6 +161,7 @@ func TestMQTTDevice(t *testing.T) {
 	}
 }
 
+//revive:disable:unhandled-error
 func TestFindPortal(t *testing.T) {
 	type args struct {
 		setup func()
@@ -202,26 +208,26 @@ func TestGetDistroID(t *testing.T) {
 	id := "testdistro"
 	goodFile := filepath.Join(t.TempDir(), "goodfile")
 	fh, err := os.Create(goodFile)
-	assert.Nil(t, err)
+	require.NoError(t, err)
 	fmt.Fprintln(fh, `VERSION_ID="`+versionID+`"`)
 	fmt.Fprintln(fh, `ID="`+id+`"`)
 	fh.Close()
 
 	tests := []struct {
 		name          string
-		wantId        string
+		wantID        string
 		wantVersionid string
 		osReleaseFile string
 	}{
 		{
 			name:          "File exists",
-			wantId:        id,
+			wantID:        id,
 			wantVersionid: versionID,
 			osReleaseFile: goodFile,
 		},
 		{
 			name:          "File does not exist.",
-			wantId:        unknownDistro,
+			wantID:        unknownDistro,
 			wantVersionid: unknownDistroVersion,
 			osReleaseFile: "/dev/null",
 		},
@@ -229,9 +235,9 @@ func TestGetDistroID(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			whichdistro.OSReleaseFile = tt.osReleaseFile
-			gotId, gotVersionid := GetDistroID()
-			if gotId != tt.wantId {
-				t.Errorf("GetDistroID() gotId = %v, want %v", gotId, tt.wantId)
+			gotID, gotVersionid := GetDistroID()
+			if gotID != tt.wantID {
+				t.Errorf("GetDistroID() gotId = %v, want %v", gotID, tt.wantID)
 			}
 			if gotVersionid != tt.wantVersionid {
 				t.Errorf("GetDistroID() gotVersionid = %v, want %v", gotVersionid, tt.wantVersionid)
@@ -245,7 +251,7 @@ func TestGetDistroDetails(t *testing.T) {
 	name := "Test Distro"
 	goodFile := filepath.Join(t.TempDir(), "goodfile")
 	fh, err := os.Create(goodFile)
-	assert.Nil(t, err)
+	require.NoError(t, err)
 	fmt.Fprintln(fh, `VERSION="`+version+`"`)
 	fmt.Fprintln(fh, `NAME="`+name+`"`)
 	fh.Close()

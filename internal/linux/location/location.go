@@ -7,7 +7,6 @@ package location
 
 import (
 	"context"
-	"errors"
 
 	"github.com/godbus/dbus/v5"
 	"github.com/rs/zerolog/log"
@@ -37,26 +36,30 @@ type locationSensor struct {
 	linux.Sensor
 }
 
-//revive:disable:unused-receiver
+//nolint:unused-receiver
 func (s *locationSensor) Name() string { return "Location" }
 
-//revive:disable:unused-receiver
+//nolint:unused-receiver
 func (s *locationSensor) ID() string { return "location" }
 
 type worker struct {
 	clientPath dbus.ObjectPath
 }
 
+//nolint:exhaustruct
 func (w *worker) Setup(ctx context.Context) *dbusx.Watch {
 	var err error
 	w.clientPath, err = dbusx.GetData[dbus.ObjectPath](ctx, dbusx.SystemBus, managerPath, geoclueInterface, getClientCall)
+
 	if !w.clientPath.IsValid() || err != nil {
 		log.Error().Err(err).Msg("Could not set up a geoclue client.")
+
 		return nil
 	}
 
 	if err = dbusx.SetProp(ctx, dbusx.SystemBus, string(w.clientPath), geoclueInterface, desktopIDProp, preferences.AppID); err != nil {
 		log.Error().Err(err).Msg("Could not set a geoclue client id.")
+
 		return nil
 	}
 
@@ -73,6 +76,7 @@ func (w *worker) Setup(ctx context.Context) *dbusx.Watch {
 	// Request to start tracking location updates.
 	if err = dbusx.Call(ctx, dbusx.SystemBus, string(w.clientPath), geoclueInterface, startCall); err != nil {
 		log.Warn().Err(err).Msg("Could not start geoclue client.")
+
 		return nil
 	}
 
@@ -91,14 +95,17 @@ func (w *worker) Watch(ctx context.Context, triggerCh chan dbusx.Trigger) chan s
 
 	go func() {
 		defer close(sensorCh)
+
 		for {
 			select {
 			case <-ctx.Done():
 				err := dbusx.Call(ctx, dbusx.SystemBus, string(w.clientPath), geoclueInterface, stopCall)
 				if err != nil {
 					log.Debug().Caller().Err(err).Msg("Failed to stop location updater.")
+
 					return
 				}
+
 				return
 			case event := <-triggerCh:
 				if locationPath, ok := event.Content[1].(dbus.ObjectPath); ok {
@@ -109,14 +116,16 @@ func (w *worker) Watch(ctx context.Context, triggerCh chan dbusx.Trigger) chan s
 			}
 		}
 	}()
+
 	return sensorCh
 }
 
 //revive:disable:unused-receiver
 func (w *worker) Sensors(_ context.Context) ([]sensor.Details, error) {
-	return nil, errors.New("unimplemented")
+	return nil, linux.ErrUnimplemented
 }
 
+//nolint:exhaustruct
 func NewLocationWorker() (*linux.SensorWorker, error) {
 	return &linux.SensorWorker{
 			WorkerName: "Location Sensor",
@@ -126,22 +135,26 @@ func NewLocationWorker() (*linux.SensorWorker, error) {
 		nil
 }
 
+//nolint:exhaustruct
 func newLocation(ctx context.Context, locationPath dbus.ObjectPath) *locationSensor {
 	getProp := func(prop string) float64 {
 		value, err := dbusx.GetProp[float64](ctx, dbusx.SystemBus, string(locationPath), geoclueInterface, locationInterface+"."+prop)
 		if err != nil {
 			log.Debug().Caller().Err(err).
 				Msgf("Could not retrieve %s.", prop)
+
 			return 0
 		}
+
 		return value
 	}
-	s := &locationSensor{}
-	s.Value = &sensor.LocationRequest{
+	location := &locationSensor{}
+	location.Value = &sensor.LocationRequest{
 		Gps:         []float64{getProp("Latitude"), getProp("Longitude")},
 		GpsAccuracy: int(getProp("Accuracy")),
 		Speed:       int(getProp("Speed")),
 		Altitude:    int(getProp("Altitude")),
 	}
-	return s
+
+	return location
 }

@@ -18,6 +18,8 @@ import (
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
+var ErrUnknownWorker = errors.New("unknown sensor worker type")
+
 // pollingType interface represents sensors that are generated on some poll interval.
 type pollingType interface {
 	Interval() time.Duration
@@ -51,7 +53,7 @@ type SensorWorker struct {
 	// Value is a pointer to an interface that exposes methods to retrieve the
 	// sensor values for this worker.
 	Value any
-	// WorkerName is a a short name to refer to this group of sensors.
+	// WorkerName is a short name to refer to this group of sensors.
 	WorkerName string
 	// WorkerDesc describes what the sensors measure.
 	WorkerDesc string
@@ -73,22 +75,45 @@ func (w *SensorWorker) Description() string {
 func (w *SensorWorker) Sensors(ctx context.Context) ([]sensor.Details, error) {
 	switch worker := w.Value.(type) {
 	case pollingType:
-		return worker.Sensors(ctx, 0)
+		sensors, err := worker.Sensors(ctx, 0)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get current state of polling sensors: %w", err)
+		}
+
+		return sensors, nil
 	case dbusType:
-		return worker.Sensors(ctx)
+		sensors, err := worker.Sensors(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get current state of polling sensors: %w", err)
+		}
+
+		return sensors, nil
 	case eventType:
-		return worker.Sensors(ctx)
+		sensors, err := worker.Sensors(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get current state of polling sensors: %w", err)
+		}
+
+		return sensors, nil
 	case oneShotType:
-		return worker.Sensors(ctx)
+		sensors, err := worker.Sensors(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get current state of polling sensors: %w", err)
+		}
+
+		return sensors, nil
 	}
-	return nil, errors.New("unknown worker type")
+	return nil, ErrUnknownWorker
 }
 
 // Updates returns a channel on which sensor updates can be received. If the
 // functionality to send sensor updates cannot be achieved, it will return a
 // non-nil error.
+//
+//nolint:cyclop
 func (w *SensorWorker) Updates(ctx context.Context) (<-chan sensor.Details, error) {
 	outCh := make(chan sensor.Details)
+
 	switch worker := w.Value.(type) {
 	case pollingType:
 		updater := func(d time.Duration) {
@@ -113,6 +138,7 @@ func (w *SensorWorker) Updates(ctx context.Context) (<-chan sensor.Details, erro
 		}
 		go func() {
 			defer close(outCh)
+
 			for s := range worker.Watch(ctx, eventCh) {
 				outCh <- s
 			}
@@ -120,6 +146,7 @@ func (w *SensorWorker) Updates(ctx context.Context) (<-chan sensor.Details, erro
 	case eventType:
 		go func() {
 			defer close(outCh)
+
 			for s := range worker.Events(ctx) {
 				outCh <- s
 			}
@@ -137,7 +164,7 @@ func (w *SensorWorker) Updates(ctx context.Context) (<-chan sensor.Details, erro
 			}
 		}()
 	default:
-		return nil, fmt.Errorf("unknown or unsupported worker type: %T", w.Value)
+		return nil, ErrUnknownWorker
 	}
 	return outCh, nil
 }

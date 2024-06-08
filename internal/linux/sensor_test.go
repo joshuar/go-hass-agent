@@ -3,6 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
+//nolint:dupl,paralleltest,exhaustruct
 package linux
 
 import (
@@ -26,8 +27,8 @@ func TestSensor_Name(t *testing.T) {
 	}
 	tests := []struct {
 		name   string
-		fields fields
 		want   string
+		fields fields
 	}{
 		{
 			name:   "known sensor type",
@@ -41,7 +42,7 @@ func TestSensor_Name(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			l := &Sensor{
+			sensor := &Sensor{
 				Value:            tt.fields.Value,
 				IconString:       tt.fields.IconString,
 				UnitsString:      tt.fields.UnitsString,
@@ -52,7 +53,7 @@ func TestSensor_Name(t *testing.T) {
 				DeviceClassValue: tt.fields.DeviceClassValue,
 				StateClassValue:  tt.fields.StateClassValue,
 			}
-			if got := l.Name(); got != tt.want {
+			if got := sensor.Name(); got != tt.want {
 				t.Errorf("Sensor.Name() = %v, want %v", got, tt.want)
 			}
 		})
@@ -73,8 +74,8 @@ func TestSensor_ID(t *testing.T) {
 	}
 	tests := []struct {
 		name   string
-		fields fields
 		want   string
+		fields fields
 	}{
 		{
 			name:   "known sensor type",
@@ -88,7 +89,7 @@ func TestSensor_ID(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			l := &Sensor{
+			sensor := &Sensor{
 				Value:            tt.fields.Value,
 				IconString:       tt.fields.IconString,
 				UnitsString:      tt.fields.UnitsString,
@@ -99,7 +100,7 @@ func TestSensor_ID(t *testing.T) {
 				DeviceClassValue: tt.fields.DeviceClassValue,
 				StateClassValue:  tt.fields.StateClassValue,
 			}
-			if got := l.ID(); got != tt.want {
+			if got := sensor.ID(); got != tt.want {
 				t.Errorf("Sensor.ID() = %v, want %v", got, tt.want)
 			}
 		})
@@ -119,9 +120,9 @@ func TestSensor_State(t *testing.T) {
 		StateClassValue  types.StateClass
 	}
 	tests := []struct {
+		want   any
 		name   string
 		fields fields
-		want   any
 	}{
 		{
 			name:   "known value",
@@ -135,7 +136,7 @@ func TestSensor_State(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			l := &Sensor{
+			sensor := &Sensor{
 				Value:            tt.fields.Value,
 				IconString:       tt.fields.IconString,
 				UnitsString:      tt.fields.UnitsString,
@@ -146,7 +147,7 @@ func TestSensor_State(t *testing.T) {
 				DeviceClassValue: tt.fields.DeviceClassValue,
 				StateClassValue:  tt.fields.StateClassValue,
 			}
-			if got := l.State(); !reflect.DeepEqual(got, tt.want) {
+			if got := sensor.State(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Sensor.State() = %v, want %v", got, tt.want)
 			}
 		})
@@ -182,7 +183,7 @@ func TestSensor_SensorType(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			l := &Sensor{
+			sensor := &Sensor{
 				Value:            tt.fields.Value,
 				IconString:       tt.fields.IconString,
 				UnitsString:      tt.fields.UnitsString,
@@ -193,7 +194,7 @@ func TestSensor_SensorType(t *testing.T) {
 				DeviceClassValue: tt.fields.DeviceClassValue,
 				StateClassValue:  tt.fields.StateClassValue,
 			}
-			if got := l.SensorType(); !reflect.DeepEqual(got, tt.want) {
+			if got := sensor.SensorType(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Sensor.SensorType() = %v, want %v", got, tt.want)
 			}
 		})
@@ -214,8 +215,8 @@ func TestSensor_Category(t *testing.T) {
 	}
 	tests := []struct {
 		name   string
-		fields fields
 		want   string
+		fields fields
 	}{
 		{
 			name: "default category",
@@ -229,7 +230,7 @@ func TestSensor_Category(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			l := &Sensor{
+			sensor := &Sensor{
 				Value:            tt.fields.Value,
 				IconString:       tt.fields.IconString,
 				UnitsString:      tt.fields.UnitsString,
@@ -240,7 +241,7 @@ func TestSensor_Category(t *testing.T) {
 				DeviceClassValue: tt.fields.DeviceClassValue,
 				StateClassValue:  tt.fields.StateClassValue,
 			}
-			if got := l.Category(); got != tt.want {
+			if got := sensor.Category(); got != tt.want {
 				t.Errorf("Sensor.Category() = %v, want %v", got, tt.want)
 			}
 		})
@@ -260,9 +261,9 @@ func TestSensor_Attributes(t *testing.T) {
 		StateClassValue  types.StateClass
 	}
 	tests := []struct {
+		want   any
 		name   string
 		fields fields
-		want   any
 	}{
 		{
 			name:   "with source",
@@ -276,7 +277,7 @@ func TestSensor_Attributes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			l := &Sensor{
+			sensor := &Sensor{
 				Value:            tt.fields.Value,
 				IconString:       tt.fields.IconString,
 				UnitsString:      tt.fields.UnitsString,
@@ -287,7 +288,7 @@ func TestSensor_Attributes(t *testing.T) {
 				DeviceClassValue: tt.fields.DeviceClassValue,
 				StateClassValue:  tt.fields.StateClassValue,
 			}
-			if got := l.Attributes(); !reflect.DeepEqual(got, tt.want) {
+			if got := sensor.Attributes(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Sensor.Attributes() = %v, want %v", got, tt.want)
 			}
 		})
