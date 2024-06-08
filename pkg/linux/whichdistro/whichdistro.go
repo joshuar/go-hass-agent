@@ -7,6 +7,7 @@ package whichdistro
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"strconv"
 )
@@ -30,47 +31,58 @@ type OSRelease map[string]string
 // containing details of why.
 func GetOSRelease() (OSRelease, error) {
 	info := make(OSRelease)
+
 	file, err := readOSRelease()
 	if err != nil {
 		return nil, err
 	}
+
 	lines := bytes.Split(file, []byte("\n"))
+
 	for _, line := range lines {
 		if bytes.Equal(line, []byte("")) {
 			continue
 		}
+
 		fields := bytes.FieldsFunc(line, func(r rune) bool {
 			return r == '='
 		})
 		info[string(fields[0])] = string(fields[1])
 	}
+
 	return info, nil
 }
 
 func readOSRelease() ([]byte, error) {
 	var contents []byte
+
 	var err error
+
 	contents, err = os.ReadFile(OSReleaseFile)
 	if err == nil {
 		return contents, nil
 	}
+
 	contents, err = os.ReadFile(OSReleaseAltFile)
 	if err == nil {
 		return contents, nil
 	}
-	return nil, err
+
+	return nil, fmt.Errorf("unable to read OSRelease file: %w", err)
 }
 
 // GetValue will retrieve the value of the given key from an OSRelease map. It
 // will perform some cleanup on the raw value to make it easier to use.
 func (r OSRelease) GetValue(key string) (value string, ok bool) {
-	if v, ok := r[key]; !ok {
+	v, ok := r[key]
+	if !ok {
 		return UnknownValue, false
-	} else {
-		value, err := strconv.Unquote(v)
-		if err != nil {
-			return UnknownValue, false
-		}
-		return value, true
 	}
+
+	value, err := strconv.Unquote(v)
+	if err != nil {
+		return UnknownValue, false
+	}
+
+	return value, true
 }

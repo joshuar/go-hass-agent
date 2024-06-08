@@ -12,11 +12,19 @@ import (
 	"net"
 	"os"
 	"path"
+	"strconv"
 
 	"github.com/jfreymuth/pulse/proto"
 
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
+
+const (
+	volumeMaxPc = 100
+	volumeMinPc = 0
+)
+
+var ErrVolumeOutofRange = errors.New("volume out of range")
 
 // PulseAudioClient represents a connection to PulseAudio. It will have an event
 // channel which is triggered any time a change happens on the default output
@@ -44,6 +52,9 @@ const (
 // made to the output device (volume changed, mute status changed, etc.) If it
 // cannot connect to Pulseaudio, a non-nil error will be returned with details
 // on the issue.
+//
+//nolint:cyclop,exhaustruct
+//revive:disable:unnecessary-stmt
 func NewPulseClient(ctx context.Context) (*PulseAudioClient, error) {
 	// Connect to pulseaudio.
 	client, conn, err := proto.Connect("")
@@ -51,7 +62,7 @@ func NewPulseClient(ctx context.Context) (*PulseAudioClient, error) {
 		return nil, fmt.Errorf("could not connect to pulseaudio: %w", err)
 	}
 
-	c := &PulseAudioClient{
+	pulse := &PulseAudioClient{
 		client:  client,
 		conn:    conn,
 		EventCh: make(chan struct{}, 1),
@@ -62,39 +73,43 @@ func NewPulseClient(ctx context.Context) (*PulseAudioClient, error) {
 		"media.name":                 proto.PropListString(preferences.AppName),
 		"application.name":           proto.PropListString(path.Base(os.Args[0])),
 		"application.icon_name":      proto.PropListString("audio-x-generic"),
-		"application.process.id":     proto.PropListString(fmt.Sprintf("%d", os.Getpid())),
+		"application.process.id":     proto.PropListString(strconv.Itoa(os.Getpid())),
 		"application.process.binary": proto.PropListString(os.Args[0]),
 		"window.x11.display":         proto.PropListString(os.Getenv("DISPLAY")),
 	}
-	err = c.client.Request(&proto.SetClientName{Props: props}, &proto.SetClientNameReply{})
+
+	err = pulse.client.Request(&proto.SetClientName{Props: props}, &proto.SetClientNameReply{})
 	if err != nil {
 		return nil, fmt.Errorf("could not send client info: %w", err)
 	}
 
 	// Get current mute state.
-	muteState, err := c.GetMute()
+	muteState, err := pulse.GetMute()
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve current mute status: %w", err)
 	}
-	c.Mute = muteState
+
+	pulse.Mute = muteState
 
 	// Get current volume.
-	volPct, err := c.GetVolume()
+	volPct, err := pulse.GetVolume()
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve current volume: %w", err)
 	}
-	c.Vol = volPct
+
+	pulse.Vol = volPct
 
 	// Callback function to be used when a Pulseaudio event occurs.
-	c.client.Callback = func(val any) {
+	pulse.client.Callback = func(val any) {
 		switch val := val.(type) {
 		case *proto.SubscribeEvent:
 			if val.Event.GetType() == proto.EventChange && val.Event.GetFacility() == proto.EventSink {
 				select {
-				case <-c.doneCh:
-					close(c.EventCh)
+				case <-pulse.doneCh:
+					close(pulse.EventCh)
+
 					return
-				case c.EventCh <- struct{}{}:
+				case pulse.EventCh <- struct{}{}:
 				default:
 				}
 			}
@@ -102,19 +117,19 @@ func NewPulseClient(ctx context.Context) (*PulseAudioClient, error) {
 	}
 
 	// Request to subscribe to all events.
-	err = c.client.Request(&proto.Subscribe{Mask: proto.SubscriptionMaskAll}, nil)
+	err = pulse.client.Request(&proto.Subscribe{Mask: proto.SubscriptionMaskAll}, nil)
 	if err != nil {
 		return nil, fmt.Errorf("could not subscribe to pulseaudio events: %w", err)
 	}
 
 	// Shutdown gracefully when requested.
 	go func() {
-		defer c.conn.Close()
-		defer close(c.doneCh)
+		defer pulse.conn.Close()
+		defer close(pulse.doneCh)
 		<-ctx.Done()
 	}()
 
-	return c, nil
+	return pulse, nil
 }
 
 // GetVolume will retrieve the current volume of the default output device, as a
@@ -124,30 +139,39 @@ func (c *PulseAudioClient) GetVolume() (float64, error) {
 	if err != nil {
 		return -1, fmt.Errorf("could not get current state: %w", err)
 	}
+
 	volPct := ParseVolume(repl)
+
 	return volPct, nil
 }
 
 // SetVolume will set the volume of the default output device to the given
 // percent amount. Values outside of 0 - 100 will be rejected.
+
 func (c *PulseAudioClient) SetVolume(pct float64) error {
-	if pct < 0 || pct > 100 {
-		return errors.New("requested volume out of range")
+	if pct < volumeMinPc || pct > volumeMaxPc {
+		return ErrVolumeOutofRange
 	}
+
 	repl, err := c.GetState()
 	if err != nil {
 		return fmt.Errorf("could not set volume: %w", err)
 	}
-	newVolume := pct / 100 * float64(proto.VolumeNorm)
+
+	newVolume := pct / volumeMaxPc * float64(proto.VolumeNorm)
 	volumes := repl.ChannelVolumes
+
 	for i := range volumes {
 		volumes[i] = uint32(newVolume)
 	}
+
 	err = c.client.Request(&proto.SetSinkVolume{SinkIndex: proto.Undefined, SinkName: outputDevice, ChannelVolumes: volumes}, nil)
 	if err != nil {
 		return fmt.Errorf("could not set volume: %w", err)
 	}
+
 	c.Vol = pct
+
 	return nil
 }
 
@@ -158,6 +182,7 @@ func (c *PulseAudioClient) GetMute() (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("could not get current state: %w", err)
 	}
+
 	return repl.Mute, nil
 }
 
@@ -168,19 +193,25 @@ func (c *PulseAudioClient) SetMute(state bool) error {
 	if err != nil {
 		return fmt.Errorf("could not set mute state: %w", err)
 	}
+
 	c.Mute = state
+
 	return nil
 }
 
 // GetState will return the low-level current state representation of the
 // default output device. It can be used for more advanced parsing and retrieval
 // about the output device.
+//
+//nolint:exhaustruct
 func (c *PulseAudioClient) GetState() (*proto.GetSinkInfoReply, error) {
 	repl := &proto.GetSinkInfoReply{}
+
 	err := c.client.Request(&proto.GetSinkInfo{SinkIndex: proto.Undefined, SinkName: outputDevice}, repl)
 	if err != nil {
 		return nil, fmt.Errorf("could not parse reply: %w", err)
 	}
+
 	return repl, nil
 }
 
@@ -190,6 +221,8 @@ func ParseVolume(repl *proto.GetSinkInfoReply) float64 {
 	for _, vol := range repl.ChannelVolumes {
 		acc += int64(vol)
 	}
+
 	acc /= int64(len(repl.ChannelVolumes))
-	return float64(acc) / float64(proto.VolumeNorm) * 100.0
+
+	return float64(acc) / float64(proto.VolumeNorm) * volumeMaxPc
 }

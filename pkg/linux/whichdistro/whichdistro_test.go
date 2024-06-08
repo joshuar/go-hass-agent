@@ -3,6 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
+//nolint:exhaustruct,paralleltest
 package whichdistro
 
 import (
@@ -10,7 +11,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 //go:embed testdata/*
@@ -23,11 +24,11 @@ func resetFiles() {
 
 func TestGetOSRelease(t *testing.T) {
 	tests := []struct {
-		name             string
 		want             OSRelease
-		wantErr          bool
+		name             string
 		osReleaseFile    string
 		osAltReleaseFile string
+		wantErr          bool
 	}{
 		{
 			name:          "successful",
@@ -41,6 +42,7 @@ func TestGetOSRelease(t *testing.T) {
 			wantErr:          true,
 		},
 	}
+
 	for _, tt := range tests {
 		OSReleaseFile = tt.osReleaseFile
 		OSReleaseAltFile = tt.osAltReleaseFile
@@ -48,11 +50,9 @@ func TestGetOSRelease(t *testing.T) {
 			_, err := GetOSRelease()
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetOSRelease() error = %v, wantErr %v", err, tt.wantErr)
+
 				return
 			}
-			// if !reflect.DeepEqual(got, tt.want) {
-			// 	t.Errorf("GetOSRelease() = %v, want %v", got, tt.want)
-			// }
 		})
 		resetFiles()
 	}
@@ -60,19 +60,21 @@ func TestGetOSRelease(t *testing.T) {
 
 func Test_readOSRelease(t *testing.T) {
 	var fedora, ubuntu []byte
+
 	var err error
 
 	fedora, err = content.ReadFile("testdata/os-release-fedora")
-	assert.Nil(t, err)
+	require.NoError(t, err)
+
 	ubuntu, err = content.ReadFile("testdata/os-release-ubuntu")
-	assert.Nil(t, err)
+	require.NoError(t, err)
 
 	tests := []struct {
 		name             string
-		want             []byte
-		wantErr          bool
 		osReleaseFile    string
 		osAltReleaseFile string
+		want             []byte
+		wantErr          bool
 	}{
 		{
 			name:          "fedora",
@@ -101,15 +103,19 @@ func Test_readOSRelease(t *testing.T) {
 			osAltReleaseFile: "/also/does/not/exist",
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			OSReleaseFile = tt.osReleaseFile
 			OSReleaseAltFile = tt.osAltReleaseFile
 			got, err := readOSRelease()
+
 			if (err != nil) != tt.wantErr {
 				t.Errorf("readOSRelease() error = %v, wantErr %v", err, tt.wantErr)
+
 				return
 			}
+
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("readOSRelease() = %v, want %v", got, tt.want)
 			}
@@ -120,18 +126,23 @@ func Test_readOSRelease(t *testing.T) {
 
 func TestOSRelease_GetValue(t *testing.T) {
 	var fedoraOSRelease, ubuntuOSRelease OSRelease
+
 	var err error
 
 	OSReleaseFile = "testdata/os-release-fedora"
+
 	fedoraOSRelease, err = GetOSRelease()
-	assert.Nil(t, err)
+	require.NoError(t, err)
+
 	OSReleaseFile = "testdata/os-release-ubuntu"
+
 	ubuntuOSRelease, err = GetOSRelease()
-	assert.Nil(t, err)
+	require.NoError(t, err)
 
 	type args struct {
 		key string
 	}
+
 	tests := []struct {
 		name      string
 		r         OSRelease
@@ -167,6 +178,7 @@ func TestOSRelease_GetValue(t *testing.T) {
 			if gotValue != tt.wantValue {
 				t.Errorf("OSRelease.GetValue() gotValue = %v, want %v", gotValue, tt.wantValue)
 			}
+
 			if gotOk != tt.wantOk {
 				t.Errorf("OSRelease.GetValue() gotOk = %v, want %v", gotOk, tt.wantOk)
 			}
