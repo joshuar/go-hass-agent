@@ -3,12 +3,12 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-// revive:disable:unused-receiver
-
+//revive:disable:unused-receiver
 package main
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"syscall"
@@ -28,15 +28,24 @@ import (
 type profileFlags logging.ProfileFlags
 
 func (d profileFlags) AfterApply() error {
-	return logging.StartProfiling(logging.ProfileFlags(d))
+	err := logging.StartProfiling(logging.ProfileFlags(d))
+	if err != nil {
+		return fmt.Errorf("could not start profiling: %w", err)
+	}
+
+	return nil
 }
 
 type noLogFileFlag bool
 
 func (d noLogFileFlag) AfterApply() error {
 	if !d {
-		logging.SetLogFile(preferences.LogFile)
+		err := logging.SetLogFile(preferences.LogFile)
+		if err != nil {
+			return fmt.Errorf("logging setup failed: %w", err)
+		}
 	}
+
 	return nil
 }
 
@@ -65,26 +74,28 @@ func (r *ResetCmd) Run(ctx *Context) error {
 	preferences.SetPath(filepath.Join(xdg.ConfigHome, a.AppID()))
 	// Reset agent.
 	if err := a.Reset(); err != nil {
-		return err
+		return fmt.Errorf("agent reset failed: %w", err)
 	}
 	// Reset registry.
 	if err := registry.Reset(); err != nil {
-		return err
+		return fmt.Errorf("registry reset failed: %w", err)
 	}
 	// Reset preferences.
 	if err := preferences.Reset(); err != nil {
-		return err
+		return fmt.Errorf("preferences reset failed: %w", err)
 	}
 	// Reset the log.
 	if err := logging.Reset(); err != nil {
-		return err
+		return fmt.Errorf("logging reset failed: %w", err)
 	}
 	log.Info().Msg("Reset complete (refer to any warnings, if any, above.)")
+
 	return nil
 }
 
 type VersionCmd struct{}
 
+//nolint:unparam
 func (r *VersionCmd) Run(_ *Context) error {
 	log.Info().Msgf("%s: %s", preferences.AppName, preferences.AppVersion)
 	return nil
@@ -107,7 +118,7 @@ flags. The UI can be explicitly disabled via the --terminal flag.
 }
 
 func (r *RegisterCmd) Run(ctx *Context) error {
-	a := agent.New(&agent.Options{
+	agnt := agent.New(&agent.Options{
 		Headless:      ctx.Headless,
 		ForceRegister: r.Force,
 		IgnoreURLs:    r.IgnoreURLs,
@@ -117,14 +128,14 @@ func (r *RegisterCmd) Run(ctx *Context) error {
 	})
 	var err error
 
-	registry.SetPath(filepath.Join(xdg.ConfigHome, a.AppID(), "sensorRegistry"))
-	preferences.SetPath(filepath.Join(xdg.ConfigHome, a.AppID()))
+	registry.SetPath(filepath.Join(xdg.ConfigHome, agnt.AppID(), "sensorRegistry"))
+	preferences.SetPath(filepath.Join(xdg.ConfigHome, agnt.AppID()))
 	var trk *sensor.Tracker
 	if trk, err = sensor.NewTracker(); err != nil {
-		log.Fatal().Err(err).Msg("Could not start sensor sensor.")
+		return fmt.Errorf("could not start sensor tracker: %w", err)
 	}
 
-	a.Register(trk)
+	agnt.Register(trk)
 	return nil
 }
 
@@ -151,19 +162,20 @@ func (r *RunCmd) Run(ctx *Context) error {
 	registry.SetPath(filepath.Join(xdg.ConfigHome, a.AppID(), "sensorRegistry"))
 	reg, err := registry.Load()
 	if err != nil {
-		log.Fatal().Err(err).Msg("Could not load sensor registry.")
+		return fmt.Errorf("could not start registry: %w", err)
 	}
 
 	preferences.SetPath(filepath.Join(xdg.ConfigHome, a.AppID()))
 	var trk *sensor.Tracker
 	if trk, err = sensor.NewTracker(); err != nil {
-		log.Fatal().Err(err).Msg("Could not start sensor sensor.")
+		return fmt.Errorf("could not start sensor tracker: %w", err)
 	}
 
 	a.Run(trk, reg)
 	return nil
 }
 
+//nolint:tagalign
 var CLI struct {
 	Run      RunCmd        `cmd:"" help:"Run Go Hass Agent."`
 	Reset    ResetCmd      `cmd:"" help:"Reset Go Hass Agent."`
