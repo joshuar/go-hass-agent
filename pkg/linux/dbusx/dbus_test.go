@@ -3,6 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
+//nolint:paralleltest
 package dbusx
 
 import (
@@ -14,6 +15,8 @@ import (
 )
 
 func skipCI(t *testing.T) {
+	t.Helper()
+
 	if os.Getenv("CI") != "" {
 		t.Skip("Skipping testing in CI environment")
 	}
@@ -21,9 +24,11 @@ func skipCI(t *testing.T) {
 
 func TestVariantToValue(t *testing.T) {
 	skipCI(t)
+
 	type args struct {
 		variant dbus.Variant
 	}
+
 	tests := []struct {
 		name string
 		args args
@@ -34,8 +39,9 @@ func TestVariantToValue(t *testing.T) {
 			args: args{variant: dbus.MakeVariant("foo")},
 			want: "foo",
 		},
-		// TODO: Test all possible variant values?
+		// ?: Test all possible variant values?
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := VariantToValue[string](tt.args.variant); !reflect.DeepEqual(got, tt.want) {
