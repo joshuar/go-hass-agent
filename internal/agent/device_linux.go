@@ -59,13 +59,16 @@ func newDevice(_ context.Context) *linux.Device {
 // sensorWorkers initialises the list of workers for sensors and returns those
 // that are supported on this device.
 func sensorWorkers() []Worker {
-	var activeWorkers []Worker
+	activeWorkers := make([]Worker, 0, len(workers))
+
 	for _, w := range workers {
 		worker, err := w()
 		if err != nil {
 			log.Warn().Err(err).Msg("Could not activate a worker.")
+
 			continue
 		}
+
 		activeWorkers = append(activeWorkers, worker)
 	}
 	return activeWorkers

@@ -23,6 +23,8 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 )
 
+var ErrCtxFailed = errors.New("unable to create a context")
+
 // Agent holds the data and structure representing an instance of the agent.
 // This includes the data structure for the UI elements and tray and some
 // strings such as app name and version.
@@ -39,15 +41,16 @@ type Options struct {
 	Headless, ForceRegister, IgnoreURLs bool
 }
 
+//nolint:exhaustruct
 func New(o *Options) *Agent {
-	a := &Agent{
+	agent := &Agent{
 		done:    make(chan struct{}),
 		Options: o,
 	}
-	if !a.Options.Headless {
-		a.ui = fyneui.NewFyneUI(a.Options.ID)
+	if !agent.Options.Headless {
+		agent.ui = fyneui.NewFyneUI(agent.Options.ID)
 	}
-	return a
+	return agent
 }
 
 // Run is the "main loop" of the agent. It sets up the agent, loads the config
@@ -58,7 +61,9 @@ func (agent *Agent) Run(trk SensorTracker, reg sensor.Registry) {
 
 	// Pre-flight: check if agent is registered. If not, run registration flow.
 	var regWait sync.WaitGroup
+
 	regWait.Add(1)
+
 	go func() {
 		defer regWait.Done()
 		if err := agent.checkRegistration(trk); err != nil {
@@ -67,6 +72,7 @@ func (agent *Agent) Run(trk SensorTracker, reg sensor.Registry) {
 	}()
 
 	wg.Add(1)
+
 	go func() {
 		defer wg.Done()
 		regWait.Wait()
@@ -86,12 +92,14 @@ func (agent *Agent) Run(trk SensorTracker, reg sensor.Registry) {
 
 		// Start worker funcs for sensors.
 		wg.Add(1)
+
 		go func() {
 			defer wg.Done()
 			runWorkers(runnerCtx, trk, reg)
 		}()
 		// Start any scripts.
 		wg.Add(1)
+
 		go func() {
 			defer wg.Done()
 			scriptPath := filepath.Join(xdg.ConfigHome, agent.AppID(), "scripts")
@@ -99,6 +107,7 @@ func (agent *Agent) Run(trk SensorTracker, reg sensor.Registry) {
 		}()
 		// Start the mqtt client
 		wg.Add(1)
+
 		go func() {
 			defer wg.Done()
 			runMQTTWorker(runnerCtx)
@@ -106,6 +115,7 @@ func (agent *Agent) Run(trk SensorTracker, reg sensor.Registry) {
 		// Listen for notifications from Home Assistant.
 		if !agent.IsHeadless() {
 			wg.Add(1)
+
 			go func() {
 				defer wg.Done()
 				agent.runNotificationsWorker(runnerCtx)
@@ -126,6 +136,7 @@ func (agent *Agent) Register(trk SensorTracker) {
 	var wg sync.WaitGroup
 
 	wg.Add(1)
+
 	go func() {
 		defer wg.Done()
 		if err := agent.checkRegistration(trk); err != nil {
@@ -144,6 +155,7 @@ func (agent *Agent) Register(trk SensorTracker) {
 func (agent *Agent) handleSignals() {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+
 	go func() {
 		defer close(agent.done)
 		<-c
@@ -173,7 +185,7 @@ func (agent *Agent) Stop() {
 func (agent *Agent) Reset() error {
 	ctx, _ := hass.NewContext()
 	if ctx == nil {
-		return errors.New("unable to create a context")
+		return ErrCtxFailed
 	}
 	runnerCtx := setupDeviceContext(ctx)
 	resetMQTTWorker(runnerCtx)
