@@ -137,10 +137,6 @@ linters:
 
 issues:
   exclude-rules:
-    - path: '(.+)_test\.go'
-      text: "pointer bytes could be"
-    - path: '(.+)_test\.go'
-      text: "literal copies lock value"
     - linters:
       - lll
       source: "^//go:generate "
@@ -181,8 +177,6 @@ linters-settings:
       - name: cognitive-complexity
         disabled: true
       - name: cyclomatic
-        disabled: true
-      - name: unused-receiver
         disabled: true
   gocyclo:
     min-complexity: 15
