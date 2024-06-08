@@ -3,6 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
+//nolint:containedctx,exhaustruct,paralleltest
 package preferences
 
 import (
@@ -17,15 +18,17 @@ func TestEmbedInContext(t *testing.T) {
 		ctx context.Context
 		p   *Preferences
 	}
+
 	tests := []struct {
-		name string
 		args args
+		name string
 	}{
 		{
 			name: "default",
 			args: args{ctx: context.TODO(), p: defaultPreferences()},
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := EmbedInContext(tt.args.ctx, tt.args.p)
@@ -44,6 +47,7 @@ func TestFetchFromContext(t *testing.T) {
 	type args struct {
 		ctx context.Context
 	}
+
 	tests := []struct {
 		name string
 		args args
@@ -59,10 +63,11 @@ func TestFetchFromContext(t *testing.T) {
 			args: args{ctx: context.TODO()},
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := FetchFromContext(tt.args.ctx)
-			assert.Equal(t, got.DeviceName, tt.want)
+			assert.Equal(t, tt.want, got.DeviceName)
 		})
 	}
 }

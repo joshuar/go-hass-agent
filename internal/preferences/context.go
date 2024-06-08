@@ -24,5 +24,6 @@ func FetchFromContext(ctx context.Context) Preferences {
 	if !ok {
 		return *defaultPreferences()
 	}
+
 	return c
 }
