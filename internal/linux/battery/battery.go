@@ -488,7 +488,7 @@ func batteryChargeIcon(v any) string {
 
 type worker struct{}
 
-// TODO: implement initial battery sensor retrieval.
+// ?: implement initial battery sensor retrieval.
 func (w *worker) Sensors(_ context.Context) ([]sensor.Details, error) {
 	return nil, linux.ErrUnimplemented
 }

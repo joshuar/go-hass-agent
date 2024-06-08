@@ -3,6 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
+//revive:disable:unused-receiver
 package net
 
 import (
@@ -92,6 +93,29 @@ func (c *connection) State() any {
 	return c.state.String()
 }
 
+func (c *connection) updateState(state connState) {
+	// Update connection state (if it changed).
+	if c.state != state {
+		c.state = state
+	}
+}
+
+//nolint:mnd
+func (c *connection) updateAddrs(addr address) {
+	switch addr.class {
+	case 4:
+		if c.attrs.Ipv4 != addr.address {
+			c.attrs.Ipv4 = addr.address
+			c.attrs.IPv4Mask = addr.mask
+		}
+	case 6:
+		if c.attrs.Ipv6 != addr.address {
+			c.attrs.Ipv6 = addr.address
+			c.attrs.IPv6Mask = addr.mask
+		}
+	}
+}
+
 //nolint:exhaustruct,mnd
 func newConnection(ctx context.Context, path dbus.ObjectPath) *connection {
 	newConnection := &connection{
@@ -141,13 +165,14 @@ func newConnection(ctx context.Context, path dbus.ObjectPath) *connection {
 	return newConnection
 }
 
-//nolint:mnd
-func monitorConnection(ctx context.Context, p dbus.ObjectPath) <-chan sensor.Details {
+//nolint:cyclop
+//revive:disable:unnecessary-stmt
+func monitorConnection(ctx context.Context, connPath dbus.ObjectPath) <-chan sensor.Details {
 	sensorCh := make(chan sensor.Details)
 	updateCh := make(chan any)
 
 	// create a new connection sensor
-	conn := newConnection(ctx, p)
+	conn := newConnection(ctx, connPath)
 
 	// process updates and handle cancellation
 	connCtx, connCancel := context.WithCancel(ctx)
@@ -172,23 +197,9 @@ func monitorConnection(ctx context.Context, p dbus.ObjectPath) <-chan sensor.Det
 				conn.mu.Lock()
 				switch update := u.(type) {
 				case connState:
-					if conn.state != update {
-						conn.state = update
-					}
+					conn.updateState(update)
 				case address:
-					if update.class == 4 {
-						if conn.attrs.Ipv4 != update.address {
-							conn.attrs.Ipv4 = update.address
-							conn.attrs.IPv4Mask = update.mask
-						}
-					}
-
-					if update.class == 6 {
-						if conn.attrs.Ipv6 != update.address {
-							conn.attrs.Ipv6 = update.address
-							conn.attrs.IPv6Mask = update.mask
-						}
-					}
+					conn.updateAddrs(update)
 				}
 				sensorCh <- conn
 				conn.mu.Unlock()
