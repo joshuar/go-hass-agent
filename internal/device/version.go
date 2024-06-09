@@ -8,6 +8,7 @@ package device
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
@@ -50,11 +51,19 @@ func (w *versionWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
 
 func (w *versionWorker) Updates(ctx context.Context) (<-chan sensor.Details, error) {
 	sensorCh := make(chan sensor.Details)
-	s, _ := w.Sensors(ctx)
+
+	sensors, err := w.Sensors(ctx)
+	if err != nil {
+		close(sensorCh)
+
+		return sensorCh, fmt.Errorf("unable to retrieve version info: %w", err)
+	}
+
 	go func() {
 		defer close(sensorCh)
-		sensorCh <- s[0]
+		sensorCh <- sensors[0]
 	}()
+
 	return sensorCh, nil
 }
 

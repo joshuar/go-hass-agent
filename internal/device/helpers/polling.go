@@ -17,17 +17,22 @@ import (
 // Effectively, `updater()` will get called sometime near `interval`, but not
 // exactly on it. This can help avoid a "thundering herd" problem of sensors all
 // trying to update at the same time.
+//
+//nolint:exhaustruct
 func PollSensors(ctx context.Context, updater func(time.Duration), interval, stdev time.Duration) {
 	lastTick := time.Now()
 	updater(time.Since(lastTick))
+
 	ticker := jitterbug.New(
 		interval,
 		&jitterbug.Norm{Stdev: stdev},
 	)
+
 	for {
 		select {
 		case <-ctx.Done():
 			ticker.Stop()
+
 			return
 		case t := <-ticker.C:
 			updater(time.Since(lastTick))
