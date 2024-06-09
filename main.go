@@ -103,6 +103,7 @@ type VersionCmd struct{}
 //nolint:unparam
 func (r *VersionCmd) Run(_ *Context) error {
 	log.Info().Msgf("%s: %s", preferences.AppName, preferences.AppVersion)
+
 	return nil
 }
 
@@ -144,6 +145,7 @@ func (r *RegisterCmd) Run(ctx *Context) error {
 	}
 
 	gohassagent.Register(trk)
+
 	return nil
 }
 
@@ -184,6 +186,7 @@ func (r *RunCmd) Run(ctx *Context) error {
 	}
 
 	gohassagent.Run(trk, reg)
+
 	return nil
 }
 
@@ -208,6 +211,7 @@ func init() {
 	uid := syscall.Getuid()
 	egid := syscall.Getegid()
 	gid := syscall.Getgid()
+
 	if uid != euid || gid != egid || uid == 0 {
 		log.Fatal().Msg("go-hass-agent should not be run with additional privileges or as root.")
 	}
