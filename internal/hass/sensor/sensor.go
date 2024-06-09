@@ -134,9 +134,11 @@ func NewRequest(reg Registry, req any) (hass.PostRequest, hass.Response, error) 
 		if reg.IsDisabled(sensor.ID()) {
 			return nil, nil, ErrSensorDisabled
 		}
+
 		if reg.IsRegistered(sensor.ID()) {
 			// If the sensor is registered, create an update request.
 			updates := []*stateUpdateRequest{newStateUpdateRequest(sensor)}
+
 			data, err := json.Marshal(updates)
 			if err != nil {
 				return nil, nil, fmt.Errorf("could not create state update request: %w", err)
@@ -157,6 +159,7 @@ func NewRequest(reg Registry, req any) (hass.PostRequest, hass.Response, error) 
 				nil
 		}
 	}
+
 	return nil, nil, fmt.Errorf("unknown request type: %T", req)
 }
 
@@ -180,6 +183,7 @@ func (u *updateResponse) UnmarshalJSON(b []byte) error {
 	if err != nil {
 		return fmt.Errorf("could not parse response: %w", err)
 	}
+
 	return nil
 }
 
@@ -192,6 +196,7 @@ func (r *registrationResponse) UnmarshalJSON(b []byte) error {
 	if err != nil {
 		return fmt.Errorf("could not parse response: %w", err)
 	}
+
 	return nil
 }
 

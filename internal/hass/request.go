@@ -3,6 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
+//revive:disable:max-public-structs
 package hass
 
 import (
@@ -83,8 +84,10 @@ type Response interface {
 // satisfy the PostRequest interface. To add authentication where required,
 // satisfy the Auth interface. To send an encrypted request, satisfy the Secret
 // interface.
+//
+//nolint:exhaustruct
 func ExecuteRequest(ctx context.Context, request any, response Response) error {
-	// TODO: handle nil response here
+	// ?: handle nil response here
 	url := ContextGetURL(ctx)
 	if url == "" {
 		return ErrInvalidURL
@@ -96,35 +99,40 @@ func ExecuteRequest(ctx context.Context, request any, response Response) error {
 	}
 
 	var responseErr *APIError
+
 	var resp *resty.Response
+
 	var err error
-	cl := client.R().
+
+	webClient := client.R().
 		SetContext(ctx).
 		SetError(&responseErr)
 	if a, ok := request.(Authenticated); ok {
-		cl = cl.SetAuthToken(a.Auth())
+		webClient = webClient.SetAuthToken(a.Auth())
 	}
-	switch r := request.(type) {
+
+	switch req := request.(type) {
 	case PostRequest:
 		log.Trace().
 			Str("method", "POST").
-			RawJSON("body", r.RequestBody()).
+			RawJSON("body", req.RequestBody()).
 			Time("sent_at", time.Now()).
 			Msg("Sending request.")
-		resp, err = cl.
-			SetBody(r.RequestBody()).
-			Post(url)
+
+		resp, err = webClient.SetBody(req.RequestBody()).Post(url)
 	case GetRequest:
 		log.Trace().
 			Str("method", "GET").
 			Time("sent_at", time.Now()).
 			Msg("Sending request.")
-		resp, err = cl.
-			Get(url)
+
+		resp, err = webClient.Get(url)
 	}
+
 	if err != nil {
-		return err
+		return fmt.Errorf("could not send request: %w", err)
 	}
+
 	log.Trace().Err(err).
 		Int("statuscode", resp.StatusCode()).
 		Str("status", resp.Status()).
@@ -133,20 +141,24 @@ func ExecuteRequest(ctx context.Context, request any, response Response) error {
 		Time("received_at", resp.ReceivedAt()).
 		RawJSON("body", resp.Body()).
 		Msg("Response received.")
+
 	if resp.IsError() {
 		if responseErr != nil {
 			responseErr.StatusCode = resp.StatusCode()
+
 			return responseErr
-		} else {
-			return &APIError{
-				StatusCode: resp.StatusCode(),
-				Message:    resp.Status(),
-			}
+		}
+
+		return &APIError{
+			StatusCode: resp.StatusCode(),
+			Message:    resp.Status(),
 		}
 	}
+
 	if err := response.UnmarshalJSON(resp.Body()); err != nil {
 		return errors.Join(ErrResponseMalformed, err)
 	}
+
 	return nil
 }
 

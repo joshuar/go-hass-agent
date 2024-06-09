@@ -3,6 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
+//nolint:exhaustruct,paralleltest
 package hass
 
 import (
@@ -11,11 +12,9 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"reflect"
-	"sync"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
@@ -33,13 +32,13 @@ func TestConfig_IsEntityDisabled(t *testing.T) {
 	}
 
 	type fields struct {
-		err     error
 		Details *ConfigEntries
-		mu      sync.Mutex
 	}
+
 	type args struct {
 		entity string
 	}
+
 	tests := []struct {
 		name    string
 		fields  fields
@@ -61,19 +60,22 @@ func TestConfig_IsEntityDisabled(t *testing.T) {
 			want:    false,
 			wantErr: false,
 		},
-		// TODO: test for error.
+		// ?: test for error.
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := &Config{
 				Details: tt.fields.Details,
-				mu:      tt.fields.mu,
 			}
 			got, err := c.IsEntityDisabled(tt.args.entity)
+
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Config.IsEntityDisabled() error = %v, wantErr %v", err, tt.wantErr)
+
 				return
 			}
+
 			if got != tt.want {
 				t.Errorf("Config.IsEntityDisabled() = %v, want %v", got, tt.want)
 			}
@@ -84,19 +86,19 @@ func TestConfig_IsEntityDisabled(t *testing.T) {
 func TestConfig_UnmarshalJSON(t *testing.T) {
 	testConfig := &ConfigEntries{}
 	testConfigJSON, err := json.Marshal(testConfig)
-	assert.Nil(t, err)
+	require.NoError(t, err)
 
 	invalidJSON, err := json.Marshal(`{"some":"json"}`)
-	assert.Nil(t, err)
+	require.NoError(t, err)
 
 	type fields struct {
-		err     error
 		Details *ConfigEntries
-		mu      sync.Mutex
 	}
+
 	type args struct {
 		b []byte
 	}
+
 	tests := []struct {
 		name    string
 		fields  fields
@@ -118,8 +120,8 @@ func TestConfig_UnmarshalJSON(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			c := &Config{
 				Details: tt.fields.Details,
-				mu:      tt.fields.mu,
 			}
+
 			if err := c.UnmarshalJSON(tt.args.b); (err != nil) != tt.wantErr {
 				t.Errorf("Config.UnmarshalJSON() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -127,24 +129,7 @@ func TestConfig_UnmarshalJSON(t *testing.T) {
 	}
 }
 
-func Test_configRequest_RequestBody(t *testing.T) {
-	tests := []struct {
-		name string
-		c    *configRequest
-		want json.RawMessage
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			c := &configRequest{}
-			if got := c.RequestBody(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("configRequest.RequestBody() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
+//nolint:containedctx,musttag
 func TestGetConfig(t *testing.T) {
 	testConfig := &Config{
 		Details: &ConfigEntries{
@@ -156,13 +141,15 @@ func TestGetConfig(t *testing.T) {
 		},
 	}
 	testConfigJSON, err := json.Marshal(testConfig)
-	assert.Nil(t, err)
+	require.NoError(t, err)
 
-	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, string(testConfigJSON))
+	mockServer := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, _ *http.Request) {
+		_, err = fmt.Fprint(response, string(testConfigJSON))
+		require.NoError(t, err)
 	}))
+
 	preferences.SetPath(t.TempDir())
-	preferences.Save(
+	err = preferences.Save(
 		preferences.SetHost(mockServer.URL),
 		preferences.SetToken("testToken"),
 		preferences.SetCloudhookURL(""),
@@ -176,13 +163,16 @@ func TestGetConfig(t *testing.T) {
 		preferences.SetVersion("6.4.0"),
 		preferences.SetRegistered(true),
 	)
+	require.NoError(t, err)
+
 	type args struct {
 		ctx context.Context
 	}
+
 	tests := []struct {
-		name    string
 		args    args
 		want    *Config
+		name    string
 		wantErr bool
 	}{
 		{
@@ -197,11 +187,16 @@ func TestGetConfig(t *testing.T) {
 			got, err := GetConfig(tt.args.ctx)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetConfig() error = %v, wantErr %v", err, tt.wantErr)
+
 				return
 			}
-			if ok, _ := got.IsEntityDisabled("disabledEntity"); ok {
+
+			ok, err := got.IsEntityDisabled("disabledEntity")
+			if ok {
 				t.Errorf("GetConfig() = %v, want %v", got, tt.want)
 			}
+
+			require.NoError(t, err)
 		})
 	}
 }

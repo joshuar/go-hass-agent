@@ -3,6 +3,8 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
+//nolint:exhaustruct,paralleltest
+//revive:disable:function-length
 package hass
 
 import (
@@ -23,10 +25,11 @@ func TestAPIError_Error(t *testing.T) {
 		Message    string
 		StatusCode int
 	}
+
 	tests := []struct {
 		name   string
-		fields fields
 		want   string
+		fields fields
 	}{
 		{
 			name:   "valid error with string code",
@@ -47,6 +50,7 @@ func TestAPIError_Error(t *testing.T) {
 			want:   "Status: 503",
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			e := &APIError{
@@ -61,32 +65,33 @@ func TestAPIError_Error(t *testing.T) {
 	}
 }
 
+// ?: mock API level responses and test those.
+//
+//nolint:containedctx
 func TestExecuteRequest(t *testing.T) {
-	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mockServer := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
 		switch {
-		case r.URL.Path == "/goodPost", r.URL.Path == "/goodGet":
-			fmt.Fprintf(w, `{"success": true}`)
-		case r.URL.Path == "/badPost", r.URL.Path == "/badGet":
-			w.WriteHeader(http.StatusBadRequest)
-			fmt.Fprintf(w, `{"success": false}`)
-		case r.URL.Path == "/badData":
-			w.WriteHeader(http.StatusBadRequest)
-			fmt.Fprintf(w, `{"success": false}`)
+		case request.URL.Path == "/goodPost", request.URL.Path == "/goodGet":
+			fmt.Fprintf(response, `{"success": true}`)
+		case request.URL.Path == "/badPost", request.URL.Path == "/badGet":
+			response.WriteHeader(http.StatusBadRequest)
+			fmt.Fprintf(response, `{"success": false}`)
+		case request.URL.Path == "/badData":
+			response.WriteHeader(http.StatusBadRequest)
+			fmt.Fprintf(response, `{"success": false}`)
 		}
 	}))
-	ctx := ContextSetClient(context.TODO(), NewDefaultHTTPClient())
 
+	ctx := ContextSetClient(context.TODO(), NewDefaultHTTPClient())
 	goodPostReq := PostRequestMock{
 		RequestBodyFunc: func() json.RawMessage { return json.RawMessage(`{"field":"value"}`) },
 	}
 	goodPostResp := &ResponseMock{
-		UnmarshalJSONFunc: func(bytes []byte) error { return nil },
+		UnmarshalJSONFunc: func(_ []byte) error { return nil },
 	}
-
 	goodGetResp := &ResponseMock{
-		UnmarshalJSONFunc: func(bytes []byte) error { return nil },
+		UnmarshalJSONFunc: func(_ []byte) error { return nil },
 	}
-
 	badPostReq := PostRequestMock{
 		RequestBodyFunc: func() json.RawMessage { return json.RawMessage(`{"field":"value"}`) },
 	}
@@ -102,11 +107,12 @@ func TestExecuteRequest(t *testing.T) {
 		request  any
 		response Response
 	}
+
 	tests := []struct {
-		name    string
 		args    args
-		wantErr bool
 		want    error
+		name    string
+		wantErr bool
 	}{
 		{
 			name:    "invalid URL",
@@ -152,19 +158,19 @@ func TestExecuteRequest(t *testing.T) {
 		// 	want: badPostResp,
 		// },
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := ExecuteRequest(tt.args.ctx, tt.args.request, tt.args.response)
 			assert.Equal(t, tt.want, got)
-			// TODO: mock API level responses and test those
 		})
 	}
 }
 
 func TestNewDefaultHTTPClient(t *testing.T) {
 	tests := []struct {
-		name string
 		want *resty.Client
+		name string
 	}{
 		{
 			name: "default",

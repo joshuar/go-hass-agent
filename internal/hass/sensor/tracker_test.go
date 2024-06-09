@@ -10,40 +10,29 @@ package sensor
 import (
 	"context"
 	"reflect"
-	"sync"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 )
 
-var mockRegistry = RegistryMock{
-	SetDisabledFunc:   func(sensor string, state bool) error { return nil },
-	SetRegisteredFunc: func(sensor string, state bool) error { return nil },
-	IsDisabledFunc:    func(sensor string) bool { return false },
-	IsRegisteredFunc:  func(sensor string) bool { return false },
-}
-
-//nolint:copylocks
 func TestSensorTracker_add(t *testing.T) {
 	type fields struct {
 		sensor map[string]Details
-		mu     sync.Mutex
 	}
 	type args struct {
 		s Details
 	}
 	tests := []struct {
 		args    args
-		name    string
 		fields  fields
+		name    string
 		wantErr bool
 	}{
 		{
 			name: "successful add",
 			fields: fields{
 				sensor: make(map[string]Details),
-				mu:     sync.Mutex{},
 			},
 			args:    args{s: &mockSensor},
 			wantErr: false,
@@ -58,7 +47,6 @@ func TestSensorTracker_add(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tr := &Tracker{
 				sensor: tt.fields.sensor,
-				mu:     tt.fields.mu,
 			}
 			if err := tr.add(tt.args.s); (err != nil) != tt.wantErr {
 				t.Errorf("SensorTracker.add() error = %v, wantErr %v", err, tt.wantErr)
@@ -73,11 +61,12 @@ func TestSensorTracker_Get(t *testing.T) {
 
 	type fields struct {
 		sensor map[string]Details
-		mu     sync.Mutex
 	}
+
 	type args struct {
 		id string
 	}
+
 	tests := []struct {
 		want    Details
 		name    string
@@ -99,17 +88,20 @@ func TestSensorTracker_Get(t *testing.T) {
 			wantErr: true,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tr := &Tracker{
 				sensor: tt.fields.sensor,
-				mu:     tt.fields.mu,
 			}
+
 			got, err := tr.Get(tt.args.id)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("SensorTracker.Get() error = %v, wantErr %v", err, tt.wantErr)
+
 				return
 			}
+
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("SensorTracker.Get() = %v, want %v", got, tt.want)
 			}
@@ -123,8 +115,8 @@ func TestSensorTracker_SensorList(t *testing.T) {
 
 	type fields struct {
 		sensor map[string]Details
-		mu     sync.Mutex
 	}
+
 	tests := []struct {
 		name   string
 		fields fields
@@ -144,7 +136,6 @@ func TestSensorTracker_SensorList(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tr := &Tracker{
 				sensor: tt.fields.sensor,
-				mu:     tt.fields.mu,
 			}
 			if got := tr.SensorList(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("SensorTracker.SensorList() = %v, want %v", got, tt.want)
@@ -163,20 +154,20 @@ func TestNewSensorTracker(t *testing.T) {
 			name: "default test",
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := NewTracker()
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewSensorTracker() error = %v, wantErr %v", err, tt.wantErr)
+
 				return
 			}
-			// if !reflect.DeepEqual(got, tt.want) {
-			// 	t.Errorf("NewSensorTracker() = %v, want %v", got, tt.want)
-			// }
 		})
 	}
 }
 
+//nolint:containedctx
 func TestMergeSensorCh(t *testing.T) {
 	testCtx, cancelFunc := context.WithCancel(context.TODO())
 	go func() {
@@ -208,6 +199,7 @@ func TestMergeSensorCh(t *testing.T) {
 		ctx      context.Context
 		sensorCh []<-chan Details
 	}
+
 	tests := []struct {
 		name string
 		args args
@@ -219,6 +211,7 @@ func TestMergeSensorCh(t *testing.T) {
 			want: []Details{&sensor1, &sensor2},
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := MergeSensorCh(tt.args.ctx, tt.args.sensorCh...)
@@ -239,11 +232,10 @@ func TestSensorTracker_Reset(t *testing.T) {
 
 	type fields struct {
 		sensor map[string]Details
-		mu     sync.Mutex
 	}
 	tests := []struct {
-		name   string
 		fields fields
+		name   string
 	}{
 		{
 			name:   "default",
@@ -254,7 +246,6 @@ func TestSensorTracker_Reset(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tr := &Tracker{
 				sensor: tt.fields.sensor,
-				mu:     tt.fields.mu,
 			}
 			tr.Reset()
 			assert.Nil(t, tr.sensor)

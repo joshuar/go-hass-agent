@@ -140,6 +140,8 @@ issues:
     - linters:
       - lll
       source: "^//go:generate "
+    - path: '(.+)_test\.go'
+      text: "copies lock value"
 
 severity:
   default-severity: "@linter"

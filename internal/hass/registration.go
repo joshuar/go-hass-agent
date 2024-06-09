@@ -8,6 +8,7 @@ package hass
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/url"
 	"time"
 
@@ -20,6 +21,7 @@ const (
 	WebHookPath      = "/api/webhook/"
 )
 
+//nolint:interfacebloat
 //go:generate moq -out mock_DeviceInfo_test.go . DeviceInfo
 type DeviceInfo interface {
 	DeviceID() string
@@ -43,7 +45,13 @@ type RegistrationInput struct {
 
 func (i *RegistrationInput) Validate() error {
 	validate := validator.New(validator.WithRequiredStructEnabled())
-	return validate.Struct(i)
+
+	err := validate.Struct(i)
+	if err != nil {
+		return fmt.Errorf("invalid registration input: %w", err)
+	}
+
+	return nil
 }
 
 type RegistrationDetails struct {
@@ -77,23 +85,24 @@ func (r *registrationRequest) RequestBody() json.RawMessage {
 	if err != nil {
 		return nil
 	}
+
 	return data
 }
 
-func newRegistrationRequest(d DeviceInfo, t string) *registrationRequest {
+func newRegistrationRequest(info DeviceInfo, token string) *registrationRequest {
 	return &registrationRequest{
-		DeviceID:           d.DeviceID(),
-		AppID:              d.AppID(),
-		AppName:            d.AppName(),
-		AppVersion:         d.AppVersion(),
-		DeviceName:         d.DeviceName(),
-		Manufacturer:       d.Manufacturer(),
-		Model:              d.Model(),
-		OsName:             d.OsName(),
-		OsVersion:          d.OsVersion(),
-		SupportsEncryption: d.SupportsEncryption(),
-		AppData:            d.AppData(),
-		Token:              t,
+		DeviceID:           info.DeviceID(),
+		AppID:              info.AppID(),
+		AppName:            info.AppName(),
+		AppVersion:         info.AppVersion(),
+		DeviceName:         info.DeviceName(),
+		Manufacturer:       info.Manufacturer(),
+		Model:              info.Model(),
+		OsName:             info.OsName(),
+		OsVersion:          info.OsVersion(),
+		SupportsEncryption: info.SupportsEncryption(),
+		AppData:            info.AppData(),
+		Token:              token,
 	}
 }
 
@@ -102,9 +111,15 @@ type registrationResponse struct {
 }
 
 func (r *registrationResponse) UnmarshalJSON(b []byte) error {
-	return json.Unmarshal(b, &r.Details)
+	err := json.Unmarshal(b, &r.Details)
+	if err != nil {
+		return fmt.Errorf("failed to parse registration response: %w", err)
+	}
+
+	return nil
 }
 
+//nolint:exhaustruct
 func newRegistrationResponse() *registrationResponse {
 	return &registrationResponse{}
 }
@@ -115,8 +130,9 @@ func RegisterWithHass(ctx context.Context, input *RegistrationInput, device Devi
 
 	serverURL, err := url.Parse(input.Server)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not parse server URL: %w", err)
 	}
+
 	serverURL = serverURL.JoinPath(registrationPath)
 	ctx = ContextSetURL(ctx, serverURL.String())
 	ctx = ContextSetClient(ctx, NewDefaultHTTPClient().SetTimeout(time.Minute))
@@ -124,5 +140,6 @@ func RegisterWithHass(ctx context.Context, input *RegistrationInput, device Devi
 	if err := ExecuteRequest(ctx, req, resp); err != nil {
 		return nil, err
 	}
+
 	return resp.Details, nil
 }
