@@ -68,19 +68,7 @@ func (w *worker) Watch(ctx context.Context, triggerCh chan dbusx.Trigger) chan s
 					continue
 				}
 
-				prop, ok := event.Content[1].(string)
-				if !ok {
-					log.Warn().Msg("Didn't understand changed property.")
-
-					continue
-				}
-
-				value, ok := event.Content[2].(dbus.Variant)
-				if !ok {
-					log.Warn().Msg("Didn't understand changed property value.")
-
-					continue
-				}
+				prop, value := extractProp(event.Content)
 
 				switch prop {
 				case colorSchemeProp:
@@ -229,4 +217,20 @@ func getProp(ctx context.Context, prop string) string {
 	}
 
 	return sensor.StateUnknown
+}
+
+func extractProp(event []any) (prop string, value dbus.Variant) {
+	var ok bool
+
+	prop, ok = event[1].(string)
+	if !ok {
+		log.Warn().Msg("Didn't understand changed property.")
+	}
+
+	value, ok = event[2].(dbus.Variant)
+	if !ok {
+		log.Warn().Msg("Didn't understand changed property value.")
+	}
+
+	return prop, value
 }
