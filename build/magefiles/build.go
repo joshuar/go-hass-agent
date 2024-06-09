@@ -66,7 +66,9 @@ func buildProject() error {
 
 	slog.Info("Running go build...", "output", output, "ldflags", ldflags)
 
-	err = sh.RunWithV(envMap, "go", "build", "-ldflags="+ldflags, "-o", output)
+	if err := sh.RunWithV(envMap, "go", "build", "-ldflags="+ldflags, "-o", output); err != nil {
+		return fmt.Errorf("failed to build project: %w", err)
+	}
 
-	return fmt.Errorf("failed to build project: %w", err)
+	return nil
 }
