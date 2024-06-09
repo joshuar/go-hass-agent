@@ -37,10 +37,8 @@ type locationSensor struct {
 	linux.Sensor
 }
 
-//nolint:unused-receiver
 func (s *locationSensor) Name() string { return "Location" }
 
-//nolint:unused-receiver
 func (s *locationSensor) ID() string { return "location" }
 
 type worker struct {
