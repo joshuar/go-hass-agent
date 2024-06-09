@@ -92,6 +92,7 @@ func (r *ResetCmd) Run(ctx *Context) error {
 	if err := logging.Reset(); err != nil {
 		return fmt.Errorf("logging reset failed: %w", err)
 	}
+
 	log.Info().Msg("Reset complete (refer to any warnings, if any, above.)")
 
 	return nil
@@ -130,11 +131,14 @@ func (r *RegisterCmd) Run(ctx *Context) error {
 		Token:         r.Token,
 		ID:            ctx.AppID,
 	})
+
 	var err error
+
+	var trk *sensor.Tracker
 
 	registry.SetPath(filepath.Join(xdg.ConfigHome, gohassagent.AppID(), "sensorRegistry"))
 	preferences.SetPath(filepath.Join(xdg.ConfigHome, gohassagent.AppID()))
-	var trk *sensor.Tracker
+
 	if trk, err = sensor.NewTracker(); err != nil {
 		return fmt.Errorf("could not start sensor tracker: %w", err)
 	}
@@ -156,21 +160,25 @@ show reported sensors/measurements.
 `
 }
 
+//nolint:exhaustruct
 func (r *RunCmd) Run(ctx *Context) error {
 	gohassagent := agent.New(&agent.Options{
 		Headless: ctx.Headless,
 		ID:       ctx.AppID,
 	})
+
 	var err error
 
+	var trk *sensor.Tracker
+
 	registry.SetPath(filepath.Join(xdg.ConfigHome, gohassagent.AppID(), "sensorRegistry"))
+	preferences.SetPath(filepath.Join(xdg.ConfigHome, gohassagent.AppID()))
+
 	reg, err := registry.Load()
 	if err != nil {
 		return fmt.Errorf("could not start registry: %w", err)
 	}
 
-	preferences.SetPath(filepath.Join(xdg.ConfigHome, gohassagent.AppID()))
-	var trk *sensor.Tracker
 	if trk, err = sensor.NewTracker(); err != nil {
 		return fmt.Errorf("could not start sensor tracker: %w", err)
 	}
@@ -211,10 +219,12 @@ func main() {
 	ctx := kong.Parse(&CLI, kong.Bind(), kong.Vars{"defaultAppID": preferences.AppID})
 	logging.SetLoggingLevel(CLI.LogLevel)
 	checkHeadless()
+
 	err := ctx.Run(&Context{Headless: CLI.Headless, Profile: CLI.Profile, AppID: CLI.AppID})
 	if CLI.Profile != nil {
 		err = errors.Join(logging.StopProfiling(logging.ProfileFlags(CLI.Profile)), err)
 	}
+
 	ctx.FatalIfErrorf(err)
 }
 
@@ -223,6 +233,7 @@ func checkHeadless() {
 		if !CLI.Headless {
 			log.Warn().Msg("DISPLAY not set, running in headless mode by default (specify --terminal to suppress this warning).")
 		}
+
 		CLI.Headless = true
 	}
 }
