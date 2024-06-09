@@ -3,6 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
+//revive:disable:unused-receiver
 package agent
 
 import (
@@ -29,6 +30,7 @@ type linuxMQTTDevice struct {
 func (d *linuxMQTTDevice) Subscriptions() []*mqttapi.Subscription {
 	var subs []*mqttapi.Subscription
 
+	// Create subscriptions for buttons.
 	for _, button := range d.buttons {
 		if sub, err := button.MarshalSubscription(); err != nil {
 			log.Warn().Err(err).Str("entity", button.Name).Msg("Could not create subscription.")
@@ -36,6 +38,7 @@ func (d *linuxMQTTDevice) Subscriptions() []*mqttapi.Subscription {
 			subs = append(subs, sub)
 		}
 	}
+	// Create subscriptions for numbers.
 	for _, number := range d.numbers {
 		if sub, err := number.MarshalSubscription(); err != nil {
 			log.Warn().Err(err).Str("entity", number.Name).Msg("Could not create subscription.")
@@ -43,6 +46,7 @@ func (d *linuxMQTTDevice) Subscriptions() []*mqttapi.Subscription {
 			subs = append(subs, sub)
 		}
 	}
+	// Create subscriptions for switches.
 	for _, sw := range d.switches {
 		if sub, err := sw.MarshalSubscription(); err != nil {
 			log.Warn().Err(err).Str("entity", sw.Name).Msg("Could not create subscription.")
@@ -50,7 +54,7 @@ func (d *linuxMQTTDevice) Subscriptions() []*mqttapi.Subscription {
 			subs = append(subs, sub)
 		}
 	}
-
+	// Add subscriptions for any additional controls.
 	subs = append(subs, d.controls...)
 
 	return subs
@@ -59,6 +63,7 @@ func (d *linuxMQTTDevice) Subscriptions() []*mqttapi.Subscription {
 func (d *linuxMQTTDevice) Configs() []*mqttapi.Msg {
 	var configs []*mqttapi.Msg
 
+	// Create sensor configs.
 	for _, sensor := range d.sensors {
 		if sub, err := sensor.MarshalConfig(); err != nil {
 			log.Warn().Err(err).Str("entity", sensor.Name).Msg("Could not create subscription.")
@@ -66,6 +71,7 @@ func (d *linuxMQTTDevice) Configs() []*mqttapi.Msg {
 			configs = append(configs, sub)
 		}
 	}
+	// Create button configs.
 	for _, button := range d.buttons {
 		if sub, err := button.MarshalConfig(); err != nil {
 			log.Warn().Err(err).Str("entity", button.Name).Msg("Could not create subscription.")
@@ -73,6 +79,7 @@ func (d *linuxMQTTDevice) Configs() []*mqttapi.Msg {
 			configs = append(configs, sub)
 		}
 	}
+	// Create number configs.
 	for _, number := range d.numbers {
 		if sub, err := number.MarshalConfig(); err != nil {
 			log.Warn().Err(err).Str("entity", number.Name).Msg("Could not create subscription.")
@@ -80,6 +87,7 @@ func (d *linuxMQTTDevice) Configs() []*mqttapi.Msg {
 			configs = append(configs, sub)
 		}
 	}
+	// Create switch configs.
 	for _, sw := range d.switches {
 		if sub, err := sw.MarshalConfig(); err != nil {
 			log.Warn().Err(err).Str("entity", sw.Name).Msg("Could not create subscription.")
@@ -99,6 +107,7 @@ func (d *linuxMQTTDevice) Setup(_ context.Context) error {
 	return nil
 }
 
+//nolint:exhaustruct
 func newMQTTDevice(ctx context.Context) *linuxMQTTDevice {
 	dev := &linuxMQTTDevice{
 		msgs: make(chan *mqttapi.Msg),

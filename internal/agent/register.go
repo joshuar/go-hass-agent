@@ -53,6 +53,7 @@ func saveRegistration(input *hass.RegistrationInput, resp *hass.RegistrationDeta
 	if err != nil {
 		return fmt.Errorf("unable to save registration: %w", err)
 	}
+
 	return nil
 }
 
@@ -96,6 +97,7 @@ func (agent *Agent) performRegistration(ctx context.Context) error {
 	}
 
 	log.Info().Msg("Successfully registered agent.")
+
 	return nil
 }
 
@@ -104,8 +106,10 @@ func (agent *Agent) checkRegistration(trk SensorTracker) error {
 	if err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("could not load preferences: %w", err)
 	}
+
 	if prefs.Registered && !agent.Options.ForceRegister {
 		log.Debug().Msg("Agent already registered.")
+
 		return nil
 	}
 
@@ -113,12 +117,15 @@ func (agent *Agent) checkRegistration(trk SensorTracker) error {
 	if err := agent.performRegistration(context.Background()); err != nil {
 		return err
 	}
+
 	if agent.Options.ForceRegister {
 		trk.Reset()
+
 		if err := registry.Reset(); err != nil {
 			log.Warn().Err(err).Msg("Problem resetting registry.")
 		}
 	}
+
 	return nil
 }
 
@@ -133,7 +140,9 @@ func generateAPIURL(host string, ignoreURLs bool, resp *hass.RegistrationDetails
 		if err != nil {
 			return "", fmt.Errorf("unable to generate API URL: %w", err)
 		}
+
 		apiURL = apiURL.JoinPath(hass.WebHookPath, resp.WebhookID)
+
 		return apiURL.String(), nil
 	}
 }
@@ -153,6 +162,8 @@ func generateWebsocketURL(host string) (string, error) {
 	default:
 		websocketURL.Scheme = "ws"
 	}
+
 	websocketURL = websocketURL.JoinPath(hass.WebsocketPath)
+
 	return websocketURL.String(), nil
 }

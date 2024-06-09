@@ -50,12 +50,15 @@ func New(o *Options) *Agent {
 	if !agent.Options.Headless {
 		agent.ui = fyneui.NewFyneUI(agent.Options.ID)
 	}
+
 	return agent
 }
 
 // Run is the "main loop" of the agent. It sets up the agent, loads the config
 // then spawns a sensor tracker and the workers to gather sensor data and
 // publish it to Home Assistant.
+//
+//revive:disable:function-length
 func (agent *Agent) Run(trk SensorTracker, reg sensor.Registry) {
 	var wg sync.WaitGroup
 
@@ -66,6 +69,7 @@ func (agent *Agent) Run(trk SensorTracker, reg sensor.Registry) {
 
 	go func() {
 		defer regWait.Done()
+
 		if err := agent.checkRegistration(trk); err != nil {
 			log.Fatal().Err(err).Msg("Error checking registration status.")
 		}
@@ -80,8 +84,10 @@ func (agent *Agent) Run(trk SensorTracker, reg sensor.Registry) {
 		ctx, cancelFunc := hass.NewContext()
 		if ctx == nil {
 			log.Error().Msg("Unable to create context.")
+
 			return
 		}
+
 		runnerCtx := setupDeviceContext(ctx)
 
 		go func() {
@@ -102,6 +108,7 @@ func (agent *Agent) Run(trk SensorTracker, reg sensor.Registry) {
 
 		go func() {
 			defer wg.Done()
+
 			scriptPath := filepath.Join(xdg.ConfigHome, agent.AppID(), "scripts")
 			runScripts(runnerCtx, scriptPath, trk, reg)
 		}()
@@ -129,6 +136,7 @@ func (agent *Agent) Run(trk SensorTracker, reg sensor.Registry) {
 		agent.ui.DisplayTrayIcon(agent, trk)
 		agent.ui.Run(agent.done)
 	}
+
 	wg.Wait()
 }
 
@@ -139,6 +147,7 @@ func (agent *Agent) Register(trk SensorTracker) {
 
 	go func() {
 		defer wg.Done()
+
 		if err := agent.checkRegistration(trk); err != nil {
 			log.Fatal().Err(err).Msg("Error checking registration status.")
 		}
@@ -147,6 +156,7 @@ func (agent *Agent) Register(trk SensorTracker) {
 	if !agent.IsHeadless() {
 		agent.ui.Run(agent.done)
 	}
+
 	wg.Wait()
 	agent.Stop()
 }
@@ -187,7 +197,10 @@ func (agent *Agent) Reset() error {
 	if ctx == nil {
 		return ErrCtxFailed
 	}
+
 	runnerCtx := setupDeviceContext(ctx)
+
 	resetMQTTWorker(runnerCtx)
+
 	return nil
 }

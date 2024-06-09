@@ -104,9 +104,11 @@ func runScripts(ctx context.Context, path string, trk SensorTracker, reg sensor.
 	switch {
 	case err != nil:
 		log.Error().Err(err).Msg("Error getting scripts.")
+
 		return
 	case len(allScripts) == 0:
 		log.Debug().Msg("Could not find any script files.")
+
 		return
 	}
 
@@ -130,6 +132,7 @@ func runScripts(ctx context.Context, path string, trk SensorTracker, reg sensor.
 				Msg("Added script sensor.")
 		}
 	}
+
 	log.Debug().Msg("Starting cron scheduler for script sensors.")
 	scheduler.Start()
 
@@ -149,8 +152,10 @@ func runScripts(ctx context.Context, path string, trk SensorTracker, reg sensor.
 			}(scriptUpdates)
 		}
 	}()
+
 	<-ctx.Done()
 	log.Debug().Msg("Stopping cron scheduler for script sensors.")
+
 	cronCtx := scheduler.Stop()
 	<-cronCtx.Done()
 }
@@ -174,6 +179,7 @@ func (agent *Agent) runNotificationsWorker(ctx context.Context) {
 			select {
 			case <-ctx.Done():
 				log.Debug().Msg("Stopping notification handler.")
+
 				return
 			case n := <-notifyCh:
 				agent.ui.DisplayNotification(n)
@@ -190,8 +196,10 @@ func runMQTTWorker(ctx context.Context) {
 	prefs, err := preferences.Load()
 	if err != nil {
 		log.Error().Err(err).Msg("Could not load MQTT preferences.")
+
 		return
 	}
+
 	if !prefs.MQTTEnabled {
 		return
 	}
@@ -203,6 +211,7 @@ func runMQTTWorker(ctx context.Context) {
 	mqttDevice := newMQTTDevice(mqttCtx)
 	if err = mqttDevice.Setup(mqttCtx); err != nil {
 		log.Error().Err(err).Msg("Could not set up device MQTT functionality.")
+
 		return
 	}
 
@@ -211,11 +220,13 @@ func runMQTTWorker(ctx context.Context) {
 	client, err := mqttapi.NewClient(mqttCtx, prefs, mqttDevice.Subscriptions(), mqttDevice.Configs())
 	if err != nil {
 		log.Error().Err(err).Msg("Could not connect to MQTT broker.")
+
 		return
 	}
 
 	// Publish the device configs.
 	log.Debug().Msg("Publishing configs.")
+
 	if err := client.Publish(mqttDevice.Configs()...); err != nil {
 		log.Error().Err(err).Msg("Failed to publish configuration messages.")
 	}
@@ -232,6 +243,7 @@ func runMQTTWorker(ctx context.Context) {
 			case <-ctx.Done():
 				mqttCancel()
 				log.Debug().Msg("Stopped listening for messages to publish to MQTT.")
+
 				return
 			}
 		}
@@ -244,8 +256,10 @@ func resetMQTTWorker(ctx context.Context) {
 	prefs, err := preferences.Load()
 	if err != nil {
 		log.Error().Err(err).Msg("Could not load MQTT preferences.")
+
 		return
 	}
+
 	if !prefs.MQTTEnabled {
 		return
 	}
@@ -255,6 +269,7 @@ func resetMQTTWorker(ctx context.Context) {
 	client, err := mqttapi.NewClient(ctx, prefs, nil, nil)
 	if err != nil {
 		log.Error().Err(err).Msg("Could not connect to MQTT broker.")
+
 		return
 	}
 
