@@ -3,6 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
+//nolint:dupl,exhaustruct,paralleltest
 package registry
 
 import (
@@ -11,7 +12,7 @@ import (
 	"testing"
 
 	"github.com/adrg/xdg"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var testSensorMap = map[string]metadata{
@@ -21,12 +22,18 @@ var testSensorMap = map[string]metadata{
 }
 
 func newTestRegistry(t *testing.T) *gobRegistry {
+	t.Helper()
+
 	registryPath = t.TempDir()
+
 	testRegistry, err := Load()
-	assert.Nil(t, err)
+	require.NoError(t, err)
+
 	testRegistry.sensors = testSensorMap
+
 	err = testRegistry.write()
-	assert.Nil(t, err)
+	require.NoError(t, err)
+
 	return testRegistry
 }
 
@@ -35,9 +42,11 @@ func Test_gobRegistry_write(t *testing.T) {
 		sensors map[string]metadata
 		mu      sync.Mutex
 	}
+
 	type args struct {
 		path string
 	}
+
 	tests := []struct {
 		name    string
 		fields  fields
@@ -57,14 +66,16 @@ func Test_gobRegistry_write(t *testing.T) {
 			wantErr: true,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			g := &gobRegistry{
+			registry := &gobRegistry{
 				sensors: tt.fields.sensors,
 				mu:      tt.fields.mu,
 			}
 			registryPath = tt.args.path
-			if err := g.write(); (err != nil) != tt.wantErr {
+
+			if err := registry.write(); (err != nil) != tt.wantErr {
 				t.Errorf("gobRegistry.write() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -76,6 +87,7 @@ func Test_gobRegistry_read(t *testing.T) {
 		sensors map[string]metadata
 		mu      sync.Mutex
 	}
+
 	type args struct {
 		path string
 	}
@@ -99,14 +111,16 @@ func Test_gobRegistry_read(t *testing.T) {
 			wantErr: true,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			g := &gobRegistry{
+			registry := &gobRegistry{
 				sensors: tt.fields.sensors,
 				mu:      tt.fields.mu,
 			}
 			registryPath = tt.args.path
-			if err := g.read(); (err != nil) != tt.wantErr {
+
+			if err := registry.read(); (err != nil) != tt.wantErr {
 				t.Errorf("gobRegistry.read() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -118,9 +132,11 @@ func Test_gobRegistry_IsDisabled(t *testing.T) {
 		sensors map[string]metadata
 		mu      sync.Mutex
 	}
+
 	type args struct {
 		id string
 	}
+
 	tests := []struct {
 		name   string
 		fields fields
@@ -146,6 +162,7 @@ func Test_gobRegistry_IsDisabled(t *testing.T) {
 			want:   false,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			g := newTestRegistry(t)
@@ -161,9 +178,11 @@ func Test_gobRegistry_IsRegistered(t *testing.T) {
 		sensors map[string]metadata
 		mu      sync.Mutex
 	}
+
 	type args struct {
 		id string
 	}
+
 	tests := []struct {
 		name   string
 		fields fields
@@ -189,6 +208,7 @@ func Test_gobRegistry_IsRegistered(t *testing.T) {
 			want:   false,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			g := newTestRegistry(t)
@@ -204,10 +224,12 @@ func Test_gobRegistry_SetDisabled(t *testing.T) {
 		sensors map[string]metadata
 		mu      sync.Mutex
 	}
+
 	type args struct {
 		id    string
 		value bool
 	}
+
 	tests := []struct {
 		name    string
 		fields  fields
@@ -221,13 +243,16 @@ func Test_gobRegistry_SetDisabled(t *testing.T) {
 			wantErr: false,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			g := newTestRegistry(t)
-			if err := g.SetDisabled(tt.args.id, tt.args.value); (err != nil) != tt.wantErr {
+			registry := newTestRegistry(t)
+
+			if err := registry.SetDisabled(tt.args.id, tt.args.value); (err != nil) != tt.wantErr {
 				t.Errorf("gobRegistry.SetDisabled() error = %v, wantErr %v", err, tt.wantErr)
 			}
-			if g.IsDisabled(tt.args.id) != tt.args.value {
+
+			if registry.IsDisabled(tt.args.id) != tt.args.value {
 				t.Error("gobRegistry.SetDisabled() not changed")
 			}
 		})
@@ -239,10 +264,12 @@ func Test_gobRegistry_SetRegistered(t *testing.T) {
 		sensors map[string]metadata
 		mu      sync.Mutex
 	}
+
 	type args struct {
 		id    string
 		value bool
 	}
+
 	tests := []struct {
 		name    string
 		fields  fields
@@ -256,13 +283,16 @@ func Test_gobRegistry_SetRegistered(t *testing.T) {
 			wantErr: false,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			g := newTestRegistry(t)
-			if err := g.SetRegistered(tt.args.id, tt.args.value); (err != nil) != tt.wantErr {
+			registry := newTestRegistry(t)
+
+			if err := registry.SetRegistered(tt.args.id, tt.args.value); (err != nil) != tt.wantErr {
 				t.Errorf("gobRegistry.SetRegistered() error = %v, wantErr %v", err, tt.wantErr)
 			}
-			if g.IsRegistered(tt.args.id) != tt.args.value {
+
+			if registry.IsRegistered(tt.args.id) != tt.args.value {
 				t.Error("gobRegistry.SetRegistered() not changed")
 			}
 		})
@@ -273,6 +303,7 @@ func TestLoad(t *testing.T) {
 	type args struct {
 		path string
 	}
+
 	tests := []struct {
 		name    string
 		args    args
@@ -289,14 +320,18 @@ func TestLoad(t *testing.T) {
 			wantErr: true,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			registryPath = tt.args.path
+
 			_, err := Load()
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Load() error = %v, wantErr %v", err, tt.wantErr)
+
 				return
 			}
+
 			registryPath = filepath.Join(xdg.ConfigHome, "sensorRegistry")
 		})
 	}

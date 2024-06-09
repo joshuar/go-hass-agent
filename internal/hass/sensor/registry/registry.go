@@ -14,12 +14,25 @@ import (
 	"github.com/adrg/xdg"
 )
 
+//go:generate stringer -type=state -output metadataStates.go -linecomment
+const (
+	disabledState   state = iota + 1 // disabled
+	registeredState                  // registered
+)
+
+type state int
+
 var registryPath = filepath.Join(xdg.ConfigHome, "sensorRegistry")
 
 var (
 	ErrNotFound        = errors.New("sensor not found")
 	ErrInvalidMetadata = errors.New("invalid sensor metadata")
 )
+
+type metadata struct {
+	Registered bool `json:"registered"`
+	Disabled   bool `json:"disabled"`
+}
 
 func SetPath(path string) {
 	registryPath = path
