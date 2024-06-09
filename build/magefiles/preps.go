@@ -26,25 +26,40 @@ var generators = map[string]string{
 // Tidy runs go mod tidy to update the go.mod and go.sum files.
 func (Preps) Tidy() error {
 	slog.Info("Running go mod tidy...")
-	return sh.Run("go", "mod", "tidy")
+
+	if err := sh.Run("go", "mod", "tidy"); err != nil {
+		return fmt.Errorf("failed to run go mod tidy: %w", err)
+	}
+
+	return nil
 }
 
 // Format prettifies your code in a standard way to prevent arguments over curly braces.
 func (Preps) Format() error {
 	slog.Info("Running go fmt...")
-	return sh.RunV("go", "fmt", "./...")
+
+	if err := sh.RunV("go", "fmt", "./..."); err != nil {
+		return fmt.Errorf("failed to run go fmt: %w", err)
+	}
+
+	return nil
 }
 
 // Generate ensures all machine-generated files (gotext, stringer, moq, etc.) are up to date.
 func (Preps) Generate() error {
 	for tool, url := range generators {
-		if !FoundOrInstalled(tool, url) {
-			return fmt.Errorf("unable to install %s", tool)
+		if err := FoundOrInstalled(tool, url); err != nil {
+			return fmt.Errorf("unable to install %s: %w", tool, err)
 		}
 	}
 
 	slog.Info("Running go generate...")
-	return sh.RunV("go", "generate", "-v", "./...")
+
+	if err := sh.RunV("go", "generate", "-v", "./..."); err != nil {
+		return fmt.Errorf("failed to run go generate: %w", err)
+	}
+
+	return nil
 }
 
 // BuildDeps installs build dependencies.
@@ -52,10 +67,12 @@ func (Preps) Deps() error {
 	if v, ok := os.LookupEnv("TARGETARCH"); ok {
 		targetArch = v
 	}
+
 	if targetArch != "" && targetArch != runtime.GOARCH {
 		if err := SudoWrap("build/scripts/enable-multiarch", targetArch); err != nil {
 			return fmt.Errorf("unable to enable multiarch for %s: %w", targetArch, err)
 		}
+
 		if err := SudoWrap("build/scripts/install-deps", targetArch, runtime.GOARCH); err != nil {
 			return fmt.Errorf("unable to enable multiarch for %s: %w", targetArch, err)
 		}
@@ -64,5 +81,6 @@ func (Preps) Deps() error {
 			return fmt.Errorf("unable to enable multiarch for %s: %w", targetArch, err)
 		}
 	}
+
 	return nil
 }

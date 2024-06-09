@@ -23,13 +23,23 @@ func (Tests) Test() error {
 	}
 
 	slog.Info("Running go test...")
-	return sh.RunV("go", "test", "-ldflags="+ldflags, "-coverprofile=coverage.txt", "-v", "./...")
+
+	if err := sh.RunV("go", "test", "-ldflags="+ldflags, "-coverprofile=coverage.txt", "-v", "./..."); err != nil {
+		return fmt.Errorf("failed to run go test: %w", err)
+	}
+
+	return nil
 }
 
 // Benchmark runs go test -bench on the project.
 func (Tests) Benchmark() error {
 	slog.Info("Running go test -bench...")
-	return sh.RunV("go", "test", "-bench=.", "./...")
+
+	if err := sh.RunV("go", "test", "-bench=.", "./..."); err != nil {
+		return fmt.Errorf("failed to run go benchmarks: %w", err)
+	}
+
+	return nil
 }
 
 // CI runs tests as part of a CI pipeline.
