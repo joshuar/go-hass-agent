@@ -3,6 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
+//revive:disable:unused-receiver
 package location
 
 import (
@@ -120,7 +121,6 @@ func (w *worker) Watch(ctx context.Context, triggerCh chan dbusx.Trigger) chan s
 	return sensorCh
 }
 
-//revive:disable:unused-receiver
 func (w *worker) Sensors(_ context.Context) ([]sensor.Details, error) {
 	return nil, linux.ErrUnimplemented
 }

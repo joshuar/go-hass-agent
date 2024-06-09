@@ -22,10 +22,21 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 )
 
+const (
+	ExternalIPUpdateInterval       = 5 * time.Minute
+	ExternalIPUpdateJitter         = 10 * time.Second
+	ExternalIPUpdateRequestTimeout = 15 * time.Second
+)
+
 var ipLookupHosts = map[string]map[int]string{
 	"icanhazip": {4: "https://4.icanhazip.com", 6: "https://6.icanhazip.com"},
 	"ipify":     {4: "https://api.ipify.org", 6: "https://api6.ipify.org"},
 }
+
+var (
+	ErrInvalidIP     = errors.New("invalid IP address")
+	ErrNoLookupHosts = errors.New("no IP lookup hosts found")
+)
 
 type address struct {
 	addr net.IP
@@ -78,8 +89,9 @@ func (a *address) Category() string { return "diagnostic" }
 
 func (a *address) Attributes() any {
 	now := time.Now()
+
 	return &struct {
-		LastUpdated string `json:"Last Updated"`
+		LastUpdated string `json:"last_updated"`
 	}{
 		LastUpdated: now.Format(time.RFC3339),
 	}
@@ -93,10 +105,12 @@ func lookupExternalIPs(client *resty.Client, ver int) (*address, error) {
 			Str("url", addr[ver]).
 			Time("sent_at", time.Now()).
 			Msg("Fetching external IP.")
+
 		resp, err := client.R().Get(addr[ver])
 		if err != nil || resp.IsError() {
 			return nil, fmt.Errorf("could not retrieve external v%d address with %s: %w", ver, addr[ver], err)
 		}
+
 		log.Trace().Err(err).
 			Int("statuscode", resp.StatusCode()).
 			Str("status", resp.Status()).
@@ -104,14 +118,18 @@ func lookupExternalIPs(client *resty.Client, ver int) (*address, error) {
 			Dur("time", resp.Time()).
 			Time("received_at", resp.ReceivedAt()).
 			Str("body", string(resp.Body())).Msg("Response received.")
+
 		cleanResp := strings.TrimSpace(string(resp.Body()))
+
 		a := net.ParseIP(cleanResp)
 		if a == nil {
-			return nil, fmt.Errorf("could not parse %s as IP address", cleanResp)
+			return nil, ErrInvalidIP
 		}
+
 		return &address{addr: a}, nil
 	}
-	return nil, errors.New("no ip lookup hosts defined")
+
+	return nil, ErrNoLookupHosts
 }
 
 type externalIPWorker struct {
@@ -124,16 +142,21 @@ func (w *externalIPWorker) Description() string {
 	return "Sensor for the external IP addresses of the device."
 }
 
+//nolint:mnd
 func (w *externalIPWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
-	var sensors []sensor.Details
+	sensors := make([]sensor.Details, 0, 2)
+
 	for _, ver := range []int{4, 6} {
-		ip, err := lookupExternalIPs(w.client, ver)
-		if err != nil || ip == nil {
+		ipAddr, err := lookupExternalIPs(w.client, ver)
+		if err != nil || ipAddr == nil {
 			log.Trace().Err(err).Msg("IP lookup failed.")
+
 			continue
 		}
-		sensors = append(sensors, ip)
+
+		sensors = append(sensors, ipAddr)
 	}
+
 	return sensors, nil
 }
 
@@ -141,14 +164,18 @@ func (w *externalIPWorker) Updates(ctx context.Context) (<-chan sensor.Details, 
 	sensorCh := make(chan sensor.Details)
 
 	updater := func(_ time.Duration) {
-		sensors, _ := w.Sensors(ctx)
+		sensors, err := w.Sensors(ctx)
+		if err != nil {
+			log.Debug().Err(err).Msg("Could not get IP update.")
+		}
+
 		for _, s := range sensors {
 			sensorCh <- s
 		}
 	}
 	go func() {
 		defer close(sensorCh)
-		helpers.PollSensors(ctx, updater, 5*time.Minute, 30*time.Second)
+		helpers.PollSensors(ctx, updater, ExternalIPUpdateInterval, ExternalIPUpdateJitter)
 	}()
 
 	return sensorCh, nil
@@ -156,6 +183,6 @@ func (w *externalIPWorker) Updates(ctx context.Context) (<-chan sensor.Details, 
 
 func NewExternalIPUpdaterWorker() *externalIPWorker {
 	return &externalIPWorker{
-		client: resty.New().SetTimeout(15 * time.Second),
+		client: resty.New().SetTimeout(ExternalIPUpdateRequestTimeout),
 	}
 }
