@@ -8,7 +8,6 @@ package registry
 
 import (
 	"path/filepath"
-	"sync"
 	"testing"
 
 	"github.com/adrg/xdg"
@@ -40,7 +39,6 @@ func newTestRegistry(t *testing.T) *gobRegistry {
 func Test_gobRegistry_write(t *testing.T) {
 	type fields struct {
 		sensors map[string]metadata
-		mu      sync.Mutex
 	}
 
 	type args struct {
@@ -71,7 +69,6 @@ func Test_gobRegistry_write(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			registry := &gobRegistry{
 				sensors: tt.fields.sensors,
-				mu:      tt.fields.mu,
 			}
 			registryPath = tt.args.path
 
@@ -85,7 +82,6 @@ func Test_gobRegistry_write(t *testing.T) {
 func Test_gobRegistry_read(t *testing.T) {
 	type fields struct {
 		sensors map[string]metadata
-		mu      sync.Mutex
 	}
 
 	type args struct {
@@ -116,7 +112,6 @@ func Test_gobRegistry_read(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			registry := &gobRegistry{
 				sensors: tt.fields.sensors,
-				mu:      tt.fields.mu,
 			}
 			registryPath = tt.args.path
 
@@ -127,10 +122,10 @@ func Test_gobRegistry_read(t *testing.T) {
 	}
 }
 
+//nolint:copylocks
 func Test_gobRegistry_IsDisabled(t *testing.T) {
 	type fields struct {
 		sensors map[string]metadata
-		mu      sync.Mutex
 	}
 
 	type args struct {
@@ -165,8 +160,9 @@ func Test_gobRegistry_IsDisabled(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			g := newTestRegistry(t)
-			if got := g.IsDisabled(tt.args.id); got != tt.want {
+			registry := newTestRegistry(t)
+
+			if got := registry.IsDisabled(tt.args.id); got != tt.want {
 				t.Errorf("gobRegistry.IsDisabled() = %v, want %v", got, tt.want)
 			}
 		})
@@ -176,7 +172,6 @@ func Test_gobRegistry_IsDisabled(t *testing.T) {
 func Test_gobRegistry_IsRegistered(t *testing.T) {
 	type fields struct {
 		sensors map[string]metadata
-		mu      sync.Mutex
 	}
 
 	type args struct {
@@ -222,7 +217,6 @@ func Test_gobRegistry_IsRegistered(t *testing.T) {
 func Test_gobRegistry_SetDisabled(t *testing.T) {
 	type fields struct {
 		sensors map[string]metadata
-		mu      sync.Mutex
 	}
 
 	type args struct {
@@ -262,7 +256,6 @@ func Test_gobRegistry_SetDisabled(t *testing.T) {
 func Test_gobRegistry_SetRegistered(t *testing.T) {
 	type fields struct {
 		sensors map[string]metadata
-		mu      sync.Mutex
 	}
 
 	type args struct {
