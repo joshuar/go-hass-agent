@@ -66,14 +66,18 @@ register command to start fresh.
 }
 
 func (r *ResetCmd) Run(ctx *Context) error {
-	a := agent.New(&agent.Options{
-		Headless: ctx.Headless,
-		ID:       ctx.AppID,
+	gohassagent := agent.New(&agent.Options{
+		Headless:      ctx.Headless,
+		ID:            ctx.AppID,
+		Server:        "",
+		Token:         "",
+		ForceRegister: false,
+		IgnoreURLs:    false,
 	})
-	registry.SetPath(filepath.Join(xdg.ConfigHome, a.AppID(), "sensorRegistry"))
-	preferences.SetPath(filepath.Join(xdg.ConfigHome, a.AppID()))
+	registry.SetPath(filepath.Join(xdg.ConfigHome, gohassagent.AppID(), "sensorRegistry"))
+	preferences.SetPath(filepath.Join(xdg.ConfigHome, gohassagent.AppID()))
 	// Reset agent.
-	if err := a.Reset(); err != nil {
+	if err := gohassagent.Reset(); err != nil {
 		return fmt.Errorf("agent reset failed: %w", err)
 	}
 	// Reset registry.
@@ -118,7 +122,7 @@ flags. The UI can be explicitly disabled via the --terminal flag.
 }
 
 func (r *RegisterCmd) Run(ctx *Context) error {
-	agnt := agent.New(&agent.Options{
+	gohassagent := agent.New(&agent.Options{
 		Headless:      ctx.Headless,
 		ForceRegister: r.Force,
 		IgnoreURLs:    r.IgnoreURLs,
@@ -128,14 +132,14 @@ func (r *RegisterCmd) Run(ctx *Context) error {
 	})
 	var err error
 
-	registry.SetPath(filepath.Join(xdg.ConfigHome, agnt.AppID(), "sensorRegistry"))
-	preferences.SetPath(filepath.Join(xdg.ConfigHome, agnt.AppID()))
+	registry.SetPath(filepath.Join(xdg.ConfigHome, gohassagent.AppID(), "sensorRegistry"))
+	preferences.SetPath(filepath.Join(xdg.ConfigHome, gohassagent.AppID()))
 	var trk *sensor.Tracker
 	if trk, err = sensor.NewTracker(); err != nil {
 		return fmt.Errorf("could not start sensor tracker: %w", err)
 	}
 
-	agnt.Register(trk)
+	gohassagent.Register(trk)
 	return nil
 }
 
@@ -153,25 +157,25 @@ show reported sensors/measurements.
 }
 
 func (r *RunCmd) Run(ctx *Context) error {
-	a := agent.New(&agent.Options{
+	gohassagent := agent.New(&agent.Options{
 		Headless: ctx.Headless,
 		ID:       ctx.AppID,
 	})
 	var err error
 
-	registry.SetPath(filepath.Join(xdg.ConfigHome, a.AppID(), "sensorRegistry"))
+	registry.SetPath(filepath.Join(xdg.ConfigHome, gohassagent.AppID(), "sensorRegistry"))
 	reg, err := registry.Load()
 	if err != nil {
 		return fmt.Errorf("could not start registry: %w", err)
 	}
 
-	preferences.SetPath(filepath.Join(xdg.ConfigHome, a.AppID()))
+	preferences.SetPath(filepath.Join(xdg.ConfigHome, gohassagent.AppID()))
 	var trk *sensor.Tracker
 	if trk, err = sensor.NewTracker(); err != nil {
 		return fmt.Errorf("could not start sensor tracker: %w", err)
 	}
 
-	a.Run(trk, reg)
+	gohassagent.Run(trk, reg)
 	return nil
 }
 

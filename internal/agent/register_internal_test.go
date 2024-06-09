@@ -85,6 +85,7 @@ func TestRegistrationResponse_GenerateAPIURL(t *testing.T) {
 			}
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Load() error = %v, wantErr %v", err, tt.wantErr)
+
 				return
 			}
 		})
@@ -149,6 +150,7 @@ func TestRegistrationResponse_GenerateWebsocketURL(t *testing.T) {
 			}
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Load() error = %v, wantErr %v", err, tt.wantErr)
+
 				return
 			}
 		})

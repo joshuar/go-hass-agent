@@ -71,6 +71,7 @@ func sensorWorkers() []Worker {
 
 		activeWorkers = append(activeWorkers, worker)
 	}
+
 	return activeWorkers
 }
 
