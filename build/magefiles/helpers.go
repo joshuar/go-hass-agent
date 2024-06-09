@@ -23,7 +23,10 @@ const (
 	pkgBase = "github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
-var ErrNotCI = errors.New("not in CI environment")
+var (
+	ErrNotCI           = errors.New("not in CI environment")
+	ErrUnsupportedArch = errors.New("unsupported target architecture")
+)
 
 // isCI checks whether we are currently running as part of a CI pipeline (i.e.
 // in a GitHub runner).
@@ -38,53 +41,70 @@ func isRoot() bool {
 	uid := syscall.Getuid()
 	egid := syscall.Getegid()
 	gid := syscall.Getgid()
+
 	if uid != euid || gid != egid || uid == 0 {
 		return true
 	}
+
 	return false
 }
 
 // SudoWrap will "wrap" the given command with sudo if needed.
 func SudoWrap(cmd string, args ...string) error {
 	if isRoot() {
-		return sh.RunV(cmd, args...)
+		if err := sh.RunV(cmd, args...); err != nil {
+			return fmt.Errorf("could not run command: %w", err)
+		}
+	} else {
+		if err := sh.RunV("sudo", slices.Concat([]string{cmd}, args)...); err != nil {
+			return fmt.Errorf("could not run command: %w", err)
+		}
 	}
-	return sh.RunV("sudo", slices.Concat([]string{cmd}, args)...)
+
+	return nil
 }
 
 // FoundOrInstalled checks for existence then installs a file if it's not there.
-func FoundOrInstalled(executableName, installURL string) (isInstalled bool) {
+func FoundOrInstalled(executableName, installURL string) error {
 	_, missing := exec.LookPath(executableName)
 	if missing != nil {
 		slog.Info("Installing tool.", "tool", executableName, "url", installURL)
+
 		err := sh.Run("go", "install", installURL)
 		if err != nil {
-			return false
+			return fmt.Errorf("installation failed: %w", err)
 		}
 	}
-	return true
+
+	return nil
 }
 
 // GetFlags gets all the compile flags to set the version and stuff.
 func GetFlags() (string, error) {
 	var version, hash, date string
+
 	var err error
+
 	if version, err = Version(); err != nil {
 		return "", fmt.Errorf("failed to retrieve version from git: %w", err)
 	}
+
 	if hash, err = GitHash(); err != nil {
 		return "", fmt.Errorf("failed to retrieve hash from git: %w", err)
 	}
+
 	if date, err = BuildDate(); err != nil {
 		return "", fmt.Errorf("failed to retrieve build date from git: %w", err)
 	}
 
 	var flags strings.Builder
+
 	flags.WriteString("-X " + pkgBase + ".gitVersion=" + version)
 	flags.WriteString(" ")
 	flags.WriteString("-X " + pkgBase + ".gitCommit=" + hash)
 	flags.WriteString(" ")
 	flags.WriteString("-X " + pkgBase + ".buildDate=" + date)
+
 	return flags.String(), nil
 }
 
@@ -97,8 +117,9 @@ func Version() (string, error) {
 	// Else, derive a version from git.
 	version, err := sh.Output("git", "describe", "--tags", "--always", "--dirty")
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("could not get version from git: %w", err)
 	}
+
 	return version, nil
 }
 
@@ -106,8 +127,9 @@ func Version() (string, error) {
 func GitHash() (string, error) {
 	hash, err := sh.Output("git", "rev-parse", "--short", "HEAD")
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("could not get git hash: %w", err)
 	}
+
 	return hash, nil
 }
 
@@ -115,8 +137,9 @@ func GitHash() (string, error) {
 func BuildDate() (string, error) {
 	date, err := sh.Output("git", "log", "--date=iso8601-strict", "-1", "--pretty=%ct")
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("could not get build date from git: %w", err)
 	}
+
 	return date, nil
 }
 
@@ -129,11 +152,11 @@ func GenerateEnv() (map[string]string, error) {
 	// CGO_ENABLED is required.
 	envMap["CGO_ENABLED"] = "1"
 
-	// Set APPVERSION to current version.
 	version, err := Version()
 	if err != nil {
 		return nil, fmt.Errorf("could not generate environment: %w", err)
 	}
+	// Set APPVERSION to current version.
 	envMap["APPVERSION"] = version
 
 	// Set NFPM_ARCH so that nfpm knows how to package for this arch.
@@ -144,6 +167,7 @@ func GenerateEnv() (map[string]string, error) {
 	if v, ok := os.LookupEnv("TARGETARCH"); ok {
 		targetArch = v
 	}
+
 	if targetArch != "" && targetArch != runtime.GOARCH {
 		slog.Info("Cross compilation requested.", "host", runtime.GOARCH, "target", targetArch)
 
@@ -162,8 +186,9 @@ func GenerateEnv() (map[string]string, error) {
 			envMap["PKG_CONFIG_PATH"] = "/usr/lib/aarch64-linux-gnu/pkgconfig"
 			envMap["GOARCH"] = "arm64"
 		default:
-			return nil, fmt.Errorf("unsupport target architecture: %s", targetArch)
+			return nil, ErrUnsupportedArch
 		}
 	}
+
 	return envMap, nil
 }

@@ -7,6 +7,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
 
 	"github.com/magefile/mage/mg"
@@ -46,6 +47,7 @@ func (b Build) CI() error {
 	mg.SerialDeps(Preps.Deps)
 
 	mg.SerialDeps(b.Full)
+
 	return nil
 }
 
@@ -63,5 +65,8 @@ func buildProject() error {
 	output := "dist/go-hass-agent-" + targetArch
 
 	slog.Info("Running go build...", "output", output, "ldflags", ldflags)
-	return sh.RunWithV(envMap, "go", "build", "-ldflags="+ldflags, "-o", output)
+
+	err = sh.RunWithV(envMap, "go", "build", "-ldflags="+ldflags, "-o", output)
+
+	return fmt.Errorf("failed to build project: %w", err)
 }
