@@ -122,7 +122,6 @@ func Test_gobRegistry_read(t *testing.T) {
 	}
 }
 
-//nolint:copylocks
 func Test_gobRegistry_IsDisabled(t *testing.T) {
 	type fields struct {
 		sensors map[string]metadata
