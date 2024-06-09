@@ -20,7 +20,7 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 )
 
-var mockSensor = SensorRegistrationMock{
+var mockSensor = RegistrationMock{
 	IDFunc:          func() string { return "mock_sensor" },
 	StateFunc:       func() any { return "mockState" },
 	AttributesFunc:  func() any { return nil },
