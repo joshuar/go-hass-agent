@@ -8,16 +8,16 @@ import (
 	"sync"
 )
 
-// Ensure, that SensorStateMock does implement SensorState.
+// Ensure, that StateMock does implement State.
 // If this is not the case, regenerate this file with moq.
-var _ State = &SensorStateMock{}
+var _ State = &StateMock{}
 
-// SensorStateMock is a mock implementation of SensorState.
+// StateMock is a mock implementation of State.
 //
-//	func TestSomethingThatUsesSensorState(t *testing.T) {
+//	func TestSomethingThatUsesState(t *testing.T) {
 //
-//		// make and configure a mocked SensorState
-//		mockedSensorState := &SensorStateMock{
+//		// make and configure a mocked State
+//		mockedState := &StateMock{
 //			AttributesFunc: func() any {
 //				panic("mock out the Attributes method")
 //			},
@@ -38,11 +38,11 @@ var _ State = &SensorStateMock{}
 //			},
 //		}
 //
-//		// use mockedSensorState in code that requires SensorState
+//		// use mockedState in code that requires State
 //		// and then make assertions.
 //
 //	}
-type SensorStateMock struct {
+type StateMock struct {
 	// AttributesFunc mocks the Attributes method.
 	AttributesFunc func() any
 
@@ -91,9 +91,9 @@ type SensorStateMock struct {
 }
 
 // Attributes calls AttributesFunc.
-func (mock *SensorStateMock) Attributes() any {
+func (mock *StateMock) Attributes() any {
 	if mock.AttributesFunc == nil {
-		panic("SensorStateMock.AttributesFunc: method is nil but SensorState.Attributes was just called")
+		panic("StateMock.AttributesFunc: method is nil but State.Attributes was just called")
 	}
 	callInfo := struct {
 	}{}
@@ -106,8 +106,8 @@ func (mock *SensorStateMock) Attributes() any {
 // AttributesCalls gets all the calls that were made to Attributes.
 // Check the length with:
 //
-//	len(mockedSensorState.AttributesCalls())
-func (mock *SensorStateMock) AttributesCalls() []struct {
+//	len(mockedState.AttributesCalls())
+func (mock *StateMock) AttributesCalls() []struct {
 } {
 	var calls []struct {
 	}
@@ -118,9 +118,9 @@ func (mock *SensorStateMock) AttributesCalls() []struct {
 }
 
 // ID calls IDFunc.
-func (mock *SensorStateMock) ID() string {
+func (mock *StateMock) ID() string {
 	if mock.IDFunc == nil {
-		panic("SensorStateMock.IDFunc: method is nil but SensorState.ID was just called")
+		panic("StateMock.IDFunc: method is nil but State.ID was just called")
 	}
 	callInfo := struct {
 	}{}
@@ -133,8 +133,8 @@ func (mock *SensorStateMock) ID() string {
 // IDCalls gets all the calls that were made to ID.
 // Check the length with:
 //
-//	len(mockedSensorState.IDCalls())
-func (mock *SensorStateMock) IDCalls() []struct {
+//	len(mockedState.IDCalls())
+func (mock *StateMock) IDCalls() []struct {
 } {
 	var calls []struct {
 	}
@@ -145,9 +145,9 @@ func (mock *SensorStateMock) IDCalls() []struct {
 }
 
 // Icon calls IconFunc.
-func (mock *SensorStateMock) Icon() string {
+func (mock *StateMock) Icon() string {
 	if mock.IconFunc == nil {
-		panic("SensorStateMock.IconFunc: method is nil but SensorState.Icon was just called")
+		panic("StateMock.IconFunc: method is nil but State.Icon was just called")
 	}
 	callInfo := struct {
 	}{}
@@ -160,8 +160,8 @@ func (mock *SensorStateMock) Icon() string {
 // IconCalls gets all the calls that were made to Icon.
 // Check the length with:
 //
-//	len(mockedSensorState.IconCalls())
-func (mock *SensorStateMock) IconCalls() []struct {
+//	len(mockedState.IconCalls())
+func (mock *StateMock) IconCalls() []struct {
 } {
 	var calls []struct {
 	}
@@ -172,9 +172,9 @@ func (mock *SensorStateMock) IconCalls() []struct {
 }
 
 // SensorType calls SensorTypeFunc.
-func (mock *SensorStateMock) SensorType() types.SensorClass {
+func (mock *StateMock) SensorType() types.SensorClass {
 	if mock.SensorTypeFunc == nil {
-		panic("SensorStateMock.SensorTypeFunc: method is nil but SensorState.SensorType was just called")
+		panic("StateMock.SensorTypeFunc: method is nil but State.SensorType was just called")
 	}
 	callInfo := struct {
 	}{}
@@ -187,8 +187,8 @@ func (mock *SensorStateMock) SensorType() types.SensorClass {
 // SensorTypeCalls gets all the calls that were made to SensorType.
 // Check the length with:
 //
-//	len(mockedSensorState.SensorTypeCalls())
-func (mock *SensorStateMock) SensorTypeCalls() []struct {
+//	len(mockedState.SensorTypeCalls())
+func (mock *StateMock) SensorTypeCalls() []struct {
 } {
 	var calls []struct {
 	}
@@ -199,9 +199,9 @@ func (mock *SensorStateMock) SensorTypeCalls() []struct {
 }
 
 // State calls StateFunc.
-func (mock *SensorStateMock) State() any {
+func (mock *StateMock) State() any {
 	if mock.StateFunc == nil {
-		panic("SensorStateMock.StateFunc: method is nil but SensorState.State was just called")
+		panic("StateMock.StateFunc: method is nil but State.State was just called")
 	}
 	callInfo := struct {
 	}{}
@@ -214,8 +214,8 @@ func (mock *SensorStateMock) State() any {
 // StateCalls gets all the calls that were made to State.
 // Check the length with:
 //
-//	len(mockedSensorState.StateCalls())
-func (mock *SensorStateMock) StateCalls() []struct {
+//	len(mockedState.StateCalls())
+func (mock *StateMock) StateCalls() []struct {
 } {
 	var calls []struct {
 	}
@@ -226,9 +226,9 @@ func (mock *SensorStateMock) StateCalls() []struct {
 }
 
 // Units calls UnitsFunc.
-func (mock *SensorStateMock) Units() string {
+func (mock *StateMock) Units() string {
 	if mock.UnitsFunc == nil {
-		panic("SensorStateMock.UnitsFunc: method is nil but SensorState.Units was just called")
+		panic("StateMock.UnitsFunc: method is nil but State.Units was just called")
 	}
 	callInfo := struct {
 	}{}
@@ -241,8 +241,8 @@ func (mock *SensorStateMock) Units() string {
 // UnitsCalls gets all the calls that were made to Units.
 // Check the length with:
 //
-//	len(mockedSensorState.UnitsCalls())
-func (mock *SensorStateMock) UnitsCalls() []struct {
+//	len(mockedState.UnitsCalls())
+func (mock *StateMock) UnitsCalls() []struct {
 } {
 	var calls []struct {
 	}

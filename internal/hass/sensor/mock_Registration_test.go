@@ -8,16 +8,16 @@ import (
 	"sync"
 )
 
-// Ensure, that SensorRegistrationMock does implement SensorRegistration.
+// Ensure, that RegistrationMock does implement Registration.
 // If this is not the case, regenerate this file with moq.
-var _ Registration = &SensorRegistrationMock{}
+var _ Registration = &RegistrationMock{}
 
-// SensorRegistrationMock is a mock implementation of SensorRegistration.
+// RegistrationMock is a mock implementation of Registration.
 //
-//	func TestSomethingThatUsesSensorRegistration(t *testing.T) {
+//	func TestSomethingThatUsesRegistration(t *testing.T) {
 //
-//		// make and configure a mocked SensorRegistration
-//		mockedSensorRegistration := &SensorRegistrationMock{
+//		// make and configure a mocked Registration
+//		mockedRegistration := &RegistrationMock{
 //			AttributesFunc: func() any {
 //				panic("mock out the Attributes method")
 //			},
@@ -50,11 +50,11 @@ var _ Registration = &SensorRegistrationMock{}
 //			},
 //		}
 //
-//		// use mockedSensorRegistration in code that requires SensorRegistration
+//		// use mockedRegistration in code that requires Registration
 //		// and then make assertions.
 //
 //	}
-type SensorRegistrationMock struct {
+type RegistrationMock struct {
 	// AttributesFunc mocks the Attributes method.
 	AttributesFunc func() any
 
@@ -131,9 +131,9 @@ type SensorRegistrationMock struct {
 }
 
 // Attributes calls AttributesFunc.
-func (mock *SensorRegistrationMock) Attributes() any {
+func (mock *RegistrationMock) Attributes() any {
 	if mock.AttributesFunc == nil {
-		panic("SensorRegistrationMock.AttributesFunc: method is nil but SensorRegistration.Attributes was just called")
+		panic("RegistrationMock.AttributesFunc: method is nil but Registration.Attributes was just called")
 	}
 	callInfo := struct {
 	}{}
@@ -146,8 +146,8 @@ func (mock *SensorRegistrationMock) Attributes() any {
 // AttributesCalls gets all the calls that were made to Attributes.
 // Check the length with:
 //
-//	len(mockedSensorRegistration.AttributesCalls())
-func (mock *SensorRegistrationMock) AttributesCalls() []struct {
+//	len(mockedRegistration.AttributesCalls())
+func (mock *RegistrationMock) AttributesCalls() []struct {
 } {
 	var calls []struct {
 	}
@@ -158,9 +158,9 @@ func (mock *SensorRegistrationMock) AttributesCalls() []struct {
 }
 
 // Category calls CategoryFunc.
-func (mock *SensorRegistrationMock) Category() string {
+func (mock *RegistrationMock) Category() string {
 	if mock.CategoryFunc == nil {
-		panic("SensorRegistrationMock.CategoryFunc: method is nil but SensorRegistration.Category was just called")
+		panic("RegistrationMock.CategoryFunc: method is nil but Registration.Category was just called")
 	}
 	callInfo := struct {
 	}{}
@@ -173,8 +173,8 @@ func (mock *SensorRegistrationMock) Category() string {
 // CategoryCalls gets all the calls that were made to Category.
 // Check the length with:
 //
-//	len(mockedSensorRegistration.CategoryCalls())
-func (mock *SensorRegistrationMock) CategoryCalls() []struct {
+//	len(mockedRegistration.CategoryCalls())
+func (mock *RegistrationMock) CategoryCalls() []struct {
 } {
 	var calls []struct {
 	}
@@ -185,9 +185,9 @@ func (mock *SensorRegistrationMock) CategoryCalls() []struct {
 }
 
 // DeviceClass calls DeviceClassFunc.
-func (mock *SensorRegistrationMock) DeviceClass() types.DeviceClass {
+func (mock *RegistrationMock) DeviceClass() types.DeviceClass {
 	if mock.DeviceClassFunc == nil {
-		panic("SensorRegistrationMock.DeviceClassFunc: method is nil but SensorRegistration.DeviceClass was just called")
+		panic("RegistrationMock.DeviceClassFunc: method is nil but Registration.DeviceClass was just called")
 	}
 	callInfo := struct {
 	}{}
@@ -200,8 +200,8 @@ func (mock *SensorRegistrationMock) DeviceClass() types.DeviceClass {
 // DeviceClassCalls gets all the calls that were made to DeviceClass.
 // Check the length with:
 //
-//	len(mockedSensorRegistration.DeviceClassCalls())
-func (mock *SensorRegistrationMock) DeviceClassCalls() []struct {
+//	len(mockedRegistration.DeviceClassCalls())
+func (mock *RegistrationMock) DeviceClassCalls() []struct {
 } {
 	var calls []struct {
 	}
@@ -212,9 +212,9 @@ func (mock *SensorRegistrationMock) DeviceClassCalls() []struct {
 }
 
 // ID calls IDFunc.
-func (mock *SensorRegistrationMock) ID() string {
+func (mock *RegistrationMock) ID() string {
 	if mock.IDFunc == nil {
-		panic("SensorRegistrationMock.IDFunc: method is nil but SensorRegistration.ID was just called")
+		panic("RegistrationMock.IDFunc: method is nil but Registration.ID was just called")
 	}
 	callInfo := struct {
 	}{}
@@ -227,8 +227,8 @@ func (mock *SensorRegistrationMock) ID() string {
 // IDCalls gets all the calls that were made to ID.
 // Check the length with:
 //
-//	len(mockedSensorRegistration.IDCalls())
-func (mock *SensorRegistrationMock) IDCalls() []struct {
+//	len(mockedRegistration.IDCalls())
+func (mock *RegistrationMock) IDCalls() []struct {
 } {
 	var calls []struct {
 	}
@@ -239,9 +239,9 @@ func (mock *SensorRegistrationMock) IDCalls() []struct {
 }
 
 // Icon calls IconFunc.
-func (mock *SensorRegistrationMock) Icon() string {
+func (mock *RegistrationMock) Icon() string {
 	if mock.IconFunc == nil {
-		panic("SensorRegistrationMock.IconFunc: method is nil but SensorRegistration.Icon was just called")
+		panic("RegistrationMock.IconFunc: method is nil but Registration.Icon was just called")
 	}
 	callInfo := struct {
 	}{}
@@ -254,8 +254,8 @@ func (mock *SensorRegistrationMock) Icon() string {
 // IconCalls gets all the calls that were made to Icon.
 // Check the length with:
 //
-//	len(mockedSensorRegistration.IconCalls())
-func (mock *SensorRegistrationMock) IconCalls() []struct {
+//	len(mockedRegistration.IconCalls())
+func (mock *RegistrationMock) IconCalls() []struct {
 } {
 	var calls []struct {
 	}
@@ -266,9 +266,9 @@ func (mock *SensorRegistrationMock) IconCalls() []struct {
 }
 
 // Name calls NameFunc.
-func (mock *SensorRegistrationMock) Name() string {
+func (mock *RegistrationMock) Name() string {
 	if mock.NameFunc == nil {
-		panic("SensorRegistrationMock.NameFunc: method is nil but SensorRegistration.Name was just called")
+		panic("RegistrationMock.NameFunc: method is nil but Registration.Name was just called")
 	}
 	callInfo := struct {
 	}{}
@@ -281,8 +281,8 @@ func (mock *SensorRegistrationMock) Name() string {
 // NameCalls gets all the calls that were made to Name.
 // Check the length with:
 //
-//	len(mockedSensorRegistration.NameCalls())
-func (mock *SensorRegistrationMock) NameCalls() []struct {
+//	len(mockedRegistration.NameCalls())
+func (mock *RegistrationMock) NameCalls() []struct {
 } {
 	var calls []struct {
 	}
@@ -293,9 +293,9 @@ func (mock *SensorRegistrationMock) NameCalls() []struct {
 }
 
 // SensorType calls SensorTypeFunc.
-func (mock *SensorRegistrationMock) SensorType() types.SensorClass {
+func (mock *RegistrationMock) SensorType() types.SensorClass {
 	if mock.SensorTypeFunc == nil {
-		panic("SensorRegistrationMock.SensorTypeFunc: method is nil but SensorRegistration.SensorType was just called")
+		panic("RegistrationMock.SensorTypeFunc: method is nil but Registration.SensorType was just called")
 	}
 	callInfo := struct {
 	}{}
@@ -308,8 +308,8 @@ func (mock *SensorRegistrationMock) SensorType() types.SensorClass {
 // SensorTypeCalls gets all the calls that were made to SensorType.
 // Check the length with:
 //
-//	len(mockedSensorRegistration.SensorTypeCalls())
-func (mock *SensorRegistrationMock) SensorTypeCalls() []struct {
+//	len(mockedRegistration.SensorTypeCalls())
+func (mock *RegistrationMock) SensorTypeCalls() []struct {
 } {
 	var calls []struct {
 	}
@@ -320,9 +320,9 @@ func (mock *SensorRegistrationMock) SensorTypeCalls() []struct {
 }
 
 // State calls StateFunc.
-func (mock *SensorRegistrationMock) State() any {
+func (mock *RegistrationMock) State() any {
 	if mock.StateFunc == nil {
-		panic("SensorRegistrationMock.StateFunc: method is nil but SensorRegistration.State was just called")
+		panic("RegistrationMock.StateFunc: method is nil but Registration.State was just called")
 	}
 	callInfo := struct {
 	}{}
@@ -335,8 +335,8 @@ func (mock *SensorRegistrationMock) State() any {
 // StateCalls gets all the calls that were made to State.
 // Check the length with:
 //
-//	len(mockedSensorRegistration.StateCalls())
-func (mock *SensorRegistrationMock) StateCalls() []struct {
+//	len(mockedRegistration.StateCalls())
+func (mock *RegistrationMock) StateCalls() []struct {
 } {
 	var calls []struct {
 	}
@@ -347,9 +347,9 @@ func (mock *SensorRegistrationMock) StateCalls() []struct {
 }
 
 // StateClass calls StateClassFunc.
-func (mock *SensorRegistrationMock) StateClass() types.StateClass {
+func (mock *RegistrationMock) StateClass() types.StateClass {
 	if mock.StateClassFunc == nil {
-		panic("SensorRegistrationMock.StateClassFunc: method is nil but SensorRegistration.StateClass was just called")
+		panic("RegistrationMock.StateClassFunc: method is nil but Registration.StateClass was just called")
 	}
 	callInfo := struct {
 	}{}
@@ -362,8 +362,8 @@ func (mock *SensorRegistrationMock) StateClass() types.StateClass {
 // StateClassCalls gets all the calls that were made to StateClass.
 // Check the length with:
 //
-//	len(mockedSensorRegistration.StateClassCalls())
-func (mock *SensorRegistrationMock) StateClassCalls() []struct {
+//	len(mockedRegistration.StateClassCalls())
+func (mock *RegistrationMock) StateClassCalls() []struct {
 } {
 	var calls []struct {
 	}
@@ -374,9 +374,9 @@ func (mock *SensorRegistrationMock) StateClassCalls() []struct {
 }
 
 // Units calls UnitsFunc.
-func (mock *SensorRegistrationMock) Units() string {
+func (mock *RegistrationMock) Units() string {
 	if mock.UnitsFunc == nil {
-		panic("SensorRegistrationMock.UnitsFunc: method is nil but SensorRegistration.Units was just called")
+		panic("RegistrationMock.UnitsFunc: method is nil but Registration.Units was just called")
 	}
 	callInfo := struct {
 	}{}
@@ -389,8 +389,8 @@ func (mock *SensorRegistrationMock) Units() string {
 // UnitsCalls gets all the calls that were made to Units.
 // Check the length with:
 //
-//	len(mockedSensorRegistration.UnitsCalls())
-func (mock *SensorRegistrationMock) UnitsCalls() []struct {
+//	len(mockedRegistration.UnitsCalls())
+func (mock *RegistrationMock) UnitsCalls() []struct {
 } {
 	var calls []struct {
 	}

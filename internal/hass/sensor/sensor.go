@@ -24,7 +24,7 @@ const (
 
 var ErrSensorDisabled = errors.New("sensor disabled")
 
-//go:generate moq -out mock_SensorState_test.go . SensorState
+//go:generate moq -out mock_State_test.go . State
 type State interface {
 	ID() string
 	Icon() string
@@ -34,7 +34,7 @@ type State interface {
 	Attributes() any
 }
 
-//go:generate moq -out mock_SensorRegistration_test.go . SensorRegistration
+//go:generate moq -out mock_Registration_test.go . Registration
 type Registration interface {
 	State
 	Name() string
