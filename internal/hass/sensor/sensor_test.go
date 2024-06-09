@@ -156,7 +156,7 @@ func Test_request_RequestBody(t *testing.T) {
 	}
 }
 
-//nolint:lll
+//nolint:funlen,lll
 //revive:disable:function-length
 func TestNewRequest(t *testing.T) {
 	registry.SetPath(filepath.Join(t.TempDir(), "testRegistry"))
@@ -247,11 +247,14 @@ func TestNewRequest(t *testing.T) {
 			got, got1, err := NewRequest(tt.args.reg, tt.args.req)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewRequest() error = %v, wantErr %v", err, tt.wantErr)
+
 				return
 			}
+
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("NewRequest() got = %v, want %v", string(got.RequestBody()), string(tt.want.RequestBody()))
 			}
+
 			if !reflect.DeepEqual(got1, tt.want1) {
 				t.Errorf("NewRequest() got1 = %v, want %v", got1, tt.want1)
 			}

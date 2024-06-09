@@ -38,12 +38,14 @@ type Tracker struct {
 // Add creates a new sensor in the tracker based on a received state update.
 func (t *Tracker) add(sensor Details) error {
 	t.mu.Lock()
+	defer t.mu.Unlock()
+
 	if t.sensor == nil {
-		t.mu.Unlock()
 		return ErrTrackerNotReady
 	}
+
 	t.sensor[sensor.ID()] = sensor
-	t.mu.Unlock()
+
 	return nil
 }
 
@@ -51,15 +53,18 @@ func (t *Tracker) add(sensor Details) error {
 func (t *Tracker) Get(id string) (Details, error) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
+
 	if t.sensor[id] != nil {
 		return t.sensor[id], nil
 	}
+
 	return nil, ErrSensorNotFound
 }
 
 func (t *Tracker) SensorList() []string {
 	t.mu.Lock()
 	defer t.mu.Unlock()
+
 	if t.sensor == nil {
 		return nil
 	}
@@ -71,7 +76,9 @@ func (t *Tracker) SensorList() []string {
 			sortedEntities = append(sortedEntities, name)
 		}
 	}
+
 	sort.Strings(sortedEntities)
+
 	return sortedEntities
 }
 
@@ -82,12 +89,15 @@ func (t *Tracker) UpdateSensor(ctx context.Context, reg Registry, upd Details) e
 	if err != nil {
 		return wrapErr(upd.ID(), err)
 	}
+	// Send the sensor request to Home Assistant.
 	if err := hass.ExecuteRequest(ctx, req, resp); err != nil {
 		return wrapErr(upd.ID(), err)
 	}
+	// Handle the response received.
 	if err := handleResponse(resp, t, upd, reg); err != nil {
 		return wrapErr(upd.ID(), err)
 	}
+
 	return nil
 }
 
@@ -97,6 +107,7 @@ func handleResponse(respIntr hass.Response, trk *Tracker, upd Details, reg Regis
 		if err := handleUpdates(reg, resp); err != nil {
 			return err
 		}
+
 		if err := trk.add(upd); err != nil {
 			return err
 		}
@@ -109,6 +120,7 @@ func handleResponse(respIntr hass.Response, trk *Tracker, upd Details, reg Regis
 	default:
 		return ErrRespUnknown
 	}
+
 	return nil
 }
 
@@ -118,18 +130,22 @@ func handleUpdates(reg Registry, r *updateResponse) error {
 		if details == nil {
 			return ErrRespUnknown
 		}
+
 		if !details.Success {
 			if details.Error != nil {
 				return fmt.Errorf("%d: %s", details.Error.Code, details.Error.Message)
 			}
+
 			return ErrRespFailed
 		}
+
 		if reg.IsDisabled(sensor) != details.Disabled {
 			if err := reg.SetDisabled(sensor, details.Disabled); err != nil {
 				return fmt.Errorf("could not set disabled status: %w", err)
 			}
 		}
 	}
+
 	return nil
 }
 
@@ -137,7 +153,13 @@ func handleRegistration(reg Registry, r *registrationResponse, s string) error {
 	if !r.Body.Success {
 		return ErrRespFailed
 	}
-	return reg.SetRegistered(s, true)
+
+	err := reg.SetRegistered(s, true)
+	if err != nil {
+		return fmt.Errorf("could not register: %w", err)
+	}
+
+	return nil
 }
 
 func (t *Tracker) Reset() {
@@ -149,6 +171,7 @@ func NewTracker() (*Tracker, error) {
 		sensor: make(map[string]Details),
 		mu:     sync.Mutex{},
 	}
+
 	return sensorTracker, nil
 }
 
@@ -161,6 +184,7 @@ func MergeSensorCh(ctx context.Context, sensorCh ...<-chan Details) chan Details
 	// copies values from c to out until c is closed, then calls wg.Done.
 	output := func(sensorOutCh <-chan Details) {
 		defer wg.Done()
+
 		if sensorOutCh == nil {
 			return
 		}
@@ -186,6 +210,7 @@ func MergeSensorCh(ctx context.Context, sensorCh ...<-chan Details) chan Details
 		wg.Wait()
 		close(out)
 	}()
+
 	return out
 }
 

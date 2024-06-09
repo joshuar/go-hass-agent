@@ -3,6 +3,8 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
+//nolint:exhaustruct,paralleltest,wrapcheck
+//revive:disable:unnecessary-stmt
 package hass
 
 import (
@@ -15,6 +17,7 @@ import (
 	"time"
 
 	"github.com/go-resty/resty/v2"
+	"github.com/stretchr/testify/require"
 )
 
 var mockDevInfo = &DeviceInfoMock{
@@ -41,29 +44,33 @@ func (r *failedResponse) UnmarshalJSON(b []byte) error {
 
 // setup creates a context using a test http client and server which will
 // return the given response when the ExecuteRequest function is called.
-var setupTestCtx = func(r Response) context.Context {
+var setupTestCtx = func(t *testing.T, response Response) context.Context {
+	t.Helper()
+
 	ctx := context.TODO()
 	// load client
 	client := resty.New().
 		SetTimeout(1 * time.Second).
 		AddRetryCondition(
-			func(rr *resty.Response, err error) bool {
+			func(rr *resty.Response, _ error) bool {
 				return rr.StatusCode() == http.StatusTooManyRequests
 			},
 		)
 	ctx = ContextSetClient(ctx, client)
 	// load server
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(responseWriter http.ResponseWriter, _ *http.Request) {
 		var resp []byte
 		var err error
-		switch rType := r.(type) {
+		switch rType := response.(type) {
 		case *registrationResponse:
 			resp, err = json.Marshal(rType.Details)
 		}
 		if err != nil {
-			w.Write(json.RawMessage(`{"success":false}`))
+			_, err := responseWriter.Write(json.RawMessage(`{"success":false}`))
+			require.NoError(t, err)
 		} else {
-			w.Write(resp)
+			_, err := responseWriter.Write(resp)
+			require.NoError(t, err)
 		}
 	}))
 	ctx = ContextSetURL(ctx, server.URL)
@@ -71,6 +78,7 @@ var setupTestCtx = func(r Response) context.Context {
 	return ctx
 }
 
+//nolint:containedctx
 func TestRegisterWithHass(t *testing.T) {
 	registrationSuccess := &registrationResponse{
 		Details: &RegistrationDetails{
@@ -80,20 +88,21 @@ func TestRegisterWithHass(t *testing.T) {
 			WebhookID:    "someID",
 		},
 	}
-	successCtx := setupTestCtx(registrationSuccess)
+	successCtx := setupTestCtx(t, registrationSuccess)
 
 	registrationFail := &failedResponse{}
-	failCtx := setupTestCtx(registrationFail)
+	failCtx := setupTestCtx(t, registrationFail)
 
 	type args struct {
 		ctx    context.Context
 		input  *RegistrationInput
 		device DeviceInfo
 	}
+
 	tests := []struct {
-		name    string
 		args    args
 		want    *RegistrationDetails
+		name    string
 		wantErr bool
 	}{
 		{
@@ -131,13 +140,16 @@ func TestRegisterWithHass(t *testing.T) {
 			wantErr: true,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := RegisterWithHass(tt.args.ctx, tt.args.input, tt.args.device)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("RegisterWithHass() error = %v, wantErr %v", err, tt.wantErr)
+
 				return
 			}
+
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("RegisterWithHass() = %v, want %v", got, tt.want)
 			}
@@ -151,6 +163,7 @@ func TestRegistrationInput_Validate(t *testing.T) {
 		Token            string
 		IgnoreOutputURLs bool
 	}
+
 	tests := []struct {
 		name    string
 		fields  fields
@@ -171,6 +184,7 @@ func TestRegistrationInput_Validate(t *testing.T) {
 			wantErr: true,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			i := &RegistrationInput{
