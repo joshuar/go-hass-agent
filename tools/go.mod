@@ -6,8 +6,8 @@ require (
 	github.com/fyne-io/fyne-cross v1.5.0
 	github.com/goreleaser/nfpm/v2 v2.37.1
 	github.com/magefile/mage v1.15.0
-	golang.org/x/text v0.15.0
-	golang.org/x/tools v0.21.0
+	golang.org/x/text v0.16.0
+	golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d
 )
 
 require (
