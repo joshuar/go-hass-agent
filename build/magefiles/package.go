@@ -65,6 +65,8 @@ func (Package) Nfpm() error {
 }
 
 // FyneCross builds packages using fyne-cross.
+//
+//nolint:mnd
 func (Package) FyneCross() error {
 	if err := os.RemoveAll(fynePath); err != nil {
 		return fmt.Errorf("could not clean dist directory: %w", err)
