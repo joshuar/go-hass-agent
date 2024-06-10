@@ -81,8 +81,8 @@ jobs:
         shell: bash
         run: |
           shopt -s nullglob
-          echo Need to sign dist/*.{rpm,deb,zst} fyne-cross/dist/linux-${{ matrix.arch }}/*.tar.xz
-          for artifact in dist/*.{rpm,deb,zst} fyne-cross/dist/linux-${{ matrix.arch }}/*.tar.xz; do
+          echo Need to sign dist/pkg/*.{rpm,deb,zst} fyne-cross/dist/linux-${{ matrix.arch }}/*.tar.xz
+          for artifact in dist/pkg/*.{rpm,deb,zst} fyne-cross/dist/linux-${{ matrix.arch }}/*.tar.xz; do
             echo Signing ${artifact}
             cosign --verbose=true sign-blob --yes --key cosign.key --output-signature=${artifact}.sig ${artifact}
           done
@@ -95,13 +95,13 @@ jobs:
         with:
           name: build-${{ matrix.arch }}-${{ github.sha }}
           path: |
-            dist
+            dist/pkg
             fyne-cross/dist/linux-${{ matrix.arch }}
       - name: Upload release artifacts
         id: upload_release
         if: ${{ needs.check_release.outputs.release_created }}
         run: |
-          gh release upload ${{ needs.check_release.outputs.release_tag }} dist/*.{rpm,deb,zst,sig}
+          gh release upload ${{ needs.check_release.outputs.release_tag }} dist/pkg/*.{rpm,deb,zst,sig}
           gh release upload ${{ needs.check_release.outputs.release_tag }} fyne-cross/dist/linux-${{ matrix.arch }}/*-${{ matrix.arch }}.tar.xz{,.sig}
         env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

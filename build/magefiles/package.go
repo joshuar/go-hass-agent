@@ -9,6 +9,8 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"os"
+	"path/filepath"
 	"slices"
 
 	"github.com/magefile/mage/mg"
@@ -21,14 +23,26 @@ const iconPath = "internal/agent/ui/assets/go-hass-agent.png"
 
 var (
 	pkgformats   = []string{"rpm", "deb", "archlinux"}
-	nfpmBaseArgs = []string{"package", "--config", ".nfpm.yaml", "--target", "dist"}
+	pkgPath      = filepath.Join(distPath, "pkg")
+	fynePath     = "fyne-cross"
+	nfpmBaseArgs = []string{"package", "--config", ".nfpm.yaml", "--target", pkgPath}
 
 	ErrNoBuildEnv        = errors.New("no build and/or version environment variables")
 	ErrNfpmInstallFailed = errors.New("unable to install nfpm")
 )
 
 // Nfpm builds packages using nfpm.
+//
+//nolint:mnd
 func (Package) Nfpm() error {
+	if err := os.RemoveAll(pkgPath); err != nil {
+		return fmt.Errorf("could not clean dist directory: %w", err)
+	}
+
+	if err := os.MkdirAll(pkgPath, 0o755); err != nil {
+		return fmt.Errorf("could not create dist directory: %w", err)
+	}
+
 	if err := FoundOrInstalled("nfpm", "github.com/goreleaser/nfpm/v2/cmd/nfpm@latest"); err != nil {
 		return fmt.Errorf("could not install nfpm: %w", err)
 	}
@@ -52,6 +66,14 @@ func (Package) Nfpm() error {
 
 // FyneCross builds packages using fyne-cross.
 func (Package) FyneCross() error {
+	if err := os.RemoveAll(fynePath); err != nil {
+		return fmt.Errorf("could not clean dist directory: %w", err)
+	}
+
+	if err := os.MkdirAll(fynePath, 0o755); err != nil {
+		return fmt.Errorf("could not create dist directory: %w", err)
+	}
+
 	if err := FoundOrInstalled("fyne-cross", "github.com/fyne-io/fyne-cross@latest"); err != nil {
 		return fmt.Errorf("failed to install fyne-cross: %w", err)
 	}
@@ -71,8 +93,8 @@ func (Package) FyneCross() error {
 	}
 
 	if err = sh.Copy(
-		"fyne-cross/dist/linux-"+targetArch+"/go-hass-agent-"+targetArch+".tar.xz",
-		"fyne-cross/dist/linux-"+targetArch+"/go-hass-agent.tar.xz",
+		fynePath+"/dist/linux-"+targetArch+"/go-hass-agent-"+targetArch+".tar.xz",
+		fynePath+"/dist/linux-"+targetArch+"/go-hass-agent.tar.xz",
 	); err != nil {
 		return fmt.Errorf("could not copy build artefact: %w", err)
 	}

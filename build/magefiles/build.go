@@ -9,6 +9,8 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"os"
+	"path/filepath"
 
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
@@ -51,7 +53,16 @@ func (b Build) CI() error {
 	return nil
 }
 
+//nolint:mnd
 func buildProject() error {
+	if err := os.RemoveAll(distPath); err != nil {
+		return fmt.Errorf("could not clean dist directory: %w", err)
+	}
+
+	if err := os.Mkdir(distPath, 0o755); err != nil {
+		return fmt.Errorf("could not create dist directory: %w", err)
+	}
+
 	envMap, err := GenerateEnv()
 	if err != nil {
 		return errors.Join(ErrBuildFailed, err)
@@ -62,7 +73,7 @@ func buildProject() error {
 		return errors.Join(ErrBuildFailed, err)
 	}
 
-	output := "dist/go-hass-agent-" + targetArch
+	output := filepath.Join(distPath, "/go-hass-agent-"+targetArch)
 
 	slog.Info("Running go build...", "output", output, "ldflags", ldflags)
 

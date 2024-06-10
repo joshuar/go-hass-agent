@@ -20,7 +20,8 @@ import (
 )
 
 const (
-	pkgBase = "github.com/joshuar/go-hass-agent/internal/preferences"
+	pkgBase  = "github.com/joshuar/go-hass-agent/internal/preferences"
+	distPath = "dist"
 )
 
 var (
