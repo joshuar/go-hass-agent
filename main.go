@@ -197,7 +197,7 @@ var CLI struct {
 	Version  VersionCmd    `cmd:"" help:"Show the Go Hass Agent version."`
 	Profile  profileFlags  `help:"Enable profiling."`
 	AppID    string        `name:"appid" default:"${defaultAppID}" help:"Specify a custom app id (for debugging)."`
-	LogLevel string        `name:"log-level" help:"Set logging level."`
+	LogLevel string        `name:"log-level" enum:"info,debug,trace" default:"info" help:"Set logging level."`
 	Register RegisterCmd   `cmd:"" help:"Register with Home Assistant."`
 	NoLog    noLogFileFlag `help:"Don't write to a log file."`
 	Headless bool          `name:"terminal" help:"Run without a GUI."`
