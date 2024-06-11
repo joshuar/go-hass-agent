@@ -5,15 +5,21 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    commit-message:
+      prefix: "build(go): :up_arrow:"
 
   # Maintain dependencies for build tools
   - package-ecosystem: "gomod"
     directory: "/tools"
     schedule:
       interval: "weekly"
+    commit-message:
+      prefix: "build(go): :up_arrow:"
 
   # Maintain dependencies for GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+    commit-message:
+      prefix: "ci(github): :up_arrow:"
