@@ -108,7 +108,7 @@ func (d *linuxMQTTDevice) Setup(_ context.Context) error {
 }
 
 //nolint:exhaustruct
-func newMQTTDevice(ctx context.Context) *linuxMQTTDevice {
+func newMQTTDevice(ctx context.Context) MQTTWorker {
 	dev := &linuxMQTTDevice{
 		msgs: make(chan *mqttapi.Msg),
 	}

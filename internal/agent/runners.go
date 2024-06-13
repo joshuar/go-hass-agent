@@ -14,9 +14,11 @@ import (
 
 	mqttapi "github.com/joshuar/go-hass-anything/v9/pkg/mqtt"
 
+	"github.com/joshuar/go-hass-agent/internal/commands"
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 	"github.com/joshuar/go-hass-agent/internal/scripts"
 )
@@ -35,6 +37,23 @@ type Worker interface {
 	// Updates returns a channel on which updates to sensors will be published,
 	// when they become available.
 	Updates(ctx context.Context) (<-chan sensor.Details, error)
+}
+
+// MQTTWorker represents an object that is responsible for controlling the
+// publishing of one or more commands over MQTT.
+type MQTTWorker interface {
+	// Subscriptions is a list of MQTT subscriptions this object wants to
+	// establish on the MQTT broker.
+	Subscriptions() []*mqttapi.Subscription
+	// Configs are MQTT messages sent to the broker that Home Assistant will use
+	// to set up entities.
+	Configs() []*mqttapi.Msg
+	// Msgs returns a channel on which this object will send MQTT messages on
+	// certain events.
+	Msgs() chan *mqttapi.Msg
+	// Setup provides a way to perform any required initialisation of the
+	// object.
+	Setup(_ context.Context) error
 }
 
 // runWorkers will call all the sensor worker functions that have been defined
@@ -192,7 +211,7 @@ func (agent *Agent) runNotificationsWorker(ctx context.Context) {
 
 // runMQTTWorker will set up a connection to MQTT and listen on topics for
 // controlling this device from Home Assistant.
-func runMQTTWorker(ctx context.Context) {
+func runMQTTWorker(ctx context.Context, commandsFile string) {
 	prefs, err := preferences.Load()
 	if err != nil {
 		log.Error().Err(err).Msg("Could not load MQTT preferences.")
@@ -207,28 +226,37 @@ func runMQTTWorker(ctx context.Context) {
 	mqttCtx, mqttCancel := context.WithCancel(ctx)
 	defer mqttCancel()
 
-	// Create an MQTT device for this operating system and run its Setup.
-	mqttDevice := newMQTTDevice(mqttCtx)
-	if err = mqttDevice.Setup(mqttCtx); err != nil {
-		log.Error().Err(err).Msg("Could not set up device MQTT functionality.")
+	var deviceController, commandController MQTTWorker
 
-		return
+	var subscriptions []*mqttapi.Subscription
+
+	var configs []*mqttapi.Msg
+
+	// Create an MQTT device for this operating system and run its Setup.
+	deviceController = newMQTTDevice(mqttCtx)
+	if err = deviceController.Setup(mqttCtx); err != nil {
+		log.Error().Err(err).Msg("Could not set up device MQTT functionality.")
+	} else {
+		subscriptions = append(subscriptions, deviceController.Subscriptions()...)
+		configs = append(configs, deviceController.Configs()...)
+	}
+
+	// Create an MQTT device for this operating system and run its Setup.
+	commandController, err = commands.NewCommandsController(ctx, commandsFile, linux.MQTTDevice())
+	if err != nil {
+		log.Warn().Err(err).Msg("Could not set up commands MQTT functionality.")
+	} else {
+		subscriptions = append(subscriptions, commandController.Subscriptions()...)
+		configs = append(configs, commandController.Configs()...)
 	}
 
 	// Create a new connection to the MQTT broker. This will also publish the
 	// device subscriptions.
-	client, err := mqttapi.NewClient(mqttCtx, prefs, mqttDevice.Subscriptions(), mqttDevice.Configs())
+	client, err := mqttapi.NewClient(mqttCtx, prefs, subscriptions, configs)
 	if err != nil {
 		log.Error().Err(err).Msg("Could not connect to MQTT broker.")
 
 		return
-	}
-
-	// Publish the device configs.
-	log.Debug().Msg("Publishing configs.")
-
-	if err := client.Publish(mqttDevice.Configs()...); err != nil {
-		log.Error().Err(err).Msg("Failed to publish configuration messages.")
 	}
 
 	go func() {
@@ -236,7 +264,7 @@ func runMQTTWorker(ctx context.Context) {
 
 		for {
 			select {
-			case msg := <-mqttDevice.Msgs():
+			case msg := <-deviceController.Msgs():
 				if err := client.Publish(msg); err != nil {
 					log.Warn().Err(err).Msg("Unable to publish message to MQTT.")
 				}

@@ -117,7 +117,9 @@ func (agent *Agent) Run(trk SensorTracker, reg sensor.Registry) {
 
 		go func() {
 			defer wg.Done()
-			runMQTTWorker(runnerCtx)
+
+			commandsFile := filepath.Join(xdg.ConfigHome, agent.AppID(), "commands.toml")
+			runMQTTWorker(runnerCtx, commandsFile)
 		}()
 		// Listen for notifications from Home Assistant.
 		if !agent.IsHeadless() {
