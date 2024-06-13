@@ -8,6 +8,7 @@ package hass
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/url"
 	"time"
@@ -20,6 +21,8 @@ const (
 	WebsocketPath    = "/api/websocket"
 	WebHookPath      = "/api/webhook/"
 )
+
+var ErrInternalValidationFailed = errors.New("internal validation error")
 
 //nolint:interfacebloat
 //go:generate moq -out mock_DeviceInfo_test.go . DeviceInfo
@@ -48,7 +51,7 @@ func (i *RegistrationInput) Validate() error {
 
 	err := validate.Struct(i)
 	if err != nil {
-		return fmt.Errorf("invalid registration input: %w", err)
+		return showValidationErrors(err)
 	}
 
 	return nil
@@ -142,4 +145,32 @@ func RegisterWithHass(ctx context.Context, input *RegistrationInput, device Devi
 	}
 
 	return resp.Details, nil
+}
+
+//nolint:err113,errorlint,wsl
+func showValidationErrors(e error) error {
+	validationErrors, ok := e.(validator.ValidationErrors)
+	if !ok {
+		return ErrInternalValidationFailed
+	}
+
+	var allErrors error
+
+	for _, err := range validationErrors {
+		// Namespace:       err.Namespace(),
+		// Field:           err.Field(),
+		// StructNamespace: err.StructNamespace(),
+		// StructField:     err.StructField(),
+		// Tag:             err.Tag(),
+		// ActualTag:       err.ActualTag(),
+		// Kind:            fmt.Sprintf("%v", err.Kind()),
+		// Type:            fmt.Sprintf("%v", err.Type()),
+		// Value:           fmt.Sprintf("%v", err.Value()),
+		// Param:           err.Param(),
+		// Message:         err.Error(),
+
+		allErrors = errors.Join(allErrors, fmt.Errorf("could validate %s input: got %s, want %s", err.Field(), err.Param(), err.Kind()))
+	}
+
+	return allErrors
 }
