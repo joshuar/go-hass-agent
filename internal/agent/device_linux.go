@@ -64,7 +64,7 @@ func sensorWorkers(ctx context.Context) []Worker {
 	for _, w := range workers {
 		worker, err := w(ctx)
 		if err != nil {
-			log.Warn().Err(err).Msg("Could not activate a worker.")
+			log.Debug().Err(err).Msg("Could not activate a worker.")
 
 			continue
 		}
