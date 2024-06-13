@@ -8,7 +8,6 @@ package power
 
 import (
 	"context"
-	"errors"
 	"path/filepath"
 	"slices"
 
@@ -25,11 +24,7 @@ const (
 	externalPowerProp = managerInterface + ".OnExternalPower"
 )
 
-var (
-	laptopPropList = []string{dockedProp, lidClosedProp, externalPowerProp}
-
-	ErrUnsupportedHardware = errors.New("unsupported hardware for laptop sensor monitoring")
-)
+var laptopPropList = []string{dockedProp, lidClosedProp, externalPowerProp}
 
 type laptopSensor struct {
 	prop string
@@ -166,8 +161,9 @@ func (w *laptopWorker) Sensors(ctx context.Context) ([]sensor.Details, error) {
 }
 
 func NewLaptopWorker(_ context.Context) (*linux.SensorWorker, error) {
+	// Don't run this worker if we are not running on a laptop.
 	if linux.Chassis() != "laptop" {
-		return nil, ErrUnsupportedHardware
+		return nil, linux.ErrUnsupportedHardware
 	}
 
 	return &linux.SensorWorker{

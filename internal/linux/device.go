@@ -30,7 +30,10 @@ const (
 	unknownDistroVersion = "Unknown Version"
 )
 
-var ErrDesktopPortalMissing = errors.New("no portal present")
+var (
+	ErrDesktopPortalMissing = errors.New("no portal present")
+	ErrUnsupportedHardware  = errors.New("unsupported hardware")
+)
 
 type Device struct {
 	appName       string
