@@ -115,7 +115,7 @@ func (w *worker) Sensors(ctx context.Context, _ time.Duration) ([]sensor.Details
 	return nil, nil
 }
 
-func NewProblemsWorker() (*linux.SensorWorker, error) {
+func NewProblemsWorker(_ context.Context) (*linux.SensorWorker, error) {
 	return &linux.SensorWorker{
 			WorkerName: "ABRT Problems Sensor",
 			WorkerDesc: "Count of problems detected by ABRT (with details in sensor attributes).",

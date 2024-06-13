@@ -103,7 +103,7 @@ func (w *worker) Sensors(ctx context.Context) ([]sensor.Details, error) {
 	return sensors, nil
 }
 
-func NewAppWorker() (*linux.SensorWorker, error) {
+func NewAppWorker(_ context.Context) (*linux.SensorWorker, error) {
 	// If we cannot find a portal interface, we cannot monitor the active app.
 	portalDest, err := linux.FindPortal()
 	if err != nil {

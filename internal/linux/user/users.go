@@ -133,7 +133,7 @@ func (w *worker) Sensors(ctx context.Context) ([]sensor.Details, error) {
 	return []sensor.Details{w.sensor}, err
 }
 
-func NewUserWorker() (*linux.SensorWorker, error) {
+func NewUserWorker(_ context.Context) (*linux.SensorWorker, error) {
 	return &linux.SensorWorker{
 			WorkerName: "User count sensor",
 			WorkerDesc: "Sensors for number of logged in users.",

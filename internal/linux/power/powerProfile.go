@@ -111,7 +111,7 @@ func (w *profileWorker) Sensors(ctx context.Context) ([]sensor.Details, error) {
 	return []sensor.Details{newPowerSensor(linux.SensorPowerProfile, profile)}, nil
 }
 
-func NewProfileWorker() (*linux.SensorWorker, error) {
+func NewProfileWorker(_ context.Context) (*linux.SensorWorker, error) {
 	return &linux.SensorWorker{
 			WorkerName: "Power Profile Sensor",
 			WorkerDesc: "Sensor to track the current power profile.",

@@ -100,7 +100,7 @@ func (w *screenLockWorker) Sensors(_ context.Context) ([]sensor.Details, error) 
 	return nil, linux.ErrUnimplemented
 }
 
-func NewScreenLockWorker() (*linux.SensorWorker, error) {
+func NewScreenLockWorker(_ context.Context) (*linux.SensorWorker, error) {
 	return &linux.SensorWorker{
 			WorkerName: "Screen Lock Sensor",
 			WorkerDesc: "Sensor to track whether the screen is currently locked.",

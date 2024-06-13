@@ -51,7 +51,7 @@ func (w *usageWorker) Sensors(ctx context.Context, d time.Duration) ([]sensor.De
 	return []sensor.Details{newSensor}, nil
 }
 
-func NewUsageWorker() (*linux.SensorWorker, error) {
+func NewUsageWorker(_ context.Context) (*linux.SensorWorker, error) {
 	return &linux.SensorWorker{
 			WorkerName: "CPU Usage Sensor",
 			WorkerDesc: "System CPU usage as a percentage.",

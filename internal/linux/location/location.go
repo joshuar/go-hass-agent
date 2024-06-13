@@ -8,6 +8,7 @@ package location
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/godbus/dbus/v5"
 	"github.com/rs/zerolog/log"
@@ -48,13 +49,6 @@ type worker struct {
 //nolint:exhaustruct
 func (w *worker) Setup(ctx context.Context) *dbusx.Watch {
 	var err error
-	w.clientPath, err = dbusx.GetData[dbus.ObjectPath](ctx, dbusx.SystemBus, managerPath, geoclueInterface, getClientCall)
-
-	if !w.clientPath.IsValid() || err != nil {
-		log.Error().Err(err).Msg("Could not set up a geoclue client.")
-
-		return nil
-	}
 
 	if err = dbusx.SetProp(ctx, dbusx.SystemBus, string(w.clientPath), geoclueInterface, desktopIDProp, preferences.AppID); err != nil {
 		log.Error().Err(err).Msg("Could not set a geoclue client id.")
@@ -123,12 +117,19 @@ func (w *worker) Sensors(_ context.Context) ([]sensor.Details, error) {
 	return nil, linux.ErrUnimplemented
 }
 
-//nolint:exhaustruct
-func NewLocationWorker() (*linux.SensorWorker, error) {
+func NewLocationWorker(ctx context.Context) (*linux.SensorWorker, error) {
+	clientPath, err := dbusx.GetData[dbus.ObjectPath](ctx, dbusx.SystemBus, managerPath, geoclueInterface, getClientCall)
+
+	if !clientPath.IsValid() || err != nil {
+		return nil, fmt.Errorf("could not set up a geoclue client: %w", err)
+	}
+
 	return &linux.SensorWorker{
 			WorkerName: "Location Sensor",
 			WorkerDesc: "Sensor for device location, from GeoClue.",
-			Value:      &worker{},
+			Value: &worker{
+				clientPath: clientPath,
+			},
 		},
 		nil
 }
