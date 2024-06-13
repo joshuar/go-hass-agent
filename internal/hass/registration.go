@@ -147,7 +147,7 @@ func RegisterWithHass(ctx context.Context, input *RegistrationInput, device Devi
 	return resp.Details, nil
 }
 
-//nolint:err113,errorlint,wsl
+//nolint:err113,errorlint
 func showValidationErrors(e error) error {
 	validationErrors, ok := e.(validator.ValidationErrors)
 	if !ok {
@@ -157,19 +157,7 @@ func showValidationErrors(e error) error {
 	var allErrors error
 
 	for _, err := range validationErrors {
-		// Namespace:       err.Namespace(),
-		// Field:           err.Field(),
-		// StructNamespace: err.StructNamespace(),
-		// StructField:     err.StructField(),
-		// Tag:             err.Tag(),
-		// ActualTag:       err.ActualTag(),
-		// Kind:            fmt.Sprintf("%v", err.Kind()),
-		// Type:            fmt.Sprintf("%v", err.Type()),
-		// Value:           fmt.Sprintf("%v", err.Value()),
-		// Param:           err.Param(),
-		// Message:         err.Error(),
-
-		allErrors = errors.Join(allErrors, fmt.Errorf("could validate %s input: got %s, want %s", err.Field(), err.Param(), err.Kind()))
+		allErrors = errors.Join(allErrors, fmt.Errorf("could validate %s input: got %s, want %s", err.Field(), err.Value(), err.Tag()))
 	}
 
 	return allErrors
