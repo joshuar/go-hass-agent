@@ -8,6 +8,7 @@ package power
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/rs/zerolog/log"
 
@@ -45,17 +46,17 @@ func newScreenlockEvent(value bool) *screenlockSensor {
 	}
 }
 
-type screenLockWorker struct{}
+type screenLockWorker struct {
+	sessionPath string
+}
 
 //nolint:exhaustruct
-func (w *screenLockWorker) Setup(ctx context.Context) *dbusx.Watch {
-	sessionPath := dbusx.GetSessionPath(ctx)
-
+func (w *screenLockWorker) Setup(_ context.Context) *dbusx.Watch {
 	return &dbusx.Watch{
 		Bus:       dbusx.SystemBus,
 		Names:     []string{sessionLockSignal, sessionUnlockSignal, sessionLockedProp},
 		Interface: sessionInterface,
-		Path:      string(sessionPath),
+		Path:      w.sessionPath,
 	}
 }
 
@@ -100,11 +101,18 @@ func (w *screenLockWorker) Sensors(_ context.Context) ([]sensor.Details, error) 
 	return nil, linux.ErrUnimplemented
 }
 
-func NewScreenLockWorker(_ context.Context) (*linux.SensorWorker, error) {
+func NewScreenLockWorker(ctx context.Context) (*linux.SensorWorker, error) {
+	sessionPath, err := dbusx.GetSessionPath(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("could not create screen lock worker: %w", err)
+	}
+
 	return &linux.SensorWorker{
 			WorkerName: "Screen Lock Sensor",
 			WorkerDesc: "Sensor to track whether the screen is currently locked.",
-			Value:      &screenLockWorker{},
+			Value: &screenLockWorker{
+				sessionPath: sessionPath,
+			},
 		},
 		nil
 }
