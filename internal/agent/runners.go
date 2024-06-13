@@ -104,13 +104,19 @@ func runWorkers(ctx context.Context, trk SensorTracker, reg sensor.Registry) {
 		}
 	}()
 
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+
 	go func() {
+		defer wg.Done()
 		<-ctx.Done()
 
 		for _, c := range cancelFuncs {
 			c()
 		}
 	}()
+	wg.Wait()
 }
 
 // runScripts will retrieve all scripts that the agent can run and queue them up
