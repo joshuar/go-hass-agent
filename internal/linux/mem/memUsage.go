@@ -136,7 +136,7 @@ func (w *usageWorker) Sensors(ctx context.Context, _ time.Duration) ([]sensor.De
 	return sensors, nil
 }
 
-func NewUsageWorker() (*linux.SensorWorker, error) {
+func NewUsageWorker(_ context.Context) (*linux.SensorWorker, error) {
 	return &linux.SensorWorker{
 			WorkerName: "Memory Usage Sensor",
 			WorkerDesc: "System RAM (and swap if enabled) usage as a percentage.",

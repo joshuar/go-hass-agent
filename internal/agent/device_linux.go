@@ -28,7 +28,7 @@ import (
 )
 
 // workers is the list of sensor workers supported on Linux.
-var workers = []func() (*linux.SensorWorker, error){
+var workers = []func(ctx context.Context) (*linux.SensorWorker, error){
 	apps.NewAppWorker,
 	battery.NewBatteryWorker,
 	cpu.NewLoadAvgWorker,
@@ -58,11 +58,11 @@ func newDevice(_ context.Context) *linux.Device {
 
 // sensorWorkers initialises the list of workers for sensors and returns those
 // that are supported on this device.
-func sensorWorkers() []Worker {
+func sensorWorkers(ctx context.Context) []Worker {
 	activeWorkers := make([]Worker, 0, len(workers))
 
 	for _, w := range workers {
-		worker, err := w()
+		worker, err := w(ctx)
 		if err != nil {
 			log.Warn().Err(err).Msg("Could not activate a worker.")
 

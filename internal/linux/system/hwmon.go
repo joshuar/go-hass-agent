@@ -129,7 +129,7 @@ func (w *hwMonWorker) Sensors(_ context.Context, _ time.Duration) ([]sensor.Deta
 	return sensors, nil
 }
 
-func NewHWMonWorker() (*linux.SensorWorker, error) {
+func NewHWMonWorker(_ context.Context) (*linux.SensorWorker, error) {
 	return &linux.SensorWorker{
 			WorkerName: "HWMon Sensors",
 			WorkerDesc: "Sensors from the hwmon kernel interface (chip temps, fan speeds, etc.)",

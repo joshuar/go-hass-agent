@@ -142,7 +142,7 @@ func (w *stateWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
 	return []sensor.Details{newPowerState(shutdown, false)}, nil
 }
 
-func NewStateWorker() (*linux.SensorWorker, error) {
+func NewStateWorker(_ context.Context) (*linux.SensorWorker, error) {
 	return &linux.SensorWorker{
 			WorkerName: "Power State Sensor",
 			WorkerDesc: "Sensor to track the current power state of the device.",

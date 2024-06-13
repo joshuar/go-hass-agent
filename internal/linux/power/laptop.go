@@ -165,7 +165,7 @@ func (w *laptopWorker) Sensors(ctx context.Context) ([]sensor.Details, error) {
 	return sensors, nil
 }
 
-func NewLaptopWorker() (*linux.SensorWorker, error) {
+func NewLaptopWorker(_ context.Context) (*linux.SensorWorker, error) {
 	if linux.Chassis() != "laptop" {
 		return nil, ErrUnsupportedHardware
 	}

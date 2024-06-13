@@ -59,7 +59,7 @@ type MQTTWorker interface {
 // runWorkers will call all the sensor worker functions that have been defined
 // for this device.
 func runWorkers(ctx context.Context, trk SensorTracker, reg sensor.Registry) {
-	workers := sensorWorkers()
+	workers := sensorWorkers(ctx)
 	workers = append(workers, device.NewExternalIPUpdaterWorker(), device.NewVersionWorker())
 
 	outCh := make([]<-chan sensor.Details, 0, len(workers))
