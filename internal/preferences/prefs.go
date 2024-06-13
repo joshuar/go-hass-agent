@@ -297,7 +297,7 @@ func Save(setters ...Preference) error {
 	}
 
 	prefs, err := Load()
-	if err != nil && !os.IsNotExist(err) {
+	if err != nil && !errors.Is(err, ErrNoPreferences) {
 		return err
 	}
 
