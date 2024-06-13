@@ -8,6 +8,7 @@
 package preferences
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -39,6 +40,9 @@ var (
 var (
 	preferencesPath = filepath.Join(xdg.ConfigHome, "go-hass-agent")
 	preferencesFile = "preferences.toml"
+
+	ErrNoPreferences = errors.New("no preferences file found, using defaults")
+	ErrFileContents  = errors.New("could not read file contents")
 )
 
 //nolint:tagalign
@@ -273,12 +277,12 @@ func Load() (*Preferences, error) {
 
 	b, err := os.ReadFile(file)
 	if err != nil {
-		return prefs, fmt.Errorf("could not read preferences file: %w", err)
+		return prefs, errors.Join(ErrNoPreferences, err)
 	}
 
 	err = toml.Unmarshal(b, &prefs)
 	if err != nil {
-		return prefs, fmt.Errorf("could not parse preferences file: %w", err)
+		return prefs, errors.Join(ErrFileContents, err)
 	}
 
 	return prefs, nil

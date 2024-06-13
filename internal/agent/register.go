@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"os"
 
 	"github.com/rs/zerolog/log"
 
@@ -103,7 +102,7 @@ func (agent *Agent) performRegistration(ctx context.Context) error {
 
 func (agent *Agent) checkRegistration(trk SensorTracker) error {
 	prefs, err := preferences.Load()
-	if err != nil && !os.IsNotExist(err) {
+	if err != nil && !errors.Is(err, preferences.ErrNoPreferences) {
 		return fmt.Errorf("could not load preferences: %w", err)
 	}
 
