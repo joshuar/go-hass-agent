@@ -74,13 +74,19 @@ var commands = map[string]commandConfig{
 func NewPowerControl(ctx context.Context) []*mqtthass.ButtonEntity {
 	entities := make([]*mqtthass.ButtonEntity, 0, len(commands))
 	device := linux.MQTTDevice()
-	sessionPath := dbusx.GetSessionPath(ctx)
+
+	sessionPath, err := dbusx.GetSessionPath(ctx)
+	if err != nil {
+		log.Warn().Err(err).Msg("Cannot create entity.")
+
+		return nil
+	}
 
 	for cmdName, cmdInfo := range commands {
 		var callback func(p *paho.Publish)
 		if cmdInfo.path == "" {
 			callback = func(_ *paho.Publish) {
-				err := dbusx.Call(ctx, dbusx.SystemBus, string(sessionPath), loginBaseInterface, cmdInfo.method)
+				err := dbusx.Call(ctx, dbusx.SystemBus, sessionPath, loginBaseInterface, cmdInfo.method)
 				if err != nil {
 					log.Warn().Err(err).Msgf("Could not %s session.", cmdInfo.name)
 				}

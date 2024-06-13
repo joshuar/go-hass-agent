@@ -40,6 +40,7 @@ var (
 	ErrNotValChanged  = errors.New("signal contents do not appear to represent a value change")
 	ErrParseNewVal    = errors.New("could not parse new value")
 	ErrParseOldVal    = errors.New("could not parse old value")
+	ErrNoSessionPath  = errors.New("could not determine session path")
 )
 
 var DbusTypeMap = map[string]dbusType{
@@ -317,26 +318,26 @@ func WatchBus(ctx context.Context, conditions *Watch) (chan Trigger, error) {
 	return outCh, nil
 }
 
-func GetSessionPath(ctx context.Context) dbus.ObjectPath {
+func GetSessionPath(ctx context.Context) (string, error) {
 	usr, err := user.Current()
 	if err != nil {
-		return ""
+		return "", fmt.Errorf("unable to determine user: %w", err)
 	}
 
 	sessions, err := GetData[[][]any](ctx, SystemBus, loginBasePath, loginBaseInterface, listSessionsMethod)
 	if err != nil {
-		return ""
+		return "", fmt.Errorf("unable to retrieve session path: %w", err)
 	}
 
 	for _, s := range sessions {
 		if thisUser, ok := s[2].(string); ok && thisUser == usr.Username {
 			if p, ok := s[4].(dbus.ObjectPath); ok {
-				return p
+				return string(p), nil
 			}
 		}
 	}
 
-	return ""
+	return "", ErrNoSessionPath
 }
 
 // ParsePropertiesChanged treats the given signal body as matching the canonical

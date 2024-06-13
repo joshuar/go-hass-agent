@@ -89,6 +89,7 @@ func newIdleSensor(ctx context.Context) (*idleSensor, error) {
 }
 
 //nolint:cyclop,exhaustruct
+//revive:disable:function-length
 func IdleUpdater(ctx context.Context) chan sensor.Details {
 	sensorCh := make(chan sensor.Details)
 
@@ -100,13 +101,19 @@ func IdleUpdater(ctx context.Context) chan sensor.Details {
 		return sensorCh
 	}
 
-	sessionPath := dbusx.GetSessionPath(ctx)
+	sessionPath, err := dbusx.GetSessionPath(ctx)
+	if err != nil {
+		log.Debug().Err(err).Msg("Cannot create idle sensor.")
+		close(sensorCh)
+
+		return sensorCh
+	}
 
 	events, err := dbusx.WatchBus(ctx, &dbusx.Watch{
 		Bus:       dbusx.SystemBus,
 		Names:     []string{sessionIdleProp, sessionIdleTimeProp},
 		Interface: sessionInterface,
-		Path:      string(sessionPath),
+		Path:      sessionPath,
 	})
 	if err != nil {
 		log.Debug().Err(err).

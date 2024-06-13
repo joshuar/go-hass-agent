@@ -8,6 +8,7 @@ package power
 
 import (
 	"context"
+	"fmt"
 	"path/filepath"
 	"slices"
 
@@ -85,17 +86,17 @@ func newLaptopEvent(prop string, state bool) *laptopSensor {
 	return sensorEvent
 }
 
-type laptopWorker struct{}
+type laptopWorker struct {
+	sessionPath string
+}
 
 //nolint:exhaustruct
-func (w *laptopWorker) Setup(ctx context.Context) *dbusx.Watch {
-	sessionPath := dbusx.GetSessionPath(ctx)
-
+func (w *laptopWorker) Setup(_ context.Context) *dbusx.Watch {
 	return &dbusx.Watch{
 		Bus:       dbusx.SystemBus,
 		Names:     []string{dbusx.PropChangedSignal},
 		Interface: managerInterface,
-		Path:      string(sessionPath),
+		Path:      w.sessionPath,
 	}
 }
 
@@ -160,16 +161,24 @@ func (w *laptopWorker) Sensors(ctx context.Context) ([]sensor.Details, error) {
 	return sensors, nil
 }
 
-func NewLaptopWorker(_ context.Context) (*linux.SensorWorker, error) {
+func NewLaptopWorker(ctx context.Context) (*linux.SensorWorker, error) {
 	// Don't run this worker if we are not running on a laptop.
 	if linux.Chassis() != "laptop" {
 		return nil, linux.ErrUnsupportedHardware
 	}
 
+	// If we can't get a session path, we can't run.
+	sessionPath, err := dbusx.GetSessionPath(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("could not create laptop worker: %w", err)
+	}
+
 	return &linux.SensorWorker{
 			WorkerName: "Laptop State Sensors",
 			WorkerDesc: "Sensors for laptop lid, dock and external power states.",
-			Value:      &laptopWorker{},
+			Value: &laptopWorker{
+				sessionPath: sessionPath,
+			},
 		},
 		nil
 }
