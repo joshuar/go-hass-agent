@@ -118,8 +118,13 @@ func (w *worker) Sensors(_ context.Context) ([]sensor.Details, error) {
 }
 
 func NewLocationWorker(ctx context.Context) (*linux.SensorWorker, error) {
-	clientPath, err := dbusx.GetData[dbus.ObjectPath](ctx, dbusx.SystemBus, managerPath, geoclueInterface, getClientCall)
+	// Don't run this worker if we are not running on a laptop.
+	if linux.Chassis() != "laptop" {
+		return nil, linux.ErrUnsupportedHardware
+	}
 
+	// Check if we can create a client, bail if we can't.
+	clientPath, err := dbusx.GetData[dbus.ObjectPath](ctx, dbusx.SystemBus, managerPath, geoclueInterface, getClientCall)
 	if !clientPath.IsValid() || err != nil {
 		return nil, fmt.Errorf("could not set up a geoclue client: %w", err)
 	}
