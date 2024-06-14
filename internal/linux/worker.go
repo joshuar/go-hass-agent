@@ -29,7 +29,7 @@ type pollingType interface {
 
 // dbusType interface represents sensors that are generated on D-Bus events.
 type dbusType interface {
-	Setup(ctx context.Context) *dbusx.Watch
+	Setup(ctx context.Context) (*dbusx.Watch, error)
 	Watch(ctx context.Context, triggerCh chan dbusx.Trigger) chan sensor.Details
 	Sensors(ctx context.Context) ([]sensor.Details, error)
 }
@@ -112,11 +112,15 @@ func (w *SensorWorker) Sensors(ctx context.Context) ([]sensor.Details, error) {
 // non-nil error.
 //
 //nolint:cyclop
+//revive:disable:function-length
 func (w *SensorWorker) Updates(ctx context.Context) (<-chan sensor.Details, error) {
 	outCh := make(chan sensor.Details)
 
 	switch worker := w.Value.(type) {
 	case pollingType:
+		// pollingType: create an updater function to run the worker's Sensors
+		// function and pass this to the PollSensors helper, using the interval
+		// and jitter the worker has requested.
 		updater := func(d time.Duration) {
 			sensors, err := worker.Sensors(ctx, d)
 			if err != nil {
@@ -131,14 +135,27 @@ func (w *SensorWorker) Updates(ctx context.Context) (<-chan sensor.Details, erro
 		}
 		go func() {
 			defer close(outCh)
+			log.Trace().Str("worker", w.Name()).Msg("Polling for sensor updates...")
 			helpers.PollSensors(ctx, updater, worker.Interval(), worker.Jitter())
 		}()
 	case dbusType:
-		eventCh, err := dbusx.WatchBus(ctx, worker.Setup(ctx))
+		// dbusType: run the worker Setup function, bail if it fails. Else, run
+		// the worker WatchBus function, which spits out sensors based on the
+		// D-Bus watch.
+		watch, err := worker.Setup(ctx)
 		if err != nil {
 			close(outCh)
 
 			return outCh, fmt.Errorf("could not set up watch for worker: %w", err)
+		}
+
+		log.Trace().Str("worker", w.Name()).Msg("Watching D-Bus for sensor updates...")
+
+		eventCh, err := dbusx.WatchBus(ctx, watch)
+		if err != nil {
+			close(outCh)
+
+			return outCh, fmt.Errorf("could not watch D-Bus for worker: %w", err)
 		}
 
 		go func() {
@@ -149,14 +166,19 @@ func (w *SensorWorker) Updates(ctx context.Context) (<-chan sensor.Details, erro
 			}
 		}()
 	case eventType:
+		// eventType: read sensors from the worker Events function and pass
+		// these on.
 		go func() {
 			defer close(outCh)
+			log.Trace().Str("worker", w.Name()).Msg("Listening for sensor update events...")
 
 			for s := range worker.Events(ctx) {
 				outCh <- s
 			}
 		}()
 	case oneShotType:
+		// oneShot: run the worker Sensors function to gather the sensors, pass
+		// these through the channel, then close it.
 		go func() {
 			defer close(outCh)
 
@@ -167,11 +189,15 @@ func (w *SensorWorker) Updates(ctx context.Context) (<-chan sensor.Details, erro
 				return
 			}
 
+			log.Trace().Str("worker", w.Name()).Msg("Sending sensors...")
+
 			for _, s := range sensors {
 				outCh <- s
 			}
 		}()
 	default:
+		// default: we should not get here, so if we do, return an error
+		// indicating we don't know what type of worker this is.
 		return nil, ErrUnknownWorker
 	}
 

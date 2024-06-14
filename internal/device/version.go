@@ -67,6 +67,6 @@ func (w *versionWorker) Updates(ctx context.Context) (<-chan sensor.Details, err
 	return sensorCh, nil
 }
 
-func NewVersionWorker() *versionWorker {
+func newVersionWorker() *versionWorker {
 	return &versionWorker{}
 }

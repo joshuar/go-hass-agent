@@ -181,7 +181,7 @@ func (w *externalIPWorker) Updates(ctx context.Context) (<-chan sensor.Details, 
 	return sensorCh, nil
 }
 
-func NewExternalIPUpdaterWorker() *externalIPWorker {
+func newExternalIPUpdaterWorker() *externalIPWorker {
 	return &externalIPWorker{
 		client: resty.New().SetTimeout(ExternalIPUpdateRequestTimeout),
 	}

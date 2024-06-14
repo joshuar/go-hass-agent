@@ -42,13 +42,14 @@ type desktopSettingSensor struct {
 type worker struct{}
 
 //nolint:exhaustruct
-func (w *worker) Setup(_ context.Context) *dbusx.Watch {
+func (w *worker) Setup(_ context.Context) (*dbusx.Watch, error) {
 	return &dbusx.Watch{
-		Bus:       dbusx.SessionBus,
-		Names:     []string{settingsChangedSignal},
-		Interface: settingsPortalInterface,
-		Path:      desktopPortalPath,
-	}
+			Bus:       dbusx.SessionBus,
+			Names:     []string{settingsChangedSignal},
+			Interface: settingsPortalInterface,
+			Path:      desktopPortalPath,
+		},
+		nil
 }
 
 func (w *worker) Watch(ctx context.Context, triggerCh chan dbusx.Trigger) chan sensor.Details {
@@ -110,7 +111,7 @@ func (w *worker) Sensors(ctx context.Context) ([]sensor.Details, error) {
 	return sensors, nil
 }
 
-func NewDesktopWorker(_ context.Context) (*linux.SensorWorker, error) {
+func NewDesktopWorker() (*linux.SensorWorker, error) {
 	// If we cannot find a portal interface, we cannot monitor desktop settings.
 	_, err := linux.FindPortal()
 	if err != nil {

@@ -23,6 +23,22 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/scripts"
 )
 
+// WorkerController represents an object that manages one or more Workers.
+type WorkerController interface {
+	// ActiveWorkers is a list of the names of all currently active Workers.
+	ActiveWorkers() []string
+	// InactiveWorkers is a list of the names of all currently inactive Workers.
+	InactiveWorkers() []string
+	// Start provides a way to start the named Worker.
+	Start(ctx context.Context, name string) (<-chan sensor.Details, error)
+	// Stop provides a way to stop the named Worker.
+	Stop(name string) error
+	// StartAll will start all Workers that this controller manages.
+	StartAll(ctx context.Context) (<-chan sensor.Details, error)
+	// StopAll will stop all Workers that this controller manages.
+	StopAll() error
+}
+
 // Worker represents an object that is responsible for controlling the
 // publishing of one or more sensors.
 type Worker interface {
@@ -59,36 +75,26 @@ type MQTTWorker interface {
 // runWorkers will call all the sensor worker functions that have been defined
 // for this device.
 func runWorkers(ctx context.Context, trk SensorTracker, reg sensor.Registry) {
-	workers := sensorWorkers(ctx)
-	workers = append(workers, device.NewExternalIPUpdaterWorker(), device.NewVersionWorker())
-
-	outCh := make([]<-chan sensor.Details, 0, len(workers))
-
-	cancelFuncs := make([]context.CancelFunc, 0, len(workers))
-
-	log.Debug().Msg("Starting worker funcs.")
-
-	for worker := range len(workers) {
-		workerCtx, cancelFunc := context.WithCancel(ctx)
-		cancelFuncs = append(cancelFuncs, cancelFunc)
-
-		log.Debug().Str("name", workers[worker].Name()).Str("description", workers[worker].Description()).Msg("Starting sensor worker.")
-
-		workerCh, err := workers[worker].Updates(workerCtx)
-		if err != nil {
-			log.Warn().Err(err).Str("name", workers[worker].Name()).Msg("Could not start worker.")
-
-			continue
-		}
-
-		outCh = append(outCh, workerCh)
+	// Create sensor workers for OS.
+	osWorkers := createSensorWorkers()
+	// Start sensor workers for OS.
+	sensorUpdates, err := osWorkers.StartAll(ctx)
+	if err != nil {
+		log.Debug().Err(err).Msg("Some OS workers could not be started.")
+	}
+	// Create sensor workers for device.
+	deviceWorkers := device.CreateSensorWorkers()
+	// Start sensor workers for device.
+	deviceUpdates, err := deviceWorkers.StartAll(ctx)
+	if err != nil {
+		log.Debug().Err(err).Msg("Some device workers could not be started.")
 	}
 
-	sensorUpdates := sensor.MergeSensorCh(ctx, outCh...)
+	// Listen for sensor updates from all workers.
 	go func() {
 		log.Debug().Msg("Listening for sensor updates.")
 
-		for update := range sensorUpdates {
+		for update := range sensor.MergeSensorCh(ctx, sensorUpdates, deviceUpdates) {
 			go func(update sensor.Details) {
 				if err := trk.UpdateSensor(ctx, reg, update); err != nil {
 					log.Warn().Err(err).Str("id", update.ID()).Msg("Update failed.")
@@ -108,12 +114,17 @@ func runWorkers(ctx context.Context, trk SensorTracker, reg sensor.Registry) {
 
 	wg.Add(1)
 
+	// When context is cancelled, stop all sensor workers.
 	go func() {
 		defer wg.Done()
 		<-ctx.Done()
 
-		for _, c := range cancelFuncs {
-			c()
+		if err := osWorkers.StopAll(); err != nil {
+			log.Debug().Err(err).Msg("Stopping OS workers reported an error.")
+		}
+
+		if err := deviceWorkers.StopAll(); err != nil {
+			log.Debug().Err(err).Msg("Stopping device workers reported an error.")
 		}
 	}()
 	wg.Wait()

@@ -47,13 +47,19 @@ type worker struct {
 }
 
 //nolint:exhaustruct
-func (w *worker) Setup(ctx context.Context) *dbusx.Watch {
+func (w *worker) Setup(ctx context.Context) (*dbusx.Watch, error) {
 	var err error
 
-	if err = dbusx.SetProp(ctx, dbusx.SystemBus, string(w.clientPath), geoclueInterface, desktopIDProp, preferences.AppID); err != nil {
-		log.Error().Err(err).Msg("Could not set a geoclue client id.")
+	// Check if we can create a client, bail if we can't.
+	clientPath, err := dbusx.GetData[dbus.ObjectPath](ctx, dbusx.SystemBus, managerPath, geoclueInterface, getClientCall)
+	if !clientPath.IsValid() || err != nil {
+		return nil, fmt.Errorf("could not set up a geoclue client: %w", err)
+	}
 
-		return nil
+	w.clientPath = clientPath
+
+	if err = dbusx.SetProp(ctx, dbusx.SystemBus, string(w.clientPath), geoclueInterface, desktopIDProp, preferences.AppID); err != nil {
+		return nil, fmt.Errorf("could not set geoclue client id: %w", err)
 	}
 
 	// Set a distance threshold.
@@ -68,19 +74,18 @@ func (w *worker) Setup(ctx context.Context) *dbusx.Watch {
 
 	// Request to start tracking location updates.
 	if err = dbusx.Call(ctx, dbusx.SystemBus, string(w.clientPath), geoclueInterface, startCall); err != nil {
-		log.Warn().Err(err).Msg("Could not start geoclue client.")
-
-		return nil
+		return nil, fmt.Errorf("could not start geoclue client: %w", err)
 	}
 
 	log.Debug().Msg("GeoClue client created.")
 
 	return &dbusx.Watch{
-		Bus:       dbusx.SystemBus,
-		Path:      string(w.clientPath),
-		Interface: clientInterface,
-		Names:     []string{"LocationUpdated"},
-	}
+			Bus:       dbusx.SystemBus,
+			Path:      string(w.clientPath),
+			Interface: clientInterface,
+			Names:     []string{"LocationUpdated"},
+		},
+		nil
 }
 
 func (w *worker) Watch(ctx context.Context, triggerCh chan dbusx.Trigger) chan sensor.Details {
@@ -117,24 +122,17 @@ func (w *worker) Sensors(_ context.Context) ([]sensor.Details, error) {
 	return nil, linux.ErrUnimplemented
 }
 
-func NewLocationWorker(ctx context.Context) (*linux.SensorWorker, error) {
+//nolint:exhaustruct
+func NewLocationWorker() (*linux.SensorWorker, error) {
 	// Don't run this worker if we are not running on a laptop.
 	if linux.Chassis() != "laptop" {
 		return nil, linux.ErrUnsupportedHardware
 	}
 
-	// Check if we can create a client, bail if we can't.
-	clientPath, err := dbusx.GetData[dbus.ObjectPath](ctx, dbusx.SystemBus, managerPath, geoclueInterface, getClientCall)
-	if !clientPath.IsValid() || err != nil {
-		return nil, fmt.Errorf("could not set up a geoclue client: %w", err)
-	}
-
 	return &linux.SensorWorker{
 			WorkerName: "Location Sensor",
 			WorkerDesc: "Sensor for device location, from GeoClue.",
-			Value: &worker{
-				clientPath: clientPath,
-			},
+			Value:      &worker{},
 		},
 		nil
 }

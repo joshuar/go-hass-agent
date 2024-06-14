@@ -245,7 +245,7 @@ func (w *ioWorker) Sensors(_ context.Context, duration time.Duration) ([]sensor.
 }
 
 //nolint:exhaustruct
-func NewIOWorker(_ context.Context) (*linux.SensorWorker, error) {
+func NewIOWorker() (*linux.SensorWorker, error) {
 	worker := &ioWorker{
 		devices: make(map[diskstats.Device]*sensors),
 	}

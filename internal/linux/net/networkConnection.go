@@ -498,7 +498,7 @@ func (w *connectionsWorker) Events(ctx context.Context) chan sensor.Details {
 }
 
 //nolint:exhaustruct
-func NewConnectionWorker(_ context.Context) (*linux.SensorWorker, error) {
+func NewConnectionWorker() (*linux.SensorWorker, error) {
 	return &linux.SensorWorker{
 			WorkerName: "Network Connection Sensors",
 			WorkerDesc: "Sensors to track network connection states and other connection specific properties.",

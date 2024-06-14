@@ -145,6 +145,9 @@ issues:
       source: "^//go:generate "
     - path: '(.+)_test\.go'
       text: "copies lock value"
+    - linters:
+      - govet
+      text: "lostcancel"
 
 severity:
   default-severity: "@linter"

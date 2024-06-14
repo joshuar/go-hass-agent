@@ -80,7 +80,7 @@ func (w *timeWorker) Sensors(ctx context.Context, _ time.Duration) ([]sensor.Det
 		nil
 }
 
-func NewTimeWorker(_ context.Context) (*linux.SensorWorker, error) {
+func NewTimeWorker() (*linux.SensorWorker, error) {
 	return &linux.SensorWorker{
 			WorkerName: "Time Sensors",
 			WorkerDesc: "Sensors for uptime and boottime.",

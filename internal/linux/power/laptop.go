@@ -91,13 +91,22 @@ type laptopWorker struct {
 }
 
 //nolint:exhaustruct
-func (w *laptopWorker) Setup(_ context.Context) *dbusx.Watch {
-	return &dbusx.Watch{
-		Bus:       dbusx.SystemBus,
-		Names:     []string{dbusx.PropChangedSignal},
-		Interface: managerInterface,
-		Path:      w.sessionPath,
+func (w *laptopWorker) Setup(ctx context.Context) (*dbusx.Watch, error) {
+	// If we can't get a session path, we can't run.
+	sessionPath, err := dbusx.GetSessionPath(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("could not create laptop worker: %w", err)
 	}
+
+	w.sessionPath = sessionPath
+
+	return &dbusx.Watch{
+			Bus:       dbusx.SystemBus,
+			Names:     []string{dbusx.PropChangedSignal},
+			Interface: managerInterface,
+			Path:      w.sessionPath,
+		},
+		nil
 }
 
 func (w *laptopWorker) Watch(ctx context.Context, triggerCh chan dbusx.Trigger) chan sensor.Details {
@@ -161,24 +170,17 @@ func (w *laptopWorker) Sensors(ctx context.Context) ([]sensor.Details, error) {
 	return sensors, nil
 }
 
-func NewLaptopWorker(ctx context.Context) (*linux.SensorWorker, error) {
+//nolint:exhaustruct
+func NewLaptopWorker() (*linux.SensorWorker, error) {
 	// Don't run this worker if we are not running on a laptop.
 	if linux.Chassis() != "laptop" {
 		return nil, linux.ErrUnsupportedHardware
 	}
 
-	// If we can't get a session path, we can't run.
-	sessionPath, err := dbusx.GetSessionPath(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("could not create laptop worker: %w", err)
-	}
-
 	return &linux.SensorWorker{
 			WorkerName: "Laptop State Sensors",
 			WorkerDesc: "Sensors for laptop lid, dock and external power states.",
-			Value: &laptopWorker{
-				sessionPath: sessionPath,
-			},
+			Value:      &laptopWorker{},
 		},
 		nil
 }

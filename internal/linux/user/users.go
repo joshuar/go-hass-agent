@@ -80,13 +80,14 @@ type worker struct {
 }
 
 //nolint:exhaustruct
-func (w *worker) Setup(_ context.Context) *dbusx.Watch {
+func (w *worker) Setup(_ context.Context) (*dbusx.Watch, error) {
 	return &dbusx.Watch{
-		Bus:       dbusx.SystemBus,
-		Names:     []string{sessionAddedSignal, sessionRemovedSignal},
-		Interface: managerInterface,
-		Path:      loginBasePath,
-	}
+			Bus:       dbusx.SystemBus,
+			Names:     []string{sessionAddedSignal, sessionRemovedSignal},
+			Interface: managerInterface,
+			Path:      loginBasePath,
+		},
+		nil
 }
 
 func (w *worker) Watch(ctx context.Context, triggerCh chan dbusx.Trigger) chan sensor.Details {
@@ -133,7 +134,7 @@ func (w *worker) Sensors(ctx context.Context) ([]sensor.Details, error) {
 	return []sensor.Details{w.sensor}, err
 }
 
-func NewUserWorker(_ context.Context) (*linux.SensorWorker, error) {
+func NewUserWorker() (*linux.SensorWorker, error) {
 	return &linux.SensorWorker{
 			WorkerName: "User count sensor",
 			WorkerDesc: "Sensors for number of logged in users.",
