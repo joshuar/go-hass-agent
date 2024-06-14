@@ -515,7 +515,7 @@ func (w *worker) Events(ctx context.Context) chan sensor.Details {
 	return sensor.MergeSensorCh(ctx, sensorCh...)
 }
 
-func NewBatteryWorker(_ context.Context) (*linux.SensorWorker, error) {
+func NewBatteryWorker() (*linux.SensorWorker, error) {
 	return &linux.SensorWorker{
 			WorkerName: "Battery Sensors",
 			WorkerDesc: "Sensors to track connected battery states.",

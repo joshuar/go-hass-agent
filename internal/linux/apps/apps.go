@@ -33,13 +33,14 @@ type worker struct {
 }
 
 //nolint:exhaustruct
-func (w *worker) Setup(_ context.Context) *dbusx.Watch {
+func (w *worker) Setup(_ context.Context) (*dbusx.Watch, error) {
 	return &dbusx.Watch{
-		Bus:       dbusx.SessionBus,
-		Path:      appStateDBusPath,
-		Interface: appStateDBusInterface,
-		Names:     []string{"RunningApplicationsChanged"},
-	}
+			Bus:       dbusx.SessionBus,
+			Path:      appStateDBusPath,
+			Interface: appStateDBusInterface,
+			Names:     []string{"RunningApplicationsChanged"},
+		},
+		nil
 }
 
 func (w *worker) Watch(ctx context.Context, triggerCh chan dbusx.Trigger) chan sensor.Details {
@@ -103,7 +104,7 @@ func (w *worker) Sensors(ctx context.Context) ([]sensor.Details, error) {
 	return sensors, nil
 }
 
-func NewAppWorker(_ context.Context) (*linux.SensorWorker, error) {
+func NewAppWorker() (*linux.SensorWorker, error) {
 	// If we cannot find a portal interface, we cannot monitor the active app.
 	portalDest, err := linux.FindPortal()
 	if err != nil {

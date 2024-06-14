@@ -81,13 +81,14 @@ func newPowerState(signalName powerSignal, signalValue any) *powerStateSensor {
 type stateWorker struct{}
 
 //nolint:exhaustruct
-func (w *stateWorker) Setup(_ context.Context) *dbusx.Watch {
+func (w *stateWorker) Setup(_ context.Context) (*dbusx.Watch, error) {
 	return &dbusx.Watch{
-		Bus:       dbusx.SystemBus,
-		Names:     []string{sleepSignal, shutdownSignal},
-		Interface: managerInterface,
-		Path:      loginBasePath,
-	}
+			Bus:       dbusx.SystemBus,
+			Names:     []string{sleepSignal, shutdownSignal},
+			Interface: managerInterface,
+			Path:      loginBasePath,
+		},
+		nil
 }
 
 func (w *stateWorker) Watch(ctx context.Context, triggerCh chan dbusx.Trigger) chan sensor.Details {
@@ -142,7 +143,7 @@ func (w *stateWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
 	return []sensor.Details{newPowerState(shutdown, false)}, nil
 }
 
-func NewStateWorker(_ context.Context) (*linux.SensorWorker, error) {
+func NewStateWorker() (*linux.SensorWorker, error) {
 	return &linux.SensorWorker{
 			WorkerName: "Power State Sensor",
 			WorkerDesc: "Sensor to track the current power state of the device.",

@@ -7,9 +7,12 @@ package agent
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
 	"github.com/rs/zerolog/log"
 
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/linux/apps"
 	"github.com/joshuar/go-hass-agent/internal/linux/battery"
@@ -27,8 +30,8 @@ import (
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
-// workers is the list of sensor workers supported on Linux.
-var workers = []func(ctx context.Context) (*linux.SensorWorker, error){
+// allworkers is the list of sensor allworkers supported on Linux.
+var allworkers = []func() (*linux.SensorWorker, error){
 	apps.NewAppWorker,
 	battery.NewBatteryWorker,
 	cpu.NewLoadAvgWorker,
@@ -52,27 +55,134 @@ var workers = []func(ctx context.Context) (*linux.SensorWorker, error){
 	user.NewUserWorker,
 }
 
-func newDevice(_ context.Context) *linux.Device {
-	return linux.NewDevice(preferences.AppName, preferences.AppVersion)
+var (
+	ErrWorkerAlreadyStarted = errors.New("worker already started")
+	ErrUnknownWorker        = errors.New("unknown worker")
+)
+
+type workerControl struct {
+	object  Worker
+	control context.CancelFunc
 }
 
-// sensorWorkers initialises the list of workers for sensors and returns those
-// that are supported on this device.
-func sensorWorkers(ctx context.Context) []Worker {
-	activeWorkers := make([]Worker, 0, len(workers))
+type linuxWorkers map[string]*workerControl
 
-	for _, w := range workers {
-		worker, err := w(ctx)
+func (w linuxWorkers) ActiveWorkers() []string {
+	workers := make([]string, 0, len(w))
+
+	for _, worker := range w {
+		if worker.control != nil {
+			workers = append(workers, worker.object.Name())
+		}
+	}
+
+	return workers
+}
+
+func (w linuxWorkers) InactiveWorkers() []string {
+	workers := make([]string, 0, len(w))
+
+	for _, worker := range w {
+		if worker.control == nil {
+			workers = append(workers, worker.object.Name())
+		}
+	}
+
+	return workers
+}
+
+func (w linuxWorkers) Start(ctx context.Context, name string) (<-chan sensor.Details, error) {
+	if worker, ok := w[name]; ok {
+		if worker.control != nil {
+			return nil, ErrWorkerAlreadyStarted
+		}
+
+		workerCtx, workerCancelFunc := context.WithCancel(ctx)
+
+		workerCh, err := w[name].object.Updates(workerCtx)
 		if err != nil {
-			log.Debug().Err(err).Msg("Could not activate a worker.")
+			return nil, fmt.Errorf("could not start worker: %w", err)
+		}
+
+		w[name].control = workerCancelFunc
+
+		return workerCh, nil
+	}
+
+	return nil, ErrUnknownWorker
+}
+
+func (w linuxWorkers) Stop(name string) error {
+	var worker *workerControl
+
+	var exists bool
+
+	if worker, exists = w[name]; !exists {
+		return ErrUnknownWorker
+	}
+
+	worker.control()
+
+	return nil
+}
+
+func (w linuxWorkers) StartAll(ctx context.Context) (<-chan sensor.Details, error) {
+	outCh := make([]<-chan sensor.Details, 0, len(allworkers))
+
+	var allerr error
+
+	log.Debug().Msg("Starting all Linux workers.")
+
+	for name, worker := range w {
+		workerCtx, cancelFunc := context.WithCancel(ctx)
+
+		log.Debug().Str("name", name).Str("description", worker.object.Description()).Msg("Starting sensor worker.")
+
+		workerCh, err := worker.object.Updates(workerCtx)
+		if err != nil {
+			allerr = errors.Join(allerr, err)
 
 			continue
 		}
 
-		activeWorkers = append(activeWorkers, worker)
+		outCh = append(outCh, workerCh)
+		worker.control = cancelFunc
 	}
 
-	return activeWorkers
+	return sensor.MergeSensorCh(ctx, outCh...), allerr
+}
+
+func (w linuxWorkers) StopAll() error {
+	for _, worker := range w {
+		worker.control()
+	}
+
+	return nil
+}
+
+func newDevice(_ context.Context) *linux.Device {
+	return linux.NewDevice(preferences.AppName, preferences.AppVersion)
+}
+
+// createSensorWorkers initialises the list of workers for sensors and returns those
+// that are supported on this device.
+//
+//nolint:exhaustruct
+func createSensorWorkers() WorkerController {
+	workers := make(linuxWorkers)
+
+	for _, w := range allworkers {
+		worker, err := w()
+		if err != nil {
+			log.Debug().Err(err).Msg("Could not initialise worker.")
+
+			continue
+		}
+
+		workers[worker.Name()] = &workerControl{object: worker}
+	}
+
+	return workers
 }
 
 // setupDeviceContext returns a new Context that contains the D-Bus API.

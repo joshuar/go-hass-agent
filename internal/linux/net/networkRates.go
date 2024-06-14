@@ -154,7 +154,7 @@ func (w *ratesWorker) Sensors(ctx context.Context, duration time.Duration) ([]se
 	return []sensor.Details{w.bytesRx, w.bytesTx, w.bytesRxRate, w.bytesTxRate}, nil
 }
 
-func NewRatesWorker(_ context.Context) (*linux.SensorWorker, error) {
+func NewRatesWorker() (*linux.SensorWorker, error) {
 	return &linux.SensorWorker{
 			WorkerName: "Network Rates Sensors",
 			WorkerDesc: "Network transfer amount and speed sensors.",

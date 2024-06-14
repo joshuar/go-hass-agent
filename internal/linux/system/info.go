@@ -49,7 +49,7 @@ func (w *infoWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
 		nil
 }
 
-func NewInfoWorker(_ context.Context) (*linux.SensorWorker, error) {
+func NewInfoWorker() (*linux.SensorWorker, error) {
 	return &linux.SensorWorker{
 			WorkerName: "System Info Sensors",
 			WorkerDesc: "Sensors for kernel version, and Distribution name and version.",

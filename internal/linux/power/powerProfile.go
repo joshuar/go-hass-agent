@@ -44,13 +44,14 @@ func newPowerSensor(sensorType linux.SensorTypeValue, sensorValue dbus.Variant) 
 type profileWorker struct{}
 
 //nolint:exhaustruct
-func (w *profileWorker) Setup(_ context.Context) *dbusx.Watch {
+func (w *profileWorker) Setup(_ context.Context) (*dbusx.Watch, error) {
 	return &dbusx.Watch{
-		Bus:       dbusx.SystemBus,
-		Names:     []string{dbusx.PropChangedSignal},
-		Interface: dbusx.PropInterface,
-		Path:      powerProfilesPath,
-	}
+			Bus:       dbusx.SystemBus,
+			Names:     []string{dbusx.PropChangedSignal},
+			Interface: dbusx.PropInterface,
+			Path:      powerProfilesPath,
+		},
+		nil
 }
 
 func (w *profileWorker) Watch(ctx context.Context, triggerCh chan dbusx.Trigger) chan sensor.Details {
@@ -111,7 +112,7 @@ func (w *profileWorker) Sensors(ctx context.Context) ([]sensor.Details, error) {
 	return []sensor.Details{newPowerSensor(linux.SensorPowerProfile, profile)}, nil
 }
 
-func NewProfileWorker(_ context.Context) (*linux.SensorWorker, error) {
+func NewProfileWorker() (*linux.SensorWorker, error) {
 	return &linux.SensorWorker{
 			WorkerName: "Power Profile Sensor",
 			WorkerDesc: "Sensor to track the current power profile.",

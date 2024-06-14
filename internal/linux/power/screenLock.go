@@ -51,13 +51,21 @@ type screenLockWorker struct {
 }
 
 //nolint:exhaustruct
-func (w *screenLockWorker) Setup(_ context.Context) *dbusx.Watch {
-	return &dbusx.Watch{
-		Bus:       dbusx.SystemBus,
-		Names:     []string{sessionLockSignal, sessionUnlockSignal, sessionLockedProp},
-		Interface: sessionInterface,
-		Path:      w.sessionPath,
+func (w *screenLockWorker) Setup(ctx context.Context) (*dbusx.Watch, error) {
+	sessionPath, err := dbusx.GetSessionPath(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("could not create screen lock worker: %w", err)
 	}
+
+	w.sessionPath = sessionPath
+
+	return &dbusx.Watch{
+			Bus:       dbusx.SystemBus,
+			Names:     []string{sessionLockSignal, sessionUnlockSignal, sessionLockedProp},
+			Interface: sessionInterface,
+			Path:      w.sessionPath,
+		},
+		nil
 }
 
 func (w *screenLockWorker) Watch(ctx context.Context, triggerCh chan dbusx.Trigger) chan sensor.Details {
@@ -101,18 +109,12 @@ func (w *screenLockWorker) Sensors(_ context.Context) ([]sensor.Details, error) 
 	return nil, linux.ErrUnimplemented
 }
 
-func NewScreenLockWorker(ctx context.Context) (*linux.SensorWorker, error) {
-	sessionPath, err := dbusx.GetSessionPath(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("could not create screen lock worker: %w", err)
-	}
-
+//nolint:exhaustruct
+func NewScreenLockWorker() (*linux.SensorWorker, error) {
 	return &linux.SensorWorker{
 			WorkerName: "Screen Lock Sensor",
 			WorkerDesc: "Sensor to track whether the screen is currently locked.",
-			Value: &screenLockWorker{
-				sessionPath: sessionPath,
-			},
+			Value:      &screenLockWorker{},
 		},
 		nil
 }
