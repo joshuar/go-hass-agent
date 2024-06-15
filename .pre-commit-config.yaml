@@ -1,0 +1,10 @@
+# Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
+# 
+# This software is released under the MIT License.
+# https://opensource.org/licenses/MIT
+
+repos:
+  - repo: https://github.com/golangci/golangci-lint
+    rev: v1.59.1
+    hooks:
+      - id: golangci-lint-full
