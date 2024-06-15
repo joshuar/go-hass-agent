@@ -17,7 +17,6 @@ import (
 	"time"
 
 	"github.com/go-resty/resty/v2"
-	"github.com/stretchr/testify/require"
 )
 
 var mockDevInfo = &DeviceInfoMock{
@@ -67,10 +66,14 @@ var setupTestCtx = func(t *testing.T, response Response) context.Context {
 		}
 		if err != nil {
 			_, err := responseWriter.Write(json.RawMessage(`{"success":false}`))
-			require.NoError(t, err)
+			if err != nil {
+				t.Fatal(err)
+			}
 		} else {
 			_, err := responseWriter.Write(resp)
-			require.NoError(t, err)
+			if err != nil {
+				t.Fatal(err)
+			}
 		}
 	}))
 	ctx = ContextSetURL(ctx, server.URL)

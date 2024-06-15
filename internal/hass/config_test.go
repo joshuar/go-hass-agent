@@ -145,7 +145,9 @@ func TestGetConfig(t *testing.T) {
 
 	mockServer := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, _ *http.Request) {
 		_, err = fmt.Fprint(response, string(testConfigJSON))
-		require.NoError(t, err)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}))
 
 	preferences.SetPath(t.TempDir())

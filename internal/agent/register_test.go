@@ -15,8 +15,6 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
@@ -166,15 +164,23 @@ func TestAgent_performRegistration(t *testing.T) {
 
 	mockGoodReponse := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		mockResponse, err := json.Marshal(&hass.RegistrationDetails{WebhookID: "someID"})
-		require.NoError(t, err)
+		if err != nil {
+			t.Fatal(err)
+		}
 		_, err = fmt.Fprint(w, string(mockResponse))
-		require.NoError(t, err)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}))
 	mockBadResponse := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		mockResponse, err := json.Marshal(&hass.RegistrationDetails{})
-		require.NoError(t, err)
+		if err != nil {
+			t.Fatal(err)
+		}
 		_, err = fmt.Fprint(w, string(mockResponse))
-		require.NoError(t, err)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}))
 
 	type fields struct {
