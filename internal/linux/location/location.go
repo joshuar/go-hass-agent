@@ -47,7 +47,7 @@ type worker struct {
 }
 
 //nolint:exhaustruct
-func (w *worker) Setup(ctx context.Context) (*dbusx.Watch, error) {
+func (w *worker) setup(ctx context.Context) (*dbusx.Watch, error) {
 	var err error
 
 	// Check if we can create a client, bail if we can't.
@@ -88,8 +88,22 @@ func (w *worker) Setup(ctx context.Context) (*dbusx.Watch, error) {
 		nil
 }
 
-func (w *worker) Watch(ctx context.Context, triggerCh chan dbusx.Trigger) chan sensor.Details {
+func (w *worker) Events(ctx context.Context) (chan sensor.Details, error) {
 	sensorCh := make(chan sensor.Details)
+
+	watch, err := w.setup(ctx)
+	if err != nil {
+		close(sensorCh)
+
+		return sensorCh, fmt.Errorf("could not setup D-Bus watch for location updates: %w", err)
+	}
+
+	triggerCh, err := dbusx.WatchBus(ctx, watch)
+	if err != nil {
+		close(sensorCh)
+
+		return sensorCh, fmt.Errorf("could not watch D-Bus for location updates: %w", err)
+	}
 
 	go func() {
 		defer close(sensorCh)
@@ -115,7 +129,7 @@ func (w *worker) Watch(ctx context.Context, triggerCh chan dbusx.Trigger) chan s
 		}
 	}()
 
-	return sensorCh
+	return sensorCh, nil
 }
 
 func (w *worker) Sensors(_ context.Context) ([]sensor.Details, error) {
@@ -126,7 +140,7 @@ func (w *worker) Sensors(_ context.Context) ([]sensor.Details, error) {
 func NewLocationWorker() (*linux.SensorWorker, error) {
 	// Don't run this worker if we are not running on a laptop.
 	if linux.Chassis() != "laptop" {
-		return nil, linux.ErrUnsupportedHardware
+		return nil, fmt.Errorf("will not start location sensor: %w", linux.ErrUnsupportedHardware)
 	}
 
 	return &linux.SensorWorker{

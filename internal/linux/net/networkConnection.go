@@ -8,6 +8,7 @@ package net
 
 import (
 	"context"
+	"fmt"
 	"slices"
 	"sync"
 
@@ -432,7 +433,7 @@ func (w *connectionsWorker) Sensors(_ context.Context) ([]sensor.Details, error)
 }
 
 //nolint:exhaustruct,mnd
-func (w *connectionsWorker) Events(ctx context.Context) chan sensor.Details {
+func (w *connectionsWorker) Events(ctx context.Context) (chan sensor.Details, error) {
 	sensorCh := make(chan sensor.Details)
 	w.list = getActiveConnections(ctx)
 	handleConn := func(path dbus.ObjectPath) {
@@ -453,11 +454,9 @@ func (w *connectionsWorker) Events(ctx context.Context) chan sensor.Details {
 		Interface: dbusNMActiveConnIntr,
 	})
 	if err != nil {
-		log.Debug().Err(err).
-			Msg("Failed to create network connections D-Bus watch.")
 		close(sensorCh)
 
-		return sensorCh
+		return sensorCh, fmt.Errorf("failed to create network connections D-Bus watch: %w", err)
 	}
 
 	go func() {
@@ -494,7 +493,7 @@ func (w *connectionsWorker) Events(ctx context.Context) chan sensor.Details {
 		handleConn(path)
 	}
 
-	return sensorCh
+	return sensorCh, nil
 }
 
 //nolint:exhaustruct

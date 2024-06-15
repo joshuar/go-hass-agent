@@ -8,6 +8,7 @@ package power
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/rs/zerolog/log"
 
@@ -81,18 +82,20 @@ func newPowerState(signalName powerSignal, signalValue any) *powerStateSensor {
 type stateWorker struct{}
 
 //nolint:exhaustruct
-func (w *stateWorker) Setup(_ context.Context) (*dbusx.Watch, error) {
-	return &dbusx.Watch{
-			Bus:       dbusx.SystemBus,
-			Names:     []string{sleepSignal, shutdownSignal},
-			Interface: managerInterface,
-			Path:      loginBasePath,
-		},
-		nil
-}
-
-func (w *stateWorker) Watch(ctx context.Context, triggerCh chan dbusx.Trigger) chan sensor.Details {
+func (w *stateWorker) Events(ctx context.Context) (chan sensor.Details, error) {
 	sensorCh := make(chan sensor.Details)
+
+	triggerCh, err := dbusx.WatchBus(ctx, &dbusx.Watch{
+		Bus:       dbusx.SystemBus,
+		Names:     []string{sleepSignal, shutdownSignal},
+		Interface: managerInterface,
+		Path:      loginBasePath,
+	})
+	if err != nil {
+		close(sensorCh)
+
+		return sensorCh, fmt.Errorf("could not watch D-Bus for power state updates: %w", err)
+	}
 
 	// Watch for state changes.
 	go func() {
@@ -133,7 +136,7 @@ func (w *stateWorker) Watch(ctx context.Context, triggerCh chan dbusx.Trigger) c
 		}
 	}()
 
-	return sensorCh
+	return sensorCh, nil
 }
 
 // Sensors returns the current sensors states. Assuming that if this is called,

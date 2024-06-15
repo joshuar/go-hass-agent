@@ -86,31 +86,31 @@ func newLaptopEvent(prop string, state bool) *laptopSensor {
 	return sensorEvent
 }
 
-type laptopWorker struct {
-	sessionPath string
-}
+type laptopWorker struct{}
 
-//nolint:exhaustruct
-func (w *laptopWorker) Setup(ctx context.Context) (*dbusx.Watch, error) {
+//nolint:cyclop,exhaustruct
+func (w *laptopWorker) Events(ctx context.Context) (chan sensor.Details, error) {
+	sensorCh := make(chan sensor.Details)
+
 	// If we can't get a session path, we can't run.
 	sessionPath, err := dbusx.GetSessionPath(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("could not create laptop worker: %w", err)
+		close(sensorCh)
+
+		return sensorCh, fmt.Errorf("could not create laptop worker: %w", err)
 	}
 
-	w.sessionPath = sessionPath
+	triggerCh, err := dbusx.WatchBus(ctx, &dbusx.Watch{
+		Bus:       dbusx.SystemBus,
+		Names:     []string{dbusx.PropChangedSignal},
+		Interface: managerInterface,
+		Path:      sessionPath,
+	})
+	if err != nil {
+		close(sensorCh)
 
-	return &dbusx.Watch{
-			Bus:       dbusx.SystemBus,
-			Names:     []string{dbusx.PropChangedSignal},
-			Interface: managerInterface,
-			Path:      w.sessionPath,
-		},
-		nil
-}
-
-func (w *laptopWorker) Watch(ctx context.Context, triggerCh chan dbusx.Trigger) chan sensor.Details {
-	sensorCh := make(chan sensor.Details)
+		return sensorCh, fmt.Errorf("could not watch D-Bus for laptop updates: %w", err)
+	}
 
 	go func() {
 		defer close(sensorCh)
@@ -150,7 +150,7 @@ func (w *laptopWorker) Watch(ctx context.Context, triggerCh chan dbusx.Trigger) 
 		}
 	}()
 
-	return sensorCh
+	return sensorCh, nil
 }
 
 func (w *laptopWorker) Sensors(ctx context.Context) ([]sensor.Details, error) {
@@ -170,11 +170,10 @@ func (w *laptopWorker) Sensors(ctx context.Context) ([]sensor.Details, error) {
 	return sensors, nil
 }
 
-//nolint:exhaustruct
 func NewLaptopWorker() (*linux.SensorWorker, error) {
 	// Don't run this worker if we are not running on a laptop.
 	if linux.Chassis() != "laptop" {
-		return nil, linux.ErrUnsupportedHardware
+		return nil, fmt.Errorf("will not create laptop sensors: %w", linux.ErrUnsupportedHardware)
 	}
 
 	return &linux.SensorWorker{

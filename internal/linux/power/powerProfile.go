@@ -44,32 +44,33 @@ func newPowerSensor(sensorType linux.SensorTypeValue, sensorValue dbus.Variant) 
 type profileWorker struct{}
 
 //nolint:exhaustruct
-func (w *profileWorker) Setup(_ context.Context) (*dbusx.Watch, error) {
-	return &dbusx.Watch{
-			Bus:       dbusx.SystemBus,
-			Names:     []string{dbusx.PropChangedSignal},
-			Interface: dbusx.PropInterface,
-			Path:      powerProfilesPath,
-		},
-		nil
-}
-
-func (w *profileWorker) Watch(ctx context.Context, triggerCh chan dbusx.Trigger) chan sensor.Details {
+func (w *profileWorker) Events(ctx context.Context) (chan sensor.Details, error) {
 	sensorCh := make(chan sensor.Details)
 
 	// Check for power profile support, exit if not available. Otherwise, send
 	// an initial update.
 	sensors, err := w.Sensors(ctx)
 	if err != nil {
-		log.Warn().Err(err).Msg("Cannot monitor power profile.")
 		close(sensorCh)
 
-		return sensorCh
+		return sensorCh, fmt.Errorf("cannot retrieve power profile: %w", err)
 	}
 
 	go func() {
 		sensorCh <- sensors[0]
 	}()
+
+	triggerCh, err := dbusx.WatchBus(ctx, &dbusx.Watch{
+		Bus:       dbusx.SystemBus,
+		Names:     []string{dbusx.PropChangedSignal},
+		Interface: dbusx.PropInterface,
+		Path:      powerProfilesPath,
+	})
+	if err != nil {
+		close(sensorCh)
+
+		return sensorCh, fmt.Errorf("could not watch D-Bus for power profile updates: %w", err)
+	}
 
 	// Watch for power profile changes.
 	go func() {
@@ -96,7 +97,7 @@ func (w *profileWorker) Watch(ctx context.Context, triggerCh chan dbusx.Trigger)
 		}
 	}()
 
-	return sensorCh
+	return sensorCh, nil
 }
 
 func (w *profileWorker) Sensors(ctx context.Context) ([]sensor.Details, error) {
