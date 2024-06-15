@@ -15,7 +15,7 @@
     "features": {
         "ghcr.io/devcontainers/features/go:1": {},
         "ghcr.io/devcontainers/features/python:1": {},
-        "ghcr.io/devcontainers/features/github-cli:1": {},
+        "ghcr.io/devcontainers/features/github-cli:1": {}
     },
     "postCreateCommand": ".devcontainer/postCreate.sh",
     "customizations": {
