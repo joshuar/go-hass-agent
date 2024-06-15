@@ -42,18 +42,20 @@ type desktopSettingSensor struct {
 type worker struct{}
 
 //nolint:exhaustruct
-func (w *worker) Setup(_ context.Context) (*dbusx.Watch, error) {
-	return &dbusx.Watch{
-			Bus:       dbusx.SessionBus,
-			Names:     []string{settingsChangedSignal},
-			Interface: settingsPortalInterface,
-			Path:      desktopPortalPath,
-		},
-		nil
-}
-
-func (w *worker) Watch(ctx context.Context, triggerCh chan dbusx.Trigger) chan sensor.Details {
+func (w *worker) Events(ctx context.Context) (chan sensor.Details, error) {
 	sensorCh := make(chan sensor.Details)
+
+	triggerCh, err := dbusx.WatchBus(ctx, &dbusx.Watch{
+		Bus:       dbusx.SessionBus,
+		Names:     []string{settingsChangedSignal},
+		Interface: settingsPortalInterface,
+		Path:      desktopPortalPath,
+	})
+	if err != nil {
+		close(sensorCh)
+
+		return sensorCh, fmt.Errorf("could not watch D-Bus for desktop settings updates: %w", err)
+	}
 
 	go func() {
 		defer close(sensorCh)
@@ -94,7 +96,7 @@ func (w *worker) Watch(ctx context.Context, triggerCh chan dbusx.Trigger) chan s
 		}
 	}()
 
-	return sensorCh
+	return sensorCh, nil
 }
 
 //nolint:mnd

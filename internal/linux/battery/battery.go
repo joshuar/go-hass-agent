@@ -494,7 +494,7 @@ func (w *worker) Sensors(_ context.Context) ([]sensor.Details, error) {
 }
 
 //nolint:prealloc
-func (w *worker) Events(ctx context.Context) chan sensor.Details {
+func (w *worker) Events(ctx context.Context) (chan sensor.Details, error) {
 	batteryTracker := newBatteryTracker()
 
 	var sensorCh []<-chan sensor.Details
@@ -512,7 +512,7 @@ func (w *worker) Events(ctx context.Context) chan sensor.Details {
 	// Monitor for battery added/removed signals.
 	sensorCh = append(sensorCh, monitorBatteryChanges(ctx, batteryTracker))
 
-	return sensor.MergeSensorCh(ctx, sensorCh...)
+	return sensor.MergeSensorCh(ctx, sensorCh...), nil
 }
 
 func NewBatteryWorker() (*linux.SensorWorker, error) {

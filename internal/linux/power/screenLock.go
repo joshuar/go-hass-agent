@@ -46,30 +46,29 @@ func newScreenlockEvent(value bool) *screenlockSensor {
 	}
 }
 
-type screenLockWorker struct {
-	sessionPath string
-}
+type screenLockWorker struct{}
 
-//nolint:exhaustruct
-func (w *screenLockWorker) Setup(ctx context.Context) (*dbusx.Watch, error) {
+//nolint:cyclop,exhaustruct
+func (w *screenLockWorker) Events(ctx context.Context) (chan sensor.Details, error) {
+	sensorCh := make(chan sensor.Details)
+
 	sessionPath, err := dbusx.GetSessionPath(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not create screen lock worker: %w", err)
 	}
 
-	w.sessionPath = sessionPath
+	triggerCh, err := dbusx.WatchBus(ctx, &dbusx.Watch{
+		Bus:       dbusx.SystemBus,
+		Names:     []string{sessionLockSignal, sessionUnlockSignal, sessionLockedProp},
+		Interface: sessionInterface,
+		Path:      sessionPath,
+	})
+	if err != nil {
+		close(sensorCh)
 
-	return &dbusx.Watch{
-			Bus:       dbusx.SystemBus,
-			Names:     []string{sessionLockSignal, sessionUnlockSignal, sessionLockedProp},
-			Interface: sessionInterface,
-			Path:      w.sessionPath,
-		},
-		nil
-}
+		return sensorCh, fmt.Errorf("could not watch D-Bus for screen lock updates: %w", err)
+	}
 
-func (w *screenLockWorker) Watch(ctx context.Context, triggerCh chan dbusx.Trigger) chan sensor.Details {
-	sensorCh := make(chan sensor.Details)
 	go func() {
 		defer close(sensorCh)
 
@@ -101,7 +100,7 @@ func (w *screenLockWorker) Watch(ctx context.Context, triggerCh chan dbusx.Trigg
 		}
 	}()
 
-	return sensorCh
+	return sensorCh, nil
 }
 
 // ?: retrieve the current screen lock state when called.
@@ -109,7 +108,6 @@ func (w *screenLockWorker) Sensors(_ context.Context) ([]sensor.Details, error) 
 	return nil, linux.ErrUnimplemented
 }
 
-//nolint:exhaustruct
 func NewScreenLockWorker() (*linux.SensorWorker, error) {
 	return &linux.SensorWorker{
 			WorkerName: "Screen Lock Sensor",

@@ -33,18 +33,20 @@ type worker struct {
 }
 
 //nolint:exhaustruct
-func (w *worker) Setup(_ context.Context) (*dbusx.Watch, error) {
-	return &dbusx.Watch{
-			Bus:       dbusx.SessionBus,
-			Path:      appStateDBusPath,
-			Interface: appStateDBusInterface,
-			Names:     []string{"RunningApplicationsChanged"},
-		},
-		nil
-}
-
-func (w *worker) Watch(ctx context.Context, triggerCh chan dbusx.Trigger) chan sensor.Details {
+func (w *worker) Events(ctx context.Context) (chan sensor.Details, error) {
 	sensorCh := make(chan sensor.Details)
+
+	triggerCh, err := dbusx.WatchBus(ctx, &dbusx.Watch{
+		Bus:       dbusx.SessionBus,
+		Path:      appStateDBusPath,
+		Interface: appStateDBusInterface,
+		Names:     []string{"RunningApplicationsChanged"},
+	})
+	if err != nil {
+		close(sensorCh)
+
+		return sensorCh, fmt.Errorf("could not watch D-Bus for app state events: %w", err)
+	}
 
 	sendSensors := func(ctx context.Context, sensorCh chan sensor.Details) {
 		appSensors, err := w.Sensors(ctx)
@@ -80,7 +82,7 @@ func (w *worker) Watch(ctx context.Context, triggerCh chan dbusx.Trigger) chan s
 		sendSensors(ctx, sensorCh)
 	}()
 
-	return sensorCh
+	return sensorCh, nil
 }
 
 func (w *worker) Sensors(ctx context.Context) ([]sensor.Details, error) {
