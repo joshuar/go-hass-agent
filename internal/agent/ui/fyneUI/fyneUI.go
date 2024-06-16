@@ -3,6 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
+//revive:disable:comment-spacings
 package fyneui
 
 import (
@@ -35,11 +36,15 @@ import (
 )
 
 var (
-	ErrInvalidURL = errors.New(ui.InvalidURLMsgString) //nolint:stylecheck
-
-	ErrInvalidURI = errors.New(ui.InvalidURIMsgString) //nolint:stylecheck
-
-	ErrInvalidHostPort = errors.New(ui.InvalidHostPortMsgString) //nolint:stylecheck
+	//nolint:stylecheck
+	//lint:ignore ST1005 these are not standard error messages
+	ErrInvalidURL = errors.New(ui.InvalidURLMsgString)
+	//nolint:stylecheck
+	//lint:ignore ST1005 these are not standard error messages
+	ErrInvalidURI = errors.New(ui.InvalidURIMsgString)
+	//nolint:stylecheck
+	//lint:ignore ST1005 these are not standard error messages
+	ErrInvalidHostPort = errors.New(ui.InvalidHostPortMsgString)
 )
 
 type FyneUI struct {
@@ -568,7 +573,8 @@ func uriValidator() fyne.StringValidator {
 // hostPortValidator is a custom fyne validator that will validate a string is a
 // valid hostname:port combination.
 //
-//nolint:err113,unused
+//nolint:err113
+//lint:ignore U1000 keeping this around just in case
 func hostPortValidator(msg string) fyne.StringValidator {
 	var errMsg error
 	if msg != "" {
