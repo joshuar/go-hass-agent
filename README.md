@@ -70,6 +70,7 @@
   - [Running “Headless”](#running-headless)
   - [Running in a container](#running-in-a-container)
   - [Regular Usage](#regular-usage)
+  - [Configuration Location](#configuration-location)
   - [Script Sensors](#script-sensors)
     - [Requirements](#requirements)
     - [Supported Scripting Languages](#supported-scripting-languages)
@@ -80,11 +81,12 @@
         - [TOML](#toml)
     - [Schedule](#schedule)
     - [Security Implications](#security-implications)
-  - [Control via MQTT](#control-via-mqtt)
+  - [Controls (via MQTT)](#controls-via-mqtt)
     - [Requirements](#requirements-1)
     - [Configuration](#configuration)
     - [Available Controls](#available-controls)
-    - [Arbitrary D-BUS commands](#arbitrary-d-bus-commands)
+    - [Custom D-BUS Controls](#custom-d-bus-controls)
+    - [Other Custom Commands](#other-custom-commands)
     - [Security Implications](#security-implications-1)
 - [:compass: Roadmap](#compass-roadmap)
 - [:wave: Contributing](#wave-contributing)
@@ -112,9 +114,9 @@
 |--------|------------------|--------|-------------------|-------------------|
 | Agent Version | The version of Go Hass Agent |  | | On agent start. |
 | Active App | Currently active (focused) application | D-Bus | | When app changes. |
-| Running Apps | Count of all running applications | D-Bus | The application names | When running apps count changes. | 
-| Accent Color  | The hex code representing the accent color of the desktop environment in use. | D-Bus | | When accent color changes. | 
-| Theme Type  | Whether a dark or light desktop theme is detected. | D-Bus | | When desktop theme changes. | 
+| Running Apps | Count of all running applications | D-Bus | The application names | When running apps count changes. |
+| Accent Color  | The hex code representing the accent color of the desktop environment in use. | D-Bus | | When accent color changes. |
+| Theme Type  | Whether a dark or light desktop theme is detected. | D-Bus | | When desktop theme changes. |
 | Battery Type | The type of battery (e.g., UPS, line power) | D-Bus | | On battery addeded/removed. |
 | Battery Temp | The current battery temperature | D-Bus | | When temp changes. |
 | Battery Power | The battery current power draw | D-Bus | Voltage, Energy consumption, where reported | When voltage changes. |
@@ -132,7 +134,7 @@
 | Device total read/writes and rates | Count of read/writes, Rate (in KB/s) of reads/writes, to the device. | SysFS | | ~Every 5 seconds. |
 | Connection State (per-connection) | The current state of each network connection | D-Bus | Connection type (e.g., wired/wireless/VPN), IP addresses | When connections change. |
 | Wi-Fi SSID[^1] | The SSID of the Wi-Fi network | D-Bus | | When SSID changes. |
-| Wi-Fi Frequency[^1] | The frequency band of the Wi-Fi network | D-Bus | | When frequency changes. | 
+| Wi-Fi Frequency[^1] | The frequency band of the Wi-Fi network | D-Bus | | When frequency changes. |
 | Wi-Fi Speed[^1] | The network speed of the Wi-Fi network | D-Bus | | When speed changes. |
 | Wi-Fi Strength[^1] | The strength of the signal of the Wi-Fi network | D-Bus | | When strength changes. |
 | Wi-Fi BSSID[^1] | The BSSID of the Wi-Fi network | D-Bus | | When BSSID changes. |
@@ -351,6 +353,18 @@ parts of Home Assistant.
 
 [![Open your Home Assistant instance to the mobile_app integration.](https://my.home-assistant.io/badges/integration.svg)](https://my.home-assistant.io/redirect/integration/?domain=mobile_app)
 
+### Configuration Location
+
+The configuration is located in a file called `preferences.toml` in
+`CONFIG_HOME/com.github.joshuar.go-hass-agent/` where `CONFIG_HOME` will be:
+
+-`~/.config` for Linux.
+- `~/Library/Application Support` for OSX.
+- `LocalAppData` for Windows.
+
+While the configuration can be edited manually, it is recommended to let the
+agent manage this file.
+
 ### Script Sensors
 
 Go Hass Agent supports utilising scripts to create sensors. In this way, you can
@@ -363,17 +377,16 @@ run on its own schedule, specified using a Cron-like syntax.
 
 #### Requirements
 
-- Scripts need to be put in
-  `CONFIG_HOME/com.github.joshuar.go-hass-agent/scripts/` where `CONFIG_HOME`
-  will be:
-  - `~/.config` for Linux.
-  - `~/Library/Application Support` for OSX.
-  - `LocalAppData` for Windows.
+- Scripts need to be put in a `scripts` folder under the configuration directory
+  (see [Configuration Location](#configuration-location).
 - You can use symlinks, if supported by your Operating System.
 - Script files need to be executable by the user running Go Hass Agent.
 - Scripts need to run without any user interaction.
 - Scripts need to output either valid JSON, YAML or TOML. See [Output
   Format](#output-format) for details.
+- Commands do not invoke the system shell and does not support expansion/glob
+  patterns or handle other expansions, pipelines, or redirections typicaly done
+  by shells.
 
 #### Supported Scripting Languages
 
@@ -538,15 +551,17 @@ and understand what the script does and all possible outputs that the script can
 produce. Scripts are run by the agent and have the permissions of the user
 running the agent. Script output is sent to your Home Assistant instance.
 
-### Control via MQTT
+### Controls (via MQTT)
 
 > [!NOTE]
 > Control via MQTT is not enabled by default.
 
 If Home Assistant is connected to
 [MQTT](https://www.home-assistant.io/integrations/mqtt/), you can also configure
-Go Hass Agent to connect to MQTT, which will then allow you to run some commands
-from Home Assistant to control the device running the agent.
+Go Hass Agent to connect to MQTT, which will then expose some controls in Home
+Assistant to control the device running the agent. Additionally, you can
+configure your own custom controls to run either [D-Bus
+commands](#custom-d-bus-controls) or [scripts and executables](#other-custom-commands).
 
 #### Requirements
 
@@ -596,7 +611,7 @@ service call.
 | Volume Control | Adjust the volume on the default audio output device |
 | Volume Mute | Mute/Unmute the default audio output device |
 
-#### Arbitrary D-BUS commands
+#### Custom D-BUS Controls
 
 The agent will subscribe to the MQTT topic `gohassagent/dbus` on the configured
 MQTT broker and listens for JSON messages of the below format, which will be
@@ -619,6 +634,44 @@ This can be used to trigger arbitrary d-bus commands on the system where the
 agent runs on, by using any MQTT client such as the Home Assistant
 [`mqtt.publish`](https://www.home-assistant.io/integrations/mqtt/#service-mqttpublish)
 service.
+
+#### Other Custom Commands
+
+You can optionally create a `commands.toml` file under the configuration
+directory (see [Configuration Location](#configuration-location) with custom
+commands to be exposed in Home Assistant.
+
+Supported control types:
+
+- [Button](https://www.home-assistant.io/integrations/button.mqtt/).
+
+> [!NOTE]
+> Commands run as the user running the agent. Commands do not invoke the system
+> shell and does not support expansion/glob patterns or handle other expansions,
+> pipelines, or redirections typically done by shells.
+
+Each command needs the following definition in the file:
+
+```toml
+[[control]] # where "control" is one of the control types above.
+name = "my command name" # required. the pretty name of the command that will the control label in Home Assistant.
+exec = "/path/to/command" # required. the path to the command to execute.
+icon = "mdi:something" # optional. the material design icon to use to represent the control in Home Assistant.
+```
+
+The following shows an example that configures two buttons
+in Home Assistant:
+
+```toml
+  [[button]]
+  name = "My Command With an Icon"
+  exec = 'command arg1 arg2 "arg3"'
+  icon = "mdi:chat"
+   
+  [[button]]
+  name = "My Command"
+  exec = "command"
+```
 
 #### Security Implications
 

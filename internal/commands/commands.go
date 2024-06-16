@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 
 	"github.com/eclipse/paho.golang/paho"
 	"github.com/iancoleman/strcase"
@@ -30,21 +31,22 @@ import (
 // ErrNoCommands indicates there were no commands to configure.
 var ErrNoCommands = errors.New("no commands")
 
-// command represents a command to run by a button or switch.
-type command struct {
+// Command represents a Command to run by a button or switch.
+type Command struct {
 	// Name is display name for the command.
-	Name string
+	Name string `toml:"name"`
 	// Exec is the actual binary or script to run.
-	Exec string
+	Exec string `toml:"exec"`
 	// Icon is a material design icon representing the command.
-	Icon string
+	Icon string `toml:"icon,omitempty"`
 }
 
-// list is a list of all the buttons/commands parsed from the config file.
+// CommandList is a CommandList of all the buttons/commands parsed from the config file.
 //
+//nolint:tagalign
 //revive:disable:struct-tag
-type list struct {
-	buttons []command `koanf:"buttons"`
+type CommandList struct {
+	Buttons []Command `toml:"button,omitempty" koanf:"button"`
 	// Switches []Command `koanf:"switches"`
 }
 
@@ -140,9 +142,9 @@ func NewCommandsController(ctx context.Context, commandsFile string, device *mqt
 		return nil, fmt.Errorf("could not load commands file: %w", err)
 	}
 
-	cmds := &list{}
+	cmds := &CommandList{}
 
-	if err := commandsCfg.Unmarshal(".", &cmds); err != nil {
+	if err := commandsCfg.Unmarshal("", &cmds); err != nil {
 		return nil, fmt.Errorf("could not parse commands file: %w", err)
 	}
 
@@ -153,9 +155,9 @@ func NewCommandsController(ctx context.Context, commandsFile string, device *mqt
 
 // newController creates a new MQTT controller to manage a bunch of buttons and
 // switches a user has defined.
-func newController(_ context.Context, device *mqtthass.Device, commands *list) *Controller {
+func newController(_ context.Context, device *mqtthass.Device, commands *CommandList) *Controller {
 	controller := &Controller{
-		buttons: generateButtons(commands.buttons, device),
+		buttons: generateButtons(commands.Buttons, device),
 	}
 
 	return controller
@@ -163,7 +165,7 @@ func newController(_ context.Context, device *mqtthass.Device, commands *list) *
 
 // generateButtons will create MQTT entities for buttons defined by the
 // controller.
-func generateButtons(buttonCmds []command, device *mqtthass.Device) []*mqtthass.ButtonEntity {
+func generateButtons(buttonCmds []Command, device *mqtthass.Device) []*mqtthass.ButtonEntity {
 	var id, icon, name string
 
 	entities := make([]*mqtthass.ButtonEntity, 0, len(buttonCmds))
@@ -181,7 +183,7 @@ func generateButtons(buttonCmds []command, device *mqtthass.Device) []*mqtthass.
 		if cmd.Icon != "" {
 			icon = cmd.Icon
 		} else {
-			icon = "mdi:help"
+			icon = "mdi:button-pointer"
 		}
 
 		entities = append(entities,
@@ -200,7 +202,8 @@ func generateButtons(buttonCmds []command, device *mqtthass.Device) []*mqtthass.
 // expected to accept any input, or produce any consumable output, so only the
 // return value is checked.
 func buttonCmd(command string) error {
-	cmd := exec.Command(command)
+	cmdElems := strings.Split(command, " ")
+	cmd := exec.Command(cmdElems[0], cmdElems[1:]...)
 
 	_, err := cmd.Output()
 	if err != nil {
