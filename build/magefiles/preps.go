@@ -48,7 +48,7 @@ func (Preps) Format() error {
 // Generate ensures all machine-generated files (gotext, stringer, moq, etc.) are up to date.
 func (Preps) Generate() error {
 	for tool, url := range generators {
-		if err := FoundOrInstalled(tool, url); err != nil {
+		if err := foundOrInstalled(tool, url); err != nil {
 			return fmt.Errorf("unable to install %s: %w", tool, err)
 		}
 	}
@@ -69,15 +69,15 @@ func (Preps) Deps() error {
 	}
 
 	if targetArch != "" && targetArch != runtime.GOARCH {
-		if err := SudoWrap("build/scripts/enable-multiarch", targetArch); err != nil {
+		if err := sudoWrap("build/scripts/enable-multiarch", targetArch); err != nil {
 			return fmt.Errorf("unable to enable multiarch for %s: %w", targetArch, err)
 		}
 
-		if err := SudoWrap("build/scripts/install-deps", targetArch, runtime.GOARCH); err != nil {
+		if err := sudoWrap("build/scripts/install-deps", targetArch, runtime.GOARCH); err != nil {
 			return fmt.Errorf("unable to enable multiarch for %s: %w", targetArch, err)
 		}
 	} else {
-		if err := SudoWrap("build/scripts/install-deps", runtime.GOARCH); err != nil {
+		if err := sudoWrap("build/scripts/install-deps", runtime.GOARCH); err != nil {
 			return fmt.Errorf("unable to enable multiarch for %s: %w", targetArch, err)
 		}
 	}

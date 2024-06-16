@@ -17,7 +17,7 @@ type Tests mg.Namespace
 
 // Test runs go test on the project.
 func (Tests) Test() error {
-	ldflags, err := GetFlags()
+	ldflags, err := getFlags()
 	if err != nil {
 		return fmt.Errorf("cannot run test: %w", err)
 	}

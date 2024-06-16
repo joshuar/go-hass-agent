@@ -43,11 +43,11 @@ func (Package) Nfpm() error {
 		return fmt.Errorf("could not create dist directory: %w", err)
 	}
 
-	if err := FoundOrInstalled("nfpm", "github.com/goreleaser/nfpm/v2/cmd/nfpm@latest"); err != nil {
+	if err := foundOrInstalled("nfpm", "github.com/goreleaser/nfpm/v2/cmd/nfpm@latest"); err != nil {
 		return fmt.Errorf("could not install nfpm: %w", err)
 	}
 
-	envMap, err := GenerateEnv()
+	envMap, err := generateEnv()
 	if err != nil {
 		return fmt.Errorf("failed to create environment: %w", err)
 	}
@@ -76,11 +76,11 @@ func (Package) FyneCross() error {
 		return fmt.Errorf("could not create dist directory: %w", err)
 	}
 
-	if err := FoundOrInstalled("fyne-cross", "github.com/fyne-io/fyne-cross@latest"); err != nil {
+	if err := foundOrInstalled("fyne-cross", "github.com/fyne-io/fyne-cross@latest"); err != nil {
 		return fmt.Errorf("failed to install fyne-cross: %w", err)
 	}
 
-	envMap, err := GenerateEnv()
+	envMap, err := generateEnv()
 	if err != nil {
 		return fmt.Errorf("failed to create environment: %w", err)
 	}
