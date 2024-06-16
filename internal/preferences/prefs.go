@@ -3,8 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-// revive:disable:unused-receiver
-
+//revive:disable:unused-receiver,comment-spacings
 package preferences
 
 import (
@@ -31,8 +30,8 @@ const (
 	LogFile           = "go-hass-agent.log"
 )
 
-//nolint:unused
 var (
+	//lint:ignore U1000 some of these will be used in the future
 	gitVersion, gitCommit, gitTreeState, buildDate string
 	AppVersion                                     = gitVersion
 )
