@@ -22,20 +22,30 @@ type Checks mg.Namespace
 
 // Lint runs various static checkers to ensure you follow The Rules(tm).
 func (Checks) Lint() error {
-	slog.Info("Running linter (go vet)...")
+	slog.Info("Running linter (golangci-lint)...")
 
 	if err := sh.RunV("golangci-lint", "run"); err != nil {
 		slog.Warn("Linter reported issues.", "error", err.Error())
 	}
 
-	if err := FoundOrInstalled("staticcheck", "honnef.co/go/tools/cmd/staticcheck@latest"); err != nil {
+	slog.Info("Running linter (staticcheck)...")
+
+	if err := foundOrInstalled("staticcheck", "honnef.co/go/tools/cmd/staticcheck@latest"); err != nil {
 		return fmt.Errorf("could not install staticcheck: %w", err)
 	}
 
-	slog.Info("Running linter (staticcheck)...")
-
 	if err := sh.RunV("staticcheck", "-f", "stylish", "./..."); err != nil {
 		return fmt.Errorf("failed to run staticcheck: %w", err)
+	}
+
+	slog.Info("Running linter (nilaway)...")
+
+	if err := foundOrInstalled("nilaway", "go.uber.org/nilaway/cmd/nilaway@latest"); err != nil {
+		return fmt.Errorf("could not install nilaway: %w", err)
+	}
+
+	if err := sh.RunV("nilaway", "./..."); err != nil {
+		return fmt.Errorf("failed to run nilaway: %w", err)
 	}
 
 	return nil
@@ -54,7 +64,7 @@ func (Checks) Licenses() error {
 	}
 
 	// If go-licenses is missing, install it
-	if err = FoundOrInstalled("go-licenses", "github.com/google/go-licenses@latest"); err != nil {
+	if err = foundOrInstalled("go-licenses", "github.com/google/go-licenses@latest"); err != nil {
 		return fmt.Errorf("could not install go-licenses: %w", err)
 	}
 	// The header sets the columns for the contents

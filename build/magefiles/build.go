@@ -63,12 +63,12 @@ func buildProject() error {
 		return fmt.Errorf("could not create dist directory: %w", err)
 	}
 
-	envMap, err := GenerateEnv()
+	envMap, err := generateEnv()
 	if err != nil {
 		return errors.Join(ErrBuildFailed, err)
 	}
 
-	ldflags, err := GetFlags()
+	ldflags, err := getFlags()
 	if err != nil {
 		return errors.Join(ErrBuildFailed, err)
 	}
