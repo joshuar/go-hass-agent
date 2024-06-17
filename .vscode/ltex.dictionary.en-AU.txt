@@ -5,3 +5,9 @@ variadic
 inode
 goroutine
 ABRT
+D-Bus
+ProcFS
+SysFS
+NetworkManager
+Cron
+cron
