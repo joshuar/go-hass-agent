@@ -1,5 +1,28 @@
 # Changelog
 
+## [9.4.0](https://github.com/joshuar/go-hass-agent/compare/v9.3.0...v9.4.0) (2024-06-17)
+
+
+### Features
+
+* :sparkles: add a framework for allowing sensor workers to be start/stopped ([988626a](https://github.com/joshuar/go-hass-agent/commit/988626a8d7c3f8b44bbd6a37db0a863ee2962531))
+* **agent:** :sparkles: add framework for running user-defined commands via MQTT buttons/switches ([61ff2af](https://github.com/joshuar/go-hass-agent/commit/61ff2af256b4a639e07f80824655c261c4034f5f))
+* **agent:** :sparkles: support ignore URLs registration option on command-line ([17927ed](https://github.com/joshuar/go-hass-agent/commit/17927ed5c69538b04483339c7df50a3bd73daa5b))
+
+
+### Bug Fixes
+
+* :bug: make log-level argument an enum ([abee169](https://github.com/joshuar/go-hass-agent/commit/abee169d53738d88caa40f7eb00b437cf7846b3a))
+* :bug: pass a context to worker creation functions ([aeca410](https://github.com/joshuar/go-hass-agent/commit/aeca41062fa3db781ccc241bf272bd34640dd6a0))
+* **agent:** :art: mqtt commands clean-up ([56c55d2](https://github.com/joshuar/go-hass-agent/commit/56c55d295d4c7e640b43192416639cdabd5ba039))
+* **agent:** :bug: don't bail on registration if no preferences file was found but default preferences were returned ([74b52f1](https://github.com/joshuar/go-hass-agent/commit/74b52f1a5c0af83618d883853b97d0f840831ef1))
+* **agent:** :bug: ensure sensor workers can remain running when running headless ([4fd534b](https://github.com/joshuar/go-hass-agent/commit/4fd534b9133d979527fa85b445ec886707c3f88c))
+* **agent:** :bug: hide worker failure log message behind debug logging as such failures are non-critical ([3c4a4c5](https://github.com/joshuar/go-hass-agent/commit/3c4a4c52c609b6a0597f6c7b8e6b1547285a0e2f))
+* **hass:** :speech_balloon: show a more informative error message when registration inputs validation fails ([57876e4](https://github.com/joshuar/go-hass-agent/commit/57876e46e14ab20fa496e40538f3d2b106c9d72f))
+* **linux:** :sparkles: don't provide a location sensor when not running on a laptop device ([acac8d7](https://github.com/joshuar/go-hass-agent/commit/acac8d74e14f216db3d2ebfe6297114e0365528e))
+* **preferences:** :bug: correctly detect default preferences as not a fatal error ([3297099](https://github.com/joshuar/go-hass-agent/commit/329709911c667d7a55c4d095576f1fd9f99d4613))
+* **translations:** :art: ensure translator uses appropriate language ([c0cd489](https://github.com/joshuar/go-hass-agent/commit/c0cd489bcf42de4f5ab22ddac574e6deb0292e10))
+
 ## [9.3.0](https://github.com/joshuar/go-hass-agent/compare/v9.2.0...v9.3.0) (2024-06-01)
 
 
