@@ -4,7 +4,7 @@
 # https://opensource.org/licenses/MIT
 
 # ARG GO_VERSION=1.22
-FROM golang:1.22 AS builder
+FROM golang@sha256:a8498215385dd85856145845f3caf34923fe5fbb11f3c7c1489ae43c4f263b20 AS builder
 WORKDIR /usr/src/go-hass-agent
 
 # copy the src to the workdir
@@ -16,7 +16,7 @@ RUN mage -v -d build/magefiles -w . preps:deps
 # build the binary
 RUN mage -v -d build/magefiles -w . build:full
 
-FROM ubuntu
+FROM ubuntu@sha256:d11b1797008f48495a888a087b273f6581daef886da9d0bda9023557eff4f070
 # import TARGETARCH
 ARG TARGETARCH
 # copy binary over from builder stage
