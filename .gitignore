@@ -16,6 +16,7 @@
 !/*.yaml
 !/*.yml
 !/*.json
+!/*.toml
 !build/*
 
 !/assets/**/*

@@ -1,0 +1,11 @@
+[[IgnoredVulns]]
+id = "GO-2022-0646"
+reason = "Agent does not use AWS SDK."
+
+[[IgnoredVulns]]
+id = "GO-2024-2698"
+reason = "Agent does not require any archives access."
+
+[[IgnoredVulns]]
+id = "GO-2021-0064"
+reason = "Agent does not use k8s."
