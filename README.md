@@ -162,12 +162,15 @@
 
 #### :robot: Script Sensors (All Platforms)
 
-All platforms can also utilise scripts to create custom sensors. See [scripts](#script-sensors).
+All platforms can also utilise scripts to create custom sensors. See
+[scripts](#script-sensors).
 
 #### :bus: Control via MQTT (All Platforms)
 
 Where Home Assistant is connected to MQTT, Go Hass Agent can add some controls
-for various system features. See [Control via MQTT](#control-via-mqtt).
+for various system features. A selection of device controls are provided by
+default, and you can configure additional controls to execute D-Bus commands or
+scripts/executables. See [Control via MQTT](#controls-via-mqtt).
 
 ### 🤔 Use-cases
 
@@ -356,11 +359,12 @@ parts of Home Assistant.
 ### Configuration Location
 
 The configuration is located in a file called `preferences.toml` in
-`CONFIG_HOME/com.github.joshuar.go-hass-agent/` where `CONFIG_HOME` will be:
+`CONFIG_HOME/com.github.joshuar.go-hass-agent/` where `CONFIG_HOME` will
+OS-dependent:
 
--`~/.config` for Linux.
-- `~/Library/Application Support` for OSX.
-- `LocalAppData` for Windows.
+- Linux: `~/.config`.
+- OSX: `~/Library/Application Support`.
+- Windows: `LocalAppData`.
 
 While the configuration can be edited manually, it is recommended to let the
 agent manage this file.
@@ -641,9 +645,10 @@ You can optionally create a `commands.toml` file under the configuration
 directory (see [Configuration Location](#configuration-location) with custom
 commands to be exposed in Home Assistant.
 
-Supported control types:
+Supported control types and expected input/output:
 
 - [Button](https://www.home-assistant.io/integrations/button.mqtt/).
+  - Output is discarded. Return value is used to indicate success/failure.
 
 > [!NOTE]
 > Commands run as the user running the agent. Commands do not invoke the system
