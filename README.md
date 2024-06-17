@@ -110,55 +110,95 @@
 
 ##### :penguin: Linux
 
-| Sensor | What it measures | Source | Extra Attributes | Update Frequency |
-|--------|------------------|--------|-------------------|-------------------|
-| Agent Version | The version of Go Hass Agent |  | | On agent start. |
-| Active App | Currently active (focused) application | D-Bus | | When app changes. |
-| Running Apps | Count of all running applications | D-Bus | The application names | When running apps count changes. |
-| Accent Color  | The hex code representing the accent color of the desktop environment in use. | D-Bus | | When accent color changes. |
-| Theme Type  | Whether a dark or light desktop theme is detected. | D-Bus | | When desktop theme changes. |
-| Battery Type | The type of battery (e.g., UPS, line power) | D-Bus | | On battery addeded/removed. |
-| Battery Temp | The current battery temperature | D-Bus | | When temp changes. |
-| Battery Power | The battery current power draw | D-Bus | Voltage, Energy consumption, where reported | When voltage changes. |
-| Battery Level/Percentage | The current battery capacity | D-Bus | | When level changes. |
-| Battery State | The current battery state (e.g., charging/discharging) | D-Bus | | When state changes. |
-| Memory Total | Total memory on the system | ProcFS | | ~Every minute |
-| Memory Available | Memory available/free | ProcFS | | ~Every minute |
-| Memory Used | Memory used | ProcFS | | ~Every minute |
-| Memory Usage | Total memory usage % | ProcFS | | ~Every minute |
-| Swap Total | Total swap on the system | ProcFS | | ~Every minute |
-| Swap Available | Swap available/free | ProcFS | | ~Every minute |
-| Swap Used | Swap used | ProcFS | | ~Every minute |
-| Swap Usage | Swap memory usage % | ProcFS | | ~Every minute |
-| Per Mountpoint Usage | % usage of mount point. | ProcFS |  Filesystem type, bytes/inode total/free/used. | ~Every minute. |
-| Device total read/writes and rates | Count of read/writes, Rate (in KB/s) of reads/writes, to the device. | SysFS | | ~Every 5 seconds. |
-| Connection State (per-connection) | The current state of each network connection | D-Bus | Connection type (e.g., wired/wireless/VPN), IP addresses | When connections change. |
-| Wi-Fi SSID[^1] | The SSID of the Wi-Fi network | D-Bus | | When SSID changes. |
-| Wi-Fi Frequency[^1] | The frequency band of the Wi-Fi network | D-Bus | | When frequency changes. |
-| Wi-Fi Speed[^1] | The network speed of the Wi-Fi network | D-Bus | | When speed changes. |
-| Wi-Fi Strength[^1] | The strength of the signal of the Wi-Fi network | D-Bus | | When strength changes. |
-| Wi-Fi BSSID[^1] | The BSSID of the Wi-Fi network | D-Bus | | When BSSID changes. |
-| Bytes Received | Total bytes received | ProcFS | Packet count, drops, errors | ~Every 5 seconds. |
-| Bytes Sent | Total bytes sent | ProcFS | Packet count, drops, errors | ~Every 5 seconds. |
-| Bytes Received Rate | Current received transfer rate  | ProcFS | | ~Every 5 seconds. |
-| Bytes Sent Rate | Current sent transfer rate | ProcFS | | ~Every 5 seconds. |
-| Load Average 1min | 1min load average | ProcFS |  | ~Every 1 minute. |
-| Load Average 5min | 5min load average | ProcFS |  | ~Every 1 minute. |
-| Load Average 15min | 15min load average | ProcFS |  | ~Every 1 minute. |
-| CPU Usage | Total CPU Usage % | ProcFS | | ~Every 10 seconds. |
-| Power Profile | The current power profile as set by the power-profiles-daemon | D-Bus | | When profile changes. |
-| Boot Time | Date/Time of last system boot | ProcFS |  | ~Every 15 minutes. |
-| Uptime | System uptime | ProcFS | | ~Every 15 minutes. |
-| Kernel Version | Version of the currently running kernel | ProcFS | | On agent start. |
-| Distribution Name | Name of the running distribution (e.g., Fedora, Ubuntu) | ProcFS | | On agent start. |
-| Distribution Version | Version of the running distribution | ProcFS | | On agent start. |
-| Current Users | Count of active users on the system | D-Bus | List of usernames | When user count changes. |
-| Screen Lock State | Current state of screen lock | D-Bus | | When screen lock changes. |
-| Power State | Power state of device (e.g., suspended, powered on/off) | D-Bus | | When power state changes. |
-| Problems | Count of any problems logged to the ABRT daemon | D-Bus |  Problem details | ~Every 15 minutes |
-| Device/Component Sensors(s) | Any reported hardware sensors (temp, fan speed, voltage, etc.) from each device/component, as extracted from the `/sys/class/hwmon` file system. | SysFS |  | ~Every 1 minute. |
-
-[^1]: Only updated when currently connected to a Wi-Fi network.
+- *Go Hass Agent Version*. Updated on agent start.
+- App Details:
+  - *Active App* (currently active (focused) application) and *Running Apps*
+  (count of all running applications). Updated when active app or number of apps
+  changes.
+  - Via D-Bus (requires [XDG Desktop Portal
+  Support](https://flatpak.github.io/xdg-desktop-portal/docs/) support).
+- Desktop Settings:
+  - *Accent Colour* (the hex code representing the accent colour of the desktop
+  environment in use) and *Theme Type* (whether a dark or light desktop theme is
+  detected). Updated when theme or colour changes.
+  - Via D-Bus (requires [XDG Desktop Portal
+  Support](https://flatpak.github.io/xdg-desktop-portal/docs/) support).
+- Connected Battery Details:
+  - *Battery Type* (the type of battery, e.g., UPS, line power). Updated on battery add/remove.
+  - *Battery Temp* (battery temperature). Updated when the temperature changes.
+  - *Battery Power* (the battery current power draw, in W). Attributes: Voltage
+    (V), Energy consumption (kWh). Updated when power draw changes.
+  - *Battery Level/Percentage* (either a textual representation of the level or
+    a percentage, depending on battery support). Updated when level changes.
+  - *Battery State* (the current battery state, e.g., charging/discharging).
+    Updated When state changes.
+  - All battery sensors require D-Bus and
+    [Upower](https://upower.freedesktop.org/) support.
+- Memory Stats:
+  - *Memory Total* (total memory on the system, in B).
+  - *Memory Available* (current memory available/free, in B).
+  - *Memory Used* (current memory usage, both in B and %).
+  - If swap is enabled, there will be similar sensors for swap.
+  - Sourced via ProcFS. Updated ~every minute.
+- Disk:
+  - *Disk Usage* (in %) per disk/mount.
+    - Attributes: File system type, bytes/inode total/free/used.
+    - Sourced via ProcFS. Updated ~every minute.
+  - *Total Read/Writes* (count) per disk.
+  - *Read/Write Rate* (in KB/s) per disk.
+    - Both sourced via SysFS. Updated ~every 5 seconds.
+- Networking:
+  - *Connection State* (connected/disconnected/activating/deactivating) per
+    connection. Updated when state changes. Requires D-Bus and NetworkManager.
+    - Attributes: IP addresses and networks.
+  - Connected Wi-Fi Network Details (requires D-Bus and NetworkManager.):
+    - *SSID* (the SSID of the Wi-Fi network). Updated when SSID changes.
+    - *Frequency* (the frequency band of the Wi-Fi network, in Hz). Updated when frequency
+      changes.
+    - *Speed* (the network speed of the Wi-Fi network, in Mbps). Updated when speed
+      changes.
+    - *Strength* (the strength of the signal of the Wi-Fi network, in dB).
+      Updated when strength changes.
+    - *BSSID* (the BSSID of the Wi-Fi network). Updated when BSSID changes.
+  - *Bytes Received/Sent* (in B). Updated ~every 5s.
+    - Attributes: packet count, drops, errors. Via ProcFS.
+  - *Bytes Received/Sent Rate* (transfer rate, in B/s). Updated ~every 5
+    seconds. Via ProcFS.
+- CPU:
+  - *Load Average (1/5/15 min)*. Updated ~every 1 minute. Via ProcFS.
+  - *CPU Usage* (in %). Updated ~every 10 seconds. Via ProcFS.
+- Power Related Details:
+  - *Power Profile* (the current power profile as set by the
+    power-profiles-daemon). Updated when profile changes.
+    - Via D-Bus (requires [power-profiles-daemon](https://hadess.fedorapeople.org/power-profiles-daemon-docs/gdbus-net.hadess.PowerProfiles.html)).
+  - *Screen Lock State* (current state of screen lock). Updated when screen lock
+    changes. 
+    - Via D-Bus. Requires `xscreensaver` or `systemd-logind` support. 
+  - *Power State* (power state of device, e.g., suspended, powered on/off).
+    Updated when power state changes.
+    - Via D-Bus. Requires `systemd-logind`.
+- Various System Details:
+  - *Boot Time* (date/Time of last system boot). Updated ~every 15 minutes. Via ProcFS.
+  - *Uptime*. Updated ~every 15 minutes. Via ProcFS.
+  - *Kernel Version* (version of the currently running kernel). Updated on agent
+    start. Via ProcFS.
+  - Distribution Details:
+    - *Distribution Name* (name of the running distribution, e.g., Fedora,
+    Ubuntu).
+    - *Distribution Version* (version of the running distribution).
+    - Both updated on agent start. Via ProcFS.
+  - *Current Users* (count of users with active sessions on the system). Updated
+    when any session changes.
+    - Attributes: List of usernames | When user count changes.
+    - Via D-Bus. Requires `systemd-logind`.
+  - *ABRT Problems* (count of any problems logged to the ABRT daemon). Updated
+    ~every 15 minutes.
+    - Attributes: extracted problem details.
+    - Requires ABRT.
+  - Hardware Sensors:
+    - Any temp, fan, power and other hardware sensors, including associated
+      alarms. Updated ~every 1 minute.
+    - Extracted from the `/sys/class/hwmon` file system.
 
 #### :robot: Script Sensors (All Platforms)
 
@@ -377,7 +417,7 @@ agent is a “mobile app” in Home Assistant, any script sensors will be associ
 with the Go Hass Agent device in Home Assistant.
 
 Each script run by the agent can create one or more sensors and each script can
-run on its own schedule, specified using a Cron-like syntax.
+run on its own schedule, specified using a Cron syntax.
 
 #### Requirements
 
@@ -389,7 +429,7 @@ run on its own schedule, specified using a Cron-like syntax.
 - Scripts need to output either valid JSON, YAML or TOML. See [Output
   Format](#output-format) for details.
 - Commands do not invoke the system shell and does not support expansion/glob
-  patterns or handle other expansions, pipelines, or redirections typicaly done
+  patterns or handle other expansions, pipelines, or redirections typically done
   by shells.
 
 #### Supported Scripting Languages
@@ -397,7 +437,7 @@ run on its own schedule, specified using a Cron-like syntax.
 Any typical scripting language that can be invoked with a shebang can be used
 for scripts. All scripts do not need to be written in the same language. So or
 the typical shells can be used such as Bash, Sh, Zsh, Fish, Elvish. Scripting
-languages such as Python, Perl and Ruby can also be used.
+languages such as Python, Perl, and Ruby can also be used.
 
 #### Output Format
 
@@ -578,7 +618,7 @@ D-Bus connection.
 To configure the agent to connect to MQTT:
 
 1. Right-click on the Go Hass Agent tray icon.
-2. Select *Settings->App*.
+2. Select *Settings→App*.
 3. Toggle ***Use MQTT*** and then enter the details for your MQTT server (not
    your Home Assistant server).
 4. Click ***Save***.
@@ -672,7 +712,7 @@ in Home Assistant:
   name = "My Command With an Icon"
   exec = 'command arg1 arg2 "arg3"'
   icon = "mdi:chat"
-   
+
   [[button]]
   name = "My Command"
   exec = "command"
