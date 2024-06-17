@@ -203,9 +203,8 @@ func generateButtons(buttonCmds []Command, device *mqtthass.Device) []*mqtthass.
 // return value is checked.
 func buttonCmd(command string) error {
 	cmdElems := strings.Split(command, " ")
-	cmd := exec.Command(cmdElems[0], cmdElems[1:]...)
 
-	_, err := cmd.Output()
+	_, err := exec.Command(cmdElems[0], cmdElems[1:]...).Output()
 	if err != nil {
 		return fmt.Errorf("could not execute button command: %w", err)
 	}
