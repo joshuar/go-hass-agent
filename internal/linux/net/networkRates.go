@@ -38,16 +38,14 @@ type netIOSensor struct {
 	netIOSensorAttributes
 }
 
-func (s *netIOSensor) Attributes() any {
-	return struct {
-		NativeUnit string `json:"native_unit_of_measurement"`
-		DataSource string `json:"data_source"`
-		netIOSensorAttributes
-	}{
-		NativeUnit:            s.UnitsString,
-		DataSource:            linux.DataSrcProcfs,
-		netIOSensorAttributes: s.netIOSensorAttributes,
-	}
+func (s *netIOSensor) Attributes() map[string]any {
+	attributes := make(map[string]any)
+
+	attributes["native_unit_of_measurement"] = s.UnitsString
+	attributes["data_source"] = linux.DataSrcProcfs
+	attributes["stats"] = s.netIOSensorAttributes
+
+	return attributes
 }
 
 //nolint:exhaustive

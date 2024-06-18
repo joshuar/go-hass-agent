@@ -35,14 +35,16 @@ type problemsSensor struct {
 	linux.Sensor
 }
 
-func (s *problemsSensor) Attributes() any {
-	return struct {
-		ProblemList map[string]map[string]any `json:"problem_list"`
-		DataSource  string                    `json:"data_source"`
-	}{
-		ProblemList: s.list,
-		DataSource:  linux.DataSrcDbus,
+func (s *problemsSensor) Attributes() map[string]any {
+	attributes := make(map[string]any)
+
+	if s.list != nil {
+		attributes["problem_list"] = s.list
 	}
+
+	attributes["data_source"] = linux.DataSrcDbus
+
+	return attributes
 }
 
 func parseProblem(details map[string]string) map[string]any {

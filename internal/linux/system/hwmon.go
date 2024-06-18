@@ -67,20 +67,21 @@ func (s *hwSensor) ID() string {
 	return s.id
 }
 
-func (s *hwSensor) Attributes() any {
-	return struct {
-		Attributes map[string]float64 `json:"extra_attributes,omitempty"`
-		NativeUnit string             `json:"native_unit_of_measurement,omitempty"`
-		DataSource string             `json:"data_source"`
-		SensorType string             `json:"sensor_type"`
-		HWMonPath  string             `json:"sysfs_path"`
-	}{
-		NativeUnit: s.UnitsString,
-		DataSource: linux.DataSrcSysfs,
-		SensorType: s.hwType,
-		Attributes: s.ExtraAttrs,
-		HWMonPath:  s.path,
+func (s *hwSensor) Attributes() map[string]any {
+	attributes := make(map[string]any)
+	if s.ExtraAttrs != nil {
+		attributes["extra_attributes"] = s.ExtraAttrs
 	}
+
+	if s.UnitsString != "" {
+		attributes["native_unit_of_measurement"] = s.UnitsString
+	}
+
+	attributes["data_source"] = linux.DataSrcSysfs
+	attributes["sensor_type"] = s.hwType
+	attributes["sysfs_path"] = s.path
+
+	return attributes
 }
 
 //nolint:exhaustruct

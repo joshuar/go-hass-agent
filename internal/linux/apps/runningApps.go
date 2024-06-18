@@ -22,26 +22,23 @@ type runningAppsSensor struct {
 	mu sync.Mutex
 }
 
-type runningAppsSensorAttributes struct {
-	DataSource  string   `json:"data_source"`
-	RunningApps []string `json:"running_apps"`
-}
+func (r *runningAppsSensor) Attributes() map[string]any {
+	attributes := make(map[string]any)
 
-//nolint:exhaustruct
-func (r *runningAppsSensor) Attributes() any {
-	attrs := &runningAppsSensorAttributes{}
+	var apps []string
 
 	r.mu.Lock()
 	for appName, state := range r.appList {
 		if dbusx.VariantToValue[uint32](state) > 0 {
-			attrs.RunningApps = append(attrs.RunningApps, appName)
+			apps = append(apps, appName)
 		}
 	}
 	r.mu.Unlock()
 
-	attrs.DataSource = linux.DataSrcDbus
+	attributes["running_apps"] = apps
+	attributes["data_source"] = linux.DataSrcDbus
 
-	return attrs
+	return attributes
 }
 
 func (r *runningAppsSensor) count() int {

@@ -47,14 +47,13 @@ func (s *idleSensor) Icon() string {
 	}
 }
 
-func (s *idleSensor) Attributes() any {
-	return struct {
-		DataSource string  `json:"data_source"`
-		Seconds    float64 `json:"duration"`
-	}{
-		DataSource: linux.DataSrcDbus,
-		Seconds:    idleTime(s.idleTime),
-	}
+func (s *idleSensor) Attributes() map[string]any {
+	attributes := make(map[string]any)
+
+	attributes["data_source"] = linux.DataSrcDbus
+	attributes["duration"] = idleTime(s.idleTime)
+
+	return attributes
 }
 
 //nolint:exhaustruct

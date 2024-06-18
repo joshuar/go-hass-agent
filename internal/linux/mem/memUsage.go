@@ -33,16 +33,6 @@ type memorySensor struct {
 	linux.Sensor
 }
 
-func (s *memorySensor) Attributes() any {
-	return struct {
-		NativeUnit string `json:"native_unit_of_measurement"`
-		DataSource string `json:"data_source"`
-	}{
-		NativeUnit: s.UnitsString,
-		DataSource: s.SensorSrc,
-	}
-}
-
 //nolint:exhaustive,exhaustruct
 func newMemoryUsageSensor(sensorType linux.SensorTypeValue, stats *mem.VirtualMemoryStat) (*memorySensor, error) {
 	newSensor := &memorySensor{}

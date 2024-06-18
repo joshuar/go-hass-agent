@@ -18,7 +18,7 @@ var _ Registration = &RegistrationMock{}
 //
 //		// make and configure a mocked Registration
 //		mockedRegistration := &RegistrationMock{
-//			AttributesFunc: func() any {
+//			AttributesFunc: func() map[string]any {
 //				panic("mock out the Attributes method")
 //			},
 //			CategoryFunc: func() string {
@@ -56,7 +56,7 @@ var _ Registration = &RegistrationMock{}
 //	}
 type RegistrationMock struct {
 	// AttributesFunc mocks the Attributes method.
-	AttributesFunc func() any
+	AttributesFunc func() map[string]any
 
 	// CategoryFunc mocks the Category method.
 	CategoryFunc func() string
@@ -131,7 +131,7 @@ type RegistrationMock struct {
 }
 
 // Attributes calls AttributesFunc.
-func (mock *RegistrationMock) Attributes() any {
+func (mock *RegistrationMock) Attributes() map[string]any {
 	if mock.AttributesFunc == nil {
 		panic("RegistrationMock.AttributesFunc: method is nil but Registration.Attributes was just called")
 	}

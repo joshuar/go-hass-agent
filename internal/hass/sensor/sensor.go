@@ -31,7 +31,7 @@ type State interface {
 	State() any
 	SensorType() types.SensorClass
 	Units() string
-	Attributes() any
+	Attributes() map[string]any
 }
 
 //go:generate moq -out mock_Registration_test.go . Registration

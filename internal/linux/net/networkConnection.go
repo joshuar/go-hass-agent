@@ -83,8 +83,23 @@ func (c *connection) Icon() string {
 	return i.String()
 }
 
-func (c *connection) Attributes() any {
-	return c.attrs
+func (c *connection) Attributes() map[string]any {
+	attributes := make(map[string]any)
+
+	attributes["connection_type"] = c.attrs.ConnectionType
+	attributes["data_source"] = linux.DataSrcDbus
+
+	if c.attrs.Ipv4 != "" {
+		attributes["ipv4_address"] = c.attrs.Ipv4
+		attributes["ipv4_mask"] = c.attrs.IPv4Mask
+	}
+
+	if c.attrs.Ipv6 != "" {
+		attributes["ipv6_address"] = c.attrs.Ipv6
+		attributes["ipv6_mask"] = c.attrs.IPv6Mask
+	}
+
+	return attributes
 }
 
 func (c *connection) State() any {
