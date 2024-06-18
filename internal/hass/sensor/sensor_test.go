@@ -23,7 +23,7 @@ import (
 var mockSensor = RegistrationMock{
 	IDFunc:          func() string { return "mock_sensor" },
 	StateFunc:       func() any { return "mockState" },
-	AttributesFunc:  func() any { return nil },
+	AttributesFunc:  func() map[string]any { return nil },
 	IconFunc:        func() string { return "mdi:mock-icon" },
 	SensorTypeFunc:  func() types.SensorClass { return types.Sensor },
 	NameFunc:        func() string { return "Mock Sensor" },

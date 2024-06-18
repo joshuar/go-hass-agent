@@ -198,8 +198,12 @@ func (s *scriptSensor) Category() string {
 	return ""
 }
 
-func (s *scriptSensor) Attributes() any {
-	return s.SensorAttributes
+func (s *scriptSensor) Attributes() map[string]any {
+	attributes := make(map[string]any)
+
+	attributes["extra_attributes"] = s.SensorAttributes
+
+	return attributes
 }
 
 // FindScripts locates scripts and returns a slice of scripts that the agent can

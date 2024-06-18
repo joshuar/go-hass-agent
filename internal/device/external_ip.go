@@ -87,14 +87,11 @@ func (a *address) Units() string { return "" }
 
 func (a *address) Category() string { return "diagnostic" }
 
-func (a *address) Attributes() any {
-	now := time.Now()
+func (a *address) Attributes() map[string]any {
+	attributes := make(map[string]any)
+	attributes["last_updated"] = time.Now().Format(time.RFC3339)
 
-	return &struct {
-		LastUpdated string `json:"last_updated"`
-	}{
-		LastUpdated: now.Format(time.RFC3339),
-	}
+	return attributes
 }
 
 func lookupExternalIPs(client *resty.Client, ver int) (*address, error) {

@@ -35,7 +35,7 @@ func (v *version) Units() string { return "" }
 
 func (v *version) Category() string { return "diagnostic" }
 
-func (v *version) Attributes() any { return nil }
+func (v *version) Attributes() map[string]any { return nil }
 
 type versionWorker struct{}
 

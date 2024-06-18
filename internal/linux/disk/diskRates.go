@@ -37,15 +37,6 @@ type diskIOSensor struct {
 	prev uint64
 }
 
-type diskIOSensorAttributes struct {
-	DataSource string `json:"data_source"`
-	NativeUnit string `json:"native_unit_of_measurement,omitempty"`
-	Model      string `json:"device_model,omitempty"`
-	SysFSPath  string `json:"sysfs_path,omitempty"`
-	Sectors    uint64 `json:"total_sectors,omitempty"`
-	Time       uint64 `json:"total_milliseconds,omitempty"`
-}
-
 type sensors struct {
 	totalReads  *diskIOSensor
 	totalWrites *diskIOSensor
@@ -63,35 +54,35 @@ func (s *diskIOSensor) ID() string {
 	return s.device.ID + "_" + strcase.ToSnake(s.SensorTypeValue.String())
 }
 
-//nolint:exhaustive,exhaustruct
-func (s *diskIOSensor) Attributes() any {
+//nolint:exhaustive
+func (s *diskIOSensor) Attributes() map[string]any {
+	attributes := make(map[string]any)
+
 	// Common attributes for all disk IO sensors
-	attrs := &diskIOSensorAttributes{
-		DataSource: linux.DataSrcSysfs,
-		Model:      s.device.Model,
-		SysFSPath:  s.device.SysFSPath,
+	attributes["data_source"] = linux.DataSrcSysfs
+
+	if s.device.Model != "" {
+		attributes["device_model"] = s.device.Model
+	}
+
+	if s.device.SysFSPath != "" {
+		attributes["sysfs_path"] = s.device.SysFSPath
 	}
 
 	switch s.SensorTypeValue {
 	case linux.SensorDiskReads:
-		attrs.Sectors = s.stats[diskstats.TotalSectorsRead]
-		attrs.Time = s.stats[diskstats.TotalTimeReading]
-		attrs.NativeUnit = diskCountUnits
-
-		return attrs
+		attributes["total_sectors"] = s.stats[diskstats.TotalSectorsRead]
+		attributes["total_milliseconds"] = s.stats[diskstats.TotalTimeReading]
+		attributes["native_unit_of_measurement"] = diskCountUnits
 	case linux.SensorDiskWrites:
-		attrs.Sectors = s.stats[diskstats.TotalSectorsWritten]
-		attrs.Time = s.stats[diskstats.TotalTimeWriting]
-		attrs.NativeUnit = diskCountUnits
-
-		return attrs
+		attributes["total_sectors"] = s.stats[diskstats.TotalSectorsWritten]
+		attributes["total_milliseconds"] = s.stats[diskstats.TotalTimeWriting]
+		attributes["native_unit_of_measurement"] = diskCountUnits
 	case linux.SensorDiskReadRate, linux.SensorDiskWriteRate:
-		attrs.NativeUnit = diskRateUnits
-
-		return attrs
+		attributes["native_unit_of_measurement"] = diskRateUnits
 	}
 
-	return nil
+	return attributes
 }
 
 //nolint:exhaustive

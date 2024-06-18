@@ -27,26 +27,6 @@ type timeSensor struct {
 	linux.Sensor
 }
 
-//nolint:exhaustive
-func (s *timeSensor) Attributes() any {
-	switch s.SensorTypeValue {
-	case linux.SensorUptime:
-		return struct {
-			NativeUnit string `json:"native_unit_of_measurement"`
-			DataSource string `json:"data_source"`
-		}{
-			NativeUnit: s.UnitsString,
-			DataSource: linux.DataSrcProcfs,
-		}
-	default:
-		return struct {
-			DataSource string `json:"data_source"`
-		}{
-			DataSource: linux.DataSrcProcfs,
-		}
-	}
-}
-
 type timeWorker struct{}
 
 func (w *timeWorker) Interval() time.Duration { return uptimeInterval }

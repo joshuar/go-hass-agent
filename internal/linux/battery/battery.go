@@ -249,8 +249,12 @@ func (s *upowerBatterySensor) Units() string {
 	}
 }
 
-func (s *upowerBatterySensor) Attributes() any {
-	return s.attributes
+func (s *upowerBatterySensor) Attributes() map[string]any {
+	attributes := make(map[string]any)
+
+	attributes["extra_attributes"] = s.attributes
+
+	return attributes
 }
 
 //nolint:exhaustive

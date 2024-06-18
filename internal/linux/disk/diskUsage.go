@@ -55,14 +55,13 @@ func (d *diskUsageSensor) ID() string {
 	return "mountpoint" + strings.ReplaceAll(d.stats.Path, "/", "_")
 }
 
-func (d *diskUsageSensor) Attributes() any {
-	return struct {
-		DataSource string `json:"data_source"`
-		Stats      disk.UsageStat
-	}{
-		DataSource: linux.DataSrcProcfs,
-		Stats:      *d.stats,
-	}
+func (d *diskUsageSensor) Attributes() map[string]any {
+	attributes := make(map[string]any)
+
+	attributes["data_source"] = linux.DataSrcProcfs
+	attributes["stats"] = d.stats
+
+	return attributes
 }
 
 type usageWorker struct{}

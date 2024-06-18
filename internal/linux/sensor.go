@@ -86,16 +86,18 @@ func (l *Sensor) Units() string {
 	return l.UnitsString
 }
 
-func (l *Sensor) Attributes() any {
+func (l *Sensor) Attributes() map[string]any {
+	attributes := make(map[string]any)
+
 	if l.SensorSrc != "" {
-		return struct {
-			DataSource string `json:"data_source"`
-		}{
-			DataSource: l.SensorSrc,
-		}
+		attributes["data_source"] = l.SensorSrc
 	}
 
-	return nil
+	if l.UnitsString != "" {
+		attributes["native_unit_of_measurement"] = l.UnitsString
+	}
+
+	return attributes
 }
 
 func (l *Sensor) String() string {

@@ -33,14 +33,12 @@ type usersSensor struct {
 	linux.Sensor
 }
 
-func (s *usersSensor) Attributes() any {
-	return struct {
-		DataSource string   `json:"data_source"`
-		Usernames  []string `json:"usernames"`
-	}{
-		DataSource: linux.DataSrcDbus,
-		Usernames:  s.userNames,
-	}
+func (s *usersSensor) Attributes() map[string]any {
+	attributes := make(map[string]any)
+	attributes["data_source"] = linux.DataSrcDbus
+	attributes["usernames"] = s.userNames
+
+	return attributes
 }
 
 func (s *usersSensor) updateUsers(ctx context.Context) error {

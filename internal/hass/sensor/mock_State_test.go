@@ -18,7 +18,7 @@ var _ State = &StateMock{}
 //
 //		// make and configure a mocked State
 //		mockedState := &StateMock{
-//			AttributesFunc: func() any {
+//			AttributesFunc: func() map[string]any {
 //				panic("mock out the Attributes method")
 //			},
 //			IDFunc: func() string {
@@ -44,7 +44,7 @@ var _ State = &StateMock{}
 //	}
 type StateMock struct {
 	// AttributesFunc mocks the Attributes method.
-	AttributesFunc func() any
+	AttributesFunc func() map[string]any
 
 	// IDFunc mocks the ID method.
 	IDFunc func() string
@@ -91,7 +91,7 @@ type StateMock struct {
 }
 
 // Attributes calls AttributesFunc.
-func (mock *StateMock) Attributes() any {
+func (mock *StateMock) Attributes() map[string]any {
 	if mock.AttributesFunc == nil {
 		panic("StateMock.AttributesFunc: method is nil but State.Attributes was just called")
 	}
