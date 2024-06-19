@@ -49,11 +49,11 @@ type Details interface {
 }
 
 type stateUpdateRequest struct {
-	StateAttributes any    `json:"attributes,omitempty"`
-	State           any    `json:"state"`
-	Icon            string `json:"icon,omitempty"`
-	Type            string `json:"type"`
-	UniqueID        string `json:"unique_id"`
+	StateAttributes map[string]any `json:"attributes,omitempty"`
+	State           any            `json:"state"`
+	Icon            string         `json:"icon,omitempty"`
+	Type            string         `json:"type"`
+	UniqueID        string         `json:"unique_id"`
 }
 
 func newStateUpdateRequest(sensor State) *stateUpdateRequest {
