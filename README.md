@@ -689,23 +689,40 @@ Supported control types and expected input/output:
 
 - [Button](https://www.home-assistant.io/integrations/button.mqtt/).
   - Output is discarded. Return value is used to indicate success/failure.
+- [Switch](https://www.home-assistant.io/integrations/switch.mqtt/).
+  - Return value is used to indicate success/failure.
+  - When the switch is toggled in Home Assistant, Go Hass Agent will run the
+    configured command with an “ON” or “OFF” appended to the end of its
+    command-line.
+  - When the configured command is run, it should output the current state as
+    “ON” or “OFF”. Any additional output is ignored and any output that doesn't
+    match these strings will indicate an error to the agent.
 
 > [!NOTE]
 > Commands run as the user running the agent. Commands do not invoke the system
 > shell and does not support expansion/glob patterns or handle other expansions,
 > pipelines, or redirections typically done by shells.
+>
+> States are not kept in sync. This is most important for all controls besides
+> buttons. For example, if you configure a switch, any changes to the state you
+> make outside of Home Assistant will not be reflected in Home Assistant
+> automatically.
 
 Each command needs the following definition in the file:
 
 ```toml
-[[control]] # where "control" is one of the control types above.
-name = "my command name" # required. the pretty name of the command that will the control label in Home Assistant.
-exec = "/path/to/command" # required. the path to the command to execute.
-icon = "mdi:something" # optional. the material design icon to use to represent the control in Home Assistant.
+# "control" should be replaced with one of the control types above.
+[[control]] 
+# name is required. The pretty name of the command that will be the label in Home Assistant.
+name = "my command name" 
+# exec is required. The path to the command to execute. Arguments can be given as required, and should be quoted if they contain spaces.
+exec = '/path/to/command arg1 "arg with space"' 
+# icon is optional. The material design icon to use to represent the control in Home Assistant. See https://pictogrammers.com/library/mdi/ for icons you can use.
+icon = "mdi:something" 
 ```
 
-The following shows an example that configures two buttons
-in Home Assistant:
+The following shows an example that configures some buttons and a switch in Home
+Assistant:
 
 ```toml
   [[button]]
@@ -716,6 +733,10 @@ in Home Assistant:
   [[button]]
   name = "My Command"
   exec = "command"
+
+  [[switch]]
+  name = "Toggle a Thing"
+  exec = "command arg1 arg2"
 ```
 
 #### Security Implications
