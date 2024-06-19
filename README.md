@@ -92,6 +92,13 @@
 - [:wave: Contributing](#wave-contributing)
   - [:scroll: Code of Conduct](#scroll-code-of-conduct)
 - [:grey\_question: FAQ](#grey_question-faq)
+  - [_Can I change the units of the sensor?_](#can-i-change-the-units-of-the-sensor)
+  - [_Can I disable some sensors?_](#can-i-disable-some-sensors)
+  - [_The GUI windows are too small/too big. How can I change the size?_](#the-gui-windows-are-too-smalltoo-big-how-can-i-change-the-size)
+  - [_What is the resource (CPU, memory) usage of the agent?_](#what-is-the-resource-cpu-memory-usage-of-the-agent)
+  - [_I've updated the agent and now I've got a bunch of duplicate/removed/disabled sensors?_](#ive-updated-the-agent-and-now-ive-got-a-bunch-of-duplicateremoveddisabled-sensors)
+  - [_Can I reset the agent (start from new)?_](#can-i-reset-the-agent-start-from-new)
+  - [_I want to run the agent on a server, as a service, without a GUI. Can I do this?_](#i-want-to-run-the-agent-on-a-server-as-a-service-without-a-gui-can-i-do-this)
 - [:gem: Acknowledgements](#gem-acknowledgements)
 - [:warning: License](#warning-license)
 
@@ -172,8 +179,8 @@
     power-profiles-daemon). Updated when profile changes.
     - Via D-Bus (requires [power-profiles-daemon](https://hadess.fedorapeople.org/power-profiles-daemon-docs/gdbus-net.hadess.PowerProfiles.html)).
   - *Screen Lock State* (current state of screen lock). Updated when screen lock
-    changes. 
-    - Via D-Bus. Requires `xscreensaver` or `systemd-logind` support. 
+    changes.
+    - Via D-Bus. Requires `xscreensaver` or `systemd-logind` support.
   - *Power State* (power state of device, e.g., suspended, powered on/off).
     Updated when power state changes.
     - Via D-Bus. Requires `systemd-logind`.
@@ -712,13 +719,18 @@ Each command needs the following definition in the file:
 
 ```toml
 # "control" should be replaced with one of the control types above.
-[[control]] 
-# name is required. The pretty name of the command that will be the label in Home Assistant.
-name = "my command name" 
-# exec is required. The path to the command to execute. Arguments can be given as required, and should be quoted if they contain spaces.
-exec = '/path/to/command arg1 "arg with space"' 
-# icon is optional. The material design icon to use to represent the control in Home Assistant. See https://pictogrammers.com/library/mdi/ for icons you can use.
-icon = "mdi:something" 
+[[control]]
+# name is required.
+# The pretty name of the command that will be the label in Home Assistant.
+name = "my command name"
+# exec is required.
+# The path to the command to execute.
+# Arguments can be given as required, and should be quoted if they contain spaces.
+exec = '/path/to/command arg1 "arg with space"'
+# icon is optional.
+# The material design icon to use to represent the control in Home Assistant.
+# See https://pictogrammers.com/library/mdi/ for icons you can use.
+icon = "mdi:something"
 ```
 
 The following shows an example that configures some buttons and a switch in Home
@@ -784,81 +796,86 @@ Please read the [Code of Conduct](https://github.com/joshuar/go-hass-agent/blob/
 <!-- FAQ -->
 ## :grey_question: FAQ
 
-- _Can I change the units of the sensor?_
-  - Yes! In the [customisation
+### _Can I change the units of the sensor?_
+
+- Yes! In the [customisation
 options](https://www.home-assistant.io/docs/configuration/customizing-devices/)
 for a sensor/entity, you can change the _unit of measurement_ (and _display
 precision_ if desired). This is useful for sensors whose native unit is not very
 human-friendly. For example the memory sensors report values in bytes (B),
 whereas you may wish to change the unit of measurement to gigabytes (GB).
 
-- _Can I disable some sensors?_
-  - The agent itself does not currently support disabling individual sensors.
-   However, you can disable the corresponding sensor entity in Home Assistant,
-   and the agent will stop sending updates for it.
-  - To disable a sensor entity, In the [customisation
+### _Can I disable some sensors?_
+
+- The agent itself does not currently support disabling individual sensors.
+ However, you can disable the corresponding sensor entity in Home Assistant,
+ and the agent will stop sending updates for it.
+- To disable a sensor entity, In the [customisation
 options](https://www.home-assistant.io/docs/configuration/customizing-devices/)
 for a sensor/entity, toggle the *Enabled* switch. The agent will automatically
 detect the disabled state and send/not send updates as appropriate.
-  - Note that while the agent will stop sending updates for a disabled sensor,
+- Note that while the agent will stop sending updates for a disabled sensor,
 it will not stop gathering the raw data for the sensor.
 
-- _The GUI windows are too small/too big. How can I change the size?_
-  - See [Scaling](https://developer.fyne.io/architecture/scaling) in the Fyne
+### _The GUI windows are too small/too big. How can I change the size?_
+
+- See [Scaling](https://developer.fyne.io/architecture/scaling) in the Fyne
 documentation. In the tray icon menu, select _Settings_ to open the Fyne
 settings app which can adjust the scaling for the app windows.
 
-- _What is the resource (CPU, memory) usage of the agent?_
-  - Very little in most cases. On Linux, the agent with all sensors working, should
+### _What is the resource (CPU, memory) usage of the agent?_
+
+- Very little in most cases. On Linux, the agent with all sensors working, should
 consume well less than 50 MB of memory with very little CPU usage. Further
 memory savings can be achieved by running the agent in “headless” mode with the
 `--terminal` command-line option. This should put the memory usage below 25 MB.
-  - On Linux, many sensors rely on D-Bus signals for publishing their data, so
+- On Linux, many sensors rely on D-Bus signals for publishing their data, so
 CPU usage may be affected by the “business” of the bus. For sensors that are
 polled on an interval, the agent makes use of some jitter in the polling
 intervals to avoid a “thundering herd” problem.
 
-- _I've updated the agent and now some sensors have been renamed. I now have a
-  bunch of sensors/entities in Home Assistant I want to remove. What can I do?_
-  - Unfortunately, sometimes the sensor naming scheme for some sensors created
+### _I've updated the agent and now I've got a bunch of duplicate/removed/disabled sensors?_
+
+- Unfortunately, sometimes the sensor naming scheme for some sensors created
 by the agent needs to change. There is unfortunately, no way for the agent to
 rename existing sensors in Home Assistant, so you end up with both the old and
 new sensors showing, and only the new sensors updating.
-  - You can remove the old sensors manually, under Developer Tools→Statistics in
+- You can remove the old sensors manually, under Developer Tools→Statistics in
 Home Assistant, for example. The list should contain sensors that are no longer
 “provided” by the agent. Or you can wait until they age out of the Home
 Assistant long-term statistics database automatically.
 
-- _Can I reset the agent (start from new)?_
-  - Yes. You can reset the agent so that it will re-register with Home Assistant
-and act as a new device. To do this:
-    1. Shut down the agent if it is running.
-    2. In Home Assistant, navigate to **Settings→Devices & Services** and click
-       on the **Mobile App** integration.
-    3. Locate the agent entry in the list of mobile devices, click the context menu
-       (three vertical dots), and choose **_Delete_**.
-    4. From a terminal, run the agent with the command: `go-hass-agent register
-       --force` (add `--terminal --server someserver --token sometoken` for
-       non-graphical registration).
-    5. The agent will go through the initial registration steps. It should report
-       that registration was successful.
-    6. Restart the agent.
+### _Can I reset the agent (start from new)?_
 
-- _I want to run the agent on a server, as a service, without a GUI. Can I do
-  this?_
-  - Yes. The packages install a systemd service file that can be enabled and
+- Yes. You can reset the agent so that it will re-register with Home Assistant
+and act as a new device. To do this:
+  1. Shut down the agent if it is running.
+  2. In Home Assistant, navigate to **Settings→Devices & Services** and click
+     on the **Mobile App** integration.
+  3. Locate the agent entry in the list of mobile devices, click the context menu
+     (three vertical dots), and choose **_Delete_**.
+  4. From a terminal, run the agent with the command: `go-hass-agent register
+     --force` (add `--terminal --server someserver --token sometoken` for
+     non-graphical registration).
+  5. The agent will go through the initial registration steps. It should report
+     that registration was successful.
+  6. Restart the agent.
+
+### _I want to run the agent on a server, as a service, without a GUI. Can I do this?_
+
+- Yes. The packages install a systemd service file that can be enabled and
 used to run the agent as a service.
-  - You will still need to register the agent manually before starting as a service.
+- You will still need to register the agent manually before starting as a service.
 See the command for registration in the [README](#running-headless).
-  - You will also need to ensure your user has “lingering” enabled.  Run `loginctl
+- You will also need to ensure your user has “lingering” enabled.  Run `loginctl
 list-users` and check that your user has **LINGER** set to “yes”. If not, run
 `loginctl enable-linger`.
-  - Once you have registered the agent and enabled lingering for your user. Enable
+- Once you have registered the agent and enabled lingering for your user. Enable
 the service and start it with the command: `systemctl --user enable
 go-hass-agent && systemctl --user start go-hass-agent`.
-  - You can check the status with `systemctl --user status go-hass-agent`. The agent
+- You can check the status with `systemctl --user status go-hass-agent`. The agent
 should start with every boot.
-  - For other init systems, consult their documentation on how to enable and run
+- For other init systems, consult their documentation on how to enable and run
 user services.
 
 [:arrow_up: Back to Top](#notebook_with_decorative_cover-table-of-contents)
