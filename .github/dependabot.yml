@@ -6,7 +6,7 @@ updates:
     schedule:
       interval: "weekly"
     commit-message:
-      prefix: "build(go): :up_arrow:"
+      prefix: "build(go): ⬆️"
 
   # Maintain dependencies for build tools
   - package-ecosystem: "gomod"
@@ -14,7 +14,7 @@ updates:
     schedule:
       interval: "weekly"
     commit-message:
-      prefix: "build(go): :up_arrow:"
+      prefix: "build(go): ⬆️"
 
   # Maintain dependencies for GitHub Actions
   - package-ecosystem: "github-actions"
@@ -22,4 +22,4 @@ updates:
     schedule:
       interval: "weekly"
     commit-message:
-      prefix: "ci(github): :up_arrow:"
+      prefix: "ci(github): ⬆️"
