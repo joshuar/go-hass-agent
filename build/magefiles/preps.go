@@ -17,6 +17,11 @@ import (
 
 type Preps mg.Namespace
 
+const (
+	buildDepsInstallScript = "build/scripts/install-build-deps"
+	multiarchScript        = "build/scripts/enable-multiarch"
+)
+
 var generators = map[string]string{
 	"moq":      "github.com/matryer/moq@latest",
 	"gotext":   "golang.org/x/text/cmd/gotext@latest",
@@ -69,15 +74,15 @@ func (Preps) Deps() error {
 	}
 
 	if targetArch != "" && targetArch != runtime.GOARCH {
-		if err := sudoWrap("build/scripts/enable-multiarch", targetArch); err != nil {
+		if err := sudoWrap(multiarchScript, targetArch); err != nil {
 			return fmt.Errorf("unable to enable multiarch for %s: %w", targetArch, err)
 		}
 
-		if err := sudoWrap("build/scripts/install-deps", targetArch, runtime.GOARCH); err != nil {
+		if err := sudoWrap(buildDepsInstallScript, targetArch, runtime.GOARCH); err != nil {
 			return fmt.Errorf("unable to enable multiarch for %s: %w", targetArch, err)
 		}
 	} else {
-		if err := sudoWrap("build/scripts/install-deps", runtime.GOARCH); err != nil {
+		if err := sudoWrap(buildDepsInstallScript, runtime.GOARCH); err != nil {
 			return fmt.Errorf("unable to enable multiarch for %s: %w", targetArch, err)
 		}
 	}

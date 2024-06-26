@@ -3,10 +3,22 @@
 # This software is released under the MIT License.
 # https://opensource.org/licenses/MIT
 
-# ARG GO_VERSION=1.22
-FROM golang@sha256:a8498215385dd85856145845f3caf34923fe5fbb11f3c7c1489ae43c4f263b20 AS builder
-WORKDIR /usr/src/go-hass-agent
+FROM --platform=$BUILDPLATFORM ubuntu@sha256:94db6b944510db19c0ff5eb13281cf166abfe6f9e01a6f8e716e976664537c60 AS builder
+# add ca-certificates so go command can download stuff
+RUN <<EOF
+export DEBIAN_FRONTEND=noninteractive
+apt-get -y update
+apt-get -y install ca-certificates
+EOF
+# download and install go
+ADD https://go.dev/dl/go1.22.4.linux-amd64.tar.gz /tmp/go1.22.4.linux-amd64.tar.gz
+RUN rm -rf /usr/local/go && tar -C /usr/local -xzf /tmp/go1.22.4.linux-amd64.tar.gz && rm /tmp/go1.22.4.linux-amd64.tar.gz
+ENV PATH="$PATH:/usr/local/go/bin:/root/go/bin"
+RUN go env
 
+WORKDIR /usr/src/go-hass-agent
+# import TARGETARCH
+ARG TARGETARCH
 # copy the src to the workdir
 ADD . .
 # install mage
@@ -16,7 +28,7 @@ RUN mage -v -d build/magefiles -w . preps:deps
 # build the binary
 RUN mage -v -d build/magefiles -w . build:full
 
-FROM ubuntu@sha256:d11b1797008f48495a888a087b273f6581daef886da9d0bda9023557eff4f070
+FROM --platform=$BUILDPLATFORM ubuntu@sha256:94db6b944510db19c0ff5eb13281cf166abfe6f9e01a6f8e716e976664537c60
 # import TARGETARCH
 ARG TARGETARCH
 # copy binary over from builder stage
@@ -35,12 +47,11 @@ path-include=/usr/share/doc/*/copyright
 # ... and Debian changelogs for native & non-native packages
 path-include=/usr/share/doc/*/changelog.*
 EOF
-RUN <<EOF
-export DEBIAN_FRONTEND=noninteractive
-apt-get -y update
-apt-get -y install libgl1 libx11-6 libglx0 libglvnd0 libxcb1 libxau6 libxdmcp6 dbus-x11
-rm -rf /var/lib/apt/lists/* /var/cache/apt/*
-EOF
+# install runtime deps
+COPY --from=builder /usr/src/go-hass-agent/build/scripts/install-run-deps /tmp/install-run-deps
+COPY --from=builder /usr/src/go-hass-agent/build/scripts/enable-multiarch /tmp/enable-multiarch
+RUN /tmp/enable-multiarch $TARGETARCH && rm /tmp/enable-multiarch
+RUN /tmp/install-run-deps $TARGETARCH && rm /tmp/install-run-deps
 # set up run entrypoint/cmd
 ENTRYPOINT ["go-hass-agent"]
 CMD ["--terminal", "run"]
