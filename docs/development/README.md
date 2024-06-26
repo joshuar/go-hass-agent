@@ -109,6 +109,14 @@ You can build an image with a command like the following (using Podman):
 podman build --file ./Dockerfile --network host --tag go-hass-agent
 ```
 
+As with building a binary,
+[cross-compliation](https://docs.docker.com/build/building/multi-platform/#cross-compilation)
+is supported by specifying a `--platform=$BUILDPLATFORM` argument:
+
+```shell
+podman build --platform=arm64 --file ./Dockerfile --network host --tag go-hass-agent
+```
+
 ## Committing Code
 
 This repository is using [conventional commit

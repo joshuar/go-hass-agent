@@ -13,15 +13,12 @@ case $1 in
         ;;
     arm)
         pkgarch=(armhf)
-        ccpkg=(gcc-arm-linux-gnueabihf)
         ;;
     arm64)
         pkgarch=(arm64)
-        ccpkg=(gcc-aarch64-linux-gnu)
         ;;
     all)
         pkgarch=(armhf arm64)
-        ccpkg=(gcc-arm-linux-gnueabihf gcc-aarch64-linux-gnu)
         ;;
     *)
         echo "No arch specified"
@@ -44,5 +41,3 @@ deb [arch=${archs}] http://ports.ubuntu.com/ubuntu-ports/ jammy-updates main
 deb [arch=${archs}] http://ports.ubuntu.com/ubuntu-ports/ jammy-security main
 #deb-src [arch=${archs}] http://ports.ubuntu.com/ubuntu-ports/ jammy-security main
 EOF
-apt-get update
-apt-get -y install ${ccpkg[@]:0}
