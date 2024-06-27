@@ -48,10 +48,9 @@
 
 <br />
 
-<!-- Table of Contents -->
-## :notebook_with_decorative_cover: Table of Contents
+## 📔 Table of Contents
 
-- [:notebook\_with\_decorative\_cover: Table of Contents](#notebook_with_decorative_cover-table-of-contents)
+- [📔 Table of Contents](#-table-of-contents)
 - [🌟 About the Project](#-about-the-project)
   - [🎯 Features](#-features)
     - [📈 Sensors (by Operating System)](#-sensors-by-operating-system)
@@ -95,10 +94,10 @@
   - [Packages](#packages)
   - [Container Images](#container-images)
 - [:wave: Contributing](#wave-contributing)
-- [💾 Committing Code](#-committing-code)
+  - [💾 Committing Code](#-committing-code)
   - [📜 Code of Conduct](#-code-of-conduct)
 - [🧭 Roadmap](#-roadmap)
-- [:grey\_question: FAQ](#grey_question-faq)
+- [❔ FAQ](#-faq)
   - [_Can I change the units of the sensor?_](#can-i-change-the-units-of-the-sensor)
   - [_Can I disable some sensors?_](#can-i-disable-some-sensors)
   - [_The GUI windows are too small/too big. How can I change the size?_](#the-gui-windows-are-too-smalltoo-big-how-can-i-change-the-size)
@@ -249,14 +248,14 @@ this app:
 ### 🗒️ Versioning
 
 This project follows [semantic versioning](https://semver.org/). Given a version
-number `MAJOR`.`MINOR`.`PATCH`, the gist of it is:
+number `MAJOR.MINOR.PATCH`, the gist of it is:
 
 - A `MAJOR` number change means breaking changes from the previous release.
 - A `MINOR` number change means significant changes and new features have been
   added, but not breaking changes.
 - A `PATCH` number change indicate minor changes and bug fixes.
 
-[:arrow_up: Back to Top](#notebook_with_decorative_cover-table-of-contents)
+[⬆️ Back to Top](#-table-of-contents)
 
 ## 🧰 Getting Started
 
@@ -306,7 +305,7 @@ Container images are available on
 Note that it is recommended to use an image tagged with the latest release
 version over the latest container image, which might be unstable.
 
-[:arrow_up: Back to Top](#notebook_with_decorative_cover-table-of-contents)
+[⬆️ Back to Top](#-table-of-contents)
 
 ## 🕹️ Usage
 
@@ -691,7 +690,7 @@ service.
 #### Other Custom Commands
 
 You can optionally create a `commands.toml` file under the configuration
-directory (see [Configuration Location](#configuration-location) with custom
+directory (see [Configuration Location](#-configuration-location) with custom
 commands to be exposed in Home Assistant.
 
 Supported control types and expected input/output:
@@ -766,7 +765,7 @@ of the controls. This means that a Home Assistant user not associated with the
 device user running the agent can use the exposed controls to issue potentially
 disruptive actions on a device that another user is accessing.
 
-[⬆️ Back to Top](#notebook_with_decorative_cover-table-of-contents)
+[⬆️ Back to Top](#-table-of-contents)
 
 ## ⚙️ Building/Compiling Manually
 
@@ -857,7 +856,7 @@ is supported:
 podman build --file ./Dockerfile --build-arg BUILDPLATFORM=linux/arm64 --build-arg TARGETARCH=arm64 --network host --tag go-hass-agent
 ```
 
-[⬆️ Back to Top](#notebook_with_decorative_cover-table-of-contents)
+[⬆️ Back to Top](#-table-of-contents)
 
 ## :wave: Contributing
 
@@ -869,7 +868,7 @@ podman build --file ./Dockerfile --build-arg BUILDPLATFORM=linux/arm64 --build-a
 - Want to help develop Go Hass Agent? See the [contributing
   guidelines](CONTRIBUTING.md).
 
-## 💾 Committing Code
+### 💾 Committing Code
 
 This repository is using [conventional commit
 messages](https://www.conventionalcommits.org/en/v1.0.0/#summary). This provides
@@ -886,7 +885,7 @@ is when writing commit messages, add a prefix:
 
 Please read the [Code of Conduct](https://github.com/joshuar/go-hass-agent/blob/master/CODE_OF_CONDUCT.md)
 
-[⬆️ Back to Top](#notebook_with_decorative_cover-table-of-contents)
+[⬆️ Back to Top](#-table-of-contents)
 
 ## 🧭 Roadmap
 
@@ -894,9 +893,9 @@ Check out [what I'm working
 on](https://github.com/joshuar/go-hass-agent/discussions/150) for future
 releases.
 
-[⬆️ Back to Top](#notebook_with_decorative_cover-table-of-contents)
+[⬆️ Back to Top](#-table-of-contents)
 
-## :grey_question: FAQ
+## ❔ FAQ
 
 ### _Can I change the units of the sensor?_
 
@@ -968,7 +967,7 @@ and act as a new device. To do this:
 - Yes. The packages install a systemd service file that can be enabled and
 used to run the agent as a service.
 - You will still need to register the agent manually before starting as a service.
-See the command for registration in the [README](#running-headless).
+See the command for registration in the [README](#-running-headless).
 - You will also need to ensure your user has “lingering” enabled.  Run `loginctl
 list-users` and check that your user has **LINGER** set to “yes”. If not, run
 `loginctl enable-linger`.
@@ -980,19 +979,18 @@ should start with every boot.
 - For other init systems, consult their documentation on how to enable and run
 user services.
 
-[⬆️ Back to Top](#notebook_with_decorative_cover-table-of-contents)
+[⬆️ Back to Top](#-table-of-contents)
 
-<!-- Acknowledgments -->
 ## 🤝 Acknowledgements
 
 - [Home Assistant](https://home-assistant.io).
+- [Mage](https://magefile.org/).
 - This [Awesome README Template](https://github.com/Louis3797/awesome-readme-template).
 
-[⬆️ Back to Top](#notebook_with_decorative_cover-table-of-contents)
+[⬆️ Back to Top](#-table-of-contents)
 
-<!-- License -->
 ## 🧑‍⚖️ License
 
 [MIT](LICENSE)
 
-[⬆️ Back to Top](#notebook_with_decorative_cover-table-of-contents)
+[⬆️ Back to Top](#-table-of-contents)
