@@ -52,25 +52,25 @@
 ## :notebook_with_decorative_cover: Table of Contents
 
 - [:notebook\_with\_decorative\_cover: Table of Contents](#notebook_with_decorative_cover-table-of-contents)
-- [:star2: About the Project](#star2-about-the-project)
-  - [:dart: Features](#dart-features)
+- [🌟 About the Project](#-about-the-project)
+  - [🎯 Features](#-features)
     - [📈 Sensors (by Operating System)](#-sensors-by-operating-system)
-      - [:penguin: Linux](#penguin-linux)
-    - [:robot: Script Sensors (All Platforms)](#robot-script-sensors-all-platforms)
-    - [:bus: Control via MQTT (All Platforms)](#bus-control-via-mqtt-all-platforms)
+      - [🐧 Linux](#-linux)
+    - [🤖 Script Sensors (All Platforms)](#-script-sensors-all-platforms)
+    - [🚌 Control via MQTT (All Platforms)](#-control-via-mqtt-all-platforms)
   - [🤔 Use-cases](#-use-cases)
   - [🗒️ Versioning](#️-versioning)
-- [:toolbox: Getting Started](#toolbox-getting-started)
+- [🧰 Getting Started](#-getting-started)
   - [🤝 Compatibility](#-compatibility)
-  - [:gear: Installation](#gear-installation)
+  - [🔽 Installation](#-installation)
     - [📦 Packages](#-packages)
     - [🚢 Container](#-container)
-- [:eyes: Usage](#eyes-usage)
+- [🕹️ Usage](#️-usage)
   - [🔛 First-run](#-first-run)
-  - [Running “Headless”](#running-headless)
-  - [Running in a container](#running-in-a-container)
-  - [Regular Usage](#regular-usage)
-  - [Configuration Location](#configuration-location)
+  - [👻 Running “Headless”](#-running-headless)
+  - [🐳 Running in a container](#-running-in-a-container)
+  - [♻️ Regular Usage](#️-regular-usage)
+  - [📌 Configuration Location](#-configuration-location)
   - [Script Sensors](#script-sensors)
     - [Requirements](#requirements)
     - [Supported Scripting Languages](#supported-scripting-languages)
@@ -88,9 +88,16 @@
     - [Custom D-BUS Controls](#custom-d-bus-controls)
     - [Other Custom Commands](#other-custom-commands)
     - [Security Implications](#security-implications-1)
-- [:compass: Roadmap](#compass-roadmap)
+- [⚙️ Building/Compiling Manually](#️-buildingcompiling-manually)
+  - [Build Requirements](#build-requirements)
+  - [Compiling](#compiling)
+  - [Cross Compilation](#cross-compilation)
+  - [Packages](#packages)
+  - [Container Images](#container-images)
 - [:wave: Contributing](#wave-contributing)
-  - [:scroll: Code of Conduct](#scroll-code-of-conduct)
+- [💾 Committing Code](#-committing-code)
+  - [📜 Code of Conduct](#-code-of-conduct)
+- [🧭 Roadmap](#-roadmap)
 - [:grey\_question: FAQ](#grey_question-faq)
   - [_Can I change the units of the sensor?_](#can-i-change-the-units-of-the-sensor)
   - [_Can I disable some sensors?_](#can-i-disable-some-sensors)
@@ -99,14 +106,12 @@
   - [_I've updated the agent and now I've got a bunch of duplicate/removed/disabled sensors?_](#ive-updated-the-agent-and-now-ive-got-a-bunch-of-duplicateremoveddisabled-sensors)
   - [_Can I reset the agent (start from new)?_](#can-i-reset-the-agent-start-from-new)
   - [_I want to run the agent on a server, as a service, without a GUI. Can I do this?_](#i-want-to-run-the-agent-on-a-server-as-a-service-without-a-gui-can-i-do-this)
-- [:gem: Acknowledgements](#gem-acknowledgements)
-- [:warning: License](#warning-license)
+- [🤝 Acknowledgements](#-acknowledgements)
+- [🧑‍⚖️ License](#️-license)
 
-<!-- About the Project -->
-## :star2: About the Project
+## 🌟 About the Project
 
-<!-- Features -->
-### :dart: Features
+### 🎯 Features
 
 #### 📈 Sensors (by Operating System)
 
@@ -115,7 +120,7 @@
 > report. In some cases, the **actual** sensors reported may be less due to
 > lack of support in the system configuration or missing hardware.
 
-##### :penguin: Linux
+##### 🐧 Linux
 
 - *Go Hass Agent Version*. Updated on agent start.
 - App Details:
@@ -207,12 +212,12 @@
       alarms. Updated ~every 1 minute.
     - Extracted from the `/sys/class/hwmon` file system.
 
-#### :robot: Script Sensors (All Platforms)
+#### 🤖 Script Sensors (All Platforms)
 
 All platforms can also utilise scripts to create custom sensors. See
 [scripts](#script-sensors).
 
-#### :bus: Control via MQTT (All Platforms)
+#### 🚌 Control via MQTT (All Platforms)
 
 Where Home Assistant is connected to MQTT, Go Hass Agent can add some controls
 for various system features. A selection of device controls are provided by
@@ -253,8 +258,7 @@ number `MAJOR`.`MINOR`.`PATCH`, the gist of it is:
 
 [:arrow_up: Back to Top](#notebook_with_decorative_cover-table-of-contents)
 
-<!-- Getting Started -->
-## :toolbox: Getting Started
+## 🧰 Getting Started
 
 ### 🤝 Compatibility
 
@@ -262,8 +266,7 @@ Currently, only Linux is supported. Though the code is designed to be extensible
 to other operating systems. See development information in the
 [docs](docs/README.md) for details on how to extend for other operating systems.
 
-<!-- Installation -->
-### :gear: Installation
+### 🔽 Installation
 
 #### 📦 Packages
 
@@ -305,8 +308,7 @@ version over the latest container image, which might be unstable.
 
 [:arrow_up: Back to Top](#notebook_with_decorative_cover-table-of-contents)
 
-<!-- Usage -->
-## :eyes: Usage
+## 🕹️ Usage
 
 Go Hass Agent runs as a tray icon by default. It is operating system,
 distribution and desktop-environment agnostic and should manifest itself in any
@@ -332,7 +334,7 @@ able to report sensors and receive notifications.
 When you have entered all the details, click **Submit** and the agent should
 start running and reporting sensors to the Home Assistant instance.
 
-### Running “Headless”
+### 👻 Running “Headless”
 
 Go Hass Agent will automatically detect if there is no GUI available and run in
 a “headless” mode with no UI. Registration will need to be completed manually as
@@ -357,7 +359,7 @@ specifying the `--terminal` command-line option.
 If you want to run Go Hass Agent as a service on a headless machine, see the
 [FAQ](docs/faq.md#q-i-want-to-run-the-agent-on-a-server-as-a-service-without-a-gui-can-i-do-this).
 
-### Running in a container
+### 🐳 Running in a container
 
 There is rough support for running Go Hass Agent within a container. Pre-built
 images [are available](https://github.com/joshuar/go-hass-agent/pkgs/container/go-hass-agent).
@@ -394,7 +396,7 @@ during registration.
 All the other volume mounts are optional, but functionality and the sensors
 reported will be severely limited without them.
 
-### Regular Usage
+### ♻️ Regular Usage
 
 When running, Go Hass Agent will appear as a device under the Mobile App
 integration in your Home Assistant instance. It should also report a list of
@@ -403,7 +405,7 @@ parts of Home Assistant.
 
 [![Open your Home Assistant instance to the mobile_app integration.](https://my.home-assistant.io/badges/integration.svg)](https://my.home-assistant.io/redirect/integration/?domain=mobile_app)
 
-### Configuration Location
+### 📌 Configuration Location
 
 The configuration is located in a file called `preferences.toml` in
 `CONFIG_HOME/com.github.joshuar.go-hass-agent/` where `CONFIG_HOME` will
@@ -429,7 +431,7 @@ run on its own schedule, specified using a Cron syntax.
 #### Requirements
 
 - Scripts need to be put in a `scripts` folder under the configuration directory
-  (see [Configuration Location](#configuration-location).
+  (see [Configuration Location](#configuration).
 - You can use symlinks, if supported by your Operating System.
 - Script files need to be executable by the user running Go Hass Agent.
 - Scripts need to run without any user interaction.
@@ -764,18 +766,99 @@ of the controls. This means that a Home Assistant user not associated with the
 device user running the agent can use the exposed controls to issue potentially
 disruptive actions on a device that another user is accessing.
 
-[:arrow_up: Back to Top](#notebook_with_decorative_cover-table-of-contents)
+[⬆️ Back to Top](#notebook_with_decorative_cover-table-of-contents)
 
-<!-- Roadmap -->
-## :compass: Roadmap
+## ⚙️ Building/Compiling Manually
 
-Check out [what I'm working
-on](https://github.com/joshuar/go-hass-agent/discussions/150) for future
-releases.
+### Build Requirements
 
-[:arrow_up: Back to Top](#notebook_with_decorative_cover-table-of-contents)
+Go Hass Agent uses [Mage](https://magefile.org/) for development. Make sure you
+follow the instructions on the Mage website to install Mage.
 
-<!-- Contributing -->
+### Compiling
+
+Use the following mage invocation in the project root directory:
+
+```shell
+mage -d build/magefiles -w . build:full
+```
+
+This will:
+
+- Run `go mod tidy`.
+- Run `go fmt ./...`.
+- Run `go generate ./...`.
+- Build a binary and place it in `dist/go-hass-agent-amd64`.
+
+To just build a binary, replace `build:full` with `build:fast` in the mage
+invocation above.
+
+### Cross Compilation
+
+Go Hass Agent can also be built for **arm (v6/v7)** and **arm64** with
+cross-compilation. **This is only supported on Ubuntu as the host for
+cross-compiles**. To build for a different architecture, set the `BUILDPLATFORM`
+environment variable:
+
+```shell
+export BUILDPLATFORM=linux/arm64 # or linux/arm/v6 or linux/arm/v7
+```
+
+Install the target architecture libraries for cross-compilation:
+
+```shell
+mage -d build/magefiles -w . preps:deps
+```
+
+Then the commands for building and packaging above should work as expected.
+
+> [!NOTE]
+> The devcontainer has all the necessary compilers and libraries
+> installed for cross-compilation.
+
+### Packages
+
+Go Hass Agent uses [nfpm](https://nfpm.goreleaser.com/) to create
+packages for Fedora, Arch, and Ubuntu and
+[fyne-cross](https://github.com/fyne-io/fyne-cross) to create packages for
+Debian and Linux distributions with older libraries.
+
+To build packages, use the following invocations:
+
+```shell
+mage -v -d build/magefiles -w . package:nfpm
+mage -v -d build/magefiles -w . package:fyneCross
+```
+
+The above mage actions will install the necessary tooling for packaging, if
+needed.
+
+- Packages built with `nfpm` will be available under the `dist/` folder.
+- Packages built with `fyne-cross` will be available under `fyne-cross/dist/linux-*/`.
+- You can build packages for other architectures as well by following the guide
+  for [cross-compliation](#cross-compilation).
+
+### Container Images
+
+A Dockerfile that you can use to build an image can be found [here](../../Dockerfile).
+
+You can build an image with a command like the following (using Podman):
+
+```shell
+podman build --file ./Dockerfile --network host --tag go-hass-agent
+```
+
+As with building a binary,
+[cross-compliation](https://docs.docker.com/build/building/multi-platform/#cross-compilation)
+is supported:
+
+```shell
+# use eitherlinux/arm64, linux/arm/v7
+podman build --file ./Dockerfile --build-arg BUILDPLATFORM=linux/arm64 --build-arg TARGETARCH=arm64 --network host --tag go-hass-agent
+```
+
+[⬆️ Back to Top](#notebook_with_decorative_cover-table-of-contents)
+
 ## :wave: Contributing
 
 - Found an issue? Please [report
@@ -786,14 +869,33 @@ releases.
 - Want to help develop Go Hass Agent? See the [contributing
   guidelines](CONTRIBUTING.md).
 
-<!-- Code of Conduct -->
-### :scroll: Code of Conduct
+## 💾 Committing Code
+
+This repository is using [conventional commit
+messages](https://www.conventionalcommits.org/en/v1.0.0/#summary). This provides
+the ability to automatically include relevant notes in the
+[changelog](../CHANGELOG.md). The [TL;DR](https://en.wikipedia.org/wiki/TL;DR)
+is when writing commit messages, add a prefix:
+
+- `feat:` for a new feature, like a new sensor.
+- `fix:` when fixing an issue.
+- `refactor:` when making non-visible but useful code changes.
+- …and so on. See the link above or see the existing commit messages for examples.
+
+### 📜 Code of Conduct
 
 Please read the [Code of Conduct](https://github.com/joshuar/go-hass-agent/blob/master/CODE_OF_CONDUCT.md)
 
-[:arrow_up: Back to Top](#notebook_with_decorative_cover-table-of-contents)
+[⬆️ Back to Top](#notebook_with_decorative_cover-table-of-contents)
 
-<!-- FAQ -->
+## 🧭 Roadmap
+
+Check out [what I'm working
+on](https://github.com/joshuar/go-hass-agent/discussions/150) for future
+releases.
+
+[⬆️ Back to Top](#notebook_with_decorative_cover-table-of-contents)
+
 ## :grey_question: FAQ
 
 ### _Can I change the units of the sensor?_
@@ -878,19 +980,19 @@ should start with every boot.
 - For other init systems, consult their documentation on how to enable and run
 user services.
 
-[:arrow_up: Back to Top](#notebook_with_decorative_cover-table-of-contents)
+[⬆️ Back to Top](#notebook_with_decorative_cover-table-of-contents)
 
 <!-- Acknowledgments -->
-## :gem: Acknowledgements
+## 🤝 Acknowledgements
 
 - [Home Assistant](https://home-assistant.io).
 - This [Awesome README Template](https://github.com/Louis3797/awesome-readme-template).
 
-[:arrow_up: Back to Top](#notebook_with_decorative_cover-table-of-contents)
+[⬆️ Back to Top](#notebook_with_decorative_cover-table-of-contents)
 
 <!-- License -->
-## :warning: License
+## 🧑‍⚖️ License
 
 [MIT](LICENSE)
 
-[:arrow_up: Back to Top](#notebook_with_decorative_cover-table-of-contents)
+[⬆️ Back to Top](#notebook_with_decorative_cover-table-of-contents)
