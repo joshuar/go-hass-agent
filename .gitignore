@@ -17,7 +17,7 @@
 !/*.yml
 !/*.json
 !/*.toml
-!build/*
+!build/**/*
 
 !/assets/**/*
 !/internal/agent/ui/assets/*
