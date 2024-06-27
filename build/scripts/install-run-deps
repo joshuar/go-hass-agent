@@ -11,7 +11,7 @@ set -e
 case $1 in
     linux/amd64) arch=(amd64) ;;
     linux/arm/*) arch=(armhf) ;;
-    arm64) arch=(arm64) ;;
+    linux/arm64) arch=(arm64) ;;
     all) arch=(armhf arm64 amd64) ;;
     *) echo "No arch specified" && exit -1 ;;
 esac
