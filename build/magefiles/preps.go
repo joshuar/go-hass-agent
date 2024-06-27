@@ -6,9 +6,10 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
-	"runtime"
+	"os"
 
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
@@ -26,6 +27,8 @@ var generators = map[string]string{
 	"gotext":   "golang.org/x/text/cmd/gotext@latest",
 	"stringer": "golang.org/x/tools/cmd/stringer@latest",
 }
+
+var ErrMissingBuildPlatform = errors.New("BUILDPLATFORM environment variable not set")
 
 // Tidy runs go mod tidy to update the go.mod and go.sum files.
 func (Preps) Tidy() error {
@@ -68,23 +71,17 @@ func (Preps) Generate() error {
 
 // BuildDeps installs build dependencies.
 func (Preps) Deps() error {
-	envMap, err := generateEnv()
-	if err != nil {
-		return fmt.Errorf("failed to create environment: %w", err)
+	buildPlatform, found := os.LookupEnv("BUILDPLATFORM")
+	if !found {
+		return ErrMissingBuildPlatform
 	}
 
-	if envMap["GOARCH"] != runtime.GOARCH {
-		if err := sudoWrap(multiarchScript, envMap["GOARCH"]); err != nil {
-			return fmt.Errorf("unable to enable multiarch for %s: %w", envMap["GOARCH"], err)
-		}
+	if err := sudoWrap(multiarchScript, buildPlatform); err != nil {
+		return fmt.Errorf("unable to enable multiarch for %s: %w", buildPlatform, err)
+	}
 
-		if err := sudoWrap(buildDepsInstallScript, envMap["GOARCH"], runtime.GOARCH); err != nil {
-			return fmt.Errorf("unable to install build deps for %s: %w", envMap["GOARCH"], err)
-		}
-	} else {
-		if err := sudoWrap(buildDepsInstallScript, runtime.GOARCH); err != nil {
-			return fmt.Errorf("unable to install build deps for %s: %w", envMap["GOARCH"], err)
-		}
+	if err := sudoWrap(buildDepsInstallScript, buildPlatform); err != nil {
+		return fmt.Errorf("unable to install build deps for %s: %w", buildPlatform, err)
 	}
 
 	return nil
