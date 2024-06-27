@@ -14,7 +14,6 @@ EOF
 ADD https://go.dev/dl/go1.22.4.linux-amd64.tar.gz /tmp/go1.22.4.linux-amd64.tar.gz
 RUN rm -rf /usr/local/go && tar -C /usr/local -xzf /tmp/go1.22.4.linux-amd64.tar.gz && rm /tmp/go1.22.4.linux-amd64.tar.gz
 ENV PATH="$PATH:/usr/local/go/bin:/root/go/bin"
-RUN go env
 
 WORKDIR /usr/src/go-hass-agent
 # import BUILDPLATFORM
@@ -29,8 +28,9 @@ RUN mage -v -d build/magefiles -w . preps:deps
 RUN mage -v -d build/magefiles -w . build:full
 
 FROM --platform=$BUILDPLATFORM ubuntu@sha256:94db6b944510db19c0ff5eb13281cf166abfe6f9e01a6f8e716e976664537c60
-# import BUILDPLATFORM
+# import BUILDPLATFORM and TARGETARCH
 ARG BUILDPLATFORM
+ARG TARGETARCH
 # copy binary over from builder stage
 COPY --from=builder /usr/src/go-hass-agent/dist/go-hass-agent-$TARGETARCH /usr/bin/go-hass-agent
 # reinstall minimum libraries for running
