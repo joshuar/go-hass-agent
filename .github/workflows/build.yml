@@ -123,6 +123,7 @@ jobs:
       contents: write
       packages: write
     runs-on: ubuntu-20.04
+    # NOTE: Ubuntu does not provide a container for armv6, so we can't build for that :(
     strategy:
       matrix:
         platform:

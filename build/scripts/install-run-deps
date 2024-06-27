@@ -18,6 +18,7 @@ esac
 
 export DEBIAN_FRONTEND=noninteractive
 
+# install runtime dependencies as appropriate for given arch
 apt-get update
 for a in "${arch[@]}"; do
         apt-get -y install \

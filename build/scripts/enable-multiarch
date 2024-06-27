@@ -7,6 +7,7 @@
 
 set -e
 
+# set pkgarch as per given BUILDPLATFORM
 case $1 in
     linux/amd64) exit 0 ;;
     linux/arm/*) pkgarch=(armhf) ;;
@@ -17,11 +18,14 @@ esac
 
 function join_by { local IFS="$1"; shift; echo "$*"; }
 
+# ensure the existing defualt repos are only consulted for amd64 arch
 sed -i 's|^deb\s|deb [arch=amd64] |g' /etc/apt/sources.list
+# add the additional arch
 for arch in "${pkgarch[@]}"; do 
     dpkg --add-architecture ${arch}
 done
 archs=$(join_by , "${pkgarch[@]}")
+# add repos for the additional arch
 tee -a /etc/apt/sources.list << EOF
 deb [arch=${archs}] http://ports.ubuntu.com/ubuntu-ports/ jammy main
 #deb-src [arch=${archs}] http://ports.ubuntu.com/ubuntu-ports/ jammy main

@@ -18,6 +18,7 @@ esac
 
 export DEBIAN_FRONTEND=noninteractive
 
+# install build dependencies as per given arch
 apt-get update
 apt-get -y install desktop-file-utils pkg-config git ${ccpkg[@]:0}
 for a in "${arch[@]}"; do
