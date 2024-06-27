@@ -161,35 +161,56 @@ func generateEnv() (map[string]string, error) {
 	envMap["APPVERSION"] = version
 
 	// Set NFPM_ARCH so that nfpm knows how to package for this arch.
-	envMap["NFPM_ARCH"] = targetArch
+	envMap["NFPM_ARCH"] = runtime.GOARCH
 
-	// Get the value of TARGETARCH (if set) from the environment, which
+	// Get the value of BUILDPLATFORM (if set) from the environment, which
 	// indicates cross-compilation has been requested.
-	if v, ok := os.LookupEnv("TARGETARCH"); ok {
-		targetArch = v
-	}
+	_, arch, ver := parseBuildPlatform()
 
-	if targetArch != "" && targetArch != runtime.GOARCH {
-		slog.Info("Cross compilation requested.", "host", runtime.GOARCH, "target", targetArch)
+	if arch != "" && arch != runtime.GOARCH {
+		slog.Info("Cross compilation requested.", "host", runtime.GOARCH, "target", arch)
 
-		// Update NFPM_ARCH tro the target arch.
-		envMap["NFPM_ARCH"] = targetArch
+		// Update NFPM_ARCH to the target arch.
+		envMap["NFPM_ARCH"] = arch + ver
 
 		// Set additional build-related variables based on the target arch.
-		switch targetArch {
+		switch arch {
 		case "arm":
 			envMap["CC"] = "arm-linux-gnueabihf-gcc"
 			envMap["PKG_CONFIG_PATH"] = "/usr/lib/arm-linux-gnueabihf/pkgconfig"
-			envMap["GOARCH"] = "arm"
-			envMap["GOARM"] = "7"
+			envMap["GOARCH"] = arch
+			envMap["GOARM"] = ver
 		case "arm64":
 			envMap["CC"] = "aarch64-linux-gnu-gcc"
 			envMap["PKG_CONFIG_PATH"] = "/usr/lib/aarch64-linux-gnu/pkgconfig"
-			envMap["GOARCH"] = "arm64"
+			envMap["GOARCH"] = arch
 		default:
 			return nil, ErrUnsupportedArch
 		}
+	} else {
+		envMap["GOARCH"] = runtime.GOARCH
 	}
 
 	return envMap, nil
+}
+
+//nolint:mnd
+func parseBuildPlatform() (operatingsystem, architecture, version string) {
+	var buildPlatform string
+
+	var ok bool
+
+	if buildPlatform, ok = os.LookupEnv("BUILDPLATFORM"); !ok {
+		return runtime.GOOS, runtime.GOARCH, ""
+	}
+
+	buildComponents := strings.Split(buildPlatform, "/")
+	operatingsystem = buildComponents[0]
+	architecture = buildComponents[1]
+
+	if len(buildComponents) > 2 {
+		version = strings.TrimPrefix(buildComponents[2], "v")
+	}
+
+	return operatingsystem, architecture, version
 }

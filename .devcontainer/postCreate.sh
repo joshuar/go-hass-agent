@@ -4,7 +4,7 @@ set -e
 
 # Install libraries for all supported arches
 sudo ./build/scripts/enable-multiarch all
-sudo ./build/scripts/install-deps arm arm64 amd64 
+sudo ./build/scripts/install-build-deps all 
 
 # Install go build packages
 go install golang.org/x/tools/cmd/stringer@latest

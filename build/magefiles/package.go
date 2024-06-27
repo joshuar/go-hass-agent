@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
@@ -85,23 +86,31 @@ func (Package) FyneCross() error {
 		return fmt.Errorf("failed to create environment: %w", err)
 	}
 
+	var output string
+
+	if strings.Contains(envMap["GOARCH"], "arm") {
+		output = envMap["GOARCH"] + envMap["GOARM"]
+	} else {
+		output = envMap["GOARCH"]
+	}
+
 	if err = sh.RunWithV(envMap,
 		"fyne-cross", "linux",
 		"-name", "go-hass-agent",
 		"-icon", iconPath,
 		"-release",
-		"-arch", targetArch); err != nil {
+		"-arch", envMap["GOARCH"]); err != nil {
 		slog.Warn("fyne-cross finished but with errors. Continuing anyway.", "error", err.Error())
 	}
 
 	if err = sh.Copy(
-		fynePath+"/dist/linux-"+targetArch+"/go-hass-agent-"+targetArch+".tar.xz",
-		fynePath+"/dist/linux-"+targetArch+"/go-hass-agent.tar.xz",
+		fynePath+"/dist/linux-"+envMap["GOARCH"]+"/go-hass-agent-"+output+".tar.xz",
+		fynePath+"/dist/linux-"+envMap["GOARCH"]+"/go-hass-agent.tar.xz",
 	); err != nil {
 		return fmt.Errorf("could not copy build artefact: %w", err)
 	}
 
-	err = sh.Rm("fyne-cross/dist/linux-" + targetArch + "/go-hass-agent.tar.xz")
+	err = sh.Rm("fyne-cross/dist/linux-" + envMap["GOARCH"] + "/go-hass-agent.tar.xz")
 	if err != nil {
 		return fmt.Errorf("could not remove unneeded build data: %w", err)
 	}

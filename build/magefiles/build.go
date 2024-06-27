@@ -11,6 +11,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
@@ -73,7 +74,13 @@ func buildProject() error {
 		return errors.Join(ErrBuildFailed, err)
 	}
 
-	output := filepath.Join(distPath, "/go-hass-agent-"+targetArch)
+	var output string
+	// Generate the output binary name depending on the arch.
+	if strings.Contains(envMap["GOARCH"], "arm") {
+		output = filepath.Join(distPath, "/go-hass-agent-"+envMap["GOARCH"]+envMap["GOARM"])
+	} else {
+		output = filepath.Join(distPath, "/go-hass-agent-"+envMap["GOARCH"])
+	}
 
 	slog.Info("Running go build...", "output", output, "ldflags", ldflags)
 
