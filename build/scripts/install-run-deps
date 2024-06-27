@@ -19,10 +19,10 @@ esac
 export DEBIAN_FRONTEND=noninteractive
 
 apt-get update
-for arch in "$@"; do
+for a in "${arch[@]}"; do
         apt-get -y install \
-                libgl1:${arch} libx11-6:${arch} libglx0:${arch} \
-                libglvnd0:${arch} libxcb1:${arch} libxau6:${arch} \
-                libxdmcp6:${arch} dbus-x11:${arch}
+                libgl1:${a} libx11-6:${a} libglx0:${a} \
+                libglvnd0:${a} libxcb1:${a} libxau6:${a} \
+                libxdmcp6:${a} dbus-x11:${a}
 done
 rm -rf /var/lib/apt/lists/* /var/cache/apt/*
