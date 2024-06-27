@@ -20,10 +20,10 @@ export DEBIAN_FRONTEND=noninteractive
 
 apt-get update
 apt-get -y install desktop-file-utils pkg-config git ${ccpkg[@]:0}
-for arch in "$@"; do
+for a in "${arch[@]}"; do
         apt-get -y install \
-                libgl1-mesa-dev:${arch} xserver-xorg-dev:${arch} \
-                libxcursor-dev:${arch} libxrandr-dev:${arch} \
-                libxinerama-dev:${arch} libxi-dev:${arch} \
-                libgl1-mesa-dev:${arch} libxxf86vm-dev:${arch}
+                libgl1-mesa-dev:${a} xserver-xorg-dev:${a} \
+                libxcursor-dev:${a} libxrandr-dev:${a} \
+                libxinerama-dev:${a} libxi-dev:${a} \
+                libgl1-mesa-dev:${a} libxxf86vm-dev:${a}
 done
