@@ -8,22 +8,11 @@
 set -e
 
 case $1 in
-    amd64)
-        exit 0
-        ;;
-    arm)
-        pkgarch=(armhf)
-        ;;
-    arm64)
-        pkgarch=(arm64)
-        ;;
-    all)
-        pkgarch=(armhf arm64)
-        ;;
-    *)
-        echo "No arch specified"
-        exit -1
-        ;;
+    linux/amd64 ) exit 0 ;;
+    linux/arm/* ) pkgarch=(armhf) ;;
+    linux/arm64 ) pkgarch=(arm64) ;;
+    all ) pkgarch=(armhf arm64) ;;
+    *) echo "No arch specified" && exit -1 ;;
 esac
 
 function join_by { local IFS="$1"; shift; echo "$*"; }

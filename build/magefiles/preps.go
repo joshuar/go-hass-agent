@@ -8,7 +8,6 @@ package main
 import (
 	"fmt"
 	"log/slog"
-	"os"
 	"runtime"
 
 	"github.com/magefile/mage/mg"
@@ -69,21 +68,22 @@ func (Preps) Generate() error {
 
 // BuildDeps installs build dependencies.
 func (Preps) Deps() error {
-	if v, ok := os.LookupEnv("TARGETARCH"); ok {
-		targetArch = v
+	envMap, err := generateEnv()
+	if err != nil {
+		return fmt.Errorf("failed to create environment: %w", err)
 	}
 
-	if targetArch != "" && targetArch != runtime.GOARCH {
-		if err := sudoWrap(multiarchScript, targetArch); err != nil {
-			return fmt.Errorf("unable to enable multiarch for %s: %w", targetArch, err)
+	if envMap["GOARCH"] != runtime.GOARCH {
+		if err := sudoWrap(multiarchScript, envMap["GOARCH"]); err != nil {
+			return fmt.Errorf("unable to enable multiarch for %s: %w", envMap["GOARCH"], err)
 		}
 
-		if err := sudoWrap(buildDepsInstallScript, targetArch, runtime.GOARCH); err != nil {
-			return fmt.Errorf("unable to enable multiarch for %s: %w", targetArch, err)
+		if err := sudoWrap(buildDepsInstallScript, envMap["GOARCH"], runtime.GOARCH); err != nil {
+			return fmt.Errorf("unable to install build deps for %s: %w", envMap["GOARCH"], err)
 		}
 	} else {
 		if err := sudoWrap(buildDepsInstallScript, runtime.GOARCH); err != nil {
-			return fmt.Errorf("unable to enable multiarch for %s: %w", targetArch, err)
+			return fmt.Errorf("unable to install build deps for %s: %w", envMap["GOARCH"], err)
 		}
 	}
 
