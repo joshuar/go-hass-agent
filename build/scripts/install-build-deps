@@ -22,8 +22,8 @@ apt-get update
 apt-get -y install desktop-file-utils pkg-config git ${ccpkg[@]:0}
 for a in "${arch[@]}"; do
         apt-get -y install \
-                libgl1-mesa-dev:${a} xserver-xorg-dev:${a} \
-                libxcursor-dev:${a} libxrandr-dev:${a} \
-                libxinerama-dev:${a} libxi-dev:${a} \
-                libgl1-mesa-dev:${a} libxxf86vm-dev:${a}
+                libgl-dev:${a} libglx-dev:${a} libglvnd-dev:${a} \
+                libxcb1-dev:${a} libxau-dev:${a} libxdmcp-dev:${a} \
+                libx11-dev:${a} libxcursor-dev:${a} libxrandr-dev:${a} \
+                libxinerama-dev:${a} libxi-dev:${a} libxxf86vm-dev:${a}
 done
