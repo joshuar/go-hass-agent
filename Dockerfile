@@ -32,7 +32,7 @@ FROM --platform=$BUILDPLATFORM ubuntu@sha256:94db6b944510db19c0ff5eb13281cf166ab
 ARG BUILDPLATFORM
 ARG TARGETARCH
 # copy binary over from builder stage
-COPY --from=builder /usr/src/go-hass-agent/dist/go-hass-agent-$TARGETARCH /usr/bin/go-hass-agent
+COPY --from=builder /usr/src/go-hass-agent/dist/go-hass-agent-$TARGETARCH* /usr/bin/go-hass-agent
 # reinstall minimum libraries for running
 RUN mkdir /etc/dpkg/dpkg.conf.d
 COPY <<EOF /etc/dpkg/dpkg.conf.d/excludes
