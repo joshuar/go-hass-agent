@@ -197,6 +197,10 @@ func generateEnv() (map[string]string, error) {
 	return envMap, nil
 }
 
+// parseBuildPlatform reads the BUILDPLATFORM environment variable, which should
+// always be set, and extracts the value into appropriate GOOS, GOARCH and GOARM
+// (if applicable) variables.
+//
 //nolint:mnd
 func parseBuildPlatform() (operatingsystem, architecture, version string) {
 	var buildPlatform string
