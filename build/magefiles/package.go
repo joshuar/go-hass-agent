@@ -63,7 +63,7 @@ func (Package) Nfpm() error {
 
 		// nfpm creates the same package name for armv6 and armv7 deb packages,
 		// so we need to rename them.
-		if envMap["GOARCH"] == "arm" {
+		if envMap["GOARCH"] == "arm" && pkgformat == "deb" {
 			debPkgs, err := filepath.Glob(distPath + "/pkg/*.deb")
 			if err != nil {
 				return fmt.Errorf("could not find arm deb package: %w", err)
