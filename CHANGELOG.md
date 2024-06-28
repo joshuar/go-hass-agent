@@ -1,5 +1,19 @@
 # Changelog
 
+## [9.5.0](https://github.com/joshuar/go-hass-agent/compare/v9.4.0...v9.5.0) (2024-06-27)
+
+
+### Features
+
+* **agent:** :sparkles: support "switch" type custom MQTT commands ([26f3272](https://github.com/joshuar/go-hass-agent/commit/26f3272eb1d746cd30f28918afd03b1a2c880334))
+* **container:** :sparkles: support cross-compilation for container images ([37489ec](https://github.com/joshuar/go-hass-agent/commit/37489ec4beb3a7d69b0eedb0c904e023e3223e6f))
+
+
+### Bug Fixes
+
+* **hass:** :bug: ensure sensor attributes are correctly marshaled ([ec6fe29](https://github.com/joshuar/go-hass-agent/commit/ec6fe29c02071073f05b54eaee4dbe56ffd830bc))
+* pass correct arch to apt-get ([e536162](https://github.com/joshuar/go-hass-agent/commit/e53616239da58d3104e06d0bd99ea0aca34cd951))
+
 ## [9.4.0](https://github.com/joshuar/go-hass-agent/compare/v9.3.0...v9.4.0) (2024-06-17)
 
 
