@@ -180,15 +180,18 @@ func generateEnv() (map[string]string, error) {
 			envMap["PKG_CONFIG_PATH"] = "/usr/lib/arm-linux-gnueabihf/pkgconfig"
 			envMap["GOARCH"] = arch
 			envMap["GOARM"] = ver
+			envMap["PLATFORMPAIR"] = arch + ver
 		case "arm64":
 			envMap["CC"] = "aarch64-linux-gnu-gcc"
 			envMap["PKG_CONFIG_PATH"] = "/usr/lib/aarch64-linux-gnu/pkgconfig"
 			envMap["GOARCH"] = arch
+			envMap["PLATFORMPAIR"] = arch
 		default:
 			return nil, ErrUnsupportedArch
 		}
 	} else {
 		envMap["GOARCH"] = runtime.GOARCH
+		envMap["PLATFORMPAIR"] = runtime.GOARCH
 	}
 
 	return envMap, nil

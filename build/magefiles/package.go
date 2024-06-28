@@ -34,7 +34,7 @@ var (
 
 // Nfpm builds packages using nfpm.
 //
-//nolint:mnd
+//nolint:mnd,cyclop
 func (Package) Nfpm() error {
 	if err := os.RemoveAll(pkgPath); err != nil {
 		return fmt.Errorf("could not clean dist directory: %w", err)
@@ -59,6 +59,27 @@ func (Package) Nfpm() error {
 
 		if err := sh.RunWithV(envMap, "nfpm", args...); err != nil {
 			return fmt.Errorf("could not run nfpm: %w", err)
+		}
+
+		// nfpm creates the same package name for armv6 and armv7 deb packages,
+		// so we need to rename them.
+		if envMap["GOARCH"] == "arm" {
+			debPkgs, err := filepath.Glob(distPath + "/pkg/*.deb")
+			if err != nil {
+				return fmt.Errorf("could not find arm deb package: %w", err)
+			}
+
+			oldDebPkg := debPkgs[0]
+			newDebPkg := strings.ReplaceAll(oldDebPkg, "armhf", "arm"+envMap["GOARM"]+"hf")
+
+			if err = sh.Copy(newDebPkg, oldDebPkg); err != nil {
+				return fmt.Errorf("could not rename old arm deb package: %w", err)
+			}
+
+			err = sh.Rm(oldDebPkg)
+			if err != nil {
+				return fmt.Errorf("could not remove old arm deb package: %w", err)
+			}
 		}
 	}
 
@@ -86,14 +107,6 @@ func (Package) FyneCross() error {
 		return fmt.Errorf("failed to create environment: %w", err)
 	}
 
-	var output string
-
-	if strings.Contains(envMap["GOARCH"], "arm") {
-		output = envMap["GOARCH"] + envMap["GOARM"]
-	} else {
-		output = envMap["GOARCH"]
-	}
-
 	if err = sh.RunWithV(envMap,
 		"fyne-cross", "linux",
 		"-name", "go-hass-agent",
@@ -103,14 +116,15 @@ func (Package) FyneCross() error {
 		slog.Warn("fyne-cross finished but with errors. Continuing anyway.", "error", err.Error())
 	}
 
-	if err = sh.Copy(
-		fynePath+"/dist/linux-"+envMap["GOARCH"]+"/go-hass-agent-"+output+".tar.xz",
-		fynePath+"/dist/linux-"+envMap["GOARCH"]+"/go-hass-agent.tar.xz",
-	); err != nil {
+	// Rename the fyne package with the arch included.
+	newFileName := fynePath + "/dist/linux-" + envMap["GOARCH"] + "/go-hass-agent-" + envMap["PLATFORMPAIR"] + ".tar.xz"
+	origFileName := fynePath + "/dist/linux-" + envMap["GOARCH"] + "/go-hass-agent.tar.xz"
+
+	if err = sh.Copy(newFileName, origFileName); err != nil {
 		return fmt.Errorf("could not copy build artefact: %w", err)
 	}
 
-	err = sh.Rm("fyne-cross/dist/linux-" + envMap["GOARCH"] + "/go-hass-agent.tar.xz")
+	err = sh.Rm(origFileName)
 	if err != nil {
 		return fmt.Errorf("could not remove unneeded build data: %w", err)
 	}
