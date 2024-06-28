@@ -11,7 +11,6 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
@@ -74,17 +73,11 @@ func buildProject() error {
 		return errors.Join(ErrBuildFailed, err)
 	}
 
-	var output string
-	// Generate the output binary name depending on the arch.
-	if strings.Contains(envMap["GOARCH"], "arm") {
-		output = filepath.Join(distPath, "/go-hass-agent-"+envMap["GOARCH"]+envMap["GOARM"])
-	} else {
-		output = filepath.Join(distPath, "/go-hass-agent-"+envMap["GOARCH"])
-	}
+	outputFile := filepath.Join(distPath, "/go-hass-agent-"+envMap["PLATFORMPAIR"])
 
-	slog.Info("Running go build...", "output", output, "ldflags", ldflags)
+	slog.Info("Running go build...", "output", outputFile, "ldflags", ldflags)
 
-	if err := sh.RunWithV(envMap, "go", "build", "-ldflags="+ldflags, "-o", output); err != nil {
+	if err := sh.RunWithV(envMap, "go", "build", "-ldflags="+ldflags, "-o", outputFile); err != nil {
 		return fmt.Errorf("failed to build project: %w", err)
 	}
 
