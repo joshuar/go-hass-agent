@@ -21,37 +21,84 @@ import (
 	fyneui "github.com/joshuar/go-hass-agent/internal/agent/ui/fyneUI"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
 var ErrCtxFailed = errors.New("unable to create a context")
 
-// Agent holds the data and structure representing an instance of the agent.
-// This includes the data structure for the UI elements and tray and some
-// strings such as app name and version.
+// Agent holds the options of the running agent, the UI object and a channel for
+// closing the agent down.
 type Agent struct {
-	ui      UI
-	done    chan struct{}
-	Options *Options
+	ui               UI
+	done             chan struct{}
+	registrationInfo *hass.RegistrationInput
+	id               string
+	headless         bool
+	forceRegister    bool
 }
 
-// Options holds options taken from the command-line that was used to
-// invoke go-hass-agent that are relevant for agent functionality.
-type Options struct {
-	ID, Server, Token                   string
-	Headless, ForceRegister, IgnoreURLs bool
-}
+// Option is a functional parameter that will configure a feature of the agent.
+type Option func(*Agent)
 
+// newDefaultAgent returns an agent with default options.
+//
 //nolint:exhaustruct
-func New(o *Options) *Agent {
-	agent := &Agent{
-		done:    make(chan struct{}),
-		Options: o,
+func newDefaultAgent() *Agent {
+	return &Agent{
+		done: make(chan struct{}),
+		id:   preferences.AppID,
 	}
-	if !agent.Options.Headless {
-		agent.ui = fyneui.NewFyneUI(agent.Options.ID)
+}
+
+// NewAgent creates a new agent with the options specified.
+func NewAgent(options ...Option) *Agent {
+	agent := newDefaultAgent()
+
+	for _, option := range options {
+		option(agent)
+	}
+
+	if !agent.headless {
+		agent.ui = fyneui.NewFyneUI(agent.id)
 	}
 
 	return agent
+}
+
+// WithID will set the agent ID to the value given.
+func WithID(id string) Option {
+	return func(a *Agent) {
+		a.id = id
+	}
+}
+
+// Headless sets whether the agent should run in a headless mode, without any
+// GUI.
+func Headless(value bool) Option {
+	return func(a *Agent) {
+		a.headless = value
+	}
+}
+
+// WithRegistrationInfo will set the info required for registering the agent.
+// Only used when the Register command is run.
+func WithRegistrationInfo(server, token string, ignoreURLs bool) Option {
+	return func(a *Agent) {
+		a.registrationInfo = &hass.RegistrationInput{
+			Server:           server,
+			Token:            token,
+			IgnoreOutputURLs: ignoreURLs,
+		}
+	}
+}
+
+// ForceRegister will force the agent to register against Home Assistant,
+// regardless of whether it is already registered. Only used when the Register
+// command is run.
+func ForceRegister(value bool) Option {
+	return func(a *Agent) {
+		a.forceRegister = value
+	}
 }
 
 // Run is the "main loop" of the agent. It sets up the agent, loads the config
@@ -122,7 +169,7 @@ func (agent *Agent) Run(trk SensorTracker, reg sensor.Registry) {
 			runMQTTWorker(runnerCtx, commandsFile)
 		}()
 		// Listen for notifications from Home Assistant.
-		if !agent.IsHeadless() {
+		if !agent.headless {
 			wg.Add(1)
 
 			go func() {
@@ -134,7 +181,7 @@ func (agent *Agent) Run(trk SensorTracker, reg sensor.Registry) {
 
 	agent.handleSignals()
 
-	if !agent.IsHeadless() {
+	if !agent.headless {
 		agent.ui.DisplayTrayIcon(agent, trk)
 		agent.ui.Run(agent.done)
 	}
@@ -155,7 +202,7 @@ func (agent *Agent) Register(trk SensorTracker) {
 		}
 	}()
 
-	if !agent.IsHeadless() {
+	if !agent.headless {
 		agent.ui.Run(agent.done)
 	}
 
@@ -175,16 +222,10 @@ func (agent *Agent) handleSignals() {
 	}()
 }
 
-// IsHeadless returns a bool indicating whether the agent is running in
-// "headless" mode (i.e., without a GUI) or not.
-func (agent *Agent) IsHeadless() bool {
-	return agent.Options.Headless
-}
-
 // AppID returns the "application ID". Currently, this ID is just used to
 // indicate whether the agent is running in debug mode or not.
 func (agent *Agent) AppID() string {
-	return agent.Options.ID
+	return agent.id
 }
 
 // Stop will close the agent's done channel which indicates to any goroutines it
