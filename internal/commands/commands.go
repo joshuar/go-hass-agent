@@ -21,13 +21,10 @@ import (
 	"github.com/iancoleman/strcase"
 	mqtthass "github.com/joshuar/go-hass-anything/v9/pkg/hass"
 	mqttapi "github.com/joshuar/go-hass-anything/v9/pkg/mqtt"
+	"github.com/pelletier/go-toml/v2"
 	"github.com/rs/zerolog/log"
 
 	"github.com/joshuar/go-hass-agent/internal/preferences"
-
-	"github.com/knadh/koanf"
-	"github.com/knadh/koanf/parsers/toml"
-	"github.com/knadh/koanf/providers/file"
 )
 
 // ErrNoCommands indicates there were no commands to configure.
@@ -142,14 +139,14 @@ func NewCommandsController(ctx context.Context, commandsFile string, device *mqt
 		return nil, ErrNoCommands
 	}
 
-	commandsCfg := koanf.New(".")
-	if err := commandsCfg.Load(file.Provider(commandsFile), toml.Parser()); err != nil {
-		return nil, fmt.Errorf("could not load commands file: %w", err)
+	data, err := os.ReadFile(commandsFile)
+	if err != nil {
+		return nil, fmt.Errorf("could not read commands file: %w", err)
 	}
 
 	cmds := &CommandList{}
 
-	if err := commandsCfg.Unmarshal("", &cmds); err != nil {
+	if err := toml.Unmarshal(data, &cmds); err != nil {
 		return nil, fmt.Errorf("could not parse commands file: %w", err)
 	}
 
