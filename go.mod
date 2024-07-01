@@ -32,11 +32,7 @@ require (
 	github.com/jaypipes/pcidb v1.0.0 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/mandykoh/go-parallel v0.1.0 // indirect
-	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
-	github.com/mitchellh/mapstructure v1.5.0 // indirect
-	github.com/mitchellh/reflectwalk v1.0.2 // indirect
-	github.com/pelletier/go-toml v1.9.3 // indirect
 	github.com/rogpeppe/go-internal v1.12.0 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.9.0 // indirect
@@ -73,7 +69,6 @@ require (
 	github.com/joshuar/go-hass-anything/v9 v9.2.0
 	github.com/jsummers/gobmp v0.0.0-20151104160322-e2ba15ffa76e // indirect
 	github.com/klauspost/compress v1.17.8 // indirect
-	github.com/knadh/koanf v1.5.0
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/mandykoh/prism v0.35.2
