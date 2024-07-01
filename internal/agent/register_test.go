@@ -183,64 +183,55 @@ func TestAgent_performRegistration(t *testing.T) {
 		}
 	}))
 
-	type fields struct {
-		ui      UI
-		done    chan struct{}
-		Options *Options
-	}
 	type args struct {
-		ctx context.Context
+		ctx    context.Context
+		server string
+		token  string
 	}
 	tests := []struct {
-		fields  fields
 		args    args
 		name    string
 		wantErr bool
 	}{
 		{
 			name: "successful test",
-			args: args{ctx: context.Background()},
-			fields: fields{Options: &Options{
-				Headless: true,
-				Server:   mockGoodReponse.URL,
-				Token:    "someToken",
-			}},
+			args: args{
+				ctx:    context.Background(),
+				server: mockGoodReponse.URL,
+				token:  "someToken",
+			},
 		},
 		{
 			name: "missing server",
-			args: args{ctx: context.Background()},
-			fields: fields{Options: &Options{
-				Headless: true,
-				Token:    "someToken",
-			}},
+			args: args{
+				ctx:   context.Background(),
+				token: "someToken",
+			},
 			wantErr: true,
 		},
 		{
 			name: "missing token",
-			args: args{ctx: context.Background()},
-			fields: fields{Options: &Options{
-				Headless: true,
-				Server:   mockGoodReponse.URL,
-			}},
+			args: args{
+				ctx:    context.Background(),
+				server: mockGoodReponse.URL,
+			},
 			wantErr: true,
 		},
 		{
 			name: "bad response",
-			args: args{ctx: context.Background()},
-			fields: fields{Options: &Options{
-				Headless: true,
-				Server:   mockBadResponse.URL,
-			}},
+			args: args{
+				ctx:    context.Background(),
+				server: mockBadResponse.URL,
+			},
 			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			agent := &Agent{
-				ui:      tt.fields.ui,
-				done:    tt.fields.done,
-				Options: tt.fields.Options,
-			}
+			agent := NewAgent(
+				Headless(true),
+				WithRegistrationInfo(tt.args.server, tt.args.token, false),
+			)
 			if err := agent.performRegistration(tt.args.ctx); (err != nil) != tt.wantErr {
 				t.Errorf("Agent.performRegistration() error = %v, wantErr %v", err, tt.wantErr)
 			}

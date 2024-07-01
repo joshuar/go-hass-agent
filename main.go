@@ -66,14 +66,10 @@ register command to start fresh.
 }
 
 func (r *ResetCmd) Run(ctx *Context) error {
-	gohassagent := agent.New(&agent.Options{
-		Headless:      ctx.Headless,
-		ID:            ctx.AppID,
-		Server:        "",
-		Token:         "",
-		ForceRegister: false,
-		IgnoreURLs:    false,
-	})
+	gohassagent := agent.NewAgent(
+		agent.WithID(ctx.AppID),
+		agent.Headless(ctx.Headless))
+
 	registry.SetPath(filepath.Join(xdg.ConfigHome, gohassagent.AppID(), "sensorRegistry"))
 	preferences.SetPath(filepath.Join(xdg.ConfigHome, gohassagent.AppID()))
 	// Reset agent.
@@ -124,14 +120,11 @@ flags. The UI can be explicitly disabled via the --terminal flag.
 }
 
 func (r *RegisterCmd) Run(ctx *Context) error {
-	gohassagent := agent.New(&agent.Options{
-		Headless:      ctx.Headless,
-		ForceRegister: r.Force,
-		IgnoreURLs:    r.IgnoreURLs,
-		Server:        r.Server,
-		Token:         r.Token,
-		ID:            ctx.AppID,
-	})
+	gohassagent := agent.NewAgent(
+		agent.WithID(ctx.AppID),
+		agent.Headless(ctx.Headless),
+		agent.WithRegistrationInfo(r.Server, r.Token, r.IgnoreURLs),
+		agent.ForceRegister(r.Force))
 
 	var err error
 
@@ -162,12 +155,10 @@ show reported sensors/measurements.
 `
 }
 
-//nolint:exhaustruct
 func (r *RunCmd) Run(ctx *Context) error {
-	gohassagent := agent.New(&agent.Options{
-		Headless: ctx.Headless,
-		ID:       ctx.AppID,
-	})
+	gohassagent := agent.NewAgent(
+		agent.WithID(ctx.AppID),
+		agent.Headless(ctx.Headless))
 
 	var err error
 

@@ -63,21 +63,15 @@ func saveRegistration(input *hass.RegistrationInput, resp *hass.RegistrationDeta
 func (agent *Agent) performRegistration(ctx context.Context) error {
 	log.Info().Msg("Registration required. Starting registration process.")
 
-	input := &hass.RegistrationInput{
-		Server:           agent.Options.Server,
-		Token:            agent.Options.Token,
-		IgnoreOutputURLs: agent.Options.IgnoreURLs,
-	}
-
 	// Display a window asking for registration details for non-headless usage.
-	if !agent.Options.Headless {
+	if !agent.headless {
 		userInputDone := make(chan struct{})
-		agent.ui.DisplayRegistrationWindow(ctx, input, userInputDone)
+		agent.ui.DisplayRegistrationWindow(ctx, agent.registrationInfo, userInputDone)
 		<-userInputDone
 	}
 
 	// Validate provided registration details.
-	if err := input.Validate(); err != nil {
+	if err := agent.registrationInfo.Validate(); err != nil {
 		// if !validRegistrationSetting("server", input.Server) || !validRegistrationSetting("token", token) {
 		return fmt.Errorf("failed: %w", err)
 	}
@@ -85,13 +79,13 @@ func (agent *Agent) performRegistration(ctx context.Context) error {
 	device := newDevice(ctx)
 
 	// Register with Home Assistant.
-	resp, err := hass.RegisterWithHass(ctx, input, device)
+	resp, err := hass.RegisterWithHass(ctx, agent.registrationInfo, device)
 	if err != nil {
 		return fmt.Errorf("failed: %w", err)
 	}
 
 	// Write registration details to config.
-	if err := saveRegistration(input, resp, device); err != nil {
+	if err := saveRegistration(agent.registrationInfo, resp, device); err != nil {
 		return fmt.Errorf("failed: %w", err)
 	}
 
@@ -106,7 +100,7 @@ func (agent *Agent) checkRegistration(trk SensorTracker) error {
 		return fmt.Errorf("could not load preferences: %w", err)
 	}
 
-	if prefs.Registered && !agent.Options.ForceRegister {
+	if prefs.Registered && !agent.forceRegister {
 		log.Debug().Msg("Agent already registered.")
 
 		return nil
@@ -117,7 +111,7 @@ func (agent *Agent) checkRegistration(trk SensorTracker) error {
 		return err
 	}
 
-	if agent.Options.ForceRegister {
+	if agent.forceRegister {
 		trk.Reset()
 
 		if err := registry.Reset(); err != nil {
