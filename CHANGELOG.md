@@ -1,5 +1,18 @@
 # Changelog
 
+## [9.5.1](https://github.com/joshuar/go-hass-agent/compare/v9.5.0...v9.5.1) (2024-07-02)
+
+
+### Bug Fixes
+
+* **linux:** :bug: don't try to create controls if they are unavailable ([f2fafbc](https://github.com/joshuar/go-hass-agent/commit/f2fafbc85b2e39d134ea570059ce588a784cfde4))
+* **scripts:** :bug: improve error and argument handling ([a37f20c](https://github.com/joshuar/go-hass-agent/commit/a37f20cf1fa7486dc859f40d82ad39fc7304f983))
+
+
+### Performance Improvements
+
+* **agent:** :fire: remove unneeded and complicated koanf usage ([b0740e8](https://github.com/joshuar/go-hass-agent/commit/b0740e88aeca48b7d7f7d6762219271d25961064))
+
 ## [9.5.0](https://github.com/joshuar/go-hass-agent/compare/v9.4.0...v9.5.0) (2024-06-27)
 
 
