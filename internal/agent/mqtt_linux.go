@@ -114,13 +114,21 @@ func newMQTTDevice(ctx context.Context) MQTTWorker {
 	}
 
 	// Add the power controls (suspend, resume, poweroff, etc.).
-	dev.buttons = append(dev.buttons, power.NewPowerControl(ctx)...)
+	powerButtons := power.NewPowerControl(ctx)
+	if powerButtons != nil {
+		dev.buttons = append(dev.buttons, powerButtons...)
+	}
 	// Add the screen lock controls.
-	dev.buttons = append(dev.buttons, power.NewScreenLockControl(ctx))
+	screenLock := power.NewScreenLockControl(ctx)
+	if screenLock != nil {
+		dev.buttons = append(dev.buttons, screenLock)
+	}
 	// Add the volume controls.
 	volEntity, muteEntity := media.VolumeControl(ctx, dev.Msgs())
-	dev.numbers = append(dev.numbers, volEntity)
-	dev.switches = append(dev.switches, muteEntity)
+	if volEntity != nil && muteEntity != nil {
+		dev.numbers = append(dev.numbers, volEntity)
+		dev.switches = append(dev.switches, muteEntity)
+	}
 	// Add the D-Bus command action.
 	dev.controls = append(dev.controls, system.NewDBusCommandSubscription(ctx))
 
