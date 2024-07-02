@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/iancoleman/strcase"
 	"github.com/pelletier/go-toml/v2"
@@ -31,9 +32,9 @@ type Script struct {
 
 //nolint:exhaustruct
 func (s *Script) execute() (*scriptOutput, error) {
-	cmd := exec.Command(s.path)
+	cmdElems := strings.Split(s.path, " ")
 
-	out, err := cmd.Output()
+	out, err := exec.Command(cmdElems[0], cmdElems[1:]...).Output()
 	if err != nil {
 		return nil, fmt.Errorf("could not execute script: %w", err)
 	}
@@ -78,7 +79,7 @@ func (s *Script) Path() string {
 
 // NewScript returns a new script object that can scheduled with the job
 // scheduler by the agent.
-func NewScript(path string) *Script {
+func NewScript(path string) (*Script, error) {
 	script := &Script{
 		path:     path,
 		schedule: "",
@@ -87,15 +88,12 @@ func NewScript(path string) *Script {
 
 	out, err := script.execute()
 	if err != nil {
-		log.Warn().Err(err).Str("script", path).
-			Msg("Cannot run script")
-
-		return nil
+		return nil, fmt.Errorf("cannot add script %s: %w", path, err)
 	}
 
 	script.schedule = out.Schedule
 
-	return script
+	return script, nil
 }
 
 // scriptOutput represents the output from a script. The output must be
@@ -211,6 +209,8 @@ func (s *scriptSensor) Attributes() map[string]any {
 func FindScripts(path string) ([]*Script, error) {
 	var scripts []*Script
 
+	var errs error
+
 	files, err := filepath.Glob(path + "/*")
 	if err != nil {
 		return nil, fmt.Errorf("could not search for scripts: %w", err)
@@ -218,10 +218,14 @@ func FindScripts(path string) ([]*Script, error) {
 
 	for _, s := range files {
 		if isExecutable(s) {
-			script := NewScript(s)
-			if script != nil {
-				scripts = append(scripts, script)
+			script, err := NewScript(s)
+			if err != nil {
+				errs = errors.Join(errs, err)
+
+				continue
 			}
+
+			scripts = append(scripts, script)
 		}
 	}
 

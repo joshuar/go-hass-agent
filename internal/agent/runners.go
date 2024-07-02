@@ -139,7 +139,7 @@ func runScripts(ctx context.Context, path string, trk SensorTracker, reg sensor.
 
 	switch {
 	case err != nil:
-		log.Error().Err(err).Msg("Error getting scripts.")
+		log.Warn().Err(err).Msg("Error getting scripts.")
 
 		return
 	case len(allScripts) == 0:
