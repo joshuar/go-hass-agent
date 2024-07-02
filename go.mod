@@ -66,7 +66,7 @@ require (
 	github.com/gopherjs/gopherjs v1.17.2 // indirect
 	github.com/jaypipes/ghw v0.12.0
 	github.com/jfreymuth/pulse v0.1.1
-	github.com/joshuar/go-hass-anything/v9 v9.2.0
+	github.com/joshuar/go-hass-anything/v9 v9.2.1
 	github.com/jsummers/gobmp v0.0.0-20151104160322-e2ba15ffa76e // indirect
 	github.com/klauspost/compress v1.17.8 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
