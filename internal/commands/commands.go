@@ -30,7 +30,7 @@ import (
 // ErrNoCommands indicates there were no commands to configure.
 var (
 	ErrNoCommands         = errors.New("no commands")
-	ErrUnknownSwitchState = errors.New("could not parse current state of switch")
+	ErrUnknownSwitchState = errors.New("could not parse switch state")
 )
 
 // Command represents a Command to run by a button or switch.
@@ -134,7 +134,7 @@ func (d *Controller) Setup(_ context.Context) error {
 // the user.
 //
 //nolint:exhaustruct
-func NewCommandsController(ctx context.Context, commandsFile string, device *mqtthass.Device) (*Controller, error) {
+func NewCommandsController(_ context.Context, commandsFile string, device *mqtthass.Device) (*Controller, error) {
 	if _, err := os.Stat(commandsFile); errors.Is(err, os.ErrNotExist) {
 		return nil, ErrNoCommands
 	}
@@ -150,20 +150,12 @@ func NewCommandsController(ctx context.Context, commandsFile string, device *mqt
 		return nil, fmt.Errorf("could not parse commands file: %w", err)
 	}
 
-	controller := newController(ctx, device, cmds)
-
-	return controller, nil
-}
-
-// newController creates a new MQTT controller to manage a bunch of buttons and
-// switches a user has defined.
-func newController(_ context.Context, device *mqtthass.Device, commands *CommandList) *Controller {
 	controller := &Controller{
-		buttons:  generateButtons(commands.Buttons, device),
-		switches: generateSwitches(commands.Switches, device),
+		buttons:  generateButtons(cmds.Buttons, device),
+		switches: generateSwitches(cmds.Switches, device),
 	}
 
-	return controller
+	return controller, nil
 }
 
 // generateButtons will create MQTT entities for buttons defined by the
@@ -261,6 +253,10 @@ func generateSwitches(switchCmds []Command, device *mqtthass.Device) []*mqtthass
 // expected to accept any input, or produce any consumable output, so only the
 // return value is checked.
 func switchCmd(command, state string) error {
+	if state == "" {
+		return ErrUnknownSwitchState
+	}
+
 	cmdElems := strings.Split(command, " ")
 	cmdElems = append(cmdElems, state)
 
