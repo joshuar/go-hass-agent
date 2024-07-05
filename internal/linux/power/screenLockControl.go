@@ -23,7 +23,7 @@ import (
 func NewScreenLockControl(ctx context.Context) *mqtthass.ButtonEntity {
 	dbusScreensaverDest, dbusScreensaverPath, dbusScreensaverMsg := getDesktopEnvScreensaverConfig()
 	dbusScreensaverLockMethod := dbusScreensaverDest + ".Lock"
-	device := linux.MQTTDevice()
+	device := linux.MQTTDevice(ctx)
 
 	return mqtthass.AsButton(
 		mqtthass.NewEntity(preferences.AppName, "Lock Screensaver", device.Name+"_lock_screensaver").

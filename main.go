@@ -7,6 +7,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -66,14 +67,20 @@ register command to start fresh.
 }
 
 func (r *ResetCmd) Run(ctx *Context) error {
-	gohassagent := agent.NewAgent(
+	agentCtx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+
+	gohassagent, err := agent.NewAgent(
 		agent.WithID(ctx.AppID),
 		agent.Headless(ctx.Headless))
+	if err != nil {
+		return fmt.Errorf("failed to run reset command: %w", err)
+	}
 
 	registry.SetPath(filepath.Join(xdg.ConfigHome, gohassagent.AppID(), "sensorRegistry"))
 	preferences.SetPath(filepath.Join(xdg.ConfigHome, gohassagent.AppID()))
 	// Reset agent.
-	if err := gohassagent.Reset(); err != nil {
+	if err := gohassagent.Reset(agentCtx); err != nil {
 		return fmt.Errorf("agent reset failed: %w", err)
 	}
 	// Reset registry.
@@ -120,13 +127,17 @@ flags. The UI can be explicitly disabled via the --terminal flag.
 }
 
 func (r *RegisterCmd) Run(ctx *Context) error {
-	gohassagent := agent.NewAgent(
+	agentCtx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+
+	gohassagent, err := agent.NewAgent(
 		agent.WithID(ctx.AppID),
 		agent.Headless(ctx.Headless),
 		agent.WithRegistrationInfo(r.Server, r.Token, r.IgnoreURLs),
 		agent.ForceRegister(r.Force))
-
-	var err error
+	if err != nil {
+		return fmt.Errorf("failed to run register command: %w", err)
+	}
 
 	var trk *sensor.Tracker
 
@@ -137,7 +148,7 @@ func (r *RegisterCmd) Run(ctx *Context) error {
 		return fmt.Errorf("could not start sensor tracker: %w", err)
 	}
 
-	gohassagent.Register(trk)
+	gohassagent.Register(agentCtx, trk)
 
 	return nil
 }
@@ -156,16 +167,19 @@ show reported sensors/measurements.
 }
 
 func (r *RunCmd) Run(ctx *Context) error {
-	gohassagent := agent.NewAgent(
+	agentCtx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+
+	gohassagent, err := agent.NewAgent(
 		agent.WithID(ctx.AppID),
 		agent.Headless(ctx.Headless))
-
-	var err error
+	if err != nil {
+		return fmt.Errorf("failed to run: %w", err)
+	}
 
 	var trk *sensor.Tracker
 
 	registry.SetPath(filepath.Join(xdg.ConfigHome, gohassagent.AppID(), "sensorRegistry"))
-	preferences.SetPath(filepath.Join(xdg.ConfigHome, gohassagent.AppID()))
 
 	reg, err := registry.Load()
 	if err != nil {
@@ -176,7 +190,9 @@ func (r *RunCmd) Run(ctx *Context) error {
 		return fmt.Errorf("could not start sensor tracker: %w", err)
 	}
 
-	gohassagent.Run(trk, reg)
+	if err := gohassagent.Run(agentCtx, trk, reg); err != nil {
+		return fmt.Errorf("failed to run: %w", err)
+	}
 
 	return nil
 }

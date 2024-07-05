@@ -73,7 +73,7 @@ var commands = map[string]commandConfig{
 
 func NewPowerControl(ctx context.Context) []*mqtthass.ButtonEntity {
 	entities := make([]*mqtthass.ButtonEntity, 0, len(commands))
-	device := linux.MQTTDevice()
+	device := linux.MQTTDevice(ctx)
 
 	sessionPath, err := dbusx.GetSessionPath(ctx)
 	if err != nil {

@@ -25,15 +25,12 @@ type EntityState struct {
 	EntityID    string         `json:"entity_id"`
 }
 
-type EntityStateRequest struct{}
+type EntityStateRequest struct {
+	token string
+}
 
 func (e *EntityStateRequest) Auth() string {
-	prefs, err := preferences.Load()
-	if err != nil {
-		return ""
-	}
-
-	return prefs.Token
+	return e.token
 }
 
 type EntityStateResponse struct {
@@ -50,19 +47,17 @@ func (e *EntityStateResponse) UnmarshalJSON(b []byte) error {
 }
 
 //nolint:exhaustruct
-func GetEntityState(sensorType, entityID string) (*EntityStateResponse, error) {
-	ctx := context.TODO()
-
-	prefs, err := preferences.Load()
+func GetEntityState(ctx context.Context, sensorType, entityID string) (*EntityStateResponse, error) {
+	prefs, err := preferences.ContextGetPrefs(ctx)
 	if err != nil {
-		return nil, ErrNoPrefs
+		return nil, ErrLoadPrefsFailed
 	}
 
 	url := prefs.Host + "/api/states/" + sensorType + "." + prefs.DeviceName + "_" + entityID
 	ctx = ContextSetURL(ctx, url)
 	ctx = ContextSetClient(ctx, resty.New())
 
-	req := &EntityStateRequest{}
+	req := &EntityStateRequest{token: prefs.Token}
 	resp := &EntityStateResponse{}
 
 	if err := ExecuteRequest(ctx, req, resp); err != nil {
@@ -72,19 +67,16 @@ func GetEntityState(sensorType, entityID string) (*EntityStateResponse, error) {
 	return resp, nil
 }
 
-type EntityStatesRequest struct{}
+type EntityStatesRequest struct {
+	token string
+}
+
+func (e *EntityStatesRequest) Auth() string {
+	return e.token
+}
 
 type EntityStatesResponse struct {
 	States []EntityStateResponse
-}
-
-func (e *EntityStatesResponse) Auth() string {
-	prefs, err := preferences.Load()
-	if err != nil {
-		return ""
-	}
-
-	return prefs.Token
 }
 
 func (e *EntityStatesResponse) UnmarshalJSON(b []byte) error {
@@ -97,18 +89,16 @@ func (e *EntityStatesResponse) UnmarshalJSON(b []byte) error {
 }
 
 //nolint:exhaustruct
-func GetAllEntityStates() (*EntityStatesResponse, error) {
-	ctx := context.TODO()
-
-	prefs, err := preferences.Load()
+func GetAllEntityStates(ctx context.Context) (*EntityStatesResponse, error) {
+	prefs, err := preferences.ContextGetPrefs(ctx)
 	if err != nil {
-		return nil, ErrNoPrefs
+		return nil, ErrLoadPrefsFailed
 	}
 
 	url := prefs.Host + "/api/states/"
 	ctx = ContextSetURL(ctx, url)
 	ctx = ContextSetClient(ctx, resty.New())
-	req := &EntityStatesRequest{}
+	req := &EntityStatesRequest{token: prefs.Token}
 	resp := &EntityStatesResponse{}
 
 	if err := ExecuteRequest(ctx, req, resp); err != nil {

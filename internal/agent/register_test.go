@@ -15,6 +15,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
@@ -159,8 +161,11 @@ func TestRegistrationResponse_GenerateWebsocketURL(t *testing.T) {
 //revive:disable:function-length
 func TestAgent_performRegistration(t *testing.T) {
 	preferences.SetPath(t.TempDir())
-	// set a fake version as it normally gets generated on build.
-	preferences.AppVersion = "v0.0.0"
+	prefs := preferences.DefaultPreferences()
+	err := prefs.Save()
+	require.NoError(t, err)
+
+	ctx := preferences.ContextSetPrefs(context.TODO(), preferences.DefaultPreferences())
 
 	mockGoodReponse := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		mockResponse, err := json.Marshal(&hass.RegistrationDetails{WebhookID: "someID"})
@@ -196,7 +201,7 @@ func TestAgent_performRegistration(t *testing.T) {
 		{
 			name: "successful test",
 			args: args{
-				ctx:    context.Background(),
+				ctx:    ctx,
 				server: mockGoodReponse.URL,
 				token:  "someToken",
 			},
@@ -204,7 +209,7 @@ func TestAgent_performRegistration(t *testing.T) {
 		{
 			name: "missing server",
 			args: args{
-				ctx:   context.Background(),
+				ctx:   ctx,
 				token: "someToken",
 			},
 			wantErr: true,
@@ -212,7 +217,7 @@ func TestAgent_performRegistration(t *testing.T) {
 		{
 			name: "missing token",
 			args: args{
-				ctx:    context.Background(),
+				ctx:    ctx,
 				server: mockGoodReponse.URL,
 			},
 			wantErr: true,
@@ -220,7 +225,7 @@ func TestAgent_performRegistration(t *testing.T) {
 		{
 			name: "bad response",
 			args: args{
-				ctx:    context.Background(),
+				ctx:    ctx,
 				server: mockBadResponse.URL,
 			},
 			wantErr: true,
@@ -228,13 +233,17 @@ func TestAgent_performRegistration(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			agent := NewAgent(
+			agent, err := NewAgent(
 				Headless(true),
 				WithRegistrationInfo(tt.args.server, tt.args.token, false),
 			)
-			if err := agent.performRegistration(tt.args.ctx); (err != nil) != tt.wantErr {
+			require.NoError(t, err)
+			if err = agent.performRegistration(tt.args.ctx); (err != nil) != tt.wantErr {
 				t.Errorf("Agent.performRegistration() error = %v, wantErr %v", err, tt.wantErr)
 			}
+			newPrefs, err := preferences.Load("")
+			require.NoError(t, err)
+			require.True(t, newPrefs.Registered)
 		})
 	}
 }

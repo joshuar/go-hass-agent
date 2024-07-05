@@ -3,10 +3,11 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//nolint:paralleltest,dupl,exhaustruct
+//nolint:paralleltest,dupl,exhaustruct,wsl
 package linux
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -151,6 +152,7 @@ func TestNewDevice(t *testing.T) {
 	}
 }
 
+//nolint:containedctx
 func TestMQTTDevice(t *testing.T) {
 	dev := NewDevice(preferences.AppName, preferences.AppVersion)
 	mqttDev := &mqtthass.Device{
@@ -161,19 +163,26 @@ func TestMQTTDevice(t *testing.T) {
 		Model:        dev.Model(),
 		Identifiers:  []string{dev.DeviceID()},
 	}
+	ctx := preferences.ContextSetPrefs(context.TODO(), preferences.DefaultPreferences())
+
+	type args struct {
+		ctx context.Context
+	}
 	tests := []struct {
+		args args
 		want *mqtthass.Device
 		name string
 	}{
 		{
 			name: "default",
 			want: mqttDev,
+			args: args{ctx: ctx},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := MQTTDevice(); !compareMQTTDevice(t, got, tt.want) {
+			if got := MQTTDevice(tt.args.ctx); !compareMQTTDevice(t, got, tt.want) {
 				t.Errorf("MQTTDevice() = %v, want %v", got, tt.want)
 			}
 		})

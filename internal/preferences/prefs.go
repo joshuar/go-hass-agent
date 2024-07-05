@@ -16,7 +16,6 @@ import (
 	"github.com/adrg/xdg"
 	mqtthass "github.com/joshuar/go-hass-anything/v9/pkg/hass"
 	"github.com/pelletier/go-toml/v2"
-	"github.com/sourcegraph/conc/pool"
 )
 
 const (
@@ -37,7 +36,7 @@ var (
 )
 
 var (
-	preferencesPath = filepath.Join(xdg.ConfigHome, "go-hass-agent")
+	preferencesPath = filepath.Join(xdg.ConfigHome, AppID)
 	preferencesFile = "preferences.toml"
 
 	ErrNoPreferences = errors.New("no preferences file found, using defaults")
@@ -92,144 +91,75 @@ func File() string {
 	return preferencesFile
 }
 
-func SetVersion(version string) Preference {
-	return func(p *Preferences) error {
-		p.Version = version
-
-		return nil
+// Load will retrieve the current preferences from the preference file on disk.
+// If there is a problem during retrieval, an error will be returned.
+func Load(id string) (*Preferences, error) {
+	if id != "" {
+		SetPath(filepath.Join(xdg.ConfigHome, id))
 	}
+
+	file := filepath.Join(preferencesPath, preferencesFile)
+	prefs := DefaultPreferences()
+
+	b, err := os.ReadFile(file)
+	if err != nil {
+		return prefs, errors.Join(ErrNoPreferences, err)
+	}
+
+	err = toml.Unmarshal(b, &prefs)
+	if err != nil {
+		return prefs, errors.Join(ErrFileContents, err)
+	}
+
+	return prefs, nil
 }
 
-func SetDeviceID(id string) Preference {
-	return func(p *Preferences) error {
-		p.DeviceID = id
-
-		return nil
+// Save will save the new values of the specified preferences to the existing
+// preferences file. NOTE: if the preferences file does not exist, Save will
+// return an error. Use New if saving preferences for the first time.
+func (p *Preferences) Save() error {
+	if err := checkPath(preferencesPath); err != nil {
+		return err
 	}
+
+	if err := validatePreferences(p); err != nil {
+		return showValidationErrors(err)
+	}
+
+	file := filepath.Join(preferencesPath, preferencesFile)
+
+	return write(p, file)
 }
 
-func SetDeviceName(name string) Preference {
-	return func(p *Preferences) error {
-		p.DeviceName = name
-
-		return nil
+// Reset will remove the preferences directory.
+func Reset() error {
+	err := os.RemoveAll(preferencesPath)
+	if err != nil {
+		return fmt.Errorf("unable to reset preferences: %w", err)
 	}
+
+	return nil
 }
 
-func SetRestAPIURL(url string) Preference {
-	return func(p *Preferences) error {
-		p.RestAPIURL = url
-
-		return nil
+//nolint:exhaustruct
+func DefaultPreferences() *Preferences {
+	if AppVersion == "" {
+		AppVersion = "Unknown"
 	}
-}
 
-func SetCloudhookURL(url string) Preference {
-	return func(p *Preferences) error {
-		p.CloudhookURL = url
-
-		return nil
+	return &Preferences{
+		Version:      AppVersion,
+		Host:         "http://localhost:8123",
+		WebsocketURL: "http://localhost:8123",
+		RestAPIURL:   "http://localhost:8123/api/webhook/replaceme",
+		Token:        "replaceMe",
+		WebhookID:    "replaceMe",
+		Registered:   false,
+		MQTTEnabled:  false,
+		DeviceID:     "Unknown",
+		DeviceName:   "Unknown",
+		mu:           &sync.Mutex{},
 	}
-}
-
-func SetRemoteUIURL(url string) Preference {
-	return func(p *Preferences) error {
-		p.RemoteUIURL = url
-
-		return nil
-	}
-}
-
-func SetSecret(secret string) Preference {
-	return func(p *Preferences) error {
-		p.Secret = secret
-
-		return nil
-	}
-}
-
-func SetHost(host string) Preference {
-	return func(p *Preferences) error {
-		p.Host = host
-
-		return nil
-	}
-}
-
-func SetToken(token string) Preference {
-	return func(p *Preferences) error {
-		p.Token = token
-
-		return nil
-	}
-}
-
-func SetWebhookID(id string) Preference {
-	return func(p *Preferences) error {
-		p.WebhookID = id
-
-		return nil
-	}
-}
-
-func SetWebsocketURL(url string) Preference {
-	return func(p *Preferences) error {
-		p.WebsocketURL = url
-
-		return nil
-	}
-}
-
-func SetRegistered(status bool) Preference {
-	return func(p *Preferences) error {
-		p.Registered = status
-
-		return nil
-	}
-}
-
-func SetMQTTEnabled(status bool) Preference {
-	return func(p *Preferences) error {
-		p.MQTTEnabled = status
-
-		return nil
-	}
-}
-
-func SetMQTTServer(server string) Preference {
-	return func(p *Preferences) error {
-		p.MQTTServer = server
-
-		return nil
-	}
-}
-
-func SetMQTTUser(user string) Preference {
-	return func(p *Preferences) error {
-		p.MQTTUser = user
-
-		return nil
-	}
-}
-
-func SetMQTTPassword(password string) Preference {
-	return func(p *Preferences) error {
-		p.MQTTPassword = password
-
-		return nil
-	}
-}
-
-func SetMQTTRegistered(status bool) Preference {
-	return func(p *Preferences) error {
-		p.MQTTRegistered = status
-
-		return nil
-	}
-}
-
-func (p *Preferences) GetMQTTEnabled() bool {
-	return p.MQTTEnabled
 }
 
 // MQTTServer returns the broker URI from the preferences.
@@ -252,97 +182,6 @@ func (p *Preferences) GetMQTTPassword() string {
 // GetTopicPrefix returns the prefix for topics on MQTT.
 func (p *Preferences) GetTopicPrefix() string {
 	return "homeassistant"
-}
-
-//nolint:exhaustruct
-func defaultPreferences() *Preferences {
-	return &Preferences{
-		Version:      AppVersion,
-		Host:         "http://localhost:8123",
-		WebsocketURL: "http://localhost:8123",
-		Token:        "replaceMe",
-		WebhookID:    "replaceMe",
-		Registered:   false,
-		MQTTEnabled:  false,
-		mu:           &sync.Mutex{},
-	}
-}
-
-// Load will retrieve the current preferences from the preference file on disk.
-// If there is a problem during retrieval, an error will be returned.
-func Load() (*Preferences, error) {
-	file := filepath.Join(preferencesPath, preferencesFile)
-	prefs := defaultPreferences()
-
-	b, err := os.ReadFile(file)
-	if err != nil {
-		return prefs, errors.Join(ErrNoPreferences, err)
-	}
-
-	err = toml.Unmarshal(b, &prefs)
-	if err != nil {
-		return prefs, errors.Join(ErrFileContents, err)
-	}
-
-	return prefs, nil
-}
-
-// Save will save the new values of the specified preferences to the existing
-// preferences file. NOTE: if the preferences file does not exist, Save will
-// return an error. Use New if saving preferences for the first time.
-func Save(setters ...Preference) error {
-	if err := checkPath(preferencesPath); err != nil {
-		return err
-	}
-
-	prefs, err := Load()
-	if err != nil && !errors.Is(err, ErrNoPreferences) {
-		return err
-	}
-
-	if err := set(prefs, setters...); err != nil {
-		return err
-	}
-
-	if err := validatePreferences(prefs); err != nil {
-		return showValidationErrors(err)
-	}
-
-	file := filepath.Join(preferencesPath, preferencesFile)
-
-	return write(prefs, file)
-}
-
-// Reset will remove the preferences directory.
-func Reset() error {
-	err := os.RemoveAll(preferencesPath)
-	if err != nil {
-		return fmt.Errorf("unable to reset preferences: %w", err)
-	}
-
-	return nil
-}
-
-func set(prefs *Preferences, setters ...Preference) error {
-	taskPool := pool.New().WithErrors()
-
-	for _, setter := range setters {
-		setPref := setter
-
-		taskPool.Go(func() error {
-			prefs.mu.Lock()
-			defer prefs.mu.Unlock()
-
-			return setPref(prefs)
-		})
-	}
-
-	err := taskPool.Wait()
-	if err != nil {
-		return fmt.Errorf("problem detected setting preferences: %w", err)
-	}
-
-	return nil
 }
 
 //nolint:mnd

@@ -9,21 +9,21 @@ import (
 	"context"
 )
 
-type key int
+type contextKey string
 
-var cfgKey key
+const prefsContextKey contextKey = "preferences"
 
-// EmbedInContext will store the config in the given context.
-func EmbedInContext(ctx context.Context, p *Preferences) context.Context {
-	return context.WithValue(ctx, cfgKey, *p)
+// ContextSetPrefs will store the config in the given context.
+func ContextSetPrefs(ctx context.Context, p *Preferences) context.Context {
+	return context.WithValue(ctx, prefsContextKey, p)
 }
 
-// FetchFromContext will attempt to fetch the config from the given context.
-func FetchFromContext(ctx context.Context) Preferences {
-	c, ok := ctx.Value(cfgKey).(Preferences)
+// ContextGetPrefs will attempt to fetch the config from the given context.
+func ContextGetPrefs(ctx context.Context) (*Preferences, error) {
+	prefs, ok := ctx.Value(prefsContextKey).(*Preferences)
 	if !ok {
-		return *defaultPreferences()
+		return nil, ErrNoPreferences
 	}
 
-	return c
+	return prefs, nil
 }

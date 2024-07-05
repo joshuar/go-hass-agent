@@ -12,11 +12,15 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
+var validate *validator.Validate
+
 var ErrInternalValidationFailed = errors.New("internal validation error")
 
-func validatePreferences(prefs *Preferences) error {
-	validate := validator.New(validator.WithRequiredStructEnabled())
+func init() {
+	validate = validator.New(validator.WithRequiredStructEnabled())
+}
 
+func validatePreferences(prefs *Preferences) error {
 	err := validate.Struct(prefs)
 	if err != nil {
 		return fmt.Errorf("validation failed: %w", err)

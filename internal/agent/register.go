@@ -24,33 +24,37 @@ var ErrInvalidRegistration = errors.New("invalid")
 // request and the successful response in the agent preferences. This includes,
 // most importantly, details on the URL that should be used to send subsequent
 // requests to Home Assistant.
-func saveRegistration(input *hass.RegistrationInput, resp *hass.RegistrationDetails, dev hass.DeviceInfo) error {
-	apiURL, err := generateAPIURL(input.Server, input.IgnoreOutputURLs, resp)
+func (agent *Agent) saveRegistration(resp *hass.RegistrationDetails, dev hass.DeviceInfo) error {
+	// Generate an API URL from the registration info and the registration response.
+	apiURL, err := generateAPIURL(agent.registrationInfo.Server, agent.registrationInfo.IgnoreOutputURLs, resp)
 	if err != nil {
 		return fmt.Errorf("unable to save registration: %w", err)
 	}
 
-	websocketURL, err := generateWebsocketURL(input.Server)
+	// Generate a websocket URL from the registration info.
+	websocketURL, err := generateWebsocketURL(agent.registrationInfo.Server)
 	if err != nil {
 		return fmt.Errorf("unable to save registration: %w", err)
 	}
 
-	err = preferences.Save(
-		preferences.SetHost(input.Server),
-		preferences.SetToken(input.Token),
-		preferences.SetCloudhookURL(resp.CloudhookURL),
-		preferences.SetRemoteUIURL(resp.RemoteUIURL),
-		preferences.SetWebhookID(resp.WebhookID),
-		preferences.SetSecret(resp.Secret),
-		preferences.SetRestAPIURL(apiURL),
-		preferences.SetWebsocketURL(websocketURL),
-		preferences.SetDeviceName(dev.DeviceName()),
-		preferences.SetDeviceID(dev.DeviceID()),
-		preferences.SetVersion(preferences.AppVersion),
-		preferences.SetRegistered(true),
-	)
+	// Set all the preferences.
+	agent.prefs.Host = agent.registrationInfo.Server
+	agent.prefs.Token = agent.registrationInfo.Token
+	agent.prefs.CloudhookURL = resp.CloudhookURL
+	agent.prefs.RemoteUIURL = resp.RemoteUIURL
+	agent.prefs.WebhookID = resp.WebhookID
+	agent.prefs.Secret = resp.Secret
+	agent.prefs.RestAPIURL = apiURL
+	agent.prefs.WebsocketURL = websocketURL
+	agent.prefs.DeviceName = dev.DeviceName()
+	agent.prefs.DeviceID = dev.DeviceID()
+	agent.prefs.Version = preferences.AppVersion
+	agent.prefs.Registered = true
+
+	// Save the preferences to disk.
+	err = agent.prefs.Save()
 	if err != nil {
-		return fmt.Errorf("unable to save registration: %w", err)
+		return fmt.Errorf("unable to save preferences: %w", err)
 	}
 
 	return nil
@@ -85,7 +89,7 @@ func (agent *Agent) performRegistration(ctx context.Context) error {
 	}
 
 	// Write registration details to config.
-	if err := saveRegistration(agent.registrationInfo, resp, device); err != nil {
+	if err := agent.saveRegistration(resp, device); err != nil {
 		return fmt.Errorf("failed: %w", err)
 	}
 
@@ -94,20 +98,15 @@ func (agent *Agent) performRegistration(ctx context.Context) error {
 	return nil
 }
 
-func (agent *Agent) checkRegistration(trk SensorTracker) error {
-	prefs, err := preferences.Load()
-	if err != nil && !errors.Is(err, preferences.ErrNoPreferences) {
-		return fmt.Errorf("could not load preferences: %w", err)
-	}
-
-	if prefs.Registered && !agent.forceRegister {
+func (agent *Agent) checkRegistration(ctx context.Context, trk SensorTracker) error {
+	if agent.prefs.Registered && !agent.forceRegister {
 		log.Debug().Msg("Agent already registered.")
 
 		return nil
 	}
 
 	// Agent is not registered or forced registration requested.
-	if err := agent.performRegistration(context.Background()); err != nil {
+	if err := agent.performRegistration(ctx); err != nil {
 		return err
 	}
 

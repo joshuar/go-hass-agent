@@ -19,7 +19,6 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
-	"github.com/joshuar/go-hass-agent/internal/preferences"
 	"github.com/joshuar/go-hass-agent/internal/scripts"
 )
 
@@ -228,15 +227,8 @@ func (agent *Agent) runNotificationsWorker(ctx context.Context) {
 
 // runMQTTWorker will set up a connection to MQTT and listen on topics for
 // controlling this device from Home Assistant.
-func runMQTTWorker(ctx context.Context, commandsFile string) {
-	prefs, err := preferences.Load()
-	if err != nil {
-		log.Error().Err(err).Msg("Could not load MQTT preferences.")
-
-		return
-	}
-
-	if !prefs.MQTTEnabled {
+func (agent *Agent) runMQTTWorker(ctx context.Context, commandsFile string) {
+	if !agent.prefs.MQTTEnabled {
 		return
 	}
 
@@ -249,6 +241,8 @@ func runMQTTWorker(ctx context.Context, commandsFile string) {
 
 	var configs []*mqttapi.Msg
 
+	var err error
+
 	// Create an MQTT device for this operating system and run its Setup.
 	deviceController = newMQTTDevice(mqttCtx)
 	if err = deviceController.Setup(mqttCtx); err != nil {
@@ -259,7 +253,7 @@ func runMQTTWorker(ctx context.Context, commandsFile string) {
 	}
 
 	// Create an MQTT device for this operating system and run its Setup.
-	commandController, err = commands.NewCommandsController(ctx, commandsFile, linux.MQTTDevice())
+	commandController, err = commands.NewCommandsController(ctx, commandsFile, linux.MQTTDevice(ctx))
 	if err != nil {
 		log.Warn().Err(err).Msg("Could not set up commands MQTT functionality.")
 	} else {
@@ -269,7 +263,7 @@ func runMQTTWorker(ctx context.Context, commandsFile string) {
 
 	// Create a new connection to the MQTT broker. This will also publish the
 	// device subscriptions.
-	client, err := mqttapi.NewClient(mqttCtx, prefs, subscriptions, configs)
+	client, err := mqttapi.NewClient(mqttCtx, agent.prefs, subscriptions, configs)
 	if err != nil {
 		log.Error().Err(err).Msg("Could not connect to MQTT broker.")
 
@@ -297,21 +291,14 @@ func runMQTTWorker(ctx context.Context, commandsFile string) {
 	<-ctx.Done()
 }
 
-func resetMQTTWorker(ctx context.Context) {
-	prefs, err := preferences.Load()
-	if err != nil {
-		log.Error().Err(err).Msg("Could not load MQTT preferences.")
-
-		return
-	}
-
-	if !prefs.MQTTEnabled {
+func (agent *Agent) resetMQTTWorker(ctx context.Context) {
+	if !agent.prefs.MQTTEnabled {
 		return
 	}
 
 	mqttDevice := newMQTTDevice(ctx)
 
-	client, err := mqttapi.NewClient(ctx, prefs, nil, nil)
+	client, err := mqttapi.NewClient(ctx, agent.prefs, nil, nil)
 	if err != nil {
 		log.Error().Err(err).Msg("Could not connect to MQTT broker.")
 
