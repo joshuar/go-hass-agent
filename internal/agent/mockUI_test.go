@@ -26,7 +26,7 @@ var _ UI = &UIMock{}
 //			DisplayRegistrationWindowFunc: func(ctx context.Context, input *hass.RegistrationInput, doneCh chan struct{})  {
 //				panic("mock out the DisplayRegistrationWindow method")
 //			},
-//			DisplayTrayIconFunc: func(agent ui.Agent, trk ui.SensorTracker)  {
+//			DisplayTrayIconFunc: func(ctx context.Context, agent ui.Agent, trk ui.SensorTracker)  {
 //				panic("mock out the DisplayTrayIcon method")
 //			},
 //			RunFunc: func(doneCh chan struct{})  {
@@ -46,7 +46,7 @@ type UIMock struct {
 	DisplayRegistrationWindowFunc func(ctx context.Context, input *hass.RegistrationInput, doneCh chan struct{})
 
 	// DisplayTrayIconFunc mocks the DisplayTrayIcon method.
-	DisplayTrayIconFunc func(agent ui.Agent, trk ui.SensorTracker)
+	DisplayTrayIconFunc func(ctx context.Context, agent ui.Agent, trk ui.SensorTracker)
 
 	// RunFunc mocks the Run method.
 	RunFunc func(doneCh chan struct{})
@@ -69,6 +69,8 @@ type UIMock struct {
 		}
 		// DisplayTrayIcon holds details about calls to the DisplayTrayIcon method.
 		DisplayTrayIcon []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
 			// Agent is the agent argument value.
 			Agent ui.Agent
 			// Trk is the trk argument value.
@@ -159,21 +161,23 @@ func (mock *UIMock) DisplayRegistrationWindowCalls() []struct {
 }
 
 // DisplayTrayIcon calls DisplayTrayIconFunc.
-func (mock *UIMock) DisplayTrayIcon(agent ui.Agent, trk ui.SensorTracker) {
+func (mock *UIMock) DisplayTrayIcon(ctx context.Context, agent ui.Agent, trk ui.SensorTracker) {
 	if mock.DisplayTrayIconFunc == nil {
 		panic("UIMock.DisplayTrayIconFunc: method is nil but UI.DisplayTrayIcon was just called")
 	}
 	callInfo := struct {
+		Ctx   context.Context
 		Agent ui.Agent
 		Trk   ui.SensorTracker
 	}{
+		Ctx:   ctx,
 		Agent: agent,
 		Trk:   trk,
 	}
 	mock.lockDisplayTrayIcon.Lock()
 	mock.calls.DisplayTrayIcon = append(mock.calls.DisplayTrayIcon, callInfo)
 	mock.lockDisplayTrayIcon.Unlock()
-	mock.DisplayTrayIconFunc(agent, trk)
+	mock.DisplayTrayIconFunc(ctx, agent, trk)
 }
 
 // DisplayTrayIconCalls gets all the calls that were made to DisplayTrayIcon.
@@ -181,10 +185,12 @@ func (mock *UIMock) DisplayTrayIcon(agent ui.Agent, trk ui.SensorTracker) {
 //
 //	len(mockedUI.DisplayTrayIconCalls())
 func (mock *UIMock) DisplayTrayIconCalls() []struct {
+	Ctx   context.Context
 	Agent ui.Agent
 	Trk   ui.SensorTracker
 } {
 	var calls []struct {
+		Ctx   context.Context
 		Agent ui.Agent
 		Trk   ui.SensorTracker
 	}

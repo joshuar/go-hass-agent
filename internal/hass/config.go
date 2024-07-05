@@ -79,7 +79,7 @@ func (c *configRequest) RequestBody() json.RawMessage {
 
 //nolint:exhaustruct
 func GetConfig(ctx context.Context) (*Config, error) {
-	prefs, err := preferences.Load()
+	prefs, err := preferences.ContextGetPrefs(ctx)
 	if err != nil {
 		return nil, ErrLoadPrefsFailed
 	}

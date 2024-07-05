@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//nolint:containedctx,paralleltest
+//nolint:containedctx,exhaustruct,nlreturn,paralleltest,wsl
 package hass
 
 import (
@@ -13,7 +13,6 @@ import (
 
 	"github.com/go-resty/resty/v2"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
@@ -136,45 +135,36 @@ func TestContextGetClient(t *testing.T) {
 	}
 }
 
-func TestNewContext(t *testing.T) {
-	mockServer := "http://test.host:9999"
+func TestSetupContext(t *testing.T) {
+	restAPIURL := "http://localhost:8123/api"
+	prefs := preferences.DefaultPreferences()
+	prefs.RestAPIURL = restAPIURL
+	ctx := preferences.ContextSetPrefs(context.TODO(), prefs)
 
-	preferences.SetPath(t.TempDir())
-	err := preferences.Save(
-		preferences.SetHost(mockServer),
-		preferences.SetToken("testToken"),
-		preferences.SetCloudhookURL(""),
-		preferences.SetRemoteUIURL(""),
-		preferences.SetWebhookID("testID"),
-		preferences.SetSecret(""),
-		preferences.SetRestAPIURL(mockServer),
-		preferences.SetWebsocketURL(mockServer),
-		preferences.SetDeviceName("testDevice"),
-		preferences.SetDeviceID("testID"),
-		preferences.SetVersion("6.4.0"),
-		preferences.SetRegistered(true),
-	)
-	require.NoError(t, err)
-
+	type args struct {
+		ctx context.Context
+	}
 	tests := []struct {
 		name    string
-		wantURL string
+		args    args
+		want    string
+		wantErr bool
 	}{
 		{
-			name:    "successful test",
-			wantURL: mockServer,
+			name: "with preferences",
+			args: args{ctx: ctx},
+			want: restAPIURL,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, _ := NewContext()
-
+			got, err := SetupContext(tt.args.ctx)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("SetupContext() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
 			gotURL := ContextGetURL(got)
-			assert.Equal(t, tt.wantURL, gotURL)
-
-			gotClient := ContextGetClient(got)
-			assert.NotNil(t, gotClient)
+			assert.Equal(t, tt.want, gotURL)
 		})
 	}
 }

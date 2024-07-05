@@ -33,14 +33,15 @@ type diskUsageSensor struct {
 
 //nolint:exhaustruct,mnd
 func newDiskUsageSensor(stat *disk.UsageStat) *diskUsageSensor {
-	newSensor := &diskUsageSensor{}
-	newSensor.IconString = "mdi:harddisk"
-	newSensor.StateClassValue = types.StateClassTotal
-	newSensor.UnitsString = "%"
-	newSensor.stats = stat
-	newSensor.Value = math.Round(stat.UsedPercent/0.05) * 0.05
-
-	return newSensor
+	return &diskUsageSensor{
+		Sensor: linux.Sensor{
+			IconString:      "mdi:harddisk",
+			StateClassValue: types.StateClassTotal,
+			UnitsString:     "%",
+			Value:           math.Round(stat.UsedPercent/0.05) * 0.05,
+		},
+		stats: stat,
+	}
 }
 
 func (d *diskUsageSensor) Name() string {

@@ -8,7 +8,9 @@
 package agent
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -32,6 +34,7 @@ type Agent struct {
 	ui               UI
 	done             chan struct{}
 	registrationInfo *hass.RegistrationInput
+	prefs            *preferences.Preferences
 	id               string
 	headless         bool
 	forceRegister    bool
@@ -45,24 +48,32 @@ type Option func(*Agent)
 //nolint:exhaustruct
 func newDefaultAgent() *Agent {
 	return &Agent{
-		done: make(chan struct{}),
-		id:   preferences.AppID,
+		done:             make(chan struct{}),
+		id:               preferences.AppID,
+		registrationInfo: &hass.RegistrationInput{},
 	}
 }
 
 // NewAgent creates a new agent with the options specified.
-func NewAgent(options ...Option) *Agent {
+func NewAgent(options ...Option) (*Agent, error) {
 	agent := newDefaultAgent()
 
 	for _, option := range options {
 		option(agent)
 	}
 
+	prefs, err := preferences.Load(agent.id)
+	if err != nil && !errors.Is(err, preferences.ErrNoPreferences) {
+		return nil, fmt.Errorf("could not create agent: %w", err)
+	}
+
+	agent.prefs = prefs
+
 	if !agent.headless {
 		agent.ui = fyneui.NewFyneUI(agent.id)
 	}
 
-	return agent
+	return agent, nil
 }
 
 // WithID will set the agent ID to the value given.
@@ -106,7 +117,18 @@ func ForceRegister(value bool) Option {
 // publish it to Home Assistant.
 //
 //revive:disable:function-length
-func (agent *Agent) Run(trk SensorTracker, reg sensor.Registry) {
+func (agent *Agent) Run(ctx context.Context, trk SensorTracker, reg sensor.Registry) error {
+	var err error
+
+	// Embed the agent preferences in the context.
+	ctx = preferences.ContextSetPrefs(ctx, agent.prefs)
+
+	// Embed required settings for Home Assistant in the context.
+	ctx, err = hass.SetupContext(ctx)
+	if err != nil {
+		return fmt.Errorf("could not run agent: %w", err)
+	}
+
 	var wg sync.WaitGroup
 
 	// Pre-flight: check if agent is registered. If not, run registration flow.
@@ -117,8 +139,8 @@ func (agent *Agent) Run(trk SensorTracker, reg sensor.Registry) {
 	go func() {
 		defer regWait.Done()
 
-		if err := agent.checkRegistration(trk); err != nil {
-			log.Fatal().Err(err).Msg("Error checking registration status.")
+		if err := agent.checkRegistration(ctx, trk); err != nil {
+			log.Error().Err(err).Msg("Error checking registration status.")
 		}
 	}()
 
@@ -128,19 +150,13 @@ func (agent *Agent) Run(trk SensorTracker, reg sensor.Registry) {
 		defer wg.Done()
 		regWait.Wait()
 
-		ctx, cancelFunc := hass.NewContext()
-		if ctx == nil {
-			log.Error().Msg("Unable to create context.")
-
-			return
-		}
-
-		runnerCtx := setupDeviceContext(ctx)
+		runnerCtx, cancelFunc := context.WithCancel(ctx)
+		runnerCtx = setupDeviceContext(runnerCtx)
 
 		go func() {
 			<-agent.done
-			log.Debug().Msg("Agent done.")
 			cancelFunc()
+			log.Debug().Msg("Agent done.")
 		}()
 
 		// Start worker funcs for sensors.
@@ -166,7 +182,7 @@ func (agent *Agent) Run(trk SensorTracker, reg sensor.Registry) {
 			defer wg.Done()
 
 			commandsFile := filepath.Join(xdg.ConfigHome, agent.AppID(), "commands.toml")
-			runMQTTWorker(runnerCtx, commandsFile)
+			agent.runMQTTWorker(runnerCtx, commandsFile)
 		}()
 		// Listen for notifications from Home Assistant.
 		if !agent.headless {
@@ -182,14 +198,16 @@ func (agent *Agent) Run(trk SensorTracker, reg sensor.Registry) {
 	agent.handleSignals()
 
 	if !agent.headless {
-		agent.ui.DisplayTrayIcon(agent, trk)
+		agent.ui.DisplayTrayIcon(ctx, agent, trk)
 		agent.ui.Run(agent.done)
 	}
 
 	wg.Wait()
+
+	return nil
 }
 
-func (agent *Agent) Register(trk SensorTracker) {
+func (agent *Agent) Register(ctx context.Context, trk SensorTracker) {
 	var wg sync.WaitGroup
 
 	wg.Add(1)
@@ -197,7 +215,7 @@ func (agent *Agent) Register(trk SensorTracker) {
 	go func() {
 		defer wg.Done()
 
-		if err := agent.checkRegistration(trk); err != nil {
+		if err := agent.checkRegistration(ctx, trk); err != nil {
 			log.Fatal().Err(err).Msg("Error checking registration status.")
 		}
 	}()
@@ -231,19 +249,28 @@ func (agent *Agent) AppID() string {
 // Stop will close the agent's done channel which indicates to any goroutines it
 // is time to clean up and exit.
 func (agent *Agent) Stop() {
+	defer close(agent.done)
+
 	log.Debug().Msg("Stopping agent.")
-	close(agent.done)
+
+	if err := agent.prefs.Save(); err != nil {
+		log.Warn().Err(err).Msg("Could not save agent preferences.")
+	}
 }
 
-func (agent *Agent) Reset() error {
-	ctx, _ := hass.NewContext()
-	if ctx == nil {
-		return ErrCtxFailed
+func (agent *Agent) Reset(ctx context.Context) error {
+	// Embed the agent preferences in the context.
+	ctx = preferences.ContextSetPrefs(ctx, agent.prefs)
+
+	// Embed required settings for Home Assistant in the context.
+	ctx, err := hass.SetupContext(ctx)
+	if err != nil {
+		return fmt.Errorf("could not setup hass context: %w", err)
 	}
 
 	runnerCtx := setupDeviceContext(ctx)
 
-	resetMQTTWorker(runnerCtx)
+	agent.resetMQTTWorker(runnerCtx)
 
 	return nil
 }

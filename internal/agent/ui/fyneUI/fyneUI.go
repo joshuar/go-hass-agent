@@ -97,12 +97,12 @@ func NewFyneUI(id string) *FyneUI {
 
 // DisplayTrayIcon displays an icon in the desktop tray with a menu for
 // controlling the agent and showing other informational windows.
-func (i *FyneUI) DisplayTrayIcon(agent ui.Agent, trk ui.SensorTracker) {
+func (i *FyneUI) DisplayTrayIcon(ctx context.Context, agent ui.Agent, trk ui.SensorTracker) {
 	if desk, ok := i.app.(desktop.App); ok {
 		// About menu item.
 		menuItemAbout := fyne.NewMenuItem(i.Translate("About"),
 			func() {
-				i.aboutWindow().Show()
+				i.aboutWindow(ctx).Show()
 			})
 		// Sensors menu item.
 		menuItemSensors := fyne.NewMenuItem(i.Translate("Sensors"),
@@ -112,7 +112,7 @@ func (i *FyneUI) DisplayTrayIcon(agent ui.Agent, trk ui.SensorTracker) {
 		// Preferences/Settings items.
 		menuItemAppPrefs := fyne.NewMenuItem(i.Translate("App Settings"),
 			func() {
-				i.agentSettingsWindow().Show()
+				i.agentSettingsWindow(ctx).Show()
 			})
 		menuItemFynePrefs := fyne.NewMenuItem(i.text.Translate("Fyne Settings"),
 			func() {
@@ -171,7 +171,7 @@ func (i *FyneUI) DisplayRegistrationWindow(ctx context.Context, input *hass.Regi
 // about the agent, such as version numbers.
 //
 //nolint:exhaustruct,mnd
-func (i *FyneUI) aboutWindow() fyne.Window {
+func (i *FyneUI) aboutWindow(ctx context.Context) fyne.Window {
 	var widgets []fyne.CanvasObject
 
 	icon := canvas.NewImageFromResource(&ui.TrayIcon{})
@@ -183,7 +183,7 @@ func (i *FyneUI) aboutWindow() fyne.Window {
 			fyne.TextAlignCenter,
 			fyne.TextStyle{Bold: true}))
 
-	if config := getHAConfig(); config != nil {
+	if config := getHAConfig(ctx); config != nil {
 		widgets = append(widgets,
 			widget.NewLabelWithStyle("Home Assistant "+config.Details.Version,
 				fyne.TextAlignCenter,
@@ -222,40 +222,32 @@ func (i *FyneUI) fyneSettingsWindow() fyne.Window {
 // agent functionality. Most of these settings will be optional.
 //
 //nolint:exhaustruct
-func (i *FyneUI) agentSettingsWindow() fyne.Window {
+func (i *FyneUI) agentSettingsWindow(ctx context.Context) fyne.Window {
 	var allFormItems []*widget.FormItem
 
-	prefs, err := preferences.Load()
+	prefs, err := preferences.ContextGetPrefs(ctx)
 	if err != nil {
-		log.Error().Err(err).Msg("Could not load preferences.")
+		log.Error().Err(err).Msg("Could not show settings window.")
 
 		return nil
 	}
 
 	// MQTT settings
 	mqttPrefs := &ui.MQTTPreferences{
-		Enabled:  prefs.GetMQTTEnabled(),
-		Server:   prefs.GetMQTTServer(),
-		User:     prefs.GetMQTTUser(),
-		Password: prefs.GetMQTTPassword(),
+		Enabled:  prefs.MQTTEnabled,
+		Server:   prefs.MQTTServer,
+		User:     prefs.MQTTUser,
+		Password: prefs.MQTTPassword,
 	}
 	allFormItems = append(allFormItems, i.mqttConfigItems(mqttPrefs)...)
 
 	window := i.app.NewWindow(i.Translate("App Preferences"))
 	settingsForm := widget.NewForm(allFormItems...)
 	settingsForm.OnSubmit = func() {
-		err := preferences.Save(
-			preferences.SetMQTTEnabled(mqttPrefs.Enabled),
-			preferences.SetMQTTServer(mqttPrefs.Server),
-			preferences.SetMQTTUser(mqttPrefs.User),
-			preferences.SetMQTTPassword(mqttPrefs.Password),
-		)
-		if err != nil {
-			dialog.ShowError(err, window)
-			log.Warn().Err(err).Msg("Could not save MQTT preferences.")
-
-			return
-		}
+		prefs.MQTTEnabled = mqttPrefs.Enabled
+		prefs.MQTTServer = mqttPrefs.Server
+		prefs.MQTTUser = mqttPrefs.User
+		prefs.MQTTPassword = mqttPrefs.Password
 
 		dialog.ShowInformation("Saved", "MQTT Preferences have been saved.", window)
 		log.Info().Msg("Saved MQTT preferences.")
@@ -607,16 +599,7 @@ func parseURL(u string) *url.URL {
 	return dest
 }
 
-func getHAConfig() *hass.Config {
-	prefs, err := preferences.Load()
-	if err != nil {
-		log.Warn().Err(err).Msg("Could not load preferences.")
-
-		return nil
-	}
-
-	ctx := preferences.EmbedInContext(context.TODO(), prefs)
-
+func getHAConfig(ctx context.Context) *hass.Config {
 	haCfg, err := hass.GetConfig(ctx)
 	if err != nil {
 		log.Warn().Err(err).Msg("Could not fetch HA config.")

@@ -30,7 +30,7 @@ type audioDevice struct {
 
 //nolint:exhaustruct,mnd
 func VolumeControl(ctx context.Context, msgCh chan *mqttapi.Msg) (*mqtthass.NumberEntity[int], *mqtthass.SwitchEntity) {
-	device := linux.MQTTDevice()
+	device := linux.MQTTDevice(ctx)
 
 	client, err := pulseaudiox.NewPulseClient(ctx)
 	if err != nil {

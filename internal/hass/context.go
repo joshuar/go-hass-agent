@@ -7,9 +7,9 @@ package hass
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/go-resty/resty/v2"
-	"github.com/rs/zerolog/log"
 
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
@@ -51,17 +51,14 @@ func ContextGetClient(ctx context.Context) *resty.Client {
 	return url
 }
 
-func NewContext() (context.Context, context.CancelFunc) {
-	prefs, err := preferences.Load()
+func SetupContext(ctx context.Context) (context.Context, error) {
+	prefs, err := preferences.ContextGetPrefs(ctx)
 	if err != nil {
-		log.Warn().Err(err).Msg("Could not create context.")
-
-		return nil, nil
+		return ctx, fmt.Errorf("could not setup hass context: %w", err)
 	}
 
-	baseCtx, cancelFunc := context.WithCancel(context.Background())
-	hassCtx := ContextSetURL(baseCtx, prefs.RestAPIURL)
-	hassCtx = ContextSetClient(hassCtx, NewDefaultHTTPClient())
+	ctx = ContextSetURL(ctx, prefs.RestAPIURL)
+	ctx = ContextSetClient(ctx, NewDefaultHTTPClient())
 
-	return hassCtx, cancelFunc
+	return ctx, nil
 }

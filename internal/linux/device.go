@@ -8,6 +8,7 @@
 package linux
 
 import (
+	"context"
 	"errors"
 	"os"
 	"strings"
@@ -111,10 +112,10 @@ func NewDevice(name, version string) *Device {
 }
 
 //nolint:exhaustruct
-func MQTTDevice() *mqtthass.Device {
+func MQTTDevice(ctx context.Context) *mqtthass.Device {
 	dev := NewDevice(preferences.AppName, preferences.AppVersion)
 
-	prefs, err := preferences.Load()
+	prefs, err := preferences.ContextGetPrefs(ctx)
 	if err != nil {
 		log.Warn().Err(err).Msg("Could not retrieve preferences.")
 	}

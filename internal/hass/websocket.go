@@ -81,9 +81,12 @@ func StartWebsocket(ctx context.Context) chan *WebsocketNotification {
 
 	notifyCh := make(chan *WebsocketNotification)
 
-	prefs, err := preferences.Load()
+	prefs, err := preferences.ContextGetPrefs(ctx)
 	if err != nil {
 		log.Error().Err(err).Msg("Could not load preferences.")
+		close(notifyCh)
+
+		return notifyCh
 	}
 
 	retryFunc := func() error {
