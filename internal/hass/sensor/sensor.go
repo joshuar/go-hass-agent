@@ -56,14 +56,20 @@ type stateUpdateRequest struct {
 	UniqueID        string         `json:"unique_id"`
 }
 
+//nolint:exhaustruct // some fields are optional
 func newStateUpdateRequest(sensor State) *stateUpdateRequest {
-	return &stateUpdateRequest{
+	upd := &stateUpdateRequest{
 		StateAttributes: sensor.Attributes(),
 		State:           sensor.State(),
 		Icon:            sensor.Icon(),
-		Type:            sensor.SensorType().String(),
 		UniqueID:        sensor.ID(),
 	}
+
+	if sensor.SensorType() > 0 {
+		upd.Type = sensor.SensorType().String()
+	}
+
+	return upd
 }
 
 type registrationRequest struct {
@@ -75,15 +81,24 @@ type registrationRequest struct {
 	DeviceClass       string `json:"device_class,omitempty"`
 }
 
+//nolint:exhaustruct // some fields are optional
 func newRegistrationRequest(sensor Registration) *registrationRequest {
-	return &registrationRequest{
+	reg := &registrationRequest{
 		stateUpdateRequest: newStateUpdateRequest(sensor),
 		Name:               sensor.Name(),
 		UnitOfMeasurement:  sensor.Units(),
-		StateClass:         sensor.StateClass().String(),
 		EntityCategory:     sensor.Category(),
-		DeviceClass:        sensor.DeviceClass().String(),
 	}
+
+	if sensor.StateClass() > 0 {
+		reg.StateClass = sensor.StateClass().String()
+	}
+
+	if sensor.DeviceClass() > 0 {
+		reg.DeviceClass = sensor.DeviceClass().String()
+	}
+
+	return reg
 }
 
 // LocationRequest represents the location information that can be sent to HA to
