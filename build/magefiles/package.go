@@ -102,9 +102,16 @@ func (Package) FyneCross() error {
 		return fmt.Errorf("failed to install fyne-cross: %w", err)
 	}
 
+	// Set-up the build environment.
 	envMap, err := generateEnv()
 	if err != nil {
 		return fmt.Errorf("failed to create environment: %w", err)
+	}
+
+	// Set-up appropriate build flags.
+	ldflags, err := getFlags()
+	if err != nil {
+		return errors.Join(ErrBuildFailed, err)
 	}
 
 	if err = sh.RunWithV(envMap,
@@ -112,6 +119,7 @@ func (Package) FyneCross() error {
 		"-name", "go-hass-agent",
 		"-icon", iconPath,
 		"-release",
+		"-ldflags", ldflags,
 		"-arch", envMap["GOARCH"]); err != nil {
 		slog.Warn("fyne-cross finished but with errors. Continuing anyway.", "error", err.Error())
 	}
