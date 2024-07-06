@@ -86,18 +86,12 @@ type Response interface {
 // interface.
 //
 //nolint:exhaustruct
-func ExecuteRequest(ctx context.Context, request any, response Response) error {
-	// ?: handle nil response here
-	url := ContextGetURL(ctx)
-	if url == "" {
-		return ErrInvalidURL
-	}
-
-	client := ContextGetClient(ctx)
+func ExecuteRequest(ctx context.Context, client *resty.Client, url string, request any, response Response) error {
 	if client == nil {
 		return ErrInvalidClient
 	}
 
+	// ?: handle nil response here
 	var responseErr *APIError
 
 	var resp *resty.Response
@@ -162,8 +156,9 @@ func ExecuteRequest(ctx context.Context, request any, response Response) error {
 	return nil
 }
 
-func NewDefaultHTTPClient() *resty.Client {
+func NewDefaultHTTPClient(url string) *resty.Client {
 	return resty.New().
 		SetTimeout(defaultTimeout).
-		AddRetryCondition(defaultRetry)
+		AddRetryCondition(defaultRetry).
+		SetBaseURL(url)
 }

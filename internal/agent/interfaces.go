@@ -35,7 +35,7 @@ type UI interface {
 //go:generate moq -out mockSensorTracker_test.go . SensorTracker
 type SensorTracker interface {
 	SensorList() []string
-	UpdateSensor(ctx context.Context, reg sensor.Registry, details sensor.Details) error
+	Process(ctx context.Context, reg sensor.Registry, sensorUpdates ...<-chan sensor.Details) error
 	Get(key string) (sensor.Details, error)
 	Reset()
 }

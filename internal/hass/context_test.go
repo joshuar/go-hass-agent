@@ -17,62 +17,6 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
-func TestContextSetURL(t *testing.T) {
-	type args struct {
-		ctx context.Context
-		url string
-	}
-
-	tests := []struct {
-		name string
-		args args
-		want string
-	}{
-		{
-			name: "successful test",
-			args: args{ctx: context.TODO(), url: "good"},
-			want: "good",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := ContextSetURL(tt.args.ctx, tt.args.url)
-			url, ok := got.Value(urlContextKey).(string)
-			assert.True(t, ok)
-			assert.Equal(t, tt.want, url)
-		})
-	}
-}
-
-func TestContextGetURL(t *testing.T) {
-	testCtx := ContextSetURL(context.TODO(), "test")
-
-	type args struct {
-		ctx context.Context
-	}
-
-	tests := []struct {
-		name string
-		args args
-		want string
-	}{
-		{
-			name: "successful test",
-			args: args{ctx: testCtx},
-			want: "test",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := ContextGetURL(tt.args.ctx); got != tt.want {
-				t.Errorf("ContextGetURL() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func TestContextSetClient(t *testing.T) {
 	goodClient := resty.New()
 
@@ -163,8 +107,9 @@ func TestSetupContext(t *testing.T) {
 				t.Errorf("SetupContext() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			gotURL := ContextGetURL(got)
-			assert.Equal(t, tt.want, gotURL)
+			client := ContextGetClient(got)
+			assert.NotNil(t, client)
+			assert.Equal(t, tt.want, client.BaseURL)
 		})
 	}
 }

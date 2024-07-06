@@ -13,8 +13,6 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/go-resty/resty/v2"
-
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
@@ -84,13 +82,12 @@ func GetConfig(ctx context.Context) (*Config, error) {
 		return nil, ErrLoadPrefsFailed
 	}
 
-	ctx = ContextSetURL(ctx, prefs.RestAPIURL)
-	ctx = ContextSetClient(ctx, resty.New())
+	client := NewDefaultHTTPClient(prefs.RestAPIURL)
 
 	req := &configRequest{}
 	resp := &Config{}
 
-	if err := ExecuteRequest(ctx, req, resp); err != nil {
+	if err := ExecuteRequest(ctx, client, "", req, resp); err != nil {
 		return nil, err
 	}
 

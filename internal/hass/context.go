@@ -17,24 +17,8 @@ import (
 type contextKey string
 
 const (
-	urlContextKey    contextKey = "url"
 	clientContextKey contextKey = "client"
 )
-
-func ContextSetURL(ctx context.Context, url string) context.Context {
-	newCtx := context.WithValue(ctx, urlContextKey, url)
-
-	return newCtx
-}
-
-func ContextGetURL(ctx context.Context) string {
-	url, ok := ctx.Value(urlContextKey).(string)
-	if !ok {
-		return ""
-	}
-
-	return url
-}
 
 func ContextSetClient(ctx context.Context, client *resty.Client) context.Context {
 	newCtx := context.WithValue(ctx, clientContextKey, client)
@@ -57,8 +41,7 @@ func SetupContext(ctx context.Context) (context.Context, error) {
 		return ctx, fmt.Errorf("could not setup hass context: %w", err)
 	}
 
-	ctx = ContextSetURL(ctx, prefs.RestAPIURL)
-	ctx = ContextSetClient(ctx, NewDefaultHTTPClient())
+	ctx = ContextSetClient(ctx, NewDefaultHTTPClient(prefs.RestAPIURL))
 
 	return ctx, nil
 }

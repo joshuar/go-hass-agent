@@ -136,11 +136,9 @@ func RegisterWithHass(ctx context.Context, input *RegistrationInput, device Devi
 		return nil, fmt.Errorf("could not parse server URL: %w", err)
 	}
 
-	serverURL = serverURL.JoinPath(registrationPath)
-	ctx = ContextSetURL(ctx, serverURL.String())
-	ctx = ContextSetClient(ctx, NewDefaultHTTPClient().SetTimeout(time.Minute))
+	client := NewDefaultHTTPClient(serverURL.String()).SetTimeout(time.Minute)
 
-	if err := ExecuteRequest(ctx, req, resp); err != nil {
+	if err := ExecuteRequest(ctx, client, registrationPath, req, resp); err != nil {
 		return nil, err
 	}
 

@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//nolint:exhaustruct,paralleltest
+//nolint:exhaustruct,lll,paralleltest,wsl
 //revive:disable:function-length
 package hass
 
@@ -82,7 +82,6 @@ func TestExecuteRequest(t *testing.T) {
 		}
 	}))
 
-	ctx := ContextSetClient(context.TODO(), NewDefaultHTTPClient())
 	goodPostReq := PostRequestMock{
 		RequestBodyFunc: func() json.RawMessage { return json.RawMessage(`{"field":"value"}`) },
 	}
@@ -106,6 +105,8 @@ func TestExecuteRequest(t *testing.T) {
 		ctx      context.Context
 		request  any
 		response Response
+		client   *resty.Client
+		url      string
 	}
 
 	tests := []struct {
@@ -115,38 +116,32 @@ func TestExecuteRequest(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name:    "invalid URL",
-			args:    args{ctx: context.TODO(), response: &ResponseMock{}},
-			wantErr: true,
-			want:    ErrInvalidURL,
-		},
-		{
-			name:    "invalid Client",
-			args:    args{ctx: ContextSetURL(context.TODO(), mockServer.URL), response: &ResponseMock{}},
+			name:    "invalid client",
+			args:    args{ctx: context.TODO(), url: mockServer.URL, response: &ResponseMock{}},
 			wantErr: true,
 			want:    ErrInvalidClient,
 		},
 		{
-			name: "goodPost",
-			args: args{ctx: ContextSetURL(ctx, mockServer.URL+"/goodPost"), request: goodPostReq, response: goodPostResp},
+			name: "valid post request",
+			args: args{ctx: context.TODO(), client: NewDefaultHTTPClient(mockServer.URL), url: "/goodPost", request: goodPostReq, response: goodPostResp},
 			want: nil,
 		},
 		{
-			name: "goodGet",
-			args: args{ctx: ContextSetURL(ctx, mockServer.URL+"/goodGet"), request: "anything", response: goodGetResp},
+			name: "valid get request",
+			args: args{ctx: context.TODO(), client: NewDefaultHTTPClient(mockServer.URL), url: "/goodGet", request: "anything", response: goodGetResp},
 			want: nil,
 		},
 		{
-			name: "badPost",
-			args: args{ctx: ContextSetURL(ctx, mockServer.URL+"/badPost"), request: badPostReq, response: &ResponseMock{}},
+			name: "invalid post request",
+			args: args{ctx: context.TODO(), client: NewDefaultHTTPClient(mockServer.URL), url: "/badPost", request: badPostReq, response: &ResponseMock{}},
 			want: &APIError{
 				StatusCode: 400,
 				Message:    "400 Bad Request",
 			},
 		},
 		{
-			name: "badGet",
-			args: args{ctx: ContextSetURL(ctx, mockServer.URL+"/badGet"), request: "anything", response: &ResponseMock{}},
+			name: "invalid get request",
+			args: args{ctx: context.TODO(), client: NewDefaultHTTPClient(mockServer.URL), url: "/badGet", request: "anything", response: &ResponseMock{}},
 			want: &APIError{
 				StatusCode: 400,
 				Message:    "400 Bad Request",
@@ -161,27 +156,34 @@ func TestExecuteRequest(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := ExecuteRequest(tt.args.ctx, tt.args.request, tt.args.response)
+			got := ExecuteRequest(tt.args.ctx, tt.args.client, tt.args.url, tt.args.request, tt.args.response)
 			assert.Equal(t, tt.want, got)
 		})
 	}
 }
 
 func TestNewDefaultHTTPClient(t *testing.T) {
+	type args struct {
+		url string
+	}
 	tests := []struct {
+		args args
 		want *resty.Client
 		name string
 	}{
 		{
 			name: "default",
+			args: args{url: "http://localhost:8123"},
 			want: resty.New().SetTimeout(defaultTimeout).
-				AddRetryCondition(defaultRetry),
+				AddRetryCondition(defaultRetry).
+				SetBaseURL("http://localhost:8123"),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := NewDefaultHTTPClient(); got != nil {
+			if got := NewDefaultHTTPClient(tt.args.url); got != nil {
 				assert.Equal(t, got.GetClient().Timeout, defaultTimeout)
+				assert.Equal(t, got.BaseURL, tt.args.url)
 			} else {
 				t.Errorf("NewDefaultHTTPClient() = %v, want %v", got, tt.want)
 			}
