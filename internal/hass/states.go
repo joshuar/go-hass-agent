@@ -12,9 +12,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/go-resty/resty/v2"
-
 	"github.com/joshuar/go-hass-agent/internal/preferences"
+)
+
+const (
+	statesEndpoint = "/api/states/"
 )
 
 type EntityState struct {
@@ -53,14 +55,13 @@ func GetEntityState(ctx context.Context, sensorType, entityID string) (*EntitySt
 		return nil, ErrLoadPrefsFailed
 	}
 
-	url := prefs.Host + "/api/states/" + sensorType + "." + prefs.DeviceName + "_" + entityID
-	ctx = ContextSetURL(ctx, url)
-	ctx = ContextSetClient(ctx, resty.New())
+	client := NewDefaultHTTPClient(prefs.Host)
+	url := statesEndpoint + sensorType + "." + prefs.DeviceName + "_" + entityID
 
 	req := &EntityStateRequest{token: prefs.Token}
 	resp := &EntityStateResponse{}
 
-	if err := ExecuteRequest(ctx, req, resp); err != nil {
+	if err := ExecuteRequest(ctx, client, url, req, resp); err != nil {
 		return nil, err
 	}
 
@@ -95,13 +96,11 @@ func GetAllEntityStates(ctx context.Context) (*EntityStatesResponse, error) {
 		return nil, ErrLoadPrefsFailed
 	}
 
-	url := prefs.Host + "/api/states/"
-	ctx = ContextSetURL(ctx, url)
-	ctx = ContextSetClient(ctx, resty.New())
+	client := NewDefaultHTTPClient(prefs.Host)
 	req := &EntityStatesRequest{token: prefs.Token}
 	resp := &EntityStatesResponse{}
 
-	if err := ExecuteRequest(ctx, req, resp); err != nil {
+	if err := ExecuteRequest(ctx, client, statesEndpoint, req, resp); err != nil {
 		return nil, err
 	}
 

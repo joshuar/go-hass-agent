@@ -12,6 +12,9 @@ import (
 	"sort"
 	"sync"
 
+	"github.com/go-resty/resty/v2"
+	"github.com/rs/zerolog/log"
+
 	"github.com/joshuar/go-hass-agent/internal/hass"
 )
 
@@ -33,20 +36,6 @@ type Registry interface {
 type Tracker struct {
 	sensor map[string]Details
 	mu     sync.Mutex
-}
-
-// Add creates a new sensor in the tracker based on a received state update.
-func (t *Tracker) add(sensor Details) error {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
-	if t.sensor == nil {
-		return ErrTrackerNotReady
-	}
-
-	t.sensor[sensor.ID()] = sensor
-
-	return nil
 }
 
 // Get fetches a sensors current tracked state.
@@ -82,15 +71,50 @@ func (t *Tracker) SensorList() []string {
 	return sortedEntities
 }
 
-// UpdateSensor will UpdateSensor a sensor update to HA, checking to ensure the sensor is not
+func (t *Tracker) Process(ctx context.Context, reg Registry, upds ...<-chan Details) error {
+	client := hass.ContextGetClient(ctx)
+
+	for update := range MergeSensorCh(ctx, upds...) {
+		go func(upd Details) {
+			if err := t.update(ctx, client, "", reg, upd); err != nil {
+				log.Warn().Err(err).Str("id", upd.ID()).Msg("Update failed.")
+			} else {
+				log.Debug().
+					Str("name", upd.Name()).
+					Str("id", upd.ID()).
+					Interface("state", upd.State()).
+					Str("units", upd.Units()).
+					Msg("Sensor updated.")
+			}
+		}(update)
+	}
+
+	return nil
+}
+
+// Add creates a new sensor in the tracker based on a received state update.
+func (t *Tracker) add(sensor Details) error {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	if t.sensor == nil {
+		return ErrTrackerNotReady
+	}
+
+	t.sensor[sensor.ID()] = sensor
+
+	return nil
+}
+
+// update will update a sensor update to HA, checking to ensure the sensor is not
 // disabled. It will also update the local registry state based on the response.
-func (t *Tracker) UpdateSensor(ctx context.Context, reg Registry, upd Details) error {
+func (t *Tracker) update(ctx context.Context, client *resty.Client, url string, reg Registry, upd Details) error {
 	req, resp, err := NewRequest(reg, upd)
 	if err != nil {
 		return wrapErr(upd.ID(), err)
 	}
 	// Send the sensor request to Home Assistant.
-	if err := hass.ExecuteRequest(ctx, req, resp); err != nil {
+	if err := hass.ExecuteRequest(ctx, client, url, req, resp); err != nil {
 		return wrapErr(upd.ID(), err)
 	}
 	// Handle the response received.

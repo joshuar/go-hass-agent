@@ -262,12 +262,6 @@ func (agent *Agent) Reset(ctx context.Context) error {
 	// Embed the agent preferences in the context.
 	ctx = preferences.ContextSetPrefs(ctx, agent.prefs)
 
-	// Embed required settings for Home Assistant in the context.
-	ctx, err := hass.SetupContext(ctx)
-	if err != nil {
-		return fmt.Errorf("could not setup hass context: %w", err)
-	}
-
 	runnerCtx := setupDeviceContext(ctx)
 
 	agent.resetMQTTWorker(runnerCtx)

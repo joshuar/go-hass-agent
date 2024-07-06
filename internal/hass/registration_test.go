@@ -14,9 +14,6 @@ import (
 	"net/http/httptest"
 	"reflect"
 	"testing"
-	"time"
-
-	"github.com/go-resty/resty/v2"
 )
 
 var mockDevInfo = &DeviceInfoMock{
@@ -43,21 +40,10 @@ func (r *failedResponse) UnmarshalJSON(b []byte) error {
 
 // setup creates a context using a test http client and server which will
 // return the given response when the ExecuteRequest function is called.
-var setupTestCtx = func(t *testing.T, response Response) context.Context {
+var setupTestServer = func(t *testing.T, response Response) *httptest.Server {
 	t.Helper()
-
-	ctx := context.TODO()
-	// load client
-	client := resty.New().
-		SetTimeout(1 * time.Second).
-		AddRetryCondition(
-			func(rr *resty.Response, _ error) bool {
-				return rr.StatusCode() == http.StatusTooManyRequests
-			},
-		)
-	ctx = ContextSetClient(ctx, client)
 	// load server
-	server := httptest.NewServer(http.HandlerFunc(func(responseWriter http.ResponseWriter, _ *http.Request) {
+	return httptest.NewServer(http.HandlerFunc(func(responseWriter http.ResponseWriter, _ *http.Request) {
 		var resp []byte
 		var err error
 		switch rType := response.(type) {
@@ -76,12 +62,10 @@ var setupTestCtx = func(t *testing.T, response Response) context.Context {
 			}
 		}
 	}))
-	ctx = ContextSetURL(ctx, server.URL)
-	// return loaded context
-	return ctx
 }
 
 //nolint:containedctx
+//revive:disable:function-length
 func TestRegisterWithHass(t *testing.T) {
 	registrationSuccess := &registrationResponse{
 		Details: &RegistrationDetails{
@@ -91,10 +75,11 @@ func TestRegisterWithHass(t *testing.T) {
 			WebhookID:    "someID",
 		},
 	}
-	successCtx := setupTestCtx(t, registrationSuccess)
+
+	regSuccessServer := setupTestServer(t, registrationSuccess)
 
 	registrationFail := &failedResponse{}
-	failCtx := setupTestCtx(t, registrationFail)
+	regFailServer := setupTestServer(t, registrationFail)
 
 	type args struct {
 		ctx    context.Context
@@ -111,9 +96,9 @@ func TestRegisterWithHass(t *testing.T) {
 		{
 			name: "successful registration",
 			args: args{
-				ctx: successCtx,
+				ctx: context.TODO(),
 				input: &RegistrationInput{
-					Server: ContextGetURL(successCtx),
+					Server: regSuccessServer.URL,
 					Token:  "aToken",
 				},
 				device: mockDevInfo,
@@ -123,7 +108,7 @@ func TestRegisterWithHass(t *testing.T) {
 		{
 			name: "invalid input",
 			args: args{
-				ctx:    successCtx,
+				ctx:    context.TODO(),
 				input:  &RegistrationInput{},
 				device: mockDevInfo,
 			},
@@ -132,9 +117,9 @@ func TestRegisterWithHass(t *testing.T) {
 		{
 			name: "failed registration",
 			args: args{
-				ctx: failCtx,
+				ctx: context.TODO(),
 				input: &RegistrationInput{
-					Server: ContextGetURL(failCtx),
+					Server: regFailServer.URL,
 					Token:  "aToken",
 				},
 				device: mockDevInfo,

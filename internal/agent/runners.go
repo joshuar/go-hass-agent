@@ -91,21 +91,8 @@ func runWorkers(ctx context.Context, trk SensorTracker, reg sensor.Registry) {
 
 	// Listen for sensor updates from all workers.
 	go func() {
-		log.Debug().Msg("Listening for sensor updates.")
-
-		for update := range sensor.MergeSensorCh(ctx, sensorUpdates, deviceUpdates) {
-			go func(update sensor.Details) {
-				if err := trk.UpdateSensor(ctx, reg, update); err != nil {
-					log.Warn().Err(err).Str("id", update.ID()).Msg("Update failed.")
-				} else {
-					log.Debug().
-						Str("name", update.Name()).
-						Str("id", update.ID()).
-						Interface("state", update.State()).
-						Str("units", update.Units()).
-						Msg("Sensor updated.")
-				}
-			}(update)
+		if err := trk.Process(ctx, reg, sensorUpdates, deviceUpdates); err != nil {
+			log.Error().Err(err).Msg("Could not process sensor updates.")
 		}
 	}()
 
@@ -172,19 +159,8 @@ func runScripts(ctx context.Context, path string, trk SensorTracker, reg sensor.
 	scheduler.Start()
 
 	go func() {
-		for scriptUpdates := range sensor.MergeSensorCh(ctx, outCh...) {
-			go func(update sensor.Details) {
-				if err := trk.UpdateSensor(ctx, reg, update); err != nil {
-					log.Warn().Err(err).Str("id", update.ID()).Msg("Update sensor failed.")
-				} else {
-					log.Debug().
-						Str("name", update.Name()).
-						Str("id", update.ID()).
-						Interface("state", update.State()).
-						Str("units", update.Units()).
-						Msg("Sensor updated.")
-				}
-			}(scriptUpdates)
+		if err := trk.Process(ctx, reg, outCh...); err != nil {
+			log.Error().Err(err).Msg("Could not process script updates.")
 		}
 	}()
 

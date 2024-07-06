@@ -22,14 +22,14 @@ var _ SensorTracker = &SensorTrackerMock{}
 //			GetFunc: func(key string) (sensor.Details, error) {
 //				panic("mock out the Get method")
 //			},
+//			ProcessFunc: func(ctx context.Context, reg sensor.Registry, sensorUpdates ...<-chan sensor.Details) error {
+//				panic("mock out the Process method")
+//			},
 //			ResetFunc: func()  {
 //				panic("mock out the Reset method")
 //			},
 //			SensorListFunc: func() []string {
 //				panic("mock out the SensorList method")
-//			},
-//			UpdateSensorFunc: func(ctx context.Context, reg sensor.Registry, details sensor.Details) error {
-//				panic("mock out the UpdateSensor method")
 //			},
 //		}
 //
@@ -41,14 +41,14 @@ type SensorTrackerMock struct {
 	// GetFunc mocks the Get method.
 	GetFunc func(key string) (sensor.Details, error)
 
+	// ProcessFunc mocks the Process method.
+	ProcessFunc func(ctx context.Context, reg sensor.Registry, sensorUpdates ...<-chan sensor.Details) error
+
 	// ResetFunc mocks the Reset method.
 	ResetFunc func()
 
 	// SensorListFunc mocks the SensorList method.
 	SensorListFunc func() []string
-
-	// UpdateSensorFunc mocks the UpdateSensor method.
-	UpdateSensorFunc func(ctx context.Context, reg sensor.Registry, details sensor.Details) error
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -57,26 +57,26 @@ type SensorTrackerMock struct {
 			// Key is the key argument value.
 			Key string
 		}
+		// Process holds details about calls to the Process method.
+		Process []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+			// Reg is the reg argument value.
+			Reg sensor.Registry
+			// SensorUpdates is the sensorUpdates argument value.
+			SensorUpdates []<-chan sensor.Details
+		}
 		// Reset holds details about calls to the Reset method.
 		Reset []struct {
 		}
 		// SensorList holds details about calls to the SensorList method.
 		SensorList []struct {
 		}
-		// UpdateSensor holds details about calls to the UpdateSensor method.
-		UpdateSensor []struct {
-			// Ctx is the ctx argument value.
-			Ctx context.Context
-			// Reg is the reg argument value.
-			Reg sensor.Registry
-			// Details is the details argument value.
-			Details sensor.Details
-		}
 	}
-	lockGet          sync.RWMutex
-	lockReset        sync.RWMutex
-	lockSensorList   sync.RWMutex
-	lockUpdateSensor sync.RWMutex
+	lockGet        sync.RWMutex
+	lockProcess    sync.RWMutex
+	lockReset      sync.RWMutex
+	lockSensorList sync.RWMutex
 }
 
 // Get calls GetFunc.
@@ -108,6 +108,46 @@ func (mock *SensorTrackerMock) GetCalls() []struct {
 	mock.lockGet.RLock()
 	calls = mock.calls.Get
 	mock.lockGet.RUnlock()
+	return calls
+}
+
+// Process calls ProcessFunc.
+func (mock *SensorTrackerMock) Process(ctx context.Context, reg sensor.Registry, sensorUpdates ...<-chan sensor.Details) error {
+	if mock.ProcessFunc == nil {
+		panic("SensorTrackerMock.ProcessFunc: method is nil but SensorTracker.Process was just called")
+	}
+	callInfo := struct {
+		Ctx           context.Context
+		Reg           sensor.Registry
+		SensorUpdates []<-chan sensor.Details
+	}{
+		Ctx:           ctx,
+		Reg:           reg,
+		SensorUpdates: sensorUpdates,
+	}
+	mock.lockProcess.Lock()
+	mock.calls.Process = append(mock.calls.Process, callInfo)
+	mock.lockProcess.Unlock()
+	return mock.ProcessFunc(ctx, reg, sensorUpdates...)
+}
+
+// ProcessCalls gets all the calls that were made to Process.
+// Check the length with:
+//
+//	len(mockedSensorTracker.ProcessCalls())
+func (mock *SensorTrackerMock) ProcessCalls() []struct {
+	Ctx           context.Context
+	Reg           sensor.Registry
+	SensorUpdates []<-chan sensor.Details
+} {
+	var calls []struct {
+		Ctx           context.Context
+		Reg           sensor.Registry
+		SensorUpdates []<-chan sensor.Details
+	}
+	mock.lockProcess.RLock()
+	calls = mock.calls.Process
+	mock.lockProcess.RUnlock()
 	return calls
 }
 
@@ -162,45 +202,5 @@ func (mock *SensorTrackerMock) SensorListCalls() []struct {
 	mock.lockSensorList.RLock()
 	calls = mock.calls.SensorList
 	mock.lockSensorList.RUnlock()
-	return calls
-}
-
-// UpdateSensor calls UpdateSensorFunc.
-func (mock *SensorTrackerMock) UpdateSensor(ctx context.Context, reg sensor.Registry, details sensor.Details) error {
-	if mock.UpdateSensorFunc == nil {
-		panic("SensorTrackerMock.UpdateSensorFunc: method is nil but SensorTracker.UpdateSensor was just called")
-	}
-	callInfo := struct {
-		Ctx     context.Context
-		Reg     sensor.Registry
-		Details sensor.Details
-	}{
-		Ctx:     ctx,
-		Reg:     reg,
-		Details: details,
-	}
-	mock.lockUpdateSensor.Lock()
-	mock.calls.UpdateSensor = append(mock.calls.UpdateSensor, callInfo)
-	mock.lockUpdateSensor.Unlock()
-	return mock.UpdateSensorFunc(ctx, reg, details)
-}
-
-// UpdateSensorCalls gets all the calls that were made to UpdateSensor.
-// Check the length with:
-//
-//	len(mockedSensorTracker.UpdateSensorCalls())
-func (mock *SensorTrackerMock) UpdateSensorCalls() []struct {
-	Ctx     context.Context
-	Reg     sensor.Registry
-	Details sensor.Details
-} {
-	var calls []struct {
-		Ctx     context.Context
-		Reg     sensor.Registry
-		Details sensor.Details
-	}
-	mock.lockUpdateSensor.RLock()
-	calls = mock.calls.UpdateSensor
-	mock.lockUpdateSensor.RUnlock()
 	return calls
 }
