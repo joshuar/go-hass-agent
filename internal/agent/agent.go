@@ -208,24 +208,17 @@ func (agent *Agent) Run(ctx context.Context, trk SensorTracker, reg sensor.Regis
 }
 
 func (agent *Agent) Register(ctx context.Context, trk SensorTracker) {
-	var wg sync.WaitGroup
-
-	wg.Add(1)
-
 	go func() {
-		defer wg.Done()
-
 		if err := agent.checkRegistration(ctx, trk); err != nil {
 			log.Fatal().Err(err).Msg("Error checking registration status.")
 		}
+
+		agent.Stop()
 	}()
 
 	if !agent.headless {
 		agent.ui.Run(agent.done)
 	}
-
-	wg.Wait()
-	agent.Stop()
 }
 
 // handleSignals will handle Ctrl-C of the agent.
