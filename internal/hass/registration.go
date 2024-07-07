@@ -24,20 +24,22 @@ const (
 
 var ErrInternalValidationFailed = errors.New("internal validation error")
 
-//nolint:interfacebloat
-//go:generate moq -out mock_DeviceInfo_test.go . DeviceInfo
-type DeviceInfo interface {
-	DeviceID() string
-	AppID() string
-	AppName() string
-	AppVersion() string
-	DeviceName() string
-	Manufacturer() string
-	Model() string
-	OsName() string
-	OsVersion() string
-	SupportsEncryption() bool
-	AppData() any
+type DeviceInfo struct {
+	DeviceID           string  `json:"device_id"`
+	AppID              string  `json:"app_id"`
+	AppName            string  `json:"app_name"`
+	AppVersion         string  `json:"app_version"`
+	DeviceName         string  `json:"device_name"`
+	Manufacturer       string  `json:"manufacturer"`
+	Model              string  `json:"model"`
+	OsName             string  `json:"os_name"`
+	OsVersion          string  `json:"os_version"`
+	AppData            AppData `json:"app_data,omitempty"`
+	SupportsEncryption bool    `json:"supports_encryption"`
+}
+
+type AppData struct {
+	PushWebsocket bool `json:"push_websocket_channel"`
 }
 
 type RegistrationInput struct {
@@ -65,18 +67,8 @@ type RegistrationDetails struct {
 }
 
 type registrationRequest struct {
-	AppData            any    `json:"app_data,omitempty"`
-	DeviceID           string `json:"device_id"`
-	AppID              string `json:"app_id"`
-	AppName            string `json:"app_name"`
-	AppVersion         string `json:"app_version"`
-	DeviceName         string `json:"device_name"`
-	Manufacturer       string `json:"manufacturer"`
-	Model              string `json:"model"`
-	OsName             string `json:"os_name"`
-	OsVersion          string `json:"os_version"`
-	Token              string `json:"-"`
-	SupportsEncryption bool   `json:"supports_encryption"`
+	*DeviceInfo
+	Token string `json:"-"`
 }
 
 func (r *registrationRequest) Auth() string {
@@ -92,20 +84,10 @@ func (r *registrationRequest) RequestBody() json.RawMessage {
 	return data
 }
 
-func newRegistrationRequest(info DeviceInfo, token string) *registrationRequest {
+func newRegistrationRequest(info *DeviceInfo, token string) *registrationRequest {
 	return &registrationRequest{
-		DeviceID:           info.DeviceID(),
-		AppID:              info.AppID(),
-		AppName:            info.AppName(),
-		AppVersion:         info.AppVersion(),
-		DeviceName:         info.DeviceName(),
-		Manufacturer:       info.Manufacturer(),
-		Model:              info.Model(),
-		OsName:             info.OsName(),
-		OsVersion:          info.OsVersion(),
-		SupportsEncryption: info.SupportsEncryption(),
-		AppData:            info.AppData(),
-		Token:              token,
+		DeviceInfo: info,
+		Token:      token,
 	}
 }
 
@@ -127,8 +109,8 @@ func newRegistrationResponse() *registrationResponse {
 	return &registrationResponse{}
 }
 
-func RegisterWithHass(ctx context.Context, input *RegistrationInput, device DeviceInfo) (*RegistrationDetails, error) {
-	req := newRegistrationRequest(device, input.Token)
+func RegisterWithHass(ctx context.Context, input *RegistrationInput, deviceInfo *DeviceInfo) (*RegistrationDetails, error) {
+	req := newRegistrationRequest(deviceInfo, input.Token)
 	resp := newRegistrationResponse()
 
 	serverURL, err := url.Parse(input.Server)

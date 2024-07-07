@@ -25,7 +25,7 @@ var ErrInvalidRegistration = errors.New("invalid")
 // request and the successful response in the agent preferences. This includes,
 // most importantly, details on the URL that should be used to send subsequent
 // requests to Home Assistant.
-func (agent *Agent) saveRegistration(resp *hass.RegistrationDetails, dev hass.DeviceInfo) error {
+func (agent *Agent) saveRegistration(resp *hass.RegistrationDetails, deviceInfo *hass.DeviceInfo) error {
 	// Generate an API URL from the registration info and the registration response.
 	apiURL, err := generateAPIURL(agent.registrationInfo.Server, agent.registrationInfo.IgnoreOutputURLs, resp)
 	if err != nil {
@@ -47,8 +47,8 @@ func (agent *Agent) saveRegistration(resp *hass.RegistrationDetails, dev hass.De
 	agent.prefs.Secret = resp.Secret
 	agent.prefs.RestAPIURL = apiURL
 	agent.prefs.WebsocketURL = websocketURL
-	agent.prefs.DeviceName = dev.DeviceName()
-	agent.prefs.DeviceID = dev.DeviceID()
+	agent.prefs.DeviceName = deviceInfo.DeviceName
+	agent.prefs.DeviceID = deviceInfo.DeviceID
 	agent.prefs.Version = preferences.AppVersion
 	agent.prefs.Registered = true
 
