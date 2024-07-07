@@ -118,17 +118,6 @@ func ForceRegister(value bool) Option {
 //
 //revive:disable:function-length
 func (agent *Agent) Run(ctx context.Context, trk SensorTracker, reg sensor.Registry) error {
-	var err error
-
-	// Embed the agent preferences in the context.
-	ctx = preferences.ContextSetPrefs(ctx, agent.prefs)
-
-	// Embed required settings for Home Assistant in the context.
-	ctx, err = hass.SetupContext(ctx)
-	if err != nil {
-		return fmt.Errorf("could not run agent: %w", err)
-	}
-
 	var wg sync.WaitGroup
 
 	// Pre-flight: check if agent is registered. If not, run registration flow.
@@ -147,8 +136,21 @@ func (agent *Agent) Run(ctx context.Context, trk SensorTracker, reg sensor.Regis
 	wg.Add(1)
 
 	go func() {
+		var err error
+
 		defer wg.Done()
 		regWait.Wait()
+
+		// Embed the agent preferences in the context.
+		ctx = preferences.ContextSetPrefs(ctx, agent.prefs)
+
+		// Embed required settings for Home Assistant in the context.
+		ctx, err = hass.SetupContext(ctx)
+		if err != nil {
+			log.Error().Err(err).Msg("Could not set up context.")
+
+			return
+		}
 
 		runnerCtx, cancelFunc := context.WithCancel(ctx)
 		runnerCtx = setupDeviceContext(runnerCtx)
