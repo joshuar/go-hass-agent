@@ -1,5 +1,24 @@
 # Changelog
 
+## [9.5.2](https://github.com/joshuar/go-hass-agent/compare/v9.5.1...v9.5.2) (2024-07-07)
+
+
+### Bug Fixes
+
+* **agent:** :bug: don't hang on register command if already registered ([37e29cc](https://github.com/joshuar/go-hass-agent/commit/37e29cc14fa3458fcfdb2872fc99d0c9729bd2a8))
+* **agent:** :bug: ensure preferences are set in context *after* registration is completed ([96bf97f](https://github.com/joshuar/go-hass-agent/commit/96bf97f7e4c211547a66400e22c800534ad65e68))
+* **agent:** :bug: make sure agent quits if registration process is cancelled ([e5acc53](https://github.com/joshuar/go-hass-agent/commit/e5acc533aeda670bdd2416a8145d6e22d43d2365))
+* **hass:** :bug: don't add State/Device classes or Sensor Type values to responses if they are not set ([022c80f](https://github.com/joshuar/go-hass-agent/commit/022c80f239154d293cf8631fc2ecdd9e3d58bd63))
+* **linux:** :bug: handle quoted and unquoted values in /etc/os-release correctly ([bdf4fce](https://github.com/joshuar/go-hass-agent/commit/bdf4fcef03ae813f3d751926f74090795d8e34c4))
+* **mage:** :bug: correct invocation for ldflags for fyne-cross ([4ff7801](https://github.com/joshuar/go-hass-agent/commit/4ff7801bb7010d4e4b757af303caab227a4a830c))
+
+
+### Performance Improvements
+
+* :recycle: improve Home Assistant API request handling ([36aee1c](https://github.com/joshuar/go-hass-agent/commit/36aee1c1ba92be06a85834fdc8e35c94545a5250))
+* :sparkles: preferences rewrite ([c15f486](https://github.com/joshuar/go-hass-agent/commit/c15f486fd5eecbbc99b68fb7cf1fb1758f4b8177))
+* **hass:** :recycle: rework request logic ([2031c88](https://github.com/joshuar/go-hass-agent/commit/2031c888fdd8e1dcae7765dd832f38a0ddc30270))
+
 ## [9.5.1](https://github.com/joshuar/go-hass-agent/compare/v9.5.0...v9.5.1) (2024-07-02)
 
 
