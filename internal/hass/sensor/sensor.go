@@ -3,6 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
+//nolint:errname // structs are dual-purpose response and error
 package sensor
 
 import (
@@ -191,6 +192,7 @@ type haError struct {
 
 type updateResponse struct {
 	Body map[string]*response
+	*hass.APIError
 }
 
 func (u *updateResponse) UnmarshalJSON(b []byte) error {
@@ -202,7 +204,21 @@ func (u *updateResponse) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+func (u *updateResponse) UnmarshalError(data []byte) error {
+	err := json.Unmarshal(data, u.APIError)
+	if err != nil {
+		return fmt.Errorf("could not unmarshal: %w", err)
+	}
+
+	return nil
+}
+
+func (u *updateResponse) Error() string {
+	return u.APIError.Error()
+}
+
 type registrationResponse struct {
+	*hass.APIError
 	Body response
 }
 
@@ -215,9 +231,37 @@ func (r *registrationResponse) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-type locationResponse struct{}
+func (r *registrationResponse) UnmarshalError(data []byte) error {
+	err := json.Unmarshal(data, r.APIError)
+	if err != nil {
+		return fmt.Errorf("could not unmarshal: %w", err)
+	}
+
+	return nil
+}
+
+func (r *registrationResponse) Error() string {
+	return r.APIError.Error()
+}
+
+type locationResponse struct {
+	*hass.APIError
+}
 
 //revive:disable:unused-receiver
 func (l *locationResponse) UnmarshalJSON(_ []byte) error {
 	return nil
+}
+
+func (l *locationResponse) UnmarshalError(data []byte) error {
+	err := json.Unmarshal(data, l.APIError)
+	if err != nil {
+		return fmt.Errorf("could not unmarshal: %w", err)
+	}
+
+	return nil
+}
+
+func (l *locationResponse) Error() string {
+	return l.APIError.Error()
 }

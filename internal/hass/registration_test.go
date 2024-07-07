@@ -29,12 +29,22 @@ var mockDevInfo = &DeviceInfo{
 	SupportsEncryption: false,
 }
 
+//nolint:errname
 type failedResponse struct {
 	Details *RegistrationDetails
+	*APIError
 }
 
 func (r *failedResponse) UnmarshalJSON(b []byte) error {
 	return json.Unmarshal(b, &r.Details)
+}
+
+func (r *failedResponse) UnmarshalError(b []byte) error {
+	return json.Unmarshal(b, r.APIError)
+}
+
+func (r *failedResponse) Error() string {
+	return r.APIError.Error()
 }
 
 // setup creates a context using a test http client and server which will

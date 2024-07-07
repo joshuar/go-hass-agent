@@ -23,9 +23,10 @@ var (
 	ErrInvalidURL        = errors.New("invalid URL")
 	ErrInvalidClient     = errors.New("invalid client")
 	ErrResponseMalformed = errors.New("malformed response")
-	ErrNoPrefs           = errors.New("loading preferences failed")
-	defaultTimeout       = 30 * time.Second
-	defaultRetry         = func(r *resty.Response, _ error) bool {
+	ErrUnknown           = errors.New("unknown error occurred")
+
+	defaultTimeout = 30 * time.Second
+	defaultRetry   = func(r *resty.Response, _ error) bool {
 		return r.StatusCode() == http.StatusTooManyRequests
 	}
 )
@@ -76,6 +77,8 @@ type Encrypted interface {
 //go:generate moq -out mock_Response_test.go . Response
 type Response interface {
 	json.Unmarshaler
+	UnmarshalError(data []byte) error
+	error
 }
 
 // ExecuteRequest sends an API request to Home Assistant. It supports either the
@@ -84,23 +87,17 @@ type Response interface {
 // satisfy the PostRequest interface. To add authentication where required,
 // satisfy the Auth interface. To send an encrypted request, satisfy the Secret
 // interface.
-//
-//nolint:exhaustruct
 func ExecuteRequest(ctx context.Context, client *resty.Client, url string, request any, response Response) error {
 	if client == nil {
 		return ErrInvalidClient
 	}
-
-	// ?: handle nil response here
-	var responseErr *APIError
 
 	var resp *resty.Response
 
 	var err error
 
 	webClient := client.R().
-		SetContext(ctx).
-		SetError(&responseErr)
+		SetContext(ctx)
 	if a, ok := request.(Authenticated); ok {
 		webClient = webClient.SetAuthToken(a.Auth())
 	}
@@ -123,6 +120,7 @@ func ExecuteRequest(ctx context.Context, client *resty.Client, url string, reque
 		resp, err = webClient.Get(url)
 	}
 
+	// If the client fails to send the request, return a wrapped error.
 	if err != nil {
 		return fmt.Errorf("could not send request: %w", err)
 	}
@@ -136,21 +134,20 @@ func ExecuteRequest(ctx context.Context, client *resty.Client, url string, reque
 		RawJSON("body", resp.Body()).
 		Msg("Response received.")
 
+	// If the response is an error code, unmarshal it with the error method.
 	if resp.IsError() {
-		if responseErr != nil {
-			responseErr.StatusCode = resp.StatusCode()
-
-			return responseErr
+		if err := response.UnmarshalError(resp.Body()); err != nil {
+			return ErrUnknown
 		}
 
-		return &APIError{
-			StatusCode: resp.StatusCode(),
-			Message:    resp.Status(),
-		}
+		return response
 	}
-
-	if err := response.UnmarshalJSON(resp.Body()); err != nil {
-		return errors.Join(ErrResponseMalformed, err)
+	// Otherwise for a successful response, if the response body is not an empty
+	// string, unmarshal it.
+	if string(resp.Body()) != "" {
+		if err := response.UnmarshalJSON(resp.Body()); err != nil {
+			return errors.Join(ErrResponseMalformed, err)
+		}
 	}
 
 	return nil

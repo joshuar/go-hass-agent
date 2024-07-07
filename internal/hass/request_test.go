@@ -94,6 +94,10 @@ func TestExecuteRequest(t *testing.T) {
 	badPostReq := PostRequestMock{
 		RequestBodyFunc: func() json.RawMessage { return json.RawMessage(`{"field":"value"}`) },
 	}
+	badPostResp := &ResponseMock{
+		UnmarshalErrorFunc: func(_ []byte) error { return nil },
+		ErrorFunc:          func() string { return "400 Bad Request" },
+	}
 
 	// badPostResp := &APIError{
 	// 	StatusCode: 400,
@@ -133,19 +137,13 @@ func TestExecuteRequest(t *testing.T) {
 		},
 		{
 			name: "invalid post request",
-			args: args{ctx: context.TODO(), client: NewDefaultHTTPClient(mockServer.URL), url: "/badPost", request: badPostReq, response: &ResponseMock{}},
-			want: &APIError{
-				StatusCode: 400,
-				Message:    "400 Bad Request",
-			},
+			args: args{ctx: context.TODO(), client: NewDefaultHTTPClient(mockServer.URL), url: "/badPost", request: badPostReq, response: badPostResp},
+			want: badPostResp,
 		},
 		{
 			name: "invalid get request",
-			args: args{ctx: context.TODO(), client: NewDefaultHTTPClient(mockServer.URL), url: "/badGet", request: "anything", response: &ResponseMock{}},
-			want: &APIError{
-				StatusCode: 400,
-				Message:    "400 Bad Request",
-			},
+			args: args{ctx: context.TODO(), client: NewDefaultHTTPClient(mockServer.URL), url: "/badGet", request: "anything", response: badPostResp},
+			want: badPostResp,
 		},
 		// {
 		// 	name: "badData",

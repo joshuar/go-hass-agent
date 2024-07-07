@@ -3,6 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
+//nolint:errname // structs are dual-purpose response and error
 //revive:disable:unused-receiver
 package hass
 
@@ -20,7 +21,8 @@ var ErrLoadPrefsFailed = errors.New("could not load preferences")
 
 type Config struct {
 	Details *ConfigEntries
-	mu      sync.Mutex
+	*APIError
+	mu sync.Mutex
 }
 
 type ConfigEntries struct {
@@ -67,6 +69,19 @@ func (c *Config) UnmarshalJSON(b []byte) error {
 	}
 
 	return nil
+}
+
+func (c *Config) UnmarshalError(data []byte) error {
+	err := json.Unmarshal(data, c.APIError)
+	if err != nil {
+		return fmt.Errorf("could not unmarshal: %w", err)
+	}
+
+	return nil
+}
+
+func (c *Config) Error() string {
+	return c.APIError.Error()
 }
 
 type configRequest struct{}
