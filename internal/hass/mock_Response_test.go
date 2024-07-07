@@ -17,6 +17,12 @@ var _ Response = &ResponseMock{}
 //
 //		// make and configure a mocked Response
 //		mockedResponse := &ResponseMock{
+//			ErrorFunc: func() string {
+//				panic("mock out the Error method")
+//			},
+//			UnmarshalErrorFunc: func(data []byte) error {
+//				panic("mock out the UnmarshalError method")
+//			},
 //			UnmarshalJSONFunc: func(bytes []byte) error {
 //				panic("mock out the UnmarshalJSON method")
 //			},
@@ -27,18 +33,93 @@ var _ Response = &ResponseMock{}
 //
 //	}
 type ResponseMock struct {
+	// ErrorFunc mocks the Error method.
+	ErrorFunc func() string
+
+	// UnmarshalErrorFunc mocks the UnmarshalError method.
+	UnmarshalErrorFunc func(data []byte) error
+
 	// UnmarshalJSONFunc mocks the UnmarshalJSON method.
 	UnmarshalJSONFunc func(bytes []byte) error
 
 	// calls tracks calls to the methods.
 	calls struct {
+		// Error holds details about calls to the Error method.
+		Error []struct {
+		}
+		// UnmarshalError holds details about calls to the UnmarshalError method.
+		UnmarshalError []struct {
+			// Data is the data argument value.
+			Data []byte
+		}
 		// UnmarshalJSON holds details about calls to the UnmarshalJSON method.
 		UnmarshalJSON []struct {
 			// Bytes is the bytes argument value.
 			Bytes []byte
 		}
 	}
-	lockUnmarshalJSON sync.RWMutex
+	lockError          sync.RWMutex
+	lockUnmarshalError sync.RWMutex
+	lockUnmarshalJSON  sync.RWMutex
+}
+
+// Error calls ErrorFunc.
+func (mock *ResponseMock) Error() string {
+	if mock.ErrorFunc == nil {
+		panic("ResponseMock.ErrorFunc: method is nil but Response.Error was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockError.Lock()
+	mock.calls.Error = append(mock.calls.Error, callInfo)
+	mock.lockError.Unlock()
+	return mock.ErrorFunc()
+}
+
+// ErrorCalls gets all the calls that were made to Error.
+// Check the length with:
+//
+//	len(mockedResponse.ErrorCalls())
+func (mock *ResponseMock) ErrorCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockError.RLock()
+	calls = mock.calls.Error
+	mock.lockError.RUnlock()
+	return calls
+}
+
+// UnmarshalError calls UnmarshalErrorFunc.
+func (mock *ResponseMock) UnmarshalError(data []byte) error {
+	if mock.UnmarshalErrorFunc == nil {
+		panic("ResponseMock.UnmarshalErrorFunc: method is nil but Response.UnmarshalError was just called")
+	}
+	callInfo := struct {
+		Data []byte
+	}{
+		Data: data,
+	}
+	mock.lockUnmarshalError.Lock()
+	mock.calls.UnmarshalError = append(mock.calls.UnmarshalError, callInfo)
+	mock.lockUnmarshalError.Unlock()
+	return mock.UnmarshalErrorFunc(data)
+}
+
+// UnmarshalErrorCalls gets all the calls that were made to UnmarshalError.
+// Check the length with:
+//
+//	len(mockedResponse.UnmarshalErrorCalls())
+func (mock *ResponseMock) UnmarshalErrorCalls() []struct {
+	Data []byte
+} {
+	var calls []struct {
+		Data []byte
+	}
+	mock.lockUnmarshalError.RLock()
+	calls = mock.calls.UnmarshalError
+	mock.lockUnmarshalError.RUnlock()
+	return calls
 }
 
 // UnmarshalJSON calls UnmarshalJSONFunc.

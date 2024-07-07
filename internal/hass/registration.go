@@ -3,6 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
+//nolint:errname // structs are dual-purpose response and error
 package hass
 
 import (
@@ -93,6 +94,7 @@ func newRegistrationRequest(info *DeviceInfo, token string) *registrationRequest
 
 type registrationResponse struct {
 	Details *RegistrationDetails
+	*APIError
 }
 
 func (r *registrationResponse) UnmarshalJSON(b []byte) error {
@@ -102,6 +104,19 @@ func (r *registrationResponse) UnmarshalJSON(b []byte) error {
 	}
 
 	return nil
+}
+
+func (r *registrationResponse) UnmarshalError(data []byte) error {
+	err := json.Unmarshal(data, r.APIError)
+	if err != nil {
+		return fmt.Errorf("could not unmarshal: %w", err)
+	}
+
+	return nil
+}
+
+func (r *registrationResponse) Error() string {
+	return r.APIError.Error()
 }
 
 //nolint:exhaustruct

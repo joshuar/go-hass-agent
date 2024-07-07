@@ -3,6 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
+//nolint:errname // structs are dual-purpose response and error
 //revive:disable:unused-receiver
 package hass
 
@@ -37,6 +38,7 @@ func (e *EntityStateRequest) Auth() string {
 
 type EntityStateResponse struct {
 	State *EntityState
+	*APIError
 }
 
 func (e *EntityStateResponse) UnmarshalJSON(b []byte) error {
@@ -46,6 +48,19 @@ func (e *EntityStateResponse) UnmarshalJSON(b []byte) error {
 	}
 
 	return nil
+}
+
+func (e *EntityStateResponse) UnmarshalError(data []byte) error {
+	err := json.Unmarshal(data, e.APIError)
+	if err != nil {
+		return fmt.Errorf("could not unmarshal: %w", err)
+	}
+
+	return nil
+}
+
+func (e *EntityStateResponse) Error() string {
+	return e.APIError.Error()
 }
 
 //nolint:exhaustruct
@@ -77,6 +92,7 @@ func (e *EntityStatesRequest) Auth() string {
 }
 
 type EntityStatesResponse struct {
+	*APIError
 	States []EntityStateResponse
 }
 
@@ -87,6 +103,19 @@ func (e *EntityStatesResponse) UnmarshalJSON(b []byte) error {
 	}
 
 	return nil
+}
+
+func (e *EntityStatesResponse) UnmarshalError(data []byte) error {
+	err := json.Unmarshal(data, e.APIError)
+	if err != nil {
+		return fmt.Errorf("could not unmarshal: %w", err)
+	}
+
+	return nil
+}
+
+func (e *EntityStatesResponse) Error() string {
+	return e.APIError.Error()
 }
 
 //nolint:exhaustruct
