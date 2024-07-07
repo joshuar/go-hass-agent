@@ -16,7 +16,7 @@ env:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@17d0e2bd7d51742c71671bd19fa12bdc9d40a3d6 # v1
@@ -49,7 +49,7 @@ jobs:
           fail_ci_if_error: false
 
   golangci:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     permissions:
       pull-requests: read # Use with `only-new-issues` option.
     steps:

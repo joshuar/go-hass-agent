@@ -19,7 +19,7 @@ env:
 jobs:
   analyze:
     name: Analyze (${{ matrix.language }})
-    runs-on: ${{ (matrix.language == 'swift' && 'macos-latest') || 'ubuntu-latest' }}
+    runs-on: ${{ (matrix.language == 'swift' && 'macos-latest') || 'ubuntu-22.04' }}
     timeout-minutes: ${{ (matrix.language == 'swift' && 120) || 360 }}
     permissions:
       security-events: write
