@@ -114,12 +114,13 @@ func (Package) FyneCross() error {
 		return errors.Join(ErrBuildFailed, err)
 	}
 
+	envMap["GOFLAGS"] = "-ldflags=" + ldflags
+
 	if err = sh.RunWithV(envMap,
 		"fyne-cross", "linux",
 		"-name", "go-hass-agent",
 		"-icon", iconPath,
 		"-release",
-		"-ldflags", ldflags,
 		"-arch", envMap["GOARCH"]); err != nil {
 		slog.Warn("fyne-cross finished but with errors. Continuing anyway.", "error", err.Error())
 	}
