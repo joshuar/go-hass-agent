@@ -148,7 +148,7 @@ func (p Package) CI() error {
 	}
 
 	mg.Deps(p.Nfpm)
-	mg.Deps(p.FyneCross)
+	// mg.Deps(p.FyneCross)
 
 	return nil
 }
