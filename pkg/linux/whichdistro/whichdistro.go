@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 )
 
 const (
@@ -74,14 +75,18 @@ func readOSRelease() ([]byte, error) {
 // GetValue will retrieve the value of the given key from an OSRelease map. It
 // will perform some cleanup on the raw value to make it easier to use.
 func (r OSRelease) GetValue(key string) (value string, ok bool) {
-	v, ok := r[key]
+	value, ok = r[key]
 	if !ok {
 		return UnknownValue, false
 	}
 
-	value, err := strconv.Unquote(v)
-	if err != nil {
-		return UnknownValue, false
+	if strings.ContainsAny(value, `"`) {
+		unquoted, err := strconv.Unquote(value)
+		if err != nil {
+			return UnknownValue, false
+		}
+
+		value = unquoted
 	}
 
 	return value, true
