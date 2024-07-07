@@ -92,8 +92,8 @@ jobs:
         shell: bash
         run: |
           shopt -s nullglob
-          echo Need to sign dist/pkg/*.{rpm,deb,zst} fyne-cross/dist/linux-*/*.tar.xz
-          for artifact in dist/pkg/*.{rpm,deb,zst} fyne-cross/dist/linux-*/*.tar.xz; do
+          echo Need to sign dist/pkg/*.{rpm,deb,zst} # fyne-cross/dist/linux-*/*.tar.xz
+          for artifact in dist/pkg/*.{rpm,deb,zst}; do
             echo Signing ${artifact}
             cosign --verbose=true sign-blob --yes --key cosign.key --output-signature=${artifact}.sig ${artifact}
           done
@@ -107,13 +107,13 @@ jobs:
           name: build-${{ env.PLATFORM_PAIR }}-${{ github.sha }}
           path: |
             dist/pkg
-            fyne-cross/dist/linux-*
+#           fyne-cross/dist/linux-*
       - name: Upload release artifacts
         id: upload_release
         if: ${{ needs.check_release.outputs.release_created }}
         run: |
           gh release upload ${{ needs.check_release.outputs.release_tag }} dist/pkg/*.{rpm,deb,zst,sig}
-          gh release upload ${{ needs.check_release.outputs.release_tag }} fyne-cross/dist/linux-*/*.tar.xz{,.sig}
+          # gh release upload ${{ needs.check_release.outputs.release_tag }} fyne-cross/dist/linux-*/*.tar.xz{,.sig}
         env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
