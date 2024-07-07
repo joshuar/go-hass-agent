@@ -13,39 +13,40 @@ import (
 
 	mqtthass "github.com/joshuar/go-hass-anything/v9/pkg/hass"
 
+	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 	"github.com/joshuar/go-hass-agent/pkg/linux/whichdistro"
 )
 
-func compareDevice(t *testing.T, got, want *Device) bool {
+func compareDevice(t *testing.T, got, want *hass.DeviceInfo) bool {
 	t.Helper()
 
 	switch {
-	case !reflect.DeepEqual(got.appName, want.appName):
+	case !reflect.DeepEqual(got.AppName, want.AppName):
 		t.Error("appName does not match")
 
 		return false
-	case !reflect.DeepEqual(got.appVersion, want.appVersion):
+	case !reflect.DeepEqual(got.AppVersion, want.AppVersion):
 		t.Error("appVersion does not match")
 
 		return false
-	case !reflect.DeepEqual(got.osName, want.osName):
+	case !reflect.DeepEqual(got.OsName, want.OsName):
 		t.Error("distro does not match")
 
 		return false
-	case !reflect.DeepEqual(got.osVersion, want.osVersion):
-		t.Error("distroVersion does not match")
+	case !reflect.DeepEqual(got.OsVersion, want.OsVersion):
+		t.Errorf("distroVersion does not match: got %s want %s", got.OsVersion, want.OsVersion)
 
 		return false
-	case !reflect.DeepEqual(got.hostname, want.hostname):
+	case !reflect.DeepEqual(got.DeviceName, want.DeviceName):
 		t.Error("hostname does not match")
 
 		return false
-	case !reflect.DeepEqual(got.hwModel, want.hwModel):
+	case !reflect.DeepEqual(got.Model, want.Model):
 		t.Error("hwModel does not match")
 
 		return false
-	case !reflect.DeepEqual(got.hwVendor, want.hwVendor):
+	case !reflect.DeepEqual(got.Manufacturer, want.Manufacturer):
 		t.Error("hwVendor does not match")
 
 		return false
@@ -71,7 +72,7 @@ func compareMQTTDevice(t *testing.T, got, want *mqtthass.Device) bool {
 
 		return false
 	case !reflect.DeepEqual(got.Manufacturer, want.Manufacturer):
-		t.Error("Manufacturer does not match")
+		t.Errorf("Manufacturer does not match: got %s want %s", got.Manufacturer, want.Manufacturer)
 
 		return false
 	case !reflect.DeepEqual(got.Model, want.Model):
@@ -87,20 +88,20 @@ func TestNewDevice(t *testing.T) {
 	origOSRelease := whichdistro.OSReleaseFile
 	origAltOSRelease := whichdistro.OSReleaseAltFile
 
-	baseDev := Device{
-		appName:    preferences.AppName,
-		appVersion: preferences.AppVersion,
-		deviceID:   getDeviceID(),
-		hostname:   getHostname(),
+	baseDev := hass.DeviceInfo{
+		AppName:    preferences.AppName,
+		AppVersion: preferences.AppVersion,
+		DeviceID:   getDeviceID(),
+		DeviceName: getHostname(),
 	}
-	baseDev.hwModel, baseDev.hwVendor = getHWProductInfo()
+	baseDev.Model, baseDev.Manufacturer = getHWProductInfo()
 
 	withoutOSRelease := baseDev
-	withoutOSRelease.osName = unknownDistro
-	withoutOSRelease.osVersion = unknownDistroVersion
+	withoutOSRelease.OsName = unknownDistro
+	withoutOSRelease.OsVersion = unknownDistroVersion
 
 	withOSRelease := baseDev
-	withOSRelease.osName, withOSRelease.osVersion = getOSID()
+	withOSRelease.OsName, withOSRelease.OsVersion = getOSID()
 
 	type args struct {
 		name           string
@@ -109,7 +110,7 @@ func TestNewDevice(t *testing.T) {
 	}
 
 	tests := []struct {
-		want *Device
+		want *hass.DeviceInfo
 		name string
 		args args
 	}{
@@ -152,12 +153,12 @@ func TestNewDevice(t *testing.T) {
 func TestMQTTDevice(t *testing.T) {
 	dev := New(preferences.AppName, preferences.AppVersion)
 	mqttDev := &mqtthass.Device{
-		Name:         dev.DeviceName(),
+		Name:         dev.DeviceName,
 		URL:          preferences.AppURL,
-		SWVersion:    dev.OsVersion(),
-		Manufacturer: dev.Manufacturer(),
-		Model:        dev.Model(),
-		Identifiers:  []string{dev.DeviceID()},
+		SWVersion:    dev.OsVersion,
+		Manufacturer: dev.Manufacturer,
+		Model:        dev.Model,
+		Identifiers:  []string{dev.DeviceID},
 	}
 	ctx := preferences.ContextSetPrefs(context.TODO(), preferences.DefaultPreferences())
 

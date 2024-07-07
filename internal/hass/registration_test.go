@@ -16,18 +16,17 @@ import (
 	"testing"
 )
 
-var mockDevInfo = &DeviceInfoMock{
-	DeviceIDFunc:           func() string { return "mockDeviceID" },
-	DeviceNameFunc:         func() string { return "testDevice" },
-	SupportsEncryptionFunc: func() bool { return false },
-	AppDataFunc:            func() any { return nil },
-	ManufacturerFunc:       func() string { return "ACME" },
-	ModelFunc:              func() string { return "Foobar" },
-	OsNameFunc:             func() string { return "Fake OS" },
-	OsVersionFunc:          func() string { return "0.0" },
-	AppIDFunc:              func() string { return "go-hass-agent-test" },
-	AppNameFunc:            func() string { return "Go Hass Agent Test" },
-	AppVersionFunc:         func() string { return "v0.0.0" },
+var mockDevInfo = &DeviceInfo{
+	DeviceID:           "mockDeviceID",
+	DeviceName:         "testDevice",
+	Manufacturer:       "ACME",
+	Model:              "Foobar",
+	OsName:             "Fake OS",
+	OsVersion:          "0.0.0",
+	AppID:              "go-hass-agent-test",
+	AppName:            "Go Hass Agent Test",
+	AppVersion:         "v0.0.0",
+	SupportsEncryption: false,
 }
 
 type failedResponse struct {
@@ -84,7 +83,7 @@ func TestRegisterWithHass(t *testing.T) {
 	type args struct {
 		ctx    context.Context
 		input  *RegistrationInput
-		device DeviceInfo
+		device *DeviceInfo
 	}
 
 	tests := []struct {

@@ -19,6 +19,7 @@ import (
 	mqtthass "github.com/joshuar/go-hass-anything/v9/pkg/hass"
 	"github.com/rs/zerolog/log"
 
+	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
@@ -31,81 +32,34 @@ const (
 
 var ErrUnsupportedHardware = errors.New("unsupported hardware")
 
-type Device struct {
-	appName    string
-	appVersion string
-	hostname   string
-	deviceID   string
-	hwVendor   string
-	hwModel    string
-	osName     string
-	osVersion  string
-}
-
-func (l *Device) AppName() string {
-	return l.appName
-}
-
-func (l *Device) AppVersion() string {
-	return l.appVersion
-}
-
-func (l *Device) AppID() string {
-	return strcase.ToSnake(l.appName)
-}
-
-func (l *Device) DeviceName() string {
-	shortHostname, _, _ := strings.Cut(l.hostname, ".")
-
-	return shortHostname
-}
-
-func (l *Device) DeviceID() string {
-	return l.deviceID
-}
-
-func (l *Device) Manufacturer() string {
-	return l.hwVendor
-}
-
-func (l *Device) Model() string {
-	return l.hwModel
-}
-
-func (l *Device) OsName() string {
-	return l.osName
-}
-
-func (l *Device) OsVersion() string {
-	return l.osVersion
-}
-
-func (l *Device) SupportsEncryption() bool {
-	return false
-}
-
-func (l *Device) AppData() any {
-	return &struct {
-		PushWebsocket bool `json:"push_websocket_channel"`
-	}{
-		PushWebsocket: true,
-	}
-}
-
+// New creates a new hass.DeviceInfo based on the device running this agent.
+// Note that the device is not idempotent, each call to this function will have
+// at least a different DeviceID in addition to any other non-static variables
+// such as the hostname.
+//
 //nolint:exhaustruct
-func New(name, version string) *Device {
-	dev := &Device{
-		appName:    name,
-		appVersion: version,
-		deviceID:   getDeviceID(),
-		hostname:   getHostname(),
+func New(name, version string) *hass.DeviceInfo {
+	hostname, _, _ := strings.Cut(getHostname(), ".")
+	dev := &hass.DeviceInfo{
+		AppName:            name,
+		AppVersion:         version,
+		AppID:              strcase.ToSnake(name),
+		DeviceID:           getDeviceID(),
+		DeviceName:         hostname,
+		SupportsEncryption: false,
+		AppData: hass.AppData{
+			PushWebsocket: true,
+		},
 	}
-	dev.osName, dev.osVersion = getOSID()
-	dev.hwModel, dev.hwVendor = getHWProductInfo()
+	dev.OsName, dev.OsVersion = getOSID()
+	dev.Model, dev.Manufacturer = getHWProductInfo()
 
 	return dev
 }
 
+// MQTTDeviceInfo returns an mqtthas.Device with the required info for
+// representing the device running the agent in MQTT.
+//
 //nolint:exhaustruct
 func MQTTDeviceInfo(ctx context.Context) *mqtthass.Device {
 	prefs, err := preferences.ContextGetPrefs(ctx)
@@ -121,8 +75,8 @@ func MQTTDeviceInfo(ctx context.Context) *mqtthass.Device {
 		Name:         hostname,
 		URL:          preferences.AppURL,
 		SWVersion:    version,
-		Manufacturer: model,
-		Model:        manufacturer,
+		Manufacturer: manufacturer,
+		Model:        model,
 		Identifiers:  []string{prefs.DeviceID},
 	}
 }
