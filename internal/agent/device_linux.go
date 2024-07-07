@@ -26,7 +26,6 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/linux/problems"
 	"github.com/joshuar/go-hass-agent/internal/linux/system"
 	"github.com/joshuar/go-hass-agent/internal/linux/user"
-	"github.com/joshuar/go-hass-agent/internal/preferences"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
@@ -158,10 +157,6 @@ func (w linuxWorkers) StopAll() error {
 	}
 
 	return nil
-}
-
-func newDevice(_ context.Context) *linux.Device {
-	return linux.NewDevice(preferences.AppName, preferences.AppVersion)
 }
 
 // createSensorWorkers initialises the list of workers for sensors and returns those

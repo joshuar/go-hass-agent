@@ -3,128 +3,179 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
+// revive:disable:unused-receiver
+
 package device
 
 import (
 	"context"
 	"errors"
-	"fmt"
+	"os"
+	"strings"
 
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/gofrs/uuid/v5"
+	"github.com/iancoleman/strcase"
+	"github.com/jaypipes/ghw"
+	mqtthass "github.com/joshuar/go-hass-anything/v9/pkg/hass"
+	"github.com/rs/zerolog/log"
+
+	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
-var ErrUnknownWorker = errors.New("unknown worker")
+const (
+	unknownVendor        = "Unknown Vendor"
+	unknownModel         = "Unknown Model"
+	unknownDistro        = "Unknown Distro"
+	unknownDistroVersion = "Unknown Version"
+)
 
-type WorkerControl struct {
-	externalIP        *externalIPWorker
-	externalIPControl context.CancelFunc
-	version           *versionWorker
-	versionControl    context.CancelFunc
+var ErrUnsupportedHardware = errors.New("unsupported hardware")
+
+type Device struct {
+	appName    string
+	appVersion string
+	hostname   string
+	deviceID   string
+	hwVendor   string
+	hwModel    string
+	osName     string
+	osVersion  string
 }
 
-//nolint:mnd
-func (w *WorkerControl) ActiveWorkers() []string {
-	activeWorkers := make([]string, 0, 2)
-
-	if w.externalIPControl != nil {
-		activeWorkers = append(activeWorkers, w.externalIP.Name())
-	}
-
-	if w.versionControl != nil {
-		activeWorkers = append(activeWorkers, w.version.Name())
-	}
-
-	return activeWorkers
+func (l *Device) AppName() string {
+	return l.appName
 }
 
-//nolint:mnd
-func (w *WorkerControl) InactiveWorkers() []string {
-	inactiveWorkers := make([]string, 0, 2)
-
-	if w.externalIPControl == nil {
-		inactiveWorkers = append(inactiveWorkers, w.externalIP.Name())
-	}
-
-	if w.versionControl == nil {
-		inactiveWorkers = append(inactiveWorkers, w.version.Name())
-	}
-
-	return inactiveWorkers
+func (l *Device) AppVersion() string {
+	return l.appVersion
 }
 
-func (w *WorkerControl) Start(ctx context.Context, name string) (<-chan sensor.Details, error) {
-	workerCtx, workerCancelFunc := context.WithCancel(ctx)
-
-	switch name {
-	case w.externalIP.Name():
-		workerCh, err := w.externalIP.Updates(workerCtx)
-		if err != nil {
-			return nil, fmt.Errorf("could not start worker: %w", err)
-		}
-
-		w.externalIPControl = workerCancelFunc
-
-		return workerCh, nil
-	case w.version.Name():
-		workerCh, err := w.version.Updates(workerCtx)
-		if err != nil {
-			return nil, fmt.Errorf("could not start worker: %w", err)
-		}
-
-		w.externalIPControl = workerCancelFunc
-
-		return workerCh, nil
-	}
-
-	return nil, ErrUnknownWorker
+func (l *Device) AppID() string {
+	return strcase.ToSnake(l.appName)
 }
 
-func (w *WorkerControl) Stop(name string) error {
-	switch name {
-	case w.externalIP.Name():
-		w.externalIPControl()
-	case w.version.Name():
-		w.versionControl()
-	}
+func (l *Device) DeviceName() string {
+	shortHostname, _, _ := strings.Cut(l.hostname, ".")
 
-	return nil
+	return shortHostname
 }
 
-func (w *WorkerControl) StartAll(ctx context.Context) (<-chan sensor.Details, error) {
-	var allerr error
-
-	ipWorkerCtx, ipCancelFunc := context.WithCancel(ctx)
-
-	ipUpdates, err := w.externalIP.Updates(ipWorkerCtx)
-	if err != nil {
-		allerr = errors.Join(allerr, err)
-	} else {
-		w.externalIPControl = ipCancelFunc
-	}
-
-	verWorkerCtx, verCancelFunc := context.WithCancel(ctx)
-
-	verUpdates, err := w.version.Updates(verWorkerCtx)
-	if err != nil {
-		allerr = errors.Join(allerr, err)
-	} else {
-		w.versionControl = verCancelFunc
-	}
-
-	return sensor.MergeSensorCh(ctx, ipUpdates, verUpdates), allerr
+func (l *Device) DeviceID() string {
+	return l.deviceID
 }
 
-func (w *WorkerControl) StopAll() error {
-	w.externalIPControl()
-	w.versionControl()
+func (l *Device) Manufacturer() string {
+	return l.hwVendor
+}
 
-	return nil
+func (l *Device) Model() string {
+	return l.hwModel
+}
+
+func (l *Device) OsName() string {
+	return l.osName
+}
+
+func (l *Device) OsVersion() string {
+	return l.osVersion
+}
+
+func (l *Device) SupportsEncryption() bool {
+	return false
+}
+
+func (l *Device) AppData() any {
+	return &struct {
+		PushWebsocket bool `json:"push_websocket_channel"`
+	}{
+		PushWebsocket: true,
+	}
 }
 
 //nolint:exhaustruct
-func CreateSensorWorkers() *WorkerControl {
-	return &WorkerControl{
-		externalIP: newExternalIPUpdaterWorker(),
-		version:    newVersionWorker(),
+func New(name, version string) *Device {
+	dev := &Device{
+		appName:    name,
+		appVersion: version,
+		deviceID:   getDeviceID(),
+		hostname:   getHostname(),
 	}
+	dev.osName, dev.osVersion = getOSID()
+	dev.hwModel, dev.hwVendor = getHWProductInfo()
+
+	return dev
+}
+
+//nolint:exhaustruct
+func MQTTDeviceInfo(ctx context.Context) *mqtthass.Device {
+	prefs, err := preferences.ContextGetPrefs(ctx)
+	if err != nil {
+		log.Warn().Err(err).Msg("Could not retrieve preferences.")
+	}
+
+	hostname, _, _ := strings.Cut(getHostname(), ".")
+	_, version := getOSID()
+	model, manufacturer := getHWProductInfo()
+
+	return &mqtthass.Device{
+		Name:         hostname,
+		URL:          preferences.AppURL,
+		SWVersion:    version,
+		Manufacturer: model,
+		Model:        manufacturer,
+		Identifiers:  []string{prefs.DeviceID},
+	}
+}
+
+// getDeviceID create a new device ID. It will be a randomly generated UUIDv4.
+func getDeviceID() string {
+	deviceID, err := uuid.NewV4()
+	if err != nil {
+		log.Warn().Err(err).
+			Msg("Could not retrieve a machine ID")
+
+		return "unknown"
+	}
+
+	return deviceID.String()
+}
+
+// getHostname retrieves the hostname of the device running the agent, or
+// localhost if that doesn't work.
+func getHostname() string {
+	hostname, err := os.Hostname()
+	if err != nil {
+		log.Warn().Err(err).Msg("Could not retrieve hostname. Using 'localhost'.")
+
+		return "localhost"
+	}
+
+	return hostname
+}
+
+// getHWProductInfo retrieves the model and vendor of the machine. If these
+// cannot be retrieved or cannot be found, they will be set to default unknown
+// strings.
+func getHWProductInfo() (model, vendor string) {
+	product, err := ghw.Product(ghw.WithDisableWarnings())
+	if err != nil {
+		log.Warn().Err(err).Msg("Could not retrieve hardware information.")
+
+		return unknownModel, unknownVendor
+	}
+
+	return product.Name, product.Vendor
+}
+
+// Chassis will return the chassis type of the machine, such as "desktop" or
+// "laptop". If this cannot be retrieved, it will return "unknown".
+func Chassis() string {
+	chassisInfo, err := ghw.Chassis(ghw.WithDisableWarnings())
+	if err != nil {
+		log.Warn().Err(err).Msg("Could not determine chassis type.")
+
+		return "unknown"
+	}
+
+	return chassisInfo.Type
 }

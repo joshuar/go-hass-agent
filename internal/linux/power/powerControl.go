@@ -12,7 +12,7 @@ import (
 	mqtthass "github.com/joshuar/go-hass-anything/v9/pkg/hass"
 	"github.com/rs/zerolog/log"
 
-	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
@@ -73,7 +73,7 @@ var commands = map[string]commandConfig{
 
 func NewPowerControl(ctx context.Context) []*mqtthass.ButtonEntity {
 	entities := make([]*mqtthass.ButtonEntity, 0, len(commands))
-	device := linux.MQTTDevice(ctx)
+	deviceInfo := device.MQTTDeviceInfo(ctx)
 
 	sessionPath, err := dbusx.GetSessionPath(ctx)
 	if err != nil {
@@ -102,9 +102,9 @@ func NewPowerControl(ctx context.Context) []*mqtthass.ButtonEntity {
 
 		entities = append(entities,
 			mqtthass.AsButton(
-				mqtthass.NewEntity(preferences.AppName, cmdInfo.name, device.Name+"_"+cmdName).
+				mqtthass.NewEntity(preferences.AppName, cmdInfo.name, deviceInfo.Name+"_"+cmdName).
 					WithOriginInfo(preferences.MQTTOrigin()).
-					WithDeviceInfo(device).
+					WithDeviceInfo(deviceInfo).
 					WithIcon(cmdInfo.icon).
 					WithCommandCallback(callback)))
 	}

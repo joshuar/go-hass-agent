@@ -16,7 +16,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 	pulseaudiox "github.com/joshuar/go-hass-agent/pkg/linux/pulseaudio"
 )
@@ -30,7 +30,7 @@ type audioDevice struct {
 
 //nolint:exhaustruct,mnd
 func VolumeControl(ctx context.Context, msgCh chan *mqttapi.Msg) (*mqtthass.NumberEntity[int], *mqtthass.SwitchEntity) {
-	device := linux.MQTTDevice(ctx)
+	deviceInfo := device.MQTTDeviceInfo(ctx)
 
 	client, err := pulseaudiox.NewPulseClient(ctx)
 	if err != nil {
@@ -47,9 +47,9 @@ func VolumeControl(ctx context.Context, msgCh chan *mqttapi.Msg) (*mqtthass.Numb
 	}
 
 	audioDev.volEntity = mqtthass.AsNumber(
-		mqtthass.NewEntity(preferences.AppName, "Volume", device.Name+"_volume").
+		mqtthass.NewEntity(preferences.AppName, "Volume", deviceInfo.Name+"_volume").
 			WithOriginInfo(preferences.MQTTOrigin()).
-			WithDeviceInfo(device).
+			WithDeviceInfo(deviceInfo).
 			WithIcon("mdi:knob").
 			WithCommandCallback(audioDev.volCommandCallback).
 			WithStateCallback(audioDev.volStateCallback).
@@ -57,9 +57,9 @@ func VolumeControl(ctx context.Context, msgCh chan *mqttapi.Msg) (*mqtthass.Numb
 		1, 0, 100, mqtthass.NumberSlider)
 
 	audioDev.muteEntity = mqtthass.AsSwitch(
-		mqtthass.NewEntity(preferences.AppName, "Mute", device.Name+"_mute").
+		mqtthass.NewEntity(preferences.AppName, "Mute", deviceInfo.Name+"_mute").
 			WithOriginInfo(preferences.MQTTOrigin()).
-			WithDeviceInfo(device).
+			WithDeviceInfo(deviceInfo).
 			WithIcon("mdi:volume-mute").
 			WithCommandCallback(audioDev.muteCommandCallback).
 			WithStateCallback(audioDev.muteStateCallback).

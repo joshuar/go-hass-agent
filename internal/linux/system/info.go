@@ -9,6 +9,7 @@ package system
 import (
 	"context"
 
+	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 )
@@ -18,10 +19,10 @@ type infoWorker struct{}
 //nolint:exhaustruct
 func (w *infoWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
 	// Get distribution name and version.
-	distro, distroVersion := linux.GetDistroDetails()
+	distro, distroVersion := device.GetOSDetails()
 
 	// Get kernel version.
-	kernelVersion := linux.GetKernelVersion()
+	kernelVersion := device.GetKernelVersion()
 
 	return []sensor.Details{
 			&linux.Sensor{

@@ -13,6 +13,7 @@ import (
 	"github.com/godbus/dbus/v5"
 	"github.com/rs/zerolog/log"
 
+	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
@@ -139,8 +140,8 @@ func (w *worker) Sensors(_ context.Context) ([]sensor.Details, error) {
 //nolint:exhaustruct
 func NewLocationWorker() (*linux.SensorWorker, error) {
 	// Don't run this worker if we are not running on a laptop.
-	if linux.Chassis() != "laptop" {
-		return nil, fmt.Errorf("will not start location sensor: %w", linux.ErrUnsupportedHardware)
+	if device.Chassis() != "laptop" {
+		return nil, fmt.Errorf("will not start location sensor: %w", device.ErrUnsupportedHardware)
 	}
 
 	return &linux.SensorWorker{

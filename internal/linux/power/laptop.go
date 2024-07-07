@@ -14,6 +14,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 
+	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
@@ -172,8 +173,8 @@ func (w *laptopWorker) Sensors(ctx context.Context) ([]sensor.Details, error) {
 
 func NewLaptopWorker() (*linux.SensorWorker, error) {
 	// Don't run this worker if we are not running on a laptop.
-	if linux.Chassis() != "laptop" {
-		return nil, fmt.Errorf("will not create laptop sensors: %w", linux.ErrUnsupportedHardware)
+	if device.Chassis() != "laptop" {
+		return nil, fmt.Errorf("will not create laptop sensors: %w", device.ErrUnsupportedHardware)
 	}
 
 	return &linux.SensorWorker{
