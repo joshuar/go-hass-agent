@@ -140,7 +140,7 @@ func (agent *Agent) Run(ctx context.Context, trk SensorTracker, reg sensor.Regis
 		defer regWait.Done()
 
 		if err := agent.checkRegistration(ctx, trk); err != nil {
-			log.Error().Err(err).Msg("Error checking registration status.")
+			log.Fatal().Err(err).Msg("Error checking registration status.")
 		}
 	}()
 
