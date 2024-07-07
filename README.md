@@ -274,8 +274,7 @@ page and download the appropriate package for your operating system and/or
 distribution:
 
 - **Fedora**: use the `.rpm`.
-- **Ubuntu**: use the `.deb`.
-- **Debian**: use the `.tar.xz`.
+- **Ubuntu/Debian**: use the `.deb`.
 - **Arch**: use the `.tar.zst`.
 
 Packages (and binaries) are available for **amd64**, **arm (v7)** and **arm64**
