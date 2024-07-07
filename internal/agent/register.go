@@ -13,6 +13,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 
+	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/registry"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
@@ -80,16 +81,16 @@ func (agent *Agent) performRegistration(ctx context.Context) error {
 		return fmt.Errorf("failed: %w", err)
 	}
 
-	device := newDevice(ctx)
+	deviceInfo := device.New(preferences.AppName, preferences.AppVersion)
 
 	// Register with Home Assistant.
-	resp, err := hass.RegisterWithHass(ctx, agent.registrationInfo, device)
+	resp, err := hass.RegisterWithHass(ctx, agent.registrationInfo, deviceInfo)
 	if err != nil {
 		return fmt.Errorf("failed: %w", err)
 	}
 
 	// Write registration details to config.
-	if err := agent.saveRegistration(resp, device); err != nil {
+	if err := agent.saveRegistration(resp, deviceInfo); err != nil {
 		return fmt.Errorf("failed: %w", err)
 	}
 

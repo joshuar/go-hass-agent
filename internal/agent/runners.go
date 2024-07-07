@@ -18,7 +18,6 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
-	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/scripts"
 )
 
@@ -229,7 +228,7 @@ func (agent *Agent) runMQTTWorker(ctx context.Context, commandsFile string) {
 	}
 
 	// Create an MQTT device for this operating system and run its Setup.
-	commandController, err = commands.NewCommandsController(ctx, commandsFile, linux.MQTTDevice(ctx))
+	commandController, err = commands.NewCommandsController(ctx, commandsFile, device.MQTTDeviceInfo(ctx))
 	if err != nil {
 		log.Warn().Err(err).Msg("Could not set up commands MQTT functionality.")
 	} else {

@@ -13,7 +13,7 @@ import (
 	"github.com/eclipse/paho.golang/paho"
 	mqtthass "github.com/joshuar/go-hass-anything/v9/pkg/hass"
 
-	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 
@@ -23,12 +23,12 @@ import (
 func NewScreenLockControl(ctx context.Context) *mqtthass.ButtonEntity {
 	dbusScreensaverDest, dbusScreensaverPath, dbusScreensaverMsg := getDesktopEnvScreensaverConfig()
 	dbusScreensaverLockMethod := dbusScreensaverDest + ".Lock"
-	device := linux.MQTTDevice(ctx)
+	deviceInfo := device.MQTTDeviceInfo(ctx)
 
 	return mqtthass.AsButton(
-		mqtthass.NewEntity(preferences.AppName, "Lock Screensaver", device.Name+"_lock_screensaver").
+		mqtthass.NewEntity(preferences.AppName, "Lock Screensaver", deviceInfo.Name+"_lock_screensaver").
 			WithOriginInfo(preferences.MQTTOrigin()).
-			WithDeviceInfo(device).
+			WithDeviceInfo(deviceInfo).
 			WithIcon("mdi:eye-lock").
 			WithCommandCallback(func(_ *paho.Publish) {
 				if dbusScreensaverPath == "" {
