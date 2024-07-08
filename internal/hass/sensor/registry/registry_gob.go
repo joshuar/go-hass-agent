@@ -12,11 +12,10 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"sync"
-
-	"github.com/rs/zerolog/log"
 )
 
 var gobRegistryFile = "sensor.reg"
@@ -27,7 +26,9 @@ type gobRegistry struct {
 }
 
 func (g *gobRegistry) write() error {
-	regFS, err := os.OpenFile(filepath.Join(registryPath, gobRegistryFile), os.O_RDWR|os.O_CREATE, 0o640)
+	registryFile := filepath.Join(registryPath, gobRegistryFile)
+
+	regFS, err := os.OpenFile(registryFile, os.O_RDWR|os.O_CREATE, 0o640)
 	if err != nil {
 		return fmt.Errorf("could not open registry: %w", err)
 	}
@@ -39,7 +40,7 @@ func (g *gobRegistry) write() error {
 		return fmt.Errorf("could not encode registry data: %w", err)
 	}
 
-	log.Debug().Msg("Wrote sensor registry to disk.")
+	slog.Debug("Wrote sensor registry to disk.", "file", registryFile)
 
 	return nil
 }
@@ -48,7 +49,9 @@ func (g *gobRegistry) read() error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
-	regFS, err := os.OpenFile(filepath.Join(registryPath, gobRegistryFile), os.O_RDWR|os.O_CREATE, 0o640)
+	registryFile := filepath.Join(registryPath, gobRegistryFile)
+
+	regFS, err := os.OpenFile(registryFile, os.O_RDWR|os.O_CREATE, 0o640)
 	if err != nil {
 		return fmt.Errorf("could not open registry: %w", err)
 	}
@@ -60,7 +63,7 @@ func (g *gobRegistry) read() error {
 		return fmt.Errorf("could not decode registry data: %w", err)
 	}
 
-	log.Debug().Msg("Read sensor registry from disk.")
+	slog.Debug("Read sensor registry from disk.", "file", registryFile)
 
 	return nil
 }
@@ -71,7 +74,7 @@ func (g *gobRegistry) IsDisabled(id string) bool {
 
 	sensor, ok := g.sensors[id]
 	if !ok {
-		log.Warn().Str("id", id).Msg("Sensor not found in registry.")
+		slog.Warn("Sensor not found in registry.", "sensor_id", id)
 
 		return false
 	}
@@ -85,7 +88,7 @@ func (g *gobRegistry) IsRegistered(id string) bool {
 
 	sensor, ok := g.sensors[id]
 	if !ok {
-		log.Warn().Str("id", id).Msg("Sensor not found in registry.")
+		slog.Warn("Sensor not found in registry.", "sensor_id", id)
 
 		return false
 	}
