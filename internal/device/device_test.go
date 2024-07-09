@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	mqtthass "github.com/joshuar/go-hass-anything/v9/pkg/hass"
+	"github.com/stretchr/testify/require"
 
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
@@ -84,26 +85,36 @@ func compareMQTTDevice(t *testing.T, got, want *mqtthass.Device) bool {
 	return true
 }
 
+//nolint:containedctx
 func TestNewDevice(t *testing.T) {
 	origOSRelease := whichdistro.OSReleaseFile
 	origAltOSRelease := whichdistro.OSReleaseAltFile
 
+	deviceID, err := getDeviceID()
+	require.NoError(t, err)
+
+	deviceName, err := getHostname(true)
+	require.NoError(t, err)
+
 	baseDev := hass.DeviceInfo{
 		AppName:    preferences.AppName,
 		AppVersion: preferences.AppVersion,
-		DeviceID:   getDeviceID(),
-		DeviceName: getHostname(),
+		DeviceID:   deviceID,
+		DeviceName: deviceName,
 	}
-	baseDev.Model, baseDev.Manufacturer = getHWProductInfo()
+	baseDev.Model, baseDev.Manufacturer, err = getHWProductInfo()
+	require.NoError(t, err)
 
 	withoutOSRelease := baseDev
 	withoutOSRelease.OsName = unknownDistro
 	withoutOSRelease.OsVersion = unknownDistroVersion
 
 	withOSRelease := baseDev
-	withOSRelease.OsName, withOSRelease.OsVersion = getOSID()
+	withOSRelease.OsName, withOSRelease.OsVersion, err = getOSID()
+	require.NoError(t, err)
 
 	type args struct {
+		ctx            context.Context
 		name           string
 		version        string
 		osReleaseFiles []string
@@ -117,6 +128,7 @@ func TestNewDevice(t *testing.T) {
 		{
 			name: "with OS Release",
 			args: args{
+				ctx:            context.TODO(),
 				name:           preferences.AppName,
 				version:        preferences.AppVersion,
 				osReleaseFiles: []string{whichdistro.OSReleaseFile, whichdistro.OSReleaseAltFile},
@@ -126,6 +138,7 @@ func TestNewDevice(t *testing.T) {
 		{
 			name: "without OS Release",
 			args: args{
+				ctx:            context.TODO(),
 				name:           preferences.AppName,
 				version:        preferences.AppVersion,
 				osReleaseFiles: []string{"", ""},
@@ -139,7 +152,7 @@ func TestNewDevice(t *testing.T) {
 			whichdistro.OSReleaseFile = tt.args.osReleaseFiles[0]
 			whichdistro.OSReleaseAltFile = tt.args.osReleaseFiles[1]
 
-			if got := New(tt.args.name, tt.args.version); !compareDevice(t, got, tt.want) {
+			if got := New(tt.args.ctx, tt.args.name, tt.args.version); !compareDevice(t, got, tt.want) {
 				t.Errorf("NewDevice() = %v, want %v", got, tt.want)
 			}
 
@@ -151,7 +164,7 @@ func TestNewDevice(t *testing.T) {
 
 //nolint:containedctx
 func TestMQTTDevice(t *testing.T) {
-	dev := New(preferences.AppName, preferences.AppVersion)
+	dev := New(context.TODO(), preferences.AppName, preferences.AppVersion)
 	mqttDev := &mqtthass.Device{
 		Name:         dev.DeviceName,
 		URL:          preferences.AppURL,

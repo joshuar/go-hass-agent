@@ -3,6 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
+//nolint:exhaustruct
 //revive:disable:unused-receiver
 package disk
 
@@ -13,12 +14,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v3/disk"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/logging"
 )
 
 const (
@@ -31,7 +32,7 @@ type diskUsageSensor struct {
 	linux.Sensor
 }
 
-//nolint:exhaustruct,mnd
+//nolint:mnd
 func newDiskUsageSensor(stat *disk.UsageStat) *diskUsageSensor {
 	return &diskUsageSensor{
 		Sensor: linux.Sensor{
@@ -82,7 +83,7 @@ func (w *usageWorker) Sensors(ctx context.Context, _ time.Duration) ([]sensor.De
 	for _, partition := range partitions {
 		usage, err := disk.UsageWithContext(ctx, partition.Mountpoint)
 		if err != nil {
-			log.Warn().Err(err).Msgf("Failed to get usage info for mountpount %s.", partition.Mountpoint)
+			logging.FromContext(ctx).Warn("Failed to get usage info for mountpount", "mountpoint", partition.Mountpoint, "error", err.Error())
 
 			continue
 		}

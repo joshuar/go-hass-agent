@@ -3,6 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
+//nolint:exhaustruct
 //revive:disable:unused-receiver
 package user
 
@@ -11,11 +12,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/rs/zerolog/log"
-
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
@@ -96,7 +96,7 @@ func (w *worker) Events(ctx context.Context) (chan sensor.Details, error) {
 	sendUpdate := func() {
 		err := w.sensor.updateUsers(ctx)
 		if err != nil {
-			log.Debug().Err(err).Msg("Update failed.")
+			logging.FromContext(ctx).Debug("Update failed", "error", err.Error())
 
 			return
 		}
@@ -104,12 +104,14 @@ func (w *worker) Events(ctx context.Context) (chan sensor.Details, error) {
 	}
 
 	go func() {
+		logging.FromContext(ctx).Debug("Monitoring for user sessions.")
+
 		defer close(sensorCh)
 
 		for {
 			select {
 			case <-ctx.Done():
-				log.Debug().Msg("Stopped users sensors.")
+				logging.FromContext(ctx).Debug("Stopped monitoring for user sessions.")
 
 				return
 			case event := <-triggerCh:

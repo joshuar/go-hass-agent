@@ -11,11 +11,11 @@ import (
 	"fmt"
 
 	"github.com/godbus/dbus/v5"
-	"github.com/rs/zerolog/log"
 
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
@@ -65,12 +65,12 @@ func (w *worker) setup(ctx context.Context) (*dbusx.Watch, error) {
 
 	// Set a distance threshold.
 	if err = dbusx.SetProp(ctx, dbusx.SystemBus, string(w.clientPath), geoclueInterface, distanceThresholdProp, uint32(0)); err != nil {
-		log.Warn().Err(err).Msg("Could not set distance threshold for geoclue requests.")
+		logging.FromContext(ctx).Warn("Could not set distance threshold for geoclue requests.", "error", err.Error())
 	}
 
 	// Set a time threshold.
 	if err = dbusx.SetProp(ctx, dbusx.SystemBus, string(w.clientPath), geoclueInterface, timeThresholdProp, uint32(0)); err != nil {
-		log.Warn().Err(err).Msg("Could not set time threshold for geoclue requests.")
+		logging.FromContext(ctx).Warn("Could not set time threshold for geoclue requests.", "error", err.Error())
 	}
 
 	// Request to start tracking location updates.
@@ -78,7 +78,7 @@ func (w *worker) setup(ctx context.Context) (*dbusx.Watch, error) {
 		return nil, fmt.Errorf("could not start geoclue client: %w", err)
 	}
 
-	log.Debug().Msg("GeoClue client created.")
+	logging.FromContext(ctx).Debug("GeoClue client created.")
 
 	return &dbusx.Watch{
 			Bus:       dbusx.SystemBus,
@@ -114,7 +114,7 @@ func (w *worker) Events(ctx context.Context) (chan sensor.Details, error) {
 			case <-ctx.Done():
 				err := dbusx.Call(ctx, dbusx.SystemBus, string(w.clientPath), geoclueInterface, stopCall)
 				if err != nil {
-					log.Debug().Caller().Err(err).Msg("Failed to stop location updater.")
+					logging.FromContext(ctx).Debug("Failed to stop location updater.", "error", err.Error())
 
 					return
 				}
@@ -140,7 +140,8 @@ func (w *worker) Sensors(_ context.Context) ([]sensor.Details, error) {
 //nolint:exhaustruct
 func NewLocationWorker() (*linux.SensorWorker, error) {
 	// Don't run this worker if we are not running on a laptop.
-	if device.Chassis() != "laptop" {
+	chassis, _ := device.Chassis() //nolint:errcheck // error is same as any value other than wanted value.
+	if chassis != "laptop" {
 		return nil, fmt.Errorf("will not start location sensor: %w", device.ErrUnsupportedHardware)
 	}
 
@@ -157,8 +158,7 @@ func newLocation(ctx context.Context, locationPath dbus.ObjectPath) *locationSen
 	getProp := func(prop string) float64 {
 		value, err := dbusx.GetProp[float64](ctx, dbusx.SystemBus, string(locationPath), geoclueInterface, locationInterface+"."+prop)
 		if err != nil {
-			log.Debug().Caller().Err(err).
-				Msgf("Could not retrieve %s.", prop)
+			logging.FromContext(ctx).Debug("Could not retrieve location property.", "property", prop, "error", err.Error())
 
 			return 0
 		}

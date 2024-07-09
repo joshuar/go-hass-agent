@@ -27,10 +27,10 @@ import (
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
 	"github.com/go-playground/validator/v10"
-	"github.com/rs/zerolog/log"
 
 	"github.com/joshuar/go-hass-agent/internal/agent/ui"
 	"github.com/joshuar/go-hass-agent/internal/hass"
+	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 	"github.com/joshuar/go-hass-agent/internal/translations"
 )
@@ -52,14 +52,14 @@ type FyneUI struct {
 	text *translations.Translator
 }
 
-func (i *FyneUI) Run(doneCh chan struct{}) {
+func (i *FyneUI) Run(ctx context.Context, doneCh chan struct{}) {
 	if i.app == nil {
-		log.Warn().Msg("No supported windowing environment. Will not run UI elements.")
+		logging.FromContext(ctx).Warn("No supported windowing environment. Will not run UI elements.")
 
 		return
 	}
 
-	log.Trace().Msg("Starting Fyne UI loop.")
+	logging.FromContext(ctx).Log(ctx, logging.LevelTrace, "Starting Fyne UI Loop")
 
 	go func() {
 		<-doneCh
@@ -85,10 +85,10 @@ func (i *FyneUI) Translate(text string) string {
 	return i.text.Translate(text)
 }
 
-func NewFyneUI(id string) *FyneUI {
+func NewFyneUI(ctx context.Context, id string) *FyneUI {
 	appUI := &FyneUI{
 		app:  app.NewWithID(id),
-		text: translations.NewTranslator(),
+		text: translations.NewTranslator(ctx),
 	}
 	appUI.app.SetIcon(&ui.TrayIcon{})
 
@@ -120,8 +120,8 @@ func (i *FyneUI) DisplayTrayIcon(ctx context.Context, agent ui.Agent, trk ui.Sen
 			})
 		// Quit menu item.
 		menuItemQuit := fyne.NewMenuItem(i.Translate("Quit"), func() {
-			log.Debug().Msg("User requested stop agent.")
-			agent.Stop()
+			logging.FromContext(ctx).Debug("Qutting agent on user request.")
+			agent.Stop(ctx)
 		})
 		menuItemQuit.IsQuit = true
 
@@ -151,7 +151,7 @@ func (i *FyneUI) DisplayRegistrationWindow(ctx context.Context, input *hass.Regi
 		close(done)
 	}
 	registrationForm.OnCancel = func() {
-		log.Warn().Msg("Canceling registration.")
+		logging.FromContext(ctx).Warn("Cancelling registration on user request.")
 		close(done)
 		window.Close()
 		ctx.Done()
@@ -183,7 +183,9 @@ func (i *FyneUI) aboutWindow(ctx context.Context) fyne.Window {
 			fyne.TextAlignCenter,
 			fyne.TextStyle{Bold: true}))
 
-	if config := getHAConfig(ctx); config != nil {
+	if config, err := getHAConfig(ctx); err != nil {
+		logging.FromContext(ctx).Error("Could not retrieve information.", "error", err.Error())
+	} else {
 		widgets = append(widgets,
 			widget.NewLabelWithStyle("Home Assistant "+config.Details.Version,
 				fyne.TextAlignCenter,
@@ -194,12 +196,16 @@ func (i *FyneUI) aboutWindow(ctx context.Context) fyne.Window {
 		)
 	}
 
+	websiteURL, _ := parseURL(preferences.AppURL)                   //nolint:errcheck
+	featureRequestURL, _ := parseURL(preferences.FeatureRequestURL) //nolint:errcheck
+	issuesURL, _ := parseURL(preferences.IssueURL)                  //nolint:errcheck
+
 	widgets = append(widgets,
 		widget.NewLabel(""),
 		container.NewGridWithColumns(3,
-			widget.NewHyperlink("website", parseURL(preferences.AppURL)),
-			widget.NewHyperlink("request feature", parseURL(preferences.FeatureRequestURL)),
-			widget.NewHyperlink("report issue", parseURL(preferences.IssueURL)),
+			widget.NewHyperlink("website", websiteURL),
+			widget.NewHyperlink("request feature", featureRequestURL),
+			widget.NewHyperlink("report issue", issuesURL),
 		),
 	)
 	windowContents := container.NewCenter(container.NewVBox(widgets...))
@@ -227,7 +233,7 @@ func (i *FyneUI) agentSettingsWindow(ctx context.Context) fyne.Window {
 
 	prefs, err := preferences.ContextGetPrefs(ctx)
 	if err != nil {
-		log.Error().Err(err).Msg("Could not show settings window.")
+		logging.FromContext(ctx).Error("Could not show settings window.", "error", err.Error())
 
 		return nil
 	}
@@ -250,11 +256,10 @@ func (i *FyneUI) agentSettingsWindow(ctx context.Context) fyne.Window {
 		prefs.MQTTPassword = mqttPrefs.Password
 
 		dialog.ShowInformation("Saved", "MQTT Preferences have been saved.", window)
-		log.Info().Msg("Saved MQTT preferences.")
+		logging.FromContext(ctx).Info("MQTT preferences saved.")
 	}
 	settingsForm.OnCancel = func() {
 		window.Close()
-		log.Info().Msg("No MQTT preferences saved.")
 	}
 	settingsForm.SubmitText = i.Translate("Save")
 	window.SetContent(container.New(layout.NewVBoxLayout(),
@@ -367,7 +372,10 @@ func (i *FyneUI) sensorsWindow(tracker ui.SensorTracker) fyne.Window {
 // registrationFields generates a list of form item widgets for selecting a
 // server to register the agent against.
 func (i *FyneUI) registrationFields(ctx context.Context, input *hass.RegistrationInput) []*widget.FormItem {
-	allServers := hass.FindServers(ctx)
+	allServers, err := hass.FindServers(ctx)
+	if err != nil {
+		logging.FromContext(ctx).Warn("Errors occurred discovering Home Assistant servers.", "error", err.Error())
+	}
 
 	if input.Token == "" {
 		input.Token = "ASecretLongLivedToken"
@@ -589,23 +597,20 @@ func hostPortValidator(msg string) fyne.StringValidator {
 }
 
 // parseURL takes a URL as a string and parses it as a url.URL.
-func parseURL(u string) *url.URL {
+func parseURL(u string) (*url.URL, error) {
 	dest, err := url.Parse(strings.TrimSpace(u))
 	if err != nil {
-		log.Warn().Err(err).
-			Msgf("Unable parse url %s", u)
+		return nil, fmt.Errorf("unable to parse URL: %w", err)
 	}
 
-	return dest
+	return dest, nil
 }
 
-func getHAConfig(ctx context.Context) *hass.Config {
+func getHAConfig(ctx context.Context) (*hass.Config, error) {
 	haCfg, err := hass.GetConfig(ctx)
 	if err != nil {
-		log.Warn().Err(err).Msg("Could not fetch HA config.")
-
-		return nil
+		return nil, fmt.Errorf("could not fetch Home Assistant config: %w", err)
 	}
 
-	return haCfg
+	return haCfg, nil
 }

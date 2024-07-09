@@ -3,6 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
+//nolint:exhaustruct
 //revive:disable:unused-receiver
 package power
 
@@ -10,10 +11,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/rs/zerolog/log"
-
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
@@ -70,12 +70,14 @@ func (w *screenLockWorker) Events(ctx context.Context) (chan sensor.Details, err
 	}
 
 	go func() {
+		logging.FromContext(ctx).Debug("Monitoring screen lock.")
+
 		defer close(sensorCh)
 
 		for {
 			select {
 			case <-ctx.Done():
-				log.Trace().Msg("Stopped screen lock sensor.")
+				logging.FromContext(ctx).Debug("Unmonitoring screen lock.")
 
 				return
 			case event := <-triggerCh:
@@ -83,13 +85,17 @@ func (w *screenLockWorker) Events(ctx context.Context) (chan sensor.Details, err
 				case dbusx.PropChangedSignal:
 					props, err := dbusx.ParsePropertiesChanged(event.Content)
 					if err != nil {
-						log.Warn().Err(err).Msg("Did not understand received trigger.")
+						logging.FromContext(ctx).Warn("Received unknown event from D-Bus.", "error", err.Error())
 
 						continue
 					}
 
-					if state, lockChanged := props.Changed[sessionLockedProp]; lockChanged {
-						sensorCh <- newScreenlockEvent(dbusx.VariantToValue[bool](state))
+					if lock, lockChanged := props.Changed[sessionLockedProp]; lockChanged {
+						if state, err := dbusx.VariantToValue[bool](lock); err != nil {
+							logging.FromContext(ctx).Warn("Could not screen lock state.", "error", err.Error())
+						} else {
+							sensorCh <- newScreenlockEvent(state)
+						}
 					}
 				case sessionLockSignal:
 					sensorCh <- newScreenlockEvent(true)

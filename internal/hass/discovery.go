@@ -7,11 +7,13 @@ package hass
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
 	"github.com/grandcat/zeroconf"
-	"github.com/rs/zerolog/log"
+
+	"github.com/joshuar/go-hass-agent/internal/logging"
 )
 
 const (
@@ -20,7 +22,7 @@ const (
 
 // FindServers is a helper function to generate a list of Home Assistant servers
 // via local network auto-discovery.
-func FindServers(ctx context.Context) []string {
+func FindServers(ctx context.Context) ([]string, error) {
 	var serverList []string
 
 	// add http://localhost:8123 to the list of servers as a fall-back/default
@@ -28,9 +30,7 @@ func FindServers(ctx context.Context) []string {
 
 	resolver, err := zeroconf.NewResolver(nil)
 	if err != nil {
-		log.Debug().Err(err).Msg("Failed to initialise resolver.")
-
-		return serverList
+		return serverList, fmt.Errorf("failed to initialise resolver: %w", err)
 	}
 
 	entries := make(chan *zeroconf.ServiceEntry)
@@ -48,22 +48,23 @@ func FindServers(ctx context.Context) []string {
 			if server != "" {
 				serverList = append(serverList, server)
 			} else {
-				log.Debug().Msgf("Entry %s did not have a base_url value. Not using it.", entry.HostName)
+				logging.FromContext(ctx).Log(ctx, logging.LevelTrace,
+					"Found a server malformed server, will not use.", "server", entry.HostName)
 			}
 		}
 	}(entries)
 
-	log.Info().Msg("Looking for Home Assistant instances on the network...")
+	logging.FromContext(ctx).Info("Looking for Home Assistant servers on the local network...")
 
 	searchCtx, searchCancel := context.WithTimeout(ctx, haDiscoveryTimeout)
 	defer searchCancel()
 
 	err = resolver.Browse(searchCtx, "_home-assistant._tcp", "local.", entries)
 	if err != nil {
-		log.Debug().Err(err).Msg("Failed to browse")
+		return serverList, fmt.Errorf("could not start search for Home Assistant servers: %w", err)
 	}
 
 	<-searchCtx.Done()
 
-	return serverList
+	return serverList, nil
 }

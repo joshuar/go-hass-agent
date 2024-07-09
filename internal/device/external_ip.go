@@ -10,16 +10,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net"
 	"strings"
 	"time"
 
 	"github.com/go-resty/resty/v2"
-	"github.com/rs/zerolog/log"
 
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
+	"github.com/joshuar/go-hass-agent/internal/logging"
 )
 
 const (
@@ -94,27 +95,29 @@ func (a *address) Attributes() map[string]any {
 	return attributes
 }
 
-func lookupExternalIPs(client *resty.Client, ver int) (*address, error) {
+func lookupExternalIPs(ctx context.Context, client *resty.Client, ver int) (*address, error) {
 	for host, addr := range ipLookupHosts {
-		log.Trace().Msgf("Trying to find external IP addresses with %s", host)
-		log.Trace().
-			Str("method", "GET").
-			Str("url", addr[ver]).
-			Time("sent_at", time.Now()).
-			Msg("Fetching external IP.")
+		logging.FromContext(ctx).
+			LogAttrs(ctx, logging.LevelTrace,
+				"Fetching external IP.",
+				slog.String("host", host),
+				slog.String("method", "GET"),
+				slog.String("url", addr[ver]),
+				slog.Time("sent_at", time.Now()))
 
 		resp, err := client.R().Get(addr[ver])
 		if err != nil || resp.IsError() {
 			return nil, fmt.Errorf("could not retrieve external v%d address with %s: %w", ver, addr[ver], err)
 		}
 
-		log.Trace().Err(err).
-			Int("statuscode", resp.StatusCode()).
-			Str("status", resp.Status()).
-			Str("protocol", resp.Proto()).
-			Dur("time", resp.Time()).
-			Time("received_at", resp.ReceivedAt()).
-			Str("body", string(resp.Body())).Msg("Response received.")
+		logging.FromContext(ctx).
+			LogAttrs(ctx, logging.LevelTrace,
+				"Received external IP.",
+				slog.Int("statuscode", resp.StatusCode()),
+				slog.String("status", resp.Status()),
+				slog.String("protocol", resp.Proto()),
+				slog.Duration("time", resp.Time()),
+				slog.String("body", string(resp.Body())))
 
 		cleanResp := strings.TrimSpace(string(resp.Body()))
 
@@ -140,13 +143,13 @@ func (w *externalIPWorker) Description() string {
 }
 
 //nolint:mnd
-func (w *externalIPWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
+func (w *externalIPWorker) Sensors(ctx context.Context) ([]sensor.Details, error) {
 	sensors := make([]sensor.Details, 0, 2)
 
 	for _, ver := range []int{4, 6} {
-		ipAddr, err := lookupExternalIPs(w.client, ver)
+		ipAddr, err := lookupExternalIPs(ctx, w.client, ver)
 		if err != nil || ipAddr == nil {
-			log.Trace().Err(err).Msg("IP lookup failed.")
+			logging.FromContext(ctx).Log(ctx, logging.LevelTrace, "Looking up external IP failed.", "error", err.Error())
 
 			continue
 		}
@@ -163,7 +166,7 @@ func (w *externalIPWorker) Updates(ctx context.Context) (<-chan sensor.Details, 
 	updater := func(_ time.Duration) {
 		sensors, err := w.Sensors(ctx)
 		if err != nil {
-			log.Debug().Err(err).Msg("Could not get IP update.")
+			logging.FromContext(ctx).Debug("Could not get external IP.", "error", err.Error())
 		}
 
 		for _, s := range sensors {

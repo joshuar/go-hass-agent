@@ -7,14 +7,13 @@ package logging
 
 import (
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"runtime"
 	"runtime/pprof"
 	"runtime/trace"
 	"strconv"
-
-	"github.com/rs/zerolog/log"
 )
 
 type ProfileFlags map[string]string
@@ -28,7 +27,7 @@ func StartProfiling(flags ProfileFlags) error {
 				return fmt.Errorf("could not start web profiler: %w", err)
 			}
 		case "heapprofile":
-			log.Debug().Msg("Heap profiling enabled.")
+			slog.Debug("Heap profiling enabled.")
 		case "cpuprofile":
 			if err := startCPUProfiler(flagVal); err != nil {
 				return fmt.Errorf("could not start CPU profiling: %w", err)
@@ -67,7 +66,7 @@ func StopProfiling(flags ProfileFlags) error {
 				return fmt.Errorf("cannot close heap profile: %w", err)
 			}
 
-			log.Debug().Msgf("Heap profile written to %s", flagVal)
+			slog.Debug("Wrote heap profile.", "file", flagVal)
 		case "cpuprofile":
 			pprof.StopCPUProfile()
 		case "traceprofile":
@@ -79,20 +78,17 @@ func StopProfiling(flags ProfileFlags) error {
 }
 
 // printMemStats and formatMemory functions are taken from golang-ci source
-
+//
+//nolint:lll
 func printMemStats(stats *runtime.MemStats) {
-	log.Debug().Msgf("Mem stats: alloc=%s total_alloc=%s sys=%s "+
-		"heap_alloc=%s heap_sys=%s heap_idle=%s heap_released=%s heap_in_use=%s "+
-		"stack_in_use=%s stack_sys=%s "+
-		"mspan_sys=%s mcache_sys=%s buck_hash_sys=%s gc_sys=%s other_sys=%s "+
-		"mallocs_n=%d frees_n=%d heap_objects_n=%d gc_cpu_fraction=%.2f",
-		formatMemory(stats.Alloc), formatMemory(stats.TotalAlloc), formatMemory(stats.Sys),
-		formatMemory(stats.HeapAlloc), formatMemory(stats.HeapSys),
-		formatMemory(stats.HeapIdle), formatMemory(stats.HeapReleased), formatMemory(stats.HeapInuse),
-		formatMemory(stats.StackInuse), formatMemory(stats.StackSys),
-		formatMemory(stats.MSpanSys), formatMemory(stats.MCacheSys), formatMemory(stats.BuckHashSys),
-		formatMemory(stats.GCSys), formatMemory(stats.OtherSys),
-		stats.Mallocs, stats.Frees, stats.HeapObjects, stats.GCCPUFraction)
+	slog.Debug("Memory stats",
+		"alloc", formatMemory(stats.Alloc), "total_alloc", formatMemory(stats.TotalAlloc), "sys", formatMemory(stats.Sys),
+		"heap_alloc", formatMemory(stats.HeapAlloc), "heap_sys", formatMemory(stats.HeapSys),
+		"heap_idle", formatMemory(stats.HeapIdle), "heap_released", formatMemory(stats.HeapReleased), "heap_in_use", formatMemory(stats.HeapInuse),
+		"stack_in_use", formatMemory(stats.StackInuse), "stack_sys", formatMemory(stats.StackSys),
+		"mspan_sys", formatMemory(stats.MSpanSys), "mcache_sys", formatMemory(stats.MCacheSys), "buck_hash_sys", formatMemory(stats.BuckHashSys),
+		"gc_sys", formatMemory(stats.GCSys), "other_sys", formatMemory(stats.OtherSys),
+		"mallocs_n", stats.Mallocs, "frees_n", stats.Frees, "heap_objects", stats.HeapObjects, "gc_cpu_fraction", stats.GCCPUFraction)
 }
 
 //nolint:varnamelen
@@ -121,13 +117,11 @@ func startWebProfiler(enable string) error {
 	if webui {
 		go func() {
 			for i := 6060; i < 6070; i++ {
-				log.Debug().
-					Msgf("Starting profiler web interface on localhost:" + strconv.Itoa(i))
+				slog.Debug("Starting profiler web interface.", "address", "http://localhost:"+strconv.Itoa(i))
 
 				err := http.ListenAndServe("localhost:"+strconv.Itoa(i), nil) // #nosec G114
 				if err != nil {
-					log.Debug().Err(err).
-						Msg("Trouble starting profiler, trying again.")
+					slog.Error("Could not start profiler web interface. Trying different port.")
 				}
 			}
 		}()
@@ -146,7 +140,7 @@ func startCPUProfiler(path string) error {
 		return fmt.Errorf("could not start CPU profiling: %w", err)
 	}
 
-	log.Debug().Msg("CPU profiling enabled.")
+	slog.Debug("CPU profiling enabled.")
 
 	return nil
 }
@@ -161,7 +155,7 @@ func startTraceProfiling(path string) error {
 		return fmt.Errorf("could not start trace profiling: %w", err)
 	}
 
-	log.Debug().Msg("Trace profiling enabled.")
+	slog.Debug("Trace profiling enabled.")
 
 	return nil
 }

@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//nolint:paralleltest
+//nolint:exhaustruct,paralleltest,wsl,unused,nlreturn
 package dbusx
 
 import (
@@ -23,28 +23,29 @@ func skipCI(t *testing.T) {
 }
 
 func TestVariantToValue(t *testing.T) {
-	skipCI(t)
-
 	type args struct {
 		variant dbus.Variant
 	}
-
 	tests := []struct {
-		name string
-		args args
-		want string
+		name    string
+		args    args
+		want    string
+		wantErr bool
 	}{
 		{
 			name: "string conversion",
 			args: args{variant: dbus.MakeVariant("foo")},
 			want: "foo",
 		},
-		// ?: Test all possible variant values?
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := VariantToValue[string](tt.args.variant); !reflect.DeepEqual(got, tt.want) {
+			got, err := VariantToValue[string](tt.args.variant)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("VariantToValue() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("VariantToValue() = %v, want %v", got, tt.want)
 			}
 		})

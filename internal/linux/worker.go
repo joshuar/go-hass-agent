@@ -9,9 +9,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
-
-	"github.com/rs/zerolog/log"
 
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
@@ -42,12 +41,9 @@ type oneShotType interface {
 // SensorWorker represents the functionality to track a group of one or more
 // related sensors.
 type SensorWorker struct {
-	// Value is a pointer to an interface that exposes methods to retrieve the
-	// sensor values for this worker.
-	Value any
-	// WorkerName is a short name to refer to this group of sensors.
+	Value      any
+	Logger     *slog.Logger
 	WorkerName string
-	// WorkerDesc describes what the sensors measure.
 	WorkerDesc string
 }
 
@@ -109,7 +105,7 @@ func (w *SensorWorker) Updates(ctx context.Context) (<-chan sensor.Details, erro
 		updater := func(d time.Duration) {
 			sensors, err := worker.Sensors(ctx, d)
 			if err != nil {
-				log.Warn().Err(err).Msg("Unable to retrieve sensors.")
+				w.Logger.Warn("Unable to retrieve sensors.")
 
 				return
 			}
@@ -120,7 +116,6 @@ func (w *SensorWorker) Updates(ctx context.Context) (<-chan sensor.Details, erro
 		}
 		go func() {
 			defer close(outCh)
-			log.Trace().Str("worker", w.Name()).Msg("Polling for sensor updates...")
 			helpers.PollSensors(ctx, updater, worker.Interval(), worker.Jitter())
 		}()
 	case eventType:
@@ -131,12 +126,10 @@ func (w *SensorWorker) Updates(ctx context.Context) (<-chan sensor.Details, erro
 
 			eventCh, err := worker.Events(ctx)
 			if err != nil {
-				log.Debug().Err(err).Msg("Could not start event worker.")
+				w.Logger.Debug("Could not start event worker.", "error", err.Error())
 
 				return
 			}
-
-			log.Trace().Str("worker", w.Name()).Msg("Listening for sensor update events...")
 
 			for s := range eventCh {
 				outCh <- s
@@ -150,12 +143,10 @@ func (w *SensorWorker) Updates(ctx context.Context) (<-chan sensor.Details, erro
 
 			sensors, err := worker.Sensors(ctx)
 			if err != nil {
-				log.Warn().Err(err).Msg("Unable to retrieve sensors.")
+				w.Logger.Debug("Unable to retrieve sensors.", "error", err.Error())
 
 				return
 			}
-
-			log.Trace().Str("worker", w.Name()).Msg("Sending sensors...")
 
 			for _, s := range sensors {
 				outCh <- s

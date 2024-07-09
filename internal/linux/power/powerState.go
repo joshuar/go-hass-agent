@@ -3,6 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
+//nolint:exhaustruct
 //revive:disable:unused-receiver
 package power
 
@@ -10,10 +11,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/rs/zerolog/log"
-
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
@@ -99,12 +99,14 @@ func (w *stateWorker) Events(ctx context.Context) (chan sensor.Details, error) {
 
 	// Watch for state changes.
 	go func() {
+		logging.FromContext(ctx).Debug("Monitoring power state.")
+
 		defer close(sensorCh)
 
 		for {
 			select {
 			case <-ctx.Done():
-				log.Debug().Msg("Stopped power state sensor.")
+				logging.FromContext(ctx).Debug("Unmonitoring power state.")
 
 				return
 			case event := <-triggerCh:
@@ -126,7 +128,7 @@ func (w *stateWorker) Events(ctx context.Context) (chan sensor.Details, error) {
 	go func() {
 		sensors, err := w.Sensors(ctx)
 		if err != nil {
-			log.Debug().Err(err).Msg("Failed to retrieve sensors.")
+			logging.FromContext(ctx).Debug("Could not retrieve power state.", "error", err.Error())
 
 			return
 		}

@@ -3,6 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
+//nolint:exhaustruct
 //revive:disable:unused-receiver
 package system
 
@@ -10,12 +11,12 @@ import (
 	"context"
 	"time"
 
-	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v3/host"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/logging"
 )
 
 const (
@@ -72,8 +73,7 @@ func NewTimeWorker() (*linux.SensorWorker, error) {
 func getUptime(ctx context.Context) any {
 	value, err := host.UptimeWithContext(ctx)
 	if err != nil {
-		log.Debug().Caller().Err(err).
-			Msg("Failed to retrieve uptime.")
+		logging.FromContext(ctx).Debug("Failed to retrieve uptime.", "error", err.Error())
 
 		return sensor.StateUnknown
 	}
@@ -87,8 +87,7 @@ func getUptime(ctx context.Context) any {
 func getBoottime(ctx context.Context) string {
 	value, err := host.BootTimeWithContext(ctx)
 	if err != nil {
-		log.Debug().Caller().Err(err).
-			Msg("Failed to retrieve boottime.")
+		logging.FromContext(ctx).Debug("Failed to retrieve boottime.", "error", err.Error())
 
 		return sensor.StateUnknown
 	}

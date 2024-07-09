@@ -7,9 +7,11 @@
 package scripts
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -17,15 +19,16 @@ import (
 
 	"github.com/iancoleman/strcase"
 	"github.com/pelletier/go-toml/v2"
-	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v3"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
+	"github.com/joshuar/go-hass-agent/internal/logging"
 )
 
 type Script struct {
 	Output   chan sensor.Details
+	logger   *slog.Logger
 	path     string
 	schedule string
 }
@@ -56,8 +59,7 @@ func (s *Script) execute() (*scriptOutput, error) {
 func (s *Script) Run() {
 	output, err := s.execute()
 	if err != nil {
-		log.Warn().Err(err).Str("script", s.path).
-			Msg("Could not run script.")
+		s.logger.Warn("Could not execute script.", "script", s.path, "error", err.Error())
 
 		return
 	}
@@ -79,11 +81,12 @@ func (s *Script) Path() string {
 
 // NewScript returns a new script object that can scheduled with the job
 // scheduler by the agent.
-func NewScript(path string) (*Script, error) {
+func NewScript(ctx context.Context, path string) (*Script, error) {
 	script := &Script{
 		path:     path,
 		schedule: "",
 		Output:   make(chan sensor.Details),
+		logger:   logging.FromContext(ctx),
 	}
 
 	out, err := script.execute()
@@ -206,7 +209,7 @@ func (s *scriptSensor) Attributes() map[string]any {
 
 // FindScripts locates scripts and returns a slice of scripts that the agent can
 // run.
-func FindScripts(path string) ([]*Script, error) {
+func FindScripts(ctx context.Context, path string) ([]*Script, error) {
 	var scripts []*Script
 
 	var errs error
@@ -216,9 +219,9 @@ func FindScripts(path string) ([]*Script, error) {
 		return nil, fmt.Errorf("could not search for scripts: %w", err)
 	}
 
-	for _, s := range files {
-		if isExecutable(s) {
-			script, err := NewScript(s)
+	for _, scriptFile := range files {
+		if isExecutable(scriptFile) {
+			script, err := NewScript(ctx, scriptFile)
 			if err != nil {
 				errs = errors.Join(errs, err)
 

@@ -10,11 +10,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"syscall"
-
-	"github.com/rs/zerolog/log"
 
 	"github.com/adrg/xdg"
 	"github.com/alecthomas/kong"
@@ -37,23 +36,12 @@ func (d profileFlags) AfterApply() error {
 	return nil
 }
 
-type noLogFileFlag bool
-
-func (d noLogFileFlag) AfterApply() error {
-	if !d {
-		err := logging.SetLogFile(preferences.LogFile)
-		if err != nil {
-			return fmt.Errorf("logging setup failed: %w", err)
-		}
-	}
-
-	return nil
-}
-
 type Context struct {
-	Profile  profileFlags
-	AppID    string
-	Headless bool
+	Profile   profileFlags
+	AppID     string
+	LogLevel  string
+	Headless  bool
+	NoLogFile bool
 }
 
 type ResetCmd struct{}
@@ -70,42 +58,52 @@ func (r *ResetCmd) Run(ctx *Context) error {
 	agentCtx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
 
-	gohassagent, err := agent.NewAgent(
+	logger := logging.New(ctx.LogLevel, ctx.NoLogFile)
+	agentCtx = logging.ToContext(agentCtx, logger)
+
+	var errs error
+
+	gohassagent, err := agent.NewAgent(agentCtx,
 		agent.WithID(ctx.AppID),
 		agent.Headless(ctx.Headless))
 	if err != nil {
-		return fmt.Errorf("failed to run reset command: %w", err)
+		errs = errors.Join(errs, fmt.Errorf("failed to run reset command: %w", err))
 	}
 
 	registry.SetPath(filepath.Join(xdg.ConfigHome, gohassagent.AppID(), "sensorRegistry"))
 	preferences.SetPath(filepath.Join(xdg.ConfigHome, gohassagent.AppID()))
 	// Reset agent.
 	if err := gohassagent.Reset(agentCtx); err != nil {
-		return fmt.Errorf("agent reset failed: %w", err)
+		errs = errors.Join(fmt.Errorf("agent reset failed: %w", err))
 	}
 	// Reset registry.
 	if err := registry.Reset(); err != nil {
-		return fmt.Errorf("registry reset failed: %w", err)
+		errs = errors.Join(fmt.Errorf("registry reset failed: %w", err))
 	}
 	// Reset preferences.
 	if err := preferences.Reset(); err != nil {
-		return fmt.Errorf("preferences reset failed: %w", err)
+		errs = errors.Join(fmt.Errorf("preferences reset failed: %w", err))
 	}
 	// Reset the log.
-	if err := logging.Reset(); err != nil {
-		return fmt.Errorf("logging reset failed: %w", err)
+	if !ctx.NoLogFile {
+		if err := logging.Reset(); err != nil {
+			errs = errors.Join(fmt.Errorf("logging reset failed: %w", err))
+		}
 	}
 
-	log.Info().Msg("Reset complete (refer to any warnings, if any, above.)")
+	if errs != nil {
+		slog.Warn("Reset completed with errors", "errors", errs.Error())
+	} else {
+		slog.Info("Reset completed.")
+	}
 
 	return nil
 }
 
 type VersionCmd struct{}
 
-//nolint:unparam
 func (r *VersionCmd) Run(_ *Context) error {
-	log.Info().Msgf("%s: %s", preferences.AppName, preferences.AppVersion)
+	fmt.Fprintf(os.Stdout, "%s: %s\n", preferences.AppName, preferences.AppVersion)
 
 	return nil
 }
@@ -130,7 +128,10 @@ func (r *RegisterCmd) Run(ctx *Context) error {
 	agentCtx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
 
-	gohassagent, err := agent.NewAgent(
+	logger := logging.New(ctx.LogLevel, ctx.NoLogFile)
+	agentCtx = logging.ToContext(agentCtx, logger)
+
+	gohassagent, err := agent.NewAgent(agentCtx,
 		agent.WithID(ctx.AppID),
 		agent.Headless(ctx.Headless),
 		agent.WithRegistrationInfo(r.Server, r.Token, r.IgnoreURLs),
@@ -170,7 +171,10 @@ func (r *RunCmd) Run(ctx *Context) error {
 	agentCtx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
 
-	gohassagent, err := agent.NewAgent(
+	logger := logging.New(ctx.LogLevel, ctx.NoLogFile)
+	agentCtx = logging.ToContext(agentCtx, logger)
+
+	gohassagent, err := agent.NewAgent(agentCtx,
 		agent.WithID(ctx.AppID),
 		agent.Headless(ctx.Headless))
 	if err != nil {
@@ -199,15 +203,15 @@ func (r *RunCmd) Run(ctx *Context) error {
 
 //nolint:tagalign
 var CLI struct {
-	Run      RunCmd        `cmd:"" help:"Run Go Hass Agent."`
-	Reset    ResetCmd      `cmd:"" help:"Reset Go Hass Agent."`
-	Version  VersionCmd    `cmd:"" help:"Show the Go Hass Agent version."`
-	Profile  profileFlags  `help:"Enable profiling."`
-	AppID    string        `name:"appid" default:"${defaultAppID}" help:"Specify a custom app id (for debugging)."`
-	LogLevel string        `name:"log-level" enum:"info,debug,trace" default:"info" help:"Set logging level."`
-	Register RegisterCmd   `cmd:"" help:"Register with Home Assistant."`
-	NoLog    noLogFileFlag `help:"Don't write to a log file."`
-	Headless bool          `name:"terminal" help:"Run without a GUI."`
+	Run       RunCmd       `cmd:"" help:"Run Go Hass Agent."`
+	Reset     ResetCmd     `cmd:"" help:"Reset Go Hass Agent."`
+	Version   VersionCmd   `cmd:"" help:"Show the Go Hass Agent version."`
+	Profile   profileFlags `help:"Enable profiling."`
+	AppID     string       `name:"appid" default:"${defaultAppID}" help:"Specify a custom app id (for debugging)."`
+	LogLevel  string       `name:"log-level" enum:"info,debug,trace" default:"info" help:"Set logging level."`
+	Register  RegisterCmd  `cmd:"" help:"Register with Home Assistant."`
+	NoLogFile bool         `help:"Don't write to a log file."`
+	Headless  bool         `name:"terminal" help:"Run without a GUI."`
 }
 
 func init() {
@@ -220,7 +224,8 @@ func init() {
 	gid := syscall.Getgid()
 
 	if uid != euid || gid != egid || uid == 0 {
-		log.Fatal().Msg("go-hass-agent should not be run with additional privileges or as root.")
+		slog.Error("go-hass-agent should not be run with additional privileges or as root.")
+		os.Exit(-1)
 	}
 }
 
@@ -228,23 +233,19 @@ func main() {
 	kong.Name(preferences.AppName)
 	kong.Description(preferences.AppDescription)
 	ctx := kong.Parse(&CLI, kong.Bind(), kong.Vars{"defaultAppID": preferences.AppID})
-	logging.SetLoggingLevel(CLI.LogLevel)
-	checkHeadless()
+	// Warn if running headless without explicitly specifying so.
+	if os.Getenv("DISPLAY") == "" {
+		if !CLI.Headless {
+			slog.Warn("DISPLAY not set, running in headless mode by default (specify --terminal to suppress this warning).")
+		}
 
-	err := ctx.Run(&Context{Headless: CLI.Headless, Profile: CLI.Profile, AppID: CLI.AppID})
+		CLI.Headless = true
+	}
+
+	err := ctx.Run(&Context{Headless: CLI.Headless, Profile: CLI.Profile, AppID: CLI.AppID, LogLevel: CLI.LogLevel, NoLogFile: CLI.NoLogFile})
 	if CLI.Profile != nil {
 		err = errors.Join(logging.StopProfiling(logging.ProfileFlags(CLI.Profile)), err)
 	}
 
 	ctx.FatalIfErrorf(err)
-}
-
-func checkHeadless() {
-	if os.Getenv("DISPLAY") == "" {
-		if !CLI.Headless {
-			log.Warn().Msg("DISPLAY not set, running in headless mode by default (specify --terminal to suppress this warning).")
-		}
-
-		CLI.Headless = true
-	}
 }

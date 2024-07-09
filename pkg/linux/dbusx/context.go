@@ -7,9 +7,8 @@ package dbusx
 
 import (
 	"context"
+	"log/slog"
 	"sync"
-
-	"github.com/rs/zerolog/log"
 )
 
 type dBusAPI struct {
@@ -17,7 +16,7 @@ type dBusAPI struct {
 	mu   sync.Mutex
 }
 
-func newDBusAPI(ctx context.Context) *dBusAPI {
+func newDBusAPI(ctx context.Context, logger *slog.Logger) *dBusAPI {
 	api := &dBusAPI{
 		dbus: make(map[dbusType]*bus),
 		mu:   sync.Mutex{},
@@ -25,9 +24,9 @@ func newDBusAPI(ctx context.Context) *dBusAPI {
 
 	api.mu.Lock()
 	for _, b := range []dbusType{SessionBus, SystemBus} {
-		bus, err := newBus(ctx, b)
+		bus, err := newBus(ctx, b, logger)
 		if err != nil {
-			log.Warn().Err(err).Msg("Could not connect to D-Bus bus.")
+			slog.Warn("Could not connect to D-Bus.", "bus", b.String(), "error", err.Error())
 		} else {
 			api.dbus[b] = bus
 		}
@@ -46,8 +45,8 @@ type key int
 var linuxCtxKey key
 
 // Setup returns a new Context that contains the D-Bus API.
-func Setup(ctx context.Context) context.Context {
-	return context.WithValue(ctx, linuxCtxKey, newDBusAPI(ctx))
+func Setup(ctx context.Context, logger *slog.Logger) context.Context {
+	return context.WithValue(ctx, linuxCtxKey, newDBusAPI(ctx, logger))
 }
 
 // getBus retrieves the D-Bus API object from the context.

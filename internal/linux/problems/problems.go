@@ -3,6 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
+//nolint:exhaustruct
 //revive:disable:unused-receiver
 package problems
 
@@ -12,11 +13,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/rs/zerolog/log"
-
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
@@ -80,7 +80,6 @@ func (w *worker) Interval() time.Duration { return problemInterval }
 
 func (w *worker) Jitter() time.Duration { return problemJitter }
 
-//nolint:exhaustruct
 func (w *worker) Sensors(ctx context.Context, _ time.Duration) ([]sensor.Details, error) {
 	problems := &problemsSensor{
 		list: make(map[string]map[string]any),
@@ -102,7 +101,7 @@ func (w *worker) Sensors(ctx context.Context, _ time.Duration) ([]sensor.Details
 			dBusProblemIntr,
 			dBusProblemIntr+".GetInfo", problem, []string{"time", "count", "package", "reason"})
 		if problemDetails == nil || err != nil {
-			log.Debug().Msg("No problems retrieved.")
+			logging.FromContext(ctx).Debug("No problems retrieved from D-Bus.")
 		} else {
 			problems.list[problem] = parseProblem(problemDetails)
 		}

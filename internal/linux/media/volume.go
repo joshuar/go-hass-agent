@@ -8,15 +8,15 @@ package media
 import (
 	"context"
 	"encoding/json"
+	"log/slog"
 	"strconv"
 
 	"github.com/eclipse/paho.golang/paho"
 	mqtthass "github.com/joshuar/go-hass-anything/v9/pkg/hass"
 	mqttapi "github.com/joshuar/go-hass-anything/v9/pkg/mqtt"
 
-	"github.com/rs/zerolog/log"
-
 	"github.com/joshuar/go-hass-agent/internal/device"
+	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 	pulseaudiox "github.com/joshuar/go-hass-agent/pkg/linux/pulseaudio"
 )
@@ -26,6 +26,7 @@ type audioDevice struct {
 	msgCh      chan *mqttapi.Msg
 	muteEntity *mqtthass.SwitchEntity
 	volEntity  *mqtthass.NumberEntity[int]
+	logger     *slog.Logger
 }
 
 //nolint:exhaustruct,mnd
@@ -34,17 +35,18 @@ func VolumeControl(ctx context.Context, msgCh chan *mqttapi.Msg) (*mqtthass.Numb
 
 	client, err := pulseaudiox.NewPulseClient(ctx)
 	if err != nil {
-		log.Warn().Err(err).Msg("Unable to connect to Pulseaudio. Volume control will be unavailable.")
+		logging.FromContext(ctx).Warn("Unable to connect to Pulseaudio. Volume control will be unavailable.", "error", err.Error())
 
 		return nil, nil
 	}
 
-	log.Debug().Msg("Connected to pulseaudio.")
-
 	audioDev := &audioDevice{
 		pulseAudio: client,
 		msgCh:      msgCh,
+		logger:     logging.FromContext(ctx).With(slog.Group("pulseaudio")),
 	}
+
+	audioDev.logger.Debug("Connected.")
 
 	audioDev.volEntity = mqtthass.AsNumber(
 		mqtthass.NewEntity(preferences.AppName, "Volume", deviceInfo.Name+"_volume").
@@ -67,20 +69,20 @@ func VolumeControl(ctx context.Context, msgCh chan *mqttapi.Msg) (*mqtthass.Numb
 		true)
 
 	go func() {
-		log.Debug().Msg("Monitoring pulseaudio for events.")
+		audioDev.logger.Debug("Monitoring for events.")
 		audioDev.publishVolume()
 		audioDev.publishMute()
 
 		for {
 			select {
 			case <-ctx.Done():
-				log.Debug().Msg("Closing pulseaudio connection.")
+				audioDev.logger.Debug("Closing connection.")
 
 				return
 			case <-client.EventCh:
 				repl, err := client.GetState()
 				if err != nil {
-					log.Debug().Err(err).Msg("Failed to parse pulseaudio state.")
+					audioDev.logger.Debug("Failed to retrieve pulseaudio state.", "error", err.Error())
 
 					continue
 				}
@@ -105,7 +107,7 @@ func VolumeControl(ctx context.Context, msgCh chan *mqttapi.Msg) (*mqtthass.Numb
 func (d *audioDevice) publishVolume() {
 	msg, err := d.volEntity.MarshalState()
 	if err != nil {
-		log.Debug().Err(err).Msg("Could not retrieve current volume.")
+		d.logger.Error("Could not retrieve current volume.", "error", err.Error())
 
 		return
 	}
@@ -118,19 +120,19 @@ func (d *audioDevice) volStateCallback(_ ...any) (json.RawMessage, error) {
 		return json.RawMessage(`{ "value": 0 }`), err
 	}
 
-	log.Trace().Int("volume", int(vol)).Msg("Publishing volume change.")
+	d.logger.Debug("Publishing volume change.", "volume", int(vol))
 
 	return json.RawMessage(`{ "value": ` + strconv.FormatFloat(vol, 'f', 0, 64) + ` }`), nil
 }
 
 func (d *audioDevice) volCommandCallback(p *paho.Publish) {
 	if newValue, err := strconv.Atoi(string(p.Payload)); err != nil {
-		log.Debug().Err(err).Msg("Could not parse new volume level.")
+		d.logger.Debug("Could not parse new volume level.", "error", err.Error())
 	} else {
-		log.Trace().Int("volume", newValue).Msg("Received volume change from Home Assistant.")
+		d.logger.Debug("Received volume change from Home Assistant.", "volume", newValue)
 
 		if err := d.pulseAudio.SetVolume(float64(newValue)); err != nil {
-			log.Debug().Err(err).Msg("Could not set volume level.")
+			d.logger.Error("Could not set volume level.", "error", err.Error())
 
 			return
 		}
@@ -152,14 +154,14 @@ func (d *audioDevice) setMute(muteVal bool) {
 	}
 
 	if err != nil {
-		log.Debug().Err(err).Msg("Could not set mute state.")
+		d.logger.Error("Could not set mute state.", "error", err.Error())
 	}
 }
 
 func (d *audioDevice) publishMute() {
 	msg, err := d.muteEntity.MarshalState()
 	if err != nil {
-		log.Debug().Msg("Could not retrieve mute state.")
+		d.logger.Error("Could retrieve mute state.", "error", err.Error())
 	} else {
 		d.msgCh <- msg
 	}

@@ -18,11 +18,11 @@ import (
 	"syscall"
 
 	"github.com/adrg/xdg"
-	"github.com/rs/zerolog/log"
 
 	fyneui "github.com/joshuar/go-hass-agent/internal/agent/ui/fyneUI"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
@@ -55,7 +55,7 @@ func newDefaultAgent() *Agent {
 }
 
 // NewAgent creates a new agent with the options specified.
-func NewAgent(options ...Option) (*Agent, error) {
+func NewAgent(ctx context.Context, options ...Option) (*Agent, error) {
 	agent := newDefaultAgent()
 
 	for _, option := range options {
@@ -70,7 +70,7 @@ func NewAgent(options ...Option) (*Agent, error) {
 	agent.prefs = prefs
 
 	if !agent.headless {
-		agent.ui = fyneui.NewFyneUI(agent.id)
+		agent.ui = fyneui.NewFyneUI(ctx, agent.id)
 	}
 
 	return agent, nil
@@ -129,7 +129,7 @@ func (agent *Agent) Run(ctx context.Context, trk SensorTracker, reg sensor.Regis
 		defer regWait.Done()
 
 		if err := agent.checkRegistration(ctx, trk); err != nil {
-			log.Fatal().Err(err).Msg("Error checking registration status.")
+			logging.FromContext(ctx).Log(ctx, logging.LevelFatal, "Error checking registration status.", "error", err.Error())
 		}
 	}()
 
@@ -147,7 +147,7 @@ func (agent *Agent) Run(ctx context.Context, trk SensorTracker, reg sensor.Regis
 		// Embed required settings for Home Assistant in the context.
 		ctx, err = hass.SetupContext(ctx)
 		if err != nil {
-			log.Error().Err(err).Msg("Could not set up context.")
+			logging.FromContext(ctx).Error("Could not add hass details to context.", "error", err.Error())
 
 			return
 		}
@@ -158,7 +158,7 @@ func (agent *Agent) Run(ctx context.Context, trk SensorTracker, reg sensor.Regis
 		go func() {
 			<-agent.done
 			cancelFunc()
-			log.Debug().Msg("Agent done.")
+			logging.FromContext(ctx).Debug("Agent done.")
 		}()
 
 		// Start worker funcs for sensors.
@@ -197,11 +197,11 @@ func (agent *Agent) Run(ctx context.Context, trk SensorTracker, reg sensor.Regis
 		}
 	}()
 
-	agent.handleSignals()
+	agent.handleSignals(ctx)
 
 	if !agent.headless {
 		agent.ui.DisplayTrayIcon(ctx, agent, trk)
-		agent.ui.Run(agent.done)
+		agent.ui.Run(ctx, agent.done)
 	}
 
 	wg.Wait()
@@ -212,26 +212,26 @@ func (agent *Agent) Run(ctx context.Context, trk SensorTracker, reg sensor.Regis
 func (agent *Agent) Register(ctx context.Context, trk SensorTracker) {
 	go func() {
 		if err := agent.checkRegistration(ctx, trk); err != nil {
-			log.Fatal().Err(err).Msg("Error checking registration status.")
+			logging.FromContext(ctx).Log(ctx, logging.LevelFatal, "Error checking registration status", "error", err.Error())
 		}
 
-		agent.Stop()
+		agent.Stop(ctx)
 	}()
 
 	if !agent.headless {
-		agent.ui.Run(agent.done)
+		agent.ui.Run(ctx, agent.done)
 	}
 }
 
 // handleSignals will handle Ctrl-C of the agent.
-func (agent *Agent) handleSignals() {
+func (agent *Agent) handleSignals(ctx context.Context) {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 
 	go func() {
 		defer close(agent.done)
 		<-c
-		log.Debug().Msg("Ctrl-C pressed.")
+		logging.FromContext(ctx).Debug("Ctrl-C pressed.")
 	}()
 }
 
@@ -243,13 +243,13 @@ func (agent *Agent) AppID() string {
 
 // Stop will close the agent's done channel which indicates to any goroutines it
 // is time to clean up and exit.
-func (agent *Agent) Stop() {
+func (agent *Agent) Stop(ctx context.Context) {
 	defer close(agent.done)
 
-	log.Debug().Msg("Stopping agent.")
+	logging.FromContext(ctx).Debug("Stopping Agent.")
 
 	if err := agent.prefs.Save(); err != nil {
-		log.Warn().Err(err).Msg("Could not save agent preferences.")
+		logging.FromContext(ctx).Warn("Could not save agent preferences", "error", err.Error())
 	}
 }
 
@@ -259,7 +259,9 @@ func (agent *Agent) Reset(ctx context.Context) error {
 
 	runnerCtx := setupDeviceContext(ctx)
 
-	agent.resetMQTTWorker(runnerCtx)
+	if err := agent.resetMQTTWorker(runnerCtx); err != nil {
+		return fmt.Errorf("problem resetting agent: %w", err)
+	}
 
 	return nil
 }

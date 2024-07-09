@@ -4,22 +4,23 @@
 // https://opensource.org/licenses/MIT
 
 //revive:disable:unused-receiver
-//nolint:misspell
+//nolint:exhaustruct,misspell
 package desktop
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/godbus/dbus/v5"
-	"github.com/rs/zerolog/log"
 
 	"github.com/mandykoh/prism/srgb"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
@@ -35,13 +36,15 @@ const (
 	reqTimeout = 15 * time.Second
 )
 
+var ErrUnknownProp = errors.New("unknown desktop property")
+
 type desktopSettingSensor struct {
 	linux.Sensor
 }
 
 type worker struct{}
 
-//nolint:exhaustruct
+//nolint:cyclop
 func (w *worker) Events(ctx context.Context) (chan sensor.Details, error) {
 	sensorCh := make(chan sensor.Details)
 
@@ -63,15 +66,16 @@ func (w *worker) Events(ctx context.Context) (chan sensor.Details, error) {
 		for {
 			select {
 			case <-ctx.Done():
-				log.Debug().Msg("Stopped desktop settings sensors.")
-
 				return
 			case event := <-triggerCh:
 				if !strings.Contains(event.Signal, settingsChangedSignal) {
 					continue
 				}
 
-				prop, value := extractProp(event.Content)
+				prop, value, err := extractProp(event.Content)
+				if err != nil {
+					logging.FromContext(ctx).Warn("Error processing received signal.", "error", err.Error())
+				}
 
 				switch prop {
 				case colorSchemeProp:
@@ -88,7 +92,7 @@ func (w *worker) Events(ctx context.Context) (chan sensor.Details, error) {
 	go func() {
 		sensors, err := w.Sensors(ctx)
 		if err != nil {
-			log.Warn().Err(err).Msg("Could not get initial sensor updates.")
+			logging.FromContext(ctx).Warn("Could not get desktop settings from D-Bus.", "error", err.Error())
 		}
 
 		for _, s := range sensors {
@@ -130,7 +134,11 @@ func NewDesktopWorker() (*linux.SensorWorker, error) {
 
 //nolint:mnd
 func parseColorScheme(value dbus.Variant) string {
-	scheme := dbusx.VariantToValue[uint32](value)
+	scheme, err := dbusx.VariantToValue[uint32](value)
+	if err != nil {
+		return sensor.StateUnknown
+	}
+
 	switch scheme {
 	case 1:
 		return "dark"
@@ -143,7 +151,11 @@ func parseColorScheme(value dbus.Variant) string {
 
 //nolint:mnd
 func parseAccentColor(value dbus.Variant) string {
-	values := dbusx.VariantToValue[[]any](value)
+	values, err := dbusx.VariantToValue[[]any](value)
+	if err != nil {
+		return sensor.StateUnknown
+	}
+
 	rgb := make([]uint8, 3)
 
 	for colour, v := range values {
@@ -160,8 +172,13 @@ func parseAccentColor(value dbus.Variant) string {
 
 //nolint:exhaustruct
 func newAccentColorSensor(ctx context.Context, accent string) *desktopSettingSensor {
+	var err error
+
 	if accent == "" {
-		accent = getProp(ctx, accentColorProp)
+		accent, err = getProp(ctx, accentColorProp)
+		if err != nil {
+			logging.FromContext(ctx).Warn("Invalid accent colour.", "error", err.Error())
+		}
 	}
 
 	newSensor := &desktopSettingSensor{}
@@ -174,10 +191,14 @@ func newAccentColorSensor(ctx context.Context, accent string) *desktopSettingSen
 	return newSensor
 }
 
-//nolint:exhaustruct
 func newColorSchemeSensor(ctx context.Context, scheme string) *desktopSettingSensor {
+	var err error
+
 	if scheme == "" {
-		scheme = getProp(ctx, colorSchemeProp)
+		scheme, err = getProp(ctx, colorSchemeProp)
+		if err != nil {
+			logging.FromContext(ctx).Warn("Invalid colour scheme.", "error", err.Error())
+		}
 	}
 
 	newSensor := &desktopSettingSensor{}
@@ -198,7 +219,7 @@ func newColorSchemeSensor(ctx context.Context, scheme string) *desktopSettingSen
 	return newSensor
 }
 
-func getProp(ctx context.Context, prop string) string {
+func getProp(ctx context.Context, prop string) (string, error) {
 	value, err := dbusx.GetData[dbus.Variant](ctx,
 		dbusx.SessionBus,
 		desktopPortalPath,
@@ -207,33 +228,31 @@ func getProp(ctx context.Context, prop string) string {
 		"org.freedesktop.appearance",
 		prop)
 	if err != nil {
-		log.Warn().Err(err).Msg("Could not retrieve accent color from D-Bus.")
-
-		return sensor.StateUnknown
+		return sensor.StateUnknown, fmt.Errorf("could not retrieve desktop property %s from D-Bus: %w", prop, err)
 	}
 
 	switch prop {
 	case accentColorProp:
-		return parseAccentColor(value)
+		return parseAccentColor(value), nil
 	case colorSchemeProp:
-		return parseColorScheme(value)
+		return parseColorScheme(value), nil
 	}
 
-	return sensor.StateUnknown
+	return sensor.StateUnknown, fmt.Errorf("could not retrieve desktop property %s from D-Bus: %w", prop, ErrUnknownProp)
 }
 
-func extractProp(event []any) (prop string, value dbus.Variant) {
+func extractProp(event []any) (prop string, value dbus.Variant, err error) {
 	var ok bool
 
 	prop, ok = event[1].(string)
 	if !ok {
-		log.Warn().Msg("Didn't understand changed property.")
+		return "", dbus.Variant{}, fmt.Errorf("error extracting property from D-Bus signal: %w", ErrUnknownProp)
 	}
 
 	value, ok = event[2].(dbus.Variant)
 	if !ok {
-		log.Warn().Msg("Didn't understand changed property value.")
+		return "", dbus.Variant{}, fmt.Errorf("error extracting property from D-Bus signal: %w", ErrUnknownProp)
 	}
 
-	return prop, value
+	return prop, value, nil
 }

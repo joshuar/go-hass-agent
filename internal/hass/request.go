@@ -11,10 +11,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"time"
 
-	"github.com/rs/zerolog/log"
+	"github.com/joshuar/go-hass-agent/internal/logging"
 
 	"github.com/go-resty/resty/v2"
 )
@@ -104,18 +105,20 @@ func ExecuteRequest(ctx context.Context, client *resty.Client, url string, reque
 
 	switch req := request.(type) {
 	case PostRequest:
-		log.Trace().
-			Str("method", "POST").
-			RawJSON("body", req.RequestBody()).
-			Time("sent_at", time.Now()).
-			Msg("Sending request.")
+		logging.FromContext(ctx).
+			LogAttrs(ctx, logging.LevelTrace,
+				"Sending request.",
+				slog.String("method", "POST"),
+				slog.Any("body", req.RequestBody()),
+				slog.Time("sent_at", time.Now()))
 
 		resp, err = webClient.SetBody(req.RequestBody()).Post(url)
 	case GetRequest:
-		log.Trace().
-			Str("method", "GET").
-			Time("sent_at", time.Now()).
-			Msg("Sending request.")
+		logging.FromContext(ctx).
+			LogAttrs(ctx, logging.LevelTrace,
+				"Sending request.",
+				slog.String("method", "GET"),
+				slog.Time("sent_at", time.Now()))
 
 		resp, err = webClient.Get(url)
 	}
@@ -125,14 +128,14 @@ func ExecuteRequest(ctx context.Context, client *resty.Client, url string, reque
 		return fmt.Errorf("could not send request: %w", err)
 	}
 
-	log.Trace().Err(err).
-		Int("statuscode", resp.StatusCode()).
-		Str("status", resp.Status()).
-		Str("protocol", resp.Proto()).
-		Dur("time", resp.Time()).
-		Time("received_at", resp.ReceivedAt()).
-		RawJSON("body", resp.Body()).
-		Msg("Response received.")
+	logging.FromContext(ctx).
+		LogAttrs(ctx, logging.LevelTrace,
+			"Received response.",
+			slog.Int("statuscode", resp.StatusCode()),
+			slog.String("status", resp.Status()),
+			slog.String("protocol", resp.Proto()),
+			slog.Duration("time", resp.Time()),
+			slog.Any("body", resp.Body()))
 
 	// If the response is an error code, unmarshal it with the error method.
 	if resp.IsError() {

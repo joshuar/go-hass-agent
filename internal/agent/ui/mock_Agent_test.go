@@ -4,6 +4,7 @@
 package ui
 
 import (
+	"context"
 	"sync"
 )
 
@@ -17,7 +18,7 @@ var _ Agent = &AgentMock{}
 //
 //		// make and configure a mocked Agent
 //		mockedAgent := &AgentMock{
-//			StopFunc: func()  {
+//			StopFunc: func(ctx context.Context)  {
 //				panic("mock out the Stop method")
 //			},
 //		}
@@ -28,28 +29,33 @@ var _ Agent = &AgentMock{}
 //	}
 type AgentMock struct {
 	// StopFunc mocks the Stop method.
-	StopFunc func()
+	StopFunc func(ctx context.Context)
 
 	// calls tracks calls to the methods.
 	calls struct {
 		// Stop holds details about calls to the Stop method.
 		Stop []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
 		}
 	}
 	lockStop sync.RWMutex
 }
 
 // Stop calls StopFunc.
-func (mock *AgentMock) Stop() {
+func (mock *AgentMock) Stop(ctx context.Context) {
 	if mock.StopFunc == nil {
 		panic("AgentMock.StopFunc: method is nil but Agent.Stop was just called")
 	}
 	callInfo := struct {
-	}{}
+		Ctx context.Context
+	}{
+		Ctx: ctx,
+	}
 	mock.lockStop.Lock()
 	mock.calls.Stop = append(mock.calls.Stop, callInfo)
 	mock.lockStop.Unlock()
-	mock.StopFunc()
+	mock.StopFunc(ctx)
 }
 
 // StopCalls gets all the calls that were made to Stop.
@@ -57,8 +63,10 @@ func (mock *AgentMock) Stop() {
 //
 //	len(mockedAgent.StopCalls())
 func (mock *AgentMock) StopCalls() []struct {
+	Ctx context.Context
 } {
 	var calls []struct {
+		Ctx context.Context
 	}
 	mock.lockStop.RLock()
 	calls = mock.calls.Stop
