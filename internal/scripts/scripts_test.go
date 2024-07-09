@@ -8,6 +8,7 @@
 package scripts
 
 import (
+	"context"
 	"encoding/json"
 	"reflect"
 	"testing"
@@ -130,8 +131,10 @@ func Test_scriptOutput_Unmarshal(t *testing.T) {
 	}
 }
 
+//nolint:containedctx
 func TestNewScript(t *testing.T) {
 	type args struct {
+		ctx  context.Context
 		path string
 	}
 	tests := []struct {
@@ -142,7 +145,7 @@ func TestNewScript(t *testing.T) {
 	}{
 		{
 			name: "valid script",
-			args: args{path: "/usr/bin/echo" + " " + jsonOut},
+			args: args{ctx: context.TODO(), path: "/usr/bin/echo" + " " + jsonOut},
 			want: &Script{
 				path:     "/usr/bin/echo" + " " + jsonOut,
 				schedule: "@every 5s",
@@ -150,13 +153,13 @@ func TestNewScript(t *testing.T) {
 		},
 		{
 			name:    "invalid script",
-			args:    args{path: "/does/not/exist"},
+			args:    args{ctx: context.TODO(), path: "/does/not/exist"},
 			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := NewScript(tt.args.path)
+			got, err := NewScript(tt.args.ctx, tt.args.path)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewScript() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -169,8 +172,10 @@ func TestNewScript(t *testing.T) {
 	}
 }
 
+//nolint:containedctx
 func TestFindScripts(t *testing.T) {
 	type args struct {
+		ctx  context.Context
 		path string
 	}
 	tests := []struct {
@@ -181,12 +186,12 @@ func TestFindScripts(t *testing.T) {
 	}{
 		{
 			name: "path with scripts",
-			args: args{path: "internal/scripts/test_files"},
+			args: args{ctx: context.TODO(), path: "internal/scripts/test_files"},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := FindScripts(tt.args.path)
+			got, err := FindScripts(tt.args.ctx, tt.args.path)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("FindScripts() error = %v, wantErr %v", err, tt.wantErr)
 				return

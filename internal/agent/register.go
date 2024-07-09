@@ -11,11 +11,10 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/rs/zerolog/log"
-
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/registry"
+	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
@@ -66,7 +65,7 @@ func (agent *Agent) saveRegistration(resp *hass.RegistrationDetails, deviceInfo 
 // will action a registration workflow displaying a GUI for user input of
 // registration details and save the results into the agent config.
 func (agent *Agent) performRegistration(ctx context.Context) error {
-	log.Info().Msg("Registration required. Starting registration process.")
+	logging.FromContext(ctx).Info("Registration required. Starting registration process.")
 
 	// Display a window asking for registration details for non-headless usage.
 	if !agent.headless {
@@ -81,7 +80,7 @@ func (agent *Agent) performRegistration(ctx context.Context) error {
 		return fmt.Errorf("failed: %w", err)
 	}
 
-	deviceInfo := device.New(preferences.AppName, preferences.AppVersion)
+	deviceInfo := device.New(ctx, preferences.AppName, preferences.AppVersion)
 
 	// Register with Home Assistant.
 	resp, err := hass.RegisterWithHass(ctx, agent.registrationInfo, deviceInfo)
@@ -94,14 +93,14 @@ func (agent *Agent) performRegistration(ctx context.Context) error {
 		return fmt.Errorf("failed: %w", err)
 	}
 
-	log.Info().Msg("Successfully registered agent.")
+	logging.FromContext(ctx).Info("Successfully registered agent.")
 
 	return nil
 }
 
 func (agent *Agent) checkRegistration(ctx context.Context, trk SensorTracker) error {
 	if agent.prefs.Registered && !agent.forceRegister {
-		log.Debug().Msg("Agent already registered.")
+		logging.FromContext(ctx).Debug("Agent is already registered. Skipping.")
 
 		return nil
 	}
@@ -115,7 +114,7 @@ func (agent *Agent) checkRegistration(ctx context.Context, trk SensorTracker) er
 		trk.Reset()
 
 		if err := registry.Reset(); err != nil {
-			log.Warn().Err(err).Msg("Problem resetting registry.")
+			logging.FromContext(ctx).Warn("Problem resetting registry.", "error", err.Error())
 		}
 	}
 

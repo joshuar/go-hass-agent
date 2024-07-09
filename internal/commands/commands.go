@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/exec"
 	"strings"
@@ -22,8 +23,8 @@ import (
 	mqtthass "github.com/joshuar/go-hass-anything/v9/pkg/hass"
 	mqttapi "github.com/joshuar/go-hass-anything/v9/pkg/mqtt"
 	"github.com/pelletier/go-toml/v2"
-	"github.com/rs/zerolog/log"
 
+	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
@@ -56,6 +57,7 @@ type CommandList struct {
 // definitions, which can be passed to Home Assistant to add appropriate
 // entities to control the buttons/switches over MQTT.
 type Controller struct {
+	logger   *slog.Logger
 	buttons  []*mqtthass.ButtonEntity
 	switches []*mqtthass.SwitchEntity
 }
@@ -69,7 +71,7 @@ func (d *Controller) Subscriptions() []*mqttapi.Subscription {
 	if d.buttons != nil {
 		for _, button := range d.buttons {
 			if sub, err := button.MarshalSubscription(); err != nil {
-				log.Warn().Err(err).Str("entity", button.Name).Msg("Could not create subscription.")
+				d.logger.Warn("Could not create subscription.", "entity", button.Name, "error", err.Error())
 			} else {
 				subs = append(subs, sub)
 			}
@@ -79,7 +81,7 @@ func (d *Controller) Subscriptions() []*mqttapi.Subscription {
 	if d.switches != nil {
 		for _, sw := range d.switches {
 			if sub, err := sw.MarshalSubscription(); err != nil {
-				log.Warn().Err(err).Str("entity", sw.Name).Msg("Could not create subscription.")
+				d.logger.Warn("Could not create subscription.", "entity", sw.Name, "error", err.Error())
 			} else {
 				subs = append(subs, sub)
 			}
@@ -98,7 +100,7 @@ func (d *Controller) Configs() []*mqttapi.Msg {
 	if d.buttons != nil {
 		for _, button := range d.buttons {
 			if sub, err := button.MarshalConfig(); err != nil {
-				log.Warn().Err(err).Str("entity", button.Name).Msg("Could not create subscription.")
+				d.logger.Warn("Could not create config.", "entity", button.Name, "error", err.Error())
 			} else {
 				configs = append(configs, sub)
 			}
@@ -108,7 +110,7 @@ func (d *Controller) Configs() []*mqttapi.Msg {
 	if d.switches != nil {
 		for _, sw := range d.switches {
 			if sub, err := sw.MarshalConfig(); err != nil {
-				log.Warn().Err(err).Str("entity", sw.Name).Msg("Could not create subscription.")
+				d.logger.Warn("Could not create config.", "entity", sw.Name, "error", err.Error())
 			} else {
 				configs = append(configs, sub)
 			}
@@ -134,7 +136,7 @@ func (d *Controller) Setup(_ context.Context) error {
 // the user.
 //
 //nolint:exhaustruct
-func NewCommandsController(_ context.Context, commandsFile string, device *mqtthass.Device) (*Controller, error) {
+func NewCommandsController(ctx context.Context, commandsFile string, device *mqtthass.Device) (*Controller, error) {
 	if _, err := os.Stat(commandsFile); errors.Is(err, os.ErrNotExist) {
 		return nil, ErrNoCommands
 	}
@@ -151,8 +153,9 @@ func NewCommandsController(_ context.Context, commandsFile string, device *mqtth
 	}
 
 	controller := &Controller{
-		buttons:  generateButtons(cmds.Buttons, device),
-		switches: generateSwitches(cmds.Switches, device),
+		buttons:  generateButtons(ctx, cmds.Buttons, device),
+		switches: generateSwitches(ctx, cmds.Switches, device),
+		logger:   logging.FromContext(ctx),
 	}
 
 	return controller, nil
@@ -160,7 +163,7 @@ func NewCommandsController(_ context.Context, commandsFile string, device *mqtth
 
 // generateButtons will create MQTT entities for buttons defined by the
 // controller.
-func generateButtons(buttonCmds []Command, device *mqtthass.Device) []*mqtthass.ButtonEntity {
+func generateButtons(ctx context.Context, buttonCmds []Command, device *mqtthass.Device) []*mqtthass.ButtonEntity {
 	var id, icon, name string
 
 	entities := make([]*mqtthass.ButtonEntity, 0, len(buttonCmds))
@@ -169,7 +172,7 @@ func generateButtons(buttonCmds []Command, device *mqtthass.Device) []*mqtthass.
 		callback := func(_ *paho.Publish) {
 			err := buttonCmd(cmd.Exec)
 			if err != nil {
-				log.Warn().Err(err).Str("command", cmd.Name).Msg("Button press failed.")
+				logging.FromContext(ctx).Warn("Button press failed.", "button", cmd.Name, "error", err.Error())
 			}
 		}
 		name = cmd.Name
@@ -209,7 +212,7 @@ func buttonCmd(command string) error {
 
 // generateButtons will create MQTT entities for buttons defined by the
 // controller.
-func generateSwitches(switchCmds []Command, device *mqtthass.Device) []*mqtthass.SwitchEntity {
+func generateSwitches(ctx context.Context, switchCmds []Command, device *mqtthass.Device) []*mqtthass.SwitchEntity {
 	var id, icon, name string
 
 	entities := make([]*mqtthass.SwitchEntity, 0, len(switchCmds))
@@ -220,7 +223,7 @@ func generateSwitches(switchCmds []Command, device *mqtthass.Device) []*mqtthass
 
 			err := switchCmd(cmd.Exec, state)
 			if err != nil {
-				log.Warn().Err(err).Str("command", cmd.Name).Msg("Switch change failed.")
+				logging.FromContext(ctx).Warn("Switch toggle failed.", "switch", cmd.Name)
 			}
 		}
 		stateCallBack := func(_ ...any) (json.RawMessage, error) {

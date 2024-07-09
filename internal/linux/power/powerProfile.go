@@ -3,6 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
+//nolint:exhaustruct
 //revive:disable:unused-receiver
 package power
 
@@ -11,10 +12,10 @@ import (
 	"fmt"
 
 	"github.com/godbus/dbus/v5"
-	"github.com/rs/zerolog/log"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
@@ -32,7 +33,14 @@ type powerSensor struct {
 //nolint:exhaustruct
 func newPowerSensor(sensorType linux.SensorTypeValue, sensorValue dbus.Variant) *powerSensor {
 	newSensor := &powerSensor{}
-	newSensor.Value = dbusx.VariantToValue[string](sensorValue)
+
+	value, err := dbusx.VariantToValue[string](sensorValue)
+	if err != nil {
+		newSensor.Value = sensor.StateUnknown
+	} else {
+		newSensor.Value = value
+	}
+
 	newSensor.SensorTypeValue = sensorType
 	newSensor.IconString = "mdi:flash"
 	newSensor.SensorSrc = linux.DataSrcDbus
@@ -74,18 +82,20 @@ func (w *profileWorker) Events(ctx context.Context) (chan sensor.Details, error)
 
 	// Watch for power profile changes.
 	go func() {
+		logging.FromContext(ctx).Debug("Monitoring power profile.")
+
 		defer close(sensorCh)
 
 		for {
 			select {
 			case <-ctx.Done():
-				log.Debug().Msg(("Stopped power profile sensor."))
+				logging.FromContext(ctx).Debug("Unmonitoring power profile.")
 
 				return
 			case event := <-triggerCh:
 				props, err := dbusx.ParsePropertiesChanged(event.Content)
 				if err != nil {
-					log.Warn().Err(err).Msg("Did not understand received trigger.")
+					logging.FromContext(ctx).Warn("Received unknown event from D-Bus.", "error", err.Error())
 
 					continue
 				}

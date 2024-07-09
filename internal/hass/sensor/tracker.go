@@ -9,13 +9,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"sort"
 	"sync"
 
 	"github.com/go-resty/resty/v2"
-	"github.com/rs/zerolog/log"
 
 	"github.com/joshuar/go-hass-agent/internal/hass"
+	"github.com/joshuar/go-hass-agent/internal/logging"
 )
 
 var (
@@ -77,14 +78,14 @@ func (t *Tracker) Process(ctx context.Context, reg Registry, upds ...<-chan Deta
 	for update := range MergeSensorCh(ctx, upds...) {
 		go func(upd Details) {
 			if err := t.update(ctx, client, "", reg, upd); err != nil {
-				log.Warn().Err(err).Str("id", upd.ID()).Msg("Update failed.")
+				logging.FromContext(ctx).Warn("Sensor update failed.", "sensor_id", upd.ID(), "error", err.Error())
 			} else {
-				log.Debug().
-					Str("name", upd.Name()).
-					Str("id", upd.ID()).
-					Interface("state", upd.State()).
-					Str("units", upd.Units()).
-					Msg("Sensor updated.")
+				logging.FromContext(ctx).
+					LogAttrs(ctx, slog.LevelDebug, "Sensor updated.",
+						slog.String("sensor_name", upd.Name()),
+						slog.String("sensor_id", upd.ID()),
+						slog.Any("state", upd.State()),
+						slog.String("units", upd.Units()))
 			}
 		}(update)
 	}

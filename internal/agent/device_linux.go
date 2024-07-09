@@ -10,8 +10,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/rs/zerolog/log"
-
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/linux/apps"
@@ -26,6 +24,7 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/linux/problems"
 	"github.com/joshuar/go-hass-agent/internal/linux/system"
 	"github.com/joshuar/go-hass-agent/internal/linux/user"
+	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
@@ -130,12 +129,10 @@ func (w linuxWorkers) StartAll(ctx context.Context) (<-chan sensor.Details, erro
 
 	var allerr error
 
-	log.Debug().Msg("Starting all Linux workers.")
-
 	for name, worker := range w {
 		workerCtx, cancelFunc := context.WithCancel(ctx)
 
-		log.Debug().Str("name", name).Str("description", worker.object.Description()).Msg("Starting sensor worker.")
+		logging.FromContext(ctx).Debug("Starting sensor worker.", "name", name, "description", worker.object.Description())
 
 		workerCh, err := worker.object.Updates(workerCtx)
 		if err != nil {
@@ -163,13 +160,15 @@ func (w linuxWorkers) StopAll() error {
 // that are supported on this device.
 //
 //nolint:exhaustruct
-func createSensorWorkers() WorkerController {
+func createSensorWorkers() (WorkerController, error) {
+	var errs error
+
 	workers := make(linuxWorkers)
 
 	for _, w := range allworkers {
 		worker, err := w()
 		if err != nil {
-			log.Debug().Err(err).Msg("Could not initialise worker.")
+			errs = errors.Join(errs, err)
 
 			continue
 		}
@@ -177,10 +176,10 @@ func createSensorWorkers() WorkerController {
 		workers[worker.Name()] = &workerControl{object: worker}
 	}
 
-	return workers
+	return workers, errs
 }
 
 // setupDeviceContext returns a new Context that contains the D-Bus API.
 func setupDeviceContext(ctx context.Context) context.Context {
-	return dbusx.Setup(ctx)
+	return dbusx.Setup(ctx, logging.FromContext(ctx))
 }

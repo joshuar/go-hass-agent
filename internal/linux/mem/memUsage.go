@@ -3,6 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
+//nolint:exhaustruct
 //revive:disable:unused-receiver
 package mem
 
@@ -12,12 +13,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/v3/mem"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/logging"
 )
 
 const (
@@ -33,7 +34,7 @@ type memorySensor struct {
 	linux.Sensor
 }
 
-//nolint:exhaustive,exhaustruct
+//nolint:exhaustive
 func newMemoryUsageSensor(sensorType linux.SensorTypeValue, stats *mem.VirtualMemoryStat) (*memorySensor, error) {
 	newSensor := &memorySensor{}
 
@@ -115,7 +116,7 @@ func (w *usageWorker) Sensors(ctx context.Context, _ time.Duration) ([]sensor.De
 	for _, stat := range stats {
 		memSensor, err := newMemoryUsageSensor(stat, memDetails)
 		if err != nil {
-			log.Warn().Err(err).Msg("Could not retrieve memory usage stat.")
+			logging.FromContext(ctx).Warn("Could not retrieve memory usage stats.", "error", err.Error())
 
 			continue
 		}

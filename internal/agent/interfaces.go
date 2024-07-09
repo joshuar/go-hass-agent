@@ -29,7 +29,7 @@ type UI interface {
 	DisplayNotification(n ui.Notification)
 	DisplayTrayIcon(ctx context.Context, agent ui.Agent, trk ui.SensorTracker)
 	DisplayRegistrationWindow(ctx context.Context, input *hass.RegistrationInput, doneCh chan struct{})
-	Run(doneCh chan struct{})
+	Run(ctx context.Context, doneCh chan struct{})
 }
 
 //go:generate moq -out mockSensorTracker_test.go . SensorTracker

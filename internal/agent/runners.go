@@ -7,10 +7,11 @@ package agent
 
 import (
 	"context"
+	"fmt"
+	"log/slog"
 	"sync"
 
 	"github.com/robfig/cron/v3"
-	"github.com/rs/zerolog/log"
 
 	mqttapi "github.com/joshuar/go-hass-anything/v9/pkg/mqtt"
 
@@ -18,6 +19,7 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/internal/scripts"
 )
 
@@ -74,24 +76,27 @@ type MQTTWorker interface {
 // for this device.
 func runWorkers(ctx context.Context, trk SensorTracker, reg sensor.Registry) {
 	// Create sensor workers for OS.
-	osWorkers := createSensorWorkers()
+	osWorkers, err := createSensorWorkers()
+	if err != nil {
+		logging.FromContext(ctx).Warn("Some sensor workers could not be created.", "errors", err.Error())
+	}
 	// Start sensor workers for OS.
 	sensorUpdates, err := osWorkers.StartAll(ctx)
 	if err != nil {
-		log.Debug().Err(err).Msg("Some OS workers could not be started.")
+		logging.FromContext(ctx).Warn("Some sensor workers could not be started", "errors", err.Error())
 	}
 	// Create sensor workers for device.
 	deviceWorkers := device.CreateSensorWorkers()
 	// Start sensor workers for device.
 	deviceUpdates, err := deviceWorkers.StartAll(ctx)
 	if err != nil {
-		log.Debug().Err(err).Msg("Some device workers could not be started.")
+		logging.FromContext(ctx).Warn("Some device workers could not be started", "errors", err.Error())
 	}
 
 	// Listen for sensor updates from all workers.
 	go func() {
 		if err := trk.Process(ctx, reg, sensorUpdates, deviceUpdates); err != nil {
-			log.Error().Err(err).Msg("Could not process sensor updates.")
+			logging.FromContext(ctx).Error("Could not process sensor updates", "error", err.Error())
 		}
 	}()
 
@@ -105,11 +110,11 @@ func runWorkers(ctx context.Context, trk SensorTracker, reg sensor.Registry) {
 		<-ctx.Done()
 
 		if err := osWorkers.StopAll(); err != nil {
-			log.Debug().Err(err).Msg("Stopping OS workers reported an error.")
+			logging.FromContext(ctx).Debug("Error occurred trying to stop sensor workers.", "error", err.Error())
 		}
 
 		if err := deviceWorkers.StopAll(); err != nil {
-			log.Debug().Err(err).Msg("Stopping device workers reported an error.")
+			logging.FromContext(ctx).Debug("Error occurred trying to stop device workers.", "error", err.Error())
 		}
 	}()
 	wg.Wait()
@@ -120,15 +125,15 @@ func runWorkers(ctx context.Context, trk SensorTracker, reg sensor.Registry) {
 // a channel to receive script output and send appropriate sensor objects to the
 // sensor.
 func runScripts(ctx context.Context, path string, trk SensorTracker, reg sensor.Registry) {
-	allScripts, err := scripts.FindScripts(path)
+	allScripts, err := scripts.FindScripts(ctx, path)
 
 	switch {
 	case err != nil:
-		log.Warn().Err(err).Msg("Error getting scripts.")
+		logging.FromContext(ctx).Warn("Error finding custom sensor scripts.", "error", err.Error())
 
 		return
 	case len(allScripts) == 0:
-		log.Debug().Msg("Could not find any script files.")
+		logging.FromContext(ctx).Debug("No custom sensor scripts found.")
 
 		return
 	}
@@ -142,29 +147,27 @@ func runScripts(ctx context.Context, path string, trk SensorTracker, reg sensor.
 		if schedule != "" {
 			_, err := scheduler.AddJob(schedule, script)
 			if err != nil {
-				log.Warn().Err(err).Str("script", script.Path()).
-					Msg("Unable to schedule script.")
+				logging.FromContext(ctx).Warn("Unable to schedule script", "script", script.Path(), "error", err.Error())
 
 				break
 			}
 
 			outCh = append(outCh, script.Output)
-			log.Debug().Str("schedule", schedule).Str("script", script.Path()).
-				Msg("Added script sensor.")
+			logging.FromContext(ctx).Debug("Script sensor scheduled.", "script", script.Path())
 		}
 	}
 
-	log.Debug().Msg("Starting cron scheduler for script sensors.")
+	logging.FromContext(ctx).Debug("Starting cron scheduler for script sensors.")
 	scheduler.Start()
 
 	go func() {
 		if err := trk.Process(ctx, reg, outCh...); err != nil {
-			log.Error().Err(err).Msg("Could not process script updates.")
+			logging.FromContext(ctx).Error("Could not process script sensor updates", "error", err.Error())
 		}
 	}()
 
 	<-ctx.Done()
-	log.Debug().Msg("Stopping cron scheduler for script sensors.")
+	logging.FromContext(ctx).Debug("Stopping cron scheduler for script sensors.")
 
 	cronCtx := scheduler.Stop()
 	<-cronCtx.Done()
@@ -174,9 +177,12 @@ func runScripts(ctx context.Context, path string, trk SensorTracker, reg sensor.
 // notification messages from Home Assistant on a websocket connection. Any
 // received notifications will be dipslayed on the device running the agent.
 func (agent *Agent) runNotificationsWorker(ctx context.Context) {
-	log.Debug().Msg("Listening for notifications.")
+	notifyCh, err := hass.StartWebsocket(ctx)
+	if err != nil {
+		logging.FromContext(ctx).Error("Could not listen for notifications.", "error", err.Error())
+	}
 
-	notifyCh := hass.StartWebsocket(ctx)
+	logging.FromContext(ctx).Debug("Listening for notifications.")
 
 	var wg sync.WaitGroup
 
@@ -188,7 +194,7 @@ func (agent *Agent) runNotificationsWorker(ctx context.Context) {
 		for {
 			select {
 			case <-ctx.Done():
-				log.Debug().Msg("Stopping notification handler.")
+				logging.FromContext(ctx).Debug("Stopping notification handler.")
 
 				return
 			case n := <-notifyCh:
@@ -221,7 +227,7 @@ func (agent *Agent) runMQTTWorker(ctx context.Context, commandsFile string) {
 	// Create an MQTT device for this operating system and run its Setup.
 	deviceController = newMQTTDevice(mqttCtx)
 	if err = deviceController.Setup(mqttCtx); err != nil {
-		log.Error().Err(err).Msg("Could not set up device MQTT functionality.")
+		logging.FromContext(ctx).Error("Could not set up MQTT.", "error", err.Error())
 	} else {
 		subscriptions = append(subscriptions, deviceController.Subscriptions()...)
 		configs = append(configs, deviceController.Configs()...)
@@ -230,7 +236,7 @@ func (agent *Agent) runMQTTWorker(ctx context.Context, commandsFile string) {
 	// Create an MQTT device for this operating system and run its Setup.
 	commandController, err = commands.NewCommandsController(ctx, commandsFile, device.MQTTDeviceInfo(ctx))
 	if err != nil {
-		log.Warn().Err(err).Msg("Could not set up commands MQTT functionality.")
+		logging.FromContext(ctx).Warn("Could not set up MQTT commands controller.", "error", err.Error())
 	} else {
 		subscriptions = append(subscriptions, commandController.Subscriptions()...)
 		configs = append(configs, commandController.Configs()...)
@@ -240,23 +246,23 @@ func (agent *Agent) runMQTTWorker(ctx context.Context, commandsFile string) {
 	// device subscriptions.
 	client, err := mqttapi.NewClient(mqttCtx, agent.prefs, subscriptions, configs)
 	if err != nil {
-		log.Error().Err(err).Msg("Could not connect to MQTT broker.")
+		logging.FromContext(ctx).Error("Could not connect to MQTT.", "error", err.Error())
 
 		return
 	}
 
 	go func() {
-		log.Debug().Msg("Listening for messages to publish to MQTT.")
+		logging.FromContext(ctx).Debug("Listening for messages to publish to MQTT.")
 
 		for {
 			select {
 			case msg := <-deviceController.Msgs():
 				if err := client.Publish(msg); err != nil {
-					log.Warn().Err(err).Msg("Unable to publish message to MQTT.")
+					logging.FromContext(ctx).Warn("Unable to publish message to MQTT.", "topic", msg.Topic, "content", slog.Any("msg", msg.Message))
 				}
 			case <-ctx.Done():
 				mqttCancel()
-				log.Debug().Msg("Stopped listening for messages to publish to MQTT.")
+				logging.FromContext(ctx).Debug("Stopped listening for messages to publish to MQTT.")
 
 				return
 			}
@@ -266,21 +272,21 @@ func (agent *Agent) runMQTTWorker(ctx context.Context, commandsFile string) {
 	<-ctx.Done()
 }
 
-func (agent *Agent) resetMQTTWorker(ctx context.Context) {
+func (agent *Agent) resetMQTTWorker(ctx context.Context) error {
 	if !agent.prefs.MQTTEnabled {
-		return
+		return nil
 	}
 
 	mqttDevice := newMQTTDevice(ctx)
 
 	client, err := mqttapi.NewClient(ctx, agent.prefs, nil, nil)
 	if err != nil {
-		log.Error().Err(err).Msg("Could not connect to MQTT broker.")
-
-		return
+		return fmt.Errorf("could not connect to MQTT: %w", err)
 	}
 
 	if err := client.Unpublish(mqttDevice.Configs()...); err != nil {
-		log.Error().Err(err).Msg("Failed to reset MQTT.")
+		return fmt.Errorf("could not remove configs from MQTT: %w", err)
 	}
+
+	return nil
 }

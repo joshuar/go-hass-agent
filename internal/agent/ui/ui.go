@@ -7,6 +7,7 @@
 package ui
 
 import (
+	"context"
 	_ "embed"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
@@ -14,7 +15,7 @@ import (
 
 //go:generate moq -out mock_Agent_test.go . Agent
 type Agent interface {
-	Stop()
+	Stop(ctx context.Context)
 }
 
 //go:generate moq -out mock_SensorTracker_test.go . SensorTracker

@@ -3,6 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
+//nolint:exhaustruct
 //revive:disable:unused-receiver
 package system
 
@@ -11,11 +12,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/rs/zerolog/log"
-
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/pkg/linux/hwmon"
 )
 
@@ -111,12 +111,12 @@ func (w *hwMonWorker) Interval() time.Duration { return hwMonInterval }
 
 func (w *hwMonWorker) Jitter() time.Duration { return hwMonJitter }
 
-func (w *hwMonWorker) Sensors(_ context.Context, _ time.Duration) ([]sensor.Details, error) {
+func (w *hwMonWorker) Sensors(ctx context.Context, _ time.Duration) ([]sensor.Details, error) {
 	hwmonSensors, err := hwmon.GetAllSensors()
 	sensors := make([]sensor.Details, 0, len(hwmonSensors))
 
 	if err != nil && len(hwmonSensors) > 0 {
-		log.Warn().Err(err).Msg("Errors fetching some chip/sensor values from hwmon API.")
+		logging.FromContext(ctx).Warn("Errors fetching some chip/sensor values from hwmon API.", "error", err.Error())
 	}
 
 	if err != nil && len(hwmonSensors) == 0 {

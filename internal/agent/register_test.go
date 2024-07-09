@@ -233,7 +233,7 @@ func TestAgent_performRegistration(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			agent, err := NewAgent(
+			agent, err := NewAgent(context.TODO(),
 				Headless(true),
 				WithRegistrationInfo(tt.args.server, tt.args.token, false),
 			)

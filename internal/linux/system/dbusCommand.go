@@ -8,11 +8,12 @@ package system
 import (
 	"context"
 	"encoding/json"
+	"log/slog"
 
 	"github.com/eclipse/paho.golang/paho"
 	mqttapi "github.com/joshuar/go-hass-anything/v9/pkg/mqtt"
-	"github.com/rs/zerolog/log"
 
+	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
@@ -35,7 +36,7 @@ func NewDBusCommandSubscription(ctx context.Context) *mqttapi.Subscription {
 			var dbusMsg dbusCommandMsg
 
 			if err := json.Unmarshal(p.Payload, &dbusMsg); err != nil {
-				log.Warn().Err(err).Msg("Could not unmarshal dbus MQTT message")
+				logging.FromContext(ctx).Warn("Could not unmarshal D-Bus MQTT message.", "error", err.Error())
 
 				return
 			}
@@ -45,7 +46,7 @@ func NewDBusCommandSubscription(ctx context.Context) *mqttapi.Subscription {
 
 				dbusMsg.Path, err = dbusx.GetSessionPath(ctx)
 				if err != nil {
-					log.Warn().Err(err).Msg("Could not determine session path.")
+					logging.FromContext(ctx).Warn("Could not determine session path.", "error", err.Error())
 
 					return
 				}
@@ -53,26 +54,27 @@ func NewDBusCommandSubscription(ctx context.Context) *mqttapi.Subscription {
 
 			dbusType, ok := dbusx.DbusTypeMap[dbusMsg.Bus]
 			if !ok {
-				log.Warn().Msg("unsupported dbus type")
+				logging.FromContext(ctx).Warn("Unsupported D-Bus type.")
 
 				return
 			}
 
-			log.Info().
-				Str("bus", dbusMsg.Bus).
-				Str("destination", dbusMsg.Destination).
-				Str("path", dbusMsg.Path).
-				Str("method", dbusMsg.Method).
-				Msg("Dispatching D-Bus command to MQTT.")
+			logging.FromContext(ctx).With(
+				slog.String("bus", dbusMsg.Bus),
+				slog.String("destination", dbusMsg.Destination),
+				slog.String("path", dbusMsg.Path),
+				slog.String("method", dbusMsg.Method),
+			).Info("Dispatching D-Bus command to MQTT.")
 
 			err := dbusx.Call(ctx, dbusType, dbusMsg.Path, dbusMsg.Destination, dbusMsg.Method, dbusMsg.Args...)
 			if err != nil {
-				log.Warn().Err(err).
-					Str("bus", dbusMsg.Bus).
-					Str("destination", dbusMsg.Destination).
-					Str("path", dbusMsg.Path).
-					Str("method", dbusMsg.Method).
-					Msg("Error dispatching D-Bus command.")
+				logging.FromContext(ctx).With(
+					slog.String("bus", dbusMsg.Bus),
+					slog.String("destination", dbusMsg.Destination),
+					slog.String("path", dbusMsg.Path),
+					slog.String("method", dbusMsg.Method),
+					slog.Any("error", err),
+				).Warn("Error dispatching D-Bus command.")
 			}
 		},
 		Topic: dbusCommandTopic,

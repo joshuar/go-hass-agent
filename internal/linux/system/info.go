@@ -3,6 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
+//nolint:exhaustruct
 //revive:disable:unused-receiver
 package system
 
@@ -12,26 +13,21 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/logging"
 )
 
 type infoWorker struct{}
 
 //nolint:exhaustruct
-func (w *infoWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
+func (w *infoWorker) Sensors(ctx context.Context) ([]sensor.Details, error) {
+	var sensors []sensor.Details
+
 	// Get distribution name and version.
-	distro, distroVersion := device.GetOSDetails()
-
-	// Get kernel version.
-	kernelVersion := device.GetKernelVersion()
-
-	return []sensor.Details{
-			&linux.Sensor{
-				SensorTypeValue: linux.SensorKernel,
-				Value:           kernelVersion,
-				IsDiagnostic:    true,
-				IconString:      "mdi:chip",
-				SensorSrc:       linux.DataSrcProcfs,
-			},
+	distro, distroVersion, err := device.GetOSDetails()
+	if err != nil {
+		logging.FromContext(ctx).Warn("Could not retrieve distribution details.", "error", err.Error())
+	} else {
+		sensors = append(sensors,
 			&linux.Sensor{
 				SensorTypeValue: linux.SensorDistribution,
 				Value:           distro,
@@ -46,8 +42,26 @@ func (w *infoWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
 				IconString:      "mdi:numeric",
 				SensorSrc:       linux.DataSrcProcfs,
 			},
-		},
-		nil
+		)
+	}
+
+	// Get kernel version.
+	kernelVersion, err := device.GetKernelVersion()
+	if err != nil {
+		logging.FromContext(ctx).Warn("Could not retrieve kernel version.", "error", err.Error())
+	} else {
+		sensors = append(sensors,
+			&linux.Sensor{
+				SensorTypeValue: linux.SensorKernel,
+				Value:           kernelVersion,
+				IsDiagnostic:    true,
+				IconString:      "mdi:chip",
+				SensorSrc:       linux.DataSrcProcfs,
+			},
+		)
+	}
+
+	return sensors, nil
 }
 
 func NewInfoWorker() (*linux.SensorWorker, error) {

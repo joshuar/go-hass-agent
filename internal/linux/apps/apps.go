@@ -3,6 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
+//nolint:exhaustruct
 //revive:disable:unused-receiver
 package apps
 
@@ -14,9 +15,8 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
-
-	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -32,7 +32,6 @@ type worker struct {
 	portalDest  string
 }
 
-//nolint:exhaustruct
 func (w *worker) Events(ctx context.Context) (chan sensor.Details, error) {
 	sensorCh := make(chan sensor.Details)
 
@@ -51,7 +50,7 @@ func (w *worker) Events(ctx context.Context) (chan sensor.Details, error) {
 	sendSensors := func(ctx context.Context, sensorCh chan sensor.Details) {
 		appSensors, err := w.Sensors(ctx)
 		if err != nil {
-			log.Warn().Err(err).Msg("Failed to update app sensors.")
+			logging.FromContext(ctx).Warn("Failed to update app sensors.", "error", err.Error())
 
 			return
 		}
@@ -68,7 +67,7 @@ func (w *worker) Events(ctx context.Context) (chan sensor.Details, error) {
 		for {
 			select {
 			case <-ctx.Done():
-				log.Debug().Msg("Stopped app sensor.")
+				logging.FromContext(ctx).Debug("Stopped app sensors.")
 
 				return
 			case <-triggerCh:

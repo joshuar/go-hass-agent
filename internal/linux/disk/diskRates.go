@@ -9,12 +9,12 @@ package disk
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"sync"
 	"time"
 	"unicode"
 
 	"github.com/iancoleman/strcase"
-	"github.com/rs/zerolog/log"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
@@ -116,7 +116,6 @@ func (s *diskIOSensor) update(stats map[diskstats.Stat]uint64, delta time.Durati
 
 	if s.SensorTypeValue == linux.SensorDiskReadRate || s.SensorTypeValue == linux.SensorDiskWriteRate {
 		if uint64(delta.Seconds()) > 0 {
-			log.Trace().Msgf("%s IO rate calc: (%d - %d) / uint64(%d) / 2", s.device, curr, s.prev, uint64(delta.Seconds()))
 			s.Value = (curr - s.prev) / uint64(delta.Seconds()) / 2
 		}
 
@@ -243,7 +242,7 @@ func NewIOWorker() (*linux.SensorWorker, error) {
 
 	newStats, err := diskstats.ReadDiskStatsFromSysFS()
 	if err != nil {
-		log.Warn().Err(err).Msg("Error reading disk stats from procfs. Will not send disk rate sensors.")
+		slog.Warn("Error reading disk stats from procfs. Will not send disk rate sensors.", "error", err.Error())
 	}
 
 	for dev := range newStats {

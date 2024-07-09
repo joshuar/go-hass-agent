@@ -9,13 +9,12 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
-
-	"github.com/rs/zerolog/log"
 )
 
 //go:generate stringer -type=Stat -output diskStatStrings.go -linecomment
@@ -95,11 +94,7 @@ func ReadDiskStatsFromProcFS() (map[Device]map[Stat]uint64, error) {
 
 			readVal, err := strconv.ParseUint(field, 10, 64)
 			if err != nil {
-				log.Warn().
-					Err(err).
-					Str("stat", stat.String()).
-					Str("device", device.ID).
-					Msg("Unable to read disk stat.")
+				slog.Warn("Unable to parse device stat.", "device", device.ID, "stat", stat.String(), "error", err.Error())
 			}
 
 			stats[device][stat] = readVal
@@ -155,7 +150,7 @@ func ReadDiskStatsFromSysFS() (map[Device]map[Stat]uint64, error) {
 		// Read the stats file.
 		data, err := os.ReadFile(dev)
 		if err != nil {
-			log.Warn().Err(err).Str("device", id).Msg("Unable to read stats for device.")
+			slog.Warn("Unable to read device stats.", "device", id, "error", err.Error())
 
 			continue
 		}
@@ -168,11 +163,7 @@ func ReadDiskStatsFromSysFS() (map[Device]map[Stat]uint64, error) {
 
 			readVal, err := strconv.ParseUint(string(field), 10, 64)
 			if err != nil {
-				log.Warn().
-					Err(err).
-					Str("stat", stat.String()).
-					Str("id", dev).
-					Msg("Unable to parse device stat.")
+				slog.Warn("Unable to parse device stat.", "device", dev, "stat", stat.String(), "error", err.Error())
 			}
 
 			stats[stat] = readVal

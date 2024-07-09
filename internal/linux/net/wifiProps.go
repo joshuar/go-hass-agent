@@ -10,7 +10,6 @@ import (
 	"slices"
 
 	"github.com/godbus/dbus/v5"
-	"github.com/rs/zerolog/log"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
@@ -146,12 +145,12 @@ func newWifiSensor(sensorType string) *wifiSensor {
 
 // monitorWifi will initially fetch and then monitor for changes of
 // relevant WiFi properties that are to be represented as sensors.
-func monitorWifi(ctx context.Context, p dbus.ObjectPath) <-chan sensor.Details {
+func (c *connection) monitorWifi(ctx context.Context) <-chan sensor.Details {
 	outCh := make(chan sensor.Details)
 	// get the devices associated with this connection
-	wifiDevices, err := dbusx.GetProp[[]dbus.ObjectPath](ctx, dbusx.SystemBus, string(p), dBusNMObj, dbusNMActiveConnIntr+".Devices")
+	wifiDevices, err := dbusx.GetProp[[]dbus.ObjectPath](ctx, dbusx.SystemBus, string(c.path), dBusNMObj, dbusNMActiveConnIntr+".Devices")
 	if err != nil {
-		log.Warn().Err(err).Msg("Could not retrieve active wireless devices.")
+		c.logger.Warn("Could not retrieve active wireless device from D-Bus.", "error", err.Error())
 
 		return nil
 	}
@@ -160,7 +159,7 @@ func monitorWifi(ctx context.Context, p dbus.ObjectPath) <-chan sensor.Details {
 		// for each device, get the access point it is currently associated with
 		accessPointPath, err := dbusx.GetProp[dbus.ObjectPath](ctx, dbusx.SystemBus, string(d), dBusNMObj, accessPointProp)
 		if err != nil {
-			log.Warn().Err(err).Msg("Could not ascertain access point.")
+			c.logger.Warn("Could not retrieve access point object from D-Bus.", "error", err.Error())
 
 			continue
 		}
@@ -169,14 +168,14 @@ func monitorWifi(ctx context.Context, p dbus.ObjectPath) <-chan sensor.Details {
 			// for the associated access point, get the wifi properties as sensors
 			value, err := dbusx.GetProp[any](ctx, dbusx.SystemBus, string(accessPointPath), dBusNMObj, accessPointInterface+"."+prop)
 			if err != nil {
-				log.Warn().Err(err).Str("prop", prop).Msg("Could not get Wi-Fi property %s.")
+				c.logger.Warn("Could not retrieve wifi property from D-Bus.", "property", prop, "error", err.Error())
 
 				continue
 			}
 
 			wifiSensor := newWifiSensor(prop)
 			if wifiSensor == nil {
-				log.Warn().Str("prop", prop).Msg("Unknown wifi property.")
+				c.logger.Warn("Unhandled wifi property.", "prop", prop)
 
 				continue
 			}
@@ -190,7 +189,7 @@ func monitorWifi(ctx context.Context, p dbus.ObjectPath) <-chan sensor.Details {
 		}
 		// monitor for changes in the wifi properties for this device
 		go func() {
-			for s := range monitorWifiProps(ctx, accessPointPath) {
+			for s := range c.monitorWifiProps(ctx, accessPointPath) {
 				outCh <- s
 			}
 		}()
@@ -200,7 +199,7 @@ func monitorWifi(ctx context.Context, p dbus.ObjectPath) <-chan sensor.Details {
 }
 
 //nolint:exhaustruct
-func monitorWifiProps(ctx context.Context, propPath dbus.ObjectPath) chan sensor.Details {
+func (c *connection) monitorWifiProps(ctx context.Context, propPath dbus.ObjectPath) chan sensor.Details {
 	sensorCh := make(chan sensor.Details)
 
 	events, err := dbusx.WatchBus(ctx, &dbusx.Watch{
@@ -209,26 +208,27 @@ func monitorWifiProps(ctx context.Context, propPath dbus.ObjectPath) chan sensor
 		Path:  string(propPath),
 	})
 	if err != nil {
-		log.Debug().Err(err).
-			Msg("Failed to create wifi properties D-Bus watch.")
+		c.logger.Debug("Failed to watch D-Bus for wifi property changes.", "error", err.Error())
 		close(sensorCh)
 
 		return sensorCh
 	}
 
 	go func() {
+		c.logger.Debug("Monitoring D-Bus for wifi property changes.")
+
 		defer close(sensorCh)
 
 		for {
 			select {
 			case <-ctx.Done():
-				log.Debug().Msg("Unmonitoring wifi properties.")
+				c.logger.Debug("Unmonitoring D-Bus for wifi property changes.")
 
 				return
 			case event := <-events:
 				props, err := dbusx.ParsePropertiesChanged(event.Content)
 				if err != nil {
-					log.Warn().Err(err).Msg("Did not understand received trigger.")
+					c.logger.Warn("Received an unknown event from D-Bus.", "error", err.Error())
 
 					continue
 				}

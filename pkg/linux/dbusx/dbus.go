@@ -9,12 +9,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os/user"
 	"strings"
 	"sync"
 
 	"github.com/godbus/dbus/v5"
-	"github.com/rs/zerolog/log"
 )
 
 //go:generate stringer -type=dbusType -output busType_strings.go
@@ -41,6 +41,7 @@ var (
 	ErrParseNewVal    = errors.New("could not parse new value")
 	ErrParseOldVal    = errors.New("could not parse old value")
 	ErrNoSessionPath  = errors.New("could not determine session path")
+	ErrInvalidPath    = errors.New("invalid D-Bus path")
 )
 
 var DbusTypeMap = map[string]dbusType{
@@ -101,15 +102,16 @@ type Values[T any] struct {
 
 type bus struct {
 	conn    *dbus.Conn
-	busType dbusType
+	logger  *slog.Logger
 	wg      sync.WaitGroup
+	busType dbusType
 }
 
 // newBus sets up D-Bus connections and channels for receiving signals. It
 // creates both a system and session bus connection.
 //
 //nolint:contextcheck
-func newBus(ctx context.Context, busType dbusType) (*bus, error) {
+func newBus(ctx context.Context, busType dbusType, logger *slog.Logger) (*bus, error) {
 	var conn *dbus.Conn
 
 	var err error
@@ -133,6 +135,7 @@ func newBus(ctx context.Context, busType dbusType) (*bus, error) {
 		conn:    conn,
 		busType: busType,
 		wg:      sync.WaitGroup{},
+		logger:  newLogger(busType.String(), logger),
 	}
 
 	go func() {
@@ -179,7 +182,13 @@ func GetProp[P any](ctx context.Context, bus dbusType, path, dest, prop string) 
 		return value, ErrNoBusCtx
 	}
 
-	log.Trace().Str("path", path).Str("dest", dest).Str("property", prop).Msgf("Requesting property (as %T).", value)
+	busObj.logger.Log(ctx, LevelTrace,
+		"Requesting property.",
+		slog.String("path", path),
+		slog.String("dest", dest),
+		slog.String("property", prop),
+	)
+
 	obj := busObj.conn.Object(dest, dbus.ObjectPath(path))
 
 	res, err := obj.GetProperty(prop)
@@ -187,7 +196,12 @@ func GetProp[P any](ctx context.Context, bus dbusType, path, dest, prop string) 
 		return value, fmt.Errorf("%s: unable to retrieve property %s from %s: %w", bus.String(), prop, dest, err)
 	}
 
-	return VariantToValue[P](res), nil
+	value, err = VariantToValue[P](res)
+	if err != nil {
+		return value, fmt.Errorf("%s: unable to retrieve property %s from %s: %w", bus.String(), prop, dest, err)
+	}
+
+	return value, nil
 }
 
 // SetProp sets the specific property to the specified value.
@@ -196,6 +210,14 @@ func SetProp[P any](ctx context.Context, bus dbusType, path, dest, prop string, 
 	if !ok {
 		return ErrNoBusCtx
 	}
+
+	busObj.logger.Log(ctx, LevelTrace,
+		"Setting property.",
+		slog.String("path", path),
+		slog.String("dest", dest),
+		slog.String("property", prop),
+		slog.Any("value", value),
+	)
 
 	v := dbus.MakeVariant(value)
 	obj := busObj.conn.Object(dest, dbus.ObjectPath(path))
@@ -221,6 +243,13 @@ func GetData[D any](ctx context.Context, bus dbusType, path, dest, method string
 	if !ok {
 		return data, ErrNoBusCtx
 	}
+
+	busObj.logger.Log(ctx, LevelTrace,
+		"Getting data.",
+		slog.String("path", path),
+		slog.String("dest", dest),
+		slog.String("method", method),
+	)
 
 	obj := busObj.conn.Object(dest, dbus.ObjectPath(path))
 
@@ -295,12 +324,13 @@ func WatchBus(ctx context.Context, conditions *Watch) (chan Trigger, error) {
 				}
 				// We have a match! Send the signal details back to the client
 				// for further processing.
-				log.Trace().
-					Str("path", conditions.Path).
-					Str("interface", conditions.Interface).
-					Strs("names", conditions.Names).
-					Interface("signal", signal).
-					Msg("Dispatching D-Bus trigger.")
+				bus.logger.Log(ctx, LevelTrace,
+					"Dispatching D-Bus trigger.",
+					slog.String("path", conditions.Path),
+					slog.String("interface", conditions.Interface),
+					slog.String("names", strings.Join(conditions.Names, ",")),
+					slog.Any("signal", signal),
+				)
 				outCh <- Trigger{
 					Signal:  signal.Name,
 					Path:    string(signal.Path),
@@ -406,16 +436,13 @@ func ParseValueChange[T any](valueChanged []any) (*Values[T], error) {
 // VariantToValue converts a dbus.Variant value into the specified Go type. If
 // the value is nil or it cannot be converted, then the return value will be the
 // default value of the specified type.
-func VariantToValue[S any](variant dbus.Variant) S {
+func VariantToValue[S any](variant dbus.Variant) (S, error) {
 	var value S
 
 	err := variant.Store(&value)
 	if err != nil {
-		log.Debug().Err(err).
-			Msgf("Unable to convert dbus variant %v to type %T.", variant, value)
-
-		return value
+		return value, fmt.Errorf("unable to convert D-Bus variant %v to type %T: %w", variant, value, err)
 	}
 
-	return value
+	return value, nil
 }

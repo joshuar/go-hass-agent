@@ -3,6 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
+//nolint:exhaustruct
 //revive:disable:unused-receiver
 package power
 
@@ -12,11 +13,10 @@ import (
 	"path/filepath"
 	"slices"
 
-	"github.com/rs/zerolog/log"
-
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
@@ -89,7 +89,7 @@ func newLaptopEvent(prop string, state bool) *laptopSensor {
 
 type laptopWorker struct{}
 
-//nolint:cyclop,exhaustruct
+//nolint:cyclop,gocognit
 func (w *laptopWorker) Events(ctx context.Context) (chan sensor.Details, error) {
 	sensorCh := make(chan sensor.Details)
 
@@ -114,25 +114,31 @@ func (w *laptopWorker) Events(ctx context.Context) (chan sensor.Details, error) 
 	}
 
 	go func() {
+		logging.FromContext(ctx).Debug("Monitoring laptop properties.")
+
 		defer close(sensorCh)
 
 		for {
 			select {
 			case <-ctx.Done():
-				log.Debug().Msg("Stopped laptop state sensor.")
+				logging.FromContext(ctx).Debug("Unmonitoring laptop properties.")
 
 				return
 			case event := <-triggerCh:
 				props, err := dbusx.ParsePropertiesChanged(event.Content)
 				if err != nil {
-					log.Warn().Err(err).Msg("Did not understand received trigger.")
+					logging.FromContext(ctx).Warn("Received unknown event from D-Bus.", "error", err.Error())
 
 					continue
 				}
 
 				for prop, value := range props.Changed {
 					if slices.Contains(laptopPropList, prop) {
-						sensorCh <- newLaptopEvent(prop, dbusx.VariantToValue[bool](value))
+						if state, err := dbusx.VariantToValue[bool](value); err != nil {
+							logging.FromContext(ctx).Warn("Could not parse property value.", "property", prop, "error", err.Error())
+						} else {
+							sensorCh <- newLaptopEvent(prop, state)
+						}
 					}
 				}
 			}
@@ -143,7 +149,7 @@ func (w *laptopWorker) Events(ctx context.Context) (chan sensor.Details, error) 
 	go func() {
 		sensors, err := w.Sensors(ctx)
 		if err != nil {
-			log.Warn().Err(err).Msg("Could not get initial sensor updates.")
+			logging.FromContext(ctx).Warn("Could not retrieve laptop properties from D-Bus.", "error", err.Error())
 		}
 
 		for _, s := range sensors {
@@ -160,7 +166,7 @@ func (w *laptopWorker) Sensors(ctx context.Context) ([]sensor.Details, error) {
 	for _, prop := range laptopPropList {
 		state, err := dbusx.GetProp[bool](ctx, dbusx.SystemBus, loginBasePath, loginBaseInterface, prop)
 		if err != nil {
-			log.Debug().Err(err).Str("prop", filepath.Ext(prop)).Msg("Could not retrieve laptop property from D-Bus.")
+			logging.FromContext(ctx).Debug("Could not retrieve property", "property", filepath.Ext(prop), "error", err.Error())
 
 			continue
 		}
@@ -173,7 +179,8 @@ func (w *laptopWorker) Sensors(ctx context.Context) ([]sensor.Details, error) {
 
 func NewLaptopWorker() (*linux.SensorWorker, error) {
 	// Don't run this worker if we are not running on a laptop.
-	if device.Chassis() != "laptop" {
+	chassis, _ := device.Chassis() //nolint:errcheck // error is same as any value other than wanted value.
+	if chassis != "laptop" {
 		return nil, fmt.Errorf("will not create laptop sensors: %w", device.ErrUnsupportedHardware)
 	}
 

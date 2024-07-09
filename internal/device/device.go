@@ -10,6 +10,7 @@ package device
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"strings"
 
@@ -17,9 +18,9 @@ import (
 	"github.com/iancoleman/strcase"
 	"github.com/jaypipes/ghw"
 	mqtthass "github.com/joshuar/go-hass-anything/v9/pkg/hass"
-	"github.com/rs/zerolog/log"
 
 	"github.com/joshuar/go-hass-agent/internal/hass"
+	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
@@ -28,6 +29,7 @@ const (
 	unknownModel         = "Unknown Model"
 	unknownDistro        = "Unknown Distro"
 	unknownDistroVersion = "Unknown Version"
+	UnknownValue         = "unknown"
 )
 
 var ErrUnsupportedHardware = errors.New("unsupported hardware")
@@ -38,21 +40,38 @@ var ErrUnsupportedHardware = errors.New("unsupported hardware")
 // such as the hostname.
 //
 //nolint:exhaustruct
-func New(name, version string) *hass.DeviceInfo {
-	hostname, _, _ := strings.Cut(getHostname(), ".")
+func New(ctx context.Context, name, version string) *hass.DeviceInfo {
+	hostname, err := getHostname(true)
+	if err != nil {
+		logging.FromContext(ctx).Warn("Problem occurred.", "error", err.Error())
+	}
+
+	deviceID, err := getDeviceID()
+	if err != nil {
+		logging.FromContext(ctx).Warn("Problem occurred.", "error", err.Error())
+	}
+
 	dev := &hass.DeviceInfo{
 		AppName:            name,
 		AppVersion:         version,
 		AppID:              strcase.ToSnake(name),
-		DeviceID:           getDeviceID(),
+		DeviceID:           deviceID,
 		DeviceName:         hostname,
 		SupportsEncryption: false,
 		AppData: hass.AppData{
 			PushWebsocket: true,
 		},
 	}
-	dev.OsName, dev.OsVersion = getOSID()
-	dev.Model, dev.Manufacturer = getHWProductInfo()
+
+	dev.OsName, dev.OsVersion, err = getOSID()
+	if err != nil {
+		logging.FromContext(ctx).Warn("Problem occurred.", "error", err.Error())
+	}
+
+	dev.Model, dev.Manufacturer, err = getHWProductInfo()
+	if err != nil {
+		logging.FromContext(ctx).Warn("Problem occurred.", "error", err.Error())
+	}
 
 	return dev
 }
@@ -64,12 +83,23 @@ func New(name, version string) *hass.DeviceInfo {
 func MQTTDeviceInfo(ctx context.Context) *mqtthass.Device {
 	prefs, err := preferences.ContextGetPrefs(ctx)
 	if err != nil {
-		log.Warn().Err(err).Msg("Could not retrieve preferences.")
+		logging.FromContext(ctx).Warn("Could not retrieve preferences.", "error", err.Error())
 	}
 
-	hostname, _, _ := strings.Cut(getHostname(), ".")
-	_, version := getOSID()
-	model, manufacturer := getHWProductInfo()
+	hostname, err := getHostname(true)
+	if err != nil {
+		logging.FromContext(ctx).Warn("Problem occurred.", "error", err.Error())
+	}
+
+	_, version, err := getOSID()
+	if err != nil {
+		logging.FromContext(ctx).Warn("Problem occurred.", "error", err.Error())
+	}
+
+	model, manufacturer, err := getHWProductInfo()
+	if err != nil {
+		logging.FromContext(ctx).Warn("Problem occurred.", "error", err.Error())
+	}
 
 	return &mqtthass.Device{
 		Name:         hostname,
@@ -82,54 +112,53 @@ func MQTTDeviceInfo(ctx context.Context) *mqtthass.Device {
 }
 
 // getDeviceID create a new device ID. It will be a randomly generated UUIDv4.
-func getDeviceID() string {
+func getDeviceID() (string, error) {
 	deviceID, err := uuid.NewV4()
 	if err != nil {
-		log.Warn().Err(err).
-			Msg("Could not retrieve a machine ID")
-
-		return "unknown"
+		return UnknownValue, fmt.Errorf("could not retrieve a machine ID: %w", err)
 	}
 
-	return deviceID.String()
+	return deviceID.String(), nil
 }
 
 // getHostname retrieves the hostname of the device running the agent, or
 // localhost if that doesn't work.
-func getHostname() string {
+//
+//revive:disable:flag-parameter
+func getHostname(short bool) (string, error) {
 	hostname, err := os.Hostname()
 	if err != nil {
-		log.Warn().Err(err).Msg("Could not retrieve hostname. Using 'localhost'.")
-
-		return "localhost"
+		return "localhost", fmt.Errorf("could not retrieve hostname: %w", err)
 	}
 
-	return hostname
+	if short {
+		shortHostname, _, _ := strings.Cut(hostname, ".")
+
+		return shortHostname, nil
+	}
+
+	return hostname, nil
 }
 
 // getHWProductInfo retrieves the model and vendor of the machine. If these
 // cannot be retrieved or cannot be found, they will be set to default unknown
 // strings.
-func getHWProductInfo() (model, vendor string) {
+func getHWProductInfo() (model, vendor string, err error) {
 	product, err := ghw.Product(ghw.WithDisableWarnings())
 	if err != nil {
-		log.Warn().Err(err).Msg("Could not retrieve hardware information.")
-
-		return unknownModel, unknownVendor
+		return unknownModel, unknownVendor, fmt.Errorf("could not retrieve hardware information: %w", err)
 	}
 
-	return product.Name, product.Vendor
+	return product.Name, product.Vendor, nil
 }
 
 // Chassis will return the chassis type of the machine, such as "desktop" or
 // "laptop". If this cannot be retrieved, it will return "unknown".
-func Chassis() string {
+func Chassis() (string, error) {
 	chassisInfo, err := ghw.Chassis(ghw.WithDisableWarnings())
 	if err != nil {
-		log.Warn().Err(err).Msg("Could not determine chassis type.")
-
-		return "unknown"
+		return UnknownValue, fmt.Errorf("could not determine chassis type: %w", err)
 	}
 
-	return chassisInfo.Type
+	return chassisInfo.Type, nil
 }

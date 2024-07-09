@@ -3,6 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
+//nolint:exhaustruct
 //revive:disable:unused-receiver
 package cpu
 
@@ -36,7 +37,7 @@ func (w *loadAvgsSensorWorker) Interval() time.Duration { return loadAvgUpdateIn
 
 func (w *loadAvgsSensorWorker) Jitter() time.Duration { return loadAvgUpdateJitter }
 
-//nolint:exhaustive,exhaustruct,mnd
+//nolint:exhaustive,mnd
 func (w *loadAvgsSensorWorker) Sensors(ctx context.Context, _ time.Duration) ([]sensor.Details, error) {
 	sensors := make([]sensor.Details, 0, 3)
 

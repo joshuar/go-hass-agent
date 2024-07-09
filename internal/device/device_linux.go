@@ -6,9 +6,8 @@
 package device
 
 import (
+	"fmt"
 	"syscall"
-
-	"github.com/rs/zerolog/log"
 
 	"github.com/joshuar/go-hass-agent/pkg/linux/whichdistro"
 )
@@ -16,14 +15,13 @@ import (
 // getOSID will retrieve the distribution ID and version ID. These are
 // suitable for usage as part of identifiers and variables. See also
 // GetDistroDetails.
-func getOSID() (id, versionid string) {
+func getOSID() (id, versionid string, err error) {
 	var distroName, distroVersion string
 
 	osReleaseInfo, err := whichdistro.GetOSRelease()
 	if err != nil {
-		log.Warn().Err(err).Msg("Could not read /etc/os-release. Contact your distro vendor to implement this file.")
-
-		return unknownDistro, unknownDistroVersion
+		return unknownDistro, unknownDistroVersion,
+			fmt.Errorf("could not read /etc/os-release: %w", err)
 	}
 
 	if v, ok := osReleaseInfo.GetValue("ID"); !ok {
@@ -38,20 +36,19 @@ func getOSID() (id, versionid string) {
 		distroVersion = v
 	}
 
-	return distroName, distroVersion
+	return distroName, distroVersion, nil
 }
 
 // GetOSDetails will retrieve the distribution name and version. The values
 // are pretty-printed and may not be suitable for usage as identifiers and
 // variables. See also GetDistroID.
-func GetOSDetails() (name, version string) {
+func GetOSDetails() (name, version string, err error) {
 	var distroName, distroVersion string
 
 	osReleaseInfo, err := whichdistro.GetOSRelease()
 	if err != nil {
-		log.Warn().Err(err).Msg("Could not read /etc/os-release. Contact your distro vendor to implement this file.")
-
-		return unknownDistro, unknownDistroVersion
+		return unknownDistro, unknownDistroVersion,
+			fmt.Errorf("could not read /etc/os-release: %w", err)
 	}
 
 	if v, ok := osReleaseInfo.GetValue("NAME"); !ok {
@@ -66,22 +63,20 @@ func GetOSDetails() (name, version string) {
 		distroVersion = v
 	}
 
-	return distroName, distroVersion
+	return distroName, distroVersion, nil
 }
 
 // GetKernelVersion will retrieve the kernel version.
 //
 //nolint:prealloc
-func GetKernelVersion() string {
+func GetKernelVersion() (string, error) {
 	var utsname syscall.Utsname
 
 	var versionBytes []byte
 
 	err := syscall.Uname(&utsname)
 	if err != nil {
-		log.Warn().Err(err).Msg("Could not retrieve kernel version.")
-
-		return "Unknown"
+		return UnknownValue, fmt.Errorf("could not retrieve kernel version: %w", err)
 	}
 
 	for _, v := range utsname.Release {
@@ -92,5 +87,5 @@ func GetKernelVersion() string {
 		versionBytes = append(versionBytes, uint8(v))
 	}
 
-	return string(versionBytes)
+	return string(versionBytes), nil
 }

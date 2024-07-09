@@ -14,10 +14,9 @@ import (
 	mqtthass "github.com/joshuar/go-hass-anything/v9/pkg/hass"
 
 	"github.com/joshuar/go-hass-agent/internal/device"
+	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
-
-	"github.com/rs/zerolog/log"
 )
 
 func NewScreenLockControl(ctx context.Context) *mqtthass.ButtonEntity {
@@ -32,7 +31,7 @@ func NewScreenLockControl(ctx context.Context) *mqtthass.ButtonEntity {
 			WithIcon("mdi:eye-lock").
 			WithCommandCallback(func(_ *paho.Publish) {
 				if dbusScreensaverPath == "" {
-					log.Warn().Msg("Could not determine screensaver method.")
+					logging.FromContext(ctx).Warn("Could not determine D-Bus method to control screensaver.")
 				}
 
 				var err error
@@ -44,7 +43,7 @@ func NewScreenLockControl(ctx context.Context) *mqtthass.ButtonEntity {
 				}
 
 				if err != nil {
-					log.Warn().Err(err).Msg("Could not lock screensaver.")
+					logging.FromContext(ctx).Warn("Could not toggle screensaver.", "error", err.Error())
 				}
 			}))
 }

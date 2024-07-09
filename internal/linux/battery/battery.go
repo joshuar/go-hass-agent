@@ -3,6 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
+//nolint:exhaustruct
 //revive:disable:unused-receiver
 package battery
 
@@ -10,17 +11,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"math"
 	"strings"
 	"sync"
 
 	"github.com/godbus/dbus/v5"
 	"github.com/iancoleman/strcase"
-	"github.com/rs/zerolog/log"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
@@ -64,6 +66,7 @@ var dBusPropToSensor = map[string]linux.SensorTypeValue{
 }
 
 type upowerBattery struct {
+	logger   *slog.Logger
 	id       string
 	model    string
 	dBusPath dbus.ObjectPath
@@ -88,7 +91,7 @@ func (b *upowerBattery) getSensors(ctx context.Context, sensors ...linux.SensorT
 	for _, batterySensor := range sensors {
 		value, err := b.getProp(ctx, batterySensor)
 		if err != nil {
-			log.Warn().Err(err).Str("battery", string(b.dBusPath)).Str("sensor", batterySensor.String()).Msg("Could not retrieve battery sensor.")
+			b.logger.Warn("Could not retrieve battery sensor.", "sensor", batterySensor.String(), "error", err.Error())
 
 			continue
 		}
@@ -107,33 +110,57 @@ func newBattery(ctx context.Context, path dbus.ObjectPath) (*upowerBattery, erro
 		dBusPath: path,
 	}
 
+	var (
+		variant dbus.Variant
+		err     error
+	)
+
 	// Get the battery type. Depending on the value, additional sensors will be added.
-	battType, err := battery.getProp(ctx, linux.SensorBattType)
+	variant, err = battery.getProp(ctx, linux.SensorBattType)
+	if err != nil {
+		return nil, fmt.Errorf("could not determine battery type: %w", err)
+	}
+	// Store the battery type.
+	battery.battType, err = dbusx.VariantToValue[batteryType](variant)
 	if err != nil {
 		return nil, fmt.Errorf("could not determine battery type: %w", err)
 	}
 
-	battery.battType = dbusx.VariantToValue[batteryType](battType)
-
-	// use the native path D-Bus property for the battery id.
-	id, err := battery.getProp(ctx, linux.SensorBattNativePath)
+	// Use the native path D-Bus property for the battery id.
+	variant, err = battery.getProp(ctx, linux.SensorBattNativePath)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve battery path in D-Bus: %w", err)
+	}
+	// Store the battery id/name.
+	battery.id, err = dbusx.VariantToValue[string](variant)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve battery path in D-Bus: %w", err)
 	}
 
-	battery.id = dbusx.VariantToValue[string](id)
+	// Set up a logger for the battery with some battery-specific default
+	// attributes.
+	battery.logger = logging.FromContext(ctx).With(
+		slog.Group("battery_info",
+			slog.String("name", battery.id),
+			slog.String("dbus_path", string(battery.dBusPath)),
+		),
+	)
 
-	model, err := battery.getProp(ctx, linux.SensorBattModel)
+	// Get the battery model.
+	variant, err = battery.getProp(ctx, linux.SensorBattModel)
 	if err != nil {
-		log.Warn().Err(err).Str("battery", string(battery.dBusPath)).Msg("Could not determine battery model.")
+		battery.logger.Warn("Could not determine battery model.")
 	}
-
-	battery.model = dbusx.VariantToValue[string](model)
+	// Store the battery model.
+	battery.model, err = dbusx.VariantToValue[string](variant)
+	if err != nil {
+		battery.logger.Warn("Could not determine battery model.")
+	}
 
 	// At a minimum, monitor the battery type and the charging state.
 	battery.sensors = append(battery.sensors, linux.SensorBattState)
 
-	if dbusx.VariantToValue[uint32](battType) == 2 {
+	if battery.battType == 2 {
 		// Battery has charge percentage, temp and charging rate sensors
 		battery.sensors = append(battery.sensors, linux.SensorBattPercentage, linux.SensorBattTemp, linux.SensorBattEnergyRate)
 	} else {
@@ -146,6 +173,7 @@ func newBattery(ctx context.Context, path dbus.ObjectPath) (*upowerBattery, erro
 
 type upowerBatterySensor struct {
 	attributes any
+	logger     *slog.Logger
 	batteryID  string
 	model      string
 	linux.Sensor
@@ -261,14 +289,30 @@ func (s *upowerBatterySensor) Attributes() map[string]any {
 func (s *upowerBatterySensor) generateAttributes(ctx context.Context, battery *upowerBattery) {
 	switch s.SensorTypeValue {
 	case linux.SensorBattEnergyRate:
-		voltage, err := battery.getProp(ctx, linux.SensorBattVoltage)
+		var (
+			variant         dbus.Variant
+			err             error
+			voltage, energy float64
+		)
+
+		variant, err = battery.getProp(ctx, linux.SensorBattVoltage)
 		if err != nil {
-			log.Warn().Err(err).Str("battery", string(battery.dBusPath)).Msg("Could not retrieve battery voltage.")
+			s.logger.Warn("Could not retrieve battery voltage.", "error", err.Error())
 		}
 
-		energy, err := battery.getProp(ctx, linux.SensorBattEnergy)
+		voltage, err = dbusx.VariantToValue[float64](variant)
 		if err != nil {
-			log.Warn().Err(err).Str("battery", string(battery.dBusPath)).Msg("Could not retrieve battery energy.")
+			s.logger.Warn("Could not retrieve battery voltage.", "error", err.Error())
+		}
+
+		variant, err = battery.getProp(ctx, linux.SensorBattEnergy)
+		if err != nil {
+			s.logger.Warn("Could not retrieve battery energy.", "error", err.Error())
+		}
+
+		energy, err = dbusx.VariantToValue[float64](variant)
+		if err != nil {
+			s.logger.Warn("Could not retrieve battery energy.", "error", err.Error())
 		}
 
 		s.attributes = &struct {
@@ -276,8 +320,8 @@ func (s *upowerBatterySensor) generateAttributes(ctx context.Context, battery *u
 			Voltage    float64 `json:"voltage"`
 			Energy     float64 `json:"energy"`
 		}{
-			Voltage:    dbusx.VariantToValue[float64](voltage),
-			Energy:     dbusx.VariantToValue[float64](energy),
+			Voltage:    voltage,
+			Energy:     energy,
 			DataSource: linux.DataSrcDbus,
 		}
 	case linux.SensorBattPercentage, linux.SensorBattLevel:
@@ -299,6 +343,7 @@ func newBatterySensor(ctx context.Context, battery *upowerBattery, sensorType li
 	batterySensor := &upowerBatterySensor{
 		batteryID: battery.id,
 		model:     battery.model,
+		logger:    battery.logger,
 	}
 	batterySensor.SensorTypeValue = sensorType
 	batterySensor.Value = value.Value()
@@ -316,7 +361,7 @@ type batteryTracker struct {
 func (t *batteryTracker) track(ctx context.Context, batteryPath dbus.ObjectPath) <-chan sensor.Details {
 	battery, err := newBattery(ctx, batteryPath)
 	if err != nil {
-		log.Warn().Err(err).Msg("Cannot monitory battery.")
+		logging.FromContext(ctx).Warn("Cannot monitor battery.", "path", batteryPath, "error", err.Error())
 
 		return nil
 	}
@@ -362,8 +407,6 @@ func getBatteries(ctx context.Context) ([]dbus.ObjectPath, error) {
 //
 //nolint:exhaustruct
 func monitorBattery(ctx context.Context, battery *upowerBattery) <-chan sensor.Details {
-	log.Debug().Str("battery", battery.id).Msg("Monitoring battery.")
-
 	sensorCh := make(chan sensor.Details)
 	// Create a DBus signal match to watch for property changes for this
 	// battery.
@@ -374,26 +417,27 @@ func monitorBattery(ctx context.Context, battery *upowerBattery) <-chan sensor.D
 		Interface: dbusx.PropInterface,
 	})
 	if err != nil {
-		log.Debug().Err(err).
-			Msg("Failed to create battery props D-Bus watch.")
+		battery.logger.Debug("Failed to create D-Bus watch for battery property changes.", "error", err.Error())
 		close(sensorCh)
 
 		return sensorCh
 	}
 
 	go func() {
+		battery.logger.Debug("Monitoring battery.")
+
 		defer close(sensorCh)
 
 		for {
 			select {
 			case <-ctx.Done():
-				log.Debug().Str("battery", battery.id).Msg("Stopped monitoring battery.")
+				battery.logger.Debug("Stopped monitoring battery.")
 
 				return
 			case event := <-events:
 				props, err := dbusx.ParsePropertiesChanged(event.Content)
 				if err != nil {
-					log.Warn().Err(err).Msg("Did not understand received trigger.")
+					battery.logger.Warn("Received a battery property change event that could not be understood.", "error", err.Error())
 
 					continue
 				}
@@ -424,20 +468,21 @@ func monitorBatteryChanges(ctx context.Context, tracker *batteryTracker) <-chan 
 		Path:      upowerDBusPath,
 	})
 	if err != nil {
-		log.Debug().Err(err).
-			Msg("Failed to create battery state D-Bus watch.")
+		logging.FromContext(ctx).Debug("Failed to create D-Bus watch for battery additions/removals.", "error", err.Error())
 		close(sensorCh)
 
 		return sensorCh
 	}
 
 	go func() {
+		logging.FromContext(ctx).Debug("Monitoring for battery additions/removals.")
+
 		defer close(sensorCh)
 
 		for {
 			select {
 			case <-ctx.Done():
-				log.Debug().Msg("Stopped monitoring for batteries.")
+				logging.FromContext(ctx).Debug("Stopped monitoring for batteries.")
 
 				return
 			case event := <-events:
@@ -506,7 +551,7 @@ func (w *worker) Events(ctx context.Context) (chan sensor.Details, error) {
 	// Get a list of all current connected batteries and monitor them.
 	batteries, err := getBatteries(ctx)
 	if err != nil {
-		log.Warn().Err(err).Msg("Could not retrieve battery list. Cannot find any existing batteries.")
+		logging.FromContext(ctx).Warn("Could not retrieve any battery details from D-Bus.", "error", err.Error())
 	}
 
 	for _, path := range batteries {

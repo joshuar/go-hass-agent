@@ -7,78 +7,113 @@ package logging
 
 import (
 	"fmt"
+	"log/slog"
 	_ "net/http/pprof" // #nosec G108
 	"os"
 	"path/filepath"
 
 	"github.com/adrg/xdg"
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
-	"github.com/rs/zerolog/pkgerrors"
+	"github.com/lmittmann/tint"
+	slogmulti "github.com/samber/slog-multi"
 )
 
-//nolint:exhaustruct,reassign
-func init() {
-	zerolog.ErrorStackMarshaler = pkgerrors.MarshalStack
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+const (
+	LevelTrace = slog.Level(-8)
+	LevelFatal = slog.Level(12)
+)
+
+//nolint:misspell
+var LevelNames = map[slog.Leveler]string{
+	LevelTrace: "TRACE",
+	LevelFatal: "FATAL",
 }
 
-// SetLoggingLevel sets an appropriate log level and enables profiling if requested.
-func SetLoggingLevel(level string) {
+var DefaultLogFile = filepath.Join(xdg.ConfigHome, "go-hass-agent.log")
+
+//nolint:exhaustruct
+//revive:disable:flag-parameter
+func New(level string, noLogFile bool) *slog.Logger {
+	// Create an slog consoleOpts object.
+	consoleOpts := &tint.Options{
+		ReplaceAttr: levelReplacer,
+	}
+	fileOpts := &tint.Options{
+		ReplaceAttr: levelReplacer,
+		NoColor:     true,
+	}
+
+	// Set the log level.
 	switch level {
 	case "trace":
-		zerolog.SetGlobalLevel(zerolog.TraceLevel)
-		log.Debug().Msg("Trace logging enabled.")
+		consoleOpts.Level = LevelTrace
+		consoleOpts.AddSource = true
 	case "debug":
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
-		log.Debug().Msg("Debug logging enabled.")
+		consoleOpts.Level = slog.LevelDebug
 	default:
-		zerolog.SetGlobalLevel(zerolog.InfoLevel)
+		consoleOpts.Level = slog.LevelInfo
 	}
+
+	var logFile string
+	if !noLogFile {
+		logFile = DefaultLogFile
+	}
+	// Set the slog handler
+	logHandler := slogmulti.Fanout(
+		tint.NewHandler(os.Stdout, consoleOpts),
+	)
+	// Unless no log file was requested, set up file logging.
+	if logFile != "" {
+		logFile, err := openLogFile(logFile)
+		if err != nil {
+			slog.Warn("unable to open log file", "file", logFile, "error", err)
+		} else {
+			logHandler = slogmulti.Fanout(
+				tint.NewHandler(os.Stdout, consoleOpts),
+				tint.NewHandler(logFile, fileOpts),
+			)
+		}
+	}
+
+	logger := slog.New(logHandler)
+
+	slog.SetDefault(logger)
+
+	return logger
 }
 
-// SetLogFile will attempt to create and then write logging to a file. If it
-// cannot do this, logging will only be available on stdout.
-//
-//nolint:exhaustruct,mnd
-func SetLogFile(filename string) error {
-	logFile := filepath.Join(xdg.StateHome, filename)
+func levelReplacer(_ []string, attr slog.Attr) slog.Attr {
+	if attr.Key == slog.LevelKey {
+		level, ok := attr.Value.Any().(slog.Level)
+		if !ok {
+			level = slog.LevelInfo
+		}
 
-	if err := checkPath(xdg.StateHome); err != nil {
-		return fmt.Errorf("unable to create directory for log file: %w", err)
+		levelLabel, exists := LevelNames[level]
+		if !exists {
+			levelLabel = level.String()
+		}
+
+		attr.Value = slog.StringValue(levelLabel)
 	}
 
-	logWriter, err := os.OpenFile(logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	return attr
+}
+
+//nolint:mnd
+func openLogFile(logFile string) (*os.File, error) {
+	logFileHandle, err := os.OpenFile(logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
-		return fmt.Errorf("unable to open log file: %w", err)
+		return nil, fmt.Errorf("unable to open log file: %w", err)
 	}
 
-	consoleWriter := zerolog.ConsoleWriter{Out: os.Stdout}
-	multiWriter := zerolog.MultiLevelWriter(consoleWriter, logWriter)
-	log.Logger = log.Output(multiWriter)
-
-	return nil
+	return logFileHandle, nil
 }
 
 // Reset will remove the log file.
 func Reset() error {
-	logFile := filepath.Join(xdg.StateHome, "go-hass-agent.log")
-
-	err := os.Remove(logFile)
+	err := os.Remove(DefaultLogFile)
 	if err != nil {
 		return fmt.Errorf("could not remove log file: %w", err)
-	}
-
-	return nil
-}
-
-func checkPath(path string) error {
-	_, err := os.Stat(path)
-	if os.IsNotExist(err) {
-		err := os.MkdirAll(path, os.ModePerm)
-		if err != nil {
-			return fmt.Errorf("unable to create path: %w", err)
-		}
 	}
 
 	return nil

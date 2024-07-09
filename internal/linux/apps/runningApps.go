@@ -29,7 +29,8 @@ func (r *runningAppsSensor) Attributes() map[string]any {
 
 	r.mu.Lock()
 	for appName, state := range r.appList {
-		if dbusx.VariantToValue[uint32](state) > 0 {
+		appState, err := dbusx.VariantToValue[uint32](state)
+		if err != nil && appState > 0 {
 			apps = append(apps, appName)
 		}
 	}
