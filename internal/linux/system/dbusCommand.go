@@ -31,12 +31,14 @@ type dbusCommandMsg struct {
 }
 
 func NewDBusCommandSubscription(ctx context.Context) *mqttapi.Subscription {
+	logger := logging.FromContext(ctx).With(slog.String("controller", "dbus_command"))
+
 	return &mqttapi.Subscription{
 		Callback: func(p *paho.Publish) {
 			var dbusMsg dbusCommandMsg
 
 			if err := json.Unmarshal(p.Payload, &dbusMsg); err != nil {
-				logging.FromContext(ctx).Warn("Could not unmarshal D-Bus MQTT message.", "error", err.Error())
+				logger.Warn("Could not unmarshal D-Bus MQTT message.", "error", err.Error())
 
 				return
 			}
@@ -46,7 +48,7 @@ func NewDBusCommandSubscription(ctx context.Context) *mqttapi.Subscription {
 
 				dbusMsg.Path, err = dbusx.GetSessionPath(ctx)
 				if err != nil {
-					logging.FromContext(ctx).Warn("Could not determine session path.", "error", err.Error())
+					logger.Warn("Could not determine session path.", "error", err.Error())
 
 					return
 				}
@@ -54,12 +56,11 @@ func NewDBusCommandSubscription(ctx context.Context) *mqttapi.Subscription {
 
 			dbusType, ok := dbusx.DbusTypeMap[dbusMsg.Bus]
 			if !ok {
-				logging.FromContext(ctx).Warn("Unsupported D-Bus type.")
+				logger.Warn("Unsupported D-Bus type.")
 
 				return
 			}
-
-			logging.FromContext(ctx).With(
+			logger.With(
 				slog.String("bus", dbusMsg.Bus),
 				slog.String("destination", dbusMsg.Destination),
 				slog.String("path", dbusMsg.Path),
@@ -68,7 +69,7 @@ func NewDBusCommandSubscription(ctx context.Context) *mqttapi.Subscription {
 
 			err := dbusx.Call(ctx, dbusType, dbusMsg.Path, dbusMsg.Destination, dbusMsg.Method, dbusMsg.Args...)
 			if err != nil {
-				logging.FromContext(ctx).With(
+				logger.With(
 					slog.String("bus", dbusMsg.Bus),
 					slog.String("destination", dbusMsg.Destination),
 					slog.String("path", dbusMsg.Path),

@@ -25,6 +25,8 @@ const (
 
 	loadAvgUpdateInterval = time.Minute
 	loadAvgUpdateJitter   = 5 * time.Second
+
+	loadAvgsWorkerID = "load_averages_sensors"
 )
 
 type loadavgSensor struct {
@@ -71,11 +73,10 @@ func (w *loadAvgsSensorWorker) Sensors(ctx context.Context, _ time.Duration) ([]
 	return sensors, nil
 }
 
-func NewLoadAvgWorker() (*linux.SensorWorker, error) {
+func NewLoadAvgWorker(_ context.Context) (*linux.SensorWorker, error) {
 	return &linux.SensorWorker{
-			WorkerName: "Load Average Sensors",
-			WorkerDesc: "The canonical 1min, 5min and 15min load averages.",
-			Value:      &loadAvgsSensorWorker{},
+			Value:    &loadAvgsSensorWorker{},
+			WorkerID: loadAvgsWorkerID,
 		},
 		nil
 }

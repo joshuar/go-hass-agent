@@ -10,6 +10,7 @@ package system
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
@@ -22,6 +23,8 @@ import (
 const (
 	hwMonInterval = time.Minute
 	hwMonJitter   = 5 * time.Second
+
+	hwmonWorkerID = "hwmon_sensors"
 )
 
 type hwSensor struct {
@@ -105,18 +108,20 @@ func newHWSensor(details *hwmon.Sensor) *hwSensor {
 	return newSensor
 }
 
-type hwMonWorker struct{}
+type hwMonWorker struct {
+	logger *slog.Logger
+}
 
 func (w *hwMonWorker) Interval() time.Duration { return hwMonInterval }
 
 func (w *hwMonWorker) Jitter() time.Duration { return hwMonJitter }
 
-func (w *hwMonWorker) Sensors(ctx context.Context, _ time.Duration) ([]sensor.Details, error) {
+func (w *hwMonWorker) Sensors(_ context.Context, _ time.Duration) ([]sensor.Details, error) {
 	hwmonSensors, err := hwmon.GetAllSensors()
 	sensors := make([]sensor.Details, 0, len(hwmonSensors))
 
 	if err != nil && len(hwmonSensors) > 0 {
-		logging.FromContext(ctx).Warn("Errors fetching some chip/sensor values from hwmon API.", "error", err.Error())
+		w.logger.Warn("Errors fetching some chip/sensor values from hwmon API.", "error", err.Error())
 	}
 
 	if err != nil && len(hwmonSensors) == 0 {
@@ -130,11 +135,12 @@ func (w *hwMonWorker) Sensors(ctx context.Context, _ time.Duration) ([]sensor.De
 	return sensors, nil
 }
 
-func NewHWMonWorker() (*linux.SensorWorker, error) {
+func NewHWMonWorker(ctx context.Context) (*linux.SensorWorker, error) {
 	return &linux.SensorWorker{
-			WorkerName: "HWMon Sensors",
-			WorkerDesc: "Sensors from the hwmon kernel interface (chip temps, fan speeds, etc.)",
-			Value:      &hwMonWorker{},
+			Value: &hwMonWorker{
+				logger: logging.FromContext(ctx).With(slog.String("worker", hwmonWorkerID)),
+			},
+			WorkerID: hwmonWorkerID,
 		},
 		nil
 }

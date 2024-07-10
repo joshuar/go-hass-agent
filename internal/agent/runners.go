@@ -42,11 +42,7 @@ type WorkerController interface {
 // Worker represents an object that is responsible for controlling the
 // publishing of one or more sensors.
 type Worker interface {
-	// Name is the collective name of the sensors this worker controls.
-	Name() string
-	// Description is a longer text of what particular sensors are gathered and
-	// where from.
-	Description() string
+	ID() string
 	// Sensors returns an array of the current value of all sensors, or a
 	// non-nil error if this is not possible.
 	Sensors(ctx context.Context) ([]sensor.Details, error)
@@ -76,7 +72,7 @@ type MQTTWorker interface {
 // for this device.
 func runWorkers(ctx context.Context, trk SensorTracker, reg sensor.Registry) {
 	// Create sensor workers for OS.
-	osWorkers, err := createSensorWorkers()
+	osWorkers, err := createSensorWorkers(ctx)
 	if err != nil {
 		logging.FromContext(ctx).Warn("Some sensor workers could not be created.", "errors", err.Error())
 	}
@@ -86,7 +82,7 @@ func runWorkers(ctx context.Context, trk SensorTracker, reg sensor.Registry) {
 		logging.FromContext(ctx).Warn("Some sensor workers could not be started", "errors", err.Error())
 	}
 	// Create sensor workers for device.
-	deviceWorkers := device.CreateSensorWorkers()
+	deviceWorkers := device.CreateSensorWorkers(ctx)
 	// Start sensor workers for device.
 	deviceUpdates, err := deviceWorkers.StartAll(ctx)
 	if err != nil {

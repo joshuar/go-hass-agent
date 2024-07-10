@@ -10,6 +10,7 @@ package power
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/godbus/dbus/v5"
 
@@ -24,6 +25,8 @@ const (
 	powerProfilesDest      = "net.hadess.PowerProfiles"
 	powerProfilesInterface = "org.freedesktop.Upower.PowerProfiles"
 	activeProfileProp      = "ActiveProfile"
+
+	powerProfileWorkerID = "power_profile_sensor"
 )
 
 type powerSensor struct {
@@ -49,7 +52,9 @@ func newPowerSensor(sensorType linux.SensorTypeValue, sensorValue dbus.Variant) 
 	return newSensor
 }
 
-type profileWorker struct{}
+type profileWorker struct {
+	logger *slog.Logger
+}
 
 //nolint:exhaustruct
 func (w *profileWorker) Events(ctx context.Context) (chan sensor.Details, error) {
@@ -82,20 +87,16 @@ func (w *profileWorker) Events(ctx context.Context) (chan sensor.Details, error)
 
 	// Watch for power profile changes.
 	go func() {
-		logging.FromContext(ctx).Debug("Monitoring power profile.")
-
 		defer close(sensorCh)
 
 		for {
 			select {
 			case <-ctx.Done():
-				logging.FromContext(ctx).Debug("Unmonitoring power profile.")
-
 				return
 			case event := <-triggerCh:
 				props, err := dbusx.ParsePropertiesChanged(event.Content)
 				if err != nil {
-					logging.FromContext(ctx).Warn("Received unknown event from D-Bus.", "error", err.Error())
+					w.logger.Warn("Received unknown event from D-Bus.", "error", err.Error())
 
 					continue
 				}
@@ -123,11 +124,12 @@ func (w *profileWorker) Sensors(ctx context.Context) ([]sensor.Details, error) {
 	return []sensor.Details{newPowerSensor(linux.SensorPowerProfile, profile)}, nil
 }
 
-func NewProfileWorker() (*linux.SensorWorker, error) {
+func NewProfileWorker(ctx context.Context) (*linux.SensorWorker, error) {
 	return &linux.SensorWorker{
-			WorkerName: "Power Profile Sensor",
-			WorkerDesc: "Sensor to track the current power profile.",
-			Value:      &profileWorker{},
+			Value: &profileWorker{
+				logger: logging.FromContext(ctx).With(slog.String("worker", powerProfileWorkerID)),
+			},
+			WorkerID: powerProfileWorkerID,
 		},
 		nil
 }

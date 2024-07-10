@@ -9,6 +9,7 @@ package system
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
@@ -16,16 +17,22 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/logging"
 )
 
-type infoWorker struct{}
+const (
+	infoWorkerID = "system_info_sensors"
+)
+
+type infoWorker struct {
+	logger *slog.Logger
+}
 
 //nolint:exhaustruct
-func (w *infoWorker) Sensors(ctx context.Context) ([]sensor.Details, error) {
+func (w *infoWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
 	var sensors []sensor.Details
 
 	// Get distribution name and version.
 	distro, distroVersion, err := device.GetOSDetails()
 	if err != nil {
-		logging.FromContext(ctx).Warn("Could not retrieve distribution details.", "error", err.Error())
+		w.logger.Warn("Could not retrieve distribution details.", "error", err.Error())
 	} else {
 		sensors = append(sensors,
 			&linux.Sensor{
@@ -48,7 +55,7 @@ func (w *infoWorker) Sensors(ctx context.Context) ([]sensor.Details, error) {
 	// Get kernel version.
 	kernelVersion, err := device.GetKernelVersion()
 	if err != nil {
-		logging.FromContext(ctx).Warn("Could not retrieve kernel version.", "error", err.Error())
+		w.logger.Warn("Could not retrieve kernel version.", "error", err.Error())
 	} else {
 		sensors = append(sensors,
 			&linux.Sensor{
@@ -64,11 +71,12 @@ func (w *infoWorker) Sensors(ctx context.Context) ([]sensor.Details, error) {
 	return sensors, nil
 }
 
-func NewInfoWorker() (*linux.SensorWorker, error) {
+func NewInfoWorker(ctx context.Context) (*linux.SensorWorker, error) {
 	return &linux.SensorWorker{
-			WorkerName: "System Info Sensors",
-			WorkerDesc: "Sensors for kernel version, and Distribution name and version.",
-			Value:      &infoWorker{},
+			Value: &infoWorker{
+				logger: logging.FromContext(ctx).With(slog.String("worker", infoWorkerID)),
+			},
+			WorkerID: infoWorkerID,
 		},
 		nil
 }

@@ -11,6 +11,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -34,6 +35,8 @@ const (
 	accentColorProp         = "accent-color"
 
 	reqTimeout = 15 * time.Second
+
+	workerID = "desktop_settings_sensors"
 )
 
 var ErrUnknownProp = errors.New("unknown desktop property")
@@ -42,7 +45,58 @@ type desktopSettingSensor struct {
 	linux.Sensor
 }
 
-type worker struct{}
+type worker struct {
+	logger *slog.Logger
+}
+
+//nolint:exhaustruct
+func (w *worker) newAccentColorSensor(ctx context.Context, accent string) *desktopSettingSensor {
+	var err error
+
+	if accent == "" {
+		accent, err = getProp(ctx, accentColorProp)
+		if err != nil {
+			w.logger.Warn("Invalid accent colour.", "error", err.Error())
+		}
+	}
+
+	newSensor := &desktopSettingSensor{}
+	newSensor.IsDiagnostic = true
+	newSensor.IconString = "mdi:palette"
+	newSensor.SensorSrc = linux.DataSrcDbus
+	newSensor.SensorTypeValue = linux.SensorAccentColor
+	newSensor.Value = accent
+
+	return newSensor
+}
+
+func (w *worker) newColorSchemeSensor(ctx context.Context, scheme string) *desktopSettingSensor {
+	var err error
+
+	if scheme == "" {
+		scheme, err = getProp(ctx, colorSchemeProp)
+		if err != nil {
+			w.logger.Warn("Invalid colour scheme.", "error", err.Error())
+		}
+	}
+
+	newSensor := &desktopSettingSensor{}
+	newSensor.IsDiagnostic = true
+	newSensor.SensorSrc = linux.DataSrcDbus
+	newSensor.SensorTypeValue = linux.SensorColorScheme
+	newSensor.Value = scheme
+
+	switch scheme {
+	case "dark":
+		newSensor.IconString = "mdi:weather-night"
+	case "light":
+		newSensor.IconString = "mdi:weather-sunny"
+	default:
+		newSensor.IconString = "mdi:theme-light-dark"
+	}
+
+	return newSensor
+}
 
 //nolint:cyclop
 func (w *worker) Events(ctx context.Context) (chan sensor.Details, error) {
@@ -74,16 +128,16 @@ func (w *worker) Events(ctx context.Context) (chan sensor.Details, error) {
 
 				prop, value, err := extractProp(event.Content)
 				if err != nil {
-					logging.FromContext(ctx).Warn("Error processing received signal.", "error", err.Error())
+					w.logger.Warn("Error processing received signal.", "error", err.Error())
 				}
 
 				switch prop {
 				case colorSchemeProp:
 					s := parseColorScheme(value)
-					sensorCh <- newColorSchemeSensor(ctx, s)
+					sensorCh <- w.newColorSchemeSensor(ctx, s)
 				case accentColorProp:
 					s := parseAccentColor(value)
-					sensorCh <- newAccentColorSensor(ctx, s)
+					sensorCh <- w.newAccentColorSensor(ctx, s)
 				}
 			}
 		}
@@ -92,7 +146,7 @@ func (w *worker) Events(ctx context.Context) (chan sensor.Details, error) {
 	go func() {
 		sensors, err := w.Sensors(ctx)
 		if err != nil {
-			logging.FromContext(ctx).Warn("Could not get desktop settings from D-Bus.", "error", err.Error())
+			w.logger.Warn("Could not get desktop settings from D-Bus.", "error", err.Error())
 		}
 
 		for _, s := range sensors {
@@ -111,13 +165,13 @@ func (w *worker) Sensors(ctx context.Context) ([]sensor.Details, error) {
 	sensors := make([]sensor.Details, 0, 2)
 
 	sensors = append(sensors,
-		newAccentColorSensor(reqCtx, ""),
-		newColorSchemeSensor(reqCtx, ""))
+		w.newAccentColorSensor(reqCtx, ""),
+		w.newColorSchemeSensor(reqCtx, ""))
 
 	return sensors, nil
 }
 
-func NewDesktopWorker() (*linux.SensorWorker, error) {
+func NewDesktopWorker(ctx context.Context) (*linux.SensorWorker, error) {
 	// If we cannot find a portal interface, we cannot monitor desktop settings.
 	_, err := linux.FindPortal()
 	if err != nil {
@@ -125,9 +179,10 @@ func NewDesktopWorker() (*linux.SensorWorker, error) {
 	}
 
 	return &linux.SensorWorker{
-			WorkerName: "Desktop Preferences Sensors",
-			WorkerDesc: "The desktop theme type (light/dark) and accent color.",
-			Value:      &worker{},
+			Value: &worker{
+				logger: logging.FromContext(ctx).With(slog.String("worker", workerID)),
+			},
+			WorkerID: workerID,
 		},
 		nil
 }
@@ -168,55 +223,6 @@ func parseAccentColor(value dbus.Variant) string {
 	}
 
 	return fmt.Sprintf("#%02x%02x%02x", rgb[0], rgb[1], rgb[2])
-}
-
-//nolint:exhaustruct
-func newAccentColorSensor(ctx context.Context, accent string) *desktopSettingSensor {
-	var err error
-
-	if accent == "" {
-		accent, err = getProp(ctx, accentColorProp)
-		if err != nil {
-			logging.FromContext(ctx).Warn("Invalid accent colour.", "error", err.Error())
-		}
-	}
-
-	newSensor := &desktopSettingSensor{}
-	newSensor.IsDiagnostic = true
-	newSensor.IconString = "mdi:palette"
-	newSensor.SensorSrc = linux.DataSrcDbus
-	newSensor.SensorTypeValue = linux.SensorAccentColor
-	newSensor.Value = accent
-
-	return newSensor
-}
-
-func newColorSchemeSensor(ctx context.Context, scheme string) *desktopSettingSensor {
-	var err error
-
-	if scheme == "" {
-		scheme, err = getProp(ctx, colorSchemeProp)
-		if err != nil {
-			logging.FromContext(ctx).Warn("Invalid colour scheme.", "error", err.Error())
-		}
-	}
-
-	newSensor := &desktopSettingSensor{}
-	newSensor.IsDiagnostic = true
-	newSensor.SensorSrc = linux.DataSrcDbus
-	newSensor.SensorTypeValue = linux.SensorColorScheme
-	newSensor.Value = scheme
-
-	switch scheme {
-	case "dark":
-		newSensor.IconString = "mdi:weather-night"
-	case "light":
-		newSensor.IconString = "mdi:weather-sunny"
-	default:
-		newSensor.IconString = "mdi:theme-light-dark"
-	}
-
-	return newSensor
 }
 
 func getProp(ctx context.Context, prop string) (string, error) {

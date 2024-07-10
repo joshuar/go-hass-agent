@@ -14,6 +14,7 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/logging"
 )
 
 var ErrUnknownWorker = errors.New("unknown sensor worker type")
@@ -41,20 +42,13 @@ type oneShotType interface {
 // SensorWorker represents the functionality to track a group of one or more
 // related sensors.
 type SensorWorker struct {
-	Value      any
-	Logger     *slog.Logger
-	WorkerName string
-	WorkerDesc string
+	Value    any
+	WorkerID string
 }
 
 // Name is the name of the group of sensors managed by this SensorWorker.
-func (w *SensorWorker) Name() string {
-	return w.WorkerName
-}
-
-// Description is an explanation of what the sensors measure.
-func (w *SensorWorker) Description() string {
-	return w.WorkerDesc
+func (w *SensorWorker) ID() string {
+	return w.WorkerID
 }
 
 // Sensors returns the current values of all sensors managed by this
@@ -97,15 +91,23 @@ func (w *SensorWorker) Sensors(ctx context.Context) ([]sensor.Details, error) {
 func (w *SensorWorker) Updates(ctx context.Context) (<-chan sensor.Details, error) {
 	outCh := make(chan sensor.Details)
 
+	var workerLogAttrs []any
+
+	workerLogAttrs = append(workerLogAttrs, slog.String("id", w.WorkerID))
+
 	switch worker := w.Value.(type) {
 	case pollingType:
+		workerLogAttrs = append(workerLogAttrs, slog.String("worker_type", "polling"))
+
 		// pollingType: create an updater function to run the worker's Sensors
 		// function and pass this to the PollSensors helper, using the interval
 		// and jitter the worker has requested.
+		logging.FromContext(ctx).Debug("Starting worker.", workerLogAttrs...)
+
 		updater := func(d time.Duration) {
 			sensors, err := worker.Sensors(ctx, d)
 			if err != nil {
-				w.Logger.Warn("Unable to retrieve sensors.")
+				logging.FromContext(ctx).Warn("Unable to retrieve sensors.", workerLogAttrs...)
 
 				return
 			}
@@ -119,6 +121,8 @@ func (w *SensorWorker) Updates(ctx context.Context) (<-chan sensor.Details, erro
 			helpers.PollSensors(ctx, updater, worker.Interval(), worker.Jitter())
 		}()
 	case eventType:
+		workerLogAttrs = append(workerLogAttrs, slog.String("worker_type", "event"))
+
 		// eventType: read sensors from the worker Events function and pass
 		// these on.
 		go func() {
@@ -126,16 +130,21 @@ func (w *SensorWorker) Updates(ctx context.Context) (<-chan sensor.Details, erro
 
 			eventCh, err := worker.Events(ctx)
 			if err != nil {
-				w.Logger.Debug("Could not start event worker.", "error", err.Error())
+				workerLogAttrs = append(workerLogAttrs, slog.Any("error", err))
+				logging.FromContext(ctx).Debug("Could not start worker.", workerLogAttrs...)
 
 				return
 			}
+
+			logging.FromContext(ctx).Debug("Starting worker.", workerLogAttrs...)
 
 			for s := range eventCh {
 				outCh <- s
 			}
 		}()
 	case oneShotType:
+		workerLogAttrs = append(workerLogAttrs, slog.String("worker_type", "one-shot"))
+
 		// oneShot: run the worker Sensors function to gather the sensors, pass
 		// these through the channel, then close it.
 		go func() {
@@ -143,10 +152,13 @@ func (w *SensorWorker) Updates(ctx context.Context) (<-chan sensor.Details, erro
 
 			sensors, err := worker.Sensors(ctx)
 			if err != nil {
-				w.Logger.Debug("Unable to retrieve sensors.", "error", err.Error())
+				workerLogAttrs = append(workerLogAttrs, slog.Any("error", err))
+				logging.FromContext(ctx).Debug("Unable to retrieve sensors.", workerLogAttrs...)
 
 				return
 			}
+
+			logging.FromContext(ctx).Debug("Starting worker.", workerLogAttrs...)
 
 			for _, s := range sensors {
 				outCh <- s
@@ -155,7 +167,7 @@ func (w *SensorWorker) Updates(ctx context.Context) (<-chan sensor.Details, erro
 	default:
 		// default: we should not get here, so if we do, return an error
 		// indicating we don't know what type of worker this is.
-		return nil, fmt.Errorf("could not track updates for %s: %w", w.Name(), ErrUnknownWorker)
+		return nil, fmt.Errorf("could not track updates for %s: %w", w.WorkerID, ErrUnknownWorker)
 	}
 
 	return outCh, nil

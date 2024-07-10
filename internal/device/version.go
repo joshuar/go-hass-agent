@@ -39,11 +39,7 @@ func (v *version) Attributes() map[string]any { return nil }
 
 type versionWorker struct{}
 
-func (w *versionWorker) Name() string { return "Go Hass Agent Version Sensor" }
-
-func (w *versionWorker) Description() string {
-	return "Sensor displays the current Go Hass Agent version."
-}
+func (w *versionWorker) ID() string { return "agent_version_sensor" }
 
 func (w *versionWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
 	return []sensor.Details{new(version)}, nil

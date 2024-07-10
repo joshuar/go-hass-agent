@@ -27,11 +27,11 @@ func (w *WorkerControl) ActiveWorkers() []string {
 	activeWorkers := make([]string, 0, 2)
 
 	if w.externalIPControl != nil {
-		activeWorkers = append(activeWorkers, w.externalIP.Name())
+		activeWorkers = append(activeWorkers, w.externalIP.ID())
 	}
 
 	if w.versionControl != nil {
-		activeWorkers = append(activeWorkers, w.version.Name())
+		activeWorkers = append(activeWorkers, w.version.ID())
 	}
 
 	return activeWorkers
@@ -42,11 +42,11 @@ func (w *WorkerControl) InactiveWorkers() []string {
 	inactiveWorkers := make([]string, 0, 2)
 
 	if w.externalIPControl == nil {
-		inactiveWorkers = append(inactiveWorkers, w.externalIP.Name())
+		inactiveWorkers = append(inactiveWorkers, w.externalIP.ID())
 	}
 
 	if w.versionControl == nil {
-		inactiveWorkers = append(inactiveWorkers, w.version.Name())
+		inactiveWorkers = append(inactiveWorkers, w.version.ID())
 	}
 
 	return inactiveWorkers
@@ -56,7 +56,7 @@ func (w *WorkerControl) Start(ctx context.Context, name string) (<-chan sensor.D
 	workerCtx, workerCancelFunc := context.WithCancel(ctx)
 
 	switch name {
-	case w.externalIP.Name():
+	case w.externalIP.ID():
 		workerCh, err := w.externalIP.Updates(workerCtx)
 		if err != nil {
 			return nil, fmt.Errorf("could not start worker: %w", err)
@@ -65,7 +65,7 @@ func (w *WorkerControl) Start(ctx context.Context, name string) (<-chan sensor.D
 		w.externalIPControl = workerCancelFunc
 
 		return workerCh, nil
-	case w.version.Name():
+	case w.version.ID():
 		workerCh, err := w.version.Updates(workerCtx)
 		if err != nil {
 			return nil, fmt.Errorf("could not start worker: %w", err)
@@ -81,9 +81,9 @@ func (w *WorkerControl) Start(ctx context.Context, name string) (<-chan sensor.D
 
 func (w *WorkerControl) Stop(name string) error {
 	switch name {
-	case w.externalIP.Name():
+	case w.externalIP.ID():
 		w.externalIPControl()
-	case w.version.Name():
+	case w.version.ID():
 		w.versionControl()
 	}
 
@@ -122,9 +122,9 @@ func (w *WorkerControl) StopAll() error {
 }
 
 //nolint:exhaustruct
-func CreateSensorWorkers() *WorkerControl {
+func CreateSensorWorkers(ctx context.Context) *WorkerControl {
 	return &WorkerControl{
-		externalIP: newExternalIPUpdaterWorker(),
+		externalIP: newExternalIPUpdaterWorker(ctx),
 		version:    newVersionWorker(),
 	}
 }

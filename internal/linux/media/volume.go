@@ -43,7 +43,7 @@ func VolumeControl(ctx context.Context, msgCh chan *mqttapi.Msg) (*mqtthass.Numb
 	audioDev := &audioDevice{
 		pulseAudio: client,
 		msgCh:      msgCh,
-		logger:     logging.FromContext(ctx).With(slog.Group("pulseaudio")),
+		logger:     logging.FromContext(ctx).With(slog.String("controller", "volume")),
 	}
 
 	audioDev.logger.Debug("Connected.")

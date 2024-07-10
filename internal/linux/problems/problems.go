@@ -10,6 +10,7 @@ package problems
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strconv"
 	"time"
 
@@ -23,6 +24,8 @@ import (
 const (
 	problemInterval = 15 * time.Minute
 	problemJitter   = time.Minute
+
+	problemsWorkerID = "abrt_problems_sensor"
 )
 
 const (
@@ -74,7 +77,9 @@ func parseProblem(details map[string]string) map[string]any {
 	return parsed
 }
 
-type worker struct{}
+type worker struct {
+	logger *slog.Logger
+}
 
 func (w *worker) Interval() time.Duration { return problemInterval }
 
@@ -101,7 +106,7 @@ func (w *worker) Sensors(ctx context.Context, _ time.Duration) ([]sensor.Details
 			dBusProblemIntr,
 			dBusProblemIntr+".GetInfo", problem, []string{"time", "count", "package", "reason"})
 		if problemDetails == nil || err != nil {
-			logging.FromContext(ctx).Debug("No problems retrieved from D-Bus.")
+			w.logger.Debug("No problems retrieved from D-Bus.")
 		} else {
 			problems.list[problem] = parseProblem(problemDetails)
 		}
@@ -116,11 +121,12 @@ func (w *worker) Sensors(ctx context.Context, _ time.Duration) ([]sensor.Details
 	return nil, nil
 }
 
-func NewProblemsWorker() (*linux.SensorWorker, error) {
+func NewProblemsWorker(ctx context.Context) (*linux.SensorWorker, error) {
 	return &linux.SensorWorker{
-			WorkerName: "ABRT Problems Sensor",
-			WorkerDesc: "Count of problems detected by ABRT (with details in sensor attributes).",
-			Value:      &worker{},
+			Value: &worker{
+				logger: logging.FromContext(ctx).With(slog.String("worker", problemsWorkerID)),
+			},
+			WorkerID: problemsWorkerID,
 		},
 		nil
 }

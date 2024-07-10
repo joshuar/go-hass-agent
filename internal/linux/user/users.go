@@ -10,6 +10,7 @@ package user
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
@@ -26,6 +27,8 @@ const (
 	sessionAddedSignal   = "SessionNew"
 	sessionRemovedSignal = "SessionRemoved"
 	listSessionsMethod   = managerInterface + ".ListSessions"
+
+	usersWorkerID = "users_sensors"
 )
 
 type usersSensor struct {
@@ -75,6 +78,7 @@ func newUsersSensor() *usersSensor {
 
 type worker struct {
 	sensor *usersSensor
+	logger *slog.Logger
 }
 
 //nolint:exhaustruct
@@ -96,7 +100,7 @@ func (w *worker) Events(ctx context.Context) (chan sensor.Details, error) {
 	sendUpdate := func() {
 		err := w.sensor.updateUsers(ctx)
 		if err != nil {
-			logging.FromContext(ctx).Debug("Update failed", "error", err.Error())
+			w.logger.Debug("Update failed", "error", err.Error())
 
 			return
 		}
@@ -104,15 +108,11 @@ func (w *worker) Events(ctx context.Context) (chan sensor.Details, error) {
 	}
 
 	go func() {
-		logging.FromContext(ctx).Debug("Monitoring for user sessions.")
-
 		defer close(sensorCh)
 
 		for {
 			select {
 			case <-ctx.Done():
-				logging.FromContext(ctx).Debug("Stopped monitoring for user sessions.")
-
 				return
 			case event := <-triggerCh:
 				if !strings.Contains(event.Signal, sessionAddedSignal) && !strings.Contains(event.Signal, sessionRemovedSignal) {
@@ -136,13 +136,13 @@ func (w *worker) Sensors(ctx context.Context) ([]sensor.Details, error) {
 	return []sensor.Details{w.sensor}, err
 }
 
-func NewUserWorker() (*linux.SensorWorker, error) {
+func NewUserWorker(ctx context.Context) (*linux.SensorWorker, error) {
 	return &linux.SensorWorker{
-			WorkerName: "User count sensor",
-			WorkerDesc: "Sensors for number of logged in users.",
 			Value: &worker{
 				sensor: newUsersSensor(),
+				logger: logging.FromContext(ctx).With(slog.String("worker", usersWorkerID)),
 			},
+			WorkerID: usersWorkerID,
 		},
 		nil
 }

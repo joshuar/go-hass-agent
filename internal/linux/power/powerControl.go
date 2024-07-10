@@ -7,6 +7,7 @@ package power
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/eclipse/paho.golang/paho"
 	mqtthass "github.com/joshuar/go-hass-anything/v9/pkg/hass"
@@ -74,10 +75,11 @@ var commands = map[string]commandConfig{
 func NewPowerControl(ctx context.Context) []*mqtthass.ButtonEntity {
 	entities := make([]*mqtthass.ButtonEntity, 0, len(commands))
 	deviceInfo := device.MQTTDeviceInfo(ctx)
+	logger := logging.FromContext(ctx).With(slog.String("controller", "power"))
 
 	sessionPath, err := dbusx.GetSessionPath(ctx)
 	if err != nil {
-		logging.FromContext(ctx).Warn("Cannot create power controls.", "error", err.Error())
+		logger.Warn("Cannot create power controls.", "error", err.Error())
 
 		return nil
 	}
@@ -88,14 +90,14 @@ func NewPowerControl(ctx context.Context) []*mqtthass.ButtonEntity {
 			callback = func(_ *paho.Publish) {
 				err := dbusx.Call(ctx, dbusx.SystemBus, sessionPath, loginBaseInterface, cmdInfo.method)
 				if err != nil {
-					logging.FromContext(ctx).Warn("Could not perform power control action.", "action", cmdInfo.name, "error", err.Error())
+					logger.Warn("Could not perform power control action.", "action", cmdInfo.name, "error", err.Error())
 				}
 			}
 		} else {
 			callback = func(_ *paho.Publish) {
 				err := dbusx.Call(ctx, dbusx.SystemBus, cmdInfo.path, loginBaseInterface, cmdInfo.method, true)
 				if err != nil {
-					logging.FromContext(ctx).Warn("Could not power off session.", "error", err.Error())
+					logger.Warn("Could not power off session.", "error", err.Error())
 				}
 			}
 		}

@@ -7,6 +7,7 @@ package power
 
 import (
 	"context"
+	"log/slog"
 	"os"
 	"strings"
 
@@ -23,6 +24,7 @@ func NewScreenLockControl(ctx context.Context) *mqtthass.ButtonEntity {
 	dbusScreensaverDest, dbusScreensaverPath, dbusScreensaverMsg := getDesktopEnvScreensaverConfig()
 	dbusScreensaverLockMethod := dbusScreensaverDest + ".Lock"
 	deviceInfo := device.MQTTDeviceInfo(ctx)
+	logger := logging.FromContext(ctx).With(slog.String("controller", "screen_lock"))
 
 	return mqtthass.AsButton(
 		mqtthass.NewEntity(preferences.AppName, "Lock Screensaver", deviceInfo.Name+"_lock_screensaver").
@@ -31,7 +33,7 @@ func NewScreenLockControl(ctx context.Context) *mqtthass.ButtonEntity {
 			WithIcon("mdi:eye-lock").
 			WithCommandCallback(func(_ *paho.Publish) {
 				if dbusScreensaverPath == "" {
-					logging.FromContext(ctx).Warn("Could not determine D-Bus method to control screensaver.")
+					logger.Warn("Could not determine D-Bus method to control screensaver.")
 				}
 
 				var err error
@@ -43,7 +45,7 @@ func NewScreenLockControl(ctx context.Context) *mqtthass.ButtonEntity {
 				}
 
 				if err != nil {
-					logging.FromContext(ctx).Warn("Could not toggle screensaver.", "error", err.Error())
+					logger.Warn("Could not toggle screensaver.", "error", err.Error())
 				}
 			}))
 }

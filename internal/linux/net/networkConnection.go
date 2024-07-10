@@ -45,6 +45,8 @@ const (
 	ipv4ConfigProp         = "Ip4Config"
 	ipv6ConfigProp         = "Ip6Config"
 	activeConnectionsProp  = "ActivatingConnection"
+
+	netConnWorkerID = "network_connection_sensors"
 )
 
 type connState uint32
@@ -260,7 +262,7 @@ func (c *connection) monitorAddresses(ctx context.Context) chan address {
 }
 
 //nolint:exhaustruct,mnd
-func newConnection(ctx context.Context, path dbus.ObjectPath) *connection {
+func newConnection(ctx context.Context, logger *slog.Logger, path dbus.ObjectPath) *connection {
 	newConnection := &connection{
 		path: path,
 		Sensor: linux.Sensor{
@@ -277,42 +279,42 @@ func newConnection(ctx context.Context, path dbus.ObjectPath) *connection {
 
 	newConnection.name, err = dbusx.GetProp[string](ctx, dbusx.SystemBus, string(path), dBusNMObj, dbusNMActiveConnIntr+".Id")
 	if err != nil {
-		logging.FromContext(ctx).Warn("Could not retrieve connection name.", "error", err.Error())
+		logger.Warn("Could not retrieve connection name.", "error", err.Error())
 	}
 
 	newConnection.state, err = dbusx.GetProp[connState](ctx, dbusx.SystemBus, string(path), dBusNMObj, dbusNMActiveConnIntr+".State")
 	if err != nil {
-		logging.FromContext(ctx).Warn("Could not retrieve connection state.", "error", err.Error())
+		logger.Warn("Could not retrieve connection state.", "error", err.Error())
 	}
 
 	newConnection.attrs.ConnectionType, err = dbusx.GetProp[string](ctx,
 		dbusx.SystemBus, string(path), dBusNMObj, dbusNMActiveConnIntr+".Type")
 	if err != nil {
-		logging.FromContext(ctx).Warn("Could not retrieve connection type.", "error", err.Error())
+		logger.Warn("Could not retrieve connection type.", "error", err.Error())
 	}
 
 	ip4ConfigPath, err := dbusx.GetProp[dbus.ObjectPath](ctx, dbusx.SystemBus, string(path), dBusNMObj, dbusNMActiveConnIntr+".Ip4Config")
 	if err != nil {
-		logging.FromContext(ctx).Warn("Could not retrieve IPv4 address for connection.", "error", err.Error())
+		logger.Warn("Could not retrieve IPv4 address for connection.", "error", err.Error())
 	}
 
 	newConnection.attrs.Ipv4, newConnection.attrs.IPv4Mask, err = getAddr(ctx, 4, ip4ConfigPath)
 	if err != nil {
-		logging.FromContext(ctx).Warn("Could not retrieve IPv4 address for connection.", "error", err.Error())
+		logger.Warn("Could not retrieve IPv4 address for connection.", "error", err.Error())
 	}
 
 	ip6ConfigPath, err := dbusx.GetProp[dbus.ObjectPath](ctx, dbusx.SystemBus, string(path), dBusNMObj, dbusNMActiveConnIntr+".Ip6Config")
 	if err != nil {
-		logging.FromContext(ctx).Warn("Could not retrieve IPv6 address for connection.", "error", err.Error())
+		logger.Warn("Could not retrieve IPv6 address for connection.", "error", err.Error())
 	}
 
 	newConnection.attrs.Ipv6, newConnection.attrs.IPv6Mask, err = getAddr(ctx, 6, ip6ConfigPath)
 	if err != nil {
-		logging.FromContext(ctx).Warn("Could not retrieve IPv6 address for connection.", "error", err.Error())
+		logger.Warn("Could not retrieve IPv6 address for connection.", "error", err.Error())
 	}
 
 	// Set up a logger for this connection with its attributes.
-	newConnection.logger = logging.FromContext(ctx).
+	newConnection.logger = logger.
 		With(slog.Group("connection_info"),
 			slog.String("name", newConnection.name),
 			slog.String("connection_type", newConnection.attrs.ConnectionType),
@@ -324,31 +326,25 @@ func newConnection(ctx context.Context, path dbus.ObjectPath) *connection {
 
 //nolint:cyclop
 //revive:disable:unnecessary-stmt
-func monitorConnection(ctx context.Context, connPath dbus.ObjectPath) <-chan sensor.Details {
+func monitorConnection(ctx context.Context, logger *slog.Logger, connPath dbus.ObjectPath) <-chan sensor.Details {
 	sensorCh := make(chan sensor.Details)
 	updateCh := make(chan any)
 
 	// create a new connection sensor
-	conn := newConnection(ctx, connPath)
+	conn := newConnection(ctx, logger, connPath)
 
 	// process updates and handle cancellation
 	connCtx, connCancel := context.WithCancel(ctx)
 
 	go func() {
-		conn.logger.Debug("Monitoring connection.")
-
 		defer close(sensorCh)
 		defer close(updateCh)
 
 		for {
 			select {
 			case <-connCtx.Done():
-				conn.logger.Debug("Connection deactivated.")
-
 				return
 			case <-ctx.Done():
-				conn.logger.Debug("Stopped monitoring connection.")
-
 				return
 			case u := <-updateCh:
 				conn.mu.Lock()
@@ -438,15 +434,13 @@ func getAddr(ctx context.Context, ver int, path dbus.ObjectPath) (addr string, m
 	return address, prefix, nil
 }
 
-func getActiveConnections(ctx context.Context) []dbus.ObjectPath {
+func getActiveConnections(ctx context.Context) ([]dbus.ObjectPath, error) {
 	connectionPaths, err := dbusx.GetProp[[]dbus.ObjectPath](ctx, dbusx.SystemBus, dBusNMPath, dBusNMObj, dBusNMObj+".ActiveConnections")
 	if err != nil {
-		logging.FromContext(ctx).Debug("Could not retrieve any network connections from D-Bus.", "error", err.Error())
-
-		return nil
+		return nil, fmt.Errorf("could not retrieve any network connections from D-Bus: %w", err)
 	}
 
-	return connectionPaths
+	return connectionPaths, nil
 }
 
 type address struct {
@@ -456,8 +450,9 @@ type address struct {
 }
 
 type connectionsWorker struct {
-	list []dbus.ObjectPath
-	mu   sync.Mutex
+	logger *slog.Logger
+	list   []dbus.ObjectPath
+	mu     sync.Mutex
 }
 
 func (w *connectionsWorker) track(path dbus.ObjectPath) {
@@ -485,13 +480,20 @@ func (w *connectionsWorker) Sensors(_ context.Context) ([]sensor.Details, error)
 	return nil, linux.ErrUnimplemented
 }
 
-//nolint:exhaustruct,mnd
+//nolint:cyclop,exhaustruct,mnd
 func (w *connectionsWorker) Events(ctx context.Context) (chan sensor.Details, error) {
 	sensorCh := make(chan sensor.Details)
-	w.list = getActiveConnections(ctx)
+
+	connectionlist, err := getActiveConnections(ctx)
+	if err != nil {
+		w.logger.Warn("Failed to get any active connections", "error", err.Error())
+	}
+
+	w.list = connectionlist
+
 	handleConn := func(path dbus.ObjectPath) {
 		go func() {
-			for s := range monitorConnection(ctx, path) {
+			for s := range monitorConnection(ctx, w.logger, path) {
 				sensorCh <- s
 			}
 
@@ -512,14 +514,14 @@ func (w *connectionsWorker) Events(ctx context.Context) (chan sensor.Details, er
 	}
 
 	go func() {
-		logging.FromContext(ctx).Debug("Monitoring for network connection changes.")
+		w.logger.Debug("Monitoring for network connection changes.")
 
 		defer close(sensorCh)
 
 		for {
 			select {
 			case <-ctx.Done():
-				logging.FromContext(ctx).Debug("Stopped monitoring for network connection changes.")
+				w.logger.Debug("Stopped monitoring for network connection changes.")
 
 				return
 			case event := <-events:
@@ -549,11 +551,12 @@ func (w *connectionsWorker) Events(ctx context.Context) (chan sensor.Details, er
 }
 
 //nolint:exhaustruct
-func NewConnectionWorker() (*linux.SensorWorker, error) {
+func NewConnectionWorker(ctx context.Context) (*linux.SensorWorker, error) {
 	return &linux.SensorWorker{
-			WorkerName: "Network Connection Sensors",
-			WorkerDesc: "Sensors to track network connection states and other connection specific properties.",
-			Value:      &connectionsWorker{},
+			Value: &connectionsWorker{
+				logger: logging.FromContext(ctx).With(slog.String("worker", netConnWorkerID)),
+			},
+			WorkerID: netConnWorkerID,
 		},
 		nil
 }

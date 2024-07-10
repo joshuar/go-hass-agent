@@ -10,6 +10,7 @@ package disk
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"math"
 	"strings"
 	"time"
@@ -25,6 +26,8 @@ import (
 const (
 	usageUpdateInterval = time.Minute
 	usageUpdateJitter   = 10 * time.Second
+
+	usageWorkerID = "disk_usage_sensors"
 )
 
 type diskUsageSensor struct {
@@ -66,7 +69,9 @@ func (d *diskUsageSensor) Attributes() map[string]any {
 	return attributes
 }
 
-type usageWorker struct{}
+type usageWorker struct {
+	logger *slog.Logger
+}
 
 func (w *usageWorker) Interval() time.Duration { return usageUpdateInterval }
 
@@ -83,7 +88,7 @@ func (w *usageWorker) Sensors(ctx context.Context, _ time.Duration) ([]sensor.De
 	for _, partition := range partitions {
 		usage, err := disk.UsageWithContext(ctx, partition.Mountpoint)
 		if err != nil {
-			logging.FromContext(ctx).Warn("Failed to get usage info for mountpount", "mountpoint", partition.Mountpoint, "error", err.Error())
+			w.logger.Warn("Failed to get usage info for mountpount", "mountpoint", partition.Mountpoint, "error", err.Error())
 
 			continue
 		}
@@ -94,11 +99,12 @@ func (w *usageWorker) Sensors(ctx context.Context, _ time.Duration) ([]sensor.De
 	return sensors, nil
 }
 
-func NewUsageWorker() (*linux.SensorWorker, error) {
+func NewUsageWorker(ctx context.Context) (*linux.SensorWorker, error) {
 	return &linux.SensorWorker{
-			WorkerName: "Disk Usage Sensors",
-			WorkerDesc: "Disk Space Usage.",
-			Value:      &usageWorker{},
+			Value: &usageWorker{
+				logger: logging.FromContext(ctx).With(slog.String("worker", usageWorkerID)),
+			},
+			WorkerID: usageWorkerID,
 		},
 		nil
 }

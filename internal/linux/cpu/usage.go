@@ -22,6 +22,8 @@ import (
 const (
 	usageUpdateInterval = 10 * time.Second
 	usageUpdateJitter   = time.Second
+
+	usageWorkerID = "cpu_usage_sensors"
 )
 
 type cpuUsageSensor struct {
@@ -52,11 +54,10 @@ func (w *usageWorker) Sensors(ctx context.Context, d time.Duration) ([]sensor.De
 	return []sensor.Details{newSensor}, nil
 }
 
-func NewUsageWorker() (*linux.SensorWorker, error) {
+func NewUsageWorker(_ context.Context) (*linux.SensorWorker, error) {
 	return &linux.SensorWorker{
-			WorkerName: "CPU Usage Sensor",
-			WorkerDesc: "System CPU usage as a percentage.",
-			Value:      &usageWorker{},
+			Value:    &usageWorker{},
+			WorkerID: usageWorkerID,
 		},
 		nil
 }
