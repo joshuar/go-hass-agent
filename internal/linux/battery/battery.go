@@ -36,6 +36,8 @@ const (
 	deviceRemovedSignal = "DeviceRemoved"
 
 	batteryIcon = "mdi:battery"
+
+	workerID = "battery_sensors"
 )
 
 var ErrInvalidBattery = errors.New("invalid battery")
@@ -105,7 +107,7 @@ func (b *upowerBattery) getSensors(ctx context.Context, sensors ...linux.SensorT
 // be treated as sensors in Home Assistant.
 //
 //nolint:exhaustruct,mnd
-func newBattery(ctx context.Context, path dbus.ObjectPath) (*upowerBattery, error) {
+func newBattery(ctx context.Context, logger *slog.Logger, path dbus.ObjectPath) (*upowerBattery, error) {
 	battery := &upowerBattery{
 		dBusPath: path,
 	}
@@ -139,7 +141,7 @@ func newBattery(ctx context.Context, path dbus.ObjectPath) (*upowerBattery, erro
 
 	// Set up a logger for the battery with some battery-specific default
 	// attributes.
-	battery.logger = logging.FromContext(ctx).With(
+	battery.logger = logger.With(
 		slog.Group("battery_info",
 			slog.String("name", battery.id),
 			slog.String("dbus_path", string(battery.dBusPath)),
@@ -355,13 +357,14 @@ func newBatterySensor(ctx context.Context, battery *upowerBattery, sensorType li
 
 type batteryTracker struct {
 	batteryList map[dbus.ObjectPath]context.CancelFunc
+	logger      *slog.Logger
 	mu          sync.Mutex
 }
 
 func (t *batteryTracker) track(ctx context.Context, batteryPath dbus.ObjectPath) <-chan sensor.Details {
-	battery, err := newBattery(ctx, batteryPath)
+	battery, err := newBattery(ctx, t.logger, batteryPath)
 	if err != nil {
-		logging.FromContext(ctx).Warn("Cannot monitor battery.", "path", batteryPath, "error", err.Error())
+		t.logger.Warn("Cannot monitor battery.", "path", batteryPath, "error", err.Error())
 
 		return nil
 	}
@@ -385,9 +388,10 @@ func (t *batteryTracker) remove(batteryPath dbus.ObjectPath) {
 }
 
 //nolint:exhaustruct
-func newBatteryTracker() *batteryTracker {
+func newBatteryTracker(logger *slog.Logger) *batteryTracker {
 	return &batteryTracker{
 		batteryList: make(map[dbus.ObjectPath]context.CancelFunc),
+		logger:      logger.With(slog.String("source", "battery_tracker")),
 	}
 }
 
@@ -468,21 +472,21 @@ func monitorBatteryChanges(ctx context.Context, tracker *batteryTracker) <-chan 
 		Path:      upowerDBusPath,
 	})
 	if err != nil {
-		logging.FromContext(ctx).Debug("Failed to create D-Bus watch for battery additions/removals.", "error", err.Error())
+		tracker.logger.Debug("Failed to create D-Bus watch for battery additions/removals.", "error", err.Error())
 		close(sensorCh)
 
 		return sensorCh
 	}
 
 	go func() {
-		logging.FromContext(ctx).Debug("Monitoring for battery additions/removals.")
+		tracker.logger.Debug("Monitoring for battery additions/removals.")
 
 		defer close(sensorCh)
 
 		for {
 			select {
 			case <-ctx.Done():
-				logging.FromContext(ctx).Debug("Stopped monitoring for batteries.")
+				tracker.logger.Debug("Stopped monitoring for batteries.")
 
 				return
 			case event := <-events:
@@ -535,23 +539,25 @@ func batteryChargeIcon(v any) string {
 	return batteryIcon + "-plus"
 }
 
-type worker struct{}
+type batterySensorWorker struct {
+	logger *slog.Logger
+}
 
 // ?: implement initial battery sensor retrieval.
-func (w *worker) Sensors(_ context.Context) ([]sensor.Details, error) {
+func (w *batterySensorWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
 	return nil, linux.ErrUnimplemented
 }
 
 //nolint:prealloc
-func (w *worker) Events(ctx context.Context) (chan sensor.Details, error) {
-	batteryTracker := newBatteryTracker()
+func (w *batterySensorWorker) Events(ctx context.Context) (chan sensor.Details, error) {
+	batteryTracker := newBatteryTracker(w.logger)
 
 	var sensorCh []<-chan sensor.Details
 
 	// Get a list of all current connected batteries and monitor them.
 	batteries, err := getBatteries(ctx)
 	if err != nil {
-		logging.FromContext(ctx).Warn("Could not retrieve any battery details from D-Bus.", "error", err.Error())
+		w.logger.Warn("Could not retrieve any battery details from D-Bus.", "error", err.Error())
 	}
 
 	for _, path := range batteries {
@@ -564,11 +570,12 @@ func (w *worker) Events(ctx context.Context) (chan sensor.Details, error) {
 	return sensor.MergeSensorCh(ctx, sensorCh...), nil
 }
 
-func NewBatteryWorker() (*linux.SensorWorker, error) {
+func NewBatteryWorker(ctx context.Context) (*linux.SensorWorker, error) {
 	return &linux.SensorWorker{
-			WorkerName: "Battery Sensors",
-			WorkerDesc: "Sensors to track connected battery states.",
-			Value:      &worker{},
+			Value: &batterySensorWorker{
+				logger: logging.FromContext(ctx).With(slog.String("worker", workerID)),
+			},
+			WorkerID: workerID,
 		},
 		nil
 }

@@ -10,11 +10,16 @@ package power
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
+)
+
+const (
+	screenLockWorkerID = "screen_lock_sensor"
 )
 
 type screenlockSensor struct {
@@ -46,7 +51,9 @@ func newScreenlockEvent(value bool) *screenlockSensor {
 	}
 }
 
-type screenLockWorker struct{}
+type screenLockWorker struct {
+	logger *slog.Logger
+}
 
 //nolint:cyclop,exhaustruct
 func (w *screenLockWorker) Events(ctx context.Context) (chan sensor.Details, error) {
@@ -70,29 +77,25 @@ func (w *screenLockWorker) Events(ctx context.Context) (chan sensor.Details, err
 	}
 
 	go func() {
-		logging.FromContext(ctx).Debug("Monitoring screen lock.")
-
 		defer close(sensorCh)
 
 		for {
 			select {
 			case <-ctx.Done():
-				logging.FromContext(ctx).Debug("Unmonitoring screen lock.")
-
 				return
 			case event := <-triggerCh:
 				switch event.Signal {
 				case dbusx.PropChangedSignal:
 					props, err := dbusx.ParsePropertiesChanged(event.Content)
 					if err != nil {
-						logging.FromContext(ctx).Warn("Received unknown event from D-Bus.", "error", err.Error())
+						w.logger.Warn("Received unknown event from D-Bus.", "error", err.Error())
 
 						continue
 					}
 
 					if lock, lockChanged := props.Changed[sessionLockedProp]; lockChanged {
 						if state, err := dbusx.VariantToValue[bool](lock); err != nil {
-							logging.FromContext(ctx).Warn("Could not screen lock state.", "error", err.Error())
+							w.logger.Warn("Could not screen lock state.", "error", err.Error())
 						} else {
 							sensorCh <- newScreenlockEvent(state)
 						}
@@ -114,11 +117,12 @@ func (w *screenLockWorker) Sensors(_ context.Context) ([]sensor.Details, error) 
 	return nil, linux.ErrUnimplemented
 }
 
-func NewScreenLockWorker() (*linux.SensorWorker, error) {
+func NewScreenLockWorker(ctx context.Context) (*linux.SensorWorker, error) {
 	return &linux.SensorWorker{
-			WorkerName: "Screen Lock Sensor",
-			WorkerDesc: "Sensor to track whether the screen is currently locked.",
-			Value:      &screenLockWorker{},
+			Value: &screenLockWorker{
+				logger: logging.FromContext(ctx).With(slog.String("worker", screenLockWorkerID)),
+			},
+			WorkerID: screenLockWorkerID,
 		},
 		nil
 }

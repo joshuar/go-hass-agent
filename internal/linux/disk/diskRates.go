@@ -28,6 +28,8 @@ const (
 
 	ratesUpdateInterval = 5 * time.Second
 	ratesUpdateJitter   = time.Second
+
+	ratesWorkerID = "disk_rates_sensors"
 )
 
 type diskIOSensor struct {
@@ -235,7 +237,7 @@ func (w *ioWorker) Sensors(_ context.Context, duration time.Duration) ([]sensor.
 }
 
 //nolint:exhaustruct
-func NewIOWorker() (*linux.SensorWorker, error) {
+func NewIOWorker(_ context.Context) (*linux.SensorWorker, error) {
 	worker := &ioWorker{
 		devices: make(map[diskstats.Device]*sensors),
 	}
@@ -250,9 +252,8 @@ func NewIOWorker() (*linux.SensorWorker, error) {
 	}
 
 	return &linux.SensorWorker{
-			WorkerName: "Disk IO Sensors",
-			WorkerDesc: "Disk IO Counts and Rates.",
-			Value:      worker,
+			Value:    worker,
+			WorkerID: ratesWorkerID,
 		},
 		nil
 }

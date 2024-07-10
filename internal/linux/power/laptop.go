@@ -10,6 +10,7 @@ package power
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"path/filepath"
 	"slices"
 
@@ -24,6 +25,8 @@ const (
 	dockedProp        = managerInterface + ".Docked"
 	lidClosedProp     = managerInterface + ".LidClosed"
 	externalPowerProp = managerInterface + ".OnExternalPower"
+
+	laptopWorkerID = "laptop_sensors"
 )
 
 var laptopPropList = []string{dockedProp, lidClosedProp, externalPowerProp}
@@ -87,7 +90,9 @@ func newLaptopEvent(prop string, state bool) *laptopSensor {
 	return sensorEvent
 }
 
-type laptopWorker struct{}
+type laptopWorker struct {
+	logger *slog.Logger
+}
 
 //nolint:cyclop,gocognit
 func (w *laptopWorker) Events(ctx context.Context) (chan sensor.Details, error) {
@@ -114,20 +119,16 @@ func (w *laptopWorker) Events(ctx context.Context) (chan sensor.Details, error) 
 	}
 
 	go func() {
-		logging.FromContext(ctx).Debug("Monitoring laptop properties.")
-
 		defer close(sensorCh)
 
 		for {
 			select {
 			case <-ctx.Done():
-				logging.FromContext(ctx).Debug("Unmonitoring laptop properties.")
-
 				return
 			case event := <-triggerCh:
 				props, err := dbusx.ParsePropertiesChanged(event.Content)
 				if err != nil {
-					logging.FromContext(ctx).Warn("Received unknown event from D-Bus.", "error", err.Error())
+					w.logger.Warn("Received unknown event from D-Bus.", "error", err.Error())
 
 					continue
 				}
@@ -135,7 +136,7 @@ func (w *laptopWorker) Events(ctx context.Context) (chan sensor.Details, error) 
 				for prop, value := range props.Changed {
 					if slices.Contains(laptopPropList, prop) {
 						if state, err := dbusx.VariantToValue[bool](value); err != nil {
-							logging.FromContext(ctx).Warn("Could not parse property value.", "property", prop, "error", err.Error())
+							w.logger.Warn("Could not parse property value.", "property", prop, "error", err.Error())
 						} else {
 							sensorCh <- newLaptopEvent(prop, state)
 						}
@@ -149,7 +150,7 @@ func (w *laptopWorker) Events(ctx context.Context) (chan sensor.Details, error) 
 	go func() {
 		sensors, err := w.Sensors(ctx)
 		if err != nil {
-			logging.FromContext(ctx).Warn("Could not retrieve laptop properties from D-Bus.", "error", err.Error())
+			w.logger.Warn("Could not retrieve laptop properties from D-Bus.", "error", err.Error())
 		}
 
 		for _, s := range sensors {
@@ -166,7 +167,7 @@ func (w *laptopWorker) Sensors(ctx context.Context) ([]sensor.Details, error) {
 	for _, prop := range laptopPropList {
 		state, err := dbusx.GetProp[bool](ctx, dbusx.SystemBus, loginBasePath, loginBaseInterface, prop)
 		if err != nil {
-			logging.FromContext(ctx).Debug("Could not retrieve property", "property", filepath.Ext(prop), "error", err.Error())
+			w.logger.Debug("Could not retrieve property", "property", filepath.Ext(prop), "error", err.Error())
 
 			continue
 		}
@@ -177,7 +178,7 @@ func (w *laptopWorker) Sensors(ctx context.Context) ([]sensor.Details, error) {
 	return sensors, nil
 }
 
-func NewLaptopWorker() (*linux.SensorWorker, error) {
+func NewLaptopWorker(ctx context.Context) (*linux.SensorWorker, error) {
 	// Don't run this worker if we are not running on a laptop.
 	chassis, _ := device.Chassis() //nolint:errcheck // error is same as any value other than wanted value.
 	if chassis != "laptop" {
@@ -185,9 +186,10 @@ func NewLaptopWorker() (*linux.SensorWorker, error) {
 	}
 
 	return &linux.SensorWorker{
-			WorkerName: "Laptop State Sensors",
-			WorkerDesc: "Sensors for laptop lid, dock and external power states.",
-			Value:      &laptopWorker{},
+			Value: &laptopWorker{
+				logger: logging.FromContext(ctx).With(slog.String("worker", laptopWorkerID)),
+			},
+			WorkerID: laptopWorkerID,
 		},
 		nil
 }

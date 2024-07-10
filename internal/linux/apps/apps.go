@@ -10,6 +10,7 @@ package apps
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/godbus/dbus/v5"
 
@@ -24,11 +25,14 @@ const (
 	appStateDBusPath      = "/org/freedesktop/portal/desktop"
 	appStateDBusInterface = "org.freedesktop.impl.portal.Background"
 	appStateDBusEvent     = "org.freedesktop.impl.portal.Background.RunningApplicationsChanged"
+
+	workerID = "app_sensors"
 )
 
 type worker struct {
 	activeApp   *activeAppSensor
 	runningApps *runningAppsSensor
+	logger      *slog.Logger
 	portalDest  string
 }
 
@@ -50,7 +54,7 @@ func (w *worker) Events(ctx context.Context) (chan sensor.Details, error) {
 	sendSensors := func(ctx context.Context, sensorCh chan sensor.Details) {
 		appSensors, err := w.Sensors(ctx)
 		if err != nil {
-			logging.FromContext(ctx).Warn("Failed to update app sensors.", "error", err.Error())
+			w.logger.Warn("Failed to update app sensors.", "error", err.Error())
 
 			return
 		}
@@ -67,8 +71,6 @@ func (w *worker) Events(ctx context.Context) (chan sensor.Details, error) {
 		for {
 			select {
 			case <-ctx.Done():
-				logging.FromContext(ctx).Debug("Stopped app sensors.")
-
 				return
 			case <-triggerCh:
 				sendSensors(ctx, sensorCh)
@@ -105,7 +107,7 @@ func (w *worker) Sensors(ctx context.Context) ([]sensor.Details, error) {
 	return sensors, nil
 }
 
-func NewAppWorker() (*linux.SensorWorker, error) {
+func NewAppWorker(ctx context.Context) (*linux.SensorWorker, error) {
 	// If we cannot find a portal interface, we cannot monitor the active app.
 	portalDest, err := linux.FindPortal()
 	if err != nil {
@@ -113,13 +115,13 @@ func NewAppWorker() (*linux.SensorWorker, error) {
 	}
 
 	return &linux.SensorWorker{
-			WorkerName: "App Sensors",
-			WorkerDesc: "Sensors to track the active app and total number of running apps.",
 			Value: &worker{
 				portalDest:  portalDest,
 				activeApp:   newActiveAppSensor(),
 				runningApps: newRunningAppsSensor(),
+				logger:      logging.FromContext(ctx).With(slog.String("worker", workerID)),
 			},
+			WorkerID: workerID,
 		},
 		nil
 }

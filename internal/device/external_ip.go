@@ -27,6 +27,8 @@ const (
 	ExternalIPUpdateInterval       = 5 * time.Minute
 	ExternalIPUpdateJitter         = 10 * time.Second
 	ExternalIPUpdateRequestTimeout = 15 * time.Second
+
+	externalIPWorkerID = "external_ip_sensor" //nolint:gosec // false positive
 )
 
 var ipLookupHosts = map[string]map[int]string{
@@ -95,61 +97,21 @@ func (a *address) Attributes() map[string]any {
 	return attributes
 }
 
-func lookupExternalIPs(ctx context.Context, client *resty.Client, ver int) (*address, error) {
-	for host, addr := range ipLookupHosts {
-		logging.FromContext(ctx).
-			LogAttrs(ctx, logging.LevelTrace,
-				"Fetching external IP.",
-				slog.String("host", host),
-				slog.String("method", "GET"),
-				slog.String("url", addr[ver]),
-				slog.Time("sent_at", time.Now()))
-
-		resp, err := client.R().Get(addr[ver])
-		if err != nil || resp.IsError() {
-			return nil, fmt.Errorf("could not retrieve external v%d address with %s: %w", ver, addr[ver], err)
-		}
-
-		logging.FromContext(ctx).
-			LogAttrs(ctx, logging.LevelTrace,
-				"Received external IP.",
-				slog.Int("statuscode", resp.StatusCode()),
-				slog.String("status", resp.Status()),
-				slog.String("protocol", resp.Proto()),
-				slog.Duration("time", resp.Time()),
-				slog.String("body", string(resp.Body())))
-
-		cleanResp := strings.TrimSpace(string(resp.Body()))
-
-		a := net.ParseIP(cleanResp)
-		if a == nil {
-			return nil, ErrInvalidIP
-		}
-
-		return &address{addr: a}, nil
-	}
-
-	return nil, ErrNoLookupHosts
-}
-
 type externalIPWorker struct {
 	client *resty.Client
+	logger *slog.Logger
 }
 
-func (w *externalIPWorker) Name() string { return "External IP Address Sensor" }
-
-func (w *externalIPWorker) Description() string {
-	return "Sensor for the external IP addresses of the device."
-}
+func (w *externalIPWorker) ID() string { return externalIPWorkerID }
 
 //nolint:mnd
 func (w *externalIPWorker) Sensors(ctx context.Context) ([]sensor.Details, error) {
 	sensors := make([]sensor.Details, 0, 2)
 
 	for _, ver := range []int{4, 6} {
-		ipAddr, err := lookupExternalIPs(ctx, w.client, ver)
+		ipAddr, err := w.lookupExternalIPs(ctx, w.client, ver)
 		if err != nil || ipAddr == nil {
-			logging.FromContext(ctx).Log(ctx, logging.LevelTrace, "Looking up external IP failed.", "error", err.Error())
+			w.logger.Log(ctx, logging.LevelTrace, "Looking up external IP failed.", "error", err.Error())
 
 			continue
 		}
@@ -166,7 +128,7 @@ func (w *externalIPWorker) Updates(ctx context.Context) (<-chan sensor.Details, 
 	updater := func(_ time.Duration) {
 		sensors, err := w.Sensors(ctx)
 		if err != nil {
-			logging.FromContext(ctx).Debug("Could not get external IP.", "error", err.Error())
+			w.logger.Debug("Could not get external IP.", "error", err.Error())
 		}
 
 		for _, s := range sensors {
@@ -181,8 +143,44 @@ func (w *externalIPWorker) Updates(ctx context.Context) (<-chan sensor.Details, 
 	return sensorCh, nil
 }
 
-func newExternalIPUpdaterWorker() *externalIPWorker {
+func (w *externalIPWorker) lookupExternalIPs(ctx context.Context, client *resty.Client, ver int) (*address, error) {
+	for host, addr := range ipLookupHosts {
+		w.logger.LogAttrs(ctx, logging.LevelTrace,
+			"Fetching external IP.",
+			slog.String("host", host),
+			slog.String("method", "GET"),
+			slog.String("url", addr[ver]),
+			slog.Time("sent_at", time.Now()))
+
+		resp, err := client.R().Get(addr[ver])
+		if err != nil || resp.IsError() {
+			return nil, fmt.Errorf("could not retrieve external v%d address with %s: %w", ver, addr[ver], err)
+		}
+
+		w.logger.LogAttrs(ctx, logging.LevelTrace,
+			"Received external IP.",
+			slog.Int("statuscode", resp.StatusCode()),
+			slog.String("status", resp.Status()),
+			slog.String("protocol", resp.Proto()),
+			slog.Duration("time", resp.Time()),
+			slog.String("body", string(resp.Body())))
+
+		cleanResp := strings.TrimSpace(string(resp.Body()))
+
+		a := net.ParseIP(cleanResp)
+		if a == nil {
+			return nil, ErrInvalidIP
+		}
+
+		return &address{addr: a}, nil
+	}
+
+	return nil, ErrNoLookupHosts
+}
+
+func newExternalIPUpdaterWorker(ctx context.Context) *externalIPWorker {
 	return &externalIPWorker{
 		client: resty.New().SetTimeout(ExternalIPUpdateRequestTimeout),
+		logger: logging.FromContext(ctx).With(slog.String("worker", externalIPWorkerID)),
 	}
 }

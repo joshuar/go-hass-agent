@@ -9,6 +9,7 @@ package location
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/godbus/dbus/v5"
 
@@ -33,6 +34,8 @@ const (
 	distanceThresholdProp = clientInterface + ".DistanceThreshold"
 	timeThresholdProp     = clientInterface + ".TimeThreshold"
 	locationUpdatedSignal = clientInterface + ".LocationUpdated"
+
+	workerID = "location_sensor"
 )
 
 type locationSensor struct {
@@ -44,6 +47,7 @@ func (s *locationSensor) Name() string { return "Location" }
 func (s *locationSensor) ID() string { return "location" }
 
 type worker struct {
+	logger     *slog.Logger
 	clientPath dbus.ObjectPath
 }
 
@@ -65,12 +69,12 @@ func (w *worker) setup(ctx context.Context) (*dbusx.Watch, error) {
 
 	// Set a distance threshold.
 	if err = dbusx.SetProp(ctx, dbusx.SystemBus, string(w.clientPath), geoclueInterface, distanceThresholdProp, uint32(0)); err != nil {
-		logging.FromContext(ctx).Warn("Could not set distance threshold for geoclue requests.", "error", err.Error())
+		w.logger.Warn("Could not set distance threshold for geoclue requests.", "error", err.Error())
 	}
 
 	// Set a time threshold.
 	if err = dbusx.SetProp(ctx, dbusx.SystemBus, string(w.clientPath), geoclueInterface, timeThresholdProp, uint32(0)); err != nil {
-		logging.FromContext(ctx).Warn("Could not set time threshold for geoclue requests.", "error", err.Error())
+		w.logger.Warn("Could not set time threshold for geoclue requests.", "error", err.Error())
 	}
 
 	// Request to start tracking location updates.
@@ -78,7 +82,7 @@ func (w *worker) setup(ctx context.Context) (*dbusx.Watch, error) {
 		return nil, fmt.Errorf("could not start geoclue client: %w", err)
 	}
 
-	logging.FromContext(ctx).Debug("GeoClue client created.")
+	w.logger.Debug("GeoClue client created.")
 
 	return &dbusx.Watch{
 			Bus:       dbusx.SystemBus,
@@ -107,6 +111,8 @@ func (w *worker) Events(ctx context.Context) (chan sensor.Details, error) {
 	}
 
 	go func() {
+		w.logger.Debug("Monitoring for location updates.")
+
 		defer close(sensorCh)
 
 		for {
@@ -114,7 +120,7 @@ func (w *worker) Events(ctx context.Context) (chan sensor.Details, error) {
 			case <-ctx.Done():
 				err := dbusx.Call(ctx, dbusx.SystemBus, string(w.clientPath), geoclueInterface, stopCall)
 				if err != nil {
-					logging.FromContext(ctx).Debug("Failed to stop location updater.", "error", err.Error())
+					w.logger.Debug("Failed to stop location updater.", "error", err.Error())
 
 					return
 				}
@@ -123,7 +129,7 @@ func (w *worker) Events(ctx context.Context) (chan sensor.Details, error) {
 			case event := <-triggerCh:
 				if locationPath, ok := event.Content[1].(dbus.ObjectPath); ok {
 					go func() {
-						sensorCh <- newLocation(ctx, locationPath)
+						sensorCh <- newLocation(ctx, w.logger, locationPath)
 					}()
 				}
 			}
@@ -138,7 +144,7 @@ func (w *worker) Sensors(_ context.Context) ([]sensor.Details, error) {
 }
 
 //nolint:exhaustruct
-func NewLocationWorker() (*linux.SensorWorker, error) {
+func NewLocationWorker(ctx context.Context) (*linux.SensorWorker, error) {
 	// Don't run this worker if we are not running on a laptop.
 	chassis, _ := device.Chassis() //nolint:errcheck // error is same as any value other than wanted value.
 	if chassis != "laptop" {
@@ -146,19 +152,20 @@ func NewLocationWorker() (*linux.SensorWorker, error) {
 	}
 
 	return &linux.SensorWorker{
-			WorkerName: "Location Sensor",
-			WorkerDesc: "Sensor for device location, from GeoClue.",
-			Value:      &worker{},
+			Value: &worker{
+				logger: logging.FromContext(ctx).With(slog.String("worker", workerID)),
+			},
+			WorkerID: workerID,
 		},
 		nil
 }
 
 //nolint:exhaustruct
-func newLocation(ctx context.Context, locationPath dbus.ObjectPath) *locationSensor {
+func newLocation(ctx context.Context, logger *slog.Logger, locationPath dbus.ObjectPath) *locationSensor {
 	getProp := func(prop string) float64 {
 		value, err := dbusx.GetProp[float64](ctx, dbusx.SystemBus, string(locationPath), geoclueInterface, locationInterface+"."+prop)
 		if err != nil {
-			logging.FromContext(ctx).Debug("Could not retrieve location property.", "property", prop, "error", err.Error())
+			logger.Debug("Could not retrieve location property.", "property", prop, "error", err.Error())
 
 			return 0
 		}

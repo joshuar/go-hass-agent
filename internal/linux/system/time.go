@@ -9,6 +9,7 @@ package system
 
 import (
 	"context"
+	"log/slog"
 	"time"
 
 	"github.com/shirou/gopsutil/v3/host"
@@ -22,13 +23,17 @@ import (
 const (
 	uptimeInterval = 15 * time.Minute
 	uptimeJitter   = time.Minute
+
+	timeWorkerID = "time_sensors"
 )
 
 type timeSensor struct {
 	linux.Sensor
 }
 
-type timeWorker struct{}
+type timeWorker struct {
+	logger *slog.Logger
+}
 
 func (w *timeWorker) Interval() time.Duration { return uptimeInterval }
 
@@ -40,7 +45,7 @@ func (w *timeWorker) Sensors(ctx context.Context, _ time.Duration) ([]sensor.Det
 			&timeSensor{
 				linux.Sensor{
 					SensorTypeValue:  linux.SensorUptime,
-					Value:            getUptime(ctx),
+					Value:            w.getUptime(ctx),
 					IsDiagnostic:     true,
 					UnitsString:      "h",
 					IconString:       "mdi:restart",
@@ -51,7 +56,7 @@ func (w *timeWorker) Sensors(ctx context.Context, _ time.Duration) ([]sensor.Det
 			&timeSensor{
 				linux.Sensor{
 					SensorTypeValue:  linux.SensorBoottime,
-					Value:            getBoottime(ctx),
+					Value:            w.getBoottime(ctx),
 					IsDiagnostic:     true,
 					IconString:       "mdi:restart",
 					DeviceClassValue: types.DeviceClassTimestamp,
@@ -61,19 +66,10 @@ func (w *timeWorker) Sensors(ctx context.Context, _ time.Duration) ([]sensor.Det
 		nil
 }
 
-func NewTimeWorker() (*linux.SensorWorker, error) {
-	return &linux.SensorWorker{
-			WorkerName: "Time Sensors",
-			WorkerDesc: "Sensors for uptime and boottime.",
-			Value:      &timeWorker{},
-		},
-		nil
-}
-
-func getUptime(ctx context.Context) any {
+func (w *timeWorker) getUptime(ctx context.Context) any {
 	value, err := host.UptimeWithContext(ctx)
 	if err != nil {
-		logging.FromContext(ctx).Debug("Failed to retrieve uptime.", "error", err.Error())
+		w.logger.Debug("Failed to retrieve uptime.", "error", err.Error())
 
 		return sensor.StateUnknown
 	}
@@ -84,13 +80,23 @@ func getUptime(ctx context.Context) any {
 	return uptime.Sub(epoch).Hours()
 }
 
-func getBoottime(ctx context.Context) string {
+func (w *timeWorker) getBoottime(ctx context.Context) string {
 	value, err := host.BootTimeWithContext(ctx)
 	if err != nil {
-		logging.FromContext(ctx).Debug("Failed to retrieve boottime.", "error", err.Error())
+		w.logger.Debug("Failed to retrieve boottime.", "error", err.Error())
 
 		return sensor.StateUnknown
 	}
 
 	return time.Unix(int64(value), 0).Format(time.RFC3339)
+}
+
+func NewTimeWorker(ctx context.Context) (*linux.SensorWorker, error) {
+	return &linux.SensorWorker{
+			Value: &timeWorker{
+				logger: logging.FromContext(ctx).With(slog.String("worker", timeWorkerID)),
+			},
+			WorkerID: timeWorkerID,
+		},
+		nil
 }

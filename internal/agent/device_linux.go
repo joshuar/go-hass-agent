@@ -29,7 +29,7 @@ import (
 )
 
 // allworkers is the list of sensor allworkers supported on Linux.
-var allworkers = []func() (*linux.SensorWorker, error){
+var allworkers = []func(context.Context) (*linux.SensorWorker, error){
 	apps.NewAppWorker,
 	battery.NewBatteryWorker,
 	cpu.NewLoadAvgWorker,
@@ -70,7 +70,7 @@ func (w linuxWorkers) ActiveWorkers() []string {
 
 	for _, worker := range w {
 		if worker.control != nil {
-			workers = append(workers, worker.object.Name())
+			workers = append(workers, worker.object.ID())
 		}
 	}
 
@@ -82,7 +82,7 @@ func (w linuxWorkers) InactiveWorkers() []string {
 
 	for _, worker := range w {
 		if worker.control == nil {
-			workers = append(workers, worker.object.Name())
+			workers = append(workers, worker.object.ID())
 		}
 	}
 
@@ -129,10 +129,8 @@ func (w linuxWorkers) StartAll(ctx context.Context) (<-chan sensor.Details, erro
 
 	var allerr error
 
-	for name, worker := range w {
+	for _, worker := range w {
 		workerCtx, cancelFunc := context.WithCancel(ctx)
-
-		logging.FromContext(ctx).Debug("Starting sensor worker.", "name", name, "description", worker.object.Description())
 
 		workerCh, err := worker.object.Updates(workerCtx)
 		if err != nil {
@@ -160,20 +158,20 @@ func (w linuxWorkers) StopAll() error {
 // that are supported on this device.
 //
 //nolint:exhaustruct
-func createSensorWorkers() (WorkerController, error) {
+func createSensorWorkers(ctx context.Context) (WorkerController, error) {
 	var errs error
 
 	workers := make(linuxWorkers)
 
-	for _, w := range allworkers {
-		worker, err := w()
+	for _, startWorkerFunc := range allworkers {
+		worker, err := startWorkerFunc(ctx)
 		if err != nil {
 			errs = errors.Join(errs, err)
 
 			continue
 		}
 
-		workers[worker.Name()] = &workerControl{object: worker}
+		workers[worker.ID()] = &workerControl{object: worker}
 	}
 
 	return workers, errs

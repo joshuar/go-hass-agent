@@ -11,6 +11,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/shirou/gopsutil/v3/mem"
@@ -26,6 +27,8 @@ const (
 
 	updateInterval = time.Minute
 	updateJitter   = 5 * time.Second
+
+	workerID = "memory_usage_sensors"
 )
 
 var ErrUnknownSensor = errors.New("unknown sensor")
@@ -83,7 +86,9 @@ func newMemoryUsageSensor(sensorType linux.SensorTypeValue, stats *mem.VirtualMe
 	return newSensor, nil
 }
 
-type usageWorker struct{}
+type usageWorker struct {
+	logger *slog.Logger
+}
 
 func (w *usageWorker) Interval() time.Duration { return updateInterval }
 
@@ -116,7 +121,7 @@ func (w *usageWorker) Sensors(ctx context.Context, _ time.Duration) ([]sensor.De
 	for _, stat := range stats {
 		memSensor, err := newMemoryUsageSensor(stat, memDetails)
 		if err != nil {
-			logging.FromContext(ctx).Warn("Could not retrieve memory usage stats.", "error", err.Error())
+			w.logger.Warn("Could not retrieve memory usage stats.", "error", err.Error())
 
 			continue
 		}
@@ -127,11 +132,12 @@ func (w *usageWorker) Sensors(ctx context.Context, _ time.Duration) ([]sensor.De
 	return sensors, nil
 }
 
-func NewUsageWorker() (*linux.SensorWorker, error) {
+func NewUsageWorker(ctx context.Context) (*linux.SensorWorker, error) {
 	return &linux.SensorWorker{
-			WorkerName: "Memory Usage Sensor",
-			WorkerDesc: "System RAM (and swap if enabled) usage as a percentage.",
-			Value:      &usageWorker{},
+			Value: &usageWorker{
+				logger: logging.FromContext(ctx).With(slog.String("worker", workerID)),
+			},
+			WorkerID: workerID,
 		},
 		nil
 }

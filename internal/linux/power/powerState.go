@@ -10,6 +10,7 @@ package power
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
@@ -23,6 +24,8 @@ const (
 
 	sleepSignal    = "PrepareForSleep"
 	shutdownSignal = "PrepareForShutdown"
+
+	powerStateWorkerID = "power_state_sensor"
 )
 
 type powerSignal int
@@ -79,7 +82,9 @@ func newPowerState(signalName powerSignal, signalValue any) *powerStateSensor {
 	}
 }
 
-type stateWorker struct{}
+type stateWorker struct {
+	logger *slog.Logger
+}
 
 //nolint:exhaustruct
 func (w *stateWorker) Events(ctx context.Context) (chan sensor.Details, error) {
@@ -99,15 +104,11 @@ func (w *stateWorker) Events(ctx context.Context) (chan sensor.Details, error) {
 
 	// Watch for state changes.
 	go func() {
-		logging.FromContext(ctx).Debug("Monitoring power state.")
-
 		defer close(sensorCh)
 
 		for {
 			select {
 			case <-ctx.Done():
-				logging.FromContext(ctx).Debug("Unmonitoring power state.")
-
 				return
 			case event := <-triggerCh:
 				switch event.Signal {
@@ -128,7 +129,7 @@ func (w *stateWorker) Events(ctx context.Context) (chan sensor.Details, error) {
 	go func() {
 		sensors, err := w.Sensors(ctx)
 		if err != nil {
-			logging.FromContext(ctx).Debug("Could not retrieve power state.", "error", err.Error())
+			w.logger.Debug("Could not retrieve power state.", "error", err.Error())
 
 			return
 		}
@@ -148,11 +149,12 @@ func (w *stateWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
 	return []sensor.Details{newPowerState(shutdown, false)}, nil
 }
 
-func NewStateWorker() (*linux.SensorWorker, error) {
+func NewStateWorker(ctx context.Context) (*linux.SensorWorker, error) {
 	return &linux.SensorWorker{
-			WorkerName: "Power State Sensor",
-			WorkerDesc: "Sensor to track the current power state of the device.",
-			Value:      &stateWorker{},
+			Value: &stateWorker{
+				logger: logging.FromContext(ctx).With(slog.String("worker", powerStateWorkerID)),
+			},
+			WorkerID: powerStateWorkerID,
 		},
 		nil
 }
