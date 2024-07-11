@@ -4,7 +4,7 @@ go 1.22.3
 
 require (
 	github.com/fyne-io/fyne-cross v1.5.0
-	github.com/goreleaser/nfpm/v2 v2.37.1
+	github.com/goreleaser/nfpm/v2 v2.38.0
 	github.com/magefile/mage v1.15.0
 	golang.org/x/text v0.16.0
 	golang.org/x/tools v0.23.0
@@ -28,7 +28,7 @@ require (
 	github.com/caarlos0/go-version v0.1.1 // indirect
 	github.com/cavaliergopher/cpio v1.0.1 // indirect
 	github.com/cloudflare/circl v1.3.8 // indirect
-	github.com/cpuguy83/go-md2man/v2 v2.0.3 // indirect
+	github.com/cpuguy83/go-md2man/v2 v2.0.4 // indirect
 	github.com/cyphar/filepath-securejoin v0.2.4 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/docker/spdystream v0.0.0-20160310174837-449fdfce4d96 // indirect
@@ -56,7 +56,7 @@ require (
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/json-iterator/go v1.1.8 // indirect
 	github.com/kevinburke/ssh_config v1.2.0 // indirect
-	github.com/klauspost/compress v1.17.8 // indirect
+	github.com/klauspost/compress v1.17.9 // indirect
 	github.com/klauspost/pgzip v1.2.6 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mholt/archiver/v3 v3.5.1 // indirect
@@ -76,7 +76,7 @@ require (
 	github.com/shopspring/decimal v1.2.0 // indirect
 	github.com/skeema/knownhosts v1.2.2 // indirect
 	github.com/spf13/cast v1.6.0 // indirect
-	github.com/spf13/cobra v1.8.0 // indirect
+	github.com/spf13/cobra v1.8.1 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/ulikunitz/xz v0.5.12 // indirect
 	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
