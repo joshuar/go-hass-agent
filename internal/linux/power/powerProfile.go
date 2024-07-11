@@ -54,6 +54,7 @@ func newPowerSensor(sensorType linux.SensorTypeValue, sensorValue dbus.Variant) 
 
 type profileWorker struct {
 	logger *slog.Logger
+	bus    *dbusx.Bus
 }
 
 //nolint:exhaustruct
@@ -73,8 +74,7 @@ func (w *profileWorker) Events(ctx context.Context) (chan sensor.Details, error)
 		sensorCh <- sensors[0]
 	}()
 
-	triggerCh, err := dbusx.WatchBus(ctx, &dbusx.Watch{
-		Bus:       dbusx.SystemBus,
+	triggerCh, err := w.bus.WatchBus(ctx, &dbusx.Watch{
 		Names:     []string{dbusx.PropChangedSignal},
 		Interface: dbusx.PropInterface,
 		Path:      powerProfilesPath,
@@ -112,8 +112,7 @@ func (w *profileWorker) Events(ctx context.Context) (chan sensor.Details, error)
 }
 
 func (w *profileWorker) Sensors(ctx context.Context) ([]sensor.Details, error) {
-	profile, err := dbusx.GetProp[dbus.Variant](ctx,
-		dbusx.SystemBus,
+	profile, err := dbusx.GetProp[dbus.Variant](ctx, w.bus,
 		powerProfilesPath,
 		powerProfilesDest,
 		powerProfilesDest+"."+activeProfileProp)
@@ -124,10 +123,16 @@ func (w *profileWorker) Sensors(ctx context.Context) ([]sensor.Details, error) {
 	return []sensor.Details{newPowerSensor(linux.SensorPowerProfile, profile)}, nil
 }
 
-func NewProfileWorker(ctx context.Context) (*linux.SensorWorker, error) {
+func NewProfileWorker(ctx context.Context, api *dbusx.DBusAPI) (*linux.SensorWorker, error) {
+	bus, err := api.GetBus(ctx, dbusx.SystemBus)
+	if err != nil {
+		return nil, fmt.Errorf("unable to monitor power profile: %w", err)
+	}
+
 	return &linux.SensorWorker{
 			Value: &profileWorker{
 				logger: logging.FromContext(ctx).With(slog.String("worker", powerProfileWorkerID)),
+				bus:    bus,
 			},
 			WorkerID: powerProfileWorkerID,
 		},

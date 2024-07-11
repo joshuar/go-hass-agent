@@ -12,8 +12,6 @@ import (
 	"github.com/eclipse/paho.golang/paho"
 	mqtthass "github.com/joshuar/go-hass-anything/v9/pkg/hass"
 
-	"github.com/joshuar/go-hass-agent/internal/device"
-	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
@@ -72,30 +70,37 @@ var commands = map[string]commandConfig{
 	},
 }
 
-func NewPowerControl(ctx context.Context) []*mqtthass.ButtonEntity {
-	entities := make([]*mqtthass.ButtonEntity, 0, len(commands))
-	deviceInfo := device.MQTTDeviceInfo(ctx)
-	logger := logging.FromContext(ctx).With(slog.String("controller", "power"))
+func NewPowerControl(ctx context.Context, api *dbusx.DBusAPI, parentLogger *slog.Logger, device *mqtthass.Device) []*mqtthass.ButtonEntity {
+	logger := parentLogger.With(slog.String("controller", "power"))
 
-	sessionPath, err := dbusx.GetSessionPath(ctx)
+	bus, err := api.GetBus(ctx, dbusx.SystemBus)
 	if err != nil {
 		logger.Warn("Cannot create power controls.", "error", err.Error())
 
 		return nil
 	}
 
+	sessionPath, err := bus.GetSessionPath(ctx)
+	if err != nil {
+		logger.Warn("Cannot create power controls.", "error", err.Error())
+
+		return nil
+	}
+
+	entities := make([]*mqtthass.ButtonEntity, 0, len(commands))
+
 	for cmdName, cmdInfo := range commands {
 		var callback func(p *paho.Publish)
 		if cmdInfo.path == "" {
 			callback = func(_ *paho.Publish) {
-				err := dbusx.Call(ctx, dbusx.SystemBus, sessionPath, loginBaseInterface, cmdInfo.method)
+				err := bus.Call(ctx, sessionPath, loginBaseInterface, cmdInfo.method)
 				if err != nil {
 					logger.Warn("Could not perform power control action.", "action", cmdInfo.name, "error", err.Error())
 				}
 			}
 		} else {
 			callback = func(_ *paho.Publish) {
-				err := dbusx.Call(ctx, dbusx.SystemBus, cmdInfo.path, loginBaseInterface, cmdInfo.method, true)
+				err := bus.Call(ctx, cmdInfo.path, loginBaseInterface, cmdInfo.method, true)
 				if err != nil {
 					logger.Warn("Could not power off session.", "error", err.Error())
 				}
@@ -104,9 +109,9 @@ func NewPowerControl(ctx context.Context) []*mqtthass.ButtonEntity {
 
 		entities = append(entities,
 			mqtthass.AsButton(
-				mqtthass.NewEntity(preferences.AppName, cmdInfo.name, deviceInfo.Name+"_"+cmdName).
+				mqtthass.NewEntity(preferences.AppName, cmdInfo.name, device.Name+"_"+cmdName).
 					WithOriginInfo(preferences.MQTTOrigin()).
-					WithDeviceInfo(deviceInfo).
+					WithDeviceInfo(device).
 					WithIcon(cmdInfo.icon).
 					WithCommandCallback(callback)))
 	}

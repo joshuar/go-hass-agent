@@ -17,6 +17,7 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
 const (
@@ -155,7 +156,7 @@ func (w *ratesWorker) Sensors(ctx context.Context, duration time.Duration) ([]se
 	return []sensor.Details{w.bytesRx, w.bytesTx, w.bytesRxRate, w.bytesTxRate}, nil
 }
 
-func NewRatesWorker(_ context.Context) (*linux.SensorWorker, error) {
+func NewRatesWorker(_ context.Context, _ *dbusx.DBusAPI) (*linux.SensorWorker, error) {
 	return &linux.SensorWorker{
 			Value: &ratesWorker{
 				bytesRx:     newNetIOSensor(linux.SensorBytesRecv),

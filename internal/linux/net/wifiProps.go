@@ -148,7 +148,7 @@ func newWifiSensor(sensorType string) *wifiSensor {
 func (c *connection) monitorWifi(ctx context.Context) <-chan sensor.Details {
 	outCh := make(chan sensor.Details)
 	// get the devices associated with this connection
-	wifiDevices, err := dbusx.GetProp[[]dbus.ObjectPath](ctx, dbusx.SystemBus, string(c.path), dBusNMObj, dbusNMActiveConnIntr+".Devices")
+	wifiDevices, err := dbusx.GetProp[[]dbus.ObjectPath](ctx, c.bus, string(c.path), dBusNMObj, dbusNMActiveConnIntr+".Devices")
 	if err != nil {
 		c.logger.Warn("Could not retrieve active wireless device from D-Bus.", "error", err.Error())
 
@@ -157,7 +157,7 @@ func (c *connection) monitorWifi(ctx context.Context) <-chan sensor.Details {
 
 	for _, d := range wifiDevices {
 		// for each device, get the access point it is currently associated with
-		accessPointPath, err := dbusx.GetProp[dbus.ObjectPath](ctx, dbusx.SystemBus, string(d), dBusNMObj, accessPointProp)
+		accessPointPath, err := dbusx.GetProp[dbus.ObjectPath](ctx, c.bus, string(d), dBusNMObj, accessPointProp)
 		if err != nil {
 			c.logger.Warn("Could not retrieve access point object from D-Bus.", "error", err.Error())
 
@@ -166,7 +166,7 @@ func (c *connection) monitorWifi(ctx context.Context) <-chan sensor.Details {
 
 		for _, prop := range wifiPropList {
 			// for the associated access point, get the wifi properties as sensors
-			value, err := dbusx.GetProp[any](ctx, dbusx.SystemBus, string(accessPointPath), dBusNMObj, accessPointInterface+"."+prop)
+			value, err := dbusx.GetProp[any](ctx, c.bus, string(accessPointPath), dBusNMObj, accessPointInterface+"."+prop)
 			if err != nil {
 				c.logger.Warn("Could not retrieve wifi property from D-Bus.", "property", prop, "error", err.Error())
 
@@ -202,8 +202,7 @@ func (c *connection) monitorWifi(ctx context.Context) <-chan sensor.Details {
 func (c *connection) monitorWifiProps(ctx context.Context, propPath dbus.ObjectPath) chan sensor.Details {
 	sensorCh := make(chan sensor.Details)
 
-	events, err := dbusx.WatchBus(ctx, &dbusx.Watch{
-		Bus:   dbusx.SystemBus,
+	events, err := c.bus.WatchBus(ctx, &dbusx.Watch{
 		Names: wifiPropList,
 		Path:  string(propPath),
 	})

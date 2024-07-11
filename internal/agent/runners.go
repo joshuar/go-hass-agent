@@ -23,8 +23,8 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/scripts"
 )
 
-// WorkerController represents an object that manages one or more Workers.
-type WorkerController interface {
+// SensorController represents an object that manages one or more Workers.
+type SensorController interface {
 	// ActiveWorkers is a list of the names of all currently active Workers.
 	ActiveWorkers() []string
 	// InactiveWorkers is a list of the names of all currently inactive Workers.
@@ -54,9 +54,9 @@ type Worker interface {
 	Stop() error
 }
 
-// MQTTWorker represents an object that is responsible for controlling the
+// MQTTController represents an object that is responsible for controlling the
 // publishing of one or more commands over MQTT.
-type MQTTWorker interface {
+type MQTTController interface {
 	// Subscriptions is a list of MQTT subscriptions this object wants to
 	// establish on the MQTT broker.
 	Subscriptions() []*mqttapi.Subscription
@@ -66,18 +66,18 @@ type MQTTWorker interface {
 	// Msgs returns a channel on which this object will send MQTT messages on
 	// certain events.
 	Msgs() chan *mqttapi.Msg
-	// Setup provides a way to perform any required initialisation of the
-	// object.
-	Setup(_ context.Context) error
+}
+
+type Controller interface {
+	SensorController
+	MQTTController
 }
 
 // runWorkers will call all the sensor worker functions that have been defined
 // for this device.
-func runWorkers(ctx context.Context, trk SensorTracker, reg sensor.Registry) {
-	// Create sensor workers for OS.
-	osWorkers := createSensorWorkers(ctx)
+func runWorkers(ctx context.Context, osController SensorController, trk SensorTracker, reg sensor.Registry) {
 	// Start sensor workers for OS.
-	sensorUpdates, err := osWorkers.StartAll(ctx)
+	sensorUpdates, err := osController.StartAll(ctx)
 	if err != nil {
 		logging.FromContext(ctx).Warn("Some sensor workers could not be started", "errors", err.Error())
 	}
@@ -105,7 +105,7 @@ func runWorkers(ctx context.Context, trk SensorTracker, reg sensor.Registry) {
 		defer wg.Done()
 		<-ctx.Done()
 
-		if err := osWorkers.StopAll(); err != nil {
+		if err := osController.StopAll(); err != nil {
 			logging.FromContext(ctx).Debug("Error occurred trying to stop sensor workers.", "error", err.Error())
 		}
 
@@ -204,30 +204,17 @@ func (agent *Agent) runNotificationsWorker(ctx context.Context) {
 
 // runMQTTWorker will set up a connection to MQTT and listen on topics for
 // controlling this device from Home Assistant.
-func (agent *Agent) runMQTTWorker(ctx context.Context, commandsFile string) {
-	if !agent.prefs.MQTTEnabled {
-		return
-	}
-
-	mqttCtx, mqttCancel := context.WithCancel(ctx)
-	defer mqttCancel()
-
-	var deviceController, commandController MQTTWorker
-
-	var subscriptions []*mqttapi.Subscription
-
-	var configs []*mqttapi.Msg
-
-	var err error
+func (agent *Agent) runMQTTWorker(ctx context.Context, osController MQTTController, commandsFile string) {
+	var (
+		commandController MQTTController
+		subscriptions     []*mqttapi.Subscription
+		configs           []*mqttapi.Msg
+		err               error
+	)
 
 	// Create an MQTT device for this operating system and run its Setup.
-	deviceController = newMQTTDevice(mqttCtx)
-	if err = deviceController.Setup(mqttCtx); err != nil {
-		logging.FromContext(ctx).Error("Could not set up MQTT.", "error", err.Error())
-	} else {
-		subscriptions = append(subscriptions, deviceController.Subscriptions()...)
-		configs = append(configs, deviceController.Configs()...)
-	}
+	subscriptions = append(subscriptions, osController.Subscriptions()...)
+	configs = append(configs, osController.Configs()...)
 
 	// Create an MQTT device for this operating system and run its Setup.
 	commandController, err = commands.NewCommandsController(ctx, commandsFile, device.MQTTDeviceInfo(ctx))
@@ -240,7 +227,7 @@ func (agent *Agent) runMQTTWorker(ctx context.Context, commandsFile string) {
 
 	// Create a new connection to the MQTT broker. This will also publish the
 	// device subscriptions.
-	client, err := mqttapi.NewClient(mqttCtx, agent.prefs, subscriptions, configs)
+	client, err := mqttapi.NewClient(ctx, agent.prefs, subscriptions, configs)
 	if err != nil {
 		logging.FromContext(ctx).Error("Could not connect to MQTT.", "error", err.Error())
 
@@ -252,12 +239,11 @@ func (agent *Agent) runMQTTWorker(ctx context.Context, commandsFile string) {
 
 		for {
 			select {
-			case msg := <-deviceController.Msgs():
+			case msg := <-osController.Msgs():
 				if err := client.Publish(msg); err != nil {
 					logging.FromContext(ctx).Warn("Unable to publish message to MQTT.", "topic", msg.Topic, "content", slog.Any("msg", msg.Message))
 				}
 			case <-ctx.Done():
-				mqttCancel()
 				logging.FromContext(ctx).Debug("Stopped listening for messages to publish to MQTT.")
 
 				return
@@ -268,19 +254,17 @@ func (agent *Agent) runMQTTWorker(ctx context.Context, commandsFile string) {
 	<-ctx.Done()
 }
 
-func (agent *Agent) resetMQTTWorker(ctx context.Context) error {
+func (agent *Agent) resetMQTTWorker(ctx context.Context, osController MQTTController) error {
 	if !agent.prefs.MQTTEnabled {
 		return nil
 	}
-
-	mqttDevice := newMQTTDevice(ctx)
 
 	client, err := mqttapi.NewClient(ctx, agent.prefs, nil, nil)
 	if err != nil {
 		return fmt.Errorf("could not connect to MQTT: %w", err)
 	}
 
-	if err := client.Unpublish(mqttDevice.Configs()...); err != nil {
+	if err := client.Unpublish(osController.Configs()...); err != nil {
 		return fmt.Errorf("could not remove configs from MQTT: %w", err)
 	}
 

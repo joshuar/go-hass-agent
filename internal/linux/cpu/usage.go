@@ -17,6 +17,7 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
 const (
@@ -54,7 +55,7 @@ func (w *usageWorker) Sensors(ctx context.Context, d time.Duration) ([]sensor.De
 	return []sensor.Details{newSensor}, nil
 }
 
-func NewUsageWorker(_ context.Context) (*linux.SensorWorker, error) {
+func NewUsageWorker(_ context.Context, _ *dbusx.DBusAPI) (*linux.SensorWorker, error) {
 	return &linux.SensorWorker{
 			Value:    &usageWorker{},
 			WorkerID: usageWorkerID,

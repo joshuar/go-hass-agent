@@ -92,6 +92,7 @@ func newLaptopEvent(prop string, state bool) *laptopSensor {
 
 type laptopWorker struct {
 	logger *slog.Logger
+	bus    *dbusx.Bus
 }
 
 //nolint:cyclop,gocognit
@@ -99,15 +100,14 @@ func (w *laptopWorker) Events(ctx context.Context) (chan sensor.Details, error) 
 	sensorCh := make(chan sensor.Details)
 
 	// If we can't get a session path, we can't run.
-	sessionPath, err := dbusx.GetSessionPath(ctx)
+	sessionPath, err := w.bus.GetSessionPath(ctx)
 	if err != nil {
 		close(sensorCh)
 
 		return sensorCh, fmt.Errorf("could not create laptop worker: %w", err)
 	}
 
-	triggerCh, err := dbusx.WatchBus(ctx, &dbusx.Watch{
-		Bus:       dbusx.SystemBus,
+	triggerCh, err := w.bus.WatchBus(ctx, &dbusx.Watch{
 		Names:     []string{dbusx.PropChangedSignal},
 		Interface: managerInterface,
 		Path:      sessionPath,
@@ -165,7 +165,7 @@ func (w *laptopWorker) Sensors(ctx context.Context) ([]sensor.Details, error) {
 	sensors := make([]sensor.Details, 0, len(laptopPropList))
 
 	for _, prop := range laptopPropList {
-		state, err := dbusx.GetProp[bool](ctx, dbusx.SystemBus, loginBasePath, loginBaseInterface, prop)
+		state, err := dbusx.GetProp[bool](ctx, w.bus, loginBasePath, loginBaseInterface, prop)
 		if err != nil {
 			w.logger.Debug("Could not retrieve property", "property", filepath.Ext(prop), "error", err.Error())
 
@@ -178,16 +178,22 @@ func (w *laptopWorker) Sensors(ctx context.Context) ([]sensor.Details, error) {
 	return sensors, nil
 }
 
-func NewLaptopWorker(ctx context.Context) (*linux.SensorWorker, error) {
+func NewLaptopWorker(ctx context.Context, api *dbusx.DBusAPI) (*linux.SensorWorker, error) {
 	// Don't run this worker if we are not running on a laptop.
 	chassis, _ := device.Chassis() //nolint:errcheck // error is same as any value other than wanted value.
 	if chassis != "laptop" {
-		return nil, fmt.Errorf("will not create laptop sensors: %w", device.ErrUnsupportedHardware)
+		return nil, fmt.Errorf("unable to monitor laptop sensors: %w", device.ErrUnsupportedHardware)
+	}
+
+	bus, err := api.GetBus(ctx, dbusx.SystemBus)
+	if err != nil {
+		return nil, fmt.Errorf("unable to monitor laptop sensors: %w", err)
 	}
 
 	return &linux.SensorWorker{
 			Value: &laptopWorker{
 				logger: logging.FromContext(ctx).With(slog.String("worker", laptopWorkerID)),
+				bus:    bus,
 			},
 			WorkerID: laptopWorkerID,
 		},

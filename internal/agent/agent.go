@@ -153,7 +153,11 @@ func (agent *Agent) Run(ctx context.Context, trk SensorTracker, reg sensor.Regis
 		}
 
 		runnerCtx, cancelFunc := context.WithCancel(ctx)
-		runnerCtx = setupDeviceContext(runnerCtx)
+
+		// Create a new OS controller. The controller will have all the
+		// necessary configuration for any OS-specific sensors and MQTT
+		// configuration.
+		osController := newOSController(runnerCtx)
 
 		go func() {
 			<-agent.done
@@ -166,7 +170,7 @@ func (agent *Agent) Run(ctx context.Context, trk SensorTracker, reg sensor.Regis
 
 		go func() {
 			defer wg.Done()
-			runWorkers(runnerCtx, trk, reg)
+			runWorkers(runnerCtx, osController, trk, reg)
 		}()
 		// Start any scripts.
 		wg.Add(1)
@@ -177,15 +181,17 @@ func (agent *Agent) Run(ctx context.Context, trk SensorTracker, reg sensor.Regis
 			scriptPath := filepath.Join(xdg.ConfigHome, agent.AppID(), "scripts")
 			runScripts(runnerCtx, scriptPath, trk, reg)
 		}()
-		// Start the mqtt client
-		wg.Add(1)
+		// Start the mqtt client if MQTT is enabled.
+		if agent.prefs.MQTTEnabled {
+			wg.Add(1)
 
-		go func() {
-			defer wg.Done()
+			go func() {
+				defer wg.Done()
 
-			commandsFile := filepath.Join(xdg.ConfigHome, agent.AppID(), "commands.toml")
-			agent.runMQTTWorker(runnerCtx, commandsFile)
-		}()
+				commandsFile := filepath.Join(xdg.ConfigHome, agent.AppID(), "commands.toml")
+				agent.runMQTTWorker(runnerCtx, osController, commandsFile)
+			}()
+		}
 		// Listen for notifications from Home Assistant.
 		if !agent.headless {
 			wg.Add(1)
@@ -257,9 +263,9 @@ func (agent *Agent) Reset(ctx context.Context) error {
 	// Embed the agent preferences in the context.
 	ctx = preferences.ContextSetPrefs(ctx, agent.prefs)
 
-	runnerCtx := setupDeviceContext(ctx)
+	osController := newOSController(ctx)
 
-	if err := agent.resetMQTTWorker(runnerCtx); err != nil {
+	if err := agent.resetMQTTWorker(ctx, osController); err != nil {
 		return fmt.Errorf("problem resetting agent: %w", err)
 	}
 
