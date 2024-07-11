@@ -76,14 +76,14 @@ func (w *SensorWorker) Sensors(ctx context.Context) ([]sensor.Details, error) {
 	case eventType:
 		sensors, err := worker.Sensors(ctx)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get current state of polling sensors: %w", err)
+			return nil, fmt.Errorf("failed to get current state of event sensors: %w", err)
 		}
 
 		return sensors, nil
 	case oneShotType:
 		sensors, err := worker.Sensors(ctx)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get current state of polling sensors: %w", err)
+			return nil, fmt.Errorf("failed to get current state of one-shot sensors: %w", err)
 		}
 
 		return sensors, nil
