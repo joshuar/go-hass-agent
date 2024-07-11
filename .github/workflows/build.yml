@@ -159,7 +159,7 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=raw,value=${{ env.APPVERSION }}
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@68827325e0b33c7199eb31dd4e31fbe9023e06e3 # v3
+        uses: docker/setup-qemu-action@5927c834f5b4fdf503fca6f4c7eccda82949e1ee # v3
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@4fd812986e6c8c2a69e18311145f9371337f27d4 # v3
       - name: Log in to the Container registry
