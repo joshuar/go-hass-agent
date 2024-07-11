@@ -49,6 +49,9 @@ type Worker interface {
 	// Updates returns a channel on which updates to sensors will be published,
 	// when they become available.
 	Updates(ctx context.Context) (<-chan sensor.Details, error)
+	// Stop is used to tell the worker to stop any background updates of
+	// sensors.
+	Stop() error
 }
 
 // MQTTWorker represents an object that is responsible for controlling the
@@ -72,10 +75,7 @@ type MQTTWorker interface {
 // for this device.
 func runWorkers(ctx context.Context, trk SensorTracker, reg sensor.Registry) {
 	// Create sensor workers for OS.
-	osWorkers, err := createSensorWorkers(ctx)
-	if err != nil {
-		logging.FromContext(ctx).Warn("Some sensor workers could not be created.", "errors", err.Error())
-	}
+	osWorkers := createSensorWorkers(ctx)
 	// Start sensor workers for OS.
 	sensorUpdates, err := osWorkers.StartAll(ctx)
 	if err != nil {

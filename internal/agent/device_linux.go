@@ -60,66 +60,65 @@ var (
 
 type workerControl struct {
 	object  Worker
-	control context.CancelFunc
+	started bool
 }
 
 type linuxWorkers map[string]*workerControl
 
 func (w linuxWorkers) ActiveWorkers() []string {
-	workers := make([]string, 0, len(w))
+	activeWorkers := make([]string, 0, len(w))
 
-	for _, worker := range w {
-		if worker.control != nil {
-			workers = append(workers, worker.object.ID())
+	for id, worker := range w {
+		if worker.started {
+			activeWorkers = append(activeWorkers, id)
 		}
 	}
 
-	return workers
+	return activeWorkers
 }
 
 func (w linuxWorkers) InactiveWorkers() []string {
-	workers := make([]string, 0, len(w))
+	inactiveWorkers := make([]string, 0, len(w))
 
 	for _, worker := range w {
-		if worker.control == nil {
-			workers = append(workers, worker.object.ID())
+		if !worker.started {
+			inactiveWorkers = append(inactiveWorkers, worker.object.ID())
 		}
 	}
 
-	return workers
+	return inactiveWorkers
 }
 
 func (w linuxWorkers) Start(ctx context.Context, name string) (<-chan sensor.Details, error) {
-	if worker, ok := w[name]; ok {
-		if worker.control != nil {
-			return nil, ErrWorkerAlreadyStarted
-		}
-
-		workerCtx, workerCancelFunc := context.WithCancel(ctx)
-
-		workerCh, err := w[name].object.Updates(workerCtx)
-		if err != nil {
-			return nil, fmt.Errorf("could not start worker: %w", err)
-		}
-
-		w[name].control = workerCancelFunc
-
-		return workerCh, nil
+	worker, exists := w[name]
+	if !exists {
+		return nil, ErrUnknownWorker
 	}
 
-	return nil, ErrUnknownWorker
+	if worker.started {
+		return nil, ErrWorkerAlreadyStarted
+	}
+
+	workerCh, err := w[name].object.Updates(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("could not start worker: %w", err)
+	}
+
+	w[name].started = true
+
+	return workerCh, nil
 }
 
 func (w linuxWorkers) Stop(name string) error {
-	var worker *workerControl
-
-	var exists bool
-
-	if worker, exists = w[name]; !exists {
+	// Check if the given worker ID exists.
+	worker, exists := w[name]
+	if !exists {
 		return ErrUnknownWorker
 	}
-
-	worker.control()
+	// Stop the worker. Report any errors.
+	if err := worker.object.Stop(); err != nil {
+		return fmt.Errorf("error stopping worker: %w", err)
+	}
 
 	return nil
 }
@@ -127,46 +126,45 @@ func (w linuxWorkers) Stop(name string) error {
 func (w linuxWorkers) StartAll(ctx context.Context) (<-chan sensor.Details, error) {
 	outCh := make([]<-chan sensor.Details, 0, len(allworkers))
 
-	var allerr error
+	var errs error
 
-	for _, worker := range w {
-		workerCtx, cancelFunc := context.WithCancel(ctx)
-
-		workerCh, err := worker.object.Updates(workerCtx)
+	for id := range w {
+		workerCh, err := w.Start(ctx, id)
 		if err != nil {
-			allerr = errors.Join(allerr, err)
+			errs = errors.Join(errs, err)
 
 			continue
 		}
 
 		outCh = append(outCh, workerCh)
-		worker.control = cancelFunc
 	}
 
-	return sensor.MergeSensorCh(ctx, outCh...), allerr
+	return sensor.MergeSensorCh(ctx, outCh...), errs
 }
 
 func (w linuxWorkers) StopAll() error {
-	for _, worker := range w {
-		worker.control()
+	var errs error
+
+	for id := range w {
+		if err := w.Stop(id); err != nil {
+			errs = errors.Join(errs, err)
+		}
 	}
 
-	return nil
+	return errs
 }
 
 // createSensorWorkers initialises the list of workers for sensors and returns those
 // that are supported on this device.
 //
 //nolint:exhaustruct
-func createSensorWorkers(ctx context.Context) (WorkerController, error) {
-	var errs error
-
+func createSensorWorkers(ctx context.Context) WorkerController {
 	workers := make(linuxWorkers)
 
 	for _, startWorkerFunc := range allworkers {
 		worker, err := startWorkerFunc(ctx)
 		if err != nil {
-			errs = errors.Join(errs, err)
+			logging.FromContext(ctx).Warn("Could not start a sensor worker.", "error", err.Error())
 
 			continue
 		}
@@ -174,7 +172,7 @@ func createSensorWorkers(ctx context.Context) (WorkerController, error) {
 		workers[worker.ID()] = &workerControl{object: worker}
 	}
 
-	return workers, errs
+	return workers
 }
 
 // setupDeviceContext returns a new Context that contains the D-Bus API.

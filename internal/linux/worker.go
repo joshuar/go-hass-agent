@@ -42,13 +42,23 @@ type oneShotType interface {
 // SensorWorker represents the functionality to track a group of one or more
 // related sensors.
 type SensorWorker struct {
-	Value    any
-	WorkerID string
+	Value      any
+	cancelFunc context.CancelFunc
+	logger     *slog.Logger
+	WorkerID   string
 }
 
-// Name is the name of the group of sensors managed by this SensorWorker.
+// ID is a name that can be used as an ID to represent the group of sensors
+// managed by this worker.
 func (w *SensorWorker) ID() string {
 	return w.WorkerID
+}
+
+// Stop will stop any processing of sensors controlled by this worker.
+func (w *SensorWorker) Stop() error {
+	w.cancelFunc()
+
+	return nil
 }
 
 // Sensors returns the current values of all sensors managed by this
@@ -85,85 +95,25 @@ func (w *SensorWorker) Sensors(ctx context.Context) ([]sensor.Details, error) {
 // Updates returns a channel on which sensor updates can be received. If the
 // functionality to send sensor updates cannot be achieved, it will return a
 // non-nil error.
-//
-//nolint:cyclop
-//revive:disable:function-length
 func (w *SensorWorker) Updates(ctx context.Context) (<-chan sensor.Details, error) {
-	outCh := make(chan sensor.Details)
+	var outCh chan sensor.Details
 
-	var workerLogAttrs []any
+	// Create a new context for the updates scope.
+	updatesCtx, cancelFunc := context.WithCancel(ctx)
+	// Save the context cancelFunc in the worker to be used as part of its
+	// Stop() method.
+	w.cancelFunc = cancelFunc
+	// Create a child logger for the worker.
+	w.logger = logging.FromContext(ctx).With("worker", w.ID())
 
-	workerLogAttrs = append(workerLogAttrs, slog.String("id", w.WorkerID))
-
+	// Handle the worker appropriately based on its type.
 	switch worker := w.Value.(type) {
 	case pollingType:
-		workerLogAttrs = append(workerLogAttrs, slog.String("worker_type", "polling"))
-
-		// pollingType: create an updater function to run the worker's Sensors
-		// function and pass this to the PollSensors helper, using the interval
-		// and jitter the worker has requested.
-		logging.FromContext(ctx).Debug("Starting worker.", workerLogAttrs...)
-
-		updater := func(d time.Duration) {
-			sensors, err := worker.Sensors(ctx, d)
-			if err != nil {
-				logging.FromContext(ctx).Warn("Unable to retrieve sensors.", workerLogAttrs...)
-
-				return
-			}
-
-			for _, s := range sensors {
-				outCh <- s
-			}
-		}
-		go func() {
-			defer close(outCh)
-			helpers.PollSensors(ctx, updater, worker.Interval(), worker.Jitter())
-		}()
+		outCh = w.handlePolling(updatesCtx, worker)
 	case eventType:
-		workerLogAttrs = append(workerLogAttrs, slog.String("worker_type", "event"))
-
-		// eventType: read sensors from the worker Events function and pass
-		// these on.
-		go func() {
-			defer close(outCh)
-
-			eventCh, err := worker.Events(ctx)
-			if err != nil {
-				workerLogAttrs = append(workerLogAttrs, slog.Any("error", err))
-				logging.FromContext(ctx).Debug("Could not start worker.", workerLogAttrs...)
-
-				return
-			}
-
-			logging.FromContext(ctx).Debug("Starting worker.", workerLogAttrs...)
-
-			for s := range eventCh {
-				outCh <- s
-			}
-		}()
+		outCh = w.handleEvents(updatesCtx, worker)
 	case oneShotType:
-		workerLogAttrs = append(workerLogAttrs, slog.String("worker_type", "one-shot"))
-
-		// oneShot: run the worker Sensors function to gather the sensors, pass
-		// these through the channel, then close it.
-		go func() {
-			defer close(outCh)
-
-			sensors, err := worker.Sensors(ctx)
-			if err != nil {
-				workerLogAttrs = append(workerLogAttrs, slog.Any("error", err))
-				logging.FromContext(ctx).Debug("Unable to retrieve sensors.", workerLogAttrs...)
-
-				return
-			}
-
-			logging.FromContext(ctx).Debug("Starting worker.", workerLogAttrs...)
-
-			for _, s := range sensors {
-				outCh <- s
-			}
-		}()
+		outCh = w.handleOneShot(updatesCtx, worker)
 	default:
 		// default: we should not get here, so if we do, return an error
 		// indicating we don't know what type of worker this is.
@@ -171,4 +121,95 @@ func (w *SensorWorker) Updates(ctx context.Context) (<-chan sensor.Details, erro
 	}
 
 	return outCh, nil
+}
+
+// handlePolling: create an updater function to run the worker's Sensors
+// function and pass this to the PollSensors helper, using the interval
+// and jitter the worker has requested.
+func (w *SensorWorker) handlePolling(ctx context.Context, worker pollingType) chan sensor.Details {
+	var workerLogAttrs []any
+
+	outCh := make(chan sensor.Details)
+
+	workerLogAttrs = append(workerLogAttrs, slog.String("worker_type", "polling"))
+
+	w.logger.Debug("Starting worker.", workerLogAttrs...)
+
+	updater := func(d time.Duration) {
+		sensors, err := worker.Sensors(ctx, d)
+		if err != nil {
+			w.logger.Warn("Unable to retrieve sensors.", workerLogAttrs...)
+
+			return
+		}
+
+		for _, s := range sensors {
+			outCh <- s
+		}
+	}
+	go func() {
+		defer close(outCh)
+		helpers.PollSensors(ctx, updater, worker.Interval(), worker.Jitter())
+	}()
+
+	return outCh
+}
+
+// handleEvents: read sensors from the worker Events function and pass these on.
+func (w *SensorWorker) handleEvents(ctx context.Context, worker eventType) chan sensor.Details {
+	var workerLogAttrs []any
+
+	outCh := make(chan sensor.Details)
+
+	workerLogAttrs = append(workerLogAttrs, slog.String("worker_type", "event"))
+
+	go func() {
+		defer close(outCh)
+
+		eventCh, err := worker.Events(ctx)
+		if err != nil {
+			workerLogAttrs = append(workerLogAttrs, slog.Any("error", err))
+			w.logger.Debug("Could not start worker.", workerLogAttrs...)
+
+			return
+		}
+
+		w.logger.Debug("Starting worker.", workerLogAttrs...)
+
+		for s := range eventCh {
+			outCh <- s
+		}
+	}()
+
+	return outCh
+}
+
+// handleOneShot: run the worker Sensors function to gather the sensors, pass these
+// through the channel, then close it.
+func (w *SensorWorker) handleOneShot(ctx context.Context, worker oneShotType) chan sensor.Details {
+	var workerLogAttrs []any
+
+	outCh := make(chan sensor.Details)
+
+	workerLogAttrs = append(workerLogAttrs, slog.String("worker_type", "one-shot"))
+
+	go func() {
+		defer close(outCh)
+
+		sensors, err := worker.Sensors(ctx)
+		if err != nil {
+			workerLogAttrs = append(workerLogAttrs, slog.Any("error", err))
+			w.logger.Debug("Unable to retrieve sensors.", workerLogAttrs...)
+
+			return
+		}
+
+		w.logger.Debug("Starting worker.", workerLogAttrs...)
+
+		for _, s := range sensors {
+			outCh <- s
+		}
+	}()
+
+	return outCh
 }
