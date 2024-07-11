@@ -69,6 +69,7 @@ var dBusPropToSensor = map[string]linux.SensorTypeValue{
 
 type upowerBattery struct {
 	logger   *slog.Logger
+	bus      *dbusx.Bus
 	id       string
 	model    string
 	dBusPath dbus.ObjectPath
@@ -82,7 +83,7 @@ func (b *upowerBattery) getProp(ctx context.Context, t linux.SensorTypeValue) (d
 		return dbus.MakeVariant(""), ErrInvalidBattery
 	}
 
-	return dbusx.GetProp[dbus.Variant](ctx, dbusx.SystemBus, string(b.dBusPath), upowerDBusDest, dBusSensorToProps[t])
+	return dbusx.GetProp[dbus.Variant](ctx, b.bus, string(b.dBusPath), upowerDBusDest, dBusSensorToProps[t])
 }
 
 // getSensors retrieves the sensors passed in for a given battery.
@@ -107,9 +108,10 @@ func (b *upowerBattery) getSensors(ctx context.Context, sensors ...linux.SensorT
 // be treated as sensors in Home Assistant.
 //
 //nolint:exhaustruct,mnd
-func newBattery(ctx context.Context, logger *slog.Logger, path dbus.ObjectPath) (*upowerBattery, error) {
+func newBattery(ctx context.Context, bus *dbusx.Bus, logger *slog.Logger, path dbus.ObjectPath) (*upowerBattery, error) {
 	battery := &upowerBattery{
 		dBusPath: path,
+		bus:      bus,
 	}
 
 	var (
@@ -355,57 +357,6 @@ func newBatterySensor(ctx context.Context, battery *upowerBattery, sensorType li
 	return batterySensor
 }
 
-type batteryTracker struct {
-	batteryList map[dbus.ObjectPath]context.CancelFunc
-	logger      *slog.Logger
-	mu          sync.Mutex
-}
-
-func (t *batteryTracker) track(ctx context.Context, batteryPath dbus.ObjectPath) <-chan sensor.Details {
-	battery, err := newBattery(ctx, t.logger, batteryPath)
-	if err != nil {
-		t.logger.Warn("Cannot monitor battery.", "path", batteryPath, "error", err.Error())
-
-		return nil
-	}
-
-	battCtx, cancelFunc := context.WithCancel(ctx)
-
-	t.mu.Lock()
-	t.batteryList[batteryPath] = cancelFunc
-	t.mu.Unlock()
-
-	return sensor.MergeSensorCh(battCtx, battery.getSensors(battCtx, battery.sensors...), monitorBattery(battCtx, battery))
-}
-
-func (t *batteryTracker) remove(batteryPath dbus.ObjectPath) {
-	if cancelFunc, ok := t.batteryList[batteryPath]; ok {
-		cancelFunc()
-		t.mu.Lock()
-		delete(t.batteryList, batteryPath)
-		t.mu.Unlock()
-	}
-}
-
-//nolint:exhaustruct
-func newBatteryTracker(logger *slog.Logger) *batteryTracker {
-	return &batteryTracker{
-		batteryList: make(map[dbus.ObjectPath]context.CancelFunc),
-		logger:      logger.With(slog.String("source", "battery_tracker")),
-	}
-}
-
-// getBatteries is a helper function to retrieve all of the known batteries
-// connected to the system.
-func getBatteries(ctx context.Context) ([]dbus.ObjectPath, error) {
-	batteryList, err := dbusx.GetData[[]dbus.ObjectPath](ctx, dbusx.SystemBus, upowerDBusPath, upowerDBusDest, upowerGetDevicesMethod)
-	if err != nil {
-		return nil, err
-	}
-
-	return batteryList, nil
-}
-
 // monitorBattery will monitor a battery device for any property changes and
 // send these as sensors.
 //
@@ -414,8 +365,7 @@ func monitorBattery(ctx context.Context, battery *upowerBattery) <-chan sensor.D
 	sensorCh := make(chan sensor.Details)
 	// Create a DBus signal match to watch for property changes for this
 	// battery.
-	events, err := dbusx.WatchBus(ctx, &dbusx.Watch{
-		Bus:       dbusx.SystemBus,
+	events, err := battery.bus.WatchBus(ctx, &dbusx.Watch{
 		Names:     []string{dbusx.PropChangedSignal},
 		Path:      string(battery.dBusPath),
 		Interface: dbusx.PropInterface,
@@ -458,60 +408,6 @@ func monitorBattery(ctx context.Context, battery *upowerBattery) <-chan sensor.D
 	return sensorCh
 }
 
-// monitorBatteryChanges monitors for battery devices being added/removed from
-// the system and will start/stop monitory each battery as appropriate.
-//
-//nolint:exhaustruct
-func monitorBatteryChanges(ctx context.Context, tracker *batteryTracker) <-chan sensor.Details {
-	sensorCh := make(chan sensor.Details)
-
-	events, err := dbusx.WatchBus(ctx, &dbusx.Watch{
-		Bus:       dbusx.SystemBus,
-		Names:     []string{deviceAddedSignal, deviceRemovedSignal},
-		Interface: upowerDBusDest,
-		Path:      upowerDBusPath,
-	})
-	if err != nil {
-		tracker.logger.Debug("Failed to create D-Bus watch for battery additions/removals.", "error", err.Error())
-		close(sensorCh)
-
-		return sensorCh
-	}
-
-	go func() {
-		tracker.logger.Debug("Monitoring for battery additions/removals.")
-
-		defer close(sensorCh)
-
-		for {
-			select {
-			case <-ctx.Done():
-				tracker.logger.Debug("Stopped monitoring for batteries.")
-
-				return
-			case event := <-events:
-				batteryPath, validBatteryPath := event.Content[0].(dbus.ObjectPath)
-				if !validBatteryPath {
-					continue
-				}
-
-				switch {
-				case strings.Contains(event.Signal, deviceAddedSignal):
-					go func() {
-						for s := range tracker.track(ctx, batteryPath) {
-							sensorCh <- s
-						}
-					}()
-				case strings.Contains(event.Signal, deviceRemovedSignal):
-					tracker.remove(batteryPath)
-				}
-			}
-		}
-	}()
-
-	return sensorCh
-}
-
 //nolint:mnd
 func batteryPercentIcon(v any) string {
 	percentage, ok := v.(float64)
@@ -540,7 +436,10 @@ func batteryChargeIcon(v any) string {
 }
 
 type batterySensorWorker struct {
-	logger *slog.Logger
+	logger      *slog.Logger
+	bus         *dbusx.Bus
+	batteryList map[dbus.ObjectPath]context.CancelFunc
+	mu          sync.Mutex
 }
 
 // ?: implement initial battery sensor retrieval.
@@ -550,30 +449,125 @@ func (w *batterySensorWorker) Sensors(_ context.Context) ([]sensor.Details, erro
 
 //nolint:prealloc
 func (w *batterySensorWorker) Events(ctx context.Context) (chan sensor.Details, error) {
-	batteryTracker := newBatteryTracker(w.logger)
-
 	var sensorCh []<-chan sensor.Details
 
 	// Get a list of all current connected batteries and monitor them.
-	batteries, err := getBatteries(ctx)
+	batteries, err := w.getBatteries(ctx)
 	if err != nil {
 		w.logger.Warn("Could not retrieve any battery details from D-Bus.", "error", err.Error())
 	}
 
 	for _, path := range batteries {
-		sensorCh = append(sensorCh, batteryTracker.track(ctx, path))
+		sensorCh = append(sensorCh, w.track(ctx, path))
 	}
 
 	// Monitor for battery added/removed signals.
-	sensorCh = append(sensorCh, monitorBatteryChanges(ctx, batteryTracker))
+	sensorCh = append(sensorCh, w.monitorBatteryChanges(ctx))
 
 	return sensor.MergeSensorCh(ctx, sensorCh...), nil
 }
 
-func NewBatteryWorker(ctx context.Context) (*linux.SensorWorker, error) {
+// getBatteries is a helper function to retrieve all of the known batteries
+// connected to the system.
+func (w *batterySensorWorker) getBatteries(ctx context.Context) ([]dbus.ObjectPath, error) {
+	batteryList, err := dbusx.GetData[[]dbus.ObjectPath](ctx, w.bus, upowerDBusPath, upowerDBusDest, upowerGetDevicesMethod)
+	if err != nil {
+		return nil, err
+	}
+
+	return batteryList, nil
+}
+
+func (w *batterySensorWorker) track(ctx context.Context, batteryPath dbus.ObjectPath) <-chan sensor.Details {
+	battery, err := newBattery(ctx, w.bus, w.logger, batteryPath)
+	if err != nil {
+		w.logger.Warn("Cannot monitor battery.", "path", batteryPath, "error", err.Error())
+
+		return nil
+	}
+
+	battCtx, cancelFunc := context.WithCancel(ctx)
+
+	w.mu.Lock()
+	w.batteryList[batteryPath] = cancelFunc
+	w.mu.Unlock()
+
+	return sensor.MergeSensorCh(battCtx, battery.getSensors(battCtx, battery.sensors...), monitorBattery(battCtx, battery))
+}
+
+func (w *batterySensorWorker) remove(batteryPath dbus.ObjectPath) {
+	if cancelFunc, ok := w.batteryList[batteryPath]; ok {
+		cancelFunc()
+		w.mu.Lock()
+		delete(w.batteryList, batteryPath)
+		w.mu.Unlock()
+	}
+}
+
+// monitorBatteryChanges monitors for battery devices being added/removed from
+// the system and will start/stop monitory each battery as appropriate.
+//
+//nolint:exhaustruct
+func (w *batterySensorWorker) monitorBatteryChanges(ctx context.Context) <-chan sensor.Details {
+	sensorCh := make(chan sensor.Details)
+
+	events, err := w.bus.WatchBus(ctx, &dbusx.Watch{
+		Names:     []string{deviceAddedSignal, deviceRemovedSignal},
+		Interface: upowerDBusDest,
+		Path:      upowerDBusPath,
+	})
+	if err != nil {
+		w.logger.Debug("Failed to create D-Bus watch for battery additions/removals.", "error", err.Error())
+		close(sensorCh)
+
+		return sensorCh
+	}
+
+	go func() {
+		w.logger.Debug("Monitoring for battery additions/removals.")
+
+		defer close(sensorCh)
+
+		for {
+			select {
+			case <-ctx.Done():
+				w.logger.Debug("Stopped monitoring for batteries.")
+
+				return
+			case event := <-events:
+				batteryPath, validBatteryPath := event.Content[0].(dbus.ObjectPath)
+				if !validBatteryPath {
+					continue
+				}
+
+				switch {
+				case strings.Contains(event.Signal, deviceAddedSignal):
+					go func() {
+						for s := range w.track(ctx, batteryPath) {
+							sensorCh <- s
+						}
+					}()
+				case strings.Contains(event.Signal, deviceRemovedSignal):
+					w.remove(batteryPath)
+				}
+			}
+		}
+	}()
+
+	return sensorCh
+}
+
+func NewBatteryWorker(ctx context.Context, api *dbusx.DBusAPI) (*linux.SensorWorker, error) {
+	bus, err := api.GetBus(ctx, dbusx.SystemBus)
+	if err != nil {
+		return nil, fmt.Errorf("unable to monitor for active applications: %w", err)
+	}
+
 	return &linux.SensorWorker{
 			Value: &batterySensorWorker{
-				logger: logging.FromContext(ctx).With(slog.String("worker", workerID)),
+				logger:      logging.FromContext(ctx).With(slog.String("worker", workerID)),
+				bus:         bus,
+				batteryList: make(map[dbus.ObjectPath]context.CancelFunc),
 			},
 			WorkerID: workerID,
 		},

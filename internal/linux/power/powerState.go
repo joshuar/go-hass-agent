@@ -84,14 +84,14 @@ func newPowerState(signalName powerSignal, signalValue any) *powerStateSensor {
 
 type stateWorker struct {
 	logger *slog.Logger
+	bus    *dbusx.Bus
 }
 
 //nolint:exhaustruct
 func (w *stateWorker) Events(ctx context.Context) (chan sensor.Details, error) {
 	sensorCh := make(chan sensor.Details)
 
-	triggerCh, err := dbusx.WatchBus(ctx, &dbusx.Watch{
-		Bus:       dbusx.SystemBus,
+	triggerCh, err := w.bus.WatchBus(ctx, &dbusx.Watch{
 		Names:     []string{sleepSignal, shutdownSignal},
 		Interface: managerInterface,
 		Path:      loginBasePath,
@@ -149,10 +149,16 @@ func (w *stateWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
 	return []sensor.Details{newPowerState(shutdown, false)}, nil
 }
 
-func NewStateWorker(ctx context.Context) (*linux.SensorWorker, error) {
+func NewStateWorker(ctx context.Context, api *dbusx.DBusAPI) (*linux.SensorWorker, error) {
+	bus, err := api.GetBus(ctx, dbusx.SystemBus)
+	if err != nil {
+		return nil, fmt.Errorf("unable to monitor power state: %w", err)
+	}
+
 	return &linux.SensorWorker{
 			Value: &stateWorker{
 				logger: logging.FromContext(ctx).With(slog.String("worker", powerStateWorkerID)),
+				bus:    bus,
 			},
 			WorkerID: powerStateWorkerID,
 		},

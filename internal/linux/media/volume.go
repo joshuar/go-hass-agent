@@ -15,8 +15,6 @@ import (
 	mqtthass "github.com/joshuar/go-hass-anything/v9/pkg/hass"
 	mqttapi "github.com/joshuar/go-hass-anything/v9/pkg/mqtt"
 
-	"github.com/joshuar/go-hass-agent/internal/device"
-	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 	pulseaudiox "github.com/joshuar/go-hass-agent/pkg/linux/pulseaudio"
 )
@@ -29,13 +27,13 @@ type audioDevice struct {
 	logger     *slog.Logger
 }
 
-//nolint:exhaustruct,mnd
-func VolumeControl(ctx context.Context, msgCh chan *mqttapi.Msg) (*mqtthass.NumberEntity[int], *mqtthass.SwitchEntity) {
-	deviceInfo := device.MQTTDeviceInfo(ctx)
+//nolint:exhaustruct,mnd,lll
+func VolumeControl(ctx context.Context, msgCh chan *mqttapi.Msg, parentLogger *slog.Logger, device *mqtthass.Device) (*mqtthass.NumberEntity[int], *mqtthass.SwitchEntity) {
+	logger := parentLogger.With(slog.String("controller", "volume"))
 
 	client, err := pulseaudiox.NewPulseClient(ctx)
 	if err != nil {
-		logging.FromContext(ctx).Warn("Unable to connect to Pulseaudio. Volume control will be unavailable.", "error", err.Error())
+		logger.Warn("Unable to connect to Pulseaudio. Volume control will be unavailable.", "error", err.Error())
 
 		return nil, nil
 	}
@@ -43,15 +41,15 @@ func VolumeControl(ctx context.Context, msgCh chan *mqttapi.Msg) (*mqtthass.Numb
 	audioDev := &audioDevice{
 		pulseAudio: client,
 		msgCh:      msgCh,
-		logger:     logging.FromContext(ctx).With(slog.String("controller", "volume")),
+		logger:     logger,
 	}
 
 	audioDev.logger.Debug("Connected.")
 
 	audioDev.volEntity = mqtthass.AsNumber(
-		mqtthass.NewEntity(preferences.AppName, "Volume", deviceInfo.Name+"_volume").
+		mqtthass.NewEntity(preferences.AppName, "Volume", device.Name+"_volume").
 			WithOriginInfo(preferences.MQTTOrigin()).
-			WithDeviceInfo(deviceInfo).
+			WithDeviceInfo(device).
 			WithIcon("mdi:knob").
 			WithCommandCallback(audioDev.volCommandCallback).
 			WithStateCallback(audioDev.volStateCallback).
@@ -59,9 +57,9 @@ func VolumeControl(ctx context.Context, msgCh chan *mqttapi.Msg) (*mqtthass.Numb
 		1, 0, 100, mqtthass.NumberSlider)
 
 	audioDev.muteEntity = mqtthass.AsSwitch(
-		mqtthass.NewEntity(preferences.AppName, "Mute", deviceInfo.Name+"_mute").
+		mqtthass.NewEntity(preferences.AppName, "Mute", device.Name+"_mute").
 			WithOriginInfo(preferences.MQTTOrigin()).
-			WithDeviceInfo(deviceInfo).
+			WithDeviceInfo(device).
 			WithIcon("mdi:volume-mute").
 			WithCommandCallback(audioDev.muteCommandCallback).
 			WithStateCallback(audioDev.muteStateCallback).

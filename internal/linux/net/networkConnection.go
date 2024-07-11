@@ -54,6 +54,7 @@ type connState uint32
 type connection struct {
 	attrs  *connectionAttributes
 	logger *slog.Logger
+	bus    *dbusx.Bus
 	name   string
 	path   dbus.ObjectPath
 	linux.Sensor
@@ -140,8 +141,7 @@ func (c *connection) updateAddrs(addr address) {
 func (c *connection) monitorState(ctx context.Context) chan connState {
 	stateCh := make(chan connState)
 
-	events, err := dbusx.WatchBus(ctx, &dbusx.Watch{
-		Bus:       dbusx.SystemBus,
+	events, err := c.bus.WatchBus(ctx, &dbusx.Watch{
 		Names:     []string{"State"},
 		Interface: dbusNMActiveConnIntr,
 		Path:      string(c.path),
@@ -197,8 +197,7 @@ func (c *connection) monitorState(ctx context.Context) chan connState {
 func (c *connection) monitorAddresses(ctx context.Context) chan address {
 	sensorCh := make(chan address)
 
-	events, err := dbusx.WatchBus(ctx, &dbusx.Watch{
-		Bus:       dbusx.SystemBus,
+	events, err := c.bus.WatchBus(ctx, &dbusx.Watch{
 		Names:     []string{ipv4ConfigProp, ipv6ConfigProp},
 		Interface: dbusNMActiveConnIntr,
 		Path:      string(c.path),
@@ -232,7 +231,7 @@ func (c *connection) monitorAddresses(ctx context.Context) chan address {
 					if err != nil {
 						c.logger.Warn("Could not retrieve IPv4 address.", "error", err.Error())
 					} else {
-						addr, mask, err := getAddr(ctx, 4, value)
+						addr, mask, err := c.getAddr(ctx, 4, value)
 						if err != nil {
 							c.logger.Warn("Could not retrieve IPv4 address.", "error", err.Error())
 						} else {
@@ -246,7 +245,7 @@ func (c *connection) monitorAddresses(ctx context.Context) chan address {
 					if err != nil {
 						c.logger.Warn("Could not retrieve IPv4 address.", "error", err.Error())
 					} else {
-						addr, mask, err := getAddr(ctx, 6, value)
+						addr, mask, err := c.getAddr(ctx, 6, value)
 						if err != nil {
 							c.logger.Warn("Could not retrieve IPv4 address.", "error", err.Error())
 						} else {
@@ -261,77 +260,76 @@ func (c *connection) monitorAddresses(ctx context.Context) chan address {
 	return sensorCh
 }
 
-//nolint:exhaustruct,mnd
-func newConnection(ctx context.Context, logger *slog.Logger, path dbus.ObjectPath) *connection {
-	newConnection := &connection{
-		path: path,
-		Sensor: linux.Sensor{
-			SensorTypeValue: linux.SensorConnectionState,
-			IsDiagnostic:    true,
-		},
-		attrs: &connectionAttributes{
-			DataSource: linux.DataSrcDbus,
-		},
+//nolint:mnd
+func (c *connection) getAddr(ctx context.Context, ver int, path dbus.ObjectPath) (addr string, mask int, err error) {
+	if path == "/" {
+		return "", 0, dbusx.ErrInvalidPath
 	}
 
-	// fetch properties for the connection
-	var err error
+	var connProp string
 
-	newConnection.name, err = dbusx.GetProp[string](ctx, dbusx.SystemBus, string(path), dBusNMObj, dbusNMActiveConnIntr+".Id")
+	switch ver {
+	case 4:
+		connProp = dBusNMObj + ".IP4Config"
+	case 6:
+		connProp = dBusNMObj + ".IP6Config"
+	}
+
+	addrDetails, err := dbusx.GetProp[[]map[string]dbus.Variant](ctx, c.bus, string(path), dBusNMObj, connProp+".AddressData")
 	if err != nil {
-		logger.Warn("Could not retrieve connection name.", "error", err.Error())
+		return "", 0, fmt.Errorf("could not retrieve address data from D-Bus: %w", err)
 	}
 
-	newConnection.state, err = dbusx.GetProp[connState](ctx, dbusx.SystemBus, string(path), dBusNMObj, dbusNMActiveConnIntr+".State")
+	var (
+		address string
+		prefix  int
+	)
+
+	if len(addrDetails) > 0 {
+		address, err = dbusx.VariantToValue[string](addrDetails[0]["address"])
+		if err != nil {
+			return "", 0, fmt.Errorf("could not parse address: %w", err)
+		}
+
+		prefix, err = dbusx.VariantToValue[int](addrDetails[0]["prefix"])
+		if err != nil {
+			return "", 0, fmt.Errorf("could not parse prefix: %w", err)
+		}
+	}
+
+	return address, prefix, nil
+}
+
+type address struct {
+	address string
+	class   int
+	mask    int
+}
+
+type connectionsWorker struct {
+	logger *slog.Logger
+	bus    *dbusx.Bus
+	list   []dbus.ObjectPath
+	mu     sync.Mutex
+}
+
+func (w *connectionsWorker) getActiveConnections(ctx context.Context) ([]dbus.ObjectPath, error) {
+	connectionPaths, err := dbusx.GetProp[[]dbus.ObjectPath](ctx, w.bus, dBusNMPath, dBusNMObj, dBusNMObj+".ActiveConnections")
 	if err != nil {
-		logger.Warn("Could not retrieve connection state.", "error", err.Error())
+		return nil, fmt.Errorf("could not retrieve any network connections from D-Bus: %w", err)
 	}
 
-	newConnection.attrs.ConnectionType, err = dbusx.GetProp[string](ctx,
-		dbusx.SystemBus, string(path), dBusNMObj, dbusNMActiveConnIntr+".Type")
-	if err != nil {
-		logger.Warn("Could not retrieve connection type.", "error", err.Error())
-	}
-
-	ip4ConfigPath, err := dbusx.GetProp[dbus.ObjectPath](ctx, dbusx.SystemBus, string(path), dBusNMObj, dbusNMActiveConnIntr+".Ip4Config")
-	if err != nil {
-		logger.Warn("Could not retrieve IPv4 address for connection.", "error", err.Error())
-	}
-
-	newConnection.attrs.Ipv4, newConnection.attrs.IPv4Mask, err = getAddr(ctx, 4, ip4ConfigPath)
-	if err != nil {
-		logger.Warn("Could not retrieve IPv4 address for connection.", "error", err.Error())
-	}
-
-	ip6ConfigPath, err := dbusx.GetProp[dbus.ObjectPath](ctx, dbusx.SystemBus, string(path), dBusNMObj, dbusNMActiveConnIntr+".Ip6Config")
-	if err != nil {
-		logger.Warn("Could not retrieve IPv6 address for connection.", "error", err.Error())
-	}
-
-	newConnection.attrs.Ipv6, newConnection.attrs.IPv6Mask, err = getAddr(ctx, 6, ip6ConfigPath)
-	if err != nil {
-		logger.Warn("Could not retrieve IPv6 address for connection.", "error", err.Error())
-	}
-
-	// Set up a logger for this connection with its attributes.
-	newConnection.logger = logger.
-		With(slog.Group("connection_info"),
-			slog.String("name", newConnection.name),
-			slog.String("connection_type", newConnection.attrs.ConnectionType),
-			slog.String("dbus_path", string(newConnection.path)),
-		)
-
-	return newConnection
+	return connectionPaths, nil
 }
 
 //nolint:cyclop
 //revive:disable:unnecessary-stmt
-func monitorConnection(ctx context.Context, logger *slog.Logger, connPath dbus.ObjectPath) <-chan sensor.Details {
+func (w *connectionsWorker) monitorConnection(ctx context.Context, connPath dbus.ObjectPath) <-chan sensor.Details {
 	sensorCh := make(chan sensor.Details)
 	updateCh := make(chan any)
 
 	// create a new connection sensor
-	conn := newConnection(ctx, logger, connPath)
+	conn := w.newConnection(ctx, connPath)
 
 	// process updates and handle cancellation
 	connCtx, connCancel := context.WithCancel(ctx)
@@ -394,65 +392,67 @@ func monitorConnection(ctx context.Context, logger *slog.Logger, connPath dbus.O
 	return sensorCh
 }
 
-//nolint:mnd
-func getAddr(ctx context.Context, ver int, path dbus.ObjectPath) (addr string, mask int, err error) {
-	if path == "/" {
-		return "", 0, dbusx.ErrInvalidPath
+//nolint:exhaustruct,mnd
+func (w *connectionsWorker) newConnection(ctx context.Context, path dbus.ObjectPath) *connection {
+	newConnection := &connection{
+		path: path,
+		Sensor: linux.Sensor{
+			SensorTypeValue: linux.SensorConnectionState,
+			IsDiagnostic:    true,
+		},
+		attrs: &connectionAttributes{
+			DataSource: linux.DataSrcDbus,
+		},
+		bus: w.bus,
 	}
 
-	var connProp string
+	// fetch properties for the connection
+	var err error
 
-	switch ver {
-	case 4:
-		connProp = dBusNMObj + ".IP4Config"
-	case 6:
-		connProp = dBusNMObj + ".IP6Config"
-	}
-
-	addrDetails, err := dbusx.GetProp[[]map[string]dbus.Variant](ctx, dbusx.SystemBus, string(path), dBusNMObj, connProp+".AddressData")
+	newConnection.name, err = dbusx.GetProp[string](ctx, w.bus, string(path), dBusNMObj, dbusNMActiveConnIntr+".Id")
 	if err != nil {
-		return "", 0, fmt.Errorf("could not retrieve address data from D-Bus: %w", err)
+		w.logger.Warn("Could not retrieve connection name.", "error", err.Error())
 	}
 
-	var (
-		address string
-		prefix  int
-	)
-
-	if len(addrDetails) > 0 {
-		address, err = dbusx.VariantToValue[string](addrDetails[0]["address"])
-		if err != nil {
-			return "", 0, fmt.Errorf("could not parse address: %w", err)
-		}
-
-		prefix, err = dbusx.VariantToValue[int](addrDetails[0]["prefix"])
-		if err != nil {
-			return "", 0, fmt.Errorf("could not parse prefix: %w", err)
-		}
-	}
-
-	return address, prefix, nil
-}
-
-func getActiveConnections(ctx context.Context) ([]dbus.ObjectPath, error) {
-	connectionPaths, err := dbusx.GetProp[[]dbus.ObjectPath](ctx, dbusx.SystemBus, dBusNMPath, dBusNMObj, dBusNMObj+".ActiveConnections")
+	newConnection.state, err = dbusx.GetProp[connState](ctx, w.bus, string(path), dBusNMObj, dbusNMActiveConnIntr+".State")
 	if err != nil {
-		return nil, fmt.Errorf("could not retrieve any network connections from D-Bus: %w", err)
+		w.logger.Warn("Could not retrieve connection state.", "error", err.Error())
 	}
 
-	return connectionPaths, nil
-}
+	newConnection.attrs.ConnectionType, err = dbusx.GetProp[string](ctx,
+		w.bus, string(path), dBusNMObj, dbusNMActiveConnIntr+".Type")
+	if err != nil {
+		w.logger.Warn("Could not retrieve connection type.", "error", err.Error())
+	}
 
-type address struct {
-	address string
-	class   int
-	mask    int
-}
+	ip4ConfigPath, err := dbusx.GetProp[dbus.ObjectPath](ctx, w.bus, string(path), dBusNMObj, dbusNMActiveConnIntr+".Ip4Config")
+	if err != nil {
+		w.logger.Warn("Could not retrieve IPv4 address for connection.", "error", err.Error())
+	}
 
-type connectionsWorker struct {
-	logger *slog.Logger
-	list   []dbus.ObjectPath
-	mu     sync.Mutex
+	newConnection.attrs.Ipv4, newConnection.attrs.IPv4Mask, err = newConnection.getAddr(ctx, 4, ip4ConfigPath)
+	if err != nil {
+		w.logger.Warn("Could not retrieve IPv4 address for connection.", "error", err.Error())
+	}
+
+	ip6ConfigPath, err := dbusx.GetProp[dbus.ObjectPath](ctx, w.bus, string(path), dBusNMObj, dbusNMActiveConnIntr+".Ip6Config")
+	if err != nil {
+		w.logger.Warn("Could not retrieve IPv6 address for connection.", "error", err.Error())
+	}
+
+	newConnection.attrs.Ipv6, newConnection.attrs.IPv6Mask, err = newConnection.getAddr(ctx, 6, ip6ConfigPath)
+	if err != nil {
+		w.logger.Warn("Could not retrieve IPv6 address for connection.", "error", err.Error())
+	}
+
+	newConnection.logger = w.logger.
+		With(slog.Group("connection_info"),
+			slog.String("name", newConnection.name),
+			slog.String("connection_type", newConnection.attrs.ConnectionType),
+			slog.String("dbus_path", string(newConnection.path)),
+		)
+
+	return newConnection
 }
 
 func (w *connectionsWorker) track(path dbus.ObjectPath) {
@@ -484,7 +484,7 @@ func (w *connectionsWorker) Sensors(_ context.Context) ([]sensor.Details, error)
 func (w *connectionsWorker) Events(ctx context.Context) (chan sensor.Details, error) {
 	sensorCh := make(chan sensor.Details)
 
-	connectionlist, err := getActiveConnections(ctx)
+	connectionlist, err := w.getActiveConnections(ctx)
 	if err != nil {
 		w.logger.Warn("Failed to get any active connections", "error", err.Error())
 	}
@@ -493,7 +493,7 @@ func (w *connectionsWorker) Events(ctx context.Context) (chan sensor.Details, er
 
 	handleConn := func(path dbus.ObjectPath) {
 		go func() {
-			for s := range monitorConnection(ctx, w.logger, path) {
+			for s := range w.monitorConnection(ctx, path) {
 				sensorCh <- s
 			}
 
@@ -501,8 +501,7 @@ func (w *connectionsWorker) Events(ctx context.Context) (chan sensor.Details, er
 		}()
 	}
 
-	events, err := dbusx.WatchBus(ctx, &dbusx.Watch{
-		Bus:           dbusx.SystemBus,
+	events, err := w.bus.WatchBus(ctx, &dbusx.Watch{
 		Names:         []string{"StateChanged"},
 		PathNamespace: dbusNMActiveConnPath,
 		Interface:     dbusNMActiveConnIntr,
@@ -551,10 +550,16 @@ func (w *connectionsWorker) Events(ctx context.Context) (chan sensor.Details, er
 }
 
 //nolint:exhaustruct
-func NewConnectionWorker(ctx context.Context) (*linux.SensorWorker, error) {
+func NewConnectionWorker(ctx context.Context, api *dbusx.DBusAPI) (*linux.SensorWorker, error) {
+	bus, err := api.GetBus(ctx, dbusx.SystemBus)
+	if err != nil {
+		return nil, fmt.Errorf("unable to monitor for network connections: %w", err)
+	}
+
 	return &linux.SensorWorker{
 			Value: &connectionsWorker{
 				logger: logging.FromContext(ctx).With(slog.String("worker", netConnWorkerID)),
+				bus:    bus,
 			},
 			WorkerID: netConnWorkerID,
 		},

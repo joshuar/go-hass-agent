@@ -53,19 +53,19 @@ func newScreenlockEvent(value bool) *screenlockSensor {
 
 type screenLockWorker struct {
 	logger *slog.Logger
+	bus    *dbusx.Bus
 }
 
 //nolint:cyclop,exhaustruct
 func (w *screenLockWorker) Events(ctx context.Context) (chan sensor.Details, error) {
 	sensorCh := make(chan sensor.Details)
 
-	sessionPath, err := dbusx.GetSessionPath(ctx)
+	sessionPath, err := w.bus.GetSessionPath(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not create screen lock worker: %w", err)
 	}
 
-	triggerCh, err := dbusx.WatchBus(ctx, &dbusx.Watch{
-		Bus:       dbusx.SystemBus,
+	triggerCh, err := w.bus.WatchBus(ctx, &dbusx.Watch{
 		Names:     []string{sessionLockSignal, sessionUnlockSignal, sessionLockedProp},
 		Interface: sessionInterface,
 		Path:      sessionPath,
@@ -117,10 +117,16 @@ func (w *screenLockWorker) Sensors(_ context.Context) ([]sensor.Details, error) 
 	return nil, linux.ErrUnimplemented
 }
 
-func NewScreenLockWorker(ctx context.Context) (*linux.SensorWorker, error) {
+func NewScreenLockWorker(ctx context.Context, api *dbusx.DBusAPI) (*linux.SensorWorker, error) {
+	bus, err := api.GetBus(ctx, dbusx.SystemBus)
+	if err != nil {
+		return nil, fmt.Errorf("unable to monitor power state: %w", err)
+	}
+
 	return &linux.SensorWorker{
 			Value: &screenLockWorker{
 				logger: logging.FromContext(ctx).With(slog.String("worker", screenLockWorkerID)),
+				bus:    bus,
 			},
 			WorkerID: screenLockWorkerID,
 		},

@@ -19,6 +19,7 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 	diskstats "github.com/joshuar/go-hass-agent/pkg/linux/proc"
 )
 
@@ -237,7 +238,7 @@ func (w *ioWorker) Sensors(_ context.Context, duration time.Duration) ([]sensor.
 }
 
 //nolint:exhaustruct
-func NewIOWorker(_ context.Context) (*linux.SensorWorker, error) {
+func NewIOWorker(_ context.Context, _ *dbusx.DBusAPI) (*linux.SensorWorker, error) {
 	worker := &ioWorker{
 		devices: make(map[diskstats.Device]*sensors),
 	}

@@ -33,14 +33,14 @@ type worker struct {
 	activeApp   *activeAppSensor
 	runningApps *runningAppsSensor
 	logger      *slog.Logger
+	bus         *dbusx.Bus
 	portalDest  string
 }
 
 func (w *worker) Events(ctx context.Context) (chan sensor.Details, error) {
 	sensorCh := make(chan sensor.Details)
 
-	triggerCh, err := dbusx.WatchBus(ctx, &dbusx.Watch{
-		Bus:       dbusx.SessionBus,
+	triggerCh, err := w.bus.WatchBus(ctx, &dbusx.Watch{
 		Path:      appStateDBusPath,
 		Interface: appStateDBusInterface,
 		Names:     []string{"RunningApplicationsChanged"},
@@ -89,7 +89,7 @@ func (w *worker) Events(ctx context.Context) (chan sensor.Details, error) {
 func (w *worker) Sensors(ctx context.Context) ([]sensor.Details, error) {
 	var sensors []sensor.Details
 
-	appList, err := dbusx.GetData[map[string]dbus.Variant](ctx, dbusx.SessionBus, appStateDBusPath, w.portalDest, appStateDBusMethod)
+	appList, err := dbusx.GetData[map[string]dbus.Variant](ctx, w.bus, appStateDBusPath, w.portalDest, appStateDBusMethod)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve app list from D-Bus: %w", err)
 	}
@@ -107,9 +107,14 @@ func (w *worker) Sensors(ctx context.Context) ([]sensor.Details, error) {
 	return sensors, nil
 }
 
-func NewAppWorker(ctx context.Context) (*linux.SensorWorker, error) {
+func NewAppWorker(ctx context.Context, api *dbusx.DBusAPI) (*linux.SensorWorker, error) {
 	// If we cannot find a portal interface, we cannot monitor the active app.
 	portalDest, err := linux.FindPortal()
+	if err != nil {
+		return nil, fmt.Errorf("unable to monitor for active applications: %w", err)
+	}
+
+	bus, err := api.GetBus(ctx, dbusx.SessionBus)
 	if err != nil {
 		return nil, fmt.Errorf("unable to monitor for active applications: %w", err)
 	}
@@ -120,6 +125,7 @@ func NewAppWorker(ctx context.Context) (*linux.SensorWorker, error) {
 				activeApp:   newActiveAppSensor(),
 				runningApps: newRunningAppsSensor(),
 				logger:      logging.FromContext(ctx).With(slog.String("worker", workerID)),
+				bus:         bus,
 			},
 			WorkerID: workerID,
 		},

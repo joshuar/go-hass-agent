@@ -63,7 +63,6 @@ type Watch struct {
 	PathNamespace string
 	Interface     string
 	Names         []string
-	Bus           dbusType
 }
 
 func (w *Watch) Parse() []dbus.MatchOption {
@@ -100,7 +99,7 @@ type Values[T any] struct {
 	Old T
 }
 
-type bus struct {
+type Bus struct {
 	conn    *dbus.Conn
 	logger  *slog.Logger
 	wg      sync.WaitGroup
@@ -109,14 +108,12 @@ type bus struct {
 
 // newBus sets up D-Bus connections and channels for receiving signals. It
 // creates both a system and session bus connection.
-//
-//nolint:contextcheck
-func newBus(ctx context.Context, busType dbusType, logger *slog.Logger) (*bus, error) {
+func newBus(ctx context.Context, busType dbusType, logger *slog.Logger) (*Bus, error) {
 	var conn *dbus.Conn
 
 	var err error
 
-	dbusCtx, cancelFunc := context.WithCancel(context.Background())
+	dbusCtx, cancelFunc := context.WithCancel(ctx)
 
 	switch busType {
 	case SessionBus:
@@ -131,7 +128,7 @@ func newBus(ctx context.Context, busType dbusType, logger *slog.Logger) (*bus, e
 		return nil, fmt.Errorf("could not connect to bus: %w", err)
 	}
 
-	bus := &bus{
+	bus := &Bus{
 		conn:    conn,
 		busType: busType,
 		wg:      sync.WaitGroup{},
@@ -153,20 +150,15 @@ func newBus(ctx context.Context, busType dbusType, logger *slog.Logger) (*bus, e
 // non-nil error will be returned. Call does not return any data. For fetching
 // data from the bus, see GetData. For retrieving the value of a property, see
 // GetProp.
-func Call(ctx context.Context, bus dbusType, path, dest, method string, args ...any) error {
-	busObj, ok := getBus(ctx, bus)
-	if !ok {
-		return ErrNoBusCtx
-	}
-
-	obj := busObj.conn.Object(dest, dbus.ObjectPath(path))
+func (b *Bus) Call(ctx context.Context, path, dest, method string, args ...any) error {
+	obj := b.conn.Object(dest, dbus.ObjectPath(path))
 	if args != nil {
-		return fmt.Errorf("%s: call could not retrieve object (%w)", bus.String(), obj.Call(method, 0, args...).Err)
+		return fmt.Errorf("%s: call could not retrieve object (%w)", b.busType.String(), obj.Call(method, 0, args...).Err)
 	}
 
-	err := obj.Call(method, 0).Err
+	err := obj.CallWithContext(ctx, method, 0).Err
 	if err != nil {
-		return fmt.Errorf("%s: unable to call method %s (args: %v): %w", bus.String(), method, args, err)
+		return fmt.Errorf("%s: unable to call method %s (args: %v): %w", b.busType.String(), method, args, err)
 	}
 
 	return obj.Call(method, 0).Err
@@ -174,44 +166,34 @@ func Call(ctx context.Context, bus dbusType, path, dest, method string, args ...
 
 // GetProp retrieves the value of the specified property from D-Bus as the given
 // type. If the property cannot be retrieved, a non-nil error is returned.
-func GetProp[P any](ctx context.Context, bus dbusType, path, dest, prop string) (P, error) {
+func GetProp[P any](ctx context.Context, bus *Bus, path, dest, prop string) (P, error) {
 	var value P
 
-	busObj, ok := getBus(ctx, bus)
-	if !ok {
-		return value, ErrNoBusCtx
-	}
-
-	busObj.logger.Log(ctx, LevelTrace,
+	bus.logger.Log(ctx, LevelTrace,
 		"Requesting property.",
 		slog.String("path", path),
 		slog.String("dest", dest),
 		slog.String("property", prop),
 	)
 
-	obj := busObj.conn.Object(dest, dbus.ObjectPath(path))
+	obj := bus.conn.Object(dest, dbus.ObjectPath(path))
 
 	res, err := obj.GetProperty(prop)
 	if err != nil {
-		return value, fmt.Errorf("%s: unable to retrieve property %s from %s: %w", bus.String(), prop, dest, err)
+		return value, fmt.Errorf("%s: unable to retrieve property %s from %s: %w", bus.busType.String(), prop, dest, err)
 	}
 
 	value, err = VariantToValue[P](res)
 	if err != nil {
-		return value, fmt.Errorf("%s: unable to retrieve property %s from %s: %w", bus.String(), prop, dest, err)
+		return value, fmt.Errorf("%s: unable to retrieve property %s from %s: %w", bus.busType.String(), prop, dest, err)
 	}
 
 	return value, nil
 }
 
 // SetProp sets the specific property to the specified value.
-func SetProp[P any](ctx context.Context, bus dbusType, path, dest, prop string, value P) error {
-	busObj, ok := getBus(ctx, bus)
-	if !ok {
-		return ErrNoBusCtx
-	}
-
-	busObj.logger.Log(ctx, LevelTrace,
+func SetProp[P any](ctx context.Context, bus *Bus, path, dest, prop string, value P) error {
+	bus.logger.Log(ctx, LevelTrace,
 		"Setting property.",
 		slog.String("path", path),
 		slog.String("dest", dest),
@@ -220,11 +202,11 @@ func SetProp[P any](ctx context.Context, bus dbusType, path, dest, prop string, 
 	)
 
 	v := dbus.MakeVariant(value)
-	obj := busObj.conn.Object(dest, dbus.ObjectPath(path))
+	obj := bus.conn.Object(dest, dbus.ObjectPath(path))
 
 	err := obj.SetProperty(prop, v)
 	if err != nil {
-		return fmt.Errorf("%s: unable to set property %s (%s) to %v: %w", bus.String(), prop, dest, value, err)
+		return fmt.Errorf("%s: unable to set property %s (%s) to %v: %w", bus.busType.String(), prop, dest, value, err)
 	}
 
 	return nil
@@ -234,24 +216,19 @@ func SetProp[P any](ctx context.Context, bus dbusType, path, dest, prop string, 
 // If there is an error or the result cannot be stored in the given type, it
 // will return an non-nil error. To execute a method, see Call. To get the value
 // of a property, see GetProp.
-func GetData[D any](ctx context.Context, bus dbusType, path, dest, method string, args ...any) (D, error) {
+func GetData[D any](ctx context.Context, bus *Bus, path, dest, method string, args ...any) (D, error) {
 	var data D
 
 	var err error
 
-	busObj, ok := getBus(ctx, bus)
-	if !ok {
-		return data, ErrNoBusCtx
-	}
-
-	busObj.logger.Log(ctx, LevelTrace,
+	bus.logger.Log(ctx, LevelTrace,
 		"Getting data.",
 		slog.String("path", path),
 		slog.String("dest", dest),
 		slog.String("method", method),
 	)
 
-	obj := busObj.conn.Object(dest, dbus.ObjectPath(path))
+	obj := bus.conn.Object(dest, dbus.ObjectPath(path))
 
 	if args != nil {
 		err = obj.Call(method, 0, args...).Store(&data)
@@ -260,7 +237,7 @@ func GetData[D any](ctx context.Context, bus dbusType, path, dest, method string
 	}
 
 	if err != nil {
-		return data, fmt.Errorf("%s: unable to get data %s from %s: %w", bus.String(), method, dest, err)
+		return data, fmt.Errorf("%s: unable to get data %s from %s: %w", bus.busType.String(), method, dest, err)
 	}
 
 	return data, nil
@@ -272,26 +249,19 @@ func GetData[D any](ctx context.Context, bus dbusType, path, dest, method string
 // data returned in the channel will contain the signal (or property) that
 // triggered the match, the path and the contents (what values actually
 // changed).
-//
-//nolint:cyclop
-func WatchBus(ctx context.Context, conditions *Watch) (chan Trigger, error) {
+func (b *Bus) WatchBus(ctx context.Context, conditions *Watch) (chan Trigger, error) {
 	var wg sync.WaitGroup
 
-	bus, ok := getBus(ctx, conditions.Bus)
-	if !ok {
-		return nil, ErrNoBusCtx
-	}
-
 	matchers := conditions.Parse()
-	if err := bus.conn.AddMatchSignalContext(ctx, matchers...); err != nil {
+	if err := b.conn.AddMatchSignalContext(ctx, matchers...); err != nil {
 		return nil, fmt.Errorf("unable to add watch conditions (%w)", err)
 	}
 
 	signalCh := make(chan *dbus.Signal)
 	outCh := make(chan Trigger)
 
-	bus.conn.Signal(signalCh)
-	bus.wg.Add(1)
+	b.conn.Signal(signalCh)
+	b.wg.Add(1)
 
 	wg.Add(1)
 
@@ -301,7 +271,7 @@ func WatchBus(ctx context.Context, conditions *Watch) (chan Trigger, error) {
 		for {
 			select {
 			case <-ctx.Done():
-				bus.conn.RemoveSignal(signalCh)
+				b.conn.RemoveSignal(signalCh)
 				close(outCh)
 
 				return
@@ -324,7 +294,7 @@ func WatchBus(ctx context.Context, conditions *Watch) (chan Trigger, error) {
 				}
 				// We have a match! Send the signal details back to the client
 				// for further processing.
-				bus.logger.Log(ctx, LevelTrace,
+				b.logger.Log(ctx, LevelTrace,
 					"Dispatching D-Bus trigger.",
 					slog.String("path", conditions.Path),
 					slog.String("interface", conditions.Interface),
@@ -342,19 +312,19 @@ func WatchBus(ctx context.Context, conditions *Watch) (chan Trigger, error) {
 
 	go func() {
 		wg.Wait()
-		bus.wg.Done()
+		b.wg.Done()
 	}()
 
 	return outCh, nil
 }
 
-func GetSessionPath(ctx context.Context) (string, error) {
+func (b *Bus) GetSessionPath(ctx context.Context) (string, error) {
 	usr, err := user.Current()
 	if err != nil {
 		return "", fmt.Errorf("unable to determine user: %w", err)
 	}
 
-	sessions, err := GetData[[][]any](ctx, SystemBus, loginBasePath, loginBaseInterface, listSessionsMethod)
+	sessions, err := GetData[[][]any](ctx, b, loginBasePath, loginBaseInterface, listSessionsMethod)
 	if err != nil {
 		return "", fmt.Errorf("unable to retrieve session path: %w", err)
 	}

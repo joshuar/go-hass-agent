@@ -18,6 +18,7 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/logging"
+	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
 const (
@@ -91,7 +92,7 @@ func (w *timeWorker) getBoottime(ctx context.Context) string {
 	return time.Unix(int64(value), 0).Format(time.RFC3339)
 }
 
-func NewTimeWorker(ctx context.Context) (*linux.SensorWorker, error) {
+func NewTimeWorker(ctx context.Context, _ *dbusx.DBusAPI) (*linux.SensorWorker, error) {
 	return &linux.SensorWorker{
 			Value: &timeWorker{
 				logger: logging.FromContext(ctx).With(slog.String("worker", timeWorkerID)),

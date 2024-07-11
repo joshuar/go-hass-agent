@@ -32,6 +32,7 @@ const (
 )
 
 type usersSensor struct {
+	bus       *dbusx.Bus
 	userNames []string
 	linux.Sensor
 }
@@ -45,7 +46,7 @@ func (s *usersSensor) Attributes() map[string]any {
 }
 
 func (s *usersSensor) updateUsers(ctx context.Context) error {
-	userData, err := dbusx.GetData[[][]any](ctx, dbusx.SystemBus, loginBasePath, loginBaseInterface, listSessionsMethod)
+	userData, err := dbusx.GetData[[][]any](ctx, s.bus, loginBasePath, loginBaseInterface, listSessionsMethod)
 	if err != nil {
 		return fmt.Errorf("could not retrieve users from D-Bus: %w", err)
 	}
@@ -66,8 +67,8 @@ func (s *usersSensor) updateUsers(ctx context.Context) error {
 }
 
 //nolint:exhaustruct
-func newUsersSensor() *usersSensor {
-	userSensor := &usersSensor{}
+func newUsersSensor(bus *dbusx.Bus) *usersSensor {
+	userSensor := &usersSensor{bus: bus}
 	userSensor.SensorTypeValue = linux.SensorUsers
 	userSensor.UnitsString = "users"
 	userSensor.IconString = "mdi:account"
@@ -79,14 +80,14 @@ func newUsersSensor() *usersSensor {
 type worker struct {
 	sensor *usersSensor
 	logger *slog.Logger
+	bus    *dbusx.Bus
 }
 
 //nolint:exhaustruct
 func (w *worker) Events(ctx context.Context) (chan sensor.Details, error) {
 	sensorCh := make(chan sensor.Details)
 
-	triggerCh, err := dbusx.WatchBus(ctx, &dbusx.Watch{
-		Bus:       dbusx.SystemBus,
+	triggerCh, err := w.bus.WatchBus(ctx, &dbusx.Watch{
 		Names:     []string{sessionAddedSignal, sessionRemovedSignal},
 		Interface: managerInterface,
 		Path:      loginBasePath,
@@ -136,11 +137,17 @@ func (w *worker) Sensors(ctx context.Context) ([]sensor.Details, error) {
 	return []sensor.Details{w.sensor}, err
 }
 
-func NewUserWorker(ctx context.Context) (*linux.SensorWorker, error) {
+func NewUserWorker(ctx context.Context, api *dbusx.DBusAPI) (*linux.SensorWorker, error) {
+	bus, err := api.GetBus(ctx, dbusx.SystemBus)
+	if err != nil {
+		return nil, fmt.Errorf("unable to monitor power profile: %w", err)
+	}
+
 	return &linux.SensorWorker{
 			Value: &worker{
-				sensor: newUsersSensor(),
+				sensor: newUsersSensor(bus),
 				logger: logging.FromContext(ctx).With(slog.String("worker", usersWorkerID)),
+				bus:    bus,
 			},
 			WorkerID: usersWorkerID,
 		},

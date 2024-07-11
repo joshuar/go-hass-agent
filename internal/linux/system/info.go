@@ -15,6 +15,7 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/logging"
+	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
 const (
@@ -71,7 +72,7 @@ func (w *infoWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
 	return sensors, nil
 }
 
-func NewInfoWorker(ctx context.Context) (*linux.SensorWorker, error) {
+func NewInfoWorker(ctx context.Context, _ *dbusx.DBusAPI) (*linux.SensorWorker, error) {
 	return &linux.SensorWorker{
 			Value: &infoWorker{
 				logger: logging.FromContext(ctx).With(slog.String("worker", infoWorkerID)),

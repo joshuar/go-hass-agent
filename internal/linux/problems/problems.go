@@ -79,6 +79,7 @@ func parseProblem(details map[string]string) map[string]any {
 
 type worker struct {
 	logger *slog.Logger
+	bus    *dbusx.Bus
 }
 
 func (w *worker) Interval() time.Duration { return problemInterval }
@@ -94,14 +95,13 @@ func (w *worker) Sensors(ctx context.Context, _ time.Duration) ([]sensor.Details
 	problems.UnitsString = "problems"
 	problems.StateClassValue = types.StateClassMeasurement
 
-	problemList, err := dbusx.GetData[[]string](ctx, dbusx.SystemBus, dBusProblemsDest, dBusProblemIntr, dBusProblemIntr+".GetProblems")
+	problemList, err := dbusx.GetData[[]string](ctx, w.bus, dBusProblemsDest, dBusProblemIntr, dBusProblemIntr+".GetProblems")
 	if err != nil {
 		return nil, fmt.Errorf("unable to retrieve the list of ABRT problems: %w", err)
 	}
 
 	for _, problem := range problemList {
-		problemDetails, err := dbusx.GetData[map[string]string](ctx,
-			dbusx.SystemBus,
+		problemDetails, err := dbusx.GetData[map[string]string](ctx, w.bus,
 			dBusProblemsDest,
 			dBusProblemIntr,
 			dBusProblemIntr+".GetInfo", problem, []string{"time", "count", "package", "reason"})
@@ -121,10 +121,16 @@ func (w *worker) Sensors(ctx context.Context, _ time.Duration) ([]sensor.Details
 	return nil, nil
 }
 
-func NewProblemsWorker(ctx context.Context) (*linux.SensorWorker, error) {
+func NewProblemsWorker(ctx context.Context, api *dbusx.DBusAPI) (*linux.SensorWorker, error) {
+	bus, err := api.GetBus(ctx, dbusx.SystemBus)
+	if err != nil {
+		return nil, fmt.Errorf("unable to monitor abrt problems: %w", err)
+	}
+
 	return &linux.SensorWorker{
 			Value: &worker{
 				logger: logging.FromContext(ctx).With(slog.String("worker", problemsWorkerID)),
+				bus:    bus,
 			},
 			WorkerID: problemsWorkerID,
 		},

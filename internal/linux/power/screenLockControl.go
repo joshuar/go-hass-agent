@@ -14,22 +14,28 @@ import (
 	"github.com/eclipse/paho.golang/paho"
 	mqtthass "github.com/joshuar/go-hass-anything/v9/pkg/hass"
 
-	"github.com/joshuar/go-hass-agent/internal/device"
-	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
-func NewScreenLockControl(ctx context.Context) *mqtthass.ButtonEntity {
+//nolint:lll
+func NewScreenLockControl(ctx context.Context, api *dbusx.DBusAPI, parentLogger *slog.Logger, device *mqtthass.Device) *mqtthass.ButtonEntity {
+	logger := parentLogger.With(slog.String("controller", "screen_lock"))
+
+	bus, err := api.GetBus(ctx, dbusx.SessionBus)
+	if err != nil {
+		logger.Warn("Cannot create screen lock control.", "error", err.Error())
+
+		return nil
+	}
+
 	dbusScreensaverDest, dbusScreensaverPath, dbusScreensaverMsg := getDesktopEnvScreensaverConfig()
 	dbusScreensaverLockMethod := dbusScreensaverDest + ".Lock"
-	deviceInfo := device.MQTTDeviceInfo(ctx)
-	logger := logging.FromContext(ctx).With(slog.String("controller", "screen_lock"))
 
 	return mqtthass.AsButton(
-		mqtthass.NewEntity(preferences.AppName, "Lock Screensaver", deviceInfo.Name+"_lock_screensaver").
+		mqtthass.NewEntity(preferences.AppName, "Lock Screensaver", device.Name+"_lock_screensaver").
 			WithOriginInfo(preferences.MQTTOrigin()).
-			WithDeviceInfo(deviceInfo).
+			WithDeviceInfo(device).
 			WithIcon("mdi:eye-lock").
 			WithCommandCallback(func(_ *paho.Publish) {
 				if dbusScreensaverPath == "" {
@@ -39,9 +45,9 @@ func NewScreenLockControl(ctx context.Context) *mqtthass.ButtonEntity {
 				var err error
 
 				if dbusScreensaverMsg != nil {
-					err = dbusx.Call(ctx, dbusx.SessionBus, dbusScreensaverPath, dbusScreensaverDest, dbusScreensaverLockMethod, dbusScreensaverMsg)
+					err = bus.Call(ctx, dbusScreensaverPath, dbusScreensaverDest, dbusScreensaverLockMethod, dbusScreensaverMsg)
 				} else {
-					err = dbusx.Call(ctx, dbusx.SessionBus, dbusScreensaverPath, dbusScreensaverDest, dbusScreensaverLockMethod)
+					err = bus.Call(ctx, dbusScreensaverPath, dbusScreensaverDest, dbusScreensaverLockMethod)
 				}
 
 				if err != nil {
