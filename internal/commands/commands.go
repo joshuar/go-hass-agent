@@ -126,11 +126,6 @@ func (d *Controller) Msgs() chan *mqttapi.Msg {
 	return nil
 }
 
-// Setup can be used to initialise the controller. This is unused.
-func (d *Controller) Setup(_ context.Context) error {
-	return nil
-}
-
 // NewCommandsController is used by the agent to initialise the commands
 // controller, which holds the MQTT configuration for the commands defined by
 // the user.
@@ -153,17 +148,17 @@ func NewCommandsController(ctx context.Context, commandsFile string, device *mqt
 	}
 
 	controller := &Controller{
-		buttons:  generateButtons(ctx, cmds.Buttons, device),
-		switches: generateSwitches(ctx, cmds.Switches, device),
-		logger:   logging.FromContext(ctx),
+		logger: logging.FromContext(ctx).With(slog.String("component", "mqtt_commands")),
 	}
+	controller.generateButtons(cmds.Buttons, device)
+	controller.generateSwitches(cmds.Switches, device)
 
 	return controller, nil
 }
 
 // generateButtons will create MQTT entities for buttons defined by the
 // controller.
-func generateButtons(ctx context.Context, buttonCmds []Command, device *mqtthass.Device) []*mqtthass.ButtonEntity {
+func (d *Controller) generateButtons(buttonCmds []Command, device *mqtthass.Device) {
 	var id, icon, name string
 
 	entities := make([]*mqtthass.ButtonEntity, 0, len(buttonCmds))
@@ -172,7 +167,7 @@ func generateButtons(ctx context.Context, buttonCmds []Command, device *mqtthass
 		callback := func(_ *paho.Publish) {
 			err := buttonCmd(cmd.Exec)
 			if err != nil {
-				logging.FromContext(ctx).Warn("Button press failed.", "button", cmd.Name, "error", err.Error())
+				d.logger.Warn("Button press failed.", "button", cmd.Name, "error", err.Error())
 			}
 		}
 		name = cmd.Name
@@ -193,7 +188,7 @@ func generateButtons(ctx context.Context, buttonCmds []Command, device *mqtthass
 					WithCommandCallback(callback)))
 	}
 
-	return entities
+	d.buttons = entities
 }
 
 // buttonCmd runs the executable associated with a button. Buttons are not
@@ -212,7 +207,7 @@ func buttonCmd(command string) error {
 
 // generateButtons will create MQTT entities for buttons defined by the
 // controller.
-func generateSwitches(ctx context.Context, switchCmds []Command, device *mqtthass.Device) []*mqtthass.SwitchEntity {
+func (d *Controller) generateSwitches(switchCmds []Command, device *mqtthass.Device) {
 	var id, icon, name string
 
 	entities := make([]*mqtthass.SwitchEntity, 0, len(switchCmds))
@@ -223,7 +218,7 @@ func generateSwitches(ctx context.Context, switchCmds []Command, device *mqtthas
 
 			err := switchCmd(cmd.Exec, state)
 			if err != nil {
-				logging.FromContext(ctx).Warn("Switch toggle failed.", "switch", cmd.Name)
+				d.logger.Warn("Switch toggle failed.", "switch", cmd.Name)
 			}
 		}
 		stateCallBack := func(_ ...any) (json.RawMessage, error) {
@@ -249,7 +244,7 @@ func generateSwitches(ctx context.Context, switchCmds []Command, device *mqtthas
 				true))
 	}
 
-	return entities
+	d.switches = entities
 }
 
 // buttonCmd runs the executable associated with a button. Buttons are not

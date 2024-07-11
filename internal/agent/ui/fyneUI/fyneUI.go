@@ -121,7 +121,7 @@ func (i *FyneUI) DisplayTrayIcon(ctx context.Context, agent ui.Agent, trk ui.Sen
 		// Quit menu item.
 		menuItemQuit := fyne.NewMenuItem(i.Translate("Quit"), func() {
 			logging.FromContext(ctx).Debug("Qutting agent on user request.")
-			agent.Stop(ctx)
+			agent.Stop()
 		})
 		menuItemQuit.IsQuit = true
 

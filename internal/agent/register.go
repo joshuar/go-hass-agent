@@ -14,7 +14,6 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/registry"
-	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
@@ -65,7 +64,7 @@ func (agent *Agent) saveRegistration(resp *hass.RegistrationDetails, deviceInfo 
 // will action a registration workflow displaying a GUI for user input of
 // registration details and save the results into the agent config.
 func (agent *Agent) performRegistration(ctx context.Context) error {
-	logging.FromContext(ctx).Info("Registration required. Starting registration process.")
+	agent.logger.Info("Registration required. Starting registration process.")
 
 	// Display a window asking for registration details for non-headless usage.
 	if !agent.headless {
@@ -93,14 +92,14 @@ func (agent *Agent) performRegistration(ctx context.Context) error {
 		return fmt.Errorf("failed: %w", err)
 	}
 
-	logging.FromContext(ctx).Info("Successfully registered agent.")
+	agent.logger.Info("Successfully registered agent.")
 
 	return nil
 }
 
 func (agent *Agent) checkRegistration(ctx context.Context, trk SensorTracker) error {
 	if agent.prefs.Registered && !agent.forceRegister {
-		logging.FromContext(ctx).Debug("Agent is already registered. Skipping.")
+		agent.logger.Debug("Agent is already registered. Skipping.")
 
 		return nil
 	}
@@ -114,7 +113,7 @@ func (agent *Agent) checkRegistration(ctx context.Context, trk SensorTracker) er
 		trk.Reset()
 
 		if err := registry.Reset(); err != nil {
-			logging.FromContext(ctx).Warn("Problem resetting registry.", "error", err.Error())
+			agent.logger.Warn("Problem resetting registry.", "error", err.Error())
 		}
 	}
 
