@@ -11,6 +11,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -35,6 +36,7 @@ type Agent struct {
 	done             chan struct{}
 	registrationInfo *hass.RegistrationInput
 	prefs            *preferences.Preferences
+	logger           *slog.Logger
 	id               string
 	headless         bool
 	forceRegister    bool
@@ -46,17 +48,18 @@ type Option func(*Agent)
 // newDefaultAgent returns an agent with default options.
 //
 //nolint:exhaustruct
-func newDefaultAgent() *Agent {
+func newDefaultAgent(ctx context.Context) *Agent {
 	return &Agent{
 		done:             make(chan struct{}),
 		id:               preferences.AppID,
 		registrationInfo: &hass.RegistrationInput{},
+		logger:           logging.FromContext(ctx).With(slog.Group("agent")),
 	}
 }
 
 // NewAgent creates a new agent with the options specified.
 func NewAgent(ctx context.Context, options ...Option) (*Agent, error) {
-	agent := newDefaultAgent()
+	agent := newDefaultAgent(ctx)
 
 	for _, option := range options {
 		option(agent)
@@ -129,7 +132,7 @@ func (agent *Agent) Run(ctx context.Context, trk SensorTracker, reg sensor.Regis
 		defer regWait.Done()
 
 		if err := agent.checkRegistration(ctx, trk); err != nil {
-			logging.FromContext(ctx).Log(ctx, logging.LevelFatal, "Error checking registration status.", "error", err.Error())
+			agent.logger.Log(ctx, logging.LevelFatal, "Error checking registration status.", "error", err.Error())
 		}
 	}()
 
@@ -147,7 +150,7 @@ func (agent *Agent) Run(ctx context.Context, trk SensorTracker, reg sensor.Regis
 		// Embed required settings for Home Assistant in the context.
 		ctx, err = hass.SetupContext(ctx)
 		if err != nil {
-			logging.FromContext(ctx).Error("Could not add hass details to context.", "error", err.Error())
+			agent.logger.Error("Could not add hass details to context.", "error", err.Error())
 
 			return
 		}
@@ -162,7 +165,7 @@ func (agent *Agent) Run(ctx context.Context, trk SensorTracker, reg sensor.Regis
 		go func() {
 			<-agent.done
 			cancelFunc()
-			logging.FromContext(ctx).Debug("Agent done.")
+			agent.logger.Debug("Agent done.")
 		}()
 
 		// Start worker funcs for sensors.
@@ -170,7 +173,7 @@ func (agent *Agent) Run(ctx context.Context, trk SensorTracker, reg sensor.Regis
 
 		go func() {
 			defer wg.Done()
-			runWorkers(runnerCtx, osController, trk, reg)
+			agent.runWorkers(runnerCtx, osController, trk, reg)
 		}()
 		// Start any scripts.
 		wg.Add(1)
@@ -179,7 +182,7 @@ func (agent *Agent) Run(ctx context.Context, trk SensorTracker, reg sensor.Regis
 			defer wg.Done()
 
 			scriptPath := filepath.Join(xdg.ConfigHome, agent.AppID(), "scripts")
-			runScripts(runnerCtx, scriptPath, trk, reg)
+			agent.runScripts(runnerCtx, scriptPath, trk, reg)
 		}()
 		// Start the mqtt client if MQTT is enabled.
 		if agent.prefs.MQTTEnabled {
@@ -203,7 +206,7 @@ func (agent *Agent) Run(ctx context.Context, trk SensorTracker, reg sensor.Regis
 		}
 	}()
 
-	agent.handleSignals(ctx)
+	agent.handleSignals()
 
 	if !agent.headless {
 		agent.ui.DisplayTrayIcon(ctx, agent, trk)
@@ -218,10 +221,10 @@ func (agent *Agent) Run(ctx context.Context, trk SensorTracker, reg sensor.Regis
 func (agent *Agent) Register(ctx context.Context, trk SensorTracker) {
 	go func() {
 		if err := agent.checkRegistration(ctx, trk); err != nil {
-			logging.FromContext(ctx).Log(ctx, logging.LevelFatal, "Error checking registration status", "error", err.Error())
+			agent.logger.Log(ctx, logging.LevelFatal, "Error checking registration status", "error", err.Error())
 		}
 
-		agent.Stop(ctx)
+		agent.Stop()
 	}()
 
 	if !agent.headless {
@@ -230,14 +233,14 @@ func (agent *Agent) Register(ctx context.Context, trk SensorTracker) {
 }
 
 // handleSignals will handle Ctrl-C of the agent.
-func (agent *Agent) handleSignals(ctx context.Context) {
+func (agent *Agent) handleSignals() {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 
 	go func() {
 		defer close(agent.done)
 		<-c
-		logging.FromContext(ctx).Debug("Ctrl-C pressed.")
+		agent.logger.Debug("Ctrl-C pressed.")
 	}()
 }
 
@@ -249,13 +252,13 @@ func (agent *Agent) AppID() string {
 
 // Stop will close the agent's done channel which indicates to any goroutines it
 // is time to clean up and exit.
-func (agent *Agent) Stop(ctx context.Context) {
+func (agent *Agent) Stop() {
 	defer close(agent.done)
 
-	logging.FromContext(ctx).Debug("Stopping Agent.")
+	agent.logger.Debug("Stopping Agent.")
 
 	if err := agent.prefs.Save(); err != nil {
-		logging.FromContext(ctx).Warn("Could not save agent preferences", "error", err.Error())
+		agent.logger.Warn("Could not save agent preferences", "error", err.Error())
 	}
 }
 

@@ -86,7 +86,7 @@ func NewScript(ctx context.Context, path string) (*Script, error) {
 		path:     path,
 		schedule: "",
 		Output:   make(chan sensor.Details),
-		logger:   logging.FromContext(ctx),
+		logger:   logging.FromContext(ctx).With(slog.String("component", "scripts")),
 	}
 
 	out, err := script.execute()
