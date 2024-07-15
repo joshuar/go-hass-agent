@@ -1,0 +1,12 @@
+---
+dir: testing
+filename: "mock_{{.InterfaceName | snakecase}}.go"
+outpkg: testing
+with-expecter: true
+packages:
+  github.com/joshuar/go-hass-agent/internal/agent:
+    interfaces:
+      Worker:
+      Controller:
+      SensorController:
+      MQTTController:

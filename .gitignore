@@ -13,8 +13,14 @@
 !/.vscode/ltex.dictionary.*.txt
 !/.github/**/*
 !/.devcontainer/**/*
-!/*.yaml
+
+# don't ignore YAML configs in sub directories EXCEPT the deployments folder
+# tree
+!**/*.yaml
+deployments/**/*.yaml
+
 !/*.yml
+!/*.yaml
 !/*.json
 !/*.toml
 !build/**/*

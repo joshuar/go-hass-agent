@@ -4,3 +4,4 @@ ignore:
   - "*_test.go" # tests
   - "internal/hass/sensor/types" # all generated
   - "*Strings.go" # generated with stringer
+  - "**/testing" # test files

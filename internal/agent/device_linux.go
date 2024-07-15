@@ -102,9 +102,9 @@ func (w linuxController) ActiveWorkers() []string {
 func (w linuxController) InactiveWorkers() []string {
 	inactiveWorkers := make([]string, 0, len(w.sensorWorkers))
 
-	for _, worker := range w.sensorWorkers {
+	for id, worker := range w.sensorWorkers {
 		if !worker.started {
-			inactiveWorkers = append(inactiveWorkers, worker.object.ID())
+			inactiveWorkers = append(inactiveWorkers, id)
 		}
 	}
 
