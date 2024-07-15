@@ -37,15 +37,18 @@ func (v *version) Category() string { return "diagnostic" }
 
 func (v *version) Attributes() map[string]any { return nil }
 
-type versionWorker struct{}
+type VersionWorker struct{}
 
-func (w *versionWorker) ID() string { return "agent_version_sensor" }
+func (w *VersionWorker) ID() string { return versionWorkerID }
 
-func (w *versionWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
+// Stop is a no-op.
+func (w *VersionWorker) Stop() error { return nil }
+
+func (w *VersionWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
 	return []sensor.Details{new(version)}, nil
 }
 
-func (w *versionWorker) Updates(ctx context.Context) (<-chan sensor.Details, error) {
+func (w *VersionWorker) Updates(ctx context.Context) (<-chan sensor.Details, error) {
 	sensorCh := make(chan sensor.Details)
 
 	sensors, err := w.Sensors(ctx)
@@ -63,6 +66,6 @@ func (w *versionWorker) Updates(ctx context.Context) (<-chan sensor.Details, err
 	return sensorCh, nil
 }
 
-func newVersionWorker() *versionWorker {
-	return &versionWorker{}
+func NewVersionWorker() *VersionWorker {
+	return &VersionWorker{}
 }

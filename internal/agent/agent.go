@@ -158,23 +158,28 @@ func (agent *Agent) Run(ctx context.Context, trk SensorTracker, reg sensor.Regis
 
 		runnerCtx, cancelFunc := context.WithCancel(ctx)
 
-		// Create a new OS controller. The controller will have all the
-		// necessary configuration for any OS-specific sensors and MQTT
-		// configuration.
-		osController := newOSController(runnerCtx)
-
+		// Cancel the runner context when the agent is done.
 		go func() {
 			<-agent.done
 			cancelFunc()
 			agent.logger.Debug("Agent done.")
 		}()
 
+		// Create a new OS controller. The controller will have all the
+		// necessary configuration for any OS-specific sensors and MQTT
+		// configuration.
+		osController := newOSController(runnerCtx)
+		// Create a new device controller. The controller will have all the
+		// necessary configuration for device-specific sensors and MQTT
+		// configuration.
+		deviceController := newDeviceController(runnerCtx)
+
 		// Start worker funcs for sensors.
 		wg.Add(1)
 
 		go func() {
 			defer wg.Done()
-			agent.runWorkers(runnerCtx, osController, trk, reg)
+			agent.runWorkers(runnerCtx, trk, reg, osController, deviceController)
 		}()
 		// Start any scripts.
 		wg.Add(1)

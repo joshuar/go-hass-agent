@@ -87,7 +87,7 @@ type linuxController struct {
 	*mqttWorker
 }
 
-func (w linuxController) ActiveWorkers() []string {
+func (w *linuxController) ActiveWorkers() []string {
 	activeWorkers := make([]string, 0, len(w.sensorWorkers))
 
 	for id, worker := range w.sensorWorkers {
@@ -99,7 +99,7 @@ func (w linuxController) ActiveWorkers() []string {
 	return activeWorkers
 }
 
-func (w linuxController) InactiveWorkers() []string {
+func (w *linuxController) InactiveWorkers() []string {
 	inactiveWorkers := make([]string, 0, len(w.sensorWorkers))
 
 	for id, worker := range w.sensorWorkers {
@@ -111,7 +111,7 @@ func (w linuxController) InactiveWorkers() []string {
 	return inactiveWorkers
 }
 
-func (w linuxController) Start(ctx context.Context, name string) (<-chan sensor.Details, error) {
+func (w *linuxController) Start(ctx context.Context, name string) (<-chan sensor.Details, error) {
 	worker, exists := w.sensorWorkers[name]
 	if !exists {
 		return nil, ErrUnknownWorker
@@ -131,7 +131,7 @@ func (w linuxController) Start(ctx context.Context, name string) (<-chan sensor.
 	return workerCh, nil
 }
 
-func (w linuxController) Stop(name string) error {
+func (w *linuxController) Stop(name string) error {
 	// Check if the given worker ID exists.
 	worker, exists := w.sensorWorkers[name]
 	if !exists {
@@ -145,7 +145,7 @@ func (w linuxController) Stop(name string) error {
 	return nil
 }
 
-func (w linuxController) StartAll(ctx context.Context) (<-chan sensor.Details, error) {
+func (w *linuxController) StartAll(ctx context.Context) (<-chan sensor.Details, error) {
 	outCh := make([]<-chan sensor.Details, 0, len(allworkers))
 
 	var errs error
@@ -164,7 +164,7 @@ func (w linuxController) StartAll(ctx context.Context) (<-chan sensor.Details, e
 	return sensor.MergeSensorCh(ctx, outCh...), errs
 }
 
-func (w linuxController) StopAll() error {
+func (w *linuxController) StopAll() error {
 	var errs error
 
 	for id := range w.sensorWorkers {
@@ -283,7 +283,7 @@ func newOSController(ctx context.Context) Controller {
 			continue
 		}
 
-		controller.sensorWorkers[worker.ID()] = &sensorWorker{object: worker}
+		controller.sensorWorkers[worker.ID()] = &sensorWorker{object: worker, started: false}
 	}
 
 	// Only set up MQTT if MQTT is enabled.

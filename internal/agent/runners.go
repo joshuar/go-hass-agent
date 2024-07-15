@@ -74,23 +74,21 @@ type Controller interface {
 
 // runWorkers will call all the sensor worker functions that have been defined
 // for this device.
-func (agent *Agent) runWorkers(ctx context.Context, osController SensorController, trk SensorTracker, reg sensor.Registry) {
-	// Start sensor workers for OS.
-	sensorUpdates, err := osController.StartAll(ctx)
-	if err != nil {
-		agent.logger.Warn("Some sensor workers could not be started", "errors", err.Error())
-	}
-	// Create sensor workers for device.
-	deviceWorkers := device.CreateSensorWorkers(ctx)
-	// Start sensor workers for device.
-	deviceUpdates, err := deviceWorkers.StartAll(ctx)
-	if err != nil {
-		agent.logger.Warn("Some device workers could not be started", "errors", err.Error())
+func (agent *Agent) runWorkers(ctx context.Context, trk SensorTracker, reg sensor.Registry, controllers ...SensorController) {
+	sensorCh := make([]<-chan sensor.Details, 0, len(controllers))
+
+	for _, controller := range controllers {
+		ch, err := controller.StartAll(ctx)
+		if err != nil {
+			agent.logger.Warn("Starting controller had problems.", "errors", err.Error())
+		}
+
+		sensorCh = append(sensorCh, ch)
 	}
 
 	// Listen for sensor updates from all workers.
 	go func() {
-		if err := trk.Process(ctx, reg, sensorUpdates, deviceUpdates); err != nil {
+		if err := trk.Process(ctx, reg, sensorCh...); err != nil {
 			agent.logger.Error("Could not process sensor updates", "error", err.Error())
 		}
 	}()
@@ -99,19 +97,19 @@ func (agent *Agent) runWorkers(ctx context.Context, osController SensorControlle
 
 	wg.Add(1)
 
-	// When context is cancelled, stop all sensor workers.
+	// When the context is cancelled, stop all sensor workers for all
+	// controllers.
 	go func() {
 		defer wg.Done()
 		<-ctx.Done()
 
-		if err := osController.StopAll(); err != nil {
-			agent.logger.Debug("Error occurred trying to stop sensor workers.", "error", err.Error())
-		}
-
-		if err := deviceWorkers.StopAll(); err != nil {
-			agent.logger.Debug("Error occurred trying to stop device workers.", "error", err.Error())
+		for _, controller := range controllers {
+			if err := controller.StopAll(); err != nil {
+				agent.logger.Debug("Error occurred trying to stop sensor workers.", "error", err.Error())
+			}
 		}
 	}()
+
 	wg.Wait()
 }
 

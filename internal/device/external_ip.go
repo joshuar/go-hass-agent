@@ -27,8 +27,6 @@ const (
 	ExternalIPUpdateInterval       = 5 * time.Minute
 	ExternalIPUpdateJitter         = 10 * time.Second
 	ExternalIPUpdateRequestTimeout = 15 * time.Second
-
-	externalIPWorkerID = "external_ip_sensor" //nolint:gosec // false positive
 )
 
 var ipLookupHosts = map[string]map[int]string{
@@ -97,15 +95,24 @@ func (a *address) Attributes() map[string]any {
 	return attributes
 }
 
-type externalIPWorker struct {
-	client *resty.Client
-	logger *slog.Logger
+type ExternalIPWorker struct {
+	client     *resty.Client
+	logger     *slog.Logger
+	cancelFunc context.CancelFunc
 }
 
-func (w *externalIPWorker) ID() string { return externalIPWorkerID }
+// ID returns the unique string to represent this worker and its sensors.
+func (w *ExternalIPWorker) ID() string { return externalIPWorkerID }
+
+// Stop will stop any processing of sensors controlled by this worker.
+func (w *ExternalIPWorker) Stop() error {
+	w.cancelFunc()
+
+	return nil
+}
 
 //nolint:mnd
-func (w *externalIPWorker) Sensors(ctx context.Context) ([]sensor.Details, error) {
+func (w *ExternalIPWorker) Sensors(ctx context.Context) ([]sensor.Details, error) {
 	sensors := make([]sensor.Details, 0, 2)
 
 	for _, ver := range []int{4, 6} {
@@ -122,11 +129,17 @@ func (w *externalIPWorker) Sensors(ctx context.Context) ([]sensor.Details, error
 	return sensors, nil
 }
 
-func (w *externalIPWorker) Updates(ctx context.Context) (<-chan sensor.Details, error) {
+func (w *ExternalIPWorker) Updates(ctx context.Context) (<-chan sensor.Details, error) {
 	sensorCh := make(chan sensor.Details)
 
+	// Create a new context for the updates scope.
+	updatesCtx, cancelFunc := context.WithCancel(ctx)
+	// Save the context cancelFunc in the worker to be used as part of its
+	// Stop() method.
+	w.cancelFunc = cancelFunc
+
 	updater := func(_ time.Duration) {
-		sensors, err := w.Sensors(ctx)
+		sensors, err := w.Sensors(updatesCtx)
 		if err != nil {
 			w.logger.Debug("Could not get external IP.", "error", err.Error())
 		}
@@ -137,13 +150,13 @@ func (w *externalIPWorker) Updates(ctx context.Context) (<-chan sensor.Details, 
 	}
 	go func() {
 		defer close(sensorCh)
-		helpers.PollSensors(ctx, updater, ExternalIPUpdateInterval, ExternalIPUpdateJitter)
+		helpers.PollSensors(updatesCtx, updater, ExternalIPUpdateInterval, ExternalIPUpdateJitter)
 	}()
 
 	return sensorCh, nil
 }
 
-func (w *externalIPWorker) lookupExternalIPs(ctx context.Context, client *resty.Client, ver int) (*address, error) {
+func (w *ExternalIPWorker) lookupExternalIPs(ctx context.Context, client *resty.Client, ver int) (*address, error) {
 	for host, addr := range ipLookupHosts {
 		w.logger.LogAttrs(ctx, logging.LevelTrace,
 			"Fetching external IP.",
@@ -178,8 +191,9 @@ func (w *externalIPWorker) lookupExternalIPs(ctx context.Context, client *resty.
 	return nil, ErrNoLookupHosts
 }
 
-func newExternalIPUpdaterWorker(ctx context.Context) *externalIPWorker {
-	return &externalIPWorker{
+//nolint:exhaustruct
+func NewExternalIPUpdaterWorker(ctx context.Context) *ExternalIPWorker {
+	return &ExternalIPWorker{
 		client: resty.New().SetTimeout(ExternalIPUpdateRequestTimeout),
 		logger: logging.FromContext(ctx).With(slog.String("worker", externalIPWorkerID)),
 	}
