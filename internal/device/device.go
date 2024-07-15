@@ -30,6 +30,9 @@ const (
 	unknownDistro        = "Unknown Distro"
 	unknownDistroVersion = "Unknown Version"
 	UnknownValue         = "unknown"
+
+	externalIPWorkerID = "external_ip_sensor" //nolint:gosec // false positive
+	versionWorkerID    = "agent_version_sensor"
 )
 
 var ErrUnsupportedHardware = errors.New("unsupported hardware")
