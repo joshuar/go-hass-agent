@@ -8,14 +8,12 @@ package agent
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
 
 	mqtthass "github.com/joshuar/go-hass-anything/v9/pkg/hass"
 	mqttapi "github.com/joshuar/go-hass-anything/v9/pkg/mqtt"
 
 	"github.com/joshuar/go-hass-agent/internal/device"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/linux/apps"
 	"github.com/joshuar/go-hass-agent/internal/linux/battery"
@@ -74,106 +72,11 @@ type mqttWorker struct {
 	controls []*mqttapi.Subscription
 }
 
-type sensorWorker struct {
-	object  Worker
-	started bool
-}
-
 type linuxController struct {
-	sensorWorkers map[string]*sensorWorker
-	dbusAPI       *dbusx.DBusAPI
-	logger        *slog.Logger
-	mqttDevice    *mqtthass.Device
+	deviceController
+	dbusAPI    *dbusx.DBusAPI
+	mqttDevice *mqtthass.Device
 	*mqttWorker
-}
-
-func (w *linuxController) ActiveWorkers() []string {
-	activeWorkers := make([]string, 0, len(w.sensorWorkers))
-
-	for id, worker := range w.sensorWorkers {
-		if worker.started {
-			activeWorkers = append(activeWorkers, id)
-		}
-	}
-
-	return activeWorkers
-}
-
-func (w *linuxController) InactiveWorkers() []string {
-	inactiveWorkers := make([]string, 0, len(w.sensorWorkers))
-
-	for id, worker := range w.sensorWorkers {
-		if !worker.started {
-			inactiveWorkers = append(inactiveWorkers, id)
-		}
-	}
-
-	return inactiveWorkers
-}
-
-func (w *linuxController) Start(ctx context.Context, name string) (<-chan sensor.Details, error) {
-	worker, exists := w.sensorWorkers[name]
-	if !exists {
-		return nil, ErrUnknownWorker
-	}
-
-	if worker.started {
-		return nil, ErrWorkerAlreadyStarted
-	}
-
-	workerCh, err := w.sensorWorkers[name].object.Updates(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("could not start worker: %w", err)
-	}
-
-	w.sensorWorkers[name].started = true
-
-	return workerCh, nil
-}
-
-func (w *linuxController) Stop(name string) error {
-	// Check if the given worker ID exists.
-	worker, exists := w.sensorWorkers[name]
-	if !exists {
-		return ErrUnknownWorker
-	}
-	// Stop the worker. Report any errors.
-	if err := worker.object.Stop(); err != nil {
-		return fmt.Errorf("error stopping worker: %w", err)
-	}
-
-	return nil
-}
-
-func (w *linuxController) StartAll(ctx context.Context) (<-chan sensor.Details, error) {
-	outCh := make([]<-chan sensor.Details, 0, len(allworkers))
-
-	var errs error
-
-	for id := range w.sensorWorkers {
-		workerCh, err := w.Start(ctx, id)
-		if err != nil {
-			errs = errors.Join(errs, err)
-
-			continue
-		}
-
-		outCh = append(outCh, workerCh)
-	}
-
-	return sensor.MergeSensorCh(ctx, outCh...), errs
-}
-
-func (w *linuxController) StopAll() error {
-	var errs error
-
-	for id := range w.sensorWorkers {
-		if err := w.Stop(id); err != nil {
-			errs = errors.Join(errs, err)
-		}
-	}
-
-	return errs
 }
 
 // linuxController implements MQTTController
@@ -265,9 +168,11 @@ func newOSController(ctx context.Context) Controller {
 	}
 
 	controller := &linuxController{
-		sensorWorkers: make(map[string]*sensorWorker),
-		dbusAPI:       dbusx.NewDBusAPI(ctx, logging.FromContext(ctx)),
-		logger:        logging.FromContext(ctx).With(slog.Group("linux")),
+		deviceController: deviceController{
+			sensorWorkers: make(map[string]*sensorWorker),
+			logger:        logging.FromContext(ctx).With(slog.Group("linux")),
+		},
+		dbusAPI: dbusx.NewDBusAPI(ctx, logging.FromContext(ctx)),
 		mqttWorker: &mqttWorker{
 			msgs: make(chan *mqttapi.Msg),
 		},
