@@ -16,6 +16,11 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/logging"
 )
 
+type sensorWorker struct {
+	object  Worker
+	started bool
+}
+
 type deviceController struct {
 	sensorWorkers map[string]*sensorWorker
 	logger        *slog.Logger
