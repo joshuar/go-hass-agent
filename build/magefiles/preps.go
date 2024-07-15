@@ -23,9 +23,10 @@ const (
 )
 
 var generators = map[string]string{
-	"moq":      "github.com/matryer/moq@latest",
-	"gotext":   "golang.org/x/text/cmd/gotext@latest",
-	"stringer": "golang.org/x/tools/cmd/stringer@latest",
+	"moq":      "github.com/matryer/moq@v0.3.4",
+	"gotext":   "golang.org/x/text/cmd/gotext@v0.16.0",
+	"stringer": "golang.org/x/tools/cmd/stringer@0.23.0",
+	"mockery":  "github.com/vektra/mockery/v2@v2.43.2",
 }
 
 var ErrMissingBuildPlatform = errors.New("BUILDPLATFORM environment variable not set")

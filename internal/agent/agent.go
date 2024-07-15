@@ -4,7 +4,8 @@
 // https://opensource.org/licenses/MIT
 
 // revive:disable:unused-receiver
-
+//
+//go:generate mockery
 package agent
 
 import (
