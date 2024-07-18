@@ -3,6 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
+//go:generate moq -out runners_mocks_test.go . SensorController Worker
 package agent
 
 import (
@@ -75,91 +76,83 @@ type Controller interface {
 // runWorkers will call all the sensor worker functions that have been defined
 // for this device.
 func (agent *Agent) runWorkers(ctx context.Context, trk SensorTracker, reg sensor.Registry, controllers ...SensorController) {
-	sensorCh := make([]<-chan sensor.Details, 0, len(controllers))
+	var sensorCh []<-chan sensor.Details
 
 	for _, controller := range controllers {
 		ch, err := controller.StartAll(ctx)
 		if err != nil {
-			agent.logger.Warn("Starting controller had problems.", "errors", err.Error())
+			agent.logger.Warn("Start controller had errors.", "errors", err.Error())
+		} else {
+			sensorCh = append(sensorCh, ch)
 		}
-
-		sensorCh = append(sensorCh, ch)
 	}
 
-	// Listen for sensor updates from all workers.
-	go func() {
-		if err := trk.Process(ctx, reg, sensorCh...); err != nil {
-			agent.logger.Error("Could not process sensor updates", "error", err.Error())
+	if len(sensorCh) == 0 {
+		agent.logger.Warn("No workers were started by any controllers.")
+
+		return
+	}
+
+	if err := trk.Process(ctx, reg, sensorCh...); err != nil {
+		agent.logger.Error("Could not process sensor updates", "error", err.Error())
+	}
+
+	for _, controller := range controllers {
+		if err := controller.StopAll(); err != nil {
+			agent.logger.Warn("Stop controller had errors.", "error", err.Error())
 		}
-	}()
-
-	var wg sync.WaitGroup
-
-	wg.Add(1)
-
-	// When the context is cancelled, stop all sensor workers for all
-	// controllers.
-	go func() {
-		defer wg.Done()
-		<-ctx.Done()
-
-		for _, controller := range controllers {
-			if err := controller.StopAll(); err != nil {
-				agent.logger.Debug("Error occurred trying to stop sensor workers.", "error", err.Error())
-			}
-		}
-	}()
-
-	wg.Wait()
+	}
 }
 
 // runScripts will retrieve all scripts that the agent can run and queue them up
 // to be run on their defined schedule using the cron scheduler. It also sets up
 // a channel to receive script output and send appropriate sensor objects to the
 // sensor.
-func (agent *Agent) runScripts(ctx context.Context, path string, trk SensorTracker, reg sensor.Registry) {
-	allScripts, err := scripts.FindScripts(ctx, path)
-
-	switch {
-	case err != nil:
-		agent.logger.Warn("Error finding custom sensor scripts.", "error", err.Error())
-
-		return
-	case len(allScripts) == 0:
-		agent.logger.Debug("No custom sensor scripts found.")
+func (agent *Agent) runScripts(ctx context.Context, trk SensorTracker, reg sensor.Registry, sensorScripts ...*scripts.Script) {
+	if len(sensorScripts) == 0 {
+		agent.logger.Warn("No sensor scripts to run.")
 
 		return
 	}
 
 	scheduler := cron.New()
+	sensorCh := make(chan sensor.Details)
 
-	outCh := make([]<-chan sensor.Details, 0, len(allScripts))
-
-	for _, script := range allScripts {
-		schedule := script.Schedule()
+	for _, script := range sensorScripts {
+		schedule := script.Schedule
 		if schedule != "" {
-			_, err := scheduler.AddJob(schedule, script)
+			runFunc := func() {
+				output, err := script.Execute()
+				if err != nil {
+					agent.logger.Warn("Could not execute script.", "script", script.Path, "error", err.Error())
+
+					return
+				}
+
+				for _, o := range output.Sensors {
+					sensorCh <- o
+				}
+			}
+
+			_, err := scheduler.AddFunc(schedule, runFunc)
 			if err != nil {
-				agent.logger.Warn("Unable to schedule script", "script", script.Path(), "error", err.Error())
+				agent.logger.Warn("Unable to schedule script", "script", script.Path, "error", err.Error())
 
 				break
 			}
 
-			outCh = append(outCh, script.Output)
-			agent.logger.Debug("Script sensor scheduled.", "script", script.Path())
+			agent.logger.Debug("Script sensor scheduled.", "script", script.Path)
 		}
 	}
 
 	agent.logger.Debug("Starting cron scheduler for script sensors.")
+
 	scheduler.Start()
 
-	go func() {
-		if err := trk.Process(ctx, reg, outCh...); err != nil {
-			agent.logger.Error("Could not process script sensor updates", "error", err.Error())
-		}
-	}()
+	if err := trk.Process(ctx, reg, sensorCh); err != nil {
+		agent.logger.Error("Could not process script sensor updates", "error", err.Error())
+	}
 
-	<-ctx.Done()
 	agent.logger.Debug("Stopping cron scheduler for script sensors.")
 
 	cronCtx := scheduler.Stop()

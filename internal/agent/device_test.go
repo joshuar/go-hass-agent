@@ -15,7 +15,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	mocks "github.com/joshuar/go-hass-agent/internal/agent/testing"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 )
 
@@ -80,8 +79,11 @@ func Test_deviceController_InactiveWorkers(t *testing.T) {
 func Test_deviceController_Start(t *testing.T) {
 	outCh := make(<-chan sensor.Details)
 
-	worker := &mocks.MockWorker{}
-	worker.EXPECT().Updates(context.TODO()).Return(outCh, nil)
+	worker := &WorkerMock{
+		UpdatesFunc: func(_ context.Context) (<-chan sensor.Details, error) {
+			return outCh, nil
+		},
+	}
 
 	type fields struct {
 		sensorWorkers map[string]*sensorWorker
@@ -140,10 +142,13 @@ func Test_deviceController_Start(t *testing.T) {
 }
 
 func Test_deviceController_Stop(t *testing.T) {
-	goodWorker := &mocks.MockWorker{}
-	goodWorker.EXPECT().Stop().Return(nil)
-	badWorker := &mocks.MockWorker{}
-	badWorker.EXPECT().Stop().Return(errors.New("i did not stop")) //nolint:err113
+	errBadWorker := errors.New("bad worker") //nolint:err113
+	goodWorker := &WorkerMock{
+		StopFunc: func() error { return nil },
+	}
+	badWorker := &WorkerMock{
+		StopFunc: func() error { return errBadWorker },
+	}
 
 	type fields struct {
 		sensorWorkers map[string]*sensorWorker

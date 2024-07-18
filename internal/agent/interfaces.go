@@ -3,6 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
+//go:generate moq -out interfaces_mocks_test.go . Registry SensorTracker
 package agent
 
 import (
@@ -34,4 +35,11 @@ type SensorTracker interface {
 	Process(ctx context.Context, reg sensor.Registry, sensorUpdates ...<-chan sensor.Details) error
 	Get(key string) (sensor.Details, error)
 	Reset()
+}
+
+type Registry interface {
+	SetDisabled(id string, state bool) error
+	SetRegistered(id string, state bool) error
+	IsDisabled(id string) bool
+	IsRegistered(id string) bool
 }
