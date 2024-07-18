@@ -7,11 +7,9 @@
 package scripts
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -21,28 +19,24 @@ import (
 	"github.com/pelletier/go-toml/v2"
 	"gopkg.in/yaml.v3"
 
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
-	"github.com/joshuar/go-hass-agent/internal/logging"
 )
 
 type Script struct {
-	Output   chan sensor.Details
-	logger   *slog.Logger
-	path     string
-	schedule string
+	Path     string
+	Schedule string
 }
 
 //nolint:exhaustruct
-func (s *Script) execute() (*scriptOutput, error) {
-	cmdElems := strings.Split(s.path, " ")
+func (s *Script) Execute() (*ScriptOutput, error) {
+	cmdElems := strings.Split(s.Path, " ")
 
 	out, err := exec.Command(cmdElems[0], cmdElems[1:]...).Output()
 	if err != nil {
 		return nil, fmt.Errorf("could not execute script: %w", err)
 	}
 
-	output := &scriptOutput{}
+	output := &ScriptOutput{}
 
 	err = output.Unmarshal(out)
 	if err != nil {
@@ -52,59 +46,30 @@ func (s *Script) execute() (*scriptOutput, error) {
 	return output, nil
 }
 
-// Run is the function that is called when a script is run by the scheduler on
-// its specified schedule. It is implemented to satisfy the cron package
-// interface, so the script can be treated as a cron job. Run will execute the
-// script, collect the output and send it through a channel as a sensor object.
-func (s *Script) Run() {
-	output, err := s.execute()
-	if err != nil {
-		s.logger.Warn("Could not execute script.", "script", s.path, "error", err.Error())
-
-		return
-	}
-
-	for _, o := range output.Sensors {
-		s.Output <- o
-	}
-}
-
-// Schedule retrieves the cron schedule that the script should be run on.
-func (s *Script) Schedule() string {
-	return s.schedule
-}
-
-// Path returns the path to the script on disk.
-func (s *Script) Path() string {
-	return s.path
-}
-
 // NewScript returns a new script object that can scheduled with the job
 // scheduler by the agent.
-func NewScript(ctx context.Context, path string) (*Script, error) {
+func NewScript(path string) (*Script, error) {
 	script := &Script{
-		path:     path,
-		schedule: "",
-		Output:   make(chan sensor.Details),
-		logger:   logging.FromContext(ctx).With(slog.String("component", "scripts")),
+		Path:     path,
+		Schedule: "",
 	}
 
-	out, err := script.execute()
+	out, err := script.Execute()
 	if err != nil {
 		return nil, fmt.Errorf("cannot add script %s: %w", path, err)
 	}
 
-	script.schedule = out.Schedule
+	script.Schedule = out.Schedule
 
 	return script, nil
 }
 
-// scriptOutput represents the output from a script. The output must be
+// ScriptOutput represents the output from a script. The output must be
 // formatted as either valid JSON or YAML. This output is used to define a
 // sensor in Home Assistant.
 //
 //nolint:tagalign
-type scriptOutput struct {
+type ScriptOutput struct {
 	Schedule string          `json:"schedule" yaml:"schedule"`
 	Sensors  []*scriptSensor `json:"sensors" yaml:"sensors"`
 }
@@ -112,7 +77,7 @@ type scriptOutput struct {
 // Unmarshal will attempt to take the raw output from a script execution and
 // format it as either JSON or YAML. If successful, this format can then be used
 // as a sensor.
-func (o *scriptOutput) Unmarshal(scriptOutput []byte) error {
+func (o *ScriptOutput) Unmarshal(scriptOutput []byte) error {
 	jsonErr := json.Unmarshal(scriptOutput, &o)
 	if jsonErr == nil {
 		return nil
@@ -136,7 +101,7 @@ type scriptSensor struct {
 	SensorState       any    `json:"sensor_state" yaml:"sensor_state" toml:"sensor_state"`
 	SensorAttributes  any    `json:"sensor_attributes,omitempty" yaml:"sensor_attributes,omitempty" toml:"sensor_attributes,omitempty"`
 	SensorName        string `json:"sensor_name" yaml:"sensor_name" toml:"sensor_name"`
-	SensorIcon        string `json:"sensor_icon" yaml:"sensor_icon" toml:"sensor_icon"`
+	SensorIcon        string `json:"sensor_icon,omitempty" yaml:"sensor_icon,omitempty" toml:"sensor_icon,omitempty"`
 	SensorDeviceClass string `json:"sensor_device_class,omitempty" yaml:"sensor_device_class,omitempty" toml:"sensor_device_class,omitempty"`
 	SensorStateClass  string `json:"sensor_state_class,omitempty" yaml:"sensor_state_class,omitempty" toml:"sensor_state_class,omitempty"`
 	SensorStateType   string `json:"sensor_type,omitempty" yaml:"sensor_type,omitempty" toml:"sensor_type,omitempty"`
@@ -152,6 +117,10 @@ func (s *scriptSensor) ID() string {
 }
 
 func (s *scriptSensor) Icon() string {
+	if s.SensorIcon == "" {
+		return "mdi:script"
+	}
+
 	return s.SensorIcon
 }
 
@@ -202,14 +171,16 @@ func (s *scriptSensor) Category() string {
 func (s *scriptSensor) Attributes() map[string]any {
 	attributes := make(map[string]any)
 
-	attributes["extra_attributes"] = s.SensorAttributes
+	if s.SensorAttributes != nil {
+		attributes["extra_attributes"] = s.SensorAttributes
+	}
 
 	return attributes
 }
 
 // FindScripts locates scripts and returns a slice of scripts that the agent can
 // run.
-func FindScripts(ctx context.Context, path string) ([]*Script, error) {
+func FindScripts(path string) ([]*Script, error) {
 	var scripts []*Script
 
 	var errs error
@@ -221,7 +192,7 @@ func FindScripts(ctx context.Context, path string) ([]*Script, error) {
 
 	for _, scriptFile := range files {
 		if isExecutable(scriptFile) {
-			script, err := NewScript(ctx, scriptFile)
+			script, err := NewScript(scriptFile)
 			if err != nil {
 				errs = errors.Join(errs, err)
 

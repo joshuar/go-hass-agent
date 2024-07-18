@@ -4,8 +4,6 @@
 // https://opensource.org/licenses/MIT
 
 // revive:disable:unused-receiver
-//
-//go:generate mockery
 package agent
 
 import (
@@ -26,6 +24,7 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
+	"github.com/joshuar/go-hass-agent/internal/scripts"
 )
 
 var ErrCtxFailed = errors.New("unable to create a context")
@@ -120,6 +119,7 @@ func ForceRegister(value bool) Option {
 // then spawns a sensor tracker and the workers to gather sensor data and
 // publish it to Home Assistant.
 //
+//nolint:funlen
 //revive:disable:function-length
 func (agent *Agent) Run(ctx context.Context, trk SensorTracker, reg sensor.Registry) error {
 	var wg sync.WaitGroup
@@ -174,21 +174,35 @@ func (agent *Agent) Run(ctx context.Context, trk SensorTracker, reg sensor.Regis
 		// configuration.
 		deviceController := newDeviceController(runnerCtx)
 
-		// Start worker funcs for sensors.
 		wg.Add(1)
-
+		// Start worker funcs for sensors.
 		go func() {
 			defer wg.Done()
 			agent.runWorkers(runnerCtx, trk, reg, osController, deviceController)
 		}()
-		// Start any scripts.
-		wg.Add(1)
 
+		wg.Add(1)
+		// Start any scripts.
 		go func() {
 			defer wg.Done()
 
+			// Define the path to custom sensor scripts.
 			scriptPath := filepath.Join(xdg.ConfigHome, agent.AppID(), "scripts")
-			agent.runScripts(runnerCtx, scriptPath, trk, reg)
+			// Get any scripts in the script path.
+			scripts, err := scripts.FindScripts(scriptPath)
+
+			switch {
+			case err != nil:
+				agent.logger.Warn("Error finding custom sensor scripts.", "error", err.Error())
+
+				return
+			case len(scripts) == 0:
+				agent.logger.Debug("No custom sensor scripts found.")
+
+				return
+			}
+
+			agent.runScripts(runnerCtx, trk, reg, scripts...)
 		}()
 		// Start the mqtt client if MQTT is enabled.
 		if agent.prefs.MQTTEnabled {
