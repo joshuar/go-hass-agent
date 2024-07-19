@@ -3,12 +3,11 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//nolint:exhaustruct,lll,nlreturn,paralleltest,wsl,varnamelen,dupl
+//nolint:exhaustruct,lll,nlreturn,paralleltest,wsl,varnamelen,dupl,prealloc
 //revive:disable:unused-receiver
 package scripts
 
 import (
-	"context"
 	"encoding/json"
 	"reflect"
 	"testing"
@@ -16,6 +15,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 )
 
@@ -46,54 +46,10 @@ sensor_state_class = 'measurement'
 `
 )
 
-func TestScript_execute(t *testing.T) {
-	var validOutput ScriptOutput
-	err := json.Unmarshal([]byte(jsonOut), &validOutput)
-	require.NoError(t, err)
-
-	type fields struct {
-		Path     string
-		Schedule string
-	}
-	tests := []struct {
-		want    *ScriptOutput
-		fields  fields
-		name    string
-		wantErr bool
-	}{
-		{
-			name:   "valid executable",
-			fields: fields{Path: "/usr/bin/echo" + " " + jsonOut},
-			want:   &validOutput,
-		},
-		{
-			name:    "invalid executable",
-			fields:  fields{Path: "/does/not/exist"},
-			wantErr: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			s := &Script{
-				Path:     tt.fields.Path,
-				Schedule: tt.fields.Schedule,
-			}
-			got, err := s.Execute()
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Script.execute() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Script.execute() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func Test_scriptOutput_Unmarshal(t *testing.T) {
 	type fields struct {
 		Schedule string
-		Sensors  []*scriptSensor
+		Sensors  []ScriptSensor
 	}
 	type args struct {
 		scriptOutput []byte
@@ -124,7 +80,7 @@ func Test_scriptOutput_Unmarshal(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			o := &ScriptOutput{
+			o := &scriptOutput{
 				Schedule: tt.fields.Schedule,
 				Sensors:  tt.fields.Sensors,
 			}
@@ -149,8 +105,8 @@ func TestNewScript(t *testing.T) {
 			name: "valid script",
 			args: args{path: "/usr/bin/echo" + " " + jsonOut},
 			want: &Script{
-				Path:     "/usr/bin/echo" + " " + jsonOut,
-				Schedule: "@every 5s",
+				path:     "/usr/bin/echo" + " " + jsonOut,
+				schedule: "@every 5s",
 			},
 		},
 		{
@@ -167,43 +123,8 @@ func TestNewScript(t *testing.T) {
 				return
 			}
 			if err == nil {
-				assert.Equal(t, tt.want.Path, got.Path)
-				assert.Equal(t, tt.want.Schedule, got.Schedule)
-			}
-		})
-	}
-}
-
-//nolint:containedctx
-func TestFindScripts(t *testing.T) {
-	script, err := NewScript("testing/data/jsonTestScript.sh")
-	require.NoError(t, err)
-
-	type args struct {
-		ctx  context.Context
-		path string
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    []*Script
-		wantErr bool
-	}{
-		{
-			name: "path with scripts",
-			args: args{ctx: context.TODO(), path: "testing/data"},
-			want: []*Script{script},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := FindScripts(tt.args.path)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("FindScripts() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got[0].Path, tt.want[0].Path) {
-				t.Errorf("FindScripts() = %v, want %v", got, tt.want)
+				assert.Equal(t, tt.want.path, got.path)
+				assert.Equal(t, tt.want.Schedule(), got.Schedule())
 			}
 		})
 	}
@@ -233,7 +154,7 @@ func TestScriptSensor_Name(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &scriptSensor{
+			s := &ScriptSensor{
 				SensorState:       tt.fields.SensorState,
 				SensorAttributes:  tt.fields.SensorAttributes,
 				SensorName:        tt.fields.SensorName,
@@ -274,7 +195,7 @@ func Test_scriptSensor_ID(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &scriptSensor{
+			s := &ScriptSensor{
 				SensorState:       tt.fields.SensorState,
 				SensorAttributes:  tt.fields.SensorAttributes,
 				SensorName:        tt.fields.SensorName,
@@ -319,7 +240,7 @@ func Test_scriptSensor_Icon(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &scriptSensor{
+			s := &ScriptSensor{
 				SensorState:       tt.fields.SensorState,
 				SensorAttributes:  tt.fields.SensorAttributes,
 				SensorName:        tt.fields.SensorName,
@@ -364,7 +285,7 @@ func Test_scriptSensor_SensorType(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &scriptSensor{
+			s := &ScriptSensor{
 				SensorState:       tt.fields.SensorState,
 				SensorAttributes:  tt.fields.SensorAttributes,
 				SensorName:        tt.fields.SensorName,
@@ -410,7 +331,7 @@ func Test_scriptSensor_DeviceClass(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &scriptSensor{
+			s := &ScriptSensor{
 				SensorState:       tt.fields.SensorState,
 				SensorAttributes:  tt.fields.SensorAttributes,
 				SensorName:        tt.fields.SensorName,
@@ -455,7 +376,7 @@ func Test_scriptSensor_StateClass(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &scriptSensor{
+			s := &ScriptSensor{
 				SensorState:       tt.fields.SensorState,
 				SensorAttributes:  tt.fields.SensorAttributes,
 				SensorName:        tt.fields.SensorName,
@@ -496,7 +417,7 @@ func Test_scriptSensor_State(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &scriptSensor{
+			s := &ScriptSensor{
 				SensorState:       tt.fields.SensorState,
 				SensorAttributes:  tt.fields.SensorAttributes,
 				SensorName:        tt.fields.SensorName,
@@ -537,7 +458,7 @@ func Test_scriptSensor_Units(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &scriptSensor{
+			s := &ScriptSensor{
 				SensorState:       tt.fields.SensorState,
 				SensorAttributes:  tt.fields.SensorAttributes,
 				SensorName:        tt.fields.SensorName,
@@ -584,7 +505,7 @@ func Test_scriptSensor_Attributes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &scriptSensor{
+			s := &ScriptSensor{
 				SensorState:       tt.fields.SensorState,
 				SensorAttributes:  tt.fields.SensorAttributes,
 				SensorName:        tt.fields.SensorName,
@@ -596,6 +517,87 @@ func Test_scriptSensor_Attributes(t *testing.T) {
 			}
 			if got := s.Attributes(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("scriptSensor.Attributes() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestScript_Schedule(t *testing.T) {
+	type fields struct {
+		path     string
+		schedule string
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   string
+	}{
+		{
+			name:   "with schedule",
+			fields: fields{schedule: "@every 5s"},
+			want:   "@every 5s",
+		},
+		{
+			name: "without schedule",
+			want: "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &Script{
+				path:     tt.fields.path,
+				schedule: tt.fields.schedule,
+			}
+			if got := s.Schedule(); got != tt.want {
+				t.Errorf("Script.Schedule() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestScript_Execute(t *testing.T) {
+	var validScriptOutput scriptOutput
+	err := json.Unmarshal([]byte(jsonOut), &validScriptOutput)
+	require.NoError(t, err)
+	var validSensors []sensor.Details
+	for _, s := range validScriptOutput.Sensors {
+		validSensors = append(validSensors, sensor.Details(&s))
+	}
+
+	type fields struct {
+		path     string
+		schedule string
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		want    []sensor.Details
+		wantErr bool
+	}{
+		{
+			name:   "valid executable",
+			fields: fields{path: "/usr/bin/echo" + " " + jsonOut},
+			want:   validSensors,
+		},
+		{
+			name:    "invalid executable",
+			fields:  fields{path: "/does/not/exist"},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &Script{
+				path:     tt.fields.path,
+				schedule: tt.fields.schedule,
+			}
+			got, err := s.Execute()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Script.Execute() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Script.Execute() = %v, want %v", got, tt.want)
 			}
 		})
 	}

@@ -463,3 +463,99 @@ func (mock *WorkerMock) UpdatesCalls() []struct {
 	mock.lockUpdates.RUnlock()
 	return calls
 }
+
+// Ensure, that ScriptMock does implement Script.
+// If this is not the case, regenerate this file with moq.
+var _ Script = &ScriptMock{}
+
+// ScriptMock is a mock implementation of Script.
+//
+//	func TestSomethingThatUsesScript(t *testing.T) {
+//
+//		// make and configure a mocked Script
+//		mockedScript := &ScriptMock{
+//			ExecuteFunc: func() ([]sensor.Details, error) {
+//				panic("mock out the Execute method")
+//			},
+//			ScheduleFunc: func() string {
+//				panic("mock out the Schedule method")
+//			},
+//		}
+//
+//		// use mockedScript in code that requires Script
+//		// and then make assertions.
+//
+//	}
+type ScriptMock struct {
+	// ExecuteFunc mocks the Execute method.
+	ExecuteFunc func() ([]sensor.Details, error)
+
+	// ScheduleFunc mocks the Schedule method.
+	ScheduleFunc func() string
+
+	// calls tracks calls to the methods.
+	calls struct {
+		// Execute holds details about calls to the Execute method.
+		Execute []struct {
+		}
+		// Schedule holds details about calls to the Schedule method.
+		Schedule []struct {
+		}
+	}
+	lockExecute  sync.RWMutex
+	lockSchedule sync.RWMutex
+}
+
+// Execute calls ExecuteFunc.
+func (mock *ScriptMock) Execute() ([]sensor.Details, error) {
+	if mock.ExecuteFunc == nil {
+		panic("ScriptMock.ExecuteFunc: method is nil but Script.Execute was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockExecute.Lock()
+	mock.calls.Execute = append(mock.calls.Execute, callInfo)
+	mock.lockExecute.Unlock()
+	return mock.ExecuteFunc()
+}
+
+// ExecuteCalls gets all the calls that were made to Execute.
+// Check the length with:
+//
+//	len(mockedScript.ExecuteCalls())
+func (mock *ScriptMock) ExecuteCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockExecute.RLock()
+	calls = mock.calls.Execute
+	mock.lockExecute.RUnlock()
+	return calls
+}
+
+// Schedule calls ScheduleFunc.
+func (mock *ScriptMock) Schedule() string {
+	if mock.ScheduleFunc == nil {
+		panic("ScriptMock.ScheduleFunc: method is nil but Script.Schedule was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockSchedule.Lock()
+	mock.calls.Schedule = append(mock.calls.Schedule, callInfo)
+	mock.lockSchedule.Unlock()
+	return mock.ScheduleFunc()
+}
+
+// ScheduleCalls gets all the calls that were made to Schedule.
+// Check the length with:
+//
+//	len(mockedScript.ScheduleCalls())
+func (mock *ScriptMock) ScheduleCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockSchedule.RLock()
+	calls = mock.calls.Schedule
+	mock.lockSchedule.RUnlock()
+	return calls
+}
