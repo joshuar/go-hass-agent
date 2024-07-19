@@ -126,6 +126,8 @@ func (agent *Agent) runScripts(ctx context.Context, trk SensorTracker, reg senso
 	scheduler := cron.New()
 	sensorCh := make(chan sensor.Details)
 
+	var jobs []cron.EntryID //nolint:prealloc // we can't determine size in advance.
+
 	for _, script := range sensorScripts {
 		if script.Schedule() == "" {
 			agent.logger.Warn("Script found without schedule defined, skipping.")
@@ -147,12 +149,14 @@ func (agent *Agent) runScripts(ctx context.Context, trk SensorTracker, reg senso
 		}
 		// Add the script to the cron scheduler to run the closure on it's
 		// defined schedule.
-		_, err := scheduler.AddFunc(script.Schedule(), runFunc)
+		jobID, err := scheduler.AddFunc(script.Schedule(), runFunc)
 		if err != nil {
 			agent.logger.Warn("Unable to schedule script", "error", err.Error())
 
 			break
 		}
+
+		jobs = append(jobs, jobID)
 	}
 
 	agent.logger.Debug("Starting cron scheduler for script sensors.")
@@ -164,10 +168,18 @@ func (agent *Agent) runScripts(ctx context.Context, trk SensorTracker, reg senso
 		agent.logger.Error("Could not process script sensor updates", "error", err.Error())
 	}
 
-	agent.logger.Debug("Stopping cron scheduler for script sensors.")
-	// Stop the scheduler once all scripts have exited.
-	cronCtx := scheduler.Stop()
-	<-cronCtx.Done()
+	go func() {
+		<-ctx.Done()
+		// Stop next run of all active cron jobs.
+		for _, jobID := range jobs {
+			scheduler.Remove(jobID)
+		}
+
+		agent.logger.Debug("Stopping cron scheduler for script sensors.")
+		// Stop the scheduler once all jobs have finished.
+		cronCtx := scheduler.Stop()
+		<-cronCtx.Done()
+	}()
 }
 
 // runNotificationsWorker will run a goroutine that is listening for

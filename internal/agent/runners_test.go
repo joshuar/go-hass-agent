@@ -147,6 +147,9 @@ func TestFindScripts(t *testing.T) {
 }
 
 func TestAgent_runScripts(t *testing.T) {
+	testCtx, cancelFunc := context.WithCancel(context.TODO())
+	defer cancelFunc()
+
 	validScript := &ScriptMock{
 		ScheduleFunc: func() string { return "@very 5s" },
 	}
@@ -184,7 +187,7 @@ func TestAgent_runScripts(t *testing.T) {
 		},
 		{
 			name:   "with scripts",
-			args:   args{sensorScripts: []Script{validScript}, trk: goodTracker},
+			args:   args{ctx: testCtx, sensorScripts: []Script{validScript}, trk: goodTracker},
 			fields: fields{logger: slog.Default()},
 		},
 	}
