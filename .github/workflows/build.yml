@@ -14,7 +14,7 @@ permissions:
 env:
   GO_VERSION: 1.22
   COSIGN_VERSION: 'v2.2.2'
-  MAGEARGS: -v -d build/magefiles -w .
+  MAGEARGS: -d build/magefiles -w .
 
 jobs:
   check_release:
