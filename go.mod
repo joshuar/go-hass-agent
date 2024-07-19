@@ -73,7 +73,7 @@ require (
 	github.com/jsummers/gobmp v0.0.0-20151104160322-e2ba15ffa76e // indirect
 	github.com/klauspost/compress v1.17.8 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
-	github.com/lmittmann/tint v1.0.4
+	github.com/lmittmann/tint v1.0.5
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/mandykoh/prism v0.35.3
 	github.com/mattn/go-colorable v0.1.13 // indirect
