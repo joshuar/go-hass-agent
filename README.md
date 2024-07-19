@@ -429,7 +429,7 @@ run on its own schedule, specified using a Cron syntax.
 #### Requirements
 
 - Scripts need to be put in a `scripts` folder under the configuration directory
-  (see [Configuration Location](#configuration).
+  (see [Configuration Location](#-configuration-location) for the full path).
 - You can use symlinks, if supported by your Operating System.
 - Script files need to be executable by the user running Go Hass Agent.
 - Scripts need to run without any user interaction.
