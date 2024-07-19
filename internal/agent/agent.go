@@ -24,7 +24,6 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
-	"github.com/joshuar/go-hass-agent/internal/scripts"
 )
 
 var ErrCtxFailed = errors.New("unable to create a context")
@@ -186,23 +185,28 @@ func (agent *Agent) Run(ctx context.Context, trk SensorTracker, reg sensor.Regis
 		go func() {
 			defer wg.Done()
 
+			// var (
+			// 	sensorScripts []Script
+			// 	err           error
+			// )
+
 			// Define the path to custom sensor scripts.
 			scriptPath := filepath.Join(xdg.ConfigHome, agent.AppID(), "scripts")
 			// Get any scripts in the script path.
-			scripts, err := scripts.FindScripts(scriptPath)
+			sensorScripts, err := findScripts(scriptPath)
 
 			switch {
 			case err != nil:
 				agent.logger.Warn("Error finding custom sensor scripts.", "error", err.Error())
 
 				return
-			case len(scripts) == 0:
+			case len(sensorScripts) == 0:
 				agent.logger.Debug("No custom sensor scripts found.")
 
 				return
 			}
 
-			agent.runScripts(runnerCtx, trk, reg, scripts...)
+			agent.runScripts(runnerCtx, trk, reg, sensorScripts...)
 		}()
 		// Start the mqtt client if MQTT is enabled.
 		if agent.prefs.MQTTEnabled {

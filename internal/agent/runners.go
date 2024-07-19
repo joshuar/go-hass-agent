@@ -3,13 +3,16 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//go:generate moq -out runners_mocks_test.go . SensorController Worker
+//go:generate moq -out runners_mocks_test.go . SensorController Worker Script
 package agent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
+	"os"
+	"path/filepath"
 	"sync"
 
 	"github.com/robfig/cron/v3"
@@ -73,6 +76,11 @@ type Controller interface {
 	MQTTController
 }
 
+type Script interface {
+	Schedule() string
+	Execute() (sensors []sensor.Details, err error)
+}
+
 // runWorkers will call all the sensor worker functions that have been defined
 // for this device.
 func (agent *Agent) runWorkers(ctx context.Context, trk SensorTracker, reg sensor.Registry, controllers ...SensorController) {
@@ -108,7 +116,7 @@ func (agent *Agent) runWorkers(ctx context.Context, trk SensorTracker, reg senso
 // to be run on their defined schedule using the cron scheduler. It also sets up
 // a channel to receive script output and send appropriate sensor objects to the
 // sensor.
-func (agent *Agent) runScripts(ctx context.Context, trk SensorTracker, reg sensor.Registry, sensorScripts ...*scripts.Script) {
+func (agent *Agent) runScripts(ctx context.Context, trk SensorTracker, reg sensor.Registry, sensorScripts ...Script) {
 	if len(sensorScripts) == 0 {
 		agent.logger.Warn("No sensor scripts to run.")
 
@@ -119,42 +127,45 @@ func (agent *Agent) runScripts(ctx context.Context, trk SensorTracker, reg senso
 	sensorCh := make(chan sensor.Details)
 
 	for _, script := range sensorScripts {
-		schedule := script.Schedule
-		if schedule != "" {
-			runFunc := func() {
-				output, err := script.Execute()
-				if err != nil {
-					agent.logger.Warn("Could not execute script.", "script", script.Path, "error", err.Error())
+		if script.Schedule() == "" {
+			agent.logger.Warn("Script found without schedule defined, skipping.")
 
-					return
-				}
-
-				for _, o := range output.Sensors {
-					sensorCh <- o
-				}
-			}
-
-			_, err := scheduler.AddFunc(schedule, runFunc)
+			continue
+		}
+		// Create a closure to run the script on it's schedule.
+		runFunc := func() {
+			sensors, err := script.Execute()
 			if err != nil {
-				agent.logger.Warn("Unable to schedule script", "script", script.Path, "error", err.Error())
+				agent.logger.Warn("Could not execute script.", "error", err.Error())
 
-				break
+				return
 			}
 
-			agent.logger.Debug("Script sensor scheduled.", "script", script.Path)
+			for _, o := range sensors {
+				sensorCh <- o
+			}
+		}
+		// Add the script to the cron scheduler to run the closure on it's
+		// defined schedule.
+		_, err := scheduler.AddFunc(script.Schedule(), runFunc)
+		if err != nil {
+			agent.logger.Warn("Unable to schedule script", "error", err.Error())
+
+			break
 		}
 	}
 
 	agent.logger.Debug("Starting cron scheduler for script sensors.")
-
+	// Start the cron scheduler
 	scheduler.Start()
-
+	// Process any sensors returned by scripts as they are executed by the
+	// scheduler.
 	if err := trk.Process(ctx, reg, sensorCh); err != nil {
 		agent.logger.Error("Could not process script sensor updates", "error", err.Error())
 	}
 
 	agent.logger.Debug("Stopping cron scheduler for script sensors.")
-
+	// Stop the scheduler once all scripts have exited.
 	cronCtx := scheduler.Stop()
 	<-cronCtx.Done()
 }
@@ -259,4 +270,41 @@ func (agent *Agent) resetMQTTWorker(ctx context.Context, osController MQTTContro
 	}
 
 	return nil
+}
+
+// FindScripts locates scripts and returns a slice of scripts that the agent can
+// run.
+func findScripts(path string) ([]Script, error) {
+	var sensorScripts []Script
+
+	var errs error
+
+	files, err := filepath.Glob(path + "/*")
+	if err != nil {
+		return nil, fmt.Errorf("could not search for scripts: %w", err)
+	}
+
+	for _, scriptFile := range files {
+		if isExecutable(scriptFile) {
+			script, err := scripts.NewScript(scriptFile)
+			if err != nil {
+				errs = errors.Join(errs, err)
+
+				continue
+			}
+
+			sensorScripts = append(sensorScripts, script)
+		}
+	}
+
+	return sensorScripts, nil
+}
+
+func isExecutable(filename string) bool {
+	fi, err := os.Stat(filename)
+	if err != nil {
+		return false
+	}
+
+	return fi.Mode().Perm()&0o111 != 0
 }
