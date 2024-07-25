@@ -17,7 +17,7 @@ import (
 	"github.com/godbus/dbus/v5"
 )
 
-//go:generate go run golang.org/x/tools/cmd/stringer -type=dbusType -output busType_strings.go
+//go:generate stringer -type=dbusType -output busType_strings.go
 const (
 	SessionBus dbusType = iota // session
 	SystemBus                  // system

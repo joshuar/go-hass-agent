@@ -17,7 +17,7 @@ import (
 	"strings"
 )
 
-//go:generate go run golang.org/x/tools/cmd/stringer -type=Stat -output diskStatStrings.go -linecomment
+//go:generate stringer -type=Stat -output diskStatStrings.go -linecomment
 const (
 	TotalReads             Stat = iota // Total reads completed
 	TotalReadsMerged                   // Total reads merged

@@ -12,12 +12,12 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 )
 
-//go:generate go run github.com/matryer/moq -out mock_Agent_test.go . Agent
+//go:generate moq -out mock_Agent_test.go . Agent
 type Agent interface {
 	Stop()
 }
 
-//go:generate go run github.com/matryer/moq -out mock_SensorTracker_test.go . SensorTracker
+//go:generate moq -out mock_SensorTracker_test.go . SensorTracker
 type SensorTracker interface {
 	SensorList() []string
 	Get(key string) (sensor.Details, error)

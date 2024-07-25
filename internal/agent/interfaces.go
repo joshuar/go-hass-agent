@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//go:generate go run github.com/matryer/moq -out interfaces_mocks_test.go . Registry SensorTracker
+//go:generate moq -out interfaces_mocks_test.go . Registry SensorTracker
 package agent
 
 import (
