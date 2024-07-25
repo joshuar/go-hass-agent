@@ -6,7 +6,7 @@
 //nolint:all
 package linux
 
-//go:generate go run golang.org/x/tools/cmd/stringer -type=SensorTypeValue -output sensorTypeStrings.go -linecomment
+//go:generate stringer -type=SensorTypeValue -output sensorTypeStrings.go -linecomment
 const (
 	SensorUnknown           SensorTypeValue = iota // Unknown Sensor
 	SensorAppActive                                // Active App

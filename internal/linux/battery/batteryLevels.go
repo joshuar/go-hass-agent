@@ -5,7 +5,7 @@
 
 package battery
 
-//go:generate go run golang.org/x/tools/cmd/stringer -type=batteryLevel -output batteryLevelsStrings.go -linecomment
+//go:generate stringer -type=batteryLevel -output batteryLevelsStrings.go -linecomment
 const (
 	batteryLevelUnknown batteryLevel = iota // Unknown
 	batteryLevelNone                        // None

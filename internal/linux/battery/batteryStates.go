@@ -5,7 +5,7 @@
 
 package battery
 
-//go:generate go run golang.org/x/tools/cmd/stringer -type=battChargeState -output batteryStatesStrings.go -linecomment
+//go:generate stringer -type=battChargeState -output batteryStatesStrings.go -linecomment
 const (
 	stateUnknown          battChargeState = iota // Unknown
 	stateCharging                                // Charging

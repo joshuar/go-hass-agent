@@ -26,7 +26,7 @@ var (
 	ErrSensorNotFound  = errors.New("sensor not found in tracker")
 )
 
-//go:generate go run github.com/matryer/moq -out mock_Registry_test.go . Registry
+//go:generate moq -out mock_Registry_test.go . Registry
 type Registry interface {
 	SetDisabled(sensor string, state bool) error
 	SetRegistered(sensor string, state bool) error
