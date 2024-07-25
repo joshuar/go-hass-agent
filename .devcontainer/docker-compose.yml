@@ -1,10 +1,10 @@
 version: "3.8"
 services:
   devcontainer:
-    build: 
+    build:
       dockerfile: Dockerfile
     volumes:
-      - ../..:/workspaces:cached
+      - ..:/workspace:cached
       - /etc/localtime:/etc/localtime:ro,cached
       - /run/dbus/system_bus_socket:/run/dbus/system_bus_socket
       - /run/user/1000/bus:/run/user/1000/bus
@@ -16,22 +16,17 @@ services:
       - seccomp:unconfined
     command: sleep infinity
   home-assistant:
-    image: ghcr.io/home-assistant/home-assistant:2024.6.3
+    image: ghcr.io/home-assistant/home-assistant:2024.7.3
     volumes:
       - ../deployments/home-assistant/config:/config
     environment:
       - "TZ=${TZ}"
     restart: on-failure
-    ports:
-      - 8123:8123
   mosquitto:
     image: docker.io/eclipse-mosquitto:2.0.18
     volumes:
-      - ../deployments/mosquitto/config:/mosquitto/config:cached
-      - ../deployments/mosquitto/data:/mosquitto/data
-      - ../deployments/mosquitto/log:/mosquitto/log
+      - ../deployments/mosquitto/config:/mosquitto/config:Z,U
+      - ../deployments/mosquitto/data:/mosquitto/data:Z,U
+      - ../deployments/mosquitto/log:/mosquitto/log:Z,U
       - /etc/localtime:/etc/localtime:ro,cached
-    ports:
-      - 1883:1883
-      - 8883:8883
     restart: on-failure
