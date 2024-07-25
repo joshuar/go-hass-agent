@@ -1,22 +1,25 @@
 {
     "dockerComposeFile": "docker-compose.yml",
     "service": "devcontainer",
-    "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
     "shutdownAction": "stopCompose",
     "containerUser": "vscode",
-    "containerEnv": { 
+    "containerEnv": {
         "TZ": "${localEnv:TZ:Australia/Brisbane}",
         "DISPLAY": ":0",
-        "XAUTHORITY": "/tmp/.Xauthority"
+        "XAUTHORITY": "/tmp/.Xauthority",
+        "HOME": "/home/vscode"
     },
+    "updateRemoteUserUID": true,
+	"workspaceFolder": "/workspace",
     "remoteEnv": {
         "DBUS_SESSION_BUS_ADDRESS": "${localEnv:DBUS_SESSION_BUS_ADDRESS}"
     },
     "features": {
         "ghcr.io/devcontainers/features/go:1": {},
-        "ghcr.io/devcontainers/features/python:1": {},
-        "ghcr.io/devcontainers/features/github-cli:1": {}
+        "ghcr.io/devcontainers/features/github-cli:1": {},
+        "ghcr.io/devcontainers-contrib/features/pre-commit:2": {}
     },
+    "forwardPorts": [8123,1883,8883],
     "postCreateCommand": ".devcontainer/postCreate.sh",
     "customizations": {
         "vscode": {
@@ -35,7 +38,8 @@
                 "DavidAnson.vscode-markdownlint",
                 "bierner.markdown-emoji",
                 "bierner.emojisense",
-                "redhat.vscode-yaml"
+                "redhat.vscode-yaml",
+                "ms-azuretools.vscode-docker"
             ],
             "settings": {
                 "terminal.integrated.defaultProfile.linux": "fish",
@@ -44,7 +48,7 @@
                 "go.lintFlags": [
                     "--fast"
                 ],
-                "gopls": { 
+                "gopls": {
                     "ui.semanticTokens": true,
                     "ui.noSemanticString": true,  // delegates string syntax highlighting to vscode
                     "ui.noSemanticNumber": true,  // delegates number syntax highlighting to vscode

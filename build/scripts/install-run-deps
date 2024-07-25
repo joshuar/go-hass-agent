@@ -21,9 +21,13 @@ export DEBIAN_FRONTEND=noninteractive
 # install runtime dependencies as appropriate for given arch
 apt-get update
 for a in "${arch[@]}"; do
-        apt-get -y install \
+        apt-get -y install --no-install-recommends \
                 libgl1:${a} libx11-6:${a} libglx0:${a} \
                 libglvnd0:${a} libxcb1:${a} libxau6:${a} \
                 libxdmcp6:${a} dbus-x11:${a}
 done
 rm -rf /var/lib/apt/lists/* /var/cache/apt/*
+
+apt-get -y autoremove && apt-get -y clean && rm -rf /var/lib/apt/lists/*
+
+exit 0
