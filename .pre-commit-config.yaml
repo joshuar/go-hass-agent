@@ -1,5 +1,5 @@
 # Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-# 
+#
 # This software is released under the MIT License.
 # https://opensource.org/licenses/MIT
 
@@ -13,3 +13,8 @@ repos:
     hooks:
       - id: conventional-pre-commit
         stages: [commit-msg]
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+    - id: trailing-whitespace
+    - id: end-of-file-fixer

@@ -58,7 +58,7 @@ type GetRequest any
 
 // PostRequest is a HTTP POST request with the request body provided by Body().
 //
-//go:generate moq -out mock_PostRequest_test.go . PostRequest
+//go:generate go run github.com/matryer/moq -out mock_PostRequest_test.go . PostRequest
 type PostRequest interface {
 	RequestBody() json.RawMessage
 }
@@ -75,7 +75,7 @@ type Encrypted interface {
 	Secret() string
 }
 
-//go:generate moq -out mock_Response_test.go . Response
+//go:generate go run github.com/matryer/moq -out mock_Response_test.go . Response
 type Response interface {
 	json.Unmarshaler
 	UnmarshalError(data []byte) error

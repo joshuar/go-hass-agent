@@ -22,7 +22,7 @@ import (
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
-//go:generate stringer -type=connState -output networkConnectionStates.go -linecomment
+//go:generate go run golang.org/x/tools/cmd/stringer -type=connState -output networkConnectionStates.go -linecomment
 const (
 	connUnknown      connState = iota // Unknown
 	connActivating                    // Activating
