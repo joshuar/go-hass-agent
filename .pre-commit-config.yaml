@@ -8,3 +8,8 @@ repos:
     rev: v1.59.1
     hooks:
       - id: golangci-lint-full
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v3.3.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
