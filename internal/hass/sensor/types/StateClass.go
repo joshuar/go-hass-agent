@@ -5,7 +5,7 @@
 
 package types
 
-//go:generate stringer -type=StateClass -output StatedClass_generated.go -linecomment
+//go:generate go run golang.org/x/tools/cmd/stringer -type=StateClass -output StatedClass_generated.go -linecomment
 const (
 	StateClassMeasurement     StateClass = iota + 1 // measurement
 	StateClassTotal                                 // total

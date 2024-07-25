@@ -8,7 +8,7 @@ package types
 // This list is taken from:
 // https://developers.home-assistant.io/docs/core/entity/sensor/
 
-//go:generate stringer -type=DeviceClass -output DeviceClass_generated.go -linecomment
+//go:generate go run golang.org/x/tools/cmd/stringer -type=DeviceClass -output DeviceClass_generated.go -linecomment
 const (
 	DeviceClassApparentPower          DeviceClass = iota + 1 // apparent_power
 	DeviceClassAqi                                           // aqi

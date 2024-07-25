@@ -20,7 +20,7 @@ import (
 	"golang.org/x/text/language"
 )
 
-//go:generate stringer -type=SensorType -output sensorType_strings.go
+//go:generate go run golang.org/x/tools/cmd/stringer -type=SensorType -output sensorType_strings.go
 const (
 	hwmonPath            = "/sys/class/hwmon"
 	Unknown   SensorType = iota

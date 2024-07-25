@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//go:generate moq -out runners_mocks_test.go . SensorController Worker Script
+//go:generate go run github.com/matryer/moq -out runners_mocks_test.go . SensorController Worker Script
 package agent
 
 import (

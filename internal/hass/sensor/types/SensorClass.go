@@ -5,7 +5,7 @@
 
 package types
 
-//go:generate stringer -type=SensorClass -linecomment -output SensorClass_generated.go
+//go:generate go run golang.org/x/tools/cmd/stringer -type=SensorClass -linecomment -output SensorClass_generated.go
 const (
 	Sensor       SensorClass = iota + 1 // sensor
 	BinarySensor                        // binary_sensor
