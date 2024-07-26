@@ -12,7 +12,7 @@ permissions:
   contents: read
 
 env:
-  GO_VERSION: 1.22
+  GO_VERSION: 1.22.5
   MAGEARGS: -d build/magefiles -w .
   BUILDPLATFORM: linux/amd64
 
@@ -58,7 +58,7 @@ jobs:
         build-mode: ${{ matrix.build-mode }}
         packs: githubsecuritylab/codeql-${{ matrix.language }}-queries
     - if: matrix.build-mode == 'manual'
-      name: Build 
+      name: Build
       run: go build
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3

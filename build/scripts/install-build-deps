@@ -23,6 +23,7 @@ apt-get update
 apt-get -y install --no-install-recommends desktop-file-utils pkg-config git ${ccpkg[@]:0}
 for a in "${arch[@]}"; do
         apt-get -y install --no-install-recommends \
+                libc6-dev:${a} \
                 libgl-dev:${a} libglx-dev:${a} libglvnd-dev:${a} \
                 libxcb1-dev:${a} libxau-dev:${a} libxdmcp-dev:${a} \
                 libx11-dev:${a} libxcursor-dev:${a} libxrandr-dev:${a} \
