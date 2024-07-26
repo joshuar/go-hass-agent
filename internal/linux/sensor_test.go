@@ -276,11 +276,7 @@ func TestSensor_Attributes(t *testing.T) {
 		{
 			name:   "with source",
 			fields: fields{SensorSrc: DataSrcProcfs},
-			want: struct {
-				DataSource string `json:"data_source"`
-			}{
-				DataSource: DataSrcProcfs,
-			},
+			want:   map[string]any{"data_source": DataSrcProcfs},
 		},
 	}
 	for _, tt := range tests {
