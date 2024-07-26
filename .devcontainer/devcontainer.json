@@ -17,9 +17,7 @@
     "features": {
         "ghcr.io/devcontainers/features/go:1": {},
         "ghcr.io/devcontainers/features/github-cli:1": {},
-        "ghcr.io/devcontainers-contrib/features/pre-commit:2": {}
     },
-    "forwardPorts": [8123,1883,8883],
     "postCreateCommand": ".devcontainer/postCreate.sh",
     "customizations": {
         "vscode": {
