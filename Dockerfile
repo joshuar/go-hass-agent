@@ -11,8 +11,9 @@ apt-get -y update
 apt-get -y install ca-certificates
 EOF
 # download and install go
-ADD https://go.dev/dl/go1.22.4.linux-amd64.tar.gz /tmp/go1.22.4.linux-amd64.tar.gz
-RUN rm -rf /usr/local/go && tar -C /usr/local -xzf /tmp/go1.22.4.linux-amd64.tar.gz && rm /tmp/go1.22.4.linux-amd64.tar.gz
+ARG GO_VERSION
+ADD https://go.dev/dl/go$GO_VERSION.linux-amd64.tar.gz /tmp/go$GO_VERSION.linux-amd64.tar.gz
+RUN rm -rf /usr/local/go && tar -C /usr/local -xzf /tmp/go$GO_VERSION.linux-amd64.tar.gz && rm /tmp/go$GO_VERSION.linux-amd64.tar.gz
 ENV PATH="$PATH:/usr/local/go/bin:/root/go/bin"
 
 WORKDIR /usr/src/go-hass-agent

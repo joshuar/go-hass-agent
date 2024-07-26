@@ -12,7 +12,7 @@ permissions:
   contents: read
 
 env:
-  GO_VERSION: 1.22
+  GO_VERSION: 1.22.5
   COSIGN_VERSION: 'v2.2.2'
   MAGEARGS: -d build/magefiles -w .
 
@@ -60,7 +60,7 @@ jobs:
       - name: Set app version for release
         if: ${{ needs.check_release.outputs.release_created }}
         run: |
-          echo "APPVERSION=${{ needs.check_release.outputs.release_tag }}" >> $GITHUB_ENV  
+          echo "APPVERSION=${{ needs.check_release.outputs.release_tag }}" >> $GITHUB_ENV
       - name: Checkout source
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
         with:
@@ -75,7 +75,7 @@ jobs:
         with:
           install-only: true
       - name: Build with Mage
-        run: mage ${MAGEARGS} build:ci 
+        run: mage ${MAGEARGS} build:ci
         env:
           BUILDPLATFORM: ${{ matrix.platform }}
       - name: Package with Mage
@@ -176,7 +176,7 @@ jobs:
           context: .
           labels: ${{ steps.docker_metadata.outputs.labels }}
           platforms: ${{ matrix.platform }}
-          outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true          
+          outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
       - name: Export digest
         run: |
           mkdir -p /tmp/digests
