@@ -109,7 +109,7 @@ func ExecuteRequest(ctx context.Context, client *resty.Client, url string, reque
 			LogAttrs(ctx, logging.LevelTrace,
 				"Sending request.",
 				slog.String("method", "POST"),
-				slog.Any("body", req.RequestBody()),
+				slog.String("body", string(req.RequestBody())),
 				slog.Time("sent_at", time.Now()))
 
 		resp, err = webClient.SetBody(req.RequestBody()).Post(url)
@@ -135,7 +135,7 @@ func ExecuteRequest(ctx context.Context, client *resty.Client, url string, reque
 			slog.String("status", resp.Status()),
 			slog.String("protocol", resp.Proto()),
 			slog.Duration("time", resp.Time()),
-			slog.Any("body", resp.Body()))
+			slog.String("body", string(resp.Body())))
 
 	// If the response is an error code, unmarshal it with the error method.
 	if resp.IsError() {
