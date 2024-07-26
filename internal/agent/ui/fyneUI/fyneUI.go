@@ -255,8 +255,13 @@ func (i *FyneUI) agentSettingsWindow(ctx context.Context) fyne.Window {
 		prefs.MQTTUser = mqttPrefs.User
 		prefs.MQTTPassword = mqttPrefs.Password
 
-		dialog.ShowInformation("Saved", "MQTT Preferences have been saved.", window)
-		logging.FromContext(ctx).Info("MQTT preferences saved.")
+		if err := prefs.Save(); err != nil {
+			dialog.ShowError(err, window)
+			logging.FromContext(ctx).Error("Failed to save MQTT preferences.", "error", err.Error())
+		} else {
+			dialog.ShowInformation("Saved", "MQTT Preferences have been saved. Restart agent to utilise them.", window)
+			logging.FromContext(ctx).Info("Saved MQTT preferences.")
+		}
 	}
 	settingsForm.OnCancel = func() {
 		window.Close()
