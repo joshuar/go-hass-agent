@@ -22,6 +22,8 @@ services:
     environment:
       - "TZ=${TZ}"
     restart: on-failure
+    ports:
+      - 8123:8123
   mosquitto:
     image: docker.io/eclipse-mosquitto:2.0.18
     volumes:
@@ -30,3 +32,6 @@ services:
       - ../deployments/mosquitto/log:/mosquitto/log:Z,U
       - /etc/localtime:/etc/localtime:ro,cached
     restart: on-failure
+    ports:
+      - 1883:1883
+      - 8883:8883
