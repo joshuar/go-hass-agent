@@ -58,8 +58,11 @@ var setupTestServer = func(t *testing.T, response Response) *httptest.Server {
 		switch rType := response.(type) {
 		case *registrationResponse:
 			resp, err = json.Marshal(rType.Details)
+		case *failedResponse:
+			err = ErrUnknown
 		}
 		if err != nil {
+			responseWriter.WriteHeader(http.StatusBadRequest)
 			_, err := responseWriter.Write(json.RawMessage(`{"success":false}`))
 			if err != nil {
 				t.Fatal(err)
