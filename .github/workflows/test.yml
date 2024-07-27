@@ -38,7 +38,6 @@ jobs:
           install-only: true
       - name: Run tests
         run: mage ${MAGEARGS} tests:ci
-        continue-on-error: true
       - name: Upload Coverage
         id: upload_coverage
         uses: codecov/codecov-action@e28ff129e5465c2c0dcc6f003fc735cb6ae0c673 # v4
