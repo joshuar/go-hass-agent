@@ -8,11 +8,13 @@ package hass
 
 import (
 	"context"
+	"log/slog"
 	"reflect"
 	"testing"
 
 	"github.com/go-resty/resty/v2"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
@@ -50,35 +52,6 @@ func TestContextSetClient(t *testing.T) {
 	}
 }
 
-func TestContextGetClient(t *testing.T) {
-	goodClient := resty.New()
-	goodCtx := ContextSetClient(context.TODO(), goodClient)
-
-	type args struct {
-		ctx context.Context
-	}
-
-	tests := []struct {
-		args args
-		want *resty.Client
-		name string
-	}{
-		{
-			name: "successful test",
-			args: args{ctx: goodCtx},
-			want: goodClient,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := ContextGetClient(tt.args.ctx); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("ContextGetClient() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func TestSetupContext(t *testing.T) {
 	restAPIURL := "http://localhost:8123/api"
 	prefs := preferences.DefaultPreferences()
@@ -107,9 +80,53 @@ func TestSetupContext(t *testing.T) {
 				t.Errorf("SetupContext() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			client := ContextGetClient(got)
+			client, err := ContextGetClient(got)
+			require.NoError(t, err)
 			assert.NotNil(t, client)
 			assert.Equal(t, tt.want, client.BaseURL)
+		})
+	}
+}
+
+func TestContextGetClient(t *testing.T) {
+	restAPIURL := "http://localhost:8123/api"
+	prefs := preferences.DefaultPreferences()
+	prefs.RestAPIURL = restAPIURL
+	ctx := preferences.ContextSetPrefs(context.TODO(), prefs)
+	ctx, err := SetupContext(ctx)
+	require.NoError(t, err)
+
+	type args struct {
+		ctx context.Context
+	}
+	tests := []struct {
+		args    args
+		want    *resty.Client
+		name    string
+		wantErr bool
+	}{
+		{
+			name: "with client",
+			args: args{ctx: ctx},
+			want: NewDefaultHTTPClient(prefs.RestAPIURL),
+		},
+		{
+			name:    "without client",
+			args:    args{ctx: context.TODO()},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ContextGetClient(tt.args.ctx)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ContextGetClient() error = %v, wantErr %v", err, tt.wantErr)
+				slog.Debug("here")
+				return
+			}
+			if err == nil {
+				assert.Equal(t, tt.want.BaseURL, got.BaseURL)
+			}
 		})
 	}
 }

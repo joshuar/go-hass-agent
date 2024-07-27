@@ -7,6 +7,7 @@ package hass
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/go-resty/resty/v2"
@@ -20,19 +21,21 @@ const (
 	clientContextKey contextKey = "client"
 )
 
+var ErrNoClient = errors.New("no client found in context")
+
 func ContextSetClient(ctx context.Context, client *resty.Client) context.Context {
 	newCtx := context.WithValue(ctx, clientContextKey, client)
 
 	return newCtx
 }
 
-func ContextGetClient(ctx context.Context) *resty.Client {
-	url, ok := ctx.Value(clientContextKey).(*resty.Client)
+func ContextGetClient(ctx context.Context) (*resty.Client, error) {
+	client, ok := ctx.Value(clientContextKey).(*resty.Client)
 	if !ok {
-		return nil
+		return nil, ErrNoClient
 	}
 
-	return url
+	return client, nil
 }
 
 func SetupContext(ctx context.Context) (context.Context, error) {

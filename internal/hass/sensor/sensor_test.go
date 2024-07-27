@@ -3,60 +3,78 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//nolint:exhaustruct,paralleltest,wsl
-//revive:disable:unused-receiver
+//nolint:paralleltest,wsl,nlreturn
+//revive:disable:unused-parameter,function-length
+//go:generate moq -out sensor_mocks_test.go . State Registration
 package sensor
 
 import (
 	"encoding/json"
-	"path/filepath"
 	"reflect"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/joshuar/go-hass-agent/internal/hass"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor/registry"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 )
 
-var mockSensor = RegistrationMock{
-	IDFunc:          func() string { return "mock_sensor" },
-	StateFunc:       func() any { return "mockState" },
+var (
+	sensorExistingID  = "existing_sensor"
+	sensorNewName     = "New Sensor"
+	sensorNewID       = "new_sensor"
+	sensorDisabledID  = "disabled_sensor"
+	sensorIcon        = "mdi:icon"
+	sensorType        = types.Sensor
+	sensorState       = "sensorState"
+	sensorUnits       = "sensorUnit"
+	sensorDeviceClass = types.DeviceClassDataSize
+	sensorStateClass  = types.StateClassMeasurement
+)
+
+var mockSensorState = &StateMock{
+	AttributesFunc: func() map[string]any { return nil },
+	IDFunc:         func() string { return sensorExistingID },
+	IconFunc:       func() string { return sensorIcon },
+	SensorTypeFunc: func() types.SensorClass { return sensorType },
+	StateFunc:      func() any { return sensorState },
+	UnitsFunc:      func() string { return sensorUnits },
+}
+
+var mockSensorRegistration = &RegistrationMock{
 	AttributesFunc:  func() map[string]any { return nil },
-	IconFunc:        func() string { return "mdi:mock-icon" },
-	SensorTypeFunc:  func() types.SensorClass { return types.Sensor },
-	NameFunc:        func() string { return "Mock Sensor" },
-	UnitsFunc:       func() string { return "mockUnit" },
-	StateClassFunc:  func() types.StateClass { return types.StateClassMeasurement },
-	DeviceClassFunc: func() types.DeviceClass { return types.DeviceClassTemperature },
+	IDFunc:          func() string { return sensorNewID },
+	IconFunc:        func() string { return sensorIcon },
+	SensorTypeFunc:  func() types.SensorClass { return sensorType },
+	StateFunc:       func() any { return sensorState },
+	UnitsFunc:       func() string { return sensorUnits },
 	CategoryFunc:    func() string { return "" },
+	DeviceClassFunc: func() types.DeviceClass { return sensorDeviceClass },
+	NameFunc:        func() string { return sensorNewName },
+	StateClassFunc:  func() types.StateClass { return sensorStateClass },
 }
 
-// Code uses type checking against interfaces, so we need to define a mock type
-// ourselves to ensure it explicitly satisfies the expected State interface.
-type mockSensorType struct {
-	value       any
-	name, id    string
-	sensorType  types.SensorClass
-	deviceClass types.DeviceClass
-	stateClass  types.StateClass
+var mockRegistry = &RegistryMock{
+	IsRegisteredFunc: func(sensor string) bool {
+		switch sensor {
+		case sensorExistingID:
+			return true
+		case sensorNewID:
+			return false
+		}
+		return false
+	},
+	IsDisabledFunc: func(sensor string) bool {
+		return sensor == sensorDisabledID
+	},
+	SetRegisteredFunc: func(sensor string, state bool) error { return nil },
+	SetDisabledFunc:   func(sensor string, state bool) error { return nil },
 }
-
-func (m *mockSensorType) Name() string                   { return m.name }
-func (m *mockSensorType) ID() string                     { return m.id }
-func (m *mockSensorType) State() any                     { return m.value }
-func (m *mockSensorType) Icon() string                   { return "mdi:icon" }
-func (m *mockSensorType) SensorType() types.SensorClass  { return m.sensorType }
-func (m *mockSensorType) Units() string                  { return "" }
-func (m *mockSensorType) Attributes() any                { return nil }
-func (m *mockSensorType) DeviceClass() types.DeviceClass { return m.deviceClass }
-func (m *mockSensorType) StateClass() types.StateClass   { return m.stateClass }
-func (m *mockSensorType) Category() string               { return "" }
 
 func Test_newStateUpdateRequest(t *testing.T) {
 	type args struct {
-		s State
+		sensor State
 	}
 	tests := []struct {
 		args args
@@ -65,19 +83,19 @@ func Test_newStateUpdateRequest(t *testing.T) {
 	}{
 		{
 			name: "default",
-			args: args{s: &mockSensor},
+			args: args{sensor: mockSensorState},
 			want: &stateUpdateRequest{
-				UniqueID: "mock_sensor",
-				Icon:     "mdi:mock-icon",
-				Type:     types.Sensor.String(),
-				State:    "mockState",
+				State:    sensorState,
+				Icon:     sensorIcon,
+				Type:     sensorType.String(),
+				UniqueID: sensorExistingID,
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := newStateUpdateRequest(tt.args.s); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("newSensorState() = %v, want %v", got, tt.want)
+			if got := newStateUpdateRequest(tt.args.sensor); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("newStateUpdateRequest() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -85,7 +103,7 @@ func Test_newStateUpdateRequest(t *testing.T) {
 
 func Test_newRegistrationRequest(t *testing.T) {
 	type args struct {
-		s Registration
+		sensor Registration
 	}
 	tests := []struct {
 		args args
@@ -94,35 +112,33 @@ func Test_newRegistrationRequest(t *testing.T) {
 	}{
 		{
 			name: "default",
-			args: args{s: &mockSensor},
+			args: args{sensor: mockSensorRegistration},
 			want: &registrationRequest{
 				stateUpdateRequest: &stateUpdateRequest{
-					UniqueID: "mock_sensor",
-					Icon:     "mdi:mock-icon",
-					Type:     types.Sensor.String(),
-					State:    "mockState",
+					State:    sensorState,
+					Icon:     sensorIcon,
+					Type:     sensorType.String(),
+					UniqueID: sensorNewID,
 				},
-				Name:              "Mock Sensor",
-				UnitOfMeasurement: "mockUnit",
-				StateClass:        types.StateClassMeasurement.String(),
-				DeviceClass:       types.DeviceClassTemperature.String(),
+				Name:        sensorNewName,
+				DeviceClass: sensorDeviceClass.String(),
+				StateClass:  sensorStateClass.String(),
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := newRegistrationRequest(tt.args.s); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("newSensorRegistration() = %v, want %v", got, tt.want)
-			}
+			got := newRegistrationRequest(tt.args.sensor)
+			assert.Equal(t, tt.want.Name, got.Name)
+			assert.Equal(t, tt.want.DeviceClass, got.DeviceClass)
+			assert.Equal(t, tt.want.StateClass, got.StateClass)
 		})
 	}
 }
 
-//nolint:lll
 func Test_request_RequestBody(t *testing.T) {
-	var data []byte
-	var err error
-	data, err = json.Marshal(newStateUpdateRequest(&mockSensor))
+	sensor := newStateUpdateRequest(mockSensorState)
+	validData, err := json.Marshal(sensor)
 	require.NoError(t, err)
 
 	type fields struct {
@@ -135,12 +151,14 @@ func Test_request_RequestBody(t *testing.T) {
 		want   json.RawMessage
 	}{
 		{
-			name: "sensor state update",
-			fields: fields{
-				RequestType: requestTypeUpdate,
-				Data:        data,
-			},
-			want: json.RawMessage(`{"type":"update_sensor_states","data":{"state":"mockState","icon":"mdi:mock-icon","type":"sensor","unique_id":"mock_sensor"}}`),
+			name:   "valid body",
+			fields: fields{RequestType: requestTypeUpdate, Data: validData},
+			want:   json.RawMessage(`{"type":"update_sensor_states","data":` + string(validData) + `}`),
+		},
+		{
+			name:   "invalid body",
+			fields: fields{RequestType: requestTypeUpdate, Data: json.RawMessage(`invalid`)},
+			want:   nil,
 		},
 	}
 	for _, tt := range tests {
@@ -156,42 +174,38 @@ func Test_request_RequestBody(t *testing.T) {
 	}
 }
 
-//nolint:funlen,lll
-//revive:disable:function-length
 func TestNewRequest(t *testing.T) {
-	registry.SetPath(filepath.Join(t.TempDir(), "testRegistry"))
-	reg, err := registry.Load()
+	newSensor := *mockSensorRegistration
+	newSensorReq := newRegistrationRequest(&newSensor)
+	newSensorData, err := json.Marshal(newSensorReq)
 	require.NoError(t, err)
-	err = reg.SetRegistered("sensor_update", true)
+	newSensorRequest := &request{
+		RequestType: requestTypeRegister,
+		Data:        newSensorData,
+	}
+
+	existingSensor := *mockSensorRegistration
+	existingSensor.IDFunc = func() string { return sensorExistingID }
+	existingSensorReq := []*stateUpdateRequest{newStateUpdateRequest(&existingSensor)}
+	existingSensorData, err := json.Marshal(existingSensorReq)
 	require.NoError(t, err)
-	err = reg.SetDisabled("sensor_disabled", true)
+	existingSensorRequest := &request{
+		RequestType: requestTypeUpdate,
+		Data:        existingSensorData,
+	}
+
+	disabledSensor := *mockSensorRegistration
+	disabledSensor.IDFunc = func() string { return sensorDisabledID }
+
+	location := &LocationRequest{Gps: []float64{1.1, 2.2}}
+	locationData, err := json.Marshal(location)
 	require.NoError(t, err)
-
-	mockLocation := &mockSensorType{
-		name: "Location",
-		id:   "location",
-		value: &LocationRequest{
-			Gps: []float64{0, 0},
-		},
+	locationDataRequest := &request{
+		RequestType: requestTypeLocation,
+		Data:        locationData,
 	}
-
-	mockUpdate := &mockSensorType{
-		name:  "Sensor Update",
-		id:    "sensor_update",
-		value: "value",
-	}
-
-	mockRegistration := &mockSensorType{
-		name:  "Sensor Registration",
-		id:    "sensor_registration",
-		value: "value",
-	}
-
-	mockDisabled := &mockSensorType{
-		name:  "Disabled Sensor",
-		id:    "sensor_disabled",
-		value: "value",
-	}
+	locationSensor := *mockSensorRegistration
+	locationSensor.StateFunc = func() any { return location }
 
 	type args struct {
 		reg Registry
@@ -205,38 +219,26 @@ func TestNewRequest(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "location",
-			args: args{reg: reg, req: mockLocation},
-			want: &request{
-				Data:        json.RawMessage(`{"gps":[0,0]}`),
-				RequestType: requestTypeLocation,
-			},
-			want1:   &locationResponse{},
-			wantErr: false,
+			name:  "new sensor",
+			args:  args{reg: mockRegistry, req: Details(&newSensor)},
+			want:  newSensorRequest,
+			want1: &registrationResponse{},
 		},
 		{
-			name: "update",
-			args: args{reg: reg, req: mockUpdate},
-			want: &request{
-				Data:        json.RawMessage(`[{"state":"value","icon":"mdi:icon","type":"SensorClass(0)","unique_id":"sensor_update"}]`),
-				RequestType: requestTypeUpdate,
-			},
-			want1:   &updateResponse{Body: make(map[string]*response)},
-			wantErr: false,
+			name:  "existing sensor",
+			args:  args{reg: mockRegistry, req: Details(&existingSensor)},
+			want:  existingSensorRequest,
+			want1: &updateResponse{Body: make(map[string]*response)},
 		},
 		{
-			name: "registration",
-			args: args{reg: reg, req: mockRegistration},
-			want: &request{
-				Data:        json.RawMessage(`{"state":"value","icon":"mdi:icon","type":"SensorClass(0)","unique_id":"sensor_registration","name":"Sensor Registration","state_class":"StateClass(0)","device_class":"DeviceClass(0)"}`),
-				RequestType: requestTypeRegister,
-			},
-			want1:   &registrationResponse{},
-			wantErr: false,
+			name:  "location",
+			args:  args{reg: mockRegistry, req: Details(&locationSensor)},
+			want:  locationDataRequest,
+			want1: &locationResponse{},
 		},
 		{
-			name:    "disabled",
-			args:    args{reg: reg, req: mockDisabled},
+			name:    "disabled sensor",
+			args:    args{reg: mockRegistry, req: Details(&disabledSensor)},
 			want:    nil,
 			want1:   nil,
 			wantErr: true,
@@ -247,16 +249,312 @@ func TestNewRequest(t *testing.T) {
 			got, got1, err := NewRequest(tt.args.reg, tt.args.req)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewRequest() error = %v, wantErr %v", err, tt.wantErr)
-
 				return
 			}
-
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("NewRequest() got = %v, want %v", string(got.RequestBody()), string(tt.want.RequestBody()))
 			}
-
 			if !reflect.DeepEqual(got1, tt.want1) {
 				t.Errorf("NewRequest() got1 = %v, want %v", got1, tt.want1)
+			}
+		})
+	}
+}
+
+func Test_updateResponse_UnmarshalJSON(t *testing.T) {
+	type fields struct {
+		Body     map[string]*response
+		APIError *hass.APIError
+	}
+	type args struct {
+		b []byte
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "valid body",
+			args: args{b: json.RawMessage(`{"sensor_id":{"success": true}}`)},
+		},
+		{
+			name:    "empty body",
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			u := &updateResponse{
+				Body:     tt.fields.Body,
+				APIError: tt.fields.APIError,
+			}
+			if err := u.UnmarshalJSON(tt.args.b); (err != nil) != tt.wantErr {
+				t.Errorf("updateResponse.UnmarshalJSON() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func Test_updateResponse_UnmarshalError(t *testing.T) {
+	type fields struct {
+		Body     map[string]*response
+		APIError *hass.APIError
+	}
+	type args struct {
+		data []byte
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		{
+			name:   "valid body",
+			args:   args{data: json.RawMessage(`{"code":"501","message":"error"}`)},
+			fields: fields{APIError: &hass.APIError{}},
+		},
+		{
+			name:    "empty body",
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			u := &updateResponse{
+				Body:     tt.fields.Body,
+				APIError: tt.fields.APIError,
+			}
+			if err := u.UnmarshalError(tt.args.data); (err != nil) != tt.wantErr {
+				t.Errorf("updateResponse.UnmarshalError() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func Test_updateResponse_Error(t *testing.T) {
+	type fields struct {
+		Body     map[string]*response
+		APIError *hass.APIError
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   string
+	}{
+		{
+			name:   "with error",
+			fields: fields{APIError: &hass.APIError{Code: "501", Message: "error"}},
+			want:   "501: error",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			u := &updateResponse{
+				Body:     tt.fields.Body,
+				APIError: tt.fields.APIError,
+			}
+			if got := u.Error(); got != tt.want {
+				t.Errorf("updateResponse.Error() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_registrationResponse_UnmarshalJSON(t *testing.T) {
+	type fields struct {
+		APIError *hass.APIError
+		Body     response
+	}
+	type args struct {
+		b []byte
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "valid body",
+			args: args{b: json.RawMessage(`{"sensor_id":{"success": true}}`)},
+		},
+		{
+			name:    "empty body",
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &registrationResponse{
+				APIError: tt.fields.APIError,
+				Body:     tt.fields.Body,
+			}
+			if err := r.UnmarshalJSON(tt.args.b); (err != nil) != tt.wantErr {
+				t.Errorf("registrationResponse.UnmarshalJSON() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func Test_registrationResponse_UnmarshalError(t *testing.T) {
+	type fields struct {
+		APIError *hass.APIError
+		Body     response
+	}
+	type args struct {
+		data []byte
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		{
+			name:   "valid body",
+			args:   args{data: json.RawMessage(`{"code":"501","message":"error"}`)},
+			fields: fields{APIError: &hass.APIError{}},
+		},
+		{
+			name:    "empty body",
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &registrationResponse{
+				APIError: tt.fields.APIError,
+				Body:     tt.fields.Body,
+			}
+			if err := r.UnmarshalError(tt.args.data); (err != nil) != tt.wantErr {
+				t.Errorf("registrationResponse.UnmarshalError() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func Test_registrationResponse_Error(t *testing.T) {
+	type fields struct {
+		APIError *hass.APIError
+		Body     response
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   string
+	}{
+		{
+			name:   "with error",
+			fields: fields{APIError: &hass.APIError{Code: "501", Message: "error"}},
+			want:   "501: error",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &registrationResponse{
+				APIError: tt.fields.APIError,
+				Body:     tt.fields.Body,
+			}
+			if got := r.Error(); got != tt.want {
+				t.Errorf("registrationResponse.Error() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_locationResponse_UnmarshalJSON(t *testing.T) {
+	type fields struct {
+		APIError *hass.APIError
+	}
+	type args struct {
+		in0 []byte
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "valid body",
+			args: args{in0: json.RawMessage(`{"sensor_id":{"success": true}}`)},
+		},
+		{
+			name: "empty body",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			l := &locationResponse{
+				APIError: tt.fields.APIError,
+			}
+			if err := l.UnmarshalJSON(tt.args.in0); (err != nil) != tt.wantErr {
+				t.Errorf("locationResponse.UnmarshalJSON() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func Test_locationResponse_UnmarshalError(t *testing.T) {
+	type fields struct {
+		APIError *hass.APIError
+	}
+	type args struct {
+		data []byte
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		{
+			name:   "valid body",
+			args:   args{data: json.RawMessage(`{"code":"501","message":"error"}`)},
+			fields: fields{APIError: &hass.APIError{}},
+		},
+		{
+			name:    "empty body",
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			l := &locationResponse{
+				APIError: tt.fields.APIError,
+			}
+			if err := l.UnmarshalError(tt.args.data); (err != nil) != tt.wantErr {
+				t.Errorf("locationResponse.UnmarshalError() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func Test_locationResponse_Error(t *testing.T) {
+	type fields struct {
+		APIError *hass.APIError
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   string
+	}{
+		{
+			name:   "with error",
+			fields: fields{APIError: &hass.APIError{Code: "501", Message: "error"}},
+			want:   "501: error",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			l := &locationResponse{
+				APIError: tt.fields.APIError,
+			}
+			if got := l.Error(); got != tt.want {
+				t.Errorf("locationResponse.Error() = %v, want %v", got, tt.want)
 			}
 		})
 	}

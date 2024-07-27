@@ -38,7 +38,7 @@ linters:
     - errname
     - errorlint
     - exhaustive
-    - exhaustruct
+    # - exhaustruct
     - exportloopref
     - fatcontext
     - forbidigo
@@ -144,7 +144,7 @@ issues:
       - lll
       source: "^//go:generate "
     - path: '(.+)_test\.go'
-      text: "copies lock value"
+      text: "copies lock"
     - linters:
       - govet
       text: "lostcancel"

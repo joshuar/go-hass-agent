@@ -3,6 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
+//go:generate moq -out tracker_mocks_test.go . Registry
 package sensor
 
 import (
@@ -24,9 +25,9 @@ var (
 	ErrRespUnknown     = errors.New("unhandled response")
 	ErrTrackerNotReady = errors.New("tracker not ready")
 	ErrSensorNotFound  = errors.New("sensor not found in tracker")
+	ErrSensorInvalid   = errors.New("invalid sensor")
 )
 
-//go:generate moq -out mock_Registry_test.go . Registry
 type Registry interface {
 	SetDisabled(sensor string, state bool) error
 	SetRegistered(sensor string, state bool) error
@@ -73,7 +74,12 @@ func (t *Tracker) SensorList() []string {
 }
 
 func (t *Tracker) Process(ctx context.Context, reg Registry, upds ...<-chan Details) error {
-	client := hass.ContextGetClient(ctx)
+	client, err := hass.ContextGetClient(ctx)
+	if err != nil {
+		logging.FromContext(ctx).Warn("Could not process sensors.", "error", err.Error())
+
+		return nil
+	}
 
 	for update := range MergeSensorCh(ctx, upds...) {
 		go func(upd Details) {
@@ -127,6 +133,10 @@ func (t *Tracker) update(ctx context.Context, client *resty.Client, url string, 
 }
 
 func handleResponse(respIntr hass.Response, trk *Tracker, upd Details, reg Registry) error {
+	if upd == nil {
+		return ErrSensorInvalid
+	}
+
 	switch resp := respIntr.(type) {
 	case *updateResponse:
 		if err := handleUpdates(reg, resp); err != nil {
@@ -188,7 +198,9 @@ func handleRegistration(reg Registry, r *registrationResponse, s string) error {
 }
 
 func (t *Tracker) Reset() {
-	t.sensor = nil
+	if t.sensor != nil {
+		t.sensor = nil
+	}
 }
 
 func NewTracker() (*Tracker, error) {
