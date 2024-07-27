@@ -4,6 +4,7 @@
 // https://opensource.org/licenses/MIT
 
 //nolint:errname // structs are dual-purpose response and error
+//go:generate moq -out sensor_mocks_test.go . State Registration Details
 package sensor
 
 import (
@@ -25,7 +26,6 @@ const (
 
 var ErrSensorDisabled = errors.New("sensor disabled")
 
-//go:generate moq -out mock_State_test.go . State
 type State interface {
 	ID() string
 	Icon() string
@@ -35,7 +35,6 @@ type State interface {
 	Attributes() map[string]any
 }
 
-//go:generate moq -out mock_Registration_test.go . Registration
 type Registration interface {
 	State
 	Name() string
@@ -191,8 +190,8 @@ type haError struct {
 }
 
 type updateResponse struct {
-	Body map[string]*response
-	*hass.APIError
+	Body           map[string]*response `json:"body"`
+	*hass.APIError `json:"api_error,omitempty"`
 }
 
 func (u *updateResponse) UnmarshalJSON(b []byte) error {
@@ -207,7 +206,7 @@ func (u *updateResponse) UnmarshalJSON(b []byte) error {
 func (u *updateResponse) UnmarshalError(data []byte) error {
 	err := json.Unmarshal(data, u.APIError)
 	if err != nil {
-		return fmt.Errorf("could not unmarshal: %w", err)
+		return fmt.Errorf("could not parse response error: %w", err)
 	}
 
 	return nil
