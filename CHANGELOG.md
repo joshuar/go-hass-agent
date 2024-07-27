@@ -1,5 +1,32 @@
 # Changelog
 
+## [9.6.0](https://github.com/joshuar/go-hass-agent/compare/v9.5.2...v9.6.0) (2024-07-27)
+
+
+### Features
+
+* :loud_sound: improve logging output ([5f12810](https://github.com/joshuar/go-hass-agent/commit/5f12810f2331fd6cf8ba8506d0bc2b78231220e0))
+* **agent:** :loud_sound: improve agent logging ([a35fcb2](https://github.com/joshuar/go-hass-agent/commit/a35fcb26f3afd819c0dd0160ee71a183ca6af4c6))
+* **linux:** :zap: D-Bus overhaul ([2cf7dd4](https://github.com/joshuar/go-hass-agent/commit/2cf7dd47337140065424409b0e275acee1705d58))
+
+
+### Bug Fixes
+
+* **agent:** :bug: actually save agent preferences and show better dialogs for success/fail ([dfd1c47](https://github.com/joshuar/go-hass-agent/commit/dfd1c478b1106d9d984aec34c11f3a8335c902f4))
+* **agent:** :bug: make sure cron scheduler is stopped gracefully ([d631411](https://github.com/joshuar/go-hass-agent/commit/d631411283da9616950a9f0d42b3ea5a0f81538e))
+* **hass:** :loud_sound: make request body more readable ([bf1f6c4](https://github.com/joshuar/go-hass-agent/commit/bf1f6c4b860d4806951aa24582fcbc0343150ba0))
+* **linux:** :loud_sound: correct worker type in error message ([5a62443](https://github.com/joshuar/go-hass-agent/commit/5a624432ecde9c1c1381a7c4f665b899a5b4d778))
+
+
+### Performance Improvements
+
+* :zap: improve ability to stop and start sensor workers ([ad045c6](https://github.com/joshuar/go-hass-agent/commit/ad045c6aa550666a350c0fcc7f04ddaa7afab99d))
+
+
+### Reverts
+
+* **go:** :rewind: go back to previous go generate incantation ([2495017](https://github.com/joshuar/go-hass-agent/commit/2495017ad1729aba94ae069915e5ed785d63402f))
+
 ## [9.5.2](https://github.com/joshuar/go-hass-agent/compare/v9.5.1...v9.5.2) (2024-07-07)
 
 
