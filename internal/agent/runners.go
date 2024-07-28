@@ -17,7 +17,7 @@ import (
 
 	"github.com/robfig/cron/v3"
 
-	mqttapi "github.com/joshuar/go-hass-anything/v9/pkg/mqtt"
+	mqttapi "github.com/joshuar/go-hass-anything/v11/pkg/mqtt"
 
 	"github.com/joshuar/go-hass-agent/internal/commands"
 	"github.com/joshuar/go-hass-agent/internal/device"
@@ -240,7 +240,7 @@ func (agent *Agent) runMQTTWorker(ctx context.Context, osController MQTTControll
 
 	// Create a new connection to the MQTT broker. This will also publish the
 	// device subscriptions.
-	client, err := mqttapi.NewClient(ctx, agent.prefs, subscriptions, configs)
+	client, err := mqttapi.NewClient(ctx, agent.prefs.GetMQTTPreferences(), subscriptions, configs)
 	if err != nil {
 		agent.logger.Error("Could not connect to MQTT.", "error", err.Error())
 
@@ -253,7 +253,7 @@ func (agent *Agent) runMQTTWorker(ctx context.Context, osController MQTTControll
 		for {
 			select {
 			case msg := <-osController.Msgs():
-				if err := client.Publish(msg); err != nil {
+				if err := client.Publish(ctx, msg); err != nil {
 					agent.logger.Warn("Unable to publish message to MQTT.", "topic", msg.Topic, "content", slog.Any("msg", msg.Message))
 				}
 			case <-ctx.Done():
@@ -268,16 +268,16 @@ func (agent *Agent) runMQTTWorker(ctx context.Context, osController MQTTControll
 }
 
 func (agent *Agent) resetMQTTWorker(ctx context.Context, osController MQTTController) error {
-	if !agent.prefs.MQTTEnabled {
+	if !agent.prefs.GetMQTTPreferences().IsMQTTEnabled() {
 		return nil
 	}
 
-	client, err := mqttapi.NewClient(ctx, agent.prefs, nil, nil)
+	client, err := mqttapi.NewClient(ctx, agent.prefs.GetMQTTPreferences(), nil, nil)
 	if err != nil {
 		return fmt.Errorf("could not connect to MQTT: %w", err)
 	}
 
-	if err := client.Unpublish(osController.Configs()...); err != nil {
+	if err := client.Unpublish(ctx, osController.Configs()...); err != nil {
 		return fmt.Errorf("could not remove configs from MQTT: %w", err)
 	}
 

@@ -231,33 +231,35 @@ func (i *FyneUI) fyneSettingsWindow() fyne.Window {
 func (i *FyneUI) agentSettingsWindow(ctx context.Context) fyne.Window {
 	var allFormItems []*widget.FormItem
 
-	prefs, err := preferences.ContextGetPrefs(ctx)
+	// Retrieve the existing MQTT preferences.
+	mqttPrefs, err := preferences.ContextGetMQTTPrefs(ctx)
 	if err != nil {
 		logging.FromContext(ctx).Error("Could not show settings window.", "error", err.Error())
 
 		return nil
 	}
 
-	// MQTT settings
-	mqttPrefs := &ui.MQTTPreferences{
-		Enabled:  prefs.MQTTEnabled,
-		Server:   prefs.MQTTServer,
-		User:     prefs.MQTTUser,
-		Password: prefs.MQTTPassword,
-	}
+	// Generate a form of MQTT preferences.
 	allFormItems = append(allFormItems, i.mqttConfigItems(mqttPrefs)...)
 
 	window := i.app.NewWindow(i.Translate("App Preferences"))
 	settingsForm := widget.NewForm(allFormItems...)
 	settingsForm.OnSubmit = func() {
-		prefs.MQTTEnabled = mqttPrefs.Enabled
-		prefs.MQTTServer = mqttPrefs.Server
-		prefs.MQTTUser = mqttPrefs.User
-		prefs.MQTTPassword = mqttPrefs.Password
-
-		if err := prefs.Save(); err != nil {
+		allPrefs, err := preferences.ContextGetPrefs(ctx)
+		if err != nil {
 			dialog.ShowError(err, window)
-			logging.FromContext(ctx).Error("Failed to save MQTT preferences.", "error", err.Error())
+			logging.FromContext(ctx).Error("Could save preferences.", "error", err.Error())
+
+			return
+		}
+
+		// Save the new MQTT preferences into the existing preferences.
+		allPrefs.MQTTPreferences = mqttPrefs
+
+		// Save the new MQTT preferences to file.
+		if err := allPrefs.Save(); err != nil {
+			dialog.ShowError(err, window)
+			logging.FromContext(ctx).Error("Could note save preferences.", "error", err.Error())
 		} else {
 			dialog.ShowInformation("Saved", "MQTT Preferences have been saved. Restart agent to utilise them.", window)
 			logging.FromContext(ctx).Info("Saved MQTT preferences.")
@@ -449,37 +451,37 @@ func (i *FyneUI) registrationFields(ctx context.Context, input *hass.Registratio
 
 // mqttConfigItems generates a list of for item widgets for configuring the
 // agent to use an MQTT for pub/sub functionality.
-func (i *FyneUI) mqttConfigItems(prefs *ui.MQTTPreferences) []*widget.FormItem {
-	serverEntry := configEntry(&prefs.Server, false)
+func (i *FyneUI) mqttConfigItems(prefs *preferences.MQTTPreferences) []*widget.FormItem {
+	serverEntry := configEntry(&prefs.MQTTServer, false)
 	serverEntry.Validator = uriValidator()
 	serverEntry.Disable()
 	serverFormItem := widget.NewFormItem(i.Translate("MQTT Server"), serverEntry)
 	serverFormItem.HintText = ui.MQTTServerInfoString
 
-	userEntry := configEntry(&prefs.User, false)
+	userEntry := configEntry(&prefs.MQTTUser, false)
 	userEntry.Disable()
 	userFormItem := widget.NewFormItem(i.Translate("MQTT User"), userEntry)
 	userFormItem.HintText = ui.MQTTUserInfoString
 
-	passwordEntry := configEntry(&prefs.Password, true)
+	passwordEntry := configEntry(&prefs.MQTTPassword, true)
 	passwordEntry.Disable()
 	passwordFormItem := widget.NewFormItem(i.Translate("MQTT Password"), passwordEntry)
 	passwordFormItem.HintText = ui.MQTTPasswordInfoString
 
-	mqttEnabled := configCheck(&prefs.Enabled, func(b bool) {
+	mqttEnabled := configCheck(&prefs.MQTTEnabled, func(b bool) {
 		switch b {
 		case true:
 			serverEntry.Enable()
 			userEntry.Enable()
 			passwordEntry.Enable()
 
-			prefs.Enabled = true
+			prefs.MQTTEnabled = true
 		case false:
 			serverEntry.Disable()
 			userEntry.Disable()
 			passwordEntry.Disable()
 
-			prefs.Enabled = false
+			prefs.MQTTEnabled = false
 		}
 	})
 

@@ -14,7 +14,7 @@ import (
 	"sync"
 
 	"github.com/adrg/xdg"
-	mqtthass "github.com/joshuar/go-hass-anything/v9/pkg/hass"
+	mqtthass "github.com/joshuar/go-hass-anything/v11/pkg/hass"
 	"github.com/pelletier/go-toml/v2"
 )
 
@@ -45,27 +45,21 @@ var (
 
 //nolint:tagalign
 type Preferences struct {
-	mu             *sync.Mutex
-	Version        string `toml:"agent.version" validate:"required"`
-	Host           string `toml:"registration.host" validate:"required,http_url"`
-	Token          string `toml:"registration.token" validate:"required,ascii"`
-	DeviceID       string `toml:"device.id" validate:"required,ascii"`
-	DeviceName     string `toml:"device.name" validate:"required,ascii"`
-	RestAPIURL     string `toml:"hass.apiurl,omitempty" validate:"http_url,required_without=CloudhookURL RemoteUIURL"`
-	CloudhookURL   string `toml:"hass.cloudhookurl,omitempty" validate:"omitempty,http_url"`
-	WebsocketURL   string `toml:"hass.websocketurl" validate:"required,url"`
-	WebhookID      string `toml:"hass.webhookid" validate:"required,ascii"`
-	RemoteUIURL    string `toml:"hass.remoteuiurl,omitempty" validate:"omitempty,http_url"`
-	Secret         string `toml:"hass.secret,omitempty" validate:"omitempty"`
-	MQTTPassword   string `toml:"mqtt.password,omitempty" validate:"omitempty"`
-	MQTTUser       string `toml:"mqtt.user,omitempty" validate:"omitempty"`
-	MQTTServer     string `toml:"mqtt.server,omitempty" validate:"omitempty,uri"`
-	Registered     bool   `toml:"hass.registered" validate:"boolean"`
-	MQTTEnabled    bool   `toml:"mqtt.enabled" validate:"boolean"`
-	MQTTRegistered bool   `toml:"mqtt.registered" validate:"boolean"`
+	mu              *sync.Mutex
+	MQTTPreferences *MQTTPreferences `toml:"mqtt,omitempty" validate:"omitempty"`
+	RestAPIURL      string           `toml:"hass.apiurl,omitempty" validate:"http_url,required_without=CloudhookURL RemoteUIURL"`
+	Token           string           `toml:"registration.token" validate:"required,ascii"`
+	DeviceID        string           `toml:"device.id" validate:"required,ascii"`
+	DeviceName      string           `toml:"device.name" validate:"required,ascii"`
+	Host            string           `toml:"registration.host" validate:"required,http_url"`
+	CloudhookURL    string           `toml:"hass.cloudhookurl,omitempty" validate:"omitempty,http_url"`
+	WebsocketURL    string           `toml:"hass.websocketurl" validate:"required,url"`
+	WebhookID       string           `toml:"hass.webhookid" validate:"required,ascii"`
+	RemoteUIURL     string           `toml:"hass.remoteuiurl,omitempty" validate:"omitempty,http_url"`
+	Secret          string           `toml:"hass.secret,omitempty" validate:"omitempty"`
+	Version         string           `toml:"agent.version" validate:"required"`
+	Registered      bool             `toml:"hass.registered" validate:"boolean"`
 }
-
-type Preference func(*Preferences) error
 
 // SetPath sets the path to the preferences file to the given path. If this
 // function is not called, a default path is used.
@@ -141,47 +135,76 @@ func Reset() error {
 	return nil
 }
 
-//nolint:exhaustruct
 func DefaultPreferences() *Preferences {
 	if AppVersion == "" {
 		AppVersion = "Unknown"
 	}
 
 	return &Preferences{
-		Version:      AppVersion,
-		Host:         "http://localhost:8123",
-		WebsocketURL: "http://localhost:8123",
-		RestAPIURL:   "http://localhost:8123/api/webhook/replaceme",
-		Token:        "replaceMe",
-		WebhookID:    "replaceMe",
-		Registered:   false,
-		MQTTEnabled:  false,
-		DeviceID:     "Unknown",
-		DeviceName:   "Unknown",
-		mu:           &sync.Mutex{},
+		Version:         AppVersion,
+		Host:            "http://localhost:8123",
+		WebsocketURL:    "http://localhost:8123",
+		RestAPIURL:      "http://localhost:8123/api/webhook/replaceme",
+		Token:           "replaceMe",
+		WebhookID:       "replaceMe",
+		Registered:      false,
+		DeviceID:        "Unknown",
+		DeviceName:      "Unknown",
+		MQTTPreferences: &MQTTPreferences{MQTTEnabled: false},
+		mu:              &sync.Mutex{},
 	}
 }
 
+func (p *Preferences) GetMQTTPreferences() *MQTTPreferences {
+	return p.MQTTPreferences
+}
+
+//nolint:tagalign
+type MQTTPreferences struct {
+	MQTTServer      string `toml:"server,omitempty" validate:"omitempty,uri"`
+	MQTTUser        string `toml:"user,omitempty" validate:"omitempty"`
+	MQTTPassword    string `toml:"password,omitempty" validate:"omitempty"`
+	MQTTTopicPrefix string `toml:"topic_prefix,omitempty" validate:"omitempty,uri"`
+	MQTTEnabled     bool   `toml:"enabled" validate:"boolean"`
+}
+
+func (p *MQTTPreferences) IsMQTTEnabled() bool {
+	return p.MQTTEnabled
+}
+
 // MQTTServer returns the broker URI from the preferences.
-func (p *Preferences) GetMQTTServer() string {
+func (p *MQTTPreferences) Server() string {
 	return p.MQTTServer
 }
 
 // MQTTUser returns any username required for connecting to the broker from the
 // preferences.
-func (p *Preferences) GetMQTTUser() string {
+func (p *MQTTPreferences) User() string {
 	return p.MQTTUser
 }
 
 // MQTTPassword returns any password required for connecting to the broker from the
 // preferences.
-func (p *Preferences) GetMQTTPassword() string {
+func (p *MQTTPreferences) Password() string {
 	return p.MQTTPassword
 }
 
 // GetTopicPrefix returns the prefix for topics on MQTT.
-func (p *Preferences) GetTopicPrefix() string {
-	return "homeassistant"
+func (p *MQTTPreferences) TopicPrefix() string {
+	if p.MQTTTopicPrefix == "" {
+		return MQTTTopicPrefix
+	}
+
+	return p.MQTTTopicPrefix
+}
+
+// MQTTOrigin defines Go Hass Agent as the origin for MQTT functionality.
+func MQTTOrigin() *mqtthass.Origin {
+	return &mqtthass.Origin{
+		Name:    AppName,
+		Version: AppVersion,
+		URL:     AppURL,
+	}
 }
 
 //nolint:mnd
@@ -209,13 +232,4 @@ func checkPath(path string) error {
 	}
 
 	return nil
-}
-
-// MQTTOrigin defines Go Hass Agent as the origin for MQTT functionality.
-func MQTTOrigin() *mqtthass.Origin {
-	return &mqtthass.Origin{
-		Name:    AppName,
-		Version: AppVersion,
-		URL:     AppURL,
-	}
 }

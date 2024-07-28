@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"github.com/eclipse/paho.golang/paho"
-	mqtthass "github.com/joshuar/go-hass-anything/v9/pkg/hass"
+	mqtthass "github.com/joshuar/go-hass-anything/v11/pkg/hass"
 
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"

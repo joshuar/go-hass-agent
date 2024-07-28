@@ -12,8 +12,8 @@ import (
 	"strconv"
 
 	"github.com/eclipse/paho.golang/paho"
-	mqtthass "github.com/joshuar/go-hass-anything/v9/pkg/hass"
-	mqttapi "github.com/joshuar/go-hass-anything/v9/pkg/mqtt"
+	mqtthass "github.com/joshuar/go-hass-anything/v11/pkg/hass"
+	mqttapi "github.com/joshuar/go-hass-anything/v11/pkg/mqtt"
 
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 	pulseaudiox "github.com/joshuar/go-hass-agent/pkg/linux/pulseaudio"

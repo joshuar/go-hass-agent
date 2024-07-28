@@ -17,8 +17,8 @@ import (
 
 	"github.com/eclipse/paho.golang/paho"
 	"github.com/go-test/deep"
-	mqtthass "github.com/joshuar/go-hass-anything/v9/pkg/hass"
-	mqttapi "github.com/joshuar/go-hass-anything/v9/pkg/mqtt"
+	mqtthass "github.com/joshuar/go-hass-anything/v11/pkg/hass"
+	mqttapi "github.com/joshuar/go-hass-anything/v11/pkg/mqtt"
 	"github.com/stretchr/testify/require"
 )
 

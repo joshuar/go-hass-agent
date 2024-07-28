@@ -17,7 +17,7 @@ import (
 	"github.com/gofrs/uuid/v5"
 	"github.com/iancoleman/strcase"
 	"github.com/jaypipes/ghw"
-	mqtthass "github.com/joshuar/go-hass-anything/v9/pkg/hass"
+	mqtthass "github.com/joshuar/go-hass-anything/v11/pkg/hass"
 
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/logging"
