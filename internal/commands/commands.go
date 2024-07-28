@@ -20,8 +20,8 @@ import (
 
 	"github.com/eclipse/paho.golang/paho"
 	"github.com/iancoleman/strcase"
-	mqtthass "github.com/joshuar/go-hass-anything/v9/pkg/hass"
-	mqttapi "github.com/joshuar/go-hass-anything/v9/pkg/mqtt"
+	mqtthass "github.com/joshuar/go-hass-anything/v11/pkg/hass"
+	mqttapi "github.com/joshuar/go-hass-anything/v11/pkg/mqtt"
 	"github.com/pelletier/go-toml/v2"
 
 	"github.com/joshuar/go-hass-agent/internal/logging"

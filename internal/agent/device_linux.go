@@ -10,8 +10,8 @@ import (
 	"errors"
 	"log/slog"
 
-	mqtthass "github.com/joshuar/go-hass-anything/v9/pkg/hass"
-	mqttapi "github.com/joshuar/go-hass-anything/v9/pkg/mqtt"
+	mqtthass "github.com/joshuar/go-hass-anything/v11/pkg/hass"
+	mqttapi "github.com/joshuar/go-hass-anything/v11/pkg/mqtt"
 
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/linux"
@@ -162,7 +162,7 @@ func (w *linuxController) Msgs() chan *mqttapi.Msg {
 //
 //nolint:exhaustruct
 func newOSController(ctx context.Context) Controller {
-	prefs, err := preferences.ContextGetPrefs(ctx)
+	prefs, err := preferences.ContextGetMQTTPrefs(ctx)
 	if err != nil {
 		logging.FromContext(ctx).Warn("Unable to set-up OS controller.", "error", err.Error())
 	}
@@ -192,7 +192,7 @@ func newOSController(ctx context.Context) Controller {
 	}
 
 	// Only set up MQTT if MQTT is enabled.
-	if !prefs.MQTTEnabled {
+	if !prefs.IsMQTTEnabled() {
 		return controller
 	}
 

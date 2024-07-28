@@ -11,7 +11,7 @@ import (
 	"reflect"
 	"testing"
 
-	mqtthass "github.com/joshuar/go-hass-anything/v9/pkg/hass"
+	mqtthass "github.com/joshuar/go-hass-anything/v11/pkg/hass"
 	"github.com/stretchr/testify/require"
 
 	"github.com/joshuar/go-hass-agent/internal/hass"

@@ -209,7 +209,7 @@ func (agent *Agent) Run(ctx context.Context, trk SensorTracker, reg sensor.Regis
 			agent.runScripts(runnerCtx, trk, reg, sensorScripts...)
 		}()
 		// Start the mqtt client if MQTT is enabled.
-		if agent.prefs.MQTTEnabled {
+		if agent.prefs.GetMQTTPreferences().IsMQTTEnabled() {
 			wg.Add(1)
 
 			go func() {
