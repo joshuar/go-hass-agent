@@ -3,12 +3,14 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
+//nolint:tagalign
 //revive:disable:unused-receiver,comment-spacings
 package preferences
 
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"sync"
@@ -45,20 +47,21 @@ var (
 
 //nolint:tagalign
 type Preferences struct {
-	mu              *sync.Mutex
-	MQTTPreferences *MQTTPreferences `toml:"mqtt,omitempty" validate:"omitempty"`
-	RestAPIURL      string           `toml:"hass.apiurl,omitempty" validate:"http_url,required_without=CloudhookURL RemoteUIURL"`
-	Token           string           `toml:"registration.token" validate:"required,ascii"`
-	DeviceID        string           `toml:"device.id" validate:"required,ascii"`
-	DeviceName      string           `toml:"device.name" validate:"required,ascii"`
-	Host            string           `toml:"registration.host" validate:"required,http_url"`
-	CloudhookURL    string           `toml:"hass.cloudhookurl,omitempty" validate:"omitempty,http_url"`
-	WebsocketURL    string           `toml:"hass.websocketurl" validate:"required,url"`
-	WebhookID       string           `toml:"hass.webhookid" validate:"required,ascii"`
-	RemoteUIURL     string           `toml:"hass.remoteuiurl,omitempty" validate:"omitempty,http_url"`
-	Secret          string           `toml:"hass.secret,omitempty" validate:"omitempty"`
-	Version         string           `toml:"agent.version" validate:"required"`
-	Registered      bool             `toml:"hass.registered" validate:"boolean"`
+	mu           *sync.Mutex
+	MQTT         *MQTT         `toml:"mqtt,omitempty"`
+	Registration *Registration `toml:"registration"`
+	Hass         *Hass         `toml:"hass"`
+	Device       *Device       `toml:"device"`
+	Version      string        `toml:"version" validate:"required"`
+	Registered   bool          `toml:"registered" validate:"boolean"`
+}
+
+type MQTT struct {
+	MQTTServer      string `toml:"server,omitempty" validate:"omitempty,uri"`
+	MQTTUser        string `toml:"user,omitempty" validate:"omitempty"`
+	MQTTPassword    string `toml:"password,omitempty" validate:"omitempty"`
+	MQTTTopicPrefix string `toml:"topic_prefix,omitempty" validate:"omitempty,ascii"`
+	MQTTEnabled     bool   `toml:"enabled" validate:"boolean"`
 }
 
 // SetPath sets the path to the preferences file to the given path. If this
@@ -85,13 +88,42 @@ func File() string {
 	return preferencesFile
 }
 
-// Load will retrieve the current preferences from the preference file on disk.
-// If there is a problem during retrieval, an error will be returned.
-func Load(id string) (*Preferences, error) {
-	if id != "" {
-		SetPath(filepath.Join(xdg.ConfigHome, id))
+func (p *Preferences) Validate() error {
+	err := validate.Struct(p)
+	if err != nil {
+		showValidationErrors(err)
+
+		return fmt.Errorf("validation failed: %w", err)
 	}
 
+	return nil
+}
+
+// Save will save the new values of the specified preferences to the existing
+// preferences file. NOTE: if the preferences file does not exist, Save will
+// return an error. Use New if saving preferences for the first time.
+func (p *Preferences) Save() error {
+	if err := checkPath(preferencesPath); err != nil {
+		return err
+	}
+
+	if err := p.Validate(); err != nil {
+		return err
+	}
+
+	file := filepath.Join(preferencesPath, preferencesFile)
+
+	return write(p, file)
+}
+
+// GetMQTTPreferences returns the subset of MQTT preferences.
+func (p *Preferences) GetMQTTPreferences() *MQTT {
+	return p.MQTT
+}
+
+// Load will retrieve the current preferences from the preference file on disk.
+// If there is a problem during retrieval, an error will be returned.
+func Load() (*Preferences, error) {
 	file := filepath.Join(preferencesPath, preferencesFile)
 	prefs := DefaultPreferences()
 
@@ -108,23 +140,6 @@ func Load(id string) (*Preferences, error) {
 	return prefs, nil
 }
 
-// Save will save the new values of the specified preferences to the existing
-// preferences file. NOTE: if the preferences file does not exist, Save will
-// return an error. Use New if saving preferences for the first time.
-func (p *Preferences) Save() error {
-	if err := checkPath(preferencesPath); err != nil {
-		return err
-	}
-
-	if err := validatePreferences(p); err != nil {
-		return showValidationErrors(err)
-	}
-
-	file := filepath.Join(preferencesPath, preferencesFile)
-
-	return write(p, file)
-}
-
 // Reset will remove the preferences directory.
 func Reset() error {
 	err := os.RemoveAll(preferencesPath)
@@ -135,62 +150,63 @@ func Reset() error {
 	return nil
 }
 
+// DefaultPreferences returns a Preferences object which contains default
+// values. While the default values will be valid values, they might not be
+// usable/relevant values.
 func DefaultPreferences() *Preferences {
 	if AppVersion == "" {
 		AppVersion = "Unknown"
 	}
 
+	device, err := newDevice()
+	if err != nil {
+		slog.Warn("Problem generating new device info.", "error", err.Error())
+	}
+
 	return &Preferences{
-		Version:         AppVersion,
-		Host:            "http://localhost:8123",
-		WebsocketURL:    "http://localhost:8123",
-		RestAPIURL:      "http://localhost:8123/api/webhook/replaceme",
-		Token:           "replaceMe",
-		WebhookID:       "replaceMe",
-		Registered:      false,
-		DeviceID:        "Unknown",
-		DeviceName:      "Unknown",
-		MQTTPreferences: &MQTTPreferences{MQTTEnabled: false},
-		mu:              &sync.Mutex{},
+		Version:    AppVersion,
+		Registered: false,
+		Registration: &Registration{
+			Server: "http://localhost:8123",
+			Token:  "ASecretLongLivedToken",
+		},
+		Hass: &Hass{
+			IgnoreHassURLs: false,
+			WebhookID:      "ALongString",
+			RestAPIURL:     "https://localhost:8123",
+			WebsocketURL:   "https://localhost:8123",
+		},
+		MQTT:   &MQTT{MQTTEnabled: false},
+		Device: device,
+		mu:     &sync.Mutex{},
 	}
 }
 
-func (p *Preferences) GetMQTTPreferences() *MQTTPreferences {
-	return p.MQTTPreferences
-}
-
-//nolint:tagalign
-type MQTTPreferences struct {
-	MQTTServer      string `toml:"server,omitempty" validate:"omitempty,uri"`
-	MQTTUser        string `toml:"user,omitempty" validate:"omitempty"`
-	MQTTPassword    string `toml:"password,omitempty" validate:"omitempty"`
-	MQTTTopicPrefix string `toml:"topic_prefix,omitempty" validate:"omitempty,uri"`
-	MQTTEnabled     bool   `toml:"enabled" validate:"boolean"`
-}
-
-func (p *MQTTPreferences) IsMQTTEnabled() bool {
+// IsMQTTEnabled is a conveinience function to determine whether MQTT
+// functionality has been enabled in the agent.
+func (p *MQTT) IsMQTTEnabled() bool {
 	return p.MQTTEnabled
 }
 
-// MQTTServer returns the broker URI from the preferences.
-func (p *MQTTPreferences) Server() string {
+// Server returns the broker URI from the preferences.
+func (p *MQTT) Server() string {
 	return p.MQTTServer
 }
 
-// MQTTUser returns any username required for connecting to the broker from the
+// User returns any username required for connecting to the broker from the
 // preferences.
-func (p *MQTTPreferences) User() string {
+func (p *MQTT) User() string {
 	return p.MQTTUser
 }
 
-// MQTTPassword returns any password required for connecting to the broker from the
+// Password returns any password required for connecting to the broker from the
 // preferences.
-func (p *MQTTPreferences) Password() string {
+func (p *MQTT) Password() string {
 	return p.MQTTPassword
 }
 
-// GetTopicPrefix returns the prefix for topics on MQTT.
-func (p *MQTTPreferences) TopicPrefix() string {
+// TopicPrefix returns the prefix for topics on MQTT.
+func (p *MQTT) TopicPrefix() string {
 	if p.MQTTTopicPrefix == "" {
 		return MQTTTopicPrefix
 	}

@@ -10,14 +10,11 @@ package hass
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"sync"
 
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
-
-var ErrLoadPrefsFailed = errors.New("could not load preferences")
 
 type Config struct {
 	Details *ConfigEntries
@@ -92,12 +89,12 @@ func (c *configRequest) RequestBody() json.RawMessage {
 
 //nolint:exhaustruct
 func GetConfig(ctx context.Context) (*Config, error) {
-	prefs, err := preferences.ContextGetPrefs(ctx)
+	url, err := preferences.ContextGetRestAPIURL(ctx)
 	if err != nil {
-		return nil, ErrLoadPrefsFailed
+		return nil, fmt.Errorf("could not fetch home assistant config: %w", err)
 	}
 
-	client := NewDefaultHTTPClient(prefs.RestAPIURL)
+	client := NewDefaultHTTPClient(url)
 
 	req := &configRequest{}
 	resp := &Config{}

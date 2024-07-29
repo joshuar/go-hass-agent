@@ -447,9 +447,10 @@ func (w *batterySensorWorker) Sensors(_ context.Context) ([]sensor.Details, erro
 	return nil, linux.ErrUnimplemented
 }
 
-//nolint:prealloc
 func (w *batterySensorWorker) Events(ctx context.Context) (chan sensor.Details, error) {
-	var sensorCh []<-chan sensor.Details
+	sensorCh := make(chan sensor.Details)
+
+	var wg sync.WaitGroup
 
 	// Get a list of all current connected batteries and monitor them.
 	batteries, err := w.getBatteries(ctx)
@@ -458,13 +459,33 @@ func (w *batterySensorWorker) Events(ctx context.Context) (chan sensor.Details, 
 	}
 
 	for _, path := range batteries {
-		sensorCh = append(sensorCh, w.track(ctx, path))
+		wg.Add(1)
+
+		go func(path dbus.ObjectPath) {
+			defer wg.Done()
+
+			for batterySensor := range w.track(ctx, path) {
+				sensorCh <- batterySensor
+			}
+		}(path)
 	}
 
-	// Monitor for battery added/removed signals.
-	sensorCh = append(sensorCh, w.monitorBatteryChanges(ctx))
+	wg.Add(1)
 
-	return sensor.MergeSensorCh(ctx, sensorCh...), nil
+	go func() {
+		defer wg.Done()
+
+		for batterySensor := range w.monitorBatteryChanges(ctx) {
+			sensorCh <- batterySensor
+		}
+	}()
+
+	go func() {
+		defer close(sensorCh)
+		wg.Wait()
+	}()
+
+	return sensorCh, nil
 }
 
 // getBatteries is a helper function to retrieve all of the known batteries
@@ -479,11 +500,15 @@ func (w *batterySensorWorker) getBatteries(ctx context.Context) ([]dbus.ObjectPa
 }
 
 func (w *batterySensorWorker) track(ctx context.Context, batteryPath dbus.ObjectPath) <-chan sensor.Details {
+	sensorCh := make(chan sensor.Details)
+
+	var wg sync.WaitGroup
+
 	battery, err := newBattery(ctx, w.bus, w.logger, batteryPath)
 	if err != nil {
 		w.logger.Warn("Cannot monitor battery.", "path", batteryPath, "error", err.Error())
 
-		return nil
+		return sensorCh
 	}
 
 	battCtx, cancelFunc := context.WithCancel(ctx)
@@ -492,7 +517,32 @@ func (w *batterySensorWorker) track(ctx context.Context, batteryPath dbus.Object
 	w.batteryList[batteryPath] = cancelFunc
 	w.mu.Unlock()
 
-	return sensor.MergeSensorCh(battCtx, battery.getSensors(battCtx, battery.sensors...), monitorBattery(battCtx, battery))
+	wg.Add(1)
+
+	go func() {
+		defer wg.Done()
+
+		for prop := range battery.getSensors(battCtx, battery.sensors...) {
+			sensorCh <- prop
+		}
+	}()
+
+	wg.Add(1)
+
+	go func() {
+		defer wg.Done()
+
+		for battery := range monitorBattery(battCtx, battery) {
+			sensorCh <- battery
+		}
+	}()
+
+	go func() {
+		defer close(sensorCh)
+		wg.Wait()
+	}()
+
+	return sensorCh
 }
 
 func (w *batterySensorWorker) remove(batteryPath dbus.ObjectPath) {

@@ -4,6 +4,7 @@
 // https://opensource.org/licenses/MIT
 
 //revive:disable:max-public-structs
+//go:generate moq -out request_mocks_test.go . PostRequest Response
 package hass
 
 import (
@@ -57,8 +58,6 @@ func (e *APIError) Error() string {
 type GetRequest any
 
 // PostRequest is a HTTP POST request with the request body provided by Body().
-//
-//go:generate moq -out mock_PostRequest_test.go . PostRequest
 type PostRequest interface {
 	RequestBody() json.RawMessage
 }
@@ -75,7 +74,6 @@ type Encrypted interface {
 	Secret() string
 }
 
-//go:generate moq -out mock_Response_test.go . Response
 type Response interface {
 	json.Unmarshaler
 	UnmarshalError(data []byte) error

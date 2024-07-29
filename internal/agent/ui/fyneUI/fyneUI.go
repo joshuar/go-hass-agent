@@ -112,7 +112,7 @@ func (i *FyneUI) DisplayTrayIcon(ctx context.Context, agent ui.Agent, trk ui.Sen
 		// Preferences/Settings items.
 		menuItemAppPrefs := fyne.NewMenuItem(i.Translate("App Settings"),
 			func() {
-				i.agentSettingsWindow(ctx).Show()
+				i.agentSettingsWindow(ctx, agent).Show()
 			})
 		menuItemFynePrefs := fyne.NewMenuItem(i.text.Translate("Fyne Settings"),
 			func() {
@@ -140,11 +140,11 @@ func (i *FyneUI) DisplayTrayIcon(ctx context.Context, agent ui.Agent, trk ui.Sen
 // provided via the command-line.
 //
 //nolint:exhaustruct
-func (i *FyneUI) DisplayRegistrationWindow(ctx context.Context, input *hass.RegistrationInput, done chan struct{}) {
+func (i *FyneUI) DisplayRegistrationWindow(ctx context.Context, prefs *preferences.Preferences, done chan struct{}) {
 	window := i.app.NewWindow(i.Translate("App Registration"))
 
 	var allFormItems []*widget.FormItem
-	allFormItems = append(allFormItems, i.registrationFields(ctx, input)...)
+	allFormItems = append(allFormItems, i.registrationFields(ctx, prefs)...)
 	registrationForm := widget.NewForm(allFormItems...)
 	registrationForm.OnSubmit = func() {
 		window.Close()
@@ -228,16 +228,11 @@ func (i *FyneUI) fyneSettingsWindow() fyne.Window {
 // agent functionality. Most of these settings will be optional.
 //
 //nolint:exhaustruct
-func (i *FyneUI) agentSettingsWindow(ctx context.Context) fyne.Window {
+func (i *FyneUI) agentSettingsWindow(ctx context.Context, agent ui.Agent) fyne.Window {
 	var allFormItems []*widget.FormItem
 
 	// Retrieve the existing MQTT preferences.
-	mqttPrefs, err := preferences.ContextGetMQTTPrefs(ctx)
-	if err != nil {
-		logging.FromContext(ctx).Error("Could not show settings window.", "error", err.Error())
-
-		return nil
-	}
+	mqttPrefs := agent.GetMQTTPreferences()
 
 	// Generate a form of MQTT preferences.
 	allFormItems = append(allFormItems, i.mqttConfigItems(mqttPrefs)...)
@@ -245,19 +240,8 @@ func (i *FyneUI) agentSettingsWindow(ctx context.Context) fyne.Window {
 	window := i.app.NewWindow(i.Translate("App Preferences"))
 	settingsForm := widget.NewForm(allFormItems...)
 	settingsForm.OnSubmit = func() {
-		allPrefs, err := preferences.ContextGetPrefs(ctx)
-		if err != nil {
-			dialog.ShowError(err, window)
-			logging.FromContext(ctx).Error("Could save preferences.", "error", err.Error())
-
-			return
-		}
-
-		// Save the new MQTT preferences into the existing preferences.
-		allPrefs.MQTTPreferences = mqttPrefs
-
 		// Save the new MQTT preferences to file.
-		if err := allPrefs.Save(); err != nil {
+		if err := agent.SaveMQTTPreferences(mqttPrefs); err != nil {
 			dialog.ShowError(err, window)
 			logging.FromContext(ctx).Error("Could note save preferences.", "error", err.Error())
 		} else {
@@ -378,24 +362,16 @@ func (i *FyneUI) sensorsWindow(tracker ui.SensorTracker) fyne.Window {
 
 // registrationFields generates a list of form item widgets for selecting a
 // server to register the agent against.
-func (i *FyneUI) registrationFields(ctx context.Context, input *hass.RegistrationInput) []*widget.FormItem {
+func (i *FyneUI) registrationFields(ctx context.Context, prefs *preferences.Preferences) []*widget.FormItem {
 	allServers, err := hass.FindServers(ctx)
 	if err != nil {
 		logging.FromContext(ctx).Warn("Errors occurred discovering Home Assistant servers.", "error", err.Error())
 	}
 
-	if input.Token == "" {
-		input.Token = "ASecretLongLivedToken"
-	}
-
-	tokenEntry := configEntry(&input.Token, false)
+	tokenEntry := configEntry(&prefs.Registration.Token, false)
 	tokenEntry.Validator = validation.NewRegexp("[A-Za-z0-9_\\.]+", "Invalid token format")
 
-	if input.Server == "" {
-		input.Server = allServers[0]
-	}
-
-	serverEntry := configEntry(&input.Server, false)
+	serverEntry := configEntry(&prefs.Registration.Server, false)
 	serverEntry.Validator = httpValidator()
 	serverEntry.Disable()
 
@@ -419,9 +395,9 @@ func (i *FyneUI) registrationFields(ctx context.Context, input *hass.Registratio
 	ignoreURLsSelect := widget.NewCheck("", func(b bool) {
 		switch b {
 		case true:
-			input.IgnoreOutputURLs = true
+			prefs.Hass.IgnoreHassURLs = true
 		case false:
-			input.IgnoreOutputURLs = false
+			prefs.Hass.IgnoreHassURLs = false
 		}
 	})
 
@@ -451,7 +427,7 @@ func (i *FyneUI) registrationFields(ctx context.Context, input *hass.Registratio
 
 // mqttConfigItems generates a list of for item widgets for configuring the
 // agent to use an MQTT for pub/sub functionality.
-func (i *FyneUI) mqttConfigItems(prefs *preferences.MQTTPreferences) []*widget.FormItem {
+func (i *FyneUI) mqttConfigItems(prefs *preferences.MQTT) []*widget.FormItem {
 	serverEntry := configEntry(&prefs.MQTTServer, false)
 	serverEntry.Validator = uriValidator()
 	serverEntry.Disable()

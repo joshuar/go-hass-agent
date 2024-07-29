@@ -28,7 +28,6 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/linux/problems"
 	"github.com/joshuar/go-hass-agent/internal/linux/system"
 	"github.com/joshuar/go-hass-agent/internal/linux/user"
-	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
@@ -161,22 +160,24 @@ func (w *linuxController) Msgs() chan *mqttapi.Msg {
 // that are supported on this device.
 //
 //nolint:exhaustruct
-func newOSController(ctx context.Context) Controller {
-	prefs, err := preferences.ContextGetMQTTPrefs(ctx)
+func (agent *Agent) newOSController(ctx context.Context) Controller {
+	mqttDevice, err := device.MQTTDevice(preferences.AppName, preferences.AppID, preferences.AppURL, preferences.AppVersion)
 	if err != nil {
-		logging.FromContext(ctx).Warn("Unable to set-up OS controller.", "error", err.Error())
+		agent.logger.Error("Unable to create MQTT device controller.", "error", err.Error())
+
+		return nil
 	}
 
 	controller := &linuxController{
 		deviceController: deviceController{
 			sensorWorkers: make(map[string]*sensorWorker),
-			logger:        logging.FromContext(ctx).With(slog.Group("linux")),
+			logger:        agent.logger.With(slog.Group("linux")),
 		},
-		dbusAPI: dbusx.NewDBusAPI(ctx, logging.FromContext(ctx)),
+		dbusAPI: dbusx.NewDBusAPI(ctx, agent.logger.With(slog.Group("dbus"))),
 		mqttWorker: &mqttWorker{
 			msgs: make(chan *mqttapi.Msg),
 		},
-		mqttDevice: device.MQTTDeviceInfo(ctx),
+		mqttDevice: mqttDevice,
 	}
 
 	// Set up sensor workers.
@@ -192,7 +193,7 @@ func newOSController(ctx context.Context) Controller {
 	}
 
 	// Only set up MQTT if MQTT is enabled.
-	if !prefs.IsMQTTEnabled() {
+	if !agent.prefs.MQTT.IsMQTTEnabled() {
 		return controller
 	}
 

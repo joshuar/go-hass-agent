@@ -120,7 +120,7 @@ func Test_getOSID(t *testing.T) {
 			origFile := whichdistro.OSReleaseFile
 			whichdistro.OSReleaseFile = tt.args.osReleaseFile
 			whichdistro.OSReleaseAltFile = tt.args.osReleaseFile
-			gotID, gotVersionid, err := getOSID()
+			gotID, gotVersionid, err := GetOSID()
 			if (err != nil) != tt.wantErr {
 				t.Errorf("getOSID() error = %v, wantErr %v", err, tt.wantErr)
 				return
