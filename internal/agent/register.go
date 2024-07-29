@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/registry"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
@@ -23,33 +22,26 @@ var ErrInvalidRegistration = errors.New("invalid")
 // request and the successful response in the agent preferences. This includes,
 // most importantly, details on the URL that should be used to send subsequent
 // requests to Home Assistant.
-func (agent *Agent) saveRegistration(resp *hass.RegistrationDetails, deviceInfo *hass.DeviceInfo) error {
-	// Generate an API URL from the registration info and the registration response.
-	apiURL, err := generateAPIURL(agent.registrationInfo.Server, agent.registrationInfo.IgnoreOutputURLs, resp)
+func (agent *Agent) saveRegistration(hassPrefs *preferences.Hass) error {
+	var err error
+
+	// Copy over existing preferences.
+	hassPrefs.IgnoreHassURLs = agent.prefs.Hass.IgnoreHassURLs
+	// Copy new hass preferences to agent preferences
+	agent.prefs.Hass = hassPrefs
+	// Add the generated URLS
+	// Generate an API URL.
+	agent.prefs.Hass.RestAPIURL, err = generateAPIURL(agent.prefs.Registration.Server, hassPrefs)
 	if err != nil {
 		return fmt.Errorf("unable to save registration: %w", err)
 	}
-
-	// Generate a websocket URL from the registration info.
-	websocketURL, err := generateWebsocketURL(agent.registrationInfo.Server)
+	// Generate a websocket URL.
+	agent.prefs.Hass.WebsocketURL, err = generateWebsocketURL(agent.prefs.Registration.Server)
 	if err != nil {
 		return fmt.Errorf("unable to save registration: %w", err)
 	}
-
-	// Set all the preferences.
-	agent.prefs.Host = agent.registrationInfo.Server
-	agent.prefs.Token = agent.registrationInfo.Token
-	agent.prefs.CloudhookURL = resp.CloudhookURL
-	agent.prefs.RemoteUIURL = resp.RemoteUIURL
-	agent.prefs.WebhookID = resp.WebhookID
-	agent.prefs.Secret = resp.Secret
-	agent.prefs.RestAPIURL = apiURL
-	agent.prefs.WebsocketURL = websocketURL
-	agent.prefs.DeviceName = deviceInfo.DeviceName
-	agent.prefs.DeviceID = deviceInfo.DeviceID
-	agent.prefs.Version = preferences.AppVersion
+	// Set agent as registered
 	agent.prefs.Registered = true
-
 	// Save the preferences to disk.
 	err = agent.prefs.Save()
 	if err != nil {
@@ -69,26 +61,24 @@ func (agent *Agent) performRegistration(ctx context.Context) error {
 	// Display a window asking for registration details for non-headless usage.
 	if !agent.headless {
 		userInputDone := make(chan struct{})
-		agent.ui.DisplayRegistrationWindow(ctx, agent.registrationInfo, userInputDone)
+		agent.ui.DisplayRegistrationWindow(ctx, agent.prefs, userInputDone)
 		<-userInputDone
 	}
 
 	// Validate provided registration details.
-	if err := agent.registrationInfo.Validate(); err != nil {
+	if err := agent.prefs.Registration.Validate(); err != nil {
 		// if !validRegistrationSetting("server", input.Server) || !validRegistrationSetting("token", token) {
 		return fmt.Errorf("failed: %w", err)
 	}
 
-	deviceInfo := device.New(ctx, preferences.AppName, preferences.AppVersion)
-
 	// Register with Home Assistant.
-	resp, err := hass.RegisterWithHass(ctx, agent.registrationInfo, deviceInfo)
+	resp, err := hass.RegisterWithHass(ctx, agent.prefs.Device, agent.prefs.Registration)
 	if err != nil {
 		return fmt.Errorf("failed: %w", err)
 	}
 
 	// Write registration details to config.
-	if err := agent.saveRegistration(resp, deviceInfo); err != nil {
+	if err := agent.saveRegistration(resp); err != nil {
 		return fmt.Errorf("failed: %w", err)
 	}
 
@@ -120,19 +110,19 @@ func (agent *Agent) checkRegistration(ctx context.Context, trk SensorTracker) er
 	return nil
 }
 
-func generateAPIURL(host string, ignoreURLs bool, resp *hass.RegistrationDetails) (string, error) {
+func generateAPIURL(server string, prefs *preferences.Hass) (string, error) {
 	switch {
-	case resp.CloudhookURL != "" && !ignoreURLs:
-		return resp.CloudhookURL, nil
-	case resp.RemoteUIURL != "" && resp.WebhookID != "" && !ignoreURLs:
-		return resp.RemoteUIURL + hass.WebHookPath + resp.WebhookID, nil
+	case prefs.CloudhookURL != "" && !prefs.IgnoreHassURLs:
+		return prefs.CloudhookURL, nil
+	case prefs.RemoteUIURL != "" && prefs.WebhookID != "" && !prefs.IgnoreHassURLs:
+		return prefs.RemoteUIURL + hass.WebHookPath + prefs.WebhookID, nil
 	default:
-		apiURL, err := url.Parse(host)
+		apiURL, err := url.Parse(server)
 		if err != nil {
 			return "", fmt.Errorf("unable to generate API URL: %w", err)
 		}
 
-		apiURL = apiURL.JoinPath(hass.WebHookPath, resp.WebhookID)
+		apiURL = apiURL.JoinPath(hass.WebHookPath, prefs.WebhookID)
 
 		return apiURL.String(), nil
 	}

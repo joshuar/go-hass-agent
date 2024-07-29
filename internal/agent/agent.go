@@ -20,7 +20,8 @@ import (
 	"github.com/adrg/xdg"
 
 	fyneui "github.com/joshuar/go-hass-agent/internal/agent/ui/fyneUI"
-	"github.com/joshuar/go-hass-agent/internal/hass"
+	"github.com/joshuar/go-hass-agent/internal/commands"
+	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
@@ -28,17 +29,24 @@ import (
 
 var ErrCtxFailed = errors.New("unable to create a context")
 
+type SensorTracker interface {
+	SensorList() []string
+	// Process(ctx context.Context, reg sensor.Registry, sensorUpdates ...<-chan sensor.Details) error
+	Add(details sensor.Details) error
+	Get(key string) (sensor.Details, error)
+	Reset()
+}
+
 // Agent holds the options of the running agent, the UI object and a channel for
 // closing the agent down.
 type Agent struct {
-	ui               UI
-	done             chan struct{}
-	registrationInfo *hass.RegistrationInput
-	prefs            *preferences.Preferences
-	logger           *slog.Logger
-	id               string
-	headless         bool
-	forceRegister    bool
+	ui            UI
+	done          chan struct{}
+	prefs         *preferences.Preferences
+	logger        *slog.Logger
+	id            string
+	headless      bool
+	forceRegister bool
 }
 
 // Option is a functional parameter that will configure a feature of the agent.
@@ -49,10 +57,9 @@ type Option func(*Agent)
 //nolint:exhaustruct
 func newDefaultAgent(ctx context.Context) *Agent {
 	return &Agent{
-		done:             make(chan struct{}),
-		id:               preferences.AppID,
-		registrationInfo: &hass.RegistrationInput{},
-		logger:           logging.FromContext(ctx).With(slog.Group("agent")),
+		done:   make(chan struct{}),
+		id:     preferences.AppID,
+		logger: logging.FromContext(ctx).With(slog.Group("agent")),
 	}
 }
 
@@ -64,7 +71,14 @@ func NewAgent(ctx context.Context, options ...Option) (*Agent, error) {
 		option(agent)
 	}
 
-	prefs, err := preferences.Load(agent.id)
+	// If we are using a custom agent ID, adjust the path to the preferences
+	// file.
+	if agent.id != preferences.AppID {
+		preferences.SetPath(filepath.Join(xdg.ConfigHome, agent.id))
+	}
+
+	// Load the agent preferences.
+	prefs, err := preferences.Load()
 	if err != nil && !errors.Is(err, preferences.ErrNoPreferences) {
 		return nil, fmt.Errorf("could not create agent: %w", err)
 	}
@@ -97,11 +111,9 @@ func Headless(value bool) Option {
 // Only used when the Register command is run.
 func WithRegistrationInfo(server, token string, ignoreURLs bool) Option {
 	return func(a *Agent) {
-		a.registrationInfo = &hass.RegistrationInput{
-			Server:           server,
-			Token:            token,
-			IgnoreOutputURLs: ignoreURLs,
-		}
+		a.prefs.Registration.Server = server
+		a.prefs.Registration.Token = token
+		a.prefs.Hass.IgnoreHassURLs = ignoreURLs
 	}
 }
 
@@ -120,7 +132,7 @@ func ForceRegister(value bool) Option {
 //
 //nolint:funlen
 //revive:disable:function-length
-func (agent *Agent) Run(ctx context.Context, trk SensorTracker, reg sensor.Registry) error {
+func (agent *Agent) Run(ctx context.Context, trk SensorTracker, reg Registry) error {
 	var wg sync.WaitGroup
 
 	// Pre-flight: check if agent is registered. If not, run registration flow.
@@ -133,29 +145,23 @@ func (agent *Agent) Run(ctx context.Context, trk SensorTracker, reg sensor.Regis
 
 		if err := agent.checkRegistration(ctx, trk); err != nil {
 			agent.logger.Log(ctx, logging.LevelFatal, "Error checking registration status.", "error", err.Error())
+			close(agent.done)
 		}
 	}()
 
 	wg.Add(1)
 
 	go func() {
-		var err error
-
 		defer wg.Done()
 		regWait.Wait()
 
-		// Embed the agent preferences in the context.
-		ctx = preferences.ContextSetPrefs(ctx, agent.prefs)
-
-		// Embed required settings for Home Assistant in the context.
-		ctx, err = hass.SetupContext(ctx)
-		if err != nil {
-			agent.logger.Error("Could not add hass details to context.", "error", err.Error())
-
-			return
-		}
-
+		// Embed some preferences into the context which are used by other parts
+		// of the code.
 		runnerCtx, cancelFunc := context.WithCancel(ctx)
+		runnerCtx = preferences.ContextSetRestAPIURL(runnerCtx, agent.prefs.Hass.RestAPIURL)
+		runnerCtx = preferences.ContextSetWebsocketURL(runnerCtx, agent.prefs.Hass.WebsocketURL)
+		runnerCtx = preferences.ContextSetWebhookID(runnerCtx, agent.prefs.Hass.WebhookID)
+		runnerCtx = preferences.ContextSetToken(runnerCtx, agent.prefs.Registration.Token)
 
 		// Cancel the runner context when the agent is done.
 		go func() {
@@ -167,67 +173,60 @@ func (agent *Agent) Run(ctx context.Context, trk SensorTracker, reg sensor.Regis
 		// Create a new OS controller. The controller will have all the
 		// necessary configuration for any OS-specific sensors and MQTT
 		// configuration.
-		osController := newOSController(runnerCtx)
+		osController := agent.newOSController(runnerCtx)
 		// Create a new device controller. The controller will have all the
 		// necessary configuration for device-specific sensors and MQTT
 		// configuration.
-		deviceController := newDeviceController(runnerCtx)
+		deviceController := agent.newDeviceController(runnerCtx)
+
+		var sensorCh []<-chan sensor.Details
+
+		// Run workers and get all channels for sensor updates.
+		sensorCh = append(sensorCh, agent.runWorkers(runnerCtx, osController, deviceController)...)
+		// Run scripts and get channel for sensor updates.
+		sensorCh = append(sensorCh, agent.runScripts(runnerCtx))
 
 		wg.Add(1)
-		// Start worker funcs for sensors.
+		// Process the sensor updates.
 		go func() {
 			defer wg.Done()
-			agent.runWorkers(runnerCtx, trk, reg, osController, deviceController)
+			agent.processSensors(runnerCtx, trk, reg, sensorCh...)
 		}()
 
-		wg.Add(1)
-		// Start any scripts.
-		go func() {
-			defer wg.Done()
-
-			// var (
-			// 	sensorScripts []Script
-			// 	err           error
-			// )
-
-			// Define the path to custom sensor scripts.
-			scriptPath := filepath.Join(xdg.ConfigHome, agent.AppID(), "scripts")
-			// Get any scripts in the script path.
-			sensorScripts, err := findScripts(scriptPath)
-
-			switch {
-			case err != nil:
-				agent.logger.Warn("Error finding custom sensor scripts.", "error", err.Error())
-
-				return
-			case len(sensorScripts) == 0:
-				agent.logger.Debug("No custom sensor scripts found.")
-
-				return
-			}
-
-			agent.runScripts(runnerCtx, trk, reg, sensorScripts...)
-		}()
 		// Start the mqtt client if MQTT is enabled.
 		if agent.prefs.GetMQTTPreferences().IsMQTTEnabled() {
 			wg.Add(1)
 
+			var commandController *commands.Controller
+
+			commandsFile := filepath.Join(xdg.ConfigHome, agent.AppID(), "commands.toml")
+
+			mqttDeviceInfo, err := device.MQTTDevice(preferences.AppName, preferences.AppID, preferences.AppURL, preferences.AppVersion)
+			if err != nil {
+				agent.logger.Warn("Could not set up MQTT commands controller.", "error", err.Error())
+			} else {
+				// Create an MQTT device for this operating system and run its Setup.
+				commandController, err = commands.NewCommandsController(ctx, commandsFile, mqttDeviceInfo)
+				if err != nil {
+					agent.logger.Warn("Could not set up MQTT commands controller.", "error", err.Error())
+
+					return
+				}
+			}
+
 			go func() {
 				defer wg.Done()
 
-				commandsFile := filepath.Join(xdg.ConfigHome, agent.AppID(), "commands.toml")
-				agent.runMQTTWorker(runnerCtx, osController, commandsFile)
+				agent.runMQTTWorker(runnerCtx, osController, commandController)
 			}()
 		}
+
+		wg.Add(1)
 		// Listen for notifications from Home Assistant.
-		if !agent.headless {
-			wg.Add(1)
-
-			go func() {
-				defer wg.Done()
-				agent.runNotificationsWorker(runnerCtx)
-			}()
-		}
+		go func() {
+			defer wg.Done()
+			agent.runNotificationsWorker(runnerCtx)
+		}()
 	}()
 
 	agent.handleSignals()
@@ -287,13 +286,25 @@ func (agent *Agent) Stop() {
 }
 
 func (agent *Agent) Reset(ctx context.Context) error {
-	// Embed the agent preferences in the context.
-	ctx = preferences.ContextSetPrefs(ctx, agent.prefs)
-
-	osController := newOSController(ctx)
+	osController := agent.newOSController(ctx)
 
 	if err := agent.resetMQTTWorker(ctx, osController); err != nil {
 		return fmt.Errorf("problem resetting agent: %w", err)
+	}
+
+	return nil
+}
+
+func (agent *Agent) GetMQTTPreferences() *preferences.MQTT {
+	return agent.prefs.GetMQTTPreferences()
+}
+
+func (agent *Agent) SaveMQTTPreferences(prefs *preferences.MQTT) error {
+	agent.prefs.MQTT = prefs
+
+	err := agent.prefs.Save()
+	if err != nil {
+		return fmt.Errorf("failed to save mqtt preferences: %w", err)
 	}
 
 	return nil

@@ -31,9 +31,9 @@ func (w *infoWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
 	var sensors []sensor.Details
 
 	// Get distribution name and version.
-	distro, distroVersion, err := device.GetOSDetails()
+	distro, version, err := device.GetOSDetails()
 	if err != nil {
-		w.logger.Warn("Could not retrieve distribution details.", "error", err.Error())
+		w.logger.Warn("Could not retrieve kernel version.", "error", err.Error())
 	} else {
 		sensors = append(sensors,
 			&linux.Sensor{
@@ -45,7 +45,7 @@ func (w *infoWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
 			},
 			&linux.Sensor{
 				SensorTypeValue: linux.SensorVersion,
-				Value:           distroVersion,
+				Value:           version,
 				IsDiagnostic:    true,
 				IconString:      "mdi:numeric",
 				SensorSrc:       linux.DataSrcProcfs,

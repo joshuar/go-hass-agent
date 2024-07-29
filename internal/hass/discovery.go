@@ -25,9 +25,6 @@ const (
 func FindServers(ctx context.Context) ([]string, error) {
 	var serverList []string
 
-	// add http://localhost:8123 to the list of servers as a fall-back/default
-	serverList = append(serverList, "http://localhost:8123")
-
 	resolver, err := zeroconf.NewResolver(nil)
 	if err != nil {
 		return serverList, fmt.Errorf("failed to initialise resolver: %w", err)

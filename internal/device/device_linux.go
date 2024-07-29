@@ -12,10 +12,10 @@ import (
 	"github.com/joshuar/go-hass-agent/pkg/linux/whichdistro"
 )
 
-// getOSID will retrieve the distribution ID and version ID. These are
+// GetOSID will retrieve the distribution ID and version ID. These are
 // suitable for usage as part of identifiers and variables. See also
 // GetDistroDetails.
-func getOSID() (id, versionid string, err error) {
+func GetOSID() (id, versionid string, err error) {
 	var distroName, distroVersion string
 
 	osReleaseInfo, err := whichdistro.GetOSRelease()

@@ -8,9 +8,12 @@ package ui
 
 import (
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
 type Agent interface {
+	GetMQTTPreferences() *preferences.MQTT
+	SaveMQTTPreferences(prefs *preferences.MQTT) error
 	Stop()
 }
 

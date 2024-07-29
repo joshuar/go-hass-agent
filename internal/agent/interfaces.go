@@ -10,31 +10,16 @@ import (
 	"context"
 
 	"github.com/joshuar/go-hass-agent/internal/agent/ui"
-	"github.com/joshuar/go-hass-agent/internal/hass"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
-
-type Device interface {
-	DeviceName() string
-	DeviceID() string
-	Setup(ctx context.Context) context.Context
-	Updates() chan sensor.Details
-}
 
 // UI are the methods required for the agent to display its windows, tray
 // and notifications.
 type UI interface {
 	DisplayNotification(n ui.Notification)
 	DisplayTrayIcon(ctx context.Context, agent ui.Agent, trk ui.SensorTracker)
-	DisplayRegistrationWindow(ctx context.Context, input *hass.RegistrationInput, doneCh chan struct{})
+	DisplayRegistrationWindow(ctx context.Context, prefs *preferences.Preferences, doneCh chan struct{})
 	Run(ctx context.Context, doneCh chan struct{})
-}
-
-type SensorTracker interface {
-	SensorList() []string
-	Process(ctx context.Context, reg sensor.Registry, sensorUpdates ...<-chan sensor.Details) error
-	Get(key string) (sensor.Details, error)
-	Reset()
 }
 
 type Registry interface {

@@ -82,11 +82,11 @@ func StartWebsocket(ctx context.Context) (chan *WebsocketNotification, error) {
 
 	notifyCh := make(chan *WebsocketNotification)
 
-	prefs, err := preferences.ContextGetPrefs(ctx)
+	url, err := preferences.ContextGetWebsocketURL(ctx)
 	if err != nil {
 		close(notifyCh)
 
-		return notifyCh, fmt.Errorf("could not load preferences: %w", err)
+		return notifyCh, fmt.Errorf("unable to start websocket connection: %w", err)
 	}
 
 	retryFunc := func() error {
@@ -97,7 +97,7 @@ func StartWebsocket(ctx context.Context) (chan *WebsocketNotification, error) {
 			return fmt.Errorf("could not connect to websocket: %w", err)
 		}
 
-		socket, resp, err = gws.NewClient(ws, &gws.ClientOption{Addr: prefs.WebsocketURL})
+		socket, resp, err = gws.NewClient(ws, &gws.ClientOption{Addr: url})
 		if err != nil {
 			return fmt.Errorf("could not connect to websocket: %w", err)
 		}
@@ -142,16 +142,21 @@ type webSocket struct {
 }
 
 func newWebsocket(ctx context.Context, notifyCh chan *WebsocketNotification) (*webSocket, error) {
-	prefs, err := preferences.ContextGetPrefs(ctx)
+	token, err := preferences.ContextGetToken(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("could not load preferences: %w", err)
+		return nil, fmt.Errorf("could not create websocket: %w", err)
+	}
+
+	webhookid, err := preferences.ContextGetWebhookID(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("could not create websocket: %w", err)
 	}
 
 	websocket := &webSocket{
 		notifyCh:  notifyCh,
 		doneCh:    make(chan struct{}),
-		token:     prefs.Token,
-		webhookID: prefs.WebhookID,
+		token:     token,
+		webhookID: webhookid,
 		nextID:    0,
 		logger:    logging.FromContext(ctx),
 	}
