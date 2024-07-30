@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	registrationPath = "/api/mobile_app/registrations"
+	RegistrationPath = "/api/mobile_app/registrations"
 	WebsocketPath    = "/api/websocket"
 	WebHookPath      = "/api/webhook/"
 )
@@ -80,14 +80,23 @@ func newRegistrationResponse() *registrationResponse {
 	return &registrationResponse{}
 }
 
-func RegisterWithHass(ctx context.Context, device *preferences.Device, registration *preferences.Registration) (*preferences.Hass, error) {
+func RegisterDevice(ctx context.Context, device *preferences.Device, registration *preferences.Registration) (*preferences.Hass, error) {
+	// Validate provided registration details.
+	if err := registration.Validate(); err != nil {
+		// if !validRegistrationSetting("server", input.Server) || !validRegistrationSetting("token", token) {
+		return nil, fmt.Errorf("could not register device: %w", err)
+	}
+
+	// Generate request and response objects.
 	req := newRegistrationRequest(device, registration.Token)
 	resp := newRegistrationResponse()
 
+	// Connect to specified Home Assistant server.
 	client := NewDefaultHTTPClient(registration.Server).SetTimeout(time.Minute)
 
-	if err := ExecuteRequest(ctx, client, registrationPath, req, resp); err != nil {
-		return nil, err
+	// Register the device against the registration endpoint.
+	if err := ExecuteRequest(ctx, client, RegistrationPath, req, resp); err != nil {
+		return nil, fmt.Errorf("could not register device: %w", err)
 	}
 
 	return resp.Details, nil

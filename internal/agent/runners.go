@@ -12,7 +12,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"os"
 	"path/filepath"
 	"sync"
 
@@ -23,7 +22,6 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
-	"github.com/joshuar/go-hass-agent/internal/scripts"
 )
 
 // SensorController represents an object that manages one or more Workers.
@@ -136,7 +134,7 @@ func (agent *Agent) runScripts(ctx context.Context) chan sensor.Details {
 	sensorCh := make(chan sensor.Details)
 
 	// Define the path to custom sensor scripts.
-	scriptPath := filepath.Join(xdg.ConfigHome, agent.AppID(), "scripts")
+	scriptPath := filepath.Join(xdg.ConfigHome, agent.id, "scripts")
 	// Get any scripts in the script path.
 	sensorScripts, err := findScripts(scriptPath)
 	// If no scripts were found or there was an error processing scripts, log a
@@ -213,7 +211,7 @@ func (agent *Agent) runScripts(ctx context.Context) chan sensor.Details {
 func (agent *Agent) processSensors(ctx context.Context, trk SensorTracker, reg Registry, sensorCh ...<-chan sensor.Details) {
 	client := hass.NewDefaultHTTPClient(agent.prefs.Hass.RestAPIURL)
 
-	for update := range MergeCh(ctx, sensorCh...) {
+	for update := range mergeCh(ctx, sensorCh...) {
 		go func(upd sensor.Details) {
 			// Ignore disabled sensors.
 			if reg.IsDisabled(upd.ID()) {
@@ -430,7 +428,7 @@ func (agent *Agent) runMQTTWorker(ctx context.Context, controllers ...MQTTContro
 
 		for {
 			select {
-			case msg := <-MergeCh(ctx, msgCh...):
+			case msg := <-mergeCh(ctx, msgCh...):
 				if err := client.Publish(ctx, msg); err != nil {
 					agent.logger.Warn("Unable to publish message to MQTT.", "topic", msg.Topic, "content", slog.Any("msg", msg.Message))
 				}
@@ -460,41 +458,4 @@ func (agent *Agent) resetMQTTWorker(ctx context.Context, osController MQTTContro
 	}
 
 	return nil
-}
-
-// FindScripts locates scripts and returns a slice of scripts that the agent can
-// run.
-func findScripts(path string) ([]Script, error) {
-	var sensorScripts []Script
-
-	var errs error
-
-	files, err := filepath.Glob(path + "/*")
-	if err != nil {
-		return nil, fmt.Errorf("could not search for scripts: %w", err)
-	}
-
-	for _, scriptFile := range files {
-		if isExecutable(scriptFile) {
-			script, err := scripts.NewScript(scriptFile)
-			if err != nil {
-				errs = errors.Join(errs, err)
-
-				continue
-			}
-
-			sensorScripts = append(sensorScripts, script)
-		}
-	}
-
-	return sensorScripts, nil
-}
-
-func isExecutable(filename string) bool {
-	fi, err := os.Stat(filename)
-	if err != nil {
-		return false
-	}
-
-	return fi.Mode().Perm()&0o111 != 0
 }

@@ -7,12 +7,18 @@ package agent
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
 	"sync"
+
+	"github.com/joshuar/go-hass-agent/internal/scripts"
 )
 
-// MergeCh merges a list of channels into a single channel. Essentially, fan-in for
+// mergeCh merges a list of channels into a single channel. Essentially, fan-in for
 // channels.
-func MergeCh[T any](ctx context.Context, inCh ...<-chan T) chan T {
+func mergeCh[T any](ctx context.Context, inCh ...<-chan T) chan T {
 	var wg sync.WaitGroup
 
 	outCh := make(chan T)
@@ -49,4 +55,41 @@ func MergeCh[T any](ctx context.Context, inCh ...<-chan T) chan T {
 	}()
 
 	return outCh
+}
+
+// FindScripts locates scripts and returns a slice of scripts that the agent can
+// run.
+func findScripts(path string) ([]Script, error) {
+	var sensorScripts []Script
+
+	var errs error
+
+	files, err := filepath.Glob(path + "/*")
+	if err != nil {
+		return nil, fmt.Errorf("could not search for scripts: %w", err)
+	}
+
+	for _, scriptFile := range files {
+		if isExecutable(scriptFile) {
+			script, err := scripts.NewScript(scriptFile)
+			if err != nil {
+				errs = errors.Join(errs, err)
+
+				continue
+			}
+
+			sensorScripts = append(sensorScripts, script)
+		}
+	}
+
+	return sensorScripts, nil
+}
+
+func isExecutable(filename string) bool {
+	fi, err := os.Stat(filename)
+	if err != nil {
+		return false
+	}
+
+	return fi.Mode().Perm()&0o111 != 0
 }

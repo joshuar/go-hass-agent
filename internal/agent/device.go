@@ -116,7 +116,7 @@ func (w *deviceController) StartAll(ctx context.Context) (<-chan sensor.Details,
 		outCh = append(outCh, workerCh)
 	}
 
-	return MergeCh(ctx, outCh...), errs
+	return mergeCh(ctx, outCh...), errs
 }
 
 func (w *deviceController) StopAll() error {
