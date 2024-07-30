@@ -4,7 +4,7 @@
 // https://opensource.org/licenses/MIT
 
 //revive:disable:max-public-structs
-//go:generate moq -out runners_mocks_test.go . SensorController Worker Script
+//go:generate moq -out runners_mocks_test.go . SensorController Worker Script LocationUpdateResponse SensorUpdateResponse SensorRegistrationResponse
 package agent
 
 import (
@@ -261,80 +261,104 @@ func (agent *Agent) processSensors(ctx context.Context, trk SensorTracker, reg R
 }
 
 func (agent *Agent) processResponse(ctx context.Context, upd sensor.Details, resp hass.Response, reg Registry, trk SensorTracker) {
+	sensorLogAttrs := slog.Group("sensor",
+		slog.String("name", upd.Name()),
+		slog.String("id", upd.ID()),
+		slog.Any("state", upd.State()),
+		slog.String("units", upd.Units()))
+
 	switch details := resp.(type) {
 	case LocationUpdateResponse:
 		if details.Updated() {
 			agent.logger.LogAttrs(ctx, slog.LevelDebug, "Location updated.")
 		} else {
-			agent.logger.Warn("Location update failed.", "error", details.Error())
+			agent.logger.Warn("Location update failed.", slog.String("error", details.Error()))
 		}
 	case SensorUpdateResponse:
 		for _, status := range details.Updates() {
-			agent.processStateUpdates(ctx, trk, reg, upd, status)
+			success, errs := processStateUpdates(trk, reg, upd, status)
+			if !success {
+				agent.logger.Warn("Sensor update failed.", sensorLogAttrs, slog.Any("error", errs))
+			} else {
+				if errs != nil {
+					agent.logger.LogAttrs(ctx, slog.LevelDebug, "Sensor update succeeded with warnings.", sensorLogAttrs, slog.Any("warnings", errs))
+				} else {
+					agent.logger.LogAttrs(ctx, slog.LevelDebug, "Sensor updated.", sensorLogAttrs)
+				}
+			}
 		}
 	case SensorRegistrationResponse:
-		agent.processRegistration(ctx, trk, reg, upd, details)
+		success, errs := processRegistration(trk, reg, upd, details)
+		if !success {
+			agent.logger.Warn("Sensor registration failed.", sensorLogAttrs, slog.Any("error", errs))
+		} else {
+			if errs != nil {
+				agent.logger.LogAttrs(ctx, slog.LevelDebug, "Sensor registration succeeded with warnings.", sensorLogAttrs, slog.Any("warnings", errs))
+			} else {
+				agent.logger.LogAttrs(ctx, slog.LevelDebug, "Sensor registered.", sensorLogAttrs)
+			}
+		}
 	}
 }
 
-//nolint:lll
-func (agent *Agent) processStateUpdates(ctx context.Context, trk SensorTracker, reg Registry, upd sensor.Details, status *sensor.UpdateStatus) {
+//nolint:err113
+func processStateUpdates(trk SensorTracker, reg Registry, upd sensor.Details, status *sensor.UpdateStatus) (bool, error) {
 	// No status was returned.
 	if status == nil {
-		agent.logger.Warn("Unknown response for sensor update.", "sensor_id", upd.ID())
-
-		return
+		return false, errors.New("unknown sensor update response")
 	}
 	// The update failed.
 	if !status.Success {
-		var err error
-
 		if status.Error != nil {
-			err = fmt.Errorf("%d: %s", status.Error.Code, status.Error.Message) //nolint:err113
-		} else {
-			err = errors.New("response failed") //nolint:err113
+			return false, fmt.Errorf("update failed, code %d: reason: %s", status.Error.Code, status.Error.Message)
 		}
 
-		agent.logger.Warn("Sensor update failed.", "sensor_id", upd.ID(), "error", err.Error())
-
-		return
+		return false, errors.New("update failed, unknown reason")
 	}
-	// The update succeeded and HA reports the sensor is now disabled.
+
+	// At this point, the sensor update was successful. Any errors are really
+	// warnings and non-critical.
+	var warnings error
+
+	// If HA reports the sensor as disabled, update the registry.
 	if reg.IsDisabled(upd.ID()) != status.Disabled {
 		if err := reg.SetDisabled(upd.ID(), status.Disabled); err != nil {
-			agent.logger.Warn("Failed to disable sensor in registry.", "sensor_id", upd.ID(), "error", err.Error())
+			warnings = errors.Join(err, errors.New("failed to disable sensor in registry"), err)
 		}
 	}
 
-	// Update the sensor state in the tracker.
+	// Add the sensor update to the tracker.
 	if err := trk.Add(upd); err != nil {
-		agent.logger.Warn("Failed to update sensor state in tracker.", "error", err.Error())
+		warnings = errors.Join(err, errors.New("failed to update sensor state in tracker"), err)
 	}
 
-	agent.logger.LogAttrs(ctx, slog.LevelDebug, "Sensor updated.",
-		slog.String("sensor_name", upd.Name()),
-		slog.String("sensor_id", upd.ID()),
-		slog.Any("state", upd.State()),
-		slog.String("units", upd.Units()))
+	// Return success status and any warnings.
+	return true, warnings
 }
 
-//nolint:lll
-func (agent *Agent) processRegistration(_ context.Context, trk SensorTracker, reg Registry, upd sensor.Details, details SensorRegistrationResponse) {
+//nolint:err113
+func processRegistration(trk SensorTracker, reg Registry, upd sensor.Details, details SensorRegistrationResponse) (bool, error) {
 	// If the registration failed, log a warning.
 	if !details.Registered() {
-		agent.logger.Warn("Failed to register sensor with Home Assistant.", "error", details.Error())
-
-		return
+		return false, fmt.Errorf("failed to register sensor: %s", details.Error())
 	}
+
+	// At this point, the sensor registration was successful. Any errors are really
+	// warnings and non-critical.
+	var warnings error
+
 	// Set the sensor as registered in the registry.
 	err := reg.SetRegistered(upd.ID(), true)
 	if err != nil {
-		agent.logger.Warn("Failed to set registered status for sensor in registry.", "sensor_id", upd.ID(), "error", err.Error())
+		warnings = errors.Join(warnings, errors.New("failed to set registered status for sensor in registry"), err)
 	}
 	// Update the sensor state in the tracker.
 	if err := trk.Add(upd); err != nil {
-		agent.logger.Warn("Failed to update sensor state in tracker.", "error", err.Error())
+		warnings = errors.Join(err, errors.New("failed to update sensor state in tracker"), err)
 	}
+
+	// Return success status and any warnings.
+	return true, warnings
 }
 
 // runNotificationsWorker will run a goroutine that is listening for
