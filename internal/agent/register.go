@@ -51,52 +51,29 @@ func (agent *Agent) saveRegistration(hassPrefs *preferences.Hass) error {
 	return nil
 }
 
-// performRegistration runs through a registration flow. If the agent is already
-// registered, it will exit unless the force parameter is true. Otherwise, it
-// will action a registration workflow displaying a GUI for user input of
-// registration details and save the results into the agent config.
-func (agent *Agent) performRegistration(ctx context.Context) error {
-	agent.logger.Info("Registration required. Starting registration process.")
+func (agent *Agent) checkRegistration(ctx context.Context, trk SensorTracker) error {
+	// If the agent is already registered and forced registration was not
+	// requested, abort.
+	if agent.prefs.Registered && !agent.forceRegister {
+		return nil
+	}
 
-	// Display a window asking for registration details for non-headless usage.
+	// If the agent is not running headless, ask the user for registration
+	// details.
 	if !agent.headless {
 		userInputDone := make(chan struct{})
 		agent.ui.DisplayRegistrationWindow(ctx, agent.prefs, userInputDone)
 		<-userInputDone
 	}
 
-	// Validate provided registration details.
-	if err := agent.prefs.Registration.Validate(); err != nil {
-		// if !validRegistrationSetting("server", input.Server) || !validRegistrationSetting("token", token) {
-		return fmt.Errorf("failed: %w", err)
-	}
-
-	// Register with Home Assistant.
-	resp, err := hass.RegisterWithHass(ctx, agent.prefs.Device, agent.prefs.Registration)
+	// Perform registration.
+	registrationDetails, err := hass.RegisterDevice(ctx, agent.prefs.Device, agent.prefs.Registration)
 	if err != nil {
-		return fmt.Errorf("failed: %w", err)
+		return fmt.Errorf("device registration failed: %w", err)
 	}
 
-	// Write registration details to config.
-	if err := agent.saveRegistration(resp); err != nil {
-		return fmt.Errorf("failed: %w", err)
-	}
-
-	agent.logger.Info("Successfully registered agent.")
-
-	return nil
-}
-
-func (agent *Agent) checkRegistration(ctx context.Context, trk SensorTracker) error {
-	if agent.prefs.Registered && !agent.forceRegister {
-		agent.logger.Debug("Agent is already registered. Skipping.")
-
-		return nil
-	}
-
-	// Agent is not registered or forced registration requested.
-	if err := agent.performRegistration(ctx); err != nil {
-		return err
+	if err := agent.saveRegistration(registrationDetails); err != nil {
+		return fmt.Errorf("saving registration failed: %w", err)
 	}
 
 	if agent.forceRegister {

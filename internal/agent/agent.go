@@ -19,6 +19,7 @@ import (
 
 	"github.com/adrg/xdg"
 
+	"github.com/joshuar/go-hass-agent/internal/agent/ui"
 	fyneui "github.com/joshuar/go-hass-agent/internal/agent/ui/fyneUI"
 	"github.com/joshuar/go-hass-agent/internal/commands"
 	"github.com/joshuar/go-hass-agent/internal/device"
@@ -28,6 +29,22 @@ import (
 )
 
 var ErrCtxFailed = errors.New("unable to create a context")
+
+// UI are the methods required for the agent to display its windows, tray
+// and notifications.
+type UI interface {
+	DisplayNotification(n ui.Notification)
+	DisplayTrayIcon(ctx context.Context, agent ui.Agent, trk ui.SensorTracker)
+	DisplayRegistrationWindow(ctx context.Context, prefs *preferences.Preferences, doneCh chan struct{})
+	Run(ctx context.Context, agent ui.Agent, doneCh chan struct{})
+}
+
+type Registry interface {
+	SetDisabled(id string, state bool) error
+	SetRegistered(id string, state bool) error
+	IsDisabled(id string) bool
+	IsRegistered(id string) bool
+}
 
 type SensorTracker interface {
 	SensorList() []string
@@ -199,9 +216,9 @@ func (agent *Agent) Run(ctx context.Context, trk SensorTracker, reg Registry) er
 
 			var commandController *commands.Controller
 
-			commandsFile := filepath.Join(xdg.ConfigHome, agent.AppID(), "commands.toml")
+			commandsFile := filepath.Join(xdg.ConfigHome, agent.id, "commands.toml")
 
-			mqttDeviceInfo, err := device.MQTTDevice(preferences.AppName, preferences.AppID, preferences.AppURL, preferences.AppVersion)
+			mqttDeviceInfo, err := device.MQTTDevice(preferences.AppName, agent.id, preferences.AppURL, preferences.AppVersion)
 			if err != nil {
 				agent.logger.Warn("Could not set up MQTT commands controller.", "error", err.Error())
 			} else {
@@ -231,10 +248,8 @@ func (agent *Agent) Run(ctx context.Context, trk SensorTracker, reg Registry) er
 
 	agent.handleSignals()
 
-	if !agent.headless {
-		agent.ui.DisplayTrayIcon(ctx, agent, trk)
-		agent.ui.Run(ctx, agent.done)
-	}
+	agent.ui.DisplayTrayIcon(ctx, agent, trk)
+	agent.ui.Run(ctx, agent, agent.done)
 
 	wg.Wait()
 
@@ -250,9 +265,7 @@ func (agent *Agent) Register(ctx context.Context, trk SensorTracker) {
 		agent.Stop()
 	}()
 
-	if !agent.headless {
-		agent.ui.Run(ctx, agent.done)
-	}
+	agent.ui.Run(ctx, agent, agent.done)
 }
 
 // handleSignals will handle Ctrl-C of the agent.
@@ -267,12 +280,6 @@ func (agent *Agent) handleSignals() {
 	}()
 }
 
-// AppID returns the "application ID". Currently, this ID is just used to
-// indicate whether the agent is running in debug mode or not.
-func (agent *Agent) AppID() string {
-	return agent.id
-}
-
 // Stop will close the agent's done channel which indicates to any goroutines it
 // is time to clean up and exit.
 func (agent *Agent) Stop() {
@@ -285,6 +292,7 @@ func (agent *Agent) Stop() {
 	}
 }
 
+// Reset will remove any agent related files and configuration.
 func (agent *Agent) Reset(ctx context.Context) error {
 	osController := agent.newOSController(ctx)
 
@@ -295,10 +303,19 @@ func (agent *Agent) Reset(ctx context.Context) error {
 	return nil
 }
 
+// Headless returns a boolean indicating whether the agent is running in
+// headless mode or not.
+func (agent *Agent) Headless() bool {
+	return agent.headless
+}
+
+// GetMQTTPreferences returns the subset of agent preferences to do with MQTT.
 func (agent *Agent) GetMQTTPreferences() *preferences.MQTT {
 	return agent.prefs.GetMQTTPreferences()
 }
 
+// SaveMQTTPreferences takes the given preferences and saves them to disk as
+// part of all agent preferences.
 func (agent *Agent) SaveMQTTPreferences(prefs *preferences.MQTT) error {
 	agent.prefs.MQTT = prefs
 

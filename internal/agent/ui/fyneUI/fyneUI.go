@@ -52,10 +52,9 @@ type FyneUI struct {
 	text *translations.Translator
 }
 
-func (i *FyneUI) Run(ctx context.Context, doneCh chan struct{}) {
-	if i.app == nil {
-		logging.FromContext(ctx).Warn("No supported windowing environment. Will not run UI elements.")
-
+func (i *FyneUI) Run(ctx context.Context, agent ui.Agent, doneCh chan struct{}) {
+	// Do not run the UI loop if the agent is running in headless mode.
+	if agent.Headless() {
 		return
 	}
 
@@ -98,6 +97,11 @@ func NewFyneUI(ctx context.Context, id string) *FyneUI {
 // DisplayTrayIcon displays an icon in the desktop tray with a menu for
 // controlling the agent and showing other informational windows.
 func (i *FyneUI) DisplayTrayIcon(ctx context.Context, agent ui.Agent, trk ui.SensorTracker) {
+	// Do not show the tray icon if the agent is running in headless mode.
+	if agent.Headless() {
+		return
+	}
+
 	if desk, ok := i.app.(desktop.App); ok {
 		// About menu item.
 		menuItemAbout := fyne.NewMenuItem(i.Translate("About"),

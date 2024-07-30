@@ -15,6 +15,7 @@ type Agent interface {
 	GetMQTTPreferences() *preferences.MQTT
 	SaveMQTTPreferences(prefs *preferences.MQTT) error
 	Stop()
+	Headless() bool
 }
 
 type SensorTracker interface {

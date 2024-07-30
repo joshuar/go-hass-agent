@@ -70,8 +70,8 @@ func (r *ResetCmd) Run(ctx *Context) error {
 		errs = errors.Join(errs, fmt.Errorf("failed to run reset command: %w", err))
 	}
 
-	registry.SetPath(filepath.Join(xdg.ConfigHome, gohassagent.AppID(), "sensorRegistry"))
-	preferences.SetPath(filepath.Join(xdg.ConfigHome, gohassagent.AppID()))
+	registry.SetPath(filepath.Join(xdg.ConfigHome, ctx.AppID, "sensorRegistry"))
+	preferences.SetPath(filepath.Join(xdg.ConfigHome, ctx.AppID))
 	// Reset agent.
 	if err := gohassagent.Reset(agentCtx); err != nil {
 		errs = errors.Join(fmt.Errorf("agent reset failed: %w", err))
@@ -142,8 +142,8 @@ func (r *RegisterCmd) Run(ctx *Context) error {
 
 	var trk *sensor.Tracker
 
-	registry.SetPath(filepath.Join(xdg.ConfigHome, gohassagent.AppID(), "sensorRegistry"))
-	preferences.SetPath(filepath.Join(xdg.ConfigHome, gohassagent.AppID()))
+	registry.SetPath(filepath.Join(xdg.ConfigHome, ctx.AppID, "sensorRegistry"))
+	preferences.SetPath(filepath.Join(xdg.ConfigHome, ctx.AppID))
 
 	if trk, err = sensor.NewTracker(); err != nil {
 		return fmt.Errorf("could not start sensor tracker: %w", err)
@@ -183,7 +183,7 @@ func (r *RunCmd) Run(ctx *Context) error {
 
 	var trk *sensor.Tracker
 
-	registry.SetPath(filepath.Join(xdg.ConfigHome, gohassagent.AppID(), "sensorRegistry"))
+	registry.SetPath(filepath.Join(xdg.ConfigHome, ctx.AppID, "sensorRegistry"))
 
 	reg, err := registry.Load()
 	if err != nil {
