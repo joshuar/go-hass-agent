@@ -559,3 +559,254 @@ func (mock *ScriptMock) ScheduleCalls() []struct {
 	mock.lockSchedule.RUnlock()
 	return calls
 }
+
+// Ensure, that LocationUpdateResponseMock does implement LocationUpdateResponse.
+// If this is not the case, regenerate this file with moq.
+var _ LocationUpdateResponse = &LocationUpdateResponseMock{}
+
+// LocationUpdateResponseMock is a mock implementation of LocationUpdateResponse.
+//
+//	func TestSomethingThatUsesLocationUpdateResponse(t *testing.T) {
+//
+//		// make and configure a mocked LocationUpdateResponse
+//		mockedLocationUpdateResponse := &LocationUpdateResponseMock{
+//			ErrorFunc: func() string {
+//				panic("mock out the Error method")
+//			},
+//			UpdatedFunc: func() bool {
+//				panic("mock out the Updated method")
+//			},
+//		}
+//
+//		// use mockedLocationUpdateResponse in code that requires LocationUpdateResponse
+//		// and then make assertions.
+//
+//	}
+type LocationUpdateResponseMock struct {
+	// ErrorFunc mocks the Error method.
+	ErrorFunc func() string
+
+	// UpdatedFunc mocks the Updated method.
+	UpdatedFunc func() bool
+
+	// calls tracks calls to the methods.
+	calls struct {
+		// Error holds details about calls to the Error method.
+		Error []struct {
+		}
+		// Updated holds details about calls to the Updated method.
+		Updated []struct {
+		}
+	}
+	lockError   sync.RWMutex
+	lockUpdated sync.RWMutex
+}
+
+// Error calls ErrorFunc.
+func (mock *LocationUpdateResponseMock) Error() string {
+	if mock.ErrorFunc == nil {
+		panic("LocationUpdateResponseMock.ErrorFunc: method is nil but LocationUpdateResponse.Error was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockError.Lock()
+	mock.calls.Error = append(mock.calls.Error, callInfo)
+	mock.lockError.Unlock()
+	return mock.ErrorFunc()
+}
+
+// ErrorCalls gets all the calls that were made to Error.
+// Check the length with:
+//
+//	len(mockedLocationUpdateResponse.ErrorCalls())
+func (mock *LocationUpdateResponseMock) ErrorCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockError.RLock()
+	calls = mock.calls.Error
+	mock.lockError.RUnlock()
+	return calls
+}
+
+// Updated calls UpdatedFunc.
+func (mock *LocationUpdateResponseMock) Updated() bool {
+	if mock.UpdatedFunc == nil {
+		panic("LocationUpdateResponseMock.UpdatedFunc: method is nil but LocationUpdateResponse.Updated was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockUpdated.Lock()
+	mock.calls.Updated = append(mock.calls.Updated, callInfo)
+	mock.lockUpdated.Unlock()
+	return mock.UpdatedFunc()
+}
+
+// UpdatedCalls gets all the calls that were made to Updated.
+// Check the length with:
+//
+//	len(mockedLocationUpdateResponse.UpdatedCalls())
+func (mock *LocationUpdateResponseMock) UpdatedCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockUpdated.RLock()
+	calls = mock.calls.Updated
+	mock.lockUpdated.RUnlock()
+	return calls
+}
+
+// Ensure, that SensorUpdateResponseMock does implement SensorUpdateResponse.
+// If this is not the case, regenerate this file with moq.
+var _ SensorUpdateResponse = &SensorUpdateResponseMock{}
+
+// SensorUpdateResponseMock is a mock implementation of SensorUpdateResponse.
+//
+//	func TestSomethingThatUsesSensorUpdateResponse(t *testing.T) {
+//
+//		// make and configure a mocked SensorUpdateResponse
+//		mockedSensorUpdateResponse := &SensorUpdateResponseMock{
+//			UpdatesFunc: func() map[string]*sensor.UpdateStatus {
+//				panic("mock out the Updates method")
+//			},
+//		}
+//
+//		// use mockedSensorUpdateResponse in code that requires SensorUpdateResponse
+//		// and then make assertions.
+//
+//	}
+type SensorUpdateResponseMock struct {
+	// UpdatesFunc mocks the Updates method.
+	UpdatesFunc func() map[string]*sensor.UpdateStatus
+
+	// calls tracks calls to the methods.
+	calls struct {
+		// Updates holds details about calls to the Updates method.
+		Updates []struct {
+		}
+	}
+	lockUpdates sync.RWMutex
+}
+
+// Updates calls UpdatesFunc.
+func (mock *SensorUpdateResponseMock) Updates() map[string]*sensor.UpdateStatus {
+	if mock.UpdatesFunc == nil {
+		panic("SensorUpdateResponseMock.UpdatesFunc: method is nil but SensorUpdateResponse.Updates was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockUpdates.Lock()
+	mock.calls.Updates = append(mock.calls.Updates, callInfo)
+	mock.lockUpdates.Unlock()
+	return mock.UpdatesFunc()
+}
+
+// UpdatesCalls gets all the calls that were made to Updates.
+// Check the length with:
+//
+//	len(mockedSensorUpdateResponse.UpdatesCalls())
+func (mock *SensorUpdateResponseMock) UpdatesCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockUpdates.RLock()
+	calls = mock.calls.Updates
+	mock.lockUpdates.RUnlock()
+	return calls
+}
+
+// Ensure, that SensorRegistrationResponseMock does implement SensorRegistrationResponse.
+// If this is not the case, regenerate this file with moq.
+var _ SensorRegistrationResponse = &SensorRegistrationResponseMock{}
+
+// SensorRegistrationResponseMock is a mock implementation of SensorRegistrationResponse.
+//
+//	func TestSomethingThatUsesSensorRegistrationResponse(t *testing.T) {
+//
+//		// make and configure a mocked SensorRegistrationResponse
+//		mockedSensorRegistrationResponse := &SensorRegistrationResponseMock{
+//			ErrorFunc: func() string {
+//				panic("mock out the Error method")
+//			},
+//			RegisteredFunc: func() bool {
+//				panic("mock out the Registered method")
+//			},
+//		}
+//
+//		// use mockedSensorRegistrationResponse in code that requires SensorRegistrationResponse
+//		// and then make assertions.
+//
+//	}
+type SensorRegistrationResponseMock struct {
+	// ErrorFunc mocks the Error method.
+	ErrorFunc func() string
+
+	// RegisteredFunc mocks the Registered method.
+	RegisteredFunc func() bool
+
+	// calls tracks calls to the methods.
+	calls struct {
+		// Error holds details about calls to the Error method.
+		Error []struct {
+		}
+		// Registered holds details about calls to the Registered method.
+		Registered []struct {
+		}
+	}
+	lockError      sync.RWMutex
+	lockRegistered sync.RWMutex
+}
+
+// Error calls ErrorFunc.
+func (mock *SensorRegistrationResponseMock) Error() string {
+	if mock.ErrorFunc == nil {
+		panic("SensorRegistrationResponseMock.ErrorFunc: method is nil but SensorRegistrationResponse.Error was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockError.Lock()
+	mock.calls.Error = append(mock.calls.Error, callInfo)
+	mock.lockError.Unlock()
+	return mock.ErrorFunc()
+}
+
+// ErrorCalls gets all the calls that were made to Error.
+// Check the length with:
+//
+//	len(mockedSensorRegistrationResponse.ErrorCalls())
+func (mock *SensorRegistrationResponseMock) ErrorCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockError.RLock()
+	calls = mock.calls.Error
+	mock.lockError.RUnlock()
+	return calls
+}
+
+// Registered calls RegisteredFunc.
+func (mock *SensorRegistrationResponseMock) Registered() bool {
+	if mock.RegisteredFunc == nil {
+		panic("SensorRegistrationResponseMock.RegisteredFunc: method is nil but SensorRegistrationResponse.Registered was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockRegistered.Lock()
+	mock.calls.Registered = append(mock.calls.Registered, callInfo)
+	mock.lockRegistered.Unlock()
+	return mock.RegisteredFunc()
+}
+
+// RegisteredCalls gets all the calls that were made to Registered.
+// Check the length with:
+//
+//	len(mockedSensorRegistrationResponse.RegisteredCalls())
+func (mock *SensorRegistrationResponseMock) RegisteredCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockRegistered.RLock()
+	calls = mock.calls.Registered
+	mock.lockRegistered.RUnlock()
+	return calls
+}
