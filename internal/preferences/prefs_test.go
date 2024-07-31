@@ -4,6 +4,7 @@
 // https://opensource.org/licenses/MIT
 
 //nolint:paralleltest,wsl,nlreturn,varnamelen
+//revive:disable:function-length
 package preferences
 
 import (
@@ -295,7 +296,6 @@ func TestPreferences_Validate(t *testing.T) {
 func TestPreferences_Save(t *testing.T) {
 	origPath := Path()
 	validPrefs := DefaultPreferences()
-	validPrefsPath := t.TempDir()
 
 	type fields struct {
 		mu           *sync.Mutex
@@ -316,8 +316,8 @@ func TestPreferences_Save(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "valid",
-			args: args{path: validPrefsPath},
+			name: "valid preferences",
+			args: args{path: t.TempDir()},
 			fields: fields{
 				MQTT:         validPrefs.MQTT,
 				Registration: validPrefs.Registration,
@@ -327,12 +327,12 @@ func TestPreferences_Save(t *testing.T) {
 			},
 		},
 		{
-			name:    "invalid",
-			args:    args{path: validPrefsPath},
+			name:    "invalid preferences",
+			args:    args{path: t.TempDir()},
 			wantErr: true,
 		},
 		{
-			name: "unwriteable",
+			name: "unwriteable preferences path",
 			args: args{path: "/"},
 			fields: fields{
 				MQTT:         validPrefs.MQTT,
@@ -342,6 +342,17 @@ func TestPreferences_Save(t *testing.T) {
 				Version:      AppVersion,
 			},
 			wantErr: true,
+		},
+		{
+			name: "missing preferences path",
+			args: args{path: filepath.Join(t.TempDir(), "missing")},
+			fields: fields{
+				MQTT:         validPrefs.MQTT,
+				Registration: validPrefs.Registration,
+				Hass:         validPrefs.Hass,
+				Device:       validPrefs.Device,
+				Version:      AppVersion,
+			},
 		},
 	}
 	for _, tt := range tests {
