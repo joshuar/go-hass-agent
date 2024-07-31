@@ -4,6 +4,8 @@
 // https://opensource.org/licenses/MIT
 
 // revive:disable:unused-receiver
+//
+//go:generate moq -out agent_mocks_test.go . UI Registry SensorTracker
 package agent
 
 import (
@@ -140,7 +142,6 @@ func ForceRegister(value bool) Option {
 // then spawns a sensor tracker and the workers to gather sensor data and
 // publish it to Home Assistant.
 //
-
 //revive:disable:function-length
 func (agent *Agent) Run(ctx context.Context, trk SensorTracker, reg Registry) error {
 	var wg sync.WaitGroup
