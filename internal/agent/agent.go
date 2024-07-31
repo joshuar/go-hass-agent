@@ -70,23 +70,17 @@ type Agent struct {
 type Option func(*Agent)
 
 // newDefaultAgent returns an agent with default options.
-//
-//nolint:exhaustruct
-func newDefaultAgent(ctx context.Context) *Agent {
+func newDefaultAgent(ctx context.Context, id string) *Agent {
 	return &Agent{
 		done:   make(chan struct{}),
-		id:     preferences.AppID,
+		id:     id,
 		logger: logging.FromContext(ctx).With(slog.Group("agent")),
 	}
 }
 
 // NewAgent creates a new agent with the options specified.
-func NewAgent(ctx context.Context, options ...Option) (*Agent, error) {
-	agent := newDefaultAgent(ctx)
-
-	for _, option := range options {
-		option(agent)
-	}
+func NewAgent(ctx context.Context, id string, options ...Option) (*Agent, error) {
+	agent := newDefaultAgent(ctx, id)
 
 	// If we are using a custom agent ID, adjust the path to the preferences
 	// file.
@@ -102,18 +96,13 @@ func NewAgent(ctx context.Context, options ...Option) (*Agent, error) {
 
 	agent.prefs = prefs
 
-	if !agent.headless {
-		agent.ui = fyneui.NewFyneUI(ctx, agent.id)
+	for _, option := range options {
+		option(agent)
 	}
+
+	agent.ui = fyneui.NewFyneUI(ctx, agent.id)
 
 	return agent, nil
-}
-
-// WithID will set the agent ID to the value given.
-func WithID(id string) Option {
-	return func(a *Agent) {
-		a.id = id
-	}
 }
 
 // Headless sets whether the agent should run in a headless mode, without any
@@ -128,9 +117,13 @@ func Headless(value bool) Option {
 // Only used when the Register command is run.
 func WithRegistrationInfo(server, token string, ignoreURLs bool) Option {
 	return func(a *Agent) {
-		a.prefs.Registration.Server = server
-		a.prefs.Registration.Token = token
-		a.prefs.Hass.IgnoreHassURLs = ignoreURLs
+		a.prefs.Registration = &preferences.Registration{
+			Server: server,
+			Token:  token,
+		}
+		a.prefs.Hass = &preferences.Hass{
+			IgnoreHassURLs: ignoreURLs,
+		}
 	}
 }
 
@@ -257,15 +250,22 @@ func (agent *Agent) Run(ctx context.Context, trk SensorTracker, reg Registry) er
 }
 
 func (agent *Agent) Register(ctx context.Context, trk SensorTracker) {
+	defer agent.Stop()
+
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+
 	go func() {
+		defer wg.Done()
+
 		if err := agent.checkRegistration(ctx, trk); err != nil {
 			agent.logger.Log(ctx, logging.LevelFatal, "Error checking registration status", "error", err.Error())
 		}
-
-		agent.Stop()
 	}()
 
 	agent.ui.Run(ctx, agent, agent.done)
+	wg.Wait()
 }
 
 // handleSignals will handle Ctrl-C of the agent.
