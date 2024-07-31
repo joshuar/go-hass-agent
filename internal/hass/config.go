@@ -12,8 +12,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"sync"
-
-	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
 type Config struct {
@@ -88,12 +86,7 @@ func (c *configRequest) RequestBody() json.RawMessage {
 }
 
 //nolint:exhaustruct
-func GetConfig(ctx context.Context) (*Config, error) {
-	url, err := preferences.ContextGetRestAPIURL(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("could not fetch home assistant config: %w", err)
-	}
-
+func GetConfig(ctx context.Context, url string) (*Config, error) {
 	client := NewDefaultHTTPClient(url)
 
 	req := &configRequest{}
