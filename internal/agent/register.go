@@ -84,6 +84,8 @@ func (agent *Agent) checkRegistration(ctx context.Context, trk SensorTracker) er
 		}
 	}
 
+	agent.logger.Info("Agent registered.")
+
 	return nil
 }
 
