@@ -18,9 +18,7 @@ type Registration struct {
 func (p *Registration) Validate() error {
 	err := validate.Struct(p)
 	if err != nil {
-		showValidationErrors(err)
-
-		return fmt.Errorf("validation failed: %w", err)
+		return fmt.Errorf("%w: %s", ErrValidationFailed, parseValidationErrors(err))
 	}
 
 	return nil

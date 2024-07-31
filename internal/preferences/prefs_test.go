@@ -18,6 +18,59 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func deviceEqual(t *testing.T, got, want *Device) bool {
+	t.Helper()
+	switch {
+	case !reflect.DeepEqual(got.AppName, want.AppName):
+		t.Error("appName does not match")
+		return false
+	case !reflect.DeepEqual(got.AppVersion, want.AppVersion):
+		t.Error("appVersion does not match")
+		return false
+	case !reflect.DeepEqual(got.OsName, want.OsName):
+		t.Error("distro does not match")
+		return false
+	case !reflect.DeepEqual(got.OsVersion, want.OsVersion):
+		t.Errorf("distroVersion does not match: got %s want %s", got.OsVersion, want.OsVersion)
+		return false
+	case !reflect.DeepEqual(got.Name, want.Name):
+		t.Error("hostname does not match")
+		return false
+	case !reflect.DeepEqual(got.Model, want.Model):
+		t.Error("hwModel does not match")
+		return false
+	case !reflect.DeepEqual(got.Manufacturer, want.Manufacturer):
+		t.Error("hwVendor does not match")
+		return false
+	}
+	return true
+}
+
+func preferencesEqual(t *testing.T, got, want *Preferences) bool {
+	t.Helper()
+	switch {
+	case !deviceEqual(t, got.Device, want.Device):
+		t.Error("device does not match")
+		return false
+	case !reflect.DeepEqual(got.Hass, want.Hass):
+		t.Error("hass preferences do not match")
+		return false
+	case !reflect.DeepEqual(got.Registration, want.Registration):
+		t.Error("registration preferences do not match")
+		return false
+	case !reflect.DeepEqual(got.MQTT, want.MQTT):
+		t.Errorf("mqtt preferences do not match")
+		return false
+	case !reflect.DeepEqual(got.Version, want.Version):
+		t.Error("version does not match")
+		return false
+	case !reflect.DeepEqual(got.Registered, want.Registered):
+		t.Error("registered does not match")
+		return false
+	}
+	return true
+}
+
 func TestSetPath(t *testing.T) {
 	testPath := t.TempDir()
 
@@ -164,7 +217,7 @@ func TestLoad(t *testing.T) {
 				return
 			}
 			require.ErrorIs(t, err, tt.wantErrType)
-			if !reflect.DeepEqual(got, tt.want) {
+			if !preferencesEqual(t, got, tt.want) {
 				t.Errorf("Load() = %v, want %v", got, tt.want)
 			}
 			SetPath(origPath)
@@ -200,7 +253,24 @@ func TestPreferences_Validate(t *testing.T) {
 			},
 		},
 		{
-			name:    "invalid",
+			name: "required field missing",
+			fields: fields{
+				MQTT:         validPrefs.MQTT,
+				Registration: validPrefs.Registration,
+				Hass:         validPrefs.Hass,
+				Device:       validPrefs.Device,
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid field value",
+			fields: fields{
+				MQTT:         validPrefs.MQTT,
+				Registration: &Registration{Server: "notaurl", Token: "somestring"},
+				Hass:         validPrefs.Hass,
+				Device:       validPrefs.Device,
+				Version:      AppVersion,
+			},
 			wantErr: true,
 		},
 	}
