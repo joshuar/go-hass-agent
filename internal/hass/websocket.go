@@ -18,17 +18,16 @@ import (
 	"github.com/lxzan/gws"
 
 	"github.com/joshuar/go-hass-agent/internal/logging"
-	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
 const (
 	pingInterval = time.Minute
 	connDeadline = 2 * pingInterval
+
+	closeNormal = 1000
 )
 
-const closeNormal = 1000
-
-type websocketMsg struct {
+type webSocketRequest struct {
 	Type           string `json:"type"`
 	WebHookID      string `json:"webhook_id,omitempty"`
 	AccessToken    string `json:"access_token,omitempty"`
@@ -36,7 +35,7 @@ type websocketMsg struct {
 	SupportConfirm bool   `json:"support_confirm,omitempty"`
 }
 
-func (m *websocketMsg) send(conn *gws.Conn) error {
+func (m *webSocketRequest) send(conn *gws.Conn) error {
 	msg, err := json.Marshal(&m)
 	if err != nil {
 		return fmt.Errorf("failed to send: %w", err)
@@ -76,105 +75,25 @@ func (n *WebsocketNotification) GetMessage() string {
 	return n.Message
 }
 
-//nolint:exhaustruct,govet
-func StartWebsocket(ctx context.Context) (chan *WebsocketNotification, error) {
-	var socket *gws.Conn
-
-	notifyCh := make(chan *WebsocketNotification)
-
-	url, err := preferences.ContextGetWebsocketURL(ctx)
-	if err != nil {
-		close(notifyCh)
-
-		return notifyCh, fmt.Errorf("unable to start websocket connection: %w", err)
-	}
-
-	retryFunc := func() error {
-		var resp *http.Response
-
-		ws, err := newWebsocket(ctx, notifyCh)
-		if err != nil {
-			return fmt.Errorf("could not connect to websocket: %w", err)
-		}
-
-		socket, resp, err = gws.NewClient(ws, &gws.ClientOption{Addr: url})
-		if err != nil {
-			return fmt.Errorf("could not connect to websocket: %w", err)
-		}
-		defer resp.Body.Close()
-
-		return nil
-	}
-
-	go func() {
-		defer close(notifyCh)
-
-		for {
-			select {
-			case <-ctx.Done():
-				if socket != nil {
-					socket.WriteClose(closeNormal, nil)
-				}
-			default:
-				err = backoff.Retry(retryFunc, backoff.WithContext(backoff.NewExponentialBackOff(), ctx))
-				if err != nil {
-					logging.FromContext(ctx).Error("Could not connect to websocket.", "error", err.Error())
-
-					return
-				}
-
-				logging.FromContext(ctx).Log(ctx, logging.LevelTrace, "Websocket connection established.")
-				socket.ReadLoop()
-			}
-		}
-	}()
-
-	return notifyCh, nil
-}
-
-type webSocket struct {
-	notifyCh  chan *WebsocketNotification
-	doneCh    chan struct{}
+type Websocket struct {
+	NotifyCh  chan WebsocketNotification
 	logger    *slog.Logger
+	socket    *gws.Conn
 	token     string
 	webhookID string
+	url       string
 	nextID    uint64
 }
 
-func newWebsocket(ctx context.Context, notifyCh chan *WebsocketNotification) (*webSocket, error) {
-	token, err := preferences.ContextGetToken(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("could not create websocket: %w", err)
-	}
-
-	webhookid, err := preferences.ContextGetWebhookID(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("could not create websocket: %w", err)
-	}
-
-	websocket := &webSocket{
-		notifyCh:  notifyCh,
-		doneCh:    make(chan struct{}),
-		token:     token,
-		webhookID: webhookid,
-		nextID:    0,
-		logger:    logging.FromContext(ctx),
-	}
-
-	return websocket, nil
-}
-
-//nolint:exhaustruct
-func (c *webSocket) newAuthMsg() *websocketMsg {
-	return &websocketMsg{
+func (c *Websocket) newAuthMsg() *webSocketRequest {
+	return &webSocketRequest{
 		Type:        "auth",
 		AccessToken: c.token,
 	}
 }
 
-//nolint:exhaustruct
-func (c *webSocket) newRegistrationMsg() *websocketMsg {
-	return &websocketMsg{
+func (c *Websocket) newRegistrationMsg() *webSocketRequest {
+	return &webSocketRequest{
 		Type:           "mobile_app/push_notification_channel",
 		ID:             atomic.LoadUint64(&c.nextID),
 		WebHookID:      c.webhookID,
@@ -182,39 +101,34 @@ func (c *webSocket) newRegistrationMsg() *websocketMsg {
 	}
 }
 
-//nolint:exhaustruct
-func (c *webSocket) newPingMsg() *websocketMsg {
-	return &websocketMsg{
+func (c *Websocket) newPingMsg() *webSocketRequest {
+	return &webSocketRequest{
 		Type: "ping",
 		ID:   atomic.LoadUint64(&c.nextID),
 	}
 }
 
 //revive:disable:unused-receiver
-func (c *webSocket) OnError(_ *gws.Conn, err error) {
+func (c *Websocket) OnError(_ *gws.Conn, err error) {
 	c.logger.Error("Error on websocket.", "error", err.Error())
 }
 
-func (c *webSocket) OnClose(_ *gws.Conn, err error) {
-	if err != nil {
+func (c *Websocket) OnClose(_ *gws.Conn, err error) {
+	if err != nil && err.Error() != "normal close" {
 		c.logger.Warn("Websocket connection closed with error.", "error", err.Error())
 	}
-
-	close(c.doneCh)
 }
 
-func (c *webSocket) OnPong(_ *gws.Conn, _ []byte) {}
+func (c *Websocket) OnPong(_ *gws.Conn, _ []byte) {}
 
-func (c *webSocket) OnOpen(socket *gws.Conn) {
-	c.logger.Debug("Websocket opened.")
-
+func (c *Websocket) OnOpen(socket *gws.Conn) {
 	go c.keepAlive(socket)
 }
 
-func (c *webSocket) OnPing(_ *gws.Conn, _ []byte) {}
+func (c *Websocket) OnPing(_ *gws.Conn, _ []byte) {}
 
-//nolint:cyclop,exhaustruct
-func (c *webSocket) OnMessage(socket *gws.Conn, message *gws.Message) {
+//nolint:cyclop
+func (c *Websocket) OnMessage(socket *gws.Conn, message *gws.Message) {
 	defer message.Close()
 
 	response := &websocketResponse{
@@ -229,11 +143,11 @@ func (c *webSocket) OnMessage(socket *gws.Conn, message *gws.Message) {
 
 	atomic.AddUint64(&c.nextID, 1)
 
-	var reply *websocketMsg
+	var reply *webSocketRequest
 
 	switch response.Type {
 	case "event":
-		c.notifyCh <- &response.Notification
+		c.NotifyCh <- response.Notification
 	case "result":
 		if !response.Success {
 			c.logger.Error("Received error on websocket.", "code", response.Error.Code, "error", response.Error.Message)
@@ -270,25 +184,78 @@ func (c *webSocket) OnMessage(socket *gws.Conn, message *gws.Message) {
 	}
 }
 
-func (c *webSocket) keepAlive(conn *gws.Conn) {
+func (c *Websocket) keepAlive(conn *gws.Conn) {
 	ticker := time.NewTicker(pingInterval)
 
-	for {
-		select {
-		case <-c.doneCh:
+	for range ticker.C {
+		if err := conn.SetDeadline(time.Now().Add(connDeadline)); err != nil {
+			c.logger.Error("Could not set deadline on websocket.", "error", err.Error())
+
 			return
-		case <-ticker.C:
-			if err := conn.SetDeadline(time.Now().Add(connDeadline)); err != nil {
-				c.logger.Error("Could not set deadline on websocket.", "error", err.Error())
+		}
 
-				return
-			}
+		msg := c.newPingMsg()
 
-			msg := c.newPingMsg()
-
-			if err := msg.send(conn); err != nil {
-				c.logger.Error("Could not send ping message.", "error", err.Error())
-			}
+		if err := msg.send(conn); err != nil {
+			c.logger.Error("Could not send ping message.", "error", err.Error())
 		}
 	}
+}
+
+// NewWebsocket creates a new websocket object using the given websocket url,
+// webhookid and token.
+func NewWebsocket(ctx context.Context, url, webhookID, token string) *Websocket {
+	return &Websocket{
+		token:     token,
+		webhookID: webhookID,
+		url:       url,
+		logger:    logging.FromContext(ctx),
+	}
+}
+
+// Connect establishes a connection on the websocket. It implements an
+// exponential backoff method for retries on the event of connection failures.
+// Once a connection is established, it sets up the notification channel for
+// receiving notifications from Home Assistant.
+func (c *Websocket) Connect(ctx context.Context) (chan WebsocketNotification, error) {
+	var (
+		err    error
+		socket *gws.Conn
+	)
+
+	retryFunc := func() error {
+		var resp *http.Response
+
+		socket, resp, err = gws.NewClient(c, &gws.ClientOption{Addr: c.url})
+		if err != nil {
+			return fmt.Errorf("could not establish connection: %w", err)
+		}
+		defer resp.Body.Close()
+
+		return nil
+	}
+
+	err = backoff.Retry(retryFunc, backoff.WithContext(backoff.NewExponentialBackOff(), ctx))
+	if err != nil {
+		return nil, fmt.Errorf("connection failed: %w", err)
+	}
+
+	c.socket = socket
+	c.NotifyCh = make(chan WebsocketNotification)
+
+	go func() {
+		<-ctx.Done()
+		c.socket.WriteClose(closeNormal, []byte(`normal close`))
+	}()
+
+	return c.NotifyCh, nil
+}
+
+// Listen will listen for notifications from Home Assistant and pass these
+// through the created channel, for the agent to consume. If the socket is
+// closed, the channel is also closed.
+func (c *Websocket) Listen() {
+	defer close(c.NotifyCh)
+	c.logger.Debug("Listening on websocket.")
+	c.socket.ReadLoop()
 }
