@@ -140,7 +140,7 @@ func ForceRegister(value bool) Option {
 // then spawns a sensor tracker and the workers to gather sensor data and
 // publish it to Home Assistant.
 //
-//nolint:funlen
+
 //revive:disable:function-length
 func (agent *Agent) Run(ctx context.Context, trk SensorTracker, reg Registry) error {
 	var wg sync.WaitGroup
@@ -165,15 +165,10 @@ func (agent *Agent) Run(ctx context.Context, trk SensorTracker, reg Registry) er
 		defer wg.Done()
 		regWait.Wait()
 
-		// Embed some preferences into the context which are used by other parts
-		// of the code.
+		// Create a context for runners
 		runnerCtx, cancelFunc := context.WithCancel(ctx)
-		runnerCtx = preferences.ContextSetRestAPIURL(runnerCtx, agent.prefs.Hass.RestAPIURL)
-		runnerCtx = preferences.ContextSetWebsocketURL(runnerCtx, agent.prefs.Hass.WebsocketURL)
-		runnerCtx = preferences.ContextSetWebhookID(runnerCtx, agent.prefs.Hass.WebhookID)
-		runnerCtx = preferences.ContextSetToken(runnerCtx, agent.prefs.Registration.Token)
 
-		// Cancel the runner context when the agent is done.
+		// Cancel the runner context wh	en the agent is done.
 		go func() {
 			<-agent.done
 			cancelFunc()
