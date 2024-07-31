@@ -144,17 +144,17 @@ func TestAgent_checkRegistration(t *testing.T) {
 		{
 			name:   "headless",
 			args:   args{path: t.TempDir()},
-			fields: fields{prefs: headless, headless: true, id: "go-hass-agent-test"},
+			fields: fields{prefs: headless, headless: true, id: "go-hass-agent-test", logger: slog.Default()},
 		},
 		{
 			name:    "headless error",
 			args:    args{path: t.TempDir()},
-			fields:  fields{prefs: headlessErr, headless: true, id: "go-hass-agent-test"},
+			fields:  fields{prefs: headlessErr, headless: true, id: "go-hass-agent-test", logger: slog.Default()},
 			wantErr: true,
 		},
 		{
 			name:   "force register",
-			fields: fields{prefs: alreadyRegistered, headless: true, forceRegister: true, id: "go-hass-agent-test"},
+			fields: fields{prefs: alreadyRegistered, headless: true, forceRegister: true, id: "go-hass-agent-test", logger: slog.Default()},
 			args:   args{path: t.TempDir(), trk: &SensorTrackerMock{ResetFunc: func() {}}},
 		},
 	}
