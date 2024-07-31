@@ -13,7 +13,6 @@ import (
 	"fmt"
 	"log/slog"
 	"path/filepath"
-	"sync"
 
 	"github.com/adrg/xdg"
 	"github.com/robfig/cron/v3"
@@ -22,6 +21,17 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+)
+
+var scriptPath string
+
+var (
+	ErrStateUpdateUnknown = errors.New("unknown sensor update response")
+	ErrStateUpdateFailed  = errors.New("state update failed")
+	ErrRegDisableFailed   = errors.New("failed to disable sensor in registry")
+	ErrRegAddFailed       = errors.New("failed to set registered status for sensor in registry")
+	ErrTrkUpdateFailed    = errors.New("failed to update sensor state in tracker")
+	ErrRegistrationFailed = errors.New("sensor registration failed")
 )
 
 // SensorController represents an object that manages one or more Workers.
@@ -130,13 +140,18 @@ func (agent *Agent) runWorkers(ctx context.Context, controllers ...SensorControl
 // to be run on their defined schedule using the cron scheduler. It also sets up
 // a channel to receive script output and send appropriate sensor objects to the
 // sensor.
+//
+//revive:disable:function-length
 func (agent *Agent) runScripts(ctx context.Context) chan sensor.Details {
 	sensorCh := make(chan sensor.Details)
 
 	// Define the path to custom sensor scripts.
-	scriptPath := filepath.Join(xdg.ConfigHome, agent.id, "scripts")
+	if scriptPath == "" {
+		scriptPath = filepath.Join(xdg.ConfigHome, agent.id, "scripts")
+	}
 	// Get any scripts in the script path.
 	sensorScripts, err := findScripts(scriptPath)
+
 	// If no scripts were found or there was an error processing scripts, log a
 	// message and return.
 	switch {
@@ -258,7 +273,7 @@ func (agent *Agent) processSensors(ctx context.Context, trk SensorTracker, reg R
 	}
 }
 
-func (agent *Agent) processResponse(ctx context.Context, upd sensor.Details, resp hass.Response, reg Registry, trk SensorTracker) {
+func (agent *Agent) processResponse(ctx context.Context, upd sensor.Details, resp any, reg Registry, trk SensorTracker) {
 	sensorLogAttrs := slog.Group("sensor",
 		slog.String("name", upd.Name()),
 		slog.String("id", upd.ID()),
@@ -299,19 +314,18 @@ func (agent *Agent) processResponse(ctx context.Context, upd sensor.Details, res
 	}
 }
 
-//nolint:err113
 func processStateUpdates(trk SensorTracker, reg Registry, upd sensor.Details, status *sensor.UpdateStatus) (bool, error) {
 	// No status was returned.
 	if status == nil {
-		return false, errors.New("unknown sensor update response")
+		return false, ErrStateUpdateUnknown
 	}
 	// The update failed.
 	if !status.Success {
 		if status.Error != nil {
-			return false, fmt.Errorf("update failed, code %d: reason: %s", status.Error.Code, status.Error.Message)
+			return false, fmt.Errorf("%w, code %d: reason: %s", ErrStateUpdateFailed, status.Error.Code, status.Error.Message)
 		}
 
-		return false, errors.New("update failed, unknown reason")
+		return false, fmt.Errorf("%w, unknown reason", ErrStateUpdateFailed)
 	}
 
 	// At this point, the sensor update was successful. Any errors are really
@@ -321,24 +335,23 @@ func processStateUpdates(trk SensorTracker, reg Registry, upd sensor.Details, st
 	// If HA reports the sensor as disabled, update the registry.
 	if reg.IsDisabled(upd.ID()) != status.Disabled {
 		if err := reg.SetDisabled(upd.ID(), status.Disabled); err != nil {
-			warnings = errors.Join(err, errors.New("failed to disable sensor in registry"), err)
+			warnings = errors.Join(warnings, fmt.Errorf("%w: %w", ErrRegDisableFailed, err))
 		}
 	}
 
 	// Add the sensor update to the tracker.
 	if err := trk.Add(upd); err != nil {
-		warnings = errors.Join(err, errors.New("failed to update sensor state in tracker"), err)
+		warnings = errors.Join(warnings, fmt.Errorf("%w: %w", ErrTrkUpdateFailed, err))
 	}
 
 	// Return success status and any warnings.
 	return true, warnings
 }
 
-//nolint:err113
 func processRegistration(trk SensorTracker, reg Registry, upd sensor.Details, details SensorRegistrationResponse) (bool, error) {
 	// If the registration failed, log a warning.
 	if !details.Registered() {
-		return false, fmt.Errorf("failed to register sensor: %s", details.Error())
+		return false, fmt.Errorf("%w: %s", ErrRegistrationFailed, details.Error())
 	}
 
 	// At this point, the sensor registration was successful. Any errors are really
@@ -348,53 +361,15 @@ func processRegistration(trk SensorTracker, reg Registry, upd sensor.Details, de
 	// Set the sensor as registered in the registry.
 	err := reg.SetRegistered(upd.ID(), true)
 	if err != nil {
-		warnings = errors.Join(warnings, errors.New("failed to set registered status for sensor in registry"), err)
+		warnings = errors.Join(warnings, fmt.Errorf("%w: %w", ErrRegAddFailed, err))
 	}
 	// Update the sensor state in the tracker.
 	if err := trk.Add(upd); err != nil {
-		warnings = errors.Join(err, errors.New("failed to update sensor state in tracker"), err)
+		warnings = errors.Join(warnings, fmt.Errorf("%w: %w", ErrTrkUpdateFailed, err))
 	}
 
 	// Return success status and any warnings.
 	return true, warnings
-}
-
-// runNotificationsWorker will run a goroutine that is listening for
-// notification messages from Home Assistant on a websocket connection. Any
-// received notifications will be dipslayed on the device running the agent.
-func (agent *Agent) runNotificationsWorker(ctx context.Context) {
-	// Don't run if agent is running headless.
-	if agent.headless {
-		return
-	}
-
-	notifyCh, err := hass.StartWebsocket(ctx)
-	if err != nil {
-		agent.logger.Error("Could not listen for notifications.", "error", err.Error())
-	}
-
-	agent.logger.Debug("Listening for notifications.")
-
-	var wg sync.WaitGroup
-
-	wg.Add(1)
-
-	go func() {
-		defer wg.Done()
-
-		for {
-			select {
-			case <-ctx.Done():
-				agent.logger.Debug("Stopping notification handler.")
-
-				return
-			case n := <-notifyCh:
-				agent.ui.DisplayNotification(n)
-			}
-		}
-	}()
-
-	wg.Wait()
 }
 
 // runMQTTWorker will set up a connection to MQTT and listen on topics for
