@@ -22,6 +22,25 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/logging"
 )
 
+const (
+	versionWorkerID    = "agent_version_sensor"
+	externalIPWorkerID = "external_ip_sensor" //nolint:gosec // false positive
+
+	ExternalIPUpdateInterval       = 5 * time.Minute
+	ExternalIPUpdateJitter         = 10 * time.Second
+	ExternalIPUpdateRequestTimeout = 15 * time.Second
+)
+
+var ipLookupHosts = map[string]map[int]string{
+	"icanhazip": {4: "https://4.icanhazip.com", 6: "https://6.icanhazip.com"},
+	"ipify":     {4: "https://api.ipify.org", 6: "https://api6.ipify.org"},
+}
+
+var (
+	ErrInvalidIP     = errors.New("invalid IP address")
+	ErrNoLookupHosts = errors.New("no IP lookup hosts found")
+)
+
 type sensorWorker struct {
 	object  Worker
 	started bool
