@@ -63,8 +63,7 @@ func (r *ResetCmd) Run(ctx *Context) error {
 
 	var errs error
 
-	gohassagent, err := agent.NewAgent(agentCtx,
-		agent.WithID(ctx.AppID),
+	gohassagent, err := agent.NewAgent(agentCtx, ctx.AppID,
 		agent.Headless(ctx.Headless))
 	if err != nil {
 		errs = errors.Join(errs, fmt.Errorf("failed to run reset command: %w", err))
@@ -131,8 +130,7 @@ func (r *RegisterCmd) Run(ctx *Context) error {
 	logger := logging.New(ctx.LogLevel, ctx.NoLogFile)
 	agentCtx = logging.ToContext(agentCtx, logger)
 
-	gohassagent, err := agent.NewAgent(agentCtx,
-		agent.WithID(ctx.AppID),
+	gohassagent, err := agent.NewAgent(agentCtx, ctx.AppID,
 		agent.Headless(ctx.Headless),
 		agent.WithRegistrationInfo(r.Server, r.Token, r.IgnoreURLs),
 		agent.ForceRegister(r.Force))
@@ -174,8 +172,7 @@ func (r *RunCmd) Run(ctx *Context) error {
 	logger := logging.New(ctx.LogLevel, ctx.NoLogFile)
 	agentCtx = logging.ToContext(agentCtx, logger)
 
-	gohassagent, err := agent.NewAgent(agentCtx,
-		agent.WithID(ctx.AppID),
+	gohassagent, err := agent.NewAgent(agentCtx, ctx.AppID,
 		agent.Headless(ctx.Headless))
 	if err != nil {
 		return fmt.Errorf("failed to run: %w", err)
