@@ -326,3 +326,7 @@ func (agent *Agent) SaveMQTTPreferences(prefs *preferences.MQTT) error {
 
 	return nil
 }
+
+func (agent *Agent) GetRestAPIURL() string {
+	return agent.prefs.Hass.RestAPIURL
+}

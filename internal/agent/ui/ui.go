@@ -14,6 +14,7 @@ import (
 type Agent interface {
 	GetMQTTPreferences() *preferences.MQTT
 	SaveMQTTPreferences(prefs *preferences.MQTT) error
+	GetRestAPIURL() string
 	Stop()
 	Headless() bool
 }

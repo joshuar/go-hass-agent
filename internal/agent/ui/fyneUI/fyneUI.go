@@ -10,6 +10,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/url"
 	"strconv"
 	"strings"
@@ -35,6 +36,8 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/translations"
 )
 
+var validate *validator.Validate
+
 var (
 	//nolint:stylecheck
 	//lint:ignore ST1005 these are not standard error messages
@@ -50,6 +53,10 @@ var (
 type FyneUI struct {
 	app  fyne.App
 	text *translations.Translator
+}
+
+func init() {
+	validate = validator.New(validator.WithRequiredStructEnabled())
 }
 
 func (i *FyneUI) Run(ctx context.Context, agent ui.Agent, doneCh chan struct{}) {
@@ -106,7 +113,7 @@ func (i *FyneUI) DisplayTrayIcon(ctx context.Context, agent ui.Agent, trk ui.Sen
 		// About menu item.
 		menuItemAbout := fyne.NewMenuItem(i.Translate("About"),
 			func() {
-				i.aboutWindow(ctx).Show()
+				i.aboutWindow(ctx, agent).Show()
 			})
 		// Sensors menu item.
 		menuItemSensors := fyne.NewMenuItem(i.Translate("Sensors"),
@@ -175,20 +182,19 @@ func (i *FyneUI) DisplayRegistrationWindow(ctx context.Context, prefs *preferenc
 // about the agent, such as version numbers.
 //
 //nolint:exhaustruct,mnd
-func (i *FyneUI) aboutWindow(ctx context.Context) fyne.Window {
+func (i *FyneUI) aboutWindow(ctx context.Context, agent ui.Agent) fyne.Window {
 	var widgets []fyne.CanvasObject
 
 	icon := canvas.NewImageFromResource(&ui.TrayIcon{})
 	icon.FillMode = canvas.ImageFillOriginal
 
-	widgets = append(widgets,
-		icon,
+	widgets = append(widgets, icon,
 		widget.NewLabelWithStyle("Go Hass Agent "+preferences.AppVersion,
 			fyne.TextAlignCenter,
 			fyne.TextStyle{Bold: true}))
 
-	if config, err := getHAConfig(ctx); err != nil {
-		logging.FromContext(ctx).Error("Could not retrieve information.", "error", err.Error())
+	if config, err := hass.GetConfig(ctx, agent.GetRestAPIURL()); err != nil {
+		logging.FromContext(ctx).Error("Could not fetch Home Assistant config.", slog.Any("error", err))
 	} else {
 		widgets = append(widgets,
 			widget.NewLabelWithStyle("Home Assistant "+config.Details.Version,
@@ -542,10 +548,8 @@ func httpValidator() fyne.StringValidator {
 // uriValidator is a custom fyne validator that will validate a string is a
 // valid http/https URL.
 func uriValidator() fyne.StringValidator {
-	v := validator.New()
-
 	return func(text string) error {
-		if v.Var(text, "uri") != nil {
+		if validate.Var(text, "uri") != nil {
 			return ErrInvalidURI
 		}
 
@@ -591,13 +595,4 @@ func parseURL(u string) (*url.URL, error) {
 	}
 
 	return dest, nil
-}
-
-func getHAConfig(ctx context.Context) (*hass.Config, error) {
-	haCfg, err := hass.GetConfig(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("could not fetch Home Assistant config: %w", err)
-	}
-
-	return haCfg, nil
 }
