@@ -643,3 +643,395 @@ func (mock *RegistrationMock) UnitsCalls() []struct {
 	mock.lockUnits.RUnlock()
 	return calls
 }
+
+// Ensure, that DetailsMock does implement Details.
+// If this is not the case, regenerate this file with moq.
+var _ Details = &DetailsMock{}
+
+// DetailsMock is a mock implementation of Details.
+//
+//	func TestSomethingThatUsesDetails(t *testing.T) {
+//
+//		// make and configure a mocked Details
+//		mockedDetails := &DetailsMock{
+//			AttributesFunc: func() map[string]any {
+//				panic("mock out the Attributes method")
+//			},
+//			CategoryFunc: func() string {
+//				panic("mock out the Category method")
+//			},
+//			DeviceClassFunc: func() types.DeviceClass {
+//				panic("mock out the DeviceClass method")
+//			},
+//			IDFunc: func() string {
+//				panic("mock out the ID method")
+//			},
+//			IconFunc: func() string {
+//				panic("mock out the Icon method")
+//			},
+//			NameFunc: func() string {
+//				panic("mock out the Name method")
+//			},
+//			SensorTypeFunc: func() types.SensorClass {
+//				panic("mock out the SensorType method")
+//			},
+//			StateFunc: func() any {
+//				panic("mock out the State method")
+//			},
+//			StateClassFunc: func() types.StateClass {
+//				panic("mock out the StateClass method")
+//			},
+//			UnitsFunc: func() string {
+//				panic("mock out the Units method")
+//			},
+//		}
+//
+//		// use mockedDetails in code that requires Details
+//		// and then make assertions.
+//
+//	}
+type DetailsMock struct {
+	// AttributesFunc mocks the Attributes method.
+	AttributesFunc func() map[string]any
+
+	// CategoryFunc mocks the Category method.
+	CategoryFunc func() string
+
+	// DeviceClassFunc mocks the DeviceClass method.
+	DeviceClassFunc func() types.DeviceClass
+
+	// IDFunc mocks the ID method.
+	IDFunc func() string
+
+	// IconFunc mocks the Icon method.
+	IconFunc func() string
+
+	// NameFunc mocks the Name method.
+	NameFunc func() string
+
+	// SensorTypeFunc mocks the SensorType method.
+	SensorTypeFunc func() types.SensorClass
+
+	// StateFunc mocks the State method.
+	StateFunc func() any
+
+	// StateClassFunc mocks the StateClass method.
+	StateClassFunc func() types.StateClass
+
+	// UnitsFunc mocks the Units method.
+	UnitsFunc func() string
+
+	// calls tracks calls to the methods.
+	calls struct {
+		// Attributes holds details about calls to the Attributes method.
+		Attributes []struct {
+		}
+		// Category holds details about calls to the Category method.
+		Category []struct {
+		}
+		// DeviceClass holds details about calls to the DeviceClass method.
+		DeviceClass []struct {
+		}
+		// ID holds details about calls to the ID method.
+		ID []struct {
+		}
+		// Icon holds details about calls to the Icon method.
+		Icon []struct {
+		}
+		// Name holds details about calls to the Name method.
+		Name []struct {
+		}
+		// SensorType holds details about calls to the SensorType method.
+		SensorType []struct {
+		}
+		// State holds details about calls to the State method.
+		State []struct {
+		}
+		// StateClass holds details about calls to the StateClass method.
+		StateClass []struct {
+		}
+		// Units holds details about calls to the Units method.
+		Units []struct {
+		}
+	}
+	lockAttributes  sync.RWMutex
+	lockCategory    sync.RWMutex
+	lockDeviceClass sync.RWMutex
+	lockID          sync.RWMutex
+	lockIcon        sync.RWMutex
+	lockName        sync.RWMutex
+	lockSensorType  sync.RWMutex
+	lockState       sync.RWMutex
+	lockStateClass  sync.RWMutex
+	lockUnits       sync.RWMutex
+}
+
+// Attributes calls AttributesFunc.
+func (mock *DetailsMock) Attributes() map[string]any {
+	if mock.AttributesFunc == nil {
+		panic("DetailsMock.AttributesFunc: method is nil but Details.Attributes was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockAttributes.Lock()
+	mock.calls.Attributes = append(mock.calls.Attributes, callInfo)
+	mock.lockAttributes.Unlock()
+	return mock.AttributesFunc()
+}
+
+// AttributesCalls gets all the calls that were made to Attributes.
+// Check the length with:
+//
+//	len(mockedDetails.AttributesCalls())
+func (mock *DetailsMock) AttributesCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockAttributes.RLock()
+	calls = mock.calls.Attributes
+	mock.lockAttributes.RUnlock()
+	return calls
+}
+
+// Category calls CategoryFunc.
+func (mock *DetailsMock) Category() string {
+	if mock.CategoryFunc == nil {
+		panic("DetailsMock.CategoryFunc: method is nil but Details.Category was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockCategory.Lock()
+	mock.calls.Category = append(mock.calls.Category, callInfo)
+	mock.lockCategory.Unlock()
+	return mock.CategoryFunc()
+}
+
+// CategoryCalls gets all the calls that were made to Category.
+// Check the length with:
+//
+//	len(mockedDetails.CategoryCalls())
+func (mock *DetailsMock) CategoryCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockCategory.RLock()
+	calls = mock.calls.Category
+	mock.lockCategory.RUnlock()
+	return calls
+}
+
+// DeviceClass calls DeviceClassFunc.
+func (mock *DetailsMock) DeviceClass() types.DeviceClass {
+	if mock.DeviceClassFunc == nil {
+		panic("DetailsMock.DeviceClassFunc: method is nil but Details.DeviceClass was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockDeviceClass.Lock()
+	mock.calls.DeviceClass = append(mock.calls.DeviceClass, callInfo)
+	mock.lockDeviceClass.Unlock()
+	return mock.DeviceClassFunc()
+}
+
+// DeviceClassCalls gets all the calls that were made to DeviceClass.
+// Check the length with:
+//
+//	len(mockedDetails.DeviceClassCalls())
+func (mock *DetailsMock) DeviceClassCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockDeviceClass.RLock()
+	calls = mock.calls.DeviceClass
+	mock.lockDeviceClass.RUnlock()
+	return calls
+}
+
+// ID calls IDFunc.
+func (mock *DetailsMock) ID() string {
+	if mock.IDFunc == nil {
+		panic("DetailsMock.IDFunc: method is nil but Details.ID was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockID.Lock()
+	mock.calls.ID = append(mock.calls.ID, callInfo)
+	mock.lockID.Unlock()
+	return mock.IDFunc()
+}
+
+// IDCalls gets all the calls that were made to ID.
+// Check the length with:
+//
+//	len(mockedDetails.IDCalls())
+func (mock *DetailsMock) IDCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockID.RLock()
+	calls = mock.calls.ID
+	mock.lockID.RUnlock()
+	return calls
+}
+
+// Icon calls IconFunc.
+func (mock *DetailsMock) Icon() string {
+	if mock.IconFunc == nil {
+		panic("DetailsMock.IconFunc: method is nil but Details.Icon was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockIcon.Lock()
+	mock.calls.Icon = append(mock.calls.Icon, callInfo)
+	mock.lockIcon.Unlock()
+	return mock.IconFunc()
+}
+
+// IconCalls gets all the calls that were made to Icon.
+// Check the length with:
+//
+//	len(mockedDetails.IconCalls())
+func (mock *DetailsMock) IconCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockIcon.RLock()
+	calls = mock.calls.Icon
+	mock.lockIcon.RUnlock()
+	return calls
+}
+
+// Name calls NameFunc.
+func (mock *DetailsMock) Name() string {
+	if mock.NameFunc == nil {
+		panic("DetailsMock.NameFunc: method is nil but Details.Name was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockName.Lock()
+	mock.calls.Name = append(mock.calls.Name, callInfo)
+	mock.lockName.Unlock()
+	return mock.NameFunc()
+}
+
+// NameCalls gets all the calls that were made to Name.
+// Check the length with:
+//
+//	len(mockedDetails.NameCalls())
+func (mock *DetailsMock) NameCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockName.RLock()
+	calls = mock.calls.Name
+	mock.lockName.RUnlock()
+	return calls
+}
+
+// SensorType calls SensorTypeFunc.
+func (mock *DetailsMock) SensorType() types.SensorClass {
+	if mock.SensorTypeFunc == nil {
+		panic("DetailsMock.SensorTypeFunc: method is nil but Details.SensorType was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockSensorType.Lock()
+	mock.calls.SensorType = append(mock.calls.SensorType, callInfo)
+	mock.lockSensorType.Unlock()
+	return mock.SensorTypeFunc()
+}
+
+// SensorTypeCalls gets all the calls that were made to SensorType.
+// Check the length with:
+//
+//	len(mockedDetails.SensorTypeCalls())
+func (mock *DetailsMock) SensorTypeCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockSensorType.RLock()
+	calls = mock.calls.SensorType
+	mock.lockSensorType.RUnlock()
+	return calls
+}
+
+// State calls StateFunc.
+func (mock *DetailsMock) State() any {
+	if mock.StateFunc == nil {
+		panic("DetailsMock.StateFunc: method is nil but Details.State was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockState.Lock()
+	mock.calls.State = append(mock.calls.State, callInfo)
+	mock.lockState.Unlock()
+	return mock.StateFunc()
+}
+
+// StateCalls gets all the calls that were made to State.
+// Check the length with:
+//
+//	len(mockedDetails.StateCalls())
+func (mock *DetailsMock) StateCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockState.RLock()
+	calls = mock.calls.State
+	mock.lockState.RUnlock()
+	return calls
+}
+
+// StateClass calls StateClassFunc.
+func (mock *DetailsMock) StateClass() types.StateClass {
+	if mock.StateClassFunc == nil {
+		panic("DetailsMock.StateClassFunc: method is nil but Details.StateClass was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockStateClass.Lock()
+	mock.calls.StateClass = append(mock.calls.StateClass, callInfo)
+	mock.lockStateClass.Unlock()
+	return mock.StateClassFunc()
+}
+
+// StateClassCalls gets all the calls that were made to StateClass.
+// Check the length with:
+//
+//	len(mockedDetails.StateClassCalls())
+func (mock *DetailsMock) StateClassCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockStateClass.RLock()
+	calls = mock.calls.StateClass
+	mock.lockStateClass.RUnlock()
+	return calls
+}
+
+// Units calls UnitsFunc.
+func (mock *DetailsMock) Units() string {
+	if mock.UnitsFunc == nil {
+		panic("DetailsMock.UnitsFunc: method is nil but Details.Units was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockUnits.Lock()
+	mock.calls.Units = append(mock.calls.Units, callInfo)
+	mock.lockUnits.Unlock()
+	return mock.UnitsFunc()
+}
+
+// UnitsCalls gets all the calls that were made to Units.
+// Check the length with:
+//
+//	len(mockedDetails.UnitsCalls())
+func (mock *DetailsMock) UnitsCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockUnits.RLock()
+	calls = mock.calls.Units
+	mock.lockUnits.RUnlock()
+	return calls
+}
