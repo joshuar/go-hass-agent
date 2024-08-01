@@ -4,7 +4,6 @@
 // https://opensource.org/licenses/MIT
 
 // revive:disable:unused-receiver
-
 package device
 
 import (

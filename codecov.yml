@@ -6,3 +6,4 @@ ignore:
   - "*Strings.go" # generated with stringer
   - "**/testing" # test files
   - "internal/translations/catalog.go" # generated with gotext
+  - internal/device/device.go # const/utility code
