@@ -3,11 +3,12 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//nolint:exhaustruct,paralleltest
+//nolint:exhaustruct,paralleltest,wsl
 package hass
 
 import (
 	"encoding/json"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -22,6 +23,7 @@ func TestConfig_IsEntityDisabled(t *testing.T) {
 			"enabledEntity": {
 				"disabled": false,
 			},
+			"invalidEntity": {},
 		},
 	}
 
@@ -41,20 +43,32 @@ func TestConfig_IsEntityDisabled(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name:    "is disabled",
+			name:    "disabled",
 			args:    args{entity: "disabledEntity"},
 			fields:  fields{Details: testConfig},
 			want:    true,
 			wantErr: false,
 		},
 		{
-			name:    "is enabled",
+			name:    "enabled",
 			args:    args{entity: "enabledEntity"},
 			fields:  fields{Details: testConfig},
 			want:    false,
 			wantErr: false,
 		},
-		// ?: test for error.
+		{
+			name:    "invalid config",
+			args:    args{entity: "enabledEntity"},
+			want:    false,
+			wantErr: true,
+		},
+		{
+			name:    "invalid entity",
+			args:    args{entity: "invalidEntity"},
+			fields:  fields{Details: testConfig},
+			want:    false,
+			wantErr: false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -118,6 +132,50 @@ func TestConfig_UnmarshalJSON(t *testing.T) {
 
 			if err := c.UnmarshalJSON(tt.args.b); (err != nil) != tt.wantErr {
 				t.Errorf("Config.UnmarshalJSON() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestConfig_UnmarshalError(t *testing.T) {
+	validErr, err := json.Marshal(&APIError{Code: 404, Message: "not found"})
+	require.NoError(t, err)
+	invalidError := []byte(`invalid`)
+
+	type fields struct {
+		Details  *ConfigEntries
+		APIError *APIError
+		mu       sync.Mutex
+	}
+	type args struct {
+		data []byte
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		{
+			name:   "valid error details",
+			fields: fields{APIError: &APIError{}},
+			args:   args{data: validErr},
+		},
+		{
+			name:    "invalid error details",
+			args:    args{data: invalidError},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &Config{
+				Details:  tt.fields.Details,
+				APIError: tt.fields.APIError,
+				mu:       tt.fields.mu,
+			}
+			if err := c.UnmarshalError(tt.args.data); (err != nil) != tt.wantErr {
+				t.Errorf("Config.UnmarshalError() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
