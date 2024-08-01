@@ -7,3 +7,5 @@ ignore:
   - "**/testing" # test files
   - "internal/translations/catalog.go" # generated with gotext
   - internal/device/device.go # const/utility code
+  - build/magefiles/* # ignore build system
+  - tools/tools.go # ignore tools hack
