@@ -14,7 +14,7 @@ import (
 	"github.com/adrg/xdg"
 )
 
-//go:generate stringer -type=state -output metadataStates.go -linecomment
+//go:generate stringer -type=state -output state_generated.go -linecomment
 const (
 	disabledState   state = iota + 1 // disabled
 	registeredState                  // registered
