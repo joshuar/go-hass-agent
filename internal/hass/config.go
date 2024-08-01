@@ -10,8 +10,14 @@ package hass
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sync"
+)
+
+var (
+	ErrInvalidEntityConfig = errors.New("entity has invalid config")
+	ErrInvalidConfig       = errors.New("invalid config")
 )
 
 type Config struct {
@@ -42,6 +48,10 @@ type units struct {
 }
 
 func (c *Config) IsEntityDisabled(entity string) (bool, error) {
+	if c.Details == nil {
+		return false, ErrInvalidConfig
+	}
+
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
