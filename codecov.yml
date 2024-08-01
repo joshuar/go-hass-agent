@@ -1,7 +1,8 @@
 ignore:
-  - "mock*.go" # generated with moq
-  - "*_generated.go" # generated with stringer 
+  - "internal/agent/ui/*.go" # const/interface/utility code
+  - "*_generated.go" # generated with stringer
   - "*_test.go" # tests
   - "internal/hass/sensor/types" # all generated
   - "*Strings.go" # generated with stringer
   - "**/testing" # test files
+  - "internal/translations/catalog.go" # generated with gotext
