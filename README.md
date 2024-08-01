@@ -105,6 +105,7 @@
   - [_I've updated the agent and now I've got a bunch of duplicate/removed/disabled sensors?_](#ive-updated-the-agent-and-now-ive-got-a-bunch-of-duplicateremoveddisabled-sensors)
   - [_Can I reset the agent (start from new)?_](#can-i-reset-the-agent-start-from-new)
   - [_I want to run the agent on a server, as a service, without a GUI. Can I do this?_](#i-want-to-run-the-agent-on-a-server-as-a-service-without-a-gui-can-i-do-this)
+  - [_Does the agent as root or with privileges?_](#does-the-agent-as-root-or-with-privileges)
 - [🤝 Acknowledgements](#-acknowledgements)
 - [🧑‍⚖️ License](#️-license)
 
@@ -977,6 +978,15 @@ go-hass-agent && systemctl --user start go-hass-agent`.
 should start with every boot.
 - For other init systems, consult their documentation on how to enable and run
 user services.
+
+### _Does the agent as root or with privileges?_
+
+No. None of the built-in sensors (or commands if MQTT is enabled) require any
+privileges. The agent will refuse to run if it is started with privileges. For
+custom scripts or commands that need privileges, there are most likely ways for
+the script/command to elevate to the privileges it needs as part of its
+execution, rather than having the agent run with privileges and the
+script/command inherit those.
 
 [⬆️ Back to Top](#-table-of-contents)
 
