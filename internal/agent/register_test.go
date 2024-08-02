@@ -50,7 +50,7 @@ func mockServer(t *testing.T) *httptest.Server {
 }
 
 func TestAgent_saveRegistration(t *testing.T) {
-	validPrefs := preferences.DefaultPreferences(t.TempDir())
+	validPrefs := preferences.DefaultPreferences(filepath.Join(t.TempDir(), "preferences.toml"))
 
 	type fields struct {
 		ui            UI
