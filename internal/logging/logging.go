@@ -10,9 +10,7 @@ import (
 	"log/slog"
 	_ "net/http/pprof" // #nosec G108
 	"os"
-	"path/filepath"
 
-	"github.com/adrg/xdg"
 	"github.com/lmittmann/tint"
 	slogmulti "github.com/samber/slog-multi"
 )
@@ -28,11 +26,9 @@ var LevelNames = map[slog.Leveler]string{
 	LevelFatal: "FATAL",
 }
 
-var DefaultLogFile = filepath.Join(xdg.ConfigHome, "go-hass-agent.log")
-
 //nolint:exhaustruct
 //revive:disable:flag-parameter
-func New(level string, noLogFile bool) *slog.Logger {
+func New(level string, logFile string) *slog.Logger {
 	// Create an slog consoleOpts object.
 	consoleOpts := &tint.Options{
 		ReplaceAttr: levelReplacer,
@@ -47,29 +43,31 @@ func New(level string, noLogFile bool) *slog.Logger {
 	case "trace":
 		consoleOpts.Level = LevelTrace
 		consoleOpts.AddSource = true
+		fileOpts.Level = LevelTrace
+		fileOpts.AddSource = true
 	case "debug":
 		consoleOpts.Level = slog.LevelDebug
+		fileOpts.Level = slog.LevelDebug
 	default:
 		consoleOpts.Level = slog.LevelInfo
+		fileOpts.Level = slog.LevelInfo
 	}
 
-	var logFile string
-	if !noLogFile {
-		logFile = DefaultLogFile
-	}
 	// Set the slog handler
-	logHandler := slogmulti.Fanout(
-		tint.NewHandler(os.Stdout, consoleOpts),
-	)
+	var logHandler slog.Handler
 	// Unless no log file was requested, set up file logging.
-	if logFile != "" {
-		logFile, err := openLogFile(logFile)
+	if logFile == "" {
+		logHandler = slogmulti.Fanout(
+			tint.NewHandler(os.Stdout, consoleOpts),
+		)
+	} else {
+		logFH, err := openLogFile(logFile)
 		if err != nil {
 			slog.Warn("unable to open log file", "file", logFile, "error", err)
 		} else {
 			logHandler = slogmulti.Fanout(
 				tint.NewHandler(os.Stdout, consoleOpts),
-				tint.NewHandler(logFile, fileOpts),
+				tint.NewHandler(logFH, fileOpts),
 			)
 		}
 	}
@@ -110,8 +108,13 @@ func openLogFile(logFile string) (*os.File, error) {
 }
 
 // Reset will remove the log file.
-func Reset() error {
-	err := os.Remove(DefaultLogFile)
+func Reset(file string) error {
+	_, err := os.Stat(file)
+	if os.IsNotExist(err) {
+		return nil
+	}
+
+	err = os.Remove(file)
 	if err != nil {
 		return fmt.Errorf("could not remove log file: %w", err)
 	}
