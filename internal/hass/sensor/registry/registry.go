@@ -9,9 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
-
-	"github.com/adrg/xdg"
 )
 
 //go:generate stringer -type=state -output state_generated.go -linecomment
@@ -21,8 +18,6 @@ const (
 )
 
 type state int
-
-var registryPath = filepath.Join(xdg.ConfigHome, "sensorRegistry")
 
 var (
 	ErrNotFound        = errors.New("sensor not found")
@@ -34,16 +29,13 @@ type metadata struct {
 	Disabled   bool `json:"disabled"`
 }
 
-func SetPath(path string) {
-	registryPath = path
-}
+func Reset(path string) error {
+	_, err := os.Stat(path)
+	if os.IsNotExist(err) {
+		return fmt.Errorf("registry not found: %w", err)
+	}
 
-func GetPath() string {
-	return registryPath
-}
-
-func Reset() error {
-	err := os.RemoveAll(registryPath)
+	err = os.RemoveAll(path)
 	if err != nil {
 		return fmt.Errorf("failed to remove registry: %w", err)
 	}

@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"reflect"
 	"testing"
 
@@ -65,7 +66,7 @@ var setupTestServer = func(t *testing.T, response Response) *httptest.Server {
 }
 
 func TestRegisterDevice(t *testing.T) {
-	testDevice := preferences.DefaultPreferences().Device
+	testDevice := preferences.DefaultPreferences(filepath.Join(t.TempDir(), "preferences.toml")).Device
 
 	registrationSuccess := &registrationResponse{
 		Details: &preferences.Hass{

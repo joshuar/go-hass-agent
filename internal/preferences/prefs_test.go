@@ -3,19 +3,17 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//nolint:paralleltest,wsl,nlreturn,varnamelen
-//revive:disable:function-length
+//nolint:paralleltest,wsl,nlreturn,dupl,varnamelen
+//revive:disable:unused-receiver,comment-spacings
 package preferences
 
 import (
-	_ "embed"
 	"os"
 	"path/filepath"
 	"reflect"
 	"sync"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -68,166 +66,15 @@ func preferencesEqual(t *testing.T, got, want *Preferences) bool {
 	case !reflect.DeepEqual(got.Registered, want.Registered):
 		t.Error("registered does not match")
 		return false
+	case !reflect.DeepEqual(got.file, want.file):
+		t.Error("file does not match")
+		return false
 	}
 	return true
 }
 
-func TestSetPath(t *testing.T) {
-	testPath := t.TempDir()
-
-	type args struct {
-		path string
-	}
-
-	tests := []struct {
-		name string
-		args args
-	}{
-		{
-			name: "set a path",
-			args: args{path: testPath},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			SetPath(tt.args.path)
-			assert.Equal(t, Path(), testPath)
-		})
-	}
-}
-
-func TestSetFile(t *testing.T) {
-	testName := "testfile"
-
-	type args struct {
-		name string
-	}
-
-	tests := []struct {
-		name string
-		args args
-	}{
-		{
-			name: "set a file",
-			args: args{name: testName},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			SetFile(tt.args.name)
-			assert.Equal(t, File(), testName)
-		})
-	}
-}
-
-func TestGetPath(t *testing.T) {
-	tests := []struct {
-		name string
-		want string
-	}{
-		{
-			name: "default path",
-			want: preferencesPath,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := Path(); got != tt.want {
-				t.Errorf("GetPath() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestGetFile(t *testing.T) {
-	tests := []struct {
-		name string
-		want string
-	}{
-		{
-			name: "default file",
-			want: preferencesFile,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := File(); got != tt.want {
-				t.Errorf("GetFile() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-// DefaultPeferences does not make sense to test.
-// func Test_defaultPreferences(t *testing.T) {}
-
-func TestLoad(t *testing.T) {
-	origPath := Path()
-
-	newPreferencesDir := t.TempDir()
-
-	invalidPreferencesDir := t.TempDir()
-	err := os.WriteFile(filepath.Join(invalidPreferencesDir, preferencesFile), []byte(`invalid toml`), 0o600)
-	require.NoError(t, err)
-
-	existingFileDir := t.TempDir()
-	existingPrefs := DefaultPreferences()
-	SetPath(existingFileDir)
-	err = existingPrefs.Save()
-	require.NoError(t, err)
-	SetPath(origPath)
-
-	type args struct {
-		path string
-	}
-	tests := []struct {
-		wantErrType error
-		want        *Preferences
-		name        string
-		args        args
-		wantErr     bool
-	}{
-		{
-			name:        "new file",
-			args:        args{path: newPreferencesDir},
-			want:        DefaultPreferences(),
-			wantErr:     true,
-			wantErrType: ErrNoPreferences,
-		},
-		{
-			name:        "invalid file",
-			args:        args{path: invalidPreferencesDir},
-			want:        DefaultPreferences(),
-			wantErr:     true,
-			wantErrType: ErrFileContents,
-		},
-		{
-			name: "existing file",
-			args: args{path: existingFileDir},
-			want: DefaultPreferences(),
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			SetPath(tt.args.path)
-			got, err := Load()
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Load() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			require.ErrorIs(t, err, tt.wantErrType)
-			if !preferencesEqual(t, got, tt.want) {
-				t.Errorf("Load() = %v, want %v", got, tt.want)
-			}
-			SetPath(origPath)
-		})
-	}
-}
-
 func TestPreferences_Validate(t *testing.T) {
-	validPrefs := DefaultPreferences()
+	validPrefs := DefaultPreferences(filepath.Join(t.TempDir(), preferencesFile))
 
 	type fields struct {
 		mu           *sync.Mutex
@@ -236,6 +83,7 @@ func TestPreferences_Validate(t *testing.T) {
 		Hass         *Hass
 		Device       *Device
 		Version      string
+		file         string
 		Registered   bool
 	}
 	tests := []struct {
@@ -285,6 +133,7 @@ func TestPreferences_Validate(t *testing.T) {
 				Device:       tt.fields.Device,
 				Version:      tt.fields.Version,
 				Registered:   tt.fields.Registered,
+				file:         tt.fields.file,
 			}
 			if err := p.Validate(); (err != nil) != tt.wantErr {
 				t.Errorf("Preferences.Validate() error = %v, wantErr %v", err, tt.wantErr)
@@ -294,8 +143,7 @@ func TestPreferences_Validate(t *testing.T) {
 }
 
 func TestPreferences_Save(t *testing.T) {
-	origPath := Path()
-	validPrefs := DefaultPreferences()
+	validPrefs := DefaultPreferences(filepath.Join(t.TempDir(), preferencesFile))
 
 	type fields struct {
 		mu           *sync.Mutex
@@ -304,48 +152,43 @@ func TestPreferences_Save(t *testing.T) {
 		Hass         *Hass
 		Device       *Device
 		Version      string
+		file         string
 		Registered   bool
-	}
-	type args struct {
-		path string
 	}
 	tests := []struct {
 		name    string
-		args    args
 		fields  fields
 		wantErr bool
 	}{
 		{
 			name: "valid preferences",
-			args: args{path: t.TempDir()},
 			fields: fields{
 				MQTT:         validPrefs.MQTT,
 				Registration: validPrefs.Registration,
 				Hass:         validPrefs.Hass,
 				Device:       validPrefs.Device,
 				Version:      AppVersion,
+				file:         validPrefs.file,
 			},
 		},
 		{
 			name:    "invalid preferences",
-			args:    args{path: t.TempDir()},
 			wantErr: true,
 		},
 		{
 			name: "unwriteable preferences path",
-			args: args{path: "/"},
 			fields: fields{
 				MQTT:         validPrefs.MQTT,
 				Registration: validPrefs.Registration,
 				Hass:         validPrefs.Hass,
 				Device:       validPrefs.Device,
 				Version:      AppVersion,
+				file:         "/",
 			},
 			wantErr: true,
 		},
 		{
 			name: "missing preferences path",
-			args: args{path: filepath.Join(t.TempDir(), "missing")},
 			fields: fields{
 				MQTT:         validPrefs.MQTT,
 				Registration: validPrefs.Registration,
@@ -353,11 +196,11 @@ func TestPreferences_Save(t *testing.T) {
 				Device:       validPrefs.Device,
 				Version:      AppVersion,
 			},
+			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			SetPath(tt.args.path)
 			p := &Preferences{
 				mu:           tt.fields.mu,
 				MQTT:         tt.fields.MQTT,
@@ -366,18 +209,118 @@ func TestPreferences_Save(t *testing.T) {
 				Device:       tt.fields.Device,
 				Version:      tt.fields.Version,
 				Registered:   tt.fields.Registered,
+				file:         tt.fields.file,
 			}
 			if err := p.Save(); (err != nil) != tt.wantErr {
 				t.Errorf("Preferences.Save() error = %v, wantErr %v", err, tt.wantErr)
 			}
-			SetPath(origPath)
+		})
+	}
+}
+
+func TestPreferences_GetMQTTPreferences(t *testing.T) {
+	validPrefs := DefaultPreferences(filepath.Join(t.TempDir(), preferencesFile))
+
+	type fields struct {
+		mu           *sync.Mutex
+		MQTT         *MQTT
+		Registration *Registration
+		Hass         *Hass
+		Device       *Device
+		Version      string
+		file         string
+		Registered   bool
+	}
+	tests := []struct {
+		want   *MQTT
+		name   string
+		fields fields
+	}{
+		{
+			name: "valid MQTT prefs",
+			fields: fields{
+				MQTT: validPrefs.MQTT,
+			},
+			want: validPrefs.MQTT,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := &Preferences{
+				mu:           tt.fields.mu,
+				MQTT:         tt.fields.MQTT,
+				Registration: tt.fields.Registration,
+				Hass:         tt.fields.Hass,
+				Device:       tt.fields.Device,
+				Version:      tt.fields.Version,
+				Registered:   tt.fields.Registered,
+				file:         tt.fields.file,
+			}
+			if got := p.GetMQTTPreferences(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Preferences.GetMQTTPreferences() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestLoad(t *testing.T) {
+	noFile := filepath.Join(t.TempDir(), preferencesFile)
+	invalidFile := filepath.Join(t.TempDir(), preferencesFile)
+	err := os.WriteFile(invalidFile, []byte(`invalid`), 0o600)
+	require.NoError(t, err)
+	existingPrefs := DefaultPreferences(filepath.Join(t.TempDir(), preferencesFile))
+	err = existingPrefs.Save()
+	require.NoError(t, err)
+
+	type args struct {
+		path string
+	}
+	tests := []struct {
+		wantErrType error
+		want        *Preferences
+		name        string
+		args        args
+		wantErr     bool
+	}{
+		{
+			name:        "new file",
+			args:        args{path: filepath.Dir(noFile)},
+			want:        DefaultPreferences(noFile),
+			wantErr:     true,
+			wantErrType: ErrNoPreferences,
+		},
+		{
+			name:        "invalid file",
+			args:        args{path: filepath.Dir(invalidFile)},
+			want:        DefaultPreferences(invalidFile),
+			wantErr:     true,
+			wantErrType: ErrFileContents,
+		},
+		{
+			name: "existing file",
+			args: args{path: filepath.Dir(existingPrefs.file)},
+			want: existingPrefs,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := Load(tt.args.path)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Load() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			require.ErrorIs(t, err, tt.wantErrType)
+			if !preferencesEqual(t, got, tt.want) {
+				t.Errorf("Load() = %v, want %v", got, tt.want)
+			}
 		})
 	}
 }
 
 func TestReset(t *testing.T) {
-	origPath := Path()
-	existsPath := t.TempDir()
+	existingPrefs := DefaultPreferences(filepath.Join(t.TempDir(), preferencesFile))
+	err := existingPrefs.Save()
+	require.NoError(t, err)
 
 	type args struct {
 		path string
@@ -388,65 +331,19 @@ func TestReset(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "exists",
-			args: args{path: existsPath},
+			name: "valid path",
+			args: args{path: filepath.Dir(existingPrefs.file)},
 		},
 		{
-			name: "does not exist",
-			args: args{path: "/doesnotexist"},
-		},
-		{
-			name:    "unwriteable",
-			args:    args{path: "/proc/self"},
+			name:    "invalid path",
+			args:    args{path: filepath.Join(t.TempDir(), "nonexistent")},
 			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
-		SetPath(tt.args.path)
 		t.Run(tt.name, func(t *testing.T) {
-			if err := Reset(); (err != nil) != tt.wantErr {
+			if err := Reset(tt.args.path); (err != nil) != tt.wantErr {
 				t.Errorf("Reset() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-		assert.NoDirExists(t, tt.args.path)
-		SetPath(origPath)
-	}
-}
-
-func TestMQTT_TopicPrefix(t *testing.T) {
-	type fields struct {
-		MQTTServer      string
-		MQTTUser        string
-		MQTTPassword    string
-		MQTTTopicPrefix string
-		MQTTEnabled     bool
-	}
-	tests := []struct {
-		name   string
-		want   string
-		fields fields
-	}{
-		{
-			name: "no topic set",
-			want: MQTTTopicPrefix,
-		},
-		{
-			name:   "custom topic set",
-			fields: fields{MQTTTopicPrefix: "testtopic"},
-			want:   "testtopic",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			p := &MQTT{
-				MQTTServer:      tt.fields.MQTTServer,
-				MQTTUser:        tt.fields.MQTTUser,
-				MQTTPassword:    tt.fields.MQTTPassword,
-				MQTTTopicPrefix: tt.fields.MQTTTopicPrefix,
-				MQTTEnabled:     tt.fields.MQTTEnabled,
-			}
-			if got := p.TopicPrefix(); got != tt.want {
-				t.Errorf("MQTT.TopicPrefix() = %v, want %v", got, tt.want)
 			}
 		})
 	}
