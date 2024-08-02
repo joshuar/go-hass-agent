@@ -84,14 +84,8 @@ func newDefaultAgent(ctx context.Context, id string) *Agent {
 func NewAgent(ctx context.Context, id string, options ...Option) (*Agent, error) {
 	agent := newDefaultAgent(ctx, id)
 
-	// If we are using a custom agent ID, adjust the path to the preferences
-	// file.
-	if agent.id != preferences.AppID {
-		preferences.SetPath(filepath.Join(xdg.ConfigHome, agent.id))
-	}
-
 	// Load the agent preferences.
-	prefs, err := preferences.Load()
+	prefs, err := preferences.Load(agent.GetPreferencesPath())
 	if err != nil && !errors.Is(err, preferences.ErrNoPreferences) {
 		return nil, fmt.Errorf("could not create agent: %w", err)
 	}
@@ -325,4 +319,12 @@ func (agent *Agent) SaveMQTTPreferences(prefs *preferences.MQTT) error {
 
 func (agent *Agent) GetRestAPIURL() string {
 	return agent.prefs.Hass.RestAPIURL
+}
+
+func (agent *Agent) GetRegistryPath() string {
+	return filepath.Join(xdg.ConfigHome, agent.id, "sensorRegistry")
+}
+
+func (agent *Agent) GetPreferencesPath() string {
+	return filepath.Join(xdg.ConfigHome, agent.id)
 }

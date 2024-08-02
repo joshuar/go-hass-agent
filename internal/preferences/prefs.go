@@ -15,7 +15,6 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/adrg/xdg"
 	mqtthass "github.com/joshuar/go-hass-anything/v11/pkg/hass"
 	"github.com/pelletier/go-toml/v2"
 )
@@ -29,6 +28,8 @@ const (
 	AppID             = "com.github.joshuar.go-hass-agent"
 	MQTTTopicPrefix   = "homeassistant"
 	LogFile           = "go-hass-agent.log"
+	preferencesFile   = "preferences.toml"
+	defaultFilePerms  = 0o600
 )
 
 var (
@@ -38,9 +39,6 @@ var (
 )
 
 var (
-	preferencesPath = filepath.Join(xdg.ConfigHome, AppID)
-	preferencesFile = "preferences.toml"
-
 	ErrNoPreferences = errors.New("no preferences file found, using defaults")
 	ErrFileContents  = errors.New("could not read file contents")
 )
@@ -53,7 +51,8 @@ type Preferences struct {
 	Hass         *Hass         `toml:"hass"`
 	Device       *Device       `toml:"device"`
 	Version      string        `toml:"version" validate:"required"`
-	Registered   bool          `toml:"registered" validate:"boolean"`
+	file         string
+	Registered   bool `toml:"registered" validate:"boolean"`
 }
 
 type MQTT struct {
@@ -62,30 +61,6 @@ type MQTT struct {
 	MQTTPassword    string `toml:"password,omitempty" validate:"omitempty"`
 	MQTTTopicPrefix string `toml:"topic_prefix,omitempty" validate:"omitempty,ascii"`
 	MQTTEnabled     bool   `toml:"enabled" validate:"boolean"`
-}
-
-// SetPath sets the path to the preferences file to the given path. If this
-// function is not called, a default path is used.
-func SetPath(path string) {
-	preferencesPath = path
-}
-
-// SetFile sets the filename of the preferences file to the given name. If this
-// function is not called, a default filename is used.
-func SetFile(name string) {
-	preferencesFile = name
-}
-
-// Path returns the current path to the preferences file. Use GetFile to
-// retrieve the filename.
-func Path() string {
-	return preferencesPath
-}
-
-// File returns the filename of the preferences file. Use GetPath to retrieve
-// its path.
-func File() string {
-	return preferencesFile
 }
 
 func (p *Preferences) Validate() error {
@@ -101,17 +76,25 @@ func (p *Preferences) Validate() error {
 // preferences file. NOTE: if the preferences file does not exist, Save will
 // return an error. Use New if saving preferences for the first time.
 func (p *Preferences) Save() error {
-	if err := checkPath(preferencesPath); err != nil {
-		return err
-	}
-
 	if err := p.Validate(); err != nil {
 		return err
 	}
 
-	file := filepath.Join(preferencesPath, preferencesFile)
+	if err := checkPath(filepath.Dir(p.file)); err != nil {
+		return err
+	}
 
-	return write(p, file)
+	b, err := toml.Marshal(p)
+	if err != nil {
+		return fmt.Errorf("unable to format preferences: %w", err)
+	}
+
+	err = os.WriteFile(p.file, b, defaultFilePerms)
+	if err != nil {
+		return fmt.Errorf("unable to write preferences file: %w", err)
+	}
+
+	return nil
 }
 
 // GetMQTTPreferences returns the subset of MQTT preferences.
@@ -121,11 +104,11 @@ func (p *Preferences) GetMQTTPreferences() *MQTT {
 
 // Load will retrieve the current preferences from the preference file on disk.
 // If there is a problem during retrieval, an error will be returned.
-func Load() (*Preferences, error) {
-	file := filepath.Join(preferencesPath, preferencesFile)
-	prefs := DefaultPreferences()
+func Load(path string) (*Preferences, error) {
+	file := filepath.Join(path, preferencesFile)
+	prefs := DefaultPreferences(file)
 
-	b, err := os.ReadFile(file)
+	b, err := os.ReadFile(prefs.file)
 	if err != nil {
 		return prefs, errors.Join(ErrNoPreferences, err)
 	}
@@ -139,8 +122,15 @@ func Load() (*Preferences, error) {
 }
 
 // Reset will remove the preferences directory.
-func Reset() error {
-	err := os.RemoveAll(preferencesPath)
+func Reset(path string) error {
+	file := filepath.Join(path, preferencesFile)
+
+	_, err := os.Stat(file)
+	if os.IsNotExist(err) {
+		return fmt.Errorf("preferences not found: %w", err)
+	}
+
+	err = os.Remove(file)
 	if err != nil {
 		return fmt.Errorf("unable to reset preferences: %w", err)
 	}
@@ -151,7 +141,7 @@ func Reset() error {
 // DefaultPreferences returns a Preferences object which contains default
 // values. While the default values will be valid values, they might not be
 // usable/relevant values.
-func DefaultPreferences() *Preferences {
+func DefaultPreferences(file string) *Preferences {
 	if AppVersion == "" {
 		AppVersion = "Unknown"
 	}
@@ -177,6 +167,7 @@ func DefaultPreferences() *Preferences {
 		MQTT:   &MQTT{MQTTEnabled: false},
 		Device: device,
 		mu:     &sync.Mutex{},
+		file:   file,
 	}
 }
 
@@ -219,21 +210,6 @@ func MQTTOrigin() *mqtthass.Origin {
 		Version: AppVersion,
 		URL:     AppURL,
 	}
-}
-
-//nolint:mnd
-func write(prefs *Preferences, file string) error {
-	b, err := toml.Marshal(prefs)
-	if err != nil {
-		return fmt.Errorf("unable to format preferences: %w", err)
-	}
-
-	err = os.WriteFile(file, b, 0o600)
-	if err != nil {
-		return fmt.Errorf("unable to write preferences file: %w", err)
-	}
-
-	return nil
 }
 
 func checkPath(path string) error {

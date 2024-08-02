@@ -12,10 +12,8 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"path/filepath"
 	"syscall"
 
-	"github.com/adrg/xdg"
 	"github.com/alecthomas/kong"
 
 	"github.com/joshuar/go-hass-agent/internal/agent"
@@ -69,18 +67,16 @@ func (r *ResetCmd) Run(ctx *Context) error {
 		errs = errors.Join(errs, fmt.Errorf("failed to run reset command: %w", err))
 	}
 
-	registry.SetPath(filepath.Join(xdg.ConfigHome, ctx.AppID, "sensorRegistry"))
-	preferences.SetPath(filepath.Join(xdg.ConfigHome, ctx.AppID))
 	// Reset agent.
 	if err := gohassagent.Reset(agentCtx); err != nil {
 		errs = errors.Join(fmt.Errorf("agent reset failed: %w", err))
 	}
 	// Reset registry.
-	if err := registry.Reset(); err != nil {
+	if err := registry.Reset(gohassagent.GetRegistryPath()); err != nil {
 		errs = errors.Join(fmt.Errorf("registry reset failed: %w", err))
 	}
 	// Reset preferences.
-	if err := preferences.Reset(); err != nil {
+	if err := preferences.Reset(gohassagent.GetPreferencesPath()); err != nil {
 		errs = errors.Join(fmt.Errorf("preferences reset failed: %w", err))
 	}
 	// Reset the log.
@@ -140,9 +136,6 @@ func (r *RegisterCmd) Run(ctx *Context) error {
 
 	var trk *sensor.Tracker
 
-	registry.SetPath(filepath.Join(xdg.ConfigHome, ctx.AppID, "sensorRegistry"))
-	preferences.SetPath(filepath.Join(xdg.ConfigHome, ctx.AppID))
-
 	if trk, err = sensor.NewTracker(); err != nil {
 		return fmt.Errorf("could not start sensor tracker: %w", err)
 	}
@@ -180,9 +173,7 @@ func (r *RunCmd) Run(ctx *Context) error {
 
 	var trk *sensor.Tracker
 
-	registry.SetPath(filepath.Join(xdg.ConfigHome, ctx.AppID, "sensorRegistry"))
-
-	reg, err := registry.Load()
+	reg, err := registry.Load(gohassagent.GetRegistryPath())
 	if err != nil {
 		return fmt.Errorf("could not start registry: %w", err)
 	}

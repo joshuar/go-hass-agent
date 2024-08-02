@@ -3,76 +3,61 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//nolint:dupl,exhaustruct,paralleltest
+//nolint:wsl,paralleltest,varnamelen,dupl,nlreturn
 package registry
 
 import (
+	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 
-	"github.com/adrg/xdg"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-var testSensorMap = map[string]metadata{
-	"registeredSensor":   {Disabled: false, Registered: true},
-	"unRegisteredSensor": {Disabled: false, Registered: false},
-	"disabledSensor":     {Disabled: true, Registered: true},
+var mockSensors = map[string]metadata{
+	"disabledSensor":   {Disabled: true, Registered: true},
+	"registeredSensor": {Disabled: false, Registered: true},
 }
 
-func newTestRegistry(t *testing.T) *gobRegistry {
+func newMockReg(t *testing.T) *gobRegistry {
 	t.Helper()
-
-	registryPath = t.TempDir()
-
-	testRegistry, err := Load()
+	mockReg, err := Load(filepath.Join(t.TempDir()))
 	require.NoError(t, err)
-
-	testRegistry.sensors = testSensorMap
-
-	err = testRegistry.write()
+	mockReg.sensors = mockSensors
+	err = mockReg.write()
 	require.NoError(t, err)
-
-	return testRegistry
+	return mockReg
 }
 
 func Test_gobRegistry_write(t *testing.T) {
 	type fields struct {
 		sensors map[string]metadata
+		file    string
 	}
-
-	type args struct {
-		path string
-	}
-
 	tests := []struct {
 		name    string
 		fields  fields
-		args    args
 		wantErr bool
 	}{
 		{
-			name:    "default",
-			args:    args{path: t.TempDir()},
-			fields:  fields{sensors: testSensorMap},
-			wantErr: false,
+			name:   "valid path",
+			fields: fields{sensors: mockSensors, file: filepath.Join(t.TempDir(), registryFile)},
 		},
 		{
 			name:    "invalid path",
-			args:    args{path: "/nonexistent"},
-			fields:  fields{sensors: testSensorMap},
+			fields:  fields{sensors: mockSensors, file: filepath.Join(t.TempDir(), "nonexistent", registryFile)},
 			wantErr: true,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			registry := &gobRegistry{
+			g := &gobRegistry{
 				sensors: tt.fields.sensors,
+				file:    tt.fields.file,
 			}
-			registryPath = tt.args.path
-
-			if err := registry.write(); (err != nil) != tt.wantErr {
+			if err := g.write(); (err != nil) != tt.wantErr {
 				t.Errorf("gobRegistry.write() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -80,43 +65,47 @@ func Test_gobRegistry_write(t *testing.T) {
 }
 
 func Test_gobRegistry_read(t *testing.T) {
+	mockReg := newMockReg(t)
+
+	invalidRegistry := filepath.Join(t.TempDir(), registryFile)
+	err := os.WriteFile(invalidRegistry, []byte(`invalid`), 0o600)
+	require.NoError(t, err)
+
 	type fields struct {
 		sensors map[string]metadata
+		file    string
 	}
-
-	type args struct {
-		path string
-	}
-
 	tests := []struct {
 		name    string
 		fields  fields
-		args    args
 		wantErr bool
 	}{
 		{
-			name:    "default",
-			args:    args{path: t.TempDir()},
-			fields:  fields{sensors: testSensorMap},
-			wantErr: false,
+			name:   "valid file",
+			fields: fields{file: mockReg.file},
 		},
 		{
-			name:    "invalid path",
-			args:    args{path: "/nonexistent"},
-			fields:  fields{sensors: testSensorMap},
+			name:    "invalid file",
+			fields:  fields{file: filepath.Join(t.TempDir(), "nonexistent", registryFile)},
+			wantErr: true,
+		},
+		{
+			name:    "invalid contents",
+			fields:  fields{file: invalidRegistry},
 			wantErr: true,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			registry := &gobRegistry{
+			g := &gobRegistry{
 				sensors: tt.fields.sensors,
+				file:    tt.fields.file,
 			}
-			registryPath = tt.args.path
-
-			if err := registry.read(); (err != nil) != tt.wantErr {
+			if err := g.read(); (err != nil) != tt.wantErr {
 				t.Errorf("gobRegistry.read() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if !tt.wantErr {
+				assert.Equal(t, mockReg.sensors, g.sensors)
 			}
 		})
 	}
@@ -125,43 +114,43 @@ func Test_gobRegistry_read(t *testing.T) {
 func Test_gobRegistry_IsDisabled(t *testing.T) {
 	type fields struct {
 		sensors map[string]metadata
+		file    string
 	}
-
 	type args struct {
 		id string
 	}
-
 	tests := []struct {
 		name   string
-		fields fields
 		args   args
+		fields fields
 		want   bool
 	}{
 		{
 			name:   "disabled sensor",
-			fields: fields{sensors: testSensorMap},
+			fields: fields{sensors: mockSensors},
 			args:   args{id: "disabledSensor"},
 			want:   true,
 		},
 		{
 			name:   "not disabled sensor",
-			fields: fields{sensors: testSensorMap},
+			fields: fields{sensors: mockSensors},
 			args:   args{id: "registeredSensor"},
 			want:   false,
 		},
 		{
 			name:   "not found",
-			fields: fields{sensors: testSensorMap},
+			fields: fields{sensors: mockSensors},
 			args:   args{id: "nonexistent"},
 			want:   false,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			registry := newTestRegistry(t)
-
-			if got := registry.IsDisabled(tt.args.id); got != tt.want {
+			g := &gobRegistry{
+				sensors: tt.fields.sensors,
+				file:    tt.fields.file,
+			}
+			if got := g.IsDisabled(tt.args.id); got != tt.want {
 				t.Errorf("gobRegistry.IsDisabled() = %v, want %v", got, tt.want)
 			}
 		})
@@ -171,41 +160,42 @@ func Test_gobRegistry_IsDisabled(t *testing.T) {
 func Test_gobRegistry_IsRegistered(t *testing.T) {
 	type fields struct {
 		sensors map[string]metadata
+		file    string
 	}
-
 	type args struct {
 		id string
 	}
-
 	tests := []struct {
 		name   string
-		fields fields
 		args   args
+		fields fields
 		want   bool
 	}{
 		{
 			name:   "registered sensor",
-			fields: fields{sensors: testSensorMap},
+			fields: fields{sensors: mockSensors},
 			args:   args{id: "registeredSensor"},
 			want:   true,
 		},
 		{
 			name:   "not registered sensor",
-			fields: fields{sensors: testSensorMap},
+			fields: fields{sensors: mockSensors},
 			args:   args{id: "unRegistered"},
 			want:   false,
 		},
 		{
 			name:   "not found",
-			fields: fields{sensors: testSensorMap},
+			fields: fields{sensors: mockSensors},
 			args:   args{id: "nonexistent"},
 			want:   false,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			g := newTestRegistry(t)
+			g := &gobRegistry{
+				sensors: tt.fields.sensors,
+				file:    tt.fields.file,
+			}
 			if got := g.IsRegistered(tt.args.id); got != tt.want {
 				t.Errorf("gobRegistry.IsRegistered() = %v, want %v", got, tt.want)
 			}
@@ -216,13 +206,12 @@ func Test_gobRegistry_IsRegistered(t *testing.T) {
 func Test_gobRegistry_SetDisabled(t *testing.T) {
 	type fields struct {
 		sensors map[string]metadata
+		file    string
 	}
-
 	type args struct {
 		id    string
 		value bool
 	}
-
 	tests := []struct {
 		name    string
 		fields  fields
@@ -231,22 +220,25 @@ func Test_gobRegistry_SetDisabled(t *testing.T) {
 	}{
 		{
 			name:    "change disabled state",
-			fields:  fields{sensors: testSensorMap},
+			fields:  fields{sensors: mockSensors, file: filepath.Join(t.TempDir(), registryFile)},
 			args:    args{id: "disabledSensor", value: false},
 			wantErr: false,
 		},
+		{
+			name:    "invalid path",
+			fields:  fields{sensors: mockSensors, file: filepath.Join(t.TempDir(), "nonexistent", registryFile)},
+			args:    args{id: "disabledSensor", value: false},
+			wantErr: true,
+		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			registry := newTestRegistry(t)
-
-			if err := registry.SetDisabled(tt.args.id, tt.args.value); (err != nil) != tt.wantErr {
-				t.Errorf("gobRegistry.SetDisabled() error = %v, wantErr %v", err, tt.wantErr)
+			g := &gobRegistry{
+				sensors: tt.fields.sensors,
+				file:    tt.fields.file,
 			}
-
-			if registry.IsDisabled(tt.args.id) != tt.args.value {
-				t.Error("gobRegistry.SetDisabled() not changed")
+			if err := g.SetDisabled(tt.args.id, tt.args.value); (err != nil) != tt.wantErr {
+				t.Errorf("gobRegistry.SetDisabled() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
@@ -255,13 +247,12 @@ func Test_gobRegistry_SetDisabled(t *testing.T) {
 func Test_gobRegistry_SetRegistered(t *testing.T) {
 	type fields struct {
 		sensors map[string]metadata
+		file    string
 	}
-
 	type args struct {
 		id    string
 		value bool
 	}
-
 	tests := []struct {
 		name    string
 		fields  fields
@@ -270,40 +261,46 @@ func Test_gobRegistry_SetRegistered(t *testing.T) {
 	}{
 		{
 			name:    "change registered state",
-			fields:  fields{sensors: testSensorMap},
+			fields:  fields{sensors: mockSensors, file: filepath.Join(t.TempDir(), registryFile)},
 			args:    args{id: "unRegisteredSensor", value: true},
 			wantErr: false,
 		},
+		{
+			name:    "invalid path",
+			fields:  fields{sensors: mockSensors, file: filepath.Join(t.TempDir(), "nonexistent", registryFile)},
+			args:    args{id: "disabledSensor", value: false},
+			wantErr: true,
+		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			registry := newTestRegistry(t)
-
-			if err := registry.SetRegistered(tt.args.id, tt.args.value); (err != nil) != tt.wantErr {
-				t.Errorf("gobRegistry.SetRegistered() error = %v, wantErr %v", err, tt.wantErr)
+			g := &gobRegistry{
+				sensors: tt.fields.sensors,
+				file:    tt.fields.file,
 			}
-
-			if registry.IsRegistered(tt.args.id) != tt.args.value {
-				t.Error("gobRegistry.SetRegistered() not changed")
+			if err := g.SetRegistered(tt.args.id, tt.args.value); (err != nil) != tt.wantErr {
+				t.Errorf("gobRegistry.SetRegistered() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
 }
 
 func TestLoad(t *testing.T) {
+	goodPath := t.TempDir()
+
 	type args struct {
 		path string
 	}
-
 	tests := []struct {
+		want    *gobRegistry
 		name    string
 		args    args
 		wantErr bool
 	}{
 		{
 			name:    "good path",
-			args:    args{path: t.TempDir()},
+			args:    args{path: goodPath},
+			want:    &gobRegistry{sensors: make(map[string]metadata), file: filepath.Join(goodPath, registryFile)},
 			wantErr: false,
 		},
 		{
@@ -312,19 +309,16 @@ func TestLoad(t *testing.T) {
 			wantErr: true,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			registryPath = tt.args.path
-
-			_, err := Load()
+			got, err := Load(tt.args.path)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Load() error = %v, wantErr %v", err, tt.wantErr)
-
 				return
 			}
-
-			registryPath = filepath.Join(xdg.ConfigHome, "sensorRegistry")
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Load() = %v, want %v", got, tt.want)
+			}
 		})
 	}
 }

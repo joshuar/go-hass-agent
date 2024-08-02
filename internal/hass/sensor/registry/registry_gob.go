@@ -3,7 +3,6 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//nolint:mnd
 package registry
 
 import (
@@ -11,26 +10,27 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/fs"
 	"log/slog"
 	"os"
 	"path/filepath"
 	"sync"
 )
 
-var gobRegistryFile = "sensor.reg"
+const (
+	registryFile     = "sensor.reg"
+	defaultFilePerms = 0o640
+)
 
 type gobRegistry struct {
 	sensors map[string]metadata
+	file    string
 	mu      sync.Mutex
 }
 
 func (g *gobRegistry) write() error {
-	registryFile := filepath.Join(registryPath, gobRegistryFile)
-
-	regFS, err := os.OpenFile(registryFile, os.O_RDWR|os.O_CREATE, 0o640)
+	regFS, err := os.OpenFile(g.file, os.O_RDWR|os.O_CREATE, defaultFilePerms)
 	if err != nil {
-		return fmt.Errorf("could not open registry: %w", err)
+		return fmt.Errorf("could not open registry for writing: %w", err)
 	}
 
 	enc := gob.NewEncoder(regFS)
@@ -49,11 +49,9 @@ func (g *gobRegistry) read() error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
-	registryFile := filepath.Join(registryPath, gobRegistryFile)
-
-	regFS, err := os.OpenFile(registryFile, os.O_RDWR|os.O_CREATE, 0o640)
+	regFS, err := os.OpenFile(g.file, os.O_RDWR|os.O_CREATE, defaultFilePerms)
 	if err != nil {
-		return fmt.Errorf("could not open registry: %w", err)
+		return fmt.Errorf("could not open registry for reading: %w", err)
 	}
 
 	dec := gob.NewDecoder(regFS)
@@ -127,15 +125,15 @@ func (g *gobRegistry) SetRegistered(id string, value bool) error {
 }
 
 //revive:disable:unexported-return
-func Load() (*gobRegistry, error) {
+func Load(path string) (*gobRegistry, error) {
 	reg := &gobRegistry{
 		sensors: make(map[string]metadata),
 		mu:      sync.Mutex{},
+		file:    filepath.Join(path, registryFile),
 	}
-	pathErr := os.MkdirAll(registryPath, 0o755)
 
-	if pathErr != nil && !errors.Is(pathErr, fs.ErrExist) {
-		return nil, fmt.Errorf("could not load registry: %w", pathErr)
+	if err := checkPath(path); err != nil {
+		return nil, fmt.Errorf("could not load registry: %w", err)
 	}
 
 	if err := reg.read(); err != nil {

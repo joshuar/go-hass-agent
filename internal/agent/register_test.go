@@ -12,6 +12,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -49,7 +50,7 @@ func mockServer(t *testing.T) *httptest.Server {
 }
 
 func TestAgent_saveRegistration(t *testing.T) {
-	origPrefPath := preferences.Path()
+	validPrefs := preferences.DefaultPreferences(t.TempDir())
 
 	type fields struct {
 		ui            UI
@@ -62,7 +63,6 @@ func TestAgent_saveRegistration(t *testing.T) {
 	}
 	type args struct {
 		hassPrefs *preferences.Hass
-		path      string
 	}
 	tests := []struct {
 		args    args
@@ -72,13 +72,12 @@ func TestAgent_saveRegistration(t *testing.T) {
 	}{
 		{
 			name:   "valid preferences",
-			args:   args{hassPrefs: newHassPrefs(t), path: t.TempDir()},
-			fields: fields{prefs: preferences.DefaultPreferences()},
+			args:   args{hassPrefs: newHassPrefs(t)},
+			fields: fields{prefs: validPrefs},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			preferences.SetPath(tt.args.path)
 			agent := &Agent{
 				ui:            tt.fields.ui,
 				done:          tt.fields.done,
@@ -92,28 +91,25 @@ func TestAgent_saveRegistration(t *testing.T) {
 				t.Errorf("Agent.saveRegistration() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			assert.True(t, agent.prefs.Registered)
-			preferences.SetPath(origPrefPath)
 		})
 	}
 }
 
 //revive:disable:function-length
 func TestAgent_checkRegistration(t *testing.T) {
-	origPrefPath := preferences.Path()
-
 	server := mockServer(t)
 
-	alreadyRegistered := preferences.DefaultPreferences()
+	alreadyRegistered := preferences.DefaultPreferences(filepath.Join(t.TempDir(), "preferences.toml"))
 	alreadyRegistered.Registered = true
 	alreadyRegistered.Hass.WebhookID = "valid"
 	alreadyRegistered.Registration.Server = server.URL
 	alreadyRegistered.Registration.Token = "valid"
 
-	headless := preferences.DefaultPreferences()
+	headless := preferences.DefaultPreferences(filepath.Join(t.TempDir(), "preferences.toml"))
 	headless.Registration.Server = server.URL
 	headless.Registration.Token = "valid"
 
-	headlessErr := preferences.DefaultPreferences()
+	headlessErr := preferences.DefaultPreferences(filepath.Join(t.TempDir(), "preferences.toml"))
 	headlessErr.Registration.Server = server.URL
 	headlessErr.Registration.Token = "bad"
 
@@ -127,8 +123,7 @@ func TestAgent_checkRegistration(t *testing.T) {
 		forceRegister bool
 	}
 	type args struct {
-		trk  SensorTracker
-		path string
+		trk SensorTracker
 	}
 	tests := []struct {
 		args    args
@@ -139,27 +134,23 @@ func TestAgent_checkRegistration(t *testing.T) {
 		{
 			name:   "already registered",
 			fields: fields{prefs: alreadyRegistered, id: "go-hass-agent-test"},
-			args:   args{path: t.TempDir()},
 		},
 		{
 			name:   "headless",
-			args:   args{path: t.TempDir()},
 			fields: fields{prefs: headless, headless: true, id: "go-hass-agent-test", logger: slog.Default()},
 		},
 		{
 			name:    "headless error",
-			args:    args{path: t.TempDir()},
 			fields:  fields{prefs: headlessErr, headless: true, id: "go-hass-agent-test", logger: slog.Default()},
 			wantErr: true,
 		},
 		{
 			name:   "force register",
 			fields: fields{prefs: alreadyRegistered, headless: true, forceRegister: true, id: "go-hass-agent-test", logger: slog.Default()},
-			args:   args{path: t.TempDir(), trk: &SensorTrackerMock{ResetFunc: func() {}}},
+			args:   args{trk: &SensorTrackerMock{ResetFunc: func() {}}},
 		},
 	}
 	for _, tt := range tests {
-		preferences.SetPath(tt.args.path)
 		t.Run(tt.name, func(t *testing.T) {
 			agent := &Agent{
 				ui:            tt.fields.ui,
@@ -177,7 +168,6 @@ func TestAgent_checkRegistration(t *testing.T) {
 				assert.True(t, agent.prefs.Registered)
 				assert.Equal(t, "valid", agent.prefs.Hass.WebhookID)
 			}
-			preferences.SetPath(origPrefPath)
 		})
 	}
 }
