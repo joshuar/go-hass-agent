@@ -54,13 +54,12 @@ func New(level string, logFile string) *slog.Logger {
 	}
 
 	// Set the slog handler
-	var logHandler slog.Handler
+	logHandler := slogmulti.Fanout(
+		tint.NewHandler(os.Stdout, consoleOpts),
+	)
+
 	// Unless no log file was requested, set up file logging.
-	if logFile == "" {
-		logHandler = slogmulti.Fanout(
-			tint.NewHandler(os.Stdout, consoleOpts),
-		)
-	} else {
+	if logFile != "" {
 		logFH, err := openLogFile(logFile)
 		if err != nil {
 			slog.Warn("unable to open log file", "file", logFile, "error", err)
