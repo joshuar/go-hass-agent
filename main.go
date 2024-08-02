@@ -12,8 +12,10 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"syscall"
 
+	"github.com/adrg/xdg"
 	"github.com/alecthomas/kong"
 
 	"github.com/joshuar/go-hass-agent/internal/agent"
@@ -56,7 +58,15 @@ func (r *ResetCmd) Run(ctx *Context) error {
 	agentCtx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
 
-	logger := logging.New(ctx.LogLevel, ctx.NoLogFile)
+	var logFile string
+
+	if ctx.NoLogFile {
+		logFile = ""
+	} else {
+		logFile = filepath.Join(xdg.ConfigHome, ctx.AppID, "agent.log")
+	}
+
+	logger := logging.New(ctx.LogLevel, logFile)
 	agentCtx = logging.ToContext(agentCtx, logger)
 
 	var errs error
@@ -80,10 +90,8 @@ func (r *ResetCmd) Run(ctx *Context) error {
 		errs = errors.Join(fmt.Errorf("preferences reset failed: %w", err))
 	}
 	// Reset the log.
-	if !ctx.NoLogFile {
-		if err := logging.Reset(); err != nil {
-			errs = errors.Join(fmt.Errorf("logging reset failed: %w", err))
-		}
+	if err := logging.Reset(logFile); err != nil {
+		errs = errors.Join(fmt.Errorf("logging reset failed: %w", err))
 	}
 
 	if errs != nil {
@@ -123,7 +131,15 @@ func (r *RegisterCmd) Run(ctx *Context) error {
 	agentCtx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
 
-	logger := logging.New(ctx.LogLevel, ctx.NoLogFile)
+	var logFile string
+
+	if ctx.NoLogFile {
+		logFile = ""
+	} else {
+		logFile = filepath.Join(xdg.ConfigHome, ctx.AppID, "agent.log")
+	}
+
+	logger := logging.New(ctx.LogLevel, logFile)
 	agentCtx = logging.ToContext(agentCtx, logger)
 
 	gohassagent, err := agent.NewAgent(agentCtx, ctx.AppID,
@@ -162,7 +178,15 @@ func (r *RunCmd) Run(ctx *Context) error {
 	agentCtx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
 
-	logger := logging.New(ctx.LogLevel, ctx.NoLogFile)
+	var logFile string
+
+	if ctx.NoLogFile {
+		logFile = ""
+	} else {
+		logFile = filepath.Join(xdg.ConfigHome, ctx.AppID, "agent.log")
+	}
+
+	logger := logging.New(ctx.LogLevel, logFile)
 	agentCtx = logging.ToContext(agentCtx, logger)
 
 	gohassagent, err := agent.NewAgent(agentCtx, ctx.AppID,
