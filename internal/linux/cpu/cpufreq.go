@@ -9,6 +9,7 @@ package cpu
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -35,6 +36,8 @@ const (
 	cpuFreqIcon  = "mdi:chip"
 	cpuFreqUnits = "Hz"
 )
+
+var ErrNoCPUFreq = errors.New("no cpu frequency files found")
 
 type cpuFreq struct {
 	cpu      string
@@ -112,6 +115,10 @@ func getCPUFreqs(path string) ([]cpuFreq, error) {
 	matches, err := filepath.Glob(path)
 	if err != nil {
 		return nil, fmt.Errorf("could not read frequency files: %w", err)
+	}
+
+	if len(matches) == 0 {
+		return nil, ErrNoCPUFreq
 	}
 
 	freqDetails := make([]cpuFreq, 0, len(matches))
