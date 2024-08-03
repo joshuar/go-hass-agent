@@ -71,11 +71,12 @@ func _() {
 	_ = x[SensorDocked-60]
 	_ = x[SensorExternalPower-61]
 	_ = x[SensorIdleState-62]
+	_ = x[SensorCPUFreq-63]
 }
 
-const _SensorTypeValue_name = "Unknown SensorActive AppRunning AppsBattery TypeBattery LevelBattery TemperatureBattery VoltageBattery EnergyBattery PowerBattery StateBattery PathBattery LevelBattery ModelMemory TotalMemory AvailableMemory UsedMemory UsageSwap Memory TotalSwap Memory UsedSwap Memory FreeSwap UsageConnection StateConnection IDConnection DeviceConnection TypeConnection IPv4Connection IPv6IPv4 AddressIPv6 AddressWi-Fi SSIDWi-Fi FrequencyWi-Fi Link SpeedWi-Fi Signal StrengthWi-Fi BSSIDBytes SentBytes ReceivedBytes Sent ThroughputBytes Received ThroughputPower ProfileLast RebootUptimeCPU load average (1 min)CPU load average (5 min)CPU load average (15 min)CPU UsageScreen LockLid ClosedProblemsKernel VersionDistribution NameDistribution VersionCurrent UsersTemperaturePower StateAccent ColorColor Scheme TypeDisk ReadsDisk WritesDisk Read RateDisk Write RateDocked StateExternal Power ConnectedIdle"
+const _SensorTypeValue_name = "Unknown SensorActive AppRunning AppsBattery TypeBattery LevelBattery TemperatureBattery VoltageBattery EnergyBattery PowerBattery StateBattery PathBattery LevelBattery ModelMemory TotalMemory AvailableMemory UsedMemory UsageSwap Memory TotalSwap Memory UsedSwap Memory FreeSwap UsageConnection StateConnection IDConnection DeviceConnection TypeConnection IPv4Connection IPv6IPv4 AddressIPv6 AddressWi-Fi SSIDWi-Fi FrequencyWi-Fi Link SpeedWi-Fi Signal StrengthWi-Fi BSSIDBytes SentBytes ReceivedBytes Sent ThroughputBytes Received ThroughputPower ProfileLast RebootUptimeCPU load average (1 min)CPU load average (5 min)CPU load average (15 min)CPU UsageScreen LockLid ClosedProblemsKernel VersionDistribution NameDistribution VersionCurrent UsersTemperaturePower StateAccent ColorColor Scheme TypeDisk ReadsDisk WritesDisk Read RateDisk Write RateDocked StateExternal Power ConnectedIdleCPU Frequency"
 
-var _SensorTypeValue_index = [...]uint16{0, 14, 24, 36, 48, 61, 80, 95, 109, 122, 135, 147, 160, 173, 185, 201, 212, 224, 241, 257, 273, 283, 299, 312, 329, 344, 359, 374, 386, 398, 408, 423, 439, 460, 471, 481, 495, 516, 541, 554, 565, 571, 595, 619, 644, 653, 664, 674, 682, 696, 713, 733, 746, 757, 768, 780, 797, 807, 818, 832, 847, 859, 883, 887}
+var _SensorTypeValue_index = [...]uint16{0, 14, 24, 36, 48, 61, 80, 95, 109, 122, 135, 147, 160, 173, 185, 201, 212, 224, 241, 257, 273, 283, 299, 312, 329, 344, 359, 374, 386, 398, 408, 423, 439, 460, 471, 481, 495, 516, 541, 554, 565, 571, 595, 619, 644, 653, 664, 674, 682, 696, 713, 733, 746, 757, 768, 780, 797, 807, 818, 832, 847, 859, 883, 887, 900}
 
 func (i SensorTypeValue) String() string {
 	if i < 0 || i >= SensorTypeValue(len(_SensorTypeValue_index)-1) {

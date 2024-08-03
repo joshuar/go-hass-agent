@@ -71,6 +71,7 @@ const (
 	SensorDocked                                   // Docked State
 	SensorExternalPower                            // External Power Connected
 	SensorIdleState                                // Idle
+	SensorCPUFreq                                  // CPU Frequency
 )
 
 // SensorTypeValue represents the unique type of sensor data being reported. Every
