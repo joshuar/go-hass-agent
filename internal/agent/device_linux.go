@@ -36,6 +36,7 @@ import (
 var allworkers = []func(context.Context, *dbusx.DBusAPI) (*linux.SensorWorker, error){
 	apps.NewAppWorker,
 	battery.NewBatteryWorker,
+	cpu.NewCPUFreqWorker,
 	cpu.NewLoadAvgWorker,
 	cpu.NewUsageWorker,
 	desktop.NewDesktopWorker,
