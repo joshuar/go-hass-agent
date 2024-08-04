@@ -30,6 +30,9 @@ const (
 	LogFile           = "go-hass-agent.log"
 	preferencesFile   = "preferences.toml"
 	defaultFilePerms  = 0o600
+
+	defaultServer = "http://localhost:8123"
+	defaultSecret = "ALongSecretString"
 )
 
 var (
@@ -155,14 +158,14 @@ func DefaultPreferences(file string) *Preferences {
 		Version:    AppVersion,
 		Registered: false,
 		Registration: &Registration{
-			Server: "http://localhost:8123",
-			Token:  "ASecretLongLivedToken",
+			Server: defaultServer,
+			Token:  defaultSecret,
 		},
 		Hass: &Hass{
 			IgnoreHassURLs: false,
-			WebhookID:      "ALongString",
-			RestAPIURL:     "https://localhost:8123",
-			WebsocketURL:   "https://localhost:8123",
+			WebhookID:      defaultSecret,
+			RestAPIURL:     defaultServer,
+			WebsocketURL:   defaultServer,
 		},
 		MQTT:   &MQTT{MQTTEnabled: false},
 		Device: device,
