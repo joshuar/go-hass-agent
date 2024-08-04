@@ -22,7 +22,6 @@ import (
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
-//nolint:unused // used to skip these tests in CI environments.
 func skipCI(t *testing.T) {
 	t.Helper()
 
@@ -32,6 +31,7 @@ func skipCI(t *testing.T) {
 }
 
 func Test_getCPUFreqs(t *testing.T) {
+	skipCI(t)
 	type args struct {
 		path string
 	}
@@ -146,6 +146,7 @@ func Test_cpuFreqWorker_Jitter(t *testing.T) {
 }
 
 func Test_cpuFreqWorker_Sensors(t *testing.T) {
+	skipCI(t)
 	type fields struct {
 		path string
 	}
