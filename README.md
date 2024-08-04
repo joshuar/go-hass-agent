@@ -705,6 +705,21 @@ Supported control types and expected input/output:
   - When the configured command is run, it should output the current state as
     “ON” or “OFF”. Any additional output is ignored and any output that doesn't
     match these strings will indicate an error to the agent.
+- [Number](https://www.home-assistant.io/integrations/number.mqtt/).
+  - `display` can be optionally set in the control configuration to specify how
+    the number control will be displayed in Home Assistant:
+    - Either `auto`, `box` or `slider`. The default if `display` is not set is
+      `auto`, where Home Assistant will decide how the control will be
+      displayed.
+  - `type` can be optionally set in the control configuration to specify whether
+    the number control has `int` or `float` values. The default will be `int` if
+    omitted.
+  - Return value is used to indicate success/failure.
+  - When the number is changed in Home Assistant, Go Hass Agent will run the
+    configured command passing the value appended to the end of its
+    command-line.
+  - When the configured command is run, it should output a number as the current
+    state. Any additional output is ignored.
 
 > [!NOTE]
 > Commands run as the user running the agent. Commands do not invoke the system
@@ -732,9 +747,29 @@ exec = '/path/to/command arg1 "arg with space"'
 # The material design icon to use to represent the control in Home Assistant.
 # See https://pictogrammers.com/library/mdi/ for icons you can use.
 icon = "mdi:something"
+# display is optional and only relevant for certain controls.
+# How the control will be shown in Home Assistant. Refer to the control type for valid values.
+display = "displayValue"
 ```
 
-The following shows an example that configures some buttons and a switch in Home
+For number controls, additional configuration may be specified (default values shown):
+
+```toml
+# type is optional.
+# Whether this number control has int or float values. Default is "int".
+type = "int"
+# min is optional.
+# The minimum value of the number. Default is 0.
+min = 0
+# max is optional.
+# The maximum value of the number. Default is 100.
+max = 100
+# step is optional.
+# The amount to change the value by (i.e., increment/decrement), if applicable. Default is 1.
+step = 1
+```
+
+The following shows an example that configures various controls in Home
 Assistant:
 
 ```toml
@@ -750,6 +785,14 @@ Assistant:
   [[switch]]
   name = "Toggle a Thing"
   exec = "command arg1 arg2"
+
+  [[number]]
+  name = "My number slider"
+  exec = "command"
+  display = "slider"
+  min = 1
+  max = 500
+  step = 5
 ```
 
 #### Security Implications
