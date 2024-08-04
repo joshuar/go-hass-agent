@@ -286,11 +286,11 @@ func Test_cmdWithState(t *testing.T) {
 	}{
 		{
 			name: "successful command",
-			args: args{command: "true"},
+			args: args{command: "true", state: "foo"},
 		},
 		{
 			name:    "unsuccessful command",
-			args:    args{command: "false"},
+			args:    args{command: "false", state: "foo"},
 			wantErr: true,
 		},
 	}
