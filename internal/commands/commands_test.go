@@ -38,18 +38,28 @@ var mockSwitch = mqtthass.AsSwitch(
 		WithIcon("mdi:test").
 		WithCommandCallback(mockCommandCallback), true)
 
+var mockNumber = mqtthass.AsNumber(
+	mqtthass.NewEntity("test", "test number", "test_number").
+		WithOriginInfo(&mqtthass.Origin{}).
+		WithDeviceInfo(&mqtthass.Device{}).
+		WithIcon("mdi:test").
+		WithCommandCallback(mockCommandCallback), 0, 100, 1, mqtthass.NumberAuto)
+
 func TestController_Subscriptions(t *testing.T) {
-	var mockButtonSubscription, mockSwitchSubscription *mqttapi.Subscription
+	var mockButtonSubscription, mockSwitchSubscription, mockNumberSubscription *mqttapi.Subscription
 	var err error
 
 	mockButtonSubscription, err = mockButton.MarshalSubscription()
 	require.NoError(t, err)
 	mockSwitchSubscription, err = mockSwitch.MarshalSubscription()
 	require.NoError(t, err)
+	mockNumberSubscription, err = mockNumber.MarshalSubscription()
+	require.NoError(t, err)
 
 	type fields struct {
-		buttons  []*mqtthass.ButtonEntity
-		switches []*mqtthass.SwitchEntity
+		buttons    []*mqtthass.ButtonEntity
+		switches   []*mqtthass.SwitchEntity
+		intNumbers []*mqtthass.NumberEntity[int]
 	}
 	tests := []struct {
 		name   string
@@ -57,19 +67,29 @@ func TestController_Subscriptions(t *testing.T) {
 		want   []*mqttapi.Subscription
 	}{
 		{
-			name:   "with subscriptions",
-			fields: fields{buttons: []*mqtthass.ButtonEntity{mockButton}, switches: []*mqtthass.SwitchEntity{mockSwitch}},
-			want:   []*mqttapi.Subscription{mockButtonSubscription, mockSwitchSubscription},
+			name: "with subscriptions",
+			fields: fields{
+				buttons:    []*mqtthass.ButtonEntity{mockButton},
+				switches:   []*mqtthass.SwitchEntity{mockSwitch},
+				intNumbers: []*mqtthass.NumberEntity[int]{mockNumber},
+			},
+			want: []*mqttapi.Subscription{
+				mockButtonSubscription,
+				mockSwitchSubscription,
+				mockNumberSubscription,
+			},
 		},
 		{
 			name: "without subscriptions",
+			want: []*mqttapi.Subscription{},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			d := &Controller{
-				buttons:  tt.fields.buttons,
-				switches: tt.fields.switches,
+				buttons:    tt.fields.buttons,
+				switches:   tt.fields.switches,
+				intNumbers: tt.fields.intNumbers,
 			}
 			got := d.Subscriptions()
 			if diff := deep.Equal(got, tt.want); diff != nil {
@@ -80,17 +100,20 @@ func TestController_Subscriptions(t *testing.T) {
 }
 
 func TestController_Configs(t *testing.T) {
-	var mockButtonConfig, mockSwitchConfig *mqttapi.Msg
+	var mockButtonConfig, mockSwitchConfig, mockNumberConfig *mqttapi.Msg
 	var err error
 
 	mockButtonConfig, err = mockButton.MarshalConfig()
 	require.NoError(t, err)
 	mockSwitchConfig, err = mockSwitch.MarshalConfig()
 	require.NoError(t, err)
+	mockNumberConfig, err = mockNumber.MarshalConfig()
+	require.NoError(t, err)
 
 	type fields struct {
-		buttons  []*mqtthass.ButtonEntity
-		switches []*mqtthass.SwitchEntity
+		buttons    []*mqtthass.ButtonEntity
+		switches   []*mqtthass.SwitchEntity
+		intNumbers []*mqtthass.NumberEntity[int]
 	}
 	tests := []struct {
 		name   string
@@ -98,19 +121,29 @@ func TestController_Configs(t *testing.T) {
 		want   []*mqttapi.Msg
 	}{
 		{
-			name:   "with configs",
-			fields: fields{buttons: []*mqtthass.ButtonEntity{mockButton}, switches: []*mqtthass.SwitchEntity{mockSwitch}},
-			want:   []*mqttapi.Msg{mockButtonConfig, mockSwitchConfig},
+			name: "with configs",
+			fields: fields{
+				buttons:    []*mqtthass.ButtonEntity{mockButton},
+				switches:   []*mqtthass.SwitchEntity{mockSwitch},
+				intNumbers: []*mqtthass.NumberEntity[int]{mockNumber},
+			},
+			want: []*mqttapi.Msg{
+				mockButtonConfig,
+				mockSwitchConfig,
+				mockNumberConfig,
+			},
 		},
 		{
 			name: "without configs",
+			want: []*mqttapi.Msg{},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			d := &Controller{
-				buttons:  tt.fields.buttons,
-				switches: tt.fields.switches,
+				buttons:    tt.fields.buttons,
+				switches:   tt.fields.switches,
+				intNumbers: tt.fields.intNumbers,
 			}
 			got := d.Configs()
 			if diff := deep.Equal(got, tt.want); diff != nil {
@@ -179,34 +212,6 @@ func TestNewCommandsController(t *testing.T) {
 	}
 }
 
-func Test_buttonCmd(t *testing.T) {
-	type args struct {
-		command string
-	}
-	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-	}{
-		{
-			name: "successful command",
-			args: args{command: "true"},
-		},
-		{
-			name:    "unsuccessful command",
-			args:    args{command: "false"},
-			wantErr: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if err := buttonCmd(tt.args.command); (err != nil) != tt.wantErr {
-				t.Errorf("buttonCmd() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
-
 func Test_switchCmd(t *testing.T) {
 	type args struct {
 		command string
@@ -234,8 +239,65 @@ func Test_switchCmd(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := switchCmd(tt.args.command, tt.args.state); (err != nil) != tt.wantErr {
+			if err := cmdWithState(tt.args.command, tt.args.state); (err != nil) != tt.wantErr {
 				t.Errorf("switchCmd() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func Test_cmdWithoutState(t *testing.T) {
+	type args struct {
+		command string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "successful command",
+			args: args{command: "true"},
+		},
+		{
+			name:    "unsuccessful command",
+			args:    args{command: "false"},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := cmdWithoutState(tt.args.command); (err != nil) != tt.wantErr {
+				t.Errorf("cmdWithoutState() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func Test_cmdWithState(t *testing.T) {
+	type args struct {
+		command string
+		state   string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "successful command",
+			args: args{command: "true"},
+		},
+		{
+			name:    "unsuccessful command",
+			args:    args{command: "false"},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := cmdWithState(tt.args.command, tt.args.state); (err != nil) != tt.wantErr {
+				t.Errorf("cmdWithState() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
@@ -281,6 +343,61 @@ func Test_switchState(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("switchState() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_numberState(t *testing.T) {
+	type args struct {
+		command string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    json.RawMessage
+		wantErr bool
+	}{
+		{
+			name: "valid int",
+			args: args{command: "echo 1"},
+			want: json.RawMessage(`{ "value": 1 }`),
+		},
+		{
+			name: "valid float",
+			args: args{command: "echo 0.567"},
+			want: json.RawMessage(`{ "value": 0.567 }`),
+		},
+		{
+			name:    "invalid (quoted)",
+			args:    args{command: `echo "1"`},
+			wantErr: true,
+		},
+		{
+			name:    "invalid (string)",
+			args:    args{command: `echo some string`},
+			wantErr: true,
+		},
+		{
+			name:    "invalid (multiple outputs)",
+			args:    args{command: `echo 0.6788 1.3453`},
+			wantErr: true,
+		},
+		{
+			name:    "unsuccessful",
+			args:    args{command: "false"},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := numberState(tt.args.command)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("numberState() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("numberState() = %v, want %v", string(got), string(tt.want))
 			}
 		})
 	}

@@ -16,6 +16,7 @@ import (
 	"log/slog"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 
 	"github.com/eclipse/paho.golang/paho"
@@ -23,18 +24,23 @@ import (
 	mqtthass "github.com/joshuar/go-hass-anything/v11/pkg/hass"
 	mqttapi "github.com/joshuar/go-hass-anything/v11/pkg/mqtt"
 	"github.com/pelletier/go-toml/v2"
+	"golang.org/x/exp/constraints"
 
 	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
-// ErrNoCommands indicates there were no commands to configure.
 var (
 	ErrNoCommands         = errors.New("no commands")
-	ErrUnknownSwitchState = errors.New("could not parse switch state")
+	ErrNoState            = errors.New("no state passed to control")
+	ErrCmdFailed          = errors.New("could not execute command for control")
+	ErrUnknownSwitchState = errors.New("could not determine state of switch")
+	ErrUnknownNumberState = errors.New("could not determine state of number")
 )
 
 // Command represents a Command to run by a button or switch.
+//
+//nolint:govet
 type Command struct {
 	// Name is display name for the command.
 	Name string `toml:"name"`
@@ -42,82 +48,124 @@ type Command struct {
 	Exec string `toml:"exec"`
 	// Icon is a material design icon representing the command.
 	Icon string `toml:"icon,omitempty"`
+	// Display represents how the entity will be shown in Home Assistant. It is
+	// only relevant for certain types, such as numbers and is ignored if
+	// unused.
+	Display string `toml:"display,omitempty"`
+	// NumberType is the type of number for number controls. It should be either
+	// 'int' or 'float'.
+	NumberType string `toml:"type,omitempty"`
+	// Min is the minimum value of the control. It is only
+	// relevant for certain types, such as numbers and is ignored if unused.
+	Min any `toml:"min,omitempty"`
+	// Max is the maximum value of the control. It is only relevant for certain
+	// types, such as numbers and is ignored if unused.
+	Max any `toml:"max,omitempty"`
+	// Step is the amount to change the value. It is only relevant for certain
+	// types, such as numbers and is ignored if unused.
+	Step any `toml:"step,omitempty"`
 }
 
 // CommandList is a CommandList of all the buttons/commands parsed from the config file.
 //
-//nolint:tagalign
 //revive:disable:struct-tag
 type CommandList struct {
-	Buttons  []Command `toml:"button,omitempty" koanf:"button"`
-	Switches []Command `toml:"switch,omitempty" koanf:"switch"`
+	Buttons  []Command `toml:"button,omitempty"`
+	Switches []Command `toml:"switch,omitempty"`
+	Numbers  []Command `toml:"number,omitempty"`
 }
 
 // Controller represents an object with one or more buttons and switches
 // definitions, which can be passed to Home Assistant to add appropriate
 // entities to control the buttons/switches over MQTT.
 type Controller struct {
-	logger   *slog.Logger
-	buttons  []*mqtthass.ButtonEntity
-	switches []*mqtthass.SwitchEntity
+	logger       *slog.Logger
+	device       *mqtthass.Device
+	buttons      []*mqtthass.ButtonEntity
+	switches     []*mqtthass.SwitchEntity
+	intNumbers   []*mqtthass.NumberEntity[int]
+	floatNumbers []*mqtthass.NumberEntity[float64]
+}
+
+// entity is a convienience interface to avoid duplicating a lot of loops when
+// configuring the controller.
+type entity interface {
+	MarshalSubscription() (*mqttapi.Subscription, error)
+	MarshalConfig() (*mqttapi.Msg, error)
 }
 
 // Subscriptions are the MQTT subscriptions for buttons and switches, providing
 // the appropriate callback mechanism to execute the associated commands.
 func (d *Controller) Subscriptions() []*mqttapi.Subscription {
-	var subs []*mqttapi.Subscription
+	total := len(d.buttons) + len(d.switches) + len(d.intNumbers) + len(d.floatNumbers)
+	subs := make([]*mqttapi.Subscription, 0, total)
 
 	// Create subscriptions for buttons.
-	if d.buttons != nil {
-		for _, button := range d.buttons {
-			if sub, err := button.MarshalSubscription(); err != nil {
-				d.logger.Warn("Could not create subscription.", "entity", button.Name, "error", err.Error())
-			} else {
-				subs = append(subs, sub)
-			}
-		}
+	for _, but := range d.buttons {
+		subs = append(subs, d.generateSubscriptions(but))
 	}
 	// Create subscriptions for switches.
-	if d.switches != nil {
-		for _, sw := range d.switches {
-			if sub, err := sw.MarshalSubscription(); err != nil {
-				d.logger.Warn("Could not create subscription.", "entity", sw.Name, "error", err.Error())
-			} else {
-				subs = append(subs, sub)
-			}
-		}
+	for _, sw := range d.switches {
+		subs = append(subs, d.generateSubscriptions(sw))
+	}
+	// Create subscriptions for int numbers.
+	for _, inum := range d.intNumbers {
+		subs = append(subs, d.generateSubscriptions(inum))
+	}
+	// Create subscriptions for float numbers.
+	for _, fnum := range d.floatNumbers {
+		subs = append(subs, d.generateSubscriptions(fnum))
 	}
 
 	return subs
 }
 
+func (d *Controller) generateSubscriptions(e entity) *mqttapi.Subscription {
+	sub, err := e.MarshalSubscription()
+	if err != nil {
+		d.logger.Warn("Could not create entity subscription.", slog.Any("error", err))
+
+		return nil
+	}
+
+	return sub
+}
+
 // Configs are the MQTT configurations required by Home Assistant to set up
 // entities for the buttons/switches.
 func (d *Controller) Configs() []*mqttapi.Msg {
-	var configs []*mqttapi.Msg
+	total := len(d.buttons) + len(d.switches) + len(d.intNumbers) + len(d.floatNumbers)
+	cfgs := make([]*mqttapi.Msg, 0, total)
 
 	// Create button configs.
-	if d.buttons != nil {
-		for _, button := range d.buttons {
-			if sub, err := button.MarshalConfig(); err != nil {
-				d.logger.Warn("Could not create config.", "entity", button.Name, "error", err.Error())
-			} else {
-				configs = append(configs, sub)
-			}
-		}
+	for _, but := range d.buttons {
+		cfgs = append(cfgs, d.generateConfigs(but))
 	}
 	// Create switch configs.
-	if d.switches != nil {
-		for _, sw := range d.switches {
-			if sub, err := sw.MarshalConfig(); err != nil {
-				d.logger.Warn("Could not create config.", "entity", sw.Name, "error", err.Error())
-			} else {
-				configs = append(configs, sub)
-			}
-		}
+	for _, sw := range d.switches {
+		cfgs = append(cfgs, d.generateConfigs(sw))
+	}
+	// Create int number configs.
+	for _, inum := range d.intNumbers {
+		cfgs = append(cfgs, d.generateConfigs(inum))
+	}
+	// Create float number configs.
+	for _, fnum := range d.floatNumbers {
+		cfgs = append(cfgs, d.generateConfigs(fnum))
 	}
 
-	return configs
+	return cfgs
+}
+
+func (d *Controller) generateConfigs(e entity) *mqttapi.Msg {
+	msg, err := e.MarshalConfig()
+	if err != nil {
+		d.logger.Warn("Could not create entity config.", slog.Any("error", err))
+
+		return nil
+	}
+
+	return msg
 }
 
 // Msgs are additional MQTT messages to be published based on any event logic
@@ -149,29 +197,31 @@ func NewCommandsController(ctx context.Context, commandsFile string, device *mqt
 
 	controller := &Controller{
 		logger: logging.FromContext(ctx).With(slog.String("component", "mqtt_commands")),
+		device: device,
 	}
-	controller.generateButtons(cmds.Buttons, device)
-	controller.generateSwitches(cmds.Switches, device)
+	controller.generateButtons(cmds.Buttons)
+	controller.generateSwitches(cmds.Switches)
+	controller.generateNumbers(cmds.Numbers)
 
 	return controller, nil
 }
 
 // generateButtons will create MQTT entities for buttons defined by the
 // controller.
-func (d *Controller) generateButtons(buttonCmds []Command, device *mqtthass.Device) {
+func (d *Controller) generateButtons(buttonCmds []Command) {
 	var id, icon, name string
 
 	entities := make([]*mqtthass.ButtonEntity, 0, len(buttonCmds))
 
 	for _, cmd := range buttonCmds {
 		callback := func(_ *paho.Publish) {
-			err := buttonCmd(cmd.Exec)
+			err := cmdWithoutState(cmd.Exec)
 			if err != nil {
 				d.logger.Warn("Button press failed.", "button", cmd.Name, "error", err.Error())
 			}
 		}
 		name = cmd.Name
-		id = strcase.ToSnake(device.Name + "_" + cmd.Name)
+		id = strcase.ToSnake(d.device.Name + "_" + cmd.Name)
 
 		if cmd.Icon != "" {
 			icon = cmd.Icon
@@ -183,7 +233,7 @@ func (d *Controller) generateButtons(buttonCmds []Command, device *mqtthass.Devi
 			mqtthass.AsButton(
 				mqtthass.NewEntity(preferences.AppName, name, id).
 					WithOriginInfo(preferences.MQTTOrigin()).
-					WithDeviceInfo(device).
+					WithDeviceInfo(d.device).
 					WithIcon(icon).
 					WithCommandCallback(callback)))
 	}
@@ -191,23 +241,9 @@ func (d *Controller) generateButtons(buttonCmds []Command, device *mqtthass.Devi
 	d.buttons = entities
 }
 
-// buttonCmd runs the executable associated with a button. Buttons are not
-// expected to accept any input, or produce any consumable output, so only the
-// return value is checked.
-func buttonCmd(command string) error {
-	cmdElems := strings.Split(command, " ")
-
-	_, err := exec.Command(cmdElems[0], cmdElems[1:]...).Output()
-	if err != nil {
-		return fmt.Errorf("could not execute button command: %w", err)
-	}
-
-	return nil
-}
-
-// generateButtons will create MQTT entities for buttons defined by the
+// generateSwitches will create MQTT entities for buttons defined by the
 // controller.
-func (d *Controller) generateSwitches(switchCmds []Command, device *mqtthass.Device) {
+func (d *Controller) generateSwitches(switchCmds []Command) {
 	var id, icon, name string
 
 	entities := make([]*mqtthass.SwitchEntity, 0, len(switchCmds))
@@ -216,16 +252,16 @@ func (d *Controller) generateSwitches(switchCmds []Command, device *mqtthass.Dev
 		cmdCallBack := func(p *paho.Publish) {
 			state := string(p.Payload)
 
-			err := switchCmd(cmd.Exec, state)
+			err := cmdWithState(cmd.Exec, state)
 			if err != nil {
-				d.logger.Warn("Switch toggle failed.", "switch", cmd.Name)
+				d.logger.Warn("Switch toggle failed.", slog.String("switch", cmd.Name), slog.Any("error", err))
 			}
 		}
 		stateCallBack := func(_ ...any) (json.RawMessage, error) {
 			return switchState(cmd.Exec)
 		}
 		name = cmd.Name
-		id = strcase.ToSnake(device.Name + "_" + cmd.Name)
+		id = strcase.ToSnake(d.device.Name + "_" + cmd.Name)
 
 		if cmd.Icon != "" {
 			icon = cmd.Icon
@@ -237,7 +273,7 @@ func (d *Controller) generateSwitches(switchCmds []Command, device *mqtthass.Dev
 			mqtthass.AsSwitch(
 				mqtthass.NewEntity(preferences.AppName, name, id).
 					WithOriginInfo(preferences.MQTTOrigin()).
-					WithDeviceInfo(device).
+					WithDeviceInfo(d.device).
 					WithIcon(icon).
 					WithStateCallback(stateCallBack).
 					WithCommandCallback(cmdCallBack),
@@ -247,12 +283,135 @@ func (d *Controller) generateSwitches(switchCmds []Command, device *mqtthass.Dev
 	d.switches = entities
 }
 
-// buttonCmd runs the executable associated with a button. Buttons are not
-// expected to accept any input, or produce any consumable output, so only the
-// return value is checked.
-func switchCmd(command, state string) error {
+// generateNumbers will create MQTT entities for numbers (both ints and floats) defined by the
+// controller.
+//
+//nolint:cyclop,funlen
+//revive:disable:function-length
+func (d *Controller) generateNumbers(numberCommands []Command) {
+	var (
+		id, icon, name string
+		ints           []*mqtthass.NumberEntity[int]
+		floats         []*mqtthass.NumberEntity[float64]
+	)
+
+	for _, cmd := range numberCommands {
+		cmdCallBack := func(p *paho.Publish) {
+			state := string(p.Payload)
+
+			err := cmdWithState(cmd.Exec, state)
+			if err != nil {
+				d.logger.Warn("Set number failed.", slog.String("number", cmd.Name), slog.Any("error", err))
+			}
+		}
+		stateCallBack := func(_ ...any) (json.RawMessage, error) {
+			return numberState(cmd.Exec)
+		}
+		name = cmd.Name
+		id = strcase.ToSnake(d.device.Name + "_" + cmd.Name)
+
+		if cmd.Icon != "" {
+			// Set the icon to the user-specified icon
+			icon = cmd.Icon
+		} else {
+			// Choose an appropriate icon based on the display value.
+			switch cmd.Display {
+			case "box":
+				icon = "mdi:counter"
+			case "slider":
+				icon = "mdi:tune"
+			default:
+				icon = "mdi:knob"
+			}
+		}
+
+		// Set the display type based on any configuration specified. Else,
+		// default to "auto".
+		displayType := mqtthass.NumberAuto
+
+		switch cmd.Display {
+		case "box":
+			displayType = mqtthass.NumberBox
+		case "slider":
+			displayType = mqtthass.NumberSlider
+		}
+
+		// Add an entity based on the number type.
+		valueType := cmd.NumberType
+
+		switch valueType {
+		case "float":
+			min := convValue[float64](cmd.Min)
+
+			max := convValue[float64](cmd.Max)
+			if max == 0 {
+				max = 100
+			}
+
+			step := convValue[float64](cmd.Step)
+			if step == 0 {
+				step = 1
+			}
+
+			floats = append(floats,
+				mqtthass.AsNumber(
+					mqtthass.NewEntity(preferences.AppName, name, id).
+						WithOriginInfo(preferences.MQTTOrigin()).
+						WithDeviceInfo(d.device).
+						WithIcon(icon).
+						WithStateCallback(stateCallBack).
+						WithCommandCallback(cmdCallBack).
+						WithValueTemplate("{{ value_json.value }}"),
+					step, min, max, displayType))
+		default:
+			min := convValue[int](cmd.Min)
+
+			max := convValue[int](cmd.Max)
+			if max == 0 {
+				max = 100
+			}
+
+			step := convValue[int](cmd.Step)
+			if step == 0 {
+				step = 1
+			}
+
+			ints = append(ints,
+				mqtthass.AsNumber(
+					mqtthass.NewEntity(preferences.AppName, name, id).
+						WithOriginInfo(preferences.MQTTOrigin()).
+						WithDeviceInfo(d.device).
+						WithIcon(icon).
+						WithStateCallback(stateCallBack).
+						WithCommandCallback(cmdCallBack).
+						WithValueTemplate("{{ value_json.value }}"),
+					step, min, max, displayType))
+		}
+	}
+
+	d.floatNumbers = floats
+	d.intNumbers = ints
+}
+
+// cmdWithoutState runs the executable associated with a control with no state
+// passed to the command. This is used for controls which do not have a state,
+// like buttons.
+func cmdWithoutState(command string) error {
+	cmdElems := strings.Split(command, " ")
+
+	_, err := exec.Command(cmdElems[0], cmdElems[1:]...).Output()
+	if err != nil {
+		return fmt.Errorf("%w: %w", ErrCmdFailed, err)
+	}
+
+	return nil
+}
+
+// cmdWithState runs the executable associated with a control, passing a state
+// value. This is used by controls with a controllable state in Home Assistant.
+func cmdWithState(command, state string) error {
 	if state == "" {
-		return ErrUnknownSwitchState
+		return ErrNoState
 	}
 
 	cmdElems := strings.Split(command, " ")
@@ -260,12 +419,14 @@ func switchCmd(command, state string) error {
 
 	_, err := exec.Command(cmdElems[0], cmdElems[1:]...).Output()
 	if err != nil {
-		return fmt.Errorf("could not execute button command: %w", err)
+		return fmt.Errorf("%w: %w", ErrCmdFailed, err)
 	}
 
 	return nil
 }
 
+// switchState will execute the command associated with the switch control,
+// which should output the current state of the switch.
 func switchState(command string) (json.RawMessage, error) {
 	cmdElems := strings.Split(command, " ")
 
@@ -282,4 +443,35 @@ func switchState(command string) (json.RawMessage, error) {
 	}
 
 	return nil, ErrUnknownSwitchState
+}
+
+func numberState(command string) (json.RawMessage, error) {
+	cmdElems := strings.Split(command, " ")
+
+	output, err := exec.Command(cmdElems[0], cmdElems[1:]...).Output()
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrUnknownNumberState, err)
+	}
+
+	number := string(bytes.TrimSpace(output))
+
+	_, err1 := strconv.ParseInt(number, 10, 64)
+	_, err2 := strconv.ParseFloat(number, 64)
+
+	if err1 != nil && err2 != nil {
+		return nil, fmt.Errorf("%w: %w", ErrUnknownNumberState, errors.Join(err1, err2))
+	}
+
+	return json.RawMessage(`{ "value": ` + number + ` }`), nil
+}
+
+// convValue provides a generic way to either convert to an int/float or just
+// return the default value of that type.
+func convValue[T constraints.Float | constraints.Integer](orig any) T {
+	value, ok := orig.(T)
+	if !ok {
+		return T(0)
+	}
+
+	return value
 }
