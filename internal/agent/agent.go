@@ -240,8 +240,6 @@ func (agent *Agent) Run(ctx context.Context, trk SensorTracker, reg Registry) er
 }
 
 func (agent *Agent) Register(ctx context.Context, trk SensorTracker) {
-	defer agent.Stop()
-
 	var wg sync.WaitGroup
 
 	wg.Add(1)
@@ -252,6 +250,8 @@ func (agent *Agent) Register(ctx context.Context, trk SensorTracker) {
 		if err := agent.checkRegistration(ctx, trk); err != nil {
 			agent.logger.Log(ctx, logging.LevelFatal, "Error checking registration status", "error", err.Error())
 		}
+
+		close(agent.done)
 	}()
 
 	agent.ui.Run(ctx, agent, agent.done)

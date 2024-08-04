@@ -23,3 +23,7 @@ func (p *Registration) Validate() error {
 
 	return nil
 }
+
+func (p *Registration) IsDefault() bool {
+	return p.Server == defaultServer && p.Token == defaultSecret
+}

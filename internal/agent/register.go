@@ -61,7 +61,7 @@ func (agent *Agent) checkRegistration(ctx context.Context, trk SensorTracker) er
 
 	// If the agent is not running headless, ask the user for registration
 	// details.
-	if !agent.headless {
+	if !agent.headless && agent.prefs.Registration.IsDefault() {
 		userInputDone := make(chan struct{})
 		agent.ui.DisplayRegistrationWindow(ctx, agent.prefs, userInputDone)
 		<-userInputDone
