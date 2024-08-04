@@ -9,6 +9,7 @@ package cpu
 
 import (
 	"context"
+	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
@@ -20,6 +21,15 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
+
+//nolint:unused // used to skip these tests in CI environments.
+func skipCI(t *testing.T) {
+	t.Helper()
+
+	if os.Getenv("CI") != "" {
+		t.Skip("Skipping testing in CI environment")
+	}
+}
 
 func Test_getCPUFreqs(t *testing.T) {
 	type args struct {
