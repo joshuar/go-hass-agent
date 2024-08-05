@@ -22,7 +22,8 @@ require (
 	github.com/shirou/gopsutil/v3 v3.24.5
 	github.com/sourcegraph/conc v0.3.0
 	github.com/stretchr/testify v1.9.0
-	github.com/yassinebenaid/godump v0.9.4
+	github.com/yassinebenaid/godump v0.9.5
+	golang.org/x/exp v0.0.0-20240416160154-fe59bbe5cc7f
 	golang.org/x/text v0.16.0
 	golang.org/x/tools v0.23.0
 	gopkg.in/yaml.v3 v3.0.1
@@ -93,7 +94,6 @@ require (
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	gitlab.com/digitalxero/go-conventional-commit v1.0.7 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/exp v0.0.0-20240416160154-fe59bbe5cc7f // indirect
 	golang.org/x/mod v0.19.0 // indirect
 	golang.org/x/sync v0.7.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
