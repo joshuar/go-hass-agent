@@ -23,8 +23,6 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/agent/ui"
 	fyneui "github.com/joshuar/go-hass-agent/internal/agent/ui/fyneUI"
-	"github.com/joshuar/go-hass-agent/internal/commands"
-	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
@@ -197,27 +195,18 @@ func (agent *Agent) Run(ctx context.Context, trk SensorTracker, reg Registry) er
 		if agent.prefs.GetMQTTPreferences().IsMQTTEnabled() {
 			wg.Add(1)
 
-			var commandController *commands.Controller
+			var mqttControllers []MQTTController
 
-			commandsFile := filepath.Join(xdg.ConfigHome, agent.id, "commands.toml")
+			mqttControllers = append(mqttControllers, osController)
 
-			mqttDeviceInfo, err := device.MQTTDevice(preferences.AppName, agent.id, preferences.AppURL, preferences.AppVersion)
-			if err != nil {
-				agent.logger.Warn("Could not set up MQTT commands controller.", "error", err.Error())
-			} else {
-				// Create an MQTT device for this operating system and run its Setup.
-				commandController, err = commands.NewCommandsController(ctx, commandsFile, mqttDeviceInfo)
-				if err != nil {
-					agent.logger.Warn("Could not set up MQTT commands controller.", "error", err.Error())
-
-					return
-				}
+			if commandsController := agent.newMQTTCommandsController(ctx); commandsController != nil {
+				mqttControllers = append(mqttControllers, commandsController)
 			}
 
 			go func() {
 				defer wg.Done()
 
-				agent.runMQTTWorker(runnerCtx, osController, commandController)
+				agent.runMQTTWorker(runnerCtx, mqttControllers...)
 			}()
 		}
 
