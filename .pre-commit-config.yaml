@@ -7,7 +7,7 @@ repos:
   - repo: https://github.com/golangci/golangci-lint
     rev: v1.59.1
     hooks:
-      - id: golangci-lint-full
+      - id: golangci-lint
   - repo: https://github.com/compilerla/conventional-pre-commit
     rev: v3.3.0
     hooks:
