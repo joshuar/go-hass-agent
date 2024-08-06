@@ -59,6 +59,7 @@ type Trigger struct {
 
 type Watch struct {
 	Args          map[int]string
+	ArgNamespace  string
 	Path          string
 	PathNamespace string
 	Interface     string
@@ -77,6 +78,8 @@ func (w *Watch) Parse() []dbus.MatchOption {
 		for arg, value := range w.Args {
 			matchers = append(matchers, dbus.WithMatchArg(arg, value))
 		}
+	case w.ArgNamespace != "":
+		matchers = append(matchers, dbus.WithMatchArg0Namespace(w.ArgNamespace))
 	case w.Interface != "":
 		matchers = append(matchers, dbus.WithMatchInterface(w.Interface))
 	case len(w.Names) != 0:
