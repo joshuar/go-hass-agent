@@ -13,7 +13,6 @@ import (
 	mqtthass "github.com/joshuar/go-hass-anything/v11/pkg/hass"
 	mqttapi "github.com/joshuar/go-hass-anything/v11/pkg/mqtt"
 
-	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/linux/apps"
 	"github.com/joshuar/go-hass-agent/internal/linux/battery"
@@ -28,7 +27,6 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/linux/problems"
 	"github.com/joshuar/go-hass-agent/internal/linux/system"
 	"github.com/joshuar/go-hass-agent/internal/linux/user"
-	"github.com/joshuar/go-hass-agent/internal/preferences"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
@@ -72,16 +70,16 @@ type mqttWorker struct {
 	controls []*mqttapi.Subscription
 }
 
-type linuxController struct {
+type linuxSensorController struct {
 	deviceController
-	dbusAPI    *dbusx.DBusAPI
-	mqttDevice *mqtthass.Device
-	*mqttWorker
 }
 
-// linuxController implements MQTTController
+type linuxMQTTController struct {
+	*mqttWorker
+	logger *slog.Logger
+}
 
-func (w *linuxController) Subscriptions() []*mqttapi.Subscription {
+func (w *linuxMQTTController) Subscriptions() []*mqttapi.Subscription {
 	var subs []*mqttapi.Subscription
 
 	// Create subscriptions for buttons.
@@ -114,7 +112,7 @@ func (w *linuxController) Subscriptions() []*mqttapi.Subscription {
 	return subs
 }
 
-func (w *linuxController) Configs() []*mqttapi.Msg {
+func (w *linuxMQTTController) Configs() []*mqttapi.Msg {
 	var configs []*mqttapi.Msg
 
 	// Create sensor configs.
@@ -153,82 +151,77 @@ func (w *linuxController) Configs() []*mqttapi.Msg {
 	return configs
 }
 
-func (w *linuxController) Msgs() chan *mqttapi.Msg {
+func (w *linuxMQTTController) Msgs() chan *mqttapi.Msg {
 	return w.msgs
 }
 
 // newOSController initialises the list of workers for sensors and returns those
 // that are supported on this device.
-//
-//nolint:exhaustruct
-func (agent *Agent) newOSController(ctx context.Context) Controller {
-	mqttDevice, err := device.MQTTDevice(preferences.AppName, preferences.AppID, preferences.AppURL, preferences.AppVersion)
-	if err != nil {
-		agent.logger.Error("Unable to create MQTT device controller.", "error", err.Error())
+func (agent *Agent) newOSController(ctx context.Context, mqttDevice *mqtthass.Device) (SensorController, MQTTController) {
+	dbusAPI := dbusx.NewDBusAPI(ctx, agent.logger.With(slog.Group("dbus")))
 
-		return nil
-	}
-
-	controller := &linuxController{
+	sensorController := &linuxSensorController{
 		deviceController: deviceController{
 			sensorWorkers: make(map[string]*sensorWorker),
-			logger:        agent.logger.With(slog.Group("linux")),
+			logger:        agent.logger.With(slog.Group("linux", slog.String("controller", "sensor"))),
 		},
-		dbusAPI: dbusx.NewDBusAPI(ctx, agent.logger.With(slog.Group("dbus"))),
-		mqttWorker: &mqttWorker{
-			msgs: make(chan *mqttapi.Msg),
-		},
-		mqttDevice: mqttDevice,
 	}
 
 	// Set up sensor workers.
 	for _, startWorkerFunc := range allworkers {
-		worker, err := startWorkerFunc(ctx, controller.dbusAPI)
+		worker, err := startWorkerFunc(ctx, dbusAPI)
 		if err != nil {
-			controller.logger.Warn("Could not start a sensor worker.", "error", err.Error())
+			sensorController.logger.Warn("Could not start a sensor worker.", "error", err.Error())
 
 			continue
 		}
 
-		controller.sensorWorkers[worker.ID()] = &sensorWorker{object: worker, started: false}
+		sensorController.sensorWorkers[worker.ID()] = &sensorWorker{object: worker, started: false}
 	}
 
-	// Only set up MQTT if MQTT is enabled.
-	if !agent.prefs.MQTT.IsMQTTEnabled() {
-		return controller
+	// Stop setup if there is no mqttDevice.
+	if mqttDevice == nil {
+		return sensorController, nil
+	}
+
+	mqttController := &linuxMQTTController{
+		mqttWorker: &mqttWorker{
+			msgs: make(chan *mqttapi.Msg),
+		},
+		logger: agent.logger.With(slog.Group("linux", slog.String("controller", "mqtt"))),
 	}
 
 	// Add the power controls (suspend, resume, poweroff, etc.).
-	powerButtons := power.NewPowerControl(ctx, controller.dbusAPI, controller.logger, controller.mqttDevice)
+	powerButtons := power.NewPowerControl(ctx, dbusAPI, mqttController.logger, mqttDevice)
 	if powerButtons != nil {
-		controller.buttons = append(controller.buttons, powerButtons...)
+		mqttController.buttons = append(mqttController.buttons, powerButtons...)
 	}
 	// Add the screen lock controls.
-	screenLock := power.NewScreenLockControl(ctx, controller.dbusAPI, controller.logger, controller.mqttDevice)
+	screenLock := power.NewScreenLockControl(ctx, dbusAPI, mqttController.logger, mqttDevice)
 	if screenLock != nil {
-		controller.buttons = append(controller.buttons, screenLock)
+		mqttController.buttons = append(mqttController.buttons, screenLock)
 	}
 	// Add the volume controls.
-	volEntity, muteEntity := media.VolumeControl(ctx, controller.Msgs(), controller.logger, controller.mqttDevice)
+	volEntity, muteEntity := media.VolumeControl(ctx, mqttController.Msgs(), mqttController.logger, mqttDevice)
 	if volEntity != nil && muteEntity != nil {
-		controller.numbers = append(controller.numbers, volEntity)
-		controller.switches = append(controller.switches, muteEntity)
+		mqttController.numbers = append(mqttController.numbers, volEntity)
+		mqttController.switches = append(mqttController.switches, muteEntity)
 	}
 	// Add media control.
-	mprisEntity, err := media.MPRISControl(ctx, controller.dbusAPI, controller.logger, controller.mqttDevice, controller.Msgs())
+	mprisEntity, err := media.MPRISControl(ctx, dbusAPI, mqttController.logger, mqttDevice, mqttController.Msgs())
 	if err != nil {
-		controller.logger.Warn("could not activate MPRIS controller", slog.Any("error", err))
+		mqttController.logger.Warn("could not activate MPRIS controller", slog.Any("error", err))
 	} else {
-		controller.sensors = append(controller.sensors, mprisEntity)
+		mqttController.sensors = append(mqttController.sensors, mprisEntity)
 	}
 
 	// Add the D-Bus command action.
-	controller.controls = append(controller.controls, system.NewDBusCommandSubscription(ctx, controller.dbusAPI, controller.logger))
+	mqttController.controls = append(mqttController.controls, system.NewDBusCommandSubscription(ctx, dbusAPI, mqttController.logger))
 
 	go func() {
-		defer close(controller.msgs)
+		defer close(mqttController.msgs)
 		<-ctx.Done()
 	}()
 
-	return controller
+	return sensorController, mqttController
 }

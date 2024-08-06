@@ -159,62 +159,57 @@ func (agent *Agent) Run(ctx context.Context, trk SensorTracker, reg Registry) er
 		regWait.Wait()
 
 		// Create a context for runners
-		runnerCtx, cancelFunc := context.WithCancel(ctx)
+		controllerCtx, cancelFunc := context.WithCancel(ctx)
 
-		// Cancel the runner context wh	en the agent is done.
+		// Cancel the runner context when the agent is done.
 		go func() {
 			<-agent.done
 			cancelFunc()
 			agent.logger.Debug("Agent done.")
 		}()
 
-		// Create a new OS controller. The controller will have all the
-		// necessary configuration for any OS-specific sensors and MQTT
-		// configuration.
-		osController := agent.newOSController(runnerCtx)
-		// Create a new device controller. The controller will have all the
-		// necessary configuration for device-specific sensors and MQTT
-		// configuration.
-		deviceController := agent.newDeviceController(runnerCtx)
+		var (
+			sensorControllers []SensorController
+			mqttControllers   []MQTTController
+		)
+		// Setup and sort all controllers by type.
+		for _, c := range agent.setupControllers(controllerCtx) {
+			switch controller := c.(type) {
+			case SensorController:
+				sensorControllers = append(sensorControllers, controller)
+			case MQTTController:
+				mqttControllers = append(mqttControllers, controller)
+			}
+		}
 
 		var sensorCh []<-chan sensor.Details
 
 		// Run workers and get all channels for sensor updates.
-		sensorCh = append(sensorCh, agent.runWorkers(runnerCtx, osController, deviceController)...)
+		sensorCh = append(sensorCh, agent.runSensorWorkers(controllerCtx, sensorControllers...)...)
 		// Run scripts and get channel for sensor updates.
-		sensorCh = append(sensorCh, agent.runScripts(runnerCtx))
+		sensorCh = append(sensorCh, agent.runScripts(controllerCtx))
 
 		wg.Add(1)
 		// Process the sensor updates.
 		go func() {
 			defer wg.Done()
-			agent.processSensors(runnerCtx, trk, reg, sensorCh...)
+			agent.processSensors(controllerCtx, trk, reg, sensorCh...)
 		}()
 
 		// Start the mqtt client if MQTT is enabled.
-		if agent.prefs.GetMQTTPreferences().IsMQTTEnabled() {
-			wg.Add(1)
+		wg.Add(1)
 
-			var mqttControllers []MQTTController
+		go func() {
+			defer wg.Done()
 
-			mqttControllers = append(mqttControllers, osController)
-
-			if commandsController := agent.newMQTTCommandsController(ctx); commandsController != nil {
-				mqttControllers = append(mqttControllers, commandsController)
-			}
-
-			go func() {
-				defer wg.Done()
-
-				agent.runMQTTWorker(runnerCtx, mqttControllers...)
-			}()
-		}
+			agent.runMQTTWorkers(controllerCtx, mqttControllers...)
+		}()
 
 		wg.Add(1)
 		// Listen for notifications from Home Assistant.
 		go func() {
 			defer wg.Done()
-			agent.runNotificationsWorker(runnerCtx)
+			agent.runNotificationsWorker(controllerCtx)
 		}()
 	}()
 
@@ -273,10 +268,10 @@ func (agent *Agent) Stop() {
 
 // Reset will remove any agent related files and configuration.
 func (agent *Agent) Reset(ctx context.Context) error {
-	osController := agent.newOSController(ctx)
-
-	if err := agent.resetMQTTWorker(ctx, osController); err != nil {
-		return fmt.Errorf("problem resetting agent: %w", err)
+	if !agent.prefs.MQTT.IsMQTTEnabled() {
+		if err := agent.resetMQTTControllers(ctx); err != nil {
+			agent.logger.Warn("Problems occurred resetting MQTT configuration.", slog.Any("error", err))
+		}
 	}
 
 	return nil
