@@ -214,6 +214,14 @@ func (agent *Agent) newOSController(ctx context.Context) Controller {
 		controller.numbers = append(controller.numbers, volEntity)
 		controller.switches = append(controller.switches, muteEntity)
 	}
+	// Add media control.
+	mprisEntity, err := media.MPRISControl(ctx, controller.dbusAPI, controller.logger, controller.mqttDevice, controller.Msgs())
+	if err != nil {
+		controller.logger.Warn("could not activate MPRIS controller", slog.Any("error", err))
+	} else {
+		controller.sensors = append(controller.sensors, mprisEntity)
+	}
+
 	// Add the D-Bus command action.
 	controller.controls = append(controller.controls, system.NewDBusCommandSubscription(ctx, controller.dbusAPI, controller.logger))
 
