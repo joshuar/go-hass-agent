@@ -47,7 +47,7 @@ func (s *mockSensor) Category() string { return sensor.CategoryDiagnostic }
 
 func (s *mockSensor) Attributes() map[string]any { return nil }
 
-func TestAgent_runWorkers(t *testing.T) {
+func TestAgent_runSensorControllers(t *testing.T) {
 	sensorCh := make(chan sensor.Details)
 	defer close(sensorCh)
 
@@ -101,7 +101,7 @@ func TestAgent_runWorkers(t *testing.T) {
 				headless:      tt.fields.headless,
 				forceRegister: tt.fields.forceRegister,
 			}
-			if got := agent.runWorkers(context.TODO(), tt.args.controllers...); !reflect.DeepEqual(got, tt.want) {
+			if got := agent.runSensorWorkers(context.TODO(), tt.args.controllers...); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Agent.runWorkers() = %v, want %v", got, tt.want)
 			}
 		})
