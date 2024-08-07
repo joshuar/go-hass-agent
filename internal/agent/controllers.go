@@ -78,6 +78,11 @@ func (agent *Agent) setupControllers(ctx context.Context) []any {
 		}
 	}
 
+	scriptsController := agent.newScriptsController(ctx)
+	if scriptsController != nil {
+		controllers = append(controllers, scriptsController)
+	}
+
 	// Create a new device controller. The controller will have all the
 	// necessary configuration for device-specific sensors and MQTT
 	// configuration.

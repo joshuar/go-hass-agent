@@ -12,10 +12,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"path/filepath"
-
-	"github.com/adrg/xdg"
-	"github.com/robfig/cron/v3"
 
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
@@ -32,11 +28,6 @@ var (
 	ErrRegistrationFailed = errors.New("sensor registration failed")
 )
 
-type Script interface {
-	Schedule() string
-	Execute() (sensors []sensor.Details, err error)
-}
-
 type LocationUpdateResponse interface {
 	Updated() bool
 	Error() string
@@ -49,93 +40,6 @@ type SensorUpdateResponse interface {
 type SensorRegistrationResponse interface {
 	Registered() bool
 	Error() string
-}
-
-// runScripts will retrieve all scripts that the agent can run and queue them up
-// to be run on their defined schedule using the cron scheduler. It also sets up
-// a channel to receive script output and send appropriate sensor objects to the
-// sensor.
-//
-//revive:disable:function-length
-func (agent *Agent) runScripts(ctx context.Context) chan sensor.Details {
-	sensorCh := make(chan sensor.Details)
-
-	// Define the path to custom sensor scripts.
-	if scriptPath == "" {
-		scriptPath = filepath.Join(xdg.ConfigHome, agent.id, "scripts")
-	}
-	// Get any scripts in the script path.
-	sensorScripts, err := findScripts(scriptPath)
-
-	// If no scripts were found or there was an error processing scripts, log a
-	// message and return.
-	switch {
-	case err != nil:
-		agent.logger.Warn("Error finding custom sensor scripts.", "error", err.Error())
-		close(sensorCh)
-
-		return sensorCh
-	case len(sensorScripts) == 0:
-		agent.logger.Debug("No custom sensor scripts found.")
-		close(sensorCh)
-
-		return sensorCh
-	}
-
-	scheduler := cron.New()
-
-	var jobs []cron.EntryID //nolint:prealloc // we can't determine size in advance.
-
-	for _, script := range sensorScripts {
-		if script.Schedule() == "" {
-			agent.logger.Warn("Script found without schedule defined, skipping.")
-
-			continue
-		}
-		// Create a closure to run the script on it's schedule.
-		runFunc := func() {
-			sensors, err := script.Execute()
-			if err != nil {
-				agent.logger.Warn("Could not execute script.", "error", err.Error())
-
-				return
-			}
-
-			for _, o := range sensors {
-				sensorCh <- o
-			}
-		}
-		// Add the script to the cron scheduler to run the closure on it's
-		// defined schedule.
-		jobID, err := scheduler.AddFunc(script.Schedule(), runFunc)
-		if err != nil {
-			agent.logger.Warn("Unable to schedule script", "error", err.Error())
-
-			break
-		}
-
-		jobs = append(jobs, jobID)
-	}
-
-	agent.logger.Debug("Starting cron scheduler for script sensors.")
-	// Start the cron scheduler
-	scheduler.Start()
-
-	go func() {
-		defer close(sensorCh)
-		<-ctx.Done()
-		// Stop next run of all active cron jobs.
-		for _, jobID := range jobs {
-			scheduler.Remove(jobID)
-		}
-
-		agent.logger.Debug("Stopping cron scheduler for script sensors.")
-		// Stop the scheduler once all jobs have finished.
-		cronCtx := scheduler.Stop()
-		<-cronCtx.Done()
-	}()
-
-	return sensorCh
 }
 
 func (agent *Agent) processSensors(ctx context.Context, trk SensorTracker, reg Registry, sensorCh ...<-chan sensor.Details) {
