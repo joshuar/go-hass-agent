@@ -12,12 +12,11 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"sync"
 
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 )
-
-var scriptPath string
 
 var (
 	ErrStateUpdateUnknown = errors.New("unknown sensor update response")
@@ -40,6 +39,58 @@ type SensorUpdateResponse interface {
 type SensorRegistrationResponse interface {
 	Registered() bool
 	Error() string
+}
+
+// runSensorWorkers will start all the sensor worker functions for all sensor
+// controllers passed in. It returns a single merged channel of sensor updates.
+func (agent *Agent) runSensorWorkers(ctx context.Context, trk SensorTracker, reg Registry, controllers ...SensorController) {
+	var (
+		sensorCh []<-chan sensor.Details
+		wg       sync.WaitGroup
+	)
+
+	for _, controller := range controllers {
+		ch, err := controller.StartAll(ctx)
+		if err != nil {
+			agent.logger.Warn("Start controller had errors.", "errors", err.Error())
+		} else {
+			sensorCh = append(sensorCh, ch)
+		}
+	}
+
+	if len(sensorCh) == 0 {
+		agent.logger.Warn("No workers were started by any controllers.")
+
+		return
+	}
+
+	wg.Add(1)
+
+	go func() {
+		defer wg.Done()
+		agent.logger.Debug("Processing sensor updates.")
+
+		for {
+			select {
+			case <-ctx.Done():
+				agent.logger.Debug("Stopping all sensor controllers.")
+
+				for _, controller := range controllers {
+					if err := controller.StopAll(); err != nil {
+						agent.logger.Warn("Stop controller had errors.", "error", err.Error())
+					}
+				}
+
+				return
+			default:
+				agent.processSensors(ctx, trk, reg, sensorCh...)
+
+				return
+			}
+		}
+	}()
+
+	wg.Wait()
 }
 
 func (agent *Agent) processSensors(ctx context.Context, trk SensorTracker, reg Registry, sensorCh ...<-chan sensor.Details) {

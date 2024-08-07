@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log/slog"
 	"path/filepath"
+	"sync"
 
 	"github.com/adrg/xdg"
 
@@ -50,6 +51,7 @@ func (agent *Agent) runMQTTWorkers(ctx context.Context, controllers ...MQTTContr
 		configs       []*mqttapi.Msg
 		msgCh         []<-chan *mqttapi.Msg
 		err           error
+		wg            sync.WaitGroup
 	)
 
 	// Add the subscriptions and configs from the controllers.
@@ -68,7 +70,10 @@ func (agent *Agent) runMQTTWorkers(ctx context.Context, controllers ...MQTTContr
 		return
 	}
 
+	wg.Add(1)
+
 	go func() {
+		defer wg.Done()
 		agent.logger.Debug("Listening for messages to publish to MQTT.")
 
 		for {
@@ -85,7 +90,7 @@ func (agent *Agent) runMQTTWorkers(ctx context.Context, controllers ...MQTTContr
 		}
 	}()
 
-	<-ctx.Done()
+	wg.Wait()
 }
 
 func (agent *Agent) resetMQTTControllers(ctx context.Context) error {
