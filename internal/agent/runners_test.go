@@ -5,7 +5,7 @@
 
 //nolint:wsl,paralleltest,nlreturn,dupl
 //revive:disable:max-public-structs,unused-receiver,unused-parameter,function-length
-//go:generate moq -out runners_mocks_test.go . SensorController Worker Script LocationUpdateResponse SensorUpdateResponse SensorRegistrationResponse
+//go:generate moq -out runners_mocks_test.go . SensorController Worker LocationUpdateResponse SensorUpdateResponse SensorRegistrationResponse
 package agent
 
 import (
@@ -104,70 +104,6 @@ func TestAgent_runSensorControllers(t *testing.T) {
 			if got := agent.runSensorWorkers(context.TODO(), tt.args.controllers...); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Agent.runWorkers() = %v, want %v", got, tt.want)
 			}
-		})
-	}
-}
-
-func TestAgent_runScripts(t *testing.T) {
-	type fields struct {
-		ui            UI
-		done          chan struct{}
-		prefs         *preferences.Preferences
-		logger        *slog.Logger
-		id            string
-		headless      bool
-		forceRegister bool
-	}
-	type args struct {
-		path string
-	}
-	tests := []struct {
-		wantFunc func(t *testing.T, sensorCh chan sensor.Details)
-		name     string
-		args     args
-		fields   fields
-	}{
-		{
-			name:   "with scripts",
-			args:   args{path: "testing/data"},
-			fields: fields{logger: slog.Default(), id: "go-hass-agent-test"},
-			wantFunc: func(t *testing.T, sensorCh chan sensor.Details) {
-				t.Helper()
-				assert.IsType(t, make(chan sensor.Details), sensorCh)
-			},
-		},
-		{
-			name:   "without scripts",
-			args:   args{path: "foo/bar"},
-			fields: fields{logger: slog.Default(), id: "go-hass-agent-test"},
-			wantFunc: func(t *testing.T, sensorCh chan sensor.Details) {
-				t.Helper()
-				assert.Empty(t, sensorCh)
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ctx, cancelFunc := context.WithCancel(context.TODO())
-			defer cancelFunc()
-			scriptPath = tt.args.path
-			agent := &Agent{
-				ui:            tt.fields.ui,
-				done:          tt.fields.done,
-				prefs:         tt.fields.prefs,
-				logger:        tt.fields.logger,
-				id:            tt.fields.id,
-				headless:      tt.fields.headless,
-				forceRegister: tt.fields.forceRegister,
-			}
-			got := agent.runScripts(ctx)
-			// Check we got what we expected.
-			tt.wantFunc(t, got)
-			// Wait for the cron scheduler to process script.
-			for range got {
-				cancelFunc()
-			}
-			scriptPath = ""
 		})
 	}
 }

@@ -28,8 +28,6 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
-var ErrCtxFailed = errors.New("unable to create a context")
-
 // UI are the methods required for the agent to display its windows, tray
 // and notifications.
 type UI interface {
@@ -187,7 +185,7 @@ func (agent *Agent) Run(ctx context.Context, trk SensorTracker, reg Registry) er
 		// Run workers and get all channels for sensor updates.
 		sensorCh = append(sensorCh, agent.runSensorWorkers(controllerCtx, sensorControllers...)...)
 		// Run scripts and get channel for sensor updates.
-		sensorCh = append(sensorCh, agent.runScripts(controllerCtx))
+		// sensorCh = append(sensorCh, agent.runScripts(controllerCtx))
 
 		wg.Add(1)
 		// Process the sensor updates.
