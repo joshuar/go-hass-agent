@@ -119,13 +119,15 @@ func (c *Controller) Stop(name string) error {
 
 	c.scheduler.Remove(c.jobs[found].ID)
 
+	c.jobs[found].ID = 0
+
 	return nil
 }
 
 func (c *Controller) StartAll(_ context.Context) (<-chan sensor.Details, error) {
 	sensorCh := make(chan sensor.Details)
 
-	for _, job := range c.jobs {
+	for idx, job := range c.jobs {
 		if job.ID > 0 {
 			c.logger.Warn("Script already started.", slog.String("script", job.path))
 
@@ -154,7 +156,7 @@ func (c *Controller) StartAll(_ context.Context) (<-chan sensor.Details, error) 
 				slog.String("schedule", job.schedule),
 				slog.Any("error", err))
 		} else {
-			job.ID = id
+			c.jobs[idx].ID = id
 			c.logger.Debug("Added cron job.",
 				slog.String("script", job.path),
 				slog.String("schedule", job.schedule),
@@ -169,9 +171,10 @@ func (c *Controller) StartAll(_ context.Context) (<-chan sensor.Details, error) 
 }
 
 func (c *Controller) StopAll() error {
-	for _, job := range c.jobs {
+	for idx, job := range c.jobs {
 		c.logger.Debug("Removing cron job.", slog.String("script", job.path))
 		c.scheduler.Remove(job.ID)
+		c.jobs[idx].ID = 0
 	}
 
 	c.logger.Debug("Stopping cron scheduler.")
