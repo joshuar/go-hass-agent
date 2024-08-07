@@ -104,36 +104,3 @@ func (agent *Agent) setupControllers(ctx context.Context) []any {
 
 	return controllers
 }
-
-// runSensorWorkers will start all the sensor worker functions for all sensor
-// controllers passed in. It returns a single merged channel of sensor updates.
-func (agent *Agent) runSensorWorkers(ctx context.Context, controllers ...SensorController) []<-chan sensor.Details {
-	var sensorCh []<-chan sensor.Details
-
-	for _, controller := range controllers {
-		ch, err := controller.StartAll(ctx)
-		if err != nil {
-			agent.logger.Warn("Start controller had errors.", "errors", err.Error())
-		} else {
-			sensorCh = append(sensorCh, ch)
-		}
-	}
-
-	if len(sensorCh) == 0 {
-		agent.logger.Warn("No workers were started by any controllers.")
-
-		return sensorCh
-	}
-
-	go func() {
-		<-ctx.Done()
-
-		for _, controller := range controllers {
-			if err := controller.StopAll(); err != nil {
-				agent.logger.Warn("Stop controller had errors.", "error", err.Error())
-			}
-		}
-	}()
-
-	return sensorCh
-}

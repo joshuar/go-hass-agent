@@ -72,7 +72,7 @@ func newDefaultAgent(ctx context.Context, id string) *Agent {
 	return &Agent{
 		done:   make(chan struct{}),
 		id:     id,
-		logger: logging.FromContext(ctx).With(slog.Group("agent")),
+		logger: logging.FromContext(ctx),
 	}
 }
 
@@ -180,23 +180,16 @@ func (agent *Agent) Run(ctx context.Context, trk SensorTracker, reg Registry) er
 			}
 		}
 
-		var sensorCh []<-chan sensor.Details
-
-		// Run workers and get all channels for sensor updates.
-		sensorCh = append(sensorCh, agent.runSensorWorkers(controllerCtx, sensorControllers...)...)
-		// Run scripts and get channel for sensor updates.
-		// sensorCh = append(sensorCh, agent.runScripts(controllerCtx))
-
 		wg.Add(1)
-		// Process the sensor updates.
+		// Run workers for any sensor controllers.
 		go func() {
 			defer wg.Done()
-			agent.processSensors(controllerCtx, trk, reg, sensorCh...)
+
+			agent.runSensorWorkers(controllerCtx, trk, reg, sensorControllers...)
 		}()
 
-		// Start the mqtt client if MQTT is enabled.
 		wg.Add(1)
-
+		// Run workers for any MQTT controllers.
 		go func() {
 			defer wg.Done()
 
