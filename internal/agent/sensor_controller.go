@@ -4,7 +4,6 @@
 // https://opensource.org/licenses/MIT
 
 //revive:disable:max-public-structs
-//go:generate moq -out runners_mocks_test.go . SensorController Worker Script LocationUpdateResponse SensorUpdateResponse SensorRegistrationResponse
 package agent
 
 import (

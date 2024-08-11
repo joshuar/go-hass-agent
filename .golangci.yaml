@@ -155,6 +155,7 @@ issues:
         - wsl
         - containedctx
         - dupl
+        - nlreturn
 
 severity:
   default-severity: "@linter"

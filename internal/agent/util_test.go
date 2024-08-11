@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//nolint:wsl,paralleltest
+//nolint:paralleltest
 package agent
 
 import (
@@ -30,7 +30,7 @@ func Test_mergeCh(t *testing.T) {
 	}()
 
 	type args struct {
-		ctx  context.Context //nolint:containedctx
+		ctx  context.Context
 		inCh []<-chan int
 	}
 	tests := []struct {
