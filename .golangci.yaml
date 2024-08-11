@@ -148,6 +148,13 @@ issues:
     - linters:
       - govet
       text: "lostcancel"
+    - path: '(.+)_test\.go'
+      linters:
+        - funlen
+        - varnamelen
+        - wsl
+        - containedctx
+        - dupl
 
 severity:
   default-severity: "@linter"
