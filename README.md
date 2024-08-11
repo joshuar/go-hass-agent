@@ -659,9 +659,11 @@ To configure the agent to connect to MQTT:
 After the above steps, Go Hass Agent will appear as a device under the MQTT
 integration in your Home Assistant.
 
-[![Open your Home Assistant instance and show the MQTT integration.](https://my.home-assistant.io/badges/integration.svg)](https://my.home-assistant.io/redirect/integration/?domain=mqtt)
+[![Open your Home Assistant instance and show the MQTT
+integration.](https://my.home-assistant.io/badges/integration.svg)](https://my.home-assistant.io/redirect/integration/?domain=mqtt)
 
-> [!NOTE] Go Hass Agent will appear in two places in your Home Assistant.
+> [!NOTE]
+> Go Hass Agent will appear in two places in your Home Assistant.
 > Firstly, under the Mobile App integration, which will show all the *sensors*
 > that Go Hass Agent is reporting. Secondly, under the MQTT integration, which
 > will show the *controls and sensors* exposed over MQTT for Go Hass Agent.
