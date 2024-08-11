@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//nolint:paralleltest,wsl,nlreturn,goconst
+//nolint:paralleltest,goconst
 package agent
 
 import (

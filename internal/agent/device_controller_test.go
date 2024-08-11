@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//nolint:exhaustruct,paralleltest,wsl,nlreturn
+//nolint:paralleltest
 package agent
 
 import (

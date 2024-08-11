@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//nolint:wsl,paralleltest,dupl
+//nolint:paralleltest
 //revive:disable:max-public-structs,unused-receiver,unused-parameter,function-length
 package agent
 

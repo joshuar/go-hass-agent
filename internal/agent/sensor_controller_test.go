@@ -3,9 +3,8 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//nolint:paralleltest,wsl,nlreturn,dupl
+//nolint:paralleltest
 //revive:disable:max-public-structs,unused-receiver,unused-parameter,function-length
-//go:generate moq -out runners_mocks_test.go . SensorController Worker Script LocationUpdateResponse SensorUpdateResponse SensorRegistrationResponse
 package agent
 
 import (
