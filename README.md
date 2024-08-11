@@ -53,11 +53,9 @@
 - [📔 Table of Contents](#-table-of-contents)
 - [🌟 About the Project](#-about-the-project)
   - [🎯 Features](#-features)
-    - [📈 Sensors (by Operating System)](#-sensors-by-operating-system)
-      - [🐧 Linux](#-linux)
-    - [🤖 Script Sensors (All Platforms)](#-script-sensors-all-platforms)
-    - [🚌 Control via MQTT (All Platforms)](#-control-via-mqtt-all-platforms)
   - [🤔 Use-cases](#-use-cases)
+  - [📈/🕹️ List of Sensors/Controls (by Operating System)](#️-list-of-sensorscontrols-by-operating-system)
+    - [🐧 Linux](#-linux)
   - [🗒️ Versioning](#️-versioning)
 - [🧰 Getting Started](#-getting-started)
   - [🤝 Compatibility](#-compatibility)
@@ -80,10 +78,8 @@
         - [TOML](#toml)
     - [Schedule](#schedule)
     - [Security Implications](#security-implications)
-  - [Controls (via MQTT)](#controls-via-mqtt)
-    - [Requirements](#requirements-1)
+  - [MQTT Sensors and Controls](#mqtt-sensors-and-controls)
     - [Configuration](#configuration)
-    - [Available Controls](#available-controls)
     - [Custom D-BUS Controls](#custom-d-bus-controls)
     - [Other Custom Commands](#other-custom-commands)
     - [Security Implications](#security-implications-1)
@@ -113,14 +109,52 @@
 
 ### 🎯 Features
 
-#### 📈 Sensors (by Operating System)
+- **Sensors:** Expose a number of sensor entities to Home Assistant, which can then be used
+  in dashboards, automations and other aspects your Home Assistant platform.
+  - By default, Go Hass Agent ships with up around 100 sensors (on Linux),
+    depending on the system it runs on.
+- **Custom Sensors via Scripts:** All platforms can also utilise scripts/executables to
+create custom sensors. See [Script Sensors](#script-sensors).
+- **Controls and additional sensors via MQTT:** Where Home Assistant is
+connected to MQTT, Go Hass Agent can add some additional sensors/controls for
+various system features. A selection of device controls are provided by default,
+and you can configure additional controls to execute D-Bus commands or
+scripts/executables. See [Control via MQTT](#mqtt-sensors-and-controls).
+
+[⬆️ Back to Top](#-table-of-contents)
+
+### 🤔 Use-cases
+
+As examples of some of the things that can be done with the data published by
+this app:
+
+- Change your lighting depending on:
+  - What active/running apps are on your laptop/desktop. For example, you could
+  set your lights dim or activate a scene when you are gaming.
+  - Whether your screen is locked or the device is shutdown/suspended.
+- With your laptop plugged into a smart plug that is also controlled by Home
+  Assistant, turn the smart plug on/off based on the battery charge. This can
+  force a full charge/discharge cycle of the battery, extending its life over
+  leaving it constantly charged.
+- Like on mobile devices, create automations based on the location of your
+  laptop running this app.
+- Monitor network the data transfer amount from the device, useful where network
+  data might be capped.
+- Monitor CPU load, disk usage and any temperature sensors emitted from the
+  device.
+- Receive notifications from Home Assistant on your desktop/laptop. Potentially
+  based on or utilising any of the data above.
+
+[⬆️ Back to Top](#-table-of-contents)
+
+### 📈/🕹️ List of Sensors/Controls (by Operating System)
 
 > [!NOTE]
 > The following list shows all **potential** sensors the agent can
 > report. In some cases, the **actual** sensors reported may be less due to
 > lack of support in the system configuration or missing hardware.
 
-##### 🐧 Linux
+#### 🐧 Linux
 
 - *Go Hass Agent Version*. Updated on agent start.
 - App Details:
@@ -135,6 +169,13 @@
   detected). Updated when theme or colour changes.
   - Via D-Bus (requires [XDG Desktop Portal
   Support](https://flatpak.github.io/xdg-desktop-portal/docs/) support).
+- Media Controls (when [configured with MQTT](#mqtt-sensors-and-controls)):
+  - *Volume Control* Adjust the volume on the default audio output device.
+  - *Volume Mute* Mute/Unmute the default audio output device.
+  - *MPRIS Player State* Show the current state of any MPRIS compatible player.
+    - Requires a player with MPRIS support.
+  - *Webcam Control* Start/stop a webcam and view the video in Home Assistant.
+    - Requires a webcam that is exposed via V4L2 (VideoForLinux2).
 - Connected Battery Details:
   - *Battery Type* (the type of battery, e.g., UPS, line power). Updated on battery add/remove.
   - *Battery Temp* (battery temperature). Updated when the temperature changes.
@@ -189,6 +230,17 @@
   - *Power State* (power state of device, e.g., suspended, powered on/off).
     Updated when power state changes.
     - Via D-Bus. Requires `systemd-logind`.
+- Power Controls (when [configured with MQTT](#mqtt-sensors-and-controls)):
+  - *Lock/Unlock Screen/Screensaver* Locks/unlocks the session for the user
+    running Go Hass Agent.
+  - *Suspend* Will (instantly) suspend (the system state is saved to RAM and
+    the CPU is turned off) the device running Go Hass Agent.
+  - *Hibernate* Will (instantly) hibernate (the system state is saved to disk
+    and the machine is powered down) the device running Go Hass Agent.
+  - *Power Off* Will (instantly) power off the device running Go Hass Agent.
+  - *Reboot* Will (instantly) reboot the device running Go Hass Agent.
+  - Power controls require a system configured with `systemd-logind` (and D-Bus)
+    support.
 - Various System Details:
   - *Boot Time* (date/Time of last system boot). Updated ~every 15 minutes. Via ProcFS.
   - *Uptime*. Updated ~every 15 minutes. Via ProcFS.
@@ -208,43 +260,11 @@
     - Attributes: extracted problem details.
     - Requires ABRT.
   - Hardware Sensors:
-    - Any temp, fan, power and other hardware sensors, including associated
-      alarms. Updated ~every 1 minute.
+    - Any *temp*, *fan*, *power* and other hardware sensors, including associated
+      *alarms*. Updated ~every 1 minute.
     - Extracted from the `/sys/class/hwmon` file system.
 
-#### 🤖 Script Sensors (All Platforms)
-
-All platforms can also utilise scripts to create custom sensors. See
-[scripts](#script-sensors).
-
-#### 🚌 Control via MQTT (All Platforms)
-
-Where Home Assistant is connected to MQTT, Go Hass Agent can add some controls
-for various system features. A selection of device controls are provided by
-default, and you can configure additional controls to execute D-Bus commands or
-scripts/executables. See [Control via MQTT](#controls-via-mqtt).
-
-### 🤔 Use-cases
-
-As examples of some of the things that can be done with the data published by
-this app:
-
-- Change your lighting depending on:
-  - What active/running apps are on your laptop/desktop. For example, you could
-  set your lights dim or activate a scene when you are gaming.
-  - Whether your screen is locked or the device is shutdown/suspended.
-- With your laptop plugged into a smart plug that is also controlled by Home
-  Assistant, turn the smart plug on/off based on the battery charge. This can
-  force a full charge/discharge cycle of the battery, extending its life over
-  leaving it constantly charged.
-- Like on mobile devices, create automations based on the location of your
-  laptop running this app.
-- Monitor network the data transfer amount from the device, useful where network
-  data might be capped.
-- Monitor CPU load, disk usage and any temperature sensors emitted from the
-  device.
-- Receive notifications from Home Assistant on your desktop/laptop. Potentially
-  based on or utilising any of the data above.
+[⬆️ Back to Top](#-table-of-contents)
 
 ### 🗒️ Versioning
 
@@ -385,6 +405,7 @@ podman run --hostname go-hass-agent-container --name my-go-hass-agent \
   --volume /proc:/host/proc:ro --volume /sys:/host/sys:ro \
   --volume /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket:ro \
   --volume /run/user/1000/bus:/run/user/1000/bus:ro \
+  --device /dev/video0:/dev/video0
   ghcr.io/joshuar/go-hass-agent # any additional options
 ```
 
@@ -393,7 +414,15 @@ and `--hostname` for the hostname that will be presented to Home Assistant
 during registration.
 
 All the other volume mounts are optional, but functionality and the sensors
-reported will be severely limited without them.
+reported will be severely limited without them:
+
+- `--volume /proc:/host/proc:ro --volume /sys:/host/sys:ro`:
+  - Enables various hardware and system monitoring sensors.
+- `--volume /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket:ro`
+- `--volume /run/user/1000/bus:/run/user/1000/bus:ro`
+  - Enables sensors that are gathered via D-Bus.
+- `--device /dev/video0:/dev/video0`
+  - Allows webcam control (when configured with MQTT).
 
 ### ♻️ Regular Usage
 
@@ -603,23 +632,18 @@ and understand what the script does and all possible outputs that the script can
 produce. Scripts are run by the agent and have the permissions of the user
 running the agent. Script output is sent to your Home Assistant instance.
 
-### Controls (via MQTT)
+### MQTT Sensors and Controls
 
 > [!NOTE]
-> Control via MQTT is not enabled by default.
+> MQTT Sensors and Controls are not enabled by default.
 
 If Home Assistant is connected to
 [MQTT](https://www.home-assistant.io/integrations/mqtt/), you can also configure
-Go Hass Agent to connect to MQTT, which will then expose some controls in Home
-Assistant to control the device running the agent. Additionally, you can
-configure your own custom controls to run either [D-Bus
-commands](#custom-d-bus-controls) or [scripts and executables](#other-custom-commands).
-
-#### Requirements
-
-- For Linux:
-  - Controls rely on distribution/system support for `systemd-logind` and a working
-D-Bus connection.
+Go Hass Agent to connect to MQTT, which will then expose some sensors and
+controls in Home Assistant to control the device running the agent.
+Additionally, you can configure your own custom controls to run either [D-Bus
+commands](#custom-d-bus-controls) or [scripts and
+executables](#other-custom-commands).
 
 #### Configuration
 
@@ -637,31 +661,12 @@ integration in your Home Assistant.
 
 [![Open your Home Assistant instance and show the MQTT integration.](https://my.home-assistant.io/badges/integration.svg)](https://my.home-assistant.io/redirect/integration/?domain=mqtt)
 
-> [!NOTE]
-> Go Hass Agent will appear in two places in your Home Assistant.
+> [!NOTE] Go Hass Agent will appear in two places in your Home Assistant.
 > Firstly, under the Mobile App integration, which will show all the *sensors*
 > that Go Hass Agent is reporting. Secondly, under the MQTT integration, which
-> will show the *controls* for Go Hass Agent. Unfortunately, due to limitations
-> with the Home Assistant architecture, these cannot be combined in a single
-> place.
-
-#### Available Controls
-
-The following table shows the controls that are available.  You can add these
-controls to dashboards in Home Assistant or use them in automations with a
-service call.
-
-| Control | What it does |
-|--------|------------------|
-| Lock Screen | Locks the session for the user running Go Hass Agent |
-| Unlock Screen | Unlocks the session for the user running Go Hass Agent |
-| Lock Screensaver | Lock the “screensaver” of the session for the user running Go Hass Agent |
-| Suspend | Will (instantly) suspend (the system state is saved to RAM and the CPU is turned off) the device running Go Hass Agent |
-| Hibernate | Will (instantly) hibernate (the system state is saved to disk and the machine is powered down) the device running Go Hass Agent |
-| Power Off | Will (instantly) power off the device running Go Hass Agent |
-| Reboot | Will (instantly) reboot the device running Go Hass Agent |
-| Volume Control | Adjust the volume on the default audio output device |
-| Volume Mute | Mute/Unmute the default audio output device |
+> will show the *controls and sensors* exposed over MQTT for Go Hass Agent.
+> Unfortunately, due to limitations with the Home Assistant architecture, these
+> cannot be combined in a single place.
 
 #### Custom D-BUS Controls
 
