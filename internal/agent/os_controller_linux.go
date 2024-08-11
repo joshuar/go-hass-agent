@@ -62,12 +62,14 @@ var (
 )
 
 type mqttWorker struct {
-	msgs     chan *mqttapi.Msg
-	sensors  []*mqtthass.SensorEntity
-	buttons  []*mqtthass.ButtonEntity
-	numbers  []*mqtthass.NumberEntity[int]
-	switches []*mqtthass.SwitchEntity
-	controls []*mqttapi.Subscription
+	msgs          chan *mqttapi.Msg
+	sensors       []*mqtthass.SensorEntity
+	buttons       []*mqtthass.ButtonEntity
+	numbers       []*mqtthass.NumberEntity[int]
+	switches      []*mqtthass.SwitchEntity
+	controls      []*mqttapi.Subscription
+	binarySensors []*mqtthass.BinarySensorEntity
+	cameras       []*mqtthass.ImageEntity
 }
 
 type linuxSensorController struct {
@@ -79,80 +81,95 @@ type linuxMQTTController struct {
 	logger *slog.Logger
 }
 
-func (w *linuxMQTTController) Subscriptions() []*mqttapi.Subscription {
-	var subs []*mqttapi.Subscription
+// entity is a convienience interface to avoid duplicating a lot of loop content
+// when configuring the controller.
+type entity interface {
+	MarshalSubscription() (*mqttapi.Subscription, error)
+	MarshalConfig() (*mqttapi.Msg, error)
+}
+
+func (c *linuxMQTTController) Subscriptions() []*mqttapi.Subscription {
+	totalLength := len(c.buttons) + len(c.numbers) + len(c.switches) + len(c.cameras)
+	subs := make([]*mqttapi.Subscription, 0, totalLength)
 
 	// Create subscriptions for buttons.
-	for _, button := range w.buttons {
-		if sub, err := button.MarshalSubscription(); err != nil {
-			w.logger.Warn("Could not create subscription.", "entity", button.Name, "error", err.Error())
-		} else {
-			subs = append(subs, sub)
-		}
+	for _, button := range c.buttons {
+		subs = append(subs, c.generateSubscription(button))
 	}
 	// Create subscriptions for numbers.
-	for _, number := range w.numbers {
-		if sub, err := number.MarshalSubscription(); err != nil {
-			w.logger.Warn("Could not create subscription.", "entity", number.Name, "error", err.Error())
-		} else {
-			subs = append(subs, sub)
-		}
+	for _, number := range c.numbers {
+		subs = append(subs, c.generateSubscription(number))
 	}
 	// Create subscriptions for switches.
-	for _, sw := range w.switches {
-		if sub, err := sw.MarshalSubscription(); err != nil {
-			w.logger.Warn("Could not create subscription.", "entity", sw.Name, "error", err.Error())
-		} else {
-			subs = append(subs, sub)
-		}
+	for _, sw := range c.switches {
+		subs = append(subs, c.generateSubscription(sw))
 	}
 	// Add subscriptions for any additional controls.
-	subs = append(subs, w.controls...)
+	subs = append(subs, c.controls...)
 
 	return subs
 }
 
-func (w *linuxMQTTController) Configs() []*mqttapi.Msg {
-	var configs []*mqttapi.Msg
+func (c *linuxMQTTController) Configs() []*mqttapi.Msg {
+	totalLength := len(c.sensors) + len(c.binarySensors) + len(c.buttons) + len(c.switches) + len(c.numbers) + len(c.cameras)
+	configs := make([]*mqttapi.Msg, 0, totalLength)
 
 	// Create sensor configs.
-	for _, sensorEntity := range w.sensors {
-		if sub, err := sensorEntity.MarshalConfig(); err != nil {
-			w.logger.Warn("Could not create config.", "entity", sensorEntity.Name, "error", err.Error())
-		} else {
-			configs = append(configs, sub)
-		}
+	for _, sensorEntity := range c.sensors {
+		configs = append(configs, c.generateConfig(sensorEntity))
+	}
+	// Create binary sensor configs.
+	for _, binarySensorEntity := range c.binarySensors {
+		configs = append(configs, c.generateConfig(binarySensorEntity))
 	}
 	// Create button configs.
-	for _, buttonEntity := range w.buttons {
-		if sub, err := buttonEntity.MarshalConfig(); err != nil {
-			w.logger.Warn("Could not create config.", "entity", buttonEntity.Name, "error", err.Error())
-		} else {
-			configs = append(configs, sub)
-		}
+	for _, buttonEntity := range c.buttons {
+		configs = append(configs, c.generateConfig(buttonEntity))
 	}
 	// Create number configs.
-	for _, numberEntity := range w.numbers {
-		if sub, err := numberEntity.MarshalConfig(); err != nil {
-			w.logger.Warn("Could not create config.", "entity", numberEntity.Name, "error", err.Error())
-		} else {
-			configs = append(configs, sub)
-		}
+	for _, numberEntity := range c.numbers {
+		configs = append(configs, c.generateConfig(numberEntity))
 	}
 	// Create switch configs.
-	for _, switchEntity := range w.switches {
-		if sub, err := switchEntity.MarshalConfig(); err != nil {
-			w.logger.Warn("Could not create config.", "entity", switchEntity.Name, "error", err.Error())
-		} else {
-			configs = append(configs, sub)
-		}
+	for _, switchEntity := range c.switches {
+		configs = append(configs, c.generateConfig(switchEntity))
+	}
+	// Create camera configs.
+	for _, cameraEntity := range c.cameras {
+		configs = append(configs, c.generateConfig(cameraEntity))
 	}
 
 	return configs
 }
 
-func (w *linuxMQTTController) Msgs() chan *mqttapi.Msg {
-	return w.msgs
+func (c *linuxMQTTController) Msgs() chan *mqttapi.Msg {
+	return c.msgs
+}
+
+// generateConfig is a helper function to avoid duplicate code around generating
+// an entity subscription.
+func (c *linuxMQTTController) generateSubscription(e entity) *mqttapi.Subscription {
+	sub, err := e.MarshalSubscription()
+	if err != nil {
+		c.logger.Warn("Could not create subscription.", slog.Any("error", err))
+
+		return nil
+	}
+
+	return sub
+}
+
+// generateConfig is a helper function to avoid duplicate code around generating
+// an entity config.
+func (c *linuxMQTTController) generateConfig(e entity) *mqttapi.Msg {
+	cfg, err := e.MarshalConfig()
+	if err != nil {
+		c.logger.Warn("Could not create config.", slog.Any("error", err.Error()))
+
+		return nil
+	}
+
+	return cfg
 }
 
 // newOSController initialises the list of workers for sensors and returns those
@@ -213,6 +230,13 @@ func (agent *Agent) newOSController(ctx context.Context, mqttDevice *mqtthass.De
 		mqttController.logger.Warn("could not activate MPRIS controller", slog.Any("error", err))
 	} else {
 		mqttController.sensors = append(mqttController.sensors, mprisEntity)
+	}
+	// Add camera control.
+	cameraEntities := media.NewCameraControl(ctx, mqttController.Msgs(), mqttController.logger, mqttDevice)
+	if cameraEntities != nil {
+		mqttController.buttons = append(mqttController.buttons, cameraEntities.StartButton, cameraEntities.StopButton)
+		mqttController.cameras = append(mqttController.cameras, cameraEntities.Images)
+		mqttController.sensors = append(mqttController.sensors, cameraEntities.Status)
 	}
 
 	// Add the D-Bus command action.
