@@ -7,7 +7,8 @@
         "TZ": "${localEnv:TZ:Australia/Brisbane}",
         "DISPLAY": ":0",
         "XAUTHORITY": "/tmp/.Xauthority",
-        "HOME": "/home/vscode"
+        "HOME": "/home/vscode",
+        "DEVCONTAINER": "true"
     },
     "updateRemoteUserUID": true,
 	"workspaceFolder": "/workspace",
