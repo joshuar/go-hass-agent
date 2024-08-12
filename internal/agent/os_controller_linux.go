@@ -175,7 +175,7 @@ func (c *linuxMQTTController) generateConfig(e entity) *mqttapi.Msg {
 // newOSController initialises the list of workers for sensors and returns those
 // that are supported on this device.
 func (agent *Agent) newOSController(ctx context.Context, mqttDevice *mqtthass.Device) (SensorController, MQTTController) {
-	dbusAPI := dbusx.NewDBusAPI(ctx, agent.logger.With(slog.Group("dbus")))
+	dbusAPI := dbusx.NewDBusAPI(ctx, agent.logger.WithGroup("dbus"))
 
 	sensorController := &linuxSensorController{
 		deviceController: deviceController{
@@ -209,9 +209,11 @@ func (agent *Agent) newOSController(ctx context.Context, mqttDevice *mqtthass.De
 	}
 
 	// Add the power controls (suspend, resume, poweroff, etc.).
-	powerButtons := power.NewPowerControl(ctx, dbusAPI, mqttController.logger, mqttDevice)
-	if powerButtons != nil {
-		mqttController.buttons = append(mqttController.buttons, powerButtons...)
+	powerEntities, err := power.NewPowerControl(ctx, dbusAPI, mqttController.logger, mqttDevice)
+	if err != nil {
+		mqttController.logger.Warn("Could not create power controls.", slog.Any("error", err))
+	} else {
+		mqttController.buttons = append(mqttController.buttons, powerEntities...)
 	}
 	// Add the screen lock controls.
 	screenLock := power.NewScreenLockControl(ctx, dbusAPI, mqttController.logger, mqttDevice)
@@ -227,7 +229,7 @@ func (agent *Agent) newOSController(ctx context.Context, mqttDevice *mqtthass.De
 	// Add media control.
 	mprisEntity, err := media.MPRISControl(ctx, dbusAPI, mqttController.logger, mqttDevice, mqttController.Msgs())
 	if err != nil {
-		mqttController.logger.Warn("could not activate MPRIS controller", slog.Any("error", err))
+		mqttController.logger.Warn("Could not activate MPRIS controller.", slog.Any("error", err))
 	} else {
 		mqttController.sensors = append(mqttController.sensors, mprisEntity)
 	}
