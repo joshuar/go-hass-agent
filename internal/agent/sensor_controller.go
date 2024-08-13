@@ -97,9 +97,21 @@ func (agent *Agent) processSensors(ctx context.Context, trk SensorTracker, reg R
 
 	for update := range mergeCh(ctx, sensorCh...) {
 		go func(upd sensor.Details) {
-			// Ignore disabled sensors.
 			if reg.IsDisabled(upd.ID()) {
-				return
+				// Ignore sensors marked as disabled in the registry (and disabled in Home Assistant).
+				if agent.isDisabledinHA(ctx, upd.ID()) {
+					slog.Debug("Not sending request for disabled sensor.",
+						slog.Group("sensor", slog.String("name", upd.Name()), slog.String("id", upd.ID())))
+
+					return
+				}
+				// If the sensor is disabled in the registry but not in Home Assistant, re-enable it.
+				slog.Debug("Sensor re-enabled in HA, will send updates.",
+					slog.Group("sensor", slog.String("name", upd.Name()), slog.String("id", upd.ID())))
+
+				if err := reg.SetDisabled(upd.ID(), false); err != nil {
+					slog.Error("Could not re-enable sensor.", slog.String("name", upd.Name()), slog.String("id", upd.ID()), slog.Any("error", err))
+				}
 			}
 
 			var (
@@ -239,4 +251,22 @@ func processRegistration(trk SensorTracker, reg Registry, upd sensor.Details, de
 
 	// Return success status and any warnings.
 	return true, warnings
+}
+
+func (agent *Agent) isDisabledinHA(ctx context.Context, id string) bool {
+	cfg, err := hass.GetConfig(ctx, agent.GetRestAPIURL())
+	if err != nil {
+		agent.logger.Debug("Could not fetch HA config. Assuming sensor is still disabled.", slog.Any("error", err))
+
+		return true
+	}
+
+	status, err := cfg.IsEntityDisabled(id)
+	if err != nil {
+		agent.logger.Debug("Could not determine sensor disabled status in HA config. Assuming sensor is still disabled.", slog.Any("error", err))
+
+		return true
+	}
+
+	return status
 }
