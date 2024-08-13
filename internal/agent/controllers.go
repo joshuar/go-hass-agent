@@ -76,6 +76,12 @@ func (agent *Agent) setupControllers(ctx context.Context) []any {
 		if err != nil {
 			agent.logger.Warn("Could not create MQTT device, MQTT functionality will not be available.", slog.Any("error", err))
 		}
+
+		// Create an MQTT commands controller.
+		mqttCmdController := agent.newMQTTController(ctx, mqttDevice)
+		if mqttCmdController != nil {
+			controllers = append(controllers, mqttCmdController)
+		}
 	}
 
 	scriptsController := agent.newScriptsController(ctx)
@@ -95,12 +101,6 @@ func (agent *Agent) setupControllers(ctx context.Context) []any {
 	// configuration.
 	osSensorController, osMQTTController := agent.newOSController(ctx, mqttDevice)
 	controllers = append(controllers, osSensorController, osMQTTController)
-
-	// Create an MQTT commands controller.
-	mqttCmdController := agent.newMQTTController(ctx, mqttDevice)
-	if mqttCmdController != nil {
-		controllers = append(controllers, mqttCmdController)
-	}
 
 	return controllers
 }

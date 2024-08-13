@@ -7,6 +7,7 @@ package agent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"path/filepath"
@@ -34,7 +35,9 @@ func (agent *Agent) newMQTTController(ctx context.Context, mqttDevice *mqtthass.
 
 	commandController, err := commands.NewCommandsController(ctx, commandsFile, mqttDevice)
 	if err != nil {
-		agent.logger.Error("Could not set up MQTT commands controller.", slog.Any("error", err))
+		if !errors.Is(err, commands.ErrNoCommands) {
+			agent.logger.Warn("Could not set up MQTT commands controller.", slog.Any("error", err))
+		}
 
 		return nil
 	}
