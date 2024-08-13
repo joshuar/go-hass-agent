@@ -58,35 +58,16 @@ func (c *powerController) generateCommands(ctx context.Context) []powerCommand {
 		},
 	}
 
-	sessionCommands := []powerCommand{
-		{
-			name: "Lock Session",
-			id:   "Lock",
-			icon: "mdi:eye-lock",
-		},
-		{
-			name: "Unlock Session",
-			icon: "mdi:eye-lock-open",
-			id:   "UnLock",
-		},
-	}
-
-	availableCommands := make([]powerCommand, 0, len(systemCommands)+len(sessionCommands))
+	availableCommands := make([]powerCommand, 0, len(systemCommands))
 
 	// Add available system power commands.
 	for _, config := range systemCommands {
 		// Check if this power method is available on the system.
 		available, _ := dbusx.GetData[string](ctx, c.bus, loginBasePath, loginBaseInterface, managerInterface+".Can"+config.id) //nolint:errcheck
 		if available == "yes" {
-			config.callBack = c.generatePowerControlCallback(ctx, config.name, loginBasePath, managerInterface+"."+config.id, true)
+			config.callBack = c.generatePowerControlCallback(ctx, config.name, loginBasePath, managerInterface+"."+config.id)
 			availableCommands = append(availableCommands, config)
 		}
-	}
-
-	// Add session power commands.
-	for _, config := range sessionCommands {
-		config.callBack = c.generatePowerControlCallback(ctx, config.name, c.sessionPath, sessionInterface+"."+config.id, nil)
-		availableCommands = append(availableCommands, config)
 	}
 
 	return availableCommands
@@ -94,17 +75,9 @@ func (c *powerController) generateCommands(ctx context.Context) []powerCommand {
 
 // generatePowerControlCallback creates an MQTT callback function that can
 // execute the appropriate D-Bus call to issue a power command on the device.
-func (c *powerController) generatePowerControlCallback(ctx context.Context, name, path, method string, arg any) func(p *paho.Publish) {
-	if arg != nil {
-		return func(_ *paho.Publish) {
-			if err := c.bus.Call(ctx, path, loginBaseInterface, method, arg); err != nil {
-				c.logger.Warn("Could not issue power control.", slog.String("control", name), slog.Any("error", err))
-			}
-		}
-	}
-
+func (c *powerController) generatePowerControlCallback(ctx context.Context, name, path, method string) func(p *paho.Publish) {
 	return func(_ *paho.Publish) {
-		if err := c.bus.Call(ctx, path, loginBaseInterface, method); err != nil {
+		if err := c.bus.Call(ctx, path, loginBaseInterface, method, true); err != nil {
 			c.logger.Warn("Could not issue power control.", slog.String("control", name), slog.Any("error", err))
 		}
 	}
@@ -112,19 +85,19 @@ func (c *powerController) generatePowerControlCallback(ctx context.Context, name
 
 //nolint:lll
 func NewPowerControl(ctx context.Context, api *dbusx.DBusAPI, parentLogger *slog.Logger, device *mqtthass.Device) ([]*mqtthass.ButtonEntity, error) {
-	bus, err := api.GetBus(ctx, dbusx.SystemBus)
+	sessionBus, err := api.GetBus(ctx, dbusx.SystemBus)
 	if err != nil {
 		return nil, fmt.Errorf("cannot create power controls: %w", err)
 	}
 
-	sessionPath, err := bus.GetSessionPath(ctx)
+	sessionPath, err := sessionBus.GetSessionPath(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("cannot create power controls: %w", err)
 	}
 
 	controller := &powerController{
 		logger:      parentLogger.WithGroup("power_control"),
-		bus:         bus,
+		bus:         sessionBus,
 		sessionPath: sessionPath,
 	}
 

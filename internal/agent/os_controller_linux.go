@@ -216,9 +216,11 @@ func (agent *Agent) newOSController(ctx context.Context, mqttDevice *mqtthass.De
 		mqttController.buttons = append(mqttController.buttons, powerEntities...)
 	}
 	// Add the screen lock controls.
-	screenLock := power.NewScreenLockControl(ctx, dbusAPI, mqttController.logger, mqttDevice)
-	if screenLock != nil {
-		mqttController.buttons = append(mqttController.buttons, screenLock)
+	screenControls, err := power.NewScreenLockControl(ctx, dbusAPI, mqttController.logger, mqttDevice)
+	if err != nil {
+		mqttController.logger.Warn("Could not create screen lock controls.", slog.Any("error", err))
+	} else {
+		mqttController.buttons = append(mqttController.buttons, screenControls...)
 	}
 	// Add the volume controls.
 	volEntity, muteEntity := media.VolumeControl(ctx, mqttController.Msgs(), mqttController.logger, mqttDevice)
