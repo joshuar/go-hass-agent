@@ -271,7 +271,9 @@ this app:
 This project follows [semantic versioning](https://semver.org/). Given a version
 number `MAJOR.MINOR.PATCH`, the gist of it is:
 
-- A `MAJOR` number change means breaking changes from the previous release.
+- A `MAJOR` number change means there [breaking
+  changes](docs/BREAKING_CHANGES.md) from the previous release that may require
+  manual intervention before/after upgrading.
 - A `MINOR` number change means significant changes and new features have been
   added, but not breaking changes.
 - A `PATCH` number change indicate minor changes and bug fixes.
