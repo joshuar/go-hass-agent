@@ -16,4 +16,7 @@ go install github.com/goreleaser/nfpm/v2/cmd/nfpm@d33a9233bb7acf04621b7811411447
 go install github.com/tomwright/dasel/v2/cmd/dasel@5d94a3049c2e81a410a6f48cf084c86c98393797
 go install github.com/sigstore/cosign/v2/cmd/cosign@fb651b4ddd8176bd81756fca2d988dd8611f514d
 
+# Install and configure starship
+curl -sS https://starship.rs/install.sh | sh -s -- -y || exit -1
+echo "starship init fish | source" >> ~/.config/fish/config.fish
 exit 0
