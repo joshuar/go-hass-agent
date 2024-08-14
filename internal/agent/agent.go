@@ -44,7 +44,7 @@ type Registry interface {
 	IsRegistered(id string) bool
 }
 
-type SensorTracker interface {
+type Tracker interface {
 	SensorList() []string
 	// Process(ctx context.Context, reg sensor.Registry, sensorUpdates ...<-chan sensor.Details) error
 	Add(details sensor.Details) error
@@ -133,7 +133,7 @@ func ForceRegister(value bool) Option {
 // publish it to Home Assistant.
 //
 //revive:disable:function-length
-func (agent *Agent) Run(ctx context.Context, trk SensorTracker, reg Registry) error {
+func (agent *Agent) Run(ctx context.Context, trk Tracker, reg Registry) error {
 	var wg sync.WaitGroup
 
 	// Pre-flight: check if agent is registered. If not, run registration flow.
@@ -214,7 +214,7 @@ func (agent *Agent) Run(ctx context.Context, trk SensorTracker, reg Registry) er
 	return nil
 }
 
-func (agent *Agent) Register(ctx context.Context, trk SensorTracker) {
+func (agent *Agent) Register(ctx context.Context, trk Tracker) {
 	var wg sync.WaitGroup
 
 	wg.Add(1)

@@ -42,7 +42,7 @@ type SensorRegistrationResponse interface {
 
 // runSensorWorkers will start all the sensor worker functions for all sensor
 // controllers passed in. It returns a single merged channel of sensor updates.
-func (agent *Agent) runSensorWorkers(ctx context.Context, trk SensorTracker, reg Registry, controllers ...SensorController) {
+func (agent *Agent) runSensorWorkers(ctx context.Context, trk Tracker, reg Registry, controllers ...SensorController) {
 	var (
 		sensorCh []<-chan sensor.Details
 		wg       sync.WaitGroup
@@ -92,7 +92,7 @@ func (agent *Agent) runSensorWorkers(ctx context.Context, trk SensorTracker, reg
 	wg.Wait()
 }
 
-func (agent *Agent) processSensors(ctx context.Context, trk SensorTracker, reg Registry, sensorCh ...<-chan sensor.Details) {
+func (agent *Agent) processSensors(ctx context.Context, trk Tracker, reg Registry, sensorCh ...<-chan sensor.Details) {
 	client := hass.NewDefaultHTTPClient(agent.prefs.Hass.RestAPIURL)
 
 	for update := range mergeCh(ctx, sensorCh...) {
@@ -154,7 +154,7 @@ func (agent *Agent) processSensors(ctx context.Context, trk SensorTracker, reg R
 	}
 }
 
-func (agent *Agent) processResponse(ctx context.Context, upd sensor.Details, resp any, reg Registry, trk SensorTracker) {
+func (agent *Agent) processResponse(ctx context.Context, upd sensor.Details, resp any, reg Registry, trk Tracker) {
 	sensorLogAttrs := slog.Group("sensor",
 		slog.String("name", upd.Name()),
 		slog.String("id", upd.ID()),
@@ -195,7 +195,7 @@ func (agent *Agent) processResponse(ctx context.Context, upd sensor.Details, res
 	}
 }
 
-func processStateUpdates(trk SensorTracker, reg Registry, upd sensor.Details, status *sensor.UpdateStatus) (bool, error) {
+func processStateUpdates(trk Tracker, reg Registry, upd sensor.Details, status *sensor.UpdateStatus) (bool, error) {
 	// No status was returned.
 	if status == nil {
 		return false, ErrStateUpdateUnknown
@@ -229,7 +229,7 @@ func processStateUpdates(trk SensorTracker, reg Registry, upd sensor.Details, st
 	return true, warnings
 }
 
-func processRegistration(trk SensorTracker, reg Registry, upd sensor.Details, details SensorRegistrationResponse) (bool, error) {
+func processRegistration(trk Tracker, reg Registry, upd sensor.Details, details SensorRegistrationResponse) (bool, error) {
 	// If the registration failed, log a warning.
 	if !details.Registered() {
 		return false, fmt.Errorf("%w: %s", ErrRegistrationFailed, details.Error())

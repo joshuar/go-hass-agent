@@ -62,7 +62,7 @@ func TestAgent_processResponse(t *testing.T) {
 		upd  sensor.Details
 		resp any
 		reg  Registry
-		trk  SensorTracker
+		trk  Tracker
 	}
 	tests := []struct {
 		args   args
@@ -121,7 +121,7 @@ func Test_processStateUpdates(t *testing.T) {
 	}
 
 	type args struct {
-		trk    SensorTracker
+		trk    Tracker
 		reg    Registry
 		upd    sensor.Details
 		status *sensor.UpdateStatus
@@ -219,7 +219,7 @@ func Test_processRegistration(t *testing.T) {
 	}
 
 	type args struct {
-		trk     SensorTracker
+		trk     Tracker
 		reg     Registry
 		upd     sensor.Details
 		details SensorRegistrationResponse
