@@ -632,6 +632,8 @@ and understand what the script does and all possible outputs that the script can
 produce. Scripts are run by the agent and have the permissions of the user
 running the agent. Script output is sent to your Home Assistant instance.
 
+[⬆️ Back to Top](#-table-of-contents)
+
 ### MQTT Sensors and Controls
 
 > [!NOTE]
@@ -670,6 +672,8 @@ integration.](https://my.home-assistant.io/badges/integration.svg)](https://my.h
 > Unfortunately, due to limitations with the Home Assistant architecture, these
 > cannot be combined in a single place.
 
+[⬆️ Back to Top](#-table-of-contents)
+
 #### Custom D-BUS Controls
 
 The agent will subscribe to the MQTT topic `gohassagent/dbus` on the configured
@@ -693,6 +697,8 @@ This can be used to trigger arbitrary d-bus commands on the system where the
 agent runs on, by using any MQTT client such as the Home Assistant
 [`mqtt.publish`](https://www.home-assistant.io/integrations/mqtt/#service-mqttpublish)
 service.
+
+[⬆️ Back to Top](#-table-of-contents)
 
 #### Other Custom Commands
 
