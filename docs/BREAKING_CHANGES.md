@@ -25,25 +25,29 @@ agent and their data in Home Assistant should not be affected.
 
 ### What you need to do
 
-For existing users, you will need to re-register Go Hass Agent with your Home Assistant instance.
+For existing users, you will need to re-register Go Hass Agent with your Home
+Assistant instance.
 
 To re-register:
 
 1. Stop Go Hass Agent if already running.
 2. Open your Home Assistant ***mobile_app*** integrations page:
 
-  [![Open your Home Assistant instance to the mobile_app
+   [![Open your Home Assistant instance to the mobile_app
   integration.](https://my.home-assistant.io/badges/integration.svg)](https://my.home-assistant.io/redirect/integration/?domain=mobile_app)
 
 3. Locate the entry for your existing Go Hass Agent device. It should be named
    the same as the hostname of the device it is running on.
 4. Click on the menu (three vertical dots) at the right of the entry:
 
-![Delete Agent Example](../assets/screenshots/delete-from-mobile-app-integrations.png)
+   ![Delete Agent Example](../assets/screenshots/delete-from-mobile-app-integrations.png)
 
 5. Choose **Delete**.
-6. Follow the [first-run instructions](../README.md#-first-run) in the README to re-register the agent.
-7. Once the agent has successfully re-registered, you can remove the old configuration directory and its contents. The old location will be `~/.config/com.joshuar.go-hass-agent.debug`.
+6. Follow the [first-run instructions](../README.md#-first-run) in the README to
+   re-register the agent.
+7. Once the agent has successfully re-registered, you can remove the old
+   configuration directory and its contents. The old location will be
+   `~/.config/com.joshuar.go-hass-agent.debug`.
 
 ### Additional steps for users with MQTT enabled
 
@@ -64,13 +68,18 @@ to the following:
 
 ## Log file location normalisation
 
-The agent will now write to a log file at `~/.config/go-hass-agent/go-hass-agent.log`.
+The agent will now write to a log file at
+`~/.config/go-hass-agent/go-hass-agent.log`.
 
 ### What you need to do
 
-Previous versions may have written a log file to either `~/.config/go-hass-agent.log` or `~/.config/com.joshuar.go-hass-agent.debug/go-hass-agent.log`. You can delete these files if desired.
+Previous versions may have written a log file to either
+`~/.config/go-hass-agent.log` or
+`~/.config/com.joshuar.go-hass-agent.debug/go-hass-agent.log`. You can delete
+these files if desired.
 
-If you do not wish Go Hass Agent to write any log file, pass `--no-log-file` when running the agent.
+If you do not wish Go Hass Agent to write any log file, pass `--no-log-file`
+when running the agent.
 
 ## Power controls renaming and consolidation (when using MQTT)
 
@@ -100,20 +109,20 @@ You may have duplicate or non-functional buttons. To fix, you can remove the
 MQTT device for Go Hass Agent and restart it. It will automatically re-create
 the appropriate entities.
 
-1. Open Home Assistant to the ***MQTT** integration page.
+1. Open Home Assistant to the **MQTT** integration page.
 
-[![Open your Home Assistant instance and show the MQTT
+   [![Open your Home Assistant instance and show the MQTT
 integration.](https://my.home-assistant.io/badges/integration.svg)](https://my.home-assistant.io/redirect/integration/?domain=mqtt)
 
 2. Click on the ***devices*** link:
 
-![Open MQTT devices Example](../assets/screenshots/open-mqtt-devices.png)
+   ![Open MQTT devices Example](../assets/screenshots/open-mqtt-devices.png)
 
 3. Locate and click on the row for the agent.  It should be named the same as
    the hostname of the device it is running on.
 4. Click on the menu (three vertical dots) below the device info:
 
-![Open MQTT device options Example](../assets/screenshots/mqtt-device-options.png)
+   ![Open MQTT device options Example](../assets/screenshots/mqtt-device-options.png)
 
 5. Choose **Delete**.
 6. Restart Go Hass Agent.
