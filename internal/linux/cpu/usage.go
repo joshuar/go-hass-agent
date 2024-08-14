@@ -3,7 +3,6 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//nolint:exhaustruct
 //revive:disable:unused-receiver
 package cpu
 
@@ -37,7 +36,6 @@ func (w *usageWorker) Interval() time.Duration { return usageUpdateInterval }
 
 func (w *usageWorker) Jitter() time.Duration { return usageUpdateJitter }
 
-//nolint:exhaustruct
 func (w *usageWorker) Sensors(ctx context.Context, d time.Duration) ([]sensor.Details, error) {
 	usage, err := cpu.PercentWithContext(ctx, d, false)
 	if err != nil {

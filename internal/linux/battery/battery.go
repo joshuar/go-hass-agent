@@ -3,7 +3,6 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//nolint:exhaustruct
 //revive:disable:unused-receiver
 package battery
 
@@ -106,8 +105,6 @@ func (b *upowerBattery) getSensors(ctx context.Context, sensors ...linux.SensorT
 
 // newBattery creates a battery object that will have a number of properties to
 // be treated as sensors in Home Assistant.
-//
-//nolint:exhaustruct,mnd
 func newBattery(ctx context.Context, bus *dbusx.Bus, logger *slog.Logger, path dbus.ObjectPath) (*upowerBattery, error) {
 	battery := &upowerBattery{
 		dBusPath: path,
@@ -164,7 +161,7 @@ func newBattery(ctx context.Context, bus *dbusx.Bus, logger *slog.Logger, path d
 	// At a minimum, monitor the battery type and the charging state.
 	battery.sensors = append(battery.sensors, linux.SensorBattState)
 
-	if battery.battType == 2 {
+	if battery.battType == batteryTypeBattery {
 		// Battery has charge percentage, temp and charging rate sensors
 		battery.sensors = append(battery.sensors, linux.SensorBattPercentage, linux.SensorBattTemp, linux.SensorBattEnergyRate)
 	} else {
@@ -342,7 +339,7 @@ func (s *upowerBatterySensor) generateAttributes(ctx context.Context, battery *u
 // newBatterySensor creates a new sensor for Home Assistant from a battery
 // property.
 //
-//nolint:exhaustruct,lll
+//nolint:lll
 func newBatterySensor(ctx context.Context, battery *upowerBattery, sensorType linux.SensorTypeValue, value dbus.Variant) *upowerBatterySensor {
 	batterySensor := &upowerBatterySensor{
 		batteryID: battery.id,
@@ -359,8 +356,6 @@ func newBatterySensor(ctx context.Context, battery *upowerBattery, sensorType li
 
 // monitorBattery will monitor a battery device for any property changes and
 // send these as sensors.
-//
-//nolint:exhaustruct
 func monitorBattery(ctx context.Context, battery *upowerBattery) <-chan sensor.Details {
 	sensorCh := make(chan sensor.Details)
 	// Create a DBus signal match to watch for property changes for this
@@ -556,8 +551,6 @@ func (w *batterySensorWorker) remove(batteryPath dbus.ObjectPath) {
 
 // monitorBatteryChanges monitors for battery devices being added/removed from
 // the system and will start/stop monitory each battery as appropriate.
-//
-//nolint:exhaustruct
 func (w *batterySensorWorker) monitorBatteryChanges(ctx context.Context) <-chan sensor.Details {
 	sensorCh := make(chan sensor.Details)
 

@@ -3,12 +3,11 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//nolint:exhaustruct,paralleltest,wsl
+//nolint:paralleltest
 package hass
 
 import (
 	"encoding/json"
-	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -145,7 +144,6 @@ func TestConfig_UnmarshalError(t *testing.T) {
 	type fields struct {
 		Details  *ConfigEntries
 		APIError *APIError
-		mu       sync.Mutex
 	}
 	type args struct {
 		data []byte
@@ -172,7 +170,6 @@ func TestConfig_UnmarshalError(t *testing.T) {
 			c := &Config{
 				Details:  tt.fields.Details,
 				APIError: tt.fields.APIError,
-				mu:       tt.fields.mu,
 			}
 			if err := c.UnmarshalError(tt.args.data); (err != nil) != tt.wantErr {
 				t.Errorf("Config.UnmarshalError() error = %v, wantErr %v", err, tt.wantErr)

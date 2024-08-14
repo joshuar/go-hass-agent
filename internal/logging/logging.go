@@ -26,7 +26,6 @@ var LevelNames = map[slog.Leveler]string{
 	LevelFatal: "FATAL",
 }
 
-//nolint:exhaustruct
 //revive:disable:flag-parameter
 func New(level string, logFile string) *slog.Logger {
 	// Create an slog consoleOpts object.

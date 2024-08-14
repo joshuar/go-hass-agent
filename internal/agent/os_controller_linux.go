@@ -174,6 +174,8 @@ func (c *linuxMQTTController) generateConfig(e entity) *mqttapi.Msg {
 
 // newOSController initialises the list of workers for sensors and returns those
 // that are supported on this device.
+//
+//revive:disable:function-length
 func (agent *Agent) newOSController(ctx context.Context, mqttDevice *mqtthass.Device) (SensorController, MQTTController) {
 	dbusAPI := dbusx.NewDBusAPI(ctx, agent.logger.WithGroup("dbus"))
 

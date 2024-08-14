@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//nolint:exhaustruct,paralleltest,wsl,unused,nlreturn
+//nolint:paralleltest
 package dbusx
 
 import (
@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+//nolint:unused // keep this around
 func skipCI(t *testing.T) {
 	t.Helper()
 

@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//nolint:dupl,paralleltest,exhaustruct
+//nolint:paralleltest
 package linux
 
 import (

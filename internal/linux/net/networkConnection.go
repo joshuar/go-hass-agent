@@ -137,7 +137,7 @@ func (c *connection) updateAddrs(addr address) {
 	}
 }
 
-//nolint:exhaustruct,mnd
+//nolint:mnd
 func (c *connection) monitorState(ctx context.Context) chan connState {
 	stateCh := make(chan connState)
 
@@ -193,7 +193,7 @@ func (c *connection) monitorState(ctx context.Context) chan connState {
 	return stateCh
 }
 
-//nolint:exhaustruct,mnd,nestif,gocognit,cyclop
+//nolint:mnd,nestif,gocognit,cyclop
 func (c *connection) monitorAddresses(ctx context.Context) chan address {
 	sensorCh := make(chan address)
 
@@ -392,7 +392,7 @@ func (w *connectionsWorker) monitorConnection(ctx context.Context, connPath dbus
 	return sensorCh
 }
 
-//nolint:exhaustruct,mnd
+//nolint:mnd
 func (w *connectionsWorker) newConnection(ctx context.Context, path dbus.ObjectPath) *connection {
 	newConnection := &connection{
 		path: path,
@@ -480,7 +480,7 @@ func (w *connectionsWorker) Sensors(_ context.Context) ([]sensor.Details, error)
 	return nil, linux.ErrUnimplemented
 }
 
-//nolint:cyclop,exhaustruct,mnd
+//nolint:cyclop,mnd
 func (w *connectionsWorker) Events(ctx context.Context) (chan sensor.Details, error) {
 	sensorCh := make(chan sensor.Details)
 
@@ -549,7 +549,6 @@ func (w *connectionsWorker) Events(ctx context.Context) (chan sensor.Details, er
 	return sensorCh, nil
 }
 
-//nolint:exhaustruct
 func NewConnectionWorker(ctx context.Context, api *dbusx.DBusAPI) (*linux.SensorWorker, error) {
 	bus, err := api.GetBus(ctx, dbusx.SystemBus)
 	if err != nil {

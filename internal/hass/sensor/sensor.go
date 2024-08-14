@@ -62,7 +62,6 @@ type stateUpdateRequest struct {
 	UniqueID        string         `json:"unique_id"`
 }
 
-//nolint:exhaustruct // some fields are optional
 func newStateUpdateRequest(sensor State) *stateUpdateRequest {
 	upd := &stateUpdateRequest{
 		StateAttributes: sensor.Attributes(),

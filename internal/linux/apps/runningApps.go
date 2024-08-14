@@ -74,7 +74,6 @@ func (r *runningAppsSensor) update(apps map[string]dbus.Variant) sensor.Details 
 	return nil
 }
 
-//nolint:exhaustruct
 func newRunningAppsSensor() *runningAppsSensor {
 	newSensor := &runningAppsSensor{}
 	newSensor.SensorTypeValue = linux.SensorAppRunning

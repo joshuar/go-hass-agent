@@ -38,7 +38,6 @@ func (a *activeAppSensor) update(l map[string]dbus.Variant) sensor.Details {
 	return nil
 }
 
-//nolint:exhaustruct
 func newActiveAppSensor() *activeAppSensor {
 	newSensor := &activeAppSensor{}
 	newSensor.SensorSrc = linux.DataSrcDbus

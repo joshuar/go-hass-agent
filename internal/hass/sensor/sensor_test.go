@@ -4,7 +4,7 @@
 // https://opensource.org/licenses/MIT
 
 //revive:disable:max-public-structs
-//nolint:paralleltest,wsl,dupl,nlreturn
+//nolint:paralleltest
 //go:generate moq -out sensor_mocks_test.go . State Registration Details
 package sensor
 

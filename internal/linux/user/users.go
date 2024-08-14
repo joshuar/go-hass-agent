@@ -3,7 +3,6 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//nolint:exhaustruct
 //revive:disable:unused-receiver
 package user
 
@@ -66,7 +65,6 @@ func (s *usersSensor) updateUsers(ctx context.Context) error {
 	return nil
 }
 
-//nolint:exhaustruct
 func newUsersSensor(bus *dbusx.Bus) *usersSensor {
 	userSensor := &usersSensor{bus: bus}
 	userSensor.SensorTypeValue = linux.SensorUsers
@@ -83,7 +81,6 @@ type worker struct {
 	bus    *dbusx.Bus
 }
 
-//nolint:exhaustruct
 func (w *worker) Events(ctx context.Context) (chan sensor.Details, error) {
 	sensorCh := make(chan sensor.Details)
 

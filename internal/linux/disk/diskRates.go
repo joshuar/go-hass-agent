@@ -126,7 +126,6 @@ func (s *diskIOSensor) update(stats map[diskstats.Stat]uint64, delta time.Durati
 	}
 }
 
-//nolint:exhaustruct
 func newDiskIOSensor(device diskstats.Device, sensorType linux.SensorTypeValue) *diskIOSensor {
 	newSensor := &diskIOSensor{
 		device: device,
@@ -143,7 +142,6 @@ func newDiskIOSensor(device diskstats.Device, sensorType linux.SensorTypeValue) 
 	return newSensor
 }
 
-//nolint:exhaustruct
 func newDiskIORateSensor(device diskstats.Device, sensorType linux.SensorTypeValue) *diskIOSensor {
 	newSensor := &diskIOSensor{
 		device: device,
@@ -237,7 +235,6 @@ func (w *ioWorker) Sensors(_ context.Context, duration time.Duration) ([]sensor.
 	return sensors, nil
 }
 
-//nolint:exhaustruct
 func NewIOWorker(_ context.Context, _ *dbusx.DBusAPI) (*linux.SensorWorker, error) {
 	worker := &ioWorker{
 		devices: make(map[diskstats.Device]*sensors),

@@ -3,7 +3,6 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//nolint:exhaustruct
 //revive:disable:unused-receiver
 package power
 
@@ -33,7 +32,6 @@ type powerSensor struct {
 	linux.Sensor
 }
 
-//nolint:exhaustruct
 func newPowerSensor(sensorType linux.SensorTypeValue, sensorValue dbus.Variant) *powerSensor {
 	newSensor := &powerSensor{}
 
@@ -57,7 +55,6 @@ type profileWorker struct {
 	bus    *dbusx.Bus
 }
 
-//nolint:exhaustruct
 func (w *profileWorker) Events(ctx context.Context) (chan sensor.Details, error) {
 	sensorCh := make(chan sensor.Details)
 

@@ -53,7 +53,7 @@ const (
 // cannot connect to Pulseaudio, a non-nil error will be returned with details
 // on the issue.
 //
-//nolint:cyclop,exhaustruct
+//nolint:cyclop
 //revive:disable:unnecessary-stmt
 func NewPulseClient(ctx context.Context) (*PulseAudioClient, error) {
 	// Connect to pulseaudio.
@@ -202,8 +202,6 @@ func (c *PulseAudioClient) SetMute(state bool) error {
 // GetState will return the low-level current state representation of the
 // default output device. It can be used for more advanced parsing and retrieval
 // about the output device.
-//
-//nolint:exhaustruct
 func (c *PulseAudioClient) GetState() (*proto.GetSinkInfoReply, error) {
 	repl := &proto.GetSinkInfoReply{}
 

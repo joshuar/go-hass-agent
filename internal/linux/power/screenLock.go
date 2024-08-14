@@ -3,7 +3,6 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//nolint:exhaustruct
 //revive:disable:unused-receiver
 package power
 
@@ -39,7 +38,6 @@ func (s *screenlockSensor) Icon() string {
 	return "mdi:eye-lock-open"
 }
 
-//nolint:exhaustruct
 func newScreenlockEvent(value bool) *screenlockSensor {
 	return &screenlockSensor{
 		Sensor: linux.Sensor{
@@ -56,7 +54,7 @@ type screenLockWorker struct {
 	bus    *dbusx.Bus
 }
 
-//nolint:cyclop,exhaustruct
+//nolint:cyclop
 func (w *screenLockWorker) Events(ctx context.Context) (chan sensor.Details, error) {
 	sensorCh := make(chan sensor.Details)
 

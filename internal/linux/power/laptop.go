@@ -3,7 +3,6 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//nolint:exhaustruct
 //revive:disable:unused-receiver
 package power
 
@@ -66,7 +65,6 @@ func (s *laptopSensor) Icon() string {
 	return "mdi:help"
 }
 
-//nolint:exhaustruct
 func newLaptopEvent(prop string, state bool) *laptopSensor {
 	sensorEvent := &laptopSensor{
 		prop: prop,

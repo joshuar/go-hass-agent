@@ -52,7 +52,6 @@ type Chip struct {
 	Sensors []*Sensor
 }
 
-//nolint:exhaustruct
 func processChip(path string) (*Chip, error) {
 	chipName, err := getFileContents(filepath.Join(path, "name"))
 	if err != nil {
@@ -351,7 +350,7 @@ func (f *sensorFile) getSensorType() (sensorType SensorType, scaleFactor float64
 	}
 }
 
-//nolint:exhaustruct,cyclop
+//nolint:cyclop
 //revive:disable:function-length
 func getSensors(path string) ([]*Sensor, error) {
 	files, err := os.ReadDir(path)

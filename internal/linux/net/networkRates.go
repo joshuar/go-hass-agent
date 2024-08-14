@@ -3,7 +3,6 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//nolint:exhaustruct
 //revive:disable:unused-receiver
 package net
 
@@ -82,7 +81,6 @@ func (s *netIOSensor) update(counters *net.IOCountersStat) {
 	}
 }
 
-//nolint:exhaustruct
 func newNetIOSensor(t linux.SensorTypeValue) *netIOSensor {
 	return &netIOSensor{
 		Sensor: linux.Sensor{
@@ -119,7 +117,6 @@ func (s *netIORateSensor) update(d time.Duration, b uint64) {
 	s.lastValue = b
 }
 
-//nolint:exhaustruct
 func newNetIORateSensor(t linux.SensorTypeValue) *netIORateSensor {
 	return &netIORateSensor{
 		Sensor: linux.Sensor{

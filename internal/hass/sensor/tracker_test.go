@@ -4,7 +4,7 @@
 // https://opensource.org/licenses/MIT
 
 //revive:disable:max-public-structs
-//nolint:paralleltest,wsl,nlreturn
+//nolint:paralleltest
 package sensor
 
 import (
@@ -22,7 +22,6 @@ var mockSensorMap = map[string]Details{
 func TestTracker_Get(t *testing.T) {
 	type fields struct {
 		sensor map[string]Details
-		mu     sync.Mutex
 	}
 	type args struct {
 		id string
@@ -52,7 +51,6 @@ func TestTracker_Get(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tr := &Tracker{
 				sensor: tt.fields.sensor,
-				mu:     tt.fields.mu,
 			}
 			got, err := tr.Get(tt.args.id)
 			if (err != nil) != tt.wantErr {
@@ -69,7 +67,6 @@ func TestTracker_Get(t *testing.T) {
 func TestTracker_SensorList(t *testing.T) {
 	type fields struct {
 		sensor map[string]Details
-		mu     sync.Mutex
 	}
 	tests := []struct {
 		name   string
@@ -90,7 +87,6 @@ func TestTracker_SensorList(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tr := &Tracker{
 				sensor: tt.fields.sensor,
-				mu:     tt.fields.mu,
 			}
 			if got := tr.SensorList(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Tracker.SensorList() = %v, want %v", got, tt.want)
@@ -105,15 +101,14 @@ func TestTracker_Add(t *testing.T) {
 
 	type fields struct {
 		sensor map[string]Details
-		mu     sync.Mutex
 	}
 	type args struct {
 		sensor Details
 	}
 	tests := []struct {
 		args    args
-		name    string
 		fields  fields
+		name    string
 		wantErr bool
 	}{
 		{
@@ -136,7 +131,6 @@ func TestTracker_Add(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tr := &Tracker{
 				sensor: tt.fields.sensor,
-				mu:     tt.fields.mu,
 			}
 			if err := tr.Add(tt.args.sensor); (err != nil) != tt.wantErr {
 				t.Errorf("Tracker.Add() error = %v, wantErr %v", err, tt.wantErr)
@@ -148,11 +142,10 @@ func TestTracker_Add(t *testing.T) {
 func TestTracker_Reset(t *testing.T) {
 	type fields struct {
 		sensor map[string]Details
-		mu     sync.Mutex
 	}
 	tests := []struct {
-		name   string
 		fields fields
+		name   string
 	}{
 		{
 			name:   "reset",
@@ -163,7 +156,6 @@ func TestTracker_Reset(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tr := &Tracker{
 				sensor: tt.fields.sensor,
-				mu:     tt.fields.mu,
 			}
 			tr.Reset()
 			assert.Nil(t, tr.sensor)
