@@ -4,11 +4,11 @@
   - [v10.0.0](#v1000)
   - [New preferences file location and format](#new-preferences-file-location-and-format)
     - [What you need to do](#what-you-need-to-do)
+    - [Additional steps for users with MQTT enabled](#additional-steps-for-users-with-mqtt-enabled)
   - [Log file location normalisation](#log-file-location-normalisation)
     - [What you need to do](#what-you-need-to-do-1)
   - [Power controls renaming and consolidation (when using MQTT)](#power-controls-renaming-and-consolidation-when-using-mqtt)
     - [What you need to do](#what-you-need-to-do-2)
-
 
 ## v10.0.0
 
@@ -45,9 +45,22 @@ To re-register:
 6. Follow the [first-run instructions](../README.md#-first-run) in the README to re-register the agent.
 7. Once the agent has successfully re-registered, you can remove the old configuration directory and its contents. The old location will be `~/.config/com.joshuar.go-hass-agent.debug`.
 
-> [!IMPORTANT]
-> If you previously configured MQTT in Go Hass Agent, you will need
-> to [re-enable](../README.md#configuration) that as well.
+### Additional steps for users with MQTT enabled
+
+If you previously configured MQTT in Go Hass Agent, you will need to
+[re-enable](../README.md#configuration) MQTT after re-registering.
+
+For users with headless installs, you'll need to edit `preferences.toml` and
+manually add the appropriate config options. Add a section in the file similar
+to the following:
+
+```toml
+  [mqtt]
+  server = 'tcp://localhost:1883'
+  user = 'test-user' # optional, only if needed
+  password = 'password' # optional, only if needed
+  enabled = true
+```
 
 ## Log file location normalisation
 
