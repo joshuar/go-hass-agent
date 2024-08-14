@@ -5,7 +5,7 @@
 
 // revive:disable:unused-receiver
 //
-//go:generate moq -out agent_mocks_test.go . UI Registry SensorTracker SensorController MQTTController Worker LocationUpdateResponse SensorUpdateResponse SensorRegistrationResponse
+//go:generate moq -out agent_mocks_test.go . UI Registry Tracker SensorController MQTTController Worker LocationUpdateResponse SensorUpdateResponse SensorRegistrationResponse
 package agent
 
 import (

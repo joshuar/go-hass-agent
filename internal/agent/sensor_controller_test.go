@@ -109,7 +109,7 @@ func Test_processStateUpdates(t *testing.T) {
 		},
 	}
 
-	trk := &SensorTrackerMock{
+	trk := &TrackerMock{
 		AddFunc: func(details sensor.Details) error {
 			switch details.ID() {
 			case "addfailed":
@@ -198,7 +198,7 @@ func Test_processRegistration(t *testing.T) {
 		},
 	}
 
-	trk := &SensorTrackerMock{
+	trk := &TrackerMock{
 		AddFunc: func(details sensor.Details) error {
 			switch details.ID() {
 			case "addfailed":
