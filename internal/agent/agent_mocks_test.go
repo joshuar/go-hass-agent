@@ -456,16 +456,16 @@ func (mock *RegistryMock) SetRegisteredCalls() []struct {
 	return calls
 }
 
-// Ensure, that SensorTrackerMock does implement SensorTracker.
+// Ensure, that TrackerMock does implement Tracker.
 // If this is not the case, regenerate this file with moq.
-var _ Tracker = &SensorTrackerMock{}
+var _ Tracker = &TrackerMock{}
 
-// SensorTrackerMock is a mock implementation of SensorTracker.
+// TrackerMock is a mock implementation of Tracker.
 //
-//	func TestSomethingThatUsesSensorTracker(t *testing.T) {
+//	func TestSomethingThatUsesTracker(t *testing.T) {
 //
-//		// make and configure a mocked SensorTracker
-//		mockedSensorTracker := &SensorTrackerMock{
+//		// make and configure a mocked Tracker
+//		mockedTracker := &TrackerMock{
 //			AddFunc: func(details sensor.Details) error {
 //				panic("mock out the Add method")
 //			},
@@ -480,11 +480,11 @@ var _ Tracker = &SensorTrackerMock{}
 //			},
 //		}
 //
-//		// use mockedSensorTracker in code that requires SensorTracker
+//		// use mockedTracker in code that requires Tracker
 //		// and then make assertions.
 //
 //	}
-type SensorTrackerMock struct {
+type TrackerMock struct {
 	// AddFunc mocks the Add method.
 	AddFunc func(details sensor.Details) error
 
@@ -523,9 +523,9 @@ type SensorTrackerMock struct {
 }
 
 // Add calls AddFunc.
-func (mock *SensorTrackerMock) Add(details sensor.Details) error {
+func (mock *TrackerMock) Add(details sensor.Details) error {
 	if mock.AddFunc == nil {
-		panic("SensorTrackerMock.AddFunc: method is nil but SensorTracker.Add was just called")
+		panic("TrackerMock.AddFunc: method is nil but Tracker.Add was just called")
 	}
 	callInfo := struct {
 		Details sensor.Details
@@ -541,8 +541,8 @@ func (mock *SensorTrackerMock) Add(details sensor.Details) error {
 // AddCalls gets all the calls that were made to Add.
 // Check the length with:
 //
-//	len(mockedSensorTracker.AddCalls())
-func (mock *SensorTrackerMock) AddCalls() []struct {
+//	len(mockedTracker.AddCalls())
+func (mock *TrackerMock) AddCalls() []struct {
 	Details sensor.Details
 } {
 	var calls []struct {
@@ -555,9 +555,9 @@ func (mock *SensorTrackerMock) AddCalls() []struct {
 }
 
 // Get calls GetFunc.
-func (mock *SensorTrackerMock) Get(key string) (sensor.Details, error) {
+func (mock *TrackerMock) Get(key string) (sensor.Details, error) {
 	if mock.GetFunc == nil {
-		panic("SensorTrackerMock.GetFunc: method is nil but SensorTracker.Get was just called")
+		panic("TrackerMock.GetFunc: method is nil but Tracker.Get was just called")
 	}
 	callInfo := struct {
 		Key string
@@ -573,8 +573,8 @@ func (mock *SensorTrackerMock) Get(key string) (sensor.Details, error) {
 // GetCalls gets all the calls that were made to Get.
 // Check the length with:
 //
-//	len(mockedSensorTracker.GetCalls())
-func (mock *SensorTrackerMock) GetCalls() []struct {
+//	len(mockedTracker.GetCalls())
+func (mock *TrackerMock) GetCalls() []struct {
 	Key string
 } {
 	var calls []struct {
@@ -587,9 +587,9 @@ func (mock *SensorTrackerMock) GetCalls() []struct {
 }
 
 // Reset calls ResetFunc.
-func (mock *SensorTrackerMock) Reset() {
+func (mock *TrackerMock) Reset() {
 	if mock.ResetFunc == nil {
-		panic("SensorTrackerMock.ResetFunc: method is nil but SensorTracker.Reset was just called")
+		panic("TrackerMock.ResetFunc: method is nil but Tracker.Reset was just called")
 	}
 	callInfo := struct {
 	}{}
@@ -602,8 +602,8 @@ func (mock *SensorTrackerMock) Reset() {
 // ResetCalls gets all the calls that were made to Reset.
 // Check the length with:
 //
-//	len(mockedSensorTracker.ResetCalls())
-func (mock *SensorTrackerMock) ResetCalls() []struct {
+//	len(mockedTracker.ResetCalls())
+func (mock *TrackerMock) ResetCalls() []struct {
 } {
 	var calls []struct {
 	}
@@ -614,9 +614,9 @@ func (mock *SensorTrackerMock) ResetCalls() []struct {
 }
 
 // SensorList calls SensorListFunc.
-func (mock *SensorTrackerMock) SensorList() []string {
+func (mock *TrackerMock) SensorList() []string {
 	if mock.SensorListFunc == nil {
-		panic("SensorTrackerMock.SensorListFunc: method is nil but SensorTracker.SensorList was just called")
+		panic("TrackerMock.SensorListFunc: method is nil but Tracker.SensorList was just called")
 	}
 	callInfo := struct {
 	}{}
@@ -629,8 +629,8 @@ func (mock *SensorTrackerMock) SensorList() []string {
 // SensorListCalls gets all the calls that were made to SensorList.
 // Check the length with:
 //
-//	len(mockedSensorTracker.SensorListCalls())
-func (mock *SensorTrackerMock) SensorListCalls() []struct {
+//	len(mockedTracker.SensorListCalls())
+func (mock *TrackerMock) SensorListCalls() []struct {
 } {
 	var calls []struct {
 	}

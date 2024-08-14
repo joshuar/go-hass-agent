@@ -147,7 +147,7 @@ func TestAgent_checkRegistration(t *testing.T) {
 		{
 			name:   "force register",
 			fields: fields{prefs: alreadyRegistered, headless: true, forceRegister: true, id: "go-hass-agent-test", logger: slog.Default()},
-			args:   args{trk: &SensorTrackerMock{ResetFunc: func() {}}},
+			args:   args{trk: &TrackerMock{ResetFunc: func() {}}},
 		},
 	}
 	for _, tt := range tests {
