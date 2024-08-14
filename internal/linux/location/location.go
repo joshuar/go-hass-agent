@@ -52,7 +52,6 @@ type worker struct {
 	clientPath dbus.ObjectPath
 }
 
-//nolint:exhaustruct
 func (w *worker) setup(ctx context.Context) (*dbusx.Watch, error) {
 	var err error
 
@@ -143,7 +142,6 @@ func (w *worker) Sensors(_ context.Context) ([]sensor.Details, error) {
 	return nil, linux.ErrUnimplemented
 }
 
-//nolint:exhaustruct
 func (w *worker) newLocation(ctx context.Context, logger *slog.Logger, locationPath dbus.ObjectPath) *locationSensor {
 	getProp := func(prop string) float64 {
 		value, err := dbusx.GetProp[float64](ctx, w.bus, string(locationPath), geoclueInterface, locationInterface+"."+prop)
@@ -166,7 +164,6 @@ func (w *worker) newLocation(ctx context.Context, logger *slog.Logger, locationP
 	return location
 }
 
-//nolint:exhaustruct
 func NewLocationWorker(ctx context.Context, api *dbusx.DBusAPI) (*linux.SensorWorker, error) {
 	// Don't run this worker if we are not running on a laptop.
 	chassis, _ := device.Chassis() //nolint:errcheck // error is same as any value other than wanted value.

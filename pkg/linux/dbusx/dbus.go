@@ -349,7 +349,7 @@ func (b *Bus) GetSessionPath(ctx context.Context) (string, error) {
 // parsed an error will be returned with details of the problem. Adapted from
 // https://github.com/godbus/dbus/issues/201
 //
-//nolint:exhaustruct,mnd
+//nolint:mnd
 func ParsePropertiesChanged(propsChanged []any) (*Properties, error) {
 	props := &Properties{}
 
@@ -383,7 +383,7 @@ func ParsePropertiesChanged(propsChanged []any) (*Properties, error) {
 // parsing the signal body, an error will be returned with details of the
 // problem.
 //
-//nolint:exhaustruct,mnd
+//nolint:mnd
 func ParseValueChange[T any](valueChanged []any) (*Values[T], error) {
 	values := &Values[T]{}
 

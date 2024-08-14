@@ -3,7 +3,6 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//nolint:exhaustruct
 //revive:disable:unused-receiver
 package system
 
@@ -88,7 +87,6 @@ func (s *hwSensor) Attributes() map[string]any {
 	return attributes
 }
 
-//nolint:exhaustruct
 func newHWSensor(details *hwmon.Sensor) *hwSensor {
 	newSensor := &hwSensor{
 		name:       details.Name(),

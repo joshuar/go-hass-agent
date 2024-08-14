@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//nolint:paralleltest,wsl,containedctx,nlreturn,dupl
+//nolint:paralleltest
 //revive:disable:unused-receiver
 package cpu
 

@@ -92,7 +92,6 @@ func (w *wifiSensor) Icon() string {
 	return "mdi:network"
 }
 
-//nolint:exhaustruct
 func newWifiSensor(sensorType string) *wifiSensor {
 	switch sensorType {
 	case ssidProp:
@@ -198,7 +197,6 @@ func (c *connection) monitorWifi(ctx context.Context) <-chan sensor.Details {
 	return outCh
 }
 
-//nolint:exhaustruct
 func (c *connection) monitorWifiProps(ctx context.Context, propPath dbus.ObjectPath) chan sensor.Details {
 	sensorCh := make(chan sensor.Details)
 

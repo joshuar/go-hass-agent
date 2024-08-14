@@ -3,7 +3,6 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//nolint:exhaustruct
 //revive:disable:unused-receiver
 package system
 
@@ -40,7 +39,6 @@ func (w *timeWorker) Interval() time.Duration { return uptimeInterval }
 
 func (w *timeWorker) Jitter() time.Duration { return uptimeJitter }
 
-//nolint:exhaustruct
 func (w *timeWorker) Sensors(ctx context.Context, _ time.Duration) ([]sensor.Details, error) {
 	return []sensor.Details{
 			&timeSensor{

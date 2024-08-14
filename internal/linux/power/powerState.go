@@ -3,7 +3,6 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//nolint:exhaustruct
 //revive:disable:unused-receiver
 package power
 
@@ -69,7 +68,6 @@ func (s *powerStateSensor) Icon() string {
 	}
 }
 
-//nolint:exhaustruct
 func newPowerState(signalName powerSignal, signalValue any) *powerStateSensor {
 	return &powerStateSensor{
 		signal: signalName,
@@ -87,7 +85,6 @@ type stateWorker struct {
 	bus    *dbusx.Bus
 }
 
-//nolint:exhaustruct
 func (w *stateWorker) Events(ctx context.Context) (chan sensor.Details, error) {
 	sensorCh := make(chan sensor.Details)
 

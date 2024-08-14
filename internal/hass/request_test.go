@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//nolint:exhaustruct,lll,paralleltest,wsl
+//nolint:paralleltest
 //revive:disable:function-length
 package hass
 
@@ -66,8 +66,6 @@ func TestAPIError_Error(t *testing.T) {
 }
 
 // ?: mock API level responses and test those.
-//
-//nolint:containedctx
 func TestExecuteRequest(t *testing.T) {
 	mockServer := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
 		switch {
@@ -120,29 +118,58 @@ func TestExecuteRequest(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name:    "invalid client",
-			args:    args{ctx: context.TODO(), url: mockServer.URL, response: &ResponseMock{}},
+			name: "invalid client",
+			args: args{
+				ctx:      context.TODO(),
+				url:      mockServer.URL,
+				response: &ResponseMock{},
+			},
 			wantErr: true,
 			want:    ErrInvalidClient,
 		},
 		{
 			name: "valid post request",
-			args: args{ctx: context.TODO(), client: NewDefaultHTTPClient(mockServer.URL), url: "/goodPost", request: goodPostReq, response: goodPostResp},
+			args: args{
+				ctx:      context.TODO(),
+				client:   NewDefaultHTTPClient(mockServer.URL),
+				url:      "/goodPost",
+				request:  goodPostReq,
+				response: goodPostResp,
+			},
 			want: nil,
 		},
 		{
 			name: "valid get request",
-			args: args{ctx: context.TODO(), client: NewDefaultHTTPClient(mockServer.URL), url: "/goodGet", request: "anything", response: goodGetResp},
+			args: args{
+				ctx:      context.TODO(),
+				client:   NewDefaultHTTPClient(mockServer.URL),
+				url:      "/goodGet",
+				request:  "anything",
+				response: goodGetResp,
+			},
 			want: nil,
 		},
 		{
 			name: "invalid post request",
-			args: args{ctx: context.TODO(), client: NewDefaultHTTPClient(mockServer.URL), url: "/badPost", request: badPostReq, response: badPostResp},
+			args: args{
+				ctx:      context.TODO(),
+				client:   NewDefaultHTTPClient(mockServer.URL),
+				url:      "/badPost",
+				request:  badPostReq,
+				response: badPostResp,
+			},
 			want: badPostResp,
 		},
 		{
 			name: "invalid get request",
-			args: args{ctx: context.TODO(), client: NewDefaultHTTPClient(mockServer.URL), url: "/badGet", request: "anything", response: badPostResp},
+			args: args{
+				ctx:      context.TODO(),
+				client:   NewDefaultHTTPClient(mockServer.URL),
+				url:      "/badGet",
+				request:  "anything",
+				response: badPostResp,
+			},
+
 			want: badPostResp,
 		},
 		// {

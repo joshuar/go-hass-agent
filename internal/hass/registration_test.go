@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//nolint:errname,paralleltest,wrapcheck,wsl,nlreturn // structs are dual-purpose response and error
+//nolint:errname,paralleltest,wrapcheck // structs are dual-purpose response and error
 package hass
 
 import (

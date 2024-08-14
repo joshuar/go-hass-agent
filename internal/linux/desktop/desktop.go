@@ -4,7 +4,7 @@
 // https://opensource.org/licenses/MIT
 
 //revive:disable:unused-receiver
-//nolint:exhaustruct,misspell
+//nolint:misspell
 package desktop
 
 import (
@@ -50,7 +50,6 @@ type worker struct {
 	bus    *dbusx.Bus
 }
 
-//nolint:exhaustruct
 func (w *worker) newAccentColorSensor(ctx context.Context, accent string) *desktopSettingSensor {
 	var err error
 

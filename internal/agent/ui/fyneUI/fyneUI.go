@@ -149,8 +149,6 @@ func (i *FyneUI) DisplayTrayIcon(ctx context.Context, agent ui.Agent, trk ui.Sen
 // DisplayRegistrationWindow displays a UI to prompt the user for the details needed to
 // complete registration. It will populate with any values that were already
 // provided via the command-line.
-//
-//nolint:exhaustruct
 func (i *FyneUI) DisplayRegistrationWindow(ctx context.Context, prefs *preferences.Preferences, done chan struct{}) {
 	window := i.app.NewWindow(i.Translate("App Registration"))
 
@@ -180,8 +178,6 @@ func (i *FyneUI) DisplayRegistrationWindow(ctx context.Context, prefs *preferenc
 
 // aboutWindow creates a window that will show some interesting information
 // about the agent, such as version numbers.
-//
-//nolint:exhaustruct,mnd
 func (i *FyneUI) aboutWindow(ctx context.Context, agent ui.Agent) fyne.Window {
 	var widgets []fyne.CanvasObject
 
@@ -206,17 +202,10 @@ func (i *FyneUI) aboutWindow(ctx context.Context, agent ui.Agent) fyne.Window {
 		)
 	}
 
-	websiteURL, _ := parseURL(preferences.AppURL)                   //nolint:errcheck
-	featureRequestURL, _ := parseURL(preferences.FeatureRequestURL) //nolint:errcheck
-	issuesURL, _ := parseURL(preferences.IssueURL)                  //nolint:errcheck
-
+	linkWidgets := generateLinks()
 	widgets = append(widgets,
 		widget.NewLabel(""),
-		container.NewGridWithColumns(3,
-			widget.NewHyperlink("website", websiteURL),
-			widget.NewHyperlink("request feature", featureRequestURL),
-			widget.NewHyperlink("report issue", issuesURL),
-		),
+		container.NewGridWithColumns(len(linkWidgets), linkWidgets...),
 	)
 	windowContents := container.NewCenter(container.NewVBox(widgets...))
 	window := i.app.NewWindow(i.Translate("About"))
@@ -236,8 +225,6 @@ func (i *FyneUI) fyneSettingsWindow() fyne.Window {
 
 // agentSettingsWindow creates a window for changing settings related to the
 // agent functionality. Most of these settings will be optional.
-//
-//nolint:exhaustruct
 func (i *FyneUI) agentSettingsWindow(ctx context.Context, agent ui.Agent) fyne.Window {
 	var allFormItems []*widget.FormItem
 
@@ -595,4 +582,36 @@ func parseURL(u string) (*url.URL, error) {
 	}
 
 	return dest, nil
+}
+
+func generateLinks() []fyne.CanvasObject {
+	var (
+		link *url.URL
+		err  error
+	)
+
+	widgets := make([]fyne.CanvasObject, 0, 3) //nolint:mnd
+
+	link, err = parseURL(preferences.AppURL)
+	if err != nil {
+		slog.Warn("Unable to parse app URL.", slog.Any("error", err))
+	} else {
+		widgets = append(widgets, widget.NewHyperlink("website", link))
+	}
+
+	link, err = parseURL(preferences.FeatureRequestURL)
+	if err != nil {
+		slog.Warn("Unable to parse feature request URL.", slog.Any("error", err))
+	} else {
+		widgets = append(widgets, widget.NewHyperlink("request feature", link))
+	}
+
+	link, err = parseURL(preferences.IssueURL)
+	if err != nil {
+		slog.Warn("Unable to parse issues URL.", slog.Any("error", err))
+	} else {
+		widgets = append(widgets, widget.NewHyperlink("report issue", link))
+	}
+
+	return widgets
 }

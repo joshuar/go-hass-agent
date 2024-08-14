@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//nolint:exhaustruct,lll,nlreturn,paralleltest,wsl,prealloc
+//nolint:paralleltest
 //revive:disable:unused-receiver
 package scripts
 
@@ -19,6 +19,7 @@ import (
 )
 
 const (
+	//nolint:lll
 	jsonOut = `{"schedule":"@every 5s","sensors":[{"sensor_name": "random 1","sensor_icon": "mdi:dice-1","sensor_state":1},{"sensor_name": "random 2","sensor_icon": "mdi:dice-2","sensor_state_class":"measurement","sensor_state":6}]}`
 	yamlOut = `schedule: '@every 5s'
 sensors:
@@ -166,7 +167,7 @@ func TestScript_Execute(t *testing.T) {
 	var validScriptOutput scriptOutput
 	err := json.Unmarshal([]byte(jsonOut), &validScriptOutput)
 	require.NoError(t, err)
-	var validSensors []sensor.Details
+	validSensors := make([]sensor.Details, 0, len(validScriptOutput.Sensors))
 	for _, s := range validScriptOutput.Sensors {
 		validSensors = append(validSensors, sensor.Details(&s))
 	}

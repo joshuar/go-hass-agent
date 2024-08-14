@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//nolint:dupl,exhaustruct
+//nolint:dupl
 //revive:disable:unused-receiver
 package commands
 
@@ -177,8 +177,6 @@ func (d *Controller) Msgs() chan *mqttapi.Msg {
 // NewCommandsController is used by the agent to initialise the commands
 // controller, which holds the MQTT configuration for the commands defined by
 // the user.
-//
-//nolint:exhaustruct
 func NewCommandsController(ctx context.Context, commandsFile string, device *mqtthass.Device) (*Controller, error) {
 	if _, err := os.Stat(commandsFile); errors.Is(err, os.ErrNotExist) {
 		return nil, ErrNoCommands

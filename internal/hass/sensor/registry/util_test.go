@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//nolint:wsl,paralleltest
+//nolint:paralleltest
 package registry
 
 import (

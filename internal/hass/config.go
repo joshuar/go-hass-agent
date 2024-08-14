@@ -95,7 +95,6 @@ func (c *configRequest) RequestBody() json.RawMessage {
 	return json.RawMessage(`{ "type": "get_config" }`)
 }
 
-//nolint:exhaustruct
 func GetConfig(ctx context.Context, url string) (*Config, error) {
 	client := NewDefaultHTTPClient(url)
 

@@ -3,7 +3,6 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//nolint:exhaustruct
 //revive:disable:unused-receiver
 package system
 
@@ -26,7 +25,6 @@ type infoWorker struct {
 	logger *slog.Logger
 }
 
-//nolint:exhaustruct
 func (w *infoWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
 	var sensors []sensor.Details
 
