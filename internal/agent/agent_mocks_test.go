@@ -458,7 +458,7 @@ func (mock *RegistryMock) SetRegisteredCalls() []struct {
 
 // Ensure, that SensorTrackerMock does implement SensorTracker.
 // If this is not the case, regenerate this file with moq.
-var _ SensorTracker = &SensorTrackerMock{}
+var _ Tracker = &SensorTrackerMock{}
 
 // SensorTrackerMock is a mock implementation of SensorTracker.
 //

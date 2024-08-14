@@ -123,7 +123,7 @@ func TestAgent_checkRegistration(t *testing.T) {
 		forceRegister bool
 	}
 	type args struct {
-		trk SensorTracker
+		trk Tracker
 	}
 	tests := []struct {
 		args    args

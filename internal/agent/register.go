@@ -52,7 +52,7 @@ func (agent *Agent) saveRegistration(hassPrefs *preferences.Hass) error {
 	return nil
 }
 
-func (agent *Agent) checkRegistration(ctx context.Context, trk SensorTracker) error {
+func (agent *Agent) checkRegistration(ctx context.Context, trk Tracker) error {
 	// If the agent is already registered and forced registration was not
 	// requested, abort.
 	if agent.prefs.Registered && !agent.forceRegister {
