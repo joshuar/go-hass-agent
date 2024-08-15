@@ -7,14 +7,11 @@ package agent
 
 import (
 	"context"
-	"log/slog"
 
 	mqtthass "github.com/joshuar/go-hass-anything/v11/pkg/hass"
 	mqttapi "github.com/joshuar/go-hass-anything/v11/pkg/mqtt"
 
-	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
-	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
 // SensorController represents an object that manages one or more Workers.
@@ -65,18 +62,13 @@ type MQTTController interface {
 func (agent *Agent) setupControllers(ctx context.Context) []any {
 	var (
 		mqttDevice  *mqtthass.Device
-		err         error
 		controllers []any
 	)
 
 	// If MQTT functionality is enabled create an MQTT device, used to configure
 	// MQTT functionality for some controllers.
 	if agent.prefs.MQTT.IsMQTTEnabled() {
-		mqttDevice, err = device.MQTTDevice(preferences.AppName, preferences.AppID, preferences.AppURL, preferences.AppVersion)
-		if err != nil {
-			agent.logger.Warn("Could not create MQTT device, MQTT functionality will not be available.", slog.Any("error", err))
-		}
-
+		mqttDevice = agent.newMQTTDevice()
 		// Create an MQTT commands controller.
 		mqttCmdController := agent.newMQTTController(ctx, mqttDevice)
 		if mqttCmdController != nil {

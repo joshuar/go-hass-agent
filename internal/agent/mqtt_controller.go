@@ -97,10 +97,7 @@ func (agent *Agent) runMQTTWorkers(ctx context.Context, controllers ...MQTTContr
 }
 
 func (agent *Agent) resetMQTTControllers(ctx context.Context) error {
-	mqttDevice, err := device.MQTTDevice(preferences.AppName, preferences.AppID, preferences.AppURL, preferences.AppVersion)
-	if err != nil {
-		return fmt.Errorf("could not reset agent MQTT functionality: %w", err)
-	}
+	mqttDevice := agent.newMQTTDevice()
 
 	var configs []*mqttapi.Msg
 
@@ -124,4 +121,13 @@ func (agent *Agent) resetMQTTControllers(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (agent *Agent) newMQTTDevice() *mqtthass.Device {
+	mqttDevice, err := device.MQTTDevice(agent.prefs.Device.Name, agent.prefs.Device.ID, preferences.AppURL, preferences.AppVersion)
+	if err != nil {
+		agent.logger.Warn("Could not create MQTT device, MQTT functionality will not be available.", slog.Any("error", err))
+	}
+
+	return mqttDevice
 }
