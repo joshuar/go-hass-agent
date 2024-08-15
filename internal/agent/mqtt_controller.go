@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"log/slog"
 	"path/filepath"
-	"sync"
 
 	"github.com/adrg/xdg"
 
@@ -54,7 +53,6 @@ func (agent *Agent) runMQTTWorkers(ctx context.Context, controllers ...MQTTContr
 		configs       []*mqttapi.Msg
 		msgCh         []<-chan *mqttapi.Msg
 		err           error
-		wg            sync.WaitGroup
 	)
 
 	// Add the subscriptions and configs from the controllers.
@@ -73,27 +71,20 @@ func (agent *Agent) runMQTTWorkers(ctx context.Context, controllers ...MQTTContr
 		return
 	}
 
-	wg.Add(1)
+	agent.logger.Debug("Listening for messages to publish to MQTT.")
 
-	go func() {
-		defer wg.Done()
-		agent.logger.Debug("Listening for messages to publish to MQTT.")
-
-		for {
-			select {
-			case msg := <-mergeCh(ctx, msgCh...):
-				if err := client.Publish(ctx, msg); err != nil {
-					agent.logger.Warn("Unable to publish message to MQTT.", "topic", msg.Topic, "content", slog.Any("msg", msg.Message))
-				}
-			case <-ctx.Done():
-				agent.logger.Debug("Stopped listening for messages to publish to MQTT.")
-
-				return
+	for {
+		select {
+		case msg := <-mergeCh(ctx, msgCh...):
+			if err := client.Publish(ctx, msg); err != nil {
+				agent.logger.Warn("Unable to publish message to MQTT.", "topic", msg.Topic, "content", slog.Any("msg", msg.Message))
 			}
-		}
-	}()
+		case <-ctx.Done():
+			agent.logger.Debug("Stopped listening for messages to publish to MQTT.")
 
-	wg.Wait()
+			return
+		}
+	}
 }
 
 func (agent *Agent) resetMQTTControllers(ctx context.Context) error {

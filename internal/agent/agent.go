@@ -186,7 +186,6 @@ func (agent *Agent) Run(ctx context.Context, trk Tracker, reg Registry) error {
 		// Run workers for any sensor controllers.
 		go func() {
 			defer wg.Done()
-
 			agent.runSensorWorkers(controllerCtx, trk, reg, sensorControllers...)
 		}()
 
@@ -195,7 +194,6 @@ func (agent *Agent) Run(ctx context.Context, trk Tracker, reg Registry) error {
 			// Run workers for any MQTT controllers.
 			go func() {
 				defer wg.Done()
-
 				agent.runMQTTWorkers(controllerCtx, mqttControllers...)
 			}()
 		}
