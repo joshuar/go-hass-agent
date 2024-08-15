@@ -15,6 +15,8 @@ import (
 	"sync"
 
 	"github.com/godbus/dbus/v5"
+
+	"github.com/joshuar/go-hass-agent/internal/logging"
 )
 
 //go:generate stringer -type=dbusType -output busType_strings.go
@@ -111,7 +113,7 @@ type Bus struct {
 
 // newBus sets up D-Bus connections and channels for receiving signals. It
 // creates both a system and session bus connection.
-func newBus(ctx context.Context, busType dbusType, logger *slog.Logger) (*Bus, error) {
+func newBus(ctx context.Context, busType dbusType) (*Bus, error) {
 	var conn *dbus.Conn
 
 	var err error
@@ -135,7 +137,7 @@ func newBus(ctx context.Context, busType dbusType, logger *slog.Logger) (*Bus, e
 		conn:    conn,
 		busType: busType,
 		wg:      sync.WaitGroup{},
-		logger:  newLogger(busType.String(), logger),
+		logger:  logging.FromContext(ctx).With(slog.String("subsystem", "dbus"), slog.String("bus", busType.String())),
 	}
 
 	go func() {
@@ -172,7 +174,7 @@ func (b *Bus) Call(ctx context.Context, path, dest, method string, args ...any) 
 func GetProp[P any](ctx context.Context, bus *Bus, path, dest, prop string) (P, error) {
 	var value P
 
-	bus.logger.Log(ctx, LevelTrace,
+	bus.logger.Log(ctx, logging.LevelTrace,
 		"Requesting property.",
 		slog.String("path", path),
 		slog.String("dest", dest),
@@ -196,7 +198,7 @@ func GetProp[P any](ctx context.Context, bus *Bus, path, dest, prop string) (P, 
 
 // SetProp sets the specific property to the specified value.
 func SetProp[P any](ctx context.Context, bus *Bus, path, dest, prop string, value P) error {
-	bus.logger.Log(ctx, LevelTrace,
+	bus.logger.Log(ctx, logging.LevelTrace,
 		"Setting property.",
 		slog.String("path", path),
 		slog.String("dest", dest),
@@ -224,7 +226,7 @@ func GetData[D any](ctx context.Context, bus *Bus, path, dest, method string, ar
 
 	var err error
 
-	bus.logger.Log(ctx, LevelTrace,
+	bus.logger.Log(ctx, logging.LevelTrace,
 		"Getting data.",
 		slog.String("path", path),
 		slog.String("dest", dest),
@@ -297,7 +299,7 @@ func (b *Bus) WatchBus(ctx context.Context, conditions *Watch) (chan Trigger, er
 				}
 				// We have a match! Send the signal details back to the client
 				// for further processing.
-				b.logger.Log(ctx, LevelTrace,
+				b.logger.Log(ctx, logging.LevelTrace,
 					"Dispatching D-Bus trigger.",
 					slog.String("path", conditions.Path),
 					slog.String("interface", conditions.Interface),
