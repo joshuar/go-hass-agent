@@ -127,6 +127,13 @@ func (c *Controller) Stop(name string) error {
 func (c *Controller) StartAll(_ context.Context) (<-chan sensor.Details, error) {
 	sensorCh := make(chan sensor.Details)
 
+	// If there are no jobs, exit.
+	if len(c.jobs) == 0 {
+		close(sensorCh)
+
+		return sensorCh, nil
+	}
+
 	for idx, job := range c.jobs {
 		if job.ID > 0 {
 			c.logger.Warn("Script already started.", slog.String("script", job.path))
