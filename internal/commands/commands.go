@@ -30,6 +30,12 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
+const (
+	stateValueTemplate = "{{ value_json.value }}"
+	switchOnState      = "ON"
+	switchOffState     = "OFF"
+)
+
 var (
 	ErrNoCommands         = errors.New("no commands")
 	ErrNoState            = errors.New("no state passed to control")
@@ -194,7 +200,7 @@ func NewCommandsController(ctx context.Context, commandsFile string, device *mqt
 	}
 
 	controller := &Controller{
-		logger: logging.FromContext(ctx).With(slog.String("component", "mqtt_commands")),
+		logger: logging.FromContext(ctx).WithGroup("custom_commands"),
 		device: device,
 	}
 	controller.generateButtons(cmds.Buttons)
@@ -215,7 +221,7 @@ func (d *Controller) generateButtons(buttonCmds []Command) {
 		callback := func(_ *paho.Publish) {
 			err := cmdWithoutState(cmd.Exec)
 			if err != nil {
-				d.logger.Warn("Button press failed.", "button", cmd.Name, "error", err.Error())
+				d.logger.Warn("Button press failed.", slog.String("button", cmd.Name), slog.Any("error", err))
 			}
 		}
 		name = cmd.Name
@@ -359,7 +365,7 @@ func (d *Controller) generateNumbers(numberCommands []Command) {
 						WithIcon(icon).
 						WithStateCallback(stateCallBack).
 						WithCommandCallback(cmdCallBack).
-						WithValueTemplate("{{ value_json.value }}"),
+						WithValueTemplate(stateValueTemplate),
 					step, min, max, displayType))
 		default:
 			min := convValue[int](cmd.Min)
@@ -382,7 +388,7 @@ func (d *Controller) generateNumbers(numberCommands []Command) {
 						WithIcon(icon).
 						WithStateCallback(stateCallBack).
 						WithCommandCallback(cmdCallBack).
-						WithValueTemplate("{{ value_json.value }}"),
+						WithValueTemplate(stateValueTemplate),
 					step, min, max, displayType))
 		}
 	}
@@ -434,10 +440,10 @@ func switchState(command string) (json.RawMessage, error) {
 	}
 
 	switch {
-	case bytes.Contains(output, []byte(`ON`)):
-		return json.RawMessage(`ON`), nil
-	case bytes.Contains(output, []byte(`OFF`)):
-		return json.RawMessage(`OFF`), nil
+	case bytes.Contains(output, []byte(switchOnState)):
+		return json.RawMessage(switchOnState), nil
+	case bytes.Contains(output, []byte(switchOffState)):
+		return json.RawMessage(switchOffState), nil
 	}
 
 	return nil, ErrUnknownSwitchState
