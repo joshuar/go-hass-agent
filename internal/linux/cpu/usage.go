@@ -20,8 +20,8 @@ import (
 )
 
 const (
-	usageUpdateInterval = 10 * time.Second
-	usageUpdateJitter   = time.Second
+	usageUpdateInterval = 5 * time.Second
+	usageUpdateJitter   = 500 * time.Millisecond
 
 	usageWorkerID = "cpu_usage_sensors"
 )
