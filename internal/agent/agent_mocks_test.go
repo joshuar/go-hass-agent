@@ -25,13 +25,13 @@ var _ UI = &UIMock{}
 //			DisplayNotificationFunc: func(n ui.Notification)  {
 //				panic("mock out the DisplayNotification method")
 //			},
-//			DisplayRegistrationWindowFunc: func(ctx context.Context, prefs *preferences.Preferences, doneCh chan struct{})  {
+//			DisplayRegistrationWindowFunc: func(prefs *preferences.Preferences, doneCh chan struct{}) chan struct{} {
 //				panic("mock out the DisplayRegistrationWindow method")
 //			},
-//			DisplayTrayIconFunc: func(ctx context.Context, agent ui.Agent, trk ui.SensorTracker)  {
+//			DisplayTrayIconFunc: func(ctx context.Context, agent ui.Agent, trk ui.SensorTracker, doneCh chan struct{})  {
 //				panic("mock out the DisplayTrayIcon method")
 //			},
-//			RunFunc: func(ctx context.Context, agent ui.Agent, doneCh chan struct{})  {
+//			RunFunc: func(agent ui.Agent, doneCh chan struct{})  {
 //				panic("mock out the Run method")
 //			},
 //		}
@@ -45,13 +45,13 @@ type UIMock struct {
 	DisplayNotificationFunc func(n ui.Notification)
 
 	// DisplayRegistrationWindowFunc mocks the DisplayRegistrationWindow method.
-	DisplayRegistrationWindowFunc func(ctx context.Context, prefs *preferences.Preferences, doneCh chan struct{})
+	DisplayRegistrationWindowFunc func(prefs *preferences.Preferences, doneCh chan struct{}) chan struct{}
 
 	// DisplayTrayIconFunc mocks the DisplayTrayIcon method.
-	DisplayTrayIconFunc func(ctx context.Context, agent ui.Agent, trk ui.SensorTracker)
+	DisplayTrayIconFunc func(ctx context.Context, agent ui.Agent, trk ui.SensorTracker, doneCh chan struct{})
 
 	// RunFunc mocks the Run method.
-	RunFunc func(ctx context.Context, agent ui.Agent, doneCh chan struct{})
+	RunFunc func(agent ui.Agent, doneCh chan struct{})
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -62,8 +62,6 @@ type UIMock struct {
 		}
 		// DisplayRegistrationWindow holds details about calls to the DisplayRegistrationWindow method.
 		DisplayRegistrationWindow []struct {
-			// Ctx is the ctx argument value.
-			Ctx context.Context
 			// Prefs is the prefs argument value.
 			Prefs *preferences.Preferences
 			// DoneCh is the doneCh argument value.
@@ -77,11 +75,11 @@ type UIMock struct {
 			Agent ui.Agent
 			// Trk is the trk argument value.
 			Trk ui.SensorTracker
+			// DoneCh is the doneCh argument value.
+			DoneCh chan struct{}
 		}
 		// Run holds details about calls to the Run method.
 		Run []struct {
-			// Ctx is the ctx argument value.
-			Ctx context.Context
 			// Agent is the agent argument value.
 			Agent ui.Agent
 			// DoneCh is the doneCh argument value.
@@ -127,23 +125,21 @@ func (mock *UIMock) DisplayNotificationCalls() []struct {
 }
 
 // DisplayRegistrationWindow calls DisplayRegistrationWindowFunc.
-func (mock *UIMock) DisplayRegistrationWindow(ctx context.Context, prefs *preferences.Preferences, doneCh chan struct{}) {
+func (mock *UIMock) DisplayRegistrationWindow(prefs *preferences.Preferences, doneCh chan struct{}) chan struct{} {
 	if mock.DisplayRegistrationWindowFunc == nil {
 		panic("UIMock.DisplayRegistrationWindowFunc: method is nil but UI.DisplayRegistrationWindow was just called")
 	}
 	callInfo := struct {
-		Ctx    context.Context
 		Prefs  *preferences.Preferences
 		DoneCh chan struct{}
 	}{
-		Ctx:    ctx,
 		Prefs:  prefs,
 		DoneCh: doneCh,
 	}
 	mock.lockDisplayRegistrationWindow.Lock()
 	mock.calls.DisplayRegistrationWindow = append(mock.calls.DisplayRegistrationWindow, callInfo)
 	mock.lockDisplayRegistrationWindow.Unlock()
-	mock.DisplayRegistrationWindowFunc(ctx, prefs, doneCh)
+	return mock.DisplayRegistrationWindowFunc(prefs, doneCh)
 }
 
 // DisplayRegistrationWindowCalls gets all the calls that were made to DisplayRegistrationWindow.
@@ -151,12 +147,10 @@ func (mock *UIMock) DisplayRegistrationWindow(ctx context.Context, prefs *prefer
 //
 //	len(mockedUI.DisplayRegistrationWindowCalls())
 func (mock *UIMock) DisplayRegistrationWindowCalls() []struct {
-	Ctx    context.Context
 	Prefs  *preferences.Preferences
 	DoneCh chan struct{}
 } {
 	var calls []struct {
-		Ctx    context.Context
 		Prefs  *preferences.Preferences
 		DoneCh chan struct{}
 	}
@@ -167,23 +161,25 @@ func (mock *UIMock) DisplayRegistrationWindowCalls() []struct {
 }
 
 // DisplayTrayIcon calls DisplayTrayIconFunc.
-func (mock *UIMock) DisplayTrayIcon(ctx context.Context, agent ui.Agent, trk ui.SensorTracker) {
+func (mock *UIMock) DisplayTrayIcon(ctx context.Context, agent ui.Agent, trk ui.SensorTracker, doneCh chan struct{}) {
 	if mock.DisplayTrayIconFunc == nil {
 		panic("UIMock.DisplayTrayIconFunc: method is nil but UI.DisplayTrayIcon was just called")
 	}
 	callInfo := struct {
-		Ctx   context.Context
-		Agent ui.Agent
-		Trk   ui.SensorTracker
+		Ctx    context.Context
+		Agent  ui.Agent
+		Trk    ui.SensorTracker
+		DoneCh chan struct{}
 	}{
-		Ctx:   ctx,
-		Agent: agent,
-		Trk:   trk,
+		Ctx:    ctx,
+		Agent:  agent,
+		Trk:    trk,
+		DoneCh: doneCh,
 	}
 	mock.lockDisplayTrayIcon.Lock()
 	mock.calls.DisplayTrayIcon = append(mock.calls.DisplayTrayIcon, callInfo)
 	mock.lockDisplayTrayIcon.Unlock()
-	mock.DisplayTrayIconFunc(ctx, agent, trk)
+	mock.DisplayTrayIconFunc(ctx, agent, trk, doneCh)
 }
 
 // DisplayTrayIconCalls gets all the calls that were made to DisplayTrayIcon.
@@ -191,14 +187,16 @@ func (mock *UIMock) DisplayTrayIcon(ctx context.Context, agent ui.Agent, trk ui.
 //
 //	len(mockedUI.DisplayTrayIconCalls())
 func (mock *UIMock) DisplayTrayIconCalls() []struct {
-	Ctx   context.Context
-	Agent ui.Agent
-	Trk   ui.SensorTracker
+	Ctx    context.Context
+	Agent  ui.Agent
+	Trk    ui.SensorTracker
+	DoneCh chan struct{}
 } {
 	var calls []struct {
-		Ctx   context.Context
-		Agent ui.Agent
-		Trk   ui.SensorTracker
+		Ctx    context.Context
+		Agent  ui.Agent
+		Trk    ui.SensorTracker
+		DoneCh chan struct{}
 	}
 	mock.lockDisplayTrayIcon.RLock()
 	calls = mock.calls.DisplayTrayIcon
@@ -207,23 +205,21 @@ func (mock *UIMock) DisplayTrayIconCalls() []struct {
 }
 
 // Run calls RunFunc.
-func (mock *UIMock) Run(ctx context.Context, agent ui.Agent, doneCh chan struct{}) {
+func (mock *UIMock) Run(agent ui.Agent, doneCh chan struct{}) {
 	if mock.RunFunc == nil {
 		panic("UIMock.RunFunc: method is nil but UI.Run was just called")
 	}
 	callInfo := struct {
-		Ctx    context.Context
 		Agent  ui.Agent
 		DoneCh chan struct{}
 	}{
-		Ctx:    ctx,
 		Agent:  agent,
 		DoneCh: doneCh,
 	}
 	mock.lockRun.Lock()
 	mock.calls.Run = append(mock.calls.Run, callInfo)
 	mock.lockRun.Unlock()
-	mock.RunFunc(ctx, agent, doneCh)
+	mock.RunFunc(agent, doneCh)
 }
 
 // RunCalls gets all the calls that were made to Run.
@@ -231,12 +227,10 @@ func (mock *UIMock) Run(ctx context.Context, agent ui.Agent, doneCh chan struct{
 //
 //	len(mockedUI.RunCalls())
 func (mock *UIMock) RunCalls() []struct {
-	Ctx    context.Context
 	Agent  ui.Agent
 	DoneCh chan struct{}
 } {
 	var calls []struct {
-		Ctx    context.Context
 		Agent  ui.Agent
 		DoneCh chan struct{}
 	}

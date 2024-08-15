@@ -32,9 +32,9 @@ import (
 // and notifications.
 type UI interface {
 	DisplayNotification(n ui.Notification)
-	DisplayTrayIcon(ctx context.Context, agent ui.Agent, trk ui.SensorTracker)
-	DisplayRegistrationWindow(ctx context.Context, prefs *preferences.Preferences, doneCh chan struct{})
-	Run(ctx context.Context, agent ui.Agent, doneCh chan struct{})
+	DisplayTrayIcon(ctx context.Context, agent ui.Agent, trk ui.SensorTracker, doneCh chan struct{})
+	DisplayRegistrationWindow(prefs *preferences.Preferences, doneCh chan struct{}) chan struct{}
+	Run(agent ui.Agent, doneCh chan struct{})
 }
 
 type Registry interface {
@@ -134,10 +134,12 @@ func ForceRegister(value bool) Option {
 //
 //revive:disable:function-length
 func (agent *Agent) Run(ctx context.Context, trk Tracker, reg Registry) error {
-	var wg sync.WaitGroup
+	var (
+		wg      sync.WaitGroup
+		regWait sync.WaitGroup
+	)
 
-	// Pre-flight: check if agent is registered. If not, run registration flow.
-	var regWait sync.WaitGroup
+	agent.handleSignals()
 
 	regWait.Add(1)
 
@@ -204,10 +206,8 @@ func (agent *Agent) Run(ctx context.Context, trk Tracker, reg Registry) error {
 		}()
 	}()
 
-	agent.handleSignals()
-
-	agent.ui.DisplayTrayIcon(ctx, agent, trk)
-	agent.ui.Run(ctx, agent, agent.done)
+	agent.ui.DisplayTrayIcon(ctx, agent, trk, agent.done)
+	agent.ui.Run(agent, agent.done)
 
 	wg.Wait()
 
@@ -229,7 +229,7 @@ func (agent *Agent) Register(ctx context.Context, trk Tracker) {
 		close(agent.done)
 	}()
 
-	agent.ui.Run(ctx, agent, agent.done)
+	agent.ui.Run(agent, agent.done)
 	wg.Wait()
 }
 
