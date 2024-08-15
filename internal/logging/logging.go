@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	_ "net/http/pprof" // #nosec G108
 	"os"
+	"path/filepath"
 
 	"github.com/lmittmann/tint"
 	slogmulti "github.com/samber/slog-multi"
@@ -18,6 +19,8 @@ import (
 const (
 	LevelTrace = slog.Level(-8)
 	LevelFatal = slog.Level(12)
+
+	defaultPerms = 0o644
 )
 
 //nolint:misspell
@@ -95,9 +98,20 @@ func levelReplacer(_ []string, attr slog.Attr) slog.Attr {
 	return attr
 }
 
-//nolint:mnd
+// openLogFile will attempt to open the specified log file. It will also attempt
+// to create the directory containing the log file if it does not exist.
 func openLogFile(logFile string) (*os.File, error) {
-	logFileHandle, err := os.OpenFile(logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	logDir := filepath.Base(logFile)
+	// Create the log directory if it does not exist.
+	_, err := os.Stat(logDir)
+	if os.IsNotExist(err) {
+		err = os.MkdirAll(logDir, os.ModePerm)
+		if err != nil {
+			return nil, fmt.Errorf("unable to log file directory %s: %w", logDir, err)
+		}
+	}
+	// Open the log file.
+	logFileHandle, err := os.OpenFile(logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, defaultPerms)
 	if err != nil {
 		return nil, fmt.Errorf("unable to open log file: %w", err)
 	}
@@ -107,11 +121,12 @@ func openLogFile(logFile string) (*os.File, error) {
 
 // Reset will remove the log file.
 func Reset(file string) error {
+	// If the log file doesn't exist, just exit.
 	_, err := os.Stat(file)
 	if os.IsNotExist(err) {
 		return nil
 	}
-
+	// Else, remove the file.
 	err = os.Remove(file)
 	if err != nil {
 		return fmt.Errorf("could not remove log file: %w", err)
