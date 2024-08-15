@@ -65,7 +65,7 @@ func NewFyneUI(ctx context.Context, id string) *FyneUI {
 	appUI := &FyneUI{
 		app:    app.NewWithID(id),
 		text:   translations.NewTranslator(ctx),
-		logger: logging.FromContext(ctx).WithGroup("fyne"),
+		logger: logging.FromContext(ctx).With(slog.String("subsystem", "fyne")),
 	}
 	appUI.app.SetIcon(&ui.TrayIcon{})
 
@@ -259,7 +259,7 @@ func (i *FyneUI) agentSettingsWindow(agent ui.Agent) fyne.Window {
 		// Save the new MQTT preferences to file.
 		if err := agent.SaveMQTTPreferences(mqttPrefs); err != nil {
 			dialog.ShowError(err, window)
-			i.logger.Error("Could note save preferences.", "error", err.Error())
+			i.logger.Error("Could note save preferences.", slog.Any("error", err))
 		} else {
 			dialog.ShowInformation("Saved", "MQTT Preferences have been saved. Restart agent to utilise them.", window)
 			i.logger.Info("Saved MQTT preferences.")
