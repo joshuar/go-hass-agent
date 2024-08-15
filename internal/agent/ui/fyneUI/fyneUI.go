@@ -51,29 +51,51 @@ var (
 )
 
 type FyneUI struct {
-	app  fyne.App
-	text *translations.Translator
+	app    fyne.App
+	text   *translations.Translator
+	logger *slog.Logger
 }
 
 func init() {
 	validate = validator.New(validator.WithRequiredStructEnabled())
 }
 
-func (i *FyneUI) Run(ctx context.Context, agent ui.Agent, doneCh chan struct{}) {
+// New FyneUI sets up the UI for the agent.
+func NewFyneUI(ctx context.Context, id string) *FyneUI {
+	appUI := &FyneUI{
+		app:    app.NewWithID(id),
+		text:   translations.NewTranslator(ctx),
+		logger: logging.FromContext(ctx).WithGroup("fyne"),
+	}
+	appUI.app.SetIcon(&ui.TrayIcon{})
+
+	return appUI
+}
+
+// Run is the "main loop" of the UI.
+func (i *FyneUI) Run(agent ui.Agent, doneCh chan struct{}) {
 	// Do not run the UI loop if the agent is running in headless mode.
 	if agent.Headless() {
 		return
 	}
 
-	logging.FromContext(ctx).Log(ctx, logging.LevelTrace, "Starting Fyne UI Loop")
-
+	// Stop the UI if the agent done signal is received.
 	go func() {
+		defer i.app.Quit()
 		<-doneCh
-		i.app.Quit()
 	}()
+
+	// Run the UI (blocking).
 	i.app.Run()
 }
 
+// Translate takes the input string and outputs a translated string for the
+// language under which the agent is running.
+func (i *FyneUI) Translate(text string) string {
+	return i.text.Translate(text)
+}
+
+// DisplayNotification will display a notification using Fyne.
 func (i *FyneUI) DisplayNotification(notification ui.Notification) {
 	if i.app == nil {
 		return
@@ -85,25 +107,9 @@ func (i *FyneUI) DisplayNotification(notification ui.Notification) {
 	})
 }
 
-// Translate takes the input string and outputs a translated string for the
-// language under which the agent is running.
-func (i *FyneUI) Translate(text string) string {
-	return i.text.Translate(text)
-}
-
-func NewFyneUI(ctx context.Context, id string) *FyneUI {
-	appUI := &FyneUI{
-		app:  app.NewWithID(id),
-		text: translations.NewTranslator(ctx),
-	}
-	appUI.app.SetIcon(&ui.TrayIcon{})
-
-	return appUI
-}
-
 // DisplayTrayIcon displays an icon in the desktop tray with a menu for
 // controlling the agent and showing other informational windows.
-func (i *FyneUI) DisplayTrayIcon(ctx context.Context, agent ui.Agent, trk ui.SensorTracker) {
+func (i *FyneUI) DisplayTrayIcon(ctx context.Context, agent ui.Agent, trk ui.SensorTracker, doneCh chan struct{}) {
 	// Do not show the tray icon if the agent is running in headless mode.
 	if agent.Headless() {
 		return
@@ -123,7 +129,7 @@ func (i *FyneUI) DisplayTrayIcon(ctx context.Context, agent ui.Agent, trk ui.Sen
 		// Preferences/Settings items.
 		menuItemAppPrefs := fyne.NewMenuItem(i.Translate("App Settings"),
 			func() {
-				i.agentSettingsWindow(ctx, agent).Show()
+				i.agentSettingsWindow(agent).Show()
 			})
 		menuItemFynePrefs := fyne.NewMenuItem(i.text.Translate("Fyne Settings"),
 			func() {
@@ -131,7 +137,7 @@ func (i *FyneUI) DisplayTrayIcon(ctx context.Context, agent ui.Agent, trk ui.Sen
 			})
 		// Quit menu item.
 		menuItemQuit := fyne.NewMenuItem(i.Translate("Quit"), func() {
-			logging.FromContext(ctx).Debug("Qutting agent on user request.")
+			i.logger.Debug("Qutting agent on user request.")
 			agent.Stop()
 		})
 		menuItemQuit.IsQuit = true
@@ -144,26 +150,31 @@ func (i *FyneUI) DisplayTrayIcon(ctx context.Context, agent ui.Agent, trk ui.Sen
 			menuItemQuit)
 		desk.SetSystemTrayMenu(menu)
 	}
+
+	go func() {
+		<-doneCh
+		i.app.Quit()
+	}()
 }
 
 // DisplayRegistrationWindow displays a UI to prompt the user for the details needed to
 // complete registration. It will populate with any values that were already
 // provided via the command-line.
-func (i *FyneUI) DisplayRegistrationWindow(ctx context.Context, prefs *preferences.Preferences, done chan struct{}) {
+func (i *FyneUI) DisplayRegistrationWindow(prefs *preferences.Preferences, doneCh chan struct{}) chan struct{} {
 	window := i.app.NewWindow(i.Translate("App Registration"))
+	userInputDone := make(chan struct{})
 
 	var allFormItems []*widget.FormItem
-	allFormItems = append(allFormItems, i.registrationFields(ctx, prefs)...)
+	allFormItems = append(allFormItems, i.registrationFields(prefs)...)
 	registrationForm := widget.NewForm(allFormItems...)
 	registrationForm.OnSubmit = func() {
 		window.Close()
-		close(done)
+		close(userInputDone)
 	}
 	registrationForm.OnCancel = func() {
-		logging.FromContext(ctx).Warn("Cancelling registration on user request.")
-		close(done)
+		i.logger.Warn("Cancelling registration on user request.")
+		close(userInputDone)
 		window.Close()
-		ctx.Done()
 	}
 
 	windowContents := container.NewVBox(
@@ -172,8 +183,16 @@ func (i *FyneUI) DisplayRegistrationWindow(ctx context.Context, prefs *preferenc
 		registrationForm,
 	)
 
+	// If we get a message on the (agent's) doneCh, close the window if open.
+	go func() {
+		defer window.Close()
+		<-doneCh
+	}()
+
 	window.SetContent(windowContents)
 	window.Show()
+
+	return userInputDone
 }
 
 // aboutWindow creates a window that will show some interesting information
@@ -225,7 +244,7 @@ func (i *FyneUI) fyneSettingsWindow() fyne.Window {
 
 // agentSettingsWindow creates a window for changing settings related to the
 // agent functionality. Most of these settings will be optional.
-func (i *FyneUI) agentSettingsWindow(ctx context.Context, agent ui.Agent) fyne.Window {
+func (i *FyneUI) agentSettingsWindow(agent ui.Agent) fyne.Window {
 	var allFormItems []*widget.FormItem
 
 	// Retrieve the existing MQTT preferences.
@@ -240,10 +259,10 @@ func (i *FyneUI) agentSettingsWindow(ctx context.Context, agent ui.Agent) fyne.W
 		// Save the new MQTT preferences to file.
 		if err := agent.SaveMQTTPreferences(mqttPrefs); err != nil {
 			dialog.ShowError(err, window)
-			logging.FromContext(ctx).Error("Could note save preferences.", "error", err.Error())
+			i.logger.Error("Could note save preferences.", "error", err.Error())
 		} else {
 			dialog.ShowInformation("Saved", "MQTT Preferences have been saved. Restart agent to utilise them.", window)
-			logging.FromContext(ctx).Info("Saved MQTT preferences.")
+			i.logger.Info("Saved MQTT preferences.")
 		}
 	}
 	settingsForm.OnCancel = func() {
@@ -359,10 +378,13 @@ func (i *FyneUI) sensorsWindow(tracker ui.SensorTracker) fyne.Window {
 
 // registrationFields generates a list of form item widgets for selecting a
 // server to register the agent against.
-func (i *FyneUI) registrationFields(ctx context.Context, prefs *preferences.Preferences) []*widget.FormItem {
-	allServers, err := hass.FindServers(ctx)
+func (i *FyneUI) registrationFields(prefs *preferences.Preferences) []*widget.FormItem {
+	searchCtx, searchCancelFunc := context.WithCancel(context.TODO())
+	defer searchCancelFunc()
+
+	allServers, err := hass.FindServers(searchCtx)
 	if err != nil {
-		logging.FromContext(ctx).Warn("Errors occurred discovering Home Assistant servers.", "error", err.Error())
+		i.logger.Warn("Errors occurred discovering Home Assistant servers.", slog.Any("error", err))
 	}
 
 	tokenEntry := configEntry(&prefs.Registration.Token, false)

@@ -17,7 +17,10 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
-var ErrInvalidRegistration = errors.New("invalid")
+var (
+	ErrInvalidRegistration = errors.New("invalid")
+	ErrAbortRegistration   = errors.New("registration aborted")
+)
 
 // saveRegistration stores the relevant information from the registration
 // request and the successful response in the agent preferences. This includes,
@@ -62,9 +65,8 @@ func (agent *Agent) checkRegistration(ctx context.Context, trk Tracker) error {
 	// If the agent is not running headless, ask the user for registration
 	// details.
 	if !agent.headless && agent.prefs.Registration.IsDefault() {
-		userInputDone := make(chan struct{})
-		agent.ui.DisplayRegistrationWindow(ctx, agent.prefs, userInputDone)
-		<-userInputDone
+		userInputDoneCh := agent.ui.DisplayRegistrationWindow(agent.prefs, agent.done)
+		<-userInputDoneCh
 	}
 
 	// Perform registration.
