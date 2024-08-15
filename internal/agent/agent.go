@@ -46,7 +46,6 @@ type Registry interface {
 
 type Tracker interface {
 	SensorList() []string
-	// Process(ctx context.Context, reg sensor.Registry, sensorUpdates ...<-chan sensor.Details) error
 	Add(details sensor.Details) error
 	Get(key string) (sensor.Details, error)
 	Reset()
@@ -147,7 +146,7 @@ func (agent *Agent) Run(ctx context.Context, trk Tracker, reg Registry) error {
 		defer regWait.Done()
 
 		if err := agent.checkRegistration(ctx, trk); err != nil {
-			agent.logger.Log(ctx, logging.LevelFatal, "Error checking registration status.", "error", err.Error())
+			agent.logger.Log(ctx, logging.LevelFatal, "Error checking registration status.", slog.Any("error", err))
 			close(agent.done)
 		}
 	}()
@@ -223,7 +222,7 @@ func (agent *Agent) Register(ctx context.Context, trk Tracker) {
 		defer wg.Done()
 
 		if err := agent.checkRegistration(ctx, trk); err != nil {
-			agent.logger.Log(ctx, logging.LevelFatal, "Error checking registration status", "error", err.Error())
+			agent.logger.Log(ctx, logging.LevelFatal, "Error checking registration status", slog.Any("error", err))
 		}
 
 		close(agent.done)
@@ -253,7 +252,7 @@ func (agent *Agent) Stop() {
 	agent.logger.Debug("Stopping Agent.")
 
 	if err := agent.prefs.Save(); err != nil {
-		agent.logger.Warn("Could not save agent preferences", "error", err.Error())
+		agent.logger.Warn("Could not save agent preferences", slog.Any("error", err))
 	}
 }
 
