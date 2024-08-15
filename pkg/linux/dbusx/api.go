@@ -18,7 +18,7 @@ type DBusAPI struct {
 	mu   sync.Mutex
 }
 
-func NewDBusAPI(ctx context.Context, logger *slog.Logger) *DBusAPI {
+func NewDBusAPI(ctx context.Context) *DBusAPI {
 	api := &DBusAPI{
 		dbus: make(map[dbusType]*Bus),
 		mu:   sync.Mutex{},
@@ -26,9 +26,9 @@ func NewDBusAPI(ctx context.Context, logger *slog.Logger) *DBusAPI {
 
 	api.mu.Lock()
 	for _, b := range []dbusType{SessionBus, SystemBus} {
-		bus, err := newBus(ctx, b, logger)
+		bus, err := newBus(ctx, b)
 		if err != nil {
-			slog.Warn("Could not connect to D-Bus.", "bus", b.String(), "error", err.Error())
+			logging.FromContext(ctx).Warn("Could not connect to D-Bus.", slog.String("bus", b.String()), slog.Any("error", err))
 		} else {
 			api.dbus[b] = bus
 		}
@@ -48,7 +48,7 @@ func (a *DBusAPI) GetBus(ctx context.Context, busType dbusType) (*Bus, error) {
 	)
 
 	if bus, exists = a.dbus[busType]; !exists {
-		return newBus(ctx, busType, logging.FromContext(ctx))
+		return newBus(ctx, busType)
 	}
 
 	return bus, nil

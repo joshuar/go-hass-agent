@@ -176,7 +176,7 @@ func (c *linuxMQTTController) generateConfig(e entity) *mqttapi.Msg {
 //
 //revive:disable:function-length
 func (agent *Agent) newOSController(ctx context.Context, mqttDevice *mqtthass.Device) (SensorController, MQTTController) {
-	dbusAPI := dbusx.NewDBusAPI(ctx, agent.logger.WithGroup("dbus"))
+	dbusAPI := dbusx.NewDBusAPI(ctx)
 
 	sensorController := &linuxSensorController{
 		deviceController: deviceController{
