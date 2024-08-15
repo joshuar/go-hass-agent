@@ -190,13 +190,15 @@ func (agent *Agent) Run(ctx context.Context, trk Tracker, reg Registry) error {
 			agent.runSensorWorkers(controllerCtx, trk, reg, sensorControllers...)
 		}()
 
-		wg.Add(1)
-		// Run workers for any MQTT controllers.
-		go func() {
-			defer wg.Done()
+		if len(mqttControllers) > 0 {
+			wg.Add(1)
+			// Run workers for any MQTT controllers.
+			go func() {
+				defer wg.Done()
 
-			agent.runMQTTWorkers(controllerCtx, mqttControllers...)
-		}()
+				agent.runMQTTWorkers(controllerCtx, mqttControllers...)
+			}()
+		}
 
 		wg.Add(1)
 		// Listen for notifications from Home Assistant.
