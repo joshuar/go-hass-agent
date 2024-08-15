@@ -973,8 +973,11 @@ whereas you may wish to change the unit of measurement to gigabytes (GB).
 options](https://www.home-assistant.io/docs/configuration/customizing-devices/)
 for a sensor/entity, toggle the *Enabled* switch. The agent will automatically
 detect the disabled state and send/not send updates as appropriate.
-- Note that while the agent will stop sending updates for a disabled sensor,
-it will not stop gathering the raw data for the sensor.
+
+> [!NOTE]
+>
+> While the agent will stop sending updates for a disabled sensor, it
+> will not stop gathering the raw data for the sensor.
 
 ### _The GUI windows are too small/too big. How can I change the size?_
 
@@ -984,41 +987,61 @@ settings app which can adjust the scaling for the app windows.
 
 ### _What is the resource (CPU, memory) usage of the agent?_
 
-- Very little in most cases. On Linux, the agent with all sensors working, should
-consume well less than 50 MB of memory with very little CPU usage. Further
-memory savings can be achieved by running the agent in “headless” mode with the
-`--terminal` command-line option. This should put the memory usage below 25 MB.
-- On Linux, many sensors rely on D-Bus signals for publishing their data, so
-CPU usage may be affected by the “business” of the bus. For sensors that are
-polled on an interval, the agent makes use of some jitter in the polling
-intervals to avoid a “thundering herd” problem.
+- Very little in most cases. On Linux, the agent with all sensors working,
+  should consume well less than 50 MB of memory with very little CPU usage.
+  Further memory savings can be achieved by running the agent in “headless” mode
+  with the `--terminal` command-line option. This should put the memory usage
+  below 25 MB.
+- On Linux, many sensors rely on D-Bus signals for publishing their data, so CPU
+  usage may be affected by the “business” of the bus. For sensors that are
+  polled on an interval, the agent makes use of some jitter in the polling
+  intervals to avoid a “thundering herd” problem.
 
 ### _I've updated the agent and now I've got a bunch of duplicate/removed/disabled sensors?_
 
-- Unfortunately, sometimes the sensor naming scheme for some sensors created
-by the agent needs to change. There is unfortunately, no way for the agent to
-rename existing sensors in Home Assistant, so you end up with both the old and
-new sensors showing, and only the new sensors updating.
-- You can remove the old sensors manually, under Developer Tools→Statistics in
-Home Assistant, for example. The list should contain sensors that are no longer
-“provided” by the agent. Or you can wait until they age out of the Home
-Assistant long-term statistics database automatically.
+- Generally, Go Hass Agent will try to reserve sensor renames to [major version
+  upgrades](#️-versioning), which may contain breaking changes.
+- Unfortunately, sometimes sensor names may inadvertently get changed in
+  non-major releases.
+- Regrettably, there is no way to rename the sensors in Home Assistant such that
+  long-term statistics and existing automations and dashboards continue to work
+  uninterrupted.
+- For long-term statistics, you can remove the old sensors manually, under
+  Developer Tools→Statistics in Home Assistant, for example. The list should
+  contain sensors that are no longer “provided” by the agent. Or you can wait
+  until they age out of the Home Assistant long-term statistics database
+  automatically.
+- For automations and dashboards the [repairs
+  integration](https://www.home-assistant.io/integrations/repairs/), will direct
+  you to any broken items and how to fix them.
+
+  [![Open your Home Assistant instance to the repairs
+  integration.](https://my.home-assistant.io/badges/repairs.svg)](https://my.home-assistant.io/redirect/repairs)
 
 ### _Can I reset the agent (start from new)?_
 
 - Yes. You can reset the agent so that it will re-register with Home Assistant
-and act as a new device. To do this:
-  1. Shut down the agent if it is running.
-  2. In Home Assistant, navigate to **Settings→Devices & Services** and click
-     on the **Mobile App** integration.
-  3. Locate the agent entry in the list of mobile devices, click the context menu
-     (three vertical dots), and choose **_Delete_**.
-  4. From a terminal, run the agent with the command: `go-hass-agent register
-     --force` (add `--terminal --server someserver --token sometoken` for
-     non-graphical registration).
-  5. The agent will go through the initial registration steps. It should report
-     that registration was successful.
-  6. Restart the agent.
+  and act as a new device. To do this:
+
+1. Stop Go Hass Agent if already running.
+2. Open your Home Assistant ***mobile_app*** integrations page:
+
+   [![Open your Home Assistant instance to the mobile_app
+  integration.](https://my.home-assistant.io/badges/integration.svg)](https://my.home-assistant.io/redirect/integration/?domain=mobile_app)
+
+3. Locate the entry for your existing Go Hass Agent device. It should be named
+   the same as the hostname of the device it is running on.
+4. Click on the menu (three vertical dots) at the right of the entry:
+
+   ![Delete Agent Example](assets/screenshots/delete-from-mobile-app-integrations.png)
+
+5. Choose **Delete**.
+6. From a terminal, run the agent with the command: `go-hass-agent register
+   --force` (add `--terminal --server someserver --token sometoken` for
+   non-graphical registration).
+7. The agent will go through the initial registration steps. It should report
+   that registration was successful.
+8. Restart the agent.
 
 ### _I want to run the agent on a server, as a service, without a GUI. Can I do this?_
 
