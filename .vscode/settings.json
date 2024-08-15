@@ -21,7 +21,8 @@
         "logging",
         "linux/proc",
         "git",
-        "mage"
+        "mage",
+        "commands"
     ],
     "go.testFlags": ["-v"],
     "[markdown]": {
