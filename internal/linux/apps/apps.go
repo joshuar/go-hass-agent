@@ -63,23 +63,18 @@ func (w *worker) Events(ctx context.Context) (chan sensor.Details, error) {
 		}
 	}
 
-	// Watch for active app changes.
-	go func() {
-		defer close(sensorCh)
-
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-triggerCh:
-				sendSensors(ctx, sensorCh)
-			}
-		}
-	}()
-
 	// Send an initial update.
 	go func() {
 		sendSensors(ctx, sensorCh)
+	}()
+
+	// Listen for and process updates from D-Bus.
+	go func() {
+		defer close(sensorCh)
+
+		for range triggerCh {
+			sendSensors(ctx, sensorCh)
+		}
 	}()
 
 	return sensorCh, nil
