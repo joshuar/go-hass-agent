@@ -8,6 +8,7 @@ package apps
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 
@@ -27,6 +28,8 @@ const (
 
 	workerID = "app_sensors"
 )
+
+var ErrNoApps = errors.New("no running apps")
 
 type worker struct {
 	activeApp   *activeAppSensor
@@ -81,21 +84,42 @@ func (w *worker) Events(ctx context.Context) (chan sensor.Details, error) {
 }
 
 func (w *worker) Sensors(ctx context.Context) ([]sensor.Details, error) {
-	var sensors []sensor.Details
+	var (
+		sensors     []sensor.Details
+		runningApps []string
+	)
 
-	appList, err := dbusx.GetData[map[string]dbus.Variant](ctx, w.bus, appStateDBusPath, w.portalDest, appStateDBusMethod)
+	apps, err := dbusx.GetData[map[string]dbus.Variant](ctx, w.bus, appStateDBusPath, w.portalDest, appStateDBusMethod)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve app list from D-Bus: %w", err)
 	}
 
-	if appList != nil {
-		if s := w.activeApp.update(appList); s != nil {
-			sensors = append(sensors, s)
-		}
+	if apps == nil {
+		return nil, ErrNoApps
+	}
 
-		if s := w.runningApps.update(appList); s != nil {
-			sensors = append(sensors, s)
+	for name, variant := range apps {
+		// Convert the state to something we understand.
+		state, err := dbusx.VariantToValue[uint32](variant)
+		if err != nil {
+			continue
 		}
+		// If the state is greater than 0, this app is running.
+		if state > 0 {
+			runningApps = append(runningApps, name)
+		}
+		// If the state is 2 this app is running and the currently active app.
+		if state == 2 && w.activeApp.State() != name {
+			w.activeApp.Value = name
+			sensors = append(sensors, w.activeApp)
+		}
+	}
+
+	// Update the running apps sensor.
+	if w.runningApps.State() != len(runningApps) {
+		w.runningApps.Value = len(runningApps)
+		w.runningApps.apps = runningApps
+		sensors = append(sensors, w.runningApps)
 	}
 
 	return sensors, nil

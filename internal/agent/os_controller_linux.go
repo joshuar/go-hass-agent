@@ -49,7 +49,6 @@ var allworkers = []func(context.Context, *dbusx.DBusAPI) (*linux.SensorWorker, e
 	power.NewStateWorker,
 	power.NewScreenLockWorker,
 	problems.NewProblemsWorker,
-	// power.IdleUpdater,
 	system.NewHWMonWorker,
 	system.NewInfoWorker,
 	system.NewTimeWorker,
