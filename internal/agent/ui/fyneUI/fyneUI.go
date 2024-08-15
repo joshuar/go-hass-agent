@@ -382,10 +382,15 @@ func (i *FyneUI) registrationFields(prefs *preferences.Preferences) []*widget.Fo
 	searchCtx, searchCancelFunc := context.WithCancel(context.TODO())
 	defer searchCancelFunc()
 
-	allServers, err := hass.FindServers(searchCtx)
+	var allServers []string
+
+	foundServers, err := hass.FindServers(searchCtx)
 	if err != nil {
 		i.logger.Warn("Errors occurred discovering Home Assistant servers.", slog.Any("error", err))
 	}
+
+	allServers = append(allServers, prefs.Registration.Server)
+	allServers = append(allServers, foundServers...)
 
 	tokenEntry := configEntry(&prefs.Registration.Token, false)
 	tokenEntry.Validator = validation.NewRegexp("[A-Za-z0-9_\\.]+", "Invalid token format")
