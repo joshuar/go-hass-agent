@@ -39,9 +39,9 @@ After you have installed the new version of Go Hass Agent:
 
 1. Open a terminal.
 2. Run `go-hass-agent upgrade`
-3. If the upgrade command reports the upgrade was successful, great news! You can run
-   proceed to reviewing the remaining breaking changes and performing required
-   actions as applicable.
+3. If the upgrade command reports the upgrade was successful, great news! You
+   can run proceed to reviewing the [remaining breaking
+   changes](#table-of-contents) and performing required actions as applicable.
 4. If the upgrade command reports an error. You'll need to proceed with the
    [manual steps](#manual-upgrade-steps-if-the-upgrade-command-failed).
 
@@ -52,8 +52,7 @@ After you have installed the new version of Go Hass Agent:
 > You only need to perform the manual upgrade steps here if the [upgrade
 > command](#run-the-upgrade-command) failed.
 
-These changes will require re-registering ([see below](#what-you-need-to-do))
-after upgrading.
+These changes will require re-registering (see below) after upgrading.
 
 > [!NOTE]
 >
@@ -66,25 +65,26 @@ after upgrading.
 
 To re-register:
 
-1. Stop Go Hass Agent if already running.
-2. Open your Home Assistant ***mobile_app*** integrations page:
+1. Upgrade Go Hass Agent.
+2. Stop Go Hass Agent if already running.
+3. Open your Home Assistant ***mobile_app*** integrations page:
 
    [![Open your Home Assistant instance to the mobile_app
   integration.](https://my.home-assistant.io/badges/integration.svg)](https://my.home-assistant.io/redirect/integration/?domain=mobile_app)
 
-3. Locate the entry for your existing Go Hass Agent device. It should be named
+4. Locate the entry for your existing Go Hass Agent device. It should be named
    the same as the hostname of the device it is running on.
-4. Click on the menu (three vertical dots) at the right of the entry:
+5. Click on the menu (three vertical dots) at the right of the entry:
 
    ![Delete Agent Example](../assets/screenshots/delete-from-mobile-app-integrations.png)
 
-5. Choose **Delete**.
-6. Follow the [first-run instructions](../README.md#-first-run) in the README to
+6. Choose **Delete**.
+7. Follow the [first-run instructions](../README.md#-first-run) in the README to
    re-register the agent.
-7. Once the agent has successfully re-registered, you can remove the old
+8. Once the agent has successfully re-registered, you can remove the old
    configuration directory and its contents. The old location will be
    `~/.config/com.joshuar.go-hass-agent.debug`.
-8. If you previously configured MQTT in Go Hass Agent, you will need to
+9. If you previously configured MQTT in Go Hass Agent, you will need to
    [re-enable](../README.md#configuration) MQTT after re-registering.
    - For users with headless installs, you'll need to edit `preferences.toml`
      and manually add the appropriate config options. Add a section in the file
