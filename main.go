@@ -3,11 +3,12 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//revive:disable:unused-receiver
+//revive:disable:unused-receiver,max-public-structs
 package main
 
 import (
 	"context"
+	"embed"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -23,7 +24,11 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/registry"
 	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
+	"github.com/joshuar/go-hass-agent/internal/upgrade"
 )
+
+//go:embed assets/cli
+var content embed.FS
 
 type profileFlags logging.ProfileFlags
 
@@ -47,11 +52,7 @@ type Context struct {
 type ResetCmd struct{}
 
 func (r *ResetCmd) Help() string {
-	return `
-Reset will unregister go-hass-agent from MQTT (if in use), delete the
-configuration directory and remove the log file. Use this prior to calling the
-register command to start fresh.
-`
+	return showHelpTxt("reset-help")
 }
 
 func (r *ResetCmd) Run(ctx *Context) error {
@@ -119,12 +120,7 @@ type RegisterCmd struct {
 }
 
 func (r *RegisterCmd) Help() string {
-	return `
-Register will attempt to register this device with Home Assistant. Registration
-will default to an interactive UI if possible. Details can be provided for
-non-interactive registration via the server (--server) and token (--token)
-flags. The UI can be explicitly disabled via the --terminal flag.
-`
+	return showHelpTxt("register-help")
 }
 
 func (r *RegisterCmd) Run(ctx *Context) error {
@@ -164,14 +160,7 @@ func (r *RegisterCmd) Run(ctx *Context) error {
 type RunCmd struct{}
 
 func (r *RunCmd) Help() string {
-	return `
-Go Hass Agent reports various device sensors and measurements to, and can
-receive desktop notifications from, Home Assistant. It can optionally provide
-control of the device via MQTT. It runs as a tray icon application or without
-any GUI in a headless mode, processing and sending/receiving data automatically.
-The tray icon, if available, provides some actions to configure settings and
-show reported sensors/measurements.
-`
+	return showHelpTxt("run-help")
 }
 
 func (r *RunCmd) Run(ctx *Context) error {
@@ -213,11 +202,45 @@ func (r *RunCmd) Run(ctx *Context) error {
 	return nil
 }
 
+type UpgradeCmd struct{}
+
+func (r *UpgradeCmd) Help() string {
+	return showHelpTxt("upgrade-help")
+}
+
+func (r *UpgradeCmd) Run(ctx *Context) error {
+	var logFile string
+
+	if ctx.NoLogFile {
+		logFile = ""
+	} else {
+		logFile = filepath.Join(xdg.DataHome, "go-hass-agent-upgrade.log")
+	}
+
+	logger := logging.New(ctx.LogLevel, logFile)
+
+	upgradeCtx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+
+	upgradeCtx = logging.ToContext(upgradeCtx, logger)
+
+	if err := upgrade.Run(upgradeCtx); err != nil {
+		slog.Warn(showHelpTxt("upgrade-failed-help"), slog.Any("error", err))
+
+		return fmt.Errorf("upgrade failed: %w", err)
+	}
+
+	slog.Info("Upgrade successful!")
+
+	return nil
+}
+
 //nolint:tagalign
 var CLI struct {
 	Run       RunCmd       `cmd:"" help:"Run Go Hass Agent."`
 	Reset     ResetCmd     `cmd:"" help:"Reset Go Hass Agent."`
 	Version   VersionCmd   `cmd:"" help:"Show the Go Hass Agent version."`
+	Upgrade   UpgradeCmd   `cmd:"" help:"Attempt to upgrade from previous version."`
 	Profile   profileFlags `help:"Enable profiling."`
 	AppID     string       `name:"appid" default:"${defaultAppID}" help:"Specify a custom app id (for debugging)."`
 	LogLevel  string       `name:"log-level" enum:"info,debug,trace" default:"info" help:"Set logging level."`
@@ -260,4 +283,13 @@ func main() {
 	}
 
 	ctx.FatalIfErrorf(err)
+}
+
+func showHelpTxt(file string) string {
+	helpTxt, err := content.ReadFile("assets/cli/" + file + ".txt")
+	if err != nil {
+		slog.Error("Cannot read help text.", slog.Any("error", err))
+	}
+
+	return string(helpTxt)
 }

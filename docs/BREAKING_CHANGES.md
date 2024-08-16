@@ -7,7 +7,8 @@
   - [v10.0.0](#v1000)
     - [New preferences file location and format](#new-preferences-file-location-and-format)
       - [What you need to do](#what-you-need-to-do)
-      - [Additional steps for users with MQTT enabled](#additional-steps-for-users-with-mqtt-enabled)
+        - [Run the upgrade command](#run-the-upgrade-command)
+        - [Manual upgrade steps (if the upgrade command failed)](#manual-upgrade-steps-if-the-upgrade-command-failed)
     - [Log file location normalisation](#log-file-location-normalisation)
       - [What you need to do](#what-you-need-to-do-1)
     - [MQTT Device renamed](#mqtt-device-renamed)
@@ -22,12 +23,39 @@
 The agent preferences file (`preferences.toml`) location has changed. The
 configuration is now located in `~/.config/go-hass-agent/`.
 
-The format of the file has changed as well and the format is now prettier TOML.
+The format of the file has changed as well it now contains more structure.
+
+#### What you need to do
+
+##### Run the upgrade command
+
+An `upgrade` command has been added to Go Hass Agent that will attempt to
+migrate a preferences file from an older version to the location and format used
+by the new version. It uses reasonable efforts to migrate but may not succeed
+and is harmless to run regardless. **It is the recommended remediation for this
+breaking change.**
+
+After you have installed the new version of Go Hass Agent:
+
+1. Open a terminal.
+2. Run `go-hass-agent upgrade`
+3. If the upgrade command reports the upgrade was successful, great news! You can run
+   proceed to reviewing the remaining breaking changes and performing required
+   actions as applicable.
+4. If the upgrade command reports an error. You'll need to proceed with the
+   [manual steps](#manual-upgrade-steps-if-the-upgrade-command-failed).
+
+##### Manual upgrade steps (if the upgrade command failed)
+
+> [!IMPORTANT]
+>
+> You only need to perform the manual upgrade steps here if the [upgrade
+> command](#run-the-upgrade-command) failed.
 
 These changes will require re-registering ([see below](#what-you-need-to-do))
 after upgrading.
 
-> [!IMPORTANT]
+> [!NOTE]
 >
 > As a result of re-registering, Go Hass Agent will appear as a new device in
 > Home Assistant. Automations and dashboards using entities from the previous
@@ -35,11 +63,6 @@ after upgrading.
 > [repairs integration](https://www.home-assistant.io/integrations/repairs/)
 > will alert and direct you to make any adjustments needed, after following the
 > manual upgrade steps and restarting the agent.
-
-#### What you need to do
-
-For existing users, you will need to re-register Go Hass Agent with your Home
-Assistant instance.
 
 To re-register:
 
@@ -61,26 +84,19 @@ To re-register:
 7. Once the agent has successfully re-registered, you can remove the old
    configuration directory and its contents. The old location will be
    `~/.config/com.joshuar.go-hass-agent.debug`.
+8. If you previously configured MQTT in Go Hass Agent, you will need to
+   [re-enable](../README.md#configuration) MQTT after re-registering.
+   - For users with headless installs, you'll need to edit `preferences.toml`
+     and manually add the appropriate config options. Add a section in the file
+     similar to the following:
 
-#### Additional steps for users with MQTT enabled
-
-If you previously configured MQTT in Go Hass Agent, you will need to
-[re-enable](../README.md#configuration) MQTT after re-registering.
-
-For users with headless installs, you'll need to edit `preferences.toml` and
-manually add the appropriate config options. Add a section in the file similar
-to the following:
-
-```toml
-  [mqtt]
-  server = 'tcp://localhost:1883'
-  user = 'test-user' # optional, only if needed
-  password = 'password' # optional, only if needed
-  enabled = true
-```
-
-These options are, unfortunately, not yet exposed via the command-line for
-configuration.
+     ```toml
+       [mqtt]
+       server = 'tcp://localhost:1883'
+       user = 'test-user' # optional, only if needed
+       password = 'password' # optional, only if needed
+       enabled = true
+     ```
 
 [⬆️ Back to Top](#table-of-contents)
 
