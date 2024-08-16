@@ -28,7 +28,7 @@ deployments/**/*.yaml
 !/assets/**/*
 !/internal/agent/ui/assets/*
 !**/testing/*
-!**/testing/data/*
+!**/testing/data/**
 
 
 !*.md
