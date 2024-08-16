@@ -654,11 +654,34 @@ executables](#other-custom-commands).
 To configure the agent to connect to MQTT:
 
 1. Right-click on the Go Hass Agent tray icon.
-2. Select *Settings→App*.
+2. Select *App Settings*.
+
+   ![App Settings Selection](assets/screenshots/app-settings.png)
+
 3. Toggle ***Use MQTT*** and then enter the details for your MQTT server (not
    your Home Assistant server).
+
+   ![MQTT Preferences](assets/screenshots/mqtt-preferences.png)
+
 4. Click ***Save***.
 5. Restart Go Hass Agent.
+
+**For users running Go Hass Agent in [headless](#-running-headless) mode.**
+
+1. You'll need to edit the `preferences.toml` file (see [configuration file
+   location](#-configuration-location)) and manually add the appropriate config
+   options. Add a section in the file similar to the following:
+
+   ```toml
+   [mqtt]
+   server = 'tcp://localhost:1883'
+   user = 'test-user' # optional, only if needed
+   password = 'password' # optional, only if needed
+   enabled = true
+   ```
+
+2. Save the file with your changes.
+3. Restart Go Hass Agent.
 
 After the above steps, Go Hass Agent will appear as a device under the MQTT
 integration in your Home Assistant.
