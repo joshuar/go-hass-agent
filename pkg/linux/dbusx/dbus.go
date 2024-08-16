@@ -12,7 +12,6 @@ import (
 	"log/slog"
 	"os/user"
 	"strings"
-	"sync"
 
 	"github.com/godbus/dbus/v5"
 
@@ -68,6 +67,9 @@ type Watch struct {
 	Names         []string
 }
 
+// Parse takes the user-defined Watch and converts the values into appropriate
+// dbus.MatchOptions. It's a convenience wrapper so users don't need to know the
+// exact invocation and/or match options.
 func (w *Watch) Parse() []dbus.MatchOption {
 	var matchers []dbus.MatchOption
 
@@ -93,58 +95,62 @@ func (w *Watch) Parse() []dbus.MatchOption {
 	return matchers
 }
 
+// Properties represents a signal that matches the canonical PropertiesChanged
+// signal. These will have an interface name together with a list of changed
+// properties (and their values) and invalidated property names.
 type Properties struct {
 	Interface   string
 	Changed     map[string]dbus.Variant
 	Invalidated []string
 }
 
+// Values represents a property value that changed. It contains the new and old
+// values.
 type Values[T any] struct {
 	New T
 	Old T
 }
 
+// Bus represents a particular D-Bus connection to either the system or session
+// bus.
 type Bus struct {
 	conn    *dbus.Conn
 	logger  *slog.Logger
-	wg      sync.WaitGroup
 	busType dbusType
 }
 
-// newBus sets up D-Bus connections and channels for receiving signals. It
-// creates both a system and session bus connection.
+// newBus creates a D-Bus connection to the requested bus. If a connection
+// cannot be established, an error is returned.
 func newBus(ctx context.Context, busType dbusType) (*Bus, error) {
-	var conn *dbus.Conn
+	var (
+		conn *dbus.Conn
+		err  error
+	)
 
-	var err error
-
-	dbusCtx, cancelFunc := context.WithCancel(ctx)
-
+	// Connect to the requested bus.
 	switch busType {
 	case SessionBus:
-		conn, err = dbus.ConnectSessionBus(dbus.WithContext(dbusCtx))
+		conn, err = dbus.ConnectSessionBus(dbus.WithContext(ctx))
 	case SystemBus:
-		conn, err = dbus.ConnectSystemBus(dbus.WithContext(dbusCtx))
+		conn, err = dbus.ConnectSystemBus(dbus.WithContext(ctx))
 	}
-
+	// If the connection fails, we bails.
 	if err != nil {
-		cancelFunc()
-
 		return nil, fmt.Errorf("could not connect to bus: %w", err)
 	}
 
+	// Set up our bus object.
 	bus := &Bus{
 		conn:    conn,
 		busType: busType,
-		wg:      sync.WaitGroup{},
 		logger:  logging.FromContext(ctx).With(slog.String("subsystem", "dbus"), slog.String("bus", busType.String())),
 	}
 
+	// Start a goroutine to close the connection when the context is cancelled
+	// (i.e. agent shutdown).
 	go func() {
 		defer conn.Close()
-		defer cancelFunc()
 		<-ctx.Done()
-		bus.wg.Wait()
 	}()
 
 	return bus, nil
@@ -255,24 +261,24 @@ func GetData[D any](ctx context.Context, bus *Bus, path, dest, method string, ar
 // triggered the match, the path and the contents (what values actually
 // changed).
 func (b *Bus) WatchBus(ctx context.Context, conditions *Watch) (chan Trigger, error) {
-	var wg sync.WaitGroup
-
+	// Parse the specified conditions and add to D-Bus for a signal watch.
 	matchers := conditions.Parse()
 	if err := b.conn.AddMatchSignalContext(ctx, matchers...); err != nil {
 		return nil, fmt.Errorf("unable to add watch conditions (%w)", err)
 	}
 
+	// Set up our channels: signalCh for signals received from D-Bus and outCh
+	// where we send the signal.
 	signalCh := make(chan *dbus.Signal)
 	outCh := make(chan Trigger)
-
+	// Connect our signal chan to the bus signal channel.
 	b.conn.Signal(signalCh)
-	b.wg.Add(1)
 
-	wg.Add(1)
-
+	// Set up a goroutine to listen for signals from D-Bus and forward them over
+	// outCh. We do some generic filtering of the signal to catch obvious bogus
+	// signals and data. If the context is cancelled (i.e., agent shutdown),
+	// clean up.
 	go func() {
-		defer wg.Done()
-
 		for {
 			select {
 			case <-ctx.Done():
@@ -313,11 +319,6 @@ func (b *Bus) WatchBus(ctx context.Context, conditions *Watch) (chan Trigger, er
 				}
 			}
 		}
-	}()
-
-	go func() {
-		wg.Wait()
-		b.wg.Done()
 	}()
 
 	return outCh, nil
