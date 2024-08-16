@@ -6,6 +6,7 @@
 package logging
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	_ "net/http/pprof" // #nosec G108
@@ -19,8 +20,6 @@ import (
 const (
 	LevelTrace = slog.Level(-8)
 	LevelFatal = slog.Level(12)
-
-	defaultPerms = 0o644
 )
 
 //nolint:misspell
@@ -104,14 +103,15 @@ func openLogFile(logFile string) (*os.File, error) {
 	logDir := filepath.Base(logFile)
 	// Create the log directory if it does not exist.
 	_, err := os.Stat(logDir)
-	if os.IsNotExist(err) {
+
+	if err == nil || errors.Is(err, os.ErrNotExist) {
 		err = os.MkdirAll(logDir, os.ModePerm)
 		if err != nil {
-			return nil, fmt.Errorf("unable to log file directory %s: %w", logDir, err)
+			return nil, fmt.Errorf("unable to create log file directory %s: %w", logDir, err)
 		}
 	}
 	// Open the log file.
-	logFileHandle, err := os.OpenFile(logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, defaultPerms)
+	logFileHandle, err := os.Create(logFile)
 	if err != nil {
 		return nil, fmt.Errorf("unable to open log file: %w", err)
 	}
