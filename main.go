@@ -214,7 +214,7 @@ func (r *UpgradeCmd) Run(ctx *Context) error {
 	if ctx.NoLogFile {
 		logFile = ""
 	} else {
-		logFile = filepath.Join(xdg.DataHome, "go-hass-agent-upgrade.log")
+		logFile = filepath.Join(xdg.ConfigHome, ctx.AppID, "upgrade.log")
 	}
 
 	logger := logging.New(ctx.LogLevel, logFile)
