@@ -100,7 +100,7 @@ func levelReplacer(_ []string, attr slog.Attr) slog.Attr {
 // openLogFile will attempt to open the specified log file. It will also attempt
 // to create the directory containing the log file if it does not exist.
 func openLogFile(logFile string) (*os.File, error) {
-	logDir := filepath.Base(logFile)
+	logDir := filepath.Dir(logFile)
 	// Create the log directory if it does not exist.
 	_, err := os.Stat(logDir)
 
@@ -110,6 +110,7 @@ func openLogFile(logFile string) (*os.File, error) {
 			return nil, fmt.Errorf("unable to create log file directory %s: %w", logDir, err)
 		}
 	}
+
 	// Open the log file.
 	logFileHandle, err := os.Create(logFile)
 	if err != nil {
