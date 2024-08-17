@@ -438,8 +438,7 @@ parts of Home Assistant.
 ### 📌 Configuration Location
 
 The configuration is located in a file called `preferences.toml` in
-`CONFIG_HOME/com.github.joshuar.go-hass-agent/` where `CONFIG_HOME` will
-OS-dependent:
+`CONFIG_HOME/go-hass-agent/` where `CONFIG_HOME` will OS-dependent:
 
 - Linux: `~/.config`.
 - OSX: `~/Library/Application Support`.
