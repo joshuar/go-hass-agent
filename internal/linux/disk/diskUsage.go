@@ -88,7 +88,7 @@ func (w *usageWorker) Sensors(ctx context.Context, _ time.Duration) ([]sensor.De
 	for _, partition := range partitions {
 		usage, err := disk.UsageWithContext(ctx, partition.Mountpoint)
 		if err != nil {
-			w.logger.Warn("Failed to get usage info for mountpount", "mountpoint", partition.Mountpoint, "error", err.Error())
+			w.logger.Debug("Failed to get usage info for mountpount", "mountpoint", partition.Mountpoint, "error", err.Error())
 
 			continue
 		}
