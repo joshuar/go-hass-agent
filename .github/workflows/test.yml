@@ -9,6 +9,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: "tests"
+  cancel-in-progress: false
+
 env:
   GO_VERSION: 1.22.5
   MAGEARGS: -d build/magefiles -w .
