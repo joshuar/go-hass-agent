@@ -1,5 +1,63 @@
 # Changelog
 
+## [10.0.0](https://github.com/joshuar/go-hass-agent/compare/v9.6.0...v10.0.0) (2024-08-17)
+
+
+### ⚠ BREAKING CHANGES
+
+* **agent:** the device representing Go Hass Agent in Home Assistant has been renamed from the generic "Go Hass Agent" to the hostname of the device running Go Hass Agent.
+* **prefs:** The default app id has changed, which changes the path to the agent configuration. As such, the agent will need to be re-registered with Home Assistant.
+* major internal update
+* MQTT preferences have been renamed in the config file. They now sit under their own heading. Existing MQTT preferences are not migrated to the new settings.
+
+### Features
+
+* :sparkles: add an upgrade command to help with upgrading after major release ([d244aa9](https://github.com/joshuar/go-hass-agent/commit/d244aa91cd502a52823377cd22203e91b760e90e))
+* **agent:** :sparkles: add support for number controls with custom MQTT commands ([09d44c4](https://github.com/joshuar/go-hass-agent/commit/09d44c41737f25261562c7150b379300215bd7cb))
+* **agent:** :sparkles: use a nicer name for the app "ID" that is exposed by Fyne to the desktop environment ([87d9ae4](https://github.com/joshuar/go-hass-agent/commit/87d9ae4ba97a0e50c50b7a3a923fe610f201a6f9))
+* **agent:** rename the MQTT device ([da65683](https://github.com/joshuar/go-hass-agent/commit/da656837ea3bd1e905f37b8ce8df1ec5b2148804))
+* **dbusx:** :sparkles: add support for watching on arg namespace ([22bc528](https://github.com/joshuar/go-hass-agent/commit/22bc528cb6abc687ccc55dda41fc86f91081b2b4))
+* **linux:** :sparkles: add basic webcam view/control ([2c30336](https://github.com/joshuar/go-hass-agent/commit/2c30336662f49a0d031c9a392e2360542df40fb7))
+* **linux:** :sparkles: add CPU frequency sensors ([6b7b91f](https://github.com/joshuar/go-hass-agent/commit/6b7b91fd0229bac4c5129e492e0359035e910f57))
+* **linux:** :sparkles: add sensor tracking media status of any MPRIS compatibile player on the system ([5915521](https://github.com/joshuar/go-hass-agent/commit/5915521433e91dd7104cadde0fda2ffb72755245))
+* **linux:** :sparkles: better screen/session controls ([17759e2](https://github.com/joshuar/go-hass-agent/commit/17759e2c21f64d51772a032494fa9bbb432ea877))
+* **linux:** :zap: improve active/running apps sensor code ([2971035](https://github.com/joshuar/go-hass-agent/commit/29710355aa50e16da7c2fea270ce8e310d407ea9))
+* **linux:** :zap: increase polling (frequency) of cpu usage (%) sensor updates ([8d4c9da](https://github.com/joshuar/go-hass-agent/commit/8d4c9da70dbb969cf2ca22d77a24ae8265c9f1cd))
+* **preferences:** :loud_sound: improve messages shown when preferences are not valid ([cf4dd0a](https://github.com/joshuar/go-hass-agent/commit/cf4dd0a8fd9d1e9cf6d07b784d4e6e724fd6c154))
+
+
+### Bug Fixes
+
+* **agent:** :bug: censure app id is set correctly in agent ([c126d45](https://github.com/joshuar/go-hass-agent/commit/c126d455268f5fa4d3e95498cb2c2560543d7f88))
+* **agent:** :bug: correct mock name so go generate doesn't crash ([e7ac7fb](https://github.com/joshuar/go-hass-agent/commit/e7ac7fb779ac5a50e1b29c7d8c24dd0408dae49c))
+* **agent:** :bug: don't exit MQTT runner if MQTT commands cannot be set up ([2417c4c](https://github.com/joshuar/go-hass-agent/commit/2417c4c4d0113025d7baaa4c83b964bccecd0e8f))
+* **agent:** :bug: don't run MQTT workers if there are no workers ([bcc7636](https://github.com/joshuar/go-hass-agent/commit/bcc76363fc04c9cef248e8a5fa7173d80c71cf50))
+* **agent:** :bug: get HA config needs rest API URL ([a549d39](https://github.com/joshuar/go-hass-agent/commit/a549d39db076d5d2ca257f57b71bd973de000c00))
+* **agent:** :bug: support passing registration parameters via command-line when running in graphical mode ([4e35159](https://github.com/joshuar/go-hass-agent/commit/4e351591220bf21ef94691688388004b3fdf1aab))
+* **agent:** :bug: sync sensor disabled state between registry and Home Assistant ([cc8d89c](https://github.com/joshuar/go-hass-agent/commit/cc8d89c544a7c0e452e1541f58f5082fe6f46cb5))
+* **agent:** :loud_sound: write a log message when agent is registered ([1cc6168](https://github.com/joshuar/go-hass-agent/commit/1cc61689464214f39efe11eb635765254965cd32))
+* **agent:** :mute: fix logging when no MQTT commands are defined ([718b0b0](https://github.com/joshuar/go-hass-agent/commit/718b0b0fac9e0d33b887e20bffba7549e5602921))
+* **linux:** :bug: only provide power controls that are available on the device ([540559d](https://github.com/joshuar/go-hass-agent/commit/540559d84a612bc36220809d7826787d9a61e736))
+* **logging:** :bug: (again again) fix create directory for logfile ([b73faff](https://github.com/joshuar/go-hass-agent/commit/b73faffe6832462777de76918784908cd43d3f2c))
+* **logging:** :bug: (again) create directory for log file if not exists ([e60a7f0](https://github.com/joshuar/go-hass-agent/commit/e60a7f0c0e6c88efeb62d3976ca7876127dafcba))
+* **logging:** :bug: handle a non-existent directory for the log file (auto-create if necessary) ([03eb8e4](https://github.com/joshuar/go-hass-agent/commit/03eb8e48c25b8dacc034d3f8376d139111faa260))
+* **logging:** :loud_sound: don't crash if we can't write to the log file ([f92cf2f](https://github.com/joshuar/go-hass-agent/commit/f92cf2f39be1f3967b2ea920b0eb7ab4d7d9890b))
+* **logging:** :loud_sound: fix log file path and level details ([1bf85ea](https://github.com/joshuar/go-hass-agent/commit/1bf85eaa2581490347f3a594108ea03c857fcdcb))
+* **scripts:** :bug: don't return an open channel that will never close if there are no scripts ([d17d4e7](https://github.com/joshuar/go-hass-agent/commit/d17d4e7aa634554dec8fb742325fcd9c9f60faa1))
+* **ui:** :bug: re-add default server to list of servers when registering agent ([c9cfd9c](https://github.com/joshuar/go-hass-agent/commit/c9cfd9c1a83f6a9d875f8225fb86486d5fa2ac4e))
+
+
+### Performance Improvements
+
+* **agent:** :fire: remove unnecessary goroutines and waitgroups ([0f01468](https://github.com/joshuar/go-hass-agent/commit/0f0146882bd6ce6aa954580161e31ee2fb000778))
+
+
+### Code Refactoring
+
+* improved MQTT functionality ([766fcce](https://github.com/joshuar/go-hass-agent/commit/766fcce98f7cd1f24aadbe85fb1d371da401ffde))
+* major internal update ([61926f6](https://github.com/joshuar/go-hass-agent/commit/61926f6be1faf734144d4a75e0b16d7193fca7c5))
+* **prefs:** change default app id ([6125a45](https://github.com/joshuar/go-hass-agent/commit/6125a45070e1ced488e6d9e39102c0354d2a0793))
+
 ## [9.6.0](https://github.com/joshuar/go-hass-agent/compare/v9.5.2...v9.6.0) (2024-07-27)
 
 
