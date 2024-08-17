@@ -101,7 +101,7 @@
   - [_I've updated the agent and now I've got a bunch of duplicate/removed/disabled sensors?_](#ive-updated-the-agent-and-now-ive-got-a-bunch-of-duplicateremoveddisabled-sensors)
   - [_Can I reset the agent (start from new)?_](#can-i-reset-the-agent-start-from-new)
   - [_I want to run the agent on a server, as a service, without a GUI. Can I do this?_](#i-want-to-run-the-agent-on-a-server-as-a-service-without-a-gui-can-i-do-this)
-  - [_Does the agent as root or with privileges?_](#does-the-agent-as-root-or-with-privileges)
+  - [_Can (or does) the agent run as root or with privileges?_](#can-or-does-the-agent-run-as-root-or-with-privileges)
 - [🤝 Acknowledgements](#-acknowledgements)
 - [🧑‍⚖️ License](#️-license)
 
@@ -1083,7 +1083,7 @@ should start with every boot.
 - For other init systems, consult their documentation on how to enable and run
 user services.
 
-### _Does the agent as root or with privileges?_
+### _Can (or does) the agent run as root or with privileges?_
 
 No. None of the built-in sensors (or commands if MQTT is enabled) require any
 privileges. The agent will refuse to run if it is started with privileges. For
