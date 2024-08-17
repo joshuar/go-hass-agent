@@ -95,7 +95,7 @@ func (agent *Agent) processSensors(ctx context.Context, trk Tracker, reg Registr
 					return
 				}
 				// If the sensor is disabled in the registry but not in Home Assistant, re-enable it.
-				slog.Debug("Sensor re-enabled in HA, will send updates.",
+				slog.Info("Sensor re-enabled in Home Assistant, Re-enabling in local registry and sending updates.",
 					slog.Group("sensor", slog.String("name", upd.Name()), slog.String("id", upd.ID())))
 
 				if err := reg.SetDisabled(upd.ID(), false); err != nil {
@@ -204,6 +204,9 @@ func processStateUpdates(trk Tracker, reg Registry, upd sensor.Details, status *
 
 	// If HA reports the sensor as disabled, update the registry.
 	if reg.IsDisabled(upd.ID()) != status.Disabled {
+		slog.Info("Sensor is disabled in Home Assistant. Setting disabled in local registry.",
+			slog.Group("sensor", slog.String("name", upd.Name()), slog.String("id", upd.ID())))
+
 		if err := reg.SetDisabled(upd.ID(), status.Disabled); err != nil {
 			warnings = errors.Join(warnings, fmt.Errorf("%w: %w", ErrRegDisableFailed, err))
 		}
