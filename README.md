@@ -107,6 +107,17 @@
 
 ## 🌟 About the Project
 
+Go Hass Agent is an application to expose sensors and controls from a device to
+Home Assistant. You can think of it as something similar to the [Home Assistant
+companion app](https://companion.home-assistant.io/) for mobile devices, but for
+your desktop, server, Raspberry Pi, toaster, whatever. If it can run Go and
+Linux, it can run Go Hass Agent!
+
+Out of the box, Go Hass Agent will report lots of details about the system it is
+running on. You can extend it with additional sensors and controls by hooking it
+up to MQTT. You can extend it **even further** with your own custom sensors and
+controls with scripts/programs.
+
 ### 🎯 Features
 
 - **Sensors:** Expose a number of sensor entities to Home Assistant, which can then be used
