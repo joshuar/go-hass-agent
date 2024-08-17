@@ -912,22 +912,18 @@ Then the commands for building and packaging above should work as expected.
 ### Packages
 
 Go Hass Agent uses [nfpm](https://nfpm.goreleaser.com/) to create
-packages for Fedora, Arch, and Ubuntu and
-[fyne-cross](https://github.com/fyne-io/fyne-cross) to create packages for
-Debian and Linux distributions with older libraries.
+packages for Fedora, Arch, and Ubuntu/Debian.
 
 To build packages, use the following invocations:
 
 ```shell
 mage -v -d build/magefiles -w . package:nfpm
-mage -v -d build/magefiles -w . package:fyneCross
 ```
 
 The above mage actions will install the necessary tooling for packaging, if
 needed.
 
-- Packages built with `nfpm` will be available under the `dist/` folder.
-- Packages built with `fyne-cross` will be available under `fyne-cross/dist/linux-*/`.
+- Packages will be available under the `dist/` folder.
 - You can build packages for other architectures as well by following the guide
   for [cross-compliation](#cross-compilation).
 
