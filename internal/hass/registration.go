@@ -3,7 +3,6 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//nolint:errname // structs are dual-purpose response and error
 package hass
 
 import (
@@ -49,55 +48,21 @@ func newRegistrationRequest(device *preferences.Device, token string) *registrat
 	}
 }
 
-type registrationResponse struct {
-	Details *preferences.Hass
-	*APIError
-}
-
-func (r *registrationResponse) UnmarshalJSON(b []byte) error {
-	err := json.Unmarshal(b, &r.Details)
-	if err != nil {
-		return fmt.Errorf("failed to parse registration response: %w", err)
-	}
-
-	return nil
-}
-
-func (r *registrationResponse) UnmarshalError(data []byte) error {
-	err := json.Unmarshal(data, r.APIError)
-	if err != nil {
-		return fmt.Errorf("could not unmarshal: %w", err)
-	}
-
-	return nil
-}
-
-func (r *registrationResponse) Error() string {
-	return r.APIError.Error()
-}
-
-func newRegistrationResponse() *registrationResponse {
-	return &registrationResponse{}
-}
-
 func RegisterDevice(ctx context.Context, device *preferences.Device, registration *preferences.Registration) (*preferences.Hass, error) {
 	// Validate provided registration details.
 	if err := registration.Validate(); err != nil {
-		// if !validRegistrationSetting("server", input.Server) || !validRegistrationSetting("token", token) {
 		return nil, fmt.Errorf("could not register device: %w", err)
 	}
 
-	// Generate request and response objects.
-	req := newRegistrationRequest(device, registration.Token)
-	resp := newRegistrationResponse()
-
-	// Connect to specified Home Assistant server.
-	client := NewDefaultHTTPClient(registration.Server).SetTimeout(time.Minute)
+	// Create a new client connection to Home Assistant at the registration path.
+	client := NewClient(ctx, nil, nil)
+	client.Endpoint(registration.Server+"/"+RegistrationPath, time.Minute)
 
 	// Register the device against the registration endpoint.
-	if err := ExecuteRequest(ctx, client, RegistrationPath, req, resp); err != nil {
+	registrationStatus, err := send[*preferences.Hass](ctx, client, newRegistrationRequest(device, registration.Token))
+	if err != nil {
 		return nil, fmt.Errorf("could not register device: %w", err)
 	}
 
-	return resp.Details, nil
+	return registrationStatus, nil
 }

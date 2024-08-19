@@ -3,16 +3,12 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//nolint:errname // structs are dual-purpose response and error
 //revive:disable:unused-receiver
 package hass
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
-	"sync"
 )
 
 var (
@@ -21,12 +17,6 @@ var (
 )
 
 type Config struct {
-	Details *ConfigEntries
-	*APIError
-	mu sync.Mutex
-}
-
-type ConfigEntries struct {
 	Entities              map[string]map[string]any `json:"entities"`
 	UnitSystem            units                     `json:"unit_system"`
 	ConfigDir             string                    `json:"config_dir"`
@@ -48,14 +38,11 @@ type units struct {
 }
 
 func (c *Config) IsEntityDisabled(entity string) (bool, error) {
-	if c.Details == nil {
+	if c.Entities == nil {
 		return false, ErrInvalidConfig
 	}
 
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	if v, ok := c.Details.Entities[entity]["disabled"]; ok {
+	if v, ok := c.Entities[entity]["disabled"]; ok {
 		disabledState, ok := v.(bool)
 		if !ok {
 			return false, nil
@@ -67,43 +54,8 @@ func (c *Config) IsEntityDisabled(entity string) (bool, error) {
 	return false, nil
 }
 
-func (c *Config) UnmarshalJSON(b []byte) error {
-	err := json.Unmarshal(b, &c.Details)
-	if err != nil {
-		return fmt.Errorf("could not read config: %w", err)
-	}
-
-	return nil
-}
-
-func (c *Config) UnmarshalError(data []byte) error {
-	err := json.Unmarshal(data, c.APIError)
-	if err != nil {
-		return fmt.Errorf("could not unmarshal: %w", err)
-	}
-
-	return nil
-}
-
-func (c *Config) Error() string {
-	return c.APIError.Error()
-}
-
 type configRequest struct{}
 
 func (c *configRequest) RequestBody() json.RawMessage {
 	return json.RawMessage(`{ "type": "get_config" }`)
-}
-
-func GetConfig(ctx context.Context, url string) (*Config, error) {
-	client := NewDefaultHTTPClient(url)
-
-	req := &configRequest{}
-	resp := &Config{}
-
-	if err := ExecuteRequest(ctx, client, "", req, resp); err != nil {
-		return nil, err
-	}
-
-	return resp, nil
 }

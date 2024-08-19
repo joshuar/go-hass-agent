@@ -109,7 +109,7 @@ func (i *FyneUI) DisplayNotification(notification ui.Notification) {
 
 // DisplayTrayIcon displays an icon in the desktop tray with a menu for
 // controlling the agent and showing other informational windows.
-func (i *FyneUI) DisplayTrayIcon(ctx context.Context, agent ui.Agent, trk ui.SensorTracker, doneCh chan struct{}) {
+func (i *FyneUI) DisplayTrayIcon(ctx context.Context, agent ui.Agent, client ui.HassClient, doneCh chan struct{}) {
 	// Do not show the tray icon if the agent is running in headless mode.
 	if agent.Headless() {
 		return
@@ -119,12 +119,12 @@ func (i *FyneUI) DisplayTrayIcon(ctx context.Context, agent ui.Agent, trk ui.Sen
 		// About menu item.
 		menuItemAbout := fyne.NewMenuItem(i.Translate("About"),
 			func() {
-				i.aboutWindow(ctx, agent).Show()
+				i.aboutWindow(ctx, client).Show()
 			})
 		// Sensors menu item.
 		menuItemSensors := fyne.NewMenuItem(i.Translate("Sensors"),
 			func() {
-				i.sensorsWindow(trk).Show()
+				i.sensorsWindow(client).Show()
 			})
 		// Preferences/Settings items.
 		menuItemAppPrefs := fyne.NewMenuItem(i.Translate("App Settings"),
@@ -197,7 +197,7 @@ func (i *FyneUI) DisplayRegistrationWindow(prefs *preferences.Preferences, doneC
 
 // aboutWindow creates a window that will show some interesting information
 // about the agent, such as version numbers.
-func (i *FyneUI) aboutWindow(ctx context.Context, agent ui.Agent) fyne.Window {
+func (i *FyneUI) aboutWindow(ctx context.Context, client ui.HassClient) fyne.Window {
 	var widgets []fyne.CanvasObject
 
 	icon := canvas.NewImageFromResource(&ui.TrayIcon{})
@@ -208,18 +208,14 @@ func (i *FyneUI) aboutWindow(ctx context.Context, agent ui.Agent) fyne.Window {
 			fyne.TextAlignCenter,
 			fyne.TextStyle{Bold: true}))
 
-	if config, err := hass.GetConfig(ctx, agent.GetRestAPIURL()); err != nil {
-		logging.FromContext(ctx).Error("Could not fetch Home Assistant config.", slog.Any("error", err))
-	} else {
-		widgets = append(widgets,
-			widget.NewLabelWithStyle("Home Assistant "+config.Details.Version,
-				fyne.TextAlignCenter,
-				fyne.TextStyle{Bold: true}),
-			widget.NewLabelWithStyle("Tracking "+strconv.Itoa(len(config.Details.Entities))+" Entities",
-				fyne.TextAlignCenter,
-				fyne.TextStyle{Italic: true}),
-		)
-	}
+	widgets = append(widgets,
+		widget.NewLabelWithStyle("Home Assistant "+client.HassVersion(ctx),
+			fyne.TextAlignCenter,
+			fyne.TextStyle{Bold: true}),
+		widget.NewLabelWithStyle("Tracking "+strconv.Itoa(len(client.SensorList()))+" Entities",
+			fyne.TextAlignCenter,
+			fyne.TextStyle{Italic: true}),
+	)
 
 	linkWidgets := generateLinks()
 	widgets = append(widgets,
@@ -283,14 +279,14 @@ func (i *FyneUI) agentSettingsWindow(agent ui.Agent) fyne.Window {
 //
 //nolint:cyclop,gocyclo,mnd
 //revive:disable:function-length
-func (i *FyneUI) sensorsWindow(tracker ui.SensorTracker) fyne.Window {
-	sensors := tracker.SensorList()
+func (i *FyneUI) sensorsWindow(client ui.HassClient) fyne.Window {
+	sensors := client.SensorList()
 	if sensors == nil {
 		return nil
 	}
 
 	getValue := func(n string) string {
-		if sensor, err := tracker.Get(n); err == nil {
+		if sensor, err := client.GetSensor(n); err == nil {
 			var valueStr strings.Builder
 
 			fmt.Fprintf(&valueStr, "%v", sensor.State())

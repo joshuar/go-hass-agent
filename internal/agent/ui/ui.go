@@ -7,6 +7,8 @@
 package ui
 
 import (
+	"context"
+
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
@@ -19,9 +21,10 @@ type Agent interface {
 	Headless() bool
 }
 
-type SensorTracker interface {
+type HassClient interface {
 	SensorList() []string
-	Get(key string) (sensor.Details, error)
+	GetSensor(id string) (sensor.Details, error)
+	HassVersion(ctx context.Context) string
 }
 
 type Notification interface {
