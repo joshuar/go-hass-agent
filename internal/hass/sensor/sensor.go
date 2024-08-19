@@ -4,16 +4,13 @@
 // https://opensource.org/licenses/MIT
 
 //revive:disable:max-public-structs
-//nolint:errname // structs are dual-purpose response and error
 //go:generate moq -out sensor_mocks_test.go . State Registration Details
 package sensor
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 
-	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 )
 
@@ -25,11 +22,6 @@ const (
 	requestTypeRegister = "register_sensor"
 	requestTypeUpdate   = "update_sensor_states"
 	requestTypeLocation = "update_location"
-)
-
-var (
-	ErrSensorDisabled  = errors.New("sensor disabled")
-	ErrInvalidLocation = errors.New("invalid location update")
 )
 
 type State interface {
@@ -62,7 +54,7 @@ type stateUpdateRequest struct {
 	UniqueID        string         `json:"unique_id"`
 }
 
-func newStateUpdateRequest(sensor State) *stateUpdateRequest {
+func createStateUpdateRequest(sensor State) *stateUpdateRequest {
 	upd := &stateUpdateRequest{
 		StateAttributes: sensor.Attributes(),
 		State:           sensor.State(),
@@ -86,9 +78,9 @@ type registrationRequest struct {
 	DeviceClass       string `json:"device_class,omitempty"`
 }
 
-func generateRegistrationRequest(sensor Registration) *registrationRequest {
+func createRegistrationRequest(sensor Registration) *registrationRequest {
 	reg := &registrationRequest{
-		stateUpdateRequest: newStateUpdateRequest(sensor),
+		stateUpdateRequest: createStateUpdateRequest(sensor),
 		Name:               sensor.Name(),
 		UnitOfMeasurement:  sensor.Units(),
 		EntityCategory:     sensor.Category(),
@@ -120,8 +112,8 @@ type LocationRequest struct {
 }
 
 type Request struct {
-	RequestType string          `json:"type"`
-	Data        json.RawMessage `json:"data"`
+	Data        any    `json:"data"`
+	RequestType string `json:"type"`
 }
 
 func (r *Request) RequestBody() json.RawMessage {
@@ -133,141 +125,75 @@ func (r *Request) RequestBody() json.RawMessage {
 	return json.RawMessage(data)
 }
 
-func NewUpdateRequest(sensor Details) (*Request, *StateUpdateResponse, error) {
-	updates := []*stateUpdateRequest{newStateUpdateRequest(sensor)}
+func NewRequest(details any) (*Request, error) {
+	var (
+		reqType string
+		reqBody any
+	)
 
-	data, err := json.Marshal(updates)
-	if err != nil {
-		return nil, nil, fmt.Errorf("could not create state update request: %w", err)
+	switch request := details.(type) {
+	case Registration:
+		reqBody = createRegistrationRequest(request)
+		reqType = requestTypeRegister
+	case State:
+		reqBody = createStateUpdateRequest(request)
+		reqType = requestTypeUpdate
+	case LocationRequest:
+		reqBody = request
+		reqType = requestTypeLocation
 	}
 
-	return &Request{Data: data, RequestType: requestTypeUpdate},
-		&StateUpdateResponse{Body: make(map[string]*UpdateStatus)},
-		nil
+	return &Request{Data: reqBody, RequestType: reqType}, nil
 }
 
-func NewLocationUpdateRequest(sensor Details) (*Request, *LocationResponse, error) {
-	location, ok := sensor.State().(*LocationRequest)
-	if !ok {
-		return nil, nil, ErrInvalidLocation
-	}
-
-	data, err := json.Marshal(location)
-	if err != nil {
-		return nil, nil, errors.Join(ErrInvalidLocation, err)
-	}
-
-	return &Request{Data: data, RequestType: requestTypeLocation},
-		&LocationResponse{},
-		nil
-}
-
-func NewRegistrationRequest(sensor Details) (*Request, *RegistrationResponse, error) {
-	data, err := json.Marshal(generateRegistrationRequest(sensor))
-	if err != nil {
-		return nil, nil, fmt.Errorf("could not create registration request: %w", err)
-	}
-
-	return &Request{Data: data, RequestType: requestTypeRegister},
-		&RegistrationResponse{},
-		nil
-}
-
-type UpdateStatus struct {
-	Error    *haError `json:"error,omitempty"`
-	Success  bool     `json:"success,omitempty"`
-	Disabled bool     `json:"is_disabled,omitempty"`
-}
-
-type haError struct {
+type APIError struct {
 	Code    any    `json:"code,omitempty"`
 	Message string `json:"message,omitempty"`
 }
 
-type StateUpdateResponse struct {
-	Body           map[string]*UpdateStatus `json:"body"`
-	*hass.APIError `json:"api_error,omitempty"`
+func (e *APIError) Error() string {
+	return fmt.Sprintf("code %s: %s", e.Code, e.Message)
 }
 
-func (u *StateUpdateResponse) UnmarshalJSON(b []byte) error {
-	err := json.Unmarshal(b, &u.Body)
-	if err != nil {
-		return fmt.Errorf("could not parse response: %w", err)
+type ResponseStatus struct {
+	ErrorDetails *APIError
+	IsSuccess    bool `json:"success,omitempty"`
+}
+
+type UpdateResponseStatus struct {
+	ResponseStatus
+	IsDisabled bool `json:"is_disabled,omitempty"`
+}
+
+func (u *UpdateResponseStatus) Disabled() bool {
+	return u.IsDisabled
+}
+
+func (u *UpdateResponseStatus) Success() (bool, error) {
+	if u.IsSuccess {
+		return true, nil
 	}
 
-	return nil
+	return false, u.ErrorDetails
 }
 
-func (u *StateUpdateResponse) UnmarshalError(data []byte) error {
-	err := json.Unmarshal(data, u.APIError)
-	if err != nil {
-		return fmt.Errorf("could not parse response error: %w", err)
+type StateUpdateResponse map[string]UpdateResponseStatus
+
+type RegistrationResponse ResponseStatus
+
+func (r *RegistrationResponse) Registered() (bool, error) {
+	if r.IsSuccess {
+		return true, nil
 	}
 
-	return nil
-}
-
-func (u *StateUpdateResponse) Error() string {
-	return u.APIError.Error()
-}
-
-func (u *StateUpdateResponse) Updates() map[string]*UpdateStatus {
-	return u.Body
-}
-
-type RegistrationResponse struct {
-	*hass.APIError
-	Body UpdateStatus
-}
-
-func (r *RegistrationResponse) UnmarshalJSON(b []byte) error {
-	err := json.Unmarshal(b, &r.Body)
-	if err != nil {
-		return fmt.Errorf("could not parse response: %w", err)
-	}
-
-	return nil
-}
-
-func (r *RegistrationResponse) UnmarshalError(data []byte) error {
-	err := json.Unmarshal(data, r.APIError)
-	if err != nil {
-		return fmt.Errorf("could not unmarshal: %w", err)
-	}
-
-	return nil
-}
-
-func (r *RegistrationResponse) Error() string {
-	return r.APIError.Error()
-}
-
-func (r *RegistrationResponse) Registered() bool {
-	return r.Body.Success
+	return false, r.ErrorDetails
 }
 
 type LocationResponse struct {
-	*hass.APIError
+	error
 }
 
-//revive:disable:unused-receiver
-func (l *LocationResponse) UnmarshalJSON(_ []byte) error {
-	return nil
-}
-
-func (l *LocationResponse) UnmarshalError(data []byte) error {
-	err := json.Unmarshal(data, l.APIError)
-	if err != nil {
-		return fmt.Errorf("could not unmarshal: %w", err)
-	}
-
-	return nil
-}
-
-func (l *LocationResponse) Error() string {
-	return l.APIError.Error()
-}
-
-func (l *LocationResponse) Updated() bool {
-	return l.APIError == nil
+//nolint:staticcheck
+func (r *LocationResponse) Updated() error {
+	return r
 }

@@ -5,7 +5,7 @@
 
 // revive:disable:unused-receiver
 //
-//go:generate moq -out agent_mocks_test.go . UI Registry Tracker SensorController MQTTController Worker LocationUpdateResponse SensorUpdateResponse SensorRegistrationResponse
+//go:generate moq -out agent_mocks_test.go . UI Registry Tracker SensorController MQTTController Worker
 package agent
 
 import (
@@ -18,21 +18,27 @@ import (
 	"path/filepath"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/adrg/xdg"
 
 	"github.com/joshuar/go-hass-agent/internal/agent/ui"
 	fyneui "github.com/joshuar/go-hass-agent/internal/agent/ui/fyneUI"
+	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
+)
+
+const (
+	defaultTimeout = 30 * time.Second
 )
 
 // UI are the methods required for the agent to display its windows, tray
 // and notifications.
 type UI interface {
 	DisplayNotification(n ui.Notification)
-	DisplayTrayIcon(ctx context.Context, agent ui.Agent, trk ui.SensorTracker, doneCh chan struct{})
+	DisplayTrayIcon(ctx context.Context, agent ui.Agent, client ui.HassClient, doneCh chan struct{})
 	DisplayRegistrationWindow(prefs *preferences.Preferences, doneCh chan struct{}) chan struct{}
 	Run(agent ui.Agent, doneCh chan struct{})
 }
@@ -55,6 +61,7 @@ type Tracker interface {
 // closing the agent down.
 type Agent struct {
 	ui            UI
+	hass          HassClient
 	done          chan struct{}
 	prefs         *preferences.Preferences
 	logger        *slog.Logger
@@ -138,6 +145,8 @@ func (agent *Agent) Run(ctx context.Context, trk Tracker, reg Registry) error {
 		regWait sync.WaitGroup
 	)
 
+	agent.hass = hass.NewClient(ctx, trk, reg)
+
 	agent.handleSignals()
 
 	regWait.Add(1)
@@ -156,6 +165,8 @@ func (agent *Agent) Run(ctx context.Context, trk Tracker, reg Registry) error {
 	go func() {
 		defer wg.Done()
 		regWait.Wait()
+
+		agent.hass.Endpoint(agent.GetRestAPIURL(), defaultTimeout)
 
 		// Create a context for runners
 		controllerCtx, cancelFunc := context.WithCancel(ctx)
@@ -185,7 +196,7 @@ func (agent *Agent) Run(ctx context.Context, trk Tracker, reg Registry) error {
 		// Run workers for any sensor controllers.
 		go func() {
 			defer wg.Done()
-			agent.runSensorWorkers(controllerCtx, trk, reg, sensorControllers...)
+			agent.runSensorWorkers(controllerCtx, sensorControllers...)
 		}()
 
 		if len(mqttControllers) > 0 {
@@ -205,7 +216,7 @@ func (agent *Agent) Run(ctx context.Context, trk Tracker, reg Registry) error {
 		}()
 	}()
 
-	agent.ui.DisplayTrayIcon(ctx, agent, trk, agent.done)
+	agent.ui.DisplayTrayIcon(ctx, agent, agent.hass, agent.done)
 	agent.ui.Run(agent, agent.done)
 
 	wg.Wait()
