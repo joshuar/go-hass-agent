@@ -139,9 +139,9 @@ func (c *Client) ProcessSensor(ctx context.Context, details sensor.Details) erro
 		return nil
 	}
 
-	if location, ok := details.State().(*sensor.LocationRequest); ok {
+	if _, ok := details.State().(*sensor.LocationRequest); ok {
 		// LocationRequest:
-		return c.handleLocationUpdate(ctx, location)
+		return c.handleLocationUpdate(ctx, details)
 	}
 
 	if c.registry.IsRegistered(details.ID()) {
@@ -152,9 +152,9 @@ func (c *Client) ProcessSensor(ctx context.Context, details sensor.Details) erro
 	return c.handleRegistration(ctx, details)
 }
 
-func (c *Client) handleLocationUpdate(ctx context.Context, location *sensor.LocationRequest) error {
+func (c *Client) handleLocationUpdate(ctx context.Context, details sensor.Details) error {
 	// req, err := sensor.NewLocationUpdateRequest(details)
-	req, err := sensor.NewRequest(location)
+	req, err := sensor.NewRequest(sensor.RequestTypeLocation, details)
 	if err != nil {
 		return fmt.Errorf("unable to handle location update: %w", err)
 	}
@@ -173,7 +173,7 @@ func (c *Client) handleLocationUpdate(ctx context.Context, location *sensor.Loca
 
 func (c *Client) handleSensorUpdate(ctx context.Context, details sensor.Details) error {
 	// req, err := sensor.NewUpdateRequest(details)
-	req, err := sensor.NewRequest(sensor.State(details))
+	req, err := sensor.NewRequest(sensor.RequestTypeUpdate, details)
 	if err != nil {
 		return fmt.Errorf("unable to handle sensor update: %w", err)
 	}
@@ -224,7 +224,7 @@ func (c *Client) handleSensorUpdate(ctx context.Context, details sensor.Details)
 
 func (c *Client) handleRegistration(ctx context.Context, details sensor.Details) error {
 	// req, err := sensor.NewRegistrationRequest(details)
-	req, err := sensor.NewRequest(sensor.Registration(details))
+	req, err := sensor.NewRequest(sensor.RequestTypeRegister, details)
 	if err != nil {
 		return fmt.Errorf("unable to handle sensor update: %w", err)
 	}
