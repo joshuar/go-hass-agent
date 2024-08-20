@@ -9,6 +9,7 @@ package sensor
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
@@ -19,9 +20,14 @@ const (
 
 	CategoryDiagnostic = "diagnostic"
 
-	requestTypeRegister = "register_sensor"
-	requestTypeUpdate   = "update_sensor_states"
-	requestTypeLocation = "update_location"
+	RequestTypeRegister = "register_sensor"
+	RequestTypeUpdate   = "update_sensor_states"
+	RequestTypeLocation = "update_location"
+)
+
+var (
+	ErrNotLocation    = errors.New("sensor details do not represent a location update")
+	ErrUnknownDetails = errors.New("unknown sensor details")
 )
 
 type State interface {
@@ -125,22 +131,22 @@ func (r *Request) RequestBody() json.RawMessage {
 	return json.RawMessage(data)
 }
 
-func NewRequest(details any) (*Request, error) {
-	var (
-		reqType string
-		reqBody any
-	)
+func NewRequest(reqType string, details Details) (*Request, error) {
+	var reqBody any
 
-	switch request := details.(type) {
-	case Registration:
-		reqBody = createRegistrationRequest(request)
-		reqType = requestTypeRegister
-	case State:
-		reqBody = createStateUpdateRequest(request)
-		reqType = requestTypeUpdate
-	case LocationRequest:
-		reqBody = request
-		reqType = requestTypeLocation
+	switch reqType {
+	case RequestTypeRegister:
+		reqBody = createRegistrationRequest(details)
+	case RequestTypeUpdate:
+		reqBody = createStateUpdateRequest(details)
+	case RequestTypeLocation:
+		if location, ok := details.State().(*LocationRequest); !ok {
+			return nil, ErrNotLocation
+		} else {
+			reqBody = location
+		}
+	default:
+		return nil, ErrUnknownDetails
 	}
 
 	return &Request{Data: reqBody, RequestType: reqType}, nil
@@ -152,7 +158,7 @@ type APIError struct {
 }
 
 func (e *APIError) Error() string {
-	return fmt.Sprintf("code %s: %s", e.Code, e.Message)
+	return fmt.Sprintf("code %v: %s", e.Code, e.Message)
 }
 
 type ResponseStatus struct {

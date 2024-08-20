@@ -127,6 +127,7 @@ require (
 	github.com/jaypipes/ghw v0.12.0
 	github.com/jfreymuth/pulse v0.1.1
 	github.com/jsummers/gobmp v0.0.0-20151104160322-e2ba15ffa76e // indirect
+	github.com/kinbiko/jsonassert v1.1.1
 	github.com/klauspost/compress v1.17.9 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/lmittmann/tint v1.0.5

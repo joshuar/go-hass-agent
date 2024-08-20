@@ -62,7 +62,7 @@ func (agent *Agent) runSensorWorkers(ctx context.Context, controllers ...SensorC
 			for details := range mergeCh(ctx, sensorCh...) {
 				go func(details sensor.Details) {
 					if err := agent.hass.ProcessSensor(ctx, details); err != nil {
-						agent.logger.Error("Error processing sensor.", slog.Any("error", err))
+						agent.logger.Error("Process sensor failed.", slog.Any("error", err))
 					}
 				}(details)
 			}
