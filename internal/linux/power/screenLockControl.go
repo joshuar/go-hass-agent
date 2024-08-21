@@ -53,7 +53,9 @@ func (c *screenControlCommand) execute(ctx context.Context) error {
 // the desktop environment. Some environments can use systemd-logind which
 // provides lock and unlock methods while others implement the older
 // xscreensaver lock method.
-func setupCommands(ctx context.Context, sessionBus *dbusx.Bus, systemBus *dbusx.Bus) ([]*screenControlCommand, error) {
+//
+//nolint:lll
+func setupCommands(ctx context.Context, sessionBus *dbusx.Bus, systemBus *dbusx.Bus, device *mqtthass.Device) ([]*screenControlCommand, error) {
 	var commands []*screenControlCommand
 
 	desktop := os.Getenv("XDG_CURRENT_DESKTOP")
@@ -70,7 +72,7 @@ func setupCommands(ctx context.Context, sessionBus *dbusx.Bus, systemBus *dbusx.
 		commands = append(commands,
 			&screenControlCommand{
 				name:   "Lock Session",
-				id:     "lock_session",
+				id:     device.Name + "_lock_session",
 				icon:   screenLockIcon,
 				intr:   loginBaseInterface,
 				path:   sessionPath,
@@ -79,7 +81,7 @@ func setupCommands(ctx context.Context, sessionBus *dbusx.Bus, systemBus *dbusx.
 			},
 			&screenControlCommand{
 				name:   "Unlock Session",
-				id:     "unlock_session",
+				id:     device.Name + "_unlock_session",
 				icon:   screenUnlockIcon,
 				intr:   loginBaseInterface,
 				path:   sessionPath,
@@ -92,7 +94,7 @@ func setupCommands(ctx context.Context, sessionBus *dbusx.Bus, systemBus *dbusx.
 		commands = append(commands,
 			&screenControlCommand{
 				name:   "Activate Screensaver",
-				id:     "activate_screensaver",
+				id:     device.Name + "_activate_screensaver",
 				icon:   screenLockIcon,
 				intr:   "org.xfce.ScreenSaver",
 				path:   "/",
@@ -104,7 +106,7 @@ func setupCommands(ctx context.Context, sessionBus *dbusx.Bus, systemBus *dbusx.
 		commands = append(commands,
 			&screenControlCommand{
 				name:   "Activate Screensaver",
-				id:     "activate_screensaver",
+				id:     device.Name + "_activate_screensaver",
 				icon:   screenLockIcon,
 				intr:   "org.cinnamon.ScreenSaver",
 				path:   "/org/cinnamon/ScreenSaver",
@@ -137,7 +139,7 @@ func NewScreenLockControl(ctx context.Context, api *dbusx.DBusAPI, parentLogger 
 	// Decorate a logger for this controller.
 	logger := parentLogger.WithGroup("screensaver_control")
 
-	commands, err := setupCommands(ctx, sessionBus, systemBus)
+	commands, err := setupCommands(ctx, sessionBus, systemBus, device)
 	if err != nil {
 		return nil, fmt.Errorf("cannot create screen lock controls: %w", err)
 	}

@@ -29,32 +29,37 @@ type powerCommand struct {
 	callBack func(p *paho.Publish)
 	name     string
 	id       string
+	method   string
 	icon     string
 }
 
 // generateCommands generates a list of power commands that are available on the
 // device running the agent.
-func (c *powerController) generateCommands(ctx context.Context) []powerCommand {
+func (c *powerController) generateCommands(ctx context.Context, device string) []powerCommand {
 	systemCommands := []powerCommand{
 		{
-			name: "Reboot",
-			id:   "Reboot",
-			icon: "mdi:restart",
+			name:   "Reboot",
+			id:     device + "_reboot",
+			method: "Reboot",
+			icon:   "mdi:restart",
 		},
 		{
-			name: "Suspend",
-			id:   "Suspend",
-			icon: "mdi:power-sleep",
+			name:   "Suspend",
+			id:     device + "_suspend",
+			method: "Suspend",
+			icon:   "mdi:power-sleep",
 		},
 		{
-			name: "Hibernate",
-			id:   "Hibernate",
-			icon: "mdi:power-sleep",
+			name:   "Hibernate",
+			id:     device + "_hibernate",
+			method: "Hibernate",
+			icon:   "mdi:power-sleep",
 		},
 		{
-			name: "Power Off",
-			icon: "mdi:power",
-			id:   "PowerOff",
+			name:   "Power Off",
+			id:     device + "_poweroff",
+			method: "PowerOff",
+			icon:   "mdi:power",
 		},
 	}
 
@@ -63,9 +68,10 @@ func (c *powerController) generateCommands(ctx context.Context) []powerCommand {
 	// Add available system power commands.
 	for _, config := range systemCommands {
 		// Check if this power method is available on the system.
-		available, _ := dbusx.GetData[string](ctx, c.bus, loginBasePath, loginBaseInterface, managerInterface+".Can"+config.id) //nolint:errcheck
-		if available == "yes" {
-			config.callBack = c.generatePowerControlCallback(ctx, config.name, loginBasePath, managerInterface+"."+config.id)
+		available, err := dbusx.GetData[string](ctx,
+			c.bus, loginBasePath, loginBaseInterface, managerInterface+".Can"+config.method)
+		if available == "yes" || err == nil {
+			config.callBack = c.generatePowerControlCallback(ctx, config.name, loginBasePath, managerInterface+"."+config.method)
 			availableCommands = append(availableCommands, config)
 		}
 	}
@@ -101,12 +107,13 @@ func NewPowerControl(ctx context.Context, api *dbusx.DBusAPI, parentLogger *slog
 		sessionPath: sessionPath,
 	}
 
-	var entities []*mqtthass.ButtonEntity //nolint:prealloc
+	commands := controller.generateCommands(ctx, device.Name)
+	entities := make([]*mqtthass.ButtonEntity, 0, len(commands))
 
-	for _, command := range controller.generateCommands(ctx) {
+	for _, command := range commands {
 		entities = append(entities,
 			mqtthass.AsButton(
-				mqtthass.NewEntity(preferences.AppName, command.name, command.name).
+				mqtthass.NewEntity(preferences.AppName, command.name, command.id).
 					WithOriginInfo(preferences.MQTTOrigin()).
 					WithDeviceInfo(device).
 					WithIcon(command.icon).
