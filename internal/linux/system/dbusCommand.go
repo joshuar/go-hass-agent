@@ -11,13 +11,10 @@ import (
 	"log/slog"
 
 	"github.com/eclipse/paho.golang/paho"
+	mqtthass "github.com/joshuar/go-hass-anything/v11/pkg/hass"
 	mqttapi "github.com/joshuar/go-hass-anything/v11/pkg/mqtt"
 
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
-)
-
-const (
-	dbusCommandTopic = "gohassagent/dbus"
 )
 
 type dbusCommandMsg struct {
@@ -29,7 +26,8 @@ type dbusCommandMsg struct {
 	UseSessionPath bool   `json:"use_session_path"`
 }
 
-func NewDBusCommandSubscription(ctx context.Context, api *dbusx.DBusAPI, parentLogger *slog.Logger) *mqttapi.Subscription {
+//nolint:lll
+func NewDBusCommandSubscription(ctx context.Context, api *dbusx.DBusAPI, parentLogger *slog.Logger, device *mqtthass.Device) *mqttapi.Subscription {
 	logger := parentLogger.With(slog.String("controller", "dbus_command"))
 
 	sessionBus, err := api.GetBus(ctx, dbusx.SessionBus)
@@ -99,6 +97,6 @@ func NewDBusCommandSubscription(ctx context.Context, api *dbusx.DBusAPI, parentL
 				).Warn("Error dispatching D-Bus command.")
 			}
 		},
-		Topic: dbusCommandTopic,
+		Topic: "gohassagent/" + device.Name + "/dbuscommand",
 	}
 }
