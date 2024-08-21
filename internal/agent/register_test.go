@@ -22,20 +22,23 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
-func newHassPrefs(t *testing.T) *preferences.Hass {
+func newHassPrefs(t *testing.T, cloudhook, remoteui string) *preferences.Hass {
 	t.Helper()
 	return &preferences.Hass{
-		WebhookID: "testWebook",
+		WebhookID:    "testWebhook",
+		CloudhookURL: cloudhook,
+		RemoteUIURL:  remoteui,
 	}
 }
 
 func mockServer(t *testing.T) *httptest.Server {
 	t.Helper()
 	return httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+		response.Header().Set("Content-Type", "application/json")
 		if request.URL.Path == hass.RegistrationPath {
 			token := request.Header.Get("Authorization")
 			if strings.Contains(token, "valid") {
-				details := &preferences.Hass{
+				details := preferences.Hass{
 					WebhookID: "valid",
 				}
 				body, err := json.Marshal(details)
@@ -50,8 +53,6 @@ func mockServer(t *testing.T) *httptest.Server {
 }
 
 func TestAgent_saveRegistration(t *testing.T) {
-	validPrefs := preferences.DefaultPreferences(filepath.Join(t.TempDir(), "preferences.toml"))
-
 	type fields struct {
 		ui            UI
 		done          chan struct{}
@@ -62,7 +63,9 @@ func TestAgent_saveRegistration(t *testing.T) {
 		forceRegister bool
 	}
 	type args struct {
-		hassPrefs *preferences.Hass
+		prefs      *preferences.Hass
+		apiURL     string
+		ignoreURLs bool
 	}
 	tests := []struct {
 		args    args
@@ -71,9 +74,35 @@ func TestAgent_saveRegistration(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name:   "valid preferences",
-			args:   args{hassPrefs: newHassPrefs(t)},
-			fields: fields{prefs: validPrefs},
+			name: "use cloudhook",
+			args: args{
+				prefs:  newHassPrefs(t, "http://localhost:8123/cloudhook", ""),
+				apiURL: "http://localhost:8123/cloudhook",
+			},
+			fields: fields{
+				prefs: preferences.DefaultPreferences(filepath.Join(t.TempDir(), "cloudhook.toml")),
+			},
+		},
+		{
+			name: "use remoteui",
+			args: args{
+				prefs:  newHassPrefs(t, "", "http://localhost:8123/remoteui"),
+				apiURL: "http://localhost:8123/remoteui/api/webhook/testWebhook",
+			},
+			fields: fields{
+				prefs: preferences.DefaultPreferences(filepath.Join(t.TempDir(), "remoteui.toml")),
+			},
+		},
+		{
+			name: "ignore urls",
+			args: args{
+				prefs:      newHassPrefs(t, "http://localhost:8123/cloudhook", "http://localhost:8123/remoteui"),
+				apiURL:     "http://localhost:8123/api/webhook/testWebhook",
+				ignoreURLs: true,
+			},
+			fields: fields{
+				prefs: preferences.DefaultPreferences(filepath.Join(t.TempDir(), "ignore.toml")),
+			},
 		},
 	}
 	for _, tt := range tests {
@@ -87,10 +116,15 @@ func TestAgent_saveRegistration(t *testing.T) {
 				headless:      tt.fields.headless,
 				forceRegister: tt.fields.forceRegister,
 			}
-			if err := agent.saveRegistration(tt.args.hassPrefs); (err != nil) != tt.wantErr {
+			if err := agent.saveRegistration(tt.args.prefs, tt.args.ignoreURLs); (err != nil) != tt.wantErr {
 				t.Errorf("Agent.saveRegistration() error = %v, wantErr %v", err, tt.wantErr)
 			}
+			if tt.wantErr {
+				return
+			}
 			assert.True(t, agent.prefs.Registered)
+			assert.Equal(t, agent.prefs.Hass.IgnoreHassURLs, tt.args.ignoreURLs)
+			assert.Equal(t, agent.prefs.Hass.RestAPIURL, tt.args.apiURL)
 		})
 	}
 }

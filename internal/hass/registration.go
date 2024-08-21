@@ -56,13 +56,13 @@ func RegisterDevice(ctx context.Context, device *preferences.Device, registratio
 
 	// Create a new client connection to Home Assistant at the registration path.
 	client := NewClient(ctx, nil, nil)
-	client.Endpoint(registration.Server+"/"+RegistrationPath, time.Minute)
+	client.Endpoint(registration.Server+RegistrationPath, time.Minute)
 
 	// Register the device against the registration endpoint.
-	registrationStatus, err := send[*preferences.Hass](ctx, client, newRegistrationRequest(device, registration.Token))
+	registrationStatus, err := send[preferences.Hass](ctx, client, newRegistrationRequest(device, registration.Token))
 	if err != nil {
 		return nil, fmt.Errorf("could not register device: %w", err)
 	}
 
-	return registrationStatus, nil
+	return &registrationStatus, nil
 }

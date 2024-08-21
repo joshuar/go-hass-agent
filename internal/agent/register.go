@@ -26,13 +26,12 @@ var (
 // request and the successful response in the agent preferences. This includes,
 // most importantly, details on the URL that should be used to send subsequent
 // requests to Home Assistant.
-func (agent *Agent) saveRegistration(hassPrefs *preferences.Hass) error {
+func (agent *Agent) saveRegistration(hassPrefs *preferences.Hass, ignoreURLs bool) error {
 	var err error
 
-	// Copy over existing preferences.
-	hassPrefs.IgnoreHassURLs = agent.prefs.Hass.IgnoreHassURLs
 	// Copy new hass preferences to agent preferences
 	agent.prefs.Hass = hassPrefs
+	agent.prefs.Hass.IgnoreHassURLs = ignoreURLs
 	// Add the generated URLS
 	// Generate an API URL.
 	agent.prefs.Hass.RestAPIURL, err = generateAPIURL(agent.prefs.Registration.Server, hassPrefs)
@@ -75,7 +74,7 @@ func (agent *Agent) checkRegistration(ctx context.Context, trk Tracker) error {
 		return fmt.Errorf("device registration failed: %w", err)
 	}
 
-	if err := agent.saveRegistration(registrationDetails); err != nil {
+	if err := agent.saveRegistration(registrationDetails, agent.prefs.Hass.IgnoreHassURLs); err != nil {
 		return fmt.Errorf("saving registration failed: %w", err)
 	}
 
