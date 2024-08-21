@@ -245,7 +245,8 @@ func (agent *Agent) newOSController(ctx context.Context, mqttDevice *mqtthass.De
 	}
 
 	// Add the D-Bus command action.
-	mqttController.controls = append(mqttController.controls, system.NewDBusCommandSubscription(ctx, dbusAPI, mqttController.logger))
+	//nolint:lll
+	mqttController.controls = append(mqttController.controls, system.NewDBusCommandSubscription(ctx, dbusAPI, mqttController.logger, mqttDevice))
 
 	go func() {
 		defer close(mqttController.msgs)
