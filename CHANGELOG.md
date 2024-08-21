@@ -1,5 +1,21 @@
 # Changelog
 
+## [10.0.1](https://github.com/joshuar/go-hass-agent/compare/v10.0.0...v10.0.1) (2024-08-21)
+
+
+### Bug Fixes
+
+* **agent,hass:** :bug: fix registration flow after hass client refactoring ([5e4a9ba](https://github.com/joshuar/go-hass-agent/commit/5e4a9ba238ea3dd370610086b6fc719ecae93ac4))
+* **hass:** :bug: pass required request type to NewRequest ([ec0a7e8](https://github.com/joshuar/go-hass-agent/commit/ec0a7e8db76bb04ec7b40a1fdd3c5a27de6ddd91))
+* **linux:** :bug: ensure D-Bus command topic is unique ([d403dbb](https://github.com/joshuar/go-hass-agent/commit/d403dbbe3867764cc43e014189b0ee4d5ad27f3e))
+* **linux:** :bug: make sure MQTT topics are unique for power and session controls ([e77b927](https://github.com/joshuar/go-hass-agent/commit/e77b9274aac249d6e1ddbc61457ed441c19c6a6c))
+* **linux:** :mute: reduce log spam if a mountpoint usage cannot be retrieved ([f4aea29](https://github.com/joshuar/go-hass-agent/commit/f4aea2963a616f6b10593c9df8ea3dbb692f8e79))
+
+
+### Performance Improvements
+
+* **agent,hass:** :zap: refactor sensor processing ([c7c3ff3](https://github.com/joshuar/go-hass-agent/commit/c7c3ff383b529051ebfe1608caee38eb8a25f46e))
+
 ## [10.0.0](https://github.com/joshuar/go-hass-agent/compare/v9.6.0...v10.0.0) (2024-08-17)
 
 
