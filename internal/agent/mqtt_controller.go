@@ -115,10 +115,18 @@ func (agent *Agent) resetMQTTControllers(ctx context.Context) error {
 }
 
 func (agent *Agent) newMQTTDevice() *mqtthass.Device {
-	mqttDevice, err := device.MQTTDevice(agent.prefs.Device.Name, agent.prefs.Device.ID, preferences.AppURL, preferences.AppVersion)
+	// Retrieve the hardware model and manufacturer.
+	model, manufacturer, err := device.GetHWProductInfo()
 	if err != nil {
-		agent.logger.Warn("Could not create MQTT device, MQTT functionality will not be available.", slog.Any("error", err))
+		agent.logger.Warn("Error creating MQTT device.", slog.Any("error", err))
 	}
 
-	return mqttDevice
+	return &mqtthass.Device{
+		Name:         agent.prefs.Device.Name,
+		URL:          preferences.AppURL,
+		SWVersion:    preferences.AppVersion,
+		Manufacturer: manufacturer,
+		Model:        model,
+		Identifiers:  []string{agent.id, agent.prefs.Device.Name, agent.prefs.Device.ID},
+	}
 }

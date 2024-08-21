@@ -14,7 +14,6 @@ import (
 
 	"github.com/gofrs/uuid/v5"
 	"github.com/jaypipes/ghw"
-	mqtthass "github.com/joshuar/go-hass-anything/v11/pkg/hass"
 )
 
 const (
@@ -46,24 +45,6 @@ func Chassis() (string, error) {
 	}
 
 	return chassisInfo.Type, nil
-}
-
-func MQTTDevice(name, id, url, version string) (*mqtthass.Device, error) {
-	// Retrieve the hardware model and manufacturer.
-	model, manufacturer, err := GetHWProductInfo()
-	if err != nil {
-		return nil, fmt.Errorf("unable to create device: %w", err)
-	}
-
-	return &mqtthass.Device{
-			Name:         name,
-			URL:          url,
-			SWVersion:    version,
-			Manufacturer: model,
-			Model:        manufacturer,
-			Identifiers:  []string{id},
-		},
-		nil
 }
 
 // GetHostname retrieves the hostname of the device running the agent, or
