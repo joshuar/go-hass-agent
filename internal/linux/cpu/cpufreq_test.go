@@ -9,6 +9,7 @@ package cpu
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -21,6 +22,13 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
+
+var runs = []struct {
+	input int
+}{
+	{input: 100},
+	{input: 1000},
+}
 
 func skipCI(t *testing.T) {
 	t.Helper()
@@ -284,6 +292,22 @@ func Test_cpuFreqSensor_Attributes(t *testing.T) {
 			}
 			if got := s.Attributes(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("cpuFreqSensor.Attributes() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Benchmark_cpuFreqWorker_Sensors(b *testing.B) {
+	worker := &cpuFreqWorker{
+		path: filepath.Join(sysFSPath, "cpu*", freqFile),
+	}
+	ctx, cancelFunc := context.WithCancel(context.TODO())
+	defer cancelFunc()
+
+	for _, v := range runs {
+		b.Run(fmt.Sprintf("input_size_%d", v.input), func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				worker.Sensors(ctx, 0) //nolint:errcheck
 			}
 		})
 	}
