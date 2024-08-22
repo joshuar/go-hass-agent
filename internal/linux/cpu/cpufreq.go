@@ -30,7 +30,7 @@ const (
 	driverFile   = "cpufreq/scaling_driver"
 
 	cpuFreqWorkerID       = "cpu_freq_sensors"
-	cpuFreqUpdateInterval = 5 * time.Second
+	cpuFreqUpdateInterval = 30 * time.Second
 	cpuFreqUpdateJitter   = 10 * time.Millisecond
 
 	cpuFreqIcon  = "mdi:chip"
@@ -131,31 +131,35 @@ func getCPUFreqs(path string) ([]cpuFreq, error) {
 		// Read the frequency value.
 		freq, err := os.ReadFile(file)
 		if err != nil {
-			slog.Warn("Could not read frequency for cpu.", slog.String("cpu", id), slog.Any("error", err))
+			slog.Debug("Could not read frequency for cpu.", slog.String("cpu", id), slog.Any("error", err))
 		}
 
 		freq = bytes.TrimSpace(freq)
 
-		// Read the current scaling governor.
-		governor, err := os.ReadFile(filepath.Join(sysFSPath, id, governorFile))
-		if err != nil {
-			slog.Warn("Could not read scaling governor for cpu.", slog.String("cpu", id), slog.Any("error", err))
-		}
-
-		governor = bytes.TrimSpace(governor)
-
-		// Read the current scaling driver.
-		driver, err := os.ReadFile(filepath.Join(sysFSPath, id, driverFile))
-		if err != nil {
-			slog.Warn("Could not read scaling driver for cpu.", slog.String("cpu", id), slog.Any("error", err))
-		}
-
-		driver = bytes.TrimSpace(driver)
-
-		freqDetails = append(freqDetails, cpuFreq{cpu: id, freq: string(freq), governor: string(governor), driver: string(driver)})
+		freqDetails = append(freqDetails,
+			cpuFreq{
+				cpu:      id,
+				freq:     string(freq),
+				governor: readCPUFreqProp(id, governorFile),
+				driver:   readCPUFreqProp(id, driverFile),
+			})
 	}
 
 	return freqDetails, nil
+}
+
+// readCPUFreqProp retrieves the current cpu freq governor for this cpu. If
+// it cannot be found, it returns "unknown".
+func readCPUFreqProp(id, file string) string {
+	// Read the current scaling driver.
+	prop, err := os.ReadFile(filepath.Join(sysFSPath, id, file))
+	if err != nil {
+		slog.Debug("Could not read CPU freq property.", slog.String("cpu", id), slog.String("property", file), slog.Any("error", err))
+
+		return "unknown"
+	}
+
+	return string(bytes.TrimSpace(prop))
 }
 
 func NewCPUFreqWorker(_ context.Context, _ *dbusx.DBusAPI) (*linux.SensorWorker, error) {
