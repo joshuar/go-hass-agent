@@ -7,11 +7,12 @@
 package cpu
 
 import (
+	"bytes"
 	"context"
+	"errors"
 	"fmt"
+	"os"
 	"time"
-
-	"github.com/shirou/gopsutil/v3/load"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
@@ -26,56 +27,92 @@ const (
 	loadAvgUpdateInterval = time.Minute
 	loadAvgUpdateJitter   = 5 * time.Second
 
+	loadAvgsFile = "/proc/loadavg"
+
+	loadAvgsTotal = 3
+
 	loadAvgsWorkerID = "load_averages_sensors"
 )
+
+var ErrParseLoadAvgs = errors.New("error parsing load averages")
 
 type loadavgSensor struct {
 	linux.Sensor
 }
 
-type loadAvgsSensorWorker struct{}
+type loadAvgsSensorWorker struct {
+	loadAvgs []*loadavgSensor
+}
 
 func (w *loadAvgsSensorWorker) Interval() time.Duration { return loadAvgUpdateInterval }
 
 func (w *loadAvgsSensorWorker) Jitter() time.Duration { return loadAvgUpdateJitter }
 
-//nolint:exhaustive,mnd
-func (w *loadAvgsSensorWorker) Sensors(ctx context.Context, _ time.Duration) ([]sensor.Details, error) {
-	sensors := make([]sensor.Details, 0, 3)
+func (w *loadAvgsSensorWorker) Sensors(_ context.Context, _ time.Duration) ([]sensor.Details, error) {
+	sensors := make([]sensor.Details, loadAvgsTotal)
 
-	loadAvgs, err := load.AvgWithContext(ctx)
+	loadAvgData, err := os.ReadFile(loadAvgsFile)
 	if err != nil {
-		return nil, fmt.Errorf("problem fetching load averages: %w", err)
+		return nil, fmt.Errorf("fetch load averages: %w", err)
 	}
 
-	for _, loadType := range []linux.SensorTypeValue{linux.SensorLoad1, linux.SensorLoad5, linux.SensorLoad15} {
-		newSensor := &loadavgSensor{}
-		newSensor.IconString = loadAvgIcon
-		newSensor.UnitsString = loadAvgUnit
-		newSensor.SensorSrc = linux.DataSrcProcfs
-		newSensor.StateClassValue = types.StateClassMeasurement
+	loadAvgs, err := parseLoadAvgs(loadAvgData)
+	if err != nil {
+		return nil, fmt.Errorf("parse load averages: %w", err)
+	}
 
-		switch loadType {
-		case linux.SensorLoad1:
-			newSensor.Value = loadAvgs.Load1
-			newSensor.SensorTypeValue = linux.SensorLoad1
-		case linux.SensorLoad5:
-			newSensor.Value = loadAvgs.Load5
-			newSensor.SensorTypeValue = linux.SensorLoad5
-		case linux.SensorLoad15:
-			newSensor.Value = loadAvgs.Load15
-			newSensor.SensorTypeValue = linux.SensorLoad15
-		}
-
-		sensors = append(sensors, newSensor)
+	for idx := range loadAvgs {
+		w.loadAvgs[idx].Value = loadAvgs[idx]
+		sensors[idx] = w.loadAvgs[idx]
 	}
 
 	return sensors, nil
 }
 
+func newLoadAvgSensors() []*loadavgSensor {
+	sensors := make([]*loadavgSensor, loadAvgsTotal)
+
+	for idx, loadType := range []linux.SensorTypeValue{linux.SensorLoad1, linux.SensorLoad5, linux.SensorLoad15} {
+		loadAvgSensor := &loadavgSensor{}
+		loadAvgSensor.IconString = loadAvgIcon
+		loadAvgSensor.UnitsString = loadAvgUnit
+		loadAvgSensor.SensorSrc = linux.DataSrcProcfs
+		loadAvgSensor.StateClassValue = types.StateClassMeasurement
+
+		switch loadType { //nolint:exhaustive
+		case linux.SensorLoad1:
+			loadAvgSensor.SensorTypeValue = linux.SensorLoad1
+		case linux.SensorLoad5:
+			loadAvgSensor.SensorTypeValue = linux.SensorLoad5
+		case linux.SensorLoad15:
+			loadAvgSensor.SensorTypeValue = linux.SensorLoad15
+		}
+
+		sensors[idx] = loadAvgSensor
+	}
+
+	return sensors
+}
+
+func parseLoadAvgs(data []byte) ([]string, error) {
+	loadAvgsData := bytes.Split(data, []byte(" "))
+
+	if len(loadAvgsData) != 5 { //nolint:mnd
+		return nil, ErrParseLoadAvgs
+	}
+
+	loadAvgs := make([]string, loadAvgsTotal)
+
+	for idx := range loadAvgs {
+		loadAvgs[idx] = string(loadAvgsData[idx][:])
+	}
+
+	return loadAvgs, nil
+}
+
 func NewLoadAvgWorker(_ context.Context, _ *dbusx.DBusAPI) (*linux.SensorWorker, error) {
 	return &linux.SensorWorker{
-			Value:    &loadAvgsSensorWorker{},
+			Value:    &loadAvgsSensorWorker{loadAvgs: newLoadAvgSensors()},
 			WorkerID: loadAvgsWorkerID,
 		},
 		nil
