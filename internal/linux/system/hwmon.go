@@ -120,7 +120,7 @@ func (w *hwMonWorker) Sensors(_ context.Context, _ time.Duration) ([]sensor.Deta
 	sensors := make([]sensor.Details, 0, len(hwmonSensors))
 
 	if err != nil && len(hwmonSensors) > 0 {
-		w.logger.Warn("Errors fetching some chip/sensor values from hwmon API.", "error", err.Error())
+		w.logger.Debug("Errors fetching some chip/sensor values from hwmon API.", slog.Any("error", err))
 	}
 
 	if err != nil && len(hwmonSensors) == 0 {
