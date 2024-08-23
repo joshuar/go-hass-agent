@@ -8,19 +8,13 @@ package cpu
 
 import (
 	"bytes"
-	"context"
-	"errors"
-	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
-	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
 const (
@@ -29,15 +23,9 @@ const (
 	governorFile = "cpufreq/scaling_governor"
 	driverFile   = "cpufreq/scaling_driver"
 
-	cpuFreqWorkerID       = "cpu_freq_sensors"
-	cpuFreqUpdateInterval = 30 * time.Second
-	cpuFreqUpdateJitter   = 10 * time.Millisecond
-
 	cpuFreqIcon  = "mdi:chip"
 	cpuFreqUnits = "Hz"
 )
-
-var ErrNoCPUFreq = errors.New("no cpu frequency files found")
 
 type cpuFreq struct {
 	cpu      string
@@ -49,29 +37,6 @@ type cpuFreq struct {
 type cpuFreqSensor struct {
 	*cpuFreq
 	linux.Sensor
-}
-
-type cpuFreqWorker struct {
-	path string
-}
-
-func (w *cpuFreqWorker) Interval() time.Duration { return cpuFreqUpdateInterval }
-
-func (w *cpuFreqWorker) Jitter() time.Duration { return cpuFreqUpdateJitter }
-
-func (w *cpuFreqWorker) Sensors(_ context.Context, _ time.Duration) ([]sensor.Details, error) {
-	freqs, err := getCPUFreqs(w.path)
-	if err != nil {
-		return nil, fmt.Errorf("could not fetch cpu frequencies: %w", err)
-	}
-
-	sensors := make([]sensor.Details, 0, len(freqs))
-
-	for _, freq := range freqs {
-		sensors = append(sensors, newCPUFreqSensor(freq))
-	}
-
-	return sensors, nil
 }
 
 func (s *cpuFreqSensor) Name() string {
@@ -95,9 +60,11 @@ func (s *cpuFreqSensor) Attributes() map[string]any {
 	}
 }
 
-func newCPUFreqSensor(info cpuFreq) *cpuFreqSensor {
-	return &cpuFreqSensor{
-		cpuFreq: &info,
+func newCPUFreqSensor(id string) *cpuFreqSensor {
+	info := getCPUFreqs(id)
+
+	sensor := &cpuFreqSensor{
+		cpuFreq: info,
 		Sensor: linux.Sensor{
 			UnitsString:      cpuFreqUnits,
 			IconString:       cpuFreqIcon,
@@ -109,43 +76,17 @@ func newCPUFreqSensor(info cpuFreq) *cpuFreqSensor {
 			Value:            info.freq,
 		},
 	}
+
+	return sensor
 }
 
-func getCPUFreqs(path string) ([]cpuFreq, error) {
-	matches, err := filepath.Glob(path)
-	if err != nil {
-		return nil, fmt.Errorf("could not read frequency files: %w", err)
+func getCPUFreqs(id string) *cpuFreq {
+	return &cpuFreq{
+		cpu:      id,
+		freq:     readCPUFreqProp(id, freqFile),
+		governor: readCPUFreqProp(id, governorFile),
+		driver:   readCPUFreqProp(id, driverFile),
 	}
-
-	if len(matches) == 0 {
-		return nil, ErrNoCPUFreq
-	}
-
-	freqDetails := make([]cpuFreq, 0, len(matches))
-
-	for _, file := range matches {
-		// Extract an id for this cpu.
-		id, _ := strings.CutPrefix(file, sysFSPath)
-		id, _ = strings.CutSuffix(id, "/"+freqFile)
-
-		// Read the frequency value.
-		freq, err := os.ReadFile(file)
-		if err != nil {
-			slog.Debug("Could not read frequency for cpu.", slog.String("cpu", id), slog.Any("error", err))
-		}
-
-		freq = bytes.TrimSpace(freq)
-
-		freqDetails = append(freqDetails,
-			cpuFreq{
-				cpu:      id,
-				freq:     string(freq),
-				governor: readCPUFreqProp(id, governorFile),
-				driver:   readCPUFreqProp(id, driverFile),
-			})
-	}
-
-	return freqDetails, nil
 }
 
 // readCPUFreqProp retrieves the current cpu freq governor for this cpu. If
@@ -160,14 +101,4 @@ func readCPUFreqProp(id, file string) string {
 	}
 
 	return string(bytes.TrimSpace(prop))
-}
-
-func NewCPUFreqWorker(_ context.Context, _ *dbusx.DBusAPI) (*linux.SensorWorker, error) {
-	return &linux.SensorWorker{
-			Value: &cpuFreqWorker{
-				path: filepath.Join(sysFSPath, "cpu*", freqFile),
-			},
-			WorkerID: cpuFreqWorkerID,
-		},
-		nil
 }

@@ -53,30 +53,34 @@ func _() {
 	_ = x[SensorLoad5-42]
 	_ = x[SensorLoad15-43]
 	_ = x[SensorCPUPc-44]
-	_ = x[SensorScreenLock-45]
-	_ = x[SensorLidClosed-46]
-	_ = x[SensorProblem-47]
-	_ = x[SensorKernel-48]
-	_ = x[SensorDistribution-49]
-	_ = x[SensorVersion-50]
-	_ = x[SensorUsers-51]
-	_ = x[SensorDeviceTemp-52]
-	_ = x[SensorPowerState-53]
-	_ = x[SensorAccentColor-54]
-	_ = x[SensorColorScheme-55]
-	_ = x[SensorDiskReads-56]
-	_ = x[SensorDiskWrites-57]
-	_ = x[SensorDiskReadRate-58]
-	_ = x[SensorDiskWriteRate-59]
-	_ = x[SensorDocked-60]
-	_ = x[SensorExternalPower-61]
-	_ = x[SensorIdleState-62]
-	_ = x[SensorCPUFreq-63]
+	_ = x[SensorCPUCtxSwitch-45]
+	_ = x[SensorProcCnt-46]
+	_ = x[SensorProcsRunning-47]
+	_ = x[SensorProcsBlocked-48]
+	_ = x[SensorScreenLock-49]
+	_ = x[SensorLidClosed-50]
+	_ = x[SensorProblem-51]
+	_ = x[SensorKernel-52]
+	_ = x[SensorDistribution-53]
+	_ = x[SensorVersion-54]
+	_ = x[SensorUsers-55]
+	_ = x[SensorDeviceTemp-56]
+	_ = x[SensorPowerState-57]
+	_ = x[SensorAccentColor-58]
+	_ = x[SensorColorScheme-59]
+	_ = x[SensorDiskReads-60]
+	_ = x[SensorDiskWrites-61]
+	_ = x[SensorDiskReadRate-62]
+	_ = x[SensorDiskWriteRate-63]
+	_ = x[SensorDocked-64]
+	_ = x[SensorExternalPower-65]
+	_ = x[SensorIdleState-66]
+	_ = x[SensorCPUFreq-67]
 }
 
-const _SensorTypeValue_name = "Unknown SensorActive AppRunning AppsBattery TypeBattery LevelBattery TemperatureBattery VoltageBattery EnergyBattery PowerBattery StateBattery PathBattery LevelBattery ModelMemory TotalMemory AvailableMemory UsedMemory UsageSwap Memory TotalSwap Memory UsedSwap Memory FreeSwap UsageConnection StateConnection IDConnection DeviceConnection TypeConnection IPv4Connection IPv6IPv4 AddressIPv6 AddressWi-Fi SSIDWi-Fi FrequencyWi-Fi Link SpeedWi-Fi Signal StrengthWi-Fi BSSIDBytes SentBytes ReceivedBytes Sent ThroughputBytes Received ThroughputPower ProfileLast RebootUptimeCPU load average (1 min)CPU load average (5 min)CPU load average (15 min)CPU UsageScreen LockLid ClosedProblemsKernel VersionDistribution NameDistribution VersionCurrent UsersTemperaturePower StateAccent ColorColor Scheme TypeDisk ReadsDisk WritesDisk Read RateDisk Write RateDocked StateExternal Power ConnectedIdleCPU Frequency"
+const _SensorTypeValue_name = "Unknown SensorActive AppRunning AppsBattery TypeBattery LevelBattery TemperatureBattery VoltageBattery EnergyBattery PowerBattery StateBattery PathBattery LevelBattery ModelMemory TotalMemory AvailableMemory UsedMemory UsageSwap Memory TotalSwap Memory UsedSwap Memory FreeSwap UsageConnection StateConnection IDConnection DeviceConnection TypeConnection IPv4Connection IPv6IPv4 AddressIPv6 AddressWi-Fi SSIDWi-Fi FrequencyWi-Fi Link SpeedWi-Fi Signal StrengthWi-Fi BSSIDBytes SentBytes ReceivedBytes Sent ThroughputBytes Received ThroughputPower ProfileLast RebootUptimeCPU load average (1 min)CPU load average (5 min)CPU load average (15 min)CPU UsageTotal CPU Context SwitchesTotal Processes CreatedProcesses RunningProcesses BlockedScreen LockLid ClosedProblemsKernel VersionDistribution NameDistribution VersionCurrent UsersTemperaturePower StateAccent ColorColor Scheme TypeDisk ReadsDisk WritesDisk Read RateDisk Write RateDocked StateExternal Power ConnectedIdleCPU Frequency"
 
-var _SensorTypeValue_index = [...]uint16{0, 14, 24, 36, 48, 61, 80, 95, 109, 122, 135, 147, 160, 173, 185, 201, 212, 224, 241, 257, 273, 283, 299, 312, 329, 344, 359, 374, 386, 398, 408, 423, 439, 460, 471, 481, 495, 516, 541, 554, 565, 571, 595, 619, 644, 653, 664, 674, 682, 696, 713, 733, 746, 757, 768, 780, 797, 807, 818, 832, 847, 859, 883, 887, 900}
+var _SensorTypeValue_index = [...]uint16{0, 14, 24, 36, 48, 61, 80, 95, 109, 122, 135, 147, 160, 173, 185, 201, 212, 224, 241, 257, 273, 283, 299, 312, 329, 344, 359, 374, 386, 398, 408, 423, 439, 460, 471, 481, 495, 516, 541, 554, 565, 571, 595, 619, 644, 653, 679, 702, 719, 736, 747, 757, 765, 779, 796, 816, 829, 840, 851, 863, 880, 890, 901, 915, 930, 942, 966, 970, 983}
 
 func (i SensorTypeValue) String() string {
 	if i < 0 || i >= SensorTypeValue(len(_SensorTypeValue_index)-1) {

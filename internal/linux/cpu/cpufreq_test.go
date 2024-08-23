@@ -8,26 +8,34 @@
 package cpu
 
 import (
-	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"reflect"
+	"runtime"
+	"strconv"
 	"testing"
-	"time"
 
-	"github.com/stretchr/testify/assert"
-
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
-	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
-var runs = []struct {
-	input int
-}{
-	{input: 100},
-	{input: 1000},
+func generateRuns(b *testing.B) []int {
+	b.Helper()
+
+	var runs []int
+
+	runs = append(runs, 1, 2)
+
+	if runtime.NumCPU() > 4 {
+		runs = append(runs, 4)
+	}
+
+	if runtime.NumCPU() > 8 {
+		runs = append(runs, 8, runtime.NumCPU()/2)
+	}
+
+	runs = append(runs, runtime.NumCPU())
+
+	return runs
 }
 
 func skipCI(t *testing.T) {
@@ -35,164 +43,6 @@ func skipCI(t *testing.T) {
 
 	if os.Getenv("CI") != "" {
 		t.Skip("Skipping testing in CI environment")
-	}
-}
-
-func Test_getCPUFreqs(t *testing.T) {
-	skipCI(t)
-	type args struct {
-		path string
-	}
-	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-	}{
-		{
-			name: "valid path",
-			args: args{path: filepath.Join(sysFSPath, "cpu*", freqFile)},
-		},
-		{
-			name:    "invalid path",
-			args:    args{path: "/nonexistent"},
-			wantErr: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := getCPUFreqs(tt.args.path)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("getCPUFreqs() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !tt.wantErr {
-				assert.Greater(t, len(got), 1)
-			}
-		})
-	}
-}
-
-func TestNewCPUFreqWorker(t *testing.T) {
-	type args struct {
-		in0 context.Context
-		in1 *dbusx.DBusAPI
-	}
-	tests := []struct {
-		args    args
-		want    *linux.SensorWorker
-		name    string
-		wantErr bool
-	}{
-		{
-			name: "valid worker",
-			want: &linux.SensorWorker{
-				Value: &cpuFreqWorker{
-					path: filepath.Join(sysFSPath, "cpu*", freqFile),
-				},
-				WorkerID: cpuFreqWorkerID,
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := NewCPUFreqWorker(tt.args.in0, tt.args.in1)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("NewCPUFreqWorker() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewCPUFreqWorker() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_cpuFreqWorker_Interval(t *testing.T) {
-	type fields struct {
-		path string
-	}
-	tests := []struct {
-		name   string
-		fields fields
-	}{
-		{
-			name: "valid interval",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			w := &cpuFreqWorker{
-				path: tt.fields.path,
-			}
-			got := w.Interval()
-			assert.Greater(t, got, cpuFreqUpdateJitter)
-		})
-	}
-}
-
-func Test_cpuFreqWorker_Jitter(t *testing.T) {
-	type fields struct {
-		path string
-	}
-	tests := []struct {
-		name   string
-		fields fields
-	}{
-		{
-			name: "valid jitter",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			w := &cpuFreqWorker{
-				path: tt.fields.path,
-			}
-			got := w.Jitter()
-			assert.Less(t, got, cpuFreqUpdateInterval)
-		})
-	}
-}
-
-func Test_cpuFreqWorker_Sensors(t *testing.T) {
-	skipCI(t)
-	type fields struct {
-		path string
-	}
-	type args struct {
-		in0 context.Context
-		in1 time.Duration
-	}
-	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		want    []sensor.Details
-		wantErr bool
-	}{
-		{
-			name:   "valid path",
-			fields: fields{path: filepath.Join(sysFSPath, "cpu*", freqFile)},
-		},
-		{
-			name:    "invalid path",
-			fields:  fields{path: "/nonexistent"},
-			wantErr: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			w := &cpuFreqWorker{
-				path: tt.fields.path,
-			}
-			got, err := w.Sensors(tt.args.in0, tt.args.in1)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("cpuFreqWorker.Sensors() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !tt.wantErr {
-				assert.Greater(t, len(got), 1)
-			}
-		})
 	}
 }
 
@@ -255,14 +105,9 @@ func Test_cpuFreqSensor_ID(t *testing.T) {
 }
 
 func Test_cpuFreqSensor_Attributes(t *testing.T) {
-	validSensor := newCPUFreqSensor(
-		cpuFreq{
-			cpu:      "cpu12",
-			governor: "performance",
-			driver:   "intel_pstate",
-			freq:     "999999",
-		},
-	)
+	skipCI(t)
+
+	validSensor := newCPUFreqSensor("cpu0")
 
 	type fields struct {
 		cpuFreq *cpuFreq
@@ -298,16 +143,18 @@ func Test_cpuFreqSensor_Attributes(t *testing.T) {
 }
 
 func Benchmark_cpuFreqWorker_Sensors(b *testing.B) {
-	worker := &cpuFreqWorker{
-		path: filepath.Join(sysFSPath, "cpu*", freqFile),
-	}
-	ctx, cancelFunc := context.WithCancel(context.TODO())
-	defer cancelFunc()
+	runs := generateRuns(b)
 
 	for _, v := range runs {
-		b.Run(fmt.Sprintf("input_size_%d", v.input), func(b *testing.B) {
+		var cpus []string
+		for i := range len(runs) {
+			cpus = append(cpus, "cpu"+strconv.Itoa(i))
+		}
+		b.Run(fmt.Sprintf("num cpus %d", v), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				worker.Sensors(ctx, 0) //nolint:errcheck
+				for _, cpu := range cpus {
+					getCPUFreqs(cpu)
+				}
 			}
 		})
 	}
