@@ -168,6 +168,8 @@ func getStats() ([]sensor.Details, error) {
 		return nil, fmt.Errorf("fetch load averages: %w", err)
 	}
 
+	defer statsFH.Close()
+
 	statsFile := bufio.NewScanner(statsFH)
 	for statsFile.Scan() {
 		// Set up word scanner for line.
