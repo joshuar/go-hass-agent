@@ -8,6 +8,7 @@ package cpu
 
 import (
 	"context"
+	"fmt"
 	"math/rand"
 	"reflect"
 	"slices"
@@ -327,4 +328,12 @@ func Test_getStats(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Benchmark_getStats(b *testing.B) {
+	b.Run(fmt.Sprintf("run %d", b.N), func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			getStats() //nolint:errcheck
+		}
+	})
 }
