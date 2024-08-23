@@ -53,6 +53,10 @@ const (
 	SensorLoad5                                    // CPU load average (5 min)
 	SensorLoad15                                   // CPU load average (15 min)
 	SensorCPUPc                                    // CPU Usage
+	SensorCPUCtxSwitch                             // Total CPU Context Switches
+	SensorProcCnt                                  // Total Processes Created
+	SensorProcsRunning                             // Processes Running
+	SensorProcsBlocked                             // Processes Blocked
 	SensorScreenLock                               // Screen Lock
 	SensorLidClosed                                // Lid Closed
 	SensorProblem                                  // Problems
