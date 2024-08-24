@@ -273,9 +273,10 @@ func Test_usageWorker_newCountSensor(t *testing.T) {
 				Value:           400,
 				IconString:      "mdi:counter",
 				SensorSrc:       linux.DataSrcProcfs,
-				StateClassValue: types.StateClassTotal,
+				StateClassValue: types.StateClassTotalIncreasing,
 				SensorTypeValue: linux.SensorCPUCtxSwitch,
 				IsDiagnostic:    true,
+				LastReset:       "0001-01-01T00:00:00Z",
 			},
 		},
 	}
