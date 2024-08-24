@@ -11,6 +11,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"strconv"
 	"strings"
@@ -21,6 +22,7 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
@@ -96,6 +98,7 @@ func (s *cpuUsageSensor) Attributes() map[string]any {
 }
 
 type usageWorker struct {
+	logger *slog.Logger
 	clktck int64
 }
 
@@ -107,7 +110,7 @@ func (w *usageWorker) Sensors(_ context.Context, _ time.Duration) ([]sensor.Deta
 	return getStats()
 }
 
-func NewUsageWorker(_ context.Context, _ *dbusx.DBusAPI) (*linux.SensorWorker, error) {
+func NewUsageWorker(ctx context.Context, _ *dbusx.DBusAPI) (*linux.SensorWorker, error) {
 	clktck, err := sysconf.Sysconf(sysconf.SC_CLK_TCK)
 	if err != nil {
 		return nil, fmt.Errorf("cannot start cpu usage worker: %w", err)
@@ -116,6 +119,7 @@ func NewUsageWorker(_ context.Context, _ *dbusx.DBusAPI) (*linux.SensorWorker, e
 	return &linux.SensorWorker{
 			Value: &usageWorker{
 				clktck: clktck,
+				logger: logging.FromContext(ctx).WithGroup(usageWorkerID),
 			},
 			WorkerID: usageWorkerID,
 		},
@@ -139,9 +143,14 @@ func (w *usageWorker) newUsageSensor(details []string, diagnostic bool) *cpuUsag
 	return usageSensor
 }
 
-func (w *usageWorker) newCountSensor(sensorType linux.SensorTypeValue, icon string, details []string) *linux.Sensor {
+func (w *usageWorker) newCountSensor(sensorType linux.SensorTypeValue, icon string, valueStr string) *linux.Sensor {
+	valueInt, err := strconv.Atoi(valueStr)
+	if err != nil {
+		w.logger.Debug("Failed to convert count from string to int.", slog.String("sensor_type", sensorType.String()), slog.Any("error", err))
+	}
+
 	return &linux.Sensor{
-		Value:           details[1],
+		Value:           valueInt,
 		IconString:      icon,
 		SensorSrc:       linux.DataSrcProcfs,
 		StateClassValue: types.StateClassTotal,
@@ -188,13 +197,13 @@ func getStats() ([]sensor.Details, error) {
 			sensors = append(sensors, worker.newUsageSensor(cols, true))
 			sensors = append(sensors, newCPUFreqSensor(cols[0]))
 		case cols[0] == "ctxt":
-			sensors = append(sensors, worker.newCountSensor(linux.SensorCPUCtxSwitch, "mdi:counter", cols))
+			sensors = append(sensors, worker.newCountSensor(linux.SensorCPUCtxSwitch, "mdi:counter", cols[1]))
 		case cols[0] == "processes":
-			sensors = append(sensors, worker.newCountSensor(linux.SensorProcCnt, "mdi:application-cog", cols))
+			sensors = append(sensors, worker.newCountSensor(linux.SensorProcCnt, "mdi:application-cog", cols[1]))
 		case cols[0] == "procs_running":
-			sensors = append(sensors, worker.newCountSensor(linux.SensorProcsRunning, "mdi:application-cog", cols))
+			sensors = append(sensors, worker.newCountSensor(linux.SensorProcsRunning, "mdi:application-cog", cols[1]))
 		case cols[0] == "procs_blocked":
-			sensors = append(sensors, worker.newCountSensor(linux.SensorProcsBlocked, "mdi:application-cog", cols))
+			sensors = append(sensors, worker.newCountSensor(linux.SensorProcsBlocked, "mdi:application-cog", cols[1]))
 		}
 	}
 
