@@ -6,12 +6,23 @@
 package linux
 
 import (
+	"bufio"
 	"errors"
+	"fmt"
 	"os"
+	"strconv"
 	"strings"
+	"time"
 )
 
-var ErrDesktopPortalMissing = errors.New("no portal present")
+const (
+	UptimeFile = "/proc/uptime"
+)
+
+var (
+	ErrDesktopPortalMissing = errors.New("no portal present")
+	ErrUptimeInvalid        = errors.New("invalid uptime")
+)
 
 // FindPortal is a helper function to work out which portal interface should be
 // used for getting information on running apps.
@@ -26,4 +37,29 @@ func FindPortal() (string, error) {
 	default:
 		return "", ErrDesktopPortalMissing
 	}
+}
+
+func getBootTime() (time.Time, error) {
+	data, err := os.Open(UptimeFile)
+	if err != nil {
+		return time.Now(), fmt.Errorf("unable to read uptime: %w", err)
+	}
+
+	defer data.Close()
+
+	line := bufio.NewScanner(data)
+	line.Split(bufio.ScanWords)
+
+	if !line.Scan() {
+		return time.Now(), ErrUptimeInvalid
+	}
+
+	uptimeValue, err := strconv.ParseFloat(line.Text(), 64)
+	if err != nil {
+		return time.Now(), ErrUptimeInvalid
+	}
+
+	uptime := time.Duration(uptimeValue * 1000000000) //nolint:mnd
+
+	return time.Now().Add(-1 * uptime), nil
 }

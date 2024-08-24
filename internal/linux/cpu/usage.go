@@ -17,8 +17,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/tklauser/go-sysconf"
-
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
@@ -98,8 +96,9 @@ func (s *cpuUsageSensor) Attributes() map[string]any {
 }
 
 type usageWorker struct {
-	logger *slog.Logger
-	clktck int64
+	boottime time.Time
+	logger   *slog.Logger
+	clktck   int64
 }
 
 func (w *usageWorker) Interval() time.Duration { return usageUpdateInterval }
@@ -107,19 +106,25 @@ func (w *usageWorker) Interval() time.Duration { return usageUpdateInterval }
 func (w *usageWorker) Jitter() time.Duration { return usageUpdateJitter }
 
 func (w *usageWorker) Sensors(_ context.Context, _ time.Duration) ([]sensor.Details, error) {
-	return getStats()
+	return w.getStats()
 }
 
 func NewUsageWorker(ctx context.Context, _ *dbusx.DBusAPI) (*linux.SensorWorker, error) {
-	clktck, err := sysconf.Sysconf(sysconf.SC_CLK_TCK)
-	if err != nil {
-		return nil, fmt.Errorf("cannot start cpu usage worker: %w", err)
+	clktck, found := linux.CtxGetClkTck(ctx)
+	if !found {
+		return nil, fmt.Errorf("%w: no clktck value", linux.ErrInvalidCtx)
+	}
+
+	boottime, found := linux.CtxGetBoottime(ctx)
+	if !found {
+		return nil, fmt.Errorf("%w: no boottime value", linux.ErrInvalidCtx)
 	}
 
 	return &linux.SensorWorker{
 			Value: &usageWorker{
-				clktck: clktck,
-				logger: logging.FromContext(ctx).WithGroup(usageWorkerID),
+				clktck:   clktck,
+				boottime: boottime,
+				logger:   logging.FromContext(ctx).WithGroup(usageWorkerID),
 			},
 			WorkerID: usageWorkerID,
 		},
@@ -153,24 +158,15 @@ func (w *usageWorker) newCountSensor(sensorType linux.SensorTypeValue, icon stri
 		Value:           valueInt,
 		IconString:      icon,
 		SensorSrc:       linux.DataSrcProcfs,
-		StateClassValue: types.StateClassTotal,
+		StateClassValue: types.StateClassTotalIncreasing,
 		SensorTypeValue: sensorType,
 		IsDiagnostic:    true,
+		LastReset:       w.boottime.Format(time.RFC3339),
 	}
 }
 
-//nolint:cyclop
-func getStats() ([]sensor.Details, error) {
+func (w *usageWorker) getStats() ([]sensor.Details, error) {
 	var sensors []sensor.Details
-
-	clktck, err := sysconf.Sysconf(sysconf.SC_CLK_TCK)
-	if err != nil {
-		return nil, fmt.Errorf("cannot start cpu usage worker: %w", err)
-	}
-
-	worker := &usageWorker{
-		clktck: clktck,
-	}
 
 	statsFH, err := os.Open(usageFile)
 	if err != nil {
@@ -192,18 +188,18 @@ func getStats() ([]sensor.Details, error) {
 		// Create a sensor depending on the line.
 		switch {
 		case cols[0] == totalCPUString:
-			sensors = append(sensors, worker.newUsageSensor(cols, false))
+			sensors = append(sensors, w.newUsageSensor(cols, false))
 		case strings.Contains(cols[0], "cpu"):
-			sensors = append(sensors, worker.newUsageSensor(cols, true))
+			sensors = append(sensors, w.newUsageSensor(cols, true))
 			sensors = append(sensors, newCPUFreqSensor(cols[0]))
 		case cols[0] == "ctxt":
-			sensors = append(sensors, worker.newCountSensor(linux.SensorCPUCtxSwitch, "mdi:counter", cols[1]))
+			sensors = append(sensors, w.newCountSensor(linux.SensorCPUCtxSwitch, "mdi:counter", cols[1]))
 		case cols[0] == "processes":
-			sensors = append(sensors, worker.newCountSensor(linux.SensorProcCnt, "mdi:application-cog", cols[1]))
+			sensors = append(sensors, w.newCountSensor(linux.SensorProcCnt, "mdi:application-cog", cols[1]))
 		case cols[0] == "procs_running":
-			sensors = append(sensors, worker.newCountSensor(linux.SensorProcsRunning, "mdi:application-cog", cols[1]))
+			sensors = append(sensors, w.newCountSensor(linux.SensorProcsRunning, "mdi:application-cog", cols[1]))
 		case cols[0] == "procs_blocked":
-			sensors = append(sensors, worker.newCountSensor(linux.SensorProcsBlocked, "mdi:application-cog", cols[1]))
+			sensors = append(sensors, w.newCountSensor(linux.SensorProcsBlocked, "mdi:application-cog", cols[1]))
 		}
 	}
 

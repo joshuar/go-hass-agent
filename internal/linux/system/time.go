@@ -7,11 +7,13 @@
 package system
 
 import (
+	"bufio"
 	"context"
+	"fmt"
 	"log/slog"
+	"os"
+	"strconv"
 	"time"
-
-	"github.com/shirou/gopsutil/v3/host"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
@@ -32,68 +34,89 @@ type timeSensor struct {
 }
 
 type timeWorker struct {
-	logger *slog.Logger
+	logger       *slog.Logger
+	boottime     time.Time
+	boottimeSent bool
 }
 
 func (w *timeWorker) Interval() time.Duration { return uptimeInterval }
 
 func (w *timeWorker) Jitter() time.Duration { return uptimeJitter }
 
-func (w *timeWorker) Sensors(ctx context.Context, _ time.Duration) ([]sensor.Details, error) {
-	return []sensor.Details{
-			&timeSensor{
-				linux.Sensor{
-					SensorTypeValue:  linux.SensorUptime,
-					Value:            w.getUptime(ctx),
-					IsDiagnostic:     true,
-					UnitsString:      "h",
-					IconString:       "mdi:restart",
-					DeviceClassValue: types.DeviceClassDuration,
-					StateClassValue:  types.StateClassMeasurement,
-				},
-			},
-			&timeSensor{
-				linux.Sensor{
-					SensorTypeValue:  linux.SensorBoottime,
-					Value:            w.getBoottime(ctx),
-					IsDiagnostic:     true,
-					IconString:       "mdi:restart",
-					DeviceClassValue: types.DeviceClassTimestamp,
-				},
-			},
+func (w *timeWorker) Sensors(_ context.Context, _ time.Duration) ([]sensor.Details, error) {
+	var sensors []sensor.Details
+
+	// Send the uptime.
+	sensors = append(sensors, &timeSensor{
+		linux.Sensor{
+			SensorTypeValue:  linux.SensorUptime,
+			Value:            w.getUptime() / 60 / 60, //nolint:mnd
+			IsDiagnostic:     true,
+			UnitsString:      "h",
+			IconString:       "mdi:restart",
+			DeviceClassValue: types.DeviceClassDuration,
+			StateClassValue:  types.StateClassMeasurement,
 		},
-		nil
-}
+	})
 
-func (w *timeWorker) getUptime(ctx context.Context) any {
-	value, err := host.UptimeWithContext(ctx)
-	if err != nil {
-		w.logger.Debug("Failed to retrieve uptime.", "error", err.Error())
-
-		return sensor.StateUnknown
+	// Send the boottime if we haven't already.
+	if !w.boottimeSent {
+		sensors = append(sensors, &timeSensor{
+			linux.Sensor{
+				SensorTypeValue:  linux.SensorBoottime,
+				Value:            w.boottime,
+				IsDiagnostic:     true,
+				IconString:       "mdi:restart",
+				DeviceClassValue: types.DeviceClassDate,
+			},
+		})
+		w.boottimeSent = true
 	}
 
-	epoch := time.Unix(0, 0)
-	uptime := time.Unix(int64(value), 0)
-
-	return uptime.Sub(epoch).Hours()
+	return sensors, nil
 }
 
-func (w *timeWorker) getBoottime(ctx context.Context) string {
-	value, err := host.BootTimeWithContext(ctx)
+// getUptime retrieve the uptime of the device running Go Hass Agent, in
+// seconds. If the uptime cannot be retrieved, it will return 0.
+func (w *timeWorker) getUptime() float64 {
+	data, err := os.Open(linux.UptimeFile)
 	if err != nil {
-		w.logger.Debug("Failed to retrieve boottime.", "error", err.Error())
+		w.logger.Debug("Unable to retrieve uptime.", slog.Any("error", err))
 
-		return sensor.StateUnknown
+		return 0
 	}
 
-	return time.Unix(int64(value), 0).Format(time.RFC3339)
+	defer data.Close()
+
+	line := bufio.NewScanner(data)
+	line.Split(bufio.ScanWords)
+
+	if !line.Scan() {
+		w.logger.Debug("Could not parse uptime.")
+
+		return 0
+	}
+
+	uptimeValue, err := strconv.ParseFloat(line.Text(), 64)
+	if err != nil {
+		w.logger.Debug("Could not parse uptime.")
+
+		return 0
+	}
+
+	return uptimeValue
 }
 
 func NewTimeWorker(ctx context.Context, _ *dbusx.DBusAPI) (*linux.SensorWorker, error) {
+	boottime, found := linux.CtxGetBoottime(ctx)
+	if !found {
+		return nil, fmt.Errorf("%w: no boottime value", linux.ErrInvalidCtx)
+	}
+
 	return &linux.SensorWorker{
 			Value: &timeWorker{
-				logger: logging.FromContext(ctx).With(slog.String("worker", timeWorkerID)),
+				logger:   logging.FromContext(ctx).WithGroup(timeWorkerID),
+				boottime: boottime,
 			},
 			WorkerID: timeWorkerID,
 		},

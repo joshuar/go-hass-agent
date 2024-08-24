@@ -37,9 +37,10 @@ type sensors struct {
 // ioWorker creates sensors for disk IO counts and rates per device. It
 // maintains an internal map of devices being tracked.
 type ioWorker struct {
-	logger  *slog.Logger
-	devices map[string]*sensors
-	mu      sync.Mutex
+	boottime time.Time
+	logger   *slog.Logger
+	devices  map[string]*sensors
+	mu       sync.Mutex
 }
 
 // addDevice adds a new device to the tracker map. If sthe device is already
@@ -50,7 +51,7 @@ func (w *ioWorker) addDevice(dev *device) {
 	defer w.mu.Unlock()
 
 	if _, ok := w.devices[dev.id]; !ok {
-		w.devices[dev.id] = newDeviceSensors(dev)
+		w.devices[dev.id] = newDeviceSensors(w.boottime, dev)
 	}
 }
 
@@ -136,14 +137,20 @@ func (w *ioWorker) Sensors(_ context.Context, duration time.Duration) ([]sensor.
 }
 
 func NewIOWorker(ctx context.Context, _ *dbusx.DBusAPI) (*linux.SensorWorker, error) {
+	boottime, found := linux.CtxGetBoottime(ctx)
+	if !found {
+		return nil, fmt.Errorf("%w: no boottime value", linux.ErrInvalidCtx)
+	}
+
 	worker := &ioWorker{
-		devices: make(map[string]*sensors),
-		logger:  logging.FromContext(ctx).WithGroup(ratesWorkerID),
+		devices:  make(map[string]*sensors),
+		logger:   logging.FromContext(ctx).WithGroup(ratesWorkerID),
+		boottime: boottime,
 	}
 
 	// Add sensors for a pseudo "total" device which tracks total values from
 	// all devices.
-	worker.devices["total"] = newDeviceSensors(&device{id: "total"})
+	worker.devices["total"] = newDeviceSensors(worker.boottime, &device{id: "total"})
 
 	return &linux.SensorWorker{
 			Value:    worker,
@@ -152,10 +159,10 @@ func NewIOWorker(ctx context.Context, _ *dbusx.DBusAPI) (*linux.SensorWorker, er
 		nil
 }
 
-func newDeviceSensors(dev *device) *sensors {
+func newDeviceSensors(boottime time.Time, dev *device) *sensors {
 	return &sensors{
-		totalReads:  newDiskIOSensor(dev, linux.SensorDiskReads),
-		totalWrites: newDiskIOSensor(dev, linux.SensorDiskWrites),
+		totalReads:  newDiskIOSensor(boottime, dev, linux.SensorDiskReads),
+		totalWrites: newDiskIOSensor(boottime, dev, linux.SensorDiskWrites),
 		readRate:    newDiskIORateSensor(dev, linux.SensorDiskReadRate),
 		writeRate:   newDiskIORateSensor(dev, linux.SensorDiskWriteRate),
 	}

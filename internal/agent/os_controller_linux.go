@@ -175,6 +175,7 @@ func (c *linuxMQTTController) generateConfig(e entity) *mqttapi.Msg {
 // that are supported on this device.
 //
 //revive:disable:function-length
+//nolint:cyclop
 func (agent *Agent) newOSController(ctx context.Context, mqttDevice *mqtthass.Device) (SensorController, MQTTController) {
 	dbusAPI := dbusx.NewDBusAPI(ctx)
 
@@ -185,9 +186,14 @@ func (agent *Agent) newOSController(ctx context.Context, mqttDevice *mqtthass.De
 		},
 	}
 
+	ctx, err := linux.NewContext(ctx)
+	if err != nil {
+		return nil, nil
+	}
+
 	// Set up sensor workers.
 	for _, startWorkerFunc := range allworkers {
-		worker, err := startWorkerFunc(ctx, dbusAPI)
+		worker, err := startWorkerFunc(ctx, dbusAPI) //nolint:govet
 		if err != nil {
 			sensorController.logger.Warn("Could not start a sensor worker.", "error", err.Error())
 
