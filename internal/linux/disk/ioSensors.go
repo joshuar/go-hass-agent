@@ -94,19 +94,22 @@ func (s *diskIOSensor) updateAttributes(stats map[stat]uint64) {
 	}
 }
 
-func newDiskIOSensor(device *device, sensorType linux.SensorTypeValue) *diskIOSensor {
+func newDiskIOSensor(boottime time.Time, device *device, sensorType linux.SensorTypeValue) *diskIOSensor {
 	newSensor := &diskIOSensor{
 		device: device,
 		Sensor: linux.Sensor{
 			StateClassValue: types.StateClassTotalIncreasing,
 			SensorTypeValue: sensorType,
 			UnitsString:     diskCountUnits,
+			LastReset:       boottime.Format(time.RFC3339),
 		},
+
 		attributes: make(map[string]any),
 	}
 
 	newSensor.attributes["data_source"] = linux.DataSrcSysfs
 	newSensor.attributes["native_unit_of_measurement"] = diskCountUnits
+	newSensor.attributes["last_reset"] = newSensor.LastReset
 
 	if device.model != "" {
 		newSensor.attributes["device_model"] = device.model

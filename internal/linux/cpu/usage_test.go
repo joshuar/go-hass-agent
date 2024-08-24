@@ -292,20 +292,33 @@ func Test_usageWorker_newCountSensor(t *testing.T) {
 	}
 }
 
-func Test_getStats(t *testing.T) {
+func Test_usageWorker_getStats(t *testing.T) {
 	skipCI(t)
 
+	clktck, err := sysconf.Sysconf(sysconf.SC_CLK_TCK)
+	require.NoError(t, err)
+
+	type fields struct {
+		logger *slog.Logger
+		clktck int64
+	}
 	tests := []struct {
+		fields  fields
 		name    string
 		wantErr bool
 	}{
 		{
-			name: "valid",
+			name:   "valid",
+			fields: fields{clktck: clktck},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := getStats()
+			w := &usageWorker{
+				clktck: tt.fields.clktck,
+				logger: tt.fields.logger,
+			}
+			got, err := w.getStats()
 			if (err != nil) != tt.wantErr {
 				t.Errorf("getStats() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -341,9 +354,14 @@ func Test_getStats(t *testing.T) {
 }
 
 func Benchmark_getStats(b *testing.B) {
+	clktck, err := sysconf.Sysconf(sysconf.SC_CLK_TCK)
+	require.NoError(b, err)
+
+	w := &usageWorker{clktck: clktck}
+
 	b.Run(fmt.Sprintf("run %d", b.N), func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			getStats() //nolint:errcheck
+			w.getStats() //nolint:errcheck
 		}
 	})
 }
