@@ -212,6 +212,7 @@ this app:
     - Attributes: File system type, bytes/inode total/free/used.
     - Sourced via ProcFS. Updated ~every minute.
   - *Total Read/Writes* (count) per disk.
+    - Attributes include total milliseconds/sectors spent.
   - *Read/Write Rate* (in KB/s) per disk.
     - Both sourced via SysFS. Updated ~every 5 seconds.
 - Networking:
@@ -233,7 +234,13 @@ this app:
     seconds. Via ProcFS.
 - CPU:
   - *Load Average (1/5/15 min)*. Updated ~every 1 minute. Via ProcFS.
-  - *CPU Usage* (in %). Updated ~every 10 seconds. Via ProcFS.
+  - *CPU Usage* (in %). Both total (all-cores) and per-core. Updated ~every 10
+    seconds. Via ProcFS.
+    - Attributes include breakdown of CPU time per state (i.e., user, idle,
+      servicing interrupts, etc.).
+  - *CPU Core Frequency* (in Hz). Per-core. Updated ~every 10 seconds. Via
+    ProcFS.
+    - Attributes include current driver and governor in use.
 - Power Related Details:
   - *Power Profile* (the current power profile as set by the
     power-profiles-daemon). Updated when profile changes.
@@ -256,7 +263,7 @@ this app:
   - Power controls require a system configured with `systemd-logind` (and D-Bus)
     support.
 - Various System Details:
-  - *Boot Time* (date/Time of last system boot). Updated ~every 15 minutes. Via ProcFS.
+  - *Boot Time* (date/Time of last system boot). Via ProcFS.
   - *Uptime*. Updated ~every 15 minutes. Via ProcFS.
   - *Kernel Version* (version of the currently running kernel). Updated on agent
     start. Via ProcFS.
