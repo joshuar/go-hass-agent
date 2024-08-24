@@ -59,18 +59,15 @@ func getDeviceNames() ([]string, error) {
 
 	defer data.Close()
 
-	var (
-		devices []string
-		lineno  int
-	)
+	var devices []string
 
 	partitions := bufio.NewScanner(data)
+	// Skip first two lines (header + blank line).
+	for range 2 {
+		partitions.Scan()
+	}
+	// Read remaining lines.
 	for partitions.Scan() {
-		lineno++
-		if lineno < 3 { //nolint:mnd
-			continue
-		}
-
 		line := bufio.NewScanner(bytes.NewReader(partitions.Bytes()))
 		line.Split(bufio.ScanWords)
 
@@ -118,10 +115,10 @@ func getDevice(deviceName string) (*device, map[stat]uint64, error) {
 
 	line := bufio.NewScanner(bytes.NewReader(data))
 	line.Split(bufio.ScanWords)
-	// Skip the first 3 fields.
-	for range 2 {
-		line.Scan()
-	}
+	// // Skip the first 3 fields.
+	// for range 2 {
+	// 	line.Scan()
+	// }
 
 	stats := make(map[stat]uint64)
 	statno := stat(0)
