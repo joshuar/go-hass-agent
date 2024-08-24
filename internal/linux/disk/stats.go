@@ -115,10 +115,6 @@ func getDevice(deviceName string) (*device, map[stat]uint64, error) {
 
 	line := bufio.NewScanner(bytes.NewReader(data))
 	line.Split(bufio.ScanWords)
-	// // Skip the first 3 fields.
-	// for range 2 {
-	// 	line.Scan()
-	// }
 
 	stats := make(map[stat]uint64)
 	statno := stat(0)
