@@ -18,7 +18,6 @@ import (
 )
 
 const (
-	sysFSPath    = "/sys/devices/system/cpu/"
 	freqFile     = "cpufreq/scaling_cur_freq"
 	governorFile = "cpufreq/scaling_governor"
 	driverFile   = "cpufreq/scaling_driver"
@@ -92,8 +91,10 @@ func getCPUFreqs(id string) *cpuFreq {
 // readCPUFreqProp retrieves the current cpu freq governor for this cpu. If
 // it cannot be found, it returns "unknown".
 func readCPUFreqProp(id, file string) string {
+	path := filepath.Join(linux.SysFSRoot, "devices", "system", "cpu", id, file)
+
 	// Read the current scaling driver.
-	prop, err := os.ReadFile(filepath.Join(sysFSPath, id, file))
+	prop, err := os.ReadFile(path)
 	if err != nil {
 		slog.Debug("Could not read CPU freq property.", slog.String("cpu", id), slog.String("property", file), slog.Any("error", err))
 

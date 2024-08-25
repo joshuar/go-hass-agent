@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
@@ -27,8 +28,6 @@ const (
 	loadAvgUpdateInterval = time.Minute
 	loadAvgUpdateJitter   = 5 * time.Second
 
-	loadAvgsFile = "/proc/loadavg"
-
 	loadAvgsTotal = 3
 
 	loadAvgsWorkerID = "load_averages_sensors"
@@ -41,6 +40,7 @@ type loadavgSensor struct {
 }
 
 type loadAvgsSensorWorker struct {
+	path     string
 	loadAvgs []*loadavgSensor
 }
 
@@ -51,7 +51,7 @@ func (w *loadAvgsSensorWorker) Jitter() time.Duration { return loadAvgUpdateJitt
 func (w *loadAvgsSensorWorker) Sensors(_ context.Context, _ time.Duration) ([]sensor.Details, error) {
 	sensors := make([]sensor.Details, loadAvgsTotal)
 
-	loadAvgData, err := os.ReadFile(loadAvgsFile)
+	loadAvgData, err := os.ReadFile(w.path)
 	if err != nil {
 		return nil, fmt.Errorf("fetch load averages: %w", err)
 	}
@@ -112,7 +112,7 @@ func parseLoadAvgs(data []byte) ([]string, error) {
 
 func NewLoadAvgWorker(_ context.Context, _ *dbusx.DBusAPI) (*linux.SensorWorker, error) {
 	return &linux.SensorWorker{
-			Value:    &loadAvgsSensorWorker{loadAvgs: newLoadAvgSensors()},
+			Value:    &loadAvgsSensorWorker{loadAvgs: newLoadAvgSensors(), path: filepath.Join(linux.ProcFSRoot, "loadavg")},
 			WorkerID: loadAvgsWorkerID,
 		},
 		nil
