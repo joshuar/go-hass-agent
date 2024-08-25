@@ -131,17 +131,15 @@ require (
 	github.com/klauspost/compress v1.17.9 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/lmittmann/tint v1.0.5
-	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/mandykoh/prism v0.35.3
 	github.com/miekg/dns v1.1.41 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/power-devops/perfstat v0.0.0-20221212215047-62379fc7944b // indirect
 	github.com/samber/slog-multi v1.2.0
-	github.com/shoenig/go-m1cpu v0.1.6 // indirect
 	github.com/srwiley/oksvg v0.0.0-20221011165216-be6e8873101c // indirect
 	github.com/srwiley/rasterx v0.0.0-20220730225603-2ab79fcdd4ef // indirect
-	github.com/tklauser/go-sysconf v0.3.12 // indirect
+	github.com/tklauser/go-sysconf v0.3.12
 	github.com/tklauser/numcpus v0.6.1 // indirect
 	github.com/vladimirvivien/go4vl v0.0.5
 	github.com/yuin/goldmark v1.7.1 // indirect
@@ -150,5 +148,5 @@ require (
 	golang.org/x/image v0.18.0 // indirect
 	golang.org/x/mobile v0.0.0-20231127183840-76ac6878050a // indirect
 	golang.org/x/net v0.28.0 // indirect
-	golang.org/x/sys v0.23.0 // indirect
+	golang.org/x/sys v0.23.0
 )
