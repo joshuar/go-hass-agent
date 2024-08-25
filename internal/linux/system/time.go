@@ -64,10 +64,10 @@ func (w *timeWorker) Sensors(_ context.Context, _ time.Duration) ([]sensor.Detai
 		sensors = append(sensors, &timeSensor{
 			linux.Sensor{
 				SensorTypeValue:  linux.SensorBoottime,
-				Value:            w.boottime,
+				Value:            w.boottime.Format(time.RFC3339),
 				IsDiagnostic:     true,
 				IconString:       "mdi:restart",
-				DeviceClassValue: types.DeviceClassDate,
+				DeviceClassValue: types.DeviceClassTimestamp,
 			},
 		})
 		w.boottimeSent = true
