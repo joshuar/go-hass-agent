@@ -12,8 +12,6 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/shirou/gopsutil/v3/disk"
-
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/logging"
@@ -35,23 +33,16 @@ func (w *usageWorker) Interval() time.Duration { return usageUpdateInterval }
 
 func (w *usageWorker) Jitter() time.Duration { return usageUpdateJitter }
 
-func (w *usageWorker) Sensors(ctx context.Context, _ time.Duration) ([]sensor.Details, error) {
-	partitions, err := disk.PartitionsWithContext(ctx, false)
-	if err != nil {
-		return nil, fmt.Errorf("could not retrieve list of physical partitions: %w", err)
+func (w *usageWorker) Sensors(_ context.Context, _ time.Duration) ([]sensor.Details, error) {
+	mounts, err := getMounts()
+	if err == nil {
+		return nil, fmt.Errorf("could not mount points: %w", err)
 	}
 
-	sensors := make([]sensor.Details, 0, len(partitions))
+	sensors := make([]sensor.Details, 0, len(mounts))
 
-	for _, partition := range partitions {
-		usage, err := disk.UsageWithContext(ctx, partition.Mountpoint)
-		if err != nil {
-			w.logger.Debug("Failed to get usage info for mountpount", "mountpoint", partition.Mountpoint, "error", err.Error())
-
-			continue
-		}
-
-		sensors = append(sensors, newDiskUsageSensor(usage))
+	for _, mount := range mounts {
+		sensors = append(sensors, newDiskUsageSensor(mount))
 	}
 
 	return sensors, nil
