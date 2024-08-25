@@ -8,7 +8,6 @@ package mem
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"math"
@@ -27,11 +26,16 @@ const (
 	updateInterval = time.Minute
 	updateJitter   = 5 * time.Second
 
+	memorySensorIcon = "mdi:memory"
+
+	memoryUsageSensorUnits   = "B"
+	memoryUsageSensorPcUnits = "%"
+
 	workerID = "memory_usage_sensors"
 )
 
-var ErrUnknownSensor = errors.New("unknown sensor")
-
+// Lists of the memory statistics we want to track as sensors. See /proc/meminfo
+// for all possible statistics.
 var (
 	memSensors  = []memStatID{memTotal, memFree, memBuffered, memCached, memAvailable, memCorrupted}
 	swapSensors = []memStatID{swapTotal, swapFree, swapCached}
@@ -57,10 +61,10 @@ func newMemSensor(id memStatID, stat *memStat) *memorySensor {
 			SensorTypeValue:  linux.SensorMemoryStat,
 			DeviceClassValue: types.DeviceClassDataSize,
 			StateClassValue:  types.StateClassTotal,
-			IconString:       "mdi:memory",
+			IconString:       memorySensorIcon,
 			SensorSrc:        linux.DataSrcProcfs,
 			Value:            stat.value,
-			UnitsString:      "B	",
+			UnitsString:      memoryUsageSensorUnits,
 		},
 		name: id.String(),
 	}
@@ -75,10 +79,10 @@ func newMemSensorPc(name string, value, total uint64) *memorySensor {
 		Sensor: linux.Sensor{
 			SensorTypeValue: linux.SensorMemoryStat,
 			StateClassValue: types.StateClassMeasurement,
-			IconString:      "mdi:memory",
+			IconString:      memorySensorIcon,
 			SensorSrc:       linux.DataSrcProcfs,
 			Value:           valuePc,
-			UnitsString:     "%",
+			UnitsString:     memoryUsageSensorPcUnits,
 		},
 		name: name,
 	}
