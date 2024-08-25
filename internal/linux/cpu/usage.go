@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -27,8 +28,6 @@ import (
 const (
 	usageUpdateInterval = 10 * time.Second
 	usageUpdateJitter   = 500 * time.Millisecond
-
-	usageFile = "/proc/stat"
 
 	usageWorkerID = "cpu_usage_sensors"
 
@@ -98,6 +97,7 @@ func (s *cpuUsageSensor) Attributes() map[string]any {
 type usageWorker struct {
 	boottime time.Time
 	logger   *slog.Logger
+	path     string
 	clktck   int64
 }
 
@@ -125,6 +125,7 @@ func NewUsageWorker(ctx context.Context, _ *dbusx.DBusAPI) (*linux.SensorWorker,
 				clktck:   clktck,
 				boottime: boottime,
 				logger:   logging.FromContext(ctx).WithGroup(usageWorkerID),
+				path:     filepath.Join(linux.ProcFSRoot, "stat"),
 			},
 			WorkerID: usageWorkerID,
 		},
@@ -168,7 +169,7 @@ func (w *usageWorker) newCountSensor(sensorType linux.SensorTypeValue, icon stri
 func (w *usageWorker) getStats() ([]sensor.Details, error) {
 	var sensors []sensor.Details
 
-	statsFH, err := os.Open(usageFile)
+	statsFH, err := os.Open(w.path)
 	if err != nil {
 		return nil, fmt.Errorf("fetch load averages: %w", err)
 	}
