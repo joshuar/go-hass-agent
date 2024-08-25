@@ -35,8 +35,8 @@ func (w *usageWorker) Jitter() time.Duration { return usageUpdateJitter }
 
 func (w *usageWorker) Sensors(_ context.Context, _ time.Duration) ([]sensor.Details, error) {
 	mounts, err := getMounts()
-	if err == nil {
-		return nil, fmt.Errorf("could not mount points: %w", err)
+	if err != nil {
+		return nil, fmt.Errorf("could not get mount points: %w", err)
 	}
 
 	sensors := make([]sensor.Details, 0, len(mounts))
