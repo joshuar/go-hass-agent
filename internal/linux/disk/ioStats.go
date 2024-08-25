@@ -11,14 +11,15 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/joshuar/go-hass-agent/internal/linux"
 )
 
-const parititonsFile = "/proc/partitions"
-
-//go:generate stringer -type=stat -output stats_generated.go -linecomment
+//go:generate stringer -type=stat -output ioStats_generated.go -linecomment
 const (
 	TotalReads             stat = iota // Total reads completed
 	TotalReadsMerged                   // Total reads merged
@@ -52,7 +53,7 @@ type device struct {
 var deviceMajNo = []string{"8", "252", "253", "259"}
 
 func getDeviceNames() ([]string, error) {
-	data, err := os.Open(parititonsFile)
+	data, err := os.Open(filepath.Join(linux.ProcFSRoot, "partitions"))
 	if err != nil {
 		return nil, fmt.Errorf("getDevices: %w", err)
 	}
@@ -99,7 +100,7 @@ func getDevice(deviceName string) (*device, map[stat]uint64, error) {
 	// Create a new device.
 	dev := &device{
 		id:        deviceName,
-		sysFSPath: "/sys/block/" + deviceName,
+		sysFSPath: filepath.Join(linux.SysFSRoot, "block", deviceName),
 	}
 
 	// Try to read the model from the appropriate file. Otherwise just leave
