@@ -14,7 +14,7 @@ require (
 	github.com/jeandeaual/go-locale v0.0.0-20240223122105-ce5225dcaa49
 	github.com/joshuar/go-hass-anything/v11 v11.1.0
 	github.com/lthibault/jitterbug/v2 v2.2.2
-	github.com/lxzan/gws v1.8.6
+	github.com/lxzan/gws v1.8.7
 	github.com/magefile/mage v1.15.0
 	github.com/matryer/moq v0.3.4
 	github.com/pelletier/go-toml/v2 v2.2.2
