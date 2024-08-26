@@ -10,26 +10,30 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/linux"
 )
 
+const (
+	runningAppsIcon  = "mdi:apps"
+	runningAppsUnits = "apps"
+)
+
 type runningAppsSensor struct {
 	apps []string
 	linux.Sensor
 }
 
 func (r *runningAppsSensor) Attributes() map[string]any {
-	attributes := make(map[string]any)
-
+	attributes := r.Sensor.Attributes()
 	attributes["running_apps"] = r.apps
-	attributes["data_source"] = linux.DataSrcDbus
 
 	return attributes
 }
 
 func newRunningAppsSensor() *runningAppsSensor {
-	newSensor := &runningAppsSensor{}
-	newSensor.SensorTypeValue = linux.SensorAppRunning
-	newSensor.IconString = "mdi:apps"
-	newSensor.UnitsString = "apps"
-	newSensor.StateClassValue = types.StateClassMeasurement
-
-	return newSensor
+	return &runningAppsSensor{
+		Sensor: linux.Sensor{
+			SensorTypeValue: linux.SensorAppRunning,
+			IconString:      runningAppsIcon,
+			UnitsString:     runningAppsUnits,
+			StateClassValue: types.StateClassMeasurement,
+		},
+	}
 }
