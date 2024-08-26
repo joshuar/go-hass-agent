@@ -62,7 +62,7 @@ const (
 	vmallocUsed                        //       Vmalloc Used Memory
 	vmallocChunk                       //      Vmalloc Largest Unused Chunk
 	memPercpu                          //            Percpu Memory
-	memCorrupted                       // Corrupted Memory
+	memCorrupted                       // Memory Corrupted
 	memAnonHugePages                   //     Anonymouse Huge Pages Memory
 	memShmemHugePages                  //    shmem Huge Pages Memory
 	memShmemPmdMapped                  //    shmem User Space Huge Pages Memory
