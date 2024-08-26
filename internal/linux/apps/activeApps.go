@@ -9,15 +9,20 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/linux"
 )
 
+const (
+	activeAppsIcon = "mdi:application"
+)
+
 type activeAppSensor struct {
 	linux.Sensor
 }
 
 func newActiveAppSensor() *activeAppSensor {
-	newSensor := &activeAppSensor{}
-	newSensor.SensorSrc = linux.DataSrcDbus
-	newSensor.SensorTypeValue = linux.SensorAppActive
-	newSensor.IconString = "mdi:application"
-
-	return newSensor
+	return &activeAppSensor{
+		Sensor: linux.Sensor{
+			SensorSrc:       linux.DataSrcDbus,
+			SensorTypeValue: linux.SensorAppActive,
+			IconString:      activeAppsIcon,
+		},
+	}
 }
