@@ -1,5 +1,33 @@
 # Changelog
 
+## [10.1.0](https://github.com/joshuar/go-hass-agent/compare/v10.0.1...v10.1.0) (2024-08-27)
+
+
+### Features
+
+* **linux:** :recycle: rework memory usage sensors ([0930a5c](https://github.com/joshuar/go-hass-agent/commit/0930a5cc0770c81327c19ac0358f1e045cbc6805))
+* **linux:** :sparkles: add support for alternative system partition mounts in cpu sensors ([55e6c78](https://github.com/joshuar/go-hass-agent/commit/55e6c783e982da3a44facf8c11635b390fd4a627))
+* **linux:** :sparkles: improve cpufreq and introduce per core cpu usage sensors ([412fef1](https://github.com/joshuar/go-hass-agent/commit/412fef13c5136016d6b16d8fbb533ef60f05174a))
+* **linux:** :sparkles: support ability to specify alternative mount points for system mounts via environment variables ([133142b](https://github.com/joshuar/go-hass-agent/commit/133142b3d94ad5db98a718ca7a9b80c68ea3acb9))
+
+
+### Bug Fixes
+
+* **linux:** :bug: ensure disk io stats are correct ([80f9a80](https://github.com/joshuar/go-hass-agent/commit/80f9a8011c7273856bde14e7dfc0ae9d9f0036a4))
+* **linux:** :bug: ensure stats file is closed properly ([8c97527](https://github.com/joshuar/go-hass-agent/commit/8c975277bc7d4dac7ce1496770c2639172652dc3))
+* **linux:** :bug: fix bootime value after recent changes ([fa977eb](https://github.com/joshuar/go-hass-agent/commit/fa977eb024b0bba5911248f62b03a533fdb3248a))
+* **linux:** :bug: usage count values should be ints not strings ([af01217](https://github.com/joshuar/go-hass-agent/commit/af01217d4847e8795f0d9a783358308edac3d5ec))
+* **linux:** :mute: don't report problems fetching hardware sensors at default log level ([d271fee](https://github.com/joshuar/go-hass-agent/commit/d271feebfbf95df196cbbef3f4b74cc19408a55d))
+* **linux:** :recycle: rework time, io and cpu sensors ([01593c7](https://github.com/joshuar/go-hass-agent/commit/01593c7d2f2b5691ee919848c0f9771510d095a9))
+
+
+### Performance Improvements
+
+* **linux:** :recycle: improve disk usage sensors ([712309c](https://github.com/joshuar/go-hass-agent/commit/712309c77df8ef8a01f9a5b38a632db5ed609144))
+* **linux:** :zap: fetch load averages internally ([067e2ca](https://github.com/joshuar/go-hass-agent/commit/067e2caef0f8e33fcd93f85af9381684041b045d))
+* **linux:** :zap: increase interval between polling for CPU frequency measurements ([c44eeea](https://github.com/joshuar/go-hass-agent/commit/c44eeea2c56403d36f7941bbd648b7613c3be97b))
+* **linux:** :zap: optimise disk io sensors ([2124a77](https://github.com/joshuar/go-hass-agent/commit/2124a778c05f4b2a11c959cb20474da594c058fc))
+
 ## [10.0.1](https://github.com/joshuar/go-hass-agent/compare/v10.0.0...v10.0.1) (2024-08-21)
 
 
