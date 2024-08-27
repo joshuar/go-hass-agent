@@ -13,7 +13,6 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
-	"time"
 
 	"github.com/godbus/dbus/v5"
 
@@ -21,7 +20,6 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
-	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
@@ -34,8 +32,6 @@ const (
 	colorSchemeProp         = "color-scheme"
 	accentColorProp         = "accent-color"
 
-	reqTimeout = 15 * time.Second
-
 	workerID = "desktop_settings_sensors"
 )
 
@@ -46,45 +42,49 @@ type desktopSettingSensor struct {
 }
 
 type worker struct {
-	logger *slog.Logger
-	bus    *dbusx.Bus
+	triggerCh chan dbusx.Trigger
+	getProp   func(prop string) (string, error)
 }
 
-func (w *worker) newAccentColorSensor(ctx context.Context, accent string) *desktopSettingSensor {
+func (w *worker) newAccentColorSensor(accent string) (*desktopSettingSensor, error) {
 	var err error
 
 	if accent == "" {
-		accent, err = w.getProp(ctx, accentColorProp)
+		accent, err = w.getProp(accentColorProp)
 		if err != nil {
-			w.logger.Warn("Invalid accent colour.", "error", err.Error())
+			return nil, fmt.Errorf("invalid accent colour: %w", err)
 		}
 	}
 
-	newSensor := &desktopSettingSensor{}
-	newSensor.IsDiagnostic = true
-	newSensor.IconString = "mdi:palette"
-	newSensor.SensorSrc = linux.DataSrcDbus
-	newSensor.SensorTypeValue = linux.SensorAccentColor
-	newSensor.Value = accent
-
-	return newSensor
+	return &desktopSettingSensor{
+		Sensor: linux.Sensor{
+			IsDiagnostic:    true,
+			IconString:      "mdi:palette",
+			SensorSrc:       linux.DataSrcDbus,
+			SensorTypeValue: linux.SensorAccentColor,
+			Value:           accent,
+		},
+	}, nil
 }
 
-func (w *worker) newColorSchemeSensor(ctx context.Context, scheme string) *desktopSettingSensor {
+func (w *worker) newColorSchemeSensor(scheme string) (*desktopSettingSensor, error) {
 	var err error
 
 	if scheme == "" {
-		scheme, err = w.getProp(ctx, colorSchemeProp)
+		scheme, err = w.getProp(colorSchemeProp)
 		if err != nil {
-			w.logger.Warn("Invalid colour scheme.", "error", err.Error())
+			return nil, fmt.Errorf("invalid colour scheme: %w", err)
 		}
 	}
 
-	newSensor := &desktopSettingSensor{}
-	newSensor.IsDiagnostic = true
-	newSensor.SensorSrc = linux.DataSrcDbus
-	newSensor.SensorTypeValue = linux.SensorColorScheme
-	newSensor.Value = scheme
+	newSensor := &desktopSettingSensor{
+		Sensor: linux.Sensor{
+			IsDiagnostic:    true,
+			SensorSrc:       linux.DataSrcDbus,
+			SensorTypeValue: linux.SensorColorScheme,
+			Value:           scheme,
+		},
+	}
 
 	switch scheme {
 	case "dark":
@@ -95,23 +95,13 @@ func (w *worker) newColorSchemeSensor(ctx context.Context, scheme string) *deskt
 		newSensor.IconString = "mdi:theme-light-dark"
 	}
 
-	return newSensor
+	return newSensor, nil
 }
 
-//nolint:cyclop
+//nolint:cyclop,gocognit
 func (w *worker) Events(ctx context.Context) (chan sensor.Details, error) {
 	sensorCh := make(chan sensor.Details)
-
-	triggerCh, err := w.bus.WatchBus(ctx, &dbusx.Watch{
-		Names:     []string{settingsChangedSignal},
-		Interface: settingsPortalInterface,
-		Path:      desktopPortalPath,
-	})
-	if err != nil {
-		close(sensorCh)
-
-		return sensorCh, fmt.Errorf("could not watch D-Bus for desktop settings updates: %w", err)
-	}
+	logger := slog.Default().With(slog.String("worker", workerID))
 
 	go func() {
 		defer close(sensorCh)
@@ -120,23 +110,29 @@ func (w *worker) Events(ctx context.Context) (chan sensor.Details, error) {
 			select {
 			case <-ctx.Done():
 				return
-			case event := <-triggerCh:
+			case event := <-w.triggerCh:
 				if !strings.Contains(event.Signal, settingsChangedSignal) {
 					continue
 				}
 
 				prop, value, err := extractProp(event.Content)
 				if err != nil {
-					w.logger.Warn("Error processing received signal.", "error", err.Error())
+					logger.Debug("Error processing received signal.", slog.Any("error", err))
 				}
 
 				switch prop {
 				case colorSchemeProp:
-					s := parseColorScheme(value)
-					sensorCh <- w.newColorSchemeSensor(ctx, s)
+					if colourSchemeSensor, err := w.newColorSchemeSensor(parseColorScheme(value)); err != nil {
+						logger.Debug("Error generating colour scheme sensor.", slog.Any("error", err))
+					} else {
+						sensorCh <- colourSchemeSensor
+					}
 				case accentColorProp:
-					s := parseAccentColor(value)
-					sensorCh <- w.newAccentColorSensor(ctx, s)
+					if accentColourSensor, err := w.newAccentColorSensor(parseAccentColor(value)); err != nil {
+						logger.Debug("Error generating accent colour sensor.", slog.Any("error", err))
+					} else {
+						sensorCh <- accentColourSensor
+					}
 				}
 			}
 		}
@@ -145,7 +141,7 @@ func (w *worker) Events(ctx context.Context) (chan sensor.Details, error) {
 	go func() {
 		sensors, err := w.Sensors(ctx)
 		if err != nil {
-			w.logger.Warn("Could not get desktop settings from D-Bus.", "error", err.Error())
+			logger.Debug("Could not get desktop settings from D-Bus.", slog.Any("error", err))
 		}
 
 		for _, s := range sensors {
@@ -157,38 +153,24 @@ func (w *worker) Events(ctx context.Context) (chan sensor.Details, error) {
 }
 
 //nolint:mnd
-func (w *worker) Sensors(ctx context.Context) ([]sensor.Details, error) {
-	reqCtx, cancelReq := context.WithTimeout(ctx, reqTimeout)
-	defer cancelReq()
-
+func (w *worker) Sensors(_ context.Context) ([]sensor.Details, error) {
 	sensors := make([]sensor.Details, 0, 2)
 
-	sensors = append(sensors,
-		w.newAccentColorSensor(reqCtx, ""),
-		w.newColorSchemeSensor(reqCtx, ""))
+	var errs error
 
-	return sensors, nil
-}
-
-func (w *worker) getProp(ctx context.Context, prop string) (string, error) {
-	value, err := dbusx.GetData[dbus.Variant](ctx, w.bus,
-		desktopPortalPath,
-		desktopPortalInterface,
-		settingsPortalInterface+".Read",
-		"org.freedesktop.appearance",
-		prop)
-	if err != nil {
-		return sensor.StateUnknown, fmt.Errorf("could not retrieve desktop property %s from D-Bus: %w", prop, err)
+	if colourSchemeSensor, err := w.newColorSchemeSensor(""); err != nil {
+		errs = errors.Join(errs, err)
+	} else {
+		sensors = append(sensors, colourSchemeSensor)
 	}
 
-	switch prop {
-	case accentColorProp:
-		return parseAccentColor(value), nil
-	case colorSchemeProp:
-		return parseColorScheme(value), nil
+	if accentColourSensor, err := w.newAccentColorSensor(""); err != nil {
+		errs = errors.Join(errs, err)
+	} else {
+		sensors = append(sensors, accentColourSensor)
 	}
 
-	return sensor.StateUnknown, fmt.Errorf("could not retrieve desktop property %s from D-Bus: %w", prop, ErrUnknownProp)
+	return sensors, errs
 }
 
 func NewDesktopWorker(ctx context.Context, api *dbusx.DBusAPI) (*linux.SensorWorker, error) {
@@ -203,10 +185,38 @@ func NewDesktopWorker(ctx context.Context, api *dbusx.DBusAPI) (*linux.SensorWor
 		return nil, fmt.Errorf("unable to monitor for desktop settings: %w", err)
 	}
 
+	triggerCh, err := dbusx.NewWatch(
+		dbusx.MatchPath(desktopPortalPath),
+		dbusx.MatchInterface(settingsPortalInterface),
+		dbusx.MatchMembers(settingsChangedSignal),
+	).Start(ctx, bus)
+	if err != nil {
+		return nil, fmt.Errorf("could not watch D-Bus for desktop settings updates: %w", err)
+	}
+
 	return &linux.SensorWorker{
 			Value: &worker{
-				logger: logging.FromContext(ctx).With(slog.String("worker", workerID)),
-				bus:    bus,
+				getProp: func(prop string) (string, error) {
+					value, err := dbusx.GetData[dbus.Variant](bus,
+						desktopPortalPath,
+						desktopPortalInterface,
+						settingsPortalInterface+".Read",
+						"org.freedesktop.appearance",
+						prop)
+					if err != nil {
+						return sensor.StateUnknown, fmt.Errorf("could not retrieve desktop property %s from D-Bus: %w", prop, err)
+					}
+
+					switch prop {
+					case accentColorProp:
+						return parseAccentColor(value), nil
+					case colorSchemeProp:
+						return parseColorScheme(value), nil
+					}
+
+					return sensor.StateUnknown, fmt.Errorf("could not retrieve desktop property %s from D-Bus: %w", prop, ErrUnknownProp)
+				},
+				triggerCh: triggerCh,
 			},
 			WorkerID: workerID,
 		},

@@ -3,6 +3,8 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
+//revive:disable:max-public-structs
+//go:generate stringer -type=dbusType -output busType_strings.go
 package dbusx
 
 import (
@@ -11,14 +13,12 @@ import (
 	"fmt"
 	"log/slog"
 	"os/user"
-	"strings"
 
 	"github.com/godbus/dbus/v5"
 
 	"github.com/joshuar/go-hass-agent/internal/logging"
 )
 
-//go:generate stringer -type=dbusType -output busType_strings.go
 const (
 	SessionBus dbusType = iota // session
 	SystemBus                  // system
@@ -43,6 +43,7 @@ var (
 	ErrParseOldVal    = errors.New("could not parse old value")
 	ErrNoSessionPath  = errors.New("could not determine session path")
 	ErrInvalidPath    = errors.New("invalid D-Bus path")
+	ErrUnknownBus     = errors.New("unknown bus")
 )
 
 var DbusTypeMap = map[string]dbusType{
@@ -51,58 +52,6 @@ var DbusTypeMap = map[string]dbusType{
 }
 
 type dbusType int
-
-type Trigger struct {
-	Signal  string
-	Path    string
-	Content []any
-}
-
-type Watch struct {
-	Args          map[int]string
-	ArgNamespace  string
-	Path          string
-	PathNamespace string
-	Interface     string
-	Names         []string
-}
-
-// Parse takes the user-defined Watch and converts the values into appropriate
-// dbus.MatchOptions. It's a convenience wrapper so users don't need to know the
-// exact invocation and/or match options.
-func (w *Watch) Parse() []dbus.MatchOption {
-	var matchers []dbus.MatchOption
-
-	switch {
-	case w.Path != "":
-		matchers = append(matchers, dbus.WithMatchObjectPath(dbus.ObjectPath(w.Path)))
-	case w.PathNamespace != "":
-		matchers = append(matchers, dbus.WithMatchPathNamespace(dbus.ObjectPath(w.PathNamespace)))
-	case w.Args != nil:
-		for arg, value := range w.Args {
-			matchers = append(matchers, dbus.WithMatchArg(arg, value))
-		}
-	case w.ArgNamespace != "":
-		matchers = append(matchers, dbus.WithMatchArg0Namespace(w.ArgNamespace))
-	case w.Interface != "":
-		matchers = append(matchers, dbus.WithMatchInterface(w.Interface))
-	case len(w.Names) != 0:
-		for _, name := range w.Names {
-			matchers = append(matchers, dbus.WithMatchMember(name))
-		}
-	}
-
-	return matchers
-}
-
-// Properties represents a signal that matches the canonical PropertiesChanged
-// signal. These will have an interface name together with a list of changed
-// properties (and their values) and invalidated property names.
-type Properties struct {
-	Interface   string
-	Changed     map[string]dbus.Variant
-	Invalidated []string
-}
 
 // Values represents a property value that changed. It contains the new and old
 // values.
@@ -114,9 +63,13 @@ type Values[T any] struct {
 // Bus represents a particular D-Bus connection to either the system or session
 // bus.
 type Bus struct {
-	conn    *dbus.Conn
-	logger  *slog.Logger
-	busType dbusType
+	conn     *dbus.Conn
+	traceLog func(msg string, args ...any)
+	busType  dbusType
+}
+
+func (b *Bus) getObject(intr, path string) dbus.BusObject {
+	return b.conn.Object(intr, dbus.ObjectPath(path))
 }
 
 // newBus creates a D-Bus connection to the requested bus. If a connection
@@ -133,6 +86,8 @@ func newBus(ctx context.Context, busType dbusType) (*Bus, error) {
 		conn, err = dbus.ConnectSessionBus(dbus.WithContext(ctx))
 	case SystemBus:
 		conn, err = dbus.ConnectSystemBus(dbus.WithContext(ctx))
+	default:
+		return nil, ErrUnknownBus
 	}
 	// If the connection fails, we bails.
 	if err != nil {
@@ -143,7 +98,10 @@ func newBus(ctx context.Context, busType dbusType) (*Bus, error) {
 	bus := &Bus{
 		conn:    conn,
 		busType: busType,
-		logger:  logging.FromContext(ctx).With(slog.String("subsystem", "dbus"), slog.String("bus", busType.String())),
+		traceLog: func(msg string, args ...any) {
+			slog.With(slog.String("subsystem", "dbus"), slog.String("bus", busType.String())).
+				Log(ctx, logging.LevelTrace, msg, args...)
+		},
 	}
 
 	// Start a goroutine to close the connection when the context is cancelled
@@ -156,90 +114,19 @@ func newBus(ctx context.Context, busType dbusType) (*Bus, error) {
 	return bus, nil
 }
 
-// Call will call the given method, at the given path and interface, with the
-// given args on the given bus. If the call fails or cannot be executed, a
-// non-nil error will be returned. Call does not return any data. For fetching
-// data from the bus, see GetData. For retrieving the value of a property, see
-// GetProp.
-func (b *Bus) Call(ctx context.Context, path, dest, method string, args ...any) error {
-	obj := b.conn.Object(dest, dbus.ObjectPath(path))
-	if args != nil {
-		return fmt.Errorf("%s: call could not retrieve object (%w)", b.busType.String(), obj.Call(method, 0, args...).Err)
-	}
-
-	err := obj.CallWithContext(ctx, method, 0).Err
-	if err != nil {
-		return fmt.Errorf("%s: unable to call method %s (args: %v): %w", b.busType.String(), method, args, err)
-	}
-
-	return obj.Call(method, 0).Err
-}
-
-// GetProp retrieves the value of the specified property from D-Bus as the given
-// type. If the property cannot be retrieved, a non-nil error is returned.
-func GetProp[P any](ctx context.Context, bus *Bus, path, dest, prop string) (P, error) {
-	var value P
-
-	bus.logger.Log(ctx, logging.LevelTrace,
-		"Requesting property.",
-		slog.String("path", path),
-		slog.String("dest", dest),
-		slog.String("property", prop),
-	)
-
-	obj := bus.conn.Object(dest, dbus.ObjectPath(path))
-
-	res, err := obj.GetProperty(prop)
-	if err != nil {
-		return value, fmt.Errorf("%s: unable to retrieve property %s from %s: %w", bus.busType.String(), prop, dest, err)
-	}
-
-	value, err = VariantToValue[P](res)
-	if err != nil {
-		return value, fmt.Errorf("%s: unable to retrieve property %s from %s: %w", bus.busType.String(), prop, dest, err)
-	}
-
-	return value, nil
-}
-
-// SetProp sets the specific property to the specified value.
-func SetProp[P any](ctx context.Context, bus *Bus, path, dest, prop string, value P) error {
-	bus.logger.Log(ctx, logging.LevelTrace,
-		"Setting property.",
-		slog.String("path", path),
-		slog.String("dest", dest),
-		slog.String("property", prop),
-		slog.Any("value", value),
-	)
-
-	v := dbus.MakeVariant(value)
-	obj := bus.conn.Object(dest, dbus.ObjectPath(path))
-
-	err := obj.SetProperty(prop, v)
-	if err != nil {
-		return fmt.Errorf("%s: unable to set property %s (%s) to %v: %w", bus.busType.String(), prop, dest, value, err)
-	}
-
-	return nil
-}
-
 // GetData fetches data using the given method from D-Bus, as the provided type.
 // If there is an error or the result cannot be stored in the given type, it
 // will return an non-nil error. To execute a method, see Call. To get the value
 // of a property, see GetProp.
-func GetData[D any](ctx context.Context, bus *Bus, path, dest, method string, args ...any) (D, error) {
-	var data D
-
-	var err error
-
-	bus.logger.Log(ctx, logging.LevelTrace,
-		"Getting data.",
-		slog.String("path", path),
-		slog.String("dest", dest),
-		slog.String("method", method),
+func GetData[D any](bus *Bus, path, dest, method string, args ...any) (D, error) {
+	var (
+		data D
+		err  error
 	)
 
-	obj := bus.conn.Object(dest, dbus.ObjectPath(path))
+	bus.traceLog("Getting data.", slog.String("path", path), slog.String("dest", dest), slog.String("method", method))
+
+	obj := bus.getObject(dest, path)
 
 	if args != nil {
 		err = obj.Call(method, 0, args...).Store(&data)
@@ -254,83 +141,13 @@ func GetData[D any](ctx context.Context, bus *Bus, path, dest, method string, ar
 	return data, nil
 }
 
-// WatchBus will set up a channel on which D-Bus messages matching the given
-// rules can be monitored. Typically, this is used to react when a certain
-// property or signal with a given path and on a given interface, changes. The
-// data returned in the channel will contain the signal (or property) that
-// triggered the match, the path and the contents (what values actually
-// changed).
-func (b *Bus) WatchBus(ctx context.Context, conditions *Watch) (chan Trigger, error) {
-	// Parse the specified conditions and add to D-Bus for a signal watch.
-	matchers := conditions.Parse()
-	if err := b.conn.AddMatchSignalContext(ctx, matchers...); err != nil {
-		return nil, fmt.Errorf("unable to add watch conditions (%w)", err)
-	}
-
-	// Set up our channels: signalCh for signals received from D-Bus and outCh
-	// where we send the signal.
-	signalCh := make(chan *dbus.Signal)
-	outCh := make(chan Trigger)
-	// Connect our signal chan to the bus signal channel.
-	b.conn.Signal(signalCh)
-
-	// Set up a goroutine to listen for signals from D-Bus and forward them over
-	// outCh. We do some generic filtering of the signal to catch obvious bogus
-	// signals and data. If the context is cancelled (i.e., agent shutdown),
-	// clean up.
-	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				b.conn.RemoveSignal(signalCh)
-				close(outCh)
-
-				return
-			case signal := <-signalCh:
-				// If the signal is empty, ignore.
-				if signal == nil {
-					continue
-				}
-				// If this signal is not for our path, ignore.
-				if conditions.Path != "" {
-					if string(signal.Path) != conditions.Path {
-						continue
-					}
-				}
-
-				if conditions.PathNamespace != "" {
-					if !strings.HasPrefix(string(signal.Path), conditions.PathNamespace) {
-						continue
-					}
-				}
-				// We have a match! Send the signal details back to the client
-				// for further processing.
-				b.logger.Log(ctx, logging.LevelTrace,
-					"Dispatching D-Bus trigger.",
-					slog.String("path", conditions.Path),
-					slog.String("interface", conditions.Interface),
-					slog.String("names", strings.Join(conditions.Names, ",")),
-					slog.Any("signal", signal),
-				)
-				outCh <- Trigger{
-					Signal:  signal.Name,
-					Path:    string(signal.Path),
-					Content: signal.Body,
-				}
-			}
-		}
-	}()
-
-	return outCh, nil
-}
-
-func (b *Bus) GetSessionPath(ctx context.Context) (string, error) {
+func (b *Bus) GetSessionPath() (string, error) {
 	usr, err := user.Current()
 	if err != nil {
 		return "", fmt.Errorf("unable to determine user: %w", err)
 	}
 
-	sessions, err := GetData[[][]any](ctx, b, loginBasePath, loginBaseInterface, listSessionsMethod)
+	sessions, err := GetData[[][]any](b, loginBasePath, loginBaseInterface, listSessionsMethod)
 	if err != nil {
 		return "", fmt.Errorf("unable to retrieve session path: %w", err)
 	}
@@ -344,40 +161,6 @@ func (b *Bus) GetSessionPath(ctx context.Context) (string, error) {
 	}
 
 	return "", ErrNoSessionPath
-}
-
-// ParsePropertiesChanged treats the given signal body as matching the canonical
-// org.freedesktop.DBus.PropertiesChanged signature and will parse it into a
-// Properties structure that is easier to use. If the signal body cannot be
-// parsed an error will be returned with details of the problem. Adapted from
-// https://github.com/godbus/dbus/issues/201
-//
-//nolint:mnd
-func ParsePropertiesChanged(propsChanged []any) (*Properties, error) {
-	props := &Properties{}
-
-	var ok bool
-
-	if len(propsChanged) != 3 {
-		return nil, ErrNotPropChanged
-	}
-
-	props.Interface, ok = propsChanged[0].(string)
-	if !ok {
-		return nil, ErrParseInterface
-	}
-
-	props.Changed, ok = propsChanged[1].(map[string]dbus.Variant)
-	if !ok {
-		return nil, ErrParseNewProps
-	}
-
-	props.Invalidated, ok = propsChanged[2].([]string)
-	if !ok {
-		return nil, ErrParseOldProps
-	}
-
-	return props, nil
 }
 
 // ParseValueChange treats the given signal body as matching a value change of a

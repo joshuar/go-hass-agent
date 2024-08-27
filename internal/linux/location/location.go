@@ -8,15 +8,13 @@ package location
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
-
-	"github.com/godbus/dbus/v5"
 
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
-	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
@@ -47,88 +45,44 @@ func (s *locationSensor) Name() string { return "Location" }
 func (s *locationSensor) ID() string { return "location" }
 
 type worker struct {
-	logger     *slog.Logger
-	bus        *dbusx.Bus
-	clientPath dbus.ObjectPath
-}
-
-func (w *worker) setup(ctx context.Context) (*dbusx.Watch, error) {
-	var err error
-
-	// Check if we can create a client, bail if we can't.
-	clientPath, err := dbusx.GetData[dbus.ObjectPath](ctx, w.bus, managerPath, geoclueInterface, getClientCall)
-	if !clientPath.IsValid() || err != nil {
-		return nil, fmt.Errorf("could not set up a geoclue client: %w", err)
-	}
-
-	w.clientPath = clientPath
-
-	if err = dbusx.SetProp(ctx, w.bus, string(w.clientPath), geoclueInterface, desktopIDProp, preferences.AppID); err != nil {
-		return nil, fmt.Errorf("could not set geoclue client id: %w", err)
-	}
-
-	// Set a distance threshold.
-	if err = dbusx.SetProp(ctx, w.bus, string(w.clientPath), geoclueInterface, distanceThresholdProp, uint32(0)); err != nil {
-		w.logger.Warn("Could not set distance threshold for geoclue requests.", "error", err.Error())
-	}
-
-	// Set a time threshold.
-	if err = dbusx.SetProp(ctx, w.bus, string(w.clientPath), geoclueInterface, timeThresholdProp, uint32(0)); err != nil {
-		w.logger.Warn("Could not set time threshold for geoclue requests.", "error", err.Error())
-	}
-
-	// Request to start tracking location updates.
-	if err = w.bus.Call(ctx, string(w.clientPath), geoclueInterface, startCall); err != nil {
-		return nil, fmt.Errorf("could not start geoclue client: %w", err)
-	}
-
-	w.logger.Debug("GeoClue client created.")
-
-	return &dbusx.Watch{
-			Path:      string(w.clientPath),
-			Interface: clientInterface,
-			Names:     []string{"LocationUpdated"},
-		},
-		nil
+	getLocationProperty func(path, prop string) (float64, error)
+	stopMethod          *dbusx.Method
+	startMethod         *dbusx.Method
+	triggerCh           chan dbusx.Trigger
 }
 
 func (w *worker) Events(ctx context.Context) (chan sensor.Details, error) {
+	logger := slog.With(slog.String("worker", workerID))
+
+	err := w.startMethod.Call(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("could not start geoclue client: %w", err)
+	}
+
 	sensorCh := make(chan sensor.Details)
 
-	watch, err := w.setup(ctx)
-	if err != nil {
-		close(sensorCh)
-
-		return sensorCh, fmt.Errorf("could not setup D-Bus watch for location updates: %w", err)
-	}
-
-	triggerCh, err := w.bus.WatchBus(ctx, watch)
-	if err != nil {
-		close(sensorCh)
-
-		return sensorCh, fmt.Errorf("could not watch D-Bus for location updates: %w", err)
-	}
-
 	go func() {
-		w.logger.Debug("Monitoring for location updates.")
+		logger.Debug("Monitoring for location updates.")
 
 		defer close(sensorCh)
 
 		for {
 			select {
 			case <-ctx.Done():
-				err := w.bus.Call(ctx, string(w.clientPath), geoclueInterface, stopCall)
-				if err != nil {
-					w.logger.Debug("Failed to stop location updater.", "error", err.Error())
-
-					return
+				if err := w.stopMethod.Call(ctx); err != nil {
+					logger.Debug("Could not stop geoclue client.", slog.Any("error", err))
 				}
 
 				return
-			case event := <-triggerCh:
-				if locationPath, ok := event.Content[1].(dbus.ObjectPath); ok {
+			case event := <-w.triggerCh:
+				if locationPath, ok := event.Content[1].(string); ok {
 					go func() {
-						sensorCh <- w.newLocation(ctx, w.logger, locationPath)
+						locationSensor, err := w.newLocation(locationPath)
+						if err != nil {
+							logger.Error("Could not update location.", slog.Any("error", err))
+						} else {
+							sensorCh <- locationSensor
+						}
 					}()
 				}
 			}
@@ -142,26 +96,32 @@ func (w *worker) Sensors(_ context.Context) ([]sensor.Details, error) {
 	return nil, linux.ErrUnimplemented
 }
 
-func (w *worker) newLocation(ctx context.Context, logger *slog.Logger, locationPath dbus.ObjectPath) *locationSensor {
-	getProp := func(prop string) float64 {
-		value, err := dbusx.GetProp[float64](ctx, w.bus, string(locationPath), geoclueInterface, locationInterface+"."+prop)
-		if err != nil {
-			logger.Debug("Could not retrieve location property.", "property", prop, "error", err.Error())
+func (w *worker) newLocation(locationPath string) (*locationSensor, error) {
+	var warnings error
 
-			return 0
-		}
+	latitude, err := w.getLocationProperty(locationPath, "Latitude")
+	warnings = errors.Join(warnings, err)
+	longitude, err := w.getLocationProperty(locationPath, "Longitude")
+	warnings = errors.Join(warnings, err)
+	speed, err := w.getLocationProperty(locationPath, "Speed")
+	warnings = errors.Join(warnings, err)
+	altitude, err := w.getLocationProperty(locationPath, "Altitude")
+	warnings = errors.Join(warnings, err)
+	accuracy, err := w.getLocationProperty(locationPath, "Accuracy")
+	warnings = errors.Join(warnings, err)
 
-		return value
+	location := &locationSensor{
+		Sensor: linux.Sensor{
+			Value: &sensor.LocationRequest{
+				Gps:         []float64{latitude, longitude},
+				GpsAccuracy: int(accuracy),
+				Speed:       int(speed),
+				Altitude:    int(altitude),
+			},
+		},
 	}
-	location := &locationSensor{}
-	location.Value = &sensor.LocationRequest{
-		Gps:         []float64{getProp("Latitude"), getProp("Longitude")},
-		GpsAccuracy: int(getProp("Accuracy")),
-		Speed:       int(getProp("Speed")),
-		Altitude:    int(getProp("Altitude")),
-	}
 
-	return location
+	return location, warnings
 }
 
 func NewLocationWorker(ctx context.Context, api *dbusx.DBusAPI) (*linux.SensorWorker, error) {
@@ -176,12 +136,68 @@ func NewLocationWorker(ctx context.Context, api *dbusx.DBusAPI) (*linux.SensorWo
 		return nil, fmt.Errorf("unable to monitor location updates: %w", err)
 	}
 
-	return &linux.SensorWorker{
-			Value: &worker{
-				logger: logging.FromContext(ctx).With(slog.String("worker", workerID)),
-				bus:    bus,
-			},
-			WorkerID: workerID,
+	// Create a GeoClue client.
+	clientPath, err := createClient(bus)
+	if err != nil {
+		return nil, fmt.Errorf("unable to create geoclue client: %w", err)
+	}
+
+	// Set threshold values.
+	setThresholds(bus, clientPath)
+
+	triggerCh, err := dbusx.NewWatch(
+		dbusx.MatchPath(clientPath),
+		dbusx.MatchInterface(clientInterface),
+		dbusx.MatchMembers("LocationUpdated")).Start(ctx, bus)
+	if err != nil {
+		return nil, fmt.Errorf("could not setup D-Bus watch for location updates: %w", err)
+	}
+
+	// Create our sensor worker.
+	worker := &worker{
+		getLocationProperty: func(path, prop string) (float64, error) {
+			value, err := dbusx.NewProperty[float64](bus, path, geoclueInterface, locationInterface+"."+prop).Get()
+			if err != nil {
+				return 0, fmt.Errorf("could not fetch location property %s: %w", prop, err)
+			}
+
+			return value, nil
 		},
-		nil
+		stopMethod:  dbusx.NewMethod(bus, geoclueInterface, clientPath, stopCall),
+		startMethod: dbusx.NewMethod(bus, geoclueInterface, clientPath, startCall),
+		triggerCh:   triggerCh,
+	}
+
+	return &linux.SensorWorker{Value: worker, WorkerID: workerID}, nil
+}
+
+func createClient(bus *dbusx.Bus) (string, error) {
+	// Check if we can create a client, bail if we can't.
+	clientPath, err := dbusx.GetData[string](bus, managerPath, geoclueInterface, getClientCall)
+	if clientPath == "" || err != nil {
+		return "", fmt.Errorf("could not set up a geoclue client: %w", err)
+	}
+
+	// Set an ID for our client.
+	if err = dbusx.NewProperty[string](bus, clientPath, geoclueInterface, desktopIDProp).Set(preferences.AppID); err != nil {
+		return "", fmt.Errorf("could not set geoclue client id: %w", err)
+	}
+
+	return clientPath, nil
+}
+
+func setThresholds(bus *dbusx.Bus, clientPath string) {
+	var err error
+
+	logger := slog.With(slog.String("worker", workerID))
+
+	// Set a distance threshold.
+	if err = dbusx.NewProperty[uint32](bus, clientPath, geoclueInterface, distanceThresholdProp).Set(0); err != nil {
+		logger.Debug("Could not set distance threshold for geoclue requests.", "error", err.Error())
+	}
+
+	// Set a time threshold.
+	if err = dbusx.NewProperty[uint32](bus, clientPath, geoclueInterface, timeThresholdProp).Set(0); err != nil {
+		logger.Debug("Could not set time threshold for geoclue requests.", "error", err.Error())
+	}
 }

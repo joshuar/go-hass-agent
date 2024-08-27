@@ -68,8 +68,7 @@ func (c *powerController) generateCommands(ctx context.Context, device string) [
 	// Add available system power commands.
 	for _, config := range systemCommands {
 		// Check if this power method is available on the system.
-		available, err := dbusx.GetData[string](ctx,
-			c.bus, loginBasePath, loginBaseInterface, managerInterface+".Can"+config.method)
+		available, err := dbusx.GetData[string](c.bus, loginBasePath, loginBaseInterface, managerInterface+".Can"+config.method)
 		if available == "yes" || err == nil {
 			config.callBack = c.generatePowerControlCallback(ctx, config.name, loginBasePath, managerInterface+"."+config.method)
 			availableCommands = append(availableCommands, config)
@@ -83,7 +82,8 @@ func (c *powerController) generateCommands(ctx context.Context, device string) [
 // execute the appropriate D-Bus call to issue a power command on the device.
 func (c *powerController) generatePowerControlCallback(ctx context.Context, name, path, method string) func(p *paho.Publish) {
 	return func(_ *paho.Publish) {
-		if err := c.bus.Call(ctx, path, loginBaseInterface, method, true); err != nil {
+		err := dbusx.NewMethod(c.bus, loginBaseInterface, path, method).Call(ctx)
+		if err != nil {
 			c.logger.Warn("Could not issue power control.", slog.String("control", name), slog.Any("error", err))
 		}
 	}
@@ -96,7 +96,7 @@ func NewPowerControl(ctx context.Context, api *dbusx.DBusAPI, parentLogger *slog
 		return nil, fmt.Errorf("cannot create power controls: %w", err)
 	}
 
-	sessionPath, err := sessionBus.GetSessionPath(ctx)
+	sessionPath, err := sessionBus.GetSessionPath()
 	if err != nil {
 		return nil, fmt.Errorf("cannot create power controls: %w", err)
 	}
