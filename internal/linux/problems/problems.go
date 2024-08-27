@@ -8,6 +8,7 @@ package problems
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strconv"
@@ -25,12 +26,12 @@ const (
 	problemJitter   = time.Minute
 
 	problemsWorkerID = "abrt_problems_sensor"
-)
 
-const (
 	dBusProblemsDest = "/org/freedesktop/problems"
 	dBusProblemIntr  = "org.freedesktop.problems"
 )
+
+var ErrNoProblemDetails = errors.New("no details found")
 
 type problemsSensor struct {
 	list map[string]map[string]any
@@ -77,47 +78,47 @@ func parseProblem(details map[string]string) map[string]any {
 }
 
 type worker struct {
-	logger *slog.Logger
-	bus    *dbusx.Bus
+	getProblems       func() ([]string, error)
+	getProblemDetails func(problem string) (map[string]string, error)
+	logger            *slog.Logger
+	bus               *dbusx.Bus
 }
 
 func (w *worker) Interval() time.Duration { return problemInterval }
 
 func (w *worker) Jitter() time.Duration { return problemJitter }
 
-func (w *worker) Sensors(ctx context.Context, _ time.Duration) ([]sensor.Details, error) {
-	problems := &problemsSensor{
+func (w *worker) Sensors(_ context.Context, _ time.Duration) ([]sensor.Details, error) {
+	problemsSensor := &problemsSensor{
 		list: make(map[string]map[string]any),
+		Sensor: linux.Sensor{
+			SensorTypeValue: linux.SensorProblem,
+			IconString:      "mdi:alert",
+			UnitsString:     "problems",
+			StateClassValue: types.StateClassMeasurement,
+		},
 	}
-	problems.SensorTypeValue = linux.SensorProblem
-	problems.IconString = "mdi:alert"
-	problems.UnitsString = "problems"
-	problems.StateClassValue = types.StateClassMeasurement
 
-	problemList, err := dbusx.GetData[[]string](ctx, w.bus, dBusProblemsDest, dBusProblemIntr, dBusProblemIntr+".GetProblems")
+	// Get the list of problems.
+	problems, err := w.getProblems()
 	if err != nil {
-		return nil, fmt.Errorf("unable to retrieve the list of ABRT problems: %w", err)
+		return nil, fmt.Errorf("could not retrieve list of problems from D-Bus: %w", err)
 	}
-
-	for _, problem := range problemList {
-		problemDetails, err := dbusx.GetData[map[string]string](ctx, w.bus,
-			dBusProblemsDest,
-			dBusProblemIntr,
-			dBusProblemIntr+".GetInfo", problem, []string{"time", "count", "package", "reason"})
-		if problemDetails == nil || err != nil {
-			w.logger.Debug("No problems retrieved from D-Bus.")
+	// Set the value of the sensor to the total count of problems.
+	problemsSensor.Value = len(problems)
+	// For each problem, fetch its details.
+	for _, problem := range problems {
+		details, err := w.getProblemDetails(problem)
+		if err != nil {
+			slog.Default().
+				With(slog.String("worker", problemsWorkerID)).
+				Debug("Unable to get problem details.", slog.String("problem", problem), slog.Any("error", err))
 		} else {
-			problems.list[problem] = parseProblem(problemDetails)
+			problemsSensor.list[problem] = parseProblem(details)
 		}
 	}
 
-	if len(problems.list) > 0 {
-		problems.Value = len(problems.list)
-
-		return []sensor.Details{problems}, nil
-	}
-
-	return nil, nil
+	return []sensor.Details{problemsSensor}, nil
 }
 
 func NewProblemsWorker(ctx context.Context, api *dbusx.DBusAPI) (*linux.SensorWorker, error) {
@@ -128,6 +129,28 @@ func NewProblemsWorker(ctx context.Context, api *dbusx.DBusAPI) (*linux.SensorWo
 
 	return &linux.SensorWorker{
 			Value: &worker{
+				getProblems: func() ([]string, error) {
+					problems, err := dbusx.GetData[[]string](bus, dBusProblemsDest, dBusProblemIntr, dBusProblemIntr+".GetProblems")
+					if err != nil {
+						return nil, fmt.Errorf("error getting data: %w", err)
+					}
+
+					return problems, nil
+				},
+				getProblemDetails: func(problem string) (map[string]string, error) {
+					details, err := dbusx.GetData[map[string]string](bus,
+						dBusProblemsDest,
+						dBusProblemIntr,
+						dBusProblemIntr+".GetInfo", problem, []string{"time", "count", "package", "reason"})
+					switch {
+					case details == nil:
+						return nil, ErrNoProblemDetails
+					case err != nil:
+						return nil, err
+					default:
+						return details, nil
+					}
+				},
 				logger: logging.FromContext(ctx).With(slog.String("worker", problemsWorkerID)),
 				bus:    bus,
 			},

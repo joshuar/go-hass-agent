@@ -7,6 +7,7 @@ package net
 
 import (
 	"context"
+	"log/slog"
 	"slices"
 
 	"github.com/godbus/dbus/v5"
@@ -147,7 +148,7 @@ func newWifiSensor(sensorType string) *wifiSensor {
 func (c *connection) monitorWifi(ctx context.Context) <-chan sensor.Details {
 	outCh := make(chan sensor.Details)
 	// get the devices associated with this connection
-	wifiDevices, err := dbusx.GetProp[[]dbus.ObjectPath](ctx, c.bus, string(c.path), dBusNMObj, dbusNMActiveConnIntr+".Devices")
+	wifiDevices, err := dbusx.NewProperty[[]dbus.ObjectPath](c.bus, string(c.path), dBusNMObj, dbusNMActiveConnIntr+".Devices").Get()
 	if err != nil {
 		c.logger.Warn("Could not retrieve active wireless device from D-Bus.", "error", err.Error())
 
@@ -156,7 +157,7 @@ func (c *connection) monitorWifi(ctx context.Context) <-chan sensor.Details {
 
 	for _, d := range wifiDevices {
 		// for each device, get the access point it is currently associated with
-		accessPointPath, err := dbusx.GetProp[dbus.ObjectPath](ctx, c.bus, string(d), dBusNMObj, accessPointProp)
+		accessPointPath, err := dbusx.NewProperty[dbus.ObjectPath](c.bus, string(d), dBusNMObj, accessPointProp).Get()
 		if err != nil {
 			c.logger.Warn("Could not retrieve access point object from D-Bus.", "error", err.Error())
 
@@ -165,7 +166,7 @@ func (c *connection) monitorWifi(ctx context.Context) <-chan sensor.Details {
 
 		for _, prop := range wifiPropList {
 			// for the associated access point, get the wifi properties as sensors
-			value, err := dbusx.GetProp[any](ctx, c.bus, string(accessPointPath), dBusNMObj, accessPointInterface+"."+prop)
+			value, err := dbusx.NewProperty[any](c.bus, string(accessPointPath), dBusNMObj, accessPointInterface+"."+prop).Get()
 			if err != nil {
 				c.logger.Warn("Could not retrieve wifi property from D-Bus.", "property", prop, "error", err.Error())
 
@@ -198,18 +199,17 @@ func (c *connection) monitorWifi(ctx context.Context) <-chan sensor.Details {
 }
 
 func (c *connection) monitorWifiProps(ctx context.Context, propPath dbus.ObjectPath) chan sensor.Details {
-	sensorCh := make(chan sensor.Details)
-
-	events, err := c.bus.WatchBus(ctx, &dbusx.Watch{
-		Names: wifiPropList,
-		Path:  string(propPath),
-	})
+	triggerCh, err := dbusx.NewWatch(
+		dbusx.MatchPath(string(propPath)),
+		dbusx.MatchMembers(wifiPropList...),
+	).Start(ctx, c.bus)
 	if err != nil {
-		c.logger.Debug("Failed to watch D-Bus for wifi property changes.", "error", err.Error())
-		close(sensorCh)
+		c.logger.Warn("Unable to set-up D-Bus watch for WiFi properties changes.", slog.Any("error", err))
 
-		return sensorCh
+		return nil
 	}
+
+	sensorCh := make(chan sensor.Details)
 
 	go func() {
 		c.logger.Debug("Monitoring D-Bus for wifi property changes.")
@@ -222,10 +222,10 @@ func (c *connection) monitorWifiProps(ctx context.Context, propPath dbus.ObjectP
 				c.logger.Debug("Unmonitoring D-Bus for wifi property changes.")
 
 				return
-			case event := <-events:
+			case event := <-triggerCh:
 				props, err := dbusx.ParsePropertiesChanged(event.Content)
 				if err != nil {
-					c.logger.Warn("Received an unknown event from D-Bus.", "error", err.Error())
+					c.logger.Warn("Received an unknown event from D-Bus.", slog.Any("error", err))
 
 					continue
 				}

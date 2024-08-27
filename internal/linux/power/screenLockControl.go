@@ -42,8 +42,9 @@ type screenControlCommand struct {
 
 // execute represents the D-Bus method call to execute the screen control.
 func (c *screenControlCommand) execute(ctx context.Context) error {
-	if err := c.bus.Call(ctx, c.path, c.intr, c.method); err != nil {
-		return fmt.Errorf("%s failed: %w", c.name, err)
+	err := dbusx.NewMethod(c.bus, c.intr, c.path, c.method).Call(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to issuse screen control commands %s: %w", c.name, err)
 	}
 
 	return nil
@@ -55,14 +56,14 @@ func (c *screenControlCommand) execute(ctx context.Context) error {
 // xscreensaver lock method.
 //
 //nolint:lll
-func setupCommands(ctx context.Context, sessionBus *dbusx.Bus, systemBus *dbusx.Bus, device *mqtthass.Device) ([]*screenControlCommand, error) {
+func setupCommands(_ context.Context, sessionBus *dbusx.Bus, systemBus *dbusx.Bus, device *mqtthass.Device) ([]*screenControlCommand, error) {
 	var commands []*screenControlCommand
 
 	desktop := os.Getenv("XDG_CURRENT_DESKTOP")
 
 	switch {
 	case strings.Contains(desktop, "KDE"), strings.Contains(desktop, "GNOME"):
-		sessionPath, err := systemBus.GetSessionPath(ctx)
+		sessionPath, err := systemBus.GetSessionPath()
 		if err != nil {
 			return nil, fmt.Errorf("unable to set up screen control commands: %w", err)
 		}

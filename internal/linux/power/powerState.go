@@ -13,7 +13,6 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
-	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
@@ -81,23 +80,12 @@ func newPowerState(signalName powerSignal, signalValue any) *powerStateSensor {
 }
 
 type stateWorker struct {
-	logger *slog.Logger
-	bus    *dbusx.Bus
+	logger    *slog.Logger
+	triggerCh chan dbusx.Trigger
 }
 
 func (w *stateWorker) Events(ctx context.Context) (chan sensor.Details, error) {
 	sensorCh := make(chan sensor.Details)
-
-	triggerCh, err := w.bus.WatchBus(ctx, &dbusx.Watch{
-		Names:     []string{sleepSignal, shutdownSignal},
-		Interface: managerInterface,
-		Path:      loginBasePath,
-	})
-	if err != nil {
-		close(sensorCh)
-
-		return sensorCh, fmt.Errorf("could not watch D-Bus for power state updates: %w", err)
-	}
 
 	// Watch for state changes.
 	go func() {
@@ -107,7 +95,7 @@ func (w *stateWorker) Events(ctx context.Context) (chan sensor.Details, error) {
 			select {
 			case <-ctx.Done():
 				return
-			case event := <-triggerCh:
+			case event := <-w.triggerCh:
 				switch event.Signal {
 				case sleepSignal:
 					go func() {
@@ -152,10 +140,18 @@ func NewStateWorker(ctx context.Context, api *dbusx.DBusAPI) (*linux.SensorWorke
 		return nil, fmt.Errorf("unable to monitor power state: %w", err)
 	}
 
+	triggerCh, err := dbusx.NewWatch(
+		dbusx.MatchPath(loginBasePath),
+		dbusx.MatchInterface(managerInterface),
+		dbusx.MatchMembers(sleepSignal, shutdownSignal),
+	).Start(ctx, bus)
+	if err != nil {
+		return nil, fmt.Errorf("unable to set-up D-Bus watch for power state: %w", err)
+	}
+
 	return &linux.SensorWorker{
 			Value: &stateWorker{
-				logger: logging.FromContext(ctx).With(slog.String("worker", powerStateWorkerID)),
-				bus:    bus,
+				triggerCh: triggerCh,
 			},
 			WorkerID: powerStateWorkerID,
 		},

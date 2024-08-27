@@ -10,12 +10,10 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"strings"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
-	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
@@ -27,82 +25,57 @@ const (
 	sessionRemovedSignal = "SessionRemoved"
 	listSessionsMethod   = managerInterface + ".ListSessions"
 
+	sensorUnits = "users"
+	sensorIcon  = "mdi:account"
+
 	usersWorkerID = "users_sensors"
 )
 
 type usersSensor struct {
-	bus       *dbusx.Bus
+	getUsers  func() ([]string, error)
 	userNames []string
 	linux.Sensor
 }
 
+func (s *usersSensor) State() any {
+	return len(s.userNames)
+}
+
 func (s *usersSensor) Attributes() map[string]any {
-	attributes := make(map[string]any)
-	attributes["data_source"] = linux.DataSrcDbus
+	attributes := s.Sensor.Attributes()
 	attributes["usernames"] = s.userNames
 
 	return attributes
 }
 
-func (s *usersSensor) updateUsers(ctx context.Context) error {
-	userData, err := dbusx.GetData[[][]any](ctx, s.bus, loginBasePath, loginBaseInterface, listSessionsMethod)
-	if err != nil {
-		return fmt.Errorf("could not retrieve users from D-Bus: %w", err)
+func newUsersSensor() *usersSensor {
+	return &usersSensor{
+		Sensor: linux.Sensor{
+			SensorTypeValue: linux.SensorUsers,
+			UnitsString:     sensorUnits,
+			IconString:      sensorIcon,
+			StateClassValue: types.StateClassMeasurement,
+			SensorSrc:       linux.DataSrcDbus,
+		},
 	}
-
-	s.Value = len(userData)
-
-	var users []string
-
-	for _, u := range userData {
-		if user, ok := u[2].(string); ok {
-			users = append(users, user)
-		}
-	}
-
-	s.userNames = users
-
-	return nil
-}
-
-func newUsersSensor(bus *dbusx.Bus) *usersSensor {
-	userSensor := &usersSensor{bus: bus}
-	userSensor.SensorTypeValue = linux.SensorUsers
-	userSensor.UnitsString = "users"
-	userSensor.IconString = "mdi:account"
-	userSensor.StateClassValue = types.StateClassMeasurement
-
-	return userSensor
 }
 
 type worker struct {
-	sensor *usersSensor
-	logger *slog.Logger
-	bus    *dbusx.Bus
+	sensor    *usersSensor
+	triggerCh chan dbusx.Trigger
 }
 
 func (w *worker) Events(ctx context.Context) (chan sensor.Details, error) {
 	sensorCh := make(chan sensor.Details)
 
-	triggerCh, err := w.bus.WatchBus(ctx, &dbusx.Watch{
-		Names:     []string{sessionAddedSignal, sessionRemovedSignal},
-		Interface: managerInterface,
-		Path:      loginBasePath,
-	})
-	if err != nil {
-		close(sensorCh)
-
-		return sensorCh, fmt.Errorf("could not watch D-Bus for user updates: %w", err)
-	}
-
 	sendUpdate := func() {
-		err := w.sensor.updateUsers(ctx)
+		users, err := w.sensor.getUsers()
 		if err != nil {
-			w.logger.Debug("Update failed", "error", err.Error())
-
-			return
+			slog.With(slog.String("worker", usersWorkerID)).Debug("Failed to get list of user sessions.", slog.Any("error", err))
+		} else {
+			w.sensor.userNames = users
+			sensorCh <- w.sensor
 		}
-		sensorCh <- w.sensor
 	}
 
 	go func() {
@@ -112,11 +85,10 @@ func (w *worker) Events(ctx context.Context) (chan sensor.Details, error) {
 			select {
 			case <-ctx.Done():
 				return
-			case event := <-triggerCh:
-				if !strings.Contains(event.Signal, sessionAddedSignal) && !strings.Contains(event.Signal, sessionRemovedSignal) {
-					continue
-				}
-
+			case <-w.triggerCh:
+				// if !strings.Contains(event.Signal, sessionAddedSignal) && !strings.Contains(event.Signal, sessionRemovedSignal) {
+				// 	continue
+				// }
 				go sendUpdate()
 			}
 		}
@@ -128,8 +100,9 @@ func (w *worker) Events(ctx context.Context) (chan sensor.Details, error) {
 	return sensorCh, nil
 }
 
-func (w *worker) Sensors(ctx context.Context) ([]sensor.Details, error) {
-	err := w.sensor.updateUsers(ctx)
+func (w *worker) Sensors(_ context.Context) ([]sensor.Details, error) {
+	users, err := w.sensor.getUsers()
+	w.sensor.userNames = users
 
 	return []sensor.Details{w.sensor}, err
 }
@@ -137,14 +110,41 @@ func (w *worker) Sensors(ctx context.Context) ([]sensor.Details, error) {
 func NewUserWorker(ctx context.Context, api *dbusx.DBusAPI) (*linux.SensorWorker, error) {
 	bus, err := api.GetBus(ctx, dbusx.SystemBus)
 	if err != nil {
-		return nil, fmt.Errorf("unable to monitor power profile: %w", err)
+		return nil, fmt.Errorf("unable to retrieve D-Bus connection: %w", err)
+	}
+
+	triggerCh, err := dbusx.NewWatch(
+		dbusx.MatchPath(loginBasePath),
+		dbusx.MatchInterface(managerInterface),
+		dbusx.MatchMembers(sessionAddedSignal, sessionRemovedSignal),
+	).Start(ctx, bus)
+	if err != nil {
+		return nil, fmt.Errorf("unable to set-up D-Bus watch for user sessions: %w", err)
+	}
+
+	usersSensor := newUsersSensor()
+
+	usersSensor.getUsers = func() ([]string, error) {
+		userData, err := dbusx.GetData[[][]any](bus, loginBasePath, loginBaseInterface, listSessionsMethod)
+		if err != nil {
+			return nil, fmt.Errorf("could not retrieve users from D-Bus: %w", err)
+		}
+
+		var users []string
+
+		for _, u := range userData {
+			if user, ok := u[2].(string); ok {
+				users = append(users, user)
+			}
+		}
+
+		return users, nil
 	}
 
 	return &linux.SensorWorker{
 			Value: &worker{
-				sensor: newUsersSensor(bus),
-				logger: logging.FromContext(ctx).With(slog.String("worker", usersWorkerID)),
-				bus:    bus,
+				sensor:    usersSensor,
+				triggerCh: triggerCh,
 			},
 			WorkerID: usersWorkerID,
 		},

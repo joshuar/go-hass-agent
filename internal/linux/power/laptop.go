@@ -10,13 +10,13 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"path/filepath"
 	"slices"
+
+	"github.com/godbus/dbus/v5"
 
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
-	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
@@ -89,32 +89,12 @@ func newLaptopEvent(prop string, state bool) *laptopSensor {
 }
 
 type laptopWorker struct {
-	logger *slog.Logger
-	bus    *dbusx.Bus
+	triggerCh  chan dbusx.Trigger
+	properties map[string]*dbusx.Property[bool]
 }
 
-//nolint:cyclop,gocognit
 func (w *laptopWorker) Events(ctx context.Context) (chan sensor.Details, error) {
 	sensorCh := make(chan sensor.Details)
-
-	// If we can't get a session path, we can't run.
-	sessionPath, err := w.bus.GetSessionPath(ctx)
-	if err != nil {
-		close(sensorCh)
-
-		return sensorCh, fmt.Errorf("could not create laptop worker: %w", err)
-	}
-
-	triggerCh, err := w.bus.WatchBus(ctx, &dbusx.Watch{
-		Names:     []string{dbusx.PropChangedSignal},
-		Interface: managerInterface,
-		Path:      sessionPath,
-	})
-	if err != nil {
-		close(sensorCh)
-
-		return sensorCh, fmt.Errorf("could not watch D-Bus for laptop updates: %w", err)
-	}
 
 	go func() {
 		defer close(sensorCh)
@@ -123,22 +103,13 @@ func (w *laptopWorker) Events(ctx context.Context) (chan sensor.Details, error) 
 			select {
 			case <-ctx.Done():
 				return
-			case event := <-triggerCh:
+			case event := <-w.triggerCh:
 				props, err := dbusx.ParsePropertiesChanged(event.Content)
 				if err != nil {
-					w.logger.Warn("Received unknown event from D-Bus.", "error", err.Error())
-
-					continue
-				}
-
-				for prop, value := range props.Changed {
-					if slices.Contains(laptopPropList, prop) {
-						if state, err := dbusx.VariantToValue[bool](value); err != nil {
-							w.logger.Warn("Could not parse property value.", "property", prop, "error", err.Error())
-						} else {
-							sensorCh <- newLaptopEvent(prop, state)
-						}
-					}
+					slog.With(slog.String("worker", laptopWorkerID)).
+						Debug("Received unknown event from D-Bus.", slog.Any("error", err))
+				} else {
+					sendChangedProps(props.Changed, sensorCh)
 				}
 			}
 		}
@@ -148,7 +119,8 @@ func (w *laptopWorker) Events(ctx context.Context) (chan sensor.Details, error) 
 	go func() {
 		sensors, err := w.Sensors(ctx)
 		if err != nil {
-			w.logger.Warn("Could not retrieve laptop properties from D-Bus.", "error", err.Error())
+			slog.With(slog.String("worker", laptopWorkerID)).
+				Debug("Could not retrieve laptop properties from D-Bus.", slog.Any("error", err))
 		}
 
 		for _, s := range sensors {
@@ -159,18 +131,18 @@ func (w *laptopWorker) Events(ctx context.Context) (chan sensor.Details, error) 
 	return sensorCh, nil
 }
 
-func (w *laptopWorker) Sensors(ctx context.Context) ([]sensor.Details, error) {
+func (w *laptopWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
 	sensors := make([]sensor.Details, 0, len(laptopPropList))
 
-	for _, prop := range laptopPropList {
-		state, err := dbusx.GetProp[bool](ctx, w.bus, loginBasePath, loginBaseInterface, prop)
+	// For each property, get its current state as a sensor.
+	for name, prop := range w.properties {
+		state, err := prop.Get()
 		if err != nil {
-			w.logger.Debug("Could not retrieve property", "property", filepath.Ext(prop), "error", err.Error())
-
-			continue
+			slog.With(slog.String("worker", laptopWorkerID)).
+				Debug("Could not retrieve property", slog.String("property", name), slog.Any("error", err))
+		} else {
+			sensors = append(sensors, newLaptopEvent(name, state))
 		}
-
-		sensors = append(sensors, newLaptopEvent(prop, state))
 	}
 
 	return sensors, nil
@@ -188,12 +160,47 @@ func NewLaptopWorker(ctx context.Context, api *dbusx.DBusAPI) (*linux.SensorWork
 		return nil, fmt.Errorf("unable to monitor laptop sensors: %w", err)
 	}
 
+	// If we can't get a session path, we can't run.
+	sessionPath, err := bus.GetSessionPath()
+	if err != nil {
+		return nil, fmt.Errorf("unable to determine user session path from D-Bus: %w", err)
+	}
+
+	triggerCh, err := dbusx.NewWatch(
+		dbusx.MatchPath(sessionPath),
+		dbusx.MatchInterface(managerInterface),
+		dbusx.MatchMembers("PropertiesChanged"),
+	).Start(ctx, bus)
+	if err != nil {
+		return nil, fmt.Errorf("unable to create D-Bus watch for laptop property updates: %w", err)
+	}
+
+	worker := &laptopWorker{
+		properties: make(map[string]*dbusx.Property[bool]),
+		triggerCh:  triggerCh,
+	}
+
+	// Generate the list of laptop properties to track.
+	for _, name := range laptopPropList {
+		worker.properties[name] = dbusx.NewProperty[bool](bus, loginBasePath, loginBaseInterface, name)
+	}
+
 	return &linux.SensorWorker{
-			Value: &laptopWorker{
-				logger: logging.FromContext(ctx).With(slog.String("worker", laptopWorkerID)),
-				bus:    bus,
-			},
+			Value:    worker,
 			WorkerID: laptopWorkerID,
 		},
 		nil
+}
+
+func sendChangedProps(props map[string]dbus.Variant, sensorCh chan sensor.Details) {
+	for prop, value := range props {
+		if slices.Contains(laptopPropList, prop) {
+			if state, err := dbusx.VariantToValue[bool](value); err != nil {
+				slog.With(slog.String("worker", laptopWorkerID)).
+					Debug("Could not parse property value.", slog.String("property", prop), slog.Any("error", err))
+			} else {
+				sensorCh <- newLaptopEvent(prop, state)
+			}
+		}
+	}
 }

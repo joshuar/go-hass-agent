@@ -17,9 +17,10 @@ import (
 type contextKey string
 
 const (
-	dbusContextKey     contextKey = "dbus"
-	clktckContextKey   contextKey = "clktck"
-	boottimeContextKey contextKey = "boottime"
+	dbusContextKey        contextKey = "dbus"
+	clktckContextKey      contextKey = "clktck"
+	boottimeContextKey    contextKey = "boottime"
+	sessionPathContextKey contextKey = "sessionPath"
 )
 
 var ErrInvalidCtx = errors.New("invalid context")

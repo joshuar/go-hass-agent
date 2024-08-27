@@ -16,7 +16,6 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
-	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
@@ -32,31 +31,20 @@ const (
 var ErrNoApps = errors.New("no running apps")
 
 type worker struct {
-	activeApp   *activeAppSensor
-	runningApps *runningAppsSensor
-	logger      *slog.Logger
-	bus         *dbusx.Bus
-	portalDest  string
+	getAppStates func() (map[string]dbus.Variant, error)
+	activeApp    *activeAppSensor
+	runningApps  *runningAppsSensor
+	triggerCh    chan dbusx.Trigger
 }
 
 func (w *worker) Events(ctx context.Context) (chan sensor.Details, error) {
 	sensorCh := make(chan sensor.Details)
-
-	triggerCh, err := w.bus.WatchBus(ctx, &dbusx.Watch{
-		Path:      appStateDBusPath,
-		Interface: appStateDBusInterface,
-		Names:     []string{"RunningApplicationsChanged"},
-	})
-	if err != nil {
-		close(sensorCh)
-
-		return sensorCh, fmt.Errorf("could not watch D-Bus for app state events: %w", err)
-	}
+	logger := slog.Default().With(slog.String("worker", workerID))
 
 	sendSensors := func(ctx context.Context, sensorCh chan sensor.Details) {
 		appSensors, err := w.Sensors(ctx)
 		if err != nil {
-			w.logger.Warn("Failed to update app sensors.", "error", err.Error())
+			logger.Debug("Failed to update app sensors.", slog.Any("error", err))
 
 			return
 		}
@@ -75,7 +63,7 @@ func (w *worker) Events(ctx context.Context) (chan sensor.Details, error) {
 	go func() {
 		defer close(sensorCh)
 
-		for range triggerCh {
+		for range w.triggerCh {
 			sendSensors(ctx, sensorCh)
 		}
 	}()
@@ -83,22 +71,18 @@ func (w *worker) Events(ctx context.Context) (chan sensor.Details, error) {
 	return sensorCh, nil
 }
 
-func (w *worker) Sensors(ctx context.Context) ([]sensor.Details, error) {
+func (w *worker) Sensors(_ context.Context) ([]sensor.Details, error) {
 	var (
 		sensors     []sensor.Details
 		runningApps []string
 	)
 
-	apps, err := dbusx.GetData[map[string]dbus.Variant](ctx, w.bus, appStateDBusPath, w.portalDest, appStateDBusMethod)
+	appStates, err := w.getAppStates()
 	if err != nil {
-		return nil, fmt.Errorf("could not retrieve app list from D-Bus: %w", err)
+		return nil, err
 	}
 
-	if apps == nil {
-		return nil, ErrNoApps
-	}
-
-	for name, variant := range apps {
+	for name, variant := range appStates {
 		// Convert the state to something we understand.
 		state, err := dbusx.VariantToValue[uint32](variant)
 		if err != nil {
@@ -137,13 +121,32 @@ func NewAppWorker(ctx context.Context, api *dbusx.DBusAPI) (*linux.SensorWorker,
 		return nil, fmt.Errorf("unable to monitor for active applications: %w", err)
 	}
 
+	triggerCh, err := dbusx.NewWatch(
+		dbusx.MatchPath(appStateDBusPath),
+		dbusx.MatchInterface(appStateDBusInterface),
+		dbusx.MatchMembers("RunningApplicationsChanged"),
+	).Start(ctx, bus)
+	if err != nil {
+		return nil, fmt.Errorf("could not watch D-Bus for app state events: %w", err)
+	}
+
 	return &linux.SensorWorker{
 			Value: &worker{
-				portalDest:  portalDest,
+				getAppStates: func() (map[string]dbus.Variant, error) {
+					apps, err := dbusx.GetData[map[string]dbus.Variant](bus, appStateDBusPath, portalDest, appStateDBusMethod)
+					if err != nil {
+						return nil, fmt.Errorf("could not retrieve app list from D-Bus: %w", err)
+					}
+
+					if apps == nil {
+						return nil, ErrNoApps
+					}
+
+					return apps, nil
+				},
 				activeApp:   newActiveAppSensor(),
 				runningApps: newRunningAppsSensor(),
-				logger:      logging.FromContext(ctx).With(slog.String("worker", workerID)),
-				bus:         bus,
+				triggerCh:   triggerCh,
 			},
 			WorkerID: workerID,
 		},

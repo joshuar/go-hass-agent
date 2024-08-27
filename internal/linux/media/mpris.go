@@ -56,12 +56,11 @@ func MPRISControl(ctx context.Context, api *dbusx.DBusAPI, parentLogger *slog.Lo
 		return nil, fmt.Errorf("could not connect to D-Bus: %w", err)
 	}
 
-	triggerCh, err := dbusAPI.WatchBus(ctx, &dbusx.Watch{
-		Names:        []string{dbusx.PropChangedSignal},
-		Interface:    dbusx.PropInterface,
-		Path:         mprisDBusPath,
-		ArgNamespace: mprisDBusNamespace,
-	})
+	triggerCh, err := dbusx.NewWatch(
+		dbusx.MatchPath(mprisDBusPath),
+		dbusx.MatchPropChanged(),
+		dbusx.MatchArgNameSpace(mprisDBusNamespace),
+	).Start(ctx, dbusAPI)
 	if err != nil {
 		return nil, fmt.Errorf("could not watch D-Bus for MPRIS signals: %w", err)
 	}
@@ -77,16 +76,13 @@ func MPRISControl(ctx context.Context, api *dbusx.DBusAPI, parentLogger *slog.Lo
 
 				return
 			case event := <-triggerCh:
-				props, err := dbusx.ParsePropertiesChanged(event.Content)
+				changed, status, err := dbusx.HasPropertyChanged[string](event.Content, "PlaybackStatus")
 				if err != nil {
-					mprisMonitor.logger.Warn("Could not parse received signal.", slog.Any("error", err))
-
-					continue
-				}
-
-				// Publish playback state changes.
-				if status, ok := props.Changed["PlaybackStatus"]; ok {
-					mprisMonitor.publishPlaybackState(status.String())
+					mprisMonitor.logger.Warn("Could not parse received D-Bus signal.", slog.Any("error", err))
+				} else {
+					if changed {
+						mprisMonitor.publishPlaybackState(status)
+					}
 				}
 			}
 		}

@@ -32,61 +32,56 @@ func NewDBusCommandSubscription(ctx context.Context, api *dbusx.DBusAPI, parentL
 
 	sessionBus, err := api.GetBus(ctx, dbusx.SessionBus)
 	if err != nil {
-		logger.Warn("Cannot create D-Bus command listener.", "error", err.Error())
+		logger.Warn("Cannot connect to session bus.", slog.Any("error", err))
 
 		return nil
 	}
 
 	systemBus, err := api.GetBus(ctx, dbusx.SessionBus)
 	if err != nil {
-		logger.Warn("Cannot create D-Bus command listener.", "error", err.Error())
+		logger.Warn("Cannot connect to system bus.", slog.Any("error", err))
 
 		return nil
 	}
+
+	busMap := map[string]*dbusx.Bus{"session": sessionBus, "system": systemBus}
 
 	return &mqttapi.Subscription{
 		Callback: func(p *paho.Publish) {
 			var dbusMsg dbusCommandMsg
 
-			if err := json.Unmarshal(p.Payload, &dbusMsg); err != nil {
-				logger.Warn("Could not unmarshal D-Bus MQTT message.", "error", err.Error())
+			// Unmarshal the request.
+			if err = json.Unmarshal(p.Payload, &dbusMsg); err != nil {
+				logger.Error("Could not unmarshal D-Bus MQTT message.", slog.Any("error", err))
 
 				return
 			}
+			// Check which bus type was requested.
+			bus, ok := busMap[dbusMsg.Bus]
+			if !ok {
+				logger.Error("Unsupported D-Bus type.")
 
+				return
+			}
+			// Fetch the session path if requested.
 			if dbusMsg.UseSessionPath {
-				var err error
-
-				dbusMsg.Path, err = sessionBus.GetSessionPath(ctx)
+				dbusMsg.Path, err = busMap["session"].GetSessionPath()
 				if err != nil {
-					logger.Warn("Could not determine session path.", "error", err.Error())
+					logger.Error("Could not determine session path.", slog.Any("error", err))
 
 					return
 				}
 			}
 
-			dbusType, ok := dbusx.DbusTypeMap[dbusMsg.Bus]
-			if !ok {
-				logger.Warn("Unsupported D-Bus type.")
-
-				return
-			}
 			logger.With(
 				slog.String("bus", dbusMsg.Bus),
 				slog.String("destination", dbusMsg.Destination),
 				slog.String("path", dbusMsg.Path),
 				slog.String("method", dbusMsg.Method),
-			).Info("Dispatching D-Bus command to MQTT.")
+			).Info("Dispatching D-Bus command.")
 
-			var bus *dbusx.Bus
-			switch dbusType {
-			case dbusx.SessionBus:
-				bus = sessionBus
-			case dbusx.SystemBus:
-				bus = systemBus
-			}
-
-			err := bus.Call(ctx, dbusMsg.Path, dbusMsg.Destination, dbusMsg.Method, dbusMsg.Args...)
+			// Call the method.
+			err = dbusx.NewMethod(bus, dbusMsg.Destination, dbusMsg.Path, dbusMsg.Method).Call(ctx, dbusMsg.Args...)
 			if err != nil {
 				logger.With(
 					slog.String("bus", dbusMsg.Bus),
