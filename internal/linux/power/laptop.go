@@ -71,18 +71,18 @@ func newLaptopEvent(prop string, state bool) *laptopSensor {
 		Sensor: linux.Sensor{
 			IsBinary:     true,
 			IsDiagnostic: true,
-			SensorSrc:    linux.DataSrcDbus,
+			DataSource:   linux.DataSrcDbus,
 			Value:        state,
 		},
 	}
 
 	switch prop {
 	case dockedProp:
-		sensorEvent.SensorTypeValue = linux.SensorDocked
+		sensorEvent.DisplayName = "Docked State"
 	case lidClosedProp:
-		sensorEvent.SensorTypeValue = linux.SensorLidClosed
+		sensorEvent.DisplayName = "Lid Closed"
 	case externalPowerProp:
-		sensorEvent.SensorTypeValue = linux.SensorExternalPower
+		sensorEvent.DisplayName = "External Power Connected"
 	}
 
 	return sensorEvent

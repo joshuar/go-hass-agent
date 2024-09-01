@@ -39,13 +39,11 @@ type problemsSensor struct {
 }
 
 func (s *problemsSensor) Attributes() map[string]any {
-	attributes := make(map[string]any)
+	attributes := s.Sensor.Attributes()
 
 	if s.list != nil {
 		attributes["problem_list"] = s.list
 	}
-
-	attributes["data_source"] = linux.DataSrcDbus
 
 	return attributes
 }
@@ -92,10 +90,11 @@ func (w *worker) Sensors(_ context.Context, _ time.Duration) ([]sensor.Details, 
 	problemsSensor := &problemsSensor{
 		list: make(map[string]map[string]any),
 		Sensor: linux.Sensor{
-			SensorTypeValue: linux.SensorProblem,
+			DisplayName:     "Problems",
 			IconString:      "mdi:alert",
 			UnitsString:     "problems",
 			StateClassValue: types.StateClassMeasurement,
+			DataSource:      linux.DataSrcDbus,
 		},
 	}
 

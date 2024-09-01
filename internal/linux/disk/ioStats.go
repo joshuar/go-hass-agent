@@ -3,6 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
+//go:generate stringer -type=stat -output ioStats_generated.go -linecomment
 package disk
 
 import (
@@ -19,7 +20,6 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/linux"
 )
 
-//go:generate stringer -type=stat -output ioStats_generated.go -linecomment
 const (
 	TotalReads             stat = iota // Total reads completed
 	TotalReadsMerged                   // Total reads merged

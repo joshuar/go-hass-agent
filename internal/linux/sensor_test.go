@@ -15,11 +15,11 @@ import (
 
 func TestSensor_Name(t *testing.T) {
 	type fields struct {
+		DisplayName      string
 		Value            any
 		IconString       string
 		UnitsString      string
 		SensorSrc        string
-		SensorTypeValue  SensorTypeValue
 		IsBinary         bool
 		IsDiagnostic     bool
 		DeviceClassValue types.DeviceClass
@@ -33,7 +33,7 @@ func TestSensor_Name(t *testing.T) {
 	}{
 		{
 			name:   "known sensor type",
-			fields: fields{SensorTypeValue: SensorAppActive},
+			fields: fields{DisplayName: "Active App"},
 			want:   "Active App",
 		},
 		{
@@ -47,8 +47,8 @@ func TestSensor_Name(t *testing.T) {
 				Value:            tt.fields.Value,
 				IconString:       tt.fields.IconString,
 				UnitsString:      tt.fields.UnitsString,
-				SensorSrc:        tt.fields.SensorSrc,
-				SensorTypeValue:  tt.fields.SensorTypeValue,
+				DataSource:       tt.fields.SensorSrc,
+				DisplayName:      tt.fields.DisplayName,
 				IsBinary:         tt.fields.IsBinary,
 				IsDiagnostic:     tt.fields.IsDiagnostic,
 				DeviceClassValue: tt.fields.DeviceClassValue,
@@ -67,7 +67,7 @@ func TestSensor_ID(t *testing.T) {
 		IconString       string
 		UnitsString      string
 		SensorSrc        string
-		SensorTypeValue  SensorTypeValue
+		DisplayName      string
 		IsBinary         bool
 		IsDiagnostic     bool
 		DeviceClassValue types.DeviceClass
@@ -81,7 +81,7 @@ func TestSensor_ID(t *testing.T) {
 	}{
 		{
 			name:   "known sensor type",
-			fields: fields{SensorTypeValue: SensorAppActive},
+			fields: fields{DisplayName: "Active App"},
 			want:   "active_app",
 		},
 		{
@@ -95,8 +95,8 @@ func TestSensor_ID(t *testing.T) {
 				Value:            tt.fields.Value,
 				IconString:       tt.fields.IconString,
 				UnitsString:      tt.fields.UnitsString,
-				SensorSrc:        tt.fields.SensorSrc,
-				SensorTypeValue:  tt.fields.SensorTypeValue,
+				DataSource:       tt.fields.SensorSrc,
+				DisplayName:      tt.fields.DisplayName,
 				IsBinary:         tt.fields.IsBinary,
 				IsDiagnostic:     tt.fields.IsDiagnostic,
 				DeviceClassValue: tt.fields.DeviceClassValue,
@@ -115,7 +115,6 @@ func TestSensor_State(t *testing.T) {
 		IconString       string
 		UnitsString      string
 		SensorSrc        string
-		SensorTypeValue  SensorTypeValue
 		IsBinary         bool
 		IsDiagnostic     bool
 		DeviceClassValue types.DeviceClass
@@ -143,8 +142,7 @@ func TestSensor_State(t *testing.T) {
 				Value:            tt.fields.Value,
 				IconString:       tt.fields.IconString,
 				UnitsString:      tt.fields.UnitsString,
-				SensorSrc:        tt.fields.SensorSrc,
-				SensorTypeValue:  tt.fields.SensorTypeValue,
+				DataSource:       tt.fields.SensorSrc,
 				IsBinary:         tt.fields.IsBinary,
 				IsDiagnostic:     tt.fields.IsDiagnostic,
 				DeviceClassValue: tt.fields.DeviceClassValue,
@@ -163,7 +161,6 @@ func TestSensor_SensorType(t *testing.T) {
 		IconString       string
 		UnitsString      string
 		SensorSrc        string
-		SensorTypeValue  SensorTypeValue
 		IsBinary         bool
 		IsDiagnostic     bool
 		DeviceClassValue types.DeviceClass
@@ -192,8 +189,7 @@ func TestSensor_SensorType(t *testing.T) {
 				Value:            tt.fields.Value,
 				IconString:       tt.fields.IconString,
 				UnitsString:      tt.fields.UnitsString,
-				SensorSrc:        tt.fields.SensorSrc,
-				SensorTypeValue:  tt.fields.SensorTypeValue,
+				DataSource:       tt.fields.SensorSrc,
 				IsBinary:         tt.fields.IsBinary,
 				IsDiagnostic:     tt.fields.IsDiagnostic,
 				DeviceClassValue: tt.fields.DeviceClassValue,
@@ -212,7 +208,6 @@ func TestSensor_Category(t *testing.T) {
 		IconString       string
 		UnitsString      string
 		SensorSrc        string
-		SensorTypeValue  SensorTypeValue
 		IsBinary         bool
 		IsDiagnostic     bool
 		DeviceClassValue types.DeviceClass
@@ -241,8 +236,7 @@ func TestSensor_Category(t *testing.T) {
 				Value:            tt.fields.Value,
 				IconString:       tt.fields.IconString,
 				UnitsString:      tt.fields.UnitsString,
-				SensorSrc:        tt.fields.SensorSrc,
-				SensorTypeValue:  tt.fields.SensorTypeValue,
+				DataSource:       tt.fields.SensorSrc,
 				IsBinary:         tt.fields.IsBinary,
 				IsDiagnostic:     tt.fields.IsDiagnostic,
 				DeviceClassValue: tt.fields.DeviceClassValue,
@@ -261,7 +255,6 @@ func TestSensor_Attributes(t *testing.T) {
 		IconString       string
 		UnitsString      string
 		SensorSrc        string
-		SensorTypeValue  SensorTypeValue
 		IsBinary         bool
 		IsDiagnostic     bool
 		DeviceClassValue types.DeviceClass
@@ -285,8 +278,7 @@ func TestSensor_Attributes(t *testing.T) {
 				Value:            tt.fields.Value,
 				IconString:       tt.fields.IconString,
 				UnitsString:      tt.fields.UnitsString,
-				SensorSrc:        tt.fields.SensorSrc,
-				SensorTypeValue:  tt.fields.SensorTypeValue,
+				DataSource:       tt.fields.SensorSrc,
 				IsBinary:         tt.fields.IsBinary,
 				IsDiagnostic:     tt.fields.IsDiagnostic,
 				DeviceClassValue: tt.fields.DeviceClassValue,

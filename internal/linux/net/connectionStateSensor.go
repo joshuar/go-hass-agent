@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//go:generate stringer -type=connState,connIcon -output connection_generated.go -linecomment
+//go:generate stringer -type=connState,connIcon -output connectionState_generated.go -linecomment
 package net
 
 import (
@@ -90,7 +90,7 @@ func (c *connectionStateSensor) updateState() error {
 
 func newConnectionStateSensor(bus *dbusx.Bus, connectionPath, connectionName string) *connectionStateSensor {
 	return &connectionStateSensor{
-		Sensor:    linux.Sensor{SensorSrc: linux.DataSrcDbus},
+		Sensor:    linux.Sensor{DataSource: linux.DataSrcDbus},
 		name:      connectionName + " Connection State",
 		id:        strcase.ToSnake(connectionName) + "_connection_state",
 		stateProp: dbusx.NewProperty[connState](bus, connectionPath, dBusNMObj, connectionStateProp),

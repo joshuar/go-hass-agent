@@ -8,8 +8,6 @@ package net
 import (
 	"log/slog"
 
-	"github.com/iancoleman/strcase"
-
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
@@ -31,18 +29,8 @@ const (
 var apPropList = []string{ssidPropName, hwAddrPropName, maxBitRatePropName, freqPropName, strPropName, bandwidthPropName}
 
 type wifiSensor struct {
-	name string
-	id   string
 	prop string
 	linux.Sensor
-}
-
-func (w *wifiSensor) Name() string {
-	return w.name
-}
-
-func (w *wifiSensor) ID() string {
-	return w.id
 }
 
 func (w *wifiSensor) State() any {
@@ -113,32 +101,26 @@ func newWifiSensor(prop string, value any) *wifiSensor {
 
 	switch prop {
 	case ssidPropName:
-		wifiSensor.name = "Wi-Fi SSID"
-		wifiSensor.id = strcase.ToSnake(wifiSensor.name)
+		wifiSensor.DisplayName = "Wi-Fi SSID"
 	case hwAddrPropName:
-		wifiSensor.name = "Wi-Fi BSSID"
-		wifiSensor.id = strcase.ToSnake(wifiSensor.name)
+		wifiSensor.DisplayName = "Wi-Fi BSSID"
 	case maxBitRatePropName:
-		wifiSensor.name = "Wi-Fi Link Speed"
-		wifiSensor.id = strcase.ToSnake(wifiSensor.name)
+		wifiSensor.DisplayName = "Wi-Fi Link Speed"
 		wifiSensor.UnitsString = "kB/s"
 		wifiSensor.DeviceClassValue = types.DeviceClassDataRate
 		wifiSensor.StateClassValue = types.StateClassMeasurement
 	case freqPropName:
-		wifiSensor.name = "Wi-Fi Frequency"
-		wifiSensor.id = strcase.ToSnake(wifiSensor.name)
+		wifiSensor.DisplayName = "Wi-Fi Frequency"
 		wifiSensor.UnitsString = "MHz"
 		wifiSensor.DeviceClassValue = types.DeviceClassFrequency
 		wifiSensor.StateClassValue = types.StateClassMeasurement
 	case bandwidthPropName:
-		wifiSensor.name = "Wi-Fi Bandwidth"
-		wifiSensor.id = strcase.ToSnake(wifiSensor.name)
+		wifiSensor.DisplayName = "Wi-Fi Bandwidth"
 		wifiSensor.UnitsString = "MHz"
 		wifiSensor.DeviceClassValue = types.DeviceClassFrequency
 		wifiSensor.StateClassValue = types.StateClassMeasurement
 	case strPropName:
-		wifiSensor.name = "Wi-Fi Signal Strength"
-		wifiSensor.id = strcase.ToSnake(wifiSensor.name)
+		wifiSensor.DisplayName = "Wi-Fi Signal Strength"
 		wifiSensor.UnitsString = "%"
 		wifiSensor.StateClassValue = types.StateClassMeasurement
 	}

@@ -161,9 +161,9 @@ func NewIOWorker(ctx context.Context, _ *dbusx.DBusAPI) (*linux.SensorWorker, er
 
 func newDeviceSensors(boottime time.Time, dev *device) *sensors {
 	return &sensors{
-		totalReads:  newDiskIOSensor(boottime, dev, linux.SensorDiskReads),
-		totalWrites: newDiskIOSensor(boottime, dev, linux.SensorDiskWrites),
-		readRate:    newDiskIORateSensor(dev, linux.SensorDiskReadRate),
-		writeRate:   newDiskIORateSensor(dev, linux.SensorDiskWriteRate),
+		totalReads:  newDiskIOSensor(boottime, dev, diskReads),
+		totalWrites: newDiskIOSensor(boottime, dev, diskWrites),
+		readRate:    newDiskIORateSensor(dev, diskReadRate),
+		writeRate:   newDiskIORateSensor(dev, diskWriteRate),
 	}
 }

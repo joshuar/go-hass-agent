@@ -4,6 +4,7 @@
 // https://opensource.org/licenses/MIT
 
 //revive:disable:unused-receiver
+//go:generate stringer -type=batterySensor -output battery_generated.go -linecomment
 package battery
 
 import (
@@ -26,6 +27,17 @@ import (
 )
 
 const (
+	battType       batterySensor = iota // Battery Type
+	battPercentage                      // Battery Level
+	battTemp                            // Battery Temperature
+	battVoltage                         // Battery Voltage
+	battEnergy                          // Battery Energy
+	battEnergyRate                      // Battery Power
+	battState                           // Battery State
+	battNativePath                      // Battery Path
+	battLevel                           // Battery Level
+	battModel                           // Battery Model
+
 	upowerDBusDest         = "org.freedesktop.UPower"
 	upowerDBusDeviceDest   = upowerDBusDest + ".Device"
 	upowerDBusPath         = "/org/freedesktop/UPower"
@@ -39,31 +51,33 @@ const (
 	workerID = "battery_sensors"
 )
 
+type batterySensor int
+
 var ErrInvalidBattery = errors.New("invalid battery")
 
 // dBusSensorToProps is a map of battery sensors to their D-Bus properties.
-var dBusSensorToProps = map[linux.SensorTypeValue]string{
-	linux.SensorBattType:       upowerDBusDeviceDest + ".Type",
-	linux.SensorBattPercentage: upowerDBusDeviceDest + ".Percentage",
-	linux.SensorBattTemp:       upowerDBusDeviceDest + ".Temperature",
-	linux.SensorBattVoltage:    upowerDBusDeviceDest + ".Voltage",
-	linux.SensorBattEnergy:     upowerDBusDeviceDest + ".Energy",
-	linux.SensorBattEnergyRate: upowerDBusDeviceDest + ".EnergyRate",
-	linux.SensorBattState:      upowerDBusDeviceDest + ".State",
-	linux.SensorBattNativePath: upowerDBusDeviceDest + ".NativePath",
-	linux.SensorBattLevel:      upowerDBusDeviceDest + ".BatteryLevel",
-	linux.SensorBattModel:      upowerDBusDeviceDest + ".Model",
+var dBusSensorToProps = map[batterySensor]string{
+	battType:       upowerDBusDeviceDest + ".Type",
+	battPercentage: upowerDBusDeviceDest + ".Percentage",
+	battTemp:       upowerDBusDeviceDest + ".Temperature",
+	battVoltage:    upowerDBusDeviceDest + ".Voltage",
+	battEnergy:     upowerDBusDeviceDest + ".Energy",
+	battEnergyRate: upowerDBusDeviceDest + ".EnergyRate",
+	battState:      upowerDBusDeviceDest + ".State",
+	battNativePath: upowerDBusDeviceDest + ".NativePath",
+	battLevel:      upowerDBusDeviceDest + ".BatteryLevel",
+	battModel:      upowerDBusDeviceDest + ".Model",
 }
 
 // dBusPropToSensor provides a map for to convert D-Bus properties to sensors.
-var dBusPropToSensor = map[string]linux.SensorTypeValue{
-	"Energy":       linux.SensorBattEnergy,
-	"EnergyRate":   linux.SensorBattEnergyRate,
-	"Voltage":      linux.SensorBattVoltage,
-	"Percentage":   linux.SensorBattPercentage,
-	"Temperatute":  linux.SensorBattTemp,
-	"State":        linux.SensorBattState,
-	"BatteryLevel": linux.SensorBattLevel,
+var dBusPropToSensor = map[string]batterySensor{
+	"Energy":       battEnergy,
+	"EnergyRate":   battEnergyRate,
+	"Voltage":      battVoltage,
+	"Percentage":   battPercentage,
+	"Temperatute":  battTemp,
+	"State":        battState,
+	"BatteryLevel": battLevel,
 }
 
 type upowerBattery struct {
@@ -72,12 +86,12 @@ type upowerBattery struct {
 	id       string
 	model    string
 	dBusPath dbus.ObjectPath
-	sensors  []linux.SensorTypeValue
+	sensors  []batterySensor
 	battType batteryType
 }
 
 // getProp retrieves the property from D-Bus that matches the given battery sensor type.
-func (b *upowerBattery) getProp(t linux.SensorTypeValue) (dbus.Variant, error) {
+func (b *upowerBattery) getProp(t batterySensor) (dbus.Variant, error) {
 	value, err := dbusx.NewProperty[dbus.Variant](b.bus, string(b.dBusPath), upowerDBusDest, dBusSensorToProps[t]).Get()
 	if err != nil {
 		return dbus.Variant{}, fmt.Errorf("could not retrieve battery property %s: %w", t.String(), err)
@@ -87,7 +101,7 @@ func (b *upowerBattery) getProp(t linux.SensorTypeValue) (dbus.Variant, error) {
 }
 
 // getSensors retrieves the sensors passed in for a given battery.
-func (b *upowerBattery) getSensors(sensors ...linux.SensorTypeValue) chan sensor.Details {
+func (b *upowerBattery) getSensors(sensors ...batterySensor) chan sensor.Details {
 	sensorCh := make(chan sensor.Details, len(sensors))
 	defer close(sensorCh)
 
@@ -118,7 +132,7 @@ func newBattery(bus *dbusx.Bus, logger *slog.Logger, path dbus.ObjectPath) (*upo
 	)
 
 	// Get the battery type. Depending on the value, additional sensors will be added.
-	variant, err = battery.getProp(linux.SensorBattType)
+	variant, err = battery.getProp(battType)
 	if err != nil {
 		return nil, fmt.Errorf("could not determine battery type: %w", err)
 	}
@@ -129,7 +143,7 @@ func newBattery(bus *dbusx.Bus, logger *slog.Logger, path dbus.ObjectPath) (*upo
 	}
 
 	// Use the native path D-Bus property for the battery id.
-	variant, err = battery.getProp(linux.SensorBattNativePath)
+	variant, err = battery.getProp(battNativePath)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve battery path in D-Bus: %w", err)
 	}
@@ -149,7 +163,7 @@ func newBattery(bus *dbusx.Bus, logger *slog.Logger, path dbus.ObjectPath) (*upo
 	)
 
 	// Get the battery model.
-	variant, err = battery.getProp(linux.SensorBattModel)
+	variant, err = battery.getProp(battModel)
 	if err != nil {
 		battery.logger.Warn("Could not determine battery model.")
 	}
@@ -160,14 +174,14 @@ func newBattery(bus *dbusx.Bus, logger *slog.Logger, path dbus.ObjectPath) (*upo
 	}
 
 	// At a minimum, monitor the battery type and the charging state.
-	battery.sensors = append(battery.sensors, linux.SensorBattState)
+	battery.sensors = append(battery.sensors, battState)
 
 	if battery.battType == batteryTypeBattery {
 		// Battery has charge percentage, temp and charging rate sensors
-		battery.sensors = append(battery.sensors, linux.SensorBattPercentage, linux.SensorBattTemp, linux.SensorBattEnergyRate)
+		battery.sensors = append(battery.sensors, battPercentage, battTemp, battEnergyRate)
 	} else {
 		// Battery has a textual level sensor
-		battery.sensors = append(battery.sensors, linux.SensorBattLevel)
+		battery.sensors = append(battery.sensors, battLevel)
 	}
 
 	return battery, nil
@@ -179,28 +193,29 @@ type upowerBatterySensor struct {
 	batteryID  string
 	model      string
 	linux.Sensor
+	sensorType batterySensor
 }
 
 // uPowerBatteryState implements hass.SensorUpdate
 
 func (s *upowerBatterySensor) Name() string {
 	if s.model == "" {
-		return s.batteryID + " " + s.SensorTypeValue.String()
+		return s.batteryID + " " + s.sensorType.String()
 	}
 
-	return s.model + " " + s.SensorTypeValue.String()
+	return s.model + " " + s.sensorType.String()
 }
 
 func (s *upowerBatterySensor) ID() string {
-	return s.batteryID + "_" + strings.ToLower(strcase.ToSnake(s.SensorTypeValue.String()))
+	return s.batteryID + "_" + strings.ToLower(strcase.ToSnake(s.sensorType.String()))
 }
 
 //nolint:exhaustive
 func (s *upowerBatterySensor) Icon() string {
-	switch s.SensorTypeValue {
-	case linux.SensorBattPercentage:
+	switch s.sensorType {
+	case battPercentage:
 		return batteryPercentIcon(s.Value)
-	case linux.SensorBattEnergyRate:
+	case battEnergyRate:
 		return batteryChargeIcon(s.Value)
 	default:
 		return batteryIcon
@@ -209,12 +224,12 @@ func (s *upowerBatterySensor) Icon() string {
 
 //nolint:exhaustive
 func (s *upowerBatterySensor) DeviceClass() types.DeviceClass {
-	switch s.SensorTypeValue {
-	case linux.SensorBattPercentage:
+	switch s.sensorType {
+	case battPercentage:
 		return types.DeviceClassBattery
-	case linux.SensorBattTemp:
+	case battTemp:
 		return types.DeviceClassTemperature
-	case linux.SensorBattEnergyRate:
+	case battEnergyRate:
 		return types.DeviceClassPower
 	default:
 		return 0
@@ -223,8 +238,8 @@ func (s *upowerBatterySensor) DeviceClass() types.DeviceClass {
 
 //nolint:exhaustive
 func (s *upowerBatterySensor) StateClass() types.StateClass {
-	switch s.SensorTypeValue {
-	case linux.SensorBattPercentage, linux.SensorBattTemp, linux.SensorBattEnergyRate:
+	switch s.sensorType {
+	case battPercentage, battTemp, battEnergyRate:
 		return types.StateClassMeasurement
 	default:
 		return 0
@@ -237,20 +252,20 @@ func (s *upowerBatterySensor) State() any {
 		return sensor.StateUnknown
 	}
 
-	switch s.SensorTypeValue {
-	case linux.SensorBattVoltage, linux.SensorBattTemp, linux.SensorBattEnergy, linux.SensorBattEnergyRate, linux.SensorBattPercentage:
+	switch s.sensorType {
+	case battVoltage, battTemp, battEnergy, battEnergyRate, battPercentage:
 		if value, ok := s.Value.(float64); !ok {
 			return sensor.StateUnknown
 		} else {
 			return value
 		}
-	case linux.SensorBattState:
+	case battState:
 		if value, ok := s.Value.(uint32); !ok {
 			return sensor.StateUnknown
 		} else {
 			return battChargeState(value).String()
 		}
-	case linux.SensorBattLevel:
+	case battLevel:
 		if value, ok := s.Value.(uint32); !ok {
 			return sensor.StateUnknown
 		} else {
@@ -267,12 +282,12 @@ func (s *upowerBatterySensor) State() any {
 
 //nolint:exhaustive
 func (s *upowerBatterySensor) Units() string {
-	switch s.SensorTypeValue {
-	case linux.SensorBattPercentage:
+	switch s.sensorType {
+	case battPercentage:
 		return "%"
-	case linux.SensorBattTemp:
+	case battTemp:
 		return "°C"
-	case linux.SensorBattEnergyRate:
+	case battEnergyRate:
 		return "W"
 	default:
 		return ""
@@ -289,15 +304,15 @@ func (s *upowerBatterySensor) Attributes() map[string]any {
 
 //nolint:exhaustive
 func (s *upowerBatterySensor) generateAttributes(battery *upowerBattery) {
-	switch s.SensorTypeValue {
-	case linux.SensorBattEnergyRate:
+	switch s.sensorType {
+	case battEnergyRate:
 		var (
 			variant         dbus.Variant
 			err             error
 			voltage, energy float64
 		)
 
-		variant, err = battery.getProp(linux.SensorBattVoltage)
+		variant, err = battery.getProp(battVoltage)
 		if err != nil {
 			s.logger.Warn("Could not retrieve battery voltage.", "error", err.Error())
 		}
@@ -307,7 +322,7 @@ func (s *upowerBatterySensor) generateAttributes(battery *upowerBattery) {
 			s.logger.Warn("Could not retrieve battery voltage.", "error", err.Error())
 		}
 
-		variant, err = battery.getProp(linux.SensorBattEnergy)
+		variant, err = battery.getProp(battEnergy)
 		if err != nil {
 			s.logger.Warn("Could not retrieve battery energy.", "error", err.Error())
 		}
@@ -326,7 +341,7 @@ func (s *upowerBatterySensor) generateAttributes(battery *upowerBattery) {
 			Energy:     energy,
 			DataSource: linux.DataSrcDbus,
 		}
-	case linux.SensorBattPercentage, linux.SensorBattLevel:
+	case battPercentage, battLevel:
 		s.attributes = &struct {
 			Type       string `json:"battery_type"`
 			DataSource string `json:"data_source"`
@@ -339,13 +354,13 @@ func (s *upowerBatterySensor) generateAttributes(battery *upowerBattery) {
 
 // newBatterySensor creates a new sensor for Home Assistant from a battery
 // property.
-func newBatterySensor(battery *upowerBattery, sensorType linux.SensorTypeValue, value dbus.Variant) *upowerBatterySensor {
+func newBatterySensor(battery *upowerBattery, sensorType batterySensor, value dbus.Variant) *upowerBatterySensor {
 	batterySensor := &upowerBatterySensor{
-		batteryID: battery.id,
-		model:     battery.model,
-		logger:    battery.logger,
+		batteryID:  battery.id,
+		model:      battery.model,
+		logger:     battery.logger,
+		sensorType: sensorType,
 	}
-	batterySensor.SensorTypeValue = sensorType
 	batterySensor.Value = value.Value()
 	batterySensor.IsDiagnostic = true
 	batterySensor.generateAttributes(battery)

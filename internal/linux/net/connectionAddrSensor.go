@@ -187,7 +187,7 @@ func newConnectionAddrSensor(bus *dbusx.Bus, ver int, connectionPath, connection
 		ver:        ver,
 		name:       name,
 		id:         id,
-		Sensor:     linux.Sensor{SensorSrc: linux.DataSrcDbus, IconString: icon, IsDiagnostic: true},
+		Sensor:     linux.Sensor{DataSource: linux.DataSrcDbus, IconString: icon, IsDiagnostic: true},
 		configProp: dbusx.NewProperty[dbus.ObjectPath](bus, connectionPath, dBusNMObj, configPropName),
 	}
 }

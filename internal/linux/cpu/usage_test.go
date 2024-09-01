@@ -209,9 +209,9 @@ func Test_usageWorker_newUsageSensor(t *testing.T) {
 		Sensor: linux.Sensor{
 			IconString:      "mdi:chip",
 			UnitsString:     "%",
-			SensorSrc:       linux.DataSrcProcfs,
+			DataSource:      linux.DataSrcProcfs,
 			StateClassValue: types.StateClassMeasurement,
-			SensorTypeValue: linux.SensorCPUPc,
+			DisplayName:     "Total CPU Usage",
 			IsDiagnostic:    false,
 		},
 	}
@@ -255,9 +255,9 @@ func Test_usageWorker_newCountSensor(t *testing.T) {
 		clktck int64
 	}
 	type args struct {
-		icon       string
-		details    string
-		sensorType linux.SensorTypeValue
+		icon    string
+		details string
+		name    string
 	}
 	tests := []struct {
 		fields fields
@@ -267,14 +267,14 @@ func Test_usageWorker_newCountSensor(t *testing.T) {
 	}{
 		{
 			name:   "valid values",
-			args:   args{sensorType: linux.SensorCPUCtxSwitch, icon: "mdi:counter", details: "400"},
+			args:   args{name: "Total CPU Context Switches", icon: "mdi:counter", details: "400"},
 			fields: fields{logger: slog.Default()},
 			want: &linux.Sensor{
+				DisplayName:     "Total CPU Context Switches",
 				Value:           400,
 				IconString:      "mdi:counter",
-				SensorSrc:       linux.DataSrcProcfs,
+				DataSource:      linux.DataSrcProcfs,
 				StateClassValue: types.StateClassTotalIncreasing,
-				SensorTypeValue: linux.SensorCPUCtxSwitch,
 				IsDiagnostic:    true,
 				LastReset:       "0001-01-01T00:00:00Z",
 			},
@@ -286,7 +286,7 @@ func Test_usageWorker_newCountSensor(t *testing.T) {
 				clktck: tt.fields.clktck,
 				logger: tt.fields.logger,
 			}
-			if got := w.newCountSensor(tt.args.sensorType, tt.args.icon, tt.args.details); !reflect.DeepEqual(got, tt.want) {
+			if got := w.newCountSensor(tt.args.name, tt.args.icon, tt.args.details); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("usageWorker.newProcCntSensor() = %v, want %v", got, tt.want)
 			}
 		})

@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
@@ -72,20 +71,14 @@ func (w *loadAvgsSensorWorker) Sensors(_ context.Context, _ time.Duration) ([]se
 func newLoadAvgSensors() []*loadavgSensor {
 	sensors := make([]*loadavgSensor, loadAvgsTotal)
 
-	for idx, loadType := range []linux.SensorTypeValue{linux.SensorLoad1, linux.SensorLoad5, linux.SensorLoad15} {
-		loadAvgSensor := &loadavgSensor{}
-		loadAvgSensor.IconString = loadAvgIcon
-		loadAvgSensor.UnitsString = loadAvgUnit
-		loadAvgSensor.SensorSrc = linux.DataSrcProcfs
-		loadAvgSensor.StateClassValue = types.StateClassMeasurement
-
-		switch loadType { //nolint:exhaustive
-		case linux.SensorLoad1:
-			loadAvgSensor.SensorTypeValue = linux.SensorLoad1
-		case linux.SensorLoad5:
-			loadAvgSensor.SensorTypeValue = linux.SensorLoad5
-		case linux.SensorLoad15:
-			loadAvgSensor.SensorTypeValue = linux.SensorLoad15
+	for idx, loadType := range []string{"CPU load average (1 min)", "CPU load average (5 min)", "CPU load average (15 min)"} {
+		loadAvgSensor := &loadavgSensor{
+			Sensor: linux.Sensor{
+				IconString:  loadAvgIcon,
+				UnitsString: loadAvgUnit,
+				DataSource:  linux.DataSrcProcfs,
+				DisplayName: loadType,
+			},
 		}
 
 		sensors[idx] = loadAvgSensor

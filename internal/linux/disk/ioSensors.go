@@ -3,6 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
+//go:generate stringer -type=ioSensor -output ioSensors_generated.go -linecomment
 package disk
 
 import (
@@ -16,61 +17,68 @@ import (
 )
 
 const (
+	diskReads     ioSensor = iota // Disk Reads
+	diskWrites                    // Disk Writes
+	diskReadRate                  // Disk Read Rate
+	diskWriteRate                 // Disk Write Rate
+
 	diskRateUnits  = "kB/s"
 	diskCountUnits = "requests"
 )
+
+type ioSensor int
 
 type diskIOSensor struct {
 	device     *device
 	attributes map[string]any
 	linux.Sensor
-	prevValue uint64
+	sensorType ioSensor
+	prevValue  uint64
 }
 
 func (s *diskIOSensor) Name() string {
 	r := []rune(s.device.id)
 
-	return string(append([]rune{unicode.ToUpper(r[0])}, r[1:]...)) + " " + s.SensorTypeValue.String()
+	return string(append([]rune{unicode.ToUpper(r[0])}, r[1:]...)) + " " + s.sensorType.String()
 }
 
 func (s *diskIOSensor) ID() string {
-	return s.device.id + "_" + strcase.ToSnake(s.SensorTypeValue.String())
+	return s.device.id + "_" + strcase.ToSnake(s.sensorType.String())
 }
 
 func (s *diskIOSensor) Attributes() map[string]any {
 	return s.attributes
 }
 
-//nolint:exhaustive
 func (s *diskIOSensor) Icon() string {
-	switch s.SensorTypeValue {
-	case linux.SensorDiskReads, linux.SensorDiskReadRate:
+	switch s.sensorType {
+	case diskReads, diskReadRate:
 		return "mdi:file-upload"
-	case linux.SensorDiskWrites, linux.SensorDiskWriteRate:
+	case diskWrites, diskWriteRate:
 		return "mdi:file-download"
 	}
 
 	return "mdi:file"
 }
 
-//nolint:exhaustive,mnd
+//nolint:mnd
 func (s *diskIOSensor) update(stats map[stat]uint64, delta time.Duration) {
 	var curr uint64
 
-	switch s.SensorTypeValue {
-	case linux.SensorDiskReads:
+	switch s.sensorType {
+	case diskReads:
 		s.Value = stats[TotalReads]
-	case linux.SensorDiskWrites:
+	case diskWrites:
 		s.Value = stats[TotalWrites]
-	case linux.SensorDiskReadRate:
+	case diskReadRate:
 		curr = stats[TotalSectorsRead]
-	case linux.SensorDiskWriteRate:
+	case diskWriteRate:
 		curr = stats[TotalSectorsWritten]
 	}
 
 	// For rate sensors, calculate the current value based on previous value and
 	// time interval since last measurement.
-	if s.SensorTypeValue == linux.SensorDiskReadRate || s.SensorTypeValue == linux.SensorDiskWriteRate {
+	if s.sensorType == diskReadRate || s.sensorType == diskWriteRate {
 		if uint64(delta.Seconds()) > 0 {
 			s.Value = (curr - s.prevValue) / uint64(delta.Seconds()) / 2
 		}
@@ -84,27 +92,26 @@ func (s *diskIOSensor) update(stats map[stat]uint64, delta time.Duration) {
 
 //nolint:exhaustive
 func (s *diskIOSensor) updateAttributes(stats map[stat]uint64) {
-	switch s.SensorTypeValue {
-	case linux.SensorDiskReads:
+	switch s.sensorType {
+	case diskReads:
 		s.attributes["total_sectors"] = stats[TotalSectorsRead]
 		s.attributes["total_milliseconds"] = stats[TotalTimeReading]
-	case linux.SensorDiskWrites:
+	case diskWrites:
 		s.attributes["total_sectors"] = stats[TotalSectorsWritten]
 		s.attributes["total_milliseconds"] = stats[TotalTimeWriting]
 	}
 }
 
-func newDiskIOSensor(boottime time.Time, device *device, sensorType linux.SensorTypeValue) *diskIOSensor {
+func newDiskIOSensor(boottime time.Time, device *device, sensorType ioSensor) *diskIOSensor {
 	newSensor := &diskIOSensor{
-		device: device,
+		device:     device,
+		sensorType: sensorType,
+		attributes: make(map[string]any),
 		Sensor: linux.Sensor{
 			StateClassValue: types.StateClassTotalIncreasing,
-			SensorTypeValue: sensorType,
 			UnitsString:     diskCountUnits,
 			LastReset:       boottime.Format(time.RFC3339),
 		},
-
-		attributes: make(map[string]any),
 	}
 
 	newSensor.attributes["data_source"] = linux.DataSrcSysfs
@@ -126,14 +133,14 @@ func newDiskIOSensor(boottime time.Time, device *device, sensorType linux.Sensor
 	return newSensor
 }
 
-func newDiskIORateSensor(device *device, sensorType linux.SensorTypeValue) *diskIOSensor {
+func newDiskIORateSensor(device *device, sensorType ioSensor) *diskIOSensor {
 	newSensor := &diskIOSensor{
-		device: device,
+		device:     device,
+		sensorType: sensorType,
 		Sensor: linux.Sensor{
 			DeviceClassValue: types.DeviceClassDataRate,
 			StateClassValue:  types.StateClassMeasurement,
 			UnitsString:      diskRateUnits,
-			SensorTypeValue:  sensorType,
 		},
 		attributes: make(map[string]any),
 	}

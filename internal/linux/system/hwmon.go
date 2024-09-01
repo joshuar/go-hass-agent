@@ -71,7 +71,10 @@ func (s *hwSensor) ID() string {
 }
 
 func (s *hwSensor) Attributes() map[string]any {
-	attributes := make(map[string]any)
+	attributes := s.Sensor.Attributes()
+	attributes["sensor_type"] = s.hwType
+	attributes["sysfs_path"] = s.path
+
 	if s.ExtraAttrs != nil {
 		attributes["extra_attributes"] = s.ExtraAttrs
 	}
@@ -79,10 +82,6 @@ func (s *hwSensor) Attributes() map[string]any {
 	if s.UnitsString != "" {
 		attributes["native_unit_of_measurement"] = s.UnitsString
 	}
-
-	attributes["data_source"] = linux.DataSrcSysfs
-	attributes["sensor_type"] = s.hwType
-	attributes["sysfs_path"] = s.path
 
 	return attributes
 }
@@ -94,8 +93,11 @@ func newHWSensor(details *hwmon.Sensor) *hwSensor {
 		hwType:     details.SensorType.String(),
 		path:       details.SysFSPath,
 		ExtraAttrs: make(map[string]float64),
+		Sensor: linux.Sensor{
+			DataSource:   linux.DataSrcSysfs,
+			IsDiagnostic: true,
+		},
 	}
-	newSensor.IsDiagnostic = true
 
 	switch newSensor.hwType {
 	case hwmon.Alarm.String(), hwmon.Intrusion.String():

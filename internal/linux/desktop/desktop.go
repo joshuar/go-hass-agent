@@ -58,11 +58,11 @@ func (w *worker) newAccentColorSensor(accent string) (*desktopSettingSensor, err
 
 	return &desktopSettingSensor{
 		Sensor: linux.Sensor{
-			IsDiagnostic:    true,
-			IconString:      "mdi:palette",
-			SensorSrc:       linux.DataSrcDbus,
-			SensorTypeValue: linux.SensorAccentColor,
-			Value:           accent,
+			IsDiagnostic: true,
+			IconString:   "mdi:palette",
+			DataSource:   linux.DataSrcDbus,
+			DisplayName:  "Desktop Accent Color",
+			Value:        accent,
 		},
 	}, nil
 }
@@ -79,10 +79,10 @@ func (w *worker) newColorSchemeSensor(scheme string) (*desktopSettingSensor, err
 
 	newSensor := &desktopSettingSensor{
 		Sensor: linux.Sensor{
-			IsDiagnostic:    true,
-			SensorSrc:       linux.DataSrcDbus,
-			SensorTypeValue: linux.SensorColorScheme,
-			Value:           scheme,
+			IsDiagnostic: true,
+			DataSource:   linux.DataSrcDbus,
+			DisplayName:  "Desktop Colour Scheme",
+			Value:        scheme,
 		},
 	}
 
