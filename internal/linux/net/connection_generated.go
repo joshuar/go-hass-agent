@@ -29,11 +29,11 @@ func _() {
 	// An "invalid array index" compiler error signifies that the constant values have changed.
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
-	_ = x[iconUnknown-5]
-	_ = x[iconActivating-6]
-	_ = x[iconOnline-7]
-	_ = x[iconDeactivating-8]
-	_ = x[iconOffline-9]
+	_ = x[iconUnknown-0]
+	_ = x[iconActivating-1]
+	_ = x[iconOnline-2]
+	_ = x[iconDeactivating-3]
+	_ = x[iconOffline-4]
 }
 
 const _connIcon_name = "mdi:help-networkmdi:plus-networkmdi:networkmdi:network-minusmdi:network-off"
@@ -41,9 +41,8 @@ const _connIcon_name = "mdi:help-networkmdi:plus-networkmdi:networkmdi:network-m
 var _connIcon_index = [...]uint8{0, 16, 32, 43, 60, 75}
 
 func (i connIcon) String() string {
-	i -= 5
 	if i >= connIcon(len(_connIcon_index)-1) {
-		return "connIcon(" + strconv.FormatInt(int64(i+5), 10) + ")"
+		return "connIcon(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
 	return _connIcon_name[_connIcon_index[i]:_connIcon_index[i+1]]
 }
