@@ -22,7 +22,9 @@ const (
 	connOnline                        // Online
 	connDeactivating                  // Deactivating
 	connOffline                       // Offline
+)
 
+const (
 	iconUnknown      connIcon = iota // mdi:help-network
 	iconActivating                   // mdi:plus-network
 	iconOnline                       // mdi:network
