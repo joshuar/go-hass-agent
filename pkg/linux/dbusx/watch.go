@@ -97,7 +97,7 @@ func NewWatch(options ...WatchOption) *Watch {
 // triggered the match, the path and the contents (what values actually
 // changed).
 //
-//nolint:cyclop,gocognit
+//nolint:cyclop
 func (w *Watch) Start(ctx context.Context, bus *Bus) (chan Trigger, error) {
 	if len(w.methods) > 0 { // Set up a watch for on each method plus all other conditions specified.
 		for _, method := range w.methods {
@@ -128,47 +128,47 @@ func (w *Watch) Start(ctx context.Context, bus *Bus) (chan Trigger, error) {
 	// signals and data. If the context is cancelled (i.e., agent shutdown),
 	// clean up.
 	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				bus.conn.RemoveSignal(signalCh)
-				close(outCh)
+		defer close(outCh)
 
-				return
-			case signal := <-signalCh:
-				// If the signal is empty, ignore.
-				if signal == nil {
+		for signal := range signalCh {
+			// If the signal is empty, ignore.
+			if signal == nil {
+				continue
+			}
+			// If a path match was specified and the path in the signal
+			// doesn't match it, ignore.
+			if w.path != "" {
+				if signal.Path != w.path {
+					bus.traceLog("Ignoring mismatched path.", slog.Any("signal", signal.Path), slog.Any("match", w.path))
+
 					continue
 				}
-				// If a path match was specified and the path in the signal
-				// doesn't match it, ignore.
-				if w.path != "" {
-					if signal.Path != w.path {
-						bus.traceLog("Ignoring mismatched path.", slog.Any("signal", signal.Path), slog.Any("match", w.path))
+			}
+			// If a path namespace match was specified and the path in the
+			// signal is not on that namespace, ignore.
+			if w.pathNamespace != "" {
+				if !strings.HasPrefix(string(signal.Path), w.pathNamespace) {
+					bus.traceLog("Ignoring mismatched path namespace.", slog.Any("signal", signal.Path), slog.Any("match", w.pathNamespace))
 
-						continue
-					}
-				}
-				// If a path namespace match was specified and the path in the
-				// signal is not on that namespace, ignore.
-				if w.pathNamespace != "" {
-					if !strings.HasPrefix(string(signal.Path), w.pathNamespace) {
-						bus.traceLog("Ignoring mismatched path namespace.", slog.Any("signal", signal.Path), slog.Any("match", w.pathNamespace))
-
-						continue
-					}
-				}
-				// We have a match! Send the signal details back to the client
-				// for further processing.
-				bus.traceLog("Dispatching D-Bus trigger.", slog.Any("signal", signal))
-
-				outCh <- Trigger{
-					Signal:  signal.Name,
-					Path:    string(signal.Path),
-					Content: signal.Body,
+					continue
 				}
 			}
+			// We have a match! Send the signal details back to the client
+			// for further processing.
+			bus.traceLog("Dispatching D-Bus trigger.", slog.Any("signal", signal))
+
+			outCh <- Trigger{
+				Signal:  signal.Name,
+				Path:    string(signal.Path),
+				Content: signal.Body,
+			}
 		}
+	}()
+
+	// If the context is cancelled, stop watching.
+	go func() {
+		defer bus.conn.RemoveSignal(signalCh)
+		<-ctx.Done()
 	}()
 
 	return outCh, nil
