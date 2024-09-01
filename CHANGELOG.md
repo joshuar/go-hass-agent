@@ -1,5 +1,12 @@
 # Changelog
 
+## [10.1.1](https://github.com/joshuar/go-hass-agent/compare/v10.1.0...v10.1.1) (2024-09-01)
+
+
+### Bug Fixes
+
+* **linux:** :bug: don't include mounts where stats cannot be retrieved for disk usage sensors ([82534c8](https://github.com/joshuar/go-hass-agent/commit/82534c8418ed5ebfbf0b96dfe63e9e497f9ae738))
+
 ## [10.1.0](https://github.com/joshuar/go-hass-agent/compare/v10.0.1...v10.1.0) (2024-08-27)
 
 
