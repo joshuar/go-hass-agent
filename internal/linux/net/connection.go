@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
-	"sync"
 
 	"github.com/godbus/dbus/v5"
 
@@ -87,17 +86,25 @@ func (c *connection) monitor(ctx context.Context, bus *dbusx.Bus) <-chan sensor.
 
 	// Monitor connection properties.
 	go func() {
+		c.logger.Debug("Monitoring connection.")
+
 		for sensor := range c.monitorConnection(ctx, bus) {
 			sensorCh <- sensor
 		}
+
+		c.logger.Debug("Unmonitoring connection.")
 	}()
 
 	// If the connection is a wifi connection, monitor wifi properties.
 	if c.connType == "802-11-wireless" {
 		go func() {
+			c.logger.Debug("Monitoring WiFi.")
+
 			for sensor := range c.monitorWifi(ctx, bus) {
 				sensorCh <- sensor
 			}
+
+			c.logger.Debug("Unmonitoring WiFi.")
 		}()
 	}
 
@@ -110,6 +117,7 @@ func (c *connection) monitor(ctx context.Context, bus *dbusx.Bus) <-chan sensor.
 //revive:disable:function-length
 func (c *connection) monitorConnection(ctx context.Context, bus *dbusx.Bus) <-chan sensor.Details {
 	sensorCh := make(chan sensor.Details)
+	monitorCtx, monitorCancel := context.WithCancel(ctx)
 
 	// Create sensors for monitored properties.
 	stateSensor := newConnectionStateSensor(bus, string(c.path), c.name)
@@ -131,9 +139,10 @@ func (c *connection) monitorConnection(ctx context.Context, bus *dbusx.Bus) <-ch
 	triggerCh, err := dbusx.NewWatch(
 		dbusx.MatchPath(string(c.path)),
 		dbusx.MatchPropChanged(),
-	).Start(ctx, bus)
+	).Start(monitorCtx, bus)
 	if err != nil {
 		c.logger.Debug("Could not start D-Bus connection property watch.", slog.Any("error", err))
+		monitorCancel()
 		close(sensorCh)
 
 		return sensorCh
@@ -141,20 +150,17 @@ func (c *connection) monitorConnection(ctx context.Context, bus *dbusx.Bus) <-ch
 
 	go func() {
 		defer close(sensorCh)
-
-		c.logger.Debug("Started monitoring connection properties.")
+		defer monitorCancel()
+		defer close(c.doneCh)
+		c.logger.Debug("Stated watching for connection property updates.")
 
 		for {
 			select {
-			case <-c.doneCh: // Connection offline.
-				c.logger.Debug("Stopped monitoring connection properties (connection offline).")
+			case <-ctx.Done():
+				c.logger.Debug("Stopped watching for connection property updates.")
 
 				return
-			case <-ctx.Done(): // Agent shutting down.
-				c.logger.Debug("Stopped monitoring connection properties (agent shutdown).")
-
-				return
-			case event := <-triggerCh: // Connection property changed.
+			case event := <-triggerCh:
 				props, err := dbusx.ParsePropertiesChanged(event.Content)
 				if err != nil {
 					continue
@@ -172,10 +178,6 @@ func (c *connection) monitorConnection(ctx context.Context, bus *dbusx.Bus) <-ch
 						} else {
 							// Send the connection state as a sensor.
 							sensorCh <- stateSensor
-						}
-
-						if state, ok := stateSensor.State().(connState); ok && state == connOffline {
-							close(c.doneCh)
 						}
 					case prop == ipv4ConfigPropName:
 						if err := ipv4Sensor.setState(value); err != nil {
@@ -197,16 +199,21 @@ func (c *connection) monitorConnection(ctx context.Context, bus *dbusx.Bus) <-ch
 					}
 				}
 			}
+
+			if stateSensor.value == connOffline {
+				break
+			}
 		}
 	}()
 
 	return sensorCh
 }
 
-//nolint:cyclop
+// monitorWifi will monitor wifi connection properties.
 func (c *connection) monitorWifi(ctx context.Context, bus *dbusx.Bus) <-chan sensor.Details {
 	triggerCh := make(chan dbusx.Trigger)
 	sensorCh := make(chan sensor.Details)
+	monitorCtx, monitorCancel := context.WithCancel(ctx)
 
 	// Get and send initial values for wifi props.
 	go func() {
@@ -218,44 +225,29 @@ func (c *connection) monitorWifi(ctx context.Context, bus *dbusx.Bus) <-chan sen
 	}()
 
 	go func() {
-		c.watchWifiDevice(ctx, bus, triggerCh)
+		c.watchAccessPointProps(monitorCtx, bus, triggerCh)
 	}()
-
-	var apCancelFunc context.CancelFunc
-
-	apCancelFunc = c.watchAPs(ctx, bus, triggerCh)
 
 	go func() {
 		defer close(sensorCh)
+		defer monitorCancel()
 
 		c.logger.Debug("Started monitoring wifi properties.")
 
 		for {
 			select {
 			case <-c.doneCh: // Connection offline.
-				c.logger.Debug("Stopped monitoring wifi properties (connection offline).")
-
 				return
 			case <-ctx.Done(): // Agent shutting down.
-				c.logger.Debug("Stopped monitoring wifi properties (agent shutdown).")
-
 				return
 			case event := <-triggerCh: // Wifi property changed.
 				props, err := dbusx.ParsePropertiesChanged(event.Content)
 				if err != nil {
 					continue
 				}
-				// Ignore device statistics.
-				if props.Interface == "org.freedesktop.NetworkManager.Device.Statistics" {
-					continue
-				}
 
 				for prop, value := range props.Changed {
-					switch {
-					case prop == activeAPPropName: // Access point changed.
-						apCancelFunc()
-						apCancelFunc = c.watchAPs(ctx, bus, triggerCh)
-					case slices.Contains(apPropList, prop): // Wifi property changed.
+					if slices.Contains(apPropList, prop) { // Wifi property changed.
 						sensorCh <- newWifiSensor(prop, value.Value())
 					}
 				}
@@ -266,57 +258,90 @@ func (c *connection) monitorWifi(ctx context.Context, bus *dbusx.Bus) <-chan sen
 	return sensorCh
 }
 
-// watchAPs will get the current active access points for a wireless connections
-// and set up a D-Bus watch on the APs property changes. It returns a cancelFunc
-// that can be used to cancel the watch. Changed properties are sent back
-// through the passed dbusx.Trigger channel.
-func (c *connection) watchAPs(ctx context.Context, bus *dbusx.Bus, triggerCh chan dbusx.Trigger) context.CancelFunc {
-	activeAccessPoints := c.getWifiAPs(bus)
-	apCtx, apCancel := context.WithCancel(ctx)
+// watchAccessPointProps sets up the watches for changes to access points and
+// their properties.
+func (c *connection) watchAccessPointProps(ctx context.Context, bus *dbusx.Bus, triggerCh chan dbusx.Trigger) {
+	apCh := make(chan dbus.ObjectPath)
+	defer close(apCh)
 
-	for _, ap := range activeAccessPoints {
-		c.watchAP(apCtx, bus, string(ap), triggerCh)
-	}
+	apWatchCtx, apWatchCancel := context.WithCancel(ctx)
+	defer apWatchCancel()
 
-	return apCancel
-}
-
-// watchWifiDevice will create a watch on the device properties for a wireless
-// connection. Changed properties are sent back through the passed dbusx.Trigger
-// channel.
-func (c *connection) watchWifiDevice(ctx context.Context, bus *dbusx.Bus, outCh chan dbusx.Trigger) {
 	devices, err := c.devicesProp.Get()
 	if err != nil {
-		c.logger.Debug("could not retrieve wireless devices for connection from D-Bus", slog.Any("error", err))
+		c.logger.Debug("Could not retrieve wireless devices for connection from D-Bus", slog.Any("error", err))
 
 		return
 	}
 
-	triggerChs := make([]<-chan dbusx.Trigger, 0, len(devices))
-
-	for _, devicePath := range devices {
-		// Monitor device properties.
-		devicePropCh, err := dbusx.NewWatch(
-			dbusx.MatchPath(string(devicePath)),
-			dbusx.MatchPropChanged(),
-		).Start(ctx, bus)
-		if err != nil {
-			c.logger.Debug("Could not start D-Bus wifi property watch", slog.Any("error", err))
-
-			return
+	go func() {
+		// Monitor access point changes on devices.
+		for _, devicePath := range devices {
+			c.monitorDeviceAccessPoint(apWatchCtx, bus, string(devicePath), apCh)
 		}
+		// Send the current active access points.
+		for _, ap := range c.getWifiAPs(bus) {
+			apCh <- ap
+		}
+	}()
 
-		triggerChs = append(triggerChs, devicePropCh)
-	}
+	var apPropCancel context.CancelFunc
 
 	for {
 		select {
+		case <-c.doneCh:
+			return
 		case <-ctx.Done():
 			return
-		case event := <-mergeCh(ctx, triggerChs...):
-			outCh <- event
+		case accessPoint := <-apCh:
+			// If there was a previous ap watch, cancel it.
+			if apPropCancel != nil {
+				apPropCancel()
+			}
+			// Watch this ap for prop changes.
+			apPropCancel = c.watchAP(ctx, bus, string(accessPoint), triggerCh)
 		}
 	}
+}
+
+// monitorDeviceAccessPoint starts a D-Bus watch for changes to the active
+// access point for a device.
+func (c *connection) monitorDeviceAccessPoint(ctx context.Context, bus *dbusx.Bus, devicePath string, outCh chan dbus.ObjectPath) {
+	monitorCtx, monitorCancel := context.WithCancel(ctx)
+
+	// Monitor the active access point property.
+	triggerCh, err := dbusx.NewWatch(
+		dbusx.MatchPath(devicePath),
+		dbusx.MatchInterface(wirelessDeviceInterface),
+		dbusx.MatchMembers(activeAPPropName),
+	).Start(monitorCtx, bus)
+	if err != nil {
+		c.logger.Debug("Could not monitor device access point.", slog.Any("error", err))
+		monitorCancel()
+
+		return
+	}
+
+	go func() {
+		defer monitorCancel()
+
+		for {
+			select {
+			case <-c.doneCh:
+				return
+			case <-ctx.Done():
+				return
+			case event := <-triggerCh:
+				values, err := dbusx.ParseValueChange[dbus.ObjectPath](event.Content)
+				if err != nil {
+					c.logger.Debug("Could not parse changed access point prop.", slog.Any("error", err))
+
+					continue
+				}
+				outCh <- values.New
+			}
+		}
+	}()
 }
 
 // getWifiAPs returns a slice of dbus.ObjectPath representing all the active
@@ -324,7 +349,7 @@ func (c *connection) watchWifiDevice(ctx context.Context, bus *dbusx.Bus, outCh 
 func (c *connection) getWifiAPs(bus *dbusx.Bus) []dbus.ObjectPath {
 	devices, err := c.devicesProp.Get()
 	if err != nil {
-		c.logger.Debug("could not retrieve wireless devices for connection from D-Bus", slog.Any("error", err))
+		c.logger.Debug("Could not retrieve active access points.", slog.Any("error", err))
 
 		return nil
 	}
@@ -334,8 +359,6 @@ func (c *connection) getWifiAPs(bus *dbusx.Bus) []dbus.ObjectPath {
 	for _, devicePath := range devices {
 		apPath, err := dbusx.NewProperty[dbus.ObjectPath](bus, string(devicePath), dBusNMObj, wirelessDeviceInterface+"."+activeAPPropName).Get()
 		if err != nil {
-			c.logger.Debug("no ap path", slog.Any("error", err))
-
 			continue
 		}
 
@@ -346,65 +369,33 @@ func (c *connection) getWifiAPs(bus *dbusx.Bus) []dbus.ObjectPath {
 }
 
 // watchAP will set up a D-Bus watch for a connection on its active wireless
-// access point.
-func (c *connection) watchAP(ctx context.Context, bus *dbusx.Bus, apPath string, outCh chan dbusx.Trigger) {
+// access point and send any access point property changes to the given trigger
+// channel. It returns a context.CancelFunc that can be used to stop the watch.
+func (c *connection) watchAP(ctx context.Context, bus *dbusx.Bus, apPath string, outCh chan dbusx.Trigger) context.CancelFunc {
+	watchCtx, watchCancel := context.WithCancel(ctx)
+
 	apPropCh, err := dbusx.NewWatch(
 		dbusx.MatchPath(apPath),
 		dbusx.MatchPropChanged(),
-	).Start(ctx, bus)
+	).Start(watchCtx, bus)
 	if err != nil {
 		c.logger.Debug("Could not start D-Bus access point property watch.", slog.Any("error", err))
 
-		return
+		return watchCancel
 	}
 
 	go func() {
+		defer watchCancel()
+
 		for {
 			select {
-			case <-ctx.Done():
+			case <-c.doneCh:
 				return
 			case event := <-apPropCh:
 				outCh <- event
 			}
 		}
 	}()
-}
 
-func mergeCh[T any](ctx context.Context, inCh ...<-chan T) chan T {
-	var wg sync.WaitGroup
-
-	outCh := make(chan T)
-
-	// Start an output goroutine for each input channel in sensorCh.  output
-	// copies values from c to out until c is closed, then calls wg.Done.
-	output := func(ch <-chan T) { //nolint:varnamelen
-		defer wg.Done()
-
-		if ch == nil {
-			return
-		}
-
-		for n := range ch {
-			select {
-			case outCh <- n:
-			case <-ctx.Done():
-				return
-			}
-		}
-	}
-
-	wg.Add(len(inCh))
-
-	for _, c := range inCh {
-		go output(c)
-	}
-
-	// Start a goroutine to close out once all the output goroutines are
-	// done.  This must start after the wg.Add call.
-	go func() {
-		wg.Wait()
-		close(outCh)
-	}()
-
-	return outCh
+	return watchCancel
 }
