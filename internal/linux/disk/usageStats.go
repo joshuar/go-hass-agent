@@ -132,9 +132,9 @@ func getMounts() ([]*mount, error) {
 
 			if err := validmount.getMountInfo(); err != nil {
 				slog.Debug("Error getting mount info.", slog.Any("error", err))
+			} else {
+				mounts = append(mounts, validmount)
 			}
-
-			mounts = append(mounts, validmount)
 		}
 	}
 
