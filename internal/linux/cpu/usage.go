@@ -138,9 +138,8 @@ func (w *usageWorker) newUsageSensor(details []string, diagnostic bool) *cpuUsag
 		Sensor: linux.Sensor{
 			IconString:      "mdi:chip",
 			UnitsString:     "%",
-			SensorSrc:       linux.DataSrcProcfs,
+			DataSource:      linux.DataSrcProcfs,
 			StateClassValue: types.StateClassMeasurement,
-			SensorTypeValue: linux.SensorCPUPc,
 			IsDiagnostic:    diagnostic,
 		},
 	}
@@ -149,18 +148,18 @@ func (w *usageWorker) newUsageSensor(details []string, diagnostic bool) *cpuUsag
 	return usageSensor
 }
 
-func (w *usageWorker) newCountSensor(sensorType linux.SensorTypeValue, icon string, valueStr string) *linux.Sensor {
+func (w *usageWorker) newCountSensor(name, icon, valueStr string) *linux.Sensor {
 	valueInt, err := strconv.Atoi(valueStr)
 	if err != nil {
-		w.logger.Debug("Failed to convert count from string to int.", slog.String("sensor_type", sensorType.String()), slog.Any("error", err))
+		w.logger.Debug("Failed to convert count from string to int.", slog.String("sensor", name), slog.Any("error", err))
 	}
 
 	return &linux.Sensor{
+		DisplayName:     name,
 		Value:           valueInt,
 		IconString:      icon,
-		SensorSrc:       linux.DataSrcProcfs,
+		DataSource:      linux.DataSrcProcfs,
 		StateClassValue: types.StateClassTotalIncreasing,
-		SensorTypeValue: sensorType,
 		IsDiagnostic:    true,
 		LastReset:       w.boottime.Format(time.RFC3339),
 	}
@@ -194,13 +193,13 @@ func (w *usageWorker) getStats() ([]sensor.Details, error) {
 			sensors = append(sensors, w.newUsageSensor(cols, true))
 			sensors = append(sensors, newCPUFreqSensor(cols[0]))
 		case cols[0] == "ctxt":
-			sensors = append(sensors, w.newCountSensor(linux.SensorCPUCtxSwitch, "mdi:counter", cols[1]))
+			sensors = append(sensors, w.newCountSensor("Total CPU Context Switches", "mdi:counter", cols[1]))
 		case cols[0] == "processes":
-			sensors = append(sensors, w.newCountSensor(linux.SensorProcCnt, "mdi:application-cog", cols[1]))
+			sensors = append(sensors, w.newCountSensor("Total Processes Created", "mdi:application-cog", cols[1]))
 		case cols[0] == "procs_running":
-			sensors = append(sensors, w.newCountSensor(linux.SensorProcsRunning, "mdi:application-cog", cols[1]))
+			sensors = append(sensors, w.newCountSensor("Processes Running", "mdi:application-cog", cols[1]))
 		case cols[0] == "procs_blocked":
-			sensors = append(sensors, w.newCountSensor(linux.SensorProcsBlocked, "mdi:application-cog", cols[1]))
+			sensors = append(sensors, w.newCountSensor("Processes Blocked", "mdi:application-cog", cols[1]))
 		}
 	}
 

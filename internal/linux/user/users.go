@@ -51,11 +51,11 @@ func (s *usersSensor) Attributes() map[string]any {
 func newUsersSensor() *usersSensor {
 	return &usersSensor{
 		Sensor: linux.Sensor{
-			SensorTypeValue: linux.SensorUsers,
+			DisplayName:     "Current Users",
 			UnitsString:     sensorUnits,
 			IconString:      sensorIcon,
 			StateClassValue: types.StateClassMeasurement,
-			SensorSrc:       linux.DataSrcDbus,
+			DataSource:      linux.DataSrcDbus,
 		},
 	}
 }
@@ -86,9 +86,6 @@ func (w *worker) Events(ctx context.Context) (chan sensor.Details, error) {
 			case <-ctx.Done():
 				return
 			case <-w.triggerCh:
-				// if !strings.Contains(event.Signal, sessionAddedSignal) && !strings.Contains(event.Signal, sessionRemovedSignal) {
-				// 	continue
-				// }
 				go sendUpdate()
 			}
 		}

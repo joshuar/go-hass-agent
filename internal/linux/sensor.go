@@ -27,12 +27,12 @@ var ErrUnimplemented = errors.New("unimplemented functionality")
 // will be able to use this struct, which satisfies the sensor.Sensor
 // interface, alllowing them to be sent as a sensor to Home Assistant.
 type Sensor struct {
-	LastReset   string
-	Value       any
-	IconString  string
-	UnitsString string
-	SensorSrc   string
-	SensorTypeValue
+	DisplayName      string
+	LastReset        string
+	Value            any
+	IconString       string
+	UnitsString      string
+	DataSource       string
 	DeviceClassValue types.DeviceClass
 	StateClassValue  types.StateClass
 	IsBinary         bool
@@ -44,11 +44,11 @@ type Sensor struct {
 // by embedding linuxSensor in another struct and defining the needed function.
 
 func (l *Sensor) Name() string {
-	return l.SensorTypeValue.String()
+	return l.DisplayName
 }
 
 func (l *Sensor) ID() string {
-	return strcase.ToSnake(l.SensorTypeValue.String())
+	return strcase.ToSnake(l.DisplayName)
 }
 
 func (l *Sensor) State() any {
@@ -90,8 +90,8 @@ func (l *Sensor) Units() string {
 func (l *Sensor) Attributes() map[string]any {
 	attributes := make(map[string]any)
 
-	if l.SensorSrc != "" {
-		attributes["data_source"] = l.SensorSrc
+	if l.DataSource != "" {
+		attributes["data_source"] = l.DataSource
 	}
 
 	if l.UnitsString != "" {

@@ -3,6 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
+//go:generate stringer -type=rateSensor -output networkRates_generated.go -linecomment
 //revive:disable:unused-receiver
 package net
 
@@ -26,8 +27,15 @@ const (
 	rateInterval = 5 * time.Second
 	rateJitter   = time.Second
 
+	bytesSent     rateSensor = iota // Bytes Sent
+	bytesRecv                       // Bytes Received
+	bytesSentRate                   // Bytes Sent Throughput
+	bytesRecvRate                   // Bytes Received Throughput
+
 	netRatesWorkerID = "network_rates_sensors"
 )
+
+type rateSensor int
 
 type netIOSensorAttributes struct {
 	Packets    uint64 `json:"packets"`     // number of packets
@@ -38,14 +46,13 @@ type netIOSensorAttributes struct {
 
 type netIOSensor struct {
 	linux.Sensor
+	sensorType rateSensor
 	netIOSensorAttributes
 }
 
 func (s *netIOSensor) Attributes() map[string]any {
-	attributes := make(map[string]any)
-
+	attributes := s.Sensor.Attributes()
 	attributes["native_unit_of_measurement"] = s.UnitsString
-	attributes["data_source"] = linux.DataSrcProcfs
 	attributes["stats"] = s.netIOSensorAttributes
 
 	return attributes
@@ -53,10 +60,10 @@ func (s *netIOSensor) Attributes() map[string]any {
 
 //nolint:exhaustive
 func (s *netIOSensor) Icon() string {
-	switch s.SensorTypeValue {
-	case linux.SensorBytesRecv:
+	switch s.sensorType {
+	case bytesRecv:
 		return "mdi:download-network"
-	case linux.SensorBytesSent:
+	case bytesSent:
 		return "mdi:upload-network"
 	}
 
@@ -65,14 +72,14 @@ func (s *netIOSensor) Icon() string {
 
 //nolint:exhaustive
 func (s *netIOSensor) update(counters *net.IOCountersStat) {
-	switch s.SensorTypeValue {
-	case linux.SensorBytesRecv:
+	switch s.sensorType {
+	case bytesRecv:
 		s.Value = counters.BytesRecv
 		s.Packets = counters.PacketsRecv
 		s.Errors = counters.Errin
 		s.Drops = counters.Dropin
 		s.FifoErrors = counters.Fifoin
-	case linux.SensorBytesSent:
+	case bytesSent:
 		s.Value = counters.BytesSent
 		s.Packets = counters.PacketsSent
 		s.Errors = counters.Errout
@@ -81,28 +88,31 @@ func (s *netIOSensor) update(counters *net.IOCountersStat) {
 	}
 }
 
-func newNetIOSensor(t linux.SensorTypeValue) *netIOSensor {
+func newNetIOSensor(t rateSensor) *netIOSensor {
 	return &netIOSensor{
+		sensorType: t,
 		Sensor: linux.Sensor{
+			DisplayName:      t.String(),
 			UnitsString:      countUnit,
-			SensorTypeValue:  t,
 			DeviceClassValue: types.DeviceClassDataSize,
 			StateClassValue:  types.StateClassMeasurement,
+			DataSource:       linux.DataSrcProcfs,
 		},
 	}
 }
 
 type netIORateSensor struct {
 	linux.Sensor
-	lastValue uint64
+	sensorType rateSensor
+	lastValue  uint64
 }
 
 //nolint:exhaustive
 func (s *netIORateSensor) Icon() string {
-	switch s.SensorTypeValue {
-	case linux.SensorBytesRecvRate:
+	switch s.sensorType {
+	case bytesRecvRate:
 		return "mdi:transfer-down"
-	case linux.SensorBytesSentRate:
+	case bytesSentRate:
 		return "mdi:transfer-up"
 	}
 
@@ -117,14 +127,15 @@ func (s *netIORateSensor) update(d time.Duration, b uint64) {
 	s.lastValue = b
 }
 
-func newNetIORateSensor(t linux.SensorTypeValue) *netIORateSensor {
+func newNetIORateSensor(t rateSensor) *netIORateSensor {
 	return &netIORateSensor{
+		sensorType: t,
 		Sensor: linux.Sensor{
+			DisplayName:      t.String(),
 			UnitsString:      rateUnit,
-			SensorTypeValue:  t,
 			DeviceClassValue: types.DeviceClassDataRate,
 			StateClassValue:  types.StateClassMeasurement,
-			SensorSrc:        linux.DataSrcProcfs,
+			DataSource:       linux.DataSrcProcfs,
 		},
 	}
 }
@@ -156,10 +167,10 @@ func (w *ratesWorker) Sensors(ctx context.Context, duration time.Duration) ([]se
 func NewRatesWorker(_ context.Context, _ *dbusx.DBusAPI) (*linux.SensorWorker, error) {
 	return &linux.SensorWorker{
 			Value: &ratesWorker{
-				bytesRx:     newNetIOSensor(linux.SensorBytesRecv),
-				bytesTx:     newNetIOSensor(linux.SensorBytesSent),
-				bytesRxRate: newNetIORateSensor(linux.SensorBytesRecvRate),
-				bytesTxRate: newNetIORateSensor(linux.SensorBytesSentRate),
+				bytesRx:     newNetIOSensor(bytesRecv),
+				bytesTx:     newNetIOSensor(bytesSent),
+				bytesRxRate: newNetIORateSensor(bytesRecvRate),
+				bytesTxRate: newNetIORateSensor(bytesSentRate),
 			},
 			WorkerID: netRatesWorkerID,
 		},

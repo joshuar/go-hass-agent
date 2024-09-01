@@ -29,10 +29,6 @@ const (
 	timeWorkerID = "time_sensors"
 )
 
-type timeSensor struct {
-	linux.Sensor
-}
-
 type timeWorker struct {
 	logger       *slog.Logger
 	boottime     time.Time
@@ -47,28 +43,24 @@ func (w *timeWorker) Sensors(_ context.Context, _ time.Duration) ([]sensor.Detai
 	var sensors []sensor.Details
 
 	// Send the uptime.
-	sensors = append(sensors, &timeSensor{
-		linux.Sensor{
-			SensorTypeValue:  linux.SensorUptime,
-			Value:            w.getUptime() / 60 / 60, //nolint:mnd
-			IsDiagnostic:     true,
-			UnitsString:      "h",
-			IconString:       "mdi:restart",
-			DeviceClassValue: types.DeviceClassDuration,
-			StateClassValue:  types.StateClassMeasurement,
-		},
+	sensors = append(sensors, &linux.Sensor{
+		DisplayName:      "Uptime",
+		Value:            w.getUptime() / 60 / 60, //nolint:mnd
+		IsDiagnostic:     true,
+		UnitsString:      "h",
+		IconString:       "mdi:restart",
+		DeviceClassValue: types.DeviceClassDuration,
+		StateClassValue:  types.StateClassMeasurement,
 	})
 
 	// Send the boottime if we haven't already.
 	if !w.boottimeSent {
-		sensors = append(sensors, &timeSensor{
-			linux.Sensor{
-				SensorTypeValue:  linux.SensorBoottime,
-				Value:            w.boottime.Format(time.RFC3339),
-				IsDiagnostic:     true,
-				IconString:       "mdi:restart",
-				DeviceClassValue: types.DeviceClassTimestamp,
-			},
+		sensors = append(sensors, &linux.Sensor{
+			DisplayName:      "Last Reboot",
+			Value:            w.boottime.Format(time.RFC3339),
+			IsDiagnostic:     true,
+			IconString:       "mdi:restart",
+			DeviceClassValue: types.DeviceClassTimestamp,
 		})
 		w.boottimeSent = true
 	}

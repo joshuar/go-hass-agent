@@ -54,7 +54,7 @@ func (s *cpuFreqSensor) Attributes() map[string]any {
 	return map[string]any{
 		"governor":                   s.governor,
 		"driver":                     s.driver,
-		"data_source":                s.SensorSrc,
+		"data_source":                s.DataSource,
 		"native_unit_of_measurement": s.UnitsString,
 	}
 }
@@ -67,11 +67,10 @@ func newCPUFreqSensor(id string) *cpuFreqSensor {
 		Sensor: linux.Sensor{
 			UnitsString:      cpuFreqUnits,
 			IconString:       cpuFreqIcon,
-			SensorSrc:        linux.DataSrcSysfs,
+			DataSource:       linux.DataSrcSysfs,
 			DeviceClassValue: types.DeviceClassFrequency,
 			StateClassValue:  types.StateClassMeasurement,
 			IsDiagnostic:     true,
-			SensorTypeValue:  linux.SensorCPUFreq,
 			Value:            info.freq,
 		},
 	}

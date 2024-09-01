@@ -13,6 +13,7 @@ import (
 const (
 	runningAppsIcon  = "mdi:apps"
 	runningAppsUnits = "apps"
+	runningAppsName  = "Running Apps"
 )
 
 type runningAppsSensor struct {
@@ -30,7 +31,7 @@ func (r *runningAppsSensor) Attributes() map[string]any {
 func newRunningAppsSensor() *runningAppsSensor {
 	return &runningAppsSensor{
 		Sensor: linux.Sensor{
-			SensorTypeValue: linux.SensorAppRunning,
+			DisplayName:     runningAppsName,
 			IconString:      runningAppsIcon,
 			UnitsString:     runningAppsUnits,
 			StateClassValue: types.StateClassMeasurement,

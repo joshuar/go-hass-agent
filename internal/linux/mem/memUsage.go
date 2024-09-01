@@ -13,8 +13,6 @@ import (
 	"math"
 	"time"
 
-	"github.com/iancoleman/strcase"
-
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
@@ -41,50 +39,31 @@ var (
 	swapSensors = []memStatID{swapTotal, swapFree, swapCached}
 )
 
-type memorySensor struct {
-	name string
-	linux.Sensor
-}
-
-func (s *memorySensor) Name() string {
-	return s.name
-}
-
-func (s *memorySensor) ID() string {
-	return strcase.ToSnake(s.name)
-}
-
 // newMemSensor generates a memorySensor for a memory stat.
-func newMemSensor(id memStatID, stat *memStat) *memorySensor {
-	return &memorySensor{
-		Sensor: linux.Sensor{
-			SensorTypeValue:  linux.SensorMemoryStat,
-			DeviceClassValue: types.DeviceClassDataSize,
-			StateClassValue:  types.StateClassTotal,
-			IconString:       memorySensorIcon,
-			SensorSrc:        linux.DataSrcProcfs,
-			Value:            stat.value,
-			UnitsString:      memoryUsageSensorUnits,
-		},
-		name: id.String(),
+func newMemSensor(id memStatID, stat *memStat) *linux.Sensor {
+	return &linux.Sensor{
+		DisplayName:      id.String(),
+		DeviceClassValue: types.DeviceClassDataSize,
+		StateClassValue:  types.StateClassTotal,
+		IconString:       memorySensorIcon,
+		DataSource:       linux.DataSrcProcfs,
+		Value:            stat.value,
+		UnitsString:      memoryUsageSensorUnits,
 	}
 }
 
 // newMemSensorPc generates a memorySensor with a percentage value for a memory
 // stat.
-func newMemSensorPc(name string, value, total uint64) *memorySensor {
+func newMemSensorPc(name string, value, total uint64) *linux.Sensor {
 	valuePc := math.Round(float64(value)/float64(total)*100/0.05) * 0.05 //nolint:mnd
 
-	return &memorySensor{
-		Sensor: linux.Sensor{
-			SensorTypeValue: linux.SensorMemoryStat,
-			StateClassValue: types.StateClassMeasurement,
-			IconString:      memorySensorIcon,
-			SensorSrc:       linux.DataSrcProcfs,
-			Value:           valuePc,
-			UnitsString:     memoryUsageSensorPcUnits,
-		},
-		name: name,
+	return &linux.Sensor{
+		DisplayName:     name,
+		StateClassValue: types.StateClassMeasurement,
+		IconString:      memorySensorIcon,
+		DataSource:      linux.DataSrcProcfs,
+		Value:           valuePc,
+		UnitsString:     memoryUsageSensorPcUnits,
 	}
 }
 

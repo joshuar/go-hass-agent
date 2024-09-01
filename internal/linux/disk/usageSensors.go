@@ -18,6 +18,22 @@ type diskUsageSensor struct {
 	linux.Sensor
 }
 
+func (d *diskUsageSensor) Name() string {
+	return "Mountpoint " + d.mount.mountpoint + " Usage"
+}
+
+func (d *diskUsageSensor) ID() string {
+	if d.mount.mountpoint == "/" {
+		return "mountpoint_root"
+	}
+
+	return "mountpoint" + strings.ReplaceAll(d.mount.mountpoint, "/", "_")
+}
+
+func (d *diskUsageSensor) Attributes() map[string]any {
+	return d.mount.attributes
+}
+
 //nolint:mnd
 func newDiskUsageSensor(mount *mount) *diskUsageSensor {
 	mount.attributes["data_source"] = linux.DataSrcProcfs
@@ -35,20 +51,4 @@ func newDiskUsageSensor(mount *mount) *diskUsageSensor {
 		},
 		mount: mount,
 	}
-}
-
-func (d *diskUsageSensor) Name() string {
-	return "Mountpoint " + d.mount.mountpoint + " Usage"
-}
-
-func (d *diskUsageSensor) ID() string {
-	if d.mount.mountpoint == "/" {
-		return "mountpoint_root"
-	}
-
-	return "mountpoint" + strings.ReplaceAll(d.mount.mountpoint, "/", "_")
-}
-
-func (d *diskUsageSensor) Attributes() map[string]any {
-	return d.mount.attributes
 }

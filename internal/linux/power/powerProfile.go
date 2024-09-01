@@ -26,19 +26,13 @@ const (
 	powerProfileIcon = "mdi:flash"
 )
 
-type powerSensor struct {
-	linux.Sensor
-}
-
-func newPowerSensor(sensorType linux.SensorTypeValue, profile string) *powerSensor {
-	return &powerSensor{
-		Sensor: linux.Sensor{
-			Value:           profile,
-			SensorTypeValue: sensorType,
-			IconString:      powerProfileIcon,
-			SensorSrc:       linux.DataSrcDbus,
-			IsDiagnostic:    true,
-		},
+func newPowerSensor(profile string) *linux.Sensor {
+	return &linux.Sensor{
+		DisplayName:  "Power Profile",
+		Value:        profile,
+		IconString:   powerProfileIcon,
+		DataSource:   linux.DataSrcDbus,
+		IsDiagnostic: true,
 	}
 }
 
@@ -75,7 +69,7 @@ func (w *profileWorker) Events(ctx context.Context) (chan sensor.Details, error)
 					logger.Debug("Could not parse received D-Bus signal.", slog.Any("error", err))
 				} else {
 					if changed {
-						sensorCh <- newPowerSensor(linux.SensorPowerProfile, profile)
+						sensorCh <- newPowerSensor(profile)
 					}
 				}
 			}
@@ -91,7 +85,7 @@ func (w *profileWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
 		return nil, fmt.Errorf("unable to retrieve active power profile from D-Bus: %w", err)
 	}
 
-	return []sensor.Details{newPowerSensor(linux.SensorPowerProfile, profile)}, nil
+	return []sensor.Details{newPowerSensor(profile)}, nil
 }
 
 func NewProfileWorker(ctx context.Context, api *dbusx.DBusAPI) (*linux.SensorWorker, error) {

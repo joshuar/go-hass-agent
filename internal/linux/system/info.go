@@ -35,18 +35,18 @@ func (w *infoWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
 	} else {
 		sensors = append(sensors,
 			&linux.Sensor{
-				SensorTypeValue: linux.SensorDistribution,
-				Value:           distro,
-				IsDiagnostic:    true,
-				IconString:      "mdi:linux",
-				SensorSrc:       linux.DataSrcProcfs,
+				DisplayName:  "Distribution Name",
+				Value:        distro,
+				IsDiagnostic: true,
+				IconString:   "mdi:linux",
+				DataSource:   linux.DataSrcProcfs,
 			},
 			&linux.Sensor{
-				SensorTypeValue: linux.SensorVersion,
-				Value:           version,
-				IsDiagnostic:    true,
-				IconString:      "mdi:numeric",
-				SensorSrc:       linux.DataSrcProcfs,
+				DisplayName:  "Distribution Version",
+				Value:        version,
+				IsDiagnostic: true,
+				IconString:   "mdi:numeric",
+				DataSource:   linux.DataSrcProcfs,
 			},
 		)
 	}
@@ -58,11 +58,11 @@ func (w *infoWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
 	} else {
 		sensors = append(sensors,
 			&linux.Sensor{
-				SensorTypeValue: linux.SensorKernel,
-				Value:           kernelVersion,
-				IsDiagnostic:    true,
-				IconString:      "mdi:chip",
-				SensorSrc:       linux.DataSrcProcfs,
+				DisplayName:  "Kernel Version",
+				Value:        kernelVersion,
+				IsDiagnostic: true,
+				IconString:   "mdi:chip",
+				DataSource:   linux.DataSrcProcfs,
 			},
 		)
 	}

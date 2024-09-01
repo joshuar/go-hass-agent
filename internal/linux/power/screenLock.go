@@ -44,10 +44,10 @@ func (s *screenlockSensor) Icon() string {
 func newScreenlockEvent(value bool) *screenlockSensor {
 	return &screenlockSensor{
 		Sensor: linux.Sensor{
-			SensorTypeValue: linux.SensorScreenLock,
-			IsBinary:        true,
-			SensorSrc:       linux.DataSrcDbus,
-			Value:           value,
+			DisplayName: "Screen Lock",
+			IsBinary:    true,
+			DataSource:  linux.DataSrcDbus,
+			Value:       value,
 		},
 	}
 }
