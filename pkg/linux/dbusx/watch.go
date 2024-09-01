@@ -128,8 +128,6 @@ func (w *Watch) Start(ctx context.Context, bus *Bus) (chan Trigger, error) {
 	// signals and data. If the context is cancelled (i.e., agent shutdown),
 	// clean up.
 	go func() {
-		defer close(outCh)
-
 		for signal := range signalCh {
 			// If the signal is empty, ignore.
 			if signal == nil {
@@ -168,6 +166,7 @@ func (w *Watch) Start(ctx context.Context, bus *Bus) (chan Trigger, error) {
 	// If the context is cancelled, stop watching.
 	go func() {
 		defer bus.conn.RemoveSignal(signalCh)
+		defer close(outCh)
 		<-ctx.Done()
 	}()
 
