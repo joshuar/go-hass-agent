@@ -59,11 +59,11 @@ type Preferences struct {
 }
 
 type MQTT struct {
-	MQTTServer      string `toml:"server,omitempty" validate:"omitempty,uri"`
-	MQTTUser        string `toml:"user,omitempty" validate:"omitempty"`
-	MQTTPassword    string `toml:"password,omitempty" validate:"omitempty"`
-	MQTTTopicPrefix string `toml:"topic_prefix,omitempty" validate:"omitempty,ascii"`
-	MQTTEnabled     bool   `toml:"enabled" validate:"boolean"`
+	MQTTServer      string `toml:"server,omitempty" validate:"omitempty,uri" kong:"required,help='MQTT server URI. Required.',placeholder='scheme://some.host:port'"` //nolint:lll
+	MQTTUser        string `toml:"user,omitempty" validate:"omitempty" kong:"optional,help='MQTT username.'"`
+	MQTTPassword    string `toml:"password,omitempty" validate:"omitempty" kong:"optional,help='MQTT password.'"`
+	MQTTTopicPrefix string `toml:"topic_prefix,omitempty" validate:"omitempty,ascii" kong:"optional,help='MQTT topic prefix.'"`
+	MQTTEnabled     bool   `toml:"enabled" validate:"boolean" kong:"-"`
 }
 
 func (p *Preferences) Validate() error {

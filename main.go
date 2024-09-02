@@ -27,6 +27,7 @@ var CLI struct {
 	Profile   cli.ProfileFlags `help:"Enable profiling."`
 	AppID     string           `name:"appid" default:"${defaultAppID}" help:"Specify a custom app id (for debugging)."`
 	LogLevel  string           `name:"log-level" enum:"info,debug,trace" default:"info" help:"Set logging level."`
+	Config    cli.ConfigCmd    `cmd:"" help:"Configure Go Hass Agent."`
 	Register  cli.RegisterCmd  `cmd:"" help:"Register with Home Assistant."`
 	NoLogFile bool             `help:"Don't write to a log file."`
 	Headless  bool             `name:"terminal" help:"Run without a GUI."`
