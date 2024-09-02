@@ -7,12 +7,13 @@ package power
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 
 	"github.com/eclipse/paho.golang/paho"
 	mqtthass "github.com/joshuar/go-hass-anything/v11/pkg/hass"
 
+	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
@@ -89,21 +90,20 @@ func (c *powerController) generatePowerControlCallback(ctx context.Context, name
 	}
 }
 
-//nolint:lll
-func NewPowerControl(ctx context.Context, api *dbusx.DBusAPI, parentLogger *slog.Logger, device *mqtthass.Device) ([]*mqtthass.ButtonEntity, error) {
-	sessionBus, err := api.GetBus(ctx, dbusx.SystemBus)
-	if err != nil {
-		return nil, fmt.Errorf("cannot create power controls: %w", err)
+func NewPowerControl(ctx context.Context, device *mqtthass.Device) ([]*mqtthass.ButtonEntity, error) {
+	bus, ok := linux.CtxGetSystemBus(ctx)
+	if !ok {
+		return nil, linux.ErrNoSystemBus
 	}
 
-	sessionPath, err := sessionBus.GetSessionPath()
-	if err != nil {
-		return nil, fmt.Errorf("cannot create power controls: %w", err)
+	sessionPath, ok := linux.CtxGetSessionPath(ctx)
+	if !ok {
+		return nil, linux.ErrNoSessionPath
 	}
 
 	controller := &powerController{
-		logger:      parentLogger.WithGroup("power_control"),
-		bus:         sessionBus,
+		logger:      logging.FromContext(ctx).WithGroup("power_control"),
+		bus:         bus,
 		sessionPath: sessionPath,
 	}
 

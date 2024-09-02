@@ -16,6 +16,8 @@ import (
 	"github.com/eclipse/paho.golang/paho"
 	mqtthass "github.com/joshuar/go-hass-anything/v11/pkg/hass"
 
+	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
@@ -123,22 +125,21 @@ func setupCommands(_ context.Context, sessionBus *dbusx.Bus, systemBus *dbusx.Bu
 
 // NewScreenLockControl is called by the OS controller of the agent to generate
 // MQTT button entities for the screen lock controls.
-//
-//nolint:lll
-func NewScreenLockControl(ctx context.Context, api *dbusx.DBusAPI, parentLogger *slog.Logger, device *mqtthass.Device) ([]*mqtthass.ButtonEntity, error) {
+func NewScreenLockControl(ctx context.Context, device *mqtthass.Device) ([]*mqtthass.ButtonEntity, error) {
 	// Retrieve the D-Bus session bus. Needed by some controls.
-	sessionBus, err := api.GetBus(ctx, dbusx.SessionBus)
-	if err != nil {
-		return nil, fmt.Errorf("cannot create screen lock controls: %w", err)
+	sessionBus, ok := linux.CtxGetSessionBus(ctx)
+	if !ok {
+		return nil, linux.ErrNoSessionBus
 	}
+
 	// Retrieve the D-Bus system bus. Needed by some controls.
-	systemBus, err := api.GetBus(ctx, dbusx.SystemBus)
-	if err != nil {
-		return nil, fmt.Errorf("cannot create screen lock controls: %w", err)
+	systemBus, ok := linux.CtxGetSystemBus(ctx)
+	if !ok {
+		return nil, linux.ErrNoSystemBus
 	}
 
 	// Decorate a logger for this controller.
-	logger := parentLogger.WithGroup("screensaver_control")
+	logger := logging.FromContext(ctx).WithGroup("screensaver_control")
 
 	commands, err := setupCommands(ctx, sessionBus, systemBus, device)
 	if err != nil {

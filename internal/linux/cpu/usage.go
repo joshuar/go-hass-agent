@@ -22,7 +22,6 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/logging"
-	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
 const (
@@ -109,7 +108,7 @@ func (w *usageWorker) Sensors(_ context.Context, _ time.Duration) ([]sensor.Deta
 	return w.getStats()
 }
 
-func NewUsageWorker(ctx context.Context, _ *dbusx.DBusAPI) (*linux.SensorWorker, error) {
+func NewUsageWorker(ctx context.Context) (*linux.SensorWorker, error) {
 	clktck, found := linux.CtxGetClkTck(ctx)
 	if !found {
 		return nil, fmt.Errorf("%w: no clktck value", linux.ErrInvalidCtx)

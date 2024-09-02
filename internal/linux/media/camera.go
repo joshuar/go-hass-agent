@@ -18,6 +18,7 @@ import (
 	"github.com/vladimirvivien/go4vl/device"
 	"github.com/vladimirvivien/go4vl/v4l2"
 
+	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
@@ -59,10 +60,8 @@ type cameraControl struct {
 }
 
 // NewCameraControl is called by the OS controller to provide the entities for a camera.
-//
-//nolint:lll
-func NewCameraControl(ctx context.Context, msgCh chan *mqttapi.Msg, parentLogger *slog.Logger, mqttDevice *mqtthass.Device) *CameraEntities {
-	camera := newCamera(parentLogger)
+func NewCameraControl(ctx context.Context, msgCh chan *mqttapi.Msg, mqttDevice *mqtthass.Device) *CameraEntities {
+	camera := newCamera(ctx)
 	entities := &CameraEntities{}
 
 	entities.Images = mqtthass.AsImage(mqtthass.NewEntity(preferences.AppName, "Webcam", mqttDevice.Name+"_camera").
@@ -124,9 +123,9 @@ func NewCameraControl(ctx context.Context, msgCh chan *mqttapi.Msg, parentLogger
 	return entities
 }
 
-func newCamera(logger *slog.Logger) *cameraControl {
+func newCamera(ctx context.Context) *cameraControl {
 	return &cameraControl{
-		logger: logger.WithGroup("camera"),
+		logger: logging.FromContext(ctx).With(slog.String("controller", "camera")),
 		state:  stoppedState,
 	}
 }

@@ -88,10 +88,10 @@ func (w *profileWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
 	return []sensor.Details{newPowerSensor(profile)}, nil
 }
 
-func NewProfileWorker(ctx context.Context, api *dbusx.DBusAPI) (*linux.SensorWorker, error) {
-	bus, err := api.GetBus(ctx, dbusx.SystemBus)
-	if err != nil {
-		return nil, fmt.Errorf("unable to monitor power profile: %w", err)
+func NewProfileWorker(ctx context.Context) (*linux.SensorWorker, error) {
+	bus, ok := linux.CtxGetSystemBus(ctx)
+	if !ok {
+		return nil, linux.ErrNoSystemBus
 	}
 
 	triggerCh, err := dbusx.NewWatch(

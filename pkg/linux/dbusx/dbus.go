@@ -72,9 +72,9 @@ func (b *Bus) getObject(intr, path string) dbus.BusObject {
 	return b.conn.Object(intr, dbus.ObjectPath(path))
 }
 
-// newBus creates a D-Bus connection to the requested bus. If a connection
+// NewBus creates a D-Bus connection to the requested bus. If a connection
 // cannot be established, an error is returned.
-func newBus(ctx context.Context, busType dbusType) (*Bus, error) {
+func NewBus(ctx context.Context, busType dbusType) (*Bus, error) {
 	var (
 		conn *dbus.Conn
 		err  error

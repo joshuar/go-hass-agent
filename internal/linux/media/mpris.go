@@ -14,6 +14,8 @@ import (
 	mqtthass "github.com/joshuar/go-hass-anything/v11/pkg/hass"
 	mqttapi "github.com/joshuar/go-hass-anything/v11/pkg/mqtt"
 
+	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
@@ -35,10 +37,14 @@ type mprisMonitor struct {
 	mediaState       string
 }
 
-//nolint:lll
-func MPRISControl(ctx context.Context, api *dbusx.DBusAPI, parentLogger *slog.Logger, device *mqtthass.Device, msgCh chan *mqttapi.Msg) (*mqtthass.SensorEntity, error) {
+func MPRISControl(ctx context.Context, device *mqtthass.Device, msgCh chan *mqttapi.Msg) (*mqtthass.SensorEntity, error) {
+	bus, ok := linux.CtxGetSessionBus(ctx)
+	if !ok {
+		return nil, linux.ErrNoSessionBus
+	}
+
 	mprisMonitor := &mprisMonitor{
-		logger: parentLogger,
+		logger: logging.FromContext(ctx).With(slog.String("controller", "mpris")),
 		msgCh:  msgCh,
 	}
 
@@ -51,16 +57,11 @@ func MPRISControl(ctx context.Context, api *dbusx.DBusAPI, parentLogger *slog.Lo
 			WithStateCallback(mprisMonitor.mprisStateCallback),
 	)
 
-	dbusAPI, err := api.GetBus(ctx, dbusx.SessionBus)
-	if err != nil {
-		return nil, fmt.Errorf("could not connect to D-Bus: %w", err)
-	}
-
 	triggerCh, err := dbusx.NewWatch(
 		dbusx.MatchPath(mprisDBusPath),
 		dbusx.MatchPropChanged(),
 		dbusx.MatchArgNameSpace(mprisDBusNamespace),
-	).Start(ctx, dbusAPI)
+	).Start(ctx, bus)
 	if err != nil {
 		return nil, fmt.Errorf("could not watch D-Bus for MPRIS signals: %w", err)
 	}
