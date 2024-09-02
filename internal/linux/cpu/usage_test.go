@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"log/slog"
 	"math/rand"
+	"path/filepath"
 	"reflect"
 	"slices"
 	"strconv"
@@ -157,7 +158,7 @@ func TestNewUsageWorker(t *testing.T) {
 	clktck, err := sysconf.Sysconf(sysconf.SC_CLK_TCK)
 	require.NoError(t, err)
 
-	ctx, cancelFunc := context.WithCancel(context.TODO())
+	ctx, cancelFunc := context.WithCancel(linux.NewContext(context.TODO()))
 	defer cancelFunc()
 	ctx = logging.ToContext(ctx, slog.Default())
 
@@ -209,7 +210,6 @@ func Test_usageWorker_newUsageSensor(t *testing.T) {
 			UnitsString:     "%",
 			DataSource:      linux.DataSrcProcfs,
 			StateClassValue: types.StateClassMeasurement,
-			DisplayName:     "Total CPU Usage",
 			IsDiagnostic:    false,
 		},
 	}
@@ -299,16 +299,17 @@ func Test_usageWorker_getStats(t *testing.T) {
 
 	type fields struct {
 		logger *slog.Logger
+		path   string
 		clktck int64
 	}
 	tests := []struct {
-		fields  fields
 		name    string
+		fields  fields
 		wantErr bool
 	}{
 		{
 			name:   "valid",
-			fields: fields{clktck: clktck},
+			fields: fields{clktck: clktck, path: filepath.Join(linux.ProcFSRoot, "stat")},
 		},
 	}
 	for _, tt := range tests {
@@ -316,6 +317,7 @@ func Test_usageWorker_getStats(t *testing.T) {
 			w := &usageWorker{
 				clktck: tt.fields.clktck,
 				logger: tt.fields.logger,
+				path:   tt.fields.path,
 			}
 			got, err := w.getStats()
 			if (err != nil) != tt.wantErr {
