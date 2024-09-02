@@ -1,6 +1,0 @@
-Go Hass Agent reports various device sensors and measurements to, and can
-receive desktop notifications from, Home Assistant. It can optionally provide
-control of the device via MQTT. It runs as a tray icon application or without
-any GUI in a headless mode, processing and sending/receiving data automatically.
-The tray icon, if available, provides some actions to configure settings and
-show reported sensors/measurements.
