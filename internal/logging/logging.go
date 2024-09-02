@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 
 	"github.com/lmittmann/tint"
+	"github.com/mattn/go-isatty"
 	slogmulti "github.com/samber/slog-multi"
 )
 
@@ -30,55 +31,59 @@ var LevelNames = map[slog.Leveler]string{
 
 //revive:disable:flag-parameter
 func New(level string, logFile string) *slog.Logger {
-	// Create an slog consoleOpts object.
-	consoleOpts := &tint.Options{
-		ReplaceAttr: levelReplacer,
-	}
-	fileOpts := &tint.Options{
-		ReplaceAttr: levelReplacer,
-		NoColor:     true,
-	}
+	var (
+		logLevel slog.Level
+		handler  slog.Handler
+	)
 
 	// Set the log level.
 	switch level {
 	case "trace":
-		consoleOpts.Level = LevelTrace
-		consoleOpts.AddSource = true
-		fileOpts.Level = LevelTrace
-		fileOpts.AddSource = true
+		logLevel = LevelTrace
 	case "debug":
-		consoleOpts.Level = slog.LevelDebug
-		fileOpts.Level = slog.LevelDebug
+		logLevel = slog.LevelDebug
 	default:
-		consoleOpts.Level = slog.LevelInfo
-		fileOpts.Level = slog.LevelInfo
+		logLevel = slog.LevelInfo
 	}
 
 	// Set the slog handler
-	logHandler := slogmulti.Fanout(
-		tint.NewHandler(os.Stdout, consoleOpts),
-	)
-
 	// Unless no log file was requested, set up file logging.
 	if logFile != "" {
 		logFH, err := openLogFile(logFile)
 		if err != nil {
 			slog.Warn("unable to open log file", "file", logFile, "error", err)
 		} else {
-			logHandler = slogmulti.Fanout(
-				tint.NewHandler(os.Stdout, consoleOpts),
-				tint.NewHandler(logFH, fileOpts),
+			handler = slogmulti.Fanout(
+				tint.NewHandler(os.Stdout, generateOptions(logLevel, os.Stdout.Fd())),
+				tint.NewHandler(logFH, generateOptions(logLevel, logFH.Fd())),
 			)
 		}
+	} else {
+		handler = slogmulti.Fanout(
+			tint.NewHandler(os.Stdout, generateOptions(logLevel, os.Stdout.Fd())),
+		)
 	}
 
-	logger := slog.New(logHandler)
+	logger := slog.New(handler)
 
 	slog.SetDefault(logger)
 
 	return logger
 }
 
+func generateOptions(level slog.Level, fd uintptr) *tint.Options {
+	opts := &tint.Options{
+		Level:   level,
+		NoColor: !isatty.IsTerminal(fd),
+	}
+	if level == LevelTrace {
+		opts.AddSource = true
+	}
+
+	return opts
+}
+
+//nolint:unused
 func levelReplacer(_ []string, attr slog.Attr) slog.Attr {
 	if attr.Key == slog.LevelKey {
 		level, ok := attr.Value.Any().(slog.Level)
