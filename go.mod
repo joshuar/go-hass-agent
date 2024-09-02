@@ -132,6 +132,7 @@ require (
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/lmittmann/tint v1.0.5
 	github.com/mandykoh/prism v0.35.3
+	github.com/mattn/go-isatty v0.0.20
 	github.com/miekg/dns v1.1.41 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
