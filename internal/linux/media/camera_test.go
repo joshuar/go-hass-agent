@@ -41,10 +41,9 @@ func TestNewCameraControl(t *testing.T) {
 	msgCh := make(chan *mqttapi.Msg)
 	defer close(msgCh)
 	type args struct {
-		ctx          context.Context
-		msgCh        chan *mqttapi.Msg
-		parentLogger *slog.Logger
-		mqttDevice   *mqtthass.Device
+		ctx        context.Context
+		msgCh      chan *mqttapi.Msg
+		mqttDevice *mqtthass.Device
 	}
 	tests := []struct {
 		args args
@@ -53,12 +52,12 @@ func TestNewCameraControl(t *testing.T) {
 	}{
 		{
 			name: "successful",
-			args: args{ctx: context.TODO(), msgCh: msgCh, parentLogger: slog.Default(), mqttDevice: &mqtthass.Device{Name: "test"}},
+			args: args{ctx: context.TODO(), msgCh: msgCh, mqttDevice: &mqtthass.Device{Name: "test"}},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := NewCameraControl(tt.args.ctx, tt.args.msgCh, tt.args.parentLogger, tt.args.mqttDevice)
+			got := NewCameraControl(tt.args.ctx, tt.args.msgCh, tt.args.mqttDevice)
 			assert.NotNil(t, got.Status)
 			state := <-msgCh
 			assert.Equal(t, []byte(stoppedState), state.Message)
@@ -71,7 +70,7 @@ func TestNewCameraControl(t *testing.T) {
 
 func Test_newCamera(t *testing.T) {
 	type args struct {
-		logger *slog.Logger
+		ctx context.Context
 	}
 	tests := []struct {
 		args args
@@ -80,7 +79,7 @@ func Test_newCamera(t *testing.T) {
 	}{
 		{
 			name: "successful",
-			args: args{logger: slog.Default()},
+			args: args{ctx: context.TODO()},
 			want: &cameraControl{
 				state:  stoppedState,
 				logger: slog.Default().WithGroup("camera"),
@@ -89,7 +88,7 @@ func Test_newCamera(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := newCamera(tt.args.logger)
+			got := newCamera(tt.args.ctx)
 			assert.NotNil(t, got.logger)
 			assert.Equal(t, stoppedState, got.state)
 		})
@@ -152,7 +151,7 @@ func Test_cameraControl_openCamera(t *testing.T) {
 func Test_cameraControl_publishImages(t *testing.T) {
 	skipCI(t)
 	skipContainer(t)
-	camera := newCamera(slog.Default())
+	camera := newCamera(context.TODO())
 	err := camera.openCamera(defaultDevice)
 	require.NoError(t, err)
 	defer camera.closeCamera() //nolint:errcheck
@@ -201,7 +200,7 @@ func Test_cameraControl_publishImages(t *testing.T) {
 func Test_cameraControl_closeCamera(t *testing.T) {
 	skipCI(t)
 	skipContainer(t)
-	camera := newCamera(slog.Default())
+	camera := newCamera(context.TODO())
 	err := camera.openCamera(defaultDevice)
 	require.NoError(t, err)
 

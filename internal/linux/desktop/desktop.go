@@ -173,16 +173,15 @@ func (w *worker) Sensors(_ context.Context) ([]sensor.Details, error) {
 	return sensors, errs
 }
 
-func NewDesktopWorker(ctx context.Context, api *dbusx.DBusAPI) (*linux.SensorWorker, error) {
-	// If we cannot find a portal interface, we cannot monitor desktop settings.
-	_, err := linux.FindPortal()
-	if err != nil {
-		return nil, fmt.Errorf("unable to monitor for desktop settings: %w", err)
+func NewDesktopWorker(ctx context.Context) (*linux.SensorWorker, error) {
+	_, ok := linux.CtxGetDesktopPortal(ctx)
+	if !ok {
+		return nil, linux.ErrNoDesktopPortal
 	}
 
-	bus, err := api.GetBus(ctx, dbusx.SessionBus)
-	if err != nil {
-		return nil, fmt.Errorf("unable to monitor for desktop settings: %w", err)
+	bus, ok := linux.CtxGetSessionBus(ctx)
+	if !ok {
+		return nil, linux.ErrNoSessionBus
 	}
 
 	triggerCh, err := dbusx.NewWatch(

@@ -24,7 +24,6 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/logging"
-	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
 func Test_cpuUsageSensor_generateValues(t *testing.T) {
@@ -164,7 +163,6 @@ func TestNewUsageWorker(t *testing.T) {
 
 	type args struct {
 		in0 context.Context
-		in1 *dbusx.DBusAPI
 	}
 	tests := []struct {
 		args    args
@@ -185,7 +183,7 @@ func TestNewUsageWorker(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := NewUsageWorker(tt.args.in0, tt.args.in1)
+			_, err := NewUsageWorker(tt.args.in0)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewUsageWorker() error = %v, wantErr %v", err, tt.wantErr)
 				return

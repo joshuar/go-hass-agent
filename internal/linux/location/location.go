@@ -15,6 +15,7 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
@@ -52,7 +53,7 @@ type worker struct {
 }
 
 func (w *worker) Events(ctx context.Context) (chan sensor.Details, error) {
-	logger := slog.With(slog.String("worker", workerID))
+	logger := logging.FromContext(ctx).With(slog.String("worker", workerID))
 
 	err := w.startMethod.Call(ctx)
 	if err != nil {
@@ -124,16 +125,16 @@ func (w *worker) newLocation(locationPath string) (*locationSensor, error) {
 	return location, warnings
 }
 
-func NewLocationWorker(ctx context.Context, api *dbusx.DBusAPI) (*linux.SensorWorker, error) {
+func NewLocationWorker(ctx context.Context) (*linux.SensorWorker, error) {
 	// Don't run this worker if we are not running on a laptop.
 	chassis, _ := device.Chassis() //nolint:errcheck // error is same as any value other than wanted value.
 	if chassis != "laptop" {
 		return nil, fmt.Errorf("unable to monitor location updates: %w", device.ErrUnsupportedHardware)
 	}
 
-	bus, err := api.GetBus(ctx, dbusx.SystemBus)
-	if err != nil {
-		return nil, fmt.Errorf("unable to monitor location updates: %w", err)
+	bus, ok := linux.CtxGetSystemBus(ctx)
+	if !ok {
+		return nil, linux.ErrNoSystemBus
 	}
 
 	// Create a GeoClue client.

@@ -16,6 +16,7 @@ import (
 	mqtthass "github.com/joshuar/go-hass-anything/v11/pkg/hass"
 	mqttapi "github.com/joshuar/go-hass-anything/v11/pkg/mqtt"
 
+	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 	pulseaudiox "github.com/joshuar/go-hass-agent/pkg/linux/pulseaudio"
 )
@@ -45,10 +46,10 @@ type entity interface {
 }
 
 //nolint:lll
-func VolumeControl(ctx context.Context, msgCh chan *mqttapi.Msg, parentLogger *slog.Logger, device *mqtthass.Device) (*mqtthass.NumberEntity[int], *mqtthass.SwitchEntity) {
-	control, err := newAudioControl(ctx, parentLogger, msgCh)
+func VolumeControl(ctx context.Context, msgCh chan *mqttapi.Msg, device *mqtthass.Device) (*mqtthass.NumberEntity[int], *mqtthass.SwitchEntity) {
+	control, err := newAudioControl(ctx, msgCh)
 	if err != nil {
-		parentLogger.Warn("Could not configure Pulseaudio. Volume control will not be available.", slog.Any("error", err))
+		logging.FromContext(ctx).Warn("Could not configure Pulseaudio. Volume control will not be available.", slog.Any("error", err))
 
 		return nil, nil
 	}
@@ -107,7 +108,7 @@ func VolumeControl(ctx context.Context, msgCh chan *mqttapi.Msg, parentLogger *s
 
 // newAudioControl will establish a connection to PulseAudio and return a
 // audioControl object for tracking and controlling audio state.
-func newAudioControl(ctx context.Context, logger *slog.Logger, msgCh chan *mqttapi.Msg) (*audioControl, error) {
+func newAudioControl(ctx context.Context, msgCh chan *mqttapi.Msg) (*audioControl, error) {
 	client, err := pulseaudiox.NewPulseClient(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("unable to connect to Pulseaudio: %w", err)
@@ -116,7 +117,7 @@ func newAudioControl(ctx context.Context, logger *slog.Logger, msgCh chan *mqtta
 	audioDev := &audioControl{
 		pulseAudio: client,
 		msgCh:      msgCh,
-		logger:     logger.WithGroup("volume_controller"),
+		logger:     logging.FromContext(ctx).WithGroup("volume_controller"),
 	}
 
 	return audioDev, nil

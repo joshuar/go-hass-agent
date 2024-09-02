@@ -16,7 +16,6 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/logging"
-	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 	"github.com/joshuar/go-hass-agent/pkg/linux/hwmon"
 )
 
@@ -136,7 +135,7 @@ func (w *hwMonWorker) Sensors(_ context.Context, _ time.Duration) ([]sensor.Deta
 	return sensors, nil
 }
 
-func NewHWMonWorker(ctx context.Context, _ *dbusx.DBusAPI) (*linux.SensorWorker, error) {
+func NewHWMonWorker(ctx context.Context) (*linux.SensorWorker, error) {
 	return &linux.SensorWorker{
 			Value: &hwMonWorker{
 				logger: logging.FromContext(ctx).With(slog.String("worker", hwmonWorkerID)),

@@ -155,10 +155,10 @@ func (w *connectionsWorker) handleConnection(ctx context.Context, path dbus.Obje
 	return nil
 }
 
-func NewConnectionWorker(ctx context.Context, api *dbusx.DBusAPI) (*linux.SensorWorker, error) {
-	bus, err := api.GetBus(ctx, dbusx.SystemBus)
-	if err != nil {
-		return nil, fmt.Errorf("unable to monitor for network connections: %w", err)
+func NewConnectionWorker(ctx context.Context) (*linux.SensorWorker, error) {
+	bus, ok := linux.CtxGetSystemBus(ctx)
+	if !ok {
+		return nil, linux.ErrNoSystemBus
 	}
 
 	return &linux.SensorWorker{

@@ -134,10 +134,10 @@ func (w *stateWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
 	return []sensor.Details{newPowerState(shutdown, false)}, nil
 }
 
-func NewStateWorker(ctx context.Context, api *dbusx.DBusAPI) (*linux.SensorWorker, error) {
-	bus, err := api.GetBus(ctx, dbusx.SystemBus)
-	if err != nil {
-		return nil, fmt.Errorf("unable to monitor power state: %w", err)
+func NewStateWorker(ctx context.Context) (*linux.SensorWorker, error) {
+	bus, ok := linux.CtxGetSystemBus(ctx)
+	if !ok {
+		return nil, linux.ErrNoSystemBus
 	}
 
 	triggerCh, err := dbusx.NewWatch(

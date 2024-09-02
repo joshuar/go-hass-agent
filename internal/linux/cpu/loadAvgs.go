@@ -17,7 +17,6 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
-	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
 const (
@@ -103,7 +102,7 @@ func parseLoadAvgs(data []byte) ([]string, error) {
 	return loadAvgs, nil
 }
 
-func NewLoadAvgWorker(_ context.Context, _ *dbusx.DBusAPI) (*linux.SensorWorker, error) {
+func NewLoadAvgWorker(_ context.Context) (*linux.SensorWorker, error) {
 	return &linux.SensorWorker{
 			Value:    &loadAvgsSensorWorker{loadAvgs: newLoadAvgSensors(), path: filepath.Join(linux.ProcFSRoot, "loadavg")},
 			WorkerID: loadAvgsWorkerID,

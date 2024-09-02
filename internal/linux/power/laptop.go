@@ -148,22 +148,22 @@ func (w *laptopWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
 	return sensors, nil
 }
 
-func NewLaptopWorker(ctx context.Context, api *dbusx.DBusAPI) (*linux.SensorWorker, error) {
+func NewLaptopWorker(ctx context.Context) (*linux.SensorWorker, error) {
 	// Don't run this worker if we are not running on a laptop.
 	chassis, _ := device.Chassis() //nolint:errcheck // error is same as any value other than wanted value.
 	if chassis != "laptop" {
 		return nil, fmt.Errorf("unable to monitor laptop sensors: %w", device.ErrUnsupportedHardware)
 	}
 
-	bus, err := api.GetBus(ctx, dbusx.SystemBus)
-	if err != nil {
-		return nil, fmt.Errorf("unable to monitor laptop sensors: %w", err)
+	bus, ok := linux.CtxGetSystemBus(ctx)
+	if !ok {
+		return nil, linux.ErrNoSystemBus
 	}
 
 	// If we can't get a session path, we can't run.
-	sessionPath, err := bus.GetSessionPath()
-	if err != nil {
-		return nil, fmt.Errorf("unable to determine user session path from D-Bus: %w", err)
+	sessionPath, ok := linux.CtxGetSessionPath(ctx)
+	if !ok {
+		return nil, linux.ErrNoSessionPath
 	}
 
 	triggerCh, err := dbusx.NewWatch(

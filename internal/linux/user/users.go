@@ -104,10 +104,10 @@ func (w *worker) Sensors(_ context.Context) ([]sensor.Details, error) {
 	return []sensor.Details{w.sensor}, err
 }
 
-func NewUserWorker(ctx context.Context, api *dbusx.DBusAPI) (*linux.SensorWorker, error) {
-	bus, err := api.GetBus(ctx, dbusx.SystemBus)
-	if err != nil {
-		return nil, fmt.Errorf("unable to retrieve D-Bus connection: %w", err)
+func NewUserWorker(ctx context.Context) (*linux.SensorWorker, error) {
+	bus, ok := linux.CtxGetSystemBus(ctx)
+	if !ok {
+		return nil, linux.ErrNoSystemBus
 	}
 
 	triggerCh, err := dbusx.NewWatch(

@@ -14,6 +14,8 @@ import (
 	mqtthass "github.com/joshuar/go-hass-anything/v11/pkg/hass"
 	mqttapi "github.com/joshuar/go-hass-anything/v11/pkg/mqtt"
 
+	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
@@ -26,72 +28,71 @@ type dbusCommandMsg struct {
 	UseSessionPath bool   `json:"use_session_path"`
 }
 
-//nolint:lll
-func NewDBusCommandSubscription(ctx context.Context, api *dbusx.DBusAPI, parentLogger *slog.Logger, device *mqtthass.Device) *mqttapi.Subscription {
-	logger := parentLogger.With(slog.String("controller", "dbus_command"))
+func NewDBusCommandSubscription(ctx context.Context, device *mqtthass.Device) (*mqttapi.Subscription, error) {
+	logger := logging.FromContext(ctx).With(slog.String("controller", "dbus_command"))
 
-	sessionBus, err := api.GetBus(ctx, dbusx.SessionBus)
-	if err != nil {
-		logger.Warn("Cannot connect to session bus.", slog.Any("error", err))
-
-		return nil
+	systemBus, ok := linux.CtxGetSystemBus(ctx)
+	if !ok {
+		return nil, linux.ErrNoSystemBus
 	}
 
-	systemBus, err := api.GetBus(ctx, dbusx.SessionBus)
-	if err != nil {
-		logger.Warn("Cannot connect to system bus.", slog.Any("error", err))
-
-		return nil
+	sessionBus, ok := linux.CtxGetSessionBus(ctx)
+	if !ok {
+		return nil, linux.ErrNoSessionBus
 	}
 
 	busMap := map[string]*dbusx.Bus{"session": sessionBus, "system": systemBus}
 
 	return &mqttapi.Subscription{
-		Callback: func(p *paho.Publish) {
-			var dbusMsg dbusCommandMsg
+			Callback: func(packet *paho.Publish) {
+				var (
+					dbusMsg dbusCommandMsg
+					err     error
+				)
 
-			// Unmarshal the request.
-			if err = json.Unmarshal(p.Payload, &dbusMsg); err != nil {
-				logger.Error("Could not unmarshal D-Bus MQTT message.", slog.Any("error", err))
-
-				return
-			}
-			// Check which bus type was requested.
-			bus, ok := busMap[dbusMsg.Bus]
-			if !ok {
-				logger.Error("Unsupported D-Bus type.")
-
-				return
-			}
-			// Fetch the session path if requested.
-			if dbusMsg.UseSessionPath {
-				dbusMsg.Path, err = busMap["session"].GetSessionPath()
-				if err != nil {
-					logger.Error("Could not determine session path.", slog.Any("error", err))
+				// Unmarshal the request.
+				if err = json.Unmarshal(packet.Payload, &dbusMsg); err != nil {
+					logger.Error("Could not unmarshal D-Bus MQTT message.", slog.Any("error", err))
 
 					return
 				}
-			}
+				// Check which bus type was requested.
+				bus, ok := busMap[dbusMsg.Bus]
+				if !ok {
+					logger.Error("Unsupported D-Bus type.")
 
-			logger.With(
-				slog.String("bus", dbusMsg.Bus),
-				slog.String("destination", dbusMsg.Destination),
-				slog.String("path", dbusMsg.Path),
-				slog.String("method", dbusMsg.Method),
-			).Info("Dispatching D-Bus command.")
+					return
+				}
+				// Fetch the session path if requested.
+				if dbusMsg.UseSessionPath {
+					dbusMsg.Path, err = busMap["session"].GetSessionPath()
+					if err != nil {
+						logger.Error("Could not determine session path.", slog.Any("error", err))
 
-			// Call the method.
-			err = dbusx.NewMethod(bus, dbusMsg.Destination, dbusMsg.Path, dbusMsg.Method).Call(ctx, dbusMsg.Args...)
-			if err != nil {
+						return
+					}
+				}
+
 				logger.With(
 					slog.String("bus", dbusMsg.Bus),
 					slog.String("destination", dbusMsg.Destination),
 					slog.String("path", dbusMsg.Path),
 					slog.String("method", dbusMsg.Method),
-					slog.Any("error", err),
-				).Warn("Error dispatching D-Bus command.")
-			}
+				).Info("Dispatching D-Bus command.")
+
+				// Call the method.
+				err = dbusx.NewMethod(bus, dbusMsg.Destination, dbusMsg.Path, dbusMsg.Method).Call(ctx, dbusMsg.Args...)
+				if err != nil {
+					logger.With(
+						slog.String("bus", dbusMsg.Bus),
+						slog.String("destination", dbusMsg.Destination),
+						slog.String("path", dbusMsg.Path),
+						slog.String("method", dbusMsg.Method),
+						slog.Any("error", err),
+					).Warn("Error dispatching D-Bus command.")
+				}
+			},
+			Topic: "gohassagent/" + device.Name + "/dbuscommand",
 		},
-		Topic: "gohassagent/" + device.Name + "/dbuscommand",
-	}
+		nil
 }

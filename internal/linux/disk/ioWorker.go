@@ -17,7 +17,6 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/logging"
-	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
 const (
@@ -136,7 +135,7 @@ func (w *ioWorker) Sensors(_ context.Context, duration time.Duration) ([]sensor.
 	return sensors, nil
 }
 
-func NewIOWorker(ctx context.Context, _ *dbusx.DBusAPI) (*linux.SensorWorker, error) {
+func NewIOWorker(ctx context.Context) (*linux.SensorWorker, error) {
 	boottime, found := linux.CtxGetBoottime(ctx)
 	if !found {
 		return nil, fmt.Errorf("%w: no boottime value", linux.ErrInvalidCtx)

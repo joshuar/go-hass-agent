@@ -94,15 +94,15 @@ func (w *screenLockWorker) Sensors(_ context.Context) ([]sensor.Details, error) 
 	return nil, linux.ErrUnimplemented
 }
 
-func NewScreenLockWorker(ctx context.Context, api *dbusx.DBusAPI) (*linux.SensorWorker, error) {
-	bus, err := api.GetBus(ctx, dbusx.SystemBus)
-	if err != nil {
-		return nil, fmt.Errorf("unable to retrieve D-Bus connection: %w", err)
+func NewScreenLockWorker(ctx context.Context) (*linux.SensorWorker, error) {
+	bus, ok := linux.CtxGetSystemBus(ctx)
+	if !ok {
+		return nil, linux.ErrNoSystemBus
 	}
 
-	sessionPath, err := bus.GetSessionPath()
-	if err != nil {
-		return nil, fmt.Errorf("unable to determine user session path from D-Bus: %w", err)
+	sessionPath, ok := linux.CtxGetSessionPath(ctx)
+	if !ok {
+		return nil, linux.ErrNoSessionPath
 	}
 
 	triggerCh, err := dbusx.NewWatch(
