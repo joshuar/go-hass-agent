@@ -22,7 +22,7 @@ require (
 	github.com/shirou/gopsutil/v3 v3.24.5
 	github.com/sourcegraph/conc v0.3.0
 	github.com/stretchr/testify v1.9.0
-	github.com/yassinebenaid/godump v0.9.6
+	github.com/yassinebenaid/godump v0.10.0
 	golang.org/x/exp v0.0.0-20240416160154-fe59bbe5cc7f
 	golang.org/x/text v0.17.0
 	golang.org/x/tools v0.24.0
