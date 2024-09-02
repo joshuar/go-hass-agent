@@ -9,6 +9,7 @@ import (
 	"embed"
 	"fmt"
 	"log/slog"
+	"os"
 	"path/filepath"
 
 	"github.com/joshuar/go-hass-agent/internal/logging"
@@ -77,6 +78,18 @@ func (d ProfileFlags) AfterApply() error {
 	err := logging.StartProfiling(logging.ProfileFlags(d))
 	if err != nil {
 		return fmt.Errorf("could not start profiling: %w", err)
+	}
+
+	return nil
+}
+
+type HeadlessFlag bool
+
+func (f *HeadlessFlag) BeforeApply() error {
+	if os.Getenv("DISPLAY") == "" && !*f {
+		slog.Warn("DISPLAY not set, running in headless mode by default (specify --terminal to suppress this warning).")
+
+		*f = true
 	}
 
 	return nil

@@ -20,17 +20,17 @@ import (
 
 //nolint:tagalign
 var CLI struct {
-	Run       cli.RunCmd       `cmd:"" help:"Run Go Hass Agent."`
-	Reset     cli.ResetCmd     `cmd:"" help:"Reset Go Hass Agent."`
-	Version   cli.VersionCmd   `cmd:"" help:"Show the Go Hass Agent version."`
-	Upgrade   cli.UpgradeCmd   `cmd:"" help:"Attempt to upgrade from previous version."`
-	Profile   cli.ProfileFlags `help:"Enable profiling."`
-	AppID     string           `name:"appid" default:"${defaultAppID}" help:"Specify a custom app id (for debugging)."`
-	LogLevel  string           `name:"log-level" enum:"info,debug,trace" default:"info" help:"Set logging level."`
-	Config    cli.ConfigCmd    `cmd:"" help:"Configure Go Hass Agent."`
-	Register  cli.RegisterCmd  `cmd:"" help:"Register with Home Assistant."`
-	NoLogFile bool             `help:"Don't write to a log file."`
-	Headless  bool             `name:"terminal" help:"Run without a GUI."`
+	Run       cli.RunCmd        `cmd:"" help:"Run Go Hass Agent."`
+	Reset     cli.ResetCmd      `cmd:"" help:"Reset Go Hass Agent."`
+	Version   cli.VersionCmd    `cmd:"" help:"Show the Go Hass Agent version."`
+	Upgrade   cli.UpgradeCmd    `cmd:"" help:"Attempt to upgrade from previous version."`
+	Profile   cli.ProfileFlags  `help:"Enable profiling."`
+	Headless  *cli.HeadlessFlag `help:"Run without a GUI." default:"false"`
+	AppID     string            `name:"appid" default:"${defaultAppID}" help:"Specify a custom app id (for debugging)."`
+	LogLevel  string            `name:"log-level" enum:"info,debug,trace" default:"info" help:"Set logging level."`
+	Config    cli.ConfigCmd     `cmd:"" help:"Configure Go Hass Agent."`
+	Register  cli.RegisterCmd   `cmd:"" help:"Register with Home Assistant."`
+	NoLogFile bool              `help:"Don't write to a log file."`
 }
 
 func init() {
@@ -52,17 +52,9 @@ func main() {
 	kong.Name(preferences.AppName)
 	kong.Description(preferences.AppDescription)
 	ctx := kong.Parse(&CLI, kong.Bind(), kong.Vars{"defaultAppID": preferences.AppID})
-	// Warn if running headless without explicitly specifying so.
-	if os.Getenv("DISPLAY") == "" {
-		if !CLI.Headless {
-			slog.Warn("DISPLAY not set, running in headless mode by default (specify --terminal to suppress this warning).")
-		}
-
-		CLI.Headless = true
-	}
 
 	err := ctx.Run(cli.CreateCtx(
-		cli.RunHeadless(CLI.Headless),
+		cli.RunHeadless(bool(*CLI.Headless)),
 		cli.WithProfileFlags(CLI.Profile),
 		cli.WithAppID(CLI.AppID),
 		cli.WithLogLevel(CLI.LogLevel),
