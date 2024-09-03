@@ -115,7 +115,7 @@ func (c *Websocket) OnError(_ *gws.Conn, err error) {
 }
 
 func (c *Websocket) OnClose(_ *gws.Conn, err error) {
-	if err != nil && err.Error() != "normal close" {
+	if err != nil && err.Error() != "gws: close normal" {
 		c.logger.Warn("Websocket connection closed with error.", "error", err.Error())
 	}
 }
