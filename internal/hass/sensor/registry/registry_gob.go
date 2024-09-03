@@ -40,8 +40,6 @@ func (g *gobRegistry) write() error {
 		return fmt.Errorf("could not encode registry data: %w", err)
 	}
 
-	slog.Debug("Wrote sensor registry to disk.", slog.String("file", registryFile))
-
 	return nil
 }
 
@@ -60,8 +58,6 @@ func (g *gobRegistry) read() error {
 	if err != nil && !errors.Is(err, io.EOF) {
 		return fmt.Errorf("could not decode registry data: %w", err)
 	}
-
-	slog.Debug("Read sensor registry from disk.", slog.String("file", registryFile))
 
 	return nil
 }
