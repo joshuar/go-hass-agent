@@ -214,7 +214,9 @@ func (c *Client) handleSensorUpdate(ctx context.Context, details sensor.Details)
 	}
 
 	if warnings != nil {
-		c.logger.Debug("Sensor updated with warnings.", sensorLogAttrs(details), slog.Any("warnings", warnings))
+		c.logger.Debug("Sensor updated with warnings.",
+			sensorLogAttrs(details),
+			slog.Any("warnings", warnings))
 	} else {
 		c.logger.Debug("Sensor updated.", sensorLogAttrs(details))
 	}
@@ -278,7 +280,9 @@ func (c *Client) isDisabled(ctx context.Context, details sensor.Details) bool {
 		slog.Info("Sensor re-enabled in Home Assistant, Re-enabling in local registry and sending updates.", sensorLogAttrs(details))
 
 		if err := c.registry.SetDisabled(details.ID(), false); err != nil {
-			slog.Error("Could not re-enable sensor.", sensorLogAttrs(details), slog.Any("error", err))
+			slog.Error("Could not re-enable sensor.",
+				sensorLogAttrs(details),
+				slog.Any("error", err))
 
 			return true
 		}
@@ -302,7 +306,8 @@ func (c *Client) isDisabledInHA(ctx context.Context, details sensor.Details) boo
 	config, err := send[Config](ctx, c, &configRequest{})
 	if err != nil {
 		c.logger.Debug("Could not fetch Home Assistant config. Assuming sensor is still disabled.",
-			sensorLogAttrs(details), slog.Any("error", err))
+			sensorLogAttrs(details),
+			slog.Any("error", err))
 
 		return true
 	}
@@ -310,7 +315,8 @@ func (c *Client) isDisabledInHA(ctx context.Context, details sensor.Details) boo
 	status, err := config.IsEntityDisabled(details.ID())
 	if err != nil {
 		c.logger.Debug("Could not determine sensor disabled status in Home Assistant config. Assuming sensor is still disabled.",
-			sensorLogAttrs(details), slog.Any("error", err))
+			sensorLogAttrs(details),
+			slog.Any("error", err))
 
 		return true
 	}

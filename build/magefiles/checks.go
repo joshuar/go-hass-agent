@@ -25,7 +25,7 @@ func (Checks) Lint() error {
 	slog.Info("Running linter (golangci-lint)...")
 
 	if err := sh.RunV("golangci-lint", "run"); err != nil {
-		slog.Warn("Linter reported issues.", "error", err.Error())
+		slog.Warn("Linter reported issues.", slog.Any("error", err))
 	}
 
 	slog.Info("Running linter (staticcheck)...")

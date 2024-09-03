@@ -108,7 +108,9 @@ func (b *upowerBattery) getSensors(sensors ...batterySensor) chan sensor.Details
 	for _, batterySensor := range sensors {
 		value, err := b.getProp(batterySensor)
 		if err != nil {
-			b.logger.Warn("Could not retrieve battery sensor.", "sensor", batterySensor.String(), "error", err.Error())
+			b.logger.Warn("Could not retrieve battery sensor.",
+				slog.String("sensor", batterySensor.String()),
+				slog.Any("error", err))
 
 			continue
 		}
@@ -314,22 +316,22 @@ func (s *upowerBatterySensor) generateAttributes(battery *upowerBattery) {
 
 		variant, err = battery.getProp(battVoltage)
 		if err != nil {
-			s.logger.Warn("Could not retrieve battery voltage.", "error", err.Error())
+			s.logger.Warn("Could not retrieve battery voltage.", slog.Any("error", err))
 		}
 
 		voltage, err = dbusx.VariantToValue[float64](variant)
 		if err != nil {
-			s.logger.Warn("Could not retrieve battery voltage.", "error", err.Error())
+			s.logger.Warn("Could not retrieve battery voltage.", slog.Any("error", err))
 		}
 
 		variant, err = battery.getProp(battEnergy)
 		if err != nil {
-			s.logger.Warn("Could not retrieve battery energy.", "error", err.Error())
+			s.logger.Warn("Could not retrieve battery energy.", slog.Any("error", err))
 		}
 
 		energy, err = dbusx.VariantToValue[float64](variant)
 		if err != nil {
-			s.logger.Warn("Could not retrieve battery energy.", "error", err.Error())
+			s.logger.Warn("Could not retrieve battery energy.", slog.Any("error", err))
 		}
 
 		s.attributes = &struct {
@@ -379,7 +381,7 @@ func monitorBattery(ctx context.Context, battery *upowerBattery) <-chan sensor.D
 		dbusx.MatchPropChanged(),
 	).Start(ctx, battery.bus)
 	if err != nil {
-		battery.logger.Debug("Failed to create D-Bus watch for battery property changes.", "error", err.Error())
+		battery.logger.Debug("Failed to create D-Bus watch for battery property changes.", slog.Any("error", err))
 		close(sensorCh)
 
 		return sensorCh
@@ -399,7 +401,7 @@ func monitorBattery(ctx context.Context, battery *upowerBattery) <-chan sensor.D
 			case event := <-events:
 				props, err := dbusx.ParsePropertiesChanged(event.Content)
 				if err != nil {
-					battery.logger.Warn("Received a battery property change event that could not be understood.", "error", err.Error())
+					battery.logger.Warn("Received a battery property change event that could not be understood.", slog.Any("error", err))
 
 					continue
 				}
@@ -463,7 +465,7 @@ func (w *batterySensorWorker) Events(ctx context.Context) (chan sensor.Details, 
 	// Get a list of all current connected batteries and monitor them.
 	batteries, err := w.getBatteries()
 	if err != nil {
-		w.logger.Warn("Could not retrieve any battery details from D-Bus.", "error", err.Error())
+		w.logger.Warn("Could not retrieve any battery details from D-Bus.", slog.Any("error", err))
 	}
 
 	for _, path := range batteries {
@@ -514,7 +516,9 @@ func (w *batterySensorWorker) track(ctx context.Context, batteryPath dbus.Object
 
 	battery, err := newBattery(w.bus, w.logger, batteryPath)
 	if err != nil {
-		w.logger.Warn("Cannot monitor battery.", "path", batteryPath, "error", err.Error())
+		w.logger.Warn("Cannot monitor battery.",
+			slog.Any("path", batteryPath),
+			slog.Any("error", err))
 
 		return sensorCh
 	}

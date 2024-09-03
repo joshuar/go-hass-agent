@@ -134,7 +134,9 @@ func getWifiSensors(bus *dbusx.Bus, apPath string) []*wifiSensor {
 	for _, prop := range apPropList {
 		value, err := dbusx.NewProperty[any](bus, apPath, dBusNMObj, accessPointInterface+"."+prop).Get()
 		if err != nil {
-			slog.Debug("Could not retrieve access point property.", slog.String("prop", prop), slog.Any("error", err))
+			slog.Debug("Could not retrieve access point property.",
+				slog.String("prop", prop),
+				slog.Any("error", err))
 
 			continue
 		}

@@ -171,7 +171,7 @@ func (c *linuxMQTTController) generateConfig(e entity) *mqttapi.Msg {
 	return cfg
 }
 
-// newOSController initialises the list of workers for sensors and returns those
+// newOSController initializes the list of workers for sensors and returns those
 // that are supported on this device.
 //
 //revive:disable:function-length

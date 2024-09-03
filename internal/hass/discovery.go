@@ -8,6 +8,7 @@ package hass
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -27,7 +28,7 @@ func FindServers(ctx context.Context) ([]string, error) {
 
 	resolver, err := zeroconf.NewResolver(nil)
 	if err != nil {
-		return serverList, fmt.Errorf("failed to initialise resolver: %w", err)
+		return serverList, fmt.Errorf("failed to initialize resolver: %w", err)
 	}
 
 	entries := make(chan *zeroconf.ServiceEntry)
@@ -46,7 +47,7 @@ func FindServers(ctx context.Context) ([]string, error) {
 				serverList = append(serverList, server)
 			} else {
 				logging.FromContext(ctx).Log(ctx, logging.LevelTrace,
-					"Found a server malformed server, will not use.", "server", entry.HostName)
+					"Found a server malformed server, will not use.", slog.String("server", entry.HostName))
 			}
 		}
 	}(entries)

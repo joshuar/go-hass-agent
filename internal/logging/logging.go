@@ -9,12 +9,12 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	_ "net/http/pprof" // #nosec G108
 	"os"
 	"path/filepath"
 
 	"github.com/lmittmann/tint"
 	"github.com/mattn/go-isatty"
+
 	slogmulti "github.com/samber/slog-multi"
 )
 
@@ -23,7 +23,6 @@ const (
 	LevelFatal = slog.Level(12)
 )
 
-//nolint:misspell
 var LevelNames = map[slog.Leveler]string{
 	LevelTrace: "TRACE",
 	LevelFatal: "FATAL",
@@ -51,7 +50,9 @@ func New(level string, logFile string) *slog.Logger {
 	if logFile != "" {
 		logFH, err := openLogFile(logFile)
 		if err != nil {
-			slog.Warn("unable to open log file", "file", logFile, "error", err)
+			slog.Warn("unable to open log file",
+				slog.String("file", logFile),
+				slog.Any("error", err))
 		} else {
 			handler = slogmulti.Fanout(
 				tint.NewHandler(os.Stdout, generateOptions(logLevel, os.Stdout.Fd())),

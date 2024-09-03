@@ -172,7 +172,7 @@ func (i *FyneUI) DisplayRegistrationWindow(prefs *preferences.Preferences, doneC
 		close(userInputDone)
 	}
 	registrationForm.OnCancel = func() {
-		i.logger.Warn("Cancelling registration on user request.")
+		i.logger.Warn("Canceling registration on user request.")
 		close(userInputDone)
 		window.Close()
 	}
@@ -257,7 +257,7 @@ func (i *FyneUI) agentSettingsWindow(agent ui.Agent) fyne.Window {
 			dialog.ShowError(err, window)
 			i.logger.Error("Could note save preferences.", slog.Any("error", err))
 		} else {
-			dialog.ShowInformation("Saved", "MQTT Preferences have been saved. Restart agent to utilise them.", window)
+			dialog.ShowInformation("Saved", "MQTT Preferences have been saved. Restart agent to utilize them.", window)
 			i.logger.Info("Saved MQTT preferences.")
 		}
 	}
@@ -277,8 +277,7 @@ func (i *FyneUI) agentSettingsWindow(agent ui.Agent) fyne.Window {
 // values that are currently tracked by the agent. Values are updated
 // continuously.
 //
-//nolint:cyclop,gocyclo,mnd
-//revive:disable:function-length
+//nolint:gocognit
 func (i *FyneUI) sensorsWindow(client ui.HassClient) fyne.Window {
 	sensors := client.SensorList()
 	if sensors == nil {

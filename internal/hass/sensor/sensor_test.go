@@ -3,8 +3,6 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//revive:disable:unused-parameter
-//nolint:paralleltest
 package sensor
 
 import (
@@ -12,9 +10,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/kinbiko/jsonassert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 )
@@ -203,7 +200,7 @@ func TestRequest_RequestBody(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+		t.Run(tt.name, func(t *testing.T) { //revive:disable:unused-parameter
 			r := &Request{
 				Data:        tt.fields.Data,
 				RequestType: tt.fields.RequestType,

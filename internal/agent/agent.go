@@ -22,8 +22,9 @@ import (
 
 	"github.com/adrg/xdg"
 
-	"github.com/joshuar/go-hass-agent/internal/agent/ui"
 	fyneui "github.com/joshuar/go-hass-agent/internal/agent/ui/fyneUI"
+
+	"github.com/joshuar/go-hass-agent/internal/agent/ui"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/logging"

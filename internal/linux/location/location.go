@@ -52,6 +52,7 @@ type worker struct {
 	triggerCh           chan dbusx.Trigger
 }
 
+//nolint:gocognit
 func (w *worker) Events(ctx context.Context) (chan sensor.Details, error) {
 	logger := logging.FromContext(ctx).With(slog.String("worker", workerID))
 
@@ -194,11 +195,11 @@ func setThresholds(bus *dbusx.Bus, clientPath string) {
 
 	// Set a distance threshold.
 	if err = dbusx.NewProperty[uint32](bus, clientPath, geoclueInterface, distanceThresholdProp).Set(0); err != nil {
-		logger.Debug("Could not set distance threshold for geoclue requests.", "error", err.Error())
+		logger.Debug("Could not set distance threshold for geoclue requests.", slog.Any("error", err))
 	}
 
 	// Set a time threshold.
 	if err = dbusx.NewProperty[uint32](bus, clientPath, geoclueInterface, timeThresholdProp).Set(0); err != nil {
-		logger.Debug("Could not set time threshold for geoclue requests.", "error", err.Error())
+		logger.Debug("Could not set time threshold for geoclue requests.", slog.Any("error", err))
 	}
 }

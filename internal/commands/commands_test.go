@@ -17,9 +17,10 @@ import (
 
 	"github.com/eclipse/paho.golang/paho"
 	"github.com/go-test/deep"
+	"github.com/stretchr/testify/require"
+
 	mqtthass "github.com/joshuar/go-hass-anything/v11/pkg/hass"
 	mqttapi "github.com/joshuar/go-hass-anything/v11/pkg/mqtt"
-	"github.com/stretchr/testify/require"
 )
 
 var mockCommandCallback = func(_ *paho.Publish) {}

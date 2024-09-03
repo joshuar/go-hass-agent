@@ -126,7 +126,9 @@ func (c *connection) monitorConnection(ctx context.Context, bus *dbusx.Bus) <-ch
 	// Update their states.
 	for _, connSensor := range []connectionSensor{stateSensor, ipv4Sensor, ipv6Sensor} {
 		if err := connSensor.updateState(); err != nil {
-			c.logger.Debug("Could not update sensor.", slog.String("sensor", connSensor.Name()), slog.Any("error", err))
+			c.logger.Debug("Could not update sensor.",
+				slog.String("sensor", connSensor.Name()),
+				slog.Any("error", err))
 		}
 	}
 	// Send initial states as sensors
@@ -210,6 +212,8 @@ func (c *connection) monitorConnection(ctx context.Context, bus *dbusx.Bus) <-ch
 }
 
 // monitorWifi will monitor wifi connection properties.
+//
+//nolint:gocognit
 func (c *connection) monitorWifi(ctx context.Context, bus *dbusx.Bus) <-chan sensor.Details {
 	triggerCh := make(chan dbusx.Trigger)
 	sensorCh := make(chan sensor.Details)

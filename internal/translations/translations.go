@@ -7,6 +7,7 @@ package translations
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/jeandeaual/go-locale"
 	"golang.org/x/text/language"
@@ -17,14 +18,14 @@ import (
 
 //go:generate gotext -srclang=en update -out=catalog.go -lang=en,fr,de github.com/joshuar/go-hass-agent
 
-// Translator provides a msgPrinter that can display localised strings for
+// Translator provides a msgPrinter that can display localized strings for
 // translation of the UI.
 type Translator struct {
 	msgPrinter *message.Printer
 }
 
 // NewTranslator creates a new Translator in the locale of the system. Strings
-// translator by this Translator instance will be localised if a translation is
+// translator by this Translator instance will be localized if a translation is
 // available.
 func NewTranslator(ctx context.Context) *Translator {
 	var msgPrinter *message.Printer
@@ -35,7 +36,7 @@ func NewTranslator(ctx context.Context) *Translator {
 
 		msgPrinter = message.NewPrinter(message.MatchLanguage(language.English.String()))
 	} else {
-		logging.FromContext(ctx).Debug("Setting language.", "lang", userLocales)
+		logging.FromContext(ctx).Debug("Setting language.", slog.Any("lang", userLocales))
 
 		msgPrinter = message.NewPrinter(message.MatchLanguage(userLocales...))
 	}

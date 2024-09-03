@@ -14,11 +14,12 @@ import (
 	"testing"
 	"time"
 
-	mqtthass "github.com/joshuar/go-hass-anything/v11/pkg/hass"
-	mqttapi "github.com/joshuar/go-hass-anything/v11/pkg/mqtt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/vladimirvivien/go4vl/device"
+
+	mqtthass "github.com/joshuar/go-hass-anything/v11/pkg/hass"
+	mqttapi "github.com/joshuar/go-hass-anything/v11/pkg/mqtt"
 )
 
 func skipCI(t *testing.T) {

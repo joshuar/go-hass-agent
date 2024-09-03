@@ -41,7 +41,7 @@ func (r *UpgradeCmd) Run(ctx *Context) error {
 	upgradeCtx = logging.ToContext(upgradeCtx, logger)
 
 	if err := upgrade.Run(upgradeCtx); err != nil {
-		slog.Warn(showHelpTxt("upgrade-failed-help"), slog.Any("error", err))
+		slog.Warn(showHelpTxt("upgrade-failed-help"), slog.Any("error", err)) //nolint:sloglint
 
 		return fmt.Errorf("upgrade failed: %w", err)
 	}

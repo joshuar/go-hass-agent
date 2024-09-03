@@ -3,12 +3,10 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//nolint:paralleltest
 package logging
 
 import (
 	"log/slog"
-	_ "net/http/pprof" // #nosec G108
 	"os"
 	"path/filepath"
 	"reflect"

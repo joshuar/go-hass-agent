@@ -242,7 +242,7 @@ func (s *Sensor) String() string {
 
 	value, err := s.Value()
 	if err != nil {
-		slog.Warn("value error", "error", err.Error())
+		slog.Warn("value error", slog.Any("error", err))
 	}
 
 	fmt.Fprintf(&sensorStr,

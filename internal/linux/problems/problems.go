@@ -86,7 +86,7 @@ func (w *worker) Interval() time.Duration { return problemInterval }
 
 func (w *worker) Jitter() time.Duration { return problemJitter }
 
-func (w *worker) Sensors(_ context.Context, _ time.Duration) ([]sensor.Details, error) {
+func (w *worker) Sensors(ctx context.Context, _ time.Duration) ([]sensor.Details, error) {
 	problemsSensor := &problemsSensor{
 		list: make(map[string]map[string]any),
 		Sensor: linux.Sensor{
@@ -109,9 +109,11 @@ func (w *worker) Sensors(_ context.Context, _ time.Duration) ([]sensor.Details, 
 	for _, problem := range problems {
 		details, err := w.getProblemDetails(problem)
 		if err != nil {
-			slog.Default().
+			logging.FromContext(ctx).
 				With(slog.String("worker", problemsWorkerID)).
-				Debug("Unable to get problem details.", slog.String("problem", problem), slog.Any("error", err))
+				Debug("Unable to get problem details.",
+					slog.String("problem", problem),
+					slog.Any("error", err))
 		} else {
 			problemsSensor.list[problem] = parseProblem(details)
 		}

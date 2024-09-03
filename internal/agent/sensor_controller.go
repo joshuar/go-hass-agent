@@ -25,14 +25,14 @@ type HassClient interface {
 // runSensorWorkers will start all the sensor worker functions for all sensor
 // controllers passed in. It returns a single merged channel of sensor updates.
 //
-//nolint:cyclop
+//nolint:gocognit
 func (agent *Agent) runSensorWorkers(ctx context.Context, controllers ...SensorController) {
 	var sensorCh []<-chan sensor.Details
 
 	for _, controller := range controllers {
 		ch, err := controller.StartAll(ctx)
 		if err != nil {
-			agent.logger.Warn("Start controller had errors.", "errors", err.Error())
+			agent.logger.Warn("Start controller had errors.", slog.Any("errors", err))
 		} else {
 			sensorCh = append(sensorCh, ch)
 		}
@@ -53,7 +53,7 @@ func (agent *Agent) runSensorWorkers(ctx context.Context, controllers ...SensorC
 
 			for _, controller := range controllers {
 				if err := controller.StopAll(); err != nil {
-					agent.logger.Warn("Stop controller had errors.", "error", err.Error())
+					agent.logger.Warn("Stop controller had errors.", slog.Any("error", err))
 				}
 			}
 

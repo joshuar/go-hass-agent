@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/url"
 	"path/filepath"
 
@@ -82,7 +83,7 @@ func (agent *Agent) checkRegistration(ctx context.Context, trk Tracker) error {
 		trk.Reset()
 
 		if err := registry.Reset(filepath.Dir(agent.GetRegistryPath())); err != nil {
-			agent.logger.Warn("Problem resetting registry.", "error", err.Error())
+			agent.logger.Warn("Problem resetting registry.", slog.Any("error", err))
 		}
 	}
 
