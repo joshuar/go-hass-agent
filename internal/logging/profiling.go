@@ -18,7 +18,6 @@ import (
 
 type ProfileFlags map[string]string
 
-//nolint:err113
 func StartProfiling(flags ProfileFlags) error {
 	for flagKey, flagVal := range flags {
 		switch flagKey {
@@ -66,7 +65,7 @@ func StopProfiling(flags ProfileFlags) error {
 				return fmt.Errorf("cannot close heap profile: %w", err)
 			}
 
-			slog.Debug("Wrote heap profile.", "file", flagVal)
+			slog.Debug("Wrote heap profile.", slog.String("file", flagVal))
 		case "cpuprofile":
 			pprof.StopCPUProfile()
 		case "traceprofile":
@@ -79,7 +78,7 @@ func StopProfiling(flags ProfileFlags) error {
 
 // printMemStats and formatMemory functions are taken from golang-ci source
 //
-//nolint:lll
+//nolint:lll,sloglint
 func printMemStats(stats *runtime.MemStats) {
 	slog.Debug("Memory stats",
 		"alloc", formatMemory(stats.Alloc), "total_alloc", formatMemory(stats.TotalAlloc), "sys", formatMemory(stats.Sys),
@@ -117,11 +116,12 @@ func startWebProfiler(enable string) error {
 	if webui {
 		go func() {
 			for i := 6060; i < 6070; i++ {
-				slog.Debug("Starting profiler web interface.", "address", "http://localhost:"+strconv.Itoa(i))
+				slog.Debug("Starting profiler web interface.",
+					slog.String("address", "http://localhost:"+strconv.Itoa(i)))
 
 				err := http.ListenAndServe("localhost:"+strconv.Itoa(i), nil) // #nosec G114
 				if err != nil {
-					slog.Error("Could not start profiler web interface. Trying different port.")
+					slog.Warn("Could not start profiler web interface. Trying different port.")
 				}
 			}
 		}()

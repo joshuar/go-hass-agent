@@ -108,13 +108,19 @@ func (w *SensorWorker) Updates(ctx context.Context) (<-chan sensor.Details, erro
 	// Handle the worker appropriately based on its type.
 	switch worker := w.Value.(type) {
 	case pollingType:
-		w.logger = logging.FromContext(ctx).With("worker", w.ID(), "worker_type", "polling")
+		w.logger = logging.FromContext(ctx).With(
+			slog.String("worker", w.ID()),
+			slog.String("worker_type", "polling"))
 		outCh = w.handlePolling(updatesCtx, worker)
 	case eventType:
-		w.logger = logging.FromContext(ctx).With("worker", w.ID(), "worker_type", "event")
+		w.logger = logging.FromContext(ctx).With(
+			slog.String("worker", w.ID()),
+			slog.String("worker_type", "polling"))
 		outCh = w.handleEvents(updatesCtx, worker)
 	case oneShotType:
-		w.logger = logging.FromContext(ctx).With("worker", w.ID(), "worker_type", "oneshot")
+		w.logger = logging.FromContext(ctx).With(
+			slog.String("worker", w.ID()),
+			slog.String("worker_type", "polling"))
 		outCh = w.handleOneShot(updatesCtx, worker)
 	default:
 		// default: we should not get here, so if we do, return an error

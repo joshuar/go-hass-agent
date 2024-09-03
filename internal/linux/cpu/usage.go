@@ -150,7 +150,9 @@ func (w *usageWorker) newUsageSensor(details []string, diagnostic bool) *cpuUsag
 func (w *usageWorker) newCountSensor(name, icon, valueStr string) *linux.Sensor {
 	valueInt, err := strconv.Atoi(valueStr)
 	if err != nil {
-		w.logger.Debug("Failed to convert count from string to int.", slog.String("sensor", name), slog.Any("error", err))
+		w.logger.Debug("Failed to convert count from string to int.",
+			slog.String("sensor", name),
+			slog.Any("error", err))
 	}
 
 	return &linux.Sensor{

@@ -13,12 +13,13 @@ import (
 	"strconv"
 
 	"github.com/eclipse/paho.golang/paho"
+
 	mqtthass "github.com/joshuar/go-hass-anything/v11/pkg/hass"
 	mqttapi "github.com/joshuar/go-hass-anything/v11/pkg/mqtt"
 
 	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
-	pulseaudiox "github.com/joshuar/go-hass-agent/pkg/linux/pulseaudio"
+	"github.com/joshuar/go-hass-agent/pkg/linux/pulseaudiox"
 )
 
 const (
@@ -130,7 +131,7 @@ func (d *audioControl) volStateCallback(_ ...any) (json.RawMessage, error) {
 		return json.RawMessage(`{ "value": 0 }`), err
 	}
 
-	d.logger.Debug("Publishing volume change.", "volume", int(vol))
+	d.logger.Debug("Publishing volume change.", slog.Int("volume", int(vol)))
 
 	return json.RawMessage(`{ "value": ` + strconv.FormatFloat(vol, 'f', 0, 64) + ` }`), nil
 }
@@ -138,12 +139,12 @@ func (d *audioControl) volStateCallback(_ ...any) (json.RawMessage, error) {
 // volCommandCallback is called when the volume is changed on MQTT.
 func (d *audioControl) volCommandCallback(p *paho.Publish) {
 	if newValue, err := strconv.Atoi(string(p.Payload)); err != nil {
-		d.logger.Debug("Could not parse new volume level.", "error", err.Error())
+		d.logger.Debug("Could not parse new volume level.", slog.Any("error", err))
 	} else {
-		d.logger.Debug("Received volume change from Home Assistant.", "volume", newValue)
+		d.logger.Debug("Received volume change from Home Assistant.", slog.Int("volume", newValue))
 
 		if err := d.pulseAudio.SetVolume(float64(newValue)); err != nil {
-			d.logger.Error("Could not set volume level.", "error", err.Error())
+			d.logger.Error("Could not set volume level.", slog.Any("error", err))
 
 			return
 		}
@@ -184,7 +185,7 @@ func (d *audioControl) muteCommandCallback(p *paho.Publish) {
 	}
 
 	if err != nil {
-		d.logger.Error("Could not set mute state.", "error", err.Error())
+		d.logger.Error("Could not set mute state.", slog.Any("error", err))
 
 		return
 	}

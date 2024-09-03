@@ -10,6 +10,7 @@ import (
 	"log/slog"
 
 	"github.com/eclipse/paho.golang/paho"
+
 	mqtthass "github.com/joshuar/go-hass-anything/v11/pkg/hass"
 
 	"github.com/joshuar/go-hass-agent/internal/linux"
@@ -85,7 +86,9 @@ func (c *powerController) generatePowerControlCallback(ctx context.Context, name
 	return func(_ *paho.Publish) {
 		err := dbusx.NewMethod(c.bus, loginBaseInterface, path, method).Call(ctx)
 		if err != nil {
-			c.logger.Warn("Could not issue power control.", slog.String("control", name), slog.Any("error", err))
+			c.logger.Warn("Could not issue power control.",
+				slog.String("control", name),
+				slog.Any("error", err))
 		}
 	}
 }

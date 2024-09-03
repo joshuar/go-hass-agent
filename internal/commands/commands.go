@@ -3,8 +3,6 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//nolint:dupl
-//revive:disable:unused-receiver
 package commands
 
 import (
@@ -21,10 +19,11 @@ import (
 
 	"github.com/eclipse/paho.golang/paho"
 	"github.com/iancoleman/strcase"
-	mqtthass "github.com/joshuar/go-hass-anything/v11/pkg/hass"
-	mqttapi "github.com/joshuar/go-hass-anything/v11/pkg/mqtt"
 	"github.com/pelletier/go-toml/v2"
 	"golang.org/x/exp/constraints"
+
+	mqtthass "github.com/joshuar/go-hass-anything/v11/pkg/hass"
+	mqttapi "github.com/joshuar/go-hass-anything/v11/pkg/mqtt"
 
 	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
@@ -45,8 +44,6 @@ var (
 )
 
 // Command represents a Command to run by a button or switch.
-//
-//nolint:govet
 type Command struct {
 	// Name is display name for the command.
 	Name string `toml:"name"`
@@ -102,6 +99,8 @@ type entity interface {
 
 // Subscriptions are the MQTT subscriptions for buttons and switches, providing
 // the appropriate callback mechanism to execute the associated commands.
+//
+//nolint:dupl
 func (d *Controller) Subscriptions() []*mqttapi.Subscription {
 	total := len(d.buttons) + len(d.switches) + len(d.intNumbers) + len(d.floatNumbers)
 	subs := make([]*mqttapi.Subscription, 0, total)
@@ -139,6 +138,8 @@ func (d *Controller) generateSubscriptions(e entity) *mqttapi.Subscription {
 
 // Configs are the MQTT configurations required by Home Assistant to set up
 // entities for the buttons/switches.
+//
+//nolint:dupl
 func (d *Controller) Configs() []*mqttapi.Msg {
 	total := len(d.buttons) + len(d.switches) + len(d.intNumbers) + len(d.floatNumbers)
 	cfgs := make([]*mqttapi.Msg, 0, total)
@@ -176,11 +177,13 @@ func (d *Controller) generateConfigs(e entity) *mqttapi.Msg {
 
 // Msgs are additional MQTT messages to be published based on any event logic
 // managed by the controller. This is unused.
+//
+//revive:disable:unused-receiver
 func (d *Controller) Msgs() chan *mqttapi.Msg {
 	return nil
 }
 
-// NewCommandsController is used by the agent to initialise the commands
+// NewCommandsController is used by the agent to initialize the commands
 // controller, which holds the MQTT configuration for the commands defined by
 // the user.
 func NewCommandsController(ctx context.Context, commandsFile string, device *mqtthass.Device) (*Controller, error) {
@@ -221,7 +224,9 @@ func (d *Controller) generateButtons(buttonCmds []Command) {
 		callback := func(_ *paho.Publish) {
 			err := cmdWithoutState(cmd.Exec)
 			if err != nil {
-				d.logger.Warn("Button press failed.", slog.String("button", cmd.Name), slog.Any("error", err))
+				d.logger.Warn("Button press failed.",
+					slog.String("button", cmd.Name),
+					slog.Any("error", err))
 			}
 		}
 		name = cmd.Name
@@ -258,7 +263,9 @@ func (d *Controller) generateSwitches(switchCmds []Command) {
 
 			err := cmdWithState(cmd.Exec, state)
 			if err != nil {
-				d.logger.Warn("Switch toggle failed.", slog.String("switch", cmd.Name), slog.Any("error", err))
+				d.logger.Warn("Switch toggle failed.",
+					slog.String("switch", cmd.Name),
+					slog.Any("error", err))
 			}
 		}
 		stateCallBack := func(_ ...any) (json.RawMessage, error) {
@@ -290,8 +297,7 @@ func (d *Controller) generateSwitches(switchCmds []Command) {
 // generateNumbers will create MQTT entities for numbers (both ints and floats) defined by the
 // controller.
 //
-//nolint:cyclop,funlen
-//revive:disable:function-length
+//nolint:gocognit,funlen
 func (d *Controller) generateNumbers(numberCommands []Command) {
 	var (
 		id, icon, name string
@@ -305,7 +311,9 @@ func (d *Controller) generateNumbers(numberCommands []Command) {
 
 			err := cmdWithState(cmd.Exec, state)
 			if err != nil {
-				d.logger.Warn("Set number failed.", slog.String("number", cmd.Name), slog.Any("error", err))
+				d.logger.Warn("Set number failed.",
+					slog.String("number", cmd.Name),
+					slog.Any("error", err))
 			}
 		}
 		stateCallBack := func(_ ...any) (json.RawMessage, error) {

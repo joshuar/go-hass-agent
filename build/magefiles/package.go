@@ -54,7 +54,7 @@ func (Package) Nfpm() error {
 	}
 
 	for _, pkgformat := range pkgformats {
-		slog.Info("Building package with nfpm.", "format", pkgformat)
+		slog.Info("Building package with nfpm.", slog.String("format", pkgformat))
 		args := slices.Concat(nfpmBaseArgs, []string{"--packager", pkgformat})
 
 		if err := sh.RunWithV(envMap, "nfpm", args...); err != nil {
@@ -122,7 +122,7 @@ func (Package) FyneCross() error {
 		"-icon", iconPath,
 		"-release",
 		"-arch", envMap["GOARCH"]); err != nil {
-		slog.Warn("fyne-cross finished but with errors. Continuing anyway.", "error", err.Error())
+		slog.Warn("fyne-cross finished but with errors. Continuing anyway.", slog.Any("error", err))
 	}
 
 	// Rename the fyne package with the arch included.
@@ -130,7 +130,7 @@ func (Package) FyneCross() error {
 	origFileName := fynePath + "/dist/linux-" + envMap["GOARCH"] + "/go-hass-agent.tar.xz"
 
 	if err = sh.Copy(newFileName, origFileName); err != nil {
-		return fmt.Errorf("could not copy build artefact: %w", err)
+		return fmt.Errorf("could not copy build artifact: %w", err)
 	}
 
 	err = sh.Rm(origFileName)

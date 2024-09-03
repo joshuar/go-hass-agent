@@ -111,12 +111,12 @@ func (c *Websocket) newPingMsg() *webSocketRequest {
 
 //revive:disable:unused-receiver
 func (c *Websocket) OnError(_ *gws.Conn, err error) {
-	c.logger.Error("Error on websocket.", "error", err.Error())
+	c.logger.Error("Error on websocket.", slog.Any("error", err))
 }
 
 func (c *Websocket) OnClose(_ *gws.Conn, err error) {
 	if err != nil && err.Error() != "gws: close normal" {
-		c.logger.Warn("Websocket connection closed with error.", "error", err.Error())
+		c.logger.Warn("Websocket connection closed with error.", slog.Any("error", err))
 	}
 }
 
@@ -137,7 +137,9 @@ func (c *Websocket) OnMessage(socket *gws.Conn, message *gws.Message) {
 	}
 
 	if err := json.Unmarshal(message.Bytes(), &response); err != nil {
-		c.logger.Error("Failed to unmarshal response.", slog.Any("error", err), slog.Any("raw_response", message.Data.Bytes()))
+		c.logger.Error("Failed to unmarshal response.",
+			slog.Any("error", err),
+			slog.Any("raw_response", message.Data.Bytes()))
 
 		return
 	}
@@ -151,7 +153,9 @@ func (c *Websocket) OnMessage(socket *gws.Conn, message *gws.Message) {
 		c.NotifyCh <- response.Notification
 	case "result":
 		if !response.Success {
-			c.logger.Error("Received error on websocket.", "code", response.Error.Code, "error", response.Error.Message)
+			c.logger.Error("Received error on websocket.",
+				slog.Any("code", response.Error.Code),
+				slog.String("error", response.Error.Message))
 
 			if response.Error.Code == "id_reuse" {
 				c.logger.Warn("Detected message ID reuse, attempting manual increment.")
@@ -169,18 +173,18 @@ func (c *Websocket) OnMessage(socket *gws.Conn, message *gws.Message) {
 	case "pong":
 		b, err := json.Marshal(response)
 		if err != nil {
-			c.logger.Error("Unable to unmarshal pong response.", "error", err.Error())
+			c.logger.Error("Unable to unmarshal pong response.", slog.Any("error", err))
 		}
 
 		c.OnPong(socket, b)
 	default:
-		c.logger.Warn("Unhandled websocket response type.", "type", response.Type)
+		c.logger.Warn("Unhandled websocket response type.", slog.String("type", response.Type))
 	}
 
 	if reply != nil {
 		err := reply.send(socket)
 		if err != nil {
-			c.logger.Error("Unable to send websocket message.", "error", err.Error())
+			c.logger.Error("Unable to send websocket message.", slog.Any("error", err))
 		}
 	}
 }
@@ -190,7 +194,7 @@ func (c *Websocket) keepAlive(conn *gws.Conn) {
 
 	for range ticker.C {
 		if err := conn.SetDeadline(time.Now().Add(connDeadline)); err != nil {
-			c.logger.Error("Could not set deadline on websocket.", "error", err.Error())
+			c.logger.Error("Could not set deadline on websocket.", slog.Any("error", err))
 
 			return
 		}
@@ -198,7 +202,7 @@ func (c *Websocket) keepAlive(conn *gws.Conn) {
 		msg := c.newPingMsg()
 
 		if err := msg.send(conn); err != nil {
-			c.logger.Error("Could not send ping message.", "error", err.Error())
+			c.logger.Error("Could not send ping message.", slog.Any("error", err))
 		}
 	}
 }

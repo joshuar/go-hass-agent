@@ -69,7 +69,9 @@ func sudoWrap(cmd string, args ...string) error {
 func foundOrInstalled(executableName, installURL string) error {
 	_, missing := exec.LookPath(executableName)
 	if missing != nil {
-		slog.Info("Installing tool.", "tool", executableName, "url", installURL)
+		slog.Info("Installing tool.",
+			slog.String("tool", executableName),
+			slog.String("url", installURL))
 
 		err := sh.Run("go", "install", installURL)
 		if err != nil {
@@ -168,7 +170,9 @@ func generateEnv() (map[string]string, error) {
 	_, arch, ver := parseBuildPlatform()
 
 	if arch != "" && arch != runtime.GOARCH {
-		slog.Info("Cross compilation requested.", "host", runtime.GOARCH, "target", arch)
+		slog.Info("Cross compilation requested.",
+			slog.String("host", runtime.GOARCH),
+			slog.String("target", arch))
 
 		// Update NFPM_ARCH to the target arch.
 		envMap["NFPM_ARCH"] = arch + ver

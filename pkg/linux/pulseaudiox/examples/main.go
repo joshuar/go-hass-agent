@@ -3,15 +3,13 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//nolint
 package main
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 
-	pulseaudiox "github.com/joshuar/go-hass-agent/pkg/linux/pulseaudio"
+	"github.com/joshuar/go-hass-agent/pkg/linux/pulseaudiox"
 )
 
 func main() {
@@ -24,19 +22,23 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
 	for {
 		<-client.EventCh
+
 		repl, err := client.GetState()
 		if err != nil {
-			slog.Error("failed to parse reply: %w", err)
+			slog.Error("failed to parse reply: %w", slog.Any("error", err))
 		}
+
 		volPct := pulseaudiox.ParseVolume(repl)
+
 		switch {
 		case repl.Mute != client.Mute:
-			fmt.Printf("mute changed to %v\n", repl.Mute)
+			slog.Info("mute changed", slog.Bool("state", repl.Mute))
 			client.Mute = repl.Mute
 		case volPct != client.Vol:
-			fmt.Printf("volume changed to %.0f%%\n", volPct)
+			slog.Info("volume changed.", slog.Float64("state", volPct))
 			client.Vol = volPct
 		}
 	}

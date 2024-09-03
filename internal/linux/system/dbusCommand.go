@@ -11,6 +11,7 @@ import (
 	"log/slog"
 
 	"github.com/eclipse/paho.golang/paho"
+
 	mqtthass "github.com/joshuar/go-hass-anything/v11/pkg/hass"
 	mqttapi "github.com/joshuar/go-hass-anything/v11/pkg/mqtt"
 

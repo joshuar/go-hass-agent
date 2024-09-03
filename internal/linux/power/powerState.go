@@ -114,7 +114,7 @@ func (w *stateWorker) Events(ctx context.Context) (chan sensor.Details, error) {
 	go func() {
 		sensors, err := w.Sensors(ctx)
 		if err != nil {
-			w.logger.Debug("Could not retrieve power state.", "error", err.Error())
+			w.logger.Debug("Could not retrieve power state.", slog.Any("error", err))
 
 			return
 		}

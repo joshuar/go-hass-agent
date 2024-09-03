@@ -40,7 +40,7 @@ func (g *gobRegistry) write() error {
 		return fmt.Errorf("could not encode registry data: %w", err)
 	}
 
-	slog.Debug("Wrote sensor registry to disk.", "file", registryFile)
+	slog.Debug("Wrote sensor registry to disk.", slog.String("file", registryFile))
 
 	return nil
 }
@@ -61,7 +61,7 @@ func (g *gobRegistry) read() error {
 		return fmt.Errorf("could not decode registry data: %w", err)
 	}
 
-	slog.Debug("Read sensor registry from disk.", "file", registryFile)
+	slog.Debug("Read sensor registry from disk.", slog.String("file", registryFile))
 
 	return nil
 }
@@ -72,7 +72,7 @@ func (g *gobRegistry) IsDisabled(id string) bool {
 
 	sensor, ok := g.sensors[id]
 	if !ok {
-		slog.Warn("Sensor not found in registry.", "sensor_id", id)
+		slog.Warn("Sensor not found in registry.", slog.String("sensor_id", id))
 
 		return false
 	}
@@ -86,7 +86,7 @@ func (g *gobRegistry) IsRegistered(id string) bool {
 
 	sensor, ok := g.sensors[id]
 	if !ok {
-		slog.Warn("Sensor not found in registry.", "sensor_id", id)
+		slog.Warn("Sensor not found in registry.", slog.String("sensor_id", id))
 
 		return false
 	}

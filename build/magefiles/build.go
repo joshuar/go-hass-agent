@@ -83,7 +83,9 @@ func buildProject() error {
 	// Set an appropriate output file based on the arch to build for.
 	outputFile := filepath.Join(distPath, "/go-hass-agent-"+envMap["PLATFORMPAIR"])
 
-	slog.Info("Running go build...", "output", outputFile, "ldflags", ldflags)
+	slog.Info("Running go build...",
+		slog.String("output", outputFile),
+		slog.String("ldflags", ldflags))
 
 	// Run the build.
 	if err := sh.RunWithV(envMap, "go", "build", "-ldflags="+ldflags, "-o", outputFile); err != nil {

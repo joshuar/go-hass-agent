@@ -68,7 +68,7 @@ func (r *ResetCmd) Run(ctx *Context) error {
 	}
 
 	if errs != nil {
-		slog.Warn("Reset completed with errors", "errors", errs.Error())
+		slog.Warn("Reset completed with errors", slog.Any("errors", errs))
 	} else {
 		slog.Info("Reset completed.")
 	}

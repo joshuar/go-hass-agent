@@ -1,8 +1,3 @@
-# Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-#
-# This software is released under the MIT License.
-# https://opensource.org/licenses/MIT
-
 run:
   timeout: 5m
 
@@ -17,126 +12,112 @@ output:
 linters:
   disable-all: true
   enable:
-    - asasalint
-    - asciicheck
-    - bidichk
+    # - asasalint
+    # - asciicheck
+    # - bidichk
     - bodyclose
     - canonicalheader
-    - containedctx
-    - contextcheck
+    # - containedctx
+    # - contextcheck
     - copyloopvar
-    - cyclop
-    - decorder
+    # - cyclop
+    # - decorder
     # - depguard
-    - dogsled
+    # - dogsled
     - dupl
     - dupword
     - durationcheck
-    - err113
+    # - err113
     - errcheck
-    - errchkjson
+    # - errchkjson
     - errname
     - errorlint
-    - exhaustive
+    # - exhaustive
     # - exhaustruct
-    - exportloopref
+    # - exportloopref # govet already reports an error when loop variable is captured by func literal so this linter is not needed.
     - fatcontext
     - forbidigo
-    - forcetypeassert
+    # - forcetypeassert # This check can be enabled through errcheck with check-type-assertions.
     - funlen
-    # - gci
-    - ginkgolinter
+    - gci
+    # - ginkgolinter
     - gocheckcompilerdirectives
     # - gochecknoglobals
     # - gochecknoinits
-    - gochecksumtype
+    # - gochecksumtype
     - gocognit
     - goconst
     # - gocritic
-    - gocyclo
+    # - gocyclo
     - godot
-    - godox
-    - gofmt
+    # - godox
+    # - gofmt # gofumpt includes formatting rules that are a superset of gofmt.
     - gofumpt
     - goheader
-    - goimports
-    - gomoddirectives
-    - gomodguard
+    # - goimports # gci has equivalent/better functionality.
+    # - gomoddirectives
+    # - gomodguard
     - goprintffuncname
     - gosec
     - gosimple
     - gosmopolitan
     - govet
-    - grouper
-    - importas
+    # - grouper
+    # - importas
     - inamedparam
     - ineffassign
     - interfacebloat
     - intrange
     - lll
-    - loggercheck
-    - maintidx
-    - makezero
+    # - loggercheck
+    # - maintidx
+    # - makezero
     - mirror
     - misspell
-    - mnd
+    # - mnd
     - musttag
     - nakedret
-    - nestif
+    # - nestif
     - nilerr
     - nilnil
-    - nlreturn
+    # - nlreturn
     - noctx
     - nolintlint
     # - nonamedreturns
     - nosprintfhostport
-    - paralleltest
+    # - paralleltest
     - perfsprint
     - prealloc
     - predeclared
-    - promlinter
-    - protogetter
+    # - promlinter
+    # - protogetter
     - reassign
     - revive
-    - rowserrcheck
+    # - rowserrcheck
     - sloglint
-    - spancheck
-    - sqlclosecheck
+    # - spancheck
+    # - sqlclosecheck
     - staticcheck
     - stylecheck
-    - tagalign
+    # - tagalign
     - tagliatelle
     - tenv
     - testableexamples
     - testifylint
     # - testpackage
     - thelper
-    - tparallel
+    # - tparallel
     - typecheck
     - unconvert
-    - unparam
+    # - unparam
     - unused
     - usestdlibvars
     - varnamelen
-    - wastedassign
-    - whitespace
+    # - wastedassign
+    # - whitespace
     - wrapcheck
     - wsl
-    - zerologlint
-  # presets:
-  #   - bugs
-  #   - comment
-  #   - complexity
-  #   - error
-  #   - format
-  #   # - import
-  #   - metalinter
-  #   - module
-  #   - performance
-  #   - sql
-  #   - style
-  #   - test
-  #   - unused
+    # - zerologlint
 
 issues:
   exclude-rules:
@@ -145,17 +126,12 @@ issues:
       source: "^//go:generate "
     - path: '(.+)_test\.go'
       text: "copies lock"
-    - linters:
-      - govet
-      text: "lostcancel"
     - path: '(.+)_test\.go'
       linters:
         - funlen
         - varnamelen
         - wsl
-        - containedctx
         - dupl
-        - nlreturn
 
 severity:
   default-severity: "@linter"
@@ -165,6 +141,8 @@ linters-settings:
   errcheck:
     check-blank: true
     check-type-assertions: true
+  misspell:
+    locale: US # US is common spelling.
   tagliatelle:
     case:
       rules:
@@ -183,18 +161,84 @@ linters-settings:
     confidence: 0.8
     ignore-generated-header: false
     rules:
-      - name: line-length-limit
+      - name: context-keys-type # Covered by staticcheck SA1029.
         disabled: true
-      - name: add-constant
+      - name: time-naming # Covered by stylecheck ST1011.
         disabled: true
-      - name: unhandled-error
+      - name: errorf # Covered by gosimple S1028.
+        disabled: true
+      - name: dot-imports # Covered by stylecheck ST1001.
+        disabled: true
+      - name: error-return # Covered by stylecheck ST1008.
+        disabled: true
+      - name: error-strings # Covered by stylecheck ST1005.
+        disabled: true
+      - name: error-naming # Covered by stylecheck ST1012.
+        disabled: true
+      - name: var-naming # Covered by stylecheck ST1003.
+        disabled: true
+      - name: package-comments
+        disabled: true
+      - name: range # Covered by gofumpt.
+        disabled: true
+      - name: receiver-naming # Covered by stylecheck ST1006.
+        disabled: true
+      - name: cyclomatic # Covered by gocognit.
+        disabled: true
+      - name: max-public-structs
+        disabled: true
+      - name: file-header
+        disabled: true
+      - name: empty-block # Covered by staticcheck SA9003.
+        disabled: true
+      - name: confusing-results # Covered more comprehensively by gocritic unnamedResult.
+        disabled: true
+      - name: unreachable-code # Covered by govet unreachable check.
+        disabled: true
+      - name: add-constant # Covered by goconst.
+        disabled: true
+      - name: flag-parameter
+        disabled: true
+      - name: unnecessary-stmt # Covered by gosimple S1023.
+        disabled: true
+      - name: bool-literal-in-expr # Covered by gosimple S1002.
+        disabled: true
+      - name: imports-blocklist
+        disabled: true
+      - name: range-val-in-closure # Covered by govet loopclosure check.
+        disabled: true
+      - name: waitgroup-by-value # Covered by govet copylocks check.
+        disabled: true
+      - name: atomic # Covered by govet atomic check.
+        disabled: true
+      - name: empty-lines # Covered by gofumpt.
+        disabled: true
+      - name: line-length-limit # Covered by lll.
+        disabled: true
+      - name: duplicated-imports # Covered by stylecheck ST1019.
+        disabled: true
+      - name: unhandled-error # Covered by errcheck.
+        disabled: true
+      - name: cognitive-complexity # Covered by gocognit.
+        disabled: true
+      - name: string-of-int # Covered by govet stringintconv check.
+        disabled: true
+      - name: function-length
+        disabled: true
+      - name: useless-break # Covered by staticcheck SA4011.
+        disabled: true
+      - name: banned-characters
+        disabled: true
+      - name: enforce-repeated-arg-type-style # Covered by govet.
+        disabled: true
+      - name: max-control-nesting # Covered by cocognit.
+        disabled: true
+      - name: argument-limit
         arguments:
-          - "fmt.Fprintf"
-          - ".*.WriteString"
-      - name: cognitive-complexity
-        disabled: true
-      - name: cyclomatic
-        disabled: true
+          - 5
+      - name: function-result-limit
+        arguments:
+          - 3
   gocyclo:
     min-complexity: 15
   goimports:
@@ -204,10 +248,24 @@ linters-settings:
   funlen:
     lines: 100
     statements: 50
+  gci:
+    sections:
+      - blank # Blank section: contains all blank imports.
+      - dot # Dot section: contains all dot imports.
+      - standard # Standard section: captures all standard packages.
+      - default # Default section: contains all imports that could not be matched to another section type.
+      - alias # Alias section: contains all alias imports.
+      - prefix(github.com/joshuar) # Custom section: groups all imports with the specified Prefix.
+    skip-generated: true
+    custom-order: true
+  gocognit:
+    min-complexity: 20
   goconst:
     min-len: 2
     min-occurrences: 3
+    ignore-tests: true
   gocritic:
+    enable-all: true
     enabled-tags:
       - diagnostic
       - experimental
@@ -215,17 +273,79 @@ linters-settings:
       - performance
       - style
     disabled-checks:
-      - dupImport # https://github.com/go-critic/go-critic/issues/845
-      - ifElseChain
+      - appendAssign
+      - badRegexp
+      - badSorting
+      - builtinShadowDecl
+      - codegenComment
+      - dupBranchBody
+      - dupSubExpr
+      - dynamicFmtString
+      - emptyDecl
+      - evalOrder
+      - externalErrorReassign
+      - flagDeref
+      - flagName
+      - nilValReturn
+      - regexpPattern
+      - sortSlice
+      - sqlQuery
+      - syncMapLoadAndDelete
+      - uncheckedInlineErr
+      - unnecessaryDefer
+      - builtinShadow
+      - captLocal
+      - commentFormatting
+      - defaultCaseOrder
+      - deferUnlambda
+      - docStub
+      - dupImport
+      - exposedSyncMutex
+      - hexLiteral
+      - httpNoBody
+      - importShadow
+      - initClause
+      - methodExprCall
+      - newDeref
       - octalLiteral
+      - paramTypeCombine
+      - regexpMust
+      - ruleguard
+      - singleCaseSwitch
+      - sloppyLen
+      - stringConcatSimplify
+      - switchTrue
+      - timeExprSimplify
+      - tooManyResultsChecker
+      - typeAssertChain
+      - typeDefFirst
+      - typeSwitchVar
+      - typeUnparen
+      - unlabelStmt
+      - unlambda
+      - unnecessaryBlock
+      - valSwap
       - whyNoLint
-      - wrapperFunc
+      - yodaStyleExpr
+      - appendCombine
+      - equalFold
+      - indexAlloc
+      - preferDecodeRune
+      - preferWriteByte
+      - rangeExprCopy
+      - sliceClear
   govet:
     enable-all: true
+    disable:
+      - asmdecl  # (not needed) reports mismatches between assembly files and Go declarations.
+      - assign  # (dupl staticcheck) detects useless assignments.
+      - cgocall  # (not needed) detects some violations of the cgo pointer passing rules.
+      - fieldalignment  # (not needed) detects structs that would use less memory if their fields were sorted.
+      - findcall  # (not needed) serves as a trivial example and test of the Analysis API.
+      - framepointer  # (not needed) reports assembly code that clobbers the frame pointer before saving it.
+      - structtag  # (dupl revive struct-tag) defines an Analyzer that checks struct field tags are well formed.
   lll:
     line-length: 140
-  misspell:
-    locale: UK
   nolintlint:
     allow-unused: false # report any unused nolint directives
     require-explanation: false # don't require an explanation for nolint directives
@@ -233,3 +353,29 @@ linters-settings:
   gosec:
     excludes:
       - G204
+  perfsprint:
+    errorf: false
+    strconcat: false
+  sloglint:
+    # Enforce not mixing key-value pairs and attributes.
+    # Default: true
+    no-mixed-args: false
+    # Enforce using key-value pairs only (overrides no-mixed-args, incompatible with attr-only).
+    # Default: false
+    kv-only: false
+    # Enforce using attributes only (overrides no-mixed-args, incompatible with kv-only).
+    # Default: false
+    attr-only: true
+    # Enforce using static values for log messages.
+    # Default: false
+    static-msg: true
+    # Enforce using constants instead of raw keys.
+    # Default: false
+    no-raw-keys: false
+    # Enforce a single key naming convention.
+    # Values: snake, kebab, camel, pascal
+    # Default: ""
+    key-naming-case: snake
+    # Enforce putting arguments on separate lines.
+    # Default: false
+    args-on-sep-lines: true

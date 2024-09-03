@@ -139,7 +139,9 @@ func (w *laptopWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
 		state, err := prop.Get()
 		if err != nil {
 			slog.With(slog.String("worker", laptopWorkerID)).
-				Debug("Could not retrieve property", slog.String("property", name), slog.Any("error", err))
+				Debug("Could not retrieve property",
+					slog.String("property", name),
+					slog.Any("error", err))
 		} else {
 			sensors = append(sensors, newLaptopEvent(name, state))
 		}
@@ -197,7 +199,9 @@ func sendChangedProps(props map[string]dbus.Variant, sensorCh chan sensor.Detail
 		if slices.Contains(laptopPropList, prop) {
 			if state, err := dbusx.VariantToValue[bool](value); err != nil {
 				slog.With(slog.String("worker", laptopWorkerID)).
-					Debug("Could not parse property value.", slog.String("property", prop), slog.Any("error", err))
+					Debug("Could not parse property value.",
+						slog.String("property", prop),
+						slog.Any("error", err))
 			} else {
 				sensorCh <- newLaptopEvent(prop, state)
 			}

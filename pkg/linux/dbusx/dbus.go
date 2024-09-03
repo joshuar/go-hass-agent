@@ -74,6 +74,8 @@ func (b *Bus) getObject(intr, path string) dbus.BusObject {
 
 // NewBus creates a D-Bus connection to the requested bus. If a connection
 // cannot be established, an error is returned.
+//
+//nolint:sloglint
 func NewBus(ctx context.Context, busType dbusType) (*Bus, error) {
 	var (
 		conn *dbus.Conn
@@ -104,7 +106,7 @@ func NewBus(ctx context.Context, busType dbusType) (*Bus, error) {
 		},
 	}
 
-	// Start a goroutine to close the connection when the context is cancelled
+	// Start a goroutine to close the connection when the context is canceled
 	// (i.e. agent shutdown).
 	go func() {
 		defer conn.Close()

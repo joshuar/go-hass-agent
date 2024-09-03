@@ -123,10 +123,14 @@ func getDevice(deviceName string) (*device, map[stat]uint64, error) {
 	for line.Scan() {
 		readVal, err := strconv.ParseUint(line.Text(), 10, 64)
 		if err != nil {
-			slog.Warn("Unable to parse device stat.", slog.String("device", dev.id), slog.String("stat", line.Text()), slog.Any("error", err))
+			slog.Warn("Unable to parse device stat.",
+				slog.String("device", dev.id),
+				slog.String("stat", line.Text()),
+				slog.Any("error", err))
+		} else {
+			stats[statno] = readVal
 		}
 
-		stats[statno] = readVal
 		statno++
 	}
 

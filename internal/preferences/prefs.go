@@ -15,8 +15,9 @@ import (
 	"path/filepath"
 	"sync"
 
-	mqtthass "github.com/joshuar/go-hass-anything/v11/pkg/hass"
 	"github.com/pelletier/go-toml/v2"
+
+	mqtthass "github.com/joshuar/go-hass-anything/v11/pkg/hass"
 )
 
 const (
@@ -151,7 +152,7 @@ func DefaultPreferences(file string) *Preferences {
 
 	device, err := newDevice()
 	if err != nil {
-		slog.Warn("Problem generating new device info.", "error", err.Error())
+		slog.Warn("Problem generating new device info.", slog.Any("error", err))
 	}
 
 	return &Preferences{

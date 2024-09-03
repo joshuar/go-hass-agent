@@ -95,7 +95,10 @@ func readCPUFreqProp(id, file string) string {
 	// Read the current scaling driver.
 	prop, err := os.ReadFile(path)
 	if err != nil {
-		slog.Debug("Could not read CPU freq property.", slog.String("cpu", id), slog.String("property", file), slog.Any("error", err))
+		slog.Debug("Could not read CPU freq property.",
+			slog.String("cpu", id),
+			slog.String("property", file),
+			slog.Any("error", err))
 
 		return "unknown"
 	}

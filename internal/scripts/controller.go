@@ -82,7 +82,9 @@ func (c *Controller) Start(_ context.Context, name string) (<-chan sensor.Detail
 	id, err := c.scheduler.AddFunc(c.jobs[found].Schedule(), func() {
 		sensors, err := c.jobs[found].Execute()
 		if err != nil {
-			c.logger.Warn("Could not execute script.", c.jobs[found].logAttrs, slog.Any("error", err))
+			c.logger.Warn("Could not execute script.",
+				c.jobs[found].logAttrs,
+				slog.Any("error", err))
 
 			return
 		}
@@ -144,7 +146,9 @@ func (c *Controller) StartAll(_ context.Context) (<-chan sensor.Details, error) 
 		runFunc := func() {
 			sensors, err := job.Script.Execute()
 			if err != nil {
-				c.logger.Warn("Could not execute script.", job.logAttrs, slog.Any("error", err))
+				c.logger.Warn("Could not execute script.",
+					job.logAttrs,
+					slog.Any("error", err))
 
 				return
 			}
@@ -157,10 +161,14 @@ func (c *Controller) StartAll(_ context.Context) (<-chan sensor.Details, error) 
 		// defined schedule.
 		id, err := c.scheduler.AddFunc(job.schedule, runFunc)
 		if err != nil {
-			c.logger.Warn("Unable to schedule script", job.logAttrs, slog.Any("error", err))
+			c.logger.Warn("Unable to schedule script",
+				job.logAttrs,
+				slog.Any("error", err))
 		} else {
 			c.jobs[idx].ID = id
-			c.logger.Debug("Added cron job.", job.logAttrs, slog.Any("job_id", id))
+			c.logger.Debug("Added cron job.",
+				job.logAttrs,
+				slog.Any("job_id", id))
 		}
 	}
 
@@ -190,7 +198,7 @@ func (c *Controller) StopAll() error {
 func NewScriptsController(ctx context.Context, path string) (*Controller, error) {
 	controller := &Controller{
 		scheduler: cron.New(),
-		logger:    logging.FromContext(ctx).With("controller", "scripts"),
+		logger:    logging.FromContext(ctx).With(slog.String("controller", "scripts")),
 	}
 
 	scripts, err := findScripts(path)

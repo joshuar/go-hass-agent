@@ -14,12 +14,12 @@ import (
 
 	"github.com/adrg/xdg"
 
+	mqtthass "github.com/joshuar/go-hass-anything/v11/pkg/hass"
+	mqttapi "github.com/joshuar/go-hass-anything/v11/pkg/mqtt"
+
 	"github.com/joshuar/go-hass-agent/internal/commands"
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
-
-	mqtthass "github.com/joshuar/go-hass-anything/v11/pkg/hass"
-	mqttapi "github.com/joshuar/go-hass-anything/v11/pkg/mqtt"
 )
 
 func (agent *Agent) newMQTTController(ctx context.Context, mqttDevice *mqtthass.Device) MQTTController {
@@ -66,7 +66,7 @@ func (agent *Agent) runMQTTWorkers(ctx context.Context, controllers ...MQTTContr
 	// device subscriptions.
 	client, err := mqttapi.NewClient(ctx, agent.prefs.GetMQTTPreferences(), subscriptions, configs)
 	if err != nil {
-		agent.logger.Error("Could not connect to MQTT.", "error", err.Error())
+		agent.logger.Error("Could not connect to MQTT.", slog.Any("error", err))
 
 		return
 	}
@@ -77,7 +77,9 @@ func (agent *Agent) runMQTTWorkers(ctx context.Context, controllers ...MQTTContr
 		select {
 		case msg := <-mergeCh(ctx, msgCh...):
 			if err := client.Publish(ctx, msg); err != nil {
-				agent.logger.Warn("Unable to publish message to MQTT.", "topic", msg.Topic, "content", slog.Any("msg", msg.Message))
+				agent.logger.Warn("Unable to publish message to MQTT.",
+					slog.String("topic", msg.Topic),
+					slog.Any("msg", msg.Message))
 			}
 		case <-ctx.Done():
 			agent.logger.Debug("Stopped listening for messages to publish to MQTT.")

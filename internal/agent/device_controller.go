@@ -216,7 +216,7 @@ func (w *ExternalIPWorker) Sensors(ctx context.Context) ([]sensor.Details, error
 	for _, ver := range []int{4, 6} {
 		ipAddr, err := w.lookupExternalIPs(ctx, w.client, ver)
 		if err != nil || ipAddr == nil {
-			w.logger.Log(ctx, logging.LevelTrace, "Looking up external IP failed.", "error", err.Error())
+			w.logger.Log(ctx, logging.LevelTrace, "Looking up external IP failed.", slog.Any("error", err))
 
 			continue
 		}
@@ -239,7 +239,7 @@ func (w *ExternalIPWorker) Updates(ctx context.Context) (<-chan sensor.Details, 
 	updater := func(_ time.Duration) {
 		sensors, err := w.Sensors(updatesCtx)
 		if err != nil {
-			w.logger.Debug("Could not get external IP.", "error", err.Error())
+			w.logger.Debug("Could not get external IP.", slog.Any("error", err))
 		}
 
 		for _, s := range sensors {

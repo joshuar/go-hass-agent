@@ -13,10 +13,11 @@ import (
 	"time"
 
 	"github.com/eclipse/paho.golang/paho"
-	mqtthass "github.com/joshuar/go-hass-anything/v11/pkg/hass"
-	mqttapi "github.com/joshuar/go-hass-anything/v11/pkg/mqtt"
 	"github.com/vladimirvivien/go4vl/device"
 	"github.com/vladimirvivien/go4vl/v4l2"
+
+	mqtthass "github.com/joshuar/go-hass-anything/v11/pkg/hass"
+	mqttapi "github.com/joshuar/go-hass-anything/v11/pkg/mqtt"
 
 	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
@@ -171,7 +172,9 @@ func (c *cameraControl) openCamera(cameraDevice string) error {
 
 	pixFmt, err := camDev.GetPixFormat()
 	if err == nil {
-		c.logger.Debug("Camera configured.", slog.Any("format", pixFmt), slog.Any("fps", fps))
+		c.logger.Debug("Camera configured.",
+			slog.Any("format", pixFmt),
+			slog.Any("fps", fps))
 	}
 
 	c.device = camDev

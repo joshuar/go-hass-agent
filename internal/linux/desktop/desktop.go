@@ -3,8 +3,6 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//revive:disable:unused-receiver
-//nolint:misspell
 package desktop
 
 import (
@@ -15,11 +13,11 @@ import (
 	"strings"
 
 	"github.com/godbus/dbus/v5"
-
 	"github.com/mandykoh/prism/srgb"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
@@ -52,7 +50,7 @@ func (w *worker) newAccentColorSensor(accent string) (*desktopSettingSensor, err
 	if accent == "" {
 		accent, err = w.getProp(accentColorProp)
 		if err != nil {
-			return nil, fmt.Errorf("invalid accent colour: %w", err)
+			return nil, fmt.Errorf("invalid accent color: %w", err)
 		}
 	}
 
@@ -73,7 +71,7 @@ func (w *worker) newColorSchemeSensor(scheme string) (*desktopSettingSensor, err
 	if scheme == "" {
 		scheme, err = w.getProp(colorSchemeProp)
 		if err != nil {
-			return nil, fmt.Errorf("invalid colour scheme: %w", err)
+			return nil, fmt.Errorf("invalid color scheme: %w", err)
 		}
 	}
 
@@ -81,7 +79,7 @@ func (w *worker) newColorSchemeSensor(scheme string) (*desktopSettingSensor, err
 		Sensor: linux.Sensor{
 			IsDiagnostic: true,
 			DataSource:   linux.DataSrcDbus,
-			DisplayName:  "Desktop Colour Scheme",
+			DisplayName:  "Desktop Color Scheme",
 			Value:        scheme,
 		},
 	}
@@ -101,7 +99,7 @@ func (w *worker) newColorSchemeSensor(scheme string) (*desktopSettingSensor, err
 //nolint:cyclop,gocognit
 func (w *worker) Events(ctx context.Context) (chan sensor.Details, error) {
 	sensorCh := make(chan sensor.Details)
-	logger := slog.Default().With(slog.String("worker", workerID))
+	logger := logging.FromContext(ctx).With(slog.String("worker", workerID))
 
 	go func() {
 		defer close(sensorCh)
@@ -123,13 +121,13 @@ func (w *worker) Events(ctx context.Context) (chan sensor.Details, error) {
 				switch prop {
 				case colorSchemeProp:
 					if colourSchemeSensor, err := w.newColorSchemeSensor(parseColorScheme(value)); err != nil {
-						logger.Debug("Error generating colour scheme sensor.", slog.Any("error", err))
+						logger.Debug("Error generating color scheme sensor.", slog.Any("error", err))
 					} else {
 						sensorCh <- colourSchemeSensor
 					}
 				case accentColorProp:
 					if accentColourSensor, err := w.newAccentColorSensor(parseAccentColor(value)); err != nil {
-						logger.Debug("Error generating accent colour sensor.", slog.Any("error", err))
+						logger.Debug("Error generating accent color sensor.", slog.Any("error", err))
 					} else {
 						sensorCh <- accentColourSensor
 					}
@@ -248,13 +246,13 @@ func parseAccentColor(value dbus.Variant) string {
 
 	rgb := make([]uint8, 3)
 
-	for colour, v := range values {
+	for color, v := range values {
 		val, ok := v.(float64)
 		if !ok {
 			continue
 		}
 
-		rgb[colour] = srgb.To8Bit(float32(val))
+		rgb[color] = srgb.To8Bit(float32(val))
 	}
 
 	return fmt.Sprintf("#%02x%02x%02x", rgb[0], rgb[1], rgb[2])

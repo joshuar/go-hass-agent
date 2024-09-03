@@ -97,7 +97,7 @@ func NewWatch(options ...WatchOption) *Watch {
 // triggered the match, the path and the contents (what values actually
 // changed).
 //
-//nolint:cyclop
+//nolint:gocognit
 func (w *Watch) Start(ctx context.Context, bus *Bus) (chan Trigger, error) {
 	if len(w.methods) > 0 { // Set up a watch for on each method plus all other conditions specified.
 		for _, method := range w.methods {
@@ -125,7 +125,7 @@ func (w *Watch) Start(ctx context.Context, bus *Bus) (chan Trigger, error) {
 
 	// Set up a goroutine to listen for signals from D-Bus and forward them over
 	// outCh. We do some generic filtering of the signal to catch obvious bogus
-	// signals and data. If the context is cancelled (i.e., agent shutdown),
+	// signals and data. If the context is canceled (i.e., agent shutdown),
 	// clean up.
 	go func() {
 		for signal := range signalCh {
@@ -163,7 +163,7 @@ func (w *Watch) Start(ctx context.Context, bus *Bus) (chan Trigger, error) {
 		}
 	}()
 
-	// If the context is cancelled, stop watching.
+	// If the context is canceled, stop watching.
 	go func() {
 		defer bus.conn.RemoveSignal(signalCh)
 		defer close(outCh)

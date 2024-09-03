@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/eclipse/paho.golang/paho"
+
 	mqtthass "github.com/joshuar/go-hass-anything/v11/pkg/hass"
 
 	"github.com/joshuar/go-hass-agent/internal/linux"
