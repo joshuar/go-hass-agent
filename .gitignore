@@ -26,6 +26,7 @@ deployments/**/*.yaml
 !build/**/*
 
 !/assets/**/*
+!/internal/cli/assets/*
 !/internal/agent/ui/assets/*
 !**/testing/*
 !**/testing/data/**
