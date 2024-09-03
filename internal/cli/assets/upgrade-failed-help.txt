@@ -1,0 +1,3 @@
+Upgrade failed. You may need to upgrade manually. Check
+https://github.com/joshuar/go-hass-agent/blob/main/docs/BREAKING_CHANGES.md for
+manual steps required.
