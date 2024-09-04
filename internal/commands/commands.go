@@ -353,9 +353,9 @@ func (d *Controller) generateNumbers(numberCommands []Command) {
 
 		switch valueType {
 		case "float":
-			min := convValue[float64](cmd.Min)
+			min := convValue[float64](cmd.Min) //nolint:predeclared
 
-			max := convValue[float64](cmd.Max)
+			max := convValue[float64](cmd.Max) //nolint:predeclared
 			if max == 0 {
 				max = 100
 			}
@@ -376,9 +376,9 @@ func (d *Controller) generateNumbers(numberCommands []Command) {
 						WithValueTemplate(stateValueTemplate),
 					step, min, max, displayType))
 		default:
-			min := convValue[int](cmd.Min)
+			min := convValue[int](cmd.Min) //nolint:predeclared
 
-			max := convValue[int](cmd.Max)
+			max := convValue[int](cmd.Max) //nolint:predeclared
 			if max == 0 {
 				max = 100
 			}

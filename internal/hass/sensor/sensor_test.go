@@ -207,7 +207,7 @@ func TestRequest_RequestBody(t *testing.T) {
 			}
 			got := r.RequestBody()
 			if tt.want != nil {
-				ja.Assertf(string(got), string(tt.want))
+				ja.Assertf(string(got), string(tt.want)) //nolint:govet
 			}
 		})
 	}

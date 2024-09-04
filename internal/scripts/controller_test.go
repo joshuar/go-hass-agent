@@ -150,7 +150,7 @@ func TestController_Start(t *testing.T) {
 				return
 			}
 			if !tt.wantErr {
-				assert.NotEmpty(t, len(c.ActiveWorkers()))
+				assert.NotEmpty(t, len(c.ActiveWorkers())) //nolint:testifylint
 			}
 		})
 	}
@@ -212,7 +212,7 @@ func TestController_Stop(t *testing.T) {
 				t.Errorf("Controller.Stop() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			if !tt.wantErr {
-				assert.NotEmpty(t, len(c.InactiveWorkers()))
+				assert.NotEmpty(t, len(c.InactiveWorkers())) //nolint:testifylint
 			}
 		})
 	}
@@ -256,7 +256,7 @@ func TestController_StartAll(t *testing.T) {
 				return
 			}
 			if !tt.wantErr {
-				assert.NotEmpty(t, len(c.ActiveWorkers()))
+				assert.NotEmpty(t, len(c.ActiveWorkers())) //nolint:testifylint
 			}
 		})
 	}
@@ -298,7 +298,7 @@ func TestController_StopAll(t *testing.T) {
 				t.Errorf("Controller.StopAll() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			if !tt.wantErr {
-				assert.NotEmpty(t, len(c.InactiveWorkers()))
+				assert.NotEmpty(t, len(c.InactiveWorkers())) //nolint:testifylint
 			}
 		})
 	}

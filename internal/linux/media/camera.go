@@ -34,10 +34,10 @@ const (
 
 // Some defaults for the device file, formats and image size.
 var (
-	defaultDevice = "/dev/video0"
-	preferredFmts = []v4l2.FourCCType{v4l2.PixelFmtMPEG, v4l2.PixelFmtMJPEG, v4l2.PixelFmtJPEG, v4l2.PixelFmtYUYV}
-	defaultHeight = 640
-	defaultWidth  = 480
+	defaultDevice        = "/dev/video0"
+	preferredFmts        = []v4l2.FourCCType{v4l2.PixelFmtMPEG, v4l2.PixelFmtMJPEG, v4l2.PixelFmtJPEG, v4l2.PixelFmtYUYV}
+	defaultHeight uint32 = 640
+	defaultWidth  uint32 = 480
 )
 
 // CameraEntities represents all of the entities that make up a camera. This
@@ -162,8 +162,8 @@ func (c *cameraControl) openCamera(cameraDevice string) error {
 	}
 
 	if err = camDev.SetPixFormat(v4l2.PixFormat{
-		Width:       uint32(defaultWidth),
-		Height:      uint32(defaultHeight),
+		Width:       defaultWidth,
+		Height:      defaultHeight,
 		PixelFormat: fmtDesc.PixelFormat,
 		Field:       v4l2.FieldNone,
 	}); err != nil {

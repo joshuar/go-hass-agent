@@ -68,7 +68,7 @@ func (c *connectionStateSensor) setState(state any) error {
 		} else {
 			c.value = state
 		}
-	case int:
+	case uint32:
 		c.value = connState(value)
 	default:
 		return ErrUnsupportedValue
