@@ -16,7 +16,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  GO_VERSION: 1.22.5
+  GO_VERSION: 1.23.0
   COSIGN_VERSION: 'v2.2.2'
   MAGEARGS: -d build/magefiles -w .
 
