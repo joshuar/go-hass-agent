@@ -29,9 +29,6 @@ func (Build) Full() error {
 	mg.Deps(Preps.Format)
 	mg.Deps(Preps.Generate)
 
-	// Record all licenses in a registry
-	mg.Deps(Checks.Licenses)
-
 	return buildProject()
 }
 

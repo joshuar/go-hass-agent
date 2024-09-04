@@ -20,8 +20,9 @@ import (
 )
 
 const (
-	pkgBase  = "github.com/joshuar/go-hass-agent/internal/preferences"
-	distPath = "dist"
+	pkgBase     = "github.com/joshuar/go-hass-agent/internal/preferences"
+	distPath    = "dist"
+	platformENV = "TARGETPLATFORM"
 )
 
 var (
@@ -201,7 +202,7 @@ func generateEnv() (map[string]string, error) {
 	return envMap, nil
 }
 
-// parseBuildPlatform reads the BUILDPLATFORM environment variable, which should
+// parseBuildPlatform reads the TARGETPLATFORM environment variable, which should
 // always be set, and extracts the value into appropriate GOOS, GOARCH and GOARM
 // (if applicable) variables.
 //
@@ -211,7 +212,7 @@ func parseBuildPlatform() (operatingsystem, architecture, version string) {
 
 	var ok bool
 
-	if buildPlatform, ok = os.LookupEnv("BUILDPLATFORM"); !ok {
+	if buildPlatform, ok = os.LookupEnv(platformENV); !ok {
 		return runtime.GOOS, runtime.GOARCH, ""
 	}
 
