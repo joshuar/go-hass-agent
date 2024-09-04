@@ -13,6 +13,8 @@ import (
 
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
+
+	"github.com/joshuar/go-hass-agent/pkg/linux/whichdistro"
 )
 
 type Preps mg.Namespace
@@ -28,7 +30,10 @@ var generators = map[string]string{
 	"stringer": "golang.org/x/tools/cmd/stringer@v0.23.0",
 }
 
-var ErrMissingBuildPlatform = errors.New("BUILDPLATFORM environment variable not set")
+var (
+	ErrMissingBuildPlatform = errors.New("BUILDPLATFORM environment variable not set")
+	ErrMissingID            = errors.New("ID missing from os-release file")
+)
 
 // Tidy runs go mod tidy to update the go.mod and go.sum files.
 func (Preps) Tidy() error {
@@ -81,11 +86,23 @@ func (Preps) Deps() error {
 		return ErrMissingBuildPlatform
 	}
 
-	if err := sudoWrap(multiarchScript, buildPlatform); err != nil {
-		return fmt.Errorf("unable to enable multiarch for %s: %w", buildPlatform, err)
+	osrelease, err := whichdistro.GetOSRelease()
+	if err != nil {
+		return fmt.Errorf("cannot infer distro details: %w", err)
 	}
 
-	if err := sudoWrap(buildDepsInstallScript, buildPlatform); err != nil {
+	distroID, found := osrelease.GetValue("ID")
+	if !found {
+		return ErrMissingID
+	}
+
+	if distroID == "ubuntu" {
+		if err := sudoWrap(multiarchScript, buildPlatform, distroID); err != nil {
+			return fmt.Errorf("unable to enable multiarch for %s: %w", buildPlatform, err)
+		}
+	}
+
+	if err := sudoWrap(buildDepsInstallScript, buildPlatform, distroID); err != nil {
 		return fmt.Errorf("unable to install build deps for %s: %w", buildPlatform, err)
 	}
 

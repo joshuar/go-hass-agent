@@ -3,7 +3,7 @@
 set -e
 
 sudo ./build/scripts/enable-multiarch all
-sudo ./build/scripts/install-build-deps all
+sudo ./build/scripts/install-build-deps all ubuntu
 
 # Install go build packages
 go install golang.org/x/tools/cmd/stringer@v0.23.0
