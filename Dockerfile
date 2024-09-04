@@ -3,7 +3,7 @@
 # This software is released under the MIT License.
 # https://opensource.org/licenses/MIT
 
-FROM docker.io/alpine AS builder
+FROM docker.io/alpine@sha256:0a4eaa0eecf5f8c050e5bba433f58c052be7587ee8af3e8b3910ef9ab5fbe9f5 AS builder
 # import TARGETPLATFORM
 ARG TARGETPLATFORM
 # set the workdir
@@ -20,7 +20,7 @@ RUN mage -v -d build/magefiles -w . preps:deps
 # build the binary
 RUN mage -v -d build/magefiles -w . build:full
 
-FROM docker.io/alpine
+FROM docker.io/alpine@sha256:0a4eaa0eecf5f8c050e5bba433f58c052be7587ee8af3e8b3910ef9ab5fbe9f5
 # import TARGETPLATFORM and TARGETARCH
 ARG TARGETPLATFORM
 ARG TARGETARCH
