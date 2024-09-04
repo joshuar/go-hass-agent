@@ -12,9 +12,9 @@ permissions:
   contents: read
 
 env:
-  GO_VERSION: 1.22.5
+  GO_VERSION: 1.23.0
   MAGEARGS: -d build/magefiles -w .
-  BUILDPLATFORM: linux/amd64
+  TARGETPLATFORM: linux/amd64
 
 jobs:
   analyze:
