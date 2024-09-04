@@ -81,11 +81,11 @@ jobs:
       - name: Build with Mage
         run: mage ${MAGEARGS} build:ci
         env:
-          BUILDPLATFORM: ${{ matrix.platform }}
+          TARGETPLATFORM: ${{ matrix.platform }}
       - name: Package with Mage
         run: mage ${MAGEARGS} package:ci
         env:
-          BUILDPLATFORM: ${{ matrix.platform }}
+          TARGETPLATFORM: ${{ matrix.platform }}
       - name: Install cosign
         id: cosign_install
         uses: sigstore/cosign-installer@4959ce089c160fddf62f7b42464195ba1a56d382 # v3
@@ -116,7 +116,6 @@ jobs:
         if: ${{ needs.check_release.outputs.release_created }}
         run: |
           gh release upload ${{ needs.check_release.outputs.release_tag }} dist/pkg/*.{rpm,deb,zst,sig}
-          # gh release upload ${{ needs.check_release.outputs.release_tag }} fyne-cross/dist/linux-*/*.tar.xz{,.sig}
         env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

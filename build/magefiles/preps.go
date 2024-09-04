@@ -81,7 +81,7 @@ func (Preps) Generate() error {
 
 // BuildDeps installs build dependencies.
 func (Preps) Deps() error {
-	buildPlatform, found := os.LookupEnv("BUILDPLATFORM")
+	buildPlatform, found := os.LookupEnv(platformENV)
 	if !found {
 		return ErrMissingBuildPlatform
 	}
