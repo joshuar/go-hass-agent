@@ -85,7 +85,7 @@ func (d ProfileFlags) AfterApply() error {
 
 type HeadlessFlag bool
 
-func (f *HeadlessFlag) BeforeApply() error {
+func (f *HeadlessFlag) AfterApply() error {
 	if os.Getenv("DISPLAY") == "" && !*f {
 		slog.Warn("DISPLAY not set, running in headless mode by default (specify --terminal to suppress this warning).")
 

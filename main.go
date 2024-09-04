@@ -25,7 +25,7 @@ var CLI struct {
 	Version   cli.VersionCmd    `cmd:"" help:"Show the Go Hass Agent version."`
 	Upgrade   cli.UpgradeCmd    `cmd:"" help:"Attempt to upgrade from previous version."`
 	Profile   cli.ProfileFlags  `help:"Enable profiling."`
-	Headless  *cli.HeadlessFlag `help:"Run without a GUI." default:"false"`
+	Headless  *cli.HeadlessFlag `name:"terminal" help:"Run without a GUI." default:"false"`
 	AppID     string            `name:"appid" default:"${defaultAppID}" help:"Specify a custom app id (for debugging)."`
 	LogLevel  string            `name:"log-level" enum:"info,debug,trace" default:"info" help:"Set logging level."`
 	Config    cli.ConfigCmd     `cmd:"" help:"Configure Go Hass Agent."`
