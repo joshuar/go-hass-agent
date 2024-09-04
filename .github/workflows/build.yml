@@ -111,7 +111,6 @@ jobs:
           name: build-${{ env.PLATFORM_PAIR }}-${{ github.sha }}
           path: |
             dist/pkg
-#           fyne-cross/dist/linux-*
       - name: Upload release artifacts
         id: upload_release
         if: ${{ needs.check_release.outputs.release_created }}
@@ -133,6 +132,7 @@ jobs:
         platform:
           - linux/amd64
           - linux/arm/v7
+          - linux/arm/v6
           - linux/arm64
     env:
       REGISTRY: ghcr.io
@@ -180,8 +180,6 @@ jobs:
           context: .
           labels: ${{ steps.docker_metadata.outputs.labels }}
           platforms: ${{ matrix.platform }}
-          build-args: |
-            GO_VERSION=${{ env.GO_VERSION }}
           outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
       - name: Export digest
         run: |
