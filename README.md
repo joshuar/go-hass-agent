@@ -406,7 +406,7 @@ If you want to run Go Hass Agent as a service on a headless machine, see the
 There is rough support for running Go Hass Agent within a container. Pre-built
 images [are
 available](https://github.com/joshuar/go-hass-agent/pkgs/container/go-hass-agent)
-for amrv6/v7, arm64 and amd64 architectures.
+for armv6/v7, arm64 and amd64 architectures.
 
 To register the agent running in a container, run the following:
 
