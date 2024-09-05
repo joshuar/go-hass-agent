@@ -118,12 +118,14 @@ func (s *netIORateSensor) Icon() string {
 	return "mdi:help-network"
 }
 
-func (s *netIORateSensor) update(d time.Duration, b uint64) {
+func (s *netIORateSensor) update(d time.Duration, currentValue uint64) {
 	if uint64(d.Seconds()) > 0 && s.lastValue != 0 {
-		s.Value = (b - s.lastValue) / uint64(d.Seconds())
+		s.Value = (currentValue - s.lastValue) / uint64(d.Seconds())
+	} else {
+		s.Value = 0
 	}
 
-	s.lastValue = b
+	s.lastValue = currentValue
 }
 
 func newNetIORateSensor(t rateSensor) *netIORateSensor {

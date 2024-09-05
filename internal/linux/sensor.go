@@ -44,18 +44,10 @@ type Sensor struct {
 // by embedding linuxSensor in another struct and defining the needed function.
 
 func (l *Sensor) Name() string {
-	if l.DisplayName == "" {
-		return "Unknown Sensor"
-	}
-
 	return l.DisplayName
 }
 
 func (l *Sensor) ID() string {
-	if l.DisplayName == "" {
-		return "unknown_sensor"
-	}
-
 	return strcase.ToSnake(l.DisplayName)
 }
 
