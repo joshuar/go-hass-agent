@@ -38,7 +38,8 @@
                 "bierner.markdown-emoji",
                 "bierner.emojisense",
                 "redhat.vscode-yaml",
-                "ms-azuretools.vscode-docker"
+                "ms-azuretools.vscode-docker",
+                "foxundermoon.shell-format"
             ],
             "settings": {
                 "terminal.integrated.defaultProfile.linux": "fish",
