@@ -81,6 +81,8 @@ func (s *diskIOSensor) update(stats map[stat]uint64, delta time.Duration) {
 	if s.sensorType == diskReadRate || s.sensorType == diskWriteRate {
 		if uint64(delta.Seconds()) > 0 {
 			s.Value = (curr - s.prevValue) / uint64(delta.Seconds()) / 2
+		} else {
+			s.Value = 0
 		}
 
 		s.prevValue = curr
