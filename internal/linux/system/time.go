@@ -44,6 +44,7 @@ func (w *timeWorker) Sensors(_ context.Context, _ time.Duration) ([]sensor.Detai
 	// Send the uptime.
 	sensors = append(sensors, &linux.Sensor{
 		DisplayName:      "Uptime",
+		UniqueID:         "uptime",
 		Value:            w.getUptime() / 60 / 60, //nolint:mnd
 		IsDiagnostic:     true,
 		UnitsString:      "h",
@@ -56,6 +57,7 @@ func (w *timeWorker) Sensors(_ context.Context, _ time.Duration) ([]sensor.Detai
 	if !w.boottimeSent {
 		sensors = append(sensors, &linux.Sensor{
 			DisplayName:      "Last Reboot",
+			UniqueID:         "last_reboot",
 			Value:            w.boottime.Format(time.RFC3339),
 			IsDiagnostic:     true,
 			IconString:       "mdi:restart",

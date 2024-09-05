@@ -29,6 +29,7 @@ const (
 func newPowerSensor(profile string) *linux.Sensor {
 	return &linux.Sensor{
 		DisplayName:  "Power Profile",
+		UniqueID:     "power_profile",
 		Value:        profile,
 		IconString:   powerProfileIcon,
 		DataSource:   linux.DataSrcDbus,

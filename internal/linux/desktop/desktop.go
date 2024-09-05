@@ -60,6 +60,7 @@ func (w *worker) newAccentColorSensor(accent string) (*desktopSettingSensor, err
 			IconString:   "mdi:palette",
 			DataSource:   linux.DataSrcDbus,
 			DisplayName:  "Desktop Accent Color",
+			UniqueID:     "desktop_accent_color",
 			Value:        accent,
 		},
 	}, nil
@@ -80,6 +81,7 @@ func (w *worker) newColorSchemeSensor(scheme string) (*desktopSettingSensor, err
 			IsDiagnostic: true,
 			DataSource:   linux.DataSrcDbus,
 			DisplayName:  "Desktop Color Scheme",
+			UniqueID:     "desktop_color_scheme",
 			Value:        scheme,
 		},
 	}

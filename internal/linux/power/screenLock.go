@@ -45,6 +45,7 @@ func newScreenlockEvent(value bool) *screenlockSensor {
 	return &screenlockSensor{
 		Sensor: linux.Sensor{
 			DisplayName: "Screen Lock",
+			UniqueID:    "screen_lock",
 			IsBinary:    true,
 			DataSource:  linux.DataSrcDbus,
 			Value:       value,

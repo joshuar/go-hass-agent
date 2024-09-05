@@ -18,6 +18,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/iancoleman/strcase"
+
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
@@ -157,6 +159,7 @@ func (w *usageWorker) newCountSensor(name, icon, valueStr string) *linux.Sensor 
 
 	return &linux.Sensor{
 		DisplayName:     name,
+		UniqueID:        strcase.ToSnake(name),
 		Value:           valueInt,
 		IconString:      icon,
 		DataSource:      linux.DataSrcProcfs,

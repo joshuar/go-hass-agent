@@ -52,6 +52,7 @@ func newUsersSensor() *usersSensor {
 	return &usersSensor{
 		Sensor: linux.Sensor{
 			DisplayName:     "Current Users",
+			UniqueID:        "current_users",
 			UnitsString:     sensorUnits,
 			IconString:      sensorIcon,
 			StateClassValue: types.StateClassMeasurement,

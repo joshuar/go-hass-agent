@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/iancoleman/strcase"
 	"github.com/shirou/gopsutil/v3/net"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
@@ -92,6 +93,7 @@ func newNetIOSensor(t rateSensor) *netIOSensor {
 		sensorType: t,
 		Sensor: linux.Sensor{
 			DisplayName:      t.String(),
+			UniqueID:         strcase.ToSnake(t.String()),
 			UnitsString:      countUnit,
 			DeviceClassValue: types.DeviceClassDataSize,
 			StateClassValue:  types.StateClassMeasurement,
@@ -133,6 +135,7 @@ func newNetIORateSensor(t rateSensor) *netIORateSensor {
 		sensorType: t,
 		Sensor: linux.Sensor{
 			DisplayName:      t.String(),
+			UniqueID:         strcase.ToSnake(t.String()),
 			UnitsString:      rateUnit,
 			DeviceClassValue: types.DeviceClassDataRate,
 			StateClassValue:  types.StateClassMeasurement,

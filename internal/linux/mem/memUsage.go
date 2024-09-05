@@ -13,6 +13,8 @@ import (
 	"math"
 	"time"
 
+	"github.com/iancoleman/strcase"
+
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
@@ -42,6 +44,7 @@ var (
 func newMemSensor(id memStatID, stat *memStat) *linux.Sensor {
 	return &linux.Sensor{
 		DisplayName:      id.String(),
+		UniqueID:         strcase.ToSnake(id.String()),
 		DeviceClassValue: types.DeviceClassDataSize,
 		StateClassValue:  types.StateClassTotal,
 		IconString:       memorySensorIcon,
@@ -58,6 +61,7 @@ func newMemSensorPc(name string, value, total uint64) *linux.Sensor {
 
 	return &linux.Sensor{
 		DisplayName:     name,
+		UniqueID:        strcase.ToSnake(name),
 		StateClassValue: types.StateClassMeasurement,
 		IconString:      memorySensorIcon,
 		DataSource:      linux.DataSrcProcfs,

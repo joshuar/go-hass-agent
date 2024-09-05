@@ -91,6 +91,7 @@ func (w *worker) Sensors(ctx context.Context, _ time.Duration) ([]sensor.Details
 		list: make(map[string]map[string]any),
 		Sensor: linux.Sensor{
 			DisplayName:     "Problems",
+			UniqueID:        "problems",
 			IconString:      "mdi:alert",
 			UnitsString:     "problems",
 			StateClassValue: types.StateClassMeasurement,

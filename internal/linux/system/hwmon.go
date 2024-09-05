@@ -29,8 +29,6 @@ const (
 type hwSensor struct {
 	ExtraAttrs map[string]float64
 	hwType     string
-	name       string
-	id         string
 	path       string
 	linux.Sensor
 }
@@ -61,14 +59,6 @@ func (s *hwSensor) asFloat(details *hwmon.Sensor) {
 	}
 }
 
-func (s *hwSensor) Name() string {
-	return s.name
-}
-
-func (s *hwSensor) ID() string {
-	return s.id
-}
-
 func (s *hwSensor) Attributes() map[string]any {
 	attributes := s.Sensor.Attributes()
 	attributes["sensor_type"] = s.hwType
@@ -87,12 +77,12 @@ func (s *hwSensor) Attributes() map[string]any {
 
 func newHWSensor(details *hwmon.Sensor) *hwSensor {
 	newSensor := &hwSensor{
-		name:       details.Name(),
-		id:         details.ID(),
 		hwType:     details.SensorType.String(),
 		path:       details.SysFSPath,
 		ExtraAttrs: make(map[string]float64),
 		Sensor: linux.Sensor{
+			DisplayName:  details.Name(),
+			UniqueID:     details.ID(),
 			DataSource:   linux.DataSrcSysfs,
 			IsDiagnostic: true,
 		},
