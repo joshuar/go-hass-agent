@@ -14,6 +14,7 @@ const (
 	runningAppsIcon  = "mdi:apps"
 	runningAppsUnits = "apps"
 	runningAppsName  = "Running Apps"
+	runningAppsID    = "running_apps"
 )
 
 type runningAppsSensor struct {
@@ -32,6 +33,7 @@ func newRunningAppsSensor() *runningAppsSensor {
 	return &runningAppsSensor{
 		Sensor: linux.Sensor{
 			DisplayName:     runningAppsName,
+			UniqueID:        runningAppsID,
 			IconString:      runningAppsIcon,
 			UnitsString:     runningAppsUnits,
 			StateClassValue: types.StateClassMeasurement,

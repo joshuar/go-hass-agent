@@ -25,22 +25,12 @@ const (
 type connectionAddrSensor struct {
 	bus         *dbusx.Bus
 	configProp  *dbusx.Property[dbus.ObjectPath]
-	name        string
-	id          string
 	addr        string
 	gateway     string
 	nameservers []string
 	linux.Sensor
 	prefix int
 	ver    int
-}
-
-func (c *connectionAddrSensor) Name() string {
-	return c.name
-}
-
-func (c *connectionAddrSensor) ID() string {
-	return c.id
 }
 
 func (c *connectionAddrSensor) Attributes() map[string]any {
@@ -139,7 +129,7 @@ func (c *connectionAddrSensor) updateGateway(configPath string) {
 	// Get the gateway property using the given config path.
 	gateway, err := dbusx.NewProperty[string](c.bus, configPath, dBusNMObj, gatewayIntr).Get()
 	if err != nil {
-		slog.With(slog.String("connection", c.name)).Debug("Could not retrieve gateway from D-Bus.", slog.Any("error", err))
+		slog.With(slog.String("connection", c.Name())).Debug("Could not retrieve gateway from D-Bus.", slog.Any("error", err))
 	} else {
 		c.gateway = gateway
 	}
@@ -155,7 +145,7 @@ func (c *connectionAddrSensor) updateNameservers(path string) {
 	// Get the gateway property using the given config path.
 	nameservers, err := dbusx.NewProperty[[]map[string]dbus.Variant](c.bus, path, dBusNMObj, nameserversIntr).Get()
 	if err != nil {
-		slog.With(slog.String("connection", c.name)).Debug("Could not retrieve nameservers from D-Bus.", slog.Any("error", err))
+		slog.With(slog.String("connection", c.Name())).Debug("Could not retrieve nameservers from D-Bus.", slog.Any("error", err))
 	} else {
 		for _, details := range nameservers {
 			nameserver, err := dbusx.VariantToValue[string](details["address"])
@@ -183,11 +173,15 @@ func newConnectionAddrSensor(bus *dbusx.Bus, ver int, connectionPath, connection
 	}
 
 	return &connectionAddrSensor{
-		bus:        bus,
-		ver:        ver,
-		name:       name,
-		id:         id,
-		Sensor:     linux.Sensor{DataSource: linux.DataSrcDbus, IconString: icon, IsDiagnostic: true},
+		bus: bus,
+		ver: ver,
+		Sensor: linux.Sensor{
+			DataSource:   linux.DataSrcDbus,
+			IconString:   icon,
+			IsDiagnostic: true,
+			DisplayName:  name,
+			UniqueID:     id,
+		},
 		configProp: dbusx.NewProperty[dbus.ObjectPath](bus, connectionPath, dBusNMObj, configPropName),
 	}
 }

@@ -230,7 +230,6 @@ func (c *Client) handleSensorUpdate(ctx context.Context, details sensor.Details)
 }
 
 func (c *Client) handleRegistration(ctx context.Context, details sensor.Details) error {
-	// req, err := sensor.NewRegistrationRequest(details)
 	req, err := sensor.NewRequest(sensor.RequestTypeRegister, details)
 	if err != nil {
 		return fmt.Errorf("unable to handle sensor update: %w", err)
@@ -238,7 +237,7 @@ func (c *Client) handleRegistration(ctx context.Context, details sensor.Details)
 
 	response, err := send[sensor.RegistrationResponse](ctx, c, req)
 	if err != nil {
-		c.logger.Error("failed to send registration request", slog.Any("error", err))
+		return fmt.Errorf("failed to send sensor registration request for %s: %w", details.ID(), err)
 	}
 
 	// If the registration failed, log a warning.

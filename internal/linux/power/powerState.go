@@ -72,6 +72,7 @@ func newPowerState(signalName powerSignal, signalValue any) *powerStateSensor {
 		signal: signalName,
 		Sensor: linux.Sensor{
 			DisplayName:  "Power State",
+			UniqueID:     "power_state",
 			Value:        signalValue,
 			DataSource:   linux.DataSrcDbus,
 			IsDiagnostic: true,

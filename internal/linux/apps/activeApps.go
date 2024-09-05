@@ -12,6 +12,7 @@ import (
 const (
 	activeAppsIcon = "mdi:application"
 	activeAppsName = "Active App"
+	activeAppsID   = "active_app"
 )
 
 type activeAppSensor struct {
@@ -22,6 +23,7 @@ func newActiveAppSensor() *activeAppSensor {
 	return &activeAppSensor{
 		Sensor: linux.Sensor{
 			DisplayName: activeAppsName,
+			UniqueID:    activeAppsID,
 			DataSource:  linux.DataSrcDbus,
 			IconString:  activeAppsIcon,
 		},

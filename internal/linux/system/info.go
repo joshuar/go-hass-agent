@@ -35,6 +35,7 @@ func (w *infoWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
 		sensors = append(sensors,
 			&linux.Sensor{
 				DisplayName:  "Distribution Name",
+				UniqueID:     "distribution_name",
 				Value:        distro,
 				IsDiagnostic: true,
 				IconString:   "mdi:linux",
@@ -42,6 +43,7 @@ func (w *infoWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
 			},
 			&linux.Sensor{
 				DisplayName:  "Distribution Version",
+				UniqueID:     "distribution_version",
 				Value:        version,
 				IsDiagnostic: true,
 				IconString:   "mdi:numeric",
@@ -58,6 +60,7 @@ func (w *infoWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
 		sensors = append(sensors,
 			&linux.Sensor{
 				DisplayName:  "Kernel Version",
+				UniqueID:     "kernel_version",
 				Value:        kernelVersion,
 				IsDiagnostic: true,
 				IconString:   "mdi:chip",

@@ -38,18 +38,8 @@ type connIcon uint32
 
 type connectionStateSensor struct {
 	stateProp *dbusx.Property[connState]
-	name      string
-	id        string
 	linux.Sensor
 	value connState
-}
-
-func (c *connectionStateSensor) Name() string {
-	return c.name
-}
-
-func (c *connectionStateSensor) ID() string {
-	return c.id
 }
 
 func (c *connectionStateSensor) Icon() string {
@@ -90,9 +80,11 @@ func (c *connectionStateSensor) updateState() error {
 
 func newConnectionStateSensor(bus *dbusx.Bus, connectionPath, connectionName string) *connectionStateSensor {
 	return &connectionStateSensor{
-		Sensor:    linux.Sensor{DataSource: linux.DataSrcDbus},
-		name:      connectionName + " Connection State",
-		id:        strcase.ToSnake(connectionName) + "_connection_state",
+		Sensor: linux.Sensor{
+			DataSource:  linux.DataSrcDbus,
+			DisplayName: connectionName + " Connection State",
+			UniqueID:    strcase.ToSnake(connectionName) + "_connection_state",
+		},
 		stateProp: dbusx.NewProperty[connState](bus, connectionPath, dBusNMObj, connectionStateProp),
 	}
 }

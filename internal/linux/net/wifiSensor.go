@@ -102,25 +102,31 @@ func newWifiSensor(prop string, value any) *wifiSensor {
 	switch prop {
 	case ssidPropName:
 		wifiSensor.DisplayName = "Wi-Fi SSID"
+		wifiSensor.UniqueID = "wi_fi_ssid"
 	case hwAddrPropName:
 		wifiSensor.DisplayName = "Wi-Fi BSSID"
+		wifiSensor.UniqueID = "wi_fi_bssid"
 	case maxBitRatePropName:
 		wifiSensor.DisplayName = "Wi-Fi Link Speed"
+		wifiSensor.UniqueID = "wi_fi_link_speed"
 		wifiSensor.UnitsString = "kB/s"
 		wifiSensor.DeviceClassValue = types.DeviceClassDataRate
 		wifiSensor.StateClassValue = types.StateClassMeasurement
 	case freqPropName:
 		wifiSensor.DisplayName = "Wi-Fi Frequency"
+		wifiSensor.UniqueID = "wi_fi_frequency"
 		wifiSensor.UnitsString = "MHz"
 		wifiSensor.DeviceClassValue = types.DeviceClassFrequency
 		wifiSensor.StateClassValue = types.StateClassMeasurement
 	case bandwidthPropName:
 		wifiSensor.DisplayName = "Wi-Fi Bandwidth"
+		wifiSensor.UniqueID = "wi_fi_bandwidth"
 		wifiSensor.UnitsString = "MHz"
 		wifiSensor.DeviceClassValue = types.DeviceClassFrequency
 		wifiSensor.StateClassValue = types.StateClassMeasurement
 	case strPropName:
 		wifiSensor.DisplayName = "Wi-Fi Signal Strength"
+		wifiSensor.UniqueID = "wi_fi_signal_strength"
 		wifiSensor.UnitsString = "%"
 		wifiSensor.StateClassValue = types.StateClassMeasurement
 	}

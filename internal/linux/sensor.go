@@ -10,8 +10,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/iancoleman/strcase"
-
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 )
 
@@ -28,6 +26,7 @@ var ErrUnimplemented = errors.New("unimplemented functionality")
 // interface, alllowing them to be sent as a sensor to Home Assistant.
 type Sensor struct {
 	DisplayName      string
+	UniqueID         string
 	LastReset        string
 	Value            any
 	IconString       string
@@ -48,7 +47,7 @@ func (l *Sensor) Name() string {
 }
 
 func (l *Sensor) ID() string {
-	return strcase.ToSnake(l.DisplayName)
+	return l.UniqueID
 }
 
 func (l *Sensor) State() any {

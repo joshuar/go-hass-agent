@@ -78,7 +78,7 @@ func createStateUpdateRequest(sensor State) *stateUpdateRequest {
 type registrationRequest struct {
 	*stateUpdateRequest
 	Name              string `json:"name" validate:"required"`
-	UnitOfMeasurement string `json:"unit_of_measurement,omitempty" validate:"required_with:DeviceClass"`
+	UnitOfMeasurement string `json:"unit_of_measurement,omitempty" validate:"required_with=DeviceClass"`
 	StateClass        string `json:"state_class,omitempty"`
 	EntityCategory    string `json:"entity_category,omitempty"`
 	DeviceClass       string `json:"device_class,omitempty"`

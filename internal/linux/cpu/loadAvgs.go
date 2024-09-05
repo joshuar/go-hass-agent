@@ -15,6 +15,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/iancoleman/strcase"
+
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 )
@@ -33,13 +35,9 @@ const (
 
 var ErrParseLoadAvgs = errors.New("error parsing load averages")
 
-type loadavgSensor struct {
-	linux.Sensor
-}
-
 type loadAvgsSensorWorker struct {
 	path     string
-	loadAvgs []*loadavgSensor
+	loadAvgs []*linux.Sensor
 }
 
 func (w *loadAvgsSensorWorker) Interval() time.Duration { return loadAvgUpdateInterval }
@@ -67,17 +65,16 @@ func (w *loadAvgsSensorWorker) Sensors(_ context.Context, _ time.Duration) ([]se
 	return sensors, nil
 }
 
-func newLoadAvgSensors() []*loadavgSensor {
-	sensors := make([]*loadavgSensor, loadAvgsTotal)
+func newLoadAvgSensors() []*linux.Sensor {
+	sensors := make([]*linux.Sensor, loadAvgsTotal)
 
 	for idx, loadType := range []string{"CPU load average (1 min)", "CPU load average (5 min)", "CPU load average (15 min)"} {
-		loadAvgSensor := &loadavgSensor{
-			Sensor: linux.Sensor{
-				IconString:  loadAvgIcon,
-				UnitsString: loadAvgUnit,
-				DataSource:  linux.DataSrcProcfs,
-				DisplayName: loadType,
-			},
+		loadAvgSensor := &linux.Sensor{
+			IconString:  loadAvgIcon,
+			UnitsString: loadAvgUnit,
+			DataSource:  linux.DataSrcProcfs,
+			DisplayName: loadType,
+			UniqueID:    strcase.ToSnake(loadType),
 		}
 
 		sensors[idx] = loadAvgSensor
