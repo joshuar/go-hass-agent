@@ -45,6 +45,11 @@ var (
 	}
 )
 
+// Validate is a request that supports validation of its values.
+type Validate interface {
+	Validate() error
+}
+
 // GetRequest is a HTTP GET request.
 type GetRequest any
 
@@ -180,7 +185,7 @@ func (c *Client) handleSensorUpdate(ctx context.Context, details sensor.Details)
 
 	response, err := send[sensor.StateUpdateResponse](ctx, c, req)
 	if err != nil {
-		return fmt.Errorf("failed to send sensor update request: %w", err)
+		return fmt.Errorf("failed to send sensor update request for %s: %w", details.ID(), err)
 	}
 
 	if response == nil {
@@ -333,6 +338,13 @@ func send[T any](ctx context.Context, client *Client, requestDetails any) (T, er
 
 	if client.endpoint == nil {
 		return response, ErrInvalidClient
+	}
+
+	// If the request supports validation, make sure it is valid.
+	if a, ok := requestDetails.(Validate); ok {
+		if err := a.Validate(); err != nil {
+			return response, fmt.Errorf("validation failed: %w", err)
+		}
 	}
 
 	requestObj := client.endpoint.R().SetContext(ctx)
