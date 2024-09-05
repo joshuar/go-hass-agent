@@ -54,10 +54,10 @@ type Details interface {
 
 type stateUpdateRequest struct {
 	StateAttributes map[string]any `json:"attributes,omitempty"`
-	State           any            `json:"state"`
-	Icon            string         `json:"icon,omitempty"`
+	State           any            `json:"state" validate:"required"`
+	Icon            string         `json:"icon,omitempty" validate:"startswith=mdi"`
 	Type            string         `json:"type"`
-	UniqueID        string         `json:"unique_id"`
+	UniqueID        string         `json:"unique_id" validate:"required"`
 }
 
 func createStateUpdateRequest(sensor State) *stateUpdateRequest {
@@ -77,8 +77,8 @@ func createStateUpdateRequest(sensor State) *stateUpdateRequest {
 
 type registrationRequest struct {
 	*stateUpdateRequest
-	Name              string `json:"name,omitempty"`
-	UnitOfMeasurement string `json:"unit_of_measurement,omitempty"`
+	Name              string `json:"name" validate:"required"`
+	UnitOfMeasurement string `json:"unit_of_measurement,omitempty" validate:"required_with:DeviceClass"`
 	StateClass        string `json:"state_class,omitempty"`
 	EntityCategory    string `json:"entity_category,omitempty"`
 	DeviceClass       string `json:"device_class,omitempty"`
@@ -119,7 +119,16 @@ type LocationRequest struct {
 
 type Request struct {
 	Data        any    `json:"data"`
-	RequestType string `json:"type"`
+	RequestType string `json:"type" validate:"oneof=register_sensor update_sensor_states update_location"`
+}
+
+func (r *Request) Validate() error {
+	err := validate.Struct(r.Data)
+	if err != nil {
+		return fmt.Errorf("%w: %s", ErrValidationFailed, parseValidationErrors(err))
+	}
+
+	return nil
 }
 
 func (r *Request) RequestBody() json.RawMessage {
