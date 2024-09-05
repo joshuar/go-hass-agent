@@ -37,7 +37,7 @@ func TestSensor_Name(t *testing.T) {
 		},
 		{
 			name: "unset sensor type",
-			want: "Unknown Sensor",
+			want: "",
 		},
 	}
 	for _, tt := range tests {
@@ -67,6 +67,7 @@ func TestSensor_ID(t *testing.T) {
 		UnitsString      string
 		SensorSrc        string
 		DisplayName      string
+		UniqueID         string
 		IsBinary         bool
 		IsDiagnostic     bool
 		DeviceClassValue types.DeviceClass
@@ -80,12 +81,12 @@ func TestSensor_ID(t *testing.T) {
 	}{
 		{
 			name:   "known sensor type",
-			fields: fields{DisplayName: "Active App"},
+			fields: fields{UniqueID: "active_app"},
 			want:   "active_app",
 		},
 		{
 			name: "unset sensor type",
-			want: "unknown_sensor",
+			want: "",
 		},
 	}
 	for _, tt := range tests {
@@ -96,6 +97,7 @@ func TestSensor_ID(t *testing.T) {
 				UnitsString:      tt.fields.UnitsString,
 				DataSource:       tt.fields.SensorSrc,
 				DisplayName:      tt.fields.DisplayName,
+				UniqueID:         tt.fields.UniqueID,
 				IsBinary:         tt.fields.IsBinary,
 				IsDiagnostic:     tt.fields.IsDiagnostic,
 				DeviceClassValue: tt.fields.DeviceClassValue,
