@@ -404,32 +404,41 @@ If you want to run Go Hass Agent as a service on a headless machine, see the
 ### 🐳 Running in a container
 
 There is rough support for running Go Hass Agent within a container. Pre-built
-images [are available](https://github.com/joshuar/go-hass-agent/pkgs/container/go-hass-agent).
+images [are
+available](https://github.com/joshuar/go-hass-agent/pkgs/container/go-hass-agent)
+for amrv6/v7, arm64 and amd64 architectures.
 
 To register the agent running in a container, run the following:
 
 ```shell
-podman run --rm --hostname go-hass-agent-container \
-  --network host \
-  --volume go-hass-agent:/home/ubuntu \
-  ghcr.io/joshuar/go-hass-agent register \
-  --server https://some.server:port \
-  --token longlivedtoken
+    podman run --rm --hostname go-hass-agent-container \
+      --network host \
+      --volume go-hass-agent:/home/go-hass-agent:U \
+      ghcr.io/joshuar/go-hass-agent:VERSION register \
+      --server https://some.server:port \
+      --token 'longlivedtoken'
 ```
 
-Adjust the `--server` and `--token` values as appropriate.
+- Change `VERSION` to the latest version. **Do not use latest, which is unstable and likely to break.**
+- Change the value of `--server` to your Home Assistant server.
+- Change the value of `--token` to a long-lived token retrieved from Home
+  Assistant.
+  - ***Be sure to quote the token to avoid shell escape errors.***
+- We are running the container in a "one-shot" mode (specifying `--rm`) as we
+  just want to register and generate the configuration file. We will use a
+  different command below to actually run Go Hass Agent.
 
 Once registered, run the agent with:
 
 ```shell
 podman run --hostname go-hass-agent-container --name my-go-hass-agent \
   --network host \
-  --volume go-hass-agent:/home/ubuntu \
+  --volume go-hass-agent:/home/go-hass-agent:U \
   --volume /proc:/host/proc:ro --volume /sys:/host/sys:ro \
   --volume /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket:ro \
   --volume /run/user/1000/bus:/run/user/1000/bus:ro \
   --device /dev/video0:/dev/video0
-  ghcr.io/joshuar/go-hass-agent # any additional options
+  ghcr.io/joshuar/go-hass-agent:VERSION # add any Go Hass Agent options here.
 ```
 
 Change the value passed to `--name` to a unique name for your running container
@@ -443,9 +452,15 @@ reported will be severely limited without them:
   - Enables various hardware and system monitoring sensors.
 - `--volume /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket:ro`
 - `--volume /run/user/1000/bus:/run/user/1000/bus:ro`
-  - Enables sensors that are gathered via D-Bus.
+  - Enables sensors that are gathered via D-Bus. Adjust `1000` to the uid of
+    your user.
 - `--device /dev/video0:/dev/video0`
   - Allows webcam control (when configured with MQTT).
+
+> [!NOTE]
+> By default, the container will run as a user with uid/gid 1000/1000.
+> You can pick a different uid/gid when building by adding --build-arg UID=999
+> and --build-arg GID=999 (adjusting the values as appropriate).
 
 ### ♻️ Regular Usage
 
