@@ -6,8 +6,19 @@
 package main
 
 import (
+	"errors"
 	"log/slog"
 	"os"
+)
+
+const (
+	distPath    = "dist"
+	platformENV = "TARGETPLATFORM"
+)
+
+var (
+	ErrNotCI           = errors.New("not in CI environment")
+	ErrUnsupportedArch = errors.New("unsupported target architecture")
 )
 
 func init() {

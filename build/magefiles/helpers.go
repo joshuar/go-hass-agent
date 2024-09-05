@@ -6,7 +6,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -17,17 +16,6 @@ import (
 	"syscall"
 
 	"github.com/magefile/mage/sh"
-)
-
-const (
-	pkgBase     = "github.com/joshuar/go-hass-agent/internal/preferences"
-	distPath    = "dist"
-	platformENV = "TARGETPLATFORM"
-)
-
-var (
-	ErrNotCI           = errors.New("not in CI environment")
-	ErrUnsupportedArch = errors.New("unsupported target architecture")
 )
 
 // isCI checks whether we are currently running as part of a CI pipeline (i.e.
@@ -85,6 +73,9 @@ func foundOrInstalled(executableName, installURL string) error {
 
 // getFlags gets all the compile flags to set the version and stuff.
 func getFlags() (string, error) {
+	// pkgPath is where flags are derived from.
+	pkgPath := "github.com/joshuar/go-hass-agent/internal/preferences"
+
 	var version, hash, date string
 
 	var err error
@@ -103,11 +94,11 @@ func getFlags() (string, error) {
 
 	var flags strings.Builder
 
-	flags.WriteString("-X " + pkgBase + ".gitVersion=" + version)
+	flags.WriteString("-X " + pkgPath + ".gitVersion=" + version)
 	flags.WriteString(" ")
-	flags.WriteString("-X " + pkgBase + ".gitCommit=" + hash)
+	flags.WriteString("-X " + pkgPath + ".gitCommit=" + hash)
 	flags.WriteString(" ")
-	flags.WriteString("-X " + pkgBase + ".buildDate=" + date)
+	flags.WriteString("-X " + pkgPath + ".buildDate=" + date)
 
 	return flags.String(), nil
 }
