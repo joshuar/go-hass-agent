@@ -269,6 +269,7 @@ func Test_usageWorker_newCountSensor(t *testing.T) {
 			fields: fields{logger: slog.Default()},
 			want: &linux.Sensor{
 				DisplayName:     "Total CPU Context Switches",
+				UniqueID:        "total_cpu_context_switches",
 				Value:           400,
 				IconString:      "mdi:counter",
 				DataSource:      linux.DataSrcProcfs,
