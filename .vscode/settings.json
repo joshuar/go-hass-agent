@@ -23,7 +23,8 @@
         "git",
         "mage",
         "commands",
-        "cli"
+        "cli",
+        "packaging"
     ],
     "go.testFlags": ["-v"],
     "[markdown]": {

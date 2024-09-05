@@ -31,35 +31,22 @@ contents:
 overrides:
   rpm:
     depends:
-      - libglvnd-glx
-      - libglvnd
-      - libX11
-      - libXext
-      - libxcb
-      - libXau
+      - libxcursor
+      - libXrandr
+      - mesa-libGL
+      - libXi
+      - libXinerama
+      - libxxf86vm
       - dbus-x11
   deb:
     depends:
-      - libgl1 
-      - libx11-6 
-      - libglx0 
-      - libglvnd0 
-      - libxcb1 
-      - libxau6 
-      - libxdmcp6 
+      - libgl1-mesa-dri
+      - xorg
       - dbus-x11
   archlinux:
     depends:
-      - libglvnd
-      - libx11
-      - libxrandr
-      - libxxf86vm
-      - libxi
+      - xorg-server
       - libxcursor
+      - libxrandr
       - libxinerama
-      - libxcb
-      - libxext
-      - libxrender
-      - libxfixes
-      - libxau
-      - libxdmcp
+      - libxi
