@@ -329,7 +329,6 @@ func send[T any](ctx context.Context, client *Client, requestDetails any) (T, er
 		response    T
 		responseErr sensor.APIError
 		responseObj *resty.Response
-		err         error
 	)
 
 	if client.endpoint == nil {
@@ -354,7 +353,7 @@ func send[T any](ctx context.Context, client *Client, requestDetails any) (T, er
 				slog.String("body", string(req.RequestBody())),
 				slog.Time("sent_at", time.Now()))
 
-		responseObj, err = requestObj.SetBody(req.RequestBody()).Post("")
+		responseObj, _ = requestObj.SetBody(req.RequestBody()).Post("") //nolint:errcheck // error is checked with responseObj.IsError()
 	case GetRequest:
 		client.logger.
 			LogAttrs(ctx, logging.LevelTrace,
@@ -362,12 +361,7 @@ func send[T any](ctx context.Context, client *Client, requestDetails any) (T, er
 				slog.String("method", "GET"),
 				slog.Time("sent_at", time.Now()))
 
-		responseObj, err = requestObj.Get("")
-	}
-
-	// If the client fails to send the request, return a wrapped error.
-	if err != nil {
-		return response, &sensor.APIError{Code: responseObj.StatusCode(), Message: responseObj.Status()}
+		responseObj, _ = requestObj.Get("") //nolint:errcheck // error is checked with responseObj.IsError()
 	}
 
 	client.logger.
@@ -380,7 +374,7 @@ func send[T any](ctx context.Context, client *Client, requestDetails any) (T, er
 			slog.String("body", string(responseObj.Body())))
 
 	if responseObj.IsError() {
-		return response, &responseErr
+		return response, &sensor.APIError{Code: responseObj.StatusCode(), Message: responseObj.Status()}
 	}
 
 	return response, nil
