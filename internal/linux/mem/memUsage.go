@@ -42,6 +42,14 @@ var (
 
 // newMemSensor generates a memorySensor for a memory stat.
 func newMemSensor(id memStatID, stat *memStat) *linux.Sensor {
+	var value uint64
+
+	if stat == nil {
+		value = 0
+	} else {
+		value = stat.value
+	}
+
 	return &linux.Sensor{
 		DisplayName:      id.String(),
 		UniqueID:         strcase.ToSnake(id.String()),
@@ -49,7 +57,7 @@ func newMemSensor(id memStatID, stat *memStat) *linux.Sensor {
 		StateClassValue:  types.StateClassTotal,
 		IconString:       memorySensorIcon,
 		DataSource:       linux.DataSrcProcfs,
-		Value:            stat.value,
+		Value:            value,
 		UnitsString:      memoryUsageSensorUnits,
 	}
 }
@@ -57,7 +65,12 @@ func newMemSensor(id memStatID, stat *memStat) *linux.Sensor {
 // newMemSensorPc generates a memorySensor with a percentage value for a memory
 // stat.
 func newMemSensorPc(name string, value, total uint64) *linux.Sensor {
-	valuePc := math.Round(float64(value)/float64(total)*100/0.05) * 0.05 //nolint:mnd
+	var valuePc float64
+	if total == 0 {
+		valuePc = 0
+	} else {
+		valuePc = math.Round(float64(value)/float64(total)*100/0.05) * 0.05 //nolint:mnd
+	}
 
 	return &linux.Sensor{
 		DisplayName:     name,
@@ -68,6 +81,37 @@ func newMemSensorPc(name string, value, total uint64) *linux.Sensor {
 		Value:           valuePc,
 		UnitsString:     memoryUsageSensorPcUnits,
 	}
+}
+
+// Calculate used memory = total - free/buffered/cached.
+func newMemUsedPc(stats memoryStats) *linux.Sensor {
+	var memOther uint64
+
+	for name, stat := range stats {
+		switch name {
+		case memFree:
+			memOther += stat.value
+		case memBuffered:
+			memOther += stat.value
+		case memCached:
+			memOther += stat.value
+		}
+	}
+
+	memTotal, _ := stats.get(memTotal)
+
+	memUsed := memTotal - memOther
+
+	return newMemSensorPc("Memory Usage", memUsed, memTotal)
+}
+
+// Calculate used swap = total - free.
+func newSwapUsedPc(stats memoryStats) *linux.Sensor {
+	swapTotal, _ := stats.get(swapTotal)
+	swapFree, _ := stats.get(swapFree)
+	swapUsed := swapTotal - swapFree
+
+	return newMemSensorPc("Swap Usage", swapUsed, swapTotal)
 }
 
 type usageWorker struct {
@@ -84,24 +128,20 @@ func (w *usageWorker) Sensors(_ context.Context, _ time.Duration) ([]sensor.Deta
 		return nil, fmt.Errorf("unable to retrieve memory stats: %w", err)
 	}
 
-	sensors := make([]sensor.Details, 0, 9) //nolint:mnd
+	sensors := make([]sensor.Details, 0, len(memSensors)+len(swapSensors)+2) //nolint:mnd
 
 	for _, id := range memSensors {
 		sensors = append(sensors, newMemSensor(id, stats[id]))
 	}
 
-	// Calculate used memory = total - free/buffered/cached.
-	usedMem := stats[memTotal].value - stats[memFree].value - stats[memBuffered].value - stats[memCached].value
-	sensors = append(sensors, newMemSensorPc("Memory Usage", usedMem, stats[memTotal].value))
+	sensors = append(sensors, newMemUsedPc(stats))
 
-	if stats[swapTotal].value > 0 {
+	if stat, _ := stats.get(swapTotal); stat > 0 {
 		for _, id := range swapSensors {
 			sensors = append(sensors, newMemSensor(id, stats[id]))
 		}
 
-		// Calculate used swap = total - free
-		usedSwap := stats[swapTotal].value - stats[swapFree].value
-		sensors = append(sensors, newMemSensorPc("Swap Usage", usedSwap, stats[swapTotal].value))
+		sensors = append(sensors, newSwapUsedPc(stats))
 	}
 
 	return sensors, nil
