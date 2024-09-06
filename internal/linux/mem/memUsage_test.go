@@ -7,7 +7,6 @@ package mem
 
 import (
 	"context"
-	"log/slog"
 	"math"
 	"testing"
 	"time"
@@ -154,9 +153,6 @@ func Test_usageWorker_Sensors(t *testing.T) {
 	}
 	withoutSwapSensors = append(withoutSwapSensors, newMemUsedPc(withoutSwap))
 
-	type fields struct {
-		logger *slog.Logger
-	}
 	type args struct {
 		in0  context.Context
 		file string
@@ -164,35 +160,29 @@ func Test_usageWorker_Sensors(t *testing.T) {
 	}
 	tests := []struct {
 		name    string
-		fields  fields
 		args    args
 		want    []sensor.Details
 		wantErr bool
 	}{
 		{
-			name:   "with swap",
-			fields: fields{logger: slog.Default()},
-			args:   args{in0: linux.NewContext(context.TODO()), file: "testing/data/meminfowithswap"},
-			want:   withSwapSensors,
+			name: "with swap",
+			args: args{in0: linux.NewContext(context.TODO()), file: "testing/data/meminfowithswap"},
+			want: withSwapSensors,
 		},
 		{
-			name:   "without swap",
-			fields: fields{logger: slog.Default()},
-			args:   args{in0: linux.NewContext(context.TODO()), file: "testing/data/meminfowithoutswap"},
-			want:   withoutSwapSensors,
+			name: "without swap",
+			args: args{in0: linux.NewContext(context.TODO()), file: "testing/data/meminfowithoutswap"},
+			want: withoutSwapSensors,
 		},
 		{
 			name:    "no stats file",
-			fields:  fields{logger: slog.Default()},
 			args:    args{in0: linux.NewContext(context.TODO()), file: "/nonexistent"},
 			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			w := &usageWorker{
-				logger: tt.fields.logger,
-			}
+			w := &usageWorker{}
 			memStatFile = tt.args.file
 			got, err := w.Sensors(tt.args.in0, tt.args.in1)
 			if (err != nil) != tt.wantErr {
