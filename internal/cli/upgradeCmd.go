@@ -8,6 +8,7 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"path/filepath"
@@ -41,6 +42,11 @@ func (r *UpgradeCmd) Run(ctx *Context) error {
 	upgradeCtx = logging.ToContext(upgradeCtx, logger)
 
 	if err := upgrade.Run(upgradeCtx); err != nil {
+		if errors.Is(err, upgrade.ErrNoPrevConfig) {
+			slog.Info("No previous installation found. Nothing to do!")
+			return nil
+		}
+
 		slog.Warn(showHelpTxt("upgrade-failed-help"), slog.Any("error", err)) //nolint:sloglint
 
 		return fmt.Errorf("upgrade failed: %w", err)
