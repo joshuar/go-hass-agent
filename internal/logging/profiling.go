@@ -5,10 +5,14 @@
 
 package logging
 
+// #nosec G108
+//nolint:gci
+//revive:disable:blank-imports
 import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"runtime"
 	"runtime/pprof"
