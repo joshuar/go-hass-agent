@@ -145,6 +145,8 @@ var statNames = map[string]memStatID{
 	"DirectMap1G":       memDirectMap4k,
 }
 
+var memStatFile = filepath.Join(linux.ProcFSRoot, "meminfo")
+
 // memStat holds the value and any units for a memory statistic.
 type memStat struct {
 	units string
@@ -154,11 +156,17 @@ type memStat struct {
 // memoryStats is a map of all the memory statistics available on this device.
 type memoryStats map[memStatID]*memStat
 
+func (m memoryStats) get(id memStatID) (uint64, string) {
+	if stat, ok := m[id]; ok {
+		return stat.value, stat.units
+	}
+
+	return 0, ""
+}
+
 // getMemStats will create a memoryStats map for this device.
 func getMemStats() (memoryStats, error) {
-	path := filepath.Join(linux.ProcFSRoot, "meminfo")
-
-	statsFH, err := os.Open(path)
+	statsFH, err := os.Open(memStatFile)
 	if err != nil {
 		return nil, fmt.Errorf("getMemStats: %w", err)
 	}
@@ -174,7 +182,6 @@ func getMemStats() (memoryStats, error) {
 			id    memStatID
 			ok    bool
 			value uint64
-			units string
 			err   error
 		)
 		// Set up word scanner for line.
@@ -199,13 +206,13 @@ func getMemStats() (memoryStats, error) {
 		}
 
 		// If there is a third field, it will be the stat units.
-		if line.Scan() {
-			units = line.Text()
-		}
+		// if line.Scan() {
+		// 	units = line.Text()
+		// }
 
 		stats[id] = &memStat{
 			value: value * 1000, //nolint:mnd // scale to bytes for backwards compatibility
-			units: units,
+			units: memoryUsageSensorUnits,
 		}
 	}
 
