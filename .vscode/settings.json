@@ -24,7 +24,8 @@
         "mage",
         "commands",
         "cli",
-        "packaging"
+        "packaging",
+        "upgrade"
     ],
     "go.testFlags": ["-v"],
     "[markdown]": {
