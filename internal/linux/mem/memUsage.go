@@ -9,7 +9,6 @@ package mem
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"math"
 	"time"
 
@@ -18,7 +17,6 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
-	"github.com/joshuar/go-hass-agent/internal/logging"
 )
 
 const (
@@ -114,9 +112,7 @@ func newSwapUsedPc(stats memoryStats) *linux.Sensor {
 	return newMemSensorPc("Swap Usage", swapUsed, swapTotal)
 }
 
-type usageWorker struct {
-	logger *slog.Logger
-}
+type usageWorker struct{}
 
 func (w *usageWorker) Interval() time.Duration { return updateInterval }
 
@@ -147,11 +143,9 @@ func (w *usageWorker) Sensors(_ context.Context, _ time.Duration) ([]sensor.Deta
 	return sensors, nil
 }
 
-func NewUsageWorker(ctx context.Context) (*linux.SensorWorker, error) {
+func NewUsageWorker(_ context.Context) (*linux.SensorWorker, error) {
 	return &linux.SensorWorker{
-			Value: &usageWorker{
-				logger: logging.FromContext(ctx).With(slog.String("worker", workerID)),
-			},
+			Value:    &usageWorker{},
 			WorkerID: workerID,
 		},
 		nil
