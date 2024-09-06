@@ -37,52 +37,45 @@ var (
 
 func NewContext(ctx context.Context) context.Context {
 	// Add clock ticks value.
-	clktck, err := sysconf.Sysconf(sysconf.SC_CLK_TCK)
-	if err != nil {
+	if clktck, err := sysconf.Sysconf(sysconf.SC_CLK_TCK); err != nil {
 		slog.Warn("Unable to add system clock ticks to context.", slog.Any("error", err))
+	} else {
+		ctx = context.WithValue(ctx, clktckContextKey, clktck)
 	}
-
-	ctx = context.WithValue(ctx, clktckContextKey, clktck)
 
 	// Add boot time value.
-	boottime, err := getBootTime()
-	if err != nil {
+	if boottime, err := getBootTime(); err != nil {
 		slog.Warn("Unable to add boot time to context.", slog.Any("error", err))
+	} else {
+		ctx = context.WithValue(ctx, boottimeContextKey, boottime)
 	}
-
-	ctx = context.WithValue(ctx, boottimeContextKey, boottime)
 
 	// Add portal interface
-	portal, err := FindPortal()
-	if err != nil {
+	if portal, err := FindPortal(); err != nil {
 		slog.Warn("Unable to add desktop portal to context.", slog.Any("error", err))
+	} else {
+		ctx = context.WithValue(ctx, desktopPortalContextKey, portal)
 	}
-
-	ctx = context.WithValue(ctx, desktopPortalContextKey, portal)
 
 	// Add D-Bus system bus connection.
-	systemBus, err := dbusx.NewBus(ctx, dbusx.SystemBus)
-	if err != nil {
+	if systemBus, err := dbusx.NewBus(ctx, dbusx.SystemBus); err != nil {
 		slog.Warn("Unable to set up D-Bus system bus connection.", slog.Any("error", err))
+	} else {
+		ctx = context.WithValue(ctx, dbusSystemContextKey, systemBus)
+		// Add session path value.
+		if sessionPath, err := systemBus.GetSessionPath(); err != nil {
+			slog.Warn("Unable to determine user session path from D-Bus.", slog.Any("error", err))
+		} else {
+			ctx = context.WithValue(ctx, sessionPathContextKey, sessionPath)
+		}
 	}
-
-	ctx = context.WithValue(ctx, dbusSystemContextKey, systemBus)
-
-	// Add session path value.
-	sessionPath, err := systemBus.GetSessionPath()
-	if err != nil {
-		slog.Warn("Unable to determine user session path from D-Bus.", slog.Any("error", err))
-	}
-
-	ctx = context.WithValue(ctx, sessionPathContextKey, sessionPath)
 
 	// Add D-Bus session bus connection.
-	sessionBus, err := dbusx.NewBus(ctx, dbusx.SessionBus)
-	if err != nil {
+	if sessionBus, err := dbusx.NewBus(ctx, dbusx.SessionBus); err != nil {
 		slog.Warn("Unable to set up D-Bus session bus connection.", slog.Any("error", err))
+	} else {
+		ctx = context.WithValue(ctx, dbusSessionContextKey, sessionBus)
 	}
-
-	ctx = context.WithValue(ctx, dbusSessionContextKey, sessionBus)
 
 	return ctx
 }
