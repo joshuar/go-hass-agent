@@ -270,7 +270,7 @@ func (agent *Agent) Stop() {
 
 // Reset will remove any agent related files and configuration.
 func (agent *Agent) Reset(ctx context.Context) error {
-	if !agent.prefs.MQTT.IsMQTTEnabled() {
+	if agent.prefs.MQTT.IsMQTTEnabled() {
 		if err := agent.resetMQTTControllers(ctx); err != nil {
 			agent.logger.Warn("Problems occurred resetting MQTT configuration.", slog.Any("error", err))
 		}
