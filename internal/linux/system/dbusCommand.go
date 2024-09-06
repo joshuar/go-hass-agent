@@ -51,6 +51,13 @@ func NewDBusCommandSubscription(ctx context.Context, device *mqtthass.Device) (*
 					err     error
 				)
 
+				logger = logger.With(
+					slog.String("bus", dbusMsg.Bus),
+					slog.String("destination", dbusMsg.Destination),
+					slog.String("path", dbusMsg.Path),
+					slog.String("method", dbusMsg.Method),
+				)
+
 				// Unmarshal the request.
 				if err = json.Unmarshal(packet.Payload, &dbusMsg); err != nil {
 					logger.Error("Could not unmarshal D-Bus MQTT message.", slog.Any("error", err))
@@ -74,23 +81,12 @@ func NewDBusCommandSubscription(ctx context.Context, device *mqtthass.Device) (*
 					}
 				}
 
-				logger.With(
-					slog.String("bus", dbusMsg.Bus),
-					slog.String("destination", dbusMsg.Destination),
-					slog.String("path", dbusMsg.Path),
-					slog.String("method", dbusMsg.Method),
-				).Info("Dispatching D-Bus command.")
+				logger.Info("Dispatching D-Bus command.")
 
 				// Call the method.
 				err = dbusx.NewMethod(bus, dbusMsg.Destination, dbusMsg.Path, dbusMsg.Method).Call(ctx, dbusMsg.Args...)
 				if err != nil {
-					logger.With(
-						slog.String("bus", dbusMsg.Bus),
-						slog.String("destination", dbusMsg.Destination),
-						slog.String("path", dbusMsg.Path),
-						slog.String("method", dbusMsg.Method),
-						slog.Any("error", err),
-					).Warn("Error dispatching D-Bus command.")
+					logger.Warn("Error dispatching D-Bus command.", slog.Any("error", err))
 				}
 			},
 			Topic: "gohassagent/" + device.Name + "/dbuscommand",
