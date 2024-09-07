@@ -98,24 +98,24 @@ func newHWSensor(details *hwmon.Sensor) *hwSensor {
 	return newSensor
 }
 
-type hwMonWorker struct {
-	logger *slog.Logger
-}
+type hwMonWorker struct{}
 
 func (w *hwMonWorker) Interval() time.Duration { return hwMonInterval }
 
 func (w *hwMonWorker) Jitter() time.Duration { return hwMonJitter }
 
-func (w *hwMonWorker) Sensors(_ context.Context, _ time.Duration) ([]sensor.Details, error) {
+func (w *hwMonWorker) Sensors(ctx context.Context, _ time.Duration) ([]sensor.Details, error) {
 	hwmonSensors, err := hwmon.GetAllSensors()
 	sensors := make([]sensor.Details, 0, len(hwmonSensors))
 
 	if err != nil && len(hwmonSensors) > 0 {
-		w.logger.Debug("Errors fetching some chip/sensor values from hwmon API.", slog.Any("error", err))
+		logging.FromContext(ctx).
+			With(slog.String("worker", hwmonWorkerID)).
+			Debug("Errors fetching some chip/sensor values from hwmon API.", slog.Any("error", err))
 	}
 
 	if err != nil && len(hwmonSensors) == 0 {
-		return nil, fmt.Errorf("could not retrieve hwmon sensor details: %w", err)
+		return sensors, fmt.Errorf("could not retrieve hwmon sensor details: %w", err)
 	}
 
 	for _, s := range hwmonSensors {
@@ -125,11 +125,9 @@ func (w *hwMonWorker) Sensors(_ context.Context, _ time.Duration) ([]sensor.Deta
 	return sensors, nil
 }
 
-func NewHWMonWorker(ctx context.Context) (*linux.SensorWorker, error) {
+func NewHWMonWorker(_ context.Context) (*linux.SensorWorker, error) {
 	return &linux.SensorWorker{
-			Value: &hwMonWorker{
-				logger: logging.FromContext(ctx).With(slog.String("worker", hwmonWorkerID)),
-			},
+			Value:    &hwMonWorker{},
 			WorkerID: hwmonWorkerID,
 		},
 		nil
