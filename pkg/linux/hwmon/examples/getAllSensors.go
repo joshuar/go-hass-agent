@@ -19,6 +19,8 @@ import (
 
 //nolint:cyclop,govet,wsl
 func main() {
+	slog.SetLogLoggerLevel(slog.LevelDebug)
+
 	cpu, err := os.Create("cpu.prof")
 	if err != nil {
 		slog.Warn("Cannot create CPU profile.", "error", err.Error())

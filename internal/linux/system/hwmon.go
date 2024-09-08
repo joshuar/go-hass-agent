@@ -33,9 +33,8 @@ type hwSensor struct {
 	linux.Sensor
 }
 
-//nolint:errcheck
 func (s *hwSensor) asBool(details *hwmon.Sensor) {
-	s.Value, _ = details.Value()
+	s.Value = details.Value()
 	if v, ok := s.Value.(bool); ok && v {
 		s.IconString = "mdi:alarm-light"
 	} else {
@@ -45,11 +44,10 @@ func (s *hwSensor) asBool(details *hwmon.Sensor) {
 	s.IsBinary = true
 }
 
-//nolint:errcheck
 func (s *hwSensor) asFloat(details *hwmon.Sensor) {
-	s.Value, _ = details.Value()
+	s.Value = details.Value()
 	s.UnitsString = details.Units()
-	i, d := parseSensorType(details.SensorType.String())
+	i, d := parseSensorType(details.MonitorType.String())
 	s.IconString = i
 	s.DeviceClassValue = d
 	s.StateClassValue = types.StateClassMeasurement
@@ -77,8 +75,8 @@ func (s *hwSensor) Attributes() map[string]any {
 
 func newHWSensor(details *hwmon.Sensor) *hwSensor {
 	newSensor := &hwSensor{
-		hwType:     details.SensorType.String(),
-		path:       details.SysFSPath,
+		hwType:     details.MonitorType.String(),
+		path:       details.HWMonPath,
 		ExtraAttrs: make(map[string]float64),
 		Sensor: linux.Sensor{
 			DisplayName:  details.Name(),
