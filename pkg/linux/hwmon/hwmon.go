@@ -51,7 +51,7 @@ type Chip struct {
 	chipName    string
 	chipID      string
 	deviceModel string
-	HWMonPath   string
+	Path        string
 	Sensors     []*Sensor
 }
 
@@ -74,7 +74,7 @@ func (c *Chip) String() string {
 // non-nil error is returned with details. It will not return an error if there
 // was an error retrieving an individual sensor for the chip.
 func (c *Chip) getSensors() ([]*Sensor, error) {
-	allSensorFiles, err := getSensorFiles(c.HWMonPath)
+	allSensorFiles, err := getSensorFiles(c.Path)
 	if err != nil {
 		return []*Sensor{}, fmt.Errorf("could not gather sensor files: %w", err)
 	}
@@ -148,9 +148,9 @@ func newChip(path string) (*Chip, error) {
 	}
 
 	chip := &Chip{
-		chipName:  chipName,
-		chipID:    filepath.Base(path),
-		HWMonPath: path,
+		chipName: chipName,
+		chipID:   filepath.Base(path),
+		Path:     path,
 	}
 
 	fh, err := os.Stat(filepath.Join(path, "device", "model"))
@@ -307,7 +307,7 @@ func (s *Sensor) String() string {
 
 	fmt.Fprintf(&sensorStr,
 		"%s: %v %s [%s] (id: %s, path: %s, chip: %s)",
-		s.Name(), s.Value(), s.Units(), s.MonitorType, s.ID(), s.HWMonPath, s.Chip.String())
+		s.Name(), s.Value(), s.Units(), s.MonitorType, s.ID(), s.Path, s.Chip.String())
 
 	for idx, a := range s.Attributes {
 		if idx == 0 {
@@ -339,21 +339,21 @@ func (s *Sensor) updateValue() error {
 
 	switch s.MonitorType {
 	case Alarm:
-		path = filepath.Join(s.HWMonPath, s.id+"_alarm")
+		path = filepath.Join(s.Path, s.id+"_alarm")
 
 		value, err = getValueAsBool(path)
 		if err != nil {
 			return fmt.Errorf("unable to read value: %w", err)
 		}
 	case Intrusion:
-		path = filepath.Join(s.HWMonPath, s.id+"_intrusion")
+		path = filepath.Join(s.Path, s.id+"_intrusion")
 
 		value, err = getValueAsBool(path)
 		if err != nil {
 			return fmt.Errorf("unable to read value: %w", err)
 		}
 	default:
-		path = filepath.Join(s.HWMonPath, s.id+"_input")
+		path = filepath.Join(s.Path, s.id+"_input")
 
 		var floatValue float64
 
