@@ -140,8 +140,12 @@ func (w *SensorWorker) handlePolling(ctx context.Context, worker pollingType) ch
 	updater := func(d time.Duration) {
 		sensors, err := worker.Sensors(ctx, d)
 		if err != nil {
-			w.logger.Warn("Unable to retrieve sensors.", slog.Any("error", err))
+			w.logger.Error("Worker error occurred.", slog.Any("error", err))
+			return
+		}
 
+		if len(sensors) == 0 {
+			w.logger.Warn("Worker returned no sensors.")
 			return
 		}
 
