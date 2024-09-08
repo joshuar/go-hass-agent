@@ -130,7 +130,7 @@ func (c *Chip) getSensors() ([]*Sensor, error) {
 				slog.Any("error", err))
 		} else {
 			if sensor.value == nil {
-				slog.Info("value is nil", slog.String("sensor", sensor.Name()))
+				slog.Debug("value is nil", slog.String("sensor", sensor.Name()))
 			}
 
 			sensors = append(sensors, sensor)
