@@ -7,8 +7,8 @@ package types
 
 //go:generate stringer -type=SensorClass -linecomment -output SensorClass_generated.go
 const (
-	Sensor       SensorClass = iota + 1 // sensor
-	BinarySensor                        // binary_sensor
+	Sensor       SensorClass = iota // sensor
+	BinarySensor                    // binary_sensor
 )
 
 // SensorClass reflects the type of sensor, sensor or binary_sensor.

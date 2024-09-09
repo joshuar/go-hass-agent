@@ -8,19 +8,19 @@ func _() {
 	// An "invalid array index" compiler error signifies that the constant values have changed.
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
+	_ = x[StateClassNone-0]
 	_ = x[StateClassMeasurement-1]
 	_ = x[StateClassTotal-2]
 	_ = x[StateClassTotalIncreasing-3]
 }
 
-const _StateClass_name = "measurementtotaltotal_increasing"
+const _StateClass_name = "nonemeasurementtotaltotal_increasing"
 
-var _StateClass_index = [...]uint8{0, 11, 16, 32}
+var _StateClass_index = [...]uint8{0, 4, 15, 20, 36}
 
 func (i StateClass) String() string {
-	i -= 1
 	if i < 0 || i >= StateClass(len(_StateClass_index)-1) {
-		return "StateClass(" + strconv.FormatInt(int64(i+1), 10) + ")"
+		return "StateClass(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
 	return _StateClass_name[_StateClass_index[i]:_StateClass_index[i+1]]
 }
