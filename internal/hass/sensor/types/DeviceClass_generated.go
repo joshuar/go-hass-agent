@@ -8,6 +8,7 @@ func _() {
 	// An "invalid array index" compiler error signifies that the constant values have changed.
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
+	_ = x[DeviceClassNone-0]
 	_ = x[DeviceClassApparentPower-1]
 	_ = x[DeviceClassAqi-2]
 	_ = x[DeviceClassAtmosphericPressure-3]
@@ -56,14 +57,13 @@ func _() {
 	_ = x[DeviceClassWindSpeed-46]
 }
 
-const _DeviceClass_name = "apparent_poweraqiatmospheric_pressurebatterycarbon_dioxidecarbon_monoxidecurrentdata_ratedata_sizedatedistancedurationenergy_storageenumfrequencygashumidityilluminanceirradiancemoisturemonetarynitrogen_dioxidenitrogen_monoxidenitrous_oxideozonepm1pm25pm10power_factorpowerprecipitationprecipitation_intensitypressurereactive_powersignal_strengthsound_pressurespeedsulphure_dioxidetemperaturetimestampvocvoltagevolumewaterweightwind_speed"
+const _DeviceClass_name = "noneapparent_poweraqiatmospheric_pressurebatterycarbon_dioxidecarbon_monoxidecurrentdata_ratedata_sizedatedistancedurationenergy_storageenumfrequencygashumidityilluminanceirradiancemoisturemonetarynitrogen_dioxidenitrogen_monoxidenitrous_oxideozonepm1pm25pm10power_factorpowerprecipitationprecipitation_intensitypressurereactive_powersignal_strengthsound_pressurespeedsulphure_dioxidetemperaturetimestampvocvoltagevolumewaterweightwind_speed"
 
-var _DeviceClass_index = [...]uint16{0, 14, 17, 37, 44, 58, 73, 80, 89, 98, 102, 110, 118, 132, 136, 145, 148, 156, 167, 177, 185, 193, 209, 226, 239, 244, 247, 251, 255, 267, 272, 285, 308, 316, 330, 345, 359, 364, 380, 391, 400, 403, 410, 416, 421, 427, 437}
+var _DeviceClass_index = [...]uint16{0, 4, 18, 21, 41, 48, 62, 77, 84, 93, 102, 106, 114, 122, 136, 140, 149, 152, 160, 171, 181, 189, 197, 213, 230, 243, 248, 251, 255, 259, 271, 276, 289, 312, 320, 334, 349, 363, 368, 384, 395, 404, 407, 414, 420, 425, 431, 441}
 
 func (i DeviceClass) String() string {
-	i -= 1
 	if i < 0 || i >= DeviceClass(len(_DeviceClass_index)-1) {
-		return "DeviceClass(" + strconv.FormatInt(int64(i+1), 10) + ")"
+		return "DeviceClass(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
 	return _DeviceClass_name[_DeviceClass_index[i]:_DeviceClass_index[i+1]]
 }

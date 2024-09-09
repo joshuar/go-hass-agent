@@ -61,18 +61,13 @@ type stateUpdateRequest struct {
 }
 
 func createStateUpdateRequest(sensor State) *stateUpdateRequest {
-	upd := &stateUpdateRequest{
+	return &stateUpdateRequest{
 		StateAttributes: sensor.Attributes(),
 		State:           sensor.State(),
 		Icon:            sensor.Icon(),
 		UniqueID:        sensor.ID(),
+		Type:            sensor.SensorType().String(),
 	}
-
-	if sensor.SensorType() > 0 {
-		upd.Type = sensor.SensorType().String()
-	}
-
-	return upd
 }
 
 type registrationRequest struct {

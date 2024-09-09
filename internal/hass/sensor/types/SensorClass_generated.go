@@ -8,8 +8,8 @@ func _() {
 	// An "invalid array index" compiler error signifies that the constant values have changed.
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
-	_ = x[Sensor-1]
-	_ = x[BinarySensor-2]
+	_ = x[Sensor-0]
+	_ = x[BinarySensor-1]
 }
 
 const _SensorClass_name = "sensorbinary_sensor"
@@ -17,9 +17,8 @@ const _SensorClass_name = "sensorbinary_sensor"
 var _SensorClass_index = [...]uint8{0, 6, 19}
 
 func (i SensorClass) String() string {
-	i -= 1
 	if i < 0 || i >= SensorClass(len(_SensorClass_index)-1) {
-		return "SensorClass(" + strconv.FormatInt(int64(i+1), 10) + ")"
+		return "SensorClass(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
 	return _SensorClass_name[_SensorClass_index[i]:_SensorClass_index[i+1]]
 }

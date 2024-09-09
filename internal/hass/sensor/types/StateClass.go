@@ -7,9 +7,10 @@ package types
 
 //go:generate stringer -type=StateClass -output StatedClass_generated.go -linecomment
 const (
-	StateClassMeasurement     StateClass = iota + 1 // measurement
-	StateClassTotal                                 // total
-	StateClassTotalIncreasing                       // total_increasing
+	StateClassNone            StateClass = iota // none
+	StateClassMeasurement                       // measurement
+	StateClassTotal                             // total
+	StateClassTotalIncreasing                   // total_increasing
 )
 
 // SensorStateClass reflects the HA state class of the sensor.
