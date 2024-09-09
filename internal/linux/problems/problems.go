@@ -78,7 +78,6 @@ func parseProblem(details map[string]string) map[string]any {
 type worker struct {
 	getProblems       func() ([]string, error)
 	getProblemDetails func(problem string) (map[string]string, error)
-	logger            *slog.Logger
 	bus               *dbusx.Bus
 }
 
@@ -129,6 +128,12 @@ func NewProblemsWorker(ctx context.Context) (*linux.SensorWorker, error) {
 		return nil, linux.ErrNoSystemBus
 	}
 
+	// Check if we can fetch problem data, bail if we can't.
+	_, err := dbusx.GetData[[]string](bus, dBusProblemsDest, dBusProblemIntr, dBusProblemIntr+".GetProblems")
+	if err != nil {
+		return nil, fmt.Errorf("unable to fetch ABRT problems from D-Bus: %w", err)
+	}
+
 	return &linux.SensorWorker{
 			Value: &worker{
 				getProblems: func() ([]string, error) {
@@ -153,8 +158,7 @@ func NewProblemsWorker(ctx context.Context) (*linux.SensorWorker, error) {
 						return details, nil
 					}
 				},
-				logger: logging.FromContext(ctx).With(slog.String("worker", problemsWorkerID)),
-				bus:    bus,
+				bus: bus,
 			},
 			WorkerID: problemsWorkerID,
 		},
