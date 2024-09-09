@@ -85,12 +85,8 @@ func TestChip_getSensors(t *testing.T) {
 	alarmSensor := &Sensor{
 		value:       false,
 		label:       "Temp1 Crit Alarm",
-		id:          "temp1_crit",
+		id:          "temp1_crit_alarm",
 		MonitorType: Alarm,
-		Attributes: []Attribute{
-			{Name: "max", Value: 80},
-			{Name: "crit", Value: 100},
-		},
 	}
 
 	type fields struct {
@@ -143,6 +139,7 @@ func TestChip_getSensors(t *testing.T) {
 			if !tt.wantErr {
 				for i := range tt.want {
 					if !slices.ContainsFunc(got, func(s *Sensor) bool {
+						t.Logf("Chip.getSensors() = %v, want %v", s.id, tt.want[i].id)
 						return s.id == tt.want[i].id
 					}) {
 						t.Errorf("Chip.getSensors() = %v, want %v", got, tt.want)

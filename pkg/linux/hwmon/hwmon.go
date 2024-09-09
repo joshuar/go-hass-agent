@@ -311,11 +311,6 @@ func (s *Sensor) ID() string {
 	id.WriteString("_")
 	id.WriteString(s.id)
 
-	if s.MonitorType == Alarm || s.MonitorType == Intrusion {
-		id.WriteString("_")
-		id.WriteString(s.MonitorType.String())
-	}
-
 	return strcase.ToSnake(id.String())
 }
 
@@ -365,7 +360,7 @@ func (s *Sensor) updateInfo(file *sensorFile) error {
 
 		if len(parts) == 2 { // 2 parts, limit alarm
 			s.label = strings.Join([]string{id, parts[0], file.sensorType.String()}, " ")
-			s.id = strings.Join([]string{id, parts[0], file.sensorType.String()}, "_")
+			s.id = strings.Join([]string{id, parts[0], "alarm"}, "_")
 		} else { // channel alarm
 			s.label = strings.Join([]string{id, file.sensorType.String()}, " ")
 		}
