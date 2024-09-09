@@ -82,62 +82,85 @@ func (c *Chip) getSensors() ([]*Sensor, error) {
 	// generate a map of allSensors from the files.
 	allSensors := make(map[string]*Sensor)
 
-	var (
-		mu sync.Mutex
-		wg sync.WaitGroup
-	)
+	for file := range allSensorFiles {
+		trackerID := file.sensorID + "_" + file.sensorType.String()
 
-	for _, sensorFile := range allSensorFiles {
-		wg.Add(1)
-
-		go func() {
-			defer wg.Done()
-
-			sensor := newSensor(&sensorFile, c)
-			trackerID := sensor.id + "_" + sensor.MonitorType.String()
-
-			mu.Lock()
-			defer mu.Unlock()
-
-			if _, ok := allSensors[trackerID]; ok {
-				// if this sensor is already tracked, update it from the sensorFile contents.
-				if err := allSensors[trackerID].updateInfo(&sensorFile); err != nil {
-					slog.Debug("Could not update existing sensor.",
-						slog.String("sensor", allSensors[trackerID].Name()),
-						slog.Any("error", err))
-				}
-			} else {
-				// else update and add as new.
-				if err := sensor.updateInfo(&sensorFile); err != nil {
-					slog.Debug("Could not parse sensor.",
-						slog.String("sensor", allSensors[trackerID].Name()),
-						slog.Any("error", err))
-				} else {
-					allSensors[trackerID] = sensor
-				}
-			}
-		}()
+		if _, ok := allSensors[trackerID]; !ok {
+			allSensors[trackerID] = newSensor(&file, c)
+		}
+		// Update based on the file contents
+		if err := allSensors[trackerID].updateInfo(&file); err != nil {
+			slog.Debug("Could not update sensor.",
+				slog.String("sensor", allSensors[trackerID].Name()),
+				slog.Any("error", err))
+		}
 	}
-
-	wg.Wait()
 
 	sensors := make([]*Sensor, 0, len(allSensors))
 
 	for _, sensor := range allSensors {
-		if err := sensor.updateValue(); err != nil {
-			slog.Debug("Could not update sensor value.",
-				slog.String("sensor", sensor.Name()),
-				slog.Any("error", err))
-		} else {
-			if sensor.value == nil {
-				slog.Debug("value is nil", slog.String("sensor", sensor.Name()))
-			}
-
-			sensors = append(sensors, sensor)
+		if sensor.value == nil {
+			slog.Debug("Ignoring sensor with nil value.", slog.String("sensor", sensor.Name()))
+			continue
 		}
+
+		sensors = append(sensors, sensor)
 	}
 
 	return sensors, nil
+}
+
+func getSensorFiles(hwMonPath string) (chan sensorFile, error) {
+	fileList, err := os.ReadDir(hwMonPath)
+	if err != nil {
+		return nil, fmt.Errorf("could not read files at path %s: %w", hwMonPath, err)
+	}
+
+	fileCh := make(chan sensorFile)
+
+	go func() {
+		var wg sync.WaitGroup
+
+		for _, file := range fileList {
+			wg.Add(1)
+
+			go func() {
+				defer wg.Done()
+				// ignore directories
+				if file.IsDir() {
+					return
+				}
+				// ignore files that can't be parsed as a sensor
+				id, attr, ok := strings.Cut(file.Name(), "_")
+				if !ok {
+					return
+				}
+				// adjust id for alarms.
+				if strings.Contains(attr, "alarm") {
+					id = id + "_alarm"
+				}
+				// get and store the contents of the sensor file.
+				contents, err := getFileContents(filepath.Join(hwMonPath, file.Name()))
+				if err != nil {
+					return
+				}
+				// return as a sensorFile.
+				fileCh <- sensorFile{
+					path:       hwMonPath,
+					name:       file.Name(),
+					sensorID:   id,
+					attribute:  attr,
+					sensorType: parseSensorType(id),
+					contents:   contents,
+				}
+			}()
+		}
+
+		wg.Wait()
+		close(fileCh)
+	}()
+
+	return fileCh, nil
 }
 
 // newChip creates a new chip from the given hwmon sysfs path.
@@ -328,80 +351,51 @@ func (s *Sensor) String() string {
 	return sensorStr.String()
 }
 
-// updateValue will update the value of the sensor to its current value, as read
-// from its input file in the hwmon sysfs tree.
-func (s *Sensor) updateValue() error {
-	var (
-		path  string
-		value any
-		err   error
-	)
-
-	switch s.MonitorType {
-	case Alarm:
-		path = filepath.Join(s.Path, s.id+"_alarm")
-
-		value, err = getValueAsBool(path)
-		if err != nil {
-			return fmt.Errorf("unable to read value: %w", err)
-		}
-	case Intrusion:
-		path = filepath.Join(s.Path, s.id+"_intrusion")
-
-		value, err = getValueAsBool(path)
-		if err != nil {
-			return fmt.Errorf("unable to read value: %w", err)
-		}
-	default:
-		path = filepath.Join(s.Path, s.id+"_input")
-
-		var floatValue float64
-
-		floatValue, err = getValueAsFloat(path)
-		if err != nil {
-			return fmt.Errorf("unable to read value: %w", err)
-		}
-
-		value = floatValue / s.scaleFactor
-	}
-
-	s.value = value
-
-	return nil
-}
-
 // updateInfo will add any additional info from the given sensorFile to the
 // sensor. This function is called in a loop processing files for a chip from
 // the hwmon sysfs, and will gradually build all the details of the sensor as
 // relevant.
 func (s *Sensor) updateInfo(file *sensorFile) error {
-	path := filepath.Join(file.path, file.filename)
-
 	switch {
-	case file.sensorAttr == "input":
-	case file.sensorAttr == "label":
-		l, err := getValueAsString(path)
-		if err != nil {
-			return err
+	case file.attribute == "label":
+		s.label = file.contents
+	case strings.Contains(file.attribute, "alarm"):
+		id, _, _ := strings.Cut(file.sensorID, "_")
+		parts := strings.Split(file.attribute, "_")
+
+		if len(parts) == 2 { // 2 parts, limit alarm
+			s.label = strings.Join([]string{id, parts[0], file.sensorType.String()}, " ")
+			s.id = strings.Join([]string{id, parts[0], file.sensorType.String()}, "_")
+		} else { // channel alarm
+			s.label = strings.Join([]string{id, file.sensorType.String()}, " ")
 		}
 
-		s.label = l
-	case strings.Contains(file.sensorAttr, "alarm"):
-		if b, _, ok := strings.Cut(file.sensorAttr, "_"); ok {
-			s.label = file.sensorType + " " + b + " Alarm"
-			s.id += "_" + b
+		if value, err := strconv.ParseBool(file.contents); err != nil {
+			return fmt.Errorf("could not parse as bool: %w", err)
 		} else {
-			s.label = "Alarm"
+			s.value = value
 		}
-	case strings.Contains(file.sensorAttr, "intrusion"):
-		s.label = "intrusion"
-	default:
-		v, err := getValueAsFloat(path)
+	case strings.Contains(file.attribute, "intrusion"):
+		id, _, _ := strings.Cut(file.sensorID, "_")
+
+		s.label = strings.Join([]string{id, file.sensorType.String()}, " ")
+
+		if value, err := strconv.ParseBool(file.contents); err != nil {
+			return fmt.Errorf("could not parse as bool: %w", err)
+		} else {
+			s.value = value
+		}
+	default: // Either the sensor value or an attribute of the sensor.
+		value, err := strconv.ParseFloat(file.contents, 64)
 		if err != nil {
-			return err
+			return fmt.Errorf("could not parse as float: %w", err)
 		}
 
-		s.Attributes = append(s.Attributes, Attribute{Name: file.sensorAttr, Value: v / s.scaleFactor})
+		if file.attribute == "input" {
+			s.value = value / s.scaleFactor
+		} else {
+			s.Attributes = append(s.Attributes, Attribute{Name: file.attribute, Value: value / s.scaleFactor})
+		}
 	}
 
 	return nil
@@ -409,14 +403,12 @@ func (s *Sensor) updateInfo(file *sensorFile) error {
 
 // newSensor creates a new sensor representation from the given sensorFile.
 func newSensor(file *sensorFile, chip *Chip) *Sensor {
-	sensorType, scaleFactor, sensorUnits := file.getSensorType()
-
 	return &Sensor{
 		Chip:        chip,
-		id:          file.sensorType,
-		MonitorType: sensorType,
-		scaleFactor: scaleFactor,
-		units:       sensorUnits,
+		id:          file.sensorID,
+		MonitorType: file.sensorType,
+		scaleFactor: getScaleFactor(file.sensorType),
+		units:       getUnits(file.sensorType),
 	}
 }
 
@@ -448,135 +440,82 @@ func (a *Attribute) String() string {
 
 type sensorFile struct {
 	path       string
-	filename   string
-	sensorType string
-	sensorAttr string
+	name       string
+	sensorID   string
+	attribute  string
+	contents   string
+	sensorType MonitorType
 }
 
-//nolint:cyclop,mnd
-func (f *sensorFile) getSensorType() (sensorType MonitorType, scaleFactor float64, units string) {
-	switch {
-	case strings.Contains(f.sensorAttr, "intrusion"):
-		return Intrusion, 1, ""
-	case strings.Contains(f.sensorAttr, "alarm"):
-		return Alarm, 1, ""
-	case strings.Contains(f.sensorType, "temp"):
-		return Temp, 1000, "°C"
-	case strings.Contains(f.sensorType, "fan"):
-		return Fan, 1, "rpm"
-	case strings.Contains(f.sensorType, "in"):
-		return Voltage, 1000, "V"
-	case strings.Contains(f.sensorType, "pwm"):
-		return PWM, 1, "Hz"
-	case strings.Contains(f.sensorType, "curr"):
-		return Current, 1, "A"
-	case strings.Contains(f.sensorType, "power"):
-		return Power, 1000, "W"
-	case strings.Contains(f.sensorType, "energy"):
-		return Energy, 1000, "J"
-	case strings.Contains(f.sensorType, "humidity"):
-		return Humidity, 1, "%"
-	case strings.Contains(f.sensorType, "freq"):
-		return Frequency, 1000, "Hz"
+func getScaleFactor(sensorType MonitorType) float64 {
+	switch sensorType {
+	case Intrusion, Alarm, Fan, PWM, Current, Humidity:
+		return 1
+	case Temp, Voltage, Power, Energy, Frequency:
+		return 1000
 	default:
-		return Unknown, 1, ""
+		return 1
+	}
+}
+
+func getUnits(sensorType MonitorType) string {
+	switch sensorType {
+	case Temp:
+		return "°C"
+	case Fan:
+		return "rpm"
+	case Voltage:
+		return "V"
+	case PWM, Frequency:
+		return "Hz"
+	case Current:
+		return "A"
+	case Power:
+		return "W"
+	case Energy:
+		return "J"
+	case Humidity:
+		return "%"
+	default:
+		return ""
+	}
+}
+
+func parseSensorType(id string) MonitorType {
+	switch {
+	case strings.Contains(id, "intrusion"):
+		return Intrusion
+	case strings.Contains(id, "alarm"):
+		return Alarm
+	case strings.Contains(id, "temp"):
+		return Temp
+	case strings.Contains(id, "fan"):
+		return Fan
+	case strings.Contains(id, "in"):
+		return Voltage
+	case strings.Contains(id, "pwm"):
+		return PWM
+	case strings.Contains(id, "curr"):
+		return Current
+	case strings.Contains(id, "power"):
+		return Power
+	case strings.Contains(id, "energy"):
+		return Energy
+	case strings.Contains(id, "humidity"):
+		return Humidity
+	case strings.Contains(id, "freq"):
+		return Frequency
+	default:
+		return Unknown
 	}
 }
 
 // getFileContents retrieves the contents of the given file as a string. If the
 // contents cannot be read, it will return "unknown" and an error.
 func getFileContents(path string) (string, error) {
-	var (
-		data []byte
-		err  error
-	)
-
-	if data, err = os.ReadFile(path); err != nil {
+	if data, err := os.ReadFile(path); err != nil {
 		return "", fmt.Errorf("could not read contents of file: %w", err)
+	} else { //revive:disable:indent-error-flow
+		return strings.TrimSpace(string(data)), nil
 	}
-
-	return strings.TrimSpace(string(data)), nil
-}
-
-func getValueAsString(p string) (string, error) {
-	return getFileContents(p)
-}
-
-func getValueAsFloat(p string) (float64, error) {
-	strValue, err := getFileContents(p)
-	if err != nil {
-		return 0, err
-	}
-
-	var floatValue float64
-
-	floatValue, err = strconv.ParseFloat(strValue, 64)
-	if err != nil {
-		return 0, fmt.Errorf("could not parse as float: %w", err)
-	}
-
-	return floatValue, nil
-}
-
-func getValueAsBool(p string) (bool, error) {
-	strValue, err := getFileContents(p)
-	if err != nil {
-		return false, err
-	}
-
-	var boolVal bool
-
-	boolVal, err = strconv.ParseBool(strValue)
-	if err != nil {
-		return false, fmt.Errorf("could not parse as bool: %w", err)
-	}
-
-	return boolVal, nil
-}
-
-func getSensorFiles(hwMonPath string) ([]sensorFile, error) {
-	fileList, err := os.ReadDir(hwMonPath)
-	if err != nil {
-		return nil, fmt.Errorf("could not read files at path %s: %w", hwMonPath, err)
-	}
-
-	files := make([]sensorFile, 0, len(fileList))
-	fileCh := make(chan sensorFile)
-
-	go func() {
-		var wg sync.WaitGroup
-
-		for _, file := range fileList {
-			wg.Add(1)
-
-			go func() {
-				defer wg.Done()
-				// ignore directories
-				if file.IsDir() {
-					return
-				}
-				// ignore files that can't be parsed as a sensor
-				sensorType, sensorAttr, ok := strings.Cut(file.Name(), "_")
-				if !ok {
-					return
-				}
-				// return any other file as a *sensorFile
-				fileCh <- sensorFile{
-					path:       hwMonPath,
-					filename:   file.Name(),
-					sensorType: sensorType,
-					sensorAttr: sensorAttr,
-				}
-			}()
-		}
-
-		wg.Wait()
-		close(fileCh)
-	}()
-
-	for sensorFile := range fileCh {
-		files = append(files, sensorFile)
-	}
-
-	return files, nil
 }

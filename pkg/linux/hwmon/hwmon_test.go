@@ -424,44 +424,6 @@ func TestGetAllSensors(t *testing.T) {
 	}
 }
 
-func Test_sensorFile_getSensorType(t *testing.T) {
-	type fields struct {
-		path       string
-		filename   string
-		sensorType string
-		sensorAttr string
-	}
-	tests := []struct {
-		name            string
-		fields          fields
-		wantSensorType  MonitorType
-		wantScaleFactor float64
-		wantUnits       string
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			f := &sensorFile{
-				path:       tt.fields.path,
-				filename:   tt.fields.filename,
-				sensorType: tt.fields.sensorType,
-				sensorAttr: tt.fields.sensorAttr,
-			}
-			gotSensorType, gotScaleFactor, gotUnits := f.getSensorType()
-			if gotSensorType != tt.wantSensorType {
-				t.Errorf("sensorFile.getSensorType() gotSensorType = %v, want %v", gotSensorType, tt.wantSensorType)
-			}
-			if gotScaleFactor != tt.wantScaleFactor {
-				t.Errorf("sensorFile.getSensorType() gotScaleFactor = %v, want %v", gotScaleFactor, tt.wantScaleFactor)
-			}
-			if gotUnits != tt.wantUnits {
-				t.Errorf("sensorFile.getSensorType() gotUnits = %v, want %v", gotUnits, tt.wantUnits)
-			}
-		})
-	}
-}
-
 func Test_getFileContents(t *testing.T) {
 	type args struct {
 		path string
@@ -483,84 +445,6 @@ func Test_getFileContents(t *testing.T) {
 			}
 			if got != tt.want {
 				t.Errorf("getFileContents() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_getValueAsString(t *testing.T) {
-	type args struct {
-		p string
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    string
-		wantErr bool
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := getValueAsString(tt.args.p)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("getValueAsString() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if got != tt.want {
-				t.Errorf("getValueAsString() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_getValueAsFloat(t *testing.T) {
-	type args struct {
-		p string
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    float64
-		wantErr bool
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := getValueAsFloat(tt.args.p)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("getValueAsFloat() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if got != tt.want {
-				t.Errorf("getValueAsFloat() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_getValueAsBool(t *testing.T) {
-	type args struct {
-		p string
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    bool
-		wantErr bool
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := getValueAsBool(tt.args.p)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("getValueAsBool() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if got != tt.want {
-				t.Errorf("getValueAsBool() = %v, want %v", got, tt.want)
 			}
 		})
 	}
