@@ -216,6 +216,54 @@ func MQTTOrigin() *mqtthass.Origin {
 	}
 }
 
+func (p *Preferences) DeviceName() string {
+	if p.Device != nil {
+		return p.Device.Name
+	}
+
+	return "Unknown Device"
+}
+
+func (p *Preferences) DeviceID() string {
+	if p.Device != nil {
+		return p.Device.ID
+	}
+
+	return "Unknown Device ID"
+}
+
+func (p *Preferences) RestAPIURL() string {
+	if p.Hass != nil {
+		return p.Hass.RestAPIURL
+	}
+
+	return ""
+}
+
+func (p *Preferences) WebsocketURL() string {
+	if p.Hass != nil {
+		return p.Hass.WebsocketURL
+	}
+
+	return ""
+}
+
+func (p *Preferences) WebhookID() string {
+	if p.Hass != nil {
+		return p.Hass.WebhookID
+	}
+
+	return ""
+}
+
+func (p *Preferences) Token() string {
+	if p.Registration != nil {
+		return p.Registration.Token
+	}
+
+	return ""
+}
+
 func checkPath(path string) error {
 	_, err := os.Stat(path)
 	if os.IsNotExist(err) {
