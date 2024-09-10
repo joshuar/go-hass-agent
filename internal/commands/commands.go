@@ -39,6 +39,7 @@ var (
 	ErrNoCommands         = errors.New("no commands")
 	ErrNoState            = errors.New("no state passed to control")
 	ErrCmdFailed          = errors.New("could not execute command for control")
+	ErrParseCmd           = errors.New("could not parse command-line")
 	ErrUnknownSwitchState = errors.New("could not determine state of switch")
 	ErrUnknownNumberState = errors.New("could not determine state of number")
 )
@@ -411,6 +412,10 @@ func (d *Controller) generateNumbers(numberCommands []Command) {
 func cmdWithoutState(command string) error {
 	cmdElems := strings.Split(command, " ")
 
+	if len(cmdElems) == 0 {
+		return ErrParseCmd
+	}
+
 	_, err := exec.Command(cmdElems[0], cmdElems[1:]...).Output()
 	if err != nil {
 		return fmt.Errorf("%w: %w", ErrCmdFailed, err)
@@ -441,6 +446,9 @@ func cmdWithState(command, state string) error {
 // which should output the current state of the switch.
 func switchState(command string) (json.RawMessage, error) {
 	cmdElems := strings.Split(command, " ")
+	if len(cmdElems) == 0 {
+		return nil, ErrUnknownSwitchState
+	}
 
 	output, err := exec.Command(cmdElems[0], cmdElems[1:]...).Output()
 	if err != nil {
@@ -459,6 +467,9 @@ func switchState(command string) (json.RawMessage, error) {
 
 func numberState(command string) (json.RawMessage, error) {
 	cmdElems := strings.Split(command, " ")
+	if len(cmdElems) == 0 {
+		return nil, ErrUnknownNumberState
+	}
 
 	output, err := exec.Command(cmdElems[0], cmdElems[1:]...).Output()
 	if err != nil {
