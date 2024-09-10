@@ -51,7 +51,11 @@ type SensorWorker struct {
 // ID is a name that can be used as an ID to represent the group of sensors
 // managed by this worker.
 func (w *SensorWorker) ID() string {
-	return w.WorkerID
+	if w != nil {
+		return w.WorkerID
+	}
+
+	return "Unknown Worker"
 }
 
 // Stop will stop any processing of sensors controlled by this worker.

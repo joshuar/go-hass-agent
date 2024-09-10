@@ -283,7 +283,6 @@ func Test_usageWorker_newCountSensor(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			w := &usageWorker{
 				clktck: tt.fields.clktck,
-				logger: tt.fields.logger,
 			}
 			if got := w.newCountSensor(tt.args.name, tt.args.icon, tt.args.details); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("usageWorker.newProcCntSensor() = %v, want %v", got, tt.want)
@@ -299,7 +298,6 @@ func Test_usageWorker_getStats(t *testing.T) {
 	require.NoError(t, err)
 
 	type fields struct {
-		logger *slog.Logger
 		path   string
 		clktck int64
 	}
@@ -317,7 +315,6 @@ func Test_usageWorker_getStats(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			w := &usageWorker{
 				clktck: tt.fields.clktck,
-				logger: tt.fields.logger,
 				path:   tt.fields.path,
 			}
 			got, err := w.getStats()

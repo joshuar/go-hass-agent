@@ -62,6 +62,7 @@ func Test_newMemUsedPc(t *testing.T) {
 	memStatFile = "testing/data/meminfowithswap"
 	withSwap, err := getMemStats()
 	require.NoError(t, err)
+	require.NotNil(t, withSwap)
 	memUsed := withSwap[memTotal].value - withSwap[memFree].value - withSwap[memBuffered].value - withSwap[memCached].value
 	memUsedPc := math.Round(float64(memUsed)/float64(withSwap[memTotal].value)*100/0.05) * 0.05
 
@@ -93,11 +94,13 @@ func Test_newSwapUsedPc(t *testing.T) {
 	memStatFile = "testing/data/meminfowithswap"
 	withSwap, err := getMemStats()
 	require.NoError(t, err)
+	require.NotNil(t, withSwap)
 	swapUsed := withSwap[swapTotal].value - withSwap[swapFree].value
 	swapUsedPc := math.Round(float64(swapUsed)/float64(withSwap[swapTotal].value)*100/0.05) * 0.05
 	memStatFile = "testing/data/meminfowithoutswap"
 	withoutSwap, err := getMemStats()
 	require.NoError(t, err)
+	require.NotNil(t, withoutSwap)
 
 	type args struct {
 		stats memoryStats
