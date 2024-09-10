@@ -55,6 +55,12 @@ func (agent *Agent) runMQTTWorkers(ctx context.Context, controllers ...MQTTContr
 		err           error
 	)
 
+	prefs := agent.prefs.GetMQTTPreferences()
+	if prefs == nil {
+		agent.logger.Debug("No MQTT preferences found, not running MQTT controller.")
+		return
+	}
+
 	// Add the subscriptions and configs from the controllers.
 	for _, controller := range controllers {
 		subscriptions = append(subscriptions, controller.Subscriptions()...)
@@ -64,10 +70,9 @@ func (agent *Agent) runMQTTWorkers(ctx context.Context, controllers ...MQTTContr
 
 	// Create a new connection to the MQTT broker. This will also publish the
 	// device subscriptions.
-	client, err := mqttapi.NewClient(ctx, agent.prefs.GetMQTTPreferences(), subscriptions, configs)
+	client, err := mqttapi.NewClient(ctx, prefs, subscriptions, configs)
 	if err != nil {
 		agent.logger.Error("Could not connect to MQTT.", slog.Any("error", err))
-
 		return
 	}
 
@@ -83,7 +88,6 @@ func (agent *Agent) runMQTTWorkers(ctx context.Context, controllers ...MQTTContr
 			}
 		case <-ctx.Done():
 			agent.logger.Debug("Stopped listening for messages to publish to MQTT.")
-
 			return
 		}
 	}
@@ -91,6 +95,11 @@ func (agent *Agent) runMQTTWorkers(ctx context.Context, controllers ...MQTTContr
 
 func (agent *Agent) resetMQTTControllers(ctx context.Context) error {
 	mqttDevice := agent.newMQTTDevice()
+
+	prefs := agent.prefs.GetMQTTPreferences()
+	if prefs == nil {
+		return nil
+	}
 
 	var configs []*mqttapi.Msg
 
@@ -104,7 +113,7 @@ func (agent *Agent) resetMQTTControllers(ctx context.Context) error {
 		configs = append(configs, mqttCmdController.Configs()...)
 	}
 
-	client, err := mqttapi.NewClient(ctx, agent.prefs.GetMQTTPreferences(), nil, nil)
+	client, err := mqttapi.NewClient(ctx, prefs, nil, nil)
 	if err != nil {
 		return fmt.Errorf("could not connect to MQTT: %w", err)
 	}
@@ -123,12 +132,19 @@ func (agent *Agent) newMQTTDevice() *mqtthass.Device {
 		agent.logger.Warn("Error creating MQTT device.", slog.Any("error", err))
 	}
 
+	var deviceName, deviceID string
+
+	if agent.prefs != nil {
+		deviceName = agent.prefs.DeviceName()
+		deviceID = agent.prefs.DeviceID()
+	}
+
 	return &mqtthass.Device{
-		Name:         agent.prefs.Device.Name,
+		Name:         deviceName,
 		URL:          preferences.AppURL,
 		SWVersion:    preferences.AppVersion,
 		Manufacturer: manufacturer,
 		Model:        model,
-		Identifiers:  []string{agent.id, agent.prefs.Device.Name, agent.prefs.Device.ID},
+		Identifiers:  []string{agent.id, deviceName, deviceID},
 	}
 }

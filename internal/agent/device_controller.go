@@ -194,9 +194,11 @@ func (w *VersionWorker) Updates(ctx context.Context) (<-chan sensor.Details, err
 }
 
 func (agent *Agent) newVersionWorker() *VersionWorker {
-	return &VersionWorker{
-		version: version(agent.prefs.Version),
+	if agent.prefs != nil {
+		return &VersionWorker{version: version(agent.prefs.Version)}
 	}
+
+	return &VersionWorker{version: version("unknown")}
 }
 
 // ID returns the unique string to represent this worker and its sensors.

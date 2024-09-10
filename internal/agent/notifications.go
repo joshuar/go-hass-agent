@@ -21,7 +21,10 @@ func (agent *Agent) runNotificationsWorker(ctx context.Context) {
 		return
 	}
 
-	websocket := hass.NewWebsocket(ctx, agent.prefs.Hass.WebsocketURL, agent.prefs.Hass.WebhookID, agent.prefs.Registration.Token)
+	websocket := hass.NewWebsocket(ctx,
+		agent.prefs.WebsocketURL(),
+		agent.prefs.WebhookID(),
+		agent.prefs.Token())
 
 	for {
 		select {

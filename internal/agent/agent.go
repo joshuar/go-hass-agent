@@ -35,6 +35,8 @@ const (
 	defaultTimeout = 30 * time.Second
 )
 
+var ErrInvalidPrefernces = errors.New("invalid agent preferences")
+
 // UI are the methods required for the agent to display its windows, tray
 // and notifications.
 type UI interface {
@@ -167,7 +169,7 @@ func (agent *Agent) Run(ctx context.Context, trk Tracker, reg Registry) error {
 		defer wg.Done()
 		regWait.Wait()
 
-		agent.hass.Endpoint(agent.GetRestAPIURL(), defaultTimeout)
+		agent.hass.Endpoint(agent.prefs.RestAPIURL(), defaultTimeout)
 
 		// Create a context for runners
 		controllerCtx, cancelFunc := context.WithCancel(ctx)
@@ -270,7 +272,8 @@ func (agent *Agent) Stop() {
 
 // Reset will remove any agent related files and configuration.
 func (agent *Agent) Reset(ctx context.Context) error {
-	if agent.prefs.MQTT.IsMQTTEnabled() {
+	prefs := agent.GetMQTTPreferences()
+	if prefs != nil && prefs.IsMQTTEnabled() {
 		if err := agent.resetMQTTControllers(ctx); err != nil {
 			agent.logger.Warn("Problems occurred resetting MQTT configuration.", slog.Any("error", err))
 		}
@@ -293,24 +296,36 @@ func (agent *Agent) GetMQTTPreferences() *preferences.MQTT {
 // SaveMQTTPreferences takes the given preferences and saves them to disk as
 // part of all agent preferences.
 func (agent *Agent) SaveMQTTPreferences(prefs *preferences.MQTT) error {
-	agent.prefs.MQTT = prefs
+	if agent.prefs != nil {
+		agent.prefs.MQTT = prefs
 
-	err := agent.prefs.Save()
-	if err != nil {
-		return fmt.Errorf("failed to save mqtt preferences: %w", err)
+		err := agent.prefs.Save()
+		if err != nil {
+			return fmt.Errorf("failed to save mqtt preferences: %w", err)
+		}
+
+		return nil
 	}
 
-	return nil
+	return ErrInvalidPrefernces
 }
 
 func (agent *Agent) GetRestAPIURL() string {
-	return agent.prefs.Hass.RestAPIURL
+	return agent.prefs.RestAPIURL()
 }
 
 func (agent *Agent) GetRegistryPath() string {
-	return filepath.Join(xdg.ConfigHome, agent.id, "sensorRegistry")
+	if agent != nil {
+		return filepath.Join(xdg.ConfigHome, agent.id, "sensorRegistry")
+	}
+
+	return filepath.Join(xdg.ConfigHome, preferences.AppID, "sensorRegistry")
 }
 
 func (agent *Agent) GetPreferencesPath() string {
-	return filepath.Join(xdg.ConfigHome, agent.id)
+	if agent != nil {
+		return filepath.Join(xdg.ConfigHome, agent.id)
+	}
+
+	return filepath.Join(xdg.ConfigHome, preferences.AppID)
 }

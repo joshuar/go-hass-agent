@@ -161,8 +161,14 @@ func (i *FyneUI) DisplayTrayIcon(ctx context.Context, agent ui.Agent, client ui.
 // complete registration. It will populate with any values that were already
 // provided via the command-line.
 func (i *FyneUI) DisplayRegistrationWindow(prefs *preferences.Preferences, doneCh chan struct{}) chan struct{} {
-	window := i.app.NewWindow(i.Translate("App Registration"))
 	userInputDone := make(chan struct{})
+
+	if i.app == nil {
+		close(userInputDone)
+		return userInputDone
+	}
+
+	window := i.app.NewWindow(i.Translate("App Registration"))
 
 	var allFormItems []*widget.FormItem
 	allFormItems = append(allFormItems, i.registrationFields(prefs)...)
