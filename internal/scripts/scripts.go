@@ -19,6 +19,8 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 )
 
+var ErrParseCmd = errors.New("could not parse script command")
+
 type Script struct {
 	path     string
 	schedule string
@@ -45,6 +47,10 @@ func (s *Script) Execute() ([]sensor.Details, error) {
 
 func (s *Script) parse() (*scriptOutput, error) {
 	cmdElems := strings.Split(s.path, " ")
+
+	if len(cmdElems) == 0 {
+		return nil, ErrParseCmd
+	}
 
 	out, err := exec.Command(cmdElems[0], cmdElems[1:]...).Output()
 	if err != nil {
