@@ -26,19 +26,11 @@ const (
 	ratesWorkerID = "disk_rates_sensors"
 )
 
-type sensors struct {
-	totalReads  *diskIOSensor
-	totalWrites *diskIOSensor
-	readRate    *diskIOSensor
-	writeRate   *diskIOSensor
-}
-
 // ioWorker creates sensors for disk IO counts and rates per device. It
 // maintains an internal map of devices being tracked.
 type ioWorker struct {
 	boottime time.Time
-	logger   *slog.Logger
-	devices  map[string]*sensors
+	devices  map[string][]*diskIOSensor
 	mu       sync.Mutex
 }
 
@@ -49,7 +41,7 @@ func (w *ioWorker) addDevice(dev *device) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	if _, ok := w.devices[dev.id]; !ok {
+	if _, found := w.devices[dev.id]; !found {
 		w.devices[dev.id] = newDeviceSensors(w.boottime, dev)
 	}
 }
@@ -60,41 +52,37 @@ func (w *ioWorker) updateDevice(dev *device, stats map[stat]uint64, delta time.D
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	w.devices[dev.id].totalReads.update(stats, delta)
-	w.devices[dev.id].totalWrites.update(stats, delta)
-	w.devices[dev.id].readRate.update(stats, delta)
-	w.devices[dev.id].writeRate.update(stats, delta)
+	sensors := make([]sensor.Details, len(w.devices["total"]))
 
-	return []sensor.Details{
-		w.devices[dev.id].totalReads,
-		w.devices[dev.id].totalWrites,
-		w.devices[dev.id].readRate,
-		w.devices[dev.id].writeRate,
+	if _, found := w.devices[dev.id]; found && stats != nil {
+		for idx := range w.devices[dev.id] {
+			w.devices[dev.id][idx].update(stats, delta)
+			sensors[idx] = w.devices[dev.id][idx]
+		}
 	}
+
+	return sensors
 }
 
 func (w *ioWorker) updateTotals(stats map[stat]uint64, delta time.Duration) []sensor.Details {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	w.devices["total"].totalReads.update(stats, delta)
-	w.devices["total"].totalWrites.update(stats, delta)
-	w.devices["total"].readRate.update(stats, delta)
-	w.devices["total"].writeRate.update(stats, delta)
+	sensors := make([]sensor.Details, len(w.devices["total"]))
 
-	return []sensor.Details{
-		w.devices["total"].totalReads,
-		w.devices["total"].totalWrites,
-		w.devices["total"].readRate,
-		w.devices["total"].writeRate,
+	for idx := range w.devices["total"] {
+		w.devices["total"][idx].update(stats, delta)
+		sensors[idx] = w.devices["total"][idx]
 	}
+
+	return sensors
 }
 
 func (w *ioWorker) Interval() time.Duration { return ratesUpdateInterval }
 
 func (w *ioWorker) Jitter() time.Duration { return ratesUpdateJitter }
 
-func (w *ioWorker) Sensors(_ context.Context, duration time.Duration) ([]sensor.Details, error) {
+func (w *ioWorker) Sensors(ctx context.Context, duration time.Duration) ([]sensor.Details, error) {
 	// Get valid devices.
 	deviceNames, err := getDeviceNames()
 	if err != nil {
@@ -108,7 +96,9 @@ func (w *ioWorker) Sensors(_ context.Context, duration time.Duration) ([]sensor.
 	for _, name := range deviceNames {
 		dev, stats, err := getDevice(name)
 		if err != nil {
-			w.logger.Warn("Unable to read device stats.", slog.Any("error", err))
+			logging.FromContext(ctx).
+				With(slog.String("worker", ratesWorkerID)).
+				Debug("Unable to read device stats.", slog.Any("error", err))
 
 			continue
 		}
@@ -142,8 +132,7 @@ func NewIOWorker(ctx context.Context) (*linux.SensorWorker, error) {
 	}
 
 	worker := &ioWorker{
-		devices:  make(map[string]*sensors),
-		logger:   logging.FromContext(ctx).WithGroup(ratesWorkerID),
+		devices:  make(map[string][]*diskIOSensor),
 		boottime: boottime,
 	}
 
@@ -158,11 +147,11 @@ func NewIOWorker(ctx context.Context) (*linux.SensorWorker, error) {
 		nil
 }
 
-func newDeviceSensors(boottime time.Time, dev *device) *sensors {
-	return &sensors{
-		totalReads:  newDiskIOSensor(boottime, dev, diskReads),
-		totalWrites: newDiskIOSensor(boottime, dev, diskWrites),
-		readRate:    newDiskIORateSensor(dev, diskReadRate),
-		writeRate:   newDiskIORateSensor(dev, diskWriteRate),
+func newDeviceSensors(boottime time.Time, dev *device) []*diskIOSensor {
+	return []*diskIOSensor{
+		newDiskIOSensor(boottime, dev, diskReads),
+		newDiskIOSensor(boottime, dev, diskWrites),
+		newDiskIORateSensor(dev, diskReadRate),
+		newDiskIORateSensor(dev, diskWriteRate),
 	}
 }
