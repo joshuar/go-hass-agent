@@ -40,7 +40,7 @@ func NewDeviceID() (string, error) {
 // "laptop". If this cannot be retrieved, it will return "unknown".
 func Chassis() (string, error) {
 	chassisInfo, err := ghw.Chassis(ghw.WithDisableWarnings())
-	if err != nil {
+	if err != nil || chassisInfo == nil {
 		return "", fmt.Errorf("could not determine chassis type: %w", err)
 	}
 
@@ -71,7 +71,7 @@ func GetHostname(short bool) (string, error) {
 // strings.
 func GetHWProductInfo() (model, vendor string, err error) {
 	product, err := ghw.Product(ghw.WithDisableWarnings())
-	if err != nil {
+	if err != nil || product == nil {
 		return unknownModel, unknownVendor, fmt.Errorf("could not retrieve hardware information: %w", err)
 	}
 
