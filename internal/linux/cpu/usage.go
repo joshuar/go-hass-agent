@@ -10,8 +10,8 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
-	"log/slog"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -23,7 +23,6 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
-	"github.com/joshuar/go-hass-agent/internal/logging"
 )
 
 const (
@@ -34,6 +33,8 @@ const (
 
 	totalCPUString = "cpu"
 )
+
+var ErrParseCPUUsage = errors.New("could not parse CPU usage")
 
 //nolint:lll
 var times = [...]string{"user_time", "nice_time", "system_time", "idle_time", "iowait_time", "irq_time", "softirq_time", "steal_time", "guest_time", "guest_nice_time"}
@@ -97,7 +98,6 @@ func (s *cpuUsageSensor) Attributes() map[string]any {
 
 type usageWorker struct {
 	boottime time.Time
-	logger   *slog.Logger
 	path     string
 	clktck   int64
 }
@@ -125,7 +125,6 @@ func NewUsageWorker(ctx context.Context) (*linux.SensorWorker, error) {
 			Value: &usageWorker{
 				clktck:   clktck,
 				boottime: boottime,
-				logger:   logging.FromContext(ctx).WithGroup(usageWorkerID),
 				path:     filepath.Join(linux.ProcFSRoot, "stat"),
 			},
 			WorkerID: usageWorkerID,
@@ -150,12 +149,7 @@ func (w *usageWorker) newUsageSensor(details []string, diagnostic bool) *cpuUsag
 }
 
 func (w *usageWorker) newCountSensor(name, icon, valueStr string) *linux.Sensor {
-	valueInt, err := strconv.Atoi(valueStr)
-	if err != nil {
-		w.logger.Debug("Failed to convert count from string to int.",
-			slog.String("sensor", name),
-			slog.Any("error", err))
-	}
+	valueInt, _ := strconv.Atoi(valueStr) //nolint:errcheck // if we can't parse it, value will be 0.
 
 	return &linux.Sensor{
 		DisplayName:     name,
@@ -174,7 +168,7 @@ func (w *usageWorker) getStats() ([]sensor.Details, error) {
 
 	statsFH, err := os.Open(w.path)
 	if err != nil {
-		return nil, fmt.Errorf("fetch load averages: %w", err)
+		return nil, fmt.Errorf("fetch cpu usage: %w", err)
 	}
 
 	defer statsFH.Close()
@@ -188,6 +182,10 @@ func (w *usageWorker) getStats() ([]sensor.Details, error) {
 		var cols []string
 		for line.Scan() {
 			cols = append(cols, line.Text())
+		}
+
+		if len(cols) == 0 {
+			return sensors, ErrParseCPUUsage
 		}
 		// Create a sensor depending on the line.
 		switch {

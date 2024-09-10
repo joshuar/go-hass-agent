@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"path"
 	"strconv"
 
 	"github.com/jfreymuth/pulse/proto"
@@ -71,10 +70,10 @@ func NewPulseClient(ctx context.Context) (*PulseAudioClient, error) {
 	// Set client properties.
 	props := proto.PropList{
 		"media.name":                 proto.PropListString(preferences.AppName),
-		"application.name":           proto.PropListString(path.Base(os.Args[0])),
+		"application.name":           proto.PropListString("go-hass-agent"),
 		"application.icon_name":      proto.PropListString("audio-x-generic"),
 		"application.process.id":     proto.PropListString(strconv.Itoa(os.Getpid())),
-		"application.process.binary": proto.PropListString(os.Args[0]),
+		"application.process.binary": proto.PropListString("go-hass-agent"),
 		"window.x11.display":         proto.PropListString(os.Getenv("DISPLAY")),
 	}
 

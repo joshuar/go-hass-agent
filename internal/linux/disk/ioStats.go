@@ -9,6 +9,7 @@ package disk
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -50,6 +51,8 @@ type device struct {
 	model     string
 }
 
+var ErrParseDevices = errors.New("could not parse devices")
+
 var deviceMajNo = []string{"8", "252", "253", "259"}
 
 func getDeviceNames() ([]string, error) {
@@ -76,6 +79,10 @@ func getDeviceNames() ([]string, error) {
 
 		for line.Scan() {
 			cols = append(cols, line.Text())
+		}
+
+		if len(cols) == 0 {
+			return devices, ErrParseDevices
 		}
 
 		if validDeviceNo(cols) {
@@ -111,7 +118,7 @@ func getDevice(deviceName string) (*device, map[stat]uint64, error) {
 
 	data, err := os.ReadFile(dev.sysFSPath + "/stat")
 	if err != nil {
-		return nil, nil, fmt.Errorf("getDeviceStats: %w", err)
+		return dev, nil, fmt.Errorf("getDeviceStats: %w", err)
 	}
 
 	line := bufio.NewScanner(bytes.NewReader(data))

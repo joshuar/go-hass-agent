@@ -33,7 +33,7 @@ const (
 	loadAvgsWorkerID = "load_averages_sensors"
 )
 
-var ErrParseLoadAvgs = errors.New("error parsing load averages")
+var ErrParseLoadAvgs = errors.New("could not parse load averages")
 
 type loadAvgsSensorWorker struct {
 	path     string
