@@ -31,12 +31,12 @@ contents:
 overrides:
   rpm:
     depends:
-      - libxcursor
+      - libXcursor
       - libXrandr
       - mesa-libGL
       - libXi
       - libXinerama
-      - libxxf86vm
+      - libXxf86vm
       - dbus-x11
   deb:
     depends:
