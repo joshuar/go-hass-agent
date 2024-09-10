@@ -75,7 +75,7 @@ func Run(_ context.Context) error {
 	}
 
 	newPrefs, err := preferences.Load(newPrefsPath)
-	if err != nil && !errors.Is(err, preferences.ErrNoPreferences) {
+	if err != nil && !errors.Is(err, preferences.ErrNoPreferences) || newPrefs == nil {
 		return fmt.Errorf("cannot initialize new preferences: %w", err)
 	}
 
