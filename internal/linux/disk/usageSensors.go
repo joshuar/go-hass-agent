@@ -13,6 +13,11 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/linux"
 )
 
+const (
+	diskUsageSensorIcon  = "mdi:harddisk"
+	diskUsageSensorUnits = "%"
+)
+
 type diskUsageSensor struct {
 	mount *mount
 	linux.Sensor
@@ -44,9 +49,9 @@ func newDiskUsageSensor(mount *mount) *diskUsageSensor {
 
 	return &diskUsageSensor{
 		Sensor: linux.Sensor{
-			IconString:      "mdi:harddisk",
+			IconString:      diskUsageSensorIcon,
 			StateClassValue: types.StateClassTotal,
-			UnitsString:     "%",
+			UnitsString:     diskUsageSensorUnits,
 			Value:           math.Round(float64(usedPc)/0.05) * 0.05,
 		},
 		mount: mount,

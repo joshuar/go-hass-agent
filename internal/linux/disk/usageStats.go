@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 
 	"golang.org/x/sys/unix"
 
@@ -36,7 +37,10 @@ type mount struct {
 	mountpoint string
 }
 
-var validVirtualFs = []string{"tmpfs", "ramfs", "cifs", "smb", "nfs"}
+var (
+	validVirtualFs = []string{"tmpfs", "ramfs", "cifs", "smb", "nfs"}
+	mountBlocklist = []string{"/tmp/crun", "/run/netns"}
+)
 
 func (m *mount) getMountInfo() error {
 	var stats unix.Statfs_t
@@ -120,8 +124,10 @@ func getMounts() ([]*mount, error) {
 		filesystem := line.Text()
 		line.Scan()
 		opts := line.Text()
-		// If the fs is in our valid filesystems, track the mount details.
-		if slices.Contains(filesystems, filesystem) {
+		// If the fs is in our valid filesystems, It should be in the list of
+		// valid filesystems and not one of the blocked mountpoints.
+		if slices.Contains(filesystems, filesystem) &&
+			!slices.ContainsFunc(mountBlocklist, func(blockedMount string) bool { return strings.HasPrefix(mountpoint, blockedMount) }) {
 			validmount := &mount{
 				mountpoint: mountpoint,
 				attributes: make(map[string]any),
