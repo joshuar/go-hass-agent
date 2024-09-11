@@ -1,6 +1,6 @@
 module github.com/joshuar/go-hass-agent
 
-go 1.22.6
+go 1.23.1
 
 require (
 	fyne.io/fyne/v2 v2.5.1
