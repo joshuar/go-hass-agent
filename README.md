@@ -80,7 +80,7 @@
     - [Security Implications](#security-implications)
   - [MQTT Sensors and Controls](#mqtt-sensors-and-controls)
     - [Configuration](#configuration)
-    - [Custom D-BUS Controls](#custom-d-bus-controls)
+    - [Custom D-Bus Controls](#custom-d-bus-controls)
     - [Other Custom Commands](#other-custom-commands)
     - [Security Implications](#security-implications-1)
 - [⚙️ Building/Compiling Manually](#️-buildingcompiling-manually)
@@ -730,29 +730,46 @@ integration.](https://my.home-assistant.io/badges/integration.svg)](https://my.h
 
 [⬆️ Back to Top](#-table-of-contents)
 
-#### Custom D-BUS Controls
+#### Custom D-Bus Controls
 
-The agent will subscribe to the MQTT topic `gohassagent/dbus` on the configured
-MQTT broker and listens for JSON messages of the below format, which will be
-accordingly dispatched to the systems
-[D-Bus](https://www.freedesktop.org/wiki/Software/dbus/).
+When MQTT is configured, Go Hass Agent will also listen on MQTT and run
+arbitrary D-Bus commands.
 
-```json
-{
-  "bus": "session",
-  "path": "/org/cinnamon/ScreenSaver",
-  "method": "org.cinnamon.ScreenSaver.Lock",
-  "destination": "org.cinnamon.ScreenSaver",
-  "args": [
-    ""
-  ]
-}
+The agent will subscribe to the MQTT topic `gohassagent/HOSTNAME/dbuscommand`
+(where `HOSTNAME` is the short hostname of the device running Go Hass Agent)  on
+the configured MQTT broker and listens for messages with a JSON payload (shown
+below) that contains details of the D-Bus method to call. When a message is
+recieved, the method will be executed. The easiest way to use this feature is
+with the `mqtt.publish` service in Home Assistant.
+
+As an example, the following will create a notification on the device running Go
+Hass Agent (YAML format used for readability):
+
+```yaml
+service: mqtt.publish
+data:
+  qos: 0
+  topic: gohassagent/HOSTNAME/dbuscommand
+  payload: |
+    {
+      "bus": "session",
+      "path": "/org/freedesktop/Notifications",
+      "method": "org.freedesktop.Notifications.Notify",
+      "destination": "org.freedesktop.Notifications",
+      "args": [
+          "my-app-name",
+          0,
+          "my-icon",
+          "summary",
+          "body",
+          [],
+          {},
+          5000
+      ],
+      "use_session_path": false
+    }
+
 ```
-
-This can be used to trigger arbitrary d-bus commands on the system where the
-agent runs on, by using any MQTT client such as the Home Assistant
-[`mqtt.publish`](https://www.home-assistant.io/integrations/mqtt/#service-mqttpublish)
-service.
 
 [⬆️ Back to Top](#-table-of-contents)
 
