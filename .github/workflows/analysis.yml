@@ -52,7 +52,7 @@ jobs:
     - name: Install build deps
       run: mage ${MAGEARGS} preps:deps
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@v3
+      uses: github/codeql-action/init@4dd16135b69a43b6c8efb853346f8437d92d3c93 # v3.26.6
       with:
         languages: ${{ matrix.language }}
         build-mode: ${{ matrix.build-mode }}
@@ -61,7 +61,7 @@ jobs:
       name: Build
       run: go build
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v3
+      uses: github/codeql-action/analyze@4dd16135b69a43b6c8efb853346f8437d92d3c93 # v3.26.6
       with:
         category: "/language:${{matrix.language}}"
 
