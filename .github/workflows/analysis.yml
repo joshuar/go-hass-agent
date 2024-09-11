@@ -1,4 +1,4 @@
-name: "CodeQL"
+name: "Analysis"
 
 on:
   push:
@@ -17,7 +17,7 @@ env:
   TARGETPLATFORM: linux/amd64
 
 jobs:
-  analyze:
+  codeql:
     name: Analyze (${{ matrix.language }})
     runs-on: ${{ (matrix.language == 'swift' && 'macos-latest') || 'ubuntu-22.04' }}
     timeout-minutes: ${{ (matrix.language == 'swift' && 120) || 360 }}
@@ -64,3 +64,19 @@ jobs:
       uses: github/codeql-action/analyze@v3
       with:
         category: "/language:${{matrix.language}}"
+
+  nilaway:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Harden Runner
+      uses: step-security/harden-runner@5c7944e73c4c2a096b17a9cb74d65b6c2bbafbde # v1
+      with:
+        egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
+    - name: Checkout repository
+      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+      with:
+        fetch-depth: 0
+    - name: Nil panic checks
+      uses: qbaware/nilaway-action@8e71d29f098051670655958e754d21ebb7197416 # v0.0.9
+      with:
+        package-to-scan: ./...

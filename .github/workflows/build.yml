@@ -40,10 +40,12 @@ jobs:
         id: release_please
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+
   build:
     needs: check_release
     permissions:
       contents: write
+    # if: ${{ !startsWith( 'doc') }}
     runs-on: ubuntu-22.04
     strategy:
       matrix:
