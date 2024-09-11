@@ -321,8 +321,8 @@ distribution:
 - **Ubuntu/Debian**: use the `.deb`.
 - **Arch**: use the `.tar.zst`.
 
-Packages (and binaries) are available for **amd64**, **arm (v7)** and **arm64**
-architectures.
+Packages (and binaries) are available for **amd64**, **arm (v6 and v7)** and
+**arm64** architectures.
 
 For distributions not listed above, you can try the binary, or build it
 yourself from source (see development [docs](docs/README.md)). Note that while
@@ -979,8 +979,8 @@ podman build --file ./Dockerfile --platform linux/arm/v7 --tag go-hass-agent
 
 > [!NOTE]
 > By default, the container will run as a user with uid/gid 1000/1000.
-> You can pick a different uid/gid when building by adding --build-arg UID=999
-> and --build-arg GID=999 (adjusting the values as appropriate).
+> You can pick a different uid/gid when building by adding `--build-arg UID=999`
+> and `--build-arg GID=999` (adjusting the values as appropriate).
 
 [⬆️ Back to Top](#-table-of-contents)
 
