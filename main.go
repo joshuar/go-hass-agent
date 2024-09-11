@@ -6,7 +6,6 @@
 package main
 
 import (
-	"errors"
 	"log/slog"
 	"os"
 	"syscall"
@@ -20,17 +19,16 @@ import (
 
 //nolint:tagalign
 var CLI struct {
-	Run       cli.RunCmd        `cmd:"" help:"Run Go Hass Agent."`
-	Reset     cli.ResetCmd      `cmd:"" help:"Reset Go Hass Agent."`
-	Version   cli.VersionCmd    `cmd:"" help:"Show the Go Hass Agent version."`
-	Upgrade   cli.UpgradeCmd    `cmd:"" help:"Attempt to upgrade from previous version."`
-	Profile   cli.ProfileFlags  `help:"Enable profiling."`
-	Headless  *cli.HeadlessFlag `name:"terminal" help:"Run without a GUI." default:"false"`
-	AppID     string            `name:"appid" default:"${defaultAppID}" help:"Specify a custom app id (for debugging)."`
-	LogLevel  string            `name:"log-level" enum:"info,debug,trace" default:"info" help:"Set logging level."`
-	Config    cli.ConfigCmd     `cmd:"" help:"Configure Go Hass Agent."`
-	Register  cli.RegisterCmd   `cmd:"" help:"Register with Home Assistant."`
-	NoLogFile bool              `help:"Don't write to a log file."`
+	Run          cli.RunCmd           `cmd:"" help:"Run Go Hass Agent."`
+	Reset        cli.ResetCmd         `cmd:"" help:"Reset Go Hass Agent."`
+	Version      cli.VersionCmd       `cmd:"" help:"Show the Go Hass Agent version."`
+	Upgrade      cli.UpgradeCmd       `cmd:"" help:"Attempt to upgrade from previous version."`
+	ProfileFlags logging.ProfileFlags `name:"profile" help:"Set profiling flags."`
+	Headless     *cli.HeadlessFlag    `name:"terminal" help:"Run without a GUI." default:"false"`
+	AppID        string               `name:"appid" default:"${defaultAppID}" help:"Specify a custom app id (for debugging)."`
+	Config       cli.ConfigCmd        `cmd:"" help:"Configure Go Hass Agent."`
+	Register     cli.RegisterCmd      `cmd:"" help:"Register with Home Assistant."`
+	logging.Options
 }
 
 func init() {
@@ -53,16 +51,29 @@ func main() {
 	kong.Description(preferences.AppDescription)
 	ctx := kong.Parse(&CLI, kong.Bind(), kong.Vars{"defaultAppID": preferences.AppID})
 
-	err := ctx.Run(cli.CreateCtx(
-		cli.RunHeadless(bool(*CLI.Headless)),
-		cli.WithProfileFlags(CLI.Profile),
-		cli.WithAppID(CLI.AppID),
-		cli.WithLogLevel(CLI.LogLevel),
-		cli.WithLogFile(!CLI.NoLogFile),
-	))
-	if CLI.Profile != nil {
-		err = errors.Join(logging.StopProfiling(logging.ProfileFlags(CLI.Profile)), err)
+	logger := logging.New(CLI.AppID, logging.Options{LogLevel: CLI.LogLevel, NoLogFile: CLI.NoLogFile})
+
+	if CLI.ProfileFlags != nil {
+		if err := logging.StartProfiling(CLI.ProfileFlags); err != nil {
+			logger.Warn("Problem starting profiling.",
+				slog.Any("error", err))
+		}
 	}
 
-	ctx.FatalIfErrorf(err)
+	if err := ctx.Run(cli.CreateCtx(
+		cli.RunHeadless(bool(*CLI.Headless)),
+		cli.WithAppID(CLI.AppID),
+		cli.WithLogger(logger),
+	)); err != nil {
+		logger.Error("Command failed.",
+			slog.String("command", ctx.Command()),
+			slog.Any("error", err))
+	}
+
+	if CLI.ProfileFlags != nil {
+		if err := logging.StopProfiling(CLI.ProfileFlags); err != nil {
+			logger.Error("Problem stopping profiling.",
+				slog.Any("error", err))
+		}
+	}
 }

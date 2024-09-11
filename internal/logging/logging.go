@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/adrg/xdg"
 	"github.com/lmittmann/tint"
 	"github.com/mattn/go-isatty"
 
@@ -28,21 +29,34 @@ var LevelNames = map[slog.Leveler]string{
 	LevelFatal: "FATAL",
 }
 
+type Options struct {
+	LogLevel  string `name:"log-level" enum:"info,debug,trace" default:"info" help:"Set logging level."`
+	NoLogFile bool   `name:"no-log-file" help:"Don't write to a log file." default:"false"`
+}
+
 //revive:disable:flag-parameter
-func New(level string, logFile string) *slog.Logger {
+func New(appID string, options Options) *slog.Logger {
 	var (
 		logLevel slog.Level
+		logFile  string
 		handler  slog.Handler
 	)
 
 	// Set the log level.
-	switch level {
+	switch options.LogLevel {
 	case "trace":
 		logLevel = LevelTrace
 	case "debug":
 		logLevel = slog.LevelDebug
 	default:
 		logLevel = slog.LevelInfo
+	}
+
+	// Set a log file if specified.
+	if options.NoLogFile {
+		logFile = ""
+	} else {
+		logFile = filepath.Join(xdg.ConfigHome, appID, "agent.log")
 	}
 
 	// Set the slog handler
@@ -66,7 +80,6 @@ func New(level string, logFile string) *slog.Logger {
 	}
 
 	logger := slog.New(handler)
-
 	slog.SetDefault(logger)
 
 	return logger

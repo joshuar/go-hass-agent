@@ -11,9 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"path/filepath"
-
-	"github.com/adrg/xdg"
 
 	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/internal/upgrade"
@@ -26,20 +23,10 @@ func (r *UpgradeCmd) Help() string {
 }
 
 func (r *UpgradeCmd) Run(ctx *Context) error {
-	var logFile string
-
-	if ctx.NoLogFile {
-		logFile = ""
-	} else {
-		logFile = filepath.Join(xdg.ConfigHome, ctx.AppID, "upgrade.log")
-	}
-
-	logger := logging.New(ctx.LogLevel, logFile)
-
 	upgradeCtx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
 
-	upgradeCtx = logging.ToContext(upgradeCtx, logger)
+	upgradeCtx = logging.ToContext(upgradeCtx, ctx.Logger)
 
 	if err := upgrade.Run(upgradeCtx); err != nil {
 		if errors.Is(err, upgrade.ErrNoPrevConfig) {

@@ -12,33 +12,34 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/adrg/xdg"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestNew(t *testing.T) {
 	type args struct {
-		level   string
-		logFile string
+		id      string
+		options Options
 	}
 	tests := []struct {
 		want *slog.Logger
-		args args
 		name string
+		args args
 	}{
 		{
 			name: "with log file",
-			args: args{logFile: filepath.Join(t.TempDir(), "test.log")},
+			args: args{id: "go-hass-agent-test"},
 		},
 		{
 			name: "with log file and custom level",
-			args: args{level: "debug", logFile: filepath.Join(t.TempDir(), "test.log")},
+			args: args{id: "go-hass-agent-test", options: Options{LogLevel: "debug", NoLogFile: true}},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := New(tt.args.level, tt.args.logFile)
-			switch tt.args.level {
+			got := New(tt.args.id, tt.args.options)
+			switch tt.args.options.LogLevel {
 			case "debug":
 				got.Debug("Test Message")
 				slog.Debug("Via default")
@@ -46,12 +47,13 @@ func TestNew(t *testing.T) {
 				got.Info("Test Message")
 				slog.Info("Via default")
 			}
-			if tt.args.logFile != "" {
-				data, err := os.ReadFile(tt.args.logFile)
-				require.NoError(t, err)
-				assert.Contains(t, string(data), string("Test Message"))
-				assert.Contains(t, string(data), string("Via default"))
+			if tt.args.options.NoLogFile {
+				return
 			}
+			data, err := os.ReadFile(filepath.Join(xdg.ConfigHome, tt.args.id, "agent.log"))
+			require.NoError(t, err)
+			assert.Contains(t, string(data), string("Test Message"))
+			assert.Contains(t, string(data), string("Via default"))
 		})
 	}
 }

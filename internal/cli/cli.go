@@ -7,12 +7,9 @@ package cli
 
 import (
 	"embed"
-	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
-
-	"github.com/joshuar/go-hass-agent/internal/logging"
 )
 
 const (
@@ -24,11 +21,9 @@ const (
 var content embed.FS
 
 type Context struct {
-	Profile   ProfileFlags
-	AppID     string
-	LogLevel  string
-	Headless  bool
-	NoLogFile bool
+	Logger   *slog.Logger
+	AppID    string
+	Headless bool
 }
 
 type CtxOption func(*Context)
@@ -48,39 +43,16 @@ func RunHeadless(opt bool) CtxOption {
 	}
 }
 
-func WithProfileFlags(flags ProfileFlags) CtxOption {
-	return func(ctx *Context) {
-		ctx.Profile = flags
-	}
-}
-
 func WithAppID(id string) CtxOption {
 	return func(ctx *Context) {
 		ctx.AppID = id
 	}
 }
 
-func WithLogLevel(level string) CtxOption {
+func WithLogger(logger *slog.Logger) CtxOption {
 	return func(ctx *Context) {
-		ctx.LogLevel = level
+		ctx.Logger = logger
 	}
-}
-
-func WithLogFile(opt bool) CtxOption {
-	return func(ctx *Context) {
-		ctx.NoLogFile = opt
-	}
-}
-
-type ProfileFlags logging.ProfileFlags
-
-func (d ProfileFlags) AfterApply() error {
-	err := logging.StartProfiling(logging.ProfileFlags(d))
-	if err != nil {
-		return fmt.Errorf("could not start profiling: %w", err)
-	}
-
-	return nil
 }
 
 type HeadlessFlag bool
