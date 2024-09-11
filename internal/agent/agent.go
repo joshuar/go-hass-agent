@@ -148,9 +148,15 @@ func (agent *Agent) Run(ctx context.Context, trk Tracker, reg Registry) error {
 		regWait sync.WaitGroup
 	)
 
+	ctx, cancelFunc := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-ctx.Done()
+		cancelFunc()
+	}()
+
 	agent.hass = hass.NewClient(ctx, trk, reg)
 
-	agent.handleSignals()
+	// agent.handleSignals()
 
 	regWait.Add(1)
 
@@ -244,18 +250,6 @@ func (agent *Agent) Register(ctx context.Context, trk Tracker) {
 
 	agent.ui.Run(agent, agent.done)
 	wg.Wait()
-}
-
-// handleSignals will handle Ctrl-C of the agent.
-func (agent *Agent) handleSignals() {
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-
-	go func() {
-		defer close(agent.done)
-		<-c
-		agent.logger.Debug("Ctrl-C pressed.")
-	}()
 }
 
 // Stop will close the agent's done channel which indicates to any goroutines it
