@@ -147,5 +147,5 @@ require (
 	golang.org/x/image v0.18.0 // indirect
 	golang.org/x/mobile v0.0.0-20231127183840-76ac6878050a // indirect
 	golang.org/x/net v0.28.0 // indirect
-	golang.org/x/sys v0.24.0
+	golang.org/x/sys v0.25.0
 )
