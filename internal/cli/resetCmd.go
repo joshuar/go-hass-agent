@@ -11,9 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"path/filepath"
-
-	"github.com/adrg/xdg"
 
 	"github.com/joshuar/go-hass-agent/internal/agent"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/registry"
@@ -31,16 +28,7 @@ func (r *ResetCmd) Run(ctx *Context) error {
 	agentCtx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
 
-	var logFile string
-
-	if ctx.NoLogFile {
-		logFile = ""
-	} else {
-		logFile = filepath.Join(xdg.ConfigHome, ctx.AppID, "agent.log")
-	}
-
-	logger := logging.New(ctx.LogLevel, logFile)
-	agentCtx = logging.ToContext(agentCtx, logger)
+	agentCtx = logging.ToContext(agentCtx, ctx.Logger)
 
 	var errs error
 
@@ -63,9 +51,9 @@ func (r *ResetCmd) Run(ctx *Context) error {
 		errs = errors.Join(fmt.Errorf("preferences reset failed: %w", err))
 	}
 	// Reset the log.
-	if err := logging.Reset(logFile); err != nil {
-		errs = errors.Join(fmt.Errorf("logging reset failed: %w", err))
-	}
+	// if err := logging.Reset(logFile); err != nil {
+	// 	errs = errors.Join(fmt.Errorf("logging reset failed: %w", err))
+	// }
 
 	if errs != nil {
 		slog.Warn("Reset completed with errors", slog.Any("errors", errs))

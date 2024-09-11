@@ -9,9 +9,6 @@ package cli
 import (
 	"context"
 	"fmt"
-	"path/filepath"
-
-	"github.com/adrg/xdg"
 
 	"github.com/joshuar/go-hass-agent/internal/agent"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
@@ -29,16 +26,7 @@ func (r *RunCmd) Run(ctx *Context) error {
 	agentCtx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
 
-	var logFile string
-
-	if ctx.NoLogFile {
-		logFile = ""
-	} else {
-		logFile = filepath.Join(xdg.ConfigHome, ctx.AppID, "agent.log")
-	}
-
-	logger := logging.New(ctx.LogLevel, logFile)
-	agentCtx = logging.ToContext(agentCtx, logger)
+	agentCtx = logging.ToContext(agentCtx, ctx.Logger)
 
 	gohassagent, err := agent.NewAgent(agentCtx, ctx.AppID,
 		agent.Headless(ctx.Headless))
