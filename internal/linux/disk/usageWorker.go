@@ -9,12 +9,10 @@ package disk
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"time"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
-	"github.com/joshuar/go-hass-agent/internal/logging"
 )
 
 const (
@@ -24,16 +22,14 @@ const (
 	usageWorkerID = "disk_usage_sensors"
 )
 
-type usageWorker struct {
-	logger *slog.Logger
-}
+type usageWorker struct{}
 
 func (w *usageWorker) Interval() time.Duration { return usageUpdateInterval }
 
 func (w *usageWorker) Jitter() time.Duration { return usageUpdateJitter }
 
-func (w *usageWorker) Sensors(_ context.Context, _ time.Duration) ([]sensor.Details, error) {
-	mounts, err := getMounts()
+func (w *usageWorker) Sensors(ctx context.Context, _ time.Duration) ([]sensor.Details, error) {
+	mounts, err := getMounts(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not get mount points: %w", err)
 	}
@@ -47,11 +43,9 @@ func (w *usageWorker) Sensors(_ context.Context, _ time.Duration) ([]sensor.Deta
 	return sensors, nil
 }
 
-func NewUsageWorker(ctx context.Context) (*linux.SensorWorker, error) {
+func NewUsageWorker(_ context.Context) (*linux.SensorWorker, error) {
 	return &linux.SensorWorker{
-			Value: &usageWorker{
-				logger: logging.FromContext(ctx).With(slog.String("worker", usageWorkerID)),
-			},
+			Value:    &usageWorker{},
 			WorkerID: usageWorkerID,
 		},
 		nil

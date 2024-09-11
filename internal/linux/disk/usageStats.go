@@ -8,6 +8,7 @@ package disk
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"log/slog"
 	"os"
@@ -18,6 +19,7 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/logging"
 )
 
 const (
@@ -93,7 +95,7 @@ func getFilesystems() ([]string, error) {
 	return filesystems, nil
 }
 
-func getMounts() ([]*mount, error) {
+func getMounts(ctx context.Context) ([]*mount, error) {
 	// Get valid filesystems.
 	filesystems, err := getFilesystems()
 	if err != nil {
@@ -105,8 +107,6 @@ func getMounts() ([]*mount, error) {
 	if err != nil {
 		return nil, fmt.Errorf("getMounts: %w", err)
 	}
-
-	defer data.Close()
 
 	var mounts []*mount
 	// Scan the file.
@@ -137,11 +137,19 @@ func getMounts() ([]*mount, error) {
 			validmount.attributes[mountAttrOpts] = opts
 
 			if err := validmount.getMountInfo(); err != nil {
-				slog.Debug("Error getting mount info.", slog.Any("error", err))
+				logging.FromContext(ctx).
+					With(slog.String("worker", usageWorkerID)).
+					Debug("Error getting mount info.", slog.Any("error", err))
 			} else {
 				mounts = append(mounts, validmount)
 			}
 		}
+	}
+
+	if err := data.Close(); err != nil {
+		logging.FromContext(ctx).
+			With(slog.String("worker", usageWorkerID)).
+			Debug("Failed to close mounts file.", slog.Any("error", err))
 	}
 
 	return mounts, nil
