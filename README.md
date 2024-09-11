@@ -406,7 +406,8 @@ If you want to run Go Hass Agent as a service on a headless machine, see the
 There is rough support for running Go Hass Agent within a container. Pre-built
 images [are
 available](https://github.com/joshuar/go-hass-agent/pkgs/container/go-hass-agent)
-for armv6/v7, arm64 and amd64 architectures.
+for armv6/v7, arm64 and amd64 architectures. The image is based on the latest
+stable Alpine Linux release.
 
 To register the agent running in a container, run the following:
 
@@ -456,11 +457,6 @@ reported will be severely limited without them:
     your user.
 - `--device /dev/video0:/dev/video0`
   - Allows webcam control (when configured with MQTT).
-
-> [!NOTE]
-> By default, the container will run as a user with uid/gid 1000/1000.
-> You can pick a different uid/gid when building by adding --build-arg UID=999
-> and --build-arg GID=999 (adjusting the values as appropriate).
 
 ### ♻️ Regular Usage
 
@@ -924,12 +920,12 @@ invocation above.
 ### Cross Compilation
 
 Go Hass Agent can also be built for **arm (v6/v7)** and **arm64** with
-cross-compilation. **This is only supported on Ubuntu as the host for
-cross-compiles**. To build for a different architecture, set the `BUILDPLATFORM`
-environment variable:
+cross-compilation. **This is only supported on Ubuntu or Alpine Linux as the
+host for cross-compiles**. To build for a different architecture, set the
+`TARGETPLATFORM` environment variable:
 
 ```shell
-export BUILDPLATFORM=linux/arm64 # or linux/arm/v6 or linux/arm/v7
+export TARGETPLATFORM=linux/arm64 # or linux/arm/v6 or linux/arm/v7
 ```
 
 Install the target architecture libraries for cross-compilation:
@@ -969,7 +965,7 @@ A Dockerfile that you can use to build an image can be found [here](../../Docker
 You can build an image with a command like the following (using Podman):
 
 ```shell
-podman build --file ./Dockerfile --network host --tag go-hass-agent
+podman build --file ./Dockerfile --tag go-hass-agent
 ```
 
 As with building a binary,
@@ -977,9 +973,14 @@ As with building a binary,
 is supported:
 
 ```shell
-# use eitherlinux/arm64, linux/arm/v7
-podman build --file ./Dockerfile --build-arg BUILDPLATFORM=linux/arm64 --build-arg TARGETARCH=arm64 --network host --tag go-hass-agent
+# use either linux/arm64, linux/arm/v7 or linux/arm/v6
+podman build --file ./Dockerfile --platform linux/arm/v7 --tag go-hass-agent
 ```
+
+> [!NOTE]
+> By default, the container will run as a user with uid/gid 1000/1000.
+> You can pick a different uid/gid when building by adding --build-arg UID=999
+> and --build-arg GID=999 (adjusting the values as appropriate).
 
 [⬆️ Back to Top](#-table-of-contents)
 
