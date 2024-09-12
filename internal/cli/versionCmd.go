@@ -15,7 +15,7 @@ import (
 
 type VersionCmd struct{}
 
-func (r *VersionCmd) Run(_ *Context) error {
+func (r *VersionCmd) Run(_ *CmdOpts) error {
 	fmt.Fprintf(os.Stdout, "%s: %s\n", preferences.AppName, preferences.AppVersion)
 
 	return nil

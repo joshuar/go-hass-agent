@@ -39,7 +39,7 @@ linters:
     - forbidigo
     # - forcetypeassert # This check can be enabled through errcheck with check-type-assertions.
     - funlen
-    - gci
+    # - gci
     # - ginkgolinter
     - gocheckcompilerdirectives
     # - gochecknoglobals

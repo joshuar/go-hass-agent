@@ -6,6 +6,7 @@
 package registry
 
 import (
+	"context"
 	"encoding/gob"
 	"errors"
 	"fmt"
@@ -14,6 +15,10 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+
+	"github.com/adrg/xdg"
+
+	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
 const (
@@ -121,14 +126,17 @@ func (g *gobRegistry) SetRegistered(id string, value bool) error {
 }
 
 //revive:disable:unexported-return
-func Load(path string) (*gobRegistry, error) {
+func Load(ctx context.Context) (*gobRegistry, error) {
+	appID := preferences.AppIDFromContext(ctx)
+	path := filepath.Join(xdg.ConfigHome, appID, "sensorRegistry", registryFile)
+
 	reg := &gobRegistry{
 		sensors: make(map[string]metadata),
 		mu:      sync.Mutex{},
-		file:    filepath.Join(path, registryFile),
+		file:    path,
 	}
 
-	if err := checkPath(path); err != nil {
+	if err := checkPath(filepath.Dir(reg.file)); err != nil {
 		return nil, fmt.Errorf("could not load registry: %w", err)
 	}
 

@@ -6,9 +6,15 @@
 package registry
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
+
+	"github.com/adrg/xdg"
+
+	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
 //go:generate stringer -type=state -output state_generated.go -linecomment
@@ -29,7 +35,10 @@ type metadata struct {
 	Disabled   bool `json:"disabled"`
 }
 
-func Reset(path string) error {
+func Reset(ctx context.Context) error {
+	appID := preferences.AppIDFromContext(ctx)
+	path := filepath.Join(xdg.ConfigHome, appID, "sensorRegistry")
+
 	_, err := os.Stat(path)
 	if os.IsNotExist(err) {
 		return fmt.Errorf("registry not found: %w", err)

@@ -6,10 +6,14 @@
 package cli
 
 import (
+	"context"
 	"embed"
 	"log/slog"
 	"os"
 	"path/filepath"
+
+	"github.com/joshuar/go-hass-agent/internal/logging"
+	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
 const (
@@ -20,16 +24,16 @@ const (
 //go:embed assets
 var content embed.FS
 
-type Context struct {
+type CmdOpts struct {
 	Logger   *slog.Logger
 	AppID    string
 	Headless bool
 }
 
-type CtxOption func(*Context)
+type Option func(*CmdOpts)
 
-func CreateCtx(options ...CtxOption) *Context {
-	ctx := &Context{}
+func CreateCtx(options ...Option) *CmdOpts {
+	ctx := &CmdOpts{}
 	for _, option := range options {
 		option(ctx)
 	}
@@ -37,20 +41,20 @@ func CreateCtx(options ...CtxOption) *Context {
 	return ctx
 }
 
-func RunHeadless(opt bool) CtxOption {
-	return func(ctx *Context) {
+func RunHeadless(opt bool) Option {
+	return func(ctx *CmdOpts) {
 		ctx.Headless = opt
 	}
 }
 
-func WithAppID(id string) CtxOption {
-	return func(ctx *Context) {
+func WithAppID(id string) Option {
+	return func(ctx *CmdOpts) {
 		ctx.AppID = id
 	}
 }
 
-func WithLogger(logger *slog.Logger) CtxOption {
-	return func(ctx *Context) {
+func WithLogger(logger *slog.Logger) Option {
+	return func(ctx *CmdOpts) {
 		ctx.Logger = logger
 	}
 }
@@ -65,6 +69,15 @@ func (f *HeadlessFlag) AfterApply() error {
 	}
 
 	return nil
+}
+
+func newContext(opts *CmdOpts) (context.Context, context.CancelFunc) {
+	ctx, cancelFunc := context.WithCancel(context.Background())
+
+	ctx = logging.ToContext(ctx, opts.Logger)
+	ctx = preferences.AppIDToContext(ctx, opts.AppID)
+
+	return ctx, cancelFunc
 }
 
 func showHelpTxt(file string) string {

@@ -56,7 +56,7 @@ type oldPreferences struct {
 
 //nolint:cyclop
 //revive:disable:function-length
-func Run(_ context.Context) error {
+func Run(ctx context.Context) error {
 	// If there is no old preferences directory, exit.
 	if _, err := os.Stat(oldPrefsPath); errors.Is(err, fs.ErrNotExist) {
 		return errors.Join(ErrNoPrevConfig, err)
@@ -74,7 +74,7 @@ func Run(_ context.Context) error {
 		return fmt.Errorf("cannot read old preferences: %w", err)
 	}
 
-	newPrefs, err := preferences.Load(newPrefsPath)
+	newPrefs, err := preferences.Load(ctx)
 	if err != nil && !errors.Is(err, preferences.ErrNoPreferences) || newPrefs == nil {
 		return fmt.Errorf("cannot initialize new preferences: %w", err)
 	}

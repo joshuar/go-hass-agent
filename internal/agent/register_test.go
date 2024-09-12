@@ -58,7 +58,6 @@ func TestAgent_saveRegistration(t *testing.T) {
 		done          chan struct{}
 		prefs         *preferences.Preferences
 		logger        *slog.Logger
-		id            string
 		headless      bool
 		forceRegister bool
 	}
@@ -112,7 +111,6 @@ func TestAgent_saveRegistration(t *testing.T) {
 				done:          tt.fields.done,
 				prefs:         tt.fields.prefs,
 				logger:        tt.fields.logger,
-				id:            tt.fields.id,
 				headless:      tt.fields.headless,
 				forceRegister: tt.fields.forceRegister,
 			}
@@ -191,7 +189,6 @@ func TestAgent_checkRegistration(t *testing.T) {
 				done:          tt.fields.done,
 				prefs:         tt.fields.prefs,
 				logger:        tt.fields.logger,
-				id:            tt.fields.id,
 				headless:      tt.fields.headless,
 				forceRegister: tt.fields.forceRegister,
 			}

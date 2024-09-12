@@ -8,9 +8,6 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"path/filepath"
-
-	"github.com/adrg/xdg"
 
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
@@ -18,16 +15,16 @@ import (
 var ErrMQTTServerRequired = errors.New("mqtt-server not specified")
 
 type ConfigCmd struct {
-	Path       string `kong:"hidden"`
 	MQTTConfig `kong:"help='Set MQTT options.'"`
 }
 
 type MQTTConfig preferences.MQTT
 
-func (r *ConfigCmd) Run(ctx *Context) error {
-	r.Path = filepath.Join(xdg.ConfigHome, ctx.AppID)
+func (r *ConfigCmd) Run(opts *CmdOpts) error {
+	agentCtx, cancelFunc := newContext(opts)
+	defer cancelFunc()
 
-	prefs, err := preferences.Load(r.Path)
+	prefs, err := preferences.Load(agentCtx)
 	if err != nil {
 		return fmt.Errorf("config: load preferences: %w", err)
 	}

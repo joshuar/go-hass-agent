@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/adrg/xdg"
 	"github.com/pelletier/go-toml/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -20,6 +21,9 @@ import (
 )
 
 func TestRun(t *testing.T) {
+	appID := "go-hass-agent-test"
+	ctx := preferences.AppIDToContext(context.TODO(), appID)
+
 	// Save the original value of paths for restoration after each test.
 	oldPathOrig := oldPrefsPath
 	oldRegistryPathOrig := oldRegistryPath
@@ -34,23 +38,25 @@ func TestRun(t *testing.T) {
 	}{
 		{
 			name: "with mqtt",
-			args: args{path: "testing/data/with-mqtt"},
+			args: args{in0: ctx, path: "testing/data/with-mqtt"},
 		},
 		{
 			name: "without mqtt",
-			args: args{path: "testing/data/without-mqtt"},
+			args: args{in0: ctx, path: "testing/data/without-mqtt"},
 		},
 		{
 			name:    "no previous preferences",
-			args:    args{path: "testing/data/nonexistent"},
+			args:    args{in0: ctx, path: "testing/data/nonexistent"},
 			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		oldPrefsPath = tt.args.path
 		oldRegistryPath = filepath.Join(oldPrefsPath, "sensorRegistry")
+
 		newPrefsPath = t.TempDir()
-		newRegistryPath = filepath.Join(newPrefsPath, "sensorRegistry")
+		xdg.ConfigHome = newPrefsPath
+		newRegistryPath = filepath.Join(newPrefsPath, appID, "sensorRegistry")
 		t.Run(tt.name, func(t *testing.T) {
 			if err := Run(tt.args.in0); (err != nil) != tt.wantErr {
 				t.Errorf("Run() error = %v, wantErr %v", err, tt.wantErr)
@@ -67,7 +73,7 @@ func TestRun(t *testing.T) {
 		err = toml.Unmarshal(oldData, &oldPrefs)
 		require.NoError(t, err)
 		// Read the new preferences file.
-		newPrefs, err := preferences.Load(newPrefsPath)
+		newPrefs, err := preferences.Load(tt.args.in0)
 		require.NoError(t, err)
 
 		// Assert registration status have been preserved.

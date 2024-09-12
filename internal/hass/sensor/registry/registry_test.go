@@ -7,12 +7,21 @@
 package registry
 
 import (
+	"context"
 	"path/filepath"
 	"testing"
+
+	"github.com/adrg/xdg"
+
+	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
 func TestReset(t *testing.T) {
-	mockReg := newMockReg(t)
+	appID := "go-hass-agent-test"
+	xdg.ConfigHome = t.TempDir()
+	ctx := preferences.AppIDToContext(context.TODO(), appID)
+
+	mockReg := newMockReg(ctx, t)
 
 	type args struct {
 		path string
@@ -34,7 +43,7 @@ func TestReset(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := Reset(tt.args.path); (err != nil) != tt.wantErr {
+			if err := Reset(ctx); (err != nil) != tt.wantErr {
 				t.Errorf("Reset() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

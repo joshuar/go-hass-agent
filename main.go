@@ -17,7 +17,6 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
-//nolint:tagalign
 var CLI struct {
 	Run          cli.RunCmd           `cmd:"" help:"Run Go Hass Agent."`
 	Reset        cli.ResetCmd         `cmd:"" help:"Reset Go Hass Agent."`

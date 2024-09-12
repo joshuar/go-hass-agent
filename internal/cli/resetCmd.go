@@ -7,7 +7,6 @@
 package cli
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -24,16 +23,14 @@ func (r *ResetCmd) Help() string {
 	return showHelpTxt("reset-help")
 }
 
-func (r *ResetCmd) Run(ctx *Context) error {
-	agentCtx, cancelFunc := context.WithCancel(context.Background())
+func (r *ResetCmd) Run(opts *CmdOpts) error {
+	agentCtx, cancelFunc := newContext(opts)
 	defer cancelFunc()
-
-	agentCtx = logging.ToContext(agentCtx, ctx.Logger)
 
 	var errs error
 
-	gohassagent, err := agent.NewAgent(agentCtx, ctx.AppID,
-		agent.Headless(ctx.Headless))
+	gohassagent, err := agent.NewAgent(agentCtx,
+		agent.Headless(opts.Headless))
 	if err != nil {
 		errs = errors.Join(errs, fmt.Errorf("failed to run reset command: %w", err))
 	}
@@ -43,17 +40,17 @@ func (r *ResetCmd) Run(ctx *Context) error {
 		errs = errors.Join(fmt.Errorf("agent reset failed: %w", err))
 	}
 	// Reset registry.
-	if err := registry.Reset(gohassagent.GetRegistryPath()); err != nil {
+	if err := registry.Reset(agentCtx); err != nil {
 		errs = errors.Join(fmt.Errorf("registry reset failed: %w", err))
 	}
 	// Reset preferences.
-	if err := preferences.Reset(gohassagent.GetPreferencesPath()); err != nil {
+	if err := preferences.Reset(agentCtx); err != nil {
 		errs = errors.Join(fmt.Errorf("preferences reset failed: %w", err))
 	}
 	// Reset the log.
-	// if err := logging.Reset(logFile); err != nil {
-	// 	errs = errors.Join(fmt.Errorf("logging reset failed: %w", err))
-	// }
+	if err := logging.Reset(agentCtx); err != nil {
+		errs = errors.Join(fmt.Errorf("logging reset failed: %w", err))
+	}
 
 	if errs != nil {
 		slog.Warn("Reset completed with errors", slog.Any("errors", errs))

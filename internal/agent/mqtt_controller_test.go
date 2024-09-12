@@ -7,6 +7,7 @@
 package agent
 
 import (
+	"context"
 	"log/slog"
 	"path/filepath"
 	"testing"
@@ -24,7 +25,10 @@ func TestAgent_newMQTTDevice(t *testing.T) {
 
 	prefs := preferences.DefaultPreferences(filepath.Join(t.TempDir(), "test.toml"))
 
-	identifiers := []string{"go-hass-agent-test", prefs.Device.Name, prefs.Device.ID}
+	appID := "go-hass-agent-test"
+	ctx := preferences.AppIDToContext(context.TODO(), appID)
+
+	identifiers := []string{appID, prefs.Device.Name, prefs.Device.ID}
 
 	type fields struct {
 		ui            UI
@@ -57,11 +61,10 @@ func TestAgent_newMQTTDevice(t *testing.T) {
 				done:          tt.fields.done,
 				prefs:         tt.fields.prefs,
 				logger:        tt.fields.logger,
-				id:            tt.fields.id,
 				headless:      tt.fields.headless,
 				forceRegister: tt.fields.forceRegister,
 			}
-			got := agent.newMQTTDevice()
+			got := agent.newMQTTDevice(ctx)
 			// Assert the MQTT device name is the device hostname.
 			assert.Equal(t, hostname, got.Name)
 			// Assert the MQTT device identifiers are the expected values.
