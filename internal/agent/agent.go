@@ -5,7 +5,7 @@
 
 // revive:disable:unused-receiver
 //
-//go:generate moq -out agent_mocks_test.go . UI Registry Tracker SensorController MQTTController Worker
+//go:generate moq -out agent_mocks_test.go . UI SensorController MQTTController Worker
 package agent
 
 import (
@@ -23,7 +23,6 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/agent/ui"
 	"github.com/joshuar/go-hass-agent/internal/hass"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
@@ -41,20 +40,6 @@ type UI interface {
 	DisplayTrayIcon(ctx context.Context, agent ui.Agent, client ui.HassClient, doneCh chan struct{})
 	DisplayRegistrationWindow(prefs *preferences.Preferences, doneCh chan struct{}) chan struct{}
 	Run(agent ui.Agent, doneCh chan struct{})
-}
-
-type Registry interface {
-	SetDisabled(id string, state bool) error
-	SetRegistered(id string, state bool) error
-	IsDisabled(id string) bool
-	IsRegistered(id string) bool
-}
-
-type Tracker interface {
-	SensorList() []string
-	Add(details sensor.Details) error
-	Get(key string) (sensor.Details, error)
-	Reset()
 }
 
 // Agent holds the options of the running agent, the UI object and a channel for
@@ -137,10 +122,11 @@ func ForceRegister(value bool) Option {
 // publish it to Home Assistant.
 //
 //revive:disable:function-length
-func (agent *Agent) Run(ctx context.Context, trk Tracker, reg Registry) error {
+func (agent *Agent) Run(ctx context.Context) error {
 	var (
 		wg      sync.WaitGroup
 		regWait sync.WaitGroup
+		err     error
 	)
 
 	ctx, cancelFunc := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
@@ -149,16 +135,17 @@ func (agent *Agent) Run(ctx context.Context, trk Tracker, reg Registry) error {
 		cancelFunc()
 	}()
 
-	agent.hass = hass.NewClient(ctx, trk, reg)
-
-	// agent.handleSignals()
+	agent.hass, err = hass.NewClient(ctx)
+	if err != nil {
+		return fmt.Errorf("could not start hass client: %w", err)
+	}
 
 	regWait.Add(1)
 
 	go func() {
 		defer regWait.Done()
 
-		if err := agent.checkRegistration(ctx, trk); err != nil {
+		if err := agent.checkRegistration(ctx); err != nil {
 			agent.logger.Log(ctx, logging.LevelFatal, "Error checking registration status.", slog.Any("error", err))
 			close(agent.done)
 		}
@@ -228,7 +215,7 @@ func (agent *Agent) Run(ctx context.Context, trk Tracker, reg Registry) error {
 	return nil
 }
 
-func (agent *Agent) Register(ctx context.Context, trk Tracker) {
+func (agent *Agent) Register(ctx context.Context) {
 	var wg sync.WaitGroup
 
 	wg.Add(1)
@@ -236,7 +223,7 @@ func (agent *Agent) Register(ctx context.Context, trk Tracker) {
 	go func() {
 		defer wg.Done()
 
-		if err := agent.checkRegistration(ctx, trk); err != nil {
+		if err := agent.checkRegistration(ctx); err != nil {
 			agent.logger.Log(ctx, logging.LevelFatal, "Error checking registration status", slog.Any("error", err))
 		}
 
