@@ -69,7 +69,7 @@ func (agent *Agent) setupControllers(ctx context.Context) []any {
 	// MQTT functionality for some controllers.
 	prefs := agent.GetMQTTPreferences()
 	if prefs != nil && prefs.IsMQTTEnabled() {
-		mqttDevice = agent.newMQTTDevice()
+		mqttDevice = agent.newMQTTDevice(ctx)
 		// Create an MQTT commands controller.
 		mqttCmdController := agent.newMQTTController(ctx, mqttDevice)
 		if mqttCmdController != nil {

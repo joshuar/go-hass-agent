@@ -8,6 +8,7 @@
 package preferences
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -15,6 +16,7 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/adrg/xdg"
 	"github.com/pelletier/go-toml/v2"
 
 	mqtthass "github.com/joshuar/go-hass-anything/v11/pkg/hass"
@@ -108,8 +110,10 @@ func (p *Preferences) GetMQTTPreferences() *MQTT {
 
 // Load will retrieve the current preferences from the preference file on disk.
 // If there is a problem during retrieval, an error will be returned.
-func Load(path string) (*Preferences, error) {
-	file := filepath.Join(path, preferencesFile)
+func Load(ctx context.Context) (*Preferences, error) {
+	appID := AppIDFromContext(ctx)
+
+	file := filepath.Join(xdg.ConfigHome, appID, preferencesFile)
 	prefs := DefaultPreferences(file)
 
 	b, err := os.ReadFile(prefs.file)
@@ -125,9 +129,10 @@ func Load(path string) (*Preferences, error) {
 	return prefs, nil
 }
 
-// Reset will remove the preferences directory.
-func Reset(path string) error {
-	file := filepath.Join(path, preferencesFile)
+// Reset will remove the preferences file.
+func Reset(ctx context.Context) error {
+	appID := AppIDFromContext(ctx)
+	file := filepath.Join(xdg.ConfigHome, appID, preferencesFile)
 
 	_, err := os.Stat(file)
 	if os.IsNotExist(err) {

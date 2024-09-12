@@ -147,7 +147,7 @@ func Benchmark_cpuFreqWorker_Sensors(b *testing.B) {
 
 	for _, v := range runs {
 		var cpus []string
-		for i := range len(runs) {
+		for i := range runs {
 			cpus = append(cpus, "cpu"+strconv.Itoa(i))
 		}
 		b.Run(fmt.Sprintf("num cpus %d", v), func(b *testing.B) {

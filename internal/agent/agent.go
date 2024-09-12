@@ -15,12 +15,9 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"sync"
 	"syscall"
 	"time"
-
-	"github.com/adrg/xdg"
 
 	fyneui "github.com/joshuar/go-hass-agent/internal/agent/ui/fyneUI"
 
@@ -68,7 +65,6 @@ type Agent struct {
 	done          chan struct{}
 	prefs         *preferences.Preferences
 	logger        *slog.Logger
-	id            string
 	headless      bool
 	forceRegister bool
 }
@@ -77,20 +73,19 @@ type Agent struct {
 type Option func(*Agent)
 
 // newDefaultAgent returns an agent with default options.
-func newDefaultAgent(ctx context.Context, id string) *Agent {
+func newDefaultAgent(ctx context.Context) *Agent {
 	return &Agent{
 		done:   make(chan struct{}),
-		id:     id,
 		logger: logging.FromContext(ctx),
 	}
 }
 
 // NewAgent creates a new agent with the options specified.
-func NewAgent(ctx context.Context, id string, options ...Option) (*Agent, error) {
-	agent := newDefaultAgent(ctx, id)
+func NewAgent(ctx context.Context, options ...Option) (*Agent, error) {
+	agent := newDefaultAgent(ctx)
 
 	// Load the agent preferences.
-	prefs, err := preferences.Load(agent.GetPreferencesPath())
+	prefs, err := preferences.Load(ctx)
 	if err != nil && !errors.Is(err, preferences.ErrNoPreferences) {
 		return nil, fmt.Errorf("could not create agent: %w", err)
 	}
@@ -306,20 +301,4 @@ func (agent *Agent) SaveMQTTPreferences(prefs *preferences.MQTT) error {
 
 func (agent *Agent) GetRestAPIURL() string {
 	return agent.prefs.RestAPIURL()
-}
-
-func (agent *Agent) GetRegistryPath() string {
-	if agent != nil {
-		return filepath.Join(xdg.ConfigHome, agent.id, "sensorRegistry")
-	}
-
-	return filepath.Join(xdg.ConfigHome, preferences.AppID, "sensorRegistry")
-}
-
-func (agent *Agent) GetPreferencesPath() string {
-	if agent != nil {
-		return filepath.Join(xdg.ConfigHome, agent.id)
-	}
-
-	return filepath.Join(xdg.ConfigHome, preferences.AppID)
 }

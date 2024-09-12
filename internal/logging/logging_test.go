@@ -6,6 +6,7 @@
 package logging
 
 import (
+	"context"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -15,6 +16,8 @@ import (
 	"github.com/adrg/xdg"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
 func TestNew(t *testing.T) {
@@ -94,9 +97,16 @@ func Test_openLogFile(t *testing.T) {
 }
 
 func TestReset(t *testing.T) {
-	deleteableFile := filepath.Join(t.TempDir(), "test.log")
-	err := os.WriteFile(deleteableFile, []byte(`test`), 0o600)
+	xdg.ConfigHome = t.TempDir()
+	appID := "go-hass-agent-test"
+	deleteableFile := filepath.Join(xdg.ConfigHome, appID, logFileName)
+	fh, err := openLogFile(deleteableFile)
 	require.NoError(t, err)
+	require.NoError(t, fh.Close())
+	err = os.WriteFile(deleteableFile, []byte(`test`), 0o600)
+	require.NoError(t, err)
+
+	ctx := preferences.AppIDToContext(context.TODO(), appID)
 
 	type args struct {
 		file string
@@ -116,7 +126,7 @@ func TestReset(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := Reset(tt.args.file); (err != nil) != tt.wantErr {
+			if err := Reset(ctx); (err != nil) != tt.wantErr {
 				t.Errorf("Reset() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			if tt.args.file != "" {

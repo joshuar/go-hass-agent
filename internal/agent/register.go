@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/url"
-	"path/filepath"
 
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/registry"
@@ -82,7 +81,7 @@ func (agent *Agent) checkRegistration(ctx context.Context, trk Tracker) error {
 	if agent.forceRegister {
 		trk.Reset()
 
-		if err := registry.Reset(filepath.Dir(agent.GetRegistryPath())); err != nil {
+		if err := registry.Reset(ctx); err != nil {
 			agent.logger.Warn("Problem resetting registry.", slog.Any("error", err))
 		}
 	}

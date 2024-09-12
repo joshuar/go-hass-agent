@@ -30,7 +30,9 @@ func (agent *Agent) newMQTTController(ctx context.Context, mqttDevice *mqtthass.
 		return nil
 	}
 
-	commandsFile := filepath.Join(xdg.ConfigHome, agent.id, "commands.toml")
+	appID := preferences.AppIDFromContext(ctx)
+
+	commandsFile := filepath.Join(xdg.ConfigHome, appID, "commands.toml")
 
 	commandController, err := commands.NewCommandsController(ctx, commandsFile, mqttDevice)
 	if err != nil {
@@ -94,7 +96,7 @@ func (agent *Agent) runMQTTWorkers(ctx context.Context, controllers ...MQTTContr
 }
 
 func (agent *Agent) resetMQTTControllers(ctx context.Context) error {
-	mqttDevice := agent.newMQTTDevice()
+	mqttDevice := agent.newMQTTDevice(ctx)
 
 	prefs := agent.prefs.GetMQTTPreferences()
 	if prefs == nil {
@@ -125,7 +127,9 @@ func (agent *Agent) resetMQTTControllers(ctx context.Context) error {
 	return nil
 }
 
-func (agent *Agent) newMQTTDevice() *mqtthass.Device {
+func (agent *Agent) newMQTTDevice(ctx context.Context) *mqtthass.Device {
+	appID := preferences.AppIDFromContext(ctx)
+
 	// Retrieve the hardware model and manufacturer.
 	model, manufacturer, err := device.GetHWProductInfo()
 	if err != nil {
@@ -145,6 +149,6 @@ func (agent *Agent) newMQTTDevice() *mqtthass.Device {
 		SWVersion:    preferences.AppVersion,
 		Manufacturer: manufacturer,
 		Model:        model,
-		Identifiers:  []string{agent.id, deviceName, deviceID},
+		Identifiers:  []string{appID, deviceName, deviceID},
 	}
 }

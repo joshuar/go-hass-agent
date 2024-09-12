@@ -8,12 +8,14 @@
 package preferences
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"reflect"
 	"sync"
 	"testing"
 
+	"github.com/adrg/xdg"
 	"github.com/stretchr/testify/require"
 )
 
@@ -264,11 +266,20 @@ func TestPreferences_GetMQTTPreferences(t *testing.T) {
 }
 
 func TestLoad(t *testing.T) {
-	noFile := filepath.Join(t.TempDir(), preferencesFile)
-	invalidFile := filepath.Join(t.TempDir(), preferencesFile)
-	err := os.WriteFile(invalidFile, []byte(`invalid`), 0o600)
+	appID := "go-hass-agent-test"
+	ctx := AppIDToContext(context.TODO(), appID)
+
+	noExistingPrefsPath := t.TempDir()
+	noExistingPrefs := DefaultPreferences(filepath.Join(noExistingPrefsPath, appID, preferencesFile))
+
+	invalidFilePath := t.TempDir()
+	err := checkPath(filepath.Join(invalidFilePath, appID))
 	require.NoError(t, err)
-	existingPrefs := DefaultPreferences(filepath.Join(t.TempDir(), preferencesFile))
+	err = os.WriteFile(filepath.Join(invalidFilePath, appID, preferencesFile), []byte(`invalid`), 0o600)
+	require.NoError(t, err)
+
+	existingFilePath := t.TempDir()
+	existingPrefs := DefaultPreferences(filepath.Join(existingFilePath, appID, preferencesFile))
 	err = existingPrefs.Save()
 	require.NoError(t, err)
 
@@ -284,32 +295,37 @@ func TestLoad(t *testing.T) {
 	}{
 		{
 			name:        "new file",
-			args:        args{path: filepath.Dir(noFile)},
-			want:        DefaultPreferences(noFile),
+			args:        args{path: noExistingPrefsPath},
+			want:        noExistingPrefs,
 			wantErr:     true,
 			wantErrType: ErrNoPreferences,
 		},
 		{
 			name:        "invalid file",
-			args:        args{path: filepath.Dir(invalidFile)},
-			want:        DefaultPreferences(invalidFile),
+			args:        args{path: invalidFilePath},
 			wantErr:     true,
 			wantErrType: ErrFileContents,
 		},
 		{
 			name: "existing file",
-			args: args{path: filepath.Dir(existingPrefs.file)},
+			args: args{path: existingFilePath},
 			want: existingPrefs,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := Load(tt.args.path)
+			xdg.ConfigHome = tt.args.path
+
+			got, err := Load(ctx)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Load() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			require.ErrorIs(t, err, tt.wantErrType)
+			if tt.wantErr {
+				require.ErrorIs(t, err, tt.wantErrType)
+				return
+			}
+
 			if !preferencesEqual(t, got, tt.want) {
 				t.Errorf("Load() = %v, want %v", got, tt.want)
 			}
@@ -318,7 +334,11 @@ func TestLoad(t *testing.T) {
 }
 
 func TestReset(t *testing.T) {
-	existingPrefs := DefaultPreferences(filepath.Join(t.TempDir(), preferencesFile))
+	appID := "go-hass-agent-test"
+	ctx := AppIDToContext(context.TODO(), appID)
+
+	existingFilePath := t.TempDir()
+	existingPrefs := DefaultPreferences(filepath.Join(existingFilePath, appID, preferencesFile))
 	err := existingPrefs.Save()
 	require.NoError(t, err)
 
@@ -332,7 +352,7 @@ func TestReset(t *testing.T) {
 	}{
 		{
 			name: "valid path",
-			args: args{path: filepath.Dir(existingPrefs.file)},
+			args: args{path: existingFilePath},
 		},
 		{
 			name:    "invalid path",
@@ -342,7 +362,9 @@ func TestReset(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := Reset(tt.args.path); (err != nil) != tt.wantErr {
+			xdg.ConfigHome = tt.args.path
+
+			if err := Reset(ctx); (err != nil) != tt.wantErr {
 				t.Errorf("Reset() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

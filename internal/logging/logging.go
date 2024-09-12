@@ -6,22 +6,27 @@
 package logging
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
 
+	slogmulti "github.com/samber/slog-multi"
+
 	"github.com/adrg/xdg"
 	"github.com/lmittmann/tint"
 	"github.com/mattn/go-isatty"
 
-	slogmulti "github.com/samber/slog-multi"
+	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
 const (
 	LevelTrace = slog.Level(-8)
 	LevelFatal = slog.Level(12)
+
+	logFileName = "agent.log"
 )
 
 var LevelNames = map[slog.Leveler]string{
@@ -56,7 +61,7 @@ func New(appID string, options Options) *slog.Logger {
 	if options.NoLogFile {
 		logFile = ""
 	} else {
-		logFile = filepath.Join(xdg.ConfigHome, appID, "agent.log")
+		logFile = filepath.Join(xdg.ConfigHome, appID, logFileName)
 	}
 
 	// Set the slog handler
@@ -140,14 +145,17 @@ func openLogFile(logFile string) (*os.File, error) {
 }
 
 // Reset will remove the log file.
-func Reset(file string) error {
+func Reset(ctx context.Context) error {
+	appID := preferences.AppIDFromContext(ctx)
+	logFile := filepath.Join(xdg.ConfigHome, appID, logFileName)
+
 	// If the log file doesn't exist, just exit.
-	_, err := os.Stat(file)
+	_, err := os.Stat(logFile)
 	if os.IsNotExist(err) {
 		return nil
 	}
 	// Else, remove the file.
-	err = os.Remove(file)
+	err = os.Remove(logFile)
 	if err != nil {
 		return fmt.Errorf("could not remove log file: %w", err)
 	}

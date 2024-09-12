@@ -7,13 +7,17 @@
 package registry
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
 
+	"github.com/adrg/xdg"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
 var mockSensors = map[string]metadata{
@@ -21,9 +25,10 @@ var mockSensors = map[string]metadata{
 	"registeredSensor": {Disabled: false, Registered: true},
 }
 
-func newMockReg(t *testing.T) *gobRegistry {
+func newMockReg(ctx context.Context, t *testing.T) *gobRegistry {
 	t.Helper()
-	mockReg, err := Load(filepath.Join(t.TempDir()))
+
+	mockReg, err := Load(ctx)
 	require.NoError(t, err)
 	mockReg.sensors = mockSensors
 	err = mockReg.write()
@@ -65,7 +70,11 @@ func Test_gobRegistry_write(t *testing.T) {
 }
 
 func Test_gobRegistry_read(t *testing.T) {
-	mockReg := newMockReg(t)
+	appID := "go-hass-agent-test"
+	xdg.ConfigHome = t.TempDir()
+	ctx := preferences.AppIDToContext(context.TODO(), appID)
+
+	mockReg := newMockReg(ctx, t)
 
 	invalidRegistry := filepath.Join(t.TempDir(), registryFile)
 	err := os.WriteFile(invalidRegistry, []byte(`invalid`), 0o600)
@@ -286,7 +295,11 @@ func Test_gobRegistry_SetRegistered(t *testing.T) {
 }
 
 func TestLoad(t *testing.T) {
+	appID := "go-hass-agent-test"
+	ctx := preferences.AppIDToContext(context.TODO(), appID)
+
 	goodPath := t.TempDir()
+	badPath := "/nonexistent"
 
 	type args struct {
 		path string
@@ -300,18 +313,19 @@ func TestLoad(t *testing.T) {
 		{
 			name:    "good path",
 			args:    args{path: goodPath},
-			want:    &gobRegistry{sensors: make(map[string]metadata), file: filepath.Join(goodPath, registryFile)},
+			want:    &gobRegistry{sensors: make(map[string]metadata), file: filepath.Join(goodPath, appID, "sensorRegistry", registryFile)},
 			wantErr: false,
 		},
 		{
 			name:    "bad path",
-			args:    args{path: "/nonexistent"},
+			args:    args{path: badPath},
 			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := Load(tt.args.path)
+			xdg.ConfigHome = tt.args.path
+			got, err := Load(ctx)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Load() error = %v, wantErr %v", err, tt.wantErr)
 				return

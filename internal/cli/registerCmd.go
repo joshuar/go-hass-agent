@@ -7,12 +7,10 @@
 package cli
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/joshuar/go-hass-agent/internal/agent"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
-	"github.com/joshuar/go-hass-agent/internal/logging"
 )
 
 type RegisterCmd struct {
@@ -26,14 +24,12 @@ func (r *RegisterCmd) Help() string {
 	return showHelpTxt("register-help")
 }
 
-func (r *RegisterCmd) Run(ctx *Context) error {
-	agentCtx, cancelFunc := context.WithCancel(context.Background())
+func (r *RegisterCmd) Run(opts *CmdOpts) error {
+	agentCtx, cancelFunc := newContext(opts)
 	defer cancelFunc()
 
-	agentCtx = logging.ToContext(agentCtx, ctx.Logger)
-
-	gohassagent, err := agent.NewAgent(agentCtx, ctx.AppID,
-		agent.Headless(ctx.Headless),
+	gohassagent, err := agent.NewAgent(agentCtx,
+		agent.Headless(opts.Headless),
 		agent.WithRegistrationInfo(r.Server, r.Token, r.IgnoreURLs),
 		agent.ForceRegister(r.Force))
 	if err != nil {

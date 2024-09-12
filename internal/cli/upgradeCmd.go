@@ -7,12 +7,10 @@
 package cli
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"log/slog"
 
-	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/internal/upgrade"
 )
 
@@ -22,11 +20,9 @@ func (r *UpgradeCmd) Help() string {
 	return showHelpTxt("upgrade-help")
 }
 
-func (r *UpgradeCmd) Run(ctx *Context) error {
-	upgradeCtx, cancelFunc := context.WithCancel(context.Background())
+func (r *UpgradeCmd) Run(opts *CmdOpts) error {
+	upgradeCtx, cancelFunc := newContext(opts)
 	defer cancelFunc()
-
-	upgradeCtx = logging.ToContext(upgradeCtx, ctx.Logger)
 
 	if err := upgrade.Run(upgradeCtx); err != nil {
 		if errors.Is(err, upgrade.ErrNoPrevConfig) {

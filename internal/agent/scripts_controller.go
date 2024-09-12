@@ -12,11 +12,13 @@ import (
 
 	"github.com/adrg/xdg"
 
+	"github.com/joshuar/go-hass-agent/internal/preferences"
 	"github.com/joshuar/go-hass-agent/internal/scripts"
 )
 
 func (agent *Agent) newScriptsController(ctx context.Context) SensorController {
-	scriptPath := filepath.Join(xdg.ConfigHome, agent.id, "scripts")
+	appID := preferences.AppIDFromContext(ctx)
+	scriptPath := filepath.Join(xdg.ConfigHome, appID, "scripts")
 
 	scriptController, err := scripts.NewScriptsController(ctx, scriptPath)
 	if err != nil {
