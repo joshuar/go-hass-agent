@@ -8,7 +8,6 @@ package agent
 
 import (
 	"context"
-	"log/slog"
 	"path/filepath"
 	"testing"
 
@@ -32,10 +31,7 @@ func TestAgent_newMQTTDevice(t *testing.T) {
 
 	type fields struct {
 		ui            UI
-		hass          HassClient
-		done          chan struct{}
 		prefs         *preferences.Preferences
-		logger        *slog.Logger
 		id            string
 		headless      bool
 		forceRegister bool
@@ -47,9 +43,8 @@ func TestAgent_newMQTTDevice(t *testing.T) {
 		{
 			name: "valid device",
 			fields: fields{
-				prefs:  prefs,
-				id:     "go-hass-agent-test",
-				logger: slog.Default(),
+				prefs: prefs,
+				id:    "go-hass-agent-test",
 			},
 		},
 	}
@@ -57,10 +52,7 @@ func TestAgent_newMQTTDevice(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			agent := &Agent{
 				ui:            tt.fields.ui,
-				hass:          tt.fields.hass,
-				done:          tt.fields.done,
 				prefs:         tt.fields.prefs,
-				logger:        tt.fields.logger,
 				headless:      tt.fields.headless,
 				forceRegister: tt.fields.forceRegister,
 			}

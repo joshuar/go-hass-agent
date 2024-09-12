@@ -14,6 +14,7 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/registry"
+	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
@@ -64,7 +65,7 @@ func (agent *Agent) checkRegistration(ctx context.Context) error {
 	// If the agent is not running headless, ask the user for registration
 	// details.
 	if !agent.headless && agent.prefs.Registration.IsDefault() {
-		userInputDoneCh := agent.ui.DisplayRegistrationWindow(agent.prefs, agent.done)
+		userInputDoneCh := agent.ui.DisplayRegistrationWindow(ctx, agent.prefs)
 		<-userInputDoneCh
 	}
 
@@ -80,11 +81,11 @@ func (agent *Agent) checkRegistration(ctx context.Context) error {
 
 	if agent.forceRegister {
 		if err := registry.Reset(ctx); err != nil {
-			agent.logger.Warn("Problem resetting registry.", slog.Any("error", err))
+			logging.FromContext(ctx).Warn("Problem resetting registry.", slog.Any("error", err))
 		}
 	}
 
-	agent.logger.Info("Agent registered.")
+	logging.FromContext(ctx).Info("Agent registered.")
 
 	return nil
 }

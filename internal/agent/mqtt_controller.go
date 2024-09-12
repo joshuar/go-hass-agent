@@ -19,13 +19,14 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/commands"
 	"github.com/joshuar/go-hass-agent/internal/device"
+	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
-func (agent *Agent) newMQTTController(ctx context.Context, mqttDevice *mqtthass.Device) MQTTController {
+func newMQTTController(ctx context.Context, mqttDevice *mqtthass.Device) MQTTController {
 	// Don't set up if no MQTT device has been passed in.
 	if mqttDevice == nil {
-		agent.logger.Warn("Not setting up MQTT controller, no MQTT device.")
+		logging.FromContext(ctx).Warn("Not setting up MQTT controller, no MQTT device.")
 
 		return nil
 	}
@@ -37,7 +38,7 @@ func (agent *Agent) newMQTTController(ctx context.Context, mqttDevice *mqtthass.
 	commandController, err := commands.NewCommandsController(ctx, commandsFile, mqttDevice)
 	if err != nil {
 		if !errors.Is(err, commands.ErrNoCommands) {
-			agent.logger.Warn("Could not set up MQTT commands controller.", slog.Any("error", err))
+			logging.FromContext(ctx).Warn("Could not set up MQTT commands controller.", slog.Any("error", err))
 		}
 
 		return nil
@@ -59,7 +60,7 @@ func (agent *Agent) runMQTTWorkers(ctx context.Context, controllers ...MQTTContr
 
 	prefs := agent.prefs.GetMQTTPreferences()
 	if prefs == nil {
-		agent.logger.Debug("No MQTT preferences found, not running MQTT controller.")
+		logging.FromContext(ctx).Debug("No MQTT preferences found, not running MQTT controller.")
 		return
 	}
 
@@ -74,22 +75,22 @@ func (agent *Agent) runMQTTWorkers(ctx context.Context, controllers ...MQTTContr
 	// device subscriptions.
 	client, err := mqttapi.NewClient(ctx, prefs, subscriptions, configs)
 	if err != nil {
-		agent.logger.Error("Could not connect to MQTT.", slog.Any("error", err))
+		logging.FromContext(ctx).Error("Could not connect to MQTT.", slog.Any("error", err))
 		return
 	}
 
-	agent.logger.Debug("Listening for messages to publish to MQTT.")
+	logging.FromContext(ctx).Debug("Listening for messages to publish to MQTT.")
 
 	for {
 		select {
 		case msg := <-mergeCh(ctx, msgCh...):
 			if err := client.Publish(ctx, msg); err != nil {
-				agent.logger.Warn("Unable to publish message to MQTT.",
+				logging.FromContext(ctx).Warn("Unable to publish message to MQTT.",
 					slog.String("topic", msg.Topic),
 					slog.Any("msg", msg.Message))
 			}
 		case <-ctx.Done():
-			agent.logger.Debug("Stopped listening for messages to publish to MQTT.")
+			logging.FromContext(ctx).Debug("Stopped listening for messages to publish to MQTT.")
 			return
 		}
 	}
@@ -105,12 +106,12 @@ func (agent *Agent) resetMQTTControllers(ctx context.Context) error {
 
 	var configs []*mqttapi.Msg
 
-	_, osMQTTController := agent.newOSController(ctx, mqttDevice)
+	_, osMQTTController := newOSController(ctx, mqttDevice)
 	if osMQTTController != nil {
 		configs = append(configs, osMQTTController.Configs()...)
 	}
 
-	mqttCmdController := agent.newMQTTController(ctx, mqttDevice)
+	mqttCmdController := newMQTTController(ctx, mqttDevice)
 	if mqttCmdController != nil {
 		configs = append(configs, mqttCmdController.Configs()...)
 	}
@@ -133,7 +134,7 @@ func (agent *Agent) newMQTTDevice(ctx context.Context) *mqtthass.Device {
 	// Retrieve the hardware model and manufacturer.
 	model, manufacturer, err := device.GetHWProductInfo()
 	if err != nil {
-		agent.logger.Warn("Error creating MQTT device.", slog.Any("error", err))
+		logging.FromContext(ctx).Warn("Error creating MQTT device.", slog.Any("error", err))
 	}
 
 	var deviceName, deviceID string

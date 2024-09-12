@@ -176,10 +176,10 @@ func (c *linuxMQTTController) generateConfig(e entity) *mqttapi.Msg {
 //
 //revive:disable:function-length
 //nolint:cyclop
-func (agent *Agent) newOSController(ctx context.Context, mqttDevice *mqtthass.Device) (SensorController, MQTTController) {
+func newOSController(ctx context.Context, mqttDevice *mqtthass.Device) (SensorController, MQTTController) {
 	ctx = linux.NewContext(ctx)
 
-	logger := agent.logger.With(slog.Group("linux", slog.String("controller", "sensor")))
+	logger := logging.FromContext(ctx).With(slog.Group("linux", slog.String("controller", "sensor")))
 	ctx = logging.ToContext(ctx, logger)
 	sensorController := &linuxSensorController{
 		deviceController: deviceController{
@@ -205,7 +205,7 @@ func (agent *Agent) newOSController(ctx context.Context, mqttDevice *mqtthass.De
 		return sensorController, nil
 	}
 
-	logger = agent.logger.With(slog.Group("linux", slog.String("controller", "mqtt")))
+	logger = logging.FromContext(ctx).With(slog.Group("linux", slog.String("controller", "mqtt")))
 	ctx = logging.ToContext(ctx, logger)
 	mqttController := &linuxMQTTController{
 		mqttWorker: &mqttWorker{

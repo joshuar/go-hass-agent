@@ -73,7 +73,7 @@ func NewFyneUI(ctx context.Context) *FyneUI {
 }
 
 // Run is the "main loop" of the UI.
-func (i *FyneUI) Run(agent ui.Agent, doneCh chan struct{}) {
+func (i *FyneUI) Run(ctx context.Context, agent ui.Agent) {
 	// Do not run the UI loop if the agent is running in headless mode.
 	if agent.Headless() {
 		return
@@ -81,8 +81,8 @@ func (i *FyneUI) Run(agent ui.Agent, doneCh chan struct{}) {
 
 	// Stop the UI if the agent done signal is received.
 	go func() {
-		defer i.app.Quit()
-		<-doneCh
+		<-ctx.Done()
+		i.app.Quit()
 	}()
 
 	// Run the UI (blocking).
@@ -109,7 +109,7 @@ func (i *FyneUI) DisplayNotification(notification ui.Notification) {
 
 // DisplayTrayIcon displays an icon in the desktop tray with a menu for
 // controlling the agent and showing other informational windows.
-func (i *FyneUI) DisplayTrayIcon(ctx context.Context, agent ui.Agent, client ui.HassClient, doneCh chan struct{}) {
+func (i *FyneUI) DisplayTrayIcon(ctx context.Context, agent ui.Agent, client ui.HassClient, cancelFunc context.CancelFunc) {
 	// Do not show the tray icon if the agent is running in headless mode.
 	if agent.Headless() {
 		return
@@ -138,7 +138,7 @@ func (i *FyneUI) DisplayTrayIcon(ctx context.Context, agent ui.Agent, client ui.
 		// Quit menu item.
 		menuItemQuit := fyne.NewMenuItem(i.Translate("Quit"), func() {
 			i.logger.Debug("Qutting agent on user request.")
-			agent.Stop()
+			cancelFunc()
 		})
 		menuItemQuit.IsQuit = true
 
@@ -152,7 +152,7 @@ func (i *FyneUI) DisplayTrayIcon(ctx context.Context, agent ui.Agent, client ui.
 	}
 
 	go func() {
-		<-doneCh
+		<-ctx.Done()
 		i.app.Quit()
 	}()
 }
@@ -160,7 +160,7 @@ func (i *FyneUI) DisplayTrayIcon(ctx context.Context, agent ui.Agent, client ui.
 // DisplayRegistrationWindow displays a UI to prompt the user for the details needed to
 // complete registration. It will populate with any values that were already
 // provided via the command-line.
-func (i *FyneUI) DisplayRegistrationWindow(prefs *preferences.Preferences, doneCh chan struct{}) chan struct{} {
+func (i *FyneUI) DisplayRegistrationWindow(ctx context.Context, prefs *preferences.Preferences) chan struct{} {
 	userInputDone := make(chan struct{})
 
 	if i.app == nil {
@@ -191,8 +191,8 @@ func (i *FyneUI) DisplayRegistrationWindow(prefs *preferences.Preferences, doneC
 
 	// If we get a message on the (agent's) doneCh, close the window if open.
 	go func() {
-		defer window.Close()
-		<-doneCh
+		<-ctx.Done()
+		window.Close()
 	}()
 
 	window.SetContent(windowContents)

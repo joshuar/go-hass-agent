@@ -71,13 +71,13 @@ func (agent *Agent) setupControllers(ctx context.Context) []any {
 	if prefs != nil && prefs.IsMQTTEnabled() {
 		mqttDevice = agent.newMQTTDevice(ctx)
 		// Create an MQTT commands controller.
-		mqttCmdController := agent.newMQTTController(ctx, mqttDevice)
+		mqttCmdController := newMQTTController(ctx, mqttDevice)
 		if mqttCmdController != nil {
 			controllers = append(controllers, mqttCmdController)
 		}
 	}
 
-	scriptsController := agent.newScriptsController(ctx)
+	scriptsController := newScriptsController(ctx)
 	if scriptsController != nil {
 		controllers = append(controllers, scriptsController)
 	}
@@ -92,7 +92,7 @@ func (agent *Agent) setupControllers(ctx context.Context) []any {
 	// Create a new OS controller. The controller will have all the
 	// necessary configuration for any OS-specific sensors and MQTT
 	// configuration.
-	osSensorController, osMQTTController := agent.newOSController(ctx, mqttDevice)
+	osSensorController, osMQTTController := newOSController(ctx, mqttDevice)
 	controllers = append(controllers, osSensorController, osMQTTController)
 
 	return controllers

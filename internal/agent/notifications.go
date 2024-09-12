@@ -10,6 +10,7 @@ import (
 	"log/slog"
 
 	"github.com/joshuar/go-hass-agent/internal/hass"
+	"github.com/joshuar/go-hass-agent/internal/logging"
 )
 
 // runNotificationsWorker will run a goroutine that is listening for
@@ -29,14 +30,12 @@ func (agent *Agent) runNotificationsWorker(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			agent.logger.Debug("Stopping notifications worker.")
-
 			return
 		default:
 			// Connect the websocket.
 			notifyCh, err := websocket.Connect(ctx)
 			if err != nil {
-				agent.logger.Warn("Failed to connect to websocket.", slog.Any("error", err))
+				logging.FromContext(ctx).Warn("Failed to connect to websocket.", slog.Any("error", err))
 
 				return
 			}

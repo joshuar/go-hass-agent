@@ -20,9 +20,9 @@ import (
 	"time"
 
 	fyneui "github.com/joshuar/go-hass-agent/internal/agent/ui/fyneUI"
+	"github.com/joshuar/go-hass-agent/internal/hass"
 
 	"github.com/joshuar/go-hass-agent/internal/agent/ui"
-	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
@@ -37,19 +37,17 @@ var ErrInvalidPrefernces = errors.New("invalid agent preferences")
 // and notifications.
 type UI interface {
 	DisplayNotification(n ui.Notification)
-	DisplayTrayIcon(ctx context.Context, agent ui.Agent, client ui.HassClient, doneCh chan struct{})
-	DisplayRegistrationWindow(prefs *preferences.Preferences, doneCh chan struct{}) chan struct{}
-	Run(agent ui.Agent, doneCh chan struct{})
+	DisplayTrayIcon(ctx context.Context, agent ui.Agent, client ui.HassClient, cancelFunc context.CancelFunc)
+	DisplayRegistrationWindow(ctx context.Context, prefs *preferences.Preferences) chan struct{}
+	Run(ctx context.Context, agent ui.Agent)
 }
 
 // Agent holds the options of the running agent, the UI object and a channel for
 // closing the agent down.
 type Agent struct {
 	ui            UI
-	hass          HassClient
-	done          chan struct{}
 	prefs         *preferences.Preferences
-	logger        *slog.Logger
+	hass          *hass.Client
 	headless      bool
 	forceRegister bool
 }
@@ -57,17 +55,9 @@ type Agent struct {
 // Option is a functional parameter that will configure a feature of the agent.
 type Option func(*Agent)
 
-// newDefaultAgent returns an agent with default options.
-func newDefaultAgent(ctx context.Context) *Agent {
-	return &Agent{
-		done:   make(chan struct{}),
-		logger: logging.FromContext(ctx),
-	}
-}
-
 // NewAgent creates a new agent with the options specified.
 func NewAgent(ctx context.Context, options ...Option) (*Agent, error) {
-	agent := newDefaultAgent(ctx)
+	agent := &Agent{}
 
 	// Load the agent preferences.
 	prefs, err := preferences.Load(ctx)
@@ -129,27 +119,29 @@ func (agent *Agent) Run(ctx context.Context) error {
 		err     error
 	)
 
-	ctx, cancelFunc := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
+	runCtx, cancelRun := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-ctx.Done()
-		cancelFunc()
+		cancelRun()
 	}()
-
-	agent.hass, err = hass.NewClient(ctx)
-	if err != nil {
-		return fmt.Errorf("could not start hass client: %w", err)
-	}
 
 	regWait.Add(1)
 
 	go func() {
 		defer regWait.Done()
 
-		if err := agent.checkRegistration(ctx); err != nil {
-			agent.logger.Log(ctx, logging.LevelFatal, "Error checking registration status.", slog.Any("error", err))
-			close(agent.done)
+		if err = agent.checkRegistration(runCtx); err != nil {
+			logging.FromContext(ctx).Error("Error checking registration status.", slog.Any("error", err))
+			cancelRun()
 		}
 	}()
+
+	agent.hass, err = hass.NewClient(ctx)
+	if err != nil {
+		return fmt.Errorf("could not create hass client: %w", err)
+	}
+
+	agent.hass.Endpoint(agent.prefs.RestAPIURL(), defaultTimeout)
 
 	wg.Add(1)
 
@@ -157,24 +149,12 @@ func (agent *Agent) Run(ctx context.Context) error {
 		defer wg.Done()
 		regWait.Wait()
 
-		agent.hass.Endpoint(agent.prefs.RestAPIURL(), defaultTimeout)
-
-		// Create a context for runners
-		controllerCtx, cancelFunc := context.WithCancel(ctx)
-
-		// Cancel the runner context when the agent is done.
-		go func() {
-			<-agent.done
-			cancelFunc()
-			agent.logger.Debug("Agent done.")
-		}()
-
 		var (
 			sensorControllers []SensorController
 			mqttControllers   []MQTTController
 		)
 		// Setup and sort all controllers by type.
-		for _, c := range agent.setupControllers(controllerCtx) {
+		for _, c := range agent.setupControllers(runCtx) {
 			switch controller := c.(type) {
 			case SensorController:
 				sensorControllers = append(sensorControllers, controller)
@@ -187,7 +167,7 @@ func (agent *Agent) Run(ctx context.Context) error {
 		// Run workers for any sensor controllers.
 		go func() {
 			defer wg.Done()
-			agent.runSensorWorkers(controllerCtx, sensorControllers...)
+			agent.runSensorWorkers(runCtx, sensorControllers...)
 		}()
 
 		if len(mqttControllers) > 0 {
@@ -195,7 +175,7 @@ func (agent *Agent) Run(ctx context.Context) error {
 			// Run workers for any MQTT controllers.
 			go func() {
 				defer wg.Done()
-				agent.runMQTTWorkers(controllerCtx, mqttControllers...)
+				agent.runMQTTWorkers(runCtx, mqttControllers...)
 			}()
 		}
 
@@ -203,12 +183,12 @@ func (agent *Agent) Run(ctx context.Context) error {
 		// Listen for notifications from Home Assistant.
 		go func() {
 			defer wg.Done()
-			agent.runNotificationsWorker(controllerCtx)
+			agent.runNotificationsWorker(runCtx)
 		}()
 	}()
 
-	agent.ui.DisplayTrayIcon(ctx, agent, agent.hass, agent.done)
-	agent.ui.Run(agent, agent.done)
+	agent.ui.DisplayTrayIcon(runCtx, agent, agent.hass, cancelRun)
+	agent.ui.Run(runCtx, agent)
 
 	wg.Wait()
 
@@ -218,32 +198,26 @@ func (agent *Agent) Run(ctx context.Context) error {
 func (agent *Agent) Register(ctx context.Context) {
 	var wg sync.WaitGroup
 
+	regCtx, cancelReg := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-ctx.Done()
+		cancelReg()
+	}()
+
 	wg.Add(1)
 
 	go func() {
 		defer wg.Done()
 
-		if err := agent.checkRegistration(ctx); err != nil {
-			agent.logger.Log(ctx, logging.LevelFatal, "Error checking registration status", slog.Any("error", err))
+		if err := agent.checkRegistration(regCtx); err != nil {
+			logging.FromContext(ctx).Error("Error checking registration status", slog.Any("error", err))
 		}
 
-		close(agent.done)
+		cancelReg()
 	}()
 
-	agent.ui.Run(agent, agent.done)
+	agent.ui.Run(regCtx, agent)
 	wg.Wait()
-}
-
-// Stop will close the agent's done channel which indicates to any goroutines it
-// is time to clean up and exit.
-func (agent *Agent) Stop() {
-	defer close(agent.done)
-
-	agent.logger.Debug("Stopping Agent.")
-
-	if err := agent.prefs.Save(); err != nil {
-		agent.logger.Warn("Could not save agent preferences", slog.Any("error", err))
-	}
 }
 
 // Reset will remove any agent related files and configuration.
@@ -251,7 +225,7 @@ func (agent *Agent) Reset(ctx context.Context) error {
 	prefs := agent.GetMQTTPreferences()
 	if prefs != nil && prefs.IsMQTTEnabled() {
 		if err := agent.resetMQTTControllers(ctx); err != nil {
-			agent.logger.Warn("Problems occurred resetting MQTT configuration.", slog.Any("error", err))
+			logging.FromContext(ctx).Error("Problems occurred resetting MQTT configuration.", slog.Any("error", err))
 		}
 	}
 
