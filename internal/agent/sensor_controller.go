@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/logging"
 )
 
 type HassClient interface {
@@ -32,28 +33,27 @@ func (agent *Agent) runSensorWorkers(ctx context.Context, controllers ...SensorC
 	for _, controller := range controllers {
 		ch, err := controller.StartAll(ctx)
 		if err != nil {
-			agent.logger.Warn("Start controller had errors.", slog.Any("errors", err))
+			logging.FromContext(ctx).Warn("Start controller had errors.", slog.Any("errors", err))
 		} else {
 			sensorCh = append(sensorCh, ch)
 		}
 	}
 
 	if len(sensorCh) == 0 {
-		agent.logger.Warn("No workers were started by any controllers.")
-
+		logging.FromContext(ctx).Warn("No workers were started by any controllers.")
 		return
 	}
 
-	agent.logger.Debug("Processing sensor updates.")
+	logging.FromContext(ctx).Debug("Processing sensor updates.")
 
 	for {
 		select {
 		case <-ctx.Done():
-			agent.logger.Debug("Stopping all sensor controllers.")
+			logging.FromContext(ctx).Debug("Stopping all sensor controllers.")
 
 			for _, controller := range controllers {
 				if err := controller.StopAll(); err != nil {
-					agent.logger.Warn("Stop controller had errors.", slog.Any("error", err))
+					logging.FromContext(ctx).Warn("Stop controller had errors.", slog.Any("error", err))
 				}
 			}
 
@@ -62,7 +62,7 @@ func (agent *Agent) runSensorWorkers(ctx context.Context, controllers ...SensorC
 			for details := range mergeCh(ctx, sensorCh...) {
 				go func(details sensor.Details) {
 					if err := agent.hass.ProcessSensor(ctx, details); err != nil {
-						agent.logger.Error("Process sensor failed.", slog.Any("error", err))
+						logging.FromContext(ctx).Error("Process sensor failed.", slog.Any("error", err))
 					}
 				}(details)
 			}

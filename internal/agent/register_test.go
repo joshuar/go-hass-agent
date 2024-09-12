@@ -9,7 +9,6 @@ package agent
 import (
 	"context"
 	"encoding/json"
-	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
@@ -55,9 +54,7 @@ func mockServer(t *testing.T) *httptest.Server {
 func TestAgent_saveRegistration(t *testing.T) {
 	type fields struct {
 		ui            UI
-		done          chan struct{}
 		prefs         *preferences.Preferences
-		logger        *slog.Logger
 		headless      bool
 		forceRegister bool
 	}
@@ -108,9 +105,7 @@ func TestAgent_saveRegistration(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			agent := &Agent{
 				ui:            tt.fields.ui,
-				done:          tt.fields.done,
 				prefs:         tt.fields.prefs,
-				logger:        tt.fields.logger,
 				headless:      tt.fields.headless,
 				forceRegister: tt.fields.forceRegister,
 			}
@@ -147,9 +142,7 @@ func TestAgent_checkRegistration(t *testing.T) {
 
 	type fields struct {
 		ui            UI
-		done          chan struct{}
 		prefs         *preferences.Preferences
-		logger        *slog.Logger
 		id            string
 		headless      bool
 		forceRegister bool
@@ -165,25 +158,23 @@ func TestAgent_checkRegistration(t *testing.T) {
 		},
 		{
 			name:   "headless",
-			fields: fields{prefs: headless, headless: true, id: "go-hass-agent-test", logger: slog.Default()},
+			fields: fields{prefs: headless, headless: true, id: "go-hass-agent-test"},
 		},
 		{
 			name:    "headless error",
-			fields:  fields{prefs: headlessErr, headless: true, id: "go-hass-agent-test", logger: slog.Default()},
+			fields:  fields{prefs: headlessErr, headless: true, id: "go-hass-agent-test"},
 			wantErr: true,
 		},
 		{
 			name:   "force register",
-			fields: fields{prefs: alreadyRegistered, headless: true, forceRegister: true, id: "go-hass-agent-test", logger: slog.Default()},
+			fields: fields{prefs: alreadyRegistered, headless: true, forceRegister: true, id: "go-hass-agent-test"},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			agent := &Agent{
 				ui:            tt.fields.ui,
-				done:          tt.fields.done,
 				prefs:         tt.fields.prefs,
-				logger:        tt.fields.logger,
 				headless:      tt.fields.headless,
 				forceRegister: tt.fields.forceRegister,
 			}

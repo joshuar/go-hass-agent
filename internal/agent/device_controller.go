@@ -161,7 +161,7 @@ func (agent *Agent) newDeviceController(ctx context.Context) SensorController {
 	// Set up sensor workers.
 	worker = agent.newVersionWorker()
 	controller.sensorWorkers[worker.ID()] = &sensorWorker{object: worker, started: false}
-	worker = agent.newExternalIPUpdaterWorker()
+	worker = agent.newExternalIPUpdaterWorker(ctx)
 	controller.sensorWorkers[worker.ID()] = &sensorWorker{object: worker, started: false}
 
 	return controller
@@ -291,9 +291,9 @@ func (w *ExternalIPWorker) lookupExternalIPs(ctx context.Context, client *resty.
 	return nil, ErrNoLookupHosts
 }
 
-func (agent *Agent) newExternalIPUpdaterWorker() *ExternalIPWorker {
+func (agent *Agent) newExternalIPUpdaterWorker(ctx context.Context) *ExternalIPWorker {
 	return &ExternalIPWorker{
 		client: resty.New().SetTimeout(ExternalIPUpdateRequestTimeout),
-		logger: agent.logger.With(slog.String("worker", externalIPWorkerID)),
+		logger: logging.FromContext(ctx).With(slog.String("worker", externalIPWorkerID)),
 	}
 }

@@ -12,17 +12,18 @@ import (
 
 	"github.com/adrg/xdg"
 
+	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 	"github.com/joshuar/go-hass-agent/internal/scripts"
 )
 
-func (agent *Agent) newScriptsController(ctx context.Context) SensorController {
+func newScriptsController(ctx context.Context) SensorController {
 	appID := preferences.AppIDFromContext(ctx)
 	scriptPath := filepath.Join(xdg.ConfigHome, appID, "scripts")
 
 	scriptController, err := scripts.NewScriptsController(ctx, scriptPath)
 	if err != nil {
-		agent.logger.Error("Could not set up scripts controller.", slog.Any("error", err))
+		logging.FromContext(ctx).Error("Could not set up scripts controller.", slog.Any("error", err))
 
 		return nil
 	}
