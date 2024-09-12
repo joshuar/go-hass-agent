@@ -81,7 +81,7 @@ func NewAgent(ctx context.Context, options ...Option) (*Agent, error) {
 		option(agent)
 	}
 
-	agent.ui = fyneui.NewFyneUI(ctx, preferences.AppName)
+	agent.ui = fyneui.NewFyneUI(ctx)
 
 	return agent, nil
 }
