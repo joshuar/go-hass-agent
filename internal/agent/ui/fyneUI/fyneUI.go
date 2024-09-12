@@ -61,9 +61,9 @@ func init() {
 }
 
 // New FyneUI sets up the UI for the agent.
-func NewFyneUI(ctx context.Context, id string) *FyneUI {
+func NewFyneUI(ctx context.Context) *FyneUI {
 	appUI := &FyneUI{
-		app:    app.NewWithID(id),
+		app:    app.NewWithID(preferences.AppName),
 		text:   translations.NewTranslator(ctx),
 		logger: logging.FromContext(ctx).With(slog.String("subsystem", "fyne")),
 	}
