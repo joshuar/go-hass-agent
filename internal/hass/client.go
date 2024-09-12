@@ -19,6 +19,7 @@ import (
 	"github.com/go-resty/resty/v2"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor/registry"
 	"github.com/joshuar/go-hass-agent/internal/logging"
 )
 
@@ -91,7 +92,17 @@ type Client struct {
 	logger   *slog.Logger
 }
 
-func NewClient(ctx context.Context, trk Tracker, reg Registry) *Client {
+func NewClient(ctx context.Context) (*Client, error) {
+	reg, err := registry.Load(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("could not start registry: %w", err)
+	}
+
+	trk, err := sensor.NewTracker()
+	if err != nil {
+		return nil, fmt.Errorf("could not start sensor tracker: %w", err)
+	}
+
 	client := &Client{
 		tracker:  trk,
 		registry: reg,
@@ -99,7 +110,7 @@ func NewClient(ctx context.Context, trk Tracker, reg Registry) *Client {
 
 	client.logger = logging.FromContext(ctx).With(slog.String("subsystem", "hass"))
 
-	return client
+	return client, nil
 }
 
 func (c *Client) Endpoint(url string, timeout time.Duration) {

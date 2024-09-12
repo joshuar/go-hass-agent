@@ -54,7 +54,7 @@ func (agent *Agent) saveRegistration(hassPrefs *preferences.Hass, ignoreURLs boo
 	return nil
 }
 
-func (agent *Agent) checkRegistration(ctx context.Context, trk Tracker) error {
+func (agent *Agent) checkRegistration(ctx context.Context) error {
 	// If the agent is already registered and forced registration was not
 	// requested, abort.
 	if agent.prefs.Registered && !agent.forceRegister {
@@ -79,8 +79,6 @@ func (agent *Agent) checkRegistration(ctx context.Context, trk Tracker) error {
 	}
 
 	if agent.forceRegister {
-		trk.Reset()
-
 		if err := registry.Reset(ctx); err != nil {
 			agent.logger.Warn("Problem resetting registry.", slog.Any("error", err))
 		}

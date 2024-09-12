@@ -67,9 +67,9 @@ func TestAgent_saveRegistration(t *testing.T) {
 		ignoreURLs bool
 	}
 	tests := []struct {
-		args    args
-		name    string
 		fields  fields
+		name    string
+		args    args
 		wantErr bool
 	}{
 		{
@@ -154,11 +154,7 @@ func TestAgent_checkRegistration(t *testing.T) {
 		headless      bool
 		forceRegister bool
 	}
-	type args struct {
-		trk Tracker
-	}
 	tests := []struct {
-		args    args
 		name    string
 		fields  fields
 		wantErr bool
@@ -179,7 +175,6 @@ func TestAgent_checkRegistration(t *testing.T) {
 		{
 			name:   "force register",
 			fields: fields{prefs: alreadyRegistered, headless: true, forceRegister: true, id: "go-hass-agent-test", logger: slog.Default()},
-			args:   args{trk: &TrackerMock{ResetFunc: func() {}}},
 		},
 	}
 	for _, tt := range tests {
@@ -192,7 +187,7 @@ func TestAgent_checkRegistration(t *testing.T) {
 				headless:      tt.fields.headless,
 				forceRegister: tt.fields.forceRegister,
 			}
-			if err := agent.checkRegistration(context.TODO(), tt.args.trk); (err != nil) != tt.wantErr {
+			if err := agent.checkRegistration(context.TODO()); (err != nil) != tt.wantErr {
 				t.Errorf("Agent.checkRegistration() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			if !tt.wantErr {

@@ -10,7 +10,6 @@ import (
 	"fmt"
 
 	"github.com/joshuar/go-hass-agent/internal/agent"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 )
 
 type RegisterCmd struct {
@@ -36,13 +35,7 @@ func (r *RegisterCmd) Run(opts *CmdOpts) error {
 		return fmt.Errorf("failed to run register command: %w", err)
 	}
 
-	var trk *sensor.Tracker
-
-	if trk, err = sensor.NewTracker(); err != nil {
-		return fmt.Errorf("could not start sensor tracker: %w", err)
-	}
-
-	gohassagent.Register(agentCtx, trk)
+	gohassagent.Register(agentCtx)
 
 	return nil
 }

@@ -10,8 +10,6 @@ import (
 	"fmt"
 
 	"github.com/joshuar/go-hass-agent/internal/agent"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor/registry"
 )
 
 type RunCmd struct{}
@@ -29,18 +27,7 @@ func (r *RunCmd) Run(opts *CmdOpts) error {
 		return fmt.Errorf("failed to run: %w", err)
 	}
 
-	var trk *sensor.Tracker
-
-	reg, err := registry.Load(agentCtx)
-	if err != nil {
-		return fmt.Errorf("could not start registry: %w", err)
-	}
-
-	if trk, err = sensor.NewTracker(); err != nil {
-		return fmt.Errorf("could not start sensor tracker: %w", err)
-	}
-
-	if err := gohassagent.Run(agentCtx, trk, reg); err != nil {
+	if err := gohassagent.Run(agentCtx); err != nil {
 		return fmt.Errorf("failed to run: %w", err)
 	}
 
