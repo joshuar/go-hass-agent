@@ -50,8 +50,10 @@ func main() {
 	kong.Description(preferences.AppDescription)
 	ctx := kong.Parse(&CLI, kong.Bind(), kong.Vars{"defaultAppID": preferences.AppID})
 
+	// Set up the logger.
 	logger := logging.New(CLI.AppID, logging.Options{LogLevel: CLI.LogLevel, NoLogFile: CLI.NoLogFile})
 
+	// Enable profiling if requested.
 	if CLI.ProfileFlags != nil {
 		if err := logging.StartProfiling(CLI.ProfileFlags); err != nil {
 			logger.Warn("Problem starting profiling.",
@@ -59,6 +61,7 @@ func main() {
 		}
 	}
 
+	// Run the requested command with the provided options.
 	if err := ctx.Run(cli.CreateCtx(
 		cli.RunHeadless(bool(*CLI.Headless)),
 		cli.WithAppID(CLI.AppID),
@@ -69,6 +72,7 @@ func main() {
 			slog.Any("error", err))
 	}
 
+	// If profiling was enabled, clean up.
 	if CLI.ProfileFlags != nil {
 		if err := logging.StopProfiling(CLI.ProfileFlags); err != nil {
 			logger.Error("Problem stopping profiling.",
