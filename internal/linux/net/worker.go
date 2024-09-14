@@ -10,7 +10,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"slices"
 	"sync"
 
 	"github.com/godbus/dbus/v5"
@@ -38,29 +37,31 @@ const (
 type connectionsWorker struct {
 	bus    *dbusx.Bus
 	logger *slog.Logger
-	list   []dbus.ObjectPath
+	list   map[string]*connection
 	mu     sync.Mutex
 }
 
-func (w *connectionsWorker) track(path dbus.ObjectPath) {
+func (w *connectionsWorker) track(conn *connection) {
 	w.mu.Lock()
-	w.list = append(w.list, path)
+	w.list[conn.name] = conn
 	w.mu.Unlock()
 }
 
-func (w *connectionsWorker) untrack(path dbus.ObjectPath) {
+func (w *connectionsWorker) untrack(id string) {
 	w.mu.Lock()
-	w.list = slices.DeleteFunc(w.list, func(p dbus.ObjectPath) bool {
-		return path == p
-	})
+	delete(w.list, id)
 	w.mu.Unlock()
 }
 
-func (w *connectionsWorker) isTracked(path dbus.ObjectPath) bool {
+func (w *connectionsWorker) isTracked(id string) bool {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	return slices.Contains(w.list, path)
+	if _, found := w.list[id]; found {
+		return true
+	}
+
+	return false
 }
 
 func (w *connectionsWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
@@ -134,7 +135,7 @@ func (w *connectionsWorker) handleConnection(ctx context.Context, path dbus.Obje
 		return fmt.Errorf("could not create connection: %w", err)
 	}
 	// Ignore loopback or already tracked connections.
-	if conn.name == "lo" || w.isTracked(path) {
+	if conn.name == "lo" || w.isTracked(conn.name) {
 		slog.Debug("Ignoring connection.", slog.String("connection", conn.name))
 
 		return nil
@@ -143,13 +144,13 @@ func (w *connectionsWorker) handleConnection(ctx context.Context, path dbus.Obje
 	// Start monitoring the connection. Pass any sensor updates from the
 	// connection through the sensor channel.
 	go func() {
-		w.track(path)
+		w.track(conn)
 
 		for s := range conn.monitor(ctx, w.bus) {
 			sensorCh <- s
 		}
 
-		w.untrack(path)
+		w.untrack(conn.name)
 	}()
 
 	return nil
@@ -165,6 +166,7 @@ func NewConnectionWorker(ctx context.Context) (*linux.SensorWorker, error) {
 			Value: &connectionsWorker{
 				bus:    bus,
 				logger: slog.With(slog.String("worker", netConnWorkerID)),
+				list:   make(map[string]*connection),
 			},
 			WorkerID: netConnWorkerID,
 		},
