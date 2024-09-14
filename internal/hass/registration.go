@@ -17,8 +17,6 @@ import (
 
 const (
 	RegistrationPath = "/api/mobile_app/registrations"
-	WebsocketPath    = "/api/websocket"
-	WebHookPath      = "/api/webhook/"
 )
 
 var ErrInternalValidationFailed = errors.New("internal validation error")

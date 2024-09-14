@@ -29,14 +29,11 @@ func (r *ResetCmd) Run(opts *CmdOpts) error {
 
 	var errs error
 
-	gohassagent, err := agent.NewAgent(agentCtx,
-		agent.Headless(opts.Headless))
-	if err != nil {
-		errs = errors.Join(errs, fmt.Errorf("failed to run reset command: %w", err))
-	}
+	agentCtx = agent.LoadCtx(agentCtx,
+		agent.SetHeadless(opts.Headless))
 
 	// Reset agent.
-	if err := gohassagent.Reset(agentCtx); err != nil {
+	if err := agent.Reset(agentCtx); err != nil {
 		errs = errors.Join(fmt.Errorf("agent reset failed: %w", err))
 	}
 	// Reset registry.

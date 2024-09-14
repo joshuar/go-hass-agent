@@ -11,21 +11,27 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/logging"
+	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
 // runNotificationsWorker will run a goroutine that is listening for
 // notification messages from Home Assistant on a websocket connection. Any
 // received notifications will be dipslayed on the device running the agent.
-func (agent *Agent) runNotificationsWorker(ctx context.Context) {
-	// Don't run if agent is running headless.
-	if agent.headless {
+func runNotificationsWorker(ctx context.Context, agentUI ui) {
+	// Don't run if agent is running headless.\
+	if Headless(ctx) {
+		return
+	}
+
+	prefs, err := preferences.Load(ctx)
+	if err != nil {
 		return
 	}
 
 	websocket := hass.NewWebsocket(ctx,
-		agent.prefs.WebsocketURL(),
-		agent.prefs.WebhookID(),
-		agent.prefs.Token())
+		prefs.WebsocketURL(),
+		prefs.WebhookID(),
+		prefs.Token())
 
 	for {
 		select {
@@ -47,7 +53,7 @@ func (agent *Agent) runNotificationsWorker(ctx context.Context) {
 
 			// Display any notifications received.
 			for notification := range notifyCh {
-				agent.ui.DisplayNotification(&notification)
+				agentUI.DisplayNotification(&notification)
 			}
 		}
 	}

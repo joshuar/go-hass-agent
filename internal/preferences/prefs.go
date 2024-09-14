@@ -18,8 +18,6 @@ import (
 
 	"github.com/adrg/xdg"
 	"github.com/pelletier/go-toml/v2"
-
-	mqtthass "github.com/joshuar/go-hass-anything/v11/pkg/hass"
 )
 
 const (
@@ -34,8 +32,8 @@ const (
 	preferencesFile   = "preferences.toml"
 	defaultFilePerms  = 0o600
 
-	defaultServer = "http://localhost:8123"
-	defaultSecret = "ALongSecretString"
+	DefaultServer = "http://localhost:8123"
+	DefaultSecret = "ALongSecretString"
 )
 
 var (
@@ -59,53 +57,6 @@ type Preferences struct {
 	Version      string        `toml:"version" validate:"required"`
 	file         string
 	Registered   bool `toml:"registered" validate:"boolean"`
-}
-
-type MQTT struct {
-	MQTTServer      string `toml:"server,omitempty" validate:"omitempty,uri" kong:"required,help='MQTT server URI. Required.',placeholder='scheme://some.host:port'"` //nolint:lll
-	MQTTUser        string `toml:"user,omitempty" validate:"omitempty" kong:"optional,help='MQTT username.'"`
-	MQTTPassword    string `toml:"password,omitempty" validate:"omitempty" kong:"optional,help='MQTT password.'"`
-	MQTTTopicPrefix string `toml:"topic_prefix,omitempty" validate:"omitempty,ascii" kong:"optional,help='MQTT topic prefix.'"`
-	MQTTEnabled     bool   `toml:"enabled" validate:"boolean" kong:"-"`
-}
-
-func (p *Preferences) Validate() error {
-	err := validate.Struct(p)
-	if err != nil {
-		return fmt.Errorf("%w: %s", ErrValidationFailed, parseValidationErrors(err))
-	}
-
-	return nil
-}
-
-// Save will save the new values of the specified preferences to the existing
-// preferences file. NOTE: if the preferences file does not exist, Save will
-// return an error. Use New if saving preferences for the first time.
-func (p *Preferences) Save() error {
-	if err := p.Validate(); err != nil {
-		return err
-	}
-
-	if err := checkPath(filepath.Dir(p.file)); err != nil {
-		return err
-	}
-
-	b, err := toml.Marshal(p)
-	if err != nil {
-		return fmt.Errorf("unable to format preferences: %w", err)
-	}
-
-	err = os.WriteFile(p.file, b, defaultFilePerms)
-	if err != nil {
-		return fmt.Errorf("unable to write preferences file: %w", err)
-	}
-
-	return nil
-}
-
-// GetMQTTPreferences returns the subset of MQTT preferences.
-func (p *Preferences) GetMQTTPreferences() *MQTT {
-	return p.MQTT
 }
 
 // Load will retrieve the current preferences from the preference file on disk.
@@ -161,80 +112,57 @@ func DefaultPreferences(file string) *Preferences {
 	}
 
 	return &Preferences{
-		Version:    AppVersion,
-		Registered: false,
-		Registration: &Registration{
-			Server: defaultServer,
-			Token:  defaultSecret,
-		},
-		Hass: &Hass{
-			IgnoreHassURLs: false,
-			WebhookID:      defaultSecret,
-			RestAPIURL:     defaultServer,
-			WebsocketURL:   defaultServer,
-		},
-		MQTT:   &MQTT{MQTTEnabled: false},
-		Device: device,
-		mu:     &sync.Mutex{},
-		file:   file,
+		Version:      AppVersion,
+		Registered:   false,
+		Registration: DefaultRegistrationPreferences(),
+		Hass:         DefaultHassPreferences(),
+		MQTT:         DefaultMQTTPreferences(),
+		Device:       device,
+		mu:           &sync.Mutex{},
+		file:         file,
 	}
 }
 
-// IsMQTTEnabled is a conveinience function to determine whether MQTT
-// functionality has been enabled in the agent.
-func (p *MQTT) IsMQTTEnabled() bool {
-	return p.MQTTEnabled
-}
-
-// Server returns the broker URI from the preferences.
-func (p *MQTT) Server() string {
-	return p.MQTTServer
-}
-
-// User returns any username required for connecting to the broker from the
-// preferences.
-func (p *MQTT) User() string {
-	return p.MQTTUser
-}
-
-// Password returns any password required for connecting to the broker from the
-// preferences.
-func (p *MQTT) Password() string {
-	return p.MQTTPassword
-}
-
-// TopicPrefix returns the prefix for topics on MQTT.
-func (p *MQTT) TopicPrefix() string {
-	if p.MQTTTopicPrefix == "" {
-		return MQTTTopicPrefix
+func (p *Preferences) Validate() error {
+	err := validate.Struct(p)
+	if err != nil {
+		return fmt.Errorf("%w: %s", ErrValidationFailed, parseValidationErrors(err))
 	}
 
-	return p.MQTTTopicPrefix
+	return nil
 }
 
-// MQTTOrigin defines Go Hass Agent as the origin for MQTT functionality.
-func MQTTOrigin() *mqtthass.Origin {
-	return &mqtthass.Origin{
-		Name:    AppName,
-		Version: AppVersion,
-		URL:     AppURL,
+// Save will save the new values of the specified preferences to the existing
+// preferences file. NOTE: if the preferences file does not exist, Save will
+// return an error. Use New if saving preferences for the first time.
+func (p *Preferences) Save() error {
+	if err := p.Validate(); err != nil {
+		return err
 	}
+
+	if err := checkPath(filepath.Dir(p.file)); err != nil {
+		return err
+	}
+
+	b, err := toml.Marshal(p)
+	if err != nil {
+		return fmt.Errorf("unable to format preferences: %w", err)
+	}
+
+	err = os.WriteFile(p.file, b, defaultFilePerms)
+	if err != nil {
+		return fmt.Errorf("unable to write preferences file: %w", err)
+	}
+
+	return nil
 }
 
-func (p *Preferences) DeviceName() string {
-	if p.Device != nil {
-		return p.Device.Name
-	}
-
-	return "Unknown Device"
+func (p *Preferences) AgentVersion() string {
+	return p.Version
 }
 
-func (p *Preferences) DeviceID() string {
-	if p.Device != nil {
-		return p.Device.ID
-	}
-
-	return "Unknown Device ID"
+func (p *Preferences) AgentRegistered() bool {
+	return p.Registered
 }
 
 func (p *Preferences) RestAPIURL() string {

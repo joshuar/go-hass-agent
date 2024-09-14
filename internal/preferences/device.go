@@ -73,3 +73,7 @@ func newDevice() (*Device, error) {
 
 	return dev, nil
 }
+
+func (p *Preferences) GetDeviceInfo() *Device {
+	return p.Device
+}

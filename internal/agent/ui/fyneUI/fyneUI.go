@@ -50,6 +50,11 @@ var (
 	ErrInvalidHostPort = errors.New(ui.InvalidHostPortMsgString)
 )
 
+type Notification interface {
+	GetTitle() string
+	GetMessage() string
+}
+
 type FyneUI struct {
 	app    fyne.App
 	text   *translations.Translator
@@ -73,12 +78,7 @@ func NewFyneUI(ctx context.Context) *FyneUI {
 }
 
 // Run is the "main loop" of the UI.
-func (i *FyneUI) Run(ctx context.Context, agent ui.Agent) {
-	// Do not run the UI loop if the agent is running in headless mode.
-	if agent.Headless() {
-		return
-	}
-
+func (i *FyneUI) Run(ctx context.Context) {
 	// Stop the UI if the agent done signal is received.
 	go func() {
 		<-ctx.Done()
@@ -96,11 +96,7 @@ func (i *FyneUI) Translate(text string) string {
 }
 
 // DisplayNotification will display a notification using Fyne.
-func (i *FyneUI) DisplayNotification(notification ui.Notification) {
-	if i.app == nil {
-		return
-	}
-
+func (i *FyneUI) DisplayNotification(notification Notification) {
 	i.app.SendNotification(&fyne.Notification{
 		Title:   notification.GetTitle(),
 		Content: notification.GetMessage(),
@@ -109,27 +105,22 @@ func (i *FyneUI) DisplayNotification(notification ui.Notification) {
 
 // DisplayTrayIcon displays an icon in the desktop tray with a menu for
 // controlling the agent and showing other informational windows.
-func (i *FyneUI) DisplayTrayIcon(ctx context.Context, agent ui.Agent, client ui.HassClient, cancelFunc context.CancelFunc) {
-	// Do not show the tray icon if the agent is running in headless mode.
-	if agent.Headless() {
-		return
-	}
-
+func (i *FyneUI) DisplayTrayIcon(ctx context.Context, cancelFunc context.CancelFunc) {
 	if desk, ok := i.app.(desktop.App); ok {
 		// About menu item.
 		menuItemAbout := fyne.NewMenuItem(i.Translate("About"),
 			func() {
-				i.aboutWindow(ctx, client).Show()
+				i.aboutWindow(ctx).Show()
 			})
 		// Sensors menu item.
 		menuItemSensors := fyne.NewMenuItem(i.Translate("Sensors"),
 			func() {
-				i.sensorsWindow(client).Show()
+				i.sensorsWindow().Show()
 			})
 		// Preferences/Settings items.
 		menuItemAppPrefs := fyne.NewMenuItem(i.Translate("App Settings"),
 			func() {
-				i.agentSettingsWindow(agent).Show()
+				i.agentSettingsWindow(ctx).Show()
 			})
 		menuItemFynePrefs := fyne.NewMenuItem(i.text.Translate("Fyne Settings"),
 			func() {
@@ -160,13 +151,8 @@ func (i *FyneUI) DisplayTrayIcon(ctx context.Context, agent ui.Agent, client ui.
 // DisplayRegistrationWindow displays a UI to prompt the user for the details needed to
 // complete registration. It will populate with any values that were already
 // provided via the command-line.
-func (i *FyneUI) DisplayRegistrationWindow(ctx context.Context, prefs *preferences.Preferences) chan struct{} {
-	userInputDone := make(chan struct{})
-
-	if i.app == nil {
-		close(userInputDone)
-		return userInputDone
-	}
+func (i *FyneUI) DisplayRegistrationWindow(ctx context.Context, prefs *preferences.Registration) chan bool {
+	userCancelled := make(chan bool)
 
 	window := i.app.NewWindow(i.Translate("App Registration"))
 
@@ -175,11 +161,13 @@ func (i *FyneUI) DisplayRegistrationWindow(ctx context.Context, prefs *preferenc
 	registrationForm := widget.NewForm(allFormItems...)
 	registrationForm.OnSubmit = func() {
 		window.Close()
-		close(userInputDone)
+		userCancelled <- false
+		close(userCancelled)
 	}
 	registrationForm.OnCancel = func() {
 		i.logger.Warn("Canceling registration on user request.")
-		close(userInputDone)
+		userCancelled <- true
+		close(userCancelled)
 		window.Close()
 	}
 
@@ -198,13 +186,27 @@ func (i *FyneUI) DisplayRegistrationWindow(ctx context.Context, prefs *preferenc
 	window.SetContent(windowContents)
 	window.Show()
 
-	return userInputDone
+	return userCancelled
 }
 
 // aboutWindow creates a window that will show some interesting information
 // about the agent, such as version numbers.
-func (i *FyneUI) aboutWindow(ctx context.Context, client ui.HassClient) fyne.Window {
+func (i *FyneUI) aboutWindow(ctx context.Context) fyne.Window {
 	var widgets []fyne.CanvasObject
+
+	prefs, err := preferences.Load(ctx)
+	if err != nil {
+		logging.FromContext(ctx).Error("Could not start sensor controller.", slog.Any("error", err))
+		return nil
+	}
+
+	hassclient, err := hass.NewClient(ctx)
+	if err != nil {
+		logging.FromContext(ctx).Debug("Cannot create Home Assistant client.", slog.Any("error", err))
+		return nil
+	}
+
+	hassclient.Endpoint(prefs.RestAPIURL(), hass.DefaultTimeout)
 
 	icon := canvas.NewImageFromResource(&ui.TrayIcon{})
 	icon.FillMode = canvas.ImageFillOriginal
@@ -215,10 +217,10 @@ func (i *FyneUI) aboutWindow(ctx context.Context, client ui.HassClient) fyne.Win
 			fyne.TextStyle{Bold: true}))
 
 	widgets = append(widgets,
-		widget.NewLabelWithStyle("Home Assistant "+client.HassVersion(ctx),
+		widget.NewLabelWithStyle("Home Assistant "+hassclient.HassVersion(ctx),
 			fyne.TextAlignCenter,
 			fyne.TextStyle{Bold: true}),
-		widget.NewLabelWithStyle("Tracking "+strconv.Itoa(len(client.SensorList()))+" Entities",
+		widget.NewLabelWithStyle("Tracking "+strconv.Itoa(len(hass.SensorList()))+" Entities",
 			fyne.TextAlignCenter,
 			fyne.TextStyle{Italic: true}),
 	)
@@ -246,20 +248,23 @@ func (i *FyneUI) fyneSettingsWindow() fyne.Window {
 
 // agentSettingsWindow creates a window for changing settings related to the
 // agent functionality. Most of these settings will be optional.
-func (i *FyneUI) agentSettingsWindow(agent ui.Agent) fyne.Window {
+func (i *FyneUI) agentSettingsWindow(ctx context.Context) fyne.Window {
 	var allFormItems []*widget.FormItem
 
-	// Retrieve the existing MQTT preferences.
-	mqttPrefs := agent.GetMQTTPreferences()
+	prefs, err := preferences.Load(ctx)
+	if err != nil {
+		logging.FromContext(ctx).Error("Could not start sensor controller.", slog.Any("error", err))
+		return nil
+	}
 
 	// Generate a form of MQTT preferences.
-	allFormItems = append(allFormItems, i.mqttConfigItems(mqttPrefs)...)
+	allFormItems = append(allFormItems, i.mqttConfigItems(prefs.MQTT)...)
 
 	window := i.app.NewWindow(i.Translate("App Preferences"))
 	settingsForm := widget.NewForm(allFormItems...)
 	settingsForm.OnSubmit = func() {
 		// Save the new MQTT preferences to file.
-		if err := agent.SaveMQTTPreferences(mqttPrefs); err != nil {
+		if err := prefs.Save(); err != nil {
 			dialog.ShowError(err, window)
 			i.logger.Error("Could note save preferences.", slog.Any("error", err))
 		} else {
@@ -284,14 +289,14 @@ func (i *FyneUI) agentSettingsWindow(agent ui.Agent) fyne.Window {
 // continuously.
 //
 //nolint:gocognit
-func (i *FyneUI) sensorsWindow(client ui.HassClient) fyne.Window {
-	sensors := client.SensorList()
+func (i *FyneUI) sensorsWindow() fyne.Window {
+	sensors := hass.SensorList()
 	if sensors == nil {
 		return nil
 	}
 
 	getValue := func(n string) string {
-		if sensor, err := client.GetSensor(n); err == nil {
+		if sensor, err := hass.GetSensor(n); err == nil {
 			var valueStr strings.Builder
 
 			fmt.Fprintf(&valueStr, "%v", sensor.State())
@@ -379,7 +384,7 @@ func (i *FyneUI) sensorsWindow(client ui.HassClient) fyne.Window {
 
 // registrationFields generates a list of form item widgets for selecting a
 // server to register the agent against.
-func (i *FyneUI) registrationFields(prefs *preferences.Preferences) []*widget.FormItem {
+func (i *FyneUI) registrationFields(prefs *preferences.Registration) []*widget.FormItem {
 	searchCtx, searchCancelFunc := context.WithCancel(context.TODO())
 	defer searchCancelFunc()
 
@@ -390,13 +395,13 @@ func (i *FyneUI) registrationFields(prefs *preferences.Preferences) []*widget.Fo
 		i.logger.Warn("Errors occurred discovering Home Assistant servers.", slog.Any("error", err))
 	}
 
-	allServers = append(allServers, prefs.Registration.Server)
+	allServers = append(allServers, prefs.Server)
 	allServers = append(allServers, foundServers...)
 
-	tokenEntry := configEntry(&prefs.Registration.Token, false)
+	tokenEntry := configEntry(&prefs.Token, false)
 	tokenEntry.Validator = validation.NewRegexp("[A-Za-z0-9_\\.]+", "Invalid token format")
 
-	serverEntry := configEntry(&prefs.Registration.Server, false)
+	serverEntry := configEntry(&prefs.Server, false)
 	serverEntry.Validator = httpValidator()
 	serverEntry.Disable()
 
@@ -420,9 +425,9 @@ func (i *FyneUI) registrationFields(prefs *preferences.Preferences) []*widget.Fo
 	ignoreURLsSelect := widget.NewCheck("", func(b bool) {
 		switch b {
 		case true:
-			prefs.Hass.IgnoreHassURLs = true
+			prefs.IgnoreHassURLs = true
 		case false:
-			prefs.Hass.IgnoreHassURLs = false
+			prefs.IgnoreHassURLs = false
 		}
 	})
 

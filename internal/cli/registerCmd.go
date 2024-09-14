@@ -27,15 +27,14 @@ func (r *RegisterCmd) Run(opts *CmdOpts) error {
 	agentCtx, cancelFunc := newContext(opts)
 	defer cancelFunc()
 
-	gohassagent, err := agent.NewAgent(agentCtx,
-		agent.Headless(opts.Headless),
-		agent.WithRegistrationInfo(r.Server, r.Token, r.IgnoreURLs),
-		agent.ForceRegister(r.Force))
-	if err != nil {
-		return fmt.Errorf("failed to run register command: %w", err)
-	}
+	agentCtx = agent.LoadCtx(agentCtx,
+		agent.SetHeadless(opts.Headless),
+		agent.SetRegistrationInfo(r.Server, r.Token, r.IgnoreURLs),
+		agent.SetForceRegister(r.Force))
 
-	gohassagent.Register(agentCtx)
+	if err := agent.Register(agentCtx); err != nil {
+		return fmt.Errorf("failed to run: %w", err)
+	}
 
 	return nil
 }

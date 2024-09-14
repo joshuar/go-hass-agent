@@ -74,11 +74,9 @@ func (t *Tracker) Reset() {
 	}
 }
 
-func NewTracker() (*Tracker, error) {
-	sensorTracker := &Tracker{
+func NewTracker() *Tracker {
+	return &Tracker{
 		sensor: make(map[string]Details),
 		mu:     sync.Mutex{},
 	}
-
-	return sensorTracker, nil
 }

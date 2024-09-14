@@ -22,12 +22,9 @@ func (r *RunCmd) Run(opts *CmdOpts) error {
 	agentCtx, cancelFunc := newContext(opts)
 	defer cancelFunc()
 
-	gohassagent, err := agent.NewAgent(agentCtx, agent.Headless(opts.Headless))
-	if err != nil {
-		return fmt.Errorf("failed to run: %w", err)
-	}
+	agentCtx = agent.LoadCtx(agentCtx, agent.SetHeadless(opts.Headless))
 
-	if err := gohassagent.Run(agentCtx); err != nil {
+	if err := agent.Run(agentCtx); err != nil {
 		return fmt.Errorf("failed to run: %w", err)
 	}
 

@@ -18,7 +18,6 @@ import (
 	mqttapi "github.com/joshuar/go-hass-anything/v11/pkg/mqtt"
 
 	"github.com/joshuar/go-hass-agent/internal/commands"
-	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
@@ -50,19 +49,13 @@ func newMQTTController(ctx context.Context, mqttDevice *mqtthass.Device) MQTTCon
 // runMQTTWorkers will connect to MQTT, publish configs and subscriptions and
 // listen for any messages from all MQTT workers defined by the passed in
 // MQTT controllers.
-func (agent *Agent) runMQTTWorkers(ctx context.Context, controllers ...MQTTController) {
+func runMQTTWorkers(ctx context.Context, prefs mqttapi.Preferences, controllers ...MQTTController) {
 	var ( //nolint:prealloc
 		subscriptions []*mqttapi.Subscription
 		configs       []*mqttapi.Msg
 		msgCh         []<-chan *mqttapi.Msg
 		err           error
 	)
-
-	prefs := agent.prefs.GetMQTTPreferences()
-	if prefs == nil {
-		logging.FromContext(ctx).Debug("No MQTT preferences found, not running MQTT controller.")
-		return
-	}
 
 	// Add the subscriptions and configs from the controllers.
 	for _, controller := range controllers {
@@ -96,27 +89,24 @@ func (agent *Agent) runMQTTWorkers(ctx context.Context, controllers ...MQTTContr
 	}
 }
 
-func (agent *Agent) resetMQTTControllers(ctx context.Context) error {
-	mqttDevice := agent.newMQTTDevice(ctx)
-
-	prefs := agent.prefs.GetMQTTPreferences()
-	if prefs == nil {
+func resetMQTTControllers(ctx context.Context, prefs agentPreferences) error {
+	if !prefs.IsMQTTEnabled() {
 		return nil
 	}
 
+	mqttDevice := prefs.GenerateMQTTDevice(ctx)
+
 	var configs []*mqttapi.Msg
 
-	_, osMQTTController := newOSController(ctx, mqttDevice)
-	if osMQTTController != nil {
-		configs = append(configs, osMQTTController.Configs()...)
-	}
+	osMQTTController := newOSMQTTController(ctx, mqttDevice)
+	configs = append(configs, osMQTTController.Configs()...)
 
 	mqttCmdController := newMQTTController(ctx, mqttDevice)
 	if mqttCmdController != nil {
 		configs = append(configs, mqttCmdController.Configs()...)
 	}
 
-	client, err := mqttapi.NewClient(ctx, prefs, nil, nil)
+	client, err := mqttapi.NewClient(ctx, prefs.GetMQTTPreferences(), nil, nil)
 	if err != nil {
 		return fmt.Errorf("could not connect to MQTT: %w", err)
 	}
@@ -126,30 +116,4 @@ func (agent *Agent) resetMQTTControllers(ctx context.Context) error {
 	}
 
 	return nil
-}
-
-func (agent *Agent) newMQTTDevice(ctx context.Context) *mqtthass.Device {
-	appID := preferences.AppIDFromContext(ctx)
-
-	// Retrieve the hardware model and manufacturer.
-	model, manufacturer, err := device.GetHWProductInfo()
-	if err != nil {
-		logging.FromContext(ctx).Warn("Error creating MQTT device.", slog.Any("error", err))
-	}
-
-	var deviceName, deviceID string
-
-	if agent.prefs != nil {
-		deviceName = agent.prefs.DeviceName()
-		deviceID = agent.prefs.DeviceID()
-	}
-
-	return &mqtthass.Device{
-		Name:         deviceName,
-		URL:          preferences.AppURL,
-		SWVersion:    preferences.AppVersion,
-		Manufacturer: manufacturer,
-		Model:        model,
-		Identifiers:  []string{appID, deviceName, deviceID},
-	}
 }

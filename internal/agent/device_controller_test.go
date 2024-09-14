@@ -9,7 +9,6 @@ package agent
 import (
 	"context"
 	"errors"
-	"log/slog"
 	"reflect"
 	"testing"
 
@@ -21,7 +20,6 @@ import (
 func Test_deviceController_ActiveWorkers(t *testing.T) {
 	type fields struct {
 		sensorWorkers map[string]*sensorWorker
-		logger        *slog.Logger
 	}
 	tests := []struct {
 		name   string
@@ -38,7 +36,6 @@ func Test_deviceController_ActiveWorkers(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			w := &deviceController{
 				sensorWorkers: tt.fields.sensorWorkers,
-				logger:        tt.fields.logger,
 			}
 			if got := w.ActiveWorkers(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("deviceController.ActiveWorkers() = %v, want %v", got, tt.want)
@@ -50,7 +47,6 @@ func Test_deviceController_ActiveWorkers(t *testing.T) {
 func Test_deviceController_InactiveWorkers(t *testing.T) {
 	type fields struct {
 		sensorWorkers map[string]*sensorWorker
-		logger        *slog.Logger
 	}
 	tests := []struct {
 		name   string
@@ -67,7 +63,6 @@ func Test_deviceController_InactiveWorkers(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			w := &deviceController{
 				sensorWorkers: tt.fields.sensorWorkers,
-				logger:        tt.fields.logger,
 			}
 			if got := w.InactiveWorkers(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("deviceController.InactiveWorkers() = %v, want %v", got, tt.want)
@@ -87,7 +82,6 @@ func Test_deviceController_Start(t *testing.T) {
 
 	type fields struct {
 		sensorWorkers map[string]*sensorWorker
-		logger        *slog.Logger
 	}
 	type args struct {
 		name string
@@ -126,7 +120,6 @@ func Test_deviceController_Start(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			w := &deviceController{
 				sensorWorkers: tt.fields.sensorWorkers,
-				logger:        tt.fields.logger,
 			}
 			got, err := w.Start(context.TODO(), tt.args.name)
 			if (err != nil) != tt.wantErr {
@@ -152,7 +145,6 @@ func Test_deviceController_Stop(t *testing.T) {
 
 	type fields struct {
 		sensorWorkers map[string]*sensorWorker
-		logger        *slog.Logger
 	}
 	type args struct {
 		name string
@@ -180,7 +172,6 @@ func Test_deviceController_Stop(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			w := &deviceController{
 				sensorWorkers: tt.fields.sensorWorkers,
-				logger:        tt.fields.logger,
 			}
 			if err := w.Stop(tt.args.name); (err != nil) != tt.wantErr {
 				t.Errorf("deviceController.Stop() error = %v, wantErr %v", err, tt.wantErr)

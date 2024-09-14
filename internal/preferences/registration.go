@@ -3,7 +3,6 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//nolint:tagalign
 package preferences
 
 import (
@@ -11,8 +10,16 @@ import (
 )
 
 type Registration struct {
-	Server string `toml:"server" validate:"required,http_url"`
-	Token  string `toml:"token" validate:"required"`
+	Server         string `toml:"server" validate:"required,http_url"`
+	Token          string `toml:"token" validate:"required"`
+	IgnoreHassURLs bool   `toml:"-" json:"-" validate:"omitempty,boolean"`
+}
+
+func DefaultRegistrationPreferences() *Registration {
+	return &Registration{
+		Server: DefaultServer,
+		Token:  DefaultSecret,
+	}
 }
 
 func (p *Registration) Validate() error {
@@ -22,8 +29,4 @@ func (p *Registration) Validate() error {
 	}
 
 	return nil
-}
-
-func (p *Registration) IsDefault() bool {
-	return p.Server == defaultServer && p.Token == defaultSecret
 }

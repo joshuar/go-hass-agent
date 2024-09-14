@@ -9,25 +9,18 @@ package agent
 import (
 	"context"
 	"log/slog"
-	"time"
 
+	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/logging"
+	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
-
-type HassClient interface {
-	ProcessSensor(ctx context.Context, details sensor.Details) error
-	SensorList() []string
-	GetSensor(id string) (sensor.Details, error)
-	HassVersion(ctx context.Context) string
-	Endpoint(url string, timeout time.Duration)
-}
 
 // runSensorWorkers will start all the sensor worker functions for all sensor
 // controllers passed in. It returns a single merged channel of sensor updates.
 //
 //nolint:gocognit
-func (agent *Agent) runSensorWorkers(ctx context.Context, controllers ...SensorController) {
+func runSensorWorkers(ctx context.Context, controllers ...SensorController) {
 	var sensorCh []<-chan sensor.Details
 
 	for _, controller := range controllers {
@@ -43,6 +36,20 @@ func (agent *Agent) runSensorWorkers(ctx context.Context, controllers ...SensorC
 		logging.FromContext(ctx).Warn("No workers were started by any controllers.")
 		return
 	}
+
+	prefs, err := preferences.Load(ctx)
+	if err != nil {
+		logging.FromContext(ctx).Error("Could not start sensor controller.", slog.Any("error", err))
+		return
+	}
+
+	hassclient, err := hass.NewClient(ctx)
+	if err != nil {
+		logging.FromContext(ctx).Debug("Cannot create Home Assistant client.", slog.Any("error", err))
+		return
+	}
+
+	hassclient.Endpoint(prefs.RestAPIURL(), hass.DefaultTimeout)
 
 	logging.FromContext(ctx).Debug("Processing sensor updates.")
 
@@ -61,7 +68,7 @@ func (agent *Agent) runSensorWorkers(ctx context.Context, controllers ...SensorC
 		default:
 			for details := range mergeCh(ctx, sensorCh...) {
 				go func(details sensor.Details) {
-					if err := agent.hass.ProcessSensor(ctx, details); err != nil {
+					if err := hassclient.ProcessSensor(ctx, details); err != nil {
 						logging.FromContext(ctx).Error("Process sensor failed.", slog.Any("error", err))
 					}
 				}(details)

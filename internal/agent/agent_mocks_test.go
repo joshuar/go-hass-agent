@@ -5,76 +5,73 @@ package agent
 
 import (
 	"context"
-	"github.com/joshuar/go-hass-agent/internal/agent/ui"
+	fyneui "github.com/joshuar/go-hass-agent/internal/agent/ui/fyneUI"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
+	mqtthass "github.com/joshuar/go-hass-anything/v11/pkg/hass"
 	mqttapi "github.com/joshuar/go-hass-anything/v11/pkg/mqtt"
 	"sync"
 )
 
-// Ensure, that UIMock does implement UI.
+// Ensure, that uiMock does implement ui.
 // If this is not the case, regenerate this file with moq.
-var _ UI = &UIMock{}
+var _ ui = &uiMock{}
 
-// UIMock is a mock implementation of UI.
+// uiMock is a mock implementation of ui.
 //
-//	func TestSomethingThatUsesUI(t *testing.T) {
+//	func TestSomethingThatUsesui(t *testing.T) {
 //
-//		// make and configure a mocked UI
-//		mockedUI := &UIMock{
-//			DisplayNotificationFunc: func(n ui.Notification)  {
+//		// make and configure a mocked ui
+//		mockedui := &uiMock{
+//			DisplayNotificationFunc: func(n fyneui.Notification)  {
 //				panic("mock out the DisplayNotification method")
 //			},
-//			DisplayRegistrationWindowFunc: func(ctx context.Context, prefs *preferences.Preferences) chan struct{} {
+//			DisplayRegistrationWindowFunc: func(ctx context.Context, prefs *preferences.Registration) chan bool {
 //				panic("mock out the DisplayRegistrationWindow method")
 //			},
-//			DisplayTrayIconFunc: func(ctx context.Context, agent ui.Agent, client ui.HassClient, cancelFunc context.CancelFunc)  {
+//			DisplayTrayIconFunc: func(ctx context.Context, cancelFunc context.CancelFunc)  {
 //				panic("mock out the DisplayTrayIcon method")
 //			},
-//			RunFunc: func(ctx context.Context, agent ui.Agent)  {
+//			RunFunc: func(ctx context.Context)  {
 //				panic("mock out the Run method")
 //			},
 //		}
 //
-//		// use mockedUI in code that requires UI
+//		// use mockedui in code that requires ui
 //		// and then make assertions.
 //
 //	}
-type UIMock struct {
+type uiMock struct {
 	// DisplayNotificationFunc mocks the DisplayNotification method.
-	DisplayNotificationFunc func(n ui.Notification)
+	DisplayNotificationFunc func(n fyneui.Notification)
 
 	// DisplayRegistrationWindowFunc mocks the DisplayRegistrationWindow method.
-	DisplayRegistrationWindowFunc func(ctx context.Context, prefs *preferences.Preferences) chan struct{}
+	DisplayRegistrationWindowFunc func(ctx context.Context, prefs *preferences.Registration) chan bool
 
 	// DisplayTrayIconFunc mocks the DisplayTrayIcon method.
-	DisplayTrayIconFunc func(ctx context.Context, agent ui.Agent, client ui.HassClient, cancelFunc context.CancelFunc)
+	DisplayTrayIconFunc func(ctx context.Context, cancelFunc context.CancelFunc)
 
 	// RunFunc mocks the Run method.
-	RunFunc func(ctx context.Context, agent ui.Agent)
+	RunFunc func(ctx context.Context)
 
 	// calls tracks calls to the methods.
 	calls struct {
 		// DisplayNotification holds details about calls to the DisplayNotification method.
 		DisplayNotification []struct {
 			// N is the n argument value.
-			N ui.Notification
+			N fyneui.Notification
 		}
 		// DisplayRegistrationWindow holds details about calls to the DisplayRegistrationWindow method.
 		DisplayRegistrationWindow []struct {
 			// Ctx is the ctx argument value.
 			Ctx context.Context
 			// Prefs is the prefs argument value.
-			Prefs *preferences.Preferences
+			Prefs *preferences.Registration
 		}
 		// DisplayTrayIcon holds details about calls to the DisplayTrayIcon method.
 		DisplayTrayIcon []struct {
 			// Ctx is the ctx argument value.
 			Ctx context.Context
-			// Agent is the agent argument value.
-			Agent ui.Agent
-			// Client is the client argument value.
-			Client ui.HassClient
 			// CancelFunc is the cancelFunc argument value.
 			CancelFunc context.CancelFunc
 		}
@@ -82,8 +79,6 @@ type UIMock struct {
 		Run []struct {
 			// Ctx is the ctx argument value.
 			Ctx context.Context
-			// Agent is the agent argument value.
-			Agent ui.Agent
 		}
 	}
 	lockDisplayNotification       sync.RWMutex
@@ -93,12 +88,12 @@ type UIMock struct {
 }
 
 // DisplayNotification calls DisplayNotificationFunc.
-func (mock *UIMock) DisplayNotification(n ui.Notification) {
+func (mock *uiMock) DisplayNotification(n fyneui.Notification) {
 	if mock.DisplayNotificationFunc == nil {
-		panic("UIMock.DisplayNotificationFunc: method is nil but UI.DisplayNotification was just called")
+		panic("uiMock.DisplayNotificationFunc: method is nil but ui.DisplayNotification was just called")
 	}
 	callInfo := struct {
-		N ui.Notification
+		N fyneui.Notification
 	}{
 		N: n,
 	}
@@ -111,12 +106,12 @@ func (mock *UIMock) DisplayNotification(n ui.Notification) {
 // DisplayNotificationCalls gets all the calls that were made to DisplayNotification.
 // Check the length with:
 //
-//	len(mockedUI.DisplayNotificationCalls())
-func (mock *UIMock) DisplayNotificationCalls() []struct {
-	N ui.Notification
+//	len(mockedui.DisplayNotificationCalls())
+func (mock *uiMock) DisplayNotificationCalls() []struct {
+	N fyneui.Notification
 } {
 	var calls []struct {
-		N ui.Notification
+		N fyneui.Notification
 	}
 	mock.lockDisplayNotification.RLock()
 	calls = mock.calls.DisplayNotification
@@ -125,13 +120,13 @@ func (mock *UIMock) DisplayNotificationCalls() []struct {
 }
 
 // DisplayRegistrationWindow calls DisplayRegistrationWindowFunc.
-func (mock *UIMock) DisplayRegistrationWindow(ctx context.Context, prefs *preferences.Preferences) chan struct{} {
+func (mock *uiMock) DisplayRegistrationWindow(ctx context.Context, prefs *preferences.Registration) chan bool {
 	if mock.DisplayRegistrationWindowFunc == nil {
-		panic("UIMock.DisplayRegistrationWindowFunc: method is nil but UI.DisplayRegistrationWindow was just called")
+		panic("uiMock.DisplayRegistrationWindowFunc: method is nil but ui.DisplayRegistrationWindow was just called")
 	}
 	callInfo := struct {
 		Ctx   context.Context
-		Prefs *preferences.Preferences
+		Prefs *preferences.Registration
 	}{
 		Ctx:   ctx,
 		Prefs: prefs,
@@ -145,14 +140,14 @@ func (mock *UIMock) DisplayRegistrationWindow(ctx context.Context, prefs *prefer
 // DisplayRegistrationWindowCalls gets all the calls that were made to DisplayRegistrationWindow.
 // Check the length with:
 //
-//	len(mockedUI.DisplayRegistrationWindowCalls())
-func (mock *UIMock) DisplayRegistrationWindowCalls() []struct {
+//	len(mockedui.DisplayRegistrationWindowCalls())
+func (mock *uiMock) DisplayRegistrationWindowCalls() []struct {
 	Ctx   context.Context
-	Prefs *preferences.Preferences
+	Prefs *preferences.Registration
 } {
 	var calls []struct {
 		Ctx   context.Context
-		Prefs *preferences.Preferences
+		Prefs *preferences.Registration
 	}
 	mock.lockDisplayRegistrationWindow.RLock()
 	calls = mock.calls.DisplayRegistrationWindow
@@ -161,41 +156,33 @@ func (mock *UIMock) DisplayRegistrationWindowCalls() []struct {
 }
 
 // DisplayTrayIcon calls DisplayTrayIconFunc.
-func (mock *UIMock) DisplayTrayIcon(ctx context.Context, agent ui.Agent, client ui.HassClient, cancelFunc context.CancelFunc) {
+func (mock *uiMock) DisplayTrayIcon(ctx context.Context, cancelFunc context.CancelFunc) {
 	if mock.DisplayTrayIconFunc == nil {
-		panic("UIMock.DisplayTrayIconFunc: method is nil but UI.DisplayTrayIcon was just called")
+		panic("uiMock.DisplayTrayIconFunc: method is nil but ui.DisplayTrayIcon was just called")
 	}
 	callInfo := struct {
 		Ctx        context.Context
-		Agent      ui.Agent
-		Client     ui.HassClient
 		CancelFunc context.CancelFunc
 	}{
 		Ctx:        ctx,
-		Agent:      agent,
-		Client:     client,
 		CancelFunc: cancelFunc,
 	}
 	mock.lockDisplayTrayIcon.Lock()
 	mock.calls.DisplayTrayIcon = append(mock.calls.DisplayTrayIcon, callInfo)
 	mock.lockDisplayTrayIcon.Unlock()
-	mock.DisplayTrayIconFunc(ctx, agent, client, cancelFunc)
+	mock.DisplayTrayIconFunc(ctx, cancelFunc)
 }
 
 // DisplayTrayIconCalls gets all the calls that were made to DisplayTrayIcon.
 // Check the length with:
 //
-//	len(mockedUI.DisplayTrayIconCalls())
-func (mock *UIMock) DisplayTrayIconCalls() []struct {
+//	len(mockedui.DisplayTrayIconCalls())
+func (mock *uiMock) DisplayTrayIconCalls() []struct {
 	Ctx        context.Context
-	Agent      ui.Agent
-	Client     ui.HassClient
 	CancelFunc context.CancelFunc
 } {
 	var calls []struct {
 		Ctx        context.Context
-		Agent      ui.Agent
-		Client     ui.HassClient
 		CancelFunc context.CancelFunc
 	}
 	mock.lockDisplayTrayIcon.RLock()
@@ -205,38 +192,335 @@ func (mock *UIMock) DisplayTrayIconCalls() []struct {
 }
 
 // Run calls RunFunc.
-func (mock *UIMock) Run(ctx context.Context, agent ui.Agent) {
+func (mock *uiMock) Run(ctx context.Context) {
 	if mock.RunFunc == nil {
-		panic("UIMock.RunFunc: method is nil but UI.Run was just called")
+		panic("uiMock.RunFunc: method is nil but ui.Run was just called")
 	}
 	callInfo := struct {
-		Ctx   context.Context
-		Agent ui.Agent
+		Ctx context.Context
 	}{
-		Ctx:   ctx,
-		Agent: agent,
+		Ctx: ctx,
 	}
 	mock.lockRun.Lock()
 	mock.calls.Run = append(mock.calls.Run, callInfo)
 	mock.lockRun.Unlock()
-	mock.RunFunc(ctx, agent)
+	mock.RunFunc(ctx)
 }
 
 // RunCalls gets all the calls that were made to Run.
 // Check the length with:
 //
-//	len(mockedUI.RunCalls())
-func (mock *UIMock) RunCalls() []struct {
-	Ctx   context.Context
-	Agent ui.Agent
+//	len(mockedui.RunCalls())
+func (mock *uiMock) RunCalls() []struct {
+	Ctx context.Context
 } {
 	var calls []struct {
-		Ctx   context.Context
-		Agent ui.Agent
+		Ctx context.Context
 	}
 	mock.lockRun.RLock()
 	calls = mock.calls.Run
 	mock.lockRun.RUnlock()
+	return calls
+}
+
+// Ensure, that agentPreferencesMock does implement agentPreferences.
+// If this is not the case, regenerate this file with moq.
+var _ agentPreferences = &agentPreferencesMock{}
+
+// agentPreferencesMock is a mock implementation of agentPreferences.
+//
+//	func TestSomethingThatUsesagentPreferences(t *testing.T) {
+//
+//		// make and configure a mocked agentPreferences
+//		mockedagentPreferences := &agentPreferencesMock{
+//			AgentRegisteredFunc: func() bool {
+//				panic("mock out the AgentRegistered method")
+//			},
+//			AgentVersionFunc: func() string {
+//				panic("mock out the AgentVersion method")
+//			},
+//			GenerateMQTTDeviceFunc: func(ctx context.Context) *mqtthass.Device {
+//				panic("mock out the GenerateMQTTDevice method")
+//			},
+//			GetDeviceInfoFunc: func() *preferences.Device {
+//				panic("mock out the GetDeviceInfo method")
+//			},
+//			GetMQTTPreferencesFunc: func() mqttapi.Preferences {
+//				panic("mock out the GetMQTTPreferences method")
+//			},
+//			IsMQTTEnabledFunc: func() bool {
+//				panic("mock out the IsMQTTEnabled method")
+//			},
+//			SaveHassPreferencesFunc: func(details *preferences.Hass, options *preferences.Registration) error {
+//				panic("mock out the SaveHassPreferences method")
+//			},
+//		}
+//
+//		// use mockedagentPreferences in code that requires agentPreferences
+//		// and then make assertions.
+//
+//	}
+type agentPreferencesMock struct {
+	// AgentRegisteredFunc mocks the AgentRegistered method.
+	AgentRegisteredFunc func() bool
+
+	// AgentVersionFunc mocks the AgentVersion method.
+	AgentVersionFunc func() string
+
+	// GenerateMQTTDeviceFunc mocks the GenerateMQTTDevice method.
+	GenerateMQTTDeviceFunc func(ctx context.Context) *mqtthass.Device
+
+	// GetDeviceInfoFunc mocks the GetDeviceInfo method.
+	GetDeviceInfoFunc func() *preferences.Device
+
+	// GetMQTTPreferencesFunc mocks the GetMQTTPreferences method.
+	GetMQTTPreferencesFunc func() mqttapi.Preferences
+
+	// IsMQTTEnabledFunc mocks the IsMQTTEnabled method.
+	IsMQTTEnabledFunc func() bool
+
+	// SaveHassPreferencesFunc mocks the SaveHassPreferences method.
+	SaveHassPreferencesFunc func(details *preferences.Hass, options *preferences.Registration) error
+
+	// calls tracks calls to the methods.
+	calls struct {
+		// AgentRegistered holds details about calls to the AgentRegistered method.
+		AgentRegistered []struct {
+		}
+		// AgentVersion holds details about calls to the AgentVersion method.
+		AgentVersion []struct {
+		}
+		// GenerateMQTTDevice holds details about calls to the GenerateMQTTDevice method.
+		GenerateMQTTDevice []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+		}
+		// GetDeviceInfo holds details about calls to the GetDeviceInfo method.
+		GetDeviceInfo []struct {
+		}
+		// GetMQTTPreferences holds details about calls to the GetMQTTPreferences method.
+		GetMQTTPreferences []struct {
+		}
+		// IsMQTTEnabled holds details about calls to the IsMQTTEnabled method.
+		IsMQTTEnabled []struct {
+		}
+		// SaveHassPreferences holds details about calls to the SaveHassPreferences method.
+		SaveHassPreferences []struct {
+			// Details is the details argument value.
+			Details *preferences.Hass
+			// Options is the options argument value.
+			Options *preferences.Registration
+		}
+	}
+	lockAgentRegistered     sync.RWMutex
+	lockAgentVersion        sync.RWMutex
+	lockGenerateMQTTDevice  sync.RWMutex
+	lockGetDeviceInfo       sync.RWMutex
+	lockGetMQTTPreferences  sync.RWMutex
+	lockIsMQTTEnabled       sync.RWMutex
+	lockSaveHassPreferences sync.RWMutex
+}
+
+// AgentRegistered calls AgentRegisteredFunc.
+func (mock *agentPreferencesMock) AgentRegistered() bool {
+	if mock.AgentRegisteredFunc == nil {
+		panic("agentPreferencesMock.AgentRegisteredFunc: method is nil but agentPreferences.AgentRegistered was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockAgentRegistered.Lock()
+	mock.calls.AgentRegistered = append(mock.calls.AgentRegistered, callInfo)
+	mock.lockAgentRegistered.Unlock()
+	return mock.AgentRegisteredFunc()
+}
+
+// AgentRegisteredCalls gets all the calls that were made to AgentRegistered.
+// Check the length with:
+//
+//	len(mockedagentPreferences.AgentRegisteredCalls())
+func (mock *agentPreferencesMock) AgentRegisteredCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockAgentRegistered.RLock()
+	calls = mock.calls.AgentRegistered
+	mock.lockAgentRegistered.RUnlock()
+	return calls
+}
+
+// AgentVersion calls AgentVersionFunc.
+func (mock *agentPreferencesMock) AgentVersion() string {
+	if mock.AgentVersionFunc == nil {
+		panic("agentPreferencesMock.AgentVersionFunc: method is nil but agentPreferences.AgentVersion was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockAgentVersion.Lock()
+	mock.calls.AgentVersion = append(mock.calls.AgentVersion, callInfo)
+	mock.lockAgentVersion.Unlock()
+	return mock.AgentVersionFunc()
+}
+
+// AgentVersionCalls gets all the calls that were made to AgentVersion.
+// Check the length with:
+//
+//	len(mockedagentPreferences.AgentVersionCalls())
+func (mock *agentPreferencesMock) AgentVersionCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockAgentVersion.RLock()
+	calls = mock.calls.AgentVersion
+	mock.lockAgentVersion.RUnlock()
+	return calls
+}
+
+// GenerateMQTTDevice calls GenerateMQTTDeviceFunc.
+func (mock *agentPreferencesMock) GenerateMQTTDevice(ctx context.Context) *mqtthass.Device {
+	if mock.GenerateMQTTDeviceFunc == nil {
+		panic("agentPreferencesMock.GenerateMQTTDeviceFunc: method is nil but agentPreferences.GenerateMQTTDevice was just called")
+	}
+	callInfo := struct {
+		Ctx context.Context
+	}{
+		Ctx: ctx,
+	}
+	mock.lockGenerateMQTTDevice.Lock()
+	mock.calls.GenerateMQTTDevice = append(mock.calls.GenerateMQTTDevice, callInfo)
+	mock.lockGenerateMQTTDevice.Unlock()
+	return mock.GenerateMQTTDeviceFunc(ctx)
+}
+
+// GenerateMQTTDeviceCalls gets all the calls that were made to GenerateMQTTDevice.
+// Check the length with:
+//
+//	len(mockedagentPreferences.GenerateMQTTDeviceCalls())
+func (mock *agentPreferencesMock) GenerateMQTTDeviceCalls() []struct {
+	Ctx context.Context
+} {
+	var calls []struct {
+		Ctx context.Context
+	}
+	mock.lockGenerateMQTTDevice.RLock()
+	calls = mock.calls.GenerateMQTTDevice
+	mock.lockGenerateMQTTDevice.RUnlock()
+	return calls
+}
+
+// GetDeviceInfo calls GetDeviceInfoFunc.
+func (mock *agentPreferencesMock) GetDeviceInfo() *preferences.Device {
+	if mock.GetDeviceInfoFunc == nil {
+		panic("agentPreferencesMock.GetDeviceInfoFunc: method is nil but agentPreferences.GetDeviceInfo was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockGetDeviceInfo.Lock()
+	mock.calls.GetDeviceInfo = append(mock.calls.GetDeviceInfo, callInfo)
+	mock.lockGetDeviceInfo.Unlock()
+	return mock.GetDeviceInfoFunc()
+}
+
+// GetDeviceInfoCalls gets all the calls that were made to GetDeviceInfo.
+// Check the length with:
+//
+//	len(mockedagentPreferences.GetDeviceInfoCalls())
+func (mock *agentPreferencesMock) GetDeviceInfoCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockGetDeviceInfo.RLock()
+	calls = mock.calls.GetDeviceInfo
+	mock.lockGetDeviceInfo.RUnlock()
+	return calls
+}
+
+// GetMQTTPreferences calls GetMQTTPreferencesFunc.
+func (mock *agentPreferencesMock) GetMQTTPreferences() mqttapi.Preferences {
+	if mock.GetMQTTPreferencesFunc == nil {
+		panic("agentPreferencesMock.GetMQTTPreferencesFunc: method is nil but agentPreferences.GetMQTTPreferences was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockGetMQTTPreferences.Lock()
+	mock.calls.GetMQTTPreferences = append(mock.calls.GetMQTTPreferences, callInfo)
+	mock.lockGetMQTTPreferences.Unlock()
+	return mock.GetMQTTPreferencesFunc()
+}
+
+// GetMQTTPreferencesCalls gets all the calls that were made to GetMQTTPreferences.
+// Check the length with:
+//
+//	len(mockedagentPreferences.GetMQTTPreferencesCalls())
+func (mock *agentPreferencesMock) GetMQTTPreferencesCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockGetMQTTPreferences.RLock()
+	calls = mock.calls.GetMQTTPreferences
+	mock.lockGetMQTTPreferences.RUnlock()
+	return calls
+}
+
+// IsMQTTEnabled calls IsMQTTEnabledFunc.
+func (mock *agentPreferencesMock) IsMQTTEnabled() bool {
+	if mock.IsMQTTEnabledFunc == nil {
+		panic("agentPreferencesMock.IsMQTTEnabledFunc: method is nil but agentPreferences.IsMQTTEnabled was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockIsMQTTEnabled.Lock()
+	mock.calls.IsMQTTEnabled = append(mock.calls.IsMQTTEnabled, callInfo)
+	mock.lockIsMQTTEnabled.Unlock()
+	return mock.IsMQTTEnabledFunc()
+}
+
+// IsMQTTEnabledCalls gets all the calls that were made to IsMQTTEnabled.
+// Check the length with:
+//
+//	len(mockedagentPreferences.IsMQTTEnabledCalls())
+func (mock *agentPreferencesMock) IsMQTTEnabledCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockIsMQTTEnabled.RLock()
+	calls = mock.calls.IsMQTTEnabled
+	mock.lockIsMQTTEnabled.RUnlock()
+	return calls
+}
+
+// SaveHassPreferences calls SaveHassPreferencesFunc.
+func (mock *agentPreferencesMock) SaveHassPreferences(details *preferences.Hass, options *preferences.Registration) error {
+	if mock.SaveHassPreferencesFunc == nil {
+		panic("agentPreferencesMock.SaveHassPreferencesFunc: method is nil but agentPreferences.SaveHassPreferences was just called")
+	}
+	callInfo := struct {
+		Details *preferences.Hass
+		Options *preferences.Registration
+	}{
+		Details: details,
+		Options: options,
+	}
+	mock.lockSaveHassPreferences.Lock()
+	mock.calls.SaveHassPreferences = append(mock.calls.SaveHassPreferences, callInfo)
+	mock.lockSaveHassPreferences.Unlock()
+	return mock.SaveHassPreferencesFunc(details, options)
+}
+
+// SaveHassPreferencesCalls gets all the calls that were made to SaveHassPreferences.
+// Check the length with:
+//
+//	len(mockedagentPreferences.SaveHassPreferencesCalls())
+func (mock *agentPreferencesMock) SaveHassPreferencesCalls() []struct {
+	Details *preferences.Hass
+	Options *preferences.Registration
+} {
+	var calls []struct {
+		Details *preferences.Hass
+		Options *preferences.Registration
+	}
+	mock.lockSaveHassPreferences.RLock()
+	calls = mock.calls.SaveHassPreferences
+	mock.lockSaveHassPreferences.RUnlock()
 	return calls
 }
 
