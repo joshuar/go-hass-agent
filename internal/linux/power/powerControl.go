@@ -19,13 +19,6 @@ import (
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
-// powerController contains items that all power controls use.
-type powerController struct {
-	logger      *slog.Logger
-	bus         *dbusx.Bus
-	sessionPath string
-}
-
 // powerCommand represents a power command in the agent.
 type powerCommand struct {
 	callBack func(p *paho.Publish)
@@ -37,7 +30,7 @@ type powerCommand struct {
 
 // generateCommands generates a list of power commands that are available on the
 // device running the agent.
-func (c *powerController) generateCommands(ctx context.Context, device string) []powerCommand {
+func generatePowerCommands(ctx context.Context, bus *dbusx.Bus, device string) []powerCommand {
 	systemCommands := []powerCommand{
 		{
 			name:   "Reboot",
@@ -70,9 +63,9 @@ func (c *powerController) generateCommands(ctx context.Context, device string) [
 	// Add available system power commands.
 	for _, config := range systemCommands {
 		// Check if this power method is available on the system.
-		available, err := dbusx.GetData[string](c.bus, loginBasePath, loginBaseInterface, managerInterface+".Can"+config.method)
+		available, err := dbusx.GetData[string](bus, loginBasePath, loginBaseInterface, managerInterface+".Can"+config.method)
 		if available == "yes" || err == nil {
-			config.callBack = c.generatePowerControlCallback(ctx, config.name, loginBasePath, managerInterface+"."+config.method)
+			config.callBack = generatePowerControlCallback(ctx, bus, config.name, loginBasePath, managerInterface+"."+config.method)
 			availableCommands = append(availableCommands, config)
 		}
 	}
@@ -82,13 +75,14 @@ func (c *powerController) generateCommands(ctx context.Context, device string) [
 
 // generatePowerControlCallback creates an MQTT callback function that can
 // execute the appropriate D-Bus call to issue a power command on the device.
-func (c *powerController) generatePowerControlCallback(ctx context.Context, name, path, method string) func(p *paho.Publish) {
+func generatePowerControlCallback(ctx context.Context, bus *dbusx.Bus, name, path, method string) func(p *paho.Publish) {
 	return func(_ *paho.Publish) {
-		err := dbusx.NewMethod(c.bus, loginBaseInterface, path, method).Call(ctx)
+		err := dbusx.NewMethod(bus, loginBaseInterface, path, method).Call(ctx, true)
 		if err != nil {
-			c.logger.Warn("Could not issue power control.",
-				slog.String("control", name),
-				slog.Any("error", err))
+			logging.FromContext(ctx).With(slog.String("controller", "power")).
+				Warn("Could not issue power control.",
+					slog.String("control", name),
+					slog.Any("error", err))
 		}
 	}
 }
@@ -99,18 +93,12 @@ func NewPowerControl(ctx context.Context, device *mqtthass.Device) ([]*mqtthass.
 		return nil, linux.ErrNoSystemBus
 	}
 
-	sessionPath, ok := linux.CtxGetSessionPath(ctx)
+	_, ok = linux.CtxGetSessionPath(ctx)
 	if !ok {
 		return nil, linux.ErrNoSessionPath
 	}
 
-	controller := &powerController{
-		logger:      logging.FromContext(ctx).WithGroup("power_control"),
-		bus:         bus,
-		sessionPath: sessionPath,
-	}
-
-	commands := controller.generateCommands(ctx, device.Name)
+	commands := generatePowerCommands(ctx, bus, device.Name)
 	entities := make([]*mqtthass.ButtonEntity, 0, len(commands))
 
 	for _, command := range commands {
