@@ -8,7 +8,6 @@ package sensor
 
 import (
 	"reflect"
-	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -175,34 +174,6 @@ func TestTracker_Reset(t *testing.T) {
 			}
 			tr.Reset()
 			assert.Nil(t, tr.sensor)
-		})
-	}
-}
-
-func TestNewTracker(t *testing.T) {
-	tests := []struct {
-		want    *Tracker
-		name    string
-		wantErr bool
-	}{
-		{
-			name: "new tracker",
-			want: &Tracker{
-				sensor: make(map[string]Details),
-				mu:     sync.Mutex{},
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := NewTracker()
-			if (err != nil) != tt.wantErr {
-				t.Errorf("NewTracker() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewTracker() = %v, want %v", got, tt.want)
-			}
 		})
 	}
 }

@@ -171,12 +171,9 @@ func (c *linuxMQTTController) generateConfig(e entity) *mqttapi.Msg {
 	return cfg
 }
 
-// newOSController initializes the list of workers for sensors and returns those
-// that are supported on this device.
-//
-//revive:disable:function-length
-//nolint:cyclop
-func newOSController(ctx context.Context, mqttDevice *mqtthass.Device) (SensorController, MQTTController) {
+// newOSSensorController initializes the list of sensor workers for sensors and
+// returns those that are supported on this device.
+func newOSSensorController(ctx context.Context) SensorController {
 	ctx = linux.NewContext(ctx)
 
 	logger := logging.FromContext(ctx).With(slog.Group("linux", slog.String("controller", "sensor")))
@@ -184,7 +181,6 @@ func newOSController(ctx context.Context, mqttDevice *mqtthass.Device) (SensorCo
 	sensorController := &linuxSensorController{
 		deviceController: deviceController{
 			sensorWorkers: make(map[string]*sensorWorker),
-			logger:        logger,
 		},
 	}
 
@@ -192,7 +188,7 @@ func newOSController(ctx context.Context, mqttDevice *mqtthass.Device) (SensorCo
 	for _, startWorkerFunc := range allworkers {
 		worker, err := startWorkerFunc(ctx)
 		if err != nil {
-			sensorController.logger.Warn("Could not start a sensor worker.", slog.Any("error", err))
+			logger.Warn("Could not start a sensor worker.", slog.Any("error", err))
 
 			continue
 		}
@@ -200,31 +196,32 @@ func newOSController(ctx context.Context, mqttDevice *mqtthass.Device) (SensorCo
 		sensorController.sensorWorkers[worker.ID()] = &sensorWorker{object: worker, started: false}
 	}
 
-	// Stop setup if there is no mqttDevice.
-	if mqttDevice == nil {
-		return sensorController, nil
-	}
+	return sensorController
+}
 
-	logger = logging.FromContext(ctx).With(slog.Group("linux", slog.String("controller", "mqtt")))
-	ctx = logging.ToContext(ctx, logger)
+// newOSMQTTController initializes the list of MQTT workers for sensors and
+// returns those that are supported on this device.
+func newOSMQTTController(ctx context.Context, mqttDevice *mqtthass.Device) MQTTController {
+	ctx = linux.NewContext(ctx)
+	logger := logging.FromContext(ctx).With(slog.Group("linux", slog.String("controller", "mqtt")))
+
 	mqttController := &linuxMQTTController{
 		mqttWorker: &mqttWorker{
 			msgs: make(chan *mqttapi.Msg),
 		},
-		logger: logger,
 	}
 
 	// Add the power controls (suspend, resume, poweroff, etc.).
 	powerEntities, err := power.NewPowerControl(ctx, mqttDevice)
 	if err != nil {
-		mqttController.logger.Warn("Could not create power controls.", slog.Any("error", err))
+		logger.Warn("Could not create power controls.", slog.Any("error", err))
 	} else {
 		mqttController.buttons = append(mqttController.buttons, powerEntities...)
 	}
 	// Add the screen lock controls.
 	screenControls, err := power.NewScreenLockControl(ctx, mqttDevice)
 	if err != nil {
-		mqttController.logger.Warn("Could not create screen lock controls.", slog.Any("error", err))
+		logger.Warn("Could not create screen lock controls.", slog.Any("error", err))
 	} else {
 		mqttController.buttons = append(mqttController.buttons, screenControls...)
 	}
@@ -237,7 +234,7 @@ func newOSController(ctx context.Context, mqttDevice *mqtthass.Device) (SensorCo
 	// Add media control.
 	mprisEntity, err := media.MPRISControl(ctx, mqttDevice, mqttController.Msgs())
 	if err != nil {
-		mqttController.logger.Warn("Could not activate MPRIS controller.", slog.Any("error", err))
+		logger.Warn("Could not activate MPRIS controller.", slog.Any("error", err))
 	} else {
 		mqttController.sensors = append(mqttController.sensors, mprisEntity)
 	}
@@ -252,7 +249,7 @@ func newOSController(ctx context.Context, mqttDevice *mqtthass.Device) (SensorCo
 	// Add the D-Bus command action.
 	dbusCmdController, err := system.NewDBusCommandSubscription(ctx, mqttDevice)
 	if err != nil {
-		mqttController.logger.Warn("Could not activate D-Bus commands controller.", slog.Any("error", err))
+		logger.Warn("Could not activate D-Bus commands controller.", slog.Any("error", err))
 	} else {
 		mqttController.controls = append(mqttController.controls, dbusCmdController)
 	}
@@ -262,5 +259,5 @@ func newOSController(ctx context.Context, mqttDevice *mqtthass.Device) (SensorCo
 		<-ctx.Done()
 	}()
 
-	return sensorController, mqttController
+	return mqttController
 }

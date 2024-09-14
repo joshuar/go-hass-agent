@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"net/url"
 
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/registry"
@@ -18,68 +17,41 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
-var (
-	ErrInvalidRegistration = errors.New("invalid")
-	ErrAbortRegistration   = errors.New("registration aborted")
-)
+var ErrUserCancelledRegistration = errors.New("user canceled registration")
 
-// saveRegistration stores the relevant information from the registration
-// request and the successful response in the agent preferences. This includes,
-// most importantly, details on the URL that should be used to send subsequent
-// requests to Home Assistant.
-func (agent *Agent) saveRegistration(hassPrefs *preferences.Hass, ignoreURLs bool) error {
-	var err error
-
-	// Copy new hass preferences to agent preferences
-	agent.prefs.Hass = hassPrefs
-	agent.prefs.Hass.IgnoreHassURLs = ignoreURLs
-	// Add the generated URLS
-	// Generate an API URL.
-	agent.prefs.Hass.RestAPIURL, err = generateAPIURL(agent.prefs.Registration.Server, hassPrefs)
-	if err != nil {
-		return fmt.Errorf("unable to save registration: %w", err)
-	}
-	// Generate a websocket URL.
-	agent.prefs.Hass.WebsocketURL, err = generateWebsocketURL(agent.prefs.Registration.Server)
-	if err != nil {
-		return fmt.Errorf("unable to save registration: %w", err)
-	}
-	// Set agent as registered
-	agent.prefs.Registered = true
-	// Save the preferences to disk.
-	err = agent.prefs.Save()
-	if err != nil {
-		return fmt.Errorf("unable to save preferences: %w", err)
-	}
-
-	return nil
-}
-
-func (agent *Agent) checkRegistration(ctx context.Context) error {
-	// If the agent is already registered and forced registration was not
-	// requested, abort.
-	if agent.prefs.Registered && !agent.forceRegister {
+func checkRegistration(ctx context.Context, agentUI ui, prefs agentPreferences) error {
+	if prefs.AgentRegistered() && !ForceRegister(ctx) {
 		return nil
 	}
 
-	// If the agent is not running headless, ask the user for registration
-	// details.
-	if !agent.headless && agent.prefs.Registration.IsDefault() {
-		userInputDoneCh := agent.ui.DisplayRegistrationWindow(ctx, agent.prefs)
-		<-userInputDoneCh
+	// Set the registration options as passed in from command-line.
+	registrationOptions := &preferences.Registration{
+		Server:         Server(ctx),
+		Token:          Token(ctx),
+		IgnoreHassURLs: IgnoreURLs(ctx),
 	}
 
-	// Perform registration.
-	registrationDetails, err := hass.RegisterDevice(ctx, agent.prefs.Device, agent.prefs.Registration)
+	// If not headless, present a UI for the user to configure options.
+	if !Headless(ctx) {
+		userInputDoneCh := agentUI.DisplayRegistrationWindow(ctx, registrationOptions)
+		if canceled := <-userInputDoneCh; canceled {
+			return ErrUserCancelledRegistration
+		}
+	}
+
+	// Perform registration with given values.
+	registrationDetails, err := hass.RegisterDevice(ctx, prefs.GetDeviceInfo(), registrationOptions)
 	if err != nil {
 		return fmt.Errorf("device registration failed: %w", err)
 	}
 
-	if err := agent.saveRegistration(registrationDetails, agent.prefs.Hass.IgnoreHassURLs); err != nil {
+	// Save the returned preferences.
+	if err := prefs.SaveHassPreferences(registrationDetails, registrationOptions); err != nil {
 		return fmt.Errorf("saving registration failed: %w", err)
 	}
 
-	if agent.forceRegister {
+	// If the registration was forced, reset the sensor registry.
+	if ForceRegister(ctx) {
 		if err := registry.Reset(ctx); err != nil {
 			logging.FromContext(ctx).Warn("Problem resetting registry.", slog.Any("error", err))
 		}
@@ -88,43 +60,4 @@ func (agent *Agent) checkRegistration(ctx context.Context) error {
 	logging.FromContext(ctx).Info("Agent registered.")
 
 	return nil
-}
-
-func generateAPIURL(server string, prefs *preferences.Hass) (string, error) {
-	switch {
-	case prefs.CloudhookURL != "" && !prefs.IgnoreHassURLs:
-		return prefs.CloudhookURL, nil
-	case prefs.RemoteUIURL != "" && prefs.WebhookID != "" && !prefs.IgnoreHassURLs:
-		return prefs.RemoteUIURL + hass.WebHookPath + prefs.WebhookID, nil
-	default:
-		apiURL, err := url.Parse(server)
-		if err != nil {
-			return "", fmt.Errorf("unable to generate API URL: %w", err)
-		}
-
-		apiURL = apiURL.JoinPath(hass.WebHookPath, prefs.WebhookID)
-
-		return apiURL.String(), nil
-	}
-}
-
-func generateWebsocketURL(host string) (string, error) {
-	websocketURL, err := url.Parse(host)
-	if err != nil {
-		return "", fmt.Errorf("unable to generate websocket URL: %w", err)
-	}
-
-	switch websocketURL.Scheme {
-	case "https":
-		websocketURL.Scheme = "wss"
-	case "http":
-		websocketURL.Scheme = "ws"
-	case "wss":
-	default:
-		websocketURL.Scheme = "ws"
-	}
-
-	websocketURL = websocketURL.JoinPath(hass.WebsocketPath)
-
-	return websocketURL.String(), nil
 }

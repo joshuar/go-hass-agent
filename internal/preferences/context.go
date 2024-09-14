@@ -10,7 +10,8 @@ import "context"
 type contextKey string
 
 const (
-	appIDContextKey contextKey = "appID"
+	appIDContextKey      contextKey = "appID"
+	restAPIURLContextKey contextKey = "restAPIURL"
 )
 
 func AppIDToContext(ctx context.Context, appID string) context.Context {
@@ -26,4 +27,19 @@ func AppIDFromContext(ctx context.Context) string {
 	}
 
 	return appID
+}
+
+func RestAPIURLToContext(ctx context.Context, url string) context.Context {
+	newCtx := context.WithValue(ctx, restAPIURLContextKey, url)
+
+	return newCtx
+}
+
+func RestAPIURLFromContext(ctx context.Context) string {
+	url, ok := ctx.Value(appIDContextKey).(string)
+	if !ok {
+		return ""
+	}
+
+	return url
 }

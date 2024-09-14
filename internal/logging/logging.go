@@ -15,11 +15,11 @@ import (
 
 	slogmulti "github.com/samber/slog-multi"
 
+	"github.com/joshuar/go-hass-agent/internal/preferences"
+
 	"github.com/adrg/xdg"
 	"github.com/lmittmann/tint"
 	"github.com/mattn/go-isatty"
-
-	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
 const (

@@ -59,7 +59,7 @@ type MQTTController interface {
 	Msgs() chan *mqttapi.Msg
 }
 
-func (agent *Agent) setupControllers(ctx context.Context) []any {
+func (agent *Agent) setupControllers(ctx context.Context, prefs agentPreferences) []any {
 	var (
 		mqttDevice  *mqtthass.Device
 		controllers []any
@@ -67,14 +67,15 @@ func (agent *Agent) setupControllers(ctx context.Context) []any {
 
 	// If MQTT functionality is enabled create an MQTT device, used to configure
 	// MQTT functionality for some controllers.
-	prefs := agent.GetMQTTPreferences()
-	if prefs != nil && prefs.IsMQTTEnabled() {
-		mqttDevice = agent.newMQTTDevice(ctx)
+	if prefs.IsMQTTEnabled() {
+		mqttDevice = prefs.GenerateMQTTDevice(ctx)
 		// Create an MQTT commands controller.
 		mqttCmdController := newMQTTController(ctx, mqttDevice)
 		if mqttCmdController != nil {
 			controllers = append(controllers, mqttCmdController)
 		}
+		// Add the OS MQTT controller.
+		controllers = append(controllers, newOSMQTTController(ctx, mqttDevice))
 	}
 
 	scriptsController := newScriptsController(ctx)
@@ -83,17 +84,14 @@ func (agent *Agent) setupControllers(ctx context.Context) []any {
 	}
 
 	// Create a new device controller. The controller will have all the
-	// necessary configuration for device-specific sensors and MQTT
-	// configuration.
-	devController := agent.newDeviceController(ctx)
+	// necessary configuration for device-specific sensors.
+	devController := agent.newDeviceController(ctx, prefs)
 	if devController != nil {
 		controllers = append(controllers, devController)
 	}
-	// Create a new OS controller. The controller will have all the
-	// necessary configuration for any OS-specific sensors and MQTT
-	// configuration.
-	osSensorController, osMQTTController := newOSController(ctx, mqttDevice)
-	controllers = append(controllers, osSensorController, osMQTTController)
+	// Create a new OS controller. The controller will have all the necessary
+	// configuration for any OS-specific sensors.
+	controllers = append(controllers, newOSSensorController(ctx))
 
 	return controllers
 }
