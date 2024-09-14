@@ -41,7 +41,13 @@ overrides:
   deb:
     depends:
       - libgl1-mesa-dri
-      - xorg
+      - libgl1
+      - libx11-6
+      - libglx0
+      - libglvnd0
+      - libxcb1
+      - libxau6
+      - libxdmcp6
       - dbus-x11
   archlinux:
     depends:
