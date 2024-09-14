@@ -10,9 +10,11 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
@@ -34,27 +36,25 @@ type powerStateSensor struct {
 }
 
 func (s *powerStateSensor) State() any {
-	boolVal, ok := s.Value.(bool)
+	value, ok := s.Value.(bool)
 	if !ok {
 		return sensor.StateUnknown
 	}
 
-	if boolVal {
-		switch s.signal {
-		case suspend:
-			return "Suspended"
-		case shutdown:
-			return "Powered Off"
-		}
+	switch {
+	case s.signal == suspend && value:
+		return "Suspended"
+	case s.signal == shutdown && value:
+		return "Powered Off"
+	default:
+		return "Powered On"
 	}
-
-	return "Powered On"
 }
 
 func (s *powerStateSensor) Icon() string {
 	str, ok := s.State().(string)
 	if !ok {
-		str = ""
+		str = "mdi:help"
 	}
 
 	switch str {
@@ -81,7 +81,6 @@ func newPowerState(signalName powerSignal, signalValue any) *powerStateSensor {
 }
 
 type stateWorker struct {
-	logger    *slog.Logger
 	triggerCh chan dbusx.Trigger
 }
 
@@ -97,15 +96,11 @@ func (w *stateWorker) Events(ctx context.Context) (chan sensor.Details, error) {
 			case <-ctx.Done():
 				return
 			case event := <-w.triggerCh:
-				switch event.Signal {
-				case sleepSignal:
-					go func() {
-						sensorCh <- newPowerState(suspend, event.Content[0])
-					}()
-				case shutdownSignal:
-					go func() {
-						sensorCh <- newPowerState(shutdown, event.Content[0])
-					}()
+				switch {
+				case strings.HasSuffix(event.Signal, sleepSignal):
+					sensorCh <- newPowerState(suspend, event.Content[0])
+				case strings.HasSuffix(event.Signal, shutdownSignal):
+					sensorCh <- newPowerState(shutdown, event.Content[0])
 				}
 			}
 		}
@@ -115,7 +110,9 @@ func (w *stateWorker) Events(ctx context.Context) (chan sensor.Details, error) {
 	go func() {
 		sensors, err := w.Sensors(ctx)
 		if err != nil {
-			w.logger.Debug("Could not retrieve power state.", slog.Any("error", err))
+			logging.FromContext(ctx).
+				With(slog.String("worker", powerStateWorkerID)).
+				Debug("Could not retrieve power state.", slog.Any("error", err))
 
 			return
 		}
