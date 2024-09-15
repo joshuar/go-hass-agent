@@ -23,7 +23,7 @@ const (
 	driverFile   = "cpufreq/scaling_driver"
 
 	cpuFreqIcon  = "mdi:chip"
-	cpuFreqUnits = "Hz"
+	cpuFreqUnits = "kHz"
 )
 
 type cpuFreq struct {
