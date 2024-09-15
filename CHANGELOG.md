@@ -1,5 +1,20 @@
 # Changelog
 
+## [10.2.1](https://github.com/joshuar/go-hass-agent/compare/v10.2.0...v10.2.1) (2024-09-15)
+
+
+### Bug Fixes
+
+* **linux:** :bug: correct power state tracking ([5bb5a4d](https://github.com/joshuar/go-hass-agent/commit/5bb5a4d9d11c8d174cda3eed9b4851b6a2345879))
+* **linux:** :bug: correct units of cpufreq sensors ([21e7104](https://github.com/joshuar/go-hass-agent/commit/21e7104c5dac591f36978e5e0f46695f9e2a5fff))
+* **linux:** :bug: make sure power controls pass required argument to D-Bus method call ([c44cd2c](https://github.com/joshuar/go-hass-agent/commit/c44cd2cefb0c3367d896a72db205d61324d562de))
+
+
+### Performance Improvements
+
+* **agent:** :building_construction: restructure preferences and hass client usage ([f6b0833](https://github.com/joshuar/go-hass-agent/commit/f6b08332dc8656b72101deb831a7ff19a565d3c0))
+* **linux:** :zap: adapt prometheus trick for grabbing hwmon file data ([7b498bc](https://github.com/joshuar/go-hass-agent/commit/7b498bc71f22acc12b430543b66a0cce347b232b))
+
 ## [10.2.0](https://github.com/joshuar/go-hass-agent/compare/v10.1.1...v10.2.0) (2024-09-12)
 
 
