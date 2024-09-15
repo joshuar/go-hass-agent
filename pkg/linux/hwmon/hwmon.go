@@ -15,6 +15,7 @@ import (
 	"sync"
 
 	"github.com/iancoleman/strcase"
+	"golang.org/x/sys/unix"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
@@ -505,12 +506,26 @@ func parseSensorType(id string) MonitorType {
 	}
 }
 
-// getFileContents retrieves the contents of the given file as a string. If the
-// contents cannot be read, it will return "unknown" and an error.
-func getFileContents(path string) (string, error) {
-	if data, err := os.ReadFile(path); err != nil {
-		return "", fmt.Errorf("could not read contents of file: %w", err)
-	} else { //revive:disable:indent-error-flow
-		return strings.TrimSpace(string(data)), nil
+// Adapted from:
+// https://github.com/prometheus/node_exporter/blob/master/collector/hwmon_linux.go
+func getFileContents(file string) (string, error) {
+	handle, err := os.Open(file)
+	if err != nil {
+		return "", fmt.Errorf("could not open file: %w", err)
 	}
+	defer handle.Close()
+
+	// On some machines, hwmon drivers are broken and return EAGAIN.  This causes
+	// Go's os.ReadFile implementation to poll forever.
+	//
+	// Since we either want to read data or bail immediately, do the simplest
+	// possible read using system call directly.
+	data := make([]byte, 128)
+
+	n, err := unix.Read(int(handle.Fd()), data) // #nosec G115 // I do not believe this is a problem.
+	if err != nil {
+		return "", fmt.Errorf("could not read contents of file: %w", err)
+	}
+
+	return strings.TrimSpace(string(data[:n])), nil
 }
