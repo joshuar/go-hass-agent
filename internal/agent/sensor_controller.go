@@ -119,7 +119,7 @@ func (c *sensorController) States(ctx context.Context) []sensor.Details {
 // controllers passed in. It returns a single merged channel of sensor updates.
 //
 //nolint:gocognit
-func runSensorWorkers(ctx context.Context, controllers ...SensorController) {
+func runSensorWorkers(ctx context.Context, prefs *preferences.Preferences, controllers ...SensorController) {
 	var sensorCh []<-chan sensor.Details
 
 	for _, controller := range controllers {
@@ -146,12 +146,6 @@ func runSensorWorkers(ctx context.Context, controllers ...SensorController) {
 		return
 	}
 
-	prefs, err := preferences.Load(ctx)
-	if err != nil {
-		logging.FromContext(ctx).Error("Could not start sensor controller.", slog.Any("error", err))
-		return
-	}
-
 	hassclient, err := hass.NewClient(ctx)
 	if err != nil {
 		logging.FromContext(ctx).Debug("Cannot create Home Assistant client.", slog.Any("error", err))
@@ -160,36 +154,30 @@ func runSensorWorkers(ctx context.Context, controllers ...SensorController) {
 
 	hassclient.Endpoint(prefs.RestAPIURL(), hass.DefaultTimeout)
 
-	logging.FromContext(ctx).Debug("Processing sensor updates.")
+	go func() {
+		<-ctx.Done()
+		logging.FromContext(ctx).Debug("Stopping all sensor controllers.")
 
-	for {
-		select {
-		case <-ctx.Done():
-			logging.FromContext(ctx).Debug("Stopping all sensor controllers.")
-
-			for _, controller := range controllers {
-				for _, workerName := range controller.ActiveWorkers() {
-					if err := controller.Stop(workerName); err != nil {
-						logging.FromContext(ctx).
-							Warn("Could not stop worker.",
-								slog.String("controller", controller.ID()),
-								slog.String("worker", workerName),
-								slog.Any("errors", err))
-					}
+		for _, controller := range controllers {
+			for _, workerName := range controller.ActiveWorkers() {
+				if err := controller.Stop(workerName); err != nil {
+					logging.FromContext(ctx).
+						Warn("Could not stop worker.",
+							slog.String("controller", controller.ID()),
+							slog.String("worker", workerName),
+							slog.Any("errors", err))
 				}
 			}
-
-			return
-		default:
-			for details := range mergeCh(ctx, sensorCh...) {
-				go func(details sensor.Details) {
-					if err := hassclient.ProcessSensor(ctx, details); err != nil {
-						logging.FromContext(ctx).Error("Process sensor failed.", slog.Any("error", err))
-					}
-				}(details)
-			}
-
-			return
 		}
+	}()
+
+	logging.FromContext(ctx).Debug("Processing sensor updates.")
+
+	for details := range mergeCh(ctx, sensorCh...) {
+		go func(details sensor.Details) {
+			if err := hassclient.ProcessSensor(ctx, details); err != nil {
+				logging.FromContext(ctx).Error("Process sensor failed.", slog.Any("error", err))
+			}
+		}(details)
 	}
 }

@@ -156,7 +156,7 @@ func Run(ctx context.Context) error {
 		// Run workers for any sensor controllers.
 		go func() {
 			defer wg.Done()
-			runSensorWorkers(runCtx, sensorControllers...)
+			runSensorWorkers(runCtx, prefs, sensorControllers...)
 		}()
 
 		if len(mqttControllers) > 0 {
