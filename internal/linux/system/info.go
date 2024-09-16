@@ -20,17 +20,17 @@ const (
 	infoWorkerID = "system_info_sensors"
 )
 
-type infoWorker struct {
-	logger *slog.Logger
-}
+type infoWorker struct{}
 
-func (w *infoWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
+func (w *infoWorker) Sensors(ctx context.Context) ([]sensor.Details, error) {
 	var sensors []sensor.Details
 
 	// Get distribution name and version.
 	distro, version, err := device.GetOSDetails()
 	if err != nil {
-		w.logger.Warn("Could not retrieve kernel version.", slog.Any("error", err))
+		logging.FromContext(ctx).
+			With(slog.String("worker", infoWorkerID)).
+			Warn("Could not retrieve distro details.", slog.Any("error", err))
 	} else {
 		sensors = append(sensors,
 			&linux.Sensor{
@@ -55,7 +55,9 @@ func (w *infoWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
 	// Get kernel version.
 	kernelVersion, err := device.GetKernelVersion()
 	if err != nil {
-		w.logger.Warn("Could not retrieve kernel version.", slog.Any("error", err))
+		logging.FromContext(ctx).
+			With(slog.String("worker", infoWorkerID)).
+			Warn("Could not retrieve kernel version.", slog.Any("error", err))
 	} else {
 		sensors = append(sensors,
 			&linux.Sensor{
@@ -72,12 +74,9 @@ func (w *infoWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
 	return sensors, nil
 }
 
-func NewInfoWorker(ctx context.Context) (*linux.SensorWorker, error) {
-	return &linux.SensorWorker{
-			Value: &infoWorker{
-				logger: logging.FromContext(ctx).With(slog.String("worker", infoWorkerID)),
-			},
-			WorkerID: infoWorkerID,
-		},
-		nil
+func NewInfoWorker(_ context.Context) (*linux.OneShotSensorWorker, error) {
+	worker := linux.NewOneShotWorker(infoWorkerID)
+	worker.OneShotType = &infoWorker{}
+
+	return worker, nil
 }

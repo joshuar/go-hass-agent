@@ -95,15 +95,17 @@ func (w *screenLockWorker) Sensors(_ context.Context) ([]sensor.Details, error) 
 	return nil, linux.ErrUnimplemented
 }
 
-func NewScreenLockWorker(ctx context.Context) (*linux.SensorWorker, error) {
+func NewScreenLockWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
+	worker := linux.NewEventWorker(screenLockWorkerID)
+
 	bus, ok := linux.CtxGetSystemBus(ctx)
 	if !ok {
-		return nil, linux.ErrNoSystemBus
+		return worker, linux.ErrNoSystemBus
 	}
 
 	sessionPath, ok := linux.CtxGetSessionPath(ctx)
 	if !ok {
-		return nil, linux.ErrNoSessionPath
+		return worker, linux.ErrNoSessionPath
 	}
 
 	triggerCh, err := dbusx.NewWatch(
@@ -111,14 +113,12 @@ func NewScreenLockWorker(ctx context.Context) (*linux.SensorWorker, error) {
 		dbusx.MatchMembers(sessionLockSignal, sessionUnlockSignal, sessionLockedProp, "PropertiesChanged"),
 	).Start(ctx, bus)
 	if err != nil {
-		return nil, fmt.Errorf("unable to create D-Bus watch for screen lock state: %w", err)
+		return worker, fmt.Errorf("unable to create D-Bus watch for screen lock state: %w", err)
 	}
 
-	return &linux.SensorWorker{
-			Value: &screenLockWorker{
-				triggerCh: triggerCh,
-			},
-			WorkerID: screenLockWorkerID,
-		},
-		nil
+	worker.EventType = &screenLockWorker{
+		triggerCh: triggerCh,
+	}
+
+	return worker, nil
 }

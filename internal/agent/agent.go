@@ -5,7 +5,7 @@
 
 // revive:disable:unused-receiver
 //
-//go:generate moq -out agent_mocks_test.go . ui agentPreferences SensorController MQTTController Worker
+//go:generate moq -out agent_mocks_test.go . ui agentPreferences SensorController MQTTController
 package agent
 
 import (

@@ -4,7 +4,7 @@
 // https://opensource.org/licenses/MIT
 
 //revive:disable:unused-receiver
-package user
+package system
 
 import (
 	"context"
@@ -61,12 +61,13 @@ func newUsersSensor() *usersSensor {
 	}
 }
 
-type worker struct {
+type Worker struct {
 	sensor    *usersSensor
 	triggerCh chan dbusx.Trigger
+	linux.EventSensorWorker
 }
 
-func (w *worker) Events(ctx context.Context) (chan sensor.Details, error) {
+func (w *Worker) Events(ctx context.Context) (chan sensor.Details, error) {
 	sensorCh := make(chan sensor.Details)
 
 	sendUpdate := func() {
@@ -98,17 +99,20 @@ func (w *worker) Events(ctx context.Context) (chan sensor.Details, error) {
 	return sensorCh, nil
 }
 
-func (w *worker) Sensors(_ context.Context) ([]sensor.Details, error) {
+func (w *Worker) Sensors(_ context.Context) ([]sensor.Details, error) {
 	users, err := w.sensor.getUsers()
 	w.sensor.userNames = users
 
 	return []sensor.Details{w.sensor}, err
 }
 
-func NewUserWorker(ctx context.Context) (*linux.SensorWorker, error) {
+func NewUserWorker(ctx context.Context) (*Worker, error) {
+	worker := &Worker{}
+	worker.WorkerID = usersWorkerID
+
 	bus, ok := linux.CtxGetSystemBus(ctx)
 	if !ok {
-		return nil, linux.ErrNoSystemBus
+		return worker, linux.ErrNoSystemBus
 	}
 
 	triggerCh, err := dbusx.NewWatch(
@@ -119,6 +123,8 @@ func NewUserWorker(ctx context.Context) (*linux.SensorWorker, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unable to set-up D-Bus watch for user sessions: %w", err)
 	}
+
+	worker.triggerCh = triggerCh
 
 	usersSensor := newUsersSensor()
 
@@ -139,12 +145,7 @@ func NewUserWorker(ctx context.Context) (*linux.SensorWorker, error) {
 		return users, nil
 	}
 
-	return &linux.SensorWorker{
-			Value: &worker{
-				sensor:    usersSensor,
-				triggerCh: triggerCh,
-			},
-			WorkerID: usersWorkerID,
-		},
-		nil
+	worker.sensor = usersSensor
+
+	return worker, nil
 }

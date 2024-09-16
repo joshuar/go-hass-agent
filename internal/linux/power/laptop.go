@@ -14,7 +14,6 @@ import (
 
 	"github.com/godbus/dbus/v5"
 
-	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
@@ -150,22 +149,18 @@ func (w *laptopWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
 	return sensors, nil
 }
 
-func NewLaptopWorker(ctx context.Context) (*linux.SensorWorker, error) {
-	// Don't run this worker if we are not running on a laptop.
-	chassis, _ := device.Chassis() //nolint:errcheck // error is same as any value other than wanted value.
-	if chassis != "laptop" {
-		return nil, fmt.Errorf("unable to monitor laptop sensors: %w", device.ErrUnsupportedHardware)
-	}
+func NewLaptopWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
+	worker := linux.NewEventWorker(laptopWorkerID)
 
 	bus, ok := linux.CtxGetSystemBus(ctx)
 	if !ok {
-		return nil, linux.ErrNoSystemBus
+		return worker, linux.ErrNoSystemBus
 	}
 
 	// If we can't get a session path, we can't run.
 	sessionPath, ok := linux.CtxGetSessionPath(ctx)
 	if !ok {
-		return nil, linux.ErrNoSessionPath
+		return worker, linux.ErrNoSessionPath
 	}
 
 	triggerCh, err := dbusx.NewWatch(
@@ -174,24 +169,20 @@ func NewLaptopWorker(ctx context.Context) (*linux.SensorWorker, error) {
 		dbusx.MatchMembers("PropertiesChanged"),
 	).Start(ctx, bus)
 	if err != nil {
-		return nil, fmt.Errorf("unable to create D-Bus watch for laptop property updates: %w", err)
+		return worker, fmt.Errorf("unable to create D-Bus watch for laptop property updates: %w", err)
 	}
 
-	worker := &laptopWorker{
-		properties: make(map[string]*dbusx.Property[bool]),
-		triggerCh:  triggerCh,
-	}
-
-	// Generate the list of laptop properties to track.
+	properties := make(map[string]*dbusx.Property[bool])
 	for _, name := range laptopPropList {
-		worker.properties[name] = dbusx.NewProperty[bool](bus, loginBasePath, loginBaseInterface, name)
+		properties[name] = dbusx.NewProperty[bool](bus, loginBasePath, loginBaseInterface, name)
 	}
 
-	return &linux.SensorWorker{
-			Value:    worker,
-			WorkerID: laptopWorkerID,
-		},
-		nil
+	worker.EventType = &laptopWorker{
+		triggerCh:  triggerCh,
+		properties: properties,
+	}
+
+	return worker, nil
 }
 
 func sendChangedProps(props map[string]dbus.Variant, sensorCh chan sensor.Details) {

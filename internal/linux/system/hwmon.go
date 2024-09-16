@@ -101,11 +101,9 @@ func newHWSensor(details *hwmon.Sensor) *hwSensor {
 
 type hwMonWorker struct{}
 
-func (w *hwMonWorker) Interval() time.Duration { return hwMonInterval }
+func (w *hwMonWorker) UpdateDelta(_ time.Duration) {}
 
-func (w *hwMonWorker) Jitter() time.Duration { return hwMonJitter }
-
-func (w *hwMonWorker) Sensors(_ context.Context, _ time.Duration) ([]sensor.Details, error) {
+func (w *hwMonWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
 	hwmonSensors, err := hwmon.GetAllSensors()
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve hardware sensors: %w", err)
@@ -120,12 +118,11 @@ func (w *hwMonWorker) Sensors(_ context.Context, _ time.Duration) ([]sensor.Deta
 	return sensors, nil
 }
 
-func NewHWMonWorker(_ context.Context) (*linux.SensorWorker, error) {
-	return &linux.SensorWorker{
-			Value:    &hwMonWorker{},
-			WorkerID: hwmonWorkerID,
-		},
-		nil
+func NewHWMonWorker(_ context.Context) (*linux.PollingSensorWorker, error) {
+	worker := linux.NewPollingWorker(hwmonWorkerID, hwMonInterval, hwMonJitter)
+	worker.PollingType = &hwMonWorker{}
+
+	return worker, nil
 }
 
 func parseSensorType(t string) (icon string, deviceclass types.DeviceClass) {

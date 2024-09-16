@@ -445,19 +445,19 @@ func batteryChargeIcon(v any) string {
 	return batteryIcon + "-plus"
 }
 
-type batterySensorWorker struct {
-	logger      *slog.Logger
+type sensorWorker struct {
 	bus         *dbusx.Bus
 	batteryList map[dbus.ObjectPath]context.CancelFunc
+	logger      *slog.Logger
 	mu          sync.Mutex
 }
 
 // ?: implement initial battery sensor retrieval.
-func (w *batterySensorWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
+func (w *sensorWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
 	return nil, linux.ErrUnimplemented
 }
 
-func (w *batterySensorWorker) Events(ctx context.Context) (chan sensor.Details, error) {
+func (w *sensorWorker) Events(ctx context.Context) (chan sensor.Details, error) {
 	sensorCh := make(chan sensor.Details)
 
 	var wg sync.WaitGroup
@@ -500,7 +500,7 @@ func (w *batterySensorWorker) Events(ctx context.Context) (chan sensor.Details, 
 
 // getBatteries is a helper function to retrieve all of the known batteries
 // connected to the system.
-func (w *batterySensorWorker) getBatteries() ([]dbus.ObjectPath, error) {
+func (w *sensorWorker) getBatteries() ([]dbus.ObjectPath, error) {
 	batteryList, err := dbusx.GetData[[]dbus.ObjectPath](w.bus, upowerDBusPath, upowerDBusDest, upowerGetDevicesMethod)
 	if err != nil {
 		return nil, err
@@ -509,7 +509,7 @@ func (w *batterySensorWorker) getBatteries() ([]dbus.ObjectPath, error) {
 	return batteryList, nil
 }
 
-func (w *batterySensorWorker) track(ctx context.Context, batteryPath dbus.ObjectPath) <-chan sensor.Details {
+func (w *sensorWorker) track(ctx context.Context, batteryPath dbus.ObjectPath) <-chan sensor.Details {
 	sensorCh := make(chan sensor.Details)
 
 	var wg sync.WaitGroup
@@ -557,7 +557,7 @@ func (w *batterySensorWorker) track(ctx context.Context, batteryPath dbus.Object
 	return sensorCh
 }
 
-func (w *batterySensorWorker) remove(batteryPath dbus.ObjectPath) {
+func (w *sensorWorker) remove(batteryPath dbus.ObjectPath) {
 	if cancelFunc, ok := w.batteryList[batteryPath]; ok {
 		cancelFunc()
 		w.mu.Lock()
@@ -568,7 +568,7 @@ func (w *batterySensorWorker) remove(batteryPath dbus.ObjectPath) {
 
 // monitorBatteryChanges monitors for battery devices being added/removed from
 // the system and will start/stop monitory each battery as appropriate.
-func (w *batterySensorWorker) monitorBatteryChanges(ctx context.Context) <-chan sensor.Details {
+func (w *sensorWorker) monitorBatteryChanges(ctx context.Context) <-chan sensor.Details {
 	triggerCh, err := dbusx.NewWatch(
 		dbusx.MatchPath(upowerDBusPath),
 		dbusx.MatchInterface(upowerDBusDest),
@@ -628,19 +628,19 @@ func (w *batterySensorWorker) monitorBatteryChanges(ctx context.Context) <-chan 
 	return sensorCh
 }
 
-func NewBatteryWorker(ctx context.Context) (*linux.SensorWorker, error) {
+func NewBatteryWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
+	worker := linux.NewEventWorker(workerID)
+
 	bus, ok := linux.CtxGetSystemBus(ctx)
 	if !ok {
-		return nil, linux.ErrNoSystemBus
+		return worker, linux.ErrNoSystemBus
 	}
 
-	return &linux.SensorWorker{
-			Value: &batterySensorWorker{
-				logger:      logging.FromContext(ctx).With(slog.String("worker", workerID)),
-				bus:         bus,
-				batteryList: make(map[dbus.ObjectPath]context.CancelFunc),
-			},
-			WorkerID: workerID,
-		},
-		nil
+	worker.EventType = &sensorWorker{
+		batteryList: make(map[dbus.ObjectPath]context.CancelFunc),
+		bus:         bus,
+		logger:      logging.FromContext(ctx).With(slog.String("worker", workerID)),
+	}
+
+	return worker, nil
 }
