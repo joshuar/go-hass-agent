@@ -3,6 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
+//go:generate moq -out register_mocks_test.go . registrationPrefs
 package agent
 
 import (
@@ -19,7 +20,12 @@ import (
 
 var ErrUserCancelledRegistration = errors.New("user canceled registration")
 
-func checkRegistration(ctx context.Context, agentUI ui, prefs agentPreferences) error {
+type registrationPrefs interface {
+	AgentRegistered() bool
+	SaveHassPreferences(details *preferences.Hass, options *preferences.Registration) error
+}
+
+func checkRegistration(ctx context.Context, agentUI ui, device *preferences.Device, prefs registrationPrefs) error {
 	if prefs.AgentRegistered() && !ForceRegister(ctx) {
 		return nil
 	}
@@ -40,7 +46,7 @@ func checkRegistration(ctx context.Context, agentUI ui, prefs agentPreferences) 
 	}
 
 	// Perform registration with given values.
-	registrationDetails, err := hass.RegisterDevice(ctx, prefs.GetDeviceInfo(), registrationOptions)
+	registrationDetails, err := hass.RegisterDevice(ctx, device, registrationOptions)
 	if err != nil {
 		return fmt.Errorf("device registration failed: %w", err)
 	}

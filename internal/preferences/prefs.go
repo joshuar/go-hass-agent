@@ -189,14 +189,6 @@ func (p *Preferences) WebhookID() string {
 	return ""
 }
 
-func (p *Preferences) Token() string {
-	if p.Registration != nil {
-		return p.Registration.Token
-	}
-
-	return ""
-}
-
 func checkPath(path string) error {
 	_, err := os.Stat(path)
 	if os.IsNotExist(err) {

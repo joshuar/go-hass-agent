@@ -12,6 +12,8 @@ import (
 	mqttapi "github.com/joshuar/go-hass-anything/v11/pkg/mqtt"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+
+	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
 // SensorController represents an object that manages one or more Workers.
@@ -44,7 +46,7 @@ type MQTTController interface {
 	Msgs() chan *mqttapi.Msg
 }
 
-func (agent *Agent) setupControllers(ctx context.Context, prefs agentPreferences) []any {
+func (agent *Agent) setupControllers(ctx context.Context, prefs *preferences.Preferences) []any {
 	var (
 		mqttDevice  *mqtthass.Device
 		controllers []any
