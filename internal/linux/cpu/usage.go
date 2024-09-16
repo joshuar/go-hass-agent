@@ -99,37 +99,36 @@ func (s *cpuUsageSensor) Attributes() map[string]any {
 type usageWorker struct {
 	boottime time.Time
 	path     string
-	clktck   int64
+	linux.PollingSensorWorker
+	clktck int64
 }
 
-func (w *usageWorker) Interval() time.Duration { return usageUpdateInterval }
+func (w *usageWorker) UpdateDelta(_ time.Duration) {}
 
-func (w *usageWorker) Jitter() time.Duration { return usageUpdateJitter }
-
-func (w *usageWorker) Sensors(_ context.Context, _ time.Duration) ([]sensor.Details, error) {
+func (w *usageWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
 	return w.getStats()
 }
 
-func NewUsageWorker(ctx context.Context) (*linux.SensorWorker, error) {
+func NewUsageWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
+	worker := linux.NewPollingWorker(usageWorkerID, usageUpdateInterval, usageUpdateJitter)
+
 	clktck, found := linux.CtxGetClkTck(ctx)
 	if !found {
-		return nil, fmt.Errorf("%w: no clktck value", linux.ErrInvalidCtx)
+		return worker, fmt.Errorf("%w: no clktck value", linux.ErrInvalidCtx)
 	}
 
 	boottime, found := linux.CtxGetBoottime(ctx)
 	if !found {
-		return nil, fmt.Errorf("%w: no boottime value", linux.ErrInvalidCtx)
+		return worker, fmt.Errorf("%w: no boottime value", linux.ErrInvalidCtx)
 	}
 
-	return &linux.SensorWorker{
-			Value: &usageWorker{
-				clktck:   clktck,
-				boottime: boottime,
-				path:     filepath.Join(linux.ProcFSRoot, "stat"),
-			},
-			WorkerID: usageWorkerID,
-		},
-		nil
+	worker.PollingType = &usageWorker{
+		path:     filepath.Join(linux.ProcFSRoot, "stat"),
+		boottime: boottime,
+		clktck:   clktck,
+	}
+
+	return worker, nil
 }
 
 func (w *usageWorker) newUsageSensor(details []string, diagnostic bool) *cpuUsageSensor {

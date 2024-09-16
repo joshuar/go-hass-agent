@@ -35,16 +35,12 @@ const (
 
 var ErrUnknownProp = errors.New("unknown desktop property")
 
-type desktopSettingSensor struct {
-	linux.Sensor
-}
-
-type worker struct {
+type settingsWorker struct {
 	triggerCh chan dbusx.Trigger
 	getProp   func(prop string) (string, error)
 }
 
-func (w *worker) newAccentColorSensor(accent string) (*desktopSettingSensor, error) {
+func (w *settingsWorker) newAccentColorSensor(accent string) (*linux.Sensor, error) {
 	var err error
 
 	if accent == "" {
@@ -54,19 +50,17 @@ func (w *worker) newAccentColorSensor(accent string) (*desktopSettingSensor, err
 		}
 	}
 
-	return &desktopSettingSensor{
-		Sensor: linux.Sensor{
-			IsDiagnostic: true,
-			IconString:   "mdi:palette",
-			DataSource:   linux.DataSrcDbus,
-			DisplayName:  "Desktop Accent Color",
-			UniqueID:     "desktop_accent_color",
-			Value:        accent,
-		},
+	return &linux.Sensor{
+		IsDiagnostic: true,
+		IconString:   "mdi:palette",
+		DataSource:   linux.DataSrcDbus,
+		DisplayName:  "Desktop Accent Color",
+		UniqueID:     "desktop_accent_color",
+		Value:        accent,
 	}, nil
 }
 
-func (w *worker) newColorSchemeSensor(scheme string) (*desktopSettingSensor, error) {
+func (w *settingsWorker) newColorSchemeSensor(scheme string) (*linux.Sensor, error) {
 	var err error
 
 	if scheme == "" {
@@ -76,14 +70,12 @@ func (w *worker) newColorSchemeSensor(scheme string) (*desktopSettingSensor, err
 		}
 	}
 
-	newSensor := &desktopSettingSensor{
-		Sensor: linux.Sensor{
-			IsDiagnostic: true,
-			DataSource:   linux.DataSrcDbus,
-			DisplayName:  "Desktop Color Scheme",
-			UniqueID:     "desktop_color_scheme",
-			Value:        scheme,
-		},
+	newSensor := &linux.Sensor{
+		IsDiagnostic: true,
+		DataSource:   linux.DataSrcDbus,
+		DisplayName:  "Desktop Color Scheme",
+		UniqueID:     "desktop_color_scheme",
+		Value:        scheme,
 	}
 
 	switch scheme {
@@ -99,7 +91,7 @@ func (w *worker) newColorSchemeSensor(scheme string) (*desktopSettingSensor, err
 }
 
 //nolint:cyclop,gocognit
-func (w *worker) Events(ctx context.Context) (chan sensor.Details, error) {
+func (w *settingsWorker) Events(ctx context.Context) (chan sensor.Details, error) {
 	sensorCh := make(chan sensor.Details)
 	logger := logging.FromContext(ctx).With(slog.String("worker", workerID))
 
@@ -153,7 +145,7 @@ func (w *worker) Events(ctx context.Context) (chan sensor.Details, error) {
 }
 
 //nolint:mnd
-func (w *worker) Sensors(_ context.Context) ([]sensor.Details, error) {
+func (w *settingsWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
 	sensors := make([]sensor.Details, 0, 2)
 
 	var errs error
@@ -173,15 +165,17 @@ func (w *worker) Sensors(_ context.Context) ([]sensor.Details, error) {
 	return sensors, errs
 }
 
-func NewDesktopWorker(ctx context.Context) (*linux.SensorWorker, error) {
+func NewDesktopWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
+	worker := linux.NewEventWorker(workerID)
+
 	_, ok := linux.CtxGetDesktopPortal(ctx)
 	if !ok {
-		return nil, linux.ErrNoDesktopPortal
+		return worker, linux.ErrNoDesktopPortal
 	}
 
 	bus, ok := linux.CtxGetSessionBus(ctx)
 	if !ok {
-		return nil, linux.ErrNoSessionBus
+		return worker, linux.ErrNoSessionBus
 	}
 
 	triggerCh, err := dbusx.NewWatch(
@@ -190,36 +184,34 @@ func NewDesktopWorker(ctx context.Context) (*linux.SensorWorker, error) {
 		dbusx.MatchMembers(settingsChangedSignal),
 	).Start(ctx, bus)
 	if err != nil {
-		return nil, fmt.Errorf("could not watch D-Bus for desktop settings updates: %w", err)
+		return worker, fmt.Errorf("could not watch D-Bus for desktop settings updates: %w", err)
 	}
 
-	return &linux.SensorWorker{
-			Value: &worker{
-				getProp: func(prop string) (string, error) {
-					value, err := dbusx.GetData[dbus.Variant](bus,
-						desktopPortalPath,
-						desktopPortalInterface,
-						settingsPortalInterface+".Read",
-						"org.freedesktop.appearance",
-						prop)
-					if err != nil {
-						return sensor.StateUnknown, fmt.Errorf("could not retrieve desktop property %s from D-Bus: %w", prop, err)
-					}
+	worker.EventType = &settingsWorker{
+		triggerCh: triggerCh,
+		getProp: func(prop string) (string, error) {
+			value, err := dbusx.GetData[dbus.Variant](bus,
+				desktopPortalPath,
+				desktopPortalInterface,
+				settingsPortalInterface+".Read",
+				"org.freedesktop.appearance",
+				prop)
+			if err != nil {
+				return sensor.StateUnknown, fmt.Errorf("could not retrieve desktop property %s from D-Bus: %w", prop, err)
+			}
 
-					switch prop {
-					case accentColorProp:
-						return parseAccentColor(value), nil
-					case colorSchemeProp:
-						return parseColorScheme(value), nil
-					}
+			switch prop {
+			case accentColorProp:
+				return parseAccentColor(value), nil
+			case colorSchemeProp:
+				return parseColorScheme(value), nil
+			}
 
-					return sensor.StateUnknown, fmt.Errorf("could not retrieve desktop property %s from D-Bus: %w", prop, ErrUnknownProp)
-				},
-				triggerCh: triggerCh,
-			},
-			WorkerID: workerID,
+			return sensor.StateUnknown, fmt.Errorf("could not retrieve desktop property %s from D-Bus: %w", prop, ErrUnknownProp)
 		},
-		nil
+	}
+
+	return worker, nil
 }
 
 //nolint:mnd

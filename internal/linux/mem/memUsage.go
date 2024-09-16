@@ -114,11 +114,9 @@ func newSwapUsedPc(stats memoryStats) *linux.Sensor {
 
 type usageWorker struct{}
 
-func (w *usageWorker) Interval() time.Duration { return updateInterval }
+func (w *usageWorker) UpdateDelta(_ time.Duration) {}
 
-func (w *usageWorker) Jitter() time.Duration { return updateJitter }
-
-func (w *usageWorker) Sensors(_ context.Context, _ time.Duration) ([]sensor.Details, error) {
+func (w *usageWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
 	stats, err := getMemStats()
 	if err != nil {
 		return nil, fmt.Errorf("unable to retrieve memory stats: %w", err)
@@ -143,10 +141,9 @@ func (w *usageWorker) Sensors(_ context.Context, _ time.Duration) ([]sensor.Deta
 	return sensors, nil
 }
 
-func NewUsageWorker(_ context.Context) (*linux.SensorWorker, error) {
-	return &linux.SensorWorker{
-			Value:    &usageWorker{},
-			WorkerID: workerID,
-		},
-		nil
+func NewUsageWorker(_ context.Context) (*linux.PollingSensorWorker, error) {
+	worker := linux.NewPollingWorker(workerID, updateInterval, updateJitter)
+	worker.PollingType = &usageWorker{}
+
+	return worker, nil
 }

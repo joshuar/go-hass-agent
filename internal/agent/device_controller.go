@@ -25,6 +25,7 @@ import (
 const (
 	versionWorkerID    = "agent_version_sensor"
 	externalIPWorkerID = "external_ip_sensor" //nolint:gosec // false positive
+	deviceControllerID = "device_controller"
 
 	ExternalIPUpdateInterval       = 5 * time.Minute
 	ExternalIPUpdateJitter         = 10 * time.Second
@@ -41,11 +42,6 @@ var (
 	ErrNoLookupHosts = errors.New("no IP lookup hosts found")
 )
 
-type sensorWorker struct {
-	object  Worker
-	started bool
-}
-
 type VersionWorker struct {
 	version
 }
@@ -55,14 +51,16 @@ type ExternalIPWorker struct {
 	cancelFunc context.CancelFunc
 }
 
-type deviceController struct {
-	sensorWorkers map[string]*sensorWorker
+type deviceController map[string]*workerState
+
+func (w deviceController) ID() string {
+	return deviceControllerID
 }
 
-func (w *deviceController) ActiveWorkers() []string {
-	activeWorkers := make([]string, 0, len(w.sensorWorkers))
+func (w deviceController) ActiveWorkers() []string {
+	activeWorkers := make([]string, 0, len(w))
 
-	for id, worker := range w.sensorWorkers {
+	for id, worker := range w {
 		if worker.started {
 			activeWorkers = append(activeWorkers, id)
 		}
@@ -71,10 +69,10 @@ func (w *deviceController) ActiveWorkers() []string {
 	return activeWorkers
 }
 
-func (w *deviceController) InactiveWorkers() []string {
-	inactiveWorkers := make([]string, 0, len(w.sensorWorkers))
+func (w deviceController) InactiveWorkers() []string {
+	inactiveWorkers := make([]string, 0, len(w))
 
-	for id, worker := range w.sensorWorkers {
+	for id, worker := range w {
 		if !worker.started {
 			inactiveWorkers = append(inactiveWorkers, id)
 		}
@@ -83,8 +81,8 @@ func (w *deviceController) InactiveWorkers() []string {
 	return inactiveWorkers
 }
 
-func (w *deviceController) Start(ctx context.Context, name string) (<-chan sensor.Details, error) {
-	worker, exists := w.sensorWorkers[name]
+func (w deviceController) Start(ctx context.Context, name string) (<-chan sensor.Details, error) {
+	worker, exists := w[name]
 	if !exists {
 		return nil, ErrUnknownWorker
 	}
@@ -93,73 +91,59 @@ func (w *deviceController) Start(ctx context.Context, name string) (<-chan senso
 		return nil, ErrWorkerAlreadyStarted
 	}
 
-	workerCh, err := w.sensorWorkers[name].object.Updates(ctx)
+	workerCh, err := w[name].Start(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not start worker: %w", err)
 	}
 
-	w.sensorWorkers[name].started = true
+	w[name].started = true
 
 	return workerCh, nil
 }
 
-func (w *deviceController) Stop(name string) error {
+func (w deviceController) Stop(name string) error {
 	// Check if the given worker ID exists.
-	worker, exists := w.sensorWorkers[name]
+	worker, exists := w[name]
 	if !exists {
 		return ErrUnknownWorker
 	}
 	// Stop the worker. Report any errors.
-	if err := worker.object.Stop(); err != nil {
+	if err := worker.Stop(); err != nil {
 		return fmt.Errorf("error stopping worker: %w", err)
 	}
 
 	return nil
 }
 
-func (w *deviceController) StartAll(ctx context.Context) (<-chan sensor.Details, error) {
-	outCh := make([]<-chan sensor.Details, 0, len(allworkers))
+func (w deviceController) States(ctx context.Context) []sensor.Details {
+	var sensors []sensor.Details
 
-	var errs error
-
-	for id := range w.sensorWorkers {
-		workerCh, err := w.Start(ctx, id)
+	for _, worker := range w.ActiveWorkers() {
+		workerSensors, err := w[worker].Sensors(ctx)
 		if err != nil {
-			errs = errors.Join(errs, err)
-
-			continue
+			logging.FromContext(ctx).
+				With(slog.String("controller", w.ID())).
+				Debug("Could not retrieve worker sensors",
+					slog.String("worker", w[worker].ID()),
+					slog.Any("error", err))
 		}
 
-		outCh = append(outCh, workerCh)
+		sensors = append(sensors, workerSensors...)
 	}
 
-	return mergeCh(ctx, outCh...), errs
-}
-
-func (w *deviceController) StopAll() error {
-	var errs error
-
-	for id := range w.sensorWorkers {
-		if err := w.Stop(id); err != nil {
-			errs = errors.Join(errs, err)
-		}
-	}
-
-	return errs
+	return sensors
 }
 
 func (agent *Agent) newDeviceController(_ context.Context, prefs agentPreferences) SensorController {
-	var worker Worker
+	var worker worker
 
-	controller := &deviceController{
-		sensorWorkers: make(map[string]*sensorWorker),
-	}
+	controller := make(deviceController)
 
 	// Set up sensor workers.
 	worker = agent.newVersionWorker(prefs.AgentVersion())
-	controller.sensorWorkers[worker.ID()] = &sensorWorker{object: worker, started: false}
+	controller[worker.ID()] = &workerState{worker: worker}
 	worker = agent.newExternalIPUpdaterWorker()
-	controller.sensorWorkers[worker.ID()] = &sensorWorker{object: worker, started: false}
+	controller[worker.ID()] = &workerState{worker: worker}
 
 	return controller
 }
@@ -168,26 +152,19 @@ func (w *VersionWorker) ID() string { return versionWorkerID }
 
 func (w *VersionWorker) Stop() error { return nil }
 
-func (w *VersionWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
-	return []sensor.Details{new(version)}, nil
-}
-
-func (w *VersionWorker) Updates(ctx context.Context) (<-chan sensor.Details, error) {
+func (w *VersionWorker) Start(_ context.Context) (<-chan sensor.Details, error) {
 	sensorCh := make(chan sensor.Details)
-
-	sensors, err := w.Sensors(ctx)
-	if err != nil {
-		close(sensorCh)
-
-		return sensorCh, fmt.Errorf("unable to retrieve version info: %w", err)
-	}
 
 	go func() {
 		defer close(sensorCh)
-		sensorCh <- sensors[0]
+		sensorCh <- w
 	}()
 
 	return sensorCh, nil
+}
+
+func (w *VersionWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
+	return []sensor.Details{&w.version}, nil
 }
 
 func (agent *Agent) newVersionWorker(value string) *VersionWorker {
@@ -224,7 +201,7 @@ func (w *ExternalIPWorker) Sensors(ctx context.Context) ([]sensor.Details, error
 	return sensors, nil
 }
 
-func (w *ExternalIPWorker) Updates(ctx context.Context) (<-chan sensor.Details, error) {
+func (w *ExternalIPWorker) Start(ctx context.Context) (<-chan sensor.Details, error) {
 	sensorCh := make(chan sensor.Details)
 
 	// Create a new context for the updates scope.

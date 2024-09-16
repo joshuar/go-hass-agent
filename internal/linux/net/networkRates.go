@@ -147,13 +147,14 @@ func newNetIORateSensor(t rateSensor) *netIORateSensor {
 type ratesWorker struct {
 	bytesRx, bytesTx         *netIOSensor
 	bytesRxRate, bytesTxRate *netIORateSensor
+	delta                    time.Duration
 }
 
-func (w *ratesWorker) Interval() time.Duration { return rateInterval }
+func (w *ratesWorker) UpdateDelta(delta time.Duration) {
+	w.delta = delta
+}
 
-func (w *ratesWorker) Jitter() time.Duration { return rateJitter }
-
-func (w *ratesWorker) Sensors(ctx context.Context, duration time.Duration) ([]sensor.Details, error) {
+func (w *ratesWorker) Sensors(ctx context.Context) ([]sensor.Details, error) {
 	// Retrieve new stats.
 	netIO, err := net.IOCountersWithContext(ctx, false)
 	if err != nil {
@@ -162,21 +163,20 @@ func (w *ratesWorker) Sensors(ctx context.Context, duration time.Duration) ([]se
 	// Update all sensors.
 	w.bytesRx.update(&netIO[0])
 	w.bytesTx.update(&netIO[0])
-	w.bytesRxRate.update(duration, netIO[0].BytesRecv)
-	w.bytesTxRate.update(duration, netIO[0].BytesSent)
+	w.bytesRxRate.update(w.delta, netIO[0].BytesRecv)
+	w.bytesTxRate.update(w.delta, netIO[0].BytesSent)
 	// Return sensors with new values.
 	return []sensor.Details{w.bytesRx, w.bytesTx, w.bytesRxRate, w.bytesTxRate}, nil
 }
 
-func NewRatesWorker(_ context.Context) (*linux.SensorWorker, error) {
-	return &linux.SensorWorker{
-			Value: &ratesWorker{
-				bytesRx:     newNetIOSensor(bytesRecv),
-				bytesTx:     newNetIOSensor(bytesSent),
-				bytesRxRate: newNetIORateSensor(bytesRecvRate),
-				bytesTxRate: newNetIORateSensor(bytesSentRate),
-			},
-			WorkerID: netRatesWorkerID,
-		},
-		nil
+func NewRatesWorker(_ context.Context) (*linux.PollingSensorWorker, error) {
+	worker := linux.NewPollingWorker(netRatesWorkerID, rateInterval, rateJitter)
+	worker.PollingType = &ratesWorker{
+		bytesRx:     newNetIOSensor(bytesRecv),
+		bytesTx:     newNetIOSensor(bytesSent),
+		bytesRxRate: newNetIORateSensor(bytesRecvRate),
+		bytesTxRate: newNetIORateSensor(bytesSentRate),
+	}
+
+	return worker, nil
 }

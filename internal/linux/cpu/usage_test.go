@@ -24,7 +24,6 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
-	"github.com/joshuar/go-hass-agent/internal/logging"
 )
 
 func Test_cpuUsageSensor_generateValues(t *testing.T) {
@@ -148,50 +147,6 @@ func Test_cpuUsageSensor_ID(t *testing.T) {
 			if got := s.ID(); got != tt.want {
 				t.Errorf("cpuUsageSensor.ID() = %v, want %v", got, tt.want)
 			}
-		})
-	}
-}
-
-func TestNewUsageWorker(t *testing.T) {
-	skipCI(t)
-
-	clktck, err := sysconf.Sysconf(sysconf.SC_CLK_TCK)
-	require.NoError(t, err)
-
-	ctx, cancelFunc := context.WithCancel(linux.NewContext(context.TODO()))
-	defer cancelFunc()
-	ctx = logging.ToContext(ctx, slog.Default())
-
-	type args struct {
-		in0 context.Context
-	}
-	tests := []struct {
-		args    args
-		want    *linux.SensorWorker
-		name    string
-		wantErr bool
-	}{
-		{
-			name: "valid",
-			args: args{in0: ctx},
-			want: &linux.SensorWorker{
-				Value: &usageWorker{
-					clktck: clktck,
-				},
-				WorkerID: usageWorkerID,
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			_, err := NewUsageWorker(tt.args.in0)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("NewUsageWorker() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			// if !reflect.DeepEqual(got, tt.want) {
-			// 	t.Errorf("NewUsageWorker() = %v, want %v", got, tt.want)
-			// }
 		})
 	}
 }
@@ -363,4 +318,38 @@ func Benchmark_getStats(b *testing.B) {
 			w.getStats() //nolint:errcheck
 		}
 	})
+}
+
+func TestNewUsageWorker(t *testing.T) {
+	type args struct {
+		ctx context.Context
+	}
+	tests := []struct {
+		args    args
+		want    *linux.PollingSensorWorker
+		name    string
+		wantErr bool
+	}{
+		{
+			name: "valid",
+			args: args{ctx: linux.NewContext(context.TODO())},
+		},
+		{
+			name:    "invalid",
+			args:    args{ctx: context.TODO()},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := NewUsageWorker(tt.args.ctx)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("NewUsageWorker() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			// if !reflect.DeepEqual(got, tt.want) {
+			// 	t.Errorf("NewUsageWorker() = %v, want %v", got, tt.want)
+			// }
+		})
+	}
 }

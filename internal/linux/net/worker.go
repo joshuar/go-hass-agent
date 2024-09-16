@@ -16,6 +16,7 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
@@ -34,26 +35,27 @@ const (
 	netConnWorkerID = "network_connection_sensors"
 )
 
-type connectionsWorker struct {
+type ConnectionsWorker struct {
 	bus    *dbusx.Bus
-	logger *slog.Logger
 	list   map[string]*connection
-	mu     sync.Mutex
+	logger *slog.Logger
+	linux.EventSensorWorker
+	mu sync.Mutex
 }
 
-func (w *connectionsWorker) track(conn *connection) {
+func (w *ConnectionsWorker) track(conn *connection) {
 	w.mu.Lock()
 	w.list[conn.name] = conn
 	w.mu.Unlock()
 }
 
-func (w *connectionsWorker) untrack(id string) {
+func (w *ConnectionsWorker) untrack(id string) {
 	w.mu.Lock()
 	delete(w.list, id)
 	w.mu.Unlock()
 }
 
-func (w *connectionsWorker) isTracked(id string) bool {
+func (w *ConnectionsWorker) isTracked(id string) bool {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
@@ -64,13 +66,13 @@ func (w *connectionsWorker) isTracked(id string) bool {
 	return false
 }
 
-func (w *connectionsWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
+func (w *ConnectionsWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
 	return nil, linux.ErrUnimplemented
 }
 
 //nolint:mnd
 //revive:disable:function-length
-func (w *connectionsWorker) Events(ctx context.Context) (chan sensor.Details, error) {
+func (w *ConnectionsWorker) Events(ctx context.Context) (chan sensor.Details, error) {
 	sensorCh := make(chan sensor.Details)
 	connCtx, connCancel := context.WithCancel(ctx)
 
@@ -129,7 +131,7 @@ func (w *connectionsWorker) Events(ctx context.Context) (chan sensor.Details, er
 	return sensorCh, nil
 }
 
-func (w *connectionsWorker) handleConnection(ctx context.Context, path dbus.ObjectPath, sensorCh chan sensor.Details) error {
+func (w *ConnectionsWorker) handleConnection(ctx context.Context, path dbus.ObjectPath, sensorCh chan sensor.Details) error {
 	conn, err := newConnection(w.bus, path)
 	if err != nil {
 		return fmt.Errorf("could not create connection: %w", err)
@@ -156,19 +158,20 @@ func (w *connectionsWorker) handleConnection(ctx context.Context, path dbus.Obje
 	return nil
 }
 
-func NewConnectionWorker(ctx context.Context) (*linux.SensorWorker, error) {
+func NewConnectionWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
+	worker := linux.NewEventWorker(netConnWorkerID)
+
 	bus, ok := linux.CtxGetSystemBus(ctx)
 	if !ok {
-		return nil, linux.ErrNoSystemBus
+		return worker, linux.ErrNoSystemBus
 	}
 
-	return &linux.SensorWorker{
-			Value: &connectionsWorker{
-				bus:    bus,
-				logger: slog.With(slog.String("worker", netConnWorkerID)),
-				list:   make(map[string]*connection),
-			},
-			WorkerID: netConnWorkerID,
-		},
-		nil
+	worker.EventType = &ConnectionsWorker{
+		bus:  bus,
+		list: make(map[string]*connection),
+		logger: logging.FromContext(ctx).
+			With(slog.String("worker", netConnWorkerID)),
+	}
+
+	return worker, nil
 }

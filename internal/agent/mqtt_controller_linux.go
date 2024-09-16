@@ -7,57 +7,16 @@ package agent
 
 import (
 	"context"
-	"errors"
 	"log/slog"
 
 	mqtthass "github.com/joshuar/go-hass-anything/v11/pkg/hass"
 	mqttapi "github.com/joshuar/go-hass-anything/v11/pkg/mqtt"
 
 	"github.com/joshuar/go-hass-agent/internal/linux"
-	"github.com/joshuar/go-hass-agent/internal/linux/apps"
-	"github.com/joshuar/go-hass-agent/internal/linux/battery"
-	"github.com/joshuar/go-hass-agent/internal/linux/cpu"
-	"github.com/joshuar/go-hass-agent/internal/linux/desktop"
-	"github.com/joshuar/go-hass-agent/internal/linux/disk"
-	"github.com/joshuar/go-hass-agent/internal/linux/location"
 	"github.com/joshuar/go-hass-agent/internal/linux/media"
-	"github.com/joshuar/go-hass-agent/internal/linux/mem"
-	"github.com/joshuar/go-hass-agent/internal/linux/net"
 	"github.com/joshuar/go-hass-agent/internal/linux/power"
-	"github.com/joshuar/go-hass-agent/internal/linux/problems"
 	"github.com/joshuar/go-hass-agent/internal/linux/system"
-	"github.com/joshuar/go-hass-agent/internal/linux/user"
 	"github.com/joshuar/go-hass-agent/internal/logging"
-)
-
-// allworkers is the list of sensor allworkers supported on Linux.
-var allworkers = []func(context.Context) (*linux.SensorWorker, error){
-	apps.NewAppWorker,
-	battery.NewBatteryWorker,
-	cpu.NewUsageWorker,
-	cpu.NewLoadAvgWorker,
-	cpu.NewUsageWorker,
-	desktop.NewDesktopWorker,
-	disk.NewIOWorker,
-	disk.NewUsageWorker,
-	location.NewLocationWorker,
-	mem.NewUsageWorker,
-	net.NewConnectionWorker,
-	net.NewRatesWorker,
-	power.NewLaptopWorker,
-	power.NewProfileWorker,
-	power.NewStateWorker,
-	power.NewScreenLockWorker,
-	problems.NewProblemsWorker,
-	system.NewHWMonWorker,
-	system.NewInfoWorker,
-	system.NewTimeWorker,
-	user.NewUserWorker,
-}
-
-var (
-	ErrWorkerAlreadyStarted = errors.New("worker already started")
-	ErrUnknownWorker        = errors.New("unknown worker")
 )
 
 type mqttWorker struct {
@@ -69,10 +28,6 @@ type mqttWorker struct {
 	controls      []*mqttapi.Subscription
 	binarySensors []*mqtthass.BinarySensorEntity
 	cameras       []*mqtthass.ImageEntity
-}
-
-type linuxSensorController struct {
-	deviceController
 }
 
 type linuxMQTTController struct {
@@ -169,34 +124,6 @@ func (c *linuxMQTTController) generateConfig(e entity) *mqttapi.Msg {
 	}
 
 	return cfg
-}
-
-// newOSSensorController initializes the list of sensor workers for sensors and
-// returns those that are supported on this device.
-func newOSSensorController(ctx context.Context) SensorController {
-	ctx = linux.NewContext(ctx)
-
-	logger := logging.FromContext(ctx).With(slog.Group("linux", slog.String("controller", "sensor")))
-	ctx = logging.ToContext(ctx, logger)
-	sensorController := &linuxSensorController{
-		deviceController: deviceController{
-			sensorWorkers: make(map[string]*sensorWorker),
-		},
-	}
-
-	// Set up sensor workers.
-	for _, startWorkerFunc := range allworkers {
-		worker, err := startWorkerFunc(ctx)
-		if err != nil {
-			logger.Warn("Could not start a sensor worker.", slog.Any("error", err))
-
-			continue
-		}
-
-		sensorController.sensorWorkers[worker.ID()] = &sensorWorker{object: worker, started: false}
-	}
-
-	return sensorController
 }
 
 // newOSMQTTController initializes the list of MQTT workers for sensors and

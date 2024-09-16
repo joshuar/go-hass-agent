@@ -132,10 +132,12 @@ func (w *stateWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
 	return []sensor.Details{newPowerState(shutdown, false)}, nil
 }
 
-func NewStateWorker(ctx context.Context) (*linux.SensorWorker, error) {
+func NewStateWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
+	worker := linux.NewEventWorker(powerStateWorkerID)
+
 	bus, ok := linux.CtxGetSystemBus(ctx)
 	if !ok {
-		return nil, linux.ErrNoSystemBus
+		return worker, linux.ErrNoSystemBus
 	}
 
 	triggerCh, err := dbusx.NewWatch(
@@ -144,14 +146,12 @@ func NewStateWorker(ctx context.Context) (*linux.SensorWorker, error) {
 		dbusx.MatchMembers(sleepSignal, shutdownSignal),
 	).Start(ctx, bus)
 	if err != nil {
-		return nil, fmt.Errorf("unable to set-up D-Bus watch for power state: %w", err)
+		return worker, fmt.Errorf("unable to set-up D-Bus watch for power state: %w", err)
 	}
 
-	return &linux.SensorWorker{
-			Value: &stateWorker{
-				triggerCh: triggerCh,
-			},
-			WorkerID: powerStateWorkerID,
-		},
-		nil
+	worker.EventType = &stateWorker{
+		triggerCh: triggerCh,
+	}
+
+	return worker, nil
 }

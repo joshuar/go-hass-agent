@@ -16,6 +16,10 @@ import (
 
 // SensorController represents an object that manages one or more Workers.
 type SensorController interface {
+	ID() string
+	// States returns the list of all sensor states tracked by all workers of
+	// this controller.
+	States(ctx context.Context) []sensor.Details
 	// ActiveWorkers is a list of the names of all currently active Workers.
 	ActiveWorkers() []string
 	// InactiveWorkers is a list of the names of all currently inactive Workers.
@@ -24,25 +28,6 @@ type SensorController interface {
 	Start(ctx context.Context, name string) (<-chan sensor.Details, error)
 	// Stop provides a way to stop the named Worker.
 	Stop(name string) error
-	// StartAll will start all Workers that this controller manages.
-	StartAll(ctx context.Context) (<-chan sensor.Details, error)
-	// StopAll will stop all Workers that this controller manages.
-	StopAll() error
-}
-
-// Worker represents an object that is responsible for controlling the
-// publishing of one or more sensors.
-type Worker interface {
-	ID() string
-	// Sensors returns an array of the current value of all sensors, or a
-	// non-nil error if this is not possible.
-	Sensors(ctx context.Context) ([]sensor.Details, error)
-	// Updates returns a channel on which updates to sensors will be published,
-	// when they become available.
-	Updates(ctx context.Context) (<-chan sensor.Details, error)
-	// Stop is used to tell the worker to stop any background updates of
-	// sensors.
-	Stop() error
 }
 
 // MQTTController represents an object that is responsible for controlling the

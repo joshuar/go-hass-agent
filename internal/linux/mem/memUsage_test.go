@@ -9,7 +9,6 @@ import (
 	"context"
 	"math"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -159,7 +158,6 @@ func Test_usageWorker_Sensors(t *testing.T) {
 	type args struct {
 		in0  context.Context
 		file string
-		in1  time.Duration
 	}
 	tests := []struct {
 		name    string
@@ -187,7 +185,7 @@ func Test_usageWorker_Sensors(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			w := &usageWorker{}
 			memStatFile = tt.args.file
-			got, err := w.Sensors(tt.args.in0, tt.args.in1)
+			got, err := w.Sensors(tt.args.in0)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("usageWorker.Sensors() error = %v, wantErr %v", err, tt.wantErr)
 				return

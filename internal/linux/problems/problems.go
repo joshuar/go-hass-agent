@@ -75,17 +75,15 @@ func parseProblem(details map[string]string) map[string]any {
 	return parsed
 }
 
-type worker struct {
+type problemsWorker struct {
 	getProblems       func() ([]string, error)
 	getProblemDetails func(problem string) (map[string]string, error)
 	bus               *dbusx.Bus
 }
 
-func (w *worker) Interval() time.Duration { return problemInterval }
+func (w *problemsWorker) UpdateDelta(_ time.Duration) {}
 
-func (w *worker) Jitter() time.Duration { return problemJitter }
-
-func (w *worker) Sensors(ctx context.Context, _ time.Duration) ([]sensor.Details, error) {
+func (w *problemsWorker) Sensors(ctx context.Context) ([]sensor.Details, error) {
 	problemsSensor := &problemsSensor{
 		list: make(map[string]map[string]any),
 		Sensor: linux.Sensor{
@@ -122,45 +120,46 @@ func (w *worker) Sensors(ctx context.Context, _ time.Duration) ([]sensor.Details
 	return []sensor.Details{problemsSensor}, nil
 }
 
-func NewProblemsWorker(ctx context.Context) (*linux.SensorWorker, error) {
+func NewProblemsWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
+	worker := linux.NewPollingWorker(problemsWorkerID, problemInterval, problemJitter)
+
 	bus, ok := linux.CtxGetSystemBus(ctx)
 	if !ok {
-		return nil, linux.ErrNoSystemBus
+		return worker, linux.ErrNoSystemBus
 	}
 
 	// Check if we can fetch problem data, bail if we can't.
 	_, err := dbusx.GetData[[]string](bus, dBusProblemsDest, dBusProblemIntr, dBusProblemIntr+".GetProblems")
 	if err != nil {
-		return nil, fmt.Errorf("unable to fetch ABRT problems from D-Bus: %w", err)
+		return worker, fmt.Errorf("unable to fetch ABRT problems from D-Bus: %w", err)
 	}
 
-	return &linux.SensorWorker{
-			Value: &worker{
-				getProblems: func() ([]string, error) {
-					problems, err := dbusx.GetData[[]string](bus, dBusProblemsDest, dBusProblemIntr, dBusProblemIntr+".GetProblems")
-					if err != nil {
-						return nil, fmt.Errorf("error getting data: %w", err)
-					}
+	worker.PollingType = &problemsWorker{
+		bus: bus,
+		getProblems: func() ([]string, error) {
+			problems, err := dbusx.GetData[[]string](bus, dBusProblemsDest, dBusProblemIntr, dBusProblemIntr+".GetProblems")
+			if err != nil {
+				return nil, fmt.Errorf("error getting data: %w", err)
+			}
 
-					return problems, nil
-				},
-				getProblemDetails: func(problem string) (map[string]string, error) {
-					details, err := dbusx.GetData[map[string]string](bus,
-						dBusProblemsDest,
-						dBusProblemIntr,
-						dBusProblemIntr+".GetInfo", problem, []string{"time", "count", "package", "reason"})
-					switch {
-					case details == nil:
-						return nil, ErrNoProblemDetails
-					case err != nil:
-						return nil, err
-					default:
-						return details, nil
-					}
-				},
-				bus: bus,
-			},
-			WorkerID: problemsWorkerID,
+			return problems, nil
 		},
-		nil
+		getProblemDetails: func(problem string) (map[string]string, error) {
+			details, err := dbusx.GetData[map[string]string](bus,
+				dBusProblemsDest,
+				dBusProblemIntr,
+				dBusProblemIntr+".GetInfo", problem, []string{"time", "count", "package", "reason"})
+
+			switch {
+			case details == nil:
+				return nil, ErrNoProblemDetails
+			case err != nil:
+				return nil, err
+			default:
+				return details, nil
+			}
+		},
+	}
+
+	return worker, nil
 }

@@ -89,10 +89,12 @@ func (w *profileWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
 	return []sensor.Details{newPowerSensor(profile)}, nil
 }
 
-func NewProfileWorker(ctx context.Context) (*linux.SensorWorker, error) {
+func NewProfileWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
+	worker := linux.NewEventWorker(powerProfileWorkerID)
+
 	bus, ok := linux.CtxGetSystemBus(ctx)
 	if !ok {
-		return nil, linux.ErrNoSystemBus
+		return worker, linux.ErrNoSystemBus
 	}
 
 	triggerCh, err := dbusx.NewWatch(
@@ -100,17 +102,15 @@ func NewProfileWorker(ctx context.Context) (*linux.SensorWorker, error) {
 		dbusx.MatchPropChanged(),
 	).Start(ctx, bus)
 	if err != nil {
-		return nil, fmt.Errorf("could not watch D-Bus for power profile updates: %w", err)
+		return worker, fmt.Errorf("could not watch D-Bus for power profile updates: %w", err)
 	}
 
-	return &linux.SensorWorker{
-			Value: &profileWorker{
-				activeProfile: dbusx.NewProperty[string](bus,
-					powerProfilesPath, powerProfilesInterface,
-					powerProfilesInterface+"."+activeProfileProp),
-				triggerCh: triggerCh,
-			},
-			WorkerID: powerProfileWorkerID,
-		},
-		nil
+	worker.EventType = &profileWorker{
+		triggerCh: triggerCh,
+		activeProfile: dbusx.NewProperty[string](bus,
+			powerProfilesPath, powerProfilesInterface,
+			powerProfilesInterface+"."+activeProfileProp),
+	}
+
+	return worker, nil
 }

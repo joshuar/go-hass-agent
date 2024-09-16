@@ -35,16 +35,14 @@ const (
 
 var ErrParseLoadAvgs = errors.New("could not parse load averages")
 
-type loadAvgsSensorWorker struct {
+type loadAvgsWorker struct {
 	path     string
 	loadAvgs []*linux.Sensor
 }
 
-func (w *loadAvgsSensorWorker) Interval() time.Duration { return loadAvgUpdateInterval }
+func (w *loadAvgsWorker) UpdateDelta(_ time.Duration) {}
 
-func (w *loadAvgsSensorWorker) Jitter() time.Duration { return loadAvgUpdateJitter }
-
-func (w *loadAvgsSensorWorker) Sensors(_ context.Context, _ time.Duration) ([]sensor.Details, error) {
+func (w *loadAvgsWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
 	sensors := make([]sensor.Details, loadAvgsTotal)
 
 	loadAvgData, err := os.ReadFile(w.path)
@@ -99,10 +97,9 @@ func parseLoadAvgs(data []byte) ([]string, error) {
 	return loadAvgs, nil
 }
 
-func NewLoadAvgWorker(_ context.Context) (*linux.SensorWorker, error) {
-	return &linux.SensorWorker{
-			Value:    &loadAvgsSensorWorker{loadAvgs: newLoadAvgSensors(), path: filepath.Join(linux.ProcFSRoot, "loadavg")},
-			WorkerID: loadAvgsWorkerID,
-		},
-		nil
+func NewLoadAvgWorker(_ context.Context) (*linux.PollingSensorWorker, error) {
+	worker := linux.NewPollingWorker(loadAvgsWorkerID, loadAvgUpdateInterval, loadAvgUpdateJitter)
+	worker.PollingType = &loadAvgsWorker{loadAvgs: newLoadAvgSensors(), path: filepath.Join(linux.ProcFSRoot, "loadavg")}
+
+	return worker, nil
 }

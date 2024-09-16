@@ -24,11 +24,9 @@ const (
 
 type usageWorker struct{}
 
-func (w *usageWorker) Interval() time.Duration { return usageUpdateInterval }
+func (w *usageWorker) UpdateDelta(_ time.Duration) {}
 
-func (w *usageWorker) Jitter() time.Duration { return usageUpdateJitter }
-
-func (w *usageWorker) Sensors(ctx context.Context, _ time.Duration) ([]sensor.Details, error) {
+func (w *usageWorker) Sensors(ctx context.Context) ([]sensor.Details, error) {
 	mounts, err := getMounts(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not get mount points: %w", err)
@@ -43,10 +41,9 @@ func (w *usageWorker) Sensors(ctx context.Context, _ time.Duration) ([]sensor.De
 	return sensors, nil
 }
 
-func NewUsageWorker(_ context.Context) (*linux.SensorWorker, error) {
-	return &linux.SensorWorker{
-			Value:    &usageWorker{},
-			WorkerID: usageWorkerID,
-		},
-		nil
+func NewUsageWorker(_ context.Context) (*linux.PollingSensorWorker, error) {
+	worker := linux.NewPollingWorker(usageWorkerID, usageUpdateInterval, usageUpdateJitter)
+	worker.PollingType = &usageWorker{}
+
+	return worker, nil
 }
