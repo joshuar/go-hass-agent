@@ -56,6 +56,7 @@
   - [🤔 Use-cases](#-use-cases)
   - [📈/🕹️ List of Sensors/Controls (by Operating System)](#️-list-of-sensorscontrols-by-operating-system)
     - [🐧 Linux](#-linux)
+    - [All Operating Systems](#all-operating-systems)
   - [🗒️ Versioning](#️-versioning)
 - [🧰 Getting Started](#-getting-started)
   - [🤝 Compatibility](#-compatibility)
@@ -170,7 +171,6 @@ this app:
 
 #### 🐧 Linux
 
-- *Go Hass Agent Version*. Updated on agent start.
 - App Details:
   - *Active App* (currently active (focused) application) and *Running Apps*
   (count of all running applications). Updated when active app or number of apps
@@ -285,6 +285,15 @@ this app:
       *alarms*. Updated ~every 1 minute.
     - Extracted from the `/sys/class/hwmon` file system.
 
+#### All Operating Systems
+
+- *Go Hass Agent Version*. Updated on agent start.
+- *External IP Addresses*. All external IP addresses (IPv4/6) of the device
+  running the agent.
+- *Connection Latency*. Total connection time (in milliseconds) to connect to
+  Home Assistant from the device running Go Hass Agent. Additional times shown
+  as attributes.
+
 [⬆️ Back to Top](#-table-of-contents)
 
 ### 🗒️ Versioning
@@ -341,6 +350,8 @@ following for the `rpm` package can be used:
 cosign verify-blob --key cosign.pub --signature go-hass-agent-*.rpm.sig go-hass-agent-*.rpm
 ```
 
+[⬆️ Back to Top](#-table-of-contents)
+
 #### 🚢 Container
 
 Container images are available on
@@ -376,6 +387,8 @@ able to report sensors and receive notifications.
 When you have entered all the details, click **Submit** and the agent should
 start running and reporting sensors to the Home Assistant instance.
 
+[⬆️ Back to Top](#-table-of-contents)
+
 ### 👻 Running “Headless”
 
 Go Hass Agent will automatically detect if there is no GUI available and run in
@@ -400,6 +413,8 @@ specifying the `--terminal` command-line option.
 
 If you want to run Go Hass Agent as a service on a headless machine, see the
 [FAQ](#i-want-to-run-the-agent-on-a-server-as-a-service-without-a-gui-can-i-do-this).
+
+[⬆️ Back to Top](#-table-of-contents)
 
 ### 🐳 Running in a container
 
@@ -458,6 +473,8 @@ reported will be severely limited without them:
 - `--device /dev/video0:/dev/video0`
   - Allows webcam control (when configured with MQTT).
 
+[⬆️ Back to Top](#-table-of-contents)
+
 ### ♻️ Regular Usage
 
 When running, Go Hass Agent will appear as a device under the Mobile App
@@ -466,6 +483,8 @@ sensors/entities you can use in any automations, scripts, dashboards and other
 parts of Home Assistant.
 
 [![Open your Home Assistant instance to the mobile_app integration.](https://my.home-assistant.io/badges/integration.svg)](https://my.home-assistant.io/redirect/integration/?domain=mobile_app)
+
+[⬆️ Back to Top](#-table-of-contents)
 
 ### 📌 Configuration Location
 
@@ -478,6 +497,8 @@ The configuration is located in a file called `preferences.toml` in
 
 While the configuration can be edited manually, it is recommended to let the
 agent manage this file.
+
+[⬆️ Back to Top](#-table-of-contents)
 
 ### Script Sensors
 
@@ -917,6 +938,8 @@ This will:
 To just build a binary, replace `build:full` with `build:fast` in the mage
 invocation above.
 
+[⬆️ Back to Top](#-table-of-contents)
+
 ### Cross Compilation
 
 Go Hass Agent can also be built for **arm (v6/v7)** and **arm64** with
@@ -940,6 +963,8 @@ Then the commands for building and packaging above should work as expected.
 > The devcontainer has all the necessary compilers and libraries
 > installed for cross-compilation.
 
+[⬆️ Back to Top](#-table-of-contents)
+
 ### Packages
 
 Go Hass Agent uses [nfpm](https://nfpm.goreleaser.com/) to create
@@ -957,6 +982,8 @@ needed.
 - Packages will be available under the `dist/` folder.
 - You can build packages for other architectures as well by following the guide
   for [cross-compliation](#cross-compilation).
+
+[⬆️ Back to Top](#-table-of-contents)
 
 ### Container Images
 
@@ -1032,6 +1059,8 @@ precision_ if desired). This is useful for sensors whose native unit is not very
 human-friendly. For example the memory sensors report values in bytes (B),
 whereas you may wish to change the unit of measurement to gigabytes (GB).
 
+[⬆️ Back to Top](#-table-of-contents)
+
 ### _Can I disable some sensors?_
 
 - The agent itself does not currently support disabling individual sensors.
@@ -1047,11 +1076,15 @@ detect the disabled state and send/not send updates as appropriate.
 > While the agent will stop sending updates for a disabled sensor, it
 > will not stop gathering the raw data for the sensor.
 
+[⬆️ Back to Top](#-table-of-contents)
+
 ### _The GUI windows are too small/too big. How can I change the size?_
 
 - See [Scaling](https://developer.fyne.io/architecture/scaling) in the Fyne
 documentation. In the tray icon menu, select _Settings_ to open the Fyne
 settings app which can adjust the scaling for the app windows.
+
+[⬆️ Back to Top](#-table-of-contents)
 
 ### _What is the resource (CPU, memory) usage of the agent?_
 
@@ -1064,6 +1097,8 @@ settings app which can adjust the scaling for the app windows.
   usage may be affected by the “business” of the bus. For sensors that are
   polled on an interval, the agent makes use of some jitter in the polling
   intervals to avoid a “thundering herd” problem.
+
+[⬆️ Back to Top](#-table-of-contents)
 
 ### _I've updated the agent and now I've got a bunch of duplicate/removed/disabled sensors?_
 
@@ -1085,6 +1120,8 @@ settings app which can adjust the scaling for the app windows.
 
   [![Open your Home Assistant instance to the repairs
   integration.](https://my.home-assistant.io/badges/repairs.svg)](https://my.home-assistant.io/redirect/repairs)
+
+[⬆️ Back to Top](#-table-of-contents)
 
 ### _Can I reset the agent (start from new)?_
 
@@ -1111,6 +1148,8 @@ settings app which can adjust the scaling for the app windows.
    that registration was successful.
 8. Restart the agent.
 
+[⬆️ Back to Top](#-table-of-contents)
+
 ### _I want to run the agent on a server, as a service, without a GUI. Can I do this?_
 
 - Yes. The packages install a systemd service file that can be enabled and
@@ -1127,6 +1166,8 @@ go-hass-agent && systemctl --user start go-hass-agent`.
 should start with every boot.
 - For other init systems, consult their documentation on how to enable and run
 user services.
+
+[⬆️ Back to Top](#-table-of-contents)
 
 ### _Can (or does) the agent run as root or with privileges?_
 

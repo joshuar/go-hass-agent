@@ -5,7 +5,7 @@
 
 // revive:disable:unused-receiver
 //
-//go:generate moq -out agent_mocks_test.go . ui agentPreferences SensorController MQTTController
+//go:generate moq -out agent_mocks_test.go . ui SensorController MQTTController
 package agent
 
 import (
@@ -17,9 +17,6 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
-
-	mqtthass "github.com/joshuar/go-hass-anything/v11/pkg/hass"
-	mqttapi "github.com/joshuar/go-hass-anything/v11/pkg/mqtt"
 
 	fyneui "github.com/joshuar/go-hass-agent/internal/agent/ui/fyneUI"
 	"github.com/joshuar/go-hass-agent/internal/logging"
@@ -35,17 +32,6 @@ type ui interface {
 	DisplayTrayIcon(ctx context.Context, cancelFunc context.CancelFunc)
 	DisplayRegistrationWindow(ctx context.Context, prefs *preferences.Registration) chan bool
 	Run(ctx context.Context)
-}
-
-// agentPreferences are the methods that the agent requires to manipulate preferences.
-type agentPreferences interface {
-	AgentVersion() string
-	AgentRegistered() bool
-	GetDeviceInfo() *preferences.Device
-	GenerateMQTTDevice(ctx context.Context) *mqtthass.Device
-	IsMQTTEnabled() bool
-	GetMQTTPreferences() mqttapi.Preferences
-	SaveHassPreferences(details *preferences.Hass, options *preferences.Registration) error
 }
 
 // Agent represents a running agent.
@@ -104,7 +90,7 @@ func Run(ctx context.Context) error {
 	var (
 		wg      sync.WaitGroup
 		regWait sync.WaitGroup
-		prefs   agentPreferences
+		prefs   *preferences.Preferences
 		err     error
 	)
 
@@ -135,7 +121,7 @@ func Run(ctx context.Context) error {
 	go func() {
 		defer regWait.Done()
 		// Check if the agent is registered. If not, start a registration flow.
-		if err = checkRegistration(runCtx, agent.ui, prefs); err != nil {
+		if err = checkRegistration(runCtx, agent.ui, prefs.GetDeviceInfo(), prefs); err != nil {
 			logging.FromContext(ctx).Error("Error checking registration status.", slog.Any("error", err))
 			cancelRun()
 		}
@@ -204,7 +190,7 @@ func Run(ctx context.Context) error {
 func Register(ctx context.Context) error {
 	var (
 		wg    sync.WaitGroup
-		prefs agentPreferences
+		prefs *preferences.Preferences
 		err   error
 	)
 
@@ -230,7 +216,7 @@ func Register(ctx context.Context) error {
 	go func() {
 		defer wg.Done()
 
-		if err := checkRegistration(regCtx, agent.ui, prefs); err != nil {
+		if err := checkRegistration(regCtx, agent.ui, prefs.GetDeviceInfo(), prefs); err != nil {
 			logging.FromContext(ctx).Error("Error checking registration status", slog.Any("error", err))
 		}
 
@@ -253,8 +239,10 @@ func Reset(ctx context.Context) error {
 		return fmt.Errorf("could not load preferences: %w", err)
 	}
 
-	if err := resetMQTTControllers(ctx, prefs); err != nil {
-		logging.FromContext(ctx).Error("Problems occurred resetting MQTT configuration.", slog.Any("error", err))
+	if prefs.IsMQTTEnabled() {
+		if err := resetMQTTControllers(ctx, prefs.GenerateMQTTDevice(ctx), prefs.GetMQTTPreferences()); err != nil {
+			logging.FromContext(ctx).Error("Problems occurred resetting MQTT configuration.", slog.Any("error", err))
+		}
 	}
 
 	return nil

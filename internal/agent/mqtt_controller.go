@@ -89,24 +89,18 @@ func runMQTTWorkers(ctx context.Context, prefs mqttapi.Preferences, controllers 
 	}
 }
 
-func resetMQTTControllers(ctx context.Context, prefs agentPreferences) error {
-	if !prefs.IsMQTTEnabled() {
-		return nil
-	}
-
-	mqttDevice := prefs.GenerateMQTTDevice(ctx)
-
+func resetMQTTControllers(ctx context.Context, device *mqtthass.Device, prefs mqttapi.Preferences) error {
 	var configs []*mqttapi.Msg
 
-	osMQTTController := newOSMQTTController(ctx, mqttDevice)
+	osMQTTController := newOSMQTTController(ctx, device)
 	configs = append(configs, osMQTTController.Configs()...)
 
-	mqttCmdController := newMQTTController(ctx, mqttDevice)
+	mqttCmdController := newMQTTController(ctx, device)
 	if mqttCmdController != nil {
 		configs = append(configs, mqttCmdController.Configs()...)
 	}
 
-	client, err := mqttapi.NewClient(ctx, prefs.GetMQTTPreferences(), nil, nil)
+	client, err := mqttapi.NewClient(ctx, prefs, nil, nil)
 	if err != nil {
 		return fmt.Errorf("could not connect to MQTT: %w", err)
 	}

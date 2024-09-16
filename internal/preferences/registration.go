@@ -30,3 +30,11 @@ func (p *Registration) Validate() error {
 
 	return nil
 }
+
+func (p *Preferences) Server() string {
+	return p.Registration.Server
+}
+
+func (p *Preferences) Token() string {
+	return p.Registration.Token
+}

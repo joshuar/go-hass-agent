@@ -20,6 +20,7 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/logging"
+	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
 const (
@@ -134,7 +135,7 @@ func (w deviceController) States(ctx context.Context) []sensor.Details {
 	return sensors
 }
 
-func (agent *Agent) newDeviceController(_ context.Context, prefs agentPreferences) SensorController {
+func (agent *Agent) newDeviceController(_ context.Context, prefs *preferences.Preferences) SensorController {
 	var worker worker
 
 	controller := make(deviceController)
@@ -143,6 +144,8 @@ func (agent *Agent) newDeviceController(_ context.Context, prefs agentPreference
 	worker = agent.newVersionWorker(prefs.AgentVersion())
 	controller[worker.ID()] = &workerState{worker: worker}
 	worker = agent.newExternalIPUpdaterWorker()
+	controller[worker.ID()] = &workerState{worker: worker}
+	worker = newConnectionLatencyWorker(prefs)
 	controller[worker.ID()] = &workerState{worker: worker}
 
 	return controller

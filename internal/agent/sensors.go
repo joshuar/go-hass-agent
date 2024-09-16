@@ -36,7 +36,7 @@ func (v *version) State() any { return preferences.AppVersion }
 
 func (v *version) Units() string { return "" }
 
-func (v *version) Category() string { return "diagnostic" }
+func (v *version) Category() string { return types.CategoryDiagnostic }
 
 func (v *version) Attributes() map[string]any { return nil }
 
@@ -83,7 +83,7 @@ func (a *address) State() any { return a.addr.String() }
 
 func (a *address) Units() string { return "" }
 
-func (a *address) Category() string { return "diagnostic" }
+func (a *address) Category() string { return types.CategoryDiagnostic }
 
 func (a *address) Attributes() map[string]any {
 	attributes := make(map[string]any)

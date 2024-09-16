@@ -19,7 +19,8 @@ func TestAgent_checkRegistration(t *testing.T) {
 	type args struct {
 		ctx     context.Context
 		agentUI ui
-		prefs   agentPreferences
+		device  *preferences.Device
+		prefs   registrationPrefs
 	}
 	tests := []struct {
 		args    args
@@ -30,11 +31,11 @@ func TestAgent_checkRegistration(t *testing.T) {
 			name: "already registered",
 			args: args{
 				ctx: LoadCtx(ctx, SetForceRegister(false)),
-				prefs: &agentPreferencesMock{
+				prefs: &registrationPrefsMock{
 					AgentRegisteredFunc:     func() bool { return true },
-					GetDeviceInfoFunc:       func() *preferences.Device { return &preferences.Device{} },
 					SaveHassPreferencesFunc: func(_ *preferences.Hass, _ *preferences.Registration) error { return nil },
 				},
+				device: &preferences.Device{},
 			},
 		},
 		{
@@ -44,11 +45,11 @@ func TestAgent_checkRegistration(t *testing.T) {
 					SetHeadless(false),
 					SetForceRegister(true),
 					SetRegistrationInfo("https://localhost:8123", "someToken", false)),
-				prefs: &agentPreferencesMock{
+				prefs: &registrationPrefsMock{
 					AgentRegisteredFunc:     func() bool { return true },
-					GetDeviceInfoFunc:       func() *preferences.Device { return &preferences.Device{} },
 					SaveHassPreferencesFunc: func(_ *preferences.Hass, _ *preferences.Registration) error { return nil },
 				},
+				device: &preferences.Device{},
 				agentUI: &uiMock{
 					DisplayRegistrationWindowFunc: func(_ context.Context, _ *preferences.Registration) chan bool {
 						doneCh := make(chan bool)
@@ -67,11 +68,11 @@ func TestAgent_checkRegistration(t *testing.T) {
 				ctx: LoadCtx(ctx,
 					SetHeadless(true),
 					SetRegistrationInfo("https://localhost:8123", "someToken", false)),
-				prefs: &agentPreferencesMock{
+				prefs: &registrationPrefsMock{
 					AgentRegisteredFunc:     func() bool { return false },
-					GetDeviceInfoFunc:       func() *preferences.Device { return &preferences.Device{} },
 					SaveHassPreferencesFunc: func(_ *preferences.Hass, _ *preferences.Registration) error { return nil },
 				},
+				device: &preferences.Device{},
 			},
 		},
 		{
@@ -80,11 +81,11 @@ func TestAgent_checkRegistration(t *testing.T) {
 				ctx: LoadCtx(ctx,
 					SetHeadless(false),
 					SetRegistrationInfo("https://localhost:8123", "someToken", false)),
-				prefs: &agentPreferencesMock{
+				prefs: &registrationPrefsMock{
 					AgentRegisteredFunc:     func() bool { return false },
-					GetDeviceInfoFunc:       func() *preferences.Device { return &preferences.Device{} },
 					SaveHassPreferencesFunc: func(_ *preferences.Hass, _ *preferences.Registration) error { return nil },
 				},
+				device: &preferences.Device{},
 				agentUI: &uiMock{
 					DisplayRegistrationWindowFunc: func(_ context.Context, _ *preferences.Registration) chan bool {
 						doneCh := make(chan bool)
@@ -103,18 +104,18 @@ func TestAgent_checkRegistration(t *testing.T) {
 				ctx: LoadCtx(ctx,
 					SetHeadless(true),
 					SetRegistrationInfo("https://localhost:8123", "someToken", false)),
-				prefs: &agentPreferencesMock{
+				prefs: &registrationPrefsMock{
 					AgentRegisteredFunc:     func() bool { return false },
-					GetDeviceInfoFunc:       func() *preferences.Device { return &preferences.Device{} },
 					SaveHassPreferencesFunc: func(_ *preferences.Hass, _ *preferences.Registration) error { return errors.New("failed") },
 				},
+				device: &preferences.Device{},
 			},
 			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := checkRegistration(tt.args.ctx, tt.args.agentUI, tt.args.prefs); (err != nil) != tt.wantErr {
+			if err := checkRegistration(tt.args.ctx, tt.args.agentUI, tt.args.device, tt.args.prefs); (err != nil) != tt.wantErr {
 				t.Errorf("Agent.checkRegistration() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
