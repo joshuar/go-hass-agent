@@ -67,8 +67,8 @@ func (l *connectionLatency) Attributes() map[string]any {
 }
 
 type connectionLatencyWorker struct {
-	client     *resty.Client
-	cancelFunc context.CancelFunc
+	client *resty.Client
+	doneCh chan struct{}
 }
 
 // ID returns the unique string to represent this worker and its sensors.
@@ -76,7 +76,7 @@ func (w *connectionLatencyWorker) ID() string { return connectionLatencyWorkerID
 
 // Stop will stop any processing of sensors controlled by this worker.
 func (w *connectionLatencyWorker) Stop() error {
-	w.cancelFunc()
+	close(w.doneCh)
 
 	return nil
 }
@@ -97,11 +97,15 @@ func (w *connectionLatencyWorker) Sensors(ctx context.Context) ([]sensor.Details
 
 func (w *connectionLatencyWorker) Start(ctx context.Context) (<-chan sensor.Details, error) {
 	sensorCh := make(chan sensor.Details)
+	w.doneCh = make(chan struct{})
+
+	// Create a new context for the updates scope.
+	workerCtx, cancelFunc := context.WithCancel(ctx)
 
 	updater := func(_ time.Duration) {
-		sensors, err := w.Sensors(ctx)
+		sensors, err := w.Sensors(workerCtx)
 		if err != nil {
-			logging.FromContext(ctx).
+			logging.FromContext(workerCtx).
 				With(slog.String("worker", connectionLatencyWorkerID)).
 				Debug("Could not generated latency sensors.", slog.Any("error", err))
 		}
@@ -110,9 +114,15 @@ func (w *connectionLatencyWorker) Start(ctx context.Context) (<-chan sensor.Deta
 			sensorCh <- s
 		}
 	}
+
 	go func() {
-		defer close(sensorCh)
 		helpers.PollSensors(ctx, updater, connectionLatencyPollInterval, connectionLatencyJitterAmount)
+	}()
+
+	go func() {
+		<-workerCtx.Done()
+		cancelFunc()
+		close(sensorCh)
 	}()
 
 	return sensorCh, nil
