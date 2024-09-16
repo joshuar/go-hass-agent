@@ -172,7 +172,7 @@ func Run(ctx context.Context) error {
 		// Listen for notifications from Home Assistant.
 		go func() {
 			defer wg.Done()
-			runNotificationsWorker(runCtx, agent.ui)
+			runNotificationsWorker(runCtx, prefs, agent.ui)
 		}()
 	}()
 
