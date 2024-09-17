@@ -102,7 +102,7 @@ require (
 require (
 	fyne.io/systray v1.11.0 // indirect
 	github.com/adrg/xdg v0.5.0
-	github.com/alecthomas/kong v0.9.0
+	github.com/alecthomas/kong v1.2.1
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/fredbi/uri v1.1.0 // indirect
