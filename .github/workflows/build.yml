@@ -31,7 +31,7 @@ jobs:
       release_tag: ${{ steps.release_please.outputs.tag_name }}
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@5c7944e73c4c2a096b17a9cb74d65b6c2bbafbde # v1
+        uses: step-security/harden-runner@91182cccc01eb5e619899d80e4e971d6181294a7 # v1
         with:
           egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
       - name: Run release please
@@ -55,7 +55,7 @@ jobs:
         - linux/arm64
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@5c7944e73c4c2a096b17a9cb74d65b6c2bbafbde # v1
+        uses: step-security/harden-runner@91182cccc01eb5e619899d80e4e971d6181294a7 # v1
         with:
           egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
       - name: Set up environment
@@ -210,7 +210,7 @@ jobs:
       IMAGE: ${{ github.repository }}
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@5c7944e73c4c2a096b17a9cb74d65b6c2bbafbde # v1
+        uses: step-security/harden-runner@91182cccc01eb5e619899d80e4e971d6181294a7 # v1
         with:
           egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
       - name: Checkout repo
