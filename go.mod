@@ -8,7 +8,7 @@ require (
 	github.com/eclipse/paho.golang v0.21.0
 	github.com/go-playground/validator/v10 v10.22.1
 	github.com/godbus/dbus/v5 v5.1.0
-	github.com/goreleaser/nfpm/v2 v2.39.0
+	github.com/goreleaser/nfpm/v2 v2.40.0
 	github.com/grandcat/zeroconf v1.0.0
 	github.com/iancoleman/strcase v0.3.0
 	github.com/jeandeaual/go-locale v0.0.0-20240223122105-ce5225dcaa49
@@ -16,7 +16,7 @@ require (
 	github.com/lthibault/jitterbug/v2 v2.2.2
 	github.com/lxzan/gws v1.8.7
 	github.com/magefile/mage v1.15.0
-	github.com/matryer/moq v0.4.0
+	github.com/matryer/moq v0.5.0
 	github.com/pelletier/go-toml/v2 v2.2.3
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/shirou/gopsutil/v3 v3.24.5
@@ -29,11 +29,11 @@ require (
 )
 
 require (
-	dario.cat/mergo v1.0.0 // indirect
+	dario.cat/mergo v1.0.1 // indirect
 	github.com/AlekSi/pointer v1.2.0 // indirect
 	github.com/BurntSushi/toml v1.4.0 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
-	github.com/Masterminds/semver/v3 v3.2.1 // indirect
+	github.com/Masterminds/semver/v3 v3.3.0 // indirect
 	github.com/Masterminds/sprig/v3 v3.2.3 // indirect
 	github.com/Microsoft/go-winio v0.6.1 // indirect
 	github.com/ProtonMail/go-crypto v1.0.0 // indirect
@@ -48,7 +48,6 @@ require (
 	github.com/cyphar/filepath-securejoin v0.2.4 // indirect
 	github.com/dolthub/maphash v0.1.0 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
-	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
 	github.com/go-git/go-billy/v5 v5.5.0 // indirect
 	github.com/go-git/go-git/v5 v5.12.0 // indirect
@@ -63,7 +62,7 @@ require (
 	github.com/imdario/mergo v0.3.16 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/invopop/jsonschema v0.12.0 // indirect
-	github.com/jaypipes/pcidb v1.0.0 // indirect
+	github.com/jaypipes/pcidb v1.0.1 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
 	github.com/kevinburke/ssh_config v1.2.0 // indirect
 	github.com/klauspost/pgzip v1.2.6 // indirect
@@ -95,14 +94,13 @@ require (
 	golang.org/x/mod v0.21.0 // indirect
 	golang.org/x/sync v0.8.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
-	gopkg.in/yaml.v2 v2.4.0 // indirect
 	howett.net/plist v1.0.0 // indirect
 )
 
 require (
 	fyne.io/systray v1.11.0 // indirect
 	github.com/adrg/xdg v0.5.0
-	github.com/alecthomas/kong v0.9.0
+	github.com/alecthomas/kong v1.2.1
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/fredbi/uri v1.1.0 // indirect
@@ -116,13 +114,13 @@ require (
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
-	github.com/go-resty/resty/v2 v2.14.0
+	github.com/go-resty/resty/v2 v2.15.0
 	github.com/go-test/deep v1.1.1
 	github.com/go-text/render v0.1.1-0.20240418202334-dd62631dae9b // indirect
 	github.com/go-text/typesetting v0.1.0 // indirect
 	github.com/gofrs/uuid/v5 v5.3.0
 	github.com/gopherjs/gopherjs v1.17.2 // indirect
-	github.com/jaypipes/ghw v0.12.0
+	github.com/jaypipes/ghw v0.13.0
 	github.com/jfreymuth/pulse v0.1.1
 	github.com/jsummers/gobmp v0.0.0-20151104160322-e2ba15ffa76e // indirect
 	github.com/kinbiko/jsonassert v1.1.1
