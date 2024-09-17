@@ -34,6 +34,8 @@ const (
 
 	DefaultServer = "http://localhost:8123"
 	DefaultSecret = "ALongSecretString"
+
+	unknownValue = "Unknown"
 )
 
 var (

@@ -209,7 +209,10 @@ func parseBuildPlatform() (operatingsystem, architecture, version string) {
 
 	buildComponents := strings.Split(buildPlatform, "/")
 	operatingsystem = buildComponents[0]
-	architecture = buildComponents[1]
+
+	if len(buildComponents) > 1 {
+		architecture = buildComponents[1]
+	}
 
 	if len(buildComponents) > 2 {
 		version = strings.TrimPrefix(buildComponents[2], "v")

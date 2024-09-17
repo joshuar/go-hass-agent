@@ -64,15 +64,19 @@ func MQTTOrigin() *mqtthass.Origin {
 // IsMQTTEnabled is a conveinience function to determine whether MQTT
 // functionality has been enabled in the agent.
 func (p *Preferences) IsMQTTEnabled() bool {
-	if p.MQTT == nil {
-		return false
+	if p.MQTT != nil {
+		return p.MQTT.MQTTEnabled
 	}
 
-	return p.MQTT.MQTTEnabled
+	return false
 }
 
 func (p *Preferences) GetMQTTPreferences() mqttapi.Preferences {
-	return p.MQTT
+	if p.MQTT != nil {
+		return p.MQTT
+	}
+
+	return DefaultMQTTPreferences()
 }
 
 func (p *Preferences) SaveMQTTPreferences(mqttPrefs *MQTT) error {
@@ -87,11 +91,11 @@ func (p *Preferences) GenerateMQTTDevice(ctx context.Context) *mqtthass.Device {
 	model, manufacturer, _ := device.GetHWProductInfo() //nolint:errcheck // error doesn't matter
 
 	return &mqtthass.Device{
-		Name:         p.Device.Name,
+		Name:         p.DeviceName(),
 		URL:          AppURL,
 		SWVersion:    AppVersion,
 		Manufacturer: manufacturer,
 		Model:        model,
-		Identifiers:  []string{appID, p.Device.Name, p.Device.ID},
+		Identifiers:  []string{appID, p.DeviceName(), p.DeviceID()},
 	}
 }

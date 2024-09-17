@@ -7,7 +7,7 @@
 package preferences
 
 import (
-	"fmt"
+	"log/slog"
 
 	"github.com/joshuar/go-hass-agent/internal/device"
 )
@@ -40,7 +40,7 @@ func newDevice() (*Device, error) {
 	// Retrieve the name as the device name.
 	name, err := device.GetHostname(true)
 	if err != nil {
-		return nil, fmt.Errorf("unable to create device: %w", err)
+		slog.Warn("Unable to determine device hostname.", slog.Any("error", err))
 	}
 
 	dev.Name = name
@@ -48,7 +48,7 @@ func newDevice() (*Device, error) {
 	// Generate a new unique Device ID
 	id, err := device.NewDeviceID()
 	if err != nil {
-		return nil, fmt.Errorf("unable to create device: %w", err)
+		slog.Warn("Unable to generate a device ID.", slog.Any("error", err))
 	}
 
 	dev.ID = id
@@ -56,7 +56,7 @@ func newDevice() (*Device, error) {
 	// Retrieve the OS name and version.
 	osName, osVersion, err := device.GetOSID()
 	if err != nil {
-		return nil, fmt.Errorf("unable to create device: %w", err)
+		slog.Warn("Unable to determine OS details.", slog.Any("error", err))
 	}
 
 	dev.OsName = osName
@@ -65,7 +65,7 @@ func newDevice() (*Device, error) {
 	// Retrieve the hardware model and manufacturer.
 	model, manufacturer, err := device.GetHWProductInfo()
 	if err != nil {
-		return nil, fmt.Errorf("unable to create device: %w", err)
+		slog.Warn("Unable to determine device hardware details.", slog.Any("error", err))
 	}
 
 	dev.Model = model
@@ -76,4 +76,20 @@ func newDevice() (*Device, error) {
 
 func (p *Preferences) GetDeviceInfo() *Device {
 	return p.Device
+}
+
+func (p *Preferences) DeviceName() string {
+	if p.Device != nil {
+		return p.Device.Name
+	}
+
+	return unknownValue
+}
+
+func (p *Preferences) DeviceID() string {
+	if p.Device != nil {
+		return p.Device.ID
+	}
+
+	return unknownValue
 }

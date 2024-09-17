@@ -99,14 +99,26 @@ func (c *sensorController) Stop(name string) error {
 func (c *sensorController) States(ctx context.Context) []sensor.Details {
 	var sensors []sensor.Details
 
-	for _, worker := range c.ActiveWorkers() {
-		workerSensors, err := c.workers[worker].Sensors(ctx)
-		if err != nil {
+	for _, workerID := range c.ActiveWorkers() {
+		worker, found := c.workers[workerID]
+		if !found {
+			logging.FromContext(ctx).
+				With(slog.String("controller", c.ID())).
+				Debug("Worker not found",
+					slog.String("worker", workerID))
+
+			continue
+		}
+
+		workerSensors, err := worker.Sensors(ctx)
+		if err != nil || len(workerSensors) == 0 {
 			logging.FromContext(ctx).
 				With(slog.String("controller", c.ID())).
 				Debug("Could not retrieve worker sensors",
-					slog.String("worker", c.workers[worker].ID()),
+					slog.String("worker", worker.ID()),
 					slog.Any("error", err))
+
+			continue
 		}
 
 		sensors = append(sensors, workerSensors...)

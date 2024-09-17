@@ -154,6 +154,13 @@ func (i *FyneUI) DisplayTrayIcon(ctx context.Context, cancelFunc context.CancelF
 func (i *FyneUI) DisplayRegistrationWindow(ctx context.Context, prefs *preferences.Registration) chan bool {
 	userCancelled := make(chan bool)
 
+	if i.app == nil {
+		logging.FromContext(ctx).Warn("No UI available.")
+		close(userCancelled)
+
+		return userCancelled
+	}
+
 	window := i.app.NewWindow(i.Translate("App Registration"))
 
 	var allFormItems []*widget.FormItem
