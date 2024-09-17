@@ -85,7 +85,7 @@ func (w *connectionLatencyWorker) Sensors(ctx context.Context) ([]sensor.Details
 	resp, err := w.client.R().
 		SetContext(ctx).
 		Get("/")
-	if err != nil {
+	if err != nil || resp.IsError() {
 		return nil, fmt.Errorf("unable to connect: %w", err)
 	}
 

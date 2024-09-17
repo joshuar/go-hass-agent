@@ -65,7 +65,7 @@ func (Package) Nfpm() error {
 		// so we need to rename them.
 		if envMap["GOARCH"] == "arm" && pkgformat == "deb" {
 			debPkgs, err := filepath.Glob(distPath + "/pkg/*.deb")
-			if err != nil {
+			if err != nil || debPkgs == nil {
 				return fmt.Errorf("could not find arm deb package: %w", err)
 			}
 
