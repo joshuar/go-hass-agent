@@ -51,7 +51,7 @@ func NewContext(ctx context.Context) context.Context {
 	}
 
 	// Add portal interface
-	if portal, err := FindPortal(); err != nil {
+	if portal, err := findPortal(); err != nil {
 		slog.Warn("Unable to add desktop portal to context.", slog.Any("error", err))
 	} else {
 		ctx = context.WithValue(ctx, desktopPortalContextKey, portal)

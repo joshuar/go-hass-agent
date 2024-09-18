@@ -24,9 +24,9 @@ var (
 	ErrUptimeInvalid        = errors.New("invalid uptime")
 )
 
-// FindPortal is a helper function to work out which portal interface should be
+// findPortal is a helper function to work out which portal interface should be
 // used for getting information on running apps.
-func FindPortal() (string, error) {
+func findPortal() (string, error) {
 	desktop := os.Getenv("XDG_CURRENT_DESKTOP")
 
 	switch {
