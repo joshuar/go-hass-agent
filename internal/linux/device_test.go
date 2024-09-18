@@ -51,7 +51,7 @@ func TestFindPortal(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.args.setup()
 
-			got, err := FindPortal()
+			got, err := findPortal()
 			if got != tt.want {
 				t.Errorf("FindPortal() = %v, want %v", got, tt.want)
 			}
