@@ -345,10 +345,7 @@ func send[T any](ctx context.Context, client *Client, requestDetails any) (T, er
 		}
 	}
 
-	requestCtx, requestCancel := context.WithTimeout(ctx, DefaultTimeout)
-	defer requestCancel()
-
-	requestObj := client.endpoint.R().SetContext(requestCtx)
+	requestObj := client.endpoint.R().SetContext(ctx)
 	requestObj = requestObj.SetError(&responseErr)
 	requestObj = requestObj.SetResult(&response)
 
