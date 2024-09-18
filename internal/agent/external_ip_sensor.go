@@ -135,11 +135,8 @@ func (w *externalIPWorker) Start(ctx context.Context) (<-chan sensor.Details, er
 	sensorCh := make(chan sensor.Details)
 	w.doneCh = make(chan struct{})
 
-	// Create a new context for the updates scope.
-	workerCtx, cancelFunc := context.WithCancel(ctx)
-
 	updater := func(_ time.Duration) {
-		sensors, err := w.Sensors(workerCtx)
+		sensors, err := w.Sensors(ctx)
 		if err != nil {
 			w.logger.
 				With(slog.String("worker", externalIPWorkerID)).
@@ -151,13 +148,12 @@ func (w *externalIPWorker) Start(ctx context.Context) (<-chan sensor.Details, er
 		}
 	}
 	go func() {
-		helpers.PollSensors(workerCtx, updater, externalIPPollInterval, externalIPJitterAmount)
+		helpers.PollSensors(ctx, updater, externalIPPollInterval, externalIPJitterAmount)
 	}()
 
 	go func() {
 		defer close(sensorCh)
 		<-w.doneCh
-		cancelFunc()
 	}()
 
 	return sensorCh, nil
