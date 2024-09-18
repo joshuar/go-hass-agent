@@ -64,7 +64,7 @@ func (l *Sensor) SensorType() types.SensorClass {
 
 func (l *Sensor) Category() string {
 	if l.IsDiagnostic {
-		return "diagnostic"
+		return types.CategoryDiagnostic
 	}
 
 	return ""
