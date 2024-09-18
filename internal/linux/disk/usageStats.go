@@ -41,7 +41,7 @@ type mount struct {
 
 var (
 	validVirtualFs = []string{"tmpfs", "ramfs", "cifs", "smb", "nfs"}
-	mountBlocklist = []string{"/tmp/crun", "/run/netns", "/run/credentials", "/run/lock"}
+	mountBlocklist = []string{"/tmp/crun", "/run"}
 )
 
 func (m *mount) getMountInfo() error {
