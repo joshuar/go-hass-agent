@@ -19,7 +19,6 @@ require (
 	github.com/matryer/moq v0.5.0
 	github.com/pelletier/go-toml/v2 v2.2.3
 	github.com/robfig/cron/v3 v3.0.1
-	github.com/shirou/gopsutil/v3 v3.24.5
 	github.com/stretchr/testify v1.9.0
 	github.com/yassinebenaid/godump v0.10.0
 	golang.org/x/exp v0.0.0-20240416160154-fe59bbe5cc7f
@@ -53,6 +52,7 @@ require (
 	github.com/go-git/go-git/v5 v5.12.0 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
+	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/rpmpack v0.6.1-0.20240329070804-c2247cbb881a // indirect
 	github.com/google/uuid v1.4.0 // indirect
 	github.com/goreleaser/chglog v0.6.1 // indirect
@@ -64,10 +64,13 @@ require (
 	github.com/invopop/jsonschema v0.12.0 // indirect
 	github.com/jaypipes/pcidb v1.0.1 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
+	github.com/josharian/native v1.1.0 // indirect
 	github.com/kevinburke/ssh_config v1.2.0 // indirect
 	github.com/klauspost/pgzip v1.2.6 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mandykoh/go-parallel v0.1.0 // indirect
+	github.com/mdlayher/netlink v1.7.2 // indirect
+	github.com/mdlayher/socket v0.4.1 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
@@ -122,6 +125,7 @@ require (
 	github.com/gopherjs/gopherjs v1.17.2 // indirect
 	github.com/jaypipes/ghw v0.13.0
 	github.com/jfreymuth/pulse v0.1.1
+	github.com/jsimonetti/rtnetlink v1.4.2
 	github.com/jsummers/gobmp v0.0.0-20151104160322-e2ba15ffa76e // indirect
 	github.com/kinbiko/jsonassert v1.1.1
 	github.com/klauspost/compress v1.17.9 // indirect
@@ -132,7 +136,6 @@ require (
 	github.com/miekg/dns v1.1.41 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
-	github.com/power-devops/perfstat v0.0.0-20221212215047-62379fc7944b // indirect
 	github.com/samber/slog-multi v1.2.1
 	github.com/srwiley/oksvg v0.0.0-20221011165216-be6e8873101c // indirect
 	github.com/srwiley/rasterx v0.0.0-20220730225603-2ab79fcdd4ef // indirect
@@ -140,7 +143,6 @@ require (
 	github.com/tklauser/numcpus v0.8.0 // indirect
 	github.com/vladimirvivien/go4vl v0.0.5
 	github.com/yuin/goldmark v1.7.1 // indirect
-	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	golang.org/x/crypto v0.27.0 // indirect
 	golang.org/x/image v0.18.0 // indirect
 	golang.org/x/mobile v0.0.0-20231127183840-76ac6878050a // indirect

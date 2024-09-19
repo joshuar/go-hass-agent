@@ -44,7 +44,7 @@ var pollingWorkers = []func(ctx context.Context) (*linux.PollingSensorWorker, er
 	cpu.NewLoadAvgWorker,
 	cpu.NewUsageWorker,
 	mem.NewUsageWorker,
-	net.NewRatesWorker,
+	net.NewNetStatsWorker,
 	problems.NewProblemsWorker,
 	system.NewTimeWorker,
 	system.NewHWMonWorker,

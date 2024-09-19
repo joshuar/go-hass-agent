@@ -18,9 +18,9 @@ const _rateSensor_name = "Bytes SentBytes ReceivedBytes Sent ThroughputBytes Rec
 
 var _rateSensor_index = [...]uint8{0, 10, 24, 45, 70}
 
-func (i rateSensor) String() string {
+func (i netStatsType) String() string {
 	i -= 4
-	if i < 0 || i >= rateSensor(len(_rateSensor_index)-1) {
+	if i < 0 || i >= netStatsType(len(_rateSensor_index)-1) {
 		return "rateSensor(" + strconv.FormatInt(int64(i+4), 10) + ")"
 	}
 	return _rateSensor_name[_rateSensor_index[i]:_rateSensor_index[i+1]]
