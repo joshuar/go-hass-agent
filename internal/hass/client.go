@@ -46,6 +46,8 @@ var (
 	ErrResponseMalformed = errors.New("malformed response")
 	ErrUnknown           = errors.New("unknown error occurred")
 
+	ErrInvalidSensor = errors.New("invalid sensor")
+
 	defaultRetry = func(r *resty.Response, _ error) bool {
 		return r.StatusCode() == http.StatusTooManyRequests
 	}
@@ -128,6 +130,10 @@ func (c *Client) HassVersion(ctx context.Context) string {
 }
 
 func (c *Client) ProcessSensor(ctx context.Context, details sensor.Details) error {
+	if details == nil {
+		return fmt.Errorf("%w: nil sensor", ErrInvalidSensor)
+	}
+
 	if c.isDisabled(ctx, details) {
 		logging.FromContext(ctx).
 			Debug("Not sending request for disabled sensor.",
@@ -299,6 +305,10 @@ func (c *Client) isDisabled(ctx context.Context, details sensor.Details) bool {
 // isDisabledInReg returns the disabled state of the sensor from the local
 // registry.
 func (c *Client) isDisabledInReg(details sensor.Details) bool {
+	if details == nil {
+		slog.Error("nil!", slog.Any("sensor", details))
+	}
+
 	return c.registry.IsDisabled(details.ID())
 }
 

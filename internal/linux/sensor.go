@@ -14,9 +14,10 @@ import (
 )
 
 const (
-	DataSrcDbus   = "D-Bus"
-	DataSrcProcfs = "ProcFS"
-	DataSrcSysfs  = "SysFS"
+	DataSrcDbus    = "D-Bus"
+	DataSrcProcfs  = "ProcFS"
+	DataSrcSysfs   = "SysFS"
+	DataSrcNetlink = "Netlink"
 )
 
 var ErrUnimplemented = errors.New("unimplemented functionality")

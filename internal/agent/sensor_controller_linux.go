@@ -31,6 +31,7 @@ var eventWorkers = []func(ctx context.Context) (*linux.EventSensorWorker, error)
 	apps.NewAppWorker,
 	battery.NewBatteryWorker,
 	net.NewConnectionWorker,
+	net.NewAddressWorker,
 	power.NewProfileWorker,
 	power.NewStateWorker,
 	power.NewScreenLockWorker,

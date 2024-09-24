@@ -57,7 +57,9 @@ func (w *SensorWorker) ID() string {
 
 // Stop will stop any processing of sensors controlled by this worker.
 func (w *SensorWorker) Stop() error {
+	slog.Debug("Stopping worker", slog.String("worker", w.ID()))
 	w.cancelFunc()
+
 	return nil
 }
 

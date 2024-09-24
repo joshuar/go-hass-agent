@@ -36,12 +36,6 @@ var (
 	ErrUnsupportedValue = errors.New("unsupported state value")
 )
 
-type connectionSensor interface {
-	sensor.Details
-	setState(value any) error
-	updateState() error
-}
-
 type connection struct {
 	devicesProp *dbusx.Property[[]dbus.ObjectPath]
 	logger      *slog.Logger
@@ -121,21 +115,15 @@ func (c *connection) monitorConnection(ctx context.Context, bus *dbusx.Bus) <-ch
 
 	// Create sensors for monitored properties.
 	stateSensor := newConnectionStateSensor(bus, string(c.path), c.name)
-	ipv4Sensor := newConnectionAddrSensor(bus, ipv4, string(c.path), c.name)
-	ipv6Sensor := newConnectionAddrSensor(bus, ipv6, string(c.path), c.name)
-	// Update their states.
-	for _, connSensor := range []connectionSensor{stateSensor, ipv4Sensor, ipv6Sensor} {
-		if err := connSensor.updateState(); err != nil {
-			c.logger.Debug("Could not update sensor.",
-				slog.String("sensor", connSensor.Name()),
-				slog.Any("error", err))
-		}
+	if err := stateSensor.updateState(); err != nil {
+		c.logger.Debug("Could not update sensor.",
+			slog.String("sensor", stateSensor.Name()),
+			slog.Any("error", err))
 	}
+
 	// Send initial states as sensors
 	go func() {
-		for _, connSensor := range []connectionSensor{stateSensor, ipv4Sensor, ipv6Sensor} {
-			sensorCh <- connSensor
-		}
+		sensorCh <- stateSensor
 	}()
 
 	triggerCh, err := dbusx.NewWatch(
@@ -180,18 +168,6 @@ func (c *connection) monitorConnection(ctx context.Context, bus *dbusx.Bus) <-ch
 						} else {
 							// Send the connection state as a sensor.
 							sensorCh <- stateSensor
-						}
-					case prop == ipv4ConfigPropName:
-						if err := ipv4Sensor.setState(value); err != nil {
-							c.logger.Warn("Could not parse updated ipv4 address.", slog.Any("error", err))
-						} else {
-							sensorCh <- ipv4Sensor
-						}
-					case prop == ipv6ConfigPropName: // IP addresses changed.
-						if err := ipv6Sensor.setState(value); err != nil {
-							c.logger.Warn("Could not parse updated ipv6 address.", slog.Any("error", err))
-						} else {
-							sensorCh <- ipv6Sensor
 						}
 					default:
 						c.logger.Debug("Unhandled property changed.",
