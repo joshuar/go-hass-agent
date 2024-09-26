@@ -45,7 +45,7 @@ type locationWorker struct {
 }
 
 //nolint:gocognit
-func (w *locationWorker) Events(ctx context.Context) (chan sensor.Entity, error) {
+func (w *locationWorker) Events(ctx context.Context) (<-chan sensor.Entity, error) {
 	logger := logging.FromContext(ctx).With(slog.String("worker", workerID))
 
 	err := w.startMethod.Call(ctx)

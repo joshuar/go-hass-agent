@@ -82,7 +82,7 @@ type stateWorker struct {
 	triggerCh chan dbusx.Trigger
 }
 
-func (w *stateWorker) Events(ctx context.Context) (chan sensor.Entity, error) {
+func (w *stateWorker) Events(ctx context.Context) (<-chan sensor.Entity, error) {
 	sensorCh := make(chan sensor.Entity)
 
 	// Watch for state changes.

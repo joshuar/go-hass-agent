@@ -101,7 +101,7 @@ func (w *settingsWorker) newColorSchemeSensor(scheme string) (sensor.Entity, err
 }
 
 //nolint:cyclop,gocognit
-func (w *settingsWorker) Events(ctx context.Context) (chan sensor.Entity, error) {
+func (w *settingsWorker) Events(ctx context.Context) (<-chan sensor.Entity, error) {
 	sensorCh := make(chan sensor.Entity)
 	logger := logging.FromContext(ctx).With(slog.String("worker", workerID))
 

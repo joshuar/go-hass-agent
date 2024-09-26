@@ -72,7 +72,7 @@ func (w *ConnectionsWorker) Sensors(_ context.Context) ([]sensor.Entity, error) 
 
 //nolint:mnd
 //revive:disable:function-length
-func (w *ConnectionsWorker) Events(ctx context.Context) (chan sensor.Entity, error) {
+func (w *ConnectionsWorker) Events(ctx context.Context) (<-chan sensor.Entity, error) {
 	sensorCh := make(chan sensor.Entity)
 	connCtx, connCancel := context.WithCancel(ctx)
 

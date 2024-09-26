@@ -53,7 +53,7 @@ type screenLockWorker struct {
 	triggerCh chan dbusx.Trigger
 }
 
-func (w *screenLockWorker) Events(ctx context.Context) (chan sensor.Entity, error) {
+func (w *screenLockWorker) Events(ctx context.Context) (<-chan sensor.Entity, error) {
 	sensorCh := make(chan sensor.Entity)
 
 	go func() {
