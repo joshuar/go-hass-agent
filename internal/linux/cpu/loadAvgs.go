@@ -18,6 +18,7 @@ import (
 	"github.com/iancoleman/strcase"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 )
 
@@ -37,13 +38,13 @@ var ErrParseLoadAvgs = errors.New("could not parse load averages")
 
 type loadAvgsWorker struct {
 	path     string
-	loadAvgs []*linux.Sensor
+	loadAvgs []sensor.Entity
 }
 
 func (w *loadAvgsWorker) UpdateDelta(_ time.Duration) {}
 
-func (w *loadAvgsWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
-	sensors := make([]sensor.Details, loadAvgsTotal)
+func (w *loadAvgsWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
+	sensors := make([]sensor.Entity, loadAvgsTotal)
 
 	loadAvgData, err := os.ReadFile(w.path)
 	if err != nil {
@@ -56,23 +57,28 @@ func (w *loadAvgsWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
 	}
 
 	for idx := range loadAvgs {
-		w.loadAvgs[idx].Value = loadAvgs[idx]
+		w.loadAvgs[idx].State = loadAvgs[idx]
 		sensors[idx] = w.loadAvgs[idx]
 	}
 
 	return sensors, nil
 }
 
-func newLoadAvgSensors() []*linux.Sensor {
-	sensors := make([]*linux.Sensor, loadAvgsTotal)
+func newLoadAvgSensors() []sensor.Entity {
+	sensors := make([]sensor.Entity, loadAvgsTotal)
 
 	for idx, loadType := range []string{"CPU load average (1 min)", "CPU load average (5 min)", "CPU load average (15 min)"} {
-		loadAvgSensor := &linux.Sensor{
-			IconString:  loadAvgIcon,
-			UnitsString: loadAvgUnit,
-			DataSource:  linux.DataSrcProcfs,
-			DisplayName: loadType,
-			UniqueID:    strcase.ToSnake(loadType),
+		loadAvgSensor := sensor.Entity{
+			Name:       loadType,
+			Units:      loadAvgUnit,
+			StateClass: types.StateClassMeasurement,
+			EntityState: &sensor.EntityState{
+				ID:   strcase.ToSnake(loadType),
+				Icon: loadAvgIcon,
+				Attributes: map[string]any{
+					"data_source": linux.DataSrcProcfs,
+				},
+			},
 		}
 
 		sensors[idx] = loadAvgSensor

@@ -10,14 +10,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"strconv"
 	"time"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
-	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
@@ -32,21 +30,6 @@ const (
 )
 
 var ErrNoProblemDetails = errors.New("no details found")
-
-type problemsSensor struct {
-	list map[string]map[string]any
-	linux.Sensor
-}
-
-func (s *problemsSensor) Attributes() map[string]any {
-	attributes := s.Sensor.Attributes()
-
-	if s.list != nil {
-		attributes["problem_list"] = s.list
-	}
-
-	return attributes
-}
 
 func parseProblem(details map[string]string) map[string]any {
 	parsed := make(map[string]any)
@@ -75,6 +58,34 @@ func parseProblem(details map[string]string) map[string]any {
 	return parsed
 }
 
+func (w *problemsWorker) newProblemsSensor(problems []string) sensor.Entity {
+	problemDetails := make(map[string]map[string]any)
+	// For each problem, fetch its details.
+	for _, problem := range problems {
+		details, err := w.getProblemDetails(problem)
+		if err != nil {
+			continue
+		}
+
+		problemDetails[problem] = parseProblem(details)
+	}
+
+	return sensor.Entity{
+		Name:       "Problems",
+		StateClass: types.StateClassMeasurement,
+		Units:      "problems",
+		EntityState: &sensor.EntityState{
+			State: len(problems),
+			ID:    "problems",
+			Icon:  "mdi:alert",
+			Attributes: map[string]any{
+				"data_source":  linux.DataSrcDbus,
+				"problem_list": problemDetails,
+			},
+		},
+	}
+}
+
 type problemsWorker struct {
 	getProblems       func() ([]string, error)
 	getProblemDetails func(problem string) (map[string]string, error)
@@ -83,41 +94,14 @@ type problemsWorker struct {
 
 func (w *problemsWorker) UpdateDelta(_ time.Duration) {}
 
-func (w *problemsWorker) Sensors(ctx context.Context) ([]sensor.Details, error) {
-	problemsSensor := &problemsSensor{
-		list: make(map[string]map[string]any),
-		Sensor: linux.Sensor{
-			DisplayName:     "Problems",
-			UniqueID:        "problems",
-			IconString:      "mdi:alert",
-			UnitsString:     "problems",
-			StateClassValue: types.StateClassMeasurement,
-			DataSource:      linux.DataSrcDbus,
-		},
-	}
-
+func (w *problemsWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 	// Get the list of problems.
 	problems, err := w.getProblems()
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve list of problems from D-Bus: %w", err)
 	}
-	// Set the value of the sensor to the total count of problems.
-	problemsSensor.Value = len(problems)
-	// For each problem, fetch its details.
-	for _, problem := range problems {
-		details, err := w.getProblemDetails(problem)
-		if err != nil {
-			logging.FromContext(ctx).
-				With(slog.String("worker", problemsWorkerID)).
-				Debug("Unable to get problem details.",
-					slog.String("problem", problem),
-					slog.Any("error", err))
-		} else {
-			problemsSensor.list[problem] = parseProblem(details)
-		}
-	}
 
-	return []sensor.Details{problemsSensor}, nil
+	return []sensor.Entity{w.newProblemsSensor(problems)}, nil
 }
 
 func NewProblemsWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {

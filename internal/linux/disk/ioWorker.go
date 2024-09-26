@@ -50,31 +50,31 @@ func (w *ioWorker) addDevice(dev *device) {
 
 // updateDevice will update a tracked device's stats. For rates, it will
 // recalculate based on the given time delta.
-func (w *ioWorker) updateDevice(dev *device, stats map[stat]uint64, delta time.Duration) []sensor.Details {
+func (w *ioWorker) updateDevice(dev *device, stats map[stat]uint64, delta time.Duration) []sensor.Entity {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	sensors := make([]sensor.Details, len(w.devices["total"]))
+	sensors := make([]sensor.Entity, len(w.devices["total"]))
 
 	if _, found := w.devices[dev.id]; found && stats != nil {
 		for idx := range w.devices[dev.id] {
 			w.devices[dev.id][idx].update(stats, delta)
-			sensors[idx] = w.devices[dev.id][idx]
+			sensors[idx] = *w.devices[dev.id][idx].Entity
 		}
 	}
 
 	return sensors
 }
 
-func (w *ioWorker) updateTotals(stats map[stat]uint64, delta time.Duration) []sensor.Details {
+func (w *ioWorker) updateTotals(stats map[stat]uint64, delta time.Duration) []sensor.Entity {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	sensors := make([]sensor.Details, len(w.devices["total"]))
+	sensors := make([]sensor.Entity, len(w.devices["total"]))
 
 	for idx := range w.devices["total"] {
 		w.devices["total"][idx].update(stats, delta)
-		sensors[idx] = w.devices["total"][idx]
+		sensors[idx] = *w.devices["total"][idx].Entity
 	}
 
 	return sensors
@@ -84,14 +84,14 @@ func (w *ioWorker) UpdateDelta(delta time.Duration) {
 	w.delta = delta
 }
 
-func (w *ioWorker) Sensors(ctx context.Context) ([]sensor.Details, error) {
+func (w *ioWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
 	// Get valid devices.
 	deviceNames, err := getDeviceNames()
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch disk devices: %w", err)
 	}
 
-	sensors := make([]sensor.Details, 0, 4*len(deviceNames)+4) //nolint:mnd
+	sensors := make([]sensor.Entity, 0, 4*len(deviceNames)+4) //nolint:mnd
 	totals := make(map[stat]uint64)
 
 	// Get the current device info and stats for all valid devices.

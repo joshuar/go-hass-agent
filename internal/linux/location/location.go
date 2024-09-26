@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/logging"
@@ -36,14 +37,6 @@ const (
 	workerID = "location_sensor"
 )
 
-type locationSensor struct {
-	linux.Sensor
-}
-
-func (s *locationSensor) Name() string { return "Location" }
-
-func (s *locationSensor) ID() string { return "location" }
-
 type locationWorker struct {
 	getLocationProperty func(path, prop string) (float64, error)
 	stopMethod          *dbusx.Method
@@ -52,7 +45,7 @@ type locationWorker struct {
 }
 
 //nolint:gocognit
-func (w *locationWorker) Events(ctx context.Context) (chan sensor.Details, error) {
+func (w *locationWorker) Events(ctx context.Context) (chan sensor.Entity, error) {
 	logger := logging.FromContext(ctx).With(slog.String("worker", workerID))
 
 	err := w.startMethod.Call(ctx)
@@ -60,7 +53,7 @@ func (w *locationWorker) Events(ctx context.Context) (chan sensor.Details, error
 		return nil, fmt.Errorf("could not start geoclue client: %w", err)
 	}
 
-	sensorCh := make(chan sensor.Details)
+	sensorCh := make(chan sensor.Entity)
 
 	go func() {
 		logger.Debug("Monitoring for location updates.")
@@ -93,11 +86,11 @@ func (w *locationWorker) Events(ctx context.Context) (chan sensor.Details, error
 	return sensorCh, nil
 }
 
-func (w *locationWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
+func (w *locationWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 	return nil, linux.ErrUnimplemented
 }
 
-func (w *locationWorker) newLocation(locationPath string) (*locationSensor, error) {
+func (w *locationWorker) newLocation(locationPath string) (sensor.Entity, error) {
 	var warnings error
 
 	latitude, err := w.getLocationProperty(locationPath, "Latitude")
@@ -111,9 +104,9 @@ func (w *locationWorker) newLocation(locationPath string) (*locationSensor, erro
 	accuracy, err := w.getLocationProperty(locationPath, "Accuracy")
 	warnings = errors.Join(warnings, err)
 
-	location := &locationSensor{
-		Sensor: linux.Sensor{
-			Value: &sensor.LocationRequest{
+	location := sensor.Entity{
+		EntityState: &sensor.EntityState{
+			State: &hass.LocationRequest{
 				Gps:         []float64{latitude, longitude},
 				GpsAccuracy: int(accuracy),
 				Speed:       int(speed),

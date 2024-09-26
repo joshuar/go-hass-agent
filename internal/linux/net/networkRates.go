@@ -14,6 +14,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"maps"
 	"slices"
 	"strings"
 	"sync"
@@ -21,7 +22,6 @@ import (
 
 	"github.com/iancoleman/strcase"
 	"github.com/jsimonetti/rtnetlink"
-	"golang.org/x/exp/maps"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
@@ -60,65 +60,55 @@ type linkStats struct {
 type netStatsType int
 
 type netStatsSensor struct {
-	*linux.Sensor
-	attributes    map[string]any
-	link          string
-	sensorType    netStatsType
+	*sensor.Entity
 	previousValue uint64
-}
-
-func (s *netStatsSensor) Attributes() map[string]any {
-	if s.attributes != nil {
-		maps.Copy(s.attributes, s.Sensor.Attributes())
-		return s.attributes
-	}
-
-	return s.Sensor.Attributes()
 }
 
 // newNetStatsSensor creates a new network stats sensor.
 func newNetStatsSensor(name string, sensorType netStatsType, stats *rtnetlink.LinkStats64) *netStatsSensor {
 	netSensor := &netStatsSensor{
-		sensorType: sensorType,
-		link:       name,
-		Sensor: &linux.Sensor{
-			DisplayName: name + " " + sensorType.String(),
-			UniqueID:    strings.ToLower(name) + "_" + strcase.ToSnake(sensorType.String()),
-			DataSource:  linux.DataSrcProcfs,
+		Entity: &sensor.Entity{
+			Name: name + " " + sensorType.String(),
+			EntityState: &sensor.EntityState{
+				ID: strings.ToLower(name) + "_" + strcase.ToSnake(sensorType.String()),
+				Attributes: map[string]any{
+					"data_source": linux.DataSrcNetlink,
+				},
+			},
 		},
 	}
 
 	// Set device sensors to category diagnostic.
 	if name != totalsName {
-		netSensor.IsDiagnostic = true
+		netSensor.Entity.Category = types.CategoryDiagnostic
 	}
 
 	// Set type-specific values.
 	switch sensorType {
 	case bytesRecv:
-		netSensor.IconString = "mdi:download-network"
-		netSensor.UnitsString = countUnit
-		netSensor.DeviceClassValue = types.DeviceClassDataSize
-		netSensor.StateClassValue = types.StateClassMeasurement
+		netSensor.Icon = "mdi:download-network"
+		netSensor.Units = countUnit
+		netSensor.DeviceClass = types.DeviceClassDataSize
+		netSensor.StateClass = types.StateClassMeasurement
 	case bytesSent:
-		netSensor.IconString = "mdi:upload-network"
-		netSensor.UnitsString = countUnit
-		netSensor.DeviceClassValue = types.DeviceClassDataSize
-		netSensor.StateClassValue = types.StateClassMeasurement
+		netSensor.Icon = "mdi:upload-network"
+		netSensor.Units = countUnit
+		netSensor.DeviceClass = types.DeviceClassDataSize
+		netSensor.StateClass = types.StateClassMeasurement
 	case bytesRecvRate:
-		netSensor.IconString = "mdi:transfer-down"
-		netSensor.UnitsString = rateUnit
-		netSensor.DeviceClassValue = types.DeviceClassDataRate
-		netSensor.StateClassValue = types.StateClassMeasurement
+		netSensor.Icon = "mdi:transfer-down"
+		netSensor.Units = rateUnit
+		netSensor.DeviceClass = types.DeviceClassDataRate
+		netSensor.StateClass = types.StateClassMeasurement
 	case bytesSentRate:
-		netSensor.IconString = "mdi:transfer-up"
-		netSensor.UnitsString = rateUnit
-		netSensor.DeviceClassValue = types.DeviceClassDataRate
-		netSensor.StateClassValue = types.StateClassMeasurement
+		netSensor.Icon = "mdi:transfer-up"
+		netSensor.Units = rateUnit
+		netSensor.DeviceClass = types.DeviceClassDataRate
+		netSensor.StateClass = types.StateClassMeasurement
 	}
 
 	// Set current value.
-	netSensor.update(stats, 0)
+	netSensor.update(name, sensorType, stats, 0)
 
 	return netSensor
 }
@@ -126,29 +116,29 @@ func newNetStatsSensor(name string, sensorType netStatsType, stats *rtnetlink.Li
 // update will update the value for a sensor. For count sensors, the value is
 // updated directly based on the new stats. For rates sensors, the new rate is
 // calculated and the previous value saved.
-func (s *netStatsSensor) update(stats *rtnetlink.LinkStats64, delta time.Duration) {
+func (s *netStatsSensor) update(link string, sensorType netStatsType, stats *rtnetlink.LinkStats64, delta time.Duration) {
 	if stats == nil {
 		return
 	}
 
-	switch s.sensorType {
+	switch sensorType {
 	case bytesRecv:
-		s.Value = stats.RXBytes
-		if s.link != totalsName {
-			s.attributes = getRXAttributes(stats)
+		s.State = stats.RXBytes
+		if link != totalsName {
+			maps.Copy(s.Attributes, getRXAttributes(stats))
 		}
 	case bytesSent:
-		s.Value = stats.TXBytes
-		if s.link != totalsName {
-			s.attributes = getTXAttributes(stats)
+		s.State = stats.TXBytes
+		if link != totalsName {
+			maps.Copy(s.Attributes, getTXAttributes(stats))
 		}
 	case bytesRecvRate:
 		rate := calculateRate(stats.RXBytes, s.previousValue, delta)
-		s.Value = rate
+		s.State = rate
 		s.previousValue = stats.RXBytes
 	case bytesSentRate:
 		rate := calculateRate(stats.TXBytes, s.previousValue, delta)
-		s.Value = rate
+		s.State = rate
 		s.previousValue = stats.TXBytes
 	}
 }
@@ -218,7 +208,7 @@ func (w *netStatsWorker) updateTotals(totalBytesRx, totalBytesTx uint64) {
 		TXBytes: totalBytesTx,
 	}
 	for _, sensorType := range sensorList {
-		w.statsSensors[totalsName][sensorType].update(stats, w.delta)
+		w.statsSensors[totalsName][sensorType].update(totalsName, sensorType, stats, w.delta)
 	}
 }
 
@@ -226,7 +216,7 @@ func (w *netStatsWorker) UpdateDelta(delta time.Duration) {
 	w.delta = delta
 }
 
-func (w *netStatsWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
+func (w *netStatsWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 	// Get all links.
 	links, err := w.getLinks()
 	if err != nil {
@@ -235,7 +225,7 @@ func (w *netStatsWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
 
 	// Get link stats, filtering "uninteresting" links.
 	stats := w.getLinkStats(links)
-	sensors := make([]sensor.Details, 0, len(stats)*4+4)
+	sensors := make([]sensor.Entity, 0, len(stats)*4+4)
 
 	w.mu.Lock()
 
@@ -251,14 +241,14 @@ func (w *netStatsWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
 
 		if _, ok := w.statsSensors[name]; ok { // Existing link/sensors, update.
 			for sensorType := range w.statsSensors[name] {
-				w.statsSensors[name][sensorType].update(stats, w.delta)
+				w.statsSensors[name][sensorType].update(name, sensorType, stats, w.delta)
 			}
 		} else { // New link, add to tracking map.
 			w.statsSensors[name] = generateSensors(name, stats)
 		}
 		// Create a list of sensors.
 		for _, s := range w.statsSensors[name] {
-			sensors = append(sensors, s)
+			sensors = append(sensors, *s.Entity)
 		}
 	}
 
@@ -266,7 +256,7 @@ func (w *netStatsWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
 	w.updateTotals(totalBytesRx, totalBytesTx)
 	// Append the total sensors to the list of sensors.
 	for _, s := range w.statsSensors[totalsName] {
-		sensors = append(sensors, s)
+		sensors = append(sensors, *s.Entity)
 	}
 
 	w.mu.Unlock()

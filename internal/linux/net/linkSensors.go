@@ -18,6 +18,7 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/logging"
 )
@@ -34,129 +35,81 @@ var (
 	}
 )
 
-type linkSensor struct {
-	attributes map[string]any
-	name       string
-	linux.Sensor
-	state rtnetlink.OperationalState
-}
+func newLinkSensor(msg rtnetlink.LinkMessage) *sensor.Entity {
+	name := msg.Attributes.Name
 
-func (s *linkSensor) Name() string {
-	return s.name + " Link State"
-}
+	link := &sensor.Entity{
+		Name:     name + " Link State",
+		Category: types.CategoryDiagnostic,
+		EntityState: &sensor.EntityState{
+			ID: strings.ToLower(name + "_link_state"),
+			Attributes: map[string]any{
+				"data_source": linux.DataSrcNetlink,
+			},
+		},
+	}
 
-func (s *linkSensor) ID() string {
-	return strings.ToLower(s.name + "_link_state")
-}
-
-func (s *linkSensor) Icon() string {
-	switch s.state {
+	switch msg.Attributes.OperationalState {
 	case rtnetlink.OperStateUp:
-		return "mdi:network"
+		link.State = "up"
+		link.Icon = "mdi:network"
 	case rtnetlink.OperStateNotPresent:
-		return "mdi:close-network"
+		link.State = "invalid"
+		link.Icon = "mdi:close-network"
+	case rtnetlink.OperStateUnknown:
+		link.State = "unknown"
+		link.Icon = "mdi:help-network"
 	default:
-		return "mdi:network-off"
+		link.State = "down"
+		link.Icon = "mdi:network-off"
 	}
-}
-
-func (s *linkSensor) State() any {
-	switch s.state {
-	case rtnetlink.OperStateUp:
-		return "up"
-	case rtnetlink.OperStateNotPresent:
-		return "invalid"
-	default:
-		return "down"
-	}
-}
-
-func (s *linkSensor) Attributes() map[string]any {
-	return s.attributes
-}
-
-func newLinkSensor(msg rtnetlink.LinkMessage) *linkSensor {
-	link := &linkSensor{
-		name:       msg.Attributes.Name,
-		state:      msg.Attributes.OperationalState,
-		attributes: make(map[string]any),
-	}
-
-	link.attributes["data_source"] = linux.DataSrcNetlink
 
 	if msg.Attributes.Info != nil {
-		link.attributes["link_type"] = msg.Attributes.Info.Kind
+		link.Attributes["link_type"] = msg.Attributes.Info.Kind
 	}
-
-	link.IsDiagnostic = true
 
 	return link
 }
 
-type addressSensor struct {
-	attributes map[string]any
-	name       string
-	address    net.IP
-	linux.Sensor
-	family ipFamily
-}
+func newAddressSensor(link rtnetlink.LinkMessage, msg rtnetlink.AddressMessage) *sensor.Entity {
+	name := link.Attributes.Name
 
-func (s *addressSensor) Name() string {
-	return s.name + " " + s.family.String() + " Address"
-}
-
-func (s *addressSensor) ID() string {
-	return strings.ToLower(s.name + "_" + s.family.String() + "_address")
-}
-
-func (s *addressSensor) Icon() string {
-	return s.family.Icon()
-}
-
-func (s *addressSensor) State() any {
-	return s.address.String()
-}
-
-func (s *addressSensor) Attributes() map[string]any {
-	return s.attributes
-}
-
-func newAddressSensor(link rtnetlink.LinkMessage, msg rtnetlink.AddressMessage) *addressSensor {
-	addr := &addressSensor{
-		name:       link.Attributes.Name,
-		family:     ipFamily(msg.Family),
-		address:    msg.Attributes.Address,
-		attributes: make(map[string]any),
+	addr := &sensor.Entity{
+		Name:     name + " " + ipFamily(msg.Family).String() + " Address",
+		Category: types.CategoryDiagnostic,
+		EntityState: &sensor.EntityState{
+			ID:    strings.ToLower(name + "_" + ipFamily(msg.Family).String() + "_address"),
+			Icon:  ipFamily(msg.Family).Icon(),
+			State: msg.Attributes.Address.String(),
+			Attributes: map[string]any{
+				"data_source": linux.DataSrcNetlink,
+			},
+		},
 	}
 
 	if link.Attributes.OperationalState != rtnetlink.OperStateUp {
-		if addr.family == unix.AF_INET {
-			addr.address = net.IPv4zero
+		if ipFamily(msg.Family) == unix.AF_INET {
+			addr.State = net.IPv4zero.String()
+		} else {
+			addr.State = net.IPv6zero.String()
 		}
-
-		addr.address = net.IPv4zero
 	}
 
-	addr.attributes["data_source"] = linux.DataSrcNetlink
-
 	if msg.Attributes.Broadcast != nil {
-		addr.attributes["broadcast"] = msg.Attributes.Broadcast.String()
+		addr.Attributes["broadcast"] = msg.Attributes.Broadcast.String()
 	}
 
 	if msg.Attributes.Local != nil {
-		addr.attributes["local"] = msg.Attributes.Local.String()
+		addr.Attributes["local"] = msg.Attributes.Local.String()
 	}
 
 	if msg.Attributes.Multicast != nil {
-		addr.attributes["multicast"] = msg.Attributes.Multicast.String()
+		addr.Attributes["multicast"] = msg.Attributes.Multicast.String()
 	}
 
 	if msg.Attributes.Anycast != nil {
-		addr.attributes["anycast"] = msg.Attributes.Anycast.String()
+		addr.Attributes["anycast"] = msg.Attributes.Anycast.String()
 	}
-
-	// Address sensors are diagnostic category.
-	addr.IsDiagnostic = true
 
 	return addr
 }
@@ -190,18 +143,18 @@ type AddressWorker struct {
 	linux.EventSensorWorker
 }
 
-func (w *AddressWorker) Sensors(ctx context.Context) ([]sensor.Details, error) {
+func (w *AddressWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
 	addresses := w.getAddresses(ctx)
 	links := w.getLinks(ctx)
 
-	sensors := make([]sensor.Details, len(addresses)+len(links))
+	var sensors []sensor.Entity //nolint:prealloc
 
 	for _, addressSensor := range addresses {
-		sensors = append(sensors, addressSensor)
+		sensors = append(sensors, *addressSensor)
 	}
 
 	for _, linkSensor := range links {
-		sensors = append(sensors, linkSensor)
+		sensors = append(sensors, *linkSensor)
 	}
 
 	return sensors, nil
@@ -210,8 +163,8 @@ func (w *AddressWorker) Sensors(ctx context.Context) ([]sensor.Details, error) {
 // TODO: reduce complexity?
 //
 //nolint:gocognit
-func (w *AddressWorker) Events(ctx context.Context) (chan sensor.Details, error) {
-	sensorCh := make(chan sensor.Details)
+func (w *AddressWorker) Events(ctx context.Context) (chan sensor.Entity, error) {
+	sensorCh := make(chan sensor.Entity)
 
 	// Get all current addresses and send as sensors.
 	sensors, err := w.Sensors(ctx)
@@ -247,12 +200,12 @@ func (w *AddressWorker) Events(ctx context.Context) (chan sensor.Details, error)
 					case *rtnetlink.LinkMessage:
 						link := filterLink(*value)
 						if link != nil {
-							sensorCh <- link
+							sensorCh <- *link
 						}
 					case *rtnetlink.AddressMessage:
 						addr := w.filterAddress(*value)
 						if addr != nil {
-							sensorCh <- addr
+							sensorCh <- *addr
 						}
 					}
 				}
@@ -287,8 +240,8 @@ func NewAddressWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 	return worker, nil
 }
 
-func (w *AddressWorker) getAddresses(ctx context.Context) []*addressSensor {
-	var addrs []*addressSensor
+func (w *AddressWorker) getAddresses(ctx context.Context) []*sensor.Entity {
+	var addrs []*sensor.Entity
 
 	// Request a list of addresses
 	msgs, err := w.nlconn.Address.List()
@@ -307,7 +260,7 @@ func (w *AddressWorker) getAddresses(ctx context.Context) []*addressSensor {
 	return addrs
 }
 
-func (w *AddressWorker) filterAddress(msg rtnetlink.AddressMessage) *addressSensor {
+func (w *AddressWorker) filterAddress(msg rtnetlink.AddressMessage) *sensor.Entity {
 	// Only include Ipv4/6 addresses.
 	if !slices.Contains(addrFamilies, msg.Family) {
 		return nil
@@ -329,8 +282,8 @@ func (w *AddressWorker) filterAddress(msg rtnetlink.AddressMessage) *addressSens
 	return newAddressSensor(link, msg)
 }
 
-func (w *AddressWorker) getLinks(ctx context.Context) []*linkSensor {
-	var links []*linkSensor
+func (w *AddressWorker) getLinks(ctx context.Context) []*sensor.Entity {
+	var links []*sensor.Entity
 
 	// Request a list of addresses
 	msgs, err := w.nlconn.Link.List()
@@ -349,7 +302,7 @@ func (w *AddressWorker) getLinks(ctx context.Context) []*linkSensor {
 	return links
 }
 
-func filterLink(msg rtnetlink.LinkMessage) *linkSensor {
+func filterLink(msg rtnetlink.LinkMessage) *sensor.Entity {
 	if slices.Contains(ifaceFilters, msg.Attributes.Name) {
 		return nil
 	}

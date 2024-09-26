@@ -10,7 +10,6 @@ import (
 	"errors"
 	"log/slog"
 
-	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/linux/apps"
 	"github.com/joshuar/go-hass-agent/internal/linux/battery"
@@ -112,20 +111,20 @@ func newOSSensorController(ctx context.Context) SensorController {
 		}
 	}
 
-	// Get the type of device we are running on.
-	chassis, _ := device.Chassis() //nolint:errcheck // error is same as any value other than wanted value.
-	// If running on a laptop, add laptop specific sensor workers.
-	if chassis == "laptop" {
-		for _, startWorker := range laptopWorkers {
-			if worker, err := startWorker(ctx); err != nil {
-				logger.Warn("Could not add worker.",
-					slog.String("worker", worker.ID()),
-					slog.Any("error", err))
-			} else {
-				controller.workers[worker.ID()] = &workerState{worker: worker}
-			}
+	// // Get the type of device we are running on.
+	// chassis, _ := device.Chassis() //nolint:errcheck // error is same as any value other than wanted value.
+	// // If running on a laptop, add laptop specific sensor workers.
+	// if chassis == "laptop" {
+	for _, startWorker := range laptopWorkers {
+		if worker, err := startWorker(ctx); err != nil {
+			logger.Warn("Could not add worker.",
+				slog.String("worker", worker.ID()),
+				slog.Any("error", err))
+		} else {
+			controller.workers[worker.ID()] = &workerState{worker: worker}
 		}
 	}
+	// }
 
 	return controller
 }

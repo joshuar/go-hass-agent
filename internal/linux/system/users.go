@@ -31,52 +31,38 @@ const (
 	usersWorkerID = "users_sensors"
 )
 
-type usersSensor struct {
-	getUsers  func() ([]string, error)
-	userNames []string
-	linux.Sensor
-}
-
-func (s *usersSensor) State() any {
-	return len(s.userNames)
-}
-
-func (s *usersSensor) Attributes() map[string]any {
-	attributes := s.Sensor.Attributes()
-	attributes["usernames"] = s.userNames
-
-	return attributes
-}
-
-func newUsersSensor() *usersSensor {
-	return &usersSensor{
-		Sensor: linux.Sensor{
-			DisplayName:     "Current Users",
-			UniqueID:        "current_users",
-			UnitsString:     sensorUnits,
-			IconString:      sensorIcon,
-			StateClassValue: types.StateClassMeasurement,
-			DataSource:      linux.DataSrcDbus,
+func newUsersSensor(users []string) sensor.Entity {
+	return sensor.Entity{
+		Name:       "Current Users",
+		StateClass: types.StateClassMeasurement,
+		Units:      sensorUnits,
+		EntityState: &sensor.EntityState{
+			ID:    "current_users",
+			Icon:  sensorIcon,
+			State: len(users),
+			Attributes: map[string]any{
+				"data_source": linux.DataSrcDbus,
+				"usernames":   users,
+			},
 		},
 	}
 }
 
 type Worker struct {
-	sensor    *usersSensor
+	getUsers  func() ([]string, error)
 	triggerCh chan dbusx.Trigger
 	linux.EventSensorWorker
 }
 
-func (w *Worker) Events(ctx context.Context) (chan sensor.Details, error) {
-	sensorCh := make(chan sensor.Details)
+func (w *Worker) Events(ctx context.Context) (chan sensor.Entity, error) {
+	sensorCh := make(chan sensor.Entity)
 
 	sendUpdate := func() {
-		users, err := w.sensor.getUsers()
+		users, err := w.getUsers()
 		if err != nil {
 			slog.With(slog.String("worker", usersWorkerID)).Debug("Failed to get list of user sessions.", slog.Any("error", err))
 		} else {
-			w.sensor.userNames = users
-			sensorCh <- w.sensor
+			sensorCh <- newUsersSensor(users)
 		}
 	}
 
@@ -99,11 +85,10 @@ func (w *Worker) Events(ctx context.Context) (chan sensor.Details, error) {
 	return sensorCh, nil
 }
 
-func (w *Worker) Sensors(_ context.Context) ([]sensor.Details, error) {
-	users, err := w.sensor.getUsers()
-	w.sensor.userNames = users
+func (w *Worker) Sensors(_ context.Context) ([]sensor.Entity, error) {
+	users, err := w.getUsers()
 
-	return []sensor.Details{w.sensor}, err
+	return []sensor.Entity{newUsersSensor(users)}, err
 }
 
 func NewUserWorker(ctx context.Context) (*Worker, error) {
@@ -126,9 +111,7 @@ func NewUserWorker(ctx context.Context) (*Worker, error) {
 
 	worker.triggerCh = triggerCh
 
-	usersSensor := newUsersSensor()
-
-	usersSensor.getUsers = func() ([]string, error) {
+	worker.getUsers = func() ([]string, error) {
 		userData, err := dbusx.GetData[[][]any](bus, loginBasePath, loginBaseInterface, listSessionsMethod)
 		if err != nil {
 			return nil, fmt.Errorf("could not retrieve users from D-Bus: %w", err)
@@ -144,8 +127,6 @@ func NewUserWorker(ctx context.Context) (*Worker, error) {
 
 		return users, nil
 	}
-
-	worker.sensor = usersSensor
 
 	return worker, nil
 }

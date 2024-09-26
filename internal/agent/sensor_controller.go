@@ -19,8 +19,8 @@ import (
 
 type worker interface {
 	ID() string
-	Start(ctx context.Context) (<-chan sensor.Details, error)
-	Sensors(ctx context.Context) ([]sensor.Details, error)
+	Start(ctx context.Context) (<-chan sensor.Entity, error)
+	Sensors(ctx context.Context) ([]sensor.Entity, error)
 	Stop() error
 }
 
@@ -62,7 +62,7 @@ func (c *sensorController) InactiveWorkers() []string {
 	return inactiveWorkers
 }
 
-func (c *sensorController) Start(ctx context.Context, name string) (<-chan sensor.Details, error) {
+func (c *sensorController) Start(ctx context.Context, name string) (<-chan sensor.Entity, error) {
 	worker, exists := c.workers[name]
 	if !exists {
 		return nil, ErrUnknownWorker
@@ -96,8 +96,8 @@ func (c *sensorController) Stop(name string) error {
 	return nil
 }
 
-func (c *sensorController) States(ctx context.Context) []sensor.Details {
-	var sensors []sensor.Details
+func (c *sensorController) States(ctx context.Context) []sensor.Entity {
+	var sensors []sensor.Entity
 
 	for _, workerID := range c.ActiveWorkers() {
 		worker, found := c.workers[workerID]
@@ -132,7 +132,7 @@ func (c *sensorController) States(ctx context.Context) []sensor.Details {
 //
 //nolint:gocognit
 func runSensorWorkers(ctx context.Context, prefs *preferences.Preferences, controllers ...SensorController) {
-	var sensorCh []<-chan sensor.Details
+	var sensorCh []<-chan sensor.Entity
 
 	for _, controller := range controllers {
 		logging.FromContext(ctx).Debug("Running controller", slog.String("controller", controller.ID()))
@@ -186,7 +186,7 @@ func runSensorWorkers(ctx context.Context, prefs *preferences.Preferences, contr
 	logging.FromContext(ctx).Debug("Processing sensor updates.")
 
 	for details := range mergeCh(ctx, sensorCh...) {
-		go func(details sensor.Details) {
+		go func(details sensor.Entity) {
 			if err := hassclient.ProcessSensor(ctx, details); err != nil {
 				logging.FromContext(ctx).Error("Process sensor failed.", slog.Any("error", err))
 			}

@@ -13,8 +13,10 @@ import (
 	"slices"
 
 	"github.com/godbus/dbus/v5"
+	"github.com/iancoleman/strcase"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
@@ -29,18 +31,40 @@ const (
 
 var laptopPropList = []string{dockedProp, lidClosedProp, externalPowerProp}
 
-type laptopSensor struct {
-	prop string
-	linux.Sensor
-}
-
-func (s *laptopSensor) Icon() string {
-	state, ok := s.Value.(bool)
-	if !ok {
-		return "mdi:alert"
+func newLaptopEvent(prop string, state bool) sensor.Entity {
+	sensorEvent := sensor.Entity{
+		Name:     laptopSensorName(prop),
+		Category: types.CategoryDiagnostic,
+		EntityState: &sensor.EntityState{
+			State:      state,
+			Icon:       laptopSensorIcon(prop, state),
+			EntityType: types.BinarySensor,
+			Attributes: map[string]any{
+				"data_source": linux.DataSrcDbus,
+			},
+		},
 	}
 
-	switch s.prop {
+	sensorEvent.ID = strcase.ToSnake(sensorEvent.Name)
+
+	return sensorEvent
+}
+
+func laptopSensorName(prop string) string {
+	switch prop {
+	case dockedProp:
+		return "Docked State"
+	case lidClosedProp:
+		return "Lid Closed"
+	case externalPowerProp:
+		return "External Power Connected"
+	}
+
+	return ""
+}
+
+func laptopSensorIcon(prop string, state bool) string {
+	switch prop {
 	case dockedProp:
 		if state {
 			return "mdi:desktop-tower-monitor"
@@ -64,36 +88,13 @@ func (s *laptopSensor) Icon() string {
 	return "mdi:help"
 }
 
-func newLaptopEvent(prop string, state bool) *laptopSensor {
-	sensorEvent := &laptopSensor{
-		prop: prop,
-		Sensor: linux.Sensor{
-			IsBinary:     true,
-			IsDiagnostic: true,
-			DataSource:   linux.DataSrcDbus,
-			Value:        state,
-		},
-	}
-
-	switch prop {
-	case dockedProp:
-		sensorEvent.DisplayName = "Docked State"
-	case lidClosedProp:
-		sensorEvent.DisplayName = "Lid Closed"
-	case externalPowerProp:
-		sensorEvent.DisplayName = "External Power Connected"
-	}
-
-	return sensorEvent
-}
-
 type laptopWorker struct {
 	triggerCh  chan dbusx.Trigger
 	properties map[string]*dbusx.Property[bool]
 }
 
-func (w *laptopWorker) Events(ctx context.Context) (chan sensor.Details, error) {
-	sensorCh := make(chan sensor.Details)
+func (w *laptopWorker) Events(ctx context.Context) (chan sensor.Entity, error) {
+	sensorCh := make(chan sensor.Entity)
 
 	go func() {
 		defer close(sensorCh)
@@ -130,8 +131,8 @@ func (w *laptopWorker) Events(ctx context.Context) (chan sensor.Details, error) 
 	return sensorCh, nil
 }
 
-func (w *laptopWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
-	sensors := make([]sensor.Details, 0, len(laptopPropList))
+func (w *laptopWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
+	sensors := make([]sensor.Entity, 0, len(laptopPropList))
 
 	// For each property, get its current state as a sensor.
 	for name, prop := range w.properties {
@@ -185,7 +186,7 @@ func NewLaptopWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 	return worker, nil
 }
 
-func sendChangedProps(props map[string]dbus.Variant, sensorCh chan sensor.Details) {
+func sendChangedProps(props map[string]dbus.Variant, sensorCh chan sensor.Entity) {
 	for prop, value := range props {
 		if slices.Contains(laptopPropList, prop) {
 			if state, err := dbusx.VariantToValue[bool](value); err != nil {

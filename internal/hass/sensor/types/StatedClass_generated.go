@@ -14,9 +14,9 @@ func _() {
 	_ = x[StateClassTotalIncreasing-3]
 }
 
-const _StateClass_name = "nonemeasurementtotaltotal_increasing"
+const _StateClass_name = "measurementtotaltotal_increasing"
 
-var _StateClass_index = [...]uint8{0, 4, 15, 20, 36}
+var _StateClass_index = [...]uint8{0, 0, 11, 16, 32}
 
 func (i StateClass) String() string {
 	if i < 0 || i >= StateClass(len(_StateClass_index)-1) {

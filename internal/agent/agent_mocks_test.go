@@ -241,10 +241,10 @@ var _ SensorController = &SensorControllerMock{}
 //			InactiveWorkersFunc: func() []string {
 //				panic("mock out the InactiveWorkers method")
 //			},
-//			StartFunc: func(ctx context.Context, name string) (<-chan sensor.Details, error) {
+//			StartFunc: func(ctx context.Context, name string) (<-chan sensor.Entity, error) {
 //				panic("mock out the Start method")
 //			},
-//			StatesFunc: func(ctx context.Context) []sensor.Details {
+//			StatesFunc: func(ctx context.Context) []sensor.Entity {
 //				panic("mock out the States method")
 //			},
 //			StopFunc: func(name string) error {
@@ -267,10 +267,10 @@ type SensorControllerMock struct {
 	InactiveWorkersFunc func() []string
 
 	// StartFunc mocks the Start method.
-	StartFunc func(ctx context.Context, name string) (<-chan sensor.Details, error)
+	StartFunc func(ctx context.Context, name string) (<-chan sensor.Entity, error)
 
 	// StatesFunc mocks the States method.
-	StatesFunc func(ctx context.Context) []sensor.Details
+	StatesFunc func(ctx context.Context) []sensor.Entity
 
 	// StopFunc mocks the Stop method.
 	StopFunc func(name string) error
@@ -394,7 +394,7 @@ func (mock *SensorControllerMock) InactiveWorkersCalls() []struct {
 }
 
 // Start calls StartFunc.
-func (mock *SensorControllerMock) Start(ctx context.Context, name string) (<-chan sensor.Details, error) {
+func (mock *SensorControllerMock) Start(ctx context.Context, name string) (<-chan sensor.Entity, error) {
 	if mock.StartFunc == nil {
 		panic("SensorControllerMock.StartFunc: method is nil but SensorController.Start was just called")
 	}
@@ -430,7 +430,7 @@ func (mock *SensorControllerMock) StartCalls() []struct {
 }
 
 // States calls StatesFunc.
-func (mock *SensorControllerMock) States(ctx context.Context) []sensor.Details {
+func (mock *SensorControllerMock) States(ctx context.Context) []sensor.Entity {
 	if mock.StatesFunc == nil {
 		panic("SensorControllerMock.StatesFunc: method is nil but SensorController.States was just called")
 	}

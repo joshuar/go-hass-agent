@@ -16,6 +16,7 @@ import (
 	"github.com/mandykoh/prism/srgb"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
@@ -40,59 +41,68 @@ type settingsWorker struct {
 	getProp   func(prop string) (string, error)
 }
 
-func (w *settingsWorker) newAccentColorSensor(accent string) (*linux.Sensor, error) {
+func (w *settingsWorker) newAccentColorSensor(accent string) (sensor.Entity, error) {
 	var err error
 
 	if accent == "" {
 		accent, err = w.getProp(accentColorProp)
 		if err != nil {
-			return nil, fmt.Errorf("invalid accent color: %w", err)
+			return sensor.Entity{}, fmt.Errorf("invalid accent color: %w", err)
 		}
 	}
 
-	return &linux.Sensor{
-		IsDiagnostic: true,
-		IconString:   "mdi:palette",
-		DataSource:   linux.DataSrcDbus,
-		DisplayName:  "Desktop Accent Color",
-		UniqueID:     "desktop_accent_color",
-		Value:        accent,
-	}, nil
+	return sensor.Entity{
+			Category: types.CategoryDiagnostic,
+			Name:     "Desktop Accent Color",
+			EntityState: &sensor.EntityState{
+				ID:    "desktop_accent_color",
+				State: accent,
+				Icon:  "mdi:palette",
+				Attributes: map[string]any{
+					"data_source": linux.DataSrcDbus,
+				},
+			},
+		},
+		nil
 }
 
-func (w *settingsWorker) newColorSchemeSensor(scheme string) (*linux.Sensor, error) {
+func (w *settingsWorker) newColorSchemeSensor(scheme string) (sensor.Entity, error) {
 	var err error
 
 	if scheme == "" {
 		scheme, err = w.getProp(colorSchemeProp)
 		if err != nil {
-			return nil, fmt.Errorf("invalid color scheme: %w", err)
+			return sensor.Entity{}, fmt.Errorf("invalid color scheme: %w", err)
 		}
 	}
 
-	newSensor := &linux.Sensor{
-		IsDiagnostic: true,
-		DataSource:   linux.DataSrcDbus,
-		DisplayName:  "Desktop Color Scheme",
-		UniqueID:     "desktop_color_scheme",
-		Value:        scheme,
+	newSensor := sensor.Entity{
+		Category: types.CategoryDiagnostic,
+		Name:     "Desktop Color Scheme",
+		EntityState: &sensor.EntityState{
+			ID:    "desktop_color_scheme",
+			State: scheme,
+			Attributes: map[string]any{
+				"data_source": linux.DataSrcDbus,
+			},
+		},
 	}
 
 	switch scheme {
 	case "dark":
-		newSensor.IconString = "mdi:weather-night"
+		newSensor.Icon = "mdi:weather-night"
 	case "light":
-		newSensor.IconString = "mdi:weather-sunny"
+		newSensor.Icon = "mdi:weather-sunny"
 	default:
-		newSensor.IconString = "mdi:theme-light-dark"
+		newSensor.Icon = "mdi:theme-light-dark"
 	}
 
 	return newSensor, nil
 }
 
 //nolint:cyclop,gocognit
-func (w *settingsWorker) Events(ctx context.Context) (chan sensor.Details, error) {
-	sensorCh := make(chan sensor.Details)
+func (w *settingsWorker) Events(ctx context.Context) (chan sensor.Entity, error) {
+	sensorCh := make(chan sensor.Entity)
 	logger := logging.FromContext(ctx).With(slog.String("worker", workerID))
 
 	go func() {
@@ -145,8 +155,8 @@ func (w *settingsWorker) Events(ctx context.Context) (chan sensor.Details, error
 }
 
 //nolint:mnd
-func (w *settingsWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
-	sensors := make([]sensor.Details, 0, 2)
+func (w *settingsWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
+	sensors := make([]sensor.Entity, 0, 2)
 
 	var errs error
 

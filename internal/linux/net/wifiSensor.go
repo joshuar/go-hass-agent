@@ -10,7 +10,6 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
-	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
@@ -28,114 +27,53 @@ const (
 
 var apPropList = []string{ssidPropName, hwAddrPropName, maxBitRatePropName, freqPropName, strPropName, bandwidthPropName}
 
-type wifiSensor struct {
-	prop string
-	linux.Sensor
-}
-
-func (w *wifiSensor) State() any {
-	switch w.prop {
-	case ssidPropName:
-		if value, ok := w.Value.([]uint8); ok {
-			return string(value)
-		} else {
-			return sensor.StateUnknown
-		}
-	case hwAddrPropName:
-		if value, ok := w.Value.(string); ok {
-			return value
-		} else {
-			return sensor.StateUnknown
-		}
-	case freqPropName, maxBitRatePropName, bandwidthPropName:
-		if value, ok := w.Value.(uint32); ok {
-			return value
-		} else {
-			return sensor.StateUnknown
-		}
-	case strPropName:
-		if value, ok := w.Value.(uint8); ok {
-			return value
-		} else {
-			return sensor.StateUnknown
-		}
-	default:
-		return sensor.StateUnknown
-	}
-}
-
-//nolint:mnd
-func (w *wifiSensor) Icon() string {
-	switch w.prop {
-	case ssidPropName, hwAddrPropName, freqPropName, maxBitRatePropName, bandwidthPropName:
-		return "mdi:wifi"
-	case strPropName:
-		value, ok := w.Value.(uint8)
-		if !ok {
-			return "mdi:wifi-strength-alert-outline"
-		}
-
-		switch {
-		case value <= 25:
-			return "mdi:wifi-strength-1"
-		case value > 25 && value <= 50:
-			return "mdi:wifi-strength-2"
-		case value > 50 && value <= 75:
-			return "mdi:wifi-strength-3"
-		case value > 75:
-			return "mdi:wifi-strength-4"
-		}
-	}
-
-	return "mdi:network"
-}
-
-func newWifiSensor(prop string, value any) *wifiSensor {
-	wifiSensor := &wifiSensor{
-		prop: prop,
-		Sensor: linux.Sensor{
-			IsDiagnostic: true,
-			Value:        value,
+func newWifiSensor(prop string, value any) sensor.Entity {
+	wifiSensor := sensor.Entity{
+		Category: types.CategoryDiagnostic,
+		EntityState: &sensor.EntityState{
+			State: generateState(prop, value),
+			Icon:  "mdi:wifi",
 		},
 	}
 
 	switch prop {
 	case ssidPropName:
-		wifiSensor.DisplayName = "Wi-Fi SSID"
-		wifiSensor.UniqueID = "wi_fi_ssid"
+		wifiSensor.Name = "Wi-Fi SSID"
+		wifiSensor.ID = "wi_fi_ssid"
 	case hwAddrPropName:
-		wifiSensor.DisplayName = "Wi-Fi BSSID"
-		wifiSensor.UniqueID = "wi_fi_bssid"
+		wifiSensor.Name = "Wi-Fi BSSID"
+		wifiSensor.ID = "wi_fi_bssid"
 	case maxBitRatePropName:
-		wifiSensor.DisplayName = "Wi-Fi Link Speed"
-		wifiSensor.UniqueID = "wi_fi_link_speed"
-		wifiSensor.UnitsString = "kB/s"
-		wifiSensor.DeviceClassValue = types.DeviceClassDataRate
-		wifiSensor.StateClassValue = types.StateClassMeasurement
+		wifiSensor.Name = "Wi-Fi Link Speed"
+		wifiSensor.ID = "wi_fi_link_speed"
+		wifiSensor.Units = "kB/s"
+		wifiSensor.DeviceClass = types.DeviceClassDataRate
+		wifiSensor.StateClass = types.StateClassMeasurement
 	case freqPropName:
-		wifiSensor.DisplayName = "Wi-Fi Frequency"
-		wifiSensor.UniqueID = "wi_fi_frequency"
-		wifiSensor.UnitsString = "MHz"
-		wifiSensor.DeviceClassValue = types.DeviceClassFrequency
-		wifiSensor.StateClassValue = types.StateClassMeasurement
+		wifiSensor.Name = "Wi-Fi Frequency"
+		wifiSensor.ID = "wi_fi_frequency"
+		wifiSensor.Units = "MHz"
+		wifiSensor.DeviceClass = types.DeviceClassFrequency
+		wifiSensor.StateClass = types.StateClassMeasurement
 	case bandwidthPropName:
-		wifiSensor.DisplayName = "Wi-Fi Bandwidth"
-		wifiSensor.UniqueID = "wi_fi_bandwidth"
-		wifiSensor.UnitsString = "MHz"
-		wifiSensor.DeviceClassValue = types.DeviceClassFrequency
-		wifiSensor.StateClassValue = types.StateClassMeasurement
+		wifiSensor.Name = "Wi-Fi Bandwidth"
+		wifiSensor.ID = "wi_fi_bandwidth"
+		wifiSensor.Units = "MHz"
+		wifiSensor.DeviceClass = types.DeviceClassFrequency
+		wifiSensor.StateClass = types.StateClassMeasurement
 	case strPropName:
-		wifiSensor.DisplayName = "Wi-Fi Signal Strength"
-		wifiSensor.UniqueID = "wi_fi_signal_strength"
-		wifiSensor.UnitsString = "%"
-		wifiSensor.StateClassValue = types.StateClassMeasurement
+		wifiSensor.Name = "Wi-Fi Signal Strength"
+		wifiSensor.ID = "wi_fi_signal_strength"
+		wifiSensor.Units = "%"
+		wifiSensor.StateClass = types.StateClassMeasurement
+		wifiSensor.Icon = generateStrIcon(value)
 	}
 
 	return wifiSensor
 }
 
-func getWifiSensors(bus *dbusx.Bus, apPath string) []*wifiSensor {
-	sensors := make([]*wifiSensor, 0, len(apPropList))
+func getWifiSensors(bus *dbusx.Bus, apPath string) []sensor.Entity {
+	sensors := make([]sensor.Entity, 0, len(apPropList))
 
 	for _, prop := range apPropList {
 		value, err := dbusx.NewProperty[any](bus, apPath, dBusNMObj, accessPointInterface+"."+prop).Get()
@@ -151,4 +89,54 @@ func getWifiSensors(bus *dbusx.Bus, apPath string) []*wifiSensor {
 	}
 
 	return sensors
+}
+
+func generateState(prop string, value any) any {
+	switch prop {
+	case ssidPropName:
+		if value, ok := value.([]uint8); ok {
+			return string(value)
+		} else {
+			return sensor.StateUnknown
+		}
+	case hwAddrPropName:
+		if value, ok := value.(string); ok {
+			return value
+		} else {
+			return sensor.StateUnknown
+		}
+	case freqPropName, maxBitRatePropName, bandwidthPropName:
+		if value, ok := value.(uint32); ok {
+			return value
+		} else {
+			return sensor.StateUnknown
+		}
+	case strPropName:
+		if value, ok := value.(uint8); ok {
+			return value
+		} else {
+			return sensor.StateUnknown
+		}
+	default:
+		return sensor.StateUnknown
+	}
+}
+
+func generateStrIcon(value any) string {
+	str, ok := value.(uint8)
+
+	switch {
+	case !ok:
+		return "mdi:wifi-strength-alert-outline"
+	case str <= 25:
+		return "mdi:wifi-strength-1"
+	case str > 25 && str <= 50:
+		return "mdi:wifi-strength-2"
+	case str > 50 && str <= 75:
+		return "mdi:wifi-strength-3"
+	case str > 75:
+		return "mdi:wifi-strength-4"
+	default:
+		return "mdi:wifi-strength-alert-outline"
+	}
 }

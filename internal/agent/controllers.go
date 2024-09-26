@@ -12,7 +12,6 @@ import (
 	mqttapi "github.com/joshuar/go-hass-anything/v11/pkg/mqtt"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
-
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
@@ -21,13 +20,13 @@ type SensorController interface {
 	ID() string
 	// States returns the list of all sensor states tracked by all workers of
 	// this controller.
-	States(ctx context.Context) []sensor.Details
+	States(ctx context.Context) []sensor.Entity
 	// ActiveWorkers is a list of the names of all currently active Workers.
 	ActiveWorkers() []string
 	// InactiveWorkers is a list of the names of all currently inactive Workers.
 	InactiveWorkers() []string
 	// Start provides a way to start the named Worker.
-	Start(ctx context.Context, name string) (<-chan sensor.Details, error)
+	Start(ctx context.Context, name string) (<-chan sensor.Entity, error)
 	// Stop provides a way to stop the named Worker.
 	Stop(name string) error
 }
