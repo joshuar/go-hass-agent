@@ -50,11 +50,23 @@ func screenLockIcon(value bool) string {
 }
 
 type screenLockWorker struct {
-	triggerCh chan dbusx.Trigger
+	triggerCh      chan dbusx.Trigger
+	screenLockProp *dbusx.Property[bool]
 }
 
+//nolint:gocognit
 func (w *screenLockWorker) Events(ctx context.Context) (<-chan sensor.Entity, error) {
 	sensorCh := make(chan sensor.Entity)
+
+	currentState, err := w.getCurrentState()
+	if err != nil {
+		close(sensorCh)
+		return sensorCh, fmt.Errorf("cannot process screen lock events: %w", err)
+	}
+
+	go func() {
+		sensorCh <- currentState
+	}()
 
 	go func() {
 		defer close(sensorCh)
@@ -86,9 +98,22 @@ func (w *screenLockWorker) Events(ctx context.Context) (<-chan sensor.Entity, er
 	return sensorCh, nil
 }
 
-// ?: retrieve the current screen lock state when called.
 func (w *screenLockWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
-	return nil, linux.ErrUnimplemented
+	currentState, err := w.getCurrentState()
+	if err != nil {
+		return nil, fmt.Errorf("cannot generate screen lock sensor: %w", err)
+	}
+
+	return []sensor.Entity{currentState}, nil
+}
+
+func (w *screenLockWorker) getCurrentState() (sensor.Entity, error) {
+	screenLockState, err := w.screenLockProp.Get()
+	if err != nil {
+		return sensor.Entity{}, fmt.Errorf("could not fetch screen lock state: %w", err)
+	}
+
+	return newScreenlockSensor(screenLockState), nil
 }
 
 func NewScreenLockWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
@@ -113,7 +138,8 @@ func NewScreenLockWorker(ctx context.Context) (*linux.EventSensorWorker, error) 
 	}
 
 	worker.EventType = &screenLockWorker{
-		triggerCh: triggerCh,
+		triggerCh:      triggerCh,
+		screenLockProp: dbusx.NewProperty[bool](bus, sessionPath, loginBaseInterface, sessionInterface+"."+sessionLockedProp),
 	}
 
 	return worker, nil
