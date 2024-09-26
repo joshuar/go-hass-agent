@@ -8,6 +8,7 @@ package agent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -29,6 +30,8 @@ const (
 
 	connectionLatencyUnits = "ms"
 )
+
+var ErrEmptyResponse = errors.New("empty response")
 
 type serverPrefs interface {
 	Server() string
@@ -85,9 +88,12 @@ func (w *connectionLatencyWorker) Sensors(ctx context.Context) ([]sensor.Entity,
 		return nil, fmt.Errorf("unable to connect: %w", err)
 	}
 
-	// Save the latency info as a connectionLatency sensor.
+	if resp.Request != nil {
+		// Save the latency info as a connectionLatency sensor.
+		return []sensor.Entity{newConnectionLatencySensor(resp.Request.TraceInfo())}, nil
+	}
 
-	return []sensor.Entity{newConnectionLatencySensor(resp.Request.TraceInfo())}, nil
+	return nil, ErrEmptyResponse
 }
 
 func (w *connectionLatencyWorker) Start(ctx context.Context) (<-chan sensor.Entity, error) {
