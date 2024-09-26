@@ -33,7 +33,7 @@ func (w *sensorWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 	return nil, linux.ErrUnimplemented
 }
 
-func (w *sensorWorker) Events(ctx context.Context) (chan sensor.Entity, error) {
+func (w *sensorWorker) Events(ctx context.Context) (<-chan sensor.Entity, error) {
 	sensorCh := make(chan sensor.Entity)
 
 	var wg sync.WaitGroup

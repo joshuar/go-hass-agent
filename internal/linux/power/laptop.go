@@ -93,7 +93,7 @@ type laptopWorker struct {
 	properties map[string]*dbusx.Property[bool]
 }
 
-func (w *laptopWorker) Events(ctx context.Context) (chan sensor.Entity, error) {
+func (w *laptopWorker) Events(ctx context.Context) (<-chan sensor.Entity, error) {
 	sensorCh := make(chan sensor.Entity)
 
 	go func() {

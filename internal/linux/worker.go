@@ -28,7 +28,7 @@ type PollingType interface {
 // EventType interface represents sensors that are generated on some event
 // trigger, such as D-Bus messages.
 type EventType interface {
-	Events(ctx context.Context) (chan sensor.Entity, error)
+	Events(ctx context.Context) (<-chan sensor.Entity, error)
 	Sensors(ctx context.Context) ([]sensor.Entity, error)
 }
 

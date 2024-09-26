@@ -45,7 +45,7 @@ type profileWorker struct {
 	triggerCh     chan dbusx.Trigger
 }
 
-func (w *profileWorker) Events(ctx context.Context) (chan sensor.Entity, error) {
+func (w *profileWorker) Events(ctx context.Context) (<-chan sensor.Entity, error) {
 	sensorCh := make(chan sensor.Entity)
 	logger := slog.With(slog.String("worker", powerProfileWorkerID))
 

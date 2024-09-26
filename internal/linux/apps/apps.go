@@ -37,7 +37,7 @@ type sensorWorker struct {
 	totalRunningApps int
 }
 
-func (w *sensorWorker) Events(ctx context.Context) (chan sensor.Entity, error) {
+func (w *sensorWorker) Events(ctx context.Context) (<-chan sensor.Entity, error) {
 	sensorCh := make(chan sensor.Entity)
 	logger := slog.Default().With(slog.String("worker", workerID))
 

@@ -163,7 +163,7 @@ func (w *AddressWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
 // TODO: reduce complexity?
 //
 //nolint:gocognit
-func (w *AddressWorker) Events(ctx context.Context) (chan sensor.Entity, error) {
+func (w *AddressWorker) Events(ctx context.Context) (<-chan sensor.Entity, error) {
 	sensorCh := make(chan sensor.Entity)
 
 	// Get all current addresses and send as sensors.
