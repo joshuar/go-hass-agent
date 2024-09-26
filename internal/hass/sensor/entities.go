@@ -44,7 +44,7 @@ type Entity struct {
 	Name        string            `json:"name" validate:"required"`
 	Units       string            `json:"unit_of_measurement,omitempty" validate:"omitempty"`
 	DeviceClass types.DeviceClass `json:"device_class,omitempty" validate:"omitempty"`
-	StateClass  types.StateClass  `json:"state_class,omitempty" validate:"omitempty,excluded_if=EntityType binary_sensor"`
+	StateClass  types.StateClass  `json:"state_class,omitempty" validate:"omitempty"`
 	Category    types.Category    `json:"entity_category,omitempty" validate:"omitempty"`
 }
 
@@ -59,7 +59,7 @@ func (e Entity) MarshalJSON() ([]byte, error) {
 		Name        string         `json:"name" validate:"required"`
 		Units       string         `json:"unit_of_measurement,omitempty" validate:"omitempty"`
 		DeviceClass string         `json:"device_class,omitempty" validate:"omitempty"`
-		StateClass  string         `json:"state_class,omitempty" validate:"omitempty,excluded_if=EntityType binary_sensor"`
+		StateClass  string         `json:"state_class,omitempty" validate:"omitempty"`
 		Category    string         `json:"entity_category,omitempty" validate:"omitempty"`
 	}{
 		State:       e.State,
