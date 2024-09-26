@@ -141,7 +141,6 @@ func (w *usageWorker) newCountSensor(name, icon, valueStr string) sensor.Entity 
 			State: valueInt,
 			Attributes: map[string]any{
 				"data_source": linux.DataSrcProcfs,
-				"last_reset":  w.boottime.Format(time.RFC3339),
 			},
 		},
 	}
