@@ -18,28 +18,6 @@ const (
 	versionWorkerID = "agent_version_sensor"
 )
 
-// type version string
-
-// func (v *version) Name() string { return "Go Hass Agent Version" }
-
-// func (v *version) ID() string { return "agent_version" }
-
-// func (v *version) Icon() string { return "mdi:face-agent" }
-
-// func (v *version) SensorType() types.SensorClass { return types.Sensor }
-
-// func (v *version) DeviceClass() types.DeviceClass { return 0 }
-
-// func (v *version) StateClass() types.StateClass { return 0 }
-
-// func (v *version) State() any { return preferences.AppVersion }
-
-// func (v *version) Units() string { return "" }
-
-// func (v *version) Category() string { return types.CategoryDiagnostic.String() }
-
-// func (v *version) Attributes() map[string]any { return nil }
-
 func newVersionSensor() sensor.Entity {
 	return sensor.Entity{
 		Name:     "Go Hass Agent Version",
