@@ -9,6 +9,7 @@ package scripts
 import (
 	"github.com/iancoleman/strcase"
 
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 )
 
@@ -24,12 +25,20 @@ type ScriptSensor struct {
 	SensorUnits       string `json:"sensor_units,omitempty" yaml:"sensor_units,omitempty" toml:"sensor_units,omitempty"`
 }
 
-func (s *ScriptSensor) Name() string {
-	return s.SensorName
-}
-
-func (s *ScriptSensor) ID() string {
-	return strcase.ToSnake(s.SensorName)
+func scriptToEntity(script ScriptSensor) sensor.Entity {
+	return sensor.Entity{
+		Name:        script.SensorName,
+		Units:       script.SensorUnits,
+		DeviceClass: script.DeviceClass(),
+		StateClass:  script.StateClass(),
+		EntityState: &sensor.EntityState{
+			State:      script.SensorState,
+			ID:         strcase.ToSnake(script.SensorName),
+			Icon:       script.Icon(),
+			Attributes: script.Attributes(),
+			EntityType: script.SensorType(),
+		},
+	}
 }
 
 func (s *ScriptSensor) Icon() string {
@@ -70,18 +79,6 @@ func (s *ScriptSensor) StateClass() types.StateClass {
 	default:
 		return 0
 	}
-}
-
-func (s *ScriptSensor) State() any {
-	return s.SensorState
-}
-
-func (s *ScriptSensor) Units() string {
-	return s.SensorUnits
-}
-
-func (s *ScriptSensor) Category() string {
-	return ""
 }
 
 func (s *ScriptSensor) Attributes() map[string]any {

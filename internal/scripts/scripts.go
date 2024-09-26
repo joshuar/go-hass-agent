@@ -30,16 +30,16 @@ func (s *Script) Schedule() string {
 	return s.schedule
 }
 
-func (s *Script) Execute() ([]sensor.Details, error) {
+func (s *Script) Execute() ([]sensor.Entity, error) {
 	output, err := s.parse()
 	if err != nil {
 		return nil, fmt.Errorf("error running script: %w", err)
 	}
 
-	sensors := make([]sensor.Details, 0, len(output.Sensors))
+	sensors := make([]sensor.Entity, 0, len(output.Sensors))
 
 	for _, s := range output.Sensors {
-		sensors = append(sensors, sensor.Details(&s))
+		sensors = append(sensors, scriptToEntity(s))
 	}
 
 	return sensors, nil

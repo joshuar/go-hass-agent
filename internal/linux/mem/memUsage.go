@@ -39,7 +39,7 @@ var (
 )
 
 // newMemSensor generates a memorySensor for a memory stat.
-func newMemSensor(id memStatID, stat *memStat) *linux.Sensor {
+func newMemSensor(id memStatID, stat *memStat) sensor.Entity {
 	var value uint64
 
 	if stat == nil {
@@ -48,21 +48,26 @@ func newMemSensor(id memStatID, stat *memStat) *linux.Sensor {
 		value = stat.value
 	}
 
-	return &linux.Sensor{
-		DisplayName:      id.String(),
-		UniqueID:         strcase.ToSnake(id.String()),
-		DeviceClassValue: types.DeviceClassDataSize,
-		StateClassValue:  types.StateClassTotal,
-		IconString:       memorySensorIcon,
-		DataSource:       linux.DataSrcProcfs,
-		Value:            value,
-		UnitsString:      memoryUsageSensorUnits,
+	return sensor.Entity{
+		Name:        id.String(),
+		DeviceClass: types.DeviceClassDataSize,
+		StateClass:  types.StateClassTotal,
+		Units:       memoryUsageSensorUnits,
+		EntityState: &sensor.EntityState{
+			ID:    strcase.ToSnake(id.String()),
+			Icon:  memorySensorIcon,
+			State: value,
+			Attributes: map[string]any{
+				"data_source":                linux.DataSrcProcfs,
+				"native_unit_of_measurement": memoryUsageSensorUnits,
+			},
+		},
 	}
 }
 
 // newMemSensorPc generates a memorySensor with a percentage value for a memory
 // stat.
-func newMemSensorPc(name string, value, total uint64) *linux.Sensor {
+func newMemSensorPc(name string, value, total uint64) sensor.Entity {
 	var valuePc float64
 	if total == 0 {
 		valuePc = 0
@@ -70,19 +75,23 @@ func newMemSensorPc(name string, value, total uint64) *linux.Sensor {
 		valuePc = math.Round(float64(value)/float64(total)*100/0.05) * 0.05 //nolint:mnd
 	}
 
-	return &linux.Sensor{
-		DisplayName:     name,
-		UniqueID:        strcase.ToSnake(name),
-		StateClassValue: types.StateClassMeasurement,
-		IconString:      memorySensorIcon,
-		DataSource:      linux.DataSrcProcfs,
-		Value:           valuePc,
-		UnitsString:     memoryUsageSensorPcUnits,
+	return sensor.Entity{
+		Name:       name,
+		StateClass: types.StateClassTotal,
+		Units:      memoryUsageSensorPcUnits,
+		EntityState: &sensor.EntityState{
+			ID:    strcase.ToSnake(name),
+			Icon:  memorySensorIcon,
+			State: valuePc,
+			Attributes: map[string]any{
+				"data_source": linux.DataSrcProcfs,
+			},
+		},
 	}
 }
 
 // Calculate used memory = total - free/buffered/cached.
-func newMemUsedPc(stats memoryStats) *linux.Sensor {
+func newMemUsedPc(stats memoryStats) sensor.Entity {
 	var memOther uint64
 
 	for name, stat := range stats {
@@ -104,7 +113,7 @@ func newMemUsedPc(stats memoryStats) *linux.Sensor {
 }
 
 // Calculate used swap = total - free.
-func newSwapUsedPc(stats memoryStats) *linux.Sensor {
+func newSwapUsedPc(stats memoryStats) sensor.Entity {
 	swapTotal, _ := stats.get(swapTotal)
 	swapFree, _ := stats.get(swapFree)
 	swapUsed := swapTotal - swapFree
@@ -116,13 +125,13 @@ type usageWorker struct{}
 
 func (w *usageWorker) UpdateDelta(_ time.Duration) {}
 
-func (w *usageWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
+func (w *usageWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 	stats, err := getMemStats()
 	if err != nil {
 		return nil, fmt.Errorf("unable to retrieve memory stats: %w", err)
 	}
 
-	sensors := make([]sensor.Details, 0, len(memSensors)+len(swapSensors)+2) //nolint:mnd
+	sensors := make([]sensor.Entity, 0, len(memSensors)+len(swapSensors)+2) //nolint:mnd
 
 	for _, id := range memSensors {
 		sensors = append(sensors, newMemSensor(id, stats[id]))

@@ -129,11 +129,7 @@ func (c *Client) HassVersion(ctx context.Context) string {
 	return config.Version
 }
 
-func (c *Client) ProcessSensor(ctx context.Context, details sensor.Details) error {
-	if details == nil {
-		return fmt.Errorf("%w: nil sensor", ErrInvalidSensor)
-	}
-
+func (c *Client) ProcessSensor(ctx context.Context, details sensor.Entity) error {
 	if c.isDisabled(ctx, details) {
 		logging.FromContext(ctx).
 			Debug("Not sending request for disabled sensor.",
@@ -142,12 +138,12 @@ func (c *Client) ProcessSensor(ctx context.Context, details sensor.Details) erro
 		return nil
 	}
 
-	if _, ok := details.State().(*sensor.LocationRequest); ok {
+	if _, ok := details.State.(*LocationRequest); ok {
 		// LocationRequest:
 		return c.handleLocationUpdate(ctx, details)
 	}
 
-	if c.registry.IsRegistered(details.ID()) {
+	if c.registry.IsRegistered(details.ID) {
 		// Sensor Update (existing sensor).
 		return c.handleSensorUpdate(ctx, details)
 	}
@@ -155,35 +151,35 @@ func (c *Client) ProcessSensor(ctx context.Context, details sensor.Details) erro
 	return c.handleRegistration(ctx, details)
 }
 
-func (c *Client) handleLocationUpdate(ctx context.Context, details sensor.Details) error {
+func (c *Client) handleLocationUpdate(ctx context.Context, details sensor.Entity) error {
 	// req, err := sensor.NewLocationUpdateRequest(details)
-	req, err := sensor.NewRequest(sensor.RequestTypeLocation, details)
+	req, err := newEntityRequest(requestTypeLocation, details)
 	if err != nil {
 		return fmt.Errorf("unable to handle location update: %w", err)
 	}
 
-	resp, err := send[sensor.LocationResponse](ctx, c, req)
+	resp, err := send[locationResponse](ctx, c, req)
 	if err != nil {
 		return fmt.Errorf("failed to send location update request: %w", err)
 	}
 
-	if err := resp.Updated(); err != nil { //nolint:staticcheck
+	if err := resp.updated(); err != nil { //nolint:staticcheck
 		return fmt.Errorf("location update failed: %w", err)
 	}
 
 	return nil
 }
 
-func (c *Client) handleSensorUpdate(ctx context.Context, details sensor.Details) error {
+func (c *Client) handleSensorUpdate(ctx context.Context, details sensor.Entity) error {
 	// req, err := sensor.NewUpdateRequest(details)
-	req, err := sensor.NewRequest(sensor.RequestTypeUpdate, details)
+	req, err := newEntityRequest(requestTypeUpdate, details)
 	if err != nil {
 		return fmt.Errorf("unable to handle sensor update: %w", err)
 	}
 
-	response, err := send[sensor.StateUpdateResponse](ctx, c, req)
+	response, err := send[stateUpdateResponse](ctx, c, req)
 	if err != nil {
-		return fmt.Errorf("failed to send sensor update request for %s: %w", details.ID(), err)
+		return fmt.Errorf("failed to send sensor update request for %s: %w", details.ID, err)
 	}
 
 	if response == nil {
@@ -195,25 +191,25 @@ func (c *Client) handleSensorUpdate(ctx context.Context, details sensor.Details)
 	var warnings error
 
 	for id, update := range response {
-		success, err := update.Success()
+		success, err := update.success()
 		if !success {
 			// The update failed.
 			warnings = errors.Join(warnings, err)
 		}
 
 		// If HA reports the sensor as disabled, update the registry.
-		if c.registry.IsDisabled(id) != update.Disabled() {
+		if c.registry.IsDisabled(id) != update.disabled() {
 			logging.FromContext(ctx).
 				Info("Sensor is disabled in Home Assistant. Setting disabled in local registry.",
 					sensorLogAttrs(details))
 
-			if err := c.registry.SetDisabled(id, update.Disabled()); err != nil {
+			if err := c.registry.SetDisabled(id, update.disabled()); err != nil {
 				warnings = errors.Join(warnings, fmt.Errorf("%w: %w", ErrRegDisableFailed, err))
 			}
 		}
 
 		// Add the sensor update to the tracker.
-		if err := tracker.Add(details); err != nil {
+		if err := tracker.Add(&details); err != nil {
 			warnings = errors.Join(warnings, fmt.Errorf("%w: %w", ErrTrkUpdateFailed, err))
 		}
 	}
@@ -232,19 +228,19 @@ func (c *Client) handleSensorUpdate(ctx context.Context, details sensor.Details)
 	return warnings
 }
 
-func (c *Client) handleRegistration(ctx context.Context, details sensor.Details) error {
-	req, err := sensor.NewRequest(sensor.RequestTypeRegister, details)
+func (c *Client) handleRegistration(ctx context.Context, details sensor.Entity) error {
+	req, err := newEntityRequest(requestTypeRegister, details)
 	if err != nil {
 		return fmt.Errorf("unable to handle sensor update: %w", err)
 	}
 
-	response, err := send[sensor.RegistrationResponse](ctx, c, req)
+	response, err := send[registrationResponse](ctx, c, req)
 	if err != nil {
-		return fmt.Errorf("failed to send sensor registration request for %s: %w", details.ID(), err)
+		return fmt.Errorf("failed to send sensor registration request for %s: %w", details.ID, err)
 	}
 
 	// If the registration failed, log a warning.
-	success, err := response.Registered()
+	success, err := response.registered()
 	if !success {
 		return errors.Join(ErrRegistrationFailed, err)
 	}
@@ -254,12 +250,12 @@ func (c *Client) handleRegistration(ctx context.Context, details sensor.Details)
 	var warnings error
 
 	// Set the sensor as registered in the registry.
-	err = c.registry.SetRegistered(details.ID(), true)
+	err = c.registry.SetRegistered(details.ID, true)
 	if err != nil {
 		warnings = errors.Join(warnings, fmt.Errorf("%w: %w", ErrRegAddFailed, err))
 	}
 	// Update the sensor state in the tracker.
-	if err := tracker.Add(details); err != nil {
+	if err := tracker.Add(&details); err != nil {
 		warnings = errors.Join(warnings, fmt.Errorf("%w: %w", ErrTrkUpdateFailed, err))
 	}
 
@@ -271,11 +267,9 @@ func (c *Client) handleRegistration(ctx context.Context, details sensor.Details)
 // disabled, we need to make an additional check against Home Assistant to see
 // if the sensor has been re-enabled, and update our local registry before
 // continuing.
-func (c *Client) isDisabled(ctx context.Context, details sensor.Details) bool {
-	// Get disabled state from local registry.
-	disabledInReg := c.isDisabledInReg(details)
+func (c *Client) isDisabled(ctx context.Context, details sensor.Entity) bool {
 	// If it is not disabled in the local registry, immediately return false.
-	if !disabledInReg {
+	if !c.isDisabledInReg(details.ID) {
 		return false
 	}
 	// Else, get the disabled state from Home Assistant
@@ -286,7 +280,7 @@ func (c *Client) isDisabled(ctx context.Context, details sensor.Details) bool {
 	if !disabledInHA {
 		slog.Info("Sensor re-enabled in Home Assistant, Re-enabling in local registry and sending updates.", sensorLogAttrs(details))
 
-		if err := c.registry.SetDisabled(details.ID(), false); err != nil {
+		if err := c.registry.SetDisabled(details.ID, false); err != nil {
 			slog.Error("Could not re-enable sensor.",
 				sensorLogAttrs(details),
 				slog.Any("error", err))
@@ -304,16 +298,12 @@ func (c *Client) isDisabled(ctx context.Context, details sensor.Details) bool {
 
 // isDisabledInReg returns the disabled state of the sensor from the local
 // registry.
-func (c *Client) isDisabledInReg(details sensor.Details) bool {
-	if details == nil {
-		slog.Error("nil!", slog.Any("sensor", details))
-	}
-
-	return c.registry.IsDisabled(details.ID())
+func (c *Client) isDisabledInReg(id string) bool {
+	return c.registry.IsDisabled(id)
 }
 
 // isDisabledInHA returns the disabled state of the sensor from Home Assistant.
-func (c *Client) isDisabledInHA(ctx context.Context, details sensor.Details) bool {
+func (c *Client) isDisabledInHA(ctx context.Context, details sensor.Entity) bool {
 	config, err := send[Config](ctx, c, &configRequest{})
 	if err != nil {
 		logging.FromContext(ctx).
@@ -324,7 +314,7 @@ func (c *Client) isDisabledInHA(ctx context.Context, details sensor.Details) boo
 		return true
 	}
 
-	status, err := config.IsEntityDisabled(details.ID())
+	status, err := config.IsEntityDisabled(details.ID)
 	if err != nil {
 		logging.FromContext(ctx).
 			Debug("Could not determine sensor disabled status in Home Assistant config. Assuming sensor is still disabled.",
@@ -340,7 +330,7 @@ func (c *Client) isDisabledInHA(ctx context.Context, details sensor.Details) boo
 func send[T any](ctx context.Context, client *Client, requestDetails any) (T, error) {
 	var (
 		response    T
-		responseErr sensor.APIError
+		responseErr apiError
 		responseObj *resty.Response
 	)
 
@@ -394,13 +384,13 @@ func send[T any](ctx context.Context, client *Client, requestDetails any) (T, er
 			slog.String("body", string(responseObj.Body())))
 
 	if responseObj.IsError() {
-		return response, &sensor.APIError{Code: responseObj.StatusCode(), Message: responseObj.Status()}
+		return response, &apiError{Code: responseObj.StatusCode(), Message: responseObj.Status()}
 	}
 
 	return response, nil
 }
 
-func GetSensor(id string) (sensor.Details, error) {
+func GetSensor(id string) (*sensor.Entity, error) {
 	details, err := tracker.Get(id)
 	if err != nil {
 		return nil, fmt.Errorf("could not get sensor details: %w", err)
@@ -415,10 +405,10 @@ func SensorList() []string {
 
 // sensorLogAttrs is a convienience function that returns some slog attributes
 // for priting sensor details in the log.
-func sensorLogAttrs(details sensor.Details) slog.Attr {
+func sensorLogAttrs(details sensor.Entity) slog.Attr {
 	return slog.Group("sensor",
-		slog.String("name", details.Name()),
-		slog.String("id", details.ID()),
-		slog.Any("state", details.State()),
-		slog.String("units", details.Units()))
+		slog.String("name", details.Name),
+		slog.String("id", details.ID),
+		slog.Any("state", details.State),
+		slog.String("units", details.Units))
 }

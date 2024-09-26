@@ -66,14 +66,14 @@ func (w *ConnectionsWorker) isTracked(id string) bool {
 	return false
 }
 
-func (w *ConnectionsWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
+func (w *ConnectionsWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 	return nil, linux.ErrUnimplemented
 }
 
 //nolint:mnd
 //revive:disable:function-length
-func (w *ConnectionsWorker) Events(ctx context.Context) (chan sensor.Details, error) {
-	sensorCh := make(chan sensor.Details)
+func (w *ConnectionsWorker) Events(ctx context.Context) (chan sensor.Entity, error) {
+	sensorCh := make(chan sensor.Entity)
 	connCtx, connCancel := context.WithCancel(ctx)
 
 	triggerCh, err := dbusx.NewWatch(
@@ -131,7 +131,7 @@ func (w *ConnectionsWorker) Events(ctx context.Context) (chan sensor.Details, er
 	return sensorCh, nil
 }
 
-func (w *ConnectionsWorker) handleConnection(ctx context.Context, path dbus.ObjectPath, sensorCh chan sensor.Details) error {
+func (w *ConnectionsWorker) handleConnection(ctx context.Context, path dbus.ObjectPath, sensorCh chan sensor.Entity) error {
 	conn, err := newConnection(w.bus, path)
 	if err != nil {
 		return fmt.Errorf("could not create connection: %w", err)

@@ -44,8 +44,8 @@ func (c *Controller) ID() string {
 	return "scripts"
 }
 
-func (c *Controller) States(_ context.Context) []sensor.Details {
-	var sensors []sensor.Details
+func (c *Controller) States(_ context.Context) []sensor.Entity {
+	var sensors []sensor.Entity
 
 	for _, worker := range c.ActiveWorkers() {
 		found := slices.IndexFunc(c.jobs, func(j job) bool { return j.path == worker })
@@ -88,7 +88,7 @@ func (c *Controller) InactiveWorkers() []string {
 	return inactiveScripts
 }
 
-func (c *Controller) Start(_ context.Context, name string) (<-chan sensor.Details, error) {
+func (c *Controller) Start(_ context.Context, name string) (<-chan sensor.Entity, error) {
 	found := slices.IndexFunc(c.jobs, func(j job) bool { return j.path == name })
 
 	// If the script was not found, return an error.
@@ -100,7 +100,7 @@ func (c *Controller) Start(_ context.Context, name string) (<-chan sensor.Detail
 		return nil, ErrAlreadyStarted
 	}
 
-	sensorCh := make(chan sensor.Details)
+	sensorCh := make(chan sensor.Entity)
 
 	// Schedule the script.
 	id, err := c.scheduler.AddFunc(c.jobs[found].Schedule(), func() {

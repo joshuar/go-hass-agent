@@ -12,6 +12,7 @@ import (
 	"log/slog"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
@@ -24,32 +25,27 @@ const (
 	screenLockUnknownIcon = "mdi:lock-alert"
 )
 
-type screenlockSensor struct {
-	linux.Sensor
-}
-
-func (s *screenlockSensor) Icon() string {
-	isLocked, ok := s.Value.(bool)
-
-	switch {
-	case !ok:
-		return screenLockUnknownIcon
-	case isLocked:
-		return screenLockedIcon
-	default:
-		return screenUnlockedIcon
+func newScreenlockSensor(value bool) sensor.Entity {
+	return sensor.Entity{
+		Name: "Screen Lock",
+		EntityState: &sensor.EntityState{
+			ID:         "screen_lock",
+			Icon:       screenLockIcon(value),
+			EntityType: types.BinarySensor,
+			State:      value,
+			Attributes: map[string]any{
+				"data_source": linux.DataSrcDbus,
+			},
+		},
 	}
 }
 
-func newScreenlockEvent(value bool) *screenlockSensor {
-	return &screenlockSensor{
-		Sensor: linux.Sensor{
-			DisplayName: "Screen Lock",
-			UniqueID:    "screen_lock",
-			IsBinary:    true,
-			DataSource:  linux.DataSrcDbus,
-			Value:       value,
-		},
+func screenLockIcon(value bool) string {
+	switch value {
+	case true:
+		return screenLockedIcon
+	default:
+		return screenUnlockedIcon
 	}
 }
 
@@ -57,8 +53,8 @@ type screenLockWorker struct {
 	triggerCh chan dbusx.Trigger
 }
 
-func (w *screenLockWorker) Events(ctx context.Context) (chan sensor.Details, error) {
-	sensorCh := make(chan sensor.Details)
+func (w *screenLockWorker) Events(ctx context.Context) (chan sensor.Entity, error) {
+	sensorCh := make(chan sensor.Entity)
 
 	go func() {
 		defer close(sensorCh)
@@ -75,13 +71,13 @@ func (w *screenLockWorker) Events(ctx context.Context) (chan sensor.Details, err
 						slog.With(slog.String("worker", screenLockWorkerID)).Debug("Could not parse received D-Bus signal.", slog.Any("error", err))
 					} else {
 						if changed {
-							sensorCh <- newScreenlockEvent(lockState)
+							sensorCh <- newScreenlockSensor(lockState)
 						}
 					}
 				case sessionLockSignal:
-					sensorCh <- newScreenlockEvent(true)
+					sensorCh <- newScreenlockSensor(true)
 				case sessionUnlockSignal:
-					sensorCh <- newScreenlockEvent(false)
+					sensorCh <- newScreenlockSensor(false)
 				}
 			}
 		}
@@ -91,7 +87,7 @@ func (w *screenLockWorker) Events(ctx context.Context) (chan sensor.Details, err
 }
 
 // ?: retrieve the current screen lock state when called.
-func (w *screenLockWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
+func (w *screenLockWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 	return nil, linux.ErrUnimplemented
 }
 

@@ -50,7 +50,7 @@ func (w deviceController) InactiveWorkers() []string {
 	return inactiveWorkers
 }
 
-func (w deviceController) Start(ctx context.Context, name string) (<-chan sensor.Details, error) {
+func (w deviceController) Start(ctx context.Context, name string) (<-chan sensor.Entity, error) {
 	worker, exists := w[name]
 	if !exists {
 		return nil, ErrUnknownWorker
@@ -84,8 +84,8 @@ func (w deviceController) Stop(name string) error {
 	return nil
 }
 
-func (w deviceController) States(ctx context.Context) []sensor.Details {
-	var sensors []sensor.Details
+func (w deviceController) States(ctx context.Context) []sensor.Entity {
+	var sensors []sensor.Entity
 
 	for _, workerID := range w.ActiveWorkers() {
 		worker, found := w[workerID]
@@ -121,7 +121,7 @@ func (agent *Agent) newDeviceController(ctx context.Context, prefs *preferences.
 	controller := make(deviceController)
 
 	// Set up sensor workers.
-	worker = newVersionWorker(prefs.AgentVersion())
+	worker = newVersionWorker()
 	controller[worker.ID()] = &workerState{worker: worker}
 	worker = newExternalIPUpdaterWorker(ctx)
 	controller[worker.ID()] = &workerState{worker: worker}

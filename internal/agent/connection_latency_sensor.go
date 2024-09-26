@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	connectionLatencyWorkerID = "connection_latency_worker"
+	connectionLatencyWorkerID = "connection_latency"
 	connectionLatencyTimeout  = 5 * time.Second
 
 	connectionLatencyPollInterval = time.Minute
@@ -35,35 +35,31 @@ type serverPrefs interface {
 	Token() string
 }
 
-type connectionLatency resty.TraceInfo
-
-func (l *connectionLatency) Name() string { return "Connection Latency" }
-
-func (l *connectionLatency) ID() string { return "connection_latency" }
-
-func (l *connectionLatency) Icon() string { return "mdi:connection" }
-
-func (l *connectionLatency) SensorType() types.SensorClass { return types.Sensor }
-
-func (l *connectionLatency) DeviceClass() types.DeviceClass { return types.DeviceClassDuration }
-
-func (l *connectionLatency) StateClass() types.StateClass { return types.StateClassMeasurement }
-
-func (l *connectionLatency) State() any { return l.TotalTime.Milliseconds() }
-
-func (l *connectionLatency) Units() string { return connectionLatencyUnits }
-
-func (l *connectionLatency) Category() string { return types.CategoryDiagnostic }
-
-func (l *connectionLatency) Attributes() map[string]any {
-	return map[string]any{
-		"DNS Lookup Time":     l.DNSLookup.Milliseconds(),
-		"Connection Time":     l.ConnTime.Milliseconds(),
-		"TCP Connection Time": l.TCPConnTime.Milliseconds(),
-		"TLS Handshake Time":  l.TLSHandshake.Milliseconds(),
-		"Server Time":         l.ServerTime.Milliseconds(),
-		"Response Time":       l.ResponseTime.Milliseconds(),
+func newConnectionLatencySensor(info resty.TraceInfo) sensor.Entity {
+	connectionLatency := sensor.Entity{
+		Name:        "Connection Latency",
+		Units:       connectionLatencyUnits,
+		DeviceClass: types.DeviceClassDuration,
+		StateClass:  types.StateClassMeasurement,
+		Category:    types.CategoryDiagnostic,
+		EntityState: &sensor.EntityState{
+			ID:         "connection_latency",
+			Icon:       "mdi:connection",
+			EntityType: types.Sensor,
+			State:      info.TotalTime.Milliseconds(),
+			Attributes: map[string]any{
+				"DNS Lookup Time":            info.DNSLookup.Milliseconds(),
+				"Connection Time":            info.ConnTime.Milliseconds(),
+				"TCP Connection Time":        info.TCPConnTime.Milliseconds(),
+				"TLS Handshake Time":         info.TLSHandshake.Milliseconds(),
+				"Server Time":                info.ServerTime.Milliseconds(),
+				"Response Time":              info.ResponseTime.Milliseconds(),
+				"native_unit_of_measurement": connectionLatencyUnits,
+			},
+		},
 	}
+
+	return connectionLatency
 }
 
 type connectionLatencyWorker struct {
@@ -81,7 +77,7 @@ func (w *connectionLatencyWorker) Stop() error {
 	return nil
 }
 
-func (w *connectionLatencyWorker) Sensors(ctx context.Context) ([]sensor.Details, error) {
+func (w *connectionLatencyWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
 	resp, err := w.client.R().
 		SetContext(ctx).
 		Get("/")
@@ -90,13 +86,12 @@ func (w *connectionLatencyWorker) Sensors(ctx context.Context) ([]sensor.Details
 	}
 
 	// Save the latency info as a connectionLatency sensor.
-	latency := connectionLatency(resp.Request.TraceInfo())
 
-	return []sensor.Details{&latency}, nil
+	return []sensor.Entity{newConnectionLatencySensor(resp.Request.TraceInfo())}, nil
 }
 
-func (w *connectionLatencyWorker) Start(ctx context.Context) (<-chan sensor.Details, error) {
-	sensorCh := make(chan sensor.Details)
+func (w *connectionLatencyWorker) Start(ctx context.Context) (<-chan sensor.Entity, error) {
+	sensorCh := make(chan sensor.Entity)
 	w.doneCh = make(chan struct{})
 
 	// Create a new context for the updates scope.

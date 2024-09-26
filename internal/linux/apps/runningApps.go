@@ -6,6 +6,7 @@
 package apps
 
 import (
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 )
@@ -17,26 +18,19 @@ const (
 	runningAppsID    = "running_apps"
 )
 
-type runningAppsSensor struct {
-	apps []string
-	linux.Sensor
-}
-
-func (r *runningAppsSensor) Attributes() map[string]any {
-	attributes := r.Sensor.Attributes()
-	attributes["running_apps"] = r.apps
-
-	return attributes
-}
-
-func newRunningAppsSensor() *runningAppsSensor {
-	return &runningAppsSensor{
-		Sensor: linux.Sensor{
-			DisplayName:     runningAppsName,
-			UniqueID:        runningAppsID,
-			IconString:      runningAppsIcon,
-			UnitsString:     runningAppsUnits,
-			StateClassValue: types.StateClassMeasurement,
+func newRunningAppsSensor(runningApps []string) sensor.Entity {
+	return sensor.Entity{
+		Name:       runningAppsName,
+		Units:      runningAppsUnits,
+		StateClass: types.StateClassMeasurement,
+		EntityState: &sensor.EntityState{
+			ID:    runningAppsID,
+			Icon:  runningAppsIcon,
+			State: len(runningApps),
+			Attributes: map[string]any{
+				"data_source": linux.DataSrcDbus,
+				"apps":        runningApps,
+			},
 		},
 	}
 }

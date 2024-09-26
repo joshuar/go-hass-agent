@@ -75,8 +75,8 @@ func newConnection(bus *dbusx.Bus, path dbus.ObjectPath) (*connection, error) {
 // monitor will set up a D-Bus watch on the connection path for
 // connection property changes and send those back through the returned channel
 // as sensors.
-func (c *connection) monitor(ctx context.Context, bus *dbusx.Bus) <-chan sensor.Details {
-	sensorCh := make(chan sensor.Details)
+func (c *connection) monitor(ctx context.Context, bus *dbusx.Bus) <-chan sensor.Entity {
+	sensorCh := make(chan sensor.Entity)
 
 	// Monitor connection properties.
 	go func() {
@@ -109,21 +109,21 @@ func (c *connection) monitor(ctx context.Context, bus *dbusx.Bus) <-chan sensor.
 //
 //nolint:gocognit,gocyclo,cyclop
 //revive:disable:function-length
-func (c *connection) monitorConnection(ctx context.Context, bus *dbusx.Bus) <-chan sensor.Details {
-	sensorCh := make(chan sensor.Details)
+func (c *connection) monitorConnection(ctx context.Context, bus *dbusx.Bus) <-chan sensor.Entity {
+	sensorCh := make(chan sensor.Entity)
 	monitorCtx, monitorCancel := context.WithCancel(ctx)
 
 	// Create sensors for monitored properties.
 	stateSensor := newConnectionStateSensor(bus, string(c.path), c.name)
 	if err := stateSensor.updateState(); err != nil {
 		c.logger.Debug("Could not update sensor.",
-			slog.String("sensor", stateSensor.Name()),
+			slog.String("sensor", stateSensor.Name),
 			slog.Any("error", err))
 	}
 
 	// Send initial states as sensors
 	go func() {
-		sensorCh <- stateSensor
+		sensorCh <- *stateSensor.Entity
 	}()
 
 	triggerCh, err := dbusx.NewWatch(
@@ -167,7 +167,7 @@ func (c *connection) monitorConnection(ctx context.Context, bus *dbusx.Bus) <-ch
 							c.logger.Warn("Could not update connection state sensor.", slog.Any("error", err))
 						} else {
 							// Send the connection state as a sensor.
-							sensorCh <- stateSensor
+							sensorCh <- *stateSensor.Entity
 						}
 					default:
 						c.logger.Debug("Unhandled property changed.",
@@ -178,7 +178,7 @@ func (c *connection) monitorConnection(ctx context.Context, bus *dbusx.Bus) <-ch
 				}
 			}
 
-			if stateSensor.value == connOffline {
+			if stateSensor.Entity.State == connOffline.String() {
 				break
 			}
 		}
@@ -190,9 +190,9 @@ func (c *connection) monitorConnection(ctx context.Context, bus *dbusx.Bus) <-ch
 // monitorWifi will monitor wifi connection properties.
 //
 //nolint:gocognit
-func (c *connection) monitorWifi(ctx context.Context, bus *dbusx.Bus) <-chan sensor.Details {
+func (c *connection) monitorWifi(ctx context.Context, bus *dbusx.Bus) <-chan sensor.Entity {
 	triggerCh := make(chan dbusx.Trigger)
-	sensorCh := make(chan sensor.Details)
+	sensorCh := make(chan sensor.Entity)
 	monitorCtx, monitorCancel := context.WithCancel(ctx)
 
 	// Get and send initial values for wifi props.

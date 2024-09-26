@@ -31,17 +31,17 @@ const (
 var ErrNoApps = errors.New("no running apps")
 
 type sensorWorker struct {
-	getAppStates func() (map[string]dbus.Variant, error)
-	activeApp    *activeAppSensor
-	runningApps  *runningAppsSensor
-	triggerCh    chan dbusx.Trigger
+	getAppStates     func() (map[string]dbus.Variant, error)
+	triggerCh        chan dbusx.Trigger
+	runningApp       string
+	totalRunningApps int
 }
 
-func (w *sensorWorker) Events(ctx context.Context) (chan sensor.Details, error) {
-	sensorCh := make(chan sensor.Details)
+func (w *sensorWorker) Events(ctx context.Context) (chan sensor.Entity, error) {
+	sensorCh := make(chan sensor.Entity)
 	logger := slog.Default().With(slog.String("worker", workerID))
 
-	sendSensors := func(ctx context.Context, sensorCh chan sensor.Details) {
+	sendSensors := func(ctx context.Context, sensorCh chan sensor.Entity) {
 		appSensors, err := w.Sensors(ctx)
 		if err != nil {
 			logger.Debug("Failed to update app sensors.", slog.Any("error", err))
@@ -71,9 +71,9 @@ func (w *sensorWorker) Events(ctx context.Context) (chan sensor.Details, error) 
 	return sensorCh, nil
 }
 
-func (w *sensorWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
+func (w *sensorWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 	var (
-		sensors     []sensor.Details
+		sensors     []sensor.Entity
 		runningApps []string
 	)
 
@@ -93,17 +93,14 @@ func (w *sensorWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
 			runningApps = append(runningApps, name)
 		}
 		// If the state is 2 this app is running and the currently active app.
-		if state == 2 && w.activeApp.State() != name {
-			w.activeApp.Value = name
-			sensors = append(sensors, w.activeApp)
+		if state == 2 && w.runningApp != name {
+			sensors = append(sensors, newActiveAppSensor(name))
 		}
 	}
 
 	// Update the running apps sensor.
-	if w.runningApps.State() != len(runningApps) {
-		w.runningApps.Value = len(runningApps)
-		w.runningApps.apps = runningApps
-		sensors = append(sensors, w.runningApps)
+	if w.totalRunningApps != len(runningApps) {
+		sensors = append(sensors, newRunningAppsSensor(runningApps))
 	}
 
 	return sensors, nil
@@ -146,8 +143,6 @@ func NewAppWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 
 			return apps, nil
 		},
-		activeApp:   newActiveAppSensor(),
-		runningApps: newRunningAppsSensor(),
 	}
 
 	return worker, nil

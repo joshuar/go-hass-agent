@@ -306,10 +306,10 @@ func (i *FyneUI) sensorsWindow() fyne.Window {
 		if sensor, err := hass.GetSensor(n); err == nil {
 			var valueStr strings.Builder
 
-			fmt.Fprintf(&valueStr, "%v", sensor.State())
+			fmt.Fprintf(&valueStr, "%v", sensor.State)
 
-			if sensor.Units() != "" {
-				fmt.Fprintf(&valueStr, " %s", sensor.Units())
+			if sensor.Units != "" {
+				fmt.Fprintf(&valueStr, " %s", sensor.Units)
 			}
 
 			return valueStr.String()

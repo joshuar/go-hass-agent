@@ -23,11 +23,6 @@ import (
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
-const (
-	screenLockIcon   = "mdi:eye-lock"
-	screenUnlockIcon = "mdi:eye-lock-open"
-)
-
 var ErrUnsupportedDesktop = errors.New("unsupported desktop environment")
 
 // screenControlCommand represents the D-Bus and MQTT Button Entity information
@@ -77,7 +72,7 @@ func setupCommands(_ context.Context, sessionBus *dbusx.Bus, systemBus *dbusx.Bu
 			&screenControlCommand{
 				name:   "Lock Session",
 				id:     device.Name + "_lock_session",
-				icon:   screenLockIcon,
+				icon:   screenLockedIcon,
 				intr:   loginBaseInterface,
 				path:   sessionPath,
 				method: sessionInterface + ".Lock",
@@ -86,7 +81,7 @@ func setupCommands(_ context.Context, sessionBus *dbusx.Bus, systemBus *dbusx.Bu
 			&screenControlCommand{
 				name:   "Unlock Session",
 				id:     device.Name + "_unlock_session",
-				icon:   screenUnlockIcon,
+				icon:   screenUnlockedIcon,
 				intr:   loginBaseInterface,
 				path:   sessionPath,
 				method: sessionInterface + ".UnLock",
@@ -99,7 +94,7 @@ func setupCommands(_ context.Context, sessionBus *dbusx.Bus, systemBus *dbusx.Bu
 			&screenControlCommand{
 				name:   "Activate Screensaver",
 				id:     device.Name + "_activate_screensaver",
-				icon:   screenLockIcon,
+				icon:   screenLockedIcon,
 				intr:   "org.xfce.ScreenSaver",
 				path:   "/",
 				method: "org.xfce.ScreenSaver.Lock",
@@ -111,7 +106,7 @@ func setupCommands(_ context.Context, sessionBus *dbusx.Bus, systemBus *dbusx.Bu
 			&screenControlCommand{
 				name:   "Activate Screensaver",
 				id:     device.Name + "_activate_screensaver",
-				icon:   screenLockIcon,
+				icon:   screenLockedIcon,
 				intr:   "org.cinnamon.ScreenSaver",
 				path:   "/org/cinnamon/ScreenSaver",
 				method: "org.cinnamon.ScreenSaver.Lock",

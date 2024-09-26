@@ -39,63 +39,6 @@ var ErrParseCPUUsage = errors.New("could not parse CPU usage")
 //nolint:lll
 var times = [...]string{"user_time", "nice_time", "system_time", "idle_time", "iowait_time", "irq_time", "softirq_time", "steal_time", "guest_time", "guest_nice_time"}
 
-type cpuUsageSensor struct {
-	cpuID           string
-	usageAttributes map[string]any
-	linux.Sensor
-}
-
-func (s *cpuUsageSensor) generateValues(clktck int64, details []string) {
-	var totalTime float64
-
-	// Don't calculate values if the length of the details array doesn't match
-	// what we expect.
-	if len(details) != len(times) {
-		return
-	}
-
-	attrs := make(map[string]any, len(times))
-
-	for idx, name := range times {
-		value, err := strconv.ParseFloat(details[idx], 64)
-		if err != nil {
-			continue
-		}
-
-		cpuTime := value / float64(clktck)
-		attrs[name] = cpuTime
-		totalTime += cpuTime
-	}
-
-	attrs["total_time"] = totalTime
-	s.usageAttributes = attrs
-
-	//nolint:forcetypeassert,mnd // we already parsed the value as a float
-	s.Value = attrs["user_time"].(float64) / totalTime * 100
-}
-
-func (s *cpuUsageSensor) Name() string {
-	switch {
-	case s.cpuID == totalCPUString:
-		return "Total CPU Usage"
-	default:
-		return "Core " + strings.TrimPrefix(s.cpuID, "cpu") + " CPU Usage"
-	}
-}
-
-func (s *cpuUsageSensor) ID() string {
-	switch {
-	case s.cpuID == totalCPUString:
-		return "total_cpu_usage"
-	default:
-		return "core_" + strings.TrimPrefix(s.cpuID, "cpu") + "_cpu_usage"
-	}
-}
-
-func (s *cpuUsageSensor) Attributes() map[string]any {
-	return s.usageAttributes
-}
-
 type usageWorker struct {
 	boottime time.Time
 	path     string
@@ -105,7 +48,7 @@ type usageWorker struct {
 
 func (w *usageWorker) UpdateDelta(_ time.Duration) {}
 
-func (w *usageWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
+func (w *usageWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 	return w.getStats()
 }
 
@@ -131,39 +74,81 @@ func NewUsageWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
 	return worker, nil
 }
 
-func (w *usageWorker) newUsageSensor(details []string, diagnostic bool) *cpuUsageSensor {
-	usageSensor := &cpuUsageSensor{
-		cpuID: details[0],
-		Sensor: linux.Sensor{
-			IconString:      "mdi:chip",
-			UnitsString:     "%",
-			DataSource:      linux.DataSrcProcfs,
-			StateClassValue: types.StateClassMeasurement,
-			IsDiagnostic:    diagnostic,
+func (w *usageWorker) newUsageSensor(details []string, category types.Category) sensor.Entity {
+	var name, id string
+
+	switch {
+	case details[0] == totalCPUString:
+		name = "Total CPU Usage"
+		id = "total_cpu_usage"
+	default:
+		num := strings.TrimPrefix(details[0], "cpu")
+		name = "Core " + num + " CPU Usage"
+		id = "core_" + num + "_cpu_usage"
+	}
+
+	value, attributes := generateUsageValues(w.clktck, details[1:])
+
+	return sensor.Entity{
+		Name:       name,
+		Units:      "%",
+		StateClass: types.StateClassMeasurement,
+		Category:   category,
+		EntityState: &sensor.EntityState{
+			ID:         id,
+			State:      value,
+			Attributes: attributes,
+			Icon:       "mdi:chip",
 		},
 	}
-	usageSensor.generateValues(w.clktck, details[1:])
-
-	return usageSensor
 }
 
-func (w *usageWorker) newCountSensor(name, icon, valueStr string) *linux.Sensor {
+func generateUsageValues(clktck int64, details []string) (float64, map[string]any) {
+	var totalTime float64
+
+	attrs := make(map[string]any, len(times))
+	attrs["data_source"] = linux.DataSrcProcfs
+
+	for idx, name := range times {
+		value, err := strconv.ParseFloat(details[idx], 64)
+		if err != nil {
+			continue
+		}
+
+		cpuTime := value / float64(clktck)
+		attrs[name] = cpuTime
+		totalTime += cpuTime
+	}
+
+	attrs["total_time"] = totalTime
+
+	//nolint:forcetypeassert,mnd // we already parsed the value as a float
+	value := attrs["user_time"].(float64) / totalTime * 100
+
+	return value, attrs
+}
+
+func (w *usageWorker) newCountSensor(name, icon, valueStr string) sensor.Entity {
 	valueInt, _ := strconv.Atoi(valueStr) //nolint:errcheck // if we can't parse it, value will be 0.
 
-	return &linux.Sensor{
-		DisplayName:     name,
-		UniqueID:        strcase.ToSnake(name),
-		Value:           valueInt,
-		IconString:      icon,
-		DataSource:      linux.DataSrcProcfs,
-		StateClassValue: types.StateClassTotalIncreasing,
-		IsDiagnostic:    true,
-		LastReset:       w.boottime.Format(time.RFC3339),
+	return sensor.Entity{
+		Name:       name,
+		StateClass: types.StateClassTotalIncreasing,
+		Category:   types.CategoryDiagnostic,
+		EntityState: &sensor.EntityState{
+			ID:    strcase.ToSnake(name),
+			Icon:  icon,
+			State: valueInt,
+			Attributes: map[string]any{
+				"data_source": linux.DataSrcProcfs,
+				"last_reset":  w.boottime.Format(time.RFC3339),
+			},
+		},
 	}
 }
 
-func (w *usageWorker) getStats() ([]sensor.Details, error) {
-	var sensors []sensor.Details
+func (w *usageWorker) getStats() ([]sensor.Entity, error) {
+	var sensors []sensor.Entity
 
 	statsFH, err := os.Open(w.path)
 	if err != nil {
@@ -189,9 +174,9 @@ func (w *usageWorker) getStats() ([]sensor.Details, error) {
 		// Create a sensor depending on the line.
 		switch {
 		case cols[0] == totalCPUString:
-			sensors = append(sensors, w.newUsageSensor(cols, false))
+			sensors = append(sensors, w.newUsageSensor(cols, types.CategoryDefault))
 		case strings.Contains(cols[0], "cpu"):
-			sensors = append(sensors, w.newUsageSensor(cols, true))
+			sensors = append(sensors, w.newUsageSensor(cols, types.CategoryDiagnostic))
 			sensors = append(sensors, newCPUFreqSensor(cols[0]))
 		case cols[0] == "ctxt":
 			sensors = append(sensors, w.newCountSensor("Total CPU Context Switches", "mdi:counter", cols[1]))

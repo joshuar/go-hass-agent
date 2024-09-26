@@ -17,12 +17,12 @@ var (
 )
 
 type Tracker struct {
-	sensor map[string]Details
+	sensor map[string]*Entity
 	mu     sync.Mutex
 }
 
 // Get fetches a sensors current tracked state.
-func (t *Tracker) Get(id string) (Details, error) {
+func (t *Tracker) Get(id string) (*Entity, error) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
@@ -44,7 +44,7 @@ func (t *Tracker) SensorList() []string {
 	sortedEntities := make([]string, 0, len(t.sensor))
 
 	for name, sensor := range t.sensor {
-		if sensor.State() != nil {
+		if sensor.State != nil {
 			sortedEntities = append(sortedEntities, name)
 		}
 	}
@@ -55,7 +55,7 @@ func (t *Tracker) SensorList() []string {
 }
 
 // Add creates a new sensor in the tracker based on a received state update.
-func (t *Tracker) Add(sensor Details) error {
+func (t *Tracker) Add(sensor *Entity) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
@@ -63,7 +63,7 @@ func (t *Tracker) Add(sensor Details) error {
 		return ErrTrackerNotReady
 	}
 
-	t.sensor[sensor.ID()] = sensor
+	t.sensor[sensor.ID] = sensor
 
 	return nil
 }
@@ -76,7 +76,7 @@ func (t *Tracker) Reset() {
 
 func NewTracker() *Tracker {
 	return &Tracker{
-		sensor: make(map[string]Details),
+		sensor: make(map[string]*Entity),
 		mu:     sync.Mutex{},
 	}
 }

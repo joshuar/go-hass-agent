@@ -28,7 +28,7 @@ const (
 	externalIPJitterAmount         = 10 * time.Second
 	externalIPUpdateRequestTimeout = 15 * time.Second
 
-	externalIPWorkerID = "external_ip_sensor" //nolint:gosec // false positive
+	externalIPWorkerID = "external_ip"
 )
 
 var ipLookupHosts = map[string]map[int]string{
@@ -41,60 +41,33 @@ var (
 	ErrNoLookupHosts = errors.New("no IP lookup hosts found")
 )
 
-type address struct {
-	addr net.IP
-}
+func newExternalIPSensor(addr net.IP) sensor.Entity {
+	var name, id, icon string
 
-func (a *address) Name() string {
 	switch {
-	case a.addr.To4() != nil:
-		return "External IPv4 Address"
-	case a.addr.To16() != nil:
-		return "External IPv6 Address"
-	default:
-		return "External IP Address"
+	case addr.To4() != nil:
+		name = "External IPv4 Address"
+		id = "external_ipv4_address"
+		icon = "mdi:numeric-4-box-outline"
+	case addr.To16() != nil:
+		name = "External IPv6 Address"
+		id = "external_ipv6_address"
+		icon = "mdi:numeric-6-box-outline"
 	}
-}
 
-func (a *address) ID() string {
-	switch {
-	case a.addr.To4() != nil:
-		return "external_ipv4_address"
-	case a.addr.To16() != nil:
-		return "external_ipv6_address"
-	default:
-		return "external_ip_address"
+	return sensor.Entity{
+		Name:     name,
+		Category: types.CategoryDiagnostic,
+		EntityState: &sensor.EntityState{
+			ID:         id,
+			Icon:       icon,
+			EntityType: types.Sensor,
+			State:      addr.String(),
+			Attributes: map[string]any{
+				"last_updated": time.Now().Format(time.RFC3339),
+			},
+		},
 	}
-}
-
-func (a *address) Icon() string {
-	switch {
-	case a.addr.To4() != nil:
-		return "mdi:numeric-4-box-outline"
-	case a.addr.To16() != nil:
-		return "mdi:numeric-6-box-outline"
-	default:
-		return "mdi:ip"
-	}
-}
-
-func (a *address) SensorType() types.SensorClass { return types.Sensor }
-
-func (a *address) DeviceClass() types.DeviceClass { return 0 }
-
-func (a *address) StateClass() types.StateClass { return 0 }
-
-func (a *address) State() any { return a.addr.String() }
-
-func (a *address) Units() string { return "" }
-
-func (a *address) Category() string { return types.CategoryDiagnostic }
-
-func (a *address) Attributes() map[string]any {
-	attributes := make(map[string]any)
-	attributes["last_updated"] = time.Now().Format(time.RFC3339)
-
-	return attributes
 }
 
 type externalIPWorker struct {
@@ -114,8 +87,8 @@ func (w *externalIPWorker) Stop() error {
 }
 
 //nolint:mnd
-func (w *externalIPWorker) Sensors(ctx context.Context) ([]sensor.Details, error) {
-	sensors := make([]sensor.Details, 0, 2)
+func (w *externalIPWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
+	sensors := make([]sensor.Entity, 0, 2)
 
 	for _, ver := range []int{4, 6} {
 		ipAddr, err := w.lookupExternalIPs(ctx, ver)
@@ -125,14 +98,14 @@ func (w *externalIPWorker) Sensors(ctx context.Context) ([]sensor.Details, error
 			continue
 		}
 
-		sensors = append(sensors, ipAddr)
+		sensors = append(sensors, newExternalIPSensor(ipAddr))
 	}
 
 	return sensors, nil
 }
 
-func (w *externalIPWorker) Start(ctx context.Context) (<-chan sensor.Details, error) {
-	sensorCh := make(chan sensor.Details)
+func (w *externalIPWorker) Start(ctx context.Context) (<-chan sensor.Entity, error) {
+	sensorCh := make(chan sensor.Entity)
 	w.doneCh = make(chan struct{})
 
 	updater := func(_ time.Duration) {
@@ -159,7 +132,7 @@ func (w *externalIPWorker) Start(ctx context.Context) (<-chan sensor.Details, er
 	return sensorCh, nil
 }
 
-func (w *externalIPWorker) lookupExternalIPs(ctx context.Context, ver int) (*address, error) {
+func (w *externalIPWorker) lookupExternalIPs(ctx context.Context, ver int) (net.IP, error) {
 	for host, addr := range ipLookupHosts {
 		w.logger.
 			With(slog.String("worker", externalIPWorkerID)).
@@ -192,7 +165,7 @@ func (w *externalIPWorker) lookupExternalIPs(ctx context.Context, ver int) (*add
 			return nil, ErrInvalidIP
 		}
 
-		return &address{addr: a}, nil
+		return a, nil
 	}
 
 	return nil, ErrNoLookupHosts

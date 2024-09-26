@@ -26,13 +26,13 @@ type usageWorker struct{}
 
 func (w *usageWorker) UpdateDelta(_ time.Duration) {}
 
-func (w *usageWorker) Sensors(ctx context.Context) ([]sensor.Details, error) {
+func (w *usageWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
 	mounts, err := getMounts(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not get mount points: %w", err)
 	}
 
-	sensors := make([]sensor.Details, 0, len(mounts))
+	sensors := make([]sensor.Entity, 0, len(mounts))
 
 	for _, mount := range mounts {
 		sensors = append(sensors, newDiskUsageSensor(mount))

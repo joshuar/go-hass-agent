@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
@@ -30,34 +31,44 @@ const (
 
 type powerSignal int
 
-type powerStateSensor struct {
-	linux.Sensor
-	signal powerSignal
+func newPowerState(name powerSignal, value any) sensor.Entity {
+	return sensor.Entity{
+		Name:     "Power State",
+		Category: types.CategoryDiagnostic,
+		EntityState: &sensor.EntityState{
+			ID:    "power_state",
+			Icon:  powerStateIcon(value),
+			State: powerStateString(name, value),
+			Attributes: map[string]any{
+				"data_source": linux.DataSrcDbus,
+			},
+		},
+	}
 }
 
-func (s *powerStateSensor) State() any {
-	value, ok := s.Value.(bool)
+func powerStateString(signal powerSignal, value any) string {
+	state, ok := value.(bool)
 	if !ok {
 		return sensor.StateUnknown
 	}
 
 	switch {
-	case s.signal == suspend && value:
+	case signal == suspend && state:
 		return "Suspended"
-	case s.signal == shutdown && value:
+	case signal == shutdown && state:
 		return "Powered Off"
 	default:
 		return "Powered On"
 	}
 }
 
-func (s *powerStateSensor) Icon() string {
-	str, ok := s.State().(string)
+func powerStateIcon(value any) string {
+	state, ok := value.(string)
 	if !ok {
-		str = "mdi:help"
+		return "mdi:power-on"
 	}
 
-	switch str {
+	switch state {
 	case "Suspended":
 		return "mdi:power-sleep"
 	case "Powered Off":
@@ -67,25 +78,12 @@ func (s *powerStateSensor) Icon() string {
 	}
 }
 
-func newPowerState(signalName powerSignal, signalValue any) *powerStateSensor {
-	return &powerStateSensor{
-		signal: signalName,
-		Sensor: linux.Sensor{
-			DisplayName:  "Power State",
-			UniqueID:     "power_state",
-			Value:        signalValue,
-			DataSource:   linux.DataSrcDbus,
-			IsDiagnostic: true,
-		},
-	}
-}
-
 type stateWorker struct {
 	triggerCh chan dbusx.Trigger
 }
 
-func (w *stateWorker) Events(ctx context.Context) (chan sensor.Details, error) {
-	sensorCh := make(chan sensor.Details)
+func (w *stateWorker) Events(ctx context.Context) (chan sensor.Entity, error) {
+	sensorCh := make(chan sensor.Entity)
 
 	// Watch for state changes.
 	go func() {
@@ -128,8 +126,8 @@ func (w *stateWorker) Events(ctx context.Context) (chan sensor.Details, error) {
 // Sensors returns the current sensors states. Assuming that if this is called,
 // then the machine is obviously running and not suspended, otherwise this
 // couldn't be called?
-func (w *stateWorker) Sensors(_ context.Context) ([]sensor.Details, error) {
-	return []sensor.Details{newPowerState(shutdown, false)}, nil
+func (w *stateWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
+	return []sensor.Entity{newPowerState(shutdown, false)}, nil
 }
 
 func NewStateWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
