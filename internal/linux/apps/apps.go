@@ -94,6 +94,7 @@ func (w *sensorWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 		}
 		// If the state is 2 this app is running and the currently active app.
 		if state == 2 && w.runningApp != name {
+			w.runningApp = name
 			sensors = append(sensors, newActiveAppSensor(name))
 		}
 	}
@@ -101,6 +102,7 @@ func (w *sensorWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 	// Update the running apps sensor.
 	if w.totalRunningApps != len(runningApps) {
 		sensors = append(sensors, newRunningAppsSensor(runningApps))
+		w.totalRunningApps = len(runningApps)
 	}
 
 	return sensors, nil
