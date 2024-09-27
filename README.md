@@ -228,10 +228,15 @@ this app:
     - *Strength* (the strength of the signal of the Wi-Fi network, in dB).
       Updated when strength changes.
     - *BSSID* (the BSSID of the Wi-Fi network). Updated when BSSID changes.
+  - *Device/Link State*
+    - Via netlink.
   - *Bytes Received/Sent* (in B). Updated ~every 5s.
-    - Attributes: packet count, drops, errors. Via ProcFS.
+    - Per network device/link and total.
+    - Via netlink.
   - *Bytes Received/Sent Rate* (transfer rate, in B/s). Updated ~every 5
     seconds. Via ProcFS.
+    - Per network device/link and total.
+    - Via netlink.
 - CPU:
   - *Load Average (1/5/15 min)*. Updated ~every 1 minute. Via ProcFS.
   - *CPU Usage* (in %). Both total (all-cores) and per-core. Updated ~every 10
@@ -284,6 +289,9 @@ this app:
     - Any *temp*, *fan*, *power* and other hardware sensors, including associated
       *alarms*. Updated ~every 1 minute.
     - Extracted from the `/sys/class/hwmon` file system.
+- Home Assistant RELATED:
+  - *Connection Latency* time (in ms) to connect to configured Home Assistant
+    server.
 
 #### All Operating Systems
 
