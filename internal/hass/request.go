@@ -40,12 +40,12 @@ type LocationRequest struct {
 }
 
 type request struct {
-	Data        any    `json:"data"`
-	RequestType string `json:"type" validate:"oneof=register_sensor update_sensor_states update_location"`
+	Data        any    `json:"data" validate:"required"`
+	RequestType string `json:"type" validate:"required,oneof=register_sensor update_sensor_states update_location"`
 }
 
 func (r *request) Validate() error {
-	err := validate.Struct(r.Data)
+	err := validate.Struct(r)
 	if err != nil {
 		return fmt.Errorf("%w: %s", ErrValidationFailed, parseValidationErrors(err))
 	}

@@ -5,7 +5,10 @@
 
 package hass
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 type apiError struct {
 	Code    any    `json:"code,omitempty"`
@@ -13,7 +16,20 @@ type apiError struct {
 }
 
 func (e *apiError) Error() string {
-	return fmt.Sprintf("code %v: %s", e.Code, e.Message)
+	var msg []string
+	if e.Code != nil {
+		msg = append(msg, fmt.Sprintf("code %v", e.Code))
+	}
+
+	if e.Message != "" {
+		msg = append(msg, e.Message)
+	}
+
+	if len(msg) == 0 {
+		msg = append(msg, "unknown error")
+	}
+
+	return strings.Join(msg, ": ")
 }
 
 type responseStatus struct {
