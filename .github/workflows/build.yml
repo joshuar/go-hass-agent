@@ -13,7 +13,7 @@ permissions:
 
 concurrency:
   group: "build"
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 env:
   COSIGN_VERSION: 'v2.4.0'
