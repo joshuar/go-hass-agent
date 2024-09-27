@@ -39,6 +39,7 @@ jobs:
           azure.archive.ubuntu.com:80
           esm.ubuntu.com:443
           ghcr.io:443
+          api.github.com:443
           github.com:443
           golang.org:443
           motd.ubuntu.com:443
