@@ -43,10 +43,8 @@ func (t *Tracker) SensorList() []string {
 
 	sortedEntities := make([]string, 0, len(t.sensor))
 
-	for name, sensor := range t.sensor {
-		if sensor.State != nil {
-			sortedEntities = append(sortedEntities, name)
-		}
+	for name := range t.sensor {
+		sortedEntities = append(sortedEntities, name)
 	}
 
 	sort.Strings(sortedEntities)
