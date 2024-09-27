@@ -34,7 +34,7 @@ jobs:
       uses: step-security/harden-runner@91182cccc01eb5e619899d80e4e971d6181294a7 # v1
       with:
         disable-sudo: true
-        egress-policy: block
+        egress-policy: audit
         allowed-endpoints: >
           github.com:443
     - name: Checkout repository
@@ -73,7 +73,7 @@ jobs:
       uses: step-security/harden-runner@91182cccc01eb5e619899d80e4e971d6181294a7 # v1
       with:
         disable-sudo: true
-        egress-policy: block
+        egress-policy: audit
         allowed-endpoints: >
           github.com:443
     - name: Checkout repository
