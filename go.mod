@@ -14,7 +14,7 @@ require (
 	github.com/jeandeaual/go-locale v0.0.0-20240223122105-ce5225dcaa49
 	github.com/joshuar/go-hass-anything/v11 v11.1.0
 	github.com/lthibault/jitterbug/v2 v2.2.2
-	github.com/lxzan/gws v1.8.7
+	github.com/lxzan/gws v1.8.8
 	github.com/magefile/mage v1.15.0
 	github.com/matryer/moq v0.5.0
 	github.com/pelletier/go-toml/v2 v2.2.3
@@ -117,7 +117,7 @@ require (
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
-	github.com/go-resty/resty/v2 v2.15.0
+	github.com/go-resty/resty/v2 v2.15.2
 	github.com/go-test/deep v1.1.1
 	github.com/go-text/render v0.1.1-0.20240418202334-dd62631dae9b // indirect
 	github.com/go-text/typesetting v0.1.0 // indirect
@@ -136,7 +136,7 @@ require (
 	github.com/miekg/dns v1.1.41 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
-	github.com/samber/slog-multi v1.2.1
+	github.com/samber/slog-multi v1.2.2
 	github.com/srwiley/oksvg v0.0.0-20221011165216-be6e8873101c // indirect
 	github.com/srwiley/rasterx v0.0.0-20220730225603-2ab79fcdd4ef // indirect
 	github.com/tklauser/go-sysconf v0.3.14
