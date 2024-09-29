@@ -59,7 +59,7 @@ func (s *ScriptSensor) SensorType() types.SensorClass {
 }
 
 func (s *ScriptSensor) DeviceClass() types.DeviceClass {
-	for d := types.DeviceClassApparentPower; d <= types.DeviceClassWindSpeed; d++ {
+	for d := types.SensorDeviceClassApparentPower; d <= types.SensorDeviceClassWindSpeed; d++ {
 		if s.SensorDeviceClass == d.String() {
 			return d
 		}

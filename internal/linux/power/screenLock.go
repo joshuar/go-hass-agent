@@ -27,7 +27,8 @@ const (
 
 func newScreenlockSensor(value bool) sensor.Entity {
 	return sensor.Entity{
-		Name: "Screen Lock",
+		Name:        "Screen Lock",
+		DeviceClass: types.BinarySensorDeviceClassLock,
 		EntityState: &sensor.EntityState{
 			ID:         "screen_lock",
 			Icon:       screenLockIcon(value),

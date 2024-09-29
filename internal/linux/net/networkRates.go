@@ -88,22 +88,22 @@ func newNetStatsSensor(name string, sensorType netStatsType, stats *rtnetlink.Li
 	case bytesRecv:
 		netSensor.Icon = "mdi:download-network"
 		netSensor.Units = countUnit
-		netSensor.DeviceClass = types.DeviceClassDataSize
+		netSensor.DeviceClass = types.SensorDeviceClassDataSize
 		netSensor.StateClass = types.StateClassMeasurement
 	case bytesSent:
 		netSensor.Icon = "mdi:upload-network"
 		netSensor.Units = countUnit
-		netSensor.DeviceClass = types.DeviceClassDataSize
+		netSensor.DeviceClass = types.SensorDeviceClassDataSize
 		netSensor.StateClass = types.StateClassMeasurement
 	case bytesRecvRate:
 		netSensor.Icon = "mdi:transfer-down"
 		netSensor.Units = rateUnit
-		netSensor.DeviceClass = types.DeviceClassDataRate
+		netSensor.DeviceClass = types.SensorDeviceClassDataRate
 		netSensor.StateClass = types.StateClassMeasurement
 	case bytesSentRate:
 		netSensor.Icon = "mdi:transfer-up"
 		netSensor.Units = rateUnit
-		netSensor.DeviceClass = types.DeviceClassDataRate
+		netSensor.DeviceClass = types.SensorDeviceClassDataRate
 		netSensor.StateClass = types.StateClassMeasurement
 	}
 

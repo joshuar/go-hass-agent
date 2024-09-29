@@ -47,19 +47,19 @@ func newWifiSensor(prop string, value any) sensor.Entity {
 		wifiSensor.Name = "Wi-Fi Link Speed"
 		wifiSensor.ID = "wi_fi_link_speed"
 		wifiSensor.Units = "kB/s"
-		wifiSensor.DeviceClass = types.DeviceClassDataRate
+		wifiSensor.DeviceClass = types.SensorDeviceClassDataRate
 		wifiSensor.StateClass = types.StateClassMeasurement
 	case freqPropName:
 		wifiSensor.Name = "Wi-Fi Frequency"
 		wifiSensor.ID = "wi_fi_frequency"
 		wifiSensor.Units = "MHz"
-		wifiSensor.DeviceClass = types.DeviceClassFrequency
+		wifiSensor.DeviceClass = types.SensorDeviceClassFrequency
 		wifiSensor.StateClass = types.StateClassMeasurement
 	case bandwidthPropName:
 		wifiSensor.Name = "Wi-Fi Bandwidth"
 		wifiSensor.ID = "wi_fi_bandwidth"
 		wifiSensor.Units = "MHz"
-		wifiSensor.DeviceClass = types.DeviceClassFrequency
+		wifiSensor.DeviceClass = types.SensorDeviceClassFrequency
 		wifiSensor.StateClass = types.StateClassMeasurement
 	case strPropName:
 		wifiSensor.Name = "Wi-Fi Signal Strength"

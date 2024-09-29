@@ -39,16 +39,16 @@ func newBatterySensor(battery *upowerBattery, sensorType batterySensor, value db
 	switch sensorType {
 	case battPercentage:
 		icon = batteryPercentIcon(value.Value())
-		deviceClass = types.DeviceClassBattery
+		deviceClass = types.SensorDeviceClassBattery
 		stateClass = types.StateClassMeasurement
 		units = "%"
 	case battTemp:
-		deviceClass = types.DeviceClassTemperature
+		deviceClass = types.SensorDeviceClassTemperature
 		stateClass = types.StateClassMeasurement
 		units = "°C"
 	case battEnergyRate:
 		icon = batteryChargeIcon(value.Value())
-		deviceClass = types.DeviceClassPower
+		deviceClass = types.SensorDeviceClassPower
 		stateClass = types.StateClassMeasurement
 		units = "W"
 	default:

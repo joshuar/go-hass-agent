@@ -50,7 +50,7 @@ func newMemSensor(id memStatID, stat *memStat) sensor.Entity {
 
 	return sensor.Entity{
 		Name:        id.String(),
-		DeviceClass: types.DeviceClassDataSize,
+		DeviceClass: types.SensorDeviceClassDataSize,
 		StateClass:  types.StateClassTotal,
 		Units:       memoryUsageSensorUnits,
 		EntityState: &sensor.EntityState{

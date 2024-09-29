@@ -58,6 +58,7 @@ func newHWSensor(details *hwmon.Sensor) sensor.Entity {
 
 		newSensor.Icon = "mdi:alarm-light-off"
 		newSensor.EntityType = types.BinarySensor
+		newSensor.DeviceClass = types.BinarySensorDeviceClassProblem
 	default:
 		icon, deviceClass := parseSensorType(details.MonitorType.String())
 		newSensor.Icon = icon
@@ -97,21 +98,21 @@ func NewHWMonWorker(_ context.Context) (*linux.PollingSensorWorker, error) {
 func parseSensorType(t string) (icon string, deviceclass types.DeviceClass) {
 	switch t {
 	case "Temp":
-		return "mdi:thermometer", types.DeviceClassTemperature
+		return "mdi:thermometer", types.SensorDeviceClassTemperature
 	case "Fan":
 		return "mdi:turbine", 0
 	case "Power":
-		return "mdi:flash", types.DeviceClassPower
+		return "mdi:flash", types.SensorDeviceClassPower
 	case "Voltage":
-		return "mdi:lightning-bolt", types.DeviceClassVoltage
+		return "mdi:lightning-bolt", types.SensorDeviceClassVoltage
 	case "Energy":
-		return "mdi:lightning-bolt", types.DeviceClassEnergyStorage
+		return "mdi:lightning-bolt", types.SensorDeviceClassEnergyStorage
 	case "Current":
-		return "mdi:current-ac", types.DeviceClassCurrent
+		return "mdi:current-ac", types.SensorDeviceClassCurrent
 	case "Frequency", "PWM":
-		return "mdi:sawtooth-wave", types.DeviceClassFrequency
+		return "mdi:sawtooth-wave", types.SensorDeviceClassFrequency
 	case "Humidity":
-		return "mdi:water-percent", types.DeviceClassHumidity
+		return "mdi:water-percent", types.SensorDeviceClassHumidity
 	default:
 		return "mdi:chip", 0
 	}

@@ -41,7 +41,7 @@ func newConnectionLatencySensor(info resty.TraceInfo) sensor.Entity {
 	connectionLatency := sensor.Entity{
 		Name:        "Connection Latency",
 		Units:       connectionLatencyUnits,
-		DeviceClass: types.DeviceClassDuration,
+		DeviceClass: types.SensorDeviceClassDuration,
 		StateClass:  types.StateClassMeasurement,
 		Category:    types.CategoryDiagnostic,
 		EntityState: &sensor.EntityState{
