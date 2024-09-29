@@ -5,7 +5,7 @@
 
 package types
 
-//go:generate stringer -type=StateClass -output StatedClass_generated.go -linecomment
+//go:generate stringer -type=StateClass -output stateclass_generated.go -linecomment
 const (
 	StateClassNone            StateClass = iota //
 	StateClassMeasurement                       // measurement
