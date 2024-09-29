@@ -272,6 +272,13 @@ this app:
   - *Uptime*. Updated ~every 15 minutes. Via ProcFS.
   - *Kernel Version* (version of the currently running kernel). Updated on agent
     start. Via ProcFS.
+  - Vulnerabilities:
+    - *Firmware Security* the [Host Security ID](https://fwupd.github.io/libfwupdplugin/hsi.html) of the device running Go Hass Agent.
+      - Attributes show details for each HSI attribute.
+      - Via D-Bus. Requires `fwupd` running on the system.
+    - *CPU Vulnerabilities* whether any CPU vulnerabilities have been detected by the kernel and exploitable/unmitigated.
+      - Attributes show the status of each vulnerability detected.
+      - Via ProcFS.
   - Distribution Details:
     - *Distribution Name* (name of the running distribution, e.g., Fedora,
     Ubuntu).
@@ -289,9 +296,6 @@ this app:
     - Any *temp*, *fan*, *power* and other hardware sensors, including associated
       *alarms*. Updated ~every 1 minute.
     - Extracted from the `/sys/class/hwmon` file system.
-- Home Assistant RELATED:
-  - *Connection Latency* time (in ms) to connect to configured Home Assistant
-    server.
 
 #### All Operating Systems
 
