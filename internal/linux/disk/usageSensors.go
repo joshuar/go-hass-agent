@@ -39,10 +39,10 @@ func newDiskUsageSensor(mount *mount) sensor.Entity {
 		Name:       "Mountpoint " + mount.mountpoint + " Usage",
 		StateClass: types.StateClassTotal,
 		Units:      diskUsageSensorUnits,
-		EntityState: &sensor.EntityState{
+		State: &sensor.State{
 			ID:         id,
 			Icon:       diskUsageSensorIcon,
-			State:      math.Round(float64(usedPc)/0.05) * 0.05,
+			Value:      math.Round(float64(usedPc)/0.05) * 0.05,
 			Attributes: mount.attributes,
 		},
 	}

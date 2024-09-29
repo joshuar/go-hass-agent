@@ -47,9 +47,9 @@ func (w *timeWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 			Units:       "h",
 			DeviceClass: types.SensorDeviceClassDuration,
 			StateClass:  types.StateClassMeasurement,
-			EntityState: &sensor.EntityState{
+			State: &sensor.State{
 				ID:    "uptime",
-				State: w.getUptime() / 60 / 60, //nolint:mnd
+				Value: w.getUptime() / 60 / 60, //nolint:mnd
 				Icon:  "mdi:restart",
 				Attributes: map[string]any{
 					"data_source":                linux.DataSrcProcfs,
@@ -65,9 +65,9 @@ func (w *timeWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 				Name:        "Last Reboot",
 				Category:    types.CategoryDiagnostic,
 				DeviceClass: types.SensorDeviceClassTimestamp,
-				EntityState: &sensor.EntityState{
+				State: &sensor.State{
 					ID:    "last_reboot",
-					State: w.boottime.Format(time.RFC3339),
+					Value: w.boottime.Format(time.RFC3339),
 					Icon:  "mdi:restart",
 				},
 			})

@@ -53,10 +53,10 @@ func newMemSensor(id memStatID, stat *memStat) sensor.Entity {
 		DeviceClass: types.SensorDeviceClassDataSize,
 		StateClass:  types.StateClassTotal,
 		Units:       memoryUsageSensorUnits,
-		EntityState: &sensor.EntityState{
+		State: &sensor.State{
 			ID:    strcase.ToSnake(id.String()),
 			Icon:  memorySensorIcon,
-			State: value,
+			Value: value,
 			Attributes: map[string]any{
 				"data_source":                linux.DataSrcProcfs,
 				"native_unit_of_measurement": memoryUsageSensorUnits,
@@ -79,10 +79,10 @@ func newMemSensorPc(name string, value, total uint64) sensor.Entity {
 		Name:       name,
 		StateClass: types.StateClassTotal,
 		Units:      memoryUsageSensorPcUnits,
-		EntityState: &sensor.EntityState{
+		State: &sensor.State{
 			ID:    strcase.ToSnake(name),
 			Icon:  memorySensorIcon,
-			State: valuePc,
+			Value: valuePc,
 			Attributes: map[string]any{
 				"data_source": linux.DataSrcProcfs,
 			},

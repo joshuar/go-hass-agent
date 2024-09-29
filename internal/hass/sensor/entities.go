@@ -14,8 +14,8 @@ const (
 	StateUnknown = "Unknown"
 )
 
-type EntityState struct {
-	State      any              `json:"state" validate:"required"`
+type State struct {
+	Value      any              `json:"state" validate:"required"`
 	Attributes map[string]any   `json:"attributes,omitempty" validate:"omitempty"`
 	Icon       string           `json:"icon,omitempty" validate:"omitempty,startswith=mdi:"`
 	ID         string           `json:"unique_id" validate:"required"`
@@ -23,7 +23,7 @@ type EntityState struct {
 }
 
 //nolint:wrapcheck
-func (s EntityState) MarshalJSON() ([]byte, error) {
+func (s State) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&struct {
 		State      any            `json:"state" validate:"required"`
 		Attributes map[string]any `json:"attributes,omitempty" validate:"omitempty"`
@@ -31,7 +31,7 @@ func (s EntityState) MarshalJSON() ([]byte, error) {
 		ID         string         `json:"unique_id" validate:"required"`
 		EntityType string         `json:"type" validate:"omitempty"`
 	}{
-		State:      s.State,
+		State:      s.Value,
 		Attributes: s.Attributes,
 		Icon:       s.Icon,
 		ID:         s.ID,
@@ -40,7 +40,7 @@ func (s EntityState) MarshalJSON() ([]byte, error) {
 }
 
 type Entity struct {
-	*EntityState
+	*State
 	Name        string            `json:"name" validate:"required"`
 	Units       string            `json:"unit_of_measurement,omitempty" validate:"omitempty"`
 	DeviceClass types.DeviceClass `json:"device_class,omitempty" validate:"omitempty"`
@@ -62,7 +62,7 @@ func (e Entity) MarshalJSON() ([]byte, error) {
 		StateClass  string         `json:"state_class,omitempty" validate:"omitempty"`
 		Category    string         `json:"entity_category,omitempty" validate:"omitempty"`
 	}{
-		State:       e.State,
+		State:       e.Value,
 		Attributes:  e.Attributes,
 		Icon:        e.Icon,
 		ID:          e.ID,

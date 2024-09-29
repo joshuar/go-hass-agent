@@ -44,9 +44,9 @@ func newCPUFreqSensor(id string) sensor.Entity {
 		DeviceClass: types.SensorDeviceClassFrequency,
 		StateClass:  types.StateClassMeasurement,
 		Category:    types.CategoryDiagnostic,
-		EntityState: &sensor.EntityState{
+		State: &sensor.State{
 			ID:         "cpufreq_core" + num + "_frequency",
-			State:      info.freq,
+			Value:      info.freq,
 			Icon:       cpuFreqIcon,
 			EntityType: types.Sensor,
 			Attributes: map[string]any{

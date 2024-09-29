@@ -54,9 +54,9 @@ func (w *settingsWorker) newAccentColorSensor(accent string) (sensor.Entity, err
 	return sensor.Entity{
 			Category: types.CategoryDiagnostic,
 			Name:     "Desktop Accent Color",
-			EntityState: &sensor.EntityState{
+			State: &sensor.State{
 				ID:    "desktop_accent_color",
-				State: accent,
+				Value: accent,
 				Icon:  "mdi:palette",
 				Attributes: map[string]any{
 					"data_source": linux.DataSrcDbus,
@@ -79,9 +79,9 @@ func (w *settingsWorker) newColorSchemeSensor(scheme string) (sensor.Entity, err
 	newSensor := sensor.Entity{
 		Category: types.CategoryDiagnostic,
 		Name:     "Desktop Color Scheme",
-		EntityState: &sensor.EntityState{
+		State: &sensor.State{
 			ID:    "desktop_color_scheme",
-			State: scheme,
+			Value: scheme,
 			Attributes: map[string]any{
 				"data_source": linux.DataSrcDbus,
 			},

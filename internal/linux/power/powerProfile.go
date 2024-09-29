@@ -29,9 +29,9 @@ func newPowerSensor(profile string) sensor.Entity {
 	return sensor.Entity{
 		Name:     "Power Profile",
 		Category: types.CategoryDiagnostic,
-		EntityState: &sensor.EntityState{
+		State: &sensor.State{
 			ID:    "power_profile",
-			State: profile,
+			Value: profile,
 			Icon:  "mdi:flash",
 			Attributes: map[string]any{
 				"data_source": linux.DataSrcDbus,

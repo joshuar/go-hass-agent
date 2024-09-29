@@ -41,9 +41,9 @@ func (s *diskIOSensor) update(stats map[stat]uint64, delta time.Duration) {
 
 	switch s.sensorType {
 	case diskReads:
-		s.State = stats[TotalReads]
+		s.Value = stats[TotalReads]
 	case diskWrites:
-		s.State = stats[TotalWrites]
+		s.Value = stats[TotalWrites]
 	case diskReadRate:
 		curr = stats[TotalSectorsRead]
 	case diskWriteRate:
@@ -54,9 +54,9 @@ func (s *diskIOSensor) update(stats map[stat]uint64, delta time.Duration) {
 	// time interval since last measurement.
 	if s.sensorType == diskReadRate || s.sensorType == diskWriteRate {
 		if uint64(delta.Seconds()) > 0 {
-			s.State = (curr - s.prevValue) / uint64(delta.Seconds()) / 2
+			s.Value = (curr - s.prevValue) / uint64(delta.Seconds()) / 2
 		} else {
-			s.State = 0
+			s.Value = 0
 		}
 
 		s.prevValue = curr
@@ -84,7 +84,7 @@ func newDiskIOSensor(boottime time.Time, device *device, sensorType ioSensor) *d
 			Name:       generateName(device.id, sensorType.String()),
 			StateClass: types.StateClassTotalIncreasing,
 			Units:      diskCountUnits,
-			EntityState: &sensor.EntityState{
+			State: &sensor.State{
 				ID:   generateID(device.id, sensorType.String()),
 				Icon: generateIcon(sensorType),
 				Attributes: map[string]any{
@@ -118,7 +118,7 @@ func newDiskIORateSensor(device *device, sensorType ioSensor) *diskIOSensor {
 			DeviceClass: types.SensorDeviceClassDataRate,
 			StateClass:  types.StateClassMeasurement,
 			Units:       diskRateUnits,
-			EntityState: &sensor.EntityState{
+			State: &sensor.State{
 				ID:   generateID(device.id, sensorType.String()),
 				Icon: generateIcon(sensorType),
 				Attributes: map[string]any{

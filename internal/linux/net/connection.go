@@ -178,7 +178,7 @@ func (c *connection) monitorConnection(ctx context.Context, bus *dbusx.Bus) <-ch
 				}
 			}
 
-			if stateSensor.Entity.State == connOffline.String() {
+			if stateSensor.Entity.Value == connOffline.String() {
 				break
 			}
 		}

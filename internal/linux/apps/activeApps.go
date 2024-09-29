@@ -20,10 +20,10 @@ const (
 func newActiveAppSensor(name string) sensor.Entity {
 	return sensor.Entity{
 		Name: activeAppsName,
-		EntityState: &sensor.EntityState{
+		State: &sensor.State{
 			ID:         activeAppsID,
 			Icon:       activeAppsIcon,
-			State:      name,
+			Value:      name,
 			EntityType: types.Sensor,
 			Attributes: map[string]any{
 				"data_source": linux.DataSrcDbus,

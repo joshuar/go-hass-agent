@@ -44,11 +44,11 @@ func newConnectionLatencySensor(info resty.TraceInfo) sensor.Entity {
 		DeviceClass: types.SensorDeviceClassDuration,
 		StateClass:  types.StateClassMeasurement,
 		Category:    types.CategoryDiagnostic,
-		EntityState: &sensor.EntityState{
+		State: &sensor.State{
 			ID:         "connection_latency",
 			Icon:       "mdi:connection",
 			EntityType: types.Sensor,
-			State:      info.TotalTime.Milliseconds(),
+			Value:      info.TotalTime.Milliseconds(),
 			Attributes: map[string]any{
 				"DNS Lookup Time":            info.DNSLookup.Milliseconds(),
 				"Connection Time":            info.ConnTime.Milliseconds(),

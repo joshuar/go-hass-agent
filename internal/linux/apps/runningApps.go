@@ -23,10 +23,10 @@ func newRunningAppsSensor(runningApps []string) sensor.Entity {
 		Name:       runningAppsName,
 		Units:      runningAppsUnits,
 		StateClass: types.StateClassMeasurement,
-		EntityState: &sensor.EntityState{
+		State: &sensor.State{
 			ID:    runningAppsID,
 			Icon:  runningAppsIcon,
-			State: len(runningApps),
+			Value: len(runningApps),
 			Attributes: map[string]any{
 				"data_source": linux.DataSrcDbus,
 				"apps":        runningApps,

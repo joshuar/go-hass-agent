@@ -16,15 +16,15 @@ import (
 func Test_request_Validate(t *testing.T) {
 	entity := sensor.Entity{
 		Name: "Mock Entity",
-		EntityState: &sensor.EntityState{
+		State: &sensor.State{
 			ID:    "mock_entity",
-			State: "mockState",
+			Value: "mockState",
 		},
 	}
 
 	invalidEntity := sensor.Entity{
 		Name: "Mock Entity",
-		EntityState: &sensor.EntityState{
+		State: &sensor.State{
 			ID: "mock_entity",
 		},
 	}
@@ -73,8 +73,8 @@ func Test_request_Validate(t *testing.T) {
 
 func Test_newEntityRequest(t *testing.T) {
 	locationEntity := sensor.Entity{
-		EntityState: &sensor.EntityState{
-			State: &LocationRequest{
+		State: &sensor.State{
+			Value: &LocationRequest{
 				Gps: []float64{0.0, 0.0},
 			},
 		},
@@ -82,7 +82,7 @@ func Test_newEntityRequest(t *testing.T) {
 
 	entity := sensor.Entity{
 		Name: "Mock Entity",
-		EntityState: &sensor.EntityState{
+		State: &sensor.State{
 			ID: "mock_entity",
 		},
 	}
@@ -100,12 +100,12 @@ func Test_newEntityRequest(t *testing.T) {
 		{
 			name: "location request",
 			args: args{requestType: requestTypeLocation, entity: locationEntity},
-			want: &request{Data: locationEntity.State, RequestType: requestTypeLocation},
+			want: &request{Data: locationEntity.Value, RequestType: requestTypeLocation},
 		},
 		{
 			name: "update request",
 			args: args{requestType: requestTypeUpdate, entity: entity},
-			want: &request{Data: entity.EntityState, RequestType: requestTypeUpdate},
+			want: &request{Data: entity.State, RequestType: requestTypeUpdate},
 		},
 		{
 			name: "registration request",

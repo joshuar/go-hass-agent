@@ -36,10 +36,10 @@ func newUsersSensor(users []string) sensor.Entity {
 		Name:       "Current Users",
 		StateClass: types.StateClassMeasurement,
 		Units:      sensorUnits,
-		EntityState: &sensor.EntityState{
+		State: &sensor.State{
 			ID:    "current_users",
 			Icon:  sensorIcon,
-			State: len(users),
+			Value: len(users),
 			Attributes: map[string]any{
 				"data_source": linux.DataSrcDbus,
 				"usernames":   users,
