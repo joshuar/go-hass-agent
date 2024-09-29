@@ -32,23 +32,9 @@ func (m *Method) Call(ctx context.Context, args ...any) error {
 		return fmt.Errorf("invalid method: %w", err)
 	}
 
-	obj := m.bus.getObject(m.intr, m.path)
-
-	if len(args) > 0 {
-		cleanArgs, warnings := m.sanitizeArgs(args)
-		if warnings != nil {
-			m.bus.traceLog("Sanitized method arguments with warnings", slog.Any("warnings", warnings))
-		}
-
-		err := obj.CallWithContext(ctx, m.name, 0, cleanArgs...).Err
-		if err != nil {
-			return fmt.Errorf("%s: unable to call method %s (args: %v): %w", m.bus.busType.String(), m.name, cleanArgs, err)
-		}
-	} else {
-		err := obj.CallWithContext(ctx, m.name, 0).Err
-		if err != nil {
-			return fmt.Errorf("%s: unable to call method %s: %w", m.bus.busType.String(), m.name, err)
-		}
+	called := m.execute(ctx, args...)
+	if called.Err != nil {
+		return fmt.Errorf("%s: unable to call method %s (args: %v): %w", m.bus.busType.String(), m.name, args, called.Err)
 	}
 
 	return nil
@@ -60,6 +46,21 @@ func (m *Method) IntrospectArgs() ([]introspect.Arg, error) {
 	}
 
 	return m.obj.Args, nil
+}
+
+func (m *Method) execute(ctx context.Context, args ...any) *dbus.Call {
+	obj := m.bus.getObject(m.intr, m.path)
+
+	if len(args) > 0 {
+		cleanArgs, warnings := m.sanitizeArgs(args)
+		if warnings != nil {
+			m.bus.traceLog("Sanitized method arguments with warnings", slog.Any("warnings", warnings))
+		}
+
+		return obj.CallWithContext(ctx, m.name, 0, cleanArgs...)
+	}
+
+	return obj.CallWithContext(ctx, m.name, 0)
 }
 
 //nolint:gocognit
@@ -141,5 +142,35 @@ func NewMethod(bus *Bus, intr, path, name string) *Method {
 		intr: intr,
 		path: path,
 		name: name,
+	}
+}
+
+type Data[T any] struct {
+	*Method
+}
+
+func (d *Data[T]) Fetch(ctx context.Context, args ...any) (T, error) {
+	var stored T
+
+	called := d.execute(ctx, args...)
+	if called.Err != nil {
+		return stored, fmt.Errorf("%s: unable to call method %s (args: %v): %w", d.bus.busType.String(), d.name, args, called.Err)
+	}
+
+	if err := called.Store(&stored); err != nil {
+		return stored, fmt.Errorf("%s: unable to store method results: %w", d.bus.busType.String(), err)
+	}
+
+	return stored, nil
+}
+
+func NewData[T any](bus *Bus, intr, path, name string) *Data[T] {
+	return &Data[T]{
+		Method: &Method{
+			bus:  bus,
+			intr: intr,
+			path: path,
+			name: name,
+		},
 	}
 }
