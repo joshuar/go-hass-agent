@@ -53,6 +53,7 @@ var pollingWorkers = []func(ctx context.Context) (*linux.PollingSensorWorker, er
 
 // oneShotWorkers are all the sensor workers that run one-time to generate sensors.
 var oneShotWorkers = []func(ctx context.Context) (*linux.OneShotSensorWorker, error){
+	cpu.NewCPUVulnerabilityWorker,
 	system.NewInfoWorker,
 	system.NewfwupdWorker,
 }
