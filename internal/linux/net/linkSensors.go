@@ -140,6 +140,7 @@ func (f ipFamily) Icon() string {
 
 type AddressWorker struct {
 	nlconn *rtnetlink.Conn
+	donech chan struct{}
 	linux.EventSensorWorker
 }
 
@@ -178,20 +179,30 @@ func (w *AddressWorker) Events(ctx context.Context) (<-chan sensor.Entity, error
 		}
 	}
 
+	done := false
+
+	go func() {
+		defer close(w.donech)
+		<-ctx.Done()
+
+		if err := w.nlconn.Close(); err != nil {
+			logging.FromContext(ctx).Debug("Could not close netlink connection.",
+				slog.Any("error", err))
+		}
+	}()
+
 	// Listen for address changes and generate new sensors.
 	go func() {
 		defer close(sensorCh)
 
-		done := false
-
 		for !done {
 			select {
-			case <-ctx.Done():
+			case <-w.donech:
 				done = true
 			default:
 				nlmsgs, _, err := w.nlconn.Receive()
 				if err != nil {
-					slog.Error("received error", slog.Any("error", err))
+					logging.FromContext(ctx).Debug("Error closing netlink connection.", slog.Any("error", err))
 					break
 				}
 
@@ -216,7 +227,7 @@ func (w *AddressWorker) Events(ctx context.Context) (<-chan sensor.Entity, error
 	return sensorCh, nil
 }
 
-func NewAddressWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
+func NewAddressWorker(_ context.Context) (*linux.EventSensorWorker, error) {
 	worker := linux.NewEventWorker(addressWorkerID)
 
 	conn, err := rtnetlink.Dial(nlConfig)
@@ -224,16 +235,10 @@ func NewAddressWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 		return worker, fmt.Errorf("could not connect to netlink: %w", err)
 	}
 
-	go func() {
-		<-ctx.Done()
-
-		if err := conn.Close(); err != nil {
-			logging.FromContext(ctx).Debug("Could not close netlink connection.",
-				slog.Any("error", err))
-		}
-	}()
-
-	addressWorker := &AddressWorker{nlconn: conn}
+	addressWorker := &AddressWorker{
+		nlconn: conn,
+		donech: make(chan struct{}),
+	}
 
 	worker.EventType = addressWorker
 
