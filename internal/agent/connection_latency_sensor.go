@@ -34,8 +34,7 @@ const (
 var ErrEmptyResponse = errors.New("empty response")
 
 type serverPrefs interface {
-	Server() string
-	Token() string
+	RestAPIURL() string
 }
 
 func newConnectionLatencySensor(info resty.TraceInfo) sensor.Entity {
@@ -66,8 +65,9 @@ func newConnectionLatencySensor(info resty.TraceInfo) sensor.Entity {
 }
 
 type connectionLatencyWorker struct {
-	client *resty.Client
-	doneCh chan struct{}
+	client   *resty.Client
+	doneCh   chan struct{}
+	endpoint string
 }
 
 // ID returns the unique string to represent this worker and its sensors.
@@ -83,9 +83,14 @@ func (w *connectionLatencyWorker) Stop() error {
 func (w *connectionLatencyWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
 	resp, err := w.client.R().
 		SetContext(ctx).
-		Get("/")
-	if err != nil || resp.IsError() {
+		Get(w.endpoint)
+
+	// Handle errors and bad responses.
+	switch {
+	case err != nil:
 		return nil, fmt.Errorf("unable to connect: %w", err)
+	case resp.Error():
+		return nil, fmt.Errorf("received error response %s", resp.Status())
 	}
 
 	if resp.Request != nil {
@@ -133,8 +138,7 @@ func newConnectionLatencyWorker(prefs serverPrefs) *connectionLatencyWorker {
 	return &connectionLatencyWorker{
 		client: resty.New().
 			SetTimeout(connectionLatencyTimeout).
-			SetBaseURL(prefs.Server() + "/api").
-			SetAuthToken(prefs.Token()).
 			EnableTrace(),
+		endpoint: prefs.RestAPIURL(),
 	}
 }
