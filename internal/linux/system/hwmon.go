@@ -58,7 +58,12 @@ func newHWSensor(details *hwmon.Sensor) sensor.Entity {
 
 		newSensor.Icon = "mdi:alarm-light-off"
 		newSensor.EntityType = types.BinarySensor
-		newSensor.DeviceClass = types.BinarySensorDeviceClassProblem
+
+		if details.MonitorType == hwmon.Alarm {
+			newSensor.DeviceClass = types.BinarySensorDeviceClassProblem
+		} else {
+			newSensor.DeviceClass = types.BinarySensorDeviceClassTamper
+		}
 	default:
 		icon, deviceClass := parseSensorType(details.MonitorType.String())
 		newSensor.Icon = icon
