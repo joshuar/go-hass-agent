@@ -33,7 +33,7 @@ func newScreenlockSensor(value bool) sensor.Entity {
 			ID:         "screen_lock",
 			Icon:       screenLockIcon(value),
 			EntityType: types.BinarySensor,
-			Value:      value,
+			Value:      !value, // For device class BinarySensorDeviceClassLock: On means open (unlocked), Off means closed (locked).
 			Attributes: map[string]any{
 				"data_source": linux.DataSrcDbus,
 			},
