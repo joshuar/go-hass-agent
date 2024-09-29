@@ -49,7 +49,7 @@ func (s *ScriptSensor) Icon() string {
 	return s.SensorIcon
 }
 
-func (s *ScriptSensor) SensorType() types.SensorClass {
+func (s *ScriptSensor) SensorType() types.SensorType {
 	switch s.SensorStateType {
 	case "binary":
 		return types.BinarySensor
