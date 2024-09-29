@@ -16,7 +16,7 @@ import (
 func TestTracker_Get(t *testing.T) {
 	mockEntity := &Entity{
 		Name: "Mock Entity",
-		EntityState: &EntityState{
+		State: &State{
 			ID: "mock_entity",
 		},
 	}
@@ -72,7 +72,7 @@ func TestTracker_Get(t *testing.T) {
 func TestTracker_SensorList(t *testing.T) {
 	mockEntity := &Entity{
 		Name: "Mock Entity",
-		EntityState: &EntityState{
+		State: &State{
 			ID: "mock_entity",
 		},
 	}
@@ -114,14 +114,14 @@ func TestTracker_SensorList(t *testing.T) {
 func TestTracker_Add(t *testing.T) {
 	newEntity := &Entity{
 		Name: "New Entity",
-		EntityState: &EntityState{
+		State: &State{
 			ID: "new_entity",
 		},
 	}
 
 	existingEntity := &Entity{
 		Name: "Existing Entity",
-		EntityState: &EntityState{
+		State: &State{
 			ID: "existing_entity",
 		},
 	}
@@ -173,7 +173,7 @@ func TestTracker_Add(t *testing.T) {
 func TestTracker_Reset(t *testing.T) {
 	mockEntity := &Entity{
 		Name: "Mock Entity",
-		EntityState: &EntityState{
+		State: &State{
 			ID: "mock_entity",
 		},
 	}

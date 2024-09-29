@@ -30,8 +30,8 @@ var apPropList = []string{ssidPropName, hwAddrPropName, maxBitRatePropName, freq
 func newWifiSensor(prop string, value any) sensor.Entity {
 	wifiSensor := sensor.Entity{
 		Category: types.CategoryDiagnostic,
-		EntityState: &sensor.EntityState{
-			State: generateState(prop, value),
+		State: &sensor.State{
+			Value: generateState(prop, value),
 			Icon:  "mdi:wifi",
 		},
 	}

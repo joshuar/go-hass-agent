@@ -105,8 +105,8 @@ func (w *locationWorker) newLocation(locationPath string) (sensor.Entity, error)
 	warnings = errors.Join(warnings, err)
 
 	location := sensor.Entity{
-		EntityState: &sensor.EntityState{
-			State: &hass.LocationRequest{
+		State: &sensor.State{
+			Value: &hass.LocationRequest{
 				Gps:         []float64{latitude, longitude},
 				GpsAccuracy: int(accuracy),
 				Speed:       int(speed),

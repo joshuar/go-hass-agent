@@ -41,7 +41,7 @@ func newLinkSensor(msg rtnetlink.LinkMessage) *sensor.Entity {
 	link := &sensor.Entity{
 		Name:     name + " Link State",
 		Category: types.CategoryDiagnostic,
-		EntityState: &sensor.EntityState{
+		State: &sensor.State{
 			ID: strings.ToLower(name + "_link_state"),
 			Attributes: map[string]any{
 				"data_source": linux.DataSrcNetlink,
@@ -51,16 +51,16 @@ func newLinkSensor(msg rtnetlink.LinkMessage) *sensor.Entity {
 
 	switch msg.Attributes.OperationalState {
 	case rtnetlink.OperStateUp:
-		link.State = "up"
+		link.Value = "up"
 		link.Icon = "mdi:network"
 	case rtnetlink.OperStateNotPresent:
-		link.State = "invalid"
+		link.Value = "invalid"
 		link.Icon = "mdi:close-network"
 	case rtnetlink.OperStateUnknown:
-		link.State = "unknown"
+		link.Value = "unknown"
 		link.Icon = "mdi:help-network"
 	default:
-		link.State = "down"
+		link.Value = "down"
 		link.Icon = "mdi:network-off"
 	}
 
@@ -77,10 +77,10 @@ func newAddressSensor(link rtnetlink.LinkMessage, msg rtnetlink.AddressMessage) 
 	addr := &sensor.Entity{
 		Name:     name + " " + ipFamily(msg.Family).String() + " Address",
 		Category: types.CategoryDiagnostic,
-		EntityState: &sensor.EntityState{
+		State: &sensor.State{
 			ID:    strings.ToLower(name + "_" + ipFamily(msg.Family).String() + "_address"),
 			Icon:  ipFamily(msg.Family).Icon(),
-			State: msg.Attributes.Address.String(),
+			Value: msg.Attributes.Address.String(),
 			Attributes: map[string]any{
 				"data_source": linux.DataSrcNetlink,
 			},
@@ -89,9 +89,9 @@ func newAddressSensor(link rtnetlink.LinkMessage, msg rtnetlink.AddressMessage) 
 
 	if link.Attributes.OperationalState != rtnetlink.OperStateUp {
 		if ipFamily(msg.Family) == unix.AF_INET {
-			addr.State = net.IPv4zero.String()
+			addr.Value = net.IPv4zero.String()
 		} else {
-			addr.State = net.IPv6zero.String()
+			addr.Value = net.IPv6zero.String()
 		}
 	}
 

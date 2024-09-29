@@ -74,8 +74,8 @@ func (w *problemsWorker) newProblemsSensor(problems []string) sensor.Entity {
 		Name:       "Problems",
 		StateClass: types.StateClassMeasurement,
 		Units:      "problems",
-		EntityState: &sensor.EntityState{
-			State: len(problems),
+		State: &sensor.State{
+			Value: len(problems),
 			ID:    "problems",
 			Icon:  "mdi:alert",
 			Attributes: map[string]any{

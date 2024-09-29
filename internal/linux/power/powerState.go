@@ -35,10 +35,10 @@ func newPowerState(name powerSignal, value any) sensor.Entity {
 	return sensor.Entity{
 		Name:     "Power State",
 		Category: types.CategoryDiagnostic,
-		EntityState: &sensor.EntityState{
+		State: &sensor.State{
 			ID:    "power_state",
 			Icon:  powerStateIcon(value),
-			State: powerStateString(name, value),
+			Value: powerStateString(name, value),
 			Attributes: map[string]any{
 				"data_source": linux.DataSrcDbus,
 			},

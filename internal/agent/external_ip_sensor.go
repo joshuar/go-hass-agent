@@ -58,11 +58,11 @@ func newExternalIPSensor(addr net.IP) sensor.Entity {
 	return sensor.Entity{
 		Name:     name,
 		Category: types.CategoryDiagnostic,
-		EntityState: &sensor.EntityState{
+		State: &sensor.State{
 			ID:         id,
 			Icon:       icon,
 			EntityType: types.Sensor,
-			State:      addr.String(),
+			Value:      addr.String(),
 			Attributes: map[string]any{
 				"last_updated": time.Now().Format(time.RFC3339),
 			},

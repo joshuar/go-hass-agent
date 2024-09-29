@@ -22,11 +22,11 @@ func newVersionSensor() sensor.Entity {
 	return sensor.Entity{
 		Name:     "Go Hass Agent Version",
 		Category: types.CategoryDiagnostic,
-		EntityState: &sensor.EntityState{
+		State: &sensor.State{
 			ID:         "agent_version",
 			Icon:       "mdi:face-agent",
 			EntityType: types.Sensor,
-			State:      preferences.AppVersion,
+			Value:      preferences.AppVersion,
 		},
 	}
 }

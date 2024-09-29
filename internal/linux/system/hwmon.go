@@ -43,9 +43,9 @@ func newHWSensor(details *hwmon.Sensor) sensor.Entity {
 		Name:     details.Name(),
 		Category: types.CategoryDiagnostic,
 		Units:    details.Units(),
-		EntityState: &sensor.EntityState{
+		State: &sensor.State{
 			ID:         details.ID(),
-			State:      details.Value(),
+			Value:      details.Value(),
 			Attributes: hwmonSensorAttributes(details),
 		},
 	}

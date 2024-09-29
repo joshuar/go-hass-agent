@@ -29,11 +29,11 @@ func newScreenlockSensor(value bool) sensor.Entity {
 	return sensor.Entity{
 		Name:        "Screen Lock",
 		DeviceClass: types.BinarySensorDeviceClassLock,
-		EntityState: &sensor.EntityState{
+		State: &sensor.State{
 			ID:         "screen_lock",
 			Icon:       screenLockIcon(value),
 			EntityType: types.BinarySensor,
-			State:      value,
+			Value:      value,
 			Attributes: map[string]any{
 				"data_source": linux.DataSrcDbus,
 			},

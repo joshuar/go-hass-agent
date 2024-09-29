@@ -69,7 +69,7 @@ func newNetStatsSensor(name string, sensorType netStatsType, stats *rtnetlink.Li
 	netSensor := &netStatsSensor{
 		Entity: &sensor.Entity{
 			Name: name + " " + sensorType.String(),
-			EntityState: &sensor.EntityState{
+			State: &sensor.State{
 				ID: strings.ToLower(name) + "_" + strcase.ToSnake(sensorType.String()),
 				Attributes: map[string]any{
 					"data_source": linux.DataSrcNetlink,
@@ -123,22 +123,22 @@ func (s *netStatsSensor) update(link string, sensorType netStatsType, stats *rtn
 
 	switch sensorType {
 	case bytesRecv:
-		s.State = stats.RXBytes
+		s.Value = stats.RXBytes
 		if link != totalsName {
 			maps.Copy(s.Attributes, getRXAttributes(stats))
 		}
 	case bytesSent:
-		s.State = stats.TXBytes
+		s.Value = stats.TXBytes
 		if link != totalsName {
 			maps.Copy(s.Attributes, getTXAttributes(stats))
 		}
 	case bytesRecvRate:
 		rate := calculateRate(stats.RXBytes, s.previousValue, delta)
-		s.State = rate
+		s.Value = rate
 		s.previousValue = stats.RXBytes
 	case bytesSentRate:
 		rate := calculateRate(stats.TXBytes, s.previousValue, delta)
-		s.State = rate
+		s.Value = rate
 		s.previousValue = stats.TXBytes
 	}
 }

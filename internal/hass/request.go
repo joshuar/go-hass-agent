@@ -65,11 +65,11 @@ func (r *request) RequestBody() json.RawMessage {
 func newEntityRequest(requestType string, entity sensor.Entity) (*request, error) {
 	switch requestType {
 	case requestTypeLocation:
-		return &request{Data: entity.State, RequestType: requestType}, nil
+		return &request{Data: entity.Value, RequestType: requestType}, nil
 	case requestTypeRegister:
 		return &request{Data: entity, RequestType: requestType}, nil
 	case requestTypeUpdate:
-		return &request{Data: entity.EntityState, RequestType: requestType}, nil
+		return &request{Data: entity.State, RequestType: requestType}, nil
 	}
 
 	return nil, ErrUnknownDetails

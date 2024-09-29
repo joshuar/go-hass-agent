@@ -37,9 +37,9 @@ func (w *infoWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
 			sensor.Entity{
 				Name:     "Distribution Name",
 				Category: types.CategoryDiagnostic,
-				EntityState: &sensor.EntityState{
+				State: &sensor.State{
 					ID:    "distribution_name",
-					State: distro,
+					Value: distro,
 					Icon:  "mdi:linux",
 					Attributes: map[string]any{
 						"data_source": linux.DataSrcProcfs,
@@ -49,9 +49,9 @@ func (w *infoWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
 			sensor.Entity{
 				Name:     "Distribution Version",
 				Category: types.CategoryDiagnostic,
-				EntityState: &sensor.EntityState{
+				State: &sensor.State{
 					ID:    "distribution_version",
-					State: version,
+					Value: version,
 					Icon:  "mdi:numeric",
 					Attributes: map[string]any{
 						"data_source": linux.DataSrcProcfs,
@@ -72,9 +72,9 @@ func (w *infoWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
 			sensor.Entity{
 				Name:     "Kernel Version",
 				Category: types.CategoryDiagnostic,
-				EntityState: &sensor.EntityState{
+				State: &sensor.State{
 					ID:    "kernel_version",
-					State: kernelVersion,
+					Value: kernelVersion,
 					Icon:  "mdi:chip",
 					Attributes: map[string]any{
 						"data_source": linux.DataSrcProcfs,

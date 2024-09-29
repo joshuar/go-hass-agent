@@ -48,11 +48,11 @@ func (c *connectionStateSensor) setState(state any) error {
 		if state, err := dbusx.VariantToValue[connState](value); err != nil {
 			return fmt.Errorf("could not parse updated connection state: %w", err)
 		} else {
-			c.Entity.State = state.String()
+			c.Entity.Value = state.String()
 			c.Entity.Icon = connIcon(state).String()
 		}
 	case uint32:
-		c.Entity.State = connState(value).String()
+		c.Entity.Value = connState(value).String()
 		c.Entity.Icon = connIcon(value).String()
 	default:
 		return ErrUnsupportedValue
@@ -67,7 +67,7 @@ func (c *connectionStateSensor) updateState() error {
 		return fmt.Errorf("cannot update state: %w", err)
 	}
 
-	c.Entity.State = state.String()
+	c.Entity.Value = state.String()
 	c.Entity.Icon = connIcon(state).String()
 
 	return nil
@@ -77,7 +77,7 @@ func newConnectionStateSensor(bus *dbusx.Bus, connectionPath, connectionName str
 	return &connectionStateSensor{
 		Entity: &sensor.Entity{
 			Name: connectionName + " Connection State",
-			EntityState: &sensor.EntityState{
+			State: &sensor.State{
 				ID: strcase.ToSnake(connectionName) + "_connection_state",
 				Attributes: map[string]any{
 					"data_source": linux.DataSrcDbus,

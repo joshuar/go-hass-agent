@@ -138,7 +138,7 @@ func (c *Client) ProcessSensor(ctx context.Context, details sensor.Entity) error
 		return nil
 	}
 
-	if _, ok := details.State.(*LocationRequest); ok {
+	if _, ok := details.Value.(*LocationRequest); ok {
 		// LocationRequest:
 		return c.handleLocationUpdate(ctx, details)
 	}
@@ -409,6 +409,6 @@ func sensorLogAttrs(details sensor.Entity) slog.Attr {
 	return slog.Group("sensor",
 		slog.String("name", details.Name),
 		slog.String("id", details.ID),
-		slog.Any("state", details.State),
+		slog.Any("state", details.Value),
 		slog.String("units", details.Units))
 }

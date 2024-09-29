@@ -29,9 +29,9 @@ func (s *rateSensor) update(delta time.Duration, valueStr string) {
 	valueInt, _ := strconv.ParseUint(valueStr, 10, 64) //nolint:errcheck // if we can't parse it, value will be 0.
 
 	if uint64(delta.Seconds()) > 0 {
-		s.State = (valueInt - s.prevState) / uint64(delta.Seconds()) / 2
+		s.Value = (valueInt - s.prevState) / uint64(delta.Seconds()) / 2
 	} else {
-		s.State = 0
+		s.Value = 0
 	}
 
 	s.Attributes["Total"] = valueInt
@@ -46,7 +46,7 @@ func newRateSensor(name, icon, units string) *rateSensor {
 			StateClass: types.StateClassMeasurement,
 			Category:   types.CategoryDiagnostic,
 			Units:      units,
-			EntityState: &sensor.EntityState{
+			State: &sensor.State{
 				ID:   strcase.ToSnake(name),
 				Icon: icon,
 				Attributes: map[string]any{
@@ -77,9 +77,9 @@ func newUsageSensor(clktck int64, details []string, category types.Category) sen
 		Units:      "%",
 		StateClass: types.StateClassMeasurement,
 		Category:   category,
-		EntityState: &sensor.EntityState{
+		State: &sensor.State{
 			ID:         id,
-			State:      value,
+			Value:      value,
 			Attributes: attributes,
 			Icon:       "mdi:chip",
 		},
@@ -118,10 +118,10 @@ func newCountSensor(name, icon, valueStr string) sensor.Entity {
 		Name:       name,
 		StateClass: types.StateClassTotalIncreasing,
 		Category:   types.CategoryDiagnostic,
-		EntityState: &sensor.EntityState{
+		State: &sensor.State{
 			ID:    strcase.ToSnake(name),
 			Icon:  icon,
-			State: valueInt,
+			Value: valueInt,
 			Attributes: map[string]any{
 				"data_source": linux.DataSrcProcfs,
 			},

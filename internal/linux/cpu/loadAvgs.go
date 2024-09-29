@@ -57,7 +57,7 @@ func (w *loadAvgsWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 	}
 
 	for idx := range loadAvgs {
-		w.loadAvgs[idx].State = loadAvgs[idx]
+		w.loadAvgs[idx].Value = loadAvgs[idx]
 		sensors[idx] = w.loadAvgs[idx]
 	}
 
@@ -72,7 +72,7 @@ func newLoadAvgSensors() []sensor.Entity {
 			Name:       loadType,
 			Units:      loadAvgUnit,
 			StateClass: types.StateClassMeasurement,
-			EntityState: &sensor.EntityState{
+			State: &sensor.State{
 				ID:   strcase.ToSnake(loadType),
 				Icon: loadAvgIcon,
 				Attributes: map[string]any{

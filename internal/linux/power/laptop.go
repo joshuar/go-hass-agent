@@ -36,8 +36,8 @@ func newLaptopEvent(prop string, state bool) sensor.Entity {
 		Name:        laptopSensorName(prop),
 		DeviceClass: types.BinarySensorDeviceClassOpening,
 		Category:    types.CategoryDiagnostic,
-		EntityState: &sensor.EntityState{
-			State:      state,
+		State: &sensor.State{
+			Value:      state,
 			Icon:       laptopSensorIcon(prop, state),
 			EntityType: types.BinarySensor,
 			Attributes: map[string]any{

@@ -61,10 +61,10 @@ func newBatterySensor(battery *upowerBattery, sensorType batterySensor, value db
 		DeviceClass: deviceClass,
 		StateClass:  stateClass,
 		Units:       units,
-		EntityState: &sensor.EntityState{
+		State: &sensor.State{
 			ID:         id,
 			Icon:       icon,
-			State:      generateSensorState(sensorType, value.Value()),
+			Value:      generateSensorState(sensorType, value.Value()),
 			Attributes: generateSensorAttributes(sensorType, battery),
 		},
 	}

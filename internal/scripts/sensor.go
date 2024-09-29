@@ -31,8 +31,8 @@ func scriptToEntity(script ScriptSensor) sensor.Entity {
 		Units:       script.SensorUnits,
 		DeviceClass: script.DeviceClass(),
 		StateClass:  script.StateClass(),
-		EntityState: &sensor.EntityState{
-			State:      script.SensorState,
+		State: &sensor.State{
+			Value:      script.SensorState,
 			ID:         strcase.ToSnake(script.SensorName),
 			Icon:       script.Icon(),
 			Attributes: script.Attributes(),
