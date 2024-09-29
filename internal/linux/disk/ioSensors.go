@@ -115,7 +115,7 @@ func newDiskIORateSensor(device *device, sensorType ioSensor) *diskIOSensor {
 	newSensor := &diskIOSensor{
 		Entity: &sensor.Entity{
 			Name:        generateName(device.id, sensorType.String()),
-			DeviceClass: types.DeviceClassDataRate,
+			DeviceClass: types.SensorDeviceClassDataRate,
 			StateClass:  types.StateClassMeasurement,
 			Units:       diskRateUnits,
 			EntityState: &sensor.EntityState{

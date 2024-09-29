@@ -41,7 +41,7 @@ func newCPUFreqSensor(id string) sensor.Entity {
 	return sensor.Entity{
 		Name:        "Core " + num + " Frequency",
 		Units:       cpuFreqUnits,
-		DeviceClass: types.DeviceClassFrequency,
+		DeviceClass: types.SensorDeviceClassFrequency,
 		StateClass:  types.StateClassMeasurement,
 		Category:    types.CategoryDiagnostic,
 		EntityState: &sensor.EntityState{

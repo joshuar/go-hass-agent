@@ -45,7 +45,7 @@ func (w *timeWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 			Name:        "Uptime",
 			Category:    types.CategoryDiagnostic,
 			Units:       "h",
-			DeviceClass: types.DeviceClassDuration,
+			DeviceClass: types.SensorDeviceClassDuration,
 			StateClass:  types.StateClassMeasurement,
 			EntityState: &sensor.EntityState{
 				ID:    "uptime",
@@ -64,7 +64,7 @@ func (w *timeWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 			sensor.Entity{
 				Name:        "Last Reboot",
 				Category:    types.CategoryDiagnostic,
-				DeviceClass: types.DeviceClassTimestamp,
+				DeviceClass: types.SensorDeviceClassTimestamp,
 				EntityState: &sensor.EntityState{
 					ID:    "last_reboot",
 					State: w.boottime.Format(time.RFC3339),

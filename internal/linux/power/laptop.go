@@ -33,8 +33,9 @@ var laptopPropList = []string{dockedProp, lidClosedProp, externalPowerProp}
 
 func newLaptopEvent(prop string, state bool) sensor.Entity {
 	sensorEvent := sensor.Entity{
-		Name:     laptopSensorName(prop),
-		Category: types.CategoryDiagnostic,
+		Name:        laptopSensorName(prop),
+		DeviceClass: types.BinarySensorDeviceClassOpening,
+		Category:    types.CategoryDiagnostic,
 		EntityState: &sensor.EntityState{
 			State:      state,
 			Icon:       laptopSensorIcon(prop, state),
