@@ -15,11 +15,11 @@ const (
 )
 
 type EntityState struct {
-	State      any               `json:"state" validate:"required"`
-	Attributes map[string]any    `json:"attributes,omitempty" validate:"omitempty"`
-	Icon       string            `json:"icon,omitempty" validate:"omitempty,startswith=mdi:"`
-	ID         string            `json:"unique_id" validate:"required"`
-	EntityType types.SensorClass `json:"type" validate:"omitempty"`
+	State      any              `json:"state" validate:"required"`
+	Attributes map[string]any   `json:"attributes,omitempty" validate:"omitempty"`
+	Icon       string           `json:"icon,omitempty" validate:"omitempty,startswith=mdi:"`
+	ID         string           `json:"unique_id" validate:"required"`
+	EntityType types.SensorType `json:"type" validate:"omitempty"`
 }
 
 //nolint:wrapcheck
