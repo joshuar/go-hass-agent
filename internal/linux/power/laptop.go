@@ -32,13 +32,53 @@ const (
 var laptopPropList = []string{dockedProp, lidClosedProp, externalPowerProp}
 
 func newLaptopEvent(prop string, state bool) sensor.Entity {
+	var (
+		name, icon  string
+		deviceClass types.DeviceClass
+	)
+
+	switch prop {
+	case dockedProp:
+		name = "Docked State"
+
+		if state {
+			icon = "mdi:desktop-tower-monitor"
+		} else {
+			icon = "mdi:laptop"
+		}
+
+		deviceClass = types.BinarySensorDeviceClassConnectivity
+	case lidClosedProp:
+		name = "Lid Closed"
+
+		if state {
+			icon = "mdi:laptop"
+		} else {
+			icon = "mdi:laptop-off"
+		}
+
+		deviceClass = types.BinarySensorDeviceClassOpening
+		state = !state // Invert state for BinarySensorDeviceClassOpening: On means open, Off means closed.
+	case externalPowerProp:
+		name = "External Power Connected"
+
+		if state {
+			icon = "mdi:power-plug"
+		} else {
+			icon = "mdi:battery"
+		}
+
+		deviceClass = types.BinarySensorDeviceClassPower
+	}
+
 	sensorEvent := sensor.Entity{
-		Name:        laptopSensorName(prop),
-		DeviceClass: types.BinarySensorDeviceClassOpening,
+		Name:        name,
+		DeviceClass: deviceClass,
 		Category:    types.CategoryDiagnostic,
 		State: &sensor.State{
+			ID:         strcase.ToSnake(name),
 			Value:      state,
-			Icon:       laptopSensorIcon(prop, state),
+			Icon:       icon,
 			EntityType: types.BinarySensor,
 			Attributes: map[string]any{
 				"data_source": linux.DataSrcDbus,
@@ -46,47 +86,7 @@ func newLaptopEvent(prop string, state bool) sensor.Entity {
 		},
 	}
 
-	sensorEvent.ID = strcase.ToSnake(sensorEvent.Name)
-
 	return sensorEvent
-}
-
-func laptopSensorName(prop string) string {
-	switch prop {
-	case dockedProp:
-		return "Docked State"
-	case lidClosedProp:
-		return "Lid Closed"
-	case externalPowerProp:
-		return "External Power Connected"
-	}
-
-	return ""
-}
-
-func laptopSensorIcon(prop string, state bool) string {
-	switch prop {
-	case dockedProp:
-		if state {
-			return "mdi:desktop-tower-monitor"
-		} else {
-			return "mdi:laptop"
-		}
-	case lidClosedProp:
-		if state {
-			return "mdi:laptop"
-		} else {
-			return "mdi:laptop-off"
-		}
-	case externalPowerProp:
-		if state {
-			return "mdi:power-plug"
-		} else {
-			return "mdi:battery"
-		}
-	}
-
-	return "mdi:help"
 }
 
 type laptopWorker struct {
