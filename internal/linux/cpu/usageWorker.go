@@ -107,10 +107,20 @@ func (w *usageWorker) getUsageStats() ([]sensor.Entity, error) {
 			sensors = append(sensors, newUsageSensor(w.clktck, cols, types.CategoryDiagnostic))
 			sensors = append(sensors, newCPUFreqSensor(cols[0]))
 		case cols[0] == "ctxt":
-			w.rateSensors["ctxt"].update(w.delta, cols[1])
+			if _, found := w.rateSensors["ctxt"]; found {
+				w.rateSensors["ctxt"].update(w.delta, cols[1])
+			} else {
+				w.rateSensors["ctxt"] = newRateSensor("CPU Context Switch Rate", "mdi:counter", "ctx/s")
+			}
+
 			sensors = append(sensors, *w.rateSensors["ctxt"].Entity)
 		case cols[0] == "processes":
-			w.rateSensors["processes"].update(w.delta, cols[1])
+			if _, found := w.rateSensors["processes"]; found {
+				w.rateSensors["processes"].update(w.delta, cols[1])
+			} else {
+				w.rateSensors["processes"] = newRateSensor("Processes Creation Rate", "mdi:application-cog", "processes/s")
+			}
+
 			sensors = append(sensors, *w.rateSensors["processes"].Entity)
 		case cols[0] == "procs_running":
 			sensors = append(sensors, newCountSensor("Processes Running", "mdi:application-cog", cols[1]))
