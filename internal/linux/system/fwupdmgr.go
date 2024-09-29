@@ -78,7 +78,7 @@ func (w *fwupdWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
 
 	hsiID := strings.Split(hsi, " ")
 
-	hsiSensor := &sensor.Entity{
+	hsiSensor := sensor.Entity{
 		Name:     "Firmware Security",
 		Category: types.CategoryDiagnostic,
 		State: &sensor.State{
@@ -101,7 +101,7 @@ func (w *fwupdWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
 		hsiSensor.Attributes[summary] = result.String()
 	}
 
-	return []sensor.Entity{*hsiSensor}, nil
+	return []sensor.Entity{hsiSensor}, nil
 }
 
 func NewfwupdWorker(ctx context.Context) (*linux.OneShotSensorWorker, error) {
