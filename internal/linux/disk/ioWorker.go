@@ -22,10 +22,8 @@ import (
 const (
 	ratesUpdateInterval = 5 * time.Second
 	ratesUpdateJitter   = time.Second
-
-	ratesWorkerID = "disk_rates_sensors"
-
-	totalsID = "total"
+	ratesWorkerID       = "disk_rates_sensors"
+	totalsID            = "total"
 )
 
 // ioWorker creates sensors for disk IO counts and rates per device. It
@@ -79,7 +77,8 @@ func (w *ioWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
 		return nil, fmt.Errorf("could not fetch disk devices: %w", err)
 	}
 
-	sensors := make([]sensor.Entity, 0, 4*len(deviceNames)+4) //nolint:mnd
+	var sensors []sensor.Entity
+
 	statsTotals := make(map[stat]uint64)
 
 	// Get the current device info and stats for all valid devices.
@@ -138,9 +137,10 @@ func NewIOWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
 
 func newDeviceSensors(boottime time.Time, dev *device) []*diskIOSensor {
 	return []*diskIOSensor{
-		newDiskIOSensor(boottime, dev, diskReads),
-		newDiskIOSensor(boottime, dev, diskWrites),
-		newDiskIORateSensor(dev, diskReadRate),
-		newDiskIORateSensor(dev, diskWriteRate),
+		newDiskIOSensor(dev, diskReads, boottime),
+		newDiskIOSensor(dev, diskWrites, boottime),
+		newDiskIOSensor(dev, diskReadRate, boottime),
+		newDiskIOSensor(dev, diskWriteRate, boottime),
+		newDiskIOSensor(dev, diskIOInProgress, boottime),
 	}
 }

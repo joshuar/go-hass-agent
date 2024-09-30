@@ -7,10 +7,9 @@
 package disk
 
 import (
+	"strings"
 	"time"
 	"unicode"
-
-	"github.com/iancoleman/strcase"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
@@ -18,16 +17,19 @@ import (
 )
 
 const (
-	diskReads     ioSensor = iota // Disk Reads
-	diskWrites                    // Disk Writes
-	diskReadRate                  // Disk Read Rate
-	diskWriteRate                 // Disk Write Rate
+	diskReads        ioSensor = iota // Disk Reads
+	diskWrites                       // Disk Writes
+	diskReadRate                     // Disk Read Rate
+	diskWriteRate                    // Disk Write Rate
+	diskIOInProgress                 // Disk IOs In Progress
 
 	diskRateUnits  = "kB/s"
 	diskCountUnits = "requests"
+	diskIOsUnits   = "ops"
 
 	ioReadsIcon  = "mdi:file-upload"
 	ioWritesIcon = "mdi:file-download"
+	ioOpsIcon    = "mdi:content-save"
 )
 
 type ioSensor int
@@ -47,6 +49,8 @@ func (s *diskIOSensor) update(stats map[stat]uint64, delta time.Duration) {
 		s.Value = stats[TotalReads]
 	case diskWrites:
 		s.Value = stats[TotalWrites]
+	case diskIOInProgress:
+		s.Value = stats[ActiveIOs]
 	case diskReadRate:
 		curr = stats[TotalSectorsRead]
 	case diskWriteRate:
@@ -81,91 +85,67 @@ func (s *diskIOSensor) updateAttributes(stats map[stat]uint64) {
 	}
 }
 
-func newDiskIOSensor(boottime time.Time, device *device, sensorType ioSensor) *diskIOSensor {
-	newSensor := &diskIOSensor{
+func newDiskIOSensor(device *device, sensorType ioSensor, boottime time.Time) *diskIOSensor {
+	r := []rune(device.id)
+	name := string(append([]rune{unicode.ToUpper(r[0])}, r[1:]...)) + " " + sensorType.String()
+	id := strings.ToLower(device.id + "_" + strings.ReplaceAll(sensorType.String(), " ", "_"))
+
+	// Base diskIOSensor fields.
+	ioSensor := &diskIOSensor{
 		Entity: &sensor.Entity{
-			Name:       generateName(device.id, sensorType.String()),
-			StateClass: types.StateClassTotalIncreasing,
-			Units:      diskCountUnits,
+			Name: name,
 			State: &sensor.State{
-				ID:   generateID(device.id, sensorType.String()),
-				Icon: generateIcon(sensorType),
+				ID: id,
 				Attributes: map[string]any{
-					"data_source":                linux.DataSrcSysfs,
-					"native_unit_of_measurement": diskRateUnits,
-					"last_reset":                 boottime.Format(time.RFC3339),
+					"data_source": linux.DataSrcSysfs,
 				},
 			},
 		},
 		sensorType: sensorType,
 	}
 
+	// Add attributes from device if available.
 	if device.model != "" {
-		newSensor.Attributes["device_model"] = device.model
+		ioSensor.Attributes["device_model"] = device.model
 	}
 
 	if device.sysFSPath != "" {
-		newSensor.Attributes["sysfs_path"] = device.sysFSPath
+		ioSensor.Attributes["sysfs_path"] = device.sysFSPath
 	}
 
 	if device.id != "total" {
-		newSensor.Category = types.CategoryDiagnostic
+		ioSensor.Category = types.CategoryDiagnostic
 	}
 
-	return newSensor
-}
-
-func newDiskIORateSensor(device *device, sensorType ioSensor) *diskIOSensor {
-	newSensor := &diskIOSensor{
-		Entity: &sensor.Entity{
-			Name:        generateName(device.id, sensorType.String()),
-			DeviceClass: types.SensorDeviceClassDataRate,
-			StateClass:  types.StateClassMeasurement,
-			Units:       diskRateUnits,
-			State: &sensor.State{
-				ID:   generateID(device.id, sensorType.String()),
-				Icon: generateIcon(sensorType),
-				Attributes: map[string]any{
-					"data_source":                linux.DataSrcSysfs,
-					"native_unit_of_measurement": diskRateUnits,
-				},
-			},
-		},
-		sensorType: sensorType,
-	}
-
-	if device.model != "" {
-		newSensor.Attributes["device_model"] = device.model
-	}
-
-	if device.sysFSPath != "" {
-		newSensor.Attributes["sysfs_path"] = device.sysFSPath
-	}
-
-	if device.id != totalsID {
-		newSensor.Category = types.CategoryDiagnostic
-	}
-
-	return newSensor
-}
-
-func generateName(id string, sensorType string) string {
-	r := []rune(id)
-
-	return string(append([]rune{unicode.ToUpper(r[0])}, r[1:]...)) + " " + sensorType
-}
-
-func generateID(id string, sensorType string) string {
-	return id + "_" + strcase.ToSnake(sensorType)
-}
-
-func generateIcon(sensorType ioSensor) string {
+	// Fill out additional fields based on sensor type.
 	switch sensorType {
-	case diskReads, diskReadRate:
-		return ioReadsIcon
-	case diskWrites, diskWriteRate:
-		return ioWritesIcon
+	case diskIOInProgress:
+		ioSensor.Icon = ioOpsIcon
+		ioSensor.StateClass = types.StateClassMeasurement
+		ioSensor.Units = diskIOsUnits
+	case diskReads, diskWrites:
+		if sensorType == diskReads {
+			ioSensor.Icon = ioReadsIcon
+		} else {
+			ioSensor.Icon = ioWritesIcon
+		}
+
+		ioSensor.Units = diskCountUnits
+		ioSensor.Attributes["native_unit_of_measurement"] = diskCountUnits
+		ioSensor.StateClass = types.StateClassTotalIncreasing
+		ioSensor.Attributes["last_reset"] = boottime.Format(time.RFC3339)
+	case diskReadRate, diskWriteRate:
+		if sensorType == diskReadRate {
+			ioSensor.Icon = ioReadsIcon
+		} else {
+			ioSensor.Icon = ioWritesIcon
+		}
+
+		ioSensor.Units = diskRateUnits
+		ioSensor.Attributes["native_unit_of_measurement"] = diskRateUnits
+		ioSensor.DeviceClass = types.SensorDeviceClassDataRate
+		ioSensor.StateClass = types.StateClassMeasurement
 	}
 
-	return "mdi:file"
+	return ioSensor
 }
