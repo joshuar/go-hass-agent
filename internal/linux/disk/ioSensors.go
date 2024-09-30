@@ -25,6 +25,9 @@ const (
 
 	diskRateUnits  = "kB/s"
 	diskCountUnits = "requests"
+
+	ioReadsIcon  = "mdi:file-upload"
+	ioWritesIcon = "mdi:file-download"
 )
 
 type ioSensor int
@@ -94,6 +97,7 @@ func newDiskIOSensor(boottime time.Time, device *device, sensorType ioSensor) *d
 				},
 			},
 		},
+		sensorType: sensorType,
 	}
 
 	if device.model != "" {
@@ -127,6 +131,7 @@ func newDiskIORateSensor(device *device, sensorType ioSensor) *diskIOSensor {
 				},
 			},
 		},
+		sensorType: sensorType,
 	}
 
 	if device.model != "" {
@@ -137,7 +142,7 @@ func newDiskIORateSensor(device *device, sensorType ioSensor) *diskIOSensor {
 		newSensor.Attributes["sysfs_path"] = device.sysFSPath
 	}
 
-	if device.id != "total" {
+	if device.id != totalsID {
 		newSensor.Category = types.CategoryDiagnostic
 	}
 
@@ -157,9 +162,9 @@ func generateID(id string, sensorType string) string {
 func generateIcon(sensorType ioSensor) string {
 	switch sensorType {
 	case diskReads, diskReadRate:
-		return "mdi:file-upload"
+		return ioReadsIcon
 	case diskWrites, diskWriteRate:
-		return "mdi:file-download"
+		return ioWritesIcon
 	}
 
 	return "mdi:file"
