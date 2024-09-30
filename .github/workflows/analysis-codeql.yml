@@ -1,4 +1,4 @@
-name: "Analysis"
+name: "CodeQL Analysis"
 
 on:
   push:
@@ -78,22 +78,3 @@ jobs:
       uses: github/codeql-action/analyze@294a9d92911152fe08befb9ec03e240add280cb3 # v3.26.8
       with:
         category: "/language:${{matrix.language}}"
-
-  nilaway:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Harden Runner
-      uses: step-security/harden-runner@91182cccc01eb5e619899d80e4e971d6181294a7 # v1
-      with:
-        disable-sudo: true
-        egress-policy: block
-        allowed-endpoints: >
-          github.com:443
-    - name: Checkout repository
-      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
-      with:
-        fetch-depth: 0
-    - name: Nil panic checks
-      uses: qbaware/nilaway-action@8e71d29f098051670655958e754d21ebb7197416 # v0.0.9
-      with:
-        package-to-scan: ./...
