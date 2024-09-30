@@ -12,11 +12,12 @@ func _() {
 	_ = x[diskWrites-1]
 	_ = x[diskReadRate-2]
 	_ = x[diskWriteRate-3]
+	_ = x[diskIOInProgress-4]
 }
 
-const _ioSensor_name = "Disk ReadsDisk WritesDisk Read RateDisk Write Rate"
+const _ioSensor_name = "Disk ReadsDisk WritesDisk Read RateDisk Write RateDisk IOs In Progress"
 
-var _ioSensor_index = [...]uint8{0, 10, 21, 35, 50}
+var _ioSensor_index = [...]uint8{0, 10, 21, 35, 50, 70}
 
 func (i ioSensor) String() string {
 	if i < 0 || i >= ioSensor(len(_ioSensor_index)-1) {
