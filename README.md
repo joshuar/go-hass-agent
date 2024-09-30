@@ -172,137 +172,137 @@ this app:
 #### 🐧 Linux
 
 - App Details:
-  - *Active App* (currently active (focused) application) and *Running Apps*
+  - **Active App** (currently active (focused) application) and **Running Apps**
   (count of all running applications). Updated when active app or number of apps
   changes.
   - Via D-Bus (requires [XDG Desktop Portal
   Support](https://flatpak.github.io/xdg-desktop-portal/docs/) support).
 - Desktop Settings:
-  - *Accent Colour* (the hex code representing the accent colour of the desktop
-  environment in use) and *Theme Type* (whether a dark or light desktop theme is
+  - **Accent Colour** (the hex code representing the accent colour of the desktop
+  environment in use) and **Theme Type** (whether a dark or light desktop theme is
   detected). Updated when theme or colour changes.
   - Via D-Bus (requires [XDG Desktop Portal
   Support](https://flatpak.github.io/xdg-desktop-portal/docs/) support).
 - Media Controls (when [configured with MQTT](#mqtt-sensors-and-controls)):
-  - *Volume Control* Adjust the volume on the default audio output device.
-  - *Volume Mute* Mute/Unmute the default audio output device.
-  - *MPRIS Player State* Show the current state of any MPRIS compatible player.
+  - **Volume Control** Adjust the volume on the default audio output device.
+  - **Volume Mute** Mute/Unmute the default audio output device.
+  - **MPRIS Player State** Show the current state of any MPRIS compatible player.
     - Requires a player with MPRIS support.
-  - *Webcam Control* Start/stop a webcam and view the video in Home Assistant.
+  - **Webcam Control** Start/stop a webcam and view the video in Home Assistant.
     - Requires a webcam that is exposed via V4L2 (VideoForLinux2).
 - Connected Battery Details:
-  - *Battery Type* (the type of battery, e.g., UPS, line power). Updated on battery add/remove.
-  - *Battery Temp* (battery temperature). Updated when the temperature changes.
-  - *Battery Power* (the battery current power draw, in W). Attributes: Voltage
+  - **Battery Type** (the type of battery, e.g., UPS, line power). Updated on battery add/remove.
+  - **Battery Temp** (battery temperature). Updated when the temperature changes.
+  - **Battery Power** (the battery current power draw, in W). Attributes: Voltage
     (V), Energy consumption (kWh). Updated when power draw changes.
-  - *Battery Level/Percentage* (either a textual representation of the level or
+  - **Battery Level/Percentage** (either a textual representation of the level or
     a percentage, depending on battery support). Updated when level changes.
-  - *Battery State* (the current battery state, e.g., charging/discharging).
+  - **Battery State** (the current battery state, e.g., charging/discharging).
     Updated When state changes.
   - All battery sensors require D-Bus and
     [Upower](https://upower.freedesktop.org/) support.
 - Memory Stats:
-  - *Memory Total* (total memory on the system, in B).
-  - *Memory Available* (current memory available/free, in B).
-  - *Memory Used* (current memory usage, both in B and %).
+  - **Memory Total** (total memory on the system, in B).
+  - **Memory Available** (current memory available/free, in B).
+  - **Memory Used** (current memory usage, both in B and %).
   - If swap is enabled, there will be similar sensors for swap.
   - Sourced via ProcFS. Updated ~every minute.
 - Disk:
-  - *Disk Usage* (in %) per disk/mount.
+  - **Disk Usage** (in %) per disk/mount.
     - Attributes: File system type, bytes/inode total/free/used.
     - Sourced via ProcFS. Updated ~every minute.
-  - *Total Read/Writes* (count) per disk.
-    - Attributes include total milliseconds/sectors spent.
-  - *Read/Write Rate* (in KB/s) per disk.
+  - **Total Read/Writes** (count) per disk.
+    - Attributes incl*ude total milliseconds/sectors spent.
+  - **Read/Write Rate** (in KB/s) per disk.
     - Both sourced via SysFS. Updated ~every 5 seconds.
 - Networking:
-  - *Connection State* (connected/disconnected/activating/deactivating) per
+  - **Connection State** (connected/disconnected/activating/deactivating) per
     connection. Updated when state changes. Requires D-Bus and NetworkManager.
     - Attributes: IP addresses and networks.
   - Connected Wi-Fi Network Details (requires D-Bus and NetworkManager.):
-    - *SSID* (the SSID of the Wi-Fi network). Updated when SSID changes.
-    - *Frequency* (the frequency band of the Wi-Fi network, in Hz). Updated when frequency
+    - **SSID** (the SSID of the Wi-Fi network). Updated when SSID changes.
+    - **Frequency** (the frequency band of the Wi-Fi network, in Hz). Updated when frequency
       changes.
-    - *Speed* (the network speed of the Wi-Fi network, in Mbps). Updated when speed
+    - **Speed** (the network speed of the Wi-Fi network, in Mbps). Updated when speed
       changes.
-    - *Strength* (the strength of the signal of the Wi-Fi network, in dB).
+    - **Strength** (the strength of the signal of the Wi-Fi network, in dB).
       Updated when strength changes.
-    - *BSSID* (the BSSID of the Wi-Fi network). Updated when BSSID changes.
-  - *Device/Link State*
+    - **BSSID** (the BSSID of the Wi-Fi network). Updated when BSSID changes.
+  - **Device/Link State**
     - Via netlink.
-  - *Bytes Received/Sent* (in B). Updated ~every 5s.
+  - **Bytes Received/Sent** (in B). Updated ~every 5s.
     - Per network device/link and total.
     - Via netlink.
-  - *Bytes Received/Sent Rate* (transfer rate, in B/s). Updated ~every 5
+  - **Bytes Received/Sent Rate** (transfer rate, in B/s). Updated ~every 5
     seconds. Via ProcFS.
     - Per network device/link and total.
     - Via netlink.
 - CPU:
-  - *Load Average (1/5/15 min)*. Updated ~every 1 minute. Via ProcFS.
-  - *CPU Usage* (in %). Both total (all-cores) and per-core. Updated ~every 10
+  - **Load Average (1/5/15 min)**. Updated ~every 1 minute. Via ProcFS.
+  - **CPU Usage** (in %). Both total (all-cores) and per-core. Updated ~every 10
     seconds. Via ProcFS.
     - Attributes include breakdown of CPU time per state (i.e., user, idle,
       servicing interrupts, etc.).
-  - *CPU Core Frequency* (in Hz). Per-core. Updated ~every 10 seconds. Via
+  - **CPU Core Frequency** (in Hz). Per-core. Updated ~every 10 seconds. Via
     ProcFS.
     - Attributes include current driver and governor in use.
 - Power Related Details:
-  - *Power Profile* (the current power profile as set by the
+  - **Power Profile** (the current power profile as set by the
     power-profiles-daemon). Updated when profile changes.
     - Via D-Bus (requires [power-profiles-daemon](https://hadess.fedorapeople.org/power-profiles-daemon-docs/gdbus-net.hadess.PowerProfiles.html)).
-  - *Screen Lock State* (current state of screen lock). Updated when screen lock
+  - **Screen Lock State** (current state of screen lock). Updated when screen lock
     changes.
     - Via D-Bus. Requires `xscreensaver` or `systemd-logind` support.
-  - *Power State* (power state of device, e.g., suspended, powered on/off).
+  - **Power State** (power state of device, e.g., suspended, powered on/off).
     Updated when power state changes.
     - Via D-Bus. Requires `systemd-logind`.
 - Power Controls (when [configured with MQTT](#mqtt-sensors-and-controls)):
-  - *Lock/Unlock Screen/Screensaver* Locks/unlocks the session for the user
+  - **Lock/Unlock Screen/Screensaver** Locks/unlocks the session for the user
     running Go Hass Agent.
-  - *Suspend* Will (instantly) suspend (the system state is saved to RAM and
+  - **Suspend** Will (instantly) suspend (the system state is saved to RAM and
     the CPU is turned off) the device running Go Hass Agent.
-  - *Hibernate* Will (instantly) hibernate (the system state is saved to disk
+  - **Hibernate** Will (instantly) hibernate (the system state is saved to disk
     and the machine is powered down) the device running Go Hass Agent.
-  - *Power Off* Will (instantly) power off the device running Go Hass Agent.
-  - *Reboot* Will (instantly) reboot the device running Go Hass Agent.
+  - **Power Off** Will (instantly) power off the device running Go Hass Agent.
+  - **Reboot** Will (instantly) reboot the device running Go Hass Agent.
   - Power controls require a system configured with `systemd-logind` (and D-Bus)
     support.
 - Various System Details:
-  - *Boot Time* (date/Time of last system boot). Via ProcFS.
-  - *Uptime*. Updated ~every 15 minutes. Via ProcFS.
-  - *Kernel Version* (version of the currently running kernel). Updated on agent
+  - **Boot Time** (date/Time of last system boot). Via ProcFS.
+  - **Uptime*. Updated ~every 15 minutes. Via ProcFS.
+  - **Kernel Version** (version of the currently running kernel). Updated on agent
     start. Via ProcFS.
   - Vulnerabilities:
-    - *Firmware Security* the [Host Security ID](https://fwupd.github.io/libfwupdplugin/hsi.html) of the device running Go Hass Agent.
+    - **Firmware Security** the [Host Security ID](https://fwupd.github.io/libfwupdplugin/hsi.html) of the device running Go Hass Agent.
       - Attributes show details for each HSI attribute.
       - Via D-Bus. Requires `fwupd` running on the system.
-    - *CPU Vulnerabilities* whether any CPU vulnerabilities have been detected by the kernel and exploitable/unmitigated.
+    - **CPU Vulnerabilities** whether any CPU vulnerabilities have been detected by the kernel and exploitable/unmitigated.
       - Attributes show the status of each vulnerability detected.
       - Via ProcFS.
   - Distribution Details:
-    - *Distribution Name* (name of the running distribution, e.g., Fedora,
+    - **Distribution Name** (name of the running distribution, e.g., Fedora,
     Ubuntu).
-    - *Distribution Version* (version of the running distribution).
+    - **Distribution Version** (version of the running distribution).
     - Both updated on agent start. Via ProcFS.
-  - *Current Users* (count of users with active sessions on the system). Updated
+  - **Current Users** (count of users with active sessions on the system). Updated
     when any session changes.
     - Attributes: List of usernames | When user count changes.
     - Via D-Bus. Requires `systemd-logind`.
-  - *ABRT Problems* (count of any problems logged to the ABRT daemon). Updated
+  - **ABRT Problems** (count of any problems logged to the ABRT daemon). Updated
     ~every 15 minutes.
     - Attributes: extracted problem details.
     - Requires ABRT.
   - Hardware Sensors:
-    - Any *temp*, *fan*, *power* and other hardware sensors, including associated
-      *alarms*. Updated ~every 1 minute.
+    - Any **temp**, **fan**, **power** and other hardware sensors, including associated
+      **alarms**. Updated ~every 1 minute.
     - Extracted from the `/sys/class/hwmon` file system.
 
 #### All Operating Systems
 
-- *Go Hass Agent Version*. Updated on agent start.
-- *External IP Addresses*. All external IP addresses (IPv4/6) of the device
+- **Go Hass Agent Version**. Updated on agent start.
+- **External IP Addresses**. All external IP addresses (IPv4/6) of the device
   running the agent.
-- *Connection Latency*. Total connection time (in milliseconds) to connect to
+- **Connection Latency**. Total connection time (in milliseconds) to connect to
   Home Assistant from the device running Go Hass Agent. Additional times shown
   as attributes.
 
