@@ -69,7 +69,7 @@
   - [🐳 Running in a container](#-running-in-a-container)
   - [♻️ Regular Usage](#️-regular-usage)
   - [📌 Configuration Location](#-configuration-location)
-  - [Script Sensors](#script-sensors)
+  - [🐚 Script Sensors](#-script-sensors)
     - [Requirements](#requirements)
     - [Supported Scripting Languages](#supported-scripting-languages)
     - [Output Format](#output-format)
@@ -79,7 +79,7 @@
         - [TOML](#toml)
     - [Schedule](#schedule)
     - [Security Implications](#security-implications)
-  - [MQTT Sensors and Controls](#mqtt-sensors-and-controls)
+  - [🚌 MQTT Sensors and Controls](#-mqtt-sensors-and-controls)
     - [Configuration](#configuration)
     - [Custom D-Bus Controls](#custom-d-bus-controls)
     - [Other Custom Commands](#other-custom-commands)
@@ -129,12 +129,12 @@ like the companion app or any other "thing" you've added into Home Assistant.
   - By default, Go Hass Agent ships with up around 100 sensors (on Linux),
     depending on the system it runs on.
 - **Custom Sensors via Scripts:** All platforms can also utilise scripts/executables to
-create custom sensors. See [Script Sensors](#script-sensors).
+create custom sensors. See [Script Sensors](#-script-sensors).
 - **Controls and additional sensors via MQTT:** Where Home Assistant is
 connected to MQTT, Go Hass Agent can add some additional sensors/controls for
 various system features. A selection of device controls are provided by default,
 and you can configure additional controls to execute D-Bus commands or
-scripts/executables. See [Control via MQTT](#mqtt-sensors-and-controls).
+scripts/executables. See [Control via MQTT](#-mqtt-sensors-and-controls).
 
 [⬆️ Back to Top](#-table-of-contents)
 
@@ -183,7 +183,7 @@ this app:
   detected). Updated when theme or colour changes.
   - Via D-Bus (requires [XDG Desktop Portal
   Support](https://flatpak.github.io/xdg-desktop-portal/docs/) support).
-- Media Controls (when [configured with MQTT](#mqtt-sensors-and-controls)):
+- Media Controls (when [configured with MQTT](#-mqtt-sensors-and-controls)):
   - **Volume Control** Adjust the volume on the default audio output device.
   - **Volume Mute** Mute/Unmute the default audio output device.
   - **MPRIS Player State** Show the current state of any MPRIS compatible player.
@@ -256,7 +256,7 @@ this app:
   - **Power State** (power state of device, e.g., suspended, powered on/off).
     Updated when power state changes.
     - Via D-Bus. Requires `systemd-logind`.
-- Power Controls (when [configured with MQTT](#mqtt-sensors-and-controls)):
+- Power Controls (when [configured with MQTT](#-mqtt-sensors-and-controls)):
   - **Lock/Unlock Screen/Screensaver** Locks/unlocks the session for the user
     running Go Hass Agent.
   - **Suspend** Will (instantly) suspend (the system state is saved to RAM and
@@ -512,7 +512,7 @@ agent manage this file.
 
 [⬆️ Back to Top](#-table-of-contents)
 
-### Script Sensors
+### 🐚 Script Sensors
 
 Go Hass Agent supports utilising scripts to create sensors. In this way, you can
 extend the sensors presented to Home Assistant by the agent. Note that as the
@@ -700,7 +700,7 @@ running the agent. Script output is sent to your Home Assistant instance.
 
 [⬆️ Back to Top](#-table-of-contents)
 
-### MQTT Sensors and Controls
+### 🚌 MQTT Sensors and Controls
 
 > [!NOTE]
 > MQTT Sensors and Controls are not enabled by default.
