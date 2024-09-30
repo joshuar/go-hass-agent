@@ -127,6 +127,7 @@ func newDiskIORateSensor(device *device, sensorType ioSensor) *diskIOSensor {
 				},
 			},
 		},
+		sensorType: sensorType,
 	}
 
 	if device.model != "" {
