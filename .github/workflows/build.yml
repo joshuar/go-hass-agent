@@ -31,9 +31,12 @@ jobs:
       release_tag: ${{ steps.release_please.outputs.tag_name }}
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@91182cccc01eb5e619899d80e4e971d6181294a7 # v1
+        uses: step-security/harden-runner@446798f8213ac2e75931c1b0769676d927801858 # v2.10.0
         with:
-          egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
+          disable-sudo: true
+          egress-policy: block
+          allowed-endpoints: >
+            api.github.com:443
       - name: Run release please
         uses: googleapis/release-please-action@7987652d64b4581673a76e33ad5e98e3dd56832f # v4
         id: release_please
@@ -55,7 +58,7 @@ jobs:
         - linux/arm64
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@91182cccc01eb5e619899d80e4e971d6181294a7 # v1
+        uses: step-security/harden-runner@446798f8213ac2e75931c1b0769676d927801858 # v2.10.0
         with:
           egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
       - name: Set up environment
@@ -138,6 +141,10 @@ jobs:
       REGISTRY: ghcr.io
       IMAGE: ${{ github.repository }}
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@446798f8213ac2e75931c1b0769676d927801858 # v2.10.0
+        with:
+          egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
       - name: Checkout repo
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
         with:
@@ -210,7 +217,7 @@ jobs:
       IMAGE: ${{ github.repository }}
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@91182cccc01eb5e619899d80e4e971d6181294a7 # v1
+        uses: step-security/harden-runner@446798f8213ac2e75931c1b0769676d927801858 # v2.10.0
         with:
           egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
       - name: Checkout repo
