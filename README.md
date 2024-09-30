@@ -212,9 +212,11 @@ this app:
     - Attributes: File system type, bytes/inode total/free/used.
     - Sourced via ProcFS. Updated ~every minute.
   - **Total Read/Writes** (count) per disk.
-    - Attributes incl*ude total milliseconds/sectors spent.
+    - Attributes include total milliseconds/sectors spent.
   - **Read/Write Rate** (in KB/s) per disk.
     - Both sourced via SysFS. Updated ~every 5 seconds.
+  - **IO Operations in Progress** per disk.
+    - Sourced via SysFS. Updated ~every 5 seconds.
 - Networking:
   - **Connection State** (connected/disconnected/activating/deactivating) per
     connection. Updated when state changes. Requires D-Bus and NetworkManager.
