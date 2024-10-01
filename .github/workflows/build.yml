@@ -84,6 +84,7 @@ jobs:
             storage.googleapis.com:443
             sum.golang.org:443
             uploads.github.com:443
+            ports.ubuntu.com:80
       - name: Set up environment
         run: |
           platform=${{ matrix.platform }}
