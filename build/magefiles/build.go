@@ -9,8 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"os"
-	"path/filepath"
 	"runtime"
 
 	"github.com/magefile/mage/mg"
@@ -54,20 +52,13 @@ func (b Build) CI() error {
 
 // buildProject is the shared method that all exported build targets use. It
 // runs the bare minimum steps to build a binary of the agent.
-//
-//nolint:mnd
 func buildProject() error {
-	// Remove any existing dist directory.
-	if err := os.RemoveAll(distPath); err != nil {
-		return fmt.Errorf("could not clean dist directory: %w", err)
-	}
-	// Recreate an empty dist directory for this build.
-	if err := os.Mkdir(distPath, 0o755); err != nil {
-		return fmt.Errorf("could not create dist directory: %w", err)
+	if err := cleanDir(distPath); err != nil {
+		return errors.Join(ErrBuildFailed, err)
 	}
 
 	// Set-up the build environment.
-	envMap, err := generateEnv()
+	buildEnv, err := generateBuildEnv()
 	if err != nil {
 		return errors.Join(ErrBuildFailed, err)
 	}
@@ -78,16 +69,13 @@ func buildProject() error {
 		return errors.Join(ErrBuildFailed, err)
 	}
 
-	// Set an appropriate output file based on the arch to build for.
-	outputFile := filepath.Join(distPath, "/go-hass-agent-"+envMap["PLATFORMPAIR"])
-
 	//nolint:sloglint
 	slog.Info("Running go build...",
-		slog.String("output", outputFile),
+		slog.String("output", buildEnv["OUTPUT"]),
 		slog.String("build.host", runtime.GOARCH))
 
 	// Run the build.
-	if err := sh.RunWithV(envMap, "go", "build", "-ldflags="+ldflags, "-o", outputFile); err != nil {
+	if err := sh.RunWithV(buildEnv, "go", "build", "-ldflags="+ldflags, "-o", buildEnv["OUTPUT"]); err != nil {
 		return fmt.Errorf("failed to build project: %w", err)
 	}
 
