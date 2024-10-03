@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//go:generate moq -out register_mocks_test.go . registrationPrefs
+//go:generate go run github.com/matryer/moq -out register_mocks_test.go . registrationPrefs
 package agent
 
 import (

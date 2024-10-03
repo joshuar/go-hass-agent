@@ -25,7 +25,7 @@ import (
 // ease with writing tests.
 var HWMonPath = "/sys/class/hwmon"
 
-//go:generate stringer -type=MonitorType -output hwmon_MonitorType_generated.go
+//go:generate go run golang.org/x/tools/cmd/stringer -type=MonitorType -output hwmon_MonitorType_generated.go
 const (
 	Unknown MonitorType = iota
 	Temp

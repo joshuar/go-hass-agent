@@ -3,6 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
+//go:generate go run golang.org/x/text/cmd/gotext -srclang=en update -out=catalog.go -lang=en,fr,de github.com/joshuar/go-hass-agent
 package translations
 
 import (
@@ -15,8 +16,6 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/logging"
 )
-
-//go:generate gotext -srclang=en update -out=catalog.go -lang=en,fr,de github.com/joshuar/go-hass-agent
 
 // Translator provides a msgPrinter that can display localized strings for
 // translation of the UI.

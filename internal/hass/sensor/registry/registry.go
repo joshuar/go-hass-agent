@@ -17,7 +17,7 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
-//go:generate stringer -type=state -output state_generated.go -linecomment
+//go:generate go run golang.org/x/tools/cmd/stringer -type=state -output state_generated.go -linecomment
 const (
 	disabledState   state = iota + 1 // disabled
 	registeredState                  // registered

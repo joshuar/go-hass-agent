@@ -4,7 +4,7 @@
 // https://opensource.org/licenses/MIT
 
 //revive:disable:max-public-structs
-//go:generate stringer -type=dbusType -output busType_strings.go
+//go:generate go run golang.org/x/tools/cmd/stringer -type=dbusType -output busType_strings.go
 package dbusx
 
 import (
