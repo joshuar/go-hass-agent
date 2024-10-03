@@ -13,6 +13,7 @@
 !/.vscode/ltex.dictionary.*.txt
 !/.github/**/*
 !/.devcontainer/**/*
+.devcontainer/devcontainer.env
 
 # don't ignore YAML configs in sub directories EXCEPT the deployments folder
 # tree
@@ -30,7 +31,6 @@ deployments/**/*.yaml
 !/internal/agent/ui/assets/*
 !**/testing/*
 !**/testing/data/**
-
 
 !*.md
 !*.go
