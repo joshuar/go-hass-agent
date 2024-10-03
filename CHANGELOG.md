@@ -1,5 +1,59 @@
 # Changelog
 
+## [10.3.0](https://github.com/joshuar/go-hass-agent/compare/v10.2.1...v10.3.0) (2024-10-01)
+
+
+### Features
+
+* **agent:** :sparkles: add connection latency sensor ([d55b1ed](https://github.com/joshuar/go-hass-agent/commit/d55b1ed552646abca51529f35595fbfca09bf3a6))
+* **dbusx:** :sparkles: Add a Data type for fetching data via a D-Bus method ([edf80e1](https://github.com/joshuar/go-hass-agent/commit/edf80e1f4dd69e3b9a9ac052a633cc9678093405))
+* **linux:** :sparkles: add a sensor to track if the kernel has reported any CPU vulnerabilities ([8d5ebf2](https://github.com/joshuar/go-hass-agent/commit/8d5ebf26306a0af1092380f1b8ecc00ffbbed4ef))
+* **linux:** :sparkles: add link sensors ([cece6ed](https://github.com/joshuar/go-hass-agent/commit/cece6ede214f193ab2c7c509a05a070c0a31dfe1))
+* **linux:** :sparkles: add per device network counts/rates sensors as well as the total counts/rates ([895125f](https://github.com/joshuar/go-hass-agent/commit/895125fb530e475086ffa1ce9b8dfec0c2c67a5a))
+* **linux:** :sparkles: add sensor for displaying firmware security details ([dae37b4](https://github.com/joshuar/go-hass-agent/commit/dae37b448a7a1d3f1041b0c01b00aec3b4b2f43e))
+* **linux:** :sparkles: add sensors for IO ops in progress per disk (and total of all disks) ([ea33a54](https://github.com/joshuar/go-hass-agent/commit/ea33a544edaf22159797290cf6e1e4fd96fb9937))
+* **linux:** :sparkles: switch total cpu context switches and processes created sensors from totals to rates ([ed015e7](https://github.com/joshuar/go-hass-agent/commit/ed015e7cfaebcb6c4be06f0bc0cd6f060fdd6d01))
+
+
+### Bug Fixes
+
+* :rotating_light: add more nil pointer protections ([f1f4293](https://github.com/joshuar/go-hass-agent/commit/f1f429391fedaa6ec3f5bfebcf13d3dc1fca704a))
+* **agent:** :bug: fix error handling and change endpoint for connection latency sensor ([6dedbc1](https://github.com/joshuar/go-hass-agent/commit/6dedbc13384ceb667e0bb5fb350747a08ee33876))
+* **agent:** :bug: pass preferences to notifications worker ([30178cd](https://github.com/joshuar/go-hass-agent/commit/30178cd0722e6e97ecab194205032c39e2ee2160))
+* **agent:** :bug: try to protect against empty response in connection latency sensor ([b40ccc7](https://github.com/joshuar/go-hass-agent/commit/b40ccc75692506cce899fbe16a7d0dd03384ba51))
+* **agent:** :bug: uncomment commented block for testing ([9f4b656](https://github.com/joshuar/go-hass-agent/commit/9f4b65619b6a6b641b2ca7e19393e07dd9ca8d1a))
+* **hass:** :bug: don't exclude nil value sensors when retrieving sensor list ([886b7eb](https://github.com/joshuar/go-hass-agent/commit/886b7eb8431aaaae6173b1c054d9b3f29e60567c))
+* **hass:** :bug: simplify validation of sensor requests ([6db1638](https://github.com/joshuar/go-hass-agent/commit/6db1638fb0458e5d2edd55854c33aafaa39f2a02))
+* **linux:** :art: better netlink shutdown handling in link sensor worker ([a265fec](https://github.com/joshuar/go-hass-agent/commit/a265fec5ea2bf811674286408ebb22f454f74e7d))
+* **linux:** :bug: actually track running app and total running apps in worker ([66e4a19](https://github.com/joshuar/go-hass-agent/commit/66e4a198993392d8098d1557a5fedeab67d98f3e))
+* **linux:** :bug: add missing disk IO sensor attribute so that disk read/write rates are calculated correctly ([8d7e6af](https://github.com/joshuar/go-hass-agent/commit/8d7e6af36111af2385d94e9fd5fc08b2b4382a3e))
+* **linux:** :bug: add missing disk IO sensor attribute so that disk read/write sensors are calculated correctly ([9b024ee](https://github.com/joshuar/go-hass-agent/commit/9b024ee8a7ed72b512a131ff8e59a186e6745b33))
+* **linux:** :bug: avoid pointer ref/deref ([86a5b5c](https://github.com/joshuar/go-hass-agent/commit/86a5b5c65fea60f5cdc64333f5d1ea7706ba39f2))
+* **linux:** :bug: correct screen lock state with new device class ([f6811bb](https://github.com/joshuar/go-hass-agent/commit/f6811bb1ffdadca13a2710d61cd1c560f23e6bfc))
+* **linux:** :bug: don't add `last_reset` attribute for cpu usage sensors with `total_increasing` state class ([89b903f](https://github.com/joshuar/go-hass-agent/commit/89b903f5e9383796a1556fb51ba4ce5722c426be))
+* **linux:** :bug: event based workers should expose a send-only channel on Events method ([40e1751](https://github.com/joshuar/go-hass-agent/commit/40e1751525f6c45cca428ecc92688c319640f7cd))
+* **linux:** :bug: filter all of `/run` from usage stats ([a0d57bf](https://github.com/joshuar/go-hass-agent/commit/a0d57bf7f2cfb4c96fecde0c058eef206941852f))
+* **linux:** :bug: filter more mount points from generating usage sensors ([b238687](https://github.com/joshuar/go-hass-agent/commit/b238687acc956bd2a072ddb6a5e75257b76c3129))
+* **linux:** :bug: fix changed network rates sensor types stringer ([64e9df9](https://github.com/joshuar/go-hass-agent/commit/64e9df942819ea7f56423db9ed115f725f69b064))
+* **linux:** :bug: get the current screen lock state and send as a sensor on start ([40cbb57](https://github.com/joshuar/go-hass-agent/commit/40cbb57c322da2f7d6b0d2f6c99363158c6cf284))
+* **linux:** :bug: protect against potential nil pointer exception ([ab99be0](https://github.com/joshuar/go-hass-agent/commit/ab99be0129089978dde4d8814bd57fd60360e169))
+* **linux:** :bug: use distinct device classes for intrusion and alarm hardware sensors ([53b552b](https://github.com/joshuar/go-hass-agent/commit/53b552b2855b9eacf29010735e1b95ca724a2ff5))
+* **linux:** :bug: use distinct device classes for laptop sensors ([c0f5fac](https://github.com/joshuar/go-hass-agent/commit/c0f5fac354e953111ab509d7c7e7627bfa2292e5))
+* **linux:** :loud_sound: add repercussions of some settings being unavailable to warning messages ([af6fc62](https://github.com/joshuar/go-hass-agent/commit/af6fc62a1c9c9e4754c12680b56587d89e4ec3b0))
+
+
+### Performance Improvements
+
+* **agent:** :fire: remove unnecessary context creation ([80890aa](https://github.com/joshuar/go-hass-agent/commit/80890aa05f89bf0c192378ea37ee104be9262975))
+* **dbusx:** :zap: more graceful dbus watch closure ([5724468](https://github.com/joshuar/go-hass-agent/commit/5724468dbb1ea422e8421c4ae914e6e4fd6f8f72))
+* **hass:** :building_construction: remove sensor interfaces, use exported struct instead ([80c5780](https://github.com/joshuar/go-hass-agent/commit/80c57800d6c4d2bda691b0cccd63ee133dc9357b))
+* **hass:** :fire: remove unnecessary context creation ([6dfd48a](https://github.com/joshuar/go-hass-agent/commit/6dfd48afc76c67ea8a10dbfb271cc29c8fe47ac6))
+
+
+### Reverts
+
+* **github:** :rewind: switch back to audit to check required access ([03b7e2a](https://github.com/joshuar/go-hass-agent/commit/03b7e2a6419943c25cea037274c03f28a5a75776))
+
 ## [10.2.1](https://github.com/joshuar/go-hass-agent/compare/v10.2.0...v10.2.1) (2024-09-15)
 
 
