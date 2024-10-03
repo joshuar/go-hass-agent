@@ -54,14 +54,9 @@ func (Preps) Format() error {
 // Generate ensures all machine-generated files (gotext, stringer, moq, etc.)
 // are up to date.
 func (Preps) Generate() error {
-	envMap, err := generateEnv()
-	if err != nil {
-		return errors.Join(ErrBuildFailed, err)
-	}
-
 	slog.Info("Running go generate...")
 
-	if err := sh.RunWithV(envMap, "go", "generate", "./..."); err != nil {
+	if err := sh.RunV("go", "generate", "./..."); err != nil {
 		return fmt.Errorf("failed to run go generate: %w", err)
 	}
 
