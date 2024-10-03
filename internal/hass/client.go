@@ -4,7 +4,7 @@
 // https://opensource.org/licenses/MIT
 
 //revive:disable:max-public-structs
-//go:generate moq -out client_mocks_test.go . PostRequest Registry
+//go:generate go run github.com/matryer/moq -out client_mocks_test.go . PostRequest Registry
 package hass
 
 import (

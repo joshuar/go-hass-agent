@@ -24,12 +24,6 @@ const (
 	multiarchScript        = "build/scripts/enable-multiarch"
 )
 
-var generators = map[string]string{
-	"moq":      "github.com/matryer/moq@v0.3.4",
-	"gotext":   "golang.org/x/text/cmd/gotext@v0.16.0",
-	"stringer": "golang.org/x/tools/cmd/stringer@v0.23.0",
-}
-
 var (
 	ErrMissingBuildPlatform = errors.New("BUILDPLATFORM environment variable not set")
 	ErrMissingID            = errors.New("ID missing from os-release file")
@@ -57,14 +51,9 @@ func (Preps) Format() error {
 	return nil
 }
 
-// Generate ensures all machine-generated files (gotext, stringer, moq, etc.) are up to date.
+// Generate ensures all machine-generated files (gotext, stringer, moq, etc.)
+// are up to date.
 func (Preps) Generate() error {
-	for tool, url := range generators {
-		if err := foundOrInstalled(tool, url); err != nil {
-			return fmt.Errorf("unable to install %s: %w", tool, err)
-		}
-	}
-
 	envMap, err := generateEnv()
 	if err != nil {
 		return errors.Join(ErrBuildFailed, err)

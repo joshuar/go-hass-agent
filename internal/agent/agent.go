@@ -5,7 +5,7 @@
 
 // revive:disable:unused-receiver
 //
-//go:generate moq -out agent_mocks_test.go . ui SensorController MQTTController
+//go:generate go run github.com/matryer/moq -out agent_mocks_test.go . ui SensorController MQTTController
 package agent
 
 import (

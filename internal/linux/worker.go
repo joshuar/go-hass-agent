@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//go:generate moq -out worker_mocks_test.go . PollingType EventType OneShotType
+//go:generate go run github.com/matryer/moq -out worker_mocks_test.go . PollingType EventType OneShotType
 package linux
 
 import (

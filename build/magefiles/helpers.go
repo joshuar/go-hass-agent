@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"os/exec"
 	"runtime"
 	"slices"
 	"strings"
@@ -48,23 +47,6 @@ func sudoWrap(cmd string, args ...string) error {
 	} else {
 		if err := sh.RunV("sudo", slices.Concat([]string{cmd}, args)...); err != nil {
 			return fmt.Errorf("could not run command: %w", err)
-		}
-	}
-
-	return nil
-}
-
-// foundOrInstalled checks for existence then installs a file if it's not there.
-func foundOrInstalled(executableName, installURL string) error {
-	_, missing := exec.LookPath(executableName)
-	if missing != nil {
-		slog.Info("Installing tool.",
-			slog.String("tool", executableName),
-			slog.String("url", installURL))
-
-		err := sh.Run("go", "install", installURL)
-		if err != nil {
-			return fmt.Errorf("installation failed: %w", err)
 		}
 	}
 

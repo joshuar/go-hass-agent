@@ -20,13 +20,10 @@ import (
 
 type Package mg.Namespace
 
-const iconPath = "internal/agent/ui/assets/go-hass-agent.png"
-
 var (
 	pkgformats   = []string{"rpm", "deb", "archlinux"}
 	pkgPath      = filepath.Join(distPath, "pkg")
-	fynePath     = "fyne-cross"
-	nfpmBaseArgs = []string{"package", "--config", ".nfpm.yaml", "--target", pkgPath}
+	nfpmBaseArgs = []string{"run", "github.com/goreleaser/nfpm/v2/cmd/nfpm", "package", "--config", ".nfpm.yaml", "--target", pkgPath}
 
 	ErrNoBuildEnv        = errors.New("no build and/or version environment variables")
 	ErrNfpmInstallFailed = errors.New("unable to install nfpm")
@@ -44,10 +41,6 @@ func (Package) Nfpm() error {
 		return fmt.Errorf("could not create dist directory: %w", err)
 	}
 
-	if err := foundOrInstalled("nfpm", "github.com/goreleaser/nfpm/v2/cmd/nfpm@latest"); err != nil {
-		return fmt.Errorf("could not install nfpm: %w", err)
-	}
-
 	envMap, err := generateEnv()
 	if err != nil {
 		return fmt.Errorf("failed to create environment: %w", err)
@@ -57,7 +50,7 @@ func (Package) Nfpm() error {
 		slog.Info("Building package with nfpm.", slog.String("format", pkgformat))
 		args := slices.Concat(nfpmBaseArgs, []string{"--packager", pkgformat})
 
-		if err := sh.RunWithV(envMap, "nfpm", args...); err != nil {
+		if err := sh.RunWithV(envMap, "go", args...); err != nil {
 			return fmt.Errorf("could not run nfpm: %w", err)
 		}
 
@@ -86,61 +79,6 @@ func (Package) Nfpm() error {
 	return nil
 }
 
-// FyneCross builds packages using fyne-cross.
-//
-//nolint:mnd
-func (Package) FyneCross() error {
-	if err := os.RemoveAll(fynePath); err != nil {
-		return fmt.Errorf("could not clean dist directory: %w", err)
-	}
-
-	if err := os.MkdirAll(fynePath, 0o755); err != nil {
-		return fmt.Errorf("could not create dist directory: %w", err)
-	}
-
-	if err := foundOrInstalled("fyne-cross", "github.com/fyne-io/fyne-cross@latest"); err != nil {
-		return fmt.Errorf("failed to install fyne-cross: %w", err)
-	}
-
-	// Set-up the build environment.
-	envMap, err := generateEnv()
-	if err != nil {
-		return fmt.Errorf("failed to create environment: %w", err)
-	}
-
-	// Set-up appropriate build flags.
-	ldflags, err := getFlags()
-	if err != nil {
-		return errors.Join(ErrBuildFailed, err)
-	}
-
-	envMap["GOFLAGS"] = "-ldflags=" + ldflags
-
-	if err = sh.RunWithV(envMap,
-		"fyne-cross", "linux",
-		"-name", "go-hass-agent",
-		"-icon", iconPath,
-		"-release",
-		"-arch", envMap["GOARCH"]); err != nil {
-		slog.Warn("fyne-cross finished but with errors. Continuing anyway.", slog.Any("error", err))
-	}
-
-	// Rename the fyne package with the arch included.
-	newFileName := fynePath + "/dist/linux-" + envMap["GOARCH"] + "/go-hass-agent-" + envMap["PLATFORMPAIR"] + ".tar.xz"
-	origFileName := fynePath + "/dist/linux-" + envMap["GOARCH"] + "/go-hass-agent.tar.xz"
-
-	if err = sh.Copy(newFileName, origFileName); err != nil {
-		return fmt.Errorf("could not copy build artifact: %w", err)
-	}
-
-	err = sh.Rm(origFileName)
-	if err != nil {
-		return fmt.Errorf("could not remove unneeded build data: %w", err)
-	}
-
-	return nil
-}
-
 // CI builds all packages as part of the CI pipeline.
 func (p Package) CI() error {
 	if !isCI() {
@@ -148,7 +86,6 @@ func (p Package) CI() error {
 	}
 
 	mg.Deps(p.Nfpm)
-	// mg.Deps(p.FyneCross)
 
 	return nil
 }

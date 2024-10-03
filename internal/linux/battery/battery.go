@@ -4,7 +4,7 @@
 // https://opensource.org/licenses/MIT
 
 //revive:disable:unused-receiver
-//go:generate stringer -type=batterySensor -output battery_generated.go -linecomment
+//go:generate go run golang.org/x/tools/cmd/stringer -type=batterySensor -output battery_generated.go -linecomment
 package battery
 
 import (

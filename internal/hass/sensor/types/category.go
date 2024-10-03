@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//go:generate stringer -type=Category -output category_generated.go -linecomment
+//go:generate go run golang.org/x/tools/cmd/stringer -type=Category -output category_generated.go -linecomment
 package types
 
 const (

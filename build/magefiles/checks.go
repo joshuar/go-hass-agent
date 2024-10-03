@@ -28,23 +28,23 @@ func (Checks) Lint() error {
 		slog.Warn("Linter reported issues.", slog.Any("error", err))
 	}
 
+	return nil
+}
+
+func (Checks) StaticCheck() error {
 	slog.Info("Running linter (staticcheck)...")
 
-	if err := foundOrInstalled("staticcheck", "honnef.co/go/tools/cmd/staticcheck@latest"); err != nil {
-		return fmt.Errorf("could not install staticcheck: %w", err)
-	}
-
-	if err := sh.RunV("staticcheck", "-f", "stylish", "./..."); err != nil {
+	if err := sh.RunV("go", "run", "honnef.co/go/tools/cmd/staticcheck", "-f", "stylish", "./..."); err != nil {
 		return fmt.Errorf("failed to run staticcheck: %w", err)
 	}
 
+	return nil
+}
+
+func (Checks) Nilaway() error {
 	slog.Info("Running linter (nilaway)...")
 
-	if err := foundOrInstalled("nilaway", "go.uber.org/nilaway/cmd/nilaway@latest"); err != nil {
-		return fmt.Errorf("could not install nilaway: %w", err)
-	}
-
-	if err := sh.RunV("nilaway", "./..."); err != nil {
+	if err := sh.RunV("go", "run", "go.uber.org/nilaway/cmd/nilaway", "./..."); err != nil {
 		return fmt.Errorf("failed to run nilaway: %w", err)
 	}
 
@@ -63,14 +63,10 @@ func (Checks) Licenses() error {
 		return fmt.Errorf("could not create directory: %w", err)
 	}
 
-	// If go-licenses is missing, install it
-	if err = foundOrInstalled("go-licenses", "github.com/google/go-licenses@latest"); err != nil {
-		return fmt.Errorf("could not install go-licenses: %w", err)
-	}
 	// The header sets the columns for the contents
 	csvHeader := "Package,URL,License\n"
 
-	csvContents, err := sh.Output("go-licenses", "report", "--ignore=github.com/joshuar", "./...")
+	csvContents, err := sh.Output("go", "run", "github.com/google/go-licenses", "report", "--ignore=github.com/joshuar", "./...")
 	if err != nil {
 		return fmt.Errorf("could not run go-licenses: %w", err)
 	}
