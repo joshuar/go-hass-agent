@@ -72,7 +72,7 @@ func (Preps) Generate() error {
 
 	slog.Info("Running go generate...")
 
-	if err := sh.RunWithV(envMap, "go", "generate", "-v", "./..."); err != nil {
+	if err := sh.RunWithV(envMap, "go", "generate", "./..."); err != nil {
 		return fmt.Errorf("failed to run go generate: %w", err)
 	}
 

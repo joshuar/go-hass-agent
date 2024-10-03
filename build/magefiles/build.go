@@ -11,6 +11,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"runtime"
 
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
@@ -80,9 +81,10 @@ func buildProject() error {
 	// Set an appropriate output file based on the arch to build for.
 	outputFile := filepath.Join(distPath, "/go-hass-agent-"+envMap["PLATFORMPAIR"])
 
+	//nolint:sloglint
 	slog.Info("Running go build...",
 		slog.String("output", outputFile),
-		slog.String("ldflags", ldflags))
+		slog.String("build.host", runtime.GOARCH))
 
 	// Run the build.
 	if err := sh.RunWithV(envMap, "go", "build", "-ldflags="+ldflags, "-o", outputFile); err != nil {
