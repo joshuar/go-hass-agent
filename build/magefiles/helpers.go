@@ -162,10 +162,7 @@ func generateEnv() (map[string]string, error) {
 	_, arch, ver := parseBuildPlatform()
 
 	if arch != "" && arch != runtime.GOARCH {
-		slog.Info("Cross compilation requested.",
-			slog.String("host", runtime.GOARCH),
-			slog.String("target", arch))
-
+		slog.Info("Setting up cross-compilation.")
 		// Update NFPM_ARCH to the target arch.
 		envMap["NFPM_ARCH"] = arch + ver
 

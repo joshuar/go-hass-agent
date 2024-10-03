@@ -9,6 +9,10 @@ import (
 	"errors"
 	"log/slog"
 	"os"
+	"time"
+
+	"github.com/lmittmann/tint"
+	"github.com/mattn/go-isatty"
 )
 
 const (
@@ -22,6 +26,28 @@ var (
 )
 
 func init() {
+	version, _ := getVersion() //nolint:errcheck
+	hash, _ := getGitHash()    //nolint:errcheck
+
+	platform, arch, ver := parseBuildPlatform()
+
 	// set global logger with custom options
-	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, nil)))
+	logger := slog.New(tint.NewHandler(os.Stderr, &tint.Options{
+		Level:      slog.LevelDebug,
+		TimeFormat: time.Kitchen,
+		NoColor:    !isatty.IsTerminal(os.Stderr.Fd()),
+	})).
+		With(
+			slog.Group("git",
+				slog.String("version", version),
+				slog.String("hash", hash),
+			),
+			slog.Group("build",
+				slog.String("os", platform),
+				slog.String("arch", arch),
+				slog.String("revision", ver),
+			),
+		)
+
+	slog.SetDefault(logger)
 }
