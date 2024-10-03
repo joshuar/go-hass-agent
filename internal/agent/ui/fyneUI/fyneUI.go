@@ -33,7 +33,6 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
-	"github.com/joshuar/go-hass-agent/internal/translations"
 )
 
 var validate *validator.Validate
@@ -57,7 +56,6 @@ type Notification interface {
 
 type FyneUI struct {
 	app    fyne.App
-	text   *translations.Translator
 	logger *slog.Logger
 }
 
@@ -69,7 +67,6 @@ func init() {
 func NewFyneUI(ctx context.Context) *FyneUI {
 	appUI := &FyneUI{
 		app:    app.NewWithID(preferences.AppName),
-		text:   translations.NewTranslator(ctx),
 		logger: logging.FromContext(ctx).With(slog.String("subsystem", "fyne")),
 	}
 	appUI.app.SetIcon(&ui.TrayIcon{})
@@ -89,12 +86,6 @@ func (i *FyneUI) Run(ctx context.Context) {
 	i.app.Run()
 }
 
-// Translate takes the input string and outputs a translated string for the
-// language under which the agent is running.
-func (i *FyneUI) Translate(text string) string {
-	return i.text.Translate(text)
-}
-
 // DisplayNotification will display a notification using Fyne.
 func (i *FyneUI) DisplayNotification(notification Notification) {
 	i.app.SendNotification(&fyne.Notification{
@@ -108,26 +99,26 @@ func (i *FyneUI) DisplayNotification(notification Notification) {
 func (i *FyneUI) DisplayTrayIcon(ctx context.Context, cancelFunc context.CancelFunc) {
 	if desk, ok := i.app.(desktop.App); ok {
 		// About menu item.
-		menuItemAbout := fyne.NewMenuItem(i.Translate("About"),
+		menuItemAbout := fyne.NewMenuItem("About",
 			func() {
 				i.aboutWindow(ctx).Show()
 			})
 		// Sensors menu item.
-		menuItemSensors := fyne.NewMenuItem(i.Translate("Sensors"),
+		menuItemSensors := fyne.NewMenuItem("Sensors",
 			func() {
 				i.sensorsWindow().Show()
 			})
 		// Preferences/Settings items.
-		menuItemAppPrefs := fyne.NewMenuItem(i.Translate("App Settings"),
+		menuItemAppPrefs := fyne.NewMenuItem("App Settings",
 			func() {
 				i.agentSettingsWindow(ctx).Show()
 			})
-		menuItemFynePrefs := fyne.NewMenuItem(i.text.Translate("Fyne Settings"),
+		menuItemFynePrefs := fyne.NewMenuItem("Fyne Settings",
 			func() {
 				i.fyneSettingsWindow().Show()
 			})
 		// Quit menu item.
-		menuItemQuit := fyne.NewMenuItem(i.Translate("Quit"), func() {
+		menuItemQuit := fyne.NewMenuItem("Quit", func() {
 			i.logger.Debug("Qutting agent on user request.")
 			cancelFunc()
 		})
@@ -161,7 +152,7 @@ func (i *FyneUI) DisplayRegistrationWindow(ctx context.Context, prefs *preferenc
 		return userCancelled
 	}
 
-	window := i.app.NewWindow(i.Translate("App Registration"))
+	window := i.app.NewWindow("App Registration")
 
 	var allFormItems []*widget.FormItem
 	allFormItems = append(allFormItems, i.registrationFields(prefs)...)
@@ -179,7 +170,7 @@ func (i *FyneUI) DisplayRegistrationWindow(ctx context.Context, prefs *preferenc
 	}
 
 	windowContents := container.NewVBox(
-		widget.NewLabelWithStyle(i.Translate(ui.RegistrationInfoString), fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+		widget.NewLabelWithStyle(ui.RegistrationInfoString, fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewLabel(""),
 		registrationForm,
 	)
@@ -238,7 +229,7 @@ func (i *FyneUI) aboutWindow(ctx context.Context) fyne.Window {
 		container.NewGridWithColumns(len(linkWidgets), linkWidgets...),
 	)
 	windowContents := container.NewCenter(container.NewVBox(widgets...))
-	window := i.app.NewWindow(i.Translate("About"))
+	window := i.app.NewWindow("About")
 	window.SetContent(windowContents)
 
 	return window
@@ -247,7 +238,7 @@ func (i *FyneUI) aboutWindow(ctx context.Context) fyne.Window {
 // fyneSettingsWindow creates a window that will show the Fyne settings for
 // controlling the look and feel of other windows.
 func (i *FyneUI) fyneSettingsWindow() fyne.Window {
-	window := i.app.NewWindow(i.Translate("Fyne Preferences"))
+	window := i.app.NewWindow("Fyne Preferences")
 	window.SetContent(settings.NewSettings().LoadAppearanceScreen(window))
 
 	return window
@@ -265,9 +256,9 @@ func (i *FyneUI) agentSettingsWindow(ctx context.Context) fyne.Window {
 	}
 
 	// Generate a form of MQTT preferences.
-	allFormItems = append(allFormItems, i.mqttConfigItems(prefs.MQTT)...)
+	allFormItems = append(allFormItems, mqttConfigItems(prefs.MQTT)...)
 
-	window := i.app.NewWindow(i.Translate("App Preferences"))
+	window := i.app.NewWindow("App Preferences")
 	settingsForm := widget.NewForm(allFormItems...)
 	settingsForm.OnSubmit = func() {
 		// Save the new MQTT preferences to file.
@@ -282,9 +273,9 @@ func (i *FyneUI) agentSettingsWindow(ctx context.Context) fyne.Window {
 	settingsForm.OnCancel = func() {
 		window.Close()
 	}
-	settingsForm.SubmitText = i.Translate("Save")
+	settingsForm.SubmitText = "Save"
 	window.SetContent(container.New(layout.NewVBoxLayout(),
-		widget.NewLabelWithStyle(i.Translate(ui.PrefsRestartMsgString), fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+		widget.NewLabelWithStyle(ui.PrefsRestartMsgString, fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		settingsForm,
 	))
 
@@ -379,7 +370,7 @@ func (i *FyneUI) sensorsWindow() fyne.Window {
 		}
 	}()
 
-	window := i.app.NewWindow(i.Translate("Sensors"))
+	window := i.app.NewWindow("Sensors")
 	window.SetContent(sensorsTable)
 	window.Resize(fyne.NewSize(480, 640))
 	window.SetOnClosed(func() {
@@ -440,23 +431,23 @@ func (i *FyneUI) registrationFields(prefs *preferences.Registration) []*widget.F
 
 	return []*widget.FormItem{
 		{
-			Text:     i.Translate("Token"),
-			HintText: i.Translate("The long-lived access token generated in Home Assistant."),
+			Text:     "Token",
+			HintText: "The long-lived access token generated in Home Assistant.",
 			Widget:   tokenEntry,
 		},
 		{
-			Text:     i.Translate("Auto-discovered Servers"),
-			HintText: i.Translate("These are the Home Assistant servers that were detected on the local network."),
+			Text:     "Auto-discovered Servers",
+			HintText: "These are the Home Assistant servers that were detected on the local network.",
 			Widget:   autoServerSelect,
 		},
 		{
-			Text:     i.Translate("Use Custom Server?"),
-			HintText: i.Translate("Select this option to enter a server manually below."), Widget: manualServerSelect,
+			Text:     "Use Custom Server?",
+			HintText: "Select this option to enter a server manually below.", Widget: manualServerSelect,
 		},
-		{Text: i.Translate("Manual Server Entry"), Widget: manualServerEntry},
+		{Text: "Manual Server Entry", Widget: manualServerEntry},
 		{
-			Text:     i.Translate("Ignore returned URLs?"),
-			HintText: i.Translate("Override Home Assistant and use server chosen (above) for API access."),
+			Text:     "Ignore returned URLs?",
+			HintText: "Override Home Assistant and use server chosen (above) for API access.",
 			Widget:   ignoreURLsSelect,
 		},
 	}
@@ -464,21 +455,21 @@ func (i *FyneUI) registrationFields(prefs *preferences.Registration) []*widget.F
 
 // mqttConfigItems generates a list of for item widgets for configuring the
 // agent to use an MQTT for pub/sub functionality.
-func (i *FyneUI) mqttConfigItems(prefs *preferences.MQTT) []*widget.FormItem {
+func mqttConfigItems(prefs *preferences.MQTT) []*widget.FormItem {
 	serverEntry := configEntry(&prefs.MQTTServer, false)
 	serverEntry.Validator = uriValidator()
 	serverEntry.Disable()
-	serverFormItem := widget.NewFormItem(i.Translate("MQTT Server"), serverEntry)
+	serverFormItem := widget.NewFormItem("MQTT Server", serverEntry)
 	serverFormItem.HintText = ui.MQTTServerInfoString
 
 	userEntry := configEntry(&prefs.MQTTUser, false)
 	userEntry.Disable()
-	userFormItem := widget.NewFormItem(i.Translate("MQTT User"), userEntry)
+	userFormItem := widget.NewFormItem("MQTT User", userEntry)
 	userFormItem.HintText = ui.MQTTUserInfoString
 
 	passwordEntry := configEntry(&prefs.MQTTPassword, true)
 	passwordEntry.Disable()
-	passwordFormItem := widget.NewFormItem(i.Translate("MQTT Password"), passwordEntry)
+	passwordFormItem := widget.NewFormItem("MQTT Password", passwordEntry)
 	passwordFormItem.HintText = ui.MQTTPasswordInfoString
 
 	mqttEnabled := configCheck(&prefs.MQTTEnabled, func(b bool) {
@@ -500,7 +491,7 @@ func (i *FyneUI) mqttConfigItems(prefs *preferences.MQTT) []*widget.FormItem {
 
 	var items []*widget.FormItem
 
-	items = append(items, widget.NewFormItem(i.Translate("Use MQTT?"), mqttEnabled),
+	items = append(items, widget.NewFormItem("Use MQTT?", mqttEnabled),
 		serverFormItem,
 		userFormItem,
 		passwordFormItem,

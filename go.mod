@@ -12,7 +12,6 @@ require (
 	github.com/goreleaser/nfpm/v2 v2.40.0
 	github.com/grandcat/zeroconf v1.0.0
 	github.com/iancoleman/strcase v0.3.0
-	github.com/jeandeaual/go-locale v0.0.0-20240223122105-ce5225dcaa49
 	github.com/joshuar/go-hass-anything/v11 v11.1.0
 	github.com/lthibault/jitterbug/v2 v2.2.2
 	github.com/lxzan/gws v1.8.8
@@ -199,6 +198,7 @@ require (
 	github.com/invopop/jsonschema v0.12.0 // indirect
 	github.com/jaypipes/pcidb v1.0.1 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
+	github.com/jeandeaual/go-locale v0.0.0-20240223122105-ce5225dcaa49 // indirect
 	github.com/jedisct1/go-minisign v0.0.0-20230811132847-661be99b8267 // indirect
 	github.com/jellydator/ttlcache/v3 v3.2.0 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
