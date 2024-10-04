@@ -12,6 +12,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"time"
 
 	slogmulti "github.com/samber/slog-multi"
 
@@ -44,7 +45,7 @@ func New(appID string, options Options) *slog.Logger {
 	var (
 		logLevel slog.Level
 		logFile  string
-		handler  slog.Handler
+		handlers []slog.Handler
 	)
 
 	// Set the log level.
@@ -64,7 +65,9 @@ func New(appID string, options Options) *slog.Logger {
 		logFile = filepath.Join(xdg.ConfigHome, appID, logFileName)
 	}
 
-	// Set the slog handler
+	handlers = append(handlers, tint.NewHandler(os.Stderr,
+		generateConsoleOptions(logLevel, os.Stderr.Fd())))
+
 	// Unless no log file was requested, set up file logging.
 	if logFile != "" {
 		logFH, err := openLogFile(logFile)
@@ -73,27 +76,22 @@ func New(appID string, options Options) *slog.Logger {
 				slog.String("file", logFile),
 				slog.Any("error", err))
 		} else {
-			handler = slogmulti.Fanout(
-				tint.NewHandler(os.Stdout, generateOptions(logLevel, os.Stdout.Fd())),
-				tint.NewHandler(logFH, generateOptions(logLevel, logFH.Fd())),
-			)
+			handlers = append(handlers, slog.NewTextHandler(logFH, generateFileOpts(logLevel)))
 		}
-	} else {
-		handler = slogmulti.Fanout(
-			tint.NewHandler(os.Stdout, generateOptions(logLevel, os.Stdout.Fd())),
-		)
 	}
 
-	logger := slog.New(handler)
+	logger := slog.New(slogmulti.Fanout(handlers...))
 	slog.SetDefault(logger)
 
 	return logger
 }
 
-func generateOptions(level slog.Level, fd uintptr) *tint.Options {
+func generateConsoleOptions(level slog.Level, fd uintptr) *tint.Options {
 	opts := &tint.Options{
-		Level:   level,
-		NoColor: !isatty.IsTerminal(fd),
+		Level:       level,
+		NoColor:     !isatty.IsTerminal(fd),
+		ReplaceAttr: tintLevelReplacer,
+		TimeFormat:  time.Kitchen,
 	}
 	if level == LevelTrace {
 		opts.AddSource = true
@@ -102,20 +100,55 @@ func generateOptions(level slog.Level, fd uintptr) *tint.Options {
 	return opts
 }
 
-//nolint:unused
-func levelReplacer(_ []string, attr slog.Attr) slog.Attr {
+func generateFileOpts(level slog.Level) *slog.HandlerOptions {
+	opts := &slog.HandlerOptions{
+		Level:       level,
+		ReplaceAttr: fileLevelReplacer,
+	}
+	if level == LevelTrace {
+		opts.AddSource = true
+	}
+
+	return opts
+}
+
+func tintLevelReplacer(_ []string, attr slog.Attr) slog.Attr {
+	// Set default level.
 	if attr.Key == slog.LevelKey {
 		level, ok := attr.Value.Any().(slog.Level)
 		if !ok {
 			level = slog.LevelInfo
 		}
 
-		levelLabel, exists := LevelNames[level]
-		if !exists {
-			levelLabel = level.String()
+		// Errors in red.
+		if err, ok := attr.Value.Any().(error); ok {
+			aErr := tint.Err(err)
+			attr.Key = aErr.Key
 		}
 
-		attr.Value = slog.StringValue(levelLabel)
+		// Format custom log level.
+		levelLabel, exists := LevelNames[level]
+		if exists {
+			attr.Value = slog.StringValue(levelLabel)
+		}
+	}
+
+	return attr
+}
+
+func fileLevelReplacer(_ []string, attr slog.Attr) slog.Attr {
+	// Set default level.
+	if attr.Key == slog.LevelKey {
+		level, ok := attr.Value.Any().(slog.Level)
+		if !ok {
+			level = slog.LevelInfo
+		}
+
+		// Format custom log level.
+		levelLabel, exists := LevelNames[level]
+		if exists {
+			attr.Value = slog.StringValue(levelLabel)
+		}
 	}
 
 	return attr
