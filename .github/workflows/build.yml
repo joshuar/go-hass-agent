@@ -16,7 +16,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  COSIGN_VERSION: 'v2.4.0'
+  COSIGN_VERSION: "v2.4.0"
   MAGEARGS: -d build/magefiles -w .
 
 jobs:
@@ -52,10 +52,10 @@ jobs:
     strategy:
       matrix:
         platform:
-        - linux/amd64
-        - linux/arm/v6
-        - linux/arm/v7
-        - linux/arm64
+          - linux/amd64
+          - linux/arm/v6
+          - linux/arm/v7
+          - linux/arm64
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@91182cccc01eb5e619899d80e4e971d6181294a7 # v2.10.1
@@ -101,7 +101,7 @@ jobs:
         id: setup_go
         uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5
         with:
-          go-version-file: 'go.mod'
+          go-version-file: "go.mod"
       - name: Install Mage
         uses: magefile/mage-action@6a5dcb5fe61f43d7c08a98bc3cf9bc63c308c08e # v3
         with:
@@ -145,7 +145,7 @@ jobs:
         run: |
           gh release upload ${{ needs.check_release.outputs.release_tag }} dist/pkg/*.{rpm,deb,zst,sig}
         env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build_container:
     needs: check_release
@@ -193,6 +193,7 @@ jobs:
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=raw,value=${{ env.APPVERSION }}
+            type=edge
         env:
           DOCKER_METADATA_ANNOTATIONS_LEVELS: manifest,index
       - name: Set up QEMU
