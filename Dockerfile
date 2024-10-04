@@ -23,24 +23,28 @@ RUN mage -v -d build/magefiles -w . preps:deps
 RUN mage -v -d build/magefiles -w . build:full
 
 FROM docker.io/alpine@sha256:0a4eaa0eecf5f8c050e5bba433f58c052be7587ee8af3e8b3910ef9ab5fbe9f5
-# import TARGETPLATFORM and TARGETARCH
+# Add image labels.
+LABEL org.opencontainers.image.source=https://github.com/joshuar/go-hass-agent
+LABEL org.opencontainers.image.description=" A Home Assistant, native app for desktop/laptop devices"
+LABEL org.opencontainers.image.licenses=MIT
+# Import TARGETPLATFORM and TARGETARCH
 ARG TARGETPLATFORM
 ARG TARGETARCH
-# add bash and dbus
+# Add bash and dbus
 RUN apk update && apk add bash dbus dbus-x11
-# install run deps
+# Install run deps
 COPY --from=builder /usr/src/go-hass-agent/build/scripts/install-run-deps /tmp/install-run-deps
 RUN /tmp/install-run-deps $TARGETPLATFORM && rm /tmp/install-run-deps
-# copy binary over from builder stage
+# Copy binary over from builder stage
 COPY --from=builder /usr/src/go-hass-agent/dist/go-hass-agent-$TARGETARCH* /usr/bin/go-hass-agent
-# allow custom uid and gid
+# Allow custom uid and gid
 ARG UID=1000
 ARG GID=1000
-# add user
+# Add user
 RUN addgroup --gid "${GID}" go-hass-agent && \
     adduser --disabled-password --gecos "" --ingroup go-hass-agent \
     --uid "${UID}" go-hass-agent
 USER go-hass-agent
-# set up run entrypoint/cmd
+# Set up run entrypoint/cmd
 ENTRYPOINT ["go-hass-agent"]
 CMD ["--terminal", "run"]
