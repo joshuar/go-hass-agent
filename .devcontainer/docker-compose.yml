@@ -17,7 +17,7 @@ services:
       - seccomp:unconfined
     command: sleep infinity
   home-assistant:
-    image: ghcr.io/home-assistant/home-assistant:2024.7.3
+    image: ghcr.io/home-assistant/home-assistant:$HA_VERSION
     volumes:
       - ../deployments/home-assistant/config:/config
     environment:
@@ -26,7 +26,7 @@ services:
     ports:
       - 8123:8123
   mosquitto:
-    image: docker.io/eclipse-mosquitto:2.0.18
+    image: docker.io/eclipse-mosquitto:$MOSQUITTO_VERSION
     volumes:
       - ../deployments/mosquitto/config:/mosquitto/config:Z,U
       - ../deployments/mosquitto/data:/mosquitto/data:Z,U
