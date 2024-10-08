@@ -1,79 +1,77 @@
 {
-    "dockerComposeFile": "docker-compose.yml",
-    "service": "devcontainer",
-    "shutdownAction": "stopCompose",
-    "containerUser": "vscode",
-    "containerEnv": {
-        "TZ": "${localEnv:TZ:Australia/Brisbane}",
-        "DISPLAY": ":0",
-        "XAUTHORITY": "/tmp/.Xauthority",
-        "HOME": "/home/vscode",
-        "DEVCONTAINER": "true"
-    },
-    "updateRemoteUserUID": true,
-	"workspaceFolder": "/workspace",
-    "remoteEnv": {
-        "DBUS_SESSION_BUS_ADDRESS": "${localEnv:DBUS_SESSION_BUS_ADDRESS}"
-    },
-    "features": {
-        "ghcr.io/devcontainers/features/go:1": {},
-        "ghcr.io/devcontainers/features/github-cli:1": {},
-    },
-    "postCreateCommand": ".devcontainer/postCreate.sh",
-    "customizations": {
-        "vscode": {
-            "extensions": [
-                "vivaxy.vscode-conventional-commits",
-                "brunodavi.conventional-snippets",
-                "golang.go",
-                "ymotongpoo.licenser",
-                "esbenp.prettier-vscode",
-                "aaron-bond.better-comments",
-                "valentjn.vscode-ltex",
-                "github.vscode-github-actions",
-                "joshbolduc.commitlint",
-                "tamasfe.even-better-toml",
-                "yzhang.markdown-all-in-one",
-                "DavidAnson.vscode-markdownlint",
-                "bierner.markdown-emoji",
-                "bierner.emojisense",
-                "redhat.vscode-yaml",
-                "ms-azuretools.vscode-docker",
-                "foxundermoon.shell-format"
-            ],
-            "settings": {
-                "terminal.integrated.defaultProfile.linux": "fish",
-                "conventionalCommits.lineBreak": "\\n",
-                "go.lintTool": "golangci-lint",
-                "go.lintFlags": [
-                    "--fast"
-                ],
-                "gopls": {
-                    "ui.semanticTokens": true,
-                    "ui.noSemanticString": true,  // delegates string syntax highlighting to vscode
-                    "ui.noSemanticNumber": true,  // delegates number syntax highlighting to vscode
-                    "formatting.gofumpt": true,
-                    "formatting.local": "github.com/joshuar/go-hass-agent",
-                    "ui.diagnostic.analyses": {
-                        "fieldalignment": true, // Disable the unreachable analyzer.
-                        "unusedvariable": true
-                    }
-                },
-                "go.useLanguageServer": true,
-                "[go]": {
-                    "editor.formatOnSave": true,
-                    "editor.codeActionsOnSave": {
-                        "source.organizeImports": "always",
-                        "source.fixAll": "always"
-                    }
-                },
-                "[go.mod]": {
-                    "editor.formatOnSave": true,
-                    "editor.codeActionsOnSave": {
-                        "source.organizeImports": "always"
-                    }
-                }
-            }
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "devcontainer",
+  "shutdownAction": "stopCompose",
+  "containerUser": "vscode",
+  "containerEnv": {
+    "TZ": "${localEnv:TZ}",
+    "DISPLAY": ":0",
+    "XAUTHORITY": "/tmp/.Xauthority",
+    "HOME": "/home/vscode",
+    "DEVCONTAINER": "true"
+  },
+  "updateRemoteUserUID": true,
+  "workspaceFolder": "/workspace",
+  "remoteEnv": {
+    "DBUS_SESSION_BUS_ADDRESS": "${localEnv:DBUS_SESSION_BUS_ADDRESS}"
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/go:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "postCreateCommand": ".devcontainer/postCreate.sh",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "vivaxy.vscode-conventional-commits",
+        "brunodavi.conventional-snippets",
+        "golang.go",
+        "ymotongpoo.licenser",
+        "esbenp.prettier-vscode",
+        "aaron-bond.better-comments",
+        "valentjn.vscode-ltex",
+        "github.vscode-github-actions",
+        "joshbolduc.commitlint",
+        "tamasfe.even-better-toml",
+        "yzhang.markdown-all-in-one",
+        "DavidAnson.vscode-markdownlint",
+        "bierner.markdown-emoji",
+        "bierner.emojisense",
+        "redhat.vscode-yaml",
+        "ms-azuretools.vscode-docker",
+        "foxundermoon.shell-format"
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "fish",
+        "conventionalCommits.lineBreak": "\\n",
+        "go.lintTool": "golangci-lint",
+        "go.lintFlags": ["--fast"],
+        "gopls": {
+          "ui.semanticTokens": true,
+          "ui.noSemanticString": true, // delegates string syntax highlighting to vscode
+          "ui.noSemanticNumber": true, // delegates number syntax highlighting to vscode
+          "formatting.gofumpt": true,
+          "formatting.local": "github.com/joshuar/go-hass-agent",
+          "ui.diagnostic.analyses": {
+            "fieldalignment": true, // Disable the unreachable analyzer.
+            "unusedvariable": true
+          }
+        },
+        "go.useLanguageServer": true,
+        "[go]": {
+          "editor.formatOnSave": true,
+          "editor.codeActionsOnSave": {
+            "source.organizeImports": "always",
+            "source.fixAll": "always"
+          }
+        },
+        "[go.mod]": {
+          "editor.formatOnSave": true,
+          "editor.codeActionsOnSave": {
+            "source.organizeImports": "always"
+          }
         }
+      }
     }
+  }
 }
