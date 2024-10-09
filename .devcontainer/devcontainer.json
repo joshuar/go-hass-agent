@@ -4,7 +4,6 @@
   "shutdownAction": "stopCompose",
   "containerUser": "vscode",
   "containerEnv": {
-    "TZ": "${localEnv:TZ}",
     "DISPLAY": ":0",
     "XAUTHORITY": "/tmp/.Xauthority",
     "HOME": "/home/vscode",

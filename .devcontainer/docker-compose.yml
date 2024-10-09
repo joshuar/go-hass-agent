@@ -9,7 +9,6 @@ services:
       - /run/dbus/system_bus_socket:/run/dbus/system_bus_socket
       - /run/user/1000/bus:/run/user/1000/bus
       - ${HOME}/.Xauthority:/tmp/.Xauthority
-    env_file: devcontainer.env
     user: vscode
     cap_add:
       - SYS_PTRACE
@@ -20,8 +19,6 @@ services:
     image: ghcr.io/home-assistant/home-assistant:$HA_VERSION
     volumes:
       - ../deployments/home-assistant/config:/config
-    environment:
-      - "TZ=${TZ}"
     restart: on-failure
     ports:
       - 8123:8123
