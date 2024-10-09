@@ -931,15 +931,14 @@ disruptive actions on a device that another user is accessing.
 
 ### Build Requirements
 
-Go Hass Agent uses [Mage](https://magefile.org/) for development. Make sure you
-follow the instructions on the Mage website to install Mage.
+Go Hass Agent uses [Mage](https://magefile.org/) for development.
 
 ### Compiling
 
 Use the following mage invocation in the project root directory:
 
 ```shell
-mage -d build/magefiles -w . build:full
+go run github.com/magefile/mage -d build/magefiles -w . build:full
 ```
 
 This will:
@@ -968,7 +967,7 @@ export TARGETPLATFORM=linux/arm64 # or linux/arm/v6 or linux/arm/v7
 Install the target architecture libraries for cross-compilation:
 
 ```shell
-mage -d build/magefiles -w . preps:deps
+go run github.com/magefile/mage -d build/magefiles -w . preps:deps
 ```
 
 Then the commands for building and packaging above should work as expected.
@@ -987,7 +986,7 @@ packages for Fedora, Arch, and Ubuntu/Debian.
 To build packages, use the following invocations:
 
 ```shell
-mage -v -d build/magefiles -w . package:nfpm
+go run github.com/magefile/mage -d build/magefiles -w . package:nfpm
 ```
 
 The above mage actions will install the necessary tooling for packaging, if
