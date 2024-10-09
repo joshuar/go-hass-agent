@@ -12,6 +12,7 @@ package main
 
 import (
 	_ "github.com/davecgh/go-spew/spew"
+	_ "github.com/goreleaser/nfpm/v2/cmd/nfpm"
 	_ "github.com/matryer/moq"
 	_ "github.com/yassinebenaid/godump"
 	_ "golang.org/x/tools/cmd/stringer"
