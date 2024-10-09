@@ -5,7 +5,7 @@
 
 FROM docker.io/alpine@sha256:0a4eaa0eecf5f8c050e5bba433f58c052be7587ee8af3e8b3910ef9ab5fbe9f5 AS builder
 # Copy go from official image.
-COPY --from=golang:1.23.1-alpine /usr/local/go/ /usr/local/go/
+COPY --from=golang:1.23.2-alpine /usr/local/go/ /usr/local/go/
 ENV PATH="/root/go/bin:/usr/local/go/bin:${PATH}"
 # Import TARGETPLATFORM.
 ARG TARGETPLATFORM
@@ -15,12 +15,10 @@ WORKDIR /usr/src/go-hass-agent
 ADD . .
 # install bash
 RUN apk update && apk add bash
-# install mage
-RUN go install github.com/magefile/mage@v1.15.0
 # install build dependencies
-RUN mage -v -d build/magefiles -w . preps:deps
+RUN go run github.com/magefile/mage -v -d build/magefiles -w . preps:deps
 # build the binary
-RUN mage -v -d build/magefiles -w . build:full
+RUN go run github.com/magefile/mage -v -d build/magefiles -w . build:full
 
 FROM docker.io/alpine@sha256:0a4eaa0eecf5f8c050e5bba433f58c052be7587ee8af3e8b3910ef9ab5fbe9f5
 # Add image labels.
