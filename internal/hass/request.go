@@ -63,14 +63,22 @@ func (r *request) RequestBody() json.RawMessage {
 }
 
 func newEntityRequest(requestType string, entity sensor.Entity) (*request, error) {
+	var req *request
+
 	switch requestType {
 	case requestTypeLocation:
-		return &request{Data: entity.Value, RequestType: requestType}, nil
+		req = &request{Data: entity.Value, RequestType: requestType}
 	case requestTypeRegister:
-		return &request{Data: entity, RequestType: requestType}, nil
+		req = &request{Data: entity, RequestType: requestType}
 	case requestTypeUpdate:
-		return &request{Data: entity.State, RequestType: requestType}, nil
+		req = &request{Data: entity.State, RequestType: requestType}
+	default:
+		return nil, ErrUnknownDetails
 	}
 
-	return nil, ErrUnknownDetails
+	if err := req.Validate(); err != nil {
+		return nil, fmt.Errorf("validation failed: %w", err)
+	}
+
+	return req, nil
 }

@@ -53,11 +53,6 @@ var (
 	}
 )
 
-// Validate is a request that supports validation of its values.
-type Validate interface {
-	Validate() error
-}
-
 // GetRequest is a HTTP GET request.
 type GetRequest any
 
@@ -336,13 +331,6 @@ func send[T any](ctx context.Context, client *Client, requestDetails any) (T, er
 
 	if client.endpoint == nil {
 		return response, ErrInvalidClient
-	}
-
-	// If the request supports validation, make sure it is valid.
-	if a, ok := requestDetails.(Validate); ok {
-		if err := a.Validate(); err != nil {
-			return response, fmt.Errorf("validation failed: %w", err)
-		}
 	}
 
 	requestObj := client.endpoint.R().SetContext(ctx)
