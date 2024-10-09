@@ -6,15 +6,12 @@
 package hass
 
 import (
-	"errors"
 	"strings"
 
 	"github.com/go-playground/validator/v10"
 )
 
 var validate *validator.Validate
-
-var ErrValidationFailed = errors.New("validation failed")
 
 func init() {
 	validate = validator.New(validator.WithRequiredStructEnabled())
@@ -33,9 +30,9 @@ func parseValidationErrors(validation error) string {
 	for _, err := range validationErrs {
 		switch err.Tag() {
 		case "required":
-			message.WriteString(err.Field() + " is required")
+			message.WriteString("field " + err.Field() + " is required")
 		default:
-			message.WriteString(err.Field() + " should match " + err.Tag())
+			message.WriteString("field " + err.Field() + " should match " + err.Tag())
 		}
 
 		message.WriteRune(' ')
