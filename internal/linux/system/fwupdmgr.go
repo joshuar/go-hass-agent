@@ -95,10 +95,17 @@ func (w *fwupdWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
 			result  hsiResult
 		)
 
-		summary, _ = dbusx.VariantToValue[string](prop["Summary"])
-		result, _ = dbusx.VariantToValue[hsiResult](prop["HsiResult"])
+		if summaryRaw, found := prop["Summary"]; found {
+			summary, _ = dbusx.VariantToValue[string](summaryRaw)
+		}
 
-		hsiSensor.Attributes[summary] = result.String()
+		if resultRaw, found := prop["HsiResult"]; found {
+			result, _ = dbusx.VariantToValue[hsiResult](resultRaw)
+		}
+
+		if summary != "" && result != ResultUnknown {
+			hsiSensor.Attributes[summary] = result.String()
+		}
 	}
 
 	return []sensor.Entity{hsiSensor}, nil
