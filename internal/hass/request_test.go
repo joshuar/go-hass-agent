@@ -83,7 +83,8 @@ func Test_newEntityRequest(t *testing.T) {
 	entity := sensor.Entity{
 		Name: "Mock Entity",
 		State: &sensor.State{
-			ID: "mock_entity",
+			ID:    "mock_entity",
+			Value: "test",
 		},
 	}
 

@@ -30,7 +30,7 @@ var (
 // create location requests directly, as Home Assistant handles these
 // differently from other sensors.
 type LocationRequest struct {
-	Gps              []float64 `json:"gps"`
+	Gps              []float64 `json:"gps" validate:"required"`
 	GpsAccuracy      int       `json:"gps_accuracy,omitempty"`
 	Battery          int       `json:"battery,omitempty"`
 	Speed            int       `json:"speed,omitempty"`
@@ -47,7 +47,7 @@ type request struct {
 func (r *request) Validate() error {
 	err := validate.Struct(r)
 	if err != nil {
-		return fmt.Errorf("%w: %s", ErrValidationFailed, parseValidationErrors(err))
+		return fmt.Errorf("%T is invalid: %s", r.Data, parseValidationErrors(err))
 	}
 
 	return nil
