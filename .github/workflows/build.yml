@@ -60,6 +60,7 @@ jobs:
         uses: step-security/harden-runner@446798f8213ac2e75931c1b0769676d927801858 # v2.10.0
         with:
           egress-policy: block
+          disable-sudo: false
           allowed-endpoints: >
             api.github.com:443
             auth.docker.io:443
