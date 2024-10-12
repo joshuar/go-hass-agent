@@ -16,9 +16,9 @@ ADD . .
 # install bash
 RUN apk update && apk add bash
 # install build dependencies
-RUN go run github.com/magefile/mage -v -d build/magefiles -w . preps:deps
+RUN go run github.com/magefile/mage -d build/magefiles -w . preps:deps
 # build the binary
-RUN go run github.com/magefile/mage -v -d build/magefiles -w . build:full
+RUN go run github.com/magefile/mage -d build/magefiles -w . build:full
 
 FROM docker.io/alpine@sha256:0a4eaa0eecf5f8c050e5bba433f58c052be7587ee8af3e8b3910ef9ab5fbe9f5
 # Add image labels.
