@@ -1,5 +1,18 @@
 # Changelog
 
+## [10.3.1](https://github.com/joshuar/go-hass-agent/compare/v10.3.0...v10.3.1) (2024-10-12)
+
+
+### Bug Fixes
+
+* **linux:** :bug: safely check for hsi properties ([3bb3849](https://github.com/joshuar/go-hass-agent/commit/3bb3849bc802264c480c45ca9ab2f20ce290151f))
+
+
+### Performance Improvements
+
+* **container:** :zap: don't install mage for container build ([dace627](https://github.com/joshuar/go-hass-agent/commit/dace627addf2287307426d3d746fb8bf2876b358))
+* **hass:** :zap: move validation of requests ([8d0eca5](https://github.com/joshuar/go-hass-agent/commit/8d0eca568b8962d5db38c667f84023f23c1c6f39))
+
 ## [10.3.0](https://github.com/joshuar/go-hass-agent/compare/v10.2.1...v10.3.0) (2024-10-01)
 
 
