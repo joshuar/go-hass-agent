@@ -60,31 +60,7 @@ jobs:
       - name: Harden Runner
         uses: step-security/harden-runner@91182cccc01eb5e619899d80e4e971d6181294a7 # v2.10.1
         with:
-          egress-policy: block
-          allowed-endpoints: >
-            api.github.com:443
-            auth.docker.io:443
-            azure.archive.ubuntu.com:80
-            esm.ubuntu.com:443
-            fyne.io:443
-            github.com:443
-            go.dev:443
-            go.googlesource.com:443
-            golang.org:443
-            gopkg.in:443
-            motd.ubuntu.com:443
-            objects.githubusercontent.com:443
-            packages.microsoft.com:443
-            pkg.go.dev:443
-            production.cloudflare.docker.com:443
-            proxy.golang.org:443
-            raw.githubusercontent.com:443
-            registry-1.docker.io:443
-            rekor.sigstore.dev:443
-            storage.googleapis.com:443
-            sum.golang.org:443
-            uploads.github.com:443
-            ports.ubuntu.com:80
+          egress-policy: audit
       - name: Set up environment
         run: |
           platform=${{ matrix.platform }}
@@ -244,19 +220,7 @@ jobs:
       - name: Harden Runner
         uses: step-security/harden-runner@91182cccc01eb5e619899d80e4e971d6181294a7 # v2.10.1
         with:
-          disable-sudo: true
-          egress-policy: block
-          allowed-endpoints: >
-            api.github.com:443
-            auth.docker.io:443
-            ghcr.io:443
-            github.com:443
-            objects.githubusercontent.com:443
-            pkg-containers.githubusercontent.com:443
-            production.cloudflare.docker.com:443
-            raw.githubusercontent.com:443
-            registry-1.docker.io:443
-            rekor.sigstore.dev:443
+          egress-policy: audit
       - name: Checkout repo
         uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4
         with:
