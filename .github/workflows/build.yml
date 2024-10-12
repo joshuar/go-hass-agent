@@ -16,7 +16,6 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  COSIGN_VERSION: "v2.4.0"
   MAGEARGS: -d build/magefiles -w .
 
 jobs:
@@ -93,8 +92,6 @@ jobs:
       - name: Install cosign
         id: cosign_install
         uses: sigstore/cosign-installer@4959ce089c160fddf62f7b42464195ba1a56d382 # v3
-        with:
-          cosign-release: ${{ env.COSIGN_VERSION }}
       - name: Sign artifacts with cosign
         id: cosign_sign
         shell: bash
@@ -106,7 +103,7 @@ jobs:
             cosign --verbose=true sign-blob --yes --key cosign.key --output-signature=${artifact}.sig ${artifact}
           done
         env:
-          COSIGN_PASSWORD: ${{ secrets.COSIGN_PWD }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
       - name: Upload build artifacts
         id: upload_artifacts
         if: ${{ ! needs.check_release.outputs.release_created }}
@@ -268,12 +265,10 @@ jobs:
           docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ steps.docker_metadata.outputs.version }}
       - name: Check and install cosign
         uses: sigstore/cosign-installer@4959ce089c160fddf62f7b42464195ba1a56d382 # v3
-        with:
-          cosign-release: ${{ env.COSIGN_VERSION }}
       - name: Sign image with a key
         env:
           TAGS: ${{ steps.docker_metadata.outputs.tags }}
-          COSIGN_PASSWORD: ${{ secrets.COSIGN_PWD }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
         run: |
           images=""
           for digest in /tmp/digests/*; do
