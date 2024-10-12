@@ -78,3 +78,9 @@ func (Checks) Licenses() error {
 
 	return nil
 }
+
+// All performs all checks.
+func (c Checks) All() error {
+	mg.Deps(c.Lint(), c.Nilaway(), c.StaticCheck(), c.Licenses())
+	return nil
+}

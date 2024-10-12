@@ -941,15 +941,7 @@ Use the following mage invocation in the project root directory:
 go run github.com/magefile/mage -d build/magefiles -w . build:full
 ```
 
-This will:
-
-- Run `go mod tidy`.
-- Run `go fmt ./...`.
-- Run `go generate ./...`.
-- Build a binary and place it in `dist/go-hass-agent-amd64`.
-
-To just build a binary, replace `build:full` with `build:fast` in the mage
-invocation above.
+This will build a binary and place it in `dist/go-hass-agent-amd64`.
 
 [⬆️ Back to Top](#-table-of-contents)
 

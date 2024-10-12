@@ -23,17 +23,6 @@ var ErrBuildFailed = errors.New("build failed")
 func (Build) Full() error {
 	slog.Info("Starting full build.")
 
-	// Make everything nice, neat, and proper
-	mg.Deps(Preps.Tidy)
-	mg.Deps(Preps.Format)
-	mg.Deps(Preps.Generate)
-
-	return buildProject()
-}
-
-// Fast just builds the binary and does not run any prep steps. It will fail if
-// the prep steps have not run.
-func (Build) Fast() error {
 	return buildProject()
 }
 
