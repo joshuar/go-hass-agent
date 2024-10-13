@@ -14,8 +14,8 @@ import (
 
 	"github.com/eclipse/paho.golang/paho"
 
-	mqtthass "github.com/joshuar/go-hass-anything/v11/pkg/hass"
-	mqttapi "github.com/joshuar/go-hass-anything/v11/pkg/mqtt"
+	mqtthass "github.com/joshuar/go-hass-anything/v12/pkg/hass"
+	mqttapi "github.com/joshuar/go-hass-anything/v12/pkg/mqtt"
 
 	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
@@ -55,25 +55,42 @@ func VolumeControl(ctx context.Context, msgCh chan *mqttapi.Msg, device *mqtthas
 		return nil, nil
 	}
 
-	control.volEntity = mqtthass.AsNumber(
-		mqtthass.NewEntity(preferences.AppName, "Volume", device.Name+"_volume").
-			WithOriginInfo(preferences.MQTTOrigin()).
-			WithDeviceInfo(device).
-			WithIcon(volIcon).
-			WithCommandCallback(control.volCommandCallback).
-			WithStateCallback(control.volStateCallback).
-			WithValueTemplate("{{ value_json.value }}"),
-		volStepPc, minVolpc, maxVolpc, mqtthass.NumberSlider)
+	control.volEntity = mqtthass.NewNumberEntity[int]().
+		WithMin(minVolpc).
+		WithMax(maxVolpc).
+		WithStep(volStepPc).
+		WithMode(mqtthass.NumberSlider).
+		WithDetails(
+			mqtthass.App(preferences.AppName),
+			mqtthass.Name("Volume"),
+			mqtthass.ID(device.Name+"_volume"),
+			mqtthass.DeviceInfo(device),
+			mqtthass.Icon(volIcon),
+		).
+		WithState(
+			mqtthass.StateCallback(control.volStateCallback),
+			mqtthass.ValueTemplate("{{ value_json.value }}"),
+		).
+		WithCommand(
+			mqtthass.CommandCallback(control.volCommandCallback),
+		)
 
-	control.muteEntity = mqtthass.AsSwitch(
-		mqtthass.NewEntity(preferences.AppName, "Mute", device.Name+"_mute").
-			WithOriginInfo(preferences.MQTTOrigin()).
-			WithDeviceInfo(device).
-			WithIcon(muteIcon).
-			WithCommandCallback(control.muteCommandCallback).
-			WithStateCallback(control.muteStateCallback).
-			WithValueTemplate("{{ value }}"),
-		false).AsTypeSwitch()
+	control.muteEntity = mqtthass.NewSwitchEntity().
+		OptimisticMode().
+		WithDetails(
+			mqtthass.App(preferences.AppName),
+			mqtthass.Name("Mute"),
+			mqtthass.ID(device.Name+"_mute"),
+			mqtthass.DeviceInfo(device),
+			mqtthass.Icon(muteIcon),
+		).
+		WithState(
+			mqtthass.StateCallback(control.muteStateCallback),
+			mqtthass.ValueTemplate("{{ value }}"),
+		).
+		WithCommand(
+			mqtthass.CommandCallback(control.muteCommandCallback),
+		)
 
 	update := func() { // Pulseaudio changed state. Get the new state.
 		// Publish and update mute state if it changed.

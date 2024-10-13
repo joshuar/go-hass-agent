@@ -11,7 +11,7 @@ import (
 
 	"github.com/eclipse/paho.golang/paho"
 
-	mqtthass "github.com/joshuar/go-hass-anything/v11/pkg/hass"
+	mqtthass "github.com/joshuar/go-hass-anything/v12/pkg/hass"
 
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/logging"
@@ -103,12 +103,16 @@ func NewPowerControl(ctx context.Context, device *mqtthass.Device) ([]*mqtthass.
 
 	for _, command := range commands {
 		entities = append(entities,
-			mqtthass.AsButton(
-				mqtthass.NewEntity(preferences.AppName, command.name, command.id).
-					WithOriginInfo(preferences.MQTTOrigin()).
-					WithDeviceInfo(device).
-					WithIcon(command.icon).
-					WithCommandCallback(command.callBack)))
+			mqtthass.NewButtonEntity().
+				WithDetails(
+					mqtthass.App(preferences.AppName),
+					mqtthass.Name(command.name),
+					mqtthass.ID(command.id),
+					mqtthass.DeviceInfo(device),
+					mqtthass.Icon(command.icon),
+				).
+				WithCommand(mqtthass.CommandCallback(command.callBack)),
+		)
 	}
 
 	return entities, nil

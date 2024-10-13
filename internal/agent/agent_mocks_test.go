@@ -8,7 +8,7 @@ import (
 	fyneui "github.com/joshuar/go-hass-agent/internal/agent/ui/fyneUI"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
-	mqttapi "github.com/joshuar/go-hass-anything/v11/pkg/mqtt"
+	mqttapi "github.com/joshuar/go-hass-anything/v12/pkg/mqtt"
 	"sync"
 )
 

@@ -8,18 +8,17 @@ package media
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
-	"time"
+	"slices"
 
 	"github.com/eclipse/paho.golang/paho"
-	"github.com/vladimirvivien/go4vl/device"
-	"github.com/vladimirvivien/go4vl/v4l2"
 
-	mqtthass "github.com/joshuar/go-hass-anything/v11/pkg/hass"
-	mqttapi "github.com/joshuar/go-hass-anything/v11/pkg/mqtt"
+	"github.com/blackjack/webcam"
+	mqtthass "github.com/joshuar/go-hass-anything/v12/pkg/hass"
+	mqttapi "github.com/joshuar/go-hass-anything/v12/pkg/mqtt"
 
-	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
@@ -35,7 +34,7 @@ const (
 // Some defaults for the device file, formats and image size.
 var (
 	defaultDevice        = "/dev/video0"
-	preferredFmts        = []v4l2.FourCCType{v4l2.PixelFmtMPEG, v4l2.PixelFmtMJPEG, v4l2.PixelFmtJPEG, v4l2.PixelFmtYUYV}
+	preferredFmts        = []string{"Motion-JPEG"}
 	defaultHeight uint32 = 640
 	defaultWidth  uint32 = 480
 )
@@ -44,178 +43,151 @@ var (
 // includes the entity for showing images, as well as button entities for
 // start/stop commands and a sensor entity showing the recording status.
 type CameraEntities struct {
-	Images      *mqtthass.ImageEntity
+	Images      *mqtthass.CameraEntity
 	StartButton *mqtthass.ButtonEntity
 	StopButton  *mqtthass.ButtonEntity
 	Status      *mqtthass.SensorEntity
-}
-
-// cameraControl is an internal struct that contains the data used to control
-// the camera and populate the entities.
-type cameraControl struct {
-	device     *device.Device
-	cancelFunc context.CancelFunc
-	logger     *slog.Logger
-	state      string
-	fps        time.Duration
+	camera      *webcam.Webcam
+	state       string
 }
 
 // NewCameraControl is called by the OS controller to provide the entities for a camera.
-func NewCameraControl(ctx context.Context, msgCh chan *mqttapi.Msg, mqttDevice *mqtthass.Device) *CameraEntities {
-	camera := newCamera(ctx)
+func NewCameraControl(_ context.Context, msgCh chan *mqttapi.Msg, mqttDevice *mqtthass.Device) *CameraEntities {
 	entities := &CameraEntities{}
 
-	entities.Images = mqtthass.AsImage(mqtthass.NewEntity(preferences.AppName, "Webcam", mqttDevice.Name+"_camera").
-		WithDeviceInfo(mqttDevice).
-		WithDefaultOriginInfo(), mqtthass.ModeImage)
+	entities.Images = mqtthass.NewCameraEntity().
+		WithDetails(
+			mqtthass.App(preferences.AppName),
+			mqtthass.Name("Webcam"),
+			mqtthass.ID(mqttDevice.Name+"_camera"),
+			mqtthass.OriginInfo(preferences.MQTTOrigin()),
+			mqtthass.DeviceInfo(mqttDevice),
+		)
 
-	entities.StartButton = mqtthass.AsButton(mqtthass.NewEntity(preferences.AppName, "Start Webcam", mqttDevice.Name+"_start_camera").
-		WithDeviceInfo(mqttDevice).
-		WithDefaultOriginInfo().
-		WithIcon(startIcon).
-		WithCommandCallback(func(_ *paho.Publish) {
-			err := camera.openCamera(defaultDevice)
+	entities.StartButton = mqtthass.NewButtonEntity().
+		WithDetails(
+			mqtthass.App(preferences.AppName),
+			mqtthass.Name("Start Webcam"),
+			mqtthass.ID(mqttDevice.Name+"_start_camera"),
+			mqtthass.OriginInfo(preferences.MQTTOrigin()),
+			mqtthass.DeviceInfo(mqttDevice),
+			mqtthass.Icon(startIcon),
+		).WithCommand(
+		mqtthass.CommandCallback(func(_ *paho.Publish) {
+			var err error
+			// Open the camera device.
+			entities.camera, err = openCamera(defaultDevice)
 			if err != nil {
-				camera.logger.Error("Could not open camera device.", slog.Any("error", err))
-
+				slog.Error("Could not open camera device.",
+					slog.Any("error", err))
 				return
 			}
 
-			camCtx, cancelFunc := context.WithCancel(ctx)
-			camera.cancelFunc = cancelFunc
-			camera.state = startedState
+			slog.Info("Start recording webcam.")
 
-			camera.logger.Debug("Start recording webcam.")
+			entities.state = startedState
 
-			go camera.publishImages(camCtx, entities.Images.GetImageTopic(), msgCh)
-			msgCh <- mqttapi.NewMsg(entities.Status.StateTopic, []byte(camera.state))
+			go publishImages(entities.camera, entities.Images.Topic, msgCh)
+			msgCh <- mqttapi.NewMsg(entities.Status.StateTopic, []byte(entities.state))
 		}))
 
-	entities.StopButton = mqtthass.AsButton(mqtthass.NewEntity(preferences.AppName, "Stop Webcam", mqttDevice.Name+"_stop_camera").
-		WithDeviceInfo(mqttDevice).
-		WithDefaultOriginInfo().
-		WithIcon(stopIcon).
-		WithCommandCallback(func(_ *paho.Publish) {
-			camera.state = stoppedState
-			if camera.cancelFunc != nil {
-				camera.cancelFunc()
-				camera.logger.Debug("Stop recording webcam.")
-
-				if err := camera.closeCamera(); err != nil {
-					camera.logger.Error("Close camera failed.", slog.Any("error", err))
-				}
+	entities.StopButton = mqtthass.NewButtonEntity().
+		WithDetails(
+			mqtthass.App(preferences.AppName),
+			mqtthass.Name("Stop Webcam"),
+			mqtthass.ID(mqttDevice.Name+"_stop_camera"),
+			mqtthass.OriginInfo(preferences.MQTTOrigin()),
+			mqtthass.DeviceInfo(mqttDevice),
+			mqtthass.Icon(stopIcon),
+		).WithCommand(
+		mqtthass.CommandCallback(func(_ *paho.Publish) {
+			if err := entities.camera.StopStreaming(); err != nil {
+				slog.Error("Stop streaming failed.", slog.Any("error", err))
 			}
-			msgCh <- mqttapi.NewMsg(entities.Status.StateTopic, []byte(camera.state))
-		}))
 
-	entities.Status = mqtthass.AsSensor(mqtthass.NewEntity(preferences.AppName, "Webcam Status", mqttDevice.Name+"_camera_status").
-		WithDeviceInfo(mqttDevice).
-		WithDefaultOriginInfo().
-		WithIcon(statusIcon).
-		WithValueTemplate("{{ value }}").
-		WithStateCallback(func(_ ...any) (json.RawMessage, error) {
-			return json.RawMessage(camera.state), nil
-		}))
+			if err := entities.camera.Close(); err != nil {
+				slog.Error("Close camera failed.", slog.Any("error", err))
+			}
+
+			entities.state = stoppedState
+			msgCh <- mqttapi.NewMsg(entities.Status.StateTopic, []byte(entities.state))
+
+			slog.Info("Stop recording webcam.")
+		}),
+	)
+
+	entities.Status = mqtthass.NewSensorEntity().
+		WithDetails(
+			mqtthass.App(preferences.AppName),
+			mqtthass.Name("Webcam Status"),
+			mqtthass.ID(mqttDevice.Name+"_camera_status"),
+			mqtthass.OriginInfo(preferences.MQTTOrigin()),
+			mqtthass.DeviceInfo(mqttDevice),
+			mqtthass.Icon(statusIcon),
+		).
+		WithState(
+			mqtthass.StateCallback(func(_ ...any) (json.RawMessage, error) {
+				return json.RawMessage(entities.state), nil
+			}),
+		)
 
 	go func() {
-		msgCh <- mqttapi.NewMsg(entities.Status.StateTopic, []byte(camera.state))
+		msgCh <- mqttapi.NewMsg(entities.Status.StateTopic, []byte(stoppedState))
 	}()
 
 	return entities
 }
 
-func newCamera(ctx context.Context) *cameraControl {
-	return &cameraControl{
-		logger: logging.FromContext(ctx).With(slog.String("controller", "camera")),
-		state:  stoppedState,
-	}
-}
-
 // openCamera opens the camera device and ensures that it has a preferred image
 // format, framerate and dimensions.
-func (c *cameraControl) openCamera(cameraDevice string) error {
-	camDev, err := device.Open(cameraDevice)
+func openCamera(cameraDevice string) (*webcam.Webcam, error) {
+	cam, err := webcam.Open(cameraDevice)
 	if err != nil {
-		return fmt.Errorf("could not open camera %s: %w", cameraDevice, err)
+		return nil, fmt.Errorf("could not open camera %s: %w", cameraDevice, err)
 	}
 
-	fps, err := camDev.GetFrameRate()
-	if err != nil {
-		return fmt.Errorf("could not determine camera frame rate: %w", err)
-	}
+	// select pixel format
+	var preferredFormat webcam.PixelFormat
 
-	fmtDescs, err := camDev.GetFormatDescriptions()
-	if err != nil {
-		return fmt.Errorf("could not determine camera formats: %w", err)
-	}
-
-	var fmtDesc *v4l2.FormatDescription
-	for _, preferredFmt := range preferredFmts {
-		fmtDesc = getFormats(fmtDescs, preferredFmt)
-		if fmtDesc != nil {
+	for format, desc := range cam.GetSupportedFormats() {
+		if slices.Contains(preferredFmts, desc) {
+			preferredFormat = format
 			break
 		}
 	}
 
-	if fmtDesc == nil {
-		return fmt.Errorf("camera does not support any preferred formats: %w", err)
+	if preferredFormat == 0 {
+		return nil, errors.New("could not determine an appropriate format")
 	}
 
-	if err = camDev.SetPixFormat(v4l2.PixFormat{
-		Width:       defaultWidth,
-		Height:      defaultHeight,
-		PixelFormat: fmtDesc.PixelFormat,
-		Field:       v4l2.FieldNone,
-	}); err != nil {
-		return fmt.Errorf("could not configure camera: %w", err)
+	_, _, _, err = cam.SetImageFormat(preferredFormat, defaultWidth, defaultHeight)
+	if err != nil {
+		return nil, fmt.Errorf("could not set camera parameters: %w", err)
 	}
 
-	pixFmt, err := camDev.GetPixFormat()
-	if err == nil {
-		c.logger.Debug("Camera configured.",
-			slog.Any("format", pixFmt),
-			slog.Any("fps", fps))
-	}
-
-	c.device = camDev
-	c.fps = time.Second / time.Duration(fps)
-
-	return nil
+	return cam, nil
 }
 
 // publishImages loops over the received frames from the camera and wraps them
 // as a MQTT message to be sent back on the bus.
-func (c *cameraControl) publishImages(ctx context.Context, topic string, msgCh chan *mqttapi.Msg) {
-	if err := c.device.Start(ctx); err != nil {
-		c.logger.Error("Could not start recording", slog.Any("error", err))
+func publishImages(cam *webcam.Webcam, topic string, msgCh chan *mqttapi.Msg) {
+	if err := cam.StartStreaming(); err != nil {
+		slog.Error("Could not start recording", slog.Any("error", err))
 
 		return
 	}
 
-	for frame := range c.device.GetOutput() {
-		c.logger.Log(ctx, mqttapi.LevelTrace, "Sending frame.")
-		msgCh <- mqttapi.NewMsg(topic, frame)
-
-		time.Sleep(c.fps)
-	}
-}
-
-// closeCamera wraps the v4l2 camera close method.
-func (c *cameraControl) closeCamera() error {
-	if err := c.device.Close(); err != nil {
-		return fmt.Errorf("could not close camera device: %w", err)
-	}
-
-	return nil
-}
-
-// getFormats finds an appropriate image format to use for the camera.
-func getFormats(fmts []v4l2.FormatDescription, pixEncoding v4l2.FourCCType) *v4l2.FormatDescription {
-	for _, desc := range fmts {
-		if desc.PixelFormat == pixEncoding {
-			return &desc
+	for {
+		err := cam.WaitForFrame(uint32(5))
+		if err != nil && errors.Is(err, &webcam.Timeout{}) {
+			continue
 		}
-	}
 
-	return nil
+		frame, err := cam.ReadFrame()
+		if len(frame) == 0 || err != nil {
+			break
+		}
+
+		msgCh <- mqttapi.NewMsg(topic, frame)
+	}
 }

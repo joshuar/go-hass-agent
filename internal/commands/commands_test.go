@@ -19,32 +19,55 @@ import (
 	"github.com/go-test/deep"
 	"github.com/stretchr/testify/require"
 
-	mqtthass "github.com/joshuar/go-hass-anything/v11/pkg/hass"
-	mqttapi "github.com/joshuar/go-hass-anything/v11/pkg/mqtt"
+	mqtthass "github.com/joshuar/go-hass-anything/v12/pkg/hass"
+	mqttapi "github.com/joshuar/go-hass-anything/v12/pkg/mqtt"
 )
 
 var mockCommandCallback = func(_ *paho.Publish) {}
 
-var mockButton = mqtthass.AsButton(
-	mqtthass.NewEntity("test", "test button", "test_button").
-		WithOriginInfo(&mqtthass.Origin{}).
-		WithDeviceInfo(&mqtthass.Device{}).
-		WithIcon("mdi:test").
-		WithCommandCallback(mockCommandCallback))
+var mockButton = mqtthass.NewButtonEntity().
+	WithDetails(
+		mqtthass.App("test"),
+		mqtthass.Name("test button"),
+		mqtthass.ID("test_button"),
+		mqtthass.OriginInfo(&mqtthass.Origin{}),
+		mqtthass.DeviceInfo(&mqtthass.Device{}),
+		mqtthass.Icon("mdi:test"),
+	).
+	WithCommand(
+		mqtthass.CommandCallback(mockCommandCallback),
+	)
 
-var mockSwitch = mqtthass.AsSwitch(
-	mqtthass.NewEntity("test", "test switch", "test_switch").
-		WithOriginInfo(&mqtthass.Origin{}).
-		WithDeviceInfo(&mqtthass.Device{}).
-		WithIcon("mdi:test").
-		WithCommandCallback(mockCommandCallback), true)
+var mockSwitch = mqtthass.NewSwitchEntity().
+	WithDetails(
+		mqtthass.App("test"),
+		mqtthass.Name("test switch"),
+		mqtthass.ID("test_switch"),
+		mqtthass.OriginInfo(&mqtthass.Origin{}),
+		mqtthass.DeviceInfo(&mqtthass.Device{}),
+		mqtthass.Icon("mdi:test"),
+	).
+	WithCommand(
+		mqtthass.CommandCallback(mockCommandCallback),
+	).
+	OptimisticMode()
 
-var mockNumber = mqtthass.AsNumber(
-	mqtthass.NewEntity("test", "test number", "test_number").
-		WithOriginInfo(&mqtthass.Origin{}).
-		WithDeviceInfo(&mqtthass.Device{}).
-		WithIcon("mdi:test").
-		WithCommandCallback(mockCommandCallback), 0, 100, 1, mqtthass.NumberAuto)
+var mockNumber = mqtthass.NewNumberEntity[int]().
+	WithDetails(
+		mqtthass.App("test"),
+		mqtthass.Name("test number"),
+		mqtthass.ID("test_number"),
+		mqtthass.OriginInfo(&mqtthass.Origin{}),
+		mqtthass.DeviceInfo(&mqtthass.Device{}),
+		mqtthass.Icon("mdi:test"),
+	).
+	WithCommand(
+		mqtthass.CommandCallback(mockCommandCallback),
+	).
+	WithStep(1).
+	WithMin(0).
+	WithMax(100).
+	WithMode(mqtthass.NumberAuto)
 
 func TestController_Subscriptions(t *testing.T) {
 	var mockButtonSubscription, mockSwitchSubscription, mockNumberSubscription *mqttapi.Subscription

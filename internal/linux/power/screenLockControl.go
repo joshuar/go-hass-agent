@@ -14,8 +14,7 @@ import (
 	"strings"
 
 	"github.com/eclipse/paho.golang/paho"
-
-	mqtthass "github.com/joshuar/go-hass-anything/v11/pkg/hass"
+	mqtthass "github.com/joshuar/go-hass-anything/v12/pkg/hass"
 
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/logging"
@@ -145,21 +144,27 @@ func NewScreenLockControl(ctx context.Context, device *mqtthass.Device) ([]*mqtt
 	buttons := make([]*mqtthass.ButtonEntity, 0, len(commands))
 
 	for _, command := range commands {
-		buttons = append(buttons, mqtthass.AsButton(
-			mqtthass.NewEntity(preferences.AppName, command.name, command.id).
-				WithOriginInfo(preferences.MQTTOrigin()).
-				WithDeviceInfo(device).
-				WithIcon(command.icon).
-				WithCommandCallback(func(_ *paho.Publish) {
-					if err := command.execute(ctx); err != nil {
-						logger.Error("Could not execute screen control command.",
-							slog.String("name", command.name),
-							slog.String("path", command.path),
-							slog.String("interface", command.intr),
-							slog.String("method", command.method),
-							slog.Any("error", err))
-					}
-				})),
+		buttons = append(buttons,
+			mqtthass.NewButtonEntity().
+				WithDetails(
+					mqtthass.App(preferences.AppName),
+					mqtthass.Name(command.name),
+					mqtthass.ID(command.id),
+					mqtthass.DeviceInfo(device),
+					mqtthass.Icon(command.icon),
+				).
+				WithCommand(
+					mqtthass.CommandCallback(func(_ *paho.Publish) {
+						if err := command.execute(ctx); err != nil {
+							logger.Error("Could not execute screen control command.",
+								slog.String("name", command.name),
+								slog.String("path", command.path),
+								slog.String("interface", command.intr),
+								slog.String("method", command.method),
+								slog.Any("error", err))
+						}
+					}),
+				),
 		)
 	}
 
