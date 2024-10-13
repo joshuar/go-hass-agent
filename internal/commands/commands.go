@@ -22,8 +22,8 @@ import (
 	"github.com/pelletier/go-toml/v2"
 	"golang.org/x/exp/constraints"
 
-	mqtthass "github.com/joshuar/go-hass-anything/v11/pkg/hass"
-	mqttapi "github.com/joshuar/go-hass-anything/v11/pkg/mqtt"
+	mqtthass "github.com/joshuar/go-hass-anything/v12/pkg/hass"
+	mqttapi "github.com/joshuar/go-hass-anything/v12/pkg/mqtt"
 
 	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
@@ -240,12 +240,17 @@ func (d *Controller) generateButtons(buttonCmds []Command) {
 		}
 
 		entities = append(entities,
-			mqtthass.AsButton(
-				mqtthass.NewEntity(preferences.AppName, name, id).
-					WithOriginInfo(preferences.MQTTOrigin()).
-					WithDeviceInfo(d.device).
-					WithIcon(icon).
-					WithCommandCallback(callback)))
+			mqtthass.NewButtonEntity().
+				WithDetails(
+					mqtthass.App(preferences.AppName),
+					mqtthass.Name(name),
+					mqtthass.ID(id),
+					mqtthass.OriginInfo(preferences.MQTTOrigin()),
+					mqtthass.DeviceInfo(d.device),
+					mqtthass.Icon(icon),
+				).WithCommand(
+				mqtthass.CommandCallback(callback),
+			))
 	}
 
 	d.buttons = entities
@@ -282,14 +287,22 @@ func (d *Controller) generateSwitches(switchCmds []Command) {
 		}
 
 		entities = append(entities,
-			mqtthass.AsSwitch(
-				mqtthass.NewEntity(preferences.AppName, name, id).
-					WithOriginInfo(preferences.MQTTOrigin()).
-					WithDeviceInfo(d.device).
-					WithIcon(icon).
-					WithStateCallback(stateCallBack).
-					WithCommandCallback(cmdCallBack),
-				true))
+			mqtthass.NewSwitchEntity().
+				WithDetails(
+					mqtthass.App(preferences.AppName),
+					mqtthass.Name(name),
+					mqtthass.ID(id),
+					mqtthass.OriginInfo(preferences.MQTTOrigin()),
+					mqtthass.DeviceInfo(d.device),
+					mqtthass.Icon(icon),
+				).
+				WithCommand(
+					mqtthass.CommandCallback(cmdCallBack),
+				).
+				WithState(
+					mqtthass.StateCallback(stateCallBack),
+				).
+				OptimisticMode())
 	}
 
 	d.switches = entities
@@ -367,15 +380,28 @@ func (d *Controller) generateNumbers(numberCommands []Command) {
 			}
 
 			floats = append(floats,
-				mqtthass.AsNumber(
-					mqtthass.NewEntity(preferences.AppName, name, id).
-						WithOriginInfo(preferences.MQTTOrigin()).
-						WithDeviceInfo(d.device).
-						WithIcon(icon).
-						WithStateCallback(stateCallBack).
-						WithCommandCallback(cmdCallBack).
-						WithValueTemplate(stateValueTemplate),
-					step, min, max, displayType))
+				mqtthass.NewNumberEntity[float64]().
+					WithDetails(
+						mqtthass.App(preferences.AppName),
+						mqtthass.Name(name),
+						mqtthass.ID(id),
+						mqtthass.OriginInfo(preferences.MQTTOrigin()),
+						mqtthass.DeviceInfo(d.device),
+						mqtthass.Icon(icon),
+					).
+					WithCommand(
+						mqtthass.CommandCallback(cmdCallBack),
+					).
+					WithState(
+						mqtthass.StateCallback(stateCallBack),
+						mqtthass.ValueTemplate(stateValueTemplate),
+					).
+					WithMode(displayType).
+					WithStep(step).
+					WithMin(min).
+					WithMax(max).
+					OptimisticMode())
+
 		default:
 			min := convValue[int](cmd.Min) //nolint:predeclared
 
@@ -390,15 +416,27 @@ func (d *Controller) generateNumbers(numberCommands []Command) {
 			}
 
 			ints = append(ints,
-				mqtthass.AsNumber(
-					mqtthass.NewEntity(preferences.AppName, name, id).
-						WithOriginInfo(preferences.MQTTOrigin()).
-						WithDeviceInfo(d.device).
-						WithIcon(icon).
-						WithStateCallback(stateCallBack).
-						WithCommandCallback(cmdCallBack).
-						WithValueTemplate(stateValueTemplate),
-					step, min, max, displayType))
+				mqtthass.NewNumberEntity[int]().
+					WithDetails(
+						mqtthass.App(preferences.AppName),
+						mqtthass.Name(name),
+						mqtthass.ID(id),
+						mqtthass.OriginInfo(preferences.MQTTOrigin()),
+						mqtthass.DeviceInfo(d.device),
+						mqtthass.Icon(icon),
+					).
+					WithCommand(
+						mqtthass.CommandCallback(cmdCallBack),
+					).
+					WithState(
+						mqtthass.StateCallback(stateCallBack),
+						mqtthass.ValueTemplate(stateValueTemplate),
+					).
+					WithMode(displayType).
+					WithStep(step).
+					WithMin(min).
+					WithMax(max).
+					OptimisticMode())
 		}
 	}
 

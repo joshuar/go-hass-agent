@@ -11,8 +11,8 @@ import (
 	"fmt"
 	"log/slog"
 
-	mqtthass "github.com/joshuar/go-hass-anything/v11/pkg/hass"
-	mqttapi "github.com/joshuar/go-hass-anything/v11/pkg/mqtt"
+	mqtthass "github.com/joshuar/go-hass-anything/v12/pkg/hass"
+	mqttapi "github.com/joshuar/go-hass-anything/v12/pkg/mqtt"
 
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/logging"
@@ -48,14 +48,19 @@ func MPRISControl(ctx context.Context, device *mqtthass.Device, msgCh chan *mqtt
 		msgCh:  msgCh,
 	}
 
-	mprisMonitor.mediaStateEntity = mqtthass.AsSensor(
-		mqtthass.NewEntity(preferences.AppName, "Media State", device.Name+"_media_state").
-			WithOriginInfo(preferences.MQTTOrigin()).
-			WithDeviceInfo(device).
-			WithIcon(mediaOffIcon).
-			WithValueTemplate("{{ value_json.value }}").
-			WithStateCallback(mprisMonitor.mprisStateCallback),
-	)
+	mprisMonitor.mediaStateEntity = mqtthass.NewSensorEntity().
+		WithDetails(
+			mqtthass.App(preferences.AppName),
+			mqtthass.Name("Media State"),
+			mqtthass.ID(device.Name+"_media_state"),
+			mqtthass.OriginInfo(preferences.MQTTOrigin()),
+			mqtthass.DeviceInfo(device),
+			mqtthass.Icon(mediaOffIcon),
+		).
+		WithState(
+			mqtthass.StateCallback(mprisMonitor.mprisStateCallback),
+			mqtthass.ValueTemplate("{{ value_json.value }}"),
+		)
 
 	triggerCh, err := dbusx.NewWatch(
 		dbusx.MatchPath(mprisDBusPath),

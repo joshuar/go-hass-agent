@@ -9,8 +9,8 @@ import (
 	"context"
 	"log/slog"
 
-	mqtthass "github.com/joshuar/go-hass-anything/v11/pkg/hass"
-	mqttapi "github.com/joshuar/go-hass-anything/v11/pkg/mqtt"
+	mqtthass "github.com/joshuar/go-hass-anything/v12/pkg/hass"
+	mqttapi "github.com/joshuar/go-hass-anything/v12/pkg/mqtt"
 
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/linux/media"
@@ -26,8 +26,8 @@ type mqttWorker struct {
 	numbers       []*mqtthass.NumberEntity[int]
 	switches      []*mqtthass.SwitchEntity
 	controls      []*mqttapi.Subscription
-	binarySensors []*mqtthass.BinarySensorEntity
-	cameras       []*mqtthass.ImageEntity
+	binarySensors []*mqtthass.SensorEntity
+	cameras       []*mqtthass.CameraEntity
 }
 
 type linuxMQTTController struct {
@@ -35,11 +35,17 @@ type linuxMQTTController struct {
 	logger *slog.Logger
 }
 
-// entity is a convienience interface to avoid duplicating a lot of loop content
+// stateEntity is a convienience interface to avoid duplicating a lot of loop content
 // when configuring the controller.
-type entity interface {
-	MarshalSubscription() (*mqttapi.Subscription, error)
+type stateEntity interface {
 	MarshalConfig() (*mqttapi.Msg, error)
+}
+
+// commandEntity is a convienience interface to avoid duplicating a lot of loop content
+// when configuring the controller.
+type commandEntity interface {
+	stateEntity
+	MarshalSubscription() (*mqttapi.Subscription, error)
 }
 
 func (c *linuxMQTTController) Subscriptions() []*mqttapi.Subscription {
@@ -102,7 +108,7 @@ func (c *linuxMQTTController) Msgs() chan *mqttapi.Msg {
 
 // generateConfig is a helper function to avoid duplicate code around generating
 // an entity subscription.
-func (c *linuxMQTTController) generateSubscription(e entity) *mqttapi.Subscription {
+func (c *linuxMQTTController) generateSubscription(e commandEntity) *mqttapi.Subscription {
 	sub, err := e.MarshalSubscription()
 	if err != nil {
 		c.logger.Warn("Could not create subscription.", slog.Any("error", err))
@@ -115,7 +121,7 @@ func (c *linuxMQTTController) generateSubscription(e entity) *mqttapi.Subscripti
 
 // generateConfig is a helper function to avoid duplicate code around generating
 // an entity config.
-func (c *linuxMQTTController) generateConfig(e entity) *mqttapi.Msg {
+func (c *linuxMQTTController) generateConfig(e stateEntity) *mqttapi.Msg {
 	cfg, err := e.MarshalConfig()
 	if err != nil {
 		c.logger.Warn("Could not create config.", slog.Any("error", err.Error()))
