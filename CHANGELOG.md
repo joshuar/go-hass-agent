@@ -1,5 +1,12 @@
 # Changelog
 
+## [10.3.2](https://github.com/joshuar/go-hass-agent/compare/v10.3.1...v10.3.2) (2024-10-15)
+
+
+### Bug Fixes
+
+* **linux:** :bug: fix total calculation for network rates sensors ([f51acaa](https://github.com/joshuar/go-hass-agent/commit/f51acaac8314df34b9d3356633e73dee91457871))
+
 ## [10.3.1](https://github.com/joshuar/go-hass-agent/compare/v10.3.0...v10.3.1) (2024-10-12)
 
 
