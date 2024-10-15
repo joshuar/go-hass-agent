@@ -237,7 +237,7 @@ func (w *netStatsWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 		name := link.name
 		stats := link.stats
 		totalBytesRx += stats.RXBytes
-		totalBytesTx += stats.RXBytes
+		totalBytesTx += stats.TXBytes
 
 		if _, ok := w.statsSensors[name]; ok { // Existing link/sensors, update.
 			for sensorType := range w.statsSensors[name] {
