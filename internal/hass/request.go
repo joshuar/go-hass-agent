@@ -18,6 +18,7 @@ const (
 	requestTypeRegister = "register_sensor"
 	requestTypeUpdate   = "update_sensor_states"
 	requestTypeLocation = "update_location"
+	requestTypeEvent    = "fire_event"
 )
 
 var (
