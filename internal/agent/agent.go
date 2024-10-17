@@ -19,6 +19,8 @@ import (
 	"syscall"
 
 	fyneui "github.com/joshuar/go-hass-agent/internal/agent/ui/fyneUI"
+	"github.com/joshuar/go-hass-agent/internal/hass/event"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
@@ -85,6 +87,7 @@ func SetForceRegister(value bool) CtxOption {
 // then spawns a sensor tracker and the workers to gather sensor data and
 // publish it to Home Assistant.
 //
+//nolint:funlen
 //revive:disable:function-length
 func Run(ctx context.Context) error {
 	var (
@@ -139,9 +142,9 @@ func Run(ctx context.Context) error {
 		}
 
 		var (
-			sensorControllers []SensorController
+			sensorControllers []WorkerController[sensor.Entity]
 			mqttControllers   []MQTTController
-			eventControllers  []EventController
+			eventControllers  []WorkerController[event.Event]
 		)
 		// Setup and sort all controllers by type.
 		for _, c := range agent.setupControllers(runCtx, prefs) {
@@ -159,7 +162,7 @@ func Run(ctx context.Context) error {
 		// Run workers for any sensor controllers.
 		go func() {
 			defer wg.Done()
-			runSensorWorkers(runCtx, prefs, sensorControllers...)
+			runControllerWorkers(runCtx, prefs, sensorControllers...)
 		}()
 
 		if len(mqttControllers) > 0 {
@@ -175,7 +178,7 @@ func Run(ctx context.Context) error {
 		// Run workers for any event controllers.
 		go func() {
 			defer wg.Done()
-			runEventWorkers(runCtx, prefs, eventControllers...)
+			runControllerWorkers(runCtx, prefs, eventControllers...)
 		}()
 
 		wg.Add(1)
