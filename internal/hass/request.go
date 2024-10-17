@@ -42,7 +42,7 @@ type LocationRequest struct {
 
 type request struct {
 	Data        any    `json:"data" validate:"required"`
-	RequestType string `json:"type" validate:"required,oneof=register_sensor update_sensor_states update_location"`
+	RequestType string `json:"type" validate:"required,oneof=register_sensor update_sensor_states update_location fire_event"`
 }
 
 func (r *request) Validate() error {
