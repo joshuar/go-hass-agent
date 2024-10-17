@@ -7,29 +7,40 @@ package agent
 
 import (
 	"context"
+	"fmt"
+	"log/slog"
 
 	mqtthass "github.com/joshuar/go-hass-anything/v12/pkg/hass"
 	mqttapi "github.com/joshuar/go-hass-anything/v12/pkg/mqtt"
 
+	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/hass/event"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
-// SensorController represents an object that manages one or more Workers.
-type SensorController interface {
+type WorkerController[T any] interface {
 	ID() string
-	// States returns the list of all sensor states tracked by all workers of
-	// this controller.
-	States(ctx context.Context) []sensor.Entity
-	// ActiveWorkers is a list of the names of all currently active Workers.
 	ActiveWorkers() []string
 	// InactiveWorkers is a list of the names of all currently inactive Workers.
 	InactiveWorkers() []string
 	// Start provides a way to start the named Worker.
-	Start(ctx context.Context, name string) (<-chan sensor.Entity, error)
+	Start(ctx context.Context, name string) (<-chan T, error)
 	// Stop provides a way to stop the named Worker.
 	Stop(name string) error
+}
+
+// SensorController represents an object that manages one or more Workers.
+type SensorController interface {
+	WorkerController[sensor.Entity]
+	// States returns the list of all sensor states tracked by all workers of
+	// this controller.
+	States(ctx context.Context) []sensor.Entity
+}
+
+type EventController interface {
+	WorkerController[event.Event]
 }
 
 // MQTTController represents an object that is responsible for controlling the
@@ -44,18 +55,6 @@ type MQTTController interface {
 	// Msgs returns a channel on which this object will send MQTT messages on
 	// certain events.
 	Msgs() chan *mqttapi.Msg
-}
-
-type EventController interface {
-	ID() string
-	// ActiveWorkers is a list of the names of all currently active Workers.
-	ActiveWorkers() []string
-	// InactiveWorkers is a list of the names of all currently inactive Workers.
-	InactiveWorkers() []string
-	// Start provides a way to start the named Worker.
-	Start(ctx context.Context, name string) (<-chan event.Event, error)
-	// Stop provides a way to stop the named Worker.
-	Stop(name string) error
 }
 
 func (agent *Agent) setupControllers(ctx context.Context, prefs *preferences.Preferences) []any {
@@ -94,4 +93,99 @@ func (agent *Agent) setupControllers(ctx context.Context, prefs *preferences.Pre
 	controllers = append(controllers, osSensorControllers, osEventControllers)
 
 	return controllers
+}
+
+func runControllerWorkers[T any](ctx context.Context, prefs *preferences.Preferences, controllers ...WorkerController[T]) {
+	// Start all inactive workers of all controllers.
+	eventCh := startAllWorkers(ctx, controllers)
+	if len(eventCh) == 0 {
+		logging.FromContext(ctx).Warn("No workers were started by any controllers.")
+		return
+	}
+
+	hassclient, err := newHassClient(ctx, prefs)
+	if err != nil {
+		logging.FromContext(ctx).Error("Cannot start workers.", slog.Any("error", err))
+		return
+	}
+
+	// When the context is done, stop all active workers of all controllers.
+	go func() {
+		<-ctx.Done()
+		stopAllWorkers(ctx, controllers)
+	}()
+
+	// Process all events/sensors from all workers.
+	for details := range mergeCh(ctx, eventCh...) {
+		go func(e T) {
+			var err error
+
+			switch details := any(e).(type) {
+			case sensor.Entity:
+				err = hassclient.ProcessSensor(ctx, details)
+			case event.Event:
+				err = hassclient.ProcessEvent(ctx, details)
+			}
+
+			if err != nil {
+				logging.FromContext(ctx).Error("Processing failed.", slog.Any("error", err))
+			}
+		}(details)
+	}
+}
+
+func startAllWorkers[T any](ctx context.Context, controllers []WorkerController[T]) []<-chan T {
+	var eventCh []<-chan T
+
+	for _, controller := range controllers {
+		logging.FromContext(ctx).Debug("Starting controller",
+			slog.String("controller", controller.ID()))
+
+		for _, workerName := range controller.InactiveWorkers() {
+			logging.FromContext(ctx).Debug("Starting worker",
+				slog.String("worker", workerName))
+
+			workerCh, err := controller.Start(ctx, workerName)
+			if err != nil {
+				logging.FromContext(ctx).
+					Warn("Could not start worker.",
+						slog.String("controller", controller.ID()),
+						slog.String("worker", workerName),
+						slog.Any("errors", err))
+			} else {
+				eventCh = append(eventCh, workerCh)
+			}
+		}
+	}
+
+	return eventCh
+}
+
+func stopAllWorkers[T any](ctx context.Context, controllers []WorkerController[T]) {
+	for _, controller := range controllers {
+		logging.FromContext(ctx).Debug("Stopping controller", slog.String("controller", controller.ID()))
+
+		for _, workerName := range controller.ActiveWorkers() {
+			logging.FromContext(ctx).Debug("Stopping worker", slog.String("worker", workerName))
+
+			if err := controller.Stop(workerName); err != nil {
+				logging.FromContext(ctx).
+					Warn("Could not stop worker.",
+						slog.String("controller", controller.ID()),
+						slog.String("worker", workerName),
+						slog.Any("errors", err))
+			}
+		}
+	}
+}
+
+func newHassClient(ctx context.Context, prefs *preferences.Preferences) (*hass.Client, error) {
+	client, err := hass.NewClient(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("cannot create Home Assistant client: %w", err)
+	}
+
+	client.Endpoint(prefs.RestAPIURL(), hass.DefaultTimeout)
+
+	return client, nil
 }
