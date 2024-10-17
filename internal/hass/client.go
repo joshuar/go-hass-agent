@@ -18,6 +18,7 @@ import (
 
 	"github.com/go-resty/resty/v2"
 
+	"github.com/joshuar/go-hass-agent/internal/hass/event"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/registry"
 	"github.com/joshuar/go-hass-agent/internal/logging"
@@ -122,6 +123,21 @@ func (c *Client) HassVersion(ctx context.Context) string {
 	}
 
 	return config.Version
+}
+
+func (c *Client) ProcessEvent(ctx context.Context, details event.Event) error {
+	req := &request{Data: details, RequestType: requestTypeEvent}
+
+	if err := req.Validate(); err != nil {
+		return fmt.Errorf("validation failed: %w", err)
+	}
+
+	_, err := send[eventResponse](ctx, c, req)
+	if err != nil {
+		return fmt.Errorf("failed to send event request: %w", err)
+	}
+
+	return nil
 }
 
 func (c *Client) ProcessSensor(ctx context.Context, details sensor.Entity) error {

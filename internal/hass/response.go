@@ -74,3 +74,5 @@ type locationResponse struct {
 func (r *locationResponse) updated() error {
 	return r
 }
+
+type eventResponse struct{}
