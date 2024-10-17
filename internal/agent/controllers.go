@@ -20,7 +20,7 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
-type WorkerController[T any] interface {
+type Controller[T any] interface {
 	ID() string
 	ActiveWorkers() []string
 	// InactiveWorkers is a list of the names of all currently inactive Workers.
@@ -33,14 +33,14 @@ type WorkerController[T any] interface {
 
 // SensorController represents an object that manages one or more Workers.
 type SensorController interface {
-	WorkerController[sensor.Entity]
+	Controller[sensor.Entity]
 	// States returns the list of all sensor states tracked by all workers of
 	// this controller.
 	States(ctx context.Context) []sensor.Entity
 }
 
 type EventController interface {
-	WorkerController[event.Event]
+	Controller[event.Event]
 }
 
 // MQTTController represents an object that is responsible for controlling the
@@ -95,7 +95,7 @@ func (agent *Agent) setupControllers(ctx context.Context, prefs *preferences.Pre
 	return controllers
 }
 
-func runControllerWorkers[T any](ctx context.Context, prefs *preferences.Preferences, controllers ...WorkerController[T]) {
+func runControllers[T any](ctx context.Context, prefs *preferences.Preferences, controllers ...Controller[T]) {
 	// Start all inactive workers of all controllers.
 	eventCh := startAllWorkers(ctx, controllers)
 	if len(eventCh) == 0 {
@@ -134,7 +134,7 @@ func runControllerWorkers[T any](ctx context.Context, prefs *preferences.Prefere
 	}
 }
 
-func startAllWorkers[T any](ctx context.Context, controllers []WorkerController[T]) []<-chan T {
+func startAllWorkers[T any](ctx context.Context, controllers []Controller[T]) []<-chan T {
 	var eventCh []<-chan T
 
 	for _, controller := range controllers {
@@ -161,7 +161,7 @@ func startAllWorkers[T any](ctx context.Context, controllers []WorkerController[
 	return eventCh
 }
 
-func stopAllWorkers[T any](ctx context.Context, controllers []WorkerController[T]) {
+func stopAllWorkers[T any](ctx context.Context, controllers []Controller[T]) {
 	for _, controller := range controllers {
 		logging.FromContext(ctx).Debug("Stopping controller", slog.String("controller", controller.ID()))
 
