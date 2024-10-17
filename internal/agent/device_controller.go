@@ -20,7 +20,7 @@ const (
 	deviceControllerID = "device_controller"
 )
 
-type deviceController map[string]*workerState
+type deviceController map[string]*sensorWorkerState
 
 func (w deviceController) ID() string {
 	return deviceControllerID
@@ -116,17 +116,17 @@ func (w deviceController) States(ctx context.Context) []sensor.Entity {
 }
 
 func (agent *Agent) newDeviceController(ctx context.Context, prefs *preferences.Preferences) SensorController {
-	var worker worker
+	var worker sensorWorker
 
 	controller := make(deviceController)
 
 	// Set up sensor workers.
 	worker = newVersionWorker()
-	controller[worker.ID()] = &workerState{worker: worker}
+	controller[worker.ID()] = &sensorWorkerState{sensorWorker: worker}
 	worker = newExternalIPUpdaterWorker(ctx)
-	controller[worker.ID()] = &workerState{worker: worker}
+	controller[worker.ID()] = &sensorWorkerState{sensorWorker: worker}
 	worker = newConnectionLatencyWorker(prefs)
-	controller[worker.ID()] = &workerState{worker: worker}
+	controller[worker.ID()] = &sensorWorkerState{sensorWorker: worker}
 
 	return controller
 }

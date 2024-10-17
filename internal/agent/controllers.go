@@ -11,6 +11,7 @@ import (
 	mqtthass "github.com/joshuar/go-hass-anything/v12/pkg/hass"
 	mqttapi "github.com/joshuar/go-hass-anything/v12/pkg/mqtt"
 
+	"github.com/joshuar/go-hass-agent/internal/hass/event"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
@@ -45,6 +46,18 @@ type MQTTController interface {
 	Msgs() chan *mqttapi.Msg
 }
 
+type EventController interface {
+	ID() string
+	// ActiveWorkers is a list of the names of all currently active Workers.
+	ActiveWorkers() []string
+	// InactiveWorkers is a list of the names of all currently inactive Workers.
+	InactiveWorkers() []string
+	// Start provides a way to start the named Worker.
+	Start(ctx context.Context, name string) (<-chan event.Event, error)
+	// Stop provides a way to stop the named Worker.
+	Stop(name string) error
+}
+
 func (agent *Agent) setupControllers(ctx context.Context, prefs *preferences.Preferences) []any {
 	var (
 		mqttDevice  *mqtthass.Device
@@ -77,7 +90,8 @@ func (agent *Agent) setupControllers(ctx context.Context, prefs *preferences.Pre
 	}
 	// Create a new OS controller. The controller will have all the necessary
 	// configuration for any OS-specific sensors.
-	controllers = append(controllers, newOSSensorController(ctx))
+	osSensorControllers, osEventControllers := newOperatingSystemControllers(ctx)
+	controllers = append(controllers, osSensorControllers, osEventControllers)
 
 	return controllers
 }
