@@ -115,7 +115,7 @@ func (w *ioWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
 }
 
 func NewIOWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
-	worker := linux.NewPollingWorker(ratesWorkerID, ratesUpdateInterval, ratesUpdateJitter)
+	worker := linux.NewPollingSensorWorker(ratesWorkerID, ratesUpdateInterval, ratesUpdateJitter)
 
 	boottime, found := linux.CtxGetBoottime(ctx)
 	if !found {
@@ -127,7 +127,7 @@ func NewIOWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
 	devices := make(map[string][]*diskIOSensor)
 	devices["total"] = newDeviceSensors(boottime, &device{id: totalsID})
 
-	worker.PollingType = &ioWorker{
+	worker.PollingSensorType = &ioWorker{
 		devices:  devices,
 		boottime: boottime,
 	}

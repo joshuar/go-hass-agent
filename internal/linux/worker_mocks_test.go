@@ -12,7 +12,7 @@ import (
 
 // Ensure, that PollingTypeMock does implement PollingType.
 // If this is not the case, regenerate this file with moq.
-var _ PollingType = &PollingTypeMock{}
+var _ PollingSensorType = &PollingTypeMock{}
 
 // PollingTypeMock is a mock implementation of PollingType.
 //
@@ -122,7 +122,7 @@ func (mock *PollingTypeMock) UpdateDeltaCalls() []struct {
 
 // Ensure, that EventTypeMock does implement EventType.
 // If this is not the case, regenerate this file with moq.
-var _ EventType = &EventTypeMock{}
+var _ EventSensorType = &EventTypeMock{}
 
 // EventTypeMock is a mock implementation of EventType.
 //
@@ -232,7 +232,7 @@ func (mock *EventTypeMock) SensorsCalls() []struct {
 
 // Ensure, that OneShotTypeMock does implement OneShotType.
 // If this is not the case, regenerate this file with moq.
-var _ OneShotType = &OneShotTypeMock{}
+var _ OneShotSensorType = &OneShotTypeMock{}
 
 // OneShotTypeMock is a mock implementation of OneShotType.
 //

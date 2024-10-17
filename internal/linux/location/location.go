@@ -119,7 +119,7 @@ func (w *locationWorker) newLocation(locationPath string) (sensor.Entity, error)
 }
 
 func NewLocationWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
-	worker := linux.NewEventWorker(workerID)
+	worker := linux.NewEventSensorWorker(workerID)
 
 	bus, ok := linux.CtxGetSystemBus(ctx)
 	if !ok {
@@ -144,7 +144,7 @@ func NewLocationWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 	}
 
 	// Create our sensor worker.
-	worker.EventType = &locationWorker{
+	worker.EventSensorType = &locationWorker{
 		triggerCh: triggerCh,
 		getLocationProperty: func(path, prop string) (float64, error) {
 			value, err := dbusx.NewProperty[float64](bus, path, geoclueInterface, locationInterface+"."+prop).Get()

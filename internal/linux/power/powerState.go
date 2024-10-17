@@ -131,7 +131,7 @@ func (w *stateWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 }
 
 func NewStateWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
-	worker := linux.NewEventWorker(powerStateWorkerID)
+	worker := linux.NewEventSensorWorker(powerStateWorkerID)
 
 	bus, ok := linux.CtxGetSystemBus(ctx)
 	if !ok {
@@ -147,7 +147,7 @@ func NewStateWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 		return worker, fmt.Errorf("unable to set-up D-Bus watch for power state: %w", err)
 	}
 
-	worker.EventType = &stateWorker{
+	worker.EventSensorType = &stateWorker{
 		triggerCh: triggerCh,
 	}
 

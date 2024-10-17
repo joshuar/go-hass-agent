@@ -159,14 +159,14 @@ func (w *ConnectionsWorker) handleConnection(ctx context.Context, path dbus.Obje
 }
 
 func NewConnectionWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
-	worker := linux.NewEventWorker(netConnWorkerID)
+	worker := linux.NewEventSensorWorker(netConnWorkerID)
 
 	bus, ok := linux.CtxGetSystemBus(ctx)
 	if !ok {
 		return worker, linux.ErrNoSystemBus
 	}
 
-	worker.EventType = &ConnectionsWorker{
+	worker.EventSensorType = &ConnectionsWorker{
 		bus:  bus,
 		list: make(map[string]*connection),
 		logger: logging.FromContext(ctx).

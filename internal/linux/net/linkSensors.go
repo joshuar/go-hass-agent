@@ -228,7 +228,7 @@ func (w *AddressWorker) Events(ctx context.Context) (<-chan sensor.Entity, error
 }
 
 func NewAddressWorker(_ context.Context) (*linux.EventSensorWorker, error) {
-	worker := linux.NewEventWorker(addressWorkerID)
+	worker := linux.NewEventSensorWorker(addressWorkerID)
 
 	conn, err := rtnetlink.Dial(nlConfig)
 	if err != nil {
@@ -240,7 +240,7 @@ func NewAddressWorker(_ context.Context) (*linux.EventSensorWorker, error) {
 		donech: make(chan struct{}),
 	}
 
-	worker.EventType = addressWorker
+	worker.EventSensorType = addressWorker
 
 	return worker, nil
 }

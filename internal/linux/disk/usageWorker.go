@@ -42,8 +42,8 @@ func (w *usageWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
 }
 
 func NewUsageWorker(_ context.Context) (*linux.PollingSensorWorker, error) {
-	worker := linux.NewPollingWorker(usageWorkerID, usageUpdateInterval, usageUpdateJitter)
-	worker.PollingType = &usageWorker{}
+	worker := linux.NewPollingSensorWorker(usageWorkerID, usageUpdateInterval, usageUpdateJitter)
+	worker.PollingSensorType = &usageWorker{}
 
 	return worker, nil
 }

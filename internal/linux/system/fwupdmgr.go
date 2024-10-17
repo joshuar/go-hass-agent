@@ -112,14 +112,14 @@ func (w *fwupdWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
 }
 
 func NewfwupdWorker(ctx context.Context) (*linux.OneShotSensorWorker, error) {
-	worker := linux.NewOneShotWorker(fwupdmgrWorkerID)
+	worker := linux.NewOneShotSensorWorker(fwupdmgrWorkerID)
 
 	bus, ok := linux.CtxGetSystemBus(ctx)
 	if !ok {
 		return worker, linux.ErrNoSystemBus
 	}
 
-	worker.OneShotType = &fwupdWorker{
+	worker.OneShotSensorType = &fwupdWorker{
 		hostSecurityAttrs: dbusx.NewData[[]map[string]dbus.Variant](bus, fwupdInterface, "/", fwupdInterface+"."+hostSecurityAttrsMethod),
 		hostSecurityID:    dbusx.NewProperty[string](bus, "/", fwupdInterface, fwupdInterface+"."+hostSecurityIDProp),
 	}

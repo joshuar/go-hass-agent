@@ -205,14 +205,14 @@ func (w *sensorWorker) monitorBatteryChanges(ctx context.Context) <-chan sensor.
 }
 
 func NewBatteryWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
-	worker := linux.NewEventWorker(workerID)
+	worker := linux.NewEventSensorWorker(workerID)
 
 	bus, ok := linux.CtxGetSystemBus(ctx)
 	if !ok {
 		return worker, linux.ErrNoSystemBus
 	}
 
-	worker.EventType = &sensorWorker{
+	worker.EventSensorType = &sensorWorker{
 		batteryList: make(map[dbus.ObjectPath]context.CancelFunc),
 		bus:         bus,
 		logger:      logging.FromContext(ctx).With(slog.String("worker", workerID)),

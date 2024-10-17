@@ -118,7 +118,7 @@ func (w *screenLockWorker) getCurrentState() (sensor.Entity, error) {
 }
 
 func NewScreenLockWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
-	worker := linux.NewEventWorker(screenLockWorkerID)
+	worker := linux.NewEventSensorWorker(screenLockWorkerID)
 
 	bus, ok := linux.CtxGetSystemBus(ctx)
 	if !ok {
@@ -138,7 +138,7 @@ func NewScreenLockWorker(ctx context.Context) (*linux.EventSensorWorker, error) 
 		return worker, fmt.Errorf("unable to create D-Bus watch for screen lock state: %w", err)
 	}
 
-	worker.EventType = &screenLockWorker{
+	worker.EventSensorType = &screenLockWorker{
 		triggerCh:      triggerCh,
 		screenLockProp: dbusx.NewProperty[bool](bus, sessionPath, loginBaseInterface, sessionInterface+"."+sessionLockedProp),
 	}
