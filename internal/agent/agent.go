@@ -141,6 +141,7 @@ func Run(ctx context.Context) error {
 		var (
 			sensorControllers []SensorController
 			mqttControllers   []MQTTController
+			eventControllers  []EventController
 		)
 		// Setup and sort all controllers by type.
 		for _, c := range agent.setupControllers(runCtx, prefs) {
@@ -149,6 +150,8 @@ func Run(ctx context.Context) error {
 				sensorControllers = append(sensorControllers, controller)
 			case MQTTController:
 				mqttControllers = append(mqttControllers, controller)
+			case EventController:
+				eventControllers = append(eventControllers, controller)
 			}
 		}
 
@@ -167,6 +170,13 @@ func Run(ctx context.Context) error {
 				runMQTTWorkers(runCtx, prefs.GetMQTTPreferences(), mqttControllers...)
 			}()
 		}
+
+		wg.Add(1)
+		// Run workers for any event controllers.
+		go func() {
+			defer wg.Done()
+			runEventWorkers(runCtx, prefs, eventControllers...)
+		}()
 
 		wg.Add(1)
 		// Listen for notifications from Home Assistant.
