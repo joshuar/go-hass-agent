@@ -266,7 +266,7 @@ func (w *netStatsWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 
 // NewNetStatsWorker sets up a sensor worker that tracks network stats.
 func NewNetStatsWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
-	worker := linux.NewPollingWorker(netRatesWorkerID, rateInterval, rateJitter)
+	worker := linux.NewPollingSensorWorker(netRatesWorkerID, rateInterval, rateJitter)
 
 	conn, err := rtnetlink.Dial(nil)
 	if err != nil {
@@ -289,7 +289,7 @@ func NewNetStatsWorker(ctx context.Context) (*linux.PollingSensorWorker, error) 
 	}
 	ratesWorker.statsSensors[totalsName] = generateSensors(totalsName, nil)
 
-	worker.PollingType = ratesWorker
+	worker.PollingSensorType = ratesWorker
 
 	return worker, nil
 }

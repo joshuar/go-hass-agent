@@ -109,14 +109,14 @@ func (w *timeWorker) getUptime() float64 {
 }
 
 func NewTimeWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
-	worker := linux.NewPollingWorker(timeWorkerID, uptimeInterval, uptimeJitter)
+	worker := linux.NewPollingSensorWorker(timeWorkerID, uptimeInterval, uptimeJitter)
 
 	boottime, found := linux.CtxGetBoottime(ctx)
 	if !found {
 		return worker, fmt.Errorf("%w: no boottime value", linux.ErrInvalidCtx)
 	}
 
-	worker.PollingType = &timeWorker{
+	worker.PollingSensorType = &timeWorker{
 		boottime: boottime,
 		logger:   logging.FromContext(ctx).With(slog.String("worker", timeWorkerID)),
 	}

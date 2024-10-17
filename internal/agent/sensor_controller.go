@@ -17,20 +17,20 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
-type worker interface {
+type sensorWorker interface {
 	ID() string
 	Start(ctx context.Context) (<-chan sensor.Entity, error)
-	Sensors(ctx context.Context) ([]sensor.Entity, error)
 	Stop() error
+	Sensors(ctx context.Context) ([]sensor.Entity, error)
 }
 
-type workerState struct {
-	worker
+type sensorWorkerState struct {
+	sensorWorker
 	started bool
 }
 
 type sensorController struct {
-	workers map[string]*workerState
+	workers map[string]*sensorWorkerState
 	id      string
 }
 

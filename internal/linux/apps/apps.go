@@ -109,7 +109,7 @@ func (w *sensorWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 }
 
 func NewAppWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
-	worker := linux.NewEventWorker(workerID)
+	worker := linux.NewEventSensorWorker(workerID)
 
 	// If we cannot find a portal interface, we cannot monitor the active app.
 	portalDest, ok := linux.CtxGetDesktopPortal(ctx)
@@ -131,7 +131,7 @@ func NewAppWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 		return worker, fmt.Errorf("could not watch D-Bus for app state events: %w", err)
 	}
 
-	worker.EventType = &sensorWorker{
+	worker.EventSensorType = &sensorWorker{
 		triggerCh: triggerCh,
 		getAppStates: func() (map[string]dbus.Variant, error) {
 			apps, err := dbusx.GetData[map[string]dbus.Variant](bus, appStateDBusPath, portalDest, appStateDBusMethod)

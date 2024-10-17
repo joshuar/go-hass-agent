@@ -152,7 +152,7 @@ func (w *laptopWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 }
 
 func NewLaptopWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
-	worker := linux.NewEventWorker(laptopWorkerID)
+	worker := linux.NewEventSensorWorker(laptopWorkerID)
 
 	bus, ok := linux.CtxGetSystemBus(ctx)
 	if !ok {
@@ -179,7 +179,7 @@ func NewLaptopWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 		properties[name] = dbusx.NewProperty[bool](bus, loginBasePath, loginBaseInterface, name)
 	}
 
-	worker.EventType = &laptopWorker{
+	worker.EventSensorType = &laptopWorker{
 		triggerCh:  triggerCh,
 		properties: properties,
 	}

@@ -94,8 +94,8 @@ func (w *hwMonWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 }
 
 func NewHWMonWorker(_ context.Context) (*linux.PollingSensorWorker, error) {
-	worker := linux.NewPollingWorker(hwmonWorkerID, hwMonInterval, hwMonJitter)
-	worker.PollingType = &hwMonWorker{}
+	worker := linux.NewPollingSensorWorker(hwmonWorkerID, hwMonInterval, hwMonJitter)
+	worker.PollingSensorType = &hwMonWorker{}
 
 	return worker, nil
 }

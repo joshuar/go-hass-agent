@@ -88,8 +88,8 @@ func (w *infoWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
 }
 
 func NewInfoWorker(_ context.Context) (*linux.OneShotSensorWorker, error) {
-	worker := linux.NewOneShotWorker(infoWorkerID)
-	worker.OneShotType = &infoWorker{}
+	worker := linux.NewOneShotSensorWorker(infoWorkerID)
+	worker.OneShotSensorType = &infoWorker{}
 
 	return worker, nil
 }

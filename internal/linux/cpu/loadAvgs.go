@@ -104,8 +104,8 @@ func parseLoadAvgs(data []byte) ([]string, error) {
 }
 
 func NewLoadAvgWorker(_ context.Context) (*linux.PollingSensorWorker, error) {
-	worker := linux.NewPollingWorker(loadAvgsWorkerID, loadAvgUpdateInterval, loadAvgUpdateJitter)
-	worker.PollingType = &loadAvgsWorker{loadAvgs: newLoadAvgSensors(), path: filepath.Join(linux.ProcFSRoot, "loadavg")}
+	worker := linux.NewPollingSensorWorker(loadAvgsWorkerID, loadAvgUpdateInterval, loadAvgUpdateJitter)
+	worker.PollingSensorType = &loadAvgsWorker{loadAvgs: newLoadAvgSensors(), path: filepath.Join(linux.ProcFSRoot, "loadavg")}
 
 	return worker, nil
 }

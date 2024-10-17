@@ -105,7 +105,7 @@ func (w *problemsWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 }
 
 func NewProblemsWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
-	worker := linux.NewPollingWorker(problemsWorkerID, problemInterval, problemJitter)
+	worker := linux.NewPollingSensorWorker(problemsWorkerID, problemInterval, problemJitter)
 
 	bus, ok := linux.CtxGetSystemBus(ctx)
 	if !ok {
@@ -118,7 +118,7 @@ func NewProblemsWorker(ctx context.Context) (*linux.PollingSensorWorker, error) 
 		return worker, fmt.Errorf("unable to fetch ABRT problems from D-Bus: %w", err)
 	}
 
-	worker.PollingType = &problemsWorker{
+	worker.PollingSensorType = &problemsWorker{
 		bus: bus,
 		getProblems: func() ([]string, error) {
 			problems, err := dbusx.GetData[[]string](bus, dBusProblemsDest, dBusProblemIntr, dBusProblemIntr+".GetProblems")

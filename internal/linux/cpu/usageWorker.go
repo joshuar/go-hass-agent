@@ -50,7 +50,7 @@ func (w *usageWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 }
 
 func NewUsageWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
-	worker := linux.NewPollingWorker(usageWorkerID, usageUpdateInterval, usageUpdateJitter)
+	worker := linux.NewPollingSensorWorker(usageWorkerID, usageUpdateInterval, usageUpdateJitter)
 
 	clktck, found := linux.CtxGetClkTck(ctx)
 	if !found {
@@ -62,7 +62,7 @@ func NewUsageWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
 		return worker, fmt.Errorf("%w: no boottime value", linux.ErrInvalidCtx)
 	}
 
-	worker.PollingType = &usageWorker{
+	worker.PollingSensorType = &usageWorker{
 		path:     filepath.Join(linux.ProcFSRoot, "stat"),
 		boottime: boottime,
 		clktck:   clktck,

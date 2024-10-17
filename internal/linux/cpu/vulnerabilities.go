@@ -69,9 +69,9 @@ func (w *cpuVulnWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 }
 
 func NewCPUVulnerabilityWorker(_ context.Context) (*linux.OneShotSensorWorker, error) {
-	worker := linux.NewOneShotWorker(cpuVulnWorkerID)
+	worker := linux.NewOneShotSensorWorker(cpuVulnWorkerID)
 
-	worker.OneShotType = &cpuVulnWorker{
+	worker.OneShotSensorType = &cpuVulnWorker{
 		path: filepath.Join(linux.SysFSRoot, cpuVulnPath),
 	}
 

@@ -176,7 +176,7 @@ func (w *settingsWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 }
 
 func NewDesktopWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
-	worker := linux.NewEventWorker(workerID)
+	worker := linux.NewEventSensorWorker(workerID)
 
 	_, ok := linux.CtxGetDesktopPortal(ctx)
 	if !ok {
@@ -197,7 +197,7 @@ func NewDesktopWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 		return worker, fmt.Errorf("could not watch D-Bus for desktop settings updates: %w", err)
 	}
 
-	worker.EventType = &settingsWorker{
+	worker.EventSensorType = &settingsWorker{
 		triggerCh: triggerCh,
 		getProp: func(prop string) (string, error) {
 			value, err := dbusx.GetData[dbus.Variant](bus,

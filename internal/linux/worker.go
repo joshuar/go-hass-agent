@@ -13,41 +13,46 @@ import (
 	"time"
 
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
+	"github.com/joshuar/go-hass-agent/internal/hass/event"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/logging"
 )
 
 var ErrUnknownWorker = errors.New("unknown sensor worker type")
 
-// PollingType interface represents sensors that are generated on some poll interval.
-type PollingType interface {
+// PollingSensorType interface represents sensors that are generated on some poll interval.
+type PollingSensorType interface {
 	UpdateDelta(delta time.Duration)
 	Sensors(ctx context.Context) ([]sensor.Entity, error)
 }
 
-// EventType interface represents sensors that are generated on some event
+// EventSensorType interface represents sensors that are generated on some event
 // trigger, such as D-Bus messages.
-type EventType interface {
+type EventSensorType interface {
 	Events(ctx context.Context) (<-chan sensor.Entity, error)
 	Sensors(ctx context.Context) ([]sensor.Entity, error)
 }
 
-// OneShotType interface represents sensors that are generated only one-time and
+// OneShotSensorType interface represents sensors that are generated only one-time and
 // have no ongoing updates.
-type OneShotType interface {
+type OneShotSensorType interface {
 	Sensors(ctx context.Context) ([]sensor.Entity, error)
 }
 
-// SensorWorker is a struct embedded in other specific worker structs. It holds
+type EventType interface {
+	Events(ctx context.Context) (<-chan event.Event, error)
+}
+
+// Worker is a struct embedded in other specific worker structs. It holds
 // a function to cancel the worker and its ID.
-type SensorWorker struct {
+type Worker struct {
 	cancelFunc context.CancelFunc
 	WorkerID   string
 }
 
 // ID is a name that can be used as an ID to represent the group of sensors
 // managed by this worker.
-func (w *SensorWorker) ID() string {
+func (w *Worker) ID() string {
 	if w != nil {
 		return w.WorkerID
 	}
@@ -56,7 +61,7 @@ func (w *SensorWorker) ID() string {
 }
 
 // Stop will stop any processing of sensors controlled by this worker.
-func (w *SensorWorker) Stop() error {
+func (w *Worker) Stop() error {
 	slog.Debug("Stopping worker", slog.String("worker", w.ID()))
 	w.cancelFunc()
 
@@ -66,8 +71,8 @@ func (w *SensorWorker) Stop() error {
 // EventSensorWorker is a worker that generates sensors on some kind of
 // event(s).
 type EventSensorWorker struct {
-	EventType
-	SensorWorker
+	EventSensorType
+	Worker
 }
 
 func (w *EventSensorWorker) Start(ctx context.Context) (<-chan sensor.Entity, error) {
@@ -78,20 +83,20 @@ func (w *EventSensorWorker) Start(ctx context.Context) (<-chan sensor.Entity, er
 	w.cancelFunc = cancelFunc
 	// Create a child logger for the worker.
 
-	return handleEvents(updatesCtx, w.EventType), nil
+	return handleSensorEvents(updatesCtx, w.EventSensorType), nil
 }
 
-func NewEventWorker(id string) *EventSensorWorker {
+func NewEventSensorWorker(id string) *EventSensorWorker {
 	return &EventSensorWorker{
-		SensorWorker: SensorWorker{WorkerID: id},
+		Worker: Worker{WorkerID: id},
 	}
 }
 
 // PollingSensorWorker is a worker that requires polling for generating sensors.
 // It has a poll interval and jitter amount.
 type PollingSensorWorker struct {
-	PollingType
-	SensorWorker
+	PollingSensorType
+	Worker
 	PollInterval time.Duration
 	JitterAmount time.Duration
 }
@@ -104,12 +109,12 @@ func (w *PollingSensorWorker) Start(ctx context.Context) (<-chan sensor.Entity, 
 	w.cancelFunc = cancelFunc
 	// Create a child logger for the worker.
 
-	return handlePolling(updatesCtx, w.PollInterval, w.JitterAmount, w.PollingType), nil
+	return handleSensorPolling(updatesCtx, w.PollInterval, w.JitterAmount, w.PollingSensorType), nil
 }
 
-func NewPollingWorker(id string, interval, jitter time.Duration) *PollingSensorWorker {
+func NewPollingSensorWorker(id string, interval, jitter time.Duration) *PollingSensorWorker {
 	return &PollingSensorWorker{
-		SensorWorker: SensorWorker{WorkerID: id},
+		Worker:       Worker{WorkerID: id},
 		PollInterval: interval,
 		JitterAmount: jitter,
 	}
@@ -118,8 +123,8 @@ func NewPollingWorker(id string, interval, jitter time.Duration) *PollingSensorW
 // OneShotSensorWorker is a worker that runs one-time, generates sensors, then
 // exits.
 type OneShotSensorWorker struct {
-	OneShotType
-	SensorWorker
+	OneShotSensorType
+	Worker
 }
 
 func (w *OneShotSensorWorker) Start(ctx context.Context) (<-chan sensor.Entity, error) {
@@ -130,19 +135,35 @@ func (w *OneShotSensorWorker) Start(ctx context.Context) (<-chan sensor.Entity, 
 	w.cancelFunc = cancelFunc
 	// Create a child logger for the worker.
 
-	return handleOneShot(updatesCtx, w.OneShotType), nil
+	return handleSensorOneShot(updatesCtx, w.OneShotSensorType), nil
 }
 
-func NewOneShotWorker(id string) *OneShotSensorWorker {
+func NewOneShotSensorWorker(id string) *OneShotSensorWorker {
 	return &OneShotSensorWorker{
-		SensorWorker: SensorWorker{WorkerID: id},
+		Worker: Worker{WorkerID: id},
 	}
 }
 
-// handlePolling: create an updater function to run the worker's Sensors
+type EventWorker struct {
+	EventType
+	Worker
+}
+
+func (w *EventWorker) Start(ctx context.Context) (<-chan event.Event, error) {
+	// Create a new context for the updates scope.
+	updatesCtx, cancelFunc := context.WithCancel(ctx)
+	// Save the context cancelFunc in the worker to be used as part of its
+	// Stop() method.
+	w.cancelFunc = cancelFunc
+	// Create a child logger for the worker.
+
+	return handleEvents(updatesCtx, w.EventType), nil
+}
+
+// handleSensorPolling: create an updater function to run the worker's Sensors
 // function and pass this to the PollSensors helper, using the interval
 // and jitter the worker has requested.
-func handlePolling(ctx context.Context, interval, jitter time.Duration, worker PollingType) <-chan sensor.Entity {
+func handleSensorPolling(ctx context.Context, interval, jitter time.Duration, worker PollingSensorType) <-chan sensor.Entity {
 	outCh := make(chan sensor.Entity)
 
 	updater := func(d time.Duration) {
@@ -179,8 +200,8 @@ func handlePolling(ctx context.Context, interval, jitter time.Duration, worker P
 	return outCh
 }
 
-// handleEvents: read sensors from the worker Events function and pass these on.
-func handleEvents(ctx context.Context, worker EventType) <-chan sensor.Entity {
+// handleSensorEvents: read sensors from the worker Events function and pass these on.
+func handleSensorEvents(ctx context.Context, worker EventSensorType) <-chan sensor.Entity {
 	outCh := make(chan sensor.Entity)
 
 	go func() {
@@ -203,9 +224,9 @@ func handleEvents(ctx context.Context, worker EventType) <-chan sensor.Entity {
 	return outCh
 }
 
-// handleOneShot: run the worker Sensors function to gather the sensors, pass these
+// handleSensorOneShot: run the worker Sensors function to gather the sensors, pass these
 // through the channel, then close it.
-func handleOneShot(ctx context.Context, worker OneShotType) <-chan sensor.Entity {
+func handleSensorOneShot(ctx context.Context, worker OneShotSensorType) <-chan sensor.Entity {
 	outCh := make(chan sensor.Entity)
 
 	go func() {
@@ -221,6 +242,30 @@ func handleOneShot(ctx context.Context, worker OneShotType) <-chan sensor.Entity
 		}
 
 		for _, s := range sensors {
+			outCh <- s
+		}
+	}()
+
+	return outCh
+}
+
+// handleEvents: read events from the worker Events function and pass these on.
+func handleEvents(ctx context.Context, worker EventType) <-chan event.Event {
+	outCh := make(chan event.Event)
+
+	go func() {
+		defer close(outCh)
+
+		eventCh, err := worker.Events(ctx)
+		if err != nil {
+			logging.FromContext(ctx).
+				With(slog.String("worker_type", "events")).
+				Debug("Unable to retrieve sensor events.", slog.Any("error", err))
+
+			return
+		}
+
+		for s := range eventCh {
 			outCh <- s
 		}
 	}()
