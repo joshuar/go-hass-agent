@@ -62,9 +62,7 @@ func (w *Worker) ID() string {
 
 // Stop will stop any processing of sensors controlled by this worker.
 func (w *Worker) Stop() error {
-	slog.Debug("Stopping worker", slog.String("worker", w.ID()))
 	w.cancelFunc()
-
 	return nil
 }
 
@@ -158,6 +156,12 @@ func (w *EventWorker) Start(ctx context.Context) (<-chan event.Event, error) {
 	// Create a child logger for the worker.
 
 	return handleEvents(updatesCtx, w.EventType), nil
+}
+
+func NewEventWorker(id string) *EventWorker {
+	return &EventWorker{
+		Worker: Worker{WorkerID: id},
+	}
 }
 
 // handleSensorPolling: create an updater function to run the worker's Sensors
