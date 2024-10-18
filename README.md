@@ -54,7 +54,7 @@
 - [🌟 About the Project](#-about-the-project)
   - [🎯 Features](#-features)
   - [🤔 Use-cases](#-use-cases)
-  - [📈/🕹️ List of Sensors/Controls (by Operating System)](#️-list-of-sensorscontrols-by-operating-system)
+  - [📈/🕹️ List of Sensors/Controls/Events (by Operating System)](#️-list-of-sensorscontrolsevents-by-operating-system)
     - [🐧 Linux](#-linux)
     - [All Operating Systems](#all-operating-systems)
   - [🗒️ Versioning](#️-versioning)
@@ -108,19 +108,20 @@
 
 ## 🌟 About the Project
 
-Go Hass Agent is an application to expose sensors and controls from a device to
-Home Assistant. You can think of it as something similar to the [Home Assistant
-companion app](https://companion.home-assistant.io/) for mobile devices, but for
-your desktop, server, Raspberry Pi, Arduino, toaster, whatever. If it can run Go
-and Linux, it can run Go Hass Agent!
+Go Hass Agent is an application to expose sensors, controls and events from a
+device to Home Assistant. You can think of it as something similar to the [Home
+Assistant companion app](https://companion.home-assistant.io/) for mobile
+devices, but for your desktop, server, Raspberry Pi, Arduino, toaster, whatever.
+If it can run Go and Linux, it can run Go Hass Agent!
 
 Out of the box, Go Hass Agent will report lots of details about the system it is
 running on. You can extend it with additional sensors and controls by hooking it
 up to MQTT. You can extend it **even further** with your own custom sensors and
 controls with scripts/programs.
 
-You can then use these sensors/controls in any automations and dashboards, just
-like the companion app or any other "thing" you've added into Home Assistant.
+You can then use these sensors, controls or events in any automations and
+dashboards, just like the companion app or any other "thing" you've added into
+Home Assistant.
 
 ### 🎯 Features
 
@@ -135,6 +136,9 @@ connected to MQTT, Go Hass Agent can add some additional sensors/controls for
 various system features. A selection of device controls are provided by default,
 and you can configure additional controls to execute D-Bus commands or
 scripts/executables. See [Control via MQTT](#-mqtt-sensors-and-controls).
+- **Events:** Go Hass Agent will send a few events when certain things happen on
+  the device running the agent (for example, user logins/logouts). You can
+  listen for these events and react on them in Home Assistant automations.
 
 [⬆️ Back to Top](#-table-of-contents)
 
@@ -147,6 +151,7 @@ this app:
   - What active/running apps are on your laptop/desktop. For example, you could
   set your lights dim or activate a scene when you are gaming.
   - Whether your screen is locked or the device is shutdown/suspended.
+- Set up automations to run when you log in or out of your machine.
 - With your laptop plugged into a smart plug that is also controlled by Home
   Assistant, turn the smart plug on/off based on the battery charge. This can
   force a full charge/discharge cycle of the battery, extending its life over
@@ -162,7 +167,7 @@ this app:
 
 [⬆️ Back to Top](#-table-of-contents)
 
-### 📈/🕹️ List of Sensors/Controls (by Operating System)
+### 📈/🕹️ List of Sensors/Controls/Events (by Operating System)
 
 > [!NOTE]
 > The following list shows all **potential** sensors the agent can
@@ -170,6 +175,8 @@ this app:
 > lack of support in the system configuration or missing hardware.
 
 #### 🐧 Linux
+
+**Sensors:**
 
 - App Details:
   - **Active App** (currently active (focused) application) and **Running Apps**
@@ -183,13 +190,9 @@ this app:
   detected). Updated when theme or colour changes.
   - Via D-Bus (requires [XDG Desktop Portal
   Support](https://flatpak.github.io/xdg-desktop-portal/docs/) support).
-- Media Controls (when [configured with MQTT](#-mqtt-sensors-and-controls)):
-  - **Volume Control** Adjust the volume on the default audio output device.
-  - **Volume Mute** Mute/Unmute the default audio output device.
+- Media:
   - **MPRIS Player State** Show the current state of any MPRIS compatible player.
     - Requires a player with MPRIS support.
-  - **Webcam Control** Start/stop a webcam and view the video in Home Assistant.
-    - Requires a webcam that is exposed via V4L2 (VideoForLinux2).
 - Connected Battery Details:
   - **Battery Type** (the type of battery, e.g., UPS, line power). Updated on battery add/remove.
   - **Battery Temp** (battery temperature). Updated when the temperature changes.
@@ -258,17 +261,6 @@ this app:
   - **Power State** (power state of device, e.g., suspended, powered on/off).
     Updated when power state changes.
     - Via D-Bus. Requires `systemd-logind`.
-- Power Controls (when [configured with MQTT](#-mqtt-sensors-and-controls)):
-  - **Lock/Unlock Screen/Screensaver** Locks/unlocks the session for the user
-    running Go Hass Agent.
-  - **Suspend** Will (instantly) suspend (the system state is saved to RAM and
-    the CPU is turned off) the device running Go Hass Agent.
-  - **Hibernate** Will (instantly) hibernate (the system state is saved to disk
-    and the machine is powered down) the device running Go Hass Agent.
-  - **Power Off** Will (instantly) power off the device running Go Hass Agent.
-  - **Reboot** Will (instantly) reboot the device running Go Hass Agent.
-  - Power controls require a system configured with `systemd-logind` (and D-Bus)
-    support.
 - Various System Details:
   - **Boot Time** (date/Time of last system boot). Via ProcFS.
   - **Uptime*. Updated ~every 15 minutes. Via ProcFS.
@@ -299,7 +291,46 @@ this app:
       **alarms**. Updated ~every 1 minute.
     - Extracted from the `/sys/class/hwmon` file system.
 
+**Controls (when [configured with MQTT](#-mqtt-sensors-and-controls))**
+
+- Media Controls:
+  - **Volume Control** Adjust the volume on the default audio output device.
+  - **Volume Mute** Mute/Unmute the default audio output device.
+  - **Webcam Control** Start/stop a webcam and view the video in Home Assistant.
+    - Requires a webcam that is exposed via V4L2 (VideoForLinux2).
+- Power Controls:
+  - **Lock/Unlock Screen/Screensaver** Locks/unlocks the session for the user
+    running Go Hass Agent.
+  - **Suspend** Will (instantly) suspend (the system state is saved to RAM and
+    the CPU is turned off) the device running Go Hass Agent.
+  - **Hibernate** Will (instantly) hibernate (the system state is saved to disk
+    and the machine is powered down) the device running Go Hass Agent.
+  - **Power Off** Will (instantly) power off the device running Go Hass Agent.
+  - **Reboot** Will (instantly) reboot the device running Go Hass Agent.
+  - Power controls require a system configured with `systemd-logind` (and D-Bus)
+    support.
+
+**Events:**
+
+- User sessions (login/logout) events.
+  - Requires a system configured with `systemd-logind` (and D-Bus).
+  - Event structures:
+
+    ```yaml
+    event_type: session_started # or session_stopped
+    data:
+      desktop: "" # blank or a desktop name, like KDE.
+      remote: true # true if remote (i.e., ssh) login.
+      remote_host: "::1" # remote host or blank.
+      remote_user: "" # remote user or blank.
+      service: "" # blank or the service that handled the action (e.g., ssh).
+      type: "tty" # blank or type of session.
+      user: myuser # username.
+    ```
+
 #### All Operating Systems
+
+**Sensors:**
 
 - **Go Hass Agent Version**. Updated on agent start.
 - **External IP Addresses**. All external IP addresses (IPv4/6) of the device

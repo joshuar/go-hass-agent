@@ -63,7 +63,9 @@ var sensorLaptopWorkers = []func(ctx context.Context) (*linux.EventSensorWorker,
 	power.NewLaptopWorker, location.NewLocationWorker,
 }
 
-var eventWorkers = []func(ctx context.Context) (*linux.EventWorker, error){}
+var eventWorkers = []func(ctx context.Context) (*linux.EventWorker, error){
+	system.NewUserSessionEventsWorker,
+}
 
 const (
 	linuxSensorControllerID = "linux_sensors_controller"
