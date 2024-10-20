@@ -19,6 +19,7 @@
 !*.json
 !cosign.*
 !assets/
+!build/
 
 !LICENSE
 !deployments/mosquitto/config/mosquitto.conf.example
