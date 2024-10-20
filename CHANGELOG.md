@@ -1,5 +1,24 @@
 # Changelog
 
+## [10.4.0](https://github.com/joshuar/go-hass-agent/compare/v10.3.2...v10.4.0) (2024-10-20)
+
+
+### Features
+
+* **agent:** :sparkles: implement event controller for event workers in agent ([c1d2033](https://github.com/joshuar/go-hass-agent/commit/c1d20330d8a9720f9299d34d46663cd09398b8cf))
+* **hass:** :sparkles: add support for sending events to Home Assistant ([6debf7e](https://github.com/joshuar/go-hass-agent/commit/6debf7ec835a94cda4cc91b91066094a91d62320))
+* **linux:** :sparkles: add session events ([61b87e6](https://github.com/joshuar/go-hass-agent/commit/61b87e6b876e2c72c0b13b683e6b953890cc9b5e))
+
+
+### Bug Fixes
+
+* **hass:** :bug: fix validation of event requests ([d95955e](https://github.com/joshuar/go-hass-agent/commit/d95955eaebae0e5c44f6185607c7f68eee2508bb))
+
+
+### Performance Improvements
+
+* **agent:** :zap: rework controller/worker concept ([8bca59f](https://github.com/joshuar/go-hass-agent/commit/8bca59f0dc06a05f6b943b0c6794b68a9943e56b))
+
 ## [10.3.2](https://github.com/joshuar/go-hass-agent/compare/v10.3.1...v10.3.2) (2024-10-15)
 
 
