@@ -4,7 +4,7 @@
 // https://opensource.org/licenses/MIT
 
 //revive:disable:unused-receiver
-package agent
+package agentsensor
 
 import (
 	"context"
@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	versionWorkerID = "agent_version_sensor"
+	versionWorkerID = "agent_version"
 )
 
 func newVersionSensor() sensor.Entity {
@@ -31,13 +31,13 @@ func newVersionSensor() sensor.Entity {
 	}
 }
 
-type versionWorker struct{}
+type VersionWorker struct{}
 
-func (w *versionWorker) ID() string { return versionWorkerID }
+func (w *VersionWorker) ID() string { return versionWorkerID }
 
-func (w *versionWorker) Stop() error { return nil }
+func (w *VersionWorker) Stop() error { return nil }
 
-func (w *versionWorker) Start(_ context.Context) (<-chan sensor.Entity, error) {
+func (w *VersionWorker) Start(_ context.Context) (<-chan sensor.Entity, error) {
 	sensorCh := make(chan sensor.Entity)
 
 	go func() {
@@ -48,10 +48,10 @@ func (w *versionWorker) Start(_ context.Context) (<-chan sensor.Entity, error) {
 	return sensorCh, nil
 }
 
-func (w *versionWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
+func (w *VersionWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 	return []sensor.Entity{newVersionSensor()}, nil
 }
 
-func newVersionWorker() *versionWorker {
-	return &versionWorker{}
+func NewVersionWorker() *VersionWorker {
+	return &VersionWorker{}
 }

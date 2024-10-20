@@ -14,9 +14,11 @@ import (
 	"log/slog"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 
+	"github.com/adrg/xdg"
 	"github.com/eclipse/paho.golang/paho"
 	"github.com/iancoleman/strcase"
 	"github.com/pelletier/go-toml/v2"
@@ -79,10 +81,10 @@ type CommandList struct {
 	Numbers  []Command `toml:"number,omitempty"`
 }
 
-// Controller represents an object with one or more buttons and switches
+// Worker represents an object with one or more buttons and switches
 // definitions, which can be passed to Home Assistant to add appropriate
 // entities to control the buttons/switches over MQTT.
-type Controller struct {
+type Worker struct {
 	logger       *slog.Logger
 	device       *mqtthass.Device
 	buttons      []*mqtthass.ButtonEntity
@@ -102,7 +104,7 @@ type entity interface {
 // the appropriate callback mechanism to execute the associated commands.
 //
 //nolint:dupl
-func (d *Controller) Subscriptions() []*mqttapi.Subscription {
+func (d *Worker) Subscriptions() []*mqttapi.Subscription {
 	total := len(d.buttons) + len(d.switches) + len(d.intNumbers) + len(d.floatNumbers)
 	subs := make([]*mqttapi.Subscription, 0, total)
 
@@ -126,7 +128,7 @@ func (d *Controller) Subscriptions() []*mqttapi.Subscription {
 	return subs
 }
 
-func (d *Controller) generateSubscriptions(e entity) *mqttapi.Subscription {
+func (d *Worker) generateSubscriptions(e entity) *mqttapi.Subscription {
 	sub, err := e.MarshalSubscription()
 	if err != nil {
 		d.logger.Warn("Could not create entity subscription.", slog.Any("error", err))
@@ -141,7 +143,7 @@ func (d *Controller) generateSubscriptions(e entity) *mqttapi.Subscription {
 // entities for the buttons/switches.
 //
 //nolint:dupl
-func (d *Controller) Configs() []*mqttapi.Msg {
+func (d *Worker) Configs() []*mqttapi.Msg {
 	total := len(d.buttons) + len(d.switches) + len(d.intNumbers) + len(d.floatNumbers)
 	cfgs := make([]*mqttapi.Msg, 0, total)
 
@@ -165,7 +167,7 @@ func (d *Controller) Configs() []*mqttapi.Msg {
 	return cfgs
 }
 
-func (d *Controller) generateConfigs(e entity) *mqttapi.Msg {
+func (d *Worker) generateConfigs(e entity) *mqttapi.Msg {
 	msg, err := e.MarshalConfig()
 	if err != nil {
 		d.logger.Warn("Could not create entity config.", slog.Any("error", err))
@@ -180,14 +182,17 @@ func (d *Controller) generateConfigs(e entity) *mqttapi.Msg {
 // managed by the controller. This is unused.
 //
 //revive:disable:unused-receiver
-func (d *Controller) Msgs() chan *mqttapi.Msg {
+func (d *Worker) Msgs() chan *mqttapi.Msg {
 	return nil
 }
 
-// NewCommandsController is used by the agent to initialize the commands
+// NewCommandsWorker is used by the agent to initialize the commands
 // controller, which holds the MQTT configuration for the commands defined by
 // the user.
-func NewCommandsController(ctx context.Context, commandsFile string, device *mqtthass.Device) (*Controller, error) {
+func NewCommandsWorker(ctx context.Context, device *mqtthass.Device) (*Worker, error) {
+	appID := preferences.AppIDFromContext(ctx)
+	commandsFile := filepath.Join(xdg.ConfigHome, appID, "commands.toml")
+
 	if _, err := os.Stat(commandsFile); errors.Is(err, os.ErrNotExist) {
 		return nil, ErrNoCommands
 	}
@@ -203,7 +208,7 @@ func NewCommandsController(ctx context.Context, commandsFile string, device *mqt
 		return nil, fmt.Errorf("could not parse commands file: %w", err)
 	}
 
-	controller := &Controller{
+	controller := &Worker{
 		logger: logging.FromContext(ctx).WithGroup("custom_commands"),
 		device: device,
 	}
@@ -216,7 +221,7 @@ func NewCommandsController(ctx context.Context, commandsFile string, device *mqt
 
 // generateButtons will create MQTT entities for buttons defined by the
 // controller.
-func (d *Controller) generateButtons(buttonCmds []Command) {
+func (d *Worker) generateButtons(buttonCmds []Command) {
 	var id, icon, name string
 
 	entities := make([]*mqtthass.ButtonEntity, 0, len(buttonCmds))
@@ -258,7 +263,7 @@ func (d *Controller) generateButtons(buttonCmds []Command) {
 
 // generateSwitches will create MQTT entities for buttons defined by the
 // controller.
-func (d *Controller) generateSwitches(switchCmds []Command) {
+func (d *Worker) generateSwitches(switchCmds []Command) {
 	var id, icon, name string
 
 	entities := make([]*mqtthass.SwitchEntity, 0, len(switchCmds))
@@ -312,7 +317,7 @@ func (d *Controller) generateSwitches(switchCmds []Command) {
 // controller.
 //
 //nolint:gocognit,funlen
-func (d *Controller) generateNumbers(numberCommands []Command) {
+func (d *Worker) generateNumbers(numberCommands []Command) {
 	var (
 		id, icon, name string
 		ints           []*mqtthass.NumberEntity[int]

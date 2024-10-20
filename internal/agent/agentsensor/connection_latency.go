@@ -3,8 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//revive:disable:unused-receiver
-package agent
+package agentsensor
 
 import (
 	"context"
@@ -64,23 +63,25 @@ func newConnectionLatencySensor(info resty.TraceInfo) sensor.Entity {
 	return connectionLatency
 }
 
-type connectionLatencyWorker struct {
+type ConnectionLatencySensorWorker struct {
 	client   *resty.Client
 	doneCh   chan struct{}
 	endpoint string
 }
 
 // ID returns the unique string to represent this worker and its sensors.
-func (w *connectionLatencyWorker) ID() string { return connectionLatencyWorkerID }
+//
+//revive:disable:unused-receiver
+func (w *ConnectionLatencySensorWorker) ID() string { return connectionLatencyWorkerID }
 
 // Stop will stop any processing of sensors controlled by this worker.
-func (w *connectionLatencyWorker) Stop() error {
+func (w *ConnectionLatencySensorWorker) Stop() error {
 	close(w.doneCh)
 
 	return nil
 }
 
-func (w *connectionLatencyWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
+func (w *ConnectionLatencySensorWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
 	resp, err := w.client.R().
 		SetContext(ctx).
 		Get(w.endpoint)
@@ -101,7 +102,7 @@ func (w *connectionLatencyWorker) Sensors(ctx context.Context) ([]sensor.Entity,
 	return nil, ErrEmptyResponse
 }
 
-func (w *connectionLatencyWorker) Start(ctx context.Context) (<-chan sensor.Entity, error) {
+func (w *ConnectionLatencySensorWorker) Start(ctx context.Context) (<-chan sensor.Entity, error) {
 	sensorCh := make(chan sensor.Entity)
 	w.doneCh = make(chan struct{})
 
@@ -134,8 +135,8 @@ func (w *connectionLatencyWorker) Start(ctx context.Context) (<-chan sensor.Enti
 	return sensorCh, nil
 }
 
-func newConnectionLatencyWorker(prefs serverPrefs) *connectionLatencyWorker {
-	return &connectionLatencyWorker{
+func NewConnectionLatencySensorWorker(prefs serverPrefs) *ConnectionLatencySensorWorker {
+	return &ConnectionLatencySensorWorker{
 		client: resty.New().
 			SetTimeout(connectionLatencyTimeout).
 			EnableTrace(),

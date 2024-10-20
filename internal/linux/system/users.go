@@ -193,6 +193,9 @@ func (w *UserSessionEventsWorker) Events(ctx context.Context) (<-chan event.Even
 			case <-ctx.Done():
 				return
 			case trigger := <-w.triggerCh:
+				if len(trigger.Content) != 2 {
+					continue
+				}
 				// If the trigger does not contain a session path, ignore.
 				path, ok := trigger.Content[1].(dbus.ObjectPath)
 				if !ok {

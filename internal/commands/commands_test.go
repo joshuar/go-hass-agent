@@ -11,10 +11,10 @@ import (
 	"context"
 	"encoding/json"
 	"os/exec"
-	"path/filepath"
 	"reflect"
 	"testing"
 
+	"github.com/adrg/xdg"
 	"github.com/eclipse/paho.golang/paho"
 	"github.com/go-test/deep"
 	"github.com/stretchr/testify/require"
@@ -110,7 +110,7 @@ func TestController_Subscriptions(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			d := &Controller{
+			d := &Worker{
 				buttons:    tt.fields.buttons,
 				switches:   tt.fields.switches,
 				intNumbers: tt.fields.intNumbers,
@@ -164,7 +164,7 @@ func TestController_Configs(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			d := &Controller{
+			d := &Worker{
 				buttons:    tt.fields.buttons,
 				switches:   tt.fields.switches,
 				intNumbers: tt.fields.intNumbers,
@@ -178,56 +178,47 @@ func TestController_Configs(t *testing.T) {
 }
 
 func TestNewCommandsController(t *testing.T) {
-	// valid commands file
-	validCommandsFile, err := filepath.Abs("testdata/commands.toml")
-	require.NoError(t, err)
+	// ctx, cancelFunc := context.WithCancel(context.TODO())
 
-	// invalid commands file
-	invalidCommandsFile, err := filepath.Abs("testdata/invalidcommands.toml")
-	require.NoError(t, err)
+	// ctx = preferences.AppIDToContext(ctx," ")
 
 	// unreadable commands file
-	unreadableCommandsFile := filepath.Join(t.TempDir(), "unreadable.toml")
-	_, err = exec.Command("touch", unreadableCommandsFile).Output()
-	require.NoError(t, err)
-	_, err = exec.Command("chmod", "a-r", unreadableCommandsFile).Output()
+	unreadableDir := "testdata/unreadable"
+	_, err := exec.Command("chmod", "a-r", unreadableDir).Output()
 	require.NoError(t, err)
 
 	mockDevice := &mqtthass.Device{}
 
 	type args struct {
-		ctx          context.Context
-		device       *mqtthass.Device
-		commandsFile string
+		ctx       context.Context
+		device    *mqtthass.Device
+		configDir string
 	}
 	tests := []struct {
-		want    *Controller
+		want    *Worker
 		args    args
 		name    string
 		wantErr bool
 	}{
 		{
-			name:    "no commands file",
-			wantErr: true,
-		},
-		{
 			name:    "unreadable commands file",
 			wantErr: true,
-			args:    args{ctx: context.TODO(), commandsFile: unreadableCommandsFile, device: mockDevice},
+			args:    args{ctx: context.TODO(), configDir: unreadableDir, device: mockDevice},
 		},
 		{
 			name:    "invalid commands file",
 			wantErr: true,
-			args:    args{ctx: context.TODO(), commandsFile: invalidCommandsFile, device: mockDevice},
+			args:    args{ctx: context.TODO(), configDir: "testdata/invalid", device: mockDevice},
 		},
 		{
 			name: "valid commands file",
-			args: args{ctx: context.TODO(), commandsFile: validCommandsFile, device: mockDevice},
+			args: args{ctx: context.TODO(), configDir: "testdata/valid", device: mockDevice},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := NewCommandsController(tt.args.ctx, tt.args.commandsFile, tt.args.device)
+			xdg.ConfigHome = tt.args.configDir
+			_, err := NewCommandsWorker(tt.args.ctx, tt.args.device)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewCommandsController() error = %v, wantErr %v", err, tt.wantErr)
 				return
