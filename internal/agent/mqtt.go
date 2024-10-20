@@ -19,7 +19,7 @@ import (
 )
 
 // MQTTWorker represents an object that is responsible for controlling the
-// publishing of one or more commands over MQTT.
+// publishing of data over MQTT.
 type MQTTWorker interface {
 	// Subscriptions is a list of MQTT subscriptions this object wants to
 	// establish on the MQTT broker.
@@ -58,6 +58,8 @@ type mqttEntities struct {
 	cameras       []*mqtthass.CameraEntity
 }
 
+// setupMQTT will create a slice of MQTTWorker from the custom commands
+// configuration and any OS-specific MQTT workers.
 func setupMQTT(ctx context.Context, prefs *preferences.Preferences) []MQTTWorker {
 	var workers []MQTTWorker
 
@@ -123,7 +125,8 @@ func processMQTTWorkers(ctx context.Context, prefs mqttapi.Preferences, controll
 	}
 }
 
-func resetMQTTControllers(ctx context.Context, prefs *preferences.Preferences) error {
+// resetMQTTWorkers will unpublish configs for all defined MQTTWorkers.
+func resetMQTTWorkers(ctx context.Context, prefs *preferences.Preferences) error {
 	var configs []*mqttapi.Msg
 
 	workers := setupMQTT(ctx, prefs)

@@ -19,6 +19,7 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/logging"
 )
 
+// linuxMQTTWorker represents the Linux-specific OS MQTTWorker.
 type linuxMQTTWorker struct {
 	*mqttEntities
 	logger *slog.Logger

@@ -64,10 +64,14 @@ var sensorLaptopWorkersInitFuncs = []func(ctx context.Context) (*linux.EventSens
 	power.NewLaptopWorker, location.NewLocationWorker,
 }
 
+// eventWorkersInitFuncs are event workers that produce events rather than sensors.
 var eventWorkersInitFuncs = []func(ctx context.Context) (*linux.EventWorker, error){
 	system.NewUserSessionEventsWorker,
 }
 
+// setupOSWorkers creates slices of OS-specific sensor and event Workers that
+// can be run by the agent. It handles initializing the workers with OS-specific
+// data, reporting any errors.
 func setupOSWorkers(ctx context.Context) ([]Worker[sensor.Entity], []Worker[event.Event]) {
 	eventWorkers := make([]Worker[event.Event], 0, len(eventWorkersInitFuncs))
 	sensorWorkers := make([]Worker[sensor.Entity], 0,
