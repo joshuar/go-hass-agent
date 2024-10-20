@@ -10,7 +10,6 @@ package commands
 import (
 	"context"
 	"encoding/json"
-	"os/exec"
 	"reflect"
 	"testing"
 
@@ -178,15 +177,6 @@ func TestController_Configs(t *testing.T) {
 }
 
 func TestNewCommandsController(t *testing.T) {
-	// ctx, cancelFunc := context.WithCancel(context.TODO())
-
-	// ctx = preferences.AppIDToContext(ctx," ")
-
-	// unreadable commands file
-	unreadableDir := "testdata/unreadable"
-	_, err := exec.Command("chmod", "a-r", unreadableDir).Output()
-	require.NoError(t, err)
-
 	mockDevice := &mqtthass.Device{}
 
 	type args struct {
@@ -203,7 +193,7 @@ func TestNewCommandsController(t *testing.T) {
 		{
 			name:    "unreadable commands file",
 			wantErr: true,
-			args:    args{ctx: context.TODO(), configDir: unreadableDir, device: mockDevice},
+			args:    args{ctx: context.TODO(), configDir: "testdata/unreadable", device: mockDevice},
 		},
 		{
 			name:    "invalid commands file",
