@@ -9,34 +9,16 @@
 
 # But not these files...
 !/.gitignore
-!/.vscode/*.json
-!/.vscode/ltex.dictionary.*.txt
-!/.github/**/*
-!/.devcontainer/**/*
-.devcontainer/devcontainer.env
-
-# don't ignore YAML configs in sub directories EXCEPT the deployments folder
-# tree
-!**/*.yaml
-
-!/*.yml
-!/*.yaml
-!/*.json
-!/*.toml
-!build/**/*
-
-!/assets/**/*
-!/internal/cli/assets/*
-!/internal/agent/ui/assets/*
-!**/testing/*
-!**/testing/data/**
-
-!*.md
 !*.go
 !go.sum
 !go.mod
+!*.yaml
+!*.yml
+!*.toml
+!*.md
+!*.json
 !cosign.*
-!Dockerfile
+!assets/
 
 !LICENSE
 !deployments/mosquitto/config/mosquitto.conf.example
