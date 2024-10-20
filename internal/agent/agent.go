@@ -151,16 +151,16 @@ func Run(ctx context.Context) error {
 
 		client.Endpoint(prefs.RestAPIURL(), hass.DefaultTimeout)
 
-		// Get OS sensor and event workers.
+		// Initialize and gather OS sensor and event workers.
 		sensorWorkers, eventWorkers := setupOSWorkers(runCtx)
-		// Add connection latency sensor worker.
+		// Initialize and add connection latency sensor worker.
 		sensorWorkers = append(sensorWorkers, agentsensor.NewConnectionLatencySensorWorker(prefs))
-		// Add external IP address sensor worker.
+		// Initialize and add external IP address sensor worker.
 		sensorWorkers = append(sensorWorkers, agentsensor.NewExternalIPUpdaterWorker(runCtx))
-		// Add external version sensor worker.
+		// Initialize and add external version sensor worker.
 		sensorWorkers = append(sensorWorkers, agentsensor.NewVersionWorker())
 
-		// Get script workers.
+		// Initialize and add the script worker.
 		scriptsWorkers, err := scripts.NewScriptsWorker(runCtx)
 		if err != nil {
 			logging.FromContext(runCtx).Warn("Could not init scripts workers.", slog.Any("error", err))
@@ -266,7 +266,7 @@ func Reset(ctx context.Context) error {
 	}
 
 	if prefs.IsMQTTEnabled() {
-		if err := resetMQTTControllers(ctx, prefs); err != nil {
+		if err := resetMQTTWorkers(ctx, prefs); err != nil {
 			logging.FromContext(ctx).Error("Problems occurred resetting MQTT configuration.", slog.Any("error", err))
 		}
 	}

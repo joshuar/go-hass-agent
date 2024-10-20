@@ -15,21 +15,29 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/logging"
 )
 
+// Worker is the base interface representing a worker that produces sensors or
+// events. It has an ID and functions to start/stop producing sensors/events.
 type Worker[T any] interface {
 	ID() string
 	Stop() error
 	Start(ctx context.Context) (<-chan T, error)
 }
 
+// SensorWorker is a worker that produces sensors. In addition to the base
+// worker methods, it has a function to generate a list of sensor values.
 type SensorWorker interface {
 	Worker[sensor.Entity]
 	Sensors(ctx context.Context) ([]sensor.Entity, error)
 }
 
+// EventWorker is a worker that produces events. It does not extend further from
+// the base worker other than defining the type of data produced.
 type EventWorker interface {
 	Worker[event.Event]
 }
 
+// startWorkers takes a slice of Workers of a particular type (sensor or event)
+// and runs their start functions, logging any errors.
 func startWorkers[T any](ctx context.Context, workers ...Worker[T]) []<-chan T {
 	var eventCh []<-chan T
 
@@ -51,6 +59,8 @@ func startWorkers[T any](ctx context.Context, workers ...Worker[T]) []<-chan T {
 	return eventCh
 }
 
+// stopWorkers takes a slice of Workers of a particular type (sensor or event)
+// and runs their stop functions, logging any errors.
 func stopWorkers[T any](ctx context.Context, workers ...Worker[T]) {
 	for _, worker := range workers {
 		logging.FromContext(ctx).Debug("Stopping worker", slog.String("worker", worker.ID()))
@@ -64,6 +74,9 @@ func stopWorkers[T any](ctx context.Context, workers ...Worker[T]) {
 	}
 }
 
+// processWorkers handles starting, stopping and processing data from a slice of
+// workers passed in.  It will start the workers, monitor for data and send it
+// to Home Assistant, and stop workers when the passed context is canceled.
 func processWorkers[T any](ctx context.Context, hassclient *hass.Client, workers ...Worker[T]) {
 	// Start all inactive workers of all controllers.
 	workerOutputs := startWorkers(ctx, workers...)
