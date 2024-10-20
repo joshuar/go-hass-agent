@@ -5,7 +5,7 @@
 
 // revive:disable:unused-receiver
 //
-//go:generate go run github.com/matryer/moq -out agent_mocks_test.go . ui SensorController MQTTController
+//go:generate go run github.com/matryer/moq -out agent_mocks_test.go . ui
 package agent
 
 import (
@@ -18,11 +18,12 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/joshuar/go-hass-agent/internal/agent/agentsensor"
 	fyneui "github.com/joshuar/go-hass-agent/internal/agent/ui/fyneUI"
-	"github.com/joshuar/go-hass-agent/internal/hass/event"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
+	"github.com/joshuar/go-hass-agent/internal/scripts"
 )
 
 var ErrInvalidPreferences = errors.New("invalid agent preferences")
@@ -141,43 +142,55 @@ func Run(ctx context.Context) error {
 			return
 		}
 
-		var (
-			sensorControllers []Controller[sensor.Entity]
-			mqttControllers   []MQTTController
-			eventControllers  []Controller[event.Event]
-		)
-		// Setup and sort all controllers by type.
-		for _, c := range agent.setupControllers(runCtx, prefs) {
-			switch controller := c.(type) {
-			case SensorController:
-				sensorControllers = append(sensorControllers, controller)
-			case MQTTController:
-				mqttControllers = append(mqttControllers, controller)
-			case EventController:
-				eventControllers = append(eventControllers, controller)
-			}
+		client, err := hass.NewClient(ctx)
+		if err != nil {
+			logging.FromContext(ctx).Error("Cannot connect to Home Assistant.",
+				slog.Any("error", err))
+			return
+		}
+
+		client.Endpoint(prefs.RestAPIURL(), hass.DefaultTimeout)
+
+		// Get OS sensor and event workers.
+		sensorWorkers, eventWorkers := setupOSWorkers(runCtx)
+		// Add connection latency sensor worker.
+		sensorWorkers = append(sensorWorkers, agentsensor.NewConnectionLatencySensorWorker(prefs))
+		// Add external IP address sensor worker.
+		sensorWorkers = append(sensorWorkers, agentsensor.NewExternalIPUpdaterWorker(runCtx))
+		// Add external version sensor worker.
+		sensorWorkers = append(sensorWorkers, agentsensor.NewVersionWorker())
+
+		// Get script workers.
+		scriptsWorkers, err := scripts.NewScriptsWorker(runCtx)
+		if err != nil {
+			logging.FromContext(runCtx).Warn("Could not init scripts workers.", slog.Any("error", err))
+		} else {
+			sensorWorkers = append(sensorWorkers, scriptsWorkers)
 		}
 
 		wg.Add(1)
-		// Run workers for any sensor controllers.
+		// Process sensor workers.
 		go func() {
 			defer wg.Done()
-			runControllers(runCtx, prefs, sensorControllers...)
+			processWorkers(runCtx, client, sensorWorkers...)
 		}()
 
 		wg.Add(1)
-		// Run workers for any event controllers.
+		// Process event workers.
 		go func() {
 			defer wg.Done()
-			runControllers(runCtx, prefs, eventControllers...)
+			processWorkers(runCtx, client, eventWorkers...)
 		}()
 
-		if len(mqttControllers) > 0 {
+		// If MQTT is enabled, init MQTT workers and process them.
+		if prefs.IsMQTTEnabled() {
+			mqttWorkers := setupMQTT(runCtx, prefs)
+
 			wg.Add(1)
-			// Run workers for any MQTT controllers.
+
 			go func() {
 				defer wg.Done()
-				runMQTTWorkers(runCtx, prefs.GetMQTTPreferences(), mqttControllers...)
+				processMQTTWorkers(runCtx, prefs.GetMQTTPreferences(), mqttWorkers...)
 			}()
 		}
 
@@ -253,7 +266,7 @@ func Reset(ctx context.Context) error {
 	}
 
 	if prefs.IsMQTTEnabled() {
-		if err := resetMQTTControllers(ctx, prefs.GenerateMQTTDevice(ctx), prefs.GetMQTTPreferences()); err != nil {
+		if err := resetMQTTControllers(ctx, prefs); err != nil {
 			logging.FromContext(ctx).Error("Problems occurred resetting MQTT configuration.", slog.Any("error", err))
 		}
 	}

@@ -3,8 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//revive:disable:unused-receiver
-package agent
+package agentsensor
 
 import (
 	"context"
@@ -70,24 +69,26 @@ func newExternalIPSensor(addr net.IP) sensor.Entity {
 	}
 }
 
-type externalIPWorker struct {
+type ExternalIPWorker struct {
 	client *resty.Client
 	doneCh chan struct{}
 	logger *slog.Logger
 }
 
 // ID returns the unique string to represent this worker and its sensors.
-func (w *externalIPWorker) ID() string { return externalIPWorkerID }
+//
+//revive:disable:unused-receiver
+func (w *ExternalIPWorker) ID() string { return externalIPWorkerID }
 
 // Stop will stop any processing of sensors controlled by this worker.
-func (w *externalIPWorker) Stop() error {
+func (w *ExternalIPWorker) Stop() error {
 	close(w.doneCh)
 
 	return nil
 }
 
 //nolint:mnd
-func (w *externalIPWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
+func (w *ExternalIPWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
 	sensors := make([]sensor.Entity, 0, 2)
 
 	for _, ver := range []int{4, 6} {
@@ -104,7 +105,7 @@ func (w *externalIPWorker) Sensors(ctx context.Context) ([]sensor.Entity, error)
 	return sensors, nil
 }
 
-func (w *externalIPWorker) Start(ctx context.Context) (<-chan sensor.Entity, error) {
+func (w *ExternalIPWorker) Start(ctx context.Context) (<-chan sensor.Entity, error) {
 	sensorCh := make(chan sensor.Entity)
 	w.doneCh = make(chan struct{})
 
@@ -132,7 +133,7 @@ func (w *externalIPWorker) Start(ctx context.Context) (<-chan sensor.Entity, err
 	return sensorCh, nil
 }
 
-func (w *externalIPWorker) lookupExternalIPs(ctx context.Context, ver int) (net.IP, error) {
+func (w *ExternalIPWorker) lookupExternalIPs(ctx context.Context, ver int) (net.IP, error) {
 	for host, addr := range ipLookupHosts {
 		w.logger.
 			With(slog.String("worker", externalIPWorkerID)).
@@ -171,8 +172,8 @@ func (w *externalIPWorker) lookupExternalIPs(ctx context.Context, ver int) (net.
 	return nil, ErrNoLookupHosts
 }
 
-func newExternalIPUpdaterWorker(ctx context.Context) *externalIPWorker {
-	return &externalIPWorker{
+func NewExternalIPUpdaterWorker(ctx context.Context) *ExternalIPWorker {
+	return &ExternalIPWorker{
 		client: resty.New().SetTimeout(externalIPUpdateRequestTimeout),
 		logger: logging.FromContext(ctx).
 			With(slog.String("worker", externalIPWorkerID)),

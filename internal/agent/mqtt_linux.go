@@ -19,36 +19,12 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/logging"
 )
 
-type mqttWorker struct {
-	msgs          chan *mqttapi.Msg
-	sensors       []*mqtthass.SensorEntity
-	buttons       []*mqtthass.ButtonEntity
-	numbers       []*mqtthass.NumberEntity[int]
-	switches      []*mqtthass.SwitchEntity
-	controls      []*mqttapi.Subscription
-	binarySensors []*mqtthass.SensorEntity
-	cameras       []*mqtthass.CameraEntity
-}
-
-type linuxMQTTController struct {
-	*mqttWorker
+type linuxMQTTWorker struct {
+	*mqttEntities
 	logger *slog.Logger
 }
 
-// stateEntity is a convienience interface to avoid duplicating a lot of loop content
-// when configuring the controller.
-type stateEntity interface {
-	MarshalConfig() (*mqttapi.Msg, error)
-}
-
-// commandEntity is a convienience interface to avoid duplicating a lot of loop content
-// when configuring the controller.
-type commandEntity interface {
-	stateEntity
-	MarshalSubscription() (*mqttapi.Subscription, error)
-}
-
-func (c *linuxMQTTController) Subscriptions() []*mqttapi.Subscription {
+func (c *linuxMQTTWorker) Subscriptions() []*mqttapi.Subscription {
 	totalLength := len(c.buttons) + len(c.numbers) + len(c.switches) + len(c.cameras)
 	subs := make([]*mqttapi.Subscription, 0, totalLength)
 
@@ -70,7 +46,7 @@ func (c *linuxMQTTController) Subscriptions() []*mqttapi.Subscription {
 	return subs
 }
 
-func (c *linuxMQTTController) Configs() []*mqttapi.Msg {
+func (c *linuxMQTTWorker) Configs() []*mqttapi.Msg {
 	totalLength := len(c.sensors) + len(c.binarySensors) + len(c.buttons) + len(c.switches) + len(c.numbers) + len(c.cameras)
 	configs := make([]*mqttapi.Msg, 0, totalLength)
 
@@ -102,13 +78,13 @@ func (c *linuxMQTTController) Configs() []*mqttapi.Msg {
 	return configs
 }
 
-func (c *linuxMQTTController) Msgs() chan *mqttapi.Msg {
+func (c *linuxMQTTWorker) Msgs() chan *mqttapi.Msg {
 	return c.msgs
 }
 
 // generateConfig is a helper function to avoid duplicate code around generating
 // an entity subscription.
-func (c *linuxMQTTController) generateSubscription(e commandEntity) *mqttapi.Subscription {
+func (c *linuxMQTTWorker) generateSubscription(e commandEntity) *mqttapi.Subscription {
 	sub, err := e.MarshalSubscription()
 	if err != nil {
 		c.logger.Warn("Could not create subscription.", slog.Any("error", err))
@@ -121,7 +97,7 @@ func (c *linuxMQTTController) generateSubscription(e commandEntity) *mqttapi.Sub
 
 // generateConfig is a helper function to avoid duplicate code around generating
 // an entity config.
-func (c *linuxMQTTController) generateConfig(e stateEntity) *mqttapi.Msg {
+func (c *linuxMQTTWorker) generateConfig(e stateEntity) *mqttapi.Msg {
 	cfg, err := e.MarshalConfig()
 	if err != nil {
 		c.logger.Warn("Could not create config.", slog.Any("error", err.Error()))
@@ -132,14 +108,14 @@ func (c *linuxMQTTController) generateConfig(e stateEntity) *mqttapi.Msg {
 	return cfg
 }
 
-// newOSMQTTController initializes the list of MQTT workers for sensors and
+// setupOSMQTTWorker initializes the list of MQTT workers for sensors and
 // returns those that are supported on this device.
-func newOSMQTTController(ctx context.Context, mqttDevice *mqtthass.Device) MQTTController {
+func setupOSMQTTWorker(ctx context.Context, mqttDevice *mqtthass.Device) MQTTWorker {
 	ctx = linux.NewContext(ctx)
 	logger := logging.FromContext(ctx).With(slog.Group("linux", slog.String("controller", "mqtt")))
 
-	mqttController := &linuxMQTTController{
-		mqttWorker: &mqttWorker{
+	mqttController := &linuxMQTTWorker{
+		mqttEntities: &mqttEntities{
 			msgs: make(chan *mqttapi.Msg),
 		},
 	}

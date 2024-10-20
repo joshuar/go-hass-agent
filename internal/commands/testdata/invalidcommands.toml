@@ -1,4 +1,0 @@
-[[button
-name "notify-send"
-exec = 'notify-send "hello"'
-icon = "mdi:chat"

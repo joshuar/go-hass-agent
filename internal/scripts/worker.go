@@ -15,10 +15,12 @@ import (
 	"path/filepath"
 	"slices"
 
+	"github.com/adrg/xdg"
 	"github.com/robfig/cron/v3"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/logging"
+	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
 var (
@@ -34,20 +36,21 @@ type job struct {
 	ID cron.EntryID
 }
 
-type Controller struct {
+type Worker struct {
+	sensorCh  chan sensor.Entity
 	scheduler *cron.Cron
 	logger    *slog.Logger
 	jobs      []job
 }
 
-func (c *Controller) ID() string {
+func (c *Worker) ID() string {
 	return "scripts"
 }
 
-func (c *Controller) States(_ context.Context) []sensor.Entity {
+func (c *Worker) States(_ context.Context) []sensor.Entity {
 	var sensors []sensor.Entity
 
-	for _, worker := range c.ActiveWorkers() {
+	for _, worker := range c.activeJobs() {
 		found := slices.IndexFunc(c.jobs, func(j job) bool { return j.path == worker })
 
 		jobSensors, err := c.jobs[found].Execute()
@@ -64,7 +67,7 @@ func (c *Controller) States(_ context.Context) []sensor.Entity {
 	return sensors
 }
 
-func (c *Controller) ActiveWorkers() []string {
+func (c *Worker) activeJobs() []string {
 	var activeScripts []string
 
 	for _, job := range c.jobs {
@@ -76,7 +79,7 @@ func (c *Controller) ActiveWorkers() []string {
 	return activeScripts
 }
 
-func (c *Controller) InactiveWorkers() []string {
+func (c *Worker) inactiveJobs() []string {
 	var inactiveScripts []string
 
 	for _, job := range c.jobs {
@@ -88,87 +91,93 @@ func (c *Controller) InactiveWorkers() []string {
 	return inactiveScripts
 }
 
-func (c *Controller) Start(_ context.Context, name string) (<-chan sensor.Entity, error) {
-	found := slices.IndexFunc(c.jobs, func(j job) bool { return j.path == name })
+func (c *Worker) Start(_ context.Context) (<-chan sensor.Entity, error) {
+	c.sensorCh = make(chan sensor.Entity)
 
-	// If the script was not found, return an error.
-	if found == -1 {
-		return nil, ErrUnknownScript
-	}
-	// If the script is already started, return an error.
-	if c.jobs[found].ID > 0 {
-		return nil, ErrAlreadyStarted
-	}
+	for idx := range c.inactiveJobs() {
+		// Schedule the script.
+		id, err := c.scheduler.AddFunc(c.jobs[idx].Schedule(), func() {
+			sensors, err := c.jobs[idx].Execute()
+			if err != nil {
+				c.logger.Warn("Could not execute script.",
+					c.jobs[idx].logAttrs,
+					slog.Any("error", err))
 
-	sensorCh := make(chan sensor.Entity)
+				return
+			}
 
-	// Schedule the script.
-	id, err := c.scheduler.AddFunc(c.jobs[found].Schedule(), func() {
-		sensors, err := c.jobs[found].Execute()
+			for _, o := range sensors {
+				c.sensorCh <- o
+			}
+		})
 		if err != nil {
-			c.logger.Warn("Could not execute script.",
-				c.jobs[found].logAttrs,
+			c.logger.Warn("Could not schedule script.",
+				c.jobs[idx].logAttrs,
 				slog.Any("error", err))
 
-			return
+			continue
 		}
 
-		for _, o := range sensors {
-			sensorCh <- o
-		}
-	})
-	if err != nil {
-		close(sensorCh)
+		// Update the job id.
+		c.jobs[idx].ID = id
 
-		return nil, ErrSchedulingFailed
+		c.logger.Debug("Scheduled script.",
+			c.jobs[idx].logAttrs)
 	}
 
-	// Update the job id.
-	c.jobs[found].ID = id
+	// Start the scheduler.
+	c.scheduler.Start()
 
 	// Return the new sensor channel for the script.
-	return sensorCh, nil
+	return c.sensorCh, nil
 }
 
-func (c *Controller) Stop(name string) error {
-	found := slices.IndexFunc(c.jobs, func(j job) bool { return j.path == name })
+func (c *Worker) Stop() error {
+	for idx := range c.activeJobs() {
+		// If the script is already stopped, return an error.
+		if c.jobs[idx].ID == 0 {
+			c.logger.Warn("Script already stopped.",
+				c.jobs[idx].logAttrs)
 
-	// If the script was not found, return an error.
-	if found == -1 {
-		return ErrUnknownScript
+			continue
+		}
+
+		c.scheduler.Remove(c.jobs[idx].ID)
+
+		c.jobs[idx].ID = 0
 	}
-	// If the script is already stopped, return an error.
-	if c.jobs[found].ID == 0 {
-		return ErrAlreadyStopped
-	}
 
-	c.scheduler.Remove(c.jobs[found].ID)
+	// Stop the scheduler.
+	c.scheduler.Stop()
 
-	c.jobs[found].ID = 0
+	close(c.sensorCh)
 
 	return nil
 }
 
-// NewScriptController creates a new sensor controller for scripts.
-func NewScriptsController(ctx context.Context, path string) (*Controller, error) {
-	controller := &Controller{
+// NewScriptController creates a new sensor worker for scripts.
+func NewScriptsWorker(ctx context.Context) (*Worker, error) {
+	appID := preferences.AppIDFromContext(ctx)
+	scriptPath := filepath.Join(xdg.ConfigHome, appID, "scripts")
+
+	worker := &Worker{
 		scheduler: cron.New(),
 		logger:    logging.FromContext(ctx).With(slog.String("controller", "scripts")),
 	}
 
-	scripts, err := findScripts(path)
+	scripts, err := findScripts(scriptPath)
 	if err != nil {
 		return nil, fmt.Errorf("could not find scripts: %w", err)
 	}
 
-	controller.jobs = make([]job, 0, len(scripts))
+	worker.jobs = make([]job, 0, len(scripts))
 
 	for _, s := range scripts {
 		logAttrs := slog.Group("job", slog.String("script", s.path), slog.String("schedule", s.schedule))
-		controller.jobs = append(controller.jobs, job{Script: *s, logAttrs: logAttrs})
+		worker.jobs = append(worker.jobs, job{Script: *s, logAttrs: logAttrs})
 	}
 
-	return controller, nil
+	return worker, nil
 }
 
 // findScripts locates scripts and returns a slice of scripts that the agent can
