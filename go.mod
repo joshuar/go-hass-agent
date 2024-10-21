@@ -3,7 +3,7 @@ module github.com/joshuar/go-hass-agent
 go 1.23.2
 
 require (
-	fyne.io/fyne/v2 v2.5.1
+	fyne.io/fyne/v2 v2.5.2
 	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/eclipse/paho.golang v0.21.0
 	github.com/go-playground/validator/v10 v10.22.1
@@ -121,8 +121,8 @@ require (
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-resty/resty/v2 v2.15.3
 	github.com/go-test/deep v1.1.1
-	github.com/go-text/render v0.1.1-0.20240418202334-dd62631dae9b // indirect
-	github.com/go-text/typesetting v0.1.0 // indirect
+	github.com/go-text/render v0.2.0 // indirect
+	github.com/go-text/typesetting v0.2.0 // indirect
 	github.com/gofrs/uuid/v5 v5.3.0
 	github.com/gopherjs/gopherjs v1.17.2 // indirect
 	github.com/jaypipes/ghw v0.13.0
