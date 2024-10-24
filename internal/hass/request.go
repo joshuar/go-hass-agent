@@ -3,15 +3,20 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//revive:disable:max-public-structs
+//go:generate go run github.com/matryer/moq -out request_mocks_test.go . PostRequest
 package hass
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
+	"time"
 
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/go-resty/resty/v2"
+
+	"github.com/joshuar/go-hass-agent/internal/logging"
 )
 
 const (
@@ -25,6 +30,30 @@ var (
 	ErrNotLocation    = errors.New("sensor details do not represent a location update")
 	ErrUnknownDetails = errors.New("unknown sensor details")
 )
+
+// GetRequest is a HTTP GET request.
+type GetRequest any
+
+// PostRequest is a HTTP POST request with the request body provided by Body().
+type PostRequest interface {
+	RequestBody() json.RawMessage
+}
+
+// Authenticated represents a request that requires passing an authentication
+// header with the value returned by Auth().
+type Authenticated interface {
+	Auth() string
+}
+
+// Encrypted represents a request that should be encrypted with the secret
+// provided by Secret().
+type Encrypted interface {
+	Secret() string
+}
+
+type Validator interface {
+	Validate() error
+}
 
 // LocationRequest represents the location information that can be sent to HA to
 // update the location of the agent. This is exposed so that device code can
@@ -63,23 +92,58 @@ func (r *request) RequestBody() json.RawMessage {
 	return json.RawMessage(data)
 }
 
-func newEntityRequest(requestType string, entity sensor.Entity) (*request, error) {
-	var req *request
+func send[T any](ctx context.Context, client *Client, requestDetails any) (T, error) {
+	var (
+		response    T
+		responseErr apiError
+		responseObj *resty.Response
+	)
 
-	switch requestType {
-	case requestTypeLocation:
-		req = &request{Data: entity.Value, RequestType: requestType}
-	case requestTypeRegister:
-		req = &request{Data: entity, RequestType: requestType}
-	case requestTypeUpdate:
-		req = &request{Data: entity.State, RequestType: requestType}
-	default:
-		return nil, ErrUnknownDetails
+	if client.endpoint == nil {
+		return response, ErrInvalidClient
 	}
 
-	if err := req.Validate(); err != nil {
-		return nil, fmt.Errorf("validation failed: %w", err)
+	requestObj := client.endpoint.R().SetContext(ctx)
+	requestObj = requestObj.SetError(&responseErr)
+	requestObj = requestObj.SetResult(&response)
+
+	// If the request is authenticated, set the auth header with the token.
+	if a, ok := requestDetails.(Authenticated); ok {
+		requestObj = requestObj.SetAuthToken(a.Auth())
 	}
 
-	return req, nil
+	switch req := requestDetails.(type) {
+	case PostRequest:
+		logging.FromContext(ctx).
+			LogAttrs(ctx, logging.LevelTrace,
+				"Sending request.",
+				slog.String("method", "POST"),
+				slog.String("body", string(req.RequestBody())),
+				slog.Time("sent_at", time.Now()))
+
+		responseObj, _ = requestObj.SetBody(req.RequestBody()).Post("") //nolint:errcheck // error is checked with responseObj.IsError()
+	case GetRequest:
+		logging.FromContext(ctx).
+			LogAttrs(ctx, logging.LevelTrace,
+				"Sending request.",
+				slog.String("method", "GET"),
+				slog.Time("sent_at", time.Now()))
+
+		responseObj, _ = requestObj.Get("") //nolint:errcheck // error is checked with responseObj.IsError()
+	}
+
+	logging.FromContext(ctx).
+		LogAttrs(ctx, logging.LevelTrace,
+			"Received response.",
+			slog.Int("statuscode", responseObj.StatusCode()),
+			slog.String("status", responseObj.Status()),
+			slog.String("protocol", responseObj.Proto()),
+			slog.Duration("time", responseObj.Time()),
+			slog.String("body", string(responseObj.Body())))
+
+	if responseObj.IsError() {
+		return response, &apiError{Code: responseObj.StatusCode(), Message: responseObj.Status()}
+	}
+
+	return response, nil
 }
