@@ -19,6 +19,11 @@ const (
 	requestTypeLocation       = "update_location"
 )
 
+type Request struct {
+	Data        any    `json:"data"`
+	RequestType string `json:"type"`
+}
+
 type State struct {
 	Value      any              `json:"state" validate:"required"`
 	Attributes map[string]any   `json:"attributes,omitempty" validate:"omitempty"`
@@ -34,6 +39,13 @@ func (s *State) Validate() error {
 	}
 
 	return nil
+}
+
+func (s *State) RequestBody() any {
+	return &Request{
+		RequestType: requestTypeUpdateSensor,
+		Data:        s,
+	}
 }
 
 //nolint:wrapcheck
@@ -53,14 +65,6 @@ func (s *State) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (s *State) RequestType() string {
-	return requestTypeUpdateSensor
-}
-
-func (s *State) RequestData() any {
-	return s
-}
-
 type Entity struct {
 	*State
 	Name        string            `json:"name" validate:"required"`
@@ -77,6 +81,13 @@ func (e *Entity) Validate() error {
 	}
 
 	return nil
+}
+
+func (e *Entity) RequestBody() any {
+	return &Request{
+		RequestType: requestTypeRegisterSensor,
+		Data:        e,
+	}
 }
 
 //nolint:wrapcheck
@@ -106,14 +117,6 @@ func (e *Entity) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (e *Entity) RequestType() string {
-	return requestTypeRegisterSensor
-}
-
-func (e *Entity) RequestData() any {
-	return e
-}
-
 // Location represents the location information that can be sent to HA to
 // update the location of the agent. This is exposed so that device code can
 // create location requests directly, as Home Assistant handles these
@@ -137,10 +140,9 @@ func (l *Location) Validate() error {
 	return nil
 }
 
-func (l *Location) RequestType() string {
-	return requestTypeLocation
-}
-
-func (l *Location) RequestData() any {
-	return l
+func (l *Location) RequestBody() any {
+	return &Request{
+		RequestType: requestTypeLocation,
+		Data:        l,
+	}
 }
