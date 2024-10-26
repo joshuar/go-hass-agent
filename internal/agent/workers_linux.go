@@ -1,7 +1,5 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2024 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
 package agent
 
@@ -57,6 +55,7 @@ var sensorOneShotWorkersInitFuncs = []func(ctx context.Context) (*linux.OneShotS
 	cpu.NewCPUVulnerabilityWorker,
 	system.NewInfoWorker,
 	system.NewfwupdWorker,
+	system.NewLastBootWorker,
 }
 
 // sensorLaptopWorkersInitFuncs are sensor workers that should only be run on laptops.
