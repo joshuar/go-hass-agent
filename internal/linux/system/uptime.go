@@ -19,8 +19,8 @@ import (
 )
 
 const (
-	uptimeInterval = 15 * time.Minute
-	uptimeJitter   = time.Minute
+	uptimePollInterval = 15 * time.Minute
+	uptimePollJitter   = time.Minute
 
 	uptimeWorkerID = "time"
 )
@@ -82,8 +82,8 @@ func (w *uptimeWorker) getUptime(ctx context.Context) float64 {
 	return uptimeValue
 }
 
-func NewTimeWorker(_ context.Context) (*linux.PollingSensorWorker, error) {
-	worker := linux.NewPollingSensorWorker(uptimeWorkerID, uptimeInterval, uptimeJitter)
+func NewUptimeTimeWorker(_ context.Context) (*linux.PollingSensorWorker, error) {
+	worker := linux.NewPollingSensorWorker(uptimeWorkerID, uptimePollInterval, uptimePollJitter)
 	worker.PollingSensorType = &uptimeWorker{}
 
 	return worker, nil
