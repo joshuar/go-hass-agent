@@ -198,13 +198,11 @@ func (i *FyneUI) aboutWindow(ctx context.Context) fyne.Window {
 		return nil
 	}
 
-	hassclient, err := hass.NewClient(ctx)
+	hassclient, err := hass.NewClient(ctx, prefs.RestAPIURL())
 	if err != nil {
 		logging.FromContext(ctx).Debug("Cannot create Home Assistant client.", slog.Any("error", err))
 		return nil
 	}
-
-	hassclient.Endpoint(prefs.RestAPIURL(), hass.DefaultTimeout)
 
 	icon := canvas.NewImageFromResource(&ui.TrayIcon{})
 	icon.FillMode = canvas.ImageFillOriginal

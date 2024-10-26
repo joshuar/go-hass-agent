@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/logging"
@@ -106,7 +105,7 @@ func (w *locationWorker) newLocation(locationPath string) (sensor.Entity, error)
 
 	location := sensor.Entity{
 		State: &sensor.State{
-			Value: &hass.LocationRequest{
+			Value: &sensor.Location{
 				Gps:         []float64{latitude, longitude},
 				GpsAccuracy: int(accuracy),
 				Speed:       int(speed),

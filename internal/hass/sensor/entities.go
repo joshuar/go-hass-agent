@@ -1,17 +1,22 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2024 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
+
+//revive:disable:unused-receiver
 package sensor
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 )
 
 const (
 	StateUnknown = "Unknown"
+
+	requestTypeRegisterSensor = "register_sensor"
+	requestTypeUpdateSensor   = "update_sensor_states"
+	requestTypeLocation       = "update_location"
 )
 
 type State struct {
@@ -22,8 +27,17 @@ type State struct {
 	EntityType types.SensorType `json:"type" validate:"omitempty"`
 }
 
+func (s *State) Validate() error {
+	err := validate.Struct(s)
+	if err != nil {
+		return fmt.Errorf("sensor state is invalid: %s", parseValidationErrors(err))
+	}
+
+	return nil
+}
+
 //nolint:wrapcheck
-func (s State) MarshalJSON() ([]byte, error) {
+func (s *State) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&struct {
 		State      any            `json:"state" validate:"required"`
 		Attributes map[string]any `json:"attributes,omitempty" validate:"omitempty"`
@@ -39,6 +53,14 @@ func (s State) MarshalJSON() ([]byte, error) {
 	})
 }
 
+func (s *State) RequestType() string {
+	return requestTypeUpdateSensor
+}
+
+func (s *State) RequestData() any {
+	return s
+}
+
 type Entity struct {
 	*State
 	Name        string            `json:"name" validate:"required"`
@@ -48,8 +70,17 @@ type Entity struct {
 	Category    types.Category    `json:"entity_category,omitempty" validate:"omitempty"`
 }
 
+func (e *Entity) Validate() error {
+	err := validate.Struct(e)
+	if err != nil {
+		return fmt.Errorf("sensor is invalid: %s", parseValidationErrors(err))
+	}
+
+	return nil
+}
+
 //nolint:wrapcheck
-func (e Entity) MarshalJSON() ([]byte, error) {
+func (e *Entity) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&struct {
 		State       any            `json:"state" validate:"required"`
 		Attributes  map[string]any `json:"attributes,omitempty" validate:"omitempty"`
@@ -73,4 +104,43 @@ func (e Entity) MarshalJSON() ([]byte, error) {
 		StateClass:  e.StateClass.String(),
 		Category:    e.Category.String(),
 	})
+}
+
+func (e *Entity) RequestType() string {
+	return requestTypeRegisterSensor
+}
+
+func (e *Entity) RequestData() any {
+	return e
+}
+
+// Location represents the location information that can be sent to HA to
+// update the location of the agent. This is exposed so that device code can
+// create location requests directly, as Home Assistant handles these
+// differently from other sensors.
+type Location struct {
+	Gps              []float64 `json:"gps" validate:"required"`
+	GpsAccuracy      int       `json:"gps_accuracy,omitempty"`
+	Battery          int       `json:"battery,omitempty"`
+	Speed            int       `json:"speed,omitempty"`
+	Altitude         int       `json:"altitude,omitempty"`
+	Course           int       `json:"course,omitempty"`
+	VerticalAccuracy int       `json:"vertical_accuracy,omitempty"`
+}
+
+func (l *Location) Validate() error {
+	err := validate.Struct(l)
+	if err != nil {
+		return fmt.Errorf("location is invalid: %s", parseValidationErrors(err))
+	}
+
+	return nil
+}
+
+func (l *Location) RequestType() string {
+	return requestTypeLocation
+}
+
+func (l *Location) RequestData() any {
+	return l
 }

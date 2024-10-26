@@ -1,16 +1,13 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2024 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
 package hass
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
-	"strings"
 
+	"github.com/joshuar/go-hass-agent/internal/hass/api"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/logging"
 )
@@ -28,31 +25,9 @@ type Response interface {
 	Status() (responseStatus, error)
 }
 
-type apiError struct {
-	Code    any    `json:"code,omitempty"`
-	Message string `json:"message,omitempty"`
-}
-
-func (e *apiError) Error() string {
-	var msg []string
-	if e.Code != nil {
-		msg = append(msg, fmt.Sprintf("code %v", e.Code))
-	}
-
-	if e.Message != "" {
-		msg = append(msg, e.Message)
-	}
-
-	if len(msg) == 0 {
-		msg = append(msg, "unknown error")
-	}
-
-	return strings.Join(msg, ": ")
-}
-
 type response struct {
-	ErrorDetails *apiError `json:"error,omitempty"`
-	IsSuccess    bool      `json:"success,omitempty"`
+	ErrorDetails *api.ResponseError `json:"error,omitempty"`
+	IsSuccess    bool               `json:"success,omitempty"`
 }
 
 func (r *response) Status() (responseStatus, error) {

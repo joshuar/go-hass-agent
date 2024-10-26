@@ -1,13 +1,11 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2024 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
-package hass
+package api
 
 import "testing"
 
-func Test_apiError_Error(t *testing.T) {
+func Test_ResponseError_Error(t *testing.T) {
 	type fields struct {
 		Code    any
 		Message string
@@ -39,7 +37,7 @@ func Test_apiError_Error(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			e := &apiError{
+			e := &ResponseError{
 				Code:    tt.fields.Code,
 				Message: tt.fields.Message,
 			}

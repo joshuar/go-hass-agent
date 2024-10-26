@@ -1,13 +1,10 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2024 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
 //revive:disable:unused-receiver
 package hass
 
 import (
-	"encoding/json"
 	"errors"
 )
 
@@ -56,6 +53,10 @@ func (c *Config) IsEntityDisabled(entity string) (bool, error) {
 
 type configRequest struct{}
 
-func (c *configRequest) RequestBody() json.RawMessage {
-	return json.RawMessage(`{ "type": "get_config" }`)
+func (c *configRequest) RequestType() string {
+	return "get_config"
+}
+
+func (c *configRequest) RequestData() any {
+	return nil
 }

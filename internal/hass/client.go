@@ -1,7 +1,5 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2024 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
 package hass
 
@@ -10,11 +8,9 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"net/http"
 	"time"
 
-	"github.com/go-resty/resty/v2"
-
+	"github.com/joshuar/go-hass-agent/internal/hass/api"
 	"github.com/joshuar/go-hass-agent/internal/hass/event"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/registry"
@@ -48,10 +44,6 @@ var (
 	ErrUnknown           = errors.New("unknown error occurred")
 
 	ErrInvalidSensor = errors.New("invalid sensor")
-
-	defaultRetry = func(r *resty.Response, _ error) bool {
-		return r.StatusCode() == http.StatusTooManyRequests
-	}
 )
 
 type Registry interface {
@@ -62,10 +54,10 @@ type Registry interface {
 }
 
 type Client struct {
-	endpoint *resty.Client
+	url string
 }
 
-func NewClient(ctx context.Context) (*Client, error) {
+func NewClient(ctx context.Context, url string) (*Client, error) {
 	var err error
 
 	sensorTracker = sensor.NewTracker()
@@ -75,22 +67,11 @@ func NewClient(ctx context.Context) (*Client, error) {
 		return nil, fmt.Errorf("could not start registry: %w", err)
 	}
 
-	return &Client{}, nil
-}
-
-func (c *Client) Endpoint(url string, timeout time.Duration) {
-	if timeout == 0 {
-		timeout = DefaultTimeout
-	}
-
-	c.endpoint = resty.New().
-		SetTimeout(timeout).
-		AddRetryCondition(defaultRetry).
-		SetBaseURL(url)
+	return &Client{url: url}, nil
 }
 
 func (c *Client) HassVersion(ctx context.Context) string {
-	config, err := send[Config](ctx, c, &configRequest{})
+	config, err := api.Send[Config](ctx, c.url, &configRequest{})
 	if err != nil {
 		logging.FromContext(ctx).
 			Debug("Could not fetch Home Assistant config.",
@@ -103,13 +84,7 @@ func (c *Client) HassVersion(ctx context.Context) string {
 }
 
 func (c *Client) ProcessEvent(ctx context.Context, details event.Event) error {
-	req := &request{Data: details, RequestType: requestTypeEvent}
-
-	if err := req.Validate(); err != nil {
-		return fmt.Errorf("invalid event request: %w", err)
-	}
-
-	resp, err := send[response](ctx, c, req)
+	resp, err := api.Send[response](ctx, c.url, details)
 	if err != nil {
 		return fmt.Errorf("failed to send event request: %w", err)
 	}
@@ -122,12 +97,21 @@ func (c *Client) ProcessEvent(ctx context.Context, details event.Event) error {
 }
 
 func (c *Client) ProcessSensor(ctx context.Context, details sensor.Entity) error {
-	req := &request{}
+	// Location request.
+	if req, ok := details.Value.(*sensor.Location); ok {
+		resp, err := api.Send[response](ctx, c.url, req)
+		if err != nil {
+			return fmt.Errorf("failed to send location update: %w", err)
+		}
 
-	if _, ok := details.Value.(*LocationRequest); ok {
-		req = &request{Data: details.Value, RequestType: requestTypeLocation}
+		if _, err := resp.Status(); err != nil {
+			return err
+		}
+
+		return nil
 	}
 
+	// Sensor update.
 	if sensorRegistry.IsRegistered(details.ID) {
 		// For sensor updates, if the sensor is disabled, don't continue.
 		if c.isDisabled(ctx, details) {
@@ -138,40 +122,23 @@ func (c *Client) ProcessSensor(ctx context.Context, details sensor.Entity) error
 			return nil
 		}
 
-		req = &request{Data: details.State, RequestType: requestTypeUpdate}
-	} else {
-		req = &request{Data: details, RequestType: requestTypeRegister}
-	}
-
-	if err := req.Validate(); err != nil {
-		return fmt.Errorf("invalid sensor request: %w", err)
-	}
-
-	switch req.RequestType {
-	case requestTypeLocation:
-		resp, err := send[response](ctx, c, req)
+		resp, err := api.Send[bulkSensorUpdateResponse](ctx, c.url, details.State)
 		if err != nil {
-			return fmt.Errorf("failed to send location update: %w", err)
-		}
-
-		if _, err := resp.Status(); err != nil {
-			return err
-		}
-	case requestTypeUpdate:
-		resp, err := send[bulkSensorUpdateResponse](ctx, c, req)
-		if err != nil {
-			return fmt.Errorf("failed to send location update: %w", err)
+			return fmt.Errorf("failed to send sensor update: %w", err)
 		}
 
 		go resp.Process(ctx, details)
-	case requestTypeRegister:
-		resp, err := send[registrationResponse](ctx, c, req)
-		if err != nil {
-			return fmt.Errorf("failed to send location update: %w", err)
-		}
 
-		go resp.Process(ctx, details)
+		return nil
 	}
+
+	// Sensor registration.
+	resp, err := api.Send[registrationResponse](ctx, c.url, details)
+	if err != nil {
+		return fmt.Errorf("failed to send sensor registration: %w", err)
+	}
+
+	go resp.Process(ctx, details)
 
 	return nil
 }
@@ -219,7 +186,7 @@ func (c *Client) isDisabledInReg(id string) bool {
 
 // isDisabledInHA returns the disabled state of the sensor from Home Assistant.
 func (c *Client) isDisabledInHA(ctx context.Context, details sensor.Entity) bool {
-	config, err := send[Config](ctx, c, &configRequest{})
+	config, err := api.Send[Config](ctx, c.url, &configRequest{})
 	if err != nil {
 		logging.FromContext(ctx).
 			Debug("Could not fetch Home Assistant config. Assuming sensor is still disabled.",
