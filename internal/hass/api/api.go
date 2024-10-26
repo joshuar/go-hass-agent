@@ -14,6 +14,7 @@ import (
 
 	"github.com/go-resty/resty/v2"
 
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/logging"
 )
 
@@ -35,14 +36,8 @@ func init() {
 		AddRetryCondition(defaultRetryFunc)
 }
 
-type RawRequest interface {
-	RequestBody() any
-}
-
-// Request is a HTTP POST request with the request body provided by Body().
 type Request interface {
-	RequestType() string
-	RequestData() any
+	RequestBody() any
 }
 
 // Authenticated represents a request that requires passing an authentication
@@ -59,11 +54,6 @@ type Encrypted interface {
 
 type Validator interface {
 	Validate() error
-}
-
-type requestBody struct {
-	Data        any    `json:"data"`
-	RequestType string `json:"type"`
 }
 
 type ResponseError struct {
@@ -89,14 +79,9 @@ func (e *ResponseError) Error() string {
 }
 
 func Send[T any](ctx context.Context, url string, details any) (T, error) {
-	var (
-		response    T
-		responseErr ResponseError
-		responseObj *resty.Response
-	)
+	var response T
 
 	requestClient := client.R().SetContext(ctx)
-	requestClient = requestClient.SetError(&responseErr)
 	requestClient = requestClient.SetResult(&response)
 
 	// If the request is authenticated, set the auth header with the token.
@@ -111,31 +96,34 @@ func Send[T any](ctx context.Context, url string, details any) (T, error) {
 		}
 	}
 
+	// Explicitly set the request body based on the type. Not doing this with
+	// composable types may result in an unexpected body.
 	switch request := details.(type) {
+	case sensor.Entity:
+		requestClient.SetBody(request.RequestBody())
+	case sensor.State:
+		requestClient.SetBody(request.RequestBody())
 	case Request:
-		body := &requestBody{
-			RequestType: request.RequestType(),
-			Data:        request.RequestData(),
-		}
-		logging.FromContext(ctx).
-			LogAttrs(ctx, logging.LevelTrace,
-				"Sending request.",
-				slog.String("method", "POST"),
-				slog.String("url", url),
-				slog.Any("body", body),
-				slog.Time("sent_at", time.Now()))
+		requestClient.SetBody(request.RequestBody())
+	}
 
-		responseObj, _ = requestClient.SetBody(body).Post(url) //nolint:errcheck // error is checked with responseObj.IsError()
-	case RawRequest:
-		logging.FromContext(ctx).
-			LogAttrs(ctx, logging.LevelTrace,
-				"Sending request.",
-				slog.String("method", "POST"),
-				slog.String("url", url),
-				slog.Any("body", request),
-				slog.Time("sent_at", time.Now()))
+	responseObj, err := requestClient.Post(url)
 
-		responseObj, _ = requestClient.SetBody(request).Post(url) //nolint:errcheck // error is checked with responseObj.IsError()
+	logging.FromContext(ctx).
+		LogAttrs(ctx, logging.LevelTrace,
+			"Sending request.",
+			slog.String("method", "POST"),
+			slog.String("url", url),
+			slog.Any("body", details),
+			slog.Time("sent_at", time.Now()))
+
+	switch {
+	case err != nil:
+		return response, fmt.Errorf("error sending request: %w", err)
+	case responseObj == nil:
+		return response, fmt.Errorf("unknown error sending request")
+	case responseObj.IsError():
+		return response, &ResponseError{Code: responseObj.StatusCode(), Message: responseObj.Status()}
 	}
 
 	logging.FromContext(ctx).
@@ -146,10 +134,6 @@ func Send[T any](ctx context.Context, url string, details any) (T, error) {
 			slog.String("protocol", responseObj.Proto()),
 			slog.Duration("time", responseObj.Time()),
 			slog.String("body", string(responseObj.Body())))
-
-	if responseObj.IsError() {
-		return response, &ResponseError{Code: responseObj.StatusCode(), Message: responseObj.Status()}
-	}
 
 	return response, nil
 }

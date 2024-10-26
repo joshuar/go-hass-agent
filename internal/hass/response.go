@@ -21,10 +21,6 @@ const (
 
 type responseStatus int
 
-type Response interface {
-	Status() (responseStatus, error)
-}
-
 type response struct {
 	ErrorDetails *api.ResponseError `json:"error,omitempty"`
 	IsSuccess    bool               `json:"success,omitempty"`

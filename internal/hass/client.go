@@ -124,7 +124,7 @@ func (c *Client) ProcessSensor(ctx context.Context, details sensor.Entity) error
 
 		resp, err := api.Send[bulkSensorUpdateResponse](ctx, c.url, details.State)
 		if err != nil {
-			return fmt.Errorf("failed to send sensor update: %w", err)
+			return fmt.Errorf("failed to send sensor update for %s: %w", details.Name, err)
 		}
 
 		go resp.Process(ctx, details)
