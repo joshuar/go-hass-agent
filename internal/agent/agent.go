@@ -142,14 +142,12 @@ func Run(ctx context.Context) error {
 			return
 		}
 
-		client, err := hass.NewClient(ctx)
+		client, err := hass.NewClient(ctx, prefs.RestAPIURL())
 		if err != nil {
 			logging.FromContext(ctx).Error("Cannot connect to Home Assistant.",
 				slog.Any("error", err))
 			return
 		}
-
-		client.Endpoint(prefs.RestAPIURL(), hass.DefaultTimeout)
 
 		// Initialize and gather OS sensor and event workers.
 		sensorWorkers, eventWorkers := setupOSWorkers(runCtx)

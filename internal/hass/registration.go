@@ -1,17 +1,14 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2024 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
 package hass
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"time"
 
+	"github.com/joshuar/go-hass-agent/internal/hass/api"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
@@ -30,13 +27,8 @@ func (r *registrationRequest) Auth() string {
 	return r.Token
 }
 
-func (r *registrationRequest) RequestBody() json.RawMessage {
-	data, err := json.Marshal(r)
-	if err != nil {
-		return nil
-	}
-
-	return data
+func (r *registrationRequest) RequestBody() any {
+	return r
 }
 
 func newRegistrationRequest(device *preferences.Device, token string) *registrationRequest {
@@ -52,16 +44,10 @@ func RegisterDevice(ctx context.Context, device *preferences.Device, registratio
 		return nil, fmt.Errorf("could not register device: %w", err)
 	}
 
-	// Create a new client connection to Home Assistant at the registration path.
-	client, err := NewClient(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("could not start hass client: %w", err)
-	}
-
-	client.Endpoint(registration.Server+RegistrationPath, time.Minute)
+	registrationURL := registration.Server + RegistrationPath
 
 	// Register the device against the registration endpoint.
-	registrationStatus, err := send[preferences.Hass](ctx, client, newRegistrationRequest(device, registration.Token))
+	registrationStatus, err := api.Send[preferences.Hass](ctx, registrationURL, newRegistrationRequest(device, registration.Token))
 	if err != nil {
 		return nil, fmt.Errorf("could not register device: %w", err)
 	}

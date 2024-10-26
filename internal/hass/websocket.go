@@ -1,7 +1,5 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2024 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
 package hass
 
@@ -17,6 +15,7 @@ import (
 	"github.com/cenkalti/backoff/v4"
 	"github.com/lxzan/gws"
 
+	"github.com/joshuar/go-hass-agent/internal/hass/api"
 	"github.com/joshuar/go-hass-agent/internal/logging"
 )
 
@@ -51,7 +50,7 @@ func (m *webSocketRequest) send(conn *gws.Conn) error {
 
 type websocketResponse struct {
 	Result       any                   `json:"result,omitempty"`
-	Error        apiError              `json:"error,omitempty"`
+	Error        api.ResponseError     `json:"error,omitempty"`
 	Type         string                `json:"type"`
 	HAVersion    string                `json:"ha_version,omitempty"`
 	Notification WebsocketNotification `json:"event,omitempty"`
