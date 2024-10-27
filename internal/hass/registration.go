@@ -28,7 +28,7 @@ func (r *registrationRequest) Auth() string {
 }
 
 func (r *registrationRequest) RequestBody() any {
-	return r
+	return r.Device
 }
 
 func newRegistrationRequest(device *preferences.Device, token string) *registrationRequest {

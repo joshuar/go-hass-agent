@@ -7,20 +7,60 @@ package agent
 
 import (
 	"context"
-	"errors"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
+	"github.com/joshuar/go-hass-agent/internal/hass/api"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
+//nolint:errcheck
+func registrationSuccess(w http.ResponseWriter, _ *http.Request) {
+	resp, _ := json.Marshal(&preferences.Hass{})
+	w.Write(resp)
+}
+
+//nolint:errcheck
+func registrationFail(w http.ResponseWriter, _ *http.Request) {
+	resp, _ := json.Marshal(&api.ResponseError{
+		Code:    http.StatusBadRequest,
+		Message: "Bad Request",
+	})
+	w.WriteHeader(http.StatusBadRequest)
+	w.Write(resp)
+}
+
+//nolint:errcheck
+func alreadyRegistered(w http.ResponseWriter, _ *http.Request) {
+	w.Write([]byte(""))
+}
+
 func TestAgent_checkRegistration(t *testing.T) {
-	ctx := preferences.AppIDToContext(context.TODO(), "go-hass-agent-test")
+	mockUI := &uiMock{
+		DisplayRegistrationWindowFunc: func(_ context.Context, _ *preferences.Registration) chan bool {
+			doneCh := make(chan bool)
+			go func() {
+				doneCh <- false
+				close(doneCh)
+			}()
+			return doneCh
+		},
+	}
+
+	mockPrefs := &registrationPrefsMock{
+		AgentRegisteredFunc:     func() bool { return false },
+		SaveHassPreferencesFunc: func(_ *preferences.Hass, _ *preferences.Registration) error { return nil },
+	}
 
 	type args struct {
-		ctx     context.Context
-		agentUI ui
-		device  *preferences.Device
-		prefs   registrationPrefs
+		agentUI       ui
+		prefs         registrationPrefs
+		device        *preferences.Device
+		handler       func(http.ResponseWriter, *http.Request)
+		forceRegister bool
+		headless      bool
 	}
 	tests := []struct {
 		args    args
@@ -30,92 +70,68 @@ func TestAgent_checkRegistration(t *testing.T) {
 		{
 			name: "already registered",
 			args: args{
-				ctx: LoadCtx(ctx, SetForceRegister(false)),
 				prefs: &registrationPrefsMock{
 					AgentRegisteredFunc:     func() bool { return true },
 					SaveHassPreferencesFunc: func(_ *preferences.Hass, _ *preferences.Registration) error { return nil },
 				},
-				device: &preferences.Device{},
+				device:  &preferences.Device{},
+				handler: alreadyRegistered,
 			},
 		},
 		{
 			name: "force registration",
 			args: args{
-				ctx: LoadCtx(ctx,
-					SetHeadless(false),
-					SetForceRegister(true),
-					SetRegistrationInfo("https://localhost:8123", "someToken", false)),
+				forceRegister: true,
 				prefs: &registrationPrefsMock{
 					AgentRegisteredFunc:     func() bool { return true },
 					SaveHassPreferencesFunc: func(_ *preferences.Hass, _ *preferences.Registration) error { return nil },
 				},
-				device: &preferences.Device{},
-				agentUI: &uiMock{
-					DisplayRegistrationWindowFunc: func(_ context.Context, _ *preferences.Registration) chan bool {
-						doneCh := make(chan bool)
-						go func() {
-							doneCh <- false
-							close(doneCh)
-						}()
-						return doneCh
-					},
-				},
+				device:  &preferences.Device{},
+				agentUI: mockUI,
+				handler: registrationSuccess,
 			},
 		},
 		{
 			name: "register headless",
 			args: args{
-				ctx: LoadCtx(ctx,
-					SetHeadless(true),
-					SetRegistrationInfo("https://localhost:8123", "someToken", false)),
-				prefs: &registrationPrefsMock{
-					AgentRegisteredFunc:     func() bool { return false },
-					SaveHassPreferencesFunc: func(_ *preferences.Hass, _ *preferences.Registration) error { return nil },
-				},
-				device: &preferences.Device{},
+				headless: true,
+				prefs:    mockPrefs,
+				device:   &preferences.Device{},
+				handler:  registrationSuccess,
 			},
 		},
 		{
 			name: "register",
 			args: args{
-				ctx: LoadCtx(ctx,
-					SetHeadless(false),
-					SetRegistrationInfo("https://localhost:8123", "someToken", false)),
-				prefs: &registrationPrefsMock{
-					AgentRegisteredFunc:     func() bool { return false },
-					SaveHassPreferencesFunc: func(_ *preferences.Hass, _ *preferences.Registration) error { return nil },
-				},
-				device: &preferences.Device{},
-				agentUI: &uiMock{
-					DisplayRegistrationWindowFunc: func(_ context.Context, _ *preferences.Registration) chan bool {
-						doneCh := make(chan bool)
-						go func() {
-							doneCh <- false
-							close(doneCh)
-						}()
-						return doneCh
-					},
-				},
+				prefs:   mockPrefs,
+				device:  &preferences.Device{},
+				agentUI: mockUI,
+				handler: registrationSuccess,
 			},
 		},
 		{
 			name: "fail",
 			args: args{
-				ctx: LoadCtx(ctx,
-					SetHeadless(true),
-					SetRegistrationInfo("https://localhost:8123", "someToken", false)),
-				prefs: &registrationPrefsMock{
-					AgentRegisteredFunc:     func() bool { return false },
-					SaveHassPreferencesFunc: func(_ *preferences.Hass, _ *preferences.Registration) error { return errors.New("failed") },
-				},
-				device: &preferences.Device{},
+				prefs:   mockPrefs,
+				device:  &preferences.Device{},
+				agentUI: mockUI,
+				handler: registrationFail,
 			},
 			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := checkRegistration(tt.args.ctx, tt.args.agentUI, tt.args.device, tt.args.prefs); (err != nil) != tt.wantErr {
+			svr := httptest.NewServer(http.HandlerFunc(tt.args.handler))
+			defer svr.Close()
+
+			ctx := preferences.AppIDToContext(context.TODO(), "go-hass-agent-test")
+			ctx = LoadCtx(ctx,
+				SetHeadless(tt.args.headless),
+				SetForceRegister(tt.args.forceRegister),
+				SetRegistrationInfo(svr.URL, "someToken", false))
+
+			if err := checkRegistration(ctx, tt.args.agentUI, tt.args.device, tt.args.prefs); (err != nil) != tt.wantErr {
 				t.Errorf("Agent.checkRegistration() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
