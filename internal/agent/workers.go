@@ -23,6 +23,13 @@ type Worker[T any] interface {
 	Start(ctx context.Context) (<-chan T, error)
 }
 
+// WorkerWithPreferences represents a worker that has preferences that can be
+// set by a user.
+type WorkerWithPreferences[T any, P any] interface {
+	Worker[T]
+	DefaultPreferences() P
+}
+
 // SensorWorker is a worker that produces sensors. In addition to the base
 // worker methods, it has a function to generate a list of sensor values.
 type SensorWorker interface {
