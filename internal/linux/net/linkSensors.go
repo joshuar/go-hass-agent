@@ -1,8 +1,7 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2024 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
+//revive:disable:unused-receiver
 package net
 
 import (
@@ -142,6 +141,7 @@ type AddressWorker struct {
 	nlconn *rtnetlink.Conn
 	donech chan struct{}
 	linux.EventSensorWorker
+	prefs WorkerPrefs
 }
 
 func (w *AddressWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
@@ -227,6 +227,16 @@ func (w *AddressWorker) Events(ctx context.Context) (<-chan sensor.Entity, error
 	return sensorCh, nil
 }
 
+func (w *AddressWorker) ID() string {
+	return preferencesID
+}
+
+func (w *AddressWorker) DefaultPreferences() WorkerPrefs {
+	return WorkerPrefs{
+		IgnoredDevices: defaultIgnoredDevices,
+	}
+}
+
 func NewAddressWorker(_ context.Context) (*linux.EventSensorWorker, error) {
 	worker := linux.NewEventSensorWorker(addressWorkerID)
 
@@ -279,8 +289,15 @@ func (w *AddressWorker) filterAddress(msg rtnetlink.AddressMessage) *sensor.Enti
 	if err != nil {
 		return nil
 	}
-	// Ignore addresses from unwanted links.
-	if slices.Contains(ifaceFilters, link.Attributes.Name) {
+
+	if link.Attributes.Name == loopbackDeviceName {
+		return nil
+	}
+
+	// Skip ignored devices.
+	if slices.ContainsFunc(w.prefs.IgnoredDevices, func(e string) bool {
+		return strings.HasPrefix(link.Attributes.Name, e)
+	}) {
 		return nil
 	}
 
