@@ -8,7 +8,7 @@ require (
 	github.com/eclipse/paho.golang v0.21.0
 	github.com/go-playground/validator/v10 v10.22.1
 	github.com/godbus/dbus/v5 v5.1.0
-	github.com/goreleaser/nfpm/v2 v2.40.0
+	github.com/goreleaser/nfpm/v2 v2.41.0
 	github.com/grandcat/zeroconf v1.0.0
 	github.com/iancoleman/strcase v0.3.0
 	github.com/joshuar/go-hass-anything/v12 v12.0.0
@@ -129,7 +129,7 @@ require (
 	github.com/jfreymuth/pulse v0.1.1
 	github.com/jsimonetti/rtnetlink v1.4.2
 	github.com/jsummers/gobmp v0.0.0-20151104160322-e2ba15ffa76e // indirect
-	github.com/klauspost/compress v1.17.9 // indirect
+	github.com/klauspost/compress v1.17.11 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/lmittmann/tint v1.0.5
 	github.com/mandykoh/prism v0.35.3
