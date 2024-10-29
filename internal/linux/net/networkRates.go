@@ -1,7 +1,5 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2024 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
 // Parts of the code for collecting stats was adapted from Prometheus:
 // https://github.com/prometheus/node_exporter//collector/netdev_linux.go
@@ -47,10 +45,7 @@ const (
 	totalsName = "Total"
 )
 
-var (
-	sensorList            = []netStatsType{bytesRecv, bytesSent, bytesRecvRate, bytesSentRate}
-	defaultIgnoredDevices = []string{"lo"}
-)
+var sensorList = []netStatsType{bytesRecv, bytesSent, bytesRecvRate, bytesSentRate}
 
 // linkStats represents a link and its stats.
 type linkStats struct {
@@ -198,14 +193,9 @@ func getTXAttributes(stats *rtnetlink.LinkStats64) map[string]any {
 type netStatsWorker struct {
 	statsSensors map[string]map[netStatsType]*netStatsSensor
 	nlconn       *rtnetlink.Conn
-	prefs        netStatsWorkerPrefs
+	prefs        WorkerPrefs
 	delta        time.Duration
 	mu           sync.Mutex
-}
-
-//nolint:lll
-type netStatsWorkerPrefs struct {
-	IgnoredDevices []string `toml:"ignored_devices" comment:"list of prefixes to match for devices to ignore, for e.g., 'eth' will ignore all devices starting with eth"`
 }
 
 // updateTotals takes the total Rx/Tx bytes and updates the total sensors.
@@ -281,11 +271,11 @@ func (w *netStatsWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 }
 
 func (w *netStatsWorker) ID() string {
-	return netRatesWorkerID
+	return preferencesID
 }
 
-func (w *netStatsWorker) DefaultPreferences() netStatsWorkerPrefs {
-	return netStatsWorkerPrefs{
+func (w *netStatsWorker) DefaultPreferences() WorkerPrefs {
+	return WorkerPrefs{
 		IgnoredDevices: defaultIgnoredDevices,
 	}
 }
@@ -302,7 +292,7 @@ func NewNetStatsWorker(ctx context.Context) (*linux.PollingSensorWorker, error) 
 	go func() {
 		<-ctx.Done()
 
-		if err := conn.Close(); err != nil {
+		if err = conn.Close(); err != nil {
 			logging.FromContext(ctx).Debug("Could not close netlink connection.",
 				slog.String("worker", netRatesWorkerID),
 				slog.Any("error", err))
@@ -347,7 +337,7 @@ func (w *netStatsWorker) getLinkStats(links []rtnetlink.LinkMessage) []linkStats
 		}
 
 		// Ignore loopback.
-		if msg.Attributes.Name == "lo" {
+		if msg.Attributes.Name == loopbackDeviceName {
 			continue
 		}
 
