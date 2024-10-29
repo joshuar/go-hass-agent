@@ -27,6 +27,7 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/logging"
+	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
 const (
@@ -47,8 +48,8 @@ const (
 )
 
 var (
-	sensorList     = []netStatsType{bytesRecv, bytesSent, bytesRecvRate, bytesSentRate}
-	ignoredDevices = []string{"lo"}
+	sensorList            = []netStatsType{bytesRecv, bytesSent, bytesRecvRate, bytesSentRate}
+	defaultIgnoredDevices = []string{"lo"}
 )
 
 // linkStats represents a link and its stats.
@@ -197,8 +198,14 @@ func getTXAttributes(stats *rtnetlink.LinkStats64) map[string]any {
 type netStatsWorker struct {
 	statsSensors map[string]map[netStatsType]*netStatsSensor
 	nlconn       *rtnetlink.Conn
+	prefs        netStatsWorkerPrefs
 	delta        time.Duration
 	mu           sync.Mutex
+}
+
+//nolint:lll
+type netStatsWorkerPrefs struct {
+	IgnoredDevices []string `toml:"ignored_devices" comment:"list of prefixes to match for devices to ignore, for e.g., 'eth' will ignore all devices starting with eth"`
 }
 
 // updateTotals takes the total Rx/Tx bytes and updates the total sensors.
@@ -264,6 +271,16 @@ func (w *netStatsWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 	return sensors, nil
 }
 
+func (w *netStatsWorker) ID() string {
+	return netRatesWorkerID
+}
+
+func (w *netStatsWorker) DefaultPreferences() netStatsWorkerPrefs {
+	return netStatsWorkerPrefs{
+		IgnoredDevices: defaultIgnoredDevices,
+	}
+}
+
 // NewNetStatsWorker sets up a sensor worker that tracks network stats.
 func NewNetStatsWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
 	worker := linux.NewPollingSensorWorker(netRatesWorkerID, rateInterval, rateJitter)
@@ -288,6 +305,11 @@ func NewNetStatsWorker(ctx context.Context) (*linux.PollingSensorWorker, error) 
 		nlconn:       conn,
 	}
 	ratesWorker.statsSensors[totalsName] = generateSensors(totalsName, nil)
+
+	ratesWorker.prefs, err = preferences.LoadWorkerPreferences(ctx, ratesWorker)
+	if err != nil {
+		return worker, fmt.Errorf("could not load preferences: %w", err)
+	}
 
 	worker.PollingSensorType = ratesWorker
 
@@ -316,7 +338,9 @@ func (w *netStatsWorker) getLinkStats(links []rtnetlink.LinkMessage) []linkStats
 		}
 
 		// Skip ignored devices.
-		if slices.Contains(ignoredDevices, msg.Attributes.Name) {
+		if slices.ContainsFunc(w.prefs.IgnoredDevices, func(e string) bool {
+			return strings.HasPrefix(msg.Attributes.Name, e)
+		}) {
 			continue
 		}
 
