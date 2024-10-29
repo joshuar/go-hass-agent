@@ -246,6 +246,13 @@ func (w *netStatsWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 		totalBytesRx += stats.RXBytes
 		totalBytesTx += stats.TXBytes
 
+		// Skip ignored devices.
+		if slices.ContainsFunc(w.prefs.IgnoredDevices, func(e string) bool {
+			return strings.HasPrefix(name, e)
+		}) {
+			continue
+		}
+
 		if _, ok := w.statsSensors[name]; ok { // Existing link/sensors, update.
 			for sensorType := range w.statsSensors[name] {
 				w.statsSensors[name][sensorType].update(name, sensorType, stats, w.delta)
@@ -259,11 +266,13 @@ func (w *netStatsWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 		}
 	}
 
-	// Update the totals sensors based on the counters.
-	w.updateTotals(totalBytesRx, totalBytesTx)
-	// Append the total sensors to the list of sensors.
-	for _, s := range w.statsSensors[totalsName] {
-		sensors = append(sensors, *s.Entity)
+	if len(stats) > 0 {
+		// Update the totals sensors based on the counters.
+		w.updateTotals(totalBytesRx, totalBytesTx)
+		// Append the total sensors to the list of sensors.
+		for _, s := range w.statsSensors[totalsName] {
+			sensors = append(sensors, *s.Entity)
+		}
 	}
 
 	w.mu.Unlock()
@@ -337,10 +346,8 @@ func (w *netStatsWorker) getLinkStats(links []rtnetlink.LinkMessage) []linkStats
 			continue
 		}
 
-		// Skip ignored devices.
-		if slices.ContainsFunc(w.prefs.IgnoredDevices, func(e string) bool {
-			return strings.HasPrefix(msg.Attributes.Name, e)
-		}) {
+		// Ignore loopback.
+		if msg.Attributes.Name == "lo" {
 			continue
 		}
 
