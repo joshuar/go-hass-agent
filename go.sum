@@ -291,8 +291,8 @@ github.com/goreleaser/chglog v0.6.1 h1:NZKiX8l0FTQPRzBgKST7knvNZmZ04f7PEGkN2wInf
 github.com/goreleaser/chglog v0.6.1/go.mod h1:Bnnfo07jMZkaAb0uRNASMZyOsX6ROW6X1qbXqN3guUo=
 github.com/goreleaser/fileglob v1.3.0 h1:/X6J7U8lbDpQtBvGcwwPS6OpzkNVlVEsFUVRx9+k+7I=
 github.com/goreleaser/fileglob v1.3.0/go.mod h1:Jx6BoXv3mbYkEzwm9THo7xbr5egkAraxkGorbJb4RxU=
-github.com/goreleaser/nfpm/v2 v2.40.0 h1:M6WaaHeTCgNopUo9e8zgeHlOiN65LZAKqogzCJXBwYQ=
-github.com/goreleaser/nfpm/v2 v2.40.0/go.mod h1:i9IfzvnHInDQohFs7iVHpWBoGaSDRp0+KG7KzNUXzns=
+github.com/goreleaser/nfpm/v2 v2.41.0 h1:JyMzS/EwqaWbFs+7Z9oZ4Hkk4or00gUTqwm9Dgr8QYg=
+github.com/goreleaser/nfpm/v2 v2.41.0/go.mod h1:VPc5kF5OgfA+BosV/A2aB+Vg34honjWvp0Vt8ogsSi0=
 github.com/gorilla/websocket v1.5.1 h1:gmztn0JnHVt9JZquRuzLw3g4wouNVzKL15iLr/zn/QY=
 github.com/gorilla/websocket v1.5.1/go.mod h1:x3kM2JMyaluk02fnUJpQuwD2dCS5NDG2ZHL0uE0tcaY=
 github.com/goxjs/gl v0.0.0-20210104184919-e3fafc6f8f2a/go.mod h1:dy/f2gjY09hwVfIyATps4G2ai7/hLwLkc5TrPqONuXY=
@@ -364,8 +364,8 @@ github.com/kevinburke/ssh_config v1.2.0 h1:x584FjTGwHzMwvHx18PXxbBVzfnxogHaAReU4
 github.com/kevinburke/ssh_config v1.2.0/go.mod h1:CT57kijsi8u/K/BOFA39wgDQJ9CxiF4nAY/ojJ6r6mM=
 github.com/kisielk/errcheck v1.5.0/go.mod h1:pFxgyoBC7bSaBwPgfKdkLd5X25qrDl4LWUI2bnpBCr8=
 github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
-github.com/klauspost/compress v1.17.9 h1:6KIumPrER1LHsvBVuDa0r5xaG0Es51mhhB9BQB2qeMA=
-github.com/klauspost/compress v1.17.9/go.mod h1:Di0epgTjJY877eYKx5yC51cX2A2Vl2ibi7bDH9ttBbw=
+github.com/klauspost/compress v1.17.11 h1:In6xLpyWOi1+C7tXUUWv2ot1QvBjxevKAaI6IXrJmUc=
+github.com/klauspost/compress v1.17.11/go.mod h1:pMDklpSncoRMuLFrf1W9Ss9KT+0rH90U12bZKk7uwG0=
 github.com/klauspost/pgzip v1.2.6 h1:8RXeL5crjEUFnR2/Sn6GJNWtSQ3Dk8pq4CL3jvdDyjU=
 github.com/klauspost/pgzip v1.2.6/go.mod h1:Ch1tH69qFZu15pkjo5kYi6mth2Zzwzt50oCQKQE9RUs=
 github.com/kr/fs v0.1.0/go.mod h1:FFnZGqtBN9Gxj7eW1uZ42v5BccTP0vu6NEaFoC2HwRg=
