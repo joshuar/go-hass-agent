@@ -104,6 +104,8 @@
   - [_Can I reset the agent (start from new)?_](#can-i-reset-the-agent-start-from-new)
   - [_I want to run the agent on a server, as a service, without a GUI. Can I do this?_](#i-want-to-run-the-agent-on-a-server-as-a-service-without-a-gui-can-i-do-this)
   - [_Can (or does) the agent run as root or with privileges?_](#can-or-does-the-agent-run-as-root-or-with-privileges)
+  - [_Why do the disk rate sensors report a non-zero value while the IO operations in progress sensor is zero?_](#why-do-the-disk-rate-sensors-report-a-non-zero-value-while-the-io-operations-in-progress-sensor-is-zero)
+  - [_What does the value of the Firmware Security sensor mean?_](#what-does-the-value-of-the-firmware-security-sensor-mean)
 - [🤝 Acknowledgements](#-acknowledgements)
 - [🧑‍⚖️ License](#️-license)
 
@@ -243,6 +245,9 @@ this app:
     seconds. Via ProcFS.
     - Per network device/link and total.
     - Via netlink.
+  - You can ignore some devices from generating these sensors, see the
+    `network_sensors_preferences.toml` file in the [configuration
+    directory](#️-configuration-location).
 - CPU:
   - **Load Average (1/5/15 min)**. Updated ~every 1 minute. Via ProcFS.
   - **CPU Usage** (in %). Both total (all-cores) and per-core. Updated ~every 10
@@ -1221,11 +1226,38 @@ script/command inherit those.
 
 [⬆️ Back to Top](#-table-of-contents)
 
+### _Why do the disk rate sensors report a non-zero value while the IO operations in progress sensor is zero?_
+
+The rate sensors are a derived value, taken by looking at the change in total IO
+operations since the sensor was last polled. The IO operations in progress
+sensor is a point-in-time measurement taken at the time of polling. So
+short-lived IO operations, that generate reads/writes but happen between polling
+intervals, won't be visible in the IO operations sensor but will contribute to
+the derived IO rate sensors.
+
+If you wanting to track IO operations, I would recommend focusing on the IO
+operations value being at a certain value over a period of time. Certainly
+however, for exact measurements, a dedicated monitoring solution is recommended.
+
+[⬆️ Back to Top](#-table-of-contents)
+
+### _What does the value of the Firmware Security sensor mean?_
+
+This is a **Host Security ID** value. More information can be found
+[here](https://fwupd.github.io/libfwupdplugin/hsi.html).
+
+[⬆️ Back to Top](#-table-of-contents)
+
 ## 🤝 Acknowledgements
 
-- [Home Assistant](https://home-assistant.io).
-- [Mage](https://magefile.org/).
-- This [Awesome README Template](https://github.com/Louis3797/awesome-readme-template).
+- [Home Assistant](https://home-assistant.io), for providing a platform to watch
+  and act on sensors and stuff.
+- [Mage](https://magefile.org/), used to make building Go Hass Agent easier.
+- This [Awesome README
+  Template](https://github.com/Louis3797/awesome-readme-template), to create
+  this awesome README.
+- [Prometheus Node Exporter](https://github.com/prometheus/node_exporter) code,
+  for inspiration on some sensors.
 
 [⬆️ Back to Top](#-table-of-contents)
 
