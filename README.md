@@ -1,8 +1,6 @@
 <!--
- Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-
- This software is released under the MIT License.
- https://opensource.org/licenses/MIT
+ Copyright 2024 Joshua Rich <joshua.rich@gmail.com>.
+ SPDX-License-Identifier: MIT
 -->
 
 <div align="center">
@@ -52,23 +50,26 @@
 
 - [📔 Table of Contents](#-table-of-contents)
 - [🌟 About the Project](#-about-the-project)
-  - [🎯 Features](#-features)
-  - [🤔 Use-cases](#-use-cases)
-  - [📈/🕹️ List of Sensors/Controls/Events (by Operating System)](#️-list-of-sensorscontrolsevents-by-operating-system)
-    - [🐧 Linux](#-linux)
-    - [All Operating Systems](#all-operating-systems)
-  - [🗒️ Versioning](#️-versioning)
+- [🎯 Features](#-features)
+- [🤔 Use-cases](#-use-cases)
+- [📈🕹️📢 List of Sensors/Controls/Events (by Operating System)](#️-list-of-sensorscontrolsevents-by-operating-system)
+  - [🐧 Linux](#-linux)
+    - [📈 Sensors](#-sensors)
+    - [🕹️ Controls](#️-controls)
+    - [📢 Events](#-events)
+  - [All Operating Systems](#all-operating-systems)
 - [🧰 Getting Started](#-getting-started)
   - [🤝 Compatibility](#-compatibility)
   - [🔽 Installation](#-installation)
     - [📦 Packages](#-packages)
     - [🚢 Container](#-container)
-- [🕹️ Usage](#️-usage)
-  - [🔛 First-run](#-first-run)
+    - [🗒️ Versioning](#️-versioning)
+- [👐🏻 Usage](#-usage)
+  - [🚩 First-run](#-first-run)
   - [👻 Running “Headless”](#-running-headless)
   - [🐳 Running in a container](#-running-in-a-container)
-  - [♻️ Regular Usage](#️-regular-usage)
-  - [📌 Configuration Location](#-configuration-location)
+  - [🔄 Regular Usage](#-regular-usage)
+  - [🗒️ Configuration Location](#️-configuration-location)
   - [🐚 Script Sensors](#-script-sensors)
     - [Requirements](#requirements)
     - [Supported Scripting Languages](#supported-scripting-languages)
@@ -79,7 +80,7 @@
         - [TOML](#toml)
     - [Schedule](#schedule)
     - [Security Implications](#security-implications)
-  - [🚌 MQTT Sensors and Controls](#-mqtt-sensors-and-controls)
+  - [💬 MQTT Sensors and Controls](#-mqtt-sensors-and-controls)
     - [Configuration](#configuration)
     - [Custom D-Bus Controls](#custom-d-bus-controls)
     - [Other Custom Commands](#other-custom-commands)
@@ -90,7 +91,7 @@
   - [Cross Compilation](#cross-compilation)
   - [Packages](#packages)
   - [Container Images](#container-images)
-- [:wave: Contributing](#wave-contributing)
+- [👋 Contributing](#-contributing)
   - [💾 Committing Code](#-committing-code)
   - [📜 Code of Conduct](#-code-of-conduct)
 - [🧭 Roadmap](#-roadmap)
@@ -123,7 +124,7 @@ You can then use these sensors, controls or events in any automations and
 dashboards, just like the companion app or any other "thing" you've added into
 Home Assistant.
 
-### 🎯 Features
+## 🎯 Features
 
 - **Sensors:** Expose a number of sensor entities to Home Assistant, which can then be used
   in dashboards, automations and other aspects your Home Assistant platform.
@@ -142,7 +143,7 @@ scripts/executables. See [Control via MQTT](#-mqtt-sensors-and-controls).
 
 [⬆️ Back to Top](#-table-of-contents)
 
-### 🤔 Use-cases
+## 🤔 Use-cases
 
 As examples of some of the things that can be done with the data published by
 this app:
@@ -167,16 +168,16 @@ this app:
 
 [⬆️ Back to Top](#-table-of-contents)
 
-### 📈/🕹️ List of Sensors/Controls/Events (by Operating System)
+## 📈🕹️📢 List of Sensors/Controls/Events (by Operating System)
 
 > [!NOTE]
 > The following list shows all **potential** sensors the agent can
 > report. In some cases, the **actual** sensors reported may be less due to
 > lack of support in the system configuration or missing hardware.
 
-#### 🐧 Linux
+### 🐧 Linux
 
-**Sensors:**
+#### 📈 Sensors
 
 - App Details:
   - **Active App** (currently active (focused) application) and **Running Apps**
@@ -291,7 +292,11 @@ this app:
       **alarms**. Updated ~every 1 minute.
     - Extracted from the `/sys/class/hwmon` file system.
 
-**Controls (when [configured with MQTT](#-mqtt-sensors-and-controls))**
+#### 🕹️ Controls
+
+> [!NOTE]
+> Only available when [configured with
+> MQTT](#-mqtt-sensors-and-controls)
 
 - Media Controls:
   - **Volume Control** Adjust the volume on the default audio output device.
@@ -310,7 +315,7 @@ this app:
   - Power controls require a system configured with `systemd-logind` (and D-Bus)
     support.
 
-**Events:**
+#### 📢 Events
 
 - User sessions (login/logout) events.
   - Requires a system configured with `systemd-logind` (and D-Bus).
@@ -328,7 +333,7 @@ this app:
       user: myuser # username.
     ```
 
-#### All Operating Systems
+### All Operating Systems
 
 **Sensors:**
 
@@ -338,20 +343,6 @@ this app:
 - **Connection Latency**. Total connection time (in milliseconds) to connect to
   Home Assistant from the device running Go Hass Agent. Additional times shown
   as attributes.
-
-[⬆️ Back to Top](#-table-of-contents)
-
-### 🗒️ Versioning
-
-This project follows [semantic versioning](https://semver.org/). Given a version
-number `MAJOR.MINOR.PATCH`, the gist of it is:
-
-- A `MAJOR` number change means there [breaking
-  changes](docs/BREAKING_CHANGES.md) from the previous release that may require
-  manual intervention before/after upgrading.
-- A `MINOR` number change means significant changes and new features have been
-  added, but not breaking changes.
-- A `PATCH` number change indicate minor changes and bug fixes.
 
 [⬆️ Back to Top](#-table-of-contents)
 
@@ -406,13 +397,27 @@ version over the latest container image, which might be unstable.
 
 [⬆️ Back to Top](#-table-of-contents)
 
-## 🕹️ Usage
+#### 🗒️ Versioning
+
+This project follows [semantic versioning](https://semver.org/). Given a version
+number `MAJOR.MINOR.PATCH`, the gist of it is:
+
+- A `MAJOR` number change means there [breaking
+  changes](docs/BREAKING_CHANGES.md) from the previous release that may require
+  manual intervention before/after upgrading.
+- A `MINOR` number change means significant changes and new features have been
+  added, but not breaking changes.
+- A `PATCH` number change indicate minor changes and bug fixes.
+
+[⬆️ Back to Top](#-table-of-contents)
+
+## 👐🏻 Usage
 
 Go Hass Agent runs as a tray icon by default. It is operating system,
 distribution and desktop-environment agnostic and should manifest itself in any
 tray of any desktop environment.
 
-### 🔛 First-run
+### 🚩 First-run
 
 On first-run, Go Hass Agent will display a window where you will need to enter
 some details, so it can register itself with a Home Assistant instance to be
@@ -520,7 +525,7 @@ reported will be severely limited without them:
 
 [⬆️ Back to Top](#-table-of-contents)
 
-### ♻️ Regular Usage
+### 🔄 Regular Usage
 
 When running, Go Hass Agent will appear as a device under the Mobile App
 integration in your Home Assistant instance. It should also report a list of
@@ -531,7 +536,7 @@ parts of Home Assistant.
 
 [⬆️ Back to Top](#-table-of-contents)
 
-### 📌 Configuration Location
+### 🗒️ Configuration Location
 
 The configuration is located in a file called `preferences.toml` in
 `CONFIG_HOME/go-hass-agent/` where `CONFIG_HOME` will OS-dependent:
@@ -558,7 +563,7 @@ run on its own schedule, specified using a Cron syntax.
 #### Requirements
 
 - Scripts need to be put in a `scripts` folder under the configuration directory
-  (see [Configuration Location](#-configuration-location) for the full path).
+  (see [Configuration Location](#️-configuration-location) for the full path).
 - You can use symlinks, if supported by your Operating System.
 - Script files need to be executable by the user running Go Hass Agent.
 - Scripts need to run without any user interaction.
@@ -733,7 +738,7 @@ running the agent. Script output is sent to your Home Assistant instance.
 
 [⬆️ Back to Top](#-table-of-contents)
 
-### 🚌 MQTT Sensors and Controls
+### 💬 MQTT Sensors and Controls
 
 > [!NOTE]
 > MQTT Sensors and Controls are not enabled by default.
@@ -838,7 +843,7 @@ data:
 #### Other Custom Commands
 
 You can optionally create a `commands.toml` file under the configuration
-directory (see [Configuration Location](#-configuration-location) with custom
+directory (see [Configuration Location](#️-configuration-location) with custom
 commands to be exposed in Home Assistant.
 
 Supported control types and expected input/output:
@@ -1047,7 +1052,7 @@ podman build --file ./Dockerfile --platform linux/arm/v7 --tag go-hass-agent
 
 [⬆️ Back to Top](#-table-of-contents)
 
-## :wave: Contributing
+## 👋 Contributing
 
 - Found an issue? Please [report
   it](https://github.com/joshuar/go-hass-agent/issues/new?assignees=joshuar&labels=&template=bug_report.md&title=%5BBUG%5D)!
