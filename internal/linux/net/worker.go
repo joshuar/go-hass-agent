@@ -135,7 +135,7 @@ func (w *ConnectionsWorker) Events(ctx context.Context) (<-chan sensor.Entity, e
 	return sensorCh, nil
 }
 
-func (w *ConnectionsWorker) ID() string {
+func (w *ConnectionsWorker) PreferencesID() string {
 	return preferencesID
 }
 
