@@ -1,7 +1,7 @@
 // Copyright 2024 Joshua Rich <joshua.rich@gmail.com>.
 // SPDX-License-Identifier: MIT
 
-package event
+package validation
 
 import (
 	"strings"
@@ -9,15 +9,15 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-var validate *validator.Validate
+var Validate *validator.Validate
 
 func init() {
-	validate = validator.New(validator.WithRequiredStructEnabled())
+	Validate = validator.New(validator.WithRequiredStructEnabled())
 }
 
 //nolint:errorlint
 //revive:disable:unhandled-error
-func parseValidationErrors(validation error) string {
+func ParseValidationErrors(validation error) string {
 	validationErrs, ok := validation.(validator.ValidationErrors)
 	if !ok {
 		return "internal validation error"

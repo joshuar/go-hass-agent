@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
+	"github.com/joshuar/go-hass-agent/internal/validation"
 )
 
 const (
@@ -33,9 +34,9 @@ type State struct {
 }
 
 func (s *State) Validate() error {
-	err := validate.Struct(s)
+	err := validation.Validate.Struct(s)
 	if err != nil {
-		return fmt.Errorf("sensor state is invalid: %s", parseValidationErrors(err))
+		return fmt.Errorf("sensor state is invalid: %s", validation.ParseValidationErrors(err))
 	}
 
 	return nil
@@ -75,9 +76,9 @@ type Entity struct {
 }
 
 func (e *Entity) Validate() error {
-	err := validate.Struct(e)
+	err := validation.Validate.Struct(e)
 	if err != nil {
-		return fmt.Errorf("sensor is invalid: %s", parseValidationErrors(err))
+		return fmt.Errorf("sensor is invalid: %s", validation.ParseValidationErrors(err))
 	}
 
 	return nil
@@ -132,9 +133,9 @@ type Location struct {
 }
 
 func (l *Location) Validate() error {
-	err := validate.Struct(l)
+	err := validation.Validate.Struct(l)
 	if err != nil {
-		return fmt.Errorf("location is invalid: %s", parseValidationErrors(err))
+		return fmt.Errorf("location is invalid: %s", validation.ParseValidationErrors(err))
 	}
 
 	return nil

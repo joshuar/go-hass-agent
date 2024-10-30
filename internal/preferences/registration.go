@@ -7,6 +7,8 @@ package preferences
 
 import (
 	"fmt"
+
+	"github.com/joshuar/go-hass-agent/internal/validation"
 )
 
 type Registration struct {
@@ -23,9 +25,9 @@ func DefaultRegistrationPreferences() *Registration {
 }
 
 func (p *Registration) Validate() error {
-	err := validate.Struct(p)
+	err := validation.Validate.Struct(p)
 	if err != nil {
-		return fmt.Errorf("%w: %s", ErrValidationFailed, parseValidationErrors(err))
+		return fmt.Errorf("validation failed: %s", validation.ParseValidationErrors(err))
 	}
 
 	return nil
