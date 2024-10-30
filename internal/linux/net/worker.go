@@ -10,6 +10,8 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"slices"
+	"strings"
 	"sync"
 
 	"github.com/godbus/dbus/v5"
@@ -17,6 +19,7 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/logging"
+	"github.com/joshuar/go-hass-agent/internal/preferences"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
@@ -40,7 +43,8 @@ type ConnectionsWorker struct {
 	list   map[string]*connection
 	logger *slog.Logger
 	linux.EventSensorWorker
-	mu sync.Mutex
+	prefs WorkerPrefs
+	mu    sync.Mutex
 }
 
 func (w *ConnectionsWorker) track(conn *connection) {
@@ -131,6 +135,16 @@ func (w *ConnectionsWorker) Events(ctx context.Context) (<-chan sensor.Entity, e
 	return sensorCh, nil
 }
 
+func (w *ConnectionsWorker) ID() string {
+	return preferencesID
+}
+
+func (w *ConnectionsWorker) DefaultPreferences() WorkerPrefs {
+	return WorkerPrefs{
+		IgnoredDevices: defaultIgnoredDevices,
+	}
+}
+
 func (w *ConnectionsWorker) handleConnection(ctx context.Context, path dbus.ObjectPath, sensorCh chan sensor.Entity) error {
 	conn, err := newConnection(w.bus, path)
 	if err != nil {
@@ -140,6 +154,12 @@ func (w *ConnectionsWorker) handleConnection(ctx context.Context, path dbus.Obje
 	if conn.name == "lo" || w.isTracked(conn.name) {
 		slog.Debug("Ignoring connection.", slog.String("connection", conn.name))
 
+		return nil
+	}
+	// Ignore user-defined devices.
+	if slices.ContainsFunc(w.prefs.IgnoredDevices, func(e string) bool {
+		return strings.HasPrefix(conn.name, e)
+	}) {
 		return nil
 	}
 
@@ -159,6 +179,8 @@ func (w *ConnectionsWorker) handleConnection(ctx context.Context, path dbus.Obje
 }
 
 func NewConnectionWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
+	var err error
+
 	worker := linux.NewEventSensorWorker(netConnWorkerID)
 
 	bus, ok := linux.CtxGetSystemBus(ctx)
@@ -166,12 +188,19 @@ func NewConnectionWorker(ctx context.Context) (*linux.EventSensorWorker, error) 
 		return worker, linux.ErrNoSystemBus
 	}
 
-	worker.EventSensorType = &ConnectionsWorker{
+	connectionsWorker := &ConnectionsWorker{
 		bus:  bus,
 		list: make(map[string]*connection),
 		logger: logging.FromContext(ctx).
 			With(slog.String("worker", netConnWorkerID)),
 	}
+
+	connectionsWorker.prefs, err = preferences.LoadWorkerPreferences(ctx, connectionsWorker)
+	if err != nil {
+		return worker, fmt.Errorf("could not load preferences: %w", err)
+	}
+
+	worker.EventSensorType = connectionsWorker
 
 	return worker, nil
 }

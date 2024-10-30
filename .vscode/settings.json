@@ -26,7 +26,8 @@
     "cli",
     "packaging",
     "upgrade",
-    "README"
+    "README",
+    "linux/net"
   ],
   "go.testFlags": ["-v"],
   "[markdown]": {

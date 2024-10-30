@@ -20,6 +20,7 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/logging"
+	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
 const (
@@ -237,7 +238,7 @@ func (w *AddressWorker) DefaultPreferences() WorkerPrefs {
 	}
 }
 
-func NewAddressWorker(_ context.Context) (*linux.EventSensorWorker, error) {
+func NewAddressWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 	worker := linux.NewEventSensorWorker(addressWorkerID)
 
 	conn, err := rtnetlink.Dial(nlConfig)
@@ -248,6 +249,11 @@ func NewAddressWorker(_ context.Context) (*linux.EventSensorWorker, error) {
 	addressWorker := &AddressWorker{
 		nlconn: conn,
 		donech: make(chan struct{}),
+	}
+
+	addressWorker.prefs, err = preferences.LoadWorkerPreferences(ctx, addressWorker)
+	if err != nil {
+		return worker, fmt.Errorf("could not load preferences: %w", err)
 	}
 
 	worker.EventSensorType = addressWorker
