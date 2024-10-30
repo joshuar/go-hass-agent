@@ -4,7 +4,11 @@
 //revive:disable:unused-receiver
 package event
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/joshuar/go-hass-agent/internal/validation"
+)
 
 const (
 	requestTypeEvent = "fire_event"
@@ -16,9 +20,9 @@ type Event struct {
 }
 
 func (e *Event) Validate() error {
-	err := validate.Struct(e)
+	err := validation.Validate.Struct(e)
 	if err != nil {
-		return fmt.Errorf("event is invalid: %s", parseValidationErrors(err))
+		return fmt.Errorf("event is invalid: %s", validation.ParseValidationErrors(err))
 	}
 
 	return nil

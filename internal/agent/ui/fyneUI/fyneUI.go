@@ -27,15 +27,14 @@ import (
 	"fyne.io/fyne/v2/driver/desktop"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
-	"github.com/go-playground/validator/v10"
+
+	agentvalidator "github.com/joshuar/go-hass-agent/internal/validation"
 
 	"github.com/joshuar/go-hass-agent/internal/agent/ui"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
-
-var validate *validator.Validate
 
 var (
 	//nolint:stylecheck
@@ -57,10 +56,6 @@ type Notification interface {
 type FyneUI struct {
 	app    fyne.App
 	logger *slog.Logger
-}
-
-func init() {
-	validate = validator.New(validator.WithRequiredStructEnabled())
 }
 
 // New FyneUI sets up the UI for the agent.
@@ -546,10 +541,8 @@ func longestString(stringList []string) string {
 // httpValidator is a custom fyne validator that will validate a string is a
 // valid http/https URL.
 func httpValidator() fyne.StringValidator {
-	v := validator.New()
-
 	return func(text string) error {
-		if v.Var(text, "http_url") != nil {
+		if agentvalidator.Validate.Var(text, "http_url") != nil {
 			return ErrInvalidURL
 		}
 
@@ -565,7 +558,7 @@ func httpValidator() fyne.StringValidator {
 // valid http/https URL.
 func uriValidator() fyne.StringValidator {
 	return func(text string) error {
-		if validate.Var(text, "uri") != nil {
+		if agentvalidator.Validate.Var(text, "uri") != nil {
 			return ErrInvalidURI
 		}
 
@@ -590,10 +583,8 @@ func hostPortValidator(msg string) fyne.StringValidator {
 		errMsg = ErrInvalidHostPort
 	}
 
-	v := validator.New()
-
 	return func(text string) error {
-		if v.Var(text, "hostname_port") != nil {
+		if agentvalidator.Validate.Var(text, "hostname_port") != nil {
 			return errMsg
 		}
 		// if _, err := url.Parse(text); err != nil {

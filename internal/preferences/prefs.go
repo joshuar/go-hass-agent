@@ -14,6 +14,8 @@ import (
 
 	"github.com/adrg/xdg"
 	"github.com/pelletier/go-toml/v2"
+
+	"github.com/joshuar/go-hass-agent/internal/validation"
 )
 
 const (
@@ -122,9 +124,9 @@ func DefaultPreferences(file string) *Preferences {
 }
 
 func (p *Preferences) Validate() error {
-	err := validate.Struct(p)
+	err := validation.Validate.Struct(p)
 	if err != nil {
-		return fmt.Errorf("%w: %s", ErrValidationFailed, parseValidationErrors(err))
+		return fmt.Errorf("validation failed: %s", validation.ParseValidationErrors(err))
 	}
 
 	return nil
