@@ -270,7 +270,7 @@ func (w *netStatsWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 	return sensors, nil
 }
 
-func (w *netStatsWorker) ID() string {
+func (w *netStatsWorker) PreferencesID() string {
 	return preferencesID
 }
 

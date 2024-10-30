@@ -19,7 +19,7 @@ import (
 // method and an ID that uniquely identifies the worker (and its preferences
 // file on disk).
 type Worker[T any] interface {
-	ID() string
+	PreferencesID() string
 	DefaultPreferences() T
 }
 
@@ -45,7 +45,7 @@ func SaveWorkerPreferences[T any](ctx context.Context, worker string, prefs T) e
 func LoadWorkerPreferences[T any](ctx context.Context, worker Worker[T]) (T, error) {
 	// Load config from file. If the preferences cannot be loaded for any reason
 	// other than the preferences file does not exist , return an error.
-	data, err := os.ReadFile(workerPreferencesFile(ctx, worker.ID()))
+	data, err := os.ReadFile(workerPreferencesFile(ctx, worker.PreferencesID()))
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return *new(T), fmt.Errorf("could not read app preferences file: %w", err)
 	}
@@ -54,7 +54,7 @@ func LoadWorkerPreferences[T any](ctx context.Context, worker Worker[T]) (T, err
 	// for the worker.
 	if errors.Is(err, os.ErrNotExist) {
 		// Save the newly created preferences to disk.
-		if err := SaveWorkerPreferences(ctx, worker.ID(), worker.DefaultPreferences()); err != nil {
+		if err := SaveWorkerPreferences(ctx, worker.PreferencesID(), worker.DefaultPreferences()); err != nil {
 			return *new(T), fmt.Errorf("could not save default preferences: %w", err)
 		}
 

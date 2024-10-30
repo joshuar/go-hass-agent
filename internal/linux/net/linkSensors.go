@@ -228,7 +228,7 @@ func (w *AddressWorker) Events(ctx context.Context) (<-chan sensor.Entity, error
 	return sensorCh, nil
 }
 
-func (w *AddressWorker) ID() string {
+func (w *AddressWorker) PreferencesID() string {
 	return preferencesID
 }
 
