@@ -308,6 +308,10 @@ this app:
   - **Volume Mute** Mute/Unmute the default audio output device.
   - **Webcam Control** Start/stop a webcam and view the video in Home Assistant.
     - Requires a webcam that is exposed via V4L2 (VideoForLinux2).
+  - You can set some preferences (for e.g., the camera device and video
+    properties) if the defaults are not satisfactory, see the
+    `media_controls_preferences.toml` file in the [configuration
+    directory](#️-configuration-location).
 - Power Controls:
   - **Lock/Unlock Screen/Screensaver** Locks/unlocks the session for the user
     running Go Hass Agent.
