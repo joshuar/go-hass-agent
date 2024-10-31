@@ -1,7 +1,5 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2024 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
 //revive:disable:unused-receiver
 package scripts
@@ -41,6 +39,11 @@ type Worker struct {
 	scheduler *cron.Cron
 	logger    *slog.Logger
 	jobs      []job
+}
+
+// TODO: implement ability to disable.
+func (c *Worker) Disabled() bool {
+	return false
 }
 
 func (c *Worker) ID() string {

@@ -1,7 +1,5 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2024 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
 //revive:disable:unused-receiver
 package net
@@ -198,6 +196,10 @@ func NewConnectionWorker(ctx context.Context) (*linux.EventSensorWorker, error) 
 	connectionsWorker.prefs, err = preferences.LoadWorkerPreferences(ctx, connectionsWorker)
 	if err != nil {
 		return worker, fmt.Errorf("could not load preferences: %w", err)
+	}
+
+	if connectionsWorker.prefs.Disabled {
+		return worker, nil
 	}
 
 	worker.EventSensorType = connectionsWorker
