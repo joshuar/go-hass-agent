@@ -149,11 +149,15 @@ func setupOSMQTTWorker(ctx context.Context, mqttDevice *mqtthass.Device) MQTTWor
 		mqttController.sensors = append(mqttController.sensors, mprisEntity)
 	}
 	// Add camera control.
-	cameraEntities := media.NewCameraControl(ctx, mqttController.Msgs(), mqttDevice)
-	if cameraEntities != nil {
-		mqttController.buttons = append(mqttController.buttons, cameraEntities.StartButton, cameraEntities.StopButton)
-		mqttController.cameras = append(mqttController.cameras, cameraEntities.Images)
-		mqttController.sensors = append(mqttController.sensors, cameraEntities.Status)
+	cameraEntities, err := media.NewCameraControl(ctx, mqttController.Msgs(), mqttDevice)
+	if err != nil {
+		logger.Warn("Could not activate Camera controller.", slog.Any("error", err))
+	} else {
+		if cameraEntities != nil {
+			mqttController.buttons = append(mqttController.buttons, cameraEntities.StartButton, cameraEntities.StopButton)
+			mqttController.cameras = append(mqttController.cameras, cameraEntities.Images)
+			mqttController.sensors = append(mqttController.sensors, cameraEntities.Status)
+		}
 	}
 
 	// Add the D-Bus command action.

@@ -27,7 +27,8 @@
     "packaging",
     "upgrade",
     "README",
-    "linux/net"
+    "linux/net",
+    "linux/media"
   ],
   "go.testFlags": ["-v"],
   "[markdown]": {
