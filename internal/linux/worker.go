@@ -1,7 +1,5 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2024 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
 //go:generate go run github.com/matryer/moq -out worker_mocks_test.go . PollingType EventType OneShotType
 package linux
@@ -73,6 +71,10 @@ type EventSensorWorker struct {
 	Worker
 }
 
+func (w *EventSensorWorker) Disabled() bool {
+	return w.EventSensorType == nil
+}
+
 func (w *EventSensorWorker) Start(ctx context.Context) (<-chan sensor.Entity, error) {
 	// Create a new context for the updates scope.
 	updatesCtx, cancelFunc := context.WithCancel(ctx)
@@ -97,6 +99,10 @@ type PollingSensorWorker struct {
 	Worker
 	PollInterval time.Duration
 	JitterAmount time.Duration
+}
+
+func (w *PollingSensorWorker) Disabled() bool {
+	return w.PollingSensorType == nil
 }
 
 func (w *PollingSensorWorker) Start(ctx context.Context) (<-chan sensor.Entity, error) {
@@ -125,6 +131,10 @@ type OneShotSensorWorker struct {
 	Worker
 }
 
+func (w *OneShotSensorWorker) Disabled() bool {
+	return w.OneShotSensorType == nil
+}
+
 func (w *OneShotSensorWorker) Start(ctx context.Context) (<-chan sensor.Entity, error) {
 	// Create a new context for the updates scope.
 	updatesCtx, cancelFunc := context.WithCancel(ctx)
@@ -145,6 +155,10 @@ func NewOneShotSensorWorker(id string) *OneShotSensorWorker {
 type EventWorker struct {
 	EventType
 	Worker
+}
+
+func (w *EventWorker) Disabled() bool {
+	return w.EventType == nil
 }
 
 func (w *EventWorker) Start(ctx context.Context) (<-chan event.Event, error) {

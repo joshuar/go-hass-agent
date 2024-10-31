@@ -310,6 +310,10 @@ func NewNetStatsWorker(ctx context.Context) (*linux.PollingSensorWorker, error) 
 		return worker, fmt.Errorf("could not load preferences: %w", err)
 	}
 
+	if ratesWorker.prefs.Disabled {
+		return worker, nil
+	}
+
 	worker.PollingSensorType = ratesWorker
 
 	return worker, nil

@@ -256,6 +256,11 @@ func NewAddressWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 		return worker, fmt.Errorf("could not load preferences: %w", err)
 	}
 
+	// If disabled, don't use the addressWorker.
+	if addressWorker.prefs.Disabled {
+		return worker, nil
+	}
+
 	worker.EventSensorType = addressWorker
 
 	return worker, nil

@@ -1,8 +1,7 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2024 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
+//revive:disable:unused-receiver
 package agentsensor
 
 import (
@@ -69,9 +68,12 @@ type ConnectionLatencySensorWorker struct {
 	endpoint string
 }
 
+// TODO: implement ability to disable.
+func (w *ConnectionLatencySensorWorker) Disabled() bool {
+	return false
+}
+
 // ID returns the unique string to represent this worker and its sensors.
-//
-//revive:disable:unused-receiver
 func (w *ConnectionLatencySensorWorker) ID() string { return connectionLatencyWorkerID }
 
 // Stop will stop any processing of sensors controlled by this worker.

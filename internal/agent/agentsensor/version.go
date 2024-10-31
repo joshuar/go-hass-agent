@@ -33,6 +33,11 @@ func newVersionSensor() sensor.Entity {
 
 type VersionWorker struct{}
 
+// TODO: implement ability to disable.
+func (w *VersionWorker) Disabled() bool {
+	return false
+}
+
 func (w *VersionWorker) ID() string { return versionWorkerID }
 
 func (w *VersionWorker) Stop() error { return nil }
