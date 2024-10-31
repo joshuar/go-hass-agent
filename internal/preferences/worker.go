@@ -14,6 +14,12 @@ import (
 	"github.com/pelletier/go-toml/v2"
 )
 
+// CommonWorkerPrefs contains worker preferences that all workers can/should
+// implement. For e.g., a toggle to completely disable the worker.
+type CommonWorkerPrefs struct {
+	Disabled bool `toml:"disabled" comment:"Set this to true to disable all these sensors."`
+}
+
 // Worker represents a Worker from the point of the preferences package. A
 // worker has a set of default preferences returned by the DefaultPreferences
 // method and an ID that uniquely identifies the worker (and its preferences

@@ -1,7 +1,5 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2024 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
 package agent
 
@@ -19,6 +17,7 @@ import (
 // events. It has an ID and functions to start/stop producing sensors/events.
 type Worker[T any] interface {
 	ID() string
+	Disabled() bool
 	Stop() error
 	Start(ctx context.Context) (<-chan T, error)
 }
@@ -49,6 +48,11 @@ func startWorkers[T any](ctx context.Context, workers ...Worker[T]) []<-chan T {
 	var eventCh []<-chan T
 
 	for _, worker := range workers {
+		// Ignore disabled workers.
+		if worker.Disabled() {
+			continue
+		}
+
 		logging.FromContext(ctx).Debug("Starting worker",
 			slog.String("worker", worker.ID()))
 
@@ -70,6 +74,11 @@ func startWorkers[T any](ctx context.Context, workers ...Worker[T]) []<-chan T {
 // and runs their stop functions, logging any errors.
 func stopWorkers[T any](ctx context.Context, workers ...Worker[T]) {
 	for _, worker := range workers {
+		// Ignore disabled workers.
+		if worker.Disabled() {
+			continue
+		}
+
 		logging.FromContext(ctx).Debug("Stopping worker", slog.String("worker", worker.ID()))
 
 		if err := worker.Stop(); err != nil {
