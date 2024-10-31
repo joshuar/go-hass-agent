@@ -1,8 +1,7 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2024 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
+//revive:disable:unused-receiver
 package media
 
 import (
@@ -29,33 +28,65 @@ const (
 
 	startedState = "Recording"
 	stoppedState = "Not Recording"
+
+	defaultCameraDevice        = "/dev/video0"
+	defaultHeight       uint32 = 640
+	defaultWidth        uint32 = 480
 )
 
-// Some defaults for the device file, formats and image size.
-var (
-	defaultDevice        = "/dev/video0"
-	preferredFmts        = []string{"Motion-JPEG"}
-	defaultHeight uint32 = 640
-	defaultWidth  uint32 = 480
-)
+var defaultPreferredFmts = []string{"Motion-JPEG"}
 
-// CameraEntities represents all of the entities that make up a camera. This
+// CameraWorker represents all of the entities that make up a camera. This
 // includes the entity for showing images, as well as button entities for
 // start/stop commands and a sensor entity showing the recording status.
-type CameraEntities struct {
+type CameraWorker struct {
 	Images      *mqtthass.CameraEntity
 	StartButton *mqtthass.ButtonEntity
 	StopButton  *mqtthass.ButtonEntity
 	Status      *mqtthass.SensorEntity
 	camera      *webcam.Webcam
 	state       string
+	prefs       CameraWorkerPrefs
+}
+
+// CameraWorkerPrefs are the preferences a user can set for the CameraWorker.
+type CameraWorkerPrefs struct {
+	CameraDevice  string   `toml:"camera_device" comment:"The camera device to control. Defaults to /dev/video0."`
+	CameraFormats []string `toml:"camera_formats" comment:"Preferred camera video formats. Defaults to Motion-JPEG."`
+	Height        uint32   `toml:"camera_video_height" comment:"Height (in pixels) of the camera image. Defaults to 640px."`
+	Width         uint32   `toml:"camera_video_width" comment:"With (in pixels) of the camera image. Defaults to 480px."`
+	preferences.CommonWorkerPrefs
+}
+
+func (w *CameraWorker) PreferencesID() string {
+	return controlsPreferencesID
+}
+
+func (w *CameraWorker) DefaultPreferences() CameraWorkerPrefs {
+	return CameraWorkerPrefs{
+		CameraDevice:  defaultCameraDevice,
+		Width:         defaultWidth,
+		Height:        defaultHeight,
+		CameraFormats: defaultPreferredFmts,
+	}
+}
+
+func (w *CameraWorker) Disabled() bool {
+	return w.prefs.Disabled
 }
 
 // NewCameraControl is called by the OS controller to provide the entities for a camera.
-func NewCameraControl(_ context.Context, msgCh chan *mqttapi.Msg, mqttDevice *mqtthass.Device) *CameraEntities {
-	entities := &CameraEntities{}
+func NewCameraControl(ctx context.Context, msgCh chan *mqttapi.Msg, mqttDevice *mqtthass.Device) (*CameraWorker, error) {
+	var err error
 
-	entities.Images = mqtthass.NewCameraEntity().
+	worker := &CameraWorker{}
+
+	worker.prefs, err = preferences.LoadWorkerPreferences(ctx, worker)
+	if err != nil {
+		return worker, fmt.Errorf("could not load preferences: %w", err)
+	}
+
+	worker.Images = mqtthass.NewCameraEntity().
 		WithDetails(
 			mqtthass.App(preferences.AppName),
 			mqtthass.Name("Webcam"),
@@ -64,7 +95,7 @@ func NewCameraControl(_ context.Context, msgCh chan *mqttapi.Msg, mqttDevice *mq
 			mqtthass.DeviceInfo(mqttDevice),
 		)
 
-	entities.StartButton = mqtthass.NewButtonEntity().
+	worker.StartButton = mqtthass.NewButtonEntity().
 		WithDetails(
 			mqtthass.App(preferences.AppName),
 			mqtthass.Name("Start Webcam"),
@@ -76,7 +107,7 @@ func NewCameraControl(_ context.Context, msgCh chan *mqttapi.Msg, mqttDevice *mq
 		mqtthass.CommandCallback(func(_ *paho.Publish) {
 			var err error
 			// Open the camera device.
-			entities.camera, err = openCamera(defaultDevice)
+			worker.camera, err = worker.openCamera()
 			if err != nil {
 				slog.Error("Could not open camera device.",
 					slog.Any("error", err))
@@ -85,13 +116,13 @@ func NewCameraControl(_ context.Context, msgCh chan *mqttapi.Msg, mqttDevice *mq
 
 			slog.Info("Start recording webcam.")
 
-			entities.state = startedState
+			worker.state = startedState
 
-			go publishImages(entities.camera, entities.Images.Topic, msgCh)
-			msgCh <- mqttapi.NewMsg(entities.Status.StateTopic, []byte(entities.state))
+			go publishImages(worker.camera, worker.Images.Topic, msgCh)
+			msgCh <- mqttapi.NewMsg(worker.Status.StateTopic, []byte(worker.state))
 		}))
 
-	entities.StopButton = mqtthass.NewButtonEntity().
+	worker.StopButton = mqtthass.NewButtonEntity().
 		WithDetails(
 			mqtthass.App(preferences.AppName),
 			mqtthass.Name("Stop Webcam"),
@@ -101,22 +132,22 @@ func NewCameraControl(_ context.Context, msgCh chan *mqttapi.Msg, mqttDevice *mq
 			mqtthass.Icon(stopIcon),
 		).WithCommand(
 		mqtthass.CommandCallback(func(_ *paho.Publish) {
-			if err := entities.camera.StopStreaming(); err != nil {
+			if err := worker.camera.StopStreaming(); err != nil {
 				slog.Error("Stop streaming failed.", slog.Any("error", err))
 			}
 
-			if err := entities.camera.Close(); err != nil {
+			if err := worker.camera.Close(); err != nil {
 				slog.Error("Close camera failed.", slog.Any("error", err))
 			}
 
-			entities.state = stoppedState
-			msgCh <- mqttapi.NewMsg(entities.Status.StateTopic, []byte(entities.state))
+			worker.state = stoppedState
+			msgCh <- mqttapi.NewMsg(worker.Status.StateTopic, []byte(worker.state))
 
 			slog.Info("Stop recording webcam.")
 		}),
 	)
 
-	entities.Status = mqtthass.NewSensorEntity().
+	worker.Status = mqtthass.NewSensorEntity().
 		WithDetails(
 			mqtthass.App(preferences.AppName),
 			mqtthass.Name("Webcam Status"),
@@ -127,30 +158,30 @@ func NewCameraControl(_ context.Context, msgCh chan *mqttapi.Msg, mqttDevice *mq
 		).
 		WithState(
 			mqtthass.StateCallback(func(_ ...any) (json.RawMessage, error) {
-				return json.RawMessage(entities.state), nil
+				return json.RawMessage(worker.state), nil
 			}),
 		)
 
 	go func() {
-		msgCh <- mqttapi.NewMsg(entities.Status.StateTopic, []byte(stoppedState))
+		msgCh <- mqttapi.NewMsg(worker.Status.StateTopic, []byte(stoppedState))
 	}()
 
-	return entities
+	return worker, nil
 }
 
 // openCamera opens the camera device and ensures that it has a preferred image
 // format, framerate and dimensions.
-func openCamera(cameraDevice string) (*webcam.Webcam, error) {
-	cam, err := webcam.Open(cameraDevice)
+func (w *CameraWorker) openCamera() (*webcam.Webcam, error) {
+	cam, err := webcam.Open(w.prefs.CameraDevice)
 	if err != nil {
-		return nil, fmt.Errorf("could not open camera %s: %w", cameraDevice, err)
+		return nil, fmt.Errorf("could not open camera %s: %w", w.prefs.CameraDevice, err)
 	}
 
 	// select pixel format
 	var preferredFormat webcam.PixelFormat
 
 	for format, desc := range cam.GetSupportedFormats() {
-		if slices.Contains(preferredFmts, desc) {
+		if slices.Contains(w.prefs.CameraFormats, desc) {
 			preferredFormat = format
 			break
 		}
@@ -160,7 +191,7 @@ func openCamera(cameraDevice string) (*webcam.Webcam, error) {
 		return nil, errors.New("could not determine an appropriate format")
 	}
 
-	_, _, _, err = cam.SetImageFormat(preferredFormat, defaultWidth, defaultHeight)
+	_, _, _, err = cam.SetImageFormat(preferredFormat, w.prefs.Width, w.prefs.Height)
 	if err != nil {
 		return nil, fmt.Errorf("could not set camera parameters: %w", err)
 	}
