@@ -28,7 +28,8 @@
     "upgrade",
     "README",
     "linux/net",
-    "linux/media"
+    "linux/media",
+    "agent/sensor"
   ],
   "go.testFlags": ["-v"],
   "[markdown]": {

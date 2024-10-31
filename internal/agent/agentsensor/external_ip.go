@@ -19,6 +19,7 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/logging"
+	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
 const (
@@ -72,11 +73,22 @@ type ExternalIPWorker struct {
 	client *resty.Client
 	doneCh chan struct{}
 	logger *slog.Logger
+	prefs  ExternalIPWorkerPrefs
+}
+
+type ExternalIPWorkerPrefs preferences.CommonWorkerPrefs
+
+func (w *ExternalIPWorker) PreferencesID() string {
+	return "external_ip_sensor"
+}
+
+func (w *ExternalIPWorker) DefaultPreferences() ExternalIPWorkerPrefs {
+	return ExternalIPWorkerPrefs{}
 }
 
 // TODO: implement ability to disable.
 func (w *ExternalIPWorker) Disabled() bool {
-	return false
+	return w.prefs.Disabled
 }
 
 // ID returns the unique string to represent this worker and its sensors.
@@ -175,9 +187,18 @@ func (w *ExternalIPWorker) lookupExternalIPs(ctx context.Context, ver int) (net.
 }
 
 func NewExternalIPUpdaterWorker(ctx context.Context) *ExternalIPWorker {
-	return &ExternalIPWorker{
+	var err error
+
+	worker := &ExternalIPWorker{
 		client: resty.New().SetTimeout(externalIPUpdateRequestTimeout),
 		logger: logging.FromContext(ctx).
 			With(slog.String("worker", externalIPWorkerID)),
 	}
+
+	worker.prefs, err = preferences.LoadWorkerPreferences(ctx, worker)
+	if err != nil {
+		return nil
+	}
+
+	return worker
 }
