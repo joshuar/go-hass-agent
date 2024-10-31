@@ -1,5 +1,36 @@
 # Changelog
 
+## [10.4.0](https://github.com/joshuar/go-hass-agent/compare/v10.3.2...v10.4.0) (2024-10-31)
+
+
+### Features
+
+* **agent:** :sparkles: add an interface to represent a worker with preferences for future use ([446857e](https://github.com/joshuar/go-hass-agent/commit/446857e0ccdae81e5834e9223c21aaa791fd3b90))
+* **agent:** :sparkles: implement event controller for event workers in agent ([c1d2033](https://github.com/joshuar/go-hass-agent/commit/c1d20330d8a9720f9299d34d46663cd09398b8cf))
+* **agent/sensor:** :sparkles: add preference to disable external ip sensor if desired ([17f8d97](https://github.com/joshuar/go-hass-agent/commit/17f8d97ddf7a3354df9d637390c2f949ceda66e5))
+* **hass:** :sparkles: add support for sending events to Home Assistant ([6debf7e](https://github.com/joshuar/go-hass-agent/commit/6debf7ec835a94cda4cc91b91066094a91d62320))
+* **linux:** :sparkles: add session events ([61b87e6](https://github.com/joshuar/go-hass-agent/commit/61b87e6b876e2c72c0b13b683e6b953890cc9b5e))
+* **linux:** :sparkles: add tracking stats from chronyd as sensors ([3de2c09](https://github.com/joshuar/go-hass-agent/commit/3de2c0946b1149aede5227da6d11678894048306))
+* **linux:** :sparkles: add user preference to define devices to ignore for network rates sensors ([c36e14e](https://github.com/joshuar/go-hass-agent/commit/c36e14eed3e0d0126195a96ff91bd50e860eb020))
+* **linux/media:** :sparkles: support user preferences for camera worker ([fef5dd9](https://github.com/joshuar/go-hass-agent/commit/fef5dd979e958903d67e94b7a4cf930b2244e846))
+* **linux/net:** :sparkles: filter on user-defined network devices for networkmanger connection state sensors ([77e3372](https://github.com/joshuar/go-hass-agent/commit/77e337233ac47213a93acdf8533e3d01c38ebe03))
+* **preferences:** :sparkles: provide a worker preference to completely disable the worker (and its sensors/events/controls) ([23c940b](https://github.com/joshuar/go-hass-agent/commit/23c940bf401721d6d75e22e16f2713c1ca36e8ee))
+* **preferences:** :sparkles: support worker preferences ([c7c49ac](https://github.com/joshuar/go-hass-agent/commit/c7c49ac86c0bd44eaf06f1b442497bbe94fd8203))
+
+
+### Bug Fixes
+
+* **hass:** :bug: fix validation of event requests ([d95955e](https://github.com/joshuar/go-hass-agent/commit/d95955eaebae0e5c44f6185607c7f68eee2508bb))
+* **hass:** :bug: rework marshaling of sensor requests ([1c579d9](https://github.com/joshuar/go-hass-agent/commit/1c579d964dfce6f51643ca7276baa8e4bcb72093))
+* **linux:** :bug: for ignored devices, ensure their stats are still tracked as part of the total network rate sensors ([468f692](https://github.com/joshuar/go-hass-agent/commit/468f6924cfc6761946a26a6b686478beee953d89))
+
+
+### Performance Improvements
+
+* :zap: share a validator instance across packages ([81bf9e8](https://github.com/joshuar/go-hass-agent/commit/81bf9e86ece23c0082a8ce7075e31a8aad8ae553))
+* **agent:** :zap: rework controller/worker concept ([8bca59f](https://github.com/joshuar/go-hass-agent/commit/8bca59f0dc06a05f6b943b0c6794b68a9943e56b))
+* **hass:** :zap: rework sending requests ([a8cd590](https://github.com/joshuar/go-hass-agent/commit/a8cd5909fa01a124b09d4d7649e245755ba7f517))
+
 ## [10.3.2](https://github.com/joshuar/go-hass-agent/compare/v10.3.1...v10.3.2) (2024-10-15)
 
 
