@@ -1,8 +1,7 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2024 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
+//revive:disable:unused-receiver
 package cpu
 
 import (
@@ -19,6 +18,7 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
 const (
@@ -39,6 +39,7 @@ type usageWorker struct {
 	linux.PollingSensorWorker
 	clktck int64
 	delta  time.Duration
+	prefs  WorkerPrefs
 }
 
 func (w *usageWorker) UpdateDelta(delta time.Duration) {
@@ -49,7 +50,17 @@ func (w *usageWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 	return w.getUsageStats()
 }
 
+func (w *usageWorker) PreferencesID() string {
+	return preferencesID
+}
+
+func (w *usageWorker) DefaultPreferences() WorkerPrefs {
+	return WorkerPrefs{}
+}
+
 func NewUsageWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
+	var err error
+
 	worker := linux.NewPollingSensorWorker(usageWorkerID, usageUpdateInterval, usageUpdateJitter)
 
 	clktck, found := linux.CtxGetClkTck(ctx)
@@ -62,7 +73,7 @@ func NewUsageWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
 		return worker, fmt.Errorf("%w: no boottime value", linux.ErrInvalidCtx)
 	}
 
-	worker.PollingSensorType = &usageWorker{
+	cpuUsageWorker := &usageWorker{
 		path:     filepath.Join(linux.ProcFSRoot, "stat"),
 		boottime: boottime,
 		clktck:   clktck,
@@ -71,6 +82,18 @@ func NewUsageWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
 			"processes": newRateSensor("Processes Creation Rate", "mdi:application-cog", "processes/s"),
 		},
 	}
+
+	cpuUsageWorker.prefs, err = preferences.LoadWorkerPreferences(ctx, cpuUsageWorker)
+	if err != nil {
+		return worker, fmt.Errorf("could not load preferences: %w", err)
+	}
+
+	// If disabled, don't use the addressWorker.
+	if cpuUsageWorker.prefs.Disabled {
+		return worker, nil
+	}
+
+	worker.PollingSensorType = cpuUsageWorker
 
 	return worker, nil
 }
@@ -105,7 +128,9 @@ func (w *usageWorker) getUsageStats() ([]sensor.Entity, error) {
 			sensors = append(sensors, newUsageSensor(w.clktck, cols, types.CategoryDefault))
 		case strings.Contains(cols[0], "cpu"):
 			sensors = append(sensors, newUsageSensor(w.clktck, cols, types.CategoryDiagnostic))
-			sensors = append(sensors, newCPUFreqSensor(cols[0]))
+			if !w.prefs.DisableCPUFreq {
+				sensors = append(sensors, newCPUFreqSensor(cols[0]))
+			}
 		case cols[0] == "ctxt":
 			if _, found := w.rateSensors["ctxt"]; found {
 				w.rateSensors["ctxt"].update(w.delta, cols[1])
