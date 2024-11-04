@@ -29,7 +29,8 @@
     "README",
     "linux/net",
     "linux/media",
-    "agent/sensor"
+    "agent/sensor",
+    "linux/cpu"
   ],
   "go.testFlags": ["-v"],
   "[markdown]": {
