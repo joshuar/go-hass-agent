@@ -14,6 +14,7 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/preferences"
 	"github.com/joshuar/go-hass-agent/pkg/linux/hwmon"
 )
 
@@ -93,9 +94,30 @@ func (w *hwMonWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 	return sensors, nil
 }
 
-func NewHWMonWorker(_ context.Context) (*linux.PollingSensorWorker, error) {
+func (w *hwMonWorker) PreferencesID() string {
+	return preferencesID
+}
+
+func (w *hwMonWorker) DefaultPreferences() WorkerPrefs {
+	return WorkerPrefs{}
+}
+
+func NewHWMonWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
 	worker := linux.NewPollingSensorWorker(hwmonWorkerID, hwMonInterval, hwMonJitter)
-	worker.PollingSensorType = &hwMonWorker{}
+
+	hwMonWorker := &hwMonWorker{}
+
+	prefs, err := preferences.LoadWorkerPreferences(ctx, hwMonWorker)
+	if err != nil {
+		return worker, fmt.Errorf("could not load preferences: %w", err)
+	}
+
+	// If disabled, don't use.
+	if prefs.DisableHWMon {
+		return worker, nil
+	}
+
+	worker.PollingSensorType = hwMonWorker
 
 	return worker, nil
 }
