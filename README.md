@@ -488,31 +488,31 @@ stable Alpine Linux release.
 To register the agent running in a container, run the following:
 
 ```shell
-    podman run --rm --hostname go-hass-agent-container \
-      --network host \
+    podman run --rm --network host \
       --volume go-hass-agent:/home/go-hass-agent:U \
-      ghcr.io/joshuar/go-hass-agent:VERSION register \
+      ghcr.io/joshuar/go-hass-agent:_VERSION_ register \
       --server https://some.server:port \
       --token 'longlivedtoken'
 ```
 
-- Change `VERSION` to the latest version. **Do not use latest, which is unstable and likely to break.**
+- Change `_VERSION_` to a release version. **Do not use latest, which is unstable and likely to break.**
 - Change the value of `--server` to your Home Assistant server.
 - Change the value of `--token` to a long-lived token retrieved from Home
   Assistant.
   - ***Be sure to quote the token to avoid shell escape errors.***
-- We are running the container in a "one-shot" mode (specifying `--rm`) as we
+- We are running the container in a “one-shot” mode (specifying `--rm`) as we
   just want to register and generate the configuration file. We will use a
   different command below to actually run Go Hass Agent.
 
 Once registered, run the agent with:
 
 ```shell
-podman run --hostname go-hass-agent-container --name my-go-hass-agent \
+podman run --hostname _HOSTNAME_ --name go-hass-agent \
   --network host \
   --volume go-hass-agent:/home/go-hass-agent:U \
   --volume /proc:/host/proc:ro --volume /sys:/host/sys:ro \
-  --volume /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket:ro \
+  --env PROCFS_ROOT=/host/proc --env SYSFS_ROOT=/host/sys \
+  --volume /run/dbus:/run/dbus:ro \
   --volume /run/user/1000/bus:/run/user/1000/bus:ro \
   --device /dev/video0:/dev/video0
   ghcr.io/joshuar/go-hass-agent:VERSION # add any Go Hass Agent options here.
@@ -525,9 +525,10 @@ during registration.
 All the other volume mounts are optional, but functionality and the sensors
 reported will be severely limited without them:
 
-- `--volume /proc:/host/proc:ro --volume /sys:/host/sys:ro`:
+- `--volume /proc:/host/proc:ro --volume /sys:/host/sys:ro`
+- `--env PROCFS_ROOT=/host/proc --env SYSFS_ROOT=/host/sys`
   - Enables various hardware and system monitoring sensors.
-- `--volume /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket:ro`
+- `--volume /run/dbus:/run/dbus:ro`
 - `--volume /run/user/1000/bus:/run/user/1000/bus:ro`
   - Enables sensors that are gathered via D-Bus. Adjust `1000` to the uid of
     your user.
@@ -563,7 +564,7 @@ agent manage this file.
 
 ### 🐚 Script Sensors
 
-Go Hass Agent supports utilising scripts to create sensors. In this way, you can
+Go Hass Agent supports utilizing scripts to create sensors. In this way, you can
 extend the sensors presented to Home Assistant by the agent. Note that as the
 agent is a “mobile app” in Home Assistant, any script sensors will be associated
 with the Go Hass Agent device in Home Assistant.
