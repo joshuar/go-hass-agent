@@ -3,16 +3,20 @@
   "service": "devcontainer",
   "shutdownAction": "stopCompose",
   "containerUser": "vscode",
-  "containerEnv": {
-    "DISPLAY": ":0",
-    "XAUTHORITY": "/tmp/.Xauthority",
-    "HOME": "/home/vscode",
-    "DEVCONTAINER": "true"
-  },
   "updateRemoteUserUID": true,
   "workspaceFolder": "/workspace",
   "remoteEnv": {
-    "DBUS_SESSION_BUS_ADDRESS": "${localEnv:DBUS_SESSION_BUS_ADDRESS}"
+    "DBUS_SESSION_BUS_ADDRESS": "${localEnv:DBUS_SESSION_BUS_ADDRESS}",
+    "DESKTOP_SESSION": "${localEnv:DESKTOP_SESSION}",
+    "DISPLAY": "${localEnv:DISPLAY}",
+    "XAUTHORITY": "${localEnv:XAUTHORITY}",
+    "XDG_CURRENT_DESKTOP": "${localEnv:XDG_CURRENT_DESKTOP}",
+    "XDG_DATA_DIRS": "${localEnv:XDG_DATA_DIRS}",
+    "XDG_MENU_PREFIX": "${localEnv:XDG_MENU_PREFIX}",
+    "XDG_RUNTIME_DIR": "${localEnv:XDG_RUNTIME_DIR}",
+    "XDG_SESSION_DESKTOP": "${localEnv:XDG_SESSION_DESKTOP}",
+    "XDG_SESSION_TYPE": "${localEnv:XDG_SESSION_TYPE}",
+    "HOME": "/home/vscode"
   },
   "features": {
     "ghcr.io/devcontainers/features/go:1": {},

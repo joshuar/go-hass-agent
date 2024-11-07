@@ -1,4 +1,5 @@
-version: "3.8"
+x-podman:
+  in_pod: false
 services:
   devcontainer:
     build:
@@ -6,10 +7,13 @@ services:
     volumes:
       - ..:/workspace:cached
       - /etc/localtime:/etc/localtime:ro,cached
-      - /run/dbus/system_bus_socket:/run/dbus/system_bus_socket
+      - /run/dbus:/run/dbus:ro
       - /run/user/1000/bus:/run/user/1000/bus
-      - ${HOME}/.Xauthority:/tmp/.Xauthority
+      - ${HOME}/.Xauthority:/home/vscode/.Xauthority
+      - /run/user/1000/podman/podman.sock:/run/docker.sock:ro
+    hostname: devcontainer
     user: vscode
+    userns_mode: keep-id    
     cap_add:
       - SYS_PTRACE
     security_opt:
@@ -18,10 +22,12 @@ services:
   home-assistant:
     image: ghcr.io/home-assistant/home-assistant:$HA_VERSION
     volumes:
-      - ../deployments/home-assistant/config:/config
+      - ../deployments/home-assistant/config:/config:Z,U
+      - /run/dbus:/run/dbus:ro
     restart: on-failure
     ports:
       - 8123:8123
+    userns_mode: keep-id
   mosquitto:
     image: docker.io/eclipse-mosquitto:$MOSQUITTO_VERSION
     volumes:
@@ -29,6 +35,7 @@ services:
       - ../deployments/mosquitto/data:/mosquitto/data:Z,U
       - ../deployments/mosquitto/log:/mosquitto/log:Z,U
       - /etc/localtime:/etc/localtime:ro,cached
+    userns_mode: keep-id
     restart: on-failure
     ports:
       - 1883:1883
