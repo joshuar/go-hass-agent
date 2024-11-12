@@ -56,9 +56,11 @@ func newLinkSensor(msg rtnetlink.LinkMessage) *sensor.Entity {
 	case rtnetlink.OperStateNotPresent:
 		link.Value = "invalid"
 		link.Icon = "mdi:close-network"
-	default:
+	case rtnetlink.OperStateDown:
 		link.Value = "down"
 		link.Icon = "mdi:network-off"
+	default:
+		return nil
 	}
 
 	if msg.Attributes.Info != nil {
