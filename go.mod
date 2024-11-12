@@ -103,7 +103,7 @@ require (
 
 require (
 	fyne.io/systray v1.11.0 // indirect
-	github.com/adrg/xdg v0.5.1
+	github.com/adrg/xdg v0.5.3
 	github.com/alecthomas/kong v1.4.0
 	github.com/blackjack/webcam v0.6.1
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
