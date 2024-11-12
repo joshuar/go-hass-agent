@@ -68,6 +68,7 @@
   - [🚩 First-run](#-first-run)
   - [👻 Running “Headless”](#-running-headless)
   - [🐳 Running in a container](#-running-in-a-container)
+  - [🔧 Alternative System Mount Points](#-alternative-system-mount-points)
   - [🔄 Regular Usage](#-regular-usage)
   - [🗒️ Configuration Location](#️-configuration-location)
   - [🐚 Script Sensors](#-script-sensors)
@@ -536,6 +537,33 @@ reported will be severely limited without them:
   - Allows webcam control (when configured with MQTT).
 
 [⬆️ Back to Top](#-table-of-contents)
+
+### 🔧 Alternative System Mount Points
+
+Go Hass Agent supports alternative system mount points, which can be especially
+useful when [running in a container](#-running-in-a-container). You can set the
+following environment variables to specify the location Go Hass Agent will use
+for various mounts:
+
+- `PROCFS_ROOT`: alternative mount point for `/proc`.
+- `DEVFS_ROOT`: alternative mount point for `/dev`.
+- `SYSFS_ROOT`: alternative mount point for `/sys`.
+
+When these are set, any sensors that would normally source their data from a
+file in one of the canonical system mount points, will use the alternative mount
+point location specified.
+
+For running in a container, example usage would be to add the following
+command-line arguments to the container run command:
+
+```shell
+podman run \
+  ...other options... \
+  --volume /proc:/host/proc:ro --volume /sys:/host/sys:ro --volume /dev:/host/dev:ro \
+  --env PROCFS_ROOT=/host/proc --env SYSFS_ROOT=/host/sys --env DEVFS_ROOT=/host/dev \
+  ...other options... \
+...
+```
 
 ### 🔄 Regular Usage
 
