@@ -9,11 +9,10 @@ services:
       - /etc/localtime:/etc/localtime:ro,cached
       - /run/dbus:/run/dbus:ro
       - /run/user/1000/bus:/run/user/1000/bus
-      - ${HOME}/.Xauthority:/home/vscode/.Xauthority
-      - /run/user/1000/podman/podman.sock:/run/docker.sock:ro
+      - /tmp/.X11-unix:/tmp/.X11-unix
     hostname: devcontainer
     user: vscode
-    userns_mode: keep-id    
+    userns_mode: keep-id
     cap_add:
       - SYS_PTRACE
     security_opt:
