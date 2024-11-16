@@ -116,7 +116,7 @@ func newCountSensor(name, icon, valueStr string) sensor.Entity {
 
 	return sensor.Entity{
 		Name:       name,
-		StateClass: types.StateClassTotalIncreasing,
+		StateClass: types.StateClassMeasurement,
 		Category:   types.CategoryDiagnostic,
 		State: &sensor.State{
 			ID:    strcase.ToSnake(name),
