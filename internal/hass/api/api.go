@@ -14,7 +14,6 @@ import (
 
 	"github.com/go-resty/resty/v2"
 
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/logging"
 )
 
@@ -78,7 +77,7 @@ func (e *ResponseError) Error() string {
 	return strings.Join(msg, ": ")
 }
 
-func Send[T any](ctx context.Context, url string, details any) (T, error) {
+func Send[T any](ctx context.Context, url string, details Request) (T, error) {
 	var response T
 
 	requestClient := client.R().SetContext(ctx)
@@ -96,17 +95,7 @@ func Send[T any](ctx context.Context, url string, details any) (T, error) {
 		}
 	}
 
-	// Explicitly set the request body based on the type. Not doing this with
-	// composable types may result in an unexpected body.
-	switch request := details.(type) {
-	case sensor.Entity:
-		requestClient.SetBody(request.RequestBody())
-	case sensor.State:
-		requestClient.SetBody(request.RequestBody())
-	case Request:
-		requestClient.SetBody(request.RequestBody())
-	}
-
+	requestClient.SetBody(details.RequestBody())
 	responseObj, err := requestClient.Post(url)
 
 	logging.FromContext(ctx).

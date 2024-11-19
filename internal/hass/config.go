@@ -53,10 +53,10 @@ func (c *Config) IsEntityDisabled(entity string) (bool, error) {
 
 type configRequest struct{}
 
-func (c *configRequest) RequestType() string {
-	return "get_config"
-}
-
-func (c *configRequest) RequestData() any {
-	return nil
+func (c *configRequest) RequestBody() any {
+	return struct {
+		Type string `json:"type"`
+	}{
+		Type: "get_config",
+	}
 }

@@ -28,10 +28,12 @@ func (e *Event) Validate() error {
 	return nil
 }
 
-func (e *Event) RequestType() string {
-	return requestTypeEvent
-}
-
-func (e *Event) RequestData() any {
-	return e
+func (e *Event) RequestBody() any {
+	return struct {
+		Data        any    `json:"data"`
+		RequestType string `json:"type"`
+	}{
+		RequestType: requestTypeEvent,
+		Data:        e,
+	}
 }
