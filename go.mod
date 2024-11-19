@@ -6,7 +6,7 @@ require (
 	fyne.io/fyne/v2 v2.5.2
 	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/eclipse/paho.golang v0.22.0
-	github.com/go-playground/validator/v10 v10.22.1
+	github.com/go-playground/validator/v10 v10.23.0
 	github.com/godbus/dbus/v5 v5.1.0
 	github.com/goreleaser/nfpm/v2 v2.41.0
 	github.com/grandcat/zeroconf v1.0.0
