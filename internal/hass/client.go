@@ -84,7 +84,7 @@ func (c *Client) HassVersion(ctx context.Context) string {
 }
 
 func (c *Client) ProcessEvent(ctx context.Context, details event.Event) error {
-	resp, err := api.Send[response](ctx, c.url, details)
+	resp, err := api.Send[response](ctx, c.url, &details)
 	if err != nil {
 		return fmt.Errorf("failed to send event request: %w", err)
 	}
@@ -133,7 +133,7 @@ func (c *Client) ProcessSensor(ctx context.Context, details sensor.Entity) error
 	}
 
 	// Sensor registration.
-	resp, err := api.Send[registrationResponse](ctx, c.url, details)
+	resp, err := api.Send[registrationResponse](ctx, c.url, &details)
 	if err != nil {
 		return fmt.Errorf("failed to send sensor registration: %w", err)
 	}

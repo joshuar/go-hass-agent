@@ -27,7 +27,7 @@ type response struct {
 }
 
 func (r *response) Status() (responseStatus, error) {
-	if r.IsSuccess {
+	if r.IsSuccess || r.ErrorDetails == nil {
 		return Updated, nil
 	}
 
