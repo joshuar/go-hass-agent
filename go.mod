@@ -8,7 +8,7 @@ require (
 	github.com/eclipse/paho.golang v0.22.0
 	github.com/go-playground/validator/v10 v10.22.1
 	github.com/godbus/dbus/v5 v5.1.0
-	github.com/goreleaser/nfpm/v2 v2.41.0
+	github.com/goreleaser/nfpm/v2 v2.41.1
 	github.com/grandcat/zeroconf v1.0.0
 	github.com/iancoleman/strcase v0.3.0
 	github.com/joshuar/go-hass-anything/v12 v12.0.0
