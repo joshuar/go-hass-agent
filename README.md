@@ -328,7 +328,7 @@ this app:
 #### 📢 Events
 
 - User sessions (login/logout) events.
-  - Requires a system configured with `systemd-logind` (and D-Bus).
+  - Requires a system configured with `systemd-logind`.
   - Event structures:
 
     ```yaml
@@ -341,6 +341,17 @@ this app:
       service: "" # blank or the service that handled the action (e.g., ssh).
       type: "tty" # blank or type of session.
       user: myuser # username.
+    ```
+
+- Out Of Memory (OOM) events.
+  - Requires a system configured with `systemd-oomd` enabled.
+  - Event structure:
+
+    ```yaml
+    event_type: oom_event
+    data:
+      process: systoomd_swap_test # process that was killed by systemd-oomd.
+      pid: 909764 # pid of process.
     ```
 
 ### All Operating Systems
