@@ -66,6 +66,7 @@ var sensorLaptopWorkersInitFuncs = []func(ctx context.Context) (*linux.EventSens
 
 // eventWorkersInitFuncs are event workers that produce events rather than sensors.
 var eventWorkersInitFuncs = []func(ctx context.Context) (*linux.EventWorker, error){
+	mem.NewOOMEventsWorker,
 	system.NewUserSessionEventsWorker,
 }
 

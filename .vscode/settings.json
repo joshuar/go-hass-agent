@@ -31,7 +31,8 @@
     "linux/media",
     "agent/sensor",
     "linux/cpu",
-    "linux/system"
+    "linux/system",
+    "linux/mem"
   ],
   "go.testFlags": ["-v"],
   "[markdown]": {
