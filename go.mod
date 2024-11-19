@@ -5,7 +5,7 @@ go 1.23.2
 require (
 	fyne.io/fyne/v2 v2.5.2
 	github.com/cenkalti/backoff/v4 v4.3.0
-	github.com/eclipse/paho.golang v0.21.0
+	github.com/eclipse/paho.golang v0.22.0
 	github.com/go-playground/validator/v10 v10.22.1
 	github.com/godbus/dbus/v5 v5.1.0
 	github.com/goreleaser/nfpm/v2 v2.41.0
@@ -58,7 +58,7 @@ require (
 	github.com/google/uuid v1.4.0 // indirect
 	github.com/goreleaser/chglog v0.6.1 // indirect
 	github.com/goreleaser/fileglob v1.3.0 // indirect
-	github.com/gorilla/websocket v1.5.1 // indirect
+	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/huandu/xstrings v1.3.3 // indirect
 	github.com/imdario/mergo v0.3.16 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
