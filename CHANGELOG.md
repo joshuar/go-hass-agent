@@ -1,5 +1,22 @@
 # Changelog
 
+## [10.5.0](https://github.com/joshuar/go-hass-agent/compare/v10.4.0...v10.5.0) (2024-11-19)
+
+
+### Features
+
+* **linux/cpu:** :sparkles: add preferences to optionally disable all cpu (and specifically, cpu frequency) sensors ([ecc5cc6](https://github.com/joshuar/go-hass-agent/commit/ecc5cc6a6a6e3d7615ef24fe7adac0811983c5d5))
+* **linux/mem:** :sparkles: send oom events to Home Assistant ([c491e81](https://github.com/joshuar/go-hass-agent/commit/c491e810f21c574fb784af9babc607416d6ba8aa))
+* **linux/system:** :sparkles: add preferences to optionally disable hwmon sensors ([7b65aab](https://github.com/joshuar/go-hass-agent/commit/7b65aab7b6473c2377c19af7e1206241f2765954))
+
+
+### Bug Fixes
+
+* **hass:** :bug: correct JSON marshaling ([bd31214](https://github.com/joshuar/go-hass-agent/commit/bd31214b7304e60483d8166070901c11a4a30b0c))
+* **linux/cpu:** :bug: cpu process state counts should not be totalincreasing state class ([0183281](https://github.com/joshuar/go-hass-agent/commit/0183281cd03514ab4a274548a4058f6fcf0a6613))
+* **linux/net:** :bug: only use link up/down/invalid netlink messages for link state ([27919b4](https://github.com/joshuar/go-hass-agent/commit/27919b46fbba0af2ba043a6ea694e84bbe00cdbb))
+* **linux/net:** :bug: treat unknown link state as down state ([813485e](https://github.com/joshuar/go-hass-agent/commit/813485e73b56de1605d5ed23ee80583d0599bad2))
+
 ## [10.4.0](https://github.com/joshuar/go-hass-agent/compare/v10.3.2...v10.4.0) (2024-10-31)
 
 
