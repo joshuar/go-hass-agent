@@ -10,8 +10,6 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/davecgh/go-spew/spew"
-
 	"github.com/joshuar/go-hass-agent/internal/hass/event"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/logging"
@@ -35,6 +33,7 @@ type OOMEventsWorker struct {
 	linux.EventWorker
 }
 
+//nolint:gocognit
 func (w *OOMEventsWorker) Events(ctx context.Context) (<-chan event.Event, error) {
 	eventCh := make(chan event.Event)
 
@@ -51,9 +50,6 @@ func (w *OOMEventsWorker) Events(ctx context.Context) (<-chan event.Event, error
 					logging.FromContext(ctx).Debug("Could not parse changed properties for unit.", slog.Any("error", err))
 					continue
 				}
-				// if !strings.HasPrefix(trigger.Path, unitPathPrefix+"/app-") {
-				// 	continue
-				// }
 				// Ignore events that don't indicate a result change.
 				if _, found := props.Changed["Result"]; !found {
 					continue
@@ -65,14 +61,7 @@ func (w *OOMEventsWorker) Events(ctx context.Context) (<-chan event.Event, error
 					continue
 				}
 
-				slog.Info("received event",
-					slog.String("path", trigger.Path),
-					slog.String("interface", props.Interface),
-					slog.Any("result", result),
-				)
-
 				if result == "oom-kill" {
-					spew.Dump(trigger)
 					// Naming is defined in
 					// https://systemd.io/DESKTOP_ENVIRONMENTS/. The strings seem
 					// to be percent-encoded with % replaced by _.
@@ -90,6 +79,7 @@ func (w *OOMEventsWorker) Events(ctx context.Context) (<-chan event.Event, error
 					// Ignore the <RANDOM> string that might be appended.
 					processStr, _, _ = strings.Cut(processStr, "@")
 					// Get the PID.
+					//nolint:errcheck
 					pid, _ := dbusx.VariantToValue[int](props.Changed["MainPID"])
 					if pid == 0 {
 						continue
