@@ -1,5 +1,12 @@
 # Changelog
 
+## [10.5.1](https://github.com/joshuar/go-hass-agent/compare/v10.5.0...v10.5.1) (2024-11-20)
+
+
+### Bug Fixes
+
+* **linux/mem:** :fire: remove debug output ([ec1b975](https://github.com/joshuar/go-hass-agent/commit/ec1b9750f05ce05bec7989b44484f057fa49d391))
+
 ## [10.5.0](https://github.com/joshuar/go-hass-agent/compare/v10.4.0...v10.5.0) (2024-11-19)
 
 
