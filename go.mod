@@ -15,15 +15,15 @@ require (
 	github.com/lthibault/jitterbug/v2 v2.2.2
 	github.com/lxzan/gws v1.8.8
 	github.com/magefile/mage v1.15.0
-	github.com/matryer/moq v0.5.0
+	github.com/matryer/moq v0.5.1
 	github.com/mdlayher/netlink v1.7.2
 	github.com/pelletier/go-toml/v2 v2.2.3
 	github.com/robfig/cron/v3 v3.0.1
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.10.0
 	github.com/yassinebenaid/godump v0.11.1
 	golang.org/x/exp v0.0.0-20240613232115-7f521ea00fb8
 	golang.org/x/text v0.20.0
-	golang.org/x/tools v0.26.0
+	golang.org/x/tools v0.27.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -95,7 +95,7 @@ require (
 	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	gitlab.com/digitalxero/go-conventional-commit v1.0.7 // indirect
-	golang.org/x/mod v0.21.0 // indirect
+	golang.org/x/mod v0.22.0 // indirect
 	golang.org/x/sync v0.9.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	howett.net/plist v1.0.0 // indirect
@@ -119,7 +119,7 @@ require (
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
-	github.com/go-resty/resty/v2 v2.16.0
+	github.com/go-resty/resty/v2 v2.16.2
 	github.com/go-test/deep v1.1.1
 	github.com/go-text/render v0.2.0 // indirect
 	github.com/go-text/typesetting v0.2.0 // indirect
@@ -143,9 +143,9 @@ require (
 	github.com/tklauser/go-sysconf v0.3.14
 	github.com/tklauser/numcpus v0.8.0 // indirect
 	github.com/yuin/goldmark v1.7.1 // indirect
-	golang.org/x/crypto v0.28.0 // indirect
+	golang.org/x/crypto v0.29.0 // indirect
 	golang.org/x/image v0.18.0 // indirect
 	golang.org/x/mobile v0.0.0-20231127183840-76ac6878050a // indirect
-	golang.org/x/net v0.30.0 // indirect
+	golang.org/x/net v0.31.0 // indirect
 	golang.org/x/sys v0.27.0
 )
