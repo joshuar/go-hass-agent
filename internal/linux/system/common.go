@@ -8,5 +8,6 @@ const (
 )
 
 type WorkerPrefs struct {
-	DisableHWMon bool `toml:"disable_hwmon" comment:"Set to true to disable hwmon sensors."`
+	HWMonUpdateInterval string `toml:"hwmon_sensor_update_interval" comment:"Time between updates of hwmon sensors (default 1m)."`
+	DisableHWMon        bool   `toml:"disable_hwmon" comment:"Set to true to disable hwmon sensors."`
 }

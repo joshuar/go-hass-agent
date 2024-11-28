@@ -3,13 +3,16 @@
 
 package cpu
 
-import "github.com/joshuar/go-hass-agent/internal/preferences"
+import (
+	"github.com/joshuar/go-hass-agent/internal/preferences"
+)
 
 const (
 	preferencesID = "cpu_sensors"
 )
 
 type WorkerPrefs struct {
-	DisableCPUFreq bool `toml:"disable_cpufreq" comment:"Set to true to disable CPU frequency sensors."`
+	UpdateInterval string `toml:"sensor_update_interval" comment:"Time between updates of sensors (default 10s)."`
+	DisableCPUFreq bool   `toml:"disable_cpufreq" comment:"Set to true to disable CPU frequency sensors."`
 	preferences.CommonWorkerPrefs
 }
