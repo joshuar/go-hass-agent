@@ -10,6 +10,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -18,12 +19,13 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
 const (
-	usageUpdateInterval = 10 * time.Second
-	usageUpdateJitter   = 500 * time.Millisecond
+	defaultUsageUpdateInterval = 10 * time.Second
+	defaultUsageUpdateJitter   = 500 * time.Millisecond
 
 	usageWorkerID = "cpu_usage"
 
@@ -34,12 +36,12 @@ var ErrParseCPUUsage = errors.New("could not parse CPU usage")
 
 type usageWorker struct {
 	boottime    time.Time
-	path        string
 	rateSensors map[string]*rateSensor
+	path        string
+	prefs       WorkerPrefs
 	linux.PollingSensorWorker
 	clktck int64
 	delta  time.Duration
-	prefs  WorkerPrefs
 }
 
 func (w *usageWorker) UpdateDelta(delta time.Duration) {
@@ -55,13 +57,15 @@ func (w *usageWorker) PreferencesID() string {
 }
 
 func (w *usageWorker) DefaultPreferences() WorkerPrefs {
-	return WorkerPrefs{}
+	return WorkerPrefs{
+		UpdateInterval: defaultUsageUpdateInterval.String(),
+	}
 }
 
 func NewUsageWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
 	var err error
 
-	worker := linux.NewPollingSensorWorker(usageWorkerID, usageUpdateInterval, usageUpdateJitter)
+	worker := linux.NewPollingSensorWorker(usageWorkerID, defaultUsageUpdateInterval, defaultUsageUpdateJitter)
 
 	clktck, found := linux.CtxGetClkTck(ctx)
 	if !found {
@@ -93,6 +97,21 @@ func NewUsageWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
 		return worker, nil
 	}
 
+	interval, err := time.ParseDuration(cpuUsageWorker.prefs.UpdateInterval)
+	if err != nil {
+		logging.FromContext(ctx).Warn("Could not parse update interval, using default value.",
+			slog.String("requested_value", cpuUsageWorker.prefs.UpdateInterval),
+			slog.String("default_value", defaultUsageUpdateInterval.String()))
+		// Save preferences with default interval value.
+		cpuUsageWorker.prefs.UpdateInterval = defaultUsageUpdateInterval.String()
+		if err := preferences.SaveWorkerPreferences(ctx, cpuUsageWorker.PreferencesID(), cpuUsageWorker.prefs); err != nil {
+			logging.FromContext(ctx).Warn("Could not save preferences.", slog.Any("error", err))
+		}
+
+		interval = defaultUsageUpdateInterval
+	}
+
+	worker.PollInterval = interval
 	worker.PollingSensorType = cpuUsageWorker
 
 	return worker, nil

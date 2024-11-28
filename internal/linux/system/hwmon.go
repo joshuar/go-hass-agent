@@ -9,11 +9,13 @@ package system
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 	"github.com/joshuar/go-hass-agent/pkg/linux/hwmon"
 )
@@ -99,7 +101,9 @@ func (w *hwMonWorker) PreferencesID() string {
 }
 
 func (w *hwMonWorker) DefaultPreferences() WorkerPrefs {
-	return WorkerPrefs{}
+	return WorkerPrefs{
+		HWMonUpdateInterval: hwMonInterval.String(),
+	}
 }
 
 func NewHWMonWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
@@ -117,6 +121,21 @@ func NewHWMonWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
 		return worker, nil
 	}
 
+	interval, err := time.ParseDuration(prefs.HWMonUpdateInterval)
+	if err != nil {
+		logging.FromContext(ctx).Warn("Could not parse update interval, using default value.",
+			slog.String("requested_value", prefs.HWMonUpdateInterval),
+			slog.String("default_value", hwMonInterval.String()))
+		// Save preferences with default interval value.
+		prefs.HWMonUpdateInterval = hwMonInterval.String()
+		if err := preferences.SaveWorkerPreferences(ctx, hwMonWorker.PreferencesID(), prefs); err != nil {
+			logging.FromContext(ctx).Warn("Could not save preferences.", slog.Any("error", err))
+		}
+
+		interval = hwMonInterval
+	}
+
+	worker.PollInterval = interval
 	worker.PollingSensorType = hwMonWorker
 
 	return worker, nil
