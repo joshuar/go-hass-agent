@@ -15,7 +15,7 @@ require (
 	github.com/lthibault/jitterbug/v2 v2.2.2
 	github.com/lxzan/gws v1.8.8
 	github.com/magefile/mage v1.15.0
-	github.com/matryer/moq v0.5.0
+	github.com/matryer/moq v0.5.1
 	github.com/mdlayher/netlink v1.7.2
 	github.com/pelletier/go-toml/v2 v2.2.3
 	github.com/robfig/cron/v3 v3.0.1
