@@ -20,11 +20,6 @@ import (
 
 var ErrUserCancelledRegistration = errors.New("user canceled registration")
 
-type registrationPrefs interface {
-	AgentRegistered() bool
-	SaveHassPreferences(ctx context.Context, details *preferences.Hass, options *preferences.Registration) error
-}
-
 func checkRegistration(ctx context.Context, agentUI ui) error {
 	if preferences.Registered() && !ForceRegister(ctx) {
 		return nil

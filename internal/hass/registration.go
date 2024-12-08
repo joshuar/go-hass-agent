@@ -32,9 +32,9 @@ func (r *registrationRequest) RequestBody() any {
 	return r.Device
 }
 
-func newRegistrationRequest(device *device.Device, token string) *registrationRequest {
+func newRegistrationRequest(thisDevice *device.Device, token string) *registrationRequest {
 	return &registrationRequest{
-		Device: device,
+		Device: thisDevice,
 		Token:  token,
 	}
 }
@@ -46,10 +46,10 @@ func RegisterDevice(ctx context.Context, registration *preferences.Registration)
 	}
 
 	registrationURL := registration.Server + RegistrationPath
-	device := device.NewDevice(preferences.AppIDFromContext(ctx))
+	thisDevice := device.NewDevice(preferences.AppIDFromContext(ctx))
 
 	// Register the device against the registration endpoint.
-	registrationStatus, err := api.Send[preferences.Hass](ctx, registrationURL, newRegistrationRequest(device, registration.Token))
+	registrationStatus, err := api.Send[preferences.Hass](ctx, registrationURL, newRegistrationRequest(thisDevice, registration.Token))
 	if err != nil {
 		return nil, fmt.Errorf("could not register device: %w", err)
 	}

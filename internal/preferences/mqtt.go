@@ -6,6 +6,7 @@
 package preferences
 
 import (
+	"errors"
 	"fmt"
 
 	mqtthass "github.com/joshuar/go-hass-anything/v12/pkg/hass"
@@ -20,12 +21,28 @@ type MQTT struct {
 	MQTTEnabled     bool   `toml:"enabled" validate:"boolean" kong:"-"`
 }
 
+var ErrSetMQTTPreference = errors.New("could not set MQTT preference")
+
 func SetMQTTPreferences(prefs *MQTT) error {
-	prefsSrc.Set("mqtt.server", prefs.MQTTServer)
-	prefsSrc.Set("mqtt.user", prefs.MQTTUser)
-	prefsSrc.Set("mqtt.password", prefs.MQTTPassword)
-	prefsSrc.Set("mqtt.topic_prefix", prefs.MQTTTopicPrefix)
-	prefsSrc.Set("mqtt.enabled", prefs.MQTTEnabled)
+	if err := prefsSrc.Set("mqtt.server", prefs.MQTTServer); err != nil {
+		return fmt.Errorf("%w: %w", ErrSetMQTTPreference, err)
+	}
+
+	if err := prefsSrc.Set("mqtt.user", prefs.MQTTUser); err != nil {
+		return fmt.Errorf("%w: %w", ErrSetMQTTPreference, err)
+	}
+
+	if err := prefsSrc.Set("mqtt.password", prefs.MQTTPassword); err != nil {
+		return fmt.Errorf("%w: %w", ErrSetMQTTPreference, err)
+	}
+
+	if err := prefsSrc.Set("mqtt.topic_prefix", prefs.MQTTTopicPrefix); err != nil {
+		return fmt.Errorf("%w: %w", ErrSetMQTTPreference, err)
+	}
+
+	if err := prefsSrc.Set("mqtt.enabled", prefs.MQTTEnabled); err != nil {
+		return fmt.Errorf("%w: %w", ErrSetMQTTPreference, err)
+	}
 
 	return nil
 }

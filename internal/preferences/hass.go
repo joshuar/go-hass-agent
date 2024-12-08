@@ -26,32 +26,49 @@ type Hass struct {
 	WebsocketURL string `toml:"websocketurl" json:"-" validate:"required,url"`
 }
 
-var ErrSaveHassPreferences = errors.New("error saving hass preferences")
+var (
+	ErrSaveHassPreferences = errors.New("error saving hass preferences")
+	ErrSetHassPreference   = errors.New("could not set hass preference")
+)
 
+//revive:disable:indent-error-flow
 func SetHassPreferences(hassPrefs *Hass, regPrefs *Registration) error {
-	prefsSrc.Set("hass.secret", hassPrefs.Secret)
+	if err := prefsSrc.Set("hass.secret", hassPrefs.Secret); err != nil {
+		return fmt.Errorf("%w: %w", ErrSetHassPreference, err)
+	}
 
 	// Generate an API URL and set preferences as appropriate.
 	if apiURL, err := generateAPIURL(hassPrefs, regPrefs); err != nil {
 		return fmt.Errorf("%w: %w", ErrSaveHassPreferences, err)
 	} else {
-		prefsSrc.Set("hass.apiurl", apiURL)
+		if err := prefsSrc.Set("hass.apiurl", apiURL); err != nil {
+			return fmt.Errorf("%w: %w", ErrSetHassPreference, err)
+		}
 	}
 
 	// Generate a websocket URL and set preferences as appropriate.
 	if websocketURL, err := generateWebsocketURL(regPrefs); err != nil {
 		return fmt.Errorf("%w: %w", ErrSaveHassPreferences, err)
 	} else {
-		prefsSrc.Set("hass.websocketurl", websocketURL)
+		if err := prefsSrc.Set("hass.websocketurl", websocketURL); err != nil {
+			return fmt.Errorf("%w: %w", ErrSetHassPreference, err)
+		}
 	}
 
 	// Set the webhookID if present.
 	if hassPrefs.WebhookID != "" {
-		prefsSrc.Set("hass.webhook_id", hassPrefs.WebhookID)
+		if err := prefsSrc.Set("hass.webhook_id", hassPrefs.WebhookID); err != nil {
+			return fmt.Errorf("%w: %w", ErrSetHassPreference, err)
+		}
 	}
 
-	prefsSrc.Set("registration.server", regPrefs.Server)
-	prefsSrc.Set("registration.token", regPrefs.Token)
+	if err := prefsSrc.Set("registration.server", regPrefs.Server); err != nil {
+		return fmt.Errorf("%w: %w", ErrSetHassPreference, err)
+	}
+
+	if err := prefsSrc.Set("registration.token", regPrefs.Token); err != nil {
+		return fmt.Errorf("%w: %w", ErrSetHassPreference, err)
+	}
 
 	return nil
 }
@@ -83,10 +100,16 @@ func Token() string {
 func generateAPIURL(hassPrefs *Hass, regPrefs *Registration) (string, error) {
 	switch {
 	case hassPrefs.CloudhookURL != "" && regPrefs.IgnoreHassURLs:
-		prefsSrc.Set("hass.cloudhook_url", hassPrefs.CloudhookURL)
+		if err := prefsSrc.Set("hass.cloudhook_url", hassPrefs.CloudhookURL); err != nil {
+			return "", fmt.Errorf("%w: %w", ErrSetHassPreference, err)
+		}
+
 		return hassPrefs.CloudhookURL, nil
 	case hassPrefs.RemoteUIURL != "" && hassPrefs.WebhookID != "" && !regPrefs.IgnoreHassURLs:
-		prefsSrc.Set("hass.remote_ui_url", hassPrefs.CloudhookURL)
+		if err := prefsSrc.Set("hass.remote_ui_url", hassPrefs.CloudhookURL); err != nil {
+			return "", fmt.Errorf("%w: %w", ErrSetHassPreference, err)
+		}
+
 		return hassPrefs.RemoteUIURL + WebHookPath + hassPrefs.WebhookID, nil
 	default:
 		apiURL, err := url.Parse(regPrefs.Server)

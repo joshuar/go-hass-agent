@@ -73,23 +73,29 @@ func Run(ctx context.Context) error {
 		return fmt.Errorf("cannot read old preferences: %w", err)
 	}
 
-	if err := preferences.Load(ctx); err != nil && !errors.Is(err, preferences.ErrLoadPreferences) {
+	if err = preferences.Load(ctx); err != nil && !errors.Is(err, preferences.ErrLoadPreferences) {
 		return fmt.Errorf("cannot initialize new preferences: %w", err)
 	}
 
-	// Map old preferences to new preferences.
-	preferences.SetRegistered(oldPrefs.Registered)
+	// Registered status.
+	if err = preferences.SetRegistered(oldPrefs.Registered); err != nil {
+		return fmt.Errorf("cannot set new preferences: %w", err)
+	}
+
 	// MQTT preferences.
 	if oldPrefs.MQTTEnabled {
-		preferences.SetMQTTPreferences(&preferences.MQTT{
+		if err = preferences.SetMQTTPreferences(&preferences.MQTT{
 			MQTTEnabled:     true,
 			MQTTServer:      oldPrefs.MQTTServer,
 			MQTTUser:        oldPrefs.MQTTUser,
 			MQTTPassword:    oldPrefs.MQTTPassword,
 			MQTTTopicPrefix: oldPrefs.MQTTTopicPrefix,
-		})
+		}); err != nil {
+			return fmt.Errorf("cannot set new preferences: %w", err)
+		}
 	}
-	preferences.SetHassPreferences(
+
+	if err = preferences.SetHassPreferences(
 		// Hass preferences.
 		&preferences.Hass{
 			Secret:       oldPrefs.Secret,
@@ -103,12 +109,17 @@ func Run(ctx context.Context) error {
 		&preferences.Registration{
 			Server: oldPrefs.Host,
 			Token:  oldPrefs.Token,
-		})
+		}); err != nil {
+		return fmt.Errorf("cannot set new preferences: %w", err)
+	}
+
 	// Device preferences.
-	preferences.SetDevicePreferences(&preferences.Device{
+	if err = preferences.SetDevicePreferences(&preferences.Device{
 		Name: oldPrefs.DeviceName,
 		ID:   oldPrefs.DeviceID,
-	})
+	}); err != nil {
+		return fmt.Errorf("cannot set new preferences: %w", err)
+	}
 
 	err = preferences.Save(ctx)
 	if err != nil {

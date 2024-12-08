@@ -5,15 +5,27 @@
 
 package preferences
 
+import (
+	"errors"
+	"fmt"
+)
+
 type Device struct {
 	ID   string `toml:"id" validate:"required,ascii"`
 	Name string `toml:"name" validate:"required,ascii"`
 }
 
+var ErrSetDevicePreference = errors.New("could not set device preference")
+
 // SetDevicePreferences sets the device preferences.
 func SetDevicePreferences(device *Device) error {
-	prefsSrc.Set("device.id", device.ID)
-	prefsSrc.Set("device.name", device.Name)
+	if err := prefsSrc.Set("device.id", device.ID); err != nil {
+		return fmt.Errorf("%w: %w", ErrSetDevicePreference, err)
+	}
+
+	if err := prefsSrc.Set("device.name", device.Name); err != nil {
+		return fmt.Errorf("%w: %w", ErrSetDevicePreference, err)
+	}
 
 	return nil
 }
@@ -27,23 +39,3 @@ func DeviceName() string {
 func DeviceID() string {
 	return prefsSrc.String("device.id")
 }
-
-// func (p *Preferences) GetDeviceInfo() *Device {
-// 	return p.Device
-// }
-
-// func (p *Preferences) DeviceName() string {
-// 	if p.Device != nil {
-// 		return p.Device.Name
-// 	}
-
-// 	return unknownValue
-// }
-
-// func (p *Preferences) DeviceID() string {
-// 	if p.Device != nil {
-// 		return p.Device.ID
-// 	}
-
-// 	return unknownValue
-// }
