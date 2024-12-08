@@ -4,17 +4,35 @@
 
 - [BREAKING CHANGES](#breaking-changes)
   - [Table of Contents](#table-of-contents)
+  - [v11.0.0](#v1100)
+    - [Worker and Agent preferences merge](#worker-and-agent-preferences-merge)
+      - [What you need to do](#what-you-need-to-do)
   - [v10.0.0](#v1000)
     - [New preferences file location and format](#new-preferences-file-location-and-format)
-      - [What you need to do](#what-you-need-to-do)
+      - [What you need to do](#what-you-need-to-do-1)
         - [Run the upgrade command](#run-the-upgrade-command)
         - [Manual upgrade steps (if the upgrade command failed)](#manual-upgrade-steps-if-the-upgrade-command-failed)
     - [Log file location normalisation](#log-file-location-normalisation)
-      - [What you need to do](#what-you-need-to-do-1)
-    - [MQTT Device renamed](#mqtt-device-renamed)
       - [What you need to do](#what-you-need-to-do-2)
-    - [Power controls renaming and consolidation (when using MQTT)](#power-controls-renaming-and-consolidation-when-using-mqtt)
+    - [MQTT Device renamed](#mqtt-device-renamed)
       - [What you need to do](#what-you-need-to-do-3)
+    - [Power controls renaming and consolidation (when using MQTT)](#power-controls-renaming-and-consolidation-when-using-mqtt)
+      - [What you need to do](#what-you-need-to-do-4)
+
+## v11.0.0
+
+### Worker and Agent preferences merge
+
+Individual worker preferences, which were previously in their own files under
+the [configuration directory](../README#️-configuration-location), now live in
+the agent preferences file (`preferences.toml`).
+
+#### What you need to do
+
+Any changes from the default values for worker preferences you have made will
+need to be **manually** changed in the agent preferences file. All workers with
+preferences should have their default preferences listed in the file. So you
+only need to scan and change the ones you have edited.
 
 ## v10.0.0
 
