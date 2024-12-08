@@ -32,7 +32,8 @@
     "agent/sensor",
     "linux/cpu",
     "linux/system",
-    "linux/mem"
+    "linux/mem",
+    "BREAKING_CHANGES"
   ],
   "go.testFlags": ["-v"],
   "[markdown]": {
