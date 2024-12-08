@@ -1,5 +1,26 @@
 # Changelog
 
+## [11.0.0](https://github.com/joshuar/go-hass-agent/compare/v10.5.1...v11.0.0) (2024-12-08)
+
+
+### ⚠ BREAKING CHANGES
+
+* **preferences:** Worker preferences are now in the agent preferences file, under a "worker_prefs" section. Any existing custom preferences will need to be manually migrated to this file.
+
+### Features
+
+* **linux/cpu,linux/system:** :sparkles: add ability to specify update interval for cpu and hwmon sensor polling ([7f8450e](https://github.com/joshuar/go-hass-agent/commit/7f8450efd1a203eee4c03eaa41e7259888652d54))
+
+
+### Bug Fixes
+
+* :bug: code cleanup missed in 7591c7ac1123bf409144c650a5cd47f8eb49ee07 ([f6dca52](https://github.com/joshuar/go-hass-agent/commit/f6dca52870a20ef1459e5a57e3cac9fd46d7919b))
+
+
+### Code Refactoring
+
+* **preferences:** :recycle: merge worker and agent preferences into single file ([7591c7a](https://github.com/joshuar/go-hass-agent/commit/7591c7ac1123bf409144c650a5cd47f8eb49ee07))
+
 ## [10.5.1](https://github.com/joshuar/go-hass-agent/compare/v10.5.0...v10.5.1) (2024-11-20)
 
 
