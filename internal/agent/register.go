@@ -22,11 +22,11 @@ var ErrUserCancelledRegistration = errors.New("user canceled registration")
 
 type registrationPrefs interface {
 	AgentRegistered() bool
-	SaveHassPreferences(details *preferences.Hass, options *preferences.Registration) error
+	SaveHassPreferences(ctx context.Context, details *preferences.Hass, options *preferences.Registration) error
 }
 
-func checkRegistration(ctx context.Context, agentUI ui, device *preferences.Device, prefs registrationPrefs) error {
-	if prefs.AgentRegistered() && !ForceRegister(ctx) {
+func checkRegistration(ctx context.Context, agentUI ui) error {
+	if preferences.Registered() && !ForceRegister(ctx) {
 		return nil
 	}
 
@@ -46,13 +46,17 @@ func checkRegistration(ctx context.Context, agentUI ui, device *preferences.Devi
 	}
 
 	// Perform registration with given values.
-	registrationDetails, err := hass.RegisterDevice(ctx, device, registrationOptions)
+	registrationDetails, err := hass.RegisterDevice(ctx, registrationOptions)
 	if err != nil {
 		return fmt.Errorf("device registration failed: %w", err)
 	}
 
 	// Save the returned preferences.
-	if err := prefs.SaveHassPreferences(registrationDetails, registrationOptions); err != nil {
+	if err := preferences.SetHassPreferences(registrationDetails, registrationOptions); err != nil {
+		return fmt.Errorf("saving registration failed: %w", err)
+	}
+
+	if err := preferences.Save(ctx); err != nil {
 		return fmt.Errorf("saving registration failed: %w", err)
 	}
 

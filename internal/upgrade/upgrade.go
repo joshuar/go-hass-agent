@@ -28,8 +28,6 @@ const (
 var (
 	oldPrefsPath    = filepath.Join(xdg.ConfigHome, oldAppID)
 	oldRegistryPath = filepath.Join(xdg.ConfigHome, oldAppID, "sensorRegistry")
-	newPrefsPath    = filepath.Join(xdg.ConfigHome, preferences.AppID)
-	newRegistryPath = filepath.Join(xdg.ConfigHome, preferences.AppID, "sensorRegistry")
 
 	ErrNoPrevConfig = errors.New("no directory from previous version found")
 )
@@ -57,6 +55,8 @@ type oldPreferences struct {
 //nolint:cyclop
 //revive:disable:function-length
 func Run(ctx context.Context) error {
+	newRegistryPath := filepath.Join(xdg.ConfigHome, preferences.AppIDFromContext(ctx), "sensorRegistry")
+
 	// If there is no old preferences directory, exit.
 	if _, err := os.Stat(oldPrefsPath); errors.Is(err, fs.ErrNotExist) {
 		return errors.Join(ErrNoPrevConfig, err)
@@ -69,43 +69,50 @@ func Run(ctx context.Context) error {
 
 	var oldPrefs oldPreferences
 
-	err = toml.Unmarshal(oldData, &oldPrefs)
-	if err != nil {
+	if err = toml.Unmarshal(oldData, &oldPrefs); err != nil {
 		return fmt.Errorf("cannot read old preferences: %w", err)
 	}
 
-	newPrefs, err := preferences.Load(ctx)
-	if err != nil && !errors.Is(err, preferences.ErrNoPreferences) || newPrefs == nil {
+	if err := preferences.Load(ctx); err != nil && !errors.Is(err, preferences.ErrLoadPreferences) {
 		return fmt.Errorf("cannot initialize new preferences: %w", err)
 	}
 
 	// Map old preferences to new preferences.
-	newPrefs.Registered = oldPrefs.Registered
+	preferences.SetRegistered(oldPrefs.Registered)
 	// MQTT preferences.
 	if oldPrefs.MQTTEnabled {
-		newPrefs.MQTT.MQTTEnabled = true
-		newPrefs.MQTT.MQTTServer = oldPrefs.MQTTServer
-		newPrefs.MQTT.MQTTUser = oldPrefs.MQTTUser
-		newPrefs.MQTT.MQTTPassword = oldPrefs.MQTTPassword
-		newPrefs.MQTT.MQTTTopicPrefix = oldPrefs.MQTTTopicPrefix
+		preferences.SetMQTTPreferences(&preferences.MQTT{
+			MQTTEnabled:     true,
+			MQTTServer:      oldPrefs.MQTTServer,
+			MQTTUser:        oldPrefs.MQTTUser,
+			MQTTPassword:    oldPrefs.MQTTPassword,
+			MQTTTopicPrefix: oldPrefs.MQTTTopicPrefix,
+		})
 	}
-	// Hass preferences.
-	newPrefs.Hass.WebsocketURL = oldPrefs.WebsocketURL
-	newPrefs.Hass.WebhookID = oldPrefs.WebhookID
-	newPrefs.Hass.CloudhookURL = oldPrefs.CloudhookURL
-	newPrefs.Hass.RemoteUIURL = oldPrefs.RemoteUIURL
-	newPrefs.Hass.RestAPIURL = oldPrefs.RestAPIURL
-	newPrefs.Hass.Secret = oldPrefs.Secret
-	// Registration preferences.
-	newPrefs.Registration.Token = oldPrefs.Token
-	newPrefs.Registration.Server = oldPrefs.Host
+	preferences.SetHassPreferences(
+		// Hass preferences.
+		&preferences.Hass{
+			Secret:       oldPrefs.Secret,
+			WebhookID:    oldPrefs.WebhookID,
+			CloudhookURL: oldPrefs.CloudhookURL,
+			RemoteUIURL:  oldPrefs.RemoteUIURL,
+			RestAPIURL:   oldPrefs.RestAPIURL,
+			WebsocketURL: oldPrefs.WebsocketURL,
+		},
+		// Registration preferences.
+		&preferences.Registration{
+			Server: oldPrefs.Host,
+			Token:  oldPrefs.Token,
+		})
 	// Device preferences.
-	newPrefs.Device.ID = oldPrefs.DeviceID
-	newPrefs.Device.Name = oldPrefs.DeviceName
+	preferences.SetDevicePreferences(&preferences.Device{
+		Name: oldPrefs.DeviceName,
+		ID:   oldPrefs.DeviceID,
+	})
 
-	err = newPrefs.Save()
+	err = preferences.Save(ctx)
 	if err != nil {
-		return fmt.Errorf("unable to save new preferences: %w", err)
+		return fmt.Errorf("%w: %w", preferences.ErrSavePreferences, err)
 	}
 
 	// Create a directory for the registry.

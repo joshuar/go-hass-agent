@@ -73,7 +73,7 @@ type ExternalIPWorker struct {
 	client *resty.Client
 	doneCh chan struct{}
 	logger *slog.Logger
-	prefs  ExternalIPWorkerPrefs
+	prefs  *ExternalIPWorkerPrefs
 }
 
 type ExternalIPWorkerPrefs preferences.CommonWorkerPrefs
@@ -86,7 +86,6 @@ func (w *ExternalIPWorker) DefaultPreferences() ExternalIPWorkerPrefs {
 	return ExternalIPWorkerPrefs{}
 }
 
-// TODO: implement ability to disable.
 func (w *ExternalIPWorker) Disabled() bool {
 	return w.prefs.Disabled
 }
@@ -195,8 +194,14 @@ func NewExternalIPUpdaterWorker(ctx context.Context) *ExternalIPWorker {
 			With(slog.String("worker", externalIPWorkerID)),
 	}
 
-	worker.prefs, err = preferences.LoadWorkerPreferences(ctx, worker)
+	prefs, err := preferences.LoadWorker(ctx, worker)
 	if err != nil {
+		return nil
+	}
+
+	worker.prefs = prefs
+
+	if worker.Disabled() {
 		return nil
 	}
 

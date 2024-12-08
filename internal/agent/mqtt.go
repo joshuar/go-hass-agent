@@ -14,6 +14,7 @@ import (
 	mqttapi "github.com/joshuar/go-hass-anything/v12/pkg/mqtt"
 
 	"github.com/joshuar/go-hass-agent/internal/commands"
+	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
@@ -60,12 +61,12 @@ type mqttEntities struct {
 
 // setupMQTT will create a slice of MQTTWorker from the custom commands
 // configuration and any OS-specific MQTT workers.
-func setupMQTT(ctx context.Context, prefs *preferences.Preferences) []MQTTWorker {
+func setupMQTT(ctx context.Context) []MQTTWorker {
 	var workers []MQTTWorker
 
 	// Create an MQTT device, used to configure MQTT functionality for some
 	// controllers.
-	mqttDevice := prefs.GenerateMQTTDevice(ctx)
+	mqttDevice := device.GenerateMQTTDevice(ctx)
 
 	// Set up custom MQTT commands worker.
 	customCommandsWorker, err := commands.NewCommandsWorker(ctx, mqttDevice)
@@ -126,15 +127,20 @@ func processMQTTWorkers(ctx context.Context, prefs mqttapi.Preferences, controll
 }
 
 // resetMQTTWorkers will unpublish configs for all defined MQTTWorkers.
-func resetMQTTWorkers(ctx context.Context, prefs *preferences.Preferences) error {
+func resetMQTTWorkers(ctx context.Context) error {
 	var configs []*mqttapi.Msg
 
-	workers := setupMQTT(ctx, prefs)
+	workers := setupMQTT(ctx)
 	for _, worker := range workers {
 		configs = append(configs, worker.Configs()...)
 	}
 
-	client, err := mqttapi.NewClient(ctx, prefs.GetMQTTPreferences(), nil, nil)
+	mqttPrefs, err := preferences.GetMQTTPreferences()
+	if err != nil {
+		return fmt.Errorf("could reset MQTT: %w", err)
+	}
+
+	client, err := mqttapi.NewClient(ctx, mqttPrefs, nil, nil)
 	if err != nil {
 		return fmt.Errorf("could not connect to MQTT: %w", err)
 	}

@@ -40,9 +40,9 @@ type ConnectionsWorker struct {
 	bus    *dbusx.Bus
 	list   map[string]*connection
 	logger *slog.Logger
+	prefs  *WorkerPrefs
 	linux.EventSensorWorker
-	prefs WorkerPrefs
-	mu    sync.Mutex
+	mu sync.Mutex
 }
 
 func (w *ConnectionsWorker) track(conn *connection) {
@@ -193,7 +193,7 @@ func NewConnectionWorker(ctx context.Context) (*linux.EventSensorWorker, error) 
 			With(slog.String("worker", netConnWorkerID)),
 	}
 
-	connectionsWorker.prefs, err = preferences.LoadWorkerPreferences(ctx, connectionsWorker)
+	connectionsWorker.prefs, err = preferences.LoadWorker(ctx, connectionsWorker)
 	if err != nil {
 		return worker, fmt.Errorf("could not load preferences: %w", err)
 	}

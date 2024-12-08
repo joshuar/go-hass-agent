@@ -140,8 +140,8 @@ func (f ipFamily) Icon() string {
 type AddressWorker struct {
 	nlconn *rtnetlink.Conn
 	donech chan struct{}
+	prefs  *WorkerPrefs
 	linux.EventSensorWorker
-	prefs WorkerPrefs
 }
 
 func (w *AddressWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
@@ -250,7 +250,7 @@ func NewAddressWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 		donech: make(chan struct{}),
 	}
 
-	addressWorker.prefs, err = preferences.LoadWorkerPreferences(ctx, addressWorker)
+	addressWorker.prefs, err = preferences.LoadWorker(ctx, addressWorker)
 	if err != nil {
 		return worker, fmt.Errorf("could not load preferences: %w", err)
 	}

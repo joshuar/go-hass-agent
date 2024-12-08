@@ -26,7 +26,7 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/scripts"
 )
 
-var ErrInvalidPreferences = errors.New("invalid agent preferences")
+var ErrAgentStart = errors.New("cannot start agent")
 
 // ui are the methods required for the agent to display its windows, tray
 // and notifications.
@@ -94,7 +94,6 @@ func Run(ctx context.Context) error {
 	var (
 		wg      sync.WaitGroup
 		regWait sync.WaitGroup
-		prefs   *preferences.Preferences
 		err     error
 	)
 
@@ -107,9 +106,8 @@ func Run(ctx context.Context) error {
 
 	// Load the preferences from file. Ignore the case where there are no
 	// existing preferences.
-	prefs, err = preferences.Load(ctx)
-	if err != nil && !errors.Is(err, preferences.ErrNoPreferences) {
-		return fmt.Errorf("could not load preferences: %w", err)
+	if err = preferences.Load(ctx); err != nil && !errors.Is(err, preferences.ErrLoadPreferences) {
+		return fmt.Errorf("%w: %w", ErrAgentStart, err)
 	}
 
 	// Set up a context for running the agent and tie its lifetime to the
@@ -125,7 +123,7 @@ func Run(ctx context.Context) error {
 	go func() {
 		defer regWait.Done()
 		// Check if the agent is registered. If not, start a registration flow.
-		if err = checkRegistration(runCtx, agent.ui, prefs.GetDeviceInfo(), prefs); err != nil {
+		if err = checkRegistration(runCtx, agent.ui); err != nil {
 			logging.FromContext(ctx).Error("Error checking registration status.", slog.Any("error", err))
 			cancelRun()
 		}
@@ -138,11 +136,11 @@ func Run(ctx context.Context) error {
 		regWait.Wait()
 
 		// If the agent is not registered, bail.
-		if !prefs.AgentRegistered() {
+		if !preferences.Registered() {
 			return
 		}
 
-		client, err := hass.NewClient(ctx, prefs.RestAPIURL())
+		client, err := hass.NewClient(ctx, preferences.RestAPIURL())
 		if err != nil {
 			logging.FromContext(ctx).Error("Cannot connect to Home Assistant.",
 				slog.Any("error", err))
@@ -152,7 +150,7 @@ func Run(ctx context.Context) error {
 		// Initialize and gather OS sensor and event workers.
 		sensorWorkers, eventWorkers := setupOSWorkers(runCtx)
 		// Initialize and add connection latency sensor worker.
-		sensorWorkers = append(sensorWorkers, agentsensor.NewConnectionLatencySensorWorker(prefs))
+		sensorWorkers = append(sensorWorkers, agentsensor.NewConnectionLatencySensorWorker())
 		// Initialize and add external IP address sensor worker.
 		sensorWorkers = append(sensorWorkers, agentsensor.NewExternalIPUpdaterWorker(runCtx))
 		// Initialize and add external version sensor worker.
@@ -181,22 +179,27 @@ func Run(ctx context.Context) error {
 		}()
 
 		// If MQTT is enabled, init MQTT workers and process them.
-		if prefs.IsMQTTEnabled() {
-			mqttWorkers := setupMQTT(runCtx, prefs)
+		if preferences.MQTTEnabled() {
+			if mqttPrefs, err := preferences.GetMQTTPreferences(); err != nil {
+				logging.FromContext(runCtx).Warn("Could not init mqtt workers.",
+					slog.Any("error", err))
+			} else {
+				mqttWorkers := setupMQTT(runCtx)
 
-			wg.Add(1)
+				wg.Add(1)
 
-			go func() {
-				defer wg.Done()
-				processMQTTWorkers(runCtx, prefs.GetMQTTPreferences(), mqttWorkers...)
-			}()
+				go func() {
+					defer wg.Done()
+					processMQTTWorkers(runCtx, mqttPrefs, mqttWorkers...)
+				}()
+			}
 		}
 
 		wg.Add(1)
 		// Listen for notifications from Home Assistant.
 		go func() {
 			defer wg.Done()
-			runNotificationsWorker(runCtx, prefs, agent.ui)
+			runNotificationsWorker(runCtx, agent.ui)
 		}()
 	}()
 
@@ -213,9 +216,8 @@ func Run(ctx context.Context) error {
 
 func Register(ctx context.Context) error {
 	var (
-		wg    sync.WaitGroup
-		prefs *preferences.Preferences
-		err   error
+		wg  sync.WaitGroup
+		err error
 	)
 
 	agent := &Agent{}
@@ -224,9 +226,8 @@ func Register(ctx context.Context) error {
 		agent.ui = fyneui.NewFyneUI(ctx)
 	}
 
-	prefs, err = preferences.Load(ctx)
-	if err != nil && !errors.Is(err, preferences.ErrNoPreferences) {
-		return fmt.Errorf("could not load preferences: %w", err)
+	if err = preferences.Load(ctx); err != nil && !errors.Is(err, preferences.ErrLoadPreferences) {
+		return fmt.Errorf("%w: %w", ErrAgentStart, err)
 	}
 
 	regCtx, cancelReg := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
@@ -240,7 +241,7 @@ func Register(ctx context.Context) error {
 	go func() {
 		defer wg.Done()
 
-		if err := checkRegistration(regCtx, agent.ui, prefs.GetDeviceInfo(), prefs); err != nil {
+		if err := checkRegistration(regCtx, agent.ui); err != nil {
 			logging.FromContext(ctx).Error("Error checking registration status", slog.Any("error", err))
 		}
 
@@ -258,13 +259,12 @@ func Register(ctx context.Context) error {
 
 // Reset will remove any agent related files and configuration.
 func Reset(ctx context.Context) error {
-	prefs, err := preferences.Load(ctx)
-	if err != nil && !errors.Is(err, preferences.ErrNoPreferences) {
-		return fmt.Errorf("could not load preferences: %w", err)
+	if err := preferences.Load(ctx); err != nil && !errors.Is(err, preferences.ErrLoadPreferences) {
+		return fmt.Errorf("%w: %w", ErrAgentStart, err)
 	}
 
-	if prefs.IsMQTTEnabled() {
-		if err := resetMQTTWorkers(ctx, prefs); err != nil {
+	if preferences.MQTTEnabled() {
+		if err := resetMQTTWorkers(ctx); err != nil {
 			logging.FromContext(ctx).Error("Problems occurred resetting MQTT configuration.", slog.Any("error", err))
 		}
 	}

@@ -87,24 +87,24 @@ func NewUsageWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
 		},
 	}
 
-	cpuUsageWorker.prefs, err = preferences.LoadWorkerPreferences(ctx, cpuUsageWorker)
+	prefs, err := preferences.LoadWorker(ctx, cpuUsageWorker)
 	if err != nil {
 		return worker, fmt.Errorf("could not load preferences: %w", err)
 	}
 
 	// If disabled, don't use the addressWorker.
-	if cpuUsageWorker.prefs.Disabled {
+	if prefs.Disabled {
 		return worker, nil
 	}
 
-	interval, err := time.ParseDuration(cpuUsageWorker.prefs.UpdateInterval)
+	interval, err := time.ParseDuration(prefs.UpdateInterval)
 	if err != nil {
 		logging.FromContext(ctx).Warn("Could not parse update interval, using default value.",
-			slog.String("requested_value", cpuUsageWorker.prefs.UpdateInterval),
+			slog.String("requested_value", prefs.UpdateInterval),
 			slog.String("default_value", defaultUsageUpdateInterval.String()))
 		// Save preferences with default interval value.
-		cpuUsageWorker.prefs.UpdateInterval = defaultUsageUpdateInterval.String()
-		if err := preferences.SaveWorkerPreferences(ctx, cpuUsageWorker.PreferencesID(), cpuUsageWorker.prefs); err != nil {
+		prefs.UpdateInterval = defaultUsageUpdateInterval.String()
+		if err := preferences.SaveWorker(ctx, cpuUsageWorker, *prefs); err != nil {
 			logging.FromContext(ctx).Warn("Could not save preferences.", slog.Any("error", err))
 		}
 

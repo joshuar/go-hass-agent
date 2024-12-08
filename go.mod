@@ -50,6 +50,7 @@ require (
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
 	github.com/go-git/go-billy/v5 v5.5.0 // indirect
 	github.com/go-git/go-git/v5 v5.12.0 // indirect
+	github.com/go-viper/mapstructure/v2 v2.2.1 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
@@ -69,6 +70,7 @@ require (
 	github.com/josharian/native v1.1.0 // indirect
 	github.com/kevinburke/ssh_config v1.2.0 // indirect
 	github.com/klauspost/pgzip v1.2.6 // indirect
+	github.com/knadh/koanf/maps v0.1.1 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mandykoh/go-parallel v0.1.0 // indirect
 	github.com/mdlayher/socket v0.4.1 // indirect
@@ -80,6 +82,7 @@ require (
 	github.com/muesli/mango-pflag v0.1.0 // indirect
 	github.com/muesli/roff v0.1.0 // indirect
 	github.com/nicksnyder/go-i18n/v2 v2.4.0 // indirect
+	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pjbgf/sha1cd v0.3.0 // indirect
 	github.com/rogpeppe/go-internal v1.12.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
@@ -130,6 +133,10 @@ require (
 	github.com/jsimonetti/rtnetlink v1.4.2
 	github.com/jsummers/gobmp v0.0.0-20151104160322-e2ba15ffa76e // indirect
 	github.com/klauspost/compress v1.17.11 // indirect
+	github.com/knadh/koanf/parsers/toml v0.1.0
+	github.com/knadh/koanf/providers/env v1.0.0
+	github.com/knadh/koanf/providers/file v1.1.2
+	github.com/knadh/koanf/v2 v2.1.2
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/lmittmann/tint v1.0.5
 	github.com/mandykoh/prism v0.35.3

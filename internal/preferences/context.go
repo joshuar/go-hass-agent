@@ -23,7 +23,7 @@ func AppIDToContext(ctx context.Context, appID string) context.Context {
 func AppIDFromContext(ctx context.Context) string {
 	appID, ok := ctx.Value(appIDContextKey).(string)
 	if !ok {
-		return AppID
+		return defaultAppID
 	}
 
 	return appID

@@ -7,6 +7,7 @@
 package preferences
 
 import (
+	"errors"
 	"fmt"
 	"net/url"
 )
@@ -25,57 +26,82 @@ type Hass struct {
 	WebsocketURL string `toml:"websocketurl" json:"-" validate:"required,url"`
 }
 
-func DefaultHassPreferences() *Hass {
-	return &Hass{
-		RestAPIURL:   DefaultServer,
-		WebsocketURL: DefaultServer,
-		WebhookID:    DefaultSecret,
-	}
-}
+var ErrSaveHassPreferences = errors.New("error saving hass preferences")
 
-func (p *Preferences) SaveHassPreferences(prefs *Hass, options *Registration) error {
-	p.Hass = prefs
-	p.Registration = options
+func SetHassPreferences(hassPrefs *Hass, regPrefs *Registration) error {
+	prefsSrc.Set("hass.secret", hassPrefs.Secret)
 
-	if err := p.generateAPIURL(); err != nil {
-		return fmt.Errorf("unable generate API URL: %w", err)
+	// Generate an API URL and set preferences as appropriate.
+	if apiURL, err := generateAPIURL(hassPrefs, regPrefs); err != nil {
+		return fmt.Errorf("%w: %w", ErrSaveHassPreferences, err)
+	} else {
+		prefsSrc.Set("hass.apiurl", apiURL)
 	}
 
-	// Generate a websocket URL.
-	if err := p.generateWebsocketURL(); err != nil {
-		return fmt.Errorf("unable to generated websocket URL: %w", err)
+	// Generate a websocket URL and set preferences as appropriate.
+	if websocketURL, err := generateWebsocketURL(regPrefs); err != nil {
+		return fmt.Errorf("%w: %w", ErrSaveHassPreferences, err)
+	} else {
+		prefsSrc.Set("hass.websocketurl", websocketURL)
 	}
 
-	// Set agent as registered
-	p.Registered = true
-
-	return p.Save()
-}
-
-func (p *Preferences) generateAPIURL() error {
-	switch {
-	case p.Hass.CloudhookURL != "" && !p.Registration.IgnoreHassURLs:
-		p.Hass.RestAPIURL = p.Hass.CloudhookURL
-	case p.Hass.RemoteUIURL != "" && p.Hass.WebhookID != "" && !p.Registration.IgnoreHassURLs:
-		p.Hass.RestAPIURL = p.Hass.RemoteUIURL + WebHookPath + p.Hass.WebhookID
-	default:
-		apiURL, err := url.Parse(p.Registration.Server)
-		if err != nil {
-			return fmt.Errorf("could not parse registration server: %w", err)
-		}
-
-		apiURL = apiURL.JoinPath(WebHookPath, p.Hass.WebhookID)
-
-		p.Hass.RestAPIURL = apiURL.String()
+	// Set the webhookID if present.
+	if hassPrefs.WebhookID != "" {
+		prefsSrc.Set("hass.webhook_id", hassPrefs.WebhookID)
 	}
+
+	prefsSrc.Set("registration.server", regPrefs.Server)
+	prefsSrc.Set("registration.token", regPrefs.Token)
 
 	return nil
 }
 
-func (p *Preferences) generateWebsocketURL() error {
-	websocketURL, err := url.Parse(p.Registration.Server)
+// RestAPIURL retrieves the configured Home Assistant Rest API URL from the
+// preferences.
+func RestAPIURL() string {
+	return prefsSrc.String("hass.apiurl")
+}
+
+// RestAPIURL retrieves the configured Home Assistant websocket API URL from the
+// preferences.
+func WebsocketURL() string {
+	return prefsSrc.String("hass.websocketurl")
+}
+
+// WebhookID retrieves the Go Hass Agent Webhook ID from the
+// preferences.
+func WebhookID() string {
+	return prefsSrc.String("hass.webhook_id")
+}
+
+// Token retrieves the Go Hass Agent long-lived access token from the
+// preferences.
+func Token() string {
+	return prefsSrc.String("registration.token")
+}
+
+func generateAPIURL(hassPrefs *Hass, regPrefs *Registration) (string, error) {
+	switch {
+	case hassPrefs.CloudhookURL != "" && regPrefs.IgnoreHassURLs:
+		prefsSrc.Set("hass.cloudhook_url", hassPrefs.CloudhookURL)
+		return hassPrefs.CloudhookURL, nil
+	case hassPrefs.RemoteUIURL != "" && hassPrefs.WebhookID != "" && !regPrefs.IgnoreHassURLs:
+		prefsSrc.Set("hass.remote_ui_url", hassPrefs.CloudhookURL)
+		return hassPrefs.RemoteUIURL + WebHookPath + hassPrefs.WebhookID, nil
+	default:
+		apiURL, err := url.Parse(regPrefs.Server)
+		if err != nil {
+			return "", fmt.Errorf("could not parse registration server: %w", err)
+		}
+
+		return apiURL.JoinPath(WebHookPath, hassPrefs.WebhookID).String(), nil
+	}
+}
+
+func generateWebsocketURL(regPrefs *Registration) (string, error) {
+	websocketURL, err := url.Parse(regPrefs.Server)
 	if err != nil {
-		return fmt.Errorf("could not parse registration server: %w", err)
+		return "", fmt.Errorf("could not parse registration server: %w", err)
 	}
 
 	switch websocketURL.Scheme {
@@ -88,9 +114,5 @@ func (p *Preferences) generateWebsocketURL() error {
 		websocketURL.Scheme = "ws"
 	}
 
-	websocketURL = websocketURL.JoinPath(WebsocketPath)
-
-	p.Hass.WebsocketURL = websocketURL.String()
-
-	return nil
+	return websocketURL.JoinPath(WebsocketPath).String(), nil
 }
