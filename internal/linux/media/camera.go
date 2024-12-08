@@ -45,8 +45,8 @@ type CameraWorker struct {
 	StopButton  *mqtthass.ButtonEntity
 	Status      *mqtthass.SensorEntity
 	camera      *webcam.Webcam
+	prefs       *CameraWorkerPrefs
 	state       string
-	prefs       CameraWorkerPrefs
 }
 
 // CameraWorkerPrefs are the preferences a user can set for the CameraWorker.
@@ -81,7 +81,7 @@ func NewCameraControl(ctx context.Context, msgCh chan *mqttapi.Msg, mqttDevice *
 
 	worker := &CameraWorker{}
 
-	worker.prefs, err = preferences.LoadWorkerPreferences(ctx, worker)
+	worker.prefs, err = preferences.LoadWorker(ctx, worker)
 	if err != nil {
 		return worker, fmt.Errorf("could not load preferences: %w", err)
 	}

@@ -187,13 +187,12 @@ func (i *FyneUI) DisplayRegistrationWindow(ctx context.Context, prefs *preferenc
 func (i *FyneUI) aboutWindow(ctx context.Context) fyne.Window {
 	var widgets []fyne.CanvasObject
 
-	prefs, err := preferences.Load(ctx)
-	if err != nil {
+	if err := preferences.Load(ctx); err != nil {
 		logging.FromContext(ctx).Error("Could not start sensor controller.", slog.Any("error", err))
 		return nil
 	}
 
-	hassclient, err := hass.NewClient(ctx, prefs.RestAPIURL())
+	hassclient, err := hass.NewClient(ctx, preferences.RestAPIURL())
 	if err != nil {
 		logging.FromContext(ctx).Debug("Cannot create Home Assistant client.", slog.Any("error", err))
 		return nil
@@ -242,20 +241,31 @@ func (i *FyneUI) fyneSettingsWindow() fyne.Window {
 func (i *FyneUI) agentSettingsWindow(ctx context.Context) fyne.Window {
 	var allFormItems []*widget.FormItem
 
-	prefs, err := preferences.Load(ctx)
+	if err := preferences.Load(ctx); err != nil {
+		i.logger.Error("Could not start sensor controller.",
+			slog.Any("error", err))
+		return nil
+	}
+
+	mqttPrefs, err := preferences.GetMQTTPreferences()
 	if err != nil {
-		logging.FromContext(ctx).Error("Could not start sensor controller.", slog.Any("error", err))
+		i.logger.Error("Could not load MQTT preferences.",
+			slog.Any("error", err))
 		return nil
 	}
 
 	// Generate a form of MQTT preferences.
-	allFormItems = append(allFormItems, mqttConfigItems(prefs.MQTT)...)
+	allFormItems = append(allFormItems, mqttConfigItems(mqttPrefs)...)
 
 	window := i.app.NewWindow("App Preferences")
 	settingsForm := widget.NewForm(allFormItems...)
 	settingsForm.OnSubmit = func() {
+		// Set the new MQTT preferences.
+		if err := preferences.SetMQTTPreferences(mqttPrefs); err != nil {
+			i.logger.Error("Could note save preferences.", slog.Any("error", err))
+		}
 		// Save the new MQTT preferences to file.
-		if err := prefs.Save(); err != nil {
+		if err := preferences.Save(ctx); err != nil {
 			dialog.ShowError(err, window)
 			i.logger.Error("Could note save preferences.", slog.Any("error", err))
 		} else {

@@ -24,16 +24,16 @@ func (r *ConfigCmd) Run(opts *CmdOpts) error {
 	agentCtx, cancelFunc := newContext(opts)
 	defer cancelFunc()
 
-	prefs, err := preferences.Load(agentCtx)
-	if err != nil {
+	if err := preferences.Load(agentCtx); err != nil {
 		return fmt.Errorf("config: load preferences: %w", err)
 	}
 
 	r.MQTTEnabled = true
-	prefs.MQTT = (*preferences.MQTT)(&r.MQTTConfig)
+	if err := preferences.SetMQTTPreferences((*preferences.MQTT)(&r.MQTTConfig)); err != nil {
+		return fmt.Errorf("config: save preferences: %w", err)
+	}
 
-	err = prefs.Save()
-	if err != nil {
+	if err := preferences.Save(agentCtx); err != nil {
 		return fmt.Errorf("config: save preferences: %w", err)
 	}
 

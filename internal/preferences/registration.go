@@ -17,13 +17,6 @@ type Registration struct {
 	IgnoreHassURLs bool   `toml:"-" json:"-" validate:"omitempty,boolean"`
 }
 
-func DefaultRegistrationPreferences() *Registration {
-	return &Registration{
-		Server: DefaultServer,
-		Token:  DefaultSecret,
-	}
-}
-
 func (p *Registration) Validate() error {
 	err := validation.Validate.Struct(p)
 	if err != nil {

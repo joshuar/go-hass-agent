@@ -48,7 +48,7 @@ func init() {
 func main() {
 	kong.Name(preferences.AppName)
 	kong.Description(preferences.AppDescription)
-	ctx := kong.Parse(&CLI, kong.Bind(), kong.Vars{"defaultAppID": preferences.AppID})
+	ctx := kong.Parse(&CLI, kong.Bind(), kong.Vars{"defaultAppID": "go-hass-agent"})
 
 	// Set up the logger.
 	logger := logging.New(CLI.AppID, logging.Options{LogLevel: CLI.LogLevel, NoLogFile: CLI.NoLogFile})

@@ -6,12 +6,10 @@
 package preferences
 
 import (
-	"context"
+	"fmt"
 
 	mqtthass "github.com/joshuar/go-hass-anything/v12/pkg/hass"
-	mqttapi "github.com/joshuar/go-hass-anything/v12/pkg/mqtt"
-
-	"github.com/joshuar/go-hass-agent/internal/device"
+	"github.com/knadh/koanf/v2"
 )
 
 type MQTT struct {
@@ -22,8 +20,28 @@ type MQTT struct {
 	MQTTEnabled     bool   `toml:"enabled" validate:"boolean" kong:"-"`
 }
 
-func DefaultMQTTPreferences() *MQTT {
-	return &MQTT{MQTTEnabled: false}
+func SetMQTTPreferences(prefs *MQTT) error {
+	prefsSrc.Set("mqtt.server", prefs.MQTTServer)
+	prefsSrc.Set("mqtt.user", prefs.MQTTUser)
+	prefsSrc.Set("mqtt.password", prefs.MQTTPassword)
+	prefsSrc.Set("mqtt.topic_prefix", prefs.MQTTTopicPrefix)
+	prefsSrc.Set("mqtt.enabled", prefs.MQTTEnabled)
+
+	return nil
+}
+
+func GetMQTTPreferences() (*MQTT, error) {
+	var mqttPrefs MQTT
+	// Unmarshal config, overwriting defaults.
+	if err := prefsSrc.UnmarshalWithConf("mqtt", &mqttPrefs, koanf.UnmarshalConf{Tag: "toml"}); err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrLoadPreferences, err)
+	}
+
+	return &mqttPrefs, nil
+}
+
+func MQTTEnabled() bool {
+	return prefsSrc.Bool("mqtt.enabled")
 }
 
 // Server returns the broker URI from the preferences.
@@ -69,33 +87,4 @@ func (p *Preferences) IsMQTTEnabled() bool {
 	}
 
 	return false
-}
-
-func (p *Preferences) GetMQTTPreferences() mqttapi.Preferences {
-	if p.MQTT != nil {
-		return p.MQTT
-	}
-
-	return DefaultMQTTPreferences()
-}
-
-func (p *Preferences) SaveMQTTPreferences(mqttPrefs *MQTT) error {
-	p.MQTT = mqttPrefs
-	return p.Save()
-}
-
-func (p *Preferences) GenerateMQTTDevice(ctx context.Context) *mqtthass.Device {
-	appID := AppIDFromContext(ctx)
-
-	// Retrieve the hardware model and manufacturer.
-	model, manufacturer, _ := device.GetHWProductInfo() //nolint:errcheck // error doesn't matter
-
-	return &mqtthass.Device{
-		Name:         p.DeviceName(),
-		URL:          AppURL,
-		SWVersion:    AppVersion,
-		Manufacturer: manufacturer,
-		Model:        model,
-		Identifiers:  []string{appID, p.DeviceName(), p.DeviceID()},
-	}
 }

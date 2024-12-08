@@ -17,16 +17,16 @@ import (
 // runNotificationsWorker will run a goroutine that is listening for
 // notification messages from Home Assistant on a websocket connection. Any
 // received notifications will be dipslayed on the device running the agent.
-func runNotificationsWorker(ctx context.Context, prefs *preferences.Preferences, agentUI ui) {
+func runNotificationsWorker(ctx context.Context, agentUI ui) {
 	// Don't run if agent is running headless.\
 	if Headless(ctx) {
 		return
 	}
 
 	websocket := hass.NewWebsocket(ctx,
-		prefs.WebsocketURL(),
-		prefs.WebhookID(),
-		prefs.Token())
+		preferences.WebsocketURL(),
+		preferences.WebhookID(),
+		preferences.Token())
 
 	for {
 		select {

@@ -17,6 +17,7 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/logging"
+	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
 const (
@@ -30,10 +31,6 @@ const (
 )
 
 var ErrEmptyResponse = errors.New("empty response")
-
-type serverPrefs interface {
-	RestAPIURL() string
-}
 
 func newConnectionLatencySensor(info resty.TraceInfo) sensor.Entity {
 	connectionLatency := sensor.Entity{
@@ -137,11 +134,11 @@ func (w *ConnectionLatencySensorWorker) Start(ctx context.Context) (<-chan senso
 	return sensorCh, nil
 }
 
-func NewConnectionLatencySensorWorker(prefs serverPrefs) *ConnectionLatencySensorWorker {
+func NewConnectionLatencySensorWorker() *ConnectionLatencySensorWorker {
 	return &ConnectionLatencySensorWorker{
 		client: resty.New().
 			SetTimeout(connectionLatencyTimeout).
 			EnableTrace(),
-		endpoint: prefs.RestAPIURL(),
+		endpoint: preferences.RestAPIURL(),
 	}
 }
