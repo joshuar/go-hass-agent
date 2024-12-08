@@ -14,12 +14,14 @@ const (
 	restAPIURLContextKey contextKey = "restAPIURL"
 )
 
+// AppIDToContext will store the given App ID in the context.
 func AppIDToContext(ctx context.Context, appID string) context.Context {
 	newCtx := context.WithValue(ctx, appIDContextKey, appID)
 
 	return newCtx
 }
 
+// AppIDFromContext retrieves the App ID from the context.
 func AppIDFromContext(ctx context.Context) string {
 	appID, ok := ctx.Value(appIDContextKey).(string)
 	if !ok {
@@ -29,12 +31,14 @@ func AppIDFromContext(ctx context.Context) string {
 	return appID
 }
 
+// RestAPIURLToContext will store the given rest API URL in the context.
 func RestAPIURLToContext(ctx context.Context, url string) context.Context {
 	newCtx := context.WithValue(ctx, restAPIURLContextKey, url)
 
 	return newCtx
 }
 
+// RestAPIURLFromContext will retrieve the rest API URL from the context.
 func RestAPIURLFromContext(ctx context.Context) string {
 	url, ok := ctx.Value(appIDContextKey).(string)
 	if !ok {

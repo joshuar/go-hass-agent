@@ -10,6 +10,7 @@ import (
 	"fmt"
 )
 
+// Device contains the device-specific preferences.
 type Device struct {
 	ID   string `toml:"id" validate:"required,ascii"`
 	Name string `toml:"name" validate:"required,ascii"`

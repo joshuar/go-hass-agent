@@ -17,6 +17,7 @@ const (
 	WebHookPath   = "/api/webhook/"
 )
 
+// Hass contains preferences related to connectivity to Home Assistant.
 type Hass struct {
 	CloudhookURL string `toml:"cloudhook_url,omitempty" json:"cloudhook_url" validate:"omitempty,http_url"`
 	RemoteUIURL  string `toml:"remote_ui_url,omitempty" json:"remote_ui_url" validate:"omitempty,http_url"`
@@ -31,6 +32,8 @@ var (
 	ErrSetHassPreference   = errors.New("could not set hass preference")
 )
 
+// SetHassPreferences will set the Hass preferences to the given values.
+//
 //revive:disable:indent-error-flow
 func SetHassPreferences(hassPrefs *Hass, regPrefs *Registration) error {
 	if err := prefsSrc.Set("hass.secret", hassPrefs.Secret); err != nil {

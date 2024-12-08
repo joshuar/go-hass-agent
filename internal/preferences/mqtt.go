@@ -13,6 +13,7 @@ import (
 	"github.com/knadh/koanf/v2"
 )
 
+// MQTT contains preferences related to MQTT functionality in Go Hass Agent.
 type MQTT struct {
 	MQTTServer      string `toml:"server,omitempty" validate:"omitempty,uri" kong:"required,help='MQTT server URI. Required.',placeholder='scheme://some.host:port'"` //nolint:lll
 	MQTTUser        string `toml:"user,omitempty" validate:"omitempty" kong:"optional,help='MQTT username.'"`
@@ -23,6 +24,8 @@ type MQTT struct {
 
 var ErrSetMQTTPreference = errors.New("could not set MQTT preference")
 
+// SetMQTTPreferences will set Go Hass Agent's MQTT preferences to the given
+// values.
 func SetMQTTPreferences(prefs *MQTT) error {
 	if err := prefsSrc.Set("mqtt.server", prefs.MQTTServer); err != nil {
 		return fmt.Errorf("%w: %w", ErrSetMQTTPreference, err)
@@ -47,6 +50,7 @@ func SetMQTTPreferences(prefs *MQTT) error {
 	return nil
 }
 
+// GetMQTTPreferences retrieves the current MQTT preferences from file.
 func GetMQTTPreferences() (*MQTT, error) {
 	var mqttPrefs MQTT
 	// Unmarshal config, overwriting defaults.
@@ -57,6 +61,7 @@ func GetMQTTPreferences() (*MQTT, error) {
 	return &mqttPrefs, nil
 }
 
+// MQTTEnabled will return whether Go Hass Agent will use MQTT.
 func MQTTEnabled() bool {
 	return prefsSrc.Bool("mqtt.enabled")
 }
@@ -98,7 +103,7 @@ func MQTTOrigin() *mqtthass.Origin {
 
 // IsMQTTEnabled is a conveinience function to determine whether MQTT
 // functionality has been enabled in the agent.
-func (p *Preferences) IsMQTTEnabled() bool {
+func (p *preferences) IsMQTTEnabled() bool {
 	if p.MQTT != nil {
 		return p.MQTT.MQTTEnabled
 	}
