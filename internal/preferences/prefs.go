@@ -54,7 +54,7 @@ var (
 )
 
 // Default agent preferences.
-var defaultAgentPreferences = &Preferences{
+var defaultAgentPreferences = &preferences{
 	Version:    AppVersion,
 	Registered: false,
 	MQTT: &MQTT{
@@ -78,8 +78,8 @@ var (
 	mu              = sync.Mutex{}
 )
 
-//nolint:tagalign
-type Preferences struct {
+// preferences defines all preferences for Go Hass Agent.
+type preferences struct {
 	MQTT         *MQTT         `toml:"mqtt,omitempty"`
 	Registration *Registration `toml:"registration"`
 	Hass         *Hass         `toml:"hass"`
@@ -139,7 +139,7 @@ func Reset(ctx context.Context) error {
 
 // Validate ensures the configuration is valid.
 func Validate() error {
-	currentPreferences := &Preferences{}
+	currentPreferences := &preferences{}
 
 	// Unmarshal current preferences.
 	if err := prefsSrc.UnmarshalWithConf("", currentPreferences, koanf.UnmarshalConf{Tag: "toml"}); err != nil {
@@ -203,6 +203,8 @@ func Registered() bool {
 	return prefsSrc.Bool("registered")
 }
 
+// checkPath checks that the given directory exists. If it doesn't it will be
+// created.
 func checkPath(path string) error {
 	_, err := os.Stat(path)
 	if os.IsNotExist(err) {

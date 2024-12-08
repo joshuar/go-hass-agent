@@ -21,7 +21,7 @@ type CommonWorkerPrefs struct {
 // Worker represents a Worker from the point of the preferences package. A
 // worker has a set of default preferences returned by the DefaultPreferences
 // method and an ID that uniquely identifies the worker (and its preferences
-// file on disk).
+// on disk).
 type Worker[T any] interface {
 	PreferencesID() string
 	DefaultPreferences() T
@@ -32,6 +32,7 @@ var (
 	ErrLoadWorkerPrefs = errors.New("error loading worker preferences")
 )
 
+// LoadWorker reads the given worker's preferences from file.
 func LoadWorker[T any](ctx context.Context, worker Worker[T]) (*T, error) {
 	// Load default worker prefs.
 	var prefs T
@@ -64,6 +65,7 @@ func LoadWorker[T any](ctx context.Context, worker Worker[T]) (*T, error) {
 	return &prefs, nil
 }
 
+// SaveWorker saves the given worker's preferences to file.
 func SaveWorker[T any](ctx context.Context, worker Worker[T], prefs T) error {
 	// We can't define the structure for every possible worker beforehand, so
 	// use map[string]any as the structure for saving.

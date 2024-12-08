@@ -11,6 +11,8 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/validation"
 )
 
+// Registration are the preferences that defines how Go Hass Agent registers
+// with Home Assistant.
 type Registration struct {
 	Server         string `toml:"server" validate:"required,http_url"`
 	Token          string `toml:"token" validate:"required"`
@@ -26,10 +28,13 @@ func (p *Registration) Validate() error {
 	return nil
 }
 
-func (p *Preferences) Server() string {
+// Server returns the server that was used for registering Go Hass Agent.
+func (p *preferences) Server() string {
 	return p.Registration.Server
 }
 
-func (p *Preferences) Token() string {
+// Token returns the long-lived access token that was used by Go Hass Agent for
+// registering with Home Assistant.
+func (p *preferences) Token() string {
 	return p.Registration.Token
 }
