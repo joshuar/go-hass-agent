@@ -22,8 +22,8 @@ require (
 	github.com/stretchr/testify v1.10.0
 	github.com/yassinebenaid/godump v0.11.1
 	golang.org/x/exp v0.0.0-20240613232115-7f521ea00fb8
-	golang.org/x/text v0.20.0
-	golang.org/x/tools v0.27.0
+	golang.org/x/text v0.21.0
+	golang.org/x/tools v0.28.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -99,7 +99,7 @@ require (
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	gitlab.com/digitalxero/go-conventional-commit v1.0.7 // indirect
 	golang.org/x/mod v0.22.0 // indirect
-	golang.org/x/sync v0.9.0 // indirect
+	golang.org/x/sync v0.10.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	howett.net/plist v1.0.0 // indirect
 )
@@ -150,9 +150,9 @@ require (
 	github.com/tklauser/go-sysconf v0.3.14
 	github.com/tklauser/numcpus v0.8.0 // indirect
 	github.com/yuin/goldmark v1.7.1 // indirect
-	golang.org/x/crypto v0.29.0 // indirect
+	golang.org/x/crypto v0.30.0 // indirect
 	golang.org/x/image v0.18.0 // indirect
 	golang.org/x/mobile v0.0.0-20231127183840-76ac6878050a // indirect
-	golang.org/x/net v0.31.0 // indirect
-	golang.org/x/sys v0.27.0
+	golang.org/x/net v0.32.0 // indirect
+	golang.org/x/sys v0.28.0
 )
