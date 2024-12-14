@@ -10,6 +10,8 @@ import (
 	"log/slog"
 
 	"github.com/pelletier/go-toml/v2"
+
+	"github.com/joshuar/go-hass-agent/internal/validation"
 )
 
 // CommonWorkerPrefs contains worker preferences that all workers can/should
@@ -54,6 +56,17 @@ func LoadWorker[T any](ctx context.Context, worker Worker[T]) (*T, error) {
 	// defaults.
 	if err := prefsSrc.Unmarshal(prefsKey, &prefs); err != nil {
 		return &prefs, fmt.Errorf("%w: %w", ErrLoadWorkerPrefs, err)
+	}
+
+	// If the preferences are invalid, warn and use defaults.
+	if err := validation.Validate.Struct(prefs); err != nil {
+		slog.Warn("Worker preferences are invalid, using defaults.",
+			slog.String("worker", worker.PreferencesID()),
+			slog.String("problems", validation.ParseValidationErrors(err)))
+
+		prefs = worker.DefaultPreferences()
+
+		return &prefs, nil
 	}
 
 	// Return preferences.
