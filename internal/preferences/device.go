@@ -10,6 +10,12 @@ import (
 	"fmt"
 )
 
+const (
+	devicePrefPrefix = "device"
+	prefDeviceID     = devicePrefPrefix + ".id"
+	prefDeviceName   = devicePrefPrefix + ".name"
+)
+
 // Device contains the device-specific preferences.
 type Device struct {
 	ID   string `toml:"id" validate:"required,ascii"`
@@ -20,23 +26,23 @@ var ErrSetDevicePreference = errors.New("could not set device preference")
 
 // SetDevicePreferences sets the device preferences.
 func SetDevicePreferences(device *Device) error {
-	if err := prefsSrc.Set("device.id", device.ID); err != nil {
+	if err := prefsSrc.Set(prefDeviceID, device.ID); err != nil {
 		return fmt.Errorf("%w: %w", ErrSetDevicePreference, err)
 	}
 
-	if err := prefsSrc.Set("device.name", device.Name); err != nil {
+	if err := prefsSrc.Set(prefDeviceName, device.Name); err != nil {
 		return fmt.Errorf("%w: %w", ErrSetDevicePreference, err)
 	}
 
 	return nil
 }
 
-// DeviceName retrieves the device name from the preferences.
-func DeviceName() string {
-	return prefsSrc.String("device.name")
-}
-
 // DeviceID retrieves the device ID from the preferences.
 func DeviceID() string {
-	return prefsSrc.String("device.id")
+	return prefsSrc.String(prefDeviceID)
+}
+
+// DeviceName retrieves the device name from the preferences.
+func DeviceName() string {
+	return prefsSrc.String(prefDeviceName)
 }

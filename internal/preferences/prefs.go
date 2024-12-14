@@ -37,6 +37,8 @@ const (
 
 	DefaultServer = "http://localhost:8123"
 	DefaultSecret = "ALongSecretString"
+
+	prefRegistered = "registered"
 )
 
 var (
@@ -191,7 +193,7 @@ func Save(ctx context.Context) error {
 // SetRegistered sets whether Go Hass Agent has been registered with Home
 // Assistant.
 func SetRegistered(value bool) error {
-	if err := prefsSrc.Set("registration", value); err != nil {
+	if err := prefsSrc.Set(prefRegistered, value); err != nil {
 		return fmt.Errorf("%w: %w", ErrSetPreference, err)
 	}
 
@@ -200,7 +202,7 @@ func SetRegistered(value bool) error {
 
 // Registered returns the registration status of Go Hass Agent.
 func Registered() bool {
-	return prefsSrc.Bool("registered")
+	return prefsSrc.Bool(prefRegistered)
 }
 
 // checkPath checks that the given directory exists. If it doesn't it will be

@@ -15,6 +15,17 @@ import (
 const (
 	WebsocketPath = "/api/websocket"
 	WebHookPath   = "/api/webhook/"
+
+	hassPrefPrefix       = "hass"
+	prefHassSecret       = hassPrefPrefix + ".secret"
+	prefHassAPIURL       = hassPrefPrefix + ".apiurl"
+	prefHassWebsocketURL = hassPrefPrefix + ".websocketurl"
+	prefHassWebhookID    = hassPrefPrefix + ".webhook_id"
+	prefHassCloudhookURL = hassPrefPrefix + ".cloudhook_url"
+	prefHassRemoteUIURL  = hassPrefPrefix + ".remote_ui_url"
+	regPrefPrefix        = "registration"
+	prefHassRegToken     = regPrefPrefix + ".token"
+	prefHassRegServer    = regPrefPrefix + ".server"
 )
 
 // Hass contains preferences related to connectivity to Home Assistant.
@@ -36,7 +47,7 @@ var (
 //
 //revive:disable:indent-error-flow
 func SetHassPreferences(hassPrefs *Hass, regPrefs *Registration) error {
-	if err := prefsSrc.Set("hass.secret", hassPrefs.Secret); err != nil {
+	if err := prefsSrc.Set(prefHassSecret, hassPrefs.Secret); err != nil {
 		return fmt.Errorf("%w: %w", ErrSetHassPreference, err)
 	}
 
@@ -44,7 +55,7 @@ func SetHassPreferences(hassPrefs *Hass, regPrefs *Registration) error {
 	if apiURL, err := generateAPIURL(hassPrefs, regPrefs); err != nil {
 		return fmt.Errorf("%w: %w", ErrSaveHassPreferences, err)
 	} else {
-		if err := prefsSrc.Set("hass.apiurl", apiURL); err != nil {
+		if err := prefsSrc.Set(prefHassAPIURL, apiURL); err != nil {
 			return fmt.Errorf("%w: %w", ErrSetHassPreference, err)
 		}
 	}
@@ -53,23 +64,23 @@ func SetHassPreferences(hassPrefs *Hass, regPrefs *Registration) error {
 	if websocketURL, err := generateWebsocketURL(regPrefs); err != nil {
 		return fmt.Errorf("%w: %w", ErrSaveHassPreferences, err)
 	} else {
-		if err := prefsSrc.Set("hass.websocketurl", websocketURL); err != nil {
+		if err := prefsSrc.Set(prefHassAPIURL, websocketURL); err != nil {
 			return fmt.Errorf("%w: %w", ErrSetHassPreference, err)
 		}
 	}
 
 	// Set the webhookID if present.
 	if hassPrefs.WebhookID != "" {
-		if err := prefsSrc.Set("hass.webhook_id", hassPrefs.WebhookID); err != nil {
+		if err := prefsSrc.Set(prefHassWebhookID, hassPrefs.WebhookID); err != nil {
 			return fmt.Errorf("%w: %w", ErrSetHassPreference, err)
 		}
 	}
 
-	if err := prefsSrc.Set("registration.server", regPrefs.Server); err != nil {
+	if err := prefsSrc.Set(prefHassRegServer, regPrefs.Server); err != nil {
 		return fmt.Errorf("%w: %w", ErrSetHassPreference, err)
 	}
 
-	if err := prefsSrc.Set("registration.token", regPrefs.Token); err != nil {
+	if err := prefsSrc.Set(prefHassRegToken, regPrefs.Token); err != nil {
 		return fmt.Errorf("%w: %w", ErrSetHassPreference, err)
 	}
 
@@ -79,37 +90,37 @@ func SetHassPreferences(hassPrefs *Hass, regPrefs *Registration) error {
 // RestAPIURL retrieves the configured Home Assistant Rest API URL from the
 // preferences.
 func RestAPIURL() string {
-	return prefsSrc.String("hass.apiurl")
+	return prefsSrc.String(prefHassAPIURL)
 }
 
 // RestAPIURL retrieves the configured Home Assistant websocket API URL from the
 // preferences.
 func WebsocketURL() string {
-	return prefsSrc.String("hass.websocketurl")
+	return prefsSrc.String(prefHassWebsocketURL)
 }
 
 // WebhookID retrieves the Go Hass Agent Webhook ID from the
 // preferences.
 func WebhookID() string {
-	return prefsSrc.String("hass.webhook_id")
+	return prefsSrc.String(prefHassWebhookID)
 }
 
 // Token retrieves the Go Hass Agent long-lived access token from the
 // preferences.
 func Token() string {
-	return prefsSrc.String("registration.token")
+	return prefsSrc.String(prefHassRegToken)
 }
 
 func generateAPIURL(hassPrefs *Hass, regPrefs *Registration) (string, error) {
 	switch {
 	case hassPrefs.CloudhookURL != "" && regPrefs.IgnoreHassURLs:
-		if err := prefsSrc.Set("hass.cloudhook_url", hassPrefs.CloudhookURL); err != nil {
+		if err := prefsSrc.Set(prefHassCloudhookURL, hassPrefs.CloudhookURL); err != nil {
 			return "", fmt.Errorf("%w: %w", ErrSetHassPreference, err)
 		}
 
 		return hassPrefs.CloudhookURL, nil
 	case hassPrefs.RemoteUIURL != "" && hassPrefs.WebhookID != "" && !regPrefs.IgnoreHassURLs:
-		if err := prefsSrc.Set("hass.remote_ui_url", hassPrefs.CloudhookURL); err != nil {
+		if err := prefsSrc.Set(prefHassRemoteUIURL, hassPrefs.CloudhookURL); err != nil {
 			return "", fmt.Errorf("%w: %w", ErrSetHassPreference, err)
 		}
 
