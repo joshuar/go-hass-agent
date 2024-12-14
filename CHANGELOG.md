@@ -1,5 +1,30 @@
 # Changelog
 
+## [11.0.0](https://github.com/joshuar/go-hass-agent/compare/v10.5.1...v11.0.0) (2024-12-14)
+
+
+### ⚠ BREAKING CHANGES
+
+* **preferences:** Worker preferences are now in the agent preferences file, under a "worker_prefs" section. Any existing custom preferences will need to be manually migrated to this file.
+
+### Features
+
+* :sparkles: allow disabling app sensors ([71a4969](https://github.com/joshuar/go-hass-agent/commit/71a49696dc7fff379a78e039099411842428f269))
+* **linux/cpu,linux/system:** :sparkles: add ability to specify update interval for cpu and hwmon sensor polling ([7f8450e](https://github.com/joshuar/go-hass-agent/commit/7f8450efd1a203eee4c03eaa41e7259888652d54))
+* **linux/cpu:** :truck: split cpu usage and frequency workers ([cc18b67](https://github.com/joshuar/go-hass-agent/commit/cc18b676be949f1bd6102d2f9305c680828e4424))
+* **preferences:** :sparkles: validate worker preferences when loading and use defaults if invalid ([748b48f](https://github.com/joshuar/go-hass-agent/commit/748b48fec5790088bba98444f4b56d1c997d50ef))
+
+
+### Bug Fixes
+
+* :bug: code cleanup missed in 7591c7ac1123bf409144c650a5cd47f8eb49ee07 ([f6dca52](https://github.com/joshuar/go-hass-agent/commit/f6dca52870a20ef1459e5a57e3cac9fd46d7919b))
+* **preferences:** :bug: ensure consistent naming of preferences through using string constants ([1397c4a](https://github.com/joshuar/go-hass-agent/commit/1397c4a9e188f37187f2f672b70788f6f420e067))
+
+
+### Code Refactoring
+
+* **preferences:** :recycle: merge worker and agent preferences into single file ([7591c7a](https://github.com/joshuar/go-hass-agent/commit/7591c7ac1123bf409144c650a5cd47f8eb49ee07))
+
 ## [10.5.1](https://github.com/joshuar/go-hass-agent/compare/v10.5.0...v10.5.1) (2024-11-20)
 
 
