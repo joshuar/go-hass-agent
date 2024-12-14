@@ -43,6 +43,7 @@ var sensorPollingWorkersInitFuncs = []func(ctx context.Context) (*linux.PollingS
 	disk.NewUsageWorker,
 	cpu.NewLoadAvgWorker,
 	cpu.NewUsageWorker,
+	cpu.NewFreqWorker,
 	mem.NewUsageWorker,
 	net.NewNetStatsWorker,
 	problems.NewProblemsWorker,
