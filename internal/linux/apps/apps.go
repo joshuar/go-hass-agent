@@ -16,6 +16,7 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/preferences"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
@@ -29,6 +30,16 @@ const (
 )
 
 var ErrNoApps = errors.New("no running apps")
+
+type WorkerPrefs preferences.CommonWorkerPrefs
+
+func (w *sensorWorker) PreferencesID() string {
+	return workerID
+}
+
+func (w *sensorWorker) DefaultPreferences() WorkerPrefs {
+	return WorkerPrefs{}
+}
 
 type sensorWorker struct {
 	getAppStates     func() (map[string]dbus.Variant, error)
@@ -117,6 +128,7 @@ func NewAppWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 		return worker, linux.ErrNoDesktopPortal
 	}
 
+	// Connect to the D-Bus session bus. Bail if we can't.
 	bus, ok := linux.CtxGetSessionBus(ctx)
 	if !ok {
 		return worker, linux.ErrNoSessionBus
@@ -131,7 +143,7 @@ func NewAppWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 		return worker, fmt.Errorf("could not watch D-Bus for app state events: %w", err)
 	}
 
-	worker.EventSensorType = &sensorWorker{
+	appsWorker := &sensorWorker{
 		triggerCh: triggerCh,
 		getAppStates: func() (map[string]dbus.Variant, error) {
 			apps, err := dbusx.GetData[map[string]dbus.Variant](bus, appStateDBusPath, portalDest, appStateDBusMethod)
@@ -146,6 +158,17 @@ func NewAppWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 			return apps, nil
 		},
 	}
+
+	prefs, err := preferences.LoadWorker(ctx, appsWorker)
+	if err != nil {
+		return worker, fmt.Errorf("could not load preferences: %w", err)
+	}
+
+	if prefs.Disabled {
+		return worker, nil
+	}
+
+	worker.EventSensorType = appsWorker
 
 	return worker, nil
 }
