@@ -13,6 +13,15 @@ import (
 	"github.com/knadh/koanf/v2"
 )
 
+const (
+	mqttPrefPrefix      = "mqtt"
+	prefMQTTServer      = mqttPrefPrefix + ".server"
+	prefMQTTUser        = mqttPrefPrefix + ".user"
+	prefMQTTPass        = mqttPrefPrefix + ".password"
+	prefMQTTTopicPrefix = mqttPrefPrefix + ".topic_prefx"
+	prefMQTTEnabled     = mqttPrefPrefix + ".enabled"
+)
+
 // MQTT contains preferences related to MQTT functionality in Go Hass Agent.
 type MQTT struct {
 	MQTTServer      string `toml:"server,omitempty" validate:"omitempty,uri" kong:"required,help='MQTT server URI. Required.',placeholder='scheme://some.host:port'"` //nolint:lll
@@ -27,23 +36,23 @@ var ErrSetMQTTPreference = errors.New("could not set MQTT preference")
 // SetMQTTPreferences will set Go Hass Agent's MQTT preferences to the given
 // values.
 func SetMQTTPreferences(prefs *MQTT) error {
-	if err := prefsSrc.Set("mqtt.server", prefs.MQTTServer); err != nil {
+	if err := prefsSrc.Set(prefMQTTServer, prefs.MQTTServer); err != nil {
 		return fmt.Errorf("%w: %w", ErrSetMQTTPreference, err)
 	}
 
-	if err := prefsSrc.Set("mqtt.user", prefs.MQTTUser); err != nil {
+	if err := prefsSrc.Set(prefMQTTUser, prefs.MQTTUser); err != nil {
 		return fmt.Errorf("%w: %w", ErrSetMQTTPreference, err)
 	}
 
-	if err := prefsSrc.Set("mqtt.password", prefs.MQTTPassword); err != nil {
+	if err := prefsSrc.Set(prefMQTTPass, prefs.MQTTPassword); err != nil {
 		return fmt.Errorf("%w: %w", ErrSetMQTTPreference, err)
 	}
 
-	if err := prefsSrc.Set("mqtt.topic_prefix", prefs.MQTTTopicPrefix); err != nil {
+	if err := prefsSrc.Set(prefMQTTTopicPrefix, prefs.MQTTTopicPrefix); err != nil {
 		return fmt.Errorf("%w: %w", ErrSetMQTTPreference, err)
 	}
 
-	if err := prefsSrc.Set("mqtt.enabled", prefs.MQTTEnabled); err != nil {
+	if err := prefsSrc.Set(prefMQTTEnabled, prefs.MQTTEnabled); err != nil {
 		return fmt.Errorf("%w: %w", ErrSetMQTTPreference, err)
 	}
 
@@ -54,7 +63,7 @@ func SetMQTTPreferences(prefs *MQTT) error {
 func GetMQTTPreferences() (*MQTT, error) {
 	var mqttPrefs MQTT
 	// Unmarshal config, overwriting defaults.
-	if err := prefsSrc.UnmarshalWithConf("mqtt", &mqttPrefs, koanf.UnmarshalConf{Tag: "toml"}); err != nil {
+	if err := prefsSrc.UnmarshalWithConf(mqttPrefPrefix, &mqttPrefs, koanf.UnmarshalConf{Tag: "toml"}); err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrLoadPreferences, err)
 	}
 
@@ -63,7 +72,7 @@ func GetMQTTPreferences() (*MQTT, error) {
 
 // MQTTEnabled will return whether Go Hass Agent will use MQTT.
 func MQTTEnabled() bool {
-	return prefsSrc.Bool("mqtt.enabled")
+	return prefsSrc.Bool(prefMQTTEnabled)
 }
 
 // Server returns the broker URI from the preferences.
@@ -85,10 +94,6 @@ func (p *MQTT) Password() string {
 
 // TopicPrefix returns the prefix for topics on MQTT.
 func (p *MQTT) TopicPrefix() string {
-	if p.MQTTTopicPrefix == "" {
-		return MQTTTopicPrefix
-	}
-
 	return p.MQTTTopicPrefix
 }
 
