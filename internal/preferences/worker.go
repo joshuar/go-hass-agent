@@ -34,15 +34,14 @@ var (
 
 // LoadWorker reads the given worker's preferences from file.
 func LoadWorker[T any](ctx context.Context, worker Worker[T]) (*T, error) {
+	prefsKey := "worker_prefs." + worker.PreferencesID()
 	// Load default worker prefs.
-	var prefs T
+	prefs := worker.DefaultPreferences()
 
-	existingPrefs := prefsSrc.Get("worker_prefs." + worker.PreferencesID())
-	if existingPrefs == nil {
+	if prefsSrc.Get(prefsKey) == nil {
 		slog.Debug("Using default preferences for worker.",
 			slog.String("worker", worker.PreferencesID()))
 
-		prefs = worker.DefaultPreferences()
 		// Save the default preferences to the preferences source.
 		if err := SaveWorker(ctx, worker, prefs); err != nil {
 			return &prefs, fmt.Errorf("%w: %w", ErrLoadWorkerPrefs, err)
@@ -51,14 +50,10 @@ func LoadWorker[T any](ctx context.Context, worker Worker[T]) (*T, error) {
 		return &prefs, nil
 	}
 
-	// Marshal the existingPrefs, which is a map[string]any, into bytes.
-	data, err := toml.Marshal(existingPrefs)
-	if err != nil {
-		return &prefs, fmt.Errorf("%w: %w", ErrSaveWorkerPrefs, err)
-	}
-	// Unmarshal the bytes back into a the worker's preferences type T.
-	if err := toml.Unmarshal(data, &prefs); err != nil {
-		return &prefs, fmt.Errorf("%w: %w", ErrSaveWorkerPrefs, err)
+	// Unmarshal the existing prefs into the prefs type, overwriting any
+	// defaults.
+	if err := prefsSrc.Unmarshal(prefsKey, &prefs); err != nil {
+		return &prefs, fmt.Errorf("%w: %w", ErrLoadWorkerPrefs, err)
 	}
 
 	// Return preferences.
