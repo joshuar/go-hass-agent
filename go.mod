@@ -3,7 +3,7 @@ module github.com/joshuar/go-hass-agent
 go 1.23.2
 
 require (
-	fyne.io/fyne/v2 v2.5.2
+	fyne.io/fyne/v2 v2.5.3
 	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/eclipse/paho.golang v0.22.0
 	github.com/go-playground/validator/v10 v10.23.0
@@ -86,7 +86,7 @@ require (
 	github.com/pjbgf/sha1cd v0.3.0 // indirect
 	github.com/rogpeppe/go-internal v1.12.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
-	github.com/rymdport/portal v0.2.6 // indirect
+	github.com/rymdport/portal v0.3.0 // indirect
 	github.com/samber/lo v1.47.0 // indirect
 	github.com/sergi/go-diff v1.3.2-0.20230802210424-5b0b94c5c0d3 // indirect
 	github.com/shopspring/decimal v1.2.0 // indirect
@@ -114,7 +114,7 @@ require (
 	github.com/fredbi/uri v1.1.0 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/fyne-io/gl-js v0.0.0-20220119005834-d2da28d9ccfe // indirect
-	github.com/fyne-io/glfw-js v0.0.0-20240101223322-6e1efdc71b7a // indirect
+	github.com/fyne-io/glfw-js v0.0.0-20241126112943-313d8a0fe1d0 // indirect
 	github.com/fyne-io/image v0.0.0-20220602074514-4956b0afb3d2 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.3 // indirect
 	github.com/go-gl/gl v0.0.0-20211210172815-726fda9656d6 // indirect
