@@ -104,12 +104,14 @@ func Send[T any](ctx context.Context, url string, details Request) (T, error) {
 	if details.Retry() {
 		// If request needs to be retried, retry the request on any error.
 		logging.FromContext(ctx).Debug("Will retry requests.", slog.Any("body", details))
+
 		requestClient = requestClient.AddRetryCondition(
-			func(r *resty.Response, err error) bool {
+			func(_ *resty.Response, err error) bool {
 				if err != nil {
 					logging.FromContext(ctx).Debug("Retrying request.", slog.Any("body", details))
 					return true
 				}
+
 				return false
 			},
 		)

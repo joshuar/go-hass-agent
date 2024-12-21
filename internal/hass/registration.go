@@ -32,6 +32,7 @@ func (r *registrationRequest) RequestBody() any {
 	return r.Device
 }
 
+// revive:disable:unused-receiver
 func (r *registrationRequest) Retry() bool {
 	return true
 }
