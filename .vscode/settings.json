@@ -33,7 +33,8 @@
     "linux/cpu",
     "linux/system",
     "linux/mem",
-    "BREAKING_CHANGES"
+    "BREAKING_CHANGES",
+    "linux/power"
   ],
   "go.testFlags": ["-v"],
   "[markdown]": {
