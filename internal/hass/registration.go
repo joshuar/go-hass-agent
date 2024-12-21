@@ -32,6 +32,10 @@ func (r *registrationRequest) RequestBody() any {
 	return r.Device
 }
 
+func (r *registrationRequest) Retry() bool {
+	return true
+}
+
 func newRegistrationRequest(thisDevice *device.Device, token string) *registrationRequest {
 	return &registrationRequest{
 		Device: thisDevice,

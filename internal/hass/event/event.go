@@ -15,8 +15,9 @@ const (
 )
 
 type Event struct {
-	EventData any    `json:"event_data" validate:"required"`
-	EventType string `json:"event_type" validate:"required"`
+	EventData    any    `json:"event_data" validate:"required"`
+	EventType    string `json:"event_type" validate:"required"`
+	RetryRequest bool
 }
 
 func (e *Event) Validate() error {
@@ -36,4 +37,8 @@ func (e *Event) RequestBody() any {
 		RequestType: requestTypeEvent,
 		Data:        e,
 	}
+}
+
+func (e *Event) Retry() bool {
+	return e.RetryRequest
 }

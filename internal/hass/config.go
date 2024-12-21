@@ -60,3 +60,7 @@ func (c *configRequest) RequestBody() any {
 		Type: "get_config",
 	}
 }
+
+func (c *configRequest) Retry() bool {
+	return false
+}
