@@ -42,6 +42,9 @@ func newPowerState(name powerSignal, value any) sensor.Entity {
 			Attributes: map[string]any{
 				"data_source": linux.DataSrcDbus,
 			},
+			RequestMetadata: sensor.RequestMetadata{
+				RetryRequest: true,
+			},
 		},
 	}
 }

@@ -37,6 +37,9 @@ func newScreenlockSensor(value bool) sensor.Entity {
 			Attributes: map[string]any{
 				"data_source": linux.DataSrcDbus,
 			},
+			RequestMetadata: sensor.RequestMetadata{
+				RetryRequest: true,
+			},
 		},
 	}
 }
