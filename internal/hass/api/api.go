@@ -24,6 +24,8 @@ const (
 var (
 	client *resty.Client
 
+	// defaultRetryFunc defines how we retry requests. By default, requests are
+	// only retried when Home Assistant responds with 429.
 	defaultRetryFunc = func(r *resty.Response, _ error) bool {
 		return r.StatusCode() == http.StatusTooManyRequests
 	}
@@ -32,11 +34,15 @@ var (
 func init() {
 	client = resty.New().
 		SetTimeout(defaultTimeout).
+		SetRetryCount(3).
+		SetRetryWaitTime(5 * time.Second).
+		SetRetryMaxWaitTime(20 * time.Second).
 		AddRetryCondition(defaultRetryFunc)
 }
 
 type Request interface {
 	RequestBody() any
+	Retry() bool
 }
 
 // Authenticated represents a request that requires passing an authentication
@@ -93,6 +99,20 @@ func Send[T any](ctx context.Context, url string, details Request) (T, error) {
 		if err := v.Validate(); err != nil {
 			return response, fmt.Errorf("invalid request: %w", err)
 		}
+	}
+
+	if details.Retry() {
+		// If request needs to be retried, retry the request on any error.
+		logging.FromContext(ctx).Debug("Will retry requests.", slog.Any("body", details))
+		requestClient = requestClient.AddRetryCondition(
+			func(r *resty.Response, err error) bool {
+				if err != nil {
+					logging.FromContext(ctx).Debug("Retrying request.", slog.Any("body", details))
+					return true
+				}
+				return false
+			},
+		)
 	}
 
 	requestClient.SetBody(details.RequestBody())

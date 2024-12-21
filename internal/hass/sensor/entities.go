@@ -25,12 +25,17 @@ type Request struct {
 	RequestType string `json:"type"`
 }
 
+type RequestMetadata struct {
+	RetryRequest bool
+}
+
 type State struct {
 	Value      any              `json:"state" validate:"required"`
 	Attributes map[string]any   `json:"attributes,omitempty" validate:"omitempty"`
 	Icon       string           `json:"icon,omitempty" validate:"omitempty,startswith=mdi:"`
 	ID         string           `json:"unique_id" validate:"required"`
 	EntityType types.SensorType `json:"type" validate:"omitempty"`
+	RequestMetadata
 }
 
 func (s *State) Validate() error {
@@ -47,6 +52,10 @@ func (s *State) RequestBody() any {
 		RequestType: requestTypeUpdateSensor,
 		Data:        s,
 	}
+}
+
+func (s *State) Retry() bool {
+	return s.RetryRequest
 }
 
 //nolint:wrapcheck
@@ -89,6 +98,10 @@ func (e *Entity) RequestBody() any {
 		RequestType: requestTypeRegisterSensor,
 		Data:        e,
 	}
+}
+
+func (e *Entity) Retry() bool {
+	return e.RetryRequest
 }
 
 //nolint:wrapcheck
@@ -146,4 +159,8 @@ func (l *Location) RequestBody() any {
 		RequestType: requestTypeLocation,
 		Data:        l,
 	}
+}
+
+func (l *Location) Retry() bool {
+	return false
 }
