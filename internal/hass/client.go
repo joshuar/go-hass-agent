@@ -99,7 +99,10 @@ func (c *Client) ProcessEvent(ctx context.Context, details event.Event) error {
 func (c *Client) ProcessSensor(ctx context.Context, details sensor.Entity) error {
 	// Location request.
 	if req, ok := details.Value.(*sensor.Location); ok {
-		resp, err := api.Send[response](ctx, c.url, req)
+		resp, err := api.Send[response](ctx, c.url,
+			sensor.NewRequest(
+				sensor.AsLocationUpdate(*req),
+			))
 		if err != nil {
 			return fmt.Errorf("failed to send location update: %w", err)
 		}
@@ -122,7 +125,11 @@ func (c *Client) ProcessSensor(ctx context.Context, details sensor.Entity) error
 			return nil
 		}
 
-		resp, err := api.Send[bulkSensorUpdateResponse](ctx, c.url, details.State)
+		resp, err := api.Send[bulkSensorUpdateResponse](ctx, c.url,
+			sensor.NewRequest(
+				sensor.AsSensorUpdate(details),
+				sensor.AsRetryable(details.RetryRequest),
+			))
 		if err != nil {
 			return fmt.Errorf("failed to send sensor update for %s: %w", details.Name, err)
 		}
@@ -133,7 +140,11 @@ func (c *Client) ProcessSensor(ctx context.Context, details sensor.Entity) error
 	}
 
 	// Sensor registration.
-	resp, err := api.Send[registrationResponse](ctx, c.url, &details)
+	resp, err := api.Send[registrationResponse](ctx, c.url,
+		sensor.NewRequest(
+			sensor.AsSensorRegistration(details),
+			sensor.AsRetryable(details.RetryRequest),
+		))
 	if err != nil {
 		return fmt.Errorf("failed to send sensor registration: %w", err)
 	}
