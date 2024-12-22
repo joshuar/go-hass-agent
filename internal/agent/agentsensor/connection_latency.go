@@ -35,12 +35,12 @@ var ErrEmptyResponse = errors.New("empty response")
 func newConnectionLatencySensor(info resty.TraceInfo) sensor.Entity {
 	return sensor.NewSensor(
 		sensor.WithName("Connection Latency"),
+		sensor.WithID("connection_latency"),
 		sensor.WithUnits(connectionLatencyUnits),
 		sensor.WithDeviceClass(types.SensorDeviceClassDuration),
 		sensor.WithStateClass(types.StateClassMeasurement),
 		sensor.AsDiagnostic(),
 		sensor.WithState(
-			sensor.WithID("connection_latency"),
 			sensor.WithIcon("mdi:connection"),
 			sensor.WithValue(info.TotalTime.Milliseconds()),
 			sensor.WithAttribute("DNS Lookup Time", info.DNSLookup.Milliseconds()),

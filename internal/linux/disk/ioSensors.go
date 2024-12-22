@@ -140,10 +140,10 @@ func newDiskIOSensor(device *device, sensorType ioSensor, boottime time.Time) *d
 	ioSensor := &diskIOSensor{
 		Entity: sensor.NewSensor(
 			sensor.WithName(name),
+			sensor.WithID(id),
 			sensor.WithUnits(units),
 			sensor.WithStateClass(stateClass),
 			sensor.WithState(
-				sensor.WithID(id),
 				sensor.WithIcon(icon),
 				sensor.WithAttributes(attributes),
 			),

@@ -77,8 +77,8 @@ func newConnectionStateSensor(bus *dbusx.Bus, connectionPath, connectionName str
 	return &connectionStateSensor{
 		Entity: sensor.NewSensor(
 			sensor.WithName(connectionName+" Connection State"),
+			sensor.WithID(strcase.ToSnake(connectionName)+"_connection_state"),
 			sensor.WithState(
-				sensor.WithID(strcase.ToSnake(connectionName)+"_connection_state"),
 				sensor.WithDataSourceAttribute(linux.DataSrcDbus),
 			),
 		),

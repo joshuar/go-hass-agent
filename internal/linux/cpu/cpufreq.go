@@ -84,14 +84,14 @@ func newCPUFreqSensor(id string) sensor.Entity {
 
 	return sensor.NewSensor(
 		sensor.WithName("Core "+num+" Frequency"),
+		sensor.WithID("cpufreq_core"+num+"_frequency"),
+		sensor.AsTypeSensor(),
 		sensor.WithUnits(cpuFreqUnits),
 		sensor.WithDeviceClass(types.SensorDeviceClassFrequency),
 		sensor.WithStateClass(types.StateClassMeasurement),
 		sensor.AsDiagnostic(),
 		sensor.WithState(
-			sensor.WithID("cpufreq_core"+num+"_frequency"),
 			sensor.WithIcon(cpuFreqIcon),
-			sensor.AsTypeSensor(),
 			sensor.WithValue(info.freq),
 			sensor.WithAttributes(map[string]any{
 				"governor":                   info.governor,

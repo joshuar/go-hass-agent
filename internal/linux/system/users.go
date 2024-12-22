@@ -43,10 +43,10 @@ const (
 func newUsersSensor(users []string) sensor.Entity {
 	return sensor.NewSensor(
 		sensor.WithName("Current Users"),
+		sensor.WithID("current_users"),
 		sensor.WithStateClass(types.StateClassMeasurement),
 		sensor.WithUnits(usersSensorUnits),
 		sensor.WithState(
-			sensor.WithID("current_users"),
 			sensor.WithIcon(usersSensorIcon),
 			sensor.WithValue(len(users)),
 			sensor.WithDataSourceAttribute(linux.DataSrcDbus),

@@ -33,12 +33,12 @@ func (w *uptimeWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
 	return []sensor.Entity{
 			sensor.NewSensor(
 				sensor.WithName("Uptime"),
+				sensor.WithID("uptime"),
 				sensor.AsDiagnostic(),
 				sensor.WithDeviceClass(types.SensorDeviceClassDuration),
 				sensor.WithStateClass(types.StateClassMeasurement),
 				sensor.WithUnits("h"),
 				sensor.WithState(
-					sensor.WithID("uptime"),
 					sensor.WithIcon("mdi:restart"),
 					sensor.WithValue(w.getUptime(ctx)/60/60),
 					sensor.WithDataSourceAttribute(linux.ProcFSRoot),

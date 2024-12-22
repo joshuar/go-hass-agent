@@ -71,9 +71,9 @@ func newWifiSensor(prop string, value any) sensor.Entity {
 
 	wifiSensor := sensor.NewSensor(
 		sensor.WithName(name),
+		sensor.WithID(id),
 		sensor.AsDiagnostic(),
 		sensor.WithState(
-			sensor.WithID(id),
 			sensor.WithIcon(icon),
 			sensor.WithValue(generateState(prop, value)),
 		),

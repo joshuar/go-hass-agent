@@ -28,11 +28,11 @@ type ScriptSensor struct {
 func scriptToEntity(script ScriptSensor) sensor.Entity {
 	entity := sensor.NewSensor(
 		sensor.WithName(script.SensorName),
+		sensor.WithID(strcase.ToSnake(script.SensorName)),
 		sensor.WithUnits(script.SensorUnits),
 		sensor.WithDeviceClass(script.DeviceClass()),
 		sensor.WithStateClass(script.StateClass()),
 		sensor.WithState(
-			sensor.WithID(strcase.ToSnake(script.SensorName)),
 			sensor.WithIcon(script.Icon()),
 			sensor.WithAttributes(script.Attributes()),
 			sensor.WithValue(script.SensorState),

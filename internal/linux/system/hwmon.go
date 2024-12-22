@@ -68,11 +68,11 @@ func newHWSensor(details *hwmon.Sensor) sensor.Entity {
 
 	hwMonSensor := sensor.NewSensor(
 		sensor.WithName(details.Name()),
+		sensor.WithID(details.ID()),
 		sensor.WithDeviceClass(deviceClass),
 		sensor.AsDiagnostic(),
 		sensor.WithUnits(details.Units()),
 		sensor.WithState(
-			sensor.WithID(details.ID()),
 			sensor.WithIcon(icon),
 			sensor.WithValue(details.Value()),
 			sensor.WithAttributes(hwmonSensorAttributes(details)),

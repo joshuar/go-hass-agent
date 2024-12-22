@@ -55,9 +55,9 @@ func newExternalIPSensor(addr net.IP) sensor.Entity {
 
 	return sensor.NewSensor(
 		sensor.WithName(name),
+		sensor.WithID(id),
 		sensor.AsDiagnostic(),
 		sensor.WithState(
-			sensor.WithID(id),
 			sensor.WithIcon(icon),
 			sensor.WithValue(addr.String()),
 			sensor.WithAttribute("last_updated", time.Now().Format(time.RFC3339)),

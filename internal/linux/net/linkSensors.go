@@ -63,9 +63,9 @@ func newLinkSensor(msg rtnetlink.LinkMessage) sensor.Entity {
 
 	return sensor.NewSensor(
 		sensor.WithName(name+" Link State"),
+		sensor.WithID(strings.ToLower(name+"_link_state")),
 		sensor.AsDiagnostic(),
 		sensor.WithState(
-			sensor.WithID(strings.ToLower(name+"_link_state")),
 			sensor.WithIcon(icon),
 			sensor.WithValue(value),
 			sensor.WithAttributes(attributes),
@@ -106,9 +106,9 @@ func newAddressSensor(link rtnetlink.LinkMessage, msg rtnetlink.AddressMessage) 
 
 	return sensor.NewSensor(
 		sensor.WithName(name+" "+ipFamily(msg.Family).String()+" Address"),
+		sensor.WithID(strings.ToLower(name+"_"+ipFamily(msg.Family).String()+"_address")),
 		sensor.AsDiagnostic(),
 		sensor.WithState(
-			sensor.WithID(strings.ToLower(name+"_"+ipFamily(msg.Family).String()+"_address")),
 			sensor.WithIcon(ipFamily(msg.Family).Icon()),
 			sensor.WithValue(value),
 			sensor.WithAttributes(attributes),

@@ -28,11 +28,11 @@ const (
 func newScreenlockSensor(value bool) sensor.Entity {
 	return sensor.NewSensor(
 		sensor.WithName("Screen Lock"),
+		sensor.WithID("screen_lock"),
+		sensor.AsTypeBinarySensor(),
 		sensor.WithDeviceClass(types.BinarySensorDeviceClassLock),
 		sensor.WithState(
-			sensor.WithID("screen_lock"),
 			sensor.WithIcon(screenLockIcon(value)),
-			sensor.AsTypeBinarySensor(),
 			sensor.WithValue(!value), // For device class BinarySensorDeviceClassLock: On means open (unlocked), Off means closed (locked).
 			sensor.WithDataSourceAttribute(linux.DataSrcDbus),
 		),

@@ -68,9 +68,9 @@ func (w *settingsWorker) Events(ctx context.Context) (<-chan sensor.Entity, erro
 
 					sensorCh <- sensor.NewSensor(
 						sensor.WithName("Desktop Color Scheme"),
+						sensor.WithID("desktop_color_scheme"),
 						sensor.AsDiagnostic(),
 						sensor.WithState(
-							sensor.WithID("desktop_color_scheme"),
 							sensor.WithIcon(icon),
 							sensor.WithValue(scheme),
 							sensor.WithDataSourceAttribute(linux.DataSrcDbus),
@@ -79,9 +79,9 @@ func (w *settingsWorker) Events(ctx context.Context) (<-chan sensor.Entity, erro
 				case accentColorProp:
 					sensorCh <- sensor.NewSensor(
 						sensor.WithName("Desktop Accent Color"),
+						sensor.WithID("desktop_accent_color"),
 						sensor.AsDiagnostic(),
 						sensor.WithState(
-							sensor.WithID("desktop_accent_color"),
 							sensor.WithIcon("mdi:palette"),
 							sensor.WithValue(parseAccentColor(value)),
 							sensor.WithDataSourceAttribute(linux.DataSrcDbus),
@@ -117,9 +117,9 @@ func (w *settingsWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
 	} else {
 		sensors = append(sensors, sensor.NewSensor(
 			sensor.WithName("Desktop Accent Color"),
+			sensor.WithID("desktop_accent_color"),
 			sensor.AsDiagnostic(),
 			sensor.WithState(
-				sensor.WithID("desktop_accent_color"),
 				sensor.WithIcon("mdi:palette"),
 				sensor.WithValue(parseAccentColor(value)),
 				sensor.WithDataSourceAttribute(linux.DataSrcDbus),
@@ -134,9 +134,9 @@ func (w *settingsWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
 
 		sensors = append(sensors, sensor.NewSensor(
 			sensor.WithName("Desktop Color Scheme"),
+			sensor.WithID("desktop_color_scheme"),
 			sensor.AsDiagnostic(),
 			sensor.WithState(
-				sensor.WithID("desktop_color_scheme"),
 				sensor.WithIcon(icon),
 				sensor.WithValue(scheme),
 				sensor.WithDataSourceAttribute(linux.DataSrcDbus),

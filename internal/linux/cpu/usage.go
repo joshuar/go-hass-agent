@@ -206,11 +206,11 @@ func (s *rateSensor) update(delta time.Duration, valueStr string) {
 func newRateSensor(name, icon, units string) *rateSensor {
 	sensorDetails := sensor.NewSensor(
 		sensor.WithName(name),
+		sensor.WithID(strcase.ToSnake(name)),
 		sensor.WithStateClass(types.StateClassMeasurement),
 		sensor.AsDiagnostic(),
 		sensor.WithUnits(units),
 		sensor.WithState(
-			sensor.WithID(strcase.ToSnake(name)),
 			sensor.WithIcon(icon),
 			sensor.WithDataSourceAttribute(linux.DataSrcProcfs),
 		),
@@ -238,10 +238,10 @@ func newUsageSensor(clktck int64, details []string, category types.Category) sen
 
 	usageSensor := sensor.NewSensor(
 		sensor.WithName(name),
+		sensor.WithID(id),
 		sensor.WithUnits("%"),
 		sensor.WithStateClass(types.StateClassMeasurement),
 		sensor.WithState(
-			sensor.WithID(id),
 			sensor.WithValue(value),
 			sensor.WithAttributes(attributes),
 			sensor.WithIcon("mdi:chip"),
@@ -285,10 +285,10 @@ func newCountSensor(name, icon, valueStr string) sensor.Entity {
 
 	return sensor.NewSensor(
 		sensor.WithName(name),
+		sensor.WithID(strcase.ToSnake(name)),
 		sensor.WithStateClass(types.StateClassMeasurement),
 		sensor.AsDiagnostic(),
 		sensor.WithState(
-			sensor.WithID(strcase.ToSnake(name)),
 			sensor.WithIcon(icon),
 			sensor.WithValue(valueInt),
 			sensor.WithDataSourceAttribute(linux.DataSrcProcfs),

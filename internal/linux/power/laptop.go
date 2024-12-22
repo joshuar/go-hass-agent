@@ -73,11 +73,11 @@ func newLaptopEvent(prop string, state bool) sensor.Entity {
 
 	return sensor.NewSensor(
 		sensor.WithName(name),
+		sensor.WithID(strcase.ToSnake(name)),
+		sensor.AsTypeBinarySensor(),
 		sensor.WithDeviceClass(deviceClass),
 		sensor.AsDiagnostic(),
 		sensor.WithState(
-			sensor.WithID(strcase.ToSnake(name)),
-			sensor.AsTypeBinarySensor(),
 			sensor.WithIcon(icon),
 			sensor.WithValue(state),
 			sensor.WithDataSourceAttribute(linux.DataSrcDbus),

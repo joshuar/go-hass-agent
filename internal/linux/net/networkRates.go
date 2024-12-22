@@ -96,11 +96,11 @@ func newNetStatsSensor(name string, sensorType netStatsType, stats *rtnetlink.Li
 
 	netSensor.Entity = sensor.NewSensor(
 		sensor.WithName(name+" "+sensorType.String()),
+		sensor.WithID(strings.ToLower(name)+"_"+strcase.ToSnake(sensorType.String())),
 		sensor.WithDeviceClass(deviceClass),
 		sensor.WithStateClass(stateClass),
 		sensor.WithUnits(units),
 		sensor.WithState(
-			sensor.WithID(strings.ToLower(name)+"_"+strcase.ToSnake(sensorType.String())),
 			sensor.WithIcon(icon),
 			sensor.WithDataSourceAttribute(linux.DataSrcNetlink),
 		),

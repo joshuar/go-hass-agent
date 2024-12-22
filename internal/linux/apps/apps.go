@@ -119,10 +119,10 @@ func (w *sensorWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 			sensors = append(sensors,
 				sensor.NewSensor(
 					sensor.WithName(activeAppsName),
+					sensor.WithID(activeAppsID),
+					sensor.AsTypeSensor(),
 					sensor.WithState(
-						sensor.WithID(activeAppsID),
 						sensor.WithIcon(activeAppsIcon),
-						sensor.AsTypeSensor(),
 						sensor.WithValue(name),
 						sensor.WithDataSourceAttribute(linux.DataSrcDbus),
 					),
@@ -136,10 +136,10 @@ func (w *sensorWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 		sensors = append(sensors,
 			sensor.NewSensor(
 				sensor.WithName(runningAppsName),
+				sensor.WithID(runningAppsID),
 				sensor.WithUnits(runningAppsUnits),
 				sensor.WithStateClass(types.StateClassMeasurement),
 				sensor.WithState(
-					sensor.WithID(runningAppsID),
 					sensor.WithIcon(runningAppsIcon),
 					sensor.WithValue(len(runningApps)),
 					sensor.WithDataSourceAttribute(linux.DataSrcDbus),

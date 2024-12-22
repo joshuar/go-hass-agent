@@ -33,9 +33,9 @@ type powerSignal int
 func newPowerState(name powerSignal, value any) sensor.Entity {
 	return sensor.NewSensor(
 		sensor.WithName("Power State"),
+		sensor.WithID("power_state"),
 		sensor.AsDiagnostic(),
 		sensor.WithState(
-			sensor.WithID("power_state"),
 			sensor.WithIcon(powerStateIcon(value)),
 			sensor.WithValue(powerStateString(name, value)),
 			sensor.WithDataSourceAttribute(linux.DataSrcDbus),

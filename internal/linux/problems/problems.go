@@ -72,10 +72,10 @@ func (w *problemsWorker) newProblemsSensor(problems []string) sensor.Entity {
 
 	return sensor.NewSensor(
 		sensor.WithName("Problems"),
+		sensor.WithID("problems"),
 		sensor.WithStateClass(types.StateClassMeasurement),
 		sensor.WithUnits("problems"),
 		sensor.WithState(
-			sensor.WithID("problems"),
 			sensor.WithIcon("mdi:alert"),
 			sensor.WithValue(len(problems)),
 			sensor.WithDataSourceAttribute(linux.DataSrcDbus),

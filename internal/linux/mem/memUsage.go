@@ -50,11 +50,11 @@ func newMemSensor(id memStatID, stat *memStat) sensor.Entity {
 
 	return sensor.NewSensor(
 		sensor.WithName(id.String()),
+		sensor.WithID(strcase.ToSnake(id.String())),
 		sensor.WithUnits(memoryUsageSensorUnits),
 		sensor.WithDeviceClass(types.SensorDeviceClassDataSize),
 		sensor.WithStateClass(types.StateClassTotal),
 		sensor.WithState(
-			sensor.WithID(strcase.ToSnake(id.String())),
 			sensor.WithIcon(memorySensorIcon),
 			sensor.WithValue(value),
 			sensor.WithDataSourceAttribute(linux.DataSrcProcfs),
@@ -75,10 +75,10 @@ func newMemSensorPc(name string, value, total uint64) sensor.Entity {
 
 	return sensor.NewSensor(
 		sensor.WithName(name),
+		sensor.WithID(strcase.ToSnake(name)),
 		sensor.WithUnits(memoryUsageSensorUnits),
 		sensor.WithStateClass(types.StateClassTotal),
 		sensor.WithState(
-			sensor.WithID(strcase.ToSnake(name)),
 			sensor.WithIcon(memorySensorIcon),
 			sensor.WithValue(valuePc),
 			sensor.WithDataSourceAttribute(linux.DataSrcProcfs),
