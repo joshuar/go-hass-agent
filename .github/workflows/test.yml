@@ -32,6 +32,8 @@ jobs:
             cli.codecov.io:443
             esm.ubuntu.com:443
             github.com:443
+            ingest.codecov.io:443
+            keybase.io:443
             motd.ubuntu.com:443
             objects.githubusercontent.com:443
             packages.microsoft.com:443
