@@ -9,6 +9,27 @@ const (
 	requestTypeLocation       = "update_location"
 )
 
+type stateRequestBody struct {
+	State      any            `json:"state" validate:"required"`
+	Attributes map[string]any `json:"attributes,omitempty" validate:"omitempty"`
+	Icon       string         `json:"icon,omitempty" validate:"omitempty,startswith=mdi:"`
+	ID         string         `json:"unique_id" validate:"required"`
+	EntityType string         `json:"type" validate:"omitempty"`
+}
+
+type registrationRequestBody struct {
+	State       any            `json:"state" validate:"required"`
+	Attributes  map[string]any `json:"attributes,omitempty" validate:"omitempty"`
+	Icon        string         `json:"icon,omitempty" validate:"omitempty,startswith=mdi:"`
+	ID          string         `json:"unique_id" validate:"required"`
+	EntityType  string         `json:"type" validate:"omitempty"`
+	Name        string         `json:"name" validate:"required"`
+	Units       string         `json:"unit_of_measurement,omitempty" validate:"omitempty"`
+	DeviceClass string         `json:"device_class,omitempty" validate:"omitempty"`
+	StateClass  string         `json:"state_class,omitempty" validate:"omitempty"`
+	Category    string         `json:"entity_category,omitempty" validate:"omitempty"`
+}
+
 // Request represents a sensor request, either a registration, update or
 // location update.
 type Request struct {
@@ -29,13 +50,7 @@ func (r *Request) Retry() bool {
 func AsSensorUpdate(entity Entity) Option[Request] {
 	return func(request Request) Request {
 		request.RequestType = requestTypeUpdateSensor
-		request.Data = &struct {
-			State      any            `json:"state" validate:"required"`
-			Attributes map[string]any `json:"attributes,omitempty" validate:"omitempty"`
-			Icon       string         `json:"icon,omitempty" validate:"omitempty,startswith=mdi:"`
-			ID         string         `json:"unique_id" validate:"required"`
-			EntityType string         `json:"type" validate:"omitempty"`
-		}{
+		request.Data = &stateRequestBody{
 			State:      entity.Value,
 			Attributes: entity.Attributes,
 			Icon:       entity.Icon,
@@ -52,18 +67,7 @@ func AsSensorUpdate(entity Entity) Option[Request] {
 func AsSensorRegistration(entity Entity) Option[Request] {
 	return func(request Request) Request {
 		request.RequestType = requestTypeRegisterSensor
-		request.Data = &struct {
-			State       any            `json:"state" validate:"required"`
-			Attributes  map[string]any `json:"attributes,omitempty" validate:"omitempty"`
-			Icon        string         `json:"icon,omitempty" validate:"omitempty,startswith=mdi:"`
-			ID          string         `json:"unique_id" validate:"required"`
-			EntityType  string         `json:"type" validate:"omitempty"`
-			Name        string         `json:"name" validate:"required"`
-			Units       string         `json:"unit_of_measurement,omitempty" validate:"omitempty"`
-			DeviceClass string         `json:"device_class,omitempty" validate:"omitempty"`
-			StateClass  string         `json:"state_class,omitempty" validate:"omitempty"`
-			Category    string         `json:"entity_category,omitempty" validate:"omitempty"`
-		}{
+		request.Data = &registrationRequestBody{
 			State:       entity.Value,
 			Attributes:  entity.Attributes,
 			Icon:        entity.Icon,
