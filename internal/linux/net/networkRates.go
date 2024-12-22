@@ -128,11 +128,13 @@ func (s *netStatsSensor) update(link string, sensorType netStatsType, stats *rtn
 	switch sensorType {
 	case bytesRecv:
 		s.UpdateValue(stats.RXBytes)
+
 		if link != totalsName {
 			maps.Copy(s.Attributes, getRXAttributes(stats))
 		}
 	case bytesSent:
 		s.UpdateValue(stats.TXBytes)
+
 		if link != totalsName {
 			maps.Copy(s.Attributes, getTXAttributes(stats))
 		}

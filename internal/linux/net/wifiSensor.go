@@ -69,7 +69,7 @@ func newWifiSensor(prop string, value any) sensor.Entity {
 		icon = generateStrIcon(value)
 	}
 
-	s := sensor.NewSensor(
+	wifiSensor := sensor.NewSensor(
 		sensor.WithName(name),
 		sensor.AsDiagnostic(),
 		sensor.WithState(
@@ -80,18 +80,18 @@ func newWifiSensor(prop string, value any) sensor.Entity {
 	)
 
 	if deviceClass != types.SensorDeviceClassNone {
-		s = sensor.WithDeviceClass(deviceClass)(s)
+		wifiSensor = sensor.WithDeviceClass(deviceClass)(wifiSensor)
 	}
 
 	if stateClass != types.StateClassNone {
-		s = sensor.WithStateClass(stateClass)(s)
+		wifiSensor = sensor.WithStateClass(stateClass)(wifiSensor)
 	}
 
 	if units != "" {
-		s = sensor.WithUnits(units)(s)
+		wifiSensor = sensor.WithUnits(units)(wifiSensor)
 	}
 
-	return s
+	return wifiSensor
 }
 
 func getWifiSensors(bus *dbusx.Bus, apPath string) []sensor.Entity {

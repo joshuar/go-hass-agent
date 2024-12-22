@@ -26,7 +26,7 @@ const (
 )
 
 func newScreenlockSensor(value bool) sensor.Entity {
-	s := sensor.NewSensor(
+	return sensor.NewSensor(
 		sensor.WithName("Screen Lock"),
 		sensor.WithDeviceClass(types.BinarySensorDeviceClassLock),
 		sensor.WithState(
@@ -36,13 +36,8 @@ func newScreenlockSensor(value bool) sensor.Entity {
 			sensor.WithValue(!value), // For device class BinarySensorDeviceClassLock: On means open (unlocked), Off means closed (locked).
 			sensor.WithDataSourceAttribute(linux.DataSrcDbus),
 		),
+		sensor.WithRequestRetry(true),
 	)
-
-	s.RequestMetadata = sensor.RequestMetadata{
-		RetryRequest: true,
-	}
-
-	return s
 }
 
 func screenLockIcon(value bool) string {
