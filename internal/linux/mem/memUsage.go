@@ -48,21 +48,19 @@ func newMemSensor(id memStatID, stat *memStat) sensor.Entity {
 		value = stat.value
 	}
 
-	return sensor.Entity{
-		Name:        id.String(),
-		DeviceClass: types.SensorDeviceClassDataSize,
-		StateClass:  types.StateClassTotal,
-		Units:       memoryUsageSensorUnits,
-		State: &sensor.State{
-			ID:    strcase.ToSnake(id.String()),
-			Icon:  memorySensorIcon,
-			Value: value,
-			Attributes: map[string]any{
-				"data_source":                linux.DataSrcProcfs,
-				"native_unit_of_measurement": memoryUsageSensorUnits,
-			},
-		},
-	}
+	return sensor.NewSensor(
+		sensor.WithName(id.String()),
+		sensor.WithUnits(memoryUsageSensorUnits),
+		sensor.WithDeviceClass(types.SensorDeviceClassDataSize),
+		sensor.WithStateClass(types.StateClassTotal),
+		sensor.WithState(
+			sensor.WithID(strcase.ToSnake(id.String())),
+			sensor.WithIcon(memorySensorIcon),
+			sensor.WithValue(value),
+			sensor.WithDataSourceAttribute(linux.DataSrcProcfs),
+			sensor.WithAttribute("native_unit_of_measurement", memoryUsageSensorUnits),
+		),
+	)
 }
 
 // newMemSensorPc generates a memorySensor with a percentage value for a memory
@@ -75,19 +73,18 @@ func newMemSensorPc(name string, value, total uint64) sensor.Entity {
 		valuePc = math.Round(float64(value)/float64(total)*100/0.05) * 0.05 //nolint:mnd
 	}
 
-	return sensor.Entity{
-		Name:       name,
-		StateClass: types.StateClassTotal,
-		Units:      memoryUsageSensorPcUnits,
-		State: &sensor.State{
-			ID:    strcase.ToSnake(name),
-			Icon:  memorySensorIcon,
-			Value: valuePc,
-			Attributes: map[string]any{
-				"data_source": linux.DataSrcProcfs,
-			},
-		},
-	}
+	return sensor.NewSensor(
+		sensor.WithName(name),
+		sensor.WithUnits(memoryUsageSensorUnits),
+		sensor.WithStateClass(types.StateClassTotal),
+		sensor.WithState(
+			sensor.WithID(strcase.ToSnake(name)),
+			sensor.WithIcon(memorySensorIcon),
+			sensor.WithValue(valuePc),
+			sensor.WithDataSourceAttribute(linux.DataSrcProcfs),
+			sensor.WithAttribute("native_unit_of_measurement", memoryUsageSensorPcUnits),
+		),
+	)
 }
 
 // Calculate used memory = total - free/buffered/cached.

@@ -17,7 +17,6 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
@@ -35,82 +34,86 @@ var (
 	}
 )
 
-func newLinkSensor(msg rtnetlink.LinkMessage) *sensor.Entity {
-	name := msg.Attributes.Name
+func newLinkSensor(msg rtnetlink.LinkMessage) sensor.Entity {
+	var (
+		value any
+		icon  string
+	)
 
-	link := &sensor.Entity{
-		Name:     name + " Link State",
-		Category: types.CategoryDiagnostic,
-		State: &sensor.State{
-			ID: strings.ToLower(name + "_link_state"),
-			Attributes: map[string]any{
-				"data_source": linux.DataSrcNetlink,
-			},
-		},
+	name := msg.Attributes.Name
+	attributes := map[string]any{
+		"data_source": linux.DataSrcNetlink,
 	}
 
 	switch msg.Attributes.OperationalState {
 	case rtnetlink.OperStateUp:
-		link.Value = "up"
-		link.Icon = "mdi:network"
+		value = "up"
+		icon = "mdi:network"
 	case rtnetlink.OperStateNotPresent:
-		link.Value = "invalid"
-		link.Icon = "mdi:close-network"
+		value = "invalid"
+		icon = "mdi:close-network"
 	case rtnetlink.OperStateDown:
-		link.Value = "down"
-		link.Icon = "mdi:network-off"
-	default:
-		return nil
+		value = "down"
+		icon = "mdi:network-off"
 	}
 
 	if msg.Attributes.Info != nil {
-		link.Attributes["link_type"] = msg.Attributes.Info.Kind
+		attributes["link_type"] = msg.Attributes.Info.Kind
 	}
 
-	return link
+	return sensor.NewSensor(
+		sensor.WithName(name+" Link State"),
+		sensor.AsDiagnostic(),
+		sensor.WithState(
+			sensor.WithID(strings.ToLower(name+"_link_state")),
+			sensor.WithIcon(icon),
+			sensor.WithValue(value),
+			sensor.WithAttributes(attributes),
+		),
+	)
 }
 
-func newAddressSensor(link rtnetlink.LinkMessage, msg rtnetlink.AddressMessage) *sensor.Entity {
+func newAddressSensor(link rtnetlink.LinkMessage, msg rtnetlink.AddressMessage) sensor.Entity {
 	name := link.Attributes.Name
-
-	addr := &sensor.Entity{
-		Name:     name + " " + ipFamily(msg.Family).String() + " Address",
-		Category: types.CategoryDiagnostic,
-		State: &sensor.State{
-			ID:    strings.ToLower(name + "_" + ipFamily(msg.Family).String() + "_address"),
-			Icon:  ipFamily(msg.Family).Icon(),
-			Value: msg.Attributes.Address.String(),
-			Attributes: map[string]any{
-				"data_source": linux.DataSrcNetlink,
-			},
-		},
+	value := msg.Attributes.Address.String()
+	attributes := map[string]any{
+		"data_source": linux.DataSrcNetlink,
 	}
 
 	if link.Attributes.OperationalState != rtnetlink.OperStateUp {
 		if ipFamily(msg.Family) == unix.AF_INET {
-			addr.Value = net.IPv4zero.String()
+			value = net.IPv4zero.String()
 		} else {
-			addr.Value = net.IPv6zero.String()
+			value = net.IPv6zero.String()
 		}
 	}
 
 	if msg.Attributes.Broadcast != nil {
-		addr.Attributes["broadcast"] = msg.Attributes.Broadcast.String()
+		attributes["broadcast"] = msg.Attributes.Broadcast.String()
 	}
 
 	if msg.Attributes.Local != nil {
-		addr.Attributes["local"] = msg.Attributes.Local.String()
+		attributes["local"] = msg.Attributes.Local.String()
 	}
 
 	if msg.Attributes.Multicast != nil {
-		addr.Attributes["multicast"] = msg.Attributes.Multicast.String()
+		attributes["multicast"] = msg.Attributes.Multicast.String()
 	}
 
 	if msg.Attributes.Anycast != nil {
-		addr.Attributes["anycast"] = msg.Attributes.Anycast.String()
+		attributes["anycast"] = msg.Attributes.Anycast.String()
 	}
 
-	return addr
+	return sensor.NewSensor(
+		sensor.WithName(name+" "+ipFamily(msg.Family).String()+" Address"),
+		sensor.AsDiagnostic(),
+		sensor.WithState(
+			sensor.WithID(strings.ToLower(name+"_"+ipFamily(msg.Family).String()+"_address")),
+			sensor.WithIcon(ipFamily(msg.Family).Icon()),
+			sensor.WithValue(value),
+			sensor.WithAttributes(attributes),
+		),
+	)
 }
 
 type ipFamily int
@@ -311,7 +314,9 @@ func (w *AddressWorker) filterAddress(msg rtnetlink.AddressMessage) *sensor.Enti
 		return nil
 	}
 
-	return newAddressSensor(link, msg)
+	s := newAddressSensor(link, msg)
+
+	return &s
 }
 
 func (w *AddressWorker) getLinks(ctx context.Context) []*sensor.Entity {
@@ -339,5 +344,7 @@ func filterLink(msg rtnetlink.LinkMessage) *sensor.Entity {
 		return nil
 	}
 
-	return newLinkSensor(msg)
+	s := newLinkSensor(msg)
+
+	return &s
 }

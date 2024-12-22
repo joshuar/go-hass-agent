@@ -13,7 +13,6 @@ import (
 	"strings"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
@@ -32,21 +31,22 @@ const (
 type powerSignal int
 
 func newPowerState(name powerSignal, value any) sensor.Entity {
-	return sensor.Entity{
-		Name:     "Power State",
-		Category: types.CategoryDiagnostic,
-		State: &sensor.State{
-			ID:    "power_state",
-			Icon:  powerStateIcon(value),
-			Value: powerStateString(name, value),
-			Attributes: map[string]any{
-				"data_source": linux.DataSrcDbus,
-			},
-			RequestMetadata: sensor.RequestMetadata{
-				RetryRequest: true,
-			},
-		},
+	s := sensor.NewSensor(
+		sensor.WithName("Power State"),
+		sensor.AsDiagnostic(),
+		sensor.WithState(
+			sensor.WithID("power_state"),
+			sensor.WithIcon(powerStateIcon(value)),
+			sensor.WithValue(powerStateString(name, value)),
+			sensor.WithDataSourceAttribute(linux.DataSrcDbus),
+		),
+	)
+
+	s.State.RequestMetadata = sensor.RequestMetadata{
+		RetryRequest: true,
 	}
+
+	return s
 }
 
 func powerStateString(signal powerSignal, value any) string {

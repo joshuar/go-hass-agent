@@ -30,8 +30,8 @@ const (
 	sessionRemovedSignal = "SessionRemoved"
 	listSessionsMethod   = managerInterface + ".ListSessions"
 
-	sensorUnits = "users"
-	sensorIcon  = "mdi:account"
+	usersSensorUnits = "users"
+	usersSensorIcon  = "mdi:account"
 
 	userSessionSensorWorkerID = "user_session_sensor_worker"
 	userSessionEventWorkerID  = "user_session_event_worker"
@@ -41,20 +41,18 @@ const (
 )
 
 func newUsersSensor(users []string) sensor.Entity {
-	return sensor.Entity{
-		Name:       "Current Users",
-		StateClass: types.StateClassMeasurement,
-		Units:      sensorUnits,
-		State: &sensor.State{
-			ID:    "current_users",
-			Icon:  sensorIcon,
-			Value: len(users),
-			Attributes: map[string]any{
-				"data_source": linux.DataSrcDbus,
-				"usernames":   users,
-			},
-		},
-	}
+	return sensor.NewSensor(
+		sensor.WithName("Current Users"),
+		sensor.WithStateClass(types.StateClassMeasurement),
+		sensor.WithUnits(usersSensorUnits),
+		sensor.WithState(
+			sensor.WithID("current_users"),
+			sensor.WithIcon(usersSensorIcon),
+			sensor.WithValue(len(users)),
+			sensor.WithDataSourceAttribute(linux.DataSrcDbus),
+			sensor.WithAttribute("usernames", users),
+		),
+	)
 }
 
 type UserSessionSensorWorker struct {

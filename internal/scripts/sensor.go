@@ -26,19 +26,22 @@ type ScriptSensor struct {
 }
 
 func scriptToEntity(script ScriptSensor) sensor.Entity {
-	return sensor.Entity{
-		Name:        script.SensorName,
-		Units:       script.SensorUnits,
-		DeviceClass: script.DeviceClass(),
-		StateClass:  script.StateClass(),
-		State: &sensor.State{
-			Value:      script.SensorState,
-			ID:         strcase.ToSnake(script.SensorName),
-			Icon:       script.Icon(),
-			Attributes: script.Attributes(),
-			EntityType: script.SensorType(),
-		},
-	}
+	entity := sensor.NewSensor(
+		sensor.WithName(script.SensorName),
+		sensor.WithUnits(script.SensorUnits),
+		sensor.WithDeviceClass(script.DeviceClass()),
+		sensor.WithStateClass(script.StateClass()),
+		sensor.WithState(
+			sensor.WithID(strcase.ToSnake(script.SensorName)),
+			sensor.WithIcon(script.Icon()),
+			sensor.WithAttributes(script.Attributes()),
+			sensor.WithValue(script.SensorState),
+		),
+	)
+
+	entity.EntityType = script.SensorType()
+
+	return entity
 }
 
 func (s *ScriptSensor) Icon() string {

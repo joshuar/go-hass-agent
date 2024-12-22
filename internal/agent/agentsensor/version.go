@@ -10,7 +10,6 @@ import (
 	"context"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
@@ -19,16 +18,15 @@ const (
 )
 
 func newVersionSensor() sensor.Entity {
-	return sensor.Entity{
-		Name:     "Go Hass Agent Version",
-		Category: types.CategoryDiagnostic,
-		State: &sensor.State{
-			ID:         "agent_version",
-			Icon:       "mdi:face-agent",
-			EntityType: types.Sensor,
-			Value:      preferences.AppVersion,
-		},
-	}
+	return sensor.NewSensor(
+		sensor.WithName("Go Hass Agent Version"),
+		sensor.AsDiagnostic(),
+		sensor.WithState(
+			sensor.WithID("agent_version"),
+			sensor.WithIcon("mdi:face-agent"),
+			sensor.WithValue(preferences.AppVersion),
+		),
+	)
 }
 
 type VersionWorker struct{}

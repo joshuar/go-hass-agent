@@ -31,22 +31,20 @@ func (w *uptimeWorker) UpdateDelta(_ time.Duration) {}
 
 func (w *uptimeWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
 	return []sensor.Entity{
-			{
-				Name:        "Uptime",
-				Category:    types.CategoryDiagnostic,
-				Units:       "h",
-				DeviceClass: types.SensorDeviceClassDuration,
-				StateClass:  types.StateClassMeasurement,
-				State: &sensor.State{
-					ID:    "uptime",
-					Value: w.getUptime(ctx) / 60 / 60, //nolint:mnd
-					Icon:  "mdi:restart",
-					Attributes: map[string]any{
-						"data_source":                linux.DataSrcProcfs,
-						"native_unit_of_measurement": "h",
-					},
-				},
-			},
+			sensor.NewSensor(
+				sensor.WithName("Uptime"),
+				sensor.AsDiagnostic(),
+				sensor.WithDeviceClass(types.SensorDeviceClassDuration),
+				sensor.WithStateClass(types.StateClassMeasurement),
+				sensor.WithUnits("h"),
+				sensor.WithState(
+					sensor.WithID("uptime"),
+					sensor.WithIcon("mdi:restart"),
+					sensor.WithValue(w.getUptime(ctx)/60/60),
+					sensor.WithDataSourceAttribute(linux.ProcFSRoot),
+					sensor.WithAttribute("native_unit_of_measurement", "h"),
+				),
+			),
 		},
 		nil
 }

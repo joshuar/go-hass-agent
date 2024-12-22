@@ -35,15 +35,15 @@ func newDiskUsageSensor(mount *mount) sensor.Entity {
 		id = "mountpoint" + strings.ReplaceAll(mount.mountpoint, "/", "_")
 	}
 
-	return sensor.Entity{
-		Name:       "Mountpoint " + mount.mountpoint + " Usage",
-		StateClass: types.StateClassTotal,
-		Units:      diskUsageSensorUnits,
-		State: &sensor.State{
-			ID:         id,
-			Icon:       diskUsageSensorIcon,
-			Value:      math.Round(float64(usedPc)/0.05) * 0.05,
-			Attributes: mount.attributes,
-		},
-	}
+	return sensor.NewSensor(
+		sensor.WithName("Mountpoint "+mount.mountpoint+" Usage"),
+		sensor.WithUnits(diskUsageSensorUnits),
+		sensor.WithStateClass(types.StateClassTotal),
+		sensor.WithState(
+			sensor.WithID(id),
+			sensor.WithIcon(diskUsageSensorIcon),
+			sensor.WithValue(math.Round(float64(usedPc)/0.05)*0.05),
+			sensor.WithAttributes(mount.attributes),
+		),
+	)
 }

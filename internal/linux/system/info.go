@@ -12,7 +12,6 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/logging"
 )
@@ -34,30 +33,26 @@ func (w *infoWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
 			Warn("Could not retrieve distro details.", slog.Any("error", err))
 	} else {
 		sensors = append(sensors,
-			sensor.Entity{
-				Name:     "Distribution Name",
-				Category: types.CategoryDiagnostic,
-				State: &sensor.State{
-					ID:    "distribution_name",
-					Value: distro,
-					Icon:  "mdi:linux",
-					Attributes: map[string]any{
-						"data_source": linux.DataSrcProcfs,
-					},
-				},
-			},
-			sensor.Entity{
-				Name:     "Distribution Version",
-				Category: types.CategoryDiagnostic,
-				State: &sensor.State{
-					ID:    "distribution_version",
-					Value: version,
-					Icon:  "mdi:numeric",
-					Attributes: map[string]any{
-						"data_source": linux.DataSrcProcfs,
-					},
-				},
-			},
+			sensor.NewSensor(
+				sensor.WithName("Distribution Name"),
+				sensor.AsDiagnostic(),
+				sensor.WithState(
+					sensor.WithID("distribution_name"),
+					sensor.WithIcon("mdi:linux"),
+					sensor.WithValue(distro),
+					sensor.WithDataSourceAttribute(linux.DataSrcProcfs),
+				),
+			),
+			sensor.NewSensor(
+				sensor.WithName("Distribution Version"),
+				sensor.AsDiagnostic(),
+				sensor.WithState(
+					sensor.WithID("distribution_version"),
+					sensor.WithIcon("mdi:numeric"),
+					sensor.WithValue(version),
+					sensor.WithDataSourceAttribute(linux.DataSrcProcfs),
+				),
+			),
 		)
 	}
 
@@ -69,18 +64,16 @@ func (w *infoWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
 			Warn("Could not retrieve kernel version.", slog.Any("error", err))
 	} else {
 		sensors = append(sensors,
-			sensor.Entity{
-				Name:     "Kernel Version",
-				Category: types.CategoryDiagnostic,
-				State: &sensor.State{
-					ID:    "kernel_version",
-					Value: kernelVersion,
-					Icon:  "mdi:chip",
-					Attributes: map[string]any{
-						"data_source": linux.DataSrcProcfs,
-					},
-				},
-			},
+			sensor.NewSensor(
+				sensor.WithName("Kernel Version"),
+				sensor.AsDiagnostic(),
+				sensor.WithState(
+					sensor.WithID("kernel_version"),
+					sensor.WithIcon("mdi:chip"),
+					sensor.WithValue(kernelVersion),
+					sensor.WithDataSourceAttribute(linux.DataSrcProcfs),
+				),
+			),
 		)
 	}
 

@@ -17,7 +17,6 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
@@ -54,19 +53,16 @@ func newExternalIPSensor(addr net.IP) sensor.Entity {
 		icon = "mdi:numeric-6-box-outline"
 	}
 
-	return sensor.Entity{
-		Name:     name,
-		Category: types.CategoryDiagnostic,
-		State: &sensor.State{
-			ID:         id,
-			Icon:       icon,
-			EntityType: types.Sensor,
-			Value:      addr.String(),
-			Attributes: map[string]any{
-				"last_updated": time.Now().Format(time.RFC3339),
-			},
-		},
-	}
+	return sensor.NewSensor(
+		sensor.WithName(name),
+		sensor.AsDiagnostic(),
+		sensor.WithState(
+			sensor.WithID(id),
+			sensor.WithIcon(icon),
+			sensor.WithValue(addr.String()),
+			sensor.WithAttribute("last_updated", time.Now().Format(time.RFC3339)),
+		),
+	)
 }
 
 type ExternalIPWorker struct {

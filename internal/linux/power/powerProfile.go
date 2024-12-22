@@ -12,7 +12,6 @@ import (
 	"log/slog"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
@@ -26,18 +25,16 @@ const (
 )
 
 func newPowerSensor(profile string) sensor.Entity {
-	return sensor.Entity{
-		Name:     "Power Profile",
-		Category: types.CategoryDiagnostic,
-		State: &sensor.State{
-			ID:    "power_profile",
-			Value: profile,
-			Icon:  "mdi:flash",
-			Attributes: map[string]any{
-				"data_source": linux.DataSrcDbus,
-			},
-		},
-	}
+	return sensor.NewSensor(
+		sensor.WithName("Power Profile"),
+		sensor.AsDiagnostic(),
+		sensor.WithState(
+			sensor.WithID("power_profile"),
+			sensor.WithIcon("mdi:flash"),
+			sensor.WithValue(profile),
+			sensor.WithDataSourceAttribute(linux.DataSrcDbus),
+		),
+	)
 }
 
 type profileWorker struct {

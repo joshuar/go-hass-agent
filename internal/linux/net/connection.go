@@ -123,7 +123,7 @@ func (c *connection) monitorConnection(ctx context.Context, bus *dbusx.Bus) <-ch
 
 	// Send initial states as sensors
 	go func() {
-		sensorCh <- *stateSensor.Entity
+		sensorCh <- stateSensor.Entity
 	}()
 
 	triggerCh, err := dbusx.NewWatch(
@@ -167,7 +167,7 @@ func (c *connection) monitorConnection(ctx context.Context, bus *dbusx.Bus) <-ch
 							c.logger.Warn("Could not update connection state sensor.", slog.Any("error", err))
 						} else {
 							// Send the connection state as a sensor.
-							sensorCh <- *stateSensor.Entity
+							sensorCh <- stateSensor.Entity
 						}
 					default:
 						c.logger.Debug("Unhandled property changed.",
