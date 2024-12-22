@@ -42,39 +42,52 @@ func hwmonSensorAttributes(details *hwmon.Sensor) map[string]any {
 }
 
 func newHWSensor(details *hwmon.Sensor) sensor.Entity {
-	newSensor := sensor.Entity{
-		Name:     details.Name(),
-		Category: types.CategoryDiagnostic,
-		Units:    details.Units(),
-		State: &sensor.State{
-			ID:         details.ID(),
-			Value:      details.Value(),
-			Attributes: hwmonSensorAttributes(details),
-		},
-	}
+	var (
+		icon        string
+		deviceClass types.DeviceClass
+		stateClass  types.StateClass
+	)
 
 	switch details.MonitorType {
 	case hwmon.Alarm, hwmon.Intrusion:
 		if v, ok := details.Value().(bool); ok && v {
-			newSensor.Icon = "mdi:alarm-light"
+			icon = "mdi:alarm-light"
 		}
 
-		newSensor.Icon = "mdi:alarm-light-off"
-		newSensor.EntityType = types.BinarySensor
+		icon = "mdi:alarm-light-off"
 
 		if details.MonitorType == hwmon.Alarm {
-			newSensor.DeviceClass = types.BinarySensorDeviceClassProblem
+			deviceClass = types.BinarySensorDeviceClassProblem
 		} else {
-			newSensor.DeviceClass = types.BinarySensorDeviceClassTamper
+			deviceClass = types.BinarySensorDeviceClassTamper
 		}
 	default:
-		icon, deviceClass := parseSensorType(details.MonitorType.String())
-		newSensor.Icon = icon
-		newSensor.DeviceClass = deviceClass
-		newSensor.StateClass = types.StateClassMeasurement
+		icon, deviceClass = parseSensorType(details.MonitorType.String())
+		stateClass = types.StateClassMeasurement
 	}
 
-	return newSensor
+	s := sensor.NewSensor(
+		sensor.WithName(details.Name()),
+		sensor.WithDeviceClass(deviceClass),
+		sensor.AsDiagnostic(),
+		sensor.WithUnits(details.Units()),
+		sensor.WithState(
+			sensor.WithID(details.ID()),
+			sensor.WithIcon(icon),
+			sensor.WithValue(details.Value()),
+			sensor.WithAttributes(hwmonSensorAttributes(details)),
+		),
+	)
+
+	if stateClass != types.StateClassNone {
+		s = sensor.WithStateClass(stateClass)(s)
+	}
+
+	if details.MonitorType == hwmon.Alarm || details.MonitorType == hwmon.Intrusion {
+		s.EntityType = types.BinarySensor
+	}
+
+	return s
 }
 
 type hwMonWorker struct{}

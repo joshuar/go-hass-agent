@@ -15,6 +15,7 @@ import (
 	"github.com/godbus/dbus/v5"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
@@ -27,6 +28,15 @@ const (
 	appStateDBusEvent     = "org.freedesktop.impl.portal.Background.RunningApplicationsChanged"
 
 	workerID = "app_sensors"
+
+	activeAppsIcon = "mdi:application"
+	activeAppsName = "Active App"
+	activeAppsID   = "active_app"
+
+	runningAppsIcon  = "mdi:apps"
+	runningAppsUnits = "apps"
+	runningAppsName  = "Running Apps"
+	runningAppsID    = "running_apps"
 )
 
 var ErrNoApps = errors.New("no running apps")
@@ -106,13 +116,37 @@ func (w *sensorWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 		// If the state is 2 this app is running and the currently active app.
 		if state == 2 && w.runningApp != name {
 			w.runningApp = name
-			sensors = append(sensors, newActiveAppSensor(name))
+			sensors = append(sensors,
+				sensor.NewSensor(
+					sensor.WithName(activeAppsName),
+					sensor.WithState(
+						sensor.WithID(activeAppsID),
+						sensor.WithIcon(activeAppsIcon),
+						sensor.AsTypeSensor(),
+						sensor.WithValue(name),
+						sensor.WithDataSourceAttribute(linux.DataSrcDbus),
+					),
+				),
+			)
 		}
 	}
 
 	// Update the running apps sensor.
 	if w.totalRunningApps != len(runningApps) {
-		sensors = append(sensors, newRunningAppsSensor(runningApps))
+		sensors = append(sensors,
+			sensor.NewSensor(
+				sensor.WithName(runningAppsName),
+				sensor.WithUnits(runningAppsUnits),
+				sensor.WithStateClass(types.StateClassMeasurement),
+				sensor.WithState(
+					sensor.WithID(runningAppsID),
+					sensor.WithIcon(runningAppsIcon),
+					sensor.WithValue(len(runningApps)),
+					sensor.WithDataSourceAttribute(linux.DataSrcDbus),
+					sensor.WithAttribute("apps", runningApps),
+				),
+			),
+		)
 		w.totalRunningApps = len(runningApps)
 	}
 

@@ -39,7 +39,7 @@ type connIcon uint32
 
 type connectionStateSensor struct {
 	stateProp *dbusx.Property[connState]
-	*sensor.Entity
+	sensor.Entity
 }
 
 func (c *connectionStateSensor) setState(state any) error {
@@ -48,12 +48,12 @@ func (c *connectionStateSensor) setState(state any) error {
 		if state, err := dbusx.VariantToValue[connState](value); err != nil {
 			return fmt.Errorf("could not parse updated connection state: %w", err)
 		} else {
-			c.Entity.Value = state.String()
-			c.Entity.Icon = connIcon(state).String()
+			c.UpdateValue(state.String())
+			c.UpdateIcon(connIcon(state).String())
 		}
 	case uint32:
-		c.Entity.Value = connState(value).String()
-		c.Entity.Icon = connIcon(value).String()
+		c.UpdateValue(connState(value).String())
+		c.UpdateIcon(connIcon(value).String())
 	default:
 		return ErrUnsupportedValue
 	}
@@ -67,23 +67,21 @@ func (c *connectionStateSensor) updateState() error {
 		return fmt.Errorf("cannot update state: %w", err)
 	}
 
-	c.Entity.Value = state.String()
-	c.Entity.Icon = connIcon(state).String()
+	c.UpdateValue(state.String())
+	c.UpdateIcon(connIcon(state).String())
 
 	return nil
 }
 
 func newConnectionStateSensor(bus *dbusx.Bus, connectionPath, connectionName string) *connectionStateSensor {
 	return &connectionStateSensor{
-		Entity: &sensor.Entity{
-			Name: connectionName + " Connection State",
-			State: &sensor.State{
-				ID: strcase.ToSnake(connectionName) + "_connection_state",
-				Attributes: map[string]any{
-					"data_source": linux.DataSrcDbus,
-				},
-			},
-		},
+		Entity: sensor.NewSensor(
+			sensor.WithName(connectionName+" Connection State"),
+			sensor.WithState(
+				sensor.WithID(strcase.ToSnake(connectionName)+"_connection_state"),
+				sensor.WithDataSourceAttribute(linux.DataSrcDbus),
+			),
+		),
 		stateProp: dbusx.NewProperty[connState](bus, connectionPath, dBusNMObj, connectionStateProp),
 	}
 }

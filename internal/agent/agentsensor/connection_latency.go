@@ -33,30 +33,25 @@ const (
 var ErrEmptyResponse = errors.New("empty response")
 
 func newConnectionLatencySensor(info resty.TraceInfo) sensor.Entity {
-	connectionLatency := sensor.Entity{
-		Name:        "Connection Latency",
-		Units:       connectionLatencyUnits,
-		DeviceClass: types.SensorDeviceClassDuration,
-		StateClass:  types.StateClassMeasurement,
-		Category:    types.CategoryDiagnostic,
-		State: &sensor.State{
-			ID:         "connection_latency",
-			Icon:       "mdi:connection",
-			EntityType: types.Sensor,
-			Value:      info.TotalTime.Milliseconds(),
-			Attributes: map[string]any{
-				"DNS Lookup Time":            info.DNSLookup.Milliseconds(),
-				"Connection Time":            info.ConnTime.Milliseconds(),
-				"TCP Connection Time":        info.TCPConnTime.Milliseconds(),
-				"TLS Handshake Time":         info.TLSHandshake.Milliseconds(),
-				"Server Time":                info.ServerTime.Milliseconds(),
-				"Response Time":              info.ResponseTime.Milliseconds(),
-				"native_unit_of_measurement": connectionLatencyUnits,
-			},
-		},
-	}
-
-	return connectionLatency
+	return sensor.NewSensor(
+		sensor.WithName("Connection Latency"),
+		sensor.WithUnits(connectionLatencyUnits),
+		sensor.WithDeviceClass(types.SensorDeviceClassDuration),
+		sensor.WithStateClass(types.StateClassMeasurement),
+		sensor.AsDiagnostic(),
+		sensor.WithState(
+			sensor.WithID("connection_latency"),
+			sensor.WithIcon("mdi:connection"),
+			sensor.WithValue(info.TotalTime.Milliseconds()),
+			sensor.WithAttribute("DNS Lookup Time", info.DNSLookup.Milliseconds()),
+			sensor.WithAttribute("Connection Time", info.ConnTime.Milliseconds()),
+			sensor.WithAttribute("TCP Connection Time", info.TCPConnTime.Milliseconds()),
+			sensor.WithAttribute("TLS Handshake Time", info.TLSHandshake.Milliseconds()),
+			sensor.WithAttribute("Server Time", info.ServerTime.Milliseconds()),
+			sensor.WithAttribute("Response Time", info.ResponseTime.Milliseconds()),
+			sensor.WithAttribute("native_unit_of_measurement", connectionLatencyUnits),
+		),
+	)
 }
 
 type ConnectionLatencySensorWorker struct {

@@ -57,7 +57,7 @@ func (w *loadAvgsWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 	}
 
 	for idx := range loadAvgs {
-		w.loadAvgs[idx].Value = loadAvgs[idx]
+		w.loadAvgs[idx].UpdateValue(loadAvgs[idx])
 		sensors[idx] = w.loadAvgs[idx]
 	}
 
@@ -68,19 +68,16 @@ func newLoadAvgSensors() []sensor.Entity {
 	sensors := make([]sensor.Entity, loadAvgsTotal)
 
 	for idx, loadType := range []string{"CPU load average (1 min)", "CPU load average (5 min)", "CPU load average (15 min)"} {
-		loadAvgSensor := sensor.Entity{
-			Name:       loadType,
-			Units:      loadAvgUnit,
-			StateClass: types.StateClassMeasurement,
-			State: &sensor.State{
-				ID:   strcase.ToSnake(loadType),
-				Icon: loadAvgIcon,
-				Attributes: map[string]any{
-					"data_source": linux.DataSrcProcfs,
-				},
-			},
-		}
-
+		loadAvgSensor := sensor.NewSensor(
+			sensor.WithName(loadType),
+			sensor.WithUnits(loadAvgUnit),
+			sensor.WithStateClass(types.StateClassMeasurement),
+			sensor.WithState(
+				sensor.WithID(strcase.ToSnake(loadType)),
+				sensor.WithIcon(loadAvgIcon),
+				sensor.WithDataSourceAttribute(linux.DataSrcProcfs),
+			),
+		)
 		sensors[idx] = loadAvgSensor
 	}
 

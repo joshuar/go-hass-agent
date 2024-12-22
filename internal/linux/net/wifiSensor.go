@@ -28,48 +28,70 @@ const (
 var apPropList = []string{ssidPropName, hwAddrPropName, maxBitRatePropName, freqPropName, strPropName, bandwidthPropName}
 
 func newWifiSensor(prop string, value any) sensor.Entity {
-	wifiSensor := sensor.Entity{
-		Category: types.CategoryDiagnostic,
-		State: &sensor.State{
-			Value: generateState(prop, value),
-			Icon:  "mdi:wifi",
-		},
-	}
+	var (
+		name, id, units string
+		deviceClass     types.DeviceClass
+		stateClass      types.StateClass
+	)
+
+	icon := "mdi:wifi"
 
 	switch prop {
 	case ssidPropName:
-		wifiSensor.Name = "Wi-Fi SSID"
-		wifiSensor.ID = "wi_fi_ssid"
+		name = "Wi-Fi SSID"
+		id = "wi_fi_ssid"
 	case hwAddrPropName:
-		wifiSensor.Name = "Wi-Fi BSSID"
-		wifiSensor.ID = "wi_fi_bssid"
+		name = "Wi-Fi BSSID"
+		id = "wi_fi_bssid"
 	case maxBitRatePropName:
-		wifiSensor.Name = "Wi-Fi Link Speed"
-		wifiSensor.ID = "wi_fi_link_speed"
-		wifiSensor.Units = "kB/s"
-		wifiSensor.DeviceClass = types.SensorDeviceClassDataRate
-		wifiSensor.StateClass = types.StateClassMeasurement
+		name = "Wi-Fi Link Speed"
+		id = "wi_fi_link_speed"
+		units = "kB/s"
+		deviceClass = types.SensorDeviceClassDataRate
+		stateClass = types.StateClassMeasurement
 	case freqPropName:
-		wifiSensor.Name = "Wi-Fi Frequency"
-		wifiSensor.ID = "wi_fi_frequency"
-		wifiSensor.Units = "MHz"
-		wifiSensor.DeviceClass = types.SensorDeviceClassFrequency
-		wifiSensor.StateClass = types.StateClassMeasurement
+		name = "Wi-Fi Frequency"
+		id = "wi_fi_frequency"
+		units = "MHz"
+		deviceClass = types.SensorDeviceClassFrequency
+		stateClass = types.StateClassMeasurement
 	case bandwidthPropName:
-		wifiSensor.Name = "Wi-Fi Bandwidth"
-		wifiSensor.ID = "wi_fi_bandwidth"
-		wifiSensor.Units = "MHz"
-		wifiSensor.DeviceClass = types.SensorDeviceClassFrequency
-		wifiSensor.StateClass = types.StateClassMeasurement
+		name = "Wi-Fi Bandwidth"
+		id = "wi_fi_bandwidth"
+		units = "MHz"
+		deviceClass = types.SensorDeviceClassFrequency
+		stateClass = types.StateClassMeasurement
 	case strPropName:
-		wifiSensor.Name = "Wi-Fi Signal Strength"
-		wifiSensor.ID = "wi_fi_signal_strength"
-		wifiSensor.Units = "%"
-		wifiSensor.StateClass = types.StateClassMeasurement
-		wifiSensor.Icon = generateStrIcon(value)
+		name = "Wi-Fi Signal Strength"
+		id = "wi_fi_signal_strength"
+		units = "%"
+		stateClass = types.StateClassMeasurement
+		icon = generateStrIcon(value)
 	}
 
-	return wifiSensor
+	s := sensor.NewSensor(
+		sensor.WithName(name),
+		sensor.AsDiagnostic(),
+		sensor.WithState(
+			sensor.WithID(id),
+			sensor.WithIcon(icon),
+			sensor.WithValue(generateState(prop, value)),
+		),
+	)
+
+	if deviceClass != types.SensorDeviceClassNone {
+		s = sensor.WithDeviceClass(deviceClass)(s)
+	}
+
+	if stateClass != types.StateClassNone {
+		s = sensor.WithStateClass(stateClass)(s)
+	}
+
+	if units != "" {
+		s = sensor.WithUnits(units)(s)
+	}
+
+	return s
 }
 
 func getWifiSensors(bus *dbusx.Bus, apPath string) []sensor.Entity {

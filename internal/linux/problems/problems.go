@@ -70,20 +70,18 @@ func (w *problemsWorker) newProblemsSensor(problems []string) sensor.Entity {
 		problemDetails[problem] = parseProblem(details)
 	}
 
-	return sensor.Entity{
-		Name:       "Problems",
-		StateClass: types.StateClassMeasurement,
-		Units:      "problems",
-		State: &sensor.State{
-			Value: len(problems),
-			ID:    "problems",
-			Icon:  "mdi:alert",
-			Attributes: map[string]any{
-				"data_source":  linux.DataSrcDbus,
-				"problem_list": problemDetails,
-			},
-		},
-	}
+	return sensor.NewSensor(
+		sensor.WithName("Problems"),
+		sensor.WithStateClass(types.StateClassMeasurement),
+		sensor.WithUnits("problems"),
+		sensor.WithState(
+			sensor.WithID("problems"),
+			sensor.WithIcon("mdi:alert"),
+			sensor.WithValue(len(problems)),
+			sensor.WithDataSourceAttribute(linux.DataSrcDbus),
+			sensor.WithAttribute("problem_list", problemDetails),
+		),
+	)
 }
 
 type problemsWorker struct {

@@ -14,7 +14,6 @@ import (
 	"github.com/godbus/dbus/v5"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
@@ -77,17 +76,7 @@ func (w *fwupdWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
 	}
 
 	hsiID := strings.Split(hsi, " ")
-
-	hsiSensor := sensor.Entity{
-		Name:     "Firmware Security",
-		Category: types.CategoryDiagnostic,
-		State: &sensor.State{
-			ID:         "firmware_security",
-			Value:      hsiID[0],
-			Icon:       "mdi:security",
-			Attributes: make(map[string]any),
-		},
-	}
+	attributes := make(map[string]any)
 
 	for _, prop := range props {
 		var (
@@ -104,11 +93,23 @@ func (w *fwupdWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
 		}
 
 		if summary != "" && result != ResultUnknown {
-			hsiSensor.Attributes[summary] = result.String()
+			attributes[summary] = result.String()
 		}
 	}
 
-	return []sensor.Entity{hsiSensor}, nil
+	return []sensor.Entity{
+			sensor.NewSensor(
+				sensor.WithName("Firmware Security"),
+				sensor.AsDiagnostic(),
+				sensor.WithState(
+					sensor.WithID("firmware_security"),
+					sensor.WithIcon("mdi:security"),
+					sensor.WithValue(hsiID[0]),
+					sensor.WithAttributes(attributes),
+				),
+			),
+		},
+		nil
 }
 
 func NewfwupdWorker(ctx context.Context) (*linux.OneShotSensorWorker, error) {

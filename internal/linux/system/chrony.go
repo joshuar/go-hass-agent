@@ -95,19 +95,18 @@ func newChronyOffsetSensor(stats map[string]string) sensor.Entity {
 		attrs[attr] = value
 	}
 
-	return sensor.Entity{
-		Name:       "Chrony System Time Offset",
-		Category:   types.CategoryDiagnostic,
-		Units:      "s",
-		StateClass: types.StateClassMeasurement,
-		State: &sensor.State{
-			ID:         "chrony_system_time_offset",
-			Value:      value,
-			Icon:       "mdi:clock",
-			Attributes: attrs,
-			EntityType: types.Sensor,
-		},
-	}
+	return sensor.NewSensor(
+		sensor.WithName("Chrony System Time Offset"),
+		sensor.AsDiagnostic(),
+		sensor.WithUnits("s"),
+		sensor.WithStateClass(types.StateClassMeasurement),
+		sensor.WithState(
+			sensor.WithID("chrony_system_time_offset"),
+			sensor.WithIcon("mdi:clock"),
+			sensor.WithValue(value),
+			sensor.WithAttributes(attrs),
+		),
+	)
 }
 
 // NewChronyWorker creates a worker to track sensors from chronyd.

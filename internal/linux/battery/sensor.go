@@ -55,19 +55,19 @@ func newBatterySensor(battery *upowerBattery, sensorType batterySensor, value db
 		icon = batteryIcon
 	}
 
-	return sensor.Entity{
-		Name:        name,
-		Category:    types.CategoryDiagnostic,
-		DeviceClass: deviceClass,
-		StateClass:  stateClass,
-		Units:       units,
-		State: &sensor.State{
-			ID:         id,
-			Icon:       icon,
-			Value:      generateSensorState(sensorType, value.Value()),
-			Attributes: generateSensorAttributes(sensorType, battery),
-		},
-	}
+	return sensor.NewSensor(
+		sensor.WithName(name),
+		sensor.WithDeviceClass(deviceClass),
+		sensor.WithStateClass(stateClass),
+		sensor.WithUnits(units),
+		sensor.AsDiagnostic(),
+		sensor.WithState(
+			sensor.WithID(id),
+			sensor.WithIcon(icon),
+			sensor.WithValue(generateSensorState(sensorType, value.Value())),
+			sensor.WithAttributes(generateSensorAttributes(sensorType, battery)),
+		),
+	)
 }
 
 func generateSensorState(sensorType batterySensor, value any) any {

@@ -59,7 +59,7 @@ func (w *ioWorker) updateDevice(id string, stats map[stat]uint64, delta time.Dur
 	if _, found := w.devices[id]; found && stats != nil {
 		for idx := range w.devices[id] {
 			w.devices[id][idx].update(stats, delta)
-			sensors[idx] = *w.devices[id][idx].Entity
+			sensors[idx] = w.devices[id][idx].Entity
 		}
 	}
 

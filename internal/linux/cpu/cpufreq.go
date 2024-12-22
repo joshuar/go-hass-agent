@@ -82,25 +82,25 @@ func newCPUFreqSensor(id string) sensor.Entity {
 	info := getCPUFreqs(id)
 	num := strings.TrimPrefix(info.cpu, "cpu")
 
-	return sensor.Entity{
-		Name:        "Core " + num + " Frequency",
-		Units:       cpuFreqUnits,
-		DeviceClass: types.SensorDeviceClassFrequency,
-		StateClass:  types.StateClassMeasurement,
-		Category:    types.CategoryDiagnostic,
-		State: &sensor.State{
-			ID:         "cpufreq_core" + num + "_frequency",
-			Value:      info.freq,
-			Icon:       cpuFreqIcon,
-			EntityType: types.Sensor,
-			Attributes: map[string]any{
+	return sensor.NewSensor(
+		sensor.WithName("Core "+num+" Frequency"),
+		sensor.WithUnits(cpuFreqUnits),
+		sensor.WithDeviceClass(types.SensorDeviceClassFrequency),
+		sensor.WithStateClass(types.StateClassMeasurement),
+		sensor.AsDiagnostic(),
+		sensor.WithState(
+			sensor.WithID("cpufreq_core"+num+"_frequency"),
+			sensor.WithIcon(cpuFreqIcon),
+			sensor.AsTypeSensor(),
+			sensor.WithValue(info.freq),
+			sensor.WithAttributes(map[string]any{
 				"governor":                   info.governor,
 				"driver":                     info.driver,
 				"data_source":                linux.DataSrcSysfs,
 				"native_unit_of_measurement": cpuFreqUnits,
-			},
-		},
-	}
+			}),
+		),
+	)
 }
 
 func getCPUFreqs(id string) *cpuFreq {

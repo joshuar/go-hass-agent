@@ -23,16 +23,17 @@ type lastBootWorker struct {
 
 func (w *lastBootWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 	return []sensor.Entity{
-			{
-				Name:        "Last Reboot",
-				Category:    types.CategoryDiagnostic,
-				DeviceClass: types.SensorDeviceClassTimestamp,
-				State: &sensor.State{
-					ID:    "last_reboot",
-					Value: w.lastBoot.Format(time.RFC3339),
-					Icon:  "mdi:restart",
-				},
-			},
+			sensor.NewSensor(
+				sensor.WithName("Last Reboot"),
+				sensor.AsDiagnostic(),
+				sensor.WithDeviceClass(types.SensorDeviceClassTimestamp),
+				sensor.WithState(
+					sensor.WithID("last_reboot"),
+					sensor.WithIcon("mdi:restart"),
+					sensor.WithValue(w.lastBoot.Format(time.RFC3339)),
+					sensor.WithDataSourceAttribute(linux.ProcFSRoot),
+				),
+			),
 		},
 		nil
 }

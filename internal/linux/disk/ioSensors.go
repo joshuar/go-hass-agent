@@ -35,7 +35,7 @@ const (
 type ioSensor int
 
 type diskIOSensor struct {
-	*sensor.Entity
+	sensor.Entity
 	sensorType ioSensor
 	prevValue  uint64
 }
@@ -46,11 +46,11 @@ func (s *diskIOSensor) update(stats map[stat]uint64, delta time.Duration) {
 
 	switch s.sensorType {
 	case diskReads:
-		s.Value = stats[TotalReads]
+		s.UpdateValue(stats[TotalReads])
 	case diskWrites:
-		s.Value = stats[TotalWrites]
+		s.UpdateValue(stats[TotalWrites])
 	case diskIOInProgress:
-		s.Value = stats[ActiveIOs]
+		s.UpdateValue(stats[ActiveIOs])
 	case diskReadRate:
 		curr = stats[TotalSectorsRead]
 	case diskWriteRate:
@@ -61,9 +61,9 @@ func (s *diskIOSensor) update(stats map[stat]uint64, delta time.Duration) {
 	// time interval since last measurement.
 	if s.sensorType == diskReadRate || s.sensorType == diskWriteRate {
 		if uint64(delta.Seconds()) > 0 {
-			s.Value = (curr - s.prevValue) / uint64(delta.Seconds()) / 2
+			s.UpdateValue((curr - s.prevValue) / uint64(delta.Seconds()) / 2)
 		} else {
-			s.Value = 0
+			s.UpdateValue(0)
 		}
 
 		s.prevValue = curr
@@ -77,11 +77,11 @@ func (s *diskIOSensor) update(stats map[stat]uint64, delta time.Duration) {
 func (s *diskIOSensor) updateAttributes(stats map[stat]uint64) {
 	switch s.sensorType {
 	case diskReads:
-		s.Attributes["total_sectors"] = stats[TotalSectorsRead]
-		s.Attributes["total_milliseconds"] = stats[TotalTimeReading]
+		s.UpdateAttribute("total_sectors", stats[TotalSectorsRead])
+		s.UpdateAttribute("total_milliseconds", stats[TotalTimeReading])
 	case diskWrites:
-		s.Attributes["total_sectors"] = stats[TotalSectorsWritten]
-		s.Attributes["total_milliseconds"] = stats[TotalTimeWriting]
+		s.UpdateAttribute("total_sectors", stats[TotalSectorsWritten])
+		s.UpdateAttribute("total_milliseconds", stats[TotalTimeWriting])
 	}
 }
 
@@ -90,61 +90,73 @@ func newDiskIOSensor(device *device, sensorType ioSensor, boottime time.Time) *d
 	name := string(append([]rune{unicode.ToUpper(r[0])}, r[1:]...)) + " " + sensorType.String()
 	id := strings.ToLower(device.id + "_" + strings.ReplaceAll(sensorType.String(), " ", "_"))
 
-	// Base diskIOSensor fields.
-	ioSensor := &diskIOSensor{
-		Entity: &sensor.Entity{
-			Name: name,
-			State: &sensor.State{
-				ID: id,
-				Attributes: map[string]any{
-					"data_source": linux.DataSrcSysfs,
-				},
-			},
-		},
-		sensorType: sensorType,
+	var (
+		icon, units string
+		stateClass  types.StateClass
+	)
+
+	attributes := map[string]any{
+		"data_source": linux.DataSrcSysfs,
 	}
 
 	// Add attributes from device if available.
 	if device.model != "" {
-		ioSensor.Attributes["device_model"] = device.model
+		attributes["device_model"] = device.model
 	}
 
 	if device.sysFSPath != "" {
-		ioSensor.Attributes["sysfs_path"] = device.sysFSPath
-	}
-
-	if device.id != "total" {
-		ioSensor.Category = types.CategoryDiagnostic
+		attributes["sysfs_path"] = device.sysFSPath
 	}
 
 	// Fill out additional fields based on sensor type.
 	switch sensorType {
 	case diskIOInProgress:
-		ioSensor.Icon = ioOpsIcon
-		ioSensor.StateClass = types.StateClassMeasurement
-		ioSensor.Units = diskIOsUnits
+		icon = ioOpsIcon
+		stateClass = types.StateClassMeasurement
+		units = diskIOsUnits
 	case diskReads, diskWrites:
 		if sensorType == diskReads {
-			ioSensor.Icon = ioReadsIcon
+			icon = ioReadsIcon
 		} else {
-			ioSensor.Icon = ioWritesIcon
+			icon = ioWritesIcon
 		}
 
-		ioSensor.Units = diskCountUnits
-		ioSensor.Attributes["native_unit_of_measurement"] = diskCountUnits
-		ioSensor.StateClass = types.StateClassTotalIncreasing
-		ioSensor.Attributes["last_reset"] = boottime.Format(time.RFC3339)
+		units = diskCountUnits
+		stateClass = types.StateClassTotalIncreasing
+		attributes["native_unit_of_measurement"] = diskCountUnits
+		attributes["last_reset"] = boottime.Format(time.RFC3339)
 	case diskReadRate, diskWriteRate:
 		if sensorType == diskReadRate {
-			ioSensor.Icon = ioReadsIcon
+			icon = ioReadsIcon
 		} else {
-			ioSensor.Icon = ioWritesIcon
+			icon = ioWritesIcon
 		}
 
-		ioSensor.Units = diskRateUnits
-		ioSensor.Attributes["native_unit_of_measurement"] = diskRateUnits
-		ioSensor.DeviceClass = types.SensorDeviceClassDataRate
-		ioSensor.StateClass = types.StateClassMeasurement
+		units = diskRateUnits
+		stateClass = types.StateClassMeasurement
+		attributes["native_unit_of_measurement"] = diskRateUnits
+	}
+
+	ioSensor := &diskIOSensor{
+		Entity: sensor.NewSensor(
+			sensor.WithName(name),
+			sensor.WithUnits(units),
+			sensor.WithStateClass(stateClass),
+			sensor.WithState(
+				sensor.WithID(id),
+				sensor.WithIcon(icon),
+				sensor.WithAttributes(attributes),
+			),
+		),
+		sensorType: sensorType,
+	}
+
+	if device.id != "total" {
+		ioSensor.Entity = sensor.AsDiagnostic()(ioSensor.Entity)
+	}
+
+	if sensorType == diskReadRate || sensorType == diskWriteRate {
+		ioSensor.Entity = sensor.WithDeviceClass(types.SensorDeviceClassDataRate)(ioSensor.Entity)
 	}
 
 	return ioSensor

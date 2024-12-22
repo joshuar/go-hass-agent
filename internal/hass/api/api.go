@@ -40,6 +40,9 @@ func init() {
 		AddRetryCondition(defaultRetryFunc)
 }
 
+// Request is an API request to Home Assistant. It has a request body (typically
+// JSON) and a boolean to indicate whether the request should be retried (with a
+// default exponential backoff).
 type Request interface {
 	RequestBody() any
 	Retry() bool
@@ -57,10 +60,12 @@ type Encrypted interface {
 	Secret() string
 }
 
+// Validator represents a request that should be validated before being sent.
 type Validator interface {
 	Validate() error
 }
 
+// ResponseError contains Home Assistant API error response details.
 type ResponseError struct {
 	Code    any    `json:"code,omitempty"`
 	Message string `json:"message,omitempty"`
@@ -83,6 +88,11 @@ func (e *ResponseError) Error() string {
 	return strings.Join(msg, ": ")
 }
 
+// Send will send the given request to the specified URL. It will handle
+// marshaling the request and unmarshaling the response. It can optionally set
+// an Auth token for requests that require it and validate the request before
+// sending. It will also handle retrying the request with an exponential backoff
+// if requested.
 func Send[T any](ctx context.Context, url string, details Request) (T, error) {
 	var response T
 
@@ -101,18 +111,11 @@ func Send[T any](ctx context.Context, url string, details Request) (T, error) {
 		}
 	}
 
+	// If request needs to be retried, retry the request on any error.
 	if details.Retry() {
-		// If request needs to be retried, retry the request on any error.
-		logging.FromContext(ctx).Debug("Will retry requests.", slog.Any("body", details))
-
 		requestClient = requestClient.AddRetryCondition(
 			func(_ *resty.Response, err error) bool {
-				if err != nil {
-					logging.FromContext(ctx).Debug("Retrying request.", slog.Any("body", details))
-					return true
-				}
-
-				return false
+				return err != nil
 			},
 		)
 	}

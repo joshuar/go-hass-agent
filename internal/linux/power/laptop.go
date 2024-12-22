@@ -71,22 +71,18 @@ func newLaptopEvent(prop string, state bool) sensor.Entity {
 		deviceClass = types.BinarySensorDeviceClassPower
 	}
 
-	sensorEvent := sensor.Entity{
-		Name:        name,
-		DeviceClass: deviceClass,
-		Category:    types.CategoryDiagnostic,
-		State: &sensor.State{
-			ID:         strcase.ToSnake(name),
-			Value:      state,
-			Icon:       icon,
-			EntityType: types.BinarySensor,
-			Attributes: map[string]any{
-				"data_source": linux.DataSrcDbus,
-			},
-		},
-	}
-
-	return sensorEvent
+	return sensor.NewSensor(
+		sensor.WithName(name),
+		sensor.WithDeviceClass(deviceClass),
+		sensor.AsDiagnostic(),
+		sensor.WithState(
+			sensor.WithID(strcase.ToSnake(name)),
+			sensor.AsTypeBinarySensor(),
+			sensor.WithIcon(icon),
+			sensor.WithValue(state),
+			sensor.WithDataSourceAttribute(linux.DataSrcDbus),
+		),
+	)
 }
 
 type laptopWorker struct {
