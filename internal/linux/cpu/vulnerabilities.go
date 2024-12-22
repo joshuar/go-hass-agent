@@ -54,12 +54,12 @@ func (w *cpuVulnWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 
 	cpuVulnSensor := sensor.NewSensor(
 		sensor.WithName("CPU Vulnerabilities"),
+		sensor.WithID("cpu_vulnerabilities"),
+		sensor.AsTypeBinarySensor(),
 		sensor.WithDeviceClass(types.BinarySensorDeviceClassProblem),
 		sensor.AsDiagnostic(),
 		sensor.WithState(
-			sensor.WithID("cpu_vulnerabilities"),
 			sensor.WithIcon("mdi:security"),
-			sensor.AsTypeBinarySensor(),
 			sensor.WithValue(cpuVulnerabilitiesFound),
 			sensor.WithAttributes(attrs),
 		),

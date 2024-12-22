@@ -11,16 +11,17 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestTracker_Get(t *testing.T) {
-	mockEntity := &Entity{
-		Name: "Mock Entity",
-		State: &State{
-			ID: "mock_entity",
-		},
-	}
+var mockEntity = NewSensor(
+	WithName("Mock Entity"),
+	WithID("mock_entity"),
+	WithState(
+		WithValue("mockValue"),
+	),
+)
 
+func TestTracker_Get(t *testing.T) {
 	mockSensorMap := map[string]*Entity{
-		mockEntity.ID: mockEntity,
+		mockEntity.ID: &mockEntity,
 	}
 
 	type fields struct {
@@ -41,7 +42,7 @@ func TestTracker_Get(t *testing.T) {
 			fields:  fields{sensor: mockSensorMap},
 			args:    args{id: "mock_entity"},
 			wantErr: false,
-			want:    mockEntity,
+			want:    &mockEntity,
 		},
 		{
 			name:    "unsuccessful get",
@@ -68,15 +69,8 @@ func TestTracker_Get(t *testing.T) {
 }
 
 func TestTracker_SensorList(t *testing.T) {
-	mockEntity := &Entity{
-		Name: "Mock Entity",
-		State: &State{
-			ID: "mock_entity",
-		},
-	}
-
 	mockSensorMap := map[string]*Entity{
-		mockEntity.ID: mockEntity,
+		mockEntity.ID: &mockEntity,
 	}
 
 	type fields struct {
@@ -110,22 +104,24 @@ func TestTracker_SensorList(t *testing.T) {
 }
 
 func TestTracker_Add(t *testing.T) {
-	newEntity := &Entity{
-		Name: "New Entity",
-		State: &State{
-			ID: "new_entity",
-		},
-	}
+	newEntity := NewSensor(
+		WithName("New Entity"),
+		WithID("new_entity"),
+		WithState(
+			WithValue("new"),
+		),
+	)
 
-	existingEntity := &Entity{
-		Name: "Existing Entity",
-		State: &State{
-			ID: "existing_entity",
-		},
-	}
+	existingEntity := NewSensor(
+		WithName("Existing Entity"),
+		WithID("existing_entity"),
+		WithState(
+			WithValue("existing"),
+		),
+	)
 
 	mockSensorMap := map[string]*Entity{
-		existingEntity.ID: existingEntity,
+		existingEntity.ID: &existingEntity,
 	}
 
 	type fields struct {
@@ -143,16 +139,16 @@ func TestTracker_Add(t *testing.T) {
 		{
 			name:   "new sensor",
 			fields: fields{sensor: mockSensorMap},
-			args:   args{sensor: newEntity},
+			args:   args{sensor: &newEntity},
 		},
 		{
 			name:   "existing sensor",
 			fields: fields{sensor: mockSensorMap},
-			args:   args{sensor: existingEntity},
+			args:   args{sensor: &existingEntity},
 		},
 		{
 			name:    "invalid tracker",
-			args:    args{sensor: newEntity},
+			args:    args{sensor: &newEntity},
 			wantErr: true,
 		},
 	}
@@ -169,15 +165,8 @@ func TestTracker_Add(t *testing.T) {
 }
 
 func TestTracker_Reset(t *testing.T) {
-	mockEntity := &Entity{
-		Name: "Mock Entity",
-		State: &State{
-			ID: "mock_entity",
-		},
-	}
-
 	mockSensorMap := map[string]*Entity{
-		mockEntity.ID: mockEntity,
+		mockEntity.ID: &mockEntity,
 	}
 
 	type fields struct {

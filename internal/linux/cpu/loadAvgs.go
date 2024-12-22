@@ -70,10 +70,10 @@ func newLoadAvgSensors() []sensor.Entity {
 	for idx, loadType := range []string{"CPU load average (1 min)", "CPU load average (5 min)", "CPU load average (15 min)"} {
 		loadAvgSensor := sensor.NewSensor(
 			sensor.WithName(loadType),
+			sensor.WithID(strcase.ToSnake(loadType)),
 			sensor.WithUnits(loadAvgUnit),
 			sensor.WithStateClass(types.StateClassMeasurement),
 			sensor.WithState(
-				sensor.WithID(strcase.ToSnake(loadType)),
 				sensor.WithIcon(loadAvgIcon),
 				sensor.WithDataSourceAttribute(linux.DataSrcProcfs),
 			),

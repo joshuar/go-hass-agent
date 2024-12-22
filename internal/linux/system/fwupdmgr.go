@@ -100,9 +100,9 @@ func (w *fwupdWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
 	return []sensor.Entity{
 			sensor.NewSensor(
 				sensor.WithName("Firmware Security"),
+				sensor.WithID("firmware_security"),
 				sensor.AsDiagnostic(),
 				sensor.WithState(
-					sensor.WithID("firmware_security"),
 					sensor.WithIcon("mdi:security"),
 					sensor.WithValue(hsiID[0]),
 					sensor.WithAttributes(attributes),

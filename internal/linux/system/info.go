@@ -35,9 +35,9 @@ func (w *infoWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
 		sensors = append(sensors,
 			sensor.NewSensor(
 				sensor.WithName("Distribution Name"),
+				sensor.WithID("distribution_name"),
 				sensor.AsDiagnostic(),
 				sensor.WithState(
-					sensor.WithID("distribution_name"),
 					sensor.WithIcon("mdi:linux"),
 					sensor.WithValue(distro),
 					sensor.WithDataSourceAttribute(linux.DataSrcProcfs),
@@ -45,9 +45,9 @@ func (w *infoWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
 			),
 			sensor.NewSensor(
 				sensor.WithName("Distribution Version"),
+				sensor.WithID("distribution_version"),
 				sensor.AsDiagnostic(),
 				sensor.WithState(
-					sensor.WithID("distribution_version"),
 					sensor.WithIcon("mdi:numeric"),
 					sensor.WithValue(version),
 					sensor.WithDataSourceAttribute(linux.DataSrcProcfs),
@@ -66,9 +66,9 @@ func (w *infoWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
 		sensors = append(sensors,
 			sensor.NewSensor(
 				sensor.WithName("Kernel Version"),
+				sensor.WithID("kernel_version"),
 				sensor.AsDiagnostic(),
 				sensor.WithState(
-					sensor.WithID("kernel_version"),
 					sensor.WithIcon("mdi:chip"),
 					sensor.WithValue(kernelVersion),
 					sensor.WithDataSourceAttribute(linux.DataSrcProcfs),

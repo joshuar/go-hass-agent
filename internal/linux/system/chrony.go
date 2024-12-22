@@ -97,11 +97,11 @@ func newChronyOffsetSensor(stats map[string]string) sensor.Entity {
 
 	return sensor.NewSensor(
 		sensor.WithName("Chrony System Time Offset"),
+		sensor.WithID("chrony_system_time_offset"),
 		sensor.AsDiagnostic(),
 		sensor.WithUnits("s"),
 		sensor.WithStateClass(types.StateClassMeasurement),
 		sensor.WithState(
-			sensor.WithID("chrony_system_time_offset"),
 			sensor.WithIcon("mdi:clock"),
 			sensor.WithValue(value),
 			sensor.WithAttributes(attrs),

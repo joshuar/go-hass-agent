@@ -20,9 +20,9 @@ const (
 func newVersionSensor() sensor.Entity {
 	return sensor.NewSensor(
 		sensor.WithName("Go Hass Agent Version"),
+		sensor.WithID("agent_version"),
 		sensor.AsDiagnostic(),
 		sensor.WithState(
-			sensor.WithID("agent_version"),
 			sensor.WithIcon("mdi:face-agent"),
 			sensor.WithValue(preferences.AppVersion),
 		),

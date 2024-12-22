@@ -23,11 +23,9 @@ type requestMetadata struct {
 }
 
 type State struct {
-	Value      any              `json:"state" validate:"required"`
-	Attributes map[string]any   `json:"attributes,omitempty" validate:"omitempty"`
-	Icon       string           `json:"icon,omitempty" validate:"omitempty,startswith=mdi:"`
-	ID         string           `json:"unique_id" validate:"required"`
-	EntityType types.SensorType `json:"type" validate:"omitempty"`
+	Value      any            `json:"state" validate:"required"`
+	Attributes map[string]any `json:"attributes,omitempty" validate:"omitempty"`
+	Icon       string         `json:"icon,omitempty" validate:"omitempty,startswith=mdi:"`
 }
 
 // WithValue assigns a value to the sensor.
@@ -86,32 +84,6 @@ func WithIcon(icon string) Option[State] {
 	}
 }
 
-// WithID sets the entity ID of the sensor.
-func WithID(id string) Option[State] {
-	return func(state State) State {
-		state.ID = id
-		return state
-	}
-}
-
-// AsTypeSensor ensures the sensor is treated as a Sensor Entity.
-// https://developers.home-assistant.io/docs/core/entity/sensor/
-func AsTypeSensor() Option[State] {
-	return func(state State) State {
-		state.EntityType = types.Sensor
-		return state
-	}
-}
-
-// AsTypeBinarySensor ensures the sensor is treated as a Binary Sensor Entity.
-// https://developers.home-assistant.io/docs/core/entity/binary-sensor
-func AsTypeBinarySensor() Option[State] {
-	return func(state State) State {
-		state.EntityType = types.BinarySensor
-		return state
-	}
-}
-
 // UpdateValue will update the sensor state with the given value.
 func (s *State) UpdateValue(value any) {
 	s.Value = value
@@ -143,8 +115,10 @@ func (s *State) Validate() error {
 type Entity struct {
 	*State
 	requestMetadata
+	ID          string            `json:"unique_id" validate:"required"`
 	Name        string            `json:"name" validate:"required"`
 	Units       string            `json:"unit_of_measurement,omitempty" validate:"omitempty"`
+	EntityType  types.SensorType  `json:"type" validate:"omitempty"`
 	DeviceClass types.DeviceClass `json:"device_class,omitempty" validate:"omitempty"`
 	StateClass  types.StateClass  `json:"state_class,omitempty" validate:"omitempty"`
 	Category    types.Category    `json:"entity_category,omitempty" validate:"omitempty"`
@@ -170,6 +144,32 @@ func WithState(options ...Option[State]) Option[Entity] {
 func WithName(name string) Option[Entity] {
 	return func(entity Entity) Entity {
 		entity.Name = name
+		return entity
+	}
+}
+
+// WithID sets the entity ID of the sensor.
+func WithID(id string) Option[Entity] {
+	return func(entity Entity) Entity {
+		entity.ID = id
+		return entity
+	}
+}
+
+// AsTypeSensor ensures the sensor is treated as a Sensor Entity.
+// https://developers.home-assistant.io/docs/core/entity/sensor/
+func AsTypeSensor() Option[Entity] {
+	return func(entity Entity) Entity {
+		entity.EntityType = types.Sensor
+		return entity
+	}
+}
+
+// AsTypeBinarySensor ensures the sensor is treated as a Binary Sensor Entity.
+// https://developers.home-assistant.io/docs/core/entity/binary-sensor
+func AsTypeBinarySensor() Option[Entity] {
+	return func(entity Entity) Entity {
+		entity.EntityType = types.BinarySensor
 		return entity
 	}
 }

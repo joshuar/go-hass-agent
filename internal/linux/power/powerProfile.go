@@ -27,9 +27,9 @@ const (
 func newPowerSensor(profile string) sensor.Entity {
 	return sensor.NewSensor(
 		sensor.WithName("Power Profile"),
+		sensor.WithID("power_profile"),
 		sensor.AsDiagnostic(),
 		sensor.WithState(
-			sensor.WithID("power_profile"),
 			sensor.WithIcon("mdi:flash"),
 			sensor.WithValue(profile),
 			sensor.WithDataSourceAttribute(linux.DataSrcDbus),

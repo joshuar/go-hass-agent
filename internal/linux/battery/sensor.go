@@ -57,12 +57,12 @@ func newBatterySensor(battery *upowerBattery, sensorType batterySensor, value db
 
 	return sensor.NewSensor(
 		sensor.WithName(name),
+		sensor.WithID(id),
 		sensor.WithDeviceClass(deviceClass),
 		sensor.WithStateClass(stateClass),
 		sensor.WithUnits(units),
 		sensor.AsDiagnostic(),
 		sensor.WithState(
-			sensor.WithID(id),
 			sensor.WithIcon(icon),
 			sensor.WithValue(generateSensorState(sensorType, value.Value())),
 			sensor.WithAttributes(generateSensorAttributes(sensorType, battery)),

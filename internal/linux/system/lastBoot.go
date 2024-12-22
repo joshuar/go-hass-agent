@@ -25,10 +25,10 @@ func (w *lastBootWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 	return []sensor.Entity{
 			sensor.NewSensor(
 				sensor.WithName("Last Reboot"),
+				sensor.WithID("last_reboot"),
 				sensor.AsDiagnostic(),
 				sensor.WithDeviceClass(types.SensorDeviceClassTimestamp),
 				sensor.WithState(
-					sensor.WithID("last_reboot"),
 					sensor.WithIcon("mdi:restart"),
 					sensor.WithValue(w.lastBoot.Format(time.RFC3339)),
 					sensor.WithDataSourceAttribute(linux.ProcFSRoot),
