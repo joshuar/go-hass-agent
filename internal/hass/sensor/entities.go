@@ -18,7 +18,7 @@ const (
 
 type Option[T any] func(T) T
 
-type RequestMetadata struct {
+type requestMetadata struct {
 	RetryRequest bool
 }
 
@@ -28,7 +28,6 @@ type State struct {
 	Icon       string           `json:"icon,omitempty" validate:"omitempty,startswith=mdi:"`
 	ID         string           `json:"unique_id" validate:"required"`
 	EntityType types.SensorType `json:"type" validate:"omitempty"`
-	RequestMetadata
 }
 
 // WithValue assigns a value to the sensor.
@@ -143,6 +142,7 @@ func (s *State) Validate() error {
 
 type Entity struct {
 	*State
+	requestMetadata
 	Name        string            `json:"name" validate:"required"`
 	Units       string            `json:"unit_of_measurement,omitempty" validate:"omitempty"`
 	DeviceClass types.DeviceClass `json:"device_class,omitempty" validate:"omitempty"`
@@ -209,6 +209,15 @@ func AsDiagnostic() Option[Entity] {
 	return func(entity Entity) Entity {
 		entity.Category = types.CategoryDiagnostic
 		return entity
+	}
+}
+
+// WithRequestRetry flags that any API requests for this entity should be
+// retried.
+func WithRequestRetry(value bool) Option[Entity] {
+	return func(e Entity) Entity {
+		e.RetryRequest = value
+		return e
 	}
 }
 

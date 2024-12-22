@@ -52,9 +52,9 @@ func newHWSensor(details *hwmon.Sensor) sensor.Entity {
 	case hwmon.Alarm, hwmon.Intrusion:
 		if v, ok := details.Value().(bool); ok && v {
 			icon = "mdi:alarm-light"
+		} else {
+			icon = "mdi:alarm-light-off"
 		}
-
-		icon = "mdi:alarm-light-off"
 
 		if details.MonitorType == hwmon.Alarm {
 			deviceClass = types.BinarySensorDeviceClassProblem
@@ -66,7 +66,7 @@ func newHWSensor(details *hwmon.Sensor) sensor.Entity {
 		stateClass = types.StateClassMeasurement
 	}
 
-	s := sensor.NewSensor(
+	hwMonSensor := sensor.NewSensor(
 		sensor.WithName(details.Name()),
 		sensor.WithDeviceClass(deviceClass),
 		sensor.AsDiagnostic(),
@@ -80,14 +80,14 @@ func newHWSensor(details *hwmon.Sensor) sensor.Entity {
 	)
 
 	if stateClass != types.StateClassNone {
-		s = sensor.WithStateClass(stateClass)(s)
+		hwMonSensor = sensor.WithStateClass(stateClass)(hwMonSensor)
 	}
 
 	if details.MonitorType == hwmon.Alarm || details.MonitorType == hwmon.Intrusion {
-		s.EntityType = types.BinarySensor
+		hwMonSensor.EntityType = types.BinarySensor
 	}
 
-	return s
+	return hwMonSensor
 }
 
 type hwMonWorker struct{}

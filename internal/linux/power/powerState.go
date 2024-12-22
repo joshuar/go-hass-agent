@@ -31,7 +31,7 @@ const (
 type powerSignal int
 
 func newPowerState(name powerSignal, value any) sensor.Entity {
-	s := sensor.NewSensor(
+	return sensor.NewSensor(
 		sensor.WithName("Power State"),
 		sensor.AsDiagnostic(),
 		sensor.WithState(
@@ -40,13 +40,8 @@ func newPowerState(name powerSignal, value any) sensor.Entity {
 			sensor.WithValue(powerStateString(name, value)),
 			sensor.WithDataSourceAttribute(linux.DataSrcDbus),
 		),
+		sensor.WithRequestRetry(true),
 	)
-
-	s.State.RequestMetadata = sensor.RequestMetadata{
-		RetryRequest: true,
-	}
-
-	return s
 }
 
 func powerStateString(signal powerSignal, value any) string {
