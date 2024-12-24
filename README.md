@@ -18,7 +18,7 @@
   <a href="https://github.com/joshuar/go-hass-agent/graphs/contributors">
     <img src="https://img.shields.io/github/contributors/joshuar/go-hass-agent" alt="contributors" />
   </a>
-  <a href="">
+  <a href="https://github.com/joshuar/go-hass-agent/commits/main/">
     <img src="https://img.shields.io/github/last-commit/joshuar/go-hass-agent" alt="last update" />
   </a>
   <a href="https://github.com/joshuar/go-hass-agent/network/members">
@@ -70,7 +70,7 @@
   - [🐳 Running in a container](#-running-in-a-container)
   - [🔧 Alternative System Mount Points](#-alternative-system-mount-points)
   - [🔄 Regular Usage](#-regular-usage)
-  - [🗒️ Configuration Location](#️-configuration-location)
+  - [🗒️ Preferences](#️-preferences)
   - [🐚 Script Sensors](#-script-sensors)
     - [Requirements](#requirements)
     - [Supported Scripting Languages](#supported-scripting-languages)
@@ -103,10 +103,11 @@
   - [_What is the resource (CPU, memory) usage of the agent?_](#what-is-the-resource-cpu-memory-usage-of-the-agent)
   - [_I've updated the agent and now I've got a bunch of duplicate/removed/disabled sensors?_](#ive-updated-the-agent-and-now-ive-got-a-bunch-of-duplicateremoveddisabled-sensors)
   - [_Can I reset the agent (start from new)?_](#can-i-reset-the-agent-start-from-new)
-  - [_I want to run the agent on a server, as a service, without a GUI. Can I do this?_](#i-want-to-run-the-agent-on-a-server-as-a-service-without-a-gui-can-i-do-this)
   - [_Can (or does) the agent run as root or with privileges?_](#can-or-does-the-agent-run-as-root-or-with-privileges)
-  - [_Why do the disk rate sensors report a non-zero value while the IO operations in progress sensor is zero?_](#why-do-the-disk-rate-sensors-report-a-non-zero-value-while-the-io-operations-in-progress-sensor-is-zero)
-  - [_What does the value of the Firmware Security sensor mean?_](#what-does-the-value-of-the-firmware-security-sensor-mean)
+  - [_(Linux) I want to run the agent on a server, as a service, without a GUI. Can I do this?_](#linux-i-want-to-run-the-agent-on-a-server-as-a-service-without-a-gui-can-i-do-this)
+  - [_(Linux) Why do the disk rate sensors report a non-zero value while the IO operations in progress sensor is zero?_](#linux-why-do-the-disk-rate-sensors-report-a-non-zero-value-while-the-io-operations-in-progress-sensor-is-zero)
+  - [_(Linux) What does the value of the Firmware Security sensor mean?_](#linux-what-does-the-value-of-the-firmware-security-sensor-mean)
+  - [_(Linux) Some of the hardware sensors are reporting incorrect values?_](#linux-some-of-the-hardware-sensors-are-reporting-incorrect-values)
 - [🤝 Acknowledgements](#-acknowledgements)
 - [🧑‍⚖️ License](#️-license)
 
@@ -124,16 +125,15 @@ up to MQTT. You can extend it **even further** with your own custom sensors and
 controls with scripts/programs.
 
 You can then use these sensors, controls or events in any automations and
-dashboards, just like the companion app or any other "thing" you've added into
+dashboards, just like the companion app or any other “thing” you've added into
 Home Assistant.
 
 ## 🎯 Features
 
-- **Sensors:** Expose a number of sensor entities to Home Assistant, which can then be used
-  in dashboards, automations and other aspects your Home Assistant platform.
-  - By default, Go Hass Agent ships with up around 100 sensors (on Linux),
-    depending on the system it runs on.
-- **Custom Sensors via Scripts:** All platforms can also utilise scripts/executables to
+- **Sensors:** Expose a number of sensor entities to Home Assistant, for
+  displaying in dashboards, using in automations or any other aspects your Home
+  Assistant platform.
+- **Custom Sensors via Scripts:** All platforms can also utilize scripts/executables to
 create custom sensors. See [Script Sensors](#-script-sensors).
 - **Controls and additional sensors via MQTT:** Where Home Assistant is
 connected to MQTT, Go Hass Agent can add some additional sensors/controls for
@@ -188,6 +188,7 @@ this app:
   changes.
   - Via D-Bus (requires [XDG Desktop Portal
   Support](https://flatpak.github.io/xdg-desktop-portal/docs/) support).
+  - Can be disabled via `worker_prefs.app_sensors.disabled` [preference](#️-preferences).
 - Desktop Settings:
   - **Accent Colour** (the hex code representing the accent colour of the desktop
   environment in use) and **Theme Type** (whether a dark or light desktop theme is
@@ -247,17 +248,22 @@ this app:
     - Per network device/link and total.
     - Via netlink.
   - You can ignore some devices from generating these sensors, see the
-    `network_sensors_preferences.toml` file in the [configuration
-    directory](#️-configuration-location).
+    `worker_prefs.network_sensors.ignored_devices` [preference](#️-preferences).
 - CPU:
   - **Load Average (1/5/15 min)**. Updated ~every 1 minute. Via ProcFS.
   - **CPU Usage** (in %). Both total (all-cores) and per-core. Updated ~every 10
     seconds. Via ProcFS.
     - Attributes include breakdown of CPU time per state (i.e., user, idle,
       servicing interrupts, etc.).
-  - **CPU Core Frequency** (in Hz). Per-core. Updated ~every 10 seconds. Via
+    - The polling frequency can be changed in the [preferences](#️-preferences) through the following:
+      - `worker_prefs.cpu_usage_sensors.update_interval`
+- - **CPU Core Frequency** (in Hz). Per-core. Updated ~every 10 seconds. Via
     ProcFS.
     - Attributes include current driver and governor in use.
+    - CPU Frequency sensors can be disabled and/or the polling frequency changed
+      in the [preferences](#️-preferences) through the following:
+      - `worker_prefs.cpu_freq_sensors.disabled`
+      - `worker_prefs.cpu_freq_sensors.update_interval`
 - Power Related Details:
   - **Power Profile** (the current power profile as set by the
     power-profiles-daemon). Updated when profile changes.
@@ -297,6 +303,10 @@ this app:
     - Any **temp**, **fan**, **power** and other hardware sensors, including associated
       **alarms**. Updated ~every 1 minute.
     - Extracted from the `/sys/class/hwmon` file system.
+    - Hardware sensors can be disabled and/or the polling frequency changed
+      in the [preferences](#️-preferences) through the following:
+      - `worker_prefs.system_sensors.disable_hwmon`
+      - `worker_prefs.system_sensors.hwmon_sensor_update_interval`
 
 #### 🕹️ Controls
 
@@ -311,8 +321,7 @@ this app:
     - Requires a webcam that is exposed via V4L2 (VideoForLinux2).
   - You can set some preferences (for e.g., the camera device and video
     properties) if the defaults are not satisfactory, see the
-    `media_controls_preferences.toml` file in the [configuration
-    directory](#️-configuration-location).
+    `media_controls_preferences.toml` file in the [preferences](#️-preferences).
 - Power Controls:
   - **Lock/Unlock Screen/Screensaver** Locks/unlocks the session for the user
     running Go Hass Agent.
@@ -361,8 +370,8 @@ this app:
 - **Go Hass Agent Version**. Updated on agent start.
 - **External IP Addresses**. All external IP addresses (IPv4/6) of the device
   running the agent.
-  - Can be disabled. See the `external_ip_sensor_preferences.toml` file in the
-    [configuration directory](#️-configuration-location).
+  - Can be disabled in the [preferences](#️-preferences) with the
+    `worker_prefs.external_ip_sensor.disabled` preference.
 - **Connection Latency**. Total connection time (in milliseconds) to connect to
   Home Assistant from the device running Go Hass Agent. Additional times shown
   as attributes.
@@ -373,7 +382,7 @@ this app:
 
 ### 🤝 Compatibility
 
-Currently, only Linux is supported. Though the code is designed to be extensible
+**Currently, only Linux is supported**. Though the code is designed to be extensible
 to other operating systems. See development information in the
 [docs](docs/README.md) for details on how to extend for other operating systems.
 
@@ -485,7 +494,7 @@ If desired, headless mode can be forced, even in graphical environments, by
 specifying the `--terminal` command-line option.
 
 If you want to run Go Hass Agent as a service on a headless machine, see the
-[FAQ](#i-want-to-run-the-agent-on-a-server-as-a-service-without-a-gui-can-i-do-this).
+[FAQ](#linux-i-want-to-run-the-agent-on-a-server-as-a-service-without-a-gui-can-i-do-this).
 
 [⬆️ Back to Top](#-table-of-contents)
 
@@ -587,17 +596,18 @@ parts of Home Assistant.
 
 [⬆️ Back to Top](#-table-of-contents)
 
-### 🗒️ Configuration Location
+### 🗒️ Preferences
 
-The configuration is located in a file called `preferences.toml` in
+The preferences file (`preferences.toml`) is located in
 `CONFIG_HOME/go-hass-agent/` where `CONFIG_HOME` will OS-dependent:
 
 - Linux: `~/.config`.
 - OSX: `~/Library/Application Support`.
 - Windows: `LocalAppData`.
 
-While the configuration can be edited manually, it is recommended to let the
-agent manage this file.
+> [!WARNING]
+> Only the individual sensor preferences under the `worker_prefs`
+> sections should be edited manually.
 
 [⬆️ Back to Top](#-table-of-contents)
 
@@ -614,7 +624,7 @@ run on its own schedule, specified using a Cron syntax.
 #### Requirements
 
 - Scripts need to be put in a `scripts` folder under the configuration directory
-  (see [Configuration Location](#️-configuration-location) for the full path).
+  (see [Preferences Location](#️-preferences) for the full path).
 - You can use symlinks, if supported by your Operating System.
 - Script files need to be executable by the user running Go Hass Agent.
 - Scripts need to run without any user interaction.
@@ -894,7 +904,7 @@ data:
 #### Other Custom Commands
 
 You can optionally create a `commands.toml` file under the configuration
-directory (see [Configuration Location](#️-configuration-location) with custom
+directory (see [preferences](#️-preferences) with custom
 commands to be exposed in Home Assistant.
 
 Supported control types and expected input/output:
@@ -1144,7 +1154,7 @@ releases.
 
 ### _Can I change the units of the sensor?_
 
-- Yes! In the [customisation
+- Yes! In the [customization
 options](https://www.home-assistant.io/docs/configuration/customizing-devices/)
 for a sensor/entity, you can change the _unit of measurement_ (and _display
 precision_ if desired). This is useful for sensors whose native unit is not very
@@ -1155,18 +1165,19 @@ whereas you may wish to change the unit of measurement to gigabytes (GB).
 
 ### _Can I disable some sensors?_
 
-- The agent itself does not currently support disabling individual sensors.
- However, you can disable the corresponding sensor entity in Home Assistant,
+- There is currently some limited support for disabling certain _groups_ of
+sensors. In the [preferences](#️-preferences), under the
+`worker_prefs` sections, you can find some controls to disable some sensor
+groups.
+- Alternatively, you can disable the corresponding sensor entity in Home Assistant,
  and the agent will stop sending updates for it.
-- To disable a sensor entity, In the [customisation
+  - To disable a sensor entity, In the [customisation
 options](https://www.home-assistant.io/docs/configuration/customizing-devices/)
 for a sensor/entity, toggle the *Enabled* switch. The agent will automatically
 detect the disabled state and send/not send updates as appropriate.
-
-> [!NOTE]
->
-> While the agent will stop sending updates for a disabled sensor, it
-> will not stop gathering the raw data for the sensor.
+  - Note that disabling a sensor in Home Assistant will **not** stop Go Hass
+    Agent from gathering the raw data for the sensor. Only disabling it via the
+    Agent preferences file will stop any data gathering.
 
 [⬆️ Back to Top](#-table-of-contents)
 
@@ -1242,7 +1253,18 @@ settings app which can adjust the scaling for the app windows.
 
 [⬆️ Back to Top](#-table-of-contents)
 
-### _I want to run the agent on a server, as a service, without a GUI. Can I do this?_
+### _Can (or does) the agent run as root or with privileges?_
+
+- No. None of the built-in sensors (or commands if MQTT is enabled) require any
+privileges. The agent will refuse to run if it is started with privileges.
+- If you have [script sensors](#-script-sensors) or [custom
+commands](#other-custom-commands) that need privileges, there are most likely
+ways for the script/command to elevate to the privileges it needs as part of its
+execution.
+
+[⬆️ Back to Top](#-table-of-contents)
+
+### _(Linux) I want to run the agent on a server, as a service, without a GUI. Can I do this?_
 
 - Yes. The packages install a systemd service file that can be enabled and
 used to run the agent as a service.
@@ -1261,36 +1283,38 @@ user services.
 
 [⬆️ Back to Top](#-table-of-contents)
 
-### _Can (or does) the agent run as root or with privileges?_
+### _(Linux) Why do the disk rate sensors report a non-zero value while the IO operations in progress sensor is zero?_
 
-No. None of the built-in sensors (or commands if MQTT is enabled) require any
-privileges. The agent will refuse to run if it is started with privileges. For
-custom scripts or commands that need privileges, there are most likely ways for
-the script/command to elevate to the privileges it needs as part of its
-execution, rather than having the agent run with privileges and the
-script/command inherit those.
-
-[⬆️ Back to Top](#-table-of-contents)
-
-### _Why do the disk rate sensors report a non-zero value while the IO operations in progress sensor is zero?_
-
-The rate sensors are a derived value, taken by looking at the change in total IO
+- The rate sensors are a derived value, taken by looking at the change in total IO
 operations since the sensor was last polled. The IO operations in progress
 sensor is a point-in-time measurement taken at the time of polling. So
 short-lived IO operations, that generate reads/writes but happen between polling
 intervals, won't be visible in the IO operations sensor but will contribute to
 the derived IO rate sensors.
-
-If you wanting to track IO operations, I would recommend focusing on the IO
+- If you are wanting to track IO operations, I would recommend focusing on the IO
 operations value being at a certain value over a period of time. Certainly
 however, for exact measurements, a dedicated monitoring solution is recommended.
 
 [⬆️ Back to Top](#-table-of-contents)
 
-### _What does the value of the Firmware Security sensor mean?_
+### _(Linux) What does the value of the Firmware Security sensor mean?_
 
-This is a **Host Security ID** value. More information can be found
+- This is a **Host Security ID** value. More information can be found
 [here](https://fwupd.github.io/libfwupdplugin/hsi.html).
+
+[⬆️ Back to Top](#-table-of-contents)
+
+### _(Linux) Some of the hardware sensors are reporting incorrect values?_
+
+- Go Hass Agent sends the raw hardware sensor data without any chip-dependent
+scaling/transformation. If you are comparing the values to, say, the output of
+sensors from the `sensors` command (part of _lm-sensors_), there will be
+discrepancies; _lm-sensors_ has a database of chips with scaling/transformation
+information for their values and applies those as required before displaying the
+values.
+- Future versions of Go Hass Agent will hopefully use similar logic to
+scale/transform the hardware sensor values. As a workaround, you can create a
+template sensor that scales/transforms values as appropriate.
 
 [⬆️ Back to Top](#-table-of-contents)
 
