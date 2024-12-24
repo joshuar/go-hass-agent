@@ -24,15 +24,19 @@
 ### Worker and Agent preferences merge
 
 Individual worker preferences, which were previously in their own files under
-the [configuration directory](../README#️-configuration-location), now live in
+the [configuration directory](../README#️-preferences), now live in
 the agent preferences file (`preferences.toml`).
 
 #### What you need to do
 
 Any changes from the default values for worker preferences you have made will
 need to be **manually** changed in the agent preferences file. All workers with
-preferences should have their default preferences listed in the file. So you
-only need to scan and change the ones you have edited.
+preferences should have their default preferences listed in the file, and you can
+consult the list of sensors in the [README](../README.md#-sensors) which has
+relevant preferences mentioned.
+
+Once you have migrated any custom preferences, it is safe to delete the
+individual preferences files (named `*_preferences.toml`).
 
 ## v10.0.0
 
