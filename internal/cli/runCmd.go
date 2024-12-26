@@ -18,9 +18,8 @@ func (r *RunCmd) Help() string {
 }
 
 func (r *RunCmd) Run(opts *CmdOpts) error {
-	if err := agent.Run(
+	if err := agent.Run(opts.Logger,
 		agent.SetHeadless(opts.Headless),
-		agent.SetLogger(opts.Logger),
 	); err != nil {
 		return fmt.Errorf("failed to run: %w", err)
 	}

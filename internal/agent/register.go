@@ -19,19 +19,19 @@ import (
 var ErrUserCancelledRegistration = errors.New("user canceled registration")
 
 func checkRegistration(ctx context.Context, agentUI ui) error {
-	if preferences.Registered() && !ForceRegister(ctx) {
+	if preferences.Registered() && !options.forceRegister {
 		return nil
 	}
 
 	// Set the registration options as passed in from command-line.
 	registrationOptions := &preferences.Registration{
-		Server:         Server(ctx),
-		Token:          Token(ctx),
-		IgnoreHassURLs: IgnoreURLs(ctx),
+		Server:         options.registrationServer,
+		Token:          options.registrationToken,
+		IgnoreHassURLs: options.ignoreHassURLs,
 	}
 
 	// If not headless, present a UI for the user to configure options.
-	if !Headless(ctx) {
+	if options.headless {
 		userInputDoneCh := agentUI.DisplayRegistrationWindow(ctx, registrationOptions)
 		if canceled := <-userInputDoneCh; canceled {
 			return ErrUserCancelledRegistration
@@ -54,7 +54,7 @@ func checkRegistration(ctx context.Context, agentUI ui) error {
 	}
 
 	// If the registration was forced, reset the sensor registry.
-	if ForceRegister(ctx) {
+	if options.forceRegister {
 		if err := registry.Reset(); err != nil {
 			logging.FromContext(ctx).Warn("Problem resetting registry.", slog.Any("error", err))
 		}

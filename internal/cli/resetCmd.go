@@ -26,9 +26,8 @@ func (r *ResetCmd) Run(opts *CmdOpts) error {
 	var errs error
 
 	// Reset agent.
-	if err := agent.Reset(
+	if err := agent.Reset(opts.Logger,
 		agent.SetHeadless(opts.Headless),
-		agent.SetLogger(opts.Logger),
 	); err != nil {
 		errs = errors.Join(fmt.Errorf("agent reset failed: %w", err))
 	}
