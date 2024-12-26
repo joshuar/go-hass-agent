@@ -1,0 +1,21 @@
+registered = true
+version = "Unknown"
+
+[device]
+  id = "3999e59c-22a6-4084-bbed-549e7dc238e4"
+  name = "testhost"
+
+[hass]
+  apiurl = "http://localhost:8123/api/webhook/random"
+  cloudhook_url = "http://localhost:8123/cloudhook"
+  remote_ui_url = ""
+  secret = ""
+  webhook_id = "random"
+  websocketurl = "ws://localhost:8123/api/websocket"
+
+[mqtt]
+  enabled = false
+
+[registration]
+  server = "http://localhost:8123"
+  token = "random"

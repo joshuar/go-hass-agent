@@ -7,7 +7,6 @@
 package registry
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -25,10 +24,10 @@ var mockSensors = map[string]metadata{
 	"registeredSensor": {Disabled: false, Registered: true},
 }
 
-func newMockReg(ctx context.Context, t *testing.T) *gobRegistry {
+func newMockReg(t *testing.T) *gobRegistry {
 	t.Helper()
 
-	mockReg, err := Load(ctx)
+	mockReg, err := Load()
 	require.NoError(t, err)
 	mockReg.sensors = mockSensors
 	err = mockReg.write()
@@ -72,9 +71,8 @@ func Test_gobRegistry_write(t *testing.T) {
 func Test_gobRegistry_read(t *testing.T) {
 	appID := "go-hass-agent-test"
 	xdg.ConfigHome = t.TempDir()
-	ctx := preferences.AppIDToContext(context.TODO(), appID)
-
-	mockReg := newMockReg(ctx, t)
+	preferences.SetAppID(appID)
+	mockReg := newMockReg(t)
 
 	invalidRegistry := filepath.Join(t.TempDir(), registryFile)
 	err := os.WriteFile(invalidRegistry, []byte(`invalid`), 0o600)
@@ -296,8 +294,7 @@ func Test_gobRegistry_SetRegistered(t *testing.T) {
 
 func TestLoad(t *testing.T) {
 	appID := "go-hass-agent-test"
-	ctx := preferences.AppIDToContext(context.TODO(), appID)
-
+	preferences.SetAppID(appID)
 	goodPath := t.TempDir()
 	badPath := "/nonexistent"
 
@@ -325,7 +322,7 @@ func TestLoad(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			xdg.ConfigHome = tt.args.path
-			got, err := Load(ctx)
+			got, err := Load()
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Load() error = %v, wantErr %v", err, tt.wantErr)
 				return

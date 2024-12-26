@@ -1,7 +1,5 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2024 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
 //revive:disable:unused-receiver
 package cli
@@ -13,10 +11,11 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
+// VersionCmd: `go-hass-agent version`.
 type VersionCmd struct{}
 
 func (r *VersionCmd) Run(_ *CmdOpts) error {
-	fmt.Fprintf(os.Stdout, "%s: %s\n", preferences.AppName, preferences.AppVersion)
+	fmt.Fprintf(os.Stdout, "%s: %s\n", preferences.AppName, preferences.AppVersion())
 
 	return nil
 }

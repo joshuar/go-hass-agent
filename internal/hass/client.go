@@ -62,7 +62,7 @@ func NewClient(ctx context.Context, url string) (*Client, error) {
 
 	sensorTracker = sensor.NewTracker()
 
-	sensorRegistry, err = registry.Load(ctx)
+	sensorRegistry, err = registry.Load()
 	if err != nil {
 		return nil, fmt.Errorf("could not start registry: %w", err)
 	}

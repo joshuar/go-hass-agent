@@ -12,17 +12,15 @@ import (
 )
 
 func GenerateMQTTDevice(ctx context.Context) *mqtthass.Device {
-	appID := preferences.AppIDFromContext(ctx)
-
 	// Retrieve the hardware model and manufacturer.
 	model, manufacturer, _ := getHWProductInfo() //nolint:errcheck // error doesn't matter
 
 	return &mqtthass.Device{
 		Name:         preferences.DeviceName(),
 		URL:          preferences.AppURL,
-		SWVersion:    preferences.AppVersion,
+		SWVersion:    preferences.AppVersion(),
 		Manufacturer: manufacturer,
 		Model:        model,
-		Identifiers:  []string{appID, preferences.DeviceName(), preferences.DeviceID()},
+		Identifiers:  []string{preferences.AppID(), preferences.DeviceName(), preferences.DeviceID()},
 	}
 }

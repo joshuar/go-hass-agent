@@ -51,7 +51,7 @@ func RegisterDevice(ctx context.Context, registration *preferences.Registration)
 	}
 
 	registrationURL := registration.Server + RegistrationPath
-	thisDevice := device.NewDevice(preferences.AppIDFromContext(ctx))
+	thisDevice := device.NewDevice()
 
 	// Register the device against the registration endpoint.
 	registrationStatus, err := api.Send[preferences.Hass](ctx, registrationURL, newRegistrationRequest(thisDevice, registration.Token))

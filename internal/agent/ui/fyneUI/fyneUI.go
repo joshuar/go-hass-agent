@@ -106,7 +106,7 @@ func (i *FyneUI) DisplayTrayIcon(ctx context.Context, cancelFunc context.CancelF
 		// Preferences/Settings items.
 		menuItemAppPrefs := fyne.NewMenuItem("App Settings",
 			func() {
-				i.agentSettingsWindow(ctx).Show()
+				i.agentSettingsWindow().Show()
 			})
 		menuItemFynePrefs := fyne.NewMenuItem("Fyne Settings",
 			func() {
@@ -187,7 +187,7 @@ func (i *FyneUI) DisplayRegistrationWindow(ctx context.Context, prefs *preferenc
 func (i *FyneUI) aboutWindow(ctx context.Context) fyne.Window {
 	var widgets []fyne.CanvasObject
 
-	if err := preferences.Load(ctx); err != nil {
+	if err := preferences.Load(); err != nil {
 		logging.FromContext(ctx).Error("Could not start sensor controller.", slog.Any("error", err))
 		return nil
 	}
@@ -202,7 +202,7 @@ func (i *FyneUI) aboutWindow(ctx context.Context) fyne.Window {
 	icon.FillMode = canvas.ImageFillOriginal
 
 	widgets = append(widgets, icon,
-		widget.NewLabelWithStyle("Go Hass Agent "+preferences.AppVersion,
+		widget.NewLabelWithStyle("Go Hass Agent "+preferences.AppVersion(),
 			fyne.TextAlignCenter,
 			fyne.TextStyle{Bold: true}))
 
@@ -238,10 +238,10 @@ func (i *FyneUI) fyneSettingsWindow() fyne.Window {
 
 // agentSettingsWindow creates a window for changing settings related to the
 // agent functionality. Most of these settings will be optional.
-func (i *FyneUI) agentSettingsWindow(ctx context.Context) fyne.Window {
+func (i *FyneUI) agentSettingsWindow() fyne.Window {
 	var allFormItems []*widget.FormItem
 
-	if err := preferences.Load(ctx); err != nil {
+	if err := preferences.Load(); err != nil {
 		i.logger.Error("Could not start sensor controller.",
 			slog.Any("error", err))
 		return nil
@@ -265,7 +265,7 @@ func (i *FyneUI) agentSettingsWindow(ctx context.Context) fyne.Window {
 			i.logger.Error("Could note save preferences.", slog.Any("error", err))
 		}
 		// Save the new MQTT preferences to file.
-		if err := preferences.Save(ctx); err != nil {
+		if err := preferences.Save(); err != nil {
 			dialog.ShowError(err, window)
 			i.logger.Error("Could note save preferences.", slog.Any("error", err))
 		} else {

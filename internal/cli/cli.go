@@ -1,18 +1,14 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2024 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
 package cli
 
 import (
-	"context"
 	"embed"
 	"log/slog"
 	"os"
 	"path/filepath"
 
-	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
@@ -26,19 +22,18 @@ var content embed.FS
 
 type CmdOpts struct {
 	Logger   *slog.Logger
-	AppID    string
 	Headless bool
 }
 
 type Option func(*CmdOpts)
 
-func CreateCtx(options ...Option) *CmdOpts {
-	ctx := &CmdOpts{}
+func AddOptions(options ...Option) *CmdOpts {
+	commandOptions := &CmdOpts{}
 	for _, option := range options {
-		option(ctx)
+		option(commandOptions)
 	}
 
-	return ctx
+	return commandOptions
 }
 
 func RunHeadless(opt bool) Option {
@@ -48,8 +43,8 @@ func RunHeadless(opt bool) Option {
 }
 
 func WithAppID(id string) Option {
-	return func(ctx *CmdOpts) {
-		ctx.AppID = id
+	return func(_ *CmdOpts) {
+		preferences.SetAppID(id)
 	}
 }
 
@@ -69,15 +64,6 @@ func (f *HeadlessFlag) AfterApply() error {
 	}
 
 	return nil
-}
-
-func newContext(opts *CmdOpts) (context.Context, context.CancelFunc) {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-
-	ctx = logging.ToContext(ctx, opts.Logger)
-	ctx = preferences.AppIDToContext(ctx, opts.AppID)
-
-	return ctx, cancelFunc
 }
 
 func showHelpTxt(file string) string {

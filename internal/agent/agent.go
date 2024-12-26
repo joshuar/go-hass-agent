@@ -1,10 +1,6 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2024 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
-// revive:disable:unused-receiver
-//
 //go:generate go run github.com/matryer/moq -out agent_mocks_test.go . ui
 package agent
 
@@ -42,18 +38,28 @@ type Agent struct {
 	ui ui
 }
 
-// CtxOption is a functional parameter that will add a value to the agent
+// CtxOption is a functional parameter that will add a value to the agent's
 // context.
 type CtxOption func(context.Context) context.Context
 
 // LoadCtx will "load" a context.Context with the given options (i.e. add values
 // to it to be used by the agent).
-func LoadCtx(ctx context.Context, options ...CtxOption) context.Context {
+func newAgentCtx(options ...CtxOption) (context.Context, context.CancelFunc) {
+	ctx, cancelFunc := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+
 	for _, option := range options {
 		ctx = option(ctx) //nolint:fatcontext
 	}
 
-	return ctx
+	return ctx, cancelFunc
+}
+
+// SetLogger sets the given logger in the context.
+func SetLogger(logger *slog.Logger) CtxOption {
+	return func(ctx context.Context) context.Context {
+		ctx = logging.ToContext(ctx, logger)
+		return ctx
+	}
 }
 
 // SetHeadless sets the headless flag in the context.
@@ -84,18 +90,20 @@ func SetForceRegister(value bool) CtxOption {
 	}
 }
 
-// Run is the "main loop" of the agent. It sets up the agent, loads the config
-// then spawns a sensor tracker and the workers to gather sensor data and
-// publish it to Home Assistant.
+// Run is invoked when Go Hass Agent is run with the `run` command-line option
+// (i.e., `go-hass-agent run`).
 //
 //nolint:funlen
 //revive:disable:function-length
-func Run(ctx context.Context) error {
+func Run(options ...CtxOption) error {
 	var (
 		wg      sync.WaitGroup
 		regWait sync.WaitGroup
 		err     error
 	)
+
+	ctx, cancelFunc := newAgentCtx(options...)
+	defer cancelFunc()
 
 	agent := &Agent{}
 
@@ -106,26 +114,18 @@ func Run(ctx context.Context) error {
 
 	// Load the preferences from file. Ignore the case where there are no
 	// existing preferences.
-	if err = preferences.Load(ctx); err != nil && !errors.Is(err, preferences.ErrLoadPreferences) {
+	if err = preferences.Load(); err != nil && !errors.Is(err, preferences.ErrLoadPreferences) {
 		return fmt.Errorf("%w: %w", ErrAgentStart, err)
 	}
-
-	// Set up a context for running the agent and tie its lifetime to the
-	// typical process termination signals.
-	runCtx, cancelRun := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		<-ctx.Done()
-		cancelRun()
-	}()
 
 	regWait.Add(1)
 
 	go func() {
 		defer regWait.Done()
 		// Check if the agent is registered. If not, start a registration flow.
-		if err = checkRegistration(runCtx, agent.ui); err != nil {
+		if err = checkRegistration(ctx, agent.ui); err != nil {
 			logging.FromContext(ctx).Error("Error checking registration status.", slog.Any("error", err))
-			cancelRun()
+			cancelFunc()
 		}
 	}()
 
@@ -148,18 +148,18 @@ func Run(ctx context.Context) error {
 		}
 
 		// Initialize and gather OS sensor and event workers.
-		sensorWorkers, eventWorkers := setupOSWorkers(runCtx)
+		sensorWorkers, eventWorkers := setupOSWorkers(ctx)
 		// Initialize and add connection latency sensor worker.
 		sensorWorkers = append(sensorWorkers, agentsensor.NewConnectionLatencySensorWorker())
 		// Initialize and add external IP address sensor worker.
-		sensorWorkers = append(sensorWorkers, agentsensor.NewExternalIPUpdaterWorker(runCtx))
+		sensorWorkers = append(sensorWorkers, agentsensor.NewExternalIPUpdaterWorker(ctx))
 		// Initialize and add external version sensor worker.
 		sensorWorkers = append(sensorWorkers, agentsensor.NewVersionWorker())
 
 		// Initialize and add the script worker.
-		scriptsWorkers, err := scripts.NewScriptsWorker(runCtx)
+		scriptsWorkers, err := scripts.NewScriptsWorker(ctx)
 		if err != nil {
-			logging.FromContext(runCtx).Warn("Could not init scripts workers.", slog.Any("error", err))
+			logging.FromContext(ctx).Warn("Could not init scripts workers.", slog.Any("error", err))
 		} else {
 			sensorWorkers = append(sensorWorkers, scriptsWorkers)
 		}
@@ -168,29 +168,29 @@ func Run(ctx context.Context) error {
 		// Process sensor workers.
 		go func() {
 			defer wg.Done()
-			processWorkers(runCtx, client, sensorWorkers...)
+			processWorkers(ctx, client, sensorWorkers...)
 		}()
 
 		wg.Add(1)
 		// Process event workers.
 		go func() {
 			defer wg.Done()
-			processWorkers(runCtx, client, eventWorkers...)
+			processWorkers(ctx, client, eventWorkers...)
 		}()
 
 		// If MQTT is enabled, init MQTT workers and process them.
 		if preferences.MQTTEnabled() {
 			if mqttPrefs, err := preferences.GetMQTTPreferences(); err != nil {
-				logging.FromContext(runCtx).Warn("Could not init mqtt workers.",
+				logging.FromContext(ctx).Warn("Could not init mqtt workers.",
 					slog.Any("error", err))
 			} else {
-				mqttWorkers := setupMQTT(runCtx)
+				mqttWorkers := setupMQTT(ctx)
 
 				wg.Add(1)
 
 				go func() {
 					defer wg.Done()
-					processMQTTWorkers(runCtx, mqttPrefs, mqttWorkers...)
+					processMQTTWorkers(ctx, mqttPrefs, mqttWorkers...)
 				}()
 			}
 		}
@@ -199,14 +199,14 @@ func Run(ctx context.Context) error {
 		// Listen for notifications from Home Assistant.
 		go func() {
 			defer wg.Done()
-			runNotificationsWorker(runCtx, agent.ui)
+			runNotificationsWorker(ctx, agent.ui)
 		}()
 	}()
 
 	// Do not run the UI loop if the agent is running in headless mode.
 	if !Headless(ctx) {
-		agent.ui.DisplayTrayIcon(runCtx, cancelRun)
-		agent.ui.Run(runCtx)
+		agent.ui.DisplayTrayIcon(ctx, cancelFunc)
+		agent.ui.Run(ctx)
 	}
 
 	wg.Wait()
@@ -214,11 +214,17 @@ func Run(ctx context.Context) error {
 	return nil
 }
 
-func Register(ctx context.Context) error {
+// Register is run when Go Hass Agent is invoked with the `register`
+// command-line option (i.e., `go-hass-agent register`). It will attempt to
+// register Go Hass Agent with Home Assistant.
+func Register(options ...CtxOption) error {
 	var (
 		wg  sync.WaitGroup
 		err error
 	)
+
+	ctx, cancelFunc := newAgentCtx(options...)
+	defer cancelFunc()
 
 	agent := &Agent{}
 	// If running headless, do not set up the UI.
@@ -226,7 +232,7 @@ func Register(ctx context.Context) error {
 		agent.ui = fyneui.NewFyneUI(ctx)
 	}
 
-	if err = preferences.Load(ctx); err != nil && !errors.Is(err, preferences.ErrLoadPreferences) {
+	if err = preferences.Load(); err != nil && !errors.Is(err, preferences.ErrLoadPreferences) {
 		return fmt.Errorf("%w: %w", ErrAgentStart, err)
 	}
 
@@ -257,12 +263,18 @@ func Register(ctx context.Context) error {
 	return nil
 }
 
-// Reset will remove any agent related files and configuration.
-func Reset(ctx context.Context) error {
-	if err := preferences.Load(ctx); err != nil && !errors.Is(err, preferences.ErrLoadPreferences) {
+// Reset is invoked when Go Hass Agent is run with the `reset` command-line
+// option (i.e., `go-hass-agent reset`).
+func Reset(options ...CtxOption) error {
+	ctx, cancelFunc := newAgentCtx(options...)
+	defer cancelFunc()
+
+	// Load the preferences so we know what we need to reset.
+	if err := preferences.Load(); err != nil && !errors.Is(err, preferences.ErrLoadPreferences) {
 		return fmt.Errorf("%w: %w", ErrAgentStart, err)
 	}
 
+	// If MQTT is enabled, reset any saved MQTT config.
 	if preferences.MQTTEnabled() {
 		if err := resetMQTTWorkers(ctx); err != nil {
 			logging.FromContext(ctx).Error("Problems occurred resetting MQTT configuration.", slog.Any("error", err))

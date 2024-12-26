@@ -6,13 +6,10 @@
 package registry
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
-
-	"github.com/adrg/xdg"
 
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
@@ -35,9 +32,9 @@ type metadata struct {
 	Disabled   bool `json:"disabled"`
 }
 
-func Reset(ctx context.Context) error {
-	appID := preferences.AppIDFromContext(ctx)
-	path := filepath.Join(xdg.ConfigHome, appID, "sensorRegistry")
+// Reset will handle resetting the registry.
+func Reset() error {
+	path := filepath.Join(preferences.Path(), "sensorRegistry")
 
 	_, err := os.Stat(path)
 	if os.IsNotExist(err) {

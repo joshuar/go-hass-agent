@@ -4,7 +4,6 @@
 package preferences
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -14,6 +13,7 @@ import (
 	"sync"
 
 	"github.com/adrg/xdg"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/knadh/koanf/parsers/toml"
 	"github.com/knadh/koanf/providers/env"
 	"github.com/knadh/koanf/providers/file"
@@ -29,7 +29,6 @@ const (
 	FeatureRequestURL   = AppURL + "/issues/new?assignees=joshuar&labels=&template=feature_request.md&title="
 	IssueURL            = AppURL + "/issues/new?assignees=joshuar&labels=&template=bug_report.md&title=%5BBUG%5D"
 	AppDescription      = "A Home Assistant, native app for desktop/laptop devices."
-	defaultAppID        = "go-hass-agent"
 	MQTTTopicPrefix     = "homeassistant"
 	LogFile             = "go-hass-agent.log"
 	defaultFilePerms    = 0o600
@@ -44,7 +43,8 @@ const (
 var (
 	//lint:ignore U1000 some of these will be used in the future
 	gitVersion, gitCommit, gitTreeState, buildDate string
-	AppVersion                                     = gitVersion
+	appVersion                                     = gitVersion
+	appID                                          = "go-hass-agent"
 )
 
 // Consistent error messages.
@@ -57,7 +57,7 @@ var (
 
 // Default agent preferences.
 var defaultAgentPreferences = &preferences{
-	Version:    AppVersion,
+	Version:    AppVersion(),
 	Registered: false,
 	MQTT: &MQTT{
 		MQTTEnabled: false,
@@ -71,12 +71,11 @@ var defaultAgentPreferences = &preferences{
 		WebsocketURL: DefaultServer,
 		WebhookID:    DefaultSecret,
 	},
-	// WorkerPrefs: make(map[string]map[string]any),
 }
 
 var (
 	prefsSrc        = koanf.New(".")
-	preferencesFile = filepath.Join(xdg.ConfigHome, defaultAppID, preferencesFilename)
+	preferencesFile = filepath.Join(xdg.ConfigHome, appID, preferencesFilename)
 	mu              = sync.Mutex{}
 )
 
@@ -86,22 +85,22 @@ type preferences struct {
 	Registration *Registration `toml:"registration"`
 	Hass         *Hass         `toml:"hass"`
 	Device       *Device       `toml:"device"`
-	Version      string        `toml:"version" validate:"required"`
+	Version      string        `toml:"version"`
 	Registered   bool          `toml:"registered" validate:"boolean"`
 }
 
 // Load will retrieve the current preferences from the preference file on disk.
 // If there is a problem during retrieval, an error will be returned.
-var Load = func(ctx context.Context) error {
+var Load = func() error {
 	return sync.OnceValue(func() error {
-		appID := AppIDFromContext(ctx)
-		preferencesFile = filepath.Join(xdg.ConfigHome, appID, preferencesFilename)
+		preferencesFile = filepath.Join(Path(), preferencesFilename)
 
 		slog.Debug("Loading preferences.", slog.String("file", preferencesFile))
 
 		// Load config file
 		if err := prefsSrc.Load(file.Provider(preferencesFile), toml.Parser()); err != nil {
-			return fmt.Errorf("%w: %w", ErrLoadPreferences, err)
+			slog.Warn("No preferences found, using defaults.", slog.Any("error", err))
+			// return fmt.Errorf("%w: %w", ErrLoadPreferences, err)
 		}
 		// Merge config with any environment variables.
 		if err := prefsSrc.Load(env.Provider(prefsEnvPrefix, ".", func(s string) string {
@@ -115,14 +114,14 @@ var Load = func(ctx context.Context) error {
 			return fmt.Errorf("%w: %w", ErrLoadPreferences, err)
 		}
 
-		return nil
+		// Validate preferences.
+		return validate()
 	})()
 }
 
 // Reset will remove the preferences file.
-func Reset(ctx context.Context) error {
-	appID := AppIDFromContext(ctx)
-	preferencesFile = filepath.Join(xdg.ConfigHome, appID, preferencesFilename)
+func Reset() error {
+	preferencesFile = filepath.Join(Path(), preferencesFilename)
 
 	slog.Debug("Removing preferences.", slog.String("file", preferencesFile))
 
@@ -139,8 +138,8 @@ func Reset(ctx context.Context) error {
 	return nil
 }
 
-// Validate ensures the configuration is valid.
-func Validate() error {
+// validate ensures the configuration is valid.
+func validate() error {
 	currentPreferences := &preferences{}
 
 	// Unmarshal current preferences.
@@ -151,8 +150,11 @@ func Validate() error {
 	// Validate current preferences.
 	err := validation.Validate.Struct(currentPreferences)
 	if err != nil {
+		spew.Dump(err)
 		return fmt.Errorf("%w: %s", ErrValidatePreferences, validation.ParseValidationErrors(err))
 	}
+
+	slog.Debug("Preferences are valid.")
 
 	return nil
 }
@@ -160,16 +162,15 @@ func Validate() error {
 // Save will save the new values of the specified preferences to the existing
 // preferences file. NOTE: if the preferences file does not exist, Save will
 // return an error. Use New if saving preferences for the first time.
-func Save(ctx context.Context) error {
+func Save() error {
 	mu.Lock()
 	defer mu.Unlock()
 
-	appID := AppIDFromContext(ctx)
-	preferencesFile = filepath.Join(xdg.ConfigHome, appID, preferencesFilename)
+	preferencesFile = filepath.Join(Path(), preferencesFilename)
 
 	slog.Debug("Saving preferences.", slog.String("file", preferencesFile))
 
-	if err := Validate(); err != nil {
+	if err := validate(); err != nil {
 		return err
 	}
 
@@ -203,6 +204,30 @@ func SetRegistered(value bool) error {
 // Registered returns the registration status of Go Hass Agent.
 func Registered() bool {
 	return prefsSrc.Bool(prefRegistered)
+}
+
+// SetAppID sets an ID that is used as part of the path to the preferences file.
+func SetAppID(id string) {
+	appID = id
+}
+
+// AppID retrieves the ID.
+func AppID() string {
+	return appID
+}
+
+// AppVersion returns the version of Go Hass Agent.
+func AppVersion() string {
+	if appVersion != "" {
+		return appVersion
+	}
+
+	return "Unknown"
+}
+
+// Path returns a path where preferences are stored.
+func Path() string {
+	return filepath.Join(xdg.ConfigHome, appID)
 }
 
 // checkPath checks that the given directory exists. If it doesn't it will be

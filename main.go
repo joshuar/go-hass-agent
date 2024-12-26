@@ -1,7 +1,5 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2024 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
 package main
 
@@ -17,6 +15,8 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
+// CLI contains all of the commands and common options for running Go Hass
+// Agent.
 var CLI struct {
 	Run          cli.RunCmd           `cmd:"" help:"Run Go Hass Agent."`
 	Reset        cli.ResetCmd         `cmd:"" help:"Reset Go Hass Agent."`
@@ -46,13 +46,13 @@ func init() {
 }
 
 func main() {
+	// Set some string.
 	kong.Name(preferences.AppName)
 	kong.Description(preferences.AppDescription)
-	ctx := kong.Parse(&CLI, kong.Bind(), kong.Vars{"defaultAppID": "go-hass-agent"})
-
+	// Parse the command-line.
+	ctx := kong.Parse(&CLI, kong.Bind(), kong.Vars{"defaultAppID": preferences.AppID()})
 	// Set up the logger.
 	logger := logging.New(CLI.AppID, logging.Options{LogLevel: CLI.LogLevel, NoLogFile: CLI.NoLogFile})
-
 	// Enable profiling if requested.
 	if CLI.ProfileFlags != nil {
 		if err := logging.StartProfiling(CLI.ProfileFlags); err != nil {
@@ -60,9 +60,8 @@ func main() {
 				slog.Any("error", err))
 		}
 	}
-
 	// Run the requested command with the provided options.
-	if err := ctx.Run(cli.CreateCtx(
+	if err := ctx.Run(cli.AddOptions(
 		cli.RunHeadless(bool(*CLI.Headless)),
 		cli.WithAppID(CLI.AppID),
 		cli.WithLogger(logger),
@@ -71,7 +70,6 @@ func main() {
 			slog.String("command", ctx.Command()),
 			slog.Any("error", err))
 	}
-
 	// If profiling was enabled, clean up.
 	if CLI.ProfileFlags != nil {
 		if err := logging.StopProfiling(CLI.ProfileFlags); err != nil {

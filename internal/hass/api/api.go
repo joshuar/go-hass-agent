@@ -21,23 +21,19 @@ const (
 	defaultTimeout = 30 * time.Second
 )
 
-var (
-	client *resty.Client
-
-	// defaultRetryFunc defines how we retry requests. By default, requests are
-	// only retried when Home Assistant responds with 429.
-	defaultRetryFunc = func(r *resty.Response, _ error) bool {
-		return r.StatusCode() == http.StatusTooManyRequests
-	}
-)
+var client *resty.Client
 
 func init() {
+	// Set-up a default Resty client with a reasonable timeout and an
+	// exponential retry process for 429 responses from Home Assistant.
 	client = resty.New().
 		SetTimeout(defaultTimeout).
 		SetRetryCount(3).
 		SetRetryWaitTime(5 * time.Second).
 		SetRetryMaxWaitTime(20 * time.Second).
-		AddRetryCondition(defaultRetryFunc)
+		AddRetryCondition(func(r *resty.Response, _ error) bool {
+			return r.StatusCode() == http.StatusTooManyRequests
+		})
 }
 
 // Request is an API request to Home Assistant. It has a request body (typically
