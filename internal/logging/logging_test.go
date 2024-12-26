@@ -1,12 +1,9 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2024 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
 package logging
 
 import (
-	"context"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -106,7 +103,7 @@ func TestReset(t *testing.T) {
 	err = os.WriteFile(deleteableFile, []byte(`test`), 0o600)
 	require.NoError(t, err)
 
-	ctx := preferences.AppIDToContext(context.TODO(), appID)
+	preferences.SetAppID(appID)
 
 	type args struct {
 		file string
@@ -126,7 +123,7 @@ func TestReset(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := Reset(ctx); (err != nil) != tt.wantErr {
+			if err := Reset(); (err != nil) != tt.wantErr {
 				t.Errorf("Reset() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			if tt.args.file != "" {

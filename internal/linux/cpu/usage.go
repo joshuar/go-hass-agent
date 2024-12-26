@@ -95,7 +95,7 @@ func NewUsageWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
 		},
 	}
 
-	prefs, err := preferences.LoadWorker(ctx, cpuUsageWorker)
+	prefs, err := preferences.LoadWorker(cpuUsageWorker)
 	if err != nil {
 		return worker, fmt.Errorf("could not load preferences: %w", err)
 	}
@@ -112,7 +112,7 @@ func NewUsageWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
 			slog.String("default_value", cpuUsageUpdateInterval.String()))
 		// Save preferences with default interval value.
 		prefs.UpdateInterval = cpuUsageUpdateInterval.String()
-		if err := preferences.SaveWorker(ctx, cpuUsageWorker, *prefs); err != nil {
+		if err := preferences.SaveWorker(cpuUsageWorker, *prefs); err != nil {
 			logging.FromContext(ctx).Warn("Could not save preferences.", slog.Any("error", err))
 		}
 

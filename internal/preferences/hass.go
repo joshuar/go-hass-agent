@@ -64,7 +64,7 @@ func SetHassPreferences(hassPrefs *Hass, regPrefs *Registration) error {
 	if websocketURL, err := generateWebsocketURL(regPrefs); err != nil {
 		return fmt.Errorf("%w: %w", ErrSaveHassPreferences, err)
 	} else {
-		if err := prefsSrc.Set(prefHassAPIURL, websocketURL); err != nil {
+		if err := prefsSrc.Set(prefHassWebsocketURL, websocketURL); err != nil {
 			return fmt.Errorf("%w: %w", ErrSetHassPreference, err)
 		}
 	}
@@ -113,7 +113,7 @@ func Token() string {
 
 func generateAPIURL(hassPrefs *Hass, regPrefs *Registration) (string, error) {
 	switch {
-	case hassPrefs.CloudhookURL != "" && regPrefs.IgnoreHassURLs:
+	case hassPrefs.CloudhookURL != "" && !regPrefs.IgnoreHassURLs:
 		if err := prefsSrc.Set(prefHassCloudhookURL, hassPrefs.CloudhookURL); err != nil {
 			return "", fmt.Errorf("%w: %w", ErrSetHassPreference, err)
 		}

@@ -1,7 +1,5 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2024 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
 package cli
 
@@ -14,17 +12,15 @@ import (
 
 var ErrMQTTServerRequired = errors.New("mqtt-server not specified")
 
+// ConfigCmd: `go-hass-agent config`.
 type ConfigCmd struct {
 	MQTTConfig `kong:"help='Set MQTT options.'"`
 }
 
 type MQTTConfig preferences.MQTT
 
-func (r *ConfigCmd) Run(opts *CmdOpts) error {
-	agentCtx, cancelFunc := newContext(opts)
-	defer cancelFunc()
-
-	if err := preferences.Load(agentCtx); err != nil {
+func (r *ConfigCmd) Run(_ *CmdOpts) error {
+	if err := preferences.Load(); err != nil {
 		return fmt.Errorf("config: load preferences: %w", err)
 	}
 
@@ -33,7 +29,7 @@ func (r *ConfigCmd) Run(opts *CmdOpts) error {
 		return fmt.Errorf("config: save preferences: %w", err)
 	}
 
-	if err := preferences.Save(agentCtx); err != nil {
+	if err := preferences.Save(); err != nil {
 		return fmt.Errorf("config: save preferences: %w", err)
 	}
 

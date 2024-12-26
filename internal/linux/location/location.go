@@ -168,7 +168,7 @@ func createClient(ctx context.Context, bus *dbusx.Bus) (string, error) {
 	}
 
 	// Set an ID for our client.
-	if err = dbusx.NewProperty[string](bus, clientPath, geoclueInterface, desktopIDProp).Set(preferences.AppIDFromContext(ctx)); err != nil {
+	if err = dbusx.NewProperty[string](bus, clientPath, geoclueInterface, desktopIDProp).Set(preferences.AppID()); err != nil {
 		return "", fmt.Errorf("could not set geoclue client id: %w", err)
 	}
 

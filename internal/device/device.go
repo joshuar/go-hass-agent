@@ -47,11 +47,11 @@ type AppData struct {
 	PushWebsocket bool `toml:"-" json:"push_websocket_channel"`
 }
 
-func NewDevice(appID string) *Device {
+func NewDevice() *Device {
 	dev := &Device{
 		AppName:    preferences.AppName,
-		AppVersion: preferences.AppVersion,
-		AppID:      appID,
+		AppVersion: preferences.AppVersion(),
+		AppID:      preferences.AppID(),
 	}
 
 	// Retrieve the name as the device name.

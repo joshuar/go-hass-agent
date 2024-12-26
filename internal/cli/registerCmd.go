@@ -1,7 +1,5 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2024 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
 //revive:disable:unused-receiver
 package cli
@@ -12,6 +10,7 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/agent"
 )
 
+// RegisterCmd: `go-hass-agent register`.
 type RegisterCmd struct {
 	Server     string `help:"Home Assistant server."`
 	Token      string `help:"Personal Access Token."`
@@ -24,15 +23,12 @@ func (r *RegisterCmd) Help() string {
 }
 
 func (r *RegisterCmd) Run(opts *CmdOpts) error {
-	agentCtx, cancelFunc := newContext(opts)
-	defer cancelFunc()
-
-	agentCtx = agent.LoadCtx(agentCtx,
+	if err := agent.Register(
 		agent.SetHeadless(opts.Headless),
 		agent.SetRegistrationInfo(r.Server, r.Token, r.IgnoreURLs),
-		agent.SetForceRegister(r.Force))
-
-	if err := agent.Register(agentCtx); err != nil {
+		agent.SetForceRegister(r.Force),
+		agent.SetLogger(opts.Logger),
+	); err != nil {
 		return fmt.Errorf("failed to run: %w", err)
 	}
 

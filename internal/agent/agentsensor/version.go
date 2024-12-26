@@ -24,7 +24,7 @@ func newVersionSensor() sensor.Entity {
 		sensor.AsDiagnostic(),
 		sensor.WithState(
 			sensor.WithIcon("mdi:face-agent"),
-			sensor.WithValue(preferences.AppVersion),
+			sensor.WithValue(preferences.AppVersion()),
 		),
 	)
 }

@@ -13,7 +13,6 @@ import (
 	"path/filepath"
 	"slices"
 
-	"github.com/adrg/xdg"
 	"github.com/robfig/cron/v3"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
@@ -160,8 +159,7 @@ func (c *Worker) Stop() error {
 
 // NewScriptController creates a new sensor worker for scripts.
 func NewScriptsWorker(ctx context.Context) (*Worker, error) {
-	appID := preferences.AppIDFromContext(ctx)
-	scriptPath := filepath.Join(xdg.ConfigHome, appID, "scripts")
+	scriptPath := filepath.Join(preferences.Path(), "scripts")
 
 	worker := &Worker{
 		scheduler: cron.New(),

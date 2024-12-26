@@ -1,7 +1,5 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2024 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
 //revive:disable:unused-receiver
 package system
@@ -124,7 +122,7 @@ func NewHWMonWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
 
 	hwMonWorker := &hwMonWorker{}
 
-	prefs, err := preferences.LoadWorker(ctx, hwMonWorker)
+	prefs, err := preferences.LoadWorker(hwMonWorker)
 	if err != nil {
 		return worker, fmt.Errorf("could not load preferences: %w", err)
 	}
@@ -141,7 +139,7 @@ func NewHWMonWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
 			slog.String("default_value", hwMonInterval.String()))
 		// Save preferences with default interval value.
 		prefs.HWMonUpdateInterval = hwMonInterval.String()
-		if err := preferences.SaveWorker(ctx, hwMonWorker, *prefs); err != nil {
+		if err := preferences.SaveWorker(hwMonWorker, *prefs); err != nil {
 			logging.FromContext(ctx).Warn("Could not save preferences.", slog.Any("error", err))
 		}
 

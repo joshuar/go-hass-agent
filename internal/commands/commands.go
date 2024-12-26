@@ -1,7 +1,5 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2024 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
 package commands
 
@@ -18,7 +16,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/adrg/xdg"
 	"github.com/eclipse/paho.golang/paho"
 	"github.com/iancoleman/strcase"
 	"github.com/pelletier/go-toml/v2"
@@ -35,6 +32,7 @@ const (
 	stateValueTemplate = "{{ value_json.value }}"
 	switchOnState      = "ON"
 	switchOffState     = "OFF"
+	commandsFile       = "commands.toml"
 )
 
 var (
@@ -190,8 +188,7 @@ func (d *Worker) Msgs() chan *mqttapi.Msg {
 // controller, which holds the MQTT configuration for the commands defined by
 // the user.
 func NewCommandsWorker(ctx context.Context, device *mqtthass.Device) (*Worker, error) {
-	appID := preferences.AppIDFromContext(ctx)
-	commandsFile := filepath.Join(xdg.ConfigHome, appID, "commands.toml")
+	commandsFile := filepath.Join(preferences.Path(), commandsFile)
 
 	if _, err := os.Stat(commandsFile); errors.Is(err, os.ErrNotExist) {
 		return nil, ErrNoCommands

@@ -1,12 +1,9 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2024 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
 package upgrade
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -54,8 +51,8 @@ type oldPreferences struct {
 
 //nolint:cyclop
 //revive:disable:function-length
-func Run(ctx context.Context) error {
-	newRegistryPath := filepath.Join(xdg.ConfigHome, preferences.AppIDFromContext(ctx), "sensorRegistry")
+func Run() error {
+	newRegistryPath := filepath.Join(preferences.Path(), "sensorRegistry")
 
 	// If there is no old preferences directory, exit.
 	if _, err := os.Stat(oldPrefsPath); errors.Is(err, fs.ErrNotExist) {
@@ -73,7 +70,7 @@ func Run(ctx context.Context) error {
 		return fmt.Errorf("cannot read old preferences: %w", err)
 	}
 
-	if err = preferences.Load(ctx); err != nil && !errors.Is(err, preferences.ErrLoadPreferences) {
+	if err = preferences.Load(); err != nil && !errors.Is(err, preferences.ErrLoadPreferences) {
 		return fmt.Errorf("cannot initialize new preferences: %w", err)
 	}
 
@@ -121,7 +118,7 @@ func Run(ctx context.Context) error {
 		return fmt.Errorf("cannot set new preferences: %w", err)
 	}
 
-	err = preferences.Save(ctx)
+	err = preferences.Save()
 	if err != nil {
 		return fmt.Errorf("%w: %w", preferences.ErrSavePreferences, err)
 	}

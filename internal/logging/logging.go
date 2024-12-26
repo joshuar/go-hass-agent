@@ -1,12 +1,9 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2024 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
 package logging
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -178,9 +175,8 @@ func openLogFile(logFile string) (*os.File, error) {
 }
 
 // Reset will remove the log file.
-func Reset(ctx context.Context) error {
-	appID := preferences.AppIDFromContext(ctx)
-	logFile := filepath.Join(xdg.ConfigHome, appID, logFileName)
+func Reset() error {
+	logFile := filepath.Join(preferences.Path(), logFileName)
 
 	// If the log file doesn't exist, just exit.
 	_, err := os.Stat(logFile)

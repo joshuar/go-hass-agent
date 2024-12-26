@@ -101,7 +101,7 @@ func (p *MQTT) TopicPrefix() string {
 func MQTTOrigin() *mqtthass.Origin {
 	return &mqtthass.Origin{
 		Name:    AppName,
-		Version: AppVersion,
+		Version: AppVersion(),
 		URL:     AppURL,
 	}
 }

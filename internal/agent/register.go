@@ -1,7 +1,5 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2024 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
 //go:generate go run github.com/matryer/moq -out register_mocks_test.go . registrationPrefs
 package agent
@@ -51,13 +49,13 @@ func checkRegistration(ctx context.Context, agentUI ui) error {
 		return fmt.Errorf("saving registration failed: %w", err)
 	}
 
-	if err := preferences.Save(ctx); err != nil {
+	if err := preferences.Save(); err != nil {
 		return fmt.Errorf("saving registration failed: %w", err)
 	}
 
 	// If the registration was forced, reset the sensor registry.
 	if ForceRegister(ctx) {
-		if err := registry.Reset(ctx); err != nil {
+		if err := registry.Reset(); err != nil {
 			logging.FromContext(ctx).Warn("Problem resetting registry.", slog.Any("error", err))
 		}
 	}
