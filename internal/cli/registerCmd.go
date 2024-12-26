@@ -23,11 +23,10 @@ func (r *RegisterCmd) Help() string {
 }
 
 func (r *RegisterCmd) Run(opts *CmdOpts) error {
-	if err := agent.Register(
+	if err := agent.Register(opts.Logger,
 		agent.SetHeadless(opts.Headless),
 		agent.SetRegistrationInfo(r.Server, r.Token, r.IgnoreURLs),
 		agent.SetForceRegister(r.Force),
-		agent.SetLogger(opts.Logger),
 	); err != nil {
 		return fmt.Errorf("failed to run: %w", err)
 	}

@@ -38,56 +38,77 @@ type Agent struct {
 	ui ui
 }
 
-// CtxOption is a functional parameter that will add a value to the agent's
-// context.
-type CtxOption func(context.Context) context.Context
+// agentOptions are the options that can be used to change the behavior of Go
+// Hass Agent.
+type agentOptions struct {
+	headless           bool
+	forceRegister      bool
+	ignoreHassURLs     bool
+	registrationServer string
+	registrationToken  string
+}
 
-// LoadCtx will "load" a context.Context with the given options (i.e. add values
-// to it to be used by the agent).
-func newAgentCtx(options ...CtxOption) (context.Context, context.CancelFunc) {
-	ctx, cancelFunc := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+// options represents the set of run-time options for the current instance of Go
+// Hass Agent.
+var options agentOptions
 
-	for _, option := range options {
-		ctx = option(ctx) //nolint:fatcontext
+// Option represents a run-time option for Go Hass Agent.
+type Option func(agentOptions) agentOptions
+
+// setup will establish the options for this run of Go Hass Agent.
+func setup(givenOptions ...Option) {
+	for _, option := range givenOptions {
+		options = option(options)
 	}
+}
+
+// SetHeadless indicates Go Hass Agent should run without a UI.
+func SetHeadless(value bool) Option {
+	return func(ao agentOptions) agentOptions {
+		ao.headless = value
+		return ao
+	}
+}
+
+// SetRegistrationInfo contains the information Go Hass Agent should use to
+// register with Home Assistant.
+func SetRegistrationInfo(server, token string, ignoreURLs bool) Option {
+	return func(ao agentOptions) agentOptions {
+		ao.ignoreHassURLs = ignoreURLs
+		ao.registrationServer = server
+		ao.registrationToken = token
+
+		return ao
+	}
+}
+
+// ForceRegister indicates that Go Hass Agent should ignore its current
+// registration status and re-register with Home Assistant.
+func SetForceRegister(value bool) Option {
+	return func(ao agentOptions) agentOptions {
+		ao.forceRegister = value
+		return ao
+	}
+}
+
+// newCtx creates a new context for this run of Go Hass Agent.
+func newCtx(logger *slog.Logger) (context.Context, context.CancelFunc) {
+	ctx, cancelFunc := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	ctx = logging.ToContext(ctx, logger)
 
 	return ctx, cancelFunc
 }
 
-// SetLogger sets the given logger in the context.
-func SetLogger(logger *slog.Logger) CtxOption {
-	return func(ctx context.Context) context.Context {
-		ctx = logging.ToContext(ctx, logger)
-		return ctx
-	}
-}
+// newAgent creates the Agent struct.
+func newAgent(ctx context.Context) *Agent {
+	agent := &Agent{}
 
-// SetHeadless sets the headless flag in the context.
-func SetHeadless(value bool) CtxOption {
-	return func(ctx context.Context) context.Context {
-		ctx = addToContext(ctx, headlessCtxKey, value)
-		return ctx
+	// If not running headless, set up the UI.
+	if !options.headless {
+		agent.ui = fyneui.NewFyneUI(ctx)
 	}
-}
 
-// SetRegistrationInfo sets registration details in the context to be used for
-// registering the agent.
-func SetRegistrationInfo(server, token string, ignoreURLs bool) CtxOption {
-	return func(ctx context.Context) context.Context {
-		ctx = addToContext(ctx, serverCtxKey, server)
-		ctx = addToContext(ctx, tokenCtxKey, token)
-		ctx = addToContext(ctx, ignoreURLsCtxKey, ignoreURLs)
-
-		return ctx
-	}
-}
-
-// ForceRegister sets the forceregister flag in the context.
-func SetForceRegister(value bool) CtxOption {
-	return func(ctx context.Context) context.Context {
-		ctx = addToContext(ctx, forceRegisterCtxKey, value)
-		return ctx
-	}
+	return agent
 }
 
 // Run is invoked when Go Hass Agent is run with the `run` command-line option
@@ -95,22 +116,20 @@ func SetForceRegister(value bool) CtxOption {
 //
 //nolint:funlen
 //revive:disable:function-length
-func Run(options ...CtxOption) error {
+func Run(logger *slog.Logger, givenOptions ...Option) error {
 	var (
 		wg      sync.WaitGroup
 		regWait sync.WaitGroup
 		err     error
 	)
 
-	ctx, cancelFunc := newAgentCtx(options...)
+	// Establish run-time options.
+	setup(givenOptions...)
+	// Setup context.
+	ctx, cancelFunc := newCtx(logger)
 	defer cancelFunc()
-
-	agent := &Agent{}
-
-	// If running headless, do not set up the UI.
-	if !Headless(ctx) {
-		agent.ui = fyneui.NewFyneUI(ctx)
-	}
+	// Create struct.
+	agent := newAgent(ctx)
 
 	// Load the preferences from file. Ignore the case where there are no
 	// existing preferences.
@@ -204,7 +223,7 @@ func Run(options ...CtxOption) error {
 	}()
 
 	// Do not run the UI loop if the agent is running in headless mode.
-	if !Headless(ctx) {
+	if !options.headless {
 		agent.ui.DisplayTrayIcon(ctx, cancelFunc)
 		agent.ui.Run(ctx)
 	}
@@ -217,20 +236,19 @@ func Run(options ...CtxOption) error {
 // Register is run when Go Hass Agent is invoked with the `register`
 // command-line option (i.e., `go-hass-agent register`). It will attempt to
 // register Go Hass Agent with Home Assistant.
-func Register(options ...CtxOption) error {
+func Register(logger *slog.Logger, givenOptions ...Option) error {
 	var (
 		wg  sync.WaitGroup
 		err error
 	)
 
-	ctx, cancelFunc := newAgentCtx(options...)
+	// Establish run-time options.
+	setup(givenOptions...)
+	// Setup context.
+	ctx, cancelFunc := newCtx(logger)
 	defer cancelFunc()
-
-	agent := &Agent{}
-	// If running headless, do not set up the UI.
-	if !Headless(ctx) {
-		agent.ui = fyneui.NewFyneUI(ctx)
-	}
+	// Create struct.
+	agent := newAgent(ctx)
 
 	if err = preferences.Load(); err != nil && !errors.Is(err, preferences.ErrLoadPreferences) {
 		return fmt.Errorf("%w: %w", ErrAgentStart, err)
@@ -254,7 +272,7 @@ func Register(options ...CtxOption) error {
 		cancelReg()
 	}()
 
-	if !Headless(ctx) {
+	if !options.headless {
 		agent.ui.Run(regCtx)
 	}
 
@@ -265,8 +283,11 @@ func Register(options ...CtxOption) error {
 
 // Reset is invoked when Go Hass Agent is run with the `reset` command-line
 // option (i.e., `go-hass-agent reset`).
-func Reset(options ...CtxOption) error {
-	ctx, cancelFunc := newAgentCtx(options...)
+func Reset(logger *slog.Logger, givenOptions ...Option) error {
+	// Establish run-time options.
+	setup(givenOptions...)
+	// Setup context.
+	ctx, cancelFunc := newCtx(logger)
 	defer cancelFunc()
 
 	// Load the preferences so we know what we need to reset.
