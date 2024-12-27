@@ -31,7 +31,7 @@ func checkRegistration(ctx context.Context, agentUI ui) error {
 	}
 
 	// If not headless, present a UI for the user to configure options.
-	if options.headless {
+	if !options.headless {
 		userInputDoneCh := agentUI.DisplayRegistrationWindow(ctx, registrationOptions)
 		if canceled := <-userInputDoneCh; canceled {
 			return ErrUserCancelledRegistration
@@ -43,12 +43,15 @@ func checkRegistration(ctx context.Context, agentUI ui) error {
 	if err != nil {
 		return fmt.Errorf("device registration failed: %w", err)
 	}
-
 	// Save the returned preferences.
 	if err := preferences.SetHassPreferences(registrationDetails, registrationOptions); err != nil {
 		return fmt.Errorf("saving registration failed: %w", err)
 	}
-
+	// Set registration status.
+	if err := preferences.SetRegistered(true); err != nil {
+		return fmt.Errorf("saving registration failed: %w", err)
+	}
+	// Save preferences to disk.
 	if err := preferences.Save(); err != nil {
 		return fmt.Errorf("saving registration failed: %w", err)
 	}
