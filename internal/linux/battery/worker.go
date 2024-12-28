@@ -1,7 +1,5 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2024 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
 package battery
 
@@ -44,6 +42,7 @@ func (w *sensorWorker) Events(ctx context.Context) (<-chan sensor.Entity, error)
 		w.logger.Warn("Could not retrieve any battery details from D-Bus.", slog.Any("error", err))
 	}
 
+	// For all batteries, start monitoring.
 	for _, path := range batteries {
 		wg.Add(1)
 
@@ -58,6 +57,7 @@ func (w *sensorWorker) Events(ctx context.Context) (<-chan sensor.Entity, error)
 
 	wg.Add(1)
 
+	// Send all sensor updates from all tracked batteries to Home Assistant.
 	go func() {
 		defer wg.Done()
 
@@ -86,7 +86,18 @@ func (w *sensorWorker) getBatteries() ([]dbus.ObjectPath, error) {
 }
 
 func (w *sensorWorker) track(ctx context.Context, batteryPath dbus.ObjectPath) <-chan sensor.Entity {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
 	sensorCh := make(chan sensor.Entity)
+
+	// Ignore if the battery is already being tracked.
+	if _, found := w.batteryList[batteryPath]; found {
+		slog.Debug("Battery already monitored", slog.String("path", string(batteryPath)))
+		close(sensorCh)
+
+		return sensorCh
+	}
 
 	var wg sync.WaitGroup
 
@@ -101,12 +112,11 @@ func (w *sensorWorker) track(ctx context.Context, batteryPath dbus.ObjectPath) <
 
 	battCtx, cancelFunc := context.WithCancel(ctx)
 
-	w.mu.Lock()
 	w.batteryList[batteryPath] = cancelFunc
-	w.mu.Unlock()
 
 	wg.Add(1)
 
+	// Get a list of sensors for this battery and send their initial state.
 	go func() {
 		defer wg.Done()
 
@@ -117,6 +127,7 @@ func (w *sensorWorker) track(ctx context.Context, batteryPath dbus.ObjectPath) <
 
 	wg.Add(1)
 
+	// Set up a goroutine to monitor for subsequent battery sensor changes.
 	go func() {
 		defer wg.Done()
 
@@ -157,18 +168,6 @@ func (w *sensorWorker) monitorBatteryChanges(ctx context.Context) <-chan sensor.
 	}
 
 	sensorCh := make(chan sensor.Entity)
-
-	// events, err := dbusx.NewWatch(
-	// 	dbusx.MatchPath(upowerDBusPath),
-	// 	dbusx.MatchInterface(upowerDBusDest),
-	// 	dbusx.MatchMember(deviceAddedSignal, deviceRemovedSignal),
-	// ).Start(ctx, w.bus)
-	// if err != nil {
-	// 	w.logger.Debug("Failed to create D-Bus watch for battery additions/removals.", "error", err.Error())
-	// 	close(sensorCh)
-
-	// 	return sensorCh
-	// }
 
 	go func() {
 		w.logger.Debug("Monitoring for battery additions/removals.")
