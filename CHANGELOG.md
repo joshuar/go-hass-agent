@@ -1,5 +1,43 @@
 # Changelog
 
+## [11.0.0](https://github.com/joshuar/go-hass-agent/compare/v10.5.1...v11.0.0) (2024-12-31)
+
+
+### ⚠ BREAKING CHANGES
+
+* **preferences:** Worker preferences are now in the agent preferences file, under a "worker_prefs" section. Any existing custom preferences will need to be manually migrated to this file.
+
+### Features
+
+* :sparkles: allow disabling app sensors ([71a4969](https://github.com/joshuar/go-hass-agent/commit/71a49696dc7fff379a78e039099411842428f269))
+* **hass,linux:** :recycle: support flagging for retryable requests through sensor options ([5d55cc6](https://github.com/joshuar/go-hass-agent/commit/5d55cc60e43831f3407d065901588d732e6986c4))
+* **hass,linux:** :sparkles: use options pattern to create sensors ([b614ec3](https://github.com/joshuar/go-hass-agent/commit/b614ec3f7b02e3595c19a1dacefd255add6873c9))
+* **hass:** :sparkles: add support to allow some requests to be retried ([b103679](https://github.com/joshuar/go-hass-agent/commit/b10367941aa487f6ee7cf9eaaa8179d51121a133))
+* **hass:** :sparkles: use options pattern to create sensor requests ([73f218b](https://github.com/joshuar/go-hass-agent/commit/73f218b1a7c2b4e2bc2e696f1e5934d497182bec))
+* **linux/cpu,linux/system:** :sparkles: add ability to specify update interval for cpu and hwmon sensor polling ([7f8450e](https://github.com/joshuar/go-hass-agent/commit/7f8450efd1a203eee4c03eaa41e7259888652d54))
+* **linux/cpu:** :truck: split cpu usage and frequency workers ([cc18b67](https://github.com/joshuar/go-hass-agent/commit/cc18b676be949f1bd6102d2f9305c680828e4424))
+* **linux/power:** :sparkles: power state and screen lock sensor requests will be retried on response failure ([e4ca6e7](https://github.com/joshuar/go-hass-agent/commit/e4ca6e74a6009e82b5315169537f35c57a192b77))
+* **preferences:** :sparkles: validate worker preferences when loading and use defaults if invalid ([748b48f](https://github.com/joshuar/go-hass-agent/commit/748b48fec5790088bba98444f4b56d1c997d50ef))
+
+
+### Bug Fixes
+
+* :bug: code cleanup missed in 7591c7ac1123bf409144c650a5cd47f8eb49ee07 ([f6dca52](https://github.com/joshuar/go-hass-agent/commit/f6dca52870a20ef1459e5a57e3cac9fd46d7919b))
+* **agent:** :bug: fix registration flow from changes in 7591c7a ([70176ce](https://github.com/joshuar/go-hass-agent/commit/70176ceababf33926023a8d0d073e15d1a8d6daf))
+* **hass:** :rotating_light: fix linter issues ([92b82d0](https://github.com/joshuar/go-hass-agent/commit/92b82d0f026e943333c0cb02718d25039b2013d1))
+* **linux/battery:** :bug: don't add already tracked batteries ([76b78e4](https://github.com/joshuar/go-hass-agent/commit/76b78e4bc9ff16f6209b789ecebff52ba22b7ca1))
+* **preferences:** :bug: ensure consistent naming of preferences through using string constants ([1397c4a](https://github.com/joshuar/go-hass-agent/commit/1397c4a9e188f37187f2f672b70788f6f420e067))
+
+
+### Performance Improvements
+
+* **agent:** :zap: don't use a "fat context" for agent options ([1e9d3c9](https://github.com/joshuar/go-hass-agent/commit/1e9d3c988b3de2fcce9bfe71c26793619a797b0f))
+
+
+### Code Refactoring
+
+* **preferences:** :recycle: merge worker and agent preferences into single file ([7591c7a](https://github.com/joshuar/go-hass-agent/commit/7591c7ac1123bf409144c650a5cd47f8eb49ee07))
+
 ## [10.5.1](https://github.com/joshuar/go-hass-agent/compare/v10.5.0...v10.5.1) (2024-11-20)
 
 
