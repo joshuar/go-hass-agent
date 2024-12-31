@@ -13,6 +13,10 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/validation"
 )
 
+const (
+	workerPrefsPrefix = "worker"
+)
+
 // CommonWorkerPrefs contains worker preferences that all workers can/should
 // implement. For e.g., a toggle to completely disable the worker.
 type CommonWorkerPrefs struct {
@@ -35,7 +39,7 @@ var (
 
 // LoadWorker reads the given worker's preferences from file.
 func LoadWorker[T any](worker Worker[T]) (*T, error) {
-	prefsKey := "worker_prefs." + worker.PreferencesID()
+	prefsKey := workerPrefsPrefix + "." + worker.PreferencesID()
 	// Load default worker prefs.
 	prefs := worker.DefaultPreferences()
 
@@ -91,7 +95,7 @@ func SaveWorker[T any](worker Worker[T], prefs T) error {
 	}
 
 	// Merge the worker preferences into the preferences file.
-	if err := prefsSrc.Set("worker_prefs."+worker.PreferencesID(), prefsMaps); err != nil {
+	if err := prefsSrc.Set(workerPrefsPrefix+"."+worker.PreferencesID(), prefsMaps); err != nil {
 		return fmt.Errorf("%w: %w", ErrSaveWorkerPrefs, err)
 	}
 
