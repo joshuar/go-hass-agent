@@ -113,7 +113,7 @@
 
 ## 🌟 About the Project
 
-Go Hass Agent is an application to expose sensors, controls and events from a
+Go Hass Agent is an application to expose sensors, controls, and events from a
 device to Home Assistant. You can think of it as something similar to the [Home
 Assistant companion app](https://companion.home-assistant.io/) for mobile
 devices, but for your desktop, server, Raspberry Pi, Arduino, toaster, whatever.
@@ -124,7 +124,7 @@ running on. You can extend it with additional sensors and controls by hooking it
 up to MQTT. You can extend it **even further** with your own custom sensors and
 controls with scripts/programs.
 
-You can then use these sensors, controls or events in any automations and
+You can then use these sensors, controls, or events in any automations and
 dashboards, just like the companion app or any other “thing” you've added into
 Home Assistant.
 
@@ -167,7 +167,7 @@ this app:
 - Monitor CPU load, disk usage and any temperature sensors emitted from the
   device.
 - Receive notifications from Home Assistant on your desktop/laptop. Potentially
-  based on or utilising any of the data above.
+  based on or utilizing any of the data above.
 
 [⬆️ Back to Top](#-table-of-contents)
 
@@ -188,11 +188,11 @@ this app:
   changes.
   - Via D-Bus (requires [XDG Desktop Portal
   Support](https://flatpak.github.io/xdg-desktop-portal/docs/) support).
-  - Can be disabled via `worker_prefs.app_sensors.disabled` [preference](#️-preferences).
+  - Can be disabled via `worker.app_sensors.disabled` [preference](#️-preferences).
 - Desktop Settings:
-  - **Accent Colour** (the hex code representing the accent colour of the desktop
+  - **Accent Color** (the hex code representing the accent color of the desktop
   environment in use) and **Theme Type** (whether a dark or light desktop theme is
-  detected). Updated when theme or colour changes.
+  detected). Updated when theme or color changes.
   - Via D-Bus (requires [XDG Desktop Portal
   Support](https://flatpak.github.io/xdg-desktop-portal/docs/) support).
 - Media:
@@ -208,7 +208,7 @@ this app:
   - **Battery State** (the current battery state, e.g., charging/discharging).
     Updated When state changes.
   - All battery sensors require D-Bus and
-    [Upower](https://upower.freedesktop.org/) support.
+    [UPower](https://upower.freedesktop.org/) support.
 - Memory Stats:
   - **Memory Total** (total memory on the system, in B).
   - **Memory Available** (current memory available/free, in B).
@@ -239,16 +239,16 @@ this app:
       Updated when strength changes.
     - **BSSID** (the BSSID of the Wi-Fi network). Updated when BSSID changes.
   - **Device/Link State**
-    - Via netlink.
+    - Via Netlink.
   - **Bytes Received/Sent** (in B). Updated ~every 5s.
     - Per network device/link and total.
-    - Via netlink.
+    - Via Netlink.
   - **Bytes Received/Sent Rate** (transfer rate, in B/s). Updated ~every 5
     seconds. Via ProcFS.
     - Per network device/link and total.
-    - Via netlink.
+    - Via Netlink.
   - You can ignore some devices from generating these sensors, see the
-    `worker_prefs.network_sensors.ignored_devices` [preference](#️-preferences).
+    `worker.network_sensors.ignored_devices` [preference](#️-preferences).
 - CPU:
   - **Load Average (1/5/15 min)**. Updated ~every 1 minute. Via ProcFS.
   - **CPU Usage** (in %). Both total (all-cores) and per-core. Updated ~every 10
@@ -256,14 +256,14 @@ this app:
     - Attributes include breakdown of CPU time per state (i.e., user, idle,
       servicing interrupts, etc.).
     - The polling frequency can be changed in the [preferences](#️-preferences) through the following:
-      - `worker_prefs.cpu_usage_sensors.update_interval`
+      - `worker.cpu_usage_sensors.update_interval`
 - - **CPU Core Frequency** (in Hz). Per-core. Updated ~every 10 seconds. Via
     ProcFS.
     - Attributes include current driver and governor in use.
     - CPU Frequency sensors can be disabled and/or the polling frequency changed
       in the [preferences](#️-preferences) through the following:
-      - `worker_prefs.cpu_freq_sensors.disabled`
-      - `worker_prefs.cpu_freq_sensors.update_interval`
+      - `worker.cpu_freq_sensors.disabled`
+      - `worker.cpu_freq_sensors.update_interval`
 - Power Related Details:
   - **Power Profile** (the current power profile as set by the
     power-profiles-daemon). Updated when profile changes.
@@ -305,8 +305,8 @@ this app:
     - Extracted from the `/sys/class/hwmon` file system.
     - Hardware sensors can be disabled and/or the polling frequency changed
       in the [preferences](#️-preferences) through the following:
-      - `worker_prefs.system_sensors.disable_hwmon`
-      - `worker_prefs.system_sensors.hwmon_sensor_update_interval`
+      - `worker.system_sensors.disable_hwmon`
+      - `worker.system_sensors.hwmon_sensor_update_interval`
 
 #### 🕹️ Controls
 
@@ -315,28 +315,28 @@ this app:
 > MQTT](#-mqtt-sensors-and-controls)
 
 - Media Controls:
-  - **Volume Control** Adjust the volume on the default audio output device.
-  - **Volume Mute** Mute/Unmute the default audio output device.
-  - **Webcam Control** Start/stop a webcam and view the video in Home Assistant.
+  - **Volume Control**: Adjust the volume on the default audio output device.
+  - **Volume Mute**: Mute/Unmute the default audio output device.
+  - **Webcam Control**: Start/stop a webcam and view the video in Home Assistant.
     - Requires a webcam that is exposed via V4L2 (VideoForLinux2).
   - You can set some preferences (for e.g., the camera device and video
     properties) if the defaults are not satisfactory, see the
     `media_controls_preferences.toml` file in the [preferences](#️-preferences).
 - Power Controls:
-  - **Lock/Unlock Screen/Screensaver** Locks/unlocks the session for the user
+  - **Lock/Unlock Screen/Screensaver**: Locks/unlocks the session for the user
     running Go Hass Agent.
-  - **Suspend** Will (instantly) suspend (the system state is saved to RAM and
-    the CPU is turned off) the device running Go Hass Agent.
-  - **Hibernate** Will (instantly) hibernate (the system state is saved to disk
-    and the machine is powered down) the device running Go Hass Agent.
-  - **Power Off** Will (instantly) power off the device running Go Hass Agent.
-  - **Reboot** Will (instantly) reboot the device running Go Hass Agent.
+  - **Suspend**: (instantly) suspend (the system state saved to RAM and
+    the CPU turned off) the device running Go Hass Agent.
+  - **Hibernate**: (instantly) hibernate (the system state saved to disk
+    and the machine powered down) the device running Go Hass Agent.
+  - **Power Off**: (instantly) power off the device running Go Hass Agent.
+  - **Reboot**: (instantly) reboot the device running Go Hass Agent.
   - Power controls require a system configured with `systemd-logind` (and D-Bus)
     support.
 
 #### 📢 Events
 
-- User sessions (login/logout) events.
+- **User sessions (login/logout) events**.
   - Requires a system configured with `systemd-logind`.
   - Event structures:
 
@@ -352,7 +352,7 @@ this app:
       user: myuser # username.
     ```
 
-- Out Of Memory (OOM) events.
+- **Out Of Memory (OOM) events**.
   - Requires a system configured with `systemd-oomd` enabled.
   - Event structure:
 
@@ -367,12 +367,12 @@ this app:
 
 **Sensors:**
 
-- **Go Hass Agent Version**. Updated on agent start.
-- **External IP Addresses**. All external IP addresses (IPv4/6) of the device
+- **Go Hass Agent Version**: Updated on agent start.
+- **External IP Addresses**: All external IP addresses (IPv4/6) of the device
   running the agent.
   - Can be disabled in the [preferences](#️-preferences) with the
-    `worker_prefs.external_ip_sensor.disabled` preference.
-- **Connection Latency**. Total connection time (in milliseconds) to connect to
+    `worker.external_ip_sensor.disabled` preference.
+- **Connection Latency**: Total connection time (in milliseconds) to connect to
   Home Assistant from the device running Go Hass Agent. Additional times shown
   as attributes.
 
@@ -581,8 +581,7 @@ podman run \
   ...other options... \
   --volume /proc:/host/proc:ro --volume /sys:/host/sys:ro --volume /dev:/host/dev:ro \
   --env PROCFS_ROOT=/host/proc --env SYSFS_ROOT=/host/sys --env DEVFS_ROOT=/host/dev \
-  ...other options... \
-...
+  ...other options...
 ```
 
 ### 🔄 Regular Usage
@@ -606,7 +605,7 @@ The preferences file (`preferences.toml`) is located in
 - Windows: `LocalAppData`.
 
 > [!WARNING]
-> Only the individual sensor preferences under the `worker_prefs`
+> Only the individual sensor preferences under the `worker`
 > sections should be edited manually.
 
 [⬆️ Back to Top](#-table-of-contents)
@@ -638,7 +637,7 @@ run on its own schedule, specified using a Cron syntax.
 
 Any typical scripting language that can be invoked with a shebang can be used
 for scripts. All scripts do not need to be written in the same language. So or
-the typical shells can be used such as Bash, Sh, Zsh, Fish, Elvish. Scripting
+the typical shells can be used such as `bash`, `sh`, `zsh`, `fish`, etc. Scripting
 languages such as Python, Perl, and Ruby can also be used.
 
 #### Output Format
@@ -791,7 +790,7 @@ However, more cron formats are supported:
 
 Running scripts can be dangerous, especially if the script does not have robust
 error-handling or whose origin is untrusted or unknown. Go Hass Agent makes no
-attempt to do any analysis or sanitisation of script output, other than ensuring
+attempt to do any analysis or sanitization of script output, other than ensuring
 the output is a [supported format](#output-format). As such, ensure you trust
 and understand what the script does and all possible outputs that the script can
 produce. Scripts are run by the agent and have the permissions of the user
@@ -867,7 +866,7 @@ The agent will subscribe to the MQTT topic `gohassagent/HOSTNAME/dbuscommand`
 (where `HOSTNAME` is the short hostname of the device running Go Hass Agent)  on
 the configured MQTT broker and listens for messages with a JSON payload (shown
 below) that contains details of the D-Bus method to call. When a message is
-recieved, the method will be executed. The easiest way to use this feature is
+received, the method will be executed. The easiest way to use this feature is
 with the `mqtt.publish` service in Home Assistant.
 
 As an example, the following will create a notification on the device running Go
@@ -1107,8 +1106,8 @@ podman build --file ./Dockerfile --platform linux/arm/v7 --tag go-hass-agent
 ```
 
 > [!NOTE]
-> By default, the container will run as a user with uid/gid 1000/1000.
-> You can pick a different uid/gid when building by adding `--build-arg UID=999`
+> By default, the container will run as a user with UID/GID 1000/1000.
+> You can pick a different UID/GID when building by adding `--build-arg UID=999`
 > and `--build-arg GID=999` (adjusting the values as appropriate).
 
 [⬆️ Back to Top](#-table-of-contents)
@@ -1167,7 +1166,7 @@ whereas you may wish to change the unit of measurement to gigabytes (GB).
 
 - There is currently some limited support for disabling certain _groups_ of
 sensors. In the [preferences](#️-preferences), under the
-`worker_prefs` sections, you can find some controls to disable some sensor
+`worker` sections, you can find some controls to disable some sensor
 groups.
 - Alternatively, you can disable the corresponding sensor entity in Home Assistant,
  and the agent will stop sending updates for it.
@@ -1270,8 +1269,8 @@ execution.
 used to run the agent as a service.
 - You will still need to register the agent manually before starting as a service.
 See the command for registration in the [README](#-running-headless).
-- You will also need to ensure your user has “lingering” enabled.  Run `loginctl
-list-users` and check that your user has **LINGER** set to “yes”. If not, run
+- You will also need to ensure your user has “lingering” enabled.  Run
+`loginctl list-users` and check that your user has `LINGER` set to “yes”. If not, run
 `loginctl enable-linger`.
 - Once you have registered the agent and enabled lingering for your user. Enable
 the service and start it with the command: `systemctl --user enable

@@ -4,28 +4,29 @@
 
 - [BREAKING CHANGES](#breaking-changes)
   - [Table of Contents](#table-of-contents)
-  - [v11.0.0](#v1100)
+  - [Version 11.0.0](#version-1100)
     - [Worker and Agent preferences merge](#worker-and-agent-preferences-merge)
       - [What you need to do](#what-you-need-to-do)
-  - [v10.0.0](#v1000)
+  - [Version 10.0.0](#version-1000)
     - [New preferences file location and format](#new-preferences-file-location-and-format)
       - [What you need to do](#what-you-need-to-do-1)
         - [Run the upgrade command](#run-the-upgrade-command)
         - [Manual upgrade steps (if the upgrade command failed)](#manual-upgrade-steps-if-the-upgrade-command-failed)
-    - [Log file location normalisation](#log-file-location-normalisation)
+    - [Log file location normalization](#log-file-location-normalization)
       - [What you need to do](#what-you-need-to-do-2)
     - [MQTT Device renamed](#mqtt-device-renamed)
       - [What you need to do](#what-you-need-to-do-3)
     - [Power controls renaming and consolidation (when using MQTT)](#power-controls-renaming-and-consolidation-when-using-mqtt)
       - [What you need to do](#what-you-need-to-do-4)
 
-## v11.0.0
+## Version 11.0.0
 
 ### Worker and Agent preferences merge
 
-Individual worker preferences, which were previously in their own files under
-the [configuration directory](../README#️-preferences), now live in
-the agent preferences file (`preferences.toml`).
+Individual worker preferences, for adjusting preferences around different sensor
+groups, were previously in their own files under the [configuration
+directory](../README#️-preferences). They now live in the agent preferences file
+(`preferences.toml`), under the `worker` heading.
 
 #### What you need to do
 
@@ -38,12 +39,12 @@ relevant preferences mentioned.
 Once you have migrated any custom preferences, it is safe to delete the
 individual preferences files (named `*_preferences.toml`).
 
-## v10.0.0
+## Version 10.0.0
 
 ### New preferences file location and format
 
 The agent preferences file (`preferences.toml`) location has changed. The
-configuration is now located in `~/.config/go-hass-agent/`.
+configuration can be found in `~/.config/go-hass-agent/`.
 
 The format of the file has changed as well it now contains more structure.
 
@@ -51,7 +52,7 @@ The format of the file has changed as well it now contains more structure.
 
 ##### Run the upgrade command
 
-An `upgrade` command has been added to Go Hass Agent that will attempt to
+The `upgrade` command has been added to Go Hass Agent that will attempt to
 migrate a preferences file from an older version to the location and format used
 by the new version. It uses reasonable efforts to migrate but may not succeed
 and is harmless to run regardless. **It is the recommended remediation for this
@@ -122,7 +123,7 @@ To re-register:
 
 [⬆️ Back to Top](#table-of-contents)
 
-### Log file location normalisation
+### Log file location normalization
 
 The agent will now write to a log file at
 `~/.config/go-hass-agent/go-hass-agent.log`.
@@ -143,18 +144,18 @@ when running the agent.
 
 The naming of Go Hass Agent in the MQTT integration in Home Assistant has
 changed. It is now named after the hostname of the device running the agent,
-rather than the generic "Go Hass Agent". This makes it easier to navigate
+rather than the generic “Go Hass Agent”. This makes it easier to navigate
 between multiple devices running Go Hass Agent in Home Assistant.
 
 #### What you need to do
 
-As a result of this, you may end up with a deprecated, non-functional "Go Hass
-Agent" device entry in Home Assistant. It can safely be removed.
+As a result of this, you may end up with a deprecated, non-functional “Go Hass
+Agent” device entry in Home Assistant. It can safely be removed.
 
 > [!IMPORTANT]
 >
 > As the device has changed, existing automations or dashboards that are using
-> entities from the old "Go Hass Agent" may be broken. In most cases, the
+> entities from the old “Go Hass Agent” may be broken. In most cases, the
 > [repairs integration](https://www.home-assistant.io/integrations/repairs/)
 > will alert and direct you to make any adjustments needed.
 
@@ -201,7 +202,7 @@ by your device will be shown. Notably:
 
 #### What you need to do
 
-Follow the [what you need to do](#what-you-need-to-do-2) for the MQTT device
+Follow [what you need to do](#what-you-need-to-do-2) for the MQTT device
 rename breaking change, if not done already.
 
 [⬆️ Back to Top](#table-of-contents)
