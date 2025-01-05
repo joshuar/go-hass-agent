@@ -18,16 +18,16 @@ const (
 	prefMQTTServer      = mqttPrefPrefix + ".server"
 	prefMQTTUser        = mqttPrefPrefix + ".user"
 	prefMQTTPass        = mqttPrefPrefix + ".password"
-	prefMQTTTopicPrefix = mqttPrefPrefix + ".topic_prefx"
+	prefMQTTTopicPrefix = mqttPrefPrefix + ".topic_prefix"
 	prefMQTTEnabled     = mqttPrefPrefix + ".enabled"
 )
 
 // MQTT contains preferences related to MQTT functionality in Go Hass Agent.
 type MQTT struct {
-	MQTTServer      string `toml:"server,omitempty" validate:"omitempty,uri" kong:"required,help='MQTT server URI. Required.',placeholder='scheme://some.host:port'"` //nolint:lll
+	MQTTServer      string `toml:"server,omitempty" validate:"required,uri" kong:"required,help='MQTT server URI. Required.',placeholder='scheme://some.host:port'"` //nolint:lll
 	MQTTUser        string `toml:"user,omitempty" validate:"omitempty" kong:"optional,help='MQTT username.'"`
 	MQTTPassword    string `toml:"password,omitempty" validate:"omitempty" kong:"optional,help='MQTT password.'"`
-	MQTTTopicPrefix string `toml:"topic_prefix,omitempty" validate:"omitempty,ascii" kong:"optional,help='MQTT topic prefix.'"`
+	MQTTTopicPrefix string `toml:"topic_prefix,omitempty" validate:"required,ascii" kong:"optional,help='MQTT topic prefix.'"`
 	MQTTEnabled     bool   `toml:"enabled" validate:"boolean" kong:"-"`
 }
 
@@ -46,6 +46,10 @@ func SetMQTTPreferences(prefs *MQTT) error {
 
 	if err := prefsSrc.Set(prefMQTTPass, prefs.MQTTPassword); err != nil {
 		return fmt.Errorf("%w: %w", ErrSetMQTTPreference, err)
+	}
+
+	if prefs.MQTTTopicPrefix == "" {
+		prefs.MQTTTopicPrefix = MQTTTopicPrefix
 	}
 
 	if err := prefsSrc.Set(prefMQTTTopicPrefix, prefs.MQTTTopicPrefix); err != nil {

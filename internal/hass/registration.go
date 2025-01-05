@@ -53,6 +53,14 @@ func RegisterDevice(ctx context.Context, registration *preferences.Registration)
 	registrationURL := registration.Server + RegistrationPath
 	thisDevice := device.NewDevice()
 
+	// Set device details in preferences.
+	if err := preferences.SetDevicePreferences(&preferences.Device{
+		Name: thisDevice.Name,
+		ID:   thisDevice.ID,
+	}); err != nil {
+		return nil, fmt.Errorf("could not register device: %w", err)
+	}
+
 	// Register the device against the registration endpoint.
 	registrationStatus, err := api.Send[preferences.Hass](ctx, registrationURL, newRegistrationRequest(thisDevice, registration.Token))
 	if err != nil {
