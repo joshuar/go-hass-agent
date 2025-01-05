@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
@@ -34,11 +35,13 @@ func newPowerState(name powerSignal, value any) sensor.Entity {
 	return sensor.NewSensor(
 		sensor.WithName("Power State"),
 		sensor.WithID("power_state"),
+		sensor.WithDeviceClass(types.SensorDeviceClassEnum),
 		sensor.AsDiagnostic(),
 		sensor.WithState(
 			sensor.WithIcon(powerStateIcon(value)),
 			sensor.WithValue(powerStateString(name, value)),
 			sensor.WithDataSourceAttribute(linux.DataSrcDbus),
+			sensor.WithAttribute("options", []string{"Powered On", "Powered Off", "Suspended"}),
 		),
 		sensor.WithRequestRetry(true),
 	)
