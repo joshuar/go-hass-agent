@@ -11,7 +11,7 @@ require (
 	github.com/goreleaser/nfpm/v2 v2.41.1
 	github.com/grandcat/zeroconf v1.0.0
 	github.com/iancoleman/strcase v0.3.0
-	github.com/joshuar/go-hass-anything/v12 v12.0.0
+	github.com/joshuar/go-hass-anything/v12 v12.1.0
 	github.com/lthibault/jitterbug/v2 v2.2.2
 	github.com/lxzan/gws v1.8.8
 	github.com/magefile/mage v1.15.0
