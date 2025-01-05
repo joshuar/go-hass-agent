@@ -13,7 +13,6 @@ import (
 	"sync"
 
 	"github.com/adrg/xdg"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/knadh/koanf/parsers/toml"
 	"github.com/knadh/koanf/providers/env"
 	"github.com/knadh/koanf/providers/file"
@@ -60,7 +59,8 @@ var defaultAgentPreferences = &preferences{
 	Version:    AppVersion(),
 	Registered: false,
 	MQTT: &MQTT{
-		MQTTEnabled: false,
+		MQTTEnabled:     false,
+		MQTTTopicPrefix: MQTTTopicPrefix,
 	},
 	Registration: &Registration{
 		Server: DefaultServer,
@@ -147,11 +147,22 @@ func validate() error {
 		return fmt.Errorf("%w: %w", ErrLoadPreferences, err)
 	}
 
-	// Validate current preferences.
-	err := validation.Validate.Struct(currentPreferences)
-	if err != nil {
-		spew.Dump(err)
+	// Ensure device preferences are valid.
+	if err := validation.Validate.Struct(currentPreferences.Device); err != nil {
 		return fmt.Errorf("%w: %s", ErrValidatePreferences, validation.ParseValidationErrors(err))
+	}
+
+	// Ensure hass preferences are valid.
+	if err := validation.Validate.Struct(currentPreferences.Hass); err != nil {
+		return fmt.Errorf("%w: %s", ErrValidatePreferences, validation.ParseValidationErrors(err))
+	}
+
+	if currentPreferences.IsMQTTEnabled() {
+		// Validate MQTT preferences are valid.
+		err := validation.Validate.Struct(currentPreferences.MQTT)
+		if err != nil {
+			return fmt.Errorf("%w: %s", ErrValidatePreferences, validation.ParseValidationErrors(err))
+		}
 	}
 
 	slog.Debug("Preferences are valid.")

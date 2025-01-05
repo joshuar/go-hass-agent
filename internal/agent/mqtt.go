@@ -7,6 +7,7 @@ package agent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 
@@ -71,8 +72,10 @@ func setupMQTT(ctx context.Context) []MQTTWorker {
 	// Set up custom MQTT commands worker.
 	customCommandsWorker, err := commands.NewCommandsWorker(ctx, mqttDevice)
 	if err != nil {
-		logging.FromContext(ctx).Warn("Could not setup custom MQTT commands.",
-			slog.Any("error", err))
+		if !errors.Is(err, commands.ErrNoCommands) {
+			logging.FromContext(ctx).Warn("Could not setup custom MQTT commands.",
+				slog.Any("error", err))
+		}
 	} else {
 		workers = append(workers, customCommandsWorker)
 	}
