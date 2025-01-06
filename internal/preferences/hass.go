@@ -35,7 +35,7 @@ type Hass struct {
 	Secret       string `toml:"secret,omitempty" json:"secret" validate:"omitempty,ascii"`
 	WebhookID    string `toml:"webhook_id" json:"webhook_id" validate:"required,ascii"`
 	RestAPIURL   string `toml:"apiurl,omitempty" json:"-" validate:"required_without=CloudhookURL RemoteUIURL,http_url"`
-	WebsocketURL string `toml:"websocketurl" json:"-" validate:"required,url"`
+	WebsocketURL string `toml:"websocketurl" json:"-" validate:"required,uri"`
 }
 
 var (

@@ -9,13 +9,12 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 
 	"github.com/adrg/xdg"
 	"github.com/knadh/koanf/parsers/toml"
-	"github.com/knadh/koanf/providers/env"
 	"github.com/knadh/koanf/providers/file"
+	"github.com/knadh/koanf/providers/structs"
 	"github.com/knadh/koanf/v2"
 
 	"github.com/joshuar/go-hass-agent/internal/validation"
@@ -100,14 +99,9 @@ var Load = func() error {
 		// Load config file
 		if err := prefsSrc.Load(file.Provider(preferencesFile), toml.Parser()); err != nil {
 			slog.Warn("No preferences found, using defaults.", slog.Any("error", err))
-			// return fmt.Errorf("%w: %w", ErrLoadPreferences, err)
-		}
-		// Merge config with any environment variables.
-		if err := prefsSrc.Load(env.Provider(prefsEnvPrefix, ".", func(s string) string {
-			return strings.Replace(strings.ToLower(
-				strings.TrimPrefix(s, prefsEnvPrefix)), "_", ".", -1)
-		}), nil); err != nil {
-			return fmt.Errorf("%w: %w", ErrLoadPreferences, err)
+			if err := prefsSrc.Load(structs.Provider(defaultAgentPreferences, "toml"), nil); err != nil {
+				return fmt.Errorf("%w: %w", ErrLoadPreferences, err)
+			}
 		}
 		// Unmarshal config, overwriting defaults.
 		if err := prefsSrc.UnmarshalWithConf("", defaultAgentPreferences, koanf.UnmarshalConf{Tag: "toml"}); err != nil {
@@ -145,11 +139,6 @@ func validate() error {
 	// Unmarshal current preferences.
 	if err := prefsSrc.UnmarshalWithConf("", currentPreferences, koanf.UnmarshalConf{Tag: "toml"}); err != nil {
 		return fmt.Errorf("%w: %w", ErrLoadPreferences, err)
-	}
-
-	// Ensure device preferences are valid.
-	if err := validation.Validate.Struct(currentPreferences.Device); err != nil {
-		return fmt.Errorf("%w: %s", ErrValidatePreferences, validation.ParseValidationErrors(err))
 	}
 
 	// Ensure hass preferences are valid.
