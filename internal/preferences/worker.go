@@ -1,6 +1,7 @@
 // Copyright 2024 Joshua Rich <joshua.rich@gmail.com>.
 // SPDX-License-Identifier: MIT
 
+//go:generate go run github.com/matryer/moq -out worker_mocks_test.go . Worker
 package preferences
 
 import (
