@@ -174,6 +174,7 @@ this app:
 ## 📈🕹️📢 List of Sensors/Controls/Events (by Operating System)
 
 > [!NOTE]
+>
 > The following list shows all **potential** sensors the agent can
 > report. In some cases, the **actual** sensors reported may be less due to
 > lack of support in the system configuration or missing hardware.
@@ -311,6 +312,7 @@ this app:
 #### 🕹️ Controls
 
 > [!NOTE]
+>
 > Only available when [configured with
 > MQTT](#-mqtt-sensors-and-controls)
 
@@ -605,6 +607,7 @@ The preferences file (`preferences.toml`) is located in
 - Windows: `LocalAppData`.
 
 > [!WARNING]
+>
 > Only the individual sensor preferences under the `worker`
 > sections should be edited manually.
 
@@ -783,7 +786,8 @@ However, more cron formats are supported:
 - `"30 3-6,20-23 * * *"`: in the range 3-6am, 8-11pm.
 - `"CRON_TZ=Asia/Tokyo 30 04 * * *"`: at 04:30 Tokyo time every day.
 
-> [!WARNING]
+> [!NOTE]
+>
 > Some schedules, while supported, might not make much sense.
 
 #### Security Implications
@@ -801,7 +805,9 @@ running the agent. Script output is sent to your Home Assistant instance.
 ### 💬 MQTT Sensors and Controls
 
 > [!NOTE]
-> MQTT Sensors and Controls are not enabled by default.
+>
+> - MQTT Sensors and Controls are not enabled by default.
+> - Go Hass Agent requires MQTT v5 support on your MQTT broker.
 
 If Home Assistant is connected to
 [MQTT](https://www.home-assistant.io/integrations/mqtt/), you can also configure
@@ -848,6 +854,7 @@ integration in your Home Assistant.
 integration.](https://my.home-assistant.io/badges/integration.svg)](https://my.home-assistant.io/redirect/integration/?domain=mqtt)
 
 > [!NOTE]
+>
 > Go Hass Agent will appear in two places in your Home Assistant.
 > Firstly, under the Mobile App integration, which will show all the *sensors*
 > that Go Hass Agent is reporting. Secondly, under the MQTT integration, which
@@ -935,6 +942,7 @@ Supported control types and expected input/output:
     state. Any additional output is ignored.
 
 > [!NOTE]
+>
 > Commands run as the user running the agent. Commands do not invoke the system
 > shell and does not support expansion/glob patterns or handle other expansions,
 > pipelines, or redirections typically done by shells.
@@ -1061,6 +1069,7 @@ go run github.com/magefile/mage -d build/magefiles -w . preps:deps
 Then the commands for building and packaging above should work as expected.
 
 > [!NOTE]
+>
 > The devcontainer has all the necessary compilers and libraries
 > installed for cross-compilation.
 
@@ -1106,6 +1115,7 @@ podman build --file ./Dockerfile --platform linux/arm/v7 --tag go-hass-agent
 ```
 
 > [!NOTE]
+>
 > By default, the container will run as a user with UID/GID 1000/1000.
 > You can pick a different UID/GID when building by adding `--build-arg UID=999`
 > and `--build-arg GID=999` (adjusting the values as appropriate).
