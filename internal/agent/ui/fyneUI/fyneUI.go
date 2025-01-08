@@ -192,12 +192,6 @@ func (i *FyneUI) aboutWindow(ctx context.Context) fyne.Window {
 		return nil
 	}
 
-	hassclient, err := hass.NewClient(ctx, preferences.RestAPIURL())
-	if err != nil {
-		logging.FromContext(ctx).Debug("Cannot create Home Assistant client.", slog.Any("error", err))
-		return nil
-	}
-
 	icon := canvas.NewImageFromResource(&ui.TrayIcon{})
 	icon.FillMode = canvas.ImageFillOriginal
 
@@ -207,7 +201,7 @@ func (i *FyneUI) aboutWindow(ctx context.Context) fyne.Window {
 			fyne.TextStyle{Bold: true}))
 
 	widgets = append(widgets,
-		widget.NewLabelWithStyle("Home Assistant "+hassclient.HassVersion(ctx),
+		widget.NewLabelWithStyle("Home Assistant "+hass.Version(ctx),
 			fyne.TextAlignCenter,
 			fyne.TextStyle{Bold: true}),
 		widget.NewLabelWithStyle("Tracking "+strconv.Itoa(len(hass.SensorList()))+" Entities",

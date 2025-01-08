@@ -15,6 +15,7 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/registry"
 	"github.com/joshuar/go-hass-agent/internal/logging"
+	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
 const (
@@ -54,10 +55,10 @@ type Registry interface {
 }
 
 type Client struct {
-	url string
+	logger *slog.Logger
 }
 
-func NewClient(ctx context.Context, url string) (*Client, error) {
+func NewClient(ctx context.Context) (*Client, error) {
 	var err error
 
 	sensorTracker = sensor.NewTracker()
@@ -67,24 +68,13 @@ func NewClient(ctx context.Context, url string) (*Client, error) {
 		return nil, fmt.Errorf("could not start registry: %w", err)
 	}
 
-	return &Client{url: url}, nil
-}
-
-func (c *Client) HassVersion(ctx context.Context) string {
-	config, err := api.Send[Config](ctx, c.url, &configRequest{})
-	if err != nil {
-		logging.FromContext(ctx).
-			Debug("Could not fetch Home Assistant config.",
-				slog.Any("error", err))
-
-		return "Unknown"
-	}
-
-	return config.Version
+	return &Client{
+		logger: logging.FromContext(ctx).With(slog.String("subsystem", "hass")),
+	}, nil
 }
 
 func (c *Client) ProcessEvent(ctx context.Context, details event.Event) error {
-	resp, err := api.Send[response](ctx, c.url, &details)
+	resp, err := api.Send[response](ctx, preferences.RestAPIURL(), &details)
 	if err != nil {
 		return fmt.Errorf("failed to send event request: %w", err)
 	}
@@ -93,13 +83,16 @@ func (c *Client) ProcessEvent(ctx context.Context, details event.Event) error {
 		return err
 	}
 
+	c.logger.Debug("Event sent.",
+		eventLogAttrs(details))
+
 	return nil
 }
 
 func (c *Client) ProcessSensor(ctx context.Context, details sensor.Entity) error {
 	// Location request.
 	if req, ok := details.Value.(*sensor.Location); ok {
-		resp, err := api.Send[response](ctx, c.url,
+		resp, err := api.Send[response](ctx, preferences.RestAPIURL(),
 			sensor.NewRequest(
 				sensor.AsLocationUpdate(*req),
 			))
@@ -118,14 +111,14 @@ func (c *Client) ProcessSensor(ctx context.Context, details sensor.Entity) error
 	if sensorRegistry.IsRegistered(details.ID) {
 		// For sensor updates, if the sensor is disabled, don't continue.
 		if c.isDisabled(ctx, details) {
-			logging.FromContext(ctx).
+			c.logger.
 				Debug("Not sending request for disabled sensor.",
 					sensorLogAttrs(details))
 
 			return nil
 		}
 
-		resp, err := api.Send[bulkSensorUpdateResponse](ctx, c.url,
+		resp, err := api.Send[bulkSensorUpdateResponse](ctx, preferences.RestAPIURL(),
 			sensor.NewRequest(
 				sensor.AsSensorUpdate(details),
 				sensor.AsRetryable(details.RetryRequest),
@@ -140,7 +133,7 @@ func (c *Client) ProcessSensor(ctx context.Context, details sensor.Entity) error
 	}
 
 	// Sensor registration.
-	resp, err := api.Send[registrationResponse](ctx, c.url,
+	resp, err := api.Send[registrationResponse](ctx, preferences.RestAPIURL(),
 		sensor.NewRequest(
 			sensor.AsSensorRegistration(details),
 			sensor.AsRetryable(details.RetryRequest),
@@ -169,10 +162,11 @@ func (c *Client) isDisabled(ctx context.Context, details sensor.Entity) bool {
 	// If sensor is no longer disabled in Home Assistant, update the local
 	// registry and return false.
 	if !disabledInHA {
-		slog.Info("Sensor re-enabled in Home Assistant, Re-enabling in local registry and sending updates.", sensorLogAttrs(details))
+		c.logger.Info("Sensor re-enabled in Home Assistant, Re-enabling in local registry and sending updates.",
+			sensorLogAttrs(details))
 
 		if err := sensorRegistry.SetDisabled(details.ID, false); err != nil {
-			slog.Error("Could not re-enable sensor.",
+			c.logger.Error("Could not re-enable sensor.",
 				sensorLogAttrs(details),
 				slog.Any("error", err))
 
@@ -197,9 +191,9 @@ func (c *Client) isDisabledInReg(id string) bool {
 
 // isDisabledInHA returns the disabled state of the sensor from Home Assistant.
 func (c *Client) isDisabledInHA(ctx context.Context, details sensor.Entity) bool {
-	config, err := api.Send[Config](ctx, c.url, &configRequest{})
+	config, err := api.Send[Config](ctx, preferences.RestAPIURL(), &configRequest{})
 	if err != nil {
-		logging.FromContext(ctx).
+		c.logger.
 			Debug("Could not fetch Home Assistant config. Assuming sensor is still disabled.",
 				sensorLogAttrs(details),
 				slog.Any("error", err))
@@ -209,7 +203,7 @@ func (c *Client) isDisabledInHA(ctx context.Context, details sensor.Entity) bool
 
 	status, err := config.IsEntityDisabled(details.ID)
 	if err != nil {
-		logging.FromContext(ctx).
+		c.logger.
 			Debug("Could not determine sensor disabled status in Home Assistant config. Assuming sensor is still disabled.",
 				sensorLogAttrs(details),
 				slog.Any("error", err))
@@ -240,5 +234,12 @@ func sensorLogAttrs(details sensor.Entity) slog.Attr {
 		slog.String("name", details.Name),
 		slog.String("id", details.ID),
 		slog.Any("state", details.Value),
-		slog.String("units", details.Units))
+		slog.String("units", details.Units),
+	)
+}
+
+func eventLogAttrs(details event.Event) slog.Attr {
+	return slog.Group("event",
+		slog.String("type", details.EventType),
+	)
 }
