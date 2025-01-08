@@ -56,7 +56,6 @@
           "formatting.gofumpt": true,
           "formatting.local": "github.com/joshuar/go-hass-agent",
           "ui.diagnostic.analyses": {
-            "fieldalignment": true, // Disable the unreachable analyzer.
             "unusedvariable": true
           }
         },
