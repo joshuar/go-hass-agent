@@ -76,7 +76,7 @@ func newMemSensorPc(name string, value, total uint64) sensor.Entity {
 	return sensor.NewSensor(
 		sensor.WithName(name),
 		sensor.WithID(strcase.ToSnake(name)),
-		sensor.WithUnits(memoryUsageSensorUnits),
+		sensor.WithUnits(memoryUsageSensorPcUnits),
 		sensor.WithStateClass(types.StateClassTotal),
 		sensor.WithState(
 			sensor.WithIcon(memorySensorIcon),
