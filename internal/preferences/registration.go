@@ -17,6 +17,7 @@ type Registration struct {
 	Server         string `toml:"server" validate:"required,http_url"`
 	Token          string `toml:"token" validate:"required"`
 	IgnoreHassURLs bool   `toml:"-" json:"-" validate:"omitempty,boolean"`
+	ForceRegister  bool   `toml:"-" json:"-" validate:"omitempty,boolean"`
 }
 
 func (p *Registration) Validate() error {

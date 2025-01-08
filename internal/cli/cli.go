@@ -25,7 +25,7 @@ type CmdOpts struct {
 	Headless bool
 }
 
-type Option func(*CmdOpts)
+type Option func(*CmdOpts) *CmdOpts
 
 func AddOptions(options ...Option) *CmdOpts {
 	commandOptions := &CmdOpts{}
@@ -37,20 +37,23 @@ func AddOptions(options ...Option) *CmdOpts {
 }
 
 func RunHeadless(opt bool) Option {
-	return func(ctx *CmdOpts) {
+	return func(ctx *CmdOpts) *CmdOpts {
 		ctx.Headless = opt
+		return ctx
 	}
 }
 
 func WithAppID(id string) Option {
-	return func(_ *CmdOpts) {
+	return func(ctx *CmdOpts) *CmdOpts {
 		preferences.SetAppID(id)
+		return ctx
 	}
 }
 
 func WithLogger(logger *slog.Logger) Option {
-	return func(ctx *CmdOpts) {
+	return func(ctx *CmdOpts) *CmdOpts {
 		ctx.Logger = logger
+		return ctx
 	}
 }
 

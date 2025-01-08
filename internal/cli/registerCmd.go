@@ -5,9 +5,15 @@
 package cli
 
 import (
+	"context"
 	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/joshuar/go-hass-agent/internal/agent"
+	"github.com/joshuar/go-hass-agent/internal/logging"
+	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
 // RegisterCmd: `go-hass-agent register`.
@@ -23,11 +29,19 @@ func (r *RegisterCmd) Help() string {
 }
 
 func (r *RegisterCmd) Run(opts *CmdOpts) error {
-	if err := agent.Register(opts.Logger,
-		agent.SetHeadless(opts.Headless),
-		agent.SetRegistrationInfo(r.Server, r.Token, r.IgnoreURLs),
-		agent.SetForceRegister(r.Force),
-	); err != nil {
+	ctx, cancelFunc := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer cancelFunc()
+
+	ctx = logging.ToContext(ctx, opts.Logger)
+	ctx = agent.HeadlessToCtx(ctx, opts.Headless)
+	ctx = agent.RegistrationToCtx(ctx, preferences.Registration{
+		Server:         r.Server,
+		Token:          r.Token,
+		IgnoreHassURLs: r.IgnoreURLs,
+		ForceRegister:  r.Force,
+	})
+
+	if err := agent.Register(ctx); err != nil {
 		return fmt.Errorf("failed to run: %w", err)
 	}
 

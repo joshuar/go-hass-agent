@@ -16,25 +16,25 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
-var ErrUserCancelledRegistration = errors.New("user canceled registration")
-
 func checkRegistration(ctx context.Context, agentUI ui) error {
-	if preferences.Registered() && !options.forceRegister {
+	if RegistrationFromCtx(ctx) != nil {
+		if preferences.Registered() && !RegistrationFromCtx(ctx).ForceRegister {
+			return nil
+		}
+	}
+
+	if preferences.Registered() {
 		return nil
 	}
 
-	// Set the registration options as passed in from command-line.
-	registrationOptions := &preferences.Registration{
-		Server:         options.registrationServer,
-		Token:          options.registrationToken,
-		IgnoreHassURLs: options.ignoreHassURLs,
-	}
+	// Retrieve registration options passed on command-line from context.
+	registrationOptions := RegistrationFromCtx(ctx)
 
 	// If not headless, present a UI for the user to configure options.
-	if !options.headless {
+	if !HeadlessFromCtx(ctx) {
 		userInputDoneCh := agentUI.DisplayRegistrationWindow(ctx, registrationOptions)
 		if canceled := <-userInputDoneCh; canceled {
-			return ErrUserCancelledRegistration
+			return errors.New("user canceled registration")
 		}
 	}
 
@@ -57,9 +57,10 @@ func checkRegistration(ctx context.Context, agentUI ui) error {
 	}
 
 	// If the registration was forced, reset the sensor registry.
-	if options.forceRegister {
+	if RegistrationFromCtx(ctx).ForceRegister {
 		if err := registry.Reset(); err != nil {
-			logging.FromContext(ctx).Warn("Problem resetting registry.", slog.Any("error", err))
+			logging.FromContext(ctx).Warn("Problem resetting registry.",
+				slog.Any("error", err))
 		}
 	}
 
