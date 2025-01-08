@@ -7,7 +7,6 @@ import (
 	"context"
 	"log/slog"
 
-	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/hass/event"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/logging"
@@ -40,6 +39,11 @@ type SensorWorker interface {
 // the base worker other than defining the type of data produced.
 type EventWorker interface {
 	Worker[event.Event]
+}
+
+type processor interface {
+	ProcessSensor(ctx context.Context, details sensor.Entity) error
+	ProcessEvent(ctx context.Context, details event.Event) error
 }
 
 // startWorkers takes a slice of Workers of a particular type (sensor or event)
@@ -92,7 +96,7 @@ func stopWorkers[T any](ctx context.Context, workers ...Worker[T]) {
 // processWorkers handles starting, stopping and processing data from a slice of
 // workers passed in.  It will start the workers, monitor for data and send it
 // to Home Assistant, and stop workers when the passed context is canceled.
-func processWorkers[T any](ctx context.Context, hassclient *hass.Client, workers ...Worker[T]) {
+func processWorkers[T any](ctx context.Context, psr processor, workers ...Worker[T]) {
 	// Start all inactive workers of all controllers.
 	workerOutputs := startWorkers(ctx, workers...)
 	if len(workerOutputs) == 0 {
@@ -113,9 +117,9 @@ func processWorkers[T any](ctx context.Context, hassclient *hass.Client, workers
 
 			switch details := any(e).(type) {
 			case sensor.Entity:
-				err = hassclient.ProcessSensor(ctx, details)
+				err = psr.ProcessSensor(ctx, details)
 			case event.Event:
-				err = hassclient.ProcessEvent(ctx, details)
+				err = psr.ProcessEvent(ctx, details)
 			}
 
 			if err != nil {
