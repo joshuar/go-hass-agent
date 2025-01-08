@@ -67,10 +67,10 @@ func setupMQTT(ctx context.Context) []MQTTWorker {
 
 	// Create an MQTT device, used to configure MQTT functionality for some
 	// controllers.
-	mqttDevice := device.GenerateMQTTDevice(ctx)
+	ctx = MQTTDeviceToCtx(ctx, device.GenerateMQTTDevice(ctx))
 
 	// Set up custom MQTT commands worker.
-	customCommandsWorker, err := commands.NewCommandsWorker(ctx, mqttDevice)
+	customCommandsWorker, err := commands.NewCommandsWorker(ctx, MQTTDeviceFromFromCtx(ctx))
 	if err != nil {
 		if !errors.Is(err, commands.ErrNoCommands) {
 			logging.FromContext(ctx).Warn("Could not setup custom MQTT commands.",
@@ -80,7 +80,7 @@ func setupMQTT(ctx context.Context) []MQTTWorker {
 		workers = append(workers, customCommandsWorker)
 	}
 
-	osWorker := setupOSMQTTWorker(ctx, mqttDevice)
+	osWorker := setupOSMQTTWorker(ctx)
 	workers = append(workers, osWorker)
 
 	return workers
@@ -89,7 +89,7 @@ func setupMQTT(ctx context.Context) []MQTTWorker {
 // processMQTTWorkers will connect to MQTT, publish configs and subscriptions and
 // listen for any messages from all MQTT workers defined by the passed in
 // MQTT controllers.
-func processMQTTWorkers(ctx context.Context, prefs mqttapi.Preferences, controllers ...MQTTWorker) {
+func processMQTTWorkers(ctx context.Context, controllers ...MQTTWorker) {
 	var ( //nolint:prealloc
 		subscriptions []*mqttapi.Subscription
 		configs       []*mqttapi.Msg
@@ -106,7 +106,7 @@ func processMQTTWorkers(ctx context.Context, prefs mqttapi.Preferences, controll
 
 	// Create a new connection to the MQTT broker. This will also publish the
 	// device subscriptions.
-	client, err := mqttapi.NewClient(ctx, prefs, subscriptions, configs)
+	client, err := mqttapi.NewClient(ctx, MQTTPrefsFromFromCtx(ctx), subscriptions, configs)
 	if err != nil {
 		logging.FromContext(ctx).Error("Could not connect to MQTT.", slog.Any("error", err))
 		return

@@ -35,76 +35,18 @@ type ui interface {
 
 // Agent represents a running agent.
 type Agent struct {
-	ui ui
-}
-
-// agentOptions are the options that can be used to change the behavior of Go
-// Hass Agent.
-type agentOptions struct {
-	headless           bool
-	forceRegister      bool
-	ignoreHassURLs     bool
-	registrationServer string
-	registrationToken  string
-}
-
-// options represents the set of run-time options for the current instance of Go
-// Hass Agent.
-var options agentOptions
-
-// Option represents a run-time option for Go Hass Agent.
-type Option func(agentOptions) agentOptions
-
-// setup will establish the options for this run of Go Hass Agent.
-func setup(givenOptions ...Option) {
-	for _, option := range givenOptions {
-		options = option(options)
-	}
-}
-
-// SetHeadless indicates Go Hass Agent should run without a UI.
-func SetHeadless(value bool) Option {
-	return func(ao agentOptions) agentOptions {
-		ao.headless = value
-		return ao
-	}
-}
-
-// SetRegistrationInfo contains the information Go Hass Agent should use to
-// register with Home Assistant.
-func SetRegistrationInfo(server, token string, ignoreURLs bool) Option {
-	return func(ao agentOptions) agentOptions {
-		ao.ignoreHassURLs = ignoreURLs
-		ao.registrationServer = server
-		ao.registrationToken = token
-
-		return ao
-	}
-}
-
-// ForceRegister indicates that Go Hass Agent should ignore its current
-// registration status and re-register with Home Assistant.
-func SetForceRegister(value bool) Option {
-	return func(ao agentOptions) agentOptions {
-		ao.forceRegister = value
-		return ao
-	}
-}
-
-// newCtx creates a new context for this run of Go Hass Agent.
-func newCtx(logger *slog.Logger) (context.Context, context.CancelFunc) {
-	ctx, cancelFunc := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	ctx = logging.ToContext(ctx, logger)
-
-	return ctx, cancelFunc
+	ui     ui
+	logger *slog.Logger
 }
 
 // newAgent creates the Agent struct.
 func newAgent(ctx context.Context) *Agent {
-	agent := &Agent{}
+	agent := &Agent{
+		logger: logging.FromContext(ctx).WithGroup("agent"),
+	}
 
 	// If not running headless, set up the UI.
-	if !options.headless {
+	if !HeadlessFromCtx(ctx) {
 		agent.ui = fyneui.NewFyneUI(ctx)
 	}
 
@@ -116,19 +58,17 @@ func newAgent(ctx context.Context) *Agent {
 //
 //nolint:funlen
 //revive:disable:function-length
-func Run(logger *slog.Logger, givenOptions ...Option) error {
+func Run(ctx context.Context) error {
 	var (
 		wg      sync.WaitGroup
 		regWait sync.WaitGroup
 		err     error
 	)
 
-	// Establish run-time options.
-	setup(givenOptions...)
-	// Setup context.
-	ctx, cancelFunc := newCtx(logger)
-	defer cancelFunc()
 	// Create struct.
+	ctx, cancelFunc := context.WithCancel(ctx)
+	defer cancelFunc()
+
 	agent := newAgent(ctx)
 
 	// Load the preferences from file. Ignore the case where there are no
@@ -143,7 +83,7 @@ func Run(logger *slog.Logger, givenOptions ...Option) error {
 		defer regWait.Done()
 		// Check if the agent is registered. If not, start a registration flow.
 		if err = checkRegistration(ctx, agent.ui); err != nil {
-			logging.FromContext(ctx).Error("Error checking registration status.", slog.Any("error", err))
+			agent.logger.Error("Error checking registration status.", slog.Any("error", err))
 			cancelFunc()
 		}
 	}()
@@ -161,7 +101,7 @@ func Run(logger *slog.Logger, givenOptions ...Option) error {
 
 		client, err := hass.NewClient(ctx, preferences.RestAPIURL())
 		if err != nil {
-			logging.FromContext(ctx).Error("Cannot connect to Home Assistant.",
+			agent.logger.Error("Cannot connect to Home Assistant.",
 				slog.Any("error", err))
 			return
 		}
@@ -178,7 +118,7 @@ func Run(logger *slog.Logger, givenOptions ...Option) error {
 		// Initialize and add the script worker.
 		scriptsWorkers, err := scripts.NewScriptsWorker(ctx)
 		if err != nil {
-			logging.FromContext(ctx).Warn("Could not init scripts workers.", slog.Any("error", err))
+			agent.logger.Warn("Could not init scripts workers.", slog.Any("error", err))
 		} else {
 			sensorWorkers = append(sensorWorkers, scriptsWorkers)
 		}
@@ -200,16 +140,17 @@ func Run(logger *slog.Logger, givenOptions ...Option) error {
 		// If MQTT is enabled, init MQTT workers and process them.
 		if preferences.MQTTEnabled() {
 			if mqttPrefs, err := preferences.GetMQTTPreferences(); err != nil {
-				logging.FromContext(ctx).Warn("Could not init mqtt workers.",
+				agent.logger.Warn("Could not init mqtt workers.",
 					slog.Any("error", err))
 			} else {
+				ctx = MQTTPrefsToCtx(ctx, mqttPrefs)
 				mqttWorkers := setupMQTT(ctx)
 
 				wg.Add(1)
 
 				go func() {
 					defer wg.Done()
-					processMQTTWorkers(ctx, mqttPrefs, mqttWorkers...)
+					processMQTTWorkers(ctx, mqttWorkers...)
 				}()
 			}
 		}
@@ -223,7 +164,7 @@ func Run(logger *slog.Logger, givenOptions ...Option) error {
 	}()
 
 	// Do not run the UI loop if the agent is running in headless mode.
-	if !options.headless {
+	if !HeadlessFromCtx(ctx) {
 		agent.ui.DisplayTrayIcon(ctx, cancelFunc)
 		agent.ui.Run(ctx)
 	}
@@ -236,18 +177,12 @@ func Run(logger *slog.Logger, givenOptions ...Option) error {
 // Register is run when Go Hass Agent is invoked with the `register`
 // command-line option (i.e., `go-hass-agent register`). It will attempt to
 // register Go Hass Agent with Home Assistant.
-func Register(logger *slog.Logger, givenOptions ...Option) error {
+func Register(ctx context.Context) error {
 	var (
 		wg  sync.WaitGroup
 		err error
 	)
 
-	// Establish run-time options.
-	setup(givenOptions...)
-	// Setup context.
-	ctx, cancelFunc := newCtx(logger)
-	defer cancelFunc()
-	// Create struct.
 	agent := newAgent(ctx)
 
 	if err = preferences.Load(); err != nil && !errors.Is(err, preferences.ErrLoadPreferences) {
@@ -266,13 +201,13 @@ func Register(logger *slog.Logger, givenOptions ...Option) error {
 		defer wg.Done()
 
 		if err := checkRegistration(regCtx, agent.ui); err != nil {
-			logging.FromContext(ctx).Error("Error checking registration status", slog.Any("error", err))
+			agent.logger.Error("Error checking registration status", slog.Any("error", err))
 		}
 
 		cancelReg()
 	}()
 
-	if !options.headless {
+	if !HeadlessFromCtx(regCtx) {
 		agent.ui.Run(regCtx)
 	}
 
@@ -283,24 +218,18 @@ func Register(logger *slog.Logger, givenOptions ...Option) error {
 
 // Reset is invoked when Go Hass Agent is run with the `reset` command-line
 // option (i.e., `go-hass-agent reset`).
-func Reset(logger *slog.Logger, givenOptions ...Option) error {
-	// Establish run-time options.
-	setup(givenOptions...)
-	// Setup context.
-	ctx, cancelFunc := newCtx(logger)
-	defer cancelFunc()
-
+func Reset(ctx context.Context) error {
+	agent := newAgent(ctx)
 	// Load the preferences so we know what we need to reset.
 	if err := preferences.Load(); err != nil && !errors.Is(err, preferences.ErrLoadPreferences) {
 		return fmt.Errorf("%w: %w", ErrAgentStart, err)
 	}
-
 	// If MQTT is enabled, reset any saved MQTT config.
 	if preferences.MQTTEnabled() {
 		if err := resetMQTTWorkers(ctx); err != nil {
-			logging.FromContext(ctx).Error("Problems occurred resetting MQTT configuration.", slog.Any("error", err))
+			agent.logger.Error("Problems occurred resetting MQTT configuration.", slog.Any("error", err))
 		}
 	}
-
+	// Agent reset complete.
 	return nil
 }

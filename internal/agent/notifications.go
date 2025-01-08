@@ -18,8 +18,8 @@ import (
 // notification messages from Home Assistant on a websocket connection. Any
 // received notifications will be dipslayed on the device running the agent.
 func runNotificationsWorker(ctx context.Context, agentUI ui) {
-	// Don't run if agent is running headless.\
-	if options.headless {
+	// Don't run if agent is running headless.
+	if HeadlessFromCtx(ctx) {
 		return
 	}
 
@@ -36,7 +36,8 @@ func runNotificationsWorker(ctx context.Context, agentUI ui) {
 			// Connect the websocket.
 			notifyCh, err := websocket.Connect(ctx)
 			if err != nil {
-				logging.FromContext(ctx).Warn("Failed to connect to websocket.", slog.Any("error", err))
+				logging.FromContext(ctx).Warn("Failed to connect to websocket.",
+					slog.Any("error", err))
 
 				return
 			}
