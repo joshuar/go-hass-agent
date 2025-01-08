@@ -1,5 +1,18 @@
 # Changelog
 
+## [11.1.0](https://github.com/joshuar/go-hass-agent/compare/v11.0.0...v11.1.0) (2025-01-06)
+
+
+### Features
+
+* **linux/power:** :sparkles: user enum sensor device class for power state sensor ([f7c0bd6](https://github.com/joshuar/go-hass-agent/commit/f7c0bd627fb9526cc648414f222f924b0ebf3a51))
+
+
+### Bug Fixes
+
+* **preferences:** :bug: actually use default preferences if no preferences file is found ([70f49ef](https://github.com/joshuar/go-hass-agent/commit/70f49ef06f1c6686ffabdf49cb1dcb6476b1402a))
+* **preferences:** :bug: more preferences fixes after 7591c7a ([ee5f2d6](https://github.com/joshuar/go-hass-agent/commit/ee5f2d6b3a25cce989900c0ff917127b9a5b77d6))
+
 ## [11.0.0](https://github.com/joshuar/go-hass-agent/compare/v10.5.1...v11.0.0) (2024-12-31)
 
 
