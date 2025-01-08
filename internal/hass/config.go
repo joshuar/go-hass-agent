@@ -5,7 +5,13 @@
 package hass
 
 import (
+	"context"
 	"errors"
+	"log/slog"
+
+	"github.com/joshuar/go-hass-agent/internal/hass/api"
+	"github.com/joshuar/go-hass-agent/internal/logging"
+	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
 var (
@@ -13,6 +19,8 @@ var (
 	ErrInvalidConfig       = errors.New("invalid config")
 )
 
+// Config represents the Home Assistant config. It is the data structure
+// returned by the "get_config" API request.
 type Config struct {
 	Entities              map[string]map[string]any `json:"entities"`
 	UnitSystem            units                     `json:"unit_system"`
@@ -34,12 +42,14 @@ type units struct {
 	Volume      string `json:"volume"`
 }
 
-func (c *Config) IsEntityDisabled(entity string) (bool, error) {
+// IsEntityDisabled will check whether the given entity is disabled according to
+// Home Assistant.
+func (c *Config) IsEntityDisabled(entityID string) (bool, error) {
 	if c.Entities == nil {
 		return false, ErrInvalidConfig
 	}
 
-	if v, ok := c.Entities[entity]["disabled"]; ok {
+	if v, ok := c.Entities[entityID]["disabled"]; ok {
 		disabledState, ok := v.(bool)
 		if !ok {
 			return false, nil
@@ -63,4 +73,18 @@ func (c *configRequest) RequestBody() any {
 
 func (c *configRequest) Retry() bool {
 	return false
+}
+
+// Version retrieves the version of Home Assistant.
+func Version(ctx context.Context) string {
+	config, err := api.Send[Config](ctx, preferences.RestAPIURL(), &configRequest{})
+	if err != nil {
+		logging.FromContext(ctx).
+			Debug("Could not fetch Home Assistant config.",
+				slog.Any("error", err))
+
+		return "Unknown"
+	}
+
+	return config.Version
 }

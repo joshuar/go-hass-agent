@@ -99,7 +99,7 @@ func Run(ctx context.Context) error {
 			return
 		}
 
-		client, err := hass.NewClient(ctx, preferences.RestAPIURL())
+		client, err := hass.NewClient(ctx)
 		if err != nil {
 			agent.logger.Error("Cannot connect to Home Assistant.",
 				slog.Any("error", err))
