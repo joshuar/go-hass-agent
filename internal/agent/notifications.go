@@ -9,7 +9,7 @@ import (
 	"context"
 	"log/slog"
 
-	"github.com/joshuar/go-hass-agent/internal/hass"
+	"github.com/joshuar/go-hass-agent/internal/hass/api"
 	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
@@ -23,7 +23,7 @@ func runNotificationsWorker(ctx context.Context, agentUI ui) {
 		return
 	}
 
-	websocket := hass.NewWebsocket(ctx,
+	websocket := api.NewWebsocket(ctx,
 		preferences.WebsocketURL(),
 		preferences.WebhookID(),
 		preferences.Token())
