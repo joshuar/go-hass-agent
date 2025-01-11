@@ -16,7 +16,6 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/agent/agentsensor"
 	fyneui "github.com/joshuar/go-hass-agent/internal/agent/ui/fyneUI"
-	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 	"github.com/joshuar/go-hass-agent/internal/scripts"
@@ -58,12 +57,14 @@ func newAgent(ctx context.Context) *Agent {
 //
 //nolint:funlen
 //revive:disable:function-length
-func Run(ctx context.Context) error {
+func Run(ctx context.Context, dataCh chan any) error {
 	var (
 		wg      sync.WaitGroup
 		regWait sync.WaitGroup
 		err     error
 	)
+
+	defer close(dataCh)
 
 	// Create struct.
 	ctx, cancelFunc := context.WithCancel(ctx)
@@ -74,7 +75,7 @@ func Run(ctx context.Context) error {
 	// Load the preferences from file. Ignore the case where there are no
 	// existing preferences.
 	if err = preferences.Load(); err != nil && !errors.Is(err, preferences.ErrLoadPreferences) {
-		return fmt.Errorf("%w: %w", ErrAgentStart, err)
+		return errors.Join(ErrAgentStart, err)
 	}
 
 	regWait.Add(1)
@@ -96,13 +97,6 @@ func Run(ctx context.Context) error {
 
 		// If the agent is not registered, bail.
 		if !preferences.Registered() {
-			return
-		}
-
-		client, err := hass.NewClient(ctx)
-		if err != nil {
-			agent.logger.Error("Cannot connect to Home Assistant.",
-				slog.Any("error", err))
 			return
 		}
 
@@ -133,14 +127,14 @@ func Run(ctx context.Context) error {
 		// Process sensor workers.
 		go func() {
 			defer wg.Done()
-			processWorkers(ctx, client, sensorWorkers...)
+			processWorkers(ctx, dataCh, sensorWorkers...)
 		}()
 
 		wg.Add(1)
 		// Process event workers.
 		go func() {
 			defer wg.Done()
-			processWorkers(ctx, client, eventWorkers...)
+			processWorkers(ctx, dataCh, eventWorkers...)
 		}()
 
 		// If MQTT is enabled, init MQTT workers and process them.

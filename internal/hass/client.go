@@ -24,7 +24,7 @@ const (
 
 var (
 	sensorRegistry Registry
-	sensorTracker  *sensor.Tracker
+	sensorTracker  = sensor.NewTracker()
 )
 
 var (
@@ -54,26 +54,43 @@ type Registry interface {
 	IsRegistered(id string) bool
 }
 
-type Client struct {
+type handler struct {
 	logger *slog.Logger
 }
 
-func NewClient(ctx context.Context) (*Client, error) {
+func NewDataHandler(ctx context.Context) (chan any, error) {
 	var err error
-
-	sensorTracker = sensor.NewTracker()
 
 	sensorRegistry, err = registry.Load()
 	if err != nil {
 		return nil, fmt.Errorf("could not start registry: %w", err)
 	}
 
-	return &Client{
+	dataCh := make(chan any)
+
+	client := &handler{
 		logger: logging.FromContext(ctx).With(slog.String("subsystem", "hass")),
-	}, nil
+	}
+
+	go func() {
+		for d := range dataCh {
+			switch data := d.(type) {
+			case sensor.Entity:
+				err = client.processSensor(ctx, data)
+			case event.Event:
+				err = client.processEvent(ctx, data)
+			}
+
+			if err != nil {
+				client.logger.Error("Processing failed.", slog.Any("error", err))
+			}
+		}
+	}()
+
+	return dataCh, nil
 }
 
-func (c *Client) ProcessEvent(ctx context.Context, details event.Event) error {
+func (c *handler) processEvent(ctx context.Context, details event.Event) error {
 	resp, err := api.Send[response](ctx, preferences.RestAPIURL(), &details)
 	if err != nil {
 		return fmt.Errorf("failed to send event request: %w", err)
@@ -89,7 +106,7 @@ func (c *Client) ProcessEvent(ctx context.Context, details event.Event) error {
 	return nil
 }
 
-func (c *Client) ProcessSensor(ctx context.Context, details sensor.Entity) error {
+func (c *handler) processSensor(ctx context.Context, details sensor.Entity) error {
 	// Location request.
 	if req, ok := details.Value.(*sensor.Location); ok {
 		resp, err := api.Send[response](ctx, preferences.RestAPIURL(),
@@ -151,7 +168,7 @@ func (c *Client) ProcessSensor(ctx context.Context, details sensor.Entity) error
 // disabled, we need to make an additional check against Home Assistant to see
 // if the sensor has been re-enabled, and update our local registry before
 // continuing.
-func (c *Client) isDisabled(ctx context.Context, details sensor.Entity) bool {
+func (c *handler) isDisabled(ctx context.Context, details sensor.Entity) bool {
 	// If it is not disabled in the local registry, immediately return false.
 	if !c.isDisabledInReg(details.ID) {
 		return false
@@ -185,12 +202,12 @@ func (c *Client) isDisabled(ctx context.Context, details sensor.Entity) bool {
 // registry.
 //
 //revive:disable:unused-receiver
-func (c *Client) isDisabledInReg(id string) bool {
+func (c *handler) isDisabledInReg(id string) bool {
 	return sensorRegistry.IsDisabled(id)
 }
 
 // isDisabledInHA returns the disabled state of the sensor from Home Assistant.
-func (c *Client) isDisabledInHA(ctx context.Context, details sensor.Entity) bool {
+func (c *handler) isDisabledInHA(ctx context.Context, details sensor.Entity) bool {
 	config, err := api.Send[Config](ctx, preferences.RestAPIURL(), &configRequest{})
 	if err != nil {
 		c.logger.
