@@ -23,7 +23,7 @@ const (
 
 // Set-up a default Resty client with a reasonable timeout and an
 // exponential retry process for 429 responses from Home Assistant.
-var client = resty.New().
+var restClient = resty.New().
 	SetTimeout(defaultTimeout).
 	SetRetryCount(3).
 	SetRetryWaitTime(5 * time.Second).
@@ -88,12 +88,12 @@ func (e *ResponseError) Error() string {
 func Send[T any](ctx context.Context, url string, details Request) (T, error) {
 	var response T
 
-	requestClient := client.R().SetContext(ctx)
-	requestClient = requestClient.SetResult(&response)
+	apiRequest := restClient.R().SetContext(ctx)
+	apiRequest = apiRequest.SetResult(&response)
 
 	// If the request is authenticated, set the auth header with the token.
 	if a, ok := details.(Authenticated); ok {
-		requestClient = requestClient.SetAuthToken(a.Auth())
+		apiRequest = apiRequest.SetAuthToken(a.Auth())
 	}
 
 	// If the request can be validated, validate it.
@@ -105,15 +105,15 @@ func Send[T any](ctx context.Context, url string, details Request) (T, error) {
 
 	// If request needs to be retried, retry the request on any error.
 	if details.Retry() {
-		requestClient = requestClient.AddRetryCondition(
+		apiRequest = apiRequest.AddRetryCondition(
 			func(_ *resty.Response, err error) bool {
 				return err != nil
 			},
 		)
 	}
 
-	requestClient.SetBody(details.RequestBody())
-	responseObj, err := requestClient.Post(url)
+	apiRequest.SetBody(details.RequestBody())
+	apiResponse, err := apiRequest.Post(url)
 
 	logging.FromContext(ctx).
 		LogAttrs(ctx, logging.LevelTrace,
@@ -126,20 +126,20 @@ func Send[T any](ctx context.Context, url string, details Request) (T, error) {
 	switch {
 	case err != nil:
 		return response, fmt.Errorf("error sending request: %w", err)
-	case responseObj == nil:
+	case apiResponse == nil:
 		return response, fmt.Errorf("unknown error sending request")
-	case responseObj.IsError():
-		return response, &ResponseError{Code: responseObj.StatusCode(), Message: responseObj.Status()}
+	case apiResponse.IsError():
+		return response, &ResponseError{Code: apiResponse.StatusCode(), Message: apiResponse.Status()}
 	}
 
 	logging.FromContext(ctx).
 		LogAttrs(ctx, logging.LevelTrace,
 			"Received response.",
-			slog.Int("statuscode", responseObj.StatusCode()),
-			slog.String("status", responseObj.Status()),
-			slog.String("protocol", responseObj.Proto()),
-			slog.Duration("time", responseObj.Time()),
-			slog.String("body", string(responseObj.Body())))
+			slog.Int("statuscode", apiResponse.StatusCode()),
+			slog.String("status", apiResponse.Status()),
+			slog.String("protocol", apiResponse.Proto()),
+			slog.Duration("time", apiResponse.Time()),
+			slog.String("body", string(apiResponse.Body())))
 
 	return response, nil
 }
