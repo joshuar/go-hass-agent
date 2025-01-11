@@ -29,6 +29,9 @@ func checkRegistration(ctx context.Context, agentUI ui) error {
 
 	// Retrieve registration options passed on command-line from context.
 	registrationOptions := RegistrationFromCtx(ctx)
+	if registrationOptions == nil {
+		registrationOptions = &preferences.Registration{}
+	}
 
 	// If not headless, present a UI for the user to configure options.
 	if !HeadlessFromCtx(ctx) {
@@ -57,7 +60,7 @@ func checkRegistration(ctx context.Context, agentUI ui) error {
 	}
 
 	// If the registration was forced, reset the sensor registry.
-	if RegistrationFromCtx(ctx).ForceRegister {
+	if registrationOptions.ForceRegister {
 		if err := registry.Reset(); err != nil {
 			logging.FromContext(ctx).Warn("Problem resetting registry.",
 				slog.Any("error", err))
