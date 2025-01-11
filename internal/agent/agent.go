@@ -53,9 +53,6 @@ func newAgent(ctx context.Context) *Agent {
 
 // Run is invoked when Go Hass Agent is run with the `run` command-line option
 // (i.e., `go-hass-agent run`).
-//
-//nolint:funlen
-//revive:disable:function-length
 func Run(ctx context.Context, dataCh chan any) error {
 	var (
 		wg      sync.WaitGroup
@@ -111,7 +108,8 @@ func Run(ctx context.Context, dataCh chan any) error {
 		// Initialize and add the script worker.
 		scriptsWorkers, err := scripts.NewScriptsWorker(ctx)
 		if err != nil {
-			agent.logger.Warn("Could not init scripts workers.", slog.Any("error", err))
+			agent.logger.Warn("Could not init scripts workers.",
+				slog.Any("error", err))
 		} else {
 			sensorWorkers = append(sensorWorkers, scriptsWorkers)
 		}
@@ -130,23 +128,12 @@ func Run(ctx context.Context, dataCh chan any) error {
 			processWorkers(ctx, dataCh, eventWorkers...)
 		}()
 
-		// If MQTT is enabled, init MQTT workers and process them.
-		if preferences.MQTTEnabled() {
-			if mqttPrefs, err := preferences.GetMQTTPreferences(); err != nil {
-				agent.logger.Warn("Could not init mqtt workers.",
-					slog.Any("error", err))
-			} else {
-				ctx = MQTTPrefsToCtx(ctx, mqttPrefs)
-				mqttWorkers := setupMQTT(ctx)
-
-				wg.Add(1)
-
-				go func() {
-					defer wg.Done()
-					processMQTTWorkers(ctx, mqttWorkers...)
-				}()
-			}
-		}
+		wg.Add(1)
+		// Process MQTT workers.
+		go func() {
+			defer wg.Done()
+			processMQTTWorkers(ctx)
+		}()
 
 		wg.Add(1)
 		// Listen for notifications from Home Assistant.
