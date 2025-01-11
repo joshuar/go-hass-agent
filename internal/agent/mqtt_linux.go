@@ -11,7 +11,6 @@ import (
 
 	mqttapi "github.com/joshuar/go-hass-anything/v12/pkg/mqtt"
 
-	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/linux/media"
 	"github.com/joshuar/go-hass-agent/internal/linux/power"
 	"github.com/joshuar/go-hass-agent/internal/linux/system"
@@ -111,8 +110,6 @@ func (c *linuxMQTTWorker) generateConfig(e stateEntity) *mqttapi.Msg {
 // setupOSMQTTWorker initializes the list of MQTT workers for sensors and
 // returns those that are supported on this device.
 func setupOSMQTTWorker(ctx context.Context) MQTTWorker {
-	ctx = linux.NewContext(ctx)
-
 	mqttController := &linuxMQTTWorker{
 		mqttEntities: &mqttEntities{
 			msgs: make(chan *mqttapi.Msg),
