@@ -19,6 +19,8 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
+var ErrResetCommandFailed = errors.New("reset command failed")
+
 // ResetCmd: `go-hass-agent reset`.
 type ResetCmd struct{}
 
@@ -31,6 +33,11 @@ func (r *ResetCmd) Run(opts *CmdOpts) error {
 
 	ctx, cancelFunc := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancelFunc()
+
+	// Load the preferences so we know what we need to reset.
+	if err := preferences.Load(); err != nil && !errors.Is(err, preferences.ErrLoadPreferences) {
+		return errors.Join(ErrResetCommandFailed, err)
+	}
 
 	ctx = logging.ToContext(ctx, opts.Logger)
 	ctx = agent.HeadlessToCtx(ctx, opts.Headless)

@@ -6,7 +6,7 @@ package cli
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"os"
 	"os/signal"
 	"syscall"
@@ -15,6 +15,8 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
+
+var ErrRegisterCmdFailed = errors.New("register command failed")
 
 // RegisterCmd: `go-hass-agent register`.
 type RegisterCmd struct {
@@ -32,6 +34,13 @@ func (r *RegisterCmd) Run(opts *CmdOpts) error {
 	ctx, cancelFunc := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancelFunc()
 
+	// Load the preferences from file. Ignore the case where there are no
+	// existing preferences.
+	if err := preferences.Load(); err != nil && !errors.Is(err, preferences.ErrLoadPreferences) {
+		return errors.Join(ErrRegisterCmdFailed, err)
+	}
+
+	// Load up the context for the agent.
 	ctx = logging.ToContext(ctx, opts.Logger)
 	ctx = agent.HeadlessToCtx(ctx, opts.Headless)
 	ctx = agent.RegistrationToCtx(ctx, preferences.Registration{
@@ -41,8 +50,9 @@ func (r *RegisterCmd) Run(opts *CmdOpts) error {
 		ForceRegister:  r.Force,
 	})
 
+	// Run the agent.
 	if err := agent.Register(ctx); err != nil {
-		return fmt.Errorf("failed to run: %w", err)
+		return errors.Join(ErrRegisterCmdFailed, err)
 	}
 
 	return nil

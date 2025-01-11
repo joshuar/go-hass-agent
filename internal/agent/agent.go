@@ -7,7 +7,6 @@ package agent
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -71,12 +70,6 @@ func Run(ctx context.Context, dataCh chan any) error {
 	defer cancelFunc()
 
 	agent := newAgent(ctx)
-
-	// Load the preferences from file. Ignore the case where there are no
-	// existing preferences.
-	if err = preferences.Load(); err != nil && !errors.Is(err, preferences.ErrLoadPreferences) {
-		return errors.Join(ErrAgentStart, err)
-	}
 
 	regWait.Add(1)
 
@@ -178,16 +171,9 @@ func Run(ctx context.Context, dataCh chan any) error {
 // command-line option (i.e., `go-hass-agent register`). It will attempt to
 // register Go Hass Agent with Home Assistant.
 func Register(ctx context.Context) error {
-	var (
-		wg  sync.WaitGroup
-		err error
-	)
+	var wg sync.WaitGroup
 
 	agent := newAgent(ctx)
-
-	if err = preferences.Load(); err != nil && !errors.Is(err, preferences.ErrLoadPreferences) {
-		return fmt.Errorf("%w: %w", ErrAgentStart, err)
-	}
 
 	regCtx, cancelReg := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 	go func() {
@@ -220,10 +206,6 @@ func Register(ctx context.Context) error {
 // option (i.e., `go-hass-agent reset`).
 func Reset(ctx context.Context) error {
 	agent := newAgent(ctx)
-	// Load the preferences so we know what we need to reset.
-	if err := preferences.Load(); err != nil && !errors.Is(err, preferences.ErrLoadPreferences) {
-		return fmt.Errorf("%w: %w", ErrAgentStart, err)
-	}
 	// If MQTT is enabled, reset any saved MQTT config.
 	if preferences.MQTTEnabled() {
 		if err := resetMQTTWorkers(ctx); err != nil {
