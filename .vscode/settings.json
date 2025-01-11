@@ -35,7 +35,9 @@
     "linux/mem",
     "BREAKING_CHANGES",
     "linux/power",
-    "linux/battery"
+    "linux/battery",
+    "hass/api",
+    "hass/discovery"
   ],
   "go.testFlags": ["-v"],
   "[markdown]": {

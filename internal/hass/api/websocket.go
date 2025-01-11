@@ -1,7 +1,7 @@
 // Copyright 2024 Joshua Rich <joshua.rich@gmail.com>.
 // SPDX-License-Identifier: MIT
 
-package hass
+package api
 
 import (
 	"context"
@@ -15,7 +15,6 @@ import (
 	"github.com/cenkalti/backoff/v4"
 	"github.com/lxzan/gws"
 
-	"github.com/joshuar/go-hass-agent/internal/hass/api"
 	"github.com/joshuar/go-hass-agent/internal/logging"
 )
 
@@ -50,7 +49,7 @@ func (m *webSocketRequest) send(conn *gws.Conn) error {
 
 type websocketResponse struct {
 	Result       any                   `json:"result,omitempty"`
-	Error        api.ResponseError     `json:"error,omitempty"`
+	Error        ResponseError         `json:"error,omitempty"`
 	Type         string                `json:"type"`
 	HAVersion    string                `json:"ha_version,omitempty"`
 	Notification WebsocketNotification `json:"event,omitempty"`
