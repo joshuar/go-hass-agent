@@ -80,8 +80,6 @@ func setupOSWorkers(ctx context.Context) ([]Worker[sensor.Entity], []Worker[even
 	sensorWorkers := make([]Worker[sensor.Entity], 0,
 		len(sensorPollingWorkersInitFuncs)+len(sensorEventWorkersInitFuncs)+len(sensorOneShotWorkersInitFuncs)+len(sensorLaptopWorkersInitFuncs))
 
-	// Set up the context.
-	ctx = linux.NewContext(ctx)
 	// Set up a logger.
 	logger := logging.FromContext(ctx).With(slog.Group("linux", slog.String("controller", "sensor")))
 	ctx = logging.ToContext(ctx, logger)

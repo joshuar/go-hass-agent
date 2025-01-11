@@ -53,6 +53,8 @@ func newAgent(ctx context.Context) *Agent {
 
 // Run is invoked when Go Hass Agent is run with the `run` command-line option
 // (i.e., `go-hass-agent run`).
+//
+//nolint:funlen
 func Run(ctx context.Context, dataCh chan any) error {
 	var (
 		wg      sync.WaitGroup
@@ -90,14 +92,17 @@ func Run(ctx context.Context, dataCh chan any) error {
 			return
 		}
 
+		// Set-up the worker context.
+		workerCtx := setupWorkerCtx(ctx)
+
 		// Initialize and gather OS sensor and event workers.
-		sensorWorkers, eventWorkers := setupOSWorkers(ctx)
+		sensorWorkers, eventWorkers := setupOSWorkers(workerCtx)
 		// Initialize and add connection latency sensor worker.
 		if worker := agentsensor.NewConnectionLatencySensorWorker(); worker != nil {
 			sensorWorkers = append(sensorWorkers, worker)
 		}
 		// Initialize and add external IP address sensor worker.
-		if worker := agentsensor.NewExternalIPUpdaterWorker(ctx); worker != nil {
+		if worker := agentsensor.NewExternalIPUpdaterWorker(workerCtx); worker != nil {
 			sensorWorkers = append(sensorWorkers, worker)
 		}
 		// Initialize and add external version sensor worker.
@@ -106,7 +111,7 @@ func Run(ctx context.Context, dataCh chan any) error {
 		}
 
 		// Initialize and add the script worker.
-		scriptsWorkers, err := scripts.NewScriptsWorker(ctx)
+		scriptsWorkers, err := scripts.NewScriptsWorker(workerCtx)
 		if err != nil {
 			agent.logger.Warn("Could not init scripts workers.",
 				slog.Any("error", err))
@@ -118,28 +123,28 @@ func Run(ctx context.Context, dataCh chan any) error {
 		// Process sensor workers.
 		go func() {
 			defer wg.Done()
-			processWorkers(ctx, dataCh, sensorWorkers...)
+			processWorkers(workerCtx, dataCh, sensorWorkers...)
 		}()
 
 		wg.Add(1)
 		// Process event workers.
 		go func() {
 			defer wg.Done()
-			processWorkers(ctx, dataCh, eventWorkers...)
+			processWorkers(workerCtx, dataCh, eventWorkers...)
 		}()
 
 		wg.Add(1)
 		// Process MQTT workers.
 		go func() {
 			defer wg.Done()
-			processMQTTWorkers(ctx)
+			processMQTTWorkers(workerCtx)
 		}()
 
 		wg.Add(1)
 		// Listen for notifications from Home Assistant.
 		go func() {
 			defer wg.Done()
-			runNotificationsWorker(ctx, agent.ui)
+			runNotificationsWorker(workerCtx, agent.ui)
 		}()
 	}()
 
