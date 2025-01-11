@@ -109,11 +109,17 @@ func Run(ctx context.Context) error {
 		// Initialize and gather OS sensor and event workers.
 		sensorWorkers, eventWorkers := setupOSWorkers(ctx)
 		// Initialize and add connection latency sensor worker.
-		sensorWorkers = append(sensorWorkers, agentsensor.NewConnectionLatencySensorWorker())
+		if worker := agentsensor.NewConnectionLatencySensorWorker(); worker != nil {
+			sensorWorkers = append(sensorWorkers, worker)
+		}
 		// Initialize and add external IP address sensor worker.
-		sensorWorkers = append(sensorWorkers, agentsensor.NewExternalIPUpdaterWorker(ctx))
+		if worker := agentsensor.NewExternalIPUpdaterWorker(ctx); worker != nil {
+			sensorWorkers = append(sensorWorkers, worker)
+		}
 		// Initialize and add external version sensor worker.
-		sensorWorkers = append(sensorWorkers, agentsensor.NewVersionWorker())
+		if worker := agentsensor.NewVersionWorker(); worker != nil {
+			sensorWorkers = append(sensorWorkers, worker)
+		}
 
 		// Initialize and add the script worker.
 		scriptsWorkers, err := scripts.NewScriptsWorker(ctx)
