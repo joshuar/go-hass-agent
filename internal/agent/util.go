@@ -10,8 +10,8 @@ import (
 	"sync"
 )
 
-// mergeCh merges a list of channels into a single channel. Essentially, fan-in for
-// channels.
+// mergeCh merges a list of channels of any type into a single channel of that
+// type (channel fan-in).
 func mergeCh[T any](ctx context.Context, inCh ...<-chan T) chan T {
 	var wg sync.WaitGroup
 
