@@ -74,7 +74,8 @@ func setupMQTT(ctx context.Context) (context.Context, error) {
 	return ctx, nil
 }
 
-// createMQTTWorkers creates the MQTT workers.
+// createMQTTWorkers returns a slice of MQTT workers, including any custom
+// command workers and OS-specific workers.
 func createMQTTWorkers(ctx context.Context) []MQTTWorker {
 	var workers []MQTTWorker
 	// Set up custom MQTT commands worker.
@@ -93,8 +94,9 @@ func createMQTTWorkers(ctx context.Context) []MQTTWorker {
 	return workers
 }
 
-// processMQTTWorkers will connect to MQTT, publish configs and subscriptions and
-// listen for any messages from all MQTT workers.
+// processMQTTWorkers will setup and create workers, then connect to MQTT,
+// publish configs and subscriptions and listen for any messages from all MQTT
+// workers.
 func processMQTTWorkers(ctx context.Context) {
 	var ( //nolint:prealloc
 		subscriptions []*mqttapi.Subscription

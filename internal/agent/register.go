@@ -16,6 +16,10 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
+// checkRegistration retrieves any registration information passed on the
+// command-line and then checks to see if the agent needs to register to Home
+// Assistant. If it does, it will perform the registration via either a
+// graphical (user-prompted) or non-graphical (automatic) process.
 func checkRegistration(ctx context.Context, agentUI ui) error {
 	// Retrieve request options passed on command-line from context.
 	request := RegistrationFromCtx(ctx)

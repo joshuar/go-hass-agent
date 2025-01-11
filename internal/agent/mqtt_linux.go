@@ -23,6 +23,8 @@ type linuxMQTTWorker struct {
 	logger *slog.Logger
 }
 
+// Subscriptions returns the any subscription request messaages for any workers
+// with subscriptions.
 func (c *linuxMQTTWorker) Subscriptions() []*mqttapi.Subscription {
 	totalLength := len(c.buttons) + len(c.numbers) + len(c.switches) + len(c.cameras)
 	subs := make([]*mqttapi.Subscription, 0, totalLength)
@@ -45,6 +47,7 @@ func (c *linuxMQTTWorker) Subscriptions() []*mqttapi.Subscription {
 	return subs
 }
 
+// Configs returns the configuration messages for all workers.
 func (c *linuxMQTTWorker) Configs() []*mqttapi.Msg {
 	totalLength := len(c.sensors) + len(c.binarySensors) + len(c.buttons) + len(c.switches) + len(c.numbers) + len(c.cameras)
 	configs := make([]*mqttapi.Msg, 0, totalLength)
@@ -77,6 +80,8 @@ func (c *linuxMQTTWorker) Configs() []*mqttapi.Msg {
 	return configs
 }
 
+// Msgs returns the messages channel through which workers pass any messages
+// they generate.
 func (c *linuxMQTTWorker) Msgs() chan *mqttapi.Msg {
 	return c.msgs
 }
