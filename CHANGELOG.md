@@ -1,5 +1,12 @@
 # Changelog
 
+## [11.1.2](https://github.com/joshuar/go-hass-agent/compare/v11.1.1...v11.1.2) (2025-01-11)
+
+
+### Bug Fixes
+
+* **agent:** :bug: new graphical registration flow ([5674352](https://github.com/joshuar/go-hass-agent/commit/5674352c0cce9f390675a5efc9a1163a562ecc4a))
+
 ## [11.1.1](https://github.com/joshuar/go-hass-agent/compare/v11.1.0...v11.1.1) (2025-01-11)
 
 
