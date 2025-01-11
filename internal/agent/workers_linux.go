@@ -6,6 +6,7 @@ package agent
 import (
 	"context"
 	"log/slog"
+	"slices"
 
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass/event"
@@ -139,8 +140,9 @@ func setupOSWorkers(ctx context.Context) ([]Worker[sensor.Entity], []Worker[even
 
 	// Get the type of device we are running on.
 	chassis, _ := device.Chassis() //nolint:errcheck // error is same as any value other than wanted value.
-	// If running on a laptop, add laptop specific sensor workers.
-	if chassis == "laptop" {
+	laptops := []string{"Portable", "Laptop", "Notebook"}
+	// If running on a laptop chassis, add laptop specific sensor workers.
+	if slices.Contains(laptops, chassis) {
 		for _, workerInit := range sensorLaptopWorkersInitFuncs {
 			worker, err := workerInit(ctx)
 			if err != nil {

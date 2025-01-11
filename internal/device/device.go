@@ -109,7 +109,7 @@ func Chassis() (string, error) {
 		return "", fmt.Errorf("could not determine chassis type: %w", err)
 	}
 
-	return chassisInfo.Type, nil
+	return chassisInfo.TypeDescription, nil
 }
 
 // getHostname retrieves the hostname of the device running the agent, or
