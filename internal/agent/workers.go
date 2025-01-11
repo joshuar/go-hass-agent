@@ -41,11 +41,6 @@ type EventWorker interface {
 	Worker[event.Event]
 }
 
-type processor interface {
-	ProcessSensor(ctx context.Context, details sensor.Entity) error
-	ProcessEvent(ctx context.Context, details event.Event) error
-}
-
 // startWorkers takes a slice of Workers of a particular type (sensor or event)
 // and runs their start functions, logging any errors.
 func startWorkers[T any](ctx context.Context, workers ...Worker[T]) []<-chan T {
@@ -96,7 +91,7 @@ func stopWorkers[T any](ctx context.Context, workers ...Worker[T]) {
 // processWorkers handles starting, stopping and processing data from a slice of
 // workers passed in.  It will start the workers, monitor for data and send it
 // to Home Assistant, and stop workers when the passed context is canceled.
-func processWorkers[T any](ctx context.Context, psr processor, workers ...Worker[T]) {
+func processWorkers[T any](ctx context.Context, outCh chan any, workers ...Worker[T]) {
 	// Start all inactive workers of all controllers.
 	workerOutputs := startWorkers(ctx, workers...)
 	if len(workerOutputs) == 0 {
@@ -112,19 +107,6 @@ func processWorkers[T any](ctx context.Context, psr processor, workers ...Worker
 
 	// Process all events/sensors from all workers.
 	for details := range mergeCh(ctx, workerOutputs...) {
-		go func(e T) {
-			var err error
-
-			switch details := any(e).(type) {
-			case sensor.Entity:
-				err = psr.ProcessSensor(ctx, details)
-			case event.Event:
-				err = psr.ProcessEvent(ctx, details)
-			}
-
-			if err != nil {
-				logging.FromContext(ctx).Error("Processing failed.", slog.Any("error", err))
-			}
-		}(details)
+		outCh <- details
 	}
 }

@@ -6,14 +6,17 @@ package cli
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/joshuar/go-hass-agent/internal/agent"
+	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/logging"
 )
+
+var ErrRunCmdFailed = errors.New("run command failed")
 
 // RunCmd: `go-hass-agent run`.
 type RunCmd struct{}
@@ -29,8 +32,13 @@ func (r *RunCmd) Run(opts *CmdOpts) error {
 	ctx = logging.ToContext(ctx, opts.Logger)
 	ctx = agent.HeadlessToCtx(ctx, opts.Headless)
 
-	if err := agent.Run(ctx); err != nil {
-		return fmt.Errorf("failed to run: %w", err)
+	dataCh, err := hass.NewDataHandler(ctx)
+	if err != nil {
+		return errors.Join(ErrRunCmdFailed, err)
+	}
+
+	if err := agent.Run(ctx, dataCh); err != nil {
+		return errors.Join(ErrRunCmdFailed, err)
 	}
 
 	return nil
