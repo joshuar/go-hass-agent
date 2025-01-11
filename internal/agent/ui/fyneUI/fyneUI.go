@@ -28,6 +28,7 @@ import (
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
 
+	"github.com/joshuar/go-hass-agent/internal/hass/discovery"
 	agentvalidator "github.com/joshuar/go-hass-agent/internal/validation"
 
 	"github.com/joshuar/go-hass-agent/internal/agent/ui"
@@ -385,7 +386,7 @@ func (i *FyneUI) registrationFields(prefs *preferences.Registration) []*widget.F
 
 	var allServers []string
 
-	foundServers, err := hass.FindServers(searchCtx)
+	foundServers, err := discovery.FindServers(searchCtx)
 	if err != nil {
 		i.logger.Warn("Errors occurred discovering Home Assistant servers.", slog.Any("error", err))
 	}
