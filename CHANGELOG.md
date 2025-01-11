@@ -1,5 +1,14 @@
 # Changelog
 
+## [11.1.1](https://github.com/joshuar/go-hass-agent/compare/v11.1.0...v11.1.1) (2025-01-11)
+
+
+### Bug Fixes
+
+* **agent:** :bug: detect more types of "laptop" chassis ([f6f32fd](https://github.com/joshuar/go-hass-agent/commit/f6f32fda3de5d462523c11e0deac12b89c6e219b))
+* **agent/sensor:** :bug: don't add nonexistent agent workers to worker list ([3d35099](https://github.com/joshuar/go-hass-agent/commit/3d35099e39eced7f0cd6c8fc343f49d074883caf))
+* **linux/mem:** :bug: correct unit for percentage memory usage sensors ([aa59eee](https://github.com/joshuar/go-hass-agent/commit/aa59eee151dbb80c0bf3ff25d2bd1fa44d0adb78))
+
 ## [11.1.0](https://github.com/joshuar/go-hass-agent/compare/v11.0.0...v11.1.0) (2025-01-06)
 
 
