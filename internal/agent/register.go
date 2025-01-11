@@ -17,37 +17,32 @@ import (
 )
 
 func checkRegistration(ctx context.Context, agentUI ui) error {
-	if RegistrationFromCtx(ctx) != nil {
-		if preferences.Registered() && !RegistrationFromCtx(ctx).ForceRegister {
-			return nil
-		}
+	// Retrieve request options passed on command-line from context.
+	request := RegistrationFromCtx(ctx)
+	if request == nil {
+		request = &preferences.Registration{}
 	}
 
-	if preferences.Registered() {
+	if preferences.Registered() && !request.ForceRegister {
+		logging.FromContext(ctx).Debug("Already registered and forced registration not requested.")
 		return nil
-	}
-
-	// Retrieve registration options passed on command-line from context.
-	registrationOptions := RegistrationFromCtx(ctx)
-	if registrationOptions == nil {
-		registrationOptions = &preferences.Registration{}
 	}
 
 	// If not headless, present a UI for the user to configure options.
 	if !HeadlessFromCtx(ctx) {
-		userInputDoneCh := agentUI.DisplayRegistrationWindow(ctx, registrationOptions)
+		userInputDoneCh := agentUI.DisplayRegistrationWindow(ctx, request)
 		if canceled := <-userInputDoneCh; canceled {
 			return errors.New("user canceled registration")
 		}
 	}
 
 	// Perform registration with given values.
-	registrationDetails, err := hass.RegisterDevice(ctx, registrationOptions)
+	result, err := hass.RegisterDevice(ctx, request)
 	if err != nil {
 		return fmt.Errorf("device registration failed: %w", err)
 	}
 	// Save the returned preferences.
-	if err := preferences.SetHassPreferences(registrationDetails, registrationOptions); err != nil {
+	if err := preferences.SetHassPreferences(result, request); err != nil {
 		return fmt.Errorf("saving registration failed: %w", err)
 	}
 	// Set registration status.
@@ -60,7 +55,7 @@ func checkRegistration(ctx context.Context, agentUI ui) error {
 	}
 
 	// If the registration was forced, reset the sensor registry.
-	if registrationOptions.ForceRegister {
+	if request.ForceRegister {
 		if err := registry.Reset(); err != nil {
 			logging.FromContext(ctx).Warn("Problem resetting registry.",
 				slog.Any("error", err))
