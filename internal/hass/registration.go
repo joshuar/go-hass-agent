@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass/api"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
@@ -20,7 +19,7 @@ const (
 var ErrInternalValidationFailed = errors.New("internal validation error")
 
 type registrationRequest struct {
-	*device.Device
+	*preferences.Device
 	Token string `json:"-"`
 }
 
@@ -37,7 +36,7 @@ func (r *registrationRequest) Retry() bool {
 	return true
 }
 
-func newRegistrationRequest(thisDevice *device.Device, token string) *registrationRequest {
+func newRegistrationRequest(thisDevice *preferences.Device, token string) *registrationRequest {
 	return &registrationRequest{
 		Device: thisDevice,
 		Token:  token,
@@ -51,18 +50,10 @@ func RegisterDevice(ctx context.Context, registration *preferences.Registration)
 	}
 
 	registrationURL := registration.Server + RegistrationPath
-	thisDevice := device.NewDevice()
-
-	// Set device details in preferences.
-	if err := preferences.SetDevicePreferences(&preferences.Device{
-		Name: thisDevice.Name,
-		ID:   thisDevice.ID,
-	}); err != nil {
-		return nil, fmt.Errorf("could not register device: %w", err)
-	}
+	dev := preferences.NewDevice()
 
 	// Register the device against the registration endpoint.
-	registrationStatus, err := api.Send[preferences.Hass](ctx, registrationURL, newRegistrationRequest(thisDevice, registration.Token))
+	registrationStatus, err := api.Send[preferences.Hass](ctx, registrationURL, newRegistrationRequest(dev, registration.Token))
 	if err != nil {
 		return nil, fmt.Errorf("could not register device: %w", err)
 	}
