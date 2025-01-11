@@ -15,7 +15,6 @@ import (
 	mqttapi "github.com/joshuar/go-hass-anything/v12/pkg/mqtt"
 
 	"github.com/joshuar/go-hass-agent/internal/commands"
-	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/logging"
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
@@ -67,7 +66,7 @@ func setupMQTT(ctx context.Context) []MQTTWorker {
 
 	// Create an MQTT device, used to configure MQTT functionality for some
 	// controllers.
-	ctx = MQTTDeviceToCtx(ctx, device.GenerateMQTTDevice(ctx))
+	ctx = MQTTDeviceToCtx(ctx, preferences.GetMQTTDevice())
 
 	// Set up custom MQTT commands worker.
 	customCommandsWorker, err := commands.NewCommandsWorker(ctx, MQTTDeviceFromFromCtx(ctx))

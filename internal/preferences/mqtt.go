@@ -11,6 +11,8 @@ import (
 
 	mqtthass "github.com/joshuar/go-hass-anything/v12/pkg/hass"
 	"github.com/knadh/koanf/v2"
+
+	"github.com/joshuar/go-hass-agent/internal/device"
 )
 
 const (
@@ -72,6 +74,20 @@ func GetMQTTPreferences() (*MQTT, error) {
 	}
 
 	return &mqttPrefs, nil
+}
+
+func GetMQTTDevice() *mqtthass.Device {
+	// Retrieve the hardware model and manufacturer.
+	model, manufacturer, _ := device.GetHWProductInfo() //nolint:errcheck // error doesn't matter
+
+	return &mqtthass.Device{
+		Name:         DeviceName(),
+		URL:          AppURL,
+		SWVersion:    AppVersion(),
+		Manufacturer: manufacturer,
+		Model:        model,
+		Identifiers:  []string{AppID(), DeviceName(), DeviceID()},
+	}
 }
 
 // MQTTEnabled will return whether Go Hass Agent will use MQTT.
