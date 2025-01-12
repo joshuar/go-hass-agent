@@ -4,6 +4,7 @@
 package validation
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/go-playground/validator/v10"
@@ -37,4 +38,12 @@ func ParseValidationErrors(validation error) string {
 	}
 
 	return message.String()
+}
+
+func ValidateVariable(variable any, rule string) (bool, error) {
+	if err := Validate.Var(variable, rule); err != nil {
+		return false, fmt.Errorf("invalid: %w", err)
+	}
+
+	return true, nil
 }

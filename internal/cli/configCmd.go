@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/davecgh/go-spew/spew"
+
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
@@ -24,26 +26,40 @@ func (r *ConfigCmd) Run(_ *CmdOpts) error {
 		return fmt.Errorf("config: load preferences: %w", err)
 	}
 
-	r.MQTTEnabled = true
-	if err := preferences.SetMQTTPreferences((*preferences.MQTT)(&r.MQTTConfig)); err != nil {
-		return fmt.Errorf("config: save preferences: %w", err)
+	preferences.SetPreferences(
+		preferences.SetMQTTEnabled(true),
+	)
+
+	if r.MQTTServer != "" {
+		preferences.SetPreferences(
+			preferences.SetMQTTServer(r.MQTTServer),
+		)
 	}
+
+	if r.MQTTTopicPrefix != "" {
+		preferences.SetPreferences(
+
+			preferences.SetMQTTTopicPrefix(r.MQTTTopicPrefix),
+		)
+	}
+
+	if r.MQTTUser != "" {
+		preferences.SetPreferences(
+
+			preferences.SetMQTTUser(r.MQTTUser),
+		)
+	}
+
+	if r.MQTTPassword != "" {
+		preferences.SetPreferences(
+			preferences.SetMQTTPassword(r.MQTTPassword),
+		)
+	}
+
+	spew.Dump(preferences.GetMQTTPreferences())
 
 	if err := preferences.Save(); err != nil {
 		return fmt.Errorf("config: save preferences: %w", err)
-	}
-
-	return nil
-}
-
-func (r *MQTTConfig) Validate() error {
-	err := validate.Struct(r)
-	if err != nil {
-		return fmt.Errorf("%w: %s", ErrValidationFailed, parseValidationErrors(err))
-	}
-
-	if r.MQTTServer == "" {
-		return ErrMQTTServerRequired
 	}
 
 	return nil

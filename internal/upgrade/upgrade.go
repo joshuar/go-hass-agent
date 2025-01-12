@@ -74,50 +74,29 @@ func Run() error {
 		return fmt.Errorf("cannot initialize new preferences: %w", err)
 	}
 
-	// Registered status.
-	if err = preferences.SetRegistered(oldPrefs.Registered); err != nil {
-		return fmt.Errorf("cannot set new preferences: %w", err)
-	}
-
-	// MQTT preferences.
+	// Set MQTT preferences if MQTT is enabled.
 	if oldPrefs.MQTTEnabled {
-		if err = preferences.SetMQTTPreferences(&preferences.MQTT{
-			MQTTEnabled:     true,
-			MQTTServer:      oldPrefs.MQTTServer,
-			MQTTUser:        oldPrefs.MQTTUser,
-			MQTTPassword:    oldPrefs.MQTTPassword,
-			MQTTTopicPrefix: oldPrefs.MQTTTopicPrefix,
-		}); err != nil {
-			return fmt.Errorf("cannot set new preferences: %w", err)
-		}
+		preferences.SetPreferences(
+			preferences.SetMQTTEnabled(true),
+			preferences.SetMQTTServer(oldPrefs.MQTTServer),
+			preferences.SetMQTTTopicPrefix(oldPrefs.MQTTTopicPrefix),
+			preferences.SetMQTTUser(oldPrefs.MQTTUser),
+			preferences.SetMQTTPassword(oldPrefs.MQTTPassword),
+		)
 	}
-
-	if err = preferences.SetHassPreferences(
+	// Set all other required preferences.
+	preferences.SetPreferences(
 		// Hass preferences.
-		&preferences.Hass{
-			Secret:       oldPrefs.Secret,
-			WebhookID:    oldPrefs.WebhookID,
-			CloudhookURL: oldPrefs.CloudhookURL,
-			RemoteUIURL:  oldPrefs.RemoteUIURL,
-			RestAPIURL:   oldPrefs.RestAPIURL,
-			WebsocketURL: oldPrefs.WebsocketURL,
-		},
-		// Registration preferences.
-		&preferences.Registration{
-			Server: oldPrefs.Host,
-			Token:  oldPrefs.Token,
-		}); err != nil {
-		return fmt.Errorf("cannot set new preferences: %w", err)
-	}
-
-	// Device preferences.
-	if err = preferences.SetDevicePreferences(&preferences.Device{
-		Name: oldPrefs.DeviceName,
-		ID:   oldPrefs.DeviceID,
-	}); err != nil {
-		return fmt.Errorf("cannot set new preferences: %w", err)
-	}
-
+		preferences.SetHassSecret(oldPrefs.Secret),
+		preferences.SetRestAPIURL(oldPrefs.RestAPIURL),
+		preferences.SetWebsocketURL(oldPrefs.WebsocketURL),
+		preferences.SetWebhookID(oldPrefs.WebhookID),
+		// Device preferences.
+		preferences.SetDeviceID(oldPrefs.DeviceID),
+		preferences.SetDeviceName(oldPrefs.DeviceName),
+		preferences.SetRegistered(true),
+	)
+	// Save the preferences to disk.
 	err = preferences.Save()
 	if err != nil {
 		return fmt.Errorf("%w: %w", preferences.ErrSavePreferences, err)

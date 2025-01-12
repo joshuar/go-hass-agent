@@ -41,21 +41,9 @@ func checkRegistration(ctx context.Context, agentUI ui) error {
 	}
 
 	// Perform registration with given values.
-	result, err := hass.RegisterDevice(ctx, request)
+	err := hass.RegisterDevice(ctx, request)
 	if err != nil {
 		return fmt.Errorf("device registration failed: %w", err)
-	}
-	// Save the returned preferences.
-	if err := preferences.SetHassPreferences(result, request); err != nil {
-		return fmt.Errorf("saving registration failed: %w", err)
-	}
-	// Set registration status.
-	if err := preferences.SetRegistered(true); err != nil {
-		return fmt.Errorf("saving registration failed: %w", err)
-	}
-	// Save preferences to disk.
-	if err := preferences.Save(); err != nil {
-		return fmt.Errorf("saving registration failed: %w", err)
 	}
 
 	// If the registration was forced, reset the sensor registry.

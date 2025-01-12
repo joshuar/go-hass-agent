@@ -42,17 +42,26 @@ type AppData struct {
 
 var ErrSetDevicePreference = errors.New("could not set device preference")
 
-// SetDevicePreferences sets the device preferences.
-func SetDevicePreferences(dev *Device) error {
-	if err := prefsSrc.Set(prefDeviceID, dev.ID); err != nil {
-		return fmt.Errorf("%w: %w", ErrSetDevicePreference, err)
-	}
+// SetDeviceID will set the device ID.
+func SetDeviceID(id string) SetPreference {
+	return func() error {
+		if err := prefsSrc.Set(prefDeviceID, id); err != nil {
+			return errors.Join(ErrSetDevicePreference, err)
+		}
 
-	if err := prefsSrc.Set(prefDeviceName, dev.Name); err != nil {
-		return fmt.Errorf("%w: %w", ErrSetDevicePreference, err)
+		return nil
 	}
+}
 
-	return nil
+// SetDeviceName will set the device name.
+func SetDeviceName(name string) SetPreference {
+	return func() error {
+		if err := prefsSrc.Set(prefDeviceName, name); err != nil {
+			return fmt.Errorf("%w: %w", ErrSetDevicePreference, err)
+		}
+
+		return nil
+	}
 }
 
 // DeviceID retrieves the device ID from the preferences.
@@ -65,6 +74,10 @@ func DeviceName() string {
 	return prefsSrc.String(prefDeviceName)
 }
 
+// NewDevice creates a new device. This is used during registration with Home
+// Assistant to identify the host running Go Hass Agent. While most of the
+// information generated is only needed during registration, the device ID and
+// Name will be stored in the preferences for later reference.
 func NewDevice() *Device {
 	dev := &Device{
 		AppName:    AppName,
@@ -73,7 +86,7 @@ func NewDevice() *Device {
 	}
 
 	// Retrieve the name as the device name.
-	name, err := device.GetHostname(true)
+	name, err := device.GetHostname()
 	if err != nil {
 		slog.Warn("Unable to determine device hostname.",
 			slog.Any("error", err))
@@ -110,10 +123,11 @@ func NewDevice() *Device {
 	dev.Model = model
 	dev.Manufacturer = manufacturer
 
-	if err := SetDevicePreferences(dev); err != nil {
-		slog.Warn("Unable to set device ID in preferences.",
-			slog.Any("error", err))
-	}
+	// Set the device id and name in the preferences store.
+	SetPreferences(
+		SetDeviceID(dev.ID),
+		SetDeviceName(dev.Name),
+	)
 
 	return dev
 }

@@ -93,9 +93,9 @@ func (u bulkSensorUpdateResponse) Process(ctx context.Context, details sensor.En
 	}
 }
 
-type registrationResponse response
+type sensorRegistrationResponse response
 
-func (r *registrationResponse) Status() (responseStatus, error) {
+func (r *sensorRegistrationResponse) Status() (responseStatus, error) {
 	if r.IsSuccess {
 		return Registered, nil
 	}
@@ -103,7 +103,7 @@ func (r *registrationResponse) Status() (responseStatus, error) {
 	return Failed, r.ErrorDetails
 }
 
-func (r *registrationResponse) Process(ctx context.Context, details sensor.Entity) {
+func (r *sensorRegistrationResponse) Process(ctx context.Context, details sensor.Entity) {
 	status, err := r.Status()
 
 	switch status {

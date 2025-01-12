@@ -27,15 +27,19 @@ const (
 	FeatureRequestURL   = AppURL + "/issues/new?assignees=joshuar&labels=&template=feature_request.md&title="
 	IssueURL            = AppURL + "/issues/new?assignees=joshuar&labels=&template=bug_report.md&title=%5BBUG%5D"
 	AppDescription      = "A Home Assistant, native app for desktop/laptop devices."
-	MQTTTopicPrefix     = "homeassistant"
 	LogFile             = "go-hass-agent.log"
 	defaultFilePerms    = 0o600
 	preferencesFilename = "preferences.toml"
 
-	DefaultServer = "http://localhost:8123"
-	DefaultSecret = "ALongSecretString"
-
 	prefRegistered = "registered"
+)
+
+const (
+	defaultServer          = "http://localhost:8123"
+	defaultWebsocketServer = "ws://localhost:8123"
+	defaultSecret          = "ALongSecretString"
+	defaultMQTTTopicPrefix = "homeassistant"
+	defaultMQTTServer      = "tcp://localhost:1883"
 )
 
 var (
@@ -59,16 +63,16 @@ var defaultAgentPreferences = &preferences{
 	Registered: false,
 	MQTT: &MQTT{
 		MQTTEnabled:     false,
-		MQTTTopicPrefix: MQTTTopicPrefix,
+		MQTTTopicPrefix: defaultMQTTTopicPrefix,
 	},
 	Registration: &Registration{
-		Server: DefaultServer,
-		Token:  DefaultSecret,
+		Server: defaultServer,
+		Token:  defaultSecret,
 	},
 	Hass: &Hass{
-		RestAPIURL:   DefaultServer,
-		WebsocketURL: DefaultServer,
-		WebhookID:    DefaultSecret,
+		RestAPIURL:   defaultServer,
+		WebsocketURL: defaultServer,
+		WebhookID:    defaultSecret,
 	},
 }
 
@@ -77,6 +81,21 @@ var (
 	preferencesFile = filepath.Join(xdg.ConfigHome, appID, preferencesFilename)
 	mu              = sync.Mutex{}
 )
+
+// SetPreference will set a preference in the preferences
+// store. If it fails, it will return a non-nil error.
+type SetPreference func() error
+
+// SetPreferences will set the given preferences. It will emit WARN level log
+// messages for each preference that failed to get set.
+func SetPreferences(preferences ...SetPreference) {
+	for _, preference := range preferences {
+		if err := preference(); err != nil {
+			slog.Warn("Error setting preference.",
+				slog.Any("error", err))
+		}
+	}
+}
 
 // preferences defines all preferences for Go Hass Agent.
 type preferences struct {
@@ -146,11 +165,13 @@ func validate() error {
 		return fmt.Errorf("%w: %s", ErrValidatePreferences, validation.ParseValidationErrors(err))
 	}
 
-	if currentPreferences.IsMQTTEnabled() {
-		// Validate MQTT preferences are valid.
-		err := validation.Validate.Struct(currentPreferences.MQTT)
-		if err != nil {
-			return fmt.Errorf("%w: %s", ErrValidatePreferences, validation.ParseValidationErrors(err))
+	if currentPreferences.MQTT != nil {
+		if currentPreferences.MQTT.MQTTEnabled {
+			// Validate MQTT preferences are valid.
+			err := validation.Validate.Struct(currentPreferences.MQTT)
+			if err != nil {
+				return fmt.Errorf("%w: %s", ErrValidatePreferences, validation.ParseValidationErrors(err))
+			}
 		}
 	}
 
@@ -193,12 +214,14 @@ func Save() error {
 
 // SetRegistered sets whether Go Hass Agent has been registered with Home
 // Assistant.
-func SetRegistered(value bool) error {
-	if err := prefsSrc.Set(prefRegistered, value); err != nil {
-		return fmt.Errorf("%w: %w", ErrSetPreference, err)
-	}
+func SetRegistered(value bool) SetPreference {
+	return func() error {
+		if err := prefsSrc.Set(prefRegistered, value); err != nil {
+			return fmt.Errorf("%w: %w", ErrSetPreference, err)
+		}
 
-	return nil
+		return nil
+	}
 }
 
 // Registered returns the registration status of Go Hass Agent.
