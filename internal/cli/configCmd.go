@@ -7,8 +7,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/davecgh/go-spew/spew"
-
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
@@ -55,8 +53,6 @@ func (r *ConfigCmd) Run(_ *CmdOpts) error {
 			preferences.SetMQTTPassword(r.MQTTPassword),
 		)
 	}
-
-	spew.Dump(preferences.GetMQTTPreferences())
 
 	if err := preferences.Save(); err != nil {
 		return fmt.Errorf("config: save preferences: %w", err)

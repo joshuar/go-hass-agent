@@ -64,6 +64,7 @@ var defaultAgentPreferences = &preferences{
 	MQTT: &MQTT{
 		MQTTEnabled:     false,
 		MQTTTopicPrefix: defaultMQTTTopicPrefix,
+		MQTTServer:      defaultMQTTServer,
 	},
 	Registration: &Registration{
 		Server: defaultServer,
@@ -71,7 +72,7 @@ var defaultAgentPreferences = &preferences{
 	},
 	Hass: &Hass{
 		RestAPIURL:   defaultServer,
-		WebsocketURL: defaultServer,
+		WebsocketURL: defaultWebsocketServer,
 		WebhookID:    defaultSecret,
 	},
 }

@@ -7,7 +7,7 @@ package preferences
 
 import (
 	"errors"
-	"fmt"
+	"log/slog"
 
 	mqtthass "github.com/joshuar/go-hass-anything/v12/pkg/hass"
 	"github.com/knadh/koanf/v2"
@@ -98,32 +98,6 @@ func SetMQTTPassword(password string) SetPreference {
 	}
 }
 
-// GetMQTTPreferences retrieves the current MQTT preferences from file.
-func GetMQTTPreferences() (*MQTT, error) {
-	var mqttPrefs MQTT
-	// Unmarshal config, overwriting defaults.
-	if err := prefsSrc.UnmarshalWithConf(mqttPrefPrefix, &mqttPrefs, koanf.UnmarshalConf{Tag: "toml"}); err != nil {
-		return nil, fmt.Errorf("%w: %w", ErrLoadPreferences, err)
-	}
-
-	return &mqttPrefs, nil
-}
-
-// GetMQTTDevice will return a device that is needed for MQTT functionality.
-func GetMQTTDevice() *mqtthass.Device {
-	// Retrieve the hardware model and manufacturer.
-	model, manufacturer, _ := device.GetHWProductInfo() //nolint:errcheck // error doesn't matter
-
-	return &mqtthass.Device{
-		Name:         DeviceName(),
-		URL:          AppURL,
-		SWVersion:    AppVersion(),
-		Manufacturer: manufacturer,
-		Model:        model,
-		Identifiers:  []string{AppID(), DeviceName(), DeviceID()},
-	}
-}
-
 // MQTTEnabled will return whether Go Hass Agent will use MQTT.
 func MQTTEnabled() bool {
 	return prefsSrc.Bool(prefMQTTEnabled)
@@ -157,5 +131,33 @@ func MQTTOrigin() *mqtthass.Origin {
 		Name:    AppName,
 		Version: AppVersion(),
 		URL:     AppURL,
+	}
+}
+
+// getMQTTPreferences retrieves the current MQTT preferences from file.
+func getMQTTPreferences() *MQTT {
+	var mqttPrefs MQTT
+	// Unmarshal config, overwriting defaults.
+	if err := prefsSrc.UnmarshalWithConf(mqttPrefPrefix, &mqttPrefs, koanf.UnmarshalConf{Tag: "toml"}); err != nil {
+		slog.Warn("Could not retrieve MQTT preferences, using defaults.",
+			slog.Any("error", err))
+		return defaultAgentPreferences.MQTT
+	}
+
+	return &mqttPrefs
+}
+
+// getMQTTDevice will return a device that is needed for MQTT functionality.
+func getMQTTDevice() *mqtthass.Device {
+	// Retrieve the hardware model and manufacturer.
+	model, manufacturer, _ := device.GetHWProductInfo() //nolint:errcheck // error doesn't matter
+
+	return &mqtthass.Device{
+		Name:         prefsSrc.String(prefDeviceName),
+		URL:          AppURL,
+		SWVersion:    AppVersion(),
+		Manufacturer: manufacturer,
+		Model:        model,
+		Identifiers:  []string{AppID(), prefsSrc.String(prefDeviceName), prefsSrc.String(prefDeviceID)},
 	}
 }

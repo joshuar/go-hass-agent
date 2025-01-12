@@ -22,7 +22,7 @@ import (
 // graphical (user-prompted) or non-graphical (automatic) process.
 func checkRegistration(ctx context.Context, agentUI ui) error {
 	// Retrieve request options passed on command-line from context.
-	request := RegistrationFromCtx(ctx)
+	request := preferences.RegistrationFromCtx(ctx)
 	if request == nil {
 		request = &preferences.Registration{}
 	}
@@ -33,7 +33,7 @@ func checkRegistration(ctx context.Context, agentUI ui) error {
 	}
 
 	// If not headless, present a UI for the user to configure options.
-	if !HeadlessFromCtx(ctx) {
+	if !preferences.HeadlessFromCtx(ctx) {
 		userInputDoneCh := agentUI.DisplayRegistrationWindow(ctx, request)
 		if canceled := <-userInputDoneCh; canceled {
 			return errors.New("user canceled registration")

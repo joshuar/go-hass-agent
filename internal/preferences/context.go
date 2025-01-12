@@ -1,15 +1,12 @@
 // Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
 // SPDX-License-Identifier: MIT
 
-package agent
+package preferences
 
 import (
 	"context"
 
 	mqtthass "github.com/joshuar/go-hass-anything/v12/pkg/hass"
-	mqttapi "github.com/joshuar/go-hass-anything/v12/pkg/mqtt"
-
-	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
 type contextKey string
@@ -23,15 +20,15 @@ const (
 
 // RegistrationToCtx stores the registration details passed on the
 // command-line to the context.
-func RegistrationToCtx(ctx context.Context, registration preferences.Registration) context.Context {
+func RegistrationToCtx(ctx context.Context, registration Registration) context.Context {
 	newCtx := context.WithValue(ctx, registrationCtxKey, registration)
 	return newCtx
 }
 
 // RegistrationFromCtx retrieves the registration details passed on the
 // command-line from the context.
-func RegistrationFromCtx(ctx context.Context) *preferences.Registration {
-	registration, ok := ctx.Value(registrationCtxKey).(preferences.Registration)
+func RegistrationFromCtx(ctx context.Context) *Registration {
+	registration, ok := ctx.Value(registrationCtxKey).(Registration)
 	if !ok {
 		return nil
 	}
@@ -57,8 +54,8 @@ func HeadlessFromCtx(ctx context.Context) bool {
 }
 
 // MQTTDeviceToCtx stores the MQTT device in the context.
-func MQTTDeviceToCtx(ctx context.Context, device *mqtthass.Device) context.Context {
-	newCtx := context.WithValue(ctx, mqttDeviceCtxKey, device)
+func MQTTDeviceToCtx(ctx context.Context) context.Context {
+	newCtx := context.WithValue(ctx, mqttDeviceCtxKey, getMQTTDevice())
 	return newCtx
 }
 
@@ -73,14 +70,14 @@ func MQTTDeviceFromFromCtx(ctx context.Context) *mqtthass.Device {
 }
 
 // MQTTPrefsToCtx stores the MQTT preferences in the context.
-func MQTTPrefsToCtx(ctx context.Context, prefs mqttapi.Preferences) context.Context {
-	newCtx := context.WithValue(ctx, mqttPrefsCtxKey, prefs)
+func MQTTPrefsToCtx(ctx context.Context) context.Context {
+	newCtx := context.WithValue(ctx, mqttPrefsCtxKey, getMQTTPreferences())
 	return newCtx
 }
 
 // MQTTPrefsFromCtx retrieves the MQTT preferences from the context.
-func MQTTPrefsFromFromCtx(ctx context.Context) mqttapi.Preferences {
-	prefs, ok := ctx.Value(mqttPrefsCtxKey).(mqttapi.Preferences)
+func MQTTPrefsFromFromCtx(ctx context.Context) *MQTT {
+	prefs, ok := ctx.Value(mqttPrefsCtxKey).(*MQTT)
 	if !ok {
 		return nil
 	}
