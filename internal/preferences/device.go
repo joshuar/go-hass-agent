@@ -64,16 +64,6 @@ func SetDeviceName(name string) SetPreference {
 	}
 }
 
-// DeviceID retrieves the device ID from the preferences.
-func DeviceID() string {
-	return prefsSrc.String(prefDeviceID)
-}
-
-// DeviceName retrieves the device name from the preferences.
-func DeviceName() string {
-	return prefsSrc.String(prefDeviceName)
-}
-
 // NewDevice creates a new device. This is used during registration with Home
 // Assistant to identify the host running Go Hass Agent. While most of the
 // information generated is only needed during registration, the device ID and

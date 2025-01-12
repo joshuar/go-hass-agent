@@ -42,8 +42,8 @@ func (r *RegisterCmd) Run(opts *CmdOpts) error {
 
 	// Load up the context for the agent.
 	ctx = logging.ToContext(ctx, opts.Logger)
-	ctx = agent.HeadlessToCtx(ctx, opts.Headless)
-	ctx = agent.RegistrationToCtx(ctx, preferences.Registration{
+	ctx = preferences.HeadlessToCtx(ctx, opts.Headless)
+	ctx = preferences.RegistrationToCtx(ctx, preferences.Registration{
 		Server:         r.Server,
 		Token:          r.Token,
 		IgnoreHassURLs: r.IgnoreURLs,

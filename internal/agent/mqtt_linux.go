@@ -15,6 +15,7 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/linux/power"
 	"github.com/joshuar/go-hass-agent/internal/linux/system"
 	"github.com/joshuar/go-hass-agent/internal/logging"
+	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
 // linuxMQTTWorker represents the Linux-specific OS MQTTWorker.
@@ -122,7 +123,7 @@ func setupOSMQTTWorker(ctx context.Context) MQTTWorker {
 	}
 
 	// Add the power controls (suspend, resume, poweroff, etc.).
-	powerEntities, err := power.NewPowerControl(ctx, MQTTDeviceFromFromCtx(ctx))
+	powerEntities, err := power.NewPowerControl(ctx, preferences.MQTTDeviceFromFromCtx(ctx))
 	if err != nil {
 		logging.FromContext(ctx).Warn("Could not create power controls.",
 			slog.Any("error", err))
@@ -130,7 +131,7 @@ func setupOSMQTTWorker(ctx context.Context) MQTTWorker {
 		mqttController.buttons = append(mqttController.buttons, powerEntities...)
 	}
 	// Add the screen lock controls.
-	screenControls, err := power.NewScreenLockControl(ctx, MQTTDeviceFromFromCtx(ctx))
+	screenControls, err := power.NewScreenLockControl(ctx, preferences.MQTTDeviceFromFromCtx(ctx))
 	if err != nil {
 		logging.FromContext(ctx).Warn("Could not create screen lock controls.",
 			slog.Any("error", err))
@@ -138,13 +139,13 @@ func setupOSMQTTWorker(ctx context.Context) MQTTWorker {
 		mqttController.buttons = append(mqttController.buttons, screenControls...)
 	}
 	// Add the volume controls.
-	volEntity, muteEntity := media.VolumeControl(ctx, mqttController.Msgs(), MQTTDeviceFromFromCtx(ctx))
+	volEntity, muteEntity := media.VolumeControl(ctx, mqttController.Msgs(), preferences.MQTTDeviceFromFromCtx(ctx))
 	if volEntity != nil && muteEntity != nil {
 		mqttController.numbers = append(mqttController.numbers, volEntity)
 		mqttController.switches = append(mqttController.switches, muteEntity)
 	}
 	// Add media control.
-	mprisEntity, err := media.MPRISControl(ctx, MQTTDeviceFromFromCtx(ctx), mqttController.Msgs())
+	mprisEntity, err := media.MPRISControl(ctx, preferences.MQTTDeviceFromFromCtx(ctx), mqttController.Msgs())
 	if err != nil {
 		logging.FromContext(ctx).Warn("Could not activate MPRIS controller.",
 			slog.Any("error", err))
@@ -152,7 +153,7 @@ func setupOSMQTTWorker(ctx context.Context) MQTTWorker {
 		mqttController.sensors = append(mqttController.sensors, mprisEntity)
 	}
 	// Add camera control.
-	cameraEntities, err := media.NewCameraControl(ctx, mqttController.Msgs(), MQTTDeviceFromFromCtx(ctx))
+	cameraEntities, err := media.NewCameraControl(ctx, mqttController.Msgs(), preferences.MQTTDeviceFromFromCtx(ctx))
 	if err != nil {
 		logging.FromContext(ctx).Warn("Could not activate Camera controller.",
 			slog.Any("error", err))
@@ -165,7 +166,7 @@ func setupOSMQTTWorker(ctx context.Context) MQTTWorker {
 	}
 
 	// Add the D-Bus command action.
-	dbusCmdController, err := system.NewDBusCommandSubscription(ctx, MQTTDeviceFromFromCtx(ctx))
+	dbusCmdController, err := system.NewDBusCommandSubscription(ctx, preferences.MQTTDeviceFromFromCtx(ctx))
 	if err != nil {
 		logging.FromContext(ctx).Warn("Could not activate D-Bus commands controller.",
 			slog.Any("error", err))

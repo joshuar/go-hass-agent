@@ -38,7 +38,7 @@ func (r *RunCmd) Run(opts *CmdOpts) error {
 
 	// Load up the context for the agent.
 	ctx = logging.ToContext(ctx, opts.Logger)
-	ctx = agent.HeadlessToCtx(ctx, opts.Headless)
+	ctx = preferences.HeadlessToCtx(ctx, opts.Headless)
 
 	// Create a new hass data handler.
 	dataCh, err := hass.NewDataHandler(ctx)

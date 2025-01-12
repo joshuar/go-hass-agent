@@ -40,7 +40,7 @@ func (r *ResetCmd) Run(opts *CmdOpts) error {
 	}
 
 	ctx = logging.ToContext(ctx, opts.Logger)
-	ctx = agent.HeadlessToCtx(ctx, opts.Headless)
+	ctx = preferences.HeadlessToCtx(ctx, opts.Headless)
 
 	// Reset agent.
 	if err := agent.Reset(ctx); err != nil {

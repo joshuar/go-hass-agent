@@ -107,7 +107,7 @@ func (i *FyneUI) DisplayTrayIcon(ctx context.Context, cancelFunc context.CancelF
 		// Preferences/Settings items.
 		menuItemAppPrefs := fyne.NewMenuItem("App Settings",
 			func() {
-				i.agentSettingsWindow().Show()
+				i.agentSettingsWindow(ctx).Show()
 			})
 		menuItemFynePrefs := fyne.NewMenuItem("Fyne Settings",
 			func() {
@@ -233,7 +233,7 @@ func (i *FyneUI) fyneSettingsWindow() fyne.Window {
 
 // agentSettingsWindow creates a window for changing settings related to the
 // agent functionality. Most of these settings will be optional.
-func (i *FyneUI) agentSettingsWindow() fyne.Window {
+func (i *FyneUI) agentSettingsWindow(ctx context.Context) fyne.Window {
 	var allFormItems []*widget.FormItem
 
 	if err := preferences.Load(); err != nil {
@@ -242,12 +242,7 @@ func (i *FyneUI) agentSettingsWindow() fyne.Window {
 		return nil
 	}
 
-	mqttPrefs, err := preferences.GetMQTTPreferences()
-	if err != nil {
-		i.logger.Error("Could not load MQTT preferences.",
-			slog.Any("error", err))
-		return nil
-	}
+	mqttPrefs := preferences.MQTTPrefsFromFromCtx(ctx)
 
 	// Generate a form of MQTT preferences.
 	allFormItems = append(allFormItems, mqttConfigItems(mqttPrefs)...)
