@@ -35,34 +35,67 @@ type MQTT struct {
 
 var ErrSetMQTTPreference = errors.New("could not set MQTT preference")
 
-// SetMQTTPreferences will set Go Hass Agent's MQTT preferences to the given
-// values.
-func SetMQTTPreferences(prefs *MQTT) error {
-	if err := prefsSrc.Set(prefMQTTServer, prefs.MQTTServer); err != nil {
-		return fmt.Errorf("%w: %w", ErrSetMQTTPreference, err)
-	}
+// SetMQTTEnabled will set the MQTT whether MQTT functionality is enabled.
+func SetMQTTEnabled(value bool) SetPreference {
+	return func() error {
+		if err := prefsSrc.Set(prefMQTTEnabled, value); err != nil {
+			return errors.Join(ErrSetMQTTPreference, err)
+		}
 
-	if err := prefsSrc.Set(prefMQTTUser, prefs.MQTTUser); err != nil {
-		return fmt.Errorf("%w: %w", ErrSetMQTTPreference, err)
+		return nil
 	}
+}
 
-	if err := prefsSrc.Set(prefMQTTPass, prefs.MQTTPassword); err != nil {
-		return fmt.Errorf("%w: %w", ErrSetMQTTPreference, err)
+// SetMQTTServer will set the MQTT server preference.
+func SetMQTTServer(server string) SetPreference {
+	return func() error {
+		if server == "" {
+			server = defaultMQTTServer
+		}
+
+		if err := prefsSrc.Set(prefMQTTServer, server); err != nil {
+			return errors.Join(ErrSetMQTTPreference, err)
+		}
+
+		return nil
 	}
+}
 
-	if prefs.MQTTTopicPrefix == "" {
-		prefs.MQTTTopicPrefix = MQTTTopicPrefix
+// SetMQTTTopicPrefix will set the MQTT server preference.
+func SetMQTTTopicPrefix(prefix string) SetPreference {
+	return func() error {
+		if prefix == "" {
+			prefix = defaultMQTTTopicPrefix
+		}
+
+		if err := prefsSrc.Set(prefMQTTTopicPrefix, prefix); err != nil {
+			return errors.Join(ErrSetMQTTPreference, err)
+		}
+
+		return nil
 	}
+}
 
-	if err := prefsSrc.Set(prefMQTTTopicPrefix, prefs.MQTTTopicPrefix); err != nil {
-		return fmt.Errorf("%w: %w", ErrSetMQTTPreference, err)
+// SetMQTTUser will set the MQTT user preference.
+func SetMQTTUser(user string) SetPreference {
+	return func() error {
+		if err := prefsSrc.Set(prefMQTTUser, user); err != nil {
+			return errors.Join(ErrSetMQTTPreference, err)
+		}
+
+		return nil
 	}
+}
 
-	if err := prefsSrc.Set(prefMQTTEnabled, prefs.MQTTEnabled); err != nil {
-		return fmt.Errorf("%w: %w", ErrSetMQTTPreference, err)
+// SetMQTTPassword will set the MQTT password.
+func SetMQTTPassword(password string) SetPreference {
+	return func() error {
+		if err := prefsSrc.Set(prefMQTTPass, password); err != nil {
+			return errors.Join(ErrSetMQTTPreference, err)
+		}
+
+		return nil
 	}
-
-	return nil
 }
 
 // GetMQTTPreferences retrieves the current MQTT preferences from file.
@@ -76,6 +109,7 @@ func GetMQTTPreferences() (*MQTT, error) {
 	return &mqttPrefs, nil
 }
 
+// GetMQTTDevice will return a device that is needed for MQTT functionality.
 func GetMQTTDevice() *mqtthass.Device {
 	// Retrieve the hardware model and manufacturer.
 	model, manufacturer, _ := device.GetHWProductInfo() //nolint:errcheck // error doesn't matter
@@ -124,14 +158,4 @@ func MQTTOrigin() *mqtthass.Origin {
 		Version: AppVersion(),
 		URL:     AppURL,
 	}
-}
-
-// IsMQTTEnabled is a conveinience function to determine whether MQTT
-// functionality has been enabled in the agent.
-func (p *preferences) IsMQTTEnabled() bool {
-	if p.MQTT != nil {
-		return p.MQTT.MQTTEnabled
-	}
-
-	return false
 }

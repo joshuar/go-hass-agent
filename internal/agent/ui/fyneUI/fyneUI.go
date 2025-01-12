@@ -256,9 +256,12 @@ func (i *FyneUI) agentSettingsWindow() fyne.Window {
 	settingsForm := widget.NewForm(allFormItems...)
 	settingsForm.OnSubmit = func() {
 		// Set the new MQTT preferences.
-		if err := preferences.SetMQTTPreferences(mqttPrefs); err != nil {
-			i.logger.Error("Could note save preferences.", slog.Any("error", err))
-		}
+		preferences.SetPreferences(
+			preferences.SetMQTTEnabled(mqttPrefs.MQTTEnabled),
+			preferences.SetMQTTServer(mqttPrefs.MQTTServer),
+			preferences.SetMQTTUser(mqttPrefs.MQTTUser),
+			preferences.SetMQTTPassword(mqttPrefs.MQTTPassword),
+		)
 		// Save the new MQTT preferences to file.
 		if err := preferences.Save(); err != nil {
 			dialog.ShowError(err, window)

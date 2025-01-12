@@ -20,7 +20,8 @@ const (
 	unknownModel         = "Unknown Model"
 	unknownDistro        = "Unknown Distro"
 	unknownDistroVersion = "Unknown Version"
-	UnknownValue         = "unknown"
+	unknownValue         = "unknown"
+	defaultHostname      = "localhost"
 )
 
 var ErrUnsupportedHardware = errors.New("unsupported hardware")
@@ -30,7 +31,7 @@ var ErrUnsupportedHardware = errors.New("unsupported hardware")
 func Chassis() (string, error) {
 	chassisInfo, err := ghw.Chassis(ghw.WithDisableWarnings())
 	if err != nil || chassisInfo == nil {
-		return "", fmt.Errorf("could not determine chassis type: %w", err)
+		return unknownValue, fmt.Errorf("could not determine chassis type: %w", err)
 	}
 
 	return chassisInfo.TypeDescription, nil
@@ -38,21 +39,15 @@ func Chassis() (string, error) {
 
 // GetHostname retrieves the hostname of the device running the agent, or
 // localhost if that doesn't work.
-//
-//revive:disable:flag-parameter
-func GetHostname(short bool) (string, error) {
+func GetHostname() (string, error) {
 	hostname, err := os.Hostname()
 	if err != nil {
-		return "localhost", fmt.Errorf("could not retrieve hostname: %w", err)
+		return defaultHostname, fmt.Errorf("could not retrieve hostname: %w", err)
 	}
 
-	if short {
-		shortHostname, _, _ := strings.Cut(hostname, ".")
+	shortHostname, _, _ := strings.Cut(hostname, ".")
 
-		return shortHostname, nil
-	}
-
-	return hostname, nil
+	return shortHostname, nil
 }
 
 // GetHWProductInfo retrieves the model and vendor of the machine. If these

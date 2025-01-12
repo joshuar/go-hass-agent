@@ -76,7 +76,7 @@ func GetKernelVersion() (string, error) {
 
 	err := syscall.Uname(&utsname)
 	if err != nil {
-		return UnknownValue, fmt.Errorf("could not retrieve kernel version: %w", err)
+		return unknownValue, fmt.Errorf("could not retrieve kernel version: %w", err)
 	}
 
 	for _, v := range utsname.Release {

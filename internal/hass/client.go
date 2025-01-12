@@ -32,12 +32,12 @@ var (
 	ErrGenRequestFailed  = errors.New("unable to generate request for sensor")
 	ErrSendRequestFailed = errors.New("could not send sensor request to Home Assistant")
 
-	ErrStateUpdateUnknown = errors.New("unknown sensor update response")
-	ErrStateUpdateFailed  = errors.New("state update failed")
-	ErrRegDisableFailed   = errors.New("failed to disable sensor in registry")
-	ErrRegAddFailed       = errors.New("failed to set registered status for sensor in registry")
-	ErrTrkUpdateFailed    = errors.New("failed to update sensor state in tracker")
-	ErrRegistrationFailed = errors.New("sensor registration failed")
+	ErrStateUpdateUnknown       = errors.New("unknown sensor update response")
+	ErrStateUpdateFailed        = errors.New("state update failed")
+	ErrRegDisableFailed         = errors.New("failed to disable sensor in registry")
+	ErrRegAddFailed             = errors.New("failed to set registered status for sensor in registry")
+	ErrTrkUpdateFailed          = errors.New("failed to update sensor state in tracker")
+	ErrSensorRegistrationFailed = errors.New("sensor registration failed")
 
 	ErrInvalidURL        = errors.New("invalid URL")
 	ErrInvalidClient     = errors.New("invalid client")
@@ -150,7 +150,7 @@ func (c *handler) processSensor(ctx context.Context, details sensor.Entity) erro
 	}
 
 	// Sensor registration.
-	resp, err := api.Send[registrationResponse](ctx, preferences.RestAPIURL(),
+	resp, err := api.Send[sensorRegistrationResponse](ctx, preferences.RestAPIURL(),
 		sensor.NewRequest(
 			sensor.AsSensorRegistration(details),
 			sensor.AsRetryable(details.RetryRequest),
