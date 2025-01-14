@@ -61,7 +61,7 @@ type handler struct {
 func NewDataHandler(ctx context.Context) (chan any, error) {
 	var err error
 
-	sensorRegistry, err = registry.Load()
+	sensorRegistry, err = registry.Load(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not start registry: %w", err)
 	}

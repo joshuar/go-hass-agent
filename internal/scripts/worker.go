@@ -159,7 +159,7 @@ func (c *Worker) Stop() error {
 
 // NewScriptController creates a new sensor worker for scripts.
 func NewScriptsWorker(ctx context.Context) (*Worker, error) {
-	scriptPath := filepath.Join(preferences.Path(), "scripts")
+	scriptPath := filepath.Join(preferences.PathFromCtx(ctx), "scripts")
 
 	worker := &Worker{
 		scheduler: cron.New(),

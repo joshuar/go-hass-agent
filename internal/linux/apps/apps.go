@@ -193,7 +193,7 @@ func NewAppWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 		},
 	}
 
-	prefs, err := preferences.LoadWorker(appsWorker)
+	prefs, err := preferences.LoadWorker(ctx, appsWorker)
 	if err != nil {
 		return worker, fmt.Errorf("could not load preferences: %w", err)
 	}

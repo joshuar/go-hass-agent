@@ -33,7 +33,7 @@ func checkRegistration(ctx context.Context, agentUI ui) error {
 	}
 
 	// If not headless, present a UI for the user to configure options.
-	if !preferences.HeadlessFromCtx(ctx) {
+	if !preferences.Headless() {
 		userInputDoneCh := agentUI.DisplayRegistrationWindow(ctx, request)
 		if canceled := <-userInputDoneCh; canceled {
 			return errors.New("user canceled registration")
@@ -48,7 +48,7 @@ func checkRegistration(ctx context.Context, agentUI ui) error {
 
 	// If the registration was forced, reset the sensor registry.
 	if request.ForceRegister {
-		if err := registry.Reset(); err != nil {
+		if err := registry.Reset(ctx); err != nil {
 			logging.FromContext(ctx).Warn("Problem resetting registry.",
 				slog.Any("error", err))
 		}

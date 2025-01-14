@@ -253,7 +253,7 @@ func NewAddressWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 		donech: make(chan struct{}),
 	}
 
-	addressWorker.prefs, err = preferences.LoadWorker(addressWorker)
+	addressWorker.prefs, err = preferences.LoadWorker(ctx, addressWorker)
 	if err != nil {
 		return worker, fmt.Errorf("could not load preferences: %w", err)
 	}

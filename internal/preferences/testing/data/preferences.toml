@@ -15,6 +15,7 @@ version = "Unknown"
 
 [mqtt]
   enabled = false
+  server = "tcp://localhost:1883"
   topic_prefix = "homeassistant"
 
 [registration]

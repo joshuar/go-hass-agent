@@ -4,6 +4,7 @@
 package upgrade
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -52,7 +53,8 @@ type oldPreferences struct {
 //nolint:cyclop
 //revive:disable:function-length
 func Run() error {
-	newRegistryPath := filepath.Join(preferences.Path(), "sensorRegistry")
+	ctx := preferences.PathToCtx(context.Background(), filepath.Join(xdg.ConfigHome, preferences.DefaultAppID))
+	newRegistryPath := filepath.Join(preferences.PathFromCtx(ctx), "sensorRegistry")
 
 	// If there is no old preferences directory, exit.
 	if _, err := os.Stat(oldPrefsPath); errors.Is(err, fs.ErrNotExist) {
@@ -70,7 +72,7 @@ func Run() error {
 		return fmt.Errorf("cannot read old preferences: %w", err)
 	}
 
-	if err = preferences.Load(); err != nil && !errors.Is(err, preferences.ErrLoadPreferences) {
+	if err = preferences.Load(ctx); err != nil && !errors.Is(err, preferences.ErrLoadPreferences) {
 		return fmt.Errorf("cannot initialize new preferences: %w", err)
 	}
 
@@ -97,7 +99,7 @@ func Run() error {
 		preferences.SetRegistered(true),
 	)
 	// Save the preferences to disk.
-	err = preferences.Save()
+	err = preferences.Save(ctx)
 	if err != nil {
 		return fmt.Errorf("%w: %w", preferences.ErrSavePreferences, err)
 	}

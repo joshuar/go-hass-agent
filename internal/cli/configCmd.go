@@ -4,8 +4,12 @@
 package cli
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
@@ -19,8 +23,13 @@ type ConfigCmd struct {
 
 type MQTTConfig preferences.MQTT
 
-func (r *ConfigCmd) Run(_ *CmdOpts) error {
-	if err := preferences.Load(); err != nil {
+func (r *ConfigCmd) Run(opts *CmdOpts) error {
+	ctx, cancelFunc := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer cancelFunc()
+
+	ctx = preferences.PathToCtx(ctx, opts.Path)
+
+	if err := preferences.Load(ctx); err != nil {
 		return fmt.Errorf("config: load preferences: %w", err)
 	}
 
@@ -54,7 +63,7 @@ func (r *ConfigCmd) Run(_ *CmdOpts) error {
 		)
 	}
 
-	if err := preferences.Save(); err != nil {
+	if err := preferences.Save(ctx); err != nil {
 		return fmt.Errorf("config: save preferences: %w", err)
 	}
 

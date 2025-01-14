@@ -72,7 +72,7 @@ func NewDevice() *Device {
 	dev := &Device{
 		AppName:    AppName,
 		AppVersion: AppVersion(),
-		AppID:      AppID(),
+		AppID:      appID,
 	}
 
 	// Retrieve the name as the device name.

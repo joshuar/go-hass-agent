@@ -10,16 +10,12 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/adrg/xdg"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
 func TestNew(t *testing.T) {
 	type args struct {
-		id      string
 		options Options
 	}
 	tests := []struct {
@@ -29,16 +25,16 @@ func TestNew(t *testing.T) {
 	}{
 		{
 			name: "with log file",
-			args: args{id: "go-hass-agent-test"},
+			args: args{options: Options{Path: t.TempDir()}},
 		},
 		{
 			name: "with log file and custom level",
-			args: args{id: "go-hass-agent-test", options: Options{LogLevel: "debug", NoLogFile: true}},
+			args: args{options: Options{LogLevel: "debug", NoLogFile: true, Path: t.TempDir()}},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := New(tt.args.id, tt.args.options)
+			got := New(tt.args.options)
 			switch tt.args.options.LogLevel {
 			case "debug":
 				got.Debug("Test Message")
@@ -50,7 +46,7 @@ func TestNew(t *testing.T) {
 			if tt.args.options.NoLogFile {
 				return
 			}
-			data, err := os.ReadFile(filepath.Join(xdg.ConfigHome, tt.args.id, "agent.log"))
+			data, err := os.ReadFile(filepath.Join(tt.args.options.Path, "agent.log"))
 			require.NoError(t, err)
 			assert.Contains(t, string(data), string("Test Message"))
 			assert.Contains(t, string(data), string("Via default"))
@@ -94,16 +90,12 @@ func Test_openLogFile(t *testing.T) {
 }
 
 func TestReset(t *testing.T) {
-	xdg.ConfigHome = t.TempDir()
-	appID := "go-hass-agent-test"
-	deleteableFile := filepath.Join(xdg.ConfigHome, appID, logFileName)
+	deleteableFile := filepath.Join(t.TempDir(), logFileName)
 	fh, err := openLogFile(deleteableFile)
 	require.NoError(t, err)
 	require.NoError(t, fh.Close())
 	err = os.WriteFile(deleteableFile, []byte(`test`), 0o600)
 	require.NoError(t, err)
-
-	preferences.SetAppID(appID)
 
 	type args struct {
 		file string
@@ -123,7 +115,7 @@ func TestReset(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := Reset(); (err != nil) != tt.wantErr {
+			if err := Reset(filepath.Dir(tt.args.file)); (err != nil) != tt.wantErr {
 				t.Errorf("Reset() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			if tt.args.file != "" {

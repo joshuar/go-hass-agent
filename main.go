@@ -6,8 +6,10 @@ package main
 import (
 	"log/slog"
 	"os"
+	"path/filepath"
 	"syscall"
 
+	"github.com/adrg/xdg"
 	"github.com/alecthomas/kong"
 
 	"github.com/joshuar/go-hass-agent/internal/cli"
@@ -17,6 +19,8 @@ import (
 
 // CLI contains all of the commands and common options for running Go Hass
 // Agent.
+//
+//nolint:lll
 var CLI struct {
 	Run          cli.RunCmd           `cmd:"" help:"Run Go Hass Agent."`
 	Reset        cli.ResetCmd         `cmd:"" help:"Reset Go Hass Agent."`
@@ -24,9 +28,10 @@ var CLI struct {
 	Upgrade      cli.UpgradeCmd       `cmd:"" help:"Attempt to upgrade from previous version."`
 	ProfileFlags logging.ProfileFlags `name:"profile" help:"Set profiling flags."`
 	Headless     *cli.HeadlessFlag    `name:"terminal" help:"Run without a GUI." default:"false"`
-	AppID        string               `name:"appid" default:"${defaultAppID}" help:"Specify a custom app id (for debugging)."`
 	Config       cli.ConfigCmd        `cmd:"" help:"Configure Go Hass Agent."`
 	Register     cli.RegisterCmd      `cmd:"" help:"Register with Home Assistant."`
+	Path         string               `name:"path" default:"${defaultPath}" help:"Specify a custom path to store preferences/logs/data (for debugging)."`
+
 	logging.Options
 }
 
@@ -50,9 +55,9 @@ func main() {
 	kong.Name(preferences.AppName)
 	kong.Description(preferences.AppDescription)
 	// Parse the command-line.
-	ctx := kong.Parse(&CLI, kong.Bind(), kong.Vars{"defaultAppID": preferences.AppID()})
+	ctx := kong.Parse(&CLI, kong.Bind(), kong.Vars{"defaultPath": filepath.Join(xdg.ConfigHome, preferences.DefaultAppID)})
 	// Set up the logger.
-	logger := logging.New(CLI.AppID, logging.Options{LogLevel: CLI.LogLevel, NoLogFile: CLI.NoLogFile})
+	logger := logging.New(logging.Options{LogLevel: CLI.LogLevel, NoLogFile: CLI.NoLogFile, Path: CLI.Path})
 	// Enable profiling if requested.
 	if CLI.ProfileFlags != nil {
 		if err := logging.StartProfiling(CLI.ProfileFlags); err != nil {
@@ -63,8 +68,8 @@ func main() {
 	// Run the requested command with the provided options.
 	if err := ctx.Run(cli.AddOptions(
 		cli.RunHeadless(bool(*CLI.Headless)),
-		cli.WithAppID(CLI.AppID),
 		cli.WithLogger(logger),
+		cli.WithPath(CLI.Path),
 	)); err != nil {
 		logger.Error("Command failed.",
 			slog.String("command", ctx.Command()),

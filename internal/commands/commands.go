@@ -188,7 +188,7 @@ func (d *Worker) Msgs() chan *mqttapi.Msg {
 // controller, which holds the MQTT configuration for the commands defined by
 // the user.
 func NewCommandsWorker(ctx context.Context, device *mqtthass.Device) (*Worker, error) {
-	commandsFile := filepath.Join(preferences.Path(), commandsFile)
+	commandsFile := filepath.Join(preferences.PathFromCtx(ctx), commandsFile)
 
 	if _, err := os.Stat(commandsFile); errors.Is(err, os.ErrNotExist) {
 		return nil, ErrNoCommands

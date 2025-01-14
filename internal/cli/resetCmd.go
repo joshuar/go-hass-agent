@@ -34,28 +34,31 @@ func (r *ResetCmd) Run(opts *CmdOpts) error {
 	ctx, cancelFunc := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancelFunc()
 
+	ctx = preferences.PathToCtx(ctx, opts.Path)
+
 	// Load the preferences so we know what we need to reset.
-	if err := preferences.Load(); err != nil && !errors.Is(err, preferences.ErrLoadPreferences) {
+	if err := preferences.Load(ctx,
+		preferences.SetHeadless(opts.Headless),
+	); err != nil && !errors.Is(err, preferences.ErrLoadPreferences) {
 		return errors.Join(ErrResetCommandFailed, err)
 	}
 
 	ctx = logging.ToContext(ctx, opts.Logger)
-	ctx = preferences.HeadlessToCtx(ctx, opts.Headless)
 
 	// Reset agent.
 	if err := agent.Reset(ctx); err != nil {
 		errs = errors.Join(fmt.Errorf("agent reset failed: %w", err))
 	}
 	// Reset registry.
-	if err := registry.Reset(); err != nil {
+	if err := registry.Reset(ctx); err != nil {
 		errs = errors.Join(fmt.Errorf("registry reset failed: %w", err))
 	}
 	// Reset preferences.
-	if err := preferences.Reset(); err != nil {
+	if err := preferences.Reset(ctx); err != nil {
 		errs = errors.Join(fmt.Errorf("preferences reset failed: %w", err))
 	}
 	// Reset the log.
-	if err := logging.Reset(); err != nil {
+	if err := logging.Reset(preferences.PathFromCtx(ctx)); err != nil {
 		errs = errors.Join(fmt.Errorf("logging reset failed: %w", err))
 	}
 

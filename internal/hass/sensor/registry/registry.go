@@ -6,6 +6,7 @@
 package registry
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -33,8 +34,8 @@ type metadata struct {
 }
 
 // Reset will handle resetting the registry.
-func Reset() error {
-	path := filepath.Join(preferences.Path(), "sensorRegistry")
+func Reset(ctx context.Context) error {
+	path := filepath.Join(preferences.PathFromCtx(ctx), "sensorRegistry")
 
 	_, err := os.Stat(path)
 	if os.IsNotExist(err) {

@@ -4,6 +4,7 @@
 package preferences
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -11,7 +12,6 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/adrg/xdg"
 	"github.com/knadh/koanf/parsers/toml"
 	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/providers/structs"
@@ -21,40 +21,54 @@ import (
 )
 
 const (
-	prefsEnvPrefix      = "GOHASSAGENT_"
-	AppName             = "Go Hass Agent"
-	AppURL              = "https://github.com/joshuar/go-hass-agent"
-	FeatureRequestURL   = AppURL + "/issues/new?assignees=joshuar&labels=&template=feature_request.md&title="
-	IssueURL            = AppURL + "/issues/new?assignees=joshuar&labels=&template=bug_report.md&title=%5BBUG%5D"
-	AppDescription      = "A Home Assistant, native app for desktop/laptop devices."
-	LogFile             = "go-hass-agent.log"
-	defaultFilePerms    = 0o600
-	preferencesFilename = "preferences.toml"
+	AppName        = "Go Hass Agent"
+	AppURL         = "https://github.com/joshuar/go-hass-agent"
+	AppDescription = "A Home Assistant, native app for desktop/laptop devices."
 
-	prefRegistered = "registered"
+	FeatureRequestURL = AppURL + "/issues/new?assignees=joshuar&labels=&template=feature_request.md&title="
+	IssueURL          = AppURL + "/issues/new?assignees=joshuar&labels=&template=bug_report.md&title=%5BBUG%5D"
+
+	preferencesFile  = "preferences.toml"
+	defaultFilePerms = 0o600
+	LogFile          = "go-hass-agent.log"
 )
 
+// Preference names.
+const (
+	prefsEnvPrefix = "GOHASSAGENT_"
+	PrefsEnvAppID  = prefsEnvPrefix + "APPID"
+
+	prefAppID      = "app_id"
+	prefRegistered = "registered"
+	prefHeadless   = "headless"
+)
+
+// Default values.
 const (
 	defaultServer          = "http://localhost:8123"
 	defaultWebsocketServer = "ws://localhost:8123"
 	defaultSecret          = "ALongSecretString"
 	defaultMQTTTopicPrefix = "homeassistant"
 	defaultMQTTServer      = "tcp://localhost:1883"
+	DefaultAppID           = "go-hass-agent"
 )
 
 var (
+	prefsSrc = koanf.New(".")
+	mu       = sync.Mutex{}
 	//lint:ignore U1000 some of these will be used in the future
 	gitVersion, gitCommit, gitTreeState, buildDate string
 	appVersion                                     = gitVersion
-	appID                                          = "go-hass-agent"
+	appID                                          = DefaultAppID
 )
 
 // Consistent error messages.
 var (
-	ErrLoadPreferences     = errors.New("error loading preferences")
-	ErrSavePreferences     = errors.New("error saving preferences")
-	ErrValidatePreferences = errors.New("error validating preferences")
-	ErrSetPreference       = errors.New("error setting preference")
+	ErrLoadPreferences      = errors.New("error loading preferences")
+	ErrSavePreferences      = errors.New("error saving preferences")
+	ErrValidatePreferences  = errors.New("error validating preferences")
+	ErrSetPreference        = errors.New("error setting preference")
+	ErrPreferencesNotLoaded = errors.New("preferences not loaded")
 )
 
 // Default agent preferences.
@@ -77,11 +91,7 @@ var defaultAgentPreferences = &preferences{
 	},
 }
 
-var (
-	prefsSrc        = koanf.New(".")
-	preferencesFile = filepath.Join(xdg.ConfigHome, appID, preferencesFilename)
-	mu              = sync.Mutex{}
-)
+type API struct{}
 
 // SetPreference will set a preference in the preferences
 // store. If it fails, it will return a non-nil error.
@@ -108,16 +118,23 @@ type preferences struct {
 	Registered   bool          `toml:"registered" validate:"boolean"`
 }
 
-// Load will retrieve the current preferences from the preference file on disk.
-// If there is a problem during retrieval, an error will be returned.
-var Load = func() error {
+// Load will retrieve the current preferences from the preference file on disk,
+// overwriting values with any passed-in preferences. If there is a problem
+// during retrieval, an error will be returned.
+var Load = func(ctx context.Context, preferences ...SetPreference) error {
 	return sync.OnceValue(func() error {
-		preferencesFile = filepath.Join(Path(), preferencesFilename)
+		prefsFile := filepath.Join(PathFromCtx(ctx), preferencesFile)
 
-		slog.Debug("Loading preferences.", slog.String("file", preferencesFile))
+		// api := &API{}
+		if runtimeAppID, found := os.LookupEnv(PrefsEnvAppID); found {
+			appID = runtimeAppID
+		}
+
+		slog.Debug("Loading preferences.",
+			slog.String("file", prefsFile))
 
 		// Load config file
-		if err := prefsSrc.Load(file.Provider(preferencesFile), toml.Parser()); err != nil {
+		if err := prefsSrc.Load(file.Provider(prefsFile), toml.Parser()); err != nil {
 			slog.Warn("No preferences found, using defaults.", slog.Any("error", err))
 			if err := prefsSrc.Load(structs.Provider(defaultAgentPreferences, "toml"), nil); err != nil {
 				return fmt.Errorf("%w: %w", ErrLoadPreferences, err)
@@ -128,23 +145,30 @@ var Load = func() error {
 			return fmt.Errorf("%w: %w", ErrLoadPreferences, err)
 		}
 
+		// Set any preferences passed in.
+		SetPreferences(preferences...)
+
 		// Validate preferences.
-		return validate()
+		if err := validate(); err != nil {
+			return fmt.Errorf("%w: %w", ErrLoadPreferences, err)
+		}
+
+		return nil
 	})()
 }
 
 // Reset will remove the preferences file.
-func Reset() error {
-	preferencesFile = filepath.Join(Path(), preferencesFilename)
+func Reset(ctx context.Context) error {
+	prefsFile := filepath.Join(PathFromCtx(ctx), preferencesFile)
 
-	slog.Debug("Removing preferences.", slog.String("file", preferencesFile))
+	slog.Debug("Removing preferences.", slog.String("file", prefsFile))
 
-	_, err := os.Stat(preferencesFile)
+	_, err := os.Stat(prefsFile)
 	if os.IsNotExist(err) {
 		return fmt.Errorf("%w: %w", ErrLoadPreferences, err)
 	}
 
-	err = os.Remove(preferencesFile)
+	err = os.Remove(prefsFile)
 	if err != nil {
 		return fmt.Errorf("unable to reset preferences: %w", err)
 	}
@@ -184,19 +208,23 @@ func validate() error {
 // Save will save the new values of the specified preferences to the existing
 // preferences file. NOTE: if the preferences file does not exist, Save will
 // return an error. Use New if saving preferences for the first time.
-func Save() error {
+func Save(ctx context.Context) error {
 	mu.Lock()
 	defer mu.Unlock()
 
-	preferencesFile = filepath.Join(Path(), preferencesFilename)
+	if prefsSrc == nil {
+		return ErrLoadPreferences
+	}
 
-	slog.Debug("Saving preferences.", slog.String("file", preferencesFile))
+	prefsFile := filepath.Join(PathFromCtx(ctx), preferencesFile)
+
+	slog.Debug("Saving preferences.", slog.String("file", prefsFile))
 
 	if err := validate(); err != nil {
 		return err
 	}
 
-	if err := checkPath(filepath.Dir(preferencesFile)); err != nil {
+	if err := checkPath(PathFromCtx(ctx)); err != nil {
 		return err
 	}
 
@@ -205,7 +233,7 @@ func Save() error {
 		return fmt.Errorf("%w: %w", ErrSavePreferences, err)
 	}
 
-	err = os.WriteFile(preferencesFile, b, defaultFilePerms)
+	err = os.WriteFile(prefsFile, b, defaultFilePerms)
 	if err != nil {
 		return fmt.Errorf("%w: %w", ErrSavePreferences, err)
 	}
@@ -230,14 +258,22 @@ func Registered() bool {
 	return prefsSrc.Bool(prefRegistered)
 }
 
-// SetAppID sets an ID that is used as part of the path to the preferences file.
-func SetAppID(id string) {
-	appID = id
+// SetHeadless sets an whether the agent should run headless (i.e., without a
+// GUI).
+func SetHeadless(value bool) SetPreference {
+	return func() error {
+		if err := prefsSrc.Set(prefHeadless, value); err != nil {
+			return fmt.Errorf("%w: %w", ErrSetPreference, err)
+		}
+
+		return nil
+	}
 }
 
-// AppID retrieves the ID.
-func AppID() string {
-	return appID
+// Headless retrieves whether the agent is running headless (i.e., without a
+// GUI).
+func Headless() bool {
+	return prefsSrc.Bool(prefHeadless)
 }
 
 // AppVersion returns the version of Go Hass Agent.
@@ -247,11 +283,6 @@ func AppVersion() string {
 	}
 
 	return "Unknown"
-}
-
-// Path returns a path where preferences are stored.
-func Path() string {
-	return filepath.Join(xdg.ConfigHome, appID)
 }
 
 // checkPath checks that the given directory exists. If it doesn't it will be

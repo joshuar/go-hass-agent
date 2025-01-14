@@ -44,7 +44,7 @@ func newAgent(ctx context.Context) *Agent {
 	}
 
 	// If not running headless, set up the UI.
-	if !preferences.HeadlessFromCtx(ctx) {
+	if !preferences.Headless() {
 		agent.ui = fyneui.NewFyneUI(ctx)
 	}
 
@@ -149,7 +149,7 @@ func Run(ctx context.Context, dataCh chan any) error {
 	}()
 
 	// Do not run the UI loop if the agent is running in headless mode.
-	if !preferences.HeadlessFromCtx(ctx) {
+	if !preferences.Headless() {
 		agent.ui.DisplayTrayIcon(ctx, cancelFunc)
 		agent.ui.Run(ctx)
 	}
@@ -185,7 +185,7 @@ func Register(ctx context.Context) error {
 		cancelReg()
 	}()
 
-	if !preferences.HeadlessFromCtx(regCtx) {
+	if !preferences.Headless() {
 		agent.ui.Run(regCtx)
 	}
 

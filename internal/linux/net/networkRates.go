@@ -315,7 +315,7 @@ func NewNetStatsWorker(ctx context.Context) (*linux.PollingSensorWorker, error) 
 	}
 	ratesWorker.statsSensors[totalsName] = generateSensors(totalsName, nil)
 
-	ratesWorker.prefs, err = preferences.LoadWorker(ratesWorker)
+	ratesWorker.prefs, err = preferences.LoadWorker(ctx, ratesWorker)
 	if err != nil {
 		return worker, fmt.Errorf("could not load preferences: %w", err)
 	}

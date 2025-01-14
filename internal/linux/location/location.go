@@ -160,7 +160,7 @@ func NewLocationWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 	return worker, nil
 }
 
-func createClient(ctx context.Context, bus *dbusx.Bus) (string, error) {
+func createClient(_ context.Context, bus *dbusx.Bus) (string, error) {
 	// Check if we can create a client, bail if we can't.
 	clientPath, err := dbusx.GetData[string](bus, managerPath, geoclueInterface, getClientCall)
 	if clientPath == "" || err != nil {
@@ -168,7 +168,7 @@ func createClient(ctx context.Context, bus *dbusx.Bus) (string, error) {
 	}
 
 	// Set an ID for our client.
-	if err = dbusx.NewProperty[string](bus, clientPath, geoclueInterface, desktopIDProp).Set(preferences.AppID()); err != nil {
+	if err = dbusx.NewProperty[string](bus, clientPath, geoclueInterface, desktopIDProp).Set(preferences.DefaultAppID); err != nil {
 		return "", fmt.Errorf("could not set geoclue client id: %w", err)
 	}
 

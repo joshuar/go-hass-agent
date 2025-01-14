@@ -188,7 +188,7 @@ func (i *FyneUI) DisplayRegistrationWindow(ctx context.Context, prefs *preferenc
 func (i *FyneUI) aboutWindow(ctx context.Context) fyne.Window {
 	var widgets []fyne.CanvasObject
 
-	if err := preferences.Load(); err != nil {
+	if err := preferences.Load(ctx); err != nil {
 		logging.FromContext(ctx).Error("Could not start sensor controller.", slog.Any("error", err))
 		return nil
 	}
@@ -236,7 +236,7 @@ func (i *FyneUI) fyneSettingsWindow() fyne.Window {
 func (i *FyneUI) agentSettingsWindow(ctx context.Context) fyne.Window {
 	var allFormItems []*widget.FormItem
 
-	if err := preferences.Load(); err != nil {
+	if err := preferences.Load(ctx); err != nil {
 		i.logger.Error("Could not start sensor controller.",
 			slog.Any("error", err))
 		return nil
@@ -258,7 +258,7 @@ func (i *FyneUI) agentSettingsWindow(ctx context.Context) fyne.Window {
 			preferences.SetMQTTPassword(mqttPrefs.MQTTPassword),
 		)
 		// Save the new MQTT preferences to file.
-		if err := preferences.Save(); err != nil {
+		if err := preferences.Save(ctx); err != nil {
 			dialog.ShowError(err, window)
 			i.logger.Error("Could note save preferences.", slog.Any("error", err))
 		} else {
