@@ -24,7 +24,7 @@ require (
 	github.com/yassinebenaid/godump v0.11.1
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56
 	golang.org/x/text v0.21.0
-	golang.org/x/tools v0.28.0
+	golang.org/x/tools v0.29.0
 	gopkg.in/yaml.v3 v3.0.1
 
 )
@@ -150,9 +150,9 @@ require (
 	github.com/tklauser/go-sysconf v0.3.14
 	github.com/tklauser/numcpus v0.8.0 // indirect
 	github.com/yuin/goldmark v1.7.1 // indirect
-	golang.org/x/crypto v0.31.0 // indirect
+	golang.org/x/crypto v0.32.0 // indirect
 	golang.org/x/image v0.18.0 // indirect
 	golang.org/x/mobile v0.0.0-20231127183840-76ac6878050a // indirect
-	golang.org/x/net v0.33.0 // indirect
+	golang.org/x/net v0.34.0 // indirect
 	golang.org/x/sys v0.29.0
 )
