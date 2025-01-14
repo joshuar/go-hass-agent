@@ -34,15 +34,18 @@ func (r *RegisterCmd) Run(opts *CmdOpts) error {
 	ctx, cancelFunc := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancelFunc()
 
+	ctx = preferences.PathToCtx(ctx, opts.Path)
+
 	// Load the preferences from file. Ignore the case where there are no
 	// existing preferences.
-	if err := preferences.Load(); err != nil && !errors.Is(err, preferences.ErrLoadPreferences) {
+	if err := preferences.Load(ctx,
+		preferences.SetHeadless(opts.Headless),
+	); err != nil && !errors.Is(err, preferences.ErrLoadPreferences) {
 		return errors.Join(ErrRegisterCmdFailed, err)
 	}
 
 	// Load up the context for the agent.
 	ctx = logging.ToContext(ctx, opts.Logger)
-	ctx = preferences.HeadlessToCtx(ctx, opts.Headless)
 	ctx = preferences.RegistrationToCtx(ctx, preferences.Registration{
 		Server:         r.Server,
 		Token:          r.Token,

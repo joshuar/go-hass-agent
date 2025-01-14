@@ -6,11 +6,11 @@
 package preferences
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
 
-	"github.com/adrg/xdg"
 	"github.com/stretchr/testify/require"
 )
 
@@ -47,9 +47,6 @@ func Test_checkPath(t *testing.T) {
 }
 
 func TestLoad(t *testing.T) {
-	xdg.ConfigHome = "testing/data"
-	appID = "go-hass-agent-test"
-
 	type args struct {
 		path string
 	}
@@ -73,9 +70,8 @@ func TestLoad(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			xdg.ConfigHome = tt.args.path
-
-			err := Load()
+			ctx := PathToCtx(context.TODO(), tt.args.path)
+			err := Load(ctx)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Load() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -85,11 +81,10 @@ func TestLoad(t *testing.T) {
 }
 
 func TestReset(t *testing.T) {
-	appID = "go-hass-agent-test"
 	existingFilePath := t.TempDir()
-	require.NoError(t, checkPath(filepath.Join(existingFilePath, appID)))
+	require.NoError(t, checkPath(existingFilePath))
 	require.NoError(t,
-		os.WriteFile(filepath.Join(existingFilePath, appID, "preferences.toml"),
+		os.WriteFile(filepath.Join(existingFilePath, "preferences.toml"),
 			[]byte(`existing`),
 			0o600))
 	nonExistingFilePath := t.TempDir()
@@ -113,10 +108,9 @@ func TestReset(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		xdg.ConfigHome = tt.args.path
-
 		t.Run(tt.name, func(t *testing.T) {
-			if err := Reset(); (err != nil) != tt.wantErr {
+			ctx := PathToCtx(context.TODO(), tt.args.path)
+			if err := Reset(ctx); (err != nil) != tt.wantErr {
 				t.Errorf("Reset() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -124,11 +118,9 @@ func TestReset(t *testing.T) {
 }
 
 func TestSave(t *testing.T) {
-	xdg.ConfigHome = "testing/data"
-	appID = "go-hass-agent-test"
-
 	type args struct {
-		path string
+		path    string
+		preload bool
 	}
 	tests := []struct {
 		name    string
@@ -137,7 +129,7 @@ func TestSave(t *testing.T) {
 	}{
 		{
 			name: "new file",
-			args: args{path: t.TempDir()},
+			args: args{path: t.TempDir(), preload: true},
 		},
 		{
 			name:    "invalid path",
@@ -146,14 +138,17 @@ func TestSave(t *testing.T) {
 		},
 		{
 			name: "existing file",
-			args: args{path: "testing/data"},
+			args: args{path: "testing/data", preload: true},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			xdg.ConfigHome = tt.args.path
-
-			if err := Save(); (err != nil) != tt.wantErr {
+			ctx := PathToCtx(context.TODO(), tt.args.path)
+			if tt.args.preload {
+				require.NoError(t, checkPath(tt.args.path))
+				require.NoError(t, Load(ctx))
+			}
+			if err := Save(ctx); (err != nil) != tt.wantErr {
 				t.Errorf("Save() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

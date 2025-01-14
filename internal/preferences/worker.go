@@ -5,6 +5,7 @@
 package preferences
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -39,7 +40,7 @@ var (
 )
 
 // LoadWorker reads the given worker's preferences from file.
-func LoadWorker[T any](worker Worker[T]) (*T, error) {
+func LoadWorker[T any](ctx context.Context, worker Worker[T]) (*T, error) {
 	prefsKey := workerPrefsPrefix + "." + worker.PreferencesID()
 	// Load default worker prefs.
 	prefs := worker.DefaultPreferences()
@@ -49,7 +50,7 @@ func LoadWorker[T any](worker Worker[T]) (*T, error) {
 			slog.String("worker", worker.PreferencesID()))
 
 		// Save the default preferences to the preferences source.
-		if err := SaveWorker(worker, prefs); err != nil {
+		if err := SaveWorker(ctx, worker, prefs); err != nil {
 			return &prefs, fmt.Errorf("%w: %w", ErrLoadWorkerPrefs, err)
 		}
 
@@ -78,7 +79,7 @@ func LoadWorker[T any](worker Worker[T]) (*T, error) {
 }
 
 // SaveWorker saves the given worker's preferences to file.
-func SaveWorker[T any](worker Worker[T], prefs T) error {
+func SaveWorker[T any](ctx context.Context, worker Worker[T], prefs T) error {
 	// We can't define the structure for every possible worker beforehand, so
 	// use map[string]any as the structure for saving.
 	prefsMaps := make(map[string]any)
@@ -101,5 +102,5 @@ func SaveWorker[T any](worker Worker[T], prefs T) error {
 	}
 
 	// Save the preferences.
-	return Save()
+	return Save(ctx)
 }

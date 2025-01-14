@@ -5,7 +5,9 @@ package preferences
 
 import (
 	"context"
+	"path/filepath"
 
+	"github.com/adrg/xdg"
 	mqtthass "github.com/joshuar/go-hass-anything/v12/pkg/hass"
 )
 
@@ -16,6 +18,7 @@ const (
 	headlessCtxKey     contextKey = "headless"
 	mqttDeviceCtxKey   contextKey = "mqttDevice"
 	mqttPrefsCtxKey    contextKey = "mqttPrefs"
+	pathCtxKey         contextKey = "path"
 )
 
 // RegistrationToCtx stores the registration details passed on the
@@ -34,23 +37,6 @@ func RegistrationFromCtx(ctx context.Context) *Registration {
 	}
 
 	return &registration
-}
-
-// HeadlessToCtx stores the value of the headless command-line option in the context.
-func HeadlessToCtx(ctx context.Context, headless bool) context.Context {
-	newCtx := context.WithValue(ctx, headlessCtxKey, headless)
-	return newCtx
-}
-
-// HeadlessFromCtx retrieves the value of the headless command-line option from
-// the context.
-func HeadlessFromCtx(ctx context.Context) bool {
-	headless, ok := ctx.Value(headlessCtxKey).(bool)
-	if !ok {
-		return false
-	}
-
-	return headless
 }
 
 // MQTTDeviceToCtx stores the MQTT device in the context.
@@ -83,4 +69,17 @@ func MQTTPrefsFromFromCtx(ctx context.Context) *MQTT {
 	}
 
 	return prefs
+}
+
+func PathToCtx(ctx context.Context, path string) context.Context {
+	return context.WithValue(ctx, pathCtxKey, path)
+}
+
+func PathFromCtx(ctx context.Context) string {
+	path, ok := ctx.Value(pathCtxKey).(string)
+	if !ok {
+		return filepath.Join(xdg.ConfigHome, DefaultAppID)
+	}
+
+	return path
 }

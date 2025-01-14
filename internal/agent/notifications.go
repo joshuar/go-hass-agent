@@ -19,7 +19,7 @@ import (
 // received notifications will be dipslayed on the device running the agent.
 func runNotificationsWorker(ctx context.Context, agentUI ui) {
 	// Don't run if agent is running headless.
-	if preferences.HeadlessFromCtx(ctx) {
+	if preferences.Headless() {
 		return
 	}
 

@@ -8,8 +8,6 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-
-	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
 const (
@@ -24,6 +22,7 @@ var content embed.FS
 type CmdOpts struct {
 	Logger   *slog.Logger
 	Headless bool
+	Path     string
 }
 
 // Option represents a command-line option.
@@ -47,19 +46,18 @@ func RunHeadless(opt bool) Option {
 	}
 }
 
-// WithAppID sets the given ID as the application ID. Useful during development
-// and debugging to change the path to the agent preferences.
-func WithAppID(id string) Option {
-	return func(ctx *CmdOpts) *CmdOpts {
-		preferences.SetAppID(id)
-		return ctx
-	}
-}
-
 // WithLogger sets the logger that will be inherited by the command.
 func WithLogger(logger *slog.Logger) Option {
 	return func(ctx *CmdOpts) *CmdOpts {
 		ctx.Logger = logger
+		return ctx
+	}
+}
+
+// WithPath sets a custom path for Go Hass Agent preferences, logs and data.
+func WithPath(path string) Option {
+	return func(ctx *CmdOpts) *CmdOpts {
+		ctx.Path = path
 		return ctx
 	}
 }

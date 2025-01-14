@@ -6,6 +6,7 @@
 package registry
 
 import (
+	"context"
 	"encoding/gob"
 	"errors"
 	"fmt"
@@ -123,8 +124,8 @@ func (g *gobRegistry) SetRegistered(id string, value bool) error {
 }
 
 //revive:disable:unexported-return
-func Load() (*gobRegistry, error) {
-	path := filepath.Join(preferences.Path(), "sensorRegistry", registryFile)
+func Load(ctx context.Context) (*gobRegistry, error) {
+	path := filepath.Join(preferences.PathFromCtx(ctx), "sensorRegistry", registryFile)
 
 	reg := &gobRegistry{
 		sensors: make(map[string]metadata),

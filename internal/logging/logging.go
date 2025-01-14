@@ -13,9 +13,6 @@ import (
 
 	slogmulti "github.com/samber/slog-multi"
 
-	"github.com/joshuar/go-hass-agent/internal/preferences"
-
-	"github.com/adrg/xdg"
 	"github.com/lmittmann/tint"
 	"github.com/mattn/go-isatty"
 )
@@ -35,10 +32,11 @@ var LevelNames = map[slog.Leveler]string{
 type Options struct {
 	LogLevel  string `name:"log-level" enum:"info,debug,trace" default:"info" help:"Set logging level."`
 	NoLogFile bool   `name:"no-log-file" help:"Don't write to a log file." default:"false"`
+	Path      string `kong:"-"`
 }
 
 //revive:disable:flag-parameter
-func New(appID string, options Options) *slog.Logger {
+func New(options Options) *slog.Logger {
 	var (
 		logLevel slog.Level
 		logFile  string
@@ -59,7 +57,7 @@ func New(appID string, options Options) *slog.Logger {
 	if options.NoLogFile {
 		logFile = ""
 	} else {
-		logFile = filepath.Join(xdg.ConfigHome, appID, logFileName)
+		logFile = filepath.Join(options.Path, logFileName)
 	}
 
 	handlers = append(handlers, tint.NewHandler(os.Stderr,
@@ -175,8 +173,8 @@ func openLogFile(logFile string) (*os.File, error) {
 }
 
 // Reset will remove the log file.
-func Reset() error {
-	logFile := filepath.Join(preferences.Path(), logFileName)
+func Reset(path string) error {
+	logFile := filepath.Join(path, logFileName)
 
 	// If the log file doesn't exist, just exit.
 	_, err := os.Stat(logFile)

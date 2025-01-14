@@ -91,7 +91,7 @@ func RegisterDevice(ctx context.Context, registration *preferences.Registration)
 		preferences.SetRegistered(true),
 	)
 	// Save preferences to disk.
-	if err := preferences.Save(); err != nil {
+	if err := preferences.Save(ctx); err != nil {
 		return errors.Join(ErrDeviceRegistrationFailed, err)
 	}
 

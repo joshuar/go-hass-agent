@@ -158,6 +158,6 @@ func getMQTTDevice() *mqtthass.Device {
 		SWVersion:    AppVersion(),
 		Manufacturer: manufacturer,
 		Model:        model,
-		Identifiers:  []string{AppID(), prefsSrc.String(prefDeviceName), prefsSrc.String(prefDeviceID)},
+		Identifiers:  []string{appID, prefsSrc.String(prefDeviceName), prefsSrc.String(prefDeviceID)},
 	}
 }

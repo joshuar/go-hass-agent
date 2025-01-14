@@ -138,7 +138,7 @@ func NewFreqWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
 
 	worker := &freqWorker{}
 
-	prefs, err := preferences.LoadWorker(worker)
+	prefs, err := preferences.LoadWorker(ctx, worker)
 	if err != nil {
 		return pollWorker, fmt.Errorf("could not load preferences: %w", err)
 	}
@@ -155,7 +155,7 @@ func NewFreqWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
 			slog.String("default_value", cpuFreqUpdateInterval.String()))
 		// Save preferences with default interval value.
 		prefs.UpdateInterval = cpuFreqUpdateInterval.String()
-		if err := preferences.SaveWorker(worker, *prefs); err != nil {
+		if err := preferences.SaveWorker(ctx, worker, *prefs); err != nil {
 			logging.FromContext(ctx).Warn("Could not save preferences.", slog.Any("error", err))
 		}
 

@@ -193,7 +193,7 @@ func NewConnectionWorker(ctx context.Context) (*linux.EventSensorWorker, error) 
 			With(slog.String("worker", netConnWorkerID)),
 	}
 
-	connectionsWorker.prefs, err = preferences.LoadWorker(connectionsWorker)
+	connectionsWorker.prefs, err = preferences.LoadWorker(ctx, connectionsWorker)
 	if err != nil {
 		return worker, fmt.Errorf("could not load preferences: %w", err)
 	}
