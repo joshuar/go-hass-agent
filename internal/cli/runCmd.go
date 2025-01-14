@@ -11,8 +11,6 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/davecgh/go-spew/spew"
-
 	"github.com/joshuar/go-hass-agent/internal/agent"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/logging"
@@ -33,8 +31,6 @@ func (r *RunCmd) Run(opts *CmdOpts) error {
 	defer cancelFunc()
 
 	ctx = preferences.PathToCtx(ctx, opts.Path)
-
-	spew.Dump(opts.Path)
 
 	// Load the preferences from file. Ignore the case where there are no
 	// existing preferences.

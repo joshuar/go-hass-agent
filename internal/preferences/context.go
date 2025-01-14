@@ -71,10 +71,13 @@ func MQTTPrefsFromFromCtx(ctx context.Context) *MQTT {
 	return prefs
 }
 
+// PathToCtx stores the base path for preferences (and other files) in the
+// context.
 func PathToCtx(ctx context.Context, path string) context.Context {
 	return context.WithValue(ctx, pathCtxKey, path)
 }
 
+// PathFromCtx retrieves the base path for preferences from the context.
 func PathFromCtx(ctx context.Context) string {
 	path, ok := ctx.Value(pathCtxKey).(string)
 	if !ok {
