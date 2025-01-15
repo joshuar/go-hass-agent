@@ -9,9 +9,9 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/joshuar/go-hass-agent/internal/components/logging"
+	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/hass/api"
-	"github.com/joshuar/go-hass-agent/internal/logging"
-	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
 // runNotificationsWorker will run a goroutine that is listening for

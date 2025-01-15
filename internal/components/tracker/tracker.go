@@ -1,12 +1,14 @@
 // Copyright 2024 Joshua Rich <joshua.rich@gmail.com>.
 // SPDX-License-Identifier: MIT
 
-package sensor
+package tracker
 
 import (
 	"errors"
 	"sort"
 	"sync"
+
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 )
 
 var (
@@ -15,12 +17,12 @@ var (
 )
 
 type Tracker struct {
-	sensor map[string]*Entity
+	sensor map[string]*sensor.Entity
 	mu     sync.Mutex
 }
 
 // Get fetches a sensors current tracked state.
-func (t *Tracker) Get(id string) (*Entity, error) {
+func (t *Tracker) Get(id string) (*sensor.Entity, error) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
@@ -51,7 +53,7 @@ func (t *Tracker) SensorList() []string {
 }
 
 // Add creates a new sensor in the tracker based on a received state update.
-func (t *Tracker) Add(sensor *Entity) error {
+func (t *Tracker) Add(sensor *sensor.Entity) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
@@ -72,7 +74,7 @@ func (t *Tracker) Reset() {
 
 func NewTracker() *Tracker {
 	return &Tracker{
-		sensor: make(map[string]*Entity),
+		sensor: make(map[string]*sensor.Entity),
 		mu:     sync.Mutex{},
 	}
 }

@@ -15,7 +15,7 @@ import (
 	"github.com/adrg/xdg"
 	"github.com/pelletier/go-toml/v2"
 
-	"github.com/joshuar/go-hass-agent/internal/preferences"
+	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 )
 
 const (

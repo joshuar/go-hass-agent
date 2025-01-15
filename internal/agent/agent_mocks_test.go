@@ -6,7 +6,7 @@ package agent
 import (
 	"context"
 	fyneui "github.com/joshuar/go-hass-agent/internal/agent/ui/fyneUI"
-	"github.com/joshuar/go-hass-agent/internal/preferences"
+	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"sync"
 )
 

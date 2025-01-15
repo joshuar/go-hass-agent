@@ -6,7 +6,7 @@ package hass
 import (
 	"testing"
 
-	"github.com/joshuar/go-hass-agent/internal/preferences"
+	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 )
 
 func Test_generateAPIURL(t *testing.T) {

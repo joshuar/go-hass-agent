@@ -7,9 +7,9 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/hass/event"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
-	"github.com/joshuar/go-hass-agent/internal/logging"
 )
 
 // Worker is the base interface representing a worker that produces sensors or

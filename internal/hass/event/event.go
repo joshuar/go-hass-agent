@@ -7,7 +7,7 @@ package event
 import (
 	"fmt"
 
-	"github.com/joshuar/go-hass-agent/internal/validation"
+	"github.com/joshuar/go-hass-agent/internal/components/validation"
 )
 
 const (

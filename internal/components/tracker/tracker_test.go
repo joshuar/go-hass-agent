@@ -2,36 +2,38 @@
 // SPDX-License-Identifier: MIT
 
 //nolint:paralleltest
-package sensor
+package tracker
 
 import (
 	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 )
 
-var mockEntity = NewSensor(
-	WithName("Mock Entity"),
-	WithID("mock_entity"),
-	WithState(
-		WithValue("mockValue"),
+var mocksensorEntity = sensor.NewSensor(
+	sensor.WithName("Mock sensor.Entity"),
+	sensor.WithID("mock_sensor.Entity"),
+	sensor.WithState(
+		sensor.WithValue("mockValue"),
 	),
 )
 
 func TestTracker_Get(t *testing.T) {
-	mockSensorMap := map[string]*Entity{
-		mockEntity.ID: &mockEntity,
+	mockSensorMap := map[string]*sensor.Entity{
+		mocksensorEntity.ID: &mocksensorEntity,
 	}
 
 	type fields struct {
-		sensor map[string]*Entity
+		sensor map[string]*sensor.Entity
 	}
 	type args struct {
 		id string
 	}
 	tests := []struct {
-		want    *Entity
+		want    *sensor.Entity
 		fields  fields
 		name    string
 		args    args
@@ -40,9 +42,9 @@ func TestTracker_Get(t *testing.T) {
 		{
 			name:    "successful get",
 			fields:  fields{sensor: mockSensorMap},
-			args:    args{id: "mock_entity"},
+			args:    args{id: "mock_sensor.Entity"},
 			wantErr: false,
-			want:    &mockEntity,
+			want:    &mocksensorEntity,
 		},
 		{
 			name:    "unsuccessful get",
@@ -69,12 +71,12 @@ func TestTracker_Get(t *testing.T) {
 }
 
 func TestTracker_SensorList(t *testing.T) {
-	mockSensorMap := map[string]*Entity{
-		mockEntity.ID: &mockEntity,
+	mockSensorMap := map[string]*sensor.Entity{
+		mocksensorEntity.ID: &mocksensorEntity,
 	}
 
 	type fields struct {
-		sensor map[string]*Entity
+		sensor map[string]*sensor.Entity
 	}
 	tests := []struct {
 		name   string
@@ -84,7 +86,7 @@ func TestTracker_SensorList(t *testing.T) {
 		{
 			name:   "with sensors",
 			fields: fields{sensor: mockSensorMap},
-			want:   []string{"mock_entity"},
+			want:   []string{"mock_sensor.Entity"},
 		},
 		{
 			name: "without sensors",
@@ -104,31 +106,31 @@ func TestTracker_SensorList(t *testing.T) {
 }
 
 func TestTracker_Add(t *testing.T) {
-	newEntity := NewSensor(
-		WithName("New Entity"),
-		WithID("new_entity"),
-		WithState(
-			WithValue("new"),
+	newSensor := sensor.NewSensor(
+		sensor.WithName("New sensor.Entity"),
+		sensor.WithID("new_sensor.Entity"),
+		sensor.WithState(
+			sensor.WithValue("new"),
 		),
 	)
 
-	existingEntity := NewSensor(
-		WithName("Existing Entity"),
-		WithID("existing_entity"),
-		WithState(
-			WithValue("existing"),
+	existingSensor := sensor.NewSensor(
+		sensor.WithName("Existing sensor.Entity"),
+		sensor.WithID("existing_sensor.Entity"),
+		sensor.WithState(
+			sensor.WithValue("existing"),
 		),
 	)
 
-	mockSensorMap := map[string]*Entity{
-		existingEntity.ID: &existingEntity,
+	mockSensorMap := map[string]*sensor.Entity{
+		existingSensor.ID: &existingSensor,
 	}
 
 	type fields struct {
-		sensor map[string]*Entity
+		sensor map[string]*sensor.Entity
 	}
 	type args struct {
-		sensor *Entity
+		sensor *sensor.Entity
 	}
 	tests := []struct {
 		args    args
@@ -139,16 +141,16 @@ func TestTracker_Add(t *testing.T) {
 		{
 			name:   "new sensor",
 			fields: fields{sensor: mockSensorMap},
-			args:   args{sensor: &newEntity},
+			args:   args{sensor: &newSensor},
 		},
 		{
 			name:   "existing sensor",
 			fields: fields{sensor: mockSensorMap},
-			args:   args{sensor: &existingEntity},
+			args:   args{sensor: &existingSensor},
 		},
 		{
 			name:    "invalid tracker",
-			args:    args{sensor: &newEntity},
+			args:    args{sensor: &newSensor},
 			wantErr: true,
 		},
 	}
@@ -165,12 +167,12 @@ func TestTracker_Add(t *testing.T) {
 }
 
 func TestTracker_Reset(t *testing.T) {
-	mockSensorMap := map[string]*Entity{
-		mockEntity.ID: &mockEntity,
+	mockSensorMap := map[string]*sensor.Entity{
+		mocksensorEntity.ID: &mocksensorEntity,
 	}
 
 	type fields struct {
-		sensor map[string]*Entity
+		sensor map[string]*sensor.Entity
 	}
 	tests := []struct {
 		fields fields

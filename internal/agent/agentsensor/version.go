@@ -9,8 +9,8 @@ package agentsensor
 import (
 	"context"
 
+	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
-	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
 const (

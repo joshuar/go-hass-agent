@@ -10,12 +10,13 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/joshuar/go-hass-agent/internal/components/logging"
+	"github.com/joshuar/go-hass-agent/internal/components/preferences"
+	"github.com/joshuar/go-hass-agent/internal/components/registry"
+	"github.com/joshuar/go-hass-agent/internal/components/tracker"
 	"github.com/joshuar/go-hass-agent/internal/hass/api"
 	"github.com/joshuar/go-hass-agent/internal/hass/event"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor/registry"
-	"github.com/joshuar/go-hass-agent/internal/logging"
-	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
 const (
@@ -24,7 +25,7 @@ const (
 
 var (
 	sensorRegistry Registry
-	sensorTracker  = sensor.NewTracker()
+	sensorTracker  = tracker.NewTracker()
 )
 
 var (

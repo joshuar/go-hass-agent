@@ -12,8 +12,8 @@ import (
 	"syscall"
 
 	"github.com/joshuar/go-hass-agent/internal/agent"
-	"github.com/joshuar/go-hass-agent/internal/logging"
-	"github.com/joshuar/go-hass-agent/internal/preferences"
+	"github.com/joshuar/go-hass-agent/internal/components/logging"
+	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 )
 
 var ErrRegisterCmdFailed = errors.New("register command failed")

@@ -4,7 +4,7 @@
 package net
 
 import (
-	"github.com/joshuar/go-hass-agent/internal/preferences"
+	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 )
 
 const (
