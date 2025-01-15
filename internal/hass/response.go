@@ -52,7 +52,7 @@ func (u *sensorUpdateReponse) Status() (responseStatus, error) {
 
 type bulkSensorUpdateResponse map[string]sensorUpdateReponse
 
-func (u bulkSensorUpdateResponse) Process(ctx context.Context, details sensor.Entity) {
+func (u bulkSensorUpdateResponse) Process(ctx context.Context, registry sensorRegistry, tracker sensorTracker, details sensor.Entity) {
 	for id, sensorReponse := range u {
 		status, err := sensorReponse.Status()
 
@@ -65,7 +65,7 @@ func (u bulkSensorUpdateResponse) Process(ctx context.Context, details sensor.En
 			return
 		case Disabled:
 			// Already disabled in registry, nothing to do.
-			if sensorRegistry.IsDisabled(id) {
+			if registry.IsDisabled(id) {
 				return
 			}
 			// Disable in registry.
@@ -73,7 +73,7 @@ func (u bulkSensorUpdateResponse) Process(ctx context.Context, details sensor.En
 				Info("Sensor is disabled in Home Assistant. Setting disabled in local registry.",
 					slog.String("id", id))
 
-			if err := sensorRegistry.SetDisabled(id, true); err != nil {
+			if err := registry.SetDisabled(id, true); err != nil {
 				logging.FromContext(ctx).Warn("Unable to disable sensor in registry.",
 					slog.String("id", id),
 					slog.Any("error", err))
@@ -85,7 +85,7 @@ func (u bulkSensorUpdateResponse) Process(ctx context.Context, details sensor.En
 		}
 
 		// Add the sensor update to the tracker.
-		if err := sensorTracker.Add(&details); err != nil {
+		if err := tracker.Add(&details); err != nil {
 			logging.FromContext(ctx).Warn("Unable to update sensor state in tracker.",
 				slog.String("id", id),
 				slog.Any("error", err))
@@ -103,7 +103,7 @@ func (r *sensorRegistrationResponse) Status() (responseStatus, error) {
 	return Failed, r.ErrorDetails
 }
 
-func (r *sensorRegistrationResponse) Process(ctx context.Context, details sensor.Entity) {
+func (r *sensorRegistrationResponse) Process(ctx context.Context, registry sensorRegistry, tracker sensorTracker, details sensor.Entity) {
 	status, err := r.Status()
 
 	switch status {
@@ -115,14 +115,14 @@ func (r *sensorRegistrationResponse) Process(ctx context.Context, details sensor
 		return
 	case Registered:
 		// Set registration status in registry.
-		err = sensorRegistry.SetRegistered(details.ID, true)
+		err = registry.SetRegistered(details.ID, true)
 		if err != nil {
 			logging.FromContext(ctx).Warn("Unable to set sensor registration in registry.",
 				slog.String("id", details.ID),
 				slog.Any("error", err))
 		}
 		// Add the sensor update to the tracker.
-		if err := sensorTracker.Add(&details); err != nil {
+		if err := tracker.Add(&details); err != nil {
 			logging.FromContext(ctx).Warn("Unable to update sensor state in tracker.",
 				slog.String("id", details.ID),
 				slog.Any("error", err))
