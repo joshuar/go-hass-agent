@@ -12,7 +12,7 @@ import (
 
 	"github.com/pelletier/go-toml/v2"
 
-	"github.com/joshuar/go-hass-agent/internal/validation"
+	"github.com/joshuar/go-hass-agent/internal/components/validation"
 )
 
 const (

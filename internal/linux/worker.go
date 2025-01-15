@@ -10,10 +10,10 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/event"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
-	"github.com/joshuar/go-hass-agent/internal/logging"
 )
 
 var ErrUnknownWorker = errors.New("unknown sensor worker type")

@@ -57,7 +57,7 @@ func sudoWrap(cmd string, args ...string) error {
 // getFlags gets all the compile flags to set the version and stuff.
 func getFlags() (string, error) {
 	// pkgPath is where flags are derived from.
-	pkgPath := "github.com/joshuar/go-hass-agent/internal/preferences"
+	pkgPath := "github.com/joshuar/go-hass-agent/internal/components/preferences"
 
 	var version, hash, date string
 

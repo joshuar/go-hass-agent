@@ -16,7 +16,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/joshuar/go-hass-agent/internal/preferences"
+	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 )
 
 const (

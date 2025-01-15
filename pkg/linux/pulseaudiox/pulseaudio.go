@@ -15,7 +15,7 @@ import (
 
 	"github.com/jfreymuth/pulse/proto"
 
-	"github.com/joshuar/go-hass-agent/internal/preferences"
+	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 )
 
 const (

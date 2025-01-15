@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"net/url"
 
+	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/hass/api"
-	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
 const (

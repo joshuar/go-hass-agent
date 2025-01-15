@@ -17,7 +17,7 @@ import (
 	"github.com/knadh/koanf/providers/structs"
 	"github.com/knadh/koanf/v2"
 
-	"github.com/joshuar/go-hass-agent/internal/validation"
+	"github.com/joshuar/go-hass-agent/internal/components/validation"
 )
 
 const (

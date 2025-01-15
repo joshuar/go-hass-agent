@@ -12,9 +12,9 @@ import (
 	"syscall"
 
 	"github.com/joshuar/go-hass-agent/internal/agent"
+	"github.com/joshuar/go-hass-agent/internal/components/logging"
+	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/hass"
-	"github.com/joshuar/go-hass-agent/internal/logging"
-	"github.com/joshuar/go-hass-agent/internal/preferences"
 )
 
 var ErrRunCmdFailed = errors.New("run command failed")

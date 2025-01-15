@@ -13,8 +13,8 @@ import (
 	"github.com/alecthomas/kong"
 
 	"github.com/joshuar/go-hass-agent/internal/cli"
-	"github.com/joshuar/go-hass-agent/internal/logging"
-	"github.com/joshuar/go-hass-agent/internal/preferences"
+	"github.com/joshuar/go-hass-agent/internal/components/logging"
+	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 )
 
 // CLI contains all of the commands and common options for running Go Hass

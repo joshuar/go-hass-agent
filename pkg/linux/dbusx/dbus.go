@@ -16,7 +16,7 @@ import (
 
 	"github.com/godbus/dbus/v5"
 
-	"github.com/joshuar/go-hass-agent/internal/logging"
+	"github.com/joshuar/go-hass-agent/internal/components/logging"
 )
 
 const (

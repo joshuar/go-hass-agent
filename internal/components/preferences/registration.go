@@ -8,7 +8,7 @@ package preferences
 import (
 	"fmt"
 
-	"github.com/joshuar/go-hass-agent/internal/validation"
+	"github.com/joshuar/go-hass-agent/internal/components/validation"
 )
 
 // Registration are the preferences that defines how Go Hass Agent registers

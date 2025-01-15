@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"maps"
 
+	"github.com/joshuar/go-hass-agent/internal/components/validation"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
-	"github.com/joshuar/go-hass-agent/internal/validation"
 )
 
 const (

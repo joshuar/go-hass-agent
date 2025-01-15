@@ -12,7 +12,7 @@ import (
 
 	"github.com/grandcat/zeroconf"
 
-	"github.com/joshuar/go-hass-agent/internal/logging"
+	"github.com/joshuar/go-hass-agent/internal/components/logging"
 )
 
 const (

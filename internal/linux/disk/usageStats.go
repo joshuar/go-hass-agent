@@ -18,8 +18,8 @@ import (
 
 	"golang.org/x/sys/unix"
 
+	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/linux"
-	"github.com/joshuar/go-hass-agent/internal/logging"
 )
 
 const (
