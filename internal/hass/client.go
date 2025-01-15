@@ -10,10 +10,10 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
+
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
-	"github.com/joshuar/go-hass-agent/internal/components/registry"
-	"github.com/joshuar/go-hass-agent/internal/components/tracker"
 	"github.com/joshuar/go-hass-agent/internal/hass/api"
 	"github.com/joshuar/go-hass-agent/internal/hass/event"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
@@ -21,11 +21,6 @@ import (
 
 const (
 	DefaultTimeout = 30 * time.Second
-)
-
-var (
-	sensorRegistry Registry
-	sensorTracker  = tracker.NewTracker()
 )
 
 var (
@@ -48,33 +43,43 @@ var (
 	ErrInvalidSensor = errors.New("invalid sensor")
 )
 
-type Registry interface {
+// sensorRegistry represents the required methods for hass to manage sensor
+// registration state.
+type sensorRegistry interface {
 	SetDisabled(id string, state bool) error
 	SetRegistered(id string, state bool) error
 	IsDisabled(id string) bool
 	IsRegistered(id string) bool
 }
 
-type handler struct {
-	logger *slog.Logger
+// sensorTracker represents the required methods for hass to track sensors and
+// their current state.
+type sensorTracker interface {
+	SensorList() []string
+	Get(id string) (*sensor.Entity, error)
+	Add(details *sensor.Entity) error
 }
 
-func NewDataHandler(ctx context.Context) (chan any, error) {
-	var err error
+type handler struct {
+	logger   *slog.Logger
+	registry sensorRegistry
+	tracker  sensorTracker
+}
 
-	sensorRegistry, err = registry.Load(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("could not start registry: %w", err)
-	}
-
+func NewDataHandler(ctx context.Context, reg sensorRegistry, trk sensorTracker) (chan any, error) {
 	dataCh := make(chan any)
 
 	client := &handler{
-		logger: logging.FromContext(ctx).With(slog.String("subsystem", "hass")),
+		logger:   logging.FromContext(ctx).With(slog.String("subsystem", "hass")),
+		registry: reg,
+		tracker:  trk,
 	}
+
+	spew.Dump(ctx)
 
 	go func() {
 		for d := range dataCh {
+			var err error
 			switch data := d.(type) {
 			case sensor.Entity:
 				err = client.processSensor(ctx, data)
@@ -126,7 +131,7 @@ func (c *handler) processSensor(ctx context.Context, details sensor.Entity) erro
 	}
 
 	// Sensor update.
-	if sensorRegistry.IsRegistered(details.ID) {
+	if c.registry.IsRegistered(details.ID) {
 		// For sensor updates, if the sensor is disabled, don't continue.
 		if c.isDisabled(ctx, details) {
 			c.logger.
@@ -145,7 +150,7 @@ func (c *handler) processSensor(ctx context.Context, details sensor.Entity) erro
 			return fmt.Errorf("failed to send sensor update for %s: %w", details.Name, err)
 		}
 
-		go resp.Process(ctx, details)
+		go resp.Process(ctx, c.registry, c.tracker, details)
 
 		return nil
 	}
@@ -160,7 +165,7 @@ func (c *handler) processSensor(ctx context.Context, details sensor.Entity) erro
 		return fmt.Errorf("failed to send sensor registration: %w", err)
 	}
 
-	go resp.Process(ctx, details)
+	go resp.Process(ctx, c.registry, c.tracker, details)
 
 	return nil
 }
@@ -183,7 +188,7 @@ func (c *handler) isDisabled(ctx context.Context, details sensor.Entity) bool {
 		c.logger.Info("Sensor re-enabled in Home Assistant, Re-enabling in local registry and sending updates.",
 			sensorLogAttrs(details))
 
-		if err := sensorRegistry.SetDisabled(details.ID, false); err != nil {
+		if err := c.registry.SetDisabled(details.ID, false); err != nil {
 			c.logger.Error("Could not re-enable sensor.",
 				sensorLogAttrs(details),
 				slog.Any("error", err))
@@ -204,7 +209,7 @@ func (c *handler) isDisabled(ctx context.Context, details sensor.Entity) bool {
 //
 //revive:disable:unused-receiver
 func (c *handler) isDisabledInReg(id string) bool {
-	return sensorRegistry.IsDisabled(id)
+	return c.registry.IsDisabled(id)
 }
 
 // isDisabledInHA returns the disabled state of the sensor from Home Assistant.
@@ -230,19 +235,6 @@ func (c *handler) isDisabledInHA(ctx context.Context, details sensor.Entity) boo
 	}
 
 	return status
-}
-
-func GetSensor(id string) (*sensor.Entity, error) {
-	details, err := sensorTracker.Get(id)
-	if err != nil {
-		return nil, fmt.Errorf("could not get sensor details: %w", err)
-	}
-
-	return details, nil
-}
-
-func SensorList() []string {
-	return sensorTracker.SensorList()
 }
 
 // sensorLogAttrs is a convienience function that returns some slog attributes

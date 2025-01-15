@@ -38,14 +38,14 @@ type Agent struct {
 }
 
 // newAgent creates the Agent struct.
-func newAgent(ctx context.Context) *Agent {
+func newAgent(ctx context.Context, tracker fyneui.Tracker) *Agent {
 	agent := &Agent{
 		logger: logging.FromContext(ctx).WithGroup("agent"),
 	}
 
 	// If not running headless, set up the UI.
 	if !preferences.Headless() {
-		agent.ui = fyneui.NewFyneUI(ctx)
+		agent.ui = fyneui.NewFyneUI(ctx, tracker)
 	}
 
 	return agent
@@ -55,7 +55,7 @@ func newAgent(ctx context.Context) *Agent {
 // (i.e., `go-hass-agent run`).
 //
 //nolint:funlen
-func Run(ctx context.Context, dataCh chan any) error {
+func Run(ctx context.Context, dataCh chan any, tracker fyneui.Tracker) error {
 	var (
 		wg      sync.WaitGroup
 		regWait sync.WaitGroup
@@ -68,7 +68,7 @@ func Run(ctx context.Context, dataCh chan any) error {
 	ctx, cancelFunc := context.WithCancel(ctx)
 	defer cancelFunc()
 
-	agent := newAgent(ctx)
+	agent := newAgent(ctx, tracker)
 
 	regWait.Add(1)
 
@@ -165,7 +165,7 @@ func Run(ctx context.Context, dataCh chan any) error {
 func Register(ctx context.Context) error {
 	var wg sync.WaitGroup
 
-	agent := newAgent(ctx)
+	agent := newAgent(ctx, nil)
 
 	regCtx, cancelReg := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 	go func() {
@@ -197,7 +197,7 @@ func Register(ctx context.Context) error {
 // Reset is invoked when Go Hass Agent is run with the `reset` command-line
 // option (i.e., `go-hass-agent reset`).
 func Reset(ctx context.Context) error {
-	agent := newAgent(ctx)
+	agent := newAgent(ctx, nil)
 	// If MQTT is enabled, reset any saved MQTT config.
 	if preferences.MQTTEnabled() {
 		if err := resetMQTTWorkers(ctx); err != nil {

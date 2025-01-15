@@ -30,6 +30,7 @@ import (
 
 	agentvalidator "github.com/joshuar/go-hass-agent/internal/components/validation"
 	"github.com/joshuar/go-hass-agent/internal/hass/discovery"
+	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 
 	"github.com/joshuar/go-hass-agent/internal/agent/ui"
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
@@ -49,21 +50,32 @@ var (
 	ErrInvalidHostPort = errors.New(ui.InvalidHostPortMsgString)
 )
 
+// Notification represents the methods for displaying a notification.
 type Notification interface {
 	GetTitle() string
 	GetMessage() string
 }
 
+// Tracker represents the methods for the UI to show the current states of
+// sensors.
+type Tracker interface {
+	Get(id string) (*sensor.Entity, error)
+	SensorList() []string
+}
+
+// FyneUI contains the data and methods to manage the UI state.
 type FyneUI struct {
-	app    fyne.App
-	logger *slog.Logger
+	app     fyne.App
+	logger  *slog.Logger
+	tracker Tracker
 }
 
 // New FyneUI sets up the UI for the agent.
-func NewFyneUI(ctx context.Context) *FyneUI {
+func NewFyneUI(ctx context.Context, tracker Tracker) *FyneUI {
 	appUI := &FyneUI{
-		app:    app.NewWithID(preferences.AppName),
-		logger: logging.FromContext(ctx).With(slog.String("subsystem", "fyne")),
+		app:     app.NewWithID(preferences.AppName),
+		logger:  logging.FromContext(ctx).With(slog.String("subsystem", "fyne")),
+		tracker: tracker,
 	}
 	appUI.app.SetIcon(&ui.TrayIcon{})
 
@@ -205,10 +217,15 @@ func (i *FyneUI) aboutWindow(ctx context.Context) fyne.Window {
 		widget.NewLabelWithStyle("Home Assistant "+hass.Version(ctx),
 			fyne.TextAlignCenter,
 			fyne.TextStyle{Bold: true}),
-		widget.NewLabelWithStyle("Tracking "+strconv.Itoa(len(hass.SensorList()))+" Entities",
-			fyne.TextAlignCenter,
-			fyne.TextStyle{Italic: true}),
 	)
+
+	if i.tracker == nil {
+		widgets = append(widgets,
+			widget.NewLabelWithStyle("Tracking "+strconv.Itoa(len(i.tracker.SensorList()))+" Entities",
+				fyne.TextAlignCenter,
+				fyne.TextStyle{Italic: true}),
+		)
+	}
 
 	linkWidgets := generateLinks()
 	widgets = append(widgets,
@@ -284,19 +301,23 @@ func (i *FyneUI) agentSettingsWindow(ctx context.Context) fyne.Window {
 //
 //nolint:gocognit
 func (i *FyneUI) sensorsWindow() fyne.Window {
-	sensors := hass.SensorList()
+	if i.tracker == nil {
+		i.logger.Error("Cannot show sensors, no sensor tracker loaded.")
+	}
+
+	sensors := i.tracker.SensorList()
 	if sensors == nil {
 		return nil
 	}
 
 	getValue := func(n string) string {
-		if sensor, err := hass.GetSensor(n); err == nil {
+		if details, err := i.tracker.Get(n); err == nil {
 			var valueStr strings.Builder
 
-			fmt.Fprintf(&valueStr, "%v", sensor.Value)
+			fmt.Fprintf(&valueStr, "%v", details.Value)
 
-			if sensor.Units != "" {
-				fmt.Fprintf(&valueStr, " %s", sensor.Units)
+			if details.Units != "" {
+				fmt.Fprintf(&valueStr, " %s", details.Units)
 			}
 
 			return valueStr.String()
