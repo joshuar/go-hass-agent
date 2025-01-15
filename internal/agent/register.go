@@ -48,7 +48,7 @@ func checkRegistration(ctx context.Context, agentUI ui) error {
 
 	// If the registration was forced, reset the sensor registry.
 	if request.ForceRegister {
-		if err := registry.Reset(ctx); err != nil {
+		if err := registry.Reset(preferences.PathFromCtx(ctx)); err != nil {
 			logging.FromContext(ctx).Warn("Problem resetting registry.",
 				slog.Any("error", err))
 		}

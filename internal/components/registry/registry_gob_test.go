@@ -7,7 +7,6 @@
 package registry
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -15,8 +14,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 )
 
 var mockSensors = map[string]metadata{
@@ -24,10 +21,10 @@ var mockSensors = map[string]metadata{
 	"registeredSensor": {Disabled: false, Registered: true},
 }
 
-func newMockReg(ctx context.Context, t *testing.T) *gobRegistry {
+func newMockReg(t *testing.T, path string) *gobRegistry {
 	t.Helper()
 
-	mockReg, err := Load(ctx)
+	mockReg, err := Load(path)
 	require.NoError(t, err)
 	mockReg.sensors = mockSensors
 	err = mockReg.write()
@@ -62,15 +59,14 @@ func Test_gobRegistry_write(t *testing.T) {
 				file:    tt.fields.file,
 			}
 			if err := g.write(); (err != nil) != tt.wantErr {
-				t.Errorf("gobRegistry.write() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("gobRegistry.write() error c= %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
 }
 
 func Test_gobRegistry_read(t *testing.T) {
-	ctx := preferences.PathToCtx(context.TODO(), t.TempDir())
-	mockReg := newMockReg(ctx, t)
+	mockReg := newMockReg(t, t.TempDir())
 
 	invalidRegistry := filepath.Join(t.TempDir(), registryFile)
 	err := os.WriteFile(invalidRegistry, []byte(`invalid`), 0o600)
@@ -323,8 +319,7 @@ func TestLoad(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx := preferences.PathToCtx(context.TODO(), tt.args.path)
-			got, err := Load(ctx)
+			got, err := Load(tt.args.path)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Load() error = %v, wantErr %v", err, tt.wantErr)
 				return

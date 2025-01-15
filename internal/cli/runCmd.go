@@ -45,7 +45,7 @@ func (r *RunCmd) Run(opts *CmdOpts) error {
 	}
 
 	// Load the registry.
-	reg, err := registry.Load(ctx)
+	reg, err := registry.Load(opts.Path)
 	if err != nil {
 		return errors.Join(ErrRunCmdFailed, err)
 	}

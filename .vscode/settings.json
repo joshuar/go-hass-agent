@@ -37,7 +37,8 @@
     "linux/power",
     "linux/battery",
     "hass/api",
-    "hass/discovery"
+    "hass/discovery",
+    "components/registry"
   ],
   "go.testFlags": ["-v"],
   "[markdown]": {

@@ -6,22 +6,11 @@
 package registry
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
-
-	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 )
-
-//go:generate go run golang.org/x/tools/cmd/stringer -type=state -output state_generated.go -linecomment
-const (
-	disabledState   state = iota + 1 // disabled
-	registeredState                  // registered
-)
-
-type state int
 
 var (
 	ErrNotFound        = errors.New("sensor not found")
@@ -34,15 +23,15 @@ type metadata struct {
 }
 
 // Reset will handle resetting the registry.
-func Reset(ctx context.Context) error {
-	path := filepath.Join(preferences.PathFromCtx(ctx), "sensorRegistry")
+func Reset(registryPath string) error {
+	registryPath = filepath.Join(registryPath, "sensorRegistry")
 
-	_, err := os.Stat(path)
+	_, err := os.Stat(registryPath)
 	if os.IsNotExist(err) {
 		return fmt.Errorf("registry not found: %w", err)
 	}
 
-	err = os.RemoveAll(path)
+	err = os.RemoveAll(registryPath)
 	if err != nil {
 		return fmt.Errorf("failed to remove registry: %w", err)
 	}

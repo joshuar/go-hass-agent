@@ -6,7 +6,6 @@
 package registry
 
 import (
-	"context"
 	"encoding/gob"
 	"errors"
 	"fmt"
@@ -15,8 +14,6 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
-
-	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 )
 
 const (
@@ -124,13 +121,13 @@ func (g *gobRegistry) SetRegistered(id string, value bool) error {
 }
 
 //revive:disable:unexported-return
-func Load(ctx context.Context) (*gobRegistry, error) {
-	path := filepath.Join(preferences.PathFromCtx(ctx), "sensorRegistry", registryFile)
+func Load(path string) (*gobRegistry, error) {
+	registryPath := filepath.Join(path, "sensorRegistry", registryFile)
 
 	reg := &gobRegistry{
 		sensors: make(map[string]metadata),
 		mu:      sync.Mutex{},
-		file:    path,
+		file:    registryPath,
 	}
 
 	if err := checkPath(filepath.Dir(reg.file)); err != nil {
