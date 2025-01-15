@@ -50,7 +50,7 @@ func (r *ResetCmd) Run(opts *CmdOpts) error {
 		errs = errors.Join(fmt.Errorf("agent reset failed: %w", err))
 	}
 	// Reset registry.
-	if err := registry.Reset(ctx); err != nil {
+	if err := registry.Reset(opts.Path); err != nil {
 		errs = errors.Join(fmt.Errorf("registry reset failed: %w", err))
 	}
 	// Reset preferences.
@@ -58,7 +58,7 @@ func (r *ResetCmd) Run(opts *CmdOpts) error {
 		errs = errors.Join(fmt.Errorf("preferences reset failed: %w", err))
 	}
 	// Reset the log.
-	if err := logging.Reset(preferences.PathFromCtx(ctx)); err != nil {
+	if err := logging.Reset(opts.Path); err != nil {
 		errs = errors.Join(fmt.Errorf("logging reset failed: %w", err))
 	}
 
