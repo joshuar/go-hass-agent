@@ -16,6 +16,7 @@ import (
 	"github.com/mandykoh/prism/srgb"
 
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
+	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
@@ -38,6 +39,15 @@ var ErrUnknownProp = errors.New("unknown desktop property")
 type settingsWorker struct {
 	triggerCh chan dbusx.Trigger
 	getProp   func(prop string) (dbus.Variant, error)
+	prefs     *WorkerPrefs
+}
+
+func (w *settingsWorker) PreferencesID() string {
+	return preferencesID
+}
+
+func (w *settingsWorker) DefaultPreferences() WorkerPrefs {
+	return WorkerPrefs{}
 }
 
 //nolint:cyclop,gocognit
@@ -148,6 +158,8 @@ func (w *settingsWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
 }
 
 func NewDesktopWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
+	var err error
+
 	worker := linux.NewEventSensorWorker(workerID)
 
 	_, ok := linux.CtxGetDesktopPortal(ctx)
@@ -169,10 +181,11 @@ func NewDesktopWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 		return worker, fmt.Errorf("could not watch D-Bus for desktop settings updates: %w", err)
 	}
 
-	worker.EventSensorType = &settingsWorker{
+	settingsWorker := &settingsWorker{
 		triggerCh: triggerCh,
 		getProp: func(prop string) (dbus.Variant, error) {
-			value, err := dbusx.GetData[dbus.Variant](bus,
+			var value dbus.Variant
+			value, err = dbusx.GetData[dbus.Variant](bus,
 				desktopPortalPath,
 				desktopPortalInterface,
 				settingsPortalInterface+".Read",
@@ -184,6 +197,17 @@ func NewDesktopWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 
 			return value, nil
 		},
+	}
+
+	settingsWorker.prefs, err = preferences.LoadWorker(ctx, settingsWorker)
+	if err != nil {
+		return worker, fmt.Errorf("could not load preferences: %w", err)
+	}
+
+	// If disabled, don't use the addressWorker.
+	if settingsWorker.prefs.Disabled {
+		slog.Info("disabled")
+		return worker, nil
 	}
 
 	return worker, nil
