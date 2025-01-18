@@ -33,7 +33,7 @@ const (
 	loadAvgsTotal = 3
 
 	loadAvgsWorkerID      = "cpu_loadavg_sensors"
-	loadAvgsPreferencesID = loadAvgsWorkerID
+	loadAvgsPreferencesID = "loadavg"
 )
 
 var ErrParseLoadAvgs = errors.New("could not parse load averages")
@@ -67,7 +67,7 @@ func (w *loadAvgsWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 }
 
 func (w *loadAvgsWorker) PreferencesID() string {
-	return loadAvgsPreferencesID
+	return basePreferencesID + "." + loadAvgsPreferencesID
 }
 
 func (w *loadAvgsWorker) DefaultPreferences() preferences.CommonWorkerPrefs {

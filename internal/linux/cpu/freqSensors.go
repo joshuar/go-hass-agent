@@ -8,29 +8,18 @@ package cpu
 
 import (
 	"bytes"
-	"context"
-	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
 	"runtime"
-	"strconv"
 	"strings"
-	"time"
 
-	"github.com/joshuar/go-hass-agent/internal/components/logging"
-	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 )
 
 const (
-	cpuFreqUpdateInterval = 30 * time.Second
-	cpuFreqUpdateJitter   = time.Second
-
-	cpuFreqWorkerID = "cpu_freq_sensors"
-
 	freqFile     = "cpufreq/scaling_cur_freq"
 	governorFile = "cpufreq/scaling_governor"
 	driverFile   = "cpufreq/scaling_driver"
@@ -40,36 +29,6 @@ const (
 )
 
 var totalCPUs = runtime.NumCPU()
-
-// FreqWorkerPrefs are the preferences for the CPU frequency worker.
-type FreqWorkerPrefs struct {
-	UpdateInterval string `toml:"update_interval" comment:"Time between updates of CPU frequency sensors (default 30s)."`
-	preferences.CommonWorkerPrefs
-}
-
-type freqWorker struct{}
-
-func (w *freqWorker) UpdateDelta(_ time.Duration) {}
-
-func (w *freqWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
-	sensors := make([]sensor.Entity, totalCPUs)
-
-	for i := range totalCPUs {
-		sensors[i] = newCPUFreqSensor("cpu" + strconv.Itoa(i))
-	}
-
-	return sensors, nil
-}
-
-func (w *freqWorker) PreferencesID() string {
-	return cpuFreqWorkerID
-}
-
-func (w *freqWorker) DefaultPreferences() FreqWorkerPrefs {
-	return FreqWorkerPrefs{
-		UpdateInterval: cpuFreqUpdateInterval.String(),
-	}
-}
 
 type cpuFreq struct {
 	cpu      string
@@ -129,33 +88,4 @@ func readCPUFreqProp(id, file string) string {
 	}
 
 	return string(bytes.TrimSpace(prop))
-}
-
-func NewFreqWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
-	freqWorker := &freqWorker{}
-
-	prefs, err := preferences.LoadWorker(ctx, freqWorker)
-	if err != nil {
-		return nil, fmt.Errorf("could not load preferences: %w", err)
-	}
-
-	//nolint:nilnil
-	if prefs.Disabled {
-		return nil, nil
-	}
-
-	pollInterval, err := time.ParseDuration(prefs.UpdateInterval)
-	if err != nil {
-		logging.FromContext(ctx).Warn("Invalid polling interval, using default",
-			slog.String("worker", cpuFreqWorkerID),
-			slog.String("given_interval", prefs.UpdateInterval),
-			slog.String("default_interval", cpuFreqUpdateInterval.String()))
-
-		pollInterval = cpuFreqUpdateInterval
-	}
-
-	pollWorker := linux.NewPollingSensorWorker(cpuFreqWorkerID, pollInterval, cpuFreqUpdateJitter)
-	pollWorker.PollingSensorType = freqWorker
-
-	return pollWorker, nil
 }

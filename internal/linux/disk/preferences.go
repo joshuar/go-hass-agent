@@ -6,8 +6,9 @@ package disk
 import "github.com/joshuar/go-hass-agent/internal/components/preferences"
 
 const (
-	ioWorkerPreferencesID    = "disk_io_sensors"
-	usageWorkerPreferencesID = "disk_usage_sensors"
+	basePreferencesID        = "disk_sensors"
+	ioWorkerPreferencesID    = "io_sensors"
+	usageWorkerPreferencesID = "usage_sensors"
 )
 
 type WorkerPrefs struct {

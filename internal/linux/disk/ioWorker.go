@@ -116,7 +116,7 @@ func (w *ioWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
 }
 
 func (w *ioWorker) PreferencesID() string {
-	return ioWorkerPreferencesID
+	return basePreferencesID + "." + ioWorkerPreferencesID
 }
 
 func (w *ioWorker) DefaultPreferences() WorkerPrefs {
