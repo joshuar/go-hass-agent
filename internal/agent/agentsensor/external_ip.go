@@ -69,21 +69,19 @@ type ExternalIPWorker struct {
 	client *resty.Client
 	doneCh chan struct{}
 	logger *slog.Logger
-	prefs  *ExternalIPWorkerPrefs
+	prefs  *preferences.CommonWorkerPrefs
 }
-
-type ExternalIPWorkerPrefs preferences.CommonWorkerPrefs
 
 func (w *ExternalIPWorker) PreferencesID() string {
 	return "external_ip_sensor"
 }
 
-func (w *ExternalIPWorker) DefaultPreferences() ExternalIPWorkerPrefs {
-	return ExternalIPWorkerPrefs{}
+func (w *ExternalIPWorker) DefaultPreferences() preferences.CommonWorkerPrefs {
+	return preferences.CommonWorkerPrefs{}
 }
 
 func (w *ExternalIPWorker) IsDisabled() bool {
-	return w.prefs.Disabled
+	return w.prefs.IsDisabled()
 }
 
 // ID returns the unique string to represent this worker and its sensors.
@@ -196,10 +194,6 @@ func NewExternalIPUpdaterWorker(ctx context.Context) *ExternalIPWorker {
 	}
 
 	worker.prefs = prefs
-
-	if worker.IsDisabled() {
-		return nil
-	}
 
 	return worker
 }
