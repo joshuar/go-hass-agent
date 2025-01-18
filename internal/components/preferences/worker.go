@@ -55,13 +55,21 @@ func LoadWorker[T any](ctx context.Context, worker Worker[T]) (*T, error) {
 		// Marshall the map[string]interface returned to []byte.
 		data, err := toml.Marshal(foundPrefs)
 		if err != nil {
-			return &defaultPrefs, fmt.Errorf("%w: %w", ErrLoadWorkerPrefs, err)
+			prefs = defaultPrefs
+		} else {
+			// Unmarshal the []byte back to the proper preferences type T.
+			if err := toml.Unmarshal(data, &prefs); err != nil {
+				prefs = defaultPrefs
+			}
 		}
-		// Unmarshal the []byte back to the proper preferences type T.
-		if err := toml.Unmarshal(data, &prefs); err != nil {
-			return &defaultPrefs, fmt.Errorf("%w: %w", ErrLoadWorkerPrefs, err)
+	} else {
+		prefs = defaultPrefs
+		// Save the default preferences to the preferences source.
+		if err := SaveWorker(ctx, worker, prefs); err != nil {
+			return &prefs, fmt.Errorf("%w: %w", ErrLoadWorkerPrefs, err)
 		}
 	}
+
 	// Validate the preferences, warn and use defaults if invalid.
 	if err := validation.Validate.Struct(prefs); err != nil {
 		slog.Warn("Worker preferences are invalid, reverting to defaults.",
