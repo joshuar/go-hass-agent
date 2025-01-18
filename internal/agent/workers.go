@@ -52,15 +52,15 @@ func startWorkers[T any](ctx context.Context, workers ...Worker[T]) []<-chan T {
 			continue
 		}
 
-		logging.FromContext(ctx).Debug("Starting worker",
-			slog.String("worker", worker.ID()))
-
 		workerCh, err := worker.Start(ctx)
 		if err != nil {
 			logging.FromContext(ctx).Warn("Could not start worker.",
 				slog.String("worker", worker.ID()),
 				slog.Any("errors", err))
 		} else {
+			logging.FromContext(ctx).Debug("Worker started.",
+				slog.String("worker", worker.ID()))
+
 			eventCh = append(eventCh, workerCh)
 		}
 	}

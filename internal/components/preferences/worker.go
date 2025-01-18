@@ -41,37 +41,38 @@ var (
 
 // LoadWorker reads the given worker's preferences from file.
 func LoadWorker[T any](ctx context.Context, worker Worker[T]) (*T, error) {
+	var (
+		prefs        T
+		defaultPrefs T
+	)
+	// Get the default preferences.
+	defaultPrefs = worker.DefaultPreferences()
+	// Set the key to the worker preferences in the preferences store.
 	prefsKey := workerPrefsPrefix + "." + worker.PreferencesID()
-	// Load default worker prefs.
-	prefs := worker.DefaultPreferences()
-
-	if prefsSrc.Get(prefsKey) == nil {
-		slog.Debug("Using default preferences for worker.",
-			slog.String("worker", worker.PreferencesID()))
-
+	// Try to retrieve any existing preferences. Use those if possible.
+	foundPrefs := prefsSrc.Get(prefsKey)
+	if foundPrefs != nil {
+		// Marshall the map[string]interface returned to []byte.
+		data, err := toml.Marshal(foundPrefs)
+		if err != nil {
+			return &defaultPrefs, fmt.Errorf("%w: %w", ErrLoadWorkerPrefs, err)
+		}
+		// Unmarshal the []byte back to the proper preferences type T.
+		if err := toml.Unmarshal(data, &prefs); err != nil {
+			return &defaultPrefs, fmt.Errorf("%w: %w", ErrLoadWorkerPrefs, err)
+		}
+	}
+	// Validate the preferences, warn and use defaults if invalid.
+	if err := validation.Validate.Struct(prefs); err != nil {
+		slog.Warn("Worker preferences are invalid, reverting to defaults.",
+			slog.String("worker", worker.PreferencesID()),
+			slog.String("problems", validation.ParseValidationErrors(err)))
 		// Save the default preferences to the preferences source.
-		if err := SaveWorker(ctx, worker, prefs); err != nil {
+		if err := SaveWorker(ctx, worker, defaultPrefs); err != nil {
 			return &prefs, fmt.Errorf("%w: %w", ErrLoadWorkerPrefs, err)
 		}
 
-		return &prefs, nil
-	}
-
-	// Unmarshal the existing prefs into the prefs type, overwriting any
-	// defaults.
-	if err := prefsSrc.Unmarshal(prefsKey, &prefs); err != nil {
-		return &prefs, fmt.Errorf("%w: %w", ErrLoadWorkerPrefs, err)
-	}
-
-	// If the preferences are invalid, warn and use defaults.
-	if err := validation.Validate.Struct(prefs); err != nil {
-		slog.Warn("Worker preferences are invalid, using defaults.",
-			slog.String("worker", worker.PreferencesID()),
-			slog.String("problems", validation.ParseValidationErrors(err)))
-
-		prefs = worker.DefaultPreferences()
-
-		return &prefs, nil
+		return &defaultPrefs, nil
 	}
 
 	// Return preferences.
@@ -83,7 +84,6 @@ func SaveWorker[T any](ctx context.Context, worker Worker[T], prefs T) error {
 	// We can't define the structure for every possible worker beforehand, so
 	// use map[string]any as the structure for saving.
 	prefsMaps := make(map[string]any)
-
 	// Marshal the worker's prefs object into bytes, using the toml tag
 	// structure.
 	data, err := toml.Marshal(&prefs)
@@ -95,12 +95,10 @@ func SaveWorker[T any](ctx context.Context, worker Worker[T], prefs T) error {
 	if err := toml.Unmarshal(data, &prefsMaps); err != nil {
 		return fmt.Errorf("%w: %w", ErrSaveWorkerPrefs, err)
 	}
-
 	// Merge the worker preferences into the preferences file.
 	if err := prefsSrc.Set(workerPrefsPrefix+"."+worker.PreferencesID(), prefsMaps); err != nil {
 		return fmt.Errorf("%w: %w", ErrSaveWorkerPrefs, err)
 	}
-
 	// Save the preferences.
 	return Save(ctx)
 }
