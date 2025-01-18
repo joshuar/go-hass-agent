@@ -20,7 +20,7 @@ import (
 
 const (
 	screenLockWorkerID      = "screen_lock_sensor"
-	screenLockPreferencesID = screenLockWorkerID
+	screenLockPreferencesID = "screen_lock"
 
 	screenLockedIcon      = "mdi:eye-lock"
 	screenUnlockedIcon    = "mdi:eye-lock-open"
@@ -111,7 +111,7 @@ func (w *screenLockWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 }
 
 func (w *screenLockWorker) PreferencesID() string {
-	return screenLockPreferencesID
+	return basePreferencesID + "." + screenLockPreferencesID
 }
 
 func (w *screenLockWorker) DefaultPreferences() preferences.CommonWorkerPrefs {

@@ -23,7 +23,7 @@ const (
 	activeProfileProp      = "ActiveProfile"
 
 	powerProfileWorkerID      = "power_profile_sensor"
-	powerProfilePreferencesID = powerProfileWorkerID
+	powerProfilePreferencesID = "power_profile"
 )
 
 func newPowerSensor(profile string) sensor.Entity {
@@ -93,7 +93,7 @@ func (w *profileWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 }
 
 func (w *profileWorker) PreferencesID() string {
-	return powerProfilePreferencesID
+	return basePreferencesID + "." + powerProfilePreferencesID
 }
 
 func (w *profileWorker) DefaultPreferences() preferences.CommonWorkerPrefs {
