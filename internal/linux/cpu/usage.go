@@ -71,18 +71,14 @@ func (w *usageWorker) DefaultPreferences() UsagePrefs {
 }
 
 func NewUsageWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
-	var err error
-
-	worker := linux.NewPollingSensorWorker(cpuUsageWorkerID, cpuUsageUpdateInterval, cpuUsageUpdateJitter)
-
 	clktck, found := linux.CtxGetClkTck(ctx)
 	if !found {
-		return worker, fmt.Errorf("%w: no clktck value", linux.ErrInvalidCtx)
+		return nil, fmt.Errorf("%w: no clktck value", linux.ErrInvalidCtx)
 	}
 
 	boottime, found := linux.CtxGetBoottime(ctx)
 	if !found {
-		return worker, fmt.Errorf("%w: no boottime value", linux.ErrInvalidCtx)
+		return nil, fmt.Errorf("%w: no boottime value", linux.ErrInvalidCtx)
 	}
 
 	cpuUsageWorker := &usageWorker{
@@ -97,29 +93,25 @@ func NewUsageWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
 
 	prefs, err := preferences.LoadWorker(ctx, cpuUsageWorker)
 	if err != nil {
-		return worker, fmt.Errorf("could not load preferences: %w", err)
+		return nil, fmt.Errorf("could not load preferences: %w", err)
 	}
 
-	// If disabled, don't use the addressWorker.
+	//nolint:nilnil
 	if prefs.Disabled {
-		return worker, nil
+		return nil, nil
 	}
 
-	interval, err := time.ParseDuration(prefs.UpdateInterval)
+	pollInterval, err := time.ParseDuration(prefs.UpdateInterval)
 	if err != nil {
-		logging.FromContext(ctx).Warn("Could not parse update interval, using default value.",
-			slog.String("requested_value", prefs.UpdateInterval),
-			slog.String("default_value", cpuUsageUpdateInterval.String()))
-		// Save preferences with default interval value.
-		prefs.UpdateInterval = cpuUsageUpdateInterval.String()
-		if err := preferences.SaveWorker(ctx, cpuUsageWorker, *prefs); err != nil {
-			logging.FromContext(ctx).Warn("Could not save preferences.", slog.Any("error", err))
-		}
+		logging.FromContext(ctx).Warn("Invalid polling interval, using default",
+			slog.String("worker", cpuUsageWorkerID),
+			slog.String("given_interval", prefs.UpdateInterval),
+			slog.String("default_interval", cpuUsageUpdateInterval.String()))
 
-		interval = cpuUsageUpdateInterval
+		pollInterval = cpuUsageUpdateInterval
 	}
 
-	worker.PollInterval = interval
+	worker := linux.NewPollingSensorWorker(cpuUsageWorkerID, pollInterval, cpuUsageUpdateJitter)
 	worker.PollingSensorType = cpuUsageWorker
 
 	return worker, nil

@@ -9,8 +9,10 @@ package disk
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
+	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
@@ -23,9 +25,7 @@ const (
 	usageWorkerID = "disk_usage_sensors"
 )
 
-type usageWorker struct {
-	prefs *WorkerPrefs
-}
+type usageWorker struct{}
 
 func (w *usageWorker) UpdateDelta(_ time.Duration) {}
 
@@ -55,22 +55,29 @@ func (w *usageWorker) DefaultPreferences() WorkerPrefs {
 }
 
 func NewUsageWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
-	var err error
-
-	worker := linux.NewPollingSensorWorker(usageWorkerID, usageUpdateInterval, usageUpdateJitter)
-
 	usageWorker := &usageWorker{}
 
-	usageWorker.prefs, err = preferences.LoadWorker(ctx, usageWorker)
+	prefs, err := preferences.LoadWorker(ctx, usageWorker)
 	if err != nil {
-		return worker, fmt.Errorf("could not load preferences: %w", err)
+		return nil, fmt.Errorf("could not load preferences: %w", err)
 	}
 
-	// If disabled, don't use the addressWorker.
-	if usageWorker.prefs.Disabled {
-		return worker, nil
+	//nolint:nilnil
+	if prefs.IsDisabled() {
+		return nil, nil
 	}
 
+	pollInterval, err := time.ParseDuration(prefs.UpdateInterval)
+	if err != nil {
+		logging.FromContext(ctx).Warn("Invalid polling interval, using default",
+			slog.String("worker", usageWorkerID),
+			slog.String("given_interval", prefs.UpdateInterval),
+			slog.String("default_interval", usageUpdateInterval.String()))
+
+		pollInterval = usageUpdateInterval
+	}
+
+	worker := linux.NewPollingSensorWorker(usageWorkerID, pollInterval, usageUpdateJitter)
 	worker.PollingSensorType = usageWorker
 
 	return worker, nil

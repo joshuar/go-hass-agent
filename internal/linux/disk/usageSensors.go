@@ -23,9 +23,9 @@ const (
 func newDiskUsageSensor(mount *mount) sensor.Entity {
 	mount.attributes["data_source"] = linux.DataSrcProcfs
 
-	usedBlocks := mount.attributes[mountAttrBlocksTotal].(uint64) - mount.attributes[mountAttrBlocksFree].(uint64) //nolint:forcetypeassert
+	usedBlocks := mount.attributes[mountAttrBlocksTotal].(uint64) - mount.attributes[mountAttrBlocksFree].(uint64) //nolint:lll,errcheck,forcetypeassert
 	mount.attributes["blocks_used"] = usedBlocks
-	usedPc := float64(usedBlocks) / float64(mount.attributes[mountAttrBlocksTotal].(uint64)) * 100 //nolint:forcetypeassert
+	usedPc := float64(usedBlocks) / float64(mount.attributes[mountAttrBlocksTotal].(uint64)) * 100 //nolint:errcheck,forcetypeassert
 
 	var id string
 
