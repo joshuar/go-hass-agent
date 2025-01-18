@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
+	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 )
@@ -34,6 +35,7 @@ type ioWorker struct {
 	linux.PollingSensorWorker
 	delta time.Duration
 	mu    sync.Mutex
+	prefs *WorkerPrefs
 }
 
 // addDevice adds a new device to the tracker map. If sthe device is already
@@ -114,7 +116,19 @@ func (w *ioWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
 	return sensors, nil
 }
 
+func (w *ioWorker) PreferencesID() string {
+	return ioWorkerPreferencesID
+}
+
+func (w *ioWorker) DefaultPreferences() WorkerPrefs {
+	return WorkerPrefs{
+		UpdateInterval: ratesUpdateInterval.String(),
+	}
+}
+
 func NewIOWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
+	var err error
+
 	worker := linux.NewPollingSensorWorker(ratesWorkerID, ratesUpdateInterval, ratesUpdateJitter)
 
 	boottime, found := linux.CtxGetBoottime(ctx)
@@ -127,10 +141,22 @@ func NewIOWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
 	devices := make(map[string][]*diskIOSensor)
 	devices["total"] = newDeviceSensors(boottime, &device{id: totalsID})
 
-	worker.PollingSensorType = &ioWorker{
+	ioWorker := &ioWorker{
 		devices:  devices,
 		boottime: boottime,
 	}
+
+	ioWorker.prefs, err = preferences.LoadWorker(ctx, ioWorker)
+	if err != nil {
+		return worker, fmt.Errorf("could not load preferences: %w", err)
+	}
+
+	// If disabled, don't use the addressWorker.
+	if ioWorker.prefs.Disabled {
+		return worker, nil
+	}
+
+	worker.PollingSensorType = ioWorker
 
 	return worker, nil
 }

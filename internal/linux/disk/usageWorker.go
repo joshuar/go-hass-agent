@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 )
@@ -22,7 +23,9 @@ const (
 	usageWorkerID = "disk_usage_sensors"
 )
 
-type usageWorker struct{}
+type usageWorker struct {
+	prefs *WorkerPrefs
+}
 
 func (w *usageWorker) UpdateDelta(_ time.Duration) {}
 
@@ -41,9 +44,34 @@ func (w *usageWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
 	return sensors, nil
 }
 
-func NewUsageWorker(_ context.Context) (*linux.PollingSensorWorker, error) {
+func (w *usageWorker) PreferencesID() string {
+	return usageWorkerPreferencesID
+}
+
+func (w *usageWorker) DefaultPreferences() WorkerPrefs {
+	return WorkerPrefs{
+		UpdateInterval: usageUpdateInterval.String(),
+	}
+}
+
+func NewUsageWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
+	var err error
+
 	worker := linux.NewPollingSensorWorker(usageWorkerID, usageUpdateInterval, usageUpdateJitter)
-	worker.PollingSensorType = &usageWorker{}
+
+	usageWorker := &usageWorker{}
+
+	usageWorker.prefs, err = preferences.LoadWorker(ctx, usageWorker)
+	if err != nil {
+		return worker, fmt.Errorf("could not load preferences: %w", err)
+	}
+
+	// If disabled, don't use the addressWorker.
+	if usageWorker.prefs.Disabled {
+		return worker, nil
+	}
+
+	worker.PollingSensorType = usageWorker
 
 	return worker, nil
 }
