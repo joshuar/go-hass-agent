@@ -29,11 +29,20 @@ func newVersionSensor() sensor.Entity {
 	)
 }
 
-type VersionWorker struct{}
+type VersionWorker struct {
+	prefs *preferences.CommonWorkerPrefs
+}
 
-// TODO: implement ability to disable.
+func (w *VersionWorker) PreferencesID() string {
+	return "version_sensor"
+}
+
+func (w *VersionWorker) DefaultPreferences() preferences.CommonWorkerPrefs {
+	return preferences.CommonWorkerPrefs{}
+}
+
 func (w *VersionWorker) IsDisabled() bool {
-	return false
+	return w.prefs.IsDisabled()
 }
 
 func (w *VersionWorker) ID() string { return versionWorkerID }
@@ -55,6 +64,15 @@ func (w *VersionWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 	return []sensor.Entity{newVersionSensor()}, nil
 }
 
-func NewVersionWorker() *VersionWorker {
-	return &VersionWorker{}
+func NewVersionWorker(ctx context.Context) *VersionWorker {
+	worker := &VersionWorker{}
+
+	prefs, err := preferences.LoadWorker(ctx, worker)
+	if err != nil {
+		return nil
+	}
+
+	worker.prefs = prefs
+
+	return worker
 }
