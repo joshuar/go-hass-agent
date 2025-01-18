@@ -22,7 +22,6 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/linux/mem"
 	"github.com/joshuar/go-hass-agent/internal/linux/net"
 	"github.com/joshuar/go-hass-agent/internal/linux/power"
-	"github.com/joshuar/go-hass-agent/internal/linux/problems"
 	"github.com/joshuar/go-hass-agent/internal/linux/system"
 )
 
@@ -47,7 +46,7 @@ var sensorPollingWorkersInitFuncs = []func(ctx context.Context) (*linux.PollingS
 	cpu.NewFreqWorker,
 	mem.NewUsageWorker,
 	net.NewNetStatsWorker,
-	problems.NewProblemsWorker,
+	system.NewProblemsWorker,
 	system.NewUptimeTimeWorker,
 	system.NewChronyWorker,
 	system.NewHWMonWorker,
@@ -55,7 +54,7 @@ var sensorPollingWorkersInitFuncs = []func(ctx context.Context) (*linux.PollingS
 
 // sensorOneShotWorkersInitFuncs are all the sensor workers that run one-time to generate sensors.
 var sensorOneShotWorkersInitFuncs = []func(ctx context.Context) (*linux.OneShotSensorWorker, error){
-	cpu.NewCPUVulnerabilityWorker,
+	system.NewCPUVulnerabilityWorker,
 	system.NewInfoWorker,
 	system.NewfwupdWorker,
 	system.NewLastBootWorker,

@@ -1,18 +1,18 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
-//revive:disable:unused-receiver
-package problems
+package system
 
 import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strconv"
 	"time"
 
+	"github.com/joshuar/go-hass-agent/internal/components/logging"
+	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
@@ -20,10 +20,11 @@ import (
 )
 
 const (
-	problemInterval = 15 * time.Minute
-	problemJitter   = time.Minute
+	abrtProblemsCheckInterval = 15 * time.Minute
+	abrtProblemsCheckJitter   = time.Minute
 
-	problemsWorkerID = "abrt_problems_sensor"
+	abrtProblemsWorkerID      = "abrt_problems_sensor"
+	abrtProblemsPreferencesID = "abrt_problems"
 
 	dBusProblemsDest = "/org/freedesktop/problems"
 	dBusProblemIntr  = "org.freedesktop.problems"
@@ -88,6 +89,7 @@ type problemsWorker struct {
 	getProblems       func() ([]string, error)
 	getProblemDetails func(problem string) (map[string]string, error)
 	bus               *dbusx.Bus
+	prefs             *ProblemsPrefs
 }
 
 func (w *problemsWorker) UpdateDelta(_ time.Duration) {}
@@ -102,46 +104,81 @@ func (w *problemsWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 	return []sensor.Entity{w.newProblemsSensor(problems)}, nil
 }
 
+func (w *problemsWorker) PreferencesID() string {
+	return basePreferencesID + "." + abrtProblemsPreferencesID
+}
+
+func (w *problemsWorker) DefaultPreferences() ProblemsPrefs {
+	return ProblemsPrefs{
+		UpdateInterval: abrtProblemsCheckInterval.String(),
+	}
+}
+
 func NewProblemsWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
-	worker := linux.NewPollingSensorWorker(problemsWorkerID, problemInterval, problemJitter)
+	var err error
+
+	problemsWorker := &problemsWorker{}
+
+	problemsWorker.prefs, err = preferences.LoadWorker(ctx, problemsWorker)
+	if err != nil {
+		return nil, fmt.Errorf("could not load preferences: %w", err)
+	}
+
+	//nolint:nilnil
+	if problemsWorker.prefs.IsDisabled() {
+		return nil, nil
+	}
+
+	pollInterval, err := time.ParseDuration(problemsWorker.prefs.UpdateInterval)
+	if err != nil {
+		logging.FromContext(ctx).Warn("Invalid polling interval, using default",
+			slog.String("worker", abrtProblemsWorkerID),
+			slog.String("given_interval", problemsWorker.prefs.UpdateInterval),
+			slog.String("default_interval", abrtProblemsCheckInterval.String()))
+
+		pollInterval = abrtProblemsCheckInterval
+	}
 
 	bus, ok := linux.CtxGetSystemBus(ctx)
 	if !ok {
-		return worker, linux.ErrNoSystemBus
+		return nil, linux.ErrNoSystemBus
 	}
+
+	problemsWorker.bus = bus
 
 	// Check if we can fetch problem data, bail if we can't.
-	_, err := dbusx.GetData[[]string](bus, dBusProblemsDest, dBusProblemIntr, dBusProblemIntr+".GetProblems")
+	_, err = dbusx.GetData[[]string](bus, dBusProblemsDest, dBusProblemIntr, dBusProblemIntr+".GetProblems")
 	if err != nil {
-		return worker, fmt.Errorf("unable to fetch ABRT problems from D-Bus: %w", err)
+		return nil, fmt.Errorf("unable to fetch ABRT problems from D-Bus: %w", err)
 	}
 
-	worker.PollingSensorType = &problemsWorker{
-		bus: bus,
-		getProblems: func() ([]string, error) {
-			problems, err := dbusx.GetData[[]string](bus, dBusProblemsDest, dBusProblemIntr, dBusProblemIntr+".GetProblems")
-			if err != nil {
-				return nil, fmt.Errorf("error getting data: %w", err)
-			}
+	problemsWorker.getProblems = func() ([]string, error) {
+		problems, err := dbusx.GetData[[]string](bus, dBusProblemsDest, dBusProblemIntr, dBusProblemIntr+".GetProblems")
+		if err != nil {
+			return nil, fmt.Errorf("error getting data: %w", err)
+		}
 
-			return problems, nil
-		},
-		getProblemDetails: func(problem string) (map[string]string, error) {
-			details, err := dbusx.GetData[map[string]string](bus,
-				dBusProblemsDest,
-				dBusProblemIntr,
-				dBusProblemIntr+".GetInfo", problem, []string{"time", "count", "package", "reason"})
-
-			switch {
-			case details == nil:
-				return nil, ErrNoProblemDetails
-			case err != nil:
-				return nil, err
-			default:
-				return details, nil
-			}
-		},
+		return problems, nil
 	}
+
+	problemsWorker.getProblemDetails = func(problem string) (map[string]string, error) {
+		details, err := dbusx.GetData[map[string]string](bus,
+			dBusProblemsDest,
+			dBusProblemIntr,
+			dBusProblemIntr+".GetInfo", problem, []string{"time", "count", "package", "reason"})
+
+		switch {
+		case details == nil:
+			return nil, ErrNoProblemDetails
+		case err != nil:
+			return nil, err
+		default:
+			return details, nil
+		}
+	}
+
+	worker := linux.NewPollingSensorWorker(abrtProblemsWorkerID, pollInterval, abrtProblemsCheckJitter)
+	worker.PollingSensorType = problemsWorker
 
 	return worker, nil
 }

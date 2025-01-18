@@ -22,7 +22,8 @@ const (
 	hwMonInterval = time.Minute
 	hwMonJitter   = 5 * time.Second
 
-	hwmonWorkerID = "hwmon"
+	hwmonWorkerID      = "hwmon_sensors"
+	hwmonPreferencesID = "hwmon"
 )
 
 func hwmonSensorAttributes(details *hwmon.Sensor) map[string]any {
@@ -88,7 +89,9 @@ func newHWSensor(details *hwmon.Sensor) sensor.Entity {
 	return hwMonSensor
 }
 
-type hwMonWorker struct{}
+type hwMonWorker struct {
+	prefs *HWMonPrefs
+}
 
 func (w *hwMonWorker) UpdateDelta(_ time.Duration) {}
 
@@ -108,45 +111,41 @@ func (w *hwMonWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 }
 
 func (w *hwMonWorker) PreferencesID() string {
-	return preferencesID
+	return basePreferencesID + "." + hwmonPreferencesID
 }
 
-func (w *hwMonWorker) DefaultPreferences() WorkerPrefs {
-	return WorkerPrefs{
-		HWMonUpdateInterval: hwMonInterval.String(),
+func (w *hwMonWorker) DefaultPreferences() HWMonPrefs {
+	return HWMonPrefs{
+		UpdateInterval: hwMonInterval.String(),
 	}
 }
 
 func NewHWMonWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
-	worker := linux.NewPollingSensorWorker(hwmonWorkerID, hwMonInterval, hwMonJitter)
+	var err error
 
 	hwMonWorker := &hwMonWorker{}
 
-	prefs, err := preferences.LoadWorker(ctx, hwMonWorker)
+	hwMonWorker.prefs, err = preferences.LoadWorker(ctx, hwMonWorker)
 	if err != nil {
-		return worker, fmt.Errorf("could not load preferences: %w", err)
+		return nil, fmt.Errorf("could not load preferences: %w", err)
 	}
 
-	// If disabled, don't use.
-	if prefs.DisableHWMon {
-		return worker, nil
+	//nolint:nilnil
+	if hwMonWorker.prefs.IsDisabled() {
+		return nil, nil
 	}
 
-	interval, err := time.ParseDuration(prefs.HWMonUpdateInterval)
+	pollInterval, err := time.ParseDuration(hwMonWorker.prefs.UpdateInterval)
 	if err != nil {
-		logging.FromContext(ctx).Warn("Could not parse update interval, using default value.",
-			slog.String("requested_value", prefs.HWMonUpdateInterval),
-			slog.String("default_value", hwMonInterval.String()))
-		// Save preferences with default interval value.
-		prefs.HWMonUpdateInterval = hwMonInterval.String()
-		if err := preferences.SaveWorker(ctx, hwMonWorker, *prefs); err != nil {
-			logging.FromContext(ctx).Warn("Could not save preferences.", slog.Any("error", err))
-		}
+		logging.FromContext(ctx).Warn("Invalid polling interval, using default",
+			slog.String("worker", hwmonWorkerID),
+			slog.String("given_interval", hwMonWorker.prefs.UpdateInterval),
+			slog.String("default_interval", hwMonInterval.String()))
 
-		interval = hwMonInterval
+		pollInterval = hwMonInterval
 	}
 
-	worker.PollInterval = interval
+	worker := linux.NewPollingSensorWorker(hwmonWorkerID, pollInterval, hwMonJitter)
 	worker.PollingSensorType = hwMonWorker
 
 	return worker, nil

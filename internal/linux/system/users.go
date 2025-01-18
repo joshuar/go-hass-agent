@@ -15,6 +15,7 @@ import (
 
 	"github.com/godbus/dbus/v5"
 
+	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/hass/event"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
@@ -33,8 +34,9 @@ const (
 	usersSensorUnits = "users"
 	usersSensorIcon  = "mdi:account"
 
-	userSessionSensorWorkerID = "user_session_sensor_worker"
-	userSessionEventWorkerID  = "user_session_event_worker"
+	userSessionsSensorWorkerID = "user_sessions_sensor_worker"
+	userSessionsEventWorkerID  = "user_sessions_event_worker"
+	userSessionsPreferencesID  = "user_sessions"
 
 	sessionStartedEventName = "session_started"
 	sessionStoppedEventName = "session_stopped"
@@ -59,6 +61,7 @@ type UserSessionSensorWorker struct {
 	getUsers  func() ([]string, error)
 	triggerCh chan dbusx.Trigger
 	linux.EventSensorWorker
+	prefs *UserSessionsPrefs
 }
 
 func (w *UserSessionSensorWorker) Events(ctx context.Context) (chan sensor.Entity, error) {
@@ -67,7 +70,7 @@ func (w *UserSessionSensorWorker) Events(ctx context.Context) (chan sensor.Entit
 	sendUpdate := func() {
 		users, err := w.getUsers()
 		if err != nil {
-			slog.With(slog.String("worker", userSessionSensorWorkerID)).Debug("Failed to get list of user sessions.", slog.Any("error", err))
+			slog.With(slog.String("worker", userSessionsSensorWorkerID)).Debug("Failed to get list of user sessions.", slog.Any("error", err))
 		} else {
 			sensorCh <- newUsersSensor(users)
 		}
@@ -98,16 +101,35 @@ func (w *UserSessionSensorWorker) Sensors(_ context.Context) ([]sensor.Entity, e
 	return []sensor.Entity{newUsersSensor(users)}, err
 }
 
+func (w *UserSessionSensorWorker) PreferencesID() string {
+	return basePreferencesID + "." + userSessionsPreferencesID
+}
+
+func (w *UserSessionSensorWorker) DefaultPreferences() UserSessionsPrefs {
+	return UserSessionsPrefs{}
+}
+
 func NewUserSessionSensorWorker(ctx context.Context) (*UserSessionSensorWorker, error) {
-	worker := &UserSessionSensorWorker{}
-	worker.WorkerID = userSessionSensorWorkerID
+	var err error
+
+	sessionsWorker := &UserSessionSensorWorker{}
+
+	sessionsWorker.prefs, err = preferences.LoadWorker(ctx, sessionsWorker)
+	if err != nil {
+		return nil, fmt.Errorf("could not load preferences: %w", err)
+	}
+
+	//nolint:nilnil
+	if sessionsWorker.prefs.IsDisabled() {
+		return nil, nil
+	}
 
 	bus, ok := linux.CtxGetSystemBus(ctx)
 	if !ok {
-		return worker, linux.ErrNoSystemBus
+		return nil, linux.ErrNoSystemBus
 	}
 
-	triggerCh, err := dbusx.NewWatch(
+	sessionsWorker.triggerCh, err = dbusx.NewWatch(
 		dbusx.MatchPath(loginBasePath),
 		dbusx.MatchInterface(managerInterface),
 		dbusx.MatchMembers(sessionAddedSignal, sessionRemovedSignal),
@@ -116,9 +138,7 @@ func NewUserSessionSensorWorker(ctx context.Context) (*UserSessionSensorWorker, 
 		return nil, fmt.Errorf("unable to set-up D-Bus watch for user sessions: %w", err)
 	}
 
-	worker.triggerCh = triggerCh
-
-	worker.getUsers = func() ([]string, error) {
+	sessionsWorker.getUsers = func() ([]string, error) {
 		userData, err := dbusx.GetData[[][]any](bus, loginBasePath, loginBaseInterface, listSessionsMethod)
 		if err != nil {
 			return nil, fmt.Errorf("could not retrieve users from D-Bus: %w", err)
@@ -135,13 +155,14 @@ func NewUserSessionSensorWorker(ctx context.Context) (*UserSessionSensorWorker, 
 		return users, nil
 	}
 
-	return worker, nil
+	return sessionsWorker, nil
 }
 
 type UserSessionEventsWorker struct {
 	triggerCh chan dbusx.Trigger
 	tracker   sessionTracker
 	linux.EventWorker
+	prefs *UserSessionsPrefs
 }
 
 type sessionTracker struct {
@@ -162,6 +183,7 @@ func (t *sessionTracker) removeSession(path string) {
 	delete(t.sessions, path)
 }
 
+//nolint:errcheck
 func (t *sessionTracker) getSessionDetails(path string) map[string]any {
 	sessionDetails := make(map[string]any)
 
@@ -221,29 +243,49 @@ func (w *UserSessionEventsWorker) Events(ctx context.Context) (<-chan event.Even
 	return eventCh, nil
 }
 
+func (w *UserSessionEventsWorker) PreferencesID() string {
+	return basePreferencesID + "." + userSessionsPreferencesID
+}
+
+func (w *UserSessionEventsWorker) DefaultPreferences() UserSessionsPrefs {
+	return UserSessionsPrefs{}
+}
+
+//nolint:errcheck
 func NewUserSessionEventsWorker(ctx context.Context) (*linux.EventWorker, error) {
-	worker := linux.NewEventWorker(userSessionEventWorkerID)
+	var err error
+
+	sessionsWorker := &UserSessionEventsWorker{}
+
+	sessionsWorker.prefs, err = preferences.LoadWorker(ctx, sessionsWorker)
+	if err != nil {
+		return nil, fmt.Errorf("could not load preferences: %w", err)
+	}
+
+	//nolint:nilnil
+	if sessionsWorker.prefs.IsDisabled() {
+		return nil, nil
+	}
 
 	bus, ok := linux.CtxGetSystemBus(ctx)
 	if !ok {
-		return worker, linux.ErrNoSystemBus
+		return nil, linux.ErrNoSystemBus
 	}
 
-	eventWorker := &UserSessionEventsWorker{
-		tracker: sessionTracker{
-			sessions: make(map[string]map[string]any),
-			getSessionProp: func(path, prop string) (dbus.Variant, error) {
-				value, err := dbusx.NewProperty[dbus.Variant](bus,
-					path,
-					loginBaseInterface,
-					loginBaseInterface+".Session."+prop).Get()
-				if err != nil {
-					return dbus.MakeVariant(sensor.StateUnknown),
-						fmt.Errorf("could not retrieve session property %s (session %s): %w", prop, path, err)
-				}
+	sessionsWorker.tracker = sessionTracker{
+		sessions: make(map[string]map[string]any),
+		getSessionProp: func(path, prop string) (dbus.Variant, error) {
+			var value dbus.Variant
+			value, err = dbusx.NewProperty[dbus.Variant](bus,
+				path,
+				loginBaseInterface,
+				loginBaseInterface+".Session."+prop).Get()
+			if err != nil {
+				return dbus.MakeVariant(sensor.StateUnknown),
+					fmt.Errorf("could not retrieve session property %s (session %s): %w", prop, path, err)
+			}
 
-				return value, nil
-			},
+			return value, nil
 		},
 	}
 
@@ -253,10 +295,10 @@ func NewUserSessionEventsWorker(ctx context.Context) (*linux.EventWorker, error)
 	}
 
 	for _, session := range currentSessions {
-		eventWorker.tracker.addSession(string(session[4].(dbus.ObjectPath)))
+		sessionsWorker.tracker.addSession(string(session[4].(dbus.ObjectPath)))
 	}
 
-	triggerCh, err := dbusx.NewWatch(
+	sessionsWorker.triggerCh, err = dbusx.NewWatch(
 		dbusx.MatchPath(loginBasePath),
 		dbusx.MatchInterface(managerInterface),
 		dbusx.MatchMembers(sessionAddedSignal, sessionRemovedSignal),
@@ -265,9 +307,8 @@ func NewUserSessionEventsWorker(ctx context.Context) (*linux.EventWorker, error)
 		return nil, fmt.Errorf("unable to set-up D-Bus watch for user sessions: %w", err)
 	}
 
-	eventWorker.triggerCh = triggerCh
-
-	worker.EventType = eventWorker
+	worker := linux.NewEventWorker(userSessionsEventWorkerID)
+	worker.EventType = sessionsWorker
 
 	return worker, nil
 }

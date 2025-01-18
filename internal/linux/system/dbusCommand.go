@@ -8,6 +8,7 @@ package system
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 
 	"github.com/eclipse/paho.golang/paho"
@@ -16,8 +17,13 @@ import (
 	mqttapi "github.com/joshuar/go-hass-anything/v12/pkg/mqtt"
 
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
+	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
+)
+
+const (
+	dbusCmdPreferencesID = "dbus_commands"
 )
 
 type dbusCommandMsg struct {
@@ -29,8 +35,30 @@ type dbusCommandMsg struct {
 	UseSessionPath bool   `json:"use_session_path"`
 }
 
+type dbusCmdWorker struct{}
+
+func (w *dbusCmdWorker) PreferencesID() string {
+	return basePreferencesID + "." + dbusCmdPreferencesID
+}
+
+func (w *dbusCmdWorker) DefaultPreferences() preferences.CommonWorkerPrefs {
+	return preferences.CommonWorkerPrefs{}
+}
+
 func NewDBusCommandSubscription(ctx context.Context, device *mqtthass.Device) (*mqttapi.Subscription, error) {
 	logger := logging.FromContext(ctx).With(slog.String("controller", "dbus_command"))
+
+	worker := &dbusCmdWorker{}
+
+	prefs, err := preferences.LoadWorker(ctx, worker)
+	if err != nil {
+		return nil, fmt.Errorf("could not load preferences: %w", err)
+	}
+
+	//nolint:nilnil
+	if prefs.IsDisabled() {
+		return nil, nil
+	}
 
 	systemBus, ok := linux.CtxGetSystemBus(ctx)
 	if !ok {

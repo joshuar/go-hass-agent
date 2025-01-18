@@ -1,9 +1,7 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
-package cpu
+package system
 
 import (
 	"context"
@@ -19,14 +17,13 @@ import (
 )
 
 const (
-	cpuVulnWorkerID = "cpu_vulnerabilities"
-	preferencesID   = cpuVulnWorkerID
-	cpuVulnPath     = "devices/system/cpu/vulnerabilities"
+	cpuVulnWorkerID      = "cpu_vulnerabilities"
+	cpuVulnPreferencesID = cpuVulnWorkerID
+	cpuVulnPath          = "devices/system/cpu/vulnerabilities"
 )
 
 type cpuVulnWorker struct {
-	path  string
-	prefs *preferences.CommonWorkerPrefs
+	path string
 }
 
 func (w *cpuVulnWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
@@ -72,7 +69,7 @@ func (w *cpuVulnWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 }
 
 func (w *cpuVulnWorker) PreferencesID() string {
-	return preferencesID
+	return basePreferencesID + "." + cpuVulnPreferencesID
 }
 
 func (w *cpuVulnWorker) DefaultPreferences() preferences.CommonWorkerPrefs {
@@ -80,24 +77,21 @@ func (w *cpuVulnWorker) DefaultPreferences() preferences.CommonWorkerPrefs {
 }
 
 func NewCPUVulnerabilityWorker(ctx context.Context) (*linux.OneShotSensorWorker, error) {
-	var err error
-
-	worker := linux.NewOneShotSensorWorker(cpuVulnWorkerID)
-
 	cpuVulnWorker := &cpuVulnWorker{
 		path: filepath.Join(linux.SysFSRoot, cpuVulnPath),
 	}
 
-	cpuVulnWorker.prefs, err = preferences.LoadWorker(ctx, cpuVulnWorker)
+	prefs, err := preferences.LoadWorker(ctx, cpuVulnWorker)
 	if err != nil {
-		return worker, fmt.Errorf("could not load preferences: %w", err)
+		return nil, fmt.Errorf("could not load preferences: %w", err)
 	}
 
-	// If disabled, don't use the addressWorker.
-	if cpuVulnWorker.prefs.Disabled {
-		return worker, nil
+	//nolint:nilnil
+	if prefs.Disabled {
+		return nil, nil
 	}
 
+	worker := linux.NewOneShotSensorWorker(cpuVulnWorkerID)
 	worker.OneShotSensorType = cpuVulnWorker
 
 	return worker, nil
