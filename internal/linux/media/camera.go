@@ -32,6 +32,8 @@ const (
 	defaultCameraDevice        = "/dev/video0"
 	defaultHeight       uint32 = 640
 	defaultWidth        uint32 = 480
+
+	cameraPreferencesID = "camera_controls"
 )
 
 var defaultPreferredFmts = []string{"Motion-JPEG"}
@@ -59,7 +61,7 @@ type CameraWorkerPrefs struct {
 }
 
 func (w *CameraWorker) PreferencesID() string {
-	return controlsPreferencesID
+	return cameraPreferencesID
 }
 
 func (w *CameraWorker) DefaultPreferences() CameraWorkerPrefs {

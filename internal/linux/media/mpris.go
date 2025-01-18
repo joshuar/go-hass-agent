@@ -28,6 +28,8 @@ const (
 
 	mprisDBusPath      = "/org/mpris/MediaPlayer2"
 	mprisDBusNamespace = "org.mpris.MediaPlayer2.Player"
+
+	mprisPreferencesID = "mpris"
 )
 
 type mprisMonitor struct {
@@ -35,9 +37,20 @@ type mprisMonitor struct {
 	mediaStateEntity *mqtthass.SensorEntity
 	msgCh            chan *mqttapi.Msg
 	mediaState       string
+	prefs            *preferences.CommonWorkerPrefs
+}
+
+func (m *mprisMonitor) PreferencesID() string {
+	return mprisPreferencesID
+}
+
+func (m *mprisMonitor) DefaultPreferences() preferences.CommonWorkerPrefs {
+	return preferences.CommonWorkerPrefs{}
 }
 
 func MPRISControl(ctx context.Context, device *mqtthass.Device, msgCh chan *mqttapi.Msg) (*mqtthass.SensorEntity, error) {
+	var err error
+
 	bus, ok := linux.CtxGetSessionBus(ctx)
 	if !ok {
 		return nil, linux.ErrNoSessionBus
@@ -46,6 +59,16 @@ func MPRISControl(ctx context.Context, device *mqtthass.Device, msgCh chan *mqtt
 	mprisMonitor := &mprisMonitor{
 		logger: logging.FromContext(ctx).With(slog.String("controller", "mpris")),
 		msgCh:  msgCh,
+	}
+
+	mprisMonitor.prefs, err = preferences.LoadWorker(ctx, mprisMonitor)
+	if err != nil {
+		return nil, fmt.Errorf("could not load preferences: %w", err)
+	}
+
+	//nolint:nilnil
+	if mprisMonitor.prefs.IsDisabled() {
+		return nil, nil
 	}
 
 	mprisMonitor.mediaStateEntity = mqtthass.NewSensorEntity().
