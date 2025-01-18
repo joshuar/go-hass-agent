@@ -11,16 +11,18 @@ import (
 	"strings"
 
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
+	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/hass/event"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
 const (
-	oomEventsWorkerID = "oom_events_worker"
-	oomDBusPath       = "/org/freedesktop/systemd1/unit"
-	unitPathPrefix    = "/org/freedesktop/systemd1/unit"
-	oomEventName      = "oom_event"
+	oomEventsWorkerID      = "oom_events"
+	oomEventsPreferencesID = oomEventsWorkerID
+	oomDBusPath            = "/org/freedesktop/systemd1/unit"
+	unitPathPrefix         = "/org/freedesktop/systemd1/unit"
+	oomEventName           = "oom_event"
 )
 
 type oomEventData struct {
@@ -31,6 +33,7 @@ type oomEventData struct {
 type OOMEventsWorker struct {
 	triggerCh chan dbusx.Trigger
 	linux.EventWorker
+	prefs *preferences.CommonWorkerPrefs
 }
 
 //nolint:gocognit
@@ -100,7 +103,17 @@ func (w *OOMEventsWorker) Events(ctx context.Context) (<-chan event.Event, error
 	return eventCh, nil
 }
 
+func (w *OOMEventsWorker) PreferencesID() string {
+	return oomEventsPreferencesID
+}
+
+func (d *OOMEventsWorker) DefaultPreferences() preferences.CommonWorkerPrefs {
+	return preferences.CommonWorkerPrefs{}
+}
+
 func NewOOMEventsWorker(ctx context.Context) (*linux.EventWorker, error) {
+	var err error
+
 	worker := linux.NewEventWorker(oomEventsWorkerID)
 
 	bus, ok := linux.CtxGetSessionBus(ctx)
@@ -109,6 +122,15 @@ func NewOOMEventsWorker(ctx context.Context) (*linux.EventWorker, error) {
 	}
 
 	eventWorker := &OOMEventsWorker{}
+
+	eventWorker.prefs, err = preferences.LoadWorker(ctx, eventWorker)
+	if err != nil {
+		return nil, fmt.Errorf("could not load preferences: %w", err)
+	}
+
+	if eventWorker.prefs.IsDisabled() {
+		return worker, nil
+	}
 
 	triggerCh, err := dbusx.NewWatch(
 		dbusx.MatchPathNamespace(oomDBusPath),
