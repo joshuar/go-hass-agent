@@ -106,7 +106,7 @@ func Run(ctx context.Context, dataCh chan any, tracker fyneui.Tracker) error {
 			sensorWorkers = append(sensorWorkers, worker)
 		}
 		// Initialize and add external version sensor worker.
-		if worker := agentsensor.NewVersionWorker(); worker != nil {
+		if worker := agentsensor.NewVersionWorker(workerCtx); worker != nil {
 			sensorWorkers = append(sensorWorkers, worker)
 		}
 
