@@ -41,7 +41,8 @@
     "components/registry",
     "components/preferences",
     "linux/desktop",
-    "linux/disk"
+    "linux/disk",
+    "linux/location"
   ],
   "go.testFlags": ["-v"],
   "[markdown]": {
