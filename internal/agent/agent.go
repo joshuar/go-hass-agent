@@ -98,7 +98,7 @@ func Run(ctx context.Context, dataCh chan any, tracker fyneui.Tracker) error {
 		// Initialize and gather OS sensor and event workers.
 		sensorWorkers, eventWorkers := setupOSWorkers(workerCtx)
 		// Initialize and add connection latency sensor worker.
-		if worker := agentsensor.NewConnectionLatencySensorWorker(); worker != nil {
+		if worker := agentsensor.NewConnectionLatencySensorWorker(workerCtx); worker != nil {
 			sensorWorkers = append(sensorWorkers, worker)
 		}
 		// Initialize and add external IP address sensor worker.
