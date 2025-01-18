@@ -17,6 +17,7 @@ import (
 
 	"github.com/iancoleman/strcase"
 
+	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
@@ -31,7 +32,8 @@ const (
 
 	loadAvgsTotal = 3
 
-	loadAvgsWorkerID = "load_averages_sensors"
+	loadAvgsWorkerID      = "cpu_loadavg_sensors"
+	loadAvgsPreferencesID = loadAvgsWorkerID
 )
 
 var ErrParseLoadAvgs = errors.New("could not parse load averages")
@@ -39,6 +41,7 @@ var ErrParseLoadAvgs = errors.New("could not parse load averages")
 type loadAvgsWorker struct {
 	path     string
 	loadAvgs []sensor.Entity
+	prefs    *preferences.CommonWorkerPrefs
 }
 
 func (w *loadAvgsWorker) UpdateDelta(_ time.Duration) {}
@@ -62,6 +65,14 @@ func (w *loadAvgsWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 	}
 
 	return sensors, nil
+}
+
+func (w *loadAvgsWorker) PreferencesID() string {
+	return loadAvgsPreferencesID
+}
+
+func (w *loadAvgsWorker) DefaultPreferences() preferences.CommonWorkerPrefs {
+	return preferences.CommonWorkerPrefs{}
 }
 
 func newLoadAvgSensors() []sensor.Entity {
@@ -100,9 +111,23 @@ func parseLoadAvgs(data []byte) ([]string, error) {
 	return loadAvgs, nil
 }
 
-func NewLoadAvgWorker(_ context.Context) (*linux.PollingSensorWorker, error) {
+func NewLoadAvgWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
+	var err error
+
 	worker := linux.NewPollingSensorWorker(loadAvgsWorkerID, loadAvgUpdateInterval, loadAvgUpdateJitter)
-	worker.PollingSensorType = &loadAvgsWorker{loadAvgs: newLoadAvgSensors(), path: filepath.Join(linux.ProcFSRoot, "loadavg")}
+	loadAvgsWorker := &loadAvgsWorker{loadAvgs: newLoadAvgSensors(), path: filepath.Join(linux.ProcFSRoot, "loadavg")}
+
+	loadAvgsWorker.prefs, err = preferences.LoadWorker(ctx, loadAvgsWorker)
+	if err != nil {
+		return worker, fmt.Errorf("could not load preferences: %w", err)
+	}
+
+	// If disabled, don't use the addressWorker.
+	if loadAvgsWorker.prefs.Disabled {
+		return worker, nil
+	}
+
+	worker.PollingSensorType = loadAvgsWorker
 
 	return worker, nil
 }
