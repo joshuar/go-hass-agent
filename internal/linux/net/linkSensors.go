@@ -237,6 +237,7 @@ func (w *AddressWorker) PreferencesID() string {
 func (w *AddressWorker) DefaultPreferences() WorkerPrefs {
 	return WorkerPrefs{
 		IgnoredDevices: defaultIgnoredDevices,
+		UpdateInterval: rateInterval.String(),
 	}
 }
 
