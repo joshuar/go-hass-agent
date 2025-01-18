@@ -206,7 +206,6 @@ func NewDesktopWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 
 	// If disabled, don't use the addressWorker.
 	if settingsWorker.prefs.Disabled {
-		slog.Info("disabled")
 		return worker, nil
 	}
 

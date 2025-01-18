@@ -40,7 +40,8 @@
     "hass/discovery",
     "components/registry",
     "components/preferences",
-    "linux/desktop"
+    "linux/desktop",
+    "linux/disk"
   ],
   "go.testFlags": ["-v"],
   "[markdown]": {
