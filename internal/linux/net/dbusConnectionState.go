@@ -140,6 +140,7 @@ func (w *ConnectionsWorker) PreferencesID() string {
 func (w *ConnectionsWorker) DefaultPreferences() WorkerPrefs {
 	return WorkerPrefs{
 		IgnoredDevices: defaultIgnoredDevices,
+		UpdateInterval: rateInterval.String(),
 	}
 }
 
