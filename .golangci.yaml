@@ -221,6 +221,8 @@ linters-settings:
         disabled: true
       - name: unhandled-error # Covered by errcheck.
         disabled: true
+      - name: unused-receiver
+        disabled: true
       - name: cognitive-complexity # Covered by gocognit.
         disabled: true
       - name: string-of-int # Covered by govet stringintconv check.
