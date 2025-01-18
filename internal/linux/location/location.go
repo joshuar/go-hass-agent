@@ -33,7 +33,8 @@ const (
 	timeThresholdProp     = clientInterface + ".TimeThreshold"
 	locationUpdatedSignal = clientInterface + ".LocationUpdated"
 
-	workerID = "location_sensor"
+	workerID      = "location_worker"
+	preferencesID = "location"
 )
 
 type locationWorker struct {
@@ -41,6 +42,7 @@ type locationWorker struct {
 	stopMethod          *dbusx.Method
 	startMethod         *dbusx.Method
 	triggerCh           chan dbusx.Trigger
+	prefs               *preferences.CommonWorkerPrefs
 }
 
 //nolint:gocognit
@@ -89,6 +91,14 @@ func (w *locationWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 	return nil, linux.ErrUnimplemented
 }
 
+func (w *locationWorker) PreferencesID() string {
+	return preferencesID
+}
+
+func (w *locationWorker) DefaultPreferences() preferences.CommonWorkerPrefs {
+	return preferences.CommonWorkerPrefs{}
+}
+
 func (w *locationWorker) newLocation(locationPath string) (sensor.Entity, error) {
 	var warnings error
 
@@ -118,7 +128,20 @@ func (w *locationWorker) newLocation(locationPath string) (sensor.Entity, error)
 }
 
 func NewLocationWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
+	var err error
+
 	worker := linux.NewEventSensorWorker(workerID)
+	locationWorker := &locationWorker{}
+
+	// Load the worker preferences.
+	locationWorker.prefs, err = preferences.LoadWorker(ctx, locationWorker)
+	if err != nil {
+		return worker, fmt.Errorf("could not load preferences: %w", err)
+	}
+	// If disabled, don't use the worker.
+	if locationWorker.prefs.Disabled {
+		return worker, nil
+	}
 
 	bus, ok := linux.CtxGetSystemBus(ctx)
 	if !ok {
@@ -134,28 +157,27 @@ func NewLocationWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 	// Set threshold values.
 	setThresholds(bus, clientPath)
 
-	triggerCh, err := dbusx.NewWatch(
+	locationWorker.triggerCh, err = dbusx.NewWatch(
 		dbusx.MatchPath(clientPath),
 		dbusx.MatchInterface(clientInterface),
 		dbusx.MatchMembers("LocationUpdated")).Start(ctx, bus)
 	if err != nil {
 		return worker, fmt.Errorf("could not setup D-Bus watch for location updates: %w", err)
 	}
+	// Set worker data.
+	locationWorker.getLocationProperty = func(path, prop string) (float64, error) {
+		value, err := dbusx.NewProperty[float64](bus, path, geoclueInterface, locationInterface+"."+prop).Get()
+		if err != nil {
+			return 0, fmt.Errorf("could not fetch location property %s: %w", prop, err)
+		}
+
+		return value, nil
+	}
+	locationWorker.startMethod = dbusx.NewMethod(bus, geoclueInterface, clientPath, startCall)
+	locationWorker.stopMethod = dbusx.NewMethod(bus, geoclueInterface, clientPath, stopCall)
 
 	// Create our sensor worker.
-	worker.EventSensorType = &locationWorker{
-		triggerCh: triggerCh,
-		getLocationProperty: func(path, prop string) (float64, error) {
-			value, err := dbusx.NewProperty[float64](bus, path, geoclueInterface, locationInterface+"."+prop).Get()
-			if err != nil {
-				return 0, fmt.Errorf("could not fetch location property %s: %w", prop, err)
-			}
-
-			return value, nil
-		},
-		startMethod: dbusx.NewMethod(bus, geoclueInterface, clientPath, startCall),
-		stopMethod:  dbusx.NewMethod(bus, geoclueInterface, clientPath, stopCall),
-	}
+	worker.EventSensorType = locationWorker
 
 	return worker, nil
 }
