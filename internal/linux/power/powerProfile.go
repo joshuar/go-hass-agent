@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
@@ -21,7 +22,8 @@ const (
 	powerProfilesInterface = "org.freedesktop.UPower.PowerProfiles"
 	activeProfileProp      = "ActiveProfile"
 
-	powerProfileWorkerID = "power_profile"
+	powerProfileWorkerID      = "power_profile_sensor"
+	powerProfilePreferencesID = powerProfileWorkerID
 )
 
 func newPowerSensor(profile string) sensor.Entity {
@@ -40,6 +42,7 @@ func newPowerSensor(profile string) sensor.Entity {
 type profileWorker struct {
 	activeProfile *dbusx.Property[string]
 	triggerCh     chan dbusx.Trigger
+	prefs         *preferences.CommonWorkerPrefs
 }
 
 func (w *profileWorker) Events(ctx context.Context) (<-chan sensor.Entity, error) {
@@ -89,15 +92,35 @@ func (w *profileWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 	return []sensor.Entity{newPowerSensor(profile)}, nil
 }
 
+func (w *profileWorker) PreferencesID() string {
+	return powerProfilePreferencesID
+}
+
+func (w *profileWorker) DefaultPreferences() preferences.CommonWorkerPrefs {
+	return preferences.CommonWorkerPrefs{}
+}
+
 func NewProfileWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
+	var err error
+
 	worker := linux.NewEventSensorWorker(powerProfileWorkerID)
+	powerProfileWorker := &profileWorker{}
+
+	powerProfileWorker.prefs, err = preferences.LoadWorker(ctx, powerProfileWorker)
+	if err != nil {
+		return nil, fmt.Errorf("could not load preferences: %w", err)
+	}
+
+	if powerProfileWorker.prefs.IsDisabled() {
+		return worker, nil
+	}
 
 	bus, ok := linux.CtxGetSystemBus(ctx)
 	if !ok {
 		return worker, linux.ErrNoSystemBus
 	}
 
-	triggerCh, err := dbusx.NewWatch(
+	powerProfileWorker.triggerCh, err = dbusx.NewWatch(
 		dbusx.MatchPath(powerProfilesPath),
 		dbusx.MatchPropChanged(),
 	).Start(ctx, bus)
@@ -105,12 +128,11 @@ func NewProfileWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 		return worker, fmt.Errorf("could not watch D-Bus for power profile updates: %w", err)
 	}
 
-	worker.EventSensorType = &profileWorker{
-		triggerCh: triggerCh,
-		activeProfile: dbusx.NewProperty[string](bus,
-			powerProfilesPath, powerProfilesInterface,
-			powerProfilesInterface+"."+activeProfileProp),
-	}
+	powerProfileWorker.activeProfile = dbusx.NewProperty[string](bus,
+		powerProfilesPath, powerProfilesInterface,
+		powerProfilesInterface+"."+activeProfileProp)
+
+	worker.EventSensorType = powerProfileWorker
 
 	return worker, nil
 }
