@@ -71,7 +71,7 @@ type EventSensorWorker struct {
 	Worker
 }
 
-func (w *EventSensorWorker) Disabled() bool {
+func (w *EventSensorWorker) IsDisabled() bool {
 	return w.EventSensorType == nil
 }
 
@@ -101,7 +101,7 @@ type PollingSensorWorker struct {
 	JitterAmount time.Duration
 }
 
-func (w *PollingSensorWorker) Disabled() bool {
+func (w *PollingSensorWorker) IsDisabled() bool {
 	return w.PollingSensorType == nil
 }
 
@@ -131,7 +131,7 @@ type OneShotSensorWorker struct {
 	Worker
 }
 
-func (w *OneShotSensorWorker) Disabled() bool {
+func (w *OneShotSensorWorker) IsDisabled() bool {
 	return w.OneShotSensorType == nil
 }
 
@@ -157,7 +157,7 @@ type EventWorker struct {
 	Worker
 }
 
-func (w *EventWorker) Disabled() bool {
+func (w *EventWorker) IsDisabled() bool {
 	return w.EventType == nil
 }
 

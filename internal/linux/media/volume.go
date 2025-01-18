@@ -29,6 +29,8 @@ const (
 	minVolpc  = 0
 	maxVolpc  = 100
 	volStepPc = 1
+
+	audioControlPreferencesID = "audio_controls"
 )
 
 // audioControl is a struct containing the data for providing audio state
@@ -39,11 +41,20 @@ type audioControl struct {
 	muteEntity *mqtthass.SwitchEntity
 	volEntity  *mqtthass.NumberEntity[int]
 	logger     *slog.Logger
+	prefs      *preferences.CommonWorkerPrefs
 }
 
 // entity is a convienience interface to treat all entities the same.
 type entity interface {
 	MarshalState(args ...any) (*mqttapi.Msg, error)
+}
+
+func (d *audioControl) PreferencesID() string {
+	return audioControlPreferencesID
+}
+
+func (d *audioControl) DefaultPreferences() preferences.CommonWorkerPrefs {
+	return preferences.CommonWorkerPrefs{}
 }
 
 //nolint:lll
@@ -52,6 +63,15 @@ func VolumeControl(ctx context.Context, msgCh chan *mqttapi.Msg, device *mqtthas
 	if err != nil {
 		logging.FromContext(ctx).Warn("Could not configure Pulseaudio. Volume control will not be available.", slog.Any("error", err))
 
+		return nil, nil
+	}
+
+	control.prefs, err = preferences.LoadWorker(ctx, control)
+	if err != nil {
+		return nil, nil
+	}
+
+	if control.prefs.IsDisabled() {
 		return nil, nil
 	}
 
