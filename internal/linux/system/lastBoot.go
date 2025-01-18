@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
@@ -19,6 +20,14 @@ const (
 
 type lastBootWorker struct {
 	lastBoot time.Time
+}
+
+func (w *lastBootWorker) PreferencesID() string {
+	return basePreferencesID + "." + infoWorkerPreferencesID
+}
+
+func (w *lastBootWorker) DefaultPreferences() preferences.CommonWorkerPrefs {
+	return preferences.CommonWorkerPrefs{}
 }
 
 func (w *lastBootWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
@@ -39,14 +48,25 @@ func (w *lastBootWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 }
 
 func NewLastBootWorker(ctx context.Context) (*linux.OneShotSensorWorker, error) {
-	worker := linux.NewOneShotSensorWorker(lastBootWorkerID)
-
 	lastBoot, found := linux.CtxGetBoottime(ctx)
 	if !found {
-		return worker, fmt.Errorf("%w: no lastBoot value", linux.ErrInvalidCtx)
+		return nil, fmt.Errorf("%w: no lastBoot value", linux.ErrInvalidCtx)
 	}
 
-	worker.OneShotSensorType = &lastBootWorker{lastBoot: lastBoot}
+	bootWorker := &lastBootWorker{lastBoot: lastBoot}
+
+	prefs, err := preferences.LoadWorker(ctx, bootWorker)
+	if err != nil {
+		return nil, fmt.Errorf("could not load preferences: %w", err)
+	}
+
+	//nolint:nilnil
+	if prefs.IsDisabled() {
+		return nil, nil
+	}
+
+	worker := linux.NewOneShotSensorWorker(lastBootWorkerID)
+	worker.OneShotSensorType = bootWorker
 
 	return worker, nil
 }

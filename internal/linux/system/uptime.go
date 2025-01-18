@@ -7,12 +7,14 @@ package system
 import (
 	"bufio"
 	"context"
+	"fmt"
 	"log/slog"
 	"os"
 	"strconv"
 	"time"
 
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
+	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
@@ -22,7 +24,8 @@ const (
 	uptimePollInterval = 15 * time.Minute
 	uptimePollJitter   = time.Minute
 
-	uptimeWorkerID = "time"
+	uptimeWorkerID            = "uptime_sensor"
+	uptimeWorkerPreferencesID = "uptime"
 )
 
 type uptimeWorker struct{}
@@ -47,6 +50,16 @@ func (w *uptimeWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
 			),
 		},
 		nil
+}
+
+func (w *uptimeWorker) PreferencesID() string {
+	return basePreferencesID + "." + uptimeWorkerPreferencesID
+}
+
+func (w *uptimeWorker) DefaultPreferences() UptimePrefs {
+	return UptimePrefs{
+		UpdateInterval: uptimePollInterval.String(),
+	}
 }
 
 // getUptime retrieve the uptime of the device running Go Hass Agent, in
@@ -80,9 +93,31 @@ func (w *uptimeWorker) getUptime(ctx context.Context) float64 {
 	return uptimeValue
 }
 
-func NewUptimeTimeWorker(_ context.Context) (*linux.PollingSensorWorker, error) {
-	worker := linux.NewPollingSensorWorker(uptimeWorkerID, uptimePollInterval, uptimePollJitter)
-	worker.PollingSensorType = &uptimeWorker{}
+func NewUptimeTimeWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
+	uptimeWorker := &uptimeWorker{}
+
+	prefs, err := preferences.LoadWorker(ctx, uptimeWorker)
+	if err != nil {
+		return nil, fmt.Errorf("could not load preferences: %w", err)
+	}
+
+	//nolint:nilnil
+	if prefs.IsDisabled() {
+		return nil, nil
+	}
+
+	pollInterval, err := time.ParseDuration(prefs.UpdateInterval)
+	if err != nil {
+		logging.FromContext(ctx).Warn("Invalid polling interval, using default",
+			slog.String("worker", uptimeWorkerID),
+			slog.String("given_interval", prefs.UpdateInterval),
+			slog.String("default_interval", uptimePollInterval.String()))
+
+		pollInterval = uptimePollInterval
+	}
+
+	worker := linux.NewPollingSensorWorker(uptimeWorkerID, pollInterval, uptimePollJitter)
+	worker.PollingSensorType = uptimeWorker
 
 	return worker, nil
 }

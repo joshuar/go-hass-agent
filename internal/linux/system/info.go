@@ -8,19 +8,30 @@ package system
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
+	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 )
 
 const (
-	infoWorkerID = "system_info"
+	infoWorkerID            = "system_info"
+	infoWorkerPreferencesID = "system_info"
 )
 
 type infoWorker struct{}
+
+func (w *infoWorker) PreferencesID() string {
+	return basePreferencesID + "." + infoWorkerPreferencesID
+}
+
+func (w *infoWorker) DefaultPreferences() preferences.CommonWorkerPrefs {
+	return preferences.CommonWorkerPrefs{}
+}
 
 func (w *infoWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
 	var sensors []sensor.Entity
@@ -80,9 +91,21 @@ func (w *infoWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
 	return sensors, nil
 }
 
-func NewInfoWorker(_ context.Context) (*linux.OneShotSensorWorker, error) {
+func NewInfoWorker(ctx context.Context) (*linux.OneShotSensorWorker, error) {
+	infoWorker := &infoWorker{}
+
+	prefs, err := preferences.LoadWorker(ctx, infoWorker)
+	if err != nil {
+		return nil, fmt.Errorf("could not load preferences: %w", err)
+	}
+
+	//nolint:nilnil
+	if prefs.IsDisabled() {
+		return nil, nil
+	}
+
 	worker := linux.NewOneShotSensorWorker(infoWorkerID)
-	worker.OneShotSensorType = &infoWorker{}
+	worker.OneShotSensorType = infoWorker
 
 	return worker, nil
 }

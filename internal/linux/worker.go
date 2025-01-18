@@ -72,7 +72,15 @@ type EventSensorWorker struct {
 }
 
 func (w *EventSensorWorker) IsDisabled() bool {
-	return w.EventSensorType == nil
+	if w == nil {
+		return true
+	}
+
+	if w.EventSensorType == nil {
+		return true
+	}
+
+	return false
 }
 
 func (w *EventSensorWorker) Start(ctx context.Context) (<-chan sensor.Entity, error) {
@@ -102,7 +110,15 @@ type PollingSensorWorker struct {
 }
 
 func (w *PollingSensorWorker) IsDisabled() bool {
-	return w.PollingSensorType == nil
+	if w == nil {
+		return true
+	}
+
+	if w.PollingSensorType == nil {
+		return true
+	}
+
+	return false
 }
 
 func (w *PollingSensorWorker) Start(ctx context.Context) (<-chan sensor.Entity, error) {
@@ -132,7 +148,15 @@ type OneShotSensorWorker struct {
 }
 
 func (w *OneShotSensorWorker) IsDisabled() bool {
-	return w.OneShotSensorType == nil
+	if w == nil {
+		return true
+	}
+
+	if w.OneShotSensorType == nil {
+		return true
+	}
+
+	return false
 }
 
 func (w *OneShotSensorWorker) Start(ctx context.Context) (<-chan sensor.Entity, error) {
@@ -158,7 +182,15 @@ type EventWorker struct {
 }
 
 func (w *EventWorker) IsDisabled() bool {
-	return w.EventType == nil
+	if w == nil {
+		return true
+	}
+
+	if w.EventType == nil {
+		return true
+	}
+
+	return false
 }
 
 func (w *EventWorker) Start(ctx context.Context) (<-chan event.Event, error) {

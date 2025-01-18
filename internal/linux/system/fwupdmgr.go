@@ -13,13 +13,15 @@ import (
 
 	"github.com/godbus/dbus/v5"
 
+	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
 const (
-	fwupdmgrWorkerID = "system_info"
+	fwupdmgrWorkerID      = "fwupdmgr_worker"
+	fwupdmgrPreferencesID = infoWorkerPreferencesID
 
 	fwupdInterface          = "org.freedesktop.fwupd"
 	hostSecurityAttrsMethod = "GetHostSecurityAttrs"
@@ -112,18 +114,39 @@ func (w *fwupdWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
 		nil
 }
 
+func (w *fwupdWorker) PreferencesID() string {
+	return basePreferencesID + "." + fwupdmgrPreferencesID
+}
+
+func (w *fwupdWorker) DefaultPreferences() preferences.CommonWorkerPrefs {
+	return preferences.CommonWorkerPrefs{}
+}
+
 func NewfwupdWorker(ctx context.Context) (*linux.OneShotSensorWorker, error) {
-	worker := linux.NewOneShotSensorWorker(fwupdmgrWorkerID)
+	fwupdWorker := &fwupdWorker{}
+
+	prefs, err := preferences.LoadWorker(ctx, fwupdWorker)
+	if err != nil {
+		return nil, fmt.Errorf("could not load preferences: %w", err)
+	}
+
+	//nolint:nilnil
+	if prefs.IsDisabled() {
+		return nil, nil
+	}
 
 	bus, ok := linux.CtxGetSystemBus(ctx)
 	if !ok {
-		return worker, linux.ErrNoSystemBus
+		return nil, linux.ErrNoSystemBus
 	}
 
-	worker.OneShotSensorType = &fwupdWorker{
-		hostSecurityAttrs: dbusx.NewData[[]map[string]dbus.Variant](bus, fwupdInterface, "/", fwupdInterface+"."+hostSecurityAttrsMethod),
-		hostSecurityID:    dbusx.NewProperty[string](bus, "/", fwupdInterface, fwupdInterface+"."+hostSecurityIDProp),
-	}
+	fwupdWorker.hostSecurityAttrs = dbusx.NewData[[]map[string]dbus.Variant](bus,
+		fwupdInterface, "/", fwupdInterface+"."+hostSecurityAttrsMethod)
+	fwupdWorker.hostSecurityID = dbusx.NewProperty[string](bus,
+		"/", fwupdInterface, fwupdInterface+"."+hostSecurityIDProp)
+
+	worker := linux.NewOneShotSensorWorker(fwupdmgrWorkerID)
+	worker.OneShotSensorType = fwupdWorker
 
 	return worker, nil
 }
