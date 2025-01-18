@@ -5,6 +5,7 @@ package battery
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"strings"
 	"sync"
@@ -12,6 +13,7 @@ import (
 	"github.com/godbus/dbus/v5"
 
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
+	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
@@ -22,6 +24,7 @@ type sensorWorker struct {
 	batteryList map[dbus.ObjectPath]context.CancelFunc
 	logger      *slog.Logger
 	mu          sync.Mutex
+	prefs       *WorkerPrefs
 }
 
 // ?: implement initial battery sensor retrieval.
@@ -72,6 +75,14 @@ func (w *sensorWorker) Events(ctx context.Context) (<-chan sensor.Entity, error)
 	}()
 
 	return sensorCh, nil
+}
+
+func (w *sensorWorker) PreferencesID() string {
+	return preferencesID
+}
+
+func (w *sensorWorker) DefaultPreferences() WorkerPrefs {
+	return WorkerPrefs{}
 }
 
 // getBatteries is a helper function to retrieve all of the known batteries
@@ -204,6 +215,8 @@ func (w *sensorWorker) monitorBatteryChanges(ctx context.Context) <-chan sensor.
 }
 
 func NewBatteryWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
+	var err error
+
 	worker := linux.NewEventSensorWorker(workerID)
 
 	bus, ok := linux.CtxGetSystemBus(ctx)
@@ -211,11 +224,24 @@ func NewBatteryWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 		return worker, linux.ErrNoSystemBus
 	}
 
-	worker.EventSensorType = &sensorWorker{
+	batteryWorker := &sensorWorker{
 		batteryList: make(map[dbus.ObjectPath]context.CancelFunc),
 		bus:         bus,
 		logger:      logging.FromContext(ctx).With(slog.String("worker", workerID)),
 	}
+
+	batteryWorker.prefs, err = preferences.LoadWorker(ctx, batteryWorker)
+	if err != nil {
+		return worker, fmt.Errorf("could not load preferences: %w", err)
+	}
+
+	// If disabled, don't use the addressWorker.
+	if batteryWorker.prefs.Disabled {
+		slog.Info("disabled")
+		return worker, nil
+	}
+
+	worker.EventSensorType = batteryWorker
 
 	return worker, nil
 }
