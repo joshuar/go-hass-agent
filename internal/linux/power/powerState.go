@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
+	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
@@ -26,7 +27,8 @@ const (
 	sleepSignal    = "PrepareForSleep"
 	shutdownSignal = "PrepareForShutdown"
 
-	powerStateWorkerID = "power_state_sensor"
+	powerStateWorkerID      = "power_state_sensor"
+	powerStatePreferencesID = powerStateWorkerID
 )
 
 type powerSignal int
@@ -81,6 +83,7 @@ func powerStateIcon(value any) string {
 
 type stateWorker struct {
 	triggerCh chan dbusx.Trigger
+	prefs     *preferences.CommonWorkerPrefs
 }
 
 func (w *stateWorker) Events(ctx context.Context) (<-chan sensor.Entity, error) {
@@ -131,15 +134,35 @@ func (w *stateWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 	return []sensor.Entity{newPowerState(shutdown, false)}, nil
 }
 
+func (w *stateWorker) PreferencesID() string {
+	return powerStatePreferencesID
+}
+
+func (w *stateWorker) DefaultPreferences() preferences.CommonWorkerPrefs {
+	return preferences.CommonWorkerPrefs{}
+}
+
 func NewStateWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
+	var err error
+
 	worker := linux.NewEventSensorWorker(powerStateWorkerID)
+	stateWorker := &stateWorker{}
+
+	stateWorker.prefs, err = preferences.LoadWorker(ctx, stateWorker)
+	if err != nil {
+		return nil, fmt.Errorf("could not load preferences: %w", err)
+	}
+
+	if stateWorker.prefs.IsDisabled() {
+		return worker, nil
+	}
 
 	bus, ok := linux.CtxGetSystemBus(ctx)
 	if !ok {
 		return worker, linux.ErrNoSystemBus
 	}
 
-	triggerCh, err := dbusx.NewWatch(
+	stateWorker.triggerCh, err = dbusx.NewWatch(
 		dbusx.MatchPath(loginBasePath),
 		dbusx.MatchInterface(managerInterface),
 		dbusx.MatchMembers(sleepSignal, shutdownSignal),
@@ -148,9 +171,7 @@ func NewStateWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 		return worker, fmt.Errorf("unable to set-up D-Bus watch for power state: %w", err)
 	}
 
-	worker.EventSensorType = &stateWorker{
-		triggerCh: triggerCh,
-	}
+	worker.EventSensorType = stateWorker
 
 	return worker, nil
 }

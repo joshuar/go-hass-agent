@@ -7,6 +7,7 @@ package power
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 
 	"github.com/eclipse/paho.golang/paho"
@@ -18,6 +19,14 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
+
+const (
+	powerControlPreferencesID = "power_controls"
+)
+
+type powerControlWorker struct {
+	prefs *preferences.CommonWorkerPrefs
+}
 
 // powerCommand represents a power command in the agent.
 type powerCommand struct {
@@ -87,7 +96,28 @@ func generatePowerControlCallback(ctx context.Context, bus *dbusx.Bus, name, pat
 	}
 }
 
+func (w *powerControlWorker) PreferencesID() string {
+	return powerControlPreferencesID
+}
+
+func (w *powerControlWorker) DefaultPreferences() preferences.CommonWorkerPrefs {
+	return preferences.CommonWorkerPrefs{}
+}
+
 func NewPowerControl(ctx context.Context, device *mqtthass.Device) ([]*mqtthass.ButtonEntity, error) {
+	var err error
+
+	worker := &powerControlWorker{}
+
+	worker.prefs, err = preferences.LoadWorker(ctx, worker)
+	if err != nil {
+		return nil, fmt.Errorf("could not load preferences: %w", err)
+	}
+
+	if worker.prefs.IsDisabled() {
+		return nil, nil
+	}
+
 	bus, ok := linux.CtxGetSystemBus(ctx)
 	if !ok {
 		return nil, linux.ErrNoSystemBus
