@@ -82,7 +82,7 @@ func (w *ExternalIPWorker) DefaultPreferences() ExternalIPWorkerPrefs {
 	return ExternalIPWorkerPrefs{}
 }
 
-func (w *ExternalIPWorker) Disabled() bool {
+func (w *ExternalIPWorker) IsDisabled() bool {
 	return w.prefs.Disabled
 }
 
@@ -197,7 +197,7 @@ func NewExternalIPUpdaterWorker(ctx context.Context) *ExternalIPWorker {
 
 	worker.prefs = prefs
 
-	if worker.Disabled() {
+	if worker.IsDisabled() {
 		return nil
 	}
 

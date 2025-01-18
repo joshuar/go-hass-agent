@@ -41,7 +41,7 @@ type Worker struct {
 }
 
 // TODO: implement ability to disable.
-func (c *Worker) Disabled() bool {
+func (c *Worker) IsDisabled() bool {
 	return false
 }
 

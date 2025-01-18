@@ -61,7 +61,7 @@ type ConnectionLatencySensorWorker struct {
 }
 
 // TODO: implement ability to disable.
-func (w *ConnectionLatencySensorWorker) Disabled() bool {
+func (w *ConnectionLatencySensorWorker) IsDisabled() bool {
 	return false
 }
 
