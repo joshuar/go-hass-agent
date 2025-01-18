@@ -58,11 +58,19 @@ type ConnectionLatencySensorWorker struct {
 	client   *resty.Client
 	doneCh   chan struct{}
 	endpoint string
+	prefs    *preferences.CommonWorkerPrefs
 }
 
-// TODO: implement ability to disable.
+func (w *ConnectionLatencySensorWorker) PreferencesID() string {
+	return "connection_latency_sensor"
+}
+
+func (w *ConnectionLatencySensorWorker) DefaultPreferences() preferences.CommonWorkerPrefs {
+	return preferences.CommonWorkerPrefs{}
+}
+
 func (w *ConnectionLatencySensorWorker) IsDisabled() bool {
-	return false
+	return w.prefs.IsDisabled()
 }
 
 // ID returns the unique string to represent this worker and its sensors.
@@ -129,11 +137,20 @@ func (w *ConnectionLatencySensorWorker) Start(ctx context.Context) (<-chan senso
 	return sensorCh, nil
 }
 
-func NewConnectionLatencySensorWorker() *ConnectionLatencySensorWorker {
-	return &ConnectionLatencySensorWorker{
+func NewConnectionLatencySensorWorker(ctx context.Context) *ConnectionLatencySensorWorker {
+	worker := &ConnectionLatencySensorWorker{
 		client: resty.New().
 			SetTimeout(connectionLatencyTimeout).
 			EnableTrace(),
 		endpoint: preferences.RestAPIURL(),
 	}
+
+	prefs, err := preferences.LoadWorker(ctx, worker)
+	if err != nil {
+		return nil
+	}
+
+	worker.prefs = prefs
+
+	return worker
 }
