@@ -155,7 +155,7 @@ func (w *usageWorker) PreferencesID() string {
 	return memUsagePreferencesID
 }
 
-func (d *usageWorker) DefaultPreferences() WorkerPreferences {
+func (w *usageWorker) DefaultPreferences() WorkerPreferences {
 	return WorkerPreferences{
 		UpdateInterval: memUsageUpdateInterval.String(),
 	}
