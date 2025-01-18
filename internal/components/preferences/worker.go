@@ -25,6 +25,11 @@ type CommonWorkerPrefs struct {
 	Disabled bool `toml:"disabled" comment:"Set this to true to disable all these sensors."`
 }
 
+// IsDisabled will return whether the worker is disabled.
+func (p *CommonWorkerPrefs) IsDisabled() bool {
+	return p.Disabled
+}
+
 // Worker represents a Worker from the point of the preferences package. A
 // worker has a set of default preferences returned by the DefaultPreferences
 // method and an ID that uniquely identifies the worker (and its preferences

@@ -16,7 +16,7 @@ import (
 // events. It has an ID and functions to start/stop producing sensors/events.
 type Worker[T any] interface {
 	ID() string
-	Disabled() bool
+	IsDisabled() bool
 	Stop() error
 	Start(ctx context.Context) (<-chan T, error)
 }
@@ -48,7 +48,7 @@ func startWorkers[T any](ctx context.Context, workers ...Worker[T]) []<-chan T {
 
 	for _, worker := range workers {
 		// Ignore disabled workers.
-		if worker.Disabled() {
+		if worker.IsDisabled() {
 			continue
 		}
 
@@ -73,7 +73,7 @@ func startWorkers[T any](ctx context.Context, workers ...Worker[T]) []<-chan T {
 func stopWorkers[T any](ctx context.Context, workers ...Worker[T]) {
 	for _, worker := range workers {
 		// Ignore disabled workers.
-		if worker.Disabled() {
+		if worker.IsDisabled() {
 			continue
 		}
 
