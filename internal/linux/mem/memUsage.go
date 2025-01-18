@@ -14,21 +14,23 @@ import (
 
 	"github.com/iancoleman/strcase"
 
+	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 )
 
 const (
-	updateInterval = time.Minute
-	updateJitter   = 5 * time.Second
+	memUsageUpdateInterval = time.Minute
+	memUsageUpdateJitter   = 5 * time.Second
 
 	memorySensorIcon = "mdi:memory"
 
 	memoryUsageSensorUnits   = "B"
 	memoryUsageSensorPcUnits = "%"
 
-	workerID = "memory_usage_sensors"
+	memUsageWorkerID      = "memory_usage_sensors"
+	memUsagePreferencesID = memUsageWorkerID
 )
 
 // Lists of the memory statistics we want to track as sensors. See /proc/meminfo
@@ -118,7 +120,9 @@ func newSwapUsedPc(stats memoryStats) sensor.Entity {
 	return newMemSensorPc("Swap Usage", swapUsed, swapTotal)
 }
 
-type usageWorker struct{}
+type usageWorker struct {
+	prefs *WorkerPreferences
+}
 
 func (w *usageWorker) UpdateDelta(_ time.Duration) {}
 
@@ -147,9 +151,33 @@ func (w *usageWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 	return sensors, nil
 }
 
-func NewUsageWorker(_ context.Context) (*linux.PollingSensorWorker, error) {
-	worker := linux.NewPollingSensorWorker(workerID, updateInterval, updateJitter)
-	worker.PollingSensorType = &usageWorker{}
+func (w *usageWorker) PreferencesID() string {
+	return memUsagePreferencesID
+}
+
+func (d *usageWorker) DefaultPreferences() WorkerPreferences {
+	return WorkerPreferences{
+		UpdateInterval: memUsageUpdateInterval.String(),
+	}
+}
+
+func NewUsageWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
+	var err error
+
+	worker := linux.NewPollingSensorWorker(memUsageWorkerID, memUsageUpdateInterval, memUsageUpdateJitter)
+	memUsageWorker := &usageWorker{}
+
+	memUsageWorker.prefs, err = preferences.LoadWorker(ctx, memUsageWorker)
+	if err != nil {
+		return worker, fmt.Errorf("could not load preferences: %w", err)
+	}
+
+	// If disabled, don't use the addressWorker.
+	if memUsageWorker.prefs.IsDisabled() {
+		return worker, nil
+	}
+
+	worker.PollingSensorType = memUsageWorker
 
 	return worker, nil
 }
