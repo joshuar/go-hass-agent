@@ -21,10 +21,10 @@ import (
 )
 
 const (
-	ratesUpdateInterval = 5 * time.Second
-	ratesUpdateJitter   = time.Second
-	ratesWorkerID       = "disk_rates_sensors"
-	totalsID            = "total"
+	ioWorkerUpdateInterval = 5 * time.Second
+	ioWorkerUpdateJitter   = time.Second
+	ioWorkerID             = "disk_rates_sensors"
+	totalsID               = "total"
 )
 
 // ioWorker creates sensors for disk IO counts and rates per device. It
@@ -35,7 +35,6 @@ type ioWorker struct {
 	linux.PollingSensorWorker
 	delta time.Duration
 	mu    sync.Mutex
-	prefs *WorkerPrefs
 }
 
 // addDevice adds a new device to the tracker map. If sthe device is already
@@ -88,7 +87,7 @@ func (w *ioWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
 		dev, stats, err := getDevice(name)
 		if err != nil {
 			logging.FromContext(ctx).
-				With(slog.String("worker", ratesWorkerID)).
+				With(slog.String("worker", ioWorkerID)).
 				Debug("Unable to read device stats.", slog.Any("error", err))
 
 			continue
@@ -122,18 +121,14 @@ func (w *ioWorker) PreferencesID() string {
 
 func (w *ioWorker) DefaultPreferences() WorkerPrefs {
 	return WorkerPrefs{
-		UpdateInterval: ratesUpdateInterval.String(),
+		UpdateInterval: ioWorkerUpdateInterval.String(),
 	}
 }
 
 func NewIOWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
-	var err error
-
-	worker := linux.NewPollingSensorWorker(ratesWorkerID, ratesUpdateInterval, ratesUpdateJitter)
-
 	boottime, found := linux.CtxGetBoottime(ctx)
 	if !found {
-		return worker, fmt.Errorf("%w: no boottime value", linux.ErrInvalidCtx)
+		return nil, fmt.Errorf("%w: no boottime value", linux.ErrInvalidCtx)
 	}
 
 	// Add sensors for a pseudo "total" device which tracks total values from
@@ -146,16 +141,27 @@ func NewIOWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
 		boottime: boottime,
 	}
 
-	ioWorker.prefs, err = preferences.LoadWorker(ctx, ioWorker)
+	prefs, err := preferences.LoadWorker(ctx, ioWorker)
 	if err != nil {
-		return worker, fmt.Errorf("could not load preferences: %w", err)
+		return nil, fmt.Errorf("could not load preferences: %w", err)
 	}
 
-	// If disabled, don't use the addressWorker.
-	if ioWorker.prefs.Disabled {
-		return worker, nil
+	//nolint:nilnil
+	if prefs.IsDisabled() {
+		return nil, nil
 	}
 
+	pollInterval, err := time.ParseDuration(prefs.UpdateInterval)
+	if err != nil {
+		logging.FromContext(ctx).Warn("Invalid polling interval, using default",
+			slog.String("worker", ioWorkerID),
+			slog.String("given_interval", prefs.UpdateInterval),
+			slog.String("default_interval", ioWorkerUpdateInterval.String()))
+
+		pollInterval = ioWorkerUpdateInterval
+	}
+
+	worker := linux.NewPollingSensorWorker(ioWorkerID, pollInterval, ioWorkerUpdateJitter)
 	worker.PollingSensorType = ioWorker
 
 	return worker, nil

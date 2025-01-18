@@ -132,38 +132,30 @@ func readCPUFreqProp(id, file string) string {
 }
 
 func NewFreqWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
-	var err error
+	freqWorker := &freqWorker{}
 
-	pollWorker := linux.NewPollingSensorWorker(cpuFreqWorkerID, cpuFreqUpdateInterval, cpuFreqUpdateJitter)
-
-	worker := &freqWorker{}
-
-	prefs, err := preferences.LoadWorker(ctx, worker)
+	prefs, err := preferences.LoadWorker(ctx, freqWorker)
 	if err != nil {
-		return pollWorker, fmt.Errorf("could not load preferences: %w", err)
+		return nil, fmt.Errorf("could not load preferences: %w", err)
 	}
 
-	// If disabled, don't use the addressWorker.
+	//nolint:nilnil
 	if prefs.Disabled {
-		return pollWorker, nil
+		return nil, nil
 	}
 
-	interval, err := time.ParseDuration(prefs.UpdateInterval)
+	pollInterval, err := time.ParseDuration(prefs.UpdateInterval)
 	if err != nil {
-		logging.FromContext(ctx).Warn("Could not parse update interval, using default value.",
-			slog.String("requested_value", prefs.UpdateInterval),
-			slog.String("default_value", cpuFreqUpdateInterval.String()))
-		// Save preferences with default interval value.
-		prefs.UpdateInterval = cpuFreqUpdateInterval.String()
-		if err := preferences.SaveWorker(ctx, worker, *prefs); err != nil {
-			logging.FromContext(ctx).Warn("Could not save preferences.", slog.Any("error", err))
-		}
+		logging.FromContext(ctx).Warn("Invalid polling interval, using default",
+			slog.String("worker", cpuFreqWorkerID),
+			slog.String("given_interval", prefs.UpdateInterval),
+			slog.String("default_interval", cpuFreqUpdateInterval.String()))
 
-		interval = cpuUsageUpdateInterval
+		pollInterval = cpuFreqUpdateInterval
 	}
 
-	pollWorker.PollInterval = interval
-	pollWorker.PollingSensorType = worker
+	pollWorker := linux.NewPollingSensorWorker(cpuFreqWorkerID, pollInterval, cpuFreqUpdateJitter)
+	pollWorker.PollingSensorType = freqWorker
 
 	return pollWorker, nil
 }

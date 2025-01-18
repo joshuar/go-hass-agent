@@ -192,11 +192,9 @@ func (w *netStatsWorker) getLinkStats(links []rtnetlink.LinkMessage) []linkStats
 
 // NewNetStatsWorker sets up a sensor worker that tracks network stats.
 func NewNetStatsWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
-	worker := linux.NewPollingSensorWorker(netRatesWorkerID, rateInterval, rateJitter)
-
 	conn, err := rtnetlink.Dial(nil)
 	if err != nil {
-		return worker, fmt.Errorf("could not connect to netlink: %w", err)
+		return nil, fmt.Errorf("could not connect to netlink: %w", err)
 	}
 
 	go func() {
@@ -217,13 +215,25 @@ func NewNetStatsWorker(ctx context.Context) (*linux.PollingSensorWorker, error) 
 
 	ratesWorker.prefs, err = preferences.LoadWorker(ctx, ratesWorker)
 	if err != nil {
-		return worker, fmt.Errorf("could not load preferences: %w", err)
+		return nil, fmt.Errorf("could not load preferences: %w", err)
 	}
 
-	if ratesWorker.prefs.Disabled {
-		return worker, nil
+	//nolint:nilnil
+	if ratesWorker.prefs.IsDisabled() {
+		return nil, nil
 	}
 
+	pollInterval, err := time.ParseDuration(ratesWorker.prefs.UpdateInterval)
+	if err != nil {
+		logging.FromContext(ctx).Warn("Invalid polling interval, using default",
+			slog.String("worker", netRatesWorkerID),
+			slog.String("given_interval", ratesWorker.prefs.UpdateInterval),
+			slog.String("default_interval", rateInterval.String()))
+
+		pollInterval = rateInterval
+	}
+
+	worker := linux.NewPollingSensorWorker(netRatesWorkerID, pollInterval, rateJitter)
 	worker.PollingSensorType = ratesWorker
 
 	return worker, nil

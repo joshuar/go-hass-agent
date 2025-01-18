@@ -41,7 +41,6 @@ var ErrParseLoadAvgs = errors.New("could not parse load averages")
 type loadAvgsWorker struct {
 	path     string
 	loadAvgs []sensor.Entity
-	prefs    *preferences.CommonWorkerPrefs
 }
 
 func (w *loadAvgsWorker) UpdateDelta(_ time.Duration) {}
@@ -112,21 +111,19 @@ func parseLoadAvgs(data []byte) ([]string, error) {
 }
 
 func NewLoadAvgWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
-	var err error
-
-	worker := linux.NewPollingSensorWorker(loadAvgsWorkerID, loadAvgUpdateInterval, loadAvgUpdateJitter)
 	loadAvgsWorker := &loadAvgsWorker{loadAvgs: newLoadAvgSensors(), path: filepath.Join(linux.ProcFSRoot, "loadavg")}
 
-	loadAvgsWorker.prefs, err = preferences.LoadWorker(ctx, loadAvgsWorker)
+	prefs, err := preferences.LoadWorker(ctx, loadAvgsWorker)
 	if err != nil {
-		return worker, fmt.Errorf("could not load preferences: %w", err)
+		return nil, fmt.Errorf("could not load preferences: %w", err)
 	}
 
-	// If disabled, don't use the addressWorker.
-	if loadAvgsWorker.prefs.Disabled {
-		return worker, nil
+	//nolint:nilnil
+	if prefs.Disabled {
+		return nil, nil
 	}
 
+	worker := linux.NewPollingSensorWorker(loadAvgsWorkerID, loadAvgUpdateInterval, loadAvgUpdateJitter)
 	worker.PollingSensorType = loadAvgsWorker
 
 	return worker, nil

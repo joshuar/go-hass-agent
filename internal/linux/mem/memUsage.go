@@ -9,11 +9,13 @@ package mem
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"math"
 	"time"
 
 	"github.com/iancoleman/strcase"
 
+	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
@@ -120,9 +122,7 @@ func newSwapUsedPc(stats memoryStats) sensor.Entity {
 	return newMemSensorPc("Swap Usage", swapUsed, swapTotal)
 }
 
-type usageWorker struct {
-	prefs *WorkerPreferences
-}
+type usageWorker struct{}
 
 func (w *usageWorker) UpdateDelta(_ time.Duration) {}
 
@@ -162,22 +162,30 @@ func (w *usageWorker) DefaultPreferences() WorkerPreferences {
 }
 
 func NewUsageWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
-	var err error
+	usageWorker := &usageWorker{}
 
-	worker := linux.NewPollingSensorWorker(memUsageWorkerID, memUsageUpdateInterval, memUsageUpdateJitter)
-	memUsageWorker := &usageWorker{}
-
-	memUsageWorker.prefs, err = preferences.LoadWorker(ctx, memUsageWorker)
+	prefs, err := preferences.LoadWorker(ctx, usageWorker)
 	if err != nil {
-		return worker, fmt.Errorf("could not load preferences: %w", err)
+		return nil, fmt.Errorf("could not load preferences: %w", err)
 	}
 
-	// If disabled, don't use the addressWorker.
-	if memUsageWorker.prefs.IsDisabled() {
-		return worker, nil
+	//nolint:nilnil
+	if prefs.IsDisabled() {
+		return nil, nil
 	}
 
-	worker.PollingSensorType = memUsageWorker
+	pollInterval, err := time.ParseDuration(prefs.UpdateInterval)
+	if err != nil {
+		logging.FromContext(ctx).Warn("Invalid polling interval, using default",
+			slog.String("worker", memUsageWorkerID),
+			slog.String("given_interval", prefs.UpdateInterval),
+			slog.String("default_interval", memUsageUpdateInterval.String()))
+
+		pollInterval = memUsageUpdateInterval
+	}
+
+	worker := linux.NewPollingSensorWorker(memUsageWorkerID, pollInterval, memUsageUpdateJitter)
+	worker.PollingSensorType = usageWorker
 
 	return worker, nil
 }
