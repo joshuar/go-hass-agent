@@ -107,7 +107,7 @@ func (w *OOMEventsWorker) PreferencesID() string {
 	return oomEventsPreferencesID
 }
 
-func (d *OOMEventsWorker) DefaultPreferences() preferences.CommonWorkerPrefs {
+func (w *OOMEventsWorker) DefaultPreferences() preferences.CommonWorkerPrefs {
 	return preferences.CommonWorkerPrefs{}
 }
 
