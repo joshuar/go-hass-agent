@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
@@ -19,11 +20,13 @@ import (
 
 const (
 	cpuVulnWorkerID = "cpu_vulnerabilities"
+	preferencesID   = cpuVulnWorkerID
 	cpuVulnPath     = "devices/system/cpu/vulnerabilities"
 )
 
 type cpuVulnWorker struct {
-	path string
+	path  string
+	prefs *preferences.CommonWorkerPrefs
 }
 
 func (w *cpuVulnWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
@@ -68,12 +71,34 @@ func (w *cpuVulnWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 	return []sensor.Entity{cpuVulnSensor}, nil
 }
 
-func NewCPUVulnerabilityWorker(_ context.Context) (*linux.OneShotSensorWorker, error) {
+func (w *cpuVulnWorker) PreferencesID() string {
+	return preferencesID
+}
+
+func (w *cpuVulnWorker) DefaultPreferences() preferences.CommonWorkerPrefs {
+	return preferences.CommonWorkerPrefs{}
+}
+
+func NewCPUVulnerabilityWorker(ctx context.Context) (*linux.OneShotSensorWorker, error) {
+	var err error
+
 	worker := linux.NewOneShotSensorWorker(cpuVulnWorkerID)
 
-	worker.OneShotSensorType = &cpuVulnWorker{
+	cpuVulnWorker := &cpuVulnWorker{
 		path: filepath.Join(linux.SysFSRoot, cpuVulnPath),
 	}
+
+	cpuVulnWorker.prefs, err = preferences.LoadWorker(ctx, cpuVulnWorker)
+	if err != nil {
+		return worker, fmt.Errorf("could not load preferences: %w", err)
+	}
+
+	// If disabled, don't use the addressWorker.
+	if cpuVulnWorker.prefs.Disabled {
+		return worker, nil
+	}
+
+	worker.OneShotSensorType = cpuVulnWorker
 
 	return worker, nil
 }
