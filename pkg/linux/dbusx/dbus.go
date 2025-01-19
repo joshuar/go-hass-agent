@@ -29,6 +29,7 @@ const (
 	loginBaseInterface    = "org.freedesktop.login1"
 	loginManagerInterface = loginBaseInterface + ".Manager"
 	listSessionsMethod    = loginManagerInterface + ".ListSessions"
+	listUsersMethod       = loginManagerInterface + ".ListUsers"
 )
 
 var (
@@ -66,6 +67,7 @@ type Bus struct {
 	conn     *dbus.Conn
 	traceLog func(msg string, args ...any)
 	busType  dbusType
+	logger   *slog.Logger
 }
 
 func (b *Bus) getObject(intr, path string) dbus.BusObject {
@@ -96,13 +98,19 @@ func NewBus(ctx context.Context, busType dbusType) (*Bus, error) {
 		return nil, fmt.Errorf("could not connect to bus: %w", err)
 	}
 
+	logger := logging.FromContext(ctx).
+		WithGroup("dbus").
+		With(
+			slog.String("bus", busType.String()),
+		)
+
 	// Set up our bus object.
 	bus := &Bus{
 		conn:    conn,
 		busType: busType,
+		logger:  logger,
 		traceLog: func(msg string, args ...any) {
-			slog.With(slog.String("subsystem", "dbus"), slog.String("bus", busType.String())).
-				Log(ctx, logging.LevelTrace, msg, args...)
+			logger.Log(ctx, logging.LevelTrace, msg, args...)
 		},
 	}
 
@@ -143,26 +151,48 @@ func GetData[D any](bus *Bus, path, dest, method string, args ...any) (D, error)
 	return data, nil
 }
 
+// GetSessionPath retrieves the user's session path from D-Bus. This is used by
+// various sensors to retrieve other data.
 func (b *Bus) GetSessionPath() (string, error) {
+	var userPath dbus.ObjectPath
+	// Get the user running the agent.
 	usr, err := user.Current()
 	if err != nil {
 		return "", fmt.Errorf("unable to determine user: %w", err)
 	}
-
-	sessions, err := GetData[[][]any](b, loginBasePath, loginBaseInterface, listSessionsMethod)
+	// Fetch all logged-in users from D-Bus.
+	users, err := GetData[[][]any](b, loginBasePath, loginBaseInterface, listUsersMethod)
 	if err != nil {
 		return "", fmt.Errorf("unable to retrieve session path: %w", err)
 	}
-
-	for _, s := range sessions {
-		if thisUser, ok := s[2].(string); ok && thisUser == usr.Username {
-			if p, ok := s[4].(dbus.ObjectPath); ok {
-				return string(p), nil
+	// Find the systemd-logind D-Bus user path for the user.
+	for _, s := range users {
+		if thisUser, ok := s[1].(string); ok && thisUser == usr.Username {
+			if p, ok := s[2].(dbus.ObjectPath); ok {
+				userPath = p
+				b.logger.Debug("Retrieved user path.", slog.String("path", string(userPath)))
 			}
 		}
 	}
-
-	return "", ErrNoSessionPath
+	// If we didn't find a path, bail.
+	if string(userPath) == "" {
+		return "", ErrNoSessionPath
+	}
+	// Fetch the desktop session for the user, which will contain the correct
+	// systemd-logind D-Bus session path for the user.
+	displayDetails, err := NewProperty[[]any](b, string(userPath), loginBaseInterface, loginBaseInterface+".User.Display").Get()
+	if err != nil {
+		return "", fmt.Errorf("unable to retrieve session path: %w", err)
+	}
+	// Extract/validate the session path.
+	sessionPath, ok := displayDetails[1].(dbus.ObjectPath)
+	if !ok || string(sessionPath) == "" {
+		return "", ErrNoSessionPath
+	}
+	// We have a valid session path.
+	b.logger.Debug("Retrieved session path.", slog.String("path", string(sessionPath)))
+	// Return the session path as a string.
+	return string(sessionPath), nil
 }
 
 // ParseValueChange treats the given signal body as matching a value change of a
