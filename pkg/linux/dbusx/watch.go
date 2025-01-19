@@ -29,6 +29,10 @@ type Watch struct {
 
 type WatchOption func(*Watch)
 
+// MatchPath matches messages which are sent from or to the given object. An
+// example of a path match is path='/org/freedesktop/Hal/Manager'
+//
+// https://dbus.freedesktop.org/doc/dbus-specification.html#message-protocol-marshaling-object-path
 func MatchPath(path string) WatchOption {
 	return func(a *Watch) {
 		a.path = dbus.ObjectPath(path)
@@ -36,6 +40,11 @@ func MatchPath(path string) WatchOption {
 	}
 }
 
+// MatchPathNamespace matches messages which are sent from or to an object for
+// which the object path is either the given value, or that value followed by
+// one or more path components. For valid paths, see:
+//
+// https://dbus.freedesktop.org/doc/dbus-specification.html#message-protocol-marshaling-object-path
 func MatchPathNamespace(path string) WatchOption {
 	return func(a *Watch) {
 		a.pathNamespace = path
@@ -43,18 +52,30 @@ func MatchPathNamespace(path string) WatchOption {
 	}
 }
 
+// MatchInterface match messages sent over or to a particular interface. An
+// example of an interface match is interface='org.freedesktop.Hal.Manager'. For
+// valid interfaces, see:
+//
+// https://dbus.freedesktop.org/doc/dbus-specification.html#message-protocol-names-interface
 func MatchInterface(intr string) WatchOption {
 	return func(a *Watch) {
 		a.matches = append(a.matches, dbus.WithMatchInterface(intr))
 	}
 }
 
+// MatchMembers matches messages which have the give method or signal name. An
+// example of a member match is member='NameOwnerChanged'. Each member match
+// will generate a separate watch automatically.
 func MatchMembers(names ...string) WatchOption {
 	return func(a *Watch) {
 		a.methods = append(a.methods, names...)
 	}
 }
 
+// MatchArgs matches are special and are used for further restricting the match
+// based on the arguments in the body of a message. An example of an argument
+// match would be arg3='Foo'. Only argument indexes from 0 to 63 should be
+// accepted.
 func MatchArgs(args map[int]string) WatchOption {
 	return func(a *Watch) {
 		for arg, value := range args {
@@ -63,6 +84,10 @@ func MatchArgs(args map[int]string) WatchOption {
 	}
 }
 
+// MatchArgNameSpace matches messages whose first argument is the given type,
+// and is a bus name or interface name within the specified namespace. This is
+// primarily intended for watching name owner changes for a group of related bus
+// names, rather than for a single name or all name changes.
 func MatchArgNameSpace(name string) WatchOption {
 	return func(a *Watch) {
 		a.matches = append(a.matches, dbus.WithMatchArg0Namespace(name))
@@ -81,6 +106,7 @@ func MatchPropChanged() WatchOption {
 	}
 }
 
+// NewWatch will create a new D-Bus watch with the given options.
 func NewWatch(options ...WatchOption) *Watch {
 	watch := &Watch{}
 	for _, option := range options {
@@ -90,7 +116,7 @@ func NewWatch(options ...WatchOption) *Watch {
 	return watch
 }
 
-// WatchBus will set up a channel on which D-Bus messages matching the given
+// Start will set up a channel on which D-Bus messages matching the given
 // rules can be monitored. Typically, this is used to react when a certain
 // property or signal with a given path and on a given interface, changes. The
 // data returned in the channel will contain the signal (or property) that
