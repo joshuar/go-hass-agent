@@ -97,6 +97,22 @@ func newUsageSensor(clktck int64, details []string, category types.Category) sen
 	return usageSensor
 }
 
+func newCountSensor(name, icon, valueStr string) sensor.Entity {
+	valueInt, _ := strconv.Atoi(valueStr) //nolint:errcheck // if we can't parse it, value will be 0.
+
+	return sensor.NewSensor(
+		sensor.WithName(name),
+		sensor.WithID(strcase.ToSnake(name)),
+		sensor.WithStateClass(types.StateClassMeasurement),
+		sensor.AsDiagnostic(),
+		sensor.WithState(
+			sensor.WithIcon(icon),
+			sensor.WithValue(valueInt),
+			sensor.WithDataSourceAttribute(linux.DataSrcProcfs),
+		),
+	)
+}
+
 func generateUsageValues(clktck int64, details []string) (float64, map[string]any) {
 	var totalTime float64
 
@@ -120,20 +136,4 @@ func generateUsageValues(clktck int64, details []string) (float64, map[string]an
 	value := attrs["user_time"].(float64) / totalTime * 100
 
 	return value, attrs
-}
-
-func newCountSensor(name, icon, valueStr string) sensor.Entity {
-	valueInt, _ := strconv.Atoi(valueStr) //nolint:errcheck // if we can't parse it, value will be 0.
-
-	return sensor.NewSensor(
-		sensor.WithName(name),
-		sensor.WithID(strcase.ToSnake(name)),
-		sensor.WithStateClass(types.StateClassMeasurement),
-		sensor.AsDiagnostic(),
-		sensor.WithState(
-			sensor.WithIcon(icon),
-			sensor.WithValue(valueInt),
-			sensor.WithDataSourceAttribute(linux.DataSrcProcfs),
-		),
-	)
 }
