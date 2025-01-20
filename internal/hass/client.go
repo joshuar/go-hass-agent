@@ -10,8 +10,6 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
-
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/hass/api"
@@ -74,8 +72,6 @@ func NewDataHandler(ctx context.Context, reg sensorRegistry, trk sensorTracker) 
 		registry: reg,
 		tracker:  trk,
 	}
-
-	spew.Dump(ctx)
 
 	go func() {
 		for d := range dataCh {

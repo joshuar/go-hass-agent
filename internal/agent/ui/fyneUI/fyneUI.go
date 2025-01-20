@@ -410,7 +410,6 @@ func (i *FyneUI) registrationFields(prefs *preferences.Registration) []*widget.F
 		i.logger.Warn("Errors occurred discovering Home Assistant servers.", slog.Any("error", err))
 	}
 
-	allServers = append(allServers, prefs.Server)
 	allServers = append(allServers, foundServers...)
 
 	tokenEntry := configEntry(&prefs.Token, false)
