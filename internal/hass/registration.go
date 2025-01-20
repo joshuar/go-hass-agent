@@ -139,5 +139,8 @@ func generateWebsocketURL(server string) (string, error) {
 		websocketURL.Scheme = "ws"
 	}
 
+	// Strip any port from host.
+	websocketURL.Host = websocketURL.Hostname()
+
 	return websocketURL.JoinPath(WebsocketPath).String(), nil
 }
