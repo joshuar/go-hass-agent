@@ -1,7 +1,5 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
 package battery
 
@@ -21,7 +19,7 @@ import (
 
 // newBatterySensor creates a new sensor for Home Assistant from a battery
 // property.
-func newBatterySensor(battery *upowerBattery, sensorType batterySensor, value dbus.Variant) sensor.Entity {
+func newBatterySensor(battery *upowerBattery, sensorType sensorType, value dbus.Variant) sensor.Entity {
 	var (
 		name, id, icon, units string
 		deviceClass           types.DeviceClass
@@ -37,16 +35,16 @@ func newBatterySensor(battery *upowerBattery, sensorType batterySensor, value db
 	id = battery.id + "_" + strings.ToLower(strcase.ToSnake(sensorType.String()))
 
 	switch sensorType {
-	case battPercentage:
+	case typePercentage:
 		icon = batteryPercentIcon(value.Value())
 		deviceClass = types.SensorDeviceClassBattery
 		stateClass = types.StateClassMeasurement
 		units = "%"
-	case battTemp:
+	case typeTemp:
 		deviceClass = types.SensorDeviceClassTemperature
 		stateClass = types.StateClassMeasurement
 		units = "°C"
-	case battEnergyRate:
+	case typeEnergyRate:
 		icon = batteryChargeIcon(value.Value())
 		deviceClass = types.SensorDeviceClassPower
 		stateClass = types.StateClassMeasurement
@@ -70,29 +68,31 @@ func newBatterySensor(battery *upowerBattery, sensorType batterySensor, value db
 	)
 }
 
-func generateSensorState(sensorType batterySensor, value any) any {
+// generateSensorState will take the raw value (from D-Bus) and format it as
+// appropriate for the battery sensor type.
+func generateSensorState(sensorType sensorType, value any) any {
 	if value == nil {
 		return sensor.StateUnknown
 	}
 
 	switch sensorType {
-	case battVoltage, battTemp, battEnergy, battEnergyRate, battPercentage:
+	case typeVoltage, typeTemp, typeEnergy, typeEnergyRate, typePercentage:
 		if value, ok := value.(float64); !ok {
 			return sensor.StateUnknown
 		} else {
 			return value
 		}
-	case battState:
+	case typeState:
 		if value, ok := value.(uint32); !ok {
 			return sensor.StateUnknown
 		} else {
-			return battChargeState(value).String()
+			return chargingState(value).String()
 		}
-	case battLevel:
+	case typeLevel:
 		if value, ok := value.(uint32); !ok {
 			return sensor.StateUnknown
 		} else {
-			return batteryLevel(value).String()
+			return level(value).String()
 		}
 	default:
 		if value, ok := value.(string); !ok {
@@ -103,37 +103,41 @@ func generateSensorState(sensorType batterySensor, value any) any {
 	}
 }
 
-//nolint:exhaustive,errcheck
-func generateSensorAttributes(sensorType batterySensor, battery *upowerBattery) map[string]any {
+// generateSensorAttributes will add some appropriate attributes to certain
+// battery sensor types.
+func generateSensorAttributes(sensorType sensorType, battery *upowerBattery) map[string]any {
 	attributes := make(map[string]any)
 
 	attributes["data_source"] = linux.DataSrcDbus
 
 	switch sensorType {
-	case battEnergyRate:
+	case typeEnergyRate:
 		var (
 			variant         dbus.Variant
 			err             error
 			voltage, energy float64
 		)
 
-		if variant, err = battery.getProp(battVoltage); err == nil {
-			voltage, _ = dbusx.VariantToValue[float64](variant)
+		if variant, err = battery.getProp(typeVoltage); err == nil {
+			voltage, _ = dbusx.VariantToValue[float64](variant) //nolint:lll,errcheck // its not important if this attribute value is not correct due to errors
 		}
 
-		if variant, err = battery.getProp(battEnergy); err == nil {
-			energy, _ = dbusx.VariantToValue[float64](variant)
+		if variant, err = battery.getProp(typeEnergy); err == nil {
+			energy, _ = dbusx.VariantToValue[float64](variant) //nolint:lll,errcheck // its not important if this attribute value is not correct due to errors
 		}
 
 		attributes["voltage"] = voltage
 		attributes["energy"] = energy
-	case battPercentage, battLevel:
+	case typePercentage, typeLevel:
 		attributes["battery_type"] = battery.battType.String()
 	}
 
 	return attributes
 }
 
+// batteryPercentIcon takes the percent value of level and returns an
+// appropriate icon to represent it.
+//
 //nolint:mnd
 func batteryPercentIcon(v any) string {
 	percentage, ok := v.(float64)
@@ -148,6 +152,8 @@ func batteryPercentIcon(v any) string {
 	return fmt.Sprintf("%s-%d", batteryIcon, int(math.Round(percentage/10)*10))
 }
 
+// batteryChargeIcon takes the value of the battery charge and returns an
+// appropriate icon to represent it.
 func batteryChargeIcon(v any) string {
 	energyRate, ok := v.(float64)
 	if !ok {
