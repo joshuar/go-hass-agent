@@ -1,10 +1,6 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
-//revive:disable:unused-receiver
-//go:generate go run golang.org/x/tools/cmd/stringer -type=batterySensor -output battery_generated.go -linecomment
 package battery
 
 import (
@@ -20,17 +16,6 @@ import (
 )
 
 const (
-	battType       batterySensor = iota // Battery Type
-	battPercentage                      // Battery Level
-	battTemp                            // Battery Temperature
-	battVoltage                         // Battery Voltage
-	battEnergy                          // Battery Energy
-	battEnergyRate                      // Battery Power
-	battState                           // Battery State
-	battNativePath                      // Battery Path
-	battLevel                           // Battery Level
-	battModel                           // Battery Model
-
 	upowerDBusDest         = "org.freedesktop.UPower"
 	upowerDBusDeviceDest   = upowerDBusDest + ".Device"
 	upowerDBusPath         = "/org/freedesktop/UPower"
@@ -44,47 +29,47 @@ const (
 	workerID = "battery_sensors"
 )
 
-type batterySensor int
-
 var ErrInvalidBattery = errors.New("invalid battery")
 
 // dBusSensorToProps is a map of battery sensors to their D-Bus properties.
-var dBusSensorToProps = map[batterySensor]string{
-	battType:       upowerDBusDeviceDest + ".Type",
-	battPercentage: upowerDBusDeviceDest + ".Percentage",
-	battTemp:       upowerDBusDeviceDest + ".Temperature",
-	battVoltage:    upowerDBusDeviceDest + ".Voltage",
-	battEnergy:     upowerDBusDeviceDest + ".Energy",
-	battEnergyRate: upowerDBusDeviceDest + ".EnergyRate",
-	battState:      upowerDBusDeviceDest + ".State",
-	battNativePath: upowerDBusDeviceDest + ".NativePath",
-	battLevel:      upowerDBusDeviceDest + ".BatteryLevel",
-	battModel:      upowerDBusDeviceDest + ".Model",
+var dBusSensorToProps = map[sensorType]string{
+	typeDesc:       upowerDBusDeviceDest + ".Type",
+	typePercentage: upowerDBusDeviceDest + ".Percentage",
+	typeTemp:       upowerDBusDeviceDest + ".Temperature",
+	typeVoltage:    upowerDBusDeviceDest + ".Voltage",
+	typeEnergy:     upowerDBusDeviceDest + ".Energy",
+	typeEnergyRate: upowerDBusDeviceDest + ".EnergyRate",
+	typeState:      upowerDBusDeviceDest + ".State",
+	typeNativePath: upowerDBusDeviceDest + ".NativePath",
+	typeLevel:      upowerDBusDeviceDest + ".BatteryLevel",
+	typeModel:      upowerDBusDeviceDest + ".Model",
 }
 
 // dBusPropToSensor provides a map for to convert D-Bus properties to sensors.
-var dBusPropToSensor = map[string]batterySensor{
-	"Energy":       battEnergy,
-	"EnergyRate":   battEnergyRate,
-	"Voltage":      battVoltage,
-	"Percentage":   battPercentage,
-	"Temperatute":  battTemp,
-	"State":        battState,
-	"BatteryLevel": battLevel,
+var dBusPropToSensor = map[string]sensorType{
+	"Energy":       typeEnergy,
+	"EnergyRate":   typeEnergyRate,
+	"Voltage":      typeVoltage,
+	"Percentage":   typePercentage,
+	"Temperatute":  typeTemp,
+	"State":        typeState,
+	"BatteryLevel": typeLevel,
 }
 
+// upowerBattery contains the data to represent a battery as derived from the
+// upower D-Bus.
 type upowerBattery struct {
 	logger   *slog.Logger
 	bus      *dbusx.Bus
 	id       string
 	model    string
 	dBusPath dbus.ObjectPath
-	sensors  []batterySensor
-	battType batteryType
+	sensors  []sensorType
+	battType typeDescription
 }
 
 // getProp retrieves the property from D-Bus that matches the given battery sensor type.
-func (b *upowerBattery) getProp(t batterySensor) (dbus.Variant, error) {
+func (b *upowerBattery) getProp(t sensorType) (dbus.Variant, error) {
 	value, err := dbusx.NewProperty[dbus.Variant](b.bus, string(b.dBusPath), upowerDBusDest, dBusSensorToProps[t]).Get()
 	if err != nil {
 		return dbus.Variant{}, fmt.Errorf("could not retrieve battery property %s: %w", t.String(), err)
@@ -94,7 +79,7 @@ func (b *upowerBattery) getProp(t batterySensor) (dbus.Variant, error) {
 }
 
 // getSensors retrieves the sensors passed in for a given battery.
-func (b *upowerBattery) getSensors(sensors ...batterySensor) chan sensor.Entity {
+func (b *upowerBattery) getSensors(sensors ...sensorType) chan sensor.Entity {
 	sensorCh := make(chan sensor.Entity, len(sensors))
 	defer close(sensorCh)
 
@@ -127,18 +112,18 @@ func newBattery(bus *dbusx.Bus, logger *slog.Logger, path dbus.ObjectPath) (*upo
 	)
 
 	// Get the battery type. Depending on the value, additional sensors will be added.
-	variant, err = battery.getProp(battType)
+	variant, err = battery.getProp(typeDesc)
 	if err != nil {
 		return nil, fmt.Errorf("could not determine battery type: %w", err)
 	}
 	// Store the battery type.
-	battery.battType, err = dbusx.VariantToValue[batteryType](variant)
+	battery.battType, err = dbusx.VariantToValue[typeDescription](variant)
 	if err != nil {
 		return nil, fmt.Errorf("could not determine battery type: %w", err)
 	}
 
 	// Use the native path D-Bus property for the battery id.
-	variant, err = battery.getProp(battNativePath)
+	variant, err = battery.getProp(typeNativePath)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve battery path in D-Bus: %w", err)
 	}
@@ -158,7 +143,7 @@ func newBattery(bus *dbusx.Bus, logger *slog.Logger, path dbus.ObjectPath) (*upo
 	)
 
 	// Get the battery model.
-	variant, err = battery.getProp(battModel)
+	variant, err = battery.getProp(typeModel)
 	if err != nil {
 		battery.logger.Warn("Could not determine battery model.")
 	}
@@ -169,14 +154,14 @@ func newBattery(bus *dbusx.Bus, logger *slog.Logger, path dbus.ObjectPath) (*upo
 	}
 
 	// At a minimum, monitor the battery type and the charging state.
-	battery.sensors = append(battery.sensors, battState)
+	battery.sensors = append(battery.sensors, typeState)
 
-	if battery.battType == batteryTypeBattery {
+	if battery.battType == batteryType {
 		// Battery has charge percentage, temp and charging rate sensors
-		battery.sensors = append(battery.sensors, battPercentage, battTemp, battEnergyRate)
+		battery.sensors = append(battery.sensors, typePercentage, typeTemp, typeEnergyRate)
 	} else {
 		// Battery has a textual level sensor
-		battery.sensors = append(battery.sensors, battLevel)
+		battery.sensors = append(battery.sensors, typeLevel)
 	}
 
 	return battery, nil
