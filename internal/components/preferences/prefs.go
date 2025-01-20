@@ -45,7 +45,7 @@ const (
 
 // Default values.
 const (
-	defaultServer          = "http://localhost:8123"
+	DefaultServer          = "http://localhost:8123"
 	defaultWebsocketServer = "ws://localhost:8123"
 	defaultSecret          = "ALongSecretString"
 	defaultMQTTTopicPrefix = "homeassistant"
@@ -81,11 +81,11 @@ var defaultAgentPreferences = &preferences{
 		MQTTServer:      defaultMQTTServer,
 	},
 	Registration: &Registration{
-		Server: defaultServer,
+		Server: DefaultServer,
 		Token:  defaultSecret,
 	},
 	Hass: &Hass{
-		RestAPIURL:   defaultServer,
+		RestAPIURL:   DefaultServer,
 		WebsocketURL: defaultWebsocketServer,
 		WebhookID:    defaultSecret,
 	},

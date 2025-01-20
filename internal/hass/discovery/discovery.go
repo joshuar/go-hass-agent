@@ -13,6 +13,7 @@ import (
 	"github.com/grandcat/zeroconf"
 
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
+	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 )
 
 const (
@@ -22,7 +23,7 @@ const (
 // FindServers is a helper function to generate a list of Home Assistant servers
 // via local network auto-discovery.
 func FindServers(ctx context.Context) ([]string, error) {
-	var serverList []string
+	serverList := []string{preferences.DefaultServer}
 
 	resolver, err := zeroconf.NewResolver(nil)
 	if err != nil {
