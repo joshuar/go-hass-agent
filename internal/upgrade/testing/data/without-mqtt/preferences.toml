@@ -1,9 +1,0 @@
-'agent.version' = 'v9.0.0'
-'registration.host' = 'https://home-assistant.test.com'
-'registration.token' = 'testToken'
-'device.id' = 'testID'
-'device.name' = 'testDevice'
-'hass.apiurl' = 'https://home-assistant.test.com/api/webhook/testWebhookID'
-'hass.websocketurl' = 'wss://home-assistant.test.com/api/websocket'
-'hass.webhookid' = 'testWebhookID'
-'hass.registered' = true
