@@ -158,7 +158,7 @@ func newBattery(bus *dbusx.Bus, logger *slog.Logger, path dbus.ObjectPath) (*upo
 
 	if battery.battType == batteryType {
 		// Battery has charge percentage, temp and charging rate sensors
-		battery.sensors = append(battery.sensors, typePercentage, typeTemp, typeEnergyRate)
+		battery.sensors = append(battery.sensors, typePercentage, typeTemp, typeEnergyRate, typeVoltage, typeEnergy)
 	} else {
 		// Battery has a textual level sensor
 		battery.sensors = append(battery.sensors, typeLevel)
