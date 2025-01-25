@@ -130,6 +130,16 @@ func setupOSMQTTWorker(ctx context.Context) MQTTWorker {
 	} else {
 		mqttController.buttons = append(mqttController.buttons, powerEntities...)
 	}
+
+	// Add inhibit controls.
+	inhibitEntities, err := power.NewInhibitControl(ctx, mqttController.Msgs(), preferences.MQTTDeviceFromFromCtx(ctx))
+	if err != nil {
+		logging.FromContext(ctx).Warn("Could not create inhibit control.",
+			slog.Any("error", err))
+	} else {
+		mqttController.switches = append(mqttController.switches, inhibitEntities)
+	}
+
 	// Add the screen lock controls.
 	screenControls, err := power.NewScreenLockControl(ctx, preferences.MQTTDeviceFromFromCtx(ctx))
 	if err != nil {
