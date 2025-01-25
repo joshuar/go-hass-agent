@@ -12,7 +12,6 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/knadh/koanf/parsers/toml"
 	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/providers/structs"
@@ -42,6 +41,7 @@ const (
 	prefAppID      = "app_id"
 	prefRegistered = "registered"
 	prefHeadless   = "headless"
+	prefVersion    = "version"
 )
 
 // Default values.
@@ -137,7 +137,7 @@ var Load = func(ctx context.Context, preferences ...SetPreference) error {
 
 		// Load config file
 		if err := prefsSrc.Load(file.Provider(prefsFile), toml.Parser()); err != nil {
-			slog.Warn("No preferences found, using defaults.", slog.Any("error", err))
+			slog.Debug("No preferences found, using defaults.", slog.Any("error", err))
 			if err := prefsSrc.Load(structs.Provider(defaultAgentPreferences, "toml"), nil); err != nil {
 				return fmt.Errorf("%w: %w", ErrLoadPreferences, err)
 			}
@@ -222,6 +222,11 @@ func Save(ctx context.Context) error {
 
 	slog.Debug("Saving preferences.", slog.String("file", prefsFile))
 
+	if err := prefsSrc.Set(prefVersion, appVersion); err != nil {
+		slog.Warn("Cannot update version in preferences file.",
+			slog.Any("error", err))
+	}
+
 	if err := validate(); err != nil {
 		return err
 	}
@@ -290,8 +295,7 @@ func AppVersion() string {
 // Version returns the version of the preferences file (i.e., the
 // last version of Go Hass Agent to write the preferences.toml file).
 func Version() string {
-	spew.Dump(prefsSrc.All())
-	return prefsSrc.String("version")
+	return prefsSrc.String(prefVersion)
 }
 
 // checkPath checks that the given directory exists. If it doesn't it will be
