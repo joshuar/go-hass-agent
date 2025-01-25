@@ -41,6 +41,7 @@ func (w *inhibitControlWorker) DefaultPreferences() preferences.CommonWorkerPref
 	return preferences.CommonWorkerPrefs{}
 }
 
+//nolint:nilnil
 func NewInhibitControl(ctx context.Context, msgCh chan *mqttapi.Msg, device *mqtthass.Device) (*mqtthass.SwitchEntity, error) {
 	var err error
 
