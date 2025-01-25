@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/knadh/koanf/parsers/toml"
 	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/providers/structs"
@@ -116,6 +117,7 @@ type preferences struct {
 	Device       *Device       `toml:"device"`
 	Version      string        `toml:"version"`
 	Registered   bool          `toml:"registered" validate:"boolean"`
+	Headless     bool          `toml:"-"`
 }
 
 // Load will retrieve the current preferences from the preference file on disk,
@@ -283,6 +285,13 @@ func AppVersion() string {
 	}
 
 	return "Unknown"
+}
+
+// Version returns the version of the preferences file (i.e., the
+// last version of Go Hass Agent to write the preferences.toml file).
+func Version() string {
+	spew.Dump(prefsSrc.All())
+	return prefsSrc.String("version")
 }
 
 // checkPath checks that the given directory exists. If it doesn't it will be

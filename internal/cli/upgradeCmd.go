@@ -5,10 +5,15 @@
 package cli
 
 import (
-	"errors"
+	"context"
 	"fmt"
 	"log/slog"
+	"os"
+	"os/signal"
+	"syscall"
 
+	"github.com/joshuar/go-hass-agent/internal/components/logging"
+	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/upgrade"
 )
 
@@ -19,19 +24,23 @@ func (r *UpgradeCmd) Help() string {
 	return showHelpTxt("upgrade-help")
 }
 
-func (r *UpgradeCmd) Run(_ *CmdOpts) error {
-	if err := upgrade.Run(); err != nil {
-		if errors.Is(err, upgrade.ErrNoPrevConfig) {
-			slog.Info("No previous installation found. Nothing to do!")
-			return nil
-		}
+func (r *UpgradeCmd) Run(opts *CmdOpts) error {
+	ctx, cancelFunc := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer cancelFunc()
 
-		slog.Warn(showHelpTxt("upgrade-failed-help"), slog.Any("error", err)) //nolint:sloglint
+	// Load up the contenxt.
+	ctx = preferences.PathToCtx(ctx, opts.Path)
+	ctx = logging.ToContext(ctx, opts.Logger)
+
+	if err := upgrade.Run(ctx); err != nil {
+
+		logging.FromContext(ctx).Warn(showHelpTxt("upgrade-failed-help"),
+			slog.Any("error", err)) //nolint:sloglint
 
 		return fmt.Errorf("upgrade failed: %w", err)
 	}
 
-	slog.Info("Upgrade successful!")
+	logging.FromContext(ctx).Info("All upgrades completed!")
 
 	return nil
 }
