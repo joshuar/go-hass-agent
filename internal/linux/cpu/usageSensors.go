@@ -105,6 +105,7 @@ func newCountSensor(name, icon, units, valueStr string) sensor.Entity {
 		sensor.WithID(strcase.ToSnake(name)),
 		sensor.WithStateClass(types.StateClassMeasurement),
 		sensor.AsDiagnostic(),
+		sensor.WithUnits(units),
 		sensor.WithState(
 			sensor.WithIcon(icon),
 			sensor.WithValue(valueInt),
