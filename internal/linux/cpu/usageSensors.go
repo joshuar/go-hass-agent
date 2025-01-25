@@ -97,7 +97,7 @@ func newUsageSensor(clktck int64, details []string, category types.Category) sen
 	return usageSensor
 }
 
-func newCountSensor(name, icon, valueStr string) sensor.Entity {
+func newCountSensor(name, icon, units, valueStr string) sensor.Entity {
 	valueInt, _ := strconv.Atoi(valueStr) //nolint:errcheck // if we can't parse it, value will be 0.
 
 	return sensor.NewSensor(

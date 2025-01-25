@@ -150,9 +150,9 @@ func (w *usageWorker) getUsageStats() ([]sensor.Entity, error) {
 
 			sensors = append(sensors, *w.rateSensors["processes"].Entity)
 		case cols[0] == "procs_running":
-			sensors = append(sensors, newCountSensor("Processes Running", "mdi:application-cog", cols[1]))
+			sensors = append(sensors, newCountSensor("Processes Running", "mdi:application-cog", "processes", cols[1]))
 		case cols[0] == "procs_blocked":
-			sensors = append(sensors, newCountSensor("Processes Blocked", "mdi:application-cog", cols[1]))
+			sensors = append(sensors, newCountSensor("Processes Blocked", "mdi:application-cog", "processes", cols[1]))
 		}
 	}
 
