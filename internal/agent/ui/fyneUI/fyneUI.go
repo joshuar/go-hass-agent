@@ -259,8 +259,7 @@ func (i *FyneUI) agentSettingsWindow(ctx context.Context) fyne.Window {
 		return nil
 	}
 
-	mqttPrefs := preferences.MQTTPrefsFromFromCtx(ctx)
-
+	mqttPrefs := preferences.MQTTPrefsFromFromCtx(preferences.MQTTPrefsToCtx(ctx))
 	// Generate a form of MQTT preferences.
 	allFormItems = append(allFormItems, mqttConfigItems(mqttPrefs)...)
 
