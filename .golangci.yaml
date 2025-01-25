@@ -158,6 +158,7 @@ linters-settings:
       - id
       - ok
       - mu
+      - fd
   revive:
     enable-all-rules: true
     confidence: 0.8
