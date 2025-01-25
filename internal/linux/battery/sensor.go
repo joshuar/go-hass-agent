@@ -49,6 +49,14 @@ func newBatterySensor(battery *upowerBattery, sensorType sensorType, value dbus.
 		deviceClass = types.SensorDeviceClassPower
 		stateClass = types.StateClassMeasurement
 		units = "W"
+	case typeEnergy:
+		deviceClass = types.SensorDeviceClassEnergyStorage
+		stateClass = types.StateClassMeasurement
+		units = "Wh"
+	case typeVoltage:
+		deviceClass = types.SensorDeviceClassVoltage
+		stateClass = types.StateClassMeasurement
+		units = "V"
 	default:
 		icon = batteryIcon
 	}
