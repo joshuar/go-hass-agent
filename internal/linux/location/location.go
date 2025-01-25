@@ -12,6 +12,8 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/godbus/dbus/v5"
+
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
@@ -70,12 +72,13 @@ func (w *locationWorker) Events(ctx context.Context) (<-chan sensor.Entity, erro
 
 				return
 			case event := <-w.triggerCh:
-				if locationPath, ok := event.Content[1].(string); ok {
+				if locationPath, ok := event.Content[1].(dbus.ObjectPath); ok {
 					go func() {
-						locationSensor, err := w.newLocation(locationPath)
+						locationSensor, err := w.newLocation(string(locationPath))
 						if err != nil {
 							logger.Error("Could not update location.", slog.Any("error", err))
 						} else {
+							logger.Debug("Location updated.")
 							sensorCh <- locationSensor
 						}
 					}()
