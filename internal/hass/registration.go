@@ -83,7 +83,7 @@ func RegisterDevice(ctx context.Context, registration *preferences.Registration)
 	}
 
 	// Set registration status in preferences.
-	preferences.SetPreferences(
+	err = preferences.Set(
 		preferences.SetHassSecret(response.Secret),
 		preferences.SetRestAPIURL(restAPIURL),
 		preferences.SetWebsocketURL(websocketAPIURL),
@@ -91,7 +91,7 @@ func RegisterDevice(ctx context.Context, registration *preferences.Registration)
 		preferences.SetRegistered(true),
 	)
 	// Save preferences to disk.
-	if err := preferences.Save(ctx); err != nil {
+	if err != nil {
 		return errors.Join(ErrDeviceRegistrationFailed, err)
 	}
 

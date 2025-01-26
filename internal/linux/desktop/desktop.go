@@ -199,7 +199,7 @@ func NewDesktopWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 		},
 	}
 
-	settingsWorker.prefs, err = preferences.LoadWorker(ctx, settingsWorker)
+	settingsWorker.prefs, err = preferences.LoadWorker(settingsWorker)
 	if err != nil {
 		return worker, fmt.Errorf("could not load preferences: %w", err)
 	}

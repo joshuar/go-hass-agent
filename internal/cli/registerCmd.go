@@ -38,9 +38,7 @@ func (r *RegisterCmd) Run(opts *CmdOpts) error {
 
 	// Load the preferences from file. Ignore the case where there are no
 	// existing preferences.
-	if err := preferences.Load(ctx,
-		preferences.SetHeadless(opts.Headless),
-	); err != nil && !errors.Is(err, preferences.ErrLoadPreferences) {
+	if err := preferences.Init(ctx); err != nil && !errors.Is(err, preferences.ErrLoadPreferences) {
 		return errors.Join(ErrRegisterCmdFailed, err)
 	}
 
@@ -54,7 +52,7 @@ func (r *RegisterCmd) Run(opts *CmdOpts) error {
 	})
 
 	// Run the agent.
-	if err := agent.Register(ctx); err != nil {
+	if err := agent.Register(ctx, opts.Headless); err != nil {
 		return errors.Join(ErrRegisterCmdFailed, err)
 	}
 

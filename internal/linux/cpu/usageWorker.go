@@ -77,7 +77,7 @@ func NewUsageWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
 		},
 	}
 
-	prefs, err := preferences.LoadWorker(ctx, cpuUsageWorker)
+	prefs, err := preferences.LoadWorker(cpuUsageWorker)
 	if err != nil {
 		return nil, fmt.Errorf("could not load preferences: %w", err)
 	}

@@ -68,7 +68,7 @@ func NewInhibitControl(ctx context.Context, msgCh chan *mqttapi.Msg, device *mqt
 			mqtthass.CommandCallback(worker.inhibitCommandCallback),
 		)
 
-	worker.prefs, err = preferences.LoadWorker(ctx, worker)
+	worker.prefs, err = preferences.LoadWorker(worker)
 	if err != nil {
 		return nil, fmt.Errorf("could not load preferences: %w", err)
 	}

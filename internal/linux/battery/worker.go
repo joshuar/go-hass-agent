@@ -230,7 +230,7 @@ func NewBatteryWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 		logger:      logging.FromContext(ctx).With(slog.String("worker", workerID)),
 	}
 
-	batteryWorker.prefs, err = preferences.LoadWorker(ctx, batteryWorker)
+	batteryWorker.prefs, err = preferences.LoadWorker(batteryWorker)
 	if err != nil {
 		return worker, fmt.Errorf("could not load preferences: %w", err)
 	}

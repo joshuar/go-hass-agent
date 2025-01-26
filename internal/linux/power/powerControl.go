@@ -109,7 +109,7 @@ func NewPowerControl(ctx context.Context, device *mqtthass.Device) ([]*mqtthass.
 
 	worker := &powerControlWorker{}
 
-	worker.prefs, err = preferences.LoadWorker(ctx, worker)
+	worker.prefs, err = preferences.LoadWorker(worker)
 	if err != nil {
 		return nil, fmt.Errorf("could not load preferences: %w", err)
 	}

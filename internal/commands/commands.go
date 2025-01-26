@@ -369,11 +369,11 @@ func (d *Worker) generateNumbers(numberCommands []Command) {
 
 		switch valueType {
 		case "float":
-			min := convValue[float64](cmd.Min) //nolint:predeclared
+			minValue := convValue[float64](cmd.Min)
 
-			max := convValue[float64](cmd.Max) //nolint:predeclared
-			if max == 0 {
-				max = 100
+			maxValue := convValue[float64](cmd.Max)
+			if maxValue == 0 {
+				maxValue = 100
 			}
 
 			step := convValue[float64](cmd.Step)
@@ -400,16 +400,16 @@ func (d *Worker) generateNumbers(numberCommands []Command) {
 					).
 					WithMode(displayType).
 					WithStep(step).
-					WithMin(min).
-					WithMax(max).
+					WithMin(minValue).
+					WithMax(maxValue).
 					OptimisticMode())
 
 		default:
-			min := convValue[int](cmd.Min) //nolint:predeclared
+			minValue := convValue[int](cmd.Min)
 
-			max := convValue[int](cmd.Max) //nolint:predeclared
-			if max == 0 {
-				max = 100
+			maxValue := convValue[int](cmd.Max)
+			if maxValue == 0 {
+				maxValue = 100
 			}
 
 			step := convValue[int](cmd.Step)
@@ -436,8 +436,8 @@ func (d *Worker) generateNumbers(numberCommands []Command) {
 					).
 					WithMode(displayType).
 					WithStep(step).
-					WithMin(min).
-					WithMax(max).
+					WithMin(minValue).
+					WithMax(maxValue).
 					OptimisticMode())
 		}
 	}

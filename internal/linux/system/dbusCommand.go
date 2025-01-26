@@ -50,7 +50,7 @@ func NewDBusCommandSubscription(ctx context.Context, device *mqtthass.Device) (*
 
 	worker := &dbusCmdWorker{}
 
-	prefs, err := preferences.LoadWorker(ctx, worker)
+	prefs, err := preferences.LoadWorker(worker)
 	if err != nil {
 		return nil, fmt.Errorf("could not load preferences: %w", err)
 	}

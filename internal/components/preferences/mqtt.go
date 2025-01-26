@@ -10,7 +10,6 @@ import (
 	"log/slog"
 
 	mqtthass "github.com/joshuar/go-hass-anything/v12/pkg/hass"
-	"github.com/knadh/koanf/v2"
 
 	"github.com/joshuar/go-hass-agent/internal/device"
 )
@@ -24,8 +23,8 @@ const (
 	prefMQTTEnabled     = mqttPrefPrefix + ".enabled"
 )
 
-// MQTT contains preferences related to MQTT functionality in Go Hass Agent.
-type MQTT struct {
+// MQTTPreferences contains preferences related to MQTTPreferences functionality in Go Hass Agent.
+type MQTTPreferences struct {
 	MQTTServer      string `toml:"server,omitempty" validate:"required,uri" kong:"required,help='MQTT server URI. Required.',placeholder='scheme://some.host:port'"` //nolint:lll
 	MQTTUser        string `toml:"user,omitempty" validate:"omitempty" kong:"optional,help='MQTT username.'"`
 	MQTTPassword    string `toml:"password,omitempty" validate:"omitempty" kong:"optional,help='MQTT password.'"`
@@ -33,7 +32,14 @@ type MQTT struct {
 	MQTTEnabled     bool   `toml:"enabled" validate:"boolean" kong:"-"`
 }
 
-var ErrSetMQTTPreference = errors.New("could not set MQTT preference")
+var (
+	ErrSetMQTTPreference   = errors.New("could not set MQTT preference")
+	defaultMQTTPreferences = &MQTTPreferences{
+		MQTTEnabled:     false,
+		MQTTTopicPrefix: defaultMQTTTopicPrefix,
+		MQTTServer:      defaultMQTTServer,
+	}
+)
 
 // SetMQTTEnabled will set the MQTT whether MQTT functionality is enabled.
 func SetMQTTEnabled(value bool) SetPreference {
@@ -104,24 +110,24 @@ func MQTTEnabled() bool {
 }
 
 // Server returns the broker URI from the preferences.
-func (p *MQTT) Server() string {
+func (p *MQTTPreferences) Server() string {
 	return p.MQTTServer
 }
 
 // User returns any username required for connecting to the broker from the
 // preferences.
-func (p *MQTT) User() string {
+func (p *MQTTPreferences) User() string {
 	return p.MQTTUser
 }
 
 // Password returns any password required for connecting to the broker from the
 // preferences.
-func (p *MQTT) Password() string {
+func (p *MQTTPreferences) Password() string {
 	return p.MQTTPassword
 }
 
 // TopicPrefix returns the prefix for topics on MQTT.
-func (p *MQTT) TopicPrefix() string {
+func (p *MQTTPreferences) TopicPrefix() string {
 	return p.MQTTTopicPrefix
 }
 
@@ -134,21 +140,19 @@ func MQTTOrigin() *mqtthass.Origin {
 	}
 }
 
-// getMQTTPreferences retrieves the current MQTT preferences from file.
-func getMQTTPreferences() *MQTT {
-	var mqttPrefs MQTT
-	// Unmarshal config, overwriting defaults.
-	if err := prefsSrc.UnmarshalWithConf(mqttPrefPrefix, &mqttPrefs, koanf.UnmarshalConf{Tag: "toml"}); err != nil {
-		slog.Warn("Could not retrieve MQTT preferences, using defaults.",
+// MQTT retrieves the current MQTT preferences from file.
+func MQTT() *MQTTPreferences {
+	prefs := *defaultMQTTPreferences
+	if err := load(mqttPrefPrefix, &prefs); err != nil {
+		logger.Debug("Could not retrieve MQTT preferences, defaults will be used.",
 			slog.Any("error", err))
-		return defaultAgentPreferences.MQTT
 	}
 
-	return &mqttPrefs
+	return &prefs
 }
 
-// getMQTTDevice will return a device that is needed for MQTT functionality.
-func getMQTTDevice() *mqtthass.Device {
+// MQTTDevice will return a device that is needed for MQTT functionality.
+func MQTTDevice() *mqtthass.Device {
 	// Retrieve the hardware model and manufacturer.
 	model, manufacturer, _ := device.GetHWProductInfo() //nolint:errcheck // error doesn't matter
 

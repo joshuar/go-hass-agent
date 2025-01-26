@@ -106,7 +106,7 @@ func NewProfileWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 	worker := linux.NewEventSensorWorker(powerProfileWorkerID)
 	powerProfileWorker := &profileWorker{}
 
-	powerProfileWorker.prefs, err = preferences.LoadWorker(ctx, powerProfileWorker)
+	powerProfileWorker.prefs, err = preferences.LoadWorker(powerProfileWorker)
 	if err != nil {
 		return nil, fmt.Errorf("could not load preferences: %w", err)
 	}

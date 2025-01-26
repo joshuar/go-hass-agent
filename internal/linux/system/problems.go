@@ -119,7 +119,7 @@ func NewProblemsWorker(ctx context.Context) (*linux.PollingSensorWorker, error) 
 
 	problemsWorker := &problemsWorker{}
 
-	problemsWorker.prefs, err = preferences.LoadWorker(ctx, problemsWorker)
+	problemsWorker.prefs, err = preferences.LoadWorker(problemsWorker)
 	if err != nil {
 		return nil, fmt.Errorf("could not load preferences: %w", err)
 	}

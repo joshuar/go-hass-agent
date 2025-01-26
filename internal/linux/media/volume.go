@@ -66,7 +66,7 @@ func VolumeControl(ctx context.Context, msgCh chan *mqttapi.Msg, device *mqtthas
 		return nil, nil
 	}
 
-	control.prefs, err = preferences.LoadWorker(ctx, control)
+	control.prefs, err = preferences.LoadWorker(control)
 	if err != nil {
 		return nil, nil
 	}

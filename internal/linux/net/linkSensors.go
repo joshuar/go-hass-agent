@@ -241,7 +241,7 @@ func (w *AddressWorker) DefaultPreferences() WorkerPrefs {
 	}
 }
 
-func NewAddressWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
+func NewAddressWorker(_ context.Context) (*linux.EventSensorWorker, error) {
 	worker := linux.NewEventSensorWorker(addressWorkerID)
 
 	conn, err := rtnetlink.Dial(nlConfig)
@@ -254,7 +254,7 @@ func NewAddressWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 		donech: make(chan struct{}),
 	}
 
-	addressWorker.prefs, err = preferences.LoadWorker(ctx, addressWorker)
+	addressWorker.prefs, err = preferences.LoadWorker(addressWorker)
 	if err != nil {
 		return worker, fmt.Errorf("could not load preferences: %w", err)
 	}

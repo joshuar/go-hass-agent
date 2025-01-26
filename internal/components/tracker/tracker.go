@@ -53,7 +53,7 @@ func (t *Tracker) SensorList() []string {
 }
 
 // Add creates a new sensor in the tracker based on a received state update.
-func (t *Tracker) Add(sensor *sensor.Entity) error {
+func (t *Tracker) Add(details *sensor.Entity) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
@@ -61,7 +61,7 @@ func (t *Tracker) Add(sensor *sensor.Entity) error {
 		return ErrTrackerNotReady
 	}
 
-	t.sensor[sensor.ID] = sensor
+	t.sensor[details.ID] = details
 
 	return nil
 }

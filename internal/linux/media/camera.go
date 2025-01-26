@@ -78,12 +78,12 @@ func (w *CameraWorker) Disabled() bool {
 }
 
 // NewCameraControl is called by the OS controller to provide the entities for a camera.
-func NewCameraControl(ctx context.Context, msgCh chan *mqttapi.Msg, mqttDevice *mqtthass.Device) (*CameraWorker, error) {
+func NewCameraControl(_ context.Context, msgCh chan *mqttapi.Msg, mqttDevice *mqtthass.Device) (*CameraWorker, error) {
 	var err error
 
 	worker := &CameraWorker{}
 
-	worker.prefs, err = preferences.LoadWorker(ctx, worker)
+	worker.prefs, err = preferences.LoadWorker(worker)
 	if err != nil {
 		return worker, fmt.Errorf("could not load preferences: %w", err)
 	}

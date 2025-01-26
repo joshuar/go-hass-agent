@@ -57,7 +57,7 @@ func (w *usageWorker) DefaultPreferences() WorkerPrefs {
 func NewUsageWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
 	usageWorker := &usageWorker{}
 
-	prefs, err := preferences.LoadWorker(ctx, usageWorker)
+	prefs, err := preferences.LoadWorker(usageWorker)
 	if err != nil {
 		return nil, fmt.Errorf("could not load preferences: %w", err)
 	}

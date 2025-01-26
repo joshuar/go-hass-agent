@@ -188,7 +188,7 @@ func NewExternalIPUpdaterWorker(ctx context.Context) *ExternalIPWorker {
 			With(slog.String("worker", externalIPWorkerID)),
 	}
 
-	prefs, err := preferences.LoadWorker(ctx, worker)
+	prefs, err := preferences.LoadWorker(worker)
 	if err != nil {
 		return nil
 	}

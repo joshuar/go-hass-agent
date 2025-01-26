@@ -1,4 +1,4 @@
-// Copyright 2024 Joshua Rich <joshua.rich@gmail.com>.
+// Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
 // SPDX-License-Identifier: MIT
 
 package preferences
@@ -17,35 +17,27 @@ import (
 	"github.com/knadh/koanf/providers/structs"
 	"github.com/knadh/koanf/v2"
 
+	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/validation"
 )
 
 const (
-	AppName        = "Go Hass Agent"
-	AppURL         = "https://github.com/joshuar/go-hass-agent"
-	AppDescription = "A Home Assistant, native app for desktop/laptop devices."
-
+	// Global informational strings.
+	AppName           = "Go Hass Agent"
+	AppURL            = "https://github.com/joshuar/go-hass-agent"
+	AppDescription    = "A Home Assistant, native app for desktop/laptop devices."
 	FeatureRequestURL = AppURL + "/issues/new?assignees=joshuar&labels=&template=feature_request.md&title="
 	IssueURL          = AppURL + "/issues/new?assignees=joshuar&labels=&template=bug_report.md&title=%5BBUG%5D"
-
+	// Internal file defaults.
 	preferencesFile  = "preferences.toml"
 	defaultFilePerms = 0o600
 	LogFile          = "go-hass-agent.log"
-)
-
-// Preference names.
-const (
-	prefsEnvPrefix = "GOHASSAGENT_"
-	PrefsEnvAppID  = prefsEnvPrefix + "APPID"
-
+	// Preference names.
 	prefAppID      = "app_id"
 	prefRegistered = "registered"
 	prefHeadless   = "headless"
 	prefVersion    = "version"
-)
-
-// Default values.
-const (
+	// Default values.
 	DefaultServer          = "http://localhost:8123"
 	defaultWebsocketServer = "ws://localhost:8123"
 	defaultSecret          = "ALongSecretString"
@@ -54,13 +46,26 @@ const (
 	DefaultAppID           = "go-hass-agent"
 )
 
+// preferences defines all preferences for Go Hass Agent.
+type preferences struct {
+	MQTT         *MQTTPreferences `toml:"mqtt,omitempty"`
+	Registration *Registration    `toml:"registration"`
+	Hass         *Hass            `toml:"hass"`
+	Device       *Device          `toml:"device"`
+	Version      string           `toml:"version"`
+	Registered   bool             `toml:"registered" validate:"boolean"`
+}
+
 var (
-	prefsSrc = koanf.New(".")
-	mu       = sync.Mutex{}
+	// Package level internal variables.
+	prefsSrc  = koanf.New(".")
+	mu        = sync.Mutex{}
+	prefsFile string
+	logger    *slog.Logger
 	//lint:ignore U1000 some of these will be used in the future
 	gitVersion, gitCommit, gitTreeState, buildDate string
-	appVersion                                     = gitVersion
 	appID                                          = DefaultAppID
+	appVersion                                     = gitVersion
 )
 
 // Consistent error messages.
@@ -73,14 +78,10 @@ var (
 )
 
 // Default agent preferences.
-var defaultAgentPreferences = &preferences{
+var defaultPreferences = &preferences{
 	Version:    AppVersion(),
 	Registered: false,
-	MQTT: &MQTT{
-		MQTTEnabled:     false,
-		MQTTTopicPrefix: defaultMQTTTopicPrefix,
-		MQTTServer:      defaultMQTTServer,
-	},
+	MQTT:       defaultMQTTPreferences,
 	Registration: &Registration{
 		Server: DefaultServer,
 		Token:  defaultSecret,
@@ -92,63 +93,36 @@ var defaultAgentPreferences = &preferences{
 	},
 }
 
-type API struct{}
-
-// SetPreference will set a preference in the preferences
-// store. If it fails, it will return a non-nil error.
-type SetPreference func() error
-
-// SetPreferences will set the given preferences. It will emit WARN level log
-// messages for each preference that failed to get set.
-func SetPreferences(preferences ...SetPreference) {
-	for _, preference := range preferences {
-		if err := preference(); err != nil {
-			slog.Warn("Error setting preference.",
-				slog.Any("error", err))
-		}
-	}
-}
-
-// preferences defines all preferences for Go Hass Agent.
-type preferences struct {
-	MQTT         *MQTT         `toml:"mqtt,omitempty"`
-	Registration *Registration `toml:"registration"`
-	Hass         *Hass         `toml:"hass"`
-	Device       *Device       `toml:"device"`
-	Version      string        `toml:"version"`
-	Registered   bool          `toml:"registered" validate:"boolean"`
-	Headless     bool          `toml:"-"`
-}
-
-// Load will retrieve the current preferences from the preference file on disk,
+// Init will retrieve the current preferences from the preference file on disk,
 // overwriting values with any passed-in preferences. If there is a problem
 // during retrieval, an error will be returned.
-var Load = func(ctx context.Context, preferences ...SetPreference) error {
+var Init = func(ctx context.Context, preferences ...SetPreference) error {
 	return sync.OnceValue(func() error {
-		prefsFile := filepath.Join(PathFromCtx(ctx), preferencesFile)
+		prefsFile = filepath.Join(PathFromCtx(ctx), preferencesFile)
+		logger = logging.FromContext(ctx).WithGroup("preferences")
 
-		// api := &API{}
-		if runtimeAppID, found := os.LookupEnv(PrefsEnvAppID); found {
-			appID = runtimeAppID
-		}
-
-		slog.Debug("Loading preferences.",
+		logger.Debug("Loading preferences.",
 			slog.String("file", prefsFile))
 
 		// Load config file
 		if err := prefsSrc.Load(file.Provider(prefsFile), toml.Parser()); err != nil {
-			slog.Debug("No preferences found, using defaults.", slog.Any("error", err))
-			if err := prefsSrc.Load(structs.Provider(defaultAgentPreferences, "toml"), nil); err != nil {
+			logger.Debug("No preferences found, using defaults.", slog.Any("error", err))
+			if err := prefsSrc.Load(structs.Provider(defaultPreferences, "toml"), nil); err != nil {
 				return fmt.Errorf("%w: %w", ErrLoadPreferences, err)
 			}
 		}
 		// Unmarshal config, overwriting defaults.
-		if err := prefsSrc.UnmarshalWithConf("", defaultAgentPreferences, koanf.UnmarshalConf{Tag: "toml"}); err != nil {
+		if err := prefsSrc.UnmarshalWithConf("", defaultPreferences, koanf.UnmarshalConf{Tag: "toml"}); err != nil {
 			return fmt.Errorf("%w: %w", ErrLoadPreferences, err)
 		}
 
 		// Set any preferences passed in.
-		SetPreferences(preferences...)
+		if len(preferences) > 0 {
+			if err := Set(preferences...); err != nil {
+				logger.Debug("Could not set initial custom preferences.",
+					slog.Any("error", err))
+			}
+		}
 
 		// Validate preferences.
 		if err := validate(); err != nil {
@@ -159,21 +133,20 @@ var Load = func(ctx context.Context, preferences ...SetPreference) error {
 	})()
 }
 
-// Reset will remove the preferences file.
-func Reset(ctx context.Context) error {
-	prefsFile := filepath.Join(PathFromCtx(ctx), preferencesFile)
-
-	slog.Debug("Removing preferences.", slog.String("file", prefsFile))
-
-	_, err := os.Stat(prefsFile)
-	if os.IsNotExist(err) {
+// load will load the preferences for a component, using the given file and
+// environment prefixes, and marshaling the config into the given config object.
+func load(configPrefix string, cfg any) error {
+	// Load config file
+	if err := prefsSrc.Load(file.Provider(prefsFile), toml.Parser()); err != nil {
+		return fmt.Errorf("%w: %w", ErrLoadPreferences, err)
+	}
+	// Unmarshal config, overwriting defaults.
+	if err := prefsSrc.UnmarshalWithConf(configPrefix, cfg, koanf.UnmarshalConf{Tag: "toml"}); err != nil {
 		return fmt.Errorf("%w: %w", ErrLoadPreferences, err)
 	}
 
-	err = os.Remove(prefsFile)
-	if err != nil {
-		return fmt.Errorf("unable to reset preferences: %w", err)
-	}
+	logger.Debug("Loading config for component.",
+		slog.String("component", configPrefix))
 
 	return nil
 }
@@ -207,10 +180,9 @@ func validate() error {
 	return nil
 }
 
-// Save will save the new values of the specified preferences to the existing
-// preferences file. NOTE: if the preferences file does not exist, Save will
-// return an error. Use New if saving preferences for the first time.
-func Save(ctx context.Context) error {
+// save will save the new values of the specified preferences to the existing
+// preferences file.
+func save() error {
 	mu.Lock()
 	defer mu.Unlock()
 
@@ -218,12 +190,10 @@ func Save(ctx context.Context) error {
 		return ErrLoadPreferences
 	}
 
-	prefsFile := filepath.Join(PathFromCtx(ctx), preferencesFile)
-
-	slog.Debug("Saving preferences.", slog.String("file", prefsFile))
+	logger.Debug("Saving preferences.", slog.String("file", prefsFile))
 
 	if err := prefsSrc.Set(prefVersion, appVersion); err != nil {
-		slog.Warn("Cannot update version in preferences file.",
+		logger.Warn("Cannot update version in preferences file.",
 			slog.Any("error", err))
 	}
 
@@ -231,7 +201,7 @@ func Save(ctx context.Context) error {
 		return err
 	}
 
-	if err := checkPath(PathFromCtx(ctx)); err != nil {
+	if err := checkPath(filepath.Dir(prefsFile)); err != nil {
 		return err
 	}
 
@@ -243,6 +213,27 @@ func Save(ctx context.Context) error {
 	err = os.WriteFile(prefsFile, b, defaultFilePerms)
 	if err != nil {
 		return fmt.Errorf("%w: %w", ErrSavePreferences, err)
+	}
+
+	return nil
+}
+
+// SetPreference will set a preference in the preferences
+// store. If it fails, it will return a non-nil error.
+type SetPreference func() error
+
+// Set will set the given preferences. It will emit WARN level log
+// messages for each preference that failed to get set.
+func Set(preferences ...SetPreference) error {
+	for _, preference := range preferences {
+		if err := preference(); err != nil {
+			logger.Warn("Error setting preference.",
+				slog.Any("error", err))
+		}
+	}
+
+	if err := save(); err != nil {
+		return errors.Join(ErrSavePreferences, err)
 	}
 
 	return nil
@@ -265,24 +256,6 @@ func Registered() bool {
 	return prefsSrc.Bool(prefRegistered)
 }
 
-// SetHeadless sets an whether the agent should run headless (i.e., without a
-// GUI).
-func SetHeadless(value bool) SetPreference {
-	return func() error {
-		if err := prefsSrc.Set(prefHeadless, value); err != nil {
-			return fmt.Errorf("%w: %w", ErrSetPreference, err)
-		}
-
-		return nil
-	}
-}
-
-// Headless retrieves whether the agent is running headless (i.e., without a
-// GUI).
-func Headless() bool {
-	return prefsSrc.Bool(prefHeadless)
-}
-
 // AppVersion returns the version of Go Hass Agent.
 func AppVersion() string {
 	if appVersion != "" {
@@ -296,6 +269,25 @@ func AppVersion() string {
 // last version of Go Hass Agent to write the preferences.toml file).
 func Version() string {
 	return prefsSrc.String(prefVersion)
+}
+
+// Reset will remove the preferences file.
+func Reset(ctx context.Context) error {
+	prefsFile := filepath.Join(PathFromCtx(ctx), preferencesFile)
+
+	slog.Debug("Removing preferences.", slog.String("file", prefsFile))
+
+	_, err := os.Stat(prefsFile)
+	if os.IsNotExist(err) {
+		return fmt.Errorf("%w: %w", ErrLoadPreferences, err)
+	}
+
+	err = os.Remove(prefsFile)
+	if err != nil {
+		return fmt.Errorf("unable to reset preferences: %w", err)
+	}
+
+	return nil
 }
 
 // checkPath checks that the given directory exists. If it doesn't it will be

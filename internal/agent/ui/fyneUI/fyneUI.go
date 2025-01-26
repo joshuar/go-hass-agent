@@ -119,7 +119,7 @@ func (i *FyneUI) DisplayTrayIcon(ctx context.Context, cancelFunc context.CancelF
 		// Preferences/Settings items.
 		menuItemAppPrefs := fyne.NewMenuItem("App Settings",
 			func() {
-				i.agentSettingsWindow(ctx).Show()
+				i.agentSettingsWindow().Show()
 			})
 		menuItemFynePrefs := fyne.NewMenuItem("Fyne Settings",
 			func() {
@@ -200,11 +200,6 @@ func (i *FyneUI) DisplayRegistrationWindow(ctx context.Context, prefs *preferenc
 func (i *FyneUI) aboutWindow(ctx context.Context) fyne.Window {
 	var widgets []fyne.CanvasObject
 
-	if err := preferences.Load(ctx); err != nil {
-		logging.FromContext(ctx).Error("Could not start sensor controller.", slog.Any("error", err))
-		return nil
-	}
-
 	icon := canvas.NewImageFromResource(&ui.TrayIcon{})
 	icon.FillMode = canvas.ImageFillOriginal
 
@@ -250,16 +245,10 @@ func (i *FyneUI) fyneSettingsWindow() fyne.Window {
 
 // agentSettingsWindow creates a window for changing settings related to the
 // agent functionality. Most of these settings will be optional.
-func (i *FyneUI) agentSettingsWindow(ctx context.Context) fyne.Window {
+func (i *FyneUI) agentSettingsWindow() fyne.Window {
 	var allFormItems []*widget.FormItem
 
-	if err := preferences.Load(ctx); err != nil {
-		i.logger.Error("Could not start sensor controller.",
-			slog.Any("error", err))
-		return nil
-	}
-
-	mqttPrefs := preferences.MQTTPrefsFromFromCtx(preferences.MQTTPrefsToCtx(ctx))
+	mqttPrefs := preferences.MQTT()
 	// Generate a form of MQTT preferences.
 	allFormItems = append(allFormItems, mqttConfigItems(mqttPrefs)...)
 
@@ -267,14 +256,14 @@ func (i *FyneUI) agentSettingsWindow(ctx context.Context) fyne.Window {
 	settingsForm := widget.NewForm(allFormItems...)
 	settingsForm.OnSubmit = func() {
 		// Set the new MQTT preferences.
-		preferences.SetPreferences(
+		err := preferences.Set(
 			preferences.SetMQTTEnabled(mqttPrefs.MQTTEnabled),
 			preferences.SetMQTTServer(mqttPrefs.MQTTServer),
 			preferences.SetMQTTUser(mqttPrefs.MQTTUser),
 			preferences.SetMQTTPassword(mqttPrefs.MQTTPassword),
 		)
 		// Save the new MQTT preferences to file.
-		if err := preferences.Save(ctx); err != nil {
+		if err != nil {
 			dialog.ShowError(err, window)
 			i.logger.Error("Could note save preferences.", slog.Any("error", err))
 		} else {
@@ -470,7 +459,7 @@ func (i *FyneUI) registrationFields(prefs *preferences.Registration) []*widget.F
 
 // mqttConfigItems generates a list of for item widgets for configuring the
 // agent to use an MQTT for pub/sub functionality.
-func mqttConfigItems(prefs *preferences.MQTT) []*widget.FormItem {
+func mqttConfigItems(prefs *preferences.MQTTPreferences) []*widget.FormItem {
 	serverEntry := configEntry(&prefs.MQTTServer, false)
 	serverEntry.Validator = uriValidator()
 	serverEntry.Disable()

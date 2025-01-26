@@ -78,7 +78,7 @@ func NewDevice() *Device {
 	// Retrieve the name as the device name.
 	name, err := device.GetHostname()
 	if err != nil {
-		slog.Warn("Unable to determine device hostname.",
+		logger.Warn("Unable to determine device hostname.",
 			slog.Any("error", err))
 	}
 
@@ -87,7 +87,7 @@ func NewDevice() *Device {
 	// Generate a new unique Device ID
 	id, err := newDeviceID()
 	if err != nil {
-		slog.Warn("Unable to generate a device ID.",
+		logger.Warn("Unable to generate a device ID.",
 			slog.Any("error", err))
 	}
 
@@ -96,7 +96,7 @@ func NewDevice() *Device {
 	// Retrieve the OS name and version.
 	osName, osVersion, err := device.GetOSID()
 	if err != nil {
-		slog.Warn("Unable to determine OS details.",
+		logger.Warn("Unable to determine OS details.",
 			slog.Any("error", err))
 	}
 
@@ -106,7 +106,7 @@ func NewDevice() *Device {
 	// Retrieve the hardware model and manufacturer.
 	model, manufacturer, err := device.GetHWProductInfo()
 	if err != nil {
-		slog.Warn("Unable to determine device hardware details.",
+		logger.Warn("Unable to determine device hardware details.",
 			slog.Any("error", err))
 	}
 
@@ -114,10 +114,13 @@ func NewDevice() *Device {
 	dev.Manufacturer = manufacturer
 
 	// Set the device id and name in the preferences store.
-	SetPreferences(
+	if err := Set(
 		SetDeviceID(dev.ID),
 		SetDeviceName(dev.Name),
-	)
+	); err != nil {
+		logger.Warn("Could not save device id/name.",
+			slog.Any("error", err))
+	}
 
 	return dev
 }

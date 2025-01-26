@@ -21,7 +21,7 @@ type ConfigCmd struct {
 	MQTTConfig `kong:"help='Set MQTT options.'"`
 }
 
-type MQTTConfig preferences.MQTT
+type MQTTConfig preferences.MQTTPreferences
 
 func (r *ConfigCmd) Run(opts *CmdOpts) error {
 	ctx, cancelFunc := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -29,41 +29,31 @@ func (r *ConfigCmd) Run(opts *CmdOpts) error {
 
 	ctx = preferences.PathToCtx(ctx, opts.Path)
 
-	if err := preferences.Load(ctx); err != nil {
+	if err := preferences.Init(ctx); err != nil {
 		return fmt.Errorf("config: load preferences: %w", err)
 	}
 
-	preferences.SetPreferences(
-		preferences.SetMQTTEnabled(true),
-	)
+	var preferencesToSet []preferences.SetPreference
+
+	preferencesToSet = append(preferencesToSet, preferences.SetMQTTEnabled(true))
 
 	if r.MQTTServer != "" {
-		preferences.SetPreferences(
-			preferences.SetMQTTServer(r.MQTTServer),
-		)
+		preferencesToSet = append(preferencesToSet, preferences.SetMQTTServer(r.MQTTServer))
 	}
 
 	if r.MQTTTopicPrefix != "" {
-		preferences.SetPreferences(
-
-			preferences.SetMQTTTopicPrefix(r.MQTTTopicPrefix),
-		)
+		preferencesToSet = append(preferencesToSet, preferences.SetMQTTTopicPrefix(r.MQTTTopicPrefix))
 	}
 
 	if r.MQTTUser != "" {
-		preferences.SetPreferences(
-
-			preferences.SetMQTTUser(r.MQTTUser),
-		)
+		preferencesToSet = append(preferencesToSet, preferences.SetMQTTUser(r.MQTTUser))
 	}
 
 	if r.MQTTPassword != "" {
-		preferences.SetPreferences(
-			preferences.SetMQTTPassword(r.MQTTPassword),
-		)
+		preferencesToSet = append(preferencesToSet, preferences.SetMQTTPassword(r.MQTTPassword))
 	}
 
-	if err := preferences.Save(ctx); err != nil {
+	if err := preferences.Set(preferencesToSet...); err != nil {
 		return fmt.Errorf("config: save preferences: %w", err)
 	}
 

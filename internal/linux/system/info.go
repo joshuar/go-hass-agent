@@ -91,10 +91,10 @@ func (w *infoWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
 	return sensors, nil
 }
 
-func NewInfoWorker(ctx context.Context) (*linux.OneShotSensorWorker, error) {
+func NewInfoWorker(_ context.Context) (*linux.OneShotSensorWorker, error) {
 	infoWorker := &infoWorker{}
 
-	prefs, err := preferences.LoadWorker(ctx, infoWorker)
+	prefs, err := preferences.LoadWorker(infoWorker)
 	if err != nil {
 		return nil, fmt.Errorf("could not load preferences: %w", err)
 	}
