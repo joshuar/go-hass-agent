@@ -123,7 +123,7 @@ func NewOOMEventsWorker(ctx context.Context) (*linux.EventWorker, error) {
 
 	eventWorker := &OOMEventsWorker{}
 
-	eventWorker.prefs, err = preferences.LoadWorker(ctx, eventWorker)
+	eventWorker.prefs, err = preferences.LoadWorker(eventWorker)
 	if err != nil {
 		return nil, fmt.Errorf("could not load preferences: %w", err)
 	}

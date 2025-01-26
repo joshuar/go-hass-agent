@@ -125,7 +125,7 @@ func NewHWMonWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
 
 	hwMonWorker := &hwMonWorker{}
 
-	hwMonWorker.prefs, err = preferences.LoadWorker(ctx, hwMonWorker)
+	hwMonWorker.prefs, err = preferences.LoadWorker(hwMonWorker)
 	if err != nil {
 		return nil, fmt.Errorf("could not load preferences: %w", err)
 	}

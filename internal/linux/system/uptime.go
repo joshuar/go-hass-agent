@@ -96,7 +96,7 @@ func (w *uptimeWorker) getUptime(ctx context.Context) float64 {
 func NewUptimeTimeWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
 	uptimeWorker := &uptimeWorker{}
 
-	prefs, err := preferences.LoadWorker(ctx, uptimeWorker)
+	prefs, err := preferences.LoadWorker(uptimeWorker)
 	if err != nil {
 		return nil, fmt.Errorf("could not load preferences: %w", err)
 	}

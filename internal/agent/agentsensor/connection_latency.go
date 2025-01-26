@@ -137,7 +137,7 @@ func (w *ConnectionLatencySensorWorker) Start(ctx context.Context) (<-chan senso
 	return sensorCh, nil
 }
 
-func NewConnectionLatencySensorWorker(ctx context.Context) *ConnectionLatencySensorWorker {
+func NewConnectionLatencySensorWorker(_ context.Context) *ConnectionLatencySensorWorker {
 	worker := &ConnectionLatencySensorWorker{
 		client: resty.New().
 			SetTimeout(connectionLatencyTimeout).
@@ -145,7 +145,7 @@ func NewConnectionLatencySensorWorker(ctx context.Context) *ConnectionLatencySen
 		endpoint: preferences.RestAPIURL(),
 	}
 
-	prefs, err := preferences.LoadWorker(ctx, worker)
+	prefs, err := preferences.LoadWorker(worker)
 	if err != nil {
 		return nil
 	}

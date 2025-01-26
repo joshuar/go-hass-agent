@@ -110,10 +110,10 @@ func parseLoadAvgs(data []byte) ([]string, error) {
 	return loadAvgs, nil
 }
 
-func NewLoadAvgWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
+func NewLoadAvgWorker(_ context.Context) (*linux.PollingSensorWorker, error) {
 	loadAvgsWorker := &loadAvgsWorker{loadAvgs: newLoadAvgSensors(), path: filepath.Join(linux.ProcFSRoot, "loadavg")}
 
-	prefs, err := preferences.LoadWorker(ctx, loadAvgsWorker)
+	prefs, err := preferences.LoadWorker(loadAvgsWorker)
 	if err != nil {
 		return nil, fmt.Errorf("could not load preferences: %w", err)
 	}

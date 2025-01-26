@@ -76,12 +76,12 @@ func (w *cpuVulnWorker) DefaultPreferences() preferences.CommonWorkerPrefs {
 	return preferences.CommonWorkerPrefs{}
 }
 
-func NewCPUVulnerabilityWorker(ctx context.Context) (*linux.OneShotSensorWorker, error) {
+func NewCPUVulnerabilityWorker(_ context.Context) (*linux.OneShotSensorWorker, error) {
 	cpuVulnWorker := &cpuVulnWorker{
 		path: filepath.Join(linux.SysFSRoot, cpuVulnPath),
 	}
 
-	prefs, err := preferences.LoadWorker(ctx, cpuVulnWorker)
+	prefs, err := preferences.LoadWorker(cpuVulnWorker)
 	if err != nil {
 		return nil, fmt.Errorf("could not load preferences: %w", err)
 	}

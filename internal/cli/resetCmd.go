@@ -37,9 +37,7 @@ func (r *ResetCmd) Run(opts *CmdOpts) error {
 	ctx = preferences.PathToCtx(ctx, opts.Path)
 
 	// Load the preferences so we know what we need to reset.
-	if err := preferences.Load(ctx,
-		preferences.SetHeadless(opts.Headless),
-	); err != nil && !errors.Is(err, preferences.ErrLoadPreferences) {
+	if err := preferences.Init(ctx); err != nil && !errors.Is(err, preferences.ErrLoadPreferences) {
 		return errors.Join(ErrResetCommandFailed, err)
 	}
 

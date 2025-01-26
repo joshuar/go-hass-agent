@@ -8,16 +8,12 @@ import (
 	"path/filepath"
 
 	"github.com/adrg/xdg"
-	mqtthass "github.com/joshuar/go-hass-anything/v12/pkg/hass"
 )
 
 type contextKey string
 
 const (
 	registrationCtxKey contextKey = "registration"
-	headlessCtxKey     contextKey = "headless"
-	mqttDeviceCtxKey   contextKey = "mqttDevice"
-	mqttPrefsCtxKey    contextKey = "mqttPrefs"
 	pathCtxKey         contextKey = "path"
 )
 
@@ -37,38 +33,6 @@ func RegistrationFromCtx(ctx context.Context) *Registration {
 	}
 
 	return &registration
-}
-
-// MQTTDeviceToCtx stores the MQTT device in the context.
-func MQTTDeviceToCtx(ctx context.Context) context.Context {
-	newCtx := context.WithValue(ctx, mqttDeviceCtxKey, getMQTTDevice())
-	return newCtx
-}
-
-// MQTTDeviceFromCtx retrieves the MQTT device from the context.
-func MQTTDeviceFromFromCtx(ctx context.Context) *mqtthass.Device {
-	device, ok := ctx.Value(mqttDeviceCtxKey).(*mqtthass.Device)
-	if !ok {
-		return nil
-	}
-
-	return device
-}
-
-// MQTTPrefsToCtx stores the MQTT preferences in the context.
-func MQTTPrefsToCtx(ctx context.Context) context.Context {
-	newCtx := context.WithValue(ctx, mqttPrefsCtxKey, getMQTTPreferences())
-	return newCtx
-}
-
-// MQTTPrefsFromCtx retrieves the MQTT preferences from the context.
-func MQTTPrefsFromFromCtx(ctx context.Context) *MQTT {
-	prefs, ok := ctx.Value(mqttPrefsCtxKey).(*MQTT)
-	if !ok {
-		return nil
-	}
-
-	return prefs
 }
 
 // PathToCtx stores the base path for preferences (and other files) in the

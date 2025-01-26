@@ -133,7 +133,7 @@ func NewScreenLockWorker(ctx context.Context) (*linux.EventSensorWorker, error) 
 	worker := linux.NewEventSensorWorker(screenLockWorkerID)
 	lockWorker := &screenLockWorker{}
 
-	lockWorker.prefs, err = preferences.LoadWorker(ctx, lockWorker)
+	lockWorker.prefs, err = preferences.LoadWorker(lockWorker)
 	if err != nil {
 		return nil, fmt.Errorf("could not load preferences: %w", err)
 	}

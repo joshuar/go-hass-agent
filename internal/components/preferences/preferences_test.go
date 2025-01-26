@@ -46,7 +46,7 @@ func Test_checkPath(t *testing.T) {
 	}
 }
 
-func TestLoad(t *testing.T) {
+func TestInit(t *testing.T) {
 	type args struct {
 		path string
 	}
@@ -71,7 +71,7 @@ func TestLoad(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := PathToCtx(context.TODO(), tt.args.path)
-			err := Load(ctx)
+			err := Init(ctx)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Load() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -146,9 +146,9 @@ func TestSave(t *testing.T) {
 			ctx := PathToCtx(context.TODO(), tt.args.path)
 			if tt.args.preload {
 				require.NoError(t, checkPath(tt.args.path))
-				require.NoError(t, Load(ctx))
+				require.NoError(t, Init(ctx))
 			}
-			if err := Save(ctx); (err != nil) != tt.wantErr {
+			if err := save(); (err != nil) != tt.wantErr {
 				t.Errorf("Save() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

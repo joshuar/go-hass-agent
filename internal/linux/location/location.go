@@ -137,7 +137,7 @@ func NewLocationWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 	locationWorker := &locationWorker{}
 
 	// Load the worker preferences.
-	locationWorker.prefs, err = preferences.LoadWorker(ctx, locationWorker)
+	locationWorker.prefs, err = preferences.LoadWorker(locationWorker)
 	if err != nil {
 		return worker, fmt.Errorf("could not load preferences: %w", err)
 	}

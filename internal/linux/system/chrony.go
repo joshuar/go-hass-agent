@@ -133,7 +133,7 @@ func NewChronyWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
 
 	chronyWorker := &chronyWorker{chronycPath: path}
 
-	chronyWorker.prefs, err = preferences.LoadWorker(ctx, chronyWorker)
+	chronyWorker.prefs, err = preferences.LoadWorker(chronyWorker)
 	if err != nil {
 		return nil, fmt.Errorf("could not load preferences: %w", err)
 	}

@@ -358,6 +358,7 @@ linters-settings:
   gosec:
     excludes:
       - G204
+      - G115
   perfsprint:
     errorf: false
     strconcat: false

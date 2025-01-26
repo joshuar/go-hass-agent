@@ -20,7 +20,7 @@ import (
 // command-line and then checks to see if the agent needs to register to Home
 // Assistant. If it does, it will perform the registration via either a
 // graphical (user-prompted) or non-graphical (automatic) process.
-func checkRegistration(ctx context.Context, agentUI ui) error {
+func checkRegistration(ctx context.Context, headless bool, agentUI ui) error {
 	// Retrieve request options passed on command-line from context.
 	request := preferences.RegistrationFromCtx(ctx)
 	if request == nil {
@@ -33,7 +33,7 @@ func checkRegistration(ctx context.Context, agentUI ui) error {
 	}
 
 	// If not headless, present a UI for the user to configure options.
-	if !preferences.Headless() {
+	if !headless {
 		userInputDoneCh := agentUI.DisplayRegistrationWindow(ctx, request)
 		if canceled := <-userInputDoneCh; canceled {
 			return errors.New("user canceled registration")

@@ -114,7 +114,7 @@ func NewUserSessionSensorWorker(ctx context.Context) (*UserSessionSensorWorker, 
 
 	sessionsWorker := &UserSessionSensorWorker{}
 
-	sessionsWorker.prefs, err = preferences.LoadWorker(ctx, sessionsWorker)
+	sessionsWorker.prefs, err = preferences.LoadWorker(sessionsWorker)
 	if err != nil {
 		return nil, fmt.Errorf("could not load preferences: %w", err)
 	}
@@ -257,7 +257,7 @@ func NewUserSessionEventsWorker(ctx context.Context) (*linux.EventWorker, error)
 
 	sessionsWorker := &UserSessionEventsWorker{}
 
-	sessionsWorker.prefs, err = preferences.LoadWorker(ctx, sessionsWorker)
+	sessionsWorker.prefs, err = preferences.LoadWorker(sessionsWorker)
 	if err != nil {
 		return nil, fmt.Errorf("could not load preferences: %w", err)
 	}

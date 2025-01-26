@@ -61,7 +61,7 @@ func MPRISControl(ctx context.Context, device *mqtthass.Device, msgCh chan *mqtt
 		msgCh:  msgCh,
 	}
 
-	mprisMonitor.prefs, err = preferences.LoadWorker(ctx, mprisMonitor)
+	mprisMonitor.prefs, err = preferences.LoadWorker(mprisMonitor)
 	if err != nil {
 		return nil, fmt.Errorf("could not load preferences: %w", err)
 	}

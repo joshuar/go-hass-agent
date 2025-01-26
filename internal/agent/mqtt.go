@@ -59,22 +59,12 @@ type mqttEntities struct {
 	cameras       []*mqtthass.CameraEntity
 }
 
-// setupMQTTCtx will load a context with MQTT preferences and device configuration.
-func setupMQTTCtx(ctx context.Context) context.Context {
-	// Add MQTT preferences to context.
-	ctx = preferences.MQTTPrefsToCtx(ctx)
-	// Get MQTT device and add to context.
-	ctx = preferences.MQTTDeviceToCtx(ctx)
-
-	return ctx
-}
-
 // createMQTTWorkers returns a slice of MQTT workers, including any custom
 // command workers and OS-specific workers.
 func createMQTTWorkers(ctx context.Context) []MQTTWorker {
 	var workers []MQTTWorker
 	// Set up custom MQTT commands worker.
-	customCommandsWorker, err := commands.NewCommandsWorker(ctx, preferences.MQTTDeviceFromFromCtx(ctx))
+	customCommandsWorker, err := commands.NewCommandsWorker(ctx, preferences.MQTTDevice())
 	if err != nil {
 		if !errors.Is(err, commands.ErrNoCommands) {
 			logging.FromContext(ctx).Warn("Could not setup custom MQTT commands.",
@@ -104,8 +94,6 @@ func processMQTTWorkers(ctx context.Context) {
 		return
 	}
 
-	// Get the MQTT preferences and device.
-	ctx = setupMQTTCtx(ctx)
 	// Create the workers.
 	workers := createMQTTWorkers(ctx)
 	// Add the subscriptions and configs from the workers.
@@ -116,7 +104,7 @@ func processMQTTWorkers(ctx context.Context) {
 	}
 	// Create a new connection to the MQTT broker, publish subscriptions and
 	// configs.
-	client, err := mqttapi.NewClient(ctx, preferences.MQTTPrefsFromFromCtx(ctx), subscriptions, configs)
+	client, err := mqttapi.NewClient(ctx, preferences.MQTT(), subscriptions, configs)
 	if err != nil {
 		logging.FromContext(ctx).Error("Could not connect to MQTT.",
 			slog.Any("error", err))
@@ -147,8 +135,6 @@ func resetMQTTWorkers(ctx context.Context) error {
 		err     error
 	)
 
-	// Get the MQTT preferences and device.
-	ctx = setupMQTTCtx(ctx)
 	// Create the workers.
 	workers := createMQTTWorkers(ctx)
 
@@ -156,7 +142,7 @@ func resetMQTTWorkers(ctx context.Context) error {
 		configs = append(configs, worker.Configs()...)
 	}
 
-	client, err := mqttapi.NewClient(ctx, preferences.MQTTPrefsFromFromCtx(ctx), nil, nil)
+	client, err := mqttapi.NewClient(ctx, preferences.MQTT(), nil, nil)
 	if err != nil {
 		return fmt.Errorf("could not connect to MQTT: %w", err)
 	}

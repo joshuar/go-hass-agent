@@ -141,7 +141,7 @@ func NewIOWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
 		boottime: boottime,
 	}
 
-	prefs, err := preferences.LoadWorker(ctx, ioWorker)
+	prefs, err := preferences.LoadWorker(ioWorker)
 	if err != nil {
 		return nil, fmt.Errorf("could not load preferences: %w", err)
 	}

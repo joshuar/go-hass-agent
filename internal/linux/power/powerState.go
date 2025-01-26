@@ -148,7 +148,7 @@ func NewStateWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 	worker := linux.NewEventSensorWorker(powerStateWorkerID)
 	stateWorker := &stateWorker{}
 
-	stateWorker.prefs, err = preferences.LoadWorker(ctx, stateWorker)
+	stateWorker.prefs, err = preferences.LoadWorker(stateWorker)
 	if err != nil {
 		return nil, fmt.Errorf("could not load preferences: %w", err)
 	}

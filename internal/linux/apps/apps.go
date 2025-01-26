@@ -180,7 +180,8 @@ func NewAppWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 	appsWorker := &sensorWorker{
 		triggerCh: triggerCh,
 		getAppStates: func() (map[string]dbus.Variant, error) {
-			apps, err := dbusx.GetData[map[string]dbus.Variant](bus, appStateDBusPath, portalDest, appStateDBusMethod)
+			var apps map[string]dbus.Variant
+			apps, err = dbusx.GetData[map[string]dbus.Variant](bus, appStateDBusPath, portalDest, appStateDBusMethod)
 			if err != nil {
 				return nil, fmt.Errorf("could not retrieve app list from D-Bus: %w", err)
 			}
@@ -193,7 +194,7 @@ func NewAppWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 		},
 	}
 
-	prefs, err := preferences.LoadWorker(ctx, appsWorker)
+	prefs, err := preferences.LoadWorker(appsWorker)
 	if err != nil {
 		return worker, fmt.Errorf("could not load preferences: %w", err)
 	}

@@ -51,7 +51,7 @@ func (w *freqWorker) DefaultPreferences() FreqWorkerPrefs {
 func NewFreqWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
 	freqWorker := &freqWorker{}
 
-	prefs, err := preferences.LoadWorker(ctx, freqWorker)
+	prefs, err := preferences.LoadWorker(freqWorker)
 	if err != nil {
 		return nil, fmt.Errorf("could not load preferences: %w", err)
 	}

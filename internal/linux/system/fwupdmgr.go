@@ -125,7 +125,7 @@ func (w *fwupdWorker) DefaultPreferences() preferences.CommonWorkerPrefs {
 func NewfwupdWorker(ctx context.Context) (*linux.OneShotSensorWorker, error) {
 	fwupdWorker := &fwupdWorker{}
 
-	prefs, err := preferences.LoadWorker(ctx, fwupdWorker)
+	prefs, err := preferences.LoadWorker(fwupdWorker)
 	if err != nil {
 		return nil, fmt.Errorf("could not load preferences: %w", err)
 	}

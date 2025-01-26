@@ -55,7 +55,7 @@ func NewLastBootWorker(ctx context.Context) (*linux.OneShotSensorWorker, error) 
 
 	bootWorker := &lastBootWorker{lastBoot: lastBoot}
 
-	prefs, err := preferences.LoadWorker(ctx, bootWorker)
+	prefs, err := preferences.LoadWorker(bootWorker)
 	if err != nil {
 		return nil, fmt.Errorf("could not load preferences: %w", err)
 	}

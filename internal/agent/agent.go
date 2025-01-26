@@ -38,13 +38,13 @@ type Agent struct {
 }
 
 // newAgent creates the Agent struct.
-func newAgent(ctx context.Context, tracker fyneui.Tracker) *Agent {
+func newAgent(ctx context.Context, headless bool, tracker fyneui.Tracker) *Agent {
 	agent := &Agent{
 		logger: logging.FromContext(ctx).WithGroup("agent"),
 	}
 
 	// If not running headless, set up the UI.
-	if !preferences.Headless() {
+	if !headless {
 		agent.ui = fyneui.NewFyneUI(ctx, tracker)
 	}
 
@@ -53,9 +53,7 @@ func newAgent(ctx context.Context, tracker fyneui.Tracker) *Agent {
 
 // Run is invoked when Go Hass Agent is run with the `run` command-line option
 // (i.e., `go-hass-agent run`).
-//
-//nolint:funlen
-func Run(ctx context.Context, dataCh chan any, tracker fyneui.Tracker) error {
+func Run(ctx context.Context, headless bool, dataCh chan any, tracker fyneui.Tracker) error {
 	var (
 		wg      sync.WaitGroup
 		regWait sync.WaitGroup
@@ -68,14 +66,14 @@ func Run(ctx context.Context, dataCh chan any, tracker fyneui.Tracker) error {
 	ctx, cancelFunc := context.WithCancel(ctx)
 	defer cancelFunc()
 
-	agent := newAgent(ctx, tracker)
+	agent := newAgent(ctx, headless, tracker)
 
 	regWait.Add(1)
 
 	go func() {
 		defer regWait.Done()
 		// Check if the agent is registered. If not, start a registration flow.
-		if err = checkRegistration(ctx, agent.ui); err != nil {
+		if err = checkRegistration(ctx, headless, agent.ui); err != nil {
 			agent.logger.Error("Error checking registration status.", slog.Any("error", err))
 			cancelFunc()
 		}
@@ -144,12 +142,12 @@ func Run(ctx context.Context, dataCh chan any, tracker fyneui.Tracker) error {
 		// Listen for notifications from Home Assistant.
 		go func() {
 			defer wg.Done()
-			runNotificationsWorker(workerCtx, agent.ui)
+			runNotificationsWorker(workerCtx, headless, agent.ui)
 		}()
 	}()
 
 	// Do not run the UI loop if the agent is running in headless mode.
-	if !preferences.Headless() {
+	if !headless {
 		agent.ui.DisplayTrayIcon(ctx, cancelFunc)
 		agent.ui.Run(ctx)
 	}
@@ -162,10 +160,10 @@ func Run(ctx context.Context, dataCh chan any, tracker fyneui.Tracker) error {
 // Register is run when Go Hass Agent is invoked with the `register`
 // command-line option (i.e., `go-hass-agent register`). It will attempt to
 // register Go Hass Agent with Home Assistant.
-func Register(ctx context.Context) error {
+func Register(ctx context.Context, headless bool) error {
 	var wg sync.WaitGroup
 
-	agent := newAgent(ctx, nil)
+	agent := newAgent(ctx, headless, nil)
 
 	regCtx, cancelReg := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 	go func() {
@@ -178,14 +176,14 @@ func Register(ctx context.Context) error {
 	go func() {
 		defer wg.Done()
 
-		if err := checkRegistration(regCtx, agent.ui); err != nil {
+		if err := checkRegistration(regCtx, headless, agent.ui); err != nil {
 			agent.logger.Error("Error checking registration status", slog.Any("error", err))
 		}
 
 		cancelReg()
 	}()
 
-	if !preferences.Headless() {
+	if !headless {
 		agent.ui.Run(regCtx)
 	}
 
@@ -197,7 +195,7 @@ func Register(ctx context.Context) error {
 // Reset is invoked when Go Hass Agent is run with the `reset` command-line
 // option (i.e., `go-hass-agent reset`).
 func Reset(ctx context.Context) error {
-	agent := newAgent(ctx, nil)
+	agent := newAgent(ctx, true, nil)
 	// If MQTT is enabled, reset any saved MQTT config.
 	if preferences.MQTTEnabled() {
 		if err := resetMQTTWorkers(ctx); err != nil {

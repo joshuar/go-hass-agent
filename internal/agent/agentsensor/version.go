@@ -64,10 +64,10 @@ func (w *VersionWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 	return []sensor.Entity{newVersionSensor()}, nil
 }
 
-func NewVersionWorker(ctx context.Context) *VersionWorker {
+func NewVersionWorker(_ context.Context) *VersionWorker {
 	worker := &VersionWorker{}
 
-	prefs, err := preferences.LoadWorker(ctx, worker)
+	prefs, err := preferences.LoadWorker(worker)
 	if err != nil {
 		return nil
 	}

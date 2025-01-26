@@ -67,13 +67,15 @@ func v1000(ctx context.Context) error {
 		return fmt.Errorf("cannot read old preferences: %w", err)
 	}
 
-	if err = preferences.Load(ctx); err != nil && !errors.Is(err, preferences.ErrLoadPreferences) {
+	if err = preferences.Init(ctx); err != nil && !errors.Is(err, preferences.ErrLoadPreferences) {
 		return fmt.Errorf("cannot initialize new preferences: %w", err)
 	}
 
+	var preferencesToSet []preferences.SetPreference
+
 	// Set MQTT preferences if MQTT is enabled.
 	if oldPrefs.MQTTEnabled {
-		preferences.SetPreferences(
+		preferencesToSet = append(preferencesToSet,
 			preferences.SetMQTTEnabled(true),
 			preferences.SetMQTTServer(oldPrefs.MQTTServer),
 			preferences.SetMQTTTopicPrefix(oldPrefs.MQTTTopicPrefix),
@@ -82,7 +84,7 @@ func v1000(ctx context.Context) error {
 		)
 	}
 	// Set all other required preferences.
-	preferences.SetPreferences(
+	preferencesToSet = append(preferencesToSet,
 		// Hass preferences.
 		preferences.SetHassSecret(oldPrefs.Secret),
 		preferences.SetRestAPIURL(oldPrefs.RestAPIURL),
@@ -93,9 +95,8 @@ func v1000(ctx context.Context) error {
 		preferences.SetDeviceName(oldPrefs.DeviceName),
 		preferences.SetRegistered(true),
 	)
-	// Save the preferences to disk.
-	err = preferences.Save(ctx)
-	if err != nil {
+
+	if err = preferences.Set(preferencesToSet...); err != nil {
 		return fmt.Errorf("%w: %w", preferences.ErrSavePreferences, err)
 	}
 
