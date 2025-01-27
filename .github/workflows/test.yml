@@ -59,7 +59,7 @@ jobs:
         run: mage ${MAGEARGS} tests:ci
       - name: Upload Coverage
         id: upload_coverage
-        uses: codecov/codecov-action@1e68e06f1dbfde0e4cefc87efeba9e4643565303 # v4
+        uses: codecov/codecov-action@13ce06bfc6bbe3ecf90edbbf1bc32fe5978ca1d3 # v4
         continue-on-error: true
         with:
           token: ${{secrets.CODECOV_TOKEN}}
