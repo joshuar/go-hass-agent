@@ -59,14 +59,18 @@ func TestGetOSRelease(t *testing.T) {
 }
 
 func Test_readOSRelease(t *testing.T) {
-	var fedora, ubuntu []byte
-
-	var err error
+	var (
+		fedora, ubuntu, tumbleweed []byte
+		err                        error
+	)
 
 	fedora, err = content.ReadFile("testdata/os-release-fedora")
 	require.NoError(t, err)
 
 	ubuntu, err = content.ReadFile("testdata/os-release-ubuntu")
+	require.NoError(t, err)
+
+	tumbleweed, err = content.ReadFile("testdata/os-release-opensuse-tumbleweed")
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -87,6 +91,12 @@ func Test_readOSRelease(t *testing.T) {
 			want:          ubuntu,
 			wantErr:       false,
 			osReleaseFile: "testdata/os-release-ubuntu",
+		},
+		{
+			name:          "opensuse-tumbleweed",
+			want:          tumbleweed,
+			wantErr:       false,
+			osReleaseFile: "testdata/os-release-opensuse-tumbleweed",
 		},
 		{
 			name:             "alt file",
