@@ -56,7 +56,7 @@ jobs:
         fetch-depth: 0
     - name: Setup Go
       id: setup_go
-      uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5
+      uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34 # v5
       with:
         go-version-file: 'go.mod'
     - name: Install Mage
@@ -66,7 +66,7 @@ jobs:
     - name: Install build deps
       run: mage ${MAGEARGS} preps:deps
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@b6a472f63d85b9c78a3ac5e89422239fc15e9b3c # v3.28.1
+      uses: github/codeql-action/init@f6091c0113d1dcf9b98e269ee48e8a7e51b7bdd4 # v3.28.5
       with:
         languages: ${{ matrix.language }}
         build-mode: ${{ matrix.build-mode }}
@@ -75,6 +75,6 @@ jobs:
       name: Build
       run: go build
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@b6a472f63d85b9c78a3ac5e89422239fc15e9b3c # v3.28.1
+      uses: github/codeql-action/analyze@f6091c0113d1dcf9b98e269ee48e8a7e51b7bdd4 # v3.28.5
       with:
         category: "/language:${{matrix.language}}"
