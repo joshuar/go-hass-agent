@@ -20,6 +20,7 @@
 !cosign.*
 !assets/
 !build/
+!**/testdata/*
 
 !LICENSE
 !deployments/mosquitto/config/mosquitto.conf.example

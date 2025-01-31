@@ -43,7 +43,11 @@ func GetOSID() (id, versionid string, err error) {
 // are pretty-printed and may not be suitable for usage as identifiers and
 // variables. See also GetDistroID.
 func GetOSDetails() (name, version string, err error) {
-	var distroName, distroVersion string
+	var (
+		distroName, distroVersion string
+		value                     string
+		found                     bool
+	)
 
 	osReleaseInfo, err := whichdistro.GetOSRelease()
 	if err != nil {
@@ -51,16 +55,20 @@ func GetOSDetails() (name, version string, err error) {
 			fmt.Errorf("could not read /etc/os-release: %w", err)
 	}
 
-	if v, ok := osReleaseInfo.GetValue("NAME"); !ok {
-		distroName = unknownDistro
+	if value, found = osReleaseInfo.GetValue("NAME"); found {
+		distroName = value
+	} else if value, found = osReleaseInfo.GetValue("ID"); found {
+		distroName = value
 	} else {
-		distroName = v
+		distroName = unknownDistro
 	}
 
-	if v, ok := osReleaseInfo.GetValue("VERSION"); !ok {
-		distroVersion = unknownDistroVersion
+	if value, found = osReleaseInfo.GetValue("VERSION"); found {
+		distroVersion = value
+	} else if value, found = osReleaseInfo.GetValue("VERSION_ID"); found {
+		distroVersion = value
 	} else {
-		distroVersion = v
+		distroVersion = unknownDistroVersion
 	}
 
 	return distroName, distroVersion, nil

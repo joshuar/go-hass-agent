@@ -48,7 +48,9 @@ func GetOSRelease() (OSRelease, error) {
 		fields := bytes.FieldsFunc(line, func(r rune) bool {
 			return r == '='
 		})
-		info[string(fields[0])] = string(fields[1])
+		if len(fields) == 2 {
+			info[string(fields[0])] = string(fields[1])
+		}
 	}
 
 	return info, nil
