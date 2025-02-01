@@ -23,7 +23,7 @@ const (
 	hwMonJitter   = 5 * time.Second
 
 	hwmonWorkerID      = "hwmon_sensors"
-	hwmonPreferencesID = "hwmon"
+	hwmonPreferencesID = sensorsPrefPrefix + "hardware_sensors"
 )
 
 func hwmonSensorAttributes(details *hwmon.Sensor) map[string]any {
@@ -111,7 +111,7 @@ func (w *hwMonWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 }
 
 func (w *hwMonWorker) PreferencesID() string {
-	return basePreferencesID + "." + hwmonPreferencesID
+	return hwmonPreferencesID
 }
 
 func (w *hwMonWorker) DefaultPreferences() HWMonPrefs {

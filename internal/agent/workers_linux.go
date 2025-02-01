@@ -13,7 +13,6 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/hass/event"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
-	"github.com/joshuar/go-hass-agent/internal/linux/apps"
 	"github.com/joshuar/go-hass-agent/internal/linux/battery"
 	"github.com/joshuar/go-hass-agent/internal/linux/cpu"
 	"github.com/joshuar/go-hass-agent/internal/linux/desktop"
@@ -27,13 +26,13 @@ import (
 
 // sensorEventWorkersInitFuncs are all of the sensor workers that generate sensors on events.
 var sensorEventWorkersInitFuncs = []func(ctx context.Context) (*linux.EventSensorWorker, error){
-	apps.NewAppWorker,
 	battery.NewBatteryWorker,
 	net.NewConnectionWorker,
 	net.NewAddressWorker,
 	power.NewProfileWorker,
 	power.NewStateWorker,
 	power.NewScreenLockWorker,
+	desktop.NewAppWorker,
 	desktop.NewDesktopWorker,
 }
 

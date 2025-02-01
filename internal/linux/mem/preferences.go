@@ -5,6 +5,10 @@ package mem
 
 import "github.com/joshuar/go-hass-agent/internal/components/preferences"
 
+const (
+	prefPrefix = preferences.SensorsPrefPrefix + "memory" + preferences.PathDelim
+)
+
 type WorkerPreferences struct {
 	preferences.CommonWorkerPrefs
 	UpdateInterval string `toml:"update_interval" comment:"Time between updates of sensors."`

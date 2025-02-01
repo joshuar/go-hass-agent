@@ -20,8 +20,7 @@ import (
 )
 
 const (
-	fwupdmgrWorkerID      = "fwupdmgr_worker"
-	fwupdmgrPreferencesID = infoWorkerPreferencesID
+	fwupdmgrWorkerID = "fwupdmgr_worker"
 
 	fwupdInterface          = "org.freedesktop.fwupd"
 	hostSecurityAttrsMethod = "GetHostSecurityAttrs"
@@ -115,7 +114,7 @@ func (w *fwupdWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
 }
 
 func (w *fwupdWorker) PreferencesID() string {
-	return basePreferencesID + "." + fwupdmgrPreferencesID
+	return infoWorkerPreferencesID
 }
 
 func (w *fwupdWorker) DefaultPreferences() preferences.CommonWorkerPrefs {

@@ -45,7 +45,7 @@ func (w *usageWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
 }
 
 func (w *usageWorker) PreferencesID() string {
-	return basePreferencesID + "." + usageWorkerPreferencesID
+	return usageWorkerPreferencesID
 }
 
 func (w *usageWorker) DefaultPreferences() WorkerPrefs {

@@ -6,7 +6,8 @@ package system
 import "github.com/joshuar/go-hass-agent/internal/components/preferences"
 
 const (
-	basePreferencesID = "system_sensors"
+	sensorsPrefPrefix  = preferences.SensorsPrefPrefix + "system" + preferences.PathDelim
+	controlsPrefPrefix = preferences.ControlsPrefPrefix + "system" + preferences.PathDelim
 )
 
 // HWMonPrefs are the preferences for the hwmon sensor worker.

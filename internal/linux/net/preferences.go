@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	preferencesID      = "network_sensors"
+	prefPrefix         = preferences.SensorsPrefPrefix + "network" + preferences.PathDelim
 	loopbackDeviceName = "lo"
 )
 
@@ -17,6 +17,5 @@ var defaultIgnoredDevices = []string{}
 //nolint:lll
 type WorkerPrefs struct {
 	IgnoredDevices []string `toml:"ignored_devices" comment:"List of prefixes to match for devices to ignore, for e.g., 'eth' will ignore all devices starting with eth."`
-	UpdateInterval string   `toml:"network_stats_update_interval" comment:"Time between updates of network stats sensors."`
 	preferences.CommonWorkerPrefs
 }

@@ -4,7 +4,7 @@
 // https://opensource.org/licenses/MIT
 
 //revive:disable:unused-receiver
-package apps
+package desktop
 
 import (
 	"context"
@@ -27,7 +27,7 @@ const (
 	appStateDBusInterface = "org.freedesktop.impl.portal.Background"
 	appStateDBusEvent     = "org.freedesktop.impl.portal.Background.RunningApplicationsChanged"
 
-	workerID = "app_sensors"
+	appWorkerID = "app_sensors"
 
 	activeAppsIcon = "mdi:application"
 	activeAppsName = "Active App"
@@ -41,10 +41,8 @@ const (
 
 var ErrNoApps = errors.New("no running apps")
 
-type WorkerPrefs preferences.CommonWorkerPrefs
-
 func (w *sensorWorker) PreferencesID() string {
-	return workerID
+	return prefPrefix + "app"
 }
 
 func (w *sensorWorker) DefaultPreferences() WorkerPrefs {
@@ -60,7 +58,7 @@ type sensorWorker struct {
 
 func (w *sensorWorker) Events(ctx context.Context) (<-chan sensor.Entity, error) {
 	sensorCh := make(chan sensor.Entity)
-	logger := slog.Default().With(slog.String("worker", workerID))
+	logger := slog.Default().With(slog.String("worker", desktopWorkerID))
 
 	sendSensors := func(ctx context.Context, sensorCh chan sensor.Entity) {
 		appSensors, err := w.Sensors(ctx)
@@ -154,7 +152,7 @@ func (w *sensorWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 }
 
 func NewAppWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
-	worker := linux.NewEventSensorWorker(workerID)
+	worker := linux.NewEventSensorWorker(appWorkerID)
 
 	// If we cannot find a portal interface, we cannot monitor the active app.
 	portalDest, ok := linux.CtxGetDesktopPortal(ctx)

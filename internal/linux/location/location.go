@@ -36,7 +36,7 @@ const (
 	locationUpdatedSignal = clientInterface + ".LocationUpdated"
 
 	workerID      = "location_worker"
-	preferencesID = "location"
+	preferencesID = preferences.SensorsPrefPrefix + "location"
 )
 
 type locationWorker struct {

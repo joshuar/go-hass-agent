@@ -31,7 +31,8 @@ const (
 	colorSchemeProp         = "color-scheme"
 	accentColorProp         = "accent-color"
 
-	workerID = "desktop_settings_sensors"
+	desktopWorkerID     = "desktop_settings_sensors"
+	desktopWorkerPrefID = prefPrefix + "preferences"
 )
 
 var ErrUnknownProp = errors.New("unknown desktop property")
@@ -43,7 +44,7 @@ type settingsWorker struct {
 }
 
 func (w *settingsWorker) PreferencesID() string {
-	return preferencesID
+	return desktopWorkerPrefID
 }
 
 func (w *settingsWorker) DefaultPreferences() WorkerPrefs {
@@ -53,7 +54,7 @@ func (w *settingsWorker) DefaultPreferences() WorkerPrefs {
 //nolint:cyclop,gocognit
 func (w *settingsWorker) Events(ctx context.Context) (<-chan sensor.Entity, error) {
 	sensorCh := make(chan sensor.Entity)
-	logger := logging.FromContext(ctx).With(slog.String("worker", workerID))
+	logger := logging.FromContext(ctx).With(slog.String("worker", desktopWorkerID))
 
 	go func() {
 		defer close(sensorCh)
@@ -160,7 +161,7 @@ func (w *settingsWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
 func NewDesktopWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 	var err error
 
-	worker := linux.NewEventSensorWorker(workerID)
+	worker := linux.NewEventSensorWorker(desktopWorkerID)
 
 	_, ok := linux.CtxGetDesktopPortal(ctx)
 	if !ok {

@@ -34,7 +34,7 @@ type VersionWorker struct {
 }
 
 func (w *VersionWorker) PreferencesID() string {
-	return "version_sensor"
+	return preferences.SensorsPrefPrefix + "agent" + preferences.PathDelim + "version"
 }
 
 func (w *VersionWorker) DefaultPreferences() preferences.CommonWorkerPrefs {

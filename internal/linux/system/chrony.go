@@ -26,7 +26,7 @@ const (
 	chronyPollJitter   = 10 * time.Second
 
 	chronyWorkerID      = "chrony_sensors"
-	chronyPreferencesID = "chrony"
+	chronyPreferencesID = sensorsPrefPrefix + "chrony"
 
 	sensorStat = "System time"
 )
@@ -50,7 +50,7 @@ func (w *chronyWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 }
 
 func (w *chronyWorker) PreferencesID() string {
-	return basePreferencesID + "." + chronyPreferencesID
+	return chronyPreferencesID
 }
 
 func (w *chronyWorker) DefaultPreferences() ChronyPrefs {

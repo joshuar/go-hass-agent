@@ -6,7 +6,7 @@ package cpu
 import "github.com/joshuar/go-hass-agent/internal/components/preferences"
 
 const (
-	basePreferencesID = "cpu_sensors"
+	prefPrefix = preferences.SensorsPrefPrefix + "cpu" + preferences.PathDelim
 )
 
 // FreqWorkerPrefs are the preferences for the CPU frequency worker.

@@ -21,7 +21,7 @@ const (
 	cpuFreqUpdateJitter   = time.Second
 
 	cpuFreqWorkerID      = "cpu_freq_sensors"
-	cpuFreqPreferencesID = "freq"
+	cpuFreqPreferencesID = prefPrefix + "frequencies"
 )
 
 type freqWorker struct{}
@@ -39,7 +39,7 @@ func (w *freqWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 }
 
 func (w *freqWorker) PreferencesID() string {
-	return basePreferencesID + "." + cpuFreqPreferencesID
+	return cpuFreqPreferencesID
 }
 
 func (w *freqWorker) DefaultPreferences() FreqWorkerPrefs {

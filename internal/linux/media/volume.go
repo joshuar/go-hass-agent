@@ -30,7 +30,7 @@ const (
 	maxVolpc  = 100
 	volStepPc = 1
 
-	audioControlPreferencesID = "audio_controls"
+	audioControlPreferencesID = preferences.ControlsPrefPrefix + "media" + preferences.PathDelim + "audio"
 )
 
 // audioControl is a struct containing the data for providing audio state

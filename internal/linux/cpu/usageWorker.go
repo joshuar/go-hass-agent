@@ -26,7 +26,7 @@ const (
 	cpuUsageUpdateJitter   = 500 * time.Millisecond
 
 	cpuUsageWorkerID      = "cpu_usage_sensors"
-	cpuUsagePreferencesID = "usage"
+	cpuUsagePreferencesID = prefPrefix + "usage"
 )
 
 type usageWorker struct {
@@ -47,7 +47,7 @@ func (w *usageWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 }
 
 func (w *usageWorker) PreferencesID() string {
-	return basePreferencesID + "." + cpuUsagePreferencesID
+	return cpuUsagePreferencesID
 }
 
 func (w *usageWorker) DefaultPreferences() UsagePrefs {

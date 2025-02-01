@@ -23,7 +23,8 @@ import (
 )
 
 const (
-	addressWorkerID = "network_addresses"
+	addressWorkerID     = "network_addresses"
+	addressWorkerPrefID = prefPrefix + "links"
 )
 
 var (
@@ -231,13 +232,12 @@ func (w *AddressWorker) Events(ctx context.Context) (<-chan sensor.Entity, error
 }
 
 func (w *AddressWorker) PreferencesID() string {
-	return preferencesID
+	return addressWorkerPrefID
 }
 
 func (w *AddressWorker) DefaultPreferences() WorkerPrefs {
 	return WorkerPrefs{
 		IgnoredDevices: defaultIgnoredDevices,
-		UpdateInterval: rateInterval.String(),
 	}
 }
 

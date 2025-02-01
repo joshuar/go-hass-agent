@@ -69,7 +69,7 @@ func (w *cpuVulnWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 }
 
 func (w *cpuVulnWorker) PreferencesID() string {
-	return basePreferencesID + "." + cpuVulnPreferencesID
+	return infoWorkerPreferencesID
 }
 
 func (w *cpuVulnWorker) DefaultPreferences() preferences.CommonWorkerPrefs {

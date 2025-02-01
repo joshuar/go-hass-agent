@@ -20,13 +20,13 @@ import (
 
 const (
 	infoWorkerID            = "system_info"
-	infoWorkerPreferencesID = "system_info"
+	infoWorkerPreferencesID = sensorsPrefPrefix + "info_sensors"
 )
 
 type infoWorker struct{}
 
 func (w *infoWorker) PreferencesID() string {
-	return basePreferencesID + "." + infoWorkerPreferencesID
+	return infoWorkerPreferencesID
 }
 
 func (w *infoWorker) DefaultPreferences() preferences.CommonWorkerPrefs {

@@ -15,6 +15,7 @@ import (
 	"github.com/godbus/dbus/v5"
 	"github.com/iancoleman/strcase"
 
+	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
@@ -26,7 +27,8 @@ const (
 	lidClosedProp     = managerInterface + ".LidClosed"
 	externalPowerProp = managerInterface + ".OnExternalPower"
 
-	laptopWorkerID = "laptop_sensors"
+	laptopWorkerID     = "laptop_sensors"
+	laptopWorkerPrefID = sensorsPrefPrefix + "laptop"
 )
 
 var laptopPropList = []string{dockedProp, lidClosedProp, externalPowerProp}
@@ -88,6 +90,7 @@ func newLaptopEvent(prop string, state bool) sensor.Entity {
 type laptopWorker struct {
 	triggerCh  chan dbusx.Trigger
 	properties map[string]*dbusx.Property[bool]
+	prefs      *preferences.CommonWorkerPrefs
 }
 
 func (w *laptopWorker) Events(ctx context.Context) (<-chan sensor.Entity, error) {
@@ -147,6 +150,15 @@ func (w *laptopWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 	return sensors, nil
 }
 
+func (w *laptopWorker) PreferencesID() string {
+	return laptopWorkerPrefID
+}
+
+func (w *laptopWorker) DefaultPreferences() preferences.CommonWorkerPrefs {
+	return preferences.CommonWorkerPrefs{}
+}
+
+//nolint:nilnil
 func NewLaptopWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 	worker := linux.NewEventSensorWorker(laptopWorkerID)
 
@@ -175,10 +187,21 @@ func NewLaptopWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 		properties[name] = dbusx.NewProperty[bool](bus, loginBasePath, loginBaseInterface, name)
 	}
 
-	worker.EventSensorType = &laptopWorker{
+	eventWorker := &laptopWorker{
 		triggerCh:  triggerCh,
 		properties: properties,
 	}
+
+	eventWorker.prefs, err = preferences.LoadWorker(eventWorker)
+	if err != nil {
+		return nil, fmt.Errorf("could not load preferences: %w", err)
+	}
+
+	if eventWorker.prefs.IsDisabled() {
+		return nil, nil
+	}
+
+	worker.EventSensorType = eventWorker
 
 	return worker, nil
 }

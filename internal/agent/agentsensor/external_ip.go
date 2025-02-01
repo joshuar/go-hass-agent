@@ -73,7 +73,7 @@ type ExternalIPWorker struct {
 }
 
 func (w *ExternalIPWorker) PreferencesID() string {
-	return "external_ip_sensor"
+	return preferences.SensorsPrefPrefix + "agent" + preferences.PathDelim + "external_ip"
 }
 
 func (w *ExternalIPWorker) DefaultPreferences() preferences.CommonWorkerPrefs {

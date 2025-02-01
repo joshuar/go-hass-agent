@@ -21,7 +21,8 @@ import (
 )
 
 const (
-	inhibitWorkerID = "inhibit_control"
+	inhibitWorkerID     = "inhibit_control"
+	inhibitWorkerPrefID = controlsPrefPrefix + "inhibit_controls"
 )
 
 type inhibitControlWorker struct {
@@ -34,7 +35,7 @@ type inhibitControlWorker struct {
 }
 
 func (w *inhibitControlWorker) PreferencesID() string {
-	return inhibitWorkerID
+	return inhibitWorkerPrefID
 }
 
 func (w *inhibitControlWorker) DefaultPreferences() preferences.CommonWorkerPrefs {

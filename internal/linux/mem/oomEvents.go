@@ -19,7 +19,7 @@ import (
 
 const (
 	oomEventsWorkerID      = "oom_events"
-	oomEventsPreferencesID = oomEventsWorkerID
+	oomEventsPreferencesID = prefPrefix + "oom_events"
 	oomDBusPath            = "/org/freedesktop/systemd1/unit"
 	unitPathPrefix         = "/org/freedesktop/systemd1/unit"
 	oomEventName           = "oom_event"

@@ -33,7 +33,7 @@ const (
 	defaultHeight       uint32 = 640
 	defaultWidth        uint32 = 480
 
-	cameraPreferencesID = "camera_controls"
+	cameraPreferencesID = preferences.ControlsPrefPrefix + "media" + preferences.PathDelim + "video"
 )
 
 var defaultPreferredFmts = []string{"Motion-JPEG"}

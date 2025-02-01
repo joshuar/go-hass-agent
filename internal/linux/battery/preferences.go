@@ -6,7 +6,7 @@ package battery
 import "github.com/joshuar/go-hass-agent/internal/components/preferences"
 
 const (
-	preferencesID = "battery_sensors"
+	preferencesID = preferences.SensorsPrefPrefix + "batteries"
 )
 
 type WorkerPrefs struct {

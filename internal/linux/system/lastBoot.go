@@ -15,7 +15,8 @@ import (
 )
 
 const (
-	lastBootWorkerID = "boot_time_sensor"
+	lastBootWorkerID     = "boot_time_sensor"
+	lastBootWorkerPrefID = infoWorkerPreferencesID
 )
 
 type lastBootWorker struct {
@@ -23,7 +24,7 @@ type lastBootWorker struct {
 }
 
 func (w *lastBootWorker) PreferencesID() string {
-	return basePreferencesID + "." + infoWorkerPreferencesID
+	return lastBootWorkerPrefID
 }
 
 func (w *lastBootWorker) DefaultPreferences() preferences.CommonWorkerPrefs {
