@@ -20,12 +20,21 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/linux"
 )
 
+const (
+	statsWorkerPrefID = prefPrefix + "usage"
+)
+
+type StatsWorkerPrefs struct {
+	WorkerPrefs
+	UpdateInterval string `toml:"update_interval" comment:"Time between updates of network stats sensors."`
+}
+
 // netStatsWorker is the object used for tracking network stats sensors. It
 // holds a netlink connection and a map of links with their stats sensors.
 type netStatsWorker struct {
 	statsSensors map[string]map[netStatsType]*netStatsSensor
 	nlconn       *rtnetlink.Conn
-	prefs        *WorkerPrefs
+	prefs        *StatsWorkerPrefs
 	delta        time.Duration
 	mu           sync.Mutex
 }
@@ -103,14 +112,15 @@ func (w *netStatsWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 }
 
 func (w *netStatsWorker) PreferencesID() string {
-	return preferencesID
+	return statsWorkerPrefID
 }
 
-func (w *netStatsWorker) DefaultPreferences() WorkerPrefs {
-	prefs := WorkerPrefs{
+func (w *netStatsWorker) DefaultPreferences() StatsWorkerPrefs {
+	prefs := StatsWorkerPrefs{
 		UpdateInterval: rateInterval.String(),
-		IgnoredDevices: defaultIgnoredDevices,
 	}
+
+	prefs.IgnoredDevices = defaultIgnoredDevices
 
 	return prefs
 }

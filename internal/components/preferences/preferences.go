@@ -44,6 +44,7 @@ const (
 	defaultMQTTTopicPrefix = "homeassistant"
 	defaultMQTTServer      = "tcp://localhost:1883"
 	DefaultAppID           = "go-hass-agent"
+	PathDelim              = "."
 )
 
 // preferences defines all preferences for Go Hass Agent.
@@ -58,7 +59,7 @@ type preferences struct {
 
 var (
 	// Package level internal variables.
-	prefsSrc  = koanf.New(".")
+	prefsSrc  = koanf.New(PathDelim)
 	mu        = sync.Mutex{}
 	prefsFile string
 	logger    *slog.Logger

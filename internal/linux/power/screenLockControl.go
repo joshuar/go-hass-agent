@@ -22,7 +22,15 @@ import (
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
+const (
+	screenLockControlsWorkerPrefID = controlsPrefPrefix + "screen_lock_controls"
+)
+
 var ErrUnsupportedDesktop = errors.New("unsupported desktop environment")
+
+type screenLockControlsWorker struct {
+	prefs *preferences.CommonWorkerPrefs
+}
 
 // screenControlCommand represents the D-Bus and MQTT Button Entity information
 // for a screen lock control. This information is used to derive the appropriate
@@ -118,9 +126,30 @@ func setupCommands(_ context.Context, sessionBus *dbusx.Bus, systemBus *dbusx.Bu
 	return commands, nil
 }
 
+func (w *screenLockControlsWorker) PreferencesID() string {
+	return screenLockControlsWorkerPrefID
+}
+
+func (w *screenLockControlsWorker) DefaultPreferences() preferences.CommonWorkerPrefs {
+	return preferences.CommonWorkerPrefs{}
+}
+
 // NewScreenLockControl is called by the OS controller of the agent to generate
 // MQTT button entities for the screen lock controls.
 func NewScreenLockControl(ctx context.Context, device *mqtthass.Device) ([]*mqtthass.ButtonEntity, error) {
+	var err error
+
+	worker := &screenLockControlsWorker{}
+
+	worker.prefs, err = preferences.LoadWorker(worker)
+	if err != nil {
+		return nil, fmt.Errorf("could not load preferences: %w", err)
+	}
+
+	if worker.prefs.IsDisabled() {
+		return nil, nil
+	}
+
 	// Retrieve the D-Bus session bus. Needed by some controls.
 	sessionBus, ok := linux.CtxGetSessionBus(ctx)
 	if !ok {

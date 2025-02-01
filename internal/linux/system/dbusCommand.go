@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	dbusCmdPreferencesID = "dbus_commands"
+	dbusCmdPreferencesID = controlsPrefPrefix + "dbus_commands"
 )
 
 type dbusCommandMsg struct {
@@ -38,7 +38,7 @@ type dbusCommandMsg struct {
 type dbusCmdWorker struct{}
 
 func (w *dbusCmdWorker) PreferencesID() string {
-	return basePreferencesID + "." + dbusCmdPreferencesID
+	return dbusCmdPreferencesID
 }
 
 func (w *dbusCmdWorker) DefaultPreferences() preferences.CommonWorkerPrefs {

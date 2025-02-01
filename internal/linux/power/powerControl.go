@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	powerControlPreferencesID = "power_controls"
+	powerControlPreferencesID = controlsPrefPrefix + "power_controls"
 )
 
 type powerControlWorker struct {

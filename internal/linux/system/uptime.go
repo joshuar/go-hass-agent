@@ -24,8 +24,7 @@ const (
 	uptimePollInterval = 15 * time.Minute
 	uptimePollJitter   = time.Minute
 
-	uptimeWorkerID            = "uptime_sensor"
-	uptimeWorkerPreferencesID = "uptime"
+	uptimeWorkerID = "uptime_sensor"
 )
 
 type uptimeWorker struct{}
@@ -53,7 +52,7 @@ func (w *uptimeWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
 }
 
 func (w *uptimeWorker) PreferencesID() string {
-	return basePreferencesID + "." + uptimeWorkerPreferencesID
+	return infoWorkerPreferencesID
 }
 
 func (w *uptimeWorker) DefaultPreferences() UptimePrefs {

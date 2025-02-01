@@ -28,7 +28,7 @@ const (
 	shutdownSignal = "PrepareForShutdown"
 
 	powerStateWorkerID      = "power_state_sensor"
-	powerStatePreferencesID = "power_state"
+	powerStatePreferencesID = sensorsPrefPrefix + "state"
 )
 
 type powerSignal int
@@ -135,7 +135,7 @@ func (w *stateWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 }
 
 func (w *stateWorker) PreferencesID() string {
-	return basePreferencesID + "." + powerStatePreferencesID
+	return powerStatePreferencesID
 }
 
 func (w *stateWorker) DefaultPreferences() preferences.CommonWorkerPrefs {

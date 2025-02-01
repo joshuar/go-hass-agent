@@ -15,7 +15,8 @@ import (
 )
 
 const (
-	workerPrefsPrefix = "worker"
+	SensorsPrefPrefix  = "sensors" + PathDelim
+	ControlsPrefPrefix = "controls" + PathDelim
 )
 
 // CommonWorkerPrefs contains worker preferences that all workers can/should
@@ -52,7 +53,7 @@ func LoadWorker[T any](worker Worker[T]) (*T, error) {
 	// Get the default preferences.
 	defaultPrefs = worker.DefaultPreferences()
 	// Set the key to the worker preferences in the preferences store.
-	prefsKey := workerPrefsPrefix + "." + worker.PreferencesID()
+	prefsKey := worker.PreferencesID()
 	// Try to retrieve any existing preferences. Use those if possible.
 	foundPrefs := prefsSrc.Get(prefsKey)
 	if foundPrefs != nil {
@@ -108,7 +109,7 @@ func SaveWorker[T any](worker Worker[T], prefs T) error {
 		return fmt.Errorf("%w: %w", ErrSaveWorkerPrefs, err)
 	}
 	// Merge the worker preferences into the preferences file.
-	if err := prefsSrc.Set(workerPrefsPrefix+"."+worker.PreferencesID(), prefsMaps); err != nil {
+	if err := prefsSrc.Set(worker.PreferencesID(), prefsMaps); err != nil {
 		return fmt.Errorf("%w: %w", ErrSaveWorkerPrefs, err)
 	}
 	// Save the preferences.

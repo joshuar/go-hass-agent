@@ -32,7 +32,7 @@ const (
 	memoryUsageSensorPcUnits = "%"
 
 	memUsageWorkerID      = "memory_usage_sensors"
-	memUsagePreferencesID = memUsageWorkerID
+	memUsagePreferencesID = prefPrefix + "usage"
 )
 
 // Lists of the memory statistics we want to track as sensors. See /proc/meminfo

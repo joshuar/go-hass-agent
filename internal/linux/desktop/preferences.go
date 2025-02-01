@@ -6,7 +6,7 @@ package desktop
 import "github.com/joshuar/go-hass-agent/internal/components/preferences"
 
 const (
-	preferencesID = "desktop_sensors"
+	prefPrefix = preferences.SensorsPrefPrefix + "desktop" + preferences.PathDelim
 )
 
 type WorkerPrefs struct {

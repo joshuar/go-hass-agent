@@ -24,7 +24,7 @@ const (
 	abrtProblemsCheckJitter   = time.Minute
 
 	abrtProblemsWorkerID      = "abrt_problems_sensor"
-	abrtProblemsPreferencesID = "abrt_problems"
+	abrtProblemsPreferencesID = sensorsPrefPrefix + "abrt_problems"
 
 	dBusProblemsDest = "/org/freedesktop/problems"
 	dBusProblemIntr  = "org.freedesktop.problems"
@@ -105,7 +105,7 @@ func (w *problemsWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 }
 
 func (w *problemsWorker) PreferencesID() string {
-	return basePreferencesID + "." + abrtProblemsPreferencesID
+	return abrtProblemsPreferencesID
 }
 
 func (w *problemsWorker) DefaultPreferences() ProblemsPrefs {

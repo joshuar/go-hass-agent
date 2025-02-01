@@ -29,7 +29,7 @@ const (
 	mprisDBusPath      = "/org/mpris/MediaPlayer2"
 	mprisDBusNamespace = "org.mpris.MediaPlayer2.Player"
 
-	mprisPreferencesID = "mpris"
+	mprisPreferencesID = preferences.SensorsPrefPrefix + "media" + preferences.PathDelim + "mpris"
 )
 
 type mprisMonitor struct {

@@ -3,6 +3,9 @@
 
 package power
 
+import "github.com/joshuar/go-hass-agent/internal/components/preferences"
+
 const (
-	basePreferencesID = "power_sensors"
+	sensorsPrefPrefix  = preferences.SensorsPrefPrefix + "power" + preferences.PathDelim
+	controlsPrefPrefix = preferences.ControlsPrefPrefix + "power" + preferences.PathDelim
 )

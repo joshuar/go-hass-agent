@@ -62,7 +62,7 @@ type ConnectionLatencySensorWorker struct {
 }
 
 func (w *ConnectionLatencySensorWorker) PreferencesID() string {
-	return "connection_latency_sensor"
+	return preferences.SensorsPrefPrefix + "agent" + preferences.PathDelim + "connection_latency"
 }
 
 func (w *ConnectionLatencySensorWorker) DefaultPreferences() preferences.CommonWorkerPrefs {

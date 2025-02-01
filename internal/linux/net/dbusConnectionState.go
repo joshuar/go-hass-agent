@@ -34,6 +34,7 @@ const (
 	activeConnectionsProp  = "ActivatingConnection"
 
 	netConnWorkerID = "network_connection_sensors"
+	netConnPrefID   = prefPrefix + "connections"
 )
 
 type ConnectionsWorker struct {
@@ -134,13 +135,12 @@ func (w *ConnectionsWorker) Events(ctx context.Context) (<-chan sensor.Entity, e
 }
 
 func (w *ConnectionsWorker) PreferencesID() string {
-	return preferencesID
+	return netConnPrefID
 }
 
 func (w *ConnectionsWorker) DefaultPreferences() WorkerPrefs {
 	return WorkerPrefs{
 		IgnoredDevices: defaultIgnoredDevices,
-		UpdateInterval: rateInterval.String(),
 	}
 }
 

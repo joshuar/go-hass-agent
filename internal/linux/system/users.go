@@ -36,7 +36,7 @@ const (
 
 	userSessionsSensorWorkerID = "user_sessions_sensor_worker"
 	userSessionsEventWorkerID  = "user_sessions_event_worker"
-	userSessionsPreferencesID  = "user_sessions"
+	userSessionsPreferencesID  = sensorsPrefPrefix + "users"
 
 	sessionStartedEventName = "session_started"
 	sessionStoppedEventName = "session_stopped"
@@ -102,7 +102,7 @@ func (w *UserSessionSensorWorker) Sensors(_ context.Context) ([]sensor.Entity, e
 }
 
 func (w *UserSessionSensorWorker) PreferencesID() string {
-	return basePreferencesID + "." + userSessionsPreferencesID
+	return userSessionsPreferencesID
 }
 
 func (w *UserSessionSensorWorker) DefaultPreferences() UserSessionsPrefs {
@@ -244,7 +244,7 @@ func (w *UserSessionEventsWorker) Events(ctx context.Context) (<-chan event.Even
 }
 
 func (w *UserSessionEventsWorker) PreferencesID() string {
-	return basePreferencesID + "." + userSessionsPreferencesID
+	return userSessionsPreferencesID
 }
 
 func (w *UserSessionEventsWorker) DefaultPreferences() UserSessionsPrefs {
