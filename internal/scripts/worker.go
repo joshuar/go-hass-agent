@@ -93,13 +93,17 @@ func (c *Worker) inactiveJobs() []string {
 	return inactiveScripts
 }
 
-func (c *Worker) Start(_ context.Context) (<-chan sensor.Entity, error) {
+func (c *Worker) Start(ctx context.Context) (<-chan sensor.Entity, error) {
 	c.sensorCh = make(chan sensor.Entity)
 
 	for idx := range c.inactiveJobs() {
+		var (
+			sensors []sensor.Entity
+			err     error
+		)
 		// Schedule the script.
 		id, err := c.scheduler.AddFunc(c.jobs[idx].Schedule(), func() {
-			sensors, err := c.jobs[idx].Execute()
+			sensors, err = c.jobs[idx].Execute()
 			if err != nil {
 				c.logger.Warn("Could not execute script.",
 					c.jobs[idx].logAttrs,
@@ -129,6 +133,12 @@ func (c *Worker) Start(_ context.Context) (<-chan sensor.Entity, error) {
 
 	// Start the scheduler.
 	c.scheduler.Start()
+	// Send script sensor states at start-up.
+	go func() {
+		for _, sensor := range c.States(ctx) {
+			c.sensorCh <- sensor
+		}
+	}()
 
 	// Return the new sensor channel for the script.
 	return c.sensorCh, nil
