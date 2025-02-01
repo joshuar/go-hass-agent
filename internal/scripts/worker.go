@@ -167,36 +167,10 @@ func (c *Worker) Stop() error {
 	return nil
 }
 
-// NewScriptController creates a new sensor worker for scripts.
-func NewScriptsWorker(ctx context.Context) (*Worker, error) {
-	scriptPath := filepath.Join(preferences.PathFromCtx(ctx), "scripts")
-
-	worker := &Worker{
-		scheduler: cron.New(),
-		logger:    logging.FromContext(ctx).With(slog.String("controller", "scripts")),
-	}
-
-	scripts, err := findScripts(scriptPath)
-	if err != nil {
-		return nil, fmt.Errorf("could not find scripts: %w", err)
-	}
-
-	worker.jobs = make([]job, 0, len(scripts))
-
-	for _, s := range scripts {
-		logAttrs := slog.Group("job", slog.String("script", s.path), slog.String("schedule", s.schedule))
-		worker.jobs = append(worker.jobs, job{Script: *s, logAttrs: logAttrs})
-	}
-
-	return worker, nil
-}
-
 // findScripts locates scripts and returns a slice of scripts that the agent can
 // run.
-func findScripts(path string) ([]*Script, error) {
+func (c *Worker) findScripts(path string) ([]*Script, error) {
 	var sensorScripts []*Script
-
-	var errs error
 
 	files, err := filepath.Glob(path + "/*")
 	if err != nil {
@@ -207,7 +181,9 @@ func findScripts(path string) ([]*Script, error) {
 		if isExecutable(scriptFile) {
 			script, err := NewScript(scriptFile)
 			if err != nil {
-				errs = errors.Join(errs, err)
+				c.logger.Warn("Script error.",
+					slog.Any("error", err),
+				)
 
 				continue
 			}
@@ -217,6 +193,30 @@ func findScripts(path string) ([]*Script, error) {
 	}
 
 	return sensorScripts, nil
+}
+
+// NewScriptController creates a new sensor worker for scripts.
+func NewScriptsWorker(ctx context.Context) (*Worker, error) {
+	scriptPath := filepath.Join(preferences.PathFromCtx(ctx), "scripts")
+
+	worker := &Worker{
+		scheduler: cron.New(),
+		logger:    logging.FromContext(ctx).WithGroup("scripts_worker"),
+	}
+
+	scripts, err := worker.findScripts(scriptPath)
+	if err != nil {
+		return nil, fmt.Errorf("could not find scripts: %w", err)
+	}
+
+	worker.jobs = make([]job, 0, len(scripts))
+
+	for _, s := range scripts {
+		logAttrs := slog.Group("job", slog.String("path", s.path), slog.String("schedule", s.schedule))
+		worker.jobs = append(worker.jobs, job{Script: *s, logAttrs: logAttrs})
+	}
+
+	return worker, nil
 }
 
 // isExecutable is helper to determine if a (script) file is executable.
