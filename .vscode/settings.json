@@ -42,7 +42,8 @@
     "components/preferences",
     "linux/desktop",
     "linux/disk",
-    "linux/location"
+    "linux/location",
+    "pkg/whichdistro"
   ],
   "go.testFlags": ["-v"],
   "[markdown]": {
