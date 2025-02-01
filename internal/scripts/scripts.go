@@ -59,9 +59,8 @@ func (s *Script) parse() (*scriptOutput, error) {
 
 	output := &scriptOutput{}
 
-	err = output.Unmarshal(out)
-	if err != nil {
-		return nil, fmt.Errorf("could not parse script output: %w", err)
+	if err := output.Unmarshal(out); err != nil {
+		return nil, fmt.Errorf("parse error: %w", err)
 	}
 
 	return output, nil
@@ -98,21 +97,28 @@ type scriptOutput struct {
 // Unmarshal will attempt to take the raw output from a script execution and
 // format it as either JSON or YAML. If successful, this format can then be used
 // as a sensor.
+//
+//revive:disable:indent-error-flow // errors need to be gathered.
 func (o *scriptOutput) Unmarshal(scriptOutput []byte) error {
-	jsonErr := json.Unmarshal(scriptOutput, &o)
-	if jsonErr == nil {
+	var parseError error
+
+	if err := json.Unmarshal(scriptOutput, o); err == nil {
 		return nil
+	} else {
+		parseError = errors.Join(parseError, fmt.Errorf("not valid JSON: %w", err))
 	}
 
-	yamlErr := yaml.Unmarshal(scriptOutput, &o)
-	if yamlErr == nil {
+	if err := yaml.Unmarshal(scriptOutput, o); err == nil {
 		return nil
+	} else {
+		parseError = errors.Join(parseError, fmt.Errorf("not valid YAML: %w", err))
 	}
 
-	tomlErr := toml.Unmarshal(scriptOutput, &o)
-	if tomlErr == nil {
+	if err := toml.Unmarshal(scriptOutput, o); err == nil {
 		return nil
+	} else {
+		parseError = errors.Join(parseError, fmt.Errorf("not valid TOML: %w", err))
 	}
 
-	return errors.Join(jsonErr, yamlErr, tomlErr)
+	return parseError
 }
