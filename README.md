@@ -1133,6 +1133,12 @@ podman build --file ./Dockerfile --platform linux/arm/v7 --tag go-hass-agent
 - Want to help develop Go Hass Agent? See the [contributing
   guidelines](CONTRIBUTING.md).
 
+> [!NOTE] On response times.
+>
+> Please note, as an open-source and hobby project, the Go Hass Agent developers
+> cannot commit to a response within any given time-frame. However, we do
+> endeavor to try to provide an initial response, and ongoing cadence of 1 week.
+
 ### 💾 Committing Code
 
 This repository is using [conventional commit
