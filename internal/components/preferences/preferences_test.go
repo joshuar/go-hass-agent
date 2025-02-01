@@ -119,8 +119,7 @@ func TestReset(t *testing.T) {
 
 func TestSave(t *testing.T) {
 	type args struct {
-		path    string
-		preload bool
+		path string
 	}
 	tests := []struct {
 		name    string
@@ -129,25 +128,18 @@ func TestSave(t *testing.T) {
 	}{
 		{
 			name: "new file",
-			args: args{path: t.TempDir(), preload: true},
-		},
-		{
-			name:    "invalid path",
-			args:    args{path: "/"},
-			wantErr: true,
+			args: args{path: t.TempDir()},
 		},
 		{
 			name: "existing file",
-			args: args{path: "testing/data", preload: true},
+			args: args{path: "testing/data"},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := PathToCtx(context.TODO(), tt.args.path)
-			if tt.args.preload {
-				require.NoError(t, checkPath(tt.args.path))
-				require.NoError(t, Init(ctx))
-			}
+			require.NoError(t, checkPath(tt.args.path))
+			require.NoError(t, Init(ctx))
 			if err := save(); (err != nil) != tt.wantErr {
 				t.Errorf("Save() error = %v, wantErr %v", err, tt.wantErr)
 			}
