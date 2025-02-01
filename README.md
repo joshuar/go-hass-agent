@@ -104,6 +104,7 @@
   - [_I've updated the agent and now I've got a bunch of duplicate/removed/disabled sensors?_](#ive-updated-the-agent-and-now-ive-got-a-bunch-of-duplicateremoveddisabled-sensors)
   - [_Can I reset the agent (start from new)?_](#can-i-reset-the-agent-start-from-new)
   - [_Can (or does) the agent run as root or with privileges?_](#can-or-does-the-agent-run-as-root-or-with-privileges)
+  - [_Can the agent run in an MQTT-only mode?_](#can-the-agent-run-in-an-mqtt-only-mode)
   - [_(Linux) I want to run the agent on a server, as a service, without a GUI. Can I do this?_](#linux-i-want-to-run-the-agent-on-a-server-as-a-service-without-a-gui-can-i-do-this)
   - [_(Linux) Why do the disk rate sensors report a non-zero value while the IO operations in progress sensor is zero?_](#linux-why-do-the-disk-rate-sensors-report-a-non-zero-value-while-the-io-operations-in-progress-sensor-is-zero)
   - [_(Linux) What does the value of the Firmware Security sensor mean?_](#linux-what-does-the-value-of-the-firmware-security-sensor-mean)
@@ -1264,12 +1265,21 @@ settings app which can adjust the scaling for the app windows.
 
 ### _Can (or does) the agent run as root or with privileges?_
 
-- No. None of the built-in sensors (or commands if MQTT is enabled) require any
+- No. None of the built-in sensors (or commands if MQTT has been enabled) require any
 privileges. The agent will refuse to run if it is started with privileges.
 - If you have [script sensors](#-script-sensors) or [custom
 commands](#other-custom-commands) that need privileges, there are most likely
 ways for the script/command to elevate to the privileges it needs as part of its
 execution.
+
+[⬆️ Back to Top](#-table-of-contents)
+
+### _Can the agent run in an MQTT-only mode?_
+
+- Unfortunately no, Go Hass Agent cannot run in an MQTT-only credentials. It makes
+use of the [Native App Integration
+API](https://developers.home-assistant.io/docs/api/native-app-integration/) that
+is **not** MQTT only.
 
 [⬆️ Back to Top](#-table-of-contents)
 
