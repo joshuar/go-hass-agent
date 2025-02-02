@@ -190,16 +190,19 @@ this app:
   changes.
   - Via D-Bus (requires [XDG Desktop Portal
   Support](https://flatpak.github.io/xdg-desktop-portal/docs/) support).
-  - Can be disabled via `worker.app_sensors.disabled` [preference](#️-preferences).
+  - [*Preferences*](#️-preferences): `[sensors.desktop.app]`.
 - Desktop Settings:
   - **Accent Color** (the hex code representing the accent color of the desktop
-  environment in use) and **Theme Type** (whether a dark or light desktop theme is
-  detected). Updated when theme or color changes.
+  environment in use).
+  - **Theme Type** (whether a dark or light desktop theme is detected).
+  - Updated when (theme or color) changes.
   - Via D-Bus (requires [XDG Desktop Portal
   Support](https://flatpak.github.io/xdg-desktop-portal/docs/) support).
+  - [*Preferences*](#️-preferences): `[sensors.desktop.preferences]`.
 - Media:
   - **MPRIS Player State** Show the current state of any MPRIS compatible player.
     - Requires a player with MPRIS support.
+  - [*Preferences*](#️-preferences): `[sensors.media.mpris]`.
 - Connected Battery Details:
   - **Battery Type** (the type of battery, e.g., UPS, line power). Updated on battery add/remove.
   - **Battery Temp** (battery temperature). Updated when the temperature changes.
@@ -211,12 +214,14 @@ this app:
     Updated When state changes.
   - All battery sensors require D-Bus and
     [UPower](https://upower.freedesktop.org/) support.
+  - [*Preferences*](#️-preferences): `[sensors.batteries]`.
 - Memory Stats:
   - **Memory Total** (total memory on the system, in B).
   - **Memory Available** (current memory available/free, in B).
   - **Memory Used** (current memory usage, both in B and %).
   - If swap is enabled, there will be similar sensors for swap.
   - Sourced via ProcFS. Updated ~every minute.
+  - [*Preferences*](#️-preferences): `[sensors.memory.usage]`.
 - Disk:
   - **Disk Usage** (in %) per disk/mount.
     - Attributes: File system type, bytes/inode total/free/used.
@@ -227,10 +232,13 @@ this app:
     - Both sourced via SysFS. Updated ~every 5 seconds.
   - **IO Operations in Progress** per disk.
     - Sourced via SysFS. Updated ~every 5 seconds.
+  - [*Preferences*](#️-preferences): `[sensors.disk.*rates*]` (`usage` for usage
+    or `rates` for all others).
 - Networking:
   - **Connection State** (connected/disconnected/activating/deactivating) per
     connection. Updated when state changes. Requires D-Bus and NetworkManager.
     - Attributes: IP addresses and networks.
+    - [*Preferences*](#️-preferences): `[sensors.network.connections]`.
   - Connected Wi-Fi Network Details (requires D-Bus and NetworkManager.):
     - **SSID** (the SSID of the Wi-Fi network). Updated when SSID changes.
     - **Frequency** (the frequency band of the Wi-Fi network, in Hz). Updated when frequency
@@ -240,42 +248,46 @@ this app:
     - **Strength** (the strength of the signal of the Wi-Fi network, in dB).
       Updated when strength changes.
     - **BSSID** (the BSSID of the Wi-Fi network). Updated when BSSID changes.
+    - [*Preferences*](#️-preferences): `[sensors.network.connections]`.
   - **Device/Link State**
     - Via Netlink.
+    - [*Preferences*](#️-preferences): `[sensors.network.links]`.
   - **Bytes Received/Sent** (in B). Updated ~every 5s.
     - Per network device/link and total.
     - Via Netlink.
+    - [*Preferences*](#️-preferences): `[sensors.network.rates]`.
   - **Bytes Received/Sent Rate** (transfer rate, in B/s). Updated ~every 5
     seconds. Via ProcFS.
     - Per network device/link and total.
     - Via Netlink.
-  - You can ignore some devices from generating these sensors, see the
-    `worker.network_sensors.ignored_devices` [preference](#️-preferences).
+    - [*Preferences*](#️-preferences): `[sensors.network.rates]`.
+  - You can ignore some devices from generating sensors, see the individual
+    preferences sections above.
 - CPU:
   - **Load Average (1/5/15 min)**. Updated ~every 1 minute. Via ProcFS.
+    - [*Preferences*](#️-preferences): `[sensors.cpu.load_averages]`.
   - **CPU Usage** (in %). Both total (all-cores) and per-core. Updated ~every 10
     seconds. Via ProcFS.
     - Attributes include breakdown of CPU time per state (i.e., user, idle,
       servicing interrupts, etc.).
-    - The polling frequency can be changed in the [preferences](#️-preferences) through the following:
-      - `worker.cpu_usage_sensors.update_interval`
+    - [*Preferences*](#️-preferences): `[sensors.cpu.usage]`.
 - - **CPU Core Frequency** (in Hz). Per-core. Updated ~every 10 seconds. Via
     ProcFS.
     - Attributes include current driver and governor in use.
-    - CPU Frequency sensors can be disabled and/or the polling frequency changed
-      in the [preferences](#️-preferences) through the following:
-      - `worker.cpu_freq_sensors.disabled`
-      - `worker.cpu_freq_sensors.update_interval`
+    - [*Preferences*](#️-preferences): `[sensors.cpu.frequencies]`.
 - Power Related Details:
   - **Power Profile** (the current power profile as set by the
     power-profiles-daemon). Updated when profile changes.
     - Via D-Bus (requires [power-profiles-daemon](https://hadess.fedorapeople.org/power-profiles-daemon-docs/gdbus-net.hadess.PowerProfiles.html)).
+    - [*Preferences*](#️-preferences): `[sensors.power.profile]`.
   - **Screen Lock State** (current state of screen lock). Updated when screen lock
     changes.
     - Via D-Bus. Requires `xscreensaver` or `systemd-logind` support.
+    - [*Preferences*](#️-preferences): `[sensors.power.screen_lock]`.
   - **Power State** (power state of device, e.g., suspended, powered on/off).
     Updated when power state changes.
     - Via D-Bus. Requires `systemd-logind`.
+    - [*Preferences*](#️-preferences): `[sensors.power.state]`.
 - Various System Details:
   - **Boot Time** (date/Time of last system boot). Via ProcFS.
   - **Uptime*. Updated ~every 15 minutes. Via ProcFS.
@@ -293,22 +305,23 @@ this app:
     Ubuntu).
     - **Distribution Version** (version of the running distribution).
     - Both updated on agent start. Via ProcFS.
+  - [*Preferences*](#️-preferences) (for all the above system details sensors):
+    `[sensors.system.info]`.
   - **Current Users** (count of users with active sessions on the system). Updated
     when any session changes.
     - Attributes: List of usernames | When user count changes.
     - Via D-Bus. Requires `systemd-logind`.
+    - [*Preferences*](#️-preferences): `[sensors.system.users]`.
   - **ABRT Problems** (count of any problems logged to the ABRT daemon). Updated
     ~every 15 minutes.
     - Attributes: extracted problem details.
     - Requires ABRT.
+    - [*Preferences*](#️-preferences): `[sensors.system.abrt_problems]`.
   - Hardware Sensors:
     - Any **temp**, **fan**, **power** and other hardware sensors, including associated
       **alarms**. Updated ~every 1 minute.
     - Extracted from the `/sys/class/hwmon` file system.
-    - Hardware sensors can be disabled and/or the polling frequency changed
-      in the [preferences](#️-preferences) through the following:
-      - `worker.system_sensors.disable_hwmon`
-      - `worker.system_sensors.hwmon_sensor_update_interval`
+    - [*Preferences*](#️-preferences): `[sensors.system.hardware_sensors]`.
 
 #### 🕹️ Controls
 
@@ -322,12 +335,11 @@ this app:
   - **Volume Mute**: Mute/Unmute the default audio output device.
   - **Webcam Control**: Start/stop a webcam and view the video in Home Assistant.
     - Requires a webcam that is exposed via V4L2 (VideoForLinux2).
-  - You can set some preferences (for e.g., the camera device and video
-    properties) if the defaults are not satisfactory, see the
-    `media_controls_preferences.toml` file in the [preferences](#️-preferences).
+  - [*Preferences*](#️-preferences) : `[controls.media.*]` (`audio` or `video`).
 - Power Controls:
   - **Lock/Unlock Screen/Screensaver**: Locks/unlocks the session for the user
     running Go Hass Agent.
+    - [*Preferences*](#️-preferences) : `[controls.power.screen_lock_controls]`.
   - **Suspend**: (instantly) suspend (the system state saved to RAM and
     the CPU turned off) the device running Go Hass Agent.
   - **Hibernate**: (instantly) hibernate (the system state saved to disk
@@ -336,6 +348,11 @@ this app:
   - **Reboot**: (instantly) reboot the device running Go Hass Agent.
   - Power controls require a system configured with `systemd-logind` (and D-Bus)
     support.
+  - [*Preferences*](#️-preferences) (for suspend/hibernate/power off/reboot controls): `[controls.power.power_controls]`.
+  - **Inhibit Lock**: stop the system from being able to shutdown or suspend.
+    - [*Preferences*](#️-preferences): `[controls.power.inhibit_controls]`.
+- Run arbitrary D-Bus commands: see [Custom D-Bus Controls](#custom-d-bus-controls).
+  - [*Preferences*](#️-preferences): `[controls.system.dbus_commands]`.
 
 #### 📢 Events
 
@@ -355,6 +372,8 @@ this app:
       user: myuser # username.
     ```
 
+  - [*Preferences*](#️-preferences): `[sensors.system.users]`.
+
 - **Out Of Memory (OOM) events**.
   - Requires a system configured with `systemd-oomd` enabled.
   - Event structure:
@@ -365,6 +384,8 @@ this app:
       process: systoomd_swap_test # process that was killed by systemd-oomd.
       pid: 909764 # pid of process.
     ```
+
+  - [*Preferences*](#️-preferences): `[sensors.memory.oom]`.
 
 ### All Operating Systems
 
@@ -607,10 +628,16 @@ The preferences file (`preferences.toml`) is located in
 - OSX: `~/Library/Application Support`.
 - Windows: `LocalAppData`.
 
+Preferences under `[sensors]` or `[controls]` can be used to adjust various
+aspects of those sensors/controls, or disable them entirely. See
+[sensors](README.md#-sensors) and [controls](README.md#️-controls) for mapping
+the preferences to individual sensors/controls.
+
 > [!WARNING]
 >
-> Only the individual sensor preferences under the `worker`
-> sections should be edited manually.
+> **Preferences in the other sections should not be edited manually**. Editing
+> preferences outside the above two groups may cause Go Hass Agent to stop
+> functioning or produce errors.
 
 [⬆️ Back to Top](#-table-of-contents)
 
@@ -1133,7 +1160,7 @@ podman build --file ./Dockerfile --platform linux/arm/v7 --tag go-hass-agent
 - Want to help develop Go Hass Agent? See the [contributing
   guidelines](CONTRIBUTING.md).
 
-> [!NOTE] On response times.
+> [!NOTE]
 >
 > Please note, as an open-source and hobby project, the Go Hass Agent developers
 > cannot commit to a response within any given time-frame. However, we do
