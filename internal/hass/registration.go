@@ -88,6 +88,8 @@ func RegisterDevice(ctx context.Context, registration *preferences.Registration)
 		preferences.SetRestAPIURL(restAPIURL),
 		preferences.SetWebsocketURL(websocketAPIURL),
 		preferences.SetWebhookID(response.WebhookID),
+		preferences.SetServer(registration.Server),
+		preferences.SetToken(registration.Token),
 		preferences.SetRegistered(true),
 	)
 	// Save preferences to disk.
