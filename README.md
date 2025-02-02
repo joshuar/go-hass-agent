@@ -392,13 +392,14 @@ this app:
 **Sensors:**
 
 - **Go Hass Agent Version**: Updated on agent start.
+  - [*Preferences*](#️-preferences): `[sensors.agent.version]`.
 - **External IP Addresses**: All external IP addresses (IPv4/6) of the device
   running the agent.
-  - Can be disabled in the [preferences](#️-preferences) with the
-    `worker.external_ip_sensor.disabled` preference.
+  - [*Preferences*](#️-preferences): `[sensors.agent.external_ip]`.
 - **Connection Latency**: Total connection time (in milliseconds) to connect to
   Home Assistant from the device running Go Hass Agent. Additional times shown
   as attributes.
+  - [*Preferences*](#️-preferences): `[sensors.agent.connection_latency]`.
 
 [⬆️ Back to Top](#-table-of-contents)
 
