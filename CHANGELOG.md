@@ -1,5 +1,59 @@
 # Changelog
 
+## [12.0.0](https://github.com/joshuar/go-hass-agent/compare/v11.1.2...v12.0.0) (2025-02-02)
+
+
+### ⚠ BREAKING CHANGES
+
+* **components/preferences:** Sensors and (MQTT) controls preferences have been restructured in the preferences file. Users who have customised any sensor/control preferences will need to manually migrate the changes to the new structure.
+
+### Features
+
+* :sparkles: add `--path` command-line option for specifying a path for preferences/logs/data ([85b13b3](https://github.com/joshuar/go-hass-agent/commit/85b13b3b5aa2f912acfbfb6f4121f10f723f7e6b))
+* **agent/sensor:** :sparkles: add preference to disable connection latency sensor ([dc31bed](https://github.com/joshuar/go-hass-agent/commit/dc31bed70767e36a072f184d8b963f15a0dbbc9b))
+* **agent/sensor:** :sparkles: add preference to disable version sensor ([dabe732](https://github.com/joshuar/go-hass-agent/commit/dabe732b5f4ff6a0db55b9637e44f5ee8cbfa167))
+* **components/preferences:** restructure sensor/control preferences ([5376ce1](https://github.com/joshuar/go-hass-agent/commit/5376ce1eed04763a5bf3f54ae017779f403e7077))
+* **linux/battery:** :sparkles: add preference to disable battery sensors ([039791e](https://github.com/joshuar/go-hass-agent/commit/039791eca0d1a928c5fb2b4d2c9648004b35e8cf))
+* **linux/battery:** :sparkles: break out voltage and energy battery attributes into their own sensors ([5875192](https://github.com/joshuar/go-hass-agent/commit/58751920e7a0febe929d2fd6540b1b999d1a46e1))
+* **linux/cpu:** :sparkles: add preferences to disable cpu load avgs and vulnerabilities sensors ([aa46a99](https://github.com/joshuar/go-hass-agent/commit/aa46a9971f9f38d5aa7249c2c87b6deeb1efad1e))
+* **linux/desktop:** :sparkles: add preference to disable desktop sensors ([cba5a50](https://github.com/joshuar/go-hass-agent/commit/cba5a5047475b61a674a68c0388ace732d87bbde))
+* **linux/disk:** :sparkles: add preferences to disable disk io/usage sensors and set intervals for sensor updates ([96be29b](https://github.com/joshuar/go-hass-agent/commit/96be29b07c19fbe334146a7a30fb2ac5eca907b1))
+* **linux/location:** :sparkles: add preference to disable location tracking ([ef6a113](https://github.com/joshuar/go-hass-agent/commit/ef6a113650f47cd87ed7df962c0bfcfdc003f257))
+* **linux/media:** :sparkles: add preferences to disable mpris, audio sensors and controls ([8eedf6d](https://github.com/joshuar/go-hass-agent/commit/8eedf6daccbf132201bcab185c1186feb66351c5))
+* **linux/mem:** :sparkles: add preferences for disabling and setting update interval of mem usage sensors and disabling oom events tracking ([83e1efc](https://github.com/joshuar/go-hass-agent/commit/83e1efc0e3aabebecf64ae508c8ac7f5f0c83009))
+* **linux/net:** :sparkles: add preference to set the interval for network device rates sensor updates ([97c104f](https://github.com/joshuar/go-hass-agent/commit/97c104fb49794e2a85e120581915eb601f7058e8))
+* **linux/power:** :sparkles: add an MQTT powered control to set a sleep/shutdown inhibit lock ([7c63100](https://github.com/joshuar/go-hass-agent/commit/7c63100e888611f45eeb7f52a533302309224f3a))
+* **linux/power:** :sparkles: add preferences for disabling the various power-based sensors individuallly ([6ca6fe1](https://github.com/joshuar/go-hass-agent/commit/6ca6fe1795b97db687c34f1c3ae103578e2debb7))
+* **linux/system:** :sparkles: add preferences for disabling/setting poll intervals (where appropriate) for all system sensor and event workers ([cca049b](https://github.com/joshuar/go-hass-agent/commit/cca049be2d01d49ae5ecb3e12274222ee61b5e13))
+
+
+### Bug Fixes
+
+* :fire: remove spew ([27fed4a](https://github.com/joshuar/go-hass-agent/commit/27fed4a1d85532de94a51be54f78f98b837f40fd))
+* **components/preferences:** :bug: additional logic fixes ([a7b138e](https://github.com/joshuar/go-hass-agent/commit/a7b138e584d5f11f89631ff45481bd5c19f30aed))
+* **components/preferences:** :bug: parse existing worker preferences correctly ([39186d2](https://github.com/joshuar/go-hass-agent/commit/39186d2c1f0a4d2a7df215b7146b50cb6f5de50d))
+* **dbusx:** :bug: better user session finder ([dbb5e06](https://github.com/joshuar/go-hass-agent/commit/dbb5e0684bcf8cdb17550da0c9fca4ef4600b081))
+* **hass:** :bug: ensure registration server and token are set in preferences ([7b9c2fa](https://github.com/joshuar/go-hass-agent/commit/7b9c2fa68db4990efbd1d5010fe5251fcd2accda))
+* **hass/api:** :bug: remove regression where websocket url retained any port element (spoiler: it shouldn't) ([4d3a4bc](https://github.com/joshuar/go-hass-agent/commit/4d3a4bc580e14008cd7b916cbb38eca08c078e16))
+* **hass/discovery:** :bug: remove regression where the default server was not listed on discovery of servers during graphical registration ([c5639d0](https://github.com/joshuar/go-hass-agent/commit/c5639d0ce5bd7d3c3cd69ccdfa3609455111021f))
+* **linux:** :bug: ensure polling sensors use poll interval from preferences, default otherwise ([79092be](https://github.com/joshuar/go-hass-agent/commit/79092be5cb2e4ba4392da9af0f8189e1d87cb9c7))
+* **linux/cpu:** :bug: actually add units for 114a35fa93c158ffe5956a94d6885e840e6a2465 ([068828b](https://github.com/joshuar/go-hass-agent/commit/068828bf0879899040b2b9fec6a612f1f235526d))
+* **linux/cpu:** :bug: add units to cpu usage count sensors ([114a35f](https://github.com/joshuar/go-hass-agent/commit/114a35fa93c158ffe5956a94d6885e840e6a2465))
+* **linux/desktop,linux/battery:** :fire: remove debugging output ([530e8c2](https://github.com/joshuar/go-hass-agent/commit/530e8c233dff980cbf47033020c0bae289397e7f))
+* **linux/location:** :bug: correct type conversion ([e0ade99](https://github.com/joshuar/go-hass-agent/commit/e0ade997be11b085ce5900685f03078741a9ca63))
+* **linux/mem:** :bug: fix linter warnings in 83e1efc0e3aabebecf64ae508c8ac7f5f0c83009 ([3acd7f6](https://github.com/joshuar/go-hass-agent/commit/3acd7f6b486bbfc48ad1a00d67effcaf93512791))
+* **linux/power:** :rotating_light: fix linter warning ([e38c259](https://github.com/joshuar/go-hass-agent/commit/e38c259d265687bba1c10cb38d041a71a29a583c))
+* **pkg/whichdistro:** :bug: ignore lines that are not key=value pairs ([ef90391](https://github.com/joshuar/go-hass-agent/commit/ef90391faeceeaef7f52acf6cb0d6fb5b490851a))
+* **preferences:** :bug: ensure version is written to `preferences.toml` when it is saved ([7b720b4](https://github.com/joshuar/go-hass-agent/commit/7b720b45c535e9309ea3ccd854a0a338065041fc))
+* **scripts:** :bug: actually warn about script parsing errors ([101b2a8](https://github.com/joshuar/go-hass-agent/commit/101b2a8a7534e35976237c0dae83a5517f52cac7))
+* **scripts:** :bug: remove regression whereby script sensors were not sending their sensor states initially at agent start-up ([cbb0344](https://github.com/joshuar/go-hass-agent/commit/cbb03441f2c4d690088eee013aa8395afc70e7da))
+* **ui:** :bug: store/fetch mqtt preferences from context ([a20f509](https://github.com/joshuar/go-hass-agent/commit/a20f509aac496eb31888d6b1c613e425af267d92))
+
+
+### Performance Improvements
+
+* **agent:** :zap: load up the worker context once and pass to all worker processes ([7dd5c57](https://github.com/joshuar/go-hass-agent/commit/7dd5c57c0ffdd3a91ffe422f0dbf65b5305008b0))
+
 ## [11.1.2](https://github.com/joshuar/go-hass-agent/compare/v11.1.1...v11.1.2) (2025-01-11)
 
 
