@@ -4,20 +4,85 @@
 
 - [BREAKING CHANGES](#breaking-changes)
   - [Table of Contents](#table-of-contents)
+  - [Version 12.0.0](#version-1200)
+    - [Sensors/Controls preferences Restructure](#sensorscontrols-preferences-restructure)
+      - [What you need to do](#what-you-need-to-do)
   - [Version 11.0.0](#version-1100)
     - [Worker and Agent preferences merge](#worker-and-agent-preferences-merge)
-      - [What you need to do](#what-you-need-to-do)
+      - [What you need to do](#what-you-need-to-do-1)
   - [Version 10.0.0](#version-1000)
     - [New preferences file location and format](#new-preferences-file-location-and-format)
-      - [What you need to do](#what-you-need-to-do-1)
+      - [What you need to do](#what-you-need-to-do-2)
         - [Run the upgrade command](#run-the-upgrade-command)
         - [Manual upgrade steps (if the upgrade command failed)](#manual-upgrade-steps-if-the-upgrade-command-failed)
     - [Log file location normalization](#log-file-location-normalization)
-      - [What you need to do](#what-you-need-to-do-2)
-    - [MQTT Device renamed](#mqtt-device-renamed)
       - [What you need to do](#what-you-need-to-do-3)
-    - [Power controls renaming and consolidation (when using MQTT)](#power-controls-renaming-and-consolidation-when-using-mqtt)
+    - [MQTT Device renamed](#mqtt-device-renamed)
       - [What you need to do](#what-you-need-to-do-4)
+    - [Power controls renaming and consolidation (when using MQTT)](#power-controls-renaming-and-consolidation-when-using-mqtt)
+      - [What you need to do](#what-you-need-to-do-5)
+
+## Version 12.0.0
+
+### Sensors/Controls preferences Restructure
+
+Preferences for sensors and (MQTT) controls have been moved (again). There are
+now two top-level groups in the preferences file for these:
+
+- `[sensors]`: for sensors (i.e., entities in Home Assistant that have a value).
+- `[controls]`: for controls (i.e., buttons, sliders, toggles etc.).
+
+Under those, there are further subgroups for broadly common types, like *cpu*,
+or *system*, for example, which hold the preferences for particular group of
+sensors/controls.
+
+For example, the preferences for CPU usage sensors are under:
+
+```toml
+[sensors]
+#...
+# other sensor groups
+#...
+   [sensors.cpu]
+   #...
+   # other cpu sensor groups
+   #...
+      [sensors.cpu.usage]
+         disabled = false
+         update_interval = "10s"
+```
+
+Similarly, for the MQTT power controls (shutdown/suspend etc.):
+
+```toml
+[controls]
+#...
+# other controls groups
+#...
+  [controls.power]
+   #...
+   # other power controls groups
+   #...
+    [controls.power.power_controls]
+      disabled = false
+```
+
+This structure is hopefully more understandable for users and provides more
+granular control for fine-tuned changes to particular groups sensors/controls.
+
+#### What you need to do
+
+Any changes from the default values for worker preferences you have made will
+need to be **manually** changed in the agent preferences file. When v12.0.0 of
+Go Hass Agent runs for the first time, it will automatically populate
+`[sensors]` and `[controls]` in the [preferences file](README.md#️-preferences)
+with default preferences. You can match your existing preferences against those
+listed in the README for [sensors](README.md#-sensors) and [controls](README.md#️-controls).
+
+Once you have migrated any custom preferences, it is safe to delete the
+individual preferences files (named `*_preferences.toml`).
+
+[⬆️ Back to Top](#table-of-contents)
 
 ## Version 11.0.0
 
@@ -33,11 +98,13 @@ directory](../README#️-preferences). They now live in the agent preferences fi
 Any changes from the default values for worker preferences you have made will
 need to be **manually** changed in the agent preferences file. All workers with
 preferences should have their default preferences listed in the file, and you can
-consult the list of sensors in the [README](../README.md#-sensors) which has
+consult the list of sensors in the [README](README.md#-sensors) which has
 relevant preferences mentioned.
 
 Once you have migrated any custom preferences, it is safe to delete the
 individual preferences files (named `*_preferences.toml`).
+
+[⬆️ Back to Top](#table-of-contents)
 
 ## Version 10.0.0
 
@@ -99,16 +166,16 @@ To re-register:
    the same as the hostname of the device it is running on.
 5. Click on the menu (three vertical dots) at the right of the entry:
 
-   ![Delete Agent Example](../assets/screenshots/delete-from-mobile-app-integrations.png)
+   ![Delete Agent Example](assets/screenshots/delete-from-mobile-app-integrations.png)
 
 6. Choose **Delete**.
-7. Follow the [first-run instructions](../README.md#-first-run) in the README to
+7. Follow the [first-run instructions](README.md#-first-run) in the README to
    re-register the agent.
 8. Once the agent has successfully re-registered, you can remove the old
    configuration directory and its contents. The old location will be
    `~/.config/com.joshuar.go-hass-agent.debug`.
 9. If you previously configured MQTT in Go Hass Agent, you will need to
-   [re-enable](../README.md#configuration) MQTT after re-registering.
+   [re-enable](README.md#configuration) MQTT after re-registering.
    - For users with headless installs, you'll need to edit `preferences.toml`
      and manually add the appropriate config options. Add a section in the file
      similar to the following:
@@ -184,7 +251,7 @@ integration.](https://my.home-assistant.io/badges/integration.svg)](https://my.h
 
 ### Power controls renaming and consolidation (when using MQTT)
 
-If you have [enabled MQTT](../README.md#mqtt-sensors-and-controls) in Go Hass
+If you have [enabled MQTT](README.md#mqtt-sensors-and-controls) in Go Hass
 Agent, then you may have some controls for shutting down/suspending the device
 running the agent and locking the screen/session of the user running the agent.
 These controls have been consolidated and only the controls that are supported
