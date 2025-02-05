@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math"
 	"time"
 
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
@@ -41,7 +42,17 @@ func (w *usageWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
 	sensors := make([]sensor.Entity, 0, len(mounts))
 
 	for _, mount := range mounts {
-		sensors = append(sensors, newDiskUsageSensor(mount))
+		diskUsageSensor := newDiskUsageSensor(mount)
+		value, ok := diskUsageSensor.Value.(float64)
+
+		switch {
+		case !ok:
+			continue
+		case math.IsNaN(value):
+			continue
+		default:
+			sensors = append(sensors, diskUsageSensor)
+		}
 	}
 
 	return sensors, nil
