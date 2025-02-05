@@ -8,6 +8,7 @@ package power
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"slices"
@@ -32,6 +33,8 @@ const (
 )
 
 var laptopPropList = []string{dockedProp, lidClosedProp, externalPowerProp}
+
+var ErrInitLaptopWorker = errors.New("could not init laptop worker")
 
 func newLaptopEvent(prop string, state bool) sensor.Entity {
 	var (
@@ -164,7 +167,7 @@ func NewLaptopWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 
 	bus, ok := linux.CtxGetSystemBus(ctx)
 	if !ok {
-		return worker, linux.ErrNoSystemBus
+		return worker, errors.Join(ErrInitLaptopWorker, linux.ErrNoSystemBus)
 	}
 
 	// If we can't get a session path, we can't run.
@@ -179,7 +182,8 @@ func NewLaptopWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 		dbusx.MatchMembers("PropertiesChanged"),
 	).Start(ctx, bus)
 	if err != nil {
-		return worker, fmt.Errorf("unable to create D-Bus watch for laptop property updates: %w", err)
+		return worker, errors.Join(ErrInitLaptopWorker,
+			fmt.Errorf("unable to create D-Bus watch for laptop property updates: %w", err))
 	}
 
 	properties := make(map[string]*dbusx.Property[bool])
@@ -194,7 +198,7 @@ func NewLaptopWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 
 	eventWorker.prefs, err = preferences.LoadWorker(eventWorker)
 	if err != nil {
-		return nil, fmt.Errorf("could not load preferences: %w", err)
+		return nil, errors.Join(ErrInitLaptopWorker, err)
 	}
 
 	if eventWorker.prefs.IsDisabled() {

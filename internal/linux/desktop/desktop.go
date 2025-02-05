@@ -35,7 +35,10 @@ const (
 	desktopWorkerPrefID = prefPrefix + "preferences"
 )
 
-var ErrUnknownProp = errors.New("unknown desktop property")
+var (
+	ErrInitDesktopWorker = errors.New("could not init desktop worker")
+	ErrUnknownProp       = errors.New("unknown desktop property")
+)
 
 type settingsWorker struct {
 	triggerCh chan dbusx.Trigger
@@ -165,12 +168,12 @@ func NewDesktopWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 
 	_, ok := linux.CtxGetDesktopPortal(ctx)
 	if !ok {
-		return worker, linux.ErrNoDesktopPortal
+		return worker, errors.Join(ErrInitDesktopWorker, linux.ErrNoDesktopPortal)
 	}
 
 	bus, ok := linux.CtxGetSessionBus(ctx)
 	if !ok {
-		return worker, linux.ErrNoSessionBus
+		return worker, errors.Join(ErrInitDesktopWorker, linux.ErrNoSessionBus)
 	}
 
 	triggerCh, err := dbusx.NewWatch(
@@ -179,7 +182,8 @@ func NewDesktopWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 		dbusx.MatchMembers(settingsChangedSignal),
 	).Start(ctx, bus)
 	if err != nil {
-		return worker, fmt.Errorf("could not watch D-Bus for desktop settings updates: %w", err)
+		return worker, errors.Join(ErrInitDesktopWorker,
+			fmt.Errorf("could not watch D-Bus for desktop settings updates: %w", err))
 	}
 
 	settingsWorker := &settingsWorker{
@@ -193,7 +197,8 @@ func NewDesktopWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 				"org.freedesktop.appearance",
 				prop)
 			if err != nil {
-				return dbus.Variant{}, fmt.Errorf("could not retrieve desktop property %s from D-Bus: %w", prop, err)
+				return dbus.Variant{}, errors.Join(ErrInitDesktopWorker,
+					fmt.Errorf("could not retrieve desktop property %s from D-Bus: %w", prop, err))
 			}
 
 			return value, nil
@@ -202,7 +207,7 @@ func NewDesktopWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 
 	settingsWorker.prefs, err = preferences.LoadWorker(settingsWorker)
 	if err != nil {
-		return worker, fmt.Errorf("could not load preferences: %w", err)
+		return worker, errors.Join(ErrInitDesktopWorker, err)
 	}
 
 	// If disabled, don't use the addressWorker.

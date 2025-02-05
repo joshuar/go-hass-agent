@@ -6,6 +6,7 @@ package system
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -25,6 +26,8 @@ const (
 	hwmonWorkerID      = "hwmon_sensors"
 	hwmonPreferencesID = sensorsPrefPrefix + "hardware_sensors"
 )
+
+var ErrInitHWMonWorker = errors.New("could not init hardware sensors worker")
 
 func hwmonSensorAttributes(details *hwmon.Sensor) map[string]any {
 	attributes := make(map[string]any)
@@ -127,7 +130,7 @@ func NewHWMonWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
 
 	hwMonWorker.prefs, err = preferences.LoadWorker(hwMonWorker)
 	if err != nil {
-		return nil, fmt.Errorf("could not load preferences: %w", err)
+		return nil, errors.Join(ErrInitHWMonWorker, err)
 	}
 
 	//nolint:nilnil

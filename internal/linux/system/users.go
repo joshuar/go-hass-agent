@@ -8,6 +8,7 @@ package system
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -41,6 +42,8 @@ const (
 	sessionStartedEventName = "session_started"
 	sessionStoppedEventName = "session_stopped"
 )
+
+var ErrInitUsersWorker = errors.New("could not init users worker")
 
 func newUsersSensor(users []string) sensor.Entity {
 	return sensor.NewSensor(
@@ -116,7 +119,7 @@ func NewUserSessionSensorWorker(ctx context.Context) (*UserSessionSensorWorker, 
 
 	sessionsWorker.prefs, err = preferences.LoadWorker(sessionsWorker)
 	if err != nil {
-		return nil, fmt.Errorf("could not load preferences: %w", err)
+		return nil, errors.Join(ErrInitUsersWorker, err)
 	}
 
 	//nolint:nilnil
@@ -126,7 +129,7 @@ func NewUserSessionSensorWorker(ctx context.Context) (*UserSessionSensorWorker, 
 
 	bus, ok := linux.CtxGetSystemBus(ctx)
 	if !ok {
-		return nil, linux.ErrNoSystemBus
+		return nil, errors.Join(ErrInitUsersWorker, linux.ErrNoSystemBus)
 	}
 
 	sessionsWorker.triggerCh, err = dbusx.NewWatch(
@@ -135,13 +138,15 @@ func NewUserSessionSensorWorker(ctx context.Context) (*UserSessionSensorWorker, 
 		dbusx.MatchMembers(sessionAddedSignal, sessionRemovedSignal),
 	).Start(ctx, bus)
 	if err != nil {
-		return nil, fmt.Errorf("unable to set-up D-Bus watch for user sessions: %w", err)
+		return nil, errors.Join(ErrInitUsersWorker,
+			fmt.Errorf("unable to set-up D-Bus watch for user sessions: %w", err))
 	}
 
 	sessionsWorker.getUsers = func() ([]string, error) {
 		userData, err := dbusx.GetData[[][]any](bus, loginBasePath, loginBaseInterface, listSessionsMethod)
 		if err != nil {
-			return nil, fmt.Errorf("could not retrieve users from D-Bus: %w", err)
+			return nil, errors.Join(ErrInitUsersWorker,
+				fmt.Errorf("could not retrieve users from D-Bus: %w", err))
 		}
 
 		var users []string
@@ -259,7 +264,7 @@ func NewUserSessionEventsWorker(ctx context.Context) (*linux.EventWorker, error)
 
 	sessionsWorker.prefs, err = preferences.LoadWorker(sessionsWorker)
 	if err != nil {
-		return nil, fmt.Errorf("could not load preferences: %w", err)
+		return nil, errors.Join(ErrInitUsersWorker, err)
 	}
 
 	//nolint:nilnil
@@ -269,7 +274,7 @@ func NewUserSessionEventsWorker(ctx context.Context) (*linux.EventWorker, error)
 
 	bus, ok := linux.CtxGetSystemBus(ctx)
 	if !ok {
-		return nil, linux.ErrNoSystemBus
+		return nil, errors.Join(ErrInitUsersWorker, linux.ErrNoSystemBus)
 	}
 
 	sessionsWorker.tracker = sessionTracker{
@@ -291,7 +296,8 @@ func NewUserSessionEventsWorker(ctx context.Context) (*linux.EventWorker, error)
 
 	currentSessions, err := dbusx.GetData[[][]any](bus, loginBasePath, loginBaseInterface, listSessionsMethod)
 	if err != nil {
-		return nil, fmt.Errorf("could not retrieve sessions from D-Bus: %w", err)
+		return nil, errors.Join(ErrInitUsersWorker,
+			fmt.Errorf("could not retrieve sessions from D-Bus: %w", err))
 	}
 
 	for _, session := range currentSessions {
@@ -304,7 +310,8 @@ func NewUserSessionEventsWorker(ctx context.Context) (*linux.EventWorker, error)
 		dbusx.MatchMembers(sessionAddedSignal, sessionRemovedSignal),
 	).Start(ctx, bus)
 	if err != nil {
-		return nil, fmt.Errorf("unable to set-up D-Bus watch for user sessions: %w", err)
+		return nil, errors.Join(ErrInitUsersWorker,
+			fmt.Errorf("unable to set-up D-Bus watch for user sessions: %w", err))
 	}
 
 	worker := linux.NewEventWorker(userSessionsEventWorkerID)

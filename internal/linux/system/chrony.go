@@ -7,6 +7,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os/exec"
@@ -30,6 +31,8 @@ const (
 
 	sensorStat = "System time"
 )
+
+var ErrInitChronyWorker = errors.New("could not init chrony worker")
 
 type chronyWorker struct {
 	chronycPath string
@@ -128,14 +131,15 @@ func newChronyOffsetSensor(stats map[string]string) sensor.Entity {
 func NewChronyWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
 	path, err := exec.LookPath("chronyc")
 	if err != nil {
-		return nil, fmt.Errorf("chronyc is not available: %w", err)
+		return nil, errors.Join(ErrInitChronyWorker,
+			fmt.Errorf("chronyc is not available: %w", err))
 	}
 
 	chronyWorker := &chronyWorker{chronycPath: path}
 
 	chronyWorker.prefs, err = preferences.LoadWorker(chronyWorker)
 	if err != nil {
-		return nil, fmt.Errorf("could not load preferences: %w", err)
+		return nil, errors.Join(ErrInitChronyWorker, err)
 	}
 
 	//nolint:nilnil

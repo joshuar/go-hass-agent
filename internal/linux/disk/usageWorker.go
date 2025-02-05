@@ -8,6 +8,7 @@ package disk
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -24,6 +25,8 @@ const (
 
 	usageWorkerID = "disk_usage_sensors"
 )
+
+var ErrInitUsageWorker = errors.New("could not init usage worker")
 
 type usageWorker struct{}
 
@@ -59,7 +62,7 @@ func NewUsageWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
 
 	prefs, err := preferences.LoadWorker(usageWorker)
 	if err != nil {
-		return nil, fmt.Errorf("could not load preferences: %w", err)
+		return nil, errors.Join(ErrInitUsageWorker, err)
 	}
 
 	//nolint:nilnil

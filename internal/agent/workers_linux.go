@@ -86,7 +86,6 @@ func setupOSWorkers(ctx context.Context) ([]Worker[sensor.Entity], []Worker[even
 		worker, err := workerInit(ctx)
 		if err != nil {
 			logging.FromContext(ctx).Warn("Could not init worker.",
-				slog.String("worker", worker.ID()),
 				slog.Any("error", err))
 
 			continue
@@ -99,7 +98,6 @@ func setupOSWorkers(ctx context.Context) ([]Worker[sensor.Entity], []Worker[even
 		worker, err := workerInit(ctx)
 		if err != nil {
 			logging.FromContext(ctx).Warn("Could not init worker.",
-				slog.String("worker", worker.ID()),
 				slog.Any("error", err))
 
 			continue
@@ -112,7 +110,6 @@ func setupOSWorkers(ctx context.Context) ([]Worker[sensor.Entity], []Worker[even
 		worker, err := workerInit(ctx)
 		if err != nil {
 			logging.FromContext(ctx).Warn("Could not init worker.",
-				slog.String("worker", worker.ID()),
 				slog.Any("error", err))
 
 			continue
@@ -125,7 +122,6 @@ func setupOSWorkers(ctx context.Context) ([]Worker[sensor.Entity], []Worker[even
 		worker, err := workerInit(ctx)
 		if err != nil {
 			logging.FromContext(ctx).Warn("Could not init worker.",
-				slog.String("worker", worker.ID()),
 				slog.Any("error", err))
 
 			continue
@@ -143,7 +139,6 @@ func setupOSWorkers(ctx context.Context) ([]Worker[sensor.Entity], []Worker[even
 			worker, err := workerInit(ctx)
 			if err != nil {
 				logging.FromContext(ctx).Warn("Could not init worker.",
-					slog.String("worker", worker.ID()),
 					slog.Any("error", err))
 
 				continue

@@ -5,7 +5,7 @@ package battery
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"log/slog"
 	"strings"
 	"sync"
@@ -18,6 +18,8 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
+
+var ErrInitBatterWorker = errors.New("could not init battery worker")
 
 type sensorWorker struct {
 	bus         *dbusx.Bus
@@ -232,7 +234,7 @@ func NewBatteryWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 
 	batteryWorker.prefs, err = preferences.LoadWorker(batteryWorker)
 	if err != nil {
-		return worker, fmt.Errorf("could not load preferences: %w", err)
+		return worker, errors.Join(ErrInitBatterWorker, err)
 	}
 
 	// If disabled, don't use the addressWorker.

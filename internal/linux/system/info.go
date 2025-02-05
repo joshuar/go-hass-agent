@@ -8,7 +8,7 @@ package system
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"log/slog"
 
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
@@ -22,6 +22,8 @@ const (
 	infoWorkerID            = "system_info"
 	infoWorkerPreferencesID = sensorsPrefPrefix + "info_sensors"
 )
+
+var ErrInitInfoWorker = errors.New("could not init system info worker")
 
 type infoWorker struct{}
 
@@ -96,7 +98,7 @@ func NewInfoWorker(_ context.Context) (*linux.OneShotSensorWorker, error) {
 
 	prefs, err := preferences.LoadWorker(infoWorker)
 	if err != nil {
-		return nil, fmt.Errorf("could not load preferences: %w", err)
+		return nil, errors.Join(ErrInitInfoWorker, err)
 	}
 
 	//nolint:nilnil

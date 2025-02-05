@@ -39,7 +39,10 @@ const (
 	runningAppsID    = "running_apps"
 )
 
-var ErrNoApps = errors.New("no running apps")
+var (
+	ErrInitAppsWorker = errors.New("could not init apps worker")
+	ErrNoApps         = errors.New("no running apps")
+)
 
 func (w *sensorWorker) PreferencesID() string {
 	return prefPrefix + "app"
@@ -157,7 +160,7 @@ func NewAppWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 	// If we cannot find a portal interface, we cannot monitor the active app.
 	portalDest, ok := linux.CtxGetDesktopPortal(ctx)
 	if !ok {
-		return worker, linux.ErrNoDesktopPortal
+		return worker, errors.Join(ErrInitAppsWorker, linux.ErrNoDesktopPortal)
 	}
 
 	// Connect to the D-Bus session bus. Bail if we can't.
@@ -172,7 +175,7 @@ func NewAppWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 		dbusx.MatchMembers("RunningApplicationsChanged"),
 	).Start(ctx, bus)
 	if err != nil {
-		return worker, fmt.Errorf("could not watch D-Bus for app state events: %w", err)
+		return worker, errors.Join(ErrInitAppsWorker, fmt.Errorf("could not watch D-Bus for app state events: %w", err))
 	}
 
 	appsWorker := &sensorWorker{
@@ -181,11 +184,11 @@ func NewAppWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 			var apps map[string]dbus.Variant
 			apps, err = dbusx.GetData[map[string]dbus.Variant](bus, appStateDBusPath, portalDest, appStateDBusMethod)
 			if err != nil {
-				return nil, fmt.Errorf("could not retrieve app list from D-Bus: %w", err)
+				return nil, errors.Join(ErrInitAppsWorker, fmt.Errorf("could not retrieve app list from D-Bus: %w", err))
 			}
 
 			if apps == nil {
-				return nil, ErrNoApps
+				return nil, errors.Join(ErrInitAppsWorker, ErrNoApps)
 			}
 
 			return apps, nil
@@ -194,7 +197,7 @@ func NewAppWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 
 	prefs, err := preferences.LoadWorker(appsWorker)
 	if err != nil {
-		return worker, fmt.Errorf("could not load preferences: %w", err)
+		return worker, errors.Join(ErrInitAppsWorker, err)
 	}
 
 	if prefs.Disabled {

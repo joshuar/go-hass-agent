@@ -8,6 +8,7 @@ package power
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -30,6 +31,8 @@ const (
 	powerStateWorkerID      = "power_state_sensor"
 	powerStatePreferencesID = sensorsPrefPrefix + "state"
 )
+
+var ErrInitPowerStateWorker = errors.New("could not init power state worker")
 
 type powerSignal int
 
@@ -150,7 +153,7 @@ func NewStateWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 
 	stateWorker.prefs, err = preferences.LoadWorker(stateWorker)
 	if err != nil {
-		return nil, fmt.Errorf("could not load preferences: %w", err)
+		return nil, errors.Join(ErrInitPowerStateWorker, err)
 	}
 
 	if stateWorker.prefs.IsDisabled() {
@@ -159,7 +162,7 @@ func NewStateWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 
 	bus, ok := linux.CtxGetSystemBus(ctx)
 	if !ok {
-		return worker, linux.ErrNoSystemBus
+		return worker, errors.Join(ErrInitPowerStateWorker, linux.ErrNoSystemBus)
 	}
 
 	stateWorker.triggerCh, err = dbusx.NewWatch(
@@ -168,7 +171,8 @@ func NewStateWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 		dbusx.MatchMembers(sleepSignal, shutdownSignal),
 	).Start(ctx, bus)
 	if err != nil {
-		return worker, fmt.Errorf("unable to set-up D-Bus watch for power state: %w", err)
+		return worker, errors.Join(ErrInitPowerStateWorker,
+			fmt.Errorf("unable to set-up D-Bus watch for power state: %w", err))
 	}
 
 	worker.EventSensorType = stateWorker

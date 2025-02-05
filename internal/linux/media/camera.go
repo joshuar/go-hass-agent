@@ -36,6 +36,8 @@ const (
 	cameraPreferencesID = preferences.ControlsPrefPrefix + "media" + preferences.PathDelim + "video"
 )
 
+var ErrInitCameraControls = errors.New("could not init camera controls")
+
 var defaultPreferredFmts = []string{"Motion-JPEG"}
 
 // CameraWorker represents all of the entities that make up a camera. This
@@ -77,6 +79,60 @@ func (w *CameraWorker) Disabled() bool {
 	return w.prefs.Disabled
 }
 
+// openCamera opens the camera device and ensures that it has a preferred image
+// format, framerate and dimensions.
+func (w *CameraWorker) openCamera() (*webcam.Webcam, error) {
+	cam, err := webcam.Open(w.prefs.CameraDevice)
+	if err != nil {
+		return nil, fmt.Errorf("could not open camera %s: %w", w.prefs.CameraDevice, err)
+	}
+
+	// select pixel format
+	var preferredFormat webcam.PixelFormat
+
+	for format, desc := range cam.GetSupportedFormats() {
+		if slices.Contains(w.prefs.CameraFormats, desc) {
+			preferredFormat = format
+			break
+		}
+	}
+
+	if preferredFormat == 0 {
+		return nil, errors.New("could not determine an appropriate format")
+	}
+
+	_, _, _, err = cam.SetImageFormat(preferredFormat, w.prefs.Width, w.prefs.Height)
+	if err != nil {
+		return nil, fmt.Errorf("could not set camera parameters: %w", err)
+	}
+
+	return cam, nil
+}
+
+// publishImages loops over the received frames from the camera and wraps them
+// as a MQTT message to be sent back on the bus.
+func publishImages(cam *webcam.Webcam, topic string, msgCh chan *mqttapi.Msg) {
+	if err := cam.StartStreaming(); err != nil {
+		slog.Error("Could not start recording", slog.Any("error", err))
+
+		return
+	}
+
+	for {
+		err := cam.WaitForFrame(uint32(5))
+		if err != nil && errors.Is(err, &webcam.Timeout{}) {
+			continue
+		}
+
+		frame, err := cam.ReadFrame()
+		if len(frame) == 0 || err != nil {
+			break
+		}
+
+		msgCh <- mqttapi.NewMsg(topic, frame)
+	}
+}
+
 // NewCameraControl is called by the OS controller to provide the entities for a camera.
 func NewCameraControl(_ context.Context, msgCh chan *mqttapi.Msg, mqttDevice *mqtthass.Device) (*CameraWorker, error) {
 	var err error
@@ -85,7 +141,7 @@ func NewCameraControl(_ context.Context, msgCh chan *mqttapi.Msg, mqttDevice *mq
 
 	worker.prefs, err = preferences.LoadWorker(worker)
 	if err != nil {
-		return worker, fmt.Errorf("could not load preferences: %w", err)
+		return worker, errors.Join(ErrInitCameraControls, err)
 	}
 
 	worker.Images = mqtthass.NewCameraEntity().
@@ -169,58 +225,4 @@ func NewCameraControl(_ context.Context, msgCh chan *mqttapi.Msg, mqttDevice *mq
 	}()
 
 	return worker, nil
-}
-
-// openCamera opens the camera device and ensures that it has a preferred image
-// format, framerate and dimensions.
-func (w *CameraWorker) openCamera() (*webcam.Webcam, error) {
-	cam, err := webcam.Open(w.prefs.CameraDevice)
-	if err != nil {
-		return nil, fmt.Errorf("could not open camera %s: %w", w.prefs.CameraDevice, err)
-	}
-
-	// select pixel format
-	var preferredFormat webcam.PixelFormat
-
-	for format, desc := range cam.GetSupportedFormats() {
-		if slices.Contains(w.prefs.CameraFormats, desc) {
-			preferredFormat = format
-			break
-		}
-	}
-
-	if preferredFormat == 0 {
-		return nil, errors.New("could not determine an appropriate format")
-	}
-
-	_, _, _, err = cam.SetImageFormat(preferredFormat, w.prefs.Width, w.prefs.Height)
-	if err != nil {
-		return nil, fmt.Errorf("could not set camera parameters: %w", err)
-	}
-
-	return cam, nil
-}
-
-// publishImages loops over the received frames from the camera and wraps them
-// as a MQTT message to be sent back on the bus.
-func publishImages(cam *webcam.Webcam, topic string, msgCh chan *mqttapi.Msg) {
-	if err := cam.StartStreaming(); err != nil {
-		slog.Error("Could not start recording", slog.Any("error", err))
-
-		return
-	}
-
-	for {
-		err := cam.WaitForFrame(uint32(5))
-		if err != nil && errors.Is(err, &webcam.Timeout{}) {
-			continue
-		}
-
-		frame, err := cam.ReadFrame()
-		if len(frame) == 0 || err != nil {
-			break
-		}
-
-		msgCh <- mqttapi.NewMsg(topic, frame)
-	}
 }

@@ -8,6 +8,7 @@ package media
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 
@@ -32,6 +33,8 @@ const (
 	mprisPreferencesID = preferences.SensorsPrefPrefix + "media" + preferences.PathDelim + "mpris"
 )
 
+var ErrInitMPRISWorker = errors.New("could not init MPRIS worker")
+
 type mprisMonitor struct {
 	logger           *slog.Logger
 	mediaStateEntity *mqtthass.SensorEntity
@@ -53,7 +56,7 @@ func MPRISControl(ctx context.Context, device *mqtthass.Device, msgCh chan *mqtt
 
 	bus, ok := linux.CtxGetSessionBus(ctx)
 	if !ok {
-		return nil, linux.ErrNoSessionBus
+		return nil, errors.Join(ErrInitMPRISWorker, linux.ErrNoSessionBus)
 	}
 
 	mprisMonitor := &mprisMonitor{
@@ -63,7 +66,7 @@ func MPRISControl(ctx context.Context, device *mqtthass.Device, msgCh chan *mqtt
 
 	mprisMonitor.prefs, err = preferences.LoadWorker(mprisMonitor)
 	if err != nil {
-		return nil, fmt.Errorf("could not load preferences: %w", err)
+		return nil, errors.Join(ErrInitMPRISWorker, err)
 	}
 
 	//nolint:nilnil
@@ -91,7 +94,8 @@ func MPRISControl(ctx context.Context, device *mqtthass.Device, msgCh chan *mqtt
 		dbusx.MatchArgNameSpace(mprisDBusNamespace),
 	).Start(ctx, bus)
 	if err != nil {
-		return nil, fmt.Errorf("could not watch D-Bus for MPRIS signals: %w", err)
+		return nil, errors.Join(ErrInitMPRISWorker,
+			fmt.Errorf("could not watch D-Bus for MPRIS signals: %w", err))
 	}
 
 	// Watch for power profile changes.

@@ -5,7 +5,7 @@ package cpu
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"log/slog"
 	"strconv"
 	"time"
@@ -23,6 +23,8 @@ const (
 	cpuFreqWorkerID      = "cpu_freq_sensors"
 	cpuFreqPreferencesID = prefPrefix + "frequencies"
 )
+
+var ErrInitFreqWorker = errors.New("could not start CPU frequencies worker")
 
 type freqWorker struct{}
 
@@ -53,7 +55,7 @@ func NewFreqWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
 
 	prefs, err := preferences.LoadWorker(freqWorker)
 	if err != nil {
-		return nil, fmt.Errorf("could not load preferences: %w", err)
+		return nil, errors.Join(ErrInitFreqWorker, err)
 	}
 
 	//nolint:nilnil

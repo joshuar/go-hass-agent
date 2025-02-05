@@ -7,7 +7,7 @@ package system
 import (
 	"bufio"
 	"context"
-	"fmt"
+	"errors"
 	"log/slog"
 	"os"
 	"strconv"
@@ -26,6 +26,8 @@ const (
 
 	uptimeWorkerID = "uptime_sensor"
 )
+
+var ErrInitUptimeWorker = errors.New("could not init uptime worker")
 
 type uptimeWorker struct{}
 
@@ -97,7 +99,7 @@ func NewUptimeTimeWorker(ctx context.Context) (*linux.PollingSensorWorker, error
 
 	prefs, err := preferences.LoadWorker(uptimeWorker)
 	if err != nil {
-		return nil, fmt.Errorf("could not load preferences: %w", err)
+		return nil, errors.Join(ErrInitUptimeWorker, err)
 	}
 
 	//nolint:nilnil
