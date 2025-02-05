@@ -1,5 +1,13 @@
 # Changelog
 
+## [12.0.1](https://github.com/joshuar/go-hass-agent/compare/v12.0.0...v12.0.1) (2025-02-05)
+
+
+### Bug Fixes
+
+* :bug: improve error handling in workers ([af3c485](https://github.com/joshuar/go-hass-agent/commit/af3c485cb96ea581df6a7e107410fafe15ccc297))
+* **linux/disk:** :bug: don't send disk usage sensors with invalid values ([05bc753](https://github.com/joshuar/go-hass-agent/commit/05bc75348236f0b973c9ee83aac1fc49a9ca1052))
+
 ## [12.0.0](https://github.com/joshuar/go-hass-agent/compare/v11.1.2...v12.0.0) (2025-02-02)
 
 
