@@ -8,6 +8,7 @@ package disk
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -26,6 +27,8 @@ const (
 	ioWorkerID             = "disk_rates_sensors"
 	totalsID               = "total"
 )
+
+var ErrInitRatesWorker = errors.New("could not init rates worker")
 
 // ioWorker creates sensors for disk IO counts and rates per device. It
 // maintains an internal map of devices being tracked.
@@ -128,7 +131,8 @@ func (w *ioWorker) DefaultPreferences() WorkerPrefs {
 func NewIOWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
 	boottime, found := linux.CtxGetBoottime(ctx)
 	if !found {
-		return nil, fmt.Errorf("%w: no boottime value", linux.ErrInvalidCtx)
+		return nil, errors.Join(ErrInitRatesWorker,
+			fmt.Errorf("%w: no boottime value", linux.ErrInvalidCtx))
 	}
 
 	// Add sensors for a pseudo "total" device which tracks total values from
@@ -143,7 +147,7 @@ func NewIOWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
 
 	prefs, err := preferences.LoadWorker(ioWorker)
 	if err != nil {
-		return nil, fmt.Errorf("could not load preferences: %w", err)
+		return nil, errors.Join(ErrInitRatesWorker, err)
 	}
 
 	//nolint:nilnil

@@ -8,6 +8,7 @@ package system
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -58,6 +59,8 @@ const (
 )
 
 type hsiLevel uint32
+
+var ErrInitFWUpdWorker = errors.New("could not init fwupdmgr worker")
 
 type fwupdWorker struct {
 	hostSecurityAttrs *dbusx.Data[[]map[string]dbus.Variant]
@@ -126,7 +129,7 @@ func NewfwupdWorker(ctx context.Context) (*linux.OneShotSensorWorker, error) {
 
 	prefs, err := preferences.LoadWorker(fwupdWorker)
 	if err != nil {
-		return nil, fmt.Errorf("could not load preferences: %w", err)
+		return nil, errors.Join(ErrInitFWUpdWorker, err)
 	}
 
 	//nolint:nilnil
@@ -136,7 +139,7 @@ func NewfwupdWorker(ctx context.Context) (*linux.OneShotSensorWorker, error) {
 
 	bus, ok := linux.CtxGetSystemBus(ctx)
 	if !ok {
-		return nil, linux.ErrNoSystemBus
+		return nil, errors.Join(ErrInitFWUpdWorker, linux.ErrNoSystemBus)
 	}
 
 	fwupdWorker.hostSecurityAttrs = dbusx.NewData[[]map[string]dbus.Variant](bus,

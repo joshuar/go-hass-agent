@@ -8,6 +8,7 @@ package agentsensor
 
 import (
 	"context"
+	"errors"
 
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
@@ -16,6 +17,8 @@ import (
 const (
 	versionWorkerID = "agent_version"
 )
+
+var ErrInitVersionWorker = errors.New("could not init version worker")
 
 func newVersionSensor() sensor.Entity {
 	return sensor.NewSensor(
@@ -64,15 +67,15 @@ func (w *VersionWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 	return []sensor.Entity{newVersionSensor()}, nil
 }
 
-func NewVersionWorker(_ context.Context) *VersionWorker {
+func NewVersionWorker(_ context.Context) (*VersionWorker, error) {
 	worker := &VersionWorker{}
 
 	prefs, err := preferences.LoadWorker(worker)
 	if err != nil {
-		return nil
+		return nil, errors.Join(ErrInitVersionWorker, err)
 	}
 
 	worker.prefs = prefs
 
-	return worker
+	return worker, nil
 }

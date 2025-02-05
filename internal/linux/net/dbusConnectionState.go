@@ -6,6 +6,7 @@ package net
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"slices"
@@ -36,6 +37,8 @@ const (
 	netConnWorkerID = "network_connection_sensors"
 	netConnPrefID   = prefPrefix + "connections"
 )
+
+var ErrInitConnStateWorker = errors.New("could not init network connection state worker")
 
 type ConnectionsWorker struct {
 	bus    *dbusx.Bus
@@ -184,7 +187,7 @@ func NewConnectionWorker(ctx context.Context) (*linux.EventSensorWorker, error) 
 
 	bus, ok := linux.CtxGetSystemBus(ctx)
 	if !ok {
-		return worker, linux.ErrNoSystemBus
+		return worker, errors.Join(ErrInitConnStateWorker, linux.ErrNoSystemBus)
 	}
 
 	connectionsWorker := &ConnectionsWorker{
@@ -196,7 +199,7 @@ func NewConnectionWorker(ctx context.Context) (*linux.EventSensorWorker, error) 
 
 	connectionsWorker.prefs, err = preferences.LoadWorker(connectionsWorker)
 	if err != nil {
-		return worker, fmt.Errorf("could not load preferences: %w", err)
+		return worker, errors.Join(ErrInitConnStateWorker, err)
 	}
 
 	if connectionsWorker.prefs.Disabled {

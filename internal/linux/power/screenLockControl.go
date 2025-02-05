@@ -26,7 +26,10 @@ const (
 	screenLockControlsWorkerPrefID = controlsPrefPrefix + "screen_lock_controls"
 )
 
-var ErrUnsupportedDesktop = errors.New("unsupported desktop environment")
+var (
+	ErrInitScreenLockControls = errors.New("could not init screen lock controls worker")
+	ErrUnsupportedDesktop     = errors.New("unsupported desktop environment")
+)
 
 type screenLockControlsWorker struct {
 	prefs *preferences.CommonWorkerPrefs
@@ -143,7 +146,7 @@ func NewScreenLockControl(ctx context.Context, device *mqtthass.Device) ([]*mqtt
 
 	worker.prefs, err = preferences.LoadWorker(worker)
 	if err != nil {
-		return nil, fmt.Errorf("could not load preferences: %w", err)
+		return nil, errors.Join(ErrInitScreenLockControls, err)
 	}
 
 	if worker.prefs.IsDisabled() {
@@ -153,13 +156,13 @@ func NewScreenLockControl(ctx context.Context, device *mqtthass.Device) ([]*mqtt
 	// Retrieve the D-Bus session bus. Needed by some controls.
 	sessionBus, ok := linux.CtxGetSessionBus(ctx)
 	if !ok {
-		return nil, linux.ErrNoSessionBus
+		return nil, errors.Join(ErrInitScreenLockControls, linux.ErrNoSessionBus)
 	}
 
 	// Retrieve the D-Bus system bus. Needed by some controls.
 	systemBus, ok := linux.CtxGetSystemBus(ctx)
 	if !ok {
-		return nil, linux.ErrNoSystemBus
+		return nil, errors.Join(ErrInitScreenLockControls, linux.ErrNoSystemBus)
 	}
 
 	// Decorate a logger for this controller.
@@ -167,7 +170,7 @@ func NewScreenLockControl(ctx context.Context, device *mqtthass.Device) ([]*mqtt
 
 	commands, err := setupCommands(ctx, sessionBus, systemBus, device)
 	if err != nil {
-		return nil, fmt.Errorf("cannot create screen lock controls: %w", err)
+		return nil, errors.Join(ErrInitScreenLockControls, err)
 	}
 
 	buttons := make([]*mqtthass.ButtonEntity, 0, len(commands))

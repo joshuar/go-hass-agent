@@ -96,15 +96,24 @@ func Run(ctx context.Context, headless bool, dataCh chan any, tracker fyneui.Tra
 		// Initialize and gather OS sensor and event workers.
 		sensorWorkers, eventWorkers := setupOSWorkers(workerCtx)
 		// Initialize and add connection latency sensor worker.
-		if worker := agentsensor.NewConnectionLatencySensorWorker(workerCtx); worker != nil {
+		if worker, err := agentsensor.NewConnectionLatencySensorWorker(workerCtx); err != nil {
+			agent.logger.Warn("Could not init agent worker.",
+				slog.Any("error", err))
+		} else {
 			sensorWorkers = append(sensorWorkers, worker)
 		}
 		// Initialize and add external IP address sensor worker.
-		if worker := agentsensor.NewExternalIPUpdaterWorker(workerCtx); worker != nil {
+		if worker, err := agentsensor.NewExternalIPUpdaterWorker(workerCtx); err != nil {
+			agent.logger.Warn("Could not init agent worker.",
+				slog.Any("error", err))
+		} else {
 			sensorWorkers = append(sensorWorkers, worker)
 		}
 		// Initialize and add external version sensor worker.
-		if worker := agentsensor.NewVersionWorker(workerCtx); worker != nil {
+		if worker, err := agentsensor.NewVersionWorker(workerCtx); err != nil {
+			agent.logger.Warn("Could not init agent worker.",
+				slog.Any("error", err))
+		} else {
 			sensorWorkers = append(sensorWorkers, worker)
 		}
 

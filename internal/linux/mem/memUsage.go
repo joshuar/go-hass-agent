@@ -8,6 +8,7 @@ package mem
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"math"
@@ -41,6 +42,8 @@ var (
 	memSensors  = []memStatID{memTotal, memFree, memBuffered, memCached, memAvailable, memCorrupted}
 	swapSensors = []memStatID{swapTotal, swapFree, swapCached}
 )
+
+var ErrInitUsageWorker = errors.New("could not init memory usage worker")
 
 // newMemSensor generates a memorySensor for a memory stat.
 func newMemSensor(id memStatID, stat *memStat) sensor.Entity {
@@ -166,7 +169,7 @@ func NewUsageWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
 
 	prefs, err := preferences.LoadWorker(usageWorker)
 	if err != nil {
-		return nil, fmt.Errorf("could not load preferences: %w", err)
+		return nil, errors.Join(ErrInitUsageWorker, err)
 	}
 
 	//nolint:nilnil

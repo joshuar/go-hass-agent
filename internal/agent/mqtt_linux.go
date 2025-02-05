@@ -150,8 +150,11 @@ func setupOSMQTTWorker(ctx context.Context) MQTTWorker {
 		mqttController.buttons = append(mqttController.buttons, screenControls...)
 	}
 	// Add the volume controls.
-	volEntity, muteEntity := media.VolumeControl(ctx, mqttController.Msgs(), mqttDevice)
-	if volEntity != nil && muteEntity != nil {
+	volEntity, muteEntity, err := media.VolumeControl(ctx, mqttController.Msgs(), mqttDevice)
+	if err != nil {
+		logging.FromContext(ctx).Warn("Could not create audio controls.",
+			slog.Any("error", err))
+	} else {
 		mqttController.numbers = append(mqttController.numbers, volEntity)
 		mqttController.switches = append(mqttController.switches, muteEntity)
 	}

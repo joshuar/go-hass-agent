@@ -7,7 +7,7 @@ package power
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"log/slog"
 
 	"github.com/eclipse/paho.golang/paho"
@@ -23,6 +23,8 @@ import (
 const (
 	powerControlPreferencesID = controlsPrefPrefix + "power_controls"
 )
+
+var ErrInitPowerControls = errors.New("could not init power controls worker")
 
 type powerControlWorker struct {
 	prefs *preferences.CommonWorkerPrefs
@@ -111,7 +113,7 @@ func NewPowerControl(ctx context.Context, device *mqtthass.Device) ([]*mqtthass.
 
 	worker.prefs, err = preferences.LoadWorker(worker)
 	if err != nil {
-		return nil, fmt.Errorf("could not load preferences: %w", err)
+		return nil, errors.Join(ErrInitPowerControls, err)
 	}
 
 	if worker.prefs.IsDisabled() {
@@ -120,12 +122,12 @@ func NewPowerControl(ctx context.Context, device *mqtthass.Device) ([]*mqtthass.
 
 	bus, ok := linux.CtxGetSystemBus(ctx)
 	if !ok {
-		return nil, linux.ErrNoSystemBus
+		return nil, errors.Join(ErrInitPowerControls, linux.ErrNoSystemBus)
 	}
 
 	_, ok = linux.CtxGetSessionPath(ctx)
 	if !ok {
-		return nil, linux.ErrNoSessionPath
+		return nil, errors.Join(ErrInitPowerControls, linux.ErrNoSessionPath)
 	}
 
 	commands := generatePowerCommands(ctx, bus, device.Name)

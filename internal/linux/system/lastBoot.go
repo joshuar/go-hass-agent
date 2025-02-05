@@ -5,6 +5,7 @@ package system
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -18,6 +19,8 @@ const (
 	lastBootWorkerID     = "boot_time_sensor"
 	lastBootWorkerPrefID = infoWorkerPreferencesID
 )
+
+var ErrInitLastBootWorker = errors.New("could not init last boot worker")
 
 type lastBootWorker struct {
 	lastBoot time.Time
@@ -51,14 +54,15 @@ func (w *lastBootWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 func NewLastBootWorker(ctx context.Context) (*linux.OneShotSensorWorker, error) {
 	lastBoot, found := linux.CtxGetBoottime(ctx)
 	if !found {
-		return nil, fmt.Errorf("%w: no lastBoot value", linux.ErrInvalidCtx)
+		return nil, errors.Join(ErrInitLastBootWorker,
+			fmt.Errorf("%w: no lastBoot value", linux.ErrInvalidCtx))
 	}
 
 	bootWorker := &lastBootWorker{lastBoot: lastBoot}
 
 	prefs, err := preferences.LoadWorker(bootWorker)
 	if err != nil {
-		return nil, fmt.Errorf("could not load preferences: %w", err)
+		return nil, errors.Join(ErrInitLastBootWorker, err)
 	}
 
 	//nolint:nilnil

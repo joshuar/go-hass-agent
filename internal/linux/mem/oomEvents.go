@@ -5,6 +5,7 @@ package mem
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/url"
@@ -24,6 +25,8 @@ const (
 	unitPathPrefix         = "/org/freedesktop/systemd1/unit"
 	oomEventName           = "oom_event"
 )
+
+var ErrInitOOMWorker = errors.New("could not init OOM worker")
 
 type oomEventData struct {
 	Process string `json:"process"`
@@ -118,14 +121,14 @@ func NewOOMEventsWorker(ctx context.Context) (*linux.EventWorker, error) {
 
 	bus, ok := linux.CtxGetSessionBus(ctx)
 	if !ok {
-		return worker, linux.ErrNoSessionBus
+		return worker, errors.Join(ErrInitOOMWorker, linux.ErrNoSessionBus)
 	}
 
 	eventWorker := &OOMEventsWorker{}
 
 	eventWorker.prefs, err = preferences.LoadWorker(eventWorker)
 	if err != nil {
-		return nil, fmt.Errorf("could not load preferences: %w", err)
+		return nil, errors.Join(ErrInitOOMWorker, err)
 	}
 
 	if eventWorker.prefs.IsDisabled() {
@@ -137,7 +140,8 @@ func NewOOMEventsWorker(ctx context.Context) (*linux.EventWorker, error) {
 		dbusx.MatchPropChanged(),
 	).Start(ctx, bus)
 	if err != nil {
-		return nil, fmt.Errorf("unable to set-up D-Bus watch for OOM events: %w", err)
+		return nil, errors.Join(ErrInitOOMWorker,
+			fmt.Errorf("unable to set-up D-Bus watch for OOM events: %w", err))
 	}
 
 	eventWorker.triggerCh = triggerCh

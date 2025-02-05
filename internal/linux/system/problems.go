@@ -30,7 +30,10 @@ const (
 	dBusProblemIntr  = "org.freedesktop.problems"
 )
 
-var ErrNoProblemDetails = errors.New("no details found")
+var (
+	ErrInitABRTWorker   = errors.New("could not init ABRT worker")
+	ErrNoProblemDetails = errors.New("no details found")
+)
 
 func parseProblem(details map[string]string) map[string]any {
 	parsed := make(map[string]any)
@@ -121,7 +124,7 @@ func NewProblemsWorker(ctx context.Context) (*linux.PollingSensorWorker, error) 
 
 	problemsWorker.prefs, err = preferences.LoadWorker(problemsWorker)
 	if err != nil {
-		return nil, fmt.Errorf("could not load preferences: %w", err)
+		return nil, errors.Join(ErrInitABRTWorker, err)
 	}
 
 	//nolint:nilnil
@@ -149,7 +152,8 @@ func NewProblemsWorker(ctx context.Context) (*linux.PollingSensorWorker, error) 
 	// Check if we can fetch problem data, bail if we can't.
 	_, err = dbusx.GetData[[]string](bus, dBusProblemsDest, dBusProblemIntr, dBusProblemIntr+".GetProblems")
 	if err != nil {
-		return nil, fmt.Errorf("unable to fetch ABRT problems from D-Bus: %w", err)
+		return nil, errors.Join(ErrInitABRTWorker,
+			fmt.Errorf("unable to fetch ABRT problems from D-Bus: %w", err))
 	}
 
 	problemsWorker.getProblems = func() ([]string, error) {

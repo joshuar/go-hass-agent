@@ -6,6 +6,7 @@ package net
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net"
@@ -34,6 +35,8 @@ var (
 		Groups: unix.RTNLGRP_LINK | unix.RTNLGRP_IPV4_NETCONF | unix.RTNLGRP_IPV6_NETCONF,
 	}
 )
+
+var ErrInitLinkWorker = errors.New("could not init network link state worker")
 
 func newLinkSensor(msg rtnetlink.LinkMessage) sensor.Entity {
 	var (
@@ -241,34 +244,6 @@ func (w *AddressWorker) DefaultPreferences() WorkerPrefs {
 	}
 }
 
-func NewAddressWorker(_ context.Context) (*linux.EventSensorWorker, error) {
-	worker := linux.NewEventSensorWorker(addressWorkerID)
-
-	conn, err := rtnetlink.Dial(nlConfig)
-	if err != nil {
-		return worker, fmt.Errorf("could not connect to netlink: %w", err)
-	}
-
-	addressWorker := &AddressWorker{
-		nlconn: conn,
-		donech: make(chan struct{}),
-	}
-
-	addressWorker.prefs, err = preferences.LoadWorker(addressWorker)
-	if err != nil {
-		return worker, fmt.Errorf("could not load preferences: %w", err)
-	}
-
-	// If disabled, don't use the addressWorker.
-	if addressWorker.prefs.Disabled {
-		return worker, nil
-	}
-
-	worker.EventSensorType = addressWorker
-
-	return worker, nil
-}
-
 func (w *AddressWorker) getAddresses(ctx context.Context) []*sensor.Entity {
 	var addrs []*sensor.Entity
 
@@ -348,4 +323,33 @@ func filterLink(msg rtnetlink.LinkMessage) *sensor.Entity {
 	s := newLinkSensor(msg)
 
 	return &s
+}
+
+func NewAddressWorker(_ context.Context) (*linux.EventSensorWorker, error) {
+	worker := linux.NewEventSensorWorker(addressWorkerID)
+
+	conn, err := rtnetlink.Dial(nlConfig)
+	if err != nil {
+		return worker, errors.Join(ErrInitLinkWorker,
+			fmt.Errorf("could not connect to netlink: %w", err))
+	}
+
+	addressWorker := &AddressWorker{
+		nlconn: conn,
+		donech: make(chan struct{}),
+	}
+
+	addressWorker.prefs, err = preferences.LoadWorker(addressWorker)
+	if err != nil {
+		return worker, errors.Join(ErrInitLinkWorker, err)
+	}
+
+	// If disabled, don't use the addressWorker.
+	if addressWorker.prefs.Disabled {
+		return worker, nil
+	}
+
+	worker.EventSensorType = addressWorker
+
+	return worker, nil
 }

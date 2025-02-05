@@ -30,7 +30,10 @@ const (
 	connectionLatencyUnits = "ms"
 )
 
-var ErrEmptyResponse = errors.New("empty response")
+var (
+	ErrInitConnLatencyWorker = errors.New("could not init connection latency worker")
+	ErrEmptyResponse         = errors.New("empty response")
+)
 
 func newConnectionLatencySensor(info resty.TraceInfo) sensor.Entity {
 	return sensor.NewSensor(
@@ -137,7 +140,7 @@ func (w *ConnectionLatencySensorWorker) Start(ctx context.Context) (<-chan senso
 	return sensorCh, nil
 }
 
-func NewConnectionLatencySensorWorker(_ context.Context) *ConnectionLatencySensorWorker {
+func NewConnectionLatencySensorWorker(_ context.Context) (*ConnectionLatencySensorWorker, error) {
 	worker := &ConnectionLatencySensorWorker{
 		client: resty.New().
 			SetTimeout(connectionLatencyTimeout).
@@ -147,10 +150,10 @@ func NewConnectionLatencySensorWorker(_ context.Context) *ConnectionLatencySenso
 
 	prefs, err := preferences.LoadWorker(worker)
 	if err != nil {
-		return nil
+		return nil, errors.Join(ErrInitConnLatencyWorker, err)
 	}
 
 	worker.prefs = prefs
 
-	return worker
+	return worker, nil
 }

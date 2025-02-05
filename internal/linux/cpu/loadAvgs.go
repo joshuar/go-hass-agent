@@ -36,7 +36,10 @@ const (
 	loadAvgsPreferencesID = prefPrefix + "load_averages"
 )
 
-var ErrParseLoadAvgs = errors.New("could not parse load averages")
+var (
+	ErrInitLoadAvgsWorker = errors.New("could not init load averages worker")
+	ErrParseLoadAvgs      = errors.New("could not parse load averages")
+)
 
 type loadAvgsWorker struct {
 	path     string
@@ -115,7 +118,7 @@ func NewLoadAvgWorker(_ context.Context) (*linux.PollingSensorWorker, error) {
 
 	prefs, err := preferences.LoadWorker(loadAvgsWorker)
 	if err != nil {
-		return nil, fmt.Errorf("could not load preferences: %w", err)
+		return nil, errors.Join(ErrInitLoadAvgsWorker, err)
 	}
 
 	//nolint:nilnil

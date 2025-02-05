@@ -5,6 +5,7 @@ package system
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -21,6 +22,8 @@ const (
 	cpuVulnPreferencesID = cpuVulnWorkerID
 	cpuVulnPath          = "devices/system/cpu/vulnerabilities"
 )
+
+var ErrInitVulnerabilitiesWorker = errors.New("could not init vulnerabilities worker")
 
 type cpuVulnWorker struct {
 	path string
@@ -83,7 +86,7 @@ func NewCPUVulnerabilityWorker(_ context.Context) (*linux.OneShotSensorWorker, e
 
 	prefs, err := preferences.LoadWorker(cpuVulnWorker)
 	if err != nil {
-		return nil, fmt.Errorf("could not load preferences: %w", err)
+		return nil, errors.Join(ErrInitVulnerabilitiesWorker, err)
 	}
 
 	//nolint:nilnil

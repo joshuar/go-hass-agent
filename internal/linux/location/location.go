@@ -39,6 +39,8 @@ const (
 	preferencesID = preferences.SensorsPrefPrefix + "location"
 )
 
+var ErrInitLocationWorker = errors.New("could not init location worker")
+
 type locationWorker struct {
 	getLocationProperty func(path, prop string) (float64, error)
 	stopMethod          *dbusx.Method
@@ -139,7 +141,7 @@ func NewLocationWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 	// Load the worker preferences.
 	locationWorker.prefs, err = preferences.LoadWorker(locationWorker)
 	if err != nil {
-		return worker, fmt.Errorf("could not load preferences: %w", err)
+		return worker, errors.Join(ErrInitLocationWorker, err)
 	}
 	// If disabled, don't use the worker.
 	if locationWorker.prefs.Disabled {
@@ -148,13 +150,14 @@ func NewLocationWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 
 	bus, ok := linux.CtxGetSystemBus(ctx)
 	if !ok {
-		return worker, linux.ErrNoSystemBus
+		return worker, errors.Join(ErrInitLocationWorker, linux.ErrNoSystemBus)
 	}
 
 	// Create a GeoClue client.
 	clientPath, err := createClient(ctx, bus)
 	if err != nil {
-		return worker, fmt.Errorf("unable to create geoclue client: %w", err)
+		return worker, errors.Join(ErrInitLocationWorker,
+			fmt.Errorf("unable to create geoclue client: %w", err))
 	}
 
 	// Set threshold values.
@@ -165,13 +168,15 @@ func NewLocationWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 		dbusx.MatchInterface(clientInterface),
 		dbusx.MatchMembers("LocationUpdated")).Start(ctx, bus)
 	if err != nil {
-		return worker, fmt.Errorf("could not setup D-Bus watch for location updates: %w", err)
+		return worker, errors.Join(ErrInitLocationWorker,
+			fmt.Errorf("could not setup D-Bus watch for location updates: %w", err))
 	}
 	// Set worker data.
 	locationWorker.getLocationProperty = func(path, prop string) (float64, error) {
 		value, err := dbusx.NewProperty[float64](bus, path, geoclueInterface, locationInterface+"."+prop).Get()
 		if err != nil {
-			return 0, fmt.Errorf("could not fetch location property %s: %w", prop, err)
+			return 0, errors.Join(ErrInitLocationWorker,
+				fmt.Errorf("could not fetch location property %s: %w", prop, err))
 		}
 
 		return value, nil

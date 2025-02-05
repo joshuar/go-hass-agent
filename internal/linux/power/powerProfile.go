@@ -8,6 +8,7 @@ package power
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 
@@ -25,6 +26,8 @@ const (
 	powerProfileWorkerID      = "power_profile_sensor"
 	powerProfilePreferencesID = sensorsPrefPrefix + "profile"
 )
+
+var ErrInitPowerProfileWorker = errors.New("could not init power profile worker")
 
 func newPowerSensor(profile string) sensor.Entity {
 	return sensor.NewSensor(
@@ -108,7 +111,7 @@ func NewProfileWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 
 	powerProfileWorker.prefs, err = preferences.LoadWorker(powerProfileWorker)
 	if err != nil {
-		return nil, fmt.Errorf("could not load preferences: %w", err)
+		return nil, errors.Join(ErrInitPowerProfileWorker, err)
 	}
 
 	if powerProfileWorker.prefs.IsDisabled() {
@@ -117,7 +120,7 @@ func NewProfileWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 
 	bus, ok := linux.CtxGetSystemBus(ctx)
 	if !ok {
-		return worker, linux.ErrNoSystemBus
+		return worker, errors.Join(ErrInitPowerProfileWorker, linux.ErrNoSystemBus)
 	}
 
 	powerProfileWorker.triggerCh, err = dbusx.NewWatch(
@@ -125,7 +128,8 @@ func NewProfileWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 		dbusx.MatchPropChanged(),
 	).Start(ctx, bus)
 	if err != nil {
-		return worker, fmt.Errorf("could not watch D-Bus for power profile updates: %w", err)
+		return worker, errors.Join(ErrInitPowerProfileWorker,
+			fmt.Errorf("could not watch D-Bus for power profile updates: %w", err))
 	}
 
 	powerProfileWorker.activeProfile = dbusx.NewProperty[string](bus,

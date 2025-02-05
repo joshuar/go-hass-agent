@@ -35,8 +35,9 @@ var ipLookupHosts = map[string]map[int]string{
 }
 
 var (
-	ErrInvalidIP     = errors.New("invalid IP address")
-	ErrNoLookupHosts = errors.New("no IP lookup hosts found")
+	ErrInitExternalIPWorker = errors.New("could not init external IP worker")
+	ErrInvalidIP            = errors.New("invalid IP address")
+	ErrNoLookupHosts        = errors.New("no IP lookup hosts found")
 )
 
 func newExternalIPSensor(addr net.IP) sensor.Entity {
@@ -179,7 +180,7 @@ func (w *ExternalIPWorker) lookupExternalIPs(ctx context.Context, ver int) (net.
 	return nil, ErrNoLookupHosts
 }
 
-func NewExternalIPUpdaterWorker(ctx context.Context) *ExternalIPWorker {
+func NewExternalIPUpdaterWorker(ctx context.Context) (*ExternalIPWorker, error) {
 	var err error
 
 	worker := &ExternalIPWorker{
@@ -190,10 +191,10 @@ func NewExternalIPUpdaterWorker(ctx context.Context) *ExternalIPWorker {
 
 	prefs, err := preferences.LoadWorker(worker)
 	if err != nil {
-		return nil
+		return nil, errors.Join(ErrInitExternalIPWorker, err)
 	}
 
 	worker.prefs = prefs
 
-	return worker
+	return worker, nil
 }

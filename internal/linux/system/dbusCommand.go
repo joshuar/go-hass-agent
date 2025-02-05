@@ -8,7 +8,7 @@ package system
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"log/slog"
 
 	"github.com/eclipse/paho.golang/paho"
@@ -25,6 +25,8 @@ import (
 const (
 	dbusCmdPreferencesID = controlsPrefPrefix + "dbus_commands"
 )
+
+var ErrInitDBusCommands = errors.New("could not init D-Bus commands worker")
 
 type dbusCommandMsg struct {
 	Bus            string `json:"bus"`
@@ -52,7 +54,7 @@ func NewDBusCommandSubscription(ctx context.Context, device *mqtthass.Device) (*
 
 	prefs, err := preferences.LoadWorker(worker)
 	if err != nil {
-		return nil, fmt.Errorf("could not load preferences: %w", err)
+		return nil, errors.Join(ErrInitDBusCommands, err)
 	}
 
 	//nolint:nilnil
@@ -62,12 +64,12 @@ func NewDBusCommandSubscription(ctx context.Context, device *mqtthass.Device) (*
 
 	systemBus, ok := linux.CtxGetSystemBus(ctx)
 	if !ok {
-		return nil, linux.ErrNoSystemBus
+		return nil, errors.Join(ErrInitDBusCommands, linux.ErrNoSystemBus)
 	}
 
 	sessionBus, ok := linux.CtxGetSessionBus(ctx)
 	if !ok {
-		return nil, linux.ErrNoSessionBus
+		return nil, errors.Join(ErrInitDBusCommands, linux.ErrNoSessionBus)
 	}
 
 	busMap := map[string]*dbusx.Bus{"session": sessionBus, "system": systemBus}

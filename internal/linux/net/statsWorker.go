@@ -5,6 +5,7 @@ package net
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"slices"
@@ -23,6 +24,8 @@ import (
 const (
 	statsWorkerPrefID = prefPrefix + "usage"
 )
+
+var ErrInitStatsWorker = errors.New("could not init network stats worker")
 
 type StatsWorkerPrefs struct {
 	WorkerPrefs
@@ -204,7 +207,8 @@ func (w *netStatsWorker) getLinkStats(links []rtnetlink.LinkMessage) []linkStats
 func NewNetStatsWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
 	conn, err := rtnetlink.Dial(nil)
 	if err != nil {
-		return nil, fmt.Errorf("could not connect to netlink: %w", err)
+		return nil, errors.Join(ErrInitStatsWorker,
+			fmt.Errorf("could not connect to netlink: %w", err))
 	}
 
 	go func() {
@@ -225,7 +229,7 @@ func NewNetStatsWorker(ctx context.Context) (*linux.PollingSensorWorker, error) 
 
 	ratesWorker.prefs, err = preferences.LoadWorker(ratesWorker)
 	if err != nil {
-		return nil, fmt.Errorf("could not load preferences: %w", err)
+		return nil, errors.Join(ErrInitStatsWorker, err)
 	}
 
 	//nolint:nilnil

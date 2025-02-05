@@ -8,6 +8,7 @@ package power
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 
@@ -26,6 +27,8 @@ const (
 	screenUnlockedIcon    = "mdi:eye-lock-open"
 	screenLockUnknownIcon = "mdi:lock-alert"
 )
+
+var ErrInitScreenLockWorker = errors.New("could not init screen lock worker")
 
 func newScreenlockSensor(value bool) sensor.Entity {
 	return sensor.NewSensor(
@@ -135,7 +138,7 @@ func NewScreenLockWorker(ctx context.Context) (*linux.EventSensorWorker, error) 
 
 	lockWorker.prefs, err = preferences.LoadWorker(lockWorker)
 	if err != nil {
-		return nil, fmt.Errorf("could not load preferences: %w", err)
+		return nil, errors.Join(ErrInitScreenLockWorker, err)
 	}
 
 	if lockWorker.prefs.IsDisabled() {
@@ -144,12 +147,12 @@ func NewScreenLockWorker(ctx context.Context) (*linux.EventSensorWorker, error) 
 
 	bus, ok := linux.CtxGetSystemBus(ctx)
 	if !ok {
-		return worker, linux.ErrNoSystemBus
+		return worker, errors.Join(ErrInitScreenLockWorker, linux.ErrNoSystemBus)
 	}
 
 	sessionPath, ok := linux.CtxGetSessionPath(ctx)
 	if !ok {
-		return worker, linux.ErrNoSessionPath
+		return worker, errors.Join(ErrInitScreenLockWorker, linux.ErrNoSessionPath)
 	}
 
 	lockWorker.triggerCh, err = dbusx.NewWatch(
@@ -157,7 +160,8 @@ func NewScreenLockWorker(ctx context.Context) (*linux.EventSensorWorker, error) 
 		dbusx.MatchMembers(sessionLockSignal, sessionUnlockSignal, sessionLockedProp, "PropertiesChanged"),
 	).Start(ctx, bus)
 	if err != nil {
-		return worker, fmt.Errorf("unable to create D-Bus watch for screen lock state: %w", err)
+		return worker, errors.Join(ErrInitScreenLockWorker,
+			fmt.Errorf("unable to create D-Bus watch for screen lock state: %w", err))
 	}
 
 	lockWorker.screenLockProp = dbusx.NewProperty[bool](bus, sessionPath, loginBaseInterface, sessionInterface+"."+sessionLockedProp)

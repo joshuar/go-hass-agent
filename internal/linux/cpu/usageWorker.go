@@ -7,6 +7,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -28,6 +29,8 @@ const (
 	cpuUsageWorkerID      = "cpu_usage_sensors"
 	cpuUsagePreferencesID = prefPrefix + "usage"
 )
+
+var ErrInitUsageWorker = errors.New("could not init CPU usage worker")
 
 type usageWorker struct {
 	boottime    time.Time
@@ -59,12 +62,12 @@ func (w *usageWorker) DefaultPreferences() UsagePrefs {
 func NewUsageWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
 	clktck, found := linux.CtxGetClkTck(ctx)
 	if !found {
-		return nil, fmt.Errorf("%w: no clktck value", linux.ErrInvalidCtx)
+		return nil, errors.Join(ErrInitUsageWorker, fmt.Errorf("%w: no clktck value", linux.ErrInvalidCtx))
 	}
 
 	boottime, found := linux.CtxGetBoottime(ctx)
 	if !found {
-		return nil, fmt.Errorf("%w: no boottime value", linux.ErrInvalidCtx)
+		return nil, errors.Join(ErrInitUsageWorker, fmt.Errorf("%w: no boottime value", linux.ErrInvalidCtx))
 	}
 
 	cpuUsageWorker := &usageWorker{
@@ -79,7 +82,7 @@ func NewUsageWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
 
 	prefs, err := preferences.LoadWorker(cpuUsageWorker)
 	if err != nil {
-		return nil, fmt.Errorf("could not load preferences: %w", err)
+		return nil, errors.Join(ErrInitUsageWorker, err)
 	}
 
 	//nolint:nilnil
