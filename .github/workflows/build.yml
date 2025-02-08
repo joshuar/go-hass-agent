@@ -24,7 +24,7 @@ jobs:
       contents: write
       pull-requests: write
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-20.04
     outputs:
       release_created: ${{ steps.release_please.outputs.release_created }}
       release_tag: ${{ steps.release_please.outputs.tag_name }}
@@ -47,7 +47,7 @@ jobs:
     permissions:
       contents: write
     # if: ${{ !startsWith( 'doc') }}
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-20.04
     strategy:
       matrix:
         platform:
@@ -150,7 +150,7 @@ jobs:
     permissions:
       contents: write
       packages: write
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-20.04
     # NOTE: Ubuntu does not provide a container for armv6, so we can't build for that :(
     strategy:
       matrix:
