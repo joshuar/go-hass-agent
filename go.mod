@@ -3,7 +3,7 @@ module github.com/joshuar/go-hass-agent
 go 1.23.4
 
 require (
-	fyne.io/fyne/v2 v2.5.3
+	fyne.io/fyne/v2 v2.5.4
 	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/eclipse/paho.golang v0.22.0
 	github.com/go-playground/validator/v10 v10.24.0
@@ -83,6 +83,7 @@ require (
 	github.com/muesli/mango-cobra v1.2.0 // indirect
 	github.com/muesli/mango-pflag v0.1.0 // indirect
 	github.com/muesli/roff v0.1.0 // indirect
+	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646 // indirect
 	github.com/nicksnyder/go-i18n/v2 v2.4.0 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pjbgf/sha1cd v0.3.0 // indirect
