@@ -15,6 +15,7 @@ import (
 	_ "github.com/goreleaser/nfpm/v2/cmd/nfpm"
 	_ "github.com/magefile/mage"
 	_ "github.com/matryer/moq"
+	_ "github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen"
 	_ "github.com/yassinebenaid/godump"
 	_ "golang.org/x/tools/cmd/stringer"
 )
