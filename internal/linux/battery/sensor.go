@@ -19,6 +19,8 @@ import (
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
+const unknownValue = "Unknown"
+
 // newBatterySensor creates a new sensor for Home Assistant from a battery
 // property.
 func newBatterySensor(ctx context.Context, battery *upowerBattery, sensorType sensorType, value dbus.Variant) (models.Entity, error) {
@@ -63,7 +65,7 @@ func newBatterySensor(ctx context.Context, battery *upowerBattery, sensorType se
 		icon = batteryIcon
 	}
 
-	return sensor.NewSensor(ctx,
+	entity, err := sensor.NewSensor(ctx,
 		sensor.WithName(name),
 		sensor.WithID(id),
 		sensor.WithDeviceClass(deviceClass),
@@ -74,37 +76,42 @@ func newBatterySensor(ctx context.Context, battery *upowerBattery, sensorType se
 		sensor.WithState(generateSensorState(sensorType, value.Value())),
 		sensor.WithAttributes(generateSensorAttributes(sensorType, battery)),
 	)
+	if err != nil {
+		return entity, fmt.Errorf("could not generate %s battery sensor: %w", name, err)
+	}
+
+	return entity, nil
 }
 
 // generateSensorState will take the raw value (from D-Bus) and format it as
 // appropriate for the battery sensor type.
 func generateSensorState(sensorType sensorType, value any) any {
 	if value == nil {
-		return "Unknown"
+		return unknownValue
 	}
 
 	switch sensorType {
 	case typeVoltage, typeTemp, typeEnergy, typeEnergyRate, typePercentage:
 		if value, ok := value.(float64); !ok {
-			return "Unknown"
+			return unknownValue
 		} else {
 			return value
 		}
 	case typeState:
 		if value, ok := value.(uint32); !ok {
-			return "Unknown"
+			return unknownValue
 		} else {
 			return chargingState(value).String()
 		}
 	case typeLevel:
 		if value, ok := value.(uint32); !ok {
-			return "Unknown"
+			return unknownValue
 		} else {
 			return level(value).String()
 		}
 	default:
 		if value, ok := value.(string); !ok {
-			return "Unknown"
+			return unknownValue
 		} else {
 			return value
 		}
