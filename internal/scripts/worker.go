@@ -17,7 +17,7 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/models"
 )
 
 var (
@@ -34,7 +34,7 @@ type job struct {
 }
 
 type Worker struct {
-	sensorCh  chan sensor.Entity
+	sensorCh  chan models.Entity
 	scheduler *cron.Cron
 	logger    *slog.Logger
 	jobs      []job
@@ -49,13 +49,13 @@ func (c *Worker) ID() string {
 	return "scripts"
 }
 
-func (c *Worker) States(_ context.Context) []sensor.Entity {
-	var sensors []sensor.Entity
+func (c *Worker) States(ctx context.Context) []models.Entity {
+	var sensors []models.Entity
 
 	for _, worker := range c.activeJobs() {
 		found := slices.IndexFunc(c.jobs, func(j job) bool { return j.path == worker })
 
-		jobSensors, err := c.jobs[found].Execute()
+		jobSensors, err := c.jobs[found].Execute(ctx)
 		if err != nil {
 			c.logger.Warn("Could not retrieve script sensors",
 				slog.String("script", c.jobs[found].path),
@@ -93,17 +93,17 @@ func (c *Worker) inactiveJobs() []string {
 	return inactiveScripts
 }
 
-func (c *Worker) Start(ctx context.Context) (<-chan sensor.Entity, error) {
-	c.sensorCh = make(chan sensor.Entity)
+func (c *Worker) Start(ctx context.Context) (<-chan models.Entity, error) {
+	c.sensorCh = make(chan models.Entity)
 
 	for idx := range c.inactiveJobs() {
 		var (
-			sensors []sensor.Entity
+			sensors []models.Entity
 			err     error
 		)
 		// Schedule the script.
 		id, err := c.scheduler.AddFunc(c.jobs[idx].Schedule(), func() {
-			sensors, err = c.jobs[idx].Execute()
+			sensors, err = c.jobs[idx].Execute(ctx)
 			if err != nil {
 				c.logger.Warn("Could not execute script.",
 					c.jobs[idx].logAttrs,

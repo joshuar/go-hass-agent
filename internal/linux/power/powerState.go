@@ -15,9 +15,10 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/models"
+	"github.com/joshuar/go-hass-agent/internal/models/class"
+	"github.com/joshuar/go-hass-agent/internal/models/sensor"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
@@ -36,26 +37,24 @@ var ErrInitPowerStateWorker = errors.New("could not init power state worker")
 
 type powerSignal int
 
-func newPowerState(name powerSignal, value any) sensor.Entity {
-	return sensor.NewSensor(
+func newPowerState(ctx context.Context, name powerSignal, value any) (models.Entity, error) {
+	return sensor.NewSensor(ctx,
 		sensor.WithName("Power State"),
 		sensor.WithID("power_state"),
-		sensor.WithDeviceClass(types.SensorDeviceClassEnum),
+		sensor.WithDeviceClass(class.SensorClassEnum),
 		sensor.AsDiagnostic(),
-		sensor.WithState(
-			sensor.WithIcon(powerStateIcon(value)),
-			sensor.WithValue(powerStateString(name, value)),
-			sensor.WithDataSourceAttribute(linux.DataSrcDbus),
-			sensor.WithAttribute("options", []string{"Powered On", "Powered Off", "Suspended"}),
-		),
-		sensor.WithRequestRetry(true),
+		sensor.WithIcon(powerStateIcon(value)),
+		sensor.WithState(powerStateString(name, value)),
+		sensor.WithDataSourceAttribute(linux.DataSrcDbus),
+		sensor.WithAttribute("options", []string{"Powered On", "Powered Off", "Suspended"}),
+		sensor.AsRetryableRequest(true),
 	)
 }
 
 func powerStateString(signal powerSignal, value any) string {
 	state, ok := value.(bool)
 	if !ok {
-		return sensor.StateUnknown
+		return "Unknown"
 	}
 
 	switch {
@@ -89,8 +88,8 @@ type stateWorker struct {
 	prefs     *preferences.CommonWorkerPrefs
 }
 
-func (w *stateWorker) Events(ctx context.Context) (<-chan sensor.Entity, error) {
-	sensorCh := make(chan sensor.Entity)
+func (w *stateWorker) Events(ctx context.Context) (<-chan models.Entity, error) {
+	sensorCh := make(chan models.Entity)
 
 	// Watch for state changes.
 	go func() {
@@ -101,12 +100,24 @@ func (w *stateWorker) Events(ctx context.Context) (<-chan sensor.Entity, error) 
 			case <-ctx.Done():
 				return
 			case event := <-w.triggerCh:
+				var (
+					entity models.Entity
+					err    error
+				)
+
 				switch {
 				case strings.HasSuffix(event.Signal, sleepSignal):
-					sensorCh <- newPowerState(suspend, event.Content[0])
+					entity, err = newPowerState(ctx, suspend, event.Content[0])
 				case strings.HasSuffix(event.Signal, shutdownSignal):
-					sensorCh <- newPowerState(shutdown, event.Content[0])
+					entity, err = newPowerState(ctx, shutdown, event.Content[0])
 				}
+
+				if err != nil {
+					logging.FromContext(ctx).Warn("Could not generate power state sensor: %w", err)
+					continue
+				}
+
+				sensorCh <- entity
 			}
 		}
 	}()
@@ -133,8 +144,13 @@ func (w *stateWorker) Events(ctx context.Context) (<-chan sensor.Entity, error) 
 // Sensors returns the current sensors states. Assuming that if this is called,
 // then the machine is obviously running and not suspended, otherwise this
 // couldn't be called?
-func (w *stateWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
-	return []sensor.Entity{newPowerState(shutdown, false)}, nil
+func (w *stateWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
+	entity, err := newPowerState(ctx, shutdown, false)
+	if err != nil {
+		return nil, fmt.Errorf("could not generate power state sensor: %w", err)
+	}
+
+	return []models.Entity{entity}, nil
 }
 
 func (w *stateWorker) PreferencesID() string {

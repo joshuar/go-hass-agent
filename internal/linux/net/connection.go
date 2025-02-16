@@ -14,7 +14,8 @@ import (
 
 	"github.com/godbus/dbus/v5"
 
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/components/logging"
+	"github.com/joshuar/go-hass-agent/internal/models"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
@@ -75,8 +76,8 @@ func newConnection(bus *dbusx.Bus, path dbus.ObjectPath) (*connection, error) {
 // monitor will set up a D-Bus watch on the connection path for
 // connection property changes and send those back through the returned channel
 // as sensors.
-func (c *connection) monitor(ctx context.Context, bus *dbusx.Bus) <-chan sensor.Entity {
-	sensorCh := make(chan sensor.Entity)
+func (c *connection) monitor(ctx context.Context, bus *dbusx.Bus) <-chan models.Entity {
+	sensorCh := make(chan models.Entity)
 
 	// Monitor connection properties.
 	go func() {
@@ -109,21 +110,27 @@ func (c *connection) monitor(ctx context.Context, bus *dbusx.Bus) <-chan sensor.
 //
 //nolint:gocognit,gocyclo,cyclop
 //revive:disable:function-length
-func (c *connection) monitorConnection(ctx context.Context, bus *dbusx.Bus) <-chan sensor.Entity {
-	sensorCh := make(chan sensor.Entity)
+func (c *connection) monitorConnection(ctx context.Context, bus *dbusx.Bus) <-chan models.Entity {
+	sensorCh := make(chan models.Entity)
 	monitorCtx, monitorCancel := context.WithCancel(ctx)
 
 	// Create sensors for monitored properties.
-	stateSensor := newConnectionStateSensor(bus, string(c.path), c.name)
-	if err := stateSensor.updateState(); err != nil {
+	stateSensor, err := newConnectionStateSensor(bus, string(c.path), c.name)
+	if err != nil {
 		c.logger.Debug("Could not update sensor.",
-			slog.String("sensor", stateSensor.Name),
+			slog.String("sensor", stateSensor.name),
 			slog.Any("error", err))
 	}
 
 	// Send initial states as sensors
 	go func() {
-		sensorCh <- stateSensor.Entity
+		if entity, err := stateSensor.generateEntity(ctx); err != nil {
+			c.logger.Debug("Could not generate sensor from connection state.",
+				slog.String("sensor", stateSensor.name),
+				slog.Any("error", err))
+		} else {
+			sensorCh <- entity
+		}
 	}()
 
 	triggerCh, err := dbusx.NewWatch(
@@ -166,8 +173,13 @@ func (c *connection) monitorConnection(ctx context.Context, bus *dbusx.Bus) <-ch
 						if err := stateSensor.setState(value); err != nil {
 							c.logger.Warn("Could not update connection state sensor.", slog.Any("error", err))
 						} else {
-							// Send the connection state as a sensor.
-							sensorCh <- stateSensor.Entity
+							if entity, err := stateSensor.generateEntity(ctx); err != nil {
+								c.logger.Debug("Could not generate sensor from connection state.",
+									slog.String("sensor", stateSensor.name),
+									slog.Any("error", err))
+							} else {
+								sensorCh <- entity
+							}
 						}
 					default:
 						c.logger.Debug("Unhandled property changed.",
@@ -178,7 +190,7 @@ func (c *connection) monitorConnection(ctx context.Context, bus *dbusx.Bus) <-ch
 				}
 			}
 
-			if stateSensor.Entity.Value == connOffline.String() {
+			if stateSensor.state == connOffline.String() {
 				break
 			}
 		}
@@ -190,15 +202,15 @@ func (c *connection) monitorConnection(ctx context.Context, bus *dbusx.Bus) <-ch
 // monitorWifi will monitor wifi connection properties.
 //
 //nolint:gocognit
-func (c *connection) monitorWifi(ctx context.Context, bus *dbusx.Bus) <-chan sensor.Entity {
+func (c *connection) monitorWifi(ctx context.Context, bus *dbusx.Bus) <-chan models.Entity {
 	triggerCh := make(chan dbusx.Trigger)
-	sensorCh := make(chan sensor.Entity)
+	sensorCh := make(chan models.Entity)
 	monitorCtx, monitorCancel := context.WithCancel(ctx)
 
 	// Get and send initial values for wifi props.
 	go func() {
 		for _, ap := range c.getWifiAPs(bus) {
-			for _, wifiSensor := range getWifiSensors(bus, string(ap)) {
+			for _, wifiSensor := range getWifiSensors(ctx, bus, string(ap)) {
 				sensorCh <- wifiSensor
 			}
 		}
@@ -228,7 +240,11 @@ func (c *connection) monitorWifi(ctx context.Context, bus *dbusx.Bus) <-chan sen
 
 				for prop, value := range props.Changed {
 					if slices.Contains(apPropList, prop) { // Wifi property changed.
-						sensorCh <- newWifiSensor(prop, value.Value())
+						if entity, err := newWifiSensor(ctx, prop, value.Value()); err != nil {
+							logging.FromContext(ctx).Warn("Could not generate new wifi property sensor.", slog.Any("error", err))
+						} else {
+							sensorCh <- entity
+						}
 					}
 				}
 			}

@@ -12,8 +12,7 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
-	"github.com/joshuar/go-hass-agent/internal/hass/event"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/models"
 )
 
 var ErrUnknownWorker = errors.New("unknown sensor worker type")
@@ -21,24 +20,24 @@ var ErrUnknownWorker = errors.New("unknown sensor worker type")
 // PollingSensorType interface represents sensors that are generated on some poll interval.
 type PollingSensorType interface {
 	UpdateDelta(delta time.Duration)
-	Sensors(ctx context.Context) ([]sensor.Entity, error)
+	Sensors(ctx context.Context) ([]models.Entity, error)
 }
 
 // EventSensorType interface represents sensors that are generated on some event
 // trigger, such as D-Bus messages.
 type EventSensorType interface {
-	Events(ctx context.Context) (<-chan sensor.Entity, error)
-	Sensors(ctx context.Context) ([]sensor.Entity, error)
+	Events(ctx context.Context) (<-chan models.Entity, error)
+	Sensors(ctx context.Context) ([]models.Entity, error)
 }
 
 // OneShotSensorType interface represents sensors that are generated only one-time and
 // have no ongoing updates.
 type OneShotSensorType interface {
-	Sensors(ctx context.Context) ([]sensor.Entity, error)
+	Sensors(ctx context.Context) ([]models.Entity, error)
 }
 
 type EventType interface {
-	Events(ctx context.Context) (<-chan event.Event, error)
+	Events(ctx context.Context) (<-chan models.Entity, error)
 }
 
 // Worker is a struct embedded in other specific worker structs. It holds
@@ -83,7 +82,7 @@ func (w *EventSensorWorker) IsDisabled() bool {
 	return false
 }
 
-func (w *EventSensorWorker) Start(ctx context.Context) (<-chan sensor.Entity, error) {
+func (w *EventSensorWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
 	// Create a new context for the updates scope.
 	updatesCtx, cancelFunc := context.WithCancel(ctx)
 	// Save the context cancelFunc in the worker to be used as part of its
@@ -121,7 +120,7 @@ func (w *PollingSensorWorker) IsDisabled() bool {
 	return false
 }
 
-func (w *PollingSensorWorker) Start(ctx context.Context) (<-chan sensor.Entity, error) {
+func (w *PollingSensorWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
 	// Create a new context for the updates scope.
 	updatesCtx, cancelFunc := context.WithCancel(ctx)
 	// Save the context cancelFunc in the worker to be used as part of its
@@ -159,7 +158,7 @@ func (w *OneShotSensorWorker) IsDisabled() bool {
 	return false
 }
 
-func (w *OneShotSensorWorker) Start(ctx context.Context) (<-chan sensor.Entity, error) {
+func (w *OneShotSensorWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
 	// Create a new context for the updates scope.
 	updatesCtx, cancelFunc := context.WithCancel(ctx)
 	// Save the context cancelFunc in the worker to be used as part of its
@@ -193,7 +192,7 @@ func (w *EventWorker) IsDisabled() bool {
 	return false
 }
 
-func (w *EventWorker) Start(ctx context.Context) (<-chan event.Event, error) {
+func (w *EventWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
 	// Create a new context for the updates scope.
 	updatesCtx, cancelFunc := context.WithCancel(ctx)
 	// Save the context cancelFunc in the worker to be used as part of its
@@ -213,8 +212,8 @@ func NewEventWorker(id string) *EventWorker {
 // handleSensorPolling: create an updater function to run the worker's Sensors
 // function and pass this to the PollSensors helper, using the interval
 // and jitter the worker has requested.
-func handleSensorPolling(ctx context.Context, interval, jitter time.Duration, worker PollingSensorType) <-chan sensor.Entity {
-	outCh := make(chan sensor.Entity)
+func handleSensorPolling(ctx context.Context, interval, jitter time.Duration, worker PollingSensorType) <-chan models.Entity {
+	outCh := make(chan models.Entity)
 
 	updater := func(d time.Duration) {
 		// Send the delta (time since last poll) to the worker. Some workers may
@@ -251,8 +250,8 @@ func handleSensorPolling(ctx context.Context, interval, jitter time.Duration, wo
 }
 
 // handleSensorEvents: read sensors from the worker Events function and pass these on.
-func handleSensorEvents(ctx context.Context, worker EventSensorType) <-chan sensor.Entity {
-	outCh := make(chan sensor.Entity)
+func handleSensorEvents(ctx context.Context, worker EventSensorType) <-chan models.Entity {
+	outCh := make(chan models.Entity)
 
 	go func() {
 		defer close(outCh)
@@ -276,8 +275,8 @@ func handleSensorEvents(ctx context.Context, worker EventSensorType) <-chan sens
 
 // handleSensorOneShot: run the worker Sensors function to gather the sensors, pass these
 // through the channel, then close it.
-func handleSensorOneShot(ctx context.Context, worker OneShotSensorType) <-chan sensor.Entity {
-	outCh := make(chan sensor.Entity)
+func handleSensorOneShot(ctx context.Context, worker OneShotSensorType) <-chan models.Entity {
+	outCh := make(chan models.Entity)
 
 	go func() {
 		defer close(outCh)
@@ -300,8 +299,8 @@ func handleSensorOneShot(ctx context.Context, worker OneShotSensorType) <-chan s
 }
 
 // handleEvents: read events from the worker Events function and pass these on.
-func handleEvents(ctx context.Context, worker EventType) <-chan event.Event {
-	outCh := make(chan event.Event)
+func handleEvents(ctx context.Context, worker EventType) <-chan models.Entity {
+	outCh := make(chan models.Entity)
 
 	go func() {
 		defer close(outCh)

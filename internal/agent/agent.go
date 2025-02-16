@@ -17,6 +17,8 @@ import (
 	fyneui "github.com/joshuar/go-hass-agent/internal/agent/ui/fyneUI"
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
+	"github.com/joshuar/go-hass-agent/internal/hass"
+	"github.com/joshuar/go-hass-agent/internal/models"
 	"github.com/joshuar/go-hass-agent/internal/scripts"
 )
 
@@ -31,6 +33,10 @@ type ui interface {
 	Run(ctx context.Context)
 }
 
+type APIs interface {
+	Hass() *hass.Client
+}
+
 // Agent represents a running agent.
 type Agent struct {
 	ui     ui
@@ -38,14 +44,14 @@ type Agent struct {
 }
 
 // newAgent creates the Agent struct.
-func newAgent(ctx context.Context, headless bool, tracker fyneui.Tracker) *Agent {
+func newAgent(ctx context.Context, headless bool, api APIs) *Agent {
 	agent := &Agent{
 		logger: logging.FromContext(ctx).WithGroup("agent"),
 	}
 
 	// If not running headless, set up the UI.
 	if !headless {
-		agent.ui = fyneui.NewFyneUI(ctx, tracker)
+		agent.ui = fyneui.NewFyneUI(ctx, api.Hass())
 	}
 
 	return agent
@@ -53,30 +59,34 @@ func newAgent(ctx context.Context, headless bool, tracker fyneui.Tracker) *Agent
 
 // Run is invoked when Go Hass Agent is run with the `run` command-line option
 // (i.e., `go-hass-agent run`).
-func Run(ctx context.Context, headless bool, dataCh chan any, tracker fyneui.Tracker) error {
+func Run(ctx context.Context, headless bool, api APIs) error {
 	var (
 		wg      sync.WaitGroup
 		regWait sync.WaitGroup
 		err     error
 	)
 
-	defer close(dataCh)
-
 	// Create struct.
 	ctx, cancelFunc := context.WithCancel(ctx)
 	defer cancelFunc()
 
-	agent := newAgent(ctx, headless, tracker)
+	agent := newAgent(ctx, headless, api)
 
 	regWait.Add(1)
 
 	go func() {
 		defer regWait.Done()
 		// Check if the agent is registered. If not, start a registration flow.
-		if err = checkRegistration(ctx, headless, agent.ui); err != nil {
+		if err = checkRegistration(ctx, headless, api.Hass(), agent.ui); err != nil {
 			agent.logger.Error("Error checking registration status.", slog.Any("error", err))
 			cancelFunc()
 		}
+	}()
+
+	dataCh := make(chan models.Entity)
+	defer close(dataCh)
+	go func() {
+		api.Hass().EntityHandler(ctx, dataCh)
 	}()
 
 	wg.Add(1)
@@ -169,7 +179,7 @@ func Run(ctx context.Context, headless bool, dataCh chan any, tracker fyneui.Tra
 // Register is run when Go Hass Agent is invoked with the `register`
 // command-line option (i.e., `go-hass-agent register`). It will attempt to
 // register Go Hass Agent with Home Assistant.
-func Register(ctx context.Context, headless bool) error {
+func Register(ctx context.Context, headless bool, api APIs) error {
 	var wg sync.WaitGroup
 
 	agent := newAgent(ctx, headless, nil)
@@ -185,7 +195,7 @@ func Register(ctx context.Context, headless bool) error {
 	go func() {
 		defer wg.Done()
 
-		if err := checkRegistration(regCtx, headless, agent.ui); err != nil {
+		if err := checkRegistration(regCtx, headless, api.Hass(), agent.ui); err != nil {
 			agent.logger.Error("Error checking registration status", slog.Any("error", err))
 		}
 

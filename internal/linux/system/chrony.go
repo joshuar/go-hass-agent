@@ -17,9 +17,10 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/models"
+	"github.com/joshuar/go-hass-agent/internal/models/class"
+	"github.com/joshuar/go-hass-agent/internal/models/sensor"
 )
 
 const (
@@ -42,14 +43,19 @@ type chronyWorker struct {
 //revive:disable:unused-receiver
 func (w *chronyWorker) UpdateDelta(_ time.Duration) {}
 
-func (w *chronyWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
+func (w *chronyWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 	// Get chrony tracking stats via chronyc.
 	stats, err := w.getChronyTrackingStats()
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve chrony stats: %w", err)
 	}
 	// Generate a sensor.
-	return []sensor.Entity{newChronyOffsetSensor(stats)}, nil
+	entity, err := newChronyOffsetSensor(ctx, stats)
+	if err != nil {
+		return nil, fmt.Errorf("could not generate chrony sensor: %w", err)
+	}
+
+	return []models.Entity{entity}, nil
 }
 
 func (w *chronyWorker) PreferencesID() string {
@@ -86,7 +92,7 @@ func (w *chronyWorker) getChronyTrackingStats() (map[string]string, error) {
 // newChronyOffsetSensor creates a new sensor representing the system clock
 // offset from the NTP server time. Attributes contain other stats acquired from
 // chrony.
-func newChronyOffsetSensor(stats map[string]string) sensor.Entity {
+func newChronyOffsetSensor(ctx context.Context, stats map[string]string) (models.Entity, error) {
 	var value any
 
 	// Try to parse the value into a float. If failed, use the string value.
@@ -113,17 +119,15 @@ func newChronyOffsetSensor(stats map[string]string) sensor.Entity {
 		attrs[attr] = value
 	}
 
-	return sensor.NewSensor(
+	return sensor.NewSensor(ctx,
 		sensor.WithName("Chrony System Time Offset"),
 		sensor.WithID("chrony_system_time_offset"),
 		sensor.AsDiagnostic(),
 		sensor.WithUnits("s"),
-		sensor.WithStateClass(types.StateClassMeasurement),
-		sensor.WithState(
-			sensor.WithIcon("mdi:clock"),
-			sensor.WithValue(value),
-			sensor.WithAttributes(attrs),
-		),
+		sensor.WithStateClass(class.StateMeasurement),
+		sensor.WithIcon("mdi:clock"),
+		sensor.WithState(value),
+		sensor.WithAttributes(attrs),
 	)
 }
 

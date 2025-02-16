@@ -7,13 +7,15 @@
 package net
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/godbus/dbus/v5"
 	"github.com/iancoleman/strcase"
 
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/models"
+	"github.com/joshuar/go-hass-agent/internal/models/sensor"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
@@ -38,8 +40,20 @@ type connState uint32
 type connIcon uint32
 
 type connectionStateSensor struct {
+	name      string
+	state     string
+	icon      string
 	stateProp *dbusx.Property[connState]
-	sensor.Entity
+}
+
+func (c *connectionStateSensor) generateEntity(ctx context.Context) (models.Entity, error) {
+	return sensor.NewSensor(ctx,
+		sensor.WithName(c.name+" Connection State"),
+		sensor.WithID(strcase.ToSnake(c.name)+"_connection_state"),
+		sensor.WithDataSourceAttribute(linux.DataSrcDbus),
+		sensor.WithState(c.state),
+		sensor.WithIcon(c.icon),
+	)
 }
 
 func (c *connectionStateSensor) setState(state any) error {
@@ -48,12 +62,12 @@ func (c *connectionStateSensor) setState(state any) error {
 		if state, err := dbusx.VariantToValue[connState](value); err != nil {
 			return fmt.Errorf("could not parse updated connection state: %w", err)
 		} else {
-			c.UpdateValue(state.String())
-			c.UpdateIcon(connIcon(state).String())
+			c.state = state.String()
+			c.icon = connIcon(state).String()
 		}
 	case uint32:
-		c.UpdateValue(connState(value).String())
-		c.UpdateIcon(connIcon(value).String())
+		c.state = connState(value).String()
+		c.icon = connIcon(value).String()
 	default:
 		return ErrUnsupportedValue
 	}
@@ -67,21 +81,21 @@ func (c *connectionStateSensor) updateState() error {
 		return fmt.Errorf("cannot update state: %w", err)
 	}
 
-	c.UpdateValue(state.String())
-	c.UpdateIcon(connIcon(state).String())
+	c.state = state.String()
+	c.state = connIcon(state).String()
 
 	return nil
 }
 
-func newConnectionStateSensor(bus *dbusx.Bus, connectionPath, connectionName string) *connectionStateSensor {
-	return &connectionStateSensor{
-		Entity: sensor.NewSensor(
-			sensor.WithName(connectionName+" Connection State"),
-			sensor.WithID(strcase.ToSnake(connectionName)+"_connection_state"),
-			sensor.WithState(
-				sensor.WithDataSourceAttribute(linux.DataSrcDbus),
-			),
-		),
+func newConnectionStateSensor(bus *dbusx.Bus, connectionPath, connectionName string) (*connectionStateSensor, error) {
+	conn := &connectionStateSensor{
+		name:      connectionName,
 		stateProp: dbusx.NewProperty[connState](bus, connectionPath, dBusNMObj, connectionStateProp),
 	}
+
+	if err := conn.updateState(); err != nil {
+		return nil, fmt.Errorf("cannot create connection sensor: %w", err)
+	}
+
+	return conn, nil
 }

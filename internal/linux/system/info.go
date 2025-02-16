@@ -9,13 +9,15 @@ package system
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/device"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/models"
+	"github.com/joshuar/go-hass-agent/internal/models/sensor"
 )
 
 const (
@@ -35,8 +37,9 @@ func (w *infoWorker) DefaultPreferences() preferences.CommonWorkerPrefs {
 	return preferences.CommonWorkerPrefs{}
 }
 
-func (w *infoWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
-	var sensors []sensor.Entity
+func (w *infoWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
+	var sensors []models.Entity
+	var errs error
 
 	// Get distribution name and version.
 	distro, version, err := device.GetOSDetails()
@@ -45,28 +48,39 @@ func (w *infoWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
 			With(slog.String("worker", infoWorkerID)).
 			Warn("Could not retrieve distro details.", slog.Any("error", err))
 	} else {
-		sensors = append(sensors,
-			sensor.NewSensor(
-				sensor.WithName("Distribution Name"),
-				sensor.WithID("distribution_name"),
-				sensor.AsDiagnostic(),
-				sensor.WithState(
-					sensor.WithIcon("mdi:linux"),
-					sensor.WithValue(distro),
-					sensor.WithDataSourceAttribute(linux.DataSrcProcfs),
-				),
-			),
-			sensor.NewSensor(
-				sensor.WithName("Distribution Version"),
-				sensor.WithID("distribution_version"),
-				sensor.AsDiagnostic(),
-				sensor.WithState(
-					sensor.WithIcon("mdi:numeric"),
-					sensor.WithValue(version),
-					sensor.WithDataSourceAttribute(linux.DataSrcProcfs),
-				),
-			),
+		var (
+			entity models.Entity
+			err    error
 		)
+
+		entity, err = sensor.NewSensor(ctx,
+			sensor.WithName("Distribution Name"),
+			sensor.WithID("distribution_name"),
+			sensor.AsDiagnostic(),
+			sensor.WithIcon("mdi:linux"),
+			sensor.WithState(distro),
+			sensor.WithDataSourceAttribute(linux.DataSrcProcfs),
+		)
+		if err != nil {
+			errs = errors.Join(errs, fmt.Errorf("could not generate distribution name sensor: %w", err))
+		} else {
+			sensors = append(sensors, entity)
+		}
+
+		entity, err = sensor.NewSensor(ctx,
+			sensor.WithName("Distribution Version"),
+			sensor.WithID("distribution_version"),
+			sensor.AsDiagnostic(),
+			sensor.WithIcon("mdi:numeric"),
+			sensor.WithState(version),
+			sensor.WithDataSourceAttribute(linux.DataSrcProcfs),
+		)
+		if err != nil {
+			errs = errors.Join(errs, fmt.Errorf("could not generate distribution version sensor: %w", err))
+		} else {
+			sensors = append(sensors, entity)
+		}
+
 	}
 
 	// Get kernel version.
@@ -76,21 +90,22 @@ func (w *infoWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
 			With(slog.String("worker", infoWorkerID)).
 			Warn("Could not retrieve kernel version.", slog.Any("error", err))
 	} else {
-		sensors = append(sensors,
-			sensor.NewSensor(
-				sensor.WithName("Kernel Version"),
-				sensor.WithID("kernel_version"),
-				sensor.AsDiagnostic(),
-				sensor.WithState(
-					sensor.WithIcon("mdi:chip"),
-					sensor.WithValue(kernelVersion),
-					sensor.WithDataSourceAttribute(linux.DataSrcProcfs),
-				),
-			),
+		entity, err := sensor.NewSensor(ctx,
+			sensor.WithName("Kernel Version"),
+			sensor.WithID("kernel_version"),
+			sensor.AsDiagnostic(),
+			sensor.WithIcon("mdi:chip"),
+			sensor.WithState(kernelVersion),
+			sensor.WithDataSourceAttribute(linux.DataSrcProcfs),
 		)
+		if err != nil {
+			errs = errors.Join(errs, fmt.Errorf("could not generate kernel version sensor: %w", err))
+		} else {
+			sensors = append(sensors, entity)
+		}
 	}
 
-	return sensors, nil
+	return sensors, errs
 }
 
 func NewInfoWorker(_ context.Context) (*linux.OneShotSensorWorker, error) {

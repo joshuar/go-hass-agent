@@ -15,8 +15,9 @@ import (
 	"github.com/godbus/dbus/v5"
 
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/models"
+	"github.com/joshuar/go-hass-agent/internal/models/sensor"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
@@ -68,7 +69,7 @@ type fwupdWorker struct {
 }
 
 //nolint:errcheck
-func (w *fwupdWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
+func (w *fwupdWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 	props, err := w.hostSecurityAttrs.Fetch(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve security properties from fwupd: %w", err)
@@ -101,19 +102,19 @@ func (w *fwupdWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
 		}
 	}
 
-	return []sensor.Entity{
-			sensor.NewSensor(
-				sensor.WithName("Firmware Security"),
-				sensor.WithID("firmware_security"),
-				sensor.AsDiagnostic(),
-				sensor.WithState(
-					sensor.WithIcon("mdi:security"),
-					sensor.WithValue(hsiID[0]),
-					sensor.WithAttributes(attributes),
-				),
-			),
-		},
-		nil
+	entity, err := sensor.NewSensor(ctx,
+		sensor.WithName("Firmware Security"),
+		sensor.WithID("firmware_security"),
+		sensor.AsDiagnostic(),
+		sensor.WithIcon("mdi:security"),
+		sensor.WithState(hsiID[0]),
+		sensor.WithAttributes(attributes),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("could not generate fwupdmgr sensor: %w", err)
+	}
+
+	return []models.Entity{entity}, nil
 }
 
 func (w *fwupdWorker) PreferencesID() string {

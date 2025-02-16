@@ -14,10 +14,12 @@ import (
 
 	"github.com/godbus/dbus/v5"
 
+	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/models"
+	"github.com/joshuar/go-hass-agent/internal/models/class"
+	"github.com/joshuar/go-hass-agent/internal/models/sensor"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
@@ -59,11 +61,11 @@ type sensorWorker struct {
 	totalRunningApps int
 }
 
-func (w *sensorWorker) Events(ctx context.Context) (<-chan sensor.Entity, error) {
-	sensorCh := make(chan sensor.Entity)
+func (w *sensorWorker) Events(ctx context.Context) (<-chan models.Entity, error) {
+	sensorCh := make(chan models.Entity)
 	logger := slog.Default().With(slog.String("worker", desktopWorkerID))
 
-	sendSensors := func(ctx context.Context, sensorCh chan sensor.Entity) {
+	sendSensors := func(ctx context.Context, sensorCh chan models.Entity) {
 		appSensors, err := w.Sensors(ctx)
 		if err != nil {
 			logger.Debug("Failed to update app sensors.", slog.Any("error", err))
@@ -93,9 +95,9 @@ func (w *sensorWorker) Events(ctx context.Context) (<-chan sensor.Entity, error)
 	return sensorCh, nil
 }
 
-func (w *sensorWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
+func (w *sensorWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 	var (
-		sensors     []sensor.Entity
+		sensors     []models.Entity
 		runningApps []string
 	)
 
@@ -117,37 +119,41 @@ func (w *sensorWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 		// If the state is 2 this app is running and the currently active app.
 		if state == 2 && w.runningApp != name {
 			w.runningApp = name
-			sensors = append(sensors,
-				sensor.NewSensor(
-					sensor.WithName(activeAppsName),
-					sensor.WithID(activeAppsID),
-					sensor.AsTypeSensor(),
-					sensor.WithState(
-						sensor.WithIcon(activeAppsIcon),
-						sensor.WithValue(name),
-						sensor.WithDataSourceAttribute(linux.DataSrcDbus),
-					),
-				),
+
+			entity, err := sensor.NewSensor(ctx,
+				sensor.WithName(activeAppsName),
+				sensor.WithID(activeAppsID),
+				sensor.AsTypeSensor(),
+				sensor.WithIcon(activeAppsIcon),
+				sensor.WithState(name),
+				sensor.WithDataSourceAttribute(linux.DataSrcDbus),
 			)
+			if err != nil {
+				logging.FromContext(ctx).Warn("Could not generate active app sensor.", slog.Any("error", err))
+			} else {
+				sensors = append(sensors, entity)
+			}
 		}
 	}
 
 	// Update the running apps sensor.
 	if w.totalRunningApps != len(runningApps) {
-		sensors = append(sensors,
-			sensor.NewSensor(
-				sensor.WithName(runningAppsName),
-				sensor.WithID(runningAppsID),
-				sensor.WithUnits(runningAppsUnits),
-				sensor.WithStateClass(types.StateClassMeasurement),
-				sensor.WithState(
-					sensor.WithIcon(runningAppsIcon),
-					sensor.WithValue(len(runningApps)),
-					sensor.WithDataSourceAttribute(linux.DataSrcDbus),
-					sensor.WithAttribute("apps", runningApps),
-				),
-			),
+		entity, err := sensor.NewSensor(ctx,
+			sensor.WithName(runningAppsName),
+			sensor.WithID(runningAppsID),
+			sensor.WithUnits(runningAppsUnits),
+			sensor.WithStateClass(class.StateMeasurement),
+			sensor.WithIcon(runningAppsIcon),
+			sensor.WithState(len(runningApps)),
+			sensor.WithDataSourceAttribute(linux.DataSrcDbus),
+			sensor.WithAttribute("apps", runningApps),
 		)
+		if err != nil {
+			logging.FromContext(ctx).Warn("Could not generate active app sensor.", slog.Any("error", err))
+		} else {
+			sensors = append(sensors, entity)
+		}
+
 		w.totalRunningApps = len(runningApps)
 	}
 

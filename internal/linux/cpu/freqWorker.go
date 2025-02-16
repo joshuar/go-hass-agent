@@ -12,8 +12,8 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/models"
 )
 
 const (
@@ -30,11 +30,15 @@ type freqWorker struct{}
 
 func (w *freqWorker) UpdateDelta(_ time.Duration) {}
 
-func (w *freqWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
-	sensors := make([]sensor.Entity, totalCPUs)
+func (w *freqWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
+	sensors := make([]models.Entity, totalCPUs)
 
 	for i := range totalCPUs {
-		sensors[i] = newCPUFreqSensor("cpu" + strconv.Itoa(i))
+		entity, err := newCPUFreqSensor(ctx, "cpu"+strconv.Itoa(i))
+		if err != nil {
+			logging.FromContext(ctx).Warn("Could not create CPU frequency sensor: %w", err)
+		}
+		sensors[i] = entity
 	}
 
 	return sensors, nil

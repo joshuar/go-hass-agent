@@ -115,13 +115,17 @@ func (s *State) Validate() error {
 type Entity struct {
 	*State
 	requestMetadata
-	ID          string            `json:"unique_id" validate:"required"`
-	Name        string            `json:"name" validate:"required"`
-	Units       string            `json:"unit_of_measurement,omitempty" validate:"omitempty"`
-	EntityType  types.SensorType  `json:"type" validate:"omitempty"`
-	DeviceClass types.DeviceClass `json:"device_class,omitempty" validate:"omitempty"`
-	StateClass  types.StateClass  `json:"state_class,omitempty" validate:"omitempty"`
-	Category    types.Category    `json:"entity_category,omitempty" validate:"omitempty"`
+	ID                string            `json:"unique_id" validate:"required"`
+	Name              string            `json:"name" validate:"required"`
+	Units             string            `json:"unit_of_measurement,omitempty" validate:"omitempty"`
+	EntityType        types.SensorType  `json:"-" validate:"omitempty"`
+	Type              string            `json:"type"`
+	DeviceClassString string            `json:"device_class,omitempty"`
+	DeviceClass       types.DeviceClass `json:"-" validate:"omitempty"`
+	StateClassString  string            `json:"state_class,omitempty"`
+	StateClass        types.StateClass  `json:"-" validate:"omitempty"`
+	CategoryString    string            `json:"entity_category,omitempty"`
+	Category          types.Category    `json:"-" validate:"omitempty"`
 }
 
 // WithState sets the sensor state options. This is useful on entity
@@ -227,6 +231,17 @@ func NewSensor(options ...Option[Entity]) Entity {
 
 	for _, option := range options {
 		sensor = option(sensor)
+	}
+
+	sensor.Type = sensor.EntityType.String()
+	if sensor.DeviceClass > 0 {
+		sensor.DeviceClassString = sensor.DeviceClass.String()
+	}
+	if sensor.StateClass > 0 {
+		sensor.DeviceClassString = sensor.StateClass.String()
+	}
+	if sensor.Category > 0 {
+		sensor.CategoryString = sensor.Category.String()
 	}
 
 	return sensor

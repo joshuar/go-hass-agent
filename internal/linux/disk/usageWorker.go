@@ -16,8 +16,8 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/models"
 )
 
 const (
@@ -33,24 +33,26 @@ type usageWorker struct{}
 
 func (w *usageWorker) UpdateDelta(_ time.Duration) {}
 
-func (w *usageWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
+func (w *usageWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 	mounts, err := getMounts(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not get mount points: %w", err)
 	}
 
-	sensors := make([]sensor.Entity, 0, len(mounts))
+	sensors := make([]models.Entity, 0, len(mounts))
 
 	for _, mount := range mounts {
-		diskUsageSensor := newDiskUsageSensor(mount)
-		value, ok := diskUsageSensor.Value.(float64)
+		usedBlocks := mount.attributes[mountAttrBlocksTotal].(uint64) - mount.attributes[mountAttrBlocksFree].(uint64) //nolint:lll,errcheck,forcetypeassert
+		usedPc := float64(usedBlocks) / float64(mount.attributes[mountAttrBlocksTotal].(uint64)) * 100                 //nolint:errcheck,forcetypeassert
 
-		switch {
-		case !ok:
+		if math.IsNaN(usedPc) {
 			continue
-		case math.IsNaN(value):
-			continue
-		default:
+		}
+
+		diskUsageSensor, err := newDiskUsageSensor(ctx, mount, usedPc)
+		if err != nil {
+			logging.FromContext(ctx).Warn("Could not generate usage sensor.", slog.Any("error", err))
+		} else {
 			sensors = append(sensors, diskUsageSensor)
 		}
 	}

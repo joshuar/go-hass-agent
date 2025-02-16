@@ -1,0 +1,15 @@
+---
+# Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
+# SPDX-License-Identifier: MIT
+# yaml-language-server: $schema=https://raw.githubusercontent.com/oapi-codegen/oapi-codegen/HEAD/configuration-schema.json
+
+package: api
+output: ../../hass/api/rest.gen.go
+generate:
+  models: true
+output-options:
+  # to make sure that all types are generated
+  skip-prune: true
+  nullable-type: true
+import-mapping:
+  ../models/models.yaml: 'github.com/joshuar/go-hass-agent/internal/models'

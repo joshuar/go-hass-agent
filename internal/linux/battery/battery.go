@@ -11,7 +11,7 @@ import (
 
 	"github.com/godbus/dbus/v5"
 
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/models"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
@@ -79,20 +79,30 @@ func (b *upowerBattery) getProp(t sensorType) (dbus.Variant, error) {
 }
 
 // getSensors retrieves the sensors passed in for a given battery.
-func (b *upowerBattery) getSensors(sensors ...sensorType) chan sensor.Entity {
-	sensorCh := make(chan sensor.Entity, len(sensors))
+func (b *upowerBattery) getSensors(ctx context.Context, sensors ...sensorType) chan models.Entity {
+	sensorCh := make(chan models.Entity, len(sensors))
 	defer close(sensorCh)
 
 	for _, batterySensor := range sensors {
 		value, err := b.getProp(batterySensor)
 		if err != nil {
-			b.logger.Warn("Could not retrieve battery sensor.",
+			b.logger.Warn("Could not retrieve battery models.",
 				slog.String("sensor", batterySensor.String()),
 				slog.Any("error", err))
 
 			continue
 		}
-		sensorCh <- newBatterySensor(b, batterySensor, value)
+
+		entity, err := newBatterySensor(ctx, b, batterySensor, value)
+		if err != nil {
+			b.logger.Warn("Could not generate battery sensor.",
+				slog.String("sensor", batterySensor.String()),
+				slog.Any("error", err))
+
+			continue
+		}
+
+		sensorCh <- entity
 	}
 
 	return sensorCh
@@ -169,8 +179,8 @@ func newBattery(bus *dbusx.Bus, logger *slog.Logger, path dbus.ObjectPath) (*upo
 
 // monitorBattery will monitor a battery device for any property changes and
 // send these as sensors.
-func monitorBattery(ctx context.Context, battery *upowerBattery) <-chan sensor.Entity {
-	sensorCh := make(chan sensor.Entity)
+func monitorBattery(ctx context.Context, battery *upowerBattery) <-chan models.Entity {
+	sensorCh := make(chan models.Entity)
 	// Create a DBus signal match to watch for property changes for this
 	// battery.
 	events, err := dbusx.NewWatch(
@@ -205,7 +215,16 @@ func monitorBattery(ctx context.Context, battery *upowerBattery) <-chan sensor.E
 
 				for prop, value := range props.Changed {
 					if s, ok := dBusPropToSensor[prop]; ok {
-						sensorCh <- newBatterySensor(battery, s, value)
+						entity, err := newBatterySensor(ctx, battery, s, value)
+						if err != nil {
+							battery.logger.Warn("Could not generate battery sensor.",
+								slog.String("sensor", s.String()),
+								slog.Any("error", err))
+
+							continue
+						}
+
+						sensorCh <- entity
 					}
 				}
 			}

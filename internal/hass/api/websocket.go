@@ -49,7 +49,7 @@ func (m *webSocketRequest) send(conn *gws.Conn) error {
 
 type websocketResponse struct {
 	Result       any                   `json:"result,omitempty"`
-	Error        ResponseError         `json:"error,omitempty"`
+	Error        APIError              `json:"error,omitempty"`
 	Type         string                `json:"type"`
 	HAVersion    string                `json:"ha_version,omitempty"`
 	Notification WebsocketNotification `json:"event,omitempty"`
@@ -151,10 +151,9 @@ func (c *Websocket) OnMessage(socket *gws.Conn, message *gws.Message) {
 	case "result":
 		if !response.Success {
 			c.logger.Error("Received error on websocket.",
-				slog.Any("code", response.Error.Code),
-				slog.String("error", response.Error.Message))
+				slog.Any("error", response.Error))
 
-			if response.Error.Code == "id_reuse" {
+			if *response.Error.Code == "id_reuse" {
 				c.logger.Warn("Detected message ID reuse, attempting manual increment.")
 				atomic.AddUint64(&c.nextID, 1)
 			}

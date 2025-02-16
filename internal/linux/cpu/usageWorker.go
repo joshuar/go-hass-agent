@@ -17,9 +17,8 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/models"
 )
 
 const (
@@ -34,7 +33,7 @@ var ErrInitUsageWorker = errors.New("could not init CPU usage worker")
 
 type usageWorker struct {
 	boottime    time.Time
-	rateSensors map[string]*rateSensor
+	rateSensors map[string]*rate
 	path        string
 	linux.PollingSensorWorker
 	clktck int64
@@ -45,8 +44,8 @@ func (w *usageWorker) UpdateDelta(delta time.Duration) {
 	w.delta = delta
 }
 
-func (w *usageWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
-	return w.getUsageStats()
+func (w *usageWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
+	return w.getUsageStats(ctx)
 }
 
 func (w *usageWorker) PreferencesID() string {
@@ -74,9 +73,9 @@ func NewUsageWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
 		path:     filepath.Join(linux.ProcFSRoot, "stat"),
 		boottime: boottime,
 		clktck:   clktck,
-		rateSensors: map[string]*rateSensor{
-			"ctxt":      newRateSensor("CPU Context Switch Rate", "mdi:counter", "ctx/s"),
-			"processes": newRateSensor("Processes Creation Rate", "mdi:application-cog", "processes/s"),
+		rateSensors: map[string]*rate{
+			"ctxt":      newRate("0"),
+			"processes": newRate("0"),
 		},
 	}
 
@@ -106,8 +105,8 @@ func NewUsageWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
 	return worker, nil
 }
 
-func (w *usageWorker) getUsageStats() ([]sensor.Entity, error) {
-	var sensors []sensor.Entity
+func (w *usageWorker) getUsageStats(ctx context.Context) ([]models.Entity, error) {
+	var sensors []models.Entity
 
 	statsFH, err := os.Open(w.path)
 	if err != nil {
@@ -133,29 +132,67 @@ func (w *usageWorker) getUsageStats() ([]sensor.Entity, error) {
 		// Create a sensor depending on the line.
 		switch {
 		case cols[0] == totalCPUString:
-			sensors = append(sensors, newUsageSensor(w.clktck, cols, types.CategoryDefault))
+			entity, err := newUsageSensor(ctx, w.clktck, cols, "")
+			if err != nil {
+				logging.FromContext(ctx).Warn("Could not generate CPU usage models.", slog.Any("error", err))
+				continue
+			}
+
+			sensors = append(sensors, entity)
 		case strings.Contains(cols[0], "cpu"):
-			sensors = append(sensors, newUsageSensor(w.clktck, cols, types.CategoryDiagnostic))
+			entity, err := newUsageSensor(ctx, w.clktck, cols, models.Diagnostic)
+			if err != nil {
+				logging.FromContext(ctx).Warn("Could not generate CPU usage models.", slog.Any("error", err))
+				continue
+			}
+
+			sensors = append(sensors, entity)
 		case cols[0] == "ctxt":
+			var state uint64
 			if _, found := w.rateSensors["ctxt"]; found {
-				w.rateSensors["ctxt"].update(w.delta, cols[1])
+				state = w.rateSensors["ctxt"].calculateRate(w.delta, cols[1])
 			} else {
-				w.rateSensors["ctxt"] = newRateSensor("CPU Context Switch Rate", "mdi:counter", "ctx/s")
+				w.rateSensors["ctxt"] = newRate(cols[1])
 			}
 
-			sensors = append(sensors, *w.rateSensors["ctxt"].Entity)
+			entity, err := newRateSensor(ctx, "CPU Context Switch Rate", "mdi:counter", "ctx/s", state, cols[1])
+			if err != nil {
+				logging.FromContext(ctx).Warn("Could not generate context switch rate sensor.", slog.Any("error", err))
+				continue
+			}
+
+			sensors = append(sensors, entity)
 		case cols[0] == "processes":
+			var state uint64
 			if _, found := w.rateSensors["processes"]; found {
-				w.rateSensors["processes"].update(w.delta, cols[1])
+				state = w.rateSensors["processes"].calculateRate(w.delta, cols[1])
 			} else {
-				w.rateSensors["processes"] = newRateSensor("Processes Creation Rate", "mdi:application-cog", "processes/s")
+				w.rateSensors["processes"] = newRate(cols[1])
 			}
 
-			sensors = append(sensors, *w.rateSensors["processes"].Entity)
+			entity, err := newRateSensor(ctx, "Processes Creation Rate", "mdi:application-cog", "processes/s", state, cols[1])
+			if err != nil {
+				logging.FromContext(ctx).Warn("Could not generate context switch rate sensor.", slog.Any("error", err))
+				continue
+			}
+
+			sensors = append(sensors, entity)
 		case cols[0] == "procs_running":
-			sensors = append(sensors, newCountSensor("Processes Running", "mdi:application-cog", "processes", cols[1]))
+			entity, err := newCountSensor(ctx, "Processes Running", "mdi:application-cog", "processes", cols[1])
+			if err != nil {
+				logging.FromContext(ctx).Warn("Could not generate CPU usage sensor.", slog.Any("error", err))
+				continue
+			}
+
+			sensors = append(sensors, entity)
 		case cols[0] == "procs_blocked":
-			sensors = append(sensors, newCountSensor("Processes Blocked", "mdi:application-cog", "processes", cols[1]))
+			entity, err := newCountSensor(ctx, "Processes Blocked", "mdi:application-cog", "processes", cols[1])
+			if err != nil {
+				logging.FromContext(ctx).Warn("Could not generate CPU usage sensor.", slog.Any("error", err))
+				continue
+			}
+
+			sensors = append(sensors, entity)
 		}
 	}
 

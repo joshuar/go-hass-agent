@@ -16,8 +16,9 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/models"
+	"github.com/joshuar/go-hass-agent/internal/models/location"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
@@ -50,7 +51,7 @@ type locationWorker struct {
 }
 
 //nolint:gocognit
-func (w *locationWorker) Events(ctx context.Context) (<-chan sensor.Entity, error) {
+func (w *locationWorker) Events(ctx context.Context) (<-chan models.Entity, error) {
 	logger := logging.FromContext(ctx).With(slog.String("worker", workerID))
 
 	err := w.startMethod.Call(ctx)
@@ -58,7 +59,7 @@ func (w *locationWorker) Events(ctx context.Context) (<-chan sensor.Entity, erro
 		return nil, fmt.Errorf("could not start geoclue client: %w", err)
 	}
 
-	sensorCh := make(chan sensor.Entity)
+	sensorCh := make(chan models.Entity)
 
 	go func() {
 		logger.Debug("Monitoring for location updates.")
@@ -76,7 +77,7 @@ func (w *locationWorker) Events(ctx context.Context) (<-chan sensor.Entity, erro
 			case event := <-w.triggerCh:
 				if locationPath, ok := event.Content[1].(dbus.ObjectPath); ok {
 					go func() {
-						locationSensor, err := w.newLocation(string(locationPath))
+						locationSensor, err := w.newLocation(ctx, string(locationPath))
 						if err != nil {
 							logger.Error("Could not update location.", slog.Any("error", err))
 						} else {
@@ -92,7 +93,7 @@ func (w *locationWorker) Events(ctx context.Context) (<-chan sensor.Entity, erro
 	return sensorCh, nil
 }
 
-func (w *locationWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
+func (w *locationWorker) Sensors(_ context.Context) ([]models.Entity, error) {
 	return nil, linux.ErrUnimplemented
 }
 
@@ -104,7 +105,7 @@ func (w *locationWorker) DefaultPreferences() preferences.CommonWorkerPrefs {
 	return preferences.CommonWorkerPrefs{}
 }
 
-func (w *locationWorker) newLocation(locationPath string) (sensor.Entity, error) {
+func (w *locationWorker) newLocation(ctx context.Context, locationPath string) (models.Entity, error) {
 	var warnings error
 
 	latitude, err := w.getLocationProperty(locationPath, "Latitude")
@@ -118,18 +119,17 @@ func (w *locationWorker) newLocation(locationPath string) (sensor.Entity, error)
 	accuracy, err := w.getLocationProperty(locationPath, "Accuracy")
 	warnings = errors.Join(warnings, err)
 
-	location := sensor.Entity{
-		State: &sensor.State{
-			Value: &sensor.Location{
-				Gps:         []float64{latitude, longitude},
-				GpsAccuracy: int(accuracy),
-				Speed:       int(speed),
-				Altitude:    int(altitude),
-			},
-		},
+	loc, err := location.NewLocation(ctx,
+		location.WithGPSCoords(float32(latitude), float32(longitude)),
+		location.WithGPSAccuracy(int(accuracy)),
+		location.WithSpeed(int(speed)),
+		location.WithAltitude(int(altitude)),
+	)
+	if err != nil {
+		warnings = errors.Join(warnings, err)
 	}
 
-	return location, warnings
+	return loc, warnings
 }
 
 func NewLocationWorker(ctx context.Context) (*linux.EventSensorWorker, error) {

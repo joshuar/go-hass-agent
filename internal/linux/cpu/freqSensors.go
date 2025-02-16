@@ -8,15 +8,17 @@ package cpu
 
 import (
 	"bytes"
+	"context"
 	"log/slog"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/models"
+	"github.com/joshuar/go-hass-agent/internal/models/class"
+	"github.com/joshuar/go-hass-agent/internal/models/sensor"
 )
 
 const (
@@ -37,28 +39,26 @@ type cpuFreq struct {
 	freq     string
 }
 
-func newCPUFreqSensor(id string) sensor.Entity {
+func newCPUFreqSensor(ctx context.Context, id string) (models.Entity, error) {
 	info := getCPUFreqs(id)
 	num := strings.TrimPrefix(info.cpu, "cpu")
 
-	return sensor.NewSensor(
+	return sensor.NewSensor(ctx,
 		sensor.WithName("Core "+num+" Frequency"),
 		sensor.WithID("cpufreq_core"+num+"_frequency"),
 		sensor.AsTypeSensor(),
 		sensor.WithUnits(cpuFreqUnits),
-		sensor.WithDeviceClass(types.SensorDeviceClassFrequency),
-		sensor.WithStateClass(types.StateClassMeasurement),
+		sensor.WithDeviceClass(class.SensorClassFrequency),
+		sensor.WithStateClass(class.StateMeasurement),
 		sensor.AsDiagnostic(),
-		sensor.WithState(
-			sensor.WithIcon(cpuFreqIcon),
-			sensor.WithValue(info.freq),
-			sensor.WithAttributes(map[string]any{
-				"governor":                   info.governor,
-				"driver":                     info.driver,
-				"data_source":                linux.DataSrcSysfs,
-				"native_unit_of_measurement": cpuFreqUnits,
-			}),
-		),
+		sensor.WithIcon(cpuFreqIcon),
+		sensor.WithState(info.freq),
+		sensor.WithAttributes(models.Attributes{
+			"governor":                   info.governor,
+			"driver":                     info.driver,
+			"data_source":                linux.DataSrcSysfs,
+			"native_unit_of_measurement": cpuFreqUnits,
+		}),
 	)
 }
 

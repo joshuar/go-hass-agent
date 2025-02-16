@@ -12,9 +12,10 @@ import (
 	"strings"
 
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/models"
+	"github.com/joshuar/go-hass-agent/internal/models/class"
+	"github.com/joshuar/go-hass-agent/internal/models/sensor"
 )
 
 const (
@@ -29,7 +30,7 @@ type cpuVulnWorker struct {
 	path string
 }
 
-func (w *cpuVulnWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
+func (w *cpuVulnWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 	var cpuVulnerabilitiesFound bool
 
 	vulnerabilities, err := filepath.Glob(w.path + "/*")
@@ -55,20 +56,18 @@ func (w *cpuVulnWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 		attrs[name] = details
 	}
 
-	cpuVulnSensor := sensor.NewSensor(
+	cpuVulnSensor, err := sensor.NewSensor(ctx,
 		sensor.WithName("CPU Vulnerabilities"),
 		sensor.WithID("cpu_vulnerabilities"),
 		sensor.AsTypeBinarySensor(),
-		sensor.WithDeviceClass(types.BinarySensorDeviceClassProblem),
+		sensor.WithDeviceClass(class.BinaryClassProblem),
 		sensor.AsDiagnostic(),
-		sensor.WithState(
-			sensor.WithIcon("mdi:security"),
-			sensor.WithValue(cpuVulnerabilitiesFound),
-			sensor.WithAttributes(attrs),
-		),
+		sensor.WithIcon("mdi:security"),
+		sensor.WithState(cpuVulnerabilitiesFound),
+		sensor.WithAttributes(attrs),
 	)
 
-	return []sensor.Entity{cpuVulnSensor}, nil
+	return []models.Entity{cpuVulnSensor}, nil
 }
 
 func (w *cpuVulnWorker) PreferencesID() string {

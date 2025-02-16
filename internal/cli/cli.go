@@ -8,6 +8,8 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+
+	"github.com/joshuar/go-hass-agent/internal/hass"
 )
 
 const (
@@ -17,6 +19,14 @@ const (
 
 //go:embed assets
 var content embed.FS
+
+type API struct {
+	hass *hass.Client
+}
+
+func (a *API) Hass() *hass.Client {
+	return a.hass
+}
 
 // CmdOpts are the global command-line options common across all commands.
 type CmdOpts struct {

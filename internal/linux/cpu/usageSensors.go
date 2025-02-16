@@ -5,6 +5,7 @@
 package cpu
 
 import (
+	"context"
 	"errors"
 	"strconv"
 	"strings"
@@ -12,9 +13,10 @@ import (
 
 	"github.com/iancoleman/strcase"
 
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/models"
+	"github.com/joshuar/go-hass-agent/internal/models/class"
+	"github.com/joshuar/go-hass-agent/internal/models/sensor"
 )
 
 const (
@@ -26,44 +28,45 @@ var ErrParseCPUUsage = errors.New("could not parse CPU usage")
 //nolint:lll
 var times = [...]string{"user_time", "nice_time", "system_time", "idle_time", "iowait_time", "irq_time", "softirq_time", "steal_time", "guest_time", "guest_nice_time"}
 
-type rateSensor struct {
-	*sensor.Entity
+type rate struct {
 	prevState uint64
 }
 
-func (s *rateSensor) update(delta time.Duration, valueStr string) {
+func (r *rate) calculateRate(delta time.Duration, valueStr string) uint64 {
 	valueInt, _ := strconv.ParseUint(valueStr, 10, 64) //nolint:errcheck // if we can't parse it, value will be 0.
 
 	if uint64(delta.Seconds()) > 0 {
-		s.UpdateValue((valueInt - s.prevState) / uint64(delta.Seconds()) / 2)
+		r.prevState = valueInt
+		return ((valueInt - r.prevState) / uint64(delta.Seconds()) / 2)
 	} else {
-		s.UpdateValue(0)
+		r.prevState = valueInt
+		return 0
 	}
-
-	s.UpdateAttribute("Total", valueInt)
-
-	s.prevState = valueInt
 }
 
-func newRateSensor(name, icon, units string) *rateSensor {
-	sensorDetails := sensor.NewSensor(
+func newRate(valueStr string) *rate {
+	r := &rate{}
+	valueInt, _ := strconv.ParseUint(valueStr, 10, 64) //nolint:errcheck // if we can't parse it, value will be 0.
+	r.prevState = valueInt
+
+	return r
+}
+
+func newRateSensor(ctx context.Context, name, icon, units string, value uint64, total string) (models.Entity, error) {
+	return sensor.NewSensor(ctx,
 		sensor.WithName(name),
 		sensor.WithID(strcase.ToSnake(name)),
-		sensor.WithStateClass(types.StateClassMeasurement),
+		sensor.WithStateClass(class.StateMeasurement),
 		sensor.AsDiagnostic(),
 		sensor.WithUnits(units),
-		sensor.WithState(
-			sensor.WithIcon(icon),
-			sensor.WithDataSourceAttribute(linux.DataSrcProcfs),
-		),
+		sensor.WithIcon(icon),
+		sensor.WithState(value),
+		sensor.WithAttribute("Total", total),
+		sensor.WithDataSourceAttribute(linux.DataSrcProcfs),
 	)
-
-	return &rateSensor{
-		Entity: &sensorDetails,
-	}
 }
 
-func newUsageSensor(clktck int64, details []string, category types.Category) sensor.Entity {
+func newUsageSensor(ctx context.Context, clktck int64, details []string, category models.EntityCategory) (models.Entity, error) {
 	var name, id string
 
 	switch {
@@ -76,45 +79,36 @@ func newUsageSensor(clktck int64, details []string, category types.Category) sen
 		id = "core_" + num + "_cpu_usage"
 	}
 
-	value, attributes := generateUsageValues(clktck, details[1:])
+	value, attributes := generateUsage(clktck, details[1:])
 
-	usageSensor := sensor.NewSensor(
+	return sensor.NewSensor(ctx,
 		sensor.WithName(name),
 		sensor.WithID(id),
 		sensor.WithUnits("%"),
-		sensor.WithStateClass(types.StateClassMeasurement),
-		sensor.WithState(
-			sensor.WithValue(value),
-			sensor.WithAttributes(attributes),
-			sensor.WithIcon("mdi:chip"),
-		),
+		sensor.WithStateClass(class.StateMeasurement),
+		sensor.WithState(value),
+		sensor.WithAttributes(attributes),
+		sensor.WithIcon("mdi:chip"),
+		sensor.WithCategory(category),
 	)
-
-	if category == types.CategoryDiagnostic {
-		usageSensor = sensor.AsDiagnostic()(usageSensor)
-	}
-
-	return usageSensor
 }
 
-func newCountSensor(name, icon, units, valueStr string) sensor.Entity {
+func newCountSensor(ctx context.Context, name, icon, units, valueStr string) (models.Entity, error) {
 	valueInt, _ := strconv.Atoi(valueStr) //nolint:errcheck // if we can't parse it, value will be 0.
 
-	return sensor.NewSensor(
+	return sensor.NewSensor(ctx,
 		sensor.WithName(name),
 		sensor.WithID(strcase.ToSnake(name)),
-		sensor.WithStateClass(types.StateClassMeasurement),
+		sensor.WithStateClass(class.StateMeasurement),
 		sensor.AsDiagnostic(),
 		sensor.WithUnits(units),
-		sensor.WithState(
-			sensor.WithIcon(icon),
-			sensor.WithValue(valueInt),
-			sensor.WithDataSourceAttribute(linux.DataSrcProcfs),
-		),
+		sensor.WithIcon(icon),
+		sensor.WithState(valueInt),
+		sensor.WithDataSourceAttribute(linux.DataSrcProcfs),
 	)
 }
 
-func generateUsageValues(clktck int64, details []string) (float64, map[string]any) {
+func generateUsage(clktck int64, details []string) (float64, map[string]any) {
 	var totalTime float64
 
 	attrs := make(map[string]any, len(times))

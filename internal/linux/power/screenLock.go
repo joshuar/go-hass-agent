@@ -12,10 +12,12 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/models"
+	"github.com/joshuar/go-hass-agent/internal/models/class"
+	"github.com/joshuar/go-hass-agent/internal/models/sensor"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
@@ -30,18 +32,16 @@ const (
 
 var ErrInitScreenLockWorker = errors.New("could not init screen lock worker")
 
-func newScreenlockSensor(value bool) sensor.Entity {
-	return sensor.NewSensor(
+func newScreenlockSensor(ctx context.Context, value bool) (models.Entity, error) {
+	return sensor.NewSensor(ctx,
 		sensor.WithName("Screen Lock"),
 		sensor.WithID("screen_lock"),
 		sensor.AsTypeBinarySensor(),
-		sensor.WithDeviceClass(types.BinarySensorDeviceClassLock),
-		sensor.WithState(
-			sensor.WithIcon(screenLockIcon(value)),
-			sensor.WithValue(!value), // For device class BinarySensorDeviceClassLock: On means open (unlocked), Off means closed (locked).
-			sensor.WithDataSourceAttribute(linux.DataSrcDbus),
-		),
-		sensor.WithRequestRetry(true),
+		sensor.WithDeviceClass(class.BinaryClassLock),
+		sensor.WithIcon(screenLockIcon(value)),
+		sensor.WithState(!value), // For device class BinarySensorDeviceClassLock: On means open (unlocked), Off means closed (locked).
+		sensor.WithDataSourceAttribute(linux.DataSrcDbus),
+		sensor.AsRetryableRequest(true),
 	)
 }
 
@@ -61,10 +61,10 @@ type screenLockWorker struct {
 }
 
 //nolint:gocognit
-func (w *screenLockWorker) Events(ctx context.Context) (<-chan sensor.Entity, error) {
-	sensorCh := make(chan sensor.Entity)
+func (w *screenLockWorker) Events(ctx context.Context) (<-chan models.Entity, error) {
+	sensorCh := make(chan models.Entity)
 
-	currentState, err := w.getCurrentState()
+	currentState, err := w.getCurrentState(ctx)
 	if err != nil {
 		close(sensorCh)
 		return sensorCh, fmt.Errorf("cannot process screen lock events: %w", err)
@@ -82,6 +82,10 @@ func (w *screenLockWorker) Events(ctx context.Context) (<-chan sensor.Entity, er
 			case <-ctx.Done():
 				return
 			case event := <-w.triggerCh:
+				var (
+					entity models.Entity
+					err    error
+				)
 				switch event.Signal {
 				case dbusx.PropChangedSignal:
 					changed, lockState, err := dbusx.HasPropertyChanged[bool](event.Content, sessionLockedProp)
@@ -89,14 +93,21 @@ func (w *screenLockWorker) Events(ctx context.Context) (<-chan sensor.Entity, er
 						slog.With(slog.String("worker", screenLockWorkerID)).Debug("Could not parse received D-Bus signal.", slog.Any("error", err))
 					} else {
 						if changed {
-							sensorCh <- newScreenlockSensor(lockState)
+							entity, err = newScreenlockSensor(ctx, lockState)
 						}
 					}
 				case sessionLockSignal:
-					sensorCh <- newScreenlockSensor(true)
+					entity, err = newScreenlockSensor(ctx, true)
 				case sessionUnlockSignal:
-					sensorCh <- newScreenlockSensor(false)
+					entity, err = newScreenlockSensor(ctx, false)
 				}
+
+				if err != nil {
+					logging.FromContext(ctx).Warn("Could not generate screen lock sensor: %w", err)
+					continue
+				}
+
+				sensorCh <- entity
 			}
 		}
 	}()
@@ -104,13 +115,13 @@ func (w *screenLockWorker) Events(ctx context.Context) (<-chan sensor.Entity, er
 	return sensorCh, nil
 }
 
-func (w *screenLockWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
-	currentState, err := w.getCurrentState()
+func (w *screenLockWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
+	currentState, err := w.getCurrentState(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("cannot generate screen lock sensor: %w", err)
 	}
 
-	return []sensor.Entity{currentState}, nil
+	return []models.Entity{currentState}, nil
 }
 
 func (w *screenLockWorker) PreferencesID() string {
@@ -121,13 +132,13 @@ func (w *screenLockWorker) DefaultPreferences() preferences.CommonWorkerPrefs {
 	return preferences.CommonWorkerPrefs{}
 }
 
-func (w *screenLockWorker) getCurrentState() (sensor.Entity, error) {
+func (w *screenLockWorker) getCurrentState(ctx context.Context) (models.Entity, error) {
 	screenLockState, err := w.screenLockProp.Get()
 	if err != nil {
-		return sensor.Entity{}, fmt.Errorf("could not fetch screen lock state: %w", err)
+		return models.Entity{}, fmt.Errorf("could not fetch screen lock state: %w", err)
 	}
 
-	return newScreenlockSensor(screenLockState), nil
+	return newScreenlockSensor(ctx, screenLockState)
 }
 
 func NewScreenLockWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
