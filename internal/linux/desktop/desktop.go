@@ -34,6 +34,8 @@ const (
 
 	desktopWorkerID     = "desktop_settings_sensors"
 	desktopWorkerPrefID = prefPrefix + "preferences"
+
+	unknownValue = "Unknown"
 )
 
 var (
@@ -119,6 +121,7 @@ func (w *settingsWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 
 	var errs error
 
+	// Accent Color Sensor.
 	if value, err := w.getProp(accentColorProp); err != nil {
 		logging.FromContext(ctx).Warn("Could not retrieve accent color property", slog.Any("error", err))
 	} else {
@@ -130,10 +133,12 @@ func (w *settingsWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 		}
 	}
 
+	// Color Theme Sensor.
 	if value, err := w.getProp(colorSchemeProp); err != nil {
 		logging.FromContext(ctx).Warn("Could not retrieve color scheme property", slog.Any("error", err))
 	} else {
 		scheme, icon := parseColorScheme(value)
+
 		entity, err := newColorSchemeSensor(ctx, scheme, icon)
 		if err != nil {
 			logging.FromContext(ctx).Warn("Could not generate color scheme sensor.", slog.Any("error", err))
@@ -206,7 +211,7 @@ func NewDesktopWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 func parseColorScheme(value dbus.Variant) (string, string) {
 	scheme, err := dbusx.VariantToValue[uint32](value)
 	if err != nil {
-		return "Unknown", "mdi:theme-light-dark"
+		return unknownValue, "mdi:theme-light-dark"
 	}
 
 	switch scheme {
@@ -215,7 +220,7 @@ func parseColorScheme(value dbus.Variant) (string, string) {
 	case 2:
 		return "light", "mdi:weather-sunny"
 	default:
-		return "Unknown", "mdi:theme-light-dark"
+		return unknownValue, "mdi:theme-light-dark"
 	}
 }
 
@@ -257,7 +262,7 @@ func extractProp(event []any) (prop string, value dbus.Variant, err error) {
 }
 
 func newColorSchemeSensor(ctx context.Context, scheme, icon string) (models.Entity, error) {
-	return sensor.NewSensor(ctx,
+	entity, err := sensor.NewSensor(ctx,
 		sensor.WithName("Desktop Color Scheme"),
 		sensor.WithID("desktop_color_scheme"),
 		sensor.AsDiagnostic(),
@@ -265,10 +270,15 @@ func newColorSchemeSensor(ctx context.Context, scheme, icon string) (models.Enti
 		sensor.WithState(scheme),
 		sensor.WithDataSourceAttribute(linux.DataSrcDbus),
 	)
+	if err != nil {
+		return entity, fmt.Errorf("could not create color scheme sensor: %w", err)
+	}
+
+	return entity, nil
 }
 
 func newAccentColorSensor(ctx context.Context, value string) (models.Entity, error) {
-	return sensor.NewSensor(ctx,
+	entity, err := sensor.NewSensor(ctx,
 		sensor.WithName("Desktop Accent Color"),
 		sensor.WithID("desktop_accent_color"),
 		sensor.AsDiagnostic(),
@@ -276,4 +286,9 @@ func newAccentColorSensor(ctx context.Context, value string) (models.Entity, err
 		sensor.WithState(value),
 		sensor.WithDataSourceAttribute(linux.DataSrcDbus),
 	)
+	if err != nil {
+		return entity, fmt.Errorf("could not create color scheme sensor: %w", err)
+	}
+
+	return entity, nil
 }
