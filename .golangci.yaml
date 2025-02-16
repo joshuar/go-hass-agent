@@ -68,7 +68,7 @@ linters:
     - ineffassign
     - interfacebloat
     - intrange
-    - lll
+    # - lll
     # - loggercheck
     # - maintidx
     # - makezero
