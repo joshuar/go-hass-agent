@@ -18,11 +18,11 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/models"
+	"github.com/joshuar/go-hass-agent/internal/models/class"
 	"github.com/joshuar/go-hass-agent/internal/models/event"
+	"github.com/joshuar/go-hass-agent/internal/models/sensor"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
@@ -47,18 +47,16 @@ const (
 
 var ErrInitUsersWorker = errors.New("could not init users worker")
 
-func newUsersSensor(users []string) sensor.Entity {
-	return sensor.NewSensor(
+func newUsersSensor(ctx context.Context, users []string) (models.Entity, error) {
+	return sensor.NewSensor(ctx,
 		sensor.WithName("Current Users"),
 		sensor.WithID("current_users"),
-		sensor.WithStateClass(types.StateClassMeasurement),
+		sensor.WithStateClass(class.StateMeasurement),
 		sensor.WithUnits(usersSensorUnits),
-		sensor.WithState(
-			sensor.WithIcon(usersSensorIcon),
-			sensor.WithValue(len(users)),
-			sensor.WithDataSourceAttribute(linux.DataSrcDbus),
-			sensor.WithAttribute("usernames", users),
-		),
+		sensor.WithIcon(usersSensorIcon),
+		sensor.WithState(len(users)),
+		sensor.WithDataSourceAttribute(linux.DataSrcDbus),
+		sensor.WithAttribute("usernames", users),
 	)
 }
 
@@ -69,15 +67,20 @@ type UserSessionSensorWorker struct {
 	prefs *UserSessionsPrefs
 }
 
-func (w *UserSessionSensorWorker) Events(ctx context.Context) (chan sensor.Entity, error) {
-	sensorCh := make(chan sensor.Entity)
+func (w *UserSessionSensorWorker) Events(ctx context.Context) (chan models.Entity, error) {
+	sensorCh := make(chan models.Entity)
 
 	sendUpdate := func() {
 		users, err := w.getUsers()
 		if err != nil {
 			slog.With(slog.String("worker", userSessionsSensorWorkerID)).Debug("Failed to get list of user sessions.", slog.Any("error", err))
 		} else {
-			sensorCh <- newUsersSensor(users)
+			entity, err := newUsersSensor(ctx, users)
+			if err != nil {
+				slog.With(slog.String("worker", userSessionsSensorWorkerID)).Debug("Failed to generate user sessions sensor.", slog.Any("error", err))
+			} else {
+				sensorCh <- entity
+			}
 		}
 	}
 
@@ -100,10 +103,15 @@ func (w *UserSessionSensorWorker) Events(ctx context.Context) (chan sensor.Entit
 	return sensorCh, nil
 }
 
-func (w *UserSessionSensorWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
+func (w *UserSessionSensorWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 	users, err := w.getUsers()
 
-	return []sensor.Entity{newUsersSensor(users)}, err
+	entity, err := newUsersSensor(ctx, users)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate user sessions sensor: %w", err)
+	} else {
+		return []models.Entity{entity}, err
+	}
 }
 
 func (w *UserSessionSensorWorker) PreferencesID() string {
@@ -232,6 +240,7 @@ func (w *UserSessionEventsWorker) Events(ctx context.Context) (<-chan models.Ent
 				switch {
 				case strings.Contains(trigger.Signal, sessionAddedSignal):
 					w.tracker.addSession(string(path))
+
 					entity, err := event.NewEvent(sessionStartedEventName, w.tracker.sessions[string(path)])
 					if err != nil {
 						logging.FromContext(ctx).Warn("Could not generate users event.", slog.Any("error", err))
@@ -240,6 +249,7 @@ func (w *UserSessionEventsWorker) Events(ctx context.Context) (<-chan models.Ent
 					}
 				case strings.Contains(trigger.Signal, sessionRemovedSignal):
 					w.tracker.removeSession(string(path))
+
 					entity, err := event.NewEvent(sessionStoppedEventName, w.tracker.sessions[string(path)])
 					if err != nil {
 						logging.FromContext(ctx).Warn("Could not generate users event.", slog.Any("error", err))
@@ -292,7 +302,7 @@ func NewUserSessionEventsWorker(ctx context.Context) (*linux.EventWorker, error)
 				loginBaseInterface,
 				loginBaseInterface+".Session."+prop).Get()
 			if err != nil {
-				return dbus.MakeVariant(sensor.StateUnknown),
+				return dbus.MakeVariant("Unknown"),
 					fmt.Errorf("could not retrieve session property %s (session %s): %w", prop, path, err)
 			}
 
