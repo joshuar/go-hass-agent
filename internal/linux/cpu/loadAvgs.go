@@ -11,14 +11,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"os"
 	"path/filepath"
 	"time"
 
 	"github.com/iancoleman/strcase"
 
-	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/models"
@@ -51,6 +49,8 @@ type loadAvgsWorker struct {
 func (w *loadAvgsWorker) UpdateDelta(_ time.Duration) {}
 
 func (w *loadAvgsWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
+	var warnings error
+
 	sensors := make([]models.Entity, 0, loadAvgsTotal)
 
 	loadAvgData, err := os.ReadFile(w.path)
@@ -66,14 +66,14 @@ func (w *loadAvgsWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 	for name, value := range loadAvgs {
 		entity, err := newLoadAvgSensor(ctx, name, value)
 		if err != nil {
-			logging.FromContext(ctx).Warn("Could not generate load average sensor.",
-				slog.Any("error", err))
+			warnings = errors.Join(warnings, fmt.Errorf("could not generate %s sensor: %w", name, err))
 			continue
 		}
+
 		sensors = append(sensors, entity)
 	}
 
-	return sensors, nil
+	return sensors, warnings
 }
 
 func (w *loadAvgsWorker) PreferencesID() string {
@@ -85,7 +85,7 @@ func (w *loadAvgsWorker) DefaultPreferences() preferences.CommonWorkerPrefs {
 }
 
 func newLoadAvgSensor(ctx context.Context, name, value string) (models.Entity, error) {
-	return sensor.NewSensor(ctx,
+	entity, err := sensor.NewSensor(ctx,
 		sensor.WithName(name),
 		sensor.WithID(strcase.ToSnake(name)),
 		sensor.WithUnits(loadAvgUnit),
@@ -94,6 +94,11 @@ func newLoadAvgSensor(ctx context.Context, name, value string) (models.Entity, e
 		sensor.WithState(value),
 		sensor.WithDataSourceAttribute(linux.DataSrcProcfs),
 	)
+	if err != nil {
+		return entity, fmt.Errorf("could not generate %s sensor: %w", name, err)
+	}
+
+	return entity, nil
 }
 
 func parseLoadAvgs(data []byte) (map[string]string, error) {
@@ -110,7 +115,7 @@ func parseLoadAvgs(data []byte) (map[string]string, error) {
 	}, nil
 }
 
-func NewLoadAvgWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
+func NewLoadAvgWorker(_ context.Context) (*linux.PollingSensorWorker, error) {
 	loadAvgsWorker := &loadAvgsWorker{path: filepath.Join(linux.ProcFSRoot, "loadavg")}
 
 	prefs, err := preferences.LoadWorker(loadAvgsWorker)

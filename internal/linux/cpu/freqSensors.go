@@ -9,6 +9,7 @@ package cpu
 import (
 	"bytes"
 	"context"
+	"errors"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -30,6 +31,8 @@ const (
 	cpuFreqUnits = "kHz"
 )
 
+var ErrNewCPUFreqSensor = errors.New("error creating new CPU Freq sensor")
+
 var totalCPUs = runtime.NumCPU()
 
 type cpuFreq struct {
@@ -43,7 +46,7 @@ func newCPUFreqSensor(ctx context.Context, id string) (models.Entity, error) {
 	info := getCPUFreqs(id)
 	num := strings.TrimPrefix(info.cpu, "cpu")
 
-	return sensor.NewSensor(ctx,
+	entity, err := sensor.NewSensor(ctx,
 		sensor.WithName("Core "+num+" Frequency"),
 		sensor.WithID("cpufreq_core"+num+"_frequency"),
 		sensor.AsTypeSensor(),
@@ -60,6 +63,11 @@ func newCPUFreqSensor(ctx context.Context, id string) (models.Entity, error) {
 			"native_unit_of_measurement": cpuFreqUnits,
 		}),
 	)
+	if err != nil {
+		return entity, errors.Join(ErrNewCPUFreqSensor, err)
+	}
+
+	return entity, nil
 }
 
 func getCPUFreqs(id string) *cpuFreq {
