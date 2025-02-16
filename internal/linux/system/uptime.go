@@ -8,6 +8,7 @@ import (
 	"bufio"
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"os"
 	"strconv"
@@ -15,9 +16,10 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/models"
+	"github.com/joshuar/go-hass-agent/internal/models/class"
+	"github.com/joshuar/go-hass-agent/internal/models/sensor"
 )
 
 const (
@@ -33,24 +35,24 @@ type uptimeWorker struct{}
 
 func (w *uptimeWorker) UpdateDelta(_ time.Duration) {}
 
-func (w *uptimeWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
-	return []sensor.Entity{
-			sensor.NewSensor(
-				sensor.WithName("Uptime"),
-				sensor.WithID("uptime"),
-				sensor.AsDiagnostic(),
-				sensor.WithDeviceClass(types.SensorDeviceClassDuration),
-				sensor.WithStateClass(types.StateClassMeasurement),
-				sensor.WithUnits("h"),
-				sensor.WithState(
-					sensor.WithIcon("mdi:restart"),
-					sensor.WithValue(w.getUptime(ctx)/60/60),
-					sensor.WithDataSourceAttribute(linux.ProcFSRoot),
-					sensor.WithAttribute("native_unit_of_measurement", "h"),
-				),
-			),
-		},
-		nil
+func (w *uptimeWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
+	entity, err := sensor.NewSensor(ctx,
+		sensor.WithName("Uptime"),
+		sensor.WithID("uptime"),
+		sensor.AsDiagnostic(),
+		sensor.WithDeviceClass(class.SensorClassDuration),
+		sensor.WithStateClass(class.StateMeasurement),
+		sensor.WithUnits("h"),
+		sensor.WithIcon("mdi:restart"),
+		sensor.WithState(w.getUptime(ctx)/60/60),
+		sensor.WithDataSourceAttribute(linux.ProcFSRoot),
+		sensor.WithAttribute("native_unit_of_measurement", "h"),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("could not generate uptime sensor: %w", err)
+	}
+
+	return []models.Entity{entity}, nil
 }
 
 func (w *uptimeWorker) PreferencesID() string {

@@ -16,10 +16,12 @@ import (
 	"github.com/godbus/dbus/v5"
 	"github.com/iancoleman/strcase"
 
+	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/models"
+	"github.com/joshuar/go-hass-agent/internal/models/class"
+	"github.com/joshuar/go-hass-agent/internal/models/sensor"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
@@ -36,10 +38,10 @@ var laptopPropList = []string{dockedProp, lidClosedProp, externalPowerProp}
 
 var ErrInitLaptopWorker = errors.New("could not init laptop worker")
 
-func newLaptopEvent(prop string, state bool) sensor.Entity {
+func newLaptopEvent(ctx context.Context, prop string, state bool) (models.Entity, error) {
 	var (
 		name, icon  string
-		deviceClass types.DeviceClass
+		deviceClass class.SensorDeviceClass
 	)
 
 	switch prop {
@@ -52,7 +54,7 @@ func newLaptopEvent(prop string, state bool) sensor.Entity {
 			icon = "mdi:laptop"
 		}
 
-		deviceClass = types.BinarySensorDeviceClassConnectivity
+		deviceClass = class.BinaryClassConnectivity
 	case lidClosedProp:
 		name = "Lid Closed"
 
@@ -62,7 +64,7 @@ func newLaptopEvent(prop string, state bool) sensor.Entity {
 			icon = "mdi:laptop-off"
 		}
 
-		deviceClass = types.BinarySensorDeviceClassOpening
+		deviceClass = class.BinaryClassOpening
 		state = !state // Invert state for BinarySensorDeviceClassOpening: On means open, Off means closed.
 	case externalPowerProp:
 		name = "External Power Connected"
@@ -73,20 +75,18 @@ func newLaptopEvent(prop string, state bool) sensor.Entity {
 			icon = "mdi:battery"
 		}
 
-		deviceClass = types.BinarySensorDeviceClassPower
+		deviceClass = class.BinaryClassPower
 	}
 
-	return sensor.NewSensor(
+	return sensor.NewSensor(ctx,
 		sensor.WithName(name),
 		sensor.WithID(strcase.ToSnake(name)),
 		sensor.AsTypeBinarySensor(),
 		sensor.WithDeviceClass(deviceClass),
 		sensor.AsDiagnostic(),
-		sensor.WithState(
-			sensor.WithIcon(icon),
-			sensor.WithValue(state),
-			sensor.WithDataSourceAttribute(linux.DataSrcDbus),
-		),
+		sensor.WithIcon(icon),
+		sensor.WithState(state),
+		sensor.WithDataSourceAttribute(linux.DataSrcDbus),
 	)
 }
 
@@ -96,8 +96,8 @@ type laptopWorker struct {
 	prefs      *preferences.CommonWorkerPrefs
 }
 
-func (w *laptopWorker) Events(ctx context.Context) (<-chan sensor.Entity, error) {
-	sensorCh := make(chan sensor.Entity)
+func (w *laptopWorker) Events(ctx context.Context) (<-chan models.Entity, error) {
+	sensorCh := make(chan models.Entity)
 
 	go func() {
 		defer close(sensorCh)
@@ -112,7 +112,7 @@ func (w *laptopWorker) Events(ctx context.Context) (<-chan sensor.Entity, error)
 					slog.With(slog.String("worker", laptopWorkerID)).
 						Debug("Received unknown event from D-Bus.", slog.Any("error", err))
 				} else {
-					sendChangedProps(props.Changed, sensorCh)
+					sendChangedProps(ctx, props.Changed, sensorCh)
 				}
 			}
 		}
@@ -134,23 +134,27 @@ func (w *laptopWorker) Events(ctx context.Context) (<-chan sensor.Entity, error)
 	return sensorCh, nil
 }
 
-func (w *laptopWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
-	sensors := make([]sensor.Entity, 0, len(laptopPropList))
+func (w *laptopWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
+	var warnings error
+
+	sensors := make([]models.Entity, 0, len(laptopPropList))
 
 	// For each property, get its current state as a sensor.
 	for name, prop := range w.properties {
 		state, err := prop.Get()
 		if err != nil {
-			slog.With(slog.String("worker", laptopWorkerID)).
-				Debug("Could not retrieve property",
-					slog.String("property", name),
-					slog.Any("error", err))
+			warnings = errors.Join(warnings, fmt.Errorf("could not retrieve property from D-Bus: %w", err))
 		} else {
-			sensors = append(sensors, newLaptopEvent(name, state))
+			entity, err := newLaptopEvent(ctx, name, state)
+			if err != nil {
+				warnings = errors.Join(warnings, fmt.Errorf("could not generate laptop sensor: %w", err))
+			} else {
+				sensors = append(sensors, entity)
+			}
 		}
 	}
 
-	return sensors, nil
+	return sensors, warnings
 }
 
 func (w *laptopWorker) PreferencesID() string {
@@ -210,16 +214,17 @@ func NewLaptopWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
 	return worker, nil
 }
 
-func sendChangedProps(props map[string]dbus.Variant, sensorCh chan sensor.Entity) {
+func sendChangedProps(ctx context.Context, props map[string]dbus.Variant, sensorCh chan models.Entity) {
 	for prop, value := range props {
 		if slices.Contains(laptopPropList, prop) {
 			if state, err := dbusx.VariantToValue[bool](value); err != nil {
-				slog.With(slog.String("worker", laptopWorkerID)).
-					Debug("Could not parse property value.",
-						slog.String("property", prop),
-						slog.Any("error", err))
+				logging.FromContext(ctx).Warn("Could not parse laptop D-Bus property.", slog.Any("error", err))
 			} else {
-				sensorCh <- newLaptopEvent(prop, state)
+				if entity, err := newLaptopEvent(ctx, prop, state); err != nil {
+					logging.FromContext(ctx).Warn("could not send laptop sensor.", slog.Any("error", err))
+				} else {
+					sensorCh <- entity
+				}
 			}
 		}
 	}

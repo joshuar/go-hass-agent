@@ -16,8 +16,9 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
+	"github.com/joshuar/go-hass-agent/internal/models"
+	"github.com/joshuar/go-hass-agent/internal/models/class"
+	"github.com/joshuar/go-hass-agent/internal/models/sensor"
 )
 
 const (
@@ -35,26 +36,29 @@ var (
 	ErrEmptyResponse         = errors.New("empty response")
 )
 
-func newConnectionLatencySensor(info resty.TraceInfo) sensor.Entity {
-	return sensor.NewSensor(
+func newConnectionLatencySensor(ctx context.Context, info resty.TraceInfo) (models.Entity, error) {
+	entity, err := sensor.NewSensor(ctx,
 		sensor.WithName("Connection Latency"),
 		sensor.WithID("connection_latency"),
 		sensor.WithUnits(connectionLatencyUnits),
-		sensor.WithDeviceClass(types.SensorDeviceClassDuration),
-		sensor.WithStateClass(types.StateClassMeasurement),
+		sensor.WithDeviceClass(class.SensorClassDuration),
+		sensor.WithStateClass(class.StateMeasurement),
 		sensor.AsDiagnostic(),
-		sensor.WithState(
-			sensor.WithIcon("mdi:connection"),
-			sensor.WithValue(info.TotalTime.Milliseconds()),
-			sensor.WithAttribute("DNS Lookup Time", info.DNSLookup.Milliseconds()),
-			sensor.WithAttribute("Connection Time", info.ConnTime.Milliseconds()),
-			sensor.WithAttribute("TCP Connection Time", info.TCPConnTime.Milliseconds()),
-			sensor.WithAttribute("TLS Handshake Time", info.TLSHandshake.Milliseconds()),
-			sensor.WithAttribute("Server Time", info.ServerTime.Milliseconds()),
-			sensor.WithAttribute("Response Time", info.ResponseTime.Milliseconds()),
-			sensor.WithAttribute("native_unit_of_measurement", connectionLatencyUnits),
-		),
+		sensor.WithIcon("mdi:connection"),
+		sensor.WithState(info.TotalTime.Milliseconds()),
+		sensor.WithAttribute("DNS Lookup Time", info.DNSLookup.Milliseconds()),
+		sensor.WithAttribute("Connection Time", info.ConnTime.Milliseconds()),
+		sensor.WithAttribute("TCP Connection Time", info.TCPConnTime.Milliseconds()),
+		sensor.WithAttribute("TLS Handshake Time", info.TLSHandshake.Milliseconds()),
+		sensor.WithAttribute("Server Time", info.ServerTime.Milliseconds()),
+		sensor.WithAttribute("Response Time", info.ResponseTime.Milliseconds()),
+		sensor.WithAttribute("native_unit_of_measurement", connectionLatencyUnits),
 	)
+	if err != nil {
+		return entity, fmt.Errorf("could not create connection latency sensor: %w", err)
+	}
+
+	return entity, nil
 }
 
 type ConnectionLatencySensorWorker struct {
@@ -86,7 +90,7 @@ func (w *ConnectionLatencySensorWorker) Stop() error {
 	return nil
 }
 
-func (w *ConnectionLatencySensorWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
+func (w *ConnectionLatencySensorWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 	resp, err := w.client.R().
 		SetContext(ctx).
 		Get(w.endpoint)
@@ -100,15 +104,19 @@ func (w *ConnectionLatencySensorWorker) Sensors(ctx context.Context) ([]sensor.E
 	}
 
 	if resp.Request != nil {
-		// Save the latency info as a connectionLatency sensor.
-		return []sensor.Entity{newConnectionLatencySensor(resp.Request.TraceInfo())}, nil
+		entity, err := newConnectionLatencySensor(ctx, resp.Request.TraceInfo())
+		if err != nil {
+			return nil, err
+		}
+		// Save the latency info as a connectionLatency models.
+		return []models.Entity{entity}, nil
 	}
 
 	return nil, ErrEmptyResponse
 }
 
-func (w *ConnectionLatencySensorWorker) Start(ctx context.Context) (<-chan sensor.Entity, error) {
-	sensorCh := make(chan sensor.Entity)
+func (w *ConnectionLatencySensorWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
+	sensorCh := make(chan models.Entity)
 	w.doneCh = make(chan struct{})
 
 	// Create a new context for the updates scope.

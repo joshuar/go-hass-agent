@@ -13,8 +13,9 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
-	"github.com/joshuar/go-hass-agent/internal/hass/event"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/models"
+	"github.com/joshuar/go-hass-agent/internal/models/event"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
@@ -40,8 +41,8 @@ type OOMEventsWorker struct {
 }
 
 //nolint:gocognit
-func (w *OOMEventsWorker) Events(ctx context.Context) (<-chan event.Event, error) {
-	eventCh := make(chan event.Event)
+func (w *OOMEventsWorker) Events(ctx context.Context) (<-chan models.Entity, error) {
+	eventCh := make(chan models.Entity)
 
 	go func() {
 		defer close(eventCh)
@@ -91,12 +92,16 @@ func (w *OOMEventsWorker) Events(ctx context.Context) (<-chan event.Event, error
 						continue
 					}
 					// Send an event.
-					eventCh <- event.Event{
-						EventType: oomEventName,
-						EventData: oomEventData{
-							Process: processStr,
-							PID:     pid,
-						},
+					entity, err := event.NewEvent(
+						oomEventName,
+						map[string]any{
+							"Process": processStr,
+							"PID":     pid,
+						})
+					if err != nil {
+						logging.FromContext(ctx).Warn("Could not create OOM event.", slog.Any("error", err))
+					} else {
+						eventCh <- entity
 					}
 				}
 			}

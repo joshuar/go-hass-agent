@@ -8,11 +8,6 @@ package preferences
 import (
 	"errors"
 	"fmt"
-	"log/slog"
-
-	"github.com/gofrs/uuid/v5"
-
-	"github.com/joshuar/go-hass-agent/internal/device"
 )
 
 const (
@@ -62,75 +57,4 @@ func SetDeviceName(name string) SetPreference {
 
 		return nil
 	}
-}
-
-// NewDevice creates a new device. This is used during registration with Home
-// Assistant to identify the host running Go Hass Agent. While most of the
-// information generated is only needed during registration, the device ID and
-// Name will be stored in the preferences for later reference.
-func NewDevice() *Device {
-	dev := &Device{
-		AppName:    AppName,
-		AppVersion: AppVersion(),
-		AppID:      appID,
-	}
-
-	// Retrieve the name as the device name.
-	name, err := device.GetHostname()
-	if err != nil {
-		logger.Warn("Unable to determine device hostname.",
-			slog.Any("error", err))
-	}
-
-	dev.Name = name
-
-	// Generate a new unique Device ID
-	id, err := newDeviceID()
-	if err != nil {
-		logger.Warn("Unable to generate a device ID.",
-			slog.Any("error", err))
-	}
-
-	dev.ID = id
-
-	// Retrieve the OS name and version.
-	osName, osVersion, err := device.GetOSID()
-	if err != nil {
-		logger.Warn("Unable to determine OS details.",
-			slog.Any("error", err))
-	}
-
-	dev.OsName = osName
-	dev.OsVersion = osVersion
-
-	// Retrieve the hardware model and manufacturer.
-	model, manufacturer, err := device.GetHWProductInfo()
-	if err != nil {
-		logger.Warn("Unable to determine device hardware details.",
-			slog.Any("error", err))
-	}
-
-	dev.Model = model
-	dev.Manufacturer = manufacturer
-
-	// Set the device id and name in the preferences store.
-	if err := Set(
-		SetDeviceID(dev.ID),
-		SetDeviceName(dev.Name),
-	); err != nil {
-		logger.Warn("Could not save device id/name.",
-			slog.Any("error", err))
-	}
-
-	return dev
-}
-
-// newDeviceID create a new device ID. It will be a randomly generated UUIDv4.
-func newDeviceID() (string, error) {
-	deviceID, err := uuid.NewV4()
-	if err != nil {
-		return "", fmt.Errorf("could not retrieve a machine ID: %w", err)
-	}
-
-	return deviceID.String(), nil
 }

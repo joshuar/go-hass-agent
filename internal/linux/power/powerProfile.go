@@ -13,8 +13,9 @@ import (
 	"log/slog"
 
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/models"
+	"github.com/joshuar/go-hass-agent/internal/models/sensor"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
@@ -29,16 +30,14 @@ const (
 
 var ErrInitPowerProfileWorker = errors.New("could not init power profile worker")
 
-func newPowerSensor(profile string) sensor.Entity {
-	return sensor.NewSensor(
+func newPowerSensor(ctx context.Context, profile string) (models.Entity, error) {
+	return sensor.NewSensor(ctx,
 		sensor.WithName("Power Profile"),
 		sensor.WithID("power_profile"),
 		sensor.AsDiagnostic(),
-		sensor.WithState(
-			sensor.WithIcon("mdi:flash"),
-			sensor.WithValue(profile),
-			sensor.WithDataSourceAttribute(linux.DataSrcDbus),
-		),
+		sensor.WithIcon("mdi:flash"),
+		sensor.WithState(profile),
+		sensor.WithDataSourceAttribute(linux.DataSrcDbus),
 	)
 }
 
@@ -48,8 +47,8 @@ type profileWorker struct {
 	prefs         *preferences.CommonWorkerPrefs
 }
 
-func (w *profileWorker) Events(ctx context.Context) (<-chan sensor.Entity, error) {
-	sensorCh := make(chan sensor.Entity)
+func (w *profileWorker) Events(ctx context.Context) (<-chan models.Entity, error) {
+	sensorCh := make(chan models.Entity)
 	logger := slog.With(slog.String("worker", powerProfileWorkerID))
 
 	// Get the current power profile and send it as an initial sensor value.
@@ -76,7 +75,12 @@ func (w *profileWorker) Events(ctx context.Context) (<-chan sensor.Entity, error
 					logger.Debug("Could not parse received D-Bus signal.", slog.Any("error", err))
 				} else {
 					if changed {
-						sensorCh <- newPowerSensor(profile)
+						entity, err := newPowerSensor(ctx, profile)
+						if err != nil {
+							logger.Warn("Could not generate power profile sensor.", slog.Any("error", err))
+						} else {
+							sensorCh <- entity
+						}
 					}
 				}
 			}
@@ -86,13 +90,18 @@ func (w *profileWorker) Events(ctx context.Context) (<-chan sensor.Entity, error
 	return sensorCh, nil
 }
 
-func (w *profileWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
+func (w *profileWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 	profile, err := w.activeProfile.Get()
 	if err != nil {
 		return nil, fmt.Errorf("unable to retrieve active power profile from D-Bus: %w", err)
 	}
 
-	return []sensor.Entity{newPowerSensor(profile)}, nil
+	entity, err := newPowerSensor(ctx, profile)
+	if err != nil {
+		return nil, fmt.Errorf("unable to generate active power profile sensor: %w", err)
+	}
+
+	return []models.Entity{entity}, nil
 }
 
 func (w *profileWorker) PreferencesID() string {

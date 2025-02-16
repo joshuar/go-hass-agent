@@ -17,8 +17,8 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/models"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
@@ -72,14 +72,14 @@ func (w *ConnectionsWorker) isTracked(id string) bool {
 	return false
 }
 
-func (w *ConnectionsWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
+func (w *ConnectionsWorker) Sensors(_ context.Context) ([]models.Entity, error) {
 	return nil, linux.ErrUnimplemented
 }
 
 //nolint:mnd
 //revive:disable:function-length
-func (w *ConnectionsWorker) Events(ctx context.Context) (<-chan sensor.Entity, error) {
-	sensorCh := make(chan sensor.Entity)
+func (w *ConnectionsWorker) Events(ctx context.Context) (<-chan models.Entity, error) {
+	sensorCh := make(chan models.Entity)
 	connCtx, connCancel := context.WithCancel(ctx)
 
 	triggerCh, err := dbusx.NewWatch(
@@ -147,7 +147,7 @@ func (w *ConnectionsWorker) DefaultPreferences() WorkerPrefs {
 	}
 }
 
-func (w *ConnectionsWorker) handleConnection(ctx context.Context, path dbus.ObjectPath, sensorCh chan sensor.Entity) error {
+func (w *ConnectionsWorker) handleConnection(ctx context.Context, path dbus.ObjectPath, sensorCh chan models.Entity) error {
 	conn, err := newConnection(w.bus, path)
 	if err != nil {
 		return fmt.Errorf("could not create connection: %w", err)

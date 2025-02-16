@@ -18,7 +18,8 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/models"
+	"github.com/joshuar/go-hass-agent/internal/models/sensor"
 )
 
 const (
@@ -40,7 +41,7 @@ var (
 	ErrNoLookupHosts        = errors.New("no IP lookup hosts found")
 )
 
-func newExternalIPSensor(addr net.IP) sensor.Entity {
+func newExternalIPSensor(ctx context.Context, addr net.IP) (models.Entity, error) {
 	var name, id, icon string
 
 	switch {
@@ -54,16 +55,19 @@ func newExternalIPSensor(addr net.IP) sensor.Entity {
 		icon = "mdi:numeric-6-box-outline"
 	}
 
-	return sensor.NewSensor(
+	entity, err := sensor.NewSensor(ctx,
 		sensor.WithName(name),
 		sensor.WithID(id),
 		sensor.AsDiagnostic(),
-		sensor.WithState(
-			sensor.WithIcon(icon),
-			sensor.WithValue(addr.String()),
-			sensor.WithAttribute("last_updated", time.Now().Format(time.RFC3339)),
-		),
+		sensor.WithIcon(icon),
+		sensor.WithState(addr.String()),
+		sensor.WithAttribute("last_updated", time.Now().Format(time.RFC3339)),
 	)
+	if err != nil {
+		return entity, fmt.Errorf("could not create external IP sensor entity: %w", err)
+	}
+
+	return entity, nil
 }
 
 type ExternalIPWorker struct {
@@ -96,25 +100,30 @@ func (w *ExternalIPWorker) Stop() error {
 }
 
 //nolint:mnd
-func (w *ExternalIPWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
-	sensors := make([]sensor.Entity, 0, 2)
+func (w *ExternalIPWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
+	sensors := make([]models.Entity, 0, 2)
 
 	for _, ver := range []int{4, 6} {
 		ipAddr, err := w.lookupExternalIPs(ctx, ver)
 		if err != nil || ipAddr == nil {
 			w.logger.Log(ctx, logging.LevelTrace, "Looking up external IP failed.", slog.Any("error", err))
-
 			continue
 		}
 
-		sensors = append(sensors, newExternalIPSensor(ipAddr))
+		entity, err := newExternalIPSensor(ctx, ipAddr)
+		if err != nil {
+			w.logger.Log(ctx, logging.LevelTrace, "Sensor creation failed.", slog.Any("error", err))
+			continue
+		}
+
+		sensors = append(sensors, entity)
 	}
 
 	return sensors, nil
 }
 
-func (w *ExternalIPWorker) Start(ctx context.Context) (<-chan sensor.Entity, error) {
-	sensorCh := make(chan sensor.Entity)
+func (w *ExternalIPWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
+	sensorCh := make(chan models.Entity)
 	w.doneCh = make(chan struct{})
 
 	updater := func(_ time.Duration) {

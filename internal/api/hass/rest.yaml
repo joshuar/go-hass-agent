@@ -1,0 +1,251 @@
+---
+# Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
+# SPDX-License-Identifier: MIT
+
+components:
+  schemas:
+    RequestType:
+      description: is the type of request.
+      type: string
+      enum:
+        - encrypted
+        - register_sensor
+        - update_sensor_states
+        - update_location
+        - fire_event
+        - get_config
+        - auth
+        - auth_ok
+        - auth_invalid
+        - auth_required
+        - ping
+        - pong
+        - result
+        - mobile_app/push_notification_channel
+        - fire_event
+    WebhookID:
+      description: is the webhook ID that can be used to send data back.
+      type: string
+      x-go-name: WebhookID
+    APIError:
+      description: defines an error status returned by the API.
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+    DeviceRegistrationRequest:
+      description: >
+        defines the registration details for the device running the agent.
+      type: object
+      required:
+        - device_id
+        - app_id
+        - app_name
+        - app_version
+        - device_name
+        - manufacturer
+        - model
+        - os_name
+        - os_version
+        - supports_encryption
+      properties:
+        device_id:
+          description: is a unique identifier for this device.
+          type: string
+          x-go-name: DeviceID
+        device_name:
+          description: is the name for this device.
+          type: string
+        manufacturer:
+          description: is the manufacturer of the device running the app.
+          type: string
+        model:
+          description: is the model of the device running the app.
+          type: string
+        app_id:
+          description: is a unique identifier for this app.
+          type: string
+          x-go-name: AppID
+        app_name:
+          description: is the name of the mobile app.
+          type: string
+        app_version:
+          description: is the version of the mobile app.
+          type: string
+        os_name:
+          description: is the name of the OS running the app.
+          type: string
+        os_version:
+          description: is the OS version of the device running the app.
+          type: string
+        supports_encryption:
+          description: indicates if the app supports encryption.
+          type: boolean
+        app_data:
+          description: >
+            Contains app data can be used if the app has a supporting component
+            that extends mobile_app functionality.
+          type: object
+    DeviceRegistrationResponse:
+      description: >
+        defines the reponse for a device registration from Home Assistant.
+        Contains URLs to use for connecting to Home Assistant.
+      type: object
+      required:
+        - webhook_id
+      properties:
+        cloudhook_url:
+          description: >
+            is the cloudhook URL provided by Home Assistant Cloud. Only will be
+            provided if user is actively subscribed to Nabu Casa.
+          type: string
+          x-go-name: CloudhookURL
+        remote_ui_url:
+          description: >
+            is the remote UI URL provided by Home Assistant Cloud. Only will be
+            provided if user is actively subscribed to Nabu Casa.
+          type: string
+          x-go-name: RemoteUIURL
+        secret:
+          description: >
+            is the secret to use for encrypted communication. Will only be
+            included if encryption is supported by both the app and the Home
+            Assistant instance. More info.
+          type: string
+        webhook_id:
+          $ref: '#/components/schemas/WebhookID'
+    Location:
+      $ref: '../models/models.yaml#/components/schemas/Location'
+    SensorState:
+      $ref: '../models/models.yaml#/components/schemas/SensorState'
+    SensorRegistration:
+      $ref: '../models/models.yaml#/components/schemas/SensorRegistration'
+    Event:
+     $ref: '../models/models.yaml#/components/schemas/Event'
+    Config:
+      type: object
+    Request:
+      description: defines a request sent through the API.
+      type: object
+      required:
+        - type
+      properties:
+        type:
+          $ref: '#/components/schemas/RequestType'
+        data:
+          description: is the request payload.
+          oneOf:
+            - $ref: '#/components/schemas/Location'
+            - $ref: '#/components/schemas/SensorState'
+            - $ref: '#/components/schemas/SensorRegistration'
+            - $ref: '#/components/schemas/Event'
+            - $ref: '#/components/schemas/Config'
+        encrypted:
+          description: indicates the request payload is encrypted.
+          type: boolean
+        retryable:
+          description: indicates whether the request can be retried.
+          type: boolean
+          x-go-json-ignore: true
+    Response:
+      description: defines a response received through the API.
+      oneOf:
+        - $ref: '#/components/schemas/SensorStateResponse'
+        - $ref: '#/components/schemas/SensorRegistrationResponse'
+        - $ref: '#/components/schemas/ConfigResponse'
+        - $ref: '#/components/schemas/ResponseStatus'
+    SensorStateResponse:
+      description: >
+        contains a map of response status for each sensor state sent.
+      type: object
+      additionalProperties:
+        $ref: '#/components/schemas/ResponseStatus'
+    ResponseStatus:
+      description: >
+        contains response specific details returned from the Home Assistant API.
+      type: object
+      properties:
+        success:
+          description: >
+            is returned to indicate that the success status of the request.
+          type: boolean
+          nullable: true
+          x-go-name: IsSuccess
+        is_disabled:
+          description: >
+            is returned for sensor entity requests and indicates whether the
+            sensor entity has been disabled in Home Assistant.
+          type: boolean
+          nullable: true
+        error:
+          description: >
+            contains API specific error details for a failed request.
+          type: object
+          allOf:
+            - $ref: '#/components/schemas/APIError'
+          nullable: true
+    SensorRegistrationResponse:
+      description: >
+        contains details on sensor registration status.
+      type: object
+      properties:
+        success:
+          description: indicates if the sensor registration was successful.
+          type: boolean
+        error:
+          type: object
+          allOf:
+            - $ref: '#/components/schemas/APIError'
+    ConfigResponse:
+      description: >
+        is a response containing Home Assistant configuration
+        details.
+      type: object
+      properties:
+        entities:
+          description: >
+            is the list sensor entities registered with this app and
+            their status.
+          type: object
+          additionalProperties:
+            type: object
+            additionalProperties: true
+        unit_system:
+          description: >
+            is the current unit systems used by the Home Assistant instance.
+          type: object
+          properties:
+            length:
+              type: string
+            mass:
+              type: string
+            temperature:
+              type: string
+            volume:
+              type: string
+        config_dir:
+          type: string
+        location_name:
+          type: string
+        time_zone:
+          description: is the configured timezone of the Home Assistant instance.
+          type: string
+        version:
+          description: is the version of Home Assistant.
+          type: string
+        components:
+          type: array
+          items:
+            type: string
+        whitelist_external_dirs:
+          type: array
+          items:
+            type: string
+        elevation:
+          type: integer
+        latitude:
+          type: number
+        longitude:
+          type: number

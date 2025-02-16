@@ -6,10 +6,12 @@
 package net
 
 import (
+	"context"
 	"log/slog"
 
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
+	"github.com/joshuar/go-hass-agent/internal/models"
+	"github.com/joshuar/go-hass-agent/internal/models/class"
+	"github.com/joshuar/go-hass-agent/internal/models/sensor"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
@@ -27,11 +29,11 @@ const (
 
 var apPropList = []string{ssidPropName, hwAddrPropName, maxBitRatePropName, freqPropName, strPropName, bandwidthPropName}
 
-func newWifiSensor(prop string, value any) sensor.Entity {
+func newWifiSensor(ctx context.Context, prop string, value any) (models.Entity, error) {
 	var (
 		name, id, units string
-		deviceClass     types.DeviceClass
-		stateClass      types.StateClass
+		deviceClass     class.SensorDeviceClass
+		stateClass      class.SensorStateClass
 	)
 
 	icon := "mdi:wifi"
@@ -47,55 +49,42 @@ func newWifiSensor(prop string, value any) sensor.Entity {
 		name = "Wi-Fi Link Speed"
 		id = "wi_fi_link_speed"
 		units = "kB/s"
-		deviceClass = types.SensorDeviceClassDataRate
-		stateClass = types.StateClassMeasurement
+		deviceClass = class.SensorClassDataRate
+		stateClass = class.StateMeasurement
 	case freqPropName:
 		name = "Wi-Fi Frequency"
 		id = "wi_fi_frequency"
 		units = "MHz"
-		deviceClass = types.SensorDeviceClassFrequency
-		stateClass = types.StateClassMeasurement
+		deviceClass = class.SensorClassFrequency
+		stateClass = class.StateMeasurement
 	case bandwidthPropName:
 		name = "Wi-Fi Bandwidth"
 		id = "wi_fi_bandwidth"
 		units = "MHz"
-		deviceClass = types.SensorDeviceClassFrequency
-		stateClass = types.StateClassMeasurement
+		deviceClass = class.SensorClassFrequency
+		stateClass = class.StateMeasurement
 	case strPropName:
 		name = "Wi-Fi Signal Strength"
 		id = "wi_fi_signal_strength"
 		units = "%"
-		stateClass = types.StateClassMeasurement
+		stateClass = class.StateMeasurement
 		icon = generateStrIcon(value)
 	}
 
-	wifiSensor := sensor.NewSensor(
+	return sensor.NewSensor(ctx,
 		sensor.WithName(name),
 		sensor.WithID(id),
 		sensor.AsDiagnostic(),
-		sensor.WithState(
-			sensor.WithIcon(icon),
-			sensor.WithValue(generateState(prop, value)),
-		),
+		sensor.WithIcon(icon),
+		sensor.WithState(generateState(prop, value)),
+		sensor.WithDeviceClass(deviceClass),
+		sensor.WithStateClass(stateClass),
+		sensor.WithUnits(units),
 	)
-
-	if deviceClass != types.SensorDeviceClassNone {
-		wifiSensor = sensor.WithDeviceClass(deviceClass)(wifiSensor)
-	}
-
-	if stateClass != types.StateClassNone {
-		wifiSensor = sensor.WithStateClass(stateClass)(wifiSensor)
-	}
-
-	if units != "" {
-		wifiSensor = sensor.WithUnits(units)(wifiSensor)
-	}
-
-	return wifiSensor
 }
 
-func getWifiSensors(bus *dbusx.Bus, apPath string) []sensor.Entity {
-	sensors := make([]sensor.Entity, 0, len(apPropList))
+func getWifiSensors(ctx context.Context, bus *dbusx.Bus, apPath string) []models.Entity {
+	sensors := make([]models.Entity, 0, len(apPropList))
 
 	for _, prop := range apPropList {
 		value, err := dbusx.NewProperty[any](bus, apPath, dBusNMObj, accessPointInterface+"."+prop).Get()
@@ -103,11 +92,18 @@ func getWifiSensors(bus *dbusx.Bus, apPath string) []sensor.Entity {
 			slog.Debug("Could not retrieve access point property.",
 				slog.String("prop", prop),
 				slog.Any("error", err))
-
 			continue
 		}
 
-		sensors = append(sensors, newWifiSensor(prop, value))
+		entity, err := newWifiSensor(ctx, prop, value)
+		if err != nil {
+			slog.Debug("Could not retrieve generate wifi sensor from property.",
+				slog.String("prop", prop),
+				slog.Any("error", err))
+			continue
+		}
+
+		sensors = append(sensors, entity)
 	}
 
 	return sensors
@@ -119,28 +115,28 @@ func generateState(prop string, value any) any {
 		if value, ok := value.([]uint8); ok {
 			return string(value)
 		} else {
-			return sensor.StateUnknown
+			return "Unknown"
 		}
 	case hwAddrPropName:
 		if value, ok := value.(string); ok {
 			return value
 		} else {
-			return sensor.StateUnknown
+			return "Unknown"
 		}
 	case freqPropName, maxBitRatePropName, bandwidthPropName:
 		if value, ok := value.(uint32); ok {
 			return value
 		} else {
-			return sensor.StateUnknown
+			return "Unknown"
 		}
 	case strPropName:
 		if value, ok := value.(uint8); ok {
 			return value
 		} else {
-			return sensor.StateUnknown
+			return "Unknown"
 		}
 	default:
-		return sensor.StateUnknown
+		return "Unknown"
 	}
 }
 

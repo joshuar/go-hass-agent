@@ -6,19 +6,8 @@ package models
 import (
 	"encoding/json"
 
-	"github.com/joshuar/go-hass-agent/internal/models/sensor"
-	"github.com/oapi-codegen/nullable"
+	"github.com/joshuar/go-hass-agent/internal/models/class"
 	"github.com/oapi-codegen/runtime"
-)
-
-// Defines values for APIRequestType.
-const (
-	Encrypted          APIRequestType = "encrypted"
-	FireEvent          APIRequestType = "fire_event"
-	GetConfig          APIRequestType = "get_config"
-	RegisterSensor     APIRequestType = "register_sensor"
-	UpdateLocation     APIRequestType = "update_location"
-	UpdateSensorStates APIRequestType = "update_sensor_states"
 )
 
 // Defines values for EntityCategory.
@@ -32,126 +21,27 @@ const (
 	SensorTypeSensor       SensorType = "sensor"
 )
 
-// APIDeviceRegistrationRequest defines the registration details for the device running the agent.
-type APIDeviceRegistrationRequest struct {
-	// AppData Contains app data can be used if the app has a supporting component that extends mobile_app functionality.
-	AppData *map[string]interface{} `json:"app_data,omitempty"`
-
-	// AppId is a unique identifier for this app.
-	AppId string `json:"app_id"`
-
-	// AppName is the name of the mobile app.
-	AppName string `json:"app_name"`
-
-	// AppVersion is the version of the mobile app.
-	AppVersion string `json:"app_version"`
-
-	// DeviceId is a unique identifier for this device.
-	DeviceId string `json:"device_id"`
-
-	// DeviceName is the name for this device.
-	DeviceName string `json:"device_name"`
-
-	// Manufacturer is the manufacturer of the device running the app.
-	Manufacturer string `json:"manufacturer"`
-
-	// Model is the model of the device running the app.
-	Model string `json:"model"`
-
-	// OsName is the name of the OS running the app.
-	OsName string `json:"os_name"`
-
-	// OsVersion is the OS version of the device running the app.
-	OsVersion string `json:"os_version"`
-
-	// SupportsEncryption indicates if the app supports encryption.
-	SupportsEncryption bool `json:"supports_encryption"`
-}
-
-// APIDeviceRegistrationResponse defines the reponse for a device registration from Home Assistant. Contains URLs to use for connecting to Home Assistant.
-type APIDeviceRegistrationResponse struct {
-	// CloudhookUrl is the cloudhook URL provided by Home Assistant Cloud. Only will be provided if user is actively subscribed to Nabu Casa.
-	CloudhookUrl *string `json:"cloudhook_url,omitempty"`
-
-	// RemoteUiUrl is the remote UI URL provided by Home Assistant Cloud. Only will be provided if user is actively subscribed to Nabu Casa.
-	RemoteUiUrl *string `json:"remote_ui_url,omitempty"`
-
-	// Secret is the secret to use for encrypted communication. Will only be included if encryption is supported by both the app and the Home Assistant instance. More info.
-	Secret *string `json:"secret,omitempty"`
-
-	// WebhookId is the webhook ID that can be used to send data back.
-	WebhookId string `json:"webhook_id"`
-}
-
-// APIError defines an error status returned by the API.
-type APIError struct {
-	Code    *string `json:"code,omitempty"`
-	Message *string `json:"message,omitempty"`
-}
-
-// APIRequest defines a request sent through the API.
-type APIRequest struct {
-	// Data is the request payload.
-	Data *APIRequest_Data `json:"data,omitempty"`
-
-	// Encrypted indicates the request payload is encrypted.
-	Encrypted *bool `json:"encrypted,omitempty"`
-
-	// Retryable indicates whether the request can be retried.
-	Retryable *bool `json:"-"`
-
-	// Type is the type of request.
-	Type APIRequestType `json:"type"`
-}
-
-// APIRequest_Data is the request payload.
-type APIRequest_Data struct {
-	union json.RawMessage
-}
-
-// APIRequestType is the type of request.
-type APIRequestType string
-
-// APIResponse defines a response received through the API.
-type APIResponse struct {
-	union json.RawMessage
-}
-
-// APISensorRegistrationResponse contains a map of response status for sensor registration.
-type APISensorRegistrationResponse struct {
-	Error *APIError `json:"error,omitempty"`
-
-	// Success indicates if the sensor registration was successful.
-	Success *bool `json:"success,omitempty"`
-}
-
-// APISensorStateResponse contains a map of response status for each sensor state sent.
-type APISensorStateResponse map[string]APISensorStateResponseStatus
-
-// APISensorStateResponseStatus contains the response status for an individual sensor.
-type APISensorStateResponseStatus struct {
-	Error *APIError `json:"error,omitempty"`
-
-	// IsDisabled indicates the sensor has been disabled in Home Assistant.
-	IsDisabled *bool `json:"is_disabled,omitempty"`
-
-	// Success indicates if the sensor state update was successful.
-	Success *bool `json:"success,omitempty"`
-}
-
-// Attributes defines additional custom attributes of a sensor, as key-value pairs, to add to the entity.
+// Attributes defines additional custom attributes of a entity.
 type Attributes map[string]interface{}
+
+// Entity is any valid Home Assistant Entity type.
+type Entity struct {
+	union json.RawMessage
+}
 
 // EntityCategory is the entity category of the entity.
 type EntityCategory string
 
 // Event defines model for Event.
 type Event struct {
-	// EventData is data of the event to fire
-	EventData map[string]interface{} `json:"event_data"`
+	// Data is data of the event to fire
+	Data map[string]interface{} `json:"event_data" validate:"required"`
 
-	// EventType is the ype of the event to fire.
-	EventType string `json:"event_type"`
+	// Type is the type of the event to fire.
+	Type string `json:"event_type" validate:"required"`
+
+	// Retryable indicates whether requests should be retried when sending this event data to Home Assistant.
+	Retryable *bool `json:"-"`
 }
 
 // Icon is a material design icon to represent the entity. Must be prefixed mdi:. If not provided, default value is mdi:cellphone.
@@ -169,10 +59,10 @@ type Location struct {
 	Course *int `json:"course,omitempty"`
 
 	// Gps is the current location as latitude and longitude.
-	Gps *[]float32 `json:"gps,omitempty"`
+	Gps []float32 `json:"gps" validate:"required,number"`
 
 	// GpsAccuracy defines GPS accuracy in meters. Must be greater than 0.
-	GpsAccuracy  *int    `json:"gps_accuracy,omitempty"`
+	GpsAccuracy  int     `json:"gps_accuracy" validate:"required,number,gte=0"`
 	LocationName *string `json:"location_name,omitempty"`
 
 	// Speed is the speed of the device in meters per second. Must be greater than 0.
@@ -187,99 +77,102 @@ type Name = string
 
 // Sensor defines model for Sensor.
 type Sensor struct {
-	// Attributes defines additional custom attributes of a sensor, as key-value pairs, to add to the entity.
-	Attributes nullable.Nullable[Attributes] `json:"attributes,omitempty"`
+	// Attributes defines additional custom attributes of a entity.
+	Attributes Attributes `json:"attributes,omitempty"`
 
 	// DeviceClass is a valid Binary Sensor or Sensor device class.
-	DeviceClass *sensor.DeviceClass `json:"device_class,omitempty"`
+	DeviceClass *class.SensorDeviceClass `json:"device_class,omitempty"`
 
 	// Disabled indicates if the entity should be enabled or disabled.
 	Disabled *bool `json:"disabled,omitempty"`
 
 	// EntityCategory is the entity category of the entity.
-	EntityCategory nullable.Nullable[EntityCategory] `json:"entity_category,omitempty"`
+	EntityCategory *EntityCategory `json:"entity_category,omitempty"`
 
 	// Icon is a material design icon to represent the entity. Must be prefixed mdi:. If not provided, default value is mdi:cellphone.
-	Icon nullable.Nullable[Icon] `json:"icon,omitempty"`
+	Icon *Icon `json:"icon,omitempty"`
 
 	// Name is a human-friendly name for a entity.
-	Name Name `json:"name"`
+	Name Name `json:"name" validate:"required"`
+
+	// Retryable indicates whether requests should be retried when sending this sensor data to Home Assistant.
+	Retryable *bool `json:"-"`
 
 	// State is the current state of the entity.
-	State State `json:"state"`
+	State State `json:"state" validate:"required"`
 
 	// StateClass is the state class of the entity (sensors only).
-	StateClass *sensor.StateClass `json:"state_class,omitempty"`
+	StateClass *class.SensorStateClass `json:"state_class,omitempty"`
 
-	// Type is the type of sensor entity.
-	Type SensorType `json:"type"`
+	// Type is the type of a sensor entity.
+	Type SensorType `json:"type" validate:"required"`
 
 	// UniqueID is a unique identifier for a entity.
-	UniqueID UniqueID `json:"unique_id"`
+	UniqueID UniqueID `json:"unique_id" validate:"required"`
 
 	// UnitOfMeasurement is the unit of measurement for the entity.
-	UnitOfMeasurement nullable.Nullable[Units] `json:"unit_of_measurement,omitempty"`
+	UnitOfMeasurement *Units `json:"unit_of_measurement,omitempty"`
 }
 
 // SensorRegistration defines model for SensorRegistration.
 type SensorRegistration struct {
-	// Attributes defines additional custom attributes of a sensor, as key-value pairs, to add to the entity.
-	Attributes nullable.Nullable[Attributes] `json:"attributes,omitempty"`
+	// Attributes defines additional custom attributes of a entity.
+	Attributes Attributes `json:"attributes,omitempty"`
 
 	// DeviceClass is a valid Binary Sensor or Sensor device class.
-	DeviceClass *sensor.DeviceClass `json:"device_class,omitempty"`
+	DeviceClass *class.SensorDeviceClass `json:"device_class,omitempty"`
 
 	// Disabled indicates if the entity should be enabled or disabled.
 	Disabled *bool `json:"disabled,omitempty"`
 
 	// EntityCategory is the entity category of the entity.
-	EntityCategory nullable.Nullable[EntityCategory] `json:"entity_category,omitempty"`
+	EntityCategory *EntityCategory `json:"entity_category,omitempty"`
 
 	// Icon is a material design icon to represent the entity. Must be prefixed mdi:. If not provided, default value is mdi:cellphone.
-	Icon nullable.Nullable[Icon] `json:"icon,omitempty"`
+	Icon *Icon `json:"icon,omitempty"`
 
 	// Name is a human-friendly name for a entity.
-	Name Name `json:"name"`
+	Name Name `json:"name" validate:"required"`
 
 	// State is the current state of the entity.
-	State State `json:"state"`
+	State State `json:"state" validate:"required"`
 
 	// StateClass is the state class of the entity (sensors only).
-	StateClass *sensor.StateClass `json:"state_class,omitempty"`
+	StateClass *class.SensorStateClass `json:"state_class,omitempty"`
 
-	// Type is the type of sensor entity.
-	Type SensorType `json:"type"`
+	// Type is the type of a sensor entity.
+	Type SensorType `json:"type" validate:"required"`
 
 	// UniqueID is a unique identifier for a entity.
-	UniqueID UniqueID `json:"unique_id"`
+	UniqueID UniqueID `json:"unique_id" validate:"required"`
 
 	// UnitOfMeasurement is the unit of measurement for the entity.
-	UnitOfMeasurement nullable.Nullable[Units] `json:"unit_of_measurement,omitempty"`
+	UnitOfMeasurement *Units `json:"unit_of_measurement,omitempty"`
 }
 
 // SensorState defines the current state of a sensor.
 type SensorState struct {
-	// Attributes defines additional custom attributes of a sensor, as key-value pairs, to add to the entity.
-	Attributes nullable.Nullable[Attributes] `json:"attributes,omitempty"`
+	// Attributes defines additional custom attributes of a entity.
+	Attributes Attributes `json:"attributes,omitempty"`
 
 	// Icon is a material design icon to represent the entity. Must be prefixed mdi:. If not provided, default value is mdi:cellphone.
-	Icon nullable.Nullable[Icon] `json:"icon,omitempty"`
+	Icon *Icon `json:"icon,omitempty"`
 
 	// State is the current state of the entity.
-	State State `json:"state"`
+	State State `json:"state" validate:"required"`
 
-	// Type is the type of sensor entity.
-	Type SensorType `json:"type"`
+	// Type is the type of a sensor entity.
+	Type SensorType `json:"type" validate:"required"`
 
 	// UniqueID is a unique identifier for a entity.
-	UniqueID UniqueID `json:"unique_id"`
+	UniqueID UniqueID `json:"unique_id" validate:"required"`
 }
 
-// SensorType is the type of sensor entity.
+// SensorType is the type of a sensor entity.
 type SensorType string
 
 // State is the current state of the entity.
-type State = string
+type State = interface{}
 
 // UniqueID is a unique identifier for a entity.
 type UniqueID = string
@@ -287,100 +180,22 @@ type UniqueID = string
 // Units is the unit of measurement for the entity.
 type Units = string
 
-// AsLocation returns the union data inside the APIRequest_Data as a Location
-func (t APIRequest_Data) AsLocation() (Location, error) {
-	var body Location
-	err := json.Unmarshal(t.union, &body)
-	return body, err
-}
-
-// FromLocation overwrites any union data inside the APIRequest_Data as the provided Location
-func (t *APIRequest_Data) FromLocation(v Location) error {
-	b, err := json.Marshal(v)
-	t.union = b
-	return err
-}
-
-// MergeLocation performs a merge with any union data inside the APIRequest_Data, using the provided Location
-func (t *APIRequest_Data) MergeLocation(v Location) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
-	return err
-}
-
-// AsSensorState returns the union data inside the APIRequest_Data as a SensorState
-func (t APIRequest_Data) AsSensorState() (SensorState, error) {
-	var body SensorState
-	err := json.Unmarshal(t.union, &body)
-	return body, err
-}
-
-// FromSensorState overwrites any union data inside the APIRequest_Data as the provided SensorState
-func (t *APIRequest_Data) FromSensorState(v SensorState) error {
-	b, err := json.Marshal(v)
-	t.union = b
-	return err
-}
-
-// MergeSensorState performs a merge with any union data inside the APIRequest_Data, using the provided SensorState
-func (t *APIRequest_Data) MergeSensorState(v SensorState) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
-	return err
-}
-
-// AsSensorRegistration returns the union data inside the APIRequest_Data as a SensorRegistration
-func (t APIRequest_Data) AsSensorRegistration() (SensorRegistration, error) {
-	var body SensorRegistration
-	err := json.Unmarshal(t.union, &body)
-	return body, err
-}
-
-// FromSensorRegistration overwrites any union data inside the APIRequest_Data as the provided SensorRegistration
-func (t *APIRequest_Data) FromSensorRegistration(v SensorRegistration) error {
-	b, err := json.Marshal(v)
-	t.union = b
-	return err
-}
-
-// MergeSensorRegistration performs a merge with any union data inside the APIRequest_Data, using the provided SensorRegistration
-func (t *APIRequest_Data) MergeSensorRegistration(v SensorRegistration) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
-	return err
-}
-
-// AsEvent returns the union data inside the APIRequest_Data as a Event
-func (t APIRequest_Data) AsEvent() (Event, error) {
+// AsEvent returns the union data inside the Entity as a Event
+func (t Entity) AsEvent() (Event, error) {
 	var body Event
 	err := json.Unmarshal(t.union, &body)
 	return body, err
 }
 
-// FromEvent overwrites any union data inside the APIRequest_Data as the provided Event
-func (t *APIRequest_Data) FromEvent(v Event) error {
+// FromEvent overwrites any union data inside the Entity as the provided Event
+func (t *Entity) FromEvent(v Event) error {
 	b, err := json.Marshal(v)
 	t.union = b
 	return err
 }
 
-// MergeEvent performs a merge with any union data inside the APIRequest_Data, using the provided Event
-func (t *APIRequest_Data) MergeEvent(v Event) error {
+// MergeEvent performs a merge with any union data inside the Entity, using the provided Event
+func (t *Entity) MergeEvent(v Event) error {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
@@ -391,32 +206,22 @@ func (t *APIRequest_Data) MergeEvent(v Event) error {
 	return err
 }
 
-func (t APIRequest_Data) MarshalJSON() ([]byte, error) {
-	b, err := t.union.MarshalJSON()
-	return b, err
-}
-
-func (t *APIRequest_Data) UnmarshalJSON(b []byte) error {
-	err := t.union.UnmarshalJSON(b)
-	return err
-}
-
-// AsAPISensorStateResponse returns the union data inside the APIResponse as a APISensorStateResponse
-func (t APIResponse) AsAPISensorStateResponse() (APISensorStateResponse, error) {
-	var body APISensorStateResponse
+// AsLocation returns the union data inside the Entity as a Location
+func (t Entity) AsLocation() (Location, error) {
+	var body Location
 	err := json.Unmarshal(t.union, &body)
 	return body, err
 }
 
-// FromAPISensorStateResponse overwrites any union data inside the APIResponse as the provided APISensorStateResponse
-func (t *APIResponse) FromAPISensorStateResponse(v APISensorStateResponse) error {
+// FromLocation overwrites any union data inside the Entity as the provided Location
+func (t *Entity) FromLocation(v Location) error {
 	b, err := json.Marshal(v)
 	t.union = b
 	return err
 }
 
-// MergeAPISensorStateResponse performs a merge with any union data inside the APIResponse, using the provided APISensorStateResponse
-func (t *APIResponse) MergeAPISensorStateResponse(v APISensorStateResponse) error {
+// MergeLocation performs a merge with any union data inside the Entity, using the provided Location
+func (t *Entity) MergeLocation(v Location) error {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
@@ -427,22 +232,22 @@ func (t *APIResponse) MergeAPISensorStateResponse(v APISensorStateResponse) erro
 	return err
 }
 
-// AsAPISensorRegistrationResponse returns the union data inside the APIResponse as a APISensorRegistrationResponse
-func (t APIResponse) AsAPISensorRegistrationResponse() (APISensorRegistrationResponse, error) {
-	var body APISensorRegistrationResponse
+// AsSensor returns the union data inside the Entity as a Sensor
+func (t Entity) AsSensor() (Sensor, error) {
+	var body Sensor
 	err := json.Unmarshal(t.union, &body)
 	return body, err
 }
 
-// FromAPISensorRegistrationResponse overwrites any union data inside the APIResponse as the provided APISensorRegistrationResponse
-func (t *APIResponse) FromAPISensorRegistrationResponse(v APISensorRegistrationResponse) error {
+// FromSensor overwrites any union data inside the Entity as the provided Sensor
+func (t *Entity) FromSensor(v Sensor) error {
 	b, err := json.Marshal(v)
 	t.union = b
 	return err
 }
 
-// MergeAPISensorRegistrationResponse performs a merge with any union data inside the APIResponse, using the provided APISensorRegistrationResponse
-func (t *APIResponse) MergeAPISensorRegistrationResponse(v APISensorRegistrationResponse) error {
+// MergeSensor performs a merge with any union data inside the Entity, using the provided Sensor
+func (t *Entity) MergeSensor(v Sensor) error {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
@@ -453,12 +258,12 @@ func (t *APIResponse) MergeAPISensorRegistrationResponse(v APISensorRegistration
 	return err
 }
 
-func (t APIResponse) MarshalJSON() ([]byte, error) {
+func (t Entity) MarshalJSON() ([]byte, error) {
 	b, err := t.union.MarshalJSON()
 	return b, err
 }
 
-func (t *APIResponse) UnmarshalJSON(b []byte) error {
+func (t *Entity) UnmarshalJSON(b []byte) error {
 	err := t.union.UnmarshalJSON(b)
 	return err
 }

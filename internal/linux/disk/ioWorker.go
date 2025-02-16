@@ -1,9 +1,6 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
-//revive:disable:unused-receiver
 package disk
 
 import (
@@ -17,8 +14,8 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/models"
 )
 
 const (
@@ -33,8 +30,8 @@ var ErrInitRatesWorker = errors.New("could not init rates worker")
 // ioWorker creates sensors for disk IO counts and rates per device. It
 // maintains an internal map of devices being tracked.
 type ioWorker struct {
-	boottime time.Time
-	devices  map[string][]*diskIOSensor
+	boottime    time.Time
+	rateSensors map[string]map[ioSensor]*rate
 	linux.PollingSensorWorker
 	delta time.Duration
 	mu    sync.Mutex
@@ -43,45 +40,98 @@ type ioWorker struct {
 // addDevice adds a new device to the tracker map. If sthe device is already
 // being tracked, it will not be added again. The bool return indicates whether
 // a device was added (true) or not (false).
-func (w *ioWorker) addDevice(dev *device) {
+func (w *ioWorker) addRateSensors(dev *device) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	if _, found := w.devices[dev.id]; !found {
-		w.devices[dev.id] = newDeviceSensors(w.boottime, dev)
+	if _, found := w.rateSensors[dev.id]; !found {
+		w.rateSensors[dev.id] = map[ioSensor]*rate{
+			diskReadRate:  {rateType: diskReadRate},
+			diskWriteRate: {rateType: diskWriteRate},
+		}
 	}
 }
 
-// updateDevice will update a tracked device's stats. For rates, it will
-// recalculate based on the given time delta.
-func (w *ioWorker) updateDevice(id string, stats map[stat]uint64, delta time.Duration) []sensor.Entity {
+func (w *ioWorker) generateDeviceRateSensors(ctx context.Context, device *device, stats map[stat]uint64, delta time.Duration) ([]models.Entity, error) {
+	var (
+		sensors  []models.Entity
+		warnings error
+	)
+
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	sensors := make([]sensor.Entity, len(w.devices[id]))
+	if _, found := w.rateSensors[device.id]; found && stats != nil {
+		for rateType := range w.rateSensors[device.id] {
+			rate := w.rateSensors[device.id][rateType].calculate(stats, delta)
 
-	if _, found := w.devices[id]; found && stats != nil {
-		for idx := range w.devices[id] {
-			w.devices[id][idx].update(stats, delta)
-			sensors[idx] = w.devices[id][idx].Entity
+			entity, err := newDiskRateSensor(ctx, device, rateType, rate)
+			if err != nil {
+				warnings = errors.Join(warnings, fmt.Errorf("could not generate rate sensor: %w", err))
+			} else {
+				sensors = append(sensors, entity)
+			}
 		}
 	}
 
-	return sensors
+	return sensors, warnings
+}
+
+func (w *ioWorker) generateDeviceStatSensors(ctx context.Context, device *device, stats map[stat]uint64) ([]models.Entity, error) {
+	var (
+		sensors  []models.Entity
+		entity   models.Entity
+		err      error
+		warnings error
+	)
+
+	diskReadsAttributes := models.Attributes{
+		"total_sectors_read":         stats[TotalSectorsRead],
+		"total_milliseconds_reading": stats[TotalTimeReading],
+	}
+
+	diskWriteAttributes := models.Attributes{
+		"total_sectors_written":      stats[TotalSectorsWritten],
+		"total_milliseconds_writing": stats[TotalTimeWriting],
+	}
+
+	// Generate diskReads sensor for device.
+	entity, err = newDiskStatSensor(ctx, device, diskReads, stats[TotalReads], diskReadsAttributes)
+	if err != nil {
+		warnings = errors.Join(warnings, fmt.Errorf("could not generate stat sensor: %w", err))
+	} else {
+		sensors = append(sensors, entity)
+	}
+	// Generate diskWrites sensor for device.
+	entity, err = newDiskStatSensor(ctx, device, diskWrites, stats[TotalWrites], diskWriteAttributes)
+	if err != nil {
+		warnings = errors.Join(warnings, fmt.Errorf("could not generate stat sensor: %w", err))
+	} else {
+		sensors = append(sensors, entity)
+	}
+	// Generate IOsInProgress sensor for device.
+	entity, err = newDiskStatSensor(ctx, device, diskIOInProgress, stats[ActiveIOs], nil)
+	if err != nil {
+		warnings = errors.Join(warnings, fmt.Errorf("could not generate stat sensor: %w", err))
+	} else {
+		sensors = append(sensors, entity)
+	}
+
+	return sensors, warnings
 }
 
 func (w *ioWorker) UpdateDelta(delta time.Duration) {
 	w.delta = delta
 }
 
-func (w *ioWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
+func (w *ioWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 	// Get valid devices.
 	deviceNames, err := getDeviceNames()
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch disk devices: %w", err)
 	}
 
-	var sensors []sensor.Entity
+	var sensors []models.Entity
 
 	statsTotals := make(map[stat]uint64)
 
@@ -96,11 +146,26 @@ func (w *ioWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
 			continue
 		}
 
-		// Add device (if it isn't already tracked).
-		w.addDevice(dev)
+		// Add rate sensors for device (if not already added).
+		w.addRateSensors(dev)
 
-		// Update device stats and return updated sensors.
-		sensors = append(sensors, w.updateDevice(dev.id, stats, w.delta)...)
+		rateSensors, warnings := w.generateDeviceRateSensors(ctx, dev, stats, w.delta)
+		if warnings != nil {
+			logging.FromContext(ctx).
+				With(slog.String("worker", ioWorkerID)).
+				Debug("Some problems occurred generating disk rate sensors.", slog.Any("warnings", warnings))
+		}
+
+		sensors = append(sensors, rateSensors...)
+
+		statSensors, warnings := w.generateDeviceStatSensors(ctx, dev, stats)
+		if warnings != nil {
+			logging.FromContext(ctx).
+				With(slog.String("worker", ioWorkerID)).
+				Debug("Some problems occurred generating disk rate sensors.", slog.Any("warnings", warnings))
+		}
+
+		sensors = append(sensors, statSensors...)
 
 		// Don't include "aggregate" devices in totals.
 		if strings.HasPrefix(dev.id, "dm") || strings.HasPrefix(dev.id, "md") {
@@ -113,7 +178,23 @@ func (w *ioWorker) Sensors(ctx context.Context) ([]sensor.Entity, error) {
 	}
 
 	// Update total stats.
-	sensors = append(sensors, w.updateDevice(totalsID, statsTotals, w.delta)...)
+	rateSensors, warnings := w.generateDeviceRateSensors(ctx, &device{id: totalsID}, statsTotals, w.delta)
+	if warnings != nil {
+		logging.FromContext(ctx).
+			With(slog.String("worker", ioWorkerID)).
+			Debug("Some problems occurred generating disk rate sensors.", slog.Any("warnings", warnings))
+	}
+
+	sensors = append(sensors, rateSensors...)
+
+	statSensors, warnings := w.generateDeviceStatSensors(ctx, &device{id: totalsID}, statsTotals)
+	if warnings != nil {
+		logging.FromContext(ctx).
+			With(slog.String("worker", ioWorkerID)).
+			Debug("Some problems occurred generating disk rate sensors.", slog.Any("warnings", warnings))
+	}
+
+	sensors = append(sensors, statSensors...)
 
 	return sensors, nil
 }
@@ -137,12 +218,15 @@ func NewIOWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
 
 	// Add sensors for a pseudo "total" device which tracks total values from
 	// all devices.
-	devices := make(map[string][]*diskIOSensor)
-	devices["total"] = newDeviceSensors(boottime, &device{id: totalsID})
+	devices := make(map[string]map[ioSensor]*rate)
+	devices["total"] = map[ioSensor]*rate{
+		diskReadRate:  {rateType: diskReadRate},
+		diskWriteRate: {rateType: diskWriteRate},
+	}
 
 	ioWorker := &ioWorker{
-		devices:  devices,
-		boottime: boottime,
+		rateSensors: devices,
+		boottime:    boottime,
 	}
 
 	prefs, err := preferences.LoadWorker(ioWorker)
@@ -169,14 +253,4 @@ func NewIOWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
 	worker.PollingSensorType = ioWorker
 
 	return worker, nil
-}
-
-func newDeviceSensors(boottime time.Time, dev *device) []*diskIOSensor {
-	return []*diskIOSensor{
-		newDiskIOSensor(dev, diskReads, boottime),
-		newDiskIOSensor(dev, diskWrites, boottime),
-		newDiskIOSensor(dev, diskReadRate, boottime),
-		newDiskIOSensor(dev, diskWriteRate, boottime),
-		newDiskIOSensor(dev, diskIOInProgress, boottime),
-	}
 }

@@ -12,6 +12,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/gofrs/uuid/v5"
 	"github.com/jaypipes/ghw"
 )
 
@@ -60,4 +61,14 @@ func GetHWProductInfo() (model, vendor string, err error) {
 	}
 
 	return product.Name, product.Vendor, nil
+}
+
+// NewDeviceID create a new device ID. It will be a randomly generated UUIDv4.
+func NewDeviceID() (string, error) {
+	deviceID, err := uuid.NewV4()
+	if err != nil {
+		return "", fmt.Errorf("could not retrieve a machine ID: %w", err)
+	}
+
+	return deviceID.String(), nil
 }

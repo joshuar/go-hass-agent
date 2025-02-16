@@ -13,9 +13,10 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/models"
+	"github.com/joshuar/go-hass-agent/internal/models/class"
+	"github.com/joshuar/go-hass-agent/internal/models/sensor"
 	"github.com/joshuar/go-hass-agent/pkg/linux/hwmon"
 )
 
@@ -43,11 +44,12 @@ func hwmonSensorAttributes(details *hwmon.Sensor) map[string]any {
 	return attributes
 }
 
-func newHWSensor(details *hwmon.Sensor) sensor.Entity {
+func newHWSensor(ctx context.Context, details *hwmon.Sensor) (models.Entity, error) {
 	var (
-		icon        string
-		deviceClass types.DeviceClass
-		stateClass  types.StateClass
+		icon             string
+		deviceClass      class.SensorDeviceClass
+		stateClass       class.SensorStateClass
+		sensorTypeOption sensor.Option
 	)
 
 	switch details.MonitorType {
@@ -59,37 +61,33 @@ func newHWSensor(details *hwmon.Sensor) sensor.Entity {
 		}
 
 		if details.MonitorType == hwmon.Alarm {
-			deviceClass = types.BinarySensorDeviceClassProblem
+			deviceClass = class.BinaryClassProblem
 		} else {
-			deviceClass = types.BinarySensorDeviceClassTamper
+			deviceClass = class.BinaryClassTamper
 		}
 	default:
 		icon, deviceClass = parseSensorType(details.MonitorType.String())
-		stateClass = types.StateClassMeasurement
+		stateClass = class.StateMeasurement
 	}
 
-	hwMonSensor := sensor.NewSensor(
+	if details.MonitorType == hwmon.Alarm || details.MonitorType == hwmon.Intrusion {
+		sensorTypeOption = sensor.AsTypeBinarySensor()
+	} else {
+		sensorTypeOption = sensor.AsTypeSensor()
+	}
+
+	return sensor.NewSensor(ctx,
 		sensor.WithName(details.Name()),
 		sensor.WithID(details.ID()),
 		sensor.WithDeviceClass(deviceClass),
 		sensor.AsDiagnostic(),
+		sensorTypeOption,
 		sensor.WithUnits(details.Units()),
-		sensor.WithState(
-			sensor.WithIcon(icon),
-			sensor.WithValue(details.Value()),
-			sensor.WithAttributes(hwmonSensorAttributes(details)),
-		),
+		sensor.WithIcon(icon),
+		sensor.WithState(details.Value()),
+		sensor.WithAttributes(hwmonSensorAttributes(details)),
+		sensor.WithStateClass(stateClass),
 	)
-
-	if stateClass != types.StateClassNone {
-		hwMonSensor = sensor.WithStateClass(stateClass)(hwMonSensor)
-	}
-
-	if details.MonitorType == hwmon.Alarm || details.MonitorType == hwmon.Intrusion {
-		hwMonSensor.EntityType = types.BinarySensor
-	}
-
-	return hwMonSensor
 }
 
 type hwMonWorker struct {
@@ -98,16 +96,22 @@ type hwMonWorker struct {
 
 func (w *hwMonWorker) UpdateDelta(_ time.Duration) {}
 
-func (w *hwMonWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
+func (w *hwMonWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
+	var warnings error
+
 	hwmonSensors, err := hwmon.GetAllSensors()
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve hardware sensors: %w", err)
 	}
 
-	sensors := make([]sensor.Entity, 0, len(hwmonSensors))
+	sensors := make([]models.Entity, 0, len(hwmonSensors))
 
 	for _, s := range hwmonSensors {
-		sensors = append(sensors, newHWSensor(s))
+		if entity, err := newHWSensor(ctx, s); err != nil {
+			warnings = errors.Join(warnings, fmt.Errorf("could not generate hwmon sensor: %w", err))
+		} else {
+			sensors = append(sensors, entity)
+		}
 	}
 
 	return sensors, nil
@@ -154,24 +158,24 @@ func NewHWMonWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
 	return worker, nil
 }
 
-func parseSensorType(t string) (icon string, deviceclass types.DeviceClass) {
+func parseSensorType(t string) (icon string, deviceclass class.SensorDeviceClass) {
 	switch t {
 	case "Temp":
-		return "mdi:thermometer", types.SensorDeviceClassTemperature
+		return "mdi:thermometer", class.SensorClassTemperature
 	case "Fan":
 		return "mdi:turbine", 0
 	case "Power":
-		return "mdi:flash", types.SensorDeviceClassPower
+		return "mdi:flash", class.SensorClassPower
 	case "Voltage":
-		return "mdi:lightning-bolt", types.SensorDeviceClassVoltage
+		return "mdi:lightning-bolt", class.SensorClassVoltage
 	case "Energy":
-		return "mdi:lightning-bolt", types.SensorDeviceClassEnergyStorage
+		return "mdi:lightning-bolt", class.SensorClassEnergyStorage
 	case "Current":
-		return "mdi:current-ac", types.SensorDeviceClassCurrent
+		return "mdi:current-ac", class.SensorClassCurrent
 	case "Frequency", "PWM":
-		return "mdi:sawtooth-wave", types.SensorDeviceClassFrequency
+		return "mdi:sawtooth-wave", class.SensorClassFrequency
 	case "Humidity":
-		return "mdi:water-percent", types.SensorDeviceClassHumidity
+		return "mdi:water-percent", class.SensorClassHumidity
 	default:
 		return "mdi:chip", 0
 	}

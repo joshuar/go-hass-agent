@@ -14,8 +14,8 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/models"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
@@ -32,12 +32,12 @@ type sensorWorker struct {
 // ?: implement initial battery sensor retrieval.
 //
 //revive:disable:unused-receiver
-func (w *sensorWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
+func (w *sensorWorker) Sensors(_ context.Context) ([]models.Entity, error) {
 	return nil, linux.ErrUnimplemented
 }
 
-func (w *sensorWorker) Events(ctx context.Context) (<-chan sensor.Entity, error) {
-	sensorCh := make(chan sensor.Entity)
+func (w *sensorWorker) Events(ctx context.Context) (<-chan models.Entity, error) {
+	sensorCh := make(chan models.Entity)
 
 	var wg sync.WaitGroup
 
@@ -98,11 +98,11 @@ func (w *sensorWorker) getBatteries() ([]dbus.ObjectPath, error) {
 	return batteryList, nil
 }
 
-func (w *sensorWorker) track(ctx context.Context, batteryPath dbus.ObjectPath) <-chan sensor.Entity {
+func (w *sensorWorker) track(ctx context.Context, batteryPath dbus.ObjectPath) <-chan models.Entity {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	sensorCh := make(chan sensor.Entity)
+	sensorCh := make(chan models.Entity)
 
 	// Ignore if the battery is already being tracked.
 	if _, found := w.batteryList[batteryPath]; found {
@@ -133,7 +133,7 @@ func (w *sensorWorker) track(ctx context.Context, batteryPath dbus.ObjectPath) <
 	go func() {
 		defer wg.Done()
 
-		for prop := range battery.getSensors(battery.sensors...) {
+		for prop := range battery.getSensors(ctx, battery.sensors...) {
 			sensorCh <- prop
 		}
 	}()
@@ -168,7 +168,7 @@ func (w *sensorWorker) remove(batteryPath dbus.ObjectPath) {
 
 // monitorBatteryChanges monitors for battery devices being added/removed from
 // the system and will start/stop monitory each battery as appropriate.
-func (w *sensorWorker) monitorBatteryChanges(ctx context.Context) <-chan sensor.Entity {
+func (w *sensorWorker) monitorBatteryChanges(ctx context.Context) <-chan models.Entity {
 	triggerCh, err := dbusx.NewWatch(
 		dbusx.MatchPath(upowerDBusPath),
 		dbusx.MatchInterface(upowerDBusDest),
@@ -180,7 +180,7 @@ func (w *sensorWorker) monitorBatteryChanges(ctx context.Context) <-chan sensor.
 		return nil
 	}
 
-	sensorCh := make(chan sensor.Entity)
+	sensorCh := make(chan models.Entity)
 
 	go func() {
 		w.logger.Debug("Monitoring for battery additions/removals.")

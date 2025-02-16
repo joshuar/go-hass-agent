@@ -17,8 +17,15 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/models"
+)
+
+var (
+	ErrParseDevices = errors.New("could not parse devices")
+	deviceMajNo     = []string{"8", "252", "253", "259"}
 )
 
 const (
@@ -51,9 +58,30 @@ type device struct {
 	model     string
 }
 
-var ErrParseDevices = errors.New("could not parse devices")
+func (d *device) generateIdentifiers(sensorType ioSensor) (name, id string) {
+	r := []rune(d.id)
+	name = string(append([]rune{unicode.ToUpper(r[0])}, r[1:]...)) + " " + sensorType.String()
+	id = strings.ToLower(d.id + "_" + strings.ReplaceAll(sensorType.String(), " ", "_"))
 
-var deviceMajNo = []string{"8", "252", "253", "259"}
+	return name, id
+}
+
+func (d *device) generateAttributes() models.Attributes {
+	attributes := models.Attributes{
+		"data_source": linux.DataSrcSysfs,
+	}
+
+	// Add attributes from device if available.
+	if d.model != "" {
+		attributes["device_model"] = d.model
+	}
+
+	if d.sysFSPath != "" {
+		attributes["sysfs_path"] = d.sysFSPath
+	}
+
+	return attributes
+}
 
 func getDeviceNames() ([]string, error) {
 	data, err := os.Open(filepath.Join(linux.ProcFSRoot, "partitions"))

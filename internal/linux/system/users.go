@@ -16,11 +16,13 @@ import (
 
 	"github.com/godbus/dbus/v5"
 
+	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
-	"github.com/joshuar/go-hass-agent/internal/hass/event"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/models"
+	"github.com/joshuar/go-hass-agent/internal/models/event"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
@@ -207,8 +209,8 @@ func (t *sessionTracker) getSessionDetails(path string) map[string]any {
 	return sessionDetails
 }
 
-func (w *UserSessionEventsWorker) Events(ctx context.Context) (<-chan event.Event, error) {
-	eventCh := make(chan event.Event)
+func (w *UserSessionEventsWorker) Events(ctx context.Context) (<-chan models.Entity, error) {
+	eventCh := make(chan models.Entity)
 
 	go func() {
 		defer close(eventCh)
@@ -230,16 +232,20 @@ func (w *UserSessionEventsWorker) Events(ctx context.Context) (<-chan event.Even
 				switch {
 				case strings.Contains(trigger.Signal, sessionAddedSignal):
 					w.tracker.addSession(string(path))
-					eventCh <- event.Event{
-						EventType: sessionStartedEventName,
-						EventData: w.tracker.sessions[string(path)],
+					entity, err := event.NewEvent(sessionStartedEventName, w.tracker.sessions[string(path)])
+					if err != nil {
+						logging.FromContext(ctx).Warn("Could not generate users event.", slog.Any("error", err))
+					} else {
+						eventCh <- entity
 					}
 				case strings.Contains(trigger.Signal, sessionRemovedSignal):
-					eventCh <- event.Event{
-						EventType: sessionStoppedEventName,
-						EventData: w.tracker.sessions[string(path)],
-					}
 					w.tracker.removeSession(string(path))
+					entity, err := event.NewEvent(sessionStoppedEventName, w.tracker.sessions[string(path)])
+					if err != nil {
+						logging.FromContext(ctx).Warn("Could not generate users event.", slog.Any("error", err))
+					} else {
+						eventCh <- entity
+					}
 				}
 			}
 		}

@@ -8,7 +8,7 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/models"
 )
 
 var (
@@ -17,12 +17,12 @@ var (
 )
 
 type Tracker struct {
-	sensor map[string]*sensor.Entity
+	sensor map[models.UniqueID]*models.Sensor
 	mu     sync.Mutex
 }
 
 // Get fetches a sensors current tracked state.
-func (t *Tracker) Get(id string) (*sensor.Entity, error) {
+func (t *Tracker) Get(id models.UniqueID) (*models.Sensor, error) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
@@ -33,7 +33,7 @@ func (t *Tracker) Get(id string) (*sensor.Entity, error) {
 	return nil, ErrSensorNotFound
 }
 
-func (t *Tracker) SensorList() []string {
+func (t *Tracker) SensorList() []models.UniqueID {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
@@ -41,7 +41,7 @@ func (t *Tracker) SensorList() []string {
 		return nil
 	}
 
-	sortedEntities := make([]string, 0, len(t.sensor))
+	sortedEntities := make([]models.UniqueID, 0, len(t.sensor))
 
 	for name := range t.sensor {
 		sortedEntities = append(sortedEntities, name)
@@ -53,7 +53,7 @@ func (t *Tracker) SensorList() []string {
 }
 
 // Add creates a new sensor in the tracker based on a received state update.
-func (t *Tracker) Add(details *sensor.Entity) error {
+func (t *Tracker) Add(details *models.Sensor) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
@@ -61,7 +61,7 @@ func (t *Tracker) Add(details *sensor.Entity) error {
 		return ErrTrackerNotReady
 	}
 
-	t.sensor[details.ID] = details
+	t.sensor[details.UniqueID] = details
 
 	return nil
 }
@@ -74,7 +74,7 @@ func (t *Tracker) Reset() {
 
 func NewTracker() *Tracker {
 	return &Tracker{
-		sensor: make(map[string]*sensor.Entity),
+		sensor: make(map[models.UniqueID]*models.Sensor),
 		mu:     sync.Mutex{},
 	}
 }

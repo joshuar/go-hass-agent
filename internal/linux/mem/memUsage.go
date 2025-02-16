@@ -18,9 +18,10 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/models"
+	"github.com/joshuar/go-hass-agent/internal/models/class"
+	"github.com/joshuar/go-hass-agent/internal/models/sensor"
 )
 
 const (
@@ -46,7 +47,7 @@ var (
 var ErrInitUsageWorker = errors.New("could not init memory usage worker")
 
 // newMemSensor generates a memorySensor for a memory stat.
-func newMemSensor(id memStatID, stat *memStat) sensor.Entity {
+func newMemSensor(ctx context.Context, id memStatID, stat *memStat) (models.Entity, error) {
 	var value uint64
 
 	if stat == nil {
@@ -55,24 +56,22 @@ func newMemSensor(id memStatID, stat *memStat) sensor.Entity {
 		value = stat.value
 	}
 
-	return sensor.NewSensor(
+	return sensor.NewSensor(ctx,
 		sensor.WithName(id.String()),
 		sensor.WithID(strcase.ToSnake(id.String())),
 		sensor.WithUnits(memoryUsageSensorUnits),
-		sensor.WithDeviceClass(types.SensorDeviceClassDataSize),
-		sensor.WithStateClass(types.StateClassTotal),
-		sensor.WithState(
-			sensor.WithIcon(memorySensorIcon),
-			sensor.WithValue(value),
-			sensor.WithDataSourceAttribute(linux.DataSrcProcfs),
-			sensor.WithAttribute("native_unit_of_measurement", memoryUsageSensorUnits),
-		),
+		sensor.WithDeviceClass(class.SensorClassDataSize),
+		sensor.WithStateClass(class.StateTotal),
+		sensor.WithIcon(memorySensorIcon),
+		sensor.WithState(value),
+		sensor.WithDataSourceAttribute(linux.DataSrcProcfs),
+		sensor.WithAttribute("native_unit_of_measurement", memoryUsageSensorUnits),
 	)
 }
 
 // newMemSensorPc generates a memorySensor with a percentage value for a memory
 // stat.
-func newMemSensorPc(name string, value, total uint64) sensor.Entity {
+func newMemSensorPc(ctx context.Context, name string, value, total uint64) (models.Entity, error) {
 	var valuePc float64
 	if total == 0 {
 		valuePc = 0
@@ -80,22 +79,20 @@ func newMemSensorPc(name string, value, total uint64) sensor.Entity {
 		valuePc = math.Round(float64(value)/float64(total)*100/0.05) * 0.05 //nolint:mnd
 	}
 
-	return sensor.NewSensor(
+	return sensor.NewSensor(ctx,
 		sensor.WithName(name),
 		sensor.WithID(strcase.ToSnake(name)),
 		sensor.WithUnits(memoryUsageSensorPcUnits),
-		sensor.WithStateClass(types.StateClassTotal),
-		sensor.WithState(
-			sensor.WithIcon(memorySensorIcon),
-			sensor.WithValue(valuePc),
-			sensor.WithDataSourceAttribute(linux.DataSrcProcfs),
-			sensor.WithAttribute("native_unit_of_measurement", memoryUsageSensorPcUnits),
-		),
+		sensor.WithStateClass(class.StateTotal),
+		sensor.WithIcon(memorySensorIcon),
+		sensor.WithState(valuePc),
+		sensor.WithDataSourceAttribute(linux.DataSrcProcfs),
+		sensor.WithAttribute("native_unit_of_measurement", memoryUsageSensorPcUnits),
 	)
 }
 
 // Calculate used memory = total - free/buffered/cached.
-func newMemUsedPc(stats memoryStats) sensor.Entity {
+func newMemUsedPc(ctx context.Context, stats memoryStats) (models.Entity, error) {
 	var memOther uint64
 
 	for name, stat := range stats {
@@ -113,42 +110,64 @@ func newMemUsedPc(stats memoryStats) sensor.Entity {
 
 	memUsed := memTotal - memOther
 
-	return newMemSensorPc("Memory Usage", memUsed, memTotal)
+	return newMemSensorPc(ctx, "Memory Usage", memUsed, memTotal)
 }
 
 // Calculate used swap = total - free.
-func newSwapUsedPc(stats memoryStats) sensor.Entity {
+func newSwapUsedPc(ctx context.Context, stats memoryStats) (models.Entity, error) {
 	swapTotal, _ := stats.get(swapTotal)
 	swapFree, _ := stats.get(swapFree)
 	swapUsed := swapTotal - swapFree
 
-	return newMemSensorPc("Swap Usage", swapUsed, swapTotal)
+	return newMemSensorPc(ctx, "Swap Usage", swapUsed, swapTotal)
 }
 
 type usageWorker struct{}
 
 func (w *usageWorker) UpdateDelta(_ time.Duration) {}
 
-func (w *usageWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
+func (w *usageWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 	stats, err := getMemStats()
 	if err != nil {
 		return nil, fmt.Errorf("unable to retrieve memory stats: %w", err)
 	}
 
-	sensors := make([]sensor.Entity, 0, len(memSensors)+len(swapSensors)+2) //nolint:mnd
+	sensors := make([]models.Entity, 0, len(memSensors)+len(swapSensors)+2) //nolint:mnd
 
 	for _, id := range memSensors {
-		sensors = append(sensors, newMemSensor(id, stats[id]))
+		entity, err := newMemSensor(ctx, id, stats[id])
+		if err != nil {
+			logging.FromContext(ctx).Warn("Could not generate memory usage sensor.", slog.Any("error", err))
+			continue
+		}
+
+		sensors = append(sensors, entity)
 	}
 
-	sensors = append(sensors, newMemUsedPc(stats))
+	entity, err := newMemUsedPc(ctx, stats)
+	if err != nil {
+		logging.FromContext(ctx).Warn("Could not generate memory usage sensor.", slog.Any("error", err))
+	} else {
+		sensors = append(sensors, entity)
+	}
 
 	if stat, _ := stats.get(swapTotal); stat > 0 {
 		for _, id := range swapSensors {
-			sensors = append(sensors, newMemSensor(id, stats[id]))
+			entity, err := newMemSensor(ctx, id, stats[id])
+			if err != nil {
+				logging.FromContext(ctx).Warn("Could not generate swap usage sensor.", slog.Any("error", err))
+				continue
+			}
+
+			sensors = append(sensors, entity)
 		}
 
-		sensors = append(sensors, newSwapUsedPc(stats))
+		entity, err := newSwapUsedPc(ctx, stats)
+		if err != nil {
+			logging.FromContext(ctx).Warn("Could not generate memory usage sensor.", slog.Any("error", err))
+		} else {
+			sensors = append(sensors, entity)
+		}
 	}
 
 	return sensors, nil

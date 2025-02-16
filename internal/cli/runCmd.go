@@ -51,14 +51,12 @@ func (r *RunCmd) Run(opts *CmdOpts) error {
 	// Load the tracker.
 	trk := tracker.NewTracker()
 
-	// Create a new hass data handler.
-	dataCh, err := hass.NewDataHandler(ctx, reg, trk)
-	if err != nil {
-		return errors.Join(ErrRunCmdFailed, err)
+	api := &API{
+		hass: hass.NewClient(ctx, trk, reg),
 	}
 
 	// Run the agent.
-	if err := agent.Run(ctx, opts.Headless, dataCh, trk); err != nil {
+	if err := agent.Run(ctx, opts.Headless, api); err != nil {
 		return errors.Join(ErrRunCmdFailed, err)
 	}
 

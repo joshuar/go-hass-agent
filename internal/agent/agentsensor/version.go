@@ -9,9 +9,13 @@ package agentsensor
 import (
 	"context"
 	"errors"
+	"fmt"
+	"log/slog"
 
+	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/models"
+	"github.com/joshuar/go-hass-agent/internal/models/sensor"
 )
 
 const (
@@ -20,15 +24,13 @@ const (
 
 var ErrInitVersionWorker = errors.New("could not init version worker")
 
-func newVersionSensor() sensor.Entity {
-	return sensor.NewSensor(
+func newVersionSensor(ctx context.Context) (models.Entity, error) {
+	return sensor.NewSensor(ctx,
 		sensor.WithName("Go Hass Agent Version"),
 		sensor.WithID("agent_version"),
 		sensor.AsDiagnostic(),
-		sensor.WithState(
-			sensor.WithIcon("mdi:face-agent"),
-			sensor.WithValue(preferences.AppVersion()),
-		),
+		sensor.WithIcon("mdi:face-agent"),
+		sensor.WithState(preferences.AppVersion()),
 	)
 }
 
@@ -52,19 +54,32 @@ func (w *VersionWorker) ID() string { return versionWorkerID }
 
 func (w *VersionWorker) Stop() error { return nil }
 
-func (w *VersionWorker) Start(_ context.Context) (<-chan sensor.Entity, error) {
-	sensorCh := make(chan sensor.Entity)
+func (w *VersionWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
+	sensorCh := make(chan models.Entity)
 
 	go func() {
 		defer close(sensorCh)
-		sensorCh <- newVersionSensor()
+
+		entity, err := newVersionSensor(ctx)
+		if err != nil {
+			logging.FromContext(ctx).Warn("Failed to create version sensor entity.",
+				slog.Any("error", err))
+			return
+		}
+
+		sensorCh <- entity
 	}()
 
 	return sensorCh, nil
 }
 
-func (w *VersionWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
-	return []sensor.Entity{newVersionSensor()}, nil
+func (w *VersionWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
+	entity, err := newVersionSensor(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create version sensor entity: %w", err)
+	}
+
+	return []models.Entity{entity}, nil
 }
 
 func NewVersionWorker(_ context.Context) (*VersionWorker, error) {

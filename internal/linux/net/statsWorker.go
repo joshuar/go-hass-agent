@@ -17,8 +17,8 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/models"
 )
 
 const (
@@ -35,29 +35,20 @@ type StatsWorkerPrefs struct {
 // netStatsWorker is the object used for tracking network stats sensors. It
 // holds a netlink connection and a map of links with their stats sensors.
 type netStatsWorker struct {
-	statsSensors map[string]map[netStatsType]*netStatsSensor
+	statsSensors map[string]map[netStatsType]*statsRate
 	nlconn       *rtnetlink.Conn
 	prefs        *StatsWorkerPrefs
 	delta        time.Duration
 	mu           sync.Mutex
 }
 
-// updateTotals takes the total Rx/Tx bytes and updates the total sensors.
-func (w *netStatsWorker) updateTotals(totalBytesRx, totalBytesTx uint64) {
-	stats := &rtnetlink.LinkStats64{
-		RXBytes: totalBytesRx,
-		TXBytes: totalBytesTx,
-	}
-	for _, sensorType := range sensorList {
-		w.statsSensors[totalsName][sensorType].update(totalsName, sensorType, stats, w.delta)
-	}
-}
-
 func (w *netStatsWorker) UpdateDelta(delta time.Duration) {
 	w.delta = delta
 }
 
-func (w *netStatsWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
+func (w *netStatsWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
+	var warnings error
+
 	// Get all links.
 	links, err := w.getLinks()
 	if err != nil {
@@ -66,7 +57,7 @@ func (w *netStatsWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 
 	// Get link stats, filtering "uninteresting" links.
 	stats := w.getLinkStats(links)
-	sensors := make([]sensor.Entity, 0, len(stats)*4+4)
+	sensors := make([]models.Entity, 0, len(stats)*4+4)
 
 	w.mu.Lock()
 
@@ -75,6 +66,11 @@ func (w *netStatsWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 
 	// For each link, update the link sensors with the new stats.
 	for _, link := range stats {
+		var (
+			entity models.Entity
+			err    error
+		)
+
 		name := link.name
 		stats := link.stats
 		totalBytesRx += stats.RXBytes
@@ -87,31 +83,83 @@ func (w *netStatsWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
 			continue
 		}
 
-		if _, ok := w.statsSensors[name]; ok { // Existing link/sensors, update.
-			for sensorType := range w.statsSensors[name] {
-				w.statsSensors[name][sensorType].update(name, sensorType, stats, w.delta)
-			}
-		} else { // New link, add to tracking map.
-			w.statsSensors[name] = generateSensors(name, stats)
+		// Generate bytesRecv sensor entity for link.
+		entity, err = newStatsTotalEntity(ctx, name, bytesRecv, models.Diagnostic, link.stats.RXBytes, getRXAttributes(stats))
+		if err != nil {
+			warnings = errors.Join(warnings, fmt.Errorf("could not generate stats sensor: %w", err))
+		} else {
+			sensors = append(sensors, entity)
 		}
-		// Create a list of sensors.
-		for _, s := range w.statsSensors[name] {
-			sensors = append(sensors, s.Entity)
+		// Generate bytesSent sensor entity for link.
+		entity, err = newStatsTotalEntity(ctx, name, bytesSent, models.Diagnostic, link.stats.TXBytes, getTXAttributes(stats))
+		if err != nil {
+			warnings = errors.Join(warnings, fmt.Errorf("could not generate stats sensor: %w", err))
+		} else {
+			sensors = append(sensors, entity)
+		}
+		// Create new trackers for the link's rates sensor entities if needed.
+		if _, ok := w.statsSensors[name]; !ok {
+			w.statsSensors[name] = newStatsRates()
+		}
+		// Generate bytesRecvRate sensor entity for link.
+		entity, err = newStatsRateEntity(ctx, name, bytesRecvRate, models.Diagnostic, w.statsSensors[name][bytesRecvRate].calculateRate(stats, w.delta))
+		if err != nil {
+			warnings = errors.Join(warnings, fmt.Errorf("could not generate stats rate sensor: %w", err))
+		} else {
+			sensors = append(sensors, entity)
+		}
+		// Generate bytesSentRate sensor entity for link.
+		entity, err = newStatsRateEntity(ctx, name, bytesSentRate, models.Diagnostic, w.statsSensors[name][bytesSentRate].calculateRate(stats, w.delta))
+		if err != nil {
+			warnings = errors.Join(warnings, fmt.Errorf("could not generate stats sensor: %w", err))
+		} else {
+			sensors = append(sensors, entity)
 		}
 	}
 
 	if len(stats) > 0 {
-		// Update the totals sensors based on the counters.
-		w.updateTotals(totalBytesRx, totalBytesTx)
-		// Append the total sensors to the list of sensors.
-		for _, s := range w.statsSensors[totalsName] {
-			sensors = append(sensors, s.Entity)
+		var (
+			entity models.Entity
+			err    error
+		)
+		// Create a pseudo total stats link stats object.
+		totalStats := &rtnetlink.LinkStats64{
+			RXBytes: totalBytesRx,
+			TXBytes: totalBytesTx,
+		}
+		// Generate total bytesRecv sensor entity.
+		entity, err = newStatsTotalEntity(ctx, totalsName, bytesRecv, models.Diagnostic, totalBytesRx, nil)
+		if err != nil {
+			warnings = errors.Join(warnings, fmt.Errorf("could not generate stats sensor: %w", err))
+		} else {
+			sensors = append(sensors, entity)
+		}
+		// Generate total bytesSent sensor entity.
+		entity, err = newStatsTotalEntity(ctx, totalsName, bytesSent, models.Diagnostic, totalBytesTx, nil)
+		if err != nil {
+			warnings = errors.Join(warnings, fmt.Errorf("could not generate stats sensor: %w", err))
+		} else {
+			sensors = append(sensors, entity)
+		}
+		// Generate total bytesRecvRate sensor entity.
+		entity, err = newStatsRateEntity(ctx, totalsName, bytesRecvRate, models.Diagnostic, w.statsSensors[totalsName][bytesRecvRate].calculateRate(totalStats, w.delta))
+		if err != nil {
+			warnings = errors.Join(warnings, fmt.Errorf("could not generate stats rate sensor: %w", err))
+		} else {
+			sensors = append(sensors, entity)
+		}
+		// Generate total bytesSentRate sensor entity.
+		entity, err = newStatsRateEntity(ctx, totalsName, bytesSentRate, models.Diagnostic, w.statsSensors[totalsName][bytesSentRate].calculateRate(totalStats, w.delta))
+		if err != nil {
+			warnings = errors.Join(warnings, fmt.Errorf("could not generate stats sensor: %w", err))
+		} else {
+			sensors = append(sensors, entity)
 		}
 	}
 
 	w.mu.Unlock()
 
-	return sensors, nil
+	return sensors, warnings
 }
 
 func (w *netStatsWorker) PreferencesID() string {
@@ -222,10 +270,10 @@ func NewNetStatsWorker(ctx context.Context) (*linux.PollingSensorWorker, error) 
 	}()
 
 	ratesWorker := &netStatsWorker{
-		statsSensors: make(map[string]map[netStatsType]*netStatsSensor),
+		statsSensors: make(map[string]map[netStatsType]*statsRate),
 		nlconn:       conn,
 	}
-	ratesWorker.statsSensors[totalsName] = generateSensors(totalsName, nil)
+	ratesWorker.statsSensors[totalsName] = newStatsRates()
 
 	ratesWorker.prefs, err = preferences.LoadWorker(ratesWorker)
 	if err != nil {

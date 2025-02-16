@@ -1,0 +1,200 @@
+---
+# Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
+# SPDX-License-Identifier: MIT
+
+components:
+  schemas:
+    # Entity Keys:
+    UniqueID:
+      description: is a unique identifier for a entity.
+      type: string
+      x-go-name: UniqueID
+      x-oapi-codegen-extra-tags:
+        validate: 'required'
+    Name:
+      description: is a human-friendly name for a entity.
+      type: string
+      x-oapi-codegen-extra-tags:
+        validate: 'required'
+    State:
+      description: is the current state of the entity.
+      x-oapi-codegen-extra-tags:
+        validate: 'required'
+    SensorType:
+      description: is the type of a sensor entity.
+      type: string
+      enum:
+        - "sensor"
+        - "binary_sensor"
+      x-oapi-codegen-extra-tags:
+        validate: 'required'
+    Attributes:
+      description: >
+        defines additional custom attributes of a entity.
+      type: object
+      additionalProperties: true
+      x-go-type-skip-optional-pointer: true
+      # nullable: true
+    Icon:
+      description: >
+        is a material design icon to represent the entity. Must be prefixed
+        mdi:. If not provided, default value is mdi:cellphone.
+      type: string
+      # nullable: true
+    Units:
+      description: is the unit of measurement for the entity.
+      type: string
+      # nullable: true
+    EntityCategory:
+      description: is the entity category of the entity.
+      type: string
+      enum:
+        - "diagnostic"
+      # nullable: true
+    # Entities:
+    Event:
+      descripton: describes an event to fire in Home Assistant.
+      type: object
+      required:
+        - event_type
+        - event_data
+      properties:
+        event_type:
+          description: is the type of the event to fire.
+          type: string
+          x-go-name: 'Type'
+          x-oapi-codegen-extra-tags:
+            validate: 'required'
+        event_data:
+          description: is data of the event to fire
+          type: object
+          additionalProperties: true
+          x-go-name: 'Data'
+          x-oapi-codegen-extra-tags:
+            validate: 'required'
+        retryable:
+          description: >
+            indicates whether requests should be retried when
+            sending this event data to Home Assistant.
+          type: boolean
+          x-go-json-ignore: true
+    Location:
+      description: defines location details of the device.
+      type: object
+      required:
+        - gps
+        - gps_accuracy
+      properties:
+        location_name:
+          desscription: >
+            is the name of the zone the device is in.
+          type: string
+        gps:
+          description: >
+            is the current location as latitude and longitude.
+          type: array
+          items:
+            type: number
+          minItems: 2
+          maxItems: 2
+          x-oapi-codegen-extra-tags:
+            validate: 'required,number'
+        gps_accuracy:
+          description: >
+            defines GPS accuracy in meters. Must be greater than 0.
+          type: integer
+          minimum: 0
+          x-oapi-codegen-extra-tags:
+            validate: 'required,number,gte=0'
+        battery:
+          description: >
+            is the percentage of battery the device has left. Must be greater than 0.
+          type: integer
+          minimum: 0
+        speed:
+          description: >
+            is the speed of the device in meters per second. Must be greater than 0.
+          type: integer
+          minimum: 0
+        altitude:
+          description: >
+            is the altitude of the device in meters. Must be greater than 0.
+          type: integer
+          minimum: 0
+        course:
+          description: >
+            is the direction in which the device is traveling, measured in degrees
+            and relative to due north. Must be greater than 0.
+          type: integer
+          minimum: 0
+        vertical_accuracy:
+          description: >
+            is the accuracy of the altitude value, measured in meters. Must be
+            greater than 0.
+          type: integer
+          minimum: 0
+    SensorState:
+      description: defines the current state of a sensor.
+      type: object
+      required:
+        - unique_id
+        - type
+        - state
+      properties:
+        unique_id:
+          $ref: '#/components/schemas/UniqueID'
+        attributes:
+          $ref: '#/components/schemas/Attributes'
+        icon:
+          $ref: '#/components/schemas/Icon'
+        type:
+          $ref: '#/components/schemas/SensorType'
+        state:
+          $ref: '#/components/schemas/State'
+    SensorRegistration:
+      description: defines a sensor to be registered with Home Assistant.
+      allOf:
+        - $ref: '#/components/schemas/SensorState'
+        - type: object
+          required:
+            - name
+          properties:
+            name:
+              $ref: '#/components/schemas/Name'
+            unit_of_measurement:
+              $ref: '#/components/schemas/Units'
+            entity_category:
+              $ref: '#/components/schemas/EntityCategory'
+            disabled:
+              description: >
+                indicates if the entity should be enabled or disabled.
+              type: boolean
+            device_class:
+              description: is a valid Binary Sensor or Sensor device class.
+              x-go-type: 'class.SensorDeviceClass'
+              x-go-type-import:
+                path: 'github.com/joshuar/go-hass-agent/internal/models/sensor'
+            state_class:
+              description: is the state class of the entity (sensors only).
+              x-go-type: 'class.SensorStateClass'
+              x-go-type-import:
+                path: 'github.com/joshuar/go-hass-agent/internal/models/sensor'
+    Sensor:
+      description: contains details about an individual sensor.
+      allOf:
+        - $ref: '#/components/schemas/SensorState'
+        - $ref: '#/components/schemas/SensorRegistration'
+        - type: object
+          properties:
+            retryable:
+              description: >
+                indicates whether requests should be retried when
+                sending this sensor data to Home Assistant.
+              type: boolean
+              x-go-json-ignore: true
+    Entity:
+      description: is any valid Home Assistant Entity type.
+      oneOf:
+        - $ref: '#/components/schemas/Event'
+        - $ref: '#/components/schemas/Location'
+        - $ref: '#/components/schemas/Sensor'

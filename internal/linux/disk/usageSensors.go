@@ -1,17 +1,17 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
 package disk
 
 import (
+	"context"
 	"math"
 	"strings"
 
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/models"
+	"github.com/joshuar/go-hass-agent/internal/models/class"
+	"github.com/joshuar/go-hass-agent/internal/models/sensor"
 )
 
 const (
@@ -20,12 +20,11 @@ const (
 )
 
 //nolint:mnd
-func newDiskUsageSensor(mount *mount) sensor.Entity {
+func newDiskUsageSensor(ctx context.Context, mount *mount, value float64) (models.Entity, error) {
 	mount.attributes["data_source"] = linux.DataSrcProcfs
 
 	usedBlocks := mount.attributes[mountAttrBlocksTotal].(uint64) - mount.attributes[mountAttrBlocksFree].(uint64) //nolint:lll,errcheck,forcetypeassert
 	mount.attributes["blocks_used"] = usedBlocks
-	usedPc := float64(usedBlocks) / float64(mount.attributes[mountAttrBlocksTotal].(uint64)) * 100 //nolint:errcheck,forcetypeassert
 
 	var id string
 
@@ -35,15 +34,13 @@ func newDiskUsageSensor(mount *mount) sensor.Entity {
 		id = "mountpoint" + strings.ReplaceAll(mount.mountpoint, "/", "_")
 	}
 
-	return sensor.NewSensor(
+	return sensor.NewSensor(ctx,
 		sensor.WithName("Mountpoint "+mount.mountpoint+" Usage"),
 		sensor.WithID(id),
 		sensor.WithUnits(diskUsageSensorUnits),
-		sensor.WithStateClass(types.StateClassTotal),
-		sensor.WithState(
-			sensor.WithIcon(diskUsageSensorIcon),
-			sensor.WithValue(math.Round(float64(usedPc)/0.05)*0.05),
-			sensor.WithAttributes(mount.attributes),
-		),
+		sensor.WithStateClass(class.StateTotal),
+		sensor.WithIcon(diskUsageSensorIcon),
+		sensor.WithState(math.Round(value/0.05)*0.05),
+		sensor.WithAttributes(mount.attributes),
 	)
 }

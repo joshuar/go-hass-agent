@@ -43,7 +43,8 @@
     "linux/desktop",
     "linux/disk",
     "linux/location",
-    "pkg/whichdistro"
+    "pkg/whichdistro",
+    "models"
   ],
   "go.testFlags": ["-v"],
   "[markdown]": {

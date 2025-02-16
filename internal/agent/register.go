@@ -20,7 +20,7 @@ import (
 // command-line and then checks to see if the agent needs to register to Home
 // Assistant. If it does, it will perform the registration via either a
 // graphical (user-prompted) or non-graphical (automatic) process.
-func checkRegistration(ctx context.Context, headless bool, agentUI ui) error {
+func checkRegistration(ctx context.Context, headless bool, hass *hass.Client, agentUI ui) error {
 	// Retrieve request options passed on command-line from context.
 	request := preferences.RegistrationFromCtx(ctx)
 	if request == nil {

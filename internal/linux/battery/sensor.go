@@ -4,6 +4,7 @@
 package battery
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"strings"
@@ -11,19 +12,20 @@ import (
 	"github.com/godbus/dbus/v5"
 	"github.com/iancoleman/strcase"
 
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/models"
+	"github.com/joshuar/go-hass-agent/internal/models/class"
+	"github.com/joshuar/go-hass-agent/internal/models/sensor"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
 // newBatterySensor creates a new sensor for Home Assistant from a battery
 // property.
-func newBatterySensor(battery *upowerBattery, sensorType sensorType, value dbus.Variant) sensor.Entity {
+func newBatterySensor(ctx context.Context, battery *upowerBattery, sensorType sensorType, value dbus.Variant) (models.Entity, error) {
 	var (
 		name, id, icon, units string
-		deviceClass           types.DeviceClass
-		stateClass            types.StateClass
+		deviceClass           class.SensorDeviceClass
+		stateClass            class.SensorStateClass
 	)
 
 	if battery.model == "" {
@@ -37,42 +39,40 @@ func newBatterySensor(battery *upowerBattery, sensorType sensorType, value dbus.
 	switch sensorType {
 	case typePercentage:
 		icon = batteryPercentIcon(value.Value())
-		deviceClass = types.SensorDeviceClassBattery
-		stateClass = types.StateClassMeasurement
+		deviceClass = class.SensorClassBattery
+		stateClass = class.StateMeasurement
 		units = "%"
 	case typeTemp:
-		deviceClass = types.SensorDeviceClassTemperature
-		stateClass = types.StateClassMeasurement
+		deviceClass = class.SensorClassTemperature
+		stateClass = class.StateMeasurement
 		units = "°C"
 	case typeEnergyRate:
 		icon = batteryChargeIcon(value.Value())
-		deviceClass = types.SensorDeviceClassPower
-		stateClass = types.StateClassMeasurement
+		deviceClass = class.SensorClassPower
+		stateClass = class.StateMeasurement
 		units = "W"
 	case typeEnergy:
-		deviceClass = types.SensorDeviceClassEnergyStorage
-		stateClass = types.StateClassMeasurement
+		deviceClass = class.SensorClassEnergyStorage
+		stateClass = class.StateMeasurement
 		units = "Wh"
 	case typeVoltage:
-		deviceClass = types.SensorDeviceClassVoltage
-		stateClass = types.StateClassMeasurement
+		deviceClass = class.SensorClassVoltage
+		stateClass = class.StateMeasurement
 		units = "V"
 	default:
 		icon = batteryIcon
 	}
 
-	return sensor.NewSensor(
+	return sensor.NewSensor(ctx,
 		sensor.WithName(name),
 		sensor.WithID(id),
 		sensor.WithDeviceClass(deviceClass),
 		sensor.WithStateClass(stateClass),
 		sensor.WithUnits(units),
 		sensor.AsDiagnostic(),
-		sensor.WithState(
-			sensor.WithIcon(icon),
-			sensor.WithValue(generateSensorState(sensorType, value.Value())),
-			sensor.WithAttributes(generateSensorAttributes(sensorType, battery)),
-		),
+		sensor.WithIcon(icon),
+		sensor.WithState(generateSensorState(sensorType, value.Value())),
+		sensor.WithAttributes(generateSensorAttributes(sensorType, battery)),
 	)
 }
 
@@ -80,31 +80,31 @@ func newBatterySensor(battery *upowerBattery, sensorType sensorType, value dbus.
 // appropriate for the battery sensor type.
 func generateSensorState(sensorType sensorType, value any) any {
 	if value == nil {
-		return sensor.StateUnknown
+		return "Unknown"
 	}
 
 	switch sensorType {
 	case typeVoltage, typeTemp, typeEnergy, typeEnergyRate, typePercentage:
 		if value, ok := value.(float64); !ok {
-			return sensor.StateUnknown
+			return "Unknown"
 		} else {
 			return value
 		}
 	case typeState:
 		if value, ok := value.(uint32); !ok {
-			return sensor.StateUnknown
+			return "Unknown"
 		} else {
 			return chargingState(value).String()
 		}
 	case typeLevel:
 		if value, ok := value.(uint32); !ok {
-			return sensor.StateUnknown
+			return "Unknown"
 		} else {
 			return level(value).String()
 		}
 	default:
 		if value, ok := value.(string); !ok {
-			return sensor.StateUnknown
+			return "Unknown"
 		} else {
 			return value
 		}

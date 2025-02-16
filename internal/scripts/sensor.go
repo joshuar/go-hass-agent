@@ -7,10 +7,13 @@
 package scripts
 
 import (
+	"context"
+
 	"github.com/iancoleman/strcase"
 
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
+	"github.com/joshuar/go-hass-agent/internal/models"
+	"github.com/joshuar/go-hass-agent/internal/models/class"
+	"github.com/joshuar/go-hass-agent/internal/models/sensor"
 )
 
 //nolint:tagalign
@@ -25,23 +28,27 @@ type ScriptSensor struct {
 	SensorUnits       string `json:"sensor_units,omitempty" yaml:"sensor_units,omitempty" toml:"sensor_units,omitempty"`
 }
 
-func scriptToEntity(script ScriptSensor) sensor.Entity {
-	entity := sensor.NewSensor(
+func scriptToEntity(ctx context.Context, script ScriptSensor) (models.Entity, error) {
+	var typeOption sensor.Option
+
+	switch script.SensorStateType {
+	case "binary":
+		typeOption = sensor.AsTypeBinarySensor()
+	default:
+		typeOption = sensor.AsTypeSensor()
+	}
+
+	return sensor.NewSensor(ctx,
 		sensor.WithName(script.SensorName),
 		sensor.WithID(strcase.ToSnake(script.SensorName)),
 		sensor.WithUnits(script.SensorUnits),
 		sensor.WithDeviceClass(script.DeviceClass()),
 		sensor.WithStateClass(script.StateClass()),
-		sensor.WithState(
-			sensor.WithIcon(script.Icon()),
-			sensor.WithAttributes(script.Attributes()),
-			sensor.WithValue(script.SensorState),
-		),
+		sensor.WithIcon(script.Icon()),
+		sensor.WithAttributes(script.Attributes()),
+		sensor.WithState(script.SensorState),
+		typeOption,
 	)
-
-	entity.EntityType = script.SensorType()
-
-	return entity
 }
 
 func (s *ScriptSensor) Icon() string {
@@ -52,17 +59,8 @@ func (s *ScriptSensor) Icon() string {
 	return s.SensorIcon
 }
 
-func (s *ScriptSensor) SensorType() types.SensorType {
-	switch s.SensorStateType {
-	case "binary":
-		return types.BinarySensor
-	default:
-		return types.Sensor
-	}
-}
-
-func (s *ScriptSensor) DeviceClass() types.DeviceClass {
-	for d := types.SensorDeviceClassApparentPower; d <= types.SensorDeviceClassWindSpeed; d++ {
+func (s *ScriptSensor) DeviceClass() class.SensorDeviceClass {
+	for d := class.SensorClassMin + 1; d <= class.BinaryClassMax; d++ {
 		if s.SensorDeviceClass == d.String() {
 			return d
 		}
@@ -71,16 +69,16 @@ func (s *ScriptSensor) DeviceClass() types.DeviceClass {
 	return 0
 }
 
-func (s *ScriptSensor) StateClass() types.StateClass {
+func (s *ScriptSensor) StateClass() class.SensorStateClass {
 	switch s.SensorStateClass {
 	case "measurement":
-		return types.StateClassMeasurement
+		return class.StateMeasurement
 	case "total":
-		return types.StateClassTotal
+		return class.StateTotal
 	case "total_increasing":
-		return types.StateClassTotalIncreasing
+		return class.StateTotalIncreasing
 	default:
-		return 0
+		return class.StateClassMin
 	}
 }
 

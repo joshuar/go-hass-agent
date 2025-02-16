@@ -13,9 +13,10 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/models"
+	"github.com/joshuar/go-hass-agent/internal/models/class"
+	"github.com/joshuar/go-hass-agent/internal/models/sensor"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
@@ -62,7 +63,7 @@ func parseProblem(details map[string]string) map[string]any {
 	return parsed
 }
 
-func (w *problemsWorker) newProblemsSensor(problems []string) sensor.Entity {
+func (w *problemsWorker) newProblemsSensor(ctx context.Context, problems []string) (models.Entity, error) {
 	problemDetails := make(map[string]map[string]any)
 	// For each problem, fetch its details.
 	for _, problem := range problems {
@@ -74,17 +75,15 @@ func (w *problemsWorker) newProblemsSensor(problems []string) sensor.Entity {
 		problemDetails[problem] = parseProblem(details)
 	}
 
-	return sensor.NewSensor(
+	return sensor.NewSensor(ctx,
 		sensor.WithName("Problems"),
 		sensor.WithID("problems"),
-		sensor.WithStateClass(types.StateClassMeasurement),
+		sensor.WithStateClass(class.StateMeasurement),
 		sensor.WithUnits("problems"),
-		sensor.WithState(
-			sensor.WithIcon("mdi:alert"),
-			sensor.WithValue(len(problems)),
-			sensor.WithDataSourceAttribute(linux.DataSrcDbus),
-			sensor.WithAttribute("problem_list", problemDetails),
-		),
+		sensor.WithIcon("mdi:alert"),
+		sensor.WithState(len(problems)),
+		sensor.WithDataSourceAttribute(linux.DataSrcDbus),
+		sensor.WithAttribute("problem_list", problemDetails),
 	)
 }
 
@@ -97,14 +96,19 @@ type problemsWorker struct {
 
 func (w *problemsWorker) UpdateDelta(_ time.Duration) {}
 
-func (w *problemsWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
+func (w *problemsWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 	// Get the list of problems.
 	problems, err := w.getProblems()
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve list of problems from D-Bus: %w", err)
 	}
 
-	return []sensor.Entity{w.newProblemsSensor(problems)}, nil
+	entity, err := w.newProblemsSensor(ctx, problems)
+	if err != nil {
+		return nil, fmt.Errorf("could not generate problem sensor: %w", err)
+	}
+
+	return []models.Entity{entity}, nil
 }
 
 func (w *problemsWorker) PreferencesID() string {

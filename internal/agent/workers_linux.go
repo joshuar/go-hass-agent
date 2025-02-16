@@ -10,8 +10,6 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/device"
-	"github.com/joshuar/go-hass-agent/internal/hass/event"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/linux/battery"
 	"github.com/joshuar/go-hass-agent/internal/linux/cpu"
@@ -22,6 +20,7 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/linux/net"
 	"github.com/joshuar/go-hass-agent/internal/linux/power"
 	"github.com/joshuar/go-hass-agent/internal/linux/system"
+	"github.com/joshuar/go-hass-agent/internal/models"
 )
 
 // sensorEventWorkersInitFuncs are all of the sensor workers that generate sensors on events.
@@ -73,9 +72,9 @@ var eventWorkersInitFuncs = []func(ctx context.Context) (*linux.EventWorker, err
 // setupOSWorkers creates slices of OS-specific sensor and event Workers that
 // can be run by the agent. It handles initializing the workers with OS-specific
 // data, reporting any errors.
-func setupOSWorkers(ctx context.Context) ([]Worker[sensor.Entity], []Worker[event.Event]) {
-	eventWorkers := make([]Worker[event.Event], 0, len(eventWorkersInitFuncs))
-	sensorWorkers := make([]Worker[sensor.Entity], 0,
+func setupOSWorkers(ctx context.Context) ([]Worker[models.Entity], []Worker[models.Entity]) {
+	eventWorkers := make([]Worker[models.Entity], 0, len(eventWorkersInitFuncs))
+	sensorWorkers := make([]Worker[models.Entity], 0,
 		len(sensorPollingWorkersInitFuncs)+len(sensorEventWorkersInitFuncs)+len(sensorOneShotWorkersInitFuncs)+len(sensorLaptopWorkersInitFuncs))
 
 	// Set up a logger.

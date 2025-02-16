@@ -14,6 +14,9 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/agent"
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
+	"github.com/joshuar/go-hass-agent/internal/components/registry"
+	"github.com/joshuar/go-hass-agent/internal/components/tracker"
+	"github.com/joshuar/go-hass-agent/internal/hass"
 )
 
 var ErrRegisterCmdFailed = errors.New("register command failed")
@@ -51,8 +54,21 @@ func (r *RegisterCmd) Run(opts *CmdOpts) error {
 		ForceRegister:  r.Force,
 	})
 
+	// Load the registry.
+	reg, err := registry.Load(opts.Path)
+	if err != nil {
+		return errors.Join(ErrRunCmdFailed, err)
+	}
+
+	// Load the tracker.
+	trk := tracker.NewTracker()
+
+	api := &API{
+		hass: hass.NewClient(ctx, trk, reg),
+	}
+
 	// Run the agent.
-	if err := agent.Register(ctx, opts.Headless); err != nil {
+	if err := agent.Register(ctx, opts.Headless, api); err != nil {
 		return errors.Join(ErrRegisterCmdFailed, err)
 	}
 

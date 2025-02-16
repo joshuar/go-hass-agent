@@ -7,6 +7,7 @@
 package scripts
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -16,7 +17,7 @@ import (
 	"github.com/pelletier/go-toml/v2"
 	"gopkg.in/yaml.v3"
 
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/models"
 )
 
 var ErrParseCmd = errors.New("could not parse script command")
@@ -30,16 +31,21 @@ func (s *Script) Schedule() string {
 	return s.schedule
 }
 
-func (s *Script) Execute() ([]sensor.Entity, error) {
+func (s *Script) Execute(ctx context.Context) ([]models.Entity, error) {
 	output, err := s.parse()
 	if err != nil {
 		return nil, fmt.Errorf("error running script: %w", err)
 	}
 
-	sensors := make([]sensor.Entity, 0, len(output.Sensors))
+	sensors := make([]models.Entity, 0, len(output.Sensors))
 
 	for _, s := range output.Sensors {
-		sensors = append(sensors, scriptToEntity(s))
+		entity, err := scriptToEntity(ctx, s)
+		if err != nil {
+			return nil, fmt.Errorf("could not create script entity: %w", err)
+		}
+
+		sensors = append(sensors, entity)
 	}
 
 	return sensors, nil
@@ -96,7 +102,7 @@ type scriptOutput struct {
 
 // Unmarshal will attempt to take the raw output from a script execution and
 // format it as either JSON or YAML. If successful, this format can then be used
-// as a sensor.
+// as a models.
 //
 //revive:disable:indent-error-flow // errors need to be gathered.
 func (o *scriptOutput) Unmarshal(scriptOutput []byte) error {

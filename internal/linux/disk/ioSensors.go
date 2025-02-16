@@ -7,13 +7,13 @@
 package disk
 
 import (
-	"strings"
+	"context"
+	"maps"
 	"time"
-	"unicode"
 
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
-	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/models"
+	"github.com/joshuar/go-hass-agent/internal/models/class"
+	"github.com/joshuar/go-hass-agent/internal/models/sensor"
 )
 
 const (
@@ -34,85 +34,58 @@ const (
 
 type ioSensor int
 
-type diskIOSensor struct {
-	sensor.Entity
-	sensorType ioSensor
-	prevValue  uint64
+type rate struct {
+	rateType  ioSensor
+	prevValue uint64
 }
 
 //nolint:mnd
-func (s *diskIOSensor) update(stats map[stat]uint64, delta time.Duration) {
-	var curr uint64
+func (s *rate) calculate(stats map[stat]uint64, delta time.Duration) uint64 {
+	var (
+		curr uint64
+		prev uint64
+	)
 
-	switch s.sensorType {
-	case diskReads:
-		s.UpdateValue(stats[TotalReads])
-	case diskWrites:
-		s.UpdateValue(stats[TotalWrites])
-	case diskIOInProgress:
-		s.UpdateValue(stats[ActiveIOs])
+	prev = s.prevValue
+
+	switch s.rateType {
 	case diskReadRate:
 		curr = stats[TotalSectorsRead]
 	case diskWriteRate:
 		curr = stats[TotalSectorsWritten]
 	}
 
+	s.prevValue = curr
+
 	// For rate sensors, calculate the current value based on previous value and
 	// time interval since last measurement.
-	if s.sensorType == diskReadRate || s.sensorType == diskWriteRate {
+	if s.rateType == diskReadRate || s.rateType == diskWriteRate {
 		if uint64(delta.Seconds()) > 0 {
-			s.UpdateValue((curr - s.prevValue) / uint64(delta.Seconds()) / 2)
-		} else {
-			s.UpdateValue(0)
+			return ((curr - prev) / uint64(delta.Seconds()) / 2)
 		}
-
-		s.prevValue = curr
 	}
 
-	// Update attributes with new stats.
-	s.updateAttributes(stats)
+	return 0
 }
 
-//nolint:exhaustive
-func (s *diskIOSensor) updateAttributes(stats map[stat]uint64) {
-	switch s.sensorType {
-	case diskReads:
-		s.UpdateAttribute("total_sectors", stats[TotalSectorsRead])
-		s.UpdateAttribute("total_milliseconds", stats[TotalTimeReading])
-	case diskWrites:
-		s.UpdateAttribute("total_sectors", stats[TotalSectorsWritten])
-		s.UpdateAttribute("total_milliseconds", stats[TotalTimeWriting])
-	}
-}
-
-func newDiskIOSensor(device *device, sensorType ioSensor, boottime time.Time) *diskIOSensor {
-	r := []rune(device.id)
-	name := string(append([]rune{unicode.ToUpper(r[0])}, r[1:]...)) + " " + sensorType.String()
-	id := strings.ToLower(device.id + "_" + strings.ReplaceAll(sensorType.String(), " ", "_"))
-
+func newDiskStatSensor(ctx context.Context, device *device, sensorType ioSensor, value uint64, attributes models.Attributes) (models.Entity, error) {
 	var (
-		icon, units string
-		stateClass  types.StateClass
+		icon, units      string
+		stateClass       class.SensorStateClass
+		diagnosticOption sensor.Option
 	)
 
-	attributes := map[string]any{
-		"data_source": linux.DataSrcSysfs,
+	name, id := device.generateIdentifiers(sensorType)
+	if attributes != nil {
+		maps.Copy(attributes, device.generateAttributes())
+	} else {
+		attributes = device.generateAttributes()
 	}
 
-	// Add attributes from device if available.
-	if device.model != "" {
-		attributes["device_model"] = device.model
-	}
-
-	if device.sysFSPath != "" {
-		attributes["sysfs_path"] = device.sysFSPath
-	}
-
-	// Fill out additional fields based on sensor type.
 	switch sensorType {
 	case diskIOInProgress:
 		icon = ioOpsIcon
-		stateClass = types.StateClassMeasurement
+		stateClass = class.StateMeasurement
 		units = diskIOsUnits
 	case diskReads, diskWrites:
 		if sensorType == diskReads {
@@ -122,42 +95,61 @@ func newDiskIOSensor(device *device, sensorType ioSensor, boottime time.Time) *d
 		}
 
 		units = diskCountUnits
-		stateClass = types.StateClassTotalIncreasing
+		stateClass = class.StateTotal
 		attributes["native_unit_of_measurement"] = diskCountUnits
-		attributes["last_reset"] = boottime.Format(time.RFC3339)
-	case diskReadRate, diskWriteRate:
-		if sensorType == diskReadRate {
-			icon = ioReadsIcon
-		} else {
-			icon = ioWritesIcon
-		}
-
-		units = diskRateUnits
-		stateClass = types.StateClassMeasurement
-		attributes["native_unit_of_measurement"] = diskRateUnits
-	}
-
-	ioSensor := &diskIOSensor{
-		Entity: sensor.NewSensor(
-			sensor.WithName(name),
-			sensor.WithID(id),
-			sensor.WithUnits(units),
-			sensor.WithStateClass(stateClass),
-			sensor.WithState(
-				sensor.WithIcon(icon),
-				sensor.WithAttributes(attributes),
-			),
-		),
-		sensorType: sensorType,
 	}
 
 	if device.id != "total" {
-		ioSensor.Entity = sensor.AsDiagnostic()(ioSensor.Entity)
+		diagnosticOption = sensor.WithCategory(models.Diagnostic)
+	} else {
+		diagnosticOption = sensor.WithCategory("")
 	}
 
-	if sensorType == diskReadRate || sensorType == diskWriteRate {
-		ioSensor.Entity = sensor.WithDeviceClass(types.SensorDeviceClassDataRate)(ioSensor.Entity)
+	return sensor.NewSensor(ctx,
+		sensor.WithName(name),
+		sensor.WithID(id),
+		sensor.WithUnits(units),
+		sensor.WithStateClass(stateClass),
+		sensor.WithState(value),
+		sensor.WithIcon(icon),
+		sensor.WithAttributes(attributes),
+		diagnosticOption,
+	)
+}
+
+func newDiskRateSensor(ctx context.Context, device *device, sensorType ioSensor, value uint64) (models.Entity, error) {
+	var (
+		diagnosticOption sensor.Option
+		icon             string
+	)
+
+	name, id := device.generateIdentifiers(sensorType)
+	attributes := device.generateAttributes()
+	units := diskRateUnits
+	stateClass := class.StateMeasurement
+	attributes["native_unit_of_measurement"] = diskRateUnits
+
+	switch sensorType {
+	case diskReadRate:
+		icon = ioReadsIcon
+	case diskWriteRate:
+		icon = ioWritesIcon
 	}
 
-	return ioSensor
+	if device.id != "total" {
+		diagnosticOption = sensor.WithCategory(models.Diagnostic)
+	} else {
+		diagnosticOption = sensor.WithCategory("")
+	}
+
+	return sensor.NewSensor(ctx,
+		sensor.WithName(name),
+		sensor.WithID(id),
+		sensor.WithUnits(units),
+		sensor.WithStateClass(stateClass),
+		sensor.WithState(value),
+		sensor.WithIcon(icon),
+		sensor.WithAttributes(attributes),
+		diagnosticOption,
+	)
 }

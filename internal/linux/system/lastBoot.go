@@ -10,9 +10,10 @@ import (
 	"time"
 
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor/types"
 	"github.com/joshuar/go-hass-agent/internal/linux"
+	"github.com/joshuar/go-hass-agent/internal/models"
+	"github.com/joshuar/go-hass-agent/internal/models/class"
+	"github.com/joshuar/go-hass-agent/internal/models/sensor"
 )
 
 const (
@@ -34,21 +35,21 @@ func (w *lastBootWorker) DefaultPreferences() preferences.CommonWorkerPrefs {
 	return preferences.CommonWorkerPrefs{}
 }
 
-func (w *lastBootWorker) Sensors(_ context.Context) ([]sensor.Entity, error) {
-	return []sensor.Entity{
-			sensor.NewSensor(
-				sensor.WithName("Last Reboot"),
-				sensor.WithID("last_reboot"),
-				sensor.AsDiagnostic(),
-				sensor.WithDeviceClass(types.SensorDeviceClassTimestamp),
-				sensor.WithState(
-					sensor.WithIcon("mdi:restart"),
-					sensor.WithValue(w.lastBoot.Format(time.RFC3339)),
-					sensor.WithDataSourceAttribute(linux.ProcFSRoot),
-				),
-			),
-		},
-		nil
+func (w *lastBootWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
+	entity, err := sensor.NewSensor(ctx,
+		sensor.WithName("Last Reboot"),
+		sensor.WithID("last_reboot"),
+		sensor.AsDiagnostic(),
+		sensor.WithDeviceClass(class.SensorClassTimestamp),
+		sensor.WithIcon("mdi:restart"),
+		sensor.WithState(w.lastBoot.Format(time.RFC3339)),
+		sensor.WithDataSourceAttribute(linux.ProcFSRoot),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("could not generate last boot sensor: %w", err)
+	}
+
+	return []models.Entity{entity}, nil
 }
 
 func NewLastBootWorker(ctx context.Context) (*linux.OneShotSensorWorker, error) {
