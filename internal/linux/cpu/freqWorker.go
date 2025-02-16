@@ -6,6 +6,7 @@ package cpu
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"strconv"
 	"time"
@@ -31,17 +32,20 @@ type freqWorker struct{}
 func (w *freqWorker) UpdateDelta(_ time.Duration) {}
 
 func (w *freqWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
+	var warnings error
+
 	sensors := make([]models.Entity, totalCPUs)
 
-	for i := range totalCPUs {
-		entity, err := newCPUFreqSensor(ctx, "cpu"+strconv.Itoa(i))
+	for idx := range totalCPUs {
+		entity, err := newCPUFreqSensor(ctx, "cpu"+strconv.Itoa(idx))
 		if err != nil {
-			logging.FromContext(ctx).Warn("Could not create CPU frequency sensor: %w", err)
+			warnings = errors.Join(warnings, fmt.Errorf("could not create CPU frequency sensor for CPU %d: %w", idx, err))
 		}
-		sensors[i] = entity
+
+		sensors[idx] = entity
 	}
 
-	return sensors, nil
+	return sensors, warnings
 }
 
 func (w *freqWorker) PreferencesID() string {

@@ -41,6 +41,21 @@ type usageWorker struct {
 	delta  time.Duration
 }
 
+// calculateRate takes a sensor name and value string and calculates the uint64 rate
+// value for the sensor.
+func (w *usageWorker) calculateRate(name, value string) uint64 {
+	var state uint64
+
+	if _, found := w.rateSensors[name]; found {
+		currValue, _ := strconv.ParseUint(value, 10, 64) //nolint:errcheck // if we can't parse it, value will be 0.
+		state = w.rateSensors[name].Calculate(currValue, w.delta)
+	} else {
+		w.rateSensors[name] = newRate(value)
+	}
+
+	return state
+}
+
 func (w *usageWorker) UpdateDelta(delta time.Duration) {
 	w.delta = delta
 }
@@ -106,8 +121,12 @@ func NewUsageWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
 	return worker, nil
 }
 
+//nolint:gocognit,funlen // There are a lot of sensors to calculate!
 func (w *usageWorker) getUsageStats(ctx context.Context) ([]models.Entity, error) {
-	var sensors []models.Entity
+	var (
+		sensors  []models.Entity
+		warnings error
+	)
 
 	statsFH, err := os.Open(w.path)
 	if err != nil {
@@ -128,14 +147,14 @@ func (w *usageWorker) getUsageStats(ctx context.Context) ([]models.Entity, error
 		}
 
 		if len(cols) == 0 {
-			return sensors, ErrParseCPUUsage
+			return nil, ErrParseCPUUsage
 		}
 		// Create a sensor depending on the line.
 		switch {
 		case cols[0] == totalCPUString:
 			entity, err := newUsageSensor(ctx, w.clktck, cols, "")
 			if err != nil {
-				logging.FromContext(ctx).Warn("Could not generate CPU usage models.", slog.Any("error", err))
+				warnings = errors.Join(warnings, fmt.Errorf("could not generate total CPU usage sensor: %w", err))
 				continue
 			}
 
@@ -143,41 +162,27 @@ func (w *usageWorker) getUsageStats(ctx context.Context) ([]models.Entity, error
 		case strings.Contains(cols[0], "cpu"):
 			entity, err := newUsageSensor(ctx, w.clktck, cols, models.Diagnostic)
 			if err != nil {
-				logging.FromContext(ctx).Warn("Could not generate CPU usage models.", slog.Any("error", err))
+				warnings = errors.Join(warnings, fmt.Errorf("could not generate CPU usage sensor: %w", err))
 				continue
 			}
 
 			sensors = append(sensors, entity)
 		case cols[0] == "ctxt":
-			var state uint64
+			rate := w.calculateRate("ctxt", cols[1])
 
-			if _, found := w.rateSensors["ctxt"]; found {
-				currValue, _ := strconv.ParseUint(cols[1], 10, 64) //nolint:errcheck // if we can't parse it, value will be 0.
-				state = w.rateSensors["ctxt"].Calculate(currValue, w.delta)
-			} else {
-				w.rateSensors["ctxt"] = newRate(cols[1])
-			}
-
-			entity, err := newRateSensor(ctx, "CPU Context Switch Rate", "mdi:counter", "ctx/s", state, cols[1])
+			entity, err := newRateSensor(ctx, "CPU Context Switch Rate", "mdi:counter", "ctx/s", rate, cols[1])
 			if err != nil {
-				logging.FromContext(ctx).Warn("Could not generate context switch rate sensor.", slog.Any("error", err))
+				warnings = errors.Join(warnings, fmt.Errorf("could not generate context switch rate sensor: %w", err))
 				continue
 			}
 
 			sensors = append(sensors, entity)
 		case cols[0] == "processes":
-			var state uint64
+			rate := w.calculateRate("processes", cols[1])
 
-			if _, found := w.rateSensors["processes"]; found {
-				currValue, _ := strconv.ParseUint(cols[1], 10, 64) //nolint:errcheck // if we can't parse it, value will be 0.
-				state = w.rateSensors["processes"].Calculate(currValue, w.delta)
-			} else {
-				w.rateSensors["processes"] = newRate(cols[1])
-			}
-
-			entity, err := newRateSensor(ctx, "Processes Creation Rate", "mdi:application-cog", "processes/s", state, cols[1])
+			entity, err := newRateSensor(ctx, "Processes Creation Rate", "mdi:application-cog", "processes/s", rate, cols[1])
 			if err != nil {
-				logging.FromContext(ctx).Warn("Could not generate context switch rate sensor.", slog.Any("error", err))
+				warnings = errors.Join(warnings, fmt.Errorf("could not generate process creation rate sensor: %w", err))
 				continue
 			}
 
@@ -185,7 +190,7 @@ func (w *usageWorker) getUsageStats(ctx context.Context) ([]models.Entity, error
 		case cols[0] == "procs_running":
 			entity, err := newCountSensor(ctx, "Processes Running", "mdi:application-cog", "processes", cols[1])
 			if err != nil {
-				logging.FromContext(ctx).Warn("Could not generate CPU usage sensor.", slog.Any("error", err))
+				warnings = errors.Join(warnings, fmt.Errorf("could not generate running process count sensor: %w", err))
 				continue
 			}
 
@@ -193,7 +198,7 @@ func (w *usageWorker) getUsageStats(ctx context.Context) ([]models.Entity, error
 		case cols[0] == "procs_blocked":
 			entity, err := newCountSensor(ctx, "Processes Blocked", "mdi:application-cog", "processes", cols[1])
 			if err != nil {
-				logging.FromContext(ctx).Warn("Could not generate CPU usage sensor.", slog.Any("error", err))
+				warnings = errors.Join(warnings, fmt.Errorf("could not generate blocked process count sensor: %w", err))
 				continue
 			}
 
@@ -201,5 +206,5 @@ func (w *usageWorker) getUsageStats(ctx context.Context) ([]models.Entity, error
 		}
 	}
 
-	return sensors, nil
+	return sensors, warnings
 }

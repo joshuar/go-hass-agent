@@ -7,6 +7,7 @@ package cpu
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -35,8 +36,9 @@ func newRate(valueStr string) *linux.RateValue[uint64] {
 	return r
 }
 
+//revive:disable:argument-limit // Not very useful to reduce the number of arguments.
 func newRateSensor(ctx context.Context, name, icon, units string, value uint64, total string) (models.Entity, error) {
-	return sensor.NewSensor(ctx,
+	entity, err := sensor.NewSensor(ctx,
 		sensor.WithName(name),
 		sensor.WithID(strcase.ToSnake(name)),
 		sensor.WithStateClass(class.StateMeasurement),
@@ -47,6 +49,11 @@ func newRateSensor(ctx context.Context, name, icon, units string, value uint64, 
 		sensor.WithAttribute("Total", total),
 		sensor.WithDataSourceAttribute(linux.DataSrcProcfs),
 	)
+	if err != nil {
+		return entity, fmt.Errorf("could not generate %s sensor: %w", name, err)
+	}
+
+	return entity, nil
 }
 
 func newUsageSensor(ctx context.Context, clktck int64, details []string, category models.EntityCategory) (models.Entity, error) {
@@ -64,7 +71,7 @@ func newUsageSensor(ctx context.Context, clktck int64, details []string, categor
 
 	value, attributes := generateUsage(clktck, details[1:])
 
-	return sensor.NewSensor(ctx,
+	entity, err := sensor.NewSensor(ctx,
 		sensor.WithName(name),
 		sensor.WithID(id),
 		sensor.WithUnits("%"),
@@ -74,12 +81,17 @@ func newUsageSensor(ctx context.Context, clktck int64, details []string, categor
 		sensor.WithIcon("mdi:chip"),
 		sensor.WithCategory(category),
 	)
+	if err != nil {
+		return entity, fmt.Errorf("could not generate %s sensor: %w", name, err)
+	}
+
+	return entity, nil
 }
 
 func newCountSensor(ctx context.Context, name, icon, units, valueStr string) (models.Entity, error) {
 	valueInt, _ := strconv.Atoi(valueStr) //nolint:errcheck // if we can't parse it, value will be 0.
 
-	return sensor.NewSensor(ctx,
+	entity, err := sensor.NewSensor(ctx,
 		sensor.WithName(name),
 		sensor.WithID(strcase.ToSnake(name)),
 		sensor.WithStateClass(class.StateMeasurement),
@@ -89,6 +101,11 @@ func newCountSensor(ctx context.Context, name, icon, units, valueStr string) (mo
 		sensor.WithState(valueInt),
 		sensor.WithDataSourceAttribute(linux.DataSrcProcfs),
 	)
+	if err != nil {
+		return entity, fmt.Errorf("could not generate %s sensor: %w", name, err)
+	}
+
+	return entity, nil
 }
 
 func generateUsage(clktck int64, details []string) (float64, map[string]any) {
