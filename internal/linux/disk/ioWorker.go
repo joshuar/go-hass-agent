@@ -31,7 +31,7 @@ var ErrInitRatesWorker = errors.New("could not init rates worker")
 // maintains an internal map of devices being tracked.
 type ioWorker struct {
 	boottime    time.Time
-	rateSensors map[string]map[ioSensor]*rate
+	rateSensors map[string]map[ioSensor]*ioRate
 	linux.PollingSensorWorker
 	delta time.Duration
 	mu    sync.Mutex
@@ -45,7 +45,7 @@ func (w *ioWorker) addRateSensors(dev *device) {
 	defer w.mu.Unlock()
 
 	if _, found := w.rateSensors[dev.id]; !found {
-		w.rateSensors[dev.id] = map[ioSensor]*rate{
+		w.rateSensors[dev.id] = map[ioSensor]*ioRate{
 			diskReadRate:  {rateType: diskReadRate},
 			diskWriteRate: {rateType: diskWriteRate},
 		}
@@ -63,7 +63,16 @@ func (w *ioWorker) generateDeviceRateSensors(ctx context.Context, device *device
 
 	if _, found := w.rateSensors[device.id]; found && stats != nil {
 		for rateType := range w.rateSensors[device.id] {
-			rate := w.rateSensors[device.id][rateType].calculate(stats, delta)
+			var currValue uint64
+
+			switch rateType {
+			case diskReadRate:
+				currValue = stats[TotalSectorsRead]
+			case diskWriteRate:
+				currValue = stats[TotalSectorsWritten]
+			}
+
+			rate := w.rateSensors[device.id][rateType].Calculate(currValue, delta)
 
 			entity, err := newDiskRateSensor(ctx, device, rateType, rate)
 			if err != nil {
@@ -218,8 +227,8 @@ func NewIOWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
 
 	// Add sensors for a pseudo "total" device which tracks total values from
 	// all devices.
-	devices := make(map[string]map[ioSensor]*rate)
-	devices["total"] = map[ioSensor]*rate{
+	devices := make(map[string]map[ioSensor]*ioRate)
+	devices["total"] = map[ioSensor]*ioRate{
 		diskReadRate:  {rateType: diskReadRate},
 		diskWriteRate: {rateType: diskWriteRate},
 	}

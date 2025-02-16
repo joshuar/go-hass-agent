@@ -35,7 +35,7 @@ type StatsWorkerPrefs struct {
 // netStatsWorker is the object used for tracking network stats sensors. It
 // holds a netlink connection and a map of links with their stats sensors.
 type netStatsWorker struct {
-	statsSensors map[string]map[netStatsType]*statsRate
+	statsSensors map[string]map[netStatsType]*netRate
 	nlconn       *rtnetlink.Conn
 	prefs        *StatsWorkerPrefs
 	delta        time.Duration
@@ -69,6 +69,7 @@ func (w *netStatsWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 		var (
 			entity models.Entity
 			err    error
+			rate   uint64
 		)
 
 		name := link.name
@@ -102,14 +103,18 @@ func (w *netStatsWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 			w.statsSensors[name] = newStatsRates()
 		}
 		// Generate bytesRecvRate sensor entity for link.
-		entity, err = newStatsRateEntity(ctx, name, bytesRecvRate, models.Diagnostic, w.statsSensors[name][bytesRecvRate].calculateRate(stats, w.delta))
+		rate = w.statsSensors[name][bytesRecvRate].Calculate(stats.RXBytes, w.delta)
+
+		entity, err = newStatsRateEntity(ctx, name, bytesRecvRate, models.Diagnostic, rate)
 		if err != nil {
 			warnings = errors.Join(warnings, fmt.Errorf("could not generate stats rate sensor: %w", err))
 		} else {
 			sensors = append(sensors, entity)
 		}
 		// Generate bytesSentRate sensor entity for link.
-		entity, err = newStatsRateEntity(ctx, name, bytesSentRate, models.Diagnostic, w.statsSensors[name][bytesSentRate].calculateRate(stats, w.delta))
+		rate = w.statsSensors[name][bytesSentRate].Calculate(stats.TXBytes, w.delta)
+
+		entity, err = newStatsRateEntity(ctx, name, bytesSentRate, models.Diagnostic, rate)
 		if err != nil {
 			warnings = errors.Join(warnings, fmt.Errorf("could not generate stats sensor: %w", err))
 		} else {
@@ -121,6 +126,7 @@ func (w *netStatsWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 		var (
 			entity models.Entity
 			err    error
+			rate   uint64
 		)
 		// Create a pseudo total stats link stats object.
 		totalStats := &rtnetlink.LinkStats64{
@@ -142,14 +148,18 @@ func (w *netStatsWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 			sensors = append(sensors, entity)
 		}
 		// Generate total bytesRecvRate sensor entity.
-		entity, err = newStatsRateEntity(ctx, totalsName, bytesRecvRate, models.Diagnostic, w.statsSensors[totalsName][bytesRecvRate].calculateRate(totalStats, w.delta))
+		rate = w.statsSensors[totalsName][bytesRecvRate].Calculate(totalStats.RXBytes, w.delta)
+
+		entity, err = newStatsRateEntity(ctx, totalsName, bytesRecvRate, models.Diagnostic, rate)
 		if err != nil {
 			warnings = errors.Join(warnings, fmt.Errorf("could not generate stats rate sensor: %w", err))
 		} else {
 			sensors = append(sensors, entity)
 		}
 		// Generate total bytesSentRate sensor entity.
-		entity, err = newStatsRateEntity(ctx, totalsName, bytesSentRate, models.Diagnostic, w.statsSensors[totalsName][bytesSentRate].calculateRate(totalStats, w.delta))
+		rate = w.statsSensors[totalsName][bytesSentRate].Calculate(totalStats.TXBytes, w.delta)
+
+		entity, err = newStatsRateEntity(ctx, totalsName, bytesSentRate, models.Diagnostic, rate)
 		if err != nil {
 			warnings = errors.Join(warnings, fmt.Errorf("could not generate stats sensor: %w", err))
 		} else {
@@ -270,7 +280,7 @@ func NewNetStatsWorker(ctx context.Context) (*linux.PollingSensorWorker, error) 
 	}()
 
 	ratesWorker := &netStatsWorker{
-		statsSensors: make(map[string]map[netStatsType]*statsRate),
+		statsSensors: make(map[string]map[netStatsType]*netRate),
 		nlconn:       conn,
 	}
 	ratesWorker.statsSensors[totalsName] = newStatsRates()

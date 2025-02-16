@@ -95,41 +95,13 @@ func newStatsRateEntity(ctx context.Context, name string, entityType netStatsTyp
 	)
 }
 
-// statsRate hold data for tracking the rate of change of a stat.
-type statsRate struct {
-	rateType  netStatsType
-	prevValue uint64
+type netRate struct {
+	linux.RateValue[uint64]
+	rateType netStatsType
 }
 
-// update will update the value for a sensor. For count sensors, the value is
-// updated directly based on the new stats. For rates sensors, the new rate is
-// calculated and the previous value saved.
-func (r *statsRate) calculateRate(stats *rtnetlink.LinkStats64, delta time.Duration) uint64 {
-	var (
-		curr uint64
-		prev uint64
-	)
-
-	switch r.rateType {
-	case bytesRecvRate:
-		curr = stats.TXBytes
-		prev = r.prevValue
-		r.prevValue = stats.RXBytes
-	case bytesSentRate:
-		curr = stats.RXBytes
-		prev = r.prevValue
-		r.prevValue = stats.TXBytes
-	}
-
-	if uint64(delta.Seconds()) > 0 && prev != 0 {
-		return (curr - prev) / uint64(delta.Seconds())
-	}
-
-	return 0
-}
-
-func newStatsRates() map[netStatsType]*statsRate {
-	return map[netStatsType]*statsRate{
+func newStatsRates() map[netStatsType]*netRate {
+	return map[netStatsType]*netRate{
 		bytesRecvRate: {rateType: bytesRecvRate},
 		bytesSentRate: {rateType: bytesSentRate},
 	}

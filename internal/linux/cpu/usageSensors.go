@@ -9,7 +9,6 @@ import (
 	"errors"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/iancoleman/strcase"
 
@@ -28,26 +27,10 @@ var ErrParseCPUUsage = errors.New("could not parse CPU usage")
 //nolint:lll
 var times = [...]string{"user_time", "nice_time", "system_time", "idle_time", "iowait_time", "irq_time", "softirq_time", "steal_time", "guest_time", "guest_nice_time"}
 
-type rate struct {
-	prevState uint64
-}
-
-func (r *rate) calculateRate(delta time.Duration, valueStr string) uint64 {
+func newRate(valueStr string) *linux.RateValue[uint64] {
+	r := &linux.RateValue[uint64]{}
 	valueInt, _ := strconv.ParseUint(valueStr, 10, 64) //nolint:errcheck // if we can't parse it, value will be 0.
-
-	if uint64(delta.Seconds()) > 0 {
-		r.prevState = valueInt
-		return ((valueInt - r.prevState) / uint64(delta.Seconds()) / 2)
-	} else {
-		r.prevState = valueInt
-		return 0
-	}
-}
-
-func newRate(valueStr string) *rate {
-	r := &rate{}
-	valueInt, _ := strconv.ParseUint(valueStr, 10, 64) //nolint:errcheck // if we can't parse it, value will be 0.
-	r.prevState = valueInt
+	r.Calculate(valueInt, 0)
 
 	return r
 }

@@ -9,8 +9,8 @@ package disk
 import (
 	"context"
 	"maps"
-	"time"
 
+	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/models"
 	"github.com/joshuar/go-hass-agent/internal/models/class"
 	"github.com/joshuar/go-hass-agent/internal/models/sensor"
@@ -34,38 +34,9 @@ const (
 
 type ioSensor int
 
-type rate struct {
-	rateType  ioSensor
-	prevValue uint64
-}
-
-//nolint:mnd
-func (s *rate) calculate(stats map[stat]uint64, delta time.Duration) uint64 {
-	var (
-		curr uint64
-		prev uint64
-	)
-
-	prev = s.prevValue
-
-	switch s.rateType {
-	case diskReadRate:
-		curr = stats[TotalSectorsRead]
-	case diskWriteRate:
-		curr = stats[TotalSectorsWritten]
-	}
-
-	s.prevValue = curr
-
-	// For rate sensors, calculate the current value based on previous value and
-	// time interval since last measurement.
-	if s.rateType == diskReadRate || s.rateType == diskWriteRate {
-		if uint64(delta.Seconds()) > 0 {
-			return ((curr - prev) / uint64(delta.Seconds()) / 2)
-		}
-	}
-
-	return 0
+type ioRate struct {
+	linux.RateValue[uint64]
+	rateType ioSensor
 }
 
 func newDiskStatSensor(ctx context.Context, device *device, sensorType ioSensor, value uint64, attributes models.Attributes) (models.Entity, error) {
@@ -76,6 +47,7 @@ func newDiskStatSensor(ctx context.Context, device *device, sensorType ioSensor,
 	)
 
 	name, id := device.generateIdentifiers(sensorType)
+
 	if attributes != nil {
 		maps.Copy(attributes, device.generateAttributes())
 	} else {
