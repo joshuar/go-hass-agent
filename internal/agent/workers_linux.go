@@ -72,10 +72,13 @@ var eventWorkersInitFuncs = []func(ctx context.Context) (*linux.EventWorker, err
 // setupOSWorkers creates slices of OS-specific sensor and event Workers that
 // can be run by the agent. It handles initializing the workers with OS-specific
 // data, reporting any errors.
-func setupOSWorkers(ctx context.Context) ([]Worker[models.Entity], []Worker[models.Entity]) {
-	eventWorkers := make([]Worker[models.Entity], 0, len(eventWorkersInitFuncs))
-	sensorWorkers := make([]Worker[models.Entity], 0,
-		len(sensorPollingWorkersInitFuncs)+len(sensorEventWorkersInitFuncs)+len(sensorOneShotWorkersInitFuncs)+len(sensorLaptopWorkersInitFuncs))
+func setupOSWorkers(ctx context.Context) []Worker[models.Entity] {
+	workers := make([]Worker[models.Entity], 0,
+		len(eventWorkersInitFuncs)+
+			len(sensorPollingWorkersInitFuncs)+
+			len(sensorEventWorkersInitFuncs)+
+			len(sensorOneShotWorkersInitFuncs)+
+			len(sensorLaptopWorkersInitFuncs))
 
 	// Set up a logger.
 	logger := logging.FromContext(ctx).With(slog.Group("linux", slog.String("controller", "sensor")))
@@ -90,7 +93,7 @@ func setupOSWorkers(ctx context.Context) ([]Worker[models.Entity], []Worker[mode
 			continue
 		}
 
-		eventWorkers = append(eventWorkers, worker)
+		workers = append(workers, worker)
 	}
 
 	for _, workerInit := range sensorEventWorkersInitFuncs {
@@ -102,7 +105,7 @@ func setupOSWorkers(ctx context.Context) ([]Worker[models.Entity], []Worker[mode
 			continue
 		}
 
-		sensorWorkers = append(sensorWorkers, worker)
+		workers = append(workers, worker)
 	}
 
 	for _, workerInit := range sensorPollingWorkersInitFuncs {
@@ -114,7 +117,7 @@ func setupOSWorkers(ctx context.Context) ([]Worker[models.Entity], []Worker[mode
 			continue
 		}
 
-		sensorWorkers = append(sensorWorkers, worker)
+		workers = append(workers, worker)
 	}
 
 	for _, workerInit := range sensorOneShotWorkersInitFuncs {
@@ -126,7 +129,7 @@ func setupOSWorkers(ctx context.Context) ([]Worker[models.Entity], []Worker[mode
 			continue
 		}
 
-		sensorWorkers = append(sensorWorkers, worker)
+		workers = append(workers, worker)
 	}
 
 	// Get the type of device we are running on.
@@ -143,9 +146,9 @@ func setupOSWorkers(ctx context.Context) ([]Worker[models.Entity], []Worker[mode
 				continue
 			}
 
-			sensorWorkers = append(sensorWorkers, worker)
+			workers = append(workers, worker)
 		}
 	}
 
-	return sensorWorkers, eventWorkers
+	return workers
 }

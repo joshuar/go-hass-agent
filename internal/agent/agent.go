@@ -85,6 +85,7 @@ func Run(ctx context.Context, headless bool, api APIs) error {
 
 	dataCh := make(chan models.Entity)
 	defer close(dataCh)
+
 	go func() {
 		api.Hass().EntityHandler(ctx, dataCh)
 	}()
@@ -104,27 +105,27 @@ func Run(ctx context.Context, headless bool, api APIs) error {
 		workerCtx := setupWorkerCtx(ctx)
 
 		// Initialize and gather OS sensor and event workers.
-		sensorWorkers, eventWorkers := setupOSWorkers(workerCtx)
+		workers := setupOSWorkers(workerCtx)
 		// Initialize and add connection latency sensor worker.
 		if worker, err := agentsensor.NewConnectionLatencySensorWorker(workerCtx); err != nil {
 			agent.logger.Warn("Could not init agent worker.",
 				slog.Any("error", err))
 		} else {
-			sensorWorkers = append(sensorWorkers, worker)
+			workers = append(workers, worker)
 		}
 		// Initialize and add external IP address sensor worker.
 		if worker, err := agentsensor.NewExternalIPUpdaterWorker(workerCtx); err != nil {
 			agent.logger.Warn("Could not init agent worker.",
 				slog.Any("error", err))
 		} else {
-			sensorWorkers = append(sensorWorkers, worker)
+			workers = append(workers, worker)
 		}
 		// Initialize and add external version sensor worker.
 		if worker, err := agentsensor.NewVersionWorker(workerCtx); err != nil {
 			agent.logger.Warn("Could not init agent worker.",
 				slog.Any("error", err))
 		} else {
-			sensorWorkers = append(sensorWorkers, worker)
+			workers = append(workers, worker)
 		}
 
 		// Initialize and add the script worker.
@@ -133,21 +134,14 @@ func Run(ctx context.Context, headless bool, api APIs) error {
 			agent.logger.Warn("Could not init scripts workers.",
 				slog.Any("error", err))
 		} else {
-			sensorWorkers = append(sensorWorkers, scriptsWorkers)
+			workers = append(workers, scriptsWorkers)
 		}
 
 		wg.Add(1)
 		// Process sensor workers.
 		go func() {
 			defer wg.Done()
-			processWorkers(workerCtx, dataCh, sensorWorkers...)
-		}()
-
-		wg.Add(1)
-		// Process event workers.
-		go func() {
-			defer wg.Done()
-			processWorkers(workerCtx, dataCh, eventWorkers...)
+			processWorkers(workerCtx, dataCh, workers...)
 		}()
 
 		wg.Add(1)
