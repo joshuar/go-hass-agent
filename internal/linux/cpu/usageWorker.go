@@ -12,6 +12,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -33,7 +34,7 @@ var ErrInitUsageWorker = errors.New("could not init CPU usage worker")
 
 type usageWorker struct {
 	boottime    time.Time
-	rateSensors map[string]*rate
+	rateSensors map[string]*linux.RateValue[uint64]
 	path        string
 	linux.PollingSensorWorker
 	clktck int64
@@ -73,7 +74,7 @@ func NewUsageWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
 		path:     filepath.Join(linux.ProcFSRoot, "stat"),
 		boottime: boottime,
 		clktck:   clktck,
-		rateSensors: map[string]*rate{
+		rateSensors: map[string]*linux.RateValue[uint64]{
 			"ctxt":      newRate("0"),
 			"processes": newRate("0"),
 		},
@@ -149,8 +150,10 @@ func (w *usageWorker) getUsageStats(ctx context.Context) ([]models.Entity, error
 			sensors = append(sensors, entity)
 		case cols[0] == "ctxt":
 			var state uint64
+
 			if _, found := w.rateSensors["ctxt"]; found {
-				state = w.rateSensors["ctxt"].calculateRate(w.delta, cols[1])
+				currValue, _ := strconv.ParseUint(cols[1], 10, 64) //nolint:errcheck // if we can't parse it, value will be 0.
+				state = w.rateSensors["ctxt"].Calculate(currValue, w.delta)
 			} else {
 				w.rateSensors["ctxt"] = newRate(cols[1])
 			}
@@ -164,8 +167,10 @@ func (w *usageWorker) getUsageStats(ctx context.Context) ([]models.Entity, error
 			sensors = append(sensors, entity)
 		case cols[0] == "processes":
 			var state uint64
+
 			if _, found := w.rateSensors["processes"]; found {
-				state = w.rateSensors["processes"].calculateRate(w.delta, cols[1])
+				currValue, _ := strconv.ParseUint(cols[1], 10, 64) //nolint:errcheck // if we can't parse it, value will be 0.
+				state = w.rateSensors["processes"].Calculate(currValue, w.delta)
 			} else {
 				w.rateSensors["processes"] = newRate(cols[1])
 			}
