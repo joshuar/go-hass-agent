@@ -179,6 +179,8 @@ func newBattery(bus *dbusx.Bus, logger *slog.Logger, path dbus.ObjectPath) (*upo
 
 // monitorBattery will monitor a battery device for any property changes and
 // send these as sensors.
+//
+//nolint:gocognit
 func monitorBattery(ctx context.Context, battery *upowerBattery) <-chan models.Entity {
 	sensorCh := make(chan models.Entity)
 	// Create a DBus signal match to watch for property changes for this
