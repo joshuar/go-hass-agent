@@ -75,15 +75,18 @@ func (c *Client) isDisabled(ctx context.Context, details models.Sensor) bool {
 		c.logger.Info("Sensor re-enabled in Home Assistant, Re-enabling in local registry and sending updates.",
 			details.LogAttributes())
 		c.sensorRegistry.SetDisabled(details.UniqueID, false)
+
 		return false
 	case !regDisabled && haDisabled:
 		c.logger.Info("Sensor has been disabled in Home Assistant, Disabling in local registry and not sending updates.",
 			details.LogAttributes())
 		c.sensorRegistry.SetDisabled(details.UniqueID, true)
+
 		return true
 	case regDisabled && haDisabled:
 		c.logger.Info("Sensor is disabled, not sending updates.",
 			details.LogAttributes())
+
 		return true
 	}
 
@@ -171,19 +174,31 @@ func (c *Client) EntityHandler(ctx context.Context, entityCh chan models.Entity)
 
 					continue
 				}
+
 				c.logger.Debug("Sensor updated.",
 					sensorData.LogAttributes())
 			} else {
 				// Otherwise, send a registration request.
-				if err := sensor.RegistrationHandler(ctx, c, sensorData); err != nil {
-					c.logger.Warn("Could not register sensor.",
+				success, err := sensor.RegistrationHandler(ctx, c, sensorData)
+
+				switch {
+				case err != nil:
+					c.logger.Warn("Send sensor registration failed.",
 						sensorData.LogAttributes(),
 						slog.Any("error", err))
+				case !success:
+					c.logger.Warn("Sensor not registered.",
+						sensorData.LogAttributes())
+				default:
+					if err := c.sensorRegistry.SetRegistered(sensorData.UniqueID, true); err != nil {
+						c.logger.Warn("Could not set local registration status.",
+							slog.Any("error", err))
+						continue
+					}
 
-					continue
+					c.logger.Debug("Sensor registered.",
+						sensorData.LogAttributes())
 				}
-				c.logger.Debug("Sensor registered.",
-					sensorData.LogAttributes())
 			}
 			// Add sensor details to the tracker.
 			if err := c.sensorTracker.Add(&sensorData); err != nil {
@@ -196,7 +211,7 @@ func (c *Client) EntityHandler(ctx context.Context, entityCh chan models.Entity)
 			continue
 		}
 
-		c.logger.Warn("Unhandled entity recieved.",
+		c.logger.Warn("Unhandled entity received.",
 			slog.String("entity_type", fmt.Sprintf("%T", entity)))
 	}
 }
@@ -285,6 +300,10 @@ func (c *Client) DisableSensor(id models.UniqueID) {
 			slog.String("id", id))
 		c.sensorRegistry.SetDisabled(id, true)
 	}
+}
+
+func (c *Client) RegisterSensor(id models.UniqueID) error {
+	return c.sensorRegistry.SetRegistered(id, true)
 }
 
 // NewClient creates a new hass client, which tracks last sensor status,
