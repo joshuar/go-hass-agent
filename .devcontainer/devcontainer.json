@@ -1,4 +1,5 @@
 {
+  "name": "Go Hass Agent Development",
   "dockerComposeFile": "docker-compose.yml",
   "service": "devcontainer",
   "shutdownAction": "stopCompose",
@@ -22,7 +23,7 @@
     "ghcr.io/devcontainers/features/go:1": {},
     "ghcr.io/devcontainers/features/github-cli:1": {}
   },
-  "postCreateCommand": ".devcontainer/postCreate.sh",
+  "postCreateCommand": "bash .devcontainer/postcreate.sh",
   "customizations": {
     "vscode": {
       "extensions": [
@@ -45,8 +46,6 @@
         "foxundermoon.shell-format"
       ],
       "settings": {
-        "terminal.integrated.defaultProfile.linux": "fish",
-        "conventionalCommits.lineBreak": "\\n",
         "go.lintTool": "golangci-lint",
         "go.lintFlags": ["--fast"],
         "gopls": {
