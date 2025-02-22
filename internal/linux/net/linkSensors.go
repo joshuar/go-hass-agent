@@ -37,9 +37,13 @@ var (
 	}
 )
 
-var ErrInitLinkWorker = errors.New("could not init network link state worker")
+var (
+	ErrNewLinkStateSensor = errors.New("could not create link state sensor")
+	ErrNewAddrSensor      = errors.New("could not create address sensor")
+	ErrInitLinkWorker     = errors.New("could not init network link state worker")
+)
 
-func newLinkSensor(ctx context.Context, msg rtnetlink.LinkMessage) (models.Entity, error) {
+func newLinkSensor(ctx context.Context, msg rtnetlink.LinkMessage) (*models.Entity, error) {
 	var (
 		value any
 		icon  string
@@ -66,7 +70,7 @@ func newLinkSensor(ctx context.Context, msg rtnetlink.LinkMessage) (models.Entit
 		attributes["link_type"] = msg.Attributes.Info.Kind
 	}
 
-	return sensor.NewSensor(ctx,
+	linkStateSensor, err := sensor.NewSensor(ctx,
 		sensor.WithName(name+" Link State"),
 		sensor.WithID(strings.ToLower(name+"_link_state")),
 		sensor.AsDiagnostic(),
@@ -74,16 +78,26 @@ func newLinkSensor(ctx context.Context, msg rtnetlink.LinkMessage) (models.Entit
 		sensor.WithState(value),
 		sensor.WithAttributes(attributes),
 	)
+	if err != nil {
+		return nil, errors.Join(ErrNewLinkStateSensor, err)
+	}
+
+	return &linkStateSensor, nil
 }
 
-func newAddressSensor(ctx context.Context, link rtnetlink.LinkMessage, msg rtnetlink.AddressMessage) (models.Entity, error) {
-	name := link.Attributes.Name
+func newAddressSensor(ctx context.Context, link *rtnetlink.LinkService, msg rtnetlink.AddressMessage) (*models.Entity, error) {
+	linkMsg, err := link.Get(msg.Index)
+	if err != nil {
+		return nil, errors.Join(ErrNewAddrSensor, err)
+	}
+
+	name := linkMsg.Attributes.Name
 	value := msg.Attributes.Address.String()
 	attributes := map[string]any{
 		"data_source": linux.DataSrcNetlink,
 	}
 
-	if link.Attributes.OperationalState != rtnetlink.OperStateUp {
+	if linkMsg.Attributes.OperationalState != rtnetlink.OperStateUp {
 		if ipFamily(msg.Family) == unix.AF_INET {
 			value = net.IPv4zero.String()
 		} else {
@@ -107,7 +121,7 @@ func newAddressSensor(ctx context.Context, link rtnetlink.LinkMessage, msg rtnet
 		attributes["anycast"] = msg.Attributes.Anycast.String()
 	}
 
-	return sensor.NewSensor(ctx,
+	addrSensor, err := sensor.NewSensor(ctx,
 		sensor.WithName(name+" "+ipFamily(msg.Family).String()+" Address"),
 		sensor.WithID(strings.ToLower(name+"_"+ipFamily(msg.Family).String()+"_address")),
 		sensor.AsDiagnostic(),
@@ -115,6 +129,11 @@ func newAddressSensor(ctx context.Context, link rtnetlink.LinkMessage, msg rtnet
 		sensor.WithState(value),
 		sensor.WithAttributes(attributes),
 	)
+	if err != nil {
+		return nil, errors.Join(ErrNewAddrSensor, err)
+	}
+
+	return &addrSensor, nil
 }
 
 type ipFamily int
@@ -219,19 +238,29 @@ func (w *AddressWorker) Events(ctx context.Context) (<-chan models.Entity, error
 				for _, msg := range nlmsgs {
 					switch value := any(msg).(type) {
 					case *rtnetlink.LinkMessage:
-						link, err := filterLink(ctx, *value)
+						if slices.Contains(ifaceFilters, value.Attributes.Name) {
+							continue
+						}
+
+						link, err := newLinkSensor(ctx, *value)
 						if err != nil {
 							logging.FromContext(ctx).Warn("Could not generate link sensor.", slog.Any("error", err))
-						} else {
-							sensorCh <- link
+							continue
 						}
+
+						sensorCh <- *link
 					case *rtnetlink.AddressMessage:
-						addr, err := w.filterAddress(ctx, *value)
+						if !w.usableAddress(*value) {
+							continue
+						}
+
+						addr, err := newAddressSensor(ctx, w.nlconn.Link, *value)
 						if err != nil {
 							logging.FromContext(ctx).Warn("Could not generate address sensor.", slog.Any("error", err))
-						} else {
-							sensorCh <- addr
+							continue
 						}
+
+						sensorCh <- *addr
 					}
 				}
 			}
@@ -265,44 +294,48 @@ func (w *AddressWorker) getAddresses(ctx context.Context) ([]models.Entity, erro
 
 	// Filter for valid addresses.
 	for _, msg := range msgs {
-		entity, err := w.filterAddress(ctx, msg)
+		if !w.usableAddress(msg) {
+			continue
+		}
+
+		entity, err := newAddressSensor(ctx, w.nlconn.Link, msg)
 		if err != nil {
 			warnings = errors.Join(warnings, fmt.Errorf("could not generate address sensor: %w", err))
 		} else if entity.Valid() {
-			addrs = append(addrs, entity)
+			addrs = append(addrs, *entity)
 		}
 	}
 
 	return addrs, warnings
 }
 
-func (w *AddressWorker) filterAddress(ctx context.Context, msg rtnetlink.AddressMessage) (models.Entity, error) {
+func (w *AddressWorker) usableAddress(msg rtnetlink.AddressMessage) bool {
 	// Only include Ipv4/6 addresses.
 	if !slices.Contains(addrFamilies, msg.Family) {
-		return models.Entity{}, nil
+		return false
 	}
 	// Only include global addresses.
 	if msg.Scope != unix.RT_SCOPE_UNIVERSE {
-		return models.Entity{}, nil
+		return false
 	}
 
 	link, err := w.nlconn.Link.Get(msg.Index)
 	if err != nil {
-		return models.Entity{}, nil
+		return false
 	}
 
 	if link.Attributes.Name == loopbackDeviceName {
-		return models.Entity{}, nil
+		return false
 	}
 
 	// Skip ignored devices.
 	if slices.ContainsFunc(w.prefs.IgnoredDevices, func(e string) bool {
 		return strings.HasPrefix(link.Attributes.Name, e)
 	}) {
-		return models.Entity{}, nil
+		return false
 	}
 
-	return newAddressSensor(ctx, link, msg)
+	return true
 }
 
 func (w *AddressWorker) getLinks(ctx context.Context) ([]models.Entity, error) {
@@ -319,23 +352,22 @@ func (w *AddressWorker) getLinks(ctx context.Context) ([]models.Entity, error) {
 
 	// Filter for valid links.
 	for _, msg := range msgs {
-		entity, err := filterLink(ctx, msg)
+		if slices.Contains(ifaceFilters, msg.Attributes.Name) {
+			continue
+		}
+
+		entity, err := newLinkSensor(ctx, msg)
 		if err != nil {
 			warnings = errors.Join(warnings, fmt.Errorf("could not generate link sensor: %w", err))
-		} else if entity.Valid() {
-			links = append(links, entity)
+			continue
+		}
+
+		if entity.Valid() {
+			links = append(links, *entity)
 		}
 	}
 
 	return links, warnings
-}
-
-func filterLink(ctx context.Context, msg rtnetlink.LinkMessage) (models.Entity, error) {
-	if slices.Contains(ifaceFilters, msg.Attributes.Name) {
-		return models.Entity{}, nil
-	}
-
-	return newLinkSensor(ctx, msg)
 }
 
 func NewAddressWorker(_ context.Context) (*linux.EventSensorWorker, error) {

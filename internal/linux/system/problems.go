@@ -32,6 +32,7 @@ const (
 )
 
 var (
+	ErrNewABRTSensor    = errors.New("could not create ABRT sensor")
 	ErrInitABRTWorker   = errors.New("could not init ABRT worker")
 	ErrNoProblemDetails = errors.New("no details found")
 )
@@ -63,7 +64,7 @@ func parseProblem(details map[string]string) map[string]any {
 	return parsed
 }
 
-func (w *problemsWorker) newProblemsSensor(ctx context.Context, problems []string) (models.Entity, error) {
+func (w *problemsWorker) newProblemsSensor(ctx context.Context, problems []string) (*models.Entity, error) {
 	problemDetails := make(map[string]map[string]any)
 	// For each problem, fetch its details.
 	for _, problem := range problems {
@@ -75,7 +76,7 @@ func (w *problemsWorker) newProblemsSensor(ctx context.Context, problems []strin
 		problemDetails[problem] = parseProblem(details)
 	}
 
-	return sensor.NewSensor(ctx,
+	abrtSensor, err := sensor.NewSensor(ctx,
 		sensor.WithName("Problems"),
 		sensor.WithID("problems"),
 		sensor.WithStateClass(class.StateMeasurement),
@@ -85,6 +86,11 @@ func (w *problemsWorker) newProblemsSensor(ctx context.Context, problems []strin
 		sensor.WithDataSourceAttribute(linux.DataSrcDbus),
 		sensor.WithAttribute("problem_list", problemDetails),
 	)
+	if err != nil {
+		return nil, errors.Join(ErrNewABRTSensor, err)
+	}
+
+	return &abrtSensor, nil
 }
 
 type problemsWorker struct {
@@ -108,7 +114,7 @@ func (w *problemsWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 		return nil, fmt.Errorf("could not generate problem sensor: %w", err)
 	}
 
-	return []models.Entity{entity}, nil
+	return []models.Entity{*entity}, nil
 }
 
 func (w *problemsWorker) PreferencesID() string {

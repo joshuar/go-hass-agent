@@ -30,10 +30,13 @@ const (
 	screenLockUnknownIcon = "mdi:lock-alert"
 )
 
-var ErrInitScreenLockWorker = errors.New("could not init screen lock worker")
+var (
+	ErrNewScreenLockSensor  = errors.New("could not create screen lock sensor")
+	ErrInitScreenLockWorker = errors.New("could not init screen lock worker")
+)
 
-func newScreenlockSensor(ctx context.Context, value bool) (models.Entity, error) {
-	return sensor.NewSensor(ctx,
+func newScreenlockSensor(ctx context.Context, value bool) (*models.Entity, error) {
+	lockSensor, err := sensor.NewSensor(ctx,
 		sensor.WithName("Screen Lock"),
 		sensor.WithID("screen_lock"),
 		sensor.AsTypeBinarySensor(),
@@ -43,6 +46,11 @@ func newScreenlockSensor(ctx context.Context, value bool) (models.Entity, error)
 		sensor.WithDataSourceAttribute(linux.DataSrcDbus),
 		sensor.AsRetryableRequest(true),
 	)
+	if err != nil {
+		return nil, errors.Join(ErrNewScreenLockSensor, err)
+	}
+
+	return &lockSensor, nil
 }
 
 func screenLockIcon(value bool) string {
@@ -71,7 +79,7 @@ func (w *screenLockWorker) Events(ctx context.Context) (<-chan models.Entity, er
 	}
 
 	go func() {
-		sensorCh <- currentState
+		sensorCh <- *currentState
 	}()
 
 	go func() {
@@ -83,12 +91,15 @@ func (w *screenLockWorker) Events(ctx context.Context) (<-chan models.Entity, er
 				return
 			case event := <-w.triggerCh:
 				var (
-					entity models.Entity
-					err    error
+					entity    *models.Entity
+					lockState bool
+					changed   bool
+					err       error
 				)
+
 				switch event.Signal {
 				case dbusx.PropChangedSignal:
-					changed, lockState, err := dbusx.HasPropertyChanged[bool](event.Content, sessionLockedProp)
+					changed, lockState, err = dbusx.HasPropertyChanged[bool](event.Content, sessionLockedProp)
 					if err != nil {
 						slog.With(slog.String("worker", screenLockWorkerID)).Debug("Could not parse received D-Bus signal.", slog.Any("error", err))
 					} else {
@@ -103,11 +114,12 @@ func (w *screenLockWorker) Events(ctx context.Context) (<-chan models.Entity, er
 				}
 
 				if err != nil {
-					logging.FromContext(ctx).Warn("Could not generate screen lock sensor: %w", err)
+					logging.FromContext(ctx).Warn("Could not generate screen lock sensor.",
+						slog.Any("error", err))
 					continue
 				}
 
-				sensorCh <- entity
+				sensorCh <- *entity
 			}
 		}
 	}()
@@ -118,10 +130,10 @@ func (w *screenLockWorker) Events(ctx context.Context) (<-chan models.Entity, er
 func (w *screenLockWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 	currentState, err := w.getCurrentState(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("cannot generate screen lock sensor: %w", err)
+		return nil, errors.Join(ErrNewScreenLockSensor, err)
 	}
 
-	return []models.Entity{currentState}, nil
+	return []models.Entity{*currentState}, nil
 }
 
 func (w *screenLockWorker) PreferencesID() string {
@@ -132,10 +144,10 @@ func (w *screenLockWorker) DefaultPreferences() preferences.CommonWorkerPrefs {
 	return preferences.CommonWorkerPrefs{}
 }
 
-func (w *screenLockWorker) getCurrentState(ctx context.Context) (models.Entity, error) {
+func (w *screenLockWorker) getCurrentState(ctx context.Context) (*models.Entity, error) {
 	screenLockState, err := w.screenLockProp.Get()
 	if err != nil {
-		return models.Entity{}, fmt.Errorf("could not fetch screen lock state: %w", err)
+		return nil, errors.Join(ErrNewScreenLockSensor, err)
 	}
 
 	return newScreenlockSensor(ctx, screenLockState)

@@ -8,6 +8,7 @@ package disk
 
 import (
 	"context"
+	"errors"
 	"maps"
 
 	"github.com/joshuar/go-hass-agent/internal/linux"
@@ -32,6 +33,11 @@ const (
 	ioOpsIcon    = "mdi:content-save"
 )
 
+var (
+	ErrNewDiskStatSensor = errors.New("could not create disk stat sensor")
+	ErrNewDiskRateSensor = errors.New("could not create disk rate sensor")
+)
+
 type ioSensor int
 
 type ioRate struct {
@@ -39,7 +45,7 @@ type ioRate struct {
 	rateType ioSensor
 }
 
-func newDiskStatSensor(ctx context.Context, device *device, sensorType ioSensor, value uint64, attributes models.Attributes) (models.Entity, error) {
+func newDiskStatSensor(ctx context.Context, device *device, sensorType ioSensor, value uint64, attributes models.Attributes) (*models.Entity, error) {
 	var (
 		icon, units      string
 		stateClass       class.SensorStateClass
@@ -77,7 +83,7 @@ func newDiskStatSensor(ctx context.Context, device *device, sensorType ioSensor,
 		diagnosticOption = sensor.WithCategory("")
 	}
 
-	return sensor.NewSensor(ctx,
+	statSensor, err := sensor.NewSensor(ctx,
 		sensor.WithName(name),
 		sensor.WithID(id),
 		sensor.WithUnits(units),
@@ -87,9 +93,14 @@ func newDiskStatSensor(ctx context.Context, device *device, sensorType ioSensor,
 		sensor.WithAttributes(attributes),
 		diagnosticOption,
 	)
+	if err != nil {
+		return nil, errors.Join(ErrNewDiskStatSensor, err)
+	}
+
+	return &statSensor, nil
 }
 
-func newDiskRateSensor(ctx context.Context, device *device, sensorType ioSensor, value uint64) (models.Entity, error) {
+func newDiskRateSensor(ctx context.Context, device *device, sensorType ioSensor, value uint64) (*models.Entity, error) {
 	var (
 		diagnosticOption sensor.Option
 		icon             string
@@ -114,7 +125,7 @@ func newDiskRateSensor(ctx context.Context, device *device, sensorType ioSensor,
 		diagnosticOption = sensor.WithCategory("")
 	}
 
-	return sensor.NewSensor(ctx,
+	rateSensor, err := sensor.NewSensor(ctx,
 		sensor.WithName(name),
 		sensor.WithID(id),
 		sensor.WithUnits(units),
@@ -124,4 +135,9 @@ func newDiskRateSensor(ctx context.Context, device *device, sensorType ioSensor,
 		sensor.WithAttributes(attributes),
 		diagnosticOption,
 	)
+	if err != nil {
+		return nil, errors.Join(ErrNewDiskRateSensor, err)
+	}
+
+	return &rateSensor, nil
 }

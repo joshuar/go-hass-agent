@@ -29,11 +29,6 @@ const (
 
 var ErrInitOOMWorker = errors.New("could not init OOM worker")
 
-type oomEventData struct {
-	Process string `json:"process"`
-	PID     int    `json:"pid"`
-}
-
 type OOMEventsWorker struct {
 	triggerCh chan dbusx.Trigger
 	linux.EventWorker

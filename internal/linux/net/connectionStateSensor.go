@@ -8,6 +8,7 @@ package net
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/godbus/dbus/v5"
@@ -27,6 +28,9 @@ const (
 	connOffline                       // Offline
 )
 
+// connState represents the connection state.
+type connState uint32
+
 const (
 	iconUnknown      connIcon = iota // mdi:help-network
 	iconActivating                   // mdi:plus-network
@@ -35,10 +39,12 @@ const (
 	iconOffline                      // mdi:network-off
 )
 
-type connState uint32
-
+// connIcon is an icon representation of the connection state.
 type connIcon uint32
 
+var ErrNewConnStateSensor = errors.New("could not create connection state sensor")
+
+// connectionStateSensor tracks properties about a connection.
 type connectionStateSensor struct {
 	name      string
 	state     string
@@ -46,25 +52,31 @@ type connectionStateSensor struct {
 	stateProp *dbusx.Property[connState]
 }
 
-func (c *connectionStateSensor) generateEntity(ctx context.Context) (models.Entity, error) {
-	return sensor.NewSensor(ctx,
+func (c *connectionStateSensor) generateEntity(ctx context.Context) (*models.Entity, error) {
+	connStateSensor, err := sensor.NewSensor(ctx,
 		sensor.WithName(c.name+" Connection State"),
 		sensor.WithID(strcase.ToSnake(c.name)+"_connection_state"),
 		sensor.WithDataSourceAttribute(linux.DataSrcDbus),
 		sensor.WithState(c.state),
 		sensor.WithIcon(c.icon),
 	)
+	if err != nil {
+		return nil, errors.Join(ErrNewConnStateSensor, err)
+	}
+
+	return &connStateSensor, nil
 }
 
 func (c *connectionStateSensor) setState(state any) error {
 	switch value := state.(type) {
 	case dbus.Variant:
-		if state, err := dbusx.VariantToValue[connState](value); err != nil {
+		state, err := dbusx.VariantToValue[connState](value)
+		if err != nil {
 			return fmt.Errorf("could not parse updated connection state: %w", err)
-		} else {
-			c.state = state.String()
-			c.icon = connIcon(state).String()
 		}
+
+		c.state = state.String()
+		c.icon = connIcon(state).String()
 	case uint32:
 		c.state = connState(value).String()
 		c.icon = connIcon(value).String()

@@ -28,10 +28,13 @@ const (
 	powerProfilePreferencesID = sensorsPrefPrefix + "profile"
 )
 
-var ErrInitPowerProfileWorker = errors.New("could not init power profile worker")
+var (
+	ErrNewPowerProfileSensor  = errors.New("could not create power profile sensor")
+	ErrInitPowerProfileWorker = errors.New("could not init power profile worker")
+)
 
-func newPowerSensor(ctx context.Context, profile string) (models.Entity, error) {
-	return sensor.NewSensor(ctx,
+func newPowerSensor(ctx context.Context, profile string) (*models.Entity, error) {
+	profileSensor, err := sensor.NewSensor(ctx,
 		sensor.WithName("Power Profile"),
 		sensor.WithID("power_profile"),
 		sensor.AsDiagnostic(),
@@ -39,6 +42,11 @@ func newPowerSensor(ctx context.Context, profile string) (models.Entity, error) 
 		sensor.WithState(profile),
 		sensor.WithDataSourceAttribute(linux.DataSrcDbus),
 	)
+	if err != nil {
+		return nil, errors.Join(ErrNewPowerProfileSensor, err)
+	}
+
+	return &profileSensor, nil
 }
 
 type profileWorker struct {
@@ -47,6 +55,7 @@ type profileWorker struct {
 	prefs         *preferences.CommonWorkerPrefs
 }
 
+//nolint:gocognit
 func (w *profileWorker) Events(ctx context.Context) (<-chan models.Entity, error) {
 	sensorCh := make(chan models.Entity)
 	logger := slog.With(slog.String("worker", powerProfileWorkerID))
@@ -79,7 +88,7 @@ func (w *profileWorker) Events(ctx context.Context) (<-chan models.Entity, error
 						if err != nil {
 							logger.Warn("Could not generate power profile sensor.", slog.Any("error", err))
 						} else {
-							sensorCh <- entity
+							sensorCh <- *entity
 						}
 					}
 				}
@@ -101,7 +110,7 @@ func (w *profileWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 		return nil, fmt.Errorf("unable to generate active power profile sensor: %w", err)
 	}
 
-	return []models.Entity{entity}, nil
+	return []models.Entity{*entity}, nil
 }
 
 func (w *profileWorker) PreferencesID() string {

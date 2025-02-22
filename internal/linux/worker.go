@@ -1,7 +1,7 @@
 // Copyright 2024 Joshua Rich <joshua.rich@gmail.com>.
 // SPDX-License-Identifier: MIT
 
-//go:generate go run github.com/matryer/moq -out worker_mocks_test.go . PollingType EventType OneShotType
+//go:generate go run github.com/matryer/moq -out worker_mocks_test.go . PollingSensorType EventSensorType OneShotSensorType EventType
 package linux
 
 import (

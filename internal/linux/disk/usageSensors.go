@@ -5,6 +5,7 @@ package disk
 
 import (
 	"context"
+	"errors"
 	"math"
 	"strings"
 
@@ -19,8 +20,10 @@ const (
 	diskUsageSensorUnits = "%"
 )
 
+var ErrNewDiskUsageSensor = errors.New("could not create disk usage sensor")
+
 //nolint:mnd
-func newDiskUsageSensor(ctx context.Context, mount *mount, value float64) (models.Entity, error) {
+func newDiskUsageSensor(ctx context.Context, mount *mount, value float64) (*models.Entity, error) {
 	mount.attributes["data_source"] = linux.DataSrcProcfs
 
 	usedBlocks := mount.attributes[mountAttrBlocksTotal].(uint64) - mount.attributes[mountAttrBlocksFree].(uint64) //nolint:lll,errcheck,forcetypeassert
@@ -34,7 +37,7 @@ func newDiskUsageSensor(ctx context.Context, mount *mount, value float64) (model
 		id = "mountpoint" + strings.ReplaceAll(mount.mountpoint, "/", "_")
 	}
 
-	return sensor.NewSensor(ctx,
+	usageSensor, err := sensor.NewSensor(ctx,
 		sensor.WithName("Mountpoint "+mount.mountpoint+" Usage"),
 		sensor.WithID(id),
 		sensor.WithUnits(diskUsageSensorUnits),
@@ -43,4 +46,9 @@ func newDiskUsageSensor(ctx context.Context, mount *mount, value float64) (model
 		sensor.WithState(math.Round(value/0.05)*0.05),
 		sensor.WithAttributes(mount.attributes),
 	)
+	if err != nil {
+		return nil, errors.Join(ErrNewDiskUsageSensor, err)
+	}
+
+	return &usageSensor, nil
 }

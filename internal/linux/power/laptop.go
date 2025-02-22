@@ -36,9 +36,12 @@ const (
 
 var laptopPropList = []string{dockedProp, lidClosedProp, externalPowerProp}
 
-var ErrInitLaptopWorker = errors.New("could not init laptop worker")
+var (
+	ErrNewLaptopSensor  = errors.New("could not create laptop sensor")
+	ErrInitLaptopWorker = errors.New("could not init laptop worker")
+)
 
-func newLaptopEvent(ctx context.Context, prop string, state bool) (models.Entity, error) {
+func newLaptopEvent(ctx context.Context, prop string, state bool) (*models.Entity, error) {
 	var (
 		name, icon  string
 		deviceClass class.SensorDeviceClass
@@ -78,7 +81,7 @@ func newLaptopEvent(ctx context.Context, prop string, state bool) (models.Entity
 		deviceClass = class.BinaryClassPower
 	}
 
-	return sensor.NewSensor(ctx,
+	laptopSensor, err := sensor.NewSensor(ctx,
 		sensor.WithName(name),
 		sensor.WithID(strcase.ToSnake(name)),
 		sensor.AsTypeBinarySensor(),
@@ -88,6 +91,11 @@ func newLaptopEvent(ctx context.Context, prop string, state bool) (models.Entity
 		sensor.WithState(state),
 		sensor.WithDataSourceAttribute(linux.DataSrcDbus),
 	)
+	if err != nil {
+		return nil, errors.Join(ErrNewLaptopSensor, err)
+	}
+
+	return &laptopSensor, nil
 }
 
 type laptopWorker struct {
@@ -149,7 +157,7 @@ func (w *laptopWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 			if err != nil {
 				warnings = errors.Join(warnings, fmt.Errorf("could not generate laptop sensor: %w", err))
 			} else {
-				sensors = append(sensors, entity)
+				sensors = append(sensors, *entity)
 			}
 		}
 	}
@@ -223,7 +231,7 @@ func sendChangedProps(ctx context.Context, props map[string]dbus.Variant, sensor
 				if entity, err := newLaptopEvent(ctx, prop, state); err != nil {
 					logging.FromContext(ctx).Warn("could not send laptop sensor.", slog.Any("error", err))
 				} else {
-					sensorCh <- entity
+					sensorCh <- *entity
 				}
 			}
 		}
