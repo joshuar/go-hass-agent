@@ -1,9 +1,8 @@
-x-podman:
-  in_pod: false
 services:
   devcontainer:
-    build:
-      dockerfile: Dockerfile
+    env_file:
+      - .env
+    image: mcr.microsoft.com/devcontainers/base:ubuntu
     volumes:
       - ..:/workspace:cached
       - /etc/localtime:/etc/localtime:ro,cached
@@ -12,13 +11,14 @@ services:
       - /tmp/.X11-unix:/tmp/.X11-unix
     hostname: devcontainer
     user: vscode
-    userns_mode: keep-id
     cap_add:
       - SYS_PTRACE
     security_opt:
       - seccomp:unconfined
     command: sleep infinity
   home-assistant:
+    env_file:
+      - .env
     image: ghcr.io/home-assistant/home-assistant:$HA_VERSION
     volumes:
       - ../deployments/home-assistant/config:/config:Z,U
@@ -26,15 +26,15 @@ services:
     restart: on-failure
     ports:
       - 8123:8123
-    userns_mode: keep-id
   mosquitto:
+    env_file:
+      - .env
     image: docker.io/eclipse-mosquitto:$MOSQUITTO_VERSION
     volumes:
       - ../deployments/mosquitto/config:/mosquitto/config:Z,U
       - ../deployments/mosquitto/data:/mosquitto/data:Z,U
       - ../deployments/mosquitto/log:/mosquitto/log:Z,U
       - /etc/localtime:/etc/localtime:ro,cached
-    userns_mode: keep-id
     restart: on-failure
     ports:
       - 1883:1883
