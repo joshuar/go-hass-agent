@@ -19,6 +19,7 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/hass/event"
 	"github.com/joshuar/go-hass-agent/internal/hass/location"
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/hass/tracker"
 	"github.com/joshuar/go-hass-agent/internal/models"
 )
 
@@ -289,11 +290,11 @@ func (c *Client) DisableSensor(id models.UniqueID) {
 // NewClient creates a new hass client, which tracks last sensor status,
 // sensor registration status and handles sending and processing requests to the
 // Home Assistant REST API.
-func NewClient(ctx context.Context, trk sensorTracker, reg sensorRegistry) *Client {
+func NewClient(ctx context.Context, reg sensorRegistry) *Client {
 	return &Client{
 		logger:         logging.FromContext(ctx).WithGroup("hass"),
 		sensorRegistry: reg,
-		sensorTracker:  trk,
+		sensorTracker:  tracker.NewTracker(),
 		restAPI: resty.New().
 			SetTimeout(defaultTimeout).
 			SetRetryCount(defaultRetryCount).

@@ -5,35 +5,40 @@
 package tracker
 
 import (
+	"context"
 	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
-)
-
-var mocksensorEntity = sensor.NewSensor(
-	sensor.WithName("Mock sensor.Entity"),
-	sensor.WithID("mock_sensor.Entity"),
-	sensor.WithState(
-		sensor.WithValue("mockValue"),
-	),
+	"github.com/joshuar/go-hass-agent/internal/models"
+	"github.com/joshuar/go-hass-agent/internal/models/sensor"
 )
 
 func TestTracker_Get(t *testing.T) {
-	mockSensorMap := map[string]*sensor.Entity{
-		mocksensorEntity.ID: &mocksensorEntity,
+	mocksensorEntity, err := sensor.NewSensor(context.TODO(),
+		sensor.WithName("Mock sensor.Entity"),
+		sensor.WithID("mock_sensor.Entity"),
+		sensor.WithState("mockValue"),
+	)
+	require.NoError(t, err)
+
+	mockSensor, err := mocksensorEntity.AsSensor()
+	require.NoError(t, err)
+
+	mockSensorMap := map[string]*models.Sensor{
+		"mock_sensor.Entity": &mockSensor,
 	}
 
 	type fields struct {
-		sensor map[string]*sensor.Entity
+		sensor map[string]*models.Sensor
 	}
 	type args struct {
 		id string
 	}
 	tests := []struct {
-		want    *sensor.Entity
+		want    *models.Sensor
 		fields  fields
 		name    string
 		args    args
@@ -44,7 +49,7 @@ func TestTracker_Get(t *testing.T) {
 			fields:  fields{sensor: mockSensorMap},
 			args:    args{id: "mock_sensor.Entity"},
 			wantErr: false,
-			want:    &mocksensorEntity,
+			want:    &mockSensor,
 		},
 		{
 			name:    "unsuccessful get",
@@ -71,12 +76,22 @@ func TestTracker_Get(t *testing.T) {
 }
 
 func TestTracker_SensorList(t *testing.T) {
-	mockSensorMap := map[string]*sensor.Entity{
-		mocksensorEntity.ID: &mocksensorEntity,
+	mocksensorEntity, err := sensor.NewSensor(context.TODO(),
+		sensor.WithName("Mock sensor.Entity"),
+		sensor.WithID("mock_sensor.Entity"),
+		sensor.WithState("mockValue"),
+	)
+	require.NoError(t, err)
+
+	mockSensor, err := mocksensorEntity.AsSensor()
+	require.NoError(t, err)
+
+	mockSensorMap := map[string]*models.Sensor{
+		"mock_sensor.Entity": &mockSensor,
 	}
 
 	type fields struct {
-		sensor map[string]*sensor.Entity
+		sensor map[string]*models.Sensor
 	}
 	tests := []struct {
 		name   string
@@ -106,31 +121,35 @@ func TestTracker_SensorList(t *testing.T) {
 }
 
 func TestTracker_Add(t *testing.T) {
-	newSensor := sensor.NewSensor(
+	newEntity, err := sensor.NewSensor(context.TODO(),
 		sensor.WithName("New sensor.Entity"),
 		sensor.WithID("new_sensor.Entity"),
-		sensor.WithState(
-			sensor.WithValue("new"),
-		),
+		sensor.WithState("new"),
 	)
+	require.NoError(t, err)
 
-	existingSensor := sensor.NewSensor(
+	newSensor, err := newEntity.AsSensor()
+	require.NoError(t, err)
+
+	existingEntity, err := sensor.NewSensor(context.TODO(),
 		sensor.WithName("Existing sensor.Entity"),
 		sensor.WithID("existing_sensor.Entity"),
-		sensor.WithState(
-			sensor.WithValue("existing"),
-		),
+		sensor.WithState("existing"),
 	)
+	require.NoError(t, err)
 
-	mockSensorMap := map[string]*sensor.Entity{
-		existingSensor.ID: &existingSensor,
+	existingSensor, err := existingEntity.AsSensor()
+	require.NoError(t, err)
+
+	mockSensorMap := map[string]*models.Sensor{
+		"existing_sensor.Entity": &existingSensor,
 	}
 
 	type fields struct {
-		sensor map[string]*sensor.Entity
+		sensor map[string]*models.Sensor
 	}
 	type args struct {
-		sensor *sensor.Entity
+		sensor *models.Sensor
 	}
 	tests := []struct {
 		args    args
@@ -167,12 +186,22 @@ func TestTracker_Add(t *testing.T) {
 }
 
 func TestTracker_Reset(t *testing.T) {
-	mockSensorMap := map[string]*sensor.Entity{
-		mocksensorEntity.ID: &mocksensorEntity,
+	mocksensorEntity, err := sensor.NewSensor(context.TODO(),
+		sensor.WithName("Mock sensor.Entity"),
+		sensor.WithID("mock_sensor.Entity"),
+		sensor.WithState("mockValue"),
+	)
+	require.NoError(t, err)
+
+	mockSensor, err := mocksensorEntity.AsSensor()
+	require.NoError(t, err)
+
+	mockSensorMap := map[string]*models.Sensor{
+		"mock_sensor.Entity": &mockSensor,
 	}
 
 	type fields struct {
-		sensor map[string]*sensor.Entity
+		sensor map[string]*models.Sensor
 	}
 	tests := []struct {
 		fields fields
