@@ -6,7 +6,6 @@ package models
 import (
 	"encoding/json"
 
-	"github.com/joshuar/go-hass-agent/internal/models/class"
 	"github.com/oapi-codegen/runtime"
 )
 
@@ -81,7 +80,7 @@ type Sensor struct {
 	Attributes Attributes `json:"attributes,omitempty"`
 
 	// DeviceClass is a valid Binary Sensor or Sensor device class.
-	DeviceClass *class.SensorDeviceClass `json:"device_class,omitempty"`
+	DeviceClass *string `json:"device_class,omitempty"`
 
 	// Disabled indicates if the entity should be enabled or disabled.
 	Disabled *bool `json:"disabled,omitempty"`
@@ -102,7 +101,7 @@ type Sensor struct {
 	State State `json:"state" validate:"required"`
 
 	// StateClass is the state class of the entity (sensors only).
-	StateClass *class.SensorStateClass `json:"state_class,omitempty"`
+	StateClass *string `json:"state_class,omitempty"`
 
 	// Type is the type of a sensor entity.
 	Type SensorType `json:"type" validate:"required"`
@@ -120,7 +119,7 @@ type SensorRegistration struct {
 	Attributes Attributes `json:"attributes,omitempty"`
 
 	// DeviceClass is a valid Binary Sensor or Sensor device class.
-	DeviceClass *class.SensorDeviceClass `json:"device_class,omitempty"`
+	DeviceClass *string `json:"device_class,omitempty"`
 
 	// Disabled indicates if the entity should be enabled or disabled.
 	Disabled *bool `json:"disabled,omitempty"`
@@ -138,7 +137,7 @@ type SensorRegistration struct {
 	State State `json:"state" validate:"required"`
 
 	// StateClass is the state class of the entity (sensors only).
-	StateClass *class.SensorStateClass `json:"state_class,omitempty"`
+	StateClass *string `json:"state_class,omitempty"`
 
 	// Type is the type of a sensor entity.
 	Type SensorType `json:"type" validate:"required"`

@@ -171,14 +171,10 @@ components:
               type: boolean
             device_class:
               description: is a valid Binary Sensor or Sensor device class.
-              x-go-type: 'class.SensorDeviceClass'
-              x-go-type-import:
-                path: 'github.com/joshuar/go-hass-agent/internal/models/sensor'
+              type: string
             state_class:
               description: is the state class of the entity (sensors only).
-              x-go-type: 'class.SensorStateClass'
-              x-go-type-import:
-                path: 'github.com/joshuar/go-hass-agent/internal/models/sensor'
+              type: string
     Sensor:
       description: contains details about an individual sensor.
       allOf:
