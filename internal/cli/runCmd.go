@@ -15,7 +15,6 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/components/registry"
-	"github.com/joshuar/go-hass-agent/internal/components/tracker"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 )
 
@@ -48,11 +47,8 @@ func (r *RunCmd) Run(opts *CmdOpts) error {
 		return errors.Join(ErrRunCmdFailed, err)
 	}
 
-	// Load the tracker.
-	trk := tracker.NewTracker()
-
 	api := &API{
-		hass: hass.NewClient(ctx, trk, reg),
+		hass: hass.NewClient(ctx, reg),
 	}
 
 	// Run the agent.
