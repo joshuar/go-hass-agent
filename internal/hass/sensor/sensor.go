@@ -112,27 +112,27 @@ func UpdateHandler(ctx context.Context, client API, sensor models.Sensor) error 
 
 // RegistrationHandler handles sending sensor data as an registration request to Home Assistant and
 // processing the response.
-func RegistrationHandler(ctx context.Context, client API, sensor models.Sensor) error {
+func RegistrationHandler(ctx context.Context, client API, sensor models.Sensor) (bool, error) {
 	req, err := newSensorRegistrationRequest(&sensor)
 	if err != nil {
-		return errors.Join(ErrHandleSensor, err)
+		return false, errors.Join(ErrHandleSensor, err)
 	}
 
 	resp, err := client.SendRequest(ctx, preferences.RestAPIURL(), *req)
 	if err != nil {
-		return errors.Join(ErrHandleSensor, err)
+		return false, errors.Join(ErrHandleSensor, err)
 	}
 
 	registration, err := resp.AsSensorRegistrationResponse()
 	if err != nil {
-		return errors.Join(ErrHandleSensor, err)
+		return false, errors.Join(ErrHandleSensor, err)
 	}
 
 	if registration.Success != nil {
 		if !*registration.Success {
-			return fmt.Errorf("sensor registration failed")
+			return false, errors.New("sensor registration failed")
 		}
 	}
 
-	return nil
+	return true, nil
 }
