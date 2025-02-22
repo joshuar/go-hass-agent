@@ -6,7 +6,6 @@ package system
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -24,30 +23,38 @@ const (
 	cpuVulnPath          = "devices/system/cpu/vulnerabilities"
 )
 
-var ErrInitVulnerabilitiesWorker = errors.New("could not init vulnerabilities worker")
+var (
+	ErrNewVulnSensor  = errors.New("could not create vulnerabilities sensor")
+	ErrInitVulnWorker = errors.New("could not init vulnerabilities worker")
+)
 
 type cpuVulnWorker struct {
 	path string
 }
 
 func (w *cpuVulnWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
-	var cpuVulnerabilitiesFound bool
+	var (
+		cpuVulnerabilitiesFound bool
+		err                     error
+	)
 
 	vulnerabilities, err := filepath.Glob(w.path + "/*")
 	if err != nil {
-		return nil, fmt.Errorf("could not fetch vulnerabilities from SysFS: %w", err)
+		return nil, errors.Join(ErrNewVulnSensor, err)
 	}
 
 	attrs := make(map[string]any)
 
 	for _, vulnerability := range vulnerabilities {
-		detailsRaw, err := os.ReadFile(vulnerability)
+		var data []byte
+
+		data, err = os.ReadFile(vulnerability)
 		if err != nil {
 			continue
 		}
 
 		name := filepath.Base(vulnerability)
-		details := strings.TrimSpace(string(detailsRaw))
+		details := strings.TrimSpace(string(data))
 
 		if strings.Contains(details, "Vulnerable") {
 			cpuVulnerabilitiesFound = true
@@ -66,6 +73,9 @@ func (w *cpuVulnWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 		sensor.WithState(cpuVulnerabilitiesFound),
 		sensor.WithAttributes(attrs),
 	)
+	if err != nil {
+		return nil, errors.Join(ErrNewVulnSensor, err)
+	}
 
 	return []models.Entity{cpuVulnSensor}, nil
 }
@@ -85,7 +95,7 @@ func NewCPUVulnerabilityWorker(_ context.Context) (*linux.OneShotSensorWorker, e
 
 	prefs, err := preferences.LoadWorker(cpuVulnWorker)
 	if err != nil {
-		return nil, errors.Join(ErrInitVulnerabilitiesWorker, err)
+		return nil, errors.Join(ErrInitVulnWorker, err)
 	}
 
 	//nolint:nilnil

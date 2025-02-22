@@ -25,7 +25,10 @@ const (
 	infoWorkerPreferencesID = sensorsPrefPrefix + "info_sensors"
 )
 
-var ErrInitInfoWorker = errors.New("could not init system info worker")
+var (
+	ErrNewInfoSensor  = errors.New("could not create info sensor")
+	ErrInitInfoWorker = errors.New("could not init system info worker")
+)
 
 type infoWorker struct{}
 
@@ -38,8 +41,10 @@ func (w *infoWorker) DefaultPreferences() preferences.CommonWorkerPrefs {
 }
 
 func (w *infoWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
-	var sensors []models.Entity
-	var errs error
+	var (
+		sensors  []models.Entity
+		warnings error
+	)
 
 	// Get distribution name and version.
 	distro, version, err := device.GetOSDetails()
@@ -48,10 +53,7 @@ func (w *infoWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 			With(slog.String("worker", infoWorkerID)).
 			Warn("Could not retrieve distro details.", slog.Any("error", err))
 	} else {
-		var (
-			entity models.Entity
-			err    error
-		)
+		var entity models.Entity
 
 		entity, err = sensor.NewSensor(ctx,
 			sensor.WithName("Distribution Name"),
@@ -62,7 +64,7 @@ func (w *infoWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 			sensor.WithDataSourceAttribute(linux.DataSrcProcfs),
 		)
 		if err != nil {
-			errs = errors.Join(errs, fmt.Errorf("could not generate distribution name sensor: %w", err))
+			warnings = errors.Join(warnings, fmt.Errorf("could not generate distribution name sensor: %w", err))
 		} else {
 			sensors = append(sensors, entity)
 		}
@@ -76,11 +78,10 @@ func (w *infoWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 			sensor.WithDataSourceAttribute(linux.DataSrcProcfs),
 		)
 		if err != nil {
-			errs = errors.Join(errs, fmt.Errorf("could not generate distribution version sensor: %w", err))
+			warnings = errors.Join(warnings, fmt.Errorf("could not generate distribution version sensor: %w", err))
 		} else {
 			sensors = append(sensors, entity)
 		}
-
 	}
 
 	// Get kernel version.
@@ -99,13 +100,13 @@ func (w *infoWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 			sensor.WithDataSourceAttribute(linux.DataSrcProcfs),
 		)
 		if err != nil {
-			errs = errors.Join(errs, fmt.Errorf("could not generate kernel version sensor: %w", err))
+			warnings = errors.Join(warnings, fmt.Errorf("could not generate kernel version sensor: %w", err))
 		} else {
 			sensors = append(sensors, entity)
 		}
 	}
 
-	return sensors, errs
+	return sensors, warnings
 }
 
 func NewInfoWorker(_ context.Context) (*linux.OneShotSensorWorker, error) {

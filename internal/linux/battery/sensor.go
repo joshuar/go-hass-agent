@@ -92,29 +92,33 @@ func generateSensorState(sensorType sensorType, value any) any {
 
 	switch sensorType {
 	case typeVoltage, typeTemp, typeEnergy, typeEnergyRate, typePercentage:
-		if value, ok := value.(float64); !ok {
+		value, ok := value.(float64)
+		if !ok {
 			return unknownValue
-		} else {
-			return value
 		}
+
+		return value
 	case typeState:
-		if value, ok := value.(uint32); !ok {
+		value, ok := value.(uint32)
+		if !ok {
 			return unknownValue
-		} else {
-			return chargingState(value).String()
 		}
+
+		return chargingState(value).String()
 	case typeLevel:
-		if value, ok := value.(uint32); !ok {
+		value, ok := value.(uint32)
+		if !ok {
 			return unknownValue
-		} else {
-			return level(value).String()
 		}
+
+		return level(value).String()
 	default:
-		if value, ok := value.(string); !ok {
+		value, ok := value.(string)
+		if !ok {
 			return unknownValue
-		} else {
-			return value
 		}
+
+		return value
 	}
 }
 

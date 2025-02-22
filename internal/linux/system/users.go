@@ -45,10 +45,13 @@ const (
 	sessionStoppedEventName = "session_stopped"
 )
 
-var ErrInitUsersWorker = errors.New("could not init users worker")
+var (
+	ErrNewUsersSensor  = errors.New("could not create users sensor")
+	ErrInitUsersWorker = errors.New("could not init users worker")
+)
 
-func newUsersSensor(ctx context.Context, users []string) (models.Entity, error) {
-	return sensor.NewSensor(ctx,
+func newUsersSensor(ctx context.Context, users []string) (*models.Entity, error) {
+	usersSensor, err := sensor.NewSensor(ctx,
 		sensor.WithName("Current Users"),
 		sensor.WithID("current_users"),
 		sensor.WithStateClass(class.StateMeasurement),
@@ -58,6 +61,11 @@ func newUsersSensor(ctx context.Context, users []string) (models.Entity, error) 
 		sensor.WithDataSourceAttribute(linux.DataSrcDbus),
 		sensor.WithAttribute("usernames", users),
 	)
+	if err != nil {
+		return nil, errors.Join(ErrNewUsersSensor, err)
+	}
+
+	return &usersSensor, nil
 }
 
 type UserSessionSensorWorker struct {
@@ -79,7 +87,7 @@ func (w *UserSessionSensorWorker) Events(ctx context.Context) (chan models.Entit
 			if err != nil {
 				slog.With(slog.String("worker", userSessionsSensorWorkerID)).Debug("Failed to generate user sessions sensor.", slog.Any("error", err))
 			} else {
-				sensorCh <- entity
+				sensorCh <- *entity
 			}
 		}
 	}
@@ -105,13 +113,16 @@ func (w *UserSessionSensorWorker) Events(ctx context.Context) (chan models.Entit
 
 func (w *UserSessionSensorWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 	users, err := w.getUsers()
+	if err != nil {
+		return nil, errors.Join(ErrNewUsersSensor, err)
+	}
 
 	entity, err := newUsersSensor(ctx, users)
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate user sessions sensor: %w", err)
-	} else {
-		return []models.Entity{entity}, err
+		return nil, errors.Join(ErrNewUsersSensor, err)
 	}
+
+	return []models.Entity{*entity}, err
 }
 
 func (w *UserSessionSensorWorker) PreferencesID() string {
@@ -217,6 +228,7 @@ func (t *sessionTracker) getSessionDetails(path string) map[string]any {
 	return sessionDetails
 }
 
+//nolint:gocognit
 func (w *UserSessionEventsWorker) Events(ctx context.Context) (<-chan models.Entity, error) {
 	eventCh := make(chan models.Entity)
 

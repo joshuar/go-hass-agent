@@ -53,7 +53,7 @@ func (w *usageWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 		if err != nil {
 			logging.FromContext(ctx).Warn("Could not generate usage sensor.", slog.Any("error", err))
 		} else {
-			sensors = append(sensors, diskUsageSensor)
+			sensors = append(sensors, *diskUsageSensor)
 		}
 	}
 

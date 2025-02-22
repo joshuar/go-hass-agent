@@ -28,7 +28,10 @@ const (
 	hwmonPreferencesID = sensorsPrefPrefix + "hardware_sensors"
 )
 
-var ErrInitHWMonWorker = errors.New("could not init hardware sensors worker")
+var (
+	ErrNewHWMonSensor  = errors.New("could not create hardware monitor sensor")
+	ErrInitHWMonWorker = errors.New("could not init hardware sensors worker")
+)
 
 func hwmonSensorAttributes(details *hwmon.Sensor) map[string]any {
 	attributes := make(map[string]any)
@@ -44,7 +47,7 @@ func hwmonSensorAttributes(details *hwmon.Sensor) map[string]any {
 	return attributes
 }
 
-func newHWSensor(ctx context.Context, details *hwmon.Sensor) (models.Entity, error) {
+func newHWSensor(ctx context.Context, details *hwmon.Sensor) (*models.Entity, error) {
 	var (
 		icon             string
 		deviceClass      class.SensorDeviceClass
@@ -76,7 +79,7 @@ func newHWSensor(ctx context.Context, details *hwmon.Sensor) (models.Entity, err
 		sensorTypeOption = sensor.AsTypeSensor()
 	}
 
-	return sensor.NewSensor(ctx,
+	hwMonSensor, err := sensor.NewSensor(ctx,
 		sensor.WithName(details.Name()),
 		sensor.WithID(details.ID()),
 		sensor.WithDeviceClass(deviceClass),
@@ -88,6 +91,11 @@ func newHWSensor(ctx context.Context, details *hwmon.Sensor) (models.Entity, err
 		sensor.WithAttributes(hwmonSensorAttributes(details)),
 		sensor.WithStateClass(stateClass),
 	)
+	if err != nil {
+		return nil, errors.Join(ErrNewHWMonSensor, err)
+	}
+
+	return &hwMonSensor, nil
 }
 
 type hwMonWorker struct {
@@ -110,7 +118,7 @@ func (w *hwMonWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 		if entity, err := newHWSensor(ctx, s); err != nil {
 			warnings = errors.Join(warnings, fmt.Errorf("could not generate hwmon sensor: %w", err))
 		} else {
-			sensors = append(sensors, entity)
+			sensors = append(sensors, *entity)
 		}
 	}
 

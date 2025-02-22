@@ -78,7 +78,7 @@ func (w *ioWorker) generateDeviceRateSensors(ctx context.Context, device *device
 			if err != nil {
 				warnings = errors.Join(warnings, fmt.Errorf("could not generate rate sensor: %w", err))
 			} else {
-				sensors = append(sensors, entity)
+				sensors = append(sensors, *entity)
 			}
 		}
 	}
@@ -89,7 +89,7 @@ func (w *ioWorker) generateDeviceRateSensors(ctx context.Context, device *device
 func (w *ioWorker) generateDeviceStatSensors(ctx context.Context, device *device, stats map[stat]uint64) ([]models.Entity, error) {
 	var (
 		sensors  []models.Entity
-		entity   models.Entity
+		entity   *models.Entity
 		err      error
 		warnings error
 	)
@@ -107,23 +107,23 @@ func (w *ioWorker) generateDeviceStatSensors(ctx context.Context, device *device
 	// Generate diskReads sensor for device.
 	entity, err = newDiskStatSensor(ctx, device, diskReads, stats[TotalReads], diskReadsAttributes)
 	if err != nil {
-		warnings = errors.Join(warnings, fmt.Errorf("could not generate stat sensor: %w", err))
+		warnings = errors.Join(warnings, fmt.Errorf("create disk read stats failed: %w", err))
 	} else {
-		sensors = append(sensors, entity)
+		sensors = append(sensors, *entity)
 	}
 	// Generate diskWrites sensor for device.
 	entity, err = newDiskStatSensor(ctx, device, diskWrites, stats[TotalWrites], diskWriteAttributes)
 	if err != nil {
-		warnings = errors.Join(warnings, fmt.Errorf("could not generate stat sensor: %w", err))
+		warnings = errors.Join(warnings, fmt.Errorf("create disk write stats failed: %w", err))
 	} else {
-		sensors = append(sensors, entity)
+		sensors = append(sensors, *entity)
 	}
 	// Generate IOsInProgress sensor for device.
 	entity, err = newDiskStatSensor(ctx, device, diskIOInProgress, stats[ActiveIOs], nil)
 	if err != nil {
-		warnings = errors.Join(warnings, fmt.Errorf("could not generate stat sensor: %w", err))
+		warnings = errors.Join(warnings, fmt.Errorf("create IOs in progress failed: %w", err))
 	} else {
-		sensors = append(sensors, entity)
+		sensors = append(sensors, *entity)
 	}
 
 	return sensors, warnings

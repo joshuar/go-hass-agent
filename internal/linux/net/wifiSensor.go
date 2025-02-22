@@ -7,6 +7,7 @@ package net
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 
 	"github.com/joshuar/go-hass-agent/internal/models"
@@ -25,11 +26,15 @@ const (
 	freqPropName       = "Frequency"
 	strPropName        = "Strength"
 	bandwidthPropName  = "Bandwidth"
+
+	unknownState = "Unknown"
 )
 
 var apPropList = []string{ssidPropName, hwAddrPropName, maxBitRatePropName, freqPropName, strPropName, bandwidthPropName}
 
-func newWifiSensor(ctx context.Context, prop string, value any) (models.Entity, error) {
+var ErrNewWifiPropSensor = errors.New("could not create wifi property sensor")
+
+func newWifiSensor(ctx context.Context, prop string, value any) (*models.Entity, error) {
 	var (
 		name, id, units string
 		deviceClass     class.SensorDeviceClass
@@ -71,7 +76,7 @@ func newWifiSensor(ctx context.Context, prop string, value any) (models.Entity, 
 		icon = generateStrIcon(value)
 	}
 
-	return sensor.NewSensor(ctx,
+	wifiPropSensor, err := sensor.NewSensor(ctx,
 		sensor.WithName(name),
 		sensor.WithID(id),
 		sensor.AsDiagnostic(),
@@ -81,6 +86,11 @@ func newWifiSensor(ctx context.Context, prop string, value any) (models.Entity, 
 		sensor.WithStateClass(stateClass),
 		sensor.WithUnits(units),
 	)
+	if err != nil {
+		return nil, errors.Join(ErrNewWifiPropSensor, err)
+	}
+
+	return &wifiPropSensor, nil
 }
 
 func getWifiSensors(ctx context.Context, bus *dbusx.Bus, apPath string) []models.Entity {
@@ -92,6 +102,7 @@ func getWifiSensors(ctx context.Context, bus *dbusx.Bus, apPath string) []models
 			slog.Debug("Could not retrieve access point property.",
 				slog.String("prop", prop),
 				slog.Any("error", err))
+
 			continue
 		}
 
@@ -100,10 +111,11 @@ func getWifiSensors(ctx context.Context, bus *dbusx.Bus, apPath string) []models
 			slog.Debug("Could not retrieve generate wifi sensor from property.",
 				slog.String("prop", prop),
 				slog.Any("error", err))
+
 			continue
 		}
 
-		sensors = append(sensors, entity)
+		sensors = append(sensors, *entity)
 	}
 
 	return sensors
@@ -114,29 +126,29 @@ func generateState(prop string, value any) any {
 	case ssidPropName:
 		if value, ok := value.([]uint8); ok {
 			return string(value)
-		} else {
-			return "Unknown"
 		}
+
+		return unknownState
 	case hwAddrPropName:
 		if value, ok := value.(string); ok {
 			return value
-		} else {
-			return "Unknown"
 		}
+
+		return unknownState
 	case freqPropName, maxBitRatePropName, bandwidthPropName:
 		if value, ok := value.(uint32); ok {
 			return value
-		} else {
-			return "Unknown"
 		}
+
+		return unknownState
 	case strPropName:
 		if value, ok := value.(uint8); ok {
 			return value
-		} else {
-			return "Unknown"
 		}
+
+		return unknownState
 	default:
-		return "Unknown"
+		return unknownState
 	}
 }
 

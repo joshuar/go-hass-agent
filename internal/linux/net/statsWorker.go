@@ -46,6 +46,7 @@ func (w *netStatsWorker) UpdateDelta(delta time.Duration) {
 	w.delta = delta
 }
 
+//nolint:gocognit,funlen
 func (w *netStatsWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 	var warnings error
 
@@ -67,7 +68,7 @@ func (w *netStatsWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 	// For each link, update the link sensors with the new stats.
 	for _, link := range stats {
 		var (
-			entity models.Entity
+			entity *models.Entity
 			err    error
 			rate   uint64
 		)
@@ -89,14 +90,14 @@ func (w *netStatsWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 		if err != nil {
 			warnings = errors.Join(warnings, fmt.Errorf("could not generate stats sensor: %w", err))
 		} else {
-			sensors = append(sensors, entity)
+			sensors = append(sensors, *entity)
 		}
 		// Generate bytesSent sensor entity for link.
 		entity, err = newStatsTotalEntity(ctx, name, bytesSent, models.Diagnostic, link.stats.TXBytes, getTXAttributes(stats))
 		if err != nil {
 			warnings = errors.Join(warnings, fmt.Errorf("could not generate stats sensor: %w", err))
 		} else {
-			sensors = append(sensors, entity)
+			sensors = append(sensors, *entity)
 		}
 		// Create new trackers for the link's rates sensor entities if needed.
 		if _, ok := w.statsSensors[name]; !ok {
@@ -109,7 +110,7 @@ func (w *netStatsWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 		if err != nil {
 			warnings = errors.Join(warnings, fmt.Errorf("could not generate stats rate sensor: %w", err))
 		} else {
-			sensors = append(sensors, entity)
+			sensors = append(sensors, *entity)
 		}
 		// Generate bytesSentRate sensor entity for link.
 		rate = w.statsSensors[name][bytesSentRate].Calculate(stats.TXBytes, w.delta)
@@ -118,13 +119,13 @@ func (w *netStatsWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 		if err != nil {
 			warnings = errors.Join(warnings, fmt.Errorf("could not generate stats sensor: %w", err))
 		} else {
-			sensors = append(sensors, entity)
+			sensors = append(sensors, *entity)
 		}
 	}
 
 	if len(stats) > 0 {
 		var (
-			entity models.Entity
+			entity *models.Entity
 			err    error
 			rate   uint64
 		)
@@ -138,14 +139,14 @@ func (w *netStatsWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 		if err != nil {
 			warnings = errors.Join(warnings, fmt.Errorf("could not generate stats sensor: %w", err))
 		} else {
-			sensors = append(sensors, entity)
+			sensors = append(sensors, *entity)
 		}
 		// Generate total bytesSent sensor entity.
 		entity, err = newStatsTotalEntity(ctx, totalsName, bytesSent, models.Diagnostic, totalBytesTx, nil)
 		if err != nil {
 			warnings = errors.Join(warnings, fmt.Errorf("could not generate stats sensor: %w", err))
 		} else {
-			sensors = append(sensors, entity)
+			sensors = append(sensors, *entity)
 		}
 		// Generate total bytesRecvRate sensor entity.
 		rate = w.statsSensors[totalsName][bytesRecvRate].Calculate(totalStats.RXBytes, w.delta)
@@ -154,7 +155,7 @@ func (w *netStatsWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 		if err != nil {
 			warnings = errors.Join(warnings, fmt.Errorf("could not generate stats rate sensor: %w", err))
 		} else {
-			sensors = append(sensors, entity)
+			sensors = append(sensors, *entity)
 		}
 		// Generate total bytesSentRate sensor entity.
 		rate = w.statsSensors[totalsName][bytesSentRate].Calculate(totalStats.TXBytes, w.delta)
@@ -163,7 +164,7 @@ func (w *netStatsWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 		if err != nil {
 			warnings = errors.Join(warnings, fmt.Errorf("could not generate stats sensor: %w", err))
 		} else {
-			sensors = append(sensors, entity)
+			sensors = append(sensors, *entity)
 		}
 	}
 

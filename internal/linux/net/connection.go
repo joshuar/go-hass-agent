@@ -111,11 +111,17 @@ func (c *connection) monitor(ctx context.Context, bus *dbusx.Bus) <-chan models.
 //nolint:gocognit,gocyclo,cyclop
 //revive:disable:function-length
 func (c *connection) monitorConnection(ctx context.Context, bus *dbusx.Bus) <-chan models.Entity {
+	var (
+		stateSensor *connectionStateSensor
+		entity      *models.Entity
+		err         error
+	)
+
 	sensorCh := make(chan models.Entity)
 	monitorCtx, monitorCancel := context.WithCancel(ctx)
 
 	// Create sensors for monitored properties.
-	stateSensor, err := newConnectionStateSensor(bus, string(c.path), c.name)
+	stateSensor, err = newConnectionStateSensor(bus, string(c.path), c.name)
 	if err != nil {
 		c.logger.Debug("Could not update sensor.",
 			slog.String("sensor", stateSensor.name),
@@ -124,12 +130,12 @@ func (c *connection) monitorConnection(ctx context.Context, bus *dbusx.Bus) <-ch
 
 	// Send initial states as sensors
 	go func() {
-		if entity, err := stateSensor.generateEntity(ctx); err != nil {
+		if entity, err = stateSensor.generateEntity(ctx); err != nil {
 			c.logger.Debug("Could not generate sensor from connection state.",
 				slog.String("sensor", stateSensor.name),
 				slog.Any("error", err))
 		} else {
-			sensorCh <- entity
+			sensorCh <- *entity
 		}
 	}()
 
@@ -178,7 +184,7 @@ func (c *connection) monitorConnection(ctx context.Context, bus *dbusx.Bus) <-ch
 									slog.String("sensor", stateSensor.name),
 									slog.Any("error", err))
 							} else {
-								sensorCh <- entity
+								sensorCh <- *entity
 							}
 						}
 					default:
@@ -240,11 +246,13 @@ func (c *connection) monitorWifi(ctx context.Context, bus *dbusx.Bus) <-chan mod
 
 				for prop, value := range props.Changed {
 					if slices.Contains(apPropList, prop) { // Wifi property changed.
-						if entity, err := newWifiSensor(ctx, prop, value.Value()); err != nil {
+						entity, err := newWifiSensor(ctx, prop, value.Value())
+						if err != nil {
 							logging.FromContext(ctx).Warn("Could not generate new wifi property sensor.", slog.Any("error", err))
-						} else {
-							sensorCh <- entity
+							continue
 						}
+
+						sensorCh <- *entity
 					}
 				}
 			}

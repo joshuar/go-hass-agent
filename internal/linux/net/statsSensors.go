@@ -10,6 +10,7 @@ package net
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"time"
 
@@ -39,6 +40,11 @@ const (
 	totalsName = "Total"
 )
 
+var (
+	ErrNewStatsSensor = errors.New("could not create stats sensor")
+	ErrNewRatesSensor = errors.New("could not create rates sensor")
+)
+
 // linkStats represents a link and its stats.
 type linkStats struct {
 	stats *rtnetlink.LinkStats64
@@ -64,9 +70,12 @@ func (t netStatsType) Icon() string {
 	return ""
 }
 
-// newStatsTotalEntity creates an entity for tracking total stats for a network device.
-func newStatsTotalEntity(ctx context.Context, name string, entityType netStatsType, category models.EntityCategory, value uint64, attributes models.Attributes) (models.Entity, error) {
-	return sensor.NewSensor(ctx,
+// newStatsTotalEntity creates an entity for tracking total stats for a network
+// device.
+//
+//revive:disable:argument-limit
+func newStatsTotalEntity(ctx context.Context, name string, entityType netStatsType, category models.EntityCategory, value uint64, attributes models.Attributes) (*models.Entity, error) {
+	statsSensor, err := sensor.NewSensor(ctx,
 		sensor.WithName(name+" "+entityType.String()),
 		sensor.WithID(strings.ToLower(name)+"_"+strcase.ToSnake(entityType.String())),
 		sensor.WithDeviceClass(class.SensorClassDataSize),
@@ -78,11 +87,16 @@ func newStatsTotalEntity(ctx context.Context, name string, entityType netStatsTy
 		sensor.WithDataSourceAttribute(linux.DataSrcNetlink),
 		sensor.WithCategory(category),
 	)
+	if err != nil {
+		return nil, errors.Join(ErrNewStatsSensor, err)
+	}
+
+	return &statsSensor, nil
 }
 
 // newStatsTotalEntity creates an entity for tracking rate stats for a network device.
-func newStatsRateEntity(ctx context.Context, name string, entityType netStatsType, category models.EntityCategory, value uint64) (models.Entity, error) {
-	return sensor.NewSensor(ctx,
+func newStatsRateEntity(ctx context.Context, name string, entityType netStatsType, category models.EntityCategory, value uint64) (*models.Entity, error) {
+	ratesSensor, err := sensor.NewSensor(ctx,
 		sensor.WithName(name+" "+entityType.String()),
 		sensor.WithID(strings.ToLower(name)+"_"+strcase.ToSnake(entityType.String())),
 		sensor.WithDeviceClass(class.SensorClassDataRate),
@@ -93,6 +107,11 @@ func newStatsRateEntity(ctx context.Context, name string, entityType netStatsTyp
 		sensor.WithDataSourceAttribute(linux.DataSrcNetlink),
 		sensor.WithCategory(category),
 	)
+	if err != nil {
+		return nil, errors.Join(ErrNewRatesSensor, err)
+	}
+
+	return &ratesSensor, nil
 }
 
 type netRate struct {

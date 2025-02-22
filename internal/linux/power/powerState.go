@@ -33,12 +33,15 @@ const (
 	powerStatePreferencesID = sensorsPrefPrefix + "state"
 )
 
-var ErrInitPowerStateWorker = errors.New("could not init power state worker")
+var (
+	ErrNewPowerStateSensor  = errors.New("could not create power state sensor")
+	ErrInitPowerStateWorker = errors.New("could not init power state worker")
+)
 
 type powerSignal int
 
-func newPowerState(ctx context.Context, name powerSignal, value any) (models.Entity, error) {
-	return sensor.NewSensor(ctx,
+func newPowerState(ctx context.Context, name powerSignal, value any) (*models.Entity, error) {
+	stateSensor, err := sensor.NewSensor(ctx,
 		sensor.WithName("Power State"),
 		sensor.WithID("power_state"),
 		sensor.WithDeviceClass(class.SensorClassEnum),
@@ -49,6 +52,11 @@ func newPowerState(ctx context.Context, name powerSignal, value any) (models.Ent
 		sensor.WithAttribute("options", []string{"Powered On", "Powered Off", "Suspended"}),
 		sensor.AsRetryableRequest(true),
 	)
+	if err != nil {
+		return nil, errors.Join(ErrNewPowerStateSensor, err)
+	}
+
+	return &stateSensor, nil
 }
 
 func powerStateString(signal powerSignal, value any) string {
@@ -101,7 +109,7 @@ func (w *stateWorker) Events(ctx context.Context) (<-chan models.Entity, error) 
 				return
 			case event := <-w.triggerCh:
 				var (
-					entity models.Entity
+					entity *models.Entity
 					err    error
 				)
 
@@ -113,11 +121,12 @@ func (w *stateWorker) Events(ctx context.Context) (<-chan models.Entity, error) 
 				}
 
 				if err != nil {
-					logging.FromContext(ctx).Warn("Could not generate power state sensor: %w", err)
+					logging.FromContext(ctx).Warn("Could not generate power state sensor.",
+						slog.Any("error", err))
 					continue
 				}
 
-				sensorCh <- entity
+				sensorCh <- *entity
 			}
 		}
 	}()
@@ -150,7 +159,7 @@ func (w *stateWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 		return nil, fmt.Errorf("could not generate power state sensor: %w", err)
 	}
 
-	return []models.Entity{entity}, nil
+	return []models.Entity{*entity}, nil
 }
 
 func (w *stateWorker) PreferencesID() string {
