@@ -1,6 +1,6 @@
 module github.com/joshuar/go-hass-agent
 
-go 1.23.4
+go 1.24.0
 
 require (
 	fyne.io/fyne/v2 v2.5.4
@@ -16,7 +16,7 @@ require (
 	github.com/lthibault/jitterbug/v2 v2.2.2
 	github.com/lxzan/gws v1.8.8
 	github.com/magefile/mage v1.15.0
-	github.com/matryer/moq v0.5.1
+	github.com/matryer/moq v0.5.3
 	github.com/mdlayher/netlink v1.7.2
 	github.com/oapi-codegen/nullable v1.1.0
 	github.com/oapi-codegen/oapi-codegen/v2 v2.4.1
@@ -26,10 +26,9 @@ require (
 	github.com/stretchr/testify v1.10.0
 	github.com/yassinebenaid/godump v0.11.1
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56
-	golang.org/x/text v0.21.0
-	golang.org/x/tools v0.29.0
+	golang.org/x/text v0.22.0
+	golang.org/x/tools v0.30.0
 	gopkg.in/yaml.v3 v3.0.1
-
 )
 
 require (
@@ -114,8 +113,8 @@ require (
 	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	gitlab.com/digitalxero/go-conventional-commit v1.0.7 // indirect
-	golang.org/x/mod v0.22.0 // indirect
-	golang.org/x/sync v0.10.0 // indirect
+	golang.org/x/mod v0.23.0 // indirect
+	golang.org/x/sync v0.11.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	howett.net/plist v1.0.0 // indirect
@@ -166,9 +165,17 @@ require (
 	github.com/tklauser/go-sysconf v0.3.14
 	github.com/tklauser/numcpus v0.8.0 // indirect
 	github.com/yuin/goldmark v1.7.1 // indirect
-	golang.org/x/crypto v0.32.0 // indirect
+	golang.org/x/crypto v0.33.0 // indirect
 	golang.org/x/image v0.18.0 // indirect
 	golang.org/x/mobile v0.0.0-20231127183840-76ac6878050a // indirect
-	golang.org/x/net v0.34.0 // indirect
-	golang.org/x/sys v0.29.0
+	golang.org/x/net v0.35.0 // indirect
+	golang.org/x/sys v0.30.0
+)
+
+tool (
+	github.com/goreleaser/nfpm/v2/cmd/nfpm
+	github.com/magefile/mage
+	github.com/matryer/moq
+	github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen
+	golang.org/x/tools/cmd/stringer
 )
