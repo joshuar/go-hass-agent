@@ -5,22 +5,22 @@ package linux
 
 import (
 	"context"
-	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
+	"github.com/joshuar/go-hass-agent/internal/models"
 	"sync"
 	"time"
 )
 
-// Ensure, that PollingTypeMock does implement PollingType.
+// Ensure, that PollingSensorTypeMock does implement PollingSensorType.
 // If this is not the case, regenerate this file with moq.
-var _ PollingSensorType = &PollingTypeMock{}
+var _ PollingSensorType = &PollingSensorTypeMock{}
 
-// PollingTypeMock is a mock implementation of PollingType.
+// PollingSensorTypeMock is a mock implementation of PollingSensorType.
 //
-//	func TestSomethingThatUsesPollingType(t *testing.T) {
+//	func TestSomethingThatUsesPollingSensorType(t *testing.T) {
 //
-//		// make and configure a mocked PollingType
-//		mockedPollingType := &PollingTypeMock{
-//			SensorsFunc: func(ctx context.Context) ([]sensor.Entity, error) {
+//		// make and configure a mocked PollingSensorType
+//		mockedPollingSensorType := &PollingSensorTypeMock{
+//			SensorsFunc: func(ctx context.Context) ([]models.Entity, error) {
 //				panic("mock out the Sensors method")
 //			},
 //			UpdateDeltaFunc: func(delta time.Duration)  {
@@ -28,13 +28,13 @@ var _ PollingSensorType = &PollingTypeMock{}
 //			},
 //		}
 //
-//		// use mockedPollingType in code that requires PollingType
+//		// use mockedPollingSensorType in code that requires PollingSensorType
 //		// and then make assertions.
 //
 //	}
-type PollingTypeMock struct {
+type PollingSensorTypeMock struct {
 	// SensorsFunc mocks the Sensors method.
-	SensorsFunc func(ctx context.Context) ([]sensor.Entity, error)
+	SensorsFunc func(ctx context.Context) ([]models.Entity, error)
 
 	// UpdateDeltaFunc mocks the UpdateDelta method.
 	UpdateDeltaFunc func(delta time.Duration)
@@ -57,9 +57,9 @@ type PollingTypeMock struct {
 }
 
 // Sensors calls SensorsFunc.
-func (mock *PollingTypeMock) Sensors(ctx context.Context) ([]sensor.Entity, error) {
+func (mock *PollingSensorTypeMock) Sensors(ctx context.Context) ([]models.Entity, error) {
 	if mock.SensorsFunc == nil {
-		panic("PollingTypeMock.SensorsFunc: method is nil but PollingType.Sensors was just called")
+		panic("PollingSensorTypeMock.SensorsFunc: method is nil but PollingSensorType.Sensors was just called")
 	}
 	callInfo := struct {
 		Ctx context.Context
@@ -75,8 +75,8 @@ func (mock *PollingTypeMock) Sensors(ctx context.Context) ([]sensor.Entity, erro
 // SensorsCalls gets all the calls that were made to Sensors.
 // Check the length with:
 //
-//	len(mockedPollingType.SensorsCalls())
-func (mock *PollingTypeMock) SensorsCalls() []struct {
+//	len(mockedPollingSensorType.SensorsCalls())
+func (mock *PollingSensorTypeMock) SensorsCalls() []struct {
 	Ctx context.Context
 } {
 	var calls []struct {
@@ -89,9 +89,9 @@ func (mock *PollingTypeMock) SensorsCalls() []struct {
 }
 
 // UpdateDelta calls UpdateDeltaFunc.
-func (mock *PollingTypeMock) UpdateDelta(delta time.Duration) {
+func (mock *PollingSensorTypeMock) UpdateDelta(delta time.Duration) {
 	if mock.UpdateDeltaFunc == nil {
-		panic("PollingTypeMock.UpdateDeltaFunc: method is nil but PollingType.UpdateDelta was just called")
+		panic("PollingSensorTypeMock.UpdateDeltaFunc: method is nil but PollingSensorType.UpdateDelta was just called")
 	}
 	callInfo := struct {
 		Delta time.Duration
@@ -107,8 +107,8 @@ func (mock *PollingTypeMock) UpdateDelta(delta time.Duration) {
 // UpdateDeltaCalls gets all the calls that were made to UpdateDelta.
 // Check the length with:
 //
-//	len(mockedPollingType.UpdateDeltaCalls())
-func (mock *PollingTypeMock) UpdateDeltaCalls() []struct {
+//	len(mockedPollingSensorType.UpdateDeltaCalls())
+func (mock *PollingSensorTypeMock) UpdateDeltaCalls() []struct {
 	Delta time.Duration
 } {
 	var calls []struct {
@@ -120,34 +120,34 @@ func (mock *PollingTypeMock) UpdateDeltaCalls() []struct {
 	return calls
 }
 
-// Ensure, that EventTypeMock does implement EventType.
+// Ensure, that EventSensorTypeMock does implement EventSensorType.
 // If this is not the case, regenerate this file with moq.
-var _ EventSensorType = &EventTypeMock{}
+var _ EventSensorType = &EventSensorTypeMock{}
 
-// EventTypeMock is a mock implementation of EventType.
+// EventSensorTypeMock is a mock implementation of EventSensorType.
 //
-//	func TestSomethingThatUsesEventType(t *testing.T) {
+//	func TestSomethingThatUsesEventSensorType(t *testing.T) {
 //
-//		// make and configure a mocked EventType
-//		mockedEventType := &EventTypeMock{
-//			EventsFunc: func(ctx context.Context) (<-chan sensor.Entity, error) {
+//		// make and configure a mocked EventSensorType
+//		mockedEventSensorType := &EventSensorTypeMock{
+//			EventsFunc: func(ctx context.Context) (<-chan models.Entity, error) {
 //				panic("mock out the Events method")
 //			},
-//			SensorsFunc: func(ctx context.Context) ([]sensor.Entity, error) {
+//			SensorsFunc: func(ctx context.Context) ([]models.Entity, error) {
 //				panic("mock out the Sensors method")
 //			},
 //		}
 //
-//		// use mockedEventType in code that requires EventType
+//		// use mockedEventSensorType in code that requires EventSensorType
 //		// and then make assertions.
 //
 //	}
-type EventTypeMock struct {
+type EventSensorTypeMock struct {
 	// EventsFunc mocks the Events method.
-	EventsFunc func(ctx context.Context) (<-chan sensor.Entity, error)
+	EventsFunc func(ctx context.Context) (<-chan models.Entity, error)
 
 	// SensorsFunc mocks the Sensors method.
-	SensorsFunc func(ctx context.Context) ([]sensor.Entity, error)
+	SensorsFunc func(ctx context.Context) ([]models.Entity, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -167,7 +167,171 @@ type EventTypeMock struct {
 }
 
 // Events calls EventsFunc.
-func (mock *EventTypeMock) Events(ctx context.Context) (<-chan sensor.Entity, error) {
+func (mock *EventSensorTypeMock) Events(ctx context.Context) (<-chan models.Entity, error) {
+	if mock.EventsFunc == nil {
+		panic("EventSensorTypeMock.EventsFunc: method is nil but EventSensorType.Events was just called")
+	}
+	callInfo := struct {
+		Ctx context.Context
+	}{
+		Ctx: ctx,
+	}
+	mock.lockEvents.Lock()
+	mock.calls.Events = append(mock.calls.Events, callInfo)
+	mock.lockEvents.Unlock()
+	return mock.EventsFunc(ctx)
+}
+
+// EventsCalls gets all the calls that were made to Events.
+// Check the length with:
+//
+//	len(mockedEventSensorType.EventsCalls())
+func (mock *EventSensorTypeMock) EventsCalls() []struct {
+	Ctx context.Context
+} {
+	var calls []struct {
+		Ctx context.Context
+	}
+	mock.lockEvents.RLock()
+	calls = mock.calls.Events
+	mock.lockEvents.RUnlock()
+	return calls
+}
+
+// Sensors calls SensorsFunc.
+func (mock *EventSensorTypeMock) Sensors(ctx context.Context) ([]models.Entity, error) {
+	if mock.SensorsFunc == nil {
+		panic("EventSensorTypeMock.SensorsFunc: method is nil but EventSensorType.Sensors was just called")
+	}
+	callInfo := struct {
+		Ctx context.Context
+	}{
+		Ctx: ctx,
+	}
+	mock.lockSensors.Lock()
+	mock.calls.Sensors = append(mock.calls.Sensors, callInfo)
+	mock.lockSensors.Unlock()
+	return mock.SensorsFunc(ctx)
+}
+
+// SensorsCalls gets all the calls that were made to Sensors.
+// Check the length with:
+//
+//	len(mockedEventSensorType.SensorsCalls())
+func (mock *EventSensorTypeMock) SensorsCalls() []struct {
+	Ctx context.Context
+} {
+	var calls []struct {
+		Ctx context.Context
+	}
+	mock.lockSensors.RLock()
+	calls = mock.calls.Sensors
+	mock.lockSensors.RUnlock()
+	return calls
+}
+
+// Ensure, that OneShotSensorTypeMock does implement OneShotSensorType.
+// If this is not the case, regenerate this file with moq.
+var _ OneShotSensorType = &OneShotSensorTypeMock{}
+
+// OneShotSensorTypeMock is a mock implementation of OneShotSensorType.
+//
+//	func TestSomethingThatUsesOneShotSensorType(t *testing.T) {
+//
+//		// make and configure a mocked OneShotSensorType
+//		mockedOneShotSensorType := &OneShotSensorTypeMock{
+//			SensorsFunc: func(ctx context.Context) ([]models.Entity, error) {
+//				panic("mock out the Sensors method")
+//			},
+//		}
+//
+//		// use mockedOneShotSensorType in code that requires OneShotSensorType
+//		// and then make assertions.
+//
+//	}
+type OneShotSensorTypeMock struct {
+	// SensorsFunc mocks the Sensors method.
+	SensorsFunc func(ctx context.Context) ([]models.Entity, error)
+
+	// calls tracks calls to the methods.
+	calls struct {
+		// Sensors holds details about calls to the Sensors method.
+		Sensors []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+		}
+	}
+	lockSensors sync.RWMutex
+}
+
+// Sensors calls SensorsFunc.
+func (mock *OneShotSensorTypeMock) Sensors(ctx context.Context) ([]models.Entity, error) {
+	if mock.SensorsFunc == nil {
+		panic("OneShotSensorTypeMock.SensorsFunc: method is nil but OneShotSensorType.Sensors was just called")
+	}
+	callInfo := struct {
+		Ctx context.Context
+	}{
+		Ctx: ctx,
+	}
+	mock.lockSensors.Lock()
+	mock.calls.Sensors = append(mock.calls.Sensors, callInfo)
+	mock.lockSensors.Unlock()
+	return mock.SensorsFunc(ctx)
+}
+
+// SensorsCalls gets all the calls that were made to Sensors.
+// Check the length with:
+//
+//	len(mockedOneShotSensorType.SensorsCalls())
+func (mock *OneShotSensorTypeMock) SensorsCalls() []struct {
+	Ctx context.Context
+} {
+	var calls []struct {
+		Ctx context.Context
+	}
+	mock.lockSensors.RLock()
+	calls = mock.calls.Sensors
+	mock.lockSensors.RUnlock()
+	return calls
+}
+
+// Ensure, that EventTypeMock does implement EventType.
+// If this is not the case, regenerate this file with moq.
+var _ EventType = &EventTypeMock{}
+
+// EventTypeMock is a mock implementation of EventType.
+//
+//	func TestSomethingThatUsesEventType(t *testing.T) {
+//
+//		// make and configure a mocked EventType
+//		mockedEventType := &EventTypeMock{
+//			EventsFunc: func(ctx context.Context) (<-chan models.Entity, error) {
+//				panic("mock out the Events method")
+//			},
+//		}
+//
+//		// use mockedEventType in code that requires EventType
+//		// and then make assertions.
+//
+//	}
+type EventTypeMock struct {
+	// EventsFunc mocks the Events method.
+	EventsFunc func(ctx context.Context) (<-chan models.Entity, error)
+
+	// calls tracks calls to the methods.
+	calls struct {
+		// Events holds details about calls to the Events method.
+		Events []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+		}
+	}
+	lockEvents sync.RWMutex
+}
+
+// Events calls EventsFunc.
+func (mock *EventTypeMock) Events(ctx context.Context) (<-chan models.Entity, error) {
 	if mock.EventsFunc == nil {
 		panic("EventTypeMock.EventsFunc: method is nil but EventType.Events was just called")
 	}
@@ -195,103 +359,5 @@ func (mock *EventTypeMock) EventsCalls() []struct {
 	mock.lockEvents.RLock()
 	calls = mock.calls.Events
 	mock.lockEvents.RUnlock()
-	return calls
-}
-
-// Sensors calls SensorsFunc.
-func (mock *EventTypeMock) Sensors(ctx context.Context) ([]sensor.Entity, error) {
-	if mock.SensorsFunc == nil {
-		panic("EventTypeMock.SensorsFunc: method is nil but EventType.Sensors was just called")
-	}
-	callInfo := struct {
-		Ctx context.Context
-	}{
-		Ctx: ctx,
-	}
-	mock.lockSensors.Lock()
-	mock.calls.Sensors = append(mock.calls.Sensors, callInfo)
-	mock.lockSensors.Unlock()
-	return mock.SensorsFunc(ctx)
-}
-
-// SensorsCalls gets all the calls that were made to Sensors.
-// Check the length with:
-//
-//	len(mockedEventType.SensorsCalls())
-func (mock *EventTypeMock) SensorsCalls() []struct {
-	Ctx context.Context
-} {
-	var calls []struct {
-		Ctx context.Context
-	}
-	mock.lockSensors.RLock()
-	calls = mock.calls.Sensors
-	mock.lockSensors.RUnlock()
-	return calls
-}
-
-// Ensure, that OneShotTypeMock does implement OneShotType.
-// If this is not the case, regenerate this file with moq.
-var _ OneShotSensorType = &OneShotTypeMock{}
-
-// OneShotTypeMock is a mock implementation of OneShotType.
-//
-//	func TestSomethingThatUsesOneShotType(t *testing.T) {
-//
-//		// make and configure a mocked OneShotType
-//		mockedOneShotType := &OneShotTypeMock{
-//			SensorsFunc: func(ctx context.Context) ([]sensor.Entity, error) {
-//				panic("mock out the Sensors method")
-//			},
-//		}
-//
-//		// use mockedOneShotType in code that requires OneShotType
-//		// and then make assertions.
-//
-//	}
-type OneShotTypeMock struct {
-	// SensorsFunc mocks the Sensors method.
-	SensorsFunc func(ctx context.Context) ([]sensor.Entity, error)
-
-	// calls tracks calls to the methods.
-	calls struct {
-		// Sensors holds details about calls to the Sensors method.
-		Sensors []struct {
-			// Ctx is the ctx argument value.
-			Ctx context.Context
-		}
-	}
-	lockSensors sync.RWMutex
-}
-
-// Sensors calls SensorsFunc.
-func (mock *OneShotTypeMock) Sensors(ctx context.Context) ([]sensor.Entity, error) {
-	if mock.SensorsFunc == nil {
-		panic("OneShotTypeMock.SensorsFunc: method is nil but OneShotType.Sensors was just called")
-	}
-	callInfo := struct {
-		Ctx context.Context
-	}{
-		Ctx: ctx,
-	}
-	mock.lockSensors.Lock()
-	mock.calls.Sensors = append(mock.calls.Sensors, callInfo)
-	mock.lockSensors.Unlock()
-	return mock.SensorsFunc(ctx)
-}
-
-// SensorsCalls gets all the calls that were made to Sensors.
-// Check the length with:
-//
-//	len(mockedOneShotType.SensorsCalls())
-func (mock *OneShotTypeMock) SensorsCalls() []struct {
-	Ctx context.Context
-} {
-	var calls []struct {
-		Ctx context.Context
-	}
-	mock.lockSensors.RLock()
-	calls = mock.calls.Sensors
-	mock.lockSensors.RUnlock()
 	return calls
 }
