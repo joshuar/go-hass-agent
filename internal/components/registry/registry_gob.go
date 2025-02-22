@@ -68,7 +68,7 @@ func (g *gobRegistry) IsDisabled(id string) bool {
 
 	sensor, ok := g.sensors[id]
 	if !ok {
-		slog.Warn("Sensor not found in registry.", slog.String("sensor_id", id))
+		slog.Debug("Sensor not found in registry.", slog.String("sensor_id", id))
 
 		return false
 	}
@@ -82,7 +82,7 @@ func (g *gobRegistry) IsRegistered(id string) bool {
 
 	sensor, ok := g.sensors[id]
 	if !ok {
-		slog.Warn("Sensor not found in registry.", slog.String("sensor_id", id))
+		slog.Debug("Sensor not found in registry.", slog.String("sensor_id", id))
 
 		return false
 	}
