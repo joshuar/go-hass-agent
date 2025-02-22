@@ -125,7 +125,8 @@ func WithUnits(units string) Option {
 func WithDeviceClass(deviceClass class.SensorDeviceClass) Option {
 	return func(s *models.Sensor) error {
 		if deviceClass.Valid() {
-			s.DeviceClass = &deviceClass
+			str := deviceClass.String()
+			s.DeviceClass = &str
 		}
 
 		return nil
@@ -139,7 +140,8 @@ func WithDeviceClass(deviceClass class.SensorDeviceClass) Option {
 func WithStateClass(stateClass class.SensorStateClass) Option {
 	return func(s *models.Sensor) error {
 		if stateClass.Valid() {
-			s.StateClass = &stateClass
+			str := stateClass.String()
+			s.StateClass = &str
 		}
 
 		return nil
@@ -191,7 +193,9 @@ func NewSensor(ctx context.Context, options ...Option) (models.Entity, error) {
 	}
 
 	if sensor.Type == "" {
-		AsTypeSensor()(&sensor)
+		if err := AsTypeSensor()(&sensor); err != nil {
+			logging.FromContext(ctx).Warn("Could not set sensor option.", slog.Any("error", err))
+		}
 	}
 
 	entity := models.Entity{}
