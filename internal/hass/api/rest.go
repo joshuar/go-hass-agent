@@ -5,7 +5,6 @@ package api
 
 import (
 	"errors"
-	"fmt"
 	"strings"
 )
 
@@ -18,7 +17,7 @@ var (
 func (e *APIError) Error() string {
 	var msg []string
 	if e.Code != nil {
-		msg = append(msg, fmt.Sprintf("code %v", e.Code))
+		msg = append(msg, *e.Code)
 	}
 
 	if e.Message != nil {
