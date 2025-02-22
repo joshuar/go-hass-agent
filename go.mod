@@ -6,7 +6,7 @@ require (
 	fyne.io/fyne/v2 v2.5.4
 	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/eclipse/paho.golang v0.22.0
-	github.com/go-playground/validator/v10 v10.24.0
+	github.com/go-playground/validator/v10 v10.25.0
 	github.com/godbus/dbus/v5 v5.1.0
 	github.com/goreleaser/nfpm/v2 v2.41.2
 	github.com/grandcat/zeroconf v1.0.0
@@ -100,7 +100,7 @@ require (
 	github.com/pjbgf/sha1cd v0.3.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/rymdport/portal v0.3.0 // indirect
-	github.com/samber/lo v1.47.0 // indirect
+	github.com/samber/lo v1.49.1 // indirect
 	github.com/sergi/go-diff v1.3.2-0.20230802210424-5b0b94c5c0d3 // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/skeema/knownhosts v1.3.0 // indirect
@@ -123,7 +123,7 @@ require (
 require (
 	fyne.io/systray v1.11.0 // indirect
 	github.com/adrg/xdg v0.5.3
-	github.com/alecthomas/kong v1.7.0
+	github.com/alecthomas/kong v1.8.1
 	github.com/blackjack/webcam v0.6.1
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
@@ -159,7 +159,7 @@ require (
 	github.com/miekg/dns v1.1.58 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
-	github.com/samber/slog-multi v1.3.3
+	github.com/samber/slog-multi v1.4.0
 	github.com/srwiley/oksvg v0.0.0-20221011165216-be6e8873101c // indirect
 	github.com/srwiley/rasterx v0.0.0-20220730225603-2ab79fcdd4ef // indirect
 	github.com/tklauser/go-sysconf v0.3.14
