@@ -37,12 +37,24 @@ func (c *Client) RegisterDevice(ctx context.Context, registration *preferences.R
 
 	// Set up the api request, and the request/response bodies.
 	apiReq := c.restAPI.R().SetContext(ctx)
+	apiReq.SetAuthToken(registration.Token)
 	apiReq.SetBody(req)
 	apiReq = apiReq.SetResult(&resp)
 
-	_, err := apiReq.Post(registration.Server + RegistrationPath)
+	registrationURL, err := url.Parse(registration.Server)
 	if err != nil {
 		return errors.Join(ErrDeviceRegistrationFailed, err)
+	}
+
+	registrationURL = registrationURL.JoinPath(RegistrationPath)
+
+	restyResp, err := apiReq.Post(registrationURL.String())
+
+	switch {
+	case err != nil:
+		return errors.Join(ErrDeviceRegistrationFailed, err)
+	case restyResp.IsError():
+		return errors.Join(ErrDeviceRegistrationFailed, errors.New(restyResp.Status()))
 	}
 
 	// Generate a rest API URL.
@@ -56,18 +68,21 @@ func (c *Client) RegisterDevice(ctx context.Context, registration *preferences.R
 		return errors.Join(ErrDeviceRegistrationFailed, err)
 	}
 
-	// Set registration status in preferences.
-	err = preferences.Set(
-		preferences.SetHassSecret(*resp.Secret),
+	prefs := []preferences.SetPreference{
 		preferences.SetRestAPIURL(restAPIURL),
 		preferences.SetWebsocketURL(websocketAPIURL),
 		preferences.SetWebhookID(resp.WebhookID),
 		preferences.SetServer(registration.Server),
 		preferences.SetToken(registration.Token),
 		preferences.SetRegistered(true),
-	)
-	// Save preferences to disk.
-	if err != nil {
+	}
+
+	if resp.Secret != nil {
+		prefs = append(prefs, preferences.SetHassSecret(*resp.Secret))
+	}
+
+	// Set registration status in preferences.
+	if err = preferences.Set(prefs...); err != nil {
 		return errors.Join(ErrDeviceRegistrationFailed, err)
 	}
 
