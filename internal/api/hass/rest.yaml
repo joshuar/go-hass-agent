@@ -212,6 +212,7 @@ components:
           additionalProperties:
             type: object
             additionalProperties: true
+          nullable: true
         unit_system:
           description: >
             is the current unit systems used by the Home Assistant instance.

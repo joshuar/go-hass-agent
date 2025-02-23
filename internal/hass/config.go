@@ -44,11 +44,15 @@ func (c *Config) IsEntityDisabled(id string) (bool, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	if c.Entities == nil {
-		return false, ErrInvalidConfig
+	// If there is no entities list, assume not disabled.
+	if c.Entities.IsSpecified() {
+		return false, nil
 	}
 
-	entities := *c.Entities
+	entities, err := c.Entities.Get()
+	if err != nil {
+		return false, errors.Join(ErrInvalidConfig, err)
+	}
 
 	if v, ok := entities[id]["disabled"]; ok {
 		disabledState, ok := v.(bool)

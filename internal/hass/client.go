@@ -149,13 +149,6 @@ func (c *Client) UpdateConfig(ctx context.Context) (bool, error) {
 func (c *Client) EntityHandler(ctx context.Context, entityCh chan models.Entity) {
 	ctx = logging.ToContext(ctx, c.logger)
 
-	// Init and update Home Assistant config if necessary.
-	if c.config == nil {
-		c.logger.Debug("Performing initial cache of Home Assistant configuration.")
-		c.config = &Config{}
-		c.UpdateConfig(ctx)
-	}
-
 	for entity := range entityCh {
 		if eventData, err := entity.AsEvent(); err == nil && eventData.Valid() {
 			// Send event.
@@ -323,6 +316,7 @@ func NewClient(ctx context.Context, reg sensorRegistry) (*Client, error) {
 		logger:         logging.FromContext(ctx).WithGroup("hass"),
 		sensorRegistry: reg,
 		sensorTracker:  tracker.NewTracker(),
+		config:         &Config{ConfigResponse: &api.ConfigResponse{}},
 		restAPI: resty.New().
 			SetTimeout(defaultTimeout).
 			SetRetryCount(defaultRetryCount).
