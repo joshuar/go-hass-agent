@@ -12,8 +12,11 @@ import (
 )
 
 const (
-	Unknown      Prefix = iota // unknown
-	SchedulerJob               // scheduler_job
+	Unknown Prefix = iota // unknown
+	// ScriptJob prefix is for scheduler jobs for scripts.
+	ScriptJob // script_job
+	// HassJob prefix is for scheduler jobs for the hass backend.
+	HassJob // hass_job
 )
 
 // Prefix represents a type of ID. Specific types share a common prefix.
@@ -34,8 +37,10 @@ func NewID(option Prefix) (string, error) {
 func IdentifyID(id string) Prefix {
 	idParts := strings.Split(id, "_")
 	switch idParts[0] {
-	case SchedulerJob.String():
-		return SchedulerJob
+	case HassJob.String():
+		return HassJob
+	case ScriptJob.String():
+		return ScriptJob
 	default:
 		return Unknown
 	}

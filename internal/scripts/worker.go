@@ -17,6 +17,7 @@ import (
 
 	"github.com/reugn/go-quartz/quartz"
 
+	"github.com/joshuar/go-hass-agent/internal/components/id"
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/models"
@@ -83,7 +84,7 @@ func (c *Worker) Start(ctx context.Context) (<-chan models.Entity, error) {
 			continue
 		}
 		// Schedule the script.
-		err = scheduler.Manager.ScheduleJob(script, trigger)
+		err = scheduler.Manager.ScheduleJob(id.ScriptJob, script, trigger)
 		if err != nil {
 			c.logger.Warn("Could not schedule script.",
 				slog.String("script", script.Description()),

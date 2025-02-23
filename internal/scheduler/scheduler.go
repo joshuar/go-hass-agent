@@ -54,9 +54,9 @@ func Start(ctx context.Context) error {
 	return nil
 }
 
-func (m *ManagerProps) ScheduleJob(job quartz.Job, trigger quartz.Trigger) error {
+func (m *ManagerProps) ScheduleJob(idPrefix id.Prefix, job quartz.Job, trigger quartz.Trigger) error {
 	// Generate a job key.
-	jobKey, err := id.NewID(id.SchedulerJob)
+	jobKey, err := id.NewID(idPrefix)
 	if err != nil {
 		return errors.Join(ErrScheduleFailed, err)
 	}
