@@ -16,6 +16,7 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/components/registry"
 	"github.com/joshuar/go-hass-agent/internal/hass"
+	"github.com/joshuar/go-hass-agent/internal/scheduler"
 )
 
 var ErrRegisterCmdFailed = errors.New("register command failed")
@@ -53,14 +54,24 @@ func (r *RegisterCmd) Run(opts *CmdOpts) error {
 		ForceRegister:  r.Force,
 	})
 
+	err := scheduler.Start(ctx)
+	if err != nil {
+		return errors.Join(ErrRunCmdFailed, err)
+	}
+
 	// Load the registry.
 	reg, err := registry.Load(opts.Path)
 	if err != nil {
 		return errors.Join(ErrRunCmdFailed, err)
 	}
 
+	client, err := hass.NewClient(ctx, reg)
+	if err != nil {
+		return errors.Join(ErrRunCmdFailed, err)
+	}
+
 	api := &API{
-		hass: hass.NewClient(ctx, reg),
+		hass: client,
 	}
 
 	// Run the agent.
