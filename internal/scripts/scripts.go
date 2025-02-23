@@ -16,6 +16,7 @@ import (
 	"strings"
 
 	"github.com/pelletier/go-toml/v2"
+	"github.com/reugn/go-quartz/quartz"
 	"gopkg.in/yaml.v3"
 
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
@@ -26,6 +27,9 @@ var (
 	ErrExecuteScript = errors.New("could not execute script")
 	ErrParseCmd      = errors.New("could not parse script command")
 )
+
+// Verify Script satisfies the quartz job interface.
+var _ quartz.Job = (*Script)(nil)
 
 type Script struct {
 	path     string
