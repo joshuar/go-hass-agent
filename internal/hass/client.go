@@ -14,6 +14,7 @@ import (
 	"github.com/reugn/go-quartz/job"
 	"github.com/reugn/go-quartz/quartz"
 
+	"github.com/joshuar/go-hass-agent/internal/components/id"
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/hass/api"
@@ -100,9 +101,6 @@ func (c *Client) isDisabledInReg(id models.UniqueID) bool {
 func (c *Client) isDisabledInHA(id models.UniqueID) bool {
 	status, err := c.config.IsEntityDisabled(id)
 	if err != nil {
-		c.logger.Debug("Could not retrieve Home Assistant config. Assuming sensor is NOT disabled.",
-			slog.Any("error", err))
-
 		return false
 	}
 
@@ -112,7 +110,7 @@ func (c *Client) isDisabledInHA(id models.UniqueID) bool {
 func (c *Client) scheduleConfigUpdates() error {
 	getConfigJob := job.NewFunctionJobWithDesc(c.UpdateConfig, "Fetch Home Assistant Configuration.")
 
-	err := scheduler.Manager.ScheduleJob(getConfigJob, quartz.NewSimpleTrigger(30*time.Second))
+	err := scheduler.Manager.ScheduleJob(id.HassJob, getConfigJob, quartz.NewSimpleTrigger(30*time.Second))
 	if err != nil {
 		return errors.Join(ErrClientSetup, err)
 	}

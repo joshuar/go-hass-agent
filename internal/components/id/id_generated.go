@@ -9,12 +9,13 @@ func _() {
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
 	_ = x[Unknown-0]
-	_ = x[SchedulerJob-1]
+	_ = x[ScriptJob-1]
+	_ = x[HassJob-2]
 }
 
-const _Prefix_name = "unknownscheduler_job"
+const _Prefix_name = "unknownscript_jobhass_job"
 
-var _Prefix_index = [...]uint8{0, 7, 20}
+var _Prefix_index = [...]uint8{0, 7, 17, 25}
 
 func (i Prefix) String() string {
 	if i < 0 || i >= Prefix(len(_Prefix_index)-1) {
