@@ -11,27 +11,78 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os/exec"
 	"strings"
 
 	"github.com/pelletier/go-toml/v2"
 	"gopkg.in/yaml.v3"
 
+	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/models"
 )
 
-var ErrParseCmd = errors.New("could not parse script command")
+var (
+	ErrExecuteScript = errors.New("could not execute script")
+	ErrParseCmd      = errors.New("could not parse script command")
+)
 
 type Script struct {
 	path     string
 	schedule string
+	outCh    chan models.Entity
 }
 
+// Start is used to create the output channel for the script. It will also
+// Execute the script once.
+func (s *Script) Start(ctx context.Context) <-chan models.Entity {
+	// Create the channel for script output.
+	s.outCh = make(chan models.Entity)
+	// Clean-up on agent close.
+	go func() {
+		defer close(s.outCh)
+		<-ctx.Done()
+	}()
+	// Send initial update.
+	go func() {
+		if err := s.Execute(ctx); err != nil {
+			logging.FromContext(ctx).Warn("Could not execute script.",
+				slog.Any("error", err))
+		}
+	}()
+
+	return s.outCh
+}
+
+// Schedule returns the script's cron schedule string.
 func (s *Script) Schedule() string {
 	return s.schedule
 }
 
-func (s *Script) Execute(ctx context.Context) ([]models.Entity, error) {
+// Execute will run the script and send any sensor entities it outputs to the
+// script's output channel. If there was an error running the script, a non-nil
+// error is returned.
+func (s *Script) Execute(ctx context.Context) error {
+	output, err := s.parse()
+	if err != nil {
+		return errors.Join(ErrExecuteScript, err)
+	}
+
+	for _, sensor := range output.Sensors {
+		entity, err := scriptToEntity(ctx, sensor)
+		if err != nil {
+			return errors.Join(ErrExecuteScript, err)
+		}
+
+		s.outCh <- *entity
+	}
+
+	return nil
+}
+
+// Run will run the script and return a slice of sensor entities. If there was
+// an error running the script, a non-nil error is returned.
+func (s *Script) Run(ctx context.Context) ([]models.Entity, error) {
 	output, err := s.parse()
 	if err != nil {
 		return nil, fmt.Errorf("error running script: %w", err)
@@ -45,12 +96,19 @@ func (s *Script) Execute(ctx context.Context) ([]models.Entity, error) {
 			return nil, fmt.Errorf("could not create script entity: %w", err)
 		}
 
-		sensors = append(sensors, entity)
+		sensors = append(sensors, *entity)
 	}
 
 	return sensors, nil
 }
 
+// Description returns a formatted string showing the script path and schedule.
+func (s *Script) Description() string {
+	return fmt.Sprintf("Run %s on schedule %s", s.path, s.schedule)
+}
+
+// parse extracts the script schedule and sensor output from the script output.
+// It will return a non-nil error if there was a problem parsing the script output.
 func (s *Script) parse() (*scriptOutput, error) {
 	cmdElems := strings.Split(s.path, " ")
 
@@ -93,8 +151,6 @@ func NewScript(path string) (*Script, error) {
 // scriptOutput represents the output from a script. The output must be
 // formatted as either valid JSON or YAML. This output is used to define a
 // sensor in Home Assistant.
-//
-//nolint:tagalign
 type scriptOutput struct {
 	Schedule string         `json:"schedule" yaml:"schedule"`
 	Sensors  []ScriptSensor `json:"sensors" yaml:"sensors"`

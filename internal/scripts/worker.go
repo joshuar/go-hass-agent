@@ -11,13 +11,16 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"slices"
+	"strings"
+	"sync"
+	"time"
 
-	"github.com/robfig/cron/v3"
+	"github.com/reugn/go-quartz/quartz"
 
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/models"
+	"github.com/joshuar/go-hass-agent/internal/scheduler"
 )
 
 var (
@@ -25,19 +28,13 @@ var (
 	ErrAlreadyStarted   = errors.New("script already started")
 	ErrAlreadyStopped   = errors.New("script already stopped")
 	ErrSchedulingFailed = errors.New("failed to schedule script")
+	ErrParseSchedule    = errors.New("could not parse script schedule")
 )
 
-type job struct {
-	logAttrs slog.Attr
-	Script
-	ID cron.EntryID
-}
-
 type Worker struct {
-	sensorCh  chan models.Entity
-	scheduler *cron.Cron
-	logger    *slog.Logger
-	jobs      []job
+	logger  *slog.Logger
+	scripts []*Script
+	outCh   chan models.Entity
 }
 
 // TODO: implement ability to disable.
@@ -49,120 +46,60 @@ func (c *Worker) ID() string {
 	return "scripts"
 }
 
+// States will execute all running scripts and returns their sensor entities.
 func (c *Worker) States(ctx context.Context) []models.Entity {
-	var sensors []models.Entity
+	var allSensors []models.Entity
 
-	for _, worker := range c.activeJobs() {
-		found := slices.IndexFunc(c.jobs, func(j job) bool { return j.path == worker })
-
-		jobSensors, err := c.jobs[found].Execute(ctx)
+	for _, script := range c.scripts {
+		scriptSensors, err := script.Run(ctx)
 		if err != nil {
 			c.logger.Warn("Could not retrieve script sensors",
-				slog.String("script", c.jobs[found].path),
+				slog.String("script", script.Description()),
 				slog.Any("error", err),
 			)
-		} else {
-			sensors = append(sensors, jobSensors...)
+
+			continue
 		}
+
+		allSensors = append(allSensors, scriptSensors...)
 	}
 
-	return sensors
-}
-
-func (c *Worker) activeJobs() []string {
-	var activeScripts []string
-
-	for _, job := range c.jobs {
-		if job.ID != 0 {
-			activeScripts = append(activeScripts, job.path)
-		}
-	}
-
-	return activeScripts
-}
-
-func (c *Worker) inactiveJobs() []string {
-	var inactiveScripts []string
-
-	for _, job := range c.jobs {
-		if job.ID == 0 {
-			inactiveScripts = append(inactiveScripts, job.path)
-		}
-	}
-
-	return inactiveScripts
+	return allSensors
 }
 
 func (c *Worker) Start(ctx context.Context) (<-chan models.Entity, error) {
-	c.sensorCh = make(chan models.Entity)
+	c.outCh = make(chan models.Entity)
 
-	for idx := range c.inactiveJobs() {
-		var (
-			sensors []models.Entity
-			err     error
-		)
-		// Schedule the script.
-		id, err := c.scheduler.AddFunc(c.jobs[idx].Schedule(), func() {
-			sensors, err = c.jobs[idx].Execute(ctx)
-			if err != nil {
-				c.logger.Warn("Could not execute script.",
-					c.jobs[idx].logAttrs,
-					slog.Any("error", err))
+	scriptOutputs := make([]<-chan models.Entity, 0, len(c.scripts))
 
-				return
-			}
-
-			for _, o := range sensors {
-				c.sensorCh <- o
-			}
-		})
+	for _, script := range c.scripts {
+		// Parse the script cron schedule as a scheduler trigger.
+		trigger, err := parseSchedule(script.Schedule())
 		if err != nil {
 			c.logger.Warn("Could not schedule script.",
-				c.jobs[idx].logAttrs,
+				slog.String("script", script.Description()),
 				slog.Any("error", err))
 
 			continue
 		}
-
-		// Update the job id.
-		c.jobs[idx].ID = id
-
-		c.logger.Debug("Scheduled script.",
-			c.jobs[idx].logAttrs)
-	}
-
-	// Start the scheduler.
-	c.scheduler.Start()
-	// Send script sensor states at start-up.
-	go func() {
-		for _, sensor := range c.States(ctx) {
-			c.sensorCh <- sensor
-		}
-	}()
-
-	// Return the new sensor channel for the script.
-	return c.sensorCh, nil
-}
-
-func (c *Worker) Stop() error {
-	for idx := range c.activeJobs() {
-		// If the script is already stopped, return an error.
-		if c.jobs[idx].ID == 0 {
-			c.logger.Warn("Script already stopped.",
-				c.jobs[idx].logAttrs)
+		// Schedule the script.
+		err = scheduler.Manager.ScheduleJob(script, trigger)
+		if err != nil {
+			c.logger.Warn("Could not schedule script.",
+				slog.String("script", script.Description()),
+				slog.Any("error", err))
 
 			continue
 		}
-
-		c.scheduler.Remove(c.jobs[idx].ID)
-
-		c.jobs[idx].ID = 0
+		// Append to list of managed scripts.
+		scriptOutputs = append(scriptOutputs, script.Start(ctx))
 	}
 
-	// Stop the scheduler.
-	c.scheduler.Stop()
+	return mergeCh(ctx, scriptOutputs...), nil
+}
 
-	close(c.sensorCh)
+func (c *Worker) Stop() error {
+	close(c.outCh)
 
 	return nil
 }
@@ -200,8 +137,7 @@ func NewScriptsWorker(ctx context.Context) (*Worker, error) {
 	scriptPath := filepath.Join(preferences.PathFromCtx(ctx), "scripts")
 
 	worker := &Worker{
-		scheduler: cron.New(),
-		logger:    logging.FromContext(ctx).WithGroup("scripts_worker"),
+		logger: logging.FromContext(ctx).WithGroup("scripts"),
 	}
 
 	scripts, err := worker.findScripts(scriptPath)
@@ -209,12 +145,7 @@ func NewScriptsWorker(ctx context.Context) (*Worker, error) {
 		return nil, fmt.Errorf("could not find scripts: %w", err)
 	}
 
-	worker.jobs = make([]job, 0, len(scripts))
-
-	for _, s := range scripts {
-		logAttrs := slog.Group("job", slog.String("path", s.path), slog.String("schedule", s.schedule))
-		worker.jobs = append(worker.jobs, job{Script: *s, logAttrs: logAttrs})
-	}
+	worker.scripts = scripts
 
 	return worker, nil
 }
@@ -227,4 +158,94 @@ func isExecutable(filename string) bool {
 	}
 
 	return fi.Mode().Perm()&0o111 != 0
+}
+
+// mergeCh merges a list of channels of any type into a single channel of that
+// type (channel fan-in).
+func mergeCh[T any](ctx context.Context, inCh ...<-chan T) chan T {
+	var wg sync.WaitGroup
+
+	outCh := make(chan T)
+
+	// Start an output goroutine for each input channel in sensorCh.  output
+	// copies values from c to out until c is closed, then calls wg.Done.
+	output := func(ch <-chan T) { //nolint:varnamelen
+		defer wg.Done()
+
+		if ch == nil {
+			return
+		}
+
+		for n := range ch {
+			select {
+			case outCh <- n:
+			case <-ctx.Done():
+				return
+			}
+		}
+	}
+
+	wg.Add(len(inCh))
+
+	for _, c := range inCh {
+		go output(c)
+	}
+
+	// Start a goroutine to close out once all the output goroutines are
+	// done.  This must start after the wg.Add call.
+	go func() {
+		wg.Wait()
+		close(outCh)
+	}()
+
+	return outCh
+}
+
+// parseSchedule parses a cron schedule string and returns the equivalent quartz
+// Trigger.
+//
+// Cron schedule parsing code adapted from
+// https://github.com/robfig/cron/blob/master/parser.go
+func parseSchedule(sched string) (quartz.Trigger, error) {
+	var (
+		trigger quartz.Trigger
+		err     error
+	)
+
+	// Attempt to parse as a standard cron schedule string.
+	trigger, err = quartz.NewCronTrigger(sched)
+	if err == nil {
+		return trigger, nil
+	}
+
+	// Attempt to parse as one of the year/month/week/day/hour strings.
+	switch sched {
+	case "@yearly", "@annually":
+		trigger, err = quartz.NewCronTrigger("0 0 0 1 1 * *")
+	case "@monthly":
+		trigger, err = quartz.NewCronTrigger("0 0 0 1 * *")
+	case "@weekly":
+		trigger, err = quartz.NewCronTrigger("0 0 0 * * 1")
+	case "@daily", "@midnight":
+		trigger, err = quartz.NewCronTrigger("0 0 0 * * *")
+	case "@hourly":
+		trigger, err = quartz.NewCronTrigger("0 0 * * * *")
+	}
+	// If successfully parsed, return the trigger.
+	if err == nil {
+		return trigger, nil
+	}
+
+	// Else, attempt to parse as an "@every ..." string.
+	const every = "@every "
+	if strings.HasPrefix(sched, every) {
+		duration, err := time.ParseDuration(sched[len(every):])
+		if err != nil {
+			return nil, errors.Join(ErrParseSchedule, err)
+		}
+
+		return quartz.NewSimpleTrigger(duration), nil
+	}
+
+	return nil, errors.Join(ErrParseSchedule, fmt.Errorf("unknown schedule format %s", sched))
 }

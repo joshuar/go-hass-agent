@@ -8,6 +8,7 @@ package scripts
 
 import (
 	"context"
+	"errors"
 
 	"github.com/iancoleman/strcase"
 
@@ -16,7 +17,8 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/models/sensor"
 )
 
-//nolint:tagalign
+var ErrNewSensorEntity = errors.New("could not create sensor entity")
+
 type ScriptSensor struct {
 	SensorState       any    `json:"sensor_state" yaml:"sensor_state" toml:"sensor_state"`
 	SensorAttributes  any    `json:"sensor_attributes,omitempty" yaml:"sensor_attributes,omitempty" toml:"sensor_attributes,omitempty"`
@@ -28,7 +30,7 @@ type ScriptSensor struct {
 	SensorUnits       string `json:"sensor_units,omitempty" yaml:"sensor_units,omitempty" toml:"sensor_units,omitempty"`
 }
 
-func scriptToEntity(ctx context.Context, script ScriptSensor) (models.Entity, error) {
+func scriptToEntity(ctx context.Context, script ScriptSensor) (*models.Entity, error) {
 	var typeOption sensor.Option
 
 	switch script.SensorStateType {
@@ -38,7 +40,7 @@ func scriptToEntity(ctx context.Context, script ScriptSensor) (models.Entity, er
 		typeOption = sensor.AsTypeSensor()
 	}
 
-	return sensor.NewSensor(ctx,
+	scriptSensor, err := sensor.NewSensor(ctx,
 		sensor.WithName(script.SensorName),
 		sensor.WithID(strcase.ToSnake(script.SensorName)),
 		sensor.WithUnits(script.SensorUnits),
@@ -49,6 +51,11 @@ func scriptToEntity(ctx context.Context, script ScriptSensor) (models.Entity, er
 		sensor.WithState(script.SensorState),
 		typeOption,
 	)
+	if err != nil {
+		return nil, errors.Join(ErrNewSensorEntity, err)
+	}
+
+	return &scriptSensor, nil
 }
 
 func (s *ScriptSensor) Icon() string {
