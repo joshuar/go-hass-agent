@@ -1,7 +1,7 @@
 // Copyright 2024 Joshua Rich <joshua.rich@gmail.com>.
 // SPDX-License-Identifier: MIT
 
-package hass
+package registration
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"net/url"
 
+	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass/api"
@@ -26,17 +27,19 @@ var (
 	ErrDeviceRegistrationFailed = errors.New("device registration failed")
 )
 
-func (c *Client) RegisterDevice(ctx context.Context, registration *preferences.Registration) error {
+// RegisterDevice will register the device running Go Hass Agent with Home
+// Assistant, using the details from the preferences passed in.
+func RegisterDevice(ctx context.Context, registration *preferences.Registration) error {
 	// Validate provided registration details.
 	if err := registration.Validate(); err != nil {
 		return errors.Join(ErrDeviceRegistrationFailed, err)
 	}
 
-	req := c.newDeviceRegistration()
+	req := newDeviceRegistration(ctx)
 	resp := api.DeviceRegistrationResponse{}
 
 	// Set up the api request, and the request/response bodies.
-	apiReq := c.restAPI.R().SetContext(ctx)
+	apiReq := api.NewClient().R().SetContext(ctx)
 	apiReq.SetAuthToken(registration.Token)
 	apiReq.SetBody(req)
 	apiReq = apiReq.SetResult(&resp)
@@ -93,7 +96,7 @@ func (c *Client) RegisterDevice(ctx context.Context, registration *preferences.R
 // Assistant to identify the host running Go Hass Agent. While most of the
 // information generated is only needed during registration, the device ID and
 // Name will be stored in the preferences for later reference.
-func (c *Client) newDeviceRegistration() *api.DeviceRegistrationRequest {
+func newDeviceRegistration(ctx context.Context) *api.DeviceRegistrationRequest {
 	dev := &api.DeviceRegistrationRequest{
 		AppName:    preferences.AppName,
 		AppVersion: preferences.AppVersion(),
@@ -103,7 +106,7 @@ func (c *Client) newDeviceRegistration() *api.DeviceRegistrationRequest {
 	// Retrieve the name as the device name.
 	name, err := device.GetHostname()
 	if err != nil {
-		c.logger.Warn("Unable to determine device hostname.",
+		logging.FromContext(ctx).Warn("Unable to determine device hostname.",
 			slog.Any("error", err))
 	}
 
@@ -112,7 +115,7 @@ func (c *Client) newDeviceRegistration() *api.DeviceRegistrationRequest {
 	// Generate a new unique Device ID
 	id, err := device.NewDeviceID()
 	if err != nil {
-		c.logger.Warn("Unable to generate a device ID.",
+		logging.FromContext(ctx).Warn("Unable to generate a device ID.",
 			slog.Any("error", err))
 	}
 
@@ -121,7 +124,7 @@ func (c *Client) newDeviceRegistration() *api.DeviceRegistrationRequest {
 	// Retrieve the OS name and version.
 	osName, osVersion, err := device.GetOSID()
 	if err != nil {
-		c.logger.Warn("Unable to determine OS details.",
+		logging.FromContext(ctx).Warn("Unable to determine OS details.",
 			slog.Any("error", err))
 	}
 
@@ -131,7 +134,7 @@ func (c *Client) newDeviceRegistration() *api.DeviceRegistrationRequest {
 	// Retrieve the hardware model and manufacturer.
 	model, manufacturer, err := device.GetHWProductInfo()
 	if err != nil {
-		c.logger.Warn("Unable to determine device hardware details.",
+		logging.FromContext(ctx).Warn("Unable to determine device hardware details.",
 			slog.Any("error", err))
 	}
 
@@ -143,7 +146,7 @@ func (c *Client) newDeviceRegistration() *api.DeviceRegistrationRequest {
 		preferences.SetDeviceID(dev.DeviceID),
 		preferences.SetDeviceName(dev.DeviceName),
 	); err != nil {
-		c.logger.Warn("Could not save device id/name.",
+		logging.FromContext(ctx).Warn("Could not save device id/name.",
 			slog.Any("error", err))
 	}
 
