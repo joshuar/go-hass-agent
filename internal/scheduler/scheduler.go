@@ -6,7 +6,9 @@ package scheduler
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
+	"math/rand"
 	"time"
 
 	"github.com/reugn/go-quartz/quartz"
@@ -70,4 +72,35 @@ func (m *ManagerProps) ScheduleJob(job quartz.Job, trigger quartz.Trigger) error
 		slog.String("job_desc", job.Description()))
 
 	return nil
+}
+
+// PollTriggerWithJitter implements the quartz.Trigger interface; uses a fixed
+// interval with an amount of jitter.
+type PollTriggerWithJitter struct {
+	Interval time.Duration
+	Jitter   time.Duration
+}
+
+// Verify PollTriggerWithJitter satisfies the Trigger interface.
+var _ quartz.Trigger = (*PollTriggerWithJitter)(nil)
+
+// NewPollTriggerWithJitter returns a new PollTriggerWithJitter using the given interval.
+func NewPollTriggerWithJitter(interval, jitter time.Duration) *PollTriggerWithJitter {
+	return &PollTriggerWithJitter{
+		Interval: interval,
+		Jitter:   jitter,
+	}
+}
+
+// NextFireTime returns the next time at which the PollTriggerWithJitter is scheduled to fire.
+func (pt *PollTriggerWithJitter) NextFireTime(prev int64) (int64, error) {
+	jitter := rand.NormFloat64()*float64(pt.Jitter) + float64(pt.Interval) // #nosec: G404
+	next := prev + int64(jitter)
+
+	return next, nil
+}
+
+// Description returns the description of the PollTriggerWithJitter.
+func (pt *PollTriggerWithJitter) Description() string {
+	return fmt.Sprintf("PollTriggerWithJitter%s%s", quartz.Sep, pt.Interval)
 }
