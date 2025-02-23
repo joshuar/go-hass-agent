@@ -12,6 +12,8 @@ import (
 	"time"
 
 	"github.com/go-resty/resty/v2"
+	"github.com/reugn/go-quartz/job"
+	"github.com/reugn/go-quartz/quartz"
 
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
@@ -21,6 +23,7 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/hass/sensor"
 	"github.com/joshuar/go-hass-agent/internal/hass/tracker"
 	"github.com/joshuar/go-hass-agent/internal/models"
+	"github.com/joshuar/go-hass-agent/internal/scheduler"
 )
 
 const (
@@ -54,9 +57,11 @@ type Client struct {
 	sensorTracker  sensorTracker
 	restAPI        *resty.Client
 	logger         *slog.Logger
+	config         *Config
 }
 
 var (
+	ErrClientSetup = errors.New("could not set up client")
 	ErrNewRequest  = errors.New("could not create request")
 	ErrSendRequest = errors.New("send request failed")
 	ErrGetConfig   = errors.New("error retrieving Home Assistant config")
@@ -66,9 +71,9 @@ var (
 // disabled, we need to make an additional check against Home Assistant to see
 // if the sensor has been re-enabled, and update our local registry before
 // continuing.
-func (c *Client) isDisabled(ctx context.Context, details models.Sensor) bool {
+func (c *Client) isDisabled(details models.Sensor) bool {
 	regDisabled := c.isDisabledInReg(details.UniqueID)
-	haDisabled := c.isDisabledInHA(ctx, details)
+	haDisabled := c.isDisabledInHA(details.UniqueID)
 
 	switch {
 	case regDisabled && !haDisabled:
@@ -95,51 +100,61 @@ func (c *Client) isDisabled(ctx context.Context, details models.Sensor) bool {
 
 // isDisabledInReg returns the disabled state of the sensor from the local
 // registry.
-//
-//revive:disable:unused-receiver
-func (c *Client) isDisabledInReg(id string) bool {
+func (c *Client) isDisabledInReg(id models.UniqueID) bool {
 	return c.sensorRegistry.IsDisabled(id)
 }
 
 // isDisabledInHA returns the disabled state of the sensor from Home Assistant.
-func (c *Client) isDisabledInHA(ctx context.Context, sensor models.Sensor) bool {
-	config, err := c.getHAConfig(ctx)
+func (c *Client) isDisabledInHA(id models.UniqueID) bool {
+	status, err := c.config.IsEntityDisabled(id)
 	if err != nil {
 		c.logger.Debug("Could not retrieve Home Assistant config. Assuming sensor is NOT disabled.",
-			sensor.LogAttributes(),
 			slog.Any("error", err))
-		return false
-	}
 
-	status, err := config.IsEntityDisabled(sensor.UniqueID)
-	if err != nil {
-		c.logger.Debug("Could not retrieve Home Assistant config. Assuming sensor is NOT disabled.",
-			slog.Any("error", err))
 		return false
 	}
 
 	return status
 }
 
-// GetHAConfig retrieves the Home Assistant config.
-func (c *Client) getHAConfig(ctx context.Context) (*api.ConfigResponse, error) {
+func (c *Client) scheduleConfigUpdates() error {
+	getConfigJob := job.NewFunctionJobWithDesc(c.UpdateConfig, "Fetch Home Assistant Configuration.")
+
+	err := scheduler.Manager.ScheduleJob(getConfigJob, quartz.NewSimpleTrigger(30*time.Second))
+	if err != nil {
+		return errors.Join(ErrClientSetup, err)
+	}
+
+	return nil
+}
+
+func (c *Client) UpdateConfig(ctx context.Context) (bool, error) {
 	resp, err := c.SendRequest(ctx, preferences.RestAPIURL(), api.Request{Type: api.GetConfig})
 	if err != nil {
-		return nil, errors.Join(ErrGetConfig, err)
+		return false, errors.Join(ErrGetConfig, err)
 	}
 
-	config, err := resp.AsConfigResponse()
+	configResp, err := resp.AsConfigResponse()
 	if err != nil {
-		return nil, errors.Join(ErrGetConfig, err)
+		return false, errors.Join(ErrGetConfig, err)
 	}
 
-	return &config, nil
+	c.config.Update(&configResp)
+
+	return true, nil
 }
 
 // EntityHandler takes incoming Entity objects via the passed in channel and
 // runs the appropriate handler for the Entity type.
 func (c *Client) EntityHandler(ctx context.Context, entityCh chan models.Entity) {
 	ctx = logging.ToContext(ctx, c.logger)
+
+	// Init and update Home Assistant config if necessary.
+	if c.config == nil {
+		c.logger.Debug("Performing initial cache of Home Assistant configuration.")
+		c.config = &Config{}
+		c.UpdateConfig(ctx)
+	}
 
 	for entity := range entityCh {
 		if eventData, err := entity.AsEvent(); err == nil && eventData.Valid() {
@@ -165,7 +180,7 @@ func (c *Client) EntityHandler(ctx context.Context, entityCh chan models.Entity)
 
 		if sensorData, err := entity.AsSensor(); err == nil {
 			// Send sensor details.
-			if c.sensorRegistry.IsRegistered(sensorData.UniqueID) && !c.isDisabled(ctx, sensorData) {
+			if c.sensorRegistry.IsRegistered(sensorData.UniqueID) && !c.isDisabled(sensorData) {
 				// If the sensor is registered and not disabled, send an update request.
 				if err := sensor.UpdateHandler(ctx, c, sensorData); err != nil {
 					c.logger.Warn("Could not update sensor.",
@@ -275,15 +290,8 @@ func (c *Client) SendRequest(ctx context.Context, url string, req api.Request) (
 }
 
 // GetHAVersion retrieves the Home Assistant version.
-func (c *Client) GetHAVersion(ctx context.Context) string {
-	config, err := c.getHAConfig(ctx)
-	if err != nil {
-		c.logger.Warn("Could not fetch Home Assistant config.",
-			slog.Any("error", err))
-		return "Unknown"
-	}
-
-	return config.GetVersion()
+func (c *Client) GetHAVersion() string {
+	return c.config.GetVersion()
 }
 
 func (c *Client) GetSensorList() []models.UniqueID {
@@ -309,8 +317,9 @@ func (c *Client) RegisterSensor(id models.UniqueID) error {
 // NewClient creates a new hass client, which tracks last sensor status,
 // sensor registration status and handles sending and processing requests to the
 // Home Assistant REST API.
-func NewClient(ctx context.Context, reg sensorRegistry) *Client {
-	return &Client{
+func NewClient(ctx context.Context, reg sensorRegistry) (*Client, error) {
+	// Create the client.
+	client := &Client{
 		logger:         logging.FromContext(ctx).WithGroup("hass"),
 		sensorRegistry: reg,
 		sensorTracker:  tracker.NewTracker(),
@@ -323,4 +332,10 @@ func NewClient(ctx context.Context, reg sensorRegistry) *Client {
 				return r.StatusCode() == http.StatusTooManyRequests
 			}),
 	}
+	// Schedule a job to get the Home Assistant on a regular interval.
+	if err := client.scheduleConfigUpdates(); err != nil {
+		return nil, errors.Join(ErrClientSetup, err)
+	}
+
+	return client, nil
 }

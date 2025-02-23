@@ -58,7 +58,7 @@ type Notification interface {
 // Hass provides methods for retrieving data from Home Assistant that the UI
 // needs to display.
 type Hass interface {
-	GetHAVersion(ctx context.Context) string
+	GetHAVersion() string
 	GetSensorList() []models.UniqueID
 	GetSensor(id models.UniqueID) (*models.Sensor, error)
 }
@@ -109,7 +109,7 @@ func (i *FyneUI) DisplayTrayIcon(ctx context.Context, cancelFunc context.CancelF
 		// About menu item.
 		menuItemAbout := fyne.NewMenuItem("About",
 			func() {
-				i.aboutWindow(ctx).Show()
+				i.aboutWindow().Show()
 			})
 		// Sensors menu item.
 		menuItemSensors := fyne.NewMenuItem("Sensors",
@@ -197,7 +197,7 @@ func (i *FyneUI) DisplayRegistrationWindow(ctx context.Context, prefs *preferenc
 
 // aboutWindow creates a window that will show some interesting information
 // about the agent, such as version numbers.
-func (i *FyneUI) aboutWindow(ctx context.Context) fyne.Window {
+func (i *FyneUI) aboutWindow() fyne.Window {
 	var widgets []fyne.CanvasObject
 
 	icon := canvas.NewImageFromResource(&ui.TrayIcon{})
@@ -209,7 +209,7 @@ func (i *FyneUI) aboutWindow(ctx context.Context) fyne.Window {
 			fyne.TextStyle{Bold: true}))
 
 	widgets = append(widgets,
-		widget.NewLabelWithStyle("Home Assistant "+i.hass.GetHAVersion(ctx),
+		widget.NewLabelWithStyle("Home Assistant "+i.hass.GetHAVersion(),
 			fyne.TextAlignCenter,
 			fyne.TextStyle{Bold: true}),
 	)
