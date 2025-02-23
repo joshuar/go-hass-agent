@@ -44,7 +44,8 @@
     "linux/disk",
     "linux/location",
     "pkg/whichdistro",
-    "models"
+    "models",
+    "components/id"
   ],
   "go.testFlags": ["-v"],
   "[markdown]": {
