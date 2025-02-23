@@ -40,12 +40,12 @@ func Start(ctx context.Context) error {
 		logger:    logging.FromContext(ctx).WithGroup("scheduler"),
 	}
 
-	Manager.logger.Info("Starting scheduler.")
+	Manager.logger.Debug("Starting scheduler.")
 	scheduler.Start(ctx)
 
 	go func() {
 		<-ctx.Done()
-		Manager.logger.Info("Stopping scheduler.")
+		Manager.logger.Debug("Stopping scheduler.")
 		scheduler.Stop()
 	}()
 
@@ -64,6 +64,10 @@ func (m *ManagerProps) ScheduleJob(job quartz.Job, trigger quartz.Trigger) error
 	if err := m.scheduler.ScheduleJob(jobDetail, trigger); err != nil {
 		return errors.Join(ErrScheduleFailed, err)
 	}
+
+	m.logger.Debug("Scheduled job.",
+		slog.String("job_key", jobKey),
+		slog.String("job_desc", job.Description()))
 
 	return nil
 }
