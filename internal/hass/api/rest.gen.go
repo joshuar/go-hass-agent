@@ -45,10 +45,10 @@ type ConfigResponse struct {
 	Elevation  *int      `json:"elevation,omitempty"`
 
 	// Entities is the list sensor entities registered with this app and their status.
-	Entities     *map[string]map[string]interface{} `json:"entities,omitempty"`
-	Latitude     *float32                           `json:"latitude,omitempty"`
-	LocationName *string                            `json:"location_name,omitempty"`
-	Longitude    *float32                           `json:"longitude,omitempty"`
+	Entities     nullable.Nullable[map[string]map[string]interface{}] `json:"entities,omitempty"`
+	Latitude     *float32                                             `json:"latitude,omitempty"`
+	LocationName *string                                              `json:"location_name,omitempty"`
+	Longitude    *float32                                             `json:"longitude,omitempty"`
 
 	// TimeZone is the configured timezone of the Home Assistant instance.
 	TimeZone *string `json:"time_zone,omitempty"`
