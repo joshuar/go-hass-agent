@@ -13,14 +13,14 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/components/registry"
-	"github.com/joshuar/go-hass-agent/internal/hass"
+	"github.com/joshuar/go-hass-agent/internal/hass/registration"
 )
 
 // checkRegistration retrieves any registration information passed on the
 // command-line and then checks to see if the agent needs to register to Home
 // Assistant. If it does, it will perform the registration via either a
 // graphical (user-prompted) or non-graphical (automatic) process.
-func checkRegistration(ctx context.Context, headless bool, hass *hass.Client, agentUI ui) error {
+func checkRegistration(ctx context.Context, headless bool, agentUI ui) error {
 	// Retrieve request options passed on command-line from context.
 	request := preferences.RegistrationFromCtx(ctx)
 	if request == nil {
@@ -41,7 +41,7 @@ func checkRegistration(ctx context.Context, headless bool, hass *hass.Client, ag
 	}
 
 	// Perform registration with given values.
-	err := hass.RegisterDevice(ctx, request)
+	err := registration.RegisterDevice(ctx, request)
 	if err != nil {
 		return fmt.Errorf("device registration failed: %w", err)
 	}

@@ -77,7 +77,7 @@ func Run(ctx context.Context, headless bool, api APIs) error {
 	go func() {
 		defer regWait.Done()
 		// Check if the agent is registered. If not, start a registration flow.
-		if err = checkRegistration(ctx, headless, api.Hass(), agent.ui); err != nil {
+		if err = checkRegistration(ctx, headless, agent.ui); err != nil {
 			agent.logger.Error("Error checking registration status.", slog.Any("error", err))
 			cancelFunc()
 		}
@@ -173,7 +173,7 @@ func Run(ctx context.Context, headless bool, api APIs) error {
 // Register is run when Go Hass Agent is invoked with the `register`
 // command-line option (i.e., `go-hass-agent register`). It will attempt to
 // register Go Hass Agent with Home Assistant.
-func Register(ctx context.Context, headless bool, api APIs) error {
+func Register(ctx context.Context, headless bool) error {
 	var wg sync.WaitGroup
 
 	agent := newAgent(ctx, headless, nil)
@@ -189,7 +189,7 @@ func Register(ctx context.Context, headless bool, api APIs) error {
 	go func() {
 		defer wg.Done()
 
-		if err := checkRegistration(regCtx, headless, api.Hass(), agent.ui); err != nil {
+		if err := checkRegistration(regCtx, headless, agent.ui); err != nil {
 			agent.logger.Error("Error checking registration status", slog.Any("error", err))
 		}
 

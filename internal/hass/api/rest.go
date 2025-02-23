@@ -5,7 +5,18 @@ package api
 
 import (
 	"errors"
+	"net/http"
 	"strings"
+	"time"
+
+	"github.com/go-resty/resty/v2"
+)
+
+const (
+	defaultTimeout      = 30 * time.Second
+	defaultRetryWait    = 5 * time.Second
+	defaultRetryCount   = 5
+	defaultRetryMaxWait = 20 * time.Second
 )
 
 var (
@@ -73,4 +84,17 @@ func (r *ResponseStatus) SensorDisabled() bool {
 	}
 
 	return false
+}
+
+// NewClient creates a new resty client that can be used to communicate with the
+// Home Assistant REST API.
+func NewClient() *resty.Client {
+	return resty.New().
+		SetTimeout(defaultTimeout).
+		SetRetryCount(defaultRetryCount).
+		SetRetryWaitTime(defaultRetryWait).
+		SetRetryMaxWaitTime(defaultRetryMaxWait).
+		AddRetryCondition(func(r *resty.Response, _ error) bool {
+			return r.StatusCode() == http.StatusTooManyRequests
+		})
 }

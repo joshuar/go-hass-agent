@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"net/http"
 	"time"
 
 	"github.com/go-resty/resty/v2"
@@ -24,13 +23,6 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/hass/tracker"
 	"github.com/joshuar/go-hass-agent/internal/models"
 	"github.com/joshuar/go-hass-agent/internal/scheduler"
-)
-
-const (
-	defaultTimeout      = 30 * time.Second
-	defaultRetryWait    = 5 * time.Second
-	defaultRetryCount   = 5
-	defaultRetryMaxWait = 20 * time.Second
 )
 
 // sensorRegistry represents the required methods for hass to manage sensor
@@ -317,14 +309,7 @@ func NewClient(ctx context.Context, reg sensorRegistry) (*Client, error) {
 		sensorRegistry: reg,
 		sensorTracker:  tracker.NewTracker(),
 		config:         &Config{ConfigResponse: &api.ConfigResponse{}},
-		restAPI: resty.New().
-			SetTimeout(defaultTimeout).
-			SetRetryCount(defaultRetryCount).
-			SetRetryWaitTime(defaultRetryWait).
-			SetRetryMaxWaitTime(defaultRetryMaxWait).
-			AddRetryCondition(func(r *resty.Response, _ error) bool {
-				return r.StatusCode() == http.StatusTooManyRequests
-			}),
+		restAPI:        api.NewClient(),
 	}
 	// Schedule a job to get the Home Assistant on a regular interval.
 	if err := client.scheduleConfigUpdates(); err != nil {
