@@ -144,7 +144,6 @@ require (
 	github.com/go-text/typesetting v0.2.0 // indirect
 	github.com/gofrs/uuid/v5 v5.3.0
 	github.com/gopherjs/gopherjs v1.17.2 // indirect
-	github.com/illarion/gonotify/v3 v3.0.2
 	github.com/jaypipes/ghw v0.13.0
 	github.com/jfreymuth/pulse v0.1.1
 	github.com/jsimonetti/rtnetlink v1.4.2
