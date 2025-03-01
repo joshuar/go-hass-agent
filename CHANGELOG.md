@@ -1,5 +1,42 @@
 # Changelog
 
+## [13.0.0](https://github.com/joshuar/go-hass-agent/compare/v12.0.1...v13.0.0) (2025-03-01)
+
+
+### ⚠ BREAKING CHANGES
+
+* **scripts:** script sensors are now run using a new scheduler backend. The scheduling is still based on cron schedule strings but some more complex/esoteric schedule strings may no longer work.
+
+### Features
+
+* :sparkles: add a job scheduler ([281c03c](https://github.com/joshuar/go-hass-agent/commit/281c03cd23d56e2382f5b0cf8070d17a4e5b3009))
+* **linux:** :zap: use a common struct to manage rate sensor values ([7bbbedb](https://github.com/joshuar/go-hass-agent/commit/7bbbedb2ba5a3c33bbd566b05d2c68c9a907c436))
+* **linux/media:** :sparkles: add webcam and mic in use sensors ([46f2ad8](https://github.com/joshuar/go-hass-agent/commit/46f2ad8825ea399eb60893800f8069612f90d7e6))
+* **models:** :sparkles: start implementing various types and objects with openapi-codegen ([ba96a3e](https://github.com/joshuar/go-hass-agent/commit/ba96a3e221d0a2d33ced5d095eedb493fbc7712a))
+* **scheduler:** :sparkles: implement a poll trigger with jitter ([26b3d99](https://github.com/joshuar/go-hass-agent/commit/26b3d99ebd2b9f002423fdf4cc7ae3160dc2cd21))
+* **scripts:** :boom: use scheduler for scripts ([1c4e8dd](https://github.com/joshuar/go-hass-agent/commit/1c4e8dd00d49e9985c1f841fad275c553d40c5c5))
+
+
+### Bug Fixes
+
+* :fire: fix missed worker conversions ([6b37417](https://github.com/joshuar/go-hass-agent/commit/6b3741749557f4b1b43226b33654b5e57aeb9f7e))
+* :rotating_light: fix more linter warnings ([a563eec](https://github.com/joshuar/go-hass-agent/commit/a563eecf3f0cf24e22809a541b49fb3cd79bca54))
+* **hass:** :bug: actually update local registration on sensor registration ([17e8966](https://github.com/joshuar/go-hass-agent/commit/17e8966bf6be21cb1ce4e468b0c106af7a34829a))
+* **hass:** :bug: better handling of initial case where HA config has no entity status ([7156ec9](https://github.com/joshuar/go-hass-agent/commit/7156ec90476f4968d8648bb849a3655d9cc0cb95))
+* **hass:** :bug: ensure authorization request header is set and url format is valid ([6969547](https://github.com/joshuar/go-hass-agent/commit/6969547aaf9c0832c944148fb8a6a375b7523ced))
+* **hass/api:** :bug: correct display of error code returned from Home Assistant Rest API ([82966ab](https://github.com/joshuar/go-hass-agent/commit/82966ab62dfc7d036d662f92d8d47836591bd801))
+* **linux/battery:** :rotating_light: clean-up code from linter warnings ([b901c65](https://github.com/joshuar/go-hass-agent/commit/b901c658e8c1c03cd6dec8e36f3cf28cebd4a5b8))
+* **linux/cpu:** :rotating_light: clean-up code from linter warnings ([8dda011](https://github.com/joshuar/go-hass-agent/commit/8dda0115aeab658c608368554845fe9c6e2a00bd))
+* **linux/desktop:** clean-up code from linter warnings ([be848db](https://github.com/joshuar/go-hass-agent/commit/be848dbdfe4018685d1dd7acd81bb58c393f1ca3))
+* **linux/media:** :bug: fix preferences location for media sensors ([d8696b1](https://github.com/joshuar/go-hass-agent/commit/d8696b159bec4e566c197c1b93c69f4c8b61be39))
+* **models:** :bug: make sure device/state class are sent as strings to Home Assistant ([5c83f9c](https://github.com/joshuar/go-hass-agent/commit/5c83f9cd1d4d66e96c13564dbcb0610cf716943e))
+
+
+### Performance Improvements
+
+* **agent:** :recycle: combine sensor and event workers ([b35bf98](https://github.com/joshuar/go-hass-agent/commit/b35bf98fb3e2637625633b2997ab2a4bed512d9e))
+* **hass:** :zap: reduce number of requests per entity update ([1ab7fad](https://github.com/joshuar/go-hass-agent/commit/1ab7fadbfdf3bb40476e0b0a30286daf1cf087f0))
+
 ## [12.0.1](https://github.com/joshuar/go-hass-agent/compare/v12.0.0...v12.0.1) (2025-02-05)
 
 
