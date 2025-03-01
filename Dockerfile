@@ -5,7 +5,7 @@
 
 FROM docker.io/alpine@sha256:0a4eaa0eecf5f8c050e5bba433f58c052be7587ee8af3e8b3910ef9ab5fbe9f5 AS builder
 # Copy go from official image.
-COPY --from=golang:1.23.2-alpine /usr/local/go/ /usr/local/go/
+COPY --from=golang:1.24.0-alpine /usr/local/go/ /usr/local/go/
 ENV PATH="/root/go/bin:/usr/local/go/bin:${PATH}"
 # Import TARGETPLATFORM.
 ARG TARGETPLATFORM
