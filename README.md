@@ -80,6 +80,9 @@
         - [YAML](#yaml)
         - [TOML](#toml)
     - [Schedule](#schedule)
+      - [Cron Expressions](#cron-expressions)
+      - [Pre-defined Intervals](#pre-defined-intervals)
+      - [Arbitrary Intervals](#arbitrary-intervals)
     - [Security Implications](#security-implications)
   - [💬 MQTT Sensors and Controls](#-mqtt-sensors-and-controls)
     - [Configuration](#configuration)
@@ -202,7 +205,10 @@ this app:
 - Media:
   - **MPRIS Player State** Show the current state of any MPRIS compatible player.
     - Requires a player with MPRIS support.
-  - [*Preferences*](#️-preferences): `[sensors.media.mpris]`.
+  - **Webcam/Microphone in use** Show when either a webcam or microphone is one
+    and recording/streaming video/audio.
+    - Requires Pipewire.
+  - [*Preferences*](#️-preferences): All under `[sensors.media]`.
 - Connected Battery Details:
   - **Battery Type** (the type of battery, e.g., UPS, line power). Updated on battery add/remove.
   - **Battery Temp** (battery temperature). Updated when the temperature changes.
@@ -792,32 +798,33 @@ compressed JSON format:
 The `schedule` field is used to specify the schedule or interval on which the
 script will be run by the agent. Each script is run on its own schedule. All
 sensors and their values should be returned each time the script is run. The
-format is documented by the [cron Golang
-package](https://pkg.go.dev/github.com/robfig/cron/v3#hdr-CRON_Expression_Format).
-In most cases, it is presumed that the script needs to be run on some interval
-of time. In that case, the easiest way to specify that is with the `@every
-<duration>` as per the [example output](#examples) such as:
+following formats are supported.
 
-- `@every 5s`: every 5 seconds
-- `@every 1h30m`: every 1 and a half hours.
+##### Cron Expressions
 
-Or a pre-defined schedule:
+Regular Cron expressions as per the [Quartz
+format](https://www.quartz-scheduler.org/documentation/quartz-2.3.0/tutorials/tutorial-lesson-06.html).
 
-- `@hourly`.
-- `@daily`.
-- `@weekly`.
-- `@monthly`.
-- `@yearly`.
+##### Pre-defined Intervals
 
-However, more cron formats are supported:
+You may use one of several pre-defined schedules in place of a Cron expression.
 
-- `"30 * * * *"`: every hour on the half hour.
-- `"30 3-6,20-23 * * *"`: in the range 3-6am, 8-11pm.
-- `"CRON_TZ=Asia/Tokyo 30 04 * * *"`: at 04:30 Tokyo time every day.
+Entry                  | Description                                | Equivalent To
+-----                  | -----------                                | -------------
+`@yearly` (or `@annually`) | Run once a year, midnight, Jan. 1st        | `0 0 1 1 *`
+`@monthly`               | Run once a month, midnight, first of month | `0 0 1 * *`
+`@weekly`                | Run once a week, midnight between Sat/Sun  | `0 0 * * 0`
+`@daily` (or `@midnight`)  | Run once a day, midnight                   | `0 0 * * *`
+`@hourly`                | Run once an hour, beginning of hour        | `0 * * * *`
 
-> [!NOTE]
->
-> Some schedules, while supported, might not make much sense.
+##### Arbitrary Intervals
+
+Arbitrary intervals are supported with the format:
+
+`@every <duration>`
+
+`<duration>` must be a string accepted by
+[time.ParseDuration](http://golang.org/pkg/time/#ParseDuration).
 
 #### Security Implications
 

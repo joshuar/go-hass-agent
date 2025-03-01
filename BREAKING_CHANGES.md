@@ -4,23 +4,57 @@
 
 - [BREAKING CHANGES](#breaking-changes)
   - [Table of Contents](#table-of-contents)
+  - [Version 13.0.0](#version-1300)
+    - [New Scheduler Implementation used by Script sensors](#new-scheduler-implementation-used-by-script-sensors)
+      - [What you need to do](#what-you-need-to-do)
   - [Version 12.0.0](#version-1200)
     - [Sensors/Controls preferences Restructure](#sensorscontrols-preferences-restructure)
-      - [What you need to do](#what-you-need-to-do)
+      - [What you need to do](#what-you-need-to-do-1)
   - [Version 11.0.0](#version-1100)
     - [Worker and Agent preferences merge](#worker-and-agent-preferences-merge)
-      - [What you need to do](#what-you-need-to-do-1)
+      - [What you need to do](#what-you-need-to-do-2)
   - [Version 10.0.0](#version-1000)
     - [New preferences file location and format](#new-preferences-file-location-and-format)
-      - [What you need to do](#what-you-need-to-do-2)
+      - [What you need to do](#what-you-need-to-do-3)
         - [Run the upgrade command](#run-the-upgrade-command)
         - [Manual upgrade steps (if the upgrade command failed)](#manual-upgrade-steps-if-the-upgrade-command-failed)
     - [Log file location normalization](#log-file-location-normalization)
-      - [What you need to do](#what-you-need-to-do-3)
-    - [MQTT Device renamed](#mqtt-device-renamed)
       - [What you need to do](#what-you-need-to-do-4)
-    - [Power controls renaming and consolidation (when using MQTT)](#power-controls-renaming-and-consolidation-when-using-mqtt)
+    - [MQTT Device renamed](#mqtt-device-renamed)
       - [What you need to do](#what-you-need-to-do-5)
+    - [Power controls renaming and consolidation (when using MQTT)](#power-controls-renaming-and-consolidation-when-using-mqtt)
+      - [What you need to do](#what-you-need-to-do-6)
+
+## Version 13.0.0
+
+### New Scheduler Implementation used by Script sensors
+
+Script sensors are now using a common scheduler implementation. This change has
+reduced the recognizable Cron expressions that can be used in script
+sensors. As a ***TL;DR*** summary:
+
+- Standard Cron expressions using the 6 fields `* * * * * *` (with an optional 7th field
+  for year) are supported.
+- The following pre-defined schedulers are still supported:
+  - `@yearly`/`@annually`.
+  - `@monthly`
+  - `@weekly`
+  - `@daily`
+  - `@hourly`
+- Intervals are still supported:
+  - `@every <duration>` (e.g. `@every 5s`).
+
+Other more esoteric patterns that were previously supported, are no longer
+usable. Script sensors **not** using the above expressions will likely fail to run
+on Go Hass Agent v13+ without manually changing the expression to a supported
+one. See the [README](README.md#schedule) for all supported expressions.
+
+#### What you need to do
+
+If you have a script sensor **not** using an expression listed in the
+[README](README.md#schedule), you will need to manually adjust your script to
+use a supported expression. Most common previously-supported expressions are
+still supported, so hopefully minimal script edits are needed.
 
 ## Version 12.0.0
 
