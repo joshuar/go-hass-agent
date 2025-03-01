@@ -18,8 +18,7 @@ import (
 )
 
 const (
-	webcamUsageWorkerID            = "webcam_usage_sensor"
-	webcamUsageWorkerPreferencesID = webcamUsageWorkerID
+	webcamUsageWorkerID = "webcam_usage_sensor"
 )
 
 var (
@@ -134,7 +133,7 @@ func (w *webcamUsageWorker) Sensors(ctx context.Context) ([]models.Entity, error
 }
 
 func (w *webcamUsageWorker) PreferencesID() string {
-	return webcamUsageWorkerPreferencesID
+	return webcamUsagePrefID
 }
 
 func (w *webcamUsageWorker) DefaultPreferences() preferences.CommonWorkerPrefs {

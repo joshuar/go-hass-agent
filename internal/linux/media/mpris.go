@@ -29,8 +29,6 @@ const (
 
 	mprisDBusPath      = "/org/mpris/MediaPlayer2"
 	mprisDBusNamespace = "org.mpris.MediaPlayer2.Player"
-
-	mprisPreferencesID = preferences.SensorsPrefPrefix + "media" + preferences.PathDelim + "mpris"
 )
 
 var ErrInitMPRISWorker = errors.New("could not init MPRIS worker")
@@ -44,7 +42,7 @@ type mprisMonitor struct {
 }
 
 func (m *mprisMonitor) PreferencesID() string {
-	return mprisPreferencesID
+	return mprisPrefID
 }
 
 func (m *mprisMonitor) DefaultPreferences() preferences.CommonWorkerPrefs {

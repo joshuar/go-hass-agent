@@ -18,8 +18,7 @@ import (
 )
 
 const (
-	micUsageWorkerID            = "microphone_usage_sensor"
-	micUsageWorkerPreferencesID = micUsageWorkerID
+	micUsageWorkerID = "microphone_usage_sensor"
 )
 
 var (
@@ -131,7 +130,7 @@ func (w *micUsageWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 }
 
 func (w *micUsageWorker) PreferencesID() string {
-	return webcamUsageWorkerPreferencesID
+	return micUsagePrefID
 }
 
 func (w *micUsageWorker) DefaultPreferences() preferences.CommonWorkerPrefs {
