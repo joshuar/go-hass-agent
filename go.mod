@@ -52,6 +52,7 @@ require (
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
 	github.com/go-git/go-billy/v5 v5.6.1 // indirect
 	github.com/go-git/go-git/v5 v5.13.1 // indirect
+	github.com/go-json-experiment/json v0.0.0-20240815175050-ebd3a8989ca1 // indirect
 	github.com/go-openapi/jsonpointer v0.21.0 // indirect
 	github.com/go-openapi/swag v0.23.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.2.1 // indirect
@@ -120,13 +121,14 @@ require (
 
 require (
 	fyne.io/systray v1.11.0 // indirect
+	github.com/ConnorsApps/pipewire-monitor-go v0.1.0
 	github.com/adrg/xdg v0.5.3
 	github.com/alecthomas/kong v1.8.1
 	github.com/blackjack/webcam v0.6.1
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/fredbi/uri v1.1.0 // indirect
-	github.com/fsnotify/fsnotify v1.7.0 // indirect
+	github.com/fsnotify/fsnotify v1.8.0 // indirect
 	github.com/fyne-io/gl-js v0.0.0-20220119005834-d2da28d9ccfe // indirect
 	github.com/fyne-io/glfw-js v0.0.0-20241126112943-313d8a0fe1d0 // indirect
 	github.com/fyne-io/image v0.0.0-20220602074514-4956b0afb3d2 // indirect
@@ -142,6 +144,7 @@ require (
 	github.com/go-text/typesetting v0.2.0 // indirect
 	github.com/gofrs/uuid/v5 v5.3.0
 	github.com/gopherjs/gopherjs v1.17.2 // indirect
+	github.com/illarion/gonotify/v3 v3.0.2
 	github.com/jaypipes/ghw v0.13.0
 	github.com/jfreymuth/pulse v0.1.1
 	github.com/jsimonetti/rtnetlink v1.4.2
