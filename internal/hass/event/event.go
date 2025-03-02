@@ -28,6 +28,7 @@ func newEventRequest(event *models.Event) (*api.Request, error) {
 
 	req := &api.Request{
 		Type:      api.FireEvent,
+		Data:      &api.Request_Data{},
 		Retryable: event.Retryable,
 	}
 
