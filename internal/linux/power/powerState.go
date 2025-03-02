@@ -118,9 +118,11 @@ func (w *stateWorker) Events(ctx context.Context) (<-chan models.Entity, error) 
 					entity, err = newPowerState(ctx, suspend, event.Content[0])
 				case strings.HasSuffix(event.Signal, shutdownSignal):
 					entity, err = newPowerState(ctx, shutdown, event.Content[0])
+				default:
+					continue
 				}
 
-				if err != nil || entity == nil {
+				if err != nil {
 					logging.FromContext(ctx).Warn("Could not generate power state sensor.",
 						slog.Any("error", err))
 					continue
