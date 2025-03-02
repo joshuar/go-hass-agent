@@ -15,8 +15,15 @@ import (
 // monitorPipewire starts a listener for pipewire events, filters events by the
 // given eventFilter function and returns the filtered events on the eventCh channel.
 func monitorPipewire(ctx context.Context, eventCh chan []*pwmonitor.Event, eventFilter func(*pwmonitor.Event) bool) {
-	if err := pwmonitor.Monitor(ctx, eventCh, eventFilter); err != nil {
-		logging.FromContext(ctx).Warn("Could not stop pipewire monitor cleanly.",
-			slog.Any("error", err))
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			if err := pwmonitor.Monitor(ctx, eventCh, eventFilter); err != nil {
+				logging.FromContext(ctx).Warn("Pipewire monitor shutdown unexpectedly. Restarting.",
+					slog.Any("error", err))
+			}
+		}
 	}
 }
