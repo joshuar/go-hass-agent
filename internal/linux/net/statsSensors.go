@@ -1,4 +1,4 @@
-// Copyright 2024 Joshua Rich <joshua.rich@gmail.com>.
+// Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
 // SPDX-License-Identifier: MIT
 
 // Parts of the code for collecting stats was adapted from Prometheus:

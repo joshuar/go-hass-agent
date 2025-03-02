@@ -1,3 +1,8 @@
+<!--
+ Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
+ SPDX-License-Identifier: MIT
+-->
+
 # Security Policy
 
 Thanks for helping to make Go Hass Agent a safe and useful application for everyone.
