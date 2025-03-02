@@ -40,7 +40,7 @@ type Event struct {
 	Type string `json:"event_type" validate:"required"`
 
 	// Retryable indicates whether requests should be retried when sending this event data to Home Assistant.
-	Retryable *bool `json:"-"`
+	Retryable bool `json:"-"`
 }
 
 // Icon is a material design icon to represent the entity. Must be prefixed mdi:. If not provided, default value is mdi:cellphone.
@@ -95,7 +95,7 @@ type Sensor struct {
 	Name Name `json:"name" validate:"required"`
 
 	// Retryable indicates whether requests should be retried when sending this sensor data to Home Assistant.
-	Retryable *bool `json:"-"`
+	Retryable bool `json:"-"`
 
 	// State is the current state of the entity.
 	State State `json:"state" validate:"required"`

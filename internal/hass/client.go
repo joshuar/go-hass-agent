@@ -226,7 +226,7 @@ func (c *Client) SendRequest(ctx context.Context, url string, req api.Request) (
 	apiReq = apiReq.SetResult(&resp)
 
 	// If request needs to be retried, retry the request on any error.
-	if req.Retryable != nil && *req.Retryable {
+	if req.Retryable {
 		apiReq = apiReq.AddRetryCondition(
 			func(_ *resty.Response, err error) bool {
 				return err != nil
