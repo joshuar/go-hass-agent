@@ -9,6 +9,7 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
+	"github.com/joshuar/go-hass-agent/internal/components/validation"
 	"github.com/joshuar/go-hass-agent/internal/hass/api"
 	"github.com/joshuar/go-hass-agent/internal/models"
 )
@@ -21,6 +22,10 @@ type API interface {
 
 // NewEventRequest takes event data and creates an event request.
 func newEventRequest(event *models.Event) (*api.Request, error) {
+	if valid, problems := validation.ValidateStruct(event); !valid {
+		return nil, errors.Join(ErrHandleEvent, problems)
+	}
+
 	req := &api.Request{
 		Type:      api.FireEvent,
 		Retryable: event.Retryable,

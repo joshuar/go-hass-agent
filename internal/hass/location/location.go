@@ -9,6 +9,7 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
+	"github.com/joshuar/go-hass-agent/internal/components/validation"
 	"github.com/joshuar/go-hass-agent/internal/hass/api"
 	"github.com/joshuar/go-hass-agent/internal/models"
 )
@@ -21,6 +22,10 @@ type API interface {
 
 // newLocationRequest takes location data and creates a location request.
 func newLocationRequest(location *models.Location) (*api.Request, error) {
+	if valid, problems := validation.ValidateStruct(location); !valid {
+		return nil, errors.Join(ErrHandleLocation, problems)
+	}
+
 	req := &api.Request{
 		Type: api.UpdateLocation,
 	}
