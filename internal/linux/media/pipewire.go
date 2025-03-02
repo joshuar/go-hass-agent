@@ -21,7 +21,7 @@ func monitorPipewire(ctx context.Context, eventCh chan []*pwmonitor.Event, event
 			return
 		default:
 			if err := pwmonitor.Monitor(ctx, eventCh, eventFilter); err != nil {
-				logging.FromContext(ctx).Warn("Pipewire monitor shutdown unexpectedly. Restarting.",
+				logging.FromContext(ctx).Debug("Pipewire monitor shutdown unexpectedly. Restarting.",
 					slog.Any("error", err))
 			}
 		}
