@@ -1,5 +1,18 @@
 # Changelog
 
+## [13.1.0](https://github.com/joshuar/go-hass-agent/compare/v13.0.1...v13.1.0) (2025-03-02)
+
+
+### Features
+
+* **hass:** :building_construction: perform validation on data received before making requests ([96cc423](https://github.com/joshuar/go-hass-agent/commit/96cc423c81a09fe1acd1d8243940ff349f57db0b))
+* **service:** :sparkles: systemd service improvements ([bcae15f](https://github.com/joshuar/go-hass-agent/commit/bcae15f2cd4fa76eac092d825c083bf39154cb82))
+
+
+### Bug Fixes
+
+* **hass:** :bug: retryable is a required field on entities and requests ([9677b9c](https://github.com/joshuar/go-hass-agent/commit/9677b9ca1c7b2532e09f8685fd060a5189689fc7))
+
 ## [13.0.1](https://github.com/joshuar/go-hass-agent/compare/v13.0.0...v13.0.1) (2025-03-02)
 
 
