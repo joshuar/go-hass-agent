@@ -1,3 +1,8 @@
+<!--
+ Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
+ SPDX-License-Identifier: MIT
+-->
+
 # BREAKING CHANGES
 
 ## Table of Contents

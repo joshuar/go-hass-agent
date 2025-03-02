@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
-
-# Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-# 
-# This software is released under the MIT License.
-# https://opensource.org/licenses/MIT
+# Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
+# SPDX-License-Identifier: MIT
 
 set -e
 
@@ -21,7 +18,7 @@ function join_by { local IFS="$1"; shift; echo "$*"; }
 # ensure the existing defualt repos are only consulted for amd64 arch
 sed -i 's|^deb\s|deb [arch=amd64] |g' /etc/apt/sources.list
 # add the additional arch
-for arch in "${pkgarch[@]}"; do 
+for arch in "${pkgarch[@]}"; do
     dpkg --add-architecture ${arch}
 done
 archs=$(join_by , "${pkgarch[@]}")

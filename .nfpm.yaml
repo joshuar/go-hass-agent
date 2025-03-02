@@ -1,7 +1,6 @@
-# nfpm example configuration file
-#
-# check https://nfpm.goreleaser.com/configuration for detailed usage
-#
+# Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
+# SPDX-License-Identifier: MIT
+
 name: "go-hass-agent"
 version: ${APPVERSION}
 section: "default"

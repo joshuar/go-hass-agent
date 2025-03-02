@@ -1,8 +1,3 @@
-# Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-#
-# This software is released under the MIT License.
-# https://opensource.org/licenses/MIT
-
 repos:
   - repo: https://github.com/compilerla/conventional-pre-commit
     rev: v3.3.0

@@ -1,7 +1,5 @@
-# Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-#
-# This software is released under the MIT License.
-# https://opensource.org/licenses/MIT
+# Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
+# SPDX-License-Identifier: MIT
 
 FROM docker.io/alpine@sha256:0a4eaa0eecf5f8c050e5bba433f58c052be7587ee8af3e8b3910ef9ab5fbe9f5 AS builder
 # Copy go from official image.
