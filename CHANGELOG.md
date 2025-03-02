@@ -1,5 +1,14 @@
 # Changelog
 
+## [13.1.1](https://github.com/joshuar/go-hass-agent/compare/v13.1.0...v13.1.1) (2025-03-02)
+
+
+### Bug Fixes
+
+* **hass:** :bug: ensure entity data is writeable before marshaling from event ([9c105c2](https://github.com/joshuar/go-hass-agent/commit/9c105c2dff20ec06747a2bc1f77b43eb756cb1ac))
+* **linux/power:** :bug: ignore non power state signals in power state sensor code ([2f9335c](https://github.com/joshuar/go-hass-agent/commit/2f9335c38d2331135c151dad43319fa30c5c2f66))
+* **linux/system:** :bug: correct logic around session added/removed events ([ded1d58](https://github.com/joshuar/go-hass-agent/commit/ded1d58548e10edf6e21759061e0c9f0f4340106))
+
 ## [13.1.0](https://github.com/joshuar/go-hass-agent/compare/v13.0.1...v13.1.0) (2025-03-02)
 
 
