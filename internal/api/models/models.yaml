@@ -58,6 +58,7 @@ components:
       required:
         - event_type
         - event_data
+        - retryable
       properties:
         event_type:
           description: is the type of the event to fire.
@@ -181,6 +182,8 @@ components:
         - $ref: '#/components/schemas/SensorState'
         - $ref: '#/components/schemas/SensorRegistration'
         - type: object
+          required:
+            - retryable
           properties:
             retryable:
               description: >

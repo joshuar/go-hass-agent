@@ -131,6 +131,7 @@ components:
       type: object
       required:
         - type
+        - retryable
       properties:
         type:
           $ref: '#/components/schemas/RequestType'

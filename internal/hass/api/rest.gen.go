@@ -132,7 +132,7 @@ type Request struct {
 	Encrypted *bool `json:"encrypted,omitempty"`
 
 	// Retryable indicates whether the request can be retried.
-	Retryable *bool `json:"-"`
+	Retryable bool `json:"-"`
 
 	// Type is the type of request.
 	Type RequestType `json:"type"`

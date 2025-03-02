@@ -175,7 +175,7 @@ func AsDiagnostic() Option {
 // to Home Assistant related to this sensor should be retried.
 func AsRetryableRequest(value bool) Option {
 	return func(s *models.Sensor) error {
-		s.Retryable = &value
+		s.Retryable = value
 		return nil
 	}
 }
