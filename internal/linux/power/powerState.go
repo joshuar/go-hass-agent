@@ -120,7 +120,7 @@ func (w *stateWorker) Events(ctx context.Context) (<-chan models.Entity, error) 
 					entity, err = newPowerState(ctx, shutdown, event.Content[0])
 				}
 
-				if err != nil {
+				if err != nil || entity == nil {
 					logging.FromContext(ctx).Warn("Could not generate power state sensor.",
 						slog.Any("error", err))
 					continue
