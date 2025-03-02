@@ -46,7 +46,8 @@
     "pkg/whichdistro",
     "models",
     "components/id",
-    "scheduler"
+    "scheduler",
+    "service"
   ],
   "go.testFlags": ["-v"],
   "[markdown]": {
