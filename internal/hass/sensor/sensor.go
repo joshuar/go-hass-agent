@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
+	"github.com/joshuar/go-hass-agent/internal/components/validation"
 	"github.com/joshuar/go-hass-agent/internal/hass/api"
 	"github.com/joshuar/go-hass-agent/internal/models"
 )
@@ -20,47 +21,42 @@ type API interface {
 	DisableSensor(id models.UniqueID)
 }
 
-// newSensorStateRequest takes sensor data and creates a sensor state update
-// request.
-func newSensorStateRequest(sensor *models.Sensor) (*api.Request, error) {
+// newSensorRequest takes sensor data and creates an api.Request for the given
+// request type.
+func newSensorRequest(reqType api.RequestType, sensor *models.Sensor) (*api.Request, error) {
+	if valid, problems := validation.ValidateStruct(sensor); !valid {
+		return nil, errors.Join(ErrHandleSensor, problems)
+	}
+
 	req := &api.Request{
-		Type:      api.UpdateSensorStates,
+		Type:      reqType,
 		Retryable: sensor.Retryable,
 		Data:      &api.Request_Data{},
 	}
 
-	state, err := sensor.AsState()
-	if err != nil {
-		return nil, errors.Join(ErrHandleSensor, err)
-	}
+	switch reqType {
+	case api.UpdateSensorStates:
+		state, err := sensor.AsState()
+		if err != nil {
+			return nil, errors.Join(ErrHandleSensor, err)
+		}
 
-	// Add the sensor state into the request.
-	err = req.Data.FromSensorState(*state)
-	if err != nil {
-		return nil, errors.Join(ErrHandleSensor, err)
-	}
+		// Add the sensor state into the request.
+		err = req.Data.FromSensorState(*state)
+		if err != nil {
+			return nil, errors.Join(ErrHandleSensor, err)
+		}
+	case api.RegisterSensor:
+		registration, err := sensor.AsRegistration()
+		if err != nil {
+			return nil, errors.Join(ErrHandleSensor, err)
+		}
 
-	return req, nil
-}
-
-// newSensorRegistrationRequest takes sensor data and creates a sensor
-// registration request.
-func newSensorRegistrationRequest(sensor *models.Sensor) (*api.Request, error) {
-	req := &api.Request{
-		Type:      api.RegisterSensor,
-		Retryable: sensor.Retryable,
-		Data:      &api.Request_Data{},
-	}
-
-	registration, err := sensor.AsRegistration()
-	if err != nil {
-		return nil, errors.Join(ErrHandleSensor, err)
-	}
-
-	// Add the sensor registration into the request.
-	err = req.Data.FromSensorRegistration(*registration)
-	if err != nil {
-		return nil, errors.Join(ErrHandleSensor, err)
+		// Add the sensor registration into the request.
+		err = req.Data.FromSensorRegistration(*registration)
+		if err != nil {
+			return nil, errors.Join(ErrHandleSensor, err)
+		}
 	}
 
 	return req, nil
@@ -69,7 +65,7 @@ func newSensorRegistrationRequest(sensor *models.Sensor) (*api.Request, error) {
 // UpdateHandler handles sending sensor data as an update request to Home Assistant and
 // processing the response.
 func UpdateHandler(ctx context.Context, client API, sensor models.Sensor) error {
-	req, err := newSensorStateRequest(&sensor)
+	req, err := newSensorRequest(api.UpdateSensorStates, &sensor)
 	if err != nil {
 		return errors.Join(ErrHandleSensor, err)
 	}
@@ -113,7 +109,7 @@ func UpdateHandler(ctx context.Context, client API, sensor models.Sensor) error 
 // RegistrationHandler handles sending sensor data as an registration request to Home Assistant and
 // processing the response.
 func RegistrationHandler(ctx context.Context, client API, sensor models.Sensor) (bool, error) {
-	req, err := newSensorRegistrationRequest(&sensor)
+	req, err := newSensorRequest(api.RegisterSensor, &sensor)
 	if err != nil {
 		return false, errors.Join(ErrHandleSensor, err)
 	}
