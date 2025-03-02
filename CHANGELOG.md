@@ -1,5 +1,13 @@
 # Changelog
 
+## [13.0.1](https://github.com/joshuar/go-hass-agent/compare/v13.0.0...v13.0.1) (2025-03-02)
+
+
+### Bug Fixes
+
+* **linux/media:** :bug: restart pipewire monitor if it crashes unexpectedly ([351e8b2](https://github.com/joshuar/go-hass-agent/commit/351e8b29a379360aa9f8f8b72413d72bb0c5632b))
+* **linux/power:** :bug: don't send nil power state entity ([f8c4837](https://github.com/joshuar/go-hass-agent/commit/f8c483757683e404a6ba5dc781bf4ed080a1fc8a))
+
 ## [13.0.0](https://github.com/joshuar/go-hass-agent/compare/v12.0.1...v13.0.0) (2025-03-01)
 
 
