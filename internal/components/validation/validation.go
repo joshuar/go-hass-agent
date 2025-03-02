@@ -20,8 +20,12 @@ func init() {
 }
 
 // ValidationErrors is a map of fields and their validation errors.
+//
+//nolint:errname
+//revive:disable:exported
 type ValidationErrors map[string][]string
 
+// Error allows ValidationErrors to be treated as an error.
 func (p ValidationErrors) Error() string {
 	var message strings.Builder
 	for field, problems := range p {
@@ -39,7 +43,6 @@ func (p ValidationErrors) Error() string {
 }
 
 //nolint:errorlint
-//revive:disable:unhandled-error
 func ParseValidationErrors(validation error) string {
 	validationErrs, ok := validation.(validator.ValidationErrors)
 	if !ok {
@@ -62,6 +65,9 @@ func ParseValidationErrors(validation error) string {
 	return message.String()
 }
 
+// parseStructValidationErrors takes the underlying validation errors and
+// formats them so that each struct field has an array of all validation errors
+// associated with it.
 func parseStructValidationErrors(validationErrors validator.ValidationErrors) ValidationErrors {
 	problems := make(ValidationErrors)
 
@@ -74,6 +80,11 @@ func parseStructValidationErrors(validationErrors validator.ValidationErrors) Va
 	return problems
 }
 
+// ValidateStruct will validate a struct using the validate tags assigned on the
+// struct fields. It returns a boolean representing whether the struct is valid.
+// If the struct is not valid, the second return value will be a non-nil map of
+// struct field names and an array of validation errors for that field.
+//
 //nolint:errorlint,errcheck
 func ValidateStruct[T any](obj T) (bool, ValidationErrors) {
 	validationErr := &validator.ValidationErrors{}
@@ -94,6 +105,10 @@ func ValidateStruct[T any](obj T) (bool, ValidationErrors) {
 	return true, nil
 }
 
+// ValidateVariable takes a single variable of any type and checks whether it is
+// valid according to the given validation rule. It returns a boolean
+// representing whether the struct is valid. If an error occurred with
+// validation, a non-nil error will also be returned.
 func ValidateVariable(variable any, rule string) (bool, error) {
 	if err := Validate.Var(variable, rule); err != nil {
 		return false, fmt.Errorf("invalid: %w", err)
