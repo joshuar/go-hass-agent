@@ -251,8 +251,9 @@ func (w *UserSessionEventsWorker) Events(ctx context.Context) (<-chan models.Ent
 				// Send the appropriate event type.
 				switch {
 				case strings.Contains(trigger.Signal, sessionAddedSignal):
+					// Add the session to the tracker.
 					w.tracker.addSession(string(path))
-
+					// Send the session added event.
 					entity, err := event.NewEvent(sessionStartedEventName, w.tracker.sessions[string(path)])
 					if err != nil {
 						logging.FromContext(ctx).Warn("Could not generate users event.", slog.Any("error", err))
@@ -260,14 +261,15 @@ func (w *UserSessionEventsWorker) Events(ctx context.Context) (<-chan models.Ent
 						eventCh <- entity
 					}
 				case strings.Contains(trigger.Signal, sessionRemovedSignal):
-					w.tracker.removeSession(string(path))
-
+					// Send the session removed event.
 					entity, err := event.NewEvent(sessionStoppedEventName, w.tracker.sessions[string(path)])
 					if err != nil {
 						logging.FromContext(ctx).Warn("Could not generate users event.", slog.Any("error", err))
 					} else {
 						eventCh <- entity
 					}
+					// Remove the session from the tracker.
+					w.tracker.removeSession(string(path))
 				}
 			}
 		}
