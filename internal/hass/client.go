@@ -240,7 +240,7 @@ func (c *Client) SendRequest(ctx context.Context, url string, req api.Request) (
 			slog.Group("request",
 				slog.String("method", "POST"),
 				slog.String("url", url),
-				slog.Any("body", req.Data),
+				// slog.Any("body", req.Data),
 				slog.Time("sent_at", time.Now()),
 			),
 		)
