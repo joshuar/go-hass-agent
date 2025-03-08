@@ -11,11 +11,12 @@ func _() {
 	_ = x[Unknown-0]
 	_ = x[ScriptJob-1]
 	_ = x[HassJob-2]
+	_ = x[Worker-3]
 }
 
-const _Prefix_name = "unknownscript_jobhass_job"
+const _Prefix_name = "unknownscript_jobhass_jobworker"
 
-var _Prefix_index = [...]uint8{0, 7, 17, 25}
+var _Prefix_index = [...]uint8{0, 7, 17, 25, 31}
 
 func (i Prefix) String() string {
 	if i < 0 || i >= Prefix(len(_Prefix_index)-1) {
