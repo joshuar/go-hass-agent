@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 //revive:disable:unused-receiver
-package cli
+package cmd
 
 import (
 	"fmt"
@@ -11,10 +11,10 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 )
 
-// VersionCmd: `go-hass-agent version`.
-type VersionCmd struct{}
+// Version: `go-hass-agent version`.
+type Version struct{}
 
-func (r *VersionCmd) Run(_ *CmdOpts) error {
+func (r *Version) Run(_ *Opts) error {
 	fmt.Fprintf(os.Stdout, "%s: %s\n", preferences.AppName, preferences.AppVersion())
 
 	return nil

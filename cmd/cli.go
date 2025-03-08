@@ -1,7 +1,7 @@
 // Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
 // SPDX-License-Identifier: MIT
 
-package cli
+package cmd
 
 import (
 	"embed"
@@ -28,19 +28,19 @@ func (a *API) Hass() *hass.Client {
 	return a.hass
 }
 
-// CmdOpts are the global command-line options common across all commands.
-type CmdOpts struct {
+// Opts are the global command-line options common across all commands.
+type Opts struct {
 	Logger   *slog.Logger
 	Headless bool
 	Path     string
 }
 
 // Option represents a command-line option.
-type Option func(*CmdOpts) *CmdOpts
+type Option func(*Opts) *Opts
 
 // AddOptions adds the given options to a command.
-func AddOptions(options ...Option) *CmdOpts {
-	commandOptions := &CmdOpts{}
+func AddOptions(options ...Option) *Opts {
+	commandOptions := &Opts{}
 	for _, option := range options {
 		option(commandOptions)
 	}
@@ -50,7 +50,7 @@ func AddOptions(options ...Option) *CmdOpts {
 
 // RunHeadless sets the headless command-line option.
 func RunHeadless(opt bool) Option {
-	return func(ctx *CmdOpts) *CmdOpts {
+	return func(ctx *Opts) *Opts {
 		ctx.Headless = opt
 		return ctx
 	}
@@ -58,7 +58,7 @@ func RunHeadless(opt bool) Option {
 
 // WithLogger sets the logger that will be inherited by the command.
 func WithLogger(logger *slog.Logger) Option {
-	return func(ctx *CmdOpts) *CmdOpts {
+	return func(ctx *Opts) *Opts {
 		ctx.Logger = logger
 		return ctx
 	}
@@ -66,7 +66,7 @@ func WithLogger(logger *slog.Logger) Option {
 
 // WithPath sets a custom path for Go Hass Agent preferences, logs and data.
 func WithPath(path string) Option {
-	return func(ctx *CmdOpts) *CmdOpts {
+	return func(ctx *Opts) *Opts {
 		ctx.Path = path
 		return ctx
 	}

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 //revive:disable:unused-receiver
-package cli
+package cmd
 
 import (
 	"context"
@@ -21,14 +21,14 @@ import (
 
 var ErrRunCmdFailed = errors.New("run command failed")
 
-// RunCmd: `go-hass-agent run`.
-type RunCmd struct{}
+// Run: `go-hass-agent run`.
+type Run struct{}
 
-func (r *RunCmd) Help() string {
+func (r *Run) Help() string {
 	return showHelpTxt("run-help")
 }
 
-func (r *RunCmd) Run(opts *CmdOpts) error {
+func (r *Run) Run(opts *Opts) error {
 	ctx, cancelFunc := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancelFunc()
 

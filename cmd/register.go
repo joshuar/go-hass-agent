@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 //revive:disable:unused-receiver
-package cli
+package cmd
 
 import (
 	"context"
@@ -18,19 +18,19 @@ import (
 
 var ErrRegisterCmdFailed = errors.New("register command failed")
 
-// RegisterCmd: `go-hass-agent register`.
-type RegisterCmd struct {
+// Register: `go-hass-agent register`.
+type Register struct {
 	Server     string `help:"Home Assistant server."`
 	Token      string `help:"Personal Access Token."`
 	Force      bool   `help:"Force registration."`
 	IgnoreURLs bool   `help:"Ignore URLs returned by Home Assistant and use provided server for access."`
 }
 
-func (r *RegisterCmd) Help() string {
+func (r *Register) Help() string {
 	return showHelpTxt("register-help")
 }
 
-func (r *RegisterCmd) Run(opts *CmdOpts) error {
+func (r *Register) Run(opts *Opts) error {
 	ctx, cancelFunc := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancelFunc()
 
