@@ -1,29 +1,5 @@
 {
-  "name": "Go Hass Agent Development",
-  "dockerComposeFile": "docker-compose.yml",
-  "service": "devcontainer",
-  "shutdownAction": "stopCompose",
   "containerUser": "vscode",
-  "updateRemoteUserUID": true,
-  "workspaceFolder": "/workspace",
-  "remoteEnv": {
-    "DBUS_SESSION_BUS_ADDRESS": "${localEnv:DBUS_SESSION_BUS_ADDRESS}",
-    "DESKTOP_SESSION": "${localEnv:DESKTOP_SESSION}",
-    "DISPLAY": "${localEnv:DISPLAY}",
-    "XAUTHORITY": "${localEnv:XAUTHORITY}",
-    "XDG_CURRENT_DESKTOP": "${localEnv:XDG_CURRENT_DESKTOP}",
-    "XDG_DATA_DIRS": "${localEnv:XDG_DATA_DIRS}",
-    "XDG_MENU_PREFIX": "${localEnv:XDG_MENU_PREFIX}",
-    "XDG_RUNTIME_DIR": "${localEnv:XDG_RUNTIME_DIR}",
-    "XDG_SESSION_DESKTOP": "${localEnv:XDG_SESSION_DESKTOP}",
-    "XDG_SESSION_TYPE": "${localEnv:XDG_SESSION_TYPE}",
-    "HOME": "/home/vscode"
-  },
-  "features": {
-    "ghcr.io/devcontainers/features/go:1": {},
-    "ghcr.io/devcontainers/features/github-cli:1": {}
-  },
-  "postCreateCommand": "bash .devcontainer/postcreate.sh",
   "customizations": {
     "vscode": {
       "extensions": [
@@ -46,33 +22,63 @@
         "foxundermoon.shell-format"
       ],
       "settings": {
+        "[go.mod]": {
+          "editor.codeActionsOnSave": {
+            "source.organizeImports": "always"
+          },
+          "editor.formatOnSave": true
+        },
+        "[go]": {
+          "editor.defaultFormatter": "golang.go",
+          "editor.codeActionsOnSave": {
+            "source.fixAll": "always",
+            "source.organizeImports": "always"
+          },
+          "editor.formatOnSave": true
+        },
+        "go.lintFlags": [
+          "--fast"
+        ],
         "go.lintTool": "golangci-lint",
-        "go.lintFlags": ["--fast"],
+        "go.useLanguageServer": true,
+        "go.diagnostic.vulncheck": "Imports",
+        "go.formatTool": "goimports",
         "gopls": {
-          "ui.semanticTokens": true,
-          "ui.noSemanticString": true, // delegates string syntax highlighting to vscode
-          "ui.noSemanticNumber": true, // delegates number syntax highlighting to vscode
           "formatting.gofumpt": true,
           "formatting.local": "github.com/joshuar/go-hass-agent",
           "ui.diagnostic.analyses": {
             "unusedvariable": true
-          }
-        },
-        "go.useLanguageServer": true,
-        "[go]": {
-          "editor.formatOnSave": true,
-          "editor.codeActionsOnSave": {
-            "source.organizeImports": "always",
-            "source.fixAll": "always"
-          }
-        },
-        "[go.mod]": {
-          "editor.formatOnSave": true,
-          "editor.codeActionsOnSave": {
-            "source.organizeImports": "always"
-          }
+          },
+          "ui.semanticTokens": true
         }
       }
     }
-  }
+  },
+  "dockerComposeFile": "docker-compose.yml",
+  "features": {
+    "ghcr.io/devcontainers-extra/features/prettier:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/devcontainers/features/go:1": {},
+    "ghcr.io/meaningful-ooo/devcontainer-features/fish:2": {},
+    "ghcr.io/schlich/devcontainer-features/starship:0": {}
+  },
+  "name": "Go Hass Agent Development",
+  "postCreateCommand": "bash .devcontainer/postcreate.sh",
+  "remoteEnv": {
+    "DBUS_SESSION_BUS_ADDRESS": "${localEnv:DBUS_SESSION_BUS_ADDRESS}",
+    "DESKTOP_SESSION": "${localEnv:DESKTOP_SESSION}",
+    "DISPLAY": "${localEnv:DISPLAY}",
+    "HOME": "/home/vscode",
+    "XAUTHORITY": "${localEnv:XAUTHORITY}",
+    "XDG_CURRENT_DESKTOP": "${localEnv:XDG_CURRENT_DESKTOP}",
+    "XDG_DATA_DIRS": "${localEnv:XDG_DATA_DIRS}",
+    "XDG_MENU_PREFIX": "${localEnv:XDG_MENU_PREFIX}",
+    "XDG_RUNTIME_DIR": "${localEnv:XDG_RUNTIME_DIR}",
+    "XDG_SESSION_DESKTOP": "${localEnv:XDG_SESSION_DESKTOP}",
+    "XDG_SESSION_TYPE": "${localEnv:XDG_SESSION_TYPE}"
+  },
+  "service": "devcontainer",
+  "shutdownAction": "stopCompose",
+  "updateRemoteUserUID": true,
+  "workspaceFolder": "/workspace"
 }
