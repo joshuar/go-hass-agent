@@ -1,7 +1,14 @@
----
+# yaml-language-server: $schema=https://raw.githubusercontent.com/OAI/OpenAPI-Specification/refs/heads/main/schemas/v3.0/schema.yaml
+
 # Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
 # SPDX-License-Identifier: MIT
 
+openapi: "3.0.3"
+info:
+  version: 1.0.0
+  title: Home Assistant REST API
+  description: Schema and models for using the Home Assistant REST API.
+paths: {}
 components:
   schemas:
     RequestType:
@@ -117,13 +124,13 @@ components:
         webhook_id:
           $ref: '#/components/schemas/WebhookID'
     Location:
-      $ref: '../models/models.yaml#/components/schemas/Location'
+      $ref: 'models.yaml#/components/schemas/Location'
     SensorState:
-      $ref: '../models/models.yaml#/components/schemas/SensorState'
+      $ref: 'models.yaml#/components/schemas/SensorState'
     SensorRegistration:
-      $ref: '../models/models.yaml#/components/schemas/SensorRegistration'
+      $ref: 'models.yaml#/components/schemas/SensorRegistration'
     Event:
-     $ref: '../models/models.yaml#/components/schemas/Event'
+     $ref: 'models.yaml#/components/schemas/Event'
     Config:
       type: object
     Request:
