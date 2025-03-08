@@ -48,7 +48,8 @@
     "components/id",
     "scheduler",
     "service",
-    "components/validation"
+    "components/validation",
+    "schemas"
   ],
   "go.testFlags": ["-v"],
   "[markdown]": {
