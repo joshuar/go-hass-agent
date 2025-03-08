@@ -21,6 +21,11 @@
 !assets/
 !build/
 !**/testdata/*
+!.prettierrc
+!.vscode/tasks.json
+!.vscode/launch.json
+!.devcontainer/*
+.devcontainer/.env
 
 !LICENSE
 !deployments/mosquitto/config/mosquitto.conf.example
@@ -30,5 +35,4 @@
 
 # always ignore these
 dist/
-fyne-cross/
 deployments/

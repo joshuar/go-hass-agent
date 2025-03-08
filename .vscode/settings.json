@@ -1,4 +1,17 @@
 {
+  "[markdown]": {
+    "diffEditor.ignoreTrimWhitespace": false,
+    "editor.defaultFormatter": "yzhang.markdown-all-in-one",
+    "editor.quickSuggestions": {
+      "comments": "off",
+      "other": "off",
+      "strings": "off"
+    },
+    "editor.trimAutoWhitespace": true,
+    "editor.unicodeHighlight.ambiguousCharacters": false,
+    "editor.unicodeHighlight.invisibleCharacters": false,
+    "editor.wordWrap": "on"
+  },
   "conventionalCommits.scopes": [
     "github",
     "agent",
@@ -51,20 +64,9 @@
     "components/validation",
     "schemas"
   ],
-  "go.testFlags": ["-v"],
-  "[markdown]": {
-    "editor.defaultFormatter": "yzhang.markdown-all-in-one",
-    "editor.unicodeHighlight.ambiguousCharacters": false,
-    "editor.unicodeHighlight.invisibleCharacters": false,
-    "diffEditor.ignoreTrimWhitespace": false,
-    "editor.wordWrap": "on",
-    "editor.trimAutoWhitespace": true,
-    "editor.quickSuggestions": {
-      "comments": "off",
-      "strings": "off",
-      "other": "off"
-    }
-  },
+  "go.testFlags": [
+    "-v"
+  ],
   "licenser.author": "Joshua Rich <joshua.rich@gmail.com>",
   "licenser.license": "MIT",
   "licenser.useSPDXLicenseFormat": true
