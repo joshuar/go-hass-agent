@@ -1,7 +1,7 @@
 // Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
 // SPDX-License-Identifier: MIT
 
-package cli
+package cmd
 
 import (
 	"context"
@@ -16,14 +16,14 @@ import (
 
 var ErrMQTTServerRequired = errors.New("mqtt-server not specified")
 
-// ConfigCmd: `go-hass-agent config`.
-type ConfigCmd struct {
+// Config: `go-hass-agent config`.
+type Config struct {
 	MQTTConfig `kong:"help='Set MQTT options.'"`
 }
 
 type MQTTConfig preferences.MQTTPreferences
 
-func (r *ConfigCmd) Run(opts *CmdOpts) error {
+func (r *Config) Run(opts *Opts) error {
 	ctx, cancelFunc := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancelFunc()
 

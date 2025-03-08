@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 //revive:disable:unused-receiver
-package cli
+package cmd
 
 import (
 	"context"
@@ -21,14 +21,14 @@ import (
 
 var ErrResetCommandFailed = errors.New("reset command failed")
 
-// ResetCmd: `go-hass-agent reset`.
-type ResetCmd struct{}
+// Reset: `go-hass-agent reset`.
+type Reset struct{}
 
-func (r *ResetCmd) Help() string {
+func (r *Reset) Help() string {
 	return showHelpTxt("reset-help")
 }
 
-func (r *ResetCmd) Run(opts *CmdOpts) error {
+func (r *Reset) Run(opts *Opts) error {
 	var errs error
 
 	ctx, cancelFunc := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)

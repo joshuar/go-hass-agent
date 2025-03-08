@@ -12,7 +12,7 @@ import (
 	"github.com/adrg/xdg"
 	"github.com/alecthomas/kong"
 
-	"github.com/joshuar/go-hass-agent/internal/cli"
+	"github.com/joshuar/go-hass-agent/cmd"
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 )
@@ -22,14 +22,14 @@ import (
 //
 //nolint:lll
 var CLI struct {
-	Run          cli.RunCmd           `cmd:"" help:"Run Go Hass Agent."`
-	Reset        cli.ResetCmd         `cmd:"" help:"Reset Go Hass Agent."`
-	Version      cli.VersionCmd       `cmd:"" help:"Show the Go Hass Agent version."`
-	Upgrade      cli.UpgradeCmd       `cmd:"" help:"Attempt to upgrade from previous version."`
+	Run          cmd.Run              `cmd:"" help:"Run Go Hass Agent."`
+	Reset        cmd.Reset            `cmd:"" help:"Reset Go Hass Agent."`
+	Version      cmd.Version          `cmd:"" help:"Show the Go Hass Agent version."`
+	Upgrade      cmd.Upgrade          `cmd:"" help:"Attempt to upgrade from previous version."`
 	ProfileFlags logging.ProfileFlags `name:"profile" help:"Set profiling flags."`
-	Headless     *cli.HeadlessFlag    `name:"terminal" help:"Run without a GUI." default:"false"`
-	Config       cli.ConfigCmd        `cmd:"" help:"Configure Go Hass Agent."`
-	Register     cli.RegisterCmd      `cmd:"" help:"Register with Home Assistant."`
+	Headless     *cmd.HeadlessFlag    `name:"terminal" help:"Run without a GUI." default:"false"`
+	Config       cmd.Config           `cmd:"" help:"Configure Go Hass Agent."`
+	Register     cmd.Register         `cmd:"" help:"Register with Home Assistant."`
 	Path         string               `name:"path" default:"${defaultPath}" help:"Specify a custom path to store preferences/logs/data (for debugging)."`
 
 	logging.Options
@@ -66,10 +66,10 @@ func main() {
 		}
 	}
 	// Run the requested command with the provided options.
-	if err := ctx.Run(cli.AddOptions(
-		cli.RunHeadless(bool(*CLI.Headless)),
-		cli.WithLogger(logger),
-		cli.WithPath(CLI.Path),
+	if err := ctx.Run(cmd.AddOptions(
+		cmd.RunHeadless(bool(*CLI.Headless)),
+		cmd.WithLogger(logger),
+		cmd.WithPath(CLI.Path),
 	)); err != nil {
 		logger.Error("Command failed.",
 			slog.String("command", ctx.Command()),

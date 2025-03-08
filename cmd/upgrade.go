@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 //revive:disable:unused-receiver
-package cli
+package cmd
 
 import (
 	"context"
@@ -17,15 +17,15 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/upgrade"
 )
 
-// UpgradeCmd: `go-hass-agent upgrade`.
-type UpgradeCmd struct{}
+// Upgrade: `go-hass-agent upgrade`.
+type Upgrade struct{}
 
-func (r *UpgradeCmd) Help() string {
+func (r *Upgrade) Help() string {
 	return showHelpTxt("upgrade-help")
 }
 
 //nolint:sloglint
-func (r *UpgradeCmd) Run(opts *CmdOpts) error {
+func (r *Upgrade) Run(opts *Opts) error {
 	ctx, cancelFunc := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancelFunc()
 
