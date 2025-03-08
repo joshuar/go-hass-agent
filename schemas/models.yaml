@@ -11,6 +11,30 @@ info:
 paths: {}
 components:
   schemas:
+    ID:
+      description: >
+        represents a unique global ID.
+      type: string
+      x-oapi-codegen-extra-tags:
+        validate: 'required'
+    MQTTMsg:
+      description: >
+        is an MQTT message.
+      x-go-type: 'mqtt.Msg'
+      x-go-type-import:
+        path: github.com/joshuar/go-hass-anything/v12/pkg/mqtt
+    MQTTConfig:
+      description: >
+        is an MQTT message containing configuration data for an entity.
+      x-go-type: 'mqtt.Msg'
+      x-go-type-import:
+        path: github.com/joshuar/go-hass-anything/v12/pkg/mqtt
+    MQTTSubscription:
+      description: >
+        is an MQTT message containing a subscription request.
+      x-go-type: 'mqtt.Subscription'
+      x-go-type-import:
+        path: github.com/joshuar/go-hass-anything/v12/pkg/mqtt
     # Entity Keys:
     UniqueID:
       description: is a unique identifier for a entity.

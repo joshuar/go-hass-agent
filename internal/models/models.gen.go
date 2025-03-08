@@ -6,6 +6,7 @@ package models
 import (
 	"encoding/json"
 
+	"github.com/joshuar/go-hass-anything/v12/pkg/mqtt"
 	"github.com/oapi-codegen/runtime"
 )
 
@@ -43,6 +44,9 @@ type Event struct {
 	Retryable bool `json:"-"`
 }
 
+// ID represents a unique global ID.
+type ID = string
+
 // Icon is a material design icon to represent the entity. Must be prefixed mdi:. If not provided, default value is mdi:cellphone.
 type Icon = string
 
@@ -70,6 +74,15 @@ type Location struct {
 	// VerticalAccuracy is the accuracy of the altitude value, measured in meters. Must be greater than 0.
 	VerticalAccuracy *int `json:"vertical_accuracy,omitempty"`
 }
+
+// MQTTConfig is an MQTT message containing configuration data for an entity.
+type MQTTConfig = mqtt.Msg
+
+// MQTTMsg is an MQTT message.
+type MQTTMsg = mqtt.Msg
+
+// MQTTSubscription is an MQTT message containing a subscription request.
+type MQTTSubscription = mqtt.Subscription
 
 // Name is a human-friendly name for a entity.
 type Name = string
