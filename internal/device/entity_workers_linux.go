@@ -1,7 +1,7 @@
 // Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
 // SPDX-License-Identifier: MIT
 
-package agent
+package device
 
 import (
 	"context"
@@ -21,11 +21,11 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/linux/net"
 	"github.com/joshuar/go-hass-agent/internal/linux/power"
 	"github.com/joshuar/go-hass-agent/internal/linux/system"
-	"github.com/joshuar/go-hass-agent/internal/models"
+	"github.com/joshuar/go-hass-agent/internal/workers"
 )
 
-// sensorEventWorkersInitFuncs are all of the sensor workers that generate sensors on events.
-var sensorEventWorkersInitFuncs = []func(ctx context.Context) (*linux.EventSensorWorker, error){
+// linuxSensorEventWorkers are all of the sensor workers that generate sensors on events.
+var linuxSensorEventWorkers = []func(ctx context.Context) (*linux.EventSensorWorker, error){
 	battery.NewBatteryWorker,
 	media.NewMicUsageWorker,
 	media.NewWebcamUsageWorker,
@@ -38,8 +38,14 @@ var sensorEventWorkersInitFuncs = []func(ctx context.Context) (*linux.EventSenso
 	desktop.NewDesktopWorker,
 }
 
-// sensorPollingWorkersInitFuncs are all of the sensor workers that need to poll to get their sensors.
-var sensorPollingWorkersInitFuncs = []func(ctx context.Context) (*linux.PollingSensorWorker, error){
+// eventWorkersInitFuncs are event workers that produce events rather than sensors.
+var linuxEventWorkers = []func(ctx context.Context) (*linux.EventWorker, error){
+	mem.NewOOMEventsWorker,
+	system.NewUserSessionEventsWorker,
+}
+
+// linuxPollingWorkers are all of the sensor workers that need to poll to get their sensors.
+var linuxPollingWorkers = []func(ctx context.Context) (*linux.PollingSensorWorker, error){
 	disk.NewIOWorker,
 	disk.NewUsageWorker,
 	cpu.NewLoadAvgWorker,
@@ -53,41 +59,33 @@ var sensorPollingWorkersInitFuncs = []func(ctx context.Context) (*linux.PollingS
 	system.NewHWMonWorker,
 }
 
-// sensorOneShotWorkersInitFuncs are all the sensor workers that run one-time to generate sensors.
-var sensorOneShotWorkersInitFuncs = []func(ctx context.Context) (*linux.OneShotSensorWorker, error){
+// linuxOneShotWorkers are all the sensor workers that run one-time to generate sensors.
+var linuxOneShotWorkers = []func(ctx context.Context) (*linux.OneShotSensorWorker, error){
 	system.NewCPUVulnerabilityWorker,
 	system.NewInfoWorker,
 	system.NewfwupdWorker,
 	system.NewLastBootWorker,
 }
 
-// sensorLaptopWorkersInitFuncs are sensor workers that should only be run on laptops.
-var sensorLaptopWorkersInitFuncs = []func(ctx context.Context) (*linux.EventSensorWorker, error){
+// linuxLaptopWorkers are sensor workers that should only be run on laptops.
+var linuxLaptopWorkers = []func(ctx context.Context) (*linux.EventSensorWorker, error){
 	power.NewLaptopWorker, location.NewLocationWorker,
 }
 
-// eventWorkersInitFuncs are event workers that produce events rather than sensors.
-var eventWorkersInitFuncs = []func(ctx context.Context) (*linux.EventWorker, error){
-	mem.NewOOMEventsWorker,
-	system.NewUserSessionEventsWorker,
-}
-
-// setupOSWorkers creates slices of OS-specific sensor and event Workers that
-// can be run by the agent. It handles initializing the workers with OS-specific
-// data, reporting any errors.
-func setupOSWorkers(ctx context.Context) []Worker[models.Entity] {
-	workers := make([]Worker[models.Entity], 0,
-		len(eventWorkersInitFuncs)+
-			len(sensorPollingWorkersInitFuncs)+
-			len(sensorEventWorkersInitFuncs)+
-			len(sensorOneShotWorkersInitFuncs)+
-			len(sensorLaptopWorkersInitFuncs))
+// CreateOSEntityWorkers sets up all OS-specific entity workers.
+func CreateOSEntityWorkers(ctx context.Context) []workers.EntityWorker {
+	osWorkers := make([]workers.EntityWorker, 0,
+		len(linuxSensorEventWorkers)+
+			len(linuxPollingWorkers)+
+			len(linuxSensorEventWorkers)+
+			len(linuxOneShotWorkers)+
+			len(linuxLaptopWorkers))
 
 	// Set up a logger.
 	logger := logging.FromContext(ctx).With(slog.Group("linux", slog.String("controller", "sensor")))
 	ctx = logging.ToContext(ctx, logger)
 
-	for _, workerInit := range eventWorkersInitFuncs {
+	for _, workerInit := range linuxEventWorkers {
 		worker, err := workerInit(ctx)
 		if err != nil {
 			logging.FromContext(ctx).Warn("Could not init worker.",
@@ -96,10 +94,10 @@ func setupOSWorkers(ctx context.Context) []Worker[models.Entity] {
 			continue
 		}
 
-		workers = append(workers, worker)
+		osWorkers = append(osWorkers, worker)
 	}
 
-	for _, workerInit := range sensorEventWorkersInitFuncs {
+	for _, workerInit := range linuxSensorEventWorkers {
 		worker, err := workerInit(ctx)
 		if err != nil {
 			logging.FromContext(ctx).Warn("Could not init worker.",
@@ -108,10 +106,10 @@ func setupOSWorkers(ctx context.Context) []Worker[models.Entity] {
 			continue
 		}
 
-		workers = append(workers, worker)
+		osWorkers = append(osWorkers, worker)
 	}
 
-	for _, workerInit := range sensorPollingWorkersInitFuncs {
+	for _, workerInit := range linuxPollingWorkers {
 		worker, err := workerInit(ctx)
 		if err != nil {
 			logging.FromContext(ctx).Warn("Could not init worker.",
@@ -120,10 +118,10 @@ func setupOSWorkers(ctx context.Context) []Worker[models.Entity] {
 			continue
 		}
 
-		workers = append(workers, worker)
+		osWorkers = append(osWorkers, worker)
 	}
 
-	for _, workerInit := range sensorOneShotWorkersInitFuncs {
+	for _, workerInit := range linuxOneShotWorkers {
 		worker, err := workerInit(ctx)
 		if err != nil {
 			logging.FromContext(ctx).Warn("Could not init worker.",
@@ -132,7 +130,7 @@ func setupOSWorkers(ctx context.Context) []Worker[models.Entity] {
 			continue
 		}
 
-		workers = append(workers, worker)
+		osWorkers = append(osWorkers, worker)
 	}
 
 	// Get the type of device we are running on.
@@ -140,7 +138,7 @@ func setupOSWorkers(ctx context.Context) []Worker[models.Entity] {
 	laptops := []string{"Portable", "Laptop", "Notebook"}
 	// If running on a laptop chassis, add laptop specific sensor workers.
 	if slices.Contains(laptops, chassis) {
-		for _, workerInit := range sensorLaptopWorkersInitFuncs {
+		for _, workerInit := range linuxLaptopWorkers {
 			worker, err := workerInit(ctx)
 			if err != nil {
 				logging.FromContext(ctx).Warn("Could not init worker.",
@@ -149,9 +147,9 @@ func setupOSWorkers(ctx context.Context) []Worker[models.Entity] {
 				continue
 			}
 
-			workers = append(workers, worker)
+			osWorkers = append(osWorkers, worker)
 		}
 	}
 
-	return workers
+	return osWorkers
 }

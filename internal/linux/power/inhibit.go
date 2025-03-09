@@ -33,7 +33,7 @@ type inhibitControlWorker struct {
 	entity *mqtthass.SwitchEntity
 	fd     int
 	logger *slog.Logger
-	msgCh  chan *mqttapi.Msg
+	msgCh  chan mqttapi.Msg
 	bus    *dbusx.Bus
 }
 
@@ -82,12 +82,12 @@ func (w *inhibitControlWorker) inhibitCommandCallback(p *paho.Publish) {
 
 // publishState will publish on MQTT the current state of the inhibit lock
 // controlled by the worker.
-func (w *inhibitControlWorker) publishState(msgCh chan *mqttapi.Msg) error {
+func (w *inhibitControlWorker) publishState(msgCh chan mqttapi.Msg) error {
 	msg, err := w.entity.MarshalState()
 	if err != nil {
 		return fmt.Errorf("could not marshal entity state: %w", err)
 	}
-	msgCh <- msg
+	msgCh <- *msg
 
 	return nil
 }
@@ -123,7 +123,7 @@ func (w *inhibitControlWorker) createInhibitLock() error {
 }
 
 //nolint:nilnil
-func NewInhibitControl(ctx context.Context, msgCh chan *mqttapi.Msg, device *mqtthass.Device) (*mqtthass.SwitchEntity, error) {
+func NewInhibitControl(ctx context.Context, msgCh chan mqttapi.Msg, device *mqtthass.Device) (*mqtthass.SwitchEntity, error) {
 	var err error
 
 	worker := &inhibitControlWorker{

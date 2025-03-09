@@ -136,7 +136,7 @@ func (c *Client) UpdateConfig(ctx context.Context) (bool, error) {
 
 // EntityHandler takes incoming Entity objects via the passed in channel and
 // runs the appropriate handler for the Entity type.
-func (c *Client) EntityHandler(ctx context.Context, entityCh chan models.Entity) {
+func (c *Client) EntityHandler(ctx context.Context, entityCh <-chan models.Entity) {
 	ctx = logging.ToContext(ctx, c.logger)
 
 	for entity := range entityCh {

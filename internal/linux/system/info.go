@@ -14,7 +14,7 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
-	"github.com/joshuar/go-hass-agent/internal/device"
+	"github.com/joshuar/go-hass-agent/internal/device/info"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/models"
 	"github.com/joshuar/go-hass-agent/internal/models/sensor"
@@ -47,7 +47,7 @@ func (w *infoWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 	)
 
 	// Get distribution name and version.
-	distro, version, err := device.GetOSDetails()
+	distro, version, err := info.GetOSDetails()
 	if err != nil {
 		logging.FromContext(ctx).
 			With(slog.String("worker", infoWorkerID)).
@@ -85,7 +85,7 @@ func (w *infoWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 	}
 
 	// Get kernel version.
-	kernelVersion, err := device.GetKernelVersion()
+	kernelVersion, err := info.GetKernelVersion()
 	if err != nil {
 		logging.FromContext(ctx).
 			With(slog.String("worker", infoWorkerID)).

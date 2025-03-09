@@ -14,9 +14,9 @@ import (
 	mqtthass "github.com/joshuar/go-hass-anything/v12/pkg/hass"
 	mqttapi "github.com/joshuar/go-hass-anything/v12/pkg/mqtt"
 
-	"github.com/joshuar/go-hass-agent/internal/commands"
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
+	"github.com/joshuar/go-hass-agent/internal/mqtt/commands"
 )
 
 // MQTTWorker represents an object that is responsible for controlling the
@@ -30,7 +30,7 @@ type MQTTWorker interface {
 	Configs() []*mqttapi.Msg
 	// Msgs returns a channel on which this object will send MQTT messages on
 	// certain events.
-	Msgs() chan *mqttapi.Msg
+	Msgs() chan mqttapi.Msg
 }
 
 // stateEntity is a convienience interface to avoid duplicating a lot of loop content
@@ -49,7 +49,7 @@ type commandEntity interface {
 // mqttEntities holds all MQTT entities for a worker and a channel through which
 // they can send MQTT messages.
 type mqttEntities struct {
-	msgs          chan *mqttapi.Msg
+	msgs          chan mqttapi.Msg
 	sensors       []*mqtthass.SensorEntity
 	buttons       []*mqtthass.ButtonEntity
 	numbers       []*mqtthass.NumberEntity[int]
@@ -86,7 +86,7 @@ func processMQTTWorkers(ctx context.Context) {
 	var ( //nolint:prealloc
 		subscriptions []*mqttapi.Subscription
 		configs       []*mqttapi.Msg
-		msgCh         []<-chan *mqttapi.Msg
+		msgCh         []<-chan mqttapi.Msg
 		err           error
 	)
 
@@ -116,7 +116,7 @@ func processMQTTWorkers(ctx context.Context) {
 	for {
 		select {
 		case msg := <-mergeCh(ctx, msgCh...):
-			if err := client.Publish(ctx, msg); err != nil {
+			if err := client.Publish(ctx, &msg); err != nil {
 				logging.FromContext(ctx).Warn("Unable to publish message to MQTT.",
 					slog.String("topic", msg.Topic),
 					slog.Any("msg", msg.Message))

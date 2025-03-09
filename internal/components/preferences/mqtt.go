@@ -11,7 +11,7 @@ import (
 
 	mqtthass "github.com/joshuar/go-hass-anything/v12/pkg/hass"
 
-	"github.com/joshuar/go-hass-agent/internal/device"
+	"github.com/joshuar/go-hass-agent/internal/device/info"
 )
 
 const (
@@ -154,7 +154,7 @@ func MQTT() *MQTTPreferences {
 // MQTTDevice will return a device that is needed for MQTT functionality.
 func MQTTDevice() *mqtthass.Device {
 	// Retrieve the hardware model and manufacturer.
-	model, manufacturer, _ := device.GetHWProductInfo() //nolint:errcheck // error doesn't matter
+	model, manufacturer, _ := info.GetHWProductInfo() //nolint:errcheck // error doesn't matter
 
 	return &mqtthass.Device{
 		Name:         prefsSrc.String(prefDeviceName),

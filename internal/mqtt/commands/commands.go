@@ -26,6 +26,7 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
+	"github.com/joshuar/go-hass-agent/internal/mqtt"
 )
 
 const (
@@ -96,6 +97,10 @@ type Worker struct {
 type entity interface {
 	MarshalSubscription() (*mqttapi.Subscription, error)
 	MarshalConfig() (*mqttapi.Msg, error)
+}
+
+func (d *Worker) ID() string {
+	return "mqtt_commands"
 }
 
 // Subscriptions are the MQTT subscriptions for buttons and switches, providing
@@ -180,40 +185,8 @@ func (d *Worker) generateConfigs(e entity) *mqttapi.Msg {
 // managed by the controller. This is unused.
 //
 //revive:disable:unused-receiver
-func (d *Worker) Msgs() chan *mqttapi.Msg {
+func (d *Worker) Msgs() chan mqttapi.Msg {
 	return nil
-}
-
-// NewCommandsWorker is used by the agent to initialize the commands
-// controller, which holds the MQTT configuration for the commands defined by
-// the user.
-func NewCommandsWorker(ctx context.Context, device *mqtthass.Device) (*Worker, error) {
-	commandsFile := filepath.Join(preferences.PathFromCtx(ctx), commandsFile)
-
-	if _, err := os.Stat(commandsFile); errors.Is(err, os.ErrNotExist) {
-		return nil, ErrNoCommands
-	}
-
-	data, err := os.ReadFile(commandsFile)
-	if err != nil {
-		return nil, fmt.Errorf("could not read commands file: %w", err)
-	}
-
-	cmds := &CommandList{}
-
-	if err := toml.Unmarshal(data, &cmds); err != nil {
-		return nil, fmt.Errorf("could not parse commands file: %w", err)
-	}
-
-	controller := &Worker{
-		logger: logging.FromContext(ctx).WithGroup("custom_commands"),
-		device: device,
-	}
-	controller.generateButtons(cmds.Buttons)
-	controller.generateSwitches(cmds.Switches)
-	controller.generateNumbers(cmds.Numbers)
-
-	return controller, nil
 }
 
 // generateButtons will create MQTT entities for buttons defined by the
@@ -444,6 +417,45 @@ func (d *Worker) generateNumbers(numberCommands []Command) {
 
 	d.floatNumbers = floats
 	d.intNumbers = ints
+}
+
+func (d *Worker) Start(_ context.Context) (*mqtt.WorkerData, error) {
+	return &mqtt.WorkerData{
+		Configs:       d.Configs(),
+		Subscriptions: d.Subscriptions(),
+	}, nil
+}
+
+// NewCommandsWorker is used by the agent to initialize the commands
+// controller, which holds the MQTT configuration for the commands defined by
+// the user.
+func NewCommandsWorker(ctx context.Context, device *mqtthass.Device) (*Worker, error) {
+	commandsFile := filepath.Join(preferences.PathFromCtx(ctx), commandsFile)
+
+	if _, err := os.Stat(commandsFile); errors.Is(err, os.ErrNotExist) {
+		return nil, ErrNoCommands
+	}
+
+	data, err := os.ReadFile(commandsFile)
+	if err != nil {
+		return nil, fmt.Errorf("could not read commands file: %w", err)
+	}
+
+	cmds := &CommandList{}
+
+	if err := toml.Unmarshal(data, &cmds); err != nil {
+		return nil, fmt.Errorf("could not parse commands file: %w", err)
+	}
+
+	controller := &Worker{
+		logger: logging.FromContext(ctx).WithGroup("custom_commands"),
+		device: device,
+	}
+	controller.generateButtons(cmds.Buttons)
+	controller.generateSwitches(cmds.Switches)
+	controller.generateNumbers(cmds.Numbers)
+
+	return controller, nil
 }
 
 // cmdWithoutState runs the executable associated with a control with no state

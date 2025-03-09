@@ -111,7 +111,7 @@ func (w *CameraWorker) openCamera() (*webcam.Webcam, error) {
 
 // publishImages loops over the received frames from the camera and wraps them
 // as a MQTT message to be sent back on the bus.
-func publishImages(cam *webcam.Webcam, topic string, msgCh chan *mqttapi.Msg) {
+func publishImages(cam *webcam.Webcam, topic string, msgCh chan mqttapi.Msg) {
 	if err := cam.StartStreaming(); err != nil {
 		slog.Error("Could not start recording", slog.Any("error", err))
 
@@ -129,12 +129,12 @@ func publishImages(cam *webcam.Webcam, topic string, msgCh chan *mqttapi.Msg) {
 			break
 		}
 
-		msgCh <- mqttapi.NewMsg(topic, frame)
+		msgCh <- *mqttapi.NewMsg(topic, frame)
 	}
 }
 
 // NewCameraControl is called by the OS controller to provide the entities for a camera.
-func NewCameraControl(_ context.Context, msgCh chan *mqttapi.Msg, mqttDevice *mqtthass.Device) (*CameraWorker, error) {
+func NewCameraControl(_ context.Context, msgCh chan mqttapi.Msg, mqttDevice *mqtthass.Device) (*CameraWorker, error) {
 	var err error
 
 	worker := &CameraWorker{}
@@ -177,7 +177,7 @@ func NewCameraControl(_ context.Context, msgCh chan *mqttapi.Msg, mqttDevice *mq
 			worker.state = startedState
 
 			go publishImages(worker.camera, worker.Images.Topic, msgCh)
-			msgCh <- mqttapi.NewMsg(worker.Status.StateTopic, []byte(worker.state))
+			msgCh <- *mqttapi.NewMsg(worker.Status.StateTopic, []byte(worker.state))
 		}))
 
 	worker.StopButton = mqtthass.NewButtonEntity().
@@ -199,7 +199,7 @@ func NewCameraControl(_ context.Context, msgCh chan *mqttapi.Msg, mqttDevice *mq
 			}
 
 			worker.state = stoppedState
-			msgCh <- mqttapi.NewMsg(worker.Status.StateTopic, []byte(worker.state))
+			msgCh <- *mqttapi.NewMsg(worker.Status.StateTopic, []byte(worker.state))
 
 			slog.Info("Stop recording webcam.")
 		}),
@@ -221,7 +221,7 @@ func NewCameraControl(_ context.Context, msgCh chan *mqttapi.Msg, mqttDevice *mq
 		)
 
 	go func() {
-		msgCh <- mqttapi.NewMsg(worker.Status.StateTopic, []byte(stoppedState))
+		msgCh <- *mqttapi.NewMsg(worker.Status.StateTopic, []byte(stoppedState))
 	}()
 
 	return worker, nil

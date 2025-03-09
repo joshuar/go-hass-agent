@@ -1,14 +1,13 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
-package agent
+package device
 
 import (
 	"context"
 	"log/slog"
 
+	mqtthass "github.com/joshuar/go-hass-anything/v12/pkg/hass"
 	mqttapi "github.com/joshuar/go-hass-anything/v12/pkg/mqtt"
 
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
@@ -16,12 +15,45 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/linux/media"
 	"github.com/joshuar/go-hass-agent/internal/linux/power"
 	"github.com/joshuar/go-hass-agent/internal/linux/system"
+	"github.com/joshuar/go-hass-agent/internal/models"
+	"github.com/joshuar/go-hass-agent/internal/mqtt"
+	"github.com/joshuar/go-hass-agent/internal/workers"
 )
+
+// stateEntity is a convienience interface to avoid duplicating a lot of loop content
+// when configuring the controller.
+type stateEntity interface {
+	MarshalConfig() (*mqttapi.Msg, error)
+}
+
+// commandEntity is a convienience interface to avoid duplicating a lot of loop content
+// when configuring the controller.
+type commandEntity interface {
+	stateEntity
+	MarshalSubscription() (*mqttapi.Subscription, error)
+}
+
+// mqttEntities holds all MQTT entities for a worker and a channel through which
+// they can send MQTT messages.
+type mqttEntities struct {
+	msgs          chan mqttapi.Msg
+	sensors       []*mqtthass.SensorEntity
+	buttons       []*mqtthass.ButtonEntity
+	numbers       []*mqtthass.NumberEntity[int]
+	switches      []*mqtthass.SwitchEntity
+	controls      []*mqttapi.Subscription
+	binarySensors []*mqtthass.SensorEntity
+	cameras       []*mqtthass.CameraEntity
+}
 
 // linuxMQTTWorker represents the Linux-specific OS MQTTWorker.
 type linuxMQTTWorker struct {
 	*mqttEntities
 	logger *slog.Logger
+}
+
+func (c *linuxMQTTWorker) ID() string {
+	return "linux_mqtt"
 }
 
 // Subscriptions returns the any subscription request messaages for any workers
@@ -87,6 +119,14 @@ func (c *linuxMQTTWorker) Msgs() chan mqttapi.Msg {
 	return c.msgs
 }
 
+func (c *linuxMQTTWorker) Start(ctx context.Context) (*mqtt.WorkerData, error) {
+	return &mqtt.WorkerData{
+		Configs:       c.Configs(),
+		Subscriptions: c.Subscriptions(),
+		Msgs:          workers.MergeCh[models.MQTTMsg](ctx, c.Msgs()),
+	}, nil
+}
+
 // generateConfig is a helper function to avoid duplicate code around generating
 // an entity subscription.
 func (c *linuxMQTTWorker) generateSubscription(e commandEntity) *mqttapi.Subscription {
@@ -113,9 +153,9 @@ func (c *linuxMQTTWorker) generateConfig(e stateEntity) *mqttapi.Msg {
 	return cfg
 }
 
-// setupOSMQTTWorker initializes the list of MQTT workers for sensors and
+// CreateOSMQTTWorkers initializes the list of MQTT workers for sensors and
 // returns those that are supported on this device.
-func setupOSMQTTWorker(ctx context.Context) MQTTWorker {
+func CreateOSMQTTWorkers(ctx context.Context) workers.MQTTWorker {
 	mqttController := &linuxMQTTWorker{
 		mqttEntities: &mqttEntities{
 			msgs: make(chan mqttapi.Msg),
