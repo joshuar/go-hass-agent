@@ -40,7 +40,7 @@ var ErrInitAudioWorker = errors.New("could not init audio worker")
 // tracking and control.
 type audioControl struct {
 	pulseAudio *pulseaudiox.PulseAudioClient
-	msgCh      chan *mqttapi.Msg
+	msgCh      chan mqttapi.Msg
 	muteEntity *mqtthass.SwitchEntity
 	volEntity  *mqtthass.NumberEntity[int]
 	logger     *slog.Logger
@@ -133,19 +133,19 @@ func (d *audioControl) muteCommandCallback(p *paho.Publish) {
 	}()
 }
 
-func publishAudioState(msgCh chan *mqttapi.Msg, entity entity) error {
+func publishAudioState(msgCh chan mqttapi.Msg, entity entity) error {
 	msg, err := entity.MarshalState()
 	if err != nil {
 		return fmt.Errorf("could not marshal entity state: %w", err)
 	}
-	msgCh <- msg
+	msgCh <- *msg
 
 	return nil
 }
 
 // newAudioControl will establish a connection to PulseAudio and return a
 // audioControl object for tracking and controlling audio state.
-func newAudioControl(ctx context.Context, msgCh chan *mqttapi.Msg) (*audioControl, error) {
+func newAudioControl(ctx context.Context, msgCh chan mqttapi.Msg) (*audioControl, error) {
 	client, err := pulseaudiox.NewPulseClient(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("unable to connect to Pulseaudio: %w", err)
@@ -161,7 +161,7 @@ func newAudioControl(ctx context.Context, msgCh chan *mqttapi.Msg) (*audioContro
 }
 
 //nolint:lll
-func VolumeControl(ctx context.Context, msgCh chan *mqttapi.Msg, device *mqtthass.Device) (*mqtthass.NumberEntity[int], *mqtthass.SwitchEntity, error) {
+func VolumeControl(ctx context.Context, msgCh chan mqttapi.Msg, device *mqtthass.Device) (*mqtthass.NumberEntity[int], *mqtthass.SwitchEntity, error) {
 	control, err := newAudioControl(ctx, msgCh)
 	if err != nil {
 		return nil, nil, errors.Join(ErrInitAudioWorker, err)

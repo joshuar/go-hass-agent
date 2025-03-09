@@ -17,9 +17,10 @@ import (
 	fyneui "github.com/joshuar/go-hass-agent/internal/agent/ui/fyneUI"
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
+	"github.com/joshuar/go-hass-agent/internal/device"
+	"github.com/joshuar/go-hass-agent/internal/device/worker/scripts"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/models"
-	"github.com/joshuar/go-hass-agent/internal/scripts"
 )
 
 var ErrAgentStart = errors.New("cannot start agent")
@@ -102,7 +103,7 @@ func Run(ctx context.Context, headless bool, api APIs) error {
 		}
 
 		// Set-up the worker context.
-		workerCtx := setupWorkerCtx(ctx)
+		workerCtx := device.SetupCtx(ctx)
 
 		// Initialize and gather OS sensor and event workers.
 		workers := setupOSWorkers(workerCtx)
@@ -113,7 +114,7 @@ func Run(ctx context.Context, headless bool, api APIs) error {
 		} else {
 			workers = append(workers, worker)
 		}
-		// Initialize and add external IP address sensor worker.
+		// Initialize and add external IP address sensor workezr.
 		if worker, err := agentsensor.NewExternalIPUpdaterWorker(workerCtx); err != nil {
 			agent.logger.Warn("Could not init agent worker.",
 				slog.Any("error", err))

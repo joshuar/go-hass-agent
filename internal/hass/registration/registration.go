@@ -12,7 +12,7 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
-	"github.com/joshuar/go-hass-agent/internal/device"
+	"github.com/joshuar/go-hass-agent/internal/device/info"
 	"github.com/joshuar/go-hass-agent/internal/hass/api"
 )
 
@@ -104,7 +104,7 @@ func newDeviceRegistration(ctx context.Context) *api.DeviceRegistrationRequest {
 	}
 
 	// Retrieve the name as the device name.
-	name, err := device.GetHostname()
+	name, err := info.GetHostname()
 	if err != nil {
 		logging.FromContext(ctx).Warn("Unable to determine device hostname.",
 			slog.Any("error", err))
@@ -113,7 +113,7 @@ func newDeviceRegistration(ctx context.Context) *api.DeviceRegistrationRequest {
 	dev.DeviceName = name
 
 	// Generate a new unique Device ID
-	id, err := device.NewDeviceID()
+	id, err := info.NewDeviceID()
 	if err != nil {
 		logging.FromContext(ctx).Warn("Unable to generate a device ID.",
 			slog.Any("error", err))
@@ -122,7 +122,7 @@ func newDeviceRegistration(ctx context.Context) *api.DeviceRegistrationRequest {
 	dev.DeviceID = id
 
 	// Retrieve the OS name and version.
-	osName, osVersion, err := device.GetOSID()
+	osName, osVersion, err := info.GetOSID()
 	if err != nil {
 		logging.FromContext(ctx).Warn("Unable to determine OS details.",
 			slog.Any("error", err))
@@ -132,7 +132,7 @@ func newDeviceRegistration(ctx context.Context) *api.DeviceRegistrationRequest {
 	dev.OsVersion = osVersion
 
 	// Retrieve the hardware model and manufacturer.
-	model, manufacturer, err := device.GetHWProductInfo()
+	model, manufacturer, err := info.GetHWProductInfo()
 	if err != nil {
 		logging.FromContext(ctx).Warn("Unable to determine device hardware details.",
 			slog.Any("error", err))

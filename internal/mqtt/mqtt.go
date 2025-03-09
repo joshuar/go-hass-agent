@@ -17,13 +17,21 @@ import (
 
 var ErrClient = errors.New("MQTT client error")
 
+// WorkerMQTTData contains the configs, subscriptions and message channels for an
+// MQTT worker or workers.
+type WorkerData struct {
+	Configs       []*models.MQTTConfig
+	Subscriptions []*models.MQTTSubscription
+	Msgs          <-chan models.MQTTMsg
+}
+
 // Start will connect to MQTT, publish worker configs and subscriptions, then
 // start a goroutine to listen for messages from workers to publish through the
 // client. If the client connection fails, a non-nil error is returned.
-func Start(ctx context.Context, configs []*models.MQTTConfig, subscriptions []*models.MQTTSubscription, msgs <-chan models.MQTTMsg) error {
+func Start(ctx context.Context, data *WorkerData) error {
 	// Create a new connection to the MQTT broker, publish subscriptions and
 	// configs.
-	client, err := mqttapi.NewClient(ctx, preferences.MQTT(), subscriptions, configs)
+	client, err := mqttapi.NewClient(ctx, preferences.MQTT(), data.Subscriptions, data.Configs)
 	if err != nil {
 		return errors.Join(ErrClient, err)
 	}
@@ -31,7 +39,7 @@ func Start(ctx context.Context, configs []*models.MQTTConfig, subscriptions []*m
 	go func() {
 		for {
 			select {
-			case msg := <-msgs:
+			case msg := <-data.Msgs:
 				if err := client.Publish(ctx, &msg); err != nil {
 					logging.FromContext(ctx).Warn("Unable to publish message to MQTT.",
 						slog.String("topic", msg.Topic),

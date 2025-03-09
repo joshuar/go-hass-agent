@@ -36,7 +36,7 @@ var ErrInitMPRISWorker = errors.New("could not init MPRIS worker")
 type mprisMonitor struct {
 	logger           *slog.Logger
 	mediaStateEntity *mqtthass.SensorEntity
-	msgCh            chan *mqttapi.Msg
+	msgCh            chan mqttapi.Msg
 	mediaState       string
 	prefs            *preferences.CommonWorkerPrefs
 }
@@ -49,7 +49,7 @@ func (m *mprisMonitor) DefaultPreferences() preferences.CommonWorkerPrefs {
 	return preferences.CommonWorkerPrefs{}
 }
 
-func MPRISControl(ctx context.Context, device *mqtthass.Device, msgCh chan *mqttapi.Msg) (*mqtthass.SensorEntity, error) {
+func MPRISControl(ctx context.Context, device *mqtthass.Device, msgCh chan mqttapi.Msg) (*mqtthass.SensorEntity, error) {
 	var err error
 
 	bus, ok := linux.CtxGetSessionBus(ctx)
@@ -146,5 +146,5 @@ func (m *mprisMonitor) publishPlaybackState(state string) {
 
 		return
 	}
-	m.msgCh <- msg
+	m.msgCh <- *msg
 }

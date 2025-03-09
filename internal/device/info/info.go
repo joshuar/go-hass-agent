@@ -3,8 +3,8 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-// revive:disable:unused-receiver
-package device
+// Package info contains methods for retrieving device information.
+package info
 
 import (
 	"errors"
