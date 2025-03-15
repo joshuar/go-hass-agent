@@ -81,10 +81,14 @@ func (a *App) runEntityWorkers(ctx context.Context, appAPIs APIs, wg *sync.WaitG
 	entityWorkers = append(entityWorkers, device.CreateOSEntityWorkers(device.SetupCtx(ctx))...)
 	// Start all entity workers.
 	entityCh := a.workerManager.StartEntityWorkers(ctx, entityWorkers...)
-	// Get hass client to handle entity workers.
+
 	go func() {
-		appAPIs.Hass().EntityHandler(ctx, entityCh)
+		defer a.workerManager.StopAllWorkers()
+		<-ctx.Done()
 	}()
+
+	// Get hass client to handle entity workers.
+	appAPIs.Hass().EntityHandler(ctx, entityCh)
 }
 
 // runMQTTWorkers will start all MQTT workers and pass their data to the MQTT client.

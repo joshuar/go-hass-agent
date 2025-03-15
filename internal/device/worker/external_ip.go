@@ -43,7 +43,6 @@ var (
 
 type ExternalIP struct {
 	client *resty.Client
-	doneCh chan struct{}
 	logger *slog.Logger
 	prefs  *preferences.CommonWorkerPrefs
 }
@@ -117,7 +116,6 @@ func newExternalIPSensor(ctx context.Context, addr net.IP) (models.Entity, error
 
 func (w *ExternalIP) Start(ctx context.Context) (<-chan models.Entity, error) {
 	sensorCh := make(chan models.Entity)
-	w.doneCh = make(chan struct{})
 
 	updater := func(_ time.Duration) {
 		sensors, err := w.sensors(ctx)
@@ -137,7 +135,7 @@ func (w *ExternalIP) Start(ctx context.Context) (<-chan models.Entity, error) {
 
 	go func() {
 		defer close(sensorCh)
-		<-w.doneCh
+		<-ctx.Done()
 	}()
 
 	return sensorCh, nil
