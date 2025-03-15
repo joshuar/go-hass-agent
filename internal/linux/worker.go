@@ -213,6 +213,10 @@ func NewEventWorker(id string) *EventWorker {
 // function and pass this to the PollSensors helper, using the interval
 // and jitter the worker has requested.
 func handleSensorPolling(ctx context.Context, interval, jitter time.Duration, worker PollingSensorType) <-chan models.Entity {
+	if worker == nil {
+		return nil
+	}
+
 	outCh := make(chan models.Entity)
 
 	updater := func(d time.Duration) {
@@ -251,6 +255,10 @@ func handleSensorPolling(ctx context.Context, interval, jitter time.Duration, wo
 
 // handleSensorEvents: read sensors from the worker Events function and pass these on.
 func handleSensorEvents(ctx context.Context, worker EventSensorType) <-chan models.Entity {
+	if worker == nil {
+		return nil
+	}
+
 	outCh := make(chan models.Entity)
 
 	go func() {
@@ -276,6 +284,10 @@ func handleSensorEvents(ctx context.Context, worker EventSensorType) <-chan mode
 // handleSensorOneShot: run the worker Sensors function to gather the sensors, pass these
 // through the channel, then close it.
 func handleSensorOneShot(ctx context.Context, worker OneShotSensorType) <-chan models.Entity {
+	if worker == nil {
+		return nil
+	}
+
 	outCh := make(chan models.Entity)
 
 	go func() {
@@ -300,6 +312,10 @@ func handleSensorOneShot(ctx context.Context, worker OneShotSensorType) <-chan m
 
 // handleEvents: read events from the worker Events function and pass these on.
 func handleEvents(ctx context.Context, worker EventType) <-chan models.Entity {
+	if worker == nil {
+		return nil
+	}
+
 	outCh := make(chan models.Entity)
 
 	go func() {

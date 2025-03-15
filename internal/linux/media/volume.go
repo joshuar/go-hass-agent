@@ -237,7 +237,9 @@ func VolumeControl(ctx context.Context, msgCh chan mqttapi.Msg, device *mqtthass
 
 				return
 			case <-control.pulseAudio.EventCh:
-				update()
+				if ctx.Err() == nil {
+					update()
+				}
 			}
 		}
 	}()

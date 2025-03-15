@@ -134,7 +134,7 @@ func publishImages(cam *webcam.Webcam, topic string, msgCh chan mqttapi.Msg) {
 }
 
 // NewCameraControl is called by the OS controller to provide the entities for a camera.
-func NewCameraControl(_ context.Context, msgCh chan mqttapi.Msg, mqttDevice *mqtthass.Device) (*CameraWorker, error) {
+func NewCameraControl(ctx context.Context, msgCh chan mqttapi.Msg, mqttDevice *mqtthass.Device) (*CameraWorker, error) {
 	var err error
 
 	worker := &CameraWorker{}
@@ -220,9 +220,11 @@ func NewCameraControl(_ context.Context, msgCh chan mqttapi.Msg, mqttDevice *mqt
 			}),
 		)
 
-	go func() {
-		msgCh <- *mqttapi.NewMsg(worker.Status.StateTopic, []byte(stoppedState))
-	}()
+	// go func() {
+	// 	if ctx.Err() == nil {
+	// 		msgCh <- *mqttapi.NewMsg(worker.Status.StateTopic, []byte(stoppedState))
+	// 	}
+	// }()
 
 	return worker, nil
 }

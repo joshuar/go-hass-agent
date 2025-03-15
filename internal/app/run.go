@@ -25,15 +25,17 @@ func Run(ctx context.Context, headless bool, appAPIs APIs) error {
 
 	ctx, cancelFunc := context.WithCancel(ctx)
 	defer cancelFunc()
+	// Add device-specific values to context.
+	ctx = device.SetupCtx(ctx)
 
-	app := New(ctx)
+	app := New(ctx, appAPIs, headless)
 
 	regWait.Add(1)
 
 	go func() {
 		defer regWait.Done()
 		// Check if the agent is registered. If not, start a registration flow.
-		if err = app.checkRegistration(ctx, headless); err != nil {
+		if err = checkRegistration(ctx, app, headless); err != nil {
 			app.logger.Error("Error checking registration status.", slog.Any("error", err))
 			cancelFunc()
 		}
@@ -50,9 +52,19 @@ func Run(ctx context.Context, headless bool, appAPIs APIs) error {
 		go app.runNotificationsWorker(ctx, &wg, &regWait)
 	}
 
+	// Do not run the UI loop if the agent is running in headless mode.
+	if !headless {
+		app.ui.DisplayTrayIcon(ctx, cancelFunc)
+		app.ui.Run(ctx)
+	}
+
+	wg.Wait()
+
 	return nil
 }
 
+// runEntityWorkers will start all entity workers and pass their data on to the
+// hass client.
 func (a *App) runEntityWorkers(ctx context.Context, appAPIs APIs, wg *sync.WaitGroup, regwg *sync.WaitGroup) {
 	defer wg.Done()
 	// Wait until registration check completes.
@@ -75,6 +87,7 @@ func (a *App) runEntityWorkers(ctx context.Context, appAPIs APIs, wg *sync.WaitG
 	}()
 }
 
+// runMQTTWorkers will start all MQTT workers and pass their data to the MQTT client.
 func (a *App) runMQTTWorkers(ctx context.Context, wg *sync.WaitGroup, regwg *sync.WaitGroup) {
 	defer wg.Done()
 	// Wait until registration check completes.
@@ -83,14 +96,14 @@ func (a *App) runMQTTWorkers(ctx context.Context, wg *sync.WaitGroup, regwg *syn
 	if !(preferences.Registered() && preferences.MQTTEnabled()) {
 		return
 	}
-
+	// Create MQTT workers.
 	var mqttWorkers []workers.MQTTWorker
-
+	// Add device-based MQTT workers.
 	mqttWorkers = append(mqttWorkers, device.CreateDeviceMQTTWorkers(ctx)...)
+	// Add os-based MQTT workers.
 	mqttWorkers = append(mqttWorkers, device.CreateOSMQTTWorkers(ctx))
-
+	// Start all MQTT workers.
 	data := a.workerManager.StartMQTTWorkers(ctx, mqttWorkers...)
-
 	if err := mqtt.Start(ctx, data); err != nil {
 		a.logger.Warn("Unable to start MQTT client.",
 			slog.Any("error", err),
@@ -128,12 +141,10 @@ func (a *App) runNotificationsWorker(ctx context.Context, wg *sync.WaitGroup, re
 
 				return
 			}
-
 			// Start listening on the websocket
 			go func() {
 				websocket.Listen()
 			}()
-
 			// Display any notifications received.
 			for notification := range notifyCh {
 				a.ui.DisplayNotification(&notification)
