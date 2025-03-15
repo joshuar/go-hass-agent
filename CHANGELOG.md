@@ -1,5 +1,21 @@
 # Changelog
 
+## [13.2.0](https://github.com/joshuar/go-hass-agent/compare/v13.1.1...v13.2.0) (2025-03-15)
+
+
+### Features
+
+* **app:** :recycle: migrate to modular app design ([c15b6db](https://github.com/joshuar/go-hass-agent/commit/c15b6dbb8c70ec1d8bc3424ad66a4e882b568a21))
+
+
+### Bug Fixes
+
+* **device:** :bug: use config rest API endpoint for connection latency sensor to eliminate log spam ([6be1fd5](https://github.com/joshuar/go-hass-agent/commit/6be1fd5fe7c0dcedc67ecb0b62ae917bb15278f9))
+* **linux:** :bug: mqtt workers should create their own channels for messages ([f3e1b0e](https://github.com/joshuar/go-hass-agent/commit/f3e1b0e2c9242c70ae4396ec6eed11dfcbd0a439))
+* **mqtt:** :bug: correctly parse numeric values from toml ([503d645](https://github.com/joshuar/go-hass-agent/commit/503d645cbc1f91920836c63385d028f219cc3723))
+* **mqtt:** :fire: remove spew ([1ec500e](https://github.com/joshuar/go-hass-agent/commit/1ec500eb6ae38e5cd4acd619f263a75e8208ee12))
+* **workers:** :zap: improve worker shutdown handling ([2290564](https://github.com/joshuar/go-hass-agent/commit/2290564eca19b6050a475b313bea15367b2153c4))
+
 ## [13.1.1](https://github.com/joshuar/go-hass-agent/compare/v13.1.0...v13.1.1) (2025-03-02)
 
 
