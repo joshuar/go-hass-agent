@@ -16,7 +16,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/eclipse/paho.golang/paho"
 	"github.com/iancoleman/strcase"
 	"github.com/pelletier/go-toml/v2"
@@ -341,8 +340,6 @@ func (d *Worker) generateNumbers(numberCommands []Command) {
 		// Add an entity based on the number type.
 		valueType := cmd.NumberType
 
-		spew.Dump(cmd)
-
 		switch valueType {
 		case "float":
 			var (
@@ -555,7 +552,6 @@ func numberState(command string) (json.RawMessage, error) {
 // return the default value of that type.
 func convValue[T constraints.Float | constraints.Integer](orig any) T {
 	value, ok := orig.(T)
-	spew.Dump(value)
 	if !ok {
 		return T(0)
 	}
