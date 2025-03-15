@@ -21,7 +21,7 @@ contents:
     dst: /usr/share/licenses/go-hass-agent/LICENSE
   - src: README.md
     dst: /usr/share/doc/go-hass-agent/README.md
-  - src: internal/agent/ui/assets/go-hass-agent.png
+  - src: internal/ui/assets/go-hass-agent.png
     dst: /usr/share/pixmaps/go-hass-agent.png
   - src: assets/go-hass-agent.desktop
     dst: /usr/share/applications/go-hass-agent.desktop
