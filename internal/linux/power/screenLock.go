@@ -35,7 +35,7 @@ var (
 	ErrInitScreenLockWorker = errors.New("could not init screen lock worker")
 )
 
-func newScreenlockSensor(ctx context.Context, value bool) (*models.Entity, error) {
+func newScreenlockSensor(ctx context.Context, value bool) (models.Entity, error) {
 	lockSensor, err := sensor.NewSensor(ctx,
 		sensor.WithName("Screen Lock"),
 		sensor.WithID("screen_lock"),
@@ -47,10 +47,10 @@ func newScreenlockSensor(ctx context.Context, value bool) (*models.Entity, error
 		sensor.AsRetryableRequest(true),
 	)
 	if err != nil {
-		return nil, errors.Join(ErrNewScreenLockSensor, err)
+		return models.Entity{}, errors.Join(ErrNewScreenLockSensor, err)
 	}
 
-	return &lockSensor, nil
+	return lockSensor, nil
 }
 
 func screenLockIcon(value bool) string {
@@ -79,19 +79,18 @@ func (w *screenLockWorker) Events(ctx context.Context) (<-chan models.Entity, er
 	}
 
 	go func() {
-		sensorCh <- *currentState
+		sensorCh <- currentState
 	}()
 
 	go func() {
-		defer close(sensorCh)
-
 		for {
 			select {
 			case <-ctx.Done():
+				close(sensorCh)
 				return
 			case event := <-w.triggerCh:
 				var (
-					entity    *models.Entity
+					entity    models.Entity
 					lockState bool
 					changed   bool
 					err       error
@@ -119,7 +118,7 @@ func (w *screenLockWorker) Events(ctx context.Context) (<-chan models.Entity, er
 					continue
 				}
 
-				sensorCh <- *entity
+				sensorCh <- entity
 			}
 		}
 	}()
@@ -133,7 +132,7 @@ func (w *screenLockWorker) Sensors(ctx context.Context) ([]models.Entity, error)
 		return nil, errors.Join(ErrNewScreenLockSensor, err)
 	}
 
-	return []models.Entity{*currentState}, nil
+	return []models.Entity{currentState}, nil
 }
 
 func (w *screenLockWorker) PreferencesID() string {
@@ -144,10 +143,10 @@ func (w *screenLockWorker) DefaultPreferences() preferences.CommonWorkerPrefs {
 	return preferences.CommonWorkerPrefs{}
 }
 
-func (w *screenLockWorker) getCurrentState(ctx context.Context) (*models.Entity, error) {
+func (w *screenLockWorker) getCurrentState(ctx context.Context) (models.Entity, error) {
 	screenLockState, err := w.screenLockProp.Get()
 	if err != nil {
-		return nil, errors.Join(ErrNewScreenLockSensor, err)
+		return models.Entity{}, errors.Join(ErrNewScreenLockSensor, err)
 	}
 
 	return newScreenlockSensor(ctx, screenLockState)
