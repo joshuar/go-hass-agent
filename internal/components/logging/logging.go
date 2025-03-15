@@ -11,10 +11,9 @@ import (
 	"path/filepath"
 	"time"
 
-	slogmulti "github.com/samber/slog-multi"
-
 	"github.com/lmittmann/tint"
 	"github.com/mattn/go-isatty"
+	slogmulti "github.com/samber/slog-multi"
 )
 
 const (
