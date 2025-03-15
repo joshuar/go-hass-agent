@@ -1,0 +1,4 @@
+Register will attempt to register this device with Home Assistant. Registration
+will default to an interactive UI if possible. Details can be provided for
+non-interactive registration via the server (--server) and token (--token)
+flags. The UI can be explicitly disabled via the --terminal flag.
