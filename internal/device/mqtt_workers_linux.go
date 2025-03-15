@@ -159,7 +159,7 @@ func CreateOSMQTTWorkers(ctx context.Context) workers.MQTTWorker {
 	if err != nil {
 		logging.FromContext(ctx).Warn("Could not create power controls.",
 			slog.Any("error", err))
-	} else {
+	} else if powerEntities != nil {
 		mqttController.buttons = append(mqttController.buttons, powerEntities...)
 	}
 
@@ -168,7 +168,7 @@ func CreateOSMQTTWorkers(ctx context.Context) workers.MQTTWorker {
 	if err != nil {
 		logging.FromContext(ctx).Warn("Could not create inhibit control.",
 			slog.Any("error", err))
-	} else {
+	} else if inhibitWorker != nil {
 		mqttController.switches = append(mqttController.switches, inhibitWorker.InhibitControl)
 		workerMsgs = append(workerMsgs, inhibitWorker.MsgCh)
 	}
@@ -178,7 +178,7 @@ func CreateOSMQTTWorkers(ctx context.Context) workers.MQTTWorker {
 	if err != nil {
 		logging.FromContext(ctx).Warn("Could not create screen lock controls.",
 			slog.Any("error", err))
-	} else {
+	} else if screenControls != nil {
 		mqttController.buttons = append(mqttController.buttons, screenControls...)
 	}
 	// Add the volume controls.
@@ -186,7 +186,7 @@ func CreateOSMQTTWorkers(ctx context.Context) workers.MQTTWorker {
 	if err != nil {
 		logging.FromContext(ctx).Warn("Could init volume worker.",
 			slog.Any("error", err))
-	} else {
+	} else if volumeWorker != nil {
 		mqttController.numbers = append(mqttController.numbers, volumeWorker.VolumeControl)
 		mqttController.switches = append(mqttController.switches, volumeWorker.MuteControl)
 		workerMsgs = append(workerMsgs, volumeWorker.MsgCh)
@@ -196,7 +196,7 @@ func CreateOSMQTTWorkers(ctx context.Context) workers.MQTTWorker {
 	if err != nil {
 		logging.FromContext(ctx).Warn("Could not activate MPRIS controller.",
 			slog.Any("error", err))
-	} else {
+	} else if mprisWorker != nil {
 		mqttController.sensors = append(mqttController.sensors, mprisWorker.MPRISStatus)
 		workerMsgs = append(workerMsgs, mprisWorker.MsgCh)
 	}
@@ -205,12 +205,10 @@ func CreateOSMQTTWorkers(ctx context.Context) workers.MQTTWorker {
 	if err != nil {
 		logging.FromContext(ctx).Warn("Could not activate Camera controller.",
 			slog.Any("error", err))
-	} else {
-		if cameraWorker != nil {
-			mqttController.buttons = append(mqttController.buttons, cameraWorker.StartButton, cameraWorker.StopButton)
-			mqttController.cameras = append(mqttController.cameras, cameraWorker.Images)
-			mqttController.sensors = append(mqttController.sensors, cameraWorker.Status)
-		}
+	} else if cameraWorker != nil {
+		mqttController.buttons = append(mqttController.buttons, cameraWorker.StartButton, cameraWorker.StopButton)
+		mqttController.cameras = append(mqttController.cameras, cameraWorker.Images)
+		mqttController.sensors = append(mqttController.sensors, cameraWorker.Status)
 		workerMsgs = append(workerMsgs, cameraWorker.MsgCh)
 	}
 
@@ -219,7 +217,7 @@ func CreateOSMQTTWorkers(ctx context.Context) workers.MQTTWorker {
 	if err != nil {
 		logging.FromContext(ctx).Warn("Could not activate D-Bus commands controller.",
 			slog.Any("error", err))
-	} else {
+	} else if dbusCmdController != nil {
 		mqttController.controls = append(mqttController.controls, dbusCmdController)
 	}
 
