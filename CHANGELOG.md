@@ -1,5 +1,13 @@
 # Changelog
 
+## [13.2.1](https://github.com/joshuar/go-hass-agent/compare/v13.2.0...v13.2.1) (2025-03-15)
+
+
+### Bug Fixes
+
+* **device:** :bug: don't try to add mqtt workers that didn't fail and cannot be enabled ([e7c1935](https://github.com/joshuar/go-hass-agent/commit/e7c1935a29d42385cc1c9af605d92dabc526061e))
+* **linux/power:** :bug: graceful shutdown of screen lock sensor worker ([b089948](https://github.com/joshuar/go-hass-agent/commit/b089948960beed1db83a561944805c136f062925))
+
 ## [13.2.0](https://github.com/joshuar/go-hass-agent/compare/v13.1.1...v13.2.0) (2025-03-15)
 
 
