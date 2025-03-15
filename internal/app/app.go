@@ -10,7 +10,7 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/hass"
-	fyneui "github.com/joshuar/go-hass-agent/internal/ui/fyneUI"
+	"github.com/joshuar/go-hass-agent/internal/ui"
 	"github.com/joshuar/go-hass-agent/internal/workers"
 )
 
@@ -22,7 +22,7 @@ type APIs interface {
 // appUI are the methods required for the agent to display its windows, tray
 // and notifications.
 type appUI interface {
-	DisplayNotification(n fyneui.Notification)
+	DisplayNotification(n ui.Notification)
 	DisplayTrayIcon(ctx context.Context, cancelFunc context.CancelFunc)
 	DisplayRegistrationWindow(ctx context.Context, prefs *preferences.Registration) chan bool
 	Run(ctx context.Context)
@@ -41,7 +41,7 @@ func New(ctx context.Context, appAPIs APIs, headless bool) *App {
 	}
 
 	if !headless {
-		app.ui = fyneui.NewFyneUI(ctx, appAPIs.Hass())
+		app.ui = ui.NewFyneUI(ctx, appAPIs.Hass())
 	}
 
 	return app

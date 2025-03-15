@@ -3,8 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//revive:disable:comment-spacings
-package fyneui
+package ui
 
 import (
 	"context"
@@ -32,7 +31,6 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/hass/discovery"
 	"github.com/joshuar/go-hass-agent/internal/models"
 
-	"github.com/joshuar/go-hass-agent/internal/agent/ui"
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 )
@@ -40,13 +38,28 @@ import (
 var (
 	//nolint:stylecheck
 	//lint:ignore ST1005 these are not standard error messages
-	ErrInvalidURL = errors.New(ui.InvalidURLMsgString)
+	ErrInvalidURL = errors.New(InvalidURLMsgString)
 	//nolint:stylecheck
 	//lint:ignore ST1005 these are not standard error messages
-	ErrInvalidURI = errors.New(ui.InvalidURIMsgString)
+	ErrInvalidURI = errors.New(InvalidURIMsgString)
 	//nolint:stylecheck
 	//lint:ignore ST1005 these are not standard error messages
-	ErrInvalidHostPort = errors.New(ui.InvalidHostPortMsgString)
+	ErrInvalidHostPort = errors.New(InvalidHostPortMsgString)
+)
+
+const (
+	RegistrationInfoString = `To register the agent, please enter the relevant details for your Home Assistant
+server (if not auto-detected) and long-lived access token.`
+
+	InvalidURLMsgString      = `You need to specify a valid http(s)://host:port.`
+	InvalidURIMsgString      = `You need to specify a valid scheme://host:port.`
+	InvalidHostPortMsgString = `You need to specify a valid host:port combination.`
+
+	MQTTServerInfoString   = "Format should be scheme://host:port Where 'scheme' is one of 'tcp' or 'ssl', 'host' is the ip-address (or hostname) and 'port' is the port on which the broker is accepting connections."
+	MQTTUserInfoString     = "Optional username to authenticate with the broker."
+	MQTTPasswordInfoString = "Optional password to authenticate with the broker."
+
+	PrefsRestartMsgString = `Please restart the agent to use changed preferences.`
 )
 
 // Notification represents the methods for displaying a notification.
@@ -77,7 +90,7 @@ func NewFyneUI(ctx context.Context, hass Hass) *FyneUI {
 		logger: logging.FromContext(ctx).With(slog.String("subsystem", "fyne")),
 		hass:   hass,
 	}
-	appUI.app.SetIcon(&ui.TrayIcon{})
+	appUI.app.SetIcon(&trayIcon{})
 
 	return appUI
 }
@@ -178,7 +191,7 @@ func (i *FyneUI) DisplayRegistrationWindow(ctx context.Context, prefs *preferenc
 	}
 
 	windowContents := container.NewVBox(
-		widget.NewLabelWithStyle(ui.RegistrationInfoString, fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+		widget.NewLabelWithStyle(RegistrationInfoString, fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewLabel(""),
 		registrationForm,
 	)
@@ -200,7 +213,7 @@ func (i *FyneUI) DisplayRegistrationWindow(ctx context.Context, prefs *preferenc
 func (i *FyneUI) aboutWindow() fyne.Window {
 	var widgets []fyne.CanvasObject
 
-	icon := canvas.NewImageFromResource(&ui.TrayIcon{})
+	icon := canvas.NewImageFromResource(&trayIcon{})
 	icon.FillMode = canvas.ImageFillOriginal
 
 	widgets = append(widgets, icon,
@@ -274,7 +287,7 @@ func (i *FyneUI) agentSettingsWindow() fyne.Window {
 	}
 	settingsForm.SubmitText = "Save"
 	window.SetContent(container.New(layout.NewVBoxLayout(),
-		widget.NewLabelWithStyle(ui.PrefsRestartMsgString, fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+		widget.NewLabelWithStyle(PrefsRestartMsgString, fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		settingsForm,
 	))
 
@@ -458,17 +471,17 @@ func mqttConfigItems(prefs *preferences.MQTTPreferences) []*widget.FormItem {
 	serverEntry.Validator = uriValidator()
 	serverEntry.Disable()
 	serverFormItem := widget.NewFormItem("MQTT Server", serverEntry)
-	serverFormItem.HintText = ui.MQTTServerInfoString
+	serverFormItem.HintText = MQTTServerInfoString
 
 	userEntry := configEntry(&prefs.MQTTUser, false)
 	userEntry.Disable()
 	userFormItem := widget.NewFormItem("MQTT User", userEntry)
-	userFormItem.HintText = ui.MQTTUserInfoString
+	userFormItem.HintText = MQTTUserInfoString
 
 	passwordEntry := configEntry(&prefs.MQTTPassword, true)
 	passwordEntry.Disable()
 	passwordFormItem := widget.NewFormItem("MQTT Password", passwordEntry)
-	passwordFormItem.HintText = ui.MQTTPasswordInfoString
+	passwordFormItem.HintText = MQTTPasswordInfoString
 
 	mqttEnabled := configCheck(&prefs.MQTTEnabled, func(b bool) {
 		switch b {
