@@ -7,7 +7,6 @@
 # Ignore everything
 *
 
-# But not these files...
 !/.gitignore
 !*.go
 !go.sum
@@ -26,6 +25,7 @@
 !.vscode/launch.json
 !.devcontainer/*
 .devcontainer/.env
+!internal/ui/assets/*
 
 !LICENSE
 !deployments/mosquitto/config/mosquitto.conf.example
