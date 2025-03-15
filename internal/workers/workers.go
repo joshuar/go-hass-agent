@@ -76,7 +76,7 @@ func (m *Manager) StartMQTTWorkers(ctx context.Context, workers ...MQTTWorker) *
 
 	for _, worker := range workers {
 		workerCtx, cancelFunc := context.WithCancel(ctx)
-		config, err := worker.Start(workerCtx)
+		workerData, err := worker.Start(workerCtx)
 		if err != nil {
 			m.logger.Warn("Could not start worker.",
 				slog.String("id", worker.ID()),
@@ -84,12 +84,12 @@ func (m *Manager) StartMQTTWorkers(ctx context.Context, workers ...MQTTWorker) *
 		} else {
 			m.workers[worker.ID()] = cancelFunc
 			// Add MQTT worker configs.
-			data.Configs = append(data.Configs, config.Configs...)
+			data.Configs = append(data.Configs, workerData.Configs...)
 			// Add MQTT worker subscriptions.
-			data.Subscriptions = append(data.Subscriptions, config.Subscriptions...)
+			data.Subscriptions = append(data.Subscriptions, workerData.Subscriptions...)
 			// Add MQTT worker message channel, if created.
-			if config.Msgs != nil {
-				msgCh = append(msgCh, config.Msgs)
+			if workerData.Msgs != nil {
+				msgCh = append(msgCh, workerData.Msgs)
 			}
 			m.logger.Debug("Started worker.",
 				slog.String("id", worker.ID()))

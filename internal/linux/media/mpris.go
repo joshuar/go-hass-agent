@@ -33,23 +33,50 @@ const (
 
 var ErrInitMPRISWorker = errors.New("could not init MPRIS worker")
 
-type mprisMonitor struct {
-	logger           *slog.Logger
-	mediaStateEntity *mqtthass.SensorEntity
-	msgCh            chan mqttapi.Msg
-	mediaState       string
-	prefs            *preferences.CommonWorkerPrefs
+type MPRISWorker struct {
+	logger      *slog.Logger
+	MPRISStatus *mqtthass.SensorEntity
+	MsgCh       chan mqttapi.Msg
+	mediaState  string
+	prefs       *preferences.CommonWorkerPrefs
 }
 
-func (m *mprisMonitor) PreferencesID() string {
+func (m *MPRISWorker) PreferencesID() string {
 	return mprisPrefID
 }
 
-func (m *mprisMonitor) DefaultPreferences() preferences.CommonWorkerPrefs {
+func (m *MPRISWorker) DefaultPreferences() preferences.CommonWorkerPrefs {
 	return preferences.CommonWorkerPrefs{}
 }
 
-func MPRISControl(ctx context.Context, device *mqtthass.Device, msgCh chan mqttapi.Msg) (*mqtthass.SensorEntity, error) {
+func (m *MPRISWorker) mprisStateCallback(_ ...any) (json.RawMessage, error) {
+	return json.RawMessage(`{ "value": ` + m.mediaState + ` }`), nil
+}
+
+func (m *MPRISWorker) publishPlaybackState(state string) {
+	m.mediaState = state
+
+	switch m.mediaState {
+	case "Playing":
+		m.MPRISStatus.Icon = mediaPlayIcon
+	case "Paused":
+		m.MPRISStatus.Icon = mediaPauseIcon
+	case "Stopped":
+		m.MPRISStatus.Icon = mediaStopIcon
+	default:
+		m.MPRISStatus.Icon = mediaOffIcon
+	}
+
+	msg, err := m.MPRISStatus.MarshalState()
+	if err != nil {
+		m.logger.Warn("Could not publish MPRIS state.", slog.Any("error", err))
+
+		return
+	}
+	m.MsgCh <- *msg
+}
+
+func NewMPRISWorker(ctx context.Context, device *mqtthass.Device) (*MPRISWorker, error) {
 	var err error
 
 	bus, ok := linux.CtxGetSessionBus(ctx)
@@ -57,22 +84,22 @@ func MPRISControl(ctx context.Context, device *mqtthass.Device, msgCh chan mqtta
 		return nil, errors.Join(ErrInitMPRISWorker, linux.ErrNoSessionBus)
 	}
 
-	mprisMonitor := &mprisMonitor{
+	worker := &MPRISWorker{
 		logger: logging.FromContext(ctx).With(slog.String("controller", "mpris")),
-		msgCh:  msgCh,
+		MsgCh:  make(chan mqttapi.Msg),
 	}
 
-	mprisMonitor.prefs, err = preferences.LoadWorker(mprisMonitor)
+	worker.prefs, err = preferences.LoadWorker(worker)
 	if err != nil {
 		return nil, errors.Join(ErrInitMPRISWorker, err)
 	}
 
 	//nolint:nilnil
-	if mprisMonitor.prefs.IsDisabled() {
+	if worker.prefs.IsDisabled() {
 		return nil, nil
 	}
 
-	mprisMonitor.mediaStateEntity = mqtthass.NewSensorEntity().
+	worker.MPRISStatus = mqtthass.NewSensorEntity().
 		WithDetails(
 			mqtthass.App(preferences.AppName),
 			mqtthass.Name("Media State"),
@@ -82,7 +109,7 @@ func MPRISControl(ctx context.Context, device *mqtthass.Device, msgCh chan mqtta
 			mqtthass.Icon(mediaOffIcon),
 		).
 		WithState(
-			mqtthass.StateCallback(mprisMonitor.mprisStateCallback),
+			mqtthass.StateCallback(worker.mprisStateCallback),
 			mqtthass.ValueTemplate("{{ value_json.value }}"),
 		)
 
@@ -98,53 +125,26 @@ func MPRISControl(ctx context.Context, device *mqtthass.Device, msgCh chan mqtta
 
 	// Watch for power profile changes.
 	go func() {
-		mprisMonitor.logger.Debug("Monitoring for MPRIS signals.")
+		worker.logger.Debug("Monitoring for MPRIS signals.")
 
 		for {
 			select {
 			case <-ctx.Done():
-				mprisMonitor.logger.Debug("Stopped monitoring for MPRIS signals.")
+				worker.logger.Debug("Stopped monitoring for MPRIS signals.")
 
 				return
 			case event := <-triggerCh:
 				changed, status, err := dbusx.HasPropertyChanged[string](event.Content, "PlaybackStatus")
 				if err != nil {
-					mprisMonitor.logger.Warn("Could not parse received D-Bus signal.", slog.Any("error", err))
+					worker.logger.Warn("Could not parse received D-Bus signal.", slog.Any("error", err))
 				} else {
 					if changed {
-						mprisMonitor.publishPlaybackState(status)
+						worker.publishPlaybackState(status)
 					}
 				}
 			}
 		}
 	}()
 
-	return mprisMonitor.mediaStateEntity, nil
-}
-
-func (m *mprisMonitor) mprisStateCallback(_ ...any) (json.RawMessage, error) {
-	return json.RawMessage(`{ "value": ` + m.mediaState + ` }`), nil
-}
-
-func (m *mprisMonitor) publishPlaybackState(state string) {
-	m.mediaState = state
-
-	switch m.mediaState {
-	case "Playing":
-		m.mediaStateEntity.Icon = mediaPlayIcon
-	case "Paused":
-		m.mediaStateEntity.Icon = mediaPauseIcon
-	case "Stopped":
-		m.mediaStateEntity.Icon = mediaStopIcon
-	default:
-		m.mediaStateEntity.Icon = mediaOffIcon
-	}
-
-	msg, err := m.mediaStateEntity.MarshalState()
-	if err != nil {
-		m.logger.Warn("Could not publish MPRIS state.", slog.Any("error", err))
-
-		return
-	}
-	m.msgCh <- *msg
+	return worker, nil
 }
