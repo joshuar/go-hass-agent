@@ -51,6 +51,7 @@ type CameraWorker struct {
 	camera      *webcam.Webcam
 	prefs       *CameraWorkerPrefs
 	state       string
+	MsgCh       chan mqttapi.Msg
 }
 
 // CameraWorkerPrefs are the preferences a user can set for the CameraWorker.
@@ -133,11 +134,12 @@ func publishImages(cam *webcam.Webcam, topic string, msgCh chan mqttapi.Msg) {
 	}
 }
 
-// NewCameraControl is called by the OS controller to provide the entities for a camera.
-func NewCameraControl(ctx context.Context, msgCh chan mqttapi.Msg, mqttDevice *mqtthass.Device) (*CameraWorker, error) {
+// NewCameraWorker is called by the OS controller to provide the entities for a camera.
+func NewCameraWorker(ctx context.Context, mqttDevice *mqtthass.Device) (*CameraWorker, error) {
 	var err error
-
-	worker := &CameraWorker{}
+	worker := &CameraWorker{
+		MsgCh: make(chan mqttapi.Msg),
+	}
 
 	worker.prefs, err = preferences.LoadWorker(worker)
 	if err != nil {
@@ -176,8 +178,8 @@ func NewCameraControl(ctx context.Context, msgCh chan mqttapi.Msg, mqttDevice *m
 
 			worker.state = startedState
 
-			go publishImages(worker.camera, worker.Images.Topic, msgCh)
-			msgCh <- *mqttapi.NewMsg(worker.Status.StateTopic, []byte(worker.state))
+			go publishImages(worker.camera, worker.Images.Topic, worker.MsgCh)
+			worker.MsgCh <- *mqttapi.NewMsg(worker.Status.StateTopic, []byte(worker.state))
 		}))
 
 	worker.StopButton = mqtthass.NewButtonEntity().
@@ -199,7 +201,7 @@ func NewCameraControl(ctx context.Context, msgCh chan mqttapi.Msg, mqttDevice *m
 			}
 
 			worker.state = stoppedState
-			msgCh <- *mqttapi.NewMsg(worker.Status.StateTopic, []byte(worker.state))
+			worker.MsgCh <- *mqttapi.NewMsg(worker.Status.StateTopic, []byte(worker.state))
 
 			slog.Info("Stop recording webcam.")
 		}),
@@ -220,11 +222,11 @@ func NewCameraControl(ctx context.Context, msgCh chan mqttapi.Msg, mqttDevice *m
 			}),
 		)
 
-	// go func() {
-	// 	if ctx.Err() == nil {
-	// 		msgCh <- *mqttapi.NewMsg(worker.Status.StateTopic, []byte(stoppedState))
-	// 	}
-	// }()
+	go func() {
+		defer close(worker.MsgCh)
+		worker.MsgCh <- *mqttapi.NewMsg(worker.Status.StateTopic, []byte(stoppedState))
+		<-ctx.Done()
+	}()
 
 	return worker, nil
 }

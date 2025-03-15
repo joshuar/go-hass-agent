@@ -28,25 +28,25 @@ const (
 
 var ErrInitInhibitWorker = errors.New("could not init inhibit control worker")
 
-type inhibitControlWorker struct {
-	prefs  *preferences.CommonWorkerPrefs
-	entity *mqtthass.SwitchEntity
-	fd     int
-	logger *slog.Logger
-	msgCh  chan mqttapi.Msg
-	bus    *dbusx.Bus
+type InhibitWorker struct {
+	prefs          *preferences.CommonWorkerPrefs
+	InhibitControl *mqtthass.SwitchEntity
+	fd             int
+	logger         *slog.Logger
+	MsgCh          chan mqttapi.Msg
+	bus            *dbusx.Bus
 }
 
-func (w *inhibitControlWorker) PreferencesID() string {
+func (w *InhibitWorker) PreferencesID() string {
 	return inhibitWorkerPrefID
 }
 
-func (w *inhibitControlWorker) DefaultPreferences() preferences.CommonWorkerPrefs {
+func (w *InhibitWorker) DefaultPreferences() preferences.CommonWorkerPrefs {
 	return preferences.CommonWorkerPrefs{}
 }
 
 // inhibitStateCallback is executed when the inhibit state is read on MQTT.
-func (w *inhibitControlWorker) inhibitStateCallback(_ ...any) (json.RawMessage, error) {
+func (w *InhibitWorker) inhibitStateCallback(_ ...any) (json.RawMessage, error) {
 	if w.fd > 0 {
 		return json.RawMessage(`ON`), nil
 	}
@@ -55,7 +55,7 @@ func (w *inhibitControlWorker) inhibitStateCallback(_ ...any) (json.RawMessage, 
 }
 
 // inhibitCommandCallback is executed when the inhibit control is toggled.
-func (w *inhibitControlWorker) inhibitCommandCallback(p *paho.Publish) {
+func (w *InhibitWorker) inhibitCommandCallback(p *paho.Publish) {
 	var err error
 
 	state := string(p.Payload)
@@ -74,7 +74,7 @@ func (w *inhibitControlWorker) inhibitCommandCallback(p *paho.Publish) {
 	}
 
 	go func() {
-		if err := w.publishState(w.msgCh); err != nil {
+		if err := w.publishState(w.MsgCh); err != nil {
 			w.logger.Error("Failed to publish mute state to MQTT.", slog.Any("error", err))
 		}
 	}()
@@ -82,8 +82,8 @@ func (w *inhibitControlWorker) inhibitCommandCallback(p *paho.Publish) {
 
 // publishState will publish on MQTT the current state of the inhibit lock
 // controlled by the worker.
-func (w *inhibitControlWorker) publishState(msgCh chan mqttapi.Msg) error {
-	msg, err := w.entity.MarshalState()
+func (w *InhibitWorker) publishState(msgCh chan mqttapi.Msg) error {
+	msg, err := w.InhibitControl.MarshalState()
 	if err != nil {
 		return fmt.Errorf("could not marshal entity state: %w", err)
 	}
@@ -94,7 +94,7 @@ func (w *inhibitControlWorker) publishState(msgCh chan mqttapi.Msg) error {
 
 // releaseInhibitLock will release any fd file lock the inhibit worker has been
 // granted.
-func (w *inhibitControlWorker) releaseInhibitLock() error {
+func (w *InhibitWorker) releaseInhibitLock() error {
 	if err := syscall.Close(w.fd); err != nil {
 		return fmt.Errorf("error closing inhibit file descriptor lock: %w", err)
 	}
@@ -103,7 +103,7 @@ func (w *inhibitControlWorker) releaseInhibitLock() error {
 }
 
 // createInhibitLock will create an inhibit lock for the worker.
-func (w *inhibitControlWorker) createInhibitLock() error {
+func (w *InhibitWorker) createInhibitLock() error {
 	fd, err := dbusx.GetData[int](w.bus,
 		"/org/freedesktop/login1",
 		"org.freedesktop.login1",
@@ -123,16 +123,16 @@ func (w *inhibitControlWorker) createInhibitLock() error {
 }
 
 //nolint:nilnil
-func NewInhibitControl(ctx context.Context, msgCh chan mqttapi.Msg, device *mqtthass.Device) (*mqtthass.SwitchEntity, error) {
+func NewInhibitWorker(ctx context.Context, device *mqtthass.Device) (*InhibitWorker, error) {
 	var err error
 
-	worker := &inhibitControlWorker{
+	worker := &InhibitWorker{
 		logger: logging.FromContext(ctx).WithGroup(inhibitWorkerID),
-		msgCh:  msgCh,
+		MsgCh:  make(chan mqttapi.Msg),
 	}
 
 	// Create an MQTT switch entity for toggling the inhibit lock.
-	worker.entity = mqtthass.NewSwitchEntity().
+	worker.InhibitControl = mqtthass.NewSwitchEntity().
 		OptimisticMode().
 		WithDetails(
 			mqtthass.App(preferences.AppName),
@@ -176,11 +176,11 @@ func NewInhibitControl(ctx context.Context, msgCh chan mqttapi.Msg, device *mqtt
 	}()
 
 	go func() {
-		if err := worker.publishState(worker.msgCh); err != nil {
+		if err := worker.publishState(worker.MsgCh); err != nil {
 			worker.logger.Warn("Could not publish initial inhibit state.",
 				slog.Any("error", err))
 		}
 	}()
 
-	return worker.entity, nil
+	return worker, nil
 }

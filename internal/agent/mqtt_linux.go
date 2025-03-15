@@ -133,7 +133,7 @@ func setupOSMQTTWorker(ctx context.Context) MQTTWorker {
 	}
 
 	// Add inhibit controls.
-	inhibitEntities, err := power.NewInhibitControl(ctx, mqttController.Msgs(), mqttDevice)
+	inhibitEntities, err := power.NewInhibitWorker(ctx, mqttController.Msgs(), mqttDevice)
 	if err != nil {
 		logging.FromContext(ctx).Warn("Could not create inhibit control.",
 			slog.Any("error", err))
@@ -159,7 +159,7 @@ func setupOSMQTTWorker(ctx context.Context) MQTTWorker {
 		mqttController.switches = append(mqttController.switches, muteEntity)
 	}
 	// Add media control.
-	mprisEntity, err := media.MPRISControl(ctx, mqttDevice, mqttController.Msgs())
+	mprisEntity, err := media.NewMPRISWorker(ctx, mqttDevice, mqttController.Msgs())
 	if err != nil {
 		logging.FromContext(ctx).Warn("Could not activate MPRIS controller.",
 			slog.Any("error", err))
@@ -167,7 +167,7 @@ func setupOSMQTTWorker(ctx context.Context) MQTTWorker {
 		mqttController.sensors = append(mqttController.sensors, mprisEntity)
 	}
 	// Add camera control.
-	cameraEntities, err := media.NewCameraControl(ctx, mqttController.Msgs(), mqttDevice)
+	cameraEntities, err := media.NewCameraWorker(ctx, mqttController.Msgs(), mqttDevice)
 	if err != nil {
 		logging.FromContext(ctx).Warn("Could not activate Camera controller.",
 			slog.Any("error", err))
