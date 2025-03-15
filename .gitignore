@@ -26,6 +26,7 @@
 !.devcontainer/*
 .devcontainer/.env
 !internal/ui/assets/*
+!cmd/assets/*
 
 !LICENSE
 !deployments/mosquitto/config/mosquitto.conf.example
