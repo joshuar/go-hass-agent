@@ -16,6 +16,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/eclipse/paho.golang/paho"
 	"github.com/iancoleman/strcase"
 	"github.com/pelletier/go-toml/v2"
@@ -88,7 +89,7 @@ type Worker struct {
 	device       *mqtthass.Device
 	buttons      []*mqtthass.ButtonEntity
 	switches     []*mqtthass.SwitchEntity
-	intNumbers   []*mqtthass.NumberEntity[int]
+	intNumbers   []*mqtthass.NumberEntity[int64]
 	floatNumbers []*mqtthass.NumberEntity[float64]
 }
 
@@ -290,7 +291,7 @@ func (d *Worker) generateSwitches(switchCmds []Command) {
 func (d *Worker) generateNumbers(numberCommands []Command) {
 	var (
 		id, icon, name string
-		ints           []*mqtthass.NumberEntity[int]
+		ints           []*mqtthass.NumberEntity[int64]
 		floats         []*mqtthass.NumberEntity[float64]
 	)
 
@@ -340,16 +341,22 @@ func (d *Worker) generateNumbers(numberCommands []Command) {
 		// Add an entity based on the number type.
 		valueType := cmd.NumberType
 
+		spew.Dump(cmd)
+
 		switch valueType {
 		case "float":
-			minValue := convValue[float64](cmd.Min)
+			var (
+				minValue float64
+				maxValue float64
+				step     float64
+			)
 
-			maxValue := convValue[float64](cmd.Max)
+			minValue = convValue[float64](cmd.Min)
+			maxValue = convValue[float64](cmd.Max)
 			if maxValue == 0 {
 				maxValue = 100
 			}
-
-			step := convValue[float64](cmd.Step)
+			step = convValue[float64](cmd.Step)
 			if step == 0 {
 				step = 1
 			}
@@ -378,20 +385,24 @@ func (d *Worker) generateNumbers(numberCommands []Command) {
 					OptimisticMode())
 
 		default:
-			minValue := convValue[int](cmd.Min)
+			var (
+				minValue int64
+				maxValue int64
+				step     int64
+			)
 
-			maxValue := convValue[int](cmd.Max)
+			minValue = convValue[int64](cmd.Min)
+			maxValue = convValue[int64](cmd.Max)
 			if maxValue == 0 {
 				maxValue = 100
 			}
-
-			step := convValue[int](cmd.Step)
+			step = convValue[int64](cmd.Step)
 			if step == 0 {
 				step = 1
 			}
 
 			ints = append(ints,
-				mqtthass.NewNumberEntity[int]().
+				mqtthass.NewNumberEntity[int64]().
 					WithDetails(
 						mqtthass.App(preferences.AppName),
 						mqtthass.Name(name),
@@ -544,6 +555,7 @@ func numberState(command string) (json.RawMessage, error) {
 // return the default value of that type.
 func convValue[T constraints.Float | constraints.Integer](orig any) T {
 	value, ok := orig.(T)
+	spew.Dump(value)
 	if !ok {
 		return T(0)
 	}
