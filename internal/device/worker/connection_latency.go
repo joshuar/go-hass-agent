@@ -15,6 +15,7 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/device/helpers"
+	"github.com/joshuar/go-hass-agent/internal/hass/api"
 	"github.com/joshuar/go-hass-agent/internal/models"
 	"github.com/joshuar/go-hass-agent/internal/models/class"
 	"github.com/joshuar/go-hass-agent/internal/models/sensor"
@@ -59,8 +60,8 @@ func (w *ConnectionLatency) ID() string { return connectionLatencyWorkerID }
 
 func (w *ConnectionLatency) sensors(ctx context.Context) ([]models.Entity, error) {
 	resp, err := w.client.R().
-		SetContext(ctx).
-		Get(w.endpoint)
+		SetContext(ctx).SetBody(api.Request{Type: api.GetConfig}).
+		Post(w.endpoint)
 
 	// Handle errors and bad responses.
 	switch {
