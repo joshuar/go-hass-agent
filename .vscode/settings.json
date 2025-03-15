@@ -64,7 +64,8 @@
     "components/validation",
     "schemas",
     "app",
-    "workers"
+    "workers",
+    "mqtt"
   ],
   "go.testFlags": [
     "-v"

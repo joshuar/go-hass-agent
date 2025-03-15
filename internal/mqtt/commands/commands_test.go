@@ -51,7 +51,7 @@ var mockSwitch = mqtthass.NewSwitchEntity().
 	).
 	OptimisticMode()
 
-var mockNumber = mqtthass.NewNumberEntity[int]().
+var mockNumber = mqtthass.NewNumberEntity[int64]().
 	WithDetails(
 		mqtthass.App("test"),
 		mqtthass.Name("test number"),
@@ -82,7 +82,7 @@ func TestController_Subscriptions(t *testing.T) {
 	type fields struct {
 		buttons    []*mqtthass.ButtonEntity
 		switches   []*mqtthass.SwitchEntity
-		intNumbers []*mqtthass.NumberEntity[int]
+		intNumbers []*mqtthass.NumberEntity[int64]
 	}
 	tests := []struct {
 		name   string
@@ -94,7 +94,7 @@ func TestController_Subscriptions(t *testing.T) {
 			fields: fields{
 				buttons:    []*mqtthass.ButtonEntity{mockButton},
 				switches:   []*mqtthass.SwitchEntity{mockSwitch},
-				intNumbers: []*mqtthass.NumberEntity[int]{mockNumber},
+				intNumbers: []*mqtthass.NumberEntity[int64]{mockNumber},
 			},
 			want: []*mqttapi.Subscription{
 				mockButtonSubscription,
@@ -136,7 +136,7 @@ func TestController_Configs(t *testing.T) {
 	type fields struct {
 		buttons    []*mqtthass.ButtonEntity
 		switches   []*mqtthass.SwitchEntity
-		intNumbers []*mqtthass.NumberEntity[int]
+		intNumbers []*mqtthass.NumberEntity[int64]
 	}
 	tests := []struct {
 		name   string
@@ -148,7 +148,7 @@ func TestController_Configs(t *testing.T) {
 			fields: fields{
 				buttons:    []*mqtthass.ButtonEntity{mockButton},
 				switches:   []*mqtthass.SwitchEntity{mockSwitch},
-				intNumbers: []*mqtthass.NumberEntity[int]{mockNumber},
+				intNumbers: []*mqtthass.NumberEntity[int64]{mockNumber},
 			},
 			want: []*mqttapi.Msg{
 				mockButtonConfig,
