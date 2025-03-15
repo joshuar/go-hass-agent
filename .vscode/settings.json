@@ -63,7 +63,8 @@
     "service",
     "components/validation",
     "schemas",
-    "app"
+    "app",
+    "workers"
   ],
   "go.testFlags": [
     "-v"

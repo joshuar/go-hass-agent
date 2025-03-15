@@ -104,6 +104,20 @@ func (m *Manager) StartMQTTWorkers(ctx context.Context, workers ...MQTTWorker) *
 // StopWorkers stops the workers with the given IDs. If the worker is
 // already stopped or not running, a warning will be logged and the action is a
 // no-op.
+func (m *Manager) StopAllWorkers() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	for id, workerCancelFunc := range m.workers {
+		workerCancelFunc()
+		m.logger.Debug("Stopped worker.",
+			slog.String("id", id))
+	}
+}
+
+// StopWorkers stops the workers with the given IDs. If the worker is
+// already stopped or not running, a warning will be logged and the action is a
+// no-op.
 func (m *Manager) StopWorkers(ids ...string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
