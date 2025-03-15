@@ -62,7 +62,8 @@
     "scheduler",
     "service",
     "components/validation",
-    "schemas"
+    "schemas",
+    "app"
   ],
   "go.testFlags": [
     "-v"

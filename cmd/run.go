@@ -11,7 +11,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/joshuar/go-hass-agent/internal/agent"
+	"github.com/joshuar/go-hass-agent/internal/app"
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/components/registry"
@@ -63,7 +63,7 @@ func (r *Run) Run(opts *Opts) error {
 	}
 
 	// Run the agent.
-	if err := agent.Run(ctx, opts.Headless, api); err != nil {
+	if err := app.Run(ctx, opts.Headless, api); err != nil {
 		return errors.Join(ErrRunCmdFailed, err)
 	}
 

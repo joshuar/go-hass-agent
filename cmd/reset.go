@@ -13,7 +13,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/joshuar/go-hass-agent/internal/agent"
+	"github.com/joshuar/go-hass-agent/internal/app"
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/components/registry"
@@ -44,7 +44,7 @@ func (r *Reset) Run(opts *Opts) error {
 	ctx = logging.ToContext(ctx, opts.Logger)
 
 	// Reset agent.
-	if err := agent.Reset(ctx); err != nil {
+	if err := app.Reset(ctx); err != nil {
 		errs = errors.Join(fmt.Errorf("agent reset failed: %w", err))
 	}
 	// Reset registry.
