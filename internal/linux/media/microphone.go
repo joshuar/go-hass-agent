@@ -88,32 +88,26 @@ func (w *micUsageWorker) parsePWState(state pwmonitor.State) {
 
 //nolint:dupl
 func (w *micUsageWorker) Events(ctx context.Context) (<-chan models.Entity, error) {
-	outCh := make(chan models.Entity)
-	pwEvents := make(chan []*pwmonitor.Event)
+	pwEvents, err := monitorPipewire(ctx, micPipewireEventFilter)
+	if err != nil {
+		return nil, errors.Join(ErrInitMicUsageWorker, err)
+	}
 
-	go monitorPipewire(ctx, pwEvents, micPipewireEventFilter)
+	outCh := make(chan models.Entity)
 
 	go func() {
 		defer close(outCh)
-		defer close(pwEvents)
 
-		for {
-			select {
-			case events := <-pwEvents:
-				for _, event := range events {
-					w.parsePWState(*event.Info.State)
+		for event := range pwEvents {
+			w.parsePWState(*event.Info.State)
 
-					micUseSensor, err := newMicUsageSensor(ctx, w.inUse)
-					if err != nil {
-						logging.FromContext(ctx).Warn("Could not parse pipewire event for mic usage.",
-							slog.Any("error", err))
-					}
-
-					outCh <- *micUseSensor
-				}
-			case <-ctx.Done():
-				return
+			micUseSensor, err := newMicUsageSensor(ctx, w.inUse)
+			if err != nil {
+				logging.FromContext(ctx).Warn("Could not parse pipewire event for mic usage.",
+					slog.Any("error", err))
 			}
+
+			outCh <- *micUseSensor
 		}
 	}()
 

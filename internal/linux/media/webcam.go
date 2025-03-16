@@ -91,32 +91,25 @@ func (w *webcamUsageWorker) parsePWState(state pwmonitor.State) {
 
 //nolint:dupl
 func (w *webcamUsageWorker) Events(ctx context.Context) (<-chan models.Entity, error) {
+	pwEvents, err := monitorPipewire(ctx, webcamPipewireEventFilter)
+	if err != nil {
+		return nil, errors.Join(ErrInitWebcamUsageWorker, err)
+	}
+
 	outCh := make(chan models.Entity)
-	pwEvents := make(chan []*pwmonitor.Event)
-
-	go monitorPipewire(ctx, pwEvents, webcamPipewireEventFilter)
-
 	go func() {
 		defer close(outCh)
-		defer close(pwEvents)
 
-		for {
-			select {
-			case events := <-pwEvents:
-				for _, event := range events {
-					w.parsePWState(*event.Info.State)
+		for event := range pwEvents {
+			w.parsePWState(*event.Info.State)
 
-					webcamUseSensor, err := newWebcamUsageSensor(ctx, w.inUse)
-					if err != nil {
-						logging.FromContext(ctx).Warn("Could not parse pipewire event for webcam usage.",
-							slog.Any("error", err))
-					}
-
-					outCh <- *webcamUseSensor
-				}
-			case <-ctx.Done():
-				return
+			webcamUseSensor, err := newWebcamUsageSensor(ctx, w.inUse)
+			if err != nil {
+				logging.FromContext(ctx).Warn("Could not parse pipewire event for webcam usage.",
+					slog.Any("error", err))
 			}
+
+			outCh <- *webcamUseSensor
 		}
 	}()
 
