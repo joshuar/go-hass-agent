@@ -19,6 +19,8 @@ import (
 
 // monitorPipewire starts a listener for pipewire events, filters events by the
 // given eventFilter function and returns the filtered events on the channel.
+//
+//nolint:gocognit
 func monitorPipewire(ctx context.Context, filterFunc func(*pwmonitor.Event) bool) (chan pwmonitor.Event, error) {
 	// Set up pw-dump command.
 	cmd := exec.CommandContext(ctx, "pw-dump", "--monitor", "--no-colors")
@@ -44,7 +46,7 @@ func monitorPipewire(ctx context.Context, filterFunc func(*pwmonitor.Event) bool
 			// Read pw-dump output.
 			for dec.More() {
 				var event pwmonitor.Event
-				if err := dec.Decode(&event); err == io.EOF {
+				if err = dec.Decode(&event); err == io.EOF {
 					break
 				} else if err != nil {
 					logging.FromContext(ctx).Debug("Error decoding pw-dump output.",
