@@ -37,7 +37,7 @@ jobs:
           allowed-endpoints: >
             api.github.com:443
       - name: Run release please
-        uses: googleapis/release-please-action@d1a8f221d7723166f48a584aebba00ef3f6febec # v4
+        uses: googleapis/release-please-action@a02a34c4d625f9be7cb89156071d8567266a2445 # v4
         id: release_please
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
