@@ -3,7 +3,7 @@ module github.com/joshuar/go-hass-agent
 go 1.24.0
 
 require (
-	fyne.io/fyne/v2 v2.5.4
+	fyne.io/fyne/v2 v2.5.5
 	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/eclipse/paho.golang v0.22.0
 	github.com/go-playground/validator/v10 v10.25.0
