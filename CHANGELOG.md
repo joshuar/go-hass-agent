@@ -1,5 +1,13 @@
 # Changelog
 
+## [13.2.3](https://github.com/joshuar/go-hass-agent/compare/v13.2.2...v13.2.3) (2025-03-22)
+
+
+### Bug Fixes
+
+* **linux:** :bug: don't try to run nil workers ([6c6fcec](https://github.com/joshuar/go-hass-agent/commit/6c6fcec9d6bd8fdc7b8bc0e19e6d47c921421276))
+* **linux:** :bug: don't try to run nil workers ([db19d08](https://github.com/joshuar/go-hass-agent/commit/db19d08dcb43cead345180ba4d8c22f19223939d))
+
 ## [13.2.2](https://github.com/joshuar/go-hass-agent/compare/v13.2.1...v13.2.2) (2025-03-22)
 
 
