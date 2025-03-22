@@ -1,5 +1,12 @@
 # Changelog
 
+## [13.2.2](https://github.com/joshuar/go-hass-agent/compare/v13.2.1...v13.2.2) (2025-03-22)
+
+
+### Performance Improvements
+
+* **linux/media:** :zap: improved pipewire monitoring for webcam/mic in use sensors ([2b65d49](https://github.com/joshuar/go-hass-agent/commit/2b65d49c7b448f8defaba2a42eb0caef4f2b6b6a))
+
 ## [13.2.1](https://github.com/joshuar/go-hass-agent/compare/v13.2.0...v13.2.1) (2025-03-15)
 
 
