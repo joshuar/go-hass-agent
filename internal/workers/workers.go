@@ -52,6 +52,9 @@ func (m *Manager) StartEntityWorkers(ctx context.Context, workers ...EntityWorke
 	for _, worker := range workers {
 		workerCtx, cancelFunc := context.WithCancel(ctx)
 		workerCh, err := worker.Start(workerCtx)
+		if workerCh == nil {
+			continue
+		}
 		if err != nil {
 			m.logger.Warn("Could not start worker.",
 				slog.String("id", worker.ID()),
