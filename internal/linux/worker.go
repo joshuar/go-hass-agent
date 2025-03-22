@@ -121,6 +121,9 @@ func (w *PollingSensorWorker) IsDisabled() bool {
 }
 
 func (w *PollingSensorWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
+	if w == nil {
+		return nil, nil
+	}
 	// Create a new context for the updates scope.
 	updatesCtx, cancelFunc := context.WithCancel(ctx)
 	// Save the context cancelFunc in the worker to be used as part of its
@@ -159,6 +162,9 @@ func (w *OneShotSensorWorker) IsDisabled() bool {
 }
 
 func (w *OneShotSensorWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
+	if w == nil {
+		return nil, nil
+	}
 	// Create a new context for the updates scope.
 	updatesCtx, cancelFunc := context.WithCancel(ctx)
 	// Save the context cancelFunc in the worker to be used as part of its
