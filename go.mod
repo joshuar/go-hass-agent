@@ -123,7 +123,7 @@ require (
 	fyne.io/systray v1.11.0 // indirect
 	github.com/ConnorsApps/pipewire-monitor-go v0.1.0
 	github.com/adrg/xdg v0.5.3
-	github.com/alecthomas/kong v1.8.1
+	github.com/alecthomas/kong v1.9.0
 	github.com/blackjack/webcam v0.6.1
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
