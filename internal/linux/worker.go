@@ -120,6 +120,7 @@ func (w *PollingSensorWorker) IsDisabled() bool {
 	return false
 }
 
+//nolint:nilnil
 func (w *PollingSensorWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
 	if w == nil {
 		return nil, nil
@@ -161,6 +162,7 @@ func (w *OneShotSensorWorker) IsDisabled() bool {
 	return false
 }
 
+//nolint:nilnil
 func (w *OneShotSensorWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
 	if w == nil {
 		return nil, nil
