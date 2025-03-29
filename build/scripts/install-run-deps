@@ -5,38 +5,32 @@
 set -e
 
 install_deps_debian() {
-
-export DEBIAN_FRONTEND=noninteractive
-
-apt-get update
-
-for a in "${arch[@]}"; do
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get -y update
+    for a in "${arch[@]}"; do
         apt-get -y install --no-install-recommends \
-                libgl1:${a} libx11-6:${a} libglx0:${a} \
-                libglvnd0:${a} libxcb1:${a} libxau6:${a} \
-                libxdmcp6:${a} dbus-x11:${a}
-done
-rm -rf /var/lib/apt/lists/* /var/cache/apt/*
-
-apt-get -y autoremove && apt-get -y clean && rm -rf /var/lib/apt/lists/*
-
+            libgl1:${a} libx11-6:${a} libglx0:${a} \
+            libglvnd0:${a} libxcb1:${a} libxau6:${a} \
+            libxdmcp6:${a} dbus-x11:${a}
+    done
+    rm -rf /var/lib/apt/lists/* /var/cache/apt/*
+    apt-get -y autoremove && apt-get -y clean && rm -rf /var/lib/apt/lists/*
 }
 
 install_deps_alpine() {
-    apk update && \
-    apk add libxcursor libxrandr libxinerama \
-        libxi mesa-gl
+    apk update &&
+        apk add libxcursor libxrandr libxinerama \
+            libxi mesa-gl
 }
 
 # set arch as appropriate
 case $1 in
-    linux/amd64) arch=(amd64) ;;
-    linux/arm/*) arch=(armhf) ;;
-    linux/arm64) arch=(arm64) ;;
-    all) arch=(armhf arm64 amd64) ;;
-    *) echo "Unsupported arch" && exit -1 ;;
+linux/amd64) arch=(amd64) ;;
+linux/arm/*) arch=(armhf) ;;
+linux/arm64) arch=(arm64) ;;
+all) arch=(armhf arm64 amd64) ;;
+*) echo "Unsupported arch" && exit -1 ;;
 esac
-
 
 ID=$(grep -ioE '^ID=.+' /etc/os-release | cut -f2 -d= | tr -d '"')
 case $ID in
