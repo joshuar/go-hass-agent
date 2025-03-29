@@ -14,22 +14,29 @@ import (
 	"github.com/godbus/dbus/v5"
 )
 
+// Trigger contains details of the D-Bus message that was captured by a watch.
 type Trigger struct {
 	Signal  string
 	Path    string
 	Content []any
 }
 
+// Watch contains the properties to define a D-Bus watch.
 type Watch struct {
 	path          dbus.ObjectPath
 	pathNamespace string
 	matches       []dbus.MatchOption
 	methods       []string
+	// handler       WatchHandler
 }
 
+// WatchHandler is a function that will handle a message captured by a watch.
+type WatchHandler func(*Trigger)
+
+// WatchOption is a functional option for configuring a D-Bus watch.
 type WatchOption func(*Watch)
 
-// MatchPath matches messages which are sent from or to the given object. An
+// MatchPath option matches messages which are sent from or to the given object. An
 // example of a path match is path='/org/freedesktop/Hal/Manager'
 //
 // https://dbus.freedesktop.org/doc/dbus-specification.html#message-protocol-marshaling-object-path
@@ -40,7 +47,7 @@ func MatchPath(path string) WatchOption {
 	}
 }
 
-// MatchPathNamespace matches messages which are sent from or to an object for
+// MatchPathNamespace option matches messages which are sent from or to an object for
 // which the object path is either the given value, or that value followed by
 // one or more path components. For valid paths, see:
 //
@@ -52,7 +59,7 @@ func MatchPathNamespace(path string) WatchOption {
 	}
 }
 
-// MatchInterface match messages sent over or to a particular interface. An
+// MatchInterface option match messages sent over or to a particular interface. An
 // example of an interface match is interface='org.freedesktop.Hal.Manager'. For
 // valid interfaces, see:
 //
@@ -63,7 +70,7 @@ func MatchInterface(intr string) WatchOption {
 	}
 }
 
-// MatchMembers matches messages which have the give method or signal name. An
+// MatchMembers option matches messages which have the give method or signal name. An
 // example of a member match is member='NameOwnerChanged'. Each member match
 // will generate a separate watch automatically.
 func MatchMembers(names ...string) WatchOption {
@@ -72,7 +79,7 @@ func MatchMembers(names ...string) WatchOption {
 	}
 }
 
-// MatchArgs matches are special and are used for further restricting the match
+// MatchArgs option matches are special and are used for further restricting the match
 // based on the arguments in the body of a message. An example of an argument
 // match would be arg3='Foo'. Only argument indexes from 0 to 63 should be
 // accepted.
@@ -84,7 +91,7 @@ func MatchArgs(args map[int]string) WatchOption {
 	}
 }
 
-// MatchArgNameSpace matches messages whose first argument is the given type,
+// MatchArgNameSpace option matches messages whose first argument is the given type,
 // and is a bus name or interface name within the specified namespace. This is
 // primarily intended for watching name owner changes for a group of related bus
 // names, rather than for a single name or all name changes.
@@ -94,7 +101,7 @@ func MatchArgNameSpace(name string) WatchOption {
 	}
 }
 
-// MatchPropChanged will set up a D-Bus watch to match on the
+// MatchPropChanged option will set up a D-Bus watch to match on the
 // org.freedesktop.DBus.Properties.PropertiesChanged signal of the
 // org.freedesktop.DBus.Properties interface, together with other match options.
 func MatchPropChanged() WatchOption {
@@ -124,7 +131,7 @@ func NewWatch(options ...WatchOption) *Watch {
 // changed).
 //
 //nolint:gocognit
-func (w *Watch) Start(ctx context.Context, bus *Bus) (chan Trigger, error) {
+func (w *Watch) Start(ctx context.Context, bus *Bus) (<-chan Trigger, error) {
 	if len(w.methods) > 0 { // Set up a watch for on each method plus all other conditions specified.
 		for _, method := range w.methods {
 			matches := append(w.matches, dbus.WithMatchMember(method))

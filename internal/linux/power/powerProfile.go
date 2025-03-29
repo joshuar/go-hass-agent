@@ -51,7 +51,7 @@ func newPowerSensor(ctx context.Context, profile string) (*models.Entity, error)
 
 type profileWorker struct {
 	activeProfile *dbusx.Property[string]
-	triggerCh     chan dbusx.Trigger
+	triggerCh     <-chan dbusx.Trigger
 	prefs         *preferences.CommonWorkerPrefs
 }
 

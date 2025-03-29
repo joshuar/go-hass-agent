@@ -92,7 +92,7 @@ func powerStateIcon(value any) string {
 }
 
 type stateWorker struct {
-	triggerCh chan dbusx.Trigger
+	triggerCh <-chan dbusx.Trigger
 	prefs     *preferences.CommonWorkerPrefs
 }
 

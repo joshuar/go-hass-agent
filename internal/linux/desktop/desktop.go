@@ -44,7 +44,7 @@ var (
 )
 
 type settingsWorker struct {
-	triggerCh chan dbusx.Trigger
+	triggerCh <-chan dbusx.Trigger
 	getProp   func(prop string) (dbus.Variant, error)
 	prefs     *WorkerPrefs
 }

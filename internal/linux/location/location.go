@@ -46,7 +46,7 @@ type locationWorker struct {
 	getLocationProperty func(path, prop string) (float64, error)
 	stopMethod          *dbusx.Method
 	startMethod         *dbusx.Method
-	triggerCh           chan dbusx.Trigger
+	triggerCh           <-chan dbusx.Trigger
 	prefs               *preferences.CommonWorkerPrefs
 }
 

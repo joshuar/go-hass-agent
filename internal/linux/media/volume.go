@@ -44,7 +44,7 @@ type VolumeWorker struct {
 	MuteControl   *mqtthass.SwitchEntity
 	VolumeControl *mqtthass.NumberEntity[int]
 	logger        *slog.Logger
-	prefs         *preferences.CommonWorkerPrefs
+	*preferences.CommonWorkerPrefs
 }
 
 // entity is a convienience interface to treat all entities the same.
@@ -160,18 +160,19 @@ func newAudioControl(ctx context.Context) (*VolumeWorker, error) {
 	return audioDev, nil
 }
 
+//nolint:nilnil
 func NewVolumeWorker(ctx context.Context, device *mqtthass.Device) (*VolumeWorker, error) {
 	worker, err := newAudioControl(ctx)
 	if err != nil {
 		return nil, errors.Join(ErrInitAudioWorker, err)
 	}
 
-	worker.prefs, err = preferences.LoadWorker(worker)
+	worker.CommonWorkerPrefs, err = preferences.LoadWorker(worker)
 	if err != nil {
 		return nil, errors.Join(ErrInitAudioWorker, err)
 	}
 
-	if worker.prefs.IsDisabled() {
+	if worker.IsDisabled() {
 		return nil, nil
 	}
 
