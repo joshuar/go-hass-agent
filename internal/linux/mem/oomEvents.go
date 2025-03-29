@@ -30,7 +30,7 @@ const (
 var ErrInitOOMWorker = errors.New("could not init OOM worker")
 
 type OOMEventsWorker struct {
-	triggerCh chan dbusx.Trigger
+	triggerCh <-chan dbusx.Trigger
 	linux.EventWorker
 	prefs *preferences.CommonWorkerPrefs
 }

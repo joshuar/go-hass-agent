@@ -63,7 +63,7 @@ func screenLockIcon(value bool) string {
 }
 
 type screenLockWorker struct {
-	triggerCh      chan dbusx.Trigger
+	triggerCh      <-chan dbusx.Trigger
 	screenLockProp *dbusx.Property[bool]
 	prefs          *preferences.CommonWorkerPrefs
 }

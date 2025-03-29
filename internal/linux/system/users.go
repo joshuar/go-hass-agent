@@ -70,7 +70,7 @@ func newUsersSensor(ctx context.Context, users []string) (*models.Entity, error)
 
 type UserSessionSensorWorker struct {
 	getUsers  func() ([]string, error)
-	triggerCh chan dbusx.Trigger
+	triggerCh <-chan dbusx.Trigger
 	linux.EventSensorWorker
 	prefs *UserSessionsPrefs
 }
@@ -185,7 +185,7 @@ func NewUserSessionSensorWorker(ctx context.Context) (*UserSessionSensorWorker, 
 }
 
 type UserSessionEventsWorker struct {
-	triggerCh chan dbusx.Trigger
+	triggerCh <-chan dbusx.Trigger
 	tracker   sessionTracker
 	linux.EventWorker
 	prefs *UserSessionsPrefs

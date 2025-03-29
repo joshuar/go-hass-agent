@@ -99,7 +99,7 @@ func newLaptopEvent(ctx context.Context, prop string, state bool) (*models.Entit
 }
 
 type laptopWorker struct {
-	triggerCh  chan dbusx.Trigger
+	triggerCh  <-chan dbusx.Trigger
 	properties map[string]*dbusx.Property[bool]
 	prefs      *preferences.CommonWorkerPrefs
 }

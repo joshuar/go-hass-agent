@@ -56,7 +56,7 @@ func (w *sensorWorker) DefaultPreferences() WorkerPrefs {
 
 type sensorWorker struct {
 	getAppStates     func() (map[string]dbus.Variant, error)
-	triggerCh        chan dbusx.Trigger
+	triggerCh        <-chan dbusx.Trigger
 	runningApp       string
 	totalRunningApps int
 }
