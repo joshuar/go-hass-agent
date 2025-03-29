@@ -53,6 +53,7 @@ func (m *Manager) StartEntityWorkers(ctx context.Context, workers ...EntityWorke
 		workerCtx, cancelFunc := context.WithCancel(ctx)
 		workerCh, err := worker.Start(workerCtx)
 		if workerCh == nil {
+			cancelFunc()
 			continue
 		}
 		if err != nil {
@@ -65,6 +66,10 @@ func (m *Manager) StartEntityWorkers(ctx context.Context, workers ...EntityWorke
 			m.logger.Debug("Started worker.",
 				slog.String("id", worker.ID()))
 		}
+		go func() {
+			defer cancelFunc()
+			<-ctx.Done()
+		}()
 	}
 
 	return MergeCh(ctx, outCh...)
@@ -84,19 +89,24 @@ func (m *Manager) StartMQTTWorkers(ctx context.Context, workers ...MQTTWorker) *
 			m.logger.Warn("Could not start worker.",
 				slog.String("id", worker.ID()),
 				slog.Any("errors", err))
-		} else {
-			m.workers[worker.ID()] = cancelFunc
-			// Add MQTT worker configs.
-			data.Configs = append(data.Configs, workerData.Configs...)
-			// Add MQTT worker subscriptions.
-			data.Subscriptions = append(data.Subscriptions, workerData.Subscriptions...)
-			// Add MQTT worker message channel, if created.
-			if workerData.Msgs != nil {
-				msgCh = append(msgCh, workerData.Msgs)
-			}
-			m.logger.Debug("Started worker.",
-				slog.String("id", worker.ID()))
+			cancelFunc()
+			continue
 		}
+		m.workers[worker.ID()] = cancelFunc
+		// Add MQTT worker configs.
+		data.Configs = append(data.Configs, workerData.Configs...)
+		// Add MQTT worker subscriptions.
+		data.Subscriptions = append(data.Subscriptions, workerData.Subscriptions...)
+		// Add MQTT worker message channel, if created.
+		if workerData.Msgs != nil {
+			msgCh = append(msgCh, workerData.Msgs)
+		}
+		m.logger.Debug("Started worker.",
+			slog.String("id", worker.ID()))
+		go func() {
+			defer cancelFunc()
+			<-ctx.Done()
+		}()
 	}
 	// Merge all worker message channels.
 	data.Msgs = MergeCh(ctx, msgCh...)
