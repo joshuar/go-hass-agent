@@ -5,11 +5,9 @@
 set -e
 
 install_deps_debian() {
-
     export DEBIAN_FRONTEND=noninteractive
-
     # install build dependencies as per given arch
-    apt-get update
+    apt-get -y update
     apt-get -y install --no-install-recommends desktop-file-utils pkg-config git ${ccpkg[@]:0}
     for a in "${arch[@]}"; do
         apt-get -y install --no-install-recommends \
@@ -19,15 +17,14 @@ install_deps_debian() {
             libx11-dev:${a} libxcursor-dev:${a} libxrandr-dev:${a} \
             libxinerama-dev:${a} libxi-dev:${a} libxxf86vm-dev:${a}
     done
-
     apt-get -y autoremove && apt-get -y clean && rm -rf /var/lib/apt/lists/*
 }
 
 install_deps_alpine() {
-    apk update && \
-    apk add git pkgconfig desktop-file-utils libc-dev \
-        gcc libxcursor-dev libxrandr-dev libxinerama-dev \
-        libxi-dev linux-headers mesa-dev
+    apk update &&
+        apk add git pkgconfig desktop-file-utils libc-dev \
+            gcc libxcursor-dev libxrandr-dev libxinerama-dev \
+            libxi-dev linux-headers mesa-dev
 }
 
 # set ccpkg and arch as appropriate
