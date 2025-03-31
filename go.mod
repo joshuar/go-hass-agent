@@ -1,7 +1,6 @@
 module github.com/joshuar/go-hass-agent
 
 go 1.24.1
-
 require (
 	fyne.io/fyne/v2 v2.5.5
 	github.com/cenkalti/backoff/v4 v4.3.0
@@ -142,7 +141,7 @@ require (
 	github.com/go-test/deep v1.1.1
 	github.com/go-text/render v0.2.0 // indirect
 	github.com/go-text/typesetting v0.2.0 // indirect
-	github.com/gofrs/uuid/v5 v5.3.1
+	github.com/gofrs/uuid/v5 v5.3.2
 	github.com/gopherjs/gopherjs v1.17.2 // indirect
 	github.com/jaypipes/ghw v0.16.0
 	github.com/jfreymuth/pulse v0.1.1
