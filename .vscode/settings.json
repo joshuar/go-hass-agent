@@ -1,4 +1,18 @@
 {
+  "[go.mod]": {
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "always"
+    },
+    "editor.formatOnSave": true
+  },
+  "[go]": {
+    "editor.codeActionsOnSave": {
+      "source.fixAll": "always",
+      "source.organizeImports": "always"
+    },
+    "editor.defaultFormatter": "golang.go",
+    "editor.formatOnSave": true
+  },
   "[markdown]": {
     "diffEditor.ignoreTrimWhitespace": false,
     "editor.defaultFormatter": "yzhang.markdown-all-in-one",
@@ -67,9 +81,23 @@
     "workers",
     "mqtt"
   ],
-  "go.testFlags": [
-    "-v"
-  ],
+  "go.lintFlags": ["--fast"],
+  "go.lintTool": "golangci-lint",
+  "go.useLanguageServer": true,
+  "go.diagnostic.vulncheck": "Imports",
+  "go.formatTool": "custom",
+  "go.alternateTools": {
+    "customFormatter": "golangci-lint"
+  },
+  "go.formatFlags": ["fmt", "--stdin"],
+  "gopls": {
+    "formatting.gofumpt": true,
+    "formatting.local": "github.com/joshuar/go-hass-agent",
+    "ui.diagnostic.analyses": {
+      "unusedvariable": true
+    },
+    "ui.semanticTokens": true
+  },
   "licenser.author": "Joshua Rich <joshua.rich@gmail.com>",
   "licenser.license": "MIT",
   "licenser.useSPDXLicenseFormat": true
