@@ -20,38 +20,7 @@
         "redhat.vscode-yaml",
         "ms-azuretools.vscode-docker",
         "foxundermoon.shell-format"
-      ],
-      "settings": {
-        "[go.mod]": {
-          "editor.codeActionsOnSave": {
-            "source.organizeImports": "always"
-          },
-          "editor.formatOnSave": true
-        },
-        "[go]": {
-          "editor.defaultFormatter": "golang.go",
-          "editor.codeActionsOnSave": {
-            "source.fixAll": "always",
-            "source.organizeImports": "always"
-          },
-          "editor.formatOnSave": true
-        },
-        "go.lintFlags": [
-          "--fast"
-        ],
-        "go.lintTool": "golangci-lint",
-        "go.useLanguageServer": true,
-        "go.diagnostic.vulncheck": "Imports",
-        "go.formatTool": "goimports",
-        "gopls": {
-          "formatting.gofumpt": true,
-          "formatting.local": "github.com/joshuar/go-hass-agent",
-          "ui.diagnostic.analyses": {
-            "unusedvariable": true
-          },
-          "ui.semanticTokens": true
-        }
-      }
+      ]
     }
   },
   "dockerComposeFile": "docker-compose.yml",
