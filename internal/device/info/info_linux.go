@@ -15,7 +15,7 @@ import (
 // GetOSID will retrieve the distribution ID and version ID. These are
 // suitable for usage as part of identifiers and variables. See also
 // GetDistroDetails.
-func GetOSID() (id, versionid string, err error) {
+func GetOSID() (string, string, error) {
 	var distroName, distroVersion string
 
 	osReleaseInfo, err := whichdistro.GetOSRelease()
@@ -42,7 +42,7 @@ func GetOSID() (id, versionid string, err error) {
 // GetOSDetails will retrieve the distribution name and version. The values
 // are pretty-printed and may not be suitable for usage as identifiers and
 // variables. See also GetDistroID.
-func GetOSDetails() (name, version string, err error) {
+func GetOSDetails() (string, string, error) {
 	var (
 		distroName, distroVersion string
 		value                     string
@@ -92,7 +92,7 @@ func GetKernelVersion() (string, error) {
 			continue
 		}
 
-		versionBytes = append(versionBytes, uint8(v))
+		versionBytes = append(versionBytes, uint8(v)) // #nosec: G115
 	}
 
 	return string(versionBytes), nil

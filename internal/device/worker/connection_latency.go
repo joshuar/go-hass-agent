@@ -37,14 +37,10 @@ var (
 	_ workers.PollingEntityWorker = (*ConnectionLatency)(nil)
 )
 
-var (
-	ErrInitConnLatencyWorker = errors.New("could not init connection latency worker")
-	ErrEmptyResponse         = errors.New("empty response")
-)
+var ErrConnLatency = errors.New("connection latency worker error")
 
 type ConnectionLatency struct {
 	client   *resty.Client
-	doneCh   chan struct{}
 	endpoint string
 	prefs    *preferences.CommonWorkerPrefs
 	*workers.PollingEntityWorkerData
@@ -71,9 +67,9 @@ func (w *ConnectionLatency) Execute(ctx context.Context) error {
 	// Handle errors and bad responses.
 	switch {
 	case err != nil:
-		return fmt.Errorf("unable to connect: %w", err)
+		return fmt.Errorf("%w: %w", ErrConnLatency, err)
 	case resp.Error():
-		return fmt.Errorf("received error response %s", resp.Status())
+		return fmt.Errorf("%w: received error response %s", ErrConnLatency, resp.Status())
 	}
 
 	if resp.Request != nil {
@@ -134,7 +130,7 @@ func NewConnectionLatencyWorker(_ context.Context) (workers.EntityWorker, error)
 
 	prefs, err := preferences.LoadWorker(worker)
 	if err != nil {
-		return worker, errors.Join(ErrInitConnLatencyWorker, err)
+		return worker, errors.Join(ErrConnLatency, err)
 	}
 	worker.prefs = prefs
 

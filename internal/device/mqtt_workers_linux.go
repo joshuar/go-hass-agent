@@ -47,7 +47,7 @@ type linuxMQTTWorker struct {
 	binarySensors []*mqtthass.SensorEntity
 	cameras       []*mqtthass.CameraEntity
 	logger        *slog.Logger
-	prefs *preferences.CommonWorkerPrefs
+	prefs         *preferences.CommonWorkerPrefs
 }
 
 func (c *linuxMQTTWorker) ID() string {
@@ -65,7 +65,6 @@ func (c *linuxMQTTWorker) DefaultPreferences() preferences.CommonWorkerPrefs {
 func (c *linuxMQTTWorker) IsDisabled() bool {
 	return c.prefs.Disabled
 }
-
 
 // Subscriptions returns the any subscription request messaages for any workers
 // with subscriptions.
@@ -166,6 +165,8 @@ func (c *linuxMQTTWorker) generateConfig(e stateEntity) *mqttapi.Msg {
 
 // CreateOSMQTTWorkers initializes the list of MQTT workers for sensors and
 // returns those that are supported on this device.
+//
+//nolint:gocyclo,cyclop,funlen
 func CreateOSMQTTWorkers(ctx context.Context) workers.MQTTWorker {
 	mqttController := &linuxMQTTWorker{}
 	mqttDevice := preferences.MQTTDevice()

@@ -25,6 +25,7 @@ const (
 	defaultHostname      = "localhost"
 )
 
+// ErrUnsupportedHardware is returned when the hardware does not support the method or action.
 var ErrUnsupportedHardware = errors.New("unsupported hardware")
 
 // Chassis will return the chassis type of the machine, such as "desktop" or
@@ -54,7 +55,7 @@ func GetHostname() (string, error) {
 // GetHWProductInfo retrieves the model and vendor of the machine. If these
 // cannot be retrieved or cannot be found, they will be set to default unknown
 // strings.
-func GetHWProductInfo() (model, vendor string, err error) {
+func GetHWProductInfo() (string, string, error) {
 	product, err := ghw.Product(ghw.WithDisableWarnings())
 	if err != nil || product == nil {
 		return unknownModel, unknownVendor, fmt.Errorf("could not retrieve hardware information: %w", err)

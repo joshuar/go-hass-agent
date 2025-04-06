@@ -1,9 +1,6 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
-//revive:disable:unused-receiver
 package scripts
 
 import (
@@ -24,8 +21,10 @@ import (
 )
 
 var (
+	// ErrExecuteScript represents an error that occurred when running a script.
 	ErrExecuteScript = errors.New("could not execute script")
-	ErrParseCmd      = errors.New("could not parse script command")
+	// ErrParseCmd represents an error that occurred trying to parse a script command-line.
+	ErrParseCmd = errors.New("could not parse script command")
 )
 
 // Verify Script satisfies the quartz job interface.
@@ -120,7 +119,7 @@ func (s *Script) parse() (*scriptOutput, error) {
 		return nil, ErrParseCmd
 	}
 
-	out, err := exec.Command(cmdElems[0], cmdElems[1:]...).Output()
+	out, err := exec.Command(cmdElems[0], cmdElems[1:]...).Output() // #nosec: G204
 	if err != nil {
 		return nil, fmt.Errorf("could not execute script: %w", err)
 	}
