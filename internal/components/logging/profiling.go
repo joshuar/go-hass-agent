@@ -17,8 +17,10 @@ import (
 	"strconv"
 )
 
+// ProfileFlags contains a map of profile flags and their values.
 type ProfileFlags map[string]string
 
+// StartProfiling will start profiling the agent based on the given profiling flags.
 func StartProfiling(flags ProfileFlags) error {
 	for flagKey, flagVal := range flags {
 		switch flagKey {
@@ -44,6 +46,7 @@ func StartProfiling(flags ProfileFlags) error {
 	return nil
 }
 
+// StopProfiling will stop profiling the agent.
 func StopProfiling(flags ProfileFlags) error {
 	for flagKey, flagVal := range flags {
 		switch flagKey {
