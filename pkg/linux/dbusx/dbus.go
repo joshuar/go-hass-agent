@@ -1,6 +1,8 @@
 // Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
 // SPDX-License-Identifier: MIT
 
+// Package dbusx provides additional helper methods for dealing with D-Bus in Go.
+//
 //go:generate go tool golang.org/x/tools/cmd/stringer -type=dbusType -output busType_strings.go
 package dbusx
 
@@ -17,11 +19,16 @@ import (
 )
 
 const (
+	// SessionBus represents the session bus connection.
 	SessionBus dbusType = iota // session
-	SystemBus                  // system
+	// SystemBus represents the system bus connection.
+	SystemBus // system
 
-	PropInterface         = "org.freedesktop.DBus.Properties"
-	PropChangedSignal     = PropInterface + ".PropertiesChanged"
+	// PropInterface is the canonical properties interface.
+	PropInterface = "org.freedesktop.DBus.Properties"
+	// PropChangedSignal is the canonical "PropertiesChanged" signal.
+	PropChangedSignal = PropInterface + ".PropertiesChanged"
+
 	loginBasePath         = "/org/freedesktop/login1"
 	loginBaseInterface    = "org.freedesktop.login1"
 	loginManagerInterface = loginBaseInterface + ".Manager"
@@ -43,11 +50,6 @@ var (
 	ErrInvalidPath    = errors.New("invalid D-Bus path")
 	ErrUnknownBus     = errors.New("unknown bus")
 )
-
-var DbusTypeMap = map[string]dbusType{
-	"session": 0,
-	"system":  1,
-}
 
 type dbusType int
 
