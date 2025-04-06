@@ -1,9 +1,6 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
-//nolint:paralleltest
 package registry
 
 import (
@@ -21,7 +18,7 @@ var mockSensors = map[string]metadata{
 	"registeredSensor": {Disabled: false, Registered: true},
 }
 
-func newMockReg(t *testing.T, path string) *gobRegistry {
+func newMockReg(t *testing.T, path string) *GobRegistry {
 	t.Helper()
 
 	mockReg, err := Load(path)
@@ -54,7 +51,7 @@ func Test_gobRegistry_write(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			g := &gobRegistry{
+			g := &GobRegistry{
 				sensors: tt.fields.sensors,
 				file:    tt.fields.file,
 			}
@@ -98,7 +95,7 @@ func Test_gobRegistry_read(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			g := &gobRegistry{
+			g := &GobRegistry{
 				sensors: tt.fields.sensors,
 				file:    tt.fields.file,
 			}
@@ -147,7 +144,7 @@ func Test_gobRegistry_IsDisabled(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			g := &gobRegistry{
+			g := &GobRegistry{
 				sensors: tt.fields.sensors,
 				file:    tt.fields.file,
 			}
@@ -193,7 +190,7 @@ func Test_gobRegistry_IsRegistered(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			g := &gobRegistry{
+			g := &GobRegistry{
 				sensors: tt.fields.sensors,
 				file:    tt.fields.file,
 			}
@@ -234,7 +231,7 @@ func Test_gobRegistry_SetDisabled(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			g := &gobRegistry{
+			g := &GobRegistry{
 				sensors: tt.fields.sensors,
 				file:    tt.fields.file,
 			}
@@ -275,7 +272,7 @@ func Test_gobRegistry_SetRegistered(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			g := &gobRegistry{
+			g := &GobRegistry{
 				sensors: tt.fields.sensors,
 				file:    tt.fields.file,
 			}
@@ -294,7 +291,7 @@ func TestLoad(t *testing.T) {
 		path string
 	}
 	tests := []struct {
-		want    *gobRegistry
+		want    *GobRegistry
 		name    string
 		args    args
 		wantErr bool
@@ -302,7 +299,7 @@ func TestLoad(t *testing.T) {
 		{
 			name: "good path",
 			args: args{path: goodPath},
-			want: &gobRegistry{
+			want: &GobRegistry{
 				sensors: make(map[string]metadata),
 				file: filepath.Join(
 					goodPath,
