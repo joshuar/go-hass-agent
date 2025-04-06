@@ -60,7 +60,7 @@ var linuxLaptopWorkers = []func(ctx context.Context) (workers.EntityWorker, erro
 
 // CreateOSEntityWorkers sets up all OS-specific entity workers.
 func CreateOSEntityWorkers(ctx context.Context) []workers.EntityWorker {
-	var osWorkers []workers.EntityWorker
+	osWorkers := make([]workers.EntityWorker, 0, len(linuxWorkers)+len(linuxLaptopWorkers))
 
 	// Set up a logger.
 	logger := logging.FromContext(ctx).With(slog.Group("linux", slog.String("controller", "sensor")))
@@ -79,7 +79,7 @@ func CreateOSEntityWorkers(ctx context.Context) []workers.EntityWorker {
 	}
 
 	// Get the type of device we are running on.
-	chassis, _ := info.Chassis() //nolint:errcheck // error is same as any value other than wanted value.
+	chassis, _ := info.Chassis()
 	laptops := []string{"Portable", "Laptop", "Notebook"}
 	// If running on a laptop chassis, add laptop specific sensor workers.
 	if slices.Contains(laptops, chassis) {

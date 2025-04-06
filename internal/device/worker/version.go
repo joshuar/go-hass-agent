@@ -1,13 +1,12 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
 package worker
 
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
@@ -24,7 +23,7 @@ const (
 
 var _ workers.EntityWorker = (*Version)(nil)
 
-var ErrInitVersionWorker = errors.New("could not init version worker")
+var ErrVersion = errors.New("version worker error")
 
 type Version struct {
 	prefs *preferences.CommonWorkerPrefs
@@ -63,13 +62,17 @@ func (w *Version) Start(ctx context.Context) (<-chan models.Entity, error) {
 }
 
 func newVersionSensor(ctx context.Context) (models.Entity, error) {
-	return sensor.NewSensor(ctx,
+	sensor, err := sensor.NewSensor(ctx,
 		sensor.WithName("Go Hass Agent Version"),
 		sensor.WithID("agent_version"),
 		sensor.AsDiagnostic(),
 		sensor.WithIcon("mdi:face-agent"),
 		sensor.WithState(preferences.AppVersion()),
 	)
+	if err != nil {
+		return sensor, fmt.Errorf("%w: %w", ErrVersion, err)
+	}
+	return sensor, nil
 }
 
 func NewVersionWorker(_ context.Context) (workers.EntityWorker, error) {
@@ -79,7 +82,7 @@ func NewVersionWorker(_ context.Context) (workers.EntityWorker, error) {
 
 	prefs, err := preferences.LoadWorker(worker)
 	if err != nil {
-		return nil, errors.Join(ErrInitVersionWorker, err)
+		return nil, errors.Join(ErrVersion, err)
 	}
 
 	worker.prefs = prefs

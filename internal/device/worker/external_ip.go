@@ -1,7 +1,6 @@
 // Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
 // SPDX-License-Identifier: MIT
 
-//revive:disable:unused-receiver
 package worker
 
 import (
@@ -70,7 +69,6 @@ func (w *ExternalIP) IsDisabled() bool {
 	return w.prefs.IsDisabled()
 }
 
-//nolint:mnd
 func (w *ExternalIP) Execute(ctx context.Context) error {
 	for ipVer := range slices.Values([]int{4, 6}) {
 		ipAddr, err := w.lookupExternalIPs(ctx, ipVer)

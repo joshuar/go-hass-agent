@@ -242,11 +242,11 @@ func parseSchedule(sched string) (quartz.Trigger, error) {
 	if strings.HasPrefix(sched, every) {
 		duration, err := time.ParseDuration(sched[len(every):])
 		if err != nil {
-			return nil, errors.Join(ErrParseSchedule, err)
+			return nil, fmt.Errorf("%w: %w", ErrParseSchedule, err)
 		}
 
 		return quartz.NewSimpleTrigger(duration), nil
 	}
 
-	return nil, errors.Join(ErrParseSchedule, fmt.Errorf("unknown schedule format %s", sched))
+	return nil, fmt.Errorf("%w: unknown schedule format %s", ErrParseSchedule, sched)
 }

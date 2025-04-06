@@ -1,9 +1,6 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
-//revive:disable:unused-receiver
 package scripts
 
 import (
@@ -19,6 +16,9 @@ import (
 
 var ErrNewSensorEntity = errors.New("could not create sensor entity")
 
+// ScriptSensor represents a sensor generated from script output.
+//
+//nolint:lll
 type ScriptSensor struct {
 	SensorState       any    `json:"sensor_state" yaml:"sensor_state" toml:"sensor_state"`
 	SensorAttributes  any    `json:"sensor_attributes,omitempty" yaml:"sensor_attributes,omitempty" toml:"sensor_attributes,omitempty"`
