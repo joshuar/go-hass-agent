@@ -92,7 +92,6 @@ type Worker struct {
 	switches     []*mqtthass.SwitchEntity
 	intNumbers   []*mqtthass.NumberEntity[int64]
 	floatNumbers []*mqtthass.NumberEntity[float64]
-	prefs *preferences.CommonWorkerPrefs
 }
 
 // entity is a convienience interface to avoid duplicating a lot of loops when
@@ -108,8 +107,6 @@ func (d *Worker) ID() string {
 
 // Subscriptions are the MQTT subscriptions for buttons and switches, providing
 // the appropriate callback mechanism to execute the associated commands.
-//
-//nolint:dupl
 func (d *Worker) Subscriptions() []*mqttapi.Subscription {
 	total := len(d.buttons) + len(d.switches) + len(d.intNumbers) + len(d.floatNumbers)
 	subs := make([]*mqttapi.Subscription, 0, total)
@@ -147,8 +144,6 @@ func (d *Worker) generateSubscriptions(e entity) *mqttapi.Subscription {
 
 // Configs are the MQTT configurations required by Home Assistant to set up
 // entities for the buttons/switches.
-//
-//nolint:dupl
 func (d *Worker) Configs() []*mqttapi.Msg {
 	total := len(d.buttons) + len(d.switches) + len(d.intNumbers) + len(d.floatNumbers)
 	cfgs := make([]*mqttapi.Msg, 0, total)
@@ -289,7 +284,7 @@ func (d *Worker) generateSwitches(switchCmds []Command) {
 // generateNumbers will create MQTT entities for numbers (both ints and floats) defined by the
 // controller.
 //
-//nolint:gocognit,funlen
+//nolint:cyclop,funlen
 func (d *Worker) generateNumbers(numberCommands []Command) {
 	var (
 		id, icon, name string
@@ -437,26 +432,15 @@ func (d *Worker) Start(_ context.Context) (*mqtt.WorkerData, error) {
 	}, nil
 }
 
-func (d *Worker) PreferencesID() string {
-	return workerID
-}
-
-func (d *Worker) DefaultPreferences() preferences.CommonWorkerPrefs {
-	return preferences.CommonWorkerPrefs{}
-}
-
 func (d *Worker) IsDisabled() bool {
-	return d.prefs.Disabled
+	return len(d.buttons)+len(d.floatNumbers)+len(d.intNumbers)+len(d.switches) == 0
 }
-
-
 
 // NewCommandsWorker is used by the agent to initialize the commands
 // controller, which holds the MQTT configuration for the commands defined by
 // the user.
 func NewCommandsWorker(ctx context.Context, device *mqtthass.Device) (*Worker, error) {
 	commandsFile := filepath.Join(preferences.PathFromCtx(ctx), commandsFile)
-
 	if _, err := os.Stat(commandsFile); errors.Is(err, os.ErrNotExist) {
 		return nil, ErrNoCommands
 	}
@@ -480,11 +464,11 @@ func NewCommandsWorker(ctx context.Context, device *mqtthass.Device) (*Worker, e
 	controller.generateSwitches(cmds.Switches)
 	controller.generateNumbers(cmds.Numbers)
 
-	prefs, err := preferences.LoadWorker(controller)
-	if err != nil {
-		return nil, fmt.Errorf("could not load custom commands preferences: %w",err)
-	}
-	controller.prefs = prefs
+	// prefs, err := preferences.LoadWorker(controller)
+	// if err != nil {
+	// 	return nil, fmt.Errorf("could not load custom commands preferences: %w", err)
+	// }
+	// controller.prefs = prefs
 
 	return controller, nil
 }
@@ -499,7 +483,7 @@ func cmdWithoutState(command string) error {
 		return ErrParseCmd
 	}
 
-	_, err := exec.Command(cmdElems[0], cmdElems[1:]...).Output()
+	_, err := exec.Command(cmdElems[0], cmdElems[1:]...).Output() // #nosec:204
 	if err != nil {
 		return fmt.Errorf("%w: %w", ErrCmdFailed, err)
 	}
@@ -517,7 +501,7 @@ func cmdWithState(command, state string) error {
 	cmdElems := strings.Split(command, " ")
 	cmdElems = append(cmdElems, state)
 
-	_, err := exec.Command(cmdElems[0], cmdElems[1:]...).Output()
+	_, err := exec.Command(cmdElems[0], cmdElems[1:]...).Output() // #nosec:204
 	if err != nil {
 		return fmt.Errorf("%w: %w", ErrCmdFailed, err)
 	}
@@ -533,7 +517,7 @@ func switchState(command string) (json.RawMessage, error) {
 		return nil, ErrUnknownSwitchState
 	}
 
-	output, err := exec.Command(cmdElems[0], cmdElems[1:]...).Output()
+	output, err := exec.Command(cmdElems[0], cmdElems[1:]...).Output() // #nosec:204
 	if err != nil {
 		return nil, fmt.Errorf("could get switch state: %w", err)
 	}
@@ -554,7 +538,7 @@ func numberState(command string) (json.RawMessage, error) {
 		return nil, ErrUnknownNumberState
 	}
 
-	output, err := exec.Command(cmdElems[0], cmdElems[1:]...).Output()
+	output, err := exec.Command(cmdElems[0], cmdElems[1:]...).Output() // #nosec:204
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrUnknownNumberState, err)
 	}
@@ -578,6 +562,5 @@ func convValue[T constraints.Float | constraints.Integer](orig any) T {
 	if !ok {
 		return T(0)
 	}
-
 	return value
 }
