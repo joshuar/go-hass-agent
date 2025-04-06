@@ -92,7 +92,12 @@ func (c *linuxMQTTWorker) Subscriptions() []*mqttapi.Subscription {
 
 // Configs returns the configuration messages for all workers.
 func (c *linuxMQTTWorker) Configs() []*mqttapi.Msg {
-	totalLength := len(c.sensors) + len(c.binarySensors) + len(c.buttons) + len(c.switches) + len(c.numbers) + len(c.cameras)
+	totalLength := len(c.sensors) +
+		len(c.binarySensors) +
+		len(c.buttons) +
+		len(c.switches) +
+		len(c.numbers) +
+		len(c.cameras)
 	configs := make([]*mqttapi.Msg, 0, totalLength)
 
 	// Create sensor configs.
