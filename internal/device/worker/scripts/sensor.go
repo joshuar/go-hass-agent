@@ -14,7 +14,8 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/models/sensor"
 )
 
-var ErrNewSensorEntity = errors.New("could not create sensor entity")
+// ErrNewSensor is returned when a problem occurred creating a sensor entity.
+var ErrNewSensor = errors.New("could not create sensor entity")
 
 // ScriptSensor represents a sensor generated from script output.
 //
@@ -52,12 +53,13 @@ func scriptToEntity(ctx context.Context, script ScriptSensor) (*models.Entity, e
 		typeOption,
 	)
 	if err != nil {
-		return nil, errors.Join(ErrNewSensorEntity, err)
+		return nil, errors.Join(ErrNewSensor, err)
 	}
 
 	return &scriptSensor, nil
 }
 
+// Icon is an material design icon to represent the script state.
 func (s *ScriptSensor) Icon() string {
 	if s.SensorIcon == "" {
 		return "mdi:script"
@@ -66,6 +68,7 @@ func (s *ScriptSensor) Icon() string {
 	return s.SensorIcon
 }
 
+// DeviceClass is a sensor device class for the script state.
 func (s *ScriptSensor) DeviceClass() class.SensorDeviceClass {
 	for d := class.SensorClassMin + 1; d <= class.BinaryClassMax; d++ {
 		if s.SensorDeviceClass == d.String() {
@@ -76,6 +79,7 @@ func (s *ScriptSensor) DeviceClass() class.SensorDeviceClass {
 	return 0
 }
 
+// StateClass is a sensor state class for the script state.
 func (s *ScriptSensor) StateClass() class.SensorStateClass {
 	switch s.SensorStateClass {
 	case "measurement":
@@ -89,6 +93,7 @@ func (s *ScriptSensor) StateClass() class.SensorStateClass {
 	}
 }
 
+// Attributes are any additional custom attributes for the script state.
 func (s *ScriptSensor) Attributes() map[string]any {
 	attributes := make(map[string]any)
 

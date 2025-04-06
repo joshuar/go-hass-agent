@@ -1,6 +1,7 @@
 // Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
 // SPDX-License-Identifier: MIT
 
+// Package scripts provides sensors based on script output.
 package scripts
 
 import (
@@ -30,6 +31,7 @@ var (
 // Verify Script satisfies the quartz job interface.
 var _ quartz.Job = (*Script)(nil)
 
+// Script represents a script.
 type Script struct {
 	path     string
 	schedule string
