@@ -24,19 +24,31 @@ import (
 // ease with writing tests.
 var HWMonPath = "/sys/class/hwmon"
 
-//go:generate go run golang.org/x/tools/cmd/stringer -type=MonitorType -output hwmon_MonitorType_generated.go
+//go:generate go tool golang.org/x/tools/cmd/stringer -type=MonitorType -output hwmon_MonitorType_generated.go
 const (
+	// Unknown hwmon sensor.
 	Unknown MonitorType = iota
+	// Temp hwmon sensor.
 	Temp
+	// Fan hwmon sensor.
 	Fan
+	// Voltage hwmon sensor.
 	Voltage
+	// PWM hwmon sensor.
 	PWM
+	// Current hwmon sensor.
 	Current
+	// Power hwmon sensor.
 	Power
+	// Energy hwmon sensor.
 	Energy
+	// Humidity hwmon sensor.
 	Humidity
+	// Frequency hwmon sensor.
 	Frequency
+	// Alarm hwmon sensor.
 	Alarm
+	// Intrusion hwmon sensor.
 	Intrusion
 )
 
@@ -375,11 +387,12 @@ func (s *Sensor) updateInfo(file *sensorFile) error {
 
 		s.label = strings.Join([]string{id, file.sensorType.String()}, " ")
 
-		if value, err := strconv.ParseBool(file.contents); err != nil {
+		value, err := strconv.ParseBool(file.contents)
+		if err != nil {
 			return fmt.Errorf("could not parse as bool: %w", err)
-		} else {
-			s.value = value
 		}
+		s.value = value
+
 	default: // Either the sensor value or an attribute of the sensor.
 		value, err := strconv.ParseFloat(file.contents, 64)
 		if err != nil {
