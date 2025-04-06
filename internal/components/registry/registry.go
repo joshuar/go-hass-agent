@@ -1,6 +1,7 @@
 // Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
 // SPDX-License-Identifier: MIT
 
+// Package registry handles managing a sensor registry locally on disk.
 package registry
 
 import (
@@ -11,7 +12,9 @@ import (
 )
 
 var (
-	ErrNotFound        = errors.New("sensor not found")
+	// ErrNotFound is returned when a sensor could not be found in the registry.
+	ErrNotFound = errors.New("sensor not found")
+	// ErrInvalidMetadata is returned when the sensor data in the registry is invalid.
 	ErrInvalidMetadata = errors.New("invalid sensor metadata")
 )
 
