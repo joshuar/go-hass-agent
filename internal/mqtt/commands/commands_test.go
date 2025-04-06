@@ -1,14 +1,9 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
-//nolint:paralleltest
-//revive:disable:unused-receiver
 package commands
 
 import (
-	"context"
 	"encoding/json"
 	"reflect"
 	"testing"
@@ -20,6 +15,8 @@ import (
 
 	mqtthass "github.com/joshuar/go-hass-anything/v12/pkg/hass"
 	mqttapi "github.com/joshuar/go-hass-anything/v12/pkg/mqtt"
+
+	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 )
 
 var mockCommandCallback = func(_ *paho.Publish) {}
@@ -68,6 +65,7 @@ var mockNumber = mqtthass.NewNumberEntity[int64]().
 	WithMax(100).
 	WithMode(mqtthass.NumberAuto)
 
+//nolint:dupl
 func TestController_Subscriptions(t *testing.T) {
 	var mockButtonSubscription, mockSwitchSubscription, mockNumberSubscription *mqttapi.Subscription
 	var err error
@@ -122,6 +120,7 @@ func TestController_Subscriptions(t *testing.T) {
 	}
 }
 
+//nolint:dupl
 func TestController_Configs(t *testing.T) {
 	var mockButtonConfig, mockSwitchConfig, mockNumberConfig *mqttapi.Msg
 	var err error
@@ -180,7 +179,6 @@ func TestNewCommandsController(t *testing.T) {
 	mockDevice := &mqtthass.Device{}
 
 	type args struct {
-		ctx       context.Context
 		device    *mqtthass.Device
 		configDir string
 	}
@@ -193,22 +191,23 @@ func TestNewCommandsController(t *testing.T) {
 		{
 			name:    "unreadable commands file",
 			wantErr: true,
-			args:    args{ctx: context.TODO(), configDir: "testdata/unreadable", device: mockDevice},
+			args:    args{configDir: "testdata/unreadable", device: mockDevice},
 		},
 		{
 			name:    "invalid commands file",
 			wantErr: true,
-			args:    args{ctx: context.TODO(), configDir: "testdata/invalid", device: mockDevice},
+			args:    args{configDir: "testdata/invalid", device: mockDevice},
 		},
 		{
 			name: "valid commands file",
-			args: args{ctx: context.TODO(), configDir: "testdata/valid", device: mockDevice},
+			args: args{configDir: "testdata/valid", device: mockDevice},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			ctx := preferences.PathToCtx(t.Context(), tt.args.configDir)
 			xdg.ConfigHome = tt.args.configDir
-			_, err := NewCommandsWorker(tt.args.ctx, tt.args.device)
+			_, err := NewCommandsWorker(ctx, tt.args.device)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewCommandsController() error = %v, wantErr %v", err, tt.wantErr)
 				return
