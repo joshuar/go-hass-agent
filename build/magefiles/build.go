@@ -13,6 +13,7 @@ import (
 	"github.com/magefile/mage/sh"
 )
 
+// Build is the mage namespace for build commands.
 type Build mg.Namespace
 
 var ErrBuildFailed = errors.New("build failed")
@@ -56,7 +57,6 @@ func buildProject() error {
 		return errors.Join(ErrBuildFailed, err)
 	}
 
-	//nolint:sloglint
 	slog.Info("Running go build...",
 		slog.String("output", buildEnv["OUTPUT"]),
 		slog.String("build.host", runtime.GOARCH))

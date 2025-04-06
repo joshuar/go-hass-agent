@@ -14,49 +14,39 @@ import (
 
 type Checks mg.Namespace
 
-// ------------------------------------------------------------
-// Targets for the Magefile that do the quality checks.
-// ------------------------------------------------------------
-
 // Lint runs various static checkers to ensure you follow The Rules(tm).
 func (Checks) Lint() error {
 	slog.Info("Running linter (golangci-lint)...")
-
 	if err := sh.RunV("golangci-lint", "run"); err != nil {
-		slog.Warn("Linter reported issues.", slog.Any("error", err))
+		return fmt.Errorf("linter issues: %w", err)
 	}
-
 	return nil
 }
 
+// StaticCheck will run the staticcheck tool.
 func (Checks) StaticCheck() error {
 	slog.Info("Running linter (staticcheck)...")
-
 	if err := sh.RunV("go", "run", "honnef.co/go/tools/cmd/staticcheck", "-f", "stylish", "./..."); err != nil {
 		return fmt.Errorf("failed to run staticcheck: %w", err)
 	}
-
 	return nil
 }
 
+// Nilaway will run the nilaway tool.
 func (Checks) Nilaway() error {
 	slog.Info("Running linter (nilaway)...")
-
 	if err := sh.RunV("go", "run", "go.uber.org/nilaway/cmd/nilaway", "./..."); err != nil {
 		return fmt.Errorf("failed to run nilaway: %w", err)
 	}
-
 	return nil
 }
 
 // Licenses pulls down any dependent project licenses, checking for "forbidden ones".
-//
-//nolint:mnd
 func (Checks) Licenses() error {
 	slog.Info("Running go-licenses...")
 
 	// Make the directory for the license files
-	err := os.MkdirAll("licenses", os.ModePerm)
+	err := os.MkdirAll("licenses", os.ModeAppend)
 	if err != nil {
 		return fmt.Errorf("could not create directory: %w", err)
 	}
@@ -64,7 +54,12 @@ func (Checks) Licenses() error {
 	// The header sets the columns for the contents
 	csvHeader := "Package,URL,License\n"
 
-	csvContents, err := sh.Output("go", "run", "github.com/google/go-licenses", "report", "--ignore=github.com/joshuar", "./...")
+	csvContents, err := sh.Output(
+		"go",
+		"run",
+		"github.com/google/go-licenses",
+		"report",
+		"--ignore=github.com/joshuar", "./...")
 	if err != nil {
 		return fmt.Errorf("could not run go-licenses: %w", err)
 	}
@@ -78,6 +73,8 @@ func (Checks) Licenses() error {
 }
 
 // All performs all checks.
+//
+//nolint:unparam
 func (c Checks) All() error {
 	mg.Deps(c.Lint(), c.Nilaway(), c.StaticCheck(), c.Licenses())
 	return nil
