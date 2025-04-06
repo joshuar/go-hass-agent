@@ -20,6 +20,7 @@ const (
 //go:embed assets
 var content embed.FS
 
+// API contains shared api objects.
 type API struct {
 	hass *hass.Client
 }

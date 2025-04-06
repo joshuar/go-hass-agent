@@ -1,7 +1,6 @@
 // Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
 // SPDX-License-Identifier: MIT
 
-//revive:disable:unused-receiver
 package cmd
 
 import (
@@ -24,7 +23,6 @@ func (r *Upgrade) Help() string {
 	return showHelpTxt("upgrade-help")
 }
 
-//nolint:sloglint
 func (r *Upgrade) Run(opts *Opts) error {
 	ctx, cancelFunc := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancelFunc()
