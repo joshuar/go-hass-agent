@@ -1,7 +1,5 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
 package dbusx
 
@@ -9,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 
 	"github.com/godbus/dbus/v5"
@@ -130,11 +129,12 @@ func NewWatch(options ...WatchOption) *Watch {
 // triggered the match, the path and the contents (what values actually
 // changed).
 //
-//nolint:gocognit
+//nolint:gocognit,funlen,nestif
 func (w *Watch) Start(ctx context.Context, bus *Bus) (<-chan Trigger, error) {
 	if len(w.methods) > 0 { // Set up a watch for on each method plus all other conditions specified.
-		for _, method := range w.methods {
-			matches := append(w.matches, dbus.WithMatchMember(method))
+		for method := range slices.Values(w.methods) {
+			matches := slices.Clone(w.matches)
+			matches = append(matches, dbus.WithMatchMember(method))
 			if err := bus.conn.AddMatchSignalContext(ctx, matches...); err != nil {
 				return nil, fmt.Errorf("unable to add watch conditions (%v): %w", w.matches, err)
 			}
@@ -149,7 +149,7 @@ func (w *Watch) Start(ctx context.Context, bus *Bus) (<-chan Trigger, error) {
 				}
 			}()
 
-			bus.traceLog("Added D-Bus watch.", slog.Any("matches", matches))
+			bus.traceLog("Added D-Bus watch.", slog.Any("matches", w.matches))
 		}
 	} else { // Set up a watch on the specified conditions.
 		if err := bus.conn.AddMatchSignalContext(ctx, w.matches...); err != nil {
@@ -197,7 +197,9 @@ func (w *Watch) Start(ctx context.Context, bus *Bus) (<-chan Trigger, error) {
 				// doesn't match it, ignore.
 				if w.path != "" {
 					if signal.Path != w.path {
-						bus.traceLog("Ignoring mismatched path.", slog.Any("signal", signal.Path), slog.Any("match", w.path))
+						bus.traceLog("Ignoring mismatched path.",
+							slog.Any("signal", signal.Path),
+							slog.Any("match", w.path))
 
 						continue
 					}
@@ -206,7 +208,9 @@ func (w *Watch) Start(ctx context.Context, bus *Bus) (<-chan Trigger, error) {
 				// signal is not on that namespace, ignore.
 				if w.pathNamespace != "" {
 					if !strings.HasPrefix(string(signal.Path), w.pathNamespace) {
-						bus.traceLog("Ignoring mismatched path namespace.", slog.Any("signal", signal.Path), slog.Any("match", w.pathNamespace))
+						bus.traceLog("Ignoring mismatched path namespace.",
+							slog.Any("signal", signal.Path),
+							slog.Any("match", w.pathNamespace))
 
 						continue
 					}
