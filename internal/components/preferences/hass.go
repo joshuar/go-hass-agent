@@ -1,9 +1,6 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
-//nolint:tagalign
 package preferences
 
 import (
@@ -33,8 +30,10 @@ type Hass struct {
 }
 
 var (
+	// ErrSaveHassPreferences indicates an error occurred while saving Hass preferences.
 	ErrSaveHassPreferences = errors.New("error saving hass preferences")
-	ErrSetHassPreference   = errors.New("could not set hass preference")
+	// ErrSetHassPreference indicates an error occurred while setting a Hass preference.
+	ErrSetHassPreference = errors.New("could not set hass preference")
 )
 
 // SetHassSecret sets the secret value in the preferences store.
@@ -87,6 +86,7 @@ func SetWebhookID(id string) SetPreference {
 	}
 }
 
+// SetServer sets the server used for initial registration.
 func SetServer(server string) SetPreference {
 	return func() error {
 		if err := prefsSrc.Set(prefHassRegServer, server); err != nil {
@@ -97,6 +97,7 @@ func SetServer(server string) SetPreference {
 	}
 }
 
+// SetToken sets the token used for initial registration.
 func SetToken(token string) SetPreference {
 	return func() error {
 		if err := prefsSrc.Set(prefHassRegToken, token); err != nil {
