@@ -6,10 +6,13 @@
 package preferences
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/joshuar/go-hass-agent/internal/components/validation"
 )
+
+var ErrRegistrationPreference = errors.New("registration preference error")
 
 // Registration are the preferences that defines how Go Hass Agent registers
 // with Home Assistant.
@@ -23,7 +26,7 @@ type Registration struct {
 func (p *Registration) Validate() error {
 	err := validation.Validate.Struct(p)
 	if err != nil {
-		return fmt.Errorf("validation failed: %s", validation.ParseValidationErrors(err))
+		return fmt.Errorf("%w: validation failed: %s", ErrRegistrationPreference, validation.ParseValidationErrors(err))
 	}
 
 	return nil

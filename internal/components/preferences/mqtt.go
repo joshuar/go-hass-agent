@@ -24,6 +24,8 @@ const (
 )
 
 // MQTTPreferences contains preferences related to MQTTPreferences functionality in Go Hass Agent.
+//
+//nolint:lll
 type MQTTPreferences struct {
 	MQTTServer      string `toml:"server,omitempty" validate:"required,uri" kong:"required,help='MQTT server URI. Required.',placeholder='scheme://some.host:port'"` //nolint:lll
 	MQTTUser        string `toml:"user,omitempty" validate:"omitempty" kong:"optional,help='MQTT username.'"`
@@ -33,7 +35,8 @@ type MQTTPreferences struct {
 }
 
 var (
-	ErrSetMQTTPreference   = errors.New("could not set MQTT preference")
+	// ErrMQTTPreference indicates a problem with setting an MQTT preference.
+	ErrMQTTPreference      = errors.New("MQTT preference error")
 	defaultMQTTPreferences = &MQTTPreferences{
 		MQTTEnabled:     false,
 		MQTTTopicPrefix: defaultMQTTTopicPrefix,
@@ -45,7 +48,7 @@ var (
 func SetMQTTEnabled(value bool) SetPreference {
 	return func() error {
 		if err := prefsSrc.Set(prefMQTTEnabled, value); err != nil {
-			return errors.Join(ErrSetMQTTPreference, err)
+			return errors.Join(ErrMQTTPreference, err)
 		}
 
 		return nil
@@ -60,7 +63,7 @@ func SetMQTTServer(server string) SetPreference {
 		}
 
 		if err := prefsSrc.Set(prefMQTTServer, server); err != nil {
-			return errors.Join(ErrSetMQTTPreference, err)
+			return errors.Join(ErrMQTTPreference, err)
 		}
 
 		return nil
@@ -75,7 +78,7 @@ func SetMQTTTopicPrefix(prefix string) SetPreference {
 		}
 
 		if err := prefsSrc.Set(prefMQTTTopicPrefix, prefix); err != nil {
-			return errors.Join(ErrSetMQTTPreference, err)
+			return errors.Join(ErrMQTTPreference, err)
 		}
 
 		return nil
@@ -86,7 +89,7 @@ func SetMQTTTopicPrefix(prefix string) SetPreference {
 func SetMQTTUser(user string) SetPreference {
 	return func() error {
 		if err := prefsSrc.Set(prefMQTTUser, user); err != nil {
-			return errors.Join(ErrSetMQTTPreference, err)
+			return errors.Join(ErrMQTTPreference, err)
 		}
 
 		return nil
@@ -97,7 +100,7 @@ func SetMQTTUser(user string) SetPreference {
 func SetMQTTPassword(password string) SetPreference {
 	return func() error {
 		if err := prefsSrc.Set(prefMQTTPass, password); err != nil {
-			return errors.Join(ErrSetMQTTPreference, err)
+			return errors.Join(ErrMQTTPreference, err)
 		}
 
 		return nil
@@ -154,7 +157,7 @@ func MQTT() *MQTTPreferences {
 // MQTTDevice will return a device that is needed for MQTT functionality.
 func MQTTDevice() *mqtthass.Device {
 	// Retrieve the hardware model and manufacturer.
-	model, manufacturer, _ := info.GetHWProductInfo() //nolint:errcheck // error doesn't matter
+	model, manufacturer, _ := info.GetHWProductInfo()
 
 	return &mqtthass.Device{
 		Name:         prefsSrc.String(prefDeviceName),

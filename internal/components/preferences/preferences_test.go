@@ -6,7 +6,6 @@
 package preferences
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -70,7 +69,7 @@ func TestInit(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx := PathToCtx(context.TODO(), tt.args.path)
+			ctx := PathToCtx(t.Context(), tt.args.path)
 			err := Init(ctx)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Load() error = %v, wantErr %v", err, tt.wantErr)
@@ -109,7 +108,7 @@ func TestReset(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx := PathToCtx(context.TODO(), tt.args.path)
+			ctx := PathToCtx(t.Context(), tt.args.path)
 			if err := Reset(ctx); (err != nil) != tt.wantErr {
 				t.Errorf("Reset() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -137,7 +136,7 @@ func TestSave(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx := PathToCtx(context.TODO(), tt.args.path)
+			ctx := PathToCtx(t.Context(), tt.args.path)
 			require.NoError(t, checkPath(tt.args.path))
 			require.NoError(t, Init(ctx))
 			if err := save(); (err != nil) != tt.wantErr {
