@@ -5,14 +5,11 @@
 
 package logging
 
-// #nosec G108
-//nolint:gci
-//revive:disable:blank-imports
 import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	_ "net/http/pprof"
+	_ "net/http/pprof" // #nosec G108
 	"os"
 	"runtime"
 	"runtime/pprof"
@@ -40,7 +37,7 @@ func StartProfiling(flags ProfileFlags) error {
 				return fmt.Errorf("could not start trace profiling: %w", err)
 			}
 		default:
-			return fmt.Errorf("unknown argument for profiling: %s=%s", flagKey, flagVal)
+			return fmt.Errorf("%w: unknown argument for profiling: %s=%s", ErrLogOption, flagKey, flagVal)
 		}
 	}
 
@@ -51,7 +48,7 @@ func StopProfiling(flags ProfileFlags) error {
 	for flagKey, flagVal := range flags {
 		switch flagKey {
 		case "heapprofile":
-			heapFile, err := os.Create(flagVal)
+			heapFile, err := os.Create(flagVal) // #nosec G304
 			if err != nil {
 				return fmt.Errorf("cannot create heap profile file: %w", err)
 			}
@@ -82,7 +79,7 @@ func StopProfiling(flags ProfileFlags) error {
 
 // printMemStats and formatMemory functions are taken from golang-ci source
 //
-//nolint:lll,sloglint
+//nolint:lll
 func printMemStats(stats *runtime.MemStats) {
 	slog.Debug("Memory stats",
 		"alloc", formatMemory(stats.Alloc), "total_alloc", formatMemory(stats.TotalAlloc), "sys", formatMemory(stats.Sys),
@@ -135,7 +132,7 @@ func startWebProfiler(enable string) error {
 }
 
 func startCPUProfiler(path string) error {
-	f, err := os.Create(path)
+	f, err := os.Create(path) // #nosec G304
 	if err != nil {
 		return fmt.Errorf("cannot create CPU profile file: %w", err)
 	}
@@ -150,7 +147,7 @@ func startCPUProfiler(path string) error {
 }
 
 func startTraceProfiling(path string) error {
-	f, err := os.Create(path)
+	f, err := os.Create(path) // #nosec G304
 	if err != nil {
 		return fmt.Errorf("cannot create trace profile file: %w", err)
 	}

@@ -1,6 +1,7 @@
 // Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
 // SPDX-License-Identifier: MIT
 
+// Package logging contains methods and object for handling logging in the agent.
 package logging
 
 import (
@@ -22,6 +23,9 @@ const (
 
 	logFileName = "agent.log"
 )
+
+// ErrLogOption represents an error or problem with a logging option.
+var ErrLogOption = errors.New("logging option error")
 
 var LevelNames = map[slog.Leveler]string{
 	LevelTrace: "TRACE",
@@ -156,14 +160,14 @@ func openLogFile(logFile string) (*os.File, error) {
 	_, err := os.Stat(logDir)
 
 	if err == nil || errors.Is(err, os.ErrNotExist) {
-		err = os.MkdirAll(logDir, os.ModePerm)
+		err = os.MkdirAll(logDir, os.ModeAppend)
 		if err != nil {
 			return nil, fmt.Errorf("unable to create log file directory %s: %w", logDir, err)
 		}
 	}
 
 	// Open the log file.
-	logFileHandle, err := os.Create(logFile)
+	logFileHandle, err := os.Create(logFile) // #nosec G304
 	if err != nil {
 		return nil, fmt.Errorf("unable to open log file: %w", err)
 	}
