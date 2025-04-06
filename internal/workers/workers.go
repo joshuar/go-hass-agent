@@ -53,7 +53,7 @@ func (d *PollingEntityWorkerData) GetTrigger() quartz.Trigger {
 }
 
 func (d *PollingEntityWorkerData) GetDelta() time.Duration {
-	delta := time.Now().Sub(d.LastFireTime)
+	delta := time.Since(d.LastFireTime)
 	d.LastFireTime = time.Now()
 	return delta
 }
