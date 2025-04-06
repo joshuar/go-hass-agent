@@ -1,8 +1,10 @@
 // Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
 // SPDX-License-Identifier: MIT
 
-//go:generate go tool golang.org/x/tools/cmd/stringer -type=Prefix -linecomment -output id_generated.go
+// Package id contains methods for generating universally unique IDs.
 package id
+
+//go:generate go tool golang.org/x/tools/cmd/stringer -type=Prefix -linecomment -output id_generated.go
 
 import (
 	"fmt"
@@ -14,6 +16,7 @@ import (
 )
 
 const (
+	// Unknown represents an unknown prefix.
 	Unknown Prefix = iota // unknown
 	// ScriptJob prefix is for scheduler jobs for scripts.
 	ScriptJob // script_job
