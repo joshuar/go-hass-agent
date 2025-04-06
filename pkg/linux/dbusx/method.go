@@ -1,7 +1,5 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
 package dbusx
 
@@ -34,7 +32,11 @@ func (m *Method) Call(ctx context.Context, args ...any) error {
 
 	called := m.execute(ctx, args...)
 	if called.Err != nil {
-		return fmt.Errorf("%s: unable to call method %s (args: %v): %w", m.bus.busType.String(), m.name, args, called.Err)
+		return fmt.Errorf("%s: unable to call method %s (args: %v): %w",
+			m.bus.busType.String(),
+			m.name,
+			args,
+			called.Err)
 	}
 
 	return nil
@@ -63,7 +65,7 @@ func (m *Method) execute(ctx context.Context, args ...any) *dbus.Call {
 	return obj.CallWithContext(ctx, m.name, 0)
 }
 
-//nolint:gocognit
+//nolint:funlen
 func (m *Method) sanitizeArgs(args []any) ([]any, error) {
 	introspection, err := NewIntrospection(m.bus, m.intr, m.path)
 	if err != nil {
@@ -103,28 +105,32 @@ func (m *Method) sanitizeArgs(args []any) ([]any, error) {
 		case "u":
 			value, err := VariantToValue[uint32](variant)
 			if err != nil {
-				warnings = errors.Join(warnings, fmt.Errorf("could not convert argument %d, using default value: %w", idx, err))
+				warnings = errors.Join(warnings,
+					fmt.Errorf("could not convert argument %d, using default value: %w", idx, err))
 			}
 
 			cleanArgs[idx] = value
 		case "i":
 			value, err := VariantToValue[int32](variant)
 			if err != nil {
-				warnings = errors.Join(warnings, fmt.Errorf("could not convert argument %d, using default value: %w", idx, err))
+				warnings = errors.Join(warnings,
+					fmt.Errorf("could not convert argument %d, using default value: %w", idx, err))
 			}
 
 			cleanArgs[idx] = value
 		case "a{sv}":
 			value, err := VariantToValue[map[string]any](variant)
 			if err != nil {
-				warnings = errors.Join(warnings, fmt.Errorf("could not convert argument %d, using default value: %w", idx, err))
+				warnings = errors.Join(warnings,
+					fmt.Errorf("could not convert argument %d, using default value: %w", idx, err))
 			}
 
 			cleanArgs[idx] = value
 		case "as":
 			value, err := VariantToValue[[]string](variant)
 			if err != nil {
-				warnings = errors.Join(warnings, fmt.Errorf("could not convert argument %d, using default value: %w", idx, err))
+				warnings = errors.Join(warnings,
+					fmt.Errorf("could not convert argument %d, using default value: %w", idx, err))
 			}
 
 			cleanArgs[idx] = value
@@ -154,7 +160,11 @@ func (d *Data[T]) Fetch(ctx context.Context, args ...any) (T, error) {
 
 	called := d.execute(ctx, args...)
 	if called.Err != nil {
-		return stored, fmt.Errorf("%s: unable to call method %s (args: %v): %w", d.bus.busType.String(), d.name, args, called.Err)
+		return stored, fmt.Errorf("%s: unable to call method %s (args: %v): %w",
+			d.bus.busType.String(),
+			d.name,
+			args,
+			called.Err)
 	}
 
 	if err := called.Store(&stored); err != nil {

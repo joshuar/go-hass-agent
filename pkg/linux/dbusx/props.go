@@ -1,7 +1,5 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
 package dbusx
 
@@ -12,7 +10,7 @@ import (
 	"github.com/godbus/dbus/v5"
 )
 
-//revive:disable:struct-tag
+// Property represents a D-Bus property.
 type Property[P any] struct {
 	bus  *Bus   `validate:"required"`
 	path string `validate:"required"`
@@ -29,18 +27,23 @@ func (p *Property[P]) Get() (P, error) {
 		return value, fmt.Errorf("invalid property: %w", err)
 	}
 
-	p.bus.traceLog("Requesting property.", slog.String("path", p.path), slog.String("dest", p.intr), slog.String("property", p.name))
+	p.bus.traceLog("Requesting property.",
+		slog.String("path", p.path),
+		slog.String("dest", p.intr),
+		slog.String("property", p.name))
 
 	obj := p.bus.getObject(p.intr, p.path)
 
 	res, err := obj.GetProperty(p.name)
 	if err != nil {
-		return value, fmt.Errorf("%s: unable to retrieve property %s from %s: %w", p.bus.busType.String(), p.name, p.intr, err)
+		return value,
+			fmt.Errorf("%s: unable to retrieve property %s from %s: %w", p.bus.busType.String(), p.name, p.intr, err)
 	}
 
 	value, err = VariantToValue[P](res)
 	if err != nil {
-		return value, fmt.Errorf("%s: unable to retrieve property %s from %s: %w", p.bus.busType.String(), p.name, p.intr, err)
+		return value,
+			fmt.Errorf("%s: unable to retrieve property %s from %s: %w", p.bus.busType.String(), p.name, p.intr, err)
 	}
 
 	return value, nil
@@ -53,14 +56,22 @@ func (p *Property[P]) Set(value P) error {
 	}
 
 	p.bus.traceLog("Setting property.",
-		slog.String("path", p.path), slog.String("dest", p.intr), slog.String("property", p.name), slog.Any("value", value))
+		slog.String("path", p.path),
+		slog.String("dest", p.intr),
+		slog.String("property", p.name),
+		slog.Any("value", value))
 
 	v := dbus.MakeVariant(value)
 	obj := p.bus.getObject(p.intr, p.path)
 
 	err := obj.SetProperty(p.name, v)
 	if err != nil {
-		return fmt.Errorf("%s: unable to set property %s (%s) to %v: %w", p.bus.busType.String(), p.name, p.intr, value, err)
+		return fmt.Errorf("%s: unable to set property %s (%s) to %v: %w",
+			p.bus.busType.String(),
+			p.name,
+			p.intr,
+			value,
+			err)
 	}
 
 	return nil
@@ -125,7 +136,8 @@ func ParsePropertiesChanged(propsChanged []any) (*Properties, error) {
 // boolean indicating whether the property changed and the new value (or the
 // default value) of the specified type for the property. If any errors
 // occurred, a non-nil error will be the third return value.
-func HasPropertyChanged[T any](event []any, property string) (changed bool, value T, err error) {
+func HasPropertyChanged[T any](event []any, property string) (bool, T, error) {
+	var value T
 	props, err := ParsePropertiesChanged(event)
 	if err != nil {
 		return false, value, fmt.Errorf("cannot parse event: %w", err)
