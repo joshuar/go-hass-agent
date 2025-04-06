@@ -19,6 +19,7 @@ const (
 	defaultFilePerms = 0o640
 )
 
+// GobRegistry is a registry based on gob binary data.
 type GobRegistry struct {
 	sensors map[string]metadata
 	file    string
