@@ -18,7 +18,9 @@ import (
 )
 
 const (
+	// LevelTrace is a custom log level representing trace-level logs.
 	LevelTrace = slog.Level(-8)
+	// LevelFatal is a custom log level representing fatal-level logs.
 	LevelFatal = slog.Level(12)
 
 	logFileName = "agent.log"
@@ -27,18 +29,20 @@ const (
 // ErrLogOption represents an error or problem with a logging option.
 var ErrLogOption = errors.New("logging option error")
 
+// LevelNames is a map of custom log level names to their string values.
 var LevelNames = map[slog.Leveler]string{
 	LevelTrace: "TRACE",
 	LevelFatal: "FATAL",
 }
 
+// Options contains the top-level logging options.
 type Options struct {
 	LogLevel  string `name:"log-level" enum:"info,debug,trace" default:"info" help:"Set logging level."`
 	NoLogFile bool   `name:"no-log-file" help:"Don't write to a log file." default:"false"`
 	Path      string `kong:"-"`
 }
 
-//revive:disable:flag-parameter
+// New creates a new logger with the given options.
 func New(options Options) *slog.Logger {
 	var (
 		logLevel slog.Level
