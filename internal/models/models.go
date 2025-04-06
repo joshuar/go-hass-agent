@@ -8,9 +8,8 @@ package models
 //go:generate go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen -config cfg.yaml api.yaml
 
 import (
+	"cmp"
 	"time"
-
-	"golang.org/x/exp/constraints"
 )
 
 // Option is a functional option for type T. Any concrete type can define its
@@ -20,5 +19,5 @@ import (
 type Option[T any] func(T) error
 
 type StateValue interface {
-	constraints.Ordered | time.Time
+	cmp.Ordered | time.Time
 }
