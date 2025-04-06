@@ -37,14 +37,14 @@ func checkRegistration(ctx context.Context, app *App, headless bool) error {
 	if !headless {
 		userInputDoneCh := app.ui.DisplayRegistrationWindow(ctx, request)
 		if canceled := <-userInputDoneCh; canceled {
-			return errors.New("user canceled registration")
+			return fmt.Errorf("%w: user cancelled registration", ErrRegister)
 		}
 	}
 
 	// Perform registration with given values.
 	err := registration.RegisterDevice(ctx, request)
 	if err != nil {
-		return fmt.Errorf("device registration failed: %w", err)
+		return fmt.Errorf("%w: %w", ErrRegister, err)
 	}
 
 	// If the registration was forced, reset the sensor registry.
