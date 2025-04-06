@@ -65,7 +65,6 @@ var mockNumber = mqtthass.NewNumberEntity[int64]().
 	WithMax(100).
 	WithMode(mqtthass.NumberAuto)
 
-//nolint:dupl
 func TestController_Subscriptions(t *testing.T) {
 	var mockButtonSubscription, mockSwitchSubscription, mockNumberSubscription *mqttapi.Subscription
 	var err error
@@ -120,7 +119,6 @@ func TestController_Subscriptions(t *testing.T) {
 	}
 }
 
-//nolint:dupl
 func TestController_Configs(t *testing.T) {
 	var mockButtonConfig, mockSwitchConfig, mockNumberConfig *mqttapi.Msg
 	var err error

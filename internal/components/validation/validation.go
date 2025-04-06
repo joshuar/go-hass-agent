@@ -22,13 +22,13 @@ func init() {
 	Validate = validator.New(validator.WithRequiredStructEnabled())
 }
 
-// ValidationErrors is a map of fields and their validation errors.
+// Errors is a map of fields and their validation errors.
 //
 //nolint:errname
-type ValidationErrors map[string][]string
+type Errors map[string][]string
 
 // Error allows ValidationErrors to be treated as an error.
-func (p ValidationErrors) Error() string {
+func (p Errors) Error() string {
 	var message strings.Builder
 	for field, problems := range p {
 		// Write the field name.
@@ -44,6 +44,9 @@ func (p ValidationErrors) Error() string {
 	return message.String()
 }
 
+// ParseValidationErrors will parse the given error as a validation error and return a string describing the validation
+// issue.
+//
 //nolint:errorlint
 func ParseValidationErrors(validation error) string {
 	validationErrs, ok := validation.(validator.ValidationErrors)
@@ -70,8 +73,8 @@ func ParseValidationErrors(validation error) string {
 // parseStructValidationErrors takes the underlying validation errors and
 // formats them so that each struct field has an array of all validation errors
 // associated with it.
-func parseStructValidationErrors(validationErrors validator.ValidationErrors) ValidationErrors {
-	problems := make(ValidationErrors)
+func parseStructValidationErrors(validationErrors validator.ValidationErrors) Errors {
+	problems := make(Errors)
 
 	for _, err := range validationErrors {
 		field := err.Field()
@@ -88,7 +91,7 @@ func parseStructValidationErrors(validationErrors validator.ValidationErrors) Va
 // struct field names and an array of validation errors for that field.
 //
 //nolint:errorlint
-func ValidateStruct[T any](obj T) (bool, ValidationErrors) {
+func ValidateStruct[T any](obj T) (bool, Errors) {
 	validationErr := &validator.ValidationErrors{}
 
 	err := Validate.Struct(obj)
