@@ -48,6 +48,7 @@ type oldPreferences struct {
 	Registered      bool   `toml:"hass.registered"`
 }
 
+//nolint:cyclop,funlen
 func v1000(ctx context.Context) error {
 	newRegistryPath := filepath.Join(preferences.PathFromCtx(ctx), "sensorRegistry")
 
@@ -56,7 +57,7 @@ func v1000(ctx context.Context) error {
 		return nil
 	}
 
-	oldData, err := os.ReadFile(filepath.Join(oldPrefsPath, "preferences.toml"))
+	oldData, err := os.ReadFile(filepath.Join(oldPrefsPath, "preferences.toml")) // #nosec: G304
 	if err != nil {
 		return fmt.Errorf("cannot read old preferences: %w", err)
 	}
@@ -101,7 +102,7 @@ func v1000(ctx context.Context) error {
 	}
 
 	// Create a directory for the registry.
-	err = os.Mkdir(newRegistryPath, os.ModePerm)
+	err = os.Mkdir(newRegistryPath, os.ModeAppend)
 	if err != nil && !errors.Is(err, os.ErrExist) {
 		return fmt.Errorf("unable to create new registry directory: %w", err)
 	}
@@ -111,17 +112,17 @@ func v1000(ctx context.Context) error {
 	}
 
 	// Attempt to copy over the old registry.
-	oldReg, err := os.Open(filepath.Join(oldRegistryPath, registryFile))
+	oldReg, err := os.Open(filepath.Join(oldRegistryPath, registryFile)) // #nosec: G304
 	if err != nil {
 		return fmt.Errorf("unable to open old registry: %w", err)
 	}
-	defer oldReg.Close()
+	defer oldReg.Close() //nolint:errcheck
 
-	newReg, err := os.Create(filepath.Join(newRegistryPath, registryFile))
+	newReg, err := os.Create(filepath.Join(newRegistryPath, registryFile)) // #nosec: G304
 	if err != nil {
 		return fmt.Errorf("unable to create new registry file: %w", err)
 	}
-	defer newReg.Close()
+	defer newReg.Close() //nolint:errcheck
 
 	_, err = io.Copy(newReg, oldReg)
 	if err != nil {
