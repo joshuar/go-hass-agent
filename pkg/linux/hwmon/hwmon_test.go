@@ -475,8 +475,11 @@ func Test_getSensorFiles(t *testing.T) {
 
 func Benchmark_GetAllSensors(b *testing.B) {
 	b.Run(fmt.Sprintf("run %d", b.N), func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			GetAllSensors() //nolint:errcheck
+		for b.Loop() {
+			_, err := GetAllSensors()
+			if err != nil {
+				b.Log("problem getting sensors: %w", err)
+			}
 		}
 	})
 }

@@ -1,7 +1,5 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
 package whichdistro
 
@@ -14,11 +12,14 @@ import (
 )
 
 const (
+	// UnknownValue is used when the value could not otherwise be determined.
 	UnknownValue = "Unknown"
 )
 
 var (
-	OSReleaseFile    = "/etc/os-release"
+	// OSReleaseFile is the canonical location of the os-release file.
+	OSReleaseFile = "/etc/os-release"
+	// OSReleaseAltFile is a canonical alternative location of the os-release file.
 	OSReleaseAltFile = "/usr/lib/os-release"
 )
 
@@ -76,8 +77,8 @@ func readOSRelease() ([]byte, error) {
 
 // GetValue will retrieve the value of the given key from an OSRelease map. It
 // will perform some cleanup on the raw value to make it easier to use.
-func (r OSRelease) GetValue(key string) (value string, ok bool) {
-	value, ok = r[key]
+func (r OSRelease) GetValue(key string) (string, bool) {
+	value, ok := r[key]
 	if !ok {
 		return UnknownValue, false
 	}
