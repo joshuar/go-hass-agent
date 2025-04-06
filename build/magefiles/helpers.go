@@ -197,27 +197,31 @@ func generatePkgEnv() (map[string]string, error) {
 // parseBuildPlatform reads the TARGETPLATFORM environment variable, which should
 // always be set, and extracts the value into appropriate GOOS, GOARCH and GOARM
 // (if applicable) variables.
-func parseBuildPlatform() (operatingsystem, architecture, version string) {
-	var buildPlatform string
-
-	var ok bool
+func parseBuildPlatform() (string, string, string) {
+	var (
+		buildPlatform string
+		opsys         string
+		arch          string
+		version       string
+		ok            bool
+	)
 
 	if buildPlatform, ok = os.LookupEnv(platformENV); !ok {
 		return runtime.GOOS, runtime.GOARCH, ""
 	}
 
 	buildComponents := strings.Split(buildPlatform, "/")
-	operatingsystem = buildComponents[0]
+	opsys = buildComponents[0]
 
 	if len(buildComponents) > 1 {
-		architecture = buildComponents[1]
+		arch = buildComponents[1]
 	}
 
 	if len(buildComponents) > 2 {
 		version = strings.TrimPrefix(buildComponents[2], "v")
 	}
 
-	return operatingsystem, architecture, version
+	return opsys, arch, version
 }
 
 func cleanDir(path string) error {
@@ -225,7 +229,7 @@ func cleanDir(path string) error {
 		return fmt.Errorf("could not clean directory %s: %w", path, err)
 	}
 
-	if err := os.MkdirAll(path, 0o755); err != nil {
+	if err := os.MkdirAll(path, os.ModeAppend); err != nil {
 		return fmt.Errorf("could not create directory %s: %w", path, err)
 	}
 

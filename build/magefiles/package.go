@@ -19,7 +19,16 @@ type Package mg.Namespace
 var (
 	pkgformats      = []string{"rpm", "deb", "archlinux"}
 	pkgPath         = filepath.Join(distPath, "pkg")
-	nfpmCommandLine = []string{"go", "run", "github.com/goreleaser/nfpm/v2/cmd/nfpm", "package", "--config", ".nfpm.yaml", "--target", pkgPath}
+	nfpmCommandLine = []string{
+		"go",
+		"run",
+		"github.com/goreleaser/nfpm/v2/cmd/nfpm",
+		"package",
+		"--config",
+		".nfpm.yaml",
+		"--target",
+		pkgPath,
+	}
 )
 
 // Nfpm builds packages using nfpm.

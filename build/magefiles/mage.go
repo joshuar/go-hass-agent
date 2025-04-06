@@ -24,8 +24,8 @@ var (
 )
 
 func init() {
-	version, _ := getVersion() //nolint:errcheck
-	hash, _ := getGitHash()    //nolint:errcheck
+	version, _ := getVersion()
+	hash, _ := getGitHash()
 
 	platform, arch, ver := parseBuildPlatform()
 
