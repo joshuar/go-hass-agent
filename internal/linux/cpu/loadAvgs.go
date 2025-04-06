@@ -16,12 +16,15 @@ import (
 	"time"
 
 	"github.com/iancoleman/strcase"
+	"github.com/reugn/go-quartz/quartz"
 
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/models"
 	"github.com/joshuar/go-hass-agent/internal/models/class"
 	"github.com/joshuar/go-hass-agent/internal/models/sensor"
+	"github.com/joshuar/go-hass-agent/internal/scheduler"
+	"github.com/joshuar/go-hass-agent/internal/workers"
 )
 
 const (
@@ -34,7 +37,13 @@ const (
 	loadAvgsTotal = 3
 
 	loadAvgsWorkerID      = "cpu_loadavg_sensors"
+	loadAvgsWorkerDesc    = "Load averages"
 	loadAvgsPreferencesID = prefPrefix + "load_averages"
+)
+
+var (
+	_ quartz.Job                  = (*loadAvgsWorker)(nil)
+	_ workers.PollingEntityWorker = (*loadAvgsWorker)(nil)
 )
 
 var (
@@ -43,24 +52,23 @@ var (
 )
 
 type loadAvgsWorker struct {
-	path string
+	*models.WorkerMetadata
+	*workers.PollingEntityWorkerData
+	prefs *preferences.CommonWorkerPrefs
+	path  string
 }
 
-func (w *loadAvgsWorker) UpdateDelta(_ time.Duration) {}
-
-func (w *loadAvgsWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
+func (w *loadAvgsWorker) Execute(ctx context.Context) error {
 	var warnings error
-
-	sensors := make([]models.Entity, 0, loadAvgsTotal)
 
 	loadAvgData, err := os.ReadFile(w.path)
 	if err != nil {
-		return nil, fmt.Errorf("fetch load averages: %w", err)
+		return fmt.Errorf("fetch load averages: %w", err)
 	}
 
 	loadAvgs, err := parseLoadAvgs(loadAvgData)
 	if err != nil {
-		return nil, fmt.Errorf("parse load averages: %w", err)
+		return fmt.Errorf("parse load averages: %w", err)
 	}
 
 	for name, value := range loadAvgs {
@@ -69,11 +77,10 @@ func (w *loadAvgsWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 			warnings = errors.Join(warnings, fmt.Errorf("could not generate %s sensor: %w", name, err))
 			continue
 		}
-
-		sensors = append(sensors, entity)
+		w.OutCh <- entity
 	}
 
-	return sensors, warnings
+	return warnings
 }
 
 func (w *loadAvgsWorker) PreferencesID() string {
@@ -82,6 +89,19 @@ func (w *loadAvgsWorker) PreferencesID() string {
 
 func (w *loadAvgsWorker) DefaultPreferences() preferences.CommonWorkerPrefs {
 	return preferences.CommonWorkerPrefs{}
+}
+
+func (w *loadAvgsWorker) IsDisabled() bool {
+	return w.prefs.IsDisabled()
+}
+
+func (w *loadAvgsWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
+	w.OutCh = make(chan models.Entity)
+	if err := workers.SchedulePollingWorker(ctx, w, w.OutCh); err != nil {
+		close(w.OutCh)
+		return w.OutCh, fmt.Errorf("could not start disk usage worker: %w", err)
+	}
+	return w.OutCh, nil
 }
 
 func newLoadAvgSensor(ctx context.Context, name, value string) (models.Entity, error) {
@@ -115,21 +135,20 @@ func parseLoadAvgs(data []byte) (map[string]string, error) {
 	}, nil
 }
 
-func NewLoadAvgWorker(_ context.Context) (*linux.PollingSensorWorker, error) {
-	loadAvgsWorker := &loadAvgsWorker{path: filepath.Join(linux.ProcFSRoot, "loadavg")}
+func NewLoadAvgWorker(_ context.Context) (workers.EntityWorker, error) {
+	worker := &loadAvgsWorker{
+		WorkerMetadata:          models.SetWorkerMetadata(loadAvgsWorkerID, loadAvgsWorkerDesc),
+		PollingEntityWorkerData: &workers.PollingEntityWorkerData{},
+		path:                    filepath.Join(linux.ProcFSRoot, "loadavg"),
+	}
 
-	prefs, err := preferences.LoadWorker(loadAvgsWorker)
+	prefs, err := preferences.LoadWorker(worker)
 	if err != nil {
 		return nil, errors.Join(ErrInitLoadAvgsWorker, err)
 	}
+	worker.prefs = prefs
 
-	//nolint:nilnil
-	if prefs.Disabled {
-		return nil, nil
-	}
-
-	worker := linux.NewPollingSensorWorker(loadAvgsWorkerID, loadAvgUpdateInterval, loadAvgUpdateJitter)
-	worker.PollingSensorType = loadAvgsWorker
+	worker.Trigger = scheduler.NewPollTriggerWithJitter(loadAvgUpdateInterval, loadAvgUpdateJitter)
 
 	return worker, nil
 }

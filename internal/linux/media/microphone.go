@@ -15,16 +15,90 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/models"
 	"github.com/joshuar/go-hass-agent/internal/models/sensor"
+	"github.com/joshuar/go-hass-agent/internal/workers"
 )
 
-const (
-	micUsageWorkerID = "microphone_usage_sensor"
-)
+var _ workers.EntityWorker = (*micUsageWorker)(nil)
 
 var (
 	ErrInitMicUsageWorker = errors.New("could not init mic usage worker")
 	ErrNewMicUsageSensor  = errors.New("could not create mic usage sensor")
 )
+
+const (
+	micUsageWorkerID   = "microphone_usage_sensor"
+	micUsageWorkerDesc = "Microphone usage detection"
+)
+
+type micUsageWorker struct {
+	prefs *preferences.CommonWorkerPrefs
+	inUse bool
+	*models.WorkerMetadata
+}
+
+// parsePWState parses a pipewire state value into the appropriate boolean value.
+func (w *micUsageWorker) parsePWState(state pwmonitor.State) {
+	switch state {
+	case pwmonitor.StateRunning:
+		w.inUse = true
+	case pwmonitor.StateIdle, pwmonitor.StateSuspended:
+		fallthrough
+	default:
+		w.inUse = false
+	}
+}
+
+func (w *micUsageWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
+	pwEvents, err := monitorPipewire(ctx, micPipewireEventFilter)
+	if err != nil {
+		return nil, errors.Join(ErrInitMicUsageWorker, err)
+	}
+	outCh := make(chan models.Entity)
+
+	go func() {
+		defer close(outCh)
+
+		for event := range pwEvents {
+			w.parsePWState(*event.Info.State)
+
+			micUseSensor, err := newMicUsageSensor(ctx, w.inUse)
+			if err != nil {
+				logging.FromContext(ctx).Warn("Could not parse pipewire event for mic usage.",
+					slog.Any("error", err))
+			}
+
+			outCh <- *micUseSensor
+		}
+	}()
+
+	return outCh, nil
+}
+
+func (w *micUsageWorker) PreferencesID() string {
+	return micUsagePrefID
+}
+
+func (w *micUsageWorker) DefaultPreferences() preferences.CommonWorkerPrefs {
+	return preferences.CommonWorkerPrefs{}
+}
+
+func (w *micUsageWorker) IsDisabled() bool {
+	return w.prefs.IsDisabled()
+}
+
+func NewMicUsageWorker(_ context.Context) (workers.EntityWorker, error) {
+	worker := &micUsageWorker{
+		WorkerMetadata: models.SetWorkerMetadata(micUsageWorkerID, micUsageWorkerDesc),
+	}
+
+	prefs, err := preferences.LoadWorker(worker)
+	if err != nil {
+		return nil, errors.Join(ErrInitMicUsageWorker, err)
+	}
+	worker.prefs = prefs
+
+	return worker, nil
+}
 
 // micPipewireEventFilter filters the pipewire events. For mic monitoring, we are only
 // interested in events of type EventNode that have the audio source media type.
@@ -67,86 +141,4 @@ func newMicUsageSensor(ctx context.Context, inUse bool) (*models.Entity, error) 
 	}
 
 	return &micUseSensor, nil
-}
-
-type micUsageWorker struct {
-	prefs *preferences.CommonWorkerPrefs
-	inUse bool
-}
-
-// parsePWState parses a pipewire state value into the appropriate boolean value.
-func (w *micUsageWorker) parsePWState(state pwmonitor.State) {
-	switch state {
-	case pwmonitor.StateRunning:
-		w.inUse = true
-	case pwmonitor.StateIdle, pwmonitor.StateSuspended:
-		fallthrough
-	default:
-		w.inUse = false
-	}
-}
-
-//nolint:dupl
-func (w *micUsageWorker) Events(ctx context.Context) (<-chan models.Entity, error) {
-	pwEvents, err := monitorPipewire(ctx, micPipewireEventFilter)
-	if err != nil {
-		return nil, errors.Join(ErrInitMicUsageWorker, err)
-	}
-
-	outCh := make(chan models.Entity)
-
-	go func() {
-		defer close(outCh)
-
-		for event := range pwEvents {
-			w.parsePWState(*event.Info.State)
-
-			micUseSensor, err := newMicUsageSensor(ctx, w.inUse)
-			if err != nil {
-				logging.FromContext(ctx).Warn("Could not parse pipewire event for mic usage.",
-					slog.Any("error", err))
-			}
-
-			outCh <- *micUseSensor
-		}
-	}()
-
-	return outCh, nil
-}
-
-func (w *micUsageWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
-	micUsage, err := newMicUsageSensor(ctx, w.inUse)
-	if err != nil {
-		return nil, errors.Join(ErrNewMicUsageSensor, err)
-	}
-
-	return []models.Entity{*micUsage}, nil
-}
-
-func (w *micUsageWorker) PreferencesID() string {
-	return micUsagePrefID
-}
-
-func (w *micUsageWorker) DefaultPreferences() preferences.CommonWorkerPrefs {
-	return preferences.CommonWorkerPrefs{}
-}
-
-func NewMicUsageWorker(_ context.Context) (*linux.EventSensorWorker, error) {
-	var err error
-
-	worker := linux.NewEventSensorWorker(micUsageWorkerID)
-	micUsageWorker := &micUsageWorker{}
-
-	micUsageWorker.prefs, err = preferences.LoadWorker(micUsageWorker)
-	if err != nil {
-		return nil, errors.Join(ErrInitMicUsageWorker, err)
-	}
-
-	if micUsageWorker.prefs.IsDisabled() {
-		return worker, nil
-	}
-
-	worker.EventSensorType = micUsageWorker
-
-	return worker, nil
 }

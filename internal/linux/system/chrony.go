@@ -15,12 +15,15 @@ import (
 	"strings"
 	"time"
 
+	"github.com/reugn/go-quartz/quartz"
+
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
-	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/models"
 	"github.com/joshuar/go-hass-agent/internal/models/class"
 	"github.com/joshuar/go-hass-agent/internal/models/sensor"
+	"github.com/joshuar/go-hass-agent/internal/scheduler"
+	"github.com/joshuar/go-hass-agent/internal/workers"
 )
 
 const (
@@ -28,9 +31,15 @@ const (
 	chronyPollJitter   = 10 * time.Second
 
 	chronyWorkerID      = "chrony_sensors"
+	chronyWorkerDesc    = "Chrony stats"
 	chronyPreferencesID = sensorsPrefPrefix + "chrony"
 
 	sensorStat = "System time"
+)
+
+var (
+	_ quartz.Job                  = (*chronyWorker)(nil)
+	_ workers.PollingEntityWorker = (*chronyWorker)(nil)
 )
 
 var ErrInitChronyWorker = errors.New("could not init chrony worker")
@@ -38,24 +47,23 @@ var ErrInitChronyWorker = errors.New("could not init chrony worker")
 type chronyWorker struct {
 	chronycPath string
 	prefs       *ChronyPrefs
+	*workers.PollingEntityWorkerData
+	*models.WorkerMetadata
 }
 
-//revive:disable:unused-receiver
-func (w *chronyWorker) UpdateDelta(_ time.Duration) {}
-
-func (w *chronyWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
+func (w *chronyWorker) Execute(ctx context.Context) error {
 	// Get chrony tracking stats via chronyc.
 	stats, err := w.getChronyTrackingStats()
 	if err != nil {
-		return nil, fmt.Errorf("could not retrieve chrony stats: %w", err)
+		return fmt.Errorf("could not retrieve chrony stats: %w", err)
 	}
 	// Generate a sensor.
 	entity, err := newChronyOffsetSensor(ctx, stats)
 	if err != nil {
-		return nil, fmt.Errorf("could not generate chrony sensor: %w", err)
+		return fmt.Errorf("could not generate chrony sensor: %w", err)
 	}
-
-	return []models.Entity{entity}, nil
+	w.OutCh <- entity
+	return nil
 }
 
 func (w *chronyWorker) PreferencesID() string {
@@ -66,6 +74,19 @@ func (w *chronyWorker) DefaultPreferences() ChronyPrefs {
 	return ChronyPrefs{
 		UpdateInterval: chronyPollInterval.String(),
 	}
+}
+
+func (w *chronyWorker) IsDisabled() bool {
+	return w.prefs.IsDisabled()
+}
+
+func (w *chronyWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
+	w.OutCh = make(chan models.Entity)
+	if err := workers.SchedulePollingWorker(ctx, w, w.OutCh); err != nil {
+		close(w.OutCh)
+		return w.OutCh, fmt.Errorf("could not start disk IO worker: %w", err)
+	}
+	return w.OutCh, nil
 }
 
 // getChronyTrackingStats executes chronyc, parsing its output and returning the
@@ -132,37 +153,35 @@ func newChronyOffsetSensor(ctx context.Context, stats map[string]string) (models
 }
 
 // NewChronyWorker creates a worker to track sensors from chronyd.
-func NewChronyWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
+func NewChronyWorker(ctx context.Context) (workers.EntityWorker, error) {
 	path, err := exec.LookPath("chronyc")
 	if err != nil {
 		return nil, errors.Join(ErrInitChronyWorker,
 			fmt.Errorf("chronyc is not available: %w", err))
 	}
 
-	chronyWorker := &chronyWorker{chronycPath: path}
+	worker := &chronyWorker{
+		WorkerMetadata:          models.SetWorkerMetadata(chronyWorkerID, chronyWorkerDesc),
+		PollingEntityWorkerData: &workers.PollingEntityWorkerData{},
+		chronycPath:             path,
+	}
 
-	chronyWorker.prefs, err = preferences.LoadWorker(chronyWorker)
+	prefs, err := preferences.LoadWorker(worker)
 	if err != nil {
 		return nil, errors.Join(ErrInitChronyWorker, err)
 	}
+	worker.prefs = prefs
 
-	//nolint:nilnil
-	if chronyWorker.prefs.IsDisabled() {
-		return nil, nil
-	}
-
-	pollInterval, err := time.ParseDuration(chronyWorker.prefs.UpdateInterval)
+	pollInterval, err := time.ParseDuration(worker.prefs.UpdateInterval)
 	if err != nil {
 		logging.FromContext(ctx).Warn("Invalid polling interval, using default",
 			slog.String("worker", chronyWorkerID),
-			slog.String("given_interval", chronyWorker.prefs.UpdateInterval),
+			slog.String("given_interval", worker.prefs.UpdateInterval),
 			slog.String("default_interval", chronyPollInterval.String()))
 
 		pollInterval = chronyPollInterval
 	}
-
-	worker := linux.NewPollingSensorWorker(chronyWorkerID, pollInterval, chronyPollJitter)
-	worker.PollingSensorType = chronyWorker
+	worker.Trigger = scheduler.NewPollTriggerWithJitter(pollInterval, chronyPollJitter)
 
 	return worker, nil
 }

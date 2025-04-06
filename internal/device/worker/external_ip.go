@@ -10,16 +10,19 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"slices"
 	"strings"
 	"time"
 
 	"github.com/go-resty/resty/v2"
+	"github.com/reugn/go-quartz/quartz"
 
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
-	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/models"
 	"github.com/joshuar/go-hass-agent/internal/models/sensor"
+	"github.com/joshuar/go-hass-agent/internal/scheduler"
+	"github.com/joshuar/go-hass-agent/internal/workers"
 )
 
 const (
@@ -27,13 +30,19 @@ const (
 	externalIPJitterAmount         = 10 * time.Second
 	externalIPUpdateRequestTimeout = 15 * time.Second
 
-	externalIPWorkerID = "external_ip"
+	externalIPWorkerID   = "external_ip"
+	externalIPWorkerDesc = "Get external IP details"
 )
 
 var ipLookupHosts = map[string]map[int]string{
 	"icanhazip": {4: "https://4.icanhazip.com", 6: "https://6.icanhazip.com"},
 	"ipify":     {4: "https://api.ipify.org", 6: "https://api6.ipify.org"},
 }
+
+var (
+	_ quartz.Job                  = (*ExternalIP)(nil)
+	_ workers.PollingEntityWorker = (*ExternalIP)(nil)
+)
 
 var (
 	ErrInitExternalIPWorker = errors.New("could not init external IP worker")
@@ -45,6 +54,8 @@ type ExternalIP struct {
 	client *resty.Client
 	logger *slog.Logger
 	prefs  *preferences.CommonWorkerPrefs
+	*workers.PollingEntityWorkerData
+	*models.WorkerMetadata
 }
 
 func (w *ExternalIP) PreferencesID() string {
@@ -59,15 +70,10 @@ func (w *ExternalIP) IsDisabled() bool {
 	return w.prefs.IsDisabled()
 }
 
-// ID returns the unique string to represent this worker and its sensors.
-func (w *ExternalIP) ID() string { return externalIPWorkerID }
-
 //nolint:mnd
-func (w *ExternalIP) sensors(ctx context.Context) ([]models.Entity, error) {
-	sensors := make([]models.Entity, 0, 2)
-
-	for _, ver := range []int{4, 6} {
-		ipAddr, err := w.lookupExternalIPs(ctx, ver)
+func (w *ExternalIP) Execute(ctx context.Context) error {
+	for ipVer := range slices.Values([]int{4, 6}) {
+		ipAddr, err := w.lookupExternalIPs(ctx, ipVer)
 		if err != nil || ipAddr == nil {
 			w.logger.Log(ctx, logging.LevelTrace, "Looking up external IP failed.", slog.Any("error", err))
 			continue
@@ -78,11 +84,9 @@ func (w *ExternalIP) sensors(ctx context.Context) ([]models.Entity, error) {
 			w.logger.Log(ctx, logging.LevelTrace, "Sensor creation failed.", slog.Any("error", err))
 			continue
 		}
-
-		sensors = append(sensors, entity)
+		w.OutCh <- entity
 	}
-
-	return sensors, nil
+	return nil
 }
 
 func newExternalIPSensor(ctx context.Context, addr net.IP) (models.Entity, error) {
@@ -115,30 +119,12 @@ func newExternalIPSensor(ctx context.Context, addr net.IP) (models.Entity, error
 }
 
 func (w *ExternalIP) Start(ctx context.Context) (<-chan models.Entity, error) {
-	sensorCh := make(chan models.Entity)
-
-	updater := func(_ time.Duration) {
-		sensors, err := w.sensors(ctx)
-		if err != nil {
-			w.logger.
-				With(slog.String("worker", externalIPWorkerID)).
-				Debug("Could not get external IP.", slog.Any("error", err))
-		}
-
-		for _, s := range sensors {
-			sensorCh <- s
-		}
+	w.OutCh = make(chan models.Entity)
+	if err := workers.SchedulePollingWorker(ctx, w, w.OutCh); err != nil {
+		close(w.OutCh)
+		return w.OutCh, fmt.Errorf("could not start disk usage worker: %w", err)
 	}
-	go func() {
-		helpers.PollSensors(ctx, updater, externalIPPollInterval, externalIPJitterAmount)
-	}()
-
-	go func() {
-		defer close(sensorCh)
-		<-ctx.Done()
-	}()
-
-	return sensorCh, nil
+	return w.OutCh, nil
 }
 
 func (w *ExternalIP) lookupExternalIPs(ctx context.Context, ver int) (net.IP, error) {
@@ -180,21 +166,24 @@ func (w *ExternalIP) lookupExternalIPs(ctx context.Context, ver int) (net.IP, er
 	return nil, ErrNoLookupHosts
 }
 
-func NewExternalIPWorker(ctx context.Context) (*ExternalIP, error) {
+func NewExternalIPWorker(ctx context.Context) (workers.EntityWorker, error) {
 	var err error
 
 	worker := &ExternalIP{
-		client: resty.New().SetTimeout(externalIPUpdateRequestTimeout),
+		WorkerMetadata:          models.SetWorkerMetadata(externalIPWorkerID, externalIPWorkerDesc),
+		PollingEntityWorkerData: &workers.PollingEntityWorkerData{},
+		client:                  resty.New().SetTimeout(externalIPUpdateRequestTimeout),
 		logger: logging.FromContext(ctx).
 			With(slog.String("worker", externalIPWorkerID)),
 	}
 
 	prefs, err := preferences.LoadWorker(worker)
 	if err != nil {
-		return worker, errors.Join(ErrInitExternalIPWorker, err)
+		return nil, errors.Join(ErrInitExternalIPWorker, err)
 	}
-
 	worker.prefs = prefs
+
+	worker.Trigger = scheduler.NewPollTriggerWithJitter(externalIPPollInterval, externalIPJitterAmount)
 
 	return worker, nil
 }

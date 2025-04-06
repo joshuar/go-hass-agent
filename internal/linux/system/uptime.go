@@ -1,7 +1,6 @@
 // Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
 // SPDX-License-Identifier: MIT
 
-//revive:disable:unused-receiver
 package system
 
 import (
@@ -14,28 +13,40 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/reugn/go-quartz/quartz"
+
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/models"
 	"github.com/joshuar/go-hass-agent/internal/models/class"
 	"github.com/joshuar/go-hass-agent/internal/models/sensor"
+	"github.com/joshuar/go-hass-agent/internal/scheduler"
+	"github.com/joshuar/go-hass-agent/internal/workers"
 )
 
 const (
 	uptimePollInterval = 15 * time.Minute
 	uptimePollJitter   = time.Minute
 
-	uptimeWorkerID = "uptime_sensor"
+	uptimeWorkerID   = "uptime_sensor"
+	uptimeWorkerDesc = "Uptime stats"
+)
+
+var (
+	_ quartz.Job                  = (*uptimeWorker)(nil)
+	_ workers.PollingEntityWorker = (*uptimeWorker)(nil)
 )
 
 var ErrInitUptimeWorker = errors.New("could not init uptime worker")
 
-type uptimeWorker struct{}
+type uptimeWorker struct {
+	prefs *UptimePrefs
+	*workers.PollingEntityWorkerData
+	*models.WorkerMetadata
+}
 
-func (w *uptimeWorker) UpdateDelta(_ time.Duration) {}
-
-func (w *uptimeWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
+func (w *uptimeWorker) Execute(ctx context.Context) error {
 	entity, err := sensor.NewSensor(ctx,
 		sensor.WithName("Uptime"),
 		sensor.WithID("uptime"),
@@ -49,10 +60,10 @@ func (w *uptimeWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 		sensor.WithAttribute("native_unit_of_measurement", "h"),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("could not generate uptime sensor: %w", err)
+		return fmt.Errorf("could not generate uptime sensor: %w", err)
 	}
-
-	return []models.Entity{entity}, nil
+	w.OutCh <- entity
+	return nil
 }
 
 func (w *uptimeWorker) PreferencesID() string {
@@ -63,6 +74,19 @@ func (w *uptimeWorker) DefaultPreferences() UptimePrefs {
 	return UptimePrefs{
 		UpdateInterval: uptimePollInterval.String(),
 	}
+}
+
+func (w *uptimeWorker) IsDisabled() bool {
+	return w.prefs.IsDisabled()
+}
+
+func (w *uptimeWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
+	w.OutCh = make(chan models.Entity)
+	if err := workers.SchedulePollingWorker(ctx, w, w.OutCh); err != nil {
+		close(w.OutCh)
+		return w.OutCh, fmt.Errorf("could not start disk IO worker: %w", err)
+	}
+	return w.OutCh, nil
 }
 
 // getUptime retrieve the uptime of the device running Go Hass Agent, in
@@ -96,18 +120,17 @@ func (w *uptimeWorker) getUptime(ctx context.Context) float64 {
 	return uptimeValue
 }
 
-func NewUptimeTimeWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
-	uptimeWorker := &uptimeWorker{}
+func NewUptimeTimeWorker(ctx context.Context) (workers.EntityWorker, error) {
+	worker := &uptimeWorker{
+		WorkerMetadata:          models.SetWorkerMetadata(uptimeWorkerID, uptimeWorkerDesc),
+		PollingEntityWorkerData: &workers.PollingEntityWorkerData{},
+	}
 
-	prefs, err := preferences.LoadWorker(uptimeWorker)
+	prefs, err := preferences.LoadWorker(worker)
 	if err != nil {
 		return nil, errors.Join(ErrInitUptimeWorker, err)
 	}
-
-	//nolint:nilnil
-	if prefs.IsDisabled() {
-		return nil, nil
-	}
+	worker.prefs = prefs
 
 	pollInterval, err := time.ParseDuration(prefs.UpdateInterval)
 	if err != nil {
@@ -118,9 +141,7 @@ func NewUptimeTimeWorker(ctx context.Context) (*linux.PollingSensorWorker, error
 
 		pollInterval = uptimePollInterval
 	}
-
-	worker := linux.NewPollingSensorWorker(uptimeWorkerID, pollInterval, uptimePollJitter)
-	worker.PollingSensorType = uptimeWorker
+	worker.Trigger = scheduler.NewPollTriggerWithJitter(pollInterval, uptimePollJitter)
 
 	return worker, nil
 }

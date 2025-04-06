@@ -15,15 +15,19 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/models"
 	"github.com/joshuar/go-hass-agent/internal/models/sensor"
+	"github.com/joshuar/go-hass-agent/internal/workers"
 )
 
-const (
-	webcamUsageWorkerID = "webcam_usage_sensor"
-)
+var _ workers.EntityWorker = (*webcamUsageWorker)(nil)
 
 var (
 	ErrInitWebcamUsageWorker = errors.New("could not init webcam usage worker")
 	ErrNewWebcamUsageSensor  = errors.New("could not create webcam usage sensor")
+)
+
+const (
+	webcamUsageWorkerID   = "webcam_usage_sensor"
+	webcamUsageWorkerDesc = "Webcam usage detection"
 )
 
 // webcamPipewireEventFilter filters the pipewire events. For webcam monitoring, we are only
@@ -75,6 +79,7 @@ func newWebcamUsageSensor(ctx context.Context, inUse bool) (*models.Entity, erro
 type webcamUsageWorker struct {
 	prefs *preferences.CommonWorkerPrefs
 	inUse bool
+	*models.WorkerMetadata
 }
 
 // parsePWState parses a pipewire state value into the appropriate boolean value.
@@ -89,8 +94,7 @@ func (w *webcamUsageWorker) parsePWState(state pwmonitor.State) {
 	}
 }
 
-//nolint:dupl
-func (w *webcamUsageWorker) Events(ctx context.Context) (<-chan models.Entity, error) {
+func (w *webcamUsageWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
 	pwEvents, err := monitorPipewire(ctx, webcamPipewireEventFilter)
 	if err != nil {
 		return nil, errors.Join(ErrInitWebcamUsageWorker, err)
@@ -133,22 +137,20 @@ func (w *webcamUsageWorker) DefaultPreferences() preferences.CommonWorkerPrefs {
 	return preferences.CommonWorkerPrefs{}
 }
 
-func NewWebcamUsageWorker(_ context.Context) (*linux.EventSensorWorker, error) {
-	var err error
+func (w *webcamUsageWorker) IsDisabled() bool {
+	return w.prefs.IsDisabled()
+}
 
-	worker := linux.NewEventSensorWorker(webcamUsageWorkerID)
-	webcamUsageWorker := &webcamUsageWorker{}
+func NewWebcamUsageWorker(_ context.Context) (workers.EntityWorker, error) {
+	worker := &webcamUsageWorker{
+		WorkerMetadata: models.SetWorkerMetadata(webcamUsageWorkerID, webcamUsageWorkerDesc),
+	}
 
-	webcamUsageWorker.prefs, err = preferences.LoadWorker(webcamUsageWorker)
+	prefs, err := preferences.LoadWorker(worker)
 	if err != nil {
 		return nil, errors.Join(ErrInitWebcamUsageWorker, err)
 	}
-
-	if webcamUsageWorker.prefs.IsDisabled() {
-		return worker, nil
-	}
-
-	worker.EventSensorType = webcamUsageWorker
+	worker.prefs = prefs
 
 	return worker, nil
 }

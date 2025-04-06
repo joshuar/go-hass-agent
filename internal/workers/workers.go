@@ -5,17 +5,26 @@ package workers
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
+	"slices"
 	"sync"
+	"time"
 
+	"github.com/reugn/go-quartz/quartz"
+
+	"github.com/joshuar/go-hass-agent/internal/components/id"
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/models"
 	"github.com/joshuar/go-hass-agent/internal/mqtt"
+	"github.com/joshuar/go-hass-agent/internal/scheduler"
 )
 
 type Worker interface {
 	// ID returns an ID for the worker.
 	ID() models.ID
+	// IsDisabled returns a boolean indicating whether the worker has been disabled (i.e, through preferences).
+	IsDisabled() bool
 }
 
 // EntityWorker is a worker that produces entities.
@@ -25,6 +34,52 @@ type EntityWorker interface {
 	// passed-in context should be canceled and the worker cleans itself up. If
 	// the worker cannot be started, a non-nill error is returned.
 	Start(ctx context.Context) (<-chan models.Entity, error)
+}
+
+type PollingEntityWorker interface {
+	EntityWorker
+	quartz.Job
+	GetTrigger() quartz.Trigger
+}
+
+type PollingEntityWorkerData struct {
+	Trigger      quartz.Trigger
+	OutCh        chan models.Entity
+	LastFireTime time.Time
+}
+
+func (d *PollingEntityWorkerData) GetTrigger() quartz.Trigger {
+	return d.Trigger
+}
+
+func (d *PollingEntityWorkerData) GetDelta() time.Duration {
+	delta := time.Now().Sub(d.LastFireTime)
+	d.LastFireTime = time.Now()
+	return delta
+}
+
+// SchedulePollingWorker handles submission of a polling entity worker to the quartz job scheduler. If the worker cannot
+// be submitted as a job, a non-nil error is returned.
+func SchedulePollingWorker(ctx context.Context, worker PollingEntityWorker, outCh chan models.Entity) error {
+	// Schedule worker.
+	err := scheduler.Manager.ScheduleJob(id.Worker, worker, worker.GetTrigger())
+	if err != nil {
+		return fmt.Errorf("could not start worker %s: %w", worker.ID(), err)
+	}
+	// Clean-up on agent close.
+	go func() {
+		defer close(outCh)
+		<-ctx.Done()
+	}()
+	// Send initial update.
+	go func() {
+		if err := worker.Execute(ctx); err != nil {
+			logging.FromContext(ctx).Warn("Could not send initial worker update.",
+				slog.String("worker_id", worker.ID()),
+				slog.Any("error", err))
+		}
+	}()
+	return nil
 }
 
 // MQTTWorker is a worker that manages some MQTT functionality.
@@ -49,7 +104,12 @@ func (m *Manager) StartEntityWorkers(ctx context.Context, workers ...EntityWorke
 
 	outCh := make([]<-chan models.Entity, 0, len(workers))
 
-	for _, worker := range workers {
+	for worker := range slices.Values(workers) {
+		if worker.IsDisabled() {
+			m.logger.Warn("Not starting disabled worker.",
+				slog.String("id", worker.ID()))
+			continue
+		}
 		workerCtx, cancelFunc := context.WithCancel(ctx)
 		workerCh, err := worker.Start(workerCtx)
 		if workerCh == nil {
@@ -82,7 +142,12 @@ func (m *Manager) StartMQTTWorkers(ctx context.Context, workers ...MQTTWorker) *
 	data := &mqtt.WorkerData{}
 	msgCh := make([]<-chan models.MQTTMsg, 0, len(workers))
 
-	for _, worker := range workers {
+	for worker := range slices.Values(workers) {
+		if worker.IsDisabled() {
+			m.logger.Warn("Not starting disabled worker.",
+				slog.String("id", worker.ID()))
+			continue
+		}
 		workerCtx, cancelFunc := context.WithCancel(ctx)
 		workerData, err := worker.Start(workerCtx)
 		if err != nil {

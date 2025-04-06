@@ -20,7 +20,15 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/models"
 	"github.com/joshuar/go-hass-agent/internal/models/class"
 	"github.com/joshuar/go-hass-agent/internal/models/sensor"
+	"github.com/joshuar/go-hass-agent/internal/workers"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
+)
+
+var _ workers.EntityWorker = (*sensorWorker)(nil)
+
+var (
+	ErrInitAppsWorker = errors.New("could not init apps worker")
+	ErrNoApps         = errors.New("no running apps")
 )
 
 const (
@@ -29,7 +37,8 @@ const (
 	appStateDBusInterface = "org.freedesktop.impl.portal.Background"
 	appStateDBusEvent     = "org.freedesktop.impl.portal.Background.RunningApplicationsChanged"
 
-	appWorkerID = "app_sensors"
+	appWorkerID   = "app_sensors"
+	appWorkerDesc = "App sensors"
 
 	activeAppsIcon = "mdi:application"
 	activeAppsName = "Active App"
@@ -41,11 +50,6 @@ const (
 	runningAppsID    = "running_apps"
 )
 
-var (
-	ErrInitAppsWorker = errors.New("could not init apps worker")
-	ErrNoApps         = errors.New("no running apps")
-)
-
 func (w *sensorWorker) PreferencesID() string {
 	return prefPrefix + "app"
 }
@@ -54,19 +58,34 @@ func (w *sensorWorker) DefaultPreferences() WorkerPrefs {
 	return WorkerPrefs{}
 }
 
+func (w *sensorWorker) IsDisabled() bool {
+	return w.prefs.IsDisabled()
+}
+
 type sensorWorker struct {
-	getAppStates     func() (map[string]dbus.Variant, error)
+	bus              *dbusx.Bus
+	portalDest       string
 	triggerCh        <-chan dbusx.Trigger
 	runningApp       string
 	totalRunningApps int
+	prefs            *WorkerPrefs
+	*models.WorkerMetadata
 }
 
-func (w *sensorWorker) Events(ctx context.Context) (<-chan models.Entity, error) {
+func (w *sensorWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
+	triggerCh, err := dbusx.NewWatch(
+		dbusx.MatchPath(appStateDBusPath),
+		dbusx.MatchInterface(appStateDBusInterface),
+		dbusx.MatchMembers("RunningApplicationsChanged"),
+	).Start(ctx, w.bus)
+	if err != nil {
+		return nil, errors.Join(ErrInitAppsWorker, fmt.Errorf("could not watch D-Bus for app state events: %w", err))
+	}
 	sensorCh := make(chan models.Entity)
 	logger := slog.Default().With(slog.String("worker", desktopWorkerID))
 
 	sendSensors := func(ctx context.Context, sensorCh chan models.Entity) {
-		appSensors, err := w.Sensors(ctx)
+		appSensors, err := w.generateSensors(ctx)
 		if err != nil {
 			logger.Debug("Failed to update app sensors.", slog.Any("error", err))
 
@@ -87,7 +106,7 @@ func (w *sensorWorker) Events(ctx context.Context) (<-chan models.Entity, error)
 	go func() {
 		defer close(sensorCh)
 
-		for range w.triggerCh {
+		for range triggerCh {
 			sendSensors(ctx, sensorCh)
 		}
 	}()
@@ -95,7 +114,7 @@ func (w *sensorWorker) Events(ctx context.Context) (<-chan models.Entity, error)
 	return sensorCh, nil
 }
 
-func (w *sensorWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
+func (w *sensorWorker) generateSensors(ctx context.Context) ([]models.Entity, error) {
 	var (
 		sensors     []models.Entity
 		runningApps []string
@@ -160,57 +179,44 @@ func (w *sensorWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 	return sensors, nil
 }
 
-func NewAppWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
-	worker := linux.NewEventSensorWorker(appWorkerID)
+func (w *sensorWorker) getAppStates() (map[string]dbus.Variant, error) {
+	var apps map[string]dbus.Variant
+	apps, err := dbusx.GetData[map[string]dbus.Variant](w.bus, appStateDBusPath, w.portalDest, appStateDBusMethod)
+	if err != nil {
+		return nil, errors.Join(ErrInitAppsWorker, fmt.Errorf("could not retrieve app list from D-Bus: %w", err))
+	}
 
+	if apps == nil {
+		return nil, errors.Join(ErrInitAppsWorker, ErrNoApps)
+	}
+
+	return apps, nil
+}
+
+func NewAppWorker(ctx context.Context) (workers.EntityWorker, error) {
 	// If we cannot find a portal interface, we cannot monitor the active app.
 	portalDest, ok := linux.CtxGetDesktopPortal(ctx)
 	if !ok {
-		return worker, errors.Join(ErrInitAppsWorker, linux.ErrNoDesktopPortal)
+		return nil, errors.Join(ErrInitAppsWorker, linux.ErrNoDesktopPortal)
 	}
 
 	// Connect to the D-Bus session bus. Bail if we can't.
 	bus, ok := linux.CtxGetSessionBus(ctx)
 	if !ok {
-		return worker, linux.ErrNoSessionBus
+		return nil, linux.ErrNoSessionBus
 	}
 
-	triggerCh, err := dbusx.NewWatch(
-		dbusx.MatchPath(appStateDBusPath),
-		dbusx.MatchInterface(appStateDBusInterface),
-		dbusx.MatchMembers("RunningApplicationsChanged"),
-	).Start(ctx, bus)
-	if err != nil {
-		return worker, errors.Join(ErrInitAppsWorker, fmt.Errorf("could not watch D-Bus for app state events: %w", err))
+	worker := &sensorWorker{
+		WorkerMetadata: models.SetWorkerMetadata(appWorkerID, appWorkerDesc),
+		bus:            bus,
+		portalDest:     portalDest,
 	}
 
-	appsWorker := &sensorWorker{
-		triggerCh: triggerCh,
-		getAppStates: func() (map[string]dbus.Variant, error) {
-			var apps map[string]dbus.Variant
-			apps, err = dbusx.GetData[map[string]dbus.Variant](bus, appStateDBusPath, portalDest, appStateDBusMethod)
-			if err != nil {
-				return nil, errors.Join(ErrInitAppsWorker, fmt.Errorf("could not retrieve app list from D-Bus: %w", err))
-			}
-
-			if apps == nil {
-				return nil, errors.Join(ErrInitAppsWorker, ErrNoApps)
-			}
-
-			return apps, nil
-		},
-	}
-
-	prefs, err := preferences.LoadWorker(appsWorker)
+	prefs, err := preferences.LoadWorker(worker)
 	if err != nil {
 		return worker, errors.Join(ErrInitAppsWorker, err)
 	}
-
-	if prefs.Disabled {
-		return worker, nil
-	}
-
-	worker.EventSensorType = appsWorker
+	worker.prefs = prefs
 
 	return worker, nil
 }

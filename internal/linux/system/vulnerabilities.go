@@ -6,22 +6,29 @@ package system
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
+	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/models"
 	"github.com/joshuar/go-hass-agent/internal/models/class"
 	"github.com/joshuar/go-hass-agent/internal/models/sensor"
+	"github.com/joshuar/go-hass-agent/internal/workers"
 )
 
 const (
 	cpuVulnWorkerID      = "cpu_vulnerabilities"
+	cpuVulnWorkerDesc    = "Potential CPU vulnerabilities reported by the kernel"
 	cpuVulnPreferencesID = cpuVulnWorkerID
 	cpuVulnPath          = "devices/system/cpu/vulnerabilities"
 )
+
+var _ workers.EntityWorker = (*cpuVulnWorker)(nil)
 
 var (
 	ErrNewVulnSensor  = errors.New("could not create vulnerabilities sensor")
@@ -29,10 +36,13 @@ var (
 )
 
 type cpuVulnWorker struct {
-	path string
+	path  string
+	prefs *preferences.CommonWorkerPrefs
+	OutCh chan models.Entity
+	*models.WorkerMetadata
 }
 
-func (w *cpuVulnWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
+func (w *cpuVulnWorker) Execute(ctx context.Context) error {
 	var (
 		cpuVulnerabilitiesFound bool
 		err                     error
@@ -40,12 +50,12 @@ func (w *cpuVulnWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 
 	vulnerabilities, err := filepath.Glob(w.path + "/*")
 	if err != nil {
-		return nil, errors.Join(ErrNewVulnSensor, err)
+		return errors.Join(ErrNewVulnSensor, err)
 	}
 
 	attrs := make(map[string]any)
 
-	for _, vulnerability := range vulnerabilities {
+	for vulnerability := range slices.Values(vulnerabilities) {
 		var data []byte
 
 		data, err = os.ReadFile(vulnerability)
@@ -74,10 +84,12 @@ func (w *cpuVulnWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 		sensor.WithAttributes(attrs),
 	)
 	if err != nil {
-		return nil, errors.Join(ErrNewVulnSensor, err)
+		return errors.Join(ErrNewVulnSensor, err)
 	}
 
-	return []models.Entity{cpuVulnSensor}, nil
+	w.OutCh <- cpuVulnSensor
+
+	return nil
 }
 
 func (w *cpuVulnWorker) PreferencesID() string {
@@ -88,23 +100,33 @@ func (w *cpuVulnWorker) DefaultPreferences() preferences.CommonWorkerPrefs {
 	return preferences.CommonWorkerPrefs{}
 }
 
-func NewCPUVulnerabilityWorker(_ context.Context) (*linux.OneShotSensorWorker, error) {
-	cpuVulnWorker := &cpuVulnWorker{
-		path: filepath.Join(linux.SysFSRoot, cpuVulnPath),
+func (w *cpuVulnWorker) IsDisabled() bool {
+	return w.prefs.IsDisabled()
+}
+
+func (w *cpuVulnWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
+	w.OutCh = make(chan models.Entity)
+	go func() {
+		defer close(w.OutCh)
+		if err := w.Execute(ctx); err != nil {
+			logging.FromContext(ctx).Warn("Failed to send cpu vulnerability details",
+				slog.Any("error", err))
+		}
+	}()
+	return w.OutCh, nil
+}
+
+func NewCPUVulnerabilityWorker(_ context.Context) (workers.EntityWorker, error) {
+	worker := &cpuVulnWorker{
+		WorkerMetadata: models.SetWorkerMetadata(cpuVulnWorkerID, cpuVulnWorkerDesc),
+		path:           filepath.Join(linux.SysFSRoot, cpuVulnPath),
 	}
 
-	prefs, err := preferences.LoadWorker(cpuVulnWorker)
+	prefs, err := preferences.LoadWorker(worker)
 	if err != nil {
 		return nil, errors.Join(ErrInitVulnWorker, err)
 	}
-
-	//nolint:nilnil
-	if prefs.Disabled {
-		return nil, nil
-	}
-
-	worker := linux.NewOneShotSensorWorker(cpuVulnWorkerID)
-	worker.OneShotSensorType = cpuVulnWorker
+	worker.prefs = prefs
 
 	return worker, nil
 }

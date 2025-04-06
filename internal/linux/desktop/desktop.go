@@ -20,7 +20,15 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/models"
 	"github.com/joshuar/go-hass-agent/internal/models/sensor"
+	"github.com/joshuar/go-hass-agent/internal/workers"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
+)
+
+var _ workers.EntityWorker = (*settingsWorker)(nil)
+
+var (
+	ErrInitDesktopWorker = errors.New("could not init desktop worker")
+	ErrUnknownProp       = errors.New("unknown desktop property")
 )
 
 const (
@@ -33,20 +41,16 @@ const (
 	accentColorProp         = "accent-color"
 
 	desktopWorkerID     = "desktop_settings_sensors"
+	desktopWorkerDesc   = "Desktop settings"
 	desktopWorkerPrefID = prefPrefix + "preferences"
 
 	unknownValue = "Unknown"
 )
 
-var (
-	ErrInitDesktopWorker = errors.New("could not init desktop worker")
-	ErrUnknownProp       = errors.New("unknown desktop property")
-)
-
 type settingsWorker struct {
-	triggerCh <-chan dbusx.Trigger
-	getProp   func(prop string) (dbus.Variant, error)
-	prefs     *WorkerPrefs
+	bus   *dbusx.Bus
+	prefs *WorkerPrefs
+	*models.WorkerMetadata
 }
 
 func (w *settingsWorker) PreferencesID() string {
@@ -57,8 +61,21 @@ func (w *settingsWorker) DefaultPreferences() WorkerPrefs {
 	return WorkerPrefs{}
 }
 
+func (w *settingsWorker) IsDisabled() bool {
+	return w.prefs.IsDisabled()
+}
+
 //nolint:cyclop,gocognit
-func (w *settingsWorker) Events(ctx context.Context) (<-chan models.Entity, error) {
+func (w *settingsWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
+	triggerCh, err := dbusx.NewWatch(
+		dbusx.MatchPath(desktopPortalPath),
+		dbusx.MatchInterface(settingsPortalInterface),
+		dbusx.MatchMembers(settingsChangedSignal),
+	).Start(ctx, w.bus)
+	if err != nil {
+		return nil, errors.Join(ErrInitDesktopWorker,
+			fmt.Errorf("could not watch D-Bus for desktop settings updates: %w", err))
+	}
 	sensorCh := make(chan models.Entity)
 	logger := logging.FromContext(ctx).With(slog.String("worker", desktopWorkerID))
 
@@ -69,7 +86,7 @@ func (w *settingsWorker) Events(ctx context.Context) (<-chan models.Entity, erro
 			select {
 			case <-ctx.Done():
 				return
-			case event := <-w.triggerCh:
+			case event := <-triggerCh:
 				if !strings.Contains(event.Signal, settingsChangedSignal) {
 					continue
 				}
@@ -102,7 +119,7 @@ func (w *settingsWorker) Events(ctx context.Context) (<-chan models.Entity, erro
 	}()
 	// Send an initial update.
 	go func() {
-		sensors, err := w.Sensors(ctx)
+		sensors, err := w.generateSensors(ctx)
 		if err != nil {
 			logger.Debug("Could not get desktop settings from D-Bus.", slog.Any("error", err))
 		}
@@ -116,7 +133,7 @@ func (w *settingsWorker) Events(ctx context.Context) (<-chan models.Entity, erro
 }
 
 //nolint:mnd
-func (w *settingsWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
+func (w *settingsWorker) generateSensors(ctx context.Context) ([]models.Entity, error) {
 	sensors := make([]models.Entity, 0, 2)
 
 	var errs error
@@ -150,59 +167,42 @@ func (w *settingsWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 	return sensors, errs
 }
 
-func NewDesktopWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
-	var err error
+func (w *settingsWorker) getProp(prop string) (dbus.Variant, error) {
+	value, err := dbusx.GetData[dbus.Variant](w.bus,
+		desktopPortalPath,
+		desktopPortalInterface,
+		settingsPortalInterface+".Read",
+		"org.freedesktop.appearance",
+		prop)
+	if err != nil {
+		return dbus.Variant{}, errors.Join(ErrInitDesktopWorker,
+			fmt.Errorf("could not retrieve desktop property %s from D-Bus: %w", prop, err))
+	}
 
-	worker := linux.NewEventSensorWorker(desktopWorkerID)
+	return value, nil
+}
 
+func NewDesktopWorker(ctx context.Context) (workers.EntityWorker, error) {
 	_, ok := linux.CtxGetDesktopPortal(ctx)
 	if !ok {
-		return worker, errors.Join(ErrInitDesktopWorker, linux.ErrNoDesktopPortal)
+		return nil, errors.Join(ErrInitDesktopWorker, linux.ErrNoDesktopPortal)
 	}
 
 	bus, ok := linux.CtxGetSessionBus(ctx)
 	if !ok {
-		return worker, errors.Join(ErrInitDesktopWorker, linux.ErrNoSessionBus)
+		return nil, errors.Join(ErrInitDesktopWorker, linux.ErrNoSessionBus)
 	}
 
-	triggerCh, err := dbusx.NewWatch(
-		dbusx.MatchPath(desktopPortalPath),
-		dbusx.MatchInterface(settingsPortalInterface),
-		dbusx.MatchMembers(settingsChangedSignal),
-	).Start(ctx, bus)
+	worker := &settingsWorker{
+		WorkerMetadata: models.SetWorkerMetadata(desktopWorkerID, desktopWorkerDesc),
+		bus:            bus,
+	}
+
+	prefs, err := preferences.LoadWorker(worker)
 	if err != nil {
-		return worker, errors.Join(ErrInitDesktopWorker,
-			fmt.Errorf("could not watch D-Bus for desktop settings updates: %w", err))
+		return nil, errors.Join(ErrInitDesktopWorker, err)
 	}
-
-	settingsWorker := &settingsWorker{
-		triggerCh: triggerCh,
-		getProp: func(prop string) (dbus.Variant, error) {
-			var value dbus.Variant
-			value, err = dbusx.GetData[dbus.Variant](bus,
-				desktopPortalPath,
-				desktopPortalInterface,
-				settingsPortalInterface+".Read",
-				"org.freedesktop.appearance",
-				prop)
-			if err != nil {
-				return dbus.Variant{}, errors.Join(ErrInitDesktopWorker,
-					fmt.Errorf("could not retrieve desktop property %s from D-Bus: %w", prop, err))
-			}
-
-			return value, nil
-		},
-	}
-
-	settingsWorker.prefs, err = preferences.LoadWorker(settingsWorker)
-	if err != nil {
-		return worker, errors.Join(ErrInitDesktopWorker, err)
-	}
-
-	// If disabled, don't use the addressWorker.
-	if settingsWorker.prefs.Disabled {
-		return worker, nil
-	}
+	worker.prefs = prefs
 
 	return worker, nil
 }

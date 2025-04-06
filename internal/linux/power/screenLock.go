@@ -18,17 +18,21 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/models"
 	"github.com/joshuar/go-hass-agent/internal/models/class"
 	"github.com/joshuar/go-hass-agent/internal/models/sensor"
+	"github.com/joshuar/go-hass-agent/internal/workers"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
 const (
 	screenLockWorkerID      = "screen_lock_sensor"
+	screenLockWorkerDesc    = "Screen lock detection"
 	screenLockPreferencesID = sensorsPrefPrefix + "screen_lock"
 
 	screenLockedIcon      = "mdi:eye-lock"
 	screenUnlockedIcon    = "mdi:eye-lock-open"
 	screenLockUnknownIcon = "mdi:lock-alert"
 )
+
+var _ workers.EntityWorker = (*screenLockWorker)(nil)
 
 var (
 	ErrNewScreenLockSensor  = errors.New("could not create screen lock sensor")
@@ -63,13 +67,23 @@ func screenLockIcon(value bool) string {
 }
 
 type screenLockWorker struct {
-	triggerCh      <-chan dbusx.Trigger
+	bus            *dbusx.Bus
+	sessionPath    string
 	screenLockProp *dbusx.Property[bool]
 	prefs          *preferences.CommonWorkerPrefs
+	*models.WorkerMetadata
 }
 
 //nolint:gocognit
-func (w *screenLockWorker) Events(ctx context.Context) (<-chan models.Entity, error) {
+func (w *screenLockWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
+	triggerCh, err := dbusx.NewWatch(
+		dbusx.MatchPath(w.sessionPath),
+		dbusx.MatchMembers(sessionLockSignal, sessionUnlockSignal, sessionLockedProp, "PropertiesChanged"),
+	).Start(ctx, w.bus)
+	if err != nil {
+		return nil, errors.Join(ErrInitScreenLockWorker,
+			fmt.Errorf("unable to create D-Bus watch for screen lock state: %w", err))
+	}
 	sensorCh := make(chan models.Entity)
 
 	currentState, err := w.getCurrentState(ctx)
@@ -88,7 +102,7 @@ func (w *screenLockWorker) Events(ctx context.Context) (<-chan models.Entity, er
 			case <-ctx.Done():
 				close(sensorCh)
 				return
-			case event := <-w.triggerCh:
+			case event := <-triggerCh:
 				var (
 					entity    models.Entity
 					lockState bool
@@ -143,6 +157,10 @@ func (w *screenLockWorker) DefaultPreferences() preferences.CommonWorkerPrefs {
 	return preferences.CommonWorkerPrefs{}
 }
 
+func (w *screenLockWorker) IsDisabled() bool {
+	return w.prefs.IsDisabled()
+}
+
 func (w *screenLockWorker) getCurrentState(ctx context.Context) (models.Entity, error) {
 	screenLockState, err := w.screenLockProp.Get()
 	if err != nil {
@@ -152,43 +170,29 @@ func (w *screenLockWorker) getCurrentState(ctx context.Context) (models.Entity, 
 	return newScreenlockSensor(ctx, screenLockState)
 }
 
-func NewScreenLockWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
-	var err error
-
-	worker := linux.NewEventSensorWorker(screenLockWorkerID)
-	lockWorker := &screenLockWorker{}
-
-	lockWorker.prefs, err = preferences.LoadWorker(lockWorker)
-	if err != nil {
-		return nil, errors.Join(ErrInitScreenLockWorker, err)
-	}
-
-	if lockWorker.prefs.IsDisabled() {
-		return worker, nil
-	}
-
+func NewScreenLockWorker(ctx context.Context) (workers.EntityWorker, error) {
 	bus, ok := linux.CtxGetSystemBus(ctx)
 	if !ok {
-		return worker, errors.Join(ErrInitScreenLockWorker, linux.ErrNoSystemBus)
+		return nil, errors.Join(ErrInitScreenLockWorker, linux.ErrNoSystemBus)
 	}
 
 	sessionPath, ok := linux.CtxGetSessionPath(ctx)
 	if !ok {
-		return worker, errors.Join(ErrInitScreenLockWorker, linux.ErrNoSessionPath)
+		return nil, errors.Join(ErrInitScreenLockWorker, linux.ErrNoSessionPath)
 	}
 
-	lockWorker.triggerCh, err = dbusx.NewWatch(
-		dbusx.MatchPath(sessionPath),
-		dbusx.MatchMembers(sessionLockSignal, sessionUnlockSignal, sessionLockedProp, "PropertiesChanged"),
-	).Start(ctx, bus)
+	worker := &screenLockWorker{
+		WorkerMetadata: models.SetWorkerMetadata(screenLockWorkerID, screenLockWorkerDesc),
+		bus:            bus,
+		sessionPath:    sessionPath,
+		screenLockProp: dbusx.NewProperty[bool](bus, sessionPath, loginBaseInterface, sessionInterface+"."+sessionLockedProp),
+	}
+
+	prefs, err := preferences.LoadWorker(worker)
 	if err != nil {
-		return worker, errors.Join(ErrInitScreenLockWorker,
-			fmt.Errorf("unable to create D-Bus watch for screen lock state: %w", err))
+		return nil, errors.Join(ErrInitScreenLockWorker, err)
 	}
-
-	lockWorker.screenLockProp = dbusx.NewProperty[bool](bus, sessionPath, loginBaseInterface, sessionInterface+"."+sessionLockedProp)
-
-	worker.EventSensorType = lockWorker
+	worker.prefs = prefs
 
 	return worker, nil
 }

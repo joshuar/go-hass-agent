@@ -19,6 +19,7 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/models"
 	"github.com/joshuar/go-hass-agent/internal/models/class"
 	"github.com/joshuar/go-hass-agent/internal/models/sensor"
+	"github.com/joshuar/go-hass-agent/internal/workers"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
@@ -30,8 +31,11 @@ const (
 	shutdownSignal = "PrepareForShutdown"
 
 	powerStateWorkerID      = "power_state_sensor"
+	powerStateWorkerDesc    = "Current power state"
 	powerStatePreferencesID = sensorsPrefPrefix + "state"
 )
+
+var _ workers.EntityWorker = (*stateWorker)(nil)
 
 var (
 	ErrNewPowerStateSensor  = errors.New("could not create power state sensor")
@@ -92,11 +96,21 @@ func powerStateIcon(value any) string {
 }
 
 type stateWorker struct {
-	triggerCh <-chan dbusx.Trigger
-	prefs     *preferences.CommonWorkerPrefs
+	bus   *dbusx.Bus
+	prefs *preferences.CommonWorkerPrefs
+	*models.WorkerMetadata
 }
 
-func (w *stateWorker) Events(ctx context.Context) (<-chan models.Entity, error) {
+func (w *stateWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
+	triggerCh, err := dbusx.NewWatch(
+		dbusx.MatchPath(loginBasePath),
+		dbusx.MatchInterface(managerInterface),
+		dbusx.MatchMembers(sleepSignal, shutdownSignal),
+	).Start(ctx, w.bus)
+	if err != nil {
+		return nil, errors.Join(ErrInitPowerStateWorker,
+			fmt.Errorf("unable to set-up D-Bus watch for power state: %w", err))
+	}
 	sensorCh := make(chan models.Entity)
 
 	// Watch for state changes.
@@ -107,7 +121,7 @@ func (w *stateWorker) Events(ctx context.Context) (<-chan models.Entity, error) 
 			select {
 			case <-ctx.Done():
 				return
-			case event := <-w.triggerCh:
+			case event := <-triggerCh:
 				var (
 					entity *models.Entity
 					err    error
@@ -172,37 +186,26 @@ func (w *stateWorker) DefaultPreferences() preferences.CommonWorkerPrefs {
 	return preferences.CommonWorkerPrefs{}
 }
 
-func NewStateWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
-	var err error
+func (w *stateWorker) IsDisabled() bool {
+	return w.prefs.IsDisabled()
+}
 
-	worker := linux.NewEventSensorWorker(powerStateWorkerID)
-	stateWorker := &stateWorker{}
+func NewStateWorker(ctx context.Context) (workers.EntityWorker, error) {
+	bus, ok := linux.CtxGetSystemBus(ctx)
+	if !ok {
+		return nil, errors.Join(ErrInitPowerStateWorker, linux.ErrNoSystemBus)
+	}
 
-	stateWorker.prefs, err = preferences.LoadWorker(stateWorker)
+	worker := &stateWorker{
+		WorkerMetadata: models.SetWorkerMetadata(powerStateWorkerID, powerStateWorkerDesc),
+		bus:            bus,
+	}
+
+	prefs, err := preferences.LoadWorker(worker)
 	if err != nil {
 		return nil, errors.Join(ErrInitPowerStateWorker, err)
 	}
-
-	if stateWorker.prefs.IsDisabled() {
-		return worker, nil
-	}
-
-	bus, ok := linux.CtxGetSystemBus(ctx)
-	if !ok {
-		return worker, errors.Join(ErrInitPowerStateWorker, linux.ErrNoSystemBus)
-	}
-
-	stateWorker.triggerCh, err = dbusx.NewWatch(
-		dbusx.MatchPath(loginBasePath),
-		dbusx.MatchInterface(managerInterface),
-		dbusx.MatchMembers(sleepSignal, shutdownSignal),
-	).Start(ctx, bus)
-	if err != nil {
-		return worker, errors.Join(ErrInitPowerStateWorker,
-			fmt.Errorf("unable to set-up D-Bus watch for power state: %w", err))
-	}
-
-	worker.EventSensorType = stateWorker
+	worker.prefs = prefs
 
 	return worker, nil
 }

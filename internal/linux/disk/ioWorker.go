@@ -8,33 +8,47 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/reugn/go-quartz/quartz"
 
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/models"
+	"github.com/joshuar/go-hass-agent/internal/scheduler"
+	"github.com/joshuar/go-hass-agent/internal/workers"
 )
 
 const (
 	ioWorkerUpdateInterval = 5 * time.Second
 	ioWorkerUpdateJitter   = time.Second
-	ioWorkerID             = "disk_rates_sensors"
-	totalsID               = "total"
+
+	ioWorkerID   = "disk_rates_sensors"
+	ioWorkerDesc = "IO usage stats"
+
+	totalsID = "total"
 )
 
 var ErrInitRatesWorker = errors.New("could not init rates worker")
 
+var (
+	_ quartz.Job                  = (*ioWorker)(nil)
+	_ workers.PollingEntityWorker = (*ioWorker)(nil)
+)
+
 // ioWorker creates sensors for disk IO counts and rates per device. It
 // maintains an internal map of devices being tracked.
 type ioWorker struct {
+	*models.WorkerMetadata
+	*workers.PollingEntityWorkerData
 	boottime    time.Time
 	rateSensors map[string]map[ioSensor]*ioRate
-	linux.PollingSensorWorker
-	delta time.Duration
-	mu    sync.Mutex
+	mu          sync.Mutex
+	prefs       *WorkerPrefs
 }
 
 // addDevice adds a new device to the tracker map. If sthe device is already
@@ -129,24 +143,19 @@ func (w *ioWorker) generateDeviceStatSensors(ctx context.Context, device *device
 	return sensors, warnings
 }
 
-func (w *ioWorker) UpdateDelta(delta time.Duration) {
-	w.delta = delta
-}
-
-func (w *ioWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
+func (w *ioWorker) Execute(ctx context.Context) error {
+	delta := w.GetDelta()
 	// Get valid devices.
 	deviceNames, err := getDeviceNames()
 	if err != nil {
-		return nil, fmt.Errorf("could not fetch disk devices: %w", err)
+		return fmt.Errorf("could not fetch disk devices: %w", err)
 	}
-
-	var sensors []models.Entity
 
 	statsTotals := make(map[stat]uint64)
 
 	// Get the current device info and stats for all valid devices.
-	for _, name := range deviceNames {
-		dev, stats, err := getDevice(name)
+	for dev := range slices.Values(deviceNames) {
+		dev, stats, err := getDevice(dev)
 		if err != nil {
 			logging.FromContext(ctx).
 				With(slog.String("worker", ioWorkerID)).
@@ -158,14 +167,15 @@ func (w *ioWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 		// Add rate sensors for device (if not already added).
 		w.addRateSensors(dev)
 
-		rateSensors, warnings := w.generateDeviceRateSensors(ctx, dev, stats, w.delta)
+		rateSensors, warnings := w.generateDeviceRateSensors(ctx, dev, stats, delta)
 		if warnings != nil {
 			logging.FromContext(ctx).
 				With(slog.String("worker", ioWorkerID)).
 				Debug("Some problems occurred generating disk rate sensors.", slog.Any("warnings", warnings))
 		}
-
-		sensors = append(sensors, rateSensors...)
+		for s := range slices.Values(rateSensors) {
+			w.OutCh <- s
+		}
 
 		statSensors, warnings := w.generateDeviceStatSensors(ctx, dev, stats)
 		if warnings != nil {
@@ -173,8 +183,9 @@ func (w *ioWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 				With(slog.String("worker", ioWorkerID)).
 				Debug("Some problems occurred generating disk rate sensors.", slog.Any("warnings", warnings))
 		}
-
-		sensors = append(sensors, statSensors...)
+		for s := range slices.Values(statSensors) {
+			w.OutCh <- s
+		}
 
 		// Don't include "aggregate" devices in totals.
 		if strings.HasPrefix(dev.id, "dm") || strings.HasPrefix(dev.id, "md") {
@@ -187,14 +198,15 @@ func (w *ioWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 	}
 
 	// Update total stats.
-	rateSensors, warnings := w.generateDeviceRateSensors(ctx, &device{id: totalsID}, statsTotals, w.delta)
+	rateSensors, warnings := w.generateDeviceRateSensors(ctx, &device{id: totalsID}, statsTotals, delta)
 	if warnings != nil {
 		logging.FromContext(ctx).
 			With(slog.String("worker", ioWorkerID)).
 			Debug("Some problems occurred generating disk rate sensors.", slog.Any("warnings", warnings))
 	}
-
-	sensors = append(sensors, rateSensors...)
+	for s := range slices.Values(rateSensors) {
+		w.OutCh <- s
+	}
 
 	statSensors, warnings := w.generateDeviceStatSensors(ctx, &device{id: totalsID}, statsTotals)
 	if warnings != nil {
@@ -202,10 +214,11 @@ func (w *ioWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 			With(slog.String("worker", ioWorkerID)).
 			Debug("Some problems occurred generating disk rate sensors.", slog.Any("warnings", warnings))
 	}
+	for s := range slices.Values(statSensors) {
+		w.OutCh <- s
+	}
 
-	sensors = append(sensors, statSensors...)
-
-	return sensors, nil
+	return nil
 }
 
 func (w *ioWorker) PreferencesID() string {
@@ -218,7 +231,20 @@ func (w *ioWorker) DefaultPreferences() WorkerPrefs {
 	}
 }
 
-func NewIOWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
+func (w *ioWorker) IsDisabled() bool {
+	return w.prefs.IsDisabled()
+}
+
+func (w *ioWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
+	w.OutCh = make(chan models.Entity)
+	if err := workers.SchedulePollingWorker(ctx, w, w.OutCh); err != nil {
+		close(w.OutCh)
+		return w.OutCh, fmt.Errorf("could not start disk IO worker: %w", err)
+	}
+	return w.OutCh, nil
+}
+
+func NewIOWorker(ctx context.Context) (workers.EntityWorker, error) {
 	boottime, found := linux.CtxGetBoottime(ctx)
 	if !found {
 		return nil, errors.Join(ErrInitRatesWorker,
@@ -234,19 +260,17 @@ func NewIOWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
 	}
 
 	ioWorker := &ioWorker{
-		rateSensors: devices,
-		boottime:    boottime,
+		WorkerMetadata:          models.SetWorkerMetadata(ioWorkerID, ioWorkerDesc),
+		PollingEntityWorkerData: &workers.PollingEntityWorkerData{},
+		rateSensors:             devices,
+		boottime:                boottime,
 	}
 
 	prefs, err := preferences.LoadWorker(ioWorker)
 	if err != nil {
 		return nil, errors.Join(ErrInitRatesWorker, err)
 	}
-
-	//nolint:nilnil
-	if prefs.IsDisabled() {
-		return nil, nil
-	}
+	ioWorker.prefs = prefs
 
 	pollInterval, err := time.ParseDuration(prefs.UpdateInterval)
 	if err != nil {
@@ -257,9 +281,7 @@ func NewIOWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
 
 		pollInterval = ioWorkerUpdateInterval
 	}
+	ioWorker.Trigger = scheduler.NewPollTriggerWithJitter(pollInterval, ioWorkerUpdateJitter)
 
-	worker := linux.NewPollingSensorWorker(ioWorkerID, pollInterval, ioWorkerUpdateJitter)
-	worker.PollingSensorType = ioWorker
-
-	return worker, nil
+	return ioWorker, nil
 }

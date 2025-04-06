@@ -224,3 +224,20 @@ components:
         - $ref: '#/components/schemas/Event'
         - $ref: '#/components/schemas/Location'
         - $ref: '#/components/schemas/Sensor'
+    WorkerMetadata:
+      description: >
+        contains metadata for describing a worker.
+      type: object
+      required:
+        - worker_id
+        - worker_description
+      properties:
+        worker_id:
+          description: >
+            is a unique ID for the worker.
+          type: string
+          x-go-name: WorkerID
+        worker_description:
+          description: >
+            is a short textual summary of the worker's purpose.
+          type: string
