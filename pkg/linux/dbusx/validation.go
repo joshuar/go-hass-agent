@@ -1,7 +1,5 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
 package dbusx
 
@@ -12,7 +10,6 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-//nolint:tagliatelle
 type validationError struct {
 	Namespace       string `json:"namespace"` // can differ when a custom TagNameFunc is registered or
 	Field           string `json:"field"`     // by passing alt name to ReportError like below
@@ -35,7 +32,6 @@ func init() {
 	validate = validator.New()
 }
 
-//nolint:govet
 func getValidationProblems(validationErrors validator.ValidationErrors) map[string]string {
 	problems := make(map[string]string)
 
@@ -61,6 +57,7 @@ func getValidationProblems(validationErrors validator.ValidationErrors) map[stri
 	return problems
 }
 
+//nolint:errorlint,forcetypeassert
 func valid[T any](obj *T) error {
 	err := validate.Struct(obj)
 	if err != nil {
@@ -69,7 +66,7 @@ func valid[T any](obj *T) error {
 			return ErrValidationError
 		case errors.Is(err, validator.ValidationErrors{}):
 			var errs error
-			for field, problem := range getValidationProblems(err.(validator.ValidationErrors)) { //nolint:errorlint,forcetypeassert
+			for field, problem := range getValidationProblems(err.(validator.ValidationErrors)) {
 				errs = errors.Join(errs, fmt.Errorf("%s: %s", field, problem)) //nolint:err113
 			}
 

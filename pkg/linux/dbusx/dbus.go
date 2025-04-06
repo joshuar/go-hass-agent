@@ -1,10 +1,7 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
-//revive:disable:max-public-structs
-//go:generate go run golang.org/x/tools/cmd/stringer -type=dbusType -output busType_strings.go
+//go:generate go tool golang.org/x/tools/cmd/stringer -type=dbusType -output busType_strings.go
 package dbusx
 
 import (
@@ -76,8 +73,6 @@ func (b *Bus) getObject(intr, path string) dbus.BusObject {
 
 // NewBus creates a D-Bus connection to the requested bus. If a connection
 // cannot be established, an error is returned.
-//
-//nolint:sloglint
 func NewBus(ctx context.Context, busType dbusType) (*Bus, error) {
 	var (
 		conn *dbus.Conn
@@ -117,7 +112,7 @@ func NewBus(ctx context.Context, busType dbusType) (*Bus, error) {
 	// Start a goroutine to close the connection when the context is canceled
 	// (i.e. agent shutdown).
 	go func() {
-		defer conn.Close()
+		defer conn.Close() //nolint:errcheck
 		<-ctx.Done()
 	}()
 
@@ -180,7 +175,9 @@ func (b *Bus) GetSessionPath() (string, error) {
 	}
 	// Fetch the desktop session for the user, which will contain the correct
 	// systemd-logind D-Bus session path for the user.
-	displayDetails, err := NewProperty[[]any](b, string(userPath), loginBaseInterface, loginBaseInterface+".User.Display").Get()
+	displayDetails, err := NewProperty[[]any](b, string(userPath),
+		loginBaseInterface,
+		loginBaseInterface+".User.Display").Get()
 	if err != nil {
 		return "", fmt.Errorf("unable to retrieve session path: %w", err)
 	}
