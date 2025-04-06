@@ -1,7 +1,5 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
 package registry
 
@@ -21,13 +19,13 @@ const (
 	defaultFilePerms = 0o640
 )
 
-type gobRegistry struct {
+type GobRegistry struct {
 	sensors map[string]metadata
 	file    string
 	mu      sync.Mutex
 }
 
-func (g *gobRegistry) write() error {
+func (g *GobRegistry) write() error {
 	regFS, err := os.OpenFile(g.file, os.O_RDWR|os.O_CREATE, defaultFilePerms)
 	if err != nil {
 		return fmt.Errorf("could not open registry for writing: %w", err)
@@ -43,7 +41,7 @@ func (g *gobRegistry) write() error {
 	return nil
 }
 
-func (g *gobRegistry) read() error {
+func (g *GobRegistry) read() error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
@@ -62,7 +60,7 @@ func (g *gobRegistry) read() error {
 	return nil
 }
 
-func (g *gobRegistry) IsDisabled(id string) bool {
+func (g *GobRegistry) IsDisabled(id string) bool {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
@@ -76,7 +74,7 @@ func (g *gobRegistry) IsDisabled(id string) bool {
 	return sensor.Disabled
 }
 
-func (g *gobRegistry) IsRegistered(id string) bool {
+func (g *GobRegistry) IsRegistered(id string) bool {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
@@ -90,7 +88,7 @@ func (g *gobRegistry) IsRegistered(id string) bool {
 	return sensor.Registered
 }
 
-func (g *gobRegistry) SetDisabled(id string, value bool) error {
+func (g *GobRegistry) SetDisabled(id string, value bool) error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
@@ -105,7 +103,7 @@ func (g *gobRegistry) SetDisabled(id string, value bool) error {
 	return nil
 }
 
-func (g *gobRegistry) SetRegistered(id string, value bool) error {
+func (g *GobRegistry) SetRegistered(id string, value bool) error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
@@ -120,11 +118,11 @@ func (g *gobRegistry) SetRegistered(id string, value bool) error {
 	return nil
 }
 
-//revive:disable:unexported-return
-func Load(path string) (*gobRegistry, error) {
+// Load will load the registry from disk.
+func Load(path string) (*GobRegistry, error) {
 	registryPath := filepath.Join(path, "sensorRegistry", registryFile)
 
-	reg := &gobRegistry{
+	reg := &GobRegistry{
 		sensors: make(map[string]metadata),
 		mu:      sync.Mutex{},
 		file:    registryPath,

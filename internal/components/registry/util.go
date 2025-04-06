@@ -1,7 +1,5 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
 package registry
 
@@ -13,7 +11,7 @@ import (
 func checkPath(path string) error {
 	_, err := os.Stat(path)
 	if os.IsNotExist(err) {
-		err := os.MkdirAll(path, os.ModePerm)
+		err := os.MkdirAll(path, 0o750)
 		if err != nil {
 			return fmt.Errorf("unable to create new directory: %w", err)
 		}
