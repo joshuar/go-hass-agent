@@ -1,6 +1,7 @@
 // Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
 // SPDX-License-Identifier: MIT
 
+// Package whichdistro provides methods to determine the Linux distribution from the os-release file.
 package whichdistro
 
 import (

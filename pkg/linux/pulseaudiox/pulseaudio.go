@@ -1,8 +1,7 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
+// Package pulseaudiox provides access and monitoring of pulseaudio.
 package pulseaudiox
 
 import (
@@ -23,6 +22,7 @@ const (
 	volumeMinPc = 0
 )
 
+// ErrVolumeOutofRange is returned if the requested volume value is out of the acceptable range.
 var ErrVolumeOutofRange = errors.New("volume out of range")
 
 // PulseAudioClient represents a connection to PulseAudio. It will have an event
@@ -146,7 +146,6 @@ func (c *PulseAudioClient) GetVolume() (float64, error) {
 
 // SetVolume will set the volume of the default output device to the given
 // percent amount. Values outside of 0 - 100 will be rejected.
-
 func (c *PulseAudioClient) SetVolume(pct float64) error {
 	if pct < volumeMinPc || pct > volumeMaxPc {
 		return ErrVolumeOutofRange
