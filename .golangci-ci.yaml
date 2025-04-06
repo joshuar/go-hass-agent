@@ -1,0 +1,328 @@
+version: "2"
+output:
+  sort-order:
+    - linter
+    - severity
+    - file
+linters:
+  default: none
+  enable:
+    - bodyclose
+    - canonicalheader
+    - copyloopvar
+    - dupl
+    - dupword
+    - durationcheck
+    - errcheck
+    - errname
+    - errorlint
+    - fatcontext
+    - forbidigo
+    - funlen
+    - gocheckcompilerdirectives
+    - gocognit
+    - goconst
+    - godot
+    - goheader
+    - goprintffuncname
+    - gosec
+    - gosmopolitan
+    - govet
+    - inamedparam
+    - ineffassign
+    - interfacebloat
+    - intrange
+    - mirror
+    - misspell
+    - musttag
+    - nakedret
+    - nilerr
+    - nilnil
+    - noctx
+    - nolintlint
+    - nosprintfhostport
+    - perfsprint
+    - prealloc
+    - predeclared
+    - reassign
+    - revive
+    - sloglint
+    - staticcheck
+    - tagliatelle
+    - testableexamples
+    - testifylint
+    - thelper
+    - unconvert
+    - unused
+    - usestdlibvars
+    - varnamelen
+    - wrapcheck
+  settings:
+    dupl:
+      threshold: 100
+    errcheck:
+      check-type-assertions: true
+      check-blank: true
+    funlen:
+      lines: 100
+      statements: 50
+    gocognit:
+      min-complexity: 20
+    goconst:
+      min-len: 2
+      min-occurrences: 3
+    gocritic:
+      enable-all: true
+      disabled-checks:
+        - appendAssign
+        - badRegexp
+        - badSorting
+        - builtinShadowDecl
+        - codegenComment
+        - dupBranchBody
+        - dupSubExpr
+        - dynamicFmtString
+        - emptyDecl
+        - evalOrder
+        - externalErrorReassign
+        - flagDeref
+        - flagName
+        - nilValReturn
+        - regexpPattern
+        - sortSlice
+        - sqlQuery
+        - syncMapLoadAndDelete
+        - uncheckedInlineErr
+        - unnecessaryDefer
+        - builtinShadow
+        - captLocal
+        - commentFormatting
+        - defaultCaseOrder
+        - deferUnlambda
+        - docStub
+        - dupImport
+        - exposedSyncMutex
+        - hexLiteral
+        - httpNoBody
+        - importShadow
+        - initClause
+        - methodExprCall
+        - newDeref
+        - octalLiteral
+        - paramTypeCombine
+        - regexpMust
+        - ruleguard
+        - singleCaseSwitch
+        - sloppyLen
+        - stringConcatSimplify
+        - switchTrue
+        - timeExprSimplify
+        - tooManyResultsChecker
+        - typeAssertChain
+        - typeDefFirst
+        - typeSwitchVar
+        - typeUnparen
+        - unlabelStmt
+        - unlambda
+        - unnecessaryBlock
+        - valSwap
+        - whyNoLint
+        - yodaStyleExpr
+        - appendCombine
+        - equalFold
+        - indexAlloc
+        - preferDecodeRune
+        - preferWriteByte
+        - rangeExprCopy
+        - sliceClear
+      enabled-tags:
+        - diagnostic
+        - experimental
+        - opinionated
+        - performance
+        - style
+    gocyclo:
+      min-complexity: 15
+    gosec:
+      excludes:
+        - G204
+        - G115
+    govet:
+      disable:
+        - asmdecl
+        - assign
+        - cgocall
+        - fieldalignment
+        - findcall
+        - framepointer
+        - structtag
+      enable-all: true
+    lll:
+      line-length: 140
+    misspell:
+      locale: US
+    nolintlint:
+      require-explanation: false
+      require-specific: false
+      allow-unused: false
+    perfsprint:
+      errorf: false
+      strconcat: false
+    revive:
+      confidence: 0.8
+      enable-all-rules: true
+      rules:
+        - name: context-keys-type
+          disabled: true
+        - name: time-naming
+          disabled: true
+        - name: errorf
+          disabled: true
+        - name: dot-imports
+          disabled: true
+        - name: error-return
+          disabled: true
+        - name: error-strings
+          disabled: true
+        - name: error-naming
+          disabled: true
+        - name: var-naming
+          disabled: true
+        - name: package-comments
+          disabled: true
+        - name: range
+          disabled: true
+        - name: receiver-naming
+          disabled: true
+        - name: cyclomatic
+          disabled: true
+        - name: max-public-structs
+          disabled: true
+        - name: file-header
+          disabled: true
+        - name: empty-block
+          disabled: true
+        - name: confusing-results
+          disabled: true
+        - name: unreachable-code
+          disabled: true
+        - name: add-constant
+          disabled: true
+        - name: flag-parameter
+          disabled: true
+        - name: unnecessary-stmt
+          disabled: true
+        - name: bool-literal-in-expr
+          disabled: true
+        - name: imports-blocklist
+          disabled: true
+        - name: range-val-in-closure
+          disabled: true
+        - name: waitgroup-by-value
+          disabled: true
+        - name: atomic
+          disabled: true
+        - name: empty-lines
+          disabled: true
+        - name: line-length-limit
+          disabled: true
+        - name: duplicated-imports
+          disabled: true
+        - name: unhandled-error
+          disabled: true
+        - name: unused-receiver
+          disabled: true
+        - name: cognitive-complexity
+          disabled: true
+        - name: string-of-int
+          disabled: true
+        - name: function-length
+          disabled: true
+        - name: useless-break
+          disabled: true
+        - name: banned-characters
+          disabled: true
+        - name: enforce-repeated-arg-type-style
+          disabled: true
+        - name: max-control-nesting
+          disabled: true
+        - name: argument-limit
+          arguments:
+            - 5
+        - name: function-result-limit
+          arguments:
+            - 3
+    sloglint:
+      no-mixed-args: false
+      kv-only: false
+      attr-only: true
+      static-msg: true
+      no-raw-keys: false
+      key-naming-case: snake
+      args-on-sep-lines: true
+    tagliatelle:
+      case:
+        rules:
+          json: snake
+          yaml: snake
+    varnamelen:
+      ignore-names:
+        - err
+        - wg
+        - tt
+        - id
+        - ok
+        - mu
+        - fd
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - lll
+        source: '^//go:generate '
+      - path: (.+)_test\.go
+        text: copies lock
+      - path: (.+)_test\.go
+        text: unused-parameter
+      - linters:
+          - dupl
+          - funlen
+          - varnamelen
+          - wsl
+        path: (.+)_test\.go
+      - linters:
+          - goconst
+        path: (.+)_test\.go
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+severity:
+  default: '@linter'
+formatters:
+  enable:
+    - gofumpt
+  settings:
+    gci:
+      sections:
+        - blank
+        - dot
+        - standard
+        - default
+        - alias
+        - prefix(github.com/joshuar)
+      custom-order: true
+    goimports:
+      local-prefixes:
+        - github.com/joshuar/go-hass-agent
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
