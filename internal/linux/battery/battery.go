@@ -25,8 +25,6 @@ const (
 	deviceRemovedSignal = "DeviceRemoved"
 
 	batteryIcon = "mdi:battery"
-
-	workerID = "battery_sensors"
 )
 
 var ErrInvalidBattery = errors.New("invalid battery")

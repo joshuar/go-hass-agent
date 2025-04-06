@@ -12,14 +12,19 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/reugn/go-quartz/quartz"
 
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/models"
+	"github.com/joshuar/go-hass-agent/internal/scheduler"
+	"github.com/joshuar/go-hass-agent/internal/workers"
 )
 
 const (
@@ -27,18 +32,25 @@ const (
 	cpuUsageUpdateJitter   = 500 * time.Millisecond
 
 	cpuUsageWorkerID      = "cpu_usage_sensors"
+	cpuUsageWorkerDesc    = "CPU usage stats"
 	cpuUsagePreferencesID = prefPrefix + "usage"
 )
 
 var ErrInitUsageWorker = errors.New("could not init CPU usage worker")
 
+var (
+	_ quartz.Job                  = (*usageWorker)(nil)
+	_ workers.PollingEntityWorker = (*usageWorker)(nil)
+)
+
 type usageWorker struct {
+	*models.WorkerMetadata
+	*workers.PollingEntityWorkerData
+	prefs       *UsagePrefs
 	boottime    time.Time
 	rateSensors map[string]*linux.RateValue[uint64]
 	path        string
-	linux.PollingSensorWorker
-	clktck int64
-	delta  time.Duration
+	clktck      int64
 }
 
 // calculateRate takes a sensor name and value string and calculates the uint64 rate
@@ -48,7 +60,7 @@ func (w *usageWorker) calculateRate(name, value string) uint64 {
 
 	if _, found := w.rateSensors[name]; found {
 		currValue, _ := strconv.ParseUint(value, 10, 64) //nolint:errcheck // if we can't parse it, value will be 0.
-		state = w.rateSensors[name].Calculate(currValue, w.delta)
+		state = w.rateSensors[name].Calculate(currValue, w.GetDelta())
 	} else {
 		w.rateSensors[name] = newRate(value)
 	}
@@ -56,12 +68,15 @@ func (w *usageWorker) calculateRate(name, value string) uint64 {
 	return state
 }
 
-func (w *usageWorker) UpdateDelta(delta time.Duration) {
-	w.delta = delta
-}
-
-func (w *usageWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
-	return w.getUsageStats(ctx)
+func (w *usageWorker) Execute(ctx context.Context) error {
+	usageSensors, err := w.getUsageStats(ctx)
+	if err != nil {
+		return fmt.Errorf("could not get usage stats: %w", err)
+	}
+	for s := range slices.Values(usageSensors) {
+		w.OutCh <- s
+	}
+	return nil
 }
 
 func (w *usageWorker) PreferencesID() string {
@@ -74,7 +89,20 @@ func (w *usageWorker) DefaultPreferences() UsagePrefs {
 	}
 }
 
-func NewUsageWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
+func (w *usageWorker) IsDisabled() bool {
+	return w.prefs.Disabled
+}
+
+func (w *usageWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
+	w.OutCh = make(chan models.Entity)
+	if err := workers.SchedulePollingWorker(ctx, w, w.OutCh); err != nil {
+		close(w.OutCh)
+		return w.OutCh, fmt.Errorf("could not start disk usage worker: %w", err)
+	}
+	return w.OutCh, nil
+}
+
+func NewUsageWorker(ctx context.Context) (workers.EntityWorker, error) {
 	clktck, found := linux.CtxGetClkTck(ctx)
 	if !found {
 		return nil, errors.Join(ErrInitUsageWorker, fmt.Errorf("%w: no clktck value", linux.ErrInvalidCtx))
@@ -85,25 +113,23 @@ func NewUsageWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
 		return nil, errors.Join(ErrInitUsageWorker, fmt.Errorf("%w: no boottime value", linux.ErrInvalidCtx))
 	}
 
-	cpuUsageWorker := &usageWorker{
-		path:     filepath.Join(linux.ProcFSRoot, "stat"),
-		boottime: boottime,
-		clktck:   clktck,
+	worker := &usageWorker{
+		WorkerMetadata:          models.SetWorkerMetadata(cpuUsageWorkerID, cpuUsageWorkerDesc),
+		PollingEntityWorkerData: &workers.PollingEntityWorkerData{},
+		path:                    filepath.Join(linux.ProcFSRoot, "stat"),
+		boottime:                boottime,
+		clktck:                  clktck,
 		rateSensors: map[string]*linux.RateValue[uint64]{
 			"ctxt":      newRate("0"),
 			"processes": newRate("0"),
 		},
 	}
 
-	prefs, err := preferences.LoadWorker(cpuUsageWorker)
+	prefs, err := preferences.LoadWorker(worker)
 	if err != nil {
 		return nil, errors.Join(ErrInitUsageWorker, err)
 	}
-
-	//nolint:nilnil
-	if prefs.Disabled {
-		return nil, nil
-	}
+	worker.prefs = prefs
 
 	pollInterval, err := time.ParseDuration(prefs.UpdateInterval)
 	if err != nil {
@@ -114,9 +140,7 @@ func NewUsageWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
 
 		pollInterval = cpuUsageUpdateInterval
 	}
-
-	worker := linux.NewPollingSensorWorker(cpuUsageWorkerID, pollInterval, cpuUsageUpdateJitter)
-	worker.PollingSensorType = cpuUsageWorker
+	worker.Trigger = scheduler.NewPollTriggerWithJitter(pollInterval, cpuUsageUpdateJitter)
 
 	return worker, nil
 }

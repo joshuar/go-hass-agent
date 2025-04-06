@@ -192,6 +192,15 @@ type UniqueID = string
 // Units is the unit of measurement for the entity.
 type Units = string
 
+// WorkerMetadata contains metadata for describing a worker.
+type WorkerMetadata struct {
+	// WorkerDescription is a short textual summary of the worker's purpose.
+	WorkerDescription string `json:"worker_description"`
+
+	// WorkerID is a unique ID for the worker.
+	WorkerID string `json:"worker_id"`
+}
+
 // AsEvent returns the union data inside the Entity as a Event
 func (t Entity) AsEvent() (Event, error) {
 	var body Event

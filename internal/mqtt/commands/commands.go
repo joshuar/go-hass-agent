@@ -34,6 +34,8 @@ const (
 	switchOnState      = "ON"
 	switchOffState     = "OFF"
 	commandsFile       = "commands.toml"
+
+	workerID = "mqtt_commands"
 )
 
 var (
@@ -90,6 +92,7 @@ type Worker struct {
 	switches     []*mqtthass.SwitchEntity
 	intNumbers   []*mqtthass.NumberEntity[int64]
 	floatNumbers []*mqtthass.NumberEntity[float64]
+	prefs *preferences.CommonWorkerPrefs
 }
 
 // entity is a convienience interface to avoid duplicating a lot of loops when
@@ -100,7 +103,7 @@ type entity interface {
 }
 
 func (d *Worker) ID() string {
-	return "mqtt_commands"
+	return workerID
 }
 
 // Subscriptions are the MQTT subscriptions for buttons and switches, providing
@@ -434,6 +437,20 @@ func (d *Worker) Start(_ context.Context) (*mqtt.WorkerData, error) {
 	}, nil
 }
 
+func (d *Worker) PreferencesID() string {
+	return workerID
+}
+
+func (d *Worker) DefaultPreferences() preferences.CommonWorkerPrefs {
+	return preferences.CommonWorkerPrefs{}
+}
+
+func (d *Worker) IsDisabled() bool {
+	return d.prefs.Disabled
+}
+
+
+
 // NewCommandsWorker is used by the agent to initialize the commands
 // controller, which holds the MQTT configuration for the commands defined by
 // the user.
@@ -462,6 +479,12 @@ func NewCommandsWorker(ctx context.Context, device *mqtthass.Device) (*Worker, e
 	controller.generateButtons(cmds.Buttons)
 	controller.generateSwitches(cmds.Switches)
 	controller.generateNumbers(cmds.Numbers)
+
+	prefs, err := preferences.LoadWorker(controller)
+	if err != nil {
+		return nil, fmt.Errorf("could not load custom commands preferences: %w",err)
+	}
+	controller.prefs = prefs
 
 	return controller, nil
 }

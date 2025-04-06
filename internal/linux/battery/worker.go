@@ -16,27 +16,29 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/models"
+	"github.com/joshuar/go-hass-agent/internal/workers"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
+var _ workers.EntityWorker = (*BatteryWorker)(nil)
+
 var ErrInitBatterWorker = errors.New("could not init battery worker")
 
-type sensorWorker struct {
+const (
+	workerID   = "battery_sensors"
+	workerDesc = "Battery statistics"
+)
+
+type BatteryWorker struct {
 	bus         *dbusx.Bus
 	batteryList map[dbus.ObjectPath]context.CancelFunc
 	logger      *slog.Logger
 	mu          sync.Mutex
 	prefs       *WorkerPrefs
+	*models.WorkerMetadata
 }
 
-// ?: implement initial battery sensor retrieval.
-//
-//revive:disable:unused-receiver
-func (w *sensorWorker) Sensors(_ context.Context) ([]models.Entity, error) {
-	return nil, linux.ErrUnimplemented
-}
-
-func (w *sensorWorker) Events(ctx context.Context) (<-chan models.Entity, error) {
+func (w *BatteryWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
 	sensorCh := make(chan models.Entity)
 
 	var wg sync.WaitGroup
@@ -79,17 +81,21 @@ func (w *sensorWorker) Events(ctx context.Context) (<-chan models.Entity, error)
 	return sensorCh, nil
 }
 
-func (w *sensorWorker) PreferencesID() string {
+func (w *BatteryWorker) PreferencesID() string {
 	return preferencesID
 }
 
-func (w *sensorWorker) DefaultPreferences() WorkerPrefs {
+func (w *BatteryWorker) DefaultPreferences() WorkerPrefs {
 	return WorkerPrefs{}
+}
+
+func (w *BatteryWorker) IsDisabled() bool {
+	return w.prefs.Disabled
 }
 
 // getBatteries is a helper function to retrieve all of the known batteries
 // connected to the system.
-func (w *sensorWorker) getBatteries() ([]dbus.ObjectPath, error) {
+func (w *BatteryWorker) getBatteries() ([]dbus.ObjectPath, error) {
 	batteryList, err := dbusx.GetData[[]dbus.ObjectPath](w.bus, upowerDBusPath, upowerDBusDest, upowerGetDevicesMethod)
 	if err != nil {
 		return nil, err
@@ -98,7 +104,7 @@ func (w *sensorWorker) getBatteries() ([]dbus.ObjectPath, error) {
 	return batteryList, nil
 }
 
-func (w *sensorWorker) track(ctx context.Context, batteryPath dbus.ObjectPath) <-chan models.Entity {
+func (w *BatteryWorker) track(ctx context.Context, batteryPath dbus.ObjectPath) <-chan models.Entity {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
@@ -157,7 +163,7 @@ func (w *sensorWorker) track(ctx context.Context, batteryPath dbus.ObjectPath) <
 	return sensorCh
 }
 
-func (w *sensorWorker) remove(batteryPath dbus.ObjectPath) {
+func (w *BatteryWorker) remove(batteryPath dbus.ObjectPath) {
 	if cancelFunc, ok := w.batteryList[batteryPath]; ok {
 		cancelFunc()
 		w.mu.Lock()
@@ -168,7 +174,7 @@ func (w *sensorWorker) remove(batteryPath dbus.ObjectPath) {
 
 // monitorBatteryChanges monitors for battery devices being added/removed from
 // the system and will start/stop monitory each battery as appropriate.
-func (w *sensorWorker) monitorBatteryChanges(ctx context.Context) <-chan models.Entity {
+func (w *BatteryWorker) monitorBatteryChanges(ctx context.Context) <-chan models.Entity {
 	triggerCh, err := dbusx.NewWatch(
 		dbusx.MatchPath(upowerDBusPath),
 		dbusx.MatchInterface(upowerDBusDest),
@@ -216,33 +222,24 @@ func (w *sensorWorker) monitorBatteryChanges(ctx context.Context) <-chan models.
 	return sensorCh
 }
 
-func NewBatteryWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
-	var err error
-
-	worker := linux.NewEventSensorWorker(workerID)
-
+func NewBatteryWorker(ctx context.Context) (workers.EntityWorker, error) {
 	bus, ok := linux.CtxGetSystemBus(ctx)
 	if !ok {
-		return worker, linux.ErrNoSystemBus
+		return nil, linux.ErrNoSystemBus
 	}
 
-	batteryWorker := &sensorWorker{
-		batteryList: make(map[dbus.ObjectPath]context.CancelFunc),
-		bus:         bus,
-		logger:      logging.FromContext(ctx).With(slog.String("worker", workerID)),
+	worker := &BatteryWorker{
+		WorkerMetadata: models.SetWorkerMetadata(workerID, workerDesc),
+		batteryList:    make(map[dbus.ObjectPath]context.CancelFunc),
+		bus:            bus,
+		logger:         logging.FromContext(ctx).With(slog.String("worker", workerID)),
 	}
 
-	batteryWorker.prefs, err = preferences.LoadWorker(batteryWorker)
+	prefs, err := preferences.LoadWorker(worker)
 	if err != nil {
-		return worker, errors.Join(ErrInitBatterWorker, err)
+		return nil, errors.Join(ErrInitBatterWorker, err)
 	}
-
-	// If disabled, don't use the addressWorker.
-	if batteryWorker.prefs.Disabled {
-		return worker, nil
-	}
-
-	worker.EventSensorType = batteryWorker
+	worker.prefs = prefs
 
 	return worker, nil
 }

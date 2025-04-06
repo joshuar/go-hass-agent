@@ -14,15 +14,24 @@ import (
 	"time"
 
 	"github.com/jsimonetti/rtnetlink"
+	"github.com/reugn/go-quartz/quartz"
 
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
-	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/models"
+	"github.com/joshuar/go-hass-agent/internal/scheduler"
+	"github.com/joshuar/go-hass-agent/internal/workers"
 )
 
 const (
+	statsWorkerID     = "network_stats"
+	statsWorkerDesc   = "Network stats"
 	statsWorkerPrefID = prefPrefix + "usage"
+)
+
+var (
+	_ quartz.Job                  = (*netStatsWorker)(nil)
+	_ workers.PollingEntityWorker = (*netStatsWorker)(nil)
 )
 
 var ErrInitStatsWorker = errors.New("could not init network stats worker")
@@ -38,27 +47,24 @@ type netStatsWorker struct {
 	statsSensors map[string]map[netStatsType]*netRate
 	nlconn       *rtnetlink.Conn
 	prefs        *StatsWorkerPrefs
-	delta        time.Duration
 	mu           sync.Mutex
-}
-
-func (w *netStatsWorker) UpdateDelta(delta time.Duration) {
-	w.delta = delta
+	*workers.PollingEntityWorkerData
+	*models.WorkerMetadata
 }
 
 //nolint:gocognit,funlen
-func (w *netStatsWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
+func (w *netStatsWorker) Execute(ctx context.Context) error {
+	delta := w.GetDelta()
 	var warnings error
 
 	// Get all links.
 	links, err := w.getLinks()
 	if err != nil {
-		return nil, fmt.Errorf("error accessing netlink: %w", err)
+		return fmt.Errorf("error accessing netlink: %w", err)
 	}
 
 	// Get link stats, filtering "uninteresting" links.
 	stats := w.getLinkStats(links)
-	sensors := make([]models.Entity, 0, len(stats)*4+4)
 
 	w.mu.Lock()
 
@@ -66,7 +72,7 @@ func (w *netStatsWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 	var totalBytesRx, totalBytesTx uint64
 
 	// For each link, update the link sensors with the new stats.
-	for _, link := range stats {
+	for link := range slices.Values(stats) {
 		var (
 			entity *models.Entity
 			err    error
@@ -90,36 +96,36 @@ func (w *netStatsWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 		if err != nil {
 			warnings = errors.Join(warnings, fmt.Errorf("could not generate stats sensor: %w", err))
 		} else {
-			sensors = append(sensors, *entity)
+			w.OutCh <- *entity
 		}
 		// Generate bytesSent sensor entity for link.
 		entity, err = newStatsTotalEntity(ctx, name, bytesSent, models.Diagnostic, link.stats.TXBytes, getTXAttributes(stats))
 		if err != nil {
 			warnings = errors.Join(warnings, fmt.Errorf("could not generate stats sensor: %w", err))
 		} else {
-			sensors = append(sensors, *entity)
+			w.OutCh <- *entity
 		}
 		// Create new trackers for the link's rates sensor entities if needed.
 		if _, ok := w.statsSensors[name]; !ok {
 			w.statsSensors[name] = newStatsRates()
 		}
 		// Generate bytesRecvRate sensor entity for link.
-		rate = w.statsSensors[name][bytesRecvRate].Calculate(stats.RXBytes, w.delta)
+		rate = w.statsSensors[name][bytesRecvRate].Calculate(stats.RXBytes, delta)
 
 		entity, err = newStatsRateEntity(ctx, name, bytesRecvRate, models.Diagnostic, rate)
 		if err != nil {
 			warnings = errors.Join(warnings, fmt.Errorf("could not generate stats rate sensor: %w", err))
 		} else {
-			sensors = append(sensors, *entity)
+			w.OutCh <- *entity
 		}
 		// Generate bytesSentRate sensor entity for link.
-		rate = w.statsSensors[name][bytesSentRate].Calculate(stats.TXBytes, w.delta)
+		rate = w.statsSensors[name][bytesSentRate].Calculate(stats.TXBytes, delta)
 
 		entity, err = newStatsRateEntity(ctx, name, bytesSentRate, models.Diagnostic, rate)
 		if err != nil {
 			warnings = errors.Join(warnings, fmt.Errorf("could not generate stats sensor: %w", err))
 		} else {
-			sensors = append(sensors, *entity)
+			w.OutCh <- *entity
 		}
 	}
 
@@ -139,38 +145,38 @@ func (w *netStatsWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 		if err != nil {
 			warnings = errors.Join(warnings, fmt.Errorf("could not generate stats sensor: %w", err))
 		} else {
-			sensors = append(sensors, *entity)
+			w.OutCh <- *entity
 		}
 		// Generate total bytesSent sensor entity.
 		entity, err = newStatsTotalEntity(ctx, totalsName, bytesSent, models.Diagnostic, totalBytesTx, nil)
 		if err != nil {
 			warnings = errors.Join(warnings, fmt.Errorf("could not generate stats sensor: %w", err))
 		} else {
-			sensors = append(sensors, *entity)
+			w.OutCh <- *entity
 		}
 		// Generate total bytesRecvRate sensor entity.
-		rate = w.statsSensors[totalsName][bytesRecvRate].Calculate(totalStats.RXBytes, w.delta)
+		rate = w.statsSensors[totalsName][bytesRecvRate].Calculate(totalStats.RXBytes, delta)
 
 		entity, err = newStatsRateEntity(ctx, totalsName, bytesRecvRate, models.Diagnostic, rate)
 		if err != nil {
 			warnings = errors.Join(warnings, fmt.Errorf("could not generate stats rate sensor: %w", err))
 		} else {
-			sensors = append(sensors, *entity)
+			w.OutCh <- *entity
 		}
 		// Generate total bytesSentRate sensor entity.
-		rate = w.statsSensors[totalsName][bytesSentRate].Calculate(totalStats.TXBytes, w.delta)
+		rate = w.statsSensors[totalsName][bytesSentRate].Calculate(totalStats.TXBytes, delta)
 
 		entity, err = newStatsRateEntity(ctx, totalsName, bytesSentRate, models.Diagnostic, rate)
 		if err != nil {
 			warnings = errors.Join(warnings, fmt.Errorf("could not generate stats sensor: %w", err))
 		} else {
-			sensors = append(sensors, *entity)
+			w.OutCh <- *entity
 		}
 	}
 
 	w.mu.Unlock()
 
-	return sensors, warnings
+	return warnings
 }
 
 func (w *netStatsWorker) PreferencesID() string {
@@ -185,6 +191,37 @@ func (w *netStatsWorker) DefaultPreferences() StatsWorkerPrefs {
 	prefs.IgnoredDevices = defaultIgnoredDevices
 
 	return prefs
+}
+
+func (w *netStatsWorker) IsDisabled() bool {
+	return w.prefs.IsDisabled()
+}
+
+func (w *netStatsWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
+	conn, err := rtnetlink.Dial(nil)
+	if err != nil {
+		return nil, errors.Join(ErrInitStatsWorker,
+			fmt.Errorf("could not connect to netlink: %w", err))
+	}
+
+	w.nlconn = conn
+
+	go func() {
+		<-ctx.Done()
+
+		if err = w.nlconn.Close(); err != nil {
+			logging.FromContext(ctx).Debug("Could not close netlink connection.",
+				slog.String("worker", netRatesWorkerID),
+				slog.Any("error", err))
+		}
+	}()
+
+	w.OutCh = make(chan models.Entity)
+	if err := workers.SchedulePollingWorker(ctx, w, w.OutCh); err != nil {
+		close(w.OutCh)
+		return w.OutCh, fmt.Errorf("could not start disk IO worker: %w", err)
+	}
+	return w.OutCh, nil
 }
 
 // getLinks returns all available links on this device. If a problem occurred, a
@@ -263,51 +300,30 @@ func (w *netStatsWorker) getLinkStats(links []rtnetlink.LinkMessage) []linkStats
 }
 
 // NewNetStatsWorker sets up a sensor worker that tracks network stats.
-func NewNetStatsWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
-	conn, err := rtnetlink.Dial(nil)
-	if err != nil {
-		return nil, errors.Join(ErrInitStatsWorker,
-			fmt.Errorf("could not connect to netlink: %w", err))
+func NewNetStatsWorker(ctx context.Context) (workers.EntityWorker, error) {
+	worker := &netStatsWorker{
+		WorkerMetadata:          models.SetWorkerMetadata(statsWorkerID, statsWorkerDesc),
+		statsSensors:            make(map[string]map[netStatsType]*netRate),
+		PollingEntityWorkerData: &workers.PollingEntityWorkerData{},
 	}
+	worker.statsSensors[totalsName] = newStatsRates()
 
-	go func() {
-		<-ctx.Done()
-
-		if err = conn.Close(); err != nil {
-			logging.FromContext(ctx).Debug("Could not close netlink connection.",
-				slog.String("worker", netRatesWorkerID),
-				slog.Any("error", err))
-		}
-	}()
-
-	ratesWorker := &netStatsWorker{
-		statsSensors: make(map[string]map[netStatsType]*netRate),
-		nlconn:       conn,
-	}
-	ratesWorker.statsSensors[totalsName] = newStatsRates()
-
-	ratesWorker.prefs, err = preferences.LoadWorker(ratesWorker)
+	prefs, err := preferences.LoadWorker(worker)
 	if err != nil {
 		return nil, errors.Join(ErrInitStatsWorker, err)
 	}
+	worker.prefs = prefs
 
-	//nolint:nilnil
-	if ratesWorker.prefs.IsDisabled() {
-		return nil, nil
-	}
-
-	pollInterval, err := time.ParseDuration(ratesWorker.prefs.UpdateInterval)
+	pollInterval, err := time.ParseDuration(worker.prefs.UpdateInterval)
 	if err != nil {
 		logging.FromContext(ctx).Warn("Invalid polling interval, using default",
 			slog.String("worker", netRatesWorkerID),
-			slog.String("given_interval", ratesWorker.prefs.UpdateInterval),
+			slog.String("given_interval", worker.prefs.UpdateInterval),
 			slog.String("default_interval", rateInterval.String()))
 
 		pollInterval = rateInterval
 	}
-
-	worker := linux.NewPollingSensorWorker(netRatesWorkerID, pollInterval, rateJitter)
-	worker.PollingSensorType = ratesWorker
+	worker.Trigger = scheduler.NewPollTriggerWithJitter(pollInterval, rateJitter)
 
 	return worker, nil
 }

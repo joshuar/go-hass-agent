@@ -22,12 +22,16 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/models"
 	"github.com/joshuar/go-hass-agent/internal/models/sensor"
+	"github.com/joshuar/go-hass-agent/internal/workers"
 )
 
 const (
 	addressWorkerID     = "network_addresses"
+	addressWorkerDesc   = "Network interface sensors"
 	addressWorkerPrefID = prefPrefix + "links"
 )
+
+var _ workers.EntityWorker = (*AddressWorker)(nil)
 
 var (
 	ifaceFilters = []string{"lo"}
@@ -164,10 +168,10 @@ type AddressWorker struct {
 	nlconn *rtnetlink.Conn
 	donech chan struct{}
 	prefs  *WorkerPrefs
-	linux.EventSensorWorker
+	*models.WorkerMetadata
 }
 
-func (w *AddressWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
+func (w *AddressWorker) generateSensors(ctx context.Context) ([]models.Entity, error) {
 	var (
 		sensors  []models.Entity
 		warnings error
@@ -188,96 +192,6 @@ func (w *AddressWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 	sensors = append(sensors, links...)
 
 	return sensors, warnings
-}
-
-// TODO: reduce complexity?
-//
-//nolint:gocognit
-func (w *AddressWorker) Events(ctx context.Context) (<-chan models.Entity, error) {
-	sensorCh := make(chan models.Entity)
-
-	// Get all current addresses and send as sensors.
-	sensors, err := w.Sensors(ctx)
-	if err != nil {
-		logging.FromContext(ctx).Debug("Could not get address sensors.", slog.Any("error", err))
-	} else {
-		for _, addressSensor := range sensors {
-			go func() {
-				sensorCh <- addressSensor
-			}()
-		}
-	}
-
-	done := false
-
-	go func() {
-		defer close(w.donech)
-		<-ctx.Done()
-
-		if err := w.nlconn.Close(); err != nil {
-			logging.FromContext(ctx).Debug("Could not close netlink connection.",
-				slog.Any("error", err))
-		}
-	}()
-
-	// Listen for address changes and generate new sensors.
-	go func() {
-		defer close(sensorCh)
-
-		for !done {
-			select {
-			case <-w.donech:
-				done = true
-			default:
-				nlmsgs, _, err := w.nlconn.Receive()
-				if err != nil {
-					logging.FromContext(ctx).Debug("Error closing netlink connection.", slog.Any("error", err))
-					break
-				}
-
-				for _, msg := range nlmsgs {
-					switch value := any(msg).(type) {
-					case *rtnetlink.LinkMessage:
-						if slices.Contains(ifaceFilters, value.Attributes.Name) {
-							continue
-						}
-
-						link, err := newLinkSensor(ctx, *value)
-						if err != nil {
-							logging.FromContext(ctx).Warn("Could not generate link sensor.", slog.Any("error", err))
-							continue
-						}
-
-						sensorCh <- *link
-					case *rtnetlink.AddressMessage:
-						if !w.usableAddress(*value) {
-							continue
-						}
-
-						addr, err := newAddressSensor(ctx, w.nlconn.Link, *value)
-						if err != nil {
-							logging.FromContext(ctx).Warn("Could not generate address sensor.", slog.Any("error", err))
-							continue
-						}
-
-						sensorCh <- *addr
-					}
-				}
-			}
-		}
-	}()
-
-	return sensorCh, nil
-}
-
-func (w *AddressWorker) PreferencesID() string {
-	return addressWorkerPrefID
-}
-
-func (w *AddressWorker) DefaultPreferences() WorkerPrefs {
-	return WorkerPrefs{
-		IgnoredDevices: defaultIgnoredDevices,
-	}
 }
 
 func (w *AddressWorker) getAddresses(ctx context.Context) ([]models.Entity, error) {
@@ -370,31 +284,118 @@ func (w *AddressWorker) getLinks(ctx context.Context) ([]models.Entity, error) {
 	return links, warnings
 }
 
-func NewAddressWorker(_ context.Context) (*linux.EventSensorWorker, error) {
-	worker := linux.NewEventSensorWorker(addressWorkerID)
+// TODO: reduce complexity?
+//
+//nolint:gocognit
+func (w *AddressWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
+	sensorCh := make(chan models.Entity)
 
+	// Get all current addresses and send as sensors.
+	sensors, err := w.generateSensors(ctx)
+	if err != nil {
+		logging.FromContext(ctx).Debug("Could not get address sensors.", slog.Any("error", err))
+	} else {
+		for _, addressSensor := range sensors {
+			go func() {
+				sensorCh <- addressSensor
+			}()
+		}
+	}
+
+	done := false
+
+	go func() {
+		defer close(w.donech)
+		<-ctx.Done()
+
+		if err := w.nlconn.Close(); err != nil {
+			logging.FromContext(ctx).Debug("Could not close netlink connection.",
+				slog.Any("error", err))
+		}
+	}()
+
+	// Listen for address changes and generate new sensors.
+	go func() {
+		defer close(sensorCh)
+
+		for !done {
+			select {
+			case <-w.donech:
+				done = true
+			default:
+				nlmsgs, _, err := w.nlconn.Receive()
+				if err != nil {
+					logging.FromContext(ctx).Debug("Error closing netlink connection.", slog.Any("error", err))
+					break
+				}
+
+				for _, msg := range nlmsgs {
+					switch value := any(msg).(type) {
+					case *rtnetlink.LinkMessage:
+						if slices.Contains(ifaceFilters, value.Attributes.Name) {
+							continue
+						}
+
+						link, err := newLinkSensor(ctx, *value)
+						if err != nil {
+							logging.FromContext(ctx).Warn("Could not generate link sensor.", slog.Any("error", err))
+							continue
+						}
+
+						sensorCh <- *link
+					case *rtnetlink.AddressMessage:
+						if !w.usableAddress(*value) {
+							continue
+						}
+
+						addr, err := newAddressSensor(ctx, w.nlconn.Link, *value)
+						if err != nil {
+							logging.FromContext(ctx).Warn("Could not generate address sensor.", slog.Any("error", err))
+							continue
+						}
+
+						sensorCh <- *addr
+					}
+				}
+			}
+		}
+	}()
+
+	return sensorCh, nil
+}
+
+func (w *AddressWorker) PreferencesID() string {
+	return addressWorkerPrefID
+}
+
+func (w *AddressWorker) DefaultPreferences() WorkerPrefs {
+	return WorkerPrefs{
+		IgnoredDevices: defaultIgnoredDevices,
+	}
+}
+
+func (w *AddressWorker) IsDisabled() bool {
+	return w.prefs.IsDisabled()
+}
+
+func NewAddressWorker(_ context.Context) (workers.EntityWorker, error) {
 	conn, err := rtnetlink.Dial(nlConfig)
 	if err != nil {
-		return worker, errors.Join(ErrInitLinkWorker,
+		return nil, errors.Join(ErrInitLinkWorker,
 			fmt.Errorf("could not connect to netlink: %w", err))
 	}
 
-	addressWorker := &AddressWorker{
-		nlconn: conn,
-		donech: make(chan struct{}),
+	worker := &AddressWorker{
+		WorkerMetadata: models.SetWorkerMetadata(addressWorkerID, addressWorkerDesc),
+		nlconn:         conn,
+		donech:         make(chan struct{}),
 	}
 
-	addressWorker.prefs, err = preferences.LoadWorker(addressWorker)
+	prefs, err := preferences.LoadWorker(worker)
 	if err != nil {
 		return worker, errors.Join(ErrInitLinkWorker, err)
 	}
-
-	// If disabled, don't use the addressWorker.
-	if addressWorker.prefs.Disabled {
-		return worker, nil
-	}
-
-	worker.EventSensorType = addressWorker
+	worker.prefs = prefs
 
 	return worker, nil
 }

@@ -16,27 +16,39 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/models"
 	"github.com/joshuar/go-hass-agent/internal/models/event"
+	"github.com/joshuar/go-hass-agent/internal/workers"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
 const (
 	oomEventsWorkerID      = "oom_events"
+	oomEventsWorkerDesc    = "OOM events detection"
 	oomEventsPreferencesID = prefPrefix + "oom_events"
 	oomDBusPath            = "/org/freedesktop/systemd1/unit"
 	unitPathPrefix         = "/org/freedesktop/systemd1/unit"
 	oomEventName           = "oom_event"
 )
 
+var _ workers.EntityWorker = (*OOMEventsWorker)(nil)
+
 var ErrInitOOMWorker = errors.New("could not init OOM worker")
 
 type OOMEventsWorker struct {
-	triggerCh <-chan dbusx.Trigger
-	linux.EventWorker
+	bus   *dbusx.Bus
 	prefs *preferences.CommonWorkerPrefs
+	*models.WorkerMetadata
 }
 
 //nolint:gocognit
-func (w *OOMEventsWorker) Events(ctx context.Context) (<-chan models.Entity, error) {
+func (w *OOMEventsWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
+	triggerCh, err := dbusx.NewWatch(
+		dbusx.MatchPathNamespace(oomDBusPath),
+		dbusx.MatchPropChanged(),
+	).Start(ctx, w.bus)
+	if err != nil {
+		return nil, errors.Join(ErrInitOOMWorker,
+			fmt.Errorf("unable to set-up D-Bus watch for OOM events: %w", err))
+	}
 	eventCh := make(chan models.Entity)
 
 	go func() {
@@ -46,7 +58,7 @@ func (w *OOMEventsWorker) Events(ctx context.Context) (<-chan models.Entity, err
 			select {
 			case <-ctx.Done():
 				return
-			case trigger := <-w.triggerCh:
+			case trigger := <-triggerCh:
 				props, err := dbusx.ParsePropertiesChanged(trigger.Content)
 				if err != nil {
 					logging.FromContext(ctx).Debug("Could not parse changed properties for unit.", slog.Any("error", err))
@@ -114,39 +126,26 @@ func (w *OOMEventsWorker) DefaultPreferences() preferences.CommonWorkerPrefs {
 	return preferences.CommonWorkerPrefs{}
 }
 
-func NewOOMEventsWorker(ctx context.Context) (*linux.EventWorker, error) {
-	var err error
+func (w *OOMEventsWorker) IsDisabled() bool {
+	return w.prefs.IsDisabled()
+}
 
-	worker := linux.NewEventWorker(oomEventsWorkerID)
-
+func NewOOMEventsWorker(ctx context.Context) (workers.EntityWorker, error) {
 	bus, ok := linux.CtxGetSessionBus(ctx)
 	if !ok {
-		return worker, errors.Join(ErrInitOOMWorker, linux.ErrNoSessionBus)
+		return nil, errors.Join(ErrInitOOMWorker, linux.ErrNoSessionBus)
 	}
 
-	eventWorker := &OOMEventsWorker{}
+	worker := &OOMEventsWorker{
+		WorkerMetadata: models.SetWorkerMetadata(oomEventsWorkerID, oomEventsWorkerDesc),
+		bus:            bus,
+	}
 
-	eventWorker.prefs, err = preferences.LoadWorker(eventWorker)
+	prefs, err := preferences.LoadWorker(worker)
 	if err != nil {
 		return nil, errors.Join(ErrInitOOMWorker, err)
 	}
-
-	if eventWorker.prefs.IsDisabled() {
-		return worker, nil
-	}
-
-	triggerCh, err := dbusx.NewWatch(
-		dbusx.MatchPathNamespace(oomDBusPath),
-		dbusx.MatchPropChanged(),
-	).Start(ctx, bus)
-	if err != nil {
-		return nil, errors.Join(ErrInitOOMWorker,
-			fmt.Errorf("unable to set-up D-Bus watch for OOM events: %w", err))
-	}
-
-	eventWorker.triggerCh = triggerCh
-
-	worker.EventType = eventWorker
+	worker.prefs = prefs
 
 	return worker, nil
 }

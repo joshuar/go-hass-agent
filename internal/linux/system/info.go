@@ -18,19 +18,27 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/models"
 	"github.com/joshuar/go-hass-agent/internal/models/sensor"
+	"github.com/joshuar/go-hass-agent/internal/workers"
 )
 
 const (
 	infoWorkerID            = "system_info"
+	infoWorkerDesc          = "General system information"
 	infoWorkerPreferencesID = sensorsPrefPrefix + "info_sensors"
 )
+
+var _ workers.EntityWorker = (*infoWorker)(nil)
 
 var (
 	ErrNewInfoSensor  = errors.New("could not create info sensor")
 	ErrInitInfoWorker = errors.New("could not init system info worker")
 )
 
-type infoWorker struct{}
+type infoWorker struct {
+	OutCh chan models.Entity
+	prefs *preferences.CommonWorkerPrefs
+	*models.WorkerMetadata
+}
 
 func (w *infoWorker) PreferencesID() string {
 	return infoWorkerPreferencesID
@@ -40,11 +48,12 @@ func (w *infoWorker) DefaultPreferences() preferences.CommonWorkerPrefs {
 	return preferences.CommonWorkerPrefs{}
 }
 
-func (w *infoWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
-	var (
-		sensors  []models.Entity
-		warnings error
-	)
+func (w *infoWorker) IsDisabled() bool {
+	return w.prefs.IsDisabled()
+}
+
+func (w *infoWorker) Execute(ctx context.Context) error {
+	var warnings error
 
 	// Get distribution name and version.
 	distro, version, err := info.GetOSDetails()
@@ -66,7 +75,7 @@ func (w *infoWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 		if err != nil {
 			warnings = errors.Join(warnings, fmt.Errorf("could not generate distribution name sensor: %w", err))
 		} else {
-			sensors = append(sensors, entity)
+			w.OutCh <- entity
 		}
 
 		entity, err = sensor.NewSensor(ctx,
@@ -80,7 +89,7 @@ func (w *infoWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 		if err != nil {
 			warnings = errors.Join(warnings, fmt.Errorf("could not generate distribution version sensor: %w", err))
 		} else {
-			sensors = append(sensors, entity)
+			w.OutCh <- entity
 		}
 	}
 
@@ -102,28 +111,35 @@ func (w *infoWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 		if err != nil {
 			warnings = errors.Join(warnings, fmt.Errorf("could not generate kernel version sensor: %w", err))
 		} else {
-			sensors = append(sensors, entity)
+			w.OutCh <- entity
 		}
 	}
 
-	return sensors, warnings
+	return warnings
 }
 
-func NewInfoWorker(_ context.Context) (*linux.OneShotSensorWorker, error) {
-	infoWorker := &infoWorker{}
+func (w *infoWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
+	w.OutCh = make(chan models.Entity)
+	go func() {
+		defer close(w.OutCh)
+		if err := w.Execute(ctx); err != nil {
+			logging.FromContext(ctx).Warn("Failed to send info details",
+				slog.Any("error", err))
+		}
+	}()
+	return w.OutCh, nil
+}
 
-	prefs, err := preferences.LoadWorker(infoWorker)
+func NewInfoWorker(_ context.Context) (workers.EntityWorker, error) {
+	worker := &infoWorker{
+		WorkerMetadata: models.SetWorkerMetadata(infoWorkerID, infoWorkerDesc),
+	}
+
+	prefs, err := preferences.LoadWorker(worker)
 	if err != nil {
 		return nil, errors.Join(ErrInitInfoWorker, err)
 	}
-
-	//nolint:nilnil
-	if prefs.IsDisabled() {
-		return nil, nil
-	}
-
-	worker := linux.NewOneShotSensorWorker(infoWorkerID)
-	worker.OneShotSensorType = infoWorker
+	worker.prefs = prefs
 
 	return worker, nil
 }

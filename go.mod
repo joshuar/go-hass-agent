@@ -1,6 +1,7 @@
 module github.com/joshuar/go-hass-agent
 
 go 1.24.2
+
 require (
 	fyne.io/fyne/v2 v2.5.5
 	github.com/cenkalti/backoff/v4 v4.3.0
@@ -11,7 +12,6 @@ require (
 	github.com/iancoleman/strcase v0.3.0
 	github.com/joshuar/go-hass-anything/v12 v12.1.0
 	github.com/knadh/koanf/providers/structs v0.1.0
-	github.com/lthibault/jitterbug/v2 v2.2.2
 	github.com/lxzan/gws v1.8.8
 	github.com/magefile/mage v1.15.0
 	github.com/mdlayher/netlink v1.7.2

@@ -19,6 +19,7 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/models"
+	"github.com/joshuar/go-hass-agent/internal/workers"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
@@ -34,9 +35,12 @@ const (
 	statePropName          = "State"
 	activeConnectionsProp  = "ActivatingConnection"
 
-	netConnWorkerID = "network_connection_sensors"
-	netConnPrefID   = prefPrefix + "connections"
+	netConnWorkerID   = "network_connection_sensors"
+	netConnWorkerDesc = "NetworkManager connection status"
+	netConnPrefID     = prefPrefix + "connections"
 )
+
+var _ workers.EntityWorker = (*ConnectionsWorker)(nil)
 
 var ErrInitConnStateWorker = errors.New("could not init network connection state worker")
 
@@ -45,8 +49,8 @@ type ConnectionsWorker struct {
 	list   map[string]*connection
 	logger *slog.Logger
 	prefs  *WorkerPrefs
-	linux.EventSensorWorker
-	mu sync.Mutex
+	mu     sync.Mutex
+	*models.WorkerMetadata
 }
 
 func (w *ConnectionsWorker) track(conn *connection) {
@@ -72,13 +76,9 @@ func (w *ConnectionsWorker) isTracked(id string) bool {
 	return false
 }
 
-func (w *ConnectionsWorker) Sensors(_ context.Context) ([]models.Entity, error) {
-	return nil, linux.ErrUnimplemented
-}
-
 //nolint:mnd
 //revive:disable:function-length
-func (w *ConnectionsWorker) Events(ctx context.Context) (<-chan models.Entity, error) {
+func (w *ConnectionsWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
 	sensorCh := make(chan models.Entity)
 	connCtx, connCancel := context.WithCancel(ctx)
 
@@ -147,6 +147,10 @@ func (w *ConnectionsWorker) DefaultPreferences() WorkerPrefs {
 	}
 }
 
+func (w *ConnectionsWorker) IsDisabled() bool {
+	return w.prefs.IsDisabled()
+}
+
 func (w *ConnectionsWorker) handleConnection(ctx context.Context, path dbus.ObjectPath, sensorCh chan models.Entity) error {
 	conn, err := newConnection(w.bus, path)
 	if err != nil {
@@ -180,33 +184,25 @@ func (w *ConnectionsWorker) handleConnection(ctx context.Context, path dbus.Obje
 	return nil
 }
 
-func NewConnectionWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
-	var err error
-
-	worker := linux.NewEventSensorWorker(netConnWorkerID)
-
+func NewConnectionWorker(ctx context.Context) (workers.EntityWorker, error) {
 	bus, ok := linux.CtxGetSystemBus(ctx)
 	if !ok {
-		return worker, errors.Join(ErrInitConnStateWorker, linux.ErrNoSystemBus)
+		return nil, errors.Join(ErrInitConnStateWorker, linux.ErrNoSystemBus)
 	}
 
-	connectionsWorker := &ConnectionsWorker{
-		bus:  bus,
-		list: make(map[string]*connection),
+	worker := &ConnectionsWorker{
+		WorkerMetadata: models.SetWorkerMetadata(netConnWorkerID, netConnWorkerDesc),
+		bus:            bus,
+		list:           make(map[string]*connection),
 		logger: logging.FromContext(ctx).
 			With(slog.String("worker", netConnWorkerID)),
 	}
 
-	connectionsWorker.prefs, err = preferences.LoadWorker(connectionsWorker)
+	prefs, err := preferences.LoadWorker(worker)
 	if err != nil {
 		return worker, errors.Join(ErrInitConnStateWorker, err)
 	}
-
-	if connectionsWorker.prefs.Disabled {
-		return worker, nil
-	}
-
-	worker.EventSensorType = connectionsWorker
+	worker.prefs = prefs
 
 	return worker, nil
 }

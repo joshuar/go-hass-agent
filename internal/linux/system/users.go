@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 	"sync"
 
@@ -23,6 +24,7 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/models/class"
 	"github.com/joshuar/go-hass-agent/internal/models/event"
 	"github.com/joshuar/go-hass-agent/internal/models/sensor"
+	"github.com/joshuar/go-hass-agent/internal/workers"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
@@ -37,9 +39,11 @@ const (
 	usersSensorUnits = "users"
 	usersSensorIcon  = "mdi:account"
 
-	userSessionsSensorWorkerID = "user_sessions_sensor_worker"
-	userSessionsEventWorkerID  = "user_sessions_event_worker"
-	userSessionsPreferencesID  = sensorsPrefPrefix + "users"
+	userSessionsSensorWorkerID   = "user_sessions_sensor_worker"
+	userSessionsSensorWorkerDesc = "User session sensors"
+	userSessionsEventWorkerID    = "user_sessions_event_worker"
+	userSessionsEventWorkerDesc  = "User session events"
+	userSessionsPreferencesID    = sensorsPrefPrefix + "users"
 
 	sessionStartedEventName = "session_started"
 	sessionStoppedEventName = "session_stopped"
@@ -48,6 +52,11 @@ const (
 var (
 	ErrNewUsersSensor  = errors.New("could not create users sensor")
 	ErrInitUsersWorker = errors.New("could not init users worker")
+)
+
+var (
+	_ workers.EntityWorker = (*UserSessionSensorWorker)(nil)
+	_ workers.EntityWorker = (*UserSessionEventsWorker)(nil)
 )
 
 func newUsersSensor(ctx context.Context, users []string) (*models.Entity, error) {
@@ -69,13 +78,39 @@ func newUsersSensor(ctx context.Context, users []string) (*models.Entity, error)
 }
 
 type UserSessionSensorWorker struct {
-	getUsers  func() ([]string, error)
-	triggerCh <-chan dbusx.Trigger
-	linux.EventSensorWorker
+	bus   *dbusx.Bus
 	prefs *UserSessionsPrefs
+	*models.WorkerMetadata
 }
 
-func (w *UserSessionSensorWorker) Events(ctx context.Context) (chan models.Entity, error) {
+func (w *UserSessionSensorWorker) getUsers() ([]string, error) {
+	userData, err := dbusx.GetData[[][]any](w.bus, loginBasePath, loginBaseInterface, listSessionsMethod)
+	if err != nil {
+		return nil, errors.Join(ErrInitUsersWorker,
+			fmt.Errorf("could not retrieve users from D-Bus: %w", err))
+	}
+
+	var users []string
+
+	for _, u := range userData {
+		if user, ok := u[2].(string); ok {
+			users = append(users, user)
+		}
+	}
+
+	return users, nil
+}
+
+func (w *UserSessionSensorWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
+	triggerCh, err := dbusx.NewWatch(
+		dbusx.MatchPath(loginBasePath),
+		dbusx.MatchInterface(managerInterface),
+		dbusx.MatchMembers(sessionAddedSignal, sessionRemovedSignal),
+	).Start(ctx, w.bus)
+	if err != nil {
+		return nil, errors.Join(ErrInitUsersWorker,
+			fmt.Errorf("unable to set-up D-Bus watch for user sessions: %w", err))
+	}
 	sensorCh := make(chan models.Entity)
 
 	sendUpdate := func() {
@@ -99,7 +134,7 @@ func (w *UserSessionSensorWorker) Events(ctx context.Context) (chan models.Entit
 			select {
 			case <-ctx.Done():
 				return
-			case <-w.triggerCh:
+			case <-triggerCh:
 				go sendUpdate()
 			}
 		}
@@ -111,20 +146,6 @@ func (w *UserSessionSensorWorker) Events(ctx context.Context) (chan models.Entit
 	return sensorCh, nil
 }
 
-func (w *UserSessionSensorWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
-	users, err := w.getUsers()
-	if err != nil {
-		return nil, errors.Join(ErrNewUsersSensor, err)
-	}
-
-	entity, err := newUsersSensor(ctx, users)
-	if err != nil {
-		return nil, errors.Join(ErrNewUsersSensor, err)
-	}
-
-	return []models.Entity{*entity}, err
-}
-
 func (w *UserSessionSensorWorker) PreferencesID() string {
 	return userSessionsPreferencesID
 }
@@ -133,83 +154,68 @@ func (w *UserSessionSensorWorker) DefaultPreferences() UserSessionsPrefs {
 	return UserSessionsPrefs{}
 }
 
-func NewUserSessionSensorWorker(ctx context.Context) (*UserSessionSensorWorker, error) {
-	var err error
+func (w *UserSessionSensorWorker) IsDisabled() bool {
+	return w.prefs.IsDisabled()
+}
 
-	sessionsWorker := &UserSessionSensorWorker{}
-
-	sessionsWorker.prefs, err = preferences.LoadWorker(sessionsWorker)
-	if err != nil {
-		return nil, errors.Join(ErrInitUsersWorker, err)
-	}
-
-	//nolint:nilnil
-	if sessionsWorker.prefs.IsDisabled() {
-		return nil, nil
-	}
-
+func NewUserSessionSensorWorker(ctx context.Context) (workers.EntityWorker, error) {
 	bus, ok := linux.CtxGetSystemBus(ctx)
 	if !ok {
 		return nil, errors.Join(ErrInitUsersWorker, linux.ErrNoSystemBus)
 	}
 
-	sessionsWorker.triggerCh, err = dbusx.NewWatch(
-		dbusx.MatchPath(loginBasePath),
-		dbusx.MatchInterface(managerInterface),
-		dbusx.MatchMembers(sessionAddedSignal, sessionRemovedSignal),
-	).Start(ctx, bus)
+	worker := &UserSessionSensorWorker{
+		WorkerMetadata: models.SetWorkerMetadata(userSessionsSensorWorkerID, userSessionsSensorWorkerDesc),
+		bus:            bus,
+	}
+
+	prefs, err := preferences.LoadWorker(worker)
 	if err != nil {
-		return nil, errors.Join(ErrInitUsersWorker,
-			fmt.Errorf("unable to set-up D-Bus watch for user sessions: %w", err))
+		return nil, errors.Join(ErrInitUsersWorker, err)
 	}
+	worker.prefs = prefs
 
-	sessionsWorker.getUsers = func() ([]string, error) {
-		userData, err := dbusx.GetData[[][]any](bus, loginBasePath, loginBaseInterface, listSessionsMethod)
-		if err != nil {
-			return nil, errors.Join(ErrInitUsersWorker,
-				fmt.Errorf("could not retrieve users from D-Bus: %w", err))
-		}
-
-		var users []string
-
-		for _, u := range userData {
-			if user, ok := u[2].(string); ok {
-				users = append(users, user)
-			}
-		}
-
-		return users, nil
-	}
-
-	return sessionsWorker, nil
+	return worker, nil
 }
 
 type UserSessionEventsWorker struct {
-	triggerCh <-chan dbusx.Trigger
-	tracker   sessionTracker
-	linux.EventWorker
 	prefs *UserSessionsPrefs
+	*sessionTracker
+	*models.WorkerMetadata
 }
 
 type sessionTracker struct {
-	getSessionProp func(path, prop string) (dbus.Variant, error)
-	sessions       map[string]map[string]any
-	mu             sync.Mutex
+	bus      *dbusx.Bus
+	sessions map[string]map[string]any
+	mu       sync.Mutex
 }
 
-func (t *sessionTracker) addSession(path string) {
+func (t *sessionTracker) trackSession(path string) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.sessions[path] = t.getSessionDetails(path)
 }
 
-func (t *sessionTracker) removeSession(path string) {
+func (t *sessionTracker) unTrackSession(path string) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	delete(t.sessions, path)
 }
 
-//nolint:errcheck
+func (t *sessionTracker) getSessionProp(path, prop string) (dbus.Variant, error) {
+	var value dbus.Variant
+	value, err := dbusx.NewProperty[dbus.Variant](t.bus,
+		path,
+		loginBaseInterface,
+		loginBaseInterface+".Session."+prop).Get()
+	if err != nil {
+		return dbus.MakeVariant("Unknown"),
+			fmt.Errorf("could not retrieve session property %s (session %s): %w", prop, path, err)
+	}
+
+	return value, nil
+}
+
 func (t *sessionTracker) getSessionDetails(path string) map[string]any {
 	sessionDetails := make(map[string]any)
 
@@ -229,7 +235,17 @@ func (t *sessionTracker) getSessionDetails(path string) map[string]any {
 }
 
 //nolint:gocognit
-func (w *UserSessionEventsWorker) Events(ctx context.Context) (<-chan models.Entity, error) {
+func (w *UserSessionEventsWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
+	triggerCh, err := dbusx.NewWatch(
+		dbusx.MatchPath(loginBasePath),
+		dbusx.MatchInterface(managerInterface),
+		dbusx.MatchMembers(sessionAddedSignal, sessionRemovedSignal),
+	).Start(ctx, w.bus)
+	if err != nil {
+		return nil, errors.Join(ErrInitUsersWorker,
+			fmt.Errorf("unable to set-up D-Bus watch for user sessions: %w", err))
+	}
+
 	eventCh := make(chan models.Entity)
 
 	go func() {
@@ -239,7 +255,7 @@ func (w *UserSessionEventsWorker) Events(ctx context.Context) (<-chan models.Ent
 			select {
 			case <-ctx.Done():
 				return
-			case trigger := <-w.triggerCh:
+			case trigger := <-triggerCh:
 				if len(trigger.Content) != 2 {
 					continue
 				}
@@ -252,9 +268,9 @@ func (w *UserSessionEventsWorker) Events(ctx context.Context) (<-chan models.Ent
 				switch {
 				case strings.Contains(trigger.Signal, sessionAddedSignal):
 					// Add the session to the tracker.
-					w.tracker.addSession(string(path))
+					w.trackSession(string(path))
 					// Send the session added event.
-					entity, err := event.NewEvent(sessionStartedEventName, w.tracker.sessions[string(path)])
+					entity, err := event.NewEvent(sessionStartedEventName, w.sessions[string(path)])
 					if err != nil {
 						logging.FromContext(ctx).Warn("Could not generate users event.", slog.Any("error", err))
 					} else {
@@ -262,14 +278,14 @@ func (w *UserSessionEventsWorker) Events(ctx context.Context) (<-chan models.Ent
 					}
 				case strings.Contains(trigger.Signal, sessionRemovedSignal):
 					// Send the session removed event.
-					entity, err := event.NewEvent(sessionStoppedEventName, w.tracker.sessions[string(path)])
+					entity, err := event.NewEvent(sessionStoppedEventName, w.sessions[string(path)])
 					if err != nil {
 						logging.FromContext(ctx).Warn("Could not generate users event.", slog.Any("error", err))
 					} else {
 						eventCh <- entity
 					}
 					// Remove the session from the tracker.
-					w.tracker.removeSession(string(path))
+					w.unTrackSession(string(path))
 				}
 			}
 		}
@@ -286,43 +302,29 @@ func (w *UserSessionEventsWorker) DefaultPreferences() UserSessionsPrefs {
 	return UserSessionsPrefs{}
 }
 
-//nolint:errcheck
-func NewUserSessionEventsWorker(ctx context.Context) (*linux.EventWorker, error) {
-	var err error
+func (w *UserSessionEventsWorker) IsDisabled() bool {
+	return w.prefs.IsDisabled()
+}
 
-	sessionsWorker := &UserSessionEventsWorker{}
-
-	sessionsWorker.prefs, err = preferences.LoadWorker(sessionsWorker)
-	if err != nil {
-		return nil, errors.Join(ErrInitUsersWorker, err)
-	}
-
-	//nolint:nilnil
-	if sessionsWorker.prefs.IsDisabled() {
-		return nil, nil
-	}
-
+func NewUserSessionEventsWorker(ctx context.Context) (workers.EntityWorker, error) {
 	bus, ok := linux.CtxGetSystemBus(ctx)
 	if !ok {
 		return nil, errors.Join(ErrInitUsersWorker, linux.ErrNoSystemBus)
 	}
 
-	sessionsWorker.tracker = sessionTracker{
-		sessions: make(map[string]map[string]any),
-		getSessionProp: func(path, prop string) (dbus.Variant, error) {
-			var value dbus.Variant
-			value, err = dbusx.NewProperty[dbus.Variant](bus,
-				path,
-				loginBaseInterface,
-				loginBaseInterface+".Session."+prop).Get()
-			if err != nil {
-				return dbus.MakeVariant("Unknown"),
-					fmt.Errorf("could not retrieve session property %s (session %s): %w", prop, path, err)
-			}
-
-			return value, nil
+	worker := &UserSessionEventsWorker{
+		WorkerMetadata: models.SetWorkerMetadata(userSessionsEventWorkerID, userSessionsEventWorkerDesc),
+		sessionTracker: &sessionTracker{
+			bus:      bus,
+			sessions: make(map[string]map[string]any),
 		},
 	}
+
+	prefs, err := preferences.LoadWorker(worker)
+	if err != nil {
+		return nil, errors.Join(ErrInitUsersWorker, err)
+	}
+	worker.prefs = prefs
 
 	currentSessions, err := dbusx.GetData[[][]any](bus, loginBasePath, loginBaseInterface, listSessionsMethod)
 	if err != nil {
@@ -330,27 +332,13 @@ func NewUserSessionEventsWorker(ctx context.Context) (*linux.EventWorker, error)
 			fmt.Errorf("could not retrieve sessions from D-Bus: %w", err))
 	}
 
-	for _, session := range currentSessions {
-		sessionsWorker.tracker.addSession(string(session[4].(dbus.ObjectPath)))
+	for session := range slices.Values(currentSessions) {
+		worker.trackSession(string(session[4].(dbus.ObjectPath)))
 	}
-
-	sessionsWorker.triggerCh, err = dbusx.NewWatch(
-		dbusx.MatchPath(loginBasePath),
-		dbusx.MatchInterface(managerInterface),
-		dbusx.MatchMembers(sessionAddedSignal, sessionRemovedSignal),
-	).Start(ctx, bus)
-	if err != nil {
-		return nil, errors.Join(ErrInitUsersWorker,
-			fmt.Errorf("unable to set-up D-Bus watch for user sessions: %w", err))
-	}
-
-	worker := linux.NewEventWorker(userSessionsEventWorkerID)
-	worker.EventType = sessionsWorker
 
 	return worker, nil
 }
 
-//nolint:errcheck
 func sessionProp[T any](getFunc func(string, string) (dbus.Variant, error), path, prop string) T {
 	var (
 		err     error

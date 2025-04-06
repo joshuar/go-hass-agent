@@ -3,29 +3,32 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//revive:disable:unused-receiver
 package worker
 
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
 
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/models"
 	"github.com/joshuar/go-hass-agent/internal/models/sensor"
+	"github.com/joshuar/go-hass-agent/internal/workers"
 )
 
 const (
-	versionWorkerID = "agent_version"
+	versionWorkerID   = "agent_version"
+	versionWorkerDesc = "Go Hass Agent version"
 )
+
+var _ workers.EntityWorker = (*Version)(nil)
 
 var ErrInitVersionWorker = errors.New("could not init version worker")
 
 type Version struct {
 	prefs *preferences.CommonWorkerPrefs
+	*models.WorkerMetadata
 }
 
 func (w *Version) PreferencesID() string {
@@ -39,10 +42,6 @@ func (w *Version) DefaultPreferences() preferences.CommonWorkerPrefs {
 func (w *Version) IsDisabled() bool {
 	return w.prefs.IsDisabled()
 }
-
-func (w *Version) ID() string { return versionWorkerID }
-
-func (w *Version) Stop() error { return nil }
 
 func (w *Version) Start(ctx context.Context) (<-chan models.Entity, error) {
 	sensorCh := make(chan models.Entity)
@@ -63,15 +62,6 @@ func (w *Version) Start(ctx context.Context) (<-chan models.Entity, error) {
 	return sensorCh, nil
 }
 
-func (w *Version) sensors(ctx context.Context) ([]models.Entity, error) {
-	entity, err := newVersionSensor(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create version sensor entity: %w", err)
-	}
-
-	return []models.Entity{entity}, nil
-}
-
 func newVersionSensor(ctx context.Context) (models.Entity, error) {
 	return sensor.NewSensor(ctx,
 		sensor.WithName("Go Hass Agent Version"),
@@ -82,12 +72,14 @@ func newVersionSensor(ctx context.Context) (models.Entity, error) {
 	)
 }
 
-func NewVersionWorker(_ context.Context) (*Version, error) {
-	worker := &Version{}
+func NewVersionWorker(_ context.Context) (workers.EntityWorker, error) {
+	worker := &Version{
+		WorkerMetadata: models.SetWorkerMetadata(versionWorkerID, versionWorkerDesc),
+	}
 
 	prefs, err := preferences.LoadWorker(worker)
 	if err != nil {
-		return worker, errors.Join(ErrInitVersionWorker, err)
+		return nil, errors.Join(ErrInitVersionWorker, err)
 	}
 
 	worker.prefs = prefs

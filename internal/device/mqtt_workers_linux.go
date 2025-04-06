@@ -19,6 +19,10 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/workers"
 )
 
+const (
+	workerID = "linux_mqtt"
+)
+
 // stateEntity is a convienience interface to avoid duplicating a lot of loop content
 // when configuring the controller.
 type stateEntity interface {
@@ -43,11 +47,25 @@ type linuxMQTTWorker struct {
 	binarySensors []*mqtthass.SensorEntity
 	cameras       []*mqtthass.CameraEntity
 	logger        *slog.Logger
+	prefs *preferences.CommonWorkerPrefs
 }
 
 func (c *linuxMQTTWorker) ID() string {
-	return "linux_mqtt"
+	return workerID
 }
+
+func (c *linuxMQTTWorker) PreferencesID() string {
+	return workerID
+}
+
+func (c *linuxMQTTWorker) DefaultPreferences() preferences.CommonWorkerPrefs {
+	return preferences.CommonWorkerPrefs{}
+}
+
+func (c *linuxMQTTWorker) IsDisabled() bool {
+	return c.prefs.Disabled
+}
+
 
 // Subscriptions returns the any subscription request messaages for any workers
 // with subscriptions.
@@ -220,6 +238,12 @@ func CreateOSMQTTWorkers(ctx context.Context) workers.MQTTWorker {
 	} else if dbusCmdController != nil {
 		mqttController.controls = append(mqttController.controls, dbusCmdController)
 	}
+
+	prefs, err := preferences.LoadWorker(mqttController)
+	if err != nil {
+		return nil
+	}
+	mqttController.prefs = prefs
 
 	go func() {
 		defer close(mqttController.msgs)

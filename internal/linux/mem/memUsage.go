@@ -12,9 +12,11 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
+	"slices"
 	"time"
 
 	"github.com/iancoleman/strcase"
+	"github.com/reugn/go-quartz/quartz"
 
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
@@ -22,6 +24,8 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/models"
 	"github.com/joshuar/go-hass-agent/internal/models/class"
 	"github.com/joshuar/go-hass-agent/internal/models/sensor"
+	"github.com/joshuar/go-hass-agent/internal/scheduler"
+	"github.com/joshuar/go-hass-agent/internal/workers"
 )
 
 const (
@@ -34,7 +38,13 @@ const (
 	memoryUsageSensorPcUnits = "%"
 
 	memUsageWorkerID      = "memory_usage_sensors"
+	memUsageWorkerDesc    = "Memory usage stats"
 	memUsagePreferencesID = prefPrefix + "usage"
+)
+
+var (
+	_ quartz.Job                  = (*usageWorker)(nil)
+	_ workers.PollingEntityWorker = (*usageWorker)(nil)
 )
 
 var ErrNewMemStatSensor = errors.New("could not create mem stat sensor")
@@ -134,11 +144,13 @@ func newSwapUsedPc(ctx context.Context, stats memoryStats) (*models.Entity, erro
 	return newMemSensorPc(ctx, "Swap Usage", swapUsed, swapTotal)
 }
 
-type usageWorker struct{}
+type usageWorker struct {
+	prefs *WorkerPreferences
+	*models.WorkerMetadata
+	*workers.PollingEntityWorkerData
+}
 
-func (w *usageWorker) UpdateDelta(_ time.Duration) {}
-
-func (w *usageWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
+func (w *usageWorker) Execute(ctx context.Context) error {
 	var (
 		stats  memoryStats
 		entity *models.Entity
@@ -147,26 +159,23 @@ func (w *usageWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 
 	stats, err = getMemStats()
 	if err != nil {
-		return nil, fmt.Errorf("unable to retrieve memory stats: %w", err)
+		return fmt.Errorf("unable to retrieve memory stats: %w", err)
 	}
 
-	sensors := make([]models.Entity, 0, len(memSensors)+len(swapSensors)+2) //nolint:mnd
-
-	for _, id := range memSensors {
-		entity, err = newMemSensor(ctx, id, stats[id])
+	for stat := range slices.Values(memSensors) {
+		entity, err = newMemSensor(ctx, stat, stats[stat])
 		if err != nil {
 			logging.FromContext(ctx).Warn("Could not generate memory usage sensor.", slog.Any("error", err))
 			continue
 		}
-
-		sensors = append(sensors, *entity)
+		w.OutCh <- *entity
 	}
 
 	entity, err = newMemUsedPc(ctx, stats)
 	if err != nil {
 		logging.FromContext(ctx).Warn("Could not generate memory usage sensor.", slog.Any("error", err))
 	} else {
-		sensors = append(sensors, *entity)
+		w.OutCh <- *entity
 	}
 
 	if stat, _ := stats.get(swapTotal); stat > 0 {
@@ -176,19 +185,18 @@ func (w *usageWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 				logging.FromContext(ctx).Warn("Could not generate swap usage sensor.", slog.Any("error", err))
 				continue
 			}
-
-			sensors = append(sensors, *entity)
+			w.OutCh <- *entity
 		}
 
 		entity, err := newSwapUsedPc(ctx, stats)
 		if err != nil {
 			logging.FromContext(ctx).Warn("Could not generate memory usage sensor.", slog.Any("error", err))
 		} else {
-			sensors = append(sensors, *entity)
+			w.OutCh <- *entity
 		}
 	}
 
-	return sensors, nil
+	return nil
 }
 
 func (w *usageWorker) PreferencesID() string {
@@ -201,18 +209,30 @@ func (w *usageWorker) DefaultPreferences() WorkerPreferences {
 	}
 }
 
-func NewUsageWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
-	usageWorker := &usageWorker{}
+func (w *usageWorker) IsDisabled() bool {
+	return w.prefs.IsDisabled()
+}
 
-	prefs, err := preferences.LoadWorker(usageWorker)
+func (w *usageWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
+	w.OutCh = make(chan models.Entity)
+	if err := workers.SchedulePollingWorker(ctx, w, w.OutCh); err != nil {
+		close(w.OutCh)
+		return w.OutCh, fmt.Errorf("could not start disk usage worker: %w", err)
+	}
+	return w.OutCh, nil
+}
+
+func NewUsageWorker(ctx context.Context) (workers.EntityWorker, error) {
+	worker := &usageWorker{
+		WorkerMetadata:          models.SetWorkerMetadata(memUsageWorkerID, memUsageWorkerDesc),
+		PollingEntityWorkerData: &workers.PollingEntityWorkerData{},
+	}
+
+	prefs, err := preferences.LoadWorker(worker)
 	if err != nil {
 		return nil, errors.Join(ErrInitUsageWorker, err)
 	}
-
-	//nolint:nilnil
-	if prefs.IsDisabled() {
-		return nil, nil
-	}
+	worker.prefs = prefs
 
 	pollInterval, err := time.ParseDuration(prefs.UpdateInterval)
 	if err != nil {
@@ -223,9 +243,7 @@ func NewUsageWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
 
 		pollInterval = memUsageUpdateInterval
 	}
-
-	worker := linux.NewPollingSensorWorker(memUsageWorkerID, pollInterval, memUsageUpdateJitter)
-	worker.PollingSensorType = usageWorker
+	worker.Trigger = scheduler.NewPollTriggerWithJitter(pollInterval, memUsageUpdateJitter)
 
 	return worker, nil
 }

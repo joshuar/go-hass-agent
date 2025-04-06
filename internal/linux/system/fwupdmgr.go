@@ -10,19 +10,23 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/godbus/dbus/v5"
 
+	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/models"
 	"github.com/joshuar/go-hass-agent/internal/models/sensor"
+	"github.com/joshuar/go-hass-agent/internal/workers"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
 const (
-	fwupdmgrWorkerID = "fwupdmgr_worker"
+	fwupdmgrWorkerID   = "fwupdmgr_worker"
+	fwupdmgrWorkerDesc = "fwupdmgr details"
 
 	fwupdInterface          = "org.freedesktop.fwupd"
 	hostSecurityAttrsMethod = "GetHostSecurityAttrs"
@@ -61,23 +65,27 @@ const (
 
 type hsiLevel uint32
 
+var _ workers.EntityWorker = (*fwupdWorker)(nil)
+
 var ErrInitFWUpdWorker = errors.New("could not init fwupdmgr worker")
 
 type fwupdWorker struct {
 	hostSecurityAttrs *dbusx.Data[[]map[string]dbus.Variant]
 	hostSecurityID    *dbusx.Property[string]
+	prefs             *preferences.CommonWorkerPrefs
+	OutCh             chan models.Entity
+	*models.WorkerMetadata
 }
 
-//nolint:errcheck
-func (w *fwupdWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
+func (w *fwupdWorker) Execute(ctx context.Context) error {
 	props, err := w.hostSecurityAttrs.Fetch(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("could not retrieve security properties from fwupd: %w", err)
+		return fmt.Errorf("could not retrieve security properties from fwupd: %w", err)
 	}
 
 	hsi, err := w.hostSecurityID.Get()
 	if err != nil {
-		return nil, fmt.Errorf("could not retrieve security id from fwupd: %w", err)
+		return fmt.Errorf("could not retrieve security id from fwupd: %w", err)
 	}
 
 	hsiID := strings.Split(hsi, " ")
@@ -111,10 +119,12 @@ func (w *fwupdWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 		sensor.WithAttributes(attributes),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("could not generate fwupdmgr sensor: %w", err)
+		return fmt.Errorf("could not generate fwupdmgr sensor: %w", err)
 	}
 
-	return []models.Entity{entity}, nil
+	w.OutCh <- entity
+
+	return nil
 }
 
 func (w *fwupdWorker) PreferencesID() string {
@@ -125,31 +135,42 @@ func (w *fwupdWorker) DefaultPreferences() preferences.CommonWorkerPrefs {
 	return preferences.CommonWorkerPrefs{}
 }
 
-func NewfwupdWorker(ctx context.Context) (*linux.OneShotSensorWorker, error) {
-	fwupdWorker := &fwupdWorker{}
+func (w *fwupdWorker) IsDisabled() bool {
+	return w.prefs.IsDisabled()
+}
 
-	prefs, err := preferences.LoadWorker(fwupdWorker)
-	if err != nil {
-		return nil, errors.Join(ErrInitFWUpdWorker, err)
-	}
+func (w *fwupdWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
+	w.OutCh = make(chan models.Entity)
+	go func() {
+		defer close(w.OutCh)
+		if err := w.Execute(ctx); err != nil {
+			logging.FromContext(ctx).Warn("Failed to send fwupdmgr details",
+				slog.Any("error", err))
+		}
+	}()
+	return w.OutCh, nil
+}
 
-	//nolint:nilnil
-	if prefs.IsDisabled() {
-		return nil, nil
-	}
-
+func NewfwupdWorker(ctx context.Context) (workers.EntityWorker, error) {
 	bus, ok := linux.CtxGetSystemBus(ctx)
 	if !ok {
 		return nil, errors.Join(ErrInitFWUpdWorker, linux.ErrNoSystemBus)
 	}
 
-	fwupdWorker.hostSecurityAttrs = dbusx.NewData[[]map[string]dbus.Variant](bus,
-		fwupdInterface, "/", fwupdInterface+"."+hostSecurityAttrsMethod)
-	fwupdWorker.hostSecurityID = dbusx.NewProperty[string](bus,
-		"/", fwupdInterface, fwupdInterface+"."+hostSecurityIDProp)
+	worker := &fwupdWorker{
+		WorkerMetadata: models.SetWorkerMetadata(fwupdmgrWorkerID, fwupdmgrWorkerDesc),
+	}
 
-	worker := linux.NewOneShotSensorWorker(fwupdmgrWorkerID)
-	worker.OneShotSensorType = fwupdWorker
+	prefs, err := preferences.LoadWorker(worker)
+	if err != nil {
+		return nil, errors.Join(ErrInitFWUpdWorker, err)
+	}
+	worker.prefs = prefs
+
+	worker.hostSecurityAttrs = dbusx.NewData[[]map[string]dbus.Variant](bus,
+		fwupdInterface, "/", fwupdInterface+"."+hostSecurityAttrsMethod)
+	worker.hostSecurityID = dbusx.NewProperty[string](bus,
+		"/", fwupdInterface, fwupdInterface+"."+hostSecurityIDProp)
 
 	return worker, nil
 }

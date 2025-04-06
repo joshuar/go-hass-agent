@@ -22,7 +22,17 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/models"
 	"github.com/joshuar/go-hass-agent/internal/models/class"
 	"github.com/joshuar/go-hass-agent/internal/models/sensor"
+	"github.com/joshuar/go-hass-agent/internal/workers"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
+)
+
+var _ workers.EntityWorker = (*laptopWorker)(nil)
+
+var laptopPropList = []string{dockedProp, lidClosedProp, externalPowerProp}
+
+var (
+	ErrNewLaptopSensor  = errors.New("could not create laptop sensor")
+	ErrInitLaptopWorker = errors.New("could not init laptop worker")
 )
 
 const (
@@ -31,15 +41,17 @@ const (
 	externalPowerProp = managerInterface + ".OnExternalPower"
 
 	laptopWorkerID     = "laptop_sensors"
+	laptopWorkerDesc   = "Laptop sensors"
 	laptopWorkerPrefID = sensorsPrefPrefix + "laptop"
 )
 
-var laptopPropList = []string{dockedProp, lidClosedProp, externalPowerProp}
-
-var (
-	ErrNewLaptopSensor  = errors.New("could not create laptop sensor")
-	ErrInitLaptopWorker = errors.New("could not init laptop worker")
-)
+type laptopWorker struct {
+	bus         *dbusx.Bus
+	sessionPath string
+	properties  map[string]*dbusx.Property[bool]
+	prefs       *preferences.CommonWorkerPrefs
+	*models.WorkerMetadata
+}
 
 func newLaptopEvent(ctx context.Context, prop string, state bool) (*models.Entity, error) {
 	var (
@@ -98,13 +110,16 @@ func newLaptopEvent(ctx context.Context, prop string, state bool) (*models.Entit
 	return &laptopSensor, nil
 }
 
-type laptopWorker struct {
-	triggerCh  <-chan dbusx.Trigger
-	properties map[string]*dbusx.Property[bool]
-	prefs      *preferences.CommonWorkerPrefs
-}
-
-func (w *laptopWorker) Events(ctx context.Context) (<-chan models.Entity, error) {
+func (w *laptopWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
+	triggerCh, err := dbusx.NewWatch(
+		dbusx.MatchPath(w.sessionPath),
+		dbusx.MatchInterface(managerInterface),
+		dbusx.MatchMembers("PropertiesChanged"),
+	).Start(ctx, w.bus)
+	if err != nil {
+		return nil, errors.Join(ErrInitLaptopWorker,
+			fmt.Errorf("unable to create D-Bus watch for laptop property updates: %w", err))
+	}
 	sensorCh := make(chan models.Entity)
 
 	go func() {
@@ -114,7 +129,7 @@ func (w *laptopWorker) Events(ctx context.Context) (<-chan models.Entity, error)
 			select {
 			case <-ctx.Done():
 				return
-			case event := <-w.triggerCh:
+			case event := <-triggerCh:
 				props, err := dbusx.ParsePropertiesChanged(event.Content)
 				if err != nil {
 					slog.With(slog.String("worker", laptopWorkerID)).
@@ -128,7 +143,7 @@ func (w *laptopWorker) Events(ctx context.Context) (<-chan models.Entity, error)
 
 	// Send an initial update.
 	go func() {
-		sensors, err := w.Sensors(ctx)
+		sensors, err := w.generateSensors(ctx)
 		if err != nil {
 			slog.With(slog.String("worker", laptopWorkerID)).
 				Debug("Could not retrieve laptop properties from D-Bus.", slog.Any("error", err))
@@ -142,7 +157,7 @@ func (w *laptopWorker) Events(ctx context.Context) (<-chan models.Entity, error)
 	return sensorCh, nil
 }
 
-func (w *laptopWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
+func (w *laptopWorker) generateSensors(ctx context.Context) ([]models.Entity, error) {
 	var warnings error
 
 	sensors := make([]models.Entity, 0, len(laptopPropList))
@@ -173,51 +188,37 @@ func (w *laptopWorker) DefaultPreferences() preferences.CommonWorkerPrefs {
 	return preferences.CommonWorkerPrefs{}
 }
 
-//nolint:nilnil
-func NewLaptopWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
-	worker := linux.NewEventSensorWorker(laptopWorkerID)
+func (w *laptopWorker) IsDisabled() bool {
+	return w.prefs.IsDisabled()
+}
 
+func NewLaptopWorker(ctx context.Context) (workers.EntityWorker, error) {
 	bus, ok := linux.CtxGetSystemBus(ctx)
 	if !ok {
-		return worker, errors.Join(ErrInitLaptopWorker, linux.ErrNoSystemBus)
+		return nil, errors.Join(ErrInitLaptopWorker, linux.ErrNoSystemBus)
 	}
-
 	// If we can't get a session path, we can't run.
 	sessionPath, ok := linux.CtxGetSessionPath(ctx)
 	if !ok {
-		return worker, linux.ErrNoSessionPath
+		return nil, linux.ErrNoSessionPath
 	}
-
-	triggerCh, err := dbusx.NewWatch(
-		dbusx.MatchPath(sessionPath),
-		dbusx.MatchInterface(managerInterface),
-		dbusx.MatchMembers("PropertiesChanged"),
-	).Start(ctx, bus)
-	if err != nil {
-		return worker, errors.Join(ErrInitLaptopWorker,
-			fmt.Errorf("unable to create D-Bus watch for laptop property updates: %w", err))
-	}
-
 	properties := make(map[string]*dbusx.Property[bool])
 	for _, name := range laptopPropList {
 		properties[name] = dbusx.NewProperty[bool](bus, loginBasePath, loginBaseInterface, name)
 	}
 
-	eventWorker := &laptopWorker{
-		triggerCh:  triggerCh,
-		properties: properties,
+	worker := &laptopWorker{
+		WorkerMetadata: models.SetWorkerMetadata(laptopWorkerID, laptopWorkerDesc),
+		bus:            bus,
+		sessionPath:    sessionPath,
+		properties:     properties,
 	}
 
-	eventWorker.prefs, err = preferences.LoadWorker(eventWorker)
+	prefs, err := preferences.LoadWorker(worker)
 	if err != nil {
 		return nil, errors.Join(ErrInitLaptopWorker, err)
 	}
-
-	if eventWorker.prefs.IsDisabled() {
-		return nil, nil
-	}
-
-	worker.EventSensorType = eventWorker
+	worker.prefs = prefs
 
 	return worker, nil
 }

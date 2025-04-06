@@ -3,7 +3,6 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//revive:disable:unused-receiver
 package disk
 
 import (
@@ -12,36 +11,46 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
+	"slices"
 	"time"
+
+	"github.com/reugn/go-quartz/quartz"
 
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
-	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/models"
+	"github.com/joshuar/go-hass-agent/internal/scheduler"
+	"github.com/joshuar/go-hass-agent/internal/workers"
 )
 
 const (
 	usageUpdateInterval = time.Minute
 	usageUpdateJitter   = 10 * time.Second
 
-	usageWorkerID = "disk_usage_sensors"
+	usageWorkerID   = "disk_usage_sensors"
+	usageWorkerDesc = "Disk usage stats"
 )
 
 var ErrInitUsageWorker = errors.New("could not init usage worker")
 
-type usageWorker struct{}
+var (
+	_ quartz.Job                  = (*usageWorker)(nil)
+	_ workers.PollingEntityWorker = (*usageWorker)(nil)
+)
 
-func (w *usageWorker) UpdateDelta(_ time.Duration) {}
+type usageWorker struct {
+	*models.WorkerMetadata
+	*workers.PollingEntityWorkerData
+	prefs *WorkerPrefs
+}
 
-func (w *usageWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
+func (w *usageWorker) Execute(ctx context.Context) error {
 	mounts, err := getMounts(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("could not get mount points: %w", err)
+		return fmt.Errorf("could not get mount points: %w", err)
 	}
 
-	sensors := make([]models.Entity, 0, len(mounts))
-
-	for _, mount := range mounts {
+	for mount := range slices.Values(mounts) {
 		usedBlocks := mount.attributes[mountAttrBlocksTotal].(uint64) - mount.attributes[mountAttrBlocksFree].(uint64) //nolint:lll,errcheck,forcetypeassert
 		usedPc := float64(usedBlocks) / float64(mount.attributes[mountAttrBlocksTotal].(uint64)) * 100                 //nolint:errcheck,forcetypeassert
 
@@ -52,12 +61,11 @@ func (w *usageWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
 		diskUsageSensor, err := newDiskUsageSensor(ctx, mount, usedPc)
 		if err != nil {
 			logging.FromContext(ctx).Warn("Could not generate usage sensor.", slog.Any("error", err))
-		} else {
-			sensors = append(sensors, *diskUsageSensor)
+			continue
 		}
+		w.OutCh <- *diskUsageSensor
 	}
-
-	return sensors, nil
+	return nil
 }
 
 func (w *usageWorker) PreferencesID() string {
@@ -70,18 +78,30 @@ func (w *usageWorker) DefaultPreferences() WorkerPrefs {
 	}
 }
 
-func NewUsageWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
-	usageWorker := &usageWorker{}
+func (w *usageWorker) IsDisabled() bool {
+	return w.prefs.Disabled
+}
+
+func (w *usageWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
+	w.OutCh = make(chan models.Entity)
+	if err := workers.SchedulePollingWorker(ctx, w, w.OutCh); err != nil {
+		close(w.OutCh)
+		return w.OutCh, fmt.Errorf("could not start disk usage worker: %w", err)
+	}
+	return w.OutCh, nil
+}
+
+func NewUsageWorker(ctx context.Context) (workers.EntityWorker, error) {
+	usageWorker := &usageWorker{
+		WorkerMetadata:          models.SetWorkerMetadata(usageWorkerID, usageWorkerDesc),
+		PollingEntityWorkerData: &workers.PollingEntityWorkerData{},
+	}
 
 	prefs, err := preferences.LoadWorker(usageWorker)
 	if err != nil {
 		return nil, errors.Join(ErrInitUsageWorker, err)
 	}
-
-	//nolint:nilnil
-	if prefs.IsDisabled() {
-		return nil, nil
-	}
+	usageWorker.prefs = prefs
 
 	pollInterval, err := time.ParseDuration(prefs.UpdateInterval)
 	if err != nil {
@@ -92,9 +112,7 @@ func NewUsageWorker(ctx context.Context) (*linux.PollingSensorWorker, error) {
 
 		pollInterval = usageUpdateInterval
 	}
+	usageWorker.Trigger = scheduler.NewPollTriggerWithJitter(pollInterval, usageUpdateJitter)
 
-	worker := linux.NewPollingSensorWorker(usageWorkerID, pollInterval, usageUpdateJitter)
-	worker.PollingSensorType = usageWorker
-
-	return worker, nil
+	return usageWorker, nil
 }

@@ -7,28 +7,34 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"time"
 
 	"github.com/go-resty/resty/v2"
+	"github.com/reugn/go-quartz/quartz"
 
-	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
-	"github.com/joshuar/go-hass-agent/internal/device/helpers"
 	"github.com/joshuar/go-hass-agent/internal/hass/api"
 	"github.com/joshuar/go-hass-agent/internal/models"
 	"github.com/joshuar/go-hass-agent/internal/models/class"
 	"github.com/joshuar/go-hass-agent/internal/models/sensor"
+	"github.com/joshuar/go-hass-agent/internal/scheduler"
+	"github.com/joshuar/go-hass-agent/internal/workers"
 )
 
 const (
-	connectionLatencyWorkerID = "connection_latency"
-	connectionLatencyTimeout  = 5 * time.Second
+	connectionLatencyWorkerID   = "connection_latency"
+	connectionLatencyWorkerDesc = "Connection latency for Home Assistant"
+	connectionLatencyTimeout    = 5 * time.Second
 
 	connectionLatencyPollInterval = time.Minute
 	connectionLatencyJitterAmount = 5 * time.Second
 
 	connectionLatencyUnits = "ms"
+)
+
+var (
+	_ quartz.Job                  = (*ConnectionLatency)(nil)
+	_ workers.PollingEntityWorker = (*ConnectionLatency)(nil)
 )
 
 var (
@@ -41,6 +47,8 @@ type ConnectionLatency struct {
 	doneCh   chan struct{}
 	endpoint string
 	prefs    *preferences.CommonWorkerPrefs
+	*workers.PollingEntityWorkerData
+	*models.WorkerMetadata
 }
 
 func (w *ConnectionLatency) PreferencesID() string {
@@ -55,10 +63,7 @@ func (w *ConnectionLatency) IsDisabled() bool {
 	return w.prefs.IsDisabled()
 }
 
-// ID returns the unique string to represent this worker and its sensors.
-func (w *ConnectionLatency) ID() string { return connectionLatencyWorkerID }
-
-func (w *ConnectionLatency) sensors(ctx context.Context) ([]models.Entity, error) {
+func (w *ConnectionLatency) Execute(ctx context.Context) error {
 	resp, err := w.client.R().
 		SetContext(ctx).SetBody(api.Request{Type: api.GetConfig}).
 		Post(w.endpoint)
@@ -66,54 +71,30 @@ func (w *ConnectionLatency) sensors(ctx context.Context) ([]models.Entity, error
 	// Handle errors and bad responses.
 	switch {
 	case err != nil:
-		return nil, fmt.Errorf("unable to connect: %w", err)
+		return fmt.Errorf("unable to connect: %w", err)
 	case resp.Error():
-		return nil, fmt.Errorf("received error response %s", resp.Status())
+		return fmt.Errorf("received error response %s", resp.Status())
 	}
 
 	if resp.Request != nil {
 		entity, err := newConnectionLatencySensor(ctx, resp.Request.TraceInfo())
 		if err != nil {
-			return nil, err
+			return err
 		}
 		// Save the latency info as a connectionLatency models.
-		return []models.Entity{entity}, nil
+		w.OutCh <- entity
 	}
 
-	return nil, ErrEmptyResponse
+	return nil
 }
 
 func (w *ConnectionLatency) Start(ctx context.Context) (<-chan models.Entity, error) {
-	sensorCh := make(chan models.Entity)
-	w.doneCh = make(chan struct{})
-
-	// Create a new context for the updates scope.
-	workerCtx, cancelFunc := context.WithCancel(ctx)
-
-	updater := func(_ time.Duration) {
-		sensors, err := w.sensors(workerCtx)
-		if err != nil {
-			logging.FromContext(workerCtx).
-				With(slog.String("worker", connectionLatencyWorkerID)).
-				Debug("Could not generated latency sensors.", slog.Any("error", err))
-		}
-
-		for _, s := range sensors {
-			sensorCh <- s
-		}
+	w.OutCh = make(chan models.Entity)
+	if err := workers.SchedulePollingWorker(ctx, w, w.OutCh); err != nil {
+		close(w.OutCh)
+		return w.OutCh, fmt.Errorf("could not start disk usage worker: %w", err)
 	}
-
-	go func() {
-		helpers.PollSensors(ctx, updater, connectionLatencyPollInterval, connectionLatencyJitterAmount)
-	}()
-
-	go func() {
-		<-workerCtx.Done()
-		cancelFunc()
-		close(sensorCh)
-	}()
-
-	return sensorCh, nil
+	return w.OutCh, nil
 }
 
 func newConnectionLatencySensor(ctx context.Context, info resty.TraceInfo) (models.Entity, error) {
@@ -141,8 +122,10 @@ func newConnectionLatencySensor(ctx context.Context, info resty.TraceInfo) (mode
 	return entity, nil
 }
 
-func NewConnectionLatencyWorker(_ context.Context) (*ConnectionLatency, error) {
+func NewConnectionLatencyWorker(_ context.Context) (workers.EntityWorker, error) {
 	worker := &ConnectionLatency{
+		WorkerMetadata:          models.SetWorkerMetadata(connectionLatencyWorkerID, connectionLatencyWorkerDesc),
+		PollingEntityWorkerData: &workers.PollingEntityWorkerData{},
 		client: resty.New().
 			SetTimeout(connectionLatencyTimeout).
 			EnableTrace(),
@@ -153,8 +136,9 @@ func NewConnectionLatencyWorker(_ context.Context) (*ConnectionLatency, error) {
 	if err != nil {
 		return worker, errors.Join(ErrInitConnLatencyWorker, err)
 	}
-
 	worker.prefs = prefs
+
+	worker.Trigger = scheduler.NewPollTriggerWithJitter(connectionLatencyPollInterval, connectionLatencyJitterAmount)
 
 	return worker, nil
 }

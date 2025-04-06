@@ -16,6 +16,7 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/models"
 	"github.com/joshuar/go-hass-agent/internal/models/sensor"
+	"github.com/joshuar/go-hass-agent/internal/workers"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
@@ -25,8 +26,11 @@ const (
 	activeProfileProp      = "ActiveProfile"
 
 	powerProfileWorkerID      = "power_profile_sensor"
+	powerProfileWorkerDesc    = "Active power profile"
 	powerProfilePreferencesID = sensorsPrefPrefix + "profile"
 )
+
+var _ workers.EntityWorker = (*profileWorker)(nil)
 
 var (
 	ErrNewPowerProfileSensor  = errors.New("could not create power profile sensor")
@@ -50,20 +54,29 @@ func newPowerSensor(ctx context.Context, profile string) (*models.Entity, error)
 }
 
 type profileWorker struct {
+	bus           *dbusx.Bus
 	activeProfile *dbusx.Property[string]
-	triggerCh     <-chan dbusx.Trigger
+	logger        *slog.Logger
 	prefs         *preferences.CommonWorkerPrefs
+	*models.WorkerMetadata
 }
 
 //nolint:gocognit
-func (w *profileWorker) Events(ctx context.Context) (<-chan models.Entity, error) {
+func (w *profileWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
+	triggerCh, err := dbusx.NewWatch(
+		dbusx.MatchPath(powerProfilesPath),
+		dbusx.MatchPropChanged(),
+	).Start(ctx, w.bus)
+	if err != nil {
+		return nil, errors.Join(ErrInitPowerProfileWorker,
+			fmt.Errorf("could not watch D-Bus for power profile updates: %w", err))
+	}
 	sensorCh := make(chan models.Entity)
-	logger := slog.With(slog.String("worker", powerProfileWorkerID))
 
 	// Get the current power profile and send it as an initial sensor value.
 	sensors, err := w.Sensors(ctx)
 	if err != nil {
-		logger.Debug("Could not retrieve power profile.", slog.Any("error", err))
+		w.logger.Debug("Could not retrieve power profile.", slog.Any("error", err))
 	} else {
 		go func() {
 			sensorCh <- sensors[0]
@@ -78,15 +91,15 @@ func (w *profileWorker) Events(ctx context.Context) (<-chan models.Entity, error
 			select {
 			case <-ctx.Done():
 				return
-			case event := <-w.triggerCh:
+			case event := <-triggerCh:
 				changed, profile, err := dbusx.HasPropertyChanged[string](event.Content, activeProfileProp)
 				if err != nil {
-					logger.Debug("Could not parse received D-Bus signal.", slog.Any("error", err))
+					w.logger.Debug("Could not parse received D-Bus signal.", slog.Any("error", err))
 				} else {
 					if changed {
 						entity, err := newPowerSensor(ctx, profile)
 						if err != nil {
-							logger.Warn("Could not generate power profile sensor.", slog.Any("error", err))
+							w.logger.Warn("Could not generate power profile sensor.", slog.Any("error", err))
 						} else {
 							sensorCh <- *entity
 						}
@@ -121,40 +134,31 @@ func (w *profileWorker) DefaultPreferences() preferences.CommonWorkerPrefs {
 	return preferences.CommonWorkerPrefs{}
 }
 
-func NewProfileWorker(ctx context.Context) (*linux.EventSensorWorker, error) {
-	var err error
+func (w *profileWorker) IsDisabled() bool {
+	return w.prefs.IsDisabled()
+}
 
-	worker := linux.NewEventSensorWorker(powerProfileWorkerID)
-	powerProfileWorker := &profileWorker{}
+func NewProfileWorker(ctx context.Context) (workers.EntityWorker, error) {
+	bus, ok := linux.CtxGetSystemBus(ctx)
+	if !ok {
+		return nil, errors.Join(ErrInitPowerProfileWorker, linux.ErrNoSystemBus)
+	}
 
-	powerProfileWorker.prefs, err = preferences.LoadWorker(powerProfileWorker)
+	worker := &profileWorker{
+		WorkerMetadata: models.SetWorkerMetadata(powerProfileWorkerID, powerProfileWorkerDesc),
+		bus:            bus,
+		logger:         slog.With(slog.String("worker", powerProfileWorkerID)),
+
+		activeProfile: dbusx.NewProperty[string](bus,
+			powerProfilesPath, powerProfilesInterface,
+			powerProfilesInterface+"."+activeProfileProp),
+	}
+
+	prefs, err := preferences.LoadWorker(worker)
 	if err != nil {
 		return nil, errors.Join(ErrInitPowerProfileWorker, err)
 	}
-
-	if powerProfileWorker.prefs.IsDisabled() {
-		return worker, nil
-	}
-
-	bus, ok := linux.CtxGetSystemBus(ctx)
-	if !ok {
-		return worker, errors.Join(ErrInitPowerProfileWorker, linux.ErrNoSystemBus)
-	}
-
-	powerProfileWorker.triggerCh, err = dbusx.NewWatch(
-		dbusx.MatchPath(powerProfilesPath),
-		dbusx.MatchPropChanged(),
-	).Start(ctx, bus)
-	if err != nil {
-		return worker, errors.Join(ErrInitPowerProfileWorker,
-			fmt.Errorf("could not watch D-Bus for power profile updates: %w", err))
-	}
-
-	powerProfileWorker.activeProfile = dbusx.NewProperty[string](bus,
-		powerProfilesPath, powerProfilesInterface,
-		powerProfilesInterface+"."+activeProfileProp)
-
-	worker.EventSensorType = powerProfileWorker
+	worker.prefs = prefs
 
 	return worker, nil
 }
