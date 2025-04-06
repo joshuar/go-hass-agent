@@ -1,7 +1,6 @@
 // Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
 // SPDX-License-Identifier: MIT
 
-//revive:disable:unused-receiver
 package scripts
 
 import (
@@ -32,19 +31,22 @@ var (
 	ErrParseSchedule    = errors.New("could not parse script schedule")
 )
 
+const (
+	scriptWorkerId   = "scripts"
+	scriptWorkerDesc = "Custom script-based sensors"
+)
+
+// Worker represents the entity worker for handling scripts.
 type Worker struct {
 	logger  *slog.Logger
 	scripts []*Script
 	outCh   chan models.Entity
+	*models.WorkerMetadata
 }
 
-// TODO: implement ability to disable.
+// IsDisabled returns a boolean indicating whether the scripts worker is disabled.
 func (c *Worker) IsDisabled() bool {
 	return false
-}
-
-func (c *Worker) ID() string {
-	return "scripts"
 }
 
 // States will execute all running scripts and returns their sensor entities.
@@ -138,7 +140,8 @@ func NewScriptsWorker(ctx context.Context) (*Worker, error) {
 	scriptPath := filepath.Join(preferences.PathFromCtx(ctx), "scripts")
 
 	worker := &Worker{
-		logger: logging.FromContext(ctx).WithGroup("scripts"),
+		WorkerMetadata: models.SetWorkerMetadata(scriptWorkerId, scriptWorkerDesc),
+		logger:         logging.FromContext(ctx).WithGroup("scripts"),
 	}
 
 	scripts, err := worker.findScripts(scriptPath)
