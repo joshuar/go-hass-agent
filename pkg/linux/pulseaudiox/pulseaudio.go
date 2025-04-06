@@ -52,8 +52,7 @@ const (
 // cannot connect to Pulseaudio, a non-nil error will be returned with details
 // on the issue.
 //
-//nolint:cyclop
-//revive:disable:unnecessary-stmt
+//nolint:funlen
 func NewPulseClient(ctx context.Context) (*PulseAudioClient, error) {
 	// Connect to pulseaudio.
 	client, conn, err := proto.Connect("")
@@ -99,6 +98,7 @@ func NewPulseClient(ctx context.Context) (*PulseAudioClient, error) {
 	pulse.Vol = volPct
 
 	// Callback function to be used when a Pulseaudio event occurs.
+	//nolint:gocritic
 	pulse.client.Callback = func(val any) {
 		switch val := val.(type) {
 		case *proto.SubscribeEvent:
@@ -123,7 +123,7 @@ func NewPulseClient(ctx context.Context) (*PulseAudioClient, error) {
 
 	// Shutdown gracefully when requested.
 	go func() {
-		defer pulse.conn.Close()
+		defer pulse.conn.Close() //nolint:errcheck
 		defer close(pulse.doneCh)
 		<-ctx.Done()
 	}()
@@ -164,7 +164,11 @@ func (c *PulseAudioClient) SetVolume(pct float64) error {
 		volumes[i] = uint32(newVolume)
 	}
 
-	err = c.client.Request(&proto.SetSinkVolume{SinkIndex: proto.Undefined, SinkName: outputDevice, ChannelVolumes: volumes}, nil)
+	err = c.client.Request(&proto.SetSinkVolume{
+		SinkIndex:      proto.Undefined,
+		SinkName:       outputDevice,
+		ChannelVolumes: volumes,
+	}, nil)
 	if err != nil {
 		return fmt.Errorf("could not set volume: %w", err)
 	}

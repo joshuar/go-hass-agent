@@ -138,7 +138,7 @@ func getSensorFiles(hwMonPath string) (chan sensorFile, error) {
 				}
 				// adjust id for alarms.
 				if strings.Contains(attr, "alarm") {
-					id = id + "_alarm"
+					id += "_alarm"
 				}
 				// get and store the contents of the sensor file.
 				contents, err := getFileContents(filepath.Join(hwMonPath, file.Name()))
@@ -509,11 +509,11 @@ func parseSensorType(id string) MonitorType {
 // Adapted from:
 // https://github.com/prometheus/node_exporter/blob/master/collector/hwmon_linux.go
 func getFileContents(file string) (string, error) {
-	handle, err := os.Open(file)
+	handle, err := os.Open(file) // #nosec: G304
 	if err != nil {
 		return "", fmt.Errorf("could not open file: %w", err)
 	}
-	defer handle.Close()
+	defer handle.Close() //nolint:errcheck
 
 	// On some machines, hwmon drivers are broken and return EAGAIN.  This causes
 	// Go's os.ReadFile implementation to poll forever.

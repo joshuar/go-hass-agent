@@ -1,9 +1,7 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
-//nolint:unused,forbidigo
+//nolint:all
 package main
 
 import (
@@ -17,7 +15,6 @@ import (
 	"github.com/joshuar/go-hass-agent/pkg/linux/hwmon"
 )
 
-//nolint:cyclop,govet,wsl
 func main() {
 	slog.SetLogLoggerLevel(slog.LevelDebug)
 
