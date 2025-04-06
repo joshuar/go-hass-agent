@@ -45,6 +45,8 @@ var (
 )
 
 // LoadWorker reads the given worker's preferences from file.
+//
+//nolint:nestif
 func LoadWorker[T any](worker Worker[T]) (*T, error) {
 	var (
 		prefs        T

@@ -1,7 +1,5 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
 package preferences
 
@@ -27,7 +25,7 @@ type Device struct {
 	Model              string  `toml:"-" json:"model"`
 	OsName             string  `toml:"-" json:"os_name"`
 	OsVersion          string  `toml:"-" json:"os_version"`
-	AppData            AppData `toml:"-" json:"app_data,omitempty"`
+	AppData            AppData `toml:"-" json:"app_data"`
 	SupportsEncryption bool    `toml:"-" json:"supports_encryption"`
 }
 
