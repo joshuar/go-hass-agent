@@ -1,6 +1,7 @@
 // Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
 // SPDX-License-Identifier: MIT
 
+// Package validation contains methods for validating objects.
 package validation
 
 import (
@@ -11,8 +12,10 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
+// ErrValidationFailed indicates that the validation action itself failed.
 var ErrValidationFailed = errors.New("internal validation error")
 
+// Validate is a globally accessible validator that can be used by other packages.
 var Validate *validator.Validate
 
 func init() {
@@ -22,7 +25,6 @@ func init() {
 // ValidationErrors is a map of fields and their validation errors.
 //
 //nolint:errname
-//revive:disable:exported
 type ValidationErrors map[string][]string
 
 // Error allows ValidationErrors to be treated as an error.
@@ -85,7 +87,7 @@ func parseStructValidationErrors(validationErrors validator.ValidationErrors) Va
 // If the struct is not valid, the second return value will be a non-nil map of
 // struct field names and an array of validation errors for that field.
 //
-//nolint:errorlint,errcheck
+//nolint:errorlint
 func ValidateStruct[T any](obj T) (bool, ValidationErrors) {
 	validationErr := &validator.ValidationErrors{}
 
@@ -97,7 +99,7 @@ func ValidateStruct[T any](obj T) (bool, ValidationErrors) {
 			}
 		}
 
-		problems := parseStructValidationErrors(err.(validator.ValidationErrors))
+		problems := parseStructValidationErrors(err.(validator.ValidationErrors)) //nolint:forcetypeassert
 
 		return false, problems
 	}
