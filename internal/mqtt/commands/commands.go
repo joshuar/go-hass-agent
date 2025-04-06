@@ -26,6 +26,7 @@ import (
 
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
+	"github.com/joshuar/go-hass-agent/internal/models"
 	"github.com/joshuar/go-hass-agent/internal/mqtt"
 )
 
@@ -35,7 +36,8 @@ const (
 	switchOffState     = "OFF"
 	commandsFile       = "commands.toml"
 
-	workerID = "mqtt_commands"
+	workerID   = "mqtt_commands"
+	workerDesc = "MQTT Commands"
 )
 
 var (
@@ -92,6 +94,7 @@ type Worker struct {
 	switches     []*mqtthass.SwitchEntity
 	intNumbers   []*mqtthass.NumberEntity[int64]
 	floatNumbers []*mqtthass.NumberEntity[float64]
+	*models.WorkerMetadata
 }
 
 // entity is a convienience interface to avoid duplicating a lot of loops when
@@ -99,10 +102,6 @@ type Worker struct {
 type entity interface {
 	MarshalSubscription() (*mqttapi.Subscription, error)
 	MarshalConfig() (*mqttapi.Msg, error)
-}
-
-func (d *Worker) ID() string {
-	return workerID
 }
 
 // Subscriptions are the MQTT subscriptions for buttons and switches, providing
@@ -445,7 +444,7 @@ func NewCommandsWorker(ctx context.Context, device *mqtthass.Device) (*Worker, e
 		return nil, ErrNoCommands
 	}
 
-	data, err := os.ReadFile(commandsFile)
+	data, err := os.ReadFile(commandsFile) // #nosec: G304
 	if err != nil {
 		return nil, fmt.Errorf("could not read commands file: %w", err)
 	}
@@ -457,18 +456,13 @@ func NewCommandsWorker(ctx context.Context, device *mqtthass.Device) (*Worker, e
 	}
 
 	controller := &Worker{
-		logger: logging.FromContext(ctx).WithGroup("custom_commands"),
-		device: device,
+		WorkerMetadata: models.SetWorkerMetadata(workerID, workerDesc),
+		logger:         logging.FromContext(ctx).WithGroup("custom_commands"),
+		device:         device,
 	}
 	controller.generateButtons(cmds.Buttons)
 	controller.generateSwitches(cmds.Switches)
 	controller.generateNumbers(cmds.Numbers)
-
-	// prefs, err := preferences.LoadWorker(controller)
-	// if err != nil {
-	// 	return nil, fmt.Errorf("could not load custom commands preferences: %w", err)
-	// }
-	// controller.prefs = prefs
 
 	return controller, nil
 }
