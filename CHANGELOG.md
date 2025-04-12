@@ -1,5 +1,24 @@
 # Changelog
 
+## [13.2.4](https://github.com/joshuar/go-hass-agent/compare/v13.2.3...v13.2.4) (2025-04-12)
+
+
+### Bug Fixes
+
+* :bug: fix permissions ([04d201a](https://github.com/joshuar/go-hass-agent/commit/04d201a1ee644070d0496c60a27e37215e9508e1))
+* **commands:** :bug: commands worker doesn't need to implement a worker with preferences ([f537cf5](https://github.com/joshuar/go-hass-agent/commit/f537cf5a1555372f183df6d78953a2a89a4aa82c))
+* **dbusx:** :bug: improve watching multiple methods ([b6e8e4b](https://github.com/joshuar/go-hass-agent/commit/b6e8e4b863779f6e5102c123d47af4bbd8135b13))
+* **linux/net:** :bug: correct state for networkmanager connection states ([f7f7a3b](https://github.com/joshuar/go-hass-agent/commit/f7f7a3b44eedb24c50452362daa52efb1e6684c5))
+* **mqtt:** :sparkles: all MQTT functionality can now be disabled in preferences ([0e72e47](https://github.com/joshuar/go-hass-agent/commit/0e72e47aff011e68e785fef9bbac2f9a6c51fa8d))
+* **scripts:** :sparkles: scripts worker can now be disabled in preferences ([7912047](https://github.com/joshuar/go-hass-agent/commit/7912047280257d6aab69a64d359d6fc2c4679a9f))
+* **workers:** :bug: improved worker context handling ([6389dbc](https://github.com/joshuar/go-hass-agent/commit/6389dbcfa8371076eb655b3a6268c0f634ce56e6))
+
+
+### Performance Improvements
+
+* :zap: remove unnecessary abstractions ([259322e](https://github.com/joshuar/go-hass-agent/commit/259322ef7b1779e4097210f623e669a36f1cd225))
+* **workers:** :zap: better delta calculation ([6dd9cd2](https://github.com/joshuar/go-hass-agent/commit/6dd9cd28c3ba4dd3eb5f4accfa421ced9a4f5d2d))
+
 ## [13.2.3](https://github.com/joshuar/go-hass-agent/compare/v13.2.2...v13.2.3) (2025-03-22)
 
 
