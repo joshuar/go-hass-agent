@@ -102,7 +102,7 @@ func v1000(ctx context.Context) error {
 	}
 
 	// Create a directory for the registry.
-	err = os.Mkdir(newRegistryPath, os.ModeAppend)
+	err = os.Mkdir(newRegistryPath, 0o750)
 	if err != nil && !errors.Is(err, os.ErrExist) {
 		return fmt.Errorf("unable to create new registry directory: %w", err)
 	}

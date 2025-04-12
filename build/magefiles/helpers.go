@@ -229,7 +229,7 @@ func cleanDir(path string) error {
 		return fmt.Errorf("could not clean directory %s: %w", path, err)
 	}
 
-	if err := os.MkdirAll(path, os.ModeAppend); err != nil {
+	if err := os.MkdirAll(path, 0o750); err != nil {
 		return fmt.Errorf("could not create directory %s: %w", path, err)
 	}
 
