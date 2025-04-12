@@ -46,7 +46,7 @@ func (Checks) Licenses() error {
 	slog.Info("Running go-licenses...")
 
 	// Make the directory for the license files
-	err := os.MkdirAll("licenses", os.ModeAppend)
+	err := os.MkdirAll("licenses", 0o750)
 	if err != nil {
 		return fmt.Errorf("could not create directory: %w", err)
 	}

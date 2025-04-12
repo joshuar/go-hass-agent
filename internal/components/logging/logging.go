@@ -164,7 +164,7 @@ func openLogFile(logFile string) (*os.File, error) {
 	_, err := os.Stat(logDir)
 
 	if err == nil || errors.Is(err, os.ErrNotExist) {
-		err = os.MkdirAll(logDir, os.ModeAppend)
+		err = os.MkdirAll(logDir, 0o750)
 		if err != nil {
 			return nil, fmt.Errorf("unable to create log file directory %s: %w", logDir, err)
 		}
