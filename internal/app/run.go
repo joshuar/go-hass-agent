@@ -96,8 +96,13 @@ func (a *App) runMQTTWorkers(ctx context.Context, wg *sync.WaitGroup, regwg *syn
 	defer wg.Done()
 	// Wait until registration check completes.
 	regwg.Wait()
-	// If the agent is not registered and MQTT is not enabled, bail.
-	if !preferences.Registered() || !preferences.MQTTEnabled() {
+	// If the agent is not registered, bail.
+	if !preferences.Registered() {
+		return
+	}
+	// If MQTT is not enabled bail.
+	if !preferences.MQTTEnabled() {
+		a.logger.Warn("MQTT functionality is disabled, will not run any MQTT sensors/controls.")
 		return
 	}
 	// Create MQTT workers.

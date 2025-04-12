@@ -432,7 +432,7 @@ func (d *Worker) Start(_ context.Context) (*mqtt.WorkerData, error) {
 }
 
 func (d *Worker) IsDisabled() bool {
-	return len(d.buttons)+len(d.floatNumbers)+len(d.intNumbers)+len(d.switches) == 0
+	return !preferences.MQTTEnabled()
 }
 
 // NewCommandsWorker is used by the agent to initialize the commands
