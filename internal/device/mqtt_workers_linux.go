@@ -47,23 +47,14 @@ type linuxMQTTWorker struct {
 	binarySensors []*mqtthass.SensorEntity
 	cameras       []*mqtthass.CameraEntity
 	logger        *slog.Logger
-	prefs         *preferences.CommonWorkerPrefs
 }
 
 func (c *linuxMQTTWorker) ID() string {
 	return workerID
 }
 
-func (c *linuxMQTTWorker) PreferencesID() string {
-	return workerID
-}
-
-func (c *linuxMQTTWorker) DefaultPreferences() preferences.CommonWorkerPrefs {
-	return preferences.CommonWorkerPrefs{}
-}
-
 func (c *linuxMQTTWorker) IsDisabled() bool {
-	return c.prefs.Disabled
+	return !preferences.MQTTEnabled()
 }
 
 // Subscriptions returns the any subscription request messaages for any workers
@@ -174,6 +165,11 @@ func (c *linuxMQTTWorker) generateConfig(e stateEntity) *mqttapi.Msg {
 //nolint:gocyclo,cyclop,funlen
 func CreateOSMQTTWorkers(ctx context.Context) workers.MQTTWorker {
 	mqttController := &linuxMQTTWorker{}
+	// Don't continue if MQTT functionality is disabled.
+	if !preferences.MQTTEnabled() {
+		return mqttController
+	}
+
 	mqttDevice := preferences.MQTTDevice()
 
 	var workerMsgs []<-chan mqttapi.Msg
@@ -244,12 +240,6 @@ func CreateOSMQTTWorkers(ctx context.Context) workers.MQTTWorker {
 	} else if dbusCmdController != nil {
 		mqttController.controls = append(mqttController.controls, dbusCmdController)
 	}
-
-	prefs, err := preferences.LoadWorker(mqttController)
-	if err != nil {
-		return nil
-	}
-	mqttController.prefs = prefs
 
 	go func() {
 		defer close(mqttController.msgs)
