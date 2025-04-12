@@ -63,7 +63,6 @@ func (c *connectionStateSensor) generateEntity(ctx context.Context) (*models.Ent
 	if err != nil {
 		return nil, errors.Join(ErrNewConnStateSensor, err)
 	}
-
 	return &connStateSensor, nil
 }
 
@@ -83,7 +82,6 @@ func (c *connectionStateSensor) setState(state any) error {
 	default:
 		return ErrUnsupportedValue
 	}
-
 	return nil
 }
 
@@ -92,10 +90,8 @@ func (c *connectionStateSensor) updateState() error {
 	if err != nil {
 		return fmt.Errorf("cannot update state: %w", err)
 	}
-
 	c.state = state.String()
-	c.state = connIcon(state).String()
-
+	c.icon = connIcon(state).String()
 	return nil
 }
 
@@ -104,10 +100,8 @@ func newConnectionStateSensor(bus *dbusx.Bus, connectionPath, connectionName str
 		name:      connectionName,
 		stateProp: dbusx.NewProperty[connState](bus, connectionPath, dBusNMObj, connectionStateProp),
 	}
-
 	if err := conn.updateState(); err != nil {
 		return nil, fmt.Errorf("cannot create connection sensor: %w", err)
 	}
-
 	return conn, nil
 }
