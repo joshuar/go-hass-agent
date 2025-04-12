@@ -41,12 +41,21 @@ type Worker struct {
 	logger  *slog.Logger
 	scripts []*Script
 	outCh   chan models.Entity
+	prefs   *preferences.CommonWorkerPrefs
 	*models.WorkerMetadata
+}
+
+func (c *Worker) PreferencesID() string {
+	return scriptWorkerId
+}
+
+func (c *Worker) DefaultPreferences() preferences.CommonWorkerPrefs {
+	return preferences.CommonWorkerPrefs{}
 }
 
 // IsDisabled returns a boolean indicating whether the scripts worker is disabled.
 func (c *Worker) IsDisabled() bool {
-	return false
+	return c.prefs.IsDisabled()
 }
 
 // States will execute all running scripts and returns their sensor entities.
@@ -148,8 +157,13 @@ func NewScriptsWorker(ctx context.Context) (*Worker, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not find scripts: %w", err)
 	}
-
 	worker.scripts = scripts
+
+	prefs, err := preferences.LoadWorker(worker)
+	if err != nil {
+		return nil, fmt.Errorf("could not load preferences: %w", err)
+	}
+	worker.prefs = prefs
 
 	return worker, nil
 }
