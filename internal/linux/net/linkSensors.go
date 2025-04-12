@@ -143,10 +143,10 @@ func newAddressSensor(ctx context.Context, link *rtnetlink.LinkService, msg rtne
 type ipFamily int
 
 func (f ipFamily) String() string {
-	switch {
-	case f == unix.AF_INET:
+	switch f {
+	case unix.AF_INET:
 		return "IPv4"
-	case f == unix.AF_INET6:
+	case unix.AF_INET6:
 		return "IPv6"
 	default:
 		return "unknown"
@@ -154,10 +154,10 @@ func (f ipFamily) String() string {
 }
 
 func (f ipFamily) Icon() string {
-	switch {
-	case f == unix.AF_INET:
+	switch f {
+	case unix.AF_INET:
 		return "mdi:numeric-4-box-outline"
-	case f == unix.AF_INET6:
+	case unix.AF_INET6:
 		return "mdi:numeric-6-box-outline"
 	default:
 		return "mdi:help"
@@ -286,7 +286,7 @@ func (w *AddressWorker) getLinks(ctx context.Context) ([]models.Entity, error) {
 
 // TODO: reduce complexity?
 //
-//nolint:gocognit
+//nolint:gocognit,funlen
 func (w *AddressWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
 	sensorCh := make(chan models.Entity)
 

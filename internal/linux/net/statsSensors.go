@@ -74,7 +74,7 @@ func (t netStatsType) Icon() string {
 // device.
 //
 //revive:disable:argument-limit
-func newStatsTotalEntity(ctx context.Context, name string, entityType netStatsType, category models.EntityCategory, value uint64, attributes models.Attributes) (*models.Entity, error) {
+func newStatsTotalEntity(ctx context.Context, name string, entityType netStatsType, value uint64, attributes models.Attributes) (*models.Entity, error) {
 	statsSensor, err := sensor.NewSensor(ctx,
 		sensor.WithName(name+" "+entityType.String()),
 		sensor.WithID(strings.ToLower(name)+"_"+strcase.ToSnake(entityType.String())),
@@ -85,7 +85,7 @@ func newStatsTotalEntity(ctx context.Context, name string, entityType netStatsTy
 		sensor.WithState(value),
 		sensor.WithAttributes(attributes),
 		sensor.WithDataSourceAttribute(linux.DataSrcNetlink),
-		sensor.WithCategory(category),
+		sensor.AsDiagnostic(),
 	)
 	if err != nil {
 		return nil, errors.Join(ErrNewStatsSensor, err)
@@ -95,7 +95,7 @@ func newStatsTotalEntity(ctx context.Context, name string, entityType netStatsTy
 }
 
 // newStatsTotalEntity creates an entity for tracking rate stats for a network device.
-func newStatsRateEntity(ctx context.Context, name string, entityType netStatsType, category models.EntityCategory, value uint64) (*models.Entity, error) {
+func newStatsRateEntity(ctx context.Context, name string, entityType netStatsType, value uint64) (*models.Entity, error) {
 	ratesSensor, err := sensor.NewSensor(ctx,
 		sensor.WithName(name+" "+entityType.String()),
 		sensor.WithID(strings.ToLower(name)+"_"+strcase.ToSnake(entityType.String())),
@@ -105,7 +105,7 @@ func newStatsRateEntity(ctx context.Context, name string, entityType netStatsTyp
 		sensor.WithIcon(entityType.Icon()),
 		sensor.WithState(value),
 		sensor.WithDataSourceAttribute(linux.DataSrcNetlink),
-		sensor.WithCategory(category),
+		sensor.AsDiagnostic(),
 	)
 	if err != nil {
 		return nil, errors.Join(ErrNewRatesSensor, err)

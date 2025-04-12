@@ -52,7 +52,7 @@ type netStatsWorker struct {
 	*models.WorkerMetadata
 }
 
-//nolint:gocognit,funlen
+//nolint:funlen
 func (w *netStatsWorker) Execute(ctx context.Context) error {
 	delta := w.GetDelta()
 	var warnings error
@@ -67,6 +67,7 @@ func (w *netStatsWorker) Execute(ctx context.Context) error {
 	stats := w.getLinkStats(links)
 
 	w.mu.Lock()
+	defer w.mu.Unlock()
 
 	// Counters for totals.
 	var totalBytesRx, totalBytesTx uint64
@@ -92,14 +93,14 @@ func (w *netStatsWorker) Execute(ctx context.Context) error {
 		}
 
 		// Generate bytesRecv sensor entity for link.
-		entity, err = newStatsTotalEntity(ctx, name, bytesRecv, models.Diagnostic, link.stats.RXBytes, getRXAttributes(stats))
+		entity, err = newStatsTotalEntity(ctx, name, bytesRecv, link.stats.RXBytes, getRXAttributes(stats))
 		if err != nil {
 			warnings = errors.Join(warnings, fmt.Errorf("could not generate stats sensor: %w", err))
 		} else {
 			w.OutCh <- *entity
 		}
 		// Generate bytesSent sensor entity for link.
-		entity, err = newStatsTotalEntity(ctx, name, bytesSent, models.Diagnostic, link.stats.TXBytes, getTXAttributes(stats))
+		entity, err = newStatsTotalEntity(ctx, name, bytesSent, link.stats.TXBytes, getTXAttributes(stats))
 		if err != nil {
 			warnings = errors.Join(warnings, fmt.Errorf("could not generate stats sensor: %w", err))
 		} else {
@@ -112,7 +113,7 @@ func (w *netStatsWorker) Execute(ctx context.Context) error {
 		// Generate bytesRecvRate sensor entity for link.
 		rate = w.statsSensors[name][bytesRecvRate].Calculate(stats.RXBytes, delta)
 
-		entity, err = newStatsRateEntity(ctx, name, bytesRecvRate, models.Diagnostic, rate)
+		entity, err = newStatsRateEntity(ctx, name, bytesRecvRate, rate)
 		if err != nil {
 			warnings = errors.Join(warnings, fmt.Errorf("could not generate stats rate sensor: %w", err))
 		} else {
@@ -121,7 +122,7 @@ func (w *netStatsWorker) Execute(ctx context.Context) error {
 		// Generate bytesSentRate sensor entity for link.
 		rate = w.statsSensors[name][bytesSentRate].Calculate(stats.TXBytes, delta)
 
-		entity, err = newStatsRateEntity(ctx, name, bytesSentRate, models.Diagnostic, rate)
+		entity, err = newStatsRateEntity(ctx, name, bytesSentRate, rate)
 		if err != nil {
 			warnings = errors.Join(warnings, fmt.Errorf("could not generate stats sensor: %w", err))
 		} else {
@@ -129,52 +130,51 @@ func (w *netStatsWorker) Execute(ctx context.Context) error {
 		}
 	}
 
-	if len(stats) > 0 {
-		var (
-			entity *models.Entity
-			err    error
-			rate   uint64
-		)
-		// Create a pseudo total stats link stats object.
-		totalStats := &rtnetlink.LinkStats64{
-			RXBytes: totalBytesRx,
-			TXBytes: totalBytesTx,
-		}
-		// Generate total bytesRecv sensor entity.
-		entity, err = newStatsTotalEntity(ctx, totalsName, bytesRecv, models.Diagnostic, totalBytesRx, nil)
-		if err != nil {
-			warnings = errors.Join(warnings, fmt.Errorf("could not generate stats sensor: %w", err))
-		} else {
-			w.OutCh <- *entity
-		}
-		// Generate total bytesSent sensor entity.
-		entity, err = newStatsTotalEntity(ctx, totalsName, bytesSent, models.Diagnostic, totalBytesTx, nil)
-		if err != nil {
-			warnings = errors.Join(warnings, fmt.Errorf("could not generate stats sensor: %w", err))
-		} else {
-			w.OutCh <- *entity
-		}
-		// Generate total bytesRecvRate sensor entity.
-		rate = w.statsSensors[totalsName][bytesRecvRate].Calculate(totalStats.RXBytes, delta)
-
-		entity, err = newStatsRateEntity(ctx, totalsName, bytesRecvRate, models.Diagnostic, rate)
-		if err != nil {
-			warnings = errors.Join(warnings, fmt.Errorf("could not generate stats rate sensor: %w", err))
-		} else {
-			w.OutCh <- *entity
-		}
-		// Generate total bytesSentRate sensor entity.
-		rate = w.statsSensors[totalsName][bytesSentRate].Calculate(totalStats.TXBytes, delta)
-
-		entity, err = newStatsRateEntity(ctx, totalsName, bytesSentRate, models.Diagnostic, rate)
-		if err != nil {
-			warnings = errors.Join(warnings, fmt.Errorf("could not generate stats sensor: %w", err))
-		} else {
-			w.OutCh <- *entity
-		}
+	if len(stats) == 0 {
+		return warnings
 	}
 
-	w.mu.Unlock()
+	var (
+		entity *models.Entity
+		rate   uint64
+	)
+	// Create a pseudo total stats link stats object.
+	totalStats := &rtnetlink.LinkStats64{
+		RXBytes: totalBytesRx,
+		TXBytes: totalBytesTx,
+	}
+	// Generate total bytesRecv sensor entity.
+	entity, err = newStatsTotalEntity(ctx, totalsName, bytesRecv, totalBytesRx, nil)
+	if err != nil {
+		warnings = errors.Join(warnings, fmt.Errorf("could not generate stats sensor: %w", err))
+	} else {
+		w.OutCh <- *entity
+	}
+	// Generate total bytesSent sensor entity.
+	entity, err = newStatsTotalEntity(ctx, totalsName, bytesSent, totalBytesTx, nil)
+	if err != nil {
+		warnings = errors.Join(warnings, fmt.Errorf("could not generate stats sensor: %w", err))
+	} else {
+		w.OutCh <- *entity
+	}
+	// Generate total bytesRecvRate sensor entity.
+	rate = w.statsSensors[totalsName][bytesRecvRate].Calculate(totalStats.RXBytes, delta)
+
+	entity, err = newStatsRateEntity(ctx, totalsName, bytesRecvRate, rate)
+	if err != nil {
+		warnings = errors.Join(warnings, fmt.Errorf("could not generate stats rate sensor: %w", err))
+	} else {
+		w.OutCh <- *entity
+	}
+	// Generate total bytesSentRate sensor entity.
+	rate = w.statsSensors[totalsName][bytesSentRate].Calculate(totalStats.TXBytes, delta)
+
+	entity, err = newStatsRateEntity(ctx, totalsName, bytesSentRate, rate)
+	if err != nil {
+		warnings = errors.Join(warnings, fmt.Errorf("could not generate stats sensor: %w", err))
+	} else {
+		w.OutCh <- *entity
+	}
 
 	return warnings
 }

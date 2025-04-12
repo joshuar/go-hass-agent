@@ -1,7 +1,5 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
 package net
 
@@ -108,8 +106,7 @@ func (c *connection) monitor(ctx context.Context, bus *dbusx.Bus) <-chan models.
 
 // monitorConnection sets up the D-Bus watch for connection property changes.
 //
-//nolint:gocognit,gocyclo,cyclop
-//revive:disable:function-length
+//nolint:gocognit,funlen
 func (c *connection) monitorConnection(ctx context.Context, bus *dbusx.Bus) <-chan models.Entity {
 	var (
 		stateSensor *connectionStateSensor
@@ -248,7 +245,8 @@ func (c *connection) monitorWifi(ctx context.Context, bus *dbusx.Bus) <-chan mod
 					if slices.Contains(apPropList, prop) { // Wifi property changed.
 						entity, err := newWifiSensor(ctx, prop, value.Value())
 						if err != nil {
-							logging.FromContext(ctx).Warn("Could not generate new wifi property sensor.", slog.Any("error", err))
+							logging.FromContext(ctx).Warn("Could not generate new wifi property sensor.",
+								slog.Any("error", err))
 							continue
 						}
 
