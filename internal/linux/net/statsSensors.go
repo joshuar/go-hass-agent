@@ -4,7 +4,7 @@
 // Parts of the code for collecting stats was adapted from Prometheus:
 // https://github.com/prometheus/node_exporter//collector/netdev_linux.go
 
-//go:generate go run golang.org/x/tools/cmd/stringer -type=netStatsType -output networkRates_generated.go -linecomment
+//go:generate go tool golang.org/x/tools/cmd/stringer -type=netStatsType -output networkRates_generated.go -linecomment
 //revive:disable:unused-receiver
 package net
 

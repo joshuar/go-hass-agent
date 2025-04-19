@@ -1,7 +1,7 @@
 // Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
 // SPDX-License-Identifier: MIT
 
-//go:generate go run golang.org/x/tools/cmd/stringer -type=sensorType,level,chargingState,typeDescription -output types_generated.go -linecomment
+//go:generate go tool golang.org/x/tools/cmd/stringer -type=sensorType,level,chargingState,typeDescription -output types_generated.go -linecomment
 package battery
 
 const (

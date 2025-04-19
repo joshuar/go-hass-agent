@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//go:generate go run golang.org/x/tools/cmd/stringer -type=connState,connIcon -output connectionState_generated.go -linecomment
+//go:generate go tool golang.org/x/tools/cmd/stringer -type=connState,connIcon -output connectionState_generated.go -linecomment
 package net
 
 import (
