@@ -5,7 +5,7 @@
 
 package class
 
-//go:generate go run golang.org/x/tools/cmd/stringer -type=SensorDeviceClass -output deviceclass.gen.go -linecomment
+//go:generate go tool golang.org/x/tools/cmd/stringer -type=SensorDeviceClass -output deviceclass.gen.go -linecomment
 const (
 	// For sensor entity device class descriptions, see:
 	// https://developers.home-assistant.io/docs/core/entity/sensor#available-device-classes

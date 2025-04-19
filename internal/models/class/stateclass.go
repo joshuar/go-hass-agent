@@ -5,7 +5,7 @@
 
 package class
 
-//go:generate go run golang.org/x/tools/cmd/stringer -type=SensorStateClass -output stateclass.gen.go -linecomment
+//go:generate go tool golang.org/x/tools/cmd/stringer -type=SensorStateClass -output stateclass.gen.go -linecomment
 const (
 	StateClassMin        SensorStateClass = iota //
 	StateMeasurement                             // measurement
