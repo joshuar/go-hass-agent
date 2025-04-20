@@ -50,7 +50,7 @@ func monitorPipewire(ctx context.Context, filterFunc func(*pwmonitor.Event) bool
 				if err = dec.Decode(&event); err == io.EOF {
 					break
 				} else if err != nil {
-					slogctx.FromCtx(ctx).Debug("Error decoding pw-dump output.",
+					slogctx.FromCtx(ctx).Log(ctx, logging.LevelTrace, "Error decoding pw-dump output.",
 						slog.Any("error", err))
 				}
 				if filterFunc(&event) {

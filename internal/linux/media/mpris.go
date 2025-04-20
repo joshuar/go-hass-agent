@@ -124,21 +124,17 @@ func NewMPRISWorker(ctx context.Context, device *mqtthass.Device) (*MPRISWorker,
 	// Watch for power profile changes.
 	go func() {
 		slogctx.FromCtx(ctx).Debug("Monitoring for MPRIS signals.")
-
 		for {
 			select {
 			case <-ctx.Done():
 				slogctx.FromCtx(ctx).Debug("Stopped monitoring for MPRIS signals.")
-
 				return
 			case event := <-triggerCh:
 				changed, status, err := dbusx.HasPropertyChanged[string](event.Content, "PlaybackStatus")
 				if err != nil {
 					slogctx.FromCtx(ctx).Warn("Could not parse received D-Bus signal.", slog.Any("error", err))
-				} else {
-					if changed {
-						worker.publishPlaybackState(ctx, status)
-					}
+				} else if changed {
+					worker.publishPlaybackState(ctx, status)
 				}
 			}
 		}
