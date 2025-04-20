@@ -110,6 +110,9 @@ func (m *Manager) StartEntityWorkers(ctx context.Context, workers ...EntityWorke
 			continue
 		}
 		workerCtx, cancelFunc := context.WithCancel(ctx)
+		workerCtx = slogctx.NewCtx(workerCtx,
+			slogctx.FromCtx(workerCtx).WithGroup("entity_worker").
+				With("id", worker.ID()))
 		workerCh, err := worker.Start(workerCtx)
 		if workerCh == nil {
 			cancelFunc()
@@ -148,6 +151,9 @@ func (m *Manager) StartMQTTWorkers(ctx context.Context, workers ...MQTTWorker) *
 			continue
 		}
 		workerCtx, cancelFunc := context.WithCancel(ctx)
+		workerCtx = slogctx.NewCtx(workerCtx,
+			slogctx.FromCtx(workerCtx).WithGroup("mqtt_worker").
+				With("id", worker.ID()))
 		workerData, err := worker.Start(workerCtx)
 		if err != nil {
 			slogctx.FromCtx(ctx).Warn("Could not start worker.",
