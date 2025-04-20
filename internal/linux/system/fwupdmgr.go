@@ -14,8 +14,8 @@ import (
 	"strings"
 
 	"github.com/godbus/dbus/v5"
+	slogctx "github.com/veqryn/slog-context"
 
-	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/models"
@@ -144,7 +144,7 @@ func (w *fwupdWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
 	go func() {
 		defer close(w.OutCh)
 		if err := w.Execute(ctx); err != nil {
-			logging.FromContext(ctx).Warn("Failed to send fwupdmgr details",
+			slogctx.FromCtx(ctx).Warn("Failed to send fwupdmgr details",
 				slog.Any("error", err))
 		}
 	}()

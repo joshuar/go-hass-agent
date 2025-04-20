@@ -12,9 +12,9 @@ import (
 	"time"
 
 	"github.com/reugn/go-quartz/quartz"
+	slogctx "github.com/veqryn/slog-context"
 
 	"github.com/joshuar/go-hass-agent/internal/components/id"
-	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/models"
 	"github.com/joshuar/go-hass-agent/internal/mqtt"
 	"github.com/joshuar/go-hass-agent/internal/scheduler"
@@ -74,7 +74,7 @@ func SchedulePollingWorker(ctx context.Context, worker PollingEntityWorker, outC
 	// Send initial update.
 	go func() {
 		if err := worker.Execute(ctx); err != nil {
-			logging.FromContext(ctx).Warn("Could not send initial worker update.",
+			slogctx.FromCtx(ctx).Warn("Could not send initial worker update.",
 				slog.String("worker_id", worker.ID()),
 				slog.Any("error", err))
 		}
@@ -93,7 +93,6 @@ type MQTTWorker interface {
 
 type Manager struct {
 	workers map[models.ID]context.CancelFunc
-	logger  *slog.Logger
 	mu      sync.Mutex
 }
 
@@ -106,7 +105,7 @@ func (m *Manager) StartEntityWorkers(ctx context.Context, workers ...EntityWorke
 
 	for worker := range slices.Values(workers) {
 		if worker.IsDisabled() {
-			m.logger.Warn("Not starting disabled worker.",
+			slogctx.FromCtx(ctx).Warn("Not starting disabled worker.",
 				slog.String("id", worker.ID()))
 			continue
 		}
@@ -117,13 +116,13 @@ func (m *Manager) StartEntityWorkers(ctx context.Context, workers ...EntityWorke
 			continue
 		}
 		if err != nil {
-			m.logger.Warn("Could not start worker.",
+			slogctx.FromCtx(ctx).Warn("Could not start worker.",
 				slog.String("id", worker.ID()),
 				slog.Any("errors", err))
 		} else {
 			m.workers[worker.ID()] = cancelFunc
 			outCh = append(outCh, workerCh)
-			m.logger.Debug("Started worker.",
+			slogctx.FromCtx(ctx).Debug("Started worker.",
 				slog.String("id", worker.ID()))
 		}
 		go func() {
@@ -144,14 +143,14 @@ func (m *Manager) StartMQTTWorkers(ctx context.Context, workers ...MQTTWorker) *
 
 	for worker := range slices.Values(workers) {
 		if worker.IsDisabled() {
-			m.logger.Warn("Not starting disabled worker.",
+			slogctx.FromCtx(ctx).Warn("Not starting disabled worker.",
 				slog.String("id", worker.ID()))
 			continue
 		}
 		workerCtx, cancelFunc := context.WithCancel(ctx)
 		workerData, err := worker.Start(workerCtx)
 		if err != nil {
-			m.logger.Warn("Could not start worker.",
+			slogctx.FromCtx(ctx).Warn("Could not start worker.",
 				slog.String("id", worker.ID()),
 				slog.Any("errors", err))
 			cancelFunc()
@@ -166,7 +165,7 @@ func (m *Manager) StartMQTTWorkers(ctx context.Context, workers ...MQTTWorker) *
 		if workerData.Msgs != nil {
 			msgCh = append(msgCh, workerData.Msgs)
 		}
-		m.logger.Debug("Started worker.",
+		slogctx.FromCtx(ctx).Debug("Started worker.",
 			slog.String("id", worker.ID()))
 		go func() {
 			defer cancelFunc()
@@ -182,13 +181,13 @@ func (m *Manager) StartMQTTWorkers(ctx context.Context, workers ...MQTTWorker) *
 // StopWorkers stops the workers with the given IDs. If the worker is
 // already stopped or not running, a warning will be logged and the action is a
 // no-op.
-func (m *Manager) StopAllWorkers() {
+func (m *Manager) StopAllWorkers(ctx context.Context) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	for id, workerCancelFunc := range m.workers {
 		workerCancelFunc()
-		m.logger.Debug("Stopped worker.",
+		slogctx.FromCtx(ctx).Debug("Stopped worker.",
 			slog.String("id", id))
 	}
 }
@@ -196,17 +195,17 @@ func (m *Manager) StopAllWorkers() {
 // StopWorkers stops the workers with the given IDs. If the worker is
 // already stopped or not running, a warning will be logged and the action is a
 // no-op.
-func (m *Manager) StopWorkers(ids ...string) {
+func (m *Manager) StopWorkers(ctx context.Context, ids ...string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	for _, id := range ids {
 		if workerCancelFunc, found := m.workers[id]; found {
 			workerCancelFunc()
-			m.logger.Debug("Stopped worker.",
+			slogctx.FromCtx(ctx).Debug("Stopped worker.",
 				slog.String("id", id))
 		} else {
-			m.logger.Warn("Unknown worker or worker not running.",
+			slogctx.FromCtx(ctx).Warn("Unknown worker or worker not running.",
 				slog.String("id", id))
 		}
 	}
@@ -215,7 +214,6 @@ func (m *Manager) StopWorkers(ids ...string) {
 func NewManager(ctx context.Context) *Manager {
 	return &Manager{
 		workers: make(map[models.ID]context.CancelFunc),
-		logger:  logging.FromContext(ctx).WithGroup("worker"),
 	}
 }
 

@@ -27,11 +27,12 @@ import (
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
 
+	slogctx "github.com/veqryn/slog-context"
+
 	agentvalidator "github.com/joshuar/go-hass-agent/internal/components/validation"
 	"github.com/joshuar/go-hass-agent/internal/hass/discovery"
 	"github.com/joshuar/go-hass-agent/internal/models"
 
-	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 )
 
@@ -86,9 +87,8 @@ type FyneUI struct {
 // New FyneUI sets up the UI for the agent.
 func NewFyneUI(ctx context.Context, hass Hass) *FyneUI {
 	appUI := &FyneUI{
-		app:    app.NewWithID(preferences.AppName),
-		logger: logging.FromContext(ctx).With(slog.String("subsystem", "fyne")),
-		hass:   hass,
+		app:  app.NewWithID(preferences.AppName),
+		hass: hass,
 	}
 	appUI.app.SetIcon(&trayIcon{})
 
@@ -167,7 +167,7 @@ func (i *FyneUI) DisplayRegistrationWindow(ctx context.Context, prefs *preferenc
 	userCancelled := make(chan bool)
 
 	if i.app == nil {
-		logging.FromContext(ctx).Warn("No UI available.")
+		slogctx.FromCtx(ctx).Warn("No UI available.")
 		close(userCancelled)
 
 		return userCancelled

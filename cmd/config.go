@@ -7,9 +7,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
+
+	slogctx "github.com/veqryn/slog-context"
 
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 )
@@ -26,7 +29,7 @@ type MQTTConfig preferences.MQTTPreferences
 func (r *Config) Run(opts *Opts) error {
 	ctx, cancelFunc := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancelFunc()
-
+	ctx = slogctx.NewCtx(ctx, slog.Default())
 	ctx = preferences.PathToCtx(ctx, opts.Path)
 
 	if err := preferences.Init(ctx); err != nil {

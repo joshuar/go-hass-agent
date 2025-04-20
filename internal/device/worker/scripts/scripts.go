@@ -15,9 +15,9 @@ import (
 
 	"github.com/pelletier/go-toml/v2"
 	"github.com/reugn/go-quartz/quartz"
+	slogctx "github.com/veqryn/slog-context"
 	"gopkg.in/yaml.v3"
 
-	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/models"
 )
 
@@ -51,7 +51,7 @@ func (s *Script) Start(ctx context.Context) <-chan models.Entity {
 	// Send initial update.
 	go func() {
 		if err := s.Execute(ctx); err != nil {
-			logging.FromContext(ctx).Warn("Could not execute script.",
+			slogctx.FromCtx(ctx).Warn("Could not execute script.",
 				slog.Any("error", err))
 		}
 	}()

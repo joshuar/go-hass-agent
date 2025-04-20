@@ -7,7 +7,8 @@ import (
 	"context"
 	"log/slog"
 
-	"github.com/joshuar/go-hass-agent/internal/components/logging"
+	slogctx "github.com/veqryn/slog-context"
+
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/hass"
 	"github.com/joshuar/go-hass-agent/internal/ui"
@@ -30,13 +31,12 @@ type appUI interface {
 
 type App struct {
 	ui            appUI
-	logger        *slog.Logger
 	workerManager *workers.Manager
 }
 
 func New(ctx context.Context, appAPIs APIs, headless bool) *App {
+	ctx = slogctx.NewCtx(ctx, slog.Default())
 	app := &App{
-		logger:        logging.FromContext(ctx).WithGroup("app"),
 		workerManager: workers.NewManager(ctx),
 	}
 

@@ -15,9 +15,9 @@ import (
 
 	"github.com/jsimonetti/rtnetlink"
 	"github.com/mdlayher/netlink"
+	slogctx "github.com/veqryn/slog-context"
 	"golang.org/x/sys/unix"
 
-	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/models"
@@ -293,7 +293,7 @@ func (w *AddressWorker) Start(ctx context.Context) (<-chan models.Entity, error)
 	// Get all current addresses and send as sensors.
 	sensors, err := w.generateSensors(ctx)
 	if err != nil {
-		logging.FromContext(ctx).Debug("Could not get address sensors.", slog.Any("error", err))
+		slogctx.FromCtx(ctx).Debug("Could not get address sensors.", slog.Any("error", err))
 	} else {
 		for _, addressSensor := range sensors {
 			go func() {
@@ -309,7 +309,7 @@ func (w *AddressWorker) Start(ctx context.Context) (<-chan models.Entity, error)
 		<-ctx.Done()
 
 		if err := w.nlconn.Close(); err != nil {
-			logging.FromContext(ctx).Debug("Could not close netlink connection.",
+			slogctx.FromCtx(ctx).Debug("Could not close netlink connection.",
 				slog.Any("error", err))
 		}
 	}()
@@ -325,7 +325,7 @@ func (w *AddressWorker) Start(ctx context.Context) (<-chan models.Entity, error)
 			default:
 				nlmsgs, _, err := w.nlconn.Receive()
 				if err != nil {
-					logging.FromContext(ctx).Debug("Error closing netlink connection.", slog.Any("error", err))
+					slogctx.FromCtx(ctx).Debug("Error closing netlink connection.", slog.Any("error", err))
 					break
 				}
 
@@ -338,7 +338,7 @@ func (w *AddressWorker) Start(ctx context.Context) (<-chan models.Entity, error)
 
 						link, err := newLinkSensor(ctx, *value)
 						if err != nil {
-							logging.FromContext(ctx).Warn("Could not generate link sensor.", slog.Any("error", err))
+							slogctx.FromCtx(ctx).Warn("Could not generate link sensor.", slog.Any("error", err))
 							continue
 						}
 
@@ -350,7 +350,7 @@ func (w *AddressWorker) Start(ctx context.Context) (<-chan models.Entity, error)
 
 						addr, err := newAddressSensor(ctx, w.nlconn.Link, *value)
 						if err != nil {
-							logging.FromContext(ctx).Warn("Could not generate address sensor.", slog.Any("error", err))
+							slogctx.FromCtx(ctx).Warn("Could not generate address sensor.", slog.Any("error", err))
 							continue
 						}
 

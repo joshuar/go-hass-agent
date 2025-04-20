@@ -15,8 +15,8 @@ import (
 
 	"github.com/eclipse/paho.golang/paho"
 	mqtthass "github.com/joshuar/go-hass-anything/v12/pkg/hass"
+	slogctx "github.com/veqryn/slog-context"
 
-	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
@@ -166,7 +166,7 @@ func NewScreenLockControl(ctx context.Context, device *mqtthass.Device) ([]*mqtt
 	}
 
 	// Decorate a logger for this controller.
-	logger := logging.FromContext(ctx).WithGroup("screensaver_control")
+	logger := slogctx.FromCtx(ctx).WithGroup("screensaver_control")
 
 	commands, err := setupCommands(ctx, sessionBus, systemBus, device)
 	if err != nil {

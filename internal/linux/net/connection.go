@@ -11,8 +11,8 @@ import (
 	"slices"
 
 	"github.com/godbus/dbus/v5"
+	slogctx "github.com/veqryn/slog-context"
 
-	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/models"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
@@ -245,7 +245,7 @@ func (c *connection) monitorWifi(ctx context.Context, bus *dbusx.Bus) <-chan mod
 					if slices.Contains(apPropList, prop) { // Wifi property changed.
 						entity, err := newWifiSensor(ctx, prop, value.Value())
 						if err != nil {
-							logging.FromContext(ctx).Warn("Could not generate new wifi property sensor.",
+							slogctx.FromCtx(ctx).Warn("Could not generate new wifi property sensor.",
 								slog.Any("error", err))
 							continue
 						}

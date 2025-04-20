@@ -13,8 +13,8 @@ import (
 	"log/slog"
 
 	"github.com/godbus/dbus/v5"
+	slogctx "github.com/veqryn/slog-context"
 
-	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/models"
@@ -148,7 +148,7 @@ func (w *sensorWorker) generateSensors(ctx context.Context) ([]models.Entity, er
 				sensor.WithDataSourceAttribute(linux.DataSrcDbus),
 			)
 			if err != nil {
-				logging.FromContext(ctx).Warn("Could not generate active app sensor.", slog.Any("error", err))
+				slogctx.FromCtx(ctx).Warn("Could not generate active app sensor.", slog.Any("error", err))
 			} else {
 				sensors = append(sensors, entity)
 			}
@@ -168,7 +168,7 @@ func (w *sensorWorker) generateSensors(ctx context.Context) ([]models.Entity, er
 			sensor.WithAttribute("apps", runningApps),
 		)
 		if err != nil {
-			logging.FromContext(ctx).Warn("Could not generate active app sensor.", slog.Any("error", err))
+			slogctx.FromCtx(ctx).Warn("Could not generate active app sensor.", slog.Any("error", err))
 		} else {
 			sensors = append(sensors, entity)
 		}

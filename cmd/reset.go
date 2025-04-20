@@ -13,6 +13,8 @@ import (
 	"os/signal"
 	"syscall"
 
+	slogctx "github.com/veqryn/slog-context"
+
 	"github.com/joshuar/go-hass-agent/internal/app"
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
@@ -33,15 +35,13 @@ func (r *Reset) Run(opts *Opts) error {
 
 	ctx, cancelFunc := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancelFunc()
-
+	ctx = slogctx.NewCtx(ctx, slog.Default())
 	ctx = preferences.PathToCtx(ctx, opts.Path)
 
 	// Load the preferences so we know what we need to reset.
 	if err := preferences.Init(ctx); err != nil && !errors.Is(err, preferences.ErrLoadPreferences) {
 		return errors.Join(ErrResetCommandFailed, err)
 	}
-
-	ctx = logging.ToContext(ctx, opts.Logger)
 
 	// Reset agent.
 	if err := app.Reset(ctx); err != nil {
@@ -61,9 +61,9 @@ func (r *Reset) Run(opts *Opts) error {
 	}
 
 	if errs != nil {
-		slog.Warn("Reset completed with errors", slog.Any("errors", errs))
+		slogctx.FromCtx(ctx).Warn("Reset completed with errors", slog.Any("errors", errs))
 	} else {
-		slog.Info("Reset completed.")
+		slogctx.FromCtx(ctx).Info("Reset completed.")
 	}
 
 	return nil

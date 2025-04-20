@@ -9,8 +9,8 @@ import (
 	"log/slog"
 
 	pwmonitor "github.com/ConnorsApps/pipewire-monitor-go"
+	slogctx "github.com/veqryn/slog-context"
 
-	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/models"
@@ -109,7 +109,7 @@ func (w *webcamUsageWorker) Start(ctx context.Context) (<-chan models.Entity, er
 
 			webcamUseSensor, err := newWebcamUsageSensor(ctx, w.inUse)
 			if err != nil {
-				logging.FromContext(ctx).Warn("Could not parse pipewire event for webcam usage.",
+				slogctx.FromCtx(ctx).Warn("Could not parse pipewire event for webcam usage.",
 					slog.Any("error", err))
 			}
 

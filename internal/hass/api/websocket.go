@@ -14,8 +14,6 @@ import (
 
 	"github.com/cenkalti/backoff/v4"
 	"github.com/lxzan/gws"
-
-	"github.com/joshuar/go-hass-agent/internal/components/logging"
 )
 
 const (
@@ -210,7 +208,6 @@ func NewWebsocket(ctx context.Context, url, webhookID, token string) *Websocket 
 		token:     token,
 		webhookID: webhookID,
 		url:       url,
-		logger:    logging.FromContext(ctx),
 	}
 }
 

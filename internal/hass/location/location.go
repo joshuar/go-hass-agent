@@ -7,7 +7,8 @@ import (
 	"context"
 	"errors"
 
-	"github.com/joshuar/go-hass-agent/internal/components/logging"
+	slogctx "github.com/veqryn/slog-context"
+
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/components/validation"
 	"github.com/joshuar/go-hass-agent/internal/hass/api"
@@ -61,7 +62,7 @@ func Handler(ctx context.Context, client API, location models.Location) error {
 		return errors.Join(ErrHandleLocation, err)
 	}
 
-	logging.FromContext(ctx).Debug("Location sent.")
+	slogctx.FromCtx(ctx).Debug("Location sent.")
 
 	return nil
 }

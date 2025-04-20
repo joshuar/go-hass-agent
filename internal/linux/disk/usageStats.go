@@ -18,7 +18,8 @@ import (
 
 	"golang.org/x/sys/unix"
 
-	"github.com/joshuar/go-hass-agent/internal/components/logging"
+	slogctx "github.com/veqryn/slog-context"
+
 	"github.com/joshuar/go-hass-agent/internal/linux"
 )
 
@@ -137,7 +138,7 @@ func getMounts(ctx context.Context) ([]*mount, error) {
 			validmount.attributes[mountAttrOpts] = opts
 
 			if err := validmount.getMountInfo(); err != nil {
-				logging.FromContext(ctx).
+				slogctx.FromCtx(ctx).
 					With(slog.String("worker", usageWorkerID)).
 					Debug("Error getting mount info.", slog.Any("error", err))
 			} else {
@@ -147,7 +148,7 @@ func getMounts(ctx context.Context) ([]*mount, error) {
 	}
 
 	if err := data.Close(); err != nil {
-		logging.FromContext(ctx).
+		slogctx.FromCtx(ctx).
 			With(slog.String("worker", usageWorkerID)).
 			Debug("Failed to close mounts file.", slog.Any("error", err))
 	}

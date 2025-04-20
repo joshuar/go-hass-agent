@@ -15,6 +15,7 @@ import (
 
 	"github.com/go-resty/resty/v2"
 	"github.com/reugn/go-quartz/quartz"
+	slogctx "github.com/veqryn/slog-context"
 
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
@@ -51,7 +52,6 @@ var (
 
 type ExternalIP struct {
 	client *resty.Client
-	logger *slog.Logger
 	prefs  *preferences.CommonWorkerPrefs
 	*workers.PollingEntityWorkerData
 	*models.WorkerMetadata
@@ -73,13 +73,13 @@ func (w *ExternalIP) Execute(ctx context.Context) error {
 	for ipVer := range slices.Values([]int{4, 6}) {
 		ipAddr, err := w.lookupExternalIPs(ctx, ipVer)
 		if err != nil || ipAddr == nil {
-			w.logger.Log(ctx, logging.LevelTrace, "Looking up external IP failed.", slog.Any("error", err))
+			slogctx.FromCtx(ctx).Log(ctx, logging.LevelTrace, "Looking up external IP failed.", slog.Any("error", err))
 			continue
 		}
 
 		entity, err := newExternalIPSensor(ctx, ipAddr)
 		if err != nil {
-			w.logger.Log(ctx, logging.LevelTrace, "Sensor creation failed.", slog.Any("error", err))
+			slogctx.FromCtx(ctx).Log(ctx, logging.LevelTrace, "Sensor creation failed.", slog.Any("error", err))
 			continue
 		}
 		w.OutCh <- entity
@@ -127,7 +127,7 @@ func (w *ExternalIP) Start(ctx context.Context) (<-chan models.Entity, error) {
 
 func (w *ExternalIP) lookupExternalIPs(ctx context.Context, ver int) (net.IP, error) {
 	for host, addr := range ipLookupHosts {
-		w.logger.
+		slogctx.FromCtx(ctx).
 			With(slog.String("worker", externalIPWorkerID)).
 			LogAttrs(ctx, logging.LevelTrace,
 				"Fetching external IP.",
@@ -141,7 +141,7 @@ func (w *ExternalIP) lookupExternalIPs(ctx context.Context, ver int) (net.IP, er
 			return nil, fmt.Errorf("could not retrieve external v%d address with %s: %w", ver, addr[ver], err)
 		}
 
-		w.logger.
+		slogctx.FromCtx(ctx).
 			With(slog.String("worker", externalIPWorkerID)).
 			LogAttrs(ctx, logging.LevelTrace,
 				"Received external IP.",
@@ -171,8 +171,6 @@ func NewExternalIPWorker(ctx context.Context) (workers.EntityWorker, error) {
 		WorkerMetadata:          models.SetWorkerMetadata(externalIPWorkerID, externalIPWorkerDesc),
 		PollingEntityWorkerData: &workers.PollingEntityWorkerData{},
 		client:                  resty.New().SetTimeout(externalIPUpdateRequestTimeout),
-		logger: logging.FromContext(ctx).
-			With(slog.String("worker", externalIPWorkerID)),
 	}
 
 	prefs, err := preferences.LoadWorker(worker)

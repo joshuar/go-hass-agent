@@ -14,6 +14,7 @@ import (
 	"os/user"
 
 	"github.com/godbus/dbus/v5"
+	slogctx "github.com/veqryn/slog-context"
 
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 )
@@ -95,7 +96,7 @@ func NewBus(ctx context.Context, busType dbusType) (*Bus, error) {
 		return nil, fmt.Errorf("could not connect to bus: %w", err)
 	}
 
-	logger := logging.FromContext(ctx).
+	logger := slogctx.FromCtx(ctx).
 		WithGroup("dbus").
 		With(
 			slog.String("bus", busType.String()),

@@ -147,7 +147,7 @@ func MQTTOrigin() *mqtthass.Origin {
 func MQTT() *MQTTPreferences {
 	prefs := *defaultMQTTPreferences
 	if err := load(mqttPrefPrefix, &prefs); err != nil {
-		logger.Debug("Could not retrieve MQTT preferences, defaults will be used.",
+		slog.Debug("Could not retrieve MQTT preferences, defaults will be used.",
 			slog.Any("error", err))
 	}
 

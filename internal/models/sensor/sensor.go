@@ -11,7 +11,8 @@ import (
 	"log/slog"
 	"maps"
 
-	"github.com/joshuar/go-hass-agent/internal/components/logging"
+	slogctx "github.com/veqryn/slog-context"
+
 	"github.com/joshuar/go-hass-agent/internal/models"
 	"github.com/joshuar/go-hass-agent/internal/models/class"
 )
@@ -188,13 +189,13 @@ func NewSensor(ctx context.Context, options ...Option) (models.Entity, error) {
 
 	for _, option := range options {
 		if err := option(&sensor); err != nil {
-			logging.FromContext(ctx).Warn("Could not set sensor option.", slog.Any("error", err))
+			slogctx.FromCtx(ctx).Warn("Could not set sensor option.", slog.Any("error", err))
 		}
 	}
 
 	if sensor.Type == "" {
 		if err := AsTypeSensor()(&sensor); err != nil {
-			logging.FromContext(ctx).Warn("Could not set sensor option.", slog.Any("error", err))
+			slogctx.FromCtx(ctx).Warn("Could not set sensor option.", slog.Any("error", err))
 		}
 	}
 

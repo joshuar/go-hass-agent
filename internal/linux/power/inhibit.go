@@ -14,8 +14,8 @@ import (
 	"github.com/eclipse/paho.golang/paho"
 	mqtthass "github.com/joshuar/go-hass-anything/v12/pkg/hass"
 	mqttapi "github.com/joshuar/go-hass-anything/v12/pkg/mqtt"
+	slogctx "github.com/veqryn/slog-context"
 
-	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
@@ -32,7 +32,6 @@ type InhibitWorker struct {
 	prefs          *preferences.CommonWorkerPrefs
 	InhibitControl *mqtthass.SwitchEntity
 	fd             int
-	logger         *slog.Logger
 	MsgCh          chan mqttapi.Msg
 	bus            *dbusx.Bus
 }
@@ -67,7 +66,7 @@ func (w *InhibitWorker) inhibitCommandCallback(p *paho.Publish) {
 	}
 
 	if err != nil {
-		w.logger.Error("Could not set inhibit state.",
+		slog.Error("Could not set inhibit state.",
 			slog.Any("error", err))
 
 		return
@@ -75,7 +74,7 @@ func (w *InhibitWorker) inhibitCommandCallback(p *paho.Publish) {
 
 	go func() {
 		if err := w.publishState(w.MsgCh); err != nil {
-			w.logger.Error("Failed to publish mute state to MQTT.", slog.Any("error", err))
+			slog.Error("Failed to publish mute state to MQTT.", slog.Any("error", err))
 		}
 	}()
 }
@@ -127,8 +126,7 @@ func NewInhibitWorker(ctx context.Context, device *mqtthass.Device) (*InhibitWor
 	var err error
 
 	worker := &InhibitWorker{
-		logger: logging.FromContext(ctx).WithGroup(inhibitWorkerID),
-		MsgCh:  make(chan mqttapi.Msg),
+		MsgCh: make(chan mqttapi.Msg),
 	}
 
 	// Create an MQTT switch entity for toggling the inhibit lock.
@@ -170,14 +168,14 @@ func NewInhibitWorker(ctx context.Context, device *mqtthass.Device) (*InhibitWor
 		<-ctx.Done()
 
 		if err := worker.releaseInhibitLock(); err != nil {
-			worker.logger.Error("Could not release inhibit state.",
+			slogctx.FromCtx(ctx).Error("Could not release inhibit state.",
 				slog.Any("error", err))
 		}
 	}()
 
 	go func() {
 		if err := worker.publishState(worker.MsgCh); err != nil {
-			worker.logger.Warn("Could not publish initial inhibit state.",
+			slogctx.FromCtx(ctx).Warn("Could not publish initial inhibit state.",
 				slog.Any("error", err))
 		}
 	}()

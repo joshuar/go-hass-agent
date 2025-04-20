@@ -11,7 +11,8 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/joshuar/go-hass-agent/internal/components/logging"
+	slogctx "github.com/veqryn/slog-context"
+
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/upgrade"
 )
@@ -26,19 +27,17 @@ func (r *Upgrade) Help() string {
 func (r *Upgrade) Run(opts *Opts) error {
 	ctx, cancelFunc := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancelFunc()
-
-	// Load up the contenxt.
+	ctx = slogctx.NewCtx(ctx, slog.Default())
 	ctx = preferences.PathToCtx(ctx, opts.Path)
-	ctx = logging.ToContext(ctx, opts.Logger)
 
 	if err := upgrade.Run(ctx); err != nil {
-		logging.FromContext(ctx).Warn(showHelpTxt("upgrade-failed-help"),
+		slogctx.FromCtx(ctx).Warn(showHelpTxt("upgrade-failed-help"),
 			slog.Any("error", err))
 
 		return fmt.Errorf("upgrade failed: %w", err)
 	}
 
-	logging.FromContext(ctx).Info("All upgrades completed!")
+	slogctx.FromCtx(ctx).Info("All upgrades completed!")
 
 	return nil
 }

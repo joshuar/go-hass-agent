@@ -7,7 +7,8 @@ import (
 	"context"
 	"errors"
 
-	"github.com/joshuar/go-hass-agent/internal/components/logging"
+	slogctx "github.com/veqryn/slog-context"
+
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/components/validation"
 	"github.com/joshuar/go-hass-agent/internal/hass/api"
@@ -63,7 +64,7 @@ func Handler(ctx context.Context, client API, event models.Event) error {
 		return errors.Join(ErrHandleEvent, err)
 	}
 
-	logging.FromContext(ctx).Debug("Event sent.", event.LogAttributes())
+	slogctx.FromCtx(ctx).Debug("Event sent.", event.LogAttributes())
 
 	return nil
 }

@@ -12,9 +12,11 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/lmittmann/tint"
 	"github.com/mattn/go-isatty"
 	slogmulti "github.com/samber/slog-multi"
+	slogctx "github.com/veqryn/slog-context"
 )
 
 const (
@@ -82,7 +84,7 @@ func New(options Options) *slog.Logger {
 		}
 	}
 
-	logger := slog.New(slogmulti.Fanout(handlers...))
+	logger := slog.New(slogctx.NewHandler(slogmulti.Fanout(handlers...), nil))
 	slog.SetDefault(logger)
 
 	return logger
@@ -115,23 +117,22 @@ func generateFileOpts(level slog.Level) *slog.HandlerOptions {
 }
 
 func tintLevelReplacer(_ []string, attr slog.Attr) slog.Attr {
-	// Set default level.
 	if attr.Key == slog.LevelKey {
 		level, ok := attr.Value.Any().(slog.Level)
 		if !ok {
 			level = slog.LevelInfo
 		}
-
-		// Errors in red.
-		if err, ok := attr.Value.Any().(error); ok {
-			aErr := tint.Err(err)
-			attr.Key = aErr.Key
-		}
-
-		// Format custom log level.
-		levelLabel, exists := LevelNames[level]
-		if exists {
-			attr.Value = slog.StringValue(levelLabel)
+		switch level {
+		case slog.LevelError:
+			attr.Value = slog.StringValue(color.HiRedString("ERROR"))
+		case slog.LevelWarn:
+			attr.Value = slog.StringValue(color.HiYellowString("WARN"))
+		case slog.LevelInfo:
+			attr.Value = slog.StringValue(color.HiGreenString("INFO"))
+		case slog.LevelDebug:
+			attr.Value = slog.StringValue(color.MagentaString("DEBUG"))
+		default:
+			attr.Value = slog.StringValue("UNKNOWN")
 		}
 	}
 
