@@ -7,7 +7,7 @@ package sensor
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"log/slog"
 	"maps"
 
@@ -17,8 +17,7 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/models/class"
 )
 
-var ErrNewSensor = errors.New("could not create new sensor")
-
+// Option is a functional option for a sensor.
 type Option models.Option[*models.Sensor]
 
 // WithState assigns a state value to the Sensor.
@@ -203,7 +202,7 @@ func NewSensor(ctx context.Context, options ...Option) (models.Entity, error) {
 
 	err := entity.FromSensor(sensor)
 	if err != nil {
-		return entity, errors.Join(ErrNewSensor, err)
+		return entity, fmt.Errorf("could not generate sensor entity: %w", err)
 	}
 
 	return entity, nil

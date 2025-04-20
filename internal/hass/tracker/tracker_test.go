@@ -1,11 +1,9 @@
 // Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
 // SPDX-License-Identifier: MIT
 
-//nolint:paralleltest
 package tracker
 
 import (
-	"context"
 	"reflect"
 	"testing"
 
@@ -17,7 +15,7 @@ import (
 )
 
 func TestTracker_Get(t *testing.T) {
-	mocksensorEntity, err := sensor.NewSensor(context.TODO(),
+	mocksensorEntity, err := sensor.NewSensor(t.Context(),
 		sensor.WithName("Mock sensor.Entity"),
 		sensor.WithID("mock_sensor.Entity"),
 		sensor.WithState("mockValue"),
@@ -76,7 +74,7 @@ func TestTracker_Get(t *testing.T) {
 }
 
 func TestTracker_SensorList(t *testing.T) {
-	mocksensorEntity, err := sensor.NewSensor(context.TODO(),
+	mocksensorEntity, err := sensor.NewSensor(t.Context(),
 		sensor.WithName("Mock sensor.Entity"),
 		sensor.WithID("mock_sensor.Entity"),
 		sensor.WithState("mockValue"),
@@ -121,7 +119,7 @@ func TestTracker_SensorList(t *testing.T) {
 }
 
 func TestTracker_Add(t *testing.T) {
-	newEntity, err := sensor.NewSensor(context.TODO(),
+	newEntity, err := sensor.NewSensor(t.Context(),
 		sensor.WithName("New sensor.Entity"),
 		sensor.WithID("new_sensor.Entity"),
 		sensor.WithState("new"),
@@ -131,7 +129,7 @@ func TestTracker_Add(t *testing.T) {
 	newSensor, err := newEntity.AsSensor()
 	require.NoError(t, err)
 
-	existingEntity, err := sensor.NewSensor(context.TODO(),
+	existingEntity, err := sensor.NewSensor(t.Context(),
 		sensor.WithName("Existing sensor.Entity"),
 		sensor.WithID("existing_sensor.Entity"),
 		sensor.WithState("existing"),
@@ -186,7 +184,7 @@ func TestTracker_Add(t *testing.T) {
 }
 
 func TestTracker_Reset(t *testing.T) {
-	mocksensorEntity, err := sensor.NewSensor(context.TODO(),
+	mocksensorEntity, err := sensor.NewSensor(t.Context(),
 		sensor.WithName("Mock sensor.Entity"),
 		sensor.WithID("mock_sensor.Entity"),
 		sensor.WithState("mockValue"),

@@ -32,7 +32,7 @@ var (
 )
 
 const (
-	scriptWorkerId   = "scripts"
+	scriptWorkerID   = "scripts"
 	scriptWorkerDesc = "Custom script-based sensors"
 )
 
@@ -45,7 +45,7 @@ type Worker struct {
 }
 
 func (c *Worker) PreferencesID() string {
-	return scriptWorkerId
+	return scriptWorkerID
 }
 
 func (c *Worker) DefaultPreferences() preferences.CommonWorkerPrefs {
@@ -148,7 +148,7 @@ func NewScriptsWorker(ctx context.Context) (*Worker, error) {
 	scriptPath := filepath.Join(preferences.PathFromCtx(ctx), "scripts")
 
 	worker := &Worker{
-		WorkerMetadata: models.SetWorkerMetadata(scriptWorkerId, scriptWorkerDesc),
+		WorkerMetadata: models.SetWorkerMetadata(scriptWorkerID, scriptWorkerDesc),
 	}
 
 	scripts, err := worker.findScripts(ctx, scriptPath)

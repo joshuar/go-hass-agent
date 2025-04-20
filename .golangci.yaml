@@ -19,6 +19,9 @@ linters:
   settings:
     gocyclo:
       min-complexity: 15
+    gosec:
+      excludes:
+        - G104 # made redundant by errcheck
     lll:
       tab-width: 4
       line-length: 120
@@ -31,8 +34,12 @@ linters:
         - ok
         - mu
         - fd
+        - to
   exclusions:
     rules:
+      - linters:
+          - lll
+        source: "^//go:generate "
       - path: '(.+)_test\.go'
         linters:
           - dupl
@@ -48,4 +55,11 @@ formatters:
     goimports:
       local-prefixes:
         - github.com/joshuar/go-hass-agent
-
+run:
+  timeout: "1m"
+  issues-exit-code: 1
+  tests: true
+  allow-parallel-runners: false
+  allow-serial-runners: false
+  go: "1.24"
+  relative-path-mode: wd

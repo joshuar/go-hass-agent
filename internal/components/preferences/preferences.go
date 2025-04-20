@@ -99,8 +99,6 @@ var defaultPreferences = &preferences{
 var Init = func(ctx context.Context, preferences ...SetPreference) error {
 	return sync.OnceValue(func() error {
 		prefsFile = filepath.Join(PathFromCtx(ctx), preferencesFile)
-		ctx = slogctx.WithGroup(ctx, "preferences")
-
 		slogctx.FromCtx(ctx).Debug("Loading preferences.",
 			slog.String("file", prefsFile))
 

@@ -25,7 +25,7 @@ type API interface {
 // request type.
 func newSensorRequest(reqType api.RequestType, sensor *models.Sensor) (*api.Request, error) {
 	if valid, problems := validation.ValidateStruct(sensor); !valid {
-		return nil, errors.Join(ErrHandleSensor, problems)
+		return nil, fmt.Errorf("%w: %w", ErrHandleSensor, problems)
 	}
 
 	req := &api.Request{
@@ -38,24 +38,24 @@ func newSensorRequest(reqType api.RequestType, sensor *models.Sensor) (*api.Requ
 	case api.UpdateSensorStates:
 		state, err := sensor.AsState()
 		if err != nil {
-			return nil, errors.Join(ErrHandleSensor, err)
+			return nil, fmt.Errorf("%w: %w", ErrHandleSensor, err)
 		}
 
 		// Add the sensor state into the request.
 		err = req.Data.FromSensorState(*state)
 		if err != nil {
-			return nil, errors.Join(ErrHandleSensor, err)
+			return nil, fmt.Errorf("%w: %w", ErrHandleSensor, err)
 		}
 	case api.RegisterSensor:
 		registration, err := sensor.AsRegistration()
 		if err != nil {
-			return nil, errors.Join(ErrHandleSensor, err)
+			return nil, fmt.Errorf("%w: %w", ErrHandleSensor, err)
 		}
 
 		// Add the sensor registration into the request.
 		err = req.Data.FromSensorRegistration(*registration)
 		if err != nil {
-			return nil, errors.Join(ErrHandleSensor, err)
+			return nil, fmt.Errorf("%w: %w", ErrHandleSensor, err)
 		}
 	}
 
@@ -67,17 +67,17 @@ func newSensorRequest(reqType api.RequestType, sensor *models.Sensor) (*api.Requ
 func UpdateHandler(ctx context.Context, client API, sensor models.Sensor) error {
 	req, err := newSensorRequest(api.UpdateSensorStates, &sensor)
 	if err != nil {
-		return errors.Join(ErrHandleSensor, err)
+		return fmt.Errorf("%w: %w", ErrHandleSensor, err)
 	}
 
 	resp, err := client.SendRequest(ctx, preferences.RestAPIURL(), *req)
 	if err != nil {
-		return errors.Join(ErrHandleSensor, err)
+		return fmt.Errorf("%w: %w", ErrHandleSensor, err)
 	}
 
 	stateResp, err := resp.AsSensorStateResponse()
 	if err != nil {
-		return errors.Join(ErrHandleSensor, err)
+		return fmt.Errorf("%w: %w", ErrHandleSensor, err)
 	}
 
 	for id, status := range stateResp {
@@ -111,22 +111,22 @@ func UpdateHandler(ctx context.Context, client API, sensor models.Sensor) error 
 func RegistrationHandler(ctx context.Context, client API, sensor models.Sensor) (bool, error) {
 	req, err := newSensorRequest(api.RegisterSensor, &sensor)
 	if err != nil {
-		return false, errors.Join(ErrHandleSensor, err)
+		return false, fmt.Errorf("%w: %w", ErrHandleSensor, err)
 	}
 
 	resp, err := client.SendRequest(ctx, preferences.RestAPIURL(), *req)
 	if err != nil {
-		return false, errors.Join(ErrHandleSensor, err)
+		return false, fmt.Errorf("%w: %w", ErrHandleSensor, err)
 	}
 
 	registration, err := resp.AsSensorRegistrationResponse()
 	if err != nil {
-		return false, errors.Join(ErrHandleSensor, err)
+		return false, fmt.Errorf("%w: %w", ErrHandleSensor, err)
 	}
 
 	if registration.Success != nil {
 		if !*registration.Success {
-			return false, errors.New("sensor registration failed")
+			return false, fmt.Errorf("%w: sensor registration failed", ErrHandleSensor)
 		}
 	}
 

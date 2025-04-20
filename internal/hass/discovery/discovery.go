@@ -1,6 +1,7 @@
 // Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
 // SPDX-License-Identifier: MIT
 
+// Package discovery implements local network discovery of Home Assistant servers.
 package discovery
 
 import (
