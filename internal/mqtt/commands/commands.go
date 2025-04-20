@@ -19,7 +19,6 @@ import (
 	"github.com/eclipse/paho.golang/paho"
 	"github.com/iancoleman/strcase"
 	"github.com/pelletier/go-toml/v2"
-	"golang.org/x/exp/constraints"
 
 	mqtthass "github.com/joshuar/go-hass-anything/v12/pkg/hass"
 	mqttapi "github.com/joshuar/go-hass-anything/v12/pkg/mqtt"
@@ -548,7 +547,7 @@ func numberState(command string) (json.RawMessage, error) {
 
 // convValue provides a generic way to either convert to an int/float or just
 // return the default value of that type.
-func convValue[T constraints.Float | constraints.Integer](orig any) T {
+func convValue[T ~float64 | ~int64](orig any) T {
 	value, ok := orig.(T)
 	if !ok {
 		return T(0)
