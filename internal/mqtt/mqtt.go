@@ -5,7 +5,7 @@ package mqtt
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"log/slog"
 
 	mqttapi "github.com/joshuar/go-hass-anything/v12/pkg/mqtt"
@@ -14,8 +14,6 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/models"
 )
-
-var ErrClient = errors.New("MQTT client error")
 
 // WorkerMQTTData contains the configs, subscriptions and message channels for an
 // MQTT worker or workers.
@@ -33,7 +31,7 @@ func Start(ctx context.Context, data *WorkerData) error {
 	// configs.
 	client, err := mqttapi.NewClient(ctx, preferences.MQTT(), data.Subscriptions, data.Configs)
 	if err != nil {
-		return errors.Join(ErrClient, err)
+		return fmt.Errorf("could not start MQTT client: %w", err)
 	}
 	// Listen for worker MQTT messages and publish them through the client.
 	go func() {
@@ -60,11 +58,11 @@ func Start(ctx context.Context, data *WorkerData) error {
 func Reset(ctx context.Context, configs []*models.MQTTConfig) error {
 	client, err := mqttapi.NewClient(ctx, preferences.MQTT(), nil, nil)
 	if err != nil {
-		return errors.Join(ErrClient, err)
+		return fmt.Errorf("could not start MQTT client: %w", err)
 	}
 
 	if err := client.Unpublish(ctx, configs...); err != nil {
-		return errors.Join(ErrClient, err)
+		return fmt.Errorf("could not remove configs: %w", err)
 	}
 
 	return nil

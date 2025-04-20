@@ -18,6 +18,7 @@ import (
 // type MyType Option[*MyType].
 type Option[T any] func(T) error
 
+// StateValue is a constraint on the types of values for an entity state.
 type StateValue interface {
 	cmp.Ordered | time.Time
 }

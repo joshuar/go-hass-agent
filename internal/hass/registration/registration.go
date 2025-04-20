@@ -33,7 +33,7 @@ var (
 func RegisterDevice(ctx context.Context, registration *preferences.Registration) error {
 	// Validate provided registration details.
 	if err := registration.Validate(); err != nil {
-		return errors.Join(ErrDeviceRegistrationFailed, err)
+		return fmt.Errorf("%w: %w", ErrDeviceRegistrationFailed, err)
 	}
 
 	req := newDeviceRegistration(ctx)
@@ -47,7 +47,7 @@ func RegisterDevice(ctx context.Context, registration *preferences.Registration)
 
 	registrationURL, err := url.Parse(registration.Server)
 	if err != nil {
-		return errors.Join(ErrDeviceRegistrationFailed, err)
+		return fmt.Errorf("%w: %w", ErrDeviceRegistrationFailed, err)
 	}
 
 	registrationURL = registrationURL.JoinPath(RegistrationPath)
@@ -56,20 +56,20 @@ func RegisterDevice(ctx context.Context, registration *preferences.Registration)
 
 	switch {
 	case err != nil:
-		return errors.Join(ErrDeviceRegistrationFailed, err)
+		return fmt.Errorf("%w: %w", ErrDeviceRegistrationFailed, err)
 	case restyResp.IsError():
-		return errors.Join(ErrDeviceRegistrationFailed, errors.New(restyResp.Status()))
+		return fmt.Errorf("%w: %s", ErrDeviceRegistrationFailed, restyResp.Status())
 	}
 
 	// Generate a rest API URL.
 	restAPIURL, err := generateAPIURL(&resp, registration)
 	if err != nil {
-		return errors.Join(ErrDeviceRegistrationFailed, err)
+		return fmt.Errorf("%w: %w", ErrDeviceRegistrationFailed, err)
 	}
 	// Generate a websocket API URL.
 	websocketAPIURL, err := generateWebsocketURL(registration.Server)
 	if err != nil {
-		return errors.Join(ErrDeviceRegistrationFailed, err)
+		return fmt.Errorf("%w: %w", ErrDeviceRegistrationFailed, err)
 	}
 
 	prefs := []preferences.SetPreference{
@@ -87,7 +87,7 @@ func RegisterDevice(ctx context.Context, registration *preferences.Registration)
 
 	// Set registration status in preferences.
 	if err = preferences.Set(prefs...); err != nil {
-		return errors.Join(ErrDeviceRegistrationFailed, err)
+		return fmt.Errorf("%w: %w", ErrDeviceRegistrationFailed, err)
 	}
 
 	return nil

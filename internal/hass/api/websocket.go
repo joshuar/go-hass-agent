@@ -14,6 +14,7 @@ import (
 
 	"github.com/cenkalti/backoff/v4"
 	"github.com/lxzan/gws"
+	slogctx "github.com/veqryn/slog-context"
 )
 
 const (
@@ -125,7 +126,7 @@ func (c *Websocket) OnPing(_ *gws.Conn, _ []byte) {}
 
 //nolint:cyclop
 func (c *Websocket) OnMessage(socket *gws.Conn, message *gws.Message) {
-	defer message.Close()
+	defer message.Close() //nolint:errcheck
 
 	response := &websocketResponse{
 		Success: true,
@@ -228,7 +229,7 @@ func (c *Websocket) Connect(ctx context.Context) (chan WebsocketNotification, er
 		if err != nil {
 			return fmt.Errorf("could not establish connection: %w", err)
 		}
-		defer resp.Body.Close()
+		defer resp.Body.Close() //nolint:errcheck
 
 		return nil
 	}
@@ -243,7 +244,10 @@ func (c *Websocket) Connect(ctx context.Context) (chan WebsocketNotification, er
 
 	go func() {
 		<-ctx.Done()
-		c.socket.WriteClose(closeNormal, []byte(`normal close`))
+		err := c.socket.WriteClose(closeNormal, []byte(`normal close`))
+		if err != nil {
+			slogctx.FromCtx(ctx).Warn("Could not close socket cleanly.", slog.Any("error", err))
+		}
 	}()
 
 	return c.NotifyCh, nil

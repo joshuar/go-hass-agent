@@ -114,7 +114,7 @@ func RestAPIURL() string {
 	return prefsSrc.String(prefHassAPIURL)
 }
 
-// RestAPIURL retrieves the configured Home Assistant websocket API URL from the
+// WebsocketURL retrieves the configured Home Assistant websocket API URL from the
 // preferences.
 func WebsocketURL() string {
 	return prefsSrc.String(prefHassWebsocketURL)

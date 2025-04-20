@@ -29,7 +29,7 @@ type Device struct {
 	SupportsEncryption bool    `toml:"-" json:"supports_encryption"`
 }
 
-// AppDate is any custom app data for this device.
+// AppData is any custom app data for this device.
 type AppData struct {
 	PushWebsocket bool `toml:"-" json:"push_websocket_channel"`
 }

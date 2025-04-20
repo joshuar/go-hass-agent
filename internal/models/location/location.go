@@ -1,13 +1,13 @@
 // Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
 // SPDX-License-Identifier: MIT
 
-// Package sensor provides a method and options for creating model.Location
+// Package location provides a method and options for creating model.Location
 // objects wrapped as a model.Entity.
 package location
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"log/slog"
 
 	slogctx "github.com/veqryn/slog-context"
@@ -15,8 +15,7 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/models"
 )
 
-var ErrNewLocation = errors.New("could not create new location")
-
+// Option is a functional option for a location.
 type Option models.Option[*models.Location]
 
 // WithGPSCoords sets the latitude and longitude GPS coordinates for the location.
@@ -65,7 +64,7 @@ func NewLocation(ctx context.Context, options ...Option) (models.Entity, error) 
 
 	err := entity.FromLocation(location)
 	if err != nil {
-		return entity, errors.Join(ErrNewLocation, err)
+		return entity, fmt.Errorf("could not generate location entity: %w", err)
 	}
 
 	return entity, nil

@@ -54,18 +54,14 @@ type Client struct {
 	config         *Config
 }
 
-var (
-	ErrClientSetup = errors.New("could not set up client")
-	ErrNewRequest  = errors.New("could not create request")
-	ErrSendRequest = errors.New("send request failed")
-	ErrGetConfig   = errors.New("error retrieving Home Assistant config")
-)
+// ErrSendRequest indicates an error occurred when sending a request to Home Assistant.
+var ErrSendRequest = errors.New("send request failed")
 
 // isDisabled handles processing a sensor that is disabled. For a sensor that is
 // disabled, we need to make an additional check against Home Assistant to see
 // if the sensor has been re-enabled, and update our local registry before
 // continuing.
-func (c *Client) isDisabled(details models.Sensor) bool {
+func (c *Client) isDisabled(ctx context.Context, details models.Sensor) bool {
 	regDisabled := c.isDisabledInReg(details.UniqueID)
 	haDisabled := c.isDisabledInHA(details.UniqueID)
 
@@ -73,14 +69,18 @@ func (c *Client) isDisabled(details models.Sensor) bool {
 	case regDisabled && !haDisabled:
 		c.logger.Info("Sensor re-enabled in Home Assistant, Re-enabling in local registry and sending updates.",
 			details.LogAttributes())
-		c.sensorRegistry.SetDisabled(details.UniqueID, false)
-
+		if err := c.sensorRegistry.SetDisabled(details.UniqueID, false); err != nil {
+			slogctx.FromCtx(ctx).Warn("Could not update sensor state in registry.",
+				details.LogAttributes())
+		}
 		return false
 	case !regDisabled && haDisabled:
 		c.logger.Info("Sensor has been disabled in Home Assistant, Disabling in local registry and not sending updates.",
 			details.LogAttributes())
-		c.sensorRegistry.SetDisabled(details.UniqueID, true)
-
+		if err := c.sensorRegistry.SetDisabled(details.UniqueID, true); err != nil {
+			slogctx.FromCtx(ctx).Warn("Could not update sensor state in registry.",
+				details.LogAttributes())
+		}
 		return true
 	case regDisabled && haDisabled:
 		c.logger.Info("Sensor is disabled, not sending updates.",
@@ -113,26 +113,24 @@ func (c *Client) scheduleConfigUpdates() error {
 		c.logger.Debug("No scheduler active, not scheduling fetch config updates.")
 		return nil
 	}
-
 	getConfigJob := job.NewFunctionJobWithDesc(c.UpdateConfig, "Fetch Home Assistant Configuration.")
-
 	err := scheduler.Manager.ScheduleJob(id.HassJob, getConfigJob, quartz.NewSimpleTrigger(30*time.Second))
 	if err != nil {
-		return errors.Join(ErrClientSetup, err)
+		return fmt.Errorf("could not schedule config updates: %w", err)
 	}
-
 	return nil
 }
 
+// UpdateConfig will fetch and store the Home Assistant config via the Home Assistant REST API.
 func (c *Client) UpdateConfig(ctx context.Context) (bool, error) {
 	resp, err := c.SendRequest(ctx, preferences.RestAPIURL(), api.Request{Type: api.GetConfig})
 	if err != nil {
-		return false, errors.Join(ErrGetConfig, err)
+		return false, fmt.Errorf("could not update config: %w", err)
 	}
 
 	configResp, err := resp.AsConfigResponse()
 	if err != nil {
-		return false, errors.Join(ErrGetConfig, err)
+		return false, fmt.Errorf("could not update config: %w", err)
 	}
 
 	c.config.Update(&configResp)
@@ -142,6 +140,8 @@ func (c *Client) UpdateConfig(ctx context.Context) (bool, error) {
 
 // EntityHandler takes incoming Entity objects via the passed in channel and
 // runs the appropriate handler for the Entity type.
+//
+//nolint:gocognit,gocyclo,funlen
 func (c *Client) EntityHandler(ctx context.Context, entityCh <-chan models.Entity) {
 	for entity := range entityCh {
 		if eventData, err := entity.AsEvent(); err == nil && eventData.Valid() {
@@ -165,9 +165,10 @@ func (c *Client) EntityHandler(ctx context.Context, entityCh <-chan models.Entit
 			continue
 		}
 
+		//nolint:nestif
 		if sensorData, err := entity.AsSensor(); err == nil {
 			// Send sensor details.
-			if c.sensorRegistry.IsRegistered(sensorData.UniqueID) && !c.isDisabled(sensorData) {
+			if c.sensorRegistry.IsRegistered(sensorData.UniqueID) && !c.isDisabled(ctx, sensorData) {
 				// If the sensor is registered and not disabled, send an update request.
 				if err := sensor.UpdateHandler(ctx, c, sensorData); err != nil {
 					c.logger.Warn("Could not update sensor.",
@@ -254,11 +255,11 @@ func (c *Client) SendRequest(ctx context.Context, url string, req api.Request) (
 	// Handle different response conditions.
 	switch {
 	case err != nil:
-		return resp, errors.Join(ErrSendRequest, err)
+		return resp, fmt.Errorf("%w: %w", ErrSendRequest, err)
 	case apiResp == nil:
-		return resp, errors.Join(ErrSendRequest, errors.New("an unknown error occurred"))
+		return resp, fmt.Errorf("%w: an unknown error occurred", ErrSendRequest)
 	case apiResp.IsError():
-		return resp, errors.Join(ErrSendRequest, fmt.Errorf("%s", apiResp.Status()))
+		return resp, fmt.Errorf("%w: %s", ErrSendRequest, apiResp.Status())
 	}
 
 	c.logger.
@@ -286,19 +287,24 @@ func (c *Client) GetSensorList() []models.UniqueID {
 }
 
 func (c *Client) GetSensor(id models.UniqueID) (*models.Sensor, error) {
-	return c.sensorTracker.Get(id)
+	return c.sensorTracker.Get(id) //nolint:wrapcheck
 }
 
 func (c *Client) DisableSensor(id models.UniqueID) {
 	if !c.isDisabledInReg(id) {
 		c.logger.Info("Disabling sensor.",
 			slog.String("id", id))
-		c.sensorRegistry.SetDisabled(id, true)
+		if err := c.sensorRegistry.SetDisabled(id, true); err != nil {
+			c.logger.Warn("Could not disable sensor.", slog.Any("error", err))
+		}
 	}
 }
 
 func (c *Client) RegisterSensor(id models.UniqueID) error {
-	return c.sensorRegistry.SetRegistered(id, true)
+	if err := c.sensorRegistry.SetRegistered(id, true); err != nil {
+		return fmt.Errorf("could not register sensor: %w", err)
+	}
+	return nil
 }
 
 // NewClient creates a new hass client, which tracks last sensor status,
@@ -315,7 +321,7 @@ func NewClient(ctx context.Context, reg sensorRegistry) (*Client, error) {
 	}
 	// Schedule a job to get the Home Assistant on a regular interval.
 	if err := client.scheduleConfigUpdates(); err != nil {
-		return nil, errors.Join(ErrClientSetup, err)
+		return nil, fmt.Errorf("could not create client: %w", err)
 	}
 
 	return client, nil

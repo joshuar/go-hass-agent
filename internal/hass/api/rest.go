@@ -1,10 +1,12 @@
 // Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
 // SPDX-License-Identifier: MIT
 
+// Package api contains methods and objects for interacting with the Home Assistant REST API.
 package api
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -19,10 +21,8 @@ const (
 	defaultRetryMaxWait = 20 * time.Second
 )
 
-var (
-	ErrUnknownResponse     = errors.New("an unknown error was returned in the response")
-	ErrUnspecifiedResponse = errors.New("an unspecified error was returned in the response")
-)
+// ErrUnknown is returned when an error occurred but the reason/cause could not be determined or was unexpected.
+var ErrUnknown = errors.New("an unknown error occurred")
 
 // Error allows an APIError to satisfy the Go Error interface.
 func (e *APIError) Error() string {
@@ -48,14 +48,14 @@ func (r *ResponseStatus) HasError() error {
 	if r.Error.IsSpecified() {
 		apiErr, err := r.Error.Get()
 		if err != nil {
-			return errors.Join(ErrUnknownResponse, err)
+			return fmt.Errorf("%w: %w", ErrUnknown, err)
 		}
 
 		return &apiErr
 	}
 
 	if r.Error.IsNull() {
-		return ErrUnspecifiedResponse
+		return ErrUnknown
 	}
 
 	return nil
@@ -65,7 +65,7 @@ func (r *ResponseStatus) HasError() error {
 // successful.
 func (r *ResponseStatus) HasSuccess() (bool, error) {
 	if r.IsSuccess.IsSpecified() {
-		return r.IsSuccess.Get()
+		return r.IsSuccess.Get() //nolint:wrapcheck
 	}
 
 	if r.IsSuccess.IsNull() {

@@ -20,6 +20,7 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/scheduler"
 )
 
+// Worker contains the common methods that define a worker.
 type Worker interface {
 	// ID returns an ID for the worker.
 	ID() models.ID
@@ -36,22 +37,26 @@ type EntityWorker interface {
 	Start(ctx context.Context) (<-chan models.Entity, error)
 }
 
+// PollingEntityWorker is an entity worker that generates entities via polling for data on a schedule.
 type PollingEntityWorker interface {
 	EntityWorker
 	quartz.Job
 	GetTrigger() quartz.Trigger
 }
 
+// PollingEntityWorkerData contains the data for handling polling.
 type PollingEntityWorkerData struct {
 	Trigger      quartz.Trigger
 	OutCh        chan models.Entity
 	LastFireTime time.Time
 }
 
+// GetTrigger returns the poll trigger for the worker.
 func (d *PollingEntityWorkerData) GetTrigger() quartz.Trigger {
 	return d.Trigger
 }
 
+// GetDelta returns a duration indicating the time that has passed since the data was last polled.
 func (d *PollingEntityWorkerData) GetDelta() time.Duration {
 	delta := time.Since(d.LastFireTime)
 	d.LastFireTime = time.Now()
@@ -91,15 +96,16 @@ type MQTTWorker interface {
 	Start(ctx context.Context) (*mqtt.WorkerData, error)
 }
 
+// Manager tracks running workers.
 type Manager struct {
+	sync.Mutex
 	workers map[models.ID]context.CancelFunc
-	mu      sync.Mutex
 }
 
 // StartEntityWorkers starts the given EntityWorkers. Any errors will be logged.
 func (m *Manager) StartEntityWorkers(ctx context.Context, workers ...EntityWorker) <-chan models.Entity {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.Lock()
+	defer m.Unlock()
 
 	outCh := make([]<-chan models.Entity, 0, len(workers))
 
@@ -137,9 +143,10 @@ func (m *Manager) StartEntityWorkers(ctx context.Context, workers ...EntityWorke
 	return MergeCh(ctx, outCh...)
 }
 
+// StartMQTTWorkers starts the given MQTTWorkers. Any errors will be logged.
 func (m *Manager) StartMQTTWorkers(ctx context.Context, workers ...MQTTWorker) *mqtt.WorkerData {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.Lock()
+	defer m.Unlock()
 
 	data := &mqtt.WorkerData{}
 	msgCh := make([]<-chan models.MQTTMsg, 0, len(workers))
@@ -188,8 +195,8 @@ func (m *Manager) StartMQTTWorkers(ctx context.Context, workers ...MQTTWorker) *
 // already stopped or not running, a warning will be logged and the action is a
 // no-op.
 func (m *Manager) StopAllWorkers(ctx context.Context) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.Lock()
+	defer m.Unlock()
 
 	for id, workerCancelFunc := range m.workers {
 		workerCancelFunc()
@@ -202,8 +209,8 @@ func (m *Manager) StopAllWorkers(ctx context.Context) {
 // already stopped or not running, a warning will be logged and the action is a
 // no-op.
 func (m *Manager) StopWorkers(ctx context.Context, ids ...string) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.Lock()
+	defer m.Unlock()
 
 	for _, id := range ids {
 		if workerCancelFunc, found := m.workers[id]; found {
@@ -217,6 +224,7 @@ func (m *Manager) StopWorkers(ctx context.Context, ids ...string) {
 	}
 }
 
+// NewManager creates a new manager object.
 func NewManager(ctx context.Context) *Manager {
 	return &Manager{
 		workers: make(map[models.ID]context.CancelFunc),

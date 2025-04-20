@@ -39,11 +39,13 @@ const (
 )
 
 var (
-	ErrNoCommands         = errors.New("no commands")
-	ErrNoState            = errors.New("no state passed to control")
-	ErrCmdFailed          = errors.New("could not execute command for control")
-	ErrParseCmd           = errors.New("could not parse command-line")
+	// ErrNoCommands indicates that no custom commands are configured.
+	ErrNoCommands = errors.New("no commands")
+	// ErrCmdFailed indicates that processing the command has failed.
+	ErrCmdFailed = errors.New("could not execute command for control")
+	// ErrUnknownSwitchState indicates the state of the switch could not be determined.
 	ErrUnknownSwitchState = errors.New("could not determine state of switch")
+	// ErrUnknownNumberState indicates the state of the number could not be determined.
 	ErrUnknownNumberState = errors.New("could not determine state of number")
 )
 
@@ -421,6 +423,7 @@ func (d *Worker) generateNumbers(numberCommands []Command) {
 	d.intNumbers = ints
 }
 
+// Start starts the MQTT worker.
 func (d *Worker) Start(_ context.Context) (*mqtt.WorkerData, error) {
 	return &mqtt.WorkerData{
 		Configs:       d.Configs(),
@@ -428,6 +431,7 @@ func (d *Worker) Start(_ context.Context) (*mqtt.WorkerData, error) {
 	}, nil
 }
 
+// IsDisabled will return a boolean indicating whether the MQTT worker is disabled.
 func (d *Worker) IsDisabled() bool {
 	return !preferences.MQTTEnabled()
 }
@@ -470,7 +474,7 @@ func cmdWithoutState(command string) error {
 	cmdElems := strings.Split(command, " ")
 
 	if len(cmdElems) == 0 {
-		return ErrParseCmd
+		return fmt.Errorf("%w: invalid command-line", ErrCmdFailed)
 	}
 
 	_, err := exec.Command(cmdElems[0], cmdElems[1:]...).Output() // #nosec:204
@@ -485,7 +489,7 @@ func cmdWithoutState(command string) error {
 // value. This is used by controls with a controllable state in Home Assistant.
 func cmdWithState(command, state string) error {
 	if state == "" {
-		return ErrNoState
+		return fmt.Errorf("%w: no state specified", ErrCmdFailed)
 	}
 
 	cmdElems := strings.Split(command, " ")

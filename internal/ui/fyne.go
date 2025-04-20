@@ -298,7 +298,7 @@ func (i *FyneUI) agentSettingsWindow() fyne.Window {
 // values that are currently tracked by the agent. Values are updated
 // continuously.
 //
-//nolint:gocognit
+//nolint:gocognit,gocyclo
 func (i *FyneUI) sensorsWindow() fyne.Window {
 	sensors := i.hass.GetSensorList()
 	if sensors == nil {
