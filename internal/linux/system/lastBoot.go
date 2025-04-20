@@ -10,7 +10,8 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/joshuar/go-hass-agent/internal/components/logging"
+	slogctx "github.com/veqryn/slog-context"
+
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/models"
@@ -72,7 +73,7 @@ func (w *lastBootWorker) Start(ctx context.Context) (<-chan models.Entity, error
 	go func() {
 		defer close(w.OutCh)
 		if err := w.Execute(ctx); err != nil {
-			logging.FromContext(ctx).Warn("Failed to send info details",
+			slogctx.FromCtx(ctx).Warn("Failed to send info details",
 				slog.Any("error", err))
 		}
 	}()

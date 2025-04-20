@@ -15,8 +15,8 @@ import (
 
 	"github.com/jsimonetti/rtnetlink"
 	"github.com/reugn/go-quartz/quartz"
+	slogctx "github.com/veqryn/slog-context"
 
-	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/models"
 	"github.com/joshuar/go-hass-agent/internal/scheduler"
@@ -210,7 +210,7 @@ func (w *netStatsWorker) Start(ctx context.Context) (<-chan models.Entity, error
 		<-ctx.Done()
 
 		if err = w.nlconn.Close(); err != nil {
-			logging.FromContext(ctx).Debug("Could not close netlink connection.",
+			slogctx.FromCtx(ctx).Debug("Could not close netlink connection.",
 				slog.String("worker", netRatesWorkerID),
 				slog.Any("error", err))
 		}
@@ -316,7 +316,7 @@ func NewNetStatsWorker(ctx context.Context) (workers.EntityWorker, error) {
 
 	pollInterval, err := time.ParseDuration(worker.prefs.UpdateInterval)
 	if err != nil {
-		logging.FromContext(ctx).Warn("Invalid polling interval, using default",
+		slogctx.FromCtx(ctx).Warn("Invalid polling interval, using default",
 			slog.String("worker", netRatesWorkerID),
 			slog.String("given_interval", worker.prefs.UpdateInterval),
 			slog.String("default_interval", rateInterval.String()))

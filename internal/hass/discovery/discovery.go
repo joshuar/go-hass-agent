@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/grandcat/zeroconf"
+	slogctx "github.com/veqryn/slog-context"
 
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
@@ -45,13 +46,13 @@ func FindServers(ctx context.Context) ([]string, error) {
 			if server != "" {
 				serverList = append(serverList, server)
 			} else {
-				logging.FromContext(ctx).Log(ctx, logging.LevelTrace,
+				slogctx.FromCtx(ctx).Log(ctx, logging.LevelTrace,
 					"Found a server malformed server, will not use.", slog.String("server", entry.HostName))
 			}
 		}
 	}(entries)
 
-	logging.FromContext(ctx).Info("Looking for Home Assistant servers on the local network...")
+	slogctx.FromCtx(ctx).Info("Looking for Home Assistant servers on the local network...")
 
 	searchCtx, searchCancel := context.WithTimeout(ctx, haDiscoveryTimeout)
 	defer searchCancel()

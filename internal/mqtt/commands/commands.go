@@ -24,7 +24,6 @@ import (
 	mqtthass "github.com/joshuar/go-hass-anything/v12/pkg/hass"
 	mqttapi "github.com/joshuar/go-hass-anything/v12/pkg/mqtt"
 
-	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/models"
 	"github.com/joshuar/go-hass-agent/internal/mqtt"
@@ -88,7 +87,6 @@ type CommandList struct {
 // definitions, which can be passed to Home Assistant to add appropriate
 // entities to control the buttons/switches over MQTT.
 type Worker struct {
-	logger       *slog.Logger
 	device       *mqtthass.Device
 	buttons      []*mqtthass.ButtonEntity
 	switches     []*mqtthass.SwitchEntity
@@ -133,7 +131,7 @@ func (d *Worker) Subscriptions() []*mqttapi.Subscription {
 func (d *Worker) generateSubscriptions(e entity) *mqttapi.Subscription {
 	sub, err := e.MarshalSubscription()
 	if err != nil {
-		d.logger.Warn("Could not create entity subscription.", slog.Any("error", err))
+		slog.Warn("Could not create entity subscription.", slog.Any("error", err))
 
 		return nil
 	}
@@ -170,7 +168,7 @@ func (d *Worker) Configs() []*mqttapi.Msg {
 func (d *Worker) generateConfigs(e entity) *mqttapi.Msg {
 	msg, err := e.MarshalConfig()
 	if err != nil {
-		d.logger.Warn("Could not create entity config.", slog.Any("error", err))
+		slog.Warn("Could not create entity config.", slog.Any("error", err))
 
 		return nil
 	}
@@ -197,7 +195,7 @@ func (d *Worker) generateButtons(buttonCmds []Command) {
 		callback := func(_ *paho.Publish) {
 			err := cmdWithoutState(cmd.Exec)
 			if err != nil {
-				d.logger.Warn("Button press failed.",
+				slog.Warn("Button press failed.",
 					slog.String("button", cmd.Name),
 					slog.Any("error", err))
 			}
@@ -241,7 +239,7 @@ func (d *Worker) generateSwitches(switchCmds []Command) {
 
 			err := cmdWithState(cmd.Exec, state)
 			if err != nil {
-				d.logger.Warn("Switch toggle failed.",
+				slog.Warn("Switch toggle failed.",
 					slog.String("switch", cmd.Name),
 					slog.Any("error", err))
 			}
@@ -297,7 +295,7 @@ func (d *Worker) generateNumbers(numberCommands []Command) {
 
 			err := cmdWithState(cmd.Exec, state)
 			if err != nil {
-				d.logger.Warn("Set number failed.",
+				slog.Warn("Set number failed.",
 					slog.String("number", cmd.Name),
 					slog.Any("error", err))
 			}
@@ -457,7 +455,6 @@ func NewCommandsWorker(ctx context.Context, device *mqtthass.Device) (*Worker, e
 
 	controller := &Worker{
 		WorkerMetadata: models.SetWorkerMetadata(workerID, workerDesc),
-		logger:         logging.FromContext(ctx).WithGroup("custom_commands"),
 		device:         device,
 	}
 	controller.generateButtons(cmds.Buttons)

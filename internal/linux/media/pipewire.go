@@ -13,6 +13,7 @@ import (
 	"os/exec"
 
 	pwmonitor "github.com/ConnorsApps/pipewire-monitor-go"
+	slogctx "github.com/veqryn/slog-context"
 
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 )
@@ -39,7 +40,7 @@ func monitorPipewire(ctx context.Context, filterFunc func(*pwmonitor.Event) bool
 		for {
 			_, err := dec.Token()
 			if err != nil && !errors.Is(err, io.ErrClosedPipe) {
-				logging.FromContext(ctx).Debug("pw-dump: failed to read JSON token.",
+				slogctx.FromCtx(ctx).Log(ctx, logging.LevelTrace, "pw-dump: failed to read JSON token.",
 					slog.Any("error", err))
 			}
 
@@ -49,7 +50,7 @@ func monitorPipewire(ctx context.Context, filterFunc func(*pwmonitor.Event) bool
 				if err = dec.Decode(&event); err == io.EOF {
 					break
 				} else if err != nil {
-					logging.FromContext(ctx).Debug("Error decoding pw-dump output.",
+					slogctx.FromCtx(ctx).Debug("Error decoding pw-dump output.",
 						slog.Any("error", err))
 				}
 				if filterFunc(&event) {
@@ -59,7 +60,7 @@ func monitorPipewire(ctx context.Context, filterFunc func(*pwmonitor.Event) bool
 
 			_, err = dec.Token()
 			if err != nil && !errors.Is(err, io.ErrClosedPipe) {
-				logging.FromContext(ctx).Debug("pw-dump: failed to read JSON token.",
+				slogctx.FromCtx(ctx).Log(ctx, logging.LevelTrace, "pw-dump: failed to read JSON token.",
 					slog.Any("error", err))
 			}
 		}
@@ -68,7 +69,7 @@ func monitorPipewire(ctx context.Context, filterFunc func(*pwmonitor.Event) bool
 	go func() {
 		defer close(outCh)
 		if err := cmd.Wait(); err != nil {
-			logging.FromContext(ctx).Debug("Error running pw-dump.",
+			slogctx.FromCtx(ctx).Debug("Error running pw-dump.",
 				slog.Any("error", err))
 		}
 	}()

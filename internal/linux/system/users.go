@@ -16,8 +16,8 @@ import (
 	"sync"
 
 	"github.com/godbus/dbus/v5"
+	slogctx "github.com/veqryn/slog-context"
 
-	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/models"
@@ -272,7 +272,7 @@ func (w *UserSessionEventsWorker) Start(ctx context.Context) (<-chan models.Enti
 					// Send the session added event.
 					entity, err := event.NewEvent(sessionStartedEventName, w.sessions[string(path)])
 					if err != nil {
-						logging.FromContext(ctx).Warn("Could not generate users event.", slog.Any("error", err))
+						slogctx.FromCtx(ctx).Warn("Could not generate users event.", slog.Any("error", err))
 					} else {
 						eventCh <- entity
 					}
@@ -280,7 +280,7 @@ func (w *UserSessionEventsWorker) Start(ctx context.Context) (<-chan models.Enti
 					// Send the session removed event.
 					entity, err := event.NewEvent(sessionStoppedEventName, w.sessions[string(path)])
 					if err != nil {
-						logging.FromContext(ctx).Warn("Could not generate users event.", slog.Any("error", err))
+						slogctx.FromCtx(ctx).Warn("Could not generate users event.", slog.Any("error", err))
 					} else {
 						eventCh <- entity
 					}

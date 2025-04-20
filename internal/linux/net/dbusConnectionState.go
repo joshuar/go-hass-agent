@@ -14,8 +14,8 @@ import (
 	"sync"
 
 	"github.com/godbus/dbus/v5"
+	slogctx "github.com/veqryn/slog-context"
 
-	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/models"
@@ -45,11 +45,10 @@ var _ workers.EntityWorker = (*ConnectionsWorker)(nil)
 var ErrInitConnStateWorker = errors.New("could not init network connection state worker")
 
 type ConnectionsWorker struct {
-	bus    *dbusx.Bus
-	list   map[string]*connection
-	logger *slog.Logger
-	prefs  *WorkerPrefs
-	mu     sync.Mutex
+	bus   *dbusx.Bus
+	list  map[string]*connection
+	prefs *WorkerPrefs
+	mu    sync.Mutex
 	*models.WorkerMetadata
 }
 
@@ -96,7 +95,7 @@ func (w *ConnectionsWorker) Start(ctx context.Context) (<-chan models.Entity, er
 
 	go func() {
 		defer close(sensorCh)
-		w.logger.Debug("Watching for network connections.")
+		slogctx.FromCtx(ctx).Debug("Watching for network connections.")
 
 		for event := range triggerCh {
 			connectionPath := dbus.ObjectPath(event.Path)
@@ -109,27 +108,27 @@ func (w *ConnectionsWorker) Start(ctx context.Context) (<-chan models.Entity, er
 			}
 			// Track all activating/new connections.
 			if err = w.handleConnection(connCtx, connectionPath, sensorCh); err != nil {
-				w.logger.Debug("Could not monitor connection.", slog.Any("error", err))
+				slogctx.FromCtx(ctx).Debug("Could not monitor connection.", slog.Any("error", err))
 			}
 		}
 
-		w.logger.Debug("Stopped watching network connections.")
+		slogctx.FromCtx(ctx).Debug("Stopped watching network connections.")
 	}()
 
 	go func() {
 		defer connCancel()
 		<-ctx.Done()
-		w.logger.Debug("Stopped events.")
+		slogctx.FromCtx(ctx).Debug("Stopped events.")
 	}()
 
 	// monitor all current active connections
 	connectionlist, err := dbusx.NewProperty[[]dbus.ObjectPath](w.bus, dBusNMPath, dBusNMObj, dBusNMObj+".ActiveConnections").Get()
 	if err != nil {
-		w.logger.Debug("Error getting active connections from D-Bus", slog.Any("error", err))
+		slogctx.FromCtx(ctx).Debug("Error getting active connections from D-Bus", slog.Any("error", err))
 	} else {
 		for _, path := range connectionlist {
 			if err := w.handleConnection(connCtx, path, sensorCh); err != nil {
-				w.logger.Debug("Could not monitor connection.", slog.Any("error", err))
+				slogctx.FromCtx(ctx).Debug("Could not monitor connection.", slog.Any("error", err))
 			}
 		}
 	}
@@ -194,8 +193,6 @@ func NewConnectionWorker(ctx context.Context) (workers.EntityWorker, error) {
 		WorkerMetadata: models.SetWorkerMetadata(netConnWorkerID, netConnWorkerDesc),
 		bus:            bus,
 		list:           make(map[string]*connection),
-		logger: logging.FromContext(ctx).
-			With(slog.String("worker", netConnWorkerID)),
 	}
 
 	prefs, err := preferences.LoadWorker(worker)

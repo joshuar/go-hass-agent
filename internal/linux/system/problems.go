@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/reugn/go-quartz/quartz"
+	slogctx "github.com/veqryn/slog-context"
 
-	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/models"
@@ -171,7 +171,7 @@ func NewProblemsWorker(ctx context.Context) (workers.EntityWorker, error) {
 
 	pollInterval, err := time.ParseDuration(worker.prefs.UpdateInterval)
 	if err != nil {
-		logging.FromContext(ctx).Warn("Invalid polling interval, using default",
+		slogctx.FromCtx(ctx).Warn("Invalid polling interval, using default",
 			slog.String("worker", abrtProblemsWorkerID),
 			slog.String("given_interval", worker.prefs.UpdateInterval),
 			slog.String("default_interval", abrtProblemsCheckInterval.String()))

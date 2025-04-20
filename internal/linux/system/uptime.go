@@ -14,8 +14,8 @@ import (
 	"time"
 
 	"github.com/reugn/go-quartz/quartz"
+	slogctx "github.com/veqryn/slog-context"
 
-	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/models"
@@ -94,7 +94,7 @@ func (w *uptimeWorker) Start(ctx context.Context) (<-chan models.Entity, error) 
 func (w *uptimeWorker) getUptime(ctx context.Context) float64 {
 	data, err := os.Open(linux.UptimeFile)
 	if err != nil {
-		logging.FromContext(ctx).Debug("Unable to retrieve uptime.", slog.Any("error", err))
+		slogctx.FromCtx(ctx).Debug("Unable to retrieve uptime.", slog.Any("error", err))
 
 		return 0
 	}
@@ -105,14 +105,14 @@ func (w *uptimeWorker) getUptime(ctx context.Context) float64 {
 	line.Split(bufio.ScanWords)
 
 	if !line.Scan() {
-		logging.FromContext(ctx).Debug("Could not parse uptime.")
+		slogctx.FromCtx(ctx).Debug("Could not parse uptime.")
 
 		return 0
 	}
 
 	uptimeValue, err := strconv.ParseFloat(line.Text(), 64)
 	if err != nil {
-		logging.FromContext(ctx).Debug("Could not parse uptime.")
+		slogctx.FromCtx(ctx).Debug("Could not parse uptime.")
 
 		return 0
 	}
@@ -134,7 +134,7 @@ func NewUptimeTimeWorker(ctx context.Context) (workers.EntityWorker, error) {
 
 	pollInterval, err := time.ParseDuration(prefs.UpdateInterval)
 	if err != nil {
-		logging.FromContext(ctx).Warn("Invalid polling interval, using default",
+		slogctx.FromCtx(ctx).Warn("Invalid polling interval, using default",
 			slog.String("worker", uptimeWorkerID),
 			slog.String("given_interval", prefs.UpdateInterval),
 			slog.String("default_interval", uptimePollInterval.String()))

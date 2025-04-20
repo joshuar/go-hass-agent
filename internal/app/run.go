@@ -8,7 +8,8 @@ import (
 	"log/slog"
 	"sync"
 
-	"github.com/joshuar/go-hass-agent/internal/components/logging"
+	slogctx "github.com/veqryn/slog-context"
+
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/device"
 	"github.com/joshuar/go-hass-agent/internal/hass/api"
@@ -36,7 +37,7 @@ func Run(ctx context.Context, headless bool, appAPIs APIs) error {
 		defer regWait.Done()
 		// Check if the agent is registered. If not, start a registration flow.
 		if err = checkRegistration(ctx, app, headless); err != nil {
-			app.logger.Error("Error checking registration status.", slog.Any("error", err))
+			slogctx.FromCtx(ctx).Error("Error checking registration status.", slog.Any("error", err))
 			cancelFunc()
 		}
 	}()
@@ -83,7 +84,7 @@ func (a *App) runEntityWorkers(ctx context.Context, appAPIs APIs, wg *sync.WaitG
 	entityCh := a.workerManager.StartEntityWorkers(ctx, entityWorkers...)
 
 	go func() {
-		defer a.workerManager.StopAllWorkers()
+		defer a.workerManager.StopAllWorkers(ctx)
 		<-ctx.Done()
 	}()
 
@@ -102,7 +103,7 @@ func (a *App) runMQTTWorkers(ctx context.Context, wg *sync.WaitGroup, regwg *syn
 	}
 	// If MQTT is not enabled bail.
 	if !preferences.MQTTEnabled() {
-		a.logger.Warn("MQTT functionality is disabled, will not run any MQTT sensors/controls.")
+		slogctx.FromCtx(ctx).Warn("MQTT functionality is disabled, will not run any MQTT sensors/controls.")
 		return
 	}
 	// Create MQTT workers.
@@ -114,7 +115,7 @@ func (a *App) runMQTTWorkers(ctx context.Context, wg *sync.WaitGroup, regwg *syn
 	// Start all MQTT workers.
 	data := a.workerManager.StartMQTTWorkers(ctx, mqttWorkers...)
 	if err := mqtt.Start(ctx, data); err != nil {
-		a.logger.Warn("Unable to start MQTT client.",
+		slogctx.FromCtx(ctx).Warn("Unable to start MQTT client.",
 			slog.Any("error", err),
 		)
 	}
@@ -145,7 +146,7 @@ func (a *App) runNotificationsWorker(ctx context.Context, wg *sync.WaitGroup, re
 			// Connect the websocket.
 			notifyCh, err := websocket.Connect(ctx)
 			if err != nil {
-				logging.FromContext(ctx).Warn("Failed to connect to websocket.",
+				slogctx.FromCtx(ctx).Warn("Failed to connect to websocket.",
 					slog.Any("error", err))
 
 				return

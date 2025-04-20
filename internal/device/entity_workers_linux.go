@@ -8,7 +8,8 @@ import (
 	"log/slog"
 	"slices"
 
-	"github.com/joshuar/go-hass-agent/internal/components/logging"
+	slogctx "github.com/veqryn/slog-context"
+
 	"github.com/joshuar/go-hass-agent/internal/device/info"
 	"github.com/joshuar/go-hass-agent/internal/linux/battery"
 	"github.com/joshuar/go-hass-agent/internal/linux/cpu"
@@ -62,14 +63,10 @@ var linuxLaptopWorkers = []func(ctx context.Context) (workers.EntityWorker, erro
 func CreateOSEntityWorkers(ctx context.Context) []workers.EntityWorker {
 	osWorkers := make([]workers.EntityWorker, 0, len(linuxWorkers)+len(linuxLaptopWorkers))
 
-	// Set up a logger.
-	logger := logging.FromContext(ctx).With(slog.Group("linux", slog.String("controller", "sensor")))
-	ctx = logging.ToContext(ctx, logger)
-
 	for workerInit := range slices.Values(linuxWorkers) {
 		worker, err := workerInit(ctx)
 		if err != nil {
-			logging.FromContext(ctx).Warn("Could not init worker.",
+			slogctx.FromCtx(ctx).Warn("Could not init worker.",
 				slog.Any("error", err))
 
 			continue
@@ -86,7 +83,7 @@ func CreateOSEntityWorkers(ctx context.Context) []workers.EntityWorker {
 		for _, workerInit := range linuxLaptopWorkers {
 			worker, err := workerInit(ctx)
 			if err != nil {
-				logging.FromContext(ctx).Warn("Could not init worker.",
+				slogctx.FromCtx(ctx).Warn("Could not init worker.",
 					slog.Any("error", err))
 
 				continue

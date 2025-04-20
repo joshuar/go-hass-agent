@@ -15,8 +15,8 @@ import (
 	"time"
 
 	"github.com/reugn/go-quartz/quartz"
+	slogctx "github.com/veqryn/slog-context"
 
-	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/models"
 	"github.com/joshuar/go-hass-agent/internal/scheduler"
@@ -60,7 +60,7 @@ func (w *usageWorker) Execute(ctx context.Context) error {
 
 		diskUsageSensor, err := newDiskUsageSensor(ctx, mount, usedPc)
 		if err != nil {
-			logging.FromContext(ctx).Warn("Could not generate usage sensor.", slog.Any("error", err))
+			slogctx.FromCtx(ctx).Warn("Could not generate usage sensor.", slog.Any("error", err))
 			continue
 		}
 		w.OutCh <- *diskUsageSensor
@@ -105,7 +105,7 @@ func NewUsageWorker(ctx context.Context) (workers.EntityWorker, error) {
 
 	pollInterval, err := time.ParseDuration(prefs.UpdateInterval)
 	if err != nil {
-		logging.FromContext(ctx).Warn("Invalid polling interval, using default",
+		slogctx.FromCtx(ctx).Warn("Invalid polling interval, using default",
 			slog.String("worker", usageWorkerID),
 			slog.String("given_interval", prefs.UpdateInterval),
 			slog.String("default_interval", usageUpdateInterval.String()))

@@ -10,7 +10,8 @@ import (
 	"log/slog"
 	"net/url"
 
-	"github.com/joshuar/go-hass-agent/internal/components/logging"
+	slogctx "github.com/veqryn/slog-context"
+
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/device/info"
 	"github.com/joshuar/go-hass-agent/internal/hass/api"
@@ -106,7 +107,7 @@ func newDeviceRegistration(ctx context.Context) *api.DeviceRegistrationRequest {
 	// Retrieve the name as the device name.
 	name, err := info.GetHostname()
 	if err != nil {
-		logging.FromContext(ctx).Warn("Unable to determine device hostname.",
+		slogctx.FromCtx(ctx).Warn("Unable to determine device hostname.",
 			slog.Any("error", err))
 	}
 
@@ -115,7 +116,7 @@ func newDeviceRegistration(ctx context.Context) *api.DeviceRegistrationRequest {
 	// Generate a new unique Device ID
 	id, err := info.NewDeviceID()
 	if err != nil {
-		logging.FromContext(ctx).Warn("Unable to generate a device ID.",
+		slogctx.FromCtx(ctx).Warn("Unable to generate a device ID.",
 			slog.Any("error", err))
 	}
 
@@ -124,7 +125,7 @@ func newDeviceRegistration(ctx context.Context) *api.DeviceRegistrationRequest {
 	// Retrieve the OS name and version.
 	osName, osVersion, err := info.GetOSID()
 	if err != nil {
-		logging.FromContext(ctx).Warn("Unable to determine OS details.",
+		slogctx.FromCtx(ctx).Warn("Unable to determine OS details.",
 			slog.Any("error", err))
 	}
 
@@ -134,7 +135,7 @@ func newDeviceRegistration(ctx context.Context) *api.DeviceRegistrationRequest {
 	// Retrieve the hardware model and manufacturer.
 	model, manufacturer, err := info.GetHWProductInfo()
 	if err != nil {
-		logging.FromContext(ctx).Warn("Unable to determine device hardware details.",
+		slogctx.FromCtx(ctx).Warn("Unable to determine device hardware details.",
 			slog.Any("error", err))
 	}
 
@@ -146,7 +147,7 @@ func newDeviceRegistration(ctx context.Context) *api.DeviceRegistrationRequest {
 		preferences.SetDeviceID(dev.DeviceID),
 		preferences.SetDeviceName(dev.DeviceName),
 	); err != nil {
-		logging.FromContext(ctx).Warn("Could not save device id/name.",
+		slogctx.FromCtx(ctx).Warn("Could not save device id/name.",
 			slog.Any("error", err))
 	}
 

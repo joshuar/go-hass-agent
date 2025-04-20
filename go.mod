@@ -52,6 +52,7 @@ require (
 	github.com/go-git/go-billy/v5 v5.6.1 // indirect
 	github.com/go-git/go-git/v5 v5.13.1 // indirect
 	github.com/go-json-experiment/json v0.0.0-20240815175050-ebd3a8989ca1 // indirect
+	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-openapi/jsonpointer v0.21.0 // indirect
 	github.com/go-openapi/swag v0.23.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.2.1 // indirect
@@ -80,6 +81,7 @@ require (
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mandykoh/go-parallel v0.1.0 // indirect
 	github.com/matryer/moq v0.5.3 // indirect
+	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mdlayher/socket v0.4.1 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
@@ -126,6 +128,7 @@ require (
 	github.com/blackjack/webcam v0.6.1
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
+	github.com/fatih/color v1.18.0
 	github.com/fredbi/uri v1.1.0 // indirect
 	github.com/fsnotify/fsnotify v1.8.0 // indirect
 	github.com/fyne-io/gl-js v0.0.0-20220119005834-d2da28d9ccfe // indirect
@@ -165,6 +168,7 @@ require (
 	github.com/srwiley/rasterx v0.0.0-20220730225603-2ab79fcdd4ef // indirect
 	github.com/tklauser/go-sysconf v0.3.15
 	github.com/tklauser/numcpus v0.10.0 // indirect
+	github.com/veqryn/slog-context v0.8.0
 	github.com/yuin/goldmark v1.7.1 // indirect
 	golang.org/x/crypto v0.33.0 // indirect
 	golang.org/x/image v0.18.0 // indirect

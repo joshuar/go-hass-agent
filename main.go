@@ -68,7 +68,6 @@ func main() {
 	// Run the requested command with the provided options.
 	if err := ctx.Run(cmd.AddOptions(
 		cmd.RunHeadless(bool(*CLI.Headless)),
-		cmd.WithLogger(logger),
 		cmd.WithPath(CLI.Path),
 	)); err != nil {
 		logger.Error("Command failed.",

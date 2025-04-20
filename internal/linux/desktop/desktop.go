@@ -14,8 +14,8 @@ import (
 
 	"github.com/godbus/dbus/v5"
 	"github.com/mandykoh/prism/srgb"
+	slogctx "github.com/veqryn/slog-context"
 
-	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/models"
@@ -77,7 +77,7 @@ func (w *settingsWorker) Start(ctx context.Context) (<-chan models.Entity, error
 			fmt.Errorf("could not watch D-Bus for desktop settings updates: %w", err))
 	}
 	sensorCh := make(chan models.Entity)
-	logger := logging.FromContext(ctx).With(slog.String("worker", desktopWorkerID))
+	logger := slogctx.FromCtx(ctx).With(slog.String("worker", desktopWorkerID))
 
 	go func() {
 		defer close(sensorCh)
@@ -140,11 +140,11 @@ func (w *settingsWorker) generateSensors(ctx context.Context) ([]models.Entity, 
 
 	// Accent Color Sensor.
 	if value, err := w.getProp(accentColorProp); err != nil {
-		logging.FromContext(ctx).Warn("Could not retrieve accent color property", slog.Any("error", err))
+		slogctx.FromCtx(ctx).Warn("Could not retrieve accent color property", slog.Any("error", err))
 	} else {
 		entity, err := newAccentColorSensor(ctx, parseAccentColor(value))
 		if err != nil {
-			logging.FromContext(ctx).Warn("Could not generate accent color sensor.", slog.Any("error", err))
+			slogctx.FromCtx(ctx).Warn("Could not generate accent color sensor.", slog.Any("error", err))
 		} else {
 			sensors = append(sensors, entity)
 		}
@@ -152,13 +152,13 @@ func (w *settingsWorker) generateSensors(ctx context.Context) ([]models.Entity, 
 
 	// Color Theme Sensor.
 	if value, err := w.getProp(colorSchemeProp); err != nil {
-		logging.FromContext(ctx).Warn("Could not retrieve color scheme property", slog.Any("error", err))
+		slogctx.FromCtx(ctx).Warn("Could not retrieve color scheme property", slog.Any("error", err))
 	} else {
 		scheme, icon := parseColorScheme(value)
 
 		entity, err := newColorSchemeSensor(ctx, scheme, icon)
 		if err != nil {
-			logging.FromContext(ctx).Warn("Could not generate color scheme sensor.", slog.Any("error", err))
+			slogctx.FromCtx(ctx).Warn("Could not generate color scheme sensor.", slog.Any("error", err))
 		} else {
 			sensors = append(sensors, entity)
 		}

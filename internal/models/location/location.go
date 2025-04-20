@@ -10,7 +10,8 @@ import (
 	"errors"
 	"log/slog"
 
-	"github.com/joshuar/go-hass-agent/internal/components/logging"
+	slogctx "github.com/veqryn/slog-context"
+
 	"github.com/joshuar/go-hass-agent/internal/models"
 )
 
@@ -56,7 +57,7 @@ func NewLocation(ctx context.Context, options ...Option) (models.Entity, error) 
 
 	for _, option := range options {
 		if err := option(&location); err != nil {
-			logging.FromContext(ctx).Warn("Could not set location option.", slog.Any("error", err))
+			slogctx.FromCtx(ctx).Warn("Could not set location option.", slog.Any("error", err))
 		}
 	}
 

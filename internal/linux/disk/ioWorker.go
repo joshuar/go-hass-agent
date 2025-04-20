@@ -14,8 +14,8 @@ import (
 	"time"
 
 	"github.com/reugn/go-quartz/quartz"
+	slogctx "github.com/veqryn/slog-context"
 
-	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/models"
@@ -157,7 +157,7 @@ func (w *ioWorker) Execute(ctx context.Context) error {
 	for dev := range slices.Values(deviceNames) {
 		dev, stats, err := getDevice(dev)
 		if err != nil {
-			logging.FromContext(ctx).
+			slogctx.FromCtx(ctx).
 				With(slog.String("worker", ioWorkerID)).
 				Debug("Unable to read device stats.", slog.Any("error", err))
 
@@ -169,7 +169,7 @@ func (w *ioWorker) Execute(ctx context.Context) error {
 
 		rateSensors, warnings := w.generateDeviceRateSensors(ctx, dev, stats, delta)
 		if warnings != nil {
-			logging.FromContext(ctx).
+			slogctx.FromCtx(ctx).
 				With(slog.String("worker", ioWorkerID)).
 				Debug("Some problems occurred generating disk rate sensors.", slog.Any("warnings", warnings))
 		}
@@ -179,7 +179,7 @@ func (w *ioWorker) Execute(ctx context.Context) error {
 
 		statSensors, warnings := w.generateDeviceStatSensors(ctx, dev, stats)
 		if warnings != nil {
-			logging.FromContext(ctx).
+			slogctx.FromCtx(ctx).
 				With(slog.String("worker", ioWorkerID)).
 				Debug("Some problems occurred generating disk rate sensors.", slog.Any("warnings", warnings))
 		}
@@ -200,7 +200,7 @@ func (w *ioWorker) Execute(ctx context.Context) error {
 	// Update total stats.
 	rateSensors, warnings := w.generateDeviceRateSensors(ctx, &device{id: totalsID}, statsTotals, delta)
 	if warnings != nil {
-		logging.FromContext(ctx).
+		slogctx.FromCtx(ctx).
 			With(slog.String("worker", ioWorkerID)).
 			Debug("Some problems occurred generating disk rate sensors.", slog.Any("warnings", warnings))
 	}
@@ -210,7 +210,7 @@ func (w *ioWorker) Execute(ctx context.Context) error {
 
 	statSensors, warnings := w.generateDeviceStatSensors(ctx, &device{id: totalsID}, statsTotals)
 	if warnings != nil {
-		logging.FromContext(ctx).
+		slogctx.FromCtx(ctx).
 			With(slog.String("worker", ioWorkerID)).
 			Debug("Some problems occurred generating disk rate sensors.", slog.Any("warnings", warnings))
 	}
@@ -274,7 +274,7 @@ func NewIOWorker(ctx context.Context) (workers.EntityWorker, error) {
 
 	pollInterval, err := time.ParseDuration(prefs.UpdateInterval)
 	if err != nil {
-		logging.FromContext(ctx).Warn("Invalid polling interval, using default",
+		slogctx.FromCtx(ctx).Warn("Invalid polling interval, using default",
 			slog.String("worker", ioWorkerID),
 			slog.String("given_interval", prefs.UpdateInterval),
 			slog.String("default_interval", ioWorkerUpdateInterval.String()))

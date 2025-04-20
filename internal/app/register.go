@@ -9,7 +9,8 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/joshuar/go-hass-agent/internal/components/logging"
+	slogctx "github.com/veqryn/slog-context"
+
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/components/registry"
 	"github.com/joshuar/go-hass-agent/internal/hass/registration"
@@ -29,7 +30,7 @@ func checkRegistration(ctx context.Context, app *App, headless bool) error {
 	}
 
 	if preferences.Registered() && !request.ForceRegister {
-		logging.FromContext(ctx).Debug("Already registered and forced registration not requested.")
+		slogctx.FromCtx(ctx).Debug("Already registered and forced registration not requested.")
 		return nil
 	}
 
@@ -50,12 +51,12 @@ func checkRegistration(ctx context.Context, app *App, headless bool) error {
 	// If the registration was forced, reset the sensor registry.
 	if request.ForceRegister {
 		if err := registry.Reset(preferences.PathFromCtx(ctx)); err != nil {
-			logging.FromContext(ctx).Warn("Problem resetting registry.",
+			slogctx.FromCtx(ctx).Warn("Problem resetting registry.",
 				slog.Any("error", err))
 		}
 	}
 
-	logging.FromContext(ctx).Info("Agent registered.")
+	slogctx.FromCtx(ctx).Info("Agent registered.")
 
 	return nil
 }

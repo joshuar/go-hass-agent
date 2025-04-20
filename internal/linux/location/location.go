@@ -13,8 +13,8 @@ import (
 	"log/slog"
 
 	"github.com/godbus/dbus/v5"
+	slogctx "github.com/veqryn/slog-context"
 
-	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/models"
@@ -47,9 +47,8 @@ const (
 )
 
 type locationWorker struct {
-	bus    *dbusx.Bus
-	logger *slog.Logger
-	prefs  *preferences.CommonWorkerPrefs
+	bus   *dbusx.Bus
+	prefs *preferences.CommonWorkerPrefs
 	*models.WorkerMetadata
 }
 
@@ -83,7 +82,7 @@ func (w *locationWorker) Start(ctx context.Context) (<-chan models.Entity, error
 	sensorCh := make(chan models.Entity)
 
 	go func() {
-		w.logger.Debug("Monitoring for location updates.")
+		slogctx.FromCtx(ctx).Debug("Monitoring for location updates.")
 
 		defer close(sensorCh)
 
@@ -91,7 +90,7 @@ func (w *locationWorker) Start(ctx context.Context) (<-chan models.Entity, error
 			select {
 			case <-ctx.Done():
 				if err := stopMethod.Call(ctx); err != nil {
-					w.logger.Debug("Could not stop geoclue client.", slog.Any("error", err))
+					slogctx.FromCtx(ctx).Debug("Could not stop geoclue client.", slog.Any("error", err))
 				}
 
 				return
@@ -100,9 +99,9 @@ func (w *locationWorker) Start(ctx context.Context) (<-chan models.Entity, error
 					go func() {
 						locationSensor, err := w.newLocation(ctx, string(locationPath))
 						if err != nil {
-							w.logger.Error("Could not update location.", slog.Any("error", err))
+							slogctx.FromCtx(ctx).Error("Could not update location.", slog.Any("error", err))
 						} else {
-							w.logger.Debug("Location updated.")
+							slogctx.FromCtx(ctx).Debug("Location updated.")
 							sensorCh <- locationSensor
 						}
 					}()
@@ -171,11 +170,11 @@ func (w *locationWorker) createClient() (string, error) {
 func (w *locationWorker) setThresholds(clientPath string) {
 	// Set a distance threshold.
 	if err := dbusx.NewProperty[uint32](w.bus, clientPath, geoclueInterface, distanceThresholdProp).Set(0); err != nil {
-		w.logger.Debug("Could not set distance threshold for geoclue requests.", slog.Any("error", err))
+		slog.Debug("Could not set distance threshold for geoclue requests.", slog.Any("error", err))
 	}
 	// Set a time threshold.
 	if err := dbusx.NewProperty[uint32](w.bus, clientPath, geoclueInterface, timeThresholdProp).Set(0); err != nil {
-		w.logger.Debug("Could not set time threshold for geoclue requests.", slog.Any("error", err))
+		slog.Debug("Could not set time threshold for geoclue requests.", slog.Any("error", err))
 	}
 }
 
@@ -198,7 +197,6 @@ func NewLocationWorker(ctx context.Context) (workers.EntityWorker, error) {
 	worker := &locationWorker{
 		WorkerMetadata: models.SetWorkerMetadata(workerID, workerDesc),
 		bus:            bus,
-		logger:         logging.FromContext(ctx).With(slog.String("worker", workerID)),
 	}
 
 	// Load the worker preferences.

@@ -8,12 +8,12 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/joshuar/go-hass-agent/internal/components/logging"
+	slogctx "github.com/veqryn/slog-context"
 )
 
 // Run will run the upgrade command.
 func Run(ctx context.Context) error {
-	logging.FromContext(ctx).Info("Checking for and attempting pre v10.0.0 upgrades...")
+	slogctx.FromCtx(ctx).Info("Checking for and attempting pre v10.0.0 upgrades...")
 	// Perform pre v10.0.0 upgrades...
 	if err := v1000(ctx); err != nil {
 		return fmt.Errorf("pre v10.0.0 upgrade failed: %w", err)

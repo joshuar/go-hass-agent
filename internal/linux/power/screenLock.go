@@ -12,7 +12,8 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/joshuar/go-hass-agent/internal/components/logging"
+	slogctx "github.com/veqryn/slog-context"
+
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/models"
@@ -127,7 +128,7 @@ func (w *screenLockWorker) Start(ctx context.Context) (<-chan models.Entity, err
 				}
 
 				if err != nil {
-					logging.FromContext(ctx).Warn("Could not generate screen lock sensor.",
+					slogctx.FromCtx(ctx).Warn("Could not generate screen lock sensor.",
 						slog.Any("error", err))
 					continue
 				}

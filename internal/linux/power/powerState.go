@@ -13,7 +13,8 @@ import (
 	"log/slog"
 	"strings"
 
-	"github.com/joshuar/go-hass-agent/internal/components/logging"
+	slogctx "github.com/veqryn/slog-context"
+
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/models"
@@ -137,7 +138,7 @@ func (w *stateWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
 				}
 
 				if err != nil {
-					logging.FromContext(ctx).Warn("Could not generate power state sensor.",
+					slogctx.FromCtx(ctx).Warn("Could not generate power state sensor.",
 						slog.Any("error", err))
 					continue
 				}
@@ -151,7 +152,7 @@ func (w *stateWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
 	go func() {
 		sensors, err := w.Sensors(ctx)
 		if err != nil {
-			logging.FromContext(ctx).
+			slogctx.FromCtx(ctx).
 				With(slog.String("worker", powerStateWorkerID)).
 				Debug("Could not retrieve power state.", slog.Any("error", err))
 

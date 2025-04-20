@@ -15,9 +15,9 @@ import (
 	"time"
 
 	"github.com/reugn/go-quartz/quartz"
+	slogctx "github.com/veqryn/slog-context"
 
 	"github.com/joshuar/go-hass-agent/internal/components/id"
-	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/models"
 	"github.com/joshuar/go-hass-agent/internal/scheduler"
@@ -38,7 +38,6 @@ const (
 
 // Worker represents the entity worker for handling scripts.
 type Worker struct {
-	logger  *slog.Logger
 	scripts []*Script
 	outCh   chan models.Entity
 	prefs   *preferences.CommonWorkerPrefs
@@ -65,7 +64,7 @@ func (c *Worker) States(ctx context.Context) []models.Entity {
 	for _, script := range c.scripts {
 		scriptSensors, err := script.Run(ctx)
 		if err != nil {
-			c.logger.Warn("Could not retrieve script sensors",
+			slogctx.FromCtx(ctx).Warn("Could not retrieve script sensors",
 				slog.String("script", script.Description()),
 				slog.Any("error", err),
 			)
@@ -88,7 +87,7 @@ func (c *Worker) Start(ctx context.Context) (<-chan models.Entity, error) {
 		// Parse the script cron schedule as a scheduler trigger.
 		trigger, err := parseSchedule(script.Schedule())
 		if err != nil {
-			c.logger.Warn("Could not schedule script.",
+			slogctx.FromCtx(ctx).Warn("Could not schedule script.",
 				slog.String("script", script.Description()),
 				slog.Any("error", err))
 
@@ -97,7 +96,7 @@ func (c *Worker) Start(ctx context.Context) (<-chan models.Entity, error) {
 		// Schedule the script.
 		err = scheduler.Manager.ScheduleJob(id.ScriptJob, script, trigger)
 		if err != nil {
-			c.logger.Warn("Could not schedule script.",
+			slogctx.FromCtx(ctx).Warn("Could not schedule script.",
 				slog.String("script", script.Description()),
 				slog.Any("error", err))
 
@@ -118,7 +117,7 @@ func (c *Worker) Stop() error {
 
 // findScripts locates scripts and returns a slice of scripts that the agent can
 // run.
-func (c *Worker) findScripts(path string) ([]*Script, error) {
+func (c *Worker) findScripts(ctx context.Context, path string) ([]*Script, error) {
 	var sensorScripts []*Script
 
 	files, err := filepath.Glob(path + "/*")
@@ -130,7 +129,7 @@ func (c *Worker) findScripts(path string) ([]*Script, error) {
 		if isExecutable(scriptFile) {
 			script, err := NewScript(scriptFile)
 			if err != nil {
-				c.logger.Warn("Script error.",
+				slogctx.FromCtx(ctx).Warn("Script error.",
 					slog.Any("error", err),
 				)
 
@@ -150,10 +149,9 @@ func NewScriptsWorker(ctx context.Context) (*Worker, error) {
 
 	worker := &Worker{
 		WorkerMetadata: models.SetWorkerMetadata(scriptWorkerId, scriptWorkerDesc),
-		logger:         logging.FromContext(ctx).WithGroup("scripts"),
 	}
 
-	scripts, err := worker.findScripts(scriptPath)
+	scripts, err := worker.findScripts(ctx, scriptPath)
 	if err != nil {
 		return nil, fmt.Errorf("could not find scripts: %w", err)
 	}

@@ -12,7 +12,8 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/joshuar/go-hass-agent/internal/components/logging"
+	slogctx "github.com/veqryn/slog-context"
+
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/device/info"
 	"github.com/joshuar/go-hass-agent/internal/linux"
@@ -58,7 +59,7 @@ func (w *infoWorker) Execute(ctx context.Context) error {
 	// Get distribution name and version.
 	distro, version, err := info.GetOSDetails()
 	if err != nil {
-		logging.FromContext(ctx).
+		slogctx.FromCtx(ctx).
 			With(slog.String("worker", infoWorkerID)).
 			Warn("Could not retrieve distro details.", slog.Any("error", err))
 	} else {
@@ -96,7 +97,7 @@ func (w *infoWorker) Execute(ctx context.Context) error {
 	// Get kernel version.
 	kernelVersion, err := info.GetKernelVersion()
 	if err != nil {
-		logging.FromContext(ctx).
+		slogctx.FromCtx(ctx).
 			With(slog.String("worker", infoWorkerID)).
 			Warn("Could not retrieve kernel version.", slog.Any("error", err))
 	} else {
@@ -123,7 +124,7 @@ func (w *infoWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
 	go func() {
 		defer close(w.OutCh)
 		if err := w.Execute(ctx); err != nil {
-			logging.FromContext(ctx).Warn("Failed to send info details",
+			slogctx.FromCtx(ctx).Warn("Failed to send info details",
 				slog.Any("error", err))
 		}
 	}()

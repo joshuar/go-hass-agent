@@ -7,7 +7,8 @@ import (
 	"context"
 	"log/slog"
 
-	"github.com/joshuar/go-hass-agent/internal/components/logging"
+	slogctx "github.com/veqryn/slog-context"
+
 	"github.com/joshuar/go-hass-agent/internal/device/worker"
 	"github.com/joshuar/go-hass-agent/internal/device/worker/scripts"
 	"github.com/joshuar/go-hass-agent/internal/workers"
@@ -19,7 +20,7 @@ func CreateDeviceEntityWorkers(ctx context.Context) []workers.EntityWorker {
 
 	// Initialize and add connection latency sensor w.
 	if w, err := worker.NewConnectionLatencyWorker(ctx); err != nil {
-		logging.FromContext(ctx).Warn("Could not set up worker.",
+		slogctx.FromCtx(ctx).Warn("Could not set up worker.",
 			slog.String("id", w.ID()),
 			slog.Any("error", err))
 	} else {
@@ -27,7 +28,7 @@ func CreateDeviceEntityWorkers(ctx context.Context) []workers.EntityWorker {
 	}
 	// Initialize and add external IP address sensor workezr.
 	if w, err := worker.NewExternalIPWorker(ctx); err != nil {
-		logging.FromContext(ctx).Warn("Could not init agent worker.",
+		slogctx.FromCtx(ctx).Warn("Could not init agent worker.",
 			slog.String("id", w.ID()),
 			slog.Any("error", err))
 	} else {
@@ -35,7 +36,7 @@ func CreateDeviceEntityWorkers(ctx context.Context) []workers.EntityWorker {
 	}
 	// Initialize and add external version sensor w.
 	if w, err := worker.NewVersionWorker(ctx); err != nil {
-		logging.FromContext(ctx).Warn("Could not init agent worker.",
+		slogctx.FromCtx(ctx).Warn("Could not init agent worker.",
 			slog.String("id", w.ID()),
 			slog.Any("error", err))
 	} else {
@@ -44,7 +45,7 @@ func CreateDeviceEntityWorkers(ctx context.Context) []workers.EntityWorker {
 
 	// Initialize and add scripts w.
 	if w, err := scripts.NewScriptsWorker(ctx); err != nil {
-		logging.FromContext(ctx).Warn("Could not init agent worker.",
+		slogctx.FromCtx(ctx).Warn("Could not init agent worker.",
 			slog.String("id", w.ID()),
 			slog.Any("error", err))
 	} else {

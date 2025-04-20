@@ -14,8 +14,8 @@ import (
 
 	mqtthass "github.com/joshuar/go-hass-anything/v12/pkg/hass"
 	mqttapi "github.com/joshuar/go-hass-anything/v12/pkg/mqtt"
+	slogctx "github.com/veqryn/slog-context"
 
-	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
@@ -34,7 +34,6 @@ const (
 var ErrInitMPRISWorker = errors.New("could not init MPRIS worker")
 
 type MPRISWorker struct {
-	logger      *slog.Logger
 	MPRISStatus *mqtthass.SensorEntity
 	MsgCh       chan mqttapi.Msg
 	mediaState  string
@@ -53,7 +52,7 @@ func (m *MPRISWorker) mprisStateCallback(_ ...any) (json.RawMessage, error) {
 	return json.RawMessage(`{ "value": ` + m.mediaState + ` }`), nil
 }
 
-func (m *MPRISWorker) publishPlaybackState(state string) {
+func (m *MPRISWorker) publishPlaybackState(ctx context.Context, state string) {
 	m.mediaState = state
 
 	switch m.mediaState {
@@ -69,7 +68,7 @@ func (m *MPRISWorker) publishPlaybackState(state string) {
 
 	msg, err := m.MPRISStatus.MarshalState()
 	if err != nil {
-		m.logger.Warn("Could not publish MPRIS state.", slog.Any("error", err))
+		slogctx.FromCtx(ctx).Warn("Could not publish MPRIS state.", slog.Any("error", err))
 
 		return
 	}
@@ -85,8 +84,7 @@ func NewMPRISWorker(ctx context.Context, device *mqtthass.Device) (*MPRISWorker,
 	}
 
 	worker := &MPRISWorker{
-		logger: logging.FromContext(ctx).With(slog.String("controller", "mpris")),
-		MsgCh:  make(chan mqttapi.Msg),
+		MsgCh: make(chan mqttapi.Msg),
 	}
 
 	worker.prefs, err = preferences.LoadWorker(worker)
@@ -125,21 +123,21 @@ func NewMPRISWorker(ctx context.Context, device *mqtthass.Device) (*MPRISWorker,
 
 	// Watch for power profile changes.
 	go func() {
-		worker.logger.Debug("Monitoring for MPRIS signals.")
+		slogctx.FromCtx(ctx).Debug("Monitoring for MPRIS signals.")
 
 		for {
 			select {
 			case <-ctx.Done():
-				worker.logger.Debug("Stopped monitoring for MPRIS signals.")
+				slogctx.FromCtx(ctx).Debug("Stopped monitoring for MPRIS signals.")
 
 				return
 			case event := <-triggerCh:
 				changed, status, err := dbusx.HasPropertyChanged[string](event.Content, "PlaybackStatus")
 				if err != nil {
-					worker.logger.Warn("Could not parse received D-Bus signal.", slog.Any("error", err))
+					slogctx.FromCtx(ctx).Warn("Could not parse received D-Bus signal.", slog.Any("error", err))
 				} else {
 					if changed {
-						worker.publishPlaybackState(status)
+						worker.publishPlaybackState(ctx, status)
 					}
 				}
 			}

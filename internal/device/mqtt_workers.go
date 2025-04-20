@@ -8,7 +8,8 @@ import (
 	"errors"
 	"log/slog"
 
-	"github.com/joshuar/go-hass-agent/internal/components/logging"
+	slogctx "github.com/veqryn/slog-context"
+
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/mqtt/commands"
 	"github.com/joshuar/go-hass-agent/internal/workers"
@@ -20,7 +21,7 @@ func CreateDeviceMQTTWorkers(ctx context.Context) []workers.MQTTWorker {
 	customCommandsWorker, err := commands.NewCommandsWorker(ctx, preferences.MQTTDevice())
 	if err != nil {
 		if !errors.Is(err, commands.ErrNoCommands) {
-			logging.FromContext(ctx).Warn("Could not setup custom MQTT commands.",
+			slogctx.FromCtx(ctx).Warn("Could not setup custom MQTT commands.",
 				slog.Any("error", err))
 		}
 	} else {

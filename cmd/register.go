@@ -7,12 +7,14 @@ package cmd
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
 
+	slogctx "github.com/veqryn/slog-context"
+
 	"github.com/joshuar/go-hass-agent/internal/app"
-	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 )
 
@@ -33,7 +35,7 @@ func (r *Register) Help() string {
 func (r *Register) Run(opts *Opts) error {
 	ctx, cancelFunc := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancelFunc()
-
+	ctx = slogctx.NewCtx(ctx, slog.Default())
 	ctx = preferences.PathToCtx(ctx, opts.Path)
 
 	// Load the preferences from file. Ignore the case where there are no
@@ -43,7 +45,6 @@ func (r *Register) Run(opts *Opts) error {
 	}
 
 	// Load up the context for the agent.
-	ctx = logging.ToContext(ctx, opts.Logger)
 	ctx = preferences.RegistrationToCtx(ctx, preferences.Registration{
 		Server:         r.Server,
 		Token:          r.Token,

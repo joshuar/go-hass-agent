@@ -12,11 +12,11 @@ import (
 	"log/slog"
 
 	"github.com/eclipse/paho.golang/paho"
+	slogctx "github.com/veqryn/slog-context"
 
 	mqtthass "github.com/joshuar/go-hass-anything/v12/pkg/hass"
 	mqttapi "github.com/joshuar/go-hass-anything/v12/pkg/mqtt"
 
-	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
@@ -48,8 +48,6 @@ func (w *dbusCmdWorker) DefaultPreferences() preferences.CommonWorkerPrefs {
 }
 
 func NewDBusCommandSubscription(ctx context.Context, device *mqtthass.Device) (*mqttapi.Subscription, error) {
-	logger := logging.FromContext(ctx).With(slog.String("controller", "dbus_command"))
-
 	worker := &dbusCmdWorker{}
 
 	prefs, err := preferences.LoadWorker(worker)
@@ -81,7 +79,7 @@ func NewDBusCommandSubscription(ctx context.Context, device *mqtthass.Device) (*
 					err     error
 				)
 
-				logger = logger.With(
+				logger := slogctx.FromCtx(ctx).With(
 					slog.String("bus", dbusMsg.Bus),
 					slog.String("destination", dbusMsg.Destination),
 					slog.String("path", dbusMsg.Path),

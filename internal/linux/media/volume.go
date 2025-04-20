@@ -14,11 +14,11 @@ import (
 	"strconv"
 
 	"github.com/eclipse/paho.golang/paho"
+	slogctx "github.com/veqryn/slog-context"
 
 	mqtthass "github.com/joshuar/go-hass-anything/v12/pkg/hass"
 	mqttapi "github.com/joshuar/go-hass-anything/v12/pkg/mqtt"
 
-	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/pkg/linux/pulseaudiox"
 )
@@ -43,7 +43,6 @@ type VolumeWorker struct {
 	MsgCh         chan mqttapi.Msg
 	MuteControl   *mqtthass.SwitchEntity
 	VolumeControl *mqtthass.NumberEntity[int]
-	logger        *slog.Logger
 	*preferences.CommonWorkerPrefs
 }
 
@@ -67,7 +66,7 @@ func (d *VolumeWorker) volStateCallback(_ ...any) (json.RawMessage, error) {
 		return json.RawMessage(`{ "value": 0 }`), err
 	}
 
-	d.logger.Debug("Publishing volume change.", slog.Int("volume", int(vol)))
+	slog.Debug("Publishing volume change.", slog.Int("volume", int(vol)))
 
 	return json.RawMessage(`{ "value": ` + strconv.FormatFloat(vol, 'f', 0, 64) + ` }`), nil
 }
@@ -75,19 +74,18 @@ func (d *VolumeWorker) volStateCallback(_ ...any) (json.RawMessage, error) {
 // volCommandCallback is called when the volume is changed on MQTT.
 func (d *VolumeWorker) volCommandCallback(p *paho.Publish) {
 	if newValue, err := strconv.Atoi(string(p.Payload)); err != nil {
-		d.logger.Debug("Could not parse new volume level.", slog.Any("error", err))
+		slog.Debug("Could not parse new volume level.", slog.Any("error", err))
 	} else {
-		d.logger.Debug("Received volume change from Home Assistant.", slog.Int("volume", newValue))
+		slog.Debug("Received volume change from Home Assistant.", slog.Int("volume", newValue))
 
 		if err := d.pulseAudio.SetVolume(float64(newValue)); err != nil {
-			d.logger.Error("Could not set volume level.", slog.Any("error", err))
-
+			slog.Error("Could not set volume level.", slog.Any("error", err))
 			return
 		}
 
 		go func() {
 			if err := publishAudioState(d.MsgCh, d.VolumeControl); err != nil {
-				d.logger.Error("Failed to publish mute state to MQTT.", slog.Any("error", err))
+				slog.Error("Failed to publish mute state to MQTT.", slog.Any("error", err))
 			}
 		}()
 	}
@@ -121,14 +119,14 @@ func (d *VolumeWorker) muteCommandCallback(p *paho.Publish) {
 	}
 
 	if err != nil {
-		d.logger.Error("Could not set mute state.", slog.Any("error", err))
+		slog.Error("Could not set mute state.", slog.Any("error", err))
 
 		return
 	}
 
 	go func() {
 		if err := publishAudioState(d.MsgCh, d.MuteControl); err != nil {
-			d.logger.Error("Failed to publish mute state to MQTT.", slog.Any("error", err))
+			slog.Error("Failed to publish mute state to MQTT.", slog.Any("error", err))
 		}
 	}()
 }
@@ -154,7 +152,6 @@ func newAudioControl(ctx context.Context) (*VolumeWorker, error) {
 	audioDev := &VolumeWorker{
 		pulseAudio: client,
 		MsgCh:      make(chan mqttapi.Msg),
-		logger:     logging.FromContext(ctx).WithGroup("volume_controller"),
 	}
 
 	return audioDev, nil
@@ -216,24 +213,24 @@ func NewVolumeWorker(ctx context.Context, device *mqtthass.Device) (*VolumeWorke
 	update := func() { // Pulseaudio changed state. Get the new state.
 		// Publish and update mute state if it changed.
 		if err := publishAudioState(worker.MsgCh, worker.MuteControl); err != nil {
-			worker.logger.Error("Failed to publish mute state to MQTT.", slog.Any("error", err))
+			slogctx.FromCtx(ctx).Error("Failed to publish mute state to MQTT.", slog.Any("error", err))
 		}
 
 		// Publish and update volume if it changed.
 		if err := publishAudioState(worker.MsgCh, worker.VolumeControl); err != nil {
-			worker.logger.Error("Failed to publish mute state to MQTT.", slog.Any("error", err))
+			slogctx.FromCtx(ctx).Error("Failed to publish mute state to MQTT.", slog.Any("error", err))
 		}
 	}
 
 	// Process Pulseaudio state updates as they are received.
 	go func() {
-		worker.logger.Debug("Monitoring for events.")
+		slogctx.FromCtx(ctx).Debug("Monitoring for events.")
 		update()
 
 		for {
 			select {
 			case <-ctx.Done():
-				worker.logger.Debug("Closing connection.")
+				slogctx.FromCtx(ctx).Debug("Closing connection.")
 
 				return
 			case <-worker.pulseAudio.EventCh:

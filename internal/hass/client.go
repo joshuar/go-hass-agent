@@ -13,6 +13,7 @@ import (
 	"github.com/go-resty/resty/v2"
 	"github.com/reugn/go-quartz/job"
 	"github.com/reugn/go-quartz/quartz"
+	slogctx "github.com/veqryn/slog-context"
 
 	"github.com/joshuar/go-hass-agent/internal/components/id"
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
@@ -142,8 +143,6 @@ func (c *Client) UpdateConfig(ctx context.Context) (bool, error) {
 // EntityHandler takes incoming Entity objects via the passed in channel and
 // runs the appropriate handler for the Entity type.
 func (c *Client) EntityHandler(ctx context.Context, entityCh <-chan models.Entity) {
-	ctx = logging.ToContext(ctx, c.logger)
-
 	for entity := range entityCh {
 		if eventData, err := entity.AsEvent(); err == nil && eventData.Valid() {
 			// Send event.
@@ -308,7 +307,7 @@ func (c *Client) RegisterSensor(id models.UniqueID) error {
 func NewClient(ctx context.Context, reg sensorRegistry) (*Client, error) {
 	// Create the client.
 	client := &Client{
-		logger:         logging.FromContext(ctx).WithGroup("hass"),
+		logger:         slogctx.FromCtx(ctx).WithGroup("hass"),
 		sensorRegistry: reg,
 		sensorTracker:  tracker.NewTracker(),
 		config:         &Config{ConfigResponse: &api.ConfigResponse{}},

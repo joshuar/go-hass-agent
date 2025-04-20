@@ -15,8 +15,8 @@ import (
 
 	"github.com/godbus/dbus/v5"
 	"github.com/iancoleman/strcase"
+	slogctx "github.com/veqryn/slog-context"
 
-	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/models"
@@ -227,10 +227,10 @@ func sendChangedProps(ctx context.Context, props map[string]dbus.Variant, sensor
 	for prop, value := range props {
 		if slices.Contains(laptopPropList, prop) {
 			if state, err := dbusx.VariantToValue[bool](value); err != nil {
-				logging.FromContext(ctx).Warn("Could not parse laptop D-Bus property.", slog.Any("error", err))
+				slogctx.FromCtx(ctx).Warn("Could not parse laptop D-Bus property.", slog.Any("error", err))
 			} else {
 				if entity, err := newLaptopEvent(ctx, prop, state); err != nil {
-					logging.FromContext(ctx).Warn("could not send laptop sensor.", slog.Any("error", err))
+					slogctx.FromCtx(ctx).Warn("could not send laptop sensor.", slog.Any("error", err))
 				} else {
 					sensorCh <- *entity
 				}

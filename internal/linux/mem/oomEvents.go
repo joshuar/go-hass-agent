@@ -11,7 +11,8 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/joshuar/go-hass-agent/internal/components/logging"
+	slogctx "github.com/veqryn/slog-context"
+
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/models"
@@ -61,7 +62,7 @@ func (w *OOMEventsWorker) Start(ctx context.Context) (<-chan models.Entity, erro
 			case trigger := <-triggerCh:
 				props, err := dbusx.ParsePropertiesChanged(trigger.Content)
 				if err != nil {
-					logging.FromContext(ctx).Debug("Could not parse changed properties for unit.", slog.Any("error", err))
+					slogctx.FromCtx(ctx).Debug("Could not parse changed properties for unit.", slog.Any("error", err))
 					continue
 				}
 				// Ignore events that don't indicate a result change.
@@ -71,7 +72,7 @@ func (w *OOMEventsWorker) Start(ctx context.Context) (<-chan models.Entity, erro
 
 				result, err := dbusx.VariantToValue[string](props.Changed["Result"])
 				if err != nil {
-					logging.FromContext(ctx).Debug("Could not parse result.", slog.Any("error", err))
+					slogctx.FromCtx(ctx).Debug("Could not parse result.", slog.Any("error", err))
 					continue
 				}
 
@@ -81,7 +82,7 @@ func (w *OOMEventsWorker) Start(ctx context.Context) (<-chan models.Entity, erro
 					// to be percent-encoded with % replaced by _.
 					processStr, err := url.PathUnescape(strings.ReplaceAll(trigger.Path, "_", "%"))
 					if err != nil {
-						logging.FromContext(ctx).Debug("Could not unescape process path string.", slog.Any("error", err))
+						slogctx.FromCtx(ctx).Debug("Could not unescape process path string.", slog.Any("error", err))
 					}
 
 					// Trim the D-Bus unit path prefix.
@@ -106,7 +107,7 @@ func (w *OOMEventsWorker) Start(ctx context.Context) (<-chan models.Entity, erro
 							"PID":     pid,
 						})
 					if err != nil {
-						logging.FromContext(ctx).Warn("Could not create OOM event.", slog.Any("error", err))
+						slogctx.FromCtx(ctx).Warn("Could not create OOM event.", slog.Any("error", err))
 					} else {
 						eventCh <- entity
 					}

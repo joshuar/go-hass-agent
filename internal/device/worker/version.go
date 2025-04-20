@@ -9,7 +9,8 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/joshuar/go-hass-agent/internal/components/logging"
+	slogctx "github.com/veqryn/slog-context"
+
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/models"
 	"github.com/joshuar/go-hass-agent/internal/models/sensor"
@@ -50,7 +51,7 @@ func (w *Version) Start(ctx context.Context) (<-chan models.Entity, error) {
 
 		entity, err := newVersionSensor(ctx)
 		if err != nil {
-			logging.FromContext(ctx).Warn("Failed to create version sensor entity.",
+			slogctx.FromCtx(ctx).Warn("Failed to create version sensor entity.",
 				slog.Any("error", err))
 			return
 		}

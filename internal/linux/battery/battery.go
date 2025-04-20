@@ -10,6 +10,7 @@ import (
 	"log/slog"
 
 	"github.com/godbus/dbus/v5"
+	slogctx "github.com/veqryn/slog-context"
 
 	"github.com/joshuar/go-hass-agent/internal/models"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
@@ -57,7 +58,6 @@ var dBusPropToSensor = map[string]sensorType{
 // upowerBattery contains the data to represent a battery as derived from the
 // upower D-Bus.
 type upowerBattery struct {
-	logger   *slog.Logger
 	bus      *dbusx.Bus
 	id       string
 	model    string
@@ -84,7 +84,7 @@ func (b *upowerBattery) getSensors(ctx context.Context, sensors ...sensorType) c
 	for _, batterySensor := range sensors {
 		value, err := b.getProp(batterySensor)
 		if err != nil {
-			b.logger.Warn("Could not retrieve battery models.",
+			slogctx.FromCtx(ctx).Warn("Could not retrieve battery models.",
 				slog.String("sensor", batterySensor.String()),
 				slog.Any("error", err))
 
@@ -93,7 +93,7 @@ func (b *upowerBattery) getSensors(ctx context.Context, sensors ...sensorType) c
 
 		entity, err := newBatterySensor(ctx, b, batterySensor, value)
 		if err != nil {
-			b.logger.Warn("Could not generate battery sensor.",
+			slogctx.FromCtx(ctx).Warn("Could not generate battery sensor.",
 				slog.String("sensor", batterySensor.String()),
 				slog.Any("error", err))
 
@@ -108,7 +108,7 @@ func (b *upowerBattery) getSensors(ctx context.Context, sensors ...sensorType) c
 
 // newBattery creates a battery object that will have a number of properties to
 // be treated as sensors in Home Assistant.
-func newBattery(bus *dbusx.Bus, logger *slog.Logger, path dbus.ObjectPath) (*upowerBattery, error) {
+func newBattery(ctx context.Context, bus *dbusx.Bus, path dbus.ObjectPath) (*upowerBattery, error) {
 	battery := &upowerBattery{
 		dBusPath: path,
 		bus:      bus,
@@ -141,24 +141,15 @@ func newBattery(bus *dbusx.Bus, logger *slog.Logger, path dbus.ObjectPath) (*upo
 		return nil, fmt.Errorf("could not retrieve battery path in D-Bus: %w", err)
 	}
 
-	// Set up a logger for the battery with some battery-specific default
-	// attributes.
-	battery.logger = logger.With(
-		slog.Group("battery_info",
-			slog.String("name", battery.id),
-			slog.String("dbus_path", string(battery.dBusPath)),
-		),
-	)
-
 	// Get the battery model.
 	variant, err = battery.getProp(typeModel)
 	if err != nil {
-		battery.logger.Warn("Could not determine battery model.")
+		slogctx.FromCtx(ctx).Warn("Could not determine battery model.")
 	}
 	// Store the battery model.
 	battery.model, err = dbusx.VariantToValue[string](variant)
 	if err != nil {
-		battery.logger.Warn("Could not determine battery model.")
+		slogctx.FromCtx(ctx).Warn("Could not determine battery model.")
 	}
 
 	// At a minimum, monitor the battery type and the charging state.
@@ -188,27 +179,27 @@ func monitorBattery(ctx context.Context, battery *upowerBattery) <-chan models.E
 		dbusx.MatchPropChanged(),
 	).Start(ctx, battery.bus)
 	if err != nil {
-		battery.logger.Debug("Failed to create D-Bus watch for battery property changes.", slog.Any("error", err))
+		slogctx.FromCtx(ctx).Debug("Failed to create D-Bus watch for battery property changes.", slog.Any("error", err))
 		close(sensorCh)
 
 		return sensorCh
 	}
 
 	go func() {
-		battery.logger.Debug("Monitoring battery.")
+		slogctx.FromCtx(ctx).Debug("Monitoring battery.")
 
 		defer close(sensorCh)
 
 		for {
 			select {
 			case <-ctx.Done():
-				battery.logger.Debug("Stopped monitoring battery.")
+				slogctx.FromCtx(ctx).Debug("Stopped monitoring battery.")
 
 				return
 			case event := <-events:
 				props, err := dbusx.ParsePropertiesChanged(event.Content)
 				if err != nil {
-					battery.logger.Warn("Received a battery property change event that could not be understood.", slog.Any("error", err))
+					slogctx.FromCtx(ctx).Warn("Received a battery property change event that could not be understood.", slog.Any("error", err))
 
 					continue
 				}
@@ -217,7 +208,7 @@ func monitorBattery(ctx context.Context, battery *upowerBattery) <-chan models.E
 					if s, ok := dBusPropToSensor[prop]; ok {
 						entity, err := newBatterySensor(ctx, battery, s, value)
 						if err != nil {
-							battery.logger.Warn("Could not generate battery sensor.",
+							slogctx.FromCtx(ctx).Warn("Could not generate battery sensor.",
 								slog.String("sensor", s.String()),
 								slog.Any("error", err))
 

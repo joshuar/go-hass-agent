@@ -11,8 +11,8 @@ import (
 	"sync"
 
 	"github.com/godbus/dbus/v5"
+	slogctx "github.com/veqryn/slog-context"
 
-	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/linux"
 	"github.com/joshuar/go-hass-agent/internal/models"
@@ -32,7 +32,6 @@ const (
 type BatteryWorker struct {
 	bus         *dbusx.Bus
 	batteryList map[dbus.ObjectPath]context.CancelFunc
-	logger      *slog.Logger
 	mu          sync.Mutex
 	prefs       *WorkerPrefs
 	*models.WorkerMetadata
@@ -46,7 +45,7 @@ func (w *BatteryWorker) Start(ctx context.Context) (<-chan models.Entity, error)
 	// Get a list of all current connected batteries and monitor them.
 	batteries, err := w.getBatteries()
 	if err != nil {
-		w.logger.Warn("Could not retrieve any battery details from D-Bus.", slog.Any("error", err))
+		slogctx.FromCtx(ctx).Warn("Could not retrieve any battery details from D-Bus.", slog.Any("error", err))
 	}
 
 	// For all batteries, start monitoring.
@@ -120,9 +119,9 @@ func (w *BatteryWorker) track(ctx context.Context, batteryPath dbus.ObjectPath) 
 
 	var wg sync.WaitGroup
 
-	battery, err := newBattery(w.bus, w.logger, batteryPath)
+	battery, err := newBattery(ctx, w.bus, batteryPath)
 	if err != nil {
-		w.logger.Warn("Cannot monitor battery.",
+		slogctx.FromCtx(ctx).Warn("Cannot monitor battery.",
 			slog.Any("path", batteryPath),
 			slog.Any("error", err))
 
@@ -181,7 +180,7 @@ func (w *BatteryWorker) monitorBatteryChanges(ctx context.Context) <-chan models
 		dbusx.MatchMembers(deviceAddedSignal, deviceRemovedSignal),
 	).Start(ctx, w.bus)
 	if err != nil {
-		w.logger.Debug("Unable to set-up D-Bus watch for battery changes.", slog.Any("error", err))
+		slogctx.FromCtx(ctx).Debug("Unable to set-up D-Bus watch for battery changes.", slog.Any("error", err))
 
 		return nil
 	}
@@ -189,14 +188,14 @@ func (w *BatteryWorker) monitorBatteryChanges(ctx context.Context) <-chan models
 	sensorCh := make(chan models.Entity)
 
 	go func() {
-		w.logger.Debug("Monitoring for battery additions/removals.")
+		slogctx.FromCtx(ctx).Debug("Monitoring for battery additions/removals.")
 
 		defer close(sensorCh)
 
 		for {
 			select {
 			case <-ctx.Done():
-				w.logger.Debug("Stopped monitoring for batteries.")
+				slogctx.FromCtx(ctx).Debug("Stopped monitoring for batteries.")
 
 				return
 			case event := <-triggerCh:
@@ -232,7 +231,6 @@ func NewBatteryWorker(ctx context.Context) (workers.EntityWorker, error) {
 		WorkerMetadata: models.SetWorkerMetadata(workerID, workerDesc),
 		batteryList:    make(map[dbus.ObjectPath]context.CancelFunc),
 		bus:            bus,
-		logger:         logging.FromContext(ctx).With(slog.String("worker", workerID)),
 	}
 
 	prefs, err := preferences.LoadWorker(worker)

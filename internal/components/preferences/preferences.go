@@ -16,8 +16,8 @@ import (
 	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/providers/structs"
 	"github.com/knadh/koanf/v2"
+	slogctx "github.com/veqryn/slog-context"
 
-	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/validation"
 )
 
@@ -62,7 +62,6 @@ var (
 	prefsSrc  = koanf.New(PathDelim)
 	mu        = sync.Mutex{}
 	prefsFile string
-	logger    *slog.Logger
 	//lint:ignore U1000 some of these will be used in the future
 	gitVersion, gitCommit, gitTreeState, buildDate string
 	appID                                          = DefaultAppID
@@ -100,14 +99,14 @@ var defaultPreferences = &preferences{
 var Init = func(ctx context.Context, preferences ...SetPreference) error {
 	return sync.OnceValue(func() error {
 		prefsFile = filepath.Join(PathFromCtx(ctx), preferencesFile)
-		logger = logging.FromContext(ctx).WithGroup("preferences")
+		ctx = slogctx.WithGroup(ctx, "preferences")
 
-		logger.Debug("Loading preferences.",
+		slogctx.FromCtx(ctx).Debug("Loading preferences.",
 			slog.String("file", prefsFile))
 
 		// Load config file
 		if err := prefsSrc.Load(file.Provider(prefsFile), toml.Parser()); err != nil {
-			logger.Debug("No preferences found, using defaults.", slog.Any("error", err))
+			slogctx.FromCtx(ctx).Debug("No preferences found, using defaults.", slog.Any("error", err))
 			if err := prefsSrc.Load(structs.Provider(defaultPreferences, "toml"), nil); err != nil {
 				return fmt.Errorf("%w: %w", ErrLoadPreferences, err)
 			}
@@ -120,7 +119,7 @@ var Init = func(ctx context.Context, preferences ...SetPreference) error {
 		// Set any preferences passed in.
 		if len(preferences) > 0 {
 			if err := Set(preferences...); err != nil {
-				logger.Debug("Could not set initial custom preferences.",
+				slogctx.FromCtx(ctx).Debug("Could not set initial custom preferences.",
 					slog.Any("error", err))
 			}
 		}
@@ -146,7 +145,7 @@ func load(configPrefix string, cfg any) error {
 		return fmt.Errorf("%w: %w", ErrLoadPreferences, err)
 	}
 
-	logger.Debug("Loading config for component.",
+	slog.Debug("Loading config for component.",
 		slog.String("component", configPrefix))
 
 	return nil
@@ -191,10 +190,10 @@ func save() error {
 		return ErrLoadPreferences
 	}
 
-	logger.Debug("Saving preferences.", slog.String("file", prefsFile))
+	slog.Debug("Saving preferences.", slog.String("file", prefsFile))
 
 	if err := prefsSrc.Set(prefVersion, appVersion); err != nil {
-		logger.Warn("Cannot update version in preferences file.",
+		slog.Warn("Cannot update version in preferences file.",
 			slog.Any("error", err))
 	}
 
@@ -228,7 +227,7 @@ type SetPreference func() error
 func Set(preferences ...SetPreference) error {
 	for _, preference := range preferences {
 		if err := preference(); err != nil {
-			logger.Warn("Error setting preference.",
+			slog.Warn("Error setting preference.",
 				slog.Any("error", err))
 		}
 	}

@@ -9,8 +9,8 @@ import (
 	"log/slog"
 
 	mqttapi "github.com/joshuar/go-hass-anything/v12/pkg/mqtt"
+	slogctx "github.com/veqryn/slog-context"
 
-	"github.com/joshuar/go-hass-agent/internal/components/logging"
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/models"
 )
@@ -41,12 +41,12 @@ func Start(ctx context.Context, data *WorkerData) error {
 			select {
 			case msg := <-data.Msgs:
 				if err := client.Publish(ctx, &msg); err != nil {
-					logging.FromContext(ctx).Warn("Unable to publish message to MQTT.",
+					slogctx.FromCtx(ctx).Warn("Unable to publish message to MQTT.",
 						slog.String("topic", msg.Topic),
 						slog.Any("msg", msg.Message))
 				}
 			case <-ctx.Done():
-				logging.FromContext(ctx).Debug("Stopped listening for messages to publish to MQTT.")
+				slogctx.FromCtx(ctx).Debug("Stopped listening for messages to publish to MQTT.")
 				return
 			}
 		}

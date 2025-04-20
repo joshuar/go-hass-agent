@@ -12,9 +12,9 @@ import (
 	"time"
 
 	"github.com/reugn/go-quartz/quartz"
+	slogctx "github.com/veqryn/slog-context"
 
 	"github.com/joshuar/go-hass-agent/internal/components/id"
-	"github.com/joshuar/go-hass-agent/internal/components/logging"
 )
 
 var (
@@ -24,7 +24,6 @@ var (
 
 type ManagerProps struct {
 	scheduler quartz.Scheduler
-	logger    *slog.Logger
 }
 
 var Manager *ManagerProps
@@ -39,15 +38,14 @@ func Start(ctx context.Context) error {
 
 	Manager = &ManagerProps{
 		scheduler: scheduler,
-		logger:    logging.FromContext(ctx).WithGroup("scheduler"),
 	}
 
-	Manager.logger.Debug("Starting scheduler.")
+	slogctx.FromCtx(ctx).Debug("Starting scheduler.")
 	scheduler.Start(ctx)
 
 	go func() {
 		<-ctx.Done()
-		Manager.logger.Debug("Stopping scheduler.")
+		slogctx.FromCtx(ctx).Debug("Stopping scheduler.")
 		scheduler.Stop()
 	}()
 
@@ -67,7 +65,7 @@ func (m *ManagerProps) ScheduleJob(idPrefix id.Prefix, job quartz.Job, trigger q
 		return errors.Join(ErrScheduleFailed, err)
 	}
 
-	m.logger.Debug("Scheduled job.",
+	slog.Debug("Scheduled job.",
 		slog.String("job_key", jobKey),
 		slog.String("job_desc", job.Description()))
 
