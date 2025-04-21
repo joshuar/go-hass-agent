@@ -76,7 +76,7 @@ require (
 	github.com/josharian/native v1.1.0 // indirect
 	github.com/kevinburke/ssh_config v1.2.0 // indirect
 	github.com/klauspost/pgzip v1.2.6 // indirect
-	github.com/knadh/koanf/maps v0.1.1 // indirect
+	github.com/knadh/koanf/maps v0.1.2 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mandykoh/go-parallel v0.1.0 // indirect
 	github.com/matryer/moq v0.5.3 // indirect
@@ -153,7 +153,7 @@ require (
 	github.com/klauspost/compress v1.17.11 // indirect
 	github.com/knadh/koanf/parsers/toml v0.1.0
 	github.com/knadh/koanf/providers/file v1.1.2
-	github.com/knadh/koanf/v2 v2.1.2
+	github.com/knadh/koanf/v2 v2.2.0
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/lmittmann/tint v1.0.7
 	github.com/mandykoh/prism v0.35.3
