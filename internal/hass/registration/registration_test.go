@@ -86,12 +86,12 @@ func Test_generateWebsocketURL(t *testing.T) {
 		{
 			name: "http",
 			args: args{server: preferences.DefaultServer},
-			want: "ws://localhost" + WebsocketPath,
+			want: "ws://localhost:8123" + WebsocketPath,
 		},
 		{
 			name: "https",
 			args: args{server: "https://localhost:8123"},
-			want: "wss://localhost" + WebsocketPath,
+			want: "wss://localhost:8123" + WebsocketPath,
 		},
 	}
 	for _, tt := range tests {
