@@ -11,7 +11,7 @@ require (
 	github.com/grandcat/zeroconf v1.0.0
 	github.com/iancoleman/strcase v0.3.0
 	github.com/joshuar/go-hass-anything/v12 v12.1.0
-	github.com/knadh/koanf/providers/structs v0.1.0
+	github.com/knadh/koanf/providers/structs v1.0.0
 	github.com/lxzan/gws v1.8.8
 	github.com/magefile/mage v1.15.0
 	github.com/mdlayher/netlink v1.7.2
