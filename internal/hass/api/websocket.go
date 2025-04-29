@@ -209,6 +209,7 @@ func NewWebsocket(ctx context.Context, url, webhookID, token string) *Websocket 
 		token:     token,
 		webhookID: webhookID,
 		url:       url,
+		logger:    slogctx.FromCtx(ctx).With(slog.String("connection", "websocket")),
 	}
 }
 
@@ -224,7 +225,6 @@ func (c *Websocket) Connect(ctx context.Context) (chan WebsocketNotification, er
 
 	retryFunc := func() error {
 		var resp *http.Response
-
 		socket, resp, err = gws.NewClient(c, &gws.ClientOption{Addr: c.url})
 		if err != nil {
 			return fmt.Errorf("could not establish connection: %w", err)
@@ -246,7 +246,7 @@ func (c *Websocket) Connect(ctx context.Context) (chan WebsocketNotification, er
 		<-ctx.Done()
 		err := c.socket.WriteClose(closeNormal, []byte(`normal close`))
 		if err != nil {
-			slogctx.FromCtx(ctx).Warn("Could not close socket cleanly.", slog.Any("error", err))
+			c.logger.Warn("Could not close socket cleanly.", slog.Any("error", err))
 		}
 	}()
 
