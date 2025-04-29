@@ -95,6 +95,8 @@ components:
             Contains app data can be used if the app has a supporting component
             that extends mobile_app functionality.
           type: object
+          additionalProperties: true
+          x-go-type-skip-optional-pointer: true
     DeviceRegistrationResponse:
       description: >
         defines the reponse for a device registration from Home Assistant.

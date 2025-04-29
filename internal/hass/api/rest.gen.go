@@ -69,7 +69,7 @@ type ConfigResponse struct {
 // DeviceRegistrationRequest defines the registration details for the device running the agent.
 type DeviceRegistrationRequest struct {
 	// AppData Contains app data can be used if the app has a supporting component that extends mobile_app functionality.
-	AppData *map[string]interface{} `json:"app_data,omitempty"`
+	AppData map[string]interface{} `json:"app_data,omitempty"`
 
 	// AppID is a unique identifier for this app.
 	AppID string `json:"app_id"`

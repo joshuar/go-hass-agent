@@ -102,7 +102,9 @@ func newDeviceRegistration(ctx context.Context) *api.DeviceRegistrationRequest {
 		AppName:    preferences.AppName,
 		AppVersion: preferences.AppVersion(),
 		AppID:      preferences.DefaultAppID,
+		AppData:    make(map[string]any),
 	}
+	dev.AppData["push_websocket_channel"] = true
 
 	// Retrieve the name as the device name.
 	name, err := info.GetHostname()
@@ -194,9 +196,6 @@ func generateWebsocketURL(server string) (string, error) {
 	default:
 		websocketURL.Scheme = "ws"
 	}
-
-	// Strip any port from host.
-	websocketURL.Host = websocketURL.Hostname()
 
 	return websocketURL.JoinPath(WebsocketPath).String(), nil
 }
