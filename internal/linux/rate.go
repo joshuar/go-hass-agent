@@ -15,7 +15,7 @@ func (r *RateValue[T]) Calculate(currValue T, delta time.Duration) T {
 	var rate T
 
 	if T(delta.Seconds()) > 0 {
-		rate = ((currValue - r.prevValue) / T(delta.Seconds()) / 2)
+		rate = ((currValue - r.prevValue) / T(delta.Seconds()))
 	}
 
 	r.prevValue = currValue
