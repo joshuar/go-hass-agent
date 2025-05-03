@@ -1,5 +1,13 @@
 # Changelog
 
+## [13.2.5](https://github.com/joshuar/go-hass-agent/compare/v13.2.4...v13.2.5) (2025-04-29)
+
+
+### Bug Fixes
+
+* **hass/api:** :ambulance: re-enable and fix websocket connection for notifications ([1914257](https://github.com/joshuar/go-hass-agent/commit/191425772245d6636c4679acf7d56284a663b300))
+* **linux:** :bug: correct calculation for rate sensors ([07a3aa9](https://github.com/joshuar/go-hass-agent/commit/07a3aa99b5c40f77b95942106a5d79a88c480627))
+
 ## [13.2.4](https://github.com/joshuar/go-hass-agent/compare/v13.2.3...v13.2.4) (2025-04-12)
 
 
