@@ -16,7 +16,7 @@ import (
 // own functional options using this.
 //
 // type MyType Option[*MyType].
-type Option[T any] func(T) error
+type Option[T any] func(T)
 
 // StateValue is a constraint on the types of values for an entity state.
 type StateValue interface {

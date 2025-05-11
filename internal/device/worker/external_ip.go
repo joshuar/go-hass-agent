@@ -76,18 +76,12 @@ func (w *ExternalIP) Execute(ctx context.Context) error {
 			slogctx.FromCtx(ctx).Log(ctx, logging.LevelTrace, "Looking up external IP failed.", slog.Any("error", err))
 			continue
 		}
-
-		entity, err := newExternalIPSensor(ctx, ipAddr)
-		if err != nil {
-			slogctx.FromCtx(ctx).Log(ctx, logging.LevelTrace, "Sensor creation failed.", slog.Any("error", err))
-			continue
-		}
-		w.OutCh <- entity
+		w.OutCh <- newExternalIPSensor(ctx, ipAddr)
 	}
 	return nil
 }
 
-func newExternalIPSensor(ctx context.Context, addr net.IP) (models.Entity, error) {
+func newExternalIPSensor(ctx context.Context, addr net.IP) models.Entity {
 	var name, id, icon string
 
 	switch {
@@ -101,7 +95,7 @@ func newExternalIPSensor(ctx context.Context, addr net.IP) (models.Entity, error
 		icon = "mdi:numeric-6-box-outline"
 	}
 
-	entity, err := sensor.NewSensor(ctx,
+	return sensor.NewSensor(ctx,
 		sensor.WithName(name),
 		sensor.WithID(id),
 		sensor.AsDiagnostic(),
@@ -109,11 +103,6 @@ func newExternalIPSensor(ctx context.Context, addr net.IP) (models.Entity, error
 		sensor.WithState(addr.String()),
 		sensor.WithAttribute("last_updated", time.Now().Format(time.RFC3339)),
 	)
-	if err != nil {
-		return entity, fmt.Errorf("could not create external IP sensor entity: %w", err)
-	}
-
-	return entity, nil
 }
 
 func (w *ExternalIP) Start(ctx context.Context) (<-chan models.Entity, error) {

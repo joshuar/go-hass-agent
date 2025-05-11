@@ -45,12 +45,7 @@ type freqWorker struct {
 func (w *freqWorker) Execute(ctx context.Context) error {
 	var warnings error
 	for idx := range totalCPUs {
-		entity, err := newCPUFreqSensor(ctx, "cpu"+strconv.Itoa(idx))
-		if err != nil {
-			warnings = errors.Join(warnings, fmt.Errorf("could not create CPU frequency sensor for CPU %d: %w", idx, err))
-			continue
-		}
-		w.OutCh <- entity
+		w.OutCh <- newCPUFreqSensor(ctx, "cpu"+strconv.Itoa(idx))
 	}
 	return warnings
 }

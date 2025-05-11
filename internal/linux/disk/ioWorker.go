@@ -66,11 +66,8 @@ func (w *ioWorker) addRateSensors(dev *device) {
 	}
 }
 
-func (w *ioWorker) generateDeviceRateSensors(ctx context.Context, device *device, stats map[stat]uint64, delta time.Duration) ([]models.Entity, error) {
-	var (
-		sensors  []models.Entity
-		warnings error
-	)
+func (w *ioWorker) generateDeviceRateSensors(ctx context.Context, device *device, stats map[stat]uint64, delta time.Duration) []models.Entity {
+	var sensors []models.Entity
 
 	w.mu.Lock()
 	defer w.mu.Unlock()
@@ -87,26 +84,15 @@ func (w *ioWorker) generateDeviceRateSensors(ctx context.Context, device *device
 			}
 
 			rate := w.rateSensors[device.id][rateType].Calculate(currValue, delta)
-
-			entity, err := newDiskRateSensor(ctx, device, rateType, rate)
-			if err != nil {
-				warnings = errors.Join(warnings, fmt.Errorf("could not generate rate sensor: %w", err))
-			} else {
-				sensors = append(sensors, *entity)
-			}
+			sensors = append(sensors, newDiskRateSensor(ctx, device, rateType, rate))
 		}
 	}
 
-	return sensors, warnings
+	return sensors
 }
 
-func (w *ioWorker) generateDeviceStatSensors(ctx context.Context, device *device, stats map[stat]uint64) ([]models.Entity, error) {
-	var (
-		sensors  []models.Entity
-		entity   *models.Entity
-		err      error
-		warnings error
-	)
+func (w *ioWorker) generateDeviceStatSensors(ctx context.Context, device *device, stats map[stat]uint64) []models.Entity {
+	var sensors []models.Entity
 
 	diskReadsAttributes := models.Attributes{
 		"total_sectors_read":         stats[TotalSectorsRead],
@@ -119,28 +105,13 @@ func (w *ioWorker) generateDeviceStatSensors(ctx context.Context, device *device
 	}
 
 	// Generate diskReads sensor for device.
-	entity, err = newDiskStatSensor(ctx, device, diskReads, stats[TotalReads], diskReadsAttributes)
-	if err != nil {
-		warnings = errors.Join(warnings, fmt.Errorf("create disk read stats failed: %w", err))
-	} else {
-		sensors = append(sensors, *entity)
-	}
+	sensors = append(sensors, newDiskStatSensor(ctx, device, diskReads, stats[TotalReads], diskReadsAttributes))
 	// Generate diskWrites sensor for device.
-	entity, err = newDiskStatSensor(ctx, device, diskWrites, stats[TotalWrites], diskWriteAttributes)
-	if err != nil {
-		warnings = errors.Join(warnings, fmt.Errorf("create disk write stats failed: %w", err))
-	} else {
-		sensors = append(sensors, *entity)
-	}
+	sensors = append(sensors, newDiskStatSensor(ctx, device, diskWrites, stats[TotalWrites], diskWriteAttributes))
 	// Generate IOsInProgress sensor for device.
-	entity, err = newDiskStatSensor(ctx, device, diskIOInProgress, stats[ActiveIOs], nil)
-	if err != nil {
-		warnings = errors.Join(warnings, fmt.Errorf("create IOs in progress failed: %w", err))
-	} else {
-		sensors = append(sensors, *entity)
-	}
+	sensors = append(sensors, newDiskStatSensor(ctx, device, diskIOInProgress, stats[ActiveIOs], nil))
 
-	return sensors, warnings
+	return sensors
 }
 
 func (w *ioWorker) Execute(ctx context.Context) error {
@@ -166,24 +137,11 @@ func (w *ioWorker) Execute(ctx context.Context) error {
 
 		// Add rate sensors for device (if not already added).
 		w.addRateSensors(dev)
-
-		rateSensors, warnings := w.generateDeviceRateSensors(ctx, dev, stats, delta)
-		if warnings != nil {
-			slogctx.FromCtx(ctx).
-				With(slog.String("worker", ioWorkerID)).
-				Debug("Some problems occurred generating disk rate sensors.", slog.Any("warnings", warnings))
-		}
-		for s := range slices.Values(rateSensors) {
+		for s := range slices.Values(w.generateDeviceRateSensors(ctx, dev, stats, delta)) {
 			w.OutCh <- s
 		}
 
-		statSensors, warnings := w.generateDeviceStatSensors(ctx, dev, stats)
-		if warnings != nil {
-			slogctx.FromCtx(ctx).
-				With(slog.String("worker", ioWorkerID)).
-				Debug("Some problems occurred generating disk rate sensors.", slog.Any("warnings", warnings))
-		}
-		for s := range slices.Values(statSensors) {
+		for s := range slices.Values(w.generateDeviceStatSensors(ctx, dev, stats)) {
 			w.OutCh <- s
 		}
 
@@ -198,23 +156,10 @@ func (w *ioWorker) Execute(ctx context.Context) error {
 	}
 
 	// Update total stats.
-	rateSensors, warnings := w.generateDeviceRateSensors(ctx, &device{id: totalsID}, statsTotals, delta)
-	if warnings != nil {
-		slogctx.FromCtx(ctx).
-			With(slog.String("worker", ioWorkerID)).
-			Debug("Some problems occurred generating disk rate sensors.", slog.Any("warnings", warnings))
-	}
-	for s := range slices.Values(rateSensors) {
+	for s := range slices.Values(w.generateDeviceRateSensors(ctx, &device{id: totalsID}, statsTotals, delta)) {
 		w.OutCh <- s
 	}
-
-	statSensors, warnings := w.generateDeviceStatSensors(ctx, &device{id: totalsID}, statsTotals)
-	if warnings != nil {
-		slogctx.FromCtx(ctx).
-			With(slog.String("worker", ioWorkerID)).
-			Debug("Some problems occurred generating disk rate sensors.", slog.Any("warnings", warnings))
-	}
-	for s := range slices.Values(statSensors) {
+	for s := range slices.Values(w.generateDeviceStatSensors(ctx, &device{id: totalsID}, statsTotals)) {
 		w.OutCh <- s
 	}
 

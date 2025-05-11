@@ -73,12 +73,25 @@ func (w *ConnectionLatency) Execute(ctx context.Context) error {
 	}
 
 	if resp.Request != nil {
-		entity, err := newConnectionLatencySensor(ctx, resp.Request.TraceInfo())
-		if err != nil {
-			return err
-		}
+		info := resp.Request.TraceInfo()
 		// Save the latency info as a connectionLatency models.
-		w.OutCh <- entity
+		w.OutCh <- sensor.NewSensor(ctx,
+			sensor.WithName("Connection Latency"),
+			sensor.WithID("connection_latency"),
+			sensor.WithUnits(connectionLatencyUnits),
+			sensor.WithDeviceClass(class.SensorClassDuration),
+			sensor.WithStateClass(class.StateMeasurement),
+			sensor.AsDiagnostic(),
+			sensor.WithIcon("mdi:connection"),
+			sensor.WithState(info.TotalTime.Milliseconds()),
+			sensor.WithAttribute("DNS Lookup Time", info.DNSLookup.Milliseconds()),
+			sensor.WithAttribute("Connection Time", info.ConnTime.Milliseconds()),
+			sensor.WithAttribute("TCP Connection Time", info.TCPConnTime.Milliseconds()),
+			sensor.WithAttribute("TLS Handshake Time", info.TLSHandshake.Milliseconds()),
+			sensor.WithAttribute("Server Time", info.ServerTime.Milliseconds()),
+			sensor.WithAttribute("Response Time", info.ResponseTime.Milliseconds()),
+			sensor.WithAttribute("native_unit_of_measurement", connectionLatencyUnits),
+		)
 	}
 
 	return nil
@@ -91,31 +104,6 @@ func (w *ConnectionLatency) Start(ctx context.Context) (<-chan models.Entity, er
 		return w.OutCh, fmt.Errorf("could not start disk usage worker: %w", err)
 	}
 	return w.OutCh, nil
-}
-
-func newConnectionLatencySensor(ctx context.Context, info resty.TraceInfo) (models.Entity, error) {
-	entity, err := sensor.NewSensor(ctx,
-		sensor.WithName("Connection Latency"),
-		sensor.WithID("connection_latency"),
-		sensor.WithUnits(connectionLatencyUnits),
-		sensor.WithDeviceClass(class.SensorClassDuration),
-		sensor.WithStateClass(class.StateMeasurement),
-		sensor.AsDiagnostic(),
-		sensor.WithIcon("mdi:connection"),
-		sensor.WithState(info.TotalTime.Milliseconds()),
-		sensor.WithAttribute("DNS Lookup Time", info.DNSLookup.Milliseconds()),
-		sensor.WithAttribute("Connection Time", info.ConnTime.Milliseconds()),
-		sensor.WithAttribute("TCP Connection Time", info.TCPConnTime.Milliseconds()),
-		sensor.WithAttribute("TLS Handshake Time", info.TLSHandshake.Milliseconds()),
-		sensor.WithAttribute("Server Time", info.ServerTime.Milliseconds()),
-		sensor.WithAttribute("Response Time", info.ResponseTime.Milliseconds()),
-		sensor.WithAttribute("native_unit_of_measurement", connectionLatencyUnits),
-	)
-	if err != nil {
-		return entity, fmt.Errorf("could not create connection latency sensor: %w", err)
-	}
-
-	return entity, nil
 }
 
 func NewConnectionLatencyWorker(_ context.Context) (workers.EntityWorker, error) {

@@ -1,7 +1,5 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
 //go:generate go tool golang.org/x/tools/cmd/stringer -type=ioSensor -output ioSensors_generated.go -linecomment
 package disk
@@ -45,7 +43,7 @@ type ioRate struct {
 	rateType ioSensor
 }
 
-func newDiskStatSensor(ctx context.Context, device *device, sensorType ioSensor, value uint64, attributes models.Attributes) (*models.Entity, error) {
+func newDiskStatSensor(ctx context.Context, device *device, sensorType ioSensor, value uint64, attributes models.Attributes) models.Entity {
 	var (
 		icon, units      string
 		stateClass       class.SensorStateClass
@@ -83,7 +81,7 @@ func newDiskStatSensor(ctx context.Context, device *device, sensorType ioSensor,
 		diagnosticOption = sensor.WithCategory("")
 	}
 
-	statSensor, err := sensor.NewSensor(ctx,
+	return sensor.NewSensor(ctx,
 		sensor.WithName(name),
 		sensor.WithID(id),
 		sensor.WithUnits(units),
@@ -93,14 +91,9 @@ func newDiskStatSensor(ctx context.Context, device *device, sensorType ioSensor,
 		sensor.WithAttributes(attributes),
 		diagnosticOption,
 	)
-	if err != nil {
-		return nil, errors.Join(ErrNewDiskStatSensor, err)
-	}
-
-	return &statSensor, nil
 }
 
-func newDiskRateSensor(ctx context.Context, device *device, sensorType ioSensor, value uint64) (*models.Entity, error) {
+func newDiskRateSensor(ctx context.Context, device *device, sensorType ioSensor, value uint64) models.Entity {
 	var (
 		diagnosticOption sensor.Option
 		icon             string
@@ -125,7 +118,7 @@ func newDiskRateSensor(ctx context.Context, device *device, sensorType ioSensor,
 		diagnosticOption = sensor.WithCategory("")
 	}
 
-	rateSensor, err := sensor.NewSensor(ctx,
+	return sensor.NewSensor(ctx,
 		sensor.WithName(name),
 		sensor.WithID(id),
 		sensor.WithUnits(units),
@@ -135,9 +128,4 @@ func newDiskRateSensor(ctx context.Context, device *device, sensorType ioSensor,
 		sensor.WithAttributes(attributes),
 		diagnosticOption,
 	)
-	if err != nil {
-		return nil, errors.Join(ErrNewDiskRateSensor, err)
-	}
-
-	return &rateSensor, nil
 }

@@ -6,10 +6,8 @@ package media
 import (
 	"context"
 	"errors"
-	"log/slog"
 
 	pwmonitor "github.com/ConnorsApps/pipewire-monitor-go"
-	slogctx "github.com/veqryn/slog-context"
 
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/linux"
@@ -58,24 +56,6 @@ func webcamUseIcon(value bool) string {
 	}
 }
 
-func newWebcamUsageSensor(ctx context.Context, inUse bool) (*models.Entity, error) {
-	// Generate sensor entity.
-	webcamUseSensor, err := sensor.NewSensor(ctx,
-		sensor.WithName("Webcam In Use"),
-		sensor.WithID("webcam_in_use"),
-		sensor.AsTypeBinarySensor(),
-		// sensor.WithDeviceClass(class.Binar),
-		sensor.WithIcon(webcamUseIcon(inUse)),
-		sensor.WithState(inUse),
-		sensor.WithDataSourceAttribute(linux.DataSrcSysfs),
-	)
-	if err != nil {
-		return nil, errors.Join(ErrNewWebcamUsageSensor, err)
-	}
-
-	return &webcamUseSensor, nil
-}
-
 type webcamUsageWorker struct {
 	prefs *preferences.CommonWorkerPrefs
 	inUse bool
@@ -106,27 +86,18 @@ func (w *webcamUsageWorker) Start(ctx context.Context) (<-chan models.Entity, er
 
 		for event := range pwEvents {
 			w.parsePWState(*event.Info.State)
-
-			webcamUseSensor, err := newWebcamUsageSensor(ctx, w.inUse)
-			if err != nil {
-				slogctx.FromCtx(ctx).Warn("Could not parse pipewire event for webcam usage.",
-					slog.Any("error", err))
-			}
-
-			outCh <- *webcamUseSensor
+			outCh <- sensor.NewSensor(ctx,
+				sensor.WithName("Webcam In Use"),
+				sensor.WithID("webcam_in_use"),
+				sensor.AsTypeBinarySensor(),
+				sensor.WithIcon(webcamUseIcon(w.inUse)),
+				sensor.WithState(w.inUse),
+				sensor.WithDataSourceAttribute(linux.DataSrcSysfs),
+			)
 		}
 	}()
 
 	return outCh, nil
-}
-
-func (w *webcamUsageWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
-	webcamUsage, err := newWebcamUsageSensor(ctx, w.inUse)
-	if err != nil {
-		return nil, errors.Join(ErrNewWebcamUsageSensor, err)
-	}
-
-	return []models.Entity{*webcamUsage}, nil
 }
 
 func (w *webcamUsageWorker) PreferencesID() string {

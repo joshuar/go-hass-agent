@@ -10,10 +10,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"strings"
-
-	slogctx "github.com/veqryn/slog-context"
 
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/linux"
@@ -45,8 +42,8 @@ var (
 
 type powerSignal int
 
-func newPowerState(ctx context.Context, name powerSignal, value any) (*models.Entity, error) {
-	stateSensor, err := sensor.NewSensor(ctx,
+func newPowerState(ctx context.Context, name powerSignal, value any) models.Entity {
+	return sensor.NewSensor(ctx,
 		sensor.WithName("Power State"),
 		sensor.WithID("power_state"),
 		sensor.WithDeviceClass(class.SensorClassEnum),
@@ -57,11 +54,6 @@ func newPowerState(ctx context.Context, name powerSignal, value any) (*models.En
 		sensor.WithAttribute("options", []string{"Powered On", "Powered Off", "Suspended"}),
 		sensor.AsRetryableRequest(true),
 	)
-	if err != nil {
-		return nil, errors.Join(ErrNewPowerStateSensor, err)
-	}
-
-	return &stateSensor, nil
 }
 
 func powerStateString(signal powerSignal, value any) string {
@@ -123,60 +115,24 @@ func (w *stateWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
 			case <-ctx.Done():
 				return
 			case event := <-triggerCh:
-				var (
-					entity *models.Entity
-					err    error
-				)
-
 				switch {
 				case strings.HasSuffix(event.Signal, sleepSignal):
-					entity, err = newPowerState(ctx, suspend, event.Content[0])
+					sensorCh <- newPowerState(ctx, suspend, event.Content[0])
 				case strings.HasSuffix(event.Signal, shutdownSignal):
-					entity, err = newPowerState(ctx, shutdown, event.Content[0])
+					sensorCh <- newPowerState(ctx, shutdown, event.Content[0])
 				default:
 					continue
 				}
-
-				if err != nil {
-					slogctx.FromCtx(ctx).Warn("Could not generate power state sensor.",
-						slog.Any("error", err))
-					continue
-				}
-
-				sensorCh <- *entity
 			}
 		}
 	}()
 
 	// Send an initial state update (on, not suspended).
 	go func() {
-		sensors, err := w.Sensors(ctx)
-		if err != nil {
-			slogctx.FromCtx(ctx).
-				With(slog.String("worker", powerStateWorkerID)).
-				Debug("Could not retrieve power state.", slog.Any("error", err))
-
-			return
-		}
-
-		for _, s := range sensors {
-			sensorCh <- s
-		}
+		sensorCh <- newPowerState(ctx, shutdown, false)
 	}()
 
 	return sensorCh, nil
-}
-
-// Sensors returns the current sensors states. Assuming that if this is called,
-// then the machine is obviously running and not suspended, otherwise this
-// couldn't be called?
-func (w *stateWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
-	entity, err := newPowerState(ctx, shutdown, false)
-	if err != nil {
-		return nil, fmt.Errorf("could not generate power state sensor: %w", err)
-	}
-
-	return []models.Entity{*entity}, nil
 }
 
 func (w *stateWorker) PreferencesID() string {

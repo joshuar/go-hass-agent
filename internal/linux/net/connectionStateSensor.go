@@ -52,18 +52,14 @@ type connectionStateSensor struct {
 	stateProp *dbusx.Property[connState]
 }
 
-func (c *connectionStateSensor) generateEntity(ctx context.Context) (*models.Entity, error) {
-	connStateSensor, err := sensor.NewSensor(ctx,
+func (c *connectionStateSensor) generateEntity(ctx context.Context) models.Entity {
+	return sensor.NewSensor(ctx,
 		sensor.WithName(c.name+" Connection State"),
 		sensor.WithID(strcase.ToSnake(c.name)+"_connection_state"),
 		sensor.WithDataSourceAttribute(linux.DataSrcDbus),
 		sensor.WithState(c.state),
 		sensor.WithIcon(c.icon),
 	)
-	if err != nil {
-		return nil, errors.Join(ErrNewConnStateSensor, err)
-	}
-	return &connStateSensor, nil
 }
 
 func (c *connectionStateSensor) setState(state any) error {

@@ -58,11 +58,7 @@ func (w *chronyWorker) Execute(ctx context.Context) error {
 		return fmt.Errorf("could not retrieve chrony stats: %w", err)
 	}
 	// Generate a sensor.
-	entity, err := newChronyOffsetSensor(ctx, stats)
-	if err != nil {
-		return fmt.Errorf("could not generate chrony sensor: %w", err)
-	}
-	w.OutCh <- entity
+	w.OutCh <- newChronyOffsetSensor(ctx, stats)
 	return nil
 }
 
@@ -113,7 +109,7 @@ func (w *chronyWorker) getChronyTrackingStats() (map[string]string, error) {
 // newChronyOffsetSensor creates a new sensor representing the system clock
 // offset from the NTP server time. Attributes contain other stats acquired from
 // chrony.
-func newChronyOffsetSensor(ctx context.Context, stats map[string]string) (models.Entity, error) {
+func newChronyOffsetSensor(ctx context.Context, stats map[string]string) models.Entity {
 	var value any
 
 	// Try to parse the value into a float. If failed, use the string value.

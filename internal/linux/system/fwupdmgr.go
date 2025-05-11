@@ -110,7 +110,7 @@ func (w *fwupdWorker) Execute(ctx context.Context) error {
 		}
 	}
 
-	entity, err := sensor.NewSensor(ctx,
+	w.OutCh <- sensor.NewSensor(ctx,
 		sensor.WithName("Firmware Security"),
 		sensor.WithID("firmware_security"),
 		sensor.AsDiagnostic(),
@@ -118,11 +118,6 @@ func (w *fwupdWorker) Execute(ctx context.Context) error {
 		sensor.WithState(hsiID[0]),
 		sensor.WithAttributes(attributes),
 	)
-	if err != nil {
-		return fmt.Errorf("could not generate fwupdmgr sensor: %w", err)
-	}
-
-	w.OutCh <- entity
 
 	return nil
 }

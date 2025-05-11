@@ -6,10 +6,6 @@ package worker
 import (
 	"context"
 	"errors"
-	"fmt"
-	"log/slog"
-
-	slogctx "github.com/veqryn/slog-context"
 
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/models"
@@ -49,31 +45,16 @@ func (w *Version) Start(ctx context.Context) (<-chan models.Entity, error) {
 	go func() {
 		defer close(sensorCh)
 
-		entity, err := newVersionSensor(ctx)
-		if err != nil {
-			slogctx.FromCtx(ctx).Warn("Failed to create version sensor entity.",
-				slog.Any("error", err))
-			return
-		}
-
-		sensorCh <- entity
+		sensorCh <- sensor.NewSensor(ctx,
+			sensor.WithName("Go Hass Agent Version"),
+			sensor.WithID("agent_version"),
+			sensor.AsDiagnostic(),
+			sensor.WithIcon("mdi:face-agent"),
+			sensor.WithState(preferences.AppVersion()),
+		)
 	}()
 
 	return sensorCh, nil
-}
-
-func newVersionSensor(ctx context.Context) (models.Entity, error) {
-	sensor, err := sensor.NewSensor(ctx,
-		sensor.WithName("Go Hass Agent Version"),
-		sensor.WithID("agent_version"),
-		sensor.AsDiagnostic(),
-		sensor.WithIcon("mdi:face-agent"),
-		sensor.WithState(preferences.AppVersion()),
-	)
-	if err != nil {
-		return sensor, fmt.Errorf("%w: %w", ErrVersion, err)
-	}
-	return sensor, nil
 }
 
 func NewVersionWorker(_ context.Context) (workers.EntityWorker, error) {

@@ -69,7 +69,7 @@ func getFilesystems() ([]string, error) {
 		return nil, fmt.Errorf("getFilesystems: %w", err)
 	}
 
-	defer data.Close()
+	defer data.Close() //nolint:errcheck
 
 	var filesystems []string
 

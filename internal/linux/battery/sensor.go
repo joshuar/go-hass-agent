@@ -23,7 +23,7 @@ const unknownValue = "Unknown"
 
 // newBatterySensor creates a new sensor for Home Assistant from a battery
 // property.
-func newBatterySensor(ctx context.Context, battery *upowerBattery, sensorType sensorType, value dbus.Variant) (models.Entity, error) {
+func newBatterySensor(ctx context.Context, battery *upowerBattery, sensorType sensorType, value dbus.Variant) models.Entity {
 	var (
 		name, id, icon, units string
 		deviceClass           class.SensorDeviceClass
@@ -65,7 +65,7 @@ func newBatterySensor(ctx context.Context, battery *upowerBattery, sensorType se
 		icon = batteryIcon
 	}
 
-	entity, err := sensor.NewSensor(ctx,
+	return sensor.NewSensor(ctx,
 		sensor.WithName(name),
 		sensor.WithID(id),
 		sensor.WithDeviceClass(deviceClass),
@@ -76,11 +76,6 @@ func newBatterySensor(ctx context.Context, battery *upowerBattery, sensorType se
 		sensor.WithState(generateSensorState(sensorType, value.Value())),
 		sensor.WithAttributes(generateSensorAttributes(sensorType, battery)),
 	)
-	if err != nil {
-		return entity, fmt.Errorf("could not generate %s battery sensor: %w", name, err)
-	}
-
-	return entity, nil
 }
 
 // generateSensorState will take the raw value (from D-Bus) and format it as
@@ -138,11 +133,11 @@ func generateSensorAttributes(sensorType sensorType, battery *upowerBattery) map
 		)
 
 		if variant, err = battery.getProp(typeVoltage); err == nil {
-			voltage, _ = dbusx.VariantToValue[float64](variant) //nolint:lll,errcheck // its not important if this attribute value is not correct due to errors
+			voltage, _ = dbusx.VariantToValue[float64](variant) //nolint:lll // its not important if this attribute value is not correct due to errors
 		}
 
 		if variant, err = battery.getProp(typeEnergy); err == nil {
-			energy, _ = dbusx.VariantToValue[float64](variant) //nolint:lll,errcheck // its not important if this attribute value is not correct due to errors
+			energy, _ = dbusx.VariantToValue[float64](variant) //nolint:lll // its not important if this attribute value is not correct due to errors
 		}
 
 		attributes["voltage"] = voltage

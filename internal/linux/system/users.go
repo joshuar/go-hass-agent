@@ -59,8 +59,8 @@ var (
 	_ workers.EntityWorker = (*UserSessionEventsWorker)(nil)
 )
 
-func newUsersSensor(ctx context.Context, users []string) (*models.Entity, error) {
-	usersSensor, err := sensor.NewSensor(ctx,
+func newUsersSensor(ctx context.Context, users []string) models.Entity {
+	return sensor.NewSensor(ctx,
 		sensor.WithName("Current Users"),
 		sensor.WithID("current_users"),
 		sensor.WithStateClass(class.StateMeasurement),
@@ -70,11 +70,6 @@ func newUsersSensor(ctx context.Context, users []string) (*models.Entity, error)
 		sensor.WithDataSourceAttribute(linux.DataSrcDbus),
 		sensor.WithAttribute("usernames", users),
 	)
-	if err != nil {
-		return nil, errors.Join(ErrNewUsersSensor, err)
-	}
-
-	return &usersSensor, nil
 }
 
 type UserSessionSensorWorker struct {
@@ -118,12 +113,7 @@ func (w *UserSessionSensorWorker) Start(ctx context.Context) (<-chan models.Enti
 		if err != nil {
 			slog.With(slog.String("worker", userSessionsSensorWorkerID)).Debug("Failed to get list of user sessions.", slog.Any("error", err))
 		} else {
-			entity, err := newUsersSensor(ctx, users)
-			if err != nil {
-				slog.With(slog.String("worker", userSessionsSensorWorkerID)).Debug("Failed to generate user sessions sensor.", slog.Any("error", err))
-			} else {
-				sensorCh <- *entity
-			}
+			sensorCh <- newUsersSensor(ctx, users)
 		}
 	}
 
