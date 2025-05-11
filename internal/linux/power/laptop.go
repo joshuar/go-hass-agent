@@ -53,7 +53,7 @@ type laptopWorker struct {
 	*models.WorkerMetadata
 }
 
-func newLaptopEvent(ctx context.Context, prop string, state bool) (*models.Entity, error) {
+func newLaptopEvent(ctx context.Context, prop string, state bool) models.Entity {
 	var (
 		name, icon  string
 		deviceClass class.SensorDeviceClass
@@ -93,7 +93,7 @@ func newLaptopEvent(ctx context.Context, prop string, state bool) (*models.Entit
 		deviceClass = class.BinaryClassPower
 	}
 
-	laptopSensor, err := sensor.NewSensor(ctx,
+	return sensor.NewSensor(ctx,
 		sensor.WithName(name),
 		sensor.WithID(strcase.ToSnake(name)),
 		sensor.AsTypeBinarySensor(),
@@ -103,11 +103,6 @@ func newLaptopEvent(ctx context.Context, prop string, state bool) (*models.Entit
 		sensor.WithState(state),
 		sensor.WithDataSourceAttribute(linux.DataSrcDbus),
 	)
-	if err != nil {
-		return nil, errors.Join(ErrNewLaptopSensor, err)
-	}
-
-	return &laptopSensor, nil
 }
 
 func (w *laptopWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
@@ -168,12 +163,7 @@ func (w *laptopWorker) generateSensors(ctx context.Context) ([]models.Entity, er
 		if err != nil {
 			warnings = errors.Join(warnings, fmt.Errorf("could not retrieve property from D-Bus: %w", err))
 		} else {
-			entity, err := newLaptopEvent(ctx, name, state)
-			if err != nil {
-				warnings = errors.Join(warnings, fmt.Errorf("could not generate laptop sensor: %w", err))
-			} else {
-				sensors = append(sensors, *entity)
-			}
+			sensors = append(sensors, newLaptopEvent(ctx, name, state))
 		}
 	}
 
@@ -229,11 +219,7 @@ func sendChangedProps(ctx context.Context, props map[string]dbus.Variant, sensor
 			if state, err := dbusx.VariantToValue[bool](value); err != nil {
 				slogctx.FromCtx(ctx).Warn("Could not parse laptop D-Bus property.", slog.Any("error", err))
 			} else {
-				if entity, err := newLaptopEvent(ctx, prop, state); err != nil {
-					slogctx.FromCtx(ctx).Warn("could not send laptop sensor.", slog.Any("error", err))
-				} else {
-					sensorCh <- *entity
-				}
+				sensorCh <- newLaptopEvent(ctx, prop, state)
 			}
 		}
 	}

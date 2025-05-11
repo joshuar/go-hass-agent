@@ -37,8 +37,8 @@ var (
 	ErrInitPowerProfileWorker = errors.New("could not init power profile worker")
 )
 
-func newPowerSensor(ctx context.Context, profile string) (*models.Entity, error) {
-	profileSensor, err := sensor.NewSensor(ctx,
+func newPowerSensor(ctx context.Context, profile string) models.Entity {
+	return sensor.NewSensor(ctx,
 		sensor.WithName("Power Profile"),
 		sensor.WithID("power_profile"),
 		sensor.AsDiagnostic(),
@@ -46,11 +46,6 @@ func newPowerSensor(ctx context.Context, profile string) (*models.Entity, error)
 		sensor.WithState(profile),
 		sensor.WithDataSourceAttribute(linux.DataSrcDbus),
 	)
-	if err != nil {
-		return nil, errors.Join(ErrNewPowerProfileSensor, err)
-	}
-
-	return &profileSensor, nil
 }
 
 type profileWorker struct {
@@ -74,12 +69,12 @@ func (w *profileWorker) Start(ctx context.Context) (<-chan models.Entity, error)
 	sensorCh := make(chan models.Entity)
 
 	// Get the current power profile and send it as an initial sensor value.
-	sensors, err := w.Sensors(ctx)
+	profile, err := w.activeProfile.Get()
 	if err != nil {
-		w.logger.Debug("Could not retrieve power profile.", slog.Any("error", err))
+		return nil, fmt.Errorf("unable to retrieve active power profile from D-Bus: %w", err)
 	} else {
 		go func() {
-			sensorCh <- sensors[0]
+			sensorCh <- newPowerSensor(ctx, profile)
 		}()
 	}
 
@@ -97,12 +92,7 @@ func (w *profileWorker) Start(ctx context.Context) (<-chan models.Entity, error)
 					w.logger.Debug("Could not parse received D-Bus signal.", slog.Any("error", err))
 				} else {
 					if changed {
-						entity, err := newPowerSensor(ctx, profile)
-						if err != nil {
-							w.logger.Warn("Could not generate power profile sensor.", slog.Any("error", err))
-						} else {
-							sensorCh <- *entity
-						}
+						sensorCh <- newPowerSensor(ctx, profile)
 					}
 				}
 			}
@@ -110,20 +100,6 @@ func (w *profileWorker) Start(ctx context.Context) (<-chan models.Entity, error)
 	}()
 
 	return sensorCh, nil
-}
-
-func (w *profileWorker) Sensors(ctx context.Context) ([]models.Entity, error) {
-	profile, err := w.activeProfile.Get()
-	if err != nil {
-		return nil, fmt.Errorf("unable to retrieve active power profile from D-Bus: %w", err)
-	}
-
-	entity, err := newPowerSensor(ctx, profile)
-	if err != nil {
-		return nil, fmt.Errorf("unable to generate active power profile sensor: %w", err)
-	}
-
-	return []models.Entity{*entity}, nil
 }
 
 func (w *profileWorker) PreferencesID() string {

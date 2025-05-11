@@ -59,7 +59,7 @@ func (w *usageWorker) calculateRate(name, value string) uint64 {
 	var state uint64
 
 	if _, found := w.rateSensors[name]; found {
-		currValue, _ := strconv.ParseUint(value, 10, 64) //nolint:errcheck // if we can't parse it, value will be 0.
+		currValue, _ := strconv.ParseUint(value, 10, 64)
 		state = w.rateSensors[name].Calculate(currValue, w.GetDelta())
 	} else {
 		w.rateSensors[name] = newRate(value)
@@ -145,7 +145,6 @@ func NewUsageWorker(ctx context.Context) (workers.EntityWorker, error) {
 	return worker, nil
 }
 
-//nolint:gocognit,funlen // There are a lot of sensors to calculate!
 func (w *usageWorker) getUsageStats(ctx context.Context) ([]models.Entity, error) {
 	var (
 		sensors  []models.Entity
@@ -157,7 +156,7 @@ func (w *usageWorker) getUsageStats(ctx context.Context) ([]models.Entity, error
 		return nil, fmt.Errorf("fetch cpu usage: %w", err)
 	}
 
-	defer statsFH.Close()
+	defer statsFH.Close() //nolint:errcheck
 
 	statsFile := bufio.NewScanner(statsFH)
 	for statsFile.Scan() {
@@ -176,57 +175,19 @@ func (w *usageWorker) getUsageStats(ctx context.Context) ([]models.Entity, error
 		// Create a sensor depending on the line.
 		switch {
 		case cols[0] == totalCPUString:
-			entity, err := newUsageSensor(ctx, w.clktck, cols, "")
-			if err != nil {
-				warnings = errors.Join(warnings, fmt.Errorf("could not generate total CPU usage sensor: %w", err))
-				continue
-			}
-
-			sensors = append(sensors, entity)
+			sensors = append(sensors, newUsageSensor(ctx, w.clktck, cols, ""))
 		case strings.Contains(cols[0], "cpu"):
-			entity, err := newUsageSensor(ctx, w.clktck, cols, models.Diagnostic)
-			if err != nil {
-				warnings = errors.Join(warnings, fmt.Errorf("could not generate CPU usage sensor: %w", err))
-				continue
-			}
-
-			sensors = append(sensors, entity)
+			sensors = append(sensors, newUsageSensor(ctx, w.clktck, cols, models.Diagnostic))
 		case cols[0] == "ctxt":
 			rate := w.calculateRate("ctxt", cols[1])
-
-			entity, err := newRateSensor(ctx, "CPU Context Switch Rate", "mdi:counter", "ctx/s", rate, cols[1])
-			if err != nil {
-				warnings = errors.Join(warnings, fmt.Errorf("could not generate context switch rate sensor: %w", err))
-				continue
-			}
-
-			sensors = append(sensors, entity)
+			sensors = append(sensors, newRateSensor(ctx, "CPU Context Switch Rate", "mdi:counter", "ctx/s", rate, cols[1]))
 		case cols[0] == "processes":
 			rate := w.calculateRate("processes", cols[1])
-
-			entity, err := newRateSensor(ctx, "Processes Creation Rate", "mdi:application-cog", "processes/s", rate, cols[1])
-			if err != nil {
-				warnings = errors.Join(warnings, fmt.Errorf("could not generate process creation rate sensor: %w", err))
-				continue
-			}
-
-			sensors = append(sensors, entity)
+			sensors = append(sensors, newRateSensor(ctx, "Processes Creation Rate", "mdi:application-cog", "processes/s", rate, cols[1]))
 		case cols[0] == "procs_running":
-			entity, err := newCountSensor(ctx, "Processes Running", "mdi:application-cog", "processes", cols[1])
-			if err != nil {
-				warnings = errors.Join(warnings, fmt.Errorf("could not generate running process count sensor: %w", err))
-				continue
-			}
-
-			sensors = append(sensors, entity)
+			sensors = append(sensors, newCountSensor(ctx, "Processes Running", "mdi:application-cog", "processes", cols[1]))
 		case cols[0] == "procs_blocked":
-			entity, err := newCountSensor(ctx, "Processes Blocked", "mdi:application-cog", "processes", cols[1])
-			if err != nil {
-				warnings = errors.Join(warnings, fmt.Errorf("could not generate blocked process count sensor: %w", err))
-				continue
-			}
-
-			sensors = append(sensors, entity)
+			sensors = append(sensors, newCountSensor(ctx, "Processes Blocked", "mdi:application-cog", "processes", cols[1]))
 		}
 	}
 

@@ -31,7 +31,7 @@ type ScriptSensor struct {
 	SensorUnits       string `json:"sensor_units,omitempty" yaml:"sensor_units,omitempty" toml:"sensor_units,omitempty"`
 }
 
-func scriptToEntity(ctx context.Context, script ScriptSensor) (*models.Entity, error) {
+func scriptToEntity(ctx context.Context, script ScriptSensor) models.Entity {
 	var typeOption sensor.Option
 
 	switch script.SensorStateType {
@@ -41,7 +41,7 @@ func scriptToEntity(ctx context.Context, script ScriptSensor) (*models.Entity, e
 		typeOption = sensor.AsTypeSensor()
 	}
 
-	scriptSensor, err := sensor.NewSensor(ctx,
+	return sensor.NewSensor(ctx,
 		sensor.WithName(script.SensorName),
 		sensor.WithID(strcase.ToSnake(script.SensorName)),
 		sensor.WithUnits(script.SensorUnits),
@@ -52,11 +52,6 @@ func scriptToEntity(ctx context.Context, script ScriptSensor) (*models.Entity, e
 		sensor.WithState(script.SensorState),
 		typeOption,
 	)
-	if err != nil {
-		return nil, errors.Join(ErrNewSensor, err)
-	}
-
-	return &scriptSensor, nil
 }
 
 // Icon is an material design icon to represent the script state.

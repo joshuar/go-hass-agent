@@ -58,7 +58,7 @@ func hwmonSensorAttributes(details *hwmon.Sensor) map[string]any {
 	return attributes
 }
 
-func newHWSensor(ctx context.Context, details *hwmon.Sensor) (*models.Entity, error) {
+func newHWSensor(ctx context.Context, details *hwmon.Sensor) models.Entity {
 	var (
 		icon             string
 		deviceClass      class.SensorDeviceClass
@@ -90,7 +90,7 @@ func newHWSensor(ctx context.Context, details *hwmon.Sensor) (*models.Entity, er
 		sensorTypeOption = sensor.AsTypeSensor()
 	}
 
-	hwMonSensor, err := sensor.NewSensor(ctx,
+	return sensor.NewSensor(ctx,
 		sensor.WithName(details.Name()),
 		sensor.WithID(details.ID()),
 		sensor.WithDeviceClass(deviceClass),
@@ -102,11 +102,6 @@ func newHWSensor(ctx context.Context, details *hwmon.Sensor) (*models.Entity, er
 		sensor.WithAttributes(hwmonSensorAttributes(details)),
 		sensor.WithStateClass(stateClass),
 	)
-	if err != nil {
-		return nil, errors.Join(ErrNewHWMonSensor, err)
-	}
-
-	return &hwMonSensor, nil
 }
 
 type hwMonWorker struct {
@@ -116,19 +111,13 @@ type hwMonWorker struct {
 }
 
 func (w *hwMonWorker) Execute(ctx context.Context) error {
-	var warnings error
-
 	hwmonSensors, err := hwmon.GetAllSensors()
 	if err != nil {
 		return fmt.Errorf("could not retrieve hardware sensors: %w", err)
 	}
 
 	for hwMonSensor := range slices.Values(hwmonSensors) {
-		if entity, err := newHWSensor(ctx, hwMonSensor); err != nil {
-			warnings = errors.Join(warnings, fmt.Errorf("could not generate hwmon sensor: %w", err))
-		} else {
-			w.OutCh <- *entity
-		}
+		w.OutCh <- newHWSensor(ctx, hwMonSensor)
 	}
 
 	return nil
@@ -183,7 +172,7 @@ func NewHWMonWorker(ctx context.Context) (workers.EntityWorker, error) {
 	return worker, nil
 }
 
-func parseSensorType(t string) (icon string, deviceclass class.SensorDeviceClass) {
+func parseSensorType(t string) (string, class.SensorDeviceClass) {
 	switch t {
 	case "Temp":
 		return "mdi:thermometer", class.SensorClassTemperature

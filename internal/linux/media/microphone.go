@@ -6,10 +6,8 @@ package media
 import (
 	"context"
 	"errors"
-	"log/slog"
 
 	pwmonitor "github.com/ConnorsApps/pipewire-monitor-go"
-	slogctx "github.com/veqryn/slog-context"
 
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
 	"github.com/joshuar/go-hass-agent/internal/linux"
@@ -60,14 +58,14 @@ func (w *micUsageWorker) Start(ctx context.Context) (<-chan models.Entity, error
 
 		for event := range pwEvents {
 			w.parsePWState(*event.Info.State)
-
-			micUseSensor, err := newMicUsageSensor(ctx, w.inUse)
-			if err != nil {
-				slogctx.FromCtx(ctx).Warn("Could not parse pipewire event for mic usage.",
-					slog.Any("error", err))
-			}
-
-			outCh <- *micUseSensor
+			outCh <- sensor.NewSensor(ctx,
+				sensor.WithName("Microphone In Use"),
+				sensor.WithID("microphone_in_use"),
+				sensor.AsTypeBinarySensor(),
+				sensor.WithIcon(micUseIcon(w.inUse)),
+				sensor.WithState(w.inUse),
+				sensor.WithDataSourceAttribute(linux.DataSrcSysfs),
+			)
 		}
 	}()
 
@@ -123,22 +121,4 @@ func micUseIcon(value bool) string {
 	default:
 		return "mdi:microphone-off"
 	}
-}
-
-func newMicUsageSensor(ctx context.Context, inUse bool) (*models.Entity, error) {
-	// Generate sensor entity.
-	micUseSensor, err := sensor.NewSensor(ctx,
-		sensor.WithName("Microphone In Use"),
-		sensor.WithID("microphone_in_use"),
-		sensor.AsTypeBinarySensor(),
-		// sensor.WithDeviceClass(class.Binar),
-		sensor.WithIcon(micUseIcon(inUse)),
-		sensor.WithState(inUse),
-		sensor.WithDataSourceAttribute(linux.DataSrcSysfs),
-	)
-	if err != nil {
-		return nil, errors.Join(ErrNewMicUsageSensor, err)
-	}
-
-	return &micUseSensor, nil
 }

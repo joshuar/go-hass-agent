@@ -7,7 +7,6 @@ package desktop
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -25,11 +24,6 @@ import (
 )
 
 var _ workers.EntityWorker = (*settingsWorker)(nil)
-
-var (
-	ErrInitDesktopWorker = errors.New("could not init desktop worker")
-	ErrUnknownProp       = errors.New("unknown desktop property")
-)
 
 const (
 	portalInterface         = "org.freedesktop.portal"
@@ -65,7 +59,7 @@ func (w *settingsWorker) IsDisabled() bool {
 	return w.prefs.IsDisabled()
 }
 
-//nolint:cyclop,gocognit
+//nolint:cyclop
 func (w *settingsWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
 	triggerCh, err := dbusx.NewWatch(
 		dbusx.MatchPath(desktopPortalPath),
@@ -73,11 +67,9 @@ func (w *settingsWorker) Start(ctx context.Context) (<-chan models.Entity, error
 		dbusx.MatchMembers(settingsChangedSignal),
 	).Start(ctx, w.bus)
 	if err != nil {
-		return nil, errors.Join(ErrInitDesktopWorker,
-			fmt.Errorf("could not watch D-Bus for desktop settings updates: %w", err))
+		return nil, fmt.Errorf("could not start desktop worker: %w", err)
 	}
 	sensorCh := make(chan models.Entity)
-	logger := slogctx.FromCtx(ctx).With(slog.String("worker", desktopWorkerID))
 
 	go func() {
 		defer close(sensorCh)
@@ -91,40 +83,21 @@ func (w *settingsWorker) Start(ctx context.Context) (<-chan models.Entity, error
 					continue
 				}
 
-				prop, value, err := extractProp(event.Content)
-				if err != nil {
-					logger.Debug("Error processing received signal.", slog.Any("error", err))
-				}
+				prop, value := extractProp(event.Content)
 
 				switch prop {
 				case colorSchemeProp:
 					scheme, icon := parseColorScheme(value)
-
-					entity, err := newColorSchemeSensor(ctx, scheme, icon)
-					if err != nil {
-						logger.Warn("Could not generate color scheme sensor.", slog.Any("error", err))
-					} else {
-						sensorCh <- entity
-					}
+					sensorCh <- newColorSchemeSensor(ctx, scheme, icon)
 				case accentColorProp:
-					entity, err := newAccentColorSensor(ctx, parseAccentColor(value))
-					if err != nil {
-						logger.Warn("Could not generate accent color sensor.", slog.Any("error", err))
-					} else {
-						sensorCh <- entity
-					}
+					sensorCh <- newAccentColorSensor(ctx, parseAccentColor(value))
 				}
 			}
 		}
 	}()
 	// Send an initial update.
 	go func() {
-		sensors, err := w.generateSensors(ctx)
-		if err != nil {
-			logger.Debug("Could not get desktop settings from D-Bus.", slog.Any("error", err))
-		}
-
-		for _, s := range sensors {
+		for _, s := range w.generateSensors(ctx) {
 			sensorCh <- s
 		}
 	}()
@@ -133,21 +106,14 @@ func (w *settingsWorker) Start(ctx context.Context) (<-chan models.Entity, error
 }
 
 //nolint:mnd
-func (w *settingsWorker) generateSensors(ctx context.Context) ([]models.Entity, error) {
+func (w *settingsWorker) generateSensors(ctx context.Context) []models.Entity {
 	sensors := make([]models.Entity, 0, 2)
-
-	var errs error
 
 	// Accent Color Sensor.
 	if value, err := w.getProp(accentColorProp); err != nil {
 		slogctx.FromCtx(ctx).Warn("Could not retrieve accent color property", slog.Any("error", err))
 	} else {
-		entity, err := newAccentColorSensor(ctx, parseAccentColor(value))
-		if err != nil {
-			slogctx.FromCtx(ctx).Warn("Could not generate accent color sensor.", slog.Any("error", err))
-		} else {
-			sensors = append(sensors, entity)
-		}
+		sensors = append(sensors, newAccentColorSensor(ctx, parseAccentColor(value)))
 	}
 
 	// Color Theme Sensor.
@@ -155,16 +121,10 @@ func (w *settingsWorker) generateSensors(ctx context.Context) ([]models.Entity, 
 		slogctx.FromCtx(ctx).Warn("Could not retrieve color scheme property", slog.Any("error", err))
 	} else {
 		scheme, icon := parseColorScheme(value)
-
-		entity, err := newColorSchemeSensor(ctx, scheme, icon)
-		if err != nil {
-			slogctx.FromCtx(ctx).Warn("Could not generate color scheme sensor.", slog.Any("error", err))
-		} else {
-			sensors = append(sensors, entity)
-		}
+		sensors = append(sensors, newColorSchemeSensor(ctx, scheme, icon))
 	}
 
-	return sensors, errs
+	return sensors
 }
 
 func (w *settingsWorker) getProp(prop string) (dbus.Variant, error) {
@@ -175,22 +135,22 @@ func (w *settingsWorker) getProp(prop string) (dbus.Variant, error) {
 		"org.freedesktop.appearance",
 		prop)
 	if err != nil {
-		return dbus.Variant{}, errors.Join(ErrInitDesktopWorker,
-			fmt.Errorf("could not retrieve desktop property %s from D-Bus: %w", prop, err))
+		return dbus.Variant{}, fmt.Errorf("could not retrieve desktop property %s from D-Bus: %w", prop, err)
 	}
 
 	return value, nil
 }
 
+// NewDesktopWorker creates a worker to track desktop settings changes.
 func NewDesktopWorker(ctx context.Context) (workers.EntityWorker, error) {
 	_, ok := linux.CtxGetDesktopPortal(ctx)
 	if !ok {
-		return nil, errors.Join(ErrInitDesktopWorker, linux.ErrNoDesktopPortal)
+		return nil, fmt.Errorf("could not start desktop worker: %w", linux.ErrNoDesktopPortal)
 	}
 
 	bus, ok := linux.CtxGetSessionBus(ctx)
 	if !ok {
-		return nil, errors.Join(ErrInitDesktopWorker, linux.ErrNoSessionBus)
+		return nil, fmt.Errorf("could not start desktop worker: %w", linux.ErrNoSessionBus)
 	}
 
 	worker := &settingsWorker{
@@ -200,7 +160,7 @@ func NewDesktopWorker(ctx context.Context) (workers.EntityWorker, error) {
 
 	prefs, err := preferences.LoadWorker(worker)
 	if err != nil {
-		return nil, errors.Join(ErrInitDesktopWorker, err)
+		return nil, fmt.Errorf("could not start desktop worker: %w", err)
 	}
 	worker.prefs = prefs
 
@@ -245,24 +205,24 @@ func parseAccentColor(value dbus.Variant) string {
 	return fmt.Sprintf("#%02x%02x%02x", rgb[0], rgb[1], rgb[2])
 }
 
-func extractProp(event []any) (prop string, value dbus.Variant, err error) {
+func extractProp(event []any) (string, dbus.Variant) {
 	var ok bool
 
-	prop, ok = event[1].(string)
+	prop, ok := event[1].(string)
 	if !ok {
-		return "", dbus.Variant{}, fmt.Errorf("error extracting property from D-Bus signal: %w", ErrUnknownProp)
+		return "", dbus.Variant{}
 	}
 
-	value, ok = event[2].(dbus.Variant)
+	value, ok := event[2].(dbus.Variant)
 	if !ok {
-		return "", dbus.Variant{}, fmt.Errorf("error extracting property from D-Bus signal: %w", ErrUnknownProp)
+		return "", dbus.Variant{}
 	}
 
-	return prop, value, nil
+	return prop, value
 }
 
-func newColorSchemeSensor(ctx context.Context, scheme, icon string) (models.Entity, error) {
-	entity, err := sensor.NewSensor(ctx,
+func newColorSchemeSensor(ctx context.Context, scheme, icon string) models.Entity {
+	return sensor.NewSensor(ctx,
 		sensor.WithName("Desktop Color Scheme"),
 		sensor.WithID("desktop_color_scheme"),
 		sensor.AsDiagnostic(),
@@ -270,15 +230,10 @@ func newColorSchemeSensor(ctx context.Context, scheme, icon string) (models.Enti
 		sensor.WithState(scheme),
 		sensor.WithDataSourceAttribute(linux.DataSrcDbus),
 	)
-	if err != nil {
-		return entity, fmt.Errorf("could not create color scheme sensor: %w", err)
-	}
-
-	return entity, nil
 }
 
-func newAccentColorSensor(ctx context.Context, value string) (models.Entity, error) {
-	entity, err := sensor.NewSensor(ctx,
+func newAccentColorSensor(ctx context.Context, value string) models.Entity {
+	return sensor.NewSensor(ctx,
 		sensor.WithName("Desktop Accent Color"),
 		sensor.WithID("desktop_accent_color"),
 		sensor.AsDiagnostic(),
@@ -286,9 +241,4 @@ func newAccentColorSensor(ctx context.Context, value string) (models.Entity, err
 		sensor.WithState(value),
 		sensor.WithDataSourceAttribute(linux.DataSrcDbus),
 	)
-	if err != nil {
-		return entity, fmt.Errorf("could not create color scheme sensor: %w", err)
-	}
-
-	return entity, nil
 }

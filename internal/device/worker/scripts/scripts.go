@@ -74,12 +74,7 @@ func (s *Script) Execute(ctx context.Context) error {
 	}
 
 	for _, sensor := range output.Sensors {
-		entity, err := scriptToEntity(ctx, sensor)
-		if err != nil {
-			return errors.Join(ErrExecuteScript, err)
-		}
-
-		s.outCh <- *entity
+		s.outCh <- scriptToEntity(ctx, sensor)
 	}
 
 	return nil
@@ -96,12 +91,7 @@ func (s *Script) Run(ctx context.Context) ([]models.Entity, error) {
 	sensors := make([]models.Entity, 0, len(output.Sensors))
 
 	for _, s := range output.Sensors {
-		entity, err := scriptToEntity(ctx, s)
-		if err != nil {
-			return nil, fmt.Errorf("could not create script entity: %w", err)
-		}
-
-		sensors = append(sensors, *entity)
+		sensors = append(sensors, scriptToEntity(ctx, s))
 	}
 
 	return sensors, nil

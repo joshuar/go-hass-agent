@@ -74,7 +74,7 @@ func (w *cpuVulnWorker) Execute(ctx context.Context) error {
 		attrs[name] = details
 	}
 
-	cpuVulnSensor, err := sensor.NewSensor(ctx,
+	w.OutCh <- sensor.NewSensor(ctx,
 		sensor.WithName("CPU Vulnerabilities"),
 		sensor.WithID("cpu_vulnerabilities"),
 		sensor.AsTypeBinarySensor(),
@@ -84,11 +84,6 @@ func (w *cpuVulnWorker) Execute(ctx context.Context) error {
 		sensor.WithState(cpuVulnerabilitiesFound),
 		sensor.WithAttributes(attrs),
 	)
-	if err != nil {
-		return errors.Join(ErrNewVulnSensor, err)
-	}
-
-	w.OutCh <- cpuVulnSensor
 
 	return nil
 }

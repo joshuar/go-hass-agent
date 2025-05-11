@@ -7,11 +7,7 @@ package sensor
 
 import (
 	"context"
-	"fmt"
-	"log/slog"
 	"maps"
-
-	slogctx "github.com/veqryn/slog-context"
 
 	"github.com/joshuar/go-hass-agent/internal/models"
 	"github.com/joshuar/go-hass-agent/internal/models/class"
@@ -22,94 +18,81 @@ type Option models.Option[*models.Sensor]
 
 // WithState assigns a state value to the Sensor.
 func WithState(value any) Option {
-	return func(s *models.Sensor) error {
+	return func(s *models.Sensor) {
 		s.State = value
-		return nil
 	}
 }
 
 // WithAttributes option sets the additional attributes for the sensor.
 func WithAttributes(attributes map[string]any) Option {
-	return func(s *models.Sensor) error {
+	return func(s *models.Sensor) {
 		if attributes == nil {
-			return nil
+			return
 		}
-
 		maps.Copy(s.Attributes, attributes)
-
-		return nil
 	}
 }
 
 // WithAttribute sets the given additional attribute to the given value.
 func WithAttribute(name string, value any) Option {
-	return func(s *models.Sensor) error {
+	return func(s *models.Sensor) {
 		s.Attributes[name] = value
-		return nil
 	}
 }
 
 // WithDataSourceAttribute will set the "data_source" additional attribute to
 // the given value.
 func WithDataSourceAttribute(source string) Option {
-	return func(s *models.Sensor) error {
-		return WithAttribute("data_source", source)(s)
+	return func(s *models.Sensor) {
+		WithAttribute("data_source", source)(s)
 	}
 }
 
 // WithIcon sets the sensor icon.
 func WithIcon(icon string) Option {
-	return func(s *models.Sensor) error {
+	return func(s *models.Sensor) {
 		if icon != "" {
 			s.Icon = &icon
 		}
-
-		return nil
 	}
 }
 
 // WithName sets the friendly name for the sensor entity.
 func WithName(name string) Option {
-	return func(s *models.Sensor) error {
+	return func(s *models.Sensor) {
 		s.Name = name
-		return nil
 	}
 }
 
 // WithID sets the entity ID of the sensor.
 func WithID(id string) Option {
-	return func(s *models.Sensor) error {
+	return func(s *models.Sensor) {
 		s.UniqueID = id
-		return nil
 	}
 }
 
 // AsTypeSensor ensures the sensor is treated as a Sensor Entity.
 // https://developers.home-assistant.io/docs/core/entity/sensor/
 func AsTypeSensor() Option {
-	return func(s *models.Sensor) error {
+	return func(s *models.Sensor) {
 		s.Type = models.SensorTypeSensor
-		return nil
 	}
 }
 
 // AsTypeBinarySensor ensures the sensor is treated as a Binary Sensor Entity.
 // https://developers.home-assistant.io/docs/core/entity/binary-sensor
 func AsTypeBinarySensor() Option {
-	return func(s *models.Sensor) error {
+	return func(s *models.Sensor) {
 		s.Type = models.SensorTypeBinarySensor
-		return nil
 	}
 }
 
 // WithUnits defines the native unit of measurement of the sensor entity.
 func WithUnits(units string) Option {
-	return func(s *models.Sensor) error {
+	return func(s *models.Sensor) {
 		if units != "" {
 			s.UnitOfMeasurement = &units
 		}
-
-		return nil
 	}
 }
 
@@ -123,13 +106,11 @@ func WithUnits(units string) Option {
 //
 // https://developers.home-assistant.io/docs/core/entity/binary-sensor#available-device-classes
 func WithDeviceClass(deviceClass class.SensorDeviceClass) Option {
-	return func(s *models.Sensor) error {
+	return func(s *models.Sensor) {
 		if deviceClass.Valid() {
 			str := deviceClass.String()
 			s.DeviceClass = &str
 		}
-
-		return nil
 	}
 }
 
@@ -138,72 +119,56 @@ func WithDeviceClass(deviceClass class.SensorDeviceClass) Option {
 //
 // https://developers.home-assistant.io/docs/core/entity/sensor/#available-state-classes
 func WithStateClass(stateClass class.SensorStateClass) Option {
-	return func(s *models.Sensor) error {
+	return func(s *models.Sensor) {
 		if stateClass.Valid() {
 			str := stateClass.String()
 			s.StateClass = &str
 		}
-
-		return nil
 	}
 }
 
 // WithCategory option sets the entity category explicitly to the value given.
 // If the value is invalid or empty, it is ignored.
 func WithCategory(category models.EntityCategory) Option {
-	return func(s *models.Sensor) error {
+	return func(s *models.Sensor) {
 		if category != "" {
 			s.EntityCategory = &category
 		}
-
-		return nil
 	}
 }
 
 // AsDiagnostic sets the sensor entity as a diagnostic. This will ensure it will
 // be grouped under a diagnostic header in the Home Assistant UI.
 func AsDiagnostic() Option {
-	return func(s *models.Sensor) error {
+	return func(s *models.Sensor) {
 		category := models.Diagnostic
 		s.EntityCategory = &category
-
-		return nil
 	}
 }
 
 // AsRetryableRequest sets a flag on the sensor that indicates the requests sent
 // to Home Assistant related to this sensor should be retried.
 func AsRetryableRequest(value bool) Option {
-	return func(s *models.Sensor) error {
+	return func(s *models.Sensor) {
 		s.Retryable = value
-		return nil
 	}
 }
 
 // NewSensor provides a way to build a sensor entity with the given options.
-func NewSensor(ctx context.Context, options ...Option) (models.Entity, error) {
+func NewSensor(ctx context.Context, options ...Option) models.Entity {
 	sensor := models.Sensor{
 		Attributes: make(models.Attributes),
 	}
 
 	for _, option := range options {
-		if err := option(&sensor); err != nil {
-			slogctx.FromCtx(ctx).Warn("Could not set sensor option.", slog.Any("error", err))
-		}
+		option(&sensor)
 	}
 
 	if sensor.Type == "" {
-		if err := AsTypeSensor()(&sensor); err != nil {
-			slogctx.FromCtx(ctx).Warn("Could not set sensor option.", slog.Any("error", err))
-		}
+		AsTypeSensor()(&sensor)
 	}
 
 	entity := models.Entity{}
-
-	err := entity.FromSensor(sensor)
-	if err != nil {
-		return entity, fmt.Errorf("could not generate sensor entity: %w", err)
-	}
-
-	return entity, nil
+	entity.FromSensor(sensor)
+	return entity
 }

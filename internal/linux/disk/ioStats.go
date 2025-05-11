@@ -58,10 +58,10 @@ type device struct {
 	model     string
 }
 
-func (d *device) generateIdentifiers(sensorType ioSensor) (name, id string) {
+func (d *device) generateIdentifiers(sensorType ioSensor) (string, string) {
 	r := []rune(d.id)
-	name = string(append([]rune{unicode.ToUpper(r[0])}, r[1:]...)) + " " + sensorType.String()
-	id = strings.ToLower(d.id + "_" + strings.ReplaceAll(sensorType.String(), " ", "_"))
+	name := string(append([]rune{unicode.ToUpper(r[0])}, r[1:]...)) + " " + sensorType.String()
+	id := strings.ToLower(d.id + "_" + strings.ReplaceAll(sensorType.String(), " ", "_"))
 
 	return name, id
 }
@@ -89,7 +89,7 @@ func getDeviceNames() ([]string, error) {
 		return nil, fmt.Errorf("getDevices: %w", err)
 	}
 
-	defer data.Close()
+	defer data.Close() //nolint:errcheck
 
 	var devices []string
 

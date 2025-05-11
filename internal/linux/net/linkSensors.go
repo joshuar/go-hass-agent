@@ -47,7 +47,7 @@ var (
 	ErrInitLinkWorker     = errors.New("could not init network link state worker")
 )
 
-func newLinkSensor(ctx context.Context, msg rtnetlink.LinkMessage) (*models.Entity, error) {
+func newLinkSensor(ctx context.Context, msg rtnetlink.LinkMessage) models.Entity {
 	var (
 		value any
 		icon  string
@@ -74,7 +74,7 @@ func newLinkSensor(ctx context.Context, msg rtnetlink.LinkMessage) (*models.Enti
 		attributes["link_type"] = msg.Attributes.Info.Kind
 	}
 
-	linkStateSensor, err := sensor.NewSensor(ctx,
+	return sensor.NewSensor(ctx,
 		sensor.WithName(name+" Link State"),
 		sensor.WithID(strings.ToLower(name+"_link_state")),
 		sensor.AsDiagnostic(),
@@ -82,11 +82,6 @@ func newLinkSensor(ctx context.Context, msg rtnetlink.LinkMessage) (*models.Enti
 		sensor.WithState(value),
 		sensor.WithAttributes(attributes),
 	)
-	if err != nil {
-		return nil, errors.Join(ErrNewLinkStateSensor, err)
-	}
-
-	return &linkStateSensor, nil
 }
 
 func newAddressSensor(ctx context.Context, link *rtnetlink.LinkService, msg rtnetlink.AddressMessage) (*models.Entity, error) {
@@ -125,7 +120,7 @@ func newAddressSensor(ctx context.Context, link *rtnetlink.LinkService, msg rtne
 		attributes["anycast"] = msg.Attributes.Anycast.String()
 	}
 
-	addrSensor, err := sensor.NewSensor(ctx,
+	addrSensor := sensor.NewSensor(ctx,
 		sensor.WithName(name+" "+ipFamily(msg.Family).String()+" Address"),
 		sensor.WithID(strings.ToLower(name+"_"+ipFamily(msg.Family).String()+"_address")),
 		sensor.AsDiagnostic(),
@@ -133,9 +128,6 @@ func newAddressSensor(ctx context.Context, link *rtnetlink.LinkService, msg rtne
 		sensor.WithState(value),
 		sensor.WithAttributes(attributes),
 	)
-	if err != nil {
-		return nil, errors.Join(ErrNewAddrSensor, err)
-	}
 
 	return &addrSensor, nil
 }
@@ -269,15 +261,9 @@ func (w *AddressWorker) getLinks(ctx context.Context) ([]models.Entity, error) {
 		if slices.Contains(ifaceFilters, msg.Attributes.Name) {
 			continue
 		}
-
-		entity, err := newLinkSensor(ctx, msg)
-		if err != nil {
-			warnings = errors.Join(warnings, fmt.Errorf("could not generate link sensor: %w", err))
-			continue
-		}
-
+		entity := newLinkSensor(ctx, msg)
 		if entity.Valid() {
-			links = append(links, *entity)
+			links = append(links, entity)
 		}
 	}
 
@@ -336,13 +322,10 @@ func (w *AddressWorker) Start(ctx context.Context) (<-chan models.Entity, error)
 							continue
 						}
 
-						link, err := newLinkSensor(ctx, *value)
-						if err != nil {
-							slogctx.FromCtx(ctx).Warn("Could not generate link sensor.", slog.Any("error", err))
-							continue
+						link := newLinkSensor(ctx, *value)
+						if link.Valid() {
+							sensorCh <- link
 						}
-
-						sensorCh <- *link
 					case *rtnetlink.AddressMessage:
 						if !w.usableAddress(*value) {
 							continue

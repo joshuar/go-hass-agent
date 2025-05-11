@@ -90,17 +90,7 @@ func (b *upowerBattery) getSensors(ctx context.Context, sensors ...sensorType) c
 
 			continue
 		}
-
-		entity, err := newBatterySensor(ctx, b, batterySensor, value)
-		if err != nil {
-			slogctx.FromCtx(ctx).Warn("Could not generate battery sensor.",
-				slog.String("sensor", batterySensor.String()),
-				slog.Any("error", err))
-
-			continue
-		}
-
-		sensorCh <- entity
+		sensorCh <- newBatterySensor(ctx, b, batterySensor, value)
 	}
 
 	return sensorCh
@@ -206,16 +196,7 @@ func monitorBattery(ctx context.Context, battery *upowerBattery) <-chan models.E
 
 				for prop, value := range props.Changed {
 					if s, ok := dBusPropToSensor[prop]; ok {
-						entity, err := newBatterySensor(ctx, battery, s, value)
-						if err != nil {
-							slogctx.FromCtx(ctx).Warn("Could not generate battery sensor.",
-								slog.String("sensor", s.String()),
-								slog.Any("error", err))
-
-							continue
-						}
-
-						sensorCh <- entity
+						sensorCh <- newBatterySensor(ctx, battery, s, value)
 					}
 				}
 			}

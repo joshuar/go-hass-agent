@@ -31,7 +31,7 @@ var linuxWorkers = []func(ctx context.Context) (workers.EntityWorker, error){
 	cpu.NewUsageWorker,
 	cpu.NewLoadAvgWorker,
 	cpu.NewFreqWorker,
-	desktop.NewAppWorker,
+	desktop.NewAppStateWorker,
 	desktop.NewDesktopWorker,
 	media.NewMicUsageWorker,
 	media.NewWebcamUsageWorker,

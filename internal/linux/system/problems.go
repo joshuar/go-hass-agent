@@ -54,7 +54,7 @@ type problemsWorker struct {
 	*workers.PollingEntityWorkerData
 }
 
-func (w *problemsWorker) generateEntity(ctx context.Context, problems []string) (*models.Entity, error) {
+func (w *problemsWorker) generateEntity(ctx context.Context, problems []string) models.Entity {
 	problemDetails := make(map[string]map[string]any)
 	// For each problem, fetch its details.
 	for _, problem := range problems {
@@ -66,7 +66,7 @@ func (w *problemsWorker) generateEntity(ctx context.Context, problems []string) 
 		problemDetails[problem] = parseProblem(details)
 	}
 
-	abrtSensor, err := sensor.NewSensor(ctx,
+	return sensor.NewSensor(ctx,
 		sensor.WithName("Problems"),
 		sensor.WithID("problems"),
 		sensor.WithStateClass(class.StateMeasurement),
@@ -76,11 +76,6 @@ func (w *problemsWorker) generateEntity(ctx context.Context, problems []string) 
 		sensor.WithDataSourceAttribute(linux.DataSrcDbus),
 		sensor.WithAttribute("problem_list", problemDetails),
 	)
-	if err != nil {
-		return nil, errors.Join(ErrNewABRTSensor, err)
-	}
-
-	return &abrtSensor, nil
 }
 
 func (w *problemsWorker) getProblems() ([]string, error) {
@@ -114,12 +109,7 @@ func (w *problemsWorker) Execute(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("could not retrieve list of problems from D-Bus: %w", err)
 	}
-
-	entity, err := w.generateEntity(ctx, problems)
-	if err != nil {
-		return fmt.Errorf("could not generate problem sensor: %w", err)
-	}
-	w.OutCh <- *entity
+	w.OutCh <- w.generateEntity(ctx, problems)
 	return nil
 }
 

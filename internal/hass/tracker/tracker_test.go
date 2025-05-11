@@ -15,12 +15,11 @@ import (
 )
 
 func TestTracker_Get(t *testing.T) {
-	mocksensorEntity, err := sensor.NewSensor(t.Context(),
+	mocksensorEntity := sensor.NewSensor(t.Context(),
 		sensor.WithName("Mock sensor.Entity"),
 		sensor.WithID("mock_sensor.Entity"),
 		sensor.WithState("mockValue"),
 	)
-	require.NoError(t, err)
 
 	mockSensor, err := mocksensorEntity.AsSensor()
 	require.NoError(t, err)
@@ -74,12 +73,11 @@ func TestTracker_Get(t *testing.T) {
 }
 
 func TestTracker_SensorList(t *testing.T) {
-	mocksensorEntity, err := sensor.NewSensor(t.Context(),
+	mocksensorEntity := sensor.NewSensor(t.Context(),
 		sensor.WithName("Mock sensor.Entity"),
 		sensor.WithID("mock_sensor.Entity"),
 		sensor.WithState("mockValue"),
 	)
-	require.NoError(t, err)
 
 	mockSensor, err := mocksensorEntity.AsSensor()
 	require.NoError(t, err)
@@ -119,22 +117,19 @@ func TestTracker_SensorList(t *testing.T) {
 }
 
 func TestTracker_Add(t *testing.T) {
-	newEntity, err := sensor.NewSensor(t.Context(),
+	newEntity := sensor.NewSensor(t.Context(),
 		sensor.WithName("New sensor.Entity"),
 		sensor.WithID("new_sensor.Entity"),
 		sensor.WithState("new"),
 	)
-	require.NoError(t, err)
-
 	newSensor, err := newEntity.AsSensor()
 	require.NoError(t, err)
 
-	existingEntity, err := sensor.NewSensor(t.Context(),
+	existingEntity := sensor.NewSensor(t.Context(),
 		sensor.WithName("Existing sensor.Entity"),
 		sensor.WithID("existing_sensor.Entity"),
 		sensor.WithState("existing"),
 	)
-	require.NoError(t, err)
 
 	existingSensor, err := existingEntity.AsSensor()
 	require.NoError(t, err)
@@ -184,12 +179,11 @@ func TestTracker_Add(t *testing.T) {
 }
 
 func TestTracker_Reset(t *testing.T) {
-	mocksensorEntity, err := sensor.NewSensor(t.Context(),
+	mocksensorEntity := sensor.NewSensor(t.Context(),
 		sensor.WithName("Mock sensor.Entity"),
 		sensor.WithID("mock_sensor.Entity"),
 		sensor.WithState("mockValue"),
 	)
-	require.NoError(t, err)
 
 	mockSensor, err := mocksensorEntity.AsSensor()
 	require.NoError(t, err)

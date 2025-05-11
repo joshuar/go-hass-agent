@@ -1,9 +1,6 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
-//revive:disable:unused-receiver
 package location
 
 import (
@@ -139,17 +136,12 @@ func (w *locationWorker) newLocation(ctx context.Context, locationPath string) (
 	accuracy, err := w.getLocationProperty(locationPath, "Accuracy")
 	warnings = errors.Join(warnings, err)
 
-	loc, err := location.NewLocation(ctx,
+	return location.NewLocation(ctx,
 		location.WithGPSCoords(float32(latitude), float32(longitude)),
 		location.WithGPSAccuracy(int(accuracy)),
 		location.WithSpeed(int(speed)),
 		location.WithAltitude(int(altitude)),
-	)
-	if err != nil {
-		warnings = errors.Join(warnings, err)
-	}
-
-	return loc, warnings
+	), warnings
 }
 
 func (w *locationWorker) createClient() (string, error) {

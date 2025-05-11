@@ -11,7 +11,6 @@ import (
 	"slices"
 
 	"github.com/godbus/dbus/v5"
-	slogctx "github.com/veqryn/slog-context"
 
 	"github.com/joshuar/go-hass-agent/internal/models"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
@@ -110,7 +109,6 @@ func (c *connection) monitor(ctx context.Context, bus *dbusx.Bus) <-chan models.
 func (c *connection) monitorConnection(ctx context.Context, bus *dbusx.Bus) <-chan models.Entity {
 	var (
 		stateSensor *connectionStateSensor
-		entity      *models.Entity
 		err         error
 	)
 
@@ -127,13 +125,7 @@ func (c *connection) monitorConnection(ctx context.Context, bus *dbusx.Bus) <-ch
 
 	// Send initial states as sensors
 	go func() {
-		if entity, err = stateSensor.generateEntity(ctx); err != nil {
-			c.logger.Debug("Could not generate sensor from connection state.",
-				slog.String("sensor", stateSensor.name),
-				slog.Any("error", err))
-		} else {
-			sensorCh <- *entity
-		}
+		sensorCh <- stateSensor.generateEntity(ctx)
 	}()
 
 	triggerCh, err := dbusx.NewWatch(
@@ -176,13 +168,7 @@ func (c *connection) monitorConnection(ctx context.Context, bus *dbusx.Bus) <-ch
 						if err := stateSensor.setState(value); err != nil {
 							c.logger.Warn("Could not update connection state sensor.", slog.Any("error", err))
 						} else {
-							if entity, err := stateSensor.generateEntity(ctx); err != nil {
-								c.logger.Debug("Could not generate sensor from connection state.",
-									slog.String("sensor", stateSensor.name),
-									slog.Any("error", err))
-							} else {
-								sensorCh <- *entity
-							}
+							sensorCh <- stateSensor.generateEntity(ctx)
 						}
 					default:
 						c.logger.Debug("Unhandled property changed.",
@@ -243,14 +229,7 @@ func (c *connection) monitorWifi(ctx context.Context, bus *dbusx.Bus) <-chan mod
 
 				for prop, value := range props.Changed {
 					if slices.Contains(apPropList, prop) { // Wifi property changed.
-						entity, err := newWifiSensor(ctx, prop, value.Value())
-						if err != nil {
-							slogctx.FromCtx(ctx).Warn("Could not generate new wifi property sensor.",
-								slog.Any("error", err))
-							continue
-						}
-
-						sensorCh <- *entity
+						sensorCh <- newWifiSensor(ctx, prop, value.Value())
 					}
 				}
 			}

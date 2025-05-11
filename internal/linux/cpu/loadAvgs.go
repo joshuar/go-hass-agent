@@ -1,9 +1,6 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
-//revive:disable:unused-receiver
 package cpu
 
 import (
@@ -33,8 +30,6 @@ const (
 
 	loadAvgUpdateInterval = time.Minute
 	loadAvgUpdateJitter   = 5 * time.Second
-
-	loadAvgsTotal = 3
 
 	loadAvgsWorkerID      = "cpu_loadavg_sensors"
 	loadAvgsWorkerDesc    = "Load averages"
@@ -72,12 +67,15 @@ func (w *loadAvgsWorker) Execute(ctx context.Context) error {
 	}
 
 	for name, value := range loadAvgs {
-		entity, err := newLoadAvgSensor(ctx, name, value)
-		if err != nil {
-			warnings = errors.Join(warnings, fmt.Errorf("could not generate %s sensor: %w", name, err))
-			continue
-		}
-		w.OutCh <- entity
+		w.OutCh <- sensor.NewSensor(ctx,
+			sensor.WithName(name),
+			sensor.WithID(strcase.ToSnake(name)),
+			sensor.WithUnits(loadAvgUnit),
+			sensor.WithStateClass(class.StateMeasurement),
+			sensor.WithIcon(loadAvgIcon),
+			sensor.WithState(value),
+			sensor.WithDataSourceAttribute(linux.DataSrcProcfs),
+		)
 	}
 
 	return warnings
@@ -104,23 +102,6 @@ func (w *loadAvgsWorker) Start(ctx context.Context) (<-chan models.Entity, error
 	return w.OutCh, nil
 }
 
-func newLoadAvgSensor(ctx context.Context, name, value string) (models.Entity, error) {
-	entity, err := sensor.NewSensor(ctx,
-		sensor.WithName(name),
-		sensor.WithID(strcase.ToSnake(name)),
-		sensor.WithUnits(loadAvgUnit),
-		sensor.WithStateClass(class.StateMeasurement),
-		sensor.WithIcon(loadAvgIcon),
-		sensor.WithState(value),
-		sensor.WithDataSourceAttribute(linux.DataSrcProcfs),
-	)
-	if err != nil {
-		return entity, fmt.Errorf("could not generate %s sensor: %w", name, err)
-	}
-
-	return entity, nil
-}
-
 func parseLoadAvgs(data []byte) (map[string]string, error) {
 	loadAvgsData := bytes.Split(data, []byte(" "))
 
@@ -129,9 +110,9 @@ func parseLoadAvgs(data []byte) (map[string]string, error) {
 	}
 
 	return map[string]string{
-		"CPU load average (1 min)":  string(loadAvgsData[0][:]),
-		"CPU load average (5 min)":  string(loadAvgsData[1][:]),
-		"CPU load average (15 min)": string(loadAvgsData[2][:]),
+		"CPU load average (1 min)":  string(loadAvgsData[0]),
+		"CPU load average (5 min)":  string(loadAvgsData[1]),
+		"CPU load average (15 min)": string(loadAvgsData[2]),
 	}, nil
 }
 

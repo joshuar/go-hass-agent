@@ -50,7 +50,7 @@ func (w *lastBootWorker) IsDisabled() bool {
 }
 
 func (w *lastBootWorker) Execute(ctx context.Context) error {
-	entity, err := sensor.NewSensor(ctx,
+	w.OutCh <- sensor.NewSensor(ctx,
 		sensor.WithName("Last Reboot"),
 		sensor.WithID("last_reboot"),
 		sensor.AsDiagnostic(),
@@ -59,12 +59,6 @@ func (w *lastBootWorker) Execute(ctx context.Context) error {
 		sensor.WithState(w.lastBoot.Format(time.RFC3339)),
 		sensor.WithDataSourceAttribute(linux.ProcFSRoot),
 	)
-	if err != nil {
-		return fmt.Errorf("could not generate last boot sensor: %w", err)
-	}
-
-	w.OutCh <- entity
-
 	return nil
 }
 

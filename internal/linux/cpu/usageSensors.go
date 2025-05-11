@@ -1,13 +1,11 @@
 // Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
 // SPDX-License-Identifier: MIT
 
-//revive:disable:unused-receiver
 package cpu
 
 import (
 	"context"
 	"errors"
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -30,15 +28,15 @@ var times = [...]string{"user_time", "nice_time", "system_time", "idle_time", "i
 
 func newRate(valueStr string) *linux.RateValue[uint64] {
 	r := &linux.RateValue[uint64]{}
-	valueInt, _ := strconv.ParseUint(valueStr, 10, 64) //nolint:errcheck // if we can't parse it, value will be 0.
+	valueInt, _ := strconv.ParseUint(valueStr, 10, 64)
 	r.Calculate(valueInt, 0)
 
 	return r
 }
 
 //revive:disable:argument-limit // Not very useful to reduce the number of arguments.
-func newRateSensor(ctx context.Context, name, icon, units string, value uint64, total string) (models.Entity, error) {
-	entity, err := sensor.NewSensor(ctx,
+func newRateSensor(ctx context.Context, name, icon, units string, value uint64, total string) models.Entity {
+	return sensor.NewSensor(ctx,
 		sensor.WithName(name),
 		sensor.WithID(strcase.ToSnake(name)),
 		sensor.WithStateClass(class.StateMeasurement),
@@ -49,18 +47,13 @@ func newRateSensor(ctx context.Context, name, icon, units string, value uint64, 
 		sensor.WithAttribute("Total", total),
 		sensor.WithDataSourceAttribute(linux.DataSrcProcfs),
 	)
-	if err != nil {
-		return entity, fmt.Errorf("could not generate %s sensor: %w", name, err)
-	}
-
-	return entity, nil
 }
 
-func newUsageSensor(ctx context.Context, clktck int64, details []string, category models.EntityCategory) (models.Entity, error) {
+func newUsageSensor(ctx context.Context, clktck int64, details []string, category models.EntityCategory) models.Entity {
 	var name, id string
 
-	switch {
-	case details[0] == totalCPUString:
+	switch details[0] {
+	case totalCPUString:
 		name = "Total CPU Usage"
 		id = "total_cpu_usage"
 	default:
@@ -71,7 +64,7 @@ func newUsageSensor(ctx context.Context, clktck int64, details []string, categor
 
 	value, attributes := generateUsage(clktck, details[1:])
 
-	entity, err := sensor.NewSensor(ctx,
+	return sensor.NewSensor(ctx,
 		sensor.WithName(name),
 		sensor.WithID(id),
 		sensor.WithUnits("%"),
@@ -81,17 +74,11 @@ func newUsageSensor(ctx context.Context, clktck int64, details []string, categor
 		sensor.WithIcon("mdi:chip"),
 		sensor.WithCategory(category),
 	)
-	if err != nil {
-		return entity, fmt.Errorf("could not generate %s sensor: %w", name, err)
-	}
-
-	return entity, nil
 }
 
-func newCountSensor(ctx context.Context, name, icon, units, valueStr string) (models.Entity, error) {
-	valueInt, _ := strconv.Atoi(valueStr) //nolint:errcheck // if we can't parse it, value will be 0.
-
-	entity, err := sensor.NewSensor(ctx,
+func newCountSensor(ctx context.Context, name, icon, units, valueStr string) models.Entity {
+	valueInt, _ := strconv.Atoi(valueStr)
+	return sensor.NewSensor(ctx,
 		sensor.WithName(name),
 		sensor.WithID(strcase.ToSnake(name)),
 		sensor.WithStateClass(class.StateMeasurement),
@@ -101,11 +88,6 @@ func newCountSensor(ctx context.Context, name, icon, units, valueStr string) (mo
 		sensor.WithState(valueInt),
 		sensor.WithDataSourceAttribute(linux.DataSrcProcfs),
 	)
-	if err != nil {
-		return entity, fmt.Errorf("could not generate %s sensor: %w", name, err)
-	}
-
-	return entity, nil
 }
 
 func generateUsage(clktck int64, details []string) (float64, map[string]any) {
@@ -127,7 +109,7 @@ func generateUsage(clktck int64, details []string) (float64, map[string]any) {
 
 	attrs["total_time"] = totalTime
 
-	//nolint:forcetypeassert,mnd,errcheck // we already parsed the value as a float
+	//nolint:forcetypeassert,mnd // we already parsed the value as a float
 	value := attrs["user_time"].(float64) / totalTime * 100
 
 	return value, attrs

@@ -47,7 +47,7 @@ type uptimeWorker struct {
 }
 
 func (w *uptimeWorker) Execute(ctx context.Context) error {
-	entity, err := sensor.NewSensor(ctx,
+	w.OutCh <- sensor.NewSensor(ctx,
 		sensor.WithName("Uptime"),
 		sensor.WithID("uptime"),
 		sensor.AsDiagnostic(),
@@ -59,10 +59,6 @@ func (w *uptimeWorker) Execute(ctx context.Context) error {
 		sensor.WithDataSourceAttribute(linux.ProcFSRoot),
 		sensor.WithAttribute("native_unit_of_measurement", "h"),
 	)
-	if err != nil {
-		return fmt.Errorf("could not generate uptime sensor: %w", err)
-	}
-	w.OutCh <- entity
 	return nil
 }
 

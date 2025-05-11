@@ -1,11 +1,16 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
 package linux
 
 import "os"
+
+const (
+	DataSrcDbus    = "D-Bus"
+	DataSrcProcfs  = "ProcFS"
+	DataSrcSysfs   = "SysFS"
+	DataSrcNetlink = "Netlink"
+)
 
 const (
 	envProcFSRoot = "PROCFS_ROOT"

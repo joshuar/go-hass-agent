@@ -59,7 +59,7 @@ var (
 var ErrInitUsageWorker = errors.New("could not init memory usage worker")
 
 // newMemSensor generates a memorySensor for a memory stat.
-func newMemSensor(ctx context.Context, id memStatID, stat *memStat) (*models.Entity, error) {
+func newMemSensor(ctx context.Context, id memStatID, stat *memStat) models.Entity {
 	var value uint64
 
 	if stat == nil {
@@ -68,7 +68,7 @@ func newMemSensor(ctx context.Context, id memStatID, stat *memStat) (*models.Ent
 		value = stat.value
 	}
 
-	statSensor, err := sensor.NewSensor(ctx,
+	return sensor.NewSensor(ctx,
 		sensor.WithName(id.String()),
 		sensor.WithID(strcase.ToSnake(id.String())),
 		sensor.WithUnits(memoryUsageSensorUnits),
@@ -79,16 +79,11 @@ func newMemSensor(ctx context.Context, id memStatID, stat *memStat) (*models.Ent
 		sensor.WithDataSourceAttribute(linux.DataSrcProcfs),
 		sensor.WithAttribute("native_unit_of_measurement", memoryUsageSensorUnits),
 	)
-	if err != nil {
-		return nil, errors.Join(ErrNewMemStatSensor, err)
-	}
-
-	return &statSensor, nil
 }
 
 // newMemSensorPc generates a memorySensor with a percentage value for a memory
 // stat.
-func newMemSensorPc(ctx context.Context, name string, value, total uint64) (*models.Entity, error) {
+func newMemSensorPc(ctx context.Context, name string, value, total uint64) models.Entity {
 	var valuePc float64
 	if total == 0 {
 		valuePc = 0
@@ -96,7 +91,7 @@ func newMemSensorPc(ctx context.Context, name string, value, total uint64) (*mod
 		valuePc = math.Round(float64(value)/float64(total)*100/0.05) * 0.05 //nolint:mnd
 	}
 
-	statSensor, err := sensor.NewSensor(ctx,
+	return sensor.NewSensor(ctx,
 		sensor.WithName(name),
 		sensor.WithID(strcase.ToSnake(name)),
 		sensor.WithUnits(memoryUsageSensorPcUnits),
@@ -106,15 +101,10 @@ func newMemSensorPc(ctx context.Context, name string, value, total uint64) (*mod
 		sensor.WithDataSourceAttribute(linux.DataSrcProcfs),
 		sensor.WithAttribute("native_unit_of_measurement", memoryUsageSensorPcUnits),
 	)
-	if err != nil {
-		return nil, errors.Join(ErrNewMemStatSensor, err)
-	}
-
-	return &statSensor, nil
 }
 
 // Calculate used memory = total - free/buffered/cached.
-func newMemUsedPc(ctx context.Context, stats memoryStats) (*models.Entity, error) {
+func newMemUsedPc(ctx context.Context, stats memoryStats) models.Entity {
 	var memOther uint64
 
 	for name, stat := range stats {
@@ -136,7 +126,7 @@ func newMemUsedPc(ctx context.Context, stats memoryStats) (*models.Entity, error
 }
 
 // Calculate used swap = total - free.
-func newSwapUsedPc(ctx context.Context, stats memoryStats) (*models.Entity, error) {
+func newSwapUsedPc(ctx context.Context, stats memoryStats) models.Entity {
 	swapTotal, _ := stats.get(swapTotal)
 	swapFree, _ := stats.get(swapFree)
 	swapUsed := swapTotal - swapFree
@@ -152,9 +142,8 @@ type usageWorker struct {
 
 func (w *usageWorker) Execute(ctx context.Context) error {
 	var (
-		stats  memoryStats
-		entity *models.Entity
-		err    error
+		stats memoryStats
+		err   error
 	)
 
 	stats, err = getMemStats()
@@ -162,38 +151,18 @@ func (w *usageWorker) Execute(ctx context.Context) error {
 		return fmt.Errorf("unable to retrieve memory stats: %w", err)
 	}
 
+	// Memory sensors.
 	for stat := range slices.Values(memSensors) {
-		entity, err = newMemSensor(ctx, stat, stats[stat])
-		if err != nil {
-			slogctx.FromCtx(ctx).Warn("Could not generate memory usage sensor.", slog.Any("error", err))
-			continue
-		}
-		w.OutCh <- *entity
+		w.OutCh <- newMemSensor(ctx, stat, stats[stat])
 	}
+	w.OutCh <- newMemUsedPc(ctx, stats)
 
-	entity, err = newMemUsedPc(ctx, stats)
-	if err != nil {
-		slogctx.FromCtx(ctx).Warn("Could not generate memory usage sensor.", slog.Any("error", err))
-	} else {
-		w.OutCh <- *entity
-	}
-
+	// Swap memory sensors.
 	if stat, _ := stats.get(swapTotal); stat > 0 {
 		for _, id := range swapSensors {
-			entity, err := newMemSensor(ctx, id, stats[id])
-			if err != nil {
-				slogctx.FromCtx(ctx).Warn("Could not generate swap usage sensor.", slog.Any("error", err))
-				continue
-			}
-			w.OutCh <- *entity
+			w.OutCh <- newMemSensor(ctx, id, stats[id])
 		}
-
-		entity, err := newSwapUsedPc(ctx, stats)
-		if err != nil {
-			slogctx.FromCtx(ctx).Warn("Could not generate memory usage sensor.", slog.Any("error", err))
-		} else {
-			w.OutCh <- *entity
-		}
+		w.OutCh <- newSwapUsedPc(ctx, stats)
 	}
 
 	return nil

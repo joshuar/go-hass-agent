@@ -1,9 +1,6 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
-//revive:disable:unused-receiver
 package cpu
 
 import (
@@ -42,11 +39,11 @@ type cpuFreq struct {
 	freq     string
 }
 
-func newCPUFreqSensor(ctx context.Context, id string) (models.Entity, error) {
+func newCPUFreqSensor(ctx context.Context, id string) models.Entity {
 	info := getCPUFreqs(id)
 	num := strings.TrimPrefix(info.cpu, "cpu")
 
-	entity, err := sensor.NewSensor(ctx,
+	return sensor.NewSensor(ctx,
 		sensor.WithName("Core "+num+" Frequency"),
 		sensor.WithID("cpufreq_core"+num+"_frequency"),
 		sensor.AsTypeSensor(),
@@ -63,11 +60,6 @@ func newCPUFreqSensor(ctx context.Context, id string) (models.Entity, error) {
 			"native_unit_of_measurement": cpuFreqUnits,
 		}),
 	)
-	if err != nil {
-		return entity, errors.Join(ErrNewCPUFreqSensor, err)
-	}
-
-	return entity, nil
 }
 
 func getCPUFreqs(id string) *cpuFreq {
@@ -85,7 +77,7 @@ func readCPUFreqProp(id, file string) string {
 	path := filepath.Join(linux.SysFSRoot, "devices", "system", "cpu", id, file)
 
 	// Read the current scaling driver.
-	prop, err := os.ReadFile(path)
+	prop, err := os.ReadFile(path) // #nosec:G304
 	if err != nil {
 		slog.Debug("Could not read CPU freq property.",
 			slog.String("cpu", id),

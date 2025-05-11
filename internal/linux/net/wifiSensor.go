@@ -34,7 +34,7 @@ var apPropList = []string{ssidPropName, hwAddrPropName, maxBitRatePropName, freq
 
 var ErrNewWifiPropSensor = errors.New("could not create wifi property sensor")
 
-func newWifiSensor(ctx context.Context, prop string, value any) (*models.Entity, error) {
+func newWifiSensor(ctx context.Context, prop string, value any) models.Entity {
 	var (
 		name, id, units string
 		deviceClass     class.SensorDeviceClass
@@ -76,7 +76,7 @@ func newWifiSensor(ctx context.Context, prop string, value any) (*models.Entity,
 		icon = generateStrIcon(value)
 	}
 
-	wifiPropSensor, err := sensor.NewSensor(ctx,
+	return sensor.NewSensor(ctx,
 		sensor.WithName(name),
 		sensor.WithID(id),
 		sensor.AsDiagnostic(),
@@ -86,11 +86,6 @@ func newWifiSensor(ctx context.Context, prop string, value any) (*models.Entity,
 		sensor.WithStateClass(stateClass),
 		sensor.WithUnits(units),
 	)
-	if err != nil {
-		return nil, errors.Join(ErrNewWifiPropSensor, err)
-	}
-
-	return &wifiPropSensor, nil
 }
 
 func getWifiSensors(ctx context.Context, bus *dbusx.Bus, apPath string) []models.Entity {
@@ -105,17 +100,7 @@ func getWifiSensors(ctx context.Context, bus *dbusx.Bus, apPath string) []models
 
 			continue
 		}
-
-		entity, err := newWifiSensor(ctx, prop, value)
-		if err != nil {
-			slog.Debug("Could not retrieve generate wifi sensor from property.",
-				slog.String("prop", prop),
-				slog.Any("error", err))
-
-			continue
-		}
-
-		sensors = append(sensors, *entity)
+		sensors = append(sensors, newWifiSensor(ctx, prop, value))
 	}
 
 	return sensors
