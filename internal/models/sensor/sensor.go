@@ -16,7 +16,7 @@ import (
 // Option is a functional option for a sensor.
 type Option models.Option[*models.Sensor]
 
-// WithState assigns a state value to the Sensor.
+// WithState option assigns a state value to the Sensor.
 func WithState(value any) Option {
 	return func(s *models.Sensor) {
 		s.State = value
@@ -33,14 +33,14 @@ func WithAttributes(attributes map[string]any) Option {
 	}
 }
 
-// WithAttribute sets the given additional attribute to the given value.
+// WithAttribute option sets the given additional attribute to the given value.
 func WithAttribute(name string, value any) Option {
 	return func(s *models.Sensor) {
 		s.Attributes[name] = value
 	}
 }
 
-// WithDataSourceAttribute will set the "data_source" additional attribute to
+// WithDataSourceAttribute option will set the "data_source" additional attribute to
 // the given value.
 func WithDataSourceAttribute(source string) Option {
 	return func(s *models.Sensor) {
@@ -48,7 +48,7 @@ func WithDataSourceAttribute(source string) Option {
 	}
 }
 
-// WithIcon sets the sensor icon.
+// WithIcon option sets the sensor icon.
 func WithIcon(icon string) Option {
 	return func(s *models.Sensor) {
 		if icon != "" {
@@ -57,21 +57,21 @@ func WithIcon(icon string) Option {
 	}
 }
 
-// WithName sets the friendly name for the sensor entity.
+// WithName option sets the friendly name for the sensor entity.
 func WithName(name string) Option {
 	return func(s *models.Sensor) {
 		s.Name = name
 	}
 }
 
-// WithID sets the entity ID of the sensor.
+// WithID option sets the entity ID of the sensor.
 func WithID(id string) Option {
 	return func(s *models.Sensor) {
 		s.UniqueID = id
 	}
 }
 
-// AsTypeSensor ensures the sensor is treated as a Sensor Entity.
+// AsTypeSensor option ensures the sensor is treated as a Sensor Entity.
 // https://developers.home-assistant.io/docs/core/entity/sensor/
 func AsTypeSensor() Option {
 	return func(s *models.Sensor) {
@@ -79,7 +79,7 @@ func AsTypeSensor() Option {
 	}
 }
 
-// AsTypeBinarySensor ensures the sensor is treated as a Binary Sensor Entity.
+// AsTypeBinarySensor option ensures the sensor is treated as a Binary Sensor Entity.
 // https://developers.home-assistant.io/docs/core/entity/binary-sensor
 func AsTypeBinarySensor() Option {
 	return func(s *models.Sensor) {
@@ -87,7 +87,7 @@ func AsTypeBinarySensor() Option {
 	}
 }
 
-// WithUnits defines the native unit of measurement of the sensor entity.
+// WithUnits option defines the native unit of measurement of the sensor entity.
 func WithUnits(units string) Option {
 	return func(s *models.Sensor) {
 		if units != "" {
@@ -96,7 +96,7 @@ func WithUnits(units string) Option {
 	}
 }
 
-// WithDeviceClass sets the device class of the sensor entity.
+// WithDeviceClass option sets the device class of the sensor entity.
 //
 // For type Sensor:
 //
@@ -137,7 +137,7 @@ func WithCategory(category models.EntityCategory) Option {
 	}
 }
 
-// AsDiagnostic sets the sensor entity as a diagnostic. This will ensure it will
+// AsDiagnostic option sets the sensor entity as a diagnostic. This will ensure it will
 // be grouped under a diagnostic header in the Home Assistant UI.
 func AsDiagnostic() Option {
 	return func(s *models.Sensor) {
@@ -146,7 +146,7 @@ func AsDiagnostic() Option {
 	}
 }
 
-// AsRetryableRequest sets a flag on the sensor that indicates the requests sent
+// AsRetryableRequest option sets a flag on the sensor that indicates the requests sent
 // to Home Assistant related to this sensor should be retried.
 func AsRetryableRequest(value bool) Option {
 	return func(s *models.Sensor) {
@@ -155,7 +155,7 @@ func AsRetryableRequest(value bool) Option {
 }
 
 // NewSensor provides a way to build a sensor entity with the given options.
-func NewSensor(ctx context.Context, options ...Option) models.Entity {
+func NewSensor(_ context.Context, options ...Option) models.Entity {
 	sensor := models.Sensor{
 		Attributes: make(models.Attributes),
 	}
