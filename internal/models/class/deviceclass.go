@@ -1,14 +1,18 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
+
+//go:generate go tool golang.org/x/tools/cmd/stringer -type=SensorDeviceClass -output deviceclass.gen.go -linecomment
 
 package class
 
-//go:generate go tool golang.org/x/tools/cmd/stringer -type=SensorDeviceClass -output deviceclass.gen.go -linecomment
+// For sensor entity device class descriptions, see:
+//
+// https://developers.home-assistant.io/docs/core/entity/sensor#available-device-classes
+//
+// For binary sensor entity device class descriptions, see:
+//
+// https://developers.home-assistant.io/docs/core/entity/binary-sensor#available-device-classes
 const (
-	// For sensor entity device class descriptions, see:
-	// https://developers.home-assistant.io/docs/core/entity/sensor#available-device-classes
 	SensorClassMin                    SensorDeviceClass = iota //
 	SensorClassApparentPower                                   // apparent_power
 	SensorClassAqi                                             // aqi
@@ -57,42 +61,39 @@ const (
 	SensorClassWeight                                          // weight
 	SensorClassWindSpeed                                       // wind_speed
 	SensorClassMax                                             //
-	// For binary sensor entity device class descriptions, see:
-	//
-	// https://developers.home-assistant.io/docs/core/entity/binary-sensor#available-device-classes
-	BinaryClassMin             //
-	BinaryClassBattery         // battery
-	BinaryClassBatteryCharging // battery_charging
-	BinaryClassCO              // carbon_monoxide
-	BinaryClassCold            // cold
-	BinaryClassConnectivity    // connectivity
-	BinaryClassDoor            // door
-	BinaryClassGarageDoor      // garage_door
-	BinaryClassGas             // gas
-	BinaryClassHeat            // heat
-	BinaryClassLight           // light
-	BinaryClassLock            // lock
-	BinaryClassMoisture        // moisture
-	BinaryClassMotion          // motion
-	BinaryClassMoving          // moving
-	BinaryClassOccupancy       // occupancy
-	BinaryClassOpening         // opening
-	BinaryClassPlug            // plug
-	BinaryClassPower           // power
-	BinaryClassPresence        // presence
-	BinaryClassProblem         // problem
-	BinaryClassRunning         // running
-	BinaryClassSafety          // safety
-	BinaryClassSmoke           // smoke
-	BinaryClassSound           // sound
-	BinaryClassTamper          // tamper
-	BinaryClassUpdate          // update
-	BinaryClassVibration       // vibration
-	BinaryClassWindow          // window
-	BinaryClassMax             //
+	BinaryClassMin                                             //
+	BinaryClassBattery                                         // battery
+	BinaryClassBatteryCharging                                 // battery_charging
+	BinaryClassCO                                              // carbon_monoxide
+	BinaryClassCold                                            // cold
+	BinaryClassConnectivity                                    // connectivity
+	BinaryClassDoor                                            // door
+	BinaryClassGarageDoor                                      // garage_door
+	BinaryClassGas                                             // gas
+	BinaryClassHeat                                            // heat
+	BinaryClassLight                                           // light
+	BinaryClassLock                                            // lock
+	BinaryClassMoisture                                        // moisture
+	BinaryClassMotion                                          // motion
+	BinaryClassMoving                                          // moving
+	BinaryClassOccupancy                                       // occupancy
+	BinaryClassOpening                                         // opening
+	BinaryClassPlug                                            // plug
+	BinaryClassPower                                           // power
+	BinaryClassPresence                                        // presence
+	BinaryClassProblem                                         // problem
+	BinaryClassRunning                                         // running
+	BinaryClassSafety                                          // safety
+	BinaryClassSmoke                                           // smoke
+	BinaryClassSound                                           // sound
+	BinaryClassTamper                                          // tamper
+	BinaryClassUpdate                                          // update
+	BinaryClassVibration                                       // vibration
+	BinaryClassWindow                                          // window
+	BinaryClassMax                                             //
 )
 
-// DeviceClass represents the device class of a sensor or binary sensor. It is
+// SensorDeviceClass represents the device class of a sensor or binary sensor. It is
 // an extra classification of what the entity represents, and will potentially
 // enforce display and unit restrictions in Home Assistant.
 type SensorDeviceClass int

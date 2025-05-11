@@ -5,7 +5,7 @@ package event
 
 import (
 	"context"
-	"errors"
+	"fmt"
 
 	slogctx "github.com/veqryn/slog-context"
 
@@ -15,16 +15,14 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/models"
 )
 
-var ErrHandleEvent = errors.New("error handling event data")
-
-type API interface {
+type clientAPI interface {
 	SendRequest(ctx context.Context, url string, req api.Request) (api.Response, error)
 }
 
 // NewEventRequest takes event data and creates an event request.
 func newEventRequest(event *models.Event) (*api.Request, error) {
 	if valid, problems := validation.ValidateStruct(event); !valid {
-		return nil, errors.Join(ErrHandleEvent, problems)
+		return nil, fmt.Errorf("could not marshal event data: %w", problems)
 	}
 
 	req := &api.Request{
@@ -36,7 +34,7 @@ func newEventRequest(event *models.Event) (*api.Request, error) {
 	// Add the sensor registration into the request.
 	err := req.Data.FromEvent(*event)
 	if err != nil {
-		return nil, errors.Join(ErrHandleEvent, err)
+		return nil, fmt.Errorf("could not marshal event data: %w", err)
 	}
 
 	return req, nil
@@ -44,24 +42,24 @@ func newEventRequest(event *models.Event) (*api.Request, error) {
 
 // Handler handles sending event data as a request to Home Assistant and
 // processing the response.
-func Handler(ctx context.Context, client API, event models.Event) error {
+func Handler(ctx context.Context, client clientAPI, event models.Event) error {
 	req, err := newEventRequest(&event)
 	if err != nil {
-		return errors.Join(ErrHandleEvent, err)
+		return err
 	}
 
 	resp, err := client.SendRequest(ctx, preferences.RestAPIURL(), *req)
 	if err != nil {
-		return errors.Join(ErrHandleEvent, err)
+		return fmt.Errorf("could not send event data: %w", err)
 	}
 
 	status, err := resp.AsResponseStatus()
 	if err != nil {
-		return errors.Join(ErrHandleEvent, err)
+		return fmt.Errorf("could not marshal event response: %w", err)
 	}
 
 	if err := status.HasError(); err != nil {
-		return errors.Join(ErrHandleEvent, err)
+		return fmt.Errorf("could not determine response status: %w", err)
 	}
 
 	slogctx.FromCtx(ctx).Debug("Event sent.", event.LogAttributes())
