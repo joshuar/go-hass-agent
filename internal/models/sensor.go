@@ -18,6 +18,7 @@ var (
 	ErrInvalidSensor   = errors.New("sensor data is invalid")
 )
 
+// Valid returns a boolean indicating whether the SensorState date is valid.
 func (s *SensorState) Valid() (bool, error) {
 	if err := validation.Validate.Struct(s); err != nil {
 		return false, fmt.Errorf("%w: %s", ErrInvalidSensor, validation.ParseValidationErrors(err))
@@ -26,6 +27,7 @@ func (s *SensorState) Valid() (bool, error) {
 	return true, nil
 }
 
+// Valid returns a boolean indicating whether the SensorRegistration data is valid.
 func (s *SensorRegistration) Valid() (bool, error) {
 	if err := validation.Validate.Struct(s); err != nil {
 		return false, fmt.Errorf("%w: %s", ErrInvalidSensor, validation.ParseValidationErrors(err))
@@ -91,7 +93,7 @@ func (s *Sensor) AsState() (*SensorState, error) {
 	return &state, nil
 }
 
-// AsState returns the Sensor data as a SensorRegistration object, which can be sent to
+// AsRegistration returns the Sensor data as a SensorRegistration object, which can be sent to
 // Home Assistant as a sensor registration request.
 func (s *Sensor) AsRegistration() (*SensorRegistration, error) {
 	// Marshal the sensor data to json.
