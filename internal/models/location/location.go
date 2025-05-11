@@ -43,7 +43,7 @@ func WithAltitude(altitude int) Option {
 }
 
 // NewLocation provides a way to build a location entity with the given options.
-func NewLocation(ctx context.Context, options ...Option) models.Entity {
+func NewLocation(_ context.Context, options ...Option) models.Entity {
 	location := models.Location{}
 
 	for _, option := range options {

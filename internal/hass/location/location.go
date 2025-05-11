@@ -1,11 +1,12 @@
 // Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
 // SPDX-License-Identifier: MIT
 
+// Package location contains code for processing location requests through the Home Assistant API.
 package location
 
 import (
 	"context"
-	"errors"
+	"fmt"
 
 	slogctx "github.com/veqryn/slog-context"
 
@@ -15,16 +16,14 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/models"
 )
 
-var ErrHandleLocation = errors.New("error handling location data")
-
-type API interface {
+type clientAPI interface {
 	SendRequest(ctx context.Context, url string, req api.Request) (api.Response, error)
 }
 
 // newLocationRequest takes location data and creates a location request.
 func newLocationRequest(location *models.Location) (*api.Request, error) {
 	if valid, problems := validation.ValidateStruct(location); !valid {
-		return nil, errors.Join(ErrHandleLocation, problems)
+		return nil, fmt.Errorf("could not marshal location data: %w", problems)
 	}
 
 	req := &api.Request{
@@ -34,7 +33,7 @@ func newLocationRequest(location *models.Location) (*api.Request, error) {
 	// Add the sensor registration into the request.
 	err := req.Data.FromLocation(*location)
 	if err != nil {
-		return nil, errors.Join(ErrHandleLocation, err)
+		return nil, fmt.Errorf("could not marshal location data: %w", err)
 	}
 
 	return req, nil
@@ -42,24 +41,24 @@ func newLocationRequest(location *models.Location) (*api.Request, error) {
 
 // Handler handles sending location data as a request to Home Assistant and
 // processing the response.
-func Handler(ctx context.Context, client API, location models.Location) error {
+func Handler(ctx context.Context, client clientAPI, location models.Location) error {
 	req, err := newLocationRequest(&location)
 	if err != nil {
-		return errors.Join(ErrHandleLocation, err)
+		return err
 	}
 
 	resp, err := client.SendRequest(ctx, preferences.RestAPIURL(), *req)
 	if err != nil {
-		return errors.Join(ErrHandleLocation, err)
+		return fmt.Errorf("could not send location request: %w", err)
 	}
 
 	status, err := resp.AsResponseStatus()
 	if err != nil {
-		return errors.Join(ErrHandleLocation, err)
+		return fmt.Errorf("could not marshal location response: %w", err)
 	}
 
 	if err := status.HasError(); err != nil {
-		return errors.Join(ErrHandleLocation, err)
+		return fmt.Errorf("could not determine location response status: %w", err)
 	}
 
 	slogctx.FromCtx(ctx).Debug("Location sent.")

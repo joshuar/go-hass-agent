@@ -1,6 +1,7 @@
 // Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
 // SPDX-License-Identifier: MIT
 
+// Package event contains code for processing events from workers through the Home Assistant API.
 package event
 
 import (
