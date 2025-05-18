@@ -6,6 +6,7 @@ package media
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	pwmonitor "github.com/ConnorsApps/pipewire-monitor-go"
 
@@ -29,34 +30,39 @@ const (
 )
 
 type micUsageWorker struct {
-	prefs *preferences.CommonWorkerPrefs
-	inUse bool
+	prefs       *preferences.CommonWorkerPrefs
+	pwEventChan chan pwmonitor.Event
+	inUse       bool
 	*models.WorkerMetadata
 }
 
-// parsePWState parses a pipewire state value into the appropriate boolean value.
-func (w *micUsageWorker) parsePWState(state pwmonitor.State) {
-	switch state {
-	case pwmonitor.StateRunning:
-		w.inUse = true
-	case pwmonitor.StateIdle, pwmonitor.StateSuspended:
-		fallthrough
-	default:
-		w.inUse = false
+func NewMicUsageWorker(ctx context.Context) (workers.EntityWorker, error) {
+	worker := &micUsageWorker{
+		WorkerMetadata: models.SetWorkerMetadata(micUsageWorkerID, micUsageWorkerDesc),
 	}
-}
 
-func (w *micUsageWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
-	pwEvents, err := monitorPipewire(ctx, micPipewireEventFilter)
+	prefs, err := preferences.LoadWorker(worker)
 	if err != nil {
 		return nil, errors.Join(ErrInitMicUsageWorker, err)
 	}
+	worker.prefs = prefs
+
+	monitor, found := linux.CtxGetPipewireMonitor(ctx)
+	if !found {
+		return nil, fmt.Errorf("%w: no pipewire monitor in context", ErrInitMicUsageWorker)
+	}
+	worker.pwEventChan = monitor.AddListener(ctx, micPipewireEventFilter)
+
+	return worker, nil
+}
+
+func (w *micUsageWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
 	outCh := make(chan models.Entity)
 
 	go func() {
 		defer close(outCh)
 
-		for event := range pwEvents {
+		for event := range w.pwEventChan {
 			w.parsePWState(*event.Info.State)
 			outCh <- sensor.NewSensor(ctx,
 				sensor.WithName("Microphone In Use"),
@@ -64,7 +70,7 @@ func (w *micUsageWorker) Start(ctx context.Context) (<-chan models.Entity, error
 				sensor.AsTypeBinarySensor(),
 				sensor.WithIcon(micUseIcon(w.inUse)),
 				sensor.WithState(w.inUse),
-				sensor.WithDataSourceAttribute(linux.DataSrcSysfs),
+				sensor.WithDataSourceAttribute(linux.DataSrcSysFS),
 			)
 		}
 	}()
@@ -84,18 +90,16 @@ func (w *micUsageWorker) IsDisabled() bool {
 	return w.prefs.IsDisabled()
 }
 
-func NewMicUsageWorker(_ context.Context) (workers.EntityWorker, error) {
-	worker := &micUsageWorker{
-		WorkerMetadata: models.SetWorkerMetadata(micUsageWorkerID, micUsageWorkerDesc),
+// parsePWState parses a pipewire state value into the appropriate boolean value.
+func (w *micUsageWorker) parsePWState(state pwmonitor.State) {
+	switch state {
+	case pwmonitor.StateRunning:
+		w.inUse = true
+	case pwmonitor.StateIdle, pwmonitor.StateSuspended:
+		fallthrough
+	default:
+		w.inUse = false
 	}
-
-	prefs, err := preferences.LoadWorker(worker)
-	if err != nil {
-		return nil, errors.Join(ErrInitMicUsageWorker, err)
-	}
-	worker.prefs = prefs
-
-	return worker, nil
 }
 
 // micPipewireEventFilter filters the pipewire events. For mic monitoring, we are only
