@@ -1,7 +1,7 @@
 // Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
 // SPDX-License-Identifier: MIT
 
-package media
+package pipewire
 
 import (
 	"context"
@@ -11,6 +11,7 @@ import (
 	"io"
 	"log/slog"
 	"os/exec"
+	"slices"
 
 	pwmonitor "github.com/ConnorsApps/pipewire-monitor-go"
 	slogctx "github.com/veqryn/slog-context"
@@ -18,11 +19,15 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 )
 
-// monitorPipewire starts a listener for pipewire events, filters events by the
-// given eventFilter function and returns the filtered events on the channel.
+// PipewireMonitor handles monitoring pipewire for events and dispatching events to registered listeners as appropriate.
+type PipewireMonitor struct {
+	listeners []*PipewireListener
+}
+
+// NewMonitor creates a new pipewire monitor.
 //
 //nolint:gocognit
-func monitorPipewire(ctx context.Context, filterFunc func(*pwmonitor.Event) bool) (chan pwmonitor.Event, error) {
+func NewMonitor(ctx context.Context) (*PipewireMonitor, error) {
 	// Set up pw-dump command.
 	cmd := exec.CommandContext(ctx, "pw-dump", "--monitor", "--no-colors")
 	stdout, err := cmd.StdoutPipe()
@@ -33,8 +38,12 @@ func monitorPipewire(ctx context.Context, filterFunc func(*pwmonitor.Event) bool
 	if err := cmd.Start(); err != nil {
 		return nil, fmt.Errorf("error starting pw-dump: %w", err)
 	}
+	// Create monitor
+	monitor := &PipewireMonitor{
+		listeners: make([]*PipewireListener, 0),
+	}
+
 	// Decode pw-dump stdout as json stream.
-	outCh := make(chan pwmonitor.Event)
 	dec := json.NewDecoder(stdout)
 	go func() {
 		for {
@@ -53,8 +62,13 @@ func monitorPipewire(ctx context.Context, filterFunc func(*pwmonitor.Event) bool
 					slogctx.FromCtx(ctx).Log(ctx, logging.LevelTrace, "Error decoding pw-dump output.",
 						slog.Any("error", err))
 				}
-				if filterFunc(&event) {
-					outCh <- event
+				// Filter the event through all listeners and send the event to whichever listeners want it.
+				for listener := range slices.Values(monitor.listeners) {
+					if listener.filterFunc(&event) {
+						go func() {
+							listener.eventCh <- event
+						}()
+					}
 				}
 			}
 
@@ -67,12 +81,26 @@ func monitorPipewire(ctx context.Context, filterFunc func(*pwmonitor.Event) bool
 	}()
 
 	go func() {
-		defer close(outCh)
-		if err := cmd.Wait(); err != nil {
-			slogctx.FromCtx(ctx).Debug("Error running pw-dump.",
-				slog.Any("error", err))
+		<-ctx.Done()
+		for listener := range slices.Values(monitor.listeners) {
+			close(listener.eventCh)
 		}
 	}()
 
-	return outCh, nil
+	return monitor, nil
+}
+
+func (m *PipewireMonitor) AddListener(ctx context.Context, filterFunc func(*pwmonitor.Event) bool) chan pwmonitor.Event {
+	eventCh := make(chan pwmonitor.Event)
+	m.listeners = append(m.listeners, &PipewireListener{
+		filterFunc: filterFunc,
+		eventCh:    eventCh,
+	})
+	return eventCh
+}
+
+// PipewireListener contains the data for goroutine that wants to listen for pipewire events.
+type PipewireListener struct {
+	filterFunc func(*pwmonitor.Event) bool
+	eventCh    chan pwmonitor.Event
 }

@@ -6,6 +6,7 @@ package media
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	pwmonitor "github.com/ConnorsApps/pipewire-monitor-go"
 
@@ -27,6 +28,80 @@ const (
 	webcamUsageWorkerID   = "webcam_usage_sensor"
 	webcamUsageWorkerDesc = "Webcam usage detection"
 )
+
+type webcamUsageWorker struct {
+	prefs       *preferences.CommonWorkerPrefs
+	pwEventChan chan pwmonitor.Event
+	inUse       bool
+	*models.WorkerMetadata
+}
+
+func NewWebcamUsageWorker(ctx context.Context) (workers.EntityWorker, error) {
+	worker := &webcamUsageWorker{
+		WorkerMetadata: models.SetWorkerMetadata(webcamUsageWorkerID, webcamUsageWorkerDesc),
+	}
+
+	// Get worker preferences.
+	prefs, err := preferences.LoadWorker(worker)
+	if err != nil {
+		return nil, errors.Join(ErrInitWebcamUsageWorker, err)
+	}
+	worker.prefs = prefs
+
+	// Set up pipewire listener.
+	monitor, found := linux.CtxGetPipewireMonitor(ctx)
+	if !found {
+		return nil, fmt.Errorf("%w: no pipewire monitor in context", ErrInitMicUsageWorker)
+	}
+	worker.pwEventChan = monitor.AddListener(ctx, webcamPipewireEventFilter)
+
+	return worker, nil
+}
+
+func (w *webcamUsageWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
+	outCh := make(chan models.Entity)
+	go func() {
+		defer close(outCh)
+
+		for event := range w.pwEventChan {
+			w.parsePWState(*event.Info.State)
+			outCh <- sensor.NewSensor(ctx,
+				sensor.WithName("Webcam In Use"),
+				sensor.WithID("webcam_in_use"),
+				sensor.AsTypeBinarySensor(),
+				sensor.WithIcon(webcamUseIcon(w.inUse)),
+				sensor.WithState(w.inUse),
+				sensor.WithDataSourceAttribute(linux.DataSrcSysFS),
+			)
+		}
+	}()
+
+	return outCh, nil
+}
+
+func (w *webcamUsageWorker) PreferencesID() string {
+	return webcamUsagePrefID
+}
+
+func (w *webcamUsageWorker) DefaultPreferences() preferences.CommonWorkerPrefs {
+	return preferences.CommonWorkerPrefs{}
+}
+
+func (w *webcamUsageWorker) IsDisabled() bool {
+	return w.prefs.IsDisabled()
+}
+
+// parsePWState parses a pipewire state value into the appropriate boolean value.
+func (w *webcamUsageWorker) parsePWState(state pwmonitor.State) {
+	switch state {
+	case pwmonitor.StateRunning, pwmonitor.StateIdle:
+		w.inUse = true
+	case pwmonitor.StateSuspended:
+		fallthrough
+	default:
+		w.inUse = false
+	}
+}
 
 // webcamPipewireEventFilter filters the pipewire events. For webcam monitoring, we are only
 // interested in events of type EventNode that have the "media.class" property
@@ -54,74 +129,4 @@ func webcamUseIcon(value bool) string {
 	default:
 		return "mdi:webcam-off"
 	}
-}
-
-type webcamUsageWorker struct {
-	prefs *preferences.CommonWorkerPrefs
-	inUse bool
-	*models.WorkerMetadata
-}
-
-// parsePWState parses a pipewire state value into the appropriate boolean value.
-func (w *webcamUsageWorker) parsePWState(state pwmonitor.State) {
-	switch state {
-	case pwmonitor.StateRunning, pwmonitor.StateIdle:
-		w.inUse = true
-	case pwmonitor.StateSuspended:
-		fallthrough
-	default:
-		w.inUse = false
-	}
-}
-
-func (w *webcamUsageWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
-	pwEvents, err := monitorPipewire(ctx, webcamPipewireEventFilter)
-	if err != nil {
-		return nil, errors.Join(ErrInitWebcamUsageWorker, err)
-	}
-
-	outCh := make(chan models.Entity)
-	go func() {
-		defer close(outCh)
-
-		for event := range pwEvents {
-			w.parsePWState(*event.Info.State)
-			outCh <- sensor.NewSensor(ctx,
-				sensor.WithName("Webcam In Use"),
-				sensor.WithID("webcam_in_use"),
-				sensor.AsTypeBinarySensor(),
-				sensor.WithIcon(webcamUseIcon(w.inUse)),
-				sensor.WithState(w.inUse),
-				sensor.WithDataSourceAttribute(linux.DataSrcSysfs),
-			)
-		}
-	}()
-
-	return outCh, nil
-}
-
-func (w *webcamUsageWorker) PreferencesID() string {
-	return webcamUsagePrefID
-}
-
-func (w *webcamUsageWorker) DefaultPreferences() preferences.CommonWorkerPrefs {
-	return preferences.CommonWorkerPrefs{}
-}
-
-func (w *webcamUsageWorker) IsDisabled() bool {
-	return w.prefs.IsDisabled()
-}
-
-func NewWebcamUsageWorker(_ context.Context) (workers.EntityWorker, error) {
-	worker := &webcamUsageWorker{
-		WorkerMetadata: models.SetWorkerMetadata(webcamUsageWorkerID, webcamUsageWorkerDesc),
-	}
-
-	prefs, err := preferences.LoadWorker(worker)
-	if err != nil {
-		return nil, errors.Join(ErrInitWebcamUsageWorker, err)
-	}
-	worker.prefs = prefs
-
-	return worker, nil
 }
