@@ -1,7 +1,5 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
 package desktop
 
@@ -105,7 +103,6 @@ func (w *settingsWorker) Start(ctx context.Context) (<-chan models.Entity, error
 	return sensorCh, nil
 }
 
-//nolint:mnd
 func (w *settingsWorker) generateSensors(ctx context.Context) []models.Entity {
 	sensors := make([]models.Entity, 0, 2)
 
@@ -228,7 +225,7 @@ func newColorSchemeSensor(ctx context.Context, scheme, icon string) models.Entit
 		sensor.AsDiagnostic(),
 		sensor.WithIcon(icon),
 		sensor.WithState(scheme),
-		sensor.WithDataSourceAttribute(linux.DataSrcDbus),
+		sensor.WithDataSourceAttribute(linux.DataSrcDBus),
 	)
 }
 
@@ -239,6 +236,6 @@ func newAccentColorSensor(ctx context.Context, value string) models.Entity {
 		sensor.AsDiagnostic(),
 		sensor.WithIcon("mdi:palette"),
 		sensor.WithState(value),
-		sensor.WithDataSourceAttribute(linux.DataSrcDbus),
+		sensor.WithDataSourceAttribute(linux.DataSrcDBus),
 	)
 }

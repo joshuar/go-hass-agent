@@ -56,7 +56,7 @@ func (c *connectionStateSensor) generateEntity(ctx context.Context) models.Entit
 	return sensor.NewSensor(ctx,
 		sensor.WithName(c.name+" Connection State"),
 		sensor.WithID(strcase.ToSnake(c.name)+"_connection_state"),
-		sensor.WithDataSourceAttribute(linux.DataSrcDbus),
+		sensor.WithDataSourceAttribute(linux.DataSrcDBus),
 		sensor.WithState(c.state),
 		sensor.WithIcon(c.icon),
 	)

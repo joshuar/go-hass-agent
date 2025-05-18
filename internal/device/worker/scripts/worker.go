@@ -44,6 +44,29 @@ type Worker struct {
 	*models.WorkerMetadata
 }
 
+// NewScriptController creates a new sensor worker for scripts.
+func NewScriptsWorker(ctx context.Context) (*Worker, error) {
+	scriptPath := filepath.Join(preferences.PathFromCtx(ctx), "scripts")
+
+	worker := &Worker{
+		WorkerMetadata: models.SetWorkerMetadata(scriptWorkerID, scriptWorkerDesc),
+	}
+
+	scripts, err := worker.findScripts(ctx, scriptPath)
+	if err != nil {
+		return nil, fmt.Errorf("could not find scripts: %w", err)
+	}
+	worker.scripts = scripts
+
+	prefs, err := preferences.LoadWorker(worker)
+	if err != nil {
+		return nil, fmt.Errorf("could not load preferences: %w", err)
+	}
+	worker.prefs = prefs
+
+	return worker, nil
+}
+
 func (c *Worker) PreferencesID() string {
 	return scriptWorkerID
 }
@@ -141,29 +164,6 @@ func (c *Worker) findScripts(ctx context.Context, path string) ([]*Script, error
 	}
 
 	return sensorScripts, nil
-}
-
-// NewScriptController creates a new sensor worker for scripts.
-func NewScriptsWorker(ctx context.Context) (*Worker, error) {
-	scriptPath := filepath.Join(preferences.PathFromCtx(ctx), "scripts")
-
-	worker := &Worker{
-		WorkerMetadata: models.SetWorkerMetadata(scriptWorkerID, scriptWorkerDesc),
-	}
-
-	scripts, err := worker.findScripts(ctx, scriptPath)
-	if err != nil {
-		return nil, fmt.Errorf("could not find scripts: %w", err)
-	}
-	worker.scripts = scripts
-
-	prefs, err := preferences.LoadWorker(worker)
-	if err != nil {
-		return nil, fmt.Errorf("could not load preferences: %w", err)
-	}
-	worker.prefs = prefs
-
-	return worker, nil
 }
 
 // isExecutable is helper to determine if a (script) file is executable.

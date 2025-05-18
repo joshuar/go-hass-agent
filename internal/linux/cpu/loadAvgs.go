@@ -74,7 +74,7 @@ func (w *loadAvgsWorker) Execute(ctx context.Context) error {
 			sensor.WithStateClass(class.StateMeasurement),
 			sensor.WithIcon(loadAvgIcon),
 			sensor.WithState(value),
-			sensor.WithDataSourceAttribute(linux.DataSrcProcfs),
+			sensor.WithDataSourceAttribute(linux.DataSrcProcFS),
 		)
 	}
 

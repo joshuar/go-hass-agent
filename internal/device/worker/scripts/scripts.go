@@ -38,6 +38,24 @@ type Script struct {
 	outCh    chan models.Entity
 }
 
+// NewScript returns a new script object that can scheduled with the job
+// scheduler by the agent.
+func NewScript(path string) (*Script, error) {
+	script := &Script{
+		path:     path,
+		schedule: "",
+	}
+
+	scriptOutput, err := script.parse()
+	if err != nil {
+		return nil, fmt.Errorf("cannot add script %s: %w", path, err)
+	}
+
+	script.schedule = scriptOutput.Schedule
+
+	return script, nil
+}
+
 // Start is used to create the output channel for the script. It will also
 // Execute the script once.
 func (s *Script) Start(ctx context.Context) <-chan models.Entity {
@@ -123,24 +141,6 @@ func (s *Script) parse() (*scriptOutput, error) {
 	}
 
 	return output, nil
-}
-
-// NewScript returns a new script object that can scheduled with the job
-// scheduler by the agent.
-func NewScript(path string) (*Script, error) {
-	script := &Script{
-		path:     path,
-		schedule: "",
-	}
-
-	scriptOutput, err := script.parse()
-	if err != nil {
-		return nil, fmt.Errorf("cannot add script %s: %w", path, err)
-	}
-
-	script.schedule = scriptOutput.Schedule
-
-	return script, nil
 }
 
 // scriptOutput represents the output from a script. The output must be

@@ -15,7 +15,9 @@ import (
 )
 
 const (
-	SensorsPrefPrefix  = "sensors" + PathDelim
+	// SensorsPrefPrefix defines a prefix under which all sensor preferences will be stored in the preferences file.
+	SensorsPrefPrefix = "sensors" + PathDelim
+	// ControlsPrefPrefix defines a prefix under which all control preferences will be stored in the preferences file.
 	ControlsPrefPrefix = "controls" + PathDelim
 )
 

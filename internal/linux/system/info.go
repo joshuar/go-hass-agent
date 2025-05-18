@@ -68,7 +68,7 @@ func (w *infoWorker) Execute(ctx context.Context) error {
 		sensor.AsDiagnostic(),
 		sensor.WithIcon("mdi:linux"),
 		sensor.WithState(distro),
-		sensor.WithDataSourceAttribute(linux.DataSrcProcfs),
+		sensor.WithDataSourceAttribute(linux.DataSrcProcFS),
 	)
 
 	w.OutCh <- sensor.NewSensor(ctx,
@@ -77,7 +77,7 @@ func (w *infoWorker) Execute(ctx context.Context) error {
 		sensor.AsDiagnostic(),
 		sensor.WithIcon("mdi:numeric"),
 		sensor.WithState(version),
-		sensor.WithDataSourceAttribute(linux.DataSrcProcfs),
+		sensor.WithDataSourceAttribute(linux.DataSrcProcFS),
 	)
 
 	// Get kernel version.
@@ -92,7 +92,7 @@ func (w *infoWorker) Execute(ctx context.Context) error {
 		sensor.AsDiagnostic(),
 		sensor.WithIcon("mdi:chip"),
 		sensor.WithState(kernelVersion),
-		sensor.WithDataSourceAttribute(linux.DataSrcProcfs),
+		sensor.WithDataSourceAttribute(linux.DataSrcProcFS),
 	)
 
 	return warnings

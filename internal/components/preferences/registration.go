@@ -23,6 +23,7 @@ type Registration struct {
 	ForceRegister  bool   `toml:"-" json:"-" validate:"omitempty,boolean"`
 }
 
+// Validate will check the registration preferences are valid.
 func (p *Registration) Validate() error {
 	err := validation.Validate.Struct(p)
 	if err != nil {

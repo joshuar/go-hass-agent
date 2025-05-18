@@ -45,7 +45,7 @@ func PathToCtx(ctx context.Context, path string) context.Context {
 func PathFromCtx(ctx context.Context) string {
 	path, ok := ctx.Value(pathCtxKey).(string)
 	if !ok {
-		return filepath.Join(xdg.ConfigHome, DefaultAppID)
+		return filepath.Join(xdg.ConfigHome, AppID)
 	}
 
 	return path

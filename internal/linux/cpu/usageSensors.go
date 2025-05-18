@@ -45,7 +45,7 @@ func newRateSensor(ctx context.Context, name, icon, units string, value uint64, 
 		sensor.WithIcon(icon),
 		sensor.WithState(value),
 		sensor.WithAttribute("Total", total),
-		sensor.WithDataSourceAttribute(linux.DataSrcProcfs),
+		sensor.WithDataSourceAttribute(linux.DataSrcProcFS),
 	)
 }
 
@@ -86,7 +86,7 @@ func newCountSensor(ctx context.Context, name, icon, units, valueStr string) mod
 		sensor.WithUnits(units),
 		sensor.WithIcon(icon),
 		sensor.WithState(valueInt),
-		sensor.WithDataSourceAttribute(linux.DataSrcProcfs),
+		sensor.WithDataSourceAttribute(linux.DataSrcProcFS),
 	)
 }
 
@@ -94,7 +94,7 @@ func generateUsage(clktck int64, details []string) (float64, map[string]any) {
 	var totalTime float64
 
 	attrs := make(map[string]any, len(times))
-	attrs["data_source"] = linux.DataSrcProcfs
+	attrs["data_source"] = linux.DataSrcProcFS
 
 	for idx, name := range times {
 		value, err := strconv.ParseFloat(details[idx], 64)

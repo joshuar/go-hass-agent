@@ -56,7 +56,7 @@ func newCPUFreqSensor(ctx context.Context, id string) models.Entity {
 		sensor.WithAttributes(models.Attributes{
 			"governor":                   info.governor,
 			"driver":                     info.driver,
-			"data_source":                linux.DataSrcSysfs,
+			"data_source":                linux.DataSrcSysFS,
 			"native_unit_of_measurement": cpuFreqUnits,
 		}),
 	)

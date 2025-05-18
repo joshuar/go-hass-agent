@@ -4,11 +4,9 @@
 package linux
 
 import (
-	"os"
 	"testing"
 )
 
-//revive:disable:unhandled-error
 func TestFindPortal(t *testing.T) {
 	type args struct {
 		setup func()
@@ -23,21 +21,21 @@ func TestFindPortal(t *testing.T) {
 		{
 			name: "KDE",
 			args: args{
-				setup: func() { os.Setenv("XDG_CURRENT_DESKTOP", "KDE") },
+				setup: func() { t.Setenv("XDG_CURRENT_DESKTOP", "KDE") },
 			},
 			want: "org.freedesktop.impl.portal.desktop.kde",
 		},
 		{
 			name: "GNOME",
 			args: args{
-				setup: func() { os.Setenv("XDG_CURRENT_DESKTOP", "GNOME") },
+				setup: func() { t.Setenv("XDG_CURRENT_DESKTOP", "GNOME") },
 			},
 			want: "org.freedesktop.impl.portal.desktop.gtk",
 		},
 		{
 			name: "Unknown",
 			args: args{
-				setup: func() { os.Setenv("XDG_CURRENT_DESKTOP", "UNKNOWN") },
+				setup: func() { t.Setenv("XDG_CURRENT_DESKTOP", "UNKNOWN") },
 			},
 			want:    "",
 			wantErr: true,

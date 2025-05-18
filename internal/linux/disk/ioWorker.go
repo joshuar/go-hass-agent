@@ -51,67 +51,46 @@ type ioWorker struct {
 	prefs       *WorkerPrefs
 }
 
-// addDevice adds a new device to the tracker map. If sthe device is already
-// being tracked, it will not be added again. The bool return indicates whether
-// a device was added (true) or not (false).
-func (w *ioWorker) addRateSensors(dev *device) {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-
-	if _, found := w.rateSensors[dev.id]; !found {
-		w.rateSensors[dev.id] = map[ioSensor]*ioRate{
-			diskReadRate:  {rateType: diskReadRate},
-			diskWriteRate: {rateType: diskWriteRate},
-		}
-	}
-}
-
-func (w *ioWorker) generateDeviceRateSensors(ctx context.Context, device *device, stats map[stat]uint64, delta time.Duration) []models.Entity {
-	var sensors []models.Entity
-
-	w.mu.Lock()
-	defer w.mu.Unlock()
-
-	if _, found := w.rateSensors[device.id]; found && stats != nil {
-		for rateType := range w.rateSensors[device.id] {
-			var currValue uint64
-
-			switch rateType {
-			case diskReadRate:
-				currValue = stats[TotalSectorsRead]
-			case diskWriteRate:
-				currValue = stats[TotalSectorsWritten]
-			}
-
-			rate := w.rateSensors[device.id][rateType].Calculate(currValue, delta)
-			sensors = append(sensors, newDiskRateSensor(ctx, device, rateType, rate))
-		}
+func NewIOWorker(ctx context.Context) (workers.EntityWorker, error) {
+	boottime, found := linux.CtxGetBoottime(ctx)
+	if !found {
+		return nil, errors.Join(ErrInitRatesWorker,
+			fmt.Errorf("%w: no boottime value", linux.ErrInvalidCtx))
 	}
 
-	return sensors
-}
-
-func (w *ioWorker) generateDeviceStatSensors(ctx context.Context, device *device, stats map[stat]uint64) []models.Entity {
-	var sensors []models.Entity
-
-	diskReadsAttributes := models.Attributes{
-		"total_sectors_read":         stats[TotalSectorsRead],
-		"total_milliseconds_reading": stats[TotalTimeReading],
+	// Add sensors for a pseudo "total" device which tracks total values from
+	// all devices.
+	devices := make(map[string]map[ioSensor]*ioRate)
+	devices["total"] = map[ioSensor]*ioRate{
+		diskReadRate:  {rateType: diskReadRate},
+		diskWriteRate: {rateType: diskWriteRate},
 	}
 
-	diskWriteAttributes := models.Attributes{
-		"total_sectors_written":      stats[TotalSectorsWritten],
-		"total_milliseconds_writing": stats[TotalTimeWriting],
+	ioWorker := &ioWorker{
+		WorkerMetadata:          models.SetWorkerMetadata(ioWorkerID, ioWorkerDesc),
+		PollingEntityWorkerData: &workers.PollingEntityWorkerData{},
+		rateSensors:             devices,
+		boottime:                boottime,
 	}
 
-	// Generate diskReads sensor for device.
-	sensors = append(sensors, newDiskStatSensor(ctx, device, diskReads, stats[TotalReads], diskReadsAttributes))
-	// Generate diskWrites sensor for device.
-	sensors = append(sensors, newDiskStatSensor(ctx, device, diskWrites, stats[TotalWrites], diskWriteAttributes))
-	// Generate IOsInProgress sensor for device.
-	sensors = append(sensors, newDiskStatSensor(ctx, device, diskIOInProgress, stats[ActiveIOs], nil))
+	prefs, err := preferences.LoadWorker(ioWorker)
+	if err != nil {
+		return nil, errors.Join(ErrInitRatesWorker, err)
+	}
+	ioWorker.prefs = prefs
 
-	return sensors
+	pollInterval, err := time.ParseDuration(prefs.UpdateInterval)
+	if err != nil {
+		slogctx.FromCtx(ctx).Warn("Invalid polling interval, using default",
+			slog.String("worker", ioWorkerID),
+			slog.String("given_interval", prefs.UpdateInterval),
+			slog.String("default_interval", ioWorkerUpdateInterval.String()))
+
+		pollInterval = ioWorkerUpdateInterval
+	}
+	ioWorker.Trigger = scheduler.NewPollTriggerWithJitter(pollInterval, ioWorkerUpdateJitter)
+
+	return ioWorker, nil
 }
 
 func (w *ioWorker) Execute(ctx context.Context) error {
@@ -189,44 +168,65 @@ func (w *ioWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
 	return w.OutCh, nil
 }
 
-func NewIOWorker(ctx context.Context) (workers.EntityWorker, error) {
-	boottime, found := linux.CtxGetBoottime(ctx)
-	if !found {
-		return nil, errors.Join(ErrInitRatesWorker,
-			fmt.Errorf("%w: no boottime value", linux.ErrInvalidCtx))
+// addDevice adds a new device to the tracker map. If sthe device is already
+// being tracked, it will not be added again. The bool return indicates whether
+// a device was added (true) or not (false).
+func (w *ioWorker) addRateSensors(dev *device) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	if _, found := w.rateSensors[dev.id]; !found {
+		w.rateSensors[dev.id] = map[ioSensor]*ioRate{
+			diskReadRate:  {rateType: diskReadRate},
+			diskWriteRate: {rateType: diskWriteRate},
+		}
+	}
+}
+
+func (w *ioWorker) generateDeviceRateSensors(ctx context.Context, device *device, stats map[stat]uint64, delta time.Duration) []models.Entity {
+	var sensors []models.Entity
+
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	if _, found := w.rateSensors[device.id]; found && stats != nil {
+		for rateType := range w.rateSensors[device.id] {
+			var currValue uint64
+
+			switch rateType {
+			case diskReadRate:
+				currValue = stats[TotalSectorsRead]
+			case diskWriteRate:
+				currValue = stats[TotalSectorsWritten]
+			}
+
+			rate := w.rateSensors[device.id][rateType].Calculate(currValue, delta)
+			sensors = append(sensors, newDiskRateSensor(ctx, device, rateType, rate))
+		}
 	}
 
-	// Add sensors for a pseudo "total" device which tracks total values from
-	// all devices.
-	devices := make(map[string]map[ioSensor]*ioRate)
-	devices["total"] = map[ioSensor]*ioRate{
-		diskReadRate:  {rateType: diskReadRate},
-		diskWriteRate: {rateType: diskWriteRate},
+	return sensors
+}
+
+func (w *ioWorker) generateDeviceStatSensors(ctx context.Context, device *device, stats map[stat]uint64) []models.Entity {
+	var sensors []models.Entity
+
+	diskReadsAttributes := models.Attributes{
+		"total_sectors_read":         stats[TotalSectorsRead],
+		"total_milliseconds_reading": stats[TotalTimeReading],
 	}
 
-	ioWorker := &ioWorker{
-		WorkerMetadata:          models.SetWorkerMetadata(ioWorkerID, ioWorkerDesc),
-		PollingEntityWorkerData: &workers.PollingEntityWorkerData{},
-		rateSensors:             devices,
-		boottime:                boottime,
+	diskWriteAttributes := models.Attributes{
+		"total_sectors_written":      stats[TotalSectorsWritten],
+		"total_milliseconds_writing": stats[TotalTimeWriting],
 	}
 
-	prefs, err := preferences.LoadWorker(ioWorker)
-	if err != nil {
-		return nil, errors.Join(ErrInitRatesWorker, err)
-	}
-	ioWorker.prefs = prefs
+	// Generate diskReads sensor for device.
+	sensors = append(sensors, newDiskStatSensor(ctx, device, diskReads, stats[TotalReads], diskReadsAttributes))
+	// Generate diskWrites sensor for device.
+	sensors = append(sensors, newDiskStatSensor(ctx, device, diskWrites, stats[TotalWrites], diskWriteAttributes))
+	// Generate IOsInProgress sensor for device.
+	sensors = append(sensors, newDiskStatSensor(ctx, device, diskIOInProgress, stats[ActiveIOs], nil))
 
-	pollInterval, err := time.ParseDuration(prefs.UpdateInterval)
-	if err != nil {
-		slogctx.FromCtx(ctx).Warn("Invalid polling interval, using default",
-			slog.String("worker", ioWorkerID),
-			slog.String("given_interval", prefs.UpdateInterval),
-			slog.String("default_interval", ioWorkerUpdateInterval.String()))
-
-		pollInterval = ioWorkerUpdateInterval
-	}
-	ioWorker.Trigger = scheduler.NewPollTriggerWithJitter(pollInterval, ioWorkerUpdateJitter)
-
-	return ioWorker, nil
+	return sensors
 }

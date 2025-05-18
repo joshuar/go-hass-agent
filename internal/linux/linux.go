@@ -6,9 +6,13 @@ package linux
 import "os"
 
 const (
-	DataSrcDbus    = "D-Bus"
-	DataSrcProcfs  = "ProcFS"
-	DataSrcSysfs   = "SysFS"
+	// DataSrcDBus indicates that the source of this data is from D-Bus.
+	DataSrcDBus = "D-Bus"
+	// DataSrcProcFS indicates that the source of this data is from the /proc filesystem.
+	DataSrcProcFS = "ProcFS"
+	// DataSrcSysFS indicates that the source of this data is from the /sys filesystem.
+	DataSrcSysFS = "SysFS"
+	// DataSrcNetlink indicates that the source of this data is from Netlink.
 	DataSrcNetlink = "Netlink"
 )
 
@@ -19,9 +23,12 @@ const (
 )
 
 var (
+	// ProcFSRoot is where the agent expects the /proc filesystem to be mounted.
 	ProcFSRoot = "/proc"
-	DevFSRoot  = "/dev"
-	SysFSRoot  = "/sys"
+	// DevFSRoot is where the agent expects the /dev filesystem to be mounted.
+	DevFSRoot = "/dev"
+	// SysFSRoot is where the agent expects the /sys filesystem to be mounted.
+	SysFSRoot = "/sys"
 )
 
 func init() {
