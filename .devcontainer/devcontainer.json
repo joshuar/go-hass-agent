@@ -11,14 +11,11 @@
         "aaron-bond.better-comments",
         "valentjn.vscode-ltex",
         "github.vscode-github-actions",
-        "joshbolduc.commitlint",
         "tamasfe.even-better-toml",
         "yzhang.markdown-all-in-one",
         "DavidAnson.vscode-markdownlint",
         "bierner.markdown-emoji",
-        "bierner.emojisense",
         "redhat.vscode-yaml",
-        "ms-azuretools.vscode-docker",
         "foxundermoon.shell-format"
       ]
     }
