@@ -79,24 +79,26 @@
     "mqtt",
     "pkg/hwmon"
   ],
+  "go.alternateTools": {
+    "customFormatter": "golangci-lint"
+  },
+  "go.formatFlags": [
+    "fmt",
+    "--stdin"
+  ],
+  "go.formatTool": "custom",
   "go.lintFlags": [
     "run",
+    "--timeout=5m",
     "--issues-exit-code=0",
     "--output.text.colors=true",
     "--output.text.path=stdout",
     "--output.text.print-issued-lines=false",
     "--show-stats=false"
   ],
-  "go.lintTool": "golangci-lint-v2",
-  // "go.lintFlags": ["--fast"],
-  // "go.lintTool": "golangci-lint",
-  "go.useLanguageServer": true,
-  "go.formatTool": "custom",
-  "go.alternateTools": {
-    "customFormatter": "golangci-lint"
-  },
-  "go.formatFlags": ["fmt", "--stdin"],
   "go.lintOnSave": "workspace",
+  "go.lintTool": "golangci-lint",
+  "go.useLanguageServer": true,
   "gopls": {
     "ui.semanticTokens": true
   },
