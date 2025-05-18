@@ -26,41 +26,6 @@ type GobRegistry struct {
 	mu      sync.Mutex
 }
 
-func (g *GobRegistry) write() error {
-	regFS, err := os.OpenFile(g.file, os.O_RDWR|os.O_CREATE, defaultFilePerms)
-	if err != nil {
-		return fmt.Errorf("could not open registry for writing: %w", err)
-	}
-
-	enc := gob.NewEncoder(regFS)
-
-	err = enc.Encode(&g.sensors)
-	if err != nil {
-		return fmt.Errorf("could not encode registry data: %w", err)
-	}
-
-	return nil
-}
-
-func (g *GobRegistry) read() error {
-	g.mu.Lock()
-	defer g.mu.Unlock()
-
-	regFS, err := os.OpenFile(g.file, os.O_RDWR|os.O_CREATE, defaultFilePerms)
-	if err != nil {
-		return fmt.Errorf("could not open registry for reading: %w", err)
-	}
-
-	dec := gob.NewDecoder(regFS)
-
-	err = dec.Decode(&g.sensors)
-	if err != nil && !errors.Is(err, io.EOF) {
-		return fmt.Errorf("could not decode registry data: %w", err)
-	}
-
-	return nil
-}
-
 func (g *GobRegistry) IsDisabled(id string) bool {
 	g.mu.Lock()
 	defer g.mu.Unlock()
@@ -138,4 +103,39 @@ func Load(path string) (*GobRegistry, error) {
 	}
 
 	return reg, nil
+}
+
+func (g *GobRegistry) write() error {
+	regFS, err := os.OpenFile(g.file, os.O_RDWR|os.O_CREATE, defaultFilePerms)
+	if err != nil {
+		return fmt.Errorf("could not open registry for writing: %w", err)
+	}
+
+	enc := gob.NewEncoder(regFS)
+
+	err = enc.Encode(&g.sensors)
+	if err != nil {
+		return fmt.Errorf("could not encode registry data: %w", err)
+	}
+
+	return nil
+}
+
+func (g *GobRegistry) read() error {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	regFS, err := os.OpenFile(g.file, os.O_RDWR|os.O_CREATE, defaultFilePerms)
+	if err != nil {
+		return fmt.Errorf("could not open registry for reading: %w", err)
+	}
+
+	dec := gob.NewDecoder(regFS)
+
+	err = dec.Decode(&g.sensors)
+	if err != nil && !errors.Is(err, io.EOF) {
+		return fmt.Errorf("could not decode registry data: %w", err)
+	}
+
+	return nil
 }

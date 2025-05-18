@@ -50,7 +50,7 @@ func newPowerState(ctx context.Context, name powerSignal, value any) models.Enti
 		sensor.AsDiagnostic(),
 		sensor.WithIcon(powerStateIcon(value)),
 		sensor.WithState(powerStateString(name, value)),
-		sensor.WithDataSourceAttribute(linux.DataSrcDbus),
+		sensor.WithDataSourceAttribute(linux.DataSrcDBus),
 		sensor.WithAttribute("options", []string{"Powered On", "Powered Off", "Suspended"}),
 		sensor.AsRetryableRequest(true),
 	)

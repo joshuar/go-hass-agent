@@ -101,7 +101,7 @@ func newLaptopEvent(ctx context.Context, prop string, state bool) models.Entity 
 		sensor.AsDiagnostic(),
 		sensor.WithIcon(icon),
 		sensor.WithState(state),
-		sensor.WithDataSourceAttribute(linux.DataSrcDbus),
+		sensor.WithDataSourceAttribute(linux.DataSrcDBus),
 	)
 }
 

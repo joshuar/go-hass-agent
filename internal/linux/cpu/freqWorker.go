@@ -42,6 +42,32 @@ type freqWorker struct {
 	prefs *FreqWorkerPrefs
 }
 
+func NewFreqWorker(ctx context.Context) (workers.EntityWorker, error) {
+	worker := &freqWorker{
+		WorkerMetadata:          models.SetWorkerMetadata(cpuFreqWorkerID, cpuFreqWorkerDesc),
+		PollingEntityWorkerData: &workers.PollingEntityWorkerData{},
+	}
+
+	prefs, err := preferences.LoadWorker(worker)
+	if err != nil {
+		return nil, errors.Join(ErrInitFreqWorker, err)
+	}
+	worker.prefs = prefs
+
+	pollInterval, err := time.ParseDuration(prefs.UpdateInterval)
+	if err != nil {
+		slogctx.FromCtx(ctx).Warn("Invalid polling interval, using default",
+			slog.String("worker", cpuFreqWorkerID),
+			slog.String("given_interval", prefs.UpdateInterval),
+			slog.String("default_interval", cpuFreqUpdateInterval.String()))
+
+		pollInterval = cpuFreqUpdateInterval
+	}
+	worker.Trigger = scheduler.NewPollTriggerWithJitter(pollInterval, cpuFreqUpdateJitter)
+
+	return worker, nil
+}
+
 func (w *freqWorker) Execute(ctx context.Context) error {
 	var warnings error
 	for idx := range totalCPUs {
@@ -71,30 +97,4 @@ func (w *freqWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
 		return w.OutCh, fmt.Errorf("could not start disk usage worker: %w", err)
 	}
 	return w.OutCh, nil
-}
-
-func NewFreqWorker(ctx context.Context) (workers.EntityWorker, error) {
-	worker := &freqWorker{
-		WorkerMetadata:          models.SetWorkerMetadata(cpuFreqWorkerID, cpuFreqWorkerDesc),
-		PollingEntityWorkerData: &workers.PollingEntityWorkerData{},
-	}
-
-	prefs, err := preferences.LoadWorker(worker)
-	if err != nil {
-		return nil, errors.Join(ErrInitFreqWorker, err)
-	}
-	worker.prefs = prefs
-
-	pollInterval, err := time.ParseDuration(prefs.UpdateInterval)
-	if err != nil {
-		slogctx.FromCtx(ctx).Warn("Invalid polling interval, using default",
-			slog.String("worker", cpuFreqWorkerID),
-			slog.String("given_interval", prefs.UpdateInterval),
-			slog.String("default_interval", cpuFreqUpdateInterval.String()))
-
-		pollInterval = cpuFreqUpdateInterval
-	}
-	worker.Trigger = scheduler.NewPollTriggerWithJitter(pollInterval, cpuFreqUpdateJitter)
-
-	return worker, nil
 }

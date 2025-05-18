@@ -68,7 +68,7 @@ func (d *device) generateIdentifiers(sensorType ioSensor) (string, string) {
 
 func (d *device) generateAttributes() models.Attributes {
 	attributes := models.Attributes{
-		"data_source": linux.DataSrcSysfs,
+		"data_source": linux.DataSrcSysFS,
 	}
 
 	// Add attributes from device if available.

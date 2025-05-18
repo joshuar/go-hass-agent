@@ -122,7 +122,7 @@ func generateSensorState(sensorType sensorType, value any) any {
 func generateSensorAttributes(sensorType sensorType, battery *upowerBattery) map[string]any {
 	attributes := make(map[string]any)
 
-	attributes["data_source"] = linux.DataSrcDbus
+	attributes["data_source"] = linux.DataSrcDBus
 
 	switch sensorType {
 	case typeEnergyRate:

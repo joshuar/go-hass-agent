@@ -22,29 +22,36 @@ import (
 )
 
 const (
-	// Global informational strings.
-	AppName           = "Go Hass Agent"
-	AppURL            = "https://github.com/joshuar/go-hass-agent"
-	AppDescription    = "A Home Assistant, native app for desktop/laptop devices."
+	// AppName is the formatted application name.
+	AppName = "Go Hass Agent"
+	// AppID is the ID of the application.
+	AppID = "go-hass-agent"
+	// AppURL is the canonical URL for the application.
+	AppURL = "https://github.com/joshuar/go-hass-agent"
+	// AppDescription is the formatted summary of the application.
+	AppDescription = "A Home Assistant, native app for desktop/laptop devices."
+	// FeatureRequestURL is the URL where users can create feature requests for the application.
 	FeatureRequestURL = AppURL + "/issues/new?assignees=joshuar&labels=&template=feature_request.md&title="
-	IssueURL          = AppURL + "/issues/new?assignees=joshuar&labels=&template=bug_report.md&title=%5BBUG%5D"
+	// IssueURL is the URL where users can create issues and bug reports about the application.
+	IssueURL = AppURL + "/issues/new?assignees=joshuar&labels=&template=bug_report.md&title=%5BBUG%5D"
 	// Internal file defaults.
 	preferencesFile  = "preferences.toml"
 	defaultFilePerms = 0o600
-	LogFile          = "go-hass-agent.log"
+	// LogFile is the filename of the log file.
+	LogFile = "go-hass-agent.log"
 	// Preference names.
 	prefAppID      = "app_id"
 	prefRegistered = "registered"
 	prefHeadless   = "headless"
 	prefVersion    = "version"
-	// Default values.
+	// DefaultServer is the default Home Assistant server URL.
 	DefaultServer          = "http://localhost:8123"
 	defaultWebsocketServer = "ws://localhost:8123"
 	defaultSecret          = "ALongSecretString"
 	defaultMQTTTopicPrefix = "homeassistant"
 	defaultMQTTServer      = "tcp://localhost:1883"
-	DefaultAppID           = "go-hass-agent"
-	PathDelim              = "."
+	// PathDelim is used for delimiting preferences.
+	PathDelim = "."
 )
 
 // preferences defines all preferences for Go Hass Agent.
@@ -64,7 +71,7 @@ var (
 	prefsFile string
 	//lint:ignore U1000 some of these will be used in the future
 	gitVersion, gitCommit, gitTreeState, buildDate string
-	appID                                          = DefaultAppID
+	appID                                          = AppID
 	appVersion                                     = gitVersion
 )
 

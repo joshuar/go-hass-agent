@@ -101,7 +101,7 @@ func newDeviceRegistration(ctx context.Context) *api.DeviceRegistrationRequest {
 	dev := &api.DeviceRegistrationRequest{
 		AppName:    preferences.AppName,
 		AppVersion: preferences.AppVersion(),
-		AppID:      preferences.DefaultAppID,
+		AppID:      preferences.AppID,
 		AppData:    make(map[string]any),
 	}
 	dev.AppData["push_websocket_channel"] = true

@@ -49,7 +49,7 @@ func hwmonSensorAttributes(details *hwmon.Sensor) map[string]any {
 
 	attributes["sensor_type"] = details.MonitorType.String()
 	attributes["sysfs_path"] = details.Path
-	attributes["data_source"] = linux.DataSrcSysfs
+	attributes["data_source"] = linux.DataSrcSysFS
 
 	if details.Units() != "" {
 		attributes["native_unit_of_measurement"] = details.Units()

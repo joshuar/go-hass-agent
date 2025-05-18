@@ -45,7 +45,7 @@ func getBootTime() (time.Time, error) {
 		return time.Now(), fmt.Errorf("unable to read uptime: %w", err)
 	}
 
-	defer data.Close()
+	defer data.Close() //nolint:errcheck
 
 	line := bufio.NewScanner(data)
 	line.Split(bufio.ScanWords)

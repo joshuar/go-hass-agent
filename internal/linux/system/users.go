@@ -67,7 +67,7 @@ func newUsersSensor(ctx context.Context, users []string) models.Entity {
 		sensor.WithUnits(usersSensorUnits),
 		sensor.WithIcon(usersSensorIcon),
 		sensor.WithState(len(users)),
-		sensor.WithDataSourceAttribute(linux.DataSrcDbus),
+		sensor.WithDataSourceAttribute(linux.DataSrcDBus),
 		sensor.WithAttribute("usernames", users),
 	)
 }

@@ -53,55 +53,6 @@ type usageWorker struct {
 	clktck      int64
 }
 
-// calculateRate takes a sensor name and value string and calculates the uint64 rate
-// value for the sensor.
-func (w *usageWorker) calculateRate(name, value string) uint64 {
-	var state uint64
-
-	if _, found := w.rateSensors[name]; found {
-		currValue, _ := strconv.ParseUint(value, 10, 64)
-		state = w.rateSensors[name].Calculate(currValue, w.GetDelta())
-	} else {
-		w.rateSensors[name] = newRate(value)
-	}
-
-	return state
-}
-
-func (w *usageWorker) Execute(ctx context.Context) error {
-	usageSensors, err := w.getUsageStats(ctx)
-	if err != nil {
-		return fmt.Errorf("could not get usage stats: %w", err)
-	}
-	for s := range slices.Values(usageSensors) {
-		w.OutCh <- s
-	}
-	return nil
-}
-
-func (w *usageWorker) PreferencesID() string {
-	return cpuUsagePreferencesID
-}
-
-func (w *usageWorker) DefaultPreferences() UsagePrefs {
-	return UsagePrefs{
-		UpdateInterval: cpuUsageUpdateInterval.String(),
-	}
-}
-
-func (w *usageWorker) IsDisabled() bool {
-	return w.prefs.Disabled
-}
-
-func (w *usageWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
-	w.OutCh = make(chan models.Entity)
-	if err := workers.SchedulePollingWorker(ctx, w, w.OutCh); err != nil {
-		close(w.OutCh)
-		return w.OutCh, fmt.Errorf("could not start disk usage worker: %w", err)
-	}
-	return w.OutCh, nil
-}
-
 func NewUsageWorker(ctx context.Context) (workers.EntityWorker, error) {
 	clktck, found := linux.CtxGetClkTck(ctx)
 	if !found {
@@ -143,6 +94,55 @@ func NewUsageWorker(ctx context.Context) (workers.EntityWorker, error) {
 	worker.Trigger = scheduler.NewPollTriggerWithJitter(pollInterval, cpuUsageUpdateJitter)
 
 	return worker, nil
+}
+
+func (w *usageWorker) Execute(ctx context.Context) error {
+	usageSensors, err := w.getUsageStats(ctx)
+	if err != nil {
+		return fmt.Errorf("could not get usage stats: %w", err)
+	}
+	for s := range slices.Values(usageSensors) {
+		w.OutCh <- s
+	}
+	return nil
+}
+
+func (w *usageWorker) PreferencesID() string {
+	return cpuUsagePreferencesID
+}
+
+func (w *usageWorker) DefaultPreferences() UsagePrefs {
+	return UsagePrefs{
+		UpdateInterval: cpuUsageUpdateInterval.String(),
+	}
+}
+
+func (w *usageWorker) IsDisabled() bool {
+	return w.prefs.Disabled
+}
+
+func (w *usageWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
+	w.OutCh = make(chan models.Entity)
+	if err := workers.SchedulePollingWorker(ctx, w, w.OutCh); err != nil {
+		close(w.OutCh)
+		return w.OutCh, fmt.Errorf("could not start disk usage worker: %w", err)
+	}
+	return w.OutCh, nil
+}
+
+// calculateRate takes a sensor name and value string and calculates the uint64 rate
+// value for the sensor.
+func (w *usageWorker) calculateRate(name, value string) uint64 {
+	var state uint64
+
+	if _, found := w.rateSensors[name]; found {
+		currValue, _ := strconv.ParseUint(value, 10, 64)
+		state = w.rateSensors[name].Calculate(currValue, w.GetDelta())
+	} else {
+		w.rateSensors[name] = newRate(value)
+	}
+
+	return state
 }
 
 func (w *usageWorker) getUsageStats(ctx context.Context) ([]models.Entity, error) {

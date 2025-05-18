@@ -44,7 +44,7 @@ func newPowerSensor(ctx context.Context, profile string) models.Entity {
 		sensor.AsDiagnostic(),
 		sensor.WithIcon("mdi:flash"),
 		sensor.WithState(profile),
-		sensor.WithDataSourceAttribute(linux.DataSrcDbus),
+		sensor.WithDataSourceAttribute(linux.DataSrcDBus),
 	)
 }
 
@@ -56,7 +56,6 @@ type profileWorker struct {
 	*models.WorkerMetadata
 }
 
-//nolint:gocognit
 func (w *profileWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
 	triggerCh, err := dbusx.NewWatch(
 		dbusx.MatchPath(powerProfilesPath),

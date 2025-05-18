@@ -73,7 +73,7 @@ func (w *problemsWorker) generateEntity(ctx context.Context, problems []string) 
 		sensor.WithUnits("problems"),
 		sensor.WithIcon("mdi:alert"),
 		sensor.WithState(len(problems)),
-		sensor.WithDataSourceAttribute(linux.DataSrcDbus),
+		sensor.WithDataSourceAttribute(linux.DataSrcDBus),
 		sensor.WithAttribute("problem_list", problemDetails),
 	)
 }

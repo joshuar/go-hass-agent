@@ -152,7 +152,7 @@ func (w *locationWorker) createClient() (string, error) {
 	}
 
 	// Set an ID for our client.
-	if err = dbusx.NewProperty[string](w.bus, clientPath, geoclueInterface, desktopIDProp).Set(preferences.DefaultAppID); err != nil {
+	if err = dbusx.NewProperty[string](w.bus, clientPath, geoclueInterface, desktopIDProp).Set(preferences.AppID); err != nil {
 		return "", fmt.Errorf("could not set geoclue client id: %w", err)
 	}
 

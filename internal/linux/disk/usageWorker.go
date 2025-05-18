@@ -44,7 +44,7 @@ var ErrNewDiskUsageSensor = errors.New("could not create disk usage sensor")
 
 //nolint:mnd
 func newDiskUsageSensor(ctx context.Context, mount *mount, value float64) models.Entity {
-	mount.attributes["data_source"] = linux.DataSrcProcfs
+	mount.attributes["data_source"] = linux.DataSrcProcFS
 
 	usedBlocks := mount.attributes[mountAttrBlocksTotal].(uint64) - mount.attributes[mountAttrBlocksFree].(uint64) //nolint:lll,forcetypeassert
 	mount.attributes["blocks_used"] = usedBlocks

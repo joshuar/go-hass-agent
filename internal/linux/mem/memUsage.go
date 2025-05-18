@@ -76,7 +76,7 @@ func newMemSensor(ctx context.Context, id memStatID, stat *memStat) models.Entit
 		sensor.WithStateClass(class.StateTotal),
 		sensor.WithIcon(memorySensorIcon),
 		sensor.WithState(value),
-		sensor.WithDataSourceAttribute(linux.DataSrcProcfs),
+		sensor.WithDataSourceAttribute(linux.DataSrcProcFS),
 		sensor.WithAttribute("native_unit_of_measurement", memoryUsageSensorUnits),
 	)
 }
@@ -98,7 +98,7 @@ func newMemSensorPc(ctx context.Context, name string, value, total uint64) model
 		sensor.WithStateClass(class.StateTotal),
 		sensor.WithIcon(memorySensorIcon),
 		sensor.WithState(valuePc),
-		sensor.WithDataSourceAttribute(linux.DataSrcProcfs),
+		sensor.WithDataSourceAttribute(linux.DataSrcProcFS),
 		sensor.WithAttribute("native_unit_of_measurement", memoryUsageSensorPcUnits),
 	)
 }

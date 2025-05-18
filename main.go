@@ -55,7 +55,7 @@ func main() {
 	kong.Name(preferences.AppName)
 	kong.Description(preferences.AppDescription)
 	// Parse the command-line.
-	ctx := kong.Parse(&CLI, kong.Bind(), kong.Vars{"defaultPath": filepath.Join(xdg.ConfigHome, preferences.DefaultAppID)})
+	ctx := kong.Parse(&CLI, kong.Bind(), kong.Vars{"defaultPath": filepath.Join(xdg.ConfigHome, preferences.AppID)})
 	// Set up the logger.
 	logger := logging.New(logging.Options{LogLevel: CLI.LogLevel, NoLogFile: CLI.NoLogFile, Path: CLI.Path})
 	// Enable profiling if requested.

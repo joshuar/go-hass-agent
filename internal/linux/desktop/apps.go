@@ -133,7 +133,7 @@ func (w *sensorWorker) generateSensors(ctx context.Context) ([]models.Entity, er
 				sensor.AsTypeSensor(),
 				sensor.WithIcon(activeAppsIcon),
 				sensor.WithState(name),
-				sensor.WithDataSourceAttribute(linux.DataSrcDbus),
+				sensor.WithDataSourceAttribute(linux.DataSrcDBus),
 			))
 		}
 	}
@@ -148,7 +148,7 @@ func (w *sensorWorker) generateSensors(ctx context.Context) ([]models.Entity, er
 			sensor.WithStateClass(class.StateMeasurement),
 			sensor.WithIcon(runningAppsIcon),
 			sensor.WithState(w.totalRunningApps),
-			sensor.WithDataSourceAttribute(linux.DataSrcDbus),
+			sensor.WithDataSourceAttribute(linux.DataSrcDBus),
 			sensor.WithAttribute("apps", runningApps),
 		))
 	}
