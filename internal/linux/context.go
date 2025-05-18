@@ -154,8 +154,8 @@ func CtxGetSessionPath(ctx context.Context) (string, bool) {
 	return path, true
 }
 
-func CtxGetPipewireMonitor(ctx context.Context) (*pipewire.PipewireMonitor, bool) {
-	monitor, ok := ctx.Value(pwMonitorContextKey).(*pipewire.PipewireMonitor)
+func CtxGetPipewireMonitor(ctx context.Context) (*pipewire.Monitor, bool) {
+	monitor, ok := ctx.Value(pwMonitorContextKey).(*pipewire.Monitor)
 	if !ok {
 		return nil, false
 	}

@@ -19,15 +19,15 @@ import (
 	"github.com/joshuar/go-hass-agent/internal/components/logging"
 )
 
-// PipewireMonitor handles monitoring pipewire for events and dispatching events to registered listeners as appropriate.
-type PipewireMonitor struct {
-	listeners []*PipewireListener
+// Monitor handles monitoring pipewire for events and dispatching events to registered listeners as appropriate.
+type Monitor struct {
+	listeners []*Listener
 }
 
 // NewMonitor creates a new pipewire monitor.
 //
 //nolint:gocognit
-func NewMonitor(ctx context.Context) (*PipewireMonitor, error) {
+func NewMonitor(ctx context.Context) (*Monitor, error) {
 	// Set up pw-dump command.
 	cmd := exec.CommandContext(ctx, "pw-dump", "--monitor", "--no-colors")
 	stdout, err := cmd.StdoutPipe()
@@ -39,8 +39,8 @@ func NewMonitor(ctx context.Context) (*PipewireMonitor, error) {
 		return nil, fmt.Errorf("error starting pw-dump: %w", err)
 	}
 	// Create monitor
-	monitor := &PipewireMonitor{
-		listeners: make([]*PipewireListener, 0),
+	monitor := &Monitor{
+		listeners: make([]*Listener, 0),
 	}
 
 	// Decode pw-dump stdout as json stream.
@@ -90,17 +90,17 @@ func NewMonitor(ctx context.Context) (*PipewireMonitor, error) {
 	return monitor, nil
 }
 
-func (m *PipewireMonitor) AddListener(ctx context.Context, filterFunc func(*pwmonitor.Event) bool) chan pwmonitor.Event {
+func (m *Monitor) AddListener(ctx context.Context, filterFunc func(*pwmonitor.Event) bool) chan pwmonitor.Event {
 	eventCh := make(chan pwmonitor.Event)
-	m.listeners = append(m.listeners, &PipewireListener{
+	m.listeners = append(m.listeners, &Listener{
 		filterFunc: filterFunc,
 		eventCh:    eventCh,
 	})
 	return eventCh
 }
 
-// PipewireListener contains the data for goroutine that wants to listen for pipewire events.
-type PipewireListener struct {
+// Listener contains the data for goroutine that wants to listen for pipewire events.
+type Listener struct {
 	filterFunc func(*pwmonitor.Event) bool
 	eventCh    chan pwmonitor.Event
 }
