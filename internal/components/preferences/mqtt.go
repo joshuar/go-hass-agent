@@ -39,8 +39,8 @@ var (
 	ErrMQTTPreference      = errors.New("MQTT preference error")
 	defaultMQTTPreferences = &MQTTPreferences{
 		MQTTEnabled:     false,
-		MQTTTopicPrefix: defaultMQTTTopicPrefix,
-		MQTTServer:      defaultMQTTServer,
+		MQTTTopicPrefix: DefaultMQTTTopicPrefix,
+		MQTTServer:      DefaultMQTTServer,
 	}
 )
 
@@ -59,7 +59,7 @@ func SetMQTTEnabled(value bool) SetPreference {
 func SetMQTTServer(server string) SetPreference {
 	return func() error {
 		if server == "" {
-			server = defaultMQTTServer
+			server = DefaultMQTTServer
 		}
 
 		if err := prefsSrc.Set(prefMQTTServer, server); err != nil {
@@ -74,7 +74,7 @@ func SetMQTTServer(server string) SetPreference {
 func SetMQTTTopicPrefix(prefix string) SetPreference {
 	return func() error {
 		if prefix == "" {
-			prefix = defaultMQTTTopicPrefix
+			prefix = DefaultMQTTTopicPrefix
 		}
 
 		if err := prefsSrc.Set(prefMQTTTopicPrefix, prefix); err != nil {

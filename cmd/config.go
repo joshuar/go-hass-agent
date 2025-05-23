@@ -38,23 +38,26 @@ func (r *Config) Run(opts *Opts) error {
 
 	var preferencesToSet []preferences.SetPreference
 
+	// Enable MQTT functionality in the preferences.
 	preferencesToSet = append(preferencesToSet, preferences.SetMQTTEnabled(true))
-
-	if r.MQTTServer != "" {
-		preferencesToSet = append(preferencesToSet, preferences.SetMQTTServer(r.MQTTServer))
-	}
-
-	if r.MQTTTopicPrefix != "" {
-		preferencesToSet = append(preferencesToSet, preferences.SetMQTTTopicPrefix(r.MQTTTopicPrefix))
-	}
-
+	// Set the user if it was passed in.
 	if r.MQTTUser != "" {
 		preferencesToSet = append(preferencesToSet, preferences.SetMQTTUser(r.MQTTUser))
 	}
-
+	// Set the password if it was passed in.
 	if r.MQTTPassword != "" {
 		preferencesToSet = append(preferencesToSet, preferences.SetMQTTPassword(r.MQTTPassword))
 	}
+	// If no server was given, set the server to the default.
+	if r.MQTTServer == "" {
+		r.MQTTServer = preferences.DefaultMQTTServer
+	}
+	preferencesToSet = append(preferencesToSet, preferences.SetMQTTServer(r.MQTTServer))
+	// If no topic prefix was passed in, set it to the default.
+	if r.MQTTTopicPrefix == "" {
+		r.MQTTTopicPrefix = preferences.DefaultMQTTTopicPrefix
+	}
+	preferencesToSet = append(preferencesToSet, preferences.SetMQTTTopicPrefix(r.MQTTTopicPrefix))
 
 	if err := preferences.Set(preferencesToSet...); err != nil {
 		return fmt.Errorf("config: save preferences: %w", err)

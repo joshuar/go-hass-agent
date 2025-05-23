@@ -48,8 +48,10 @@ const (
 	DefaultServer          = "http://localhost:8123"
 	defaultWebsocketServer = "ws://localhost:8123"
 	defaultSecret          = "ALongSecretString"
-	defaultMQTTTopicPrefix = "homeassistant"
-	defaultMQTTServer      = "tcp://localhost:1883"
+	// DefaultMQTTTopicPrefix is the default topic prefix for MQTT.
+	DefaultMQTTTopicPrefix = "homeassistant"
+	// DefaultMQTTServer is the default MQTT server to use.
+	DefaultMQTTServer = "tcp://localhost:1883"
 	// PathDelim is used for delimiting preferences.
 	PathDelim = "."
 )
