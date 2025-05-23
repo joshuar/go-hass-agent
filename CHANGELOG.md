@@ -1,5 +1,12 @@
 # Changelog
 
+## [13.2.6](https://github.com/joshuar/go-hass-agent/compare/v13.2.5...v13.2.6) (2025-05-18)
+
+
+### Performance Improvements
+
+* **linux:** :zap: use a shared pipewire monitor instance for workers monitoring pipewire events ([972e595](https://github.com/joshuar/go-hass-agent/commit/972e5957b5235723ecfe06749c6f76b0355ebf4c))
+
 ## [13.2.5](https://github.com/joshuar/go-hass-agent/compare/v13.2.4...v13.2.5) (2025-04-29)
 
 
