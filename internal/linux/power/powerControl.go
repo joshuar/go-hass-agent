@@ -137,7 +137,7 @@ func NewPowerControl(ctx context.Context, device *mqtthass.Device) ([]*mqtthass.
 		entities = append(entities,
 			mqtthass.NewButtonEntity().
 				WithDetails(
-					mqtthass.App(preferences.AppName),
+					mqtthass.App(preferences.AppName+"_"+device.Name),
 					mqtthass.Name(command.name),
 					mqtthass.ID(command.id),
 					mqtthass.DeviceInfo(device),

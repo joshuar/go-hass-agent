@@ -99,7 +99,7 @@ func NewMPRISWorker(ctx context.Context, device *mqtthass.Device) (*MPRISWorker,
 
 	worker.MPRISStatus = mqtthass.NewSensorEntity().
 		WithDetails(
-			mqtthass.App(preferences.AppName),
+			mqtthass.App(preferences.AppName+"_"+device.Name),
 			mqtthass.Name("Media State"),
 			mqtthass.ID(device.Name+"_media_state"),
 			mqtthass.OriginInfo(preferences.MQTTOrigin()),
