@@ -87,6 +87,7 @@ jobs:
             uploads.github.com:443
       - name: Set up environment
         run: |
+          echo "APPVERSION=$(git describe --tags --always --dirty)" >> $GITHUB_ENV
           platform=${{ matrix.platform }}
           echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
       - name: Set app version for release
@@ -134,7 +135,7 @@ jobs:
         if: ${{ ! needs.check_release.outputs.release_created }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: build-${{ env.PLATFORM_PAIR }}-${{ github.sha }}
+          name: build-${{ env.PLATFORM_PAIR }}-${{ env.APPVERSION }}.zip
           path: |
             dist/pkg
       - name: Upload release artifacts
@@ -233,7 +234,7 @@ jobs:
       - name: Upload digest
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: digests-${{ env.PLATFORM_PAIR }}
+          name: digests-${{ env.PLATFORM_PAIR }}-${{ env.APPVERSION }}
           path: /tmp/digests/*
           if-no-files-found: error
           retention-days: 1
