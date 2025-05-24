@@ -1,5 +1,13 @@
 # Changelog
 
+## [13.2.7](https://github.com/joshuar/go-hass-agent/compare/v13.2.6...v13.2.7) (2025-05-24)
+
+
+### Bug Fixes
+
+* **mqtt:** :bug: ensure a default server and topic are set if not passed in when configuring MQTT from the command-line ([beee456](https://github.com/joshuar/go-hass-agent/commit/beee456f8bc596c1f72b4efe80ba1fa7d903c894))
+* **mqtt:** :bug: make sure devices use a unique "app" id for mqtt topics ([5b64ae9](https://github.com/joshuar/go-hass-agent/commit/5b64ae9ccc07e6771af263cd3e72924b61f45322))
+
 ## [13.2.6](https://github.com/joshuar/go-hass-agent/compare/v13.2.5...v13.2.6) (2025-05-18)
 
 
