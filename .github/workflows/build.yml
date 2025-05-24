@@ -85,6 +85,10 @@ jobs:
             storage.googleapis.com:443
             sum.golang.org:443
             uploads.github.com:443
+      - name: Checkout source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          fetch-depth: 0
       - name: Set up environment
         run: |
           echo "APPVERSION=$(git describe --tags --always --dirty)" >> $GITHUB_ENV
@@ -94,10 +98,6 @@ jobs:
         if: ${{ needs.check_release.outputs.release_created }}
         run: |
           echo "APPVERSION=${{ needs.check_release.outputs.release_tag }}" >> $GITHUB_ENV
-      - name: Checkout source
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
-        with:
-          fetch-depth: 0
       - name: Setup Go
         id: setup_go
         uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5
