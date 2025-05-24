@@ -179,7 +179,7 @@ func NewScreenLockControl(ctx context.Context, device *mqtthass.Device) ([]*mqtt
 		buttons = append(buttons,
 			mqtthass.NewButtonEntity().
 				WithDetails(
-					mqtthass.App(preferences.AppName),
+					mqtthass.App(preferences.AppName+"_"+device.Name),
 					mqtthass.Name(command.name),
 					mqtthass.ID(command.id),
 					mqtthass.DeviceInfo(device),

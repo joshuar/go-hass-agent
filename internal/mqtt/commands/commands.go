@@ -213,7 +213,7 @@ func (d *Worker) generateButtons(buttonCmds []Command) {
 		entities = append(entities,
 			mqtthass.NewButtonEntity().
 				WithDetails(
-					mqtthass.App(preferences.AppName),
+					mqtthass.App(preferences.AppName+"_"+d.device.Name),
 					mqtthass.Name(name),
 					mqtthass.ID(id),
 					mqtthass.OriginInfo(preferences.MQTTOrigin()),
@@ -260,7 +260,7 @@ func (d *Worker) generateSwitches(switchCmds []Command) {
 		entities = append(entities,
 			mqtthass.NewSwitchEntity().
 				WithDetails(
-					mqtthass.App(preferences.AppName),
+					mqtthass.App(preferences.AppName+"_"+d.device.Name),
 					mqtthass.Name(name),
 					mqtthass.ID(id),
 					mqtthass.OriginInfo(preferences.MQTTOrigin()),
@@ -357,7 +357,7 @@ func (d *Worker) generateNumbers(numberCommands []Command) {
 			floats = append(floats,
 				mqtthass.NewNumberEntity[float64]().
 					WithDetails(
-						mqtthass.App(preferences.AppName),
+						mqtthass.App(preferences.AppName+"_"+d.device.Name),
 						mqtthass.Name(name),
 						mqtthass.ID(id),
 						mqtthass.OriginInfo(preferences.MQTTOrigin()),
@@ -397,7 +397,7 @@ func (d *Worker) generateNumbers(numberCommands []Command) {
 			ints = append(ints,
 				mqtthass.NewNumberEntity[int64]().
 					WithDetails(
-						mqtthass.App(preferences.AppName),
+						mqtthass.App(preferences.AppName+"_"+d.device.Name),
 						mqtthass.Name(name),
 						mqtthass.ID(id),
 						mqtthass.OriginInfo(preferences.MQTTOrigin()),

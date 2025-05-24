@@ -133,7 +133,7 @@ func NewInhibitWorker(ctx context.Context, device *mqtthass.Device) (*InhibitWor
 	worker.InhibitControl = mqtthass.NewSwitchEntity().
 		OptimisticMode().
 		WithDetails(
-			mqtthass.App(preferences.AppName),
+			mqtthass.App(preferences.AppName+"_"+device.Name),
 			mqtthass.Name("Inhibit Sleep/Shutdown"),
 			mqtthass.ID(device.Name+"_inhibit_lock"),
 			mqtthass.DeviceInfo(device),

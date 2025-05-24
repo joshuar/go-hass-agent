@@ -179,7 +179,7 @@ func NewVolumeWorker(ctx context.Context, device *mqtthass.Device) (*VolumeWorke
 		WithStep(volStepPc).
 		WithMode(mqtthass.NumberSlider).
 		WithDetails(
-			mqtthass.App(preferences.AppName),
+			mqtthass.App(preferences.AppName+"_"+device.Name),
 			mqtthass.Name("Volume"),
 			mqtthass.ID(device.Name+"_volume"),
 			mqtthass.DeviceInfo(device),
@@ -196,7 +196,7 @@ func NewVolumeWorker(ctx context.Context, device *mqtthass.Device) (*VolumeWorke
 	worker.MuteControl = mqtthass.NewSwitchEntity().
 		OptimisticMode().
 		WithDetails(
-			mqtthass.App(preferences.AppName),
+			mqtthass.App(preferences.AppName+"_"+device.Name),
 			mqtthass.Name("Mute"),
 			mqtthass.ID(device.Name+"_mute"),
 			mqtthass.DeviceInfo(device),
