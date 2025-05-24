@@ -1,5 +1,9 @@
+networks:
+  go-hass-agent:
+    enable_ipv6: true
 services:
   devcontainer:
+    hostname: devcontainer
     env_file:
       - .env
     image: mcr.microsoft.com/devcontainers/base:ubuntu
@@ -9,33 +13,42 @@ services:
       - /run/dbus:/run/dbus:ro
       - /run/user/1000/bus:/run/user/1000/bus
       - /tmp/.X11-unix:/tmp/.X11-unix
-    hostname: devcontainer
     user: vscode
     cap_add:
       - SYS_PTRACE
     security_opt:
       - seccomp:unconfined
     command: sleep infinity
+    networks:
+      - go-hass-agent
   home-assistant:
+    hostname: home-assistant
+    privileged: true
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
     env_file:
       - .env
     image: ghcr.io/home-assistant/home-assistant:$HA_VERSION
     volumes:
-      - ../deployments/home-assistant/config:/config:Z,U
+      - ../deployments/home-assistant/config:/config
       - /run/dbus:/run/dbus:ro
-    restart: on-failure
     ports:
       - 8123:8123
+    networks:
+      - go-hass-agent
   mosquitto:
+    hostname: mosquitto
     env_file:
       - .env
     image: docker.io/eclipse-mosquitto:$MOSQUITTO_VERSION
     volumes:
-      - ../deployments/mosquitto/config:/mosquitto/config:Z,U
-      - ../deployments/mosquitto/data:/mosquitto/data:Z,U
-      - ../deployments/mosquitto/log:/mosquitto/log:Z,U
+      - ../deployments/mosquitto/config:/mosquitto/config
+      - ../deployments/mosquitto/data:/mosquitto/data
+      - ../deployments/mosquitto/log:/mosquitto/log
       - /etc/localtime:/etc/localtime:ro,cached
-    restart: on-failure
     ports:
       - 1883:1883
       - 8883:8883
+    networks:
+      - go-hass-agent
