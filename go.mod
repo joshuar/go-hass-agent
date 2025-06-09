@@ -153,7 +153,7 @@ require (
 	github.com/klauspost/compress v1.17.11 // indirect
 	github.com/knadh/koanf/parsers/toml v0.1.0
 	github.com/knadh/koanf/providers/file v1.2.0
-	github.com/knadh/koanf/v2 v2.2.0
+	github.com/knadh/koanf/v2 v2.2.1
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/lmittmann/tint v1.1.1
 	github.com/mandykoh/prism v0.35.3
