@@ -1,5 +1,12 @@
 # Changelog
 
+## [13.2.8](https://github.com/joshuar/go-hass-agent/compare/v13.2.7...v13.2.8) (2025-06-20)
+
+
+### Bug Fixes
+
+* **linux/system:** :bug: ensure details are added when logging a D-Bus command execution ([763801c](https://github.com/joshuar/go-hass-agent/commit/763801c8a49c79dc8d6503182ae32d194142915b))
+
 ## [13.2.7](https://github.com/joshuar/go-hass-agent/compare/v13.2.6...v13.2.7) (2025-05-24)
 
 
