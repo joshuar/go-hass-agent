@@ -79,12 +79,7 @@ func NewDBusCommandSubscription(ctx context.Context, device *mqtthass.Device) (*
 					err     error
 				)
 
-				logger := slogctx.FromCtx(ctx).With(
-					slog.String("bus", dbusMsg.Bus),
-					slog.String("destination", dbusMsg.Destination),
-					slog.String("path", dbusMsg.Path),
-					slog.String("method", dbusMsg.Method),
-				)
+				logger := slogctx.FromCtx(ctx)
 
 				// Unmarshal the request.
 				if err = json.Unmarshal(packet.Payload, &dbusMsg); err != nil {
@@ -109,7 +104,12 @@ func NewDBusCommandSubscription(ctx context.Context, device *mqtthass.Device) (*
 					}
 				}
 
-				logger.Info("Dispatching D-Bus command.")
+				logger.With(
+					slog.String("bus", dbusMsg.Bus),
+					slog.String("destination", dbusMsg.Destination),
+					slog.String("path", dbusMsg.Path),
+					slog.String("method", dbusMsg.Method),
+				).Info("Dispatching D-Bus command.")
 
 				// Call the method.
 				err = dbusx.NewMethod(bus, dbusMsg.Destination, dbusMsg.Path, dbusMsg.Method).Call(ctx, dbusMsg.Args...)
