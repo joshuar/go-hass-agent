@@ -117,7 +117,7 @@ jobs:
           TARGETPLATFORM: ${{ matrix.platform }}
       - name: Install cosign
         id: cosign_install
-        uses: sigstore/cosign-installer@3454372f43399081ed03b604cb2d021dabca52bb # v3
+        uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3
       - name: Sign artifacts with cosign
         id: cosign_sign
         shell: bash
@@ -313,7 +313,7 @@ jobs:
         run: |
           docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ steps.docker_metadata.outputs.version }}
       - name: Check and install cosign
-        uses: sigstore/cosign-installer@3454372f43399081ed03b604cb2d021dabca52bb # v3
+        uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3
       - name: Sign image with a key
         env:
           TAGS: ${{ steps.docker_metadata.outputs.tags }}
