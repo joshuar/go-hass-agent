@@ -45,7 +45,7 @@ func (c *Config) IsEntityDisabled(id string) (bool, error) {
 	defer c.mu.Unlock()
 
 	// If there is no entities list, assume not disabled.
-	if c.Entities.IsSpecified() {
+	if c.Entities.IsNull() {
 		return false, nil
 	}
 
