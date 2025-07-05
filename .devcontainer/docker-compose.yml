@@ -6,21 +6,28 @@ services:
     hostname: devcontainer
     env_file:
       - .env
-    image: mcr.microsoft.com/devcontainers/base:ubuntu
+    devices:
+      - /dev/dri
+    environment:
+      - WAYLAND_DISPLAY=${WAYLAND_DISPLAY}
+      - XDG_RUNTIME_DIR=/tmp
+    image: mcr.microsoft.com/devcontainers/base:ubuntu-22.04
     volumes:
       - ..:/workspace:cached
+      - "${XDG_RUNTIME_DIR}/${WAYLAND_DISPLAY}:/tmp/${WAYLAND_DISPLAY}"
       - /etc/localtime:/etc/localtime:ro,cached
       - /run/dbus:/run/dbus:ro
       - /run/user/1000/bus:/run/user/1000/bus
-      - /tmp/.X11-unix:/tmp/.X11-unix
     user: vscode
     cap_add:
       - SYS_PTRACE
     security_opt:
       - seccomp:unconfined
+      - label:disable
     command: sleep infinity
     networks:
       - go-hass-agent
+    privileged: true
   home-assistant:
     hostname: home-assistant
     privileged: true

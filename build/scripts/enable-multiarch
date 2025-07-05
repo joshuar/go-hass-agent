@@ -23,10 +23,12 @@ function join_by {
 sed -i 's|^deb\s|deb [arch=amd64] |g' /etc/apt/sources.list
 # add the additional arch
 for arch in "${pkgarch[@]}"; do
+    echo "Enabling architecture ${arch}"
     dpkg --add-architecture ${arch}
 done
 archs=$(join_by , "${pkgarch[@]}")
 # add repos for the additional arch
+echo "Adding package sources for architectures ${archs}"
 tee -a /etc/apt/sources.list <<EOF
 deb [arch=${archs}] http://ports.ubuntu.com/ubuntu-ports/ jammy main
 #deb-src [arch=${archs}] http://ports.ubuntu.com/ubuntu-ports/ jammy main
