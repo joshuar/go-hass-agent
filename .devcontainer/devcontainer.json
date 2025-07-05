@@ -1,5 +1,12 @@
 {
   "containerUser": "vscode",
+  "containerEnv": {
+    "HOME": "/home/vscode",
+    "XDG_RUNTIME_DIR": "/tmp",
+    "WAYLAND_DISPLAY": "${env:WAYLAND_DISPLAY}",
+    "APPIMAGE_EXTRACT_AND_RUN": "1",
+    "DBUS_SESSION_BUS_ADDRESS": "${env:DBUS_SESSION_BUS_ADDRESS}"
+  },
   "customizations": {
     "vscode": {
       "extensions": [
@@ -28,21 +35,9 @@
     "ghcr.io/meaningful-ooo/devcontainer-features/fish:2": {},
     "ghcr.io/schlich/devcontainer-features/starship:0": {}
   },
+
   "name": "Go Hass Agent Development",
   "postCreateCommand": "bash .devcontainer/postcreate.sh",
-  "remoteEnv": {
-    "DBUS_SESSION_BUS_ADDRESS": "${localEnv:DBUS_SESSION_BUS_ADDRESS}",
-    "DESKTOP_SESSION": "${localEnv:DESKTOP_SESSION}",
-    "DISPLAY": "${localEnv:DISPLAY}",
-    "HOME": "/home/vscode",
-    "XAUTHORITY": "${localEnv:XAUTHORITY}",
-    "XDG_CURRENT_DESKTOP": "${localEnv:XDG_CURRENT_DESKTOP}",
-    "XDG_DATA_DIRS": "${localEnv:XDG_DATA_DIRS}",
-    "XDG_MENU_PREFIX": "${localEnv:XDG_MENU_PREFIX}",
-    "XDG_RUNTIME_DIR": "${localEnv:XDG_RUNTIME_DIR}",
-    "XDG_SESSION_DESKTOP": "${localEnv:XDG_SESSION_DESKTOP}",
-    "XDG_SESSION_TYPE": "${localEnv:XDG_SESSION_TYPE}"
-  },
   "service": "devcontainer",
   "shutdownAction": "stopCompose",
   "updateRemoteUserUID": true,
