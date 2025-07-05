@@ -57,33 +57,58 @@ type Client struct {
 // ErrSendRequest indicates an error occurred when sending a request to Home Assistant.
 var ErrSendRequest = errors.New("send request failed")
 
+// NewClient creates a new hass client, which tracks last sensor status,
+// sensor registration status and handles sending and processing requests to the
+// Home Assistant REST API.
+func NewClient(ctx context.Context, reg sensorRegistry) (*Client, error) {
+	// Create the client.
+	client := &Client{
+		logger:         slogctx.FromCtx(ctx).WithGroup("hass"),
+		sensorRegistry: reg,
+		sensorTracker:  tracker.NewTracker(),
+		config:         &Config{ConfigResponse: &api.ConfigResponse{}},
+		restAPI:        api.NewClient(),
+	}
+	// Schedule a job to get the Home Assistant on a regular interval.
+	if err := client.scheduleConfigUpdates(); err != nil {
+		return nil, fmt.Errorf("could not create client: %w", err)
+	}
+	// Run the job one-time initially to get the config.
+	updated, err := client.UpdateConfig(ctx)
+	if !updated || err != nil {
+		return nil, fmt.Errorf("could not create client: %w", err)
+	}
+
+	return client, nil
+}
+
 // isDisabled handles processing a sensor that is disabled. For a sensor that is
 // disabled, we need to make an additional check against Home Assistant to see
 // if the sensor has been re-enabled, and update our local registry before
 // continuing.
 func (c *Client) isDisabled(ctx context.Context, details models.Sensor) bool {
 	regDisabled := c.isDisabledInReg(details.UniqueID)
-	haDisabled := c.isDisabledInHA(details.UniqueID)
+	haDisabled, haConfigErr := c.isDisabledInHA(details.UniqueID)
 
 	switch {
-	case regDisabled && !haDisabled:
-		c.logger.Info("Sensor re-enabled in Home Assistant, Re-enabling in local registry and sending updates.",
+	case regDisabled && (haConfigErr == nil && !haDisabled):
+		c.logger.Debug("Sensor re-enabled in Home Assistant, Re-enabling in local registry and sending updates.",
 			details.LogAttributes())
 		if err := c.sensorRegistry.SetDisabled(details.UniqueID, false); err != nil {
 			slogctx.FromCtx(ctx).Warn("Could not update sensor state in registry.",
 				details.LogAttributes())
 		}
 		return false
-	case !regDisabled && haDisabled:
-		c.logger.Info("Sensor has been disabled in Home Assistant, Disabling in local registry and not sending updates.",
+	case !regDisabled && (haConfigErr == nil && haDisabled):
+		c.logger.Debug("Sensor has been disabled in Home Assistant, Disabling in local registry and not sending updates.",
 			details.LogAttributes())
 		if err := c.sensorRegistry.SetDisabled(details.UniqueID, true); err != nil {
 			slogctx.FromCtx(ctx).Warn("Could not update sensor state in registry.",
 				details.LogAttributes())
 		}
 		return true
-	case regDisabled && haDisabled:
-		c.logger.Info("Sensor is disabled, not sending updates.",
+	case regDisabled && (haConfigErr == nil && haDisabled):
+		c.logger.Debug("Sensor is disabled, not sending updates.",
 			details.LogAttributes())
 
 		return true
@@ -99,13 +124,13 @@ func (c *Client) isDisabledInReg(id models.UniqueID) bool {
 }
 
 // isDisabledInHA returns the disabled state of the sensor from Home Assistant.
-func (c *Client) isDisabledInHA(id models.UniqueID) bool {
+func (c *Client) isDisabledInHA(id models.UniqueID) (bool, error) {
 	status, err := c.config.IsEntityDisabled(id)
 	if err != nil {
-		return false
+		return false, err
 	}
 
-	return status
+	return status, nil
 }
 
 func (c *Client) scheduleConfigUpdates() error {
@@ -168,8 +193,12 @@ func (c *Client) EntityHandler(ctx context.Context, entityCh <-chan models.Entit
 		//nolint:nestif
 		if sensorData, err := entity.AsSensor(); err == nil {
 			// Send sensor details.
-			if c.sensorRegistry.IsRegistered(sensorData.UniqueID) && !c.isDisabled(ctx, sensorData) {
-				// If the sensor is registered and not disabled, send an update request.
+			if c.sensorRegistry.IsRegistered(sensorData.UniqueID) {
+				// Ignore updates for disabled sensors.
+				if c.isDisabled(ctx, sensorData) {
+					continue
+				}
+				// Otherwise, send an update.
 				if err := sensor.UpdateHandler(ctx, c, sensorData); err != nil {
 					c.logger.Warn("Could not update sensor.",
 						sensorData.LogAttributes(),
@@ -178,7 +207,7 @@ func (c *Client) EntityHandler(ctx context.Context, entityCh <-chan models.Entit
 					continue
 				}
 
-				c.logger.Debug("Sensor updated.",
+				c.logger.Log(ctx, logging.LevelTrace, "Sensor updated.",
 					sensorData.LogAttributes())
 			} else {
 				// Otherwise, send a registration request.
@@ -292,7 +321,7 @@ func (c *Client) GetSensor(id models.UniqueID) (*models.Sensor, error) {
 
 func (c *Client) DisableSensor(id models.UniqueID) {
 	if !c.isDisabledInReg(id) {
-		c.logger.Info("Disabling sensor.",
+		c.logger.Debug("Disabling sensor.",
 			slog.String("id", id))
 		if err := c.sensorRegistry.SetDisabled(id, true); err != nil {
 			c.logger.Warn("Could not disable sensor.", slog.Any("error", err))
@@ -305,24 +334,4 @@ func (c *Client) RegisterSensor(id models.UniqueID) error {
 		return fmt.Errorf("could not register sensor: %w", err)
 	}
 	return nil
-}
-
-// NewClient creates a new hass client, which tracks last sensor status,
-// sensor registration status and handles sending and processing requests to the
-// Home Assistant REST API.
-func NewClient(ctx context.Context, reg sensorRegistry) (*Client, error) {
-	// Create the client.
-	client := &Client{
-		logger:         slogctx.FromCtx(ctx).WithGroup("hass"),
-		sensorRegistry: reg,
-		sensorTracker:  tracker.NewTracker(),
-		config:         &Config{ConfigResponse: &api.ConfigResponse{}},
-		restAPI:        api.NewClient(),
-	}
-	// Schedule a job to get the Home Assistant on a regular interval.
-	if err := client.scheduleConfigUpdates(); err != nil {
-		return nil, fmt.Errorf("could not create client: %w", err)
-	}
-
-	return client, nil
 }
