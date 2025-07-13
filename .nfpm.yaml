@@ -9,7 +9,7 @@ maintainer: Joshua Rich <joshua.rich@gmail.com>
 description: |
   A Home Assistant, native app for desktop/laptop devices.
 vendor: org.github.joshuar
-homepage: https://github.com/joshuar/go-hass-app
+homepage: https://github.com/joshuar/go-hass-agent
 license: MIT
 arch: ${NFPM_ARCH}
 # changelog: CHANGELOG.md
