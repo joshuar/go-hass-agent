@@ -119,6 +119,7 @@ require (
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	howett.net/plist v1.0.0 // indirect
+	kernel.org/pub/linux/libs/security/libcap/psx v1.2.76 // indirect
 )
 
 require (
@@ -126,6 +127,7 @@ require (
 	github.com/ConnorsApps/pipewire-monitor-go v0.1.0
 	github.com/adrg/xdg v0.5.3
 	github.com/alecthomas/kong v1.12.0
+	github.com/anatol/smart.go v0.0.0-20241126061019-f03d79b340d2
 	github.com/blackjack/webcam v0.6.1
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
@@ -176,6 +178,7 @@ require (
 	golang.org/x/mobile v0.0.0-20231127183840-76ac6878050a // indirect
 	golang.org/x/net v0.41.0 // indirect
 	golang.org/x/sys v0.33.0
+	kernel.org/pub/linux/libs/security/libcap/cap v1.2.76
 )
 
 tool (

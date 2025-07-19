@@ -27,6 +27,8 @@ contents:
     dst: /usr/share/applications/go-hass-agent.desktop
   - src: init/go-hass-agent.service
     dst: /usr/lib/systemd/user/go-hass-agent.service
+scripts:
+  postinstall: assets/postinstall.sh
 overrides:
   rpm:
     depends:
@@ -37,6 +39,8 @@ overrides:
       - libXinerama
       - libXxf86vm
       - dbus-x11
+    recommends:
+      - libcap
   deb:
     depends:
       - libgl1-mesa-dri
@@ -48,6 +52,8 @@ overrides:
       - libxau6
       - libxdmcp6
       - dbus-x11
+    recommends:
+      - libcap2
   archlinux:
     depends:
       - xorg-server
@@ -55,3 +61,5 @@ overrides:
       - libxrandr
       - libxinerama
       - libxi
+    recommends:
+      - libcap

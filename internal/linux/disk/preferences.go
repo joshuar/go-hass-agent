@@ -9,6 +9,7 @@ const (
 	prefPrefix               = preferences.SensorsPrefPrefix + "disk" + preferences.PathDelim
 	ioWorkerPreferencesID    = prefPrefix + "rates"
 	usageWorkerPreferencesID = prefPrefix + "usage"
+	smartWorkerPreferencesID = prefPrefix + "smart"
 )
 
 type WorkerPrefs struct {
