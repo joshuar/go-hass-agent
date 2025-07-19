@@ -79,6 +79,8 @@ github.com/alecthomas/kong v1.12.0 h1:oKd/0fHSdajj5PfGDd3ScvEvpVJf9mT2mb5r9xYadY
 github.com/alecthomas/kong v1.12.0/go.mod h1:p2vqieVMeTAnaC83txKtXe8FLke2X07aruPWXyMPQrU=
 github.com/alecthomas/repr v0.4.0 h1:GhI2A8MACjfegCPVq9f1FLvIBS+DrQ2KQBFZP1iFzXc=
 github.com/alecthomas/repr v0.4.0/go.mod h1:Fr0507jx4eOXV7AlPV6AVZLYrLIuIeSOWtW57eE/O/4=
+github.com/anatol/smart.go v0.0.0-20241126061019-f03d79b340d2 h1:ha5+W2OHFJOEY4uTne98HGD9vQltSYtdyzNCbyhp7rY=
+github.com/anatol/smart.go v0.0.0-20241126061019-f03d79b340d2/go.mod h1:NoOw2eVExhZPtVxpYJzEvdRc5OSbCQZJT2vSe3dflPg=
 github.com/anmitsu/go-shlex v0.0.0-20200514113438-38f4b401e2be h1:9AeTilPcZAjCFIImctFaOjnTIavg87rW78vTPkQqLI8=
 github.com/anmitsu/go-shlex v0.0.0-20200514113438-38f4b401e2be/go.mod h1:ySMOLuWl6zY27l47sB3qLNK6tF2fkHG55UZxx8oIVo4=
 github.com/antihax/optional v1.0.0/go.mod h1:uupD/76wgC+ih3iEmQUL+0Ugr19nfwCT1kdvxnR2qWY=
@@ -1083,6 +1085,10 @@ honnef.co/go/tools v0.0.1-2020.1.3/go.mod h1:X/FiERA/W4tHapMX5mGpAtMSVEeEUOyHaw9
 honnef.co/go/tools v0.0.1-2020.1.4/go.mod h1:X/FiERA/W4tHapMX5mGpAtMSVEeEUOyHaw9vFzvIQ3k=
 howett.net/plist v1.0.0 h1:7CrbWYbPPO/PyNy38b2EB/+gYbjCe2DXBxgtOOZbSQM=
 howett.net/plist v1.0.0/go.mod h1:lqaXoTrLY4hg8tnEzNru53gicrbv7rrk+2xJA/7hw9g=
+kernel.org/pub/linux/libs/security/libcap/cap v1.2.76 h1:mrdLPj8ujM6eIKGtd1PkkuCIodpFFDM42Cfm0YODkIM=
+kernel.org/pub/linux/libs/security/libcap/cap v1.2.76/go.mod h1:7V2BQeHnVAQwhCnCPJ977giCeGDiywVewWF+8vkpPlc=
+kernel.org/pub/linux/libs/security/libcap/psx v1.2.76 h1:3DyzQ30OHt3wiOZVL1se2g1PAPJIU7+tMUyvfMUj1dY=
+kernel.org/pub/linux/libs/security/libcap/psx v1.2.76/go.mod h1:+l6Ee2F59XiJ2I6WR5ObpC1utCQJZ/VLsEbQCD8RG24=
 rsc.io/binaryregexp v0.2.0/go.mod h1:qTv7/COck+e2FymRvadv62gMdZztPaShugOCi3I+8D8=
 rsc.io/quote/v3 v3.1.0/go.mod h1:yEA65RcK8LyAZtP9Kv3t0HmxON59tX3rD+tICJqUlj0=
 rsc.io/sampler v1.3.0/go.mod h1:T1hPZKmBbMNahiBKFy5HrXp6adAjACjK9JXDnKaTXpA=

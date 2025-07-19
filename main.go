@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"syscall"
 
-	"github.com/adrg/xdg"
 	"github.com/alecthomas/kong"
 
 	"github.com/joshuar/go-hass-agent/cmd"
@@ -55,7 +54,12 @@ func main() {
 	kong.Name(preferences.AppName)
 	kong.Description(preferences.AppDescription)
 	// Parse the command-line.
-	ctx := kong.Parse(&CLI, kong.Bind(), kong.Vars{"defaultPath": filepath.Join(xdg.ConfigHome, preferences.AppID)})
+	configDir, err := os.UserConfigDir()
+	if err != nil {
+		slog.Error("Could not determine config directory.")
+		os.Exit(-1)
+	}
+	ctx := kong.Parse(&CLI, kong.Bind(), kong.Vars{"defaultPath": filepath.Join(configDir, preferences.AppID)})
 	// Set up the logger.
 	logger := logging.New(logging.Options{LogLevel: CLI.LogLevel, NoLogFile: CLI.NoLogFile, Path: CLI.Path})
 	// Enable profiling if requested.

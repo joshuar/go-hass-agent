@@ -28,6 +28,7 @@ var linuxWorkers = []func(ctx context.Context) (workers.EntityWorker, error){
 	battery.NewBatteryWorker,
 	disk.NewIOWorker,
 	disk.NewUsageWorker,
+	disk.NewSmartWorker,
 	cpu.NewUsageWorker,
 	cpu.NewLoadAvgWorker,
 	cpu.NewFreqWorker,
