@@ -17,7 +17,7 @@
 !*.md
 !*.json
 !cosign.*
-!assets/
+!assets/*
 !build/
 !**/testdata/*
 !.prettierrc
