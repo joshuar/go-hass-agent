@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/anatol/smart.go"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/jaypipes/ghw"
 	"github.com/reugn/go-quartz/quartz"
 	slogctx "github.com/veqryn/slog-context"
@@ -44,11 +45,9 @@ var ignoredSmartDiskPatterns = []string{"sr", "dm", "loop", "zram"}
 //
 // Permissions required for accessing SMART data:
 //
-// - user running Go Hass Agent is member of 'disk' group
-// - Go Hass Agent binary has cap_sys_rawio,cap_sys_admin,cap_mknod=ep capabilities set
+// - cap_sys_rawio,cap_sys_admin,cap_mknod,cap_dac_override=+ep capabilities set
 var smartWorkerRequiredChecks = &linux.Checks{
-	Groups:       []int{6},
-	Capabilities: []cap.Value{cap.SYS_RAWIO, cap.SYS_ADMIN, cap.MKNOD},
+	Capabilities: []cap.Value{cap.SYS_RAWIO, cap.SYS_ADMIN, cap.MKNOD, cap.DAC_OVERRIDE},
 }
 
 const (
@@ -162,6 +161,7 @@ func (w *smartWorker) Execute(ctx context.Context) error {
 			}
 			smartData = nvmeSmart
 		}
+		spew.Dump(newSmartSensor(ctx, smartData))
 		w.OutCh <- newSmartSensor(ctx, smartData)
 	}
 	return nil
