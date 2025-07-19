@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/anatol/smart.go"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/jaypipes/ghw"
 	"github.com/reugn/go-quartz/quartz"
 	slogctx "github.com/veqryn/slog-context"
@@ -45,7 +44,7 @@ var ignoredSmartDiskPatterns = []string{"sr", "dm", "loop", "zram"}
 //
 // Permissions required for accessing SMART data:
 //
-// - cap_sys_rawio,cap_sys_admin,cap_mknod,cap_dac_override=+ep capabilities set
+// - cap_sys_rawio,cap_sys_admin,cap_mknod,cap_dac_override=+ep capabilities set.
 var smartWorkerRequiredChecks = &linux.Checks{
 	Capabilities: []cap.Value{cap.SYS_RAWIO, cap.SYS_ADMIN, cap.MKNOD, cap.DAC_OVERRIDE},
 }
@@ -144,8 +143,19 @@ func (w *smartWorker) Execute(ctx context.Context) error {
 			}
 			smartData = ataSmart
 		case *smart.ScsiDevice:
-			slogctx.FromCtx(ctx).Debug("SCSI disks are currently unsupported.")
-			_, _ = smartDevice.Capacity()
+			data, err := smartDevice.ReadGenericAttributes()
+			if err != nil {
+				slogctx.FromCtx(ctx).Debug("Could not read SMART data for device.",
+					slog.String("device", details.Disk),
+					slog.Any("error", err),
+				)
+				continue
+			}
+			scsiSmart := &scsiSmartDetails{
+				diskDetails:       details,
+				GenericAttributes: data,
+			}
+			smartData = scsiSmart
 		case *smart.NVMeDevice:
 			data, err := smartDevice.ReadSMART()
 			if err != nil {
@@ -161,7 +171,6 @@ func (w *smartWorker) Execute(ctx context.Context) error {
 			}
 			smartData = nvmeSmart
 		}
-		spew.Dump(newSmartSensor(ctx, smartData))
 		w.OutCh <- newSmartSensor(ctx, smartData)
 	}
 	return nil
@@ -231,7 +240,7 @@ func (nvme *nvmeSmartDetails) Problem() bool {
 
 func (nvme *nvmeSmartDetails) Attributes() map[string]any {
 	nvmeAttrs := map[string]any{
-		"Temperature":   fmt.Sprintf("%d K", nvme.Temperature),
+		"Temperature":   fmt.Sprintf("%.2f °C", kelvinToCelsius(nvme.Temperature)),
 		"Percent Used":  fmt.Sprintf("%d %%", nvme.PercentUsed),
 		"Percent Spare": fmt.Sprintf("%d %%", nvme.AvailSpare),
 	}
@@ -401,7 +410,7 @@ func (ata *ataSmartDetails) Attributes() map[string]any {
 	if attr, ok := ata.Attrs[194]; ok {
 		temp, _, _, _, err := attr.ParseAsTemperature()
 		if err == nil {
-			ataAttrs[attr.Name] = fmt.Sprintf("%d K", temp)
+			ataAttrs[attr.Name] = fmt.Sprintf("%.2f °C", kelvinToCelsius(temp))
 		}
 	}
 	// Reallocation Event Count greater than zero.
@@ -426,6 +435,29 @@ func (ata *ataSmartDetails) Attributes() map[string]any {
 	return attrs
 }
 
+type scsiSmartDetails struct {
+	*diskDetails
+	*smart.GenericAttributes
+}
+
+func (scsi *scsiSmartDetails) Problem() bool {
+	// TODO: work out a health heuristic for SCSI devices. Currently doesn't seem to be any attributes/status exposed by
+	// library.
+	return false
+}
+
+func (scsi *scsiSmartDetails) Attributes() map[string]any {
+	scsiattrs := make(map[string]any)
+	scsiattrs["Temperature"] = fmt.Sprintf("%d °C", scsi.Temperature)
+	scsiattrs["Power On Hours"] = scsi.PowerOnHours
+	scsiattrs["Power Cycles"] = scsi.PowerCycles
+	scsiattrs["Read Blocks"] = scsi.Read
+	scsiattrs["Written Blocks"] = scsi.Written
+	attrs := maps.Clone(scsi.details())
+	maps.Copy(attrs, scsiattrs)
+	return attrs
+}
+
 func newSmartSensor(ctx context.Context, data smartData) models.Entity {
 	return sensor.NewSensor(ctx,
 		sensor.WithName(data.ID()+" SMART Status"),
@@ -437,4 +469,8 @@ func newSmartSensor(ctx context.Context, data smartData) models.Entity {
 		sensor.WithState(data.Problem()),
 		sensor.WithAttributes(data.Attributes()),
 	)
+}
+
+func kelvinToCelsius[T ~int | ~uint16](kelvin T) float32 {
+	return float32(kelvin) - 273.15
 }
