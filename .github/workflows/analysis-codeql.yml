@@ -50,6 +50,7 @@ jobs:
           raw.githubusercontent.com:443
           storage.googleapis.com:443
           uploads.github.com:443
+          release-assets.githubusercontent.com:443
     - name: Checkout repository
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       with:
