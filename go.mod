@@ -177,7 +177,7 @@ require (
 	golang.org/x/image v0.18.0 // indirect
 	golang.org/x/mobile v0.0.0-20231127183840-76ac6878050a // indirect
 	golang.org/x/net v0.41.0 // indirect
-	golang.org/x/sys v0.33.0
+	golang.org/x/sys v0.34.0
 	kernel.org/pub/linux/libs/security/libcap/cap v1.2.76
 )
 
