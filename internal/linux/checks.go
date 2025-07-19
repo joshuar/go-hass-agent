@@ -6,8 +6,10 @@ package linux
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"slices"
+	"strings"
 
 	"kernel.org/pub/linux/libs/security/libcap/cap"
 )
@@ -59,12 +61,17 @@ func (c *Checks) hasGroups() (bool, error) {
 // hasCapabilities returns a boolean indicating whether Go Hass Agent has the required capabilties set.
 func (c *Checks) hasCapabilities() (bool, error) {
 	current := cap.GetProc()
+	iab := cap.IABGetProc().String()
+	slog.Debug("Checking capabilities.",
+		slog.String("set", current.String()),
+		slog.String("bound", iab),
+	)
 	for required := range slices.Values(c.Capabilities) {
 		found, err := current.GetFlag(cap.Permitted, required)
 		if err != nil {
 			return false, fmt.Errorf("could not parse required capability %s: %w", c.Capabilities, err)
 		}
-		if !found {
+		if !found && !strings.Contains(iab, required.String()) {
 			return false, fmt.Errorf("%w: required capability missing: %s", ErrChecksFailed, required.String())
 		}
 	}
