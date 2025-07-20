@@ -171,7 +171,9 @@ func (w *smartWorker) Execute(ctx context.Context) error {
 			}
 			smartData = nvmeSmart
 		}
-		w.OutCh <- newSmartSensor(ctx, smartData)
+		if smartData != nil {
+			w.OutCh <- newSmartSensor(ctx, smartData)
+		}
 	}
 	return nil
 }
@@ -255,9 +257,11 @@ type ataSmartDetails struct {
 	*smart.AtaSmartPage
 }
 
-// Problem returns a boolean indicating whether the SMART data indicates a problem for the ATA disk. The heuristic for a
-// problem is any of the values marked as critical at the following link with values greater than zero. For code
-// spelunkers, if you have suggestions, please open a GitHub issue with your comments!
+// Problem returns a boolean indicating whether the SMART data indicates a problem for the ATA disk.
+//
+// TODO: The heuristic for a problem is any of the values marked as critical at the following link with values greater
+// than zero. This may not be ideal. For code spelunkers, if you have suggestions, please open a GitHub issue with your
+// comments!
 //
 // https://en.wikipedia.org/wiki/Self-Monitoring,_Analysis_and_Reporting_Technology#In_ATA
 //
@@ -326,8 +330,8 @@ func (ata *ataSmartDetails) Problem() bool {
 	return false
 }
 
-// Attributes are the SMART attributes for ATA disks. Trying to expose most common/interesting attributes. For code spelunkers, if you have
-// suggestions, please open a GitHub issue with your comments!
+// Attributes are the SMART attributes for ATA disks. Trying to expose most common/interesting attributes. For code
+// spelunkers, if you have suggestions, please open a GitHub issue with your comments!
 //
 //nolint:gocyclo,funlen // ¯\_(ツ)_/¯
 func (ata *ataSmartDetails) Attributes() map[string]any {
@@ -410,7 +414,7 @@ func (ata *ataSmartDetails) Attributes() map[string]any {
 	if attr, ok := ata.Attrs[194]; ok {
 		temp, _, _, _, err := attr.ParseAsTemperature()
 		if err == nil {
-			ataAttrs[attr.Name] = fmt.Sprintf("%.2f °C", kelvinToCelsius(temp))
+			ataAttrs[attr.Name] = fmt.Sprintf("%d °C", temp)
 		}
 	}
 	// Reallocation Event Count greater than zero.
