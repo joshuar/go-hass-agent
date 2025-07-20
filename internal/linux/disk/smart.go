@@ -97,10 +97,11 @@ func NewSmartWorker(ctx context.Context) (workers.EntityWorker, error) {
 	return smartWorker, nil
 }
 
+//nolint:funlen
 func (w *smartWorker) Execute(ctx context.Context) error {
 	block, err := ghw.Block()
 	if err != nil {
-		return fmt.Errorf("could not retrieve disks: %w", err)
+		return fmt.Errorf("%w: %w", ErrSmartWorker, err)
 	}
 
 	for _, disk := range block.Disks {
@@ -131,7 +132,7 @@ func (w *smartWorker) Execute(ctx context.Context) error {
 		case *smart.SataDevice:
 			data, err := smartDevice.ReadSMARTData()
 			if err != nil {
-				slogctx.FromCtx(ctx).Debug("Could not read SMART data for device.",
+				slogctx.FromCtx(ctx).Debug("Failed to read SATA disk SMART data.",
 					slog.String("device", details.Disk),
 					slog.Any("error", err),
 				)
@@ -143,23 +144,44 @@ func (w *smartWorker) Execute(ctx context.Context) error {
 			}
 			smartData = ataSmart
 		case *smart.ScsiDevice:
-			data, err := smartDevice.ReadGenericAttributes()
+			// Inspect the SCSI disk.
+			inq, err := smartDevice.Inquiry()
 			if err != nil {
-				slogctx.FromCtx(ctx).Debug("Could not read SMART data for device.",
+				slogctx.FromCtx(ctx).Debug("Failed to read SCSI disk SMART data.",
 					slog.String("device", details.Disk),
 					slog.Any("error", err),
 				)
 				continue
 			}
-			scsiSmart := &scsiSmartDetails{
-				diskDetails:       details,
-				GenericAttributes: data,
+			// If it indicates ATA, treat it as a SATA disk.
+			var ataSmart *smart.SataDevice
+			if string(inq.VendorIdent[:]) == "ATA     " {
+				ataSmart, err = smart.OpenSata("/dev/" + disk.Name)
+				if err != nil {
+					slogctx.FromCtx(ctx).Debug("Failed to read SCSI disk as SATA device.",
+						slog.String("device", details.Disk),
+						slog.Any("error", err),
+					)
+					continue
+				}
+			}
+			data, err := ataSmart.ReadSMARTData()
+			if err != nil {
+				slogctx.FromCtx(ctx).Debug("Failed to read SATA disk SMART data.",
+					slog.String("device", details.Disk),
+					slog.Any("error", err),
+				)
+				continue
+			}
+			scsiSmart := &ataSmartDetails{
+				diskDetails:  details,
+				AtaSmartPage: data,
 			}
 			smartData = scsiSmart
 		case *smart.NVMeDevice:
 			data, err := smartDevice.ReadSMART()
 			if err != nil {
-				slogctx.FromCtx(ctx).Debug("Could not read SMART data for device.",
+				slogctx.FromCtx(ctx).Debug("Failed to read NVMe disk SMART data.",
 					slog.String("device", details.Disk),
 					slog.Any("error", err),
 				)
@@ -182,7 +204,7 @@ func (w *smartWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
 	w.OutCh = make(chan models.Entity)
 	if err := workers.SchedulePollingWorker(ctx, w, w.OutCh); err != nil {
 		close(w.OutCh)
-		return w.OutCh, fmt.Errorf("could not start disk IO worker: %w", err)
+		return w.OutCh, fmt.Errorf("%w: %w", ErrSmartWorker, err)
 	}
 	return w.OutCh, nil
 }
