@@ -153,31 +153,30 @@ func (w *smartWorker) Execute(ctx context.Context) error {
 				)
 				continue
 			}
-			// If it indicates ATA, treat it as a SATA disk.
-			var ataSmart *smart.SataDevice
 			if string(inq.VendorIdent[:]) == "ATA     " {
-				ataSmart, err = smart.OpenSata("/dev/" + disk.Name)
+				// If it indicates ATA, treat it as a SATA disk.
+				ataSmart, err := smart.OpenSata("/dev/" + disk.Name)
 				if err != nil {
 					slogctx.FromCtx(ctx).Debug("Failed to read SCSI disk as SATA device.",
 						slog.String("device", details.Disk),
 						slog.Any("error", err),
 					)
-					continue
+				} else {
+					data, err := ataSmart.ReadSMARTData()
+					if err != nil {
+						slogctx.FromCtx(ctx).Debug("Failed to read SATA disk SMART data.",
+							slog.String("device", details.Disk),
+							slog.Any("error", err),
+						)
+					} else {
+						scsiSmart := &ataSmartDetails{
+							diskDetails:  details,
+							AtaSmartPage: data,
+						}
+						smartData = scsiSmart
+					}
 				}
 			}
-			data, err := ataSmart.ReadSMARTData()
-			if err != nil {
-				slogctx.FromCtx(ctx).Debug("Failed to read SATA disk SMART data.",
-					slog.String("device", details.Disk),
-					slog.Any("error", err),
-				)
-				continue
-			}
-			scsiSmart := &ataSmartDetails{
-				diskDetails:  details,
-				AtaSmartPage: data,
-			}
-			smartData = scsiSmart
 		case *smart.NVMeDevice:
 			data, err := smartDevice.ReadSMART()
 			if err != nil {
