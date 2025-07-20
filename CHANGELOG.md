@@ -1,5 +1,17 @@
 # Changelog
 
+## [13.3.0](https://github.com/joshuar/go-hass-agent/compare/v13.2.8...v13.3.0) (2025-07-20)
+
+
+### Features
+
+* **linux/disk:** :sparkles: basic SMART disk monitoring sensors ([17e2b8f](https://github.com/joshuar/go-hass-agent/commit/17e2b8fca820cca7133a58dfdc71a4cb69073d5b))
+
+
+### Reverts
+
+* **linux:** :rewind: simplify capabilities checks ([c420e63](https://github.com/joshuar/go-hass-agent/commit/c420e63955a75e4567ec27776d48651f5b98b8b0))
+
 ## [13.2.8](https://github.com/joshuar/go-hass-agent/compare/v13.2.7...v13.2.8) (2025-07-05)
 
 
