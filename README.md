@@ -117,36 +117,30 @@
 
 ## 🌟 About the Project
 
-Go Hass Agent is an application to expose sensors, controls, and events from a
-device to Home Assistant. You can think of it as something similar to the [Home
-Assistant companion app](https://companion.home-assistant.io/) for mobile
-devices, but for your desktop, server, Raspberry Pi, Arduino, toaster, whatever.
-If it can run Go and Linux, it can run Go Hass Agent!
+Go Hass Agent is an application to expose sensors, controls, and events from a device to Home Assistant. You can think
+of it as something similar to the [Home Assistant companion app](https://companion.home-assistant.io/) for mobile
+devices, but for your desktop, server, Raspberry Pi, Arduino, toaster, whatever. If it can run Go and Linux, it can run
+Go Hass Agent!
 
-Out of the box, Go Hass Agent will report lots of details about the system it is
-running on. You can extend it with additional sensors and controls by hooking it
-up to MQTT. You can extend it **even further** with your own custom sensors and
-controls with scripts/programs.
+Out of the box, Go Hass Agent will report lots of details about the system it is running on. You can extend it with
+additional sensors and controls by hooking it up to MQTT. You can extend it **even further** with your own custom
+sensors and controls with scripts/programs.
 
-You can then use these sensors, controls, or events in any automations and
-dashboards, just like the companion app or any other “thing” you've added into
-Home Assistant.
+You can then use these sensors, controls, or events in any automations and dashboards, just like the companion app or
+any other “thing” you've added into Home Assistant.
 
 ## 🎯 Features
 
-- **Sensors:** Expose a number of sensor entities to Home Assistant, for
-  displaying in dashboards, using in automations or any other aspects your Home
-  Assistant platform.
-- **Custom Sensors via Scripts:** All platforms can also utilize scripts/executables to
-create custom sensors. See [Script Sensors](#-script-sensors).
-- **Controls and additional sensors via MQTT:** Where Home Assistant is
-connected to MQTT, Go Hass Agent can add some additional sensors/controls for
-various system features. A selection of device controls are provided by default,
-and you can configure additional controls to execute D-Bus commands or
-scripts/executables. See [Control via MQTT](#-mqtt-sensors-and-controls).
-- **Events:** Go Hass Agent will send a few events when certain things happen on
-  the device running the agent (for example, user logins/logouts). You can
-  listen for these events and react on them in Home Assistant automations.
+- **Sensors:** Expose a number of sensor entities to Home Assistant, for displaying in dashboards, using in automations
+  or any other aspects your Home Assistant platform.
+- **Custom Sensors via Scripts:** All platforms can also utilize scripts/executables to create custom sensors. See
+[Script Sensors](#-script-sensors).
+- **Controls and additional sensors via MQTT:** Where Home Assistant is connected to MQTT, Go Hass Agent can add some
+additional sensors/controls for various system features. A selection of device controls are provided by default, and you
+can configure additional controls to execute D-Bus commands or scripts/executables. See [Control via
+MQTT](#-mqtt-sensors-and-controls).
+- **Events:** Go Hass Agent will send a few events when certain things happen on the device running the agent (for
+  example, user logins/logouts). You can listen for these events and react on them in Home Assistant automations.
 
 [⬆️ Back to Top](#-table-of-contents)
 
@@ -156,22 +150,19 @@ As examples of some of the things that can be done with the data published by
 this app:
 
 - Change your lighting depending on:
-  - What active/running apps are on your laptop/desktop. For example, you could
-  set your lights dim or activate a scene when you are gaming.
+  - What active/running apps are on your laptop/desktop. For example, you could set your lights dim or activate a scene
+  when you are gaming.
   - Whether your screen is locked or the device is shutdown/suspended.
 - Set up automations to run when you log in or out of your machine.
-- With your laptop plugged into a smart plug that is also controlled by Home
-  Assistant, turn the smart plug on/off based on the battery charge. This can
-  force a full charge/discharge cycle of the battery, extending its life over
-  leaving it constantly charged.
-- Like on mobile devices, create automations based on the location of your
-  laptop running this app.
+- With your laptop plugged into a smart plug that is also controlled by Home Assistant, turn the smart plug on/off based
+  on the battery charge. This can force a full charge/discharge cycle of the battery, extending its life over leaving it
+  constantly charged.
+- Like on mobile devices, create automations based on the location of your laptop running this app.
 - Monitor network the data transfer amount from the device, useful where network
   data might be capped.
-- Monitor CPU load, disk usage and any temperature sensors emitted from the
-  device.
-- Receive notifications from Home Assistant on your desktop/laptop. Potentially
-  based on or utilizing any of the data above.
+- Monitor CPU load, disk usage and any temperature sensors emitted from the device.
+- Receive notifications from Home Assistant on your desktop/laptop. Potentially based on or utilizing any of the data
+  above.
 
 [⬆️ Back to Top](#-table-of-contents)
 
@@ -179,18 +170,16 @@ this app:
 
 > [!NOTE]
 >
-> The following list shows all **potential** sensors the agent can
-> report. In some cases, the **actual** sensors reported may be less due to
-> lack of support in the system configuration or missing hardware.
+> The following list shows all **potential** sensors the agent can report. In some cases, the **actual** sensors
+> reported may be less due to lack of support in the system configuration or missing hardware.
 
 ### 🐧 Linux
 
 #### 📈 Sensors
 
 - App Details:
-  - **Active App** (currently active (focused) application) and **Running Apps**
-  (count of all running applications). Updated when active app or number of apps
-  changes.
+  - **Active App** (currently active (focused) application) and **Running Apps** (count of all running applications).
+  Updated when active app or number of apps changes.
   - Via D-Bus (requires [XDG Desktop Portal
   Support](https://flatpak.github.io/xdg-desktop-portal/docs/) support).
   - [*Preferences*](#️-preferences): `[sensors.desktop.app]`.
@@ -205,17 +194,16 @@ this app:
 - Media:
   - **MPRIS Player State** Show the current state of any MPRIS compatible player.
     - Requires a player with MPRIS support.
-  - **Webcam/Microphone in use** Show when either a webcam or microphone is one
-    and recording/streaming video/audio.
+  - **Webcam/Microphone in use** Show when either a webcam or microphone is one and recording/streaming video/audio.
     - Requires Pipewire.
   - [*Preferences*](#️-preferences): All under `[sensors.media]`.
 - Connected Battery Details:
   - **Battery Type** (the type of battery, e.g., UPS, line power). Updated on battery add/remove.
   - **Battery Temp** (battery temperature). Updated when the temperature changes.
-  - **Battery Power** (the battery current power draw, in W). Attributes: Voltage
-    (V), Energy consumption (kWh). Updated when power draw changes.
-  - **Battery Level/Percentage** (either a textual representation of the level or
-    a percentage, depending on battery support). Updated when level changes.
+  - **Battery Power** (the battery current power draw, in W). Attributes: Voltage (V), Energy consumption (kWh). Updated
+    when power draw changes.
+  - **Battery Level/Percentage** (either a textual representation of the level or a percentage, depending on battery
+    support). Updated when level changes.
   - **Battery State** (the current battery state, e.g., charging/discharging).
     Updated When state changes.
   - All battery sensors require D-Bus and
@@ -238,6 +226,9 @@ this app:
     - Both sourced via SysFS. Updated ~every 5 seconds.
   - **IO Operations in Progress** per disk.
     - Sourced via SysFS. Updated ~every 5 seconds.
+  - **S.M.A.R.T status and attributes** per disk.
+    - Requires the following capabilities on the Go Hass Agent binary (already applied for containers and rpm/deb/arch
+      packages): `cap_sys_rawio,cap_sys_admin,cap_mknod,cap_dac_override=+ep`.
   - [*Preferences*](#️-preferences): `[sensors.disk.*rates*]` (`usage` for usage
     or `rates` for all others).
 - Networking:
@@ -453,38 +444,33 @@ cosign verify-blob --key cosign.pub --signature go-hass-agent-*.rpm.sig go-hass-
 
 #### 🚢 Container
 
-Container images are available on
-[ghcr.io](https://github.com/joshuar/go-hass-agent/pkgs/container/go-hass-agent).
-Note that it is recommended to use an image tagged with the latest release
-version over the latest container image, which might be unstable.
+Container images are available on [ghcr.io](https://github.com/joshuar/go-hass-agent/pkgs/container/go-hass-agent). Note
+that it is recommended to use an image tagged with the latest release version over the latest container image, which
+might be unstable.
 
 [⬆️ Back to Top](#-table-of-contents)
 
 #### 🗒️ Versioning
 
-This project follows [semantic versioning](https://semver.org/). Given a version
-number `MAJOR.MINOR.PATCH`, the gist of it is:
+This project follows [semantic versioning](https://semver.org/). Given a version number `MAJOR.MINOR.PATCH`, the gist of
+it is:
 
-- A `MAJOR` number change means there [breaking
-  changes](docs/BREAKING_CHANGES.md) from the previous release that may require
-  manual intervention before/after upgrading.
-- A `MINOR` number change means significant changes and new features have been
-  added, but not breaking changes.
+- A `MAJOR` number change means there [breaking changes](docs/BREAKING_CHANGES.md) from the previous release that may
+  require manual intervention before/after upgrading.
+- A `MINOR` number change means significant changes and new features have been added, but not breaking changes.
 - A `PATCH` number change indicate minor changes and bug fixes.
 
 [⬆️ Back to Top](#-table-of-contents)
 
 ## 👐🏻 Usage
 
-Go Hass Agent runs as a tray icon by default. It is operating system,
-distribution and desktop-environment agnostic and should manifest itself in any
-tray of any desktop environment.
+Go Hass Agent runs as a tray icon by default. It is operating system, distribution, and desktop-environment agnostic and
+should manifest itself in any tray of any desktop environment.
 
 ### 🚩 First-run
 
-On first-run, Go Hass Agent will display a window where you will need to enter
-some details, so it can register itself with a Home Assistant instance to be
-able to report sensors and receive notifications.
+On first-run, Go Hass Agent will display a window where you will need to enter some details, so it can register itself
+with a Home Assistant instance to be able to report sensors and receive notifications.
 
 ![Registration Window](assets/screenshots/registration.png)
 
@@ -493,36 +479,32 @@ able to report sensors and receive notifications.
 - A long-lived access token. You can generate one on your [account profile
   page](https://www.home-assistant.io/docs/authentication/#your-account-profile).
 - The web address (URL) on which a Home Assistant instance can be found.
-  - Go Hass Agent will try to auto-detect this for you, and you can select it in
-    the _Auto-discovered servers_ list. Otherwise, you will need to select _Use
-    Custom Server?_, and enter the details manually in _Manual Server Entry_.
+  - Go Hass Agent will try to auto-detect this for you, and you can select it in the _Auto-discovered servers_ list.
+    Otherwise, you will need to select _Use Custom Server?_, and enter the details manually in _Manual Server Entry_.
 
-When you have entered all the details, click **Submit** and the agent should
-start running and reporting sensors to the Home Assistant instance.
+When you have entered all the details, click **Submit** and the agent should start running and reporting sensors to the
+Home Assistant instance.
 
 [⬆️ Back to Top](#-table-of-contents)
 
 ### 👻 Running “Headless”
 
-Go Hass Agent will automatically detect if there is no GUI available and run in
-a “headless” mode with no UI. Registration will need to be completed manually as
-a first step in such environments.
+Go Hass Agent will automatically detect if there is no GUI available and run in a “headless” mode with no UI.
+Registration will need to be completed manually as a first step in such environments.
 
-You can register Go Hass Agent on the command-line with by
-running:
+You can register Go Hass Agent on the command-line with by running:
 
 ```shell
 go-hass-agent --terminal register --token _TOKEN_ --server _URL_
 ```
 
-You will need to provide a long-lived token `_TOKEN_` and the URL of your Home
-Assistant instance, `_URL_`.
+You will need to provide a long-lived token `_TOKEN_` and the URL of your Home Assistant instance, `_URL_`.
 
-Once registered, running Go Hass Agent again with no options should start
-tracking and sending sensor data to Home Assistant.
+Once registered, running Go Hass Agent again with no options should start tracking and sending sensor data to Home
+Assistant.
 
-If desired, headless mode can be forced, even in graphical environments, by
-specifying the `--terminal` command-line option.
+If desired, headless mode can be forced, even in graphical environments, by specifying the `--terminal` command-line
+option.
 
 If you want to run Go Hass Agent as a service on a headless machine, see the
 [FAQ](#linux-i-want-to-run-the-agent-on-a-server-as-a-service-without-a-gui-can-i-do-this).
@@ -531,11 +513,9 @@ If you want to run Go Hass Agent as a service on a headless machine, see the
 
 ### 🐳 Running in a container
 
-There is rough support for running Go Hass Agent within a container. Pre-built
-images [are
-available](https://github.com/joshuar/go-hass-agent/pkgs/container/go-hass-agent)
-for armv6/v7, arm64 and amd64 architectures. The image is based on the latest
-stable Alpine Linux release.
+There is rough support for running Go Hass Agent within a container. Pre-built images [are
+available](https://github.com/joshuar/go-hass-agent/pkgs/container/go-hass-agent) for *armv6/v7*, *arm64* and *amd64*
+architectures. The image is based on the latest stable Alpine Linux release.
 
 To register the agent running in a container, run the following:
 
@@ -549,12 +529,10 @@ To register the agent running in a container, run the following:
 
 - Change `_VERSION_` to a release version. **Do not use latest, which is unstable and likely to break.**
 - Change the value of `--server` to your Home Assistant server.
-- Change the value of `--token` to a long-lived token retrieved from Home
-  Assistant.
+- Change the value of `--token` to a long-lived token retrieved from Home Assistant.
   - ***Be sure to quote the token to avoid shell escape errors.***
-- We are running the container in a “one-shot” mode (specifying `--rm`) as we
-  just want to register and generate the configuration file. We will use a
-  different command below to actually run Go Hass Agent.
+- We are running the container in a “one-shot” mode (specifying `--rm`) as we just want to register and generate the
+  configuration file. We will use a different command below to actually run Go Hass Agent.
 
 Once registered, run the agent with:
 
@@ -566,16 +544,16 @@ podman run --hostname _HOSTNAME_ --name go-hass-agent \
   --env PROCFS_ROOT=/host/proc --env SYSFS_ROOT=/host/sys \
   --volume /run/dbus:/run/dbus:ro \
   --volume /run/user/1000/bus:/run/user/1000/bus:ro \
-  --device /dev/video0:/dev/video0
+  --device /dev/video0:/dev/video0 \
+  --cap-add SYS_ADMIN --cap-add SYS_RAWIO --cap-add MKNOD \
   ghcr.io/joshuar/go-hass-agent:VERSION # add any Go Hass Agent options here.
 ```
 
-Change the value passed to `--name` to a unique name for your running container
-and `--hostname` for the hostname that will be presented to Home Assistant
-during registration.
+Change the value passed to `--name` to a unique name for your running container and `--hostname` for the hostname that
+will be presented to Home Assistant during registration.
 
-All the other volume mounts are optional, but functionality and the sensors
-reported will be severely limited without them:
+All the other volume mounts are optional, but functionality and the sensors reported will be severely limited without
+them:
 
 - `--volume /proc:/host/proc:ro --volume /sys:/host/sys:ro`
 - `--env PROCFS_ROOT=/host/proc --env SYSFS_ROOT=/host/sys`
@@ -584,6 +562,9 @@ reported will be severely limited without them:
 - `--volume /run/user/1000/bus:/run/user/1000/bus:ro`
   - Enables sensors that are gathered via D-Bus. Adjust `1000` to the uid of
     your user.
+- `--cap-add SYS_ADMIN --cap-add SYS_RAWIO --cap-add MKNOD`
+  - Assigns capabilities to allow fetching some sensor data (see [sensor list](#-sensors) for which sensors require what
+    capabilities).
 - `--device /dev/video0:/dev/video0`
   - Allows webcam control (when configured with MQTT).
 
@@ -591,10 +572,9 @@ reported will be severely limited without them:
 
 ### 🔧 Alternative System Mount Points
 
-Go Hass Agent supports alternative system mount points, which can be especially
-useful when [running in a container](#-running-in-a-container). You can set the
-following environment variables to specify the location Go Hass Agent will use
-for various mounts:
+Go Hass Agent supports alternative system mount points, which can be especially useful when [running in a
+container](#-running-in-a-container). You can set the following environment variables to specify the location Go Hass
+Agent will use for various mounts:
 
 - `PROCFS_ROOT`: alternative mount point for `/proc`.
 - `DEVFS_ROOT`: alternative mount point for `/dev`.
@@ -628,7 +608,7 @@ parts of Home Assistant.
 
 ### 🗒️ Preferences
 
-The preferences file (`preferences.toml`) is located in
+The preference file (`preferences.toml`) is located in
 `CONFIG_HOME/go-hass-agent/` where `CONFIG_HOME` will OS-dependent:
 
 - Linux: `~/.config`.
@@ -883,34 +863,28 @@ To configure the agent to connect to MQTT:
 
 3. Restart Go Hass Agent.
 
-After the above steps, Go Hass Agent will appear as a device under the MQTT
-integration in your Home Assistant.
+After the above steps, Go Hass Agent will appear as a device under the MQTT integration in your Home Assistant.
 
 [![Open your Home Assistant instance and show the MQTT
 integration.](https://my.home-assistant.io/badges/integration.svg)](https://my.home-assistant.io/redirect/integration/?domain=mqtt)
 
 > [!NOTE]
 >
-> Go Hass Agent will appear in two places in your Home Assistant.
-> Firstly, under the Mobile App integration, which will show all the *sensors*
-> that Go Hass Agent is reporting. Secondly, under the MQTT integration, which
-> will show the *controls and sensors* exposed over MQTT for Go Hass Agent.
-> Unfortunately, due to limitations with the Home Assistant architecture, these
-> cannot be combined in a single place.
+> Go Hass Agent will appear in two places in your Home Assistant. Firstly, under the Mobile App integration, which will
+> show all the *sensors* that Go Hass Agent is reporting. Secondly, under the MQTT integration, which will show the
+> *controls and sensors* exposed over MQTT for Go Hass Agent. Unfortunately, due to limitations with the Home Assistant
+> architecture, these cannot be combined in a single place.
 
 [⬆️ Back to Top](#-table-of-contents)
 
 #### Custom D-Bus Controls
 
-When MQTT is configured, Go Hass Agent will also listen on MQTT and run
-arbitrary D-Bus commands.
+When MQTT is configured, Go Hass Agent will also listen on MQTT and run arbitrary D-Bus commands.
 
-The agent will subscribe to the MQTT topic `gohassagent/HOSTNAME/dbuscommand`
-(where `HOSTNAME` is the short hostname of the device running Go Hass Agent)  on
-the configured MQTT broker and listens for messages with a JSON payload (shown
-below) that contains details of the D-Bus method to call. When a message is
-received, the method will be executed. The easiest way to use this feature is
-with the `mqtt.publish` service in Home Assistant.
+The agent will subscribe to the MQTT topic `gohassagent/HOSTNAME/dbuscommand` (where `HOSTNAME` is the short hostname of
+the device running Go Hass Agent). It listens for messages with a JSON payload (shown below) that contains details of
+the D-Bus method to call. When a message is received, the method will be executed. The easiest way to use this feature
+is with the `mqtt.publish` service in Home Assistant.
 
 As an example, the following will create a notification on the device running Go
 Hass Agent (YAML format used for readability):
@@ -945,9 +919,8 @@ data:
 
 #### Other Custom Commands
 
-You can optionally create a `commands.toml` file under the configuration
-directory (see [preferences](#️-preferences) with custom
-commands to be exposed in Home Assistant.
+You can optionally create a `commands.toml` file under the configuration directory (see [preferences](#️-preferences)
+with custom commands to be exposed in Home Assistant.
 
 Supported control types and expected input/output:
 
@@ -955,37 +928,30 @@ Supported control types and expected input/output:
   - Output is discarded. Return value is used to indicate success/failure.
 - [Switch](https://www.home-assistant.io/integrations/switch.mqtt/).
   - Return value is used to indicate success/failure.
-  - When the switch is toggled in Home Assistant, Go Hass Agent will run the
-    configured command with an “ON” or “OFF” appended to the end of its
-    command-line.
-  - When the configured command is run, it should output the current state as
-    “ON” or “OFF”. Any additional output is ignored and any output that doesn't
-    match these strings will indicate an error to the agent.
+  - When the switch is toggled in Home Assistant, Go Hass Agent will run the configured command with an “ON” or “OFF”
+    appended to the end of its command-line.
+  - When the configured command is run, it should output the current state as “ON” or “OFF”. Any additional output is
+    ignored and any output that doesn't match these strings will indicate an error to the agent.
 - [Number](https://www.home-assistant.io/integrations/number.mqtt/).
-  - `display` can be optionally set in the control configuration to specify how
-    the number control will be displayed in Home Assistant:
-    - Either `auto`, `box` or `slider`. The default if `display` is not set is
-      `auto`, where Home Assistant will decide how the control will be
-      displayed.
-  - `type` can be optionally set in the control configuration to specify whether
-    the number control has `int` or `float` values. The default will be `int` if
-    omitted.
+  - `display` can be optionally set in the control configuration to specify how the number control will be displayed in
+    Home Assistant:
+    - Either `auto`, `box` or `slider`. The default if `display` is not set is `auto`, where Home Assistant will decide
+      how the control will be displayed.
+  - `type` can be optionally set in the control configuration to specify whether the number control has `int` or `float`
+    values. The default will be `int` if omitted.
   - Return value is used to indicate success/failure.
-  - When the number is changed in Home Assistant, Go Hass Agent will run the
-    configured command passing the value appended to the end of its
-    command-line.
-  - When the configured command is run, it should output a number as the current
-    state. Any additional output is ignored.
+  - When the number is changed in Home Assistant, Go Hass Agent will run the configured command passing the value
+    appended to the end of its command-line.
+  - When the configured command is run, it should output a number as the current state. Any additional output is
+    ignored.
 
 > [!NOTE]
 >
-> Commands run as the user running the agent. Commands do not invoke the system
-> shell and does not support expansion/glob patterns or handle other expansions,
-> pipelines, or redirections typically done by shells.
+> Commands run as the user running the agent. Commands do not invoke the system shell and does not support
+> expansion/glob patterns or handle other expansions, pipelines, or redirections typically done by shells.
 >
-> States are not kept in sync. This is most important for all controls besides
-> buttons. For example, if you configure a switch, any changes to the state you
-> make outside of Home Assistant will not be reflected in Home Assistant
+> States are not kept in sync. This is most important for all controls besides buttons. For example, if you configure a
+> switch, any changes to the state you make outside of Home Assistant will not be reflected in Home Assistant
 > automatically.
 
 Each command needs the following definition in the file:
@@ -1054,16 +1020,13 @@ Assistant:
 
 #### Security Implications
 
-There is a significant discrepancy in permissions between the device running Go
-Hass Agent and Home Assistant.
+There is a significant discrepancy in permissions between the device running Go Hass Agent and Home Assistant.
 
-Go Hass Agent runs under a user account on a device. So the above controls will
-only work where that user has permissions to run the underlying actions on that
-device. Home Assistant does not currently offer any fine-grained access control
-for controls like the above. So any Home Assistant user will be able to run any
-of the controls. This means that a Home Assistant user not associated with the
-device user running the agent can use the exposed controls to issue potentially
-disruptive actions on a device that another user is accessing.
+Go Hass Agent runs under a user account on a device. So the above controls will only work where that user has
+permissions to run the underlying actions on that device. Home Assistant does not currently offer any fine-grained
+access control for controls like the above. So any Home Assistant user will be able to run any of the controls. This
+means that a Home Assistant user not associated with the device user running the agent can use the exposed controls to
+issue potentially disruptive actions on a device that another user is accessing.
 
 [⬆️ Back to Top](#-table-of-contents)
 
@@ -1306,12 +1269,15 @@ settings app which can adjust the scaling for the app windows.
 
 ### _Can (or does) the agent run as root or with privileges?_
 
-- No. None of the built-in sensors (or commands if MQTT has been enabled) require any
-privileges. The agent will refuse to run if it is started with privileges.
-- If you have [script sensors](#-script-sensors) or [custom
-commands](#other-custom-commands) that need privileges, there are most likely
-ways for the script/command to elevate to the privileges it needs as part of its
-execution.
+- You cannot run Go Hass Agent with root privileges or as the root user. The agent will refuse to run.
+- Some sensors do require additional [capabilities](https://www.man7.org/linux/man-pages/man7/capabilities.7.html) in
+  order to access the required data.
+  - When you install via a package (rpm, deb, etc.), the agent binary will have the required
+    capabilities.
+  - If you build yourself, you need to set the capabilities on your binary manually. Consult the
+    [sensors list](#-sensors) for which sensors require what capabilities.
+- If you have [script sensors](#-script-sensors) or [custom commands](#other-custom-commands) that need privileges,
+  there are most likely ways for the script/command to elevate to the privileges it needs as part of its execution.
 
 [⬆️ Back to Top](#-table-of-contents)
 
