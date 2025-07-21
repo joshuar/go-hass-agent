@@ -16,7 +16,7 @@ require (
 	github.com/magefile/mage v1.15.0
 	github.com/mdlayher/netlink v1.7.2
 	github.com/oapi-codegen/nullable v1.1.0
-	github.com/oapi-codegen/runtime v1.1.1
+	github.com/oapi-codegen/runtime v1.1.2
 	github.com/pelletier/go-toml/v2 v2.2.4
 	github.com/stretchr/testify v1.10.0
 	golang.org/x/text v0.27.0
