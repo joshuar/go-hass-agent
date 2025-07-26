@@ -6,8 +6,11 @@ linters:
     - depguard
     - exhaustive
     - exhaustruct
+    - funlen
     - gochecknoglobals
     - gochecknoinits
+    - gocognit
+    - gocyclo
     - godox
     - ireturn
     - lll
@@ -17,8 +20,6 @@ linters:
     - tagliatelle
     - wsl
   settings:
-    gocyclo:
-      min-complexity: 15
     gosec:
       excludes:
         - G104 # made redundant by errcheck
@@ -31,6 +32,13 @@ linters:
         - name: exported
           arguments:
             - disable-checks-on-variables
+    sloglint:
+      kv-only: false
+      no-mixed-args: true
+      static-msg: false
+      attr-only: true
+      no-raw-keys: false
+      args-on-sep-lines: true
     varnamelen:
       ignore-names:
         - err
