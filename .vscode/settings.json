@@ -77,7 +77,8 @@
     "app",
     "workers",
     "mqtt",
-    "pkg/hwmon"
+    "pkg/hwmon",
+    "docker"
   ],
   "go.alternateTools": {
     "customFormatter": "golangci-lint"

@@ -65,7 +65,7 @@ func (m *ManagerProps) ScheduleJob(idPrefix id.Prefix, job quartz.Job, trigger q
 		return errors.Join(ErrScheduleFailed, err)
 	}
 
-	slog.Debug("Scheduled job.",
+	slog.Debug("Scheduled worker.",
 		slog.String("job_key", jobKey),
 		slog.String("job_desc", job.Description()))
 

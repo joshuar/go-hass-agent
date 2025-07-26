@@ -5,9 +5,8 @@ package preferences
 
 import (
 	"context"
+	"os"
 	"path/filepath"
-
-	"github.com/adrg/xdg"
 )
 
 type contextKey string
@@ -45,7 +44,11 @@ func PathToCtx(ctx context.Context, path string) context.Context {
 func PathFromCtx(ctx context.Context) string {
 	path, ok := ctx.Value(pathCtxKey).(string)
 	if !ok {
-		return filepath.Join(xdg.ConfigHome, AppID)
+		configDir, err := os.UserConfigDir()
+		if err != nil {
+			configDir = "/tmp"
+		}
+		return filepath.Join(configDir, AppID)
 	}
 
 	return path
