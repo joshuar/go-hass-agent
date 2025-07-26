@@ -8,7 +8,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/adrg/xdg"
 	"github.com/eclipse/paho.golang/paho"
 	"github.com/go-test/deep"
 	"github.com/stretchr/testify/require"
@@ -204,7 +203,7 @@ func TestNewCommandsController(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := preferences.PathToCtx(t.Context(), tt.args.configDir)
-			xdg.ConfigHome = tt.args.configDir
+			// xdg.ConfigHome = tt.args.configDir
 			_, err := NewCommandsWorker(ctx, tt.args.device)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewCommandsController() error = %v, wantErr %v", err, tt.wantErr)

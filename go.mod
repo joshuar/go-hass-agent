@@ -1,6 +1,6 @@
 module github.com/joshuar/go-hass-agent
 
-go 1.24.3
+go 1.24
 
 require (
 	fyne.io/fyne/v2 v2.5.5
@@ -125,7 +125,6 @@ require (
 require (
 	fyne.io/systray v1.11.0 // indirect
 	github.com/ConnorsApps/pipewire-monitor-go v0.1.0
-	github.com/adrg/xdg v0.5.3
 	github.com/alecthomas/kong v1.12.1
 	github.com/anatol/smart.go v0.0.0-20241126061019-f03d79b340d2
 	github.com/blackjack/webcam v0.6.1

@@ -12,7 +12,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/adrg/xdg"
 	"github.com/pelletier/go-toml/v2"
 
 	"github.com/joshuar/go-hass-agent/internal/components/preferences"
@@ -21,11 +20,6 @@ import (
 const (
 	oldAppID     = "com.github.joshuar.go-hass-agent"
 	registryFile = "sensor.reg"
-)
-
-var (
-	oldPrefsPath    = filepath.Join(xdg.ConfigHome, oldAppID)
-	oldRegistryPath = filepath.Join(xdg.ConfigHome, oldAppID, "sensorRegistry")
 )
 
 type oldPreferences struct {
@@ -50,6 +44,13 @@ type oldPreferences struct {
 
 //nolint:cyclop,funlen
 func v1000(ctx context.Context) error {
+	configDir, err := os.UserConfigDir()
+	if err != nil {
+		return fmt.Errorf("cannot read user config dir: %w", err)
+	}
+	oldPrefsPath := filepath.Join(configDir, oldAppID)
+	oldRegistryPath := filepath.Join(configDir, oldAppID, "sensorRegistry")
+
 	newRegistryPath := filepath.Join(preferences.PathFromCtx(ctx), "sensorRegistry")
 
 	// If there is no old preferences directory, exit.
