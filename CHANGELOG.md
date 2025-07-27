@@ -1,5 +1,13 @@
 # Changelog
 
+## [13.3.1](https://github.com/joshuar/go-hass-agent/compare/v13.3.0...v13.3.1) (2025-07-27)
+
+
+### Bug Fixes
+
+* **hass:** :bug: don't try to update the config initially if agent is unregistered ([a468499](https://github.com/joshuar/go-hass-agent/commit/a4684999ff80515d5100afc758a77bd432828235))
+* **hass:** :bug: fail fast on update job if not registered ([5c08685](https://github.com/joshuar/go-hass-agent/commit/5c086851b0e9a861637d238f13651b3682672f3b))
+
 ## [13.3.0](https://github.com/joshuar/go-hass-agent/compare/v13.2.8...v13.3.0) (2025-07-20)
 
 
