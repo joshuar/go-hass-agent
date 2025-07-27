@@ -29,8 +29,11 @@ type ManagerProps struct {
 var Manager *ManagerProps
 
 func Start(ctx context.Context) error {
+	misfiredCh := make(chan quartz.ScheduledJob)
 	scheduler, err := quartz.NewStdScheduler(
-		quartz.WithOutdatedThreshold(50 * time.Second),
+		quartz.WithOutdatedThreshold(50*time.Second),
+		quartz.WithLogger(&logger{Logger: slogctx.FromCtx(ctx)}),
+		quartz.WithMisfiredChan(misfiredCh),
 	)
 	if err != nil {
 		return errors.Join(ErrRunFailed, err)
@@ -39,6 +42,16 @@ func Start(ctx context.Context) error {
 	Manager = &ManagerProps{
 		scheduler: scheduler,
 	}
+
+	// Run goroutine to log misfired jobs.
+	go func() {
+		for misfiredJob := range misfiredCh {
+			slogctx.FromCtx(ctx).Debug("Job misfired.",
+				slog.String("job_id", misfiredJob.JobDetail().JobKey().String()),
+				slog.String("job_description", misfiredJob.JobDetail().Job().Description()),
+			)
+		}
+	}()
 
 	slogctx.FromCtx(ctx).Debug("Starting scheduler.")
 	scheduler.Start(ctx)
@@ -101,4 +114,12 @@ func (pt *PollTriggerWithJitter) NextFireTime(prev int64) (int64, error) {
 // Description returns the description of the PollTriggerWithJitter.
 func (pt *PollTriggerWithJitter) Description() string {
 	return fmt.Sprintf("PollTriggerWithJitter%s%s", quartz.Sep, pt.Interval)
+}
+
+type logger struct {
+	*slog.Logger
+}
+
+func (l *logger) Trace(msg string, args ...any) {
+	l.Debug(msg, args...)
 }
