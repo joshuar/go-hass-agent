@@ -74,9 +74,11 @@ func NewClient(ctx context.Context, reg sensorRegistry) (*Client, error) {
 		return nil, fmt.Errorf("could not create client: %w", err)
 	}
 	// Run the job one-time initially to get the config.
-	updated, err := client.UpdateConfig(ctx)
-	if !updated || err != nil {
-		return nil, fmt.Errorf("could not create client: %w", err)
+	if preferences.Registered() {
+		updated, err := client.UpdateConfig(ctx)
+		if !updated || err != nil {
+			return nil, fmt.Errorf("could not create client: %w", err)
+		}
 	}
 
 	return client, nil
