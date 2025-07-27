@@ -150,6 +150,9 @@ func (c *Client) scheduleConfigUpdates() error {
 
 // UpdateConfig will fetch and store the Home Assistant config via the Home Assistant REST API.
 func (c *Client) UpdateConfig(ctx context.Context) (bool, error) {
+	if !preferences.Registered() {
+		return false, fmt.Errorf("%w: not registered, cannot update config", ErrSendRequest)
+	}
 	resp, err := c.SendRequest(ctx, preferences.RestAPIURL(), api.Request{Type: api.GetConfig})
 	if err != nil {
 		return false, fmt.Errorf("could not update config: %w", err)
