@@ -290,61 +290,61 @@ type ataSmartDetails struct {
 func (ata *ataSmartDetails) Problem() bool {
 	// Read Error Rate value greater than zero.
 	if attr, ok := ata.Attrs[1]; ok {
-		if attr.Current > 0 {
+		if attr.ValueRaw > 0 {
 			return true
 		}
 	}
 	// Reallocated Sectors Count greater than zero.
 	if attr, ok := ata.Attrs[5]; ok {
-		if attr.Current > 0 {
+		if attr.ValueRaw > 0 {
 			return true
 		}
 	}
 	// Spin Retry Count greater than zero.
 	if attr, ok := ata.Attrs[10]; ok {
-		if attr.Current > 0 {
+		if attr.ValueRaw > 0 {
 			return true
 		}
 	}
 	//  End-to-End error / IOEDC  greater than zero.
 	if attr, ok := ata.Attrs[184]; ok {
-		if attr.Current > 0 {
+		if attr.ValueRaw > 0 {
 			return true
 		}
 	}
 	// Reported Uncorrectable Errors greater than zero.
 	if attr, ok := ata.Attrs[187]; ok {
-		if attr.Current > 0 {
+		if attr.ValueRaw > 0 {
 			return true
 		}
 	}
 	// Command Timeout greater than zero.
 	if attr, ok := ata.Attrs[188]; ok {
-		if attr.Current > 0 {
+		if attr.ValueRaw > 0 {
 			return true
 		}
 	}
 	// Reallocation Event Count greater than zero.
 	if attr, ok := ata.Attrs[196]; ok {
-		if attr.Current > 0 {
+		if attr.ValueRaw > 0 {
 			return true
 		}
 	}
 	// Current Pending Sector Count greater than zero.
 	if attr, ok := ata.Attrs[197]; ok {
-		if attr.Current > 0 {
+		if attr.ValueRaw > 0 {
 			return true
 		}
 	}
 	// (Offline) Uncorrectable Sector Count greater than zero.
 	if attr, ok := ata.Attrs[198]; ok {
-		if attr.Current > 0 {
+		if attr.ValueRaw > 0 {
 			return true
 		}
 	}
 	// Soft Read Error Rate or TA Counter Detected greater than zero.
 	if attr, ok := ata.Attrs[201]; ok {
-		if attr.Current > 0 {
+		if attr.ValueRaw > 0 {
 			return true
 		}
 	}
@@ -359,11 +359,11 @@ func (ata *ataSmartDetails) Attributes() map[string]any {
 	ataAttrs := make(map[string]any)
 	// Read Error Rate.
 	if attr, ok := ata.Attrs[1]; ok {
-		ataAttrs[attr.Name] = attr.Current
+		ataAttrs[attr.Name] = attr.ValueRaw
 	}
 	// Throughput Performance.
 	if attr, ok := ata.Attrs[2]; ok {
-		ataAttrs[attr.Name] = attr.Current
+		ataAttrs[attr.Name] = attr.ValueRaw
 	}
 	// Spin-Up Time.
 	if attr, ok := ata.Attrs[3]; ok {
@@ -374,15 +374,15 @@ func (ata *ataSmartDetails) Attributes() map[string]any {
 	}
 	// Start/Stop Count.
 	if attr, ok := ata.Attrs[4]; ok {
-		ataAttrs[attr.Name] = attr.Current
+		ataAttrs[attr.Name] = attr.ValueRaw
 	}
 	// Reallocated Sectors Count.
 	if attr, ok := ata.Attrs[5]; ok {
-		ataAttrs[attr.Name] = attr.Current
+		ataAttrs[attr.Name] = attr.ValueRaw
 	}
 	// Seek Time Performance
 	if attr, ok := ata.Attrs[8]; ok {
-		ataAttrs[attr.Name] = attr.Current
+		ataAttrs[attr.Name] = attr.ValueRaw
 	}
 	// Power-On Hours.
 	if attr, ok := ata.Attrs[9]; ok {
@@ -393,43 +393,43 @@ func (ata *ataSmartDetails) Attributes() map[string]any {
 	}
 	// Spin Retry Count.
 	if attr, ok := ata.Attrs[10]; ok {
-		ataAttrs[attr.Name] = attr.Current
+		ataAttrs[attr.Name] = attr.ValueRaw
 	}
 	// Power Cycle Count.
 	if attr, ok := ata.Attrs[12]; ok {
-		ataAttrs[attr.Name] = attr.Current
+		ataAttrs[attr.Name] = attr.ValueRaw
 	}
 	// Soft Read Error Rate.
 	if attr, ok := ata.Attrs[13]; ok {
-		ataAttrs[attr.Name] = attr.Current
+		ataAttrs[attr.Name] = attr.ValueRaw
 	}
 	// Unexpected Power Loss Count.
 	if attr, ok := ata.Attrs[174]; ok {
-		ataAttrs[attr.Name] = attr.Current
+		ataAttrs[attr.Name] = attr.ValueRaw
 	}
 	//  End-to-End error / IOEDC.
 	if attr, ok := ata.Attrs[184]; ok {
-		ataAttrs[attr.Name] = attr.Current
+		ataAttrs[attr.Name] = attr.ValueRaw
 	}
 	// Reported Uncorrectable Errors.
 	if attr, ok := ata.Attrs[187]; ok {
-		ataAttrs[attr.Name] = attr.Current
+		ataAttrs[attr.Name] = attr.ValueRaw
 	}
 	// Command Timeout.
 	if attr, ok := ata.Attrs[188]; ok {
-		ataAttrs[attr.Name] = attr.Current
+		ataAttrs[attr.Name] = attr.ValueRaw
 	}
 	// High Fly Writes.
 	if attr, ok := ata.Attrs[189]; ok {
-		ataAttrs[attr.Name] = attr.Current
+		ataAttrs[attr.Name] = attr.ValueRaw
 	}
 	// G-sense Error Rate.
 	if attr, ok := ata.Attrs[191]; ok {
-		ataAttrs[attr.Name] = attr.Current
+		ataAttrs[attr.Name] = attr.ValueRaw
 	}
 	// Unsafe Shutdown Count.
 	if attr, ok := ata.Attrs[192]; ok {
-		ataAttrs[attr.Name] = attr.Current
+		ataAttrs[attr.Name] = attr.ValueRaw
 	}
 	// Temperature.
 	if attr, ok := ata.Attrs[194]; ok {
@@ -440,19 +440,19 @@ func (ata *ataSmartDetails) Attributes() map[string]any {
 	}
 	// Reallocation Event Count greater than zero.
 	if attr, ok := ata.Attrs[196]; ok {
-		ataAttrs[attr.Name] = attr.Current
+		ataAttrs[attr.Name] = attr.ValueRaw
 	}
 	// Current Pending Sector Count greater than zero.
 	if attr, ok := ata.Attrs[197]; ok {
-		ataAttrs[attr.Name] = attr.Current
+		ataAttrs[attr.Name] = attr.ValueRaw
 	}
 	// (Offline) Uncorrectable Sector Count greater than zero.
 	if attr, ok := ata.Attrs[198]; ok {
-		ataAttrs[attr.Name] = attr.Current
+		ataAttrs[attr.Name] = attr.ValueRaw
 	}
 	// Soft Read Error Rate or TA Counter Detected greater than zero.
 	if attr, ok := ata.Attrs[201]; ok {
-		ataAttrs[attr.Name] = attr.Current
+		ataAttrs[attr.Name] = attr.ValueRaw
 	}
 
 	attrs := maps.Clone(ata.details())
