@@ -20,7 +20,10 @@
 !assets/*
 !build/
 !**/testdata/*
-!.prettierrc
+!.prettier*
+!.parcel*
+!.postcss*
+!eslint.config.js
 !.vscode/tasks.json
 !.vscode/launch.json
 !.devcontainer/*

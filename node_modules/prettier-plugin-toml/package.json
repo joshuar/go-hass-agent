@@ -1,0 +1,49 @@
+{
+  "name": "prettier-plugin-toml",
+  "version": "2.0.6",
+  "type": "module",
+  "description": "An opinionated `toml` formatter plugin for Prettier",
+  "repository": "git+https://github.com/un-ts/prettier.git",
+  "homepage": "https://github.com/un-ts/prettier/tree/master/packages/toml",
+  "author": "Ray (https://mk1.io) <i@mk1.io>",
+  "maintainers": [
+    "JounQin <admin@1stg.me> (https://www.1stG.me)"
+  ],
+  "funding": "https://opencollective.com/unts",
+  "license": "MIT",
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "main": "./lib/index.cjs",
+  "types": "./index.d.cts",
+  "module": "./lib/index.js",
+  "exports": {
+    "import": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "require": {
+      "types": "./index.d.cts",
+      "default": "./lib/index.cjs"
+    }
+  },
+  "files": [
+    "index.d.cts",
+    "lib"
+  ],
+  "keywords": [
+    "toml",
+    "plugin",
+    "prettier",
+    "prettier-plugin"
+  ],
+  "peerDependencies": {
+    "prettier": "^3.0.3"
+  },
+  "dependencies": {
+    "@taplo/lib": "^0.5.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

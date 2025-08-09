@@ -1,3 +1,0 @@
-Reset will unregister go-hass-agent from MQTT (if in use), delete the
-configuration directory and remove the log file. Use this prior to calling the
-register command to start fresh.

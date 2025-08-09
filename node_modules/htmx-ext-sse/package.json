@@ -1,0 +1,29 @@
+{
+  "name": "htmx-ext-sse",
+  "version": "2.2.3",
+  "homepage": "https://htmx.org/extensions/sse/",
+  "main": "dist/sse.esm.js",
+  "unpkg": "dist/sse.min.js",
+  "scripts": {
+    "lint": "eslint test/ext test",
+    "lint-fix": "eslint test/ext test --fix",
+    "format": "eslint --fix test/ext test",
+    "test": "mocha-chrome test/index.html",
+    "www": "bash ./scripts/www.sh"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bigskysoftware/htmx-extensions.git"
+  },
+  "dependencies": {
+    "htmx.org": "^2.0.2"
+  },
+  "devDependencies": {
+    "chai": "^4.3.10",
+    "chai-dom": "^1.12.0",
+    "mocha": "10.1.0",
+    "mocha-chrome": "https://github.com/Telroshan/mocha-chrome",
+    "sinon": "^9.2.4",
+    "htmx.org": "^2.0.2"
+  }
+}

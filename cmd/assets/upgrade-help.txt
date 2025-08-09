@@ -1,4 +1,0 @@
-Use upgrade to attempt any upgrade actions from a previous version of Go Hass
-Agent to the running version. The upgrade command tries its best to perform
-actions, but does not guarantee success. It is safe to run this command multiple
-times (though unnecessary).
