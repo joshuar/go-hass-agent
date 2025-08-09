@@ -1,5 +1,12 @@
 # Changelog
 
+## [13.3.2](https://github.com/joshuar/go-hass-agent/compare/v13.3.1...v13.3.2) (2025-08-09)
+
+
+### Bug Fixes
+
+* **linux/disk:** :bug: use correct value for SATA disk attributes ([22920ac](https://github.com/joshuar/go-hass-agent/commit/22920ac0545c9804103fc350377f359aabd1f886))
+
 ## [13.3.1](https://github.com/joshuar/go-hass-agent/compare/v13.3.0...v13.3.1) (2025-07-27)
 
 
