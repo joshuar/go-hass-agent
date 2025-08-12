@@ -87,7 +87,7 @@ jobs:
             uploads.github.com:443
             release-assets.githubusercontent.com:443
       - name: Checkout source
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4
         with:
           fetch-depth: 0
       - name: Set up environment
@@ -182,7 +182,7 @@ jobs:
             sum.golang.org:443
             release-assets.githubusercontent.com:443
       - name: Checkout repo
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4
         with:
           fetch-depth: 0
       - name: Set up environment
@@ -271,7 +271,7 @@ jobs:
             rekor.sigstore.dev:443
             release-assets.githubusercontent.com:443
       - name: Checkout repo
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4
         with:
           fetch-depth: 0
       - name: Set up environment
