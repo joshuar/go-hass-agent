@@ -50,7 +50,7 @@ require (
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
 	github.com/go-git/go-billy/v5 v5.6.1 // indirect
 	github.com/go-git/go-git/v5 v5.13.1 // indirect
-	github.com/go-json-experiment/json v0.0.0-20240815175050-ebd3a8989ca1 // indirect
+	github.com/go-json-experiment/json v0.0.0-20250714165856-be8212f5270d // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-openapi/jsonpointer v0.21.0 // indirect
 	github.com/go-openapi/swag v0.23.0 // indirect
@@ -171,6 +171,7 @@ require (
 	github.com/tklauser/go-sysconf v0.3.15
 	github.com/tklauser/numcpus v0.10.0 // indirect
 	github.com/veqryn/slog-context v0.8.0
+	github.com/veqryn/slog-json v0.5.0
 	github.com/yuin/goldmark v1.7.1 // indirect
 	golang.org/x/crypto v0.39.0 // indirect
 	golang.org/x/image v0.18.0 // indirect
