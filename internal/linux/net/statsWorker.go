@@ -198,6 +198,13 @@ func (w *netStatsWorker) getLinkStats(links []rtnetlink.LinkMessage) []linkStats
 			continue
 		}
 
+		// Skip ignored devices.
+		if slices.ContainsFunc(w.prefs.IgnoredDevices, func(e string) bool {
+			return strings.HasPrefix(msg.Attributes.Name, e)
+		}) {
+			continue
+		}
+
 		// Ignore devices that are not currently active.
 		if *msg.Attributes.Carrier == 0 {
 			continue
