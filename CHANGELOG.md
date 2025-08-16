@@ -1,5 +1,14 @@
 # Changelog
 
+## [13.3.3](https://github.com/joshuar/go-hass-agent/compare/v13.3.2...v13.3.3) (2025-08-16)
+
+
+### Bug Fixes
+
+* **linux/disk:** :wrench: don't generate disk sensors for podman overlay mounts by default ([3e5e8d9](https://github.com/joshuar/go-hass-agent/commit/3e5e8d9a9a25b7d605d7a8d81a9f7e292a9665db))
+* **linux/net:** :bug: use ignored devices for network rate sensors ([18e7a67](https://github.com/joshuar/go-hass-agent/commit/18e7a67419c714099e472db666db93914abc1569))
+* **linux/net:** :wrench: ignore virtual network devices created by common container engines by default ([65d7688](https://github.com/joshuar/go-hass-agent/commit/65d768865f6c96bb8ea1ea7ed05c0e4adb87c399))
+
 ## [13.3.2](https://github.com/joshuar/go-hass-agent/compare/v13.3.1...v13.3.2) (2025-08-09)
 
 
