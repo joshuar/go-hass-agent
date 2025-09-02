@@ -68,7 +68,7 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/invopop/jsonschema v0.13.0 // indirect
 	github.com/invopop/yaml v0.3.1 // indirect
-	github.com/jaypipes/pcidb v1.1.0 // indirect
+	github.com/jaypipes/pcidb v1.1.1 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
 	github.com/jeandeaual/go-locale v0.0.0-20240223122105-ce5225dcaa49 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
@@ -146,7 +146,7 @@ require (
 	github.com/go-text/typesetting v0.2.0 // indirect
 	github.com/gofrs/uuid/v5 v5.3.2
 	github.com/gopherjs/gopherjs v1.17.2 // indirect
-	github.com/jaypipes/ghw v0.19.0
+	github.com/jaypipes/ghw v0.19.1
 	github.com/jfreymuth/pulse v0.1.1
 	github.com/jsimonetti/rtnetlink v1.4.2
 	github.com/jsummers/gobmp v0.0.0-20151104160322-e2ba15ffa76e // indirect
