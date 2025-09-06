@@ -25,6 +25,7 @@ import (
 	"github.com/joshuar/go-hass-agent/agent"
 	"github.com/joshuar/go-hass-agent/config"
 	"github.com/joshuar/go-hass-agent/server/handlers"
+	"github.com/joshuar/go-hass-agent/server/middlewares"
 )
 
 const (
@@ -140,6 +141,8 @@ func setupRoutes(static embed.FS) *chi.Mux {
 			ServerErrorLevel: slog.LevelError,
 			WithRequestID:    true,
 		}),
+		middlewares.SetupHTMX,
+
 		// middlewares.SetupCORS(config.Environment()),
 		// middlewares.CSP(server.ServerConfig.CSP),
 		// middlewares.Etag,
@@ -150,12 +153,13 @@ func setupRoutes(static embed.FS) *chi.Mux {
 	//
 	// Static content.
 	router.Group(func(r chi.Router) {
-		r.Handle("/static/*", handlers.StaticFileServerHandler(http.FS(static)))
+		r.Handle("/web/content/*", handlers.StaticFileServerHandler(http.FS(static)))
 	})
 	// // Error handling.
 	// router.NotFound(handlers.NotFound())
 
-	router.Get("/register", handlers.Register())
+	router.Get("/register", handlers.GetRegistration())
+	router.With(middlewares.RequireHTMX).Get("/register/discovery", handlers.RegistrationDiscovery())
 	// // Front page.
 	// router.Get("/", handlers.Landing())
 	// // Access routes.

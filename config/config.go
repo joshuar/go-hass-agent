@@ -32,6 +32,9 @@ const (
 	AppDescription = "A Home Assistant, native app for desktop/laptop devices."
 	// ConfigFile is the location of the server configuration file.
 	ConfigFile = "config.toml"
+
+	// DefaultServer is the default Home Assistant server address.
+	DefaultServer = "http://localhost:8123"
 )
 
 type configData struct {

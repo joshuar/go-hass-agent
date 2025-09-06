@@ -84,7 +84,9 @@
     "docker",
     "air",
     "web/content",
-    "web/assets"
+    "web/assets",
+    "web/templates",
+    "server/middlewares"
   ],
   "css.lint.idSelector": "warning",
   "emmet.includeLanguages": {
