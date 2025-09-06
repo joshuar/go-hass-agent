@@ -1,6 +1,3 @@
-networks:
-  go-hass-agent:
-    enable_ipv6: true
 services:
   devcontainer:
     hostname: devcontainer
@@ -11,7 +8,11 @@ services:
     environment:
       - WAYLAND_DISPLAY=${WAYLAND_DISPLAY}
       - XDG_RUNTIME_DIR=/tmp
-    image: mcr.microsoft.com/devcontainers/base:ubuntu-22.04
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - GO_VERSION=$GO_VERSION
     volumes:
       - ..:/workspace:cached
       - "${XDG_RUNTIME_DIR}/${WAYLAND_DISPLAY}:/tmp/${WAYLAND_DISPLAY}"
@@ -24,10 +25,8 @@ services:
     security_opt:
       - seccomp:unconfined
       - label:disable
-    command: sleep infinity
-    networks:
-      - go-hass-agent
-    privileged: true
+    command: -c 'sleep infinity'
+
   home-assistant:
     hostname: home-assistant
     privileged: true
@@ -42,8 +41,7 @@ services:
       - /run/dbus:/run/dbus:ro
     ports:
       - 8123:8123
-    networks:
-      - go-hass-agent
+
   mosquitto:
     hostname: mosquitto
     env_file:
@@ -57,5 +55,3 @@ services:
     ports:
       - 1883:1883
       - 8883:8883
-    networks:
-      - go-hass-agent
