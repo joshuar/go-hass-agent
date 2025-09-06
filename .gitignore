@@ -18,9 +18,13 @@
 !*.md
 !*.json
 !cosign.*
-!assets/*
+!web/assets/*
+!web/content/*
+web/content/*.js
+web/content/*.js.map
+web/content/*.css
+web/content/*.css.map
 !build/
-!**/testdata/*
 !.prettierrc
 !.prettierignore
 !.parcelrc
@@ -29,15 +33,14 @@
 !.vscode/tasks.json
 !.vscode/launch.json
 !.devcontainer/*
-.devcontainer/.env
-!internal/ui/assets/*
-!cmd/assets/*
 !LICENSE
 !deployments/mosquitto/config/mosquitto.conf.example
 # ...even if they are in subdirectories
 !*/
 
 # always ignore these
+tmp/
+.devcontainer/.env
 dist/
 deployments/
 node_modules/
