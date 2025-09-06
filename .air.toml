@@ -7,7 +7,7 @@ args_bin = [
   "--profile='heapprofile=deployments/heap.prof;cpuprofile=deployments/cpu.prof;webui=true'",
   "run",
 ]
-cmd = "go run github.com/a-h/templ/cmd/templ@latest generate && go build -o ./tmp/go-hass-agent ."
+cmd = "~/go/bin/templ generate && go build -o ./tmp/go-hass-agent ."
 delay = 1000
 exclude_dir = [
   ".parcel-cache",
