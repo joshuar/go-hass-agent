@@ -7,6 +7,10 @@
     "APPIMAGE_EXTRACT_AND_RUN": "1",
     "DBUS_SESSION_BUS_ADDRESS": "${env:DBUS_SESSION_BUS_ADDRESS}"
   },
+  "remoteEnv": {
+    "PODMAN_COMPOSE_WARNING_LOGS": "false",
+    "TZ": "${localEnv:TZ:Australia/Brisbane}"
+  },
   "customizations": {
     "vscode": {
       "extensions": [
@@ -23,19 +27,16 @@
         "DavidAnson.vscode-markdownlint",
         "bierner.markdown-emoji",
         "redhat.vscode-yaml",
-        "foxundermoon.shell-format"
+        "foxundermoon.shell-format",
+        "a-h.templ",
+        "bradlc.vscode-tailwindcss",
+        "dnut.rewrap-revived",
+        "dz4k.vscode-hyperscript-org",
+        "elijah-potter.harper"
       ]
     }
   },
   "dockerComposeFile": "docker-compose.yml",
-  "features": {
-    "ghcr.io/devcontainers-extra/features/prettier:1": {},
-    "ghcr.io/devcontainers/features/github-cli:1": {},
-    "ghcr.io/devcontainers/features/go:1": {},
-    "ghcr.io/meaningful-ooo/devcontainer-features/fish:2": {},
-    "ghcr.io/schlich/devcontainer-features/starship:0": {}
-  },
-
   "name": "Go Hass Agent Development",
   "postCreateCommand": "bash .devcontainer/postcreate.sh",
   "service": "devcontainer",
