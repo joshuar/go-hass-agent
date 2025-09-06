@@ -1,37 +1,21 @@
 {
-  "name": "go-hass-agent",
-  "version": "0.0.0",
-  "description": " A Home Assistant, native app for desktop/laptop devices.",
-  "license": "MIT",
   "browserslist": "> 0.5%, last 2 versions, not dead",
-  "scripts": {
-    "build:parcel": "parcel build ./web/assets/scripts.js ./web/assets/styles.css --dist-dir ./web/content --no-scope-hoist",
-    "build:parcel:dev": "parcel build ./web/assets/scripts.js ./web/assets/styles.css --dist-dir ./web/content --no-optimize --log-level verbose --no-scope-hoist"
-  },
   "dependencies": {
     "daisyui": "^5.1.7",
-    "date-fns": "^4.1.0",
-    "htmx-ext-ajax-header": "^2.0.2",
-    "htmx-ext-multi-swap": "^2.0.1",
-    "htmx-ext-response-targets": "^2.0.3",
-    "htmx-ext-sse": "^2.2.3",
     "htmx.org": "^2.0.6",
     "hyperscript.org": "^0.9.14",
-    "idiomorph": "^0.7.3",
     "tailwindcss": "^4.1.13"
   },
+  "description": " A Home Assistant, native app for desktop/laptop devices.",
   "devDependencies": {
     "@eslint/js": "^9.35.0",
     "@parcel/transformer-css": "^2.15.4",
     "@prettier/plugin-xml": "^3.4.2",
-    "@tailwindcss/cli": "^4.1.13",
-    "@tailwindcss/nesting": "^0.0.0-insiders.565cd3e",
     "@tailwindcss/postcss": "^4.1.13",
     "@tailwindcss/typography": "^0.5.16",
     "eslint": "^9.35.0",
     "eslint-config-prettier": "^10.1.8",
     "globals": "^16.3.0",
-    "htmx-ext-debug": "^2.0.1",
     "parcel": "^2.15.4",
     "postcss": "^8.5.6",
     "postcss-cli": "^11.0.1",
@@ -40,5 +24,12 @@
     "prettier": "^3.6.2",
     "prettier-plugin-tailwindcss": "^0.6.14",
     "prettier-plugin-toml": "^2.0.6"
-  }
+  },
+  "license": "MIT",
+  "name": "go-hass-agent",
+  "scripts": {
+    "build:parcel": "parcel build ./web/assets/scripts.js ./web/assets/styles.css --dist-dir ./web/content --no-scope-hoist",
+    "build:parcel:dev": "parcel build ./web/assets/scripts.js ./web/assets/styles.css --dist-dir ./web/content --no-optimize --log-level verbose --no-scope-hoist"
+  },
+  "version": "0.0.0"
 }
