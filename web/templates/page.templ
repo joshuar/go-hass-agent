@@ -1,0 +1,71 @@
+// Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
+
+package templates
+
+var (
+	Content  = FragmentKey{}
+	FullPage = FragmentKey{}
+)
+
+type FragmentKey struct{}
+
+// SetPageTitle sets (or updates) the page's <title></title> tag. If the title is an empty string, a default title will
+// be set instead.
+templ SetPageTitle(title string) {
+	if title != "" {
+		<title>{ title }</title>
+	} else {
+		<title>Go Hass Agent</title>
+	}
+}
+
+// Page renders a full HTML page with the given body content and title.
+templ Page(title string, body templ.Component) {
+	@templ.Fragment(FullPage) {
+		<!DOCTYPE html>
+		<html lang="en" class="h-full">
+			<head>
+				<meta charset="UTF-8"/>
+				// https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Viewport_meta_element#interactive-widget
+				<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no"/>
+				<meta http-equiv="X-UA-Compatible" content="ie=edge"/>
+				<link rel="manifest" href="/web/content/manifest.json"/>
+				<link rel="apple-touch-icon" href="/web/content/apple-touch-icon.png"/>
+				<link rel="shortcut icon" href="/web/content/favicon.ico" type="image/x-icon"/>
+				<link rel="icon" href="/web/content/favicon.svg" type="image/svg+xml"/>
+				<link rel="icon" href="/web/content/favicon.png" sizes="any"/>
+				<link href="/web/content/fonts/inter/inter.css" rel="stylesheet"/>
+				<script src="/web/content/scripts.js"></script>
+				<link href="/web/content/styles.css" rel="stylesheet"/>
+				// Site-wide htmx config.
+				<meta
+					name="htmx-config"
+					content='{
+				"selfRequestsOnly":true,
+				"allowNestedOobSwaps":true,
+				"historyRestoreAsHxRequest":false,
+				"historyCacheSize":0,
+				"responseHandling":[
+            		{"code":"204", "swap": false},
+            		{"code":"[23]..", "swap": true},
+            		{"code":"422", "swap": true},
+            		{"code":"500", "swap": true},
+            		{"code":"[45]..", "swap": false, "error":true},
+            		{"code":"...", "swap": true}
+        		]
+			}'
+				/>
+				@SetPageTitle(title)
+			</head>
+			<body
+				class="h-full"
+				_="on every htmx:beforeSend in <button:not(.no-disable)/> tell it toggle [@disabled='true'] until htmx:afterOnLoad"
+			>
+				<main class="mx-auto max-w-7xl sm:px-6 lg:px-8">
+					@body
+				</main>
+			</body>
+		</html>
+	}
+}
