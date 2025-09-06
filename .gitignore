@@ -7,6 +7,7 @@
 # Ignore everything
 *
 
+# Except these...
 !/.gitignore
 !*.go
 !go.sum
@@ -21,19 +22,22 @@
 !build/
 !**/testdata/*
 !.prettierrc
+!.prettierignore
+!.parcelrc
+!.postcssrc
+!eslint.config.js
 !.vscode/tasks.json
 !.vscode/launch.json
 !.devcontainer/*
 .devcontainer/.env
 !internal/ui/assets/*
 !cmd/assets/*
-
 !LICENSE
 !deployments/mosquitto/config/mosquitto.conf.example
-
 # ...even if they are in subdirectories
 !*/
 
 # always ignore these
 dist/
 deployments/
+node_modules/
