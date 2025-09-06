@@ -4,12 +4,13 @@
 # SPDX-License-Identifier: MIT
 
 package: api
-output: ../internal/hass/api/websocket.gen.go
+output: ../hass/api/rest.gen.go
 generate:
   models: true
 output-options:
-  # to make sure that all types are generated
   skip-prune: true
   nullable-type: true
+  prefer-skip-optional-pointer: true
+  prefer-skip-optional-pointer-with-omitzero: true
 import-mapping:
-  rest.yaml: '-'
+  models.yaml: 'github.com/joshuar/go-hass-agent/models'

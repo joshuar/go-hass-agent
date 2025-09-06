@@ -56,8 +56,8 @@ func (s *SensorRegistration) Valid() (bool, error) {
 // LogAttributes returns an slog.Group of log attributes for a sensor entity.
 func (s *Sensor) LogAttributes() slog.Attr {
 	var state string
-	if s.UnitOfMeasurement != nil {
-		state = fmt.Sprintf("%v %s", s.State, *s.UnitOfMeasurement)
+	if s.UnitOfMeasurement != "" {
+		state = fmt.Sprintf("%v %s", s.State, s.UnitOfMeasurement)
 	} else {
 		state = fmt.Sprintf("%v", s.State)
 	}
