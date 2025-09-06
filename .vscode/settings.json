@@ -23,6 +23,9 @@
     "editor.unicodeHighlight.invisibleCharacters": false,
     "editor.wordWrap": "on"
   },
+  "[templ]": {
+    "editor.defaultFormatter": "a-h.templ"
+  },
   "conventionalCommits.scopes": [
     "github",
     "agent",
@@ -80,13 +83,17 @@
     "pkg/hwmon",
     "docker"
   ],
+  "css.lint.idSelector": "warning",
+  "emmet.includeLanguages": {
+    "templ": "html"
+  },
+  "files.associations": {
+    "*.css": "tailwindcss"
+  },
   "go.alternateTools": {
     "customFormatter": "golangci-lint-v2"
   },
-  "go.formatFlags": [
-    "fmt",
-    "--stdin"
-  ],
+  "go.formatFlags": ["fmt", "--stdin"],
   "go.formatTool": "custom",
   "go.lintFlags": [
     "run",
@@ -105,5 +112,8 @@
   },
   "licenser.author": "Joshua Rich <joshua.rich@gmail.com>",
   "licenser.license": "MIT",
-  "licenser.useSPDXLicenseFormat": true
+  "licenser.useSPDXLicenseFormat": true,
+  "tailwindCSS.includeLanguages": {
+    "templ": "html"
+  }
 }
