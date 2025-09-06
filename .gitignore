@@ -10,6 +10,7 @@
 # Except these...
 !/.gitignore
 !*.go
+!*.templ
 !go.sum
 !go.mod
 !*.yaml
@@ -44,3 +45,4 @@ tmp/
 dist/
 deployments/
 node_modules/
+*_templ.go
