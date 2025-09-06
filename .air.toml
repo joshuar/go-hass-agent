@@ -1,0 +1,51 @@
+root = "."
+tmp_dir = "tmp"
+
+[build]
+bin = "tmp/go-hass-agent"
+args_bin = [
+  "--profile='heapprofile=deployments/heap.prof;cpuprofile=deployments/cpu.prof;webui=true'",
+  "run",
+]
+cmd = "go run github.com/a-h/templ/cmd/templ@latest generate && go build -o ./tmp/go-hass-agent ."
+delay = 1000
+exclude_dir = [
+  ".parcel-cache",
+  "bin",
+  "dist",
+  "node_modules",
+  "static",
+  "tmp",
+  "tests",
+  "vendor",
+]
+exclude_regex = ["_test\\.go", "_templ\\.go"]
+exclude_unchanged = false
+follow_symlink = false
+include_ext = ["go", "templ", "html", "json", "js", "ts", "css", "scss"]
+kill_delay = 500
+log = "deployments/build-errors-air.log"
+poll = false
+poll_interval = 500
+pre_cmd = ["bun run build:parcel:dev"]
+rerun = false
+rerun_delay = 500
+send_interrupt = true
+stop_on_error = true
+
+[log]
+main_only = false
+time = true
+
+[color]
+build = "yellow"
+main = "magenta"
+runner = "green"
+watcher = "cyan"
+
+[misc]
+clean_on_exit = true
+
+[screen]
+clear_on_rebuild = false
+keep_scroll = true
