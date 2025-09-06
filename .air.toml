@@ -2,11 +2,12 @@ root = "."
 tmp_dir = "tmp"
 
 [build]
-bin = "tmp/go-hass-agent"
 args_bin = [
   "--profile='heapprofile=deployments/heap.prof;cpuprofile=deployments/cpu.prof;webui=true'",
+  "--log-level=debug",
   "run",
 ]
+bin = "tmp/go-hass-agent"
 cmd = "~/go/bin/templ generate && go build -o ./tmp/go-hass-agent ."
 delay = 1000
 exclude_dir = [
@@ -18,6 +19,7 @@ exclude_dir = [
   "tmp",
   "tests",
   "vendor",
+  "_archive",
 ]
 exclude_regex = ["_test\\.go", "_templ\\.go"]
 exclude_unchanged = false
