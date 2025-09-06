@@ -4,10 +4,13 @@
 # SPDX-License-Identifier: MIT
 
 package: models
-output: ../internal/models/models.gen.go
+output: ../models/models.gen.go
 generate:
   models: true
 output-options:
-  # to make sure that all types are generated
   skip-prune: true
   nullable-type: true
+  prefer-skip-optional-pointer: true
+  prefer-skip-optional-pointer-with-omitzero: true
+compatibility:
+  always-prefix-enum-values: true

@@ -31,14 +31,14 @@ func WithGPSAccuracy(accuracy int) Option {
 // WithSpeed option sets the speed value for the location.
 func WithSpeed(speed int) Option {
 	return func(l *models.Location) {
-		l.Speed = &speed
+		l.Speed = speed
 	}
 }
 
 // WithAltitude option sets the altitude value for the location.
 func WithAltitude(altitude int) Option {
 	return func(l *models.Location) {
-		l.Altitude = &altitude
+		l.Altitude = altitude
 	}
 }
 

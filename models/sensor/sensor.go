@@ -52,7 +52,7 @@ func WithDataSourceAttribute(source string) Option {
 func WithIcon(icon string) Option {
 	return func(s *models.Sensor) {
 		if icon != "" {
-			s.Icon = &icon
+			s.Icon = icon
 		}
 	}
 }
@@ -91,7 +91,7 @@ func AsTypeBinarySensor() Option {
 func WithUnits(units string) Option {
 	return func(s *models.Sensor) {
 		if units != "" {
-			s.UnitOfMeasurement = &units
+			s.UnitOfMeasurement = units
 		}
 	}
 }
@@ -109,7 +109,7 @@ func WithDeviceClass(deviceClass class.SensorDeviceClass) Option {
 	return func(s *models.Sensor) {
 		if deviceClass.Valid() {
 			str := deviceClass.String()
-			s.DeviceClass = &str
+			s.DeviceClass = str
 		}
 	}
 }
@@ -122,7 +122,7 @@ func WithStateClass(stateClass class.SensorStateClass) Option {
 	return func(s *models.Sensor) {
 		if stateClass.Valid() {
 			str := stateClass.String()
-			s.StateClass = &str
+			s.StateClass = str
 		}
 	}
 }
@@ -132,7 +132,7 @@ func WithStateClass(stateClass class.SensorStateClass) Option {
 func WithCategory(category models.EntityCategory) Option {
 	return func(s *models.Sensor) {
 		if category != "" {
-			s.EntityCategory = &category
+			s.EntityCategory = category
 		}
 	}
 }
@@ -141,8 +141,8 @@ func WithCategory(category models.EntityCategory) Option {
 // be grouped under a diagnostic header in the Home Assistant UI.
 func AsDiagnostic() Option {
 	return func(s *models.Sensor) {
-		category := models.Diagnostic
-		s.EntityCategory = &category
+		category := models.EntityCategoryDiagnostic
+		s.EntityCategory = category
 	}
 }
 
