@@ -19,6 +19,7 @@ linters:
     - tagalign
     - tagliatelle
     - wsl
+    - wsl_v5
   settings:
     gosec:
       excludes:

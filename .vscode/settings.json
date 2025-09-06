@@ -81,7 +81,9 @@
     "workers",
     "mqtt",
     "pkg/hwmon",
-    "docker"
+    "docker",
+    "air",
+    "web/content"
   ],
   "css.lint.idSelector": "warning",
   "emmet.includeLanguages": {
