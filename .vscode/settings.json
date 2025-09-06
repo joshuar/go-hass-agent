@@ -81,7 +81,7 @@
     "docker"
   ],
   "go.alternateTools": {
-    "customFormatter": "golangci-lint"
+    "customFormatter": "golangci-lint-v2"
   },
   "go.formatFlags": [
     "fmt",
@@ -98,7 +98,7 @@
     "--show-stats=false"
   ],
   "go.lintOnSave": "workspace",
-  "go.lintTool": "golangci-lint",
+  "go.lintTool": "golangci-lint-v2",
   "go.useLanguageServer": true,
   "gopls": {
     "ui.semanticTokens": true
