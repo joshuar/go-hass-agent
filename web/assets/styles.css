@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-@import "tailwindcss" source("../web/**/*.{html,templ}");
+@import "tailwindcss" source("../templates/**/*.{html,templ}");
 @plugin "@tailwindcss/typography";
 
 @plugin 'daisyui' {

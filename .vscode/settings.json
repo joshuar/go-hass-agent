@@ -83,7 +83,8 @@
     "pkg/hwmon",
     "docker",
     "air",
-    "web/content"
+    "web/content",
+    "web/assets"
   ],
   "css.lint.idSelector": "warning",
   "emmet.includeLanguages": {
