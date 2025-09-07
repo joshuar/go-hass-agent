@@ -15,6 +15,14 @@ const (
 	EntityCategoryDiagnostic EntityCategory = "diagnostic"
 )
 
+// Defines values for MessageStatus.
+const (
+	MessageStatusError   MessageStatus = "error"
+	MessageStatusInfo    MessageStatus = "info"
+	MessageStatusSuccess MessageStatus = "success"
+	MessageStatusWarning MessageStatus = "warning"
+)
+
 // Defines values for SensorType.
 const (
 	SensorTypeBinarySensor SensorType = "binary_sensor"
@@ -83,6 +91,21 @@ type MQTTMsg = mqtt.Msg
 
 // MQTTSubscription is an MQTT message containing a subscription request.
 type MQTTSubscription = mqtt.Subscription
+
+// Message is a user-facing message representing some condition or state within the service that the user should be informed about.
+type Message struct {
+	// Details is a longer description and/or background details about the message.
+	Details string `json:"details,omitempty,omitzero"`
+
+	// Status indicates the severity or importance of the message.
+	Status MessageStatus `json:"status" validate:"required"`
+
+	// Summary is a brief description for the message, which can be used as a title or summary.
+	Summary string `json:"summary" validate:"required"`
+}
+
+// MessageStatus indicates the severity or importance of the message.
+type MessageStatus string
 
 // Name is a human-friendly name for a entity.
 type Name = string

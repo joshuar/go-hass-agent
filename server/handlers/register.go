@@ -15,16 +15,24 @@ import (
 	"github.com/justinas/alice"
 	slogctx "github.com/veqryn/slog-context"
 
+	"github.com/joshuar/go-hass-agent/agent"
 	"github.com/joshuar/go-hass-agent/config"
+	"github.com/joshuar/go-hass-agent/hass"
 	"github.com/joshuar/go-hass-agent/logging"
+	"github.com/joshuar/go-hass-agent/models"
+	"github.com/joshuar/go-hass-agent/server/forms"
 	"github.com/joshuar/go-hass-agent/web/templates"
 )
 
-func GetRegistration() http.HandlerFunc {
+func GetRegistration(agent *agent.Agent) http.HandlerFunc {
 	return alice.New(
 		routeLogger,
 	).ThenFunc(func(res http.ResponseWriter, req *http.Request) {
-		renderTemplate(templates.RegistrationForm(), "Register - Go Hass Agent").ServeHTTP(res, req)
+		if agent.IsRegistered() {
+			renderTemplate(templates.RegistrationResponse(models.NewInfoMessage("Already registered", "")), "Register - Go Hass Agent").ServeHTTP(res, req)
+		} else {
+			renderTemplate(templates.RegistrationForm(nil, nil), "Register - Go Hass Agent").ServeHTTP(res, req)
+		}
 	}).ServeHTTP
 }
 
@@ -78,10 +86,30 @@ func RegistrationDiscovery() http.HandlerFunc {
 	}).ServeHTTP
 }
 
-func ProcessRegistration() http.HandlerFunc {
+func ProcessRegistration(agent *agent.Agent) http.HandlerFunc {
 	return alice.New(
 		routeLogger,
 	).ThenFunc(func(res http.ResponseWriter, req *http.Request) {
-		renderTemplate(templates.RegistrationForm(), "Register - Go Hass Agent").ServeHTTP(res, req)
+		request, valid, err := forms.DecodeForm[*hass.RegistrationRequest](req)
+		if err != nil || !valid {
+			renderTemplate(templates.RegistrationForm(models.NewErrorMessage("Invalid details.", err.Error()), request), "Register - Go Hass Agent").ServeHTTP(res, req)
+			return
+		}
+
+		err = hass.Register(req.Context(), agent.Config.ID, request)
+		if err != nil {
+			templ.Handler(templates.RegistrationForm(
+				models.NewErrorMessage("There was a problem trying to register this device:", err.Error()),
+				request,
+			)).ServeHTTP(res, req)
+			return
+		}
+
+		agent.Register()
+
+		templ.Handler(templates.RegistrationForm(
+			models.NewSuccessMessage("Device registered!", ""),
+			request,
+		)).ServeHTTP(res, req)
 	}).ServeHTTP
 }

@@ -94,9 +94,7 @@ func RegisterDevice(ctx context.Context, registration *preferences.Registration)
 }
 
 // NewDevice creates a new device. This is used during registration with Home
-// Assistant to identify the host running Go Hass Agent. While most of the
-// information generated is only needed during registration, the device ID and
-// Name will be stored in the preferences for later reference.
+// Assistant to identify the host running Go Hass Agent.
 func newDeviceRegistration(ctx context.Context) *api.DeviceRegistrationRequest {
 	dev := &api.DeviceRegistrationRequest{
 		AppName:    preferences.AppName,

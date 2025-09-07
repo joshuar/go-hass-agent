@@ -26,6 +26,7 @@ require (
 	github.com/cloudflare/circl v1.3.8 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.6 // indirect
 	github.com/cyphar/filepath-securejoin v0.3.6 // indirect
+	github.com/dolthub/maphash v0.1.0 // indirect
 	github.com/dprotaso/go-yit v0.0.0-20220510233725-9ba8df137936 // indirect
 	github.com/eclipse/paho.golang v0.22.0 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
@@ -113,6 +114,7 @@ require (
 	github.com/ConnorsApps/pipewire-monitor-go v0.1.0
 	github.com/a-h/templ v0.3.943
 	github.com/alecthomas/kong v1.12.1
+	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/fatih/color v1.18.0
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.8 // indirect
@@ -120,6 +122,7 @@ require (
 	github.com/go-playground/form/v4 v4.2.1
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
+	github.com/go-resty/resty/v2 v2.16.5
 	github.com/go-test/deep v1.1.1 // indirect
 	github.com/goforj/godump v1.6.0
 	github.com/gofrs/uuid/v5 v5.3.2
@@ -133,6 +136,7 @@ require (
 	github.com/knadh/koanf/v2 v2.2.2
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/lmittmann/tint v1.1.2
+	github.com/lxzan/gws v1.8.9
 	github.com/matoous/go-nanoid v1.5.1
 	github.com/mattn/go-isatty v0.0.20
 	github.com/reugn/go-quartz v0.15.1

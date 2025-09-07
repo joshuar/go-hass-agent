@@ -75,7 +75,7 @@ func New(static embed.FS, agent *agent.Agent) (*Server, error) {
 	}
 
 	// Set up routes.
-	router := setupRoutes(static)
+	router := setupRoutes(static, agent)
 
 	server.Server = &http.Server{
 		Handler:      router,
@@ -130,7 +130,7 @@ func (s *Server) Start(ctx context.Context) error {
 	return nil
 }
 
-func setupRoutes(static embed.FS) *chi.Mux {
+func setupRoutes(static embed.FS, agent *agent.Agent) *chi.Mux {
 	// Set up a new chi router.
 	router := chi.NewRouter()
 	router.Use(
@@ -158,8 +158,9 @@ func setupRoutes(static embed.FS) *chi.Mux {
 	// // Error handling.
 	// router.NotFound(handlers.NotFound())
 
-	router.Get("/register", handlers.GetRegistration())
+	router.Get("/register", handlers.GetRegistration(agent))
 	router.With(middlewares.RequireHTMX).Get("/register/discovery", handlers.RegistrationDiscovery())
+	router.With(middlewares.RequireHTMX).Post("/register", handlers.ProcessRegistration(agent))
 	// // Front page.
 	// router.Get("/", handlers.Landing())
 	// // Access routes.
