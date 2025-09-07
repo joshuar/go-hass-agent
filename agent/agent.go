@@ -10,6 +10,7 @@ import (
 	"log/slog"
 
 	"github.com/joshuar/go-hass-agent/config"
+	"github.com/joshuar/go-hass-agent/device"
 )
 
 var registered chan struct{}
@@ -25,7 +26,8 @@ type Agent struct {
 
 // Config contains the agent configuration options.
 type Config struct {
-	Registered bool `toml:"registered"`
+	Registered bool   `toml:"registered"`
+	ID         string `toml:"device_id"`
 }
 
 // New sets up a new agent instance.
@@ -41,6 +43,21 @@ func New() (*Agent, error) {
 	if err := config.Load(agentConfigPrefix, agent.Config); err != nil {
 		return agent, fmt.Errorf("unable to load agent config: %w", err)
 	}
+	// Generate a unique device ID if required.
+	if agent.Config.ID == "" {
+		slog.Debug("Generating new device ID.")
+		// Generate a new unique Device ID
+		id, err := device.NewDeviceID()
+		if err != nil {
+			return agent, fmt.Errorf("unable to generate new device id: %w", err)
+		}
+		err = config.Set(map[string]any{"agent.device_id": id})
+		if err != nil {
+			return agent, fmt.Errorf("unable to generate new device id: %w", err)
+		}
+		agent.Config.ID = id
+	}
+
 	if agent.IsRegistered() {
 		close(registered)
 	}

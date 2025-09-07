@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/goforj/godump"
 	"github.com/knadh/koanf/parsers/toml"
 	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/v2"
@@ -38,11 +39,13 @@ const (
 )
 
 type configData struct {
+	mu   sync.Mutex
 	src  *koanf.Koanf
 	path string
 }
 
 var globalConfig = configData{
+	mu:   sync.Mutex{},
 	src:  koanf.New("."),
 	path: GetPath(),
 }
@@ -108,6 +111,71 @@ func Load(configPrefix string, cfg any) error {
 
 	slog.Debug("Loading config for component.",
 		slog.String("component", configPrefix))
+
+	return nil
+}
+
+// Set will set the given options in the config. After all options are set, the config file is written.
+func Set(options map[string]any) error {
+	// globalConfig.mu.Lock()
+	// defer globalConfig.mu.Unlock()
+	for key, value := range options {
+		err := globalConfig.src.Set(key, value)
+		if err != nil {
+			slog.Error("Unable to set config option.",
+				slog.String("key", key),
+				slog.Any("value", value),
+				slog.Any("error", err),
+			)
+		}
+	}
+	err := save()
+	if err != nil {
+		return fmt.Errorf("unable to save config: %w", err)
+	}
+	return nil
+}
+
+// save will save the new values of the specified preferences to the existing
+// preferences file.
+func save() error {
+	// globalConfig.mu.Lock()
+	// defer globalConfig.mu.Unlock()
+
+	configFile := filepath.Join(globalConfig.path, ConfigFile)
+	godump.Dump(configFile)
+
+	if err := checkPath(globalConfig.path); err != nil {
+		return err
+	}
+
+	b, err := globalConfig.src.Marshal(toml.Parser())
+	if err != nil {
+		return fmt.Errorf("unable to marshal config: %w", err)
+	}
+
+	err = os.WriteFile(configFile, b, 0o600)
+	if err != nil {
+		return fmt.Errorf("unable to write config file %s: %w", configFile, err)
+	}
+
+	slog.Debug("Saved config to disk.",
+		slog.String("file", configFile),
+	)
+
+	return nil
+}
+
+// checkPath checks that the given directory exists. If it doesn't it will be
+// created.
+func checkPath(path string) error {
+	_, err := os.Stat(path)
+	if os.IsNotExist(err) {
+		err := os.MkdirAll(path, 0o750)
+		if err != nil {
+			return fmt.Errorf("unable to create new directory: %w", err)
+		}
+	}
 
 	return nil
 }
