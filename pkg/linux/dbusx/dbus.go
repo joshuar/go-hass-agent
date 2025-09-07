@@ -3,7 +3,7 @@
 
 // Package dbusx provides additional helper methods for dealing with D-Bus in Go.
 //
-//go:generate go tool golang.org/x/tools/cmd/stringer -type=dbusType -output busType_strings.go
+//go:generate go tool stringer -type=dbusType -output busType_strings.go
 package dbusx
 
 import (
@@ -16,7 +16,7 @@ import (
 	"github.com/godbus/dbus/v5"
 	slogctx "github.com/veqryn/slog-context"
 
-	"github.com/joshuar/go-hass-agent/internal/components/logging"
+	"github.com/joshuar/go-hass-agent/logging"
 )
 
 const (

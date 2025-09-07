@@ -14,7 +14,7 @@ import (
 
 	"github.com/jfreymuth/pulse/proto"
 
-	"github.com/joshuar/go-hass-agent/internal/components/preferences"
+	"github.com/joshuar/go-hass-agent/config"
 )
 
 const (
@@ -68,7 +68,7 @@ func NewPulseClient(ctx context.Context) (*PulseAudioClient, error) {
 	}
 	// Set client properties.
 	props := proto.PropList{
-		"media.name":                 proto.PropListString(preferences.AppName),
+		"media.name":                 proto.PropListString(config.AppName),
 		"application.name":           proto.PropListString("go-hass-agent"),
 		"application.icon_name":      proto.PropListString("audio-x-generic"),
 		"application.process.id":     proto.PropListString(strconv.Itoa(os.Getpid())),
