@@ -4,36 +4,46 @@
 package templates
 
 import "slices"
+import "github.com/joshuar/go-hass-agent/models"
+import "github.com/joshuar/go-hass-agent/hass"
 
-templ RegistrationForm() {
-	<div class="flex min-h-full flex-col justify-center items-center px-6 py-12 lg:px-8">
+templ RegistrationForm(msg *models.Message, request *hass.RegistrationRequest) {
+	<div id="registration-form" class="flex min-h-full flex-col justify-center items-center px-6 py-12 lg:px-8">
 		<div class="sm:mx-auto sm:w-full sm:max-w-sm">
 			<img src="web/content/go-hass-agent.png" alt="Go Hass Agent" class="mx-auto h-10 w-auto"/>
 			<h2 class="mt-10 text-center text-2xl/9 font-bold tracking-tight">Register Go Hass Agent with Home Assistant</h2>
 		</div>
-		<fieldset class="fieldset bg-base-200 border-base-300 rounded-box w-xs border p-4">
-			// <legend class="fieldset-legend">Server</legend>
-			<label class="label">
-				<input type="checkbox" class="toggle" _="on click toggle @disabled on #detected-servers then toggle @disabled on #detect-servers-button then toggle @disabled on #custom-server"/>
-				Use custom server
-			</label>
-			<label class="label">Detected Servers</label>
-			<div class="join">
-				<select id="detected-servers" class="select join-item" hx-get="/register/discovery" hx-trigger="load">
-				<option selected class="htmx-indicator">Finding servers...</option>
-				</select>
-				<button id="detect-servers-button" class="btn btn-square join-item" hx-get="/register/discovery" hx-target="#detected-servers">
-					<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
-						<path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"></path>
-					</svg>
-				</button>
-			</div>
-			<label class="label">Custom Server</label>
-			<input id="custom-server" type="url" class="input" placeholder="http://host:port" disabled/>
-			<label class="label">Token</label>
-			<input type="password" required class="input" placeholder="SuperSecret"/>
-			<button class="btn btn-neutral mt-4">Register</button>
-		</fieldset>
+		<form hx-post="/register" hx-target="#registration-form" hx-swap="outerHTML">
+			<fieldset class="fieldset bg-base-200 border-base-300 rounded-box w-xs border p-4">
+				if msg != nil {
+					@Alert(msg)
+				}
+				<label class="label">
+					<input type="checkbox" class="toggle" _="on click toggle @disabled on #detected-servers then toggle @disabled on #detect-servers-button then toggle @disabled on #custom-server"/>
+					Use custom server
+				</label>
+				<label class="label">Detected Servers</label>
+				<div class="join" hx-target="#detected-servers" hx-swap="innerHTML">
+					<select id="detected-servers" name="server" class="select join-item" hx-get="/register/discovery" hx-trigger="load" >
+						<option selected class="htmx-indicator">Finding servers...</option>
+					</select>
+					<button id="detect-servers-button" class="btn btn-square join-item" hx-get="/register/discovery">
+						<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
+							<path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"></path>
+						</svg>
+					</button>
+				</div>
+				<label class="label">Custom Server</label>
+				<input id="custom-server" type="url" name="server" class="input" placeholder="http://host:port" disabled/>
+				<label class="label">
+					<input type="checkbox" name="ignore_hass_urls"/>
+					Ignore returned URLs and use this server for all requests.
+				</label>
+				<label class="label">Token</label>
+				<input type="password" required name="token" if request != nil && request.Token != "" { value={ request.Token } } class="input" placeholder="SuperSecret"/>
+				<button class="btn btn-neutral mt-4" type="submit">Register</button>
+			</fieldset>
+		</form>
 	</div>
 }
 
@@ -42,4 +52,10 @@ templ DiscoveredServers(servers []string) {
 	for server := range slices.Values(servers) {
 		<option>{ server }</option>
 	}
+}
+
+templ RegistrationResponse(msg *models.Message) {
+	<div class="flex min-h-full flex-col justify-center items-center px-6 py-12 lg:px-8">
+		@Alert(msg)
+	</div>
 }

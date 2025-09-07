@@ -72,6 +72,7 @@ func (a *Agent) IsRegistered() bool {
 
 // Register will mark the registration status of the agent as registered.
 func (a *Agent) Register() {
+	err = config.Set(map[string]any{"agent.registered": true})
 	a.Config.Registered = true
 	close(registered)
 }

@@ -1,5 +1,3 @@
-# yaml-language-server: $schema=https://raw.githubusercontent.com/OAI/OpenAPI-Specification/refs/heads/main/schemas/v3.0/schema.yaml
-
 # Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
 # SPDX-License-Identifier: MIT
 
@@ -8,7 +6,6 @@ info:
   version: 1.0.0
   title: Models
   description: Common objects and fields.
-paths: {}
 components:
   schemas:
     ID:
@@ -241,3 +238,29 @@ components:
           description: >
             is a short textual summary of the worker's purpose.
           type: string
+    Message:
+      description: >
+        is a user-facing message representing some condition or state within the service that the user should be
+        informed about.
+      type: object
+      required:
+        - summary
+        - status
+      properties:
+        summary:
+          description: >
+            is a brief description for the message, which can be used as a title or summary.
+          type: string
+          x-oapi-codegen-extra-tags:
+            validate: 'required'
+        details:
+          description: >
+            is a longer description and/or background details about the message.
+          type: string
+        status:
+          description: >
+            indicates the severity or importance of the message.
+          type: string
+          enum: ['info', 'success', 'warning', 'error']
+          x-oapi-codegen-extra-tags:
+            validate: 'required'
