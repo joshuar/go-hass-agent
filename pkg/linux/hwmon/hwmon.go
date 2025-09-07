@@ -24,7 +24,7 @@ import (
 // ease with writing tests.
 var HWMonPath = "/sys/class/hwmon"
 
-//go:generate go tool golang.org/x/tools/cmd/stringer -type=MonitorType -output hwmon_MonitorType_generated.go
+//go:generate go tool stringer -type=MonitorType -output hwmon_MonitorType_generated.go
 const (
 	// Unknown hwmon sensor.
 	Unknown MonitorType = iota

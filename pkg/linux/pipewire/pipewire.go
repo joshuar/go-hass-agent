@@ -16,7 +16,7 @@ import (
 	pwmonitor "github.com/ConnorsApps/pipewire-monitor-go"
 	slogctx "github.com/veqryn/slog-context"
 
-	"github.com/joshuar/go-hass-agent/internal/components/logging"
+	"github.com/joshuar/go-hass-agent/logging"
 )
 
 // Monitor handles monitoring pipewire for events and dispatching events to registered listeners as appropriate.
