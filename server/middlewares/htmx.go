@@ -14,8 +14,6 @@ func SetupHTMX(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
 		res.Header().Add("Vary", "HX-Request")
 		res.Header().Add("Vary", "HX-History-Restore-Request")
-		res.Header().Add("Cache-Control", "no-cache")
-		res.Header().Add("Cache-Control", "private")
 		next.ServeHTTP(res, req)
 	})
 }

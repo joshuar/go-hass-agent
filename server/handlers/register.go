@@ -29,9 +29,9 @@ func GetRegistration(agent *agent.Agent) http.HandlerFunc {
 		routeLogger,
 	).ThenFunc(func(res http.ResponseWriter, req *http.Request) {
 		if agent.IsRegistered() {
-			renderTemplate(templates.RegistrationResponse(models.NewInfoMessage("Already registered", "")), "Register - Go Hass Agent").ServeHTTP(res, req)
+			renderPage(templates.RegistrationResponse(models.NewInfoMessage("Already registered", "")), "Register - Go Hass Agent").ServeHTTP(res, req)
 		} else {
-			renderTemplate(templates.RegistrationForm(nil, nil), "Register - Go Hass Agent").ServeHTTP(res, req)
+			renderPage(templates.RegistrationForm(nil, nil), "Register - Go Hass Agent").ServeHTTP(res, req)
 		}
 	}).ServeHTTP
 }
@@ -92,7 +92,7 @@ func ProcessRegistration(agent *agent.Agent) http.HandlerFunc {
 	).ThenFunc(func(res http.ResponseWriter, req *http.Request) {
 		request, valid, err := forms.DecodeForm[*hass.RegistrationRequest](req)
 		if err != nil || !valid {
-			renderTemplate(templates.RegistrationForm(models.NewErrorMessage("Invalid details.", err.Error()), request), "Register - Go Hass Agent").ServeHTTP(res, req)
+			renderPage(templates.RegistrationForm(models.NewErrorMessage("Invalid details.", err.Error()), request), "Register - Go Hass Agent").ServeHTTP(res, req)
 			return
 		}
 
