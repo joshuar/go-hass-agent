@@ -1,48 +1,77 @@
 {
-    // See https://go.microsoft.com/fwlink/?LinkId=733558
-    // for the documentation about the tasks.json format
-    "version": "2.0.0",
-    "tasks": [
-      {
-        "label": "MQTT: Watch 'homeassistant/#'",
-        "type": "shell",
-        "command": "mosquitto_sub -h mosquitto -v -t \"homeassistant/#\"",
-        "group": "none",
-        "presentation": {
-          "reveal": "always",
-          "panel": "new"
-        },
-        "problemMatcher": []
+  // See https://go.microsoft.com/fwlink/?LinkId=733558
+  // for the documentation about the tasks.json format
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "MQTT: Watch 'homeassistant/#'",
+      "type": "shell",
+      "command": "mosquitto_sub -h mosquitto -v -t \"homeassistant/#\"",
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
       },
-      {
-        "label": "View Log: Mosquitto",
-        "type": "shell",
-        "command": "tail -F deployments/mosquitto/log/mosquitto.log",
-        "group": "none",
-        "presentation": {
-          "echo": true,
-          "reveal": "always",
-          "focus": false,
-          "panel": "dedicated",
-          "showReuseMessage": true,
-          "clear": false
-        },
-        "problemMatcher": []
+      "problemMatcher": []
+    },
+    {
+      "label": "View Log: Mosquitto",
+      "type": "shell",
+      "command": "tail -F deployments/mosquitto/log/mosquitto.log",
+      "group": "none",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "dedicated",
+        "showReuseMessage": true,
+        "clear": false
       },
-      {
-        "label": "View Log: Home Assistant",
-        "type": "shell",
-        "command": "tail -F deployments/home-assistant/config/home-assistant.log",
-        "group": "none",
-        "presentation": {
-          "echo": true,
-          "reveal": "always",
-          "focus": false,
-          "panel": "dedicated",
-          "showReuseMessage": true,
-          "clear": false
-        },
-        "problemMatcher": []
+      "problemMatcher": []
+    },
+    {
+      "label": "View Log: Home Assistant",
+      "type": "shell",
+      "command": "tail -F deployments/home-assistant/config/home-assistant.log",
+      "group": "none",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "dedicated",
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "templ: watch for changes",
+      "type": "shell",
+      "command": "templ generate --watch --path web/templates -v",
+      "group": "none",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "dedicated",
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "agent: run",
+      "type": "shell",
+      "command": "air -c .air.toml",
+      "problemMatcher": [],
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "dedicated",
+        "showReuseMessage": true,
+        "clear": false
       }
-    ]
-  }
+    }
+  ]
+}
