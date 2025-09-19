@@ -32,7 +32,7 @@ const (
 	// AppDescription is the formatted summary of the application.
 	AppDescription = "A Home Assistant, native app for desktop/laptop devices."
 	// ConfigFile is the location of the server configuration file.
-	ConfigFile = "config.toml"
+	ConfigFile = "preferences.toml"
 
 	// DefaultServer is the default Home Assistant server address.
 	DefaultServer = "http://localhost:8123"
