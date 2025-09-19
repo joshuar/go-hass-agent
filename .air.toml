@@ -2,16 +2,20 @@ root = "."
 tmp_dir = "tmp"
 
 [build]
+pre_cmd = [
+  "bun run build:css",
+  "bun run build:js",
+  "go run github.com/a-h/templ/cmd/templ@latest generate -path web",
+]
+cmd = 'go build -ldflags="-X github.com/joshuar/go-hass-agent/config.AppVersion=$(git describe --tags --always --long --dirty)" -o ./tmp/go-hass-agent .'
 args_bin = [
   "--profile='heapprofile=deployments/heap.prof;cpuprofile=deployments/cpu.prof;webui=true'",
-  "--log-level=debug",
   "run",
 ]
+full_bin = "export $(grep -v '^#' .devcontainer/.env | xargs) && tmp/go-hass-agent"
 bin = "tmp/go-hass-agent"
-cmd = "~/go/bin/templ generate && go build -o ./tmp/go-hass-agent ."
-delay = 1000
+cdelay = 1000
 exclude_dir = [
-  ".parcel-cache",
   "bin",
   "dist",
   "node_modules",
@@ -20,6 +24,7 @@ exclude_dir = [
   "tests",
   "vendor",
   "_archive",
+  "schema"
 ]
 exclude_regex = ["_test\\.go", "_templ\\.go"]
 exclude_unchanged = false
@@ -29,7 +34,6 @@ kill_delay = 500
 log = "deployments/build-errors-air.log"
 poll = false
 poll_interval = 500
-pre_cmd = ["bun run build:parcel:dev"]
 rerun = false
 rerun_delay = 500
 send_interrupt = true
