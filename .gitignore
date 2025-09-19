@@ -45,4 +45,3 @@ tmp/
 dist/
 deployments/
 node_modules/
-*_templ.go
