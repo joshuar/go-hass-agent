@@ -19,8 +19,11 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/justinas/nosurf"
 	slogchi "github.com/samber/slog-chi"
 	slogctx "github.com/veqryn/slog-context"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
 
 	"github.com/joshuar/go-hass-agent/agent"
 	"github.com/joshuar/go-hass-agent/config"
@@ -77,8 +80,9 @@ func New(static embed.FS, agent *agent.Agent) (*Server, error) {
 	// Set up routes.
 	router := setupRoutes(static, agent)
 
+	h2s := &http2.Server{}
 	server.Server = &http.Server{
-		Handler:      router,
+		Handler:      h2c.NewHandler(nosurf.New(router), h2s),
 		Addr:         net.JoinHostPort(server.Config.Host, strconv.Itoa(server.Config.Port)),
 		ReadTimeout:  server.Config.ReadTimeout,
 		WriteTimeout: server.Config.WriteTimeout,
@@ -147,6 +151,8 @@ func setupRoutes(static embed.FS, agent *agent.Agent) *chi.Mux {
 		// middlewares.CSP(server.ServerConfig.CSP),
 		// middlewares.Etag,
 		middleware.StripSlashes,
+		middlewares.SaveCSRFToken,
+		middleware.NoCache,
 	)
 
 	// Routes.
@@ -161,8 +167,8 @@ func setupRoutes(static embed.FS, agent *agent.Agent) *chi.Mux {
 	router.Get("/register", handlers.GetRegistration(agent))
 	router.With(middlewares.RequireHTMX).Get("/register/discovery", handlers.RegistrationDiscovery())
 	router.With(middlewares.RequireHTMX).Post("/register", handlers.ProcessRegistration(agent))
-	// // Front page.
-	// router.Get("/", handlers.Landing())
+	// Front page.
+	router.Get("/", handlers.Landing(agent))
 	// // Access routes.
 	// router.Get("/login", handlers.Login())
 	// router.Group(func(r chi.Router) {

@@ -3,12 +3,7 @@
 
 package templates
 
-var (
-	Content  = FragmentKey{}
-	FullPage = FragmentKey{}
-)
-
-type FragmentKey struct{}
+import "github.com/joshuar/go-hass-agent/models"
 
 // SetPageTitle sets (or updates) the page's <title></title> tag. If the title is an empty string, a default title will
 // be set instead.
@@ -22,7 +17,6 @@ templ SetPageTitle(title string) {
 
 // Page renders a full HTML page with the given body content and title.
 templ Page(title string, body templ.Component) {
-	@templ.Fragment(FullPage) {
 		<!DOCTYPE html>
 		<html lang="en" class="h-full">
 			<head>
@@ -62,10 +56,10 @@ templ Page(title string, body templ.Component) {
 				class="h-full"
 				_="on every htmx:beforeSend in <button:not(.no-disable)/> tell it toggle [@disabled='true'] until htmx:afterOnLoad"
 			>
+				<input id="csrf_token" type="hidden" name="csrf_token" value={ models.CSRFTokenFromCtx(ctx) }/>
 				<main class="mx-auto max-w-7xl sm:px-6 lg:px-8">
 					@body
 				</main>
 			</body>
 		</html>
-	}
 }

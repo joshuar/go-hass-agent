@@ -41,7 +41,9 @@ func routeLogger(next http.Handler) http.Handler {
 	})
 }
 
-func renderTemplate(template templ.Component, title string) http.Handler {
+// renderPage will render the given template as a full page. It handles htmx and non-htmx requests, rendering the
+// appropriate full or partial HTML response as appropriate.
+func renderPage(template templ.Component, title string) http.Handler {
 	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
 		if template == nil {
 			// If there is no response, return 204: No Content.
@@ -51,13 +53,18 @@ func renderTemplate(template templ.Component, title string) http.Handler {
 		// Write the response template.
 		if IsHTMX(req) {
 			if IsHistoryRestoreRequest(req) {
-				templ.Handler(templates.Page(title, template), templ.WithFragments(templates.FullPage)).ServeHTTP(res, req)
+				templ.Handler(templates.Page(title, template)).ServeHTTP(res, req)
 				return
 			} else if title != "" {
 				// Update the page title if set.
 				template = templ.Join(template, templates.SetPageTitle(title))
 			}
-			templ.Handler(template, templ.WithFragments(templates.Content)).ServeHTTP(res, req)
+			template = templ.Join(template, templates.UpdateCSRFToken())
+			target := templates.FragmentKey(req.Header.Get("HX-Target"))
+			if target == "" {
+				target = templates.FragmentContent
+			}
+			templ.Handler(template, templ.WithFragments(target)).ServeHTTP(res, req)
 		} else {
 			template = templates.Page(title, template)
 			err := template.Render(req.Context(), res)
@@ -68,6 +75,11 @@ func renderTemplate(template templ.Component, title string) http.Handler {
 			}
 		}
 	})
+}
+
+// renderPartial will render the given template, optionally updating the page title if one is given.
+func renderPartial(template templ.Component) http.Handler {
+	return templ.Handler(templ.Join(template, templates.UpdateCSRFToken()))
 }
 
 func IsHTMX(req *http.Request) bool {

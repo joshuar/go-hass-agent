@@ -86,7 +86,8 @@
     "web/content",
     "web/assets",
     "web/templates",
-    "server/middlewares"
+    "server/middlewares",
+    "server"
   ],
   "css.lint.idSelector": "warning",
   "emmet.includeLanguages": {
