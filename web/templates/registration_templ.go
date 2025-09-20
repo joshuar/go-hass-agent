@@ -37,7 +37,7 @@ func RegistrationForm(msg *models.Message, request *hass.RegistrationRequest) te
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div id=\"registration-form\" class=\"flex min-h-full flex-col justify-center items-center px-6 py-12 lg:px-8\"><div class=\"sm:mx-auto sm:w-full sm:max-w-sm\"><img src=\"web/content/go-hass-agent.png\" alt=\"Go Hass Agent\" class=\"mx-auto h-10 w-auto\"><h2 class=\"mt-10 text-center text-2xl/9 font-bold tracking-tight\">Register Go Hass Agent with Home Assistant</h2></div><form hx-post=\"/register\" hx-target=\"#registration-form\" hx-swap=\"outerHTML\"><fieldset class=\"fieldset bg-base-200 border-base-300 rounded-box w-xs border p-4\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div id=\"registration-form\" class=\"flex min-h-full flex-col justify-center items-center px-6 py-12 lg:px-8\"><div class=\"sm:mx-auto sm:w-full sm:max-w-sm\"><img src=\"web/content/go-hass-agent.png\" alt=\"Go Hass Agent\" class=\"mx-auto h-10 w-auto\"><h2 class=\"mt-10 text-center text-2xl/9 font-bold tracking-tight\">Register Go Hass Agent with Home Assistant</h2></div><form hx-post=\"/register\" hx-target=\"#registration-form\" hx-swap=\"outerHTML\" hx-include=\"[name='csrf_token']\"><fieldset class=\"fieldset bg-base-200 border-base-300 rounded-box w-xs border p-4\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -59,7 +59,7 @@ func RegistrationForm(msg *models.Message, request *hass.RegistrationRequest) te
 			var templ_7745c5c3_Var2 string
 			templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(request.Token)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/registration.templ`, Line: 43, Col: 113}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/registration.templ`, Line: 53, Col: 27}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 			if templ_7745c5c3_Err != nil {
@@ -111,7 +111,7 @@ func DiscoveredServers(servers []string) templ.Component {
 			var templ_7745c5c3_Var4 string
 			templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(server)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/registration.templ`, Line: 53, Col: 18}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/registration.templ`, Line: 67, Col: 18}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 			if templ_7745c5c3_Err != nil {

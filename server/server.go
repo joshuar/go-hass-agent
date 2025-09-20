@@ -64,7 +64,7 @@ func New(static embed.FS, agent *agent.Agent) (*Server, error) {
 	server := &Server{
 		Config: &Config{
 			Host:         "localhost",
-			Port:         7000,
+			Port:         8223,
 			CertFile:     "",
 			KeyFile:      "",
 			ReadTimeout:  5 * time.Second,
@@ -118,18 +118,21 @@ func (s *Server) Start(ctx context.Context) error {
 	}()
 
 	// And we serve HTTP until the world ends.
-	var err error
-	if s.Config.CertFile != "" && s.Config.KeyFile != "" {
-		err = s.ListenAndServeTLS(s.Config.CertFile, s.Config.KeyFile)
-	} else {
-		err = s.ListenAndServe()
-	}
-	if errors.Is(err, http.ErrServerClosed) { // graceful shutdown
-		slogctx.FromCtx(ctx).Debug("Shutting down server...")
-		wg.Wait()
-	} else if err != nil {
-		return fmt.Errorf("error shutting down server: %w", err)
-	}
+	go func() {
+		var err error
+		if s.Config.CertFile != "" && s.Config.KeyFile != "" {
+			err = s.ListenAndServeTLS(s.Config.CertFile, s.Config.KeyFile)
+		} else {
+			err = s.ListenAndServe()
+		}
+		if errors.Is(err, http.ErrServerClosed) { // graceful shutdown
+			slogctx.FromCtx(ctx).Debug("Shutting down server...")
+			wg.Wait()
+		} else if err != nil {
+			slogctx.FromCtx(ctx).Debug("Error shutting down server.",
+				slog.Any("error", err))
+		}
+	}()
 
 	return nil
 }

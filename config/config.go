@@ -12,13 +12,15 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/goforj/godump"
-	"github.com/knadh/koanf/parsers/toml"
+	"github.com/knadh/koanf/parsers/toml/v2"
 	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/v2"
 )
 
-var ErrLoadConfig = errors.New("could not load config")
+var (
+	ErrGetConfig  = errors.New("could not get from config")
+	ErrLoadConfig = errors.New("could not load config")
+)
 
 var AppVersion = "_UNKNOWN_"
 
@@ -39,13 +41,13 @@ const (
 )
 
 type configData struct {
-	mu   sync.Mutex
+	sync.Mutex
+
 	src  *koanf.Koanf
 	path string
 }
 
 var globalConfig = configData{
-	mu:   sync.Mutex{},
 	src:  koanf.New("."),
 	path: GetPath(),
 }
@@ -69,24 +71,25 @@ var Init = sync.OnceValue(func() error {
 		return fmt.Errorf("%w: %w", ErrLoadConfig, err)
 	}
 	// Watch for changes.
-	provider.Watch(func(event any, err error) {
-		if err != nil {
-			slog.Error("Error occurred while watching config for changes.",
-				slog.Any("error", err),
-			)
-			return
-		}
-		// Reload config on changes.
-		slog.Debug("Config file changed, reloading config.")
-		globalConfig.src = koanf.New(".")
-		globalConfig.src.Load(provider, toml.Parser())
-	})
+	// provider.Watch(func(event any, err error) {
+	// 	if err != nil {
+	// 		slog.Error("Error occurred while watching config for changes.",
+	// 			slog.Any("error", err),
+	// 		)
+	// 		return
+	// 	}
+	// 	// Reload config on changes.
+	// 	slog.Debug("Config file changed, reloading config.")
+	// 	globalConfig.src = koanf.New(".")
+	// 	globalConfig.src.Load(provider, toml.Parser())
+	// })
 
 	slog.Debug("Config backend initialized.")
 
 	return nil
 })
 
+// GetPath returns the directory path under which the config file (and other files/data) is stored.
 func GetPath() string {
 	userConfigDir, err := os.UserConfigDir()
 	if err != nil {
@@ -95,6 +98,7 @@ func GetPath() string {
 	return filepath.Join(userConfigDir, AppID)
 }
 
+// SetPath sets the directory path under which the config file (and other files/data) will be stored.
 func SetPath(path string) {
 	globalConfig.path = path
 }
@@ -103,22 +107,36 @@ func SetPath(path string) {
 // environment prefixes, and marshaling the config into the given config object.
 // Components should take care to ensure this is called only once, where
 // required.
-func Load(configPrefix string, cfg any) error {
+func Load(path string, cfg any) error {
 	// Unmarshal config, overwriting defaults.
-	if err := globalConfig.src.UnmarshalWithConf(configPrefix, cfg, koanf.UnmarshalConf{Tag: "toml"}); err != nil {
-		return fmt.Errorf("%w: %w", ErrLoadConfig, err)
+	if err := globalConfig.src.UnmarshalWithConf(path, cfg, koanf.UnmarshalConf{Tag: "toml"}); err != nil {
+		return fmt.Errorf("could not load config %s: %w", path, err)
 	}
 
-	slog.Debug("Loading config for component.",
-		slog.String("component", configPrefix))
+	slog.Debug("Loading config path.",
+		slog.String("path", path))
 
+	return nil
+}
+
+// Save will save the given config at the given path.
+func Save(path string, config any) error {
+	globalConfig.Lock()
+	err := globalConfig.src.Set(path, config)
+	if err != nil {
+		return fmt.Errorf("unable to save config: %w", err)
+	}
+	globalConfig.Unlock()
+	err = save()
+	if err != nil {
+		return fmt.Errorf("unable to save config: %w", err)
+	}
 	return nil
 }
 
 // Set will set the given options in the config. After all options are set, the config file is written.
 func Set(options map[string]any) error {
-	// globalConfig.mu.Lock()
-	// defer globalConfig.mu.Unlock()
+	globalConfig.Lock()
 	for key, value := range options {
 		err := globalConfig.src.Set(key, value)
 		if err != nil {
@@ -129,6 +147,7 @@ func Set(options map[string]any) error {
 			)
 		}
 	}
+	globalConfig.Unlock()
 	err := save()
 	if err != nil {
 		return fmt.Errorf("unable to save config: %w", err)
@@ -136,14 +155,31 @@ func Set(options map[string]any) error {
 	return nil
 }
 
+// Get will return the value located at the given path in the config.
+func Get[T any](path string) (T, error) {
+	globalConfig.Lock()
+	defer globalConfig.Unlock()
+	value, ok := globalConfig.src.Get(path).(T)
+	if !ok {
+		return value, fmt.Errorf("%w: %s: not %T", ErrGetConfig, path, value)
+	}
+	return value, nil
+}
+
+// Exists reports whether the given path exists in the config.
+func Exists(path string) bool {
+	globalConfig.Lock()
+	defer globalConfig.Unlock()
+	return globalConfig.src.Exists(path)
+}
+
 // save will save the new values of the specified preferences to the existing
 // preferences file.
 func save() error {
-	// globalConfig.mu.Lock()
-	// defer globalConfig.mu.Unlock()
+	globalConfig.Lock()
+	defer globalConfig.Unlock()
 
 	configFile := filepath.Join(globalConfig.path, ConfigFile)
-	godump.Dump(configFile)
 
 	if err := checkPath(globalConfig.path); err != nil {
 		return err

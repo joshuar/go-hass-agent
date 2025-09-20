@@ -13,6 +13,7 @@ import (
 
 	"github.com/joshuar/go-hass-agent/cli"
 	"github.com/joshuar/go-hass-agent/config"
+	"github.com/joshuar/go-hass-agent/device"
 	"github.com/joshuar/go-hass-agent/logging"
 )
 
@@ -66,7 +67,21 @@ func main() {
 		}
 	}
 	// Initialise the config.
-	config.Init()
+	err := config.Init()
+	if err != nil {
+		slog.Error("Unable to start.",
+			slog.Any("error", err))
+		os.Exit(-1)
+	}
+	// Generate device details if required.
+	if !config.Exists(device.ConfigPrefix) {
+		err := device.NewConfig()
+		if err != nil {
+			slog.Error("Unable to start.",
+				slog.Any("error", err))
+			os.Exit(-1)
+		}
+	}
 	// Run the requested command with the provided options.
 	if err := cmdCtx.Run(&cli.Opts{Path: CLI.Path, StaticContent: content}); err != nil {
 		slog.Error("Command failed.",

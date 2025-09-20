@@ -8,15 +8,17 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sync"
 
+	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/config"
-	"github.com/joshuar/go-hass-agent/device"
+	"github.com/joshuar/go-hass-agent/hass"
 )
 
 var registered chan struct{}
 
 const (
-	agentConfigPrefix = "agent"
+	ConfigPrefix = "agent"
 )
 
 // Agent represents the data and methods required for running the agent.
@@ -26,8 +28,7 @@ type Agent struct {
 
 // Config contains the agent configuration options.
 type Config struct {
-	Registered bool   `toml:"registered"`
-	ID         string `toml:"device_id"`
+	Registered bool `toml:"registered"`
 }
 
 // New sets up a new agent instance.
@@ -40,24 +41,21 @@ func New() (*Agent, error) {
 		},
 	}
 	// Load the server config.
-	if err := config.Load(agentConfigPrefix, agent.Config); err != nil {
+	if err := config.Load(ConfigPrefix, agent.Config); err != nil {
 		return agent, fmt.Errorf("unable to load agent config: %w", err)
 	}
-	// Generate a unique device ID if required.
-	if agent.Config.ID == "" {
-		slog.Debug("Generating new device ID.")
-		// Generate a new unique Device ID
-		id, err := device.NewDeviceID()
+	// Pick up legacy (pre v14) registered value in config and rewrite into new location.
+	if config.Exists("registered") {
+		registered, err := config.Get[bool]("registered")
 		if err != nil {
-			return agent, fmt.Errorf("unable to generate new device id: %w", err)
+			return agent, fmt.Errorf("unable to load agent config: %w", err)
 		}
-		err = config.Set(map[string]any{"agent.device_id": id})
+		err = config.Set(map[string]any{"agent.registered": registered})
 		if err != nil {
-			return agent, fmt.Errorf("unable to generate new device id: %w", err)
+			return agent, fmt.Errorf("unable to load agent config: %w", err)
 		}
-		agent.Config.ID = id
 	}
-
+	// Check for registration and flag as appropriate.
 	if agent.IsRegistered() {
 		close(registered)
 	}
@@ -72,7 +70,7 @@ func (a *Agent) IsRegistered() bool {
 
 // Register will mark the registration status of the agent as registered.
 func (a *Agent) Register() {
-	err := config.Set(map[string]any{"agent.registered": true})
+	err := config.Save(ConfigPrefix, a.Config)
 	if err != nil {
 		slog.Error("Unable to save registration status to config.",
 			slog.Any("error", err))
@@ -89,12 +87,32 @@ func (a *Agent) Run(ctx context.Context) error {
 		select {
 		case <-registered:
 			slog.Debug("Agent is registered.")
-			// hassClient, err := hass.NewClient(ctx)
-			// godump.Dump(hassClient)
-			// if err != nil {
-			// 	return fmt.Errorf("unable to run agent: %w", err)
-			// }
-			return nil
+			hassClient, err := hass.NewClient(ctx, a)
+			if err != nil {
+				return fmt.Errorf("unable to run agent: %w", err)
+			}
+			manager := workers.NewManager(ctx)
+			var wg sync.WaitGroup
+			// Run entity workers.
+			wg.Go(func() {
+				// Create entity workers.
+				var entityWorkers []workers.EntityWorker
+				// Add device-based entity workers.
+				entityWorkers = append(entityWorkers, CreateDeviceEntityWorkers(ctx, hassClient.RestAPIURL())...)
+				// Add os-based entity workers.
+				entityWorkers = append(entityWorkers, CreateOSEntityWorkers(workers.SetupCtx(ctx))...)
+				// Start all entity workers.
+				entityCh := manager.StartEntityWorkers(ctx, entityWorkers...)
+
+				go func() {
+					defer manager.StopAllWorkers(ctx)
+					<-ctx.Done()
+				}()
+
+				// Get hass client to handle entity workers.
+				hassClient.EntityHandler(ctx, entityCh)
+			})
+			wg.Wait()
 		case <-ctx.Done():
 			slog.Debug("Stopping agent.")
 			return nil

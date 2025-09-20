@@ -32,7 +32,7 @@ func Start(ctx context.Context) error {
 	misfiredCh := make(chan quartz.ScheduledJob)
 	scheduler, err := quartz.NewStdScheduler(
 		quartz.WithOutdatedThreshold(50*time.Second),
-		quartz.WithLogger(&logger{Logger: slogctx.FromCtx(ctx)}),
+		// quartz.WithLogger(&logger{Logger: slogctx.FromCtx(ctx)}),
 		quartz.WithMisfiredChan(misfiredCh),
 	)
 	if err != nil {
@@ -116,10 +116,10 @@ func (pt *PollTriggerWithJitter) Description() string {
 	return fmt.Sprintf("PollTriggerWithJitter%s%s", quartz.Sep, pt.Interval)
 }
 
-type logger struct {
-	*slog.Logger
-}
+// type logger struct {
+// 	*slog.Logger
+// }
 
-func (l *logger) Trace(msg string, args ...any) {
-	l.Debug(msg, args...)
-}
+// func (l *logger) Trace(msg string, args ...any) {
+// 	l.Debug(msg, args...)
+// }

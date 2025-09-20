@@ -17,6 +17,7 @@ import (
 
 	"github.com/joshuar/go-hass-agent/agent"
 	"github.com/joshuar/go-hass-agent/config"
+	"github.com/joshuar/go-hass-agent/device"
 	"github.com/joshuar/go-hass-agent/hass"
 	"github.com/joshuar/go-hass-agent/logging"
 	"github.com/joshuar/go-hass-agent/models"
@@ -96,7 +97,16 @@ func ProcessRegistration(agent *agent.Agent) http.HandlerFunc {
 			return
 		}
 
-		err = hass.Register(req.Context(), agent.Config.ID, request)
+		deviceCfg, err := device.GetConfig()
+		if err != nil {
+			templ.Handler(templates.RegistrationForm(
+				models.NewErrorMessage("There was a problem trying to register this device:", err.Error()),
+				request,
+			)).ServeHTTP(res, req)
+			return
+		}
+
+		err = hass.Register(req.Context(), deviceCfg.ID, request)
 		if err != nil {
 			templ.Handler(templates.RegistrationForm(
 				models.NewErrorMessage("There was a problem trying to register this device:", err.Error()),

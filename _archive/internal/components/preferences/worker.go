@@ -24,7 +24,7 @@ const (
 // CommonWorkerPrefs contains worker preferences that all workers can/should
 // implement. For e.g., a toggle to completely disable the worker.
 type CommonWorkerPrefs struct {
-	Disabled bool `toml:"disabled" comment:"Set this to true to disable all these sensors."`
+	Disabled bool `toml:"disabled"`
 }
 
 // IsDisabled will return whether the worker is disabled.

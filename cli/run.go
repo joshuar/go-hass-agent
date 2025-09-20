@@ -61,7 +61,10 @@ func (r *Run) Run(opts *Opts) error {
 	}
 
 	// Start agent.
-	agent.Run(ctx)
+	err = agent.Run(ctx)
+	if err != nil {
+		return fmt.Errorf("unable to run: %w", err)
+	}
 
 	// client, err := hass.NewClient(ctx, reg)
 	// if err != nil {

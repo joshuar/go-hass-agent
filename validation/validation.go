@@ -12,8 +12,12 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-// ErrValidationFailed indicates that the validation action itself failed.
-var ErrValidationFailed = errors.New("internal validation error")
+var (
+	// ErrValidationFailed indicates that the validation action itself failed.
+	ErrValidationFailed = errors.New("internal validation error")
+	// ErrValidation indicates that validation did not pass.
+	ErrValidation = errors.New("validation failed")
+)
 
 // Validate is a globally accessible validator that can be used by other packages.
 var Validate *validator.Validate

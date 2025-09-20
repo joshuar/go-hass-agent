@@ -35,11 +35,11 @@ type RegistrationRequest struct {
 func (r *RegistrationRequest) Valid() (bool, error) {
 	err := validation.Validate.Struct(r)
 	if err != nil {
-		return false, fmt.Errorf("validation failed: %s", validation.ParseValidationErrors(err))
+		return false, fmt.Errorf("%w: %s", validation.ErrValidation, validation.ParseValidationErrors(err))
 	}
 	_, err = url.Parse(r.Server)
 	if err != nil {
-		return false, fmt.Errorf("validation failed: %w", err)
+		return false, fmt.Errorf("%w: %w", validation.ErrValidation, err)
 	}
 
 	return true, nil
@@ -85,10 +85,10 @@ func Register(ctx context.Context, id string, details *RegistrationRequest) erro
 
 	// Save options to config.
 	err = config.Set(map[string]any{
-		OptionPrefix + "." + OptionAPIURL:       restAPIURL,
-		OptionPrefix + "." + OptionWebsocketURL: websocketAPIURL,
-		OptionPrefix + "." + OptionWebhookID:    resp.WebhookID,
-		OptionPrefix + "." + OptionSecret:       resp.Secret,
+		ConfigPrefix + "." + ConfigAPIURL:       restAPIURL,
+		ConfigPrefix + "." + ConfigWebsocketURL: websocketAPIURL,
+		ConfigPrefix + "." + ConfigWebhookID:    resp.WebhookID,
+		ConfigPrefix + "." + ConfigSecret:       resp.Secret,
 		"registration.server":                   details.Server,
 		"registration.token":                    details.Token,
 	})

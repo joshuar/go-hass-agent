@@ -13,7 +13,12 @@ templ RegistrationForm(msg *models.Message, request *hass.RegistrationRequest) {
 			<img src="web/content/go-hass-agent.png" alt="Go Hass Agent" class="mx-auto h-10 w-auto"/>
 			<h2 class="mt-10 text-center text-2xl/9 font-bold tracking-tight">Register Go Hass Agent with Home Assistant</h2>
 		</div>
-		<form hx-post="/register" hx-target="#registration-form" hx-swap="outerHTML">
+		<form
+			hx-post="/register"
+			hx-target="#registration-form"
+			hx-swap="outerHTML"
+			hx-include="[name='csrf_token']"
+		>
 			<fieldset class="fieldset bg-base-200 border-base-300 rounded-box w-xs border p-4">
 				if msg != nil {
 					@Alert(msg)
@@ -24,7 +29,7 @@ templ RegistrationForm(msg *models.Message, request *hass.RegistrationRequest) {
 				</label>
 				<label class="label">Detected Servers</label>
 				<div class="join" hx-target="#detected-servers" hx-swap="innerHTML">
-					<select id="detected-servers" name="server" class="select join-item" hx-get="/register/discovery" hx-trigger="load" >
+					<select id="detected-servers" name="server" class="select join-item" hx-get="/register/discovery" hx-trigger="load">
 						<option selected class="htmx-indicator">Finding servers...</option>
 					</select>
 					<button id="detect-servers-button" class="btn btn-square join-item" hx-get="/register/discovery">
@@ -40,7 +45,16 @@ templ RegistrationForm(msg *models.Message, request *hass.RegistrationRequest) {
 					Ignore returned URLs and use this server for all requests.
 				</label>
 				<label class="label">Token</label>
-				<input type="password" required name="token" if request != nil && request.Token != "" { value={ request.Token } } class="input" placeholder="SuperSecret"/>
+				<input
+					type="password"
+					required
+					name="token"
+					if request != nil && request.Token != "" {
+						value={ request.Token }
+					}
+					class="input"
+					placeholder="SuperSecret"
+				/>
 				<button class="btn btn-neutral mt-4" type="submit">Register</button>
 			</fieldset>
 		</form>
