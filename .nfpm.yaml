@@ -12,54 +12,54 @@ vendor: org.github.joshuar
 homepage: https://github.com/joshuar/go-hass-agent
 license: MIT
 arch: ${NFPM_ARCH}
-# changelog: CHANGELOG.md
+changelog: CHANGELOG.md
 contents:
-  - src: dist/go-hass-agent-${NFPM_ARCH}
+  - src: dist/go-hass-agent
     dst: /usr/bin/go-hass-agent
     expand: true
   - src: LICENSE
     dst: /usr/share/licenses/go-hass-agent/LICENSE
   - src: README.md
     dst: /usr/share/doc/go-hass-agent/README.md
-  - src: internal/ui/assets/go-hass-agent.png
+  - src: web/content/go-hass-agent.png
     dst: /usr/share/pixmaps/go-hass-agent.png
-  - src: assets/go-hass-agent.desktop
-    dst: /usr/share/applications/go-hass-agent.desktop
-  - src: init/go-hass-agent.service
+  - src: assets/start-go-hass-agent.desktop
+    dst: /usr/share/applications/start-go-hass-agent.desktop
+  - src: assets/go-hass-agent.service
     dst: /usr/lib/systemd/user/go-hass-agent.service
 scripts:
   postinstall: assets/postinstall.sh
 overrides:
   rpm:
     depends:
-      - libXcursor
-      - libXrandr
-      - mesa-libGL
-      - libXi
-      - libXinerama
-      - libXxf86vm
+      # - libXcursor
+      # - libXrandr
+      # - mesa-libGL
+      # - libXi
+      # - libXinerama
+      # - libXxf86vm
       - dbus-x11
     recommends:
       - libcap
   deb:
     depends:
-      - libgl1-mesa-dri
-      - libgl1
-      - libx11-6
-      - libglx0
-      - libglvnd0
-      - libxcb1
-      - libxau6
-      - libxdmcp6
+      # - libgl1-mesa-dri
+      # - libgl1
+      # - libx11-6
+      # - libglx0
+      # - libglvnd0
+      # - libxcb1
+      # - libxau6
+      # - libxdmcp6
       - dbus-x11
     recommends:
       - libcap2
   archlinux:
-    depends:
-      - xorg-server
-      - libxcursor
-      - libxrandr
-      - libxinerama
-      - libxi
+    # depends:
+    #   - xorg-server
+    #   - libxcursor
+    #   - libxrandr
+    #   - libxinerama
+    #   - libxi
     recommends:
       - libcap

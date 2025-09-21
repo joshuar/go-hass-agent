@@ -15,9 +15,6 @@ concurrency:
   group: "build"
   cancel-in-progress: true
 
-env:
-  MAGEARGS: -d build/magefiles -w .
-
 jobs:
   check_release:
     permissions:
@@ -46,20 +43,25 @@ jobs:
     needs: check_release
     permissions:
       contents: write
-    # if: ${{ !startsWith( 'doc') }}
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        platform:
-          - linux/amd64
-          - linux/arm/v6
-          - linux/arm/v7
-          - linux/arm64
+        include:
+          - platform: linux/arm/v6
+            goarch: arm
+            goarm: 6
+          - platform: linux/arm/v7
+            goarch: arm
+            goarm: 7
+          - platform: linux/arm64
+            goarch: arm64
+          - platform: linux/amd64
+            goarch: amd64
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
         with:
-          egress-policy: block
+          egress-policy: audit
           disable-sudo: false
           allowed-endpoints: >
             api.github.com:443
@@ -92,7 +94,11 @@ jobs:
           fetch-depth: 0
       - name: Set up environment
         run: |
-          echo "APPVERSION=$(git describe --tags --always --dirty)" >> $GITHUB_ENV
+          echo CGO_ENABLED=0 >> $GITHUB_ENV
+          echo GOARCH=${{matrix.goarch}} >> $GITHUB_ENV
+          echo NFPM_ARCH=${{matrix.goarch}} >> $GITHUB_ENV
+          if [ -n "${{matrix.goarm}}" ]; then echo GOARM=${{matrix.goarm}} >> $GITHUB_ENV; fi
+          echo "APPVERSION=$(git describe --tags --always --long --dirty)" >> $GITHUB_ENV
           platform=${{ matrix.platform }}
           echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
       - name: Set app version for release
@@ -104,18 +110,21 @@ jobs:
         uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v5
         with:
           go-version-file: "go.mod"
-      - name: Install Mage
-        uses: magefile/mage-action@6f50bbb8ea47d56e62dee92392788acbc8192d0b # v3
-        with:
-          install-only: true
-      - name: Build with Mage
-        run: mage ${MAGEARGS} build:ci
-        env:
-          TARGETPLATFORM: ${{ matrix.platform }}
-      - name: Package with Mage
-        run: mage ${MAGEARGS} package:ci
-        env:
-          TARGETPLATFORM: ${{ matrix.platform }}
+      - name: Setup bun
+        uses: oven-sh/setup-bun@v2
+      - name: Install frontend tools
+        run: bun install
+      - name: Bundle javascript
+        run: bunx esbuild ./web/assets/scripts.js --bundle --sourcemap --outdir=./web/content/
+      - name: Bundle css
+        run: bunx tailwindcss -i ./web/assets/styles.css -o ./web/content/styles.css --minify --map
+      - name: Build
+        run: go build -ldflags="-w -s -X github.com/joshuar/go-hass-agent/config.AppVersion=$(git describe --tags --always --long --dirty)" -o dist/go-hass-agent
+      - name: Package
+        run: |
+          for format in rpm deb arch; do
+            go run github.com/goreleaser/nfpm/v2/cmd/nfpm@latest package --packager ${format} --config .nfpm.yaml --target dist
+          done
       - name: Install cosign
         id: cosign_install
         uses: sigstore/cosign-installer@d7543c93d881b35a8faa02e8e3605f69b7a1ce62 # v3
@@ -124,8 +133,8 @@ jobs:
         shell: bash
         run: |
           shopt -s nullglob
-          echo Need to sign dist/pkg/*.{rpm,deb,zst} # fyne-cross/dist/linux-*/*.tar.xz
-          for artifact in dist/pkg/*.{rpm,deb,zst}; do
+          echo Need to sign dist/*.{rpm,deb,zst}
+          for artifact in dist/*.{rpm,deb,zst}; do
             echo Signing ${artifact}
             cosign --verbose=true sign-blob --yes --key cosign.key --output-signature=${artifact}.sig ${artifact}
           done
@@ -138,12 +147,14 @@ jobs:
         with:
           name: build-${{ env.PLATFORM_PAIR }}-${{ env.APPVERSION }}.zip
           path: |
-            dist/pkg
+            dist/*.rpm
+            dist/*.deb
+            dist/*.zst
       - name: Upload release artifacts
         id: upload_release
         if: ${{ needs.check_release.outputs.release_created }}
         run: |
-          gh release upload ${{ needs.check_release.outputs.release_tag }} dist/pkg/*.{rpm,deb,zst,sig}
+          gh release upload ${{ needs.check_release.outputs.release_tag }} dist/*.{rpm,deb,zst,sig}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
