@@ -25,6 +25,7 @@ web/content/*.js
 web/content/*.js.map
 web/content/*.css
 web/content/*.css.map
+!web/content/fonts/*
 !assets/*
 !**/testdata/**
 !.prettierrc
