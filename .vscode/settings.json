@@ -3,29 +3,19 @@
     "editor.codeActionsOnSave": {
       "source.organizeImports": "always"
     },
+    "editor.defaultFormatter": "golang.go",
     "editor.formatOnSave": true
   },
   "[go]": {
     "editor.codeActionsOnSave": {
       "source.fixAll": "always"
-    }
-  },
-  "[markdown]": {
-    "diffEditor.ignoreTrimWhitespace": false,
-    "editor.defaultFormatter": "yzhang.markdown-all-in-one",
-    "editor.quickSuggestions": {
-      "comments": "off",
-      "other": "off",
-      "strings": "off"
     },
-    "editor.trimAutoWhitespace": true,
-    "editor.unicodeHighlight.ambiguousCharacters": false,
-    "editor.unicodeHighlight.invisibleCharacters": false,
-    "editor.wordWrap": "on"
+    "editor.defaultFormatter": "golang.go"
   },
   "[templ]": {
     "editor.defaultFormatter": "a-h.templ"
   },
+  "conventionalCommits.lineBreak": "\\n",
   "conventionalCommits.scopes": [
     "github",
     "agent",
@@ -90,17 +80,28 @@
     "server"
   ],
   "css.lint.idSelector": "warning",
+  "editor.formatOnSave": true,
   "emmet.includeLanguages": {
     "templ": "html"
   },
   "files.associations": {
     "*.css": "tailwindcss"
   },
+  "files.exclude": {
+    "**/.DS_Store": true,
+    "**/.git": true,
+    "**/.hg": true,
+    "**/.svn": true,
+    "**/*_templ.go": true,
+    "**/CVS": true,
+    "**/Thumbs.db": true
+  },
   "go.alternateTools": {
     "customFormatter": "golangci-lint-v2"
   },
   "go.formatFlags": ["fmt", "--stdin"],
   "go.formatTool": "custom",
+  "go.inlayHints.constantValues": true,
   "go.lintFlags": [
     "run",
     "--timeout=5m",
@@ -110,7 +111,6 @@
     "--output.text.print-issued-lines=false",
     "--show-stats=false"
   ],
-  "go.lintOnSave": "workspace",
   "go.lintTool": "golangci-lint-v2",
   "go.useLanguageServer": true,
   "gopls": {
@@ -119,7 +119,15 @@
   "licenser.author": "Joshua Rich <joshua.rich@gmail.com>",
   "licenser.license": "MIT",
   "licenser.useSPDXLicenseFormat": true,
+  "ltex.language": "en-AU",
+  "prettier.bracketSameLine": true,
   "tailwindCSS.includeLanguages": {
     "templ": "html"
-  }
+  },
+  "templ.goplsRemote": "auto",
+  "terminal.integrated.defaultProfile.linux": "fish",
+  "terminal.integrated.scrollback": 10000,
+  "conventionalCommits.promptBody": false,
+  "tailwindCSS.emmetCompletions": true,
+  "prettier.singleAttributePerLine": true
 }
