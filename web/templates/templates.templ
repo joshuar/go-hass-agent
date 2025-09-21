@@ -11,6 +11,7 @@ const (
 
 type FragmentKey string
 
+type TemplatesCtxKey string
 
 templ UpdateCSRFToken() {
 	<input id="csrf_token" hx-swap-oob="true" hx-swap="outerHTML" type="hidden" name="csrf_token" value={ models.CSRFTokenFromCtx(ctx) }/>

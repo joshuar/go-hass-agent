@@ -7,56 +7,137 @@ import "slices"
 import "github.com/joshuar/go-hass-agent/models"
 import "github.com/joshuar/go-hass-agent/hass"
 
-templ RegistrationForm(msg *models.Message, request *hass.RegistrationRequest) {
-	<div id="registration-form" class="flex min-h-full flex-col justify-center items-center px-6 py-12 lg:px-8">
-		<div class="sm:mx-auto sm:w-full sm:max-w-sm">
-			<img src="web/content/go-hass-agent.png" alt="Go Hass Agent" class="mx-auto h-10 w-auto"/>
-			<h2 class="mt-10 text-center text-2xl/9 font-bold tracking-tight">Register Go Hass Agent with Home Assistant</h2>
-		</div>
+templ RegistrationForm(request *hass.RegistrationRequest) {
+	<div id="registration-form" class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 		<form
 			hx-post="/register"
 			hx-target="#registration-form"
 			hx-swap="outerHTML"
 			hx-include="[name='csrf_token']"
 		>
-			<fieldset class="fieldset bg-base-200 border-base-300 rounded-box w-xs border p-4">
-				if msg != nil {
-					@Alert(msg)
-				}
-				<label class="label">
-					<input type="checkbox" class="toggle" _="on click toggle @disabled on #detected-servers then toggle @disabled on #detect-servers-button then toggle @disabled on #custom-server"/>
-					Use custom server
-				</label>
-				<label class="label">Detected Servers</label>
-				<div class="join" hx-target="#detected-servers" hx-swap="innerHTML">
-					<select id="detected-servers" name="server" class="select join-item" hx-get="/register/discovery" hx-trigger="load">
-						<option selected class="htmx-indicator">Finding servers...</option>
-					</select>
-					<button id="detect-servers-button" class="btn btn-square join-item" hx-get="/register/discovery">
-						<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
-							<path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"></path>
-						</svg>
-					</button>
+			<div class="space-y-12">
+				<div class="grid grid-cols-1 gap-x-8 gap-y-10 border-b border-base-content/10 pb-12 md:grid-cols-3">
+					<div>
+						<h2 class="text-base/7 font-semibold">Registration</h2>
+						<p class="mt-1 text-sm/6 text-base-content/80">Fill in the following details to register Go Hass Agent with Home Assistant.</p>
+					</div>
+					<div class="grid max-w-2xl grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6 md:col-span-2 mt-12">
+						// Toggle use custom server.
+						<div class="sm:col-span-4 flex gap-3">
+							<input
+								id="use-custom-server"
+								type="checkbox"
+								aria-describedby="use-custom-server-description"
+								class="col-start-1 row-start-1 toggle"
+								_="on click toggle @disabled on #detected-servers then toggle @disabled on #detect-servers-button then toggle @disabled on #custom-server"
+							/>
+							<div class="flex text-sm/6 items-center gap-3">
+								<label for="use-custom-server" class="font-medium ">Use custom server</label>
+								<div class="dropdown dropdown-end">
+									<div tabindex="0" role="button" class="btn btn-circle btn-ghost btn-xs text-info">
+										<svg
+											tabindex="0"
+											xmlns="http://www.w3.org/2000/svg"
+											fill="none"
+											viewBox="0 0 24 24"
+											class="h-4 w-4 stroke-current"
+										>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+											></path>
+										</svg>
+									</div>
+									<div tabindex="0" class="card card-sm dropdown-content bg-base-100 rounded-box z-1 w-64 shadow-sm">
+										<div tabindex="0" class="card-body">
+											<p id="use-custom-server-description">Ignore discovered servers and enter manually.</p>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+						// Discovered servers.
+						<div class="sm:col-span-4">
+							<label for="mqtt_server" class="block text-sm/6 font-medium">Detected Servers</label>
+							<div class="mt-2 join w-full" hx-target="#detected-servers" hx-swap="innerHTML">
+								<select id="detected-servers" name="server" class="select join-item" hx-get="/register/discovery" hx-trigger="load">
+									<option selected class="htmx-indicator">Finding servers...</option>
+								</select>
+								<button id="detect-servers-button" class="btn btn-square join-item" hx-get="/register/discovery">
+									<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
+										<path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"></path>
+									</svg>
+								</button>
+							</div>
+						</div>
+						// Custom server.
+						<div class="sm:col-span-4">
+							<label for="custom-server" class="block text-sm/6 font-medium">Custom Server</label>
+							<div class="mt-2 w-full">
+								<input
+									id="custom-server"
+									type="url"
+									name="server"
+									class="input"
+									placeholder="http://host:port"
+									disabled
+								/>
+							</div>
+						</div>
+						// Ignore returned URLs checkbox.
+						<div class="sm:col-span-4 flex gap-3">
+							<input
+								id="ignore-hass-urls"
+								name="ignore_hass_urls"
+								type="checkbox"
+								aria-describedby="ignore-hass-urls-description"
+								class="col-start-1 row-start-1 checkbox"
+							/>
+							<div class="flex text-sm/6 gap-3">
+								<label for="ignore-hass-urls" class="font-medium ">Ignore Home Assistant URLs</label>
+								<div class="dropdown dropdown-end">
+									<div tabindex="0" role="button" class="btn btn-circle btn-ghost btn-xs text-info">
+										<svg
+											tabindex="0"
+											xmlns="http://www.w3.org/2000/svg"
+											fill="none"
+											viewBox="0 0 24 24"
+											class="h-4 w-4 stroke-current"
+										>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+											></path>
+										</svg>
+									</div>
+									<div tabindex="0" class="card card-sm dropdown-content bg-base-100 rounded-box z-1 w-64 shadow-sm">
+										<div tabindex="0" class="card-body">
+											<p id="ignore-hass-urls-description">Check this to ignore the API URLs returned by Home Assistant and use the given server address for all Home Assistant API requests. This is sometimes needed when your Home Assistant is behind a proxy or accessed from an address that is different to what Home Assistant sees.</p>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+						// Personal access token.
+						<div class="sm:col-span-3">
+							<label for="token" class="block text-sm/6 font-medium">Token</label>
+							<div class="mt-2">
+								<input
+									id="token"
+									type="password"
+									name="token"
+									class="block w-full input"
+									required
+								/>
+							</div>
+						</div>
+					</div>
 				</div>
-				<label class="label">Custom Server</label>
-				<input id="custom-server" type="url" name="server" class="input" placeholder="http://host:port" disabled/>
-				<label class="label">
-					<input type="checkbox" name="ignore_hass_urls"/>
-					Ignore returned URLs and use this server for all requests.
-				</label>
-				<label class="label">Token</label>
-				<input
-					type="password"
-					required
-					name="token"
-					if request != nil && request.Token != "" {
-						value={ request.Token }
-					}
-					class="input"
-					placeholder="SuperSecret"
-				/>
-				<button class="btn btn-neutral mt-4" type="submit">Register</button>
-			</fieldset>
+			</div>
 		</form>
 	</div>
 }
@@ -69,7 +150,25 @@ templ DiscoveredServers(servers []string) {
 }
 
 templ RegistrationResponse(msg *models.Message) {
-	<div class="flex min-h-full flex-col justify-center items-center px-6 py-12 lg:px-8">
-		@Alert(msg)
+	<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+		<div
+			role="alert"
+			class={
+				"alert alert-outline mx-auto my-8",
+				templ.KV("alert-error", msg.IsError()),
+				templ.KV("alert-success", msg.IsSuccess()),
+				templ.KV("alert-warning", msg.IsWarning()),
+				templ.KV("alert-info", msg.IsInfo()),
+			}
+		>
+			<div class="px-4 py-5 sm:p-6 space-y-4">
+				<span class="gap-y-2">
+					<p class="font-semibold text-base">{ msg.Summary }</p>
+					if msg.HasDetails() {
+						<p class="text-sm">{ msg.Details }</p>
+					}
+				</span>
+			</div>
+		</div>
 	</div>
 }

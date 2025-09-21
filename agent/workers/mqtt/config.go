@@ -13,15 +13,15 @@ import (
 )
 
 const (
-	mqttConfigPrefix = "mqtt"
+	ConfigPrefix = "mqtt"
 )
 
 type Config struct {
-	MQTTServer      string `toml:"server,omitempty" validate:"required,uri" kong:"required,help='MQTT server URI. Required.',placeholder='scheme://some.host:port'"` //nolint:lll
-	MQTTUser        string `toml:"user,omitempty" validate:"omitempty" kong:"optional,help='MQTT username.'"`
-	MQTTPassword    string `toml:"password,omitempty" validate:"omitempty" kong:"optional,help='MQTT password.'"`
-	MQTTTopicPrefix string `toml:"topic_prefix,omitempty" validate:"required,ascii" kong:"optional,help='MQTT topic prefix.'"`
-	MQTTEnabled     bool   `toml:"enabled" validate:"boolean" kong:"-"`
+	MQTTServer      string `toml:"server,omitempty" form:"mqtt_server" validate:"required,uri" kong:"required,help='MQTT server URI. Required.',placeholder='scheme://some.host:port'"` //nolint:lll
+	MQTTUser        string `toml:"user,omitempty" form:"mqtt_user" validate:"omitempty" kong:"optional,help='MQTT username.'"`
+	MQTTPassword    string `toml:"password,omitempty" form:"mqtt_password" validate:"omitempty" kong:"optional,help='MQTT password.'"`
+	MQTTTopicPrefix string `toml:"topic_prefix,omitempty" form:"mqtt_topic_prefix" validate:"required,ascii" kong:"optional,help='MQTT topic prefix.'"`
+	MQTTEnabled     bool   `toml:"enabled" form:"mqtt_enabled" validate:"boolean" kong:"-"`
 }
 
 func (c *Config) Server() string {

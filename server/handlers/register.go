@@ -32,7 +32,7 @@ func GetRegistration(agent *agent.Agent) http.HandlerFunc {
 		if agent.IsRegistered() {
 			renderPage(templates.RegistrationResponse(models.NewInfoMessage("Already registered", "")), "Register - Go Hass Agent").ServeHTTP(res, req)
 		} else {
-			renderPage(templates.RegistrationForm(nil, nil), "Register - Go Hass Agent").ServeHTTP(res, req)
+			renderPage(templates.RegistrationForm(&hass.RegistrationRequest{}), "Register - Go Hass Agent").ServeHTTP(res, req)
 		}
 	}).ServeHTTP
 }
@@ -93,33 +93,33 @@ func ProcessRegistration(agent *agent.Agent) http.HandlerFunc {
 	).ThenFunc(func(res http.ResponseWriter, req *http.Request) {
 		request, valid, err := forms.DecodeForm[*hass.RegistrationRequest](req)
 		if err != nil || !valid {
-			renderPage(templates.RegistrationForm(models.NewErrorMessage("Invalid details.", err.Error()), request), "Register - Go Hass Agent").ServeHTTP(res, req)
+			template := templ.Join(
+				templates.RegistrationForm(request),
+				templates.Notification(models.NewErrorMessage("Invalid details.", err.Error())))
+			renderPartial(template).ServeHTTP(res, req)
 			return
 		}
 
 		deviceCfg, err := device.GetConfig()
 		if err != nil {
-			templ.Handler(templates.RegistrationForm(
-				models.NewErrorMessage("There was a problem trying to register this device:", err.Error()),
-				request,
-			)).ServeHTTP(res, req)
+			template := templ.Join(
+				templates.RegistrationForm(request),
+				templates.Notification(models.NewErrorMessage("Invalid details.", err.Error())))
+			renderPartial(template).ServeHTTP(res, req)
 			return
 		}
 
 		err = hass.Register(req.Context(), deviceCfg.ID, request)
 		if err != nil {
-			templ.Handler(templates.RegistrationForm(
-				models.NewErrorMessage("There was a problem trying to register this device:", err.Error()),
-				request,
-			)).ServeHTTP(res, req)
+			template := templ.Join(
+				templates.RegistrationForm(request),
+				templates.Notification(models.NewErrorMessage("There was a problem trying to register this device:", err.Error())))
+			renderPartial(template).ServeHTTP(res, req)
 			return
 		}
 
 		agent.Register()
 
-		templ.Handler(templates.RegistrationForm(
-			models.NewSuccessMessage("Device registered!", ""),
-			request,
-		)).ServeHTTP(res, req)
+		renderPartial(templates.RegistrationResponse(models.NewInfoMessage("Already registered", ""))).ServeHTTP(res, req)
 	}).ServeHTTP
 }

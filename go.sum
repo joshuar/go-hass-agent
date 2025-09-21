@@ -255,6 +255,8 @@ github.com/mandykoh/prism v0.35.3 h1:H9althbP8zJFC+0kuv1EMmSB3/QsAUYwnttKXNmROsI
 github.com/mandykoh/prism v0.35.3/go.mod h1:XppnIliS0AUO5YVJvDbU72xot6qY3CmD6IX92ZNnJmg=
 github.com/matoous/go-nanoid v1.5.1 h1:aCjdvTyO9LLnTIi0fgdXhOPPvOHjpXN6Ik9DaNjIct4=
 github.com/matoous/go-nanoid v1.5.1/go.mod h1:zyD2a71IubI24efhpvkJz+ZwfwagzgSO6UNiFsZKN7U=
+github.com/matoous/go-nanoid/v2 v2.1.0 h1:P64+dmq21hhWdtvZfEAofnvJULaRR1Yib0+PnU669bE=
+github.com/matoous/go-nanoid/v2 v2.1.0/go.mod h1:KlbGNQ+FhrUNIHUxZdL63t7tl4LaPkZNpUULS8H4uVM=
 github.com/matryer/is v1.4.0 h1:sosSmIWwkYITGrxZ25ULNDeKiMNzFSr4V/eqBQP0PeE=
 github.com/matryer/is v1.4.0/go.mod h1:8I/i5uYgLzgsgEloJE1U6xx5HkBQpAZvepWuujKwMRU=
 github.com/matryer/moq v0.5.3 h1:4femQCFmBUwFPYs8VfM5ID7AI67/DTEDRBbTtSWy7GU=

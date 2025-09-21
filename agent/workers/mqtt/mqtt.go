@@ -29,7 +29,7 @@ type WorkerData struct {
 func Start(ctx context.Context, data *WorkerData) error {
 	// Load the mqtt config.
 	var mqttcfg Config
-	if err := config.Load(mqttConfigPrefix, &mqttcfg); err != nil {
+	if err := config.Load(ConfigPrefix, &mqttcfg); err != nil {
 		return fmt.Errorf("unable to start MQTT: %w", err)
 	}
 	// Create a new connection to the MQTT broker, publish subscriptions and
@@ -63,7 +63,7 @@ func Start(ctx context.Context, data *WorkerData) error {
 func Reset(ctx context.Context, configs []*models.MQTTConfig) error {
 	// Load the mqtt config.
 	var mqttcfg Config
-	if err := config.Load(mqttConfigPrefix, &mqttcfg); err != nil {
+	if err := config.Load(ConfigPrefix, &mqttcfg); err != nil {
 		return fmt.Errorf("could not reset MQTT preferences: %w", err)
 	}
 	client, err := mqttapi.NewClient(ctx, &mqttcfg, nil, nil)

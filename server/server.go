@@ -166,31 +166,15 @@ func setupRoutes(static embed.FS, agent *agent.Agent) *chi.Mux {
 	})
 	// // Error handling.
 	// router.NotFound(handlers.NotFound())
-
+	// Landing page.
+	router.Get("/", handlers.Landing(agent))
+	// Registration.
 	router.Get("/register", handlers.GetRegistration(agent))
 	router.With(middlewares.RequireHTMX).Get("/register/discovery", handlers.RegistrationDiscovery())
 	router.With(middlewares.RequireHTMX).Post("/register", handlers.ProcessRegistration(agent))
-	// Front page.
-	router.Get("/", handlers.Landing(agent))
-	// // Access routes.
-	// router.Get("/login", handlers.Login())
-	// router.Group(func(r chi.Router) {
-	// 	r.Use(
-	// 		session.Manager.LoadAndSave,
-	// 	)
-	// 	r.Get("/logout", handlers.Logout())
-	// })
-
-	// // Authenticated routes.
-	// router.Group(func(r chi.Router) {
-	// 	r.Use(
-	// 		middlewares.SetupHTMX,
-	// 		middlewares.SetupElastic(),
-	// 		session.Manager.LoadAndSave,
-	// 		middlewares.RequireUserAuth(handler.DataAPI(), handler.AuthAPI()),
-	// 	)
-	// 	r.Get("/register", handler.Home())
-	// })
+	// Preferences.
+	router.Get("/preferences", handlers.ShowPreferences())
+	router.With(middlewares.RequireHTMX).Post("/preferences", handlers.SavePreferences())
 
 	return router
 }

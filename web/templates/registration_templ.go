@@ -16,7 +16,7 @@ import "slices"
 import "github.com/joshuar/go-hass-agent/models"
 import "github.com/joshuar/go-hass-agent/hass"
 
-func RegistrationForm(msg *models.Message, request *hass.RegistrationRequest) templ.Component {
+func RegistrationForm(request *hass.RegistrationRequest) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -37,40 +37,7 @@ func RegistrationForm(msg *models.Message, request *hass.RegistrationRequest) te
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div id=\"registration-form\" class=\"flex min-h-full flex-col justify-center items-center px-6 py-12 lg:px-8\"><div class=\"sm:mx-auto sm:w-full sm:max-w-sm\"><img src=\"web/content/go-hass-agent.png\" alt=\"Go Hass Agent\" class=\"mx-auto h-10 w-auto\"><h2 class=\"mt-10 text-center text-2xl/9 font-bold tracking-tight\">Register Go Hass Agent with Home Assistant</h2></div><form hx-post=\"/register\" hx-target=\"#registration-form\" hx-swap=\"outerHTML\" hx-include=\"[name='csrf_token']\"><fieldset class=\"fieldset bg-base-200 border-base-300 rounded-box w-xs border p-4\">")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		if msg != nil {
-			templ_7745c5c3_Err = Alert(msg).Render(ctx, templ_7745c5c3_Buffer)
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<label class=\"label\"><input type=\"checkbox\" class=\"toggle\" _=\"on click toggle @disabled on #detected-servers then toggle @disabled on #detect-servers-button then toggle @disabled on #custom-server\"> Use custom server</label> <label class=\"label\">Detected Servers</label><div class=\"join\" hx-target=\"#detected-servers\" hx-swap=\"innerHTML\"><select id=\"detected-servers\" name=\"server\" class=\"select join-item\" hx-get=\"/register/discovery\" hx-trigger=\"load\"><option selected class=\"htmx-indicator\">Finding servers...</option></select> <button id=\"detect-servers-button\" class=\"btn btn-square join-item\" hx-get=\"/register/discovery\"><svg xmlns=\"http://www.w3.org/2000/svg\" fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"1.5\" stroke=\"currentColor\" class=\"size-4\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z\"></path></svg></button></div><label class=\"label\">Custom Server</label> <input id=\"custom-server\" type=\"url\" name=\"server\" class=\"input\" placeholder=\"http://host:port\" disabled> <label class=\"label\"><input type=\"checkbox\" name=\"ignore_hass_urls\"> Ignore returned URLs and use this server for all requests.</label> <label class=\"label\">Token</label> <input type=\"password\" required name=\"token\"")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		if request != nil && request.Token != "" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, " value=\"")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			var templ_7745c5c3_Var2 string
-			templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(request.Token)
-			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/registration.templ`, Line: 53, Col: 27}
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "\"")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, " class=\"input\" placeholder=\"SuperSecret\"> <button class=\"btn btn-neutral mt-4\" type=\"submit\">Register</button></fieldset></form></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div id=\"registration-form\" class=\"mx-auto max-w-7xl px-4 sm:px-6 lg:px-8\"><form hx-post=\"/register\" hx-target=\"#registration-form\" hx-swap=\"outerHTML\" hx-include=\"[name='csrf_token']\"><div class=\"space-y-12\"><div class=\"grid grid-cols-1 gap-x-8 gap-y-10 border-b border-base-content/10 pb-12 md:grid-cols-3\"><div><h2 class=\"text-base/7 font-semibold\">Registration</h2><p class=\"mt-1 text-sm/6 text-base-content/80\">Fill in the following details to register Go Hass Agent with Home Assistant.</p></div><div class=\"grid max-w-2xl grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6 md:col-span-2 mt-12\"><div class=\"sm:col-span-4 flex gap-3\"><input id=\"use-custom-server\" type=\"checkbox\" aria-describedby=\"use-custom-server-description\" class=\"col-start-1 row-start-1 toggle\" _=\"on click toggle @disabled on #detected-servers then toggle @disabled on #detect-servers-button then toggle @disabled on #custom-server\"><div class=\"flex text-sm/6 items-center gap-3\"><label for=\"use-custom-server\" class=\"font-medium \">Use custom server</label><div class=\"dropdown dropdown-end\"><div tabindex=\"0\" role=\"button\" class=\"btn btn-circle btn-ghost btn-xs text-info\"><svg tabindex=\"0\" xmlns=\"http://www.w3.org/2000/svg\" fill=\"none\" viewBox=\"0 0 24 24\" class=\"h-4 w-4 stroke-current\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z\"></path></svg></div><div tabindex=\"0\" class=\"card card-sm dropdown-content bg-base-100 rounded-box z-1 w-64 shadow-sm\"><div tabindex=\"0\" class=\"card-body\"><p id=\"use-custom-server-description\">Ignore discovered servers and enter manually.</p></div></div></div></div></div><div class=\"sm:col-span-4\"><label for=\"mqtt_server\" class=\"block text-sm/6 font-medium\">Detected Servers</label><div class=\"mt-2 join w-full\" hx-target=\"#detected-servers\" hx-swap=\"innerHTML\"><select id=\"detected-servers\" name=\"server\" class=\"select join-item\" hx-get=\"/register/discovery\" hx-trigger=\"load\"><option selected class=\"htmx-indicator\">Finding servers...</option></select> <button id=\"detect-servers-button\" class=\"btn btn-square join-item\" hx-get=\"/register/discovery\"><svg xmlns=\"http://www.w3.org/2000/svg\" fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"1.5\" stroke=\"currentColor\" class=\"size-4\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z\"></path></svg></button></div></div><div class=\"sm:col-span-4\"><label for=\"custom-server\" class=\"block text-sm/6 font-medium\">Custom Server</label><div class=\"mt-2 w-full\"><input id=\"custom-server\" type=\"url\" name=\"server\" class=\"input\" placeholder=\"http://host:port\" disabled></div></div><div class=\"sm:col-span-4 flex gap-3\"><input id=\"ignore-hass-urls\" name=\"ignore_hass_urls\" type=\"checkbox\" aria-describedby=\"ignore-hass-urls-description\" class=\"col-start-1 row-start-1 checkbox\"><div class=\"flex text-sm/6 gap-3\"><label for=\"ignore-hass-urls\" class=\"font-medium \">Ignore Home Assistant URLs</label><div class=\"dropdown dropdown-end\"><div tabindex=\"0\" role=\"button\" class=\"btn btn-circle btn-ghost btn-xs text-info\"><svg tabindex=\"0\" xmlns=\"http://www.w3.org/2000/svg\" fill=\"none\" viewBox=\"0 0 24 24\" class=\"h-4 w-4 stroke-current\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z\"></path></svg></div><div tabindex=\"0\" class=\"card card-sm dropdown-content bg-base-100 rounded-box z-1 w-64 shadow-sm\"><div tabindex=\"0\" class=\"card-body\"><p id=\"ignore-hass-urls-description\">Check this to ignore the API URLs returned by Home Assistant and use the given server address for all Home Assistant API requests. This is sometimes needed when your Home Assistant is behind a proxy or accessed from an address that is different to what Home Assistant sees.</p></div></div></div></div></div><div class=\"sm:col-span-3\"><label for=\"token\" class=\"block text-sm/6 font-medium\">Token</label><div class=\"mt-2\"><input id=\"token\" type=\"password\" name=\"token\" class=\"block w-full input\" required></div></div></div></div></div></form></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -94,30 +61,30 @@ func DiscoveredServers(servers []string) templ.Component {
 			}()
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var3 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var3 == nil {
-			templ_7745c5c3_Var3 = templ.NopComponent
+		templ_7745c5c3_Var2 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var2 == nil {
+			templ_7745c5c3_Var2 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<option disabled selected>Select a server</option> ")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<option disabled selected>Select a server</option> ")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		for server := range slices.Values(servers) {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "<option>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<option>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var4 string
-			templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(server)
+			var templ_7745c5c3_Var3 string
+			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(server)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/registration.templ`, Line: 67, Col: 18}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/registration.templ`, Line: 148, Col: 18}
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "</option>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</option>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -142,20 +109,75 @@ func RegistrationResponse(msg *models.Message) templ.Component {
 			}()
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var5 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var5 == nil {
-			templ_7745c5c3_Var5 = templ.NopComponent
+		templ_7745c5c3_Var4 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var4 == nil {
+			templ_7745c5c3_Var4 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "<div class=\"flex min-h-full flex-col justify-center items-center px-6 py-12 lg:px-8\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<div class=\"mx-auto max-w-7xl px-4 sm:px-6 lg:px-8\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = Alert(msg).Render(ctx, templ_7745c5c3_Buffer)
+		var templ_7745c5c3_Var5 = []any{"alert alert-outline mx-auto my-8",
+			templ.KV("alert-error", msg.IsError()),
+			templ.KV("alert-success", msg.IsSuccess()),
+			templ.KV("alert-warning", msg.IsWarning()),
+			templ.KV("alert-info", msg.IsInfo()),
+		}
+		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var5...)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "</div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<div role=\"alert\" class=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var6 string
+		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(templ.CSSClasses(templ_7745c5c3_Var5).String())
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/registration.templ`, Line: 1, Col: 0}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "\"><div class=\"px-4 py-5 sm:p-6 space-y-4\"><span class=\"gap-y-2\"><p class=\"font-semibold text-base\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var7 string
+		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(msg.Summary)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/registration.templ`, Line: 166, Col: 53}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "</p>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		if msg.HasDetails() {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "<p class=\"text-sm\">")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var8 string
+			templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(msg.Details)
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/registration.templ`, Line: 168, Col: 38}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "</p>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</span></div></div></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

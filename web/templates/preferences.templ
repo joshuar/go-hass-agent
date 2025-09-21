@@ -1,0 +1,151 @@
+// Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
+
+package templates
+
+import (
+	"fmt"
+	"github.com/joshuar/go-hass-agent/agent/workers/mqtt"
+	"github.com/joshuar/go-hass-agent/validation"
+)
+
+type Preferences struct {
+	MQTT *mqtt.Config `form:"mqtt"`
+}
+
+func NewPreferences() *Preferences {
+	return &Preferences{
+		MQTT: &mqtt.Config{},
+	}
+}
+
+// Valid returns a boolean indicating whether
+func (p *Preferences) Valid() (bool, error) {
+	err := validation.Validate.Struct(p.MQTT)
+	if err != nil {
+		return false, fmt.Errorf("%w: %s", validation.ErrValidation, validation.ParseValidationErrors(err))
+	}
+
+	return true, nil
+}
+
+func (r *Preferences) Sanitise() error {
+	return nil
+}
+
+templ PreferencesForm(prefs *Preferences) {
+	<div id="preferences-form" class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+		<form
+			hx-post="/preferences"
+			hx-target="#preferences-form"
+			hx-swap="outerHTML"
+			hx-include="[name='csrf_token']"
+		>
+			<div class="space-y-12">
+				<div class="grid grid-cols-1 gap-x-8 gap-y-10 border-b border-base-content/10 pb-12 md:grid-cols-3">
+					<div>
+						<h2 class="text-base/7 font-semibold">MQTT</h2>
+						<p class="mt-1 text-sm/6 text-base-content/80">Configure preferences for MQTT functionality.</p>
+					</div>
+					<div class="grid max-w-2xl grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6 md:col-span-2">
+						<div class="sm:col-span-4 flex gap-3">
+							<div class="flex h-6 shrink-0 items-center">
+								<div class="group grid size-4 grid-cols-1">
+									<input
+										id="mqtt_enabled"
+										type="checkbox"
+										if prefs.MQTT.MQTTEnabled {
+											checked="checked"
+										}
+										name="mqtt.mqtt_enabled"
+										aria-describedby="mqtt-enabled-description"
+										class="col-start-1 row-start-1 checkbox"
+										_="on click toggle @disabled on #mqtt_server then toggle @disabled on #mqtt_username then toggle @disabled on #mqtt_password then toggle @disabled on #mqtt_topic_prefix"
+									/>
+								</div>
+							</div>
+							<div class="text-sm/6">
+								<label for="mqtt_enabled" class="font-medium ">Enabled</label>
+								<p id="mqtt-enabled-description" class="text-base-content/80">Toggle MQTT functionality (requires agent restart to take effect).</p>
+							</div>
+						</div>
+						<div class="sm:col-span-4">
+							<label for="mqtt_server" class="block text-sm/6 font-medium">Server</label>
+							<div class="mt-2">
+								<input
+									id="mqtt_server"
+									type="text"
+									name="mqtt.mqtt_server"
+									if prefs.MQTT.MQTTServer != "" {
+										value={ prefs.MQTT.MQTTServer }
+									}
+									class="block w-full input"
+									if !prefs.MQTT.MQTTEnabled {
+										disabled
+									}
+								/>
+							</div>
+						</div>
+						<div class="sm:col-span-3">
+							<label for="mqtt_username" class="block text-sm/6 font-medium">Username (optional)</label>
+							<div class="mt-2">
+								<input
+									id="mqtt_username"
+									type="text"
+									name="mqtt.mqtt_username"
+									if prefs.MQTT.MQTTUser != "" {
+										value={ prefs.MQTT.MQTTUser }
+									}
+									class="block w-full input"
+									if !prefs.MQTT.MQTTEnabled {
+										disabled
+									}
+								/>
+							</div>
+						</div>
+						<div class="sm:col-span-3">
+							<label for="mqtt_password" class="block text-sm/6 font-medium">Password (optional)</label>
+							<div class="mt-2">
+								<input
+									id="mqtt_password"
+									type="password"
+									name="mqtt.mqtt_password"
+									if prefs.MQTT.MQTTPassword != "" {
+										value={ prefs.MQTT.MQTTPassword }
+									}
+									class="block w-full input"
+									if !prefs.MQTT.MQTTEnabled {
+										disabled
+									}
+								/>
+							</div>
+						</div>
+						<div class="sm:col-span-4">
+							<label for="mqtt_topic_prefix" class="block text-sm/6 font-medium">Topic Prefix (optional)</label>
+							<div class="mt-2">
+								<input
+									id="mqtt_topic_prefix"
+									type="text"
+									name="mqtt.mqtt_topic_prefix"
+									if prefs.MQTT.MQTTTopicPrefix != "" {
+										value={ prefs.MQTT.MQTTTopicPrefix }
+									} else {
+										value="homeassistant"
+									}
+									class="block w-full input"
+									if !prefs.MQTT.MQTTEnabled {
+										disabled
+									}
+								/>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="mt-6 flex items-center justify-end gap-x-6">
+				// <button type="button" class="btn btn-outline">Cancel</button>
+				<button type="submit" class="btn btn-primary">Save</button>
+			</div>
+		</form>
+	</div>
+}

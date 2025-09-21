@@ -17,25 +17,25 @@ templ SetPageTitle(title string) {
 
 // Page renders a full HTML page with the given body content and title.
 templ Page(title string, body templ.Component) {
-		<!DOCTYPE html>
-		<html lang="en" class="h-full">
-			<head>
-				<meta charset="UTF-8"/>
-				// https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Viewport_meta_element#interactive-widget
-				<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no"/>
-				<meta http-equiv="X-UA-Compatible" content="ie=edge"/>
-				<link rel="manifest" href="/web/content/manifest.json"/>
-				<link rel="apple-touch-icon" href="/web/content/apple-touch-icon.png"/>
-				<link rel="shortcut icon" href="/web/content/favicon.ico" type="image/x-icon"/>
-				<link rel="icon" href="/web/content/favicon.svg" type="image/svg+xml"/>
-				<link rel="icon" href="/web/content/favicon.png" sizes="any"/>
-				<link href="/web/content/fonts/inter/inter.css" rel="stylesheet"/>
-				<script src="/web/content/scripts.js"></script>
-				<link href="/web/content/styles.css" rel="stylesheet"/>
-				// Site-wide htmx config.
-				<meta
-					name="htmx-config"
-					content='{
+	<!DOCTYPE html>
+	<html lang="en" class="h-full">
+		<head>
+			<meta charset="UTF-8"/>
+			// https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Viewport_meta_element#interactive-widget
+			<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no"/>
+			<meta http-equiv="X-UA-Compatible" content="ie=edge"/>
+			<link rel="manifest" href="/web/content/manifest.json"/>
+			<link rel="apple-touch-icon" href="/web/content/apple-touch-icon.png"/>
+			<link rel="shortcut icon" href="/web/content/favicon.ico" type="image/x-icon"/>
+			<link rel="icon" href="/web/content/favicon.svg" type="image/svg+xml"/>
+			<link rel="icon" href="/web/content/favicon.png" sizes="any"/>
+			<link href="/web/content/fonts/inter/inter.css" rel="stylesheet"/>
+			<script src="/web/content/scripts.js"></script>
+			<link href="/web/content/styles.css" rel="stylesheet"/>
+			// Site-wide htmx config.
+			<meta
+				name="htmx-config"
+				content='{
 				"selfRequestsOnly":true,
 				"allowNestedOobSwaps":true,
 				"historyRestoreAsHxRequest":false,
@@ -49,17 +49,20 @@ templ Page(title string, body templ.Component) {
             		{"code":"...", "swap": true}
         		]
 			}'
-				/>
-				@SetPageTitle(title)
-			</head>
-			<body
-				class="h-full"
-				_="on every htmx:beforeSend in <button:not(.no-disable)/> tell it toggle [@disabled='true'] until htmx:afterOnLoad"
-			>
-				<input id="csrf_token" type="hidden" name="csrf_token" value={ models.CSRFTokenFromCtx(ctx) }/>
-				<main class="mx-auto max-w-7xl sm:px-6 lg:px-8">
-					@body
-				</main>
-			</body>
-		</html>
+			/>
+			@SetPageTitle(title)
+		</head>
+		<body
+			class="h-full"
+			_="on every htmx:beforeSend in <button:not(.no-disable)/> tell it toggle [@disabled='true'] until htmx:afterOnLoad"
+		>
+			<input id="csrf_token" type="hidden" name="csrf_token" value={ models.CSRFTokenFromCtx(ctx) }/>
+			<div aria-live="assertive" class="pointer-events-none fixed inset-0 flex items-end px-4 py-6 sm:items-start sm:p-6">
+				<div id="notifications" class="flex w-full flex-col items-center space-y-4 sm:items-end"></div>
+			</div>
+			<main class="mx-auto max-w-7xl sm:px-6 lg:px-8">
+				@body
+			</main>
+		</body>
+	</html>
 }
