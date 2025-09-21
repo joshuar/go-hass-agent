@@ -10,7 +10,10 @@ import (
 	"log/slog"
 	"sync"
 
+	slogctx "github.com/veqryn/slog-context"
+
 	"github.com/joshuar/go-hass-agent/agent/workers"
+	"github.com/joshuar/go-hass-agent/agent/workers/mqtt"
 	"github.com/joshuar/go-hass-agent/config"
 	"github.com/joshuar/go-hass-agent/hass"
 )
@@ -93,7 +96,7 @@ func (a *Agent) Run(ctx context.Context) error {
 			}
 			manager := workers.NewManager(ctx)
 			var wg sync.WaitGroup
-			// Run entity workers.
+			// Entity/Event workers.
 			wg.Go(func() {
 				// Create entity workers.
 				var entityWorkers []workers.EntityWorker
@@ -111,6 +114,48 @@ func (a *Agent) Run(ctx context.Context) error {
 
 				// Get hass client to handle entity workers.
 				hassClient.EntityHandler(ctx, entityCh)
+			})
+			// MQTT workers.
+			wg.Go(func() {
+				// Don't continue if MQTT isn't configured.
+				if !config.Exists("mqtt") {
+					slog.Debug("Not configuring MQTT functionality, not configured.")
+					return
+				}
+				// Get MQTT status.
+				enabled, err := config.Get[bool]("mqtt.enabled")
+				if err != nil {
+					slogctx.FromCtx(ctx).Warn("Unable to start device MQTT workers.",
+						slog.Any("error", err))
+					return
+				}
+				// Don't continue if MQTT is explicitly disabled.
+				if !enabled {
+					slog.Debug("Not starting MQTT workers, MQTT functionality explicitly disabled.")
+					return
+				}
+				// Create MQTT workers.
+				var mqttWorkers []workers.MQTTWorker
+				// Add device-based MQTT workers.
+				deviceMQTTworkers, err := CreateDeviceMQTTWorkers(ctx)
+				if err != nil {
+					slogctx.FromCtx(ctx).Warn("Unable to start device MQTT workers.",
+						slog.Any("error", err))
+				}
+				mqttWorkers = append(mqttWorkers, deviceMQTTworkers...)
+				// Add os-based MQTT workers.
+				osMQTTworkers, err := CreateOSMQTTWorkers(ctx)
+				if err != nil {
+					slogctx.FromCtx(ctx).Warn("Unable to start OS MQTT workers.",
+						slog.Any("error", err))
+				}
+				mqttWorkers = append(mqttWorkers, osMQTTworkers)
+				// Start all MQTT workers.
+				data := manager.StartMQTTWorkers(ctx, mqttWorkers...)
+				if err := mqtt.Start(ctx, data); err != nil {
+					slogctx.FromCtx(ctx).Warn("Unable to start MQTT.",
+						slog.Any("error", err))
+				}
 			})
 			wg.Wait()
 		case <-ctx.Done():

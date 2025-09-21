@@ -165,10 +165,6 @@ func (c *linuxMQTTWorker) generateConfig(e stateEntity) *mqttapi.Msg {
 //nolint:gocyclo,cyclop,funlen
 func CreateOSMQTTWorkers(ctx context.Context) (workers.MQTTWorker, error) {
 	mqttController := &linuxMQTTWorker{}
-	// Don't continue if MQTT functionality is disabled.
-	// if !preferences.MQTTEnabled() {
-	// 	return mqttController
-	// }
 
 	mqttDevice, err := mqtt.MQTTDevice()
 	if err != nil {

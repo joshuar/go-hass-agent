@@ -15,7 +15,7 @@ import (
 	"github.com/joshuar/go-hass-agent/models"
 )
 
-// WorkerMQTTData contains the configs, subscriptions and message channels for an
+// WorkerData contains the configs, subscriptions and message channels for an
 // MQTT worker or workers.
 type WorkerData struct {
 	Configs       []*models.MQTTConfig
