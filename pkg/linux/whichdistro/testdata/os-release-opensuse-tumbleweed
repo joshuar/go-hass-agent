@@ -1,0 +1,16 @@
+NAME="openSUSE Tumbleweed"
+# VERSION="20250128"
+ID="opensuse-tumbleweed"
+ID_LIKE="opensuse suse"
+VERSION_ID="20250128"
+PRETTY_NAME="openSUSE Tumbleweed"
+ANSI_COLOR="0;32"
+# CPE 2.3 format, boo#1217921
+CPE_NAME="cpe:2.3:o:opensuse:tumbleweed:20250128:*:*:*:*:*:*:*"
+#CPE 2.2 format
+#CPE_NAME="cpe:/o:opensuse:tumbleweed:20250128"
+BUG_REPORT_URL="https://bugzilla.opensuse.org"
+SUPPORT_URL="https://bugs.opensuse.org"
+HOME_URL="https://www.opensuse.org"
+DOCUMENTATION_URL="https://en.opensuse.org/Portal:Tumbleweed"
+LOGO="distributor-logo-Tumbleweed"

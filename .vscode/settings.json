@@ -77,7 +77,8 @@
     "web/assets",
     "web/templates",
     "server/middlewares",
-    "server"
+    "server",
+    "config"
   ],
   "css.lint.idSelector": "warning",
   "editor.formatOnSave": true,

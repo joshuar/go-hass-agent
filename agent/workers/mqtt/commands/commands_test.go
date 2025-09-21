@@ -14,6 +14,8 @@ import (
 
 	mqtthass "github.com/joshuar/go-hass-anything/v12/pkg/hass"
 	mqttapi "github.com/joshuar/go-hass-anything/v12/pkg/mqtt"
+
+	"github.com/joshuar/go-hass-agent/config"
 )
 
 var mockCommandCallback = func(_ *paho.Publish) {}
@@ -200,7 +202,7 @@ func TestNewCommandsController(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// xdg.ConfigHome = tt.args.configDir
+			config.SetPath(tt.args.configDir)
 			_, err := NewCommandsWorker(t.Context(), tt.args.device)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewCommandsController() error = %v, wantErr %v", err, tt.wantErr)

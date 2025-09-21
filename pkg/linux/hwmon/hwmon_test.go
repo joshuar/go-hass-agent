@@ -103,7 +103,7 @@ func TestChip_getSensors(t *testing.T) {
 		{
 			name: "success",
 			fields: fields{
-				Path:     "testing/data/hwmon0",
+				Path:     "testdata/hwmon0",
 				chipName: "coretemp",
 				chipID:   "hwmon0",
 			},
@@ -112,7 +112,7 @@ func TestChip_getSensors(t *testing.T) {
 		{
 			name: "fail",
 			fields: fields{
-				Path: "testing/data/hwmon10",
+				Path: "testdata/hwmon10",
 			},
 			wantErr: true,
 		},
@@ -160,26 +160,26 @@ func Test_newChip(t *testing.T) {
 	}{
 		{
 			name: "without device model",
-			args: args{path: "testing/data/hwmon0"},
+			args: args{path: "testdata/hwmon0"},
 			want: &Chip{
 				chipName: "coretemp",
 				chipID:   "hwmon0",
-				Path:     "testing/data/hwmon0",
+				Path:     "testdata/hwmon0",
 			},
 		},
 		{
 			name: "with a device model",
-			args: args{path: "testing/data/hwmon1"},
+			args: args{path: "testdata/hwmon1"},
 			want: &Chip{
 				chipName:    "drivetemp",
 				chipID:      "hwmon1",
-				Path:        "testing/data/hwmon1",
+				Path:        "testdata/hwmon1",
 				deviceModel: "CT1000MX500SSD1",
 			},
 		},
 		{
 			name:    "fail",
-			args:    args{path: "testing/data/hwmon10"},
+			args:    args{path: "testdata/hwmon10"},
 			wantErr: true,
 		},
 	}
@@ -203,9 +203,9 @@ func Test_newChip(t *testing.T) {
 func TestGetAllChips(t *testing.T) {
 	var chips []*Chip
 
-	chip0, err := newChip("testing/data/hwmon0")
+	chip0, err := newChip("testdata/hwmon0")
 	require.NoError(t, err)
-	chip1, err := newChip("testing/data/hwmon1")
+	chip1, err := newChip("testdata/hwmon1")
 	require.NoError(t, err)
 
 	chips = append(chips, chip0, chip1)
@@ -221,7 +221,7 @@ func TestGetAllChips(t *testing.T) {
 	}{
 		{
 			name: "success",
-			args: args{path: "testing/data"},
+			args: args{path: "testdata"},
 			want: chips,
 		},
 		{
@@ -266,7 +266,7 @@ func TestSensor_Name(t *testing.T) {
 			fields: fields{
 				Chip: &Chip{
 					deviceModel: "CT1000MX500SSD1",
-					Path:        "testing/data/hwmon1",
+					Path:        "testdata/hwmon1",
 					chipName:    "drivetemp",
 					chipID:      "hwmon1",
 				},
@@ -279,7 +279,7 @@ func TestSensor_Name(t *testing.T) {
 			fields: fields{
 				Chip: &Chip{
 					deviceModel: "CT1000MX500SSD1",
-					Path:        "testing/data/hwmon1",
+					Path:        "testdata/hwmon1",
 					chipName:    "drivetemp",
 					chipID:      "hwmon1",
 				},
@@ -292,7 +292,7 @@ func TestSensor_Name(t *testing.T) {
 			name: "no device model, no label",
 			fields: fields{
 				Chip: &Chip{
-					Path:     "testing/data/hwmon0",
+					Path:     "testdata/hwmon0",
 					chipName: "coretemp",
 					chipID:   "hwmon0",
 				},
@@ -304,7 +304,7 @@ func TestSensor_Name(t *testing.T) {
 			name: "no device model, label",
 			fields: fields{
 				Chip: &Chip{
-					Path:     "testing/data/hwmon0",
+					Path:     "testdata/hwmon0",
 					chipName: "coretemp",
 					chipID:   "hwmon0",
 				},
@@ -353,7 +353,7 @@ func TestSensor_ID(t *testing.T) {
 			name: "valid",
 			fields: fields{
 				Chip: &Chip{
-					Path:     "testing/data/hwmon0",
+					Path:     "testdata/hwmon0",
 					chipName: "coretemp",
 					chipID:   "hwmon0",
 				},
@@ -393,7 +393,7 @@ func TestGetAllSensors(t *testing.T) {
 	}{
 		{
 			name: "success",
-			args: args{path: "testing/data"},
+			args: args{path: "testdata"},
 		},
 		{
 			name:    "fail",

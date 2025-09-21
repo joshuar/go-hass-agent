@@ -23,7 +23,7 @@ func Test_getMemStats(t *testing.T) {
 	}{
 		{
 			name: "with swap",
-			args: args{file: "testing/data/meminfowithswap"},
+			args: args{file: "testdata/meminfowithswap"},
 			want: memoryStats{
 				memTotal:     &memStat{value: 32572792 * 1000, units: "B"},
 				memFree:      &memStat{value: 1396256 * 1000, units: "B"},
@@ -35,7 +35,7 @@ func Test_getMemStats(t *testing.T) {
 		},
 		{
 			name: "without swap",
-			args: args{file: "testing/data/meminfowithoutswap"},
+			args: args{file: "testdata/meminfowithoutswap"},
 			want: memoryStats{
 				memTotal:     &memStat{value: 32572792 * 1000, units: "B"},
 				memFree:      &memStat{value: 1396256 * 1000, units: "B"},
