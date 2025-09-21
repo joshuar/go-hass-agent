@@ -120,6 +120,6 @@ func ProcessRegistration(agent *agent.Agent) http.HandlerFunc {
 
 		agent.Register()
 
-		renderPartial(templates.RegistrationResponse(models.NewInfoMessage("Already registered", ""))).ServeHTTP(res, req)
+		renderPartial(templates.RegistrationResponse(models.NewSuccessMessage("Agent registered!", "You can close this browser window."))).ServeHTTP(res, req)
 	}).ServeHTTP
 }
