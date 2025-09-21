@@ -122,7 +122,7 @@ jobs:
         run: go build -ldflags="-w -s -X github.com/joshuar/go-hass-agent/config.AppVersion=$(git describe --tags --always --long --dirty)" -o dist/go-hass-agent
       - name: Package
         run: |
-          for format in rpm deb arch; do
+          for format in rpm deb archlinux; do
             go run github.com/goreleaser/nfpm/v2/cmd/nfpm@latest package --packager ${format} --config .nfpm.yaml --target dist
           done
       - name: Install cosign
