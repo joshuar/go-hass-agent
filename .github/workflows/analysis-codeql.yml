@@ -67,6 +67,12 @@ jobs:
         run: bunx esbuild ./web/assets/scripts.js --bundle --sourcemap --outdir=./web/content/
       - name: Bundle css
         run: bunx tailwindcss -i ./web/assets/styles.css -o ./web/content/styles.css --minify --map
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@3c3833e0f8c1c83d449a7478aa59c036a9165498 # v3.29.5
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+          packs: githubsecuritylab/codeql-${{ matrix.language }}-queries
       - if: matrix.build-mode == 'manual'
         name: Build
         run: go build -ldflags="-X github.com/joshuar/go-hass-agent/config.AppVersion=$(git describe --tags --always --long --dirty)"
