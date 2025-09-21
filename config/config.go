@@ -52,6 +52,8 @@ var globalConfig = configData{
 	path: GetPath(),
 }
 
+var customPath string
+
 // Init initializes the config store. This will load the global (app) config
 // values and set up a config backend that other components can use via the Load
 // method. This only happens once.
@@ -91,6 +93,9 @@ var Init = sync.OnceValue(func() error {
 
 // GetPath returns the directory path under which the config file (and other files/data) is stored.
 func GetPath() string {
+	if customPath != "" {
+		return customPath
+	}
 	userConfigDir, err := os.UserConfigDir()
 	if err != nil {
 		panic("could not determine config directory.")
@@ -100,7 +105,7 @@ func GetPath() string {
 
 // SetPath sets the directory path under which the config file (and other files/data) will be stored.
 func SetPath(path string) {
-	globalConfig.path = path
+	customPath = path
 }
 
 // Load will load the config for a component, using the given file and
