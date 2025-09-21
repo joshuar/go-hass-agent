@@ -94,10 +94,7 @@ jobs:
           fetch-depth: 0
       - name: Set up environment
         run: |
-          echo CGO_ENABLED=0 >> $GITHUB_ENV
-          echo GOARCH=${{matrix.goarch}} >> $GITHUB_ENV
           echo NFPM_ARCH=${{matrix.goarch}} >> $GITHUB_ENV
-          if [ -n "${{matrix.goarm}}" ]; then echo GOARM=${{matrix.goarm}} >> $GITHUB_ENV; fi
           echo "APPVERSION=$(git describe --tags --always --long --dirty)" >> $GITHUB_ENV
           platform=${{ matrix.platform }}
           echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
@@ -119,7 +116,12 @@ jobs:
       - name: Bundle css
         run: bunx tailwindcss -i ./web/assets/styles.css -o ./web/content/styles.css --minify --map
       - name: Build
-        run: go build -ldflags="-w -s -X github.com/joshuar/go-hass-agent/config.AppVersion=$(git describe --tags --always --long --dirty)" -o dist/go-hass-agent
+        run: |
+          go build -ldflags="-w -s -X github.com/joshuar/go-hass-agent/config.AppVersion=$(git describe --tags --always --long --dirty)" -o dist/go-hass-agent
+        env:
+          CGO_ENABLED: 0
+          GOARCH: ${{matrix.goarch}}
+          GOARM: ${{matrix.goarm}}
       - name: Package
         run: |
           for format in rpm deb archlinux; do
