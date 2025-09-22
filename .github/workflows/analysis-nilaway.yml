@@ -25,6 +25,6 @@ jobs:
         with:
           fetch-depth: 0
       - name: Nil panic checks
-        uses: qbaware/nilaway-action@099f6056c6fc4290402f6435dfc4b7a8ca64601b # v0.0.13
+        uses: qbaware/nilaway-action@18bae1177e15ef2cc9583baa872c43c50ad84d9e # v0.0.14
         with:
           package-to-scan: ./...
