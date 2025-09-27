@@ -25,11 +25,10 @@ RUN apk update && apk add --no-cache bash libcap git curl libstdc++ libgcc upx
 RUN <<EOF
     curl -fsSL https://bun.com/install | bash
 EOF
+ENV PATH="/root/.bun/bin:${PATH}"
 
 # install and build frontend with bin
 RUN <<EOF
-    export BUN_INSTALL="$HOME/.bun"
-    export PATH="$BUN_INSTALL/bin:$PATH"
     bun install
     bun x esbuild ./web/assets/scripts.js --bundle --minify --outdir=./web/content/
     bun x tailwindcss -i ./web/assets/styles.css -o ./web/content/styles.css --minify
