@@ -19,7 +19,7 @@ RUN go mod download
 COPY . .
 
 # install build deps
-RUN apk update && apk add bash libcap git curl libstdc++ libgcc
+RUN apk update && apk add --no-cache bash libcap git curl libstdc++ libgcc upx
 
 # install bun
 RUN <<EOF
@@ -40,7 +40,6 @@ ENV CGO_ENABLED=0
 RUN go build -ldflags="-s -w -X github.com/joshuar/go-hass-agent/config.AppVersion=$APPVERSION" -o dist/go-hass-agent
 
 # compress binary with upx
-RUN apk add --no-cache upx
 RUN upx --best --lzma dist/go-hass-agent
 
 FROM docker.io/alpine:3.22.1
