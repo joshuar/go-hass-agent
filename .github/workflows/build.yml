@@ -176,8 +176,8 @@ jobs:
       matrix:
         platform:
           - linux/amd64
-          - linux/arm32v7
-          - linux/arm32v6
+          - linux/arm
+          - linux/arm/v7
           - linux/arm64
     env:
       REGISTRY: ghcr.io
