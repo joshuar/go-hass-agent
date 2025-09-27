@@ -122,11 +122,11 @@ jobs:
           GOARCH: ${{matrix.goarch}}
           GOARM: ${{matrix.goarm}}
 
+      - name: Install upx
+        run: sudo apt install -y upx
+
       - name: Compress binary with upx
-        uses: svenstaro/upx-action@v2
-        with:
-          files: |
-            dist/go-hass-agent
+        run: upx --best --lzma dist/go-hass-agent
 
       - name: Package
         run: |
@@ -187,7 +187,7 @@ jobs:
         uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
         with:
           disable-sudo: true
-          egress-policy: block
+          egress-policy: audit
           allowed-endpoints: >
             api.github.com:443
             auth.docker.io:443
