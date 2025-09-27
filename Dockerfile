@@ -22,18 +22,26 @@ COPY . .
 RUN apk update && apk add bash libcap git curl libstdc++ libgcc
 
 # install bun
-COPY --from=oven/bun:alpine /usr/local/bin/bun /usr/local/bin/bun
+RUN <<EOF
+    curl -fsSL https://bun.com/install | bash
+EOF
 
 # install and build frontend with bin
 RUN <<EOF
+    export BUN_INSTALL="$HOME/.bun"
+    export PATH="$BUN_INSTALL/bin:$PATH"
     bun install
-    bun x esbuild ./web/assets/scripts.js --bundle --sourcemap --outdir=./web/content/
-    bun x tailwindcss -i ./web/assets/styles.css -o ./web/content/styles.css --minify --map
+    bun x esbuild ./web/assets/scripts.js --bundle --minify --outdir=./web/content/
+    bun x tailwindcss -i ./web/assets/styles.css -o ./web/content/styles.css --minify
 EOF
 
 # build the binary
 ENV CGO_ENABLED=0
 RUN go build -ldflags="-s -w -X github.com/joshuar/go-hass-agent/config.AppVersion=$APPVERSION" -o dist/go-hass-agent
+
+# compress binary with upx
+RUN apk add --no-cache upx
+RUN upx --best --lzma dist/go-hass-agent
 
 FROM docker.io/alpine:3.22.1
 
