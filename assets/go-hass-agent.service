@@ -6,7 +6,7 @@ Wants=network-online.target
 After=network-online.target nss-lookup.target
 
 [Service]
-ExecStart=/usr/bin/go-hass-agent --terminal run
+ExecStart=/usr/bin/go-hass-agent run
 Type=simple
 Restart=always
 RestartSec=30
