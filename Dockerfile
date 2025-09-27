@@ -7,11 +7,15 @@ ARG APPVERSION
 
 WORKDIR /usr/src/app
 
+# Copy go from official image.
+COPY --from=docker.io/golang:1.25.1 /usr/local/go/ /usr/local/go/
+ENV PATH="/root/go/bin:/usr/local/go/bin:/usr/local/bin:${PATH}"
+
 # install build deps
 RUN <<EOF
 export DEBIAN_INTERATIVE=0
 apt-get -y update
-apt-get -y install golang npm upx ca-certificates
+apt-get -y install npm upx ca-certificates
 EOF
 
 # pre-copy/cache go.mod for pre-downloading dependencies and only redownloading them in subsequent builds if they change
