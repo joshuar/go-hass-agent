@@ -25,7 +25,7 @@ RUN apk update && apk add --no-cache bash libcap git curl libstdc++ libgcc upx
 RUN curl -fsSL https://bun.com/install | bash
 
 # install and build frontend with bin
-RUN <<EOF
+RUN bash <<EOF
 export PATH="${HOME}/.bun/bin:${PATH}"
 bun install
 bun x esbuild ./web/assets/scripts.js --bundle --minify --outdir=./web/content/
