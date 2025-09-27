@@ -22,16 +22,15 @@ COPY . .
 RUN apk update && apk add --no-cache bash libcap git curl libstdc++ libgcc upx
 
 # install bun
-RUN <<EOF
-    curl -fsSL https://bun.com/install | bash
-EOF
+RUN curl -fsSL https://bun.com/install | bash
+
 ENV PATH="/root/.bun/bin:${PATH}"
 
 # install and build frontend with bin
 RUN <<EOF
-    bun install
-    bun x esbuild ./web/assets/scripts.js --bundle --minify --outdir=./web/content/
-    bun x tailwindcss -i ./web/assets/styles.css -o ./web/content/styles.css --minify
+    ~/.bun/bin/bun install
+    ~/.bun/bin/bun x esbuild ./web/assets/scripts.js --bundle --minify --outdir=./web/content/
+    ~/.bun/bin/bun x tailwindcss -i ./web/assets/styles.css -o ./web/content/styles.css --minify
 EOF
 
 # build the binary
