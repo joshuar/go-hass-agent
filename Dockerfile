@@ -9,7 +9,7 @@ WORKDIR /usr/src/app
 
 # Copy go from official image.
 COPY --from=golang:1.25.1-alpine /usr/local/go/ /usr/local/go/
-ENV PATH="/root/go/bin:/usr/local/go/bin:${PATH}"
+ENV PATH="/root/go/bin:/usr/local/go/bin:/usr/local/bin:${PATH}"
 
 # pre-copy/cache go.mod for pre-downloading dependencies and only redownloading them in subsequent builds if they change
 COPY go.mod go.sum ./
@@ -22,13 +22,14 @@ COPY . .
 RUN apk update && apk add --no-cache bash libcap git curl libstdc++ libgcc upx
 
 # install bun
-RUN curl -fsSL https://bun.com/install | bash
+COPY --from=oven/bun:alpine /usr/local/bin/bun /usr/local/bin/bun
 
 # install and build frontend with bin
-RUN export PATH="${HOME}/.bun/bin:${PATH}" && \
-    bun install && \
-    bun x esbuild ./web/assets/scripts.js --bundle --minify --outdir=./web/content/ && \
-    bun x tailwindcss -i ./web/assets/styles.css -o ./web/content/styles.css --minify
+RUN <<EOF
+bun install
+bun x esbuild ./web/assets/scripts.js --bundle --minify --outdir=./web/content/
+bun x tailwindcss -i ./web/assets/styles.css -o ./web/content/styles.css --minify
+EOF
 
 # build the binary
 ENV CGO_ENABLED=0
