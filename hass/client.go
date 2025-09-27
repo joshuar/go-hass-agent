@@ -297,6 +297,15 @@ func (c *Client) RegisterSensor(id models.UniqueID) error {
 	return nil
 }
 
+// Reset performs a reset of the client. It will remove existing registry data.
+func Reset() error {
+	err := registry.Reset(config.GetPath())
+	if err != nil {
+		return fmt.Errorf("unable to reset client: %w", err)
+	}
+	return nil
+}
+
 // isDisabled handles processing a sensor that is disabled. For a sensor that is
 // disabled, we need to make an additional check against Home Assistant to see
 // if the sensor has been re-enabled, and update our local registry before

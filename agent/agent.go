@@ -73,14 +73,26 @@ func (a *Agent) IsRegistered() bool {
 
 // Register will mark the registration status of the agent as registered.
 func (a *Agent) Register() {
+	a.Config.Registered = true
 	err := config.Save(ConfigPrefix, a.Config)
 	if err != nil {
 		slog.Error("Unable to save registration status to config.",
 			slog.Any("error", err))
 		return
 	}
-	a.Config.Registered = true
 	close(registered)
+}
+
+// Reset will undo registration status of the agent.
+func (a *Agent) Reset() {
+	a.Config.Registered = false
+	err := config.Save(ConfigPrefix, a.Config)
+	if err != nil {
+		slog.Error("Unable to save registration status to config.",
+			slog.Any("error", err))
+		return
+	}
+	registered = make(chan struct{})
 }
 
 // Run is the main loop of the agent. It will configure and run all sensor workers and process and send the data to Home

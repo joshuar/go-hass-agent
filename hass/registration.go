@@ -26,9 +26,9 @@ const (
 // RegistrationRequest are the preferences that defines how Go Hass Agent registers
 // with Home Assistant.
 type RegistrationRequest struct {
-	Server         string `toml:"server" form:"server" validate:"required,http_url"`
-	Token          string `toml:"token" form:"token" validate:"required"`
-	IgnoreHassURLs bool   `toml:"-" json:"-" form:"ignore_hass_urls" validate:"omitempty,boolean"`
+	Server         string `toml:"server" form:"server" validate:"required,http_url" help:"URL of the Home Assistant server."`
+	Token          string `toml:"token" form:"token" validate:"required" help:"Personal Access Token obtained from Home Assistant."`
+	IgnoreHassURLS bool   `toml:"-" json:"-" form:"ignore_hass_urls" validate:"omitempty,boolean" help:"Ignore URLs returned by Home Assistant and use provided server for access."`
 }
 
 // Validate will check the registration preferences are valid.
@@ -142,9 +142,9 @@ func newDeviceRegistration(ctx context.Context, id string) *api.DeviceRegistrati
 // https://developers.home-assistant.io/docs/api/native-app-integration/sending-data#sending-webhook-data-via-rest-api
 func generateAPIURL(response *api.DeviceRegistrationResponse, request *RegistrationRequest) (string, error) {
 	switch {
-	case response.CloudhookURL != "" && !request.IgnoreHassURLs:
+	case response.CloudhookURL != "" && !request.IgnoreHassURLS:
 		return response.CloudhookURL, nil
-	case response.RemoteUIURL != "" && response.WebhookID != "" && !request.IgnoreHassURLs:
+	case response.RemoteUIURL != "" && response.WebhookID != "" && !request.IgnoreHassURLS:
 		return response.RemoteUIURL + webHookPath + response.WebhookID, nil
 	default:
 		apiURL, err := url.Parse(request.Server)

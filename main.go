@@ -29,8 +29,8 @@ var CLI struct {
 	// Upgrade      cmd.Upgrade          `cmd:"" help:"Attempt to upgrade from previous version."`
 	ProfileFlags logging.ProfileFlags `name:"profile" help:"Set profiling flags."`
 	// Config       cmd.Config           `cmd:"" help:"Configure Go Hass Agent."`
-	// Register     cmd.Register         `cmd:"" help:"Register with Home Assistant."`
-	Path string `name:"path" default:"${defaultPath}" help:"Specify a custom path to store preferences/logs/data (for debugging)."`
+	Register cli.Register `cmd:"" help:"Register with Home Assistant."`
+	Path     string       `name:"path" default:"${defaultPath}" help:"Specify a custom path to store preferences/logs/data (for debugging)."`
 
 	logging.Options
 }
