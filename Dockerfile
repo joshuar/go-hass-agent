@@ -1,15 +1,22 @@
 # Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
 # SPDX-License-Identifier: MIT
 
-FROM docker.io/alpine:3.22.1 AS builder
+FROM docker.io/ubuntu:24.04 AS builder
 
 ARG APPVERSION
 
 WORKDIR /usr/src/app
 
 # Copy go from official image.
-COPY --from=golang:1.25.1-alpine /usr/local/go/ /usr/local/go/
+COPY --from=docker.io/golang:1.25.1-trixie /usr/local/go/ /usr/local/go/
 ENV PATH="/root/go/bin:/usr/local/go/bin:/usr/local/bin:${PATH}"
+
+# install build deps
+RUN <<EOF
+export DEBIAN_INTERATIVE=0
+apt-get -y update
+apt-get -y install npm upx ca-certificates
+EOF
 
 # pre-copy/cache go.mod for pre-downloading dependencies and only redownloading them in subsequent builds if they change
 COPY go.mod go.sum ./
@@ -18,10 +25,7 @@ RUN go mod download
 # Copy source
 COPY . .
 
-# install build deps
-RUN apk update && apk add --no-cache bash libcap git curl npm upx
-
-# install and build frontend with bin
+# install and build frontend with npm
 RUN <<EOF
 npm install
 npm x -c 'esbuild ./web/assets/scripts.js --bundle --minify --outdir=./web/content/'
@@ -61,6 +65,6 @@ USER go-hass-agent
 
 # Set up run entrypoint/cmd
 ENTRYPOINT ["go-hass-agent"]
-CMD ["--terminal", "run"]
+CMD ["run"]
 
 
