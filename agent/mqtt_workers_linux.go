@@ -240,11 +240,6 @@ func CreateOSMQTTWorkers(ctx context.Context) (workers.MQTTWorker, error) {
 		mqttController.controls = append(mqttController.controls, dbusCmdController)
 	}
 
-	go func() {
-		defer close(mqttController.msgs)
-		<-ctx.Done()
-	}()
-
 	mqttController.msgs = workers.MergeCh(ctx, workerMsgs...)
 
 	return mqttController, nil
