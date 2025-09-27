@@ -193,17 +193,15 @@ func (o *scriptOutput) Unmarshal(scriptOutput []byte) error {
 var ErrNewSensor = errors.New("could not create sensor entity")
 
 // ScriptSensor represents a sensor generated from script output.
-//
-//nolint:lll
 type ScriptSensor struct {
-	SensorState       any    `json:"sensor_state" yaml:"sensor_state" toml:"sensor_state"`
-	SensorAttributes  any    `json:"sensor_attributes,omitempty" yaml:"sensor_attributes,omitempty" toml:"sensor_attributes,omitempty"`
-	SensorName        string `json:"sensor_name" yaml:"sensor_name" toml:"sensor_name"`
-	SensorIcon        string `json:"sensor_icon,omitempty" yaml:"sensor_icon,omitempty" toml:"sensor_icon,omitempty"`
-	SensorDeviceClass string `json:"sensor_device_class,omitempty" yaml:"sensor_device_class,omitempty" toml:"sensor_device_class,omitempty"`
-	SensorStateClass  string `json:"sensor_state_class,omitempty" yaml:"sensor_state_class,omitempty" toml:"sensor_state_class,omitempty"`
-	SensorStateType   string `json:"sensor_type,omitempty" yaml:"sensor_type,omitempty" toml:"sensor_type,omitempty"`
-	SensorUnits       string `json:"sensor_units,omitempty" yaml:"sensor_units,omitempty" toml:"sensor_units,omitempty"`
+	SensorState       any            `json:"sensor_state" yaml:"sensor_state" toml:"sensor_state"`
+	SensorAttributes  map[string]any `json:"sensor_attributes,omitempty" yaml:"sensor_attributes,omitempty" toml:"sensor_attributes,omitempty"`
+	SensorName        string         `json:"sensor_name" yaml:"sensor_name" toml:"sensor_name"`
+	SensorIcon        string         `json:"sensor_icon,omitempty" yaml:"sensor_icon,omitempty" toml:"sensor_icon,omitempty"`
+	SensorDeviceClass string         `json:"sensor_device_class,omitempty" yaml:"sensor_device_class,omitempty" toml:"sensor_device_class,omitempty"`
+	SensorStateClass  string         `json:"sensor_state_class,omitempty" yaml:"sensor_state_class,omitempty" toml:"sensor_state_class,omitempty"`
+	SensorStateType   string         `json:"sensor_type,omitempty" yaml:"sensor_type,omitempty" toml:"sensor_type,omitempty"`
+	SensorUnits       string         `json:"sensor_units,omitempty" yaml:"sensor_units,omitempty" toml:"sensor_units,omitempty"`
 }
 
 func scriptToEntity(ctx context.Context, script ScriptSensor) models.Entity {
@@ -268,7 +266,7 @@ func (s *ScriptSensor) Attributes() map[string]any {
 	attributes := make(map[string]any)
 
 	if s.SensorAttributes != nil {
-		attributes["extra_attributes"] = s.SensorAttributes
+		attributes = s.SensorAttributes
 	}
 
 	return attributes
@@ -287,15 +285,16 @@ const (
 	scriptWorkerDesc = "Custom script-based sensors"
 )
 
-// Worker represents the entity worker for handling scripts.
+// ScriptWorker is a worker for custom scripts.
 type ScriptWorker struct {
+	*models.WorkerMetadata
+
 	scripts []*Script
 	outCh   chan models.Entity
 	prefs   *CommonWorkerPrefs
-	*models.WorkerMetadata
 }
 
-// NewScriptController creates a new sensor worker for scripts.
+// NewScriptsWorker creates a new worker for custom scripts.
 func NewScriptsWorker(ctx context.Context) (*ScriptWorker, error) {
 	scriptPath := filepath.Join(config.GetPath(), "scripts")
 

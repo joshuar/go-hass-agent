@@ -697,8 +697,7 @@ unit in `sensor_units` as well.
   Class](https://developers.home-assistant.io/docs/core/entity/sensor/#available-state-classes).
   Either *measurement*, *total* or *total_increasing*.
 - `sensor_attributes`: any additional attributes to be displayed with the
-  sensor. **Note that the value is required to be valid JSON, regardless of the
-  script output format.**
+  sensor.
 
 ##### Examples
 
@@ -710,7 +709,7 @@ output formats.
 JSON output can be either compressed:
 
 ```json
-{"schedule":"@every 5s","sensors":[{"sensor_name": "random 1","sensor_icon": "mdi:dice-1","sensor_state":1},{"sensor_name": "random 2","sensor_icon": "mdi:dice-2","sensor_state_class":"measurement","sensor_state":6}]}
+{"schedule":"@every 5s","sensors":[{"sensor_name": "random 1","sensor_icon": "mdi:dice-1","sensor_state":1},{"sensor_name": "random 2","sensor_icon": "mdi:dice-2","sensor_state_class":"measurement","sensor_state":6,"sensor_attributes":{"foo":"bar","baz":1}}]}
 ```
 
 Or pretty-printed:
@@ -728,7 +727,11 @@ Or pretty-printed:
       "sensor_name": "random 2",
       "sensor_icon": "mdi:dice-2",
       "sensor_state_class": "measurement",
-      "sensor_state": 6
+      "sensor_state": 6,
+      "sensor_attributes": {
+        "foo": "bar",
+        "baz": 1,
+      }
     }
   ]
 }
@@ -746,6 +749,9 @@ sensors:
       sensor_icon: mdi:dice-2
       sensor_state_class: measurement
       sensor_state: 9
+      sensor_attributes:
+        foo: "bar"
+        baz: 1
 ```
 
 ###### TOML
@@ -763,6 +769,7 @@ sensor_icon = 'mdi:dice-2'
 sensor_name = 'random 2'
 sensor_state = 3
 sensor_state_class = 'measurement'
+sensor_attributes = { foo = "bar", baz = 1 }
 ```
 
 For a binary sensor, the output should have `sensor_type` set to “binary” and
