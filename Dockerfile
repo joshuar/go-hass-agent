@@ -19,14 +19,14 @@ RUN go mod download
 COPY . .
 
 # install build deps
-RUN apk update && apk add --no-cache bash libcap git curl libstdc++ libgcc upx
+RUN apk update && apk add --no-cache bash libcap git curl npm upx
 
 # install and build frontend with bin
-RUN curl -fsSL https://bun.com/install | bash
-RUN export PATH="/root/.bun/bin:${PATH}" && \
-    bun install && \
-    bun x esbuild ./web/assets/scripts.js --bundle --minify --outdir=./web/content/ && \
-    bun x tailwindcss -i ./web/assets/styles.css -o ./web/content/styles.css --minify
+RUN <<EOF
+npm install
+npm x -c 'esbuild ./web/assets/scripts.js --bundle --minify --outdir=./web/content/'
+npm x -c 'tailwindcss -i ./web/assets/styles.css -o ./web/content/styles.css --minify'
+EOF
 
 # build the binary
 ENV CGO_ENABLED=0
