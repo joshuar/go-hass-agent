@@ -109,19 +109,25 @@ jobs:
           go-version-file: "go.mod"
       - name: Setup bun
         uses: oven-sh/setup-bun@v2
-      - name: Install frontend tools
-        run: bun install
-      - name: Bundle javascript
-        run: bunx esbuild ./web/assets/scripts.js --bundle --sourcemap --outdir=./web/content/
-      - name: Bundle css
-        run: bunx tailwindcss -i ./web/assets/styles.css -o ./web/content/styles.css --minify --map
-      - name: Build
+      - name: Build frontend files
         run: |
-          go build -ldflags="-w -s -X github.com/joshuar/go-hass-agent/config.AppVersion=$(git describe --tags --always --long --dirty)" -o dist/go-hass-agent
+          bun install
+          bunx esbuild ./web/assets/scripts.js --bundle --minify --outdir=./web/content/
+          bunx tailwindcss -i ./web/assets/styles.css -o ./web/content/styles.css --minify
+      - name: Build binary
+        run: |
+          go build -ldflags="-w -s -X github.com/joshuar/go-hass-agent/config.AppVersion=${{ env.APPVERSION }}" -o dist/go-hass-agent
         env:
           CGO_ENABLED: 0
           GOARCH: ${{matrix.goarch}}
           GOARM: ${{matrix.goarm}}
+
+      - name: Compress binary with upx
+        uses: svenstaro/upx-action@v2
+        with:
+          files: |
+            dist/go-hass-agent
+
       - name: Package
         run: |
           for format in rpm deb archlinux; do
