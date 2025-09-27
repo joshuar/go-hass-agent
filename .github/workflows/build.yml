@@ -194,37 +194,22 @@ jobs:
             storage.googleapis.com:443
             sum.golang.org:443
             release-assets.githubusercontent.com:443
+
       - name: Checkout repo
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4
         with:
           fetch-depth: 0
+
       - name: Set up environment
         run: |
           echo "APPVERSION=$(git describe --tags --always --dirty)" >> $GITHUB_ENV
           platform=${{ matrix.platform }}
           echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
+
       - name: Set app version for release
         if: ${{ needs.check_release.outputs.release_created }}
         run: echo "APPVERSION=${{ needs.check_release.outputs.release_tag }}" >> $GITHUB_ENV
-      - name: Get Docker metadata
-        id: docker_metadata
-        uses: docker/metadata-action@c1e51972afc2121e065aed6d45c65596fe445f3f # v5
-        with:
-          images: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE }}
-          tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=${{ env.APPVERSION }}
-            type=edge
-        env:
-          DOCKER_METADATA_ANNOTATIONS_LEVELS: manifest,index
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392 # v3
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3
+
       - name: Log in to the Container registry
         id: registry_login
         uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3
@@ -232,6 +217,25 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get Docker metadata
+        id: docker_metadata
+        uses: docker/metadata-action@c1e51972afc2121e065aed6d45c65596fe445f3f # v5
+        with:
+          images: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE }}
+          tags: |
+            type=sha,format=long
+            type=raw,value=${{ env.APPVERSION }}
+        env:
+          DOCKER_METADATA_ANNOTATIONS_LEVELS: manifest,index
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392 # v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3
+
       - name: Build container image
         id: build_image
         uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v5
@@ -239,13 +243,18 @@ jobs:
           context: .
           labels: ${{ steps.docker_metadata.outputs.labels }}
           annotations: ${{ steps.docker_metadata.outputs.annotations }}
+          tags: ${{ steps.docker_metadata.outputs.tags }}
           platforms: ${{ matrix.platform }}
-          outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
+          outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE }},push=true
+          build-args: |
+            APPVERSION=${{ env.APPVERSION }}
+
       - name: Export digest
         run: |
           mkdir -p /tmp/digests
           digest="${{ steps.build_image.outputs.digest }}"
           touch "/tmp/digests/${digest#sha256:}"
+
       - name: Upload digest
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
@@ -283,36 +292,30 @@ jobs:
             registry-1.docker.io:443
             rekor.sigstore.dev:443
             release-assets.githubusercontent.com:443
+
       - name: Checkout repo
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4
         with:
           fetch-depth: 0
+
       - name: Set up environment
         run: |
           echo "APPVERSION=$(git describe --tags --always --dirty)" >> $GITHUB_ENV
+
       - name: Set app version for release
         if: ${{ needs.check_release.outputs.release_created }}
         run: echo "APPVERSION=${{ needs.check_release.outputs.release_tag }}" >> $GITHUB_ENV
+
       - name: Download digests
         uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v4
         with:
           path: /tmp/digests
           pattern: digests-*
           merge-multiple: true
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3
-      - name: Get Docker metadata
-        id: docker_metadata
-        uses: docker/metadata-action@c1e51972afc2121e065aed6d45c65596fe445f3f # v5
-        with:
-          images: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE }}
-          tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=${{ env.APPVERSION }}
+
       - name: Log in to the Container registry
         id: registry_login
         uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3
@@ -320,16 +323,30 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get Docker metadata
+        id: docker_metadata
+        uses: docker/metadata-action@c1e51972afc2121e065aed6d45c65596fe445f3f # v5
+        with:
+          images: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE }}
+          tags: |
+            type=sha,format=long
+            type=raw,value=${{ env.APPVERSION }}
+
       - name: Create manifest list and push
         working-directory: /tmp/digests
         run: |
           docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
             $(printf '${{ env.REGISTRY }}/${{ env.IMAGE }}@sha256:%s ' *)
+
       - name: Inspect image
         run: |
           docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ steps.docker_metadata.outputs.version }}
+
       - name: Check and install cosign
         uses: sigstore/cosign-installer@d7543c93d881b35a8faa02e8e3605f69b7a1ce62 # v3
+
       - name: Sign image with a key
         env:
           TAGS: ${{ steps.docker_metadata.outputs.tags }}
