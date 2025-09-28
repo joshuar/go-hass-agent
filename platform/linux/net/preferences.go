@@ -12,7 +12,7 @@ const (
 	loopbackDeviceName = "lo"
 )
 
-var defaultIgnoredDevices = []string{"veth", "podman", "docker", "vnet"}
+var defaultIgnoredDevices = []string{"lo", "veth", "podman", "docker", "vnet"}
 
 //nolint:lll
 type WorkerPrefs struct {

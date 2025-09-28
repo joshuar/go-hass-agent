@@ -366,7 +366,7 @@ func (w *NetlinkWorker) getLinks(ctx context.Context) ([]models.Entity, error) {
 	}
 
 	// Filter for valid links.
-	for _, msg := range msgs {
+	for msg := range slices.Values(msgs) {
 		if slices.Contains(w.prefs.IgnoredDevices, msg.Attributes.Name) {
 			continue
 		}
