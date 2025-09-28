@@ -11,7 +11,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/goforj/godump"
 	"github.com/reugn/go-quartz/quartz"
 	slogctx "github.com/veqryn/slog-context"
 
@@ -43,7 +42,6 @@ func (p *CommonWorkerPrefs) IsDisabled() bool {
 
 func LoadWorkerPreferences[T any](path string, preferences T) (T, error) {
 	if !config.Exists(path) {
-		godump.Dump(preferences)
 		err := SaveWorkerPreferences(path, preferences)
 		if err != nil {
 			return preferences, fmt.Errorf("could not save new preferences: %w", err)
