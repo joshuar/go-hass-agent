@@ -66,10 +66,12 @@
     - [🗒️ Versioning](#️-versioning)
 - [👐🏻 Usage](#-usage)
   - [🚩 First-run](#-first-run)
-  - [👻 Running “Headless”](#-running-headless)
+  - [🔄 Subsequent runs and running automatically](#-subsequent-runs-and-running-automatically)
+    - [On a desktop using autostart functionality](#on-a-desktop-using-autostart-functionality)
+    - [On a server using systemd](#on-a-server-using-systemd)
   - [🐳 Running in a container](#-running-in-a-container)
   - [🔧 Alternative System Mount Points](#-alternative-system-mount-points)
-  - [🔄 Regular Usage](#-regular-usage)
+  - [🤖 Home Assistant Integration](#-home-assistant-integration)
   - [🗒️ Preferences](#️-preferences)
   - [🐚 Script Sensors](#-script-sensors)
     - [Requirements](#requirements)
@@ -102,13 +104,11 @@
 - [❔ FAQ](#-faq)
   - [_Can I change the units of the sensor?_](#can-i-change-the-units-of-the-sensor)
   - [_Can I disable some sensors?_](#can-i-disable-some-sensors)
-  - [_The GUI windows are too small/too big. How can I change the size?_](#the-gui-windows-are-too-smalltoo-big-how-can-i-change-the-size)
   - [_What is the resource (CPU, memory) usage of the agent?_](#what-is-the-resource-cpu-memory-usage-of-the-agent)
   - [_I've updated the agent and now I've got a bunch of duplicate/removed/disabled sensors?_](#ive-updated-the-agent-and-now-ive-got-a-bunch-of-duplicateremoveddisabled-sensors)
   - [_Can I reset the agent (start from new)?_](#can-i-reset-the-agent-start-from-new)
   - [_Can (or does) the agent run as root or with privileges?_](#can-or-does-the-agent-run-as-root-or-with-privileges)
   - [_Can the agent run in an MQTT-only mode?_](#can-the-agent-run-in-an-mqtt-only-mode)
-  - [_(Linux) I want to run the agent on a server, as a service, without a GUI. Can I do this?_](#linux-i-want-to-run-the-agent-on-a-server-as-a-service-without-a-gui-can-i-do-this)
   - [_(Linux) Why do the disk rate sensors report a non-zero value while the IO operations in progress sensor is zero?_](#linux-why-do-the-disk-rate-sensors-report-a-non-zero-value-while-the-io-operations-in-progress-sensor-is-zero)
   - [_(Linux) What does the value of the Firmware Security sensor mean?_](#linux-what-does-the-value-of-the-firmware-security-sensor-mean)
   - [_(Linux) Some of the hardware sensors are reporting incorrect values?_](#linux-some-of-the-hardware-sensors-are-reporting-incorrect-values)
@@ -134,11 +134,11 @@ any other “thing” you've added into Home Assistant.
 - **Sensors:** Expose a number of sensor entities to Home Assistant, for displaying in dashboards, using in automations
   or any other aspects your Home Assistant platform.
 - **Custom Sensors via Scripts:** All platforms can also utilize scripts/executables to create custom sensors. See
-[Script Sensors](#-script-sensors).
+  [Script Sensors](#-script-sensors).
 - **Controls and additional sensors via MQTT:** Where Home Assistant is connected to MQTT, Go Hass Agent can add some
-additional sensors/controls for various system features. A selection of device controls are provided by default, and you
-can configure additional controls to execute D-Bus commands or scripts/executables. See [Control via
-MQTT](#-mqtt-sensors-and-controls).
+  additional sensors/controls for various system features. A selection of device controls are provided by default, and you
+  can configure additional controls to execute D-Bus commands or scripts/executables. See [Control via
+  MQTT](#-mqtt-sensors-and-controls).
 - **Events:** Go Hass Agent will send a few events when certain things happen on the device running the agent (for
   example, user logins/logouts). You can listen for these events and react on them in Home Assistant automations.
 
@@ -151,7 +151,7 @@ this app:
 
 - Change your lighting depending on:
   - What active/running apps are on your laptop/desktop. For example, you could set your lights dim or activate a scene
-  when you are gaming.
+    when you are gaming.
   - Whether your screen is locked or the device is shutdown/suspended.
 - Set up automations to run when you log in or out of your machine.
 - With your laptop plugged into a smart plug that is also controlled by Home Assistant, turn the smart plug on/off based
@@ -179,24 +179,23 @@ this app:
 
 - App Details:
   - **Active App** (currently active (focused) application) and **Running Apps** (count of all running applications).
-  Updated when active app or number of apps changes.
+    Updated when active app or number of apps changes.
   - Via D-Bus (requires [XDG Desktop Portal
-  Support](https://flatpak.github.io/xdg-desktop-portal/docs/) support).
-  - [*Preferences*](#️-preferences): `[sensors.desktop.app]`.
+    Support](https://flatpak.github.io/xdg-desktop-portal/docs/) support).
+  - [_Preferences_](#️-preferences): `[sensors.desktop.app]`.
 - Desktop Settings:
-  - **Accent Color** (the hex code representing the accent color of the desktop
-  environment in use).
+  - **Accent Color** (the hex code representing the accent color of the desktop environment in use).
   - **Theme Type** (whether a dark or light desktop theme is detected).
   - Updated when (theme or color) changes.
   - Via D-Bus (requires [XDG Desktop Portal
-  Support](https://flatpak.github.io/xdg-desktop-portal/docs/) support).
-  - [*Preferences*](#️-preferences): `[sensors.desktop.preferences]`.
+    Support](https://flatpak.github.io/xdg-desktop-portal/docs/) support).
+  - [_Preferences_](#️-preferences): `[sensors.desktop.preferences]`.
 - Media:
   - **MPRIS Player State** Show the current state of any MPRIS compatible player.
     - Requires a player with MPRIS support.
   - **Webcam/Microphone in use** Show when either a webcam or microphone is one and recording/streaming video/audio.
     - Requires Pipewire.
-  - [*Preferences*](#️-preferences): All under `[sensors.media]`.
+  - [_Preferences_](#️-preferences): All under `[sensors.media]`.
 - Connected Battery Details:
   - **Battery Type** (the type of battery, e.g., UPS, line power). Updated on battery add/remove.
   - **Battery Temp** (battery temperature). Updated when the temperature changes.
@@ -208,14 +207,14 @@ this app:
     Updated When state changes.
   - All battery sensors require D-Bus and
     [UPower](https://upower.freedesktop.org/) support.
-  - [*Preferences*](#️-preferences): `[sensors.batteries]`.
+  - [_Preferences_](#️-preferences): `[sensors.batteries]`.
 - Memory Stats:
   - **Memory Total** (total memory on the system, in B).
   - **Memory Available** (current memory available/free, in B).
   - **Memory Used** (current memory usage, both in B and %).
   - If swap is enabled, there will be similar sensors for swap.
   - Sourced via ProcFS. Updated ~every minute.
-  - [*Preferences*](#️-preferences): `[sensors.memory.usage]`.
+  - [_Preferences_](#️-preferences): `[sensors.memory.usage]`.
 - Disk:
   - **Disk Usage** (in %) per disk/mount.
     - Attributes: File system type, bytes/inode total/free/used.
@@ -229,96 +228,85 @@ this app:
   - **S.M.A.R.T status and attributes** per disk.
     - Requires the following capabilities on the Go Hass Agent binary (already applied for containers and rpm/deb/arch
       packages): `cap_sys_rawio,cap_sys_admin,cap_mknod,cap_dac_override=+ep`.
-  - [*Preferences*](#️-preferences): `[sensors.disk.*rates*]` (`usage` for usage
+  - [_Preferences_](#️-preferences): `[sensors.disk.*rates*]` (`usage` for usage
     or `rates` for all others).
 - Networking:
   - **Connection State** (connected/disconnected/activating/deactivating) per
     connection. Updated when state changes. Requires D-Bus and NetworkManager.
     - Attributes: IP addresses and networks.
-    - [*Preferences*](#️-preferences): `[sensors.network.connections]`.
+    - [_Preferences_](#️-preferences): `[sensors.network.connections]`.
   - Connected Wi-Fi Network Details (requires D-Bus and NetworkManager.):
     - **SSID** (the SSID of the Wi-Fi network). Updated when SSID changes.
-    - **Frequency** (the frequency band of the Wi-Fi network, in Hz). Updated when frequency
-      changes.
-    - **Speed** (the network speed of the Wi-Fi network, in Mbps). Updated when speed
-      changes.
-    - **Strength** (the strength of the signal of the Wi-Fi network, in dB).
-      Updated when strength changes.
+    - **Frequency** (the frequency band of the Wi-Fi network, in Hz). Updated when frequency changes.
+    - **Speed** (the network speed of the Wi-Fi network, in Mbps). Updated when speed changes.
+    - **Strength** (the strength of the signal of the Wi-Fi network, in dB). Updated when strength changes.
     - **BSSID** (the BSSID of the Wi-Fi network). Updated when BSSID changes.
-    - [*Preferences*](#️-preferences): `[sensors.network.connections]`.
+    - [_Preferences_](#️-preferences): `[sensors.network.connections]`.
   - **Device/Link State**
     - Via Netlink.
-    - [*Preferences*](#️-preferences): `[sensors.network.links]`.
+    - [_Preferences_](#️-preferences): `[sensors.network.links]`.
   - **Bytes Received/Sent** (in B). Updated ~every 5s.
     - Per network device/link and total.
     - Via Netlink.
-    - [*Preferences*](#️-preferences): `[sensors.network.rates]`.
-  - **Bytes Received/Sent Rate** (transfer rate, in B/s). Updated ~every 5
-    seconds. Via ProcFS.
+    - [_Preferences_](#️-preferences): `[sensors.network.rates]`.
+  - **Bytes Received/Sent Rate** (transfer rate, in B/s). Updated ~every 5 seconds. Via ProcFS.
     - Per network device/link and total.
     - Via Netlink.
-    - [*Preferences*](#️-preferences): `[sensors.network.rates]`.
-  - You can ignore some devices from generating sensors, see the individual
-    preferences sections above.
+    - [_Preferences_](#️-preferences): `[sensors.network.rates]`.
+  - You can ignore some devices from generating sensors, see the individual preferences sections above.
 - CPU:
   - **Load Average (1/5/15 min)**. Updated ~every 1 minute. Via ProcFS.
-    - [*Preferences*](#️-preferences): `[sensors.cpu.load_averages]`.
-  - **CPU Usage** (in %). Both total (all-cores) and per-core. Updated ~every 10
-    seconds. Via ProcFS.
+    - [_Preferences_](#️-preferences): `[sensors.cpu.load_averages]`.
+  - **CPU Usage** (in %). Both total (all-cores) and per-core. Updated ~every 10 seconds. Via ProcFS.
     - Attributes include breakdown of CPU time per state (i.e., user, idle,
       servicing interrupts, etc.).
-    - [*Preferences*](#️-preferences): `[sensors.cpu.usage]`.
+    - [_Preferences_](#️-preferences): `[sensors.cpu.usage]`.
 - - **CPU Core Frequency** (in Hz). Per-core. Updated ~every 10 seconds. Via
     ProcFS.
     - Attributes include current driver and governor in use.
-    - [*Preferences*](#️-preferences): `[sensors.cpu.frequencies]`.
+    - [_Preferences_](#️-preferences): `[sensors.cpu.frequencies]`.
 - Power Related Details:
-  - **Power Profile** (the current power profile as set by the
-    power-profiles-daemon). Updated when profile changes.
+  - **Power Profile** (the current power profile as set by the power-profiles-daemon). Updated when profile changes.
     - Via D-Bus (requires [power-profiles-daemon](https://hadess.fedorapeople.org/power-profiles-daemon-docs/gdbus-net.hadess.PowerProfiles.html)).
-    - [*Preferences*](#️-preferences): `[sensors.power.profile]`.
-  - **Screen Lock State** (current state of screen lock). Updated when screen lock
-    changes.
+    - [_Preferences_](#️-preferences): `[sensors.power.profile]`.
+  - **Screen Lock State** (current state of screen lock). Updated when screen lock changes.
     - Via D-Bus. Requires `xscreensaver` or `systemd-logind` support.
-    - [*Preferences*](#️-preferences): `[sensors.power.screen_lock]`.
-  - **Power State** (power state of device, e.g., suspended, powered on/off).
-    Updated when power state changes.
+    - [_Preferences_](#️-preferences): `[sensors.power.screen_lock]`.
+  - **Power State** (power state of device, e.g., suspended, powered on/off). Updated when power state changes.
     - Via D-Bus. Requires `systemd-logind`.
-    - [*Preferences*](#️-preferences): `[sensors.power.state]`.
+    - [_Preferences_](#️-preferences): `[sensors.power.state]`.
 - Various System Details:
   - **Boot Time** (date/Time of last system boot). Via ProcFS.
-  - **Uptime*. Updated ~every 15 minutes. Via ProcFS.
-  - **Kernel Version** (version of the currently running kernel). Updated on agent
-    start. Via ProcFS.
+  - \*_Uptime_. Updated ~every 15 minutes. Via ProcFS.
+  - **Kernel Version** (version of the currently running kernel). Updated on agent start. Via ProcFS.
   - Vulnerabilities:
-    - **Firmware Security** the [Host Security ID](https://fwupd.github.io/libfwupdplugin/hsi.html) of the device running Go Hass Agent.
+    - **Firmware Security** the [Host Security ID](https://fwupd.github.io/libfwupdplugin/hsi.html) of the device
+      running Go Hass Agent.
       - Attributes show details for each HSI attribute.
       - Via D-Bus. Requires `fwupd` running on the system.
-    - **CPU Vulnerabilities** whether any CPU vulnerabilities have been detected by the kernel and exploitable/unmitigated.
+    - **CPU Vulnerabilities** whether any CPU vulnerabilities have been detected by the kernel and
+      exploitable/unmitigated.
       - Attributes show the status of each vulnerability detected.
       - Via ProcFS.
   - Distribution Details:
-    - **Distribution Name** (name of the running distribution, e.g., Fedora,
-    Ubuntu).
+    - **Distribution Name** (name of the running distribution, e.g., Fedora, Ubuntu).
     - **Distribution Version** (version of the running distribution).
     - Both updated on agent start. Via ProcFS.
-  - [*Preferences*](#️-preferences) (for all the above system details sensors):
+  - [_Preferences_](#️-preferences) (for all the above system details sensors):
     `[sensors.system.info]`.
-  - **Current Users** (count of users with active sessions on the system). Updated
-    when any session changes.
+  - **Current Users** (count of users with active sessions on the system). Updated when any session changes.
     - Attributes: List of usernames | When user count changes.
     - Via D-Bus. Requires `systemd-logind`.
-    - [*Preferences*](#️-preferences): `[sensors.system.users]`.
-  - **ABRT Problems** (count of any problems logged to the ABRT daemon). Updated
-    ~every 15 minutes.
+    - [_Preferences_](#️-preferences): `[sensors.system.users]`.
+  - **ABRT Problems** (count of any problems logged to the ABRT daemon). Updated ~every 15 minutes.
     - Attributes: extracted problem details.
     - Requires ABRT.
-    - [*Preferences*](#️-preferences): `[sensors.system.abrt_problems]`.
+    - [_Preferences_](#️-preferences): `[sensors.system.abrt_problems]`.
   - Hardware Sensors:
     - Any **temp**, **fan**, **power** and other hardware sensors, including associated
       **alarms**. Updated ~every 1 minute.
     - Extracted from the `/sys/class/hwmon` file system.
-    - [*Preferences*](#️-preferences): `[sensors.system.hardware_sensors]`.
+    - [_Preferences_](#️-preferences): `[sensors.system.hardware_sensors]`.
 
 #### 🕹️ Controls
 
@@ -332,24 +320,23 @@ this app:
   - **Volume Mute**: Mute/Unmute the default audio output device.
   - **Webcam Control**: Start/stop a webcam and view the video in Home Assistant.
     - Requires a webcam that is exposed via V4L2 (VideoForLinux2).
-  - [*Preferences*](#️-preferences) : `[controls.media.*]` (`audio` or `video`).
+  - [_Preferences_](#️-preferences) : `[controls.media.*]` (`audio` or `video`).
 - Power Controls:
   - **Lock/Unlock Screen/Screensaver**: Locks/unlocks the session for the user
     running Go Hass Agent.
-    - [*Preferences*](#️-preferences) : `[controls.power.screen_lock_controls]`.
-  - **Suspend**: (instantly) suspend (the system state saved to RAM and
-    the CPU turned off) the device running Go Hass Agent.
-  - **Hibernate**: (instantly) hibernate (the system state saved to disk
-    and the machine powered down) the device running Go Hass Agent.
+    - [_Preferences_](#️-preferences) : `[controls.power.screen_lock_controls]`.
+  - **Suspend**: (instantly) suspend (the system state saved to RAM and the CPU turned off) the device running Go Hass
+    Agent.
+  - **Hibernate**: (instantly) hibernate (the system state saved to disk and the machine powered down) the device
+    running Go Hass Agent.
   - **Power Off**: (instantly) power off the device running Go Hass Agent.
   - **Reboot**: (instantly) reboot the device running Go Hass Agent.
-  - Power controls require a system configured with `systemd-logind` (and D-Bus)
-    support.
-  - [*Preferences*](#️-preferences) (for suspend/hibernate/power off/reboot controls): `[controls.power.power_controls]`.
+  - Power controls require a system configured with `systemd-logind` (and D-Bus) support.
+  - [_Preferences_](#️-preferences) (for suspend/hibernate/power off/reboot controls): `[controls.power.power_controls]`.
   - **Inhibit Lock**: stop the system from being able to shutdown or suspend.
-    - [*Preferences*](#️-preferences): `[controls.power.inhibit_controls]`.
+    - [_Preferences_](#️-preferences): `[controls.power.inhibit_controls]`.
 - Run arbitrary D-Bus commands: see [Custom D-Bus Controls](#custom-d-bus-controls).
-  - [*Preferences*](#️-preferences): `[controls.system.dbus_commands]`.
+  - [_Preferences_](#️-preferences): `[controls.system.dbus_commands]`.
 
 #### 📢 Events
 
@@ -369,7 +356,7 @@ this app:
       user: myuser # username.
     ```
 
-  - [*Preferences*](#️-preferences): `[sensors.system.users]`.
+  - [_Preferences_](#️-preferences): `[sensors.system.users]`.
 
 - **Out Of Memory (OOM) events**.
   - Requires a system configured with `systemd-oomd` enabled.
@@ -382,21 +369,19 @@ this app:
       pid: 909764 # pid of process.
     ```
 
-  - [*Preferences*](#️-preferences): `[sensors.memory.oom]`.
+  - [_Preferences_](#️-preferences): `[sensors.memory.oom]`.
 
 ### All Operating Systems
 
 **Sensors:**
 
 - **Go Hass Agent Version**: Updated on agent start.
-  - [*Preferences*](#️-preferences): `[sensors.agent.version]`.
-- **External IP Addresses**: All external IP addresses (IPv4/6) of the device
-  running the agent.
-  - [*Preferences*](#️-preferences): `[sensors.agent.external_ip]`.
-- **Connection Latency**: Total connection time (in milliseconds) to connect to
-  Home Assistant from the device running Go Hass Agent. Additional times shown
-  as attributes.
-  - [*Preferences*](#️-preferences): `[sensors.agent.connection_latency]`.
+  - [_Preferences_](#️-preferences): `[sensors.agent.version]`.
+- **External IP Addresses**: All external IP addresses (IPv4/6) of the device running the agent.
+  - [_Preferences_](#️-preferences): `[sensors.agent.external_ip]`.
+- **Connection Latency**: Total connection time (in milliseconds) to connect to Home Assistant from the device running
+  Go Hass Agent. Additional times shown as attributes.
+  - [_Preferences_](#️-preferences): `[sensors.agent.connection_latency]`.
 
 [⬆️ Back to Top](#-table-of-contents)
 
@@ -404,9 +389,8 @@ this app:
 
 ### 🤝 Compatibility
 
-**Currently, only Linux is supported**. Though the code is designed to be extensible
-to other operating systems. See development information in the
-[docs](docs/README.md) for details on how to extend for other operating systems.
+**Currently, only Linux is supported**. Though the code is designed to be extensible to other operating systems. See
+development information in the [docs](docs/README.md) for details on how to extend for other operating systems.
 
 ### 🔽 Installation
 
@@ -420,21 +404,16 @@ distribution:
 - **Ubuntu/Debian**: use the `.deb`.
 - **Arch**: use the `.tar.zst`.
 
-Packages (and binaries) are available for **amd64**, **arm (v6 and v7)** and
-**arm64** architectures.
+Packages (and binaries) are available for **amd64**, **arm (v6 and v7)** and **arm64** architectures.
 
-For distributions not listed above, you can try the binary, or build it
-yourself from source (see development [docs](docs/README.md)). Note that while
-Go is known for statically compiled binaries that “run anywhere”, the Fyne UI
-toolkit used by Go Hass Agent makes use of shared libraries that may need to
-be installed as well.
+For distributions not listed above, you can try the binary, or build it yourself from source (see development
+[docs](docs/README.md)). Note that while Go is known for statically compiled binaries that “run anywhere”, the Fyne UI
+toolkit used by Go Hass Agent makes use of shared libraries that may need to be installed as well.
 
-Package signatures can be verified with
-[cosign](https://github.com/sigstore/cosign). To verify a package, you'll need
+Package signatures can be verified with [cosign](https://github.com/sigstore/cosign). To verify a package, you'll need
 to download [cosign.pub](cosign.pub) public key and the `.sig` file (downloaded from
-[releases](https://github.com/joshuar/go-hass-agent/releases)) that matches the
-package you want to verify. To verify a package, a command similar to the
-following for the `rpm` package can be used:
+[releases](https://github.com/joshuar/go-hass-agent/releases)) that matches the package you want to verify. To verify a
+package, a command similar to the following for the `rpm` package can be used:
 
 ```shell
 cosign verify-blob --key cosign.pub --signature go-hass-agent-*.rpm.sig go-hass-agent-*.rpm
@@ -444,9 +423,10 @@ cosign verify-blob --key cosign.pub --signature go-hass-agent-*.rpm.sig go-hass-
 
 #### 🚢 Container
 
-Container images are available on [ghcr.io](https://github.com/joshuar/go-hass-agent/pkgs/container/go-hass-agent). Note
-that it is recommended to use an image tagged with the latest release version over the latest container image, which
-might be unstable.
+Container images are available on [ghcr.io](https://github.com/joshuar/go-hass-agent/pkgs/container/go-hass-agent). The
+container image is multi-platform and supports **amd64**, **arm (v6 and v7)** and **arm64** architectures. Note that it
+is recommended to use an image tagged with the latest release version over the latest container image, which might be
+unstable.
 
 [⬆️ Back to Top](#-table-of-contents)
 
@@ -464,57 +444,71 @@ it is:
 
 ## 👐🏻 Usage
 
-Go Hass Agent runs as a tray icon by default. It is operating system, distribution, and desktop-environment agnostic and
-should manifest itself in any tray of any desktop environment.
+Go Hass Agent is distribution, and desktop-environment agnostic. It runs in the background gathering and submitting
+sensor/event/command data to Home Assistant. It exposes a limited web UI (accessible via
+[http://localhost:8223](http://localhost:8223)) used for some initial setup and optional configuration options.
 
 ### 🚩 First-run
 
-On first-run, Go Hass Agent will display a window where you will need to enter some details, so it can register itself
-with a Home Assistant instance to be able to report sensors and receive notifications.
+On first-run, open a browser tab and navigate to [http://localhost:8223](http://localhost:8223). You should be
+redirected to the registration form where you will need to enter details to allow Go Hass Agent to register with Home
+Assistant:
 
-![Registration Window](assets/screenshots/registration.png)
+![Registration Window](assets/screenshots/registration-form.png)
 
 **You will need:**
 
 - A long-lived access token. You can generate one on your [account profile
   page](https://www.home-assistant.io/docs/authentication/#your-account-profile).
 - The web address (URL) on which a Home Assistant instance can be found.
-  - Go Hass Agent will try to auto-detect this for you, and you can select it in the _Auto-discovered servers_ list.
-    Otherwise, you will need to select _Use Custom Server?_, and enter the details manually in _Manual Server Entry_.
+  - Go Hass Agent will try to auto-detect this for you, and you can select it in the _Detected servers_ list. Otherwise,
+    you will need to select _Use Custom Server_, and enter the details manually in _Custom Server_.
 
-When you have entered all the details, click **Submit** and the agent should start running and reporting sensors to the
-Home Assistant instance.
+When you have entered all the details, click **Register** and the agent should start running and reporting sensors to
+the Home Assistant instance.
+
+Alternatively, you can register Go Hass Agent on the command-line by running:
+
+```shell
+go-hass-agent register --token _TOKEN_ --server _URL_
+```
+
+Once registered, Go Hass Agent should start sending sensor/event data to Home Assistant.
 
 [⬆️ Back to Top](#-table-of-contents)
 
-### 👻 Running “Headless”
+### 🔄 Subsequent runs and running automatically
 
-Go Hass Agent will automatically detect if there is no GUI available and run in a “headless” mode with no UI.
-Registration will need to be completed manually as a first step in such environments.
+#### On a desktop using autostart functionality
 
-You can register Go Hass Agent on the command-line with by running:
+Go Hass Agent packages install a `.desktop` file exposes Go Hass Agent in your desktop's application menu that can be
+used to start the agent. Use your desktop's autostart functionality to set this desktop entry to autostart (consult your
+desktop documentation for details, or consult the links
+[here](https://wiki.archlinux.org/title/Autostarting#On_desktop_environment_startup) or
+[here](https://wiki.archlinux.org/title/Autostarting#On_window_manager_startup)).
 
-```shell
-go-hass-agent --terminal register --token _TOKEN_ --server _URL_
-```
+#### On a server using systemd
 
-You will need to provide a long-lived token `_TOKEN_` and the URL of your Home Assistant instance, `_URL_`.
+Go Hass Agent packages install a systemd service file that can be enabled and used to run the agent as a service. You
+will still need to register the agent manually before starting as a service (see above, in particular registering on
+the command-line).
 
-Once registered, running Go Hass Agent again with no options should start tracking and sending sensor data to Home
-Assistant.
+You will also need to ensure your user has “lingering” enabled. Run `loginctl list-users` and check that your user has
+`LINGER` set to “yes”. If not, run `loginctl enable-linger`.
 
-If desired, headless mode can be forced, even in graphical environments, by specifying the `--terminal` command-line
-option.
+Once you have registered the agent and enabled lingering for your user. Enable the service and start it with the
+command: `systemctl --user enable go-hass-agent && systemctl --user start go-hass-agent`.
 
-If you want to run Go Hass Agent as a service on a headless machine, see the
-[FAQ](#linux-i-want-to-run-the-agent-on-a-server-as-a-service-without-a-gui-can-i-do-this).
+You can check the status with `systemctl --user status go-hass-agent`. The agent should start with every boot.
+
+For other init systems, consult their documentation on how to enable and run user services.
 
 [⬆️ Back to Top](#-table-of-contents)
 
 ### 🐳 Running in a container
 
 There is rough support for running Go Hass Agent within a container. Pre-built images [are
-available](https://github.com/joshuar/go-hass-agent/pkgs/container/go-hass-agent) for *armv6/v7*, *arm64* and *amd64*
+available](https://github.com/joshuar/go-hass-agent/pkgs/container/go-hass-agent) for _armv6/v7_, _arm64_ and _amd64_
 architectures. The image is based on the latest stable Alpine Linux release.
 
 To register the agent running in a container, run the following:
@@ -530,7 +524,7 @@ To register the agent running in a container, run the following:
 - Change `_VERSION_` to a release version. **Do not use latest, which is unstable and likely to break.**
 - Change the value of `--server` to your Home Assistant server.
 - Change the value of `--token` to a long-lived token retrieved from Home Assistant.
-  - ***Be sure to quote the token to avoid shell escape errors.***
+  - **_Be sure to quote the token to avoid shell escape errors._**
 - We are running the container in a “one-shot” mode (specifying `--rm`) as we just want to register and generate the
   configuration file. We will use a different command below to actually run Go Hass Agent.
 
@@ -580,12 +574,11 @@ Agent will use for various mounts:
 - `DEVFS_ROOT`: alternative mount point for `/dev`.
 - `SYSFS_ROOT`: alternative mount point for `/sys`.
 
-When these are set, any sensors that would normally source their data from a
-file in one of the canonical system mount points, will use the alternative mount
-point location specified.
+When these are set, any sensors that would normally source their data from a file in one of the canonical system mount
+points, will use the alternative mount point location specified.
 
-For running in a container, example usage would be to add the following
-command-line arguments to the container run command:
+For running in a container, example usage would be to add the following command-line arguments to the container run
+command:
 
 ```shell
 podman run \
@@ -595,12 +588,13 @@ podman run \
   ...other options...
 ```
 
-### 🔄 Regular Usage
+[⬆️ Back to Top](#-table-of-contents)
 
-When running, Go Hass Agent will appear as a device under the Mobile App
-integration in your Home Assistant instance. It should also report a list of
-sensors/entities you can use in any automations, scripts, dashboards and other
-parts of Home Assistant.
+### 🤖 Home Assistant Integration
+
+When running, Go Hass Agent will appear as a device under the Mobile App integration in your Home Assistant instance. It
+should also report a list of sensors/entities you can use in any automations, scripts, dashboards and other parts of
+Home Assistant.
 
 [![Open your Home Assistant instance to the mobile_app integration.](https://my.home-assistant.io/badges/integration.svg)](https://my.home-assistant.io/redirect/integration/?domain=mobile_app)
 
@@ -608,17 +602,16 @@ parts of Home Assistant.
 
 ### 🗒️ Preferences
 
-The preference file (`preferences.toml`) is located in
-`CONFIG_HOME/go-hass-agent/` where `CONFIG_HOME` will OS-dependent:
+The preference file (`preferences.toml`) is located in `CONFIG_HOME/go-hass-agent/` where `CONFIG_HOME` will
+OS-dependent:
 
 - Linux: `~/.config`.
 - OSX: `~/Library/Application Support`.
 - Windows: `LocalAppData`.
 
-Preferences under `[sensors]` or `[controls]` can be used to adjust various
-aspects of those sensors/controls, or disable them entirely. See
-[sensors](README.md#-sensors) and [controls](README.md#️-controls) for mapping
-the preferences to individual sensors/controls.
+Preferences under `[sensors]` or `[controls]` can be used to adjust various aspects of those sensors/controls, or
+disable them entirely. See [sensors](README.md#-sensors) and [controls](README.md#️-controls) for mapping the
+preferences to individual sensors/controls.
 
 > [!WARNING]
 >
@@ -630,86 +623,90 @@ the preferences to individual sensors/controls.
 
 ### 🐚 Script Sensors
 
-Go Hass Agent supports utilizing scripts to create sensors. In this way, you can
-extend the sensors presented to Home Assistant by the agent. Note that as the
-agent is a “mobile app” in Home Assistant, any script sensors will be associated
-with the Go Hass Agent device in Home Assistant.
+Go Hass Agent supports utilizing scripts to create sensors. In this way, you can extend the sensors presented to Home
+Assistant by the agent. Note that as the agent is a “mobile app” in Home Assistant, any script sensors will be
+associated with the Go Hass Agent device in Home Assistant.
 
-Each script run by the agent can create one or more sensors and each script can
-run on its own schedule, specified using a Cron syntax.
+Each script run by the agent can create one or more sensors and each script can run on its own schedule, specified using
+a Cron syntax.
 
 #### Requirements
 
-- Scripts need to be put in a `scripts` folder under the configuration directory
-  (see [Preferences Location](#️-preferences) for the full path).
+- Scripts need to be put in a `scripts` folder under the configuration directory (see [Preferences
+  Location](#️-preferences) for the full path).
 - You can use symlinks, if supported by your Operating System.
 - Script files need to be executable by the user running Go Hass Agent.
 - Scripts need to run without any user interaction.
-- Scripts need to output either valid JSON, YAML or TOML. See [Output
-  Format](#output-format) for details.
-- Commands do not invoke the system shell and does not support expansion/glob
-  patterns or handle other expansions, pipelines, or redirections typically done
-  by shells.
+- Scripts need to output either valid JSON, YAML or TOML. See [Output Format](#output-format) for details.
+- Commands do not invoke the system shell and does not support expansion/glob patterns or handle other expansions,
+  pipelines, or redirections typically done by shells.
 
 #### Supported Scripting Languages
 
-Any typical scripting language that can be invoked with a shebang can be used
-for scripts. All scripts do not need to be written in the same language. So or
-the typical shells can be used such as `bash`, `sh`, `zsh`, `fish`, etc. Scripting
+Any typical scripting language that can be invoked with a shebang can be used for scripts. All scripts do not need to be
+written in the same language. So or the typical shells can be used such as `bash`, `sh`, `zsh`, `fish`, etc. Scripting
 languages such as Python, Perl, and Ruby can also be used.
 
 #### Output Format
 
-All scripts should produce output that is either valid JSON, YAML or TOML.
-Scripts do not need to use the same format; you can have one script that
-produces JSON and another that produces TOML. All scripts will need to output
-the following fields:
+All scripts should produce output that is either valid JSON, YAML or TOML. Scripts do not need to use the same format;
+you can have one script that produces JSON and another that produces TOML. All scripts will need to output the following
+fields:
 
 - A `schedule` field containing a [cron-formatted schedule](#schedule).
 - A `sensors` field containing a list of sensors.
 
 Sensors themselves need to be represented by the following fields:
 
-- `sensor_name`: the *friendly* name of the sensor in Home Assistant (e.g., *My
-  Script Sensor*).
-- `sensor_icon`: a [Material Design
-Icon](https://pictogrammers.github.io/@mdi/font/2.0.46/) representing the
-current state. It can be changed dynamically based on the current state or
-remain constant. Format is `mdi:icon_name`.
-- `sensor_state`: the current value of the sensor. For numerical states, without
-  the units. Otherwise, a *string* or *boolean* (for binary sensors).
+- `sensor_name`: the _friendly_ name of the sensor in Home Assistant (e.g., _My
+  Script Sensor_).
+- `sensor_icon`: a [Material Design Icon](https://pictogrammers.github.io/@mdi/font/2.0.46/) representing the current
+  state. It can be changed dynamically based on the current state or remain constant. Format is `mdi:icon_name`.
+- `sensor_state`: the current value of the sensor. For numerical states, without the units. Otherwise, a _string_ or
+  _boolean_ (for binary sensors).
   - **Note:** for a binary sensor, do not enclose the `true`/`false` in quotes.
 
-The following optional fields can also be specified, which help control the
-display in Home Assistant.
+The following optional fields can also be specified, which help control the display in Home Assistant.
 
 - `sensor_units`: the units for the state value.
-- `sensor_type`: the *type* of sensor. If this is a binary sensor with a boolean
-  value, set this to *“binary”*. Else, do not set this field.
+- `sensor_type`: the _type_ of sensor. If this is a binary sensor with a boolean value, set this to _“binary”_. Else, do
+  not set this field.
 - `sensor_device_class`: a Home Assistant [Device
-Class](https://developers.home-assistant.io/docs/core/entity/sensor/#available-device-classes)
-for the sensor, which will dictate how it will be displayed in Home Assistant.
-There are many, pick an appropriate one (see
-[`internal/hass/sensor/deviceClass.go`](../internal/hass/sensor/deviceClass.go)).
-If setting `sensor_device_class`, it is likely required to set an appropriate
-unit in `sensor_units` as well.
+  Class](https://developers.home-assistant.io/docs/core/entity/sensor/#available-device-classes) for the sensor, which
+  will dictate how it will be displayed in Home Assistant. There are many, pick an appropriate one (see
+  [`internal/hass/sensor/deviceClass.go`](../internal/hass/sensor/deviceClass.go)). If setting `sensor_device_class`, it
+  is likely required to set an appropriate unit in `sensor_units` as well.
 - `sensor_state_class`: the Home Assistant [State
-  Class](https://developers.home-assistant.io/docs/core/entity/sensor/#available-state-classes).
-  Either *measurement*, *total* or *total_increasing*.
-- `sensor_attributes`: any additional attributes to be displayed with the
-  sensor.
+  Class](https://developers.home-assistant.io/docs/core/entity/sensor/#available-state-classes). Either _measurement_,
+  _total_ or _total_increasing_.
+- `sensor_attributes`: any additional attributes to be displayed with the sensor.
 
 ##### Examples
 
-The following examples show a script that produces two sensors, in different
-output formats.
+The following examples show a script that produces two sensors, in different output formats.
 
 ###### JSON
 
 JSON output can be either compressed:
 
 ```json
-{"schedule":"@every 5s","sensors":[{"sensor_name": "random 1","sensor_icon": "mdi:dice-1","sensor_state":1},{"sensor_name": "random 2","sensor_icon": "mdi:dice-2","sensor_state_class":"measurement","sensor_state":6,"sensor_attributes":{"foo":"bar","baz":1}}]}
+{
+  "schedule": "@every 5s",
+  "sensors": [
+    {
+      "sensor_name": "random 1",
+      "sensor_icon": "mdi:dice-1",
+      "sensor_state": 1
+    },
+    {
+      "sensor_name": "random 2",
+      "sensor_icon": "mdi:dice-2",
+      "sensor_state_class": "measurement",
+      "sensor_state": 6,
+      "sensor_attributes": { "foo": "bar", "baz": 1 }
+    }
+  ]
+}
 ```
 
 Or pretty-printed:
@@ -730,7 +727,7 @@ Or pretty-printed:
       "sensor_state": 6,
       "sensor_attributes": {
         "foo": "bar",
-        "baz": 1,
+        "baz": 1
       }
     }
   ]
@@ -740,18 +737,18 @@ Or pretty-printed:
 ###### YAML
 
 ```yaml
-schedule: '@every 5s'
+schedule: "@every 5s"
 sensors:
-    - sensor_name: random 1
-      sensor_icon: mdi:dice-1
-      sensor_state: 8
-    - sensor_name: random 2
-      sensor_icon: mdi:dice-2
-      sensor_state_class: measurement
-      sensor_state: 9
-      sensor_attributes:
-        foo: "bar"
-        baz: 1
+  - sensor_name: random 1
+    sensor_icon: mdi:dice-1
+    sensor_state: 8
+  - sensor_name: random 2
+    sensor_icon: mdi:dice-2
+    sensor_state_class: measurement
+    sensor_state: 9
+    sensor_attributes:
+      foo: "bar"
+      baz: 1
 ```
 
 ###### TOML
@@ -772,19 +769,27 @@ sensor_state_class = 'measurement'
 sensor_attributes = { foo = "bar", baz = 1 }
 ```
 
-For a binary sensor, the output should have `sensor_type` set to “binary” and
-the `sensor_state` as `true` or `false` (without quotes). As an example in
-compressed JSON format:
+For a binary sensor, the output should have `sensor_type` set to “binary” and the `sensor_state` as `true` or `false`
+(without quotes). As an example in compressed JSON format:
 
 ```json
-{"schedule":"@every 10s","sensors":[{"sensor_name":"random 4","sensor_type":"binary","sensor_icon":"mdi:dice-3","sensor_state":false}]}
+{
+  "schedule": "@every 10s",
+  "sensors": [
+    {
+      "sensor_name": "random 4",
+      "sensor_type": "binary",
+      "sensor_icon": "mdi:dice-3",
+      "sensor_state": false
+    }
+  ]
+}
 ```
 
 #### Schedule
 
-The `schedule` field is used to specify the schedule or interval on which the
-script will be run by the agent. Each script is run on its own schedule. All
-sensors and their values should be returned each time the script is run. The
+The `schedule` field is used to specify the schedule or interval on which the script will be run by the agent. Each
+script is run on its own schedule. All sensors and their values should be returned each time the script is run. The
 following formats are supported.
 
 ##### Cron Expressions
@@ -796,13 +801,13 @@ format](https://www.quartz-scheduler.org/documentation/quartz-2.3.0/tutorials/tu
 
 You may use one of several pre-defined schedules in place of a Cron expression.
 
-Entry                  | Description                                | Equivalent To
------                  | -----------                                | -------------
-`@yearly` (or `@annually`) | Run once a year, midnight, Jan. 1st        | `0 0 1 1 *`
-`@monthly`               | Run once a month, midnight, first of month | `0 0 1 * *`
-`@weekly`                | Run once a week, midnight between Sat/Sun  | `0 0 * * 0`
-`@daily` (or `@midnight`)  | Run once a day, midnight                   | `0 0 * * *`
-`@hourly`                | Run once an hour, beginning of hour        | `0 * * * *`
+| Entry                      | Description                                | Equivalent To |
+| -------------------------- | ------------------------------------------ | ------------- |
+| `@yearly` (or `@annually`) | Run once a year, midnight, Jan. 1st        | `0 0 1 1 *`   |
+| `@monthly`                 | Run once a month, midnight, first of month | `0 0 1 * *`   |
+| `@weekly`                  | Run once a week, midnight between Sat/Sun  | `0 0 * * 0`   |
+| `@daily` (or `@midnight`)  | Run once a day, midnight                   | `0 0 * * *`   |
+| `@hourly`                  | Run once an hour, beginning of hour        | `0 * * * *`   |
 
 ##### Arbitrary Intervals
 
@@ -815,13 +820,11 @@ Arbitrary intervals are supported with the format:
 
 #### Security Implications
 
-Running scripts can be dangerous, especially if the script does not have robust
-error-handling or whose origin is untrusted or unknown. Go Hass Agent makes no
-attempt to do any analysis or sanitization of script output, other than ensuring
-the output is a [supported format](#output-format). As such, ensure you trust
-and understand what the script does and all possible outputs that the script can
-produce. Scripts are run by the agent and have the permissions of the user
-running the agent. Script output is sent to your Home Assistant instance.
+Running scripts can be dangerous, especially if the script does not have robust error-handling or whose origin is
+untrusted or unknown. Go Hass Agent makes no attempt to do any analysis or sanitization of script output, other than
+ensuring the output is a [supported format](#output-format). As such, ensure you trust and understand what the script
+does and all possible outputs that the script can produce. Scripts are run by the agent and have the permissions of the
+user running the agent. Script output is sent to your Home Assistant instance.
 
 [⬆️ Back to Top](#-table-of-contents)
 
@@ -832,32 +835,24 @@ running the agent. Script output is sent to your Home Assistant instance.
 > - MQTT Sensors and Controls are not enabled by default.
 > - Go Hass Agent requires MQTT v5 support on your MQTT broker.
 
-If Home Assistant is connected to
-[MQTT](https://www.home-assistant.io/integrations/mqtt/), you can also configure
-Go Hass Agent to connect to MQTT, which will then expose some sensors and
-controls in Home Assistant to control the device running the agent.
-Additionally, you can configure your own custom controls to run either [D-Bus
-commands](#custom-d-bus-controls) or [scripts and
-executables](#other-custom-commands).
+If Home Assistant is connected to [MQTT](https://www.home-assistant.io/integrations/mqtt/), you can also configure Go
+Hass Agent to connect to MQTT, which will then expose some sensors and controls in Home Assistant to control the device
+running the agent. Additionally, you can configure your own custom controls to run either [D-Bus
+commands](#custom-d-bus-controls) or [scripts and executables](#other-custom-commands).
 
 #### Configuration
 
 To configure the agent to connect to MQTT:
 
-1. Right-click on the Go Hass Agent tray icon.
-2. Select *App Settings*.
+1. Open your browser and navigate to the Go Hass Agent preferences page: [http://localhost:8223/preferences](http://localhost:8223/preferences):
+2. Toggle **_Use MQTT_** and then enter the details for your MQTT server (not your Home Assistant server).
 
-   ![App Settings Selection](assets/screenshots/app-settings.png)
+   ![MQTT Preferences](assets/screenshots/preferences.png)
 
-3. Toggle ***Use MQTT*** and then enter the details for your MQTT server (not
-   your Home Assistant server).
+3. Click **_Save_**.
+4. Restart Go Hass Agent.
 
-   ![MQTT Preferences](assets/screenshots/mqtt-preferences.png)
-
-4. Click ***Save***.
-5. Restart Go Hass Agent.
-
-**For users running Go Hass Agent in [headless](#-running-headless) mode.**
+You can also set MQTT preferences on the command-line:
 
 1. Stop Go Hass Agent if running.
 2. Use the `config` command option to specify your MQTT server parameters:
@@ -878,8 +873,8 @@ integration.](https://my.home-assistant.io/badges/integration.svg)](https://my.h
 > [!NOTE]
 >
 > Go Hass Agent will appear in two places in your Home Assistant. Firstly, under the Mobile App integration, which will
-> show all the *sensors* that Go Hass Agent is reporting. Secondly, under the MQTT integration, which will show the
-> *controls and sensors* exposed over MQTT for Go Hass Agent. Unfortunately, due to limitations with the Home Assistant
+> show all the _sensors_ that Go Hass Agent is reporting. Secondly, under the MQTT integration, which will show the
+> _controls and sensors_ exposed over MQTT for Go Hass Agent. Unfortunately, due to limitations with the Home Assistant
 > architecture, these cannot be combined in a single place.
 
 [⬆️ Back to Top](#-table-of-contents)
@@ -919,7 +914,6 @@ data:
       ],
       "use_session_path": false
     }
-
 ```
 
 [⬆️ Back to Top](#-table-of-contents)
@@ -999,30 +993,29 @@ max = 100
 step = 1
 ```
 
-The following shows an example that configures various controls in Home
-Assistant:
+The following shows an example that configures various controls in Home Assistant:
 
 ```toml
-  [[button]]
-  name = "My Command With an Icon"
-  exec = 'command arg1 arg2 "arg3"'
-  icon = "mdi:chat"
+[[button]]
+name = "My Command With an Icon"
+exec = 'command arg1 arg2 "arg3"'
+icon = "mdi:chat"
 
-  [[button]]
-  name = "My Command"
-  exec = "command"
+[[button]]
+name = "My Command"
+exec = "command"
 
-  [[switch]]
-  name = "Toggle a Thing"
-  exec = "command arg1 arg2"
+[[switch]]
+name = "Toggle a Thing"
+exec = "command arg1 arg2"
 
-  [[number]]
-  name = "My number slider"
-  exec = "command"
-  display = "slider"
-  min = 1
-  max = 500
-  step = 5
+[[number]]
+name = "My number slider"
+exec = "command"
+display = "slider"
+min = 1
+max = 500
+step = 5
 ```
 
 #### Security Implications
@@ -1041,14 +1034,26 @@ issue potentially disruptive actions on a device that another user is accessing.
 
 ### Build Requirements
 
-Go Hass Agent uses [Mage](https://magefile.org/) for development.
+Besides Go, Go Hass Agent requires a javascript runtime/toolkit to bundle/build some assets required for the web UI.
+It's recommended to use [bun](https://bun.sh/) for this.
+
+> [!NOTE]
+>
+> The devcontainer has all the necessary tooling installed for building Go Hass Agent.
+>
+> Some architectures are not supported by bun. In these cases, it's fine to use [npm](https://www.npmjs.com/) as well,
+> which has much wider architecture support.
 
 ### Compiling
 
-Use the following mage invocation in the project root directory:
+From the root of the Go Hass Agent repository, use the following commands will build/bundle everything needed:
 
 ```shell
-go run github.com/magefile/mage -d build/magefiles -w . build:full
+bun install
+bunx esbuild ./web/assets/scripts.js --bundle --minify --outdir=./web/content/
+bunx tailwindcss -i ./web/assets/styles.css -o ./web/content/styles.css --minify
+# the -X ... linker option is *required*
+CGO_ENABLED=0 go build -ldflags="-w -s -X github.com/joshuar/go-hass-agent/config.AppVersion=$(git describe --tags --always --long --dirty)" -o dist/go-hass-agent
 ```
 
 This will build a binary and place it in `dist/go-hass-agent-amd64`.
@@ -1057,47 +1062,28 @@ This will build a binary and place it in `dist/go-hass-agent-amd64`.
 
 ### Cross Compilation
 
-Go Hass Agent can also be built for **arm (v6/v7)** and **arm64** with
-cross-compilation. **This is only supported on Ubuntu or Alpine Linux as the
-host for cross-compiles**. To build for a different architecture, set the
-`TARGETPLATFORM` environment variable:
+Go Hass Agent can also be built for **arm (v6/v7)** and **arm64** with cross-compilation. Just change the `go build` in
+the commands above as appropriate. For e.g.:
 
 ```shell
-export TARGETPLATFORM=linux/arm64 # or linux/arm/v6 or linux/arm/v7
+RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -ldflags="-s -w -X github.com/joshuar/go-hass-agent/config.AppVersion=$(git describe --tags --always --long --dirty)" -o dist/go-hass-agent
 ```
-
-Install the target architecture libraries for cross-compilation:
-
-```shell
-go run github.com/magefile/mage -d build/magefiles -w . preps:deps
-```
-
-Then the commands for building and packaging above should work as expected.
-
-> [!NOTE]
->
-> The devcontainer has all the necessary compilers and libraries
-> installed for cross-compilation.
 
 [⬆️ Back to Top](#-table-of-contents)
 
 ### Packages
 
-Go Hass Agent uses [nfpm](https://nfpm.goreleaser.com/) to create
-packages for Fedora, Arch, and Ubuntu/Debian.
+Go Hass Agent uses [nfpm](https://nfpm.goreleaser.com/) to create packages for Fedora, Arch, and Ubuntu/Debian.
 
 To build packages, use the following invocations:
 
 ```shell
-go run github.com/magefile/mage -d build/magefiles -w . package:nfpm
+for format in rpm deb archlinux; do
+  go run github.com/goreleaser/nfpm/v2/cmd/nfpm@latest package --packager ${format} --config .nfpm.yaml --target dist
+done
 ```
 
-The above mage actions will install the necessary tooling for packaging, if
-needed.
-
-- Packages will be available under the `dist/` folder.
-- You can build packages for other architectures as well by following the guide
-  for [cross-compliation](#cross-compilation).
+This will build packages for all possible formats and they will be available under the `dist/` folder.
 
 [⬆️ Back to Top](#-table-of-contents)
 
@@ -1111,8 +1097,7 @@ You can build an image with a command like the following (using Podman):
 podman build --file ./Dockerfile --tag go-hass-agent
 ```
 
-As with building a binary,
-[cross-compliation](https://docs.docker.com/build/building/multi-platform/#cross-compilation)
+As with building a binary, [cross-compliation](https://docs.docker.com/build/building/multi-platform/#cross-compilation)
 is supported:
 
 ```shell
@@ -1122,9 +1107,8 @@ podman build --file ./Dockerfile --platform linux/arm/v7 --tag go-hass-agent
 
 > [!NOTE]
 >
-> By default, the container will run as a user with UID/GID 1000/1000.
-> You can pick a different UID/GID when building by adding `--build-arg UID=999`
-> and `--build-arg GID=999` (adjusting the values as appropriate).
+> By default, the container will run as a user with UID/GID 1000/1000. You can pick a different UID/GID when building by
+> adding `--build-arg UID=999` and `--build-arg GID=999` (adjusting the values as appropriate).
 
 [⬆️ Back to Top](#-table-of-contents)
 
@@ -1132,25 +1116,20 @@ podman build --file ./Dockerfile --platform linux/arm/v7 --tag go-hass-agent
 
 - Found an issue? Please [report
   it](https://github.com/joshuar/go-hass-agent/issues/new?assignees=joshuar&labels=&template=bug_report.md&title=%5BBUG%5D)!
-- Have a suggestion for a feature? Want a particular sensor/measurement added?
-  Submit a [feature
+- Have a suggestion for a feature? Want a particular sensor/measurement added? Submit a [feature
   request](https://github.com/joshuar/go-hass-agent/issues/new?assignees=joshuar&labels=&template=feature_request.md&title=)!
-- Want to help develop Go Hass Agent? See the [contributing
-  guidelines](CONTRIBUTING.md).
+- Want to help develop Go Hass Agent? See the [contributing guidelines](CONTRIBUTING.md).
 
 > [!NOTE]
 >
-> Please note, as an open-source and hobby project, the Go Hass Agent developers
-> cannot commit to a response within any given time-frame. However, we do
-> endeavor to try to provide an initial response, and ongoing cadence of 1 week.
+> Please note, as an open-source and hobby project, the Go Hass Agent developers cannot commit to a response within any
+> given time-frame. However, we do endeavor to try to provide an initial response, and ongoing cadence of 1 week.
 
 ### 💾 Committing Code
 
-This repository is using [conventional commit
-messages](https://www.conventionalcommits.org/en/v1.0.0/#summary). This provides
-the ability to automatically include relevant notes in the
-[changelog](../CHANGELOG.md). The [TL;DR](https://en.wikipedia.org/wiki/TL;DR)
-is when writing commit messages, add a prefix:
+This repository is using [conventional commit messages](https://www.conventionalcommits.org/en/v1.0.0/#summary). This
+provides the ability to automatically include relevant notes in the [changelog](../CHANGELOG.md). The
+[TL;DR](https://en.wikipedia.org/wiki/TL;DR) is when writing commit messages, add a prefix:
 
 - `feat:` for a new feature, like a new sensor.
 - `fix:` when fixing an issue.
@@ -1165,9 +1144,7 @@ Please read the [Code of Conduct](https://github.com/joshuar/go-hass-agent/blob/
 
 ## 🧭 Roadmap
 
-Check out [what I'm working
-on](https://github.com/joshuar/go-hass-agent/discussions/150) for future
-releases.
+Check out [what I'm working on](https://github.com/joshuar/go-hass-agent/discussions/150) for future releases.
 
 [⬆️ Back to Top](#-table-of-contents)
 
@@ -1175,88 +1152,64 @@ releases.
 
 ### _Can I change the units of the sensor?_
 
-- Yes! In the [customization
-options](https://www.home-assistant.io/docs/configuration/customizing-devices/)
-for a sensor/entity, you can change the _unit of measurement_ (and _display
-precision_ if desired). This is useful for sensors whose native unit is not very
-human-friendly. For example the memory sensors report values in bytes (B),
-whereas you may wish to change the unit of measurement to gigabytes (GB).
+- Yes! In the [customization options](https://www.home-assistant.io/docs/configuration/customizing-devices/) for a
+  sensor/entity, you can change the _unit of measurement_ (and _display precision_ if desired). This is useful for
+  sensors whose native unit is not very human-friendly. For example the memory sensors report values in bytes (B),
+  whereas you may wish to change the unit of measurement to gigabytes (GB).
 
 [⬆️ Back to Top](#-table-of-contents)
 
 ### _Can I disable some sensors?_
 
-- There is currently some limited support for disabling certain _groups_ of
-sensors. In the [preferences](#️-preferences), under the
-`worker` sections, you can find some controls to disable some sensor
-groups.
-- Alternatively, you can disable the corresponding sensor entity in Home Assistant,
- and the agent will stop sending updates for it.
+- There is currently some limited support for disabling certain _groups_ of sensors. In the
+  [preferences](#️-preferences), under the `worker` sections, you can find some controls to disable some sensor groups.
+- Alternatively, you can disable the corresponding sensor entity in Home Assistant, and the agent will stop sending
+  updates for it.
   - To disable a sensor entity, In the [customisation
-options](https://www.home-assistant.io/docs/configuration/customizing-devices/)
-for a sensor/entity, toggle the *Enabled* switch. The agent will automatically
-detect the disabled state and send/not send updates as appropriate.
-  - Note that disabling a sensor in Home Assistant will **not** stop Go Hass
-    Agent from gathering the raw data for the sensor. Only disabling it via the
-    Agent preferences file will stop any data gathering.
-
-[⬆️ Back to Top](#-table-of-contents)
-
-### _The GUI windows are too small/too big. How can I change the size?_
-
-- See [Scaling](https://developer.fyne.io/architecture/scaling) in the Fyne
-documentation. In the tray icon menu, select _Settings_ to open the Fyne
-settings app which can adjust the scaling for the app windows.
+    options](https://www.home-assistant.io/docs/configuration/customizing-devices/) for a sensor/entity, toggle the
+    _Enabled_ switch. The agent will automatically detect the disabled state and send/not send updates as appropriate.
+  - Note that disabling a sensor in Home Assistant will **not** stop Go Hass Agent from gathering the raw data for the
+    sensor. Only disabling it via the Agent preferences file will stop any data gathering.
 
 [⬆️ Back to Top](#-table-of-contents)
 
 ### _What is the resource (CPU, memory) usage of the agent?_
 
-- Very little in most cases. On Linux, the agent with all sensors working,
-  should consume well less than 50 MB of memory with very little CPU usage.
-  Further memory savings can be achieved by running the agent in “headless” mode
-  with the `--terminal` command-line option. This should put the memory usage
-  below 25 MB.
-- On Linux, many sensors rely on D-Bus signals for publishing their data, so CPU
-  usage may be affected by the “business” of the bus. For sensors that are
-  polled on an interval, the agent makes use of some jitter in the polling
-  intervals to avoid a “thundering herd” problem.
+- Very little in most cases. On Linux, the agent with all sensors working, should consume well less than 50 MB of memory
+  with very little CPU usage.
+- On Linux, many sensors rely on D-Bus signals for publishing their data, so CPU usage may be affected by the “business”
+  of the bus. For sensors that are polled on an interval, the agent makes use of some jitter in the polling intervals to
+  avoid a “thundering herd” problem.
 
 [⬆️ Back to Top](#-table-of-contents)
 
 ### _I've updated the agent and now I've got a bunch of duplicate/removed/disabled sensors?_
 
-- Generally, Go Hass Agent will try to reserve sensor renames to [major version
-  upgrades](#️-versioning), which may contain breaking changes.
-- Unfortunately, sometimes sensor names may inadvertently get changed in
-  non-major releases.
-- Regrettably, there is no way to rename the sensors in Home Assistant such that
-  long-term statistics and existing automations and dashboards continue to work
-  uninterrupted.
-- For long-term statistics, you can remove the old sensors manually, under
-  Developer Tools→Statistics in Home Assistant, for example. The list should
-  contain sensors that are no longer “provided” by the agent. Or you can wait
-  until they age out of the Home Assistant long-term statistics database
-  automatically.
-- For automations and dashboards the [repairs
-  integration](https://www.home-assistant.io/integrations/repairs/), will direct
-  you to any broken items and how to fix them.
+- Generally, Go Hass Agent will try to reserve sensor renames to [major version upgrades](#️-versioning), which may
+  contain breaking changes.
+- Unfortunately, sometimes sensor names may inadvertently get changed in non-major releases.
+- Regrettably, there is no way to rename the sensors in Home Assistant such that long-term statistics and existing
+  automations and dashboards continue to work uninterrupted.
+- For long-term statistics, you can remove the old sensors manually, under Developer Tools→Statistics in Home Assistant,
+  for example. The list should contain sensors that are no longer “provided” by the agent. Or you can wait until they
+  age out of the Home Assistant long-term statistics database automatically.
+- For automations and dashboards the [repairs integration](https://www.home-assistant.io/integrations/repairs/), will
+  direct you to any broken items and how to fix them.
 
   [![Open your Home Assistant instance to the repairs
-  integration.](https://my.home-assistant.io/badges/repairs.svg)](https://my.home-assistant.io/redirect/repairs)
+integration.](https://my.home-assistant.io/badges/repairs.svg)](https://my.home-assistant.io/redirect/repairs)
 
 [⬆️ Back to Top](#-table-of-contents)
 
 ### _Can I reset the agent (start from new)?_
 
-- Yes. You can reset the agent so that it will re-register with Home Assistant
-  and act as a new device. To do this:
+- Yes. You can reset the agent so that it will re-register with Home Assistant and act as a new device. To do this:
 
 1. Stop Go Hass Agent if already running.
-2. Open your Home Assistant ***mobile_app*** integrations page:
+2. Open your Home Assistant **_mobile_app_** integrations page:
 
    [![Open your Home Assistant instance to the mobile_app
-  integration.](https://my.home-assistant.io/badges/integration.svg)](https://my.home-assistant.io/redirect/integration/?domain=mobile_app)
+integration.](https://my.home-assistant.io/badges/integration.svg)](https://my.home-assistant.io/redirect/integration/?domain=mobile_app)
 
 3. Locate the entry for your existing Go Hass Agent device. It should be named
    the same as the hostname of the device it is running on.
@@ -1265,11 +1218,9 @@ settings app which can adjust the scaling for the app windows.
    ![Delete Agent Example](assets/screenshots/delete-from-mobile-app-integrations.png)
 
 5. Choose **Delete**.
-6. From a terminal, run the agent with the command: `go-hass-agent register
-   --force` (add `--terminal --server someserver --token sometoken` for
-   non-graphical registration).
-7. The agent will go through the initial registration steps. It should report
-   that registration was successful.
+6. From a terminal, run the agent with the command: `go-hass-agent register --force` (add `--server someserver --token
+sometoken` for non-graphical registration).
+7. The agent will go through the initial registration steps. It should report that registration was successful.
 8. Restart the agent.
 
 [⬆️ Back to Top](#-table-of-contents)
@@ -1281,8 +1232,8 @@ settings app which can adjust the scaling for the app windows.
   order to access the required data.
   - When you install via a package (rpm, deb, etc.), the agent binary will have the required
     capabilities.
-  - If you build yourself, you need to set the capabilities on your binary manually. Consult the
-    [sensors list](#-sensors) for which sensors require what capabilities.
+  - If you build yourself, you need to set the capabilities on your binary manually. Consult the [sensors
+    list](#-sensors) for which sensors require what capabilities.
 - If you have [script sensors](#-script-sensors) or [custom commands](#other-custom-commands) that need privileges,
   there are most likely ways for the script/command to elevate to the privileges it needs as part of its execution.
 
@@ -1290,77 +1241,47 @@ settings app which can adjust the scaling for the app windows.
 
 ### _Can the agent run in an MQTT-only mode?_
 
-- Unfortunately no, Go Hass Agent cannot run in an MQTT-only credentials. It makes
-use of the [Native App Integration
-API](https://developers.home-assistant.io/docs/api/native-app-integration/) that
-is **not** MQTT only.
-
-[⬆️ Back to Top](#-table-of-contents)
-
-### _(Linux) I want to run the agent on a server, as a service, without a GUI. Can I do this?_
-
-- Yes. The packages install a systemd service file that can be enabled and
-used to run the agent as a service.
-- You will still need to register the agent manually before starting as a service.
-See the command for registration in the [README](#-running-headless).
-- You will also need to ensure your user has “lingering” enabled.  Run
-`loginctl list-users` and check that your user has `LINGER` set to “yes”. If not, run
-`loginctl enable-linger`.
-- Once you have registered the agent and enabled lingering for your user. Enable
-the service and start it with the command: `systemctl --user enable
-go-hass-agent && systemctl --user start go-hass-agent`.
-- You can check the status with `systemctl --user status go-hass-agent`. The agent
-should start with every boot.
-- For other init systems, consult their documentation on how to enable and run
-user services.
+- Unfortunately no, Go Hass Agent cannot run in an MQTT-only credentials. It makes use of the [Native App Integration
+  API](https://developers.home-assistant.io/docs/api/native-app-integration/) that is **not** MQTT only.
 
 [⬆️ Back to Top](#-table-of-contents)
 
 ### _(Linux) Why do the disk rate sensors report a non-zero value while the IO operations in progress sensor is zero?_
 
-- The rate sensors are a derived value, taken by looking at the change in total IO
-operations since the sensor was last polled. The IO operations in progress
-sensor is a point-in-time measurement taken at the time of polling. So
-short-lived IO operations, that generate reads/writes but happen between polling
-intervals, won't be visible in the IO operations sensor but will contribute to
-the derived IO rate sensors.
-- If you are wanting to track IO operations, I would recommend focusing on the IO
-operations value being at a certain value over a period of time. Certainly
-however, for exact measurements, a dedicated monitoring solution is recommended.
+- The rate sensors are a derived value, taken by looking at the change in total IO operations since the sensor was last
+  polled. The IO operations in progress sensor is a point-in-time measurement taken at the time of polling. So
+  short-lived IO operations, that generate reads/writes but happen between polling intervals, won't be visible in the IO
+  operations sensor but will contribute to the derived IO rate sensors.
+- If you are wanting to track IO operations, I would recommend focusing on the IO operations value being at a certain
+  value over a period of time. Certainly however, for exact measurements, a dedicated monitoring solution is
+  recommended.
 
 [⬆️ Back to Top](#-table-of-contents)
 
 ### _(Linux) What does the value of the Firmware Security sensor mean?_
 
 - This is a **Host Security ID** value. More information can be found
-[here](https://fwupd.github.io/libfwupdplugin/hsi.html).
+  [here](https://fwupd.github.io/libfwupdplugin/hsi.html).
 
 [⬆️ Back to Top](#-table-of-contents)
 
 ### _(Linux) Some of the hardware sensors are reporting incorrect values?_
 
-- Go Hass Agent sends the raw hardware sensor data without any chip-dependent
-scaling/transformation. If you are comparing the values to, say, the output of
-sensors from the `sensors` command (part of _lm-sensors_), there will be
-discrepancies; _lm-sensors_ has a database of chips with scaling/transformation
-information for their values and applies those as required before displaying the
-values.
-- Future versions of Go Hass Agent will hopefully use similar logic to
-scale/transform the hardware sensor values. As a workaround, you can create a
-template sensor that scales/transforms values as appropriate.
+- Go Hass Agent sends the raw hardware sensor data without any chip-dependent scaling/transformation. If you are
+  comparing the values to, say, the output of sensors from the `sensors` command (part of _lm-sensors_), there will be
+  discrepancies; _lm-sensors_ has a database of chips with scaling/transformation information for their values and
+  applies those as required before displaying the values.
+- Future versions of Go Hass Agent will hopefully use similar logic to scale/transform the hardware sensor values. As a
+  workaround, you can create a template sensor that scales/transforms values as appropriate.
 
 [⬆️ Back to Top](#-table-of-contents)
 
 ## 🤝 Acknowledgements
 
-- [Home Assistant](https://home-assistant.io), for providing a platform to watch
-  and act on sensors and stuff.
+- [Home Assistant](https://home-assistant.io), for providing a platform to watch and act on sensors and stuff.
 - [Mage](https://magefile.org/), used to make building Go Hass Agent easier.
-- This [Awesome README
-  Template](https://github.com/Louis3797/awesome-readme-template), to create
-  this awesome README.
-- [Prometheus Node Exporter](https://github.com/prometheus/node_exporter) code,
-  for inspiration on some sensors.
+- This [Awesome README Template](https://github.com/Louis3797/awesome-readme-template), to create this awesome README.
+- [Prometheus Node Exporter](https://github.com/prometheus/node_exporter) code, for inspiration on some sensors.
 
 [⬆️ Back to Top](#-table-of-contents)
 
