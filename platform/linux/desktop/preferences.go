@@ -12,5 +12,5 @@ const (
 )
 
 type WorkerPrefs struct {
-	*workers.CommonWorkerPrefs
+	workers.CommonWorkerPrefs
 }
