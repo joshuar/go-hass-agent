@@ -209,6 +209,9 @@ jobs:
         if: ${{ needs.check_release.outputs.release_created }}
         run: echo "APPVERSION=${{ needs.check_release.outputs.release_tag }}" >> $GITHUB_ENV
 
+      - name: Check and install cosign
+        uses: sigstore/cosign-installer@d7543c93d881b35a8faa02e8e3605f69b7a1ce62 # v3
+
       - name: Log in to the Container registry
         id: registry_login
         uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3
