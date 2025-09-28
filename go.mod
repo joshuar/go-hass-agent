@@ -68,7 +68,6 @@ require (
 	github.com/kevinburke/ssh_config v1.2.0 // indirect
 	github.com/klauspost/pgzip v1.2.6 // indirect
 	github.com/knadh/koanf/maps v0.1.2 // indirect
-	github.com/magefile/mage v1.15.0 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mandykoh/go-parallel v0.1.0 // indirect
 	github.com/matryer/moq v0.5.3 // indirect
@@ -135,7 +134,6 @@ require (
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-resty/resty/v2 v2.16.5
 	github.com/go-test/deep v1.1.1
-	github.com/goforj/godump v1.6.0
 	github.com/gofrs/uuid/v5 v5.3.2
 	github.com/grandcat/zeroconf v1.0.0
 	github.com/jaypipes/ghw v0.19.1
@@ -168,7 +166,6 @@ require (
 
 tool (
 	github.com/goreleaser/nfpm/v2/cmd/nfpm
-	github.com/magefile/mage
 	github.com/matryer/moq
 	github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen
 	golang.org/x/tools/cmd/stringer
