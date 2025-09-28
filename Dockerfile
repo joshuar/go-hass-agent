@@ -3,8 +3,6 @@
 
 FROM --platform=linux/amd64 docker.io/alpine:3.22.1 AS builder
 
-RUN echo "Running on $BUILDPLATFORM, building for $TARGETPLATFORM"
-
 ARG TARGETOS
 ARG TARGETARCH
 ARG APPVERSION
@@ -36,7 +34,6 @@ EOF
 
 # build the binary
 ENV CGO_ENABLED=0
-RUN go env
 RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -ldflags="-s -w -X github.com/joshuar/go-hass-agent/config.AppVersion=$APPVERSION" -o dist/go-hass-agent
 
 # compress binary with upx
