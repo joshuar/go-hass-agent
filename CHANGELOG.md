@@ -1,5 +1,45 @@
 # Changelog
 
+## [14.0.0](https://github.com/joshuar/go-hass-agent/compare/v13.3.3...v14.0.0) (2025-09-28)
+
+
+### Features
+
+* :bento: add additional frontend assets ([32bdffd](https://github.com/joshuar/go-hass-agent/commit/32bdffd0a93a7451444c2358579d53f20fb23d1d))
+* :sparkles: support environment variables for setting log level and logging to file ([c936223](https://github.com/joshuar/go-hass-agent/commit/c936223994924f9fe26afe4603f13c97273d4769))
+* :sparkles: web-based registration start ([c675b71](https://github.com/joshuar/go-hass-agent/commit/c675b71aebf3d06f92909af0e14b50a7a77fe4eb))
+* **agent:** :sparkles: generate and save a device ID as necessary ([27e4b4c](https://github.com/joshuar/go-hass-agent/commit/27e4b4cc01e9fbcf500e579369bfec8f3ee46a19))
+* **cli:** :sparkles: re-add config command ([b98915f](https://github.com/joshuar/go-hass-agent/commit/b98915f66df46bfa0b2fcbab2fd793757c02e9cf))
+* **cli:** :sparkles: re-add register command ([1b74186](https://github.com/joshuar/go-hass-agent/commit/1b741862dcad94302d07154ab05614dce146c94d))
+* **dbusx:** :sparkles: add a function to get all methods on a bus ([aed572d](https://github.com/joshuar/go-hass-agent/commit/aed572d4ebc341659f2f140113ad0d0090649c0c))
+* **device:** :sparkles: re-add device info methods ([7dec66f](https://github.com/joshuar/go-hass-agent/commit/7dec66f3461eb283d07c05fa091c3eadb7ef0fd5))
+* **server:** :sparkles: implement preferences page ([2b7ee34](https://github.com/joshuar/go-hass-agent/commit/2b7ee34fe75f3fc926471472c71daf08a3430435))
+* **server:** :sparkles: server improvements ([f5cf330](https://github.com/joshuar/go-hass-agent/commit/f5cf330bd2fa96d74233036f6637e68262bd9f93))
+* **server/middlewares:** :sparkles: htmx middlewares ([2731a9f](https://github.com/joshuar/go-hass-agent/commit/2731a9f5e90a8431bcdbef621b0c51d6145aa05c))
+* **web/content:** :bento: add more favicon variants ([c2a61fe](https://github.com/joshuar/go-hass-agent/commit/c2a61fe0a5db2c85ee787306ba7b47b6e4e44527))
+* **web/content:** :bento: bundle inter fonts ([41e39ab](https://github.com/joshuar/go-hass-agent/commit/41e39ab7a4aaf63dc37e9560282372c8de4c306b))
+* **web/templates:** :sparkles: standard page template ([d26ffaf](https://github.com/joshuar/go-hass-agent/commit/d26ffaf72e16f092858e54f5aa427f69f64ce302))
+
+
+### Bug Fixes
+
+* **agent:** :bug: don't nest script sensor attributes, allow native format ([d202827](https://github.com/joshuar/go-hass-agent/commit/d2028271f31a5b47d1b554e888cd79f668c83bd5))
+* **agent:** :bug: don't try to close channel that gets closed ([3ebd3f0](https://github.com/joshuar/go-hass-agent/commit/3ebd3f019d1f097df440cb321cba0b4179d173c5))
+* **agent:** :bug: make sure context is set up correctly ([41efeb8](https://github.com/joshuar/go-hass-agent/commit/41efeb8aa6c39346862ca3569fe61dc38cedd5bd))
+* **agent:** :fire: remove debugging output ([b3d67cc](https://github.com/joshuar/go-hass-agent/commit/b3d67cc499d8c598bca128df314b8fa7e556c41b))
+* **assets:** :bug: remove deprecated `--terminal` command-line argument in systemd service file ([74f819d](https://github.com/joshuar/go-hass-agent/commit/74f819d97bb004bbc4325c6a0d21a1c68c6a0384))
+* **config:** :bug: fix setting a custom path to the config ([3e21e84](https://github.com/joshuar/go-hass-agent/commit/3e21e84d718df1957b734abffc499848299bac73))
+* **linux/desktop:** :bug: fix nil pointer references for desktop preferences ([b5f0130](https://github.com/joshuar/go-hass-agent/commit/b5f013069bae9dc2167931235ab3413199ef0e68))
+* **linux/media:** :bug: fix getting media status ([c441792](https://github.com/joshuar/go-hass-agent/commit/c4417927ec94f88701227f002cf4114de15db297))
+* **linux/net:** :bug: use device filters from preferences for netlink worker (link/address state sensors) ([521a101](https://github.com/joshuar/go-hass-agent/commit/521a1018c44f97cb449f910621037c985cfa72be))
+* **web/assets:** :bug: fix path to templates ([abbd452](https://github.com/joshuar/go-hass-agent/commit/abbd452201fb6cf5eefdf75fdbb51f66f6e73ecc))
+* **web/templates:** :bug: registration fixes ([c4dd8e3](https://github.com/joshuar/go-hass-agent/commit/c4dd8e3efa8315359ca5bdd7195e9f2fd78bbb54))
+
+
+### Miscellaneous Chores
+
+* release 14.0.0 ([1b73fdf](https://github.com/joshuar/go-hass-agent/commit/1b73fdf76cfdc7ca35a02d4511b256337a6aca67))
+
 ## [13.3.3](https://github.com/joshuar/go-hass-agent/compare/v13.3.2...v13.3.3) (2025-08-16)
 
 
