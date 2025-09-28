@@ -70,10 +70,6 @@ type Bus struct {
 	logger   *slog.Logger
 }
 
-func (b *Bus) getObject(intr, path string) dbus.BusObject {
-	return b.conn.Object(intr, dbus.ObjectPath(path))
-}
-
 // NewBus creates a D-Bus connection to the requested bus. If a connection
 // cannot be established, an error is returned.
 func NewBus(ctx context.Context, busType dbusType) (*Bus, error) {
@@ -122,33 +118,6 @@ func NewBus(ctx context.Context, busType dbusType) (*Bus, error) {
 	return bus, nil
 }
 
-// GetData fetches data using the given method from D-Bus, as the provided type.
-// If there is an error or the result cannot be stored in the given type, it
-// will return an non-nil error. To execute a method, see Call. To get the value
-// of a property, see GetProp.
-func GetData[D any](bus *Bus, path, dest, method string, args ...any) (D, error) {
-	var (
-		data D
-		err  error
-	)
-
-	bus.traceLog("Getting data.", slog.String("path", path), slog.String("dest", dest), slog.String("method", method))
-
-	obj := bus.getObject(dest, path)
-
-	if args != nil {
-		err = obj.Call(method, 0, args...).Store(&data)
-	} else {
-		err = obj.Call(method, 0).Store(&data)
-	}
-
-	if err != nil {
-		return data, fmt.Errorf("%s: unable to get data %s from %s: %w", bus.busType.String(), method, dest, err)
-	}
-
-	return data, nil
-}
-
 // GetSessionPath retrieves the user's session path from D-Bus. This is used by
 // various sensors to retrieve other data.
 func (b *Bus) GetSessionPath() (string, error) {
@@ -193,6 +162,47 @@ func (b *Bus) GetSessionPath() (string, error) {
 	b.logger.Debug("Retrieved session path.", slog.String("path", string(sessionPath)))
 	// Return the session path as a string.
 	return string(sessionPath), nil
+}
+
+// ListNames lists all interfaces exposed on the bus.
+func (b *Bus) ListNames() ([]string, error) {
+	var names []string
+	err := b.conn.BusObject().Call("org.freedesktop.DBus.ListNames", 0).Store(&names)
+	if err != nil {
+		return nil, fmt.Errorf("unable to retrieve names from bus: %w", err)
+	}
+	return names, nil
+}
+
+func (b *Bus) getObject(intr, path string) dbus.BusObject {
+	return b.conn.Object(intr, dbus.ObjectPath(path))
+}
+
+// GetData fetches data using the given method from D-Bus, as the provided type.
+// If there is an error or the result cannot be stored in the given type, it
+// will return an non-nil error. To execute a method, see Call. To get the value
+// of a property, see GetProp.
+func GetData[D any](bus *Bus, path, dest, method string, args ...any) (D, error) {
+	var (
+		data D
+		err  error
+	)
+
+	bus.traceLog("Getting data.", slog.String("path", path), slog.String("dest", dest), slog.String("method", method))
+
+	obj := bus.getObject(dest, path)
+
+	if args != nil {
+		err = obj.Call(method, 0, args...).Store(&data)
+	} else {
+		err = obj.Call(method, 0).Store(&data)
+	}
+
+	if err != nil {
+		return data, fmt.Errorf("%s: unable to get data %s from %s: %w", bus.busType.String(), method, dest, err)
+	}
+
+	return data, nil
 }
 
 // ParseValueChange treats the given signal body as matching a value change of a
