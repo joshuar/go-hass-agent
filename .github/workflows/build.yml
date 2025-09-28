@@ -243,7 +243,7 @@ jobs:
           labels: ${{ steps.docker_metadata.outputs.labels }}
           annotations: ${{ steps.docker_metadata.outputs.annotations }}
           tags: ${{ steps.docker_metadata.outputs.tags }}
-          platforms: linux/amd64,linux/arm64,linux/arm/v6,linux/arm/v7
+          platforms: linux/amd64,linux/arm64,linux/arm,linux/arm/v7
           outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE }},push=true
           build-args: |
             APPVERSION=${{ env.APPVERSION }}
