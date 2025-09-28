@@ -98,6 +98,7 @@ func (a *Agent) Reset() {
 // Run is the main loop of the agent. It will configure and run all sensor workers and process and send the data to Home
 // Assistant. Run blocks and won't perform any actions until the registration status of the agent is true.
 func (a *Agent) Run(ctx context.Context) error {
+	ctx = workers.SetupCtx(ctx)
 	for {
 		select {
 		case <-registered:
@@ -115,7 +116,7 @@ func (a *Agent) Run(ctx context.Context) error {
 				// Add device-based entity workers.
 				entityWorkers = append(entityWorkers, CreateDeviceEntityWorkers(ctx, hassClient.RestAPIURL())...)
 				// Add os-based entity workers.
-				entityWorkers = append(entityWorkers, CreateOSEntityWorkers(workers.SetupCtx(ctx))...)
+				entityWorkers = append(entityWorkers, CreateOSEntityWorkers(ctx)...)
 				// Start all entity workers.
 				entityCh := manager.StartEntityWorkers(ctx, entityWorkers...)
 
