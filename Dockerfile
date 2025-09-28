@@ -1,7 +1,7 @@
 # Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
 # SPDX-License-Identifier: MIT
 
-FROM --platform=linux/amd64 docker.io/alpine:3.22.1 AS builder
+FROM --platform=$BUILDPLATFORM docker.io/alpine:3.22.1 AS builder
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -25,7 +25,7 @@ RUN go mod download
 # Copy source
 COPY . .
 
-# install and build frontend with npm
+# install and build frontend with npm (we don't use bun as it is unsupported on some arches we support)
 RUN <<EOF
 npm install
 npm x -c 'esbuild ./web/assets/scripts.js --bundle --minify --outdir=./web/content/'
