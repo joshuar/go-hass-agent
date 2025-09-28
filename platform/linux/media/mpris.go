@@ -30,7 +30,7 @@ const (
 	mediaOffIcon   = "mdi:music-note-off"
 
 	mprisDBusPath      = "/org/mpris/MediaPlayer2"
-	mprisDBusNamespace = "org.mpris.MediaPlayer2.Player"
+	mprisDBusNamespace = "org.mpris.MediaPlayer2"
 )
 
 var ErrInitMPRISWorker = errors.New("could not init MPRIS worker")
@@ -47,7 +47,7 @@ func (m *MPRISWorker) mprisStateCallback(_ ...any) (json.RawMessage, error) {
 }
 
 func (m *MPRISWorker) publishPlaybackState(ctx context.Context, state string) {
-	m.mediaState = state
+	m.mediaState = fmt.Sprintf("%q", state)
 
 	switch m.mediaState {
 	case "Playing":
@@ -108,7 +108,7 @@ func NewMPRISWorker(ctx context.Context, device *mqtthass.Device) (*MPRISWorker,
 
 	triggerCh, err := dbusx.NewWatch(
 		dbusx.MatchPath(mprisDBusPath),
-		dbusx.MatchPropChanged(),
+		// dbusx.MatchPropChanged(),
 		dbusx.MatchArgNameSpace(mprisDBusNamespace),
 	).Start(ctx, bus)
 	if err != nil {
@@ -134,6 +134,8 @@ func NewMPRISWorker(ctx context.Context, device *mqtthass.Device) (*MPRISWorker,
 			}
 		}
 	}()
+
+	// TODO: send the state on agent startup.
 
 	return worker, nil
 }

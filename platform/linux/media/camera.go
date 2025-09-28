@@ -214,7 +214,7 @@ func NewCameraWorker(ctx context.Context, mqttDevice *mqtthass.Device) (*CameraW
 		).
 		WithState(
 			mqtthass.StateCallback(func(_ ...any) (json.RawMessage, error) {
-				return json.RawMessage(worker.state), nil
+				return json.RawMessage(fmt.Sprintf("%q", worker.state)), nil
 			}),
 		)
 
