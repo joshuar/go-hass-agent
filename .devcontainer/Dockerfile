@@ -9,7 +9,7 @@ FROM docker.io/alpine AS builder
 COPY --from=docker.io/golang:1.25.1-alpine /usr/local/go/ /usr/local/go/
 
 # Install additional packages
-RUN apk update && apk add sudo openssh curl git bash fish micro graphviz nodejs npm
+RUN apk update && apk add sudo openssh curl git bash fish micro graphviz nodejs npm mosquitto-clients
 
 # Install starship
 RUN cd /tmp && curl -sS https://starship.rs/install.sh | sh -s -- -y || exit -1
