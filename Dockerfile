@@ -1,21 +1,23 @@
 # Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
 # SPDX-License-Identifier: MIT
 
-FROM docker.io/ubuntu:25.04 AS builder
+FROM --platform=linux/amd64 docker.io/alpine:3.22.1 AS builder
 
+RUN echo "Running on $BUILDPLATFORM, building for $TARGETPLATFORM"
+
+ARG TARGETOS
+ARG TARGETARCH
 ARG APPVERSION
 
 WORKDIR /usr/src/app
 
 # Copy go from official image.
-COPY --from=docker.io/golang:1.25.1 /usr/local/go/ /usr/local/go/
+COPY --from=docker.io/golang:1.25.1-alpine /usr/local/go/ /usr/local/go/
 ENV PATH="/root/go/bin:/usr/local/go/bin:/usr/local/bin:${PATH}"
 
 # install build deps
 RUN <<EOF
-export DEBIAN_INTERATIVE=0
-apt-get -y update
-apt-get -y install npm upx ca-certificates
+apk add npm upx ca-certificates
 EOF
 
 # pre-copy/cache go.mod for pre-downloading dependencies and only redownloading them in subsequent builds if they change
@@ -34,7 +36,8 @@ EOF
 
 # build the binary
 ENV CGO_ENABLED=0
-RUN go build -ldflags="-s -w -X github.com/joshuar/go-hass-agent/config.AppVersion=$APPVERSION" -o dist/go-hass-agent
+RUN go env
+RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -ldflags="-s -w -X github.com/joshuar/go-hass-agent/config.AppVersion=$APPVERSION" -o dist/go-hass-agent
 
 # compress binary with upx
 RUN upx --best --lzma dist/go-hass-agent
