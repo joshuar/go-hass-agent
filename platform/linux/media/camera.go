@@ -147,7 +147,7 @@ func NewCameraWorker(ctx context.Context, mqttDevice *mqtthass.Device) (*CameraW
 			mqtthass.App(config.AppName+"_"+mqttDevice.Name),
 			mqtthass.Name("Webcam"),
 			mqtthass.ID(mqttDevice.Name+"_camera"),
-			mqtthass.OriginInfo(mqtt.MQTTOrigin()),
+			mqtthass.OriginInfo(mqtt.Origin()),
 			mqtthass.DeviceInfo(mqttDevice),
 		)
 
@@ -156,7 +156,7 @@ func NewCameraWorker(ctx context.Context, mqttDevice *mqtthass.Device) (*CameraW
 			mqtthass.App(config.AppName+"_"+mqttDevice.Name),
 			mqtthass.Name("Start Webcam"),
 			mqtthass.ID(mqttDevice.Name+"_start_camera"),
-			mqtthass.OriginInfo(mqtt.MQTTOrigin()),
+			mqtthass.OriginInfo(mqtt.Origin()),
 			mqtthass.DeviceInfo(mqttDevice),
 			mqtthass.Icon(startIcon),
 		).WithCommand(
@@ -183,7 +183,7 @@ func NewCameraWorker(ctx context.Context, mqttDevice *mqtthass.Device) (*CameraW
 			mqtthass.App(config.AppName+"_"+mqttDevice.Name),
 			mqtthass.Name("Stop Webcam"),
 			mqtthass.ID(mqttDevice.Name+"_stop_camera"),
-			mqtthass.OriginInfo(mqtt.MQTTOrigin()),
+			mqtthass.OriginInfo(mqtt.Origin()),
 			mqtthass.DeviceInfo(mqttDevice),
 			mqtthass.Icon(stopIcon),
 		).WithCommand(
@@ -208,7 +208,7 @@ func NewCameraWorker(ctx context.Context, mqttDevice *mqtthass.Device) (*CameraW
 			mqtthass.App(config.AppName+"_"+mqttDevice.Name),
 			mqtthass.Name("Webcam Status"),
 			mqtthass.ID(mqttDevice.Name+"_camera_status"),
-			mqtthass.OriginInfo(mqtt.MQTTOrigin()),
+			mqtthass.OriginInfo(mqtt.Origin()),
 			mqtthass.DeviceInfo(mqttDevice),
 			mqtthass.Icon(statusIcon),
 		).

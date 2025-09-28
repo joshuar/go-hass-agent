@@ -19,7 +19,7 @@ import (
 func CreateDeviceMQTTWorkers(ctx context.Context) ([]workers.MQTTWorker, error) {
 	var mqttWorkers []workers.MQTTWorker
 	// Set up custom MQTT commands worker.
-	device, err := mqtt.MQTTDevice()
+	device, err := mqtt.Device()
 	if err != nil {
 		return nil, fmt.Errorf("unable to create device MQTT workers: %w", err)
 	}

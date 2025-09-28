@@ -97,7 +97,7 @@ func NewMPRISWorker(ctx context.Context, device *mqtthass.Device) (*MPRISWorker,
 			mqtthass.App(config.AppName+"_"+device.Name),
 			mqtthass.Name("Media State"),
 			mqtthass.ID(device.Name+"_media_state"),
-			mqtthass.OriginInfo(mqtt.MQTTOrigin()),
+			mqtthass.OriginInfo(mqtt.Origin()),
 			mqtthass.DeviceInfo(device),
 			mqtthass.Icon(mediaOffIcon),
 		).

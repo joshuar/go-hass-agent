@@ -216,7 +216,7 @@ func (d *Worker) generateButtons(buttonCmds []Command) {
 					mqtthass.App(config.AppName+"_"+d.device.Name),
 					mqtthass.Name(name),
 					mqtthass.ID(id),
-					mqtthass.OriginInfo(mqtt.MQTTOrigin()),
+					mqtthass.OriginInfo(mqtt.Origin()),
 					mqtthass.DeviceInfo(d.device),
 					mqtthass.Icon(icon),
 				).WithCommand(
@@ -263,7 +263,7 @@ func (d *Worker) generateSwitches(switchCmds []Command) {
 					mqtthass.App(config.AppName+"_"+d.device.Name),
 					mqtthass.Name(name),
 					mqtthass.ID(id),
-					mqtthass.OriginInfo(mqtt.MQTTOrigin()),
+					mqtthass.OriginInfo(mqtt.Origin()),
 					mqtthass.DeviceInfo(d.device),
 					mqtthass.Icon(icon),
 				).
@@ -360,7 +360,7 @@ func (d *Worker) generateNumbers(numberCommands []Command) {
 						mqtthass.App(config.AppName+"_"+d.device.Name),
 						mqtthass.Name(name),
 						mqtthass.ID(id),
-						mqtthass.OriginInfo(mqtt.MQTTOrigin()),
+						mqtthass.OriginInfo(mqtt.Origin()),
 						mqtthass.DeviceInfo(d.device),
 						mqtthass.Icon(icon),
 					).
@@ -400,7 +400,7 @@ func (d *Worker) generateNumbers(numberCommands []Command) {
 						mqtthass.App(config.AppName+"_"+d.device.Name),
 						mqtthass.Name(name),
 						mqtthass.ID(id),
-						mqtthass.OriginInfo(mqtt.MQTTOrigin()),
+						mqtthass.OriginInfo(mqtt.Origin()),
 						mqtthass.DeviceInfo(d.device),
 						mqtthass.Icon(icon),
 					).

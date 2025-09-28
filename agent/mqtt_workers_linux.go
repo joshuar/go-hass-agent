@@ -166,7 +166,7 @@ func (c *linuxMQTTWorker) generateConfig(e stateEntity) *mqttapi.Msg {
 func CreateOSMQTTWorkers(ctx context.Context) (workers.MQTTWorker, error) {
 	mqttController := &linuxMQTTWorker{}
 
-	mqttDevice, err := mqtt.MQTTDevice()
+	mqttDevice, err := mqtt.Device()
 	if err != nil {
 		return nil, fmt.Errorf("unable to create OS MQTT workers: %w", err)
 	}
