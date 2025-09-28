@@ -21,7 +21,7 @@ jobs:
       contents: write
       pull-requests: write
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     outputs:
       release_created: ${{ steps.release_please.outputs.release_created }}
       release_tag: ${{ steps.release_please.outputs.tag_name }}
@@ -43,7 +43,7 @@ jobs:
     needs: check_release
     permissions:
       contents: write
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         include:
@@ -171,14 +171,7 @@ jobs:
     permissions:
       contents: write
       packages: write
-    runs-on: ubuntu-22.04
-    strategy:
-      matrix:
-        platform:
-          - linux/amd64
-          - linux/arm
-          - linux/arm/v7
-          - linux/arm64
+    runs-on: ubuntu-24.04
     env:
       REGISTRY: ghcr.io
       IMAGE: ${{ github.repository }}
@@ -243,128 +236,26 @@ jobs:
         uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3
 
       - name: Build container image
-        id: build_image
+        id: build_and_push
         uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v5
         with:
           context: .
           labels: ${{ steps.docker_metadata.outputs.labels }}
           annotations: ${{ steps.docker_metadata.outputs.annotations }}
           tags: ${{ steps.docker_metadata.outputs.tags }}
-          platforms: ${{ matrix.platform }}
+          platforms: linux/amd64,linux/arm64,linux/arm/v6,linux/arm/v7
           outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE }},push=true
           build-args: |
             APPVERSION=${{ env.APPVERSION }}
 
-      - name: Export digest
-        run: |
-          mkdir -p /tmp/digests
-          digest="${{ steps.build_image.outputs.digest }}"
-          touch "/tmp/digests/${digest#sha256:}"
-
-      - name: Upload digest
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: digests-${{ env.PLATFORM_PAIR }}-${{ env.APPVERSION }}
-          path: /tmp/digests/*
-          if-no-files-found: error
-          retention-days: 1
-
-  merge:
-    runs-on: ubuntu-22.04
-    needs:
-      - check_release
-      - build_container
-    permissions:
-      contents: read
-      packages: write
-    env:
-      REGISTRY: ghcr.io
-      IMAGE: ${{ github.repository }}
-    steps:
-      - name: Harden Runner
-        uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
-        with:
-          disable-sudo: true
-          egress-policy: block
-          allowed-endpoints: >
-            api.github.com:443
-            auth.docker.io:443
-            ghcr.io:443
-            github.com:443
-            objects.githubusercontent.com:443
-            pkg-containers.githubusercontent.com:443
-            production.cloudflare.docker.com:443
-            raw.githubusercontent.com:443
-            registry-1.docker.io:443
-            rekor.sigstore.dev:443
-            release-assets.githubusercontent.com:443
-
-      - name: Checkout repo
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4
-        with:
-          fetch-depth: 0
-
-      - name: Set up environment
-        run: |
-          echo "APPVERSION=$(git describe --tags --always --dirty)" >> $GITHUB_ENV
-
-      - name: Set app version for release
-        if: ${{ needs.check_release.outputs.release_created }}
-        run: echo "APPVERSION=${{ needs.check_release.outputs.release_tag }}" >> $GITHUB_ENV
-
-      - name: Download digests
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v4
-        with:
-          path: /tmp/digests
-          pattern: digests-*
-          merge-multiple: true
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3
-
-      - name: Log in to the Container registry
-        id: registry_login
-        uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Get Docker metadata
-        id: docker_metadata
-        uses: docker/metadata-action@c1e51972afc2121e065aed6d45c65596fe445f3f # v5
-        with:
-          images: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE }}
-          tags: |
-            type=sha,format=long
-            type=raw,value=${{ env.APPVERSION }}
-
-      - name: Create manifest list and push
-        working-directory: /tmp/digests
-        run: |
-          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-            $(printf '${{ env.REGISTRY }}/${{ env.IMAGE }}@sha256:%s ' *)
-
-      - name: Inspect image
-        run: |
-          docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ steps.docker_metadata.outputs.version }}
-
-      - name: Check and install cosign
-        uses: sigstore/cosign-installer@d7543c93d881b35a8faa02e8e3605f69b7a1ce62 # v3
-
       - name: Sign image with a key
+        run: |
+          images=""
+          for tag in ${TAGS}; do
+            images+="${tag}@${DIGEST} "
+          done
+          cosign sign --yes --key cosign.key ${images}
         env:
           TAGS: ${{ steps.docker_metadata.outputs.tags }}
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
-        run: |
-          images=""
-          for digest in /tmp/digests/*; do
-            for tag in ${TAGS}; do
-              images+="${tag}@sha256:$(basename $digest) "
-            done
-          done
-          cosign --verbose=true sign --yes --key cosign.key \
-            -a "repo=${{ github.repository }}" \
-            -a "ref=${{ github.ref }}" \
-            ${images}
+          DIGEST: ${{ steps.build_and_push.outputs.digest }}
