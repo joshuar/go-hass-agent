@@ -30,10 +30,9 @@ const (
 	addressWorkerPrefID = prefPrefix + "links"
 )
 
-var _ workers.EntityWorker = (*AddressWorker)(nil)
+var _ workers.EntityWorker = (*NetlinkWorker)(nil)
 
 var (
-	ifaceFilters = []string{"lo"}
 	addrFamilies = []uint8{uint8(unix.AF_INET), uint8(unix.AF_INET6)}
 	nlConfig     = &netlink.Config{
 		Groups: unix.RTNLGRP_LINK | unix.RTNLGRP_IPV4_NETCONF | unix.RTNLGRP_IPV6_NETCONF,
@@ -155,124 +154,45 @@ func (f ipFamily) Icon() string {
 	}
 }
 
-type AddressWorker struct {
+// NetlinkWorker handles generating sensors from netlink.
+type NetlinkWorker struct {
+	*models.WorkerMetadata
+
 	nlconn *rtnetlink.Conn
 	donech chan struct{}
 	prefs  *WorkerPrefs
-	*models.WorkerMetadata
 }
 
-func (w *AddressWorker) generateSensors(ctx context.Context) ([]models.Entity, error) {
-	var (
-		sensors  []models.Entity
-		warnings error
-	)
-
-	addresses, err := w.getAddresses(ctx)
+// NewNetlinkWorker creates a new netlink worker. Once started, this worker will generate entities for network link
+// states and addresses.
+func NewNetlinkWorker(_ context.Context) (workers.EntityWorker, error) {
+	conn, err := rtnetlink.Dial(nlConfig)
 	if err != nil {
-		warnings = errors.Join(warnings, fmt.Errorf("problem fetching address: %w", err))
+		return nil, errors.Join(ErrInitLinkWorker,
+			fmt.Errorf("could not connect to netlink: %w", err))
 	}
 
-	sensors = append(sensors, addresses...)
-
-	links, err := w.getLinks(ctx)
-	if err != nil {
-		warnings = errors.Join(warnings, fmt.Errorf("problem fetching links: %w", err))
+	worker := &NetlinkWorker{
+		WorkerMetadata: models.SetWorkerMetadata(addressWorkerID, addressWorkerDesc),
+		nlconn:         conn,
+		donech:         make(chan struct{}),
 	}
 
-	sensors = append(sensors, links...)
+	defaultPrefs := &WorkerPrefs{
+		IgnoredDevices: defaultIgnoredDevices,
+	}
+	worker.prefs, err = workers.LoadWorkerPreferences(addressWorkerPrefID, defaultPrefs)
+	if err != nil {
+		return worker, errors.Join(ErrInitLinkWorker, err)
+	}
 
-	return sensors, warnings
+	return worker, nil
 }
 
-func (w *AddressWorker) getAddresses(ctx context.Context) ([]models.Entity, error) {
-	var (
-		addrs    []models.Entity
-		warnings error
-	)
-
-	// Request a list of addresses
-	msgs, err := w.nlconn.Address.List()
-	if err != nil {
-		return nil, fmt.Errorf("could not retrieve link addresses from netlink: %w", err)
-	}
-
-	// Filter for valid addresses.
-	for _, msg := range msgs {
-		if !w.usableAddress(msg) {
-			continue
-		}
-
-		entity, err := newAddressSensor(ctx, w.nlconn.Link, msg)
-		if err != nil {
-			warnings = errors.Join(warnings, fmt.Errorf("could not generate address sensor: %w", err))
-		} else if entity.Valid() {
-			addrs = append(addrs, *entity)
-		}
-	}
-
-	return addrs, warnings
-}
-
-func (w *AddressWorker) usableAddress(msg rtnetlink.AddressMessage) bool {
-	// Only include Ipv4/6 addresses.
-	if !slices.Contains(addrFamilies, msg.Family) {
-		return false
-	}
-	// Only include global addresses.
-	if msg.Scope != unix.RT_SCOPE_UNIVERSE {
-		return false
-	}
-
-	link, err := w.nlconn.Link.Get(msg.Index)
-	if err != nil {
-		return false
-	}
-
-	if link.Attributes.Name == loopbackDeviceName {
-		return false
-	}
-
-	// Skip ignored devices.
-	if slices.ContainsFunc(w.prefs.IgnoredDevices, func(e string) bool {
-		return strings.HasPrefix(link.Attributes.Name, e)
-	}) {
-		return false
-	}
-
-	return true
-}
-
-func (w *AddressWorker) getLinks(ctx context.Context) ([]models.Entity, error) {
-	var (
-		links    []models.Entity
-		warnings error
-	)
-
-	// Request a list of addresses
-	msgs, err := w.nlconn.Link.List()
-	if err != nil {
-		return nil, fmt.Errorf("could not retrieve links from netlink: %w", err)
-	}
-
-	// Filter for valid links.
-	for _, msg := range msgs {
-		if slices.Contains(ifaceFilters, msg.Attributes.Name) {
-			continue
-		}
-		entity := newLinkSensor(ctx, msg)
-		if entity.Valid() {
-			links = append(links, entity)
-		}
-	}
-
-	return links, warnings
-}
-
-// TODO: reduce complexity?
+// Start will start the netlink worker. This will generate initial sensors and send updates for address/link state changes.
 //
 //nolint:gocognit,funlen
-func (w *AddressWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
+func (w *NetlinkWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
 	sensorCh := make(chan models.Entity)
 
 	// Get all current addresses and send as sensors.
@@ -317,7 +237,7 @@ func (w *AddressWorker) Start(ctx context.Context) (<-chan models.Entity, error)
 				for _, msg := range nlmsgs {
 					switch value := any(msg).(type) {
 					case *rtnetlink.LinkMessage:
-						if slices.Contains(ifaceFilters, value.Attributes.Name) {
+						if slices.Contains(w.prefs.IgnoredDevices, value.Attributes.Name) {
 							continue
 						}
 
@@ -346,30 +266,115 @@ func (w *AddressWorker) Start(ctx context.Context) (<-chan models.Entity, error)
 	return sensorCh, nil
 }
 
-func (w *AddressWorker) IsDisabled() bool {
+// IsDisabled will return a boolean indicating whether the netlink worker has been explicitly disabled in the
+// preferences.
+func (w *NetlinkWorker) IsDisabled() bool {
 	return w.prefs.IsDisabled()
 }
 
-func NewAddressWorker(_ context.Context) (workers.EntityWorker, error) {
-	conn, err := rtnetlink.Dial(nlConfig)
+func (w *NetlinkWorker) generateSensors(ctx context.Context) ([]models.Entity, error) {
+	var (
+		sensors  []models.Entity
+		warnings error
+	)
+
+	addresses, err := w.getAddresses(ctx)
 	if err != nil {
-		return nil, errors.Join(ErrInitLinkWorker,
-			fmt.Errorf("could not connect to netlink: %w", err))
+		warnings = errors.Join(warnings, fmt.Errorf("problem fetching address: %w", err))
 	}
 
-	worker := &AddressWorker{
-		WorkerMetadata: models.SetWorkerMetadata(addressWorkerID, addressWorkerDesc),
-		nlconn:         conn,
-		donech:         make(chan struct{}),
-	}
+	sensors = append(sensors, addresses...)
 
-	defaultPrefs := &WorkerPrefs{
-		IgnoredDevices: defaultIgnoredDevices,
-	}
-	worker.prefs, err = workers.LoadWorkerPreferences(addressWorkerPrefID, defaultPrefs)
+	links, err := w.getLinks(ctx)
 	if err != nil {
-		return worker, errors.Join(ErrInitLinkWorker, err)
+		warnings = errors.Join(warnings, fmt.Errorf("problem fetching links: %w", err))
 	}
 
-	return worker, nil
+	sensors = append(sensors, links...)
+
+	return sensors, warnings
+}
+
+func (w *NetlinkWorker) getAddresses(ctx context.Context) ([]models.Entity, error) {
+	var (
+		addrs    []models.Entity
+		warnings error
+	)
+
+	// Request a list of addresses
+	msgs, err := w.nlconn.Address.List()
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve link addresses from netlink: %w", err)
+	}
+
+	// Filter for valid addresses.
+	for _, msg := range msgs {
+		if !w.usableAddress(msg) {
+			continue
+		}
+
+		entity, err := newAddressSensor(ctx, w.nlconn.Link, msg)
+		if err != nil {
+			warnings = errors.Join(warnings, fmt.Errorf("could not generate address sensor: %w", err))
+		} else if entity.Valid() {
+			addrs = append(addrs, *entity)
+		}
+	}
+
+	return addrs, warnings
+}
+
+func (w *NetlinkWorker) usableAddress(msg rtnetlink.AddressMessage) bool {
+	// Only include Ipv4/6 addresses.
+	if !slices.Contains(addrFamilies, msg.Family) {
+		return false
+	}
+	// Only include global addresses.
+	if msg.Scope != unix.RT_SCOPE_UNIVERSE {
+		return false
+	}
+
+	link, err := w.nlconn.Link.Get(msg.Index)
+	if err != nil {
+		return false
+	}
+
+	if link.Attributes.Name == loopbackDeviceName {
+		return false
+	}
+
+	// Skip ignored devices.
+	if slices.ContainsFunc(w.prefs.IgnoredDevices, func(e string) bool {
+		return strings.HasPrefix(link.Attributes.Name, e)
+	}) {
+		return false
+	}
+
+	return true
+}
+
+func (w *NetlinkWorker) getLinks(ctx context.Context) ([]models.Entity, error) {
+	var (
+		links    []models.Entity
+		warnings error
+	)
+
+	// Request a list of addresses
+	msgs, err := w.nlconn.Link.List()
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve links from netlink: %w", err)
+	}
+
+	// Filter for valid links.
+	for _, msg := range msgs {
+		if slices.Contains(w.prefs.IgnoredDevices, msg.Attributes.Name) {
+			continue
+		}
+		entity := newLinkSensor(ctx, msg)
+		if entity.Valid() {
+			links = append(links, entity)
+		}
+	}
+
+	return links, warnings
 }

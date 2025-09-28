@@ -39,7 +39,7 @@ var linuxWorkers = []func(ctx context.Context) (workers.EntityWorker, error){
 	mem.NewUsageWorker,
 	mem.NewOOMEventsWorker,
 	net.NewConnectionWorker,
-	net.NewAddressWorker,
+	net.NewNetlinkWorker,
 	net.NewNetStatsWorker,
 	power.NewProfileWorker,
 	power.NewStateWorker,
