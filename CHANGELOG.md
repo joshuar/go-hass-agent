@@ -1,5 +1,12 @@
 # Changelog
 
+## [14.0.1](https://github.com/joshuar/go-hass-agent/compare/v14.0.0...v14.0.1) (2025-09-29)
+
+
+### Bug Fixes
+
+* **linux/cpu:** :bug: correct CPU usage values ([12b2da9](https://github.com/joshuar/go-hass-agent/commit/12b2da91be45ae9816d9afd0da514dd63e94deaa))
+
 ## [14.0.0](https://github.com/joshuar/go-hass-agent/compare/v13.3.3...v14.0.0) (2025-09-28)
 
 
