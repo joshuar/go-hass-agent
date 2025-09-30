@@ -13,12 +13,14 @@ const (
 
 // FreqWorkerPrefs are the preferences for the CPU frequency worker.
 type FreqWorkerPrefs struct {
-	UpdateInterval string `toml:"update_interval"`
 	workers.CommonWorkerPrefs
+
+	UpdateInterval string `toml:"update_interval"`
 }
 
 // UsagePrefs are the preferences for the CPU usage worker.
 type UsagePrefs struct {
-	UpdateInterval string `toml:"update_interval"`
 	workers.CommonWorkerPrefs
+
+	UpdateInterval string `toml:"update_interval"`
 }

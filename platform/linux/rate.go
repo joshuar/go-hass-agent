@@ -8,7 +8,7 @@ import (
 )
 
 // RateValue represents a value that is a rate (i.e. changes with time).
-type RateValue[T ~uint64] struct {
+type RateValue[T ~uint64 | ~float64] struct {
 	prevValue T
 }
 
