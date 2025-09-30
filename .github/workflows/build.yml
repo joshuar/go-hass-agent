@@ -94,7 +94,11 @@ jobs:
           fetch-depth: 0
       - name: Set up environment
         run: |
-          echo NFPM_ARCH=${{matrix.goarch}} >> $GITHUB_ENV
+          if [ -n "${{matrix.goarm}}" ]; then
+            echo NFPM_ARCH=${{matrix.goarch}}v${{matrix.goarm}} >> $GITHUB_ENV
+          else
+            echo NFPM_ARCH=${{matrix.goarch}} >> $GITHUB_ENV
+          fi
           echo "APPVERSION=$(git describe --tags --always --long --dirty)" >> $GITHUB_ENV
           platform=${{ matrix.platform }}
           echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
