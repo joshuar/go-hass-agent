@@ -278,14 +278,14 @@ func newUsageSensor(ctx context.Context, worker *usageWorker, details []string, 
 	} else {
 		currValue = nonIdleTime
 	}
-	worker.cpuSensors[details[0]] = currValue
+	worker.cpuSensors[details[0]] = nonIdleTime
 
 	if _, found := worker.cpuSensors[details[0]+"_total"]; found {
 		currTotal = totalTime - worker.cpuSensors[details[0]+"_total"]
 	} else {
 		currTotal = totalTime
 	}
-	worker.cpuSensors[details[0]+"_total"] = currTotal
+	worker.cpuSensors[details[0]+"_total"] = totalTime
 	state := currValue / currTotal * 100
 
 	return sensor.NewSensor(ctx,
