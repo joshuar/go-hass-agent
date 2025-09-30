@@ -1,5 +1,12 @@
 # Changelog
 
+## [14.0.2](https://github.com/joshuar/go-hass-agent/compare/v14.0.1...v14.0.2) (2025-09-30)
+
+
+### Bug Fixes
+
+* **linux/cpu:** :bug: correctly store previously cpu time measurement for usage calculation ([00d6c61](https://github.com/joshuar/go-hass-agent/commit/00d6c61086689eb76104672156ec5c9ecfe1f638))
+
 ## [14.0.1](https://github.com/joshuar/go-hass-agent/compare/v14.0.0...v14.0.1) (2025-09-29)
 
 
