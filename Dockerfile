@@ -48,7 +48,7 @@ LABEL org.opencontainers.image.description=" A Home Assistant, native app for de
 LABEL org.opencontainers.image.licenses=MIT
 
 # Add bash and dbus
-RUN apk update && apk add bash dbus dbus-x11 strace
+RUN apk update && apk add bash dbus dbus-x11
 
 # Copy binary over from builder stage
 COPY --from=builder /usr/src/app/dist/go-hass-agent /usr/bin/go-hass-agent
