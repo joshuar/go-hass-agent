@@ -60,7 +60,7 @@ var linuxLaptopWorkers = []func(ctx context.Context) (workers.EntityWorker, erro
 	power.NewLaptopWorker, location.NewLocationWorker,
 }
 
-// CreateOSEntityWorkers sets up all OS-specific entity
+// CreateOSEntityWorkers sets up all OS-specific entity workers.
 func CreateOSEntityWorkers(ctx context.Context) []workers.EntityWorker {
 	osWorkers := make([]workers.EntityWorker, 0, len(linuxWorkers)+len(linuxLaptopWorkers))
 

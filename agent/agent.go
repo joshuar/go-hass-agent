@@ -27,6 +27,7 @@ var icon []byte
 var registered chan struct{}
 
 const (
+	// ConfigPrefix is the prefix/heading under which agent preferences are found in the preferences file.
 	ConfigPrefix = "agent"
 )
 

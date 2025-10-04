@@ -16,6 +16,7 @@ import (
 	"github.com/joshuar/go-hass-agent/agent/workers/mqtt/commands"
 )
 
+// CreateDeviceMQTTWorkers sets up the device-specific MQTT workers.
 func CreateDeviceMQTTWorkers(ctx context.Context) ([]workers.MQTTWorker, error) {
 	var mqttWorkers []workers.MQTTWorker
 	// Set up custom MQTT commands worker.

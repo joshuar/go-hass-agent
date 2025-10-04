@@ -81,7 +81,7 @@ func (c *linuxMQTTWorker) Subscriptions() []*mqttapi.Subscription {
 	return subs
 }
 
-// Configs returns the configuration messages for all
+// Configs returns the configuration messages for all mqtt workers.
 func (c *linuxMQTTWorker) Configs() []*mqttapi.Msg {
 	totalLength := len(c.sensors) +
 		len(c.binarySensors) +

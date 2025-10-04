@@ -12,7 +12,7 @@ import (
 	"github.com/joshuar/go-hass-agent/agent/workers"
 )
 
-// CreateDeviceworkers.EntityWorkers sets up all device-specific entity
+// CreateDeviceEntityWorkers sets up all device-specific entity workers.
 func CreateDeviceEntityWorkers(ctx context.Context, restAPIURL string) []workers.EntityWorker {
 	var deviceWorkers []workers.EntityWorker
 
