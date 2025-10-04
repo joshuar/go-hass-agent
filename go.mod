@@ -4,6 +4,7 @@ go 1.25
 
 require (
 	github.com/eclipse/paho.golang v0.23.0
+	github.com/gen2brain/beeep v0.11.1
 	github.com/go-playground/validator/v10 v10.27.0
 	github.com/godbus/dbus/v5 v5.1.0
 	github.com/iancoleman/strcase v0.3.0
@@ -41,7 +42,6 @@ require (
 	github.com/dprotaso/go-yit v0.0.0-20220510233725-9ba8df137936 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/esiqveland/notify v0.13.3 // indirect
-	github.com/gen2brain/beeep v0.11.1 // indirect
 	github.com/getkin/kin-openapi v0.132.0 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
 	github.com/go-git/go-billy/v5 v5.6.2 // indirect
