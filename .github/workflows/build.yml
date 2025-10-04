@@ -112,7 +112,7 @@ jobs:
         with:
           go-version-file: "go.mod"
       - name: Setup bun
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@735343b667d3e6f658f44d0eca948eb6282f2b76 # v2.0.2
       - name: Build frontend files
         run: |
           bun install
