@@ -27,6 +27,7 @@ web/content/*.css
 web/content/*.css.map
 !web/content/fonts/*
 !assets/**/*
+!agent/assets/*
 !**/testdata/**
 !.prettierrc
 !.prettierignore

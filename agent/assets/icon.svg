@@ -10,7 +10,7 @@
    xml:space="preserve"
    inkscape:version="1.4.2 (ebf0e940d0, 2025-05-08)"
    sodipodi:docname="favicon.svg"
-   inkscape:export-filename="../../agent/assets/icon.png"
+   inkscape:export-filename="go-hass-agent.png"
    inkscape:export-xdpi="1024"
    inkscape:export-ydpi="1024"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
@@ -18,12 +18,12 @@
    xmlns="http://www.w3.org/2000/svg"
    xmlns:svg="http://www.w3.org/2000/svg"><sodipodi:namedview
      id="namedview1"
-     pagecolor="#000000"
+     pagecolor="#02729f"
      bordercolor="#000000"
      borderopacity="0.25"
      inkscape:showpageshadow="false"
      inkscape:pageopacity="0.0"
-     inkscape:pagecheckerboard="true"
+     inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
      inkscape:document-units="px"
      inkscape:zoom="16.613688"
@@ -35,10 +35,10 @@
      inkscape:window-y="0"
      inkscape:window-maximized="1"
      inkscape:current-layer="svg1"
-     showborder="true"
+     showborder="false"
      borderlayer="false"
      showgrid="false"
-     inkscape:export-bgcolor="#02729f00" /><defs
+     inkscape:export-bgcolor="#02729fff" /><defs
      id="defs1"><linearGradient
        id="swatch2"
        inkscape:swatch="solid"><stop

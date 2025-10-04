@@ -28,10 +28,6 @@ import (
 	"github.com/joshuar/go-hass-agent/scheduler"
 )
 
-const (
-	hassConfigPrefix = "hass"
-)
-
 type agent interface {
 	IsRegistered() bool
 }
@@ -72,7 +68,7 @@ var ErrSendRequest = errors.New("send request failed")
 func NewClient(ctx context.Context, agent agent) (*Client, error) {
 	var hasscfg Config
 	// Load the hass config.
-	if err := config.Load(hassConfigPrefix, &hasscfg); err != nil {
+	if err := config.Load(ConfigPrefix, &hasscfg); err != nil {
 		return nil, fmt.Errorf("unable to load hass config: %w", err)
 	}
 	// Load the registry.

@@ -6,17 +6,23 @@ package agent
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"log/slog"
 	"sync"
 
+	"github.com/gen2brain/beeep"
 	slogctx "github.com/veqryn/slog-context"
 
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/agent/workers/mqtt"
 	"github.com/joshuar/go-hass-agent/config"
 	"github.com/joshuar/go-hass-agent/hass"
+	"github.com/joshuar/go-hass-agent/hass/api"
 )
+
+//go:embed assets/icon.png
+var icon []byte
 
 var registered chan struct{}
 
@@ -168,6 +174,43 @@ func (a *Agent) Run(ctx context.Context) error {
 				if err := mqtt.Start(ctx, data); err != nil {
 					slogctx.FromCtx(ctx).Warn("Unable to start MQTT.",
 						slog.Any("error", err))
+				}
+			})
+			// Run notification worker.
+			wg.Go(func() {
+				beeep.AppName = config.AppName
+				websocket, err := api.NewWebsocket(ctx)
+				if err != nil {
+					slogctx.FromCtx(ctx).Warn("Unable to listen for notifications.",
+						slog.Any("error", err))
+					return
+				}
+				for {
+					select {
+					case <-ctx.Done():
+						return
+					default:
+						// Connect the websocket.
+						notifyCh, err := websocket.Connect(ctx)
+						if err != nil {
+							slogctx.FromCtx(ctx).Warn("Failed to connect to websocket.",
+								slog.Any("error", err))
+
+							return
+						}
+						// Start listening on the websocket
+						go func() {
+							websocket.Listen()
+						}()
+						// Display any notifications received.
+						for notification := range notifyCh {
+							err := beeep.Notify(notification.Title, notification.Message, icon)
+							if err != nil {
+								slogctx.FromCtx(ctx).Warn("Unable to send notification.",
+									slog.Any("error", err))
+							}
+						}
+					}
 				}
 			})
 			wg.Wait()

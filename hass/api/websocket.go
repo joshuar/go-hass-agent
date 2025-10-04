@@ -15,6 +15,8 @@ import (
 	"github.com/cenkalti/backoff/v4"
 	"github.com/lxzan/gws"
 	slogctx "github.com/veqryn/slog-context"
+
+	"github.com/joshuar/go-hass-agent/config"
 )
 
 const (
@@ -22,6 +24,9 @@ const (
 	connDeadline = 2 * pingInterval
 
 	closeNormal = 1000
+
+	hassConfigPrefix = "hass"
+	regConfigPrefix  = "registration"
 )
 
 type webSocketRequest struct {
@@ -32,46 +37,17 @@ type webSocketRequest struct {
 	SupportConfirm bool   `json:"support_confirm,omitempty"`
 }
 
-func (m *webSocketRequest) send(conn *gws.Conn) error {
-	msg, err := json.Marshal(&m)
-	if err != nil {
-		return fmt.Errorf("failed to send: %w", err)
-	}
-
-	err = conn.WriteMessage(gws.OpcodeText, msg)
-	if err != nil {
-		return fmt.Errorf("failed to send: %w", err)
-	}
-
-	return nil
+type hassConfig struct {
+	Secret       string `toml:"secret"`
+	WebHookID    string `toml:"webhook_id" validate:"required"`
+	WebsocketURL string `toml:"websocketurl" validate:"required"`
 }
 
-type websocketResponse struct {
-	Result       any                   `json:"result,omitempty"`
-	Error        APIError              `json:"error,omitempty"`
-	Type         string                `json:"type"`
-	HAVersion    string                `json:"ha_version,omitempty"`
-	Notification WebsocketNotification `json:"event,omitempty"`
-	ID           uint64                `json:"id,omitempty"`
-	Success      bool                  `json:"success,omitempty"`
+type regConfig struct {
+	Token string `toml:"token" validate:"required"`
 }
 
-type WebsocketNotification struct {
-	Data      any      `json:"data,omitempty"`
-	Message   string   `json:"message"`
-	Title     string   `json:"title,omitempty"`
-	ConfirmID string   `json:"confirm_id,omitempty"`
-	Target    []string `json:"target,omitempty"`
-}
-
-func (n *WebsocketNotification) GetTitle() string {
-	return n.Title
-}
-
-func (n *WebsocketNotification) GetMessage() string {
-	return n.Message
-}
-
+// Websocket represents a websocket connection to Home Assistant.
 type Websocket struct {
 	NotifyCh  chan WebsocketNotification
 	logger    *slog.Logger
@@ -80,6 +56,30 @@ type Websocket struct {
 	webhookID string
 	url       string
 	nextID    uint64
+}
+
+// NewWebsocket creates a new websocket object using the given websocket url,
+// webhookid and token.
+func NewWebsocket(ctx context.Context) (*Websocket, error) {
+	var hassCfg hassConfig
+	// Load the hass config.
+	err := config.Load(hassConfigPrefix, &hassCfg)
+	if err != nil {
+		return nil, fmt.Errorf("unable to load hass config: %w", err)
+	}
+	var regCfg regConfig
+	// Load the registration config.
+	err = config.Load(regConfigPrefix, &regCfg)
+	if err != nil {
+		return nil, fmt.Errorf("unable to load registration config: %w", err)
+	}
+
+	return &Websocket{
+		token:     regCfg.Token,
+		webhookID: hassCfg.WebHookID,
+		url:       hassCfg.WebsocketURL,
+		logger:    slogctx.FromCtx(ctx).With(slog.String("connection", "websocket")),
+	}, nil
 }
 
 func (c *Websocket) newAuthMsg() *webSocketRequest {
@@ -202,17 +202,6 @@ func (c *Websocket) keepAlive(conn *gws.Conn) {
 	}
 }
 
-// NewWebsocket creates a new websocket object using the given websocket url,
-// webhookid and token.
-func NewWebsocket(ctx context.Context, url, webhookID, token string) *Websocket {
-	return &Websocket{
-		token:     token,
-		webhookID: webhookID,
-		url:       url,
-		logger:    slogctx.FromCtx(ctx).With(slog.String("connection", "websocket")),
-	}
-}
-
 // Connect establishes a connection on the websocket. It implements an
 // exponential backoff method for retries on the event of connection failures.
 // Once a connection is established, it sets up the notification channel for
@@ -260,4 +249,44 @@ func (c *Websocket) Listen() {
 	defer close(c.NotifyCh)
 	c.logger.Debug("Listening on websocket.")
 	c.socket.ReadLoop()
+}
+
+func (m *webSocketRequest) send(conn *gws.Conn) error {
+	msg, err := json.Marshal(&m)
+	if err != nil {
+		return fmt.Errorf("failed to send: %w", err)
+	}
+
+	err = conn.WriteMessage(gws.OpcodeText, msg)
+	if err != nil {
+		return fmt.Errorf("failed to send: %w", err)
+	}
+
+	return nil
+}
+
+type websocketResponse struct {
+	Result       any                   `json:"result,omitempty"`
+	Error        APIError              `json:"error,omitempty"`
+	Type         string                `json:"type"`
+	HAVersion    string                `json:"ha_version,omitempty"`
+	Notification WebsocketNotification `json:"event,omitempty"`
+	ID           uint64                `json:"id,omitempty"`
+	Success      bool                  `json:"success,omitempty"`
+}
+
+type WebsocketNotification struct {
+	Data      any      `json:"data,omitempty"`
+	Message   string   `json:"message"`
+	Title     string   `json:"title,omitempty"`
+	ConfirmID string   `json:"confirm_id,omitempty"`
+	Target    []string `json:"target,omitempty"`
+}
+
+func (n *WebsocketNotification) GetTitle() string {
+	return n.Title
+}
+
+func (n *WebsocketNotification) GetMessage() string {
+	return n.Message
 }
