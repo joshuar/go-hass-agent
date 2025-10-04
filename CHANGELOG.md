@@ -1,5 +1,12 @@
 # Changelog
 
+## [14.0.3](https://github.com/joshuar/go-hass-agent/compare/v14.0.2...v14.0.3) (2025-10-04)
+
+
+### Bug Fixes
+
+* **agent:** :sparkles: re-add notification support (when running on a desktop) ([416901f](https://github.com/joshuar/go-hass-agent/commit/416901f31c4e45d7c513931235c83e2c776e2ab0))
+
 ## [14.0.2](https://github.com/joshuar/go-hass-agent/compare/v14.0.1...v14.0.2) (2025-09-30)
 
 
