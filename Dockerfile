@@ -1,7 +1,7 @@
 # Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
 # SPDX-License-Identifier: MIT
 
-FROM --platform=$BUILDPLATFORM docker.io/alpine:3.22.1 AS builder
+FROM --platform=$BUILDPLATFORM docker.io/alpine:3.22.1@sha256:4bcff63911fcb4448bd4fdacec207030997caf25e9bea4045fa6c8c44de311d1 AS builder
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -10,7 +10,7 @@ ARG APPVERSION
 WORKDIR /usr/src/app
 
 # Copy go from official image.
-COPY --from=docker.io/golang:1.25.1-alpine /usr/local/go/ /usr/local/go/
+COPY --from=docker.io/golang:1.25.1-alpine@sha256:b6ed3fd0452c0e9bcdef5597f29cc1418f61672e9d3a2f55bf02e7222c014abd /usr/local/go/ /usr/local/go/
 ENV PATH="/root/go/bin:/usr/local/go/bin:/usr/local/bin:${PATH}"
 
 # install build deps
@@ -39,7 +39,7 @@ RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -ldflags="-s -w -X github.com
 # compress binary with upx
 RUN upx --best --lzma dist/go-hass-agent
 
-FROM docker.io/alpine:3.22.1
+FROM docker.io/alpine:3.22.1@sha256:4bcff63911fcb4448bd4fdacec207030997caf25e9bea4045fa6c8c44de311d1
 
 # Add image labels.
 LABEL org.opencontainers.image.title="Go Hass Agent"
