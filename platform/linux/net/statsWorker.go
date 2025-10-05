@@ -36,7 +36,7 @@ var (
 var ErrInitStatsWorker = errors.New("could not init network stats worker")
 
 type StatsWorkerPrefs struct {
-	WorkerPrefs
+	Preferences
 	UpdateInterval string `toml:"update_interval"`
 }
 

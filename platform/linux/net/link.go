@@ -39,97 +39,6 @@ var (
 	}
 )
 
-var (
-	ErrNewLinkStateSensor = errors.New("could not create link state sensor")
-	ErrNewAddrSensor      = errors.New("could not create address sensor")
-	ErrInitLinkWorker     = errors.New("could not init network link state worker")
-)
-
-func newLinkSensor(ctx context.Context, msg rtnetlink.LinkMessage) models.Entity {
-	var (
-		value any
-		icon  string
-	)
-
-	name := msg.Attributes.Name
-	attributes := map[string]any{
-		"data_source": linux.DataSrcNetlink,
-	}
-
-	switch msg.Attributes.OperationalState {
-	case rtnetlink.OperStateUp:
-		value = "up"
-		icon = "mdi:network"
-	case rtnetlink.OperStateNotPresent:
-		value = "invalid"
-		icon = "mdi:close-network"
-	case rtnetlink.OperStateDown:
-		value = "down"
-		icon = "mdi:network-off"
-	}
-
-	if msg.Attributes.Info != nil {
-		attributes["link_type"] = msg.Attributes.Info.Kind
-	}
-
-	return sensor.NewSensor(ctx,
-		sensor.WithName(name+" Link State"),
-		sensor.WithID(strings.ToLower(name+"_link_state")),
-		sensor.AsDiagnostic(),
-		sensor.WithIcon(icon),
-		sensor.WithState(value),
-		sensor.WithAttributes(attributes),
-	)
-}
-
-func newAddressSensor(ctx context.Context, link *rtnetlink.LinkService, msg rtnetlink.AddressMessage) (*models.Entity, error) {
-	linkMsg, err := link.Get(msg.Index)
-	if err != nil {
-		return nil, errors.Join(ErrNewAddrSensor, err)
-	}
-
-	name := linkMsg.Attributes.Name
-	value := msg.Attributes.Address.String()
-	attributes := map[string]any{
-		"data_source": linux.DataSrcNetlink,
-	}
-
-	if linkMsg.Attributes.OperationalState != rtnetlink.OperStateUp {
-		if ipFamily(msg.Family) == unix.AF_INET {
-			value = net.IPv4zero.String()
-		} else {
-			value = net.IPv6zero.String()
-		}
-	}
-
-	if msg.Attributes.Broadcast != nil {
-		attributes["broadcast"] = msg.Attributes.Broadcast.String()
-	}
-
-	if msg.Attributes.Local != nil {
-		attributes["local"] = msg.Attributes.Local.String()
-	}
-
-	if msg.Attributes.Multicast != nil {
-		attributes["multicast"] = msg.Attributes.Multicast.String()
-	}
-
-	if msg.Attributes.Anycast != nil {
-		attributes["anycast"] = msg.Attributes.Anycast.String()
-	}
-
-	addrSensor := sensor.NewSensor(ctx,
-		sensor.WithName(name+" "+ipFamily(msg.Family).String()+" Address"),
-		sensor.WithID(strings.ToLower(name+"_"+ipFamily(msg.Family).String()+"_address")),
-		sensor.AsDiagnostic(),
-		sensor.WithIcon(ipFamily(msg.Family).Icon()),
-		sensor.WithState(value),
-		sensor.WithAttributes(attributes),
-	)
-
-	return &addrSensor, nil
-}
-
 type ipFamily int
 
 func (f ipFamily) String() string {
@@ -160,7 +69,7 @@ type NetlinkWorker struct {
 
 	nlconn *rtnetlink.Conn
 	donech chan struct{}
-	prefs  *WorkerPrefs
+	prefs  *Preferences
 }
 
 // NewNetlinkWorker creates a new netlink worker. Once started, this worker will generate entities for network link
@@ -168,8 +77,7 @@ type NetlinkWorker struct {
 func NewNetlinkWorker(_ context.Context) (workers.EntityWorker, error) {
 	conn, err := rtnetlink.Dial(nlConfig)
 	if err != nil {
-		return nil, errors.Join(ErrInitLinkWorker,
-			fmt.Errorf("could not connect to netlink: %w", err))
+		return nil, fmt.Errorf("unable to start netlink worker: %w", err)
 	}
 
 	worker := &NetlinkWorker{
@@ -178,12 +86,12 @@ func NewNetlinkWorker(_ context.Context) (workers.EntityWorker, error) {
 		donech:         make(chan struct{}),
 	}
 
-	defaultPrefs := &WorkerPrefs{
+	defaultPrefs := &Preferences{
 		IgnoredDevices: defaultIgnoredDevices,
 	}
 	worker.prefs, err = workers.LoadWorkerPreferences(addressWorkerPrefID, defaultPrefs)
 	if err != nil {
-		return worker, errors.Join(ErrInitLinkWorker, err)
+		return worker, fmt.Errorf("unable to start netlink worker: %w", err)
 	}
 
 	return worker, nil
@@ -237,10 +145,11 @@ func (w *NetlinkWorker) Start(ctx context.Context) (<-chan models.Entity, error)
 				for _, msg := range nlmsgs {
 					switch value := any(msg).(type) {
 					case *rtnetlink.LinkMessage:
-						if slices.Contains(w.prefs.IgnoredDevices, value.Attributes.Name) {
+						if slices.ContainsFunc(w.prefs.IgnoredDevices, func(filter string) bool {
+							return strings.HasPrefix(value.Attributes.Name, filter)
+						}) {
 							continue
 						}
-
 						link := newLinkSensor(ctx, *value)
 						if link.Valid() {
 							sensorCh <- link
@@ -367,7 +276,9 @@ func (w *NetlinkWorker) getLinks(ctx context.Context) ([]models.Entity, error) {
 
 	// Filter for valid links.
 	for msg := range slices.Values(msgs) {
-		if slices.Contains(w.prefs.IgnoredDevices, msg.Attributes.Name) {
+		if slices.ContainsFunc(w.prefs.IgnoredDevices, func(filter string) bool {
+			return strings.HasPrefix(msg.Attributes.Name, filter)
+		}) {
 			continue
 		}
 		entity := newLinkSensor(ctx, msg)
@@ -377,4 +288,89 @@ func (w *NetlinkWorker) getLinks(ctx context.Context) ([]models.Entity, error) {
 	}
 
 	return links, warnings
+}
+
+func newLinkSensor(ctx context.Context, msg rtnetlink.LinkMessage) models.Entity {
+	var (
+		value any
+		icon  string
+	)
+
+	name := msg.Attributes.Name
+	attributes := map[string]any{
+		"data_source": linux.DataSrcNetlink,
+	}
+
+	switch msg.Attributes.OperationalState {
+	case rtnetlink.OperStateUp:
+		value = "up"
+		icon = "mdi:network"
+	case rtnetlink.OperStateNotPresent:
+		value = "invalid"
+		icon = "mdi:close-network"
+	case rtnetlink.OperStateDown:
+		value = "down"
+		icon = "mdi:network-off"
+	}
+
+	if msg.Attributes.Info != nil {
+		attributes["link_type"] = msg.Attributes.Info.Kind
+	}
+
+	return sensor.NewSensor(ctx,
+		sensor.WithName(name+" Link State"),
+		sensor.WithID(strings.ToLower(name+"_link_state")),
+		sensor.AsDiagnostic(),
+		sensor.WithIcon(icon),
+		sensor.WithState(value),
+		sensor.WithAttributes(attributes),
+	)
+}
+
+func newAddressSensor(ctx context.Context, link *rtnetlink.LinkService, msg rtnetlink.AddressMessage) (*models.Entity, error) {
+	linkMsg, err := link.Get(msg.Index)
+	if err != nil {
+		return nil, fmt.Errorf("unable to generate address sensor: %w", err)
+	}
+
+	name := linkMsg.Attributes.Name
+	value := msg.Attributes.Address.String()
+	attributes := map[string]any{
+		"data_source": linux.DataSrcNetlink,
+	}
+
+	if linkMsg.Attributes.OperationalState != rtnetlink.OperStateUp {
+		if ipFamily(msg.Family) == unix.AF_INET {
+			value = net.IPv4zero.String()
+		} else {
+			value = net.IPv6zero.String()
+		}
+	}
+
+	if msg.Attributes.Broadcast != nil {
+		attributes["broadcast"] = msg.Attributes.Broadcast.String()
+	}
+
+	if msg.Attributes.Local != nil {
+		attributes["local"] = msg.Attributes.Local.String()
+	}
+
+	if msg.Attributes.Multicast != nil {
+		attributes["multicast"] = msg.Attributes.Multicast.String()
+	}
+
+	if msg.Attributes.Anycast != nil {
+		attributes["anycast"] = msg.Attributes.Anycast.String()
+	}
+
+	addrSensor := sensor.NewSensor(ctx,
+		sensor.WithName(name+" "+ipFamily(msg.Family).String()+" Address"),
+		sensor.WithID(strings.ToLower(name+"_"+ipFamily(msg.Family).String()+"_address")),
+		sensor.AsDiagnostic(),
+		sensor.WithIcon(ipFamily(msg.Family).Icon()),
+		sensor.WithState(value),
+		sensor.WithAttributes(attributes),
+	)
+
+	return &addrSensor, nil
 }
