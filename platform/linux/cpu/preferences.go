@@ -11,8 +11,8 @@ const (
 	prefPrefix = "sensors.cpu."
 )
 
-// FreqWorkerPrefs are the preferences for the CPU frequency worker.
-type FreqWorkerPrefs struct {
+// FreqPrefs are the preferences for the CPU frequency worker.
+type FreqPrefs struct {
 	workers.CommonWorkerPrefs
 
 	UpdateInterval string `toml:"update_interval"`
