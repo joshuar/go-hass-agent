@@ -1,5 +1,14 @@
 # Changelog
 
+## [14.0.3](https://github.com/joshuar/go-hass-agent/compare/v14.0.2...v14.0.3) (2025-10-05)
+
+
+### Bug Fixes
+
+* **agent:** :sparkles: re-add notification support (when running on a desktop) ([416901f](https://github.com/joshuar/go-hass-agent/commit/416901f31c4e45d7c513931235c83e2c776e2ab0))
+* **linux/cpu:** :bug: fix preferences prefix for cpu frequency sensor preferences ([95c6184](https://github.com/joshuar/go-hass-agent/commit/95c61847ecb2ab30f680f0d58ea345dd4c5b9933))
+* **linux/net:** :bug: fix filtering of devices for link sensors ([4585133](https://github.com/joshuar/go-hass-agent/commit/45851338fd97d5ef5ad5bccd400cf940397c6f31))
+
 ## [14.0.2](https://github.com/joshuar/go-hass-agent/compare/v14.0.1...v14.0.2) (2025-09-30)
 
 
