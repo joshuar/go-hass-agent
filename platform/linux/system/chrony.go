@@ -61,10 +61,6 @@ func (w *chronyWorker) Execute(ctx context.Context) error {
 	return nil
 }
 
-func (w *chronyWorker) PreferencesID() string {
-	return chronyPreferencesID
-}
-
 func (w *chronyWorker) DefaultPreferences() ChronyPrefs {
 	return ChronyPrefs{
 		UpdateInterval: chronyPollInterval.String(),

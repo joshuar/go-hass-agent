@@ -23,8 +23,6 @@ import (
 
 // Worker contains the common methods that define a worker.
 type Worker interface {
-	// ID returns an ID for the worker.
-	ID() models.ID
 	// IsDisabled returns a boolean indicating whether the worker has been disabled (i.e, through preferences).
 	IsDisabled() bool
 }
@@ -40,6 +38,7 @@ func (p *CommonWorkerPrefs) IsDisabled() bool {
 	return p.Disabled
 }
 
+// LoadWorkerPreferences handles loading preferences from file for the given worker path in the file, into the given worker preferences object.
 func LoadWorkerPreferences[T any](path string, preferences T) (T, error) {
 	if !config.Exists(path) {
 		err := SaveWorkerPreferences(path, preferences)
@@ -54,6 +53,7 @@ func LoadWorkerPreferences[T any](path string, preferences T) (T, error) {
 	return preferences, nil
 }
 
+// SaveWorkerPreferences handles saving the given worker preferences to file at the given path.
 func SaveWorkerPreferences[T any](path string, preferences T) error {
 	err := config.Save(path, preferences)
 	if err != nil {
@@ -103,7 +103,7 @@ func SchedulePollingWorker(ctx context.Context, worker PollingEntityWorker, outC
 	// Schedule worker.
 	err := scheduler.Manager.ScheduleJob(id.Worker, worker, worker.GetTrigger())
 	if err != nil {
-		return fmt.Errorf("could not start worker %s: %w", worker.ID(), err)
+		return fmt.Errorf("could not schedule polling worker: %w", err)
 	}
 	// Clean-up on agent close.
 	go func() {
@@ -113,8 +113,7 @@ func SchedulePollingWorker(ctx context.Context, worker PollingEntityWorker, outC
 	// Send initial update.
 	go func() {
 		if err := worker.Execute(ctx); err != nil {
-			slogctx.FromCtx(ctx).Warn("Could not send initial worker update.",
-				slog.String("worker_id", worker.ID()),
+			slogctx.FromCtx(ctx).Warn("Could not send initial polling worker update.",
 				slog.Any("error", err))
 		}
 	}()
@@ -133,7 +132,15 @@ type MQTTWorker interface {
 // Manager tracks running workers.
 type Manager struct {
 	sync.Mutex
-	workers map[models.ID]context.CancelFunc
+
+	workerCancelFuncs []context.CancelFunc
+}
+
+// NewManager creates a new manager object.
+func NewManager(ctx context.Context) *Manager {
+	return &Manager{
+		workerCancelFuncs: make([]context.CancelFunc, 0),
+	}
 }
 
 // StartEntityWorkers starts the given EntityWorkers. Any errors will be logged.
@@ -145,28 +152,22 @@ func (m *Manager) StartEntityWorkers(ctx context.Context, workers ...EntityWorke
 
 	for worker := range slices.Values(workers) {
 		if worker.IsDisabled() {
-			slogctx.FromCtx(ctx).Warn("Not starting disabled worker.",
-				slog.String("id", worker.ID()))
 			continue
 		}
 		workerCtx, cancelFunc := context.WithCancel(ctx)
 		workerCtx = slogctx.NewCtx(workerCtx,
-			slogctx.FromCtx(workerCtx).WithGroup("entity_worker").
-				With("id", worker.ID()))
+			slogctx.FromCtx(workerCtx).WithGroup("entity_worker"))
 		workerCh, err := worker.Start(workerCtx)
 		if workerCh == nil {
 			cancelFunc()
 			continue
 		}
 		if err != nil {
-			slogctx.FromCtx(ctx).Warn("Could not start worker.",
-				slog.String("id", worker.ID()),
+			slogctx.FromCtx(ctx).Warn("Could not start entity worker.",
 				slog.Any("errors", err))
 		} else {
-			m.workers[worker.ID()] = cancelFunc
+			m.workerCancelFuncs = append(m.workerCancelFuncs, cancelFunc)
 			outCh = append(outCh, workerCh)
-			slogctx.FromCtx(ctx).Debug("Started worker.",
-				slog.String("id", worker.ID()))
 		}
 		go func() {
 			defer cancelFunc()
@@ -187,23 +188,19 @@ func (m *Manager) StartMQTTWorkers(ctx context.Context, workers ...MQTTWorker) *
 
 	for worker := range slices.Values(workers) {
 		if worker.IsDisabled() {
-			slogctx.FromCtx(ctx).Warn("Not starting disabled worker.",
-				slog.String("id", worker.ID()))
 			continue
 		}
 		workerCtx, cancelFunc := context.WithCancel(ctx)
 		workerCtx = slogctx.NewCtx(workerCtx,
-			slogctx.FromCtx(workerCtx).WithGroup("mqtt_worker").
-				With("id", worker.ID()))
+			slogctx.FromCtx(workerCtx).WithGroup("mqtt_worker"))
 		workerData, err := worker.Start(workerCtx)
 		if err != nil {
-			slogctx.FromCtx(ctx).Warn("Could not start worker.",
-				slog.String("id", worker.ID()),
+			slogctx.FromCtx(ctx).Warn("Could not start mqtt worker.",
 				slog.Any("errors", err))
 			cancelFunc()
 			continue
 		}
-		m.workers[worker.ID()] = cancelFunc
+		m.workerCancelFuncs = append(m.workerCancelFuncs, cancelFunc)
 		// Add MQTT worker configs.
 		data.Configs = append(data.Configs, workerData.Configs...)
 		// Add MQTT worker subscriptions.
@@ -212,8 +209,6 @@ func (m *Manager) StartMQTTWorkers(ctx context.Context, workers ...MQTTWorker) *
 		if workerData.Msgs != nil {
 			msgCh = append(msgCh, workerData.Msgs)
 		}
-		slogctx.FromCtx(ctx).Debug("Started worker.",
-			slog.String("id", worker.ID()))
 		go func() {
 			defer cancelFunc()
 			<-ctx.Done()
@@ -225,43 +220,12 @@ func (m *Manager) StartMQTTWorkers(ctx context.Context, workers ...MQTTWorker) *
 	return data
 }
 
-// StopWorkers stops the workers with the given IDs. If the worker is
-// already stopped or not running, a warning will be logged and the action is a
-// no-op.
+// StopAllWorkers stops all workers.
 func (m *Manager) StopAllWorkers(ctx context.Context) {
 	m.Lock()
 	defer m.Unlock()
-
-	for id, workerCancelFunc := range m.workers {
+	for workerCancelFunc := range slices.Values(m.workerCancelFuncs) {
 		workerCancelFunc()
-		slogctx.FromCtx(ctx).Debug("Stopped worker.",
-			slog.String("id", id))
-	}
-}
-
-// StopWorkers stops the workers with the given IDs. If the worker is
-// already stopped or not running, a warning will be logged and the action is a
-// no-op.
-func (m *Manager) StopWorkers(ctx context.Context, ids ...string) {
-	m.Lock()
-	defer m.Unlock()
-
-	for _, id := range ids {
-		if workerCancelFunc, found := m.workers[id]; found {
-			workerCancelFunc()
-			slogctx.FromCtx(ctx).Debug("Stopped worker.",
-				slog.String("id", id))
-		} else {
-			slogctx.FromCtx(ctx).Warn("Unknown worker or worker not running.",
-				slog.String("id", id))
-		}
-	}
-}
-
-// NewManager creates a new manager object.
-func NewManager(ctx context.Context) *Manager {
-	return &Manager{
-		workers: make(map[models.ID]context.CancelFunc),
 	}
 }
 

@@ -49,10 +49,6 @@ type linuxMQTTWorker struct {
 	logger        *slog.Logger
 }
 
-func (c *linuxMQTTWorker) ID() string {
-	return workerID
-}
-
 func (c *linuxMQTTWorker) IsDisabled() bool {
 	return false
 }

@@ -114,13 +114,10 @@ func SetPath(path string) {
 // required.
 func Load(path string, cfg any) error {
 	// Unmarshal config, overwriting defaults.
-	if err := globalConfig.src.UnmarshalWithConf(path, cfg, koanf.UnmarshalConf{Tag: "toml"}); err != nil {
+	err := globalConfig.src.UnmarshalWithConf(path, cfg, koanf.UnmarshalConf{Tag: "toml"})
+	if err != nil {
 		return fmt.Errorf("could not load config %s: %w", path, err)
 	}
-
-	slog.Debug("Loading config path.",
-		slog.String("path", path))
-
 	return nil
 }
 

@@ -167,10 +167,6 @@ func (w *usageWorker) Execute(ctx context.Context) error {
 	return nil
 }
 
-func (w *usageWorker) PreferencesID() string {
-	return memUsagePreferencesID
-}
-
 func (w *usageWorker) DefaultPreferences() WorkerPreferences {
 	return WorkerPreferences{
 		UpdateInterval: memUsageUpdateInterval.String(),
