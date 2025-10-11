@@ -69,7 +69,7 @@ type NetlinkWorker struct {
 
 	nlconn *rtnetlink.Conn
 	donech chan struct{}
-	prefs  *Preferences
+	prefs  *CommonPreferences
 }
 
 // NewNetlinkWorker creates a new netlink worker. Once started, this worker will generate entities for network link
@@ -86,7 +86,7 @@ func NewNetlinkWorker(_ context.Context) (workers.EntityWorker, error) {
 		donech:         make(chan struct{}),
 	}
 
-	defaultPrefs := &Preferences{
+	defaultPrefs := &CommonPreferences{
 		IgnoredDevices: defaultIgnoredDevices,
 	}
 	worker.prefs, err = workers.LoadWorkerPreferences(addressWorkerPrefID, defaultPrefs)
@@ -249,10 +249,6 @@ func (w *NetlinkWorker) usableAddress(msg rtnetlink.AddressMessage) bool {
 
 	link, err := w.nlconn.Link.Get(msg.Index)
 	if err != nil {
-		return false
-	}
-
-	if link.Attributes.Name == loopbackDeviceName {
 		return false
 	}
 

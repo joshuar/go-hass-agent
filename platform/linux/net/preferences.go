@@ -8,15 +8,14 @@ import (
 )
 
 const (
-	prefPrefix         = "sensors.network."
-	loopbackDeviceName = "lo"
+	prefPrefix = "sensors.network."
 )
 
 var defaultIgnoredDevices = []string{"lo", "veth", "podman", "docker", "vnet"}
 
-// Preferences represents common preferences across all net workers. All workers support being disabled and setting a
+// CommonPreferences represents common preferences across all net workers. All workers support being disabled and setting a
 // list of devices to filter.
-type Preferences struct {
+type CommonPreferences struct {
 	workers.CommonWorkerPrefs
 
 	IgnoredDevices []string `toml:"ignored_devices"`

@@ -46,7 +46,7 @@ var ErrInitConnStateWorker = errors.New("could not init network connection state
 type ConnectionsWorker struct {
 	bus   *dbusx.Bus
 	list  map[string]*connection
-	prefs *Preferences
+	prefs *CommonPreferences
 	mu    sync.Mutex
 	*models.WorkerMetadata
 }
@@ -184,7 +184,7 @@ func NewConnectionWorker(ctx context.Context) (workers.EntityWorker, error) {
 		list:           make(map[string]*connection),
 	}
 
-	defaultPrefs := &Preferences{
+	defaultPrefs := &CommonPreferences{
 		IgnoredDevices: defaultIgnoredDevices,
 	}
 	var err error

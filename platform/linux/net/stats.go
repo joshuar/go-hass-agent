@@ -5,7 +5,6 @@ package net
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"slices"
@@ -13,19 +12,42 @@ import (
 	"sync"
 	"time"
 
+	"github.com/iancoleman/strcase"
 	"github.com/jsimonetti/rtnetlink"
 	"github.com/reugn/go-quartz/quartz"
 	slogctx "github.com/veqryn/slog-context"
 
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/models"
+	"github.com/joshuar/go-hass-agent/models/class"
+	"github.com/joshuar/go-hass-agent/models/sensor"
+	"github.com/joshuar/go-hass-agent/platform/linux"
 	"github.com/joshuar/go-hass-agent/scheduler"
+)
+
+//go:generate go tool stringer -type=netStatsType -output stats_generated.go -linecomment
+const (
+	bytesSent     netStatsType = iota // Bytes Sent
+	bytesRecv                         // Bytes Received
+	bytesSentRate                     // Bytes Sent Throughput
+	bytesRecvRate                     // Bytes Received Throughput
+
 )
 
 const (
 	statsWorkerID     = "network_stats"
 	statsWorkerDesc   = "Network stats"
 	statsWorkerPrefID = prefPrefix + "usage"
+
+	countUnit = "B"
+	rateUnit  = "B/s"
+
+	rateInterval = 5 * time.Second
+	rateJitter   = time.Second
+
+	netRatesWorkerID = "network_stats_worker"
+
+	totalsName = "Total"
 )
 
 var (
@@ -33,22 +55,23 @@ var (
 	_ workers.PollingEntityWorker = (*netStatsWorker)(nil)
 )
 
-var ErrInitStatsWorker = errors.New("could not init network stats worker")
-
+// StatsWorkerPrefs are the preferences for the stats worker.
 type StatsWorkerPrefs struct {
-	Preferences
+	CommonPreferences
+
 	UpdateInterval string `toml:"update_interval"`
 }
 
 // netStatsWorker is the object used for tracking network stats sensors. It
 // holds a netlink connection and a map of links with their stats sensors.
 type netStatsWorker struct {
+	*workers.PollingEntityWorkerData
+	*models.WorkerMetadata
+
 	statsSensors map[string]map[netStatsType]*netRate
 	nlconn       *rtnetlink.Conn
 	prefs        *StatsWorkerPrefs
 	mu           sync.Mutex
-	*workers.PollingEntityWorkerData
-	*models.WorkerMetadata
 }
 
 //nolint:funlen
@@ -61,7 +84,7 @@ func (w *netStatsWorker) Execute(ctx context.Context) error {
 		return fmt.Errorf("error accessing netlink: %w", err)
 	}
 
-	// Get link stats, filtering "uninteresting" links.
+	// Get link stats, filtering links as per preferences.
 	stats := w.getLinkStats(links)
 
 	w.mu.Lock()
@@ -78,13 +101,6 @@ func (w *netStatsWorker) Execute(ctx context.Context) error {
 		stats := link.stats
 		totalBytesRx += stats.RXBytes
 		totalBytesTx += stats.TXBytes
-
-		// Skip ignored devices.
-		if slices.ContainsFunc(w.prefs.IgnoredDevices, func(e string) bool {
-			return strings.HasPrefix(name, e)
-		}) {
-			continue
-		}
 
 		// Generate bytesRecv sensor entity for link.
 		w.OutCh <- newStatsTotalEntity(ctx, name, bytesRecv, link.stats.RXBytes, getRXAttributes(stats))
@@ -133,15 +149,13 @@ func (w *netStatsWorker) IsDisabled() bool {
 func (w *netStatsWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
 	conn, err := rtnetlink.Dial(nil)
 	if err != nil {
-		return nil, errors.Join(ErrInitStatsWorker,
-			fmt.Errorf("could not connect to netlink: %w", err))
+		return nil, fmt.Errorf("unable to start net stats worker: %w", err)
 	}
 
 	w.nlconn = conn
 
 	go func() {
 		<-ctx.Done()
-
 		if err = w.nlconn.Close(); err != nil {
 			slogctx.FromCtx(ctx).Debug("Could not close netlink connection.",
 				slog.String("worker", netRatesWorkerID),
@@ -157,7 +171,7 @@ func (w *netStatsWorker) Start(ctx context.Context) (<-chan models.Entity, error
 	return w.OutCh, nil
 }
 
-// getLinks returns all available links on this device. If a problem occurred, a
+// getLinks returns all available links. If a problem occurred, a
 // non-nil error is returned.
 func (w *netStatsWorker) getLinks() ([]rtnetlink.LinkMessage, error) {
 	links, err := w.nlconn.Link.List()
@@ -178,15 +192,11 @@ func (w *netStatsWorker) getLinkStats(links []rtnetlink.LinkMessage) []linkStats
 			continue
 		}
 
-		// Ignore loopback.
-		if msg.Attributes.Name == loopbackDeviceName {
-			continue
-		}
-
 		// Skip ignored devices.
 		if slices.ContainsFunc(w.prefs.IgnoredDevices, func(e string) bool {
 			return strings.HasPrefix(msg.Attributes.Name, e)
 		}) {
+			slog.Debug("Ignoring device stats.", slog.String("device", msg.Attributes.Name))
 			continue
 		}
 
@@ -255,7 +265,7 @@ func NewNetStatsWorker(ctx context.Context) (workers.EntityWorker, error) {
 	var err error
 	worker.prefs, err = workers.LoadWorkerPreferences(statsWorkerPrefID, defaultPrefs)
 	if err != nil {
-		return nil, errors.Join(ErrInitStatsWorker, err)
+		return nil, fmt.Errorf("unable to load net stats worker preferences: %w", err)
 	}
 
 	pollInterval, err := time.ParseDuration(worker.prefs.UpdateInterval)
@@ -270,4 +280,115 @@ func NewNetStatsWorker(ctx context.Context) (workers.EntityWorker, error) {
 	worker.Trigger = scheduler.NewPollTriggerWithJitter(pollInterval, rateJitter)
 
 	return worker, nil
+}
+
+// linkStats represents a link and its stats.
+type linkStats struct {
+	stats *rtnetlink.LinkStats64
+	name  string
+}
+
+// netStatsType is the type of stat being tracked by an entity.
+type netStatsType int
+
+// Icon returns an material design icon representation of the network stat.
+func (t netStatsType) Icon() string {
+	switch t {
+	case bytesSent:
+		return "mdi:upload-network"
+	case bytesRecv:
+		return "mdi:download-network"
+	case bytesSentRate:
+		return "mdi:transfer-up"
+	case bytesRecvRate:
+		return "mdi:transfer-down"
+	}
+
+	return ""
+}
+
+// newStatsTotalEntity creates an entity for tracking total stats for a network
+// device.
+//
+//revive:disable:argument-limit
+func newStatsTotalEntity(ctx context.Context, name string, entityType netStatsType, value uint64, attributes models.Attributes) models.Entity {
+	return sensor.NewSensor(ctx,
+		sensor.WithName(name+" "+entityType.String()),
+		sensor.WithID(strings.ToLower(name)+"_"+strcase.ToSnake(entityType.String())),
+		sensor.WithDeviceClass(class.SensorClassDataSize),
+		sensor.WithStateClass(class.StateMeasurement),
+		sensor.WithUnits(countUnit),
+		sensor.WithIcon(entityType.Icon()),
+		sensor.WithState(value),
+		sensor.WithAttributes(attributes),
+		sensor.WithDataSourceAttribute(linux.DataSrcNetlink),
+		sensor.AsDiagnostic(),
+	)
+}
+
+// newStatsTotalEntity creates an entity for tracking rate stats for a network device.
+func newStatsRateEntity(ctx context.Context, name string, entityType netStatsType, value uint64) models.Entity {
+	return sensor.NewSensor(ctx,
+		sensor.WithName(name+" "+entityType.String()),
+		sensor.WithID(strings.ToLower(name)+"_"+strcase.ToSnake(entityType.String())),
+		sensor.WithDeviceClass(class.SensorClassDataRate),
+		sensor.WithStateClass(class.StateMeasurement),
+		sensor.WithUnits(rateUnit),
+		sensor.WithIcon(entityType.Icon()),
+		sensor.WithState(value),
+		sensor.WithDataSourceAttribute(linux.DataSrcNetlink),
+		sensor.AsDiagnostic(),
+	)
+}
+
+type netRate struct {
+	linux.RateValue[uint64]
+
+	rateType netStatsType
+}
+
+func newStatsRates() map[netStatsType]*netRate {
+	return map[netStatsType]*netRate{
+		bytesRecvRate: {rateType: bytesRecvRate},
+		bytesSentRate: {rateType: bytesSentRate},
+	}
+}
+
+// getRXAttributes returns all sundry receive stats which can be added to a
+// sensor as extra attributes.
+func getRXAttributes(stats *rtnetlink.LinkStats64) models.Attributes {
+	return models.Attributes{
+		"receive_packets":       stats.RXPackets,
+		"receive_errors":        stats.RXErrors,
+		"receive_dropped":       stats.RXDropped,
+		"multicast":             stats.Multicast,
+		"collisions":            stats.Collisions,
+		"receive_length_errors": stats.RXLengthErrors,
+		"receive_over_errors":   stats.RXOverErrors,
+		"receive_crc_errors":    stats.RXCRCErrors,
+		"receive_frame_errors":  stats.RXFrameErrors,
+		"receive_fifo_errors":   stats.RXFIFOErrors,
+		"receive_missed_errors": stats.RXMissedErrors,
+		"receive_compressed":    stats.RXCompressed,
+		"transmit_compressed":   stats.TXCompressed,
+		"receive_nohandler":     stats.RXNoHandler,
+	}
+}
+
+// getTXAttributes returns all sundry transmit stats which can be added to a
+// sensor as extra attributes.
+func getTXAttributes(stats *rtnetlink.LinkStats64) models.Attributes {
+	return models.Attributes{
+		"transmit_packets":          stats.TXPackets,
+		"transmit_errors":           stats.TXErrors,
+		"transmit_dropped":          stats.TXDropped,
+		"multicast":                 stats.Multicast,
+		"collisions":                stats.Collisions,
+		"transmit_aborted_errors":   stats.TXAbortedErrors,
+		"transmit_carrier_errors":   stats.TXCarrierErrors,
+		"transmit_fifo_errors":      stats.TXFIFOErrors,
+		"transmit_heartbeat_errors": stats.TXHeartbeatErrors,
+		"transmit_window_errors":    stats.TXWindowErrors,
+		"transmit_compressed":       stats.TXCompressed,
+	}
 }
