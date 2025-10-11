@@ -146,8 +146,6 @@ func (w *ConnectionsWorker) handleConnection(ctx context.Context, path dbus.Obje
 	}
 	// Ignore loopback or already tracked connections.
 	if conn.name == "lo" || w.isTracked(conn.name) {
-		slog.Debug("Ignoring connection.", slog.String("connection", conn.name))
-
 		return nil
 	}
 	// Ignore user-defined devices.

@@ -196,7 +196,6 @@ func (w *netStatsWorker) getLinkStats(links []rtnetlink.LinkMessage) []linkStats
 		if slices.ContainsFunc(w.prefs.IgnoredDevices, func(e string) bool {
 			return strings.HasPrefix(msg.Attributes.Name, e)
 		}) {
-			slog.Debug("Ignoring device stats.", slog.String("device", msg.Attributes.Name))
 			continue
 		}
 

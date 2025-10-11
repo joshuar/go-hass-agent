@@ -19,6 +19,7 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/joshuar/go-hass-agent/agent/workers"
+	"github.com/joshuar/go-hass-agent/logging"
 	"github.com/joshuar/go-hass-agent/models"
 	"github.com/joshuar/go-hass-agent/models/sensor"
 	"github.com/joshuar/go-hass-agent/platform/linux"
@@ -148,9 +149,7 @@ func (w *NetlinkWorker) Start(ctx context.Context) (<-chan models.Entity, error)
 						if slices.ContainsFunc(w.prefs.IgnoredDevices, func(filter string) bool {
 							return strings.HasPrefix(value.Attributes.Name, filter)
 						}) {
-							// slogctx.FromCtx(ctx).Log(ctx, logging.LevelTrace, "Filtering device.",
-							// 	slog.String("name", value.Attributes.Name))
-							slogctx.FromCtx(ctx).Debug("Filtering device.",
+							slogctx.FromCtx(ctx).Log(ctx, logging.LevelTrace, "Filtering device.",
 								slog.String("name", value.Attributes.Name))
 							continue
 						}
