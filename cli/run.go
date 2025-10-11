@@ -20,24 +20,27 @@ import (
 	"github.com/joshuar/go-hass-agent/server"
 )
 
-// Run: `go-hass-agent run`.
+// Run is the command-line option for running the agent.
 type Run struct{}
 
+// Help shows a help message about the run command.
 func (r *Run) Help() string {
 	return "Run Go Hass Agent with the given options."
 }
 
+// Run starts the agent.
 func (r *Run) Run(opts *Opts) error {
 	ctx, cancelFunc := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancelFunc()
 	ctx = slogctx.NewCtx(ctx, slog.Default())
 
-	if err := config.Init(); err != nil && !errors.Is(err, config.ErrLoadConfig) {
+	err := config.Init()
+	if err != nil && !errors.Is(err, config.ErrLoadConfig) {
 		return fmt.Errorf("unable to run: %w", err)
 	}
 
 	// Start scheduler.
-	err := scheduler.Start(ctx)
+	err = scheduler.Start(ctx)
 	if err != nil {
 		return fmt.Errorf("unable to run: %w", err)
 	}
@@ -65,20 +68,6 @@ func (r *Run) Run(opts *Opts) error {
 	if err != nil {
 		return fmt.Errorf("unable to run: %w", err)
 	}
-
-	// client, err := hass.NewClient(ctx, reg)
-	// if err != nil {
-	// 	return errors.Join(ErrRunCmdFailed, err)
-	// }
-
-	// api := &API{
-	// 	hass: client,
-	// }
-
-	// // Run the agent.
-	// if err := app.Run(ctx, opts.Headless, api); err != nil {
-	// 	return errors.Join(ErrRunCmdFailed, err)
-	// }
 
 	return nil
 }
