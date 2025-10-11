@@ -41,6 +41,9 @@ RUN upx --best --lzma dist/go-hass-agent
 
 FROM docker.io/alpine:3.22.1@sha256:4bcff63911fcb4448bd4fdacec207030997caf25e9bea4045fa6c8c44de311d1
 
+# Don't log to a file when running in a container
+ENV GOHASSAGENT_NOLOGFILE=1
+
 # Add image labels.
 LABEL org.opencontainers.image.title="Go Hass Agent"
 LABEL org.opencontainers.image.source=https://github.com/joshuar/go-hass-agent
