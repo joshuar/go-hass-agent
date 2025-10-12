@@ -1,5 +1,18 @@
 # Changelog
 
+## [14.1.0](https://github.com/joshuar/go-hass-agent/compare/v14.0.3...v14.1.0) (2025-10-12)
+
+
+### Features
+
+* **container:** :building_construction: don't log to a file when running in a container (still log to stderr) ([fdf8c1d](https://github.com/joshuar/go-hass-agent/commit/fdf8c1ddd85e17d88c14e19b200c6ef4cbef5a91))
+* **linux/disk:** :sparkles: support a user preference for ignoring mountpoints for disk usage sensor ([17d4490](https://github.com/joshuar/go-hass-agent/commit/17d449074a218a259a4aa43dded9b10bb717b86f))
+
+
+### Bug Fixes
+
+* **linux/power:** :bug: fix spelling mistake in unlocking session command for KDE/Gnome (╯°□°）╯︵ ┻━┻ ([38d2dd6](https://github.com/joshuar/go-hass-agent/commit/38d2dd6d30a9424c6c24183c06b7e2d1d2c19f1d))
+
 ## [14.0.3](https://github.com/joshuar/go-hass-agent/compare/v14.0.2...v14.0.3) (2025-10-05)
 
 
