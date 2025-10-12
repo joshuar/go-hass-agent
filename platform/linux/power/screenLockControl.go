@@ -93,7 +93,7 @@ func setupCommands(_ context.Context, sessionBus *dbusx.Bus, systemBus *dbusx.Bu
 				icon:   screenUnlockedIcon,
 				intr:   loginBaseInterface,
 				path:   sessionPath,
-				method: sessionInterface + ".UnLock",
+				method: sessionInterface + ".Unlock",
 				bus:    systemBus,
 			},
 		)
