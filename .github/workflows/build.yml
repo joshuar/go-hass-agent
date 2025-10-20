@@ -139,7 +139,7 @@ jobs:
           done
       - name: Install cosign
         id: cosign_install
-        uses: sigstore/cosign-installer@d7543c93d881b35a8faa02e8e3605f69b7a1ce62 # v3
+        uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad # v3
       - name: Sign artifacts with cosign
         id: cosign_sign
         shell: bash
@@ -214,7 +214,7 @@ jobs:
         run: echo "APPVERSION=${{ needs.check_release.outputs.release_tag }}" >> $GITHUB_ENV
 
       - name: Check and install cosign
-        uses: sigstore/cosign-installer@d7543c93d881b35a8faa02e8e3605f69b7a1ce62 # v3
+        uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad # v3
 
       - name: Log in to the Container registry
         id: registry_login
