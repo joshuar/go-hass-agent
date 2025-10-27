@@ -335,8 +335,8 @@ github.com/russross/blackfriday/v2 v2.1.0 h1:JIOH55/0cWyOuilr9/qlrm0BSXldqnqwMsf
 github.com/russross/blackfriday/v2 v2.1.0/go.mod h1:+Rmxgy9KzJVeS9/2gXHxylqXiyQDYRxCVz55jmeOWTM=
 github.com/samber/lo v1.51.0 h1:kysRYLbHy/MB7kQZf5DSN50JHmMsNEdeY24VzJFu7wI=
 github.com/samber/lo v1.51.0/go.mod h1:4+MXEGsJzbKGaUEQFKBq2xtfuznW9oz/WrgyzMzRoM0=
-github.com/samber/slog-chi v1.16.1 h1:cg8U8FXJjBNdxY3NlYP+fMKXmeHBpEJD1rtG+yikVu0=
-github.com/samber/slog-chi v1.16.1/go.mod h1:Wavzf+B7j20Ud3wvUN6omgtISBxS6N1BEvd3JU6cBz4=
+github.com/samber/slog-chi v1.17.0 h1:zP66fV4LGF1y1Dg/+uHNY9Uxkmw1YNWaZGws6M6mPCk=
+github.com/samber/slog-chi v1.17.0/go.mod h1:a1iIuofF2gS1ii8aXIQhC6TEguLOhOvSM958fY5hToU=
 github.com/samber/slog-common v0.19.0 h1:fNcZb8B2uOLooeYwFpAlKjkQTUafdjfqKcwcC89G9YI=
 github.com/samber/slog-common v0.19.0/go.mod h1:dTz+YOU76aH007YUU0DffsXNsGFQRQllPQh9XyNoA3M=
 github.com/samber/slog-multi v1.5.0 h1:UDRJdsdb0R5vFQFy3l26rpX3rL3FEPJTJ2yKVjoiT1I=
