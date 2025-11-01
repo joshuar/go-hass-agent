@@ -148,7 +148,7 @@ jobs:
           echo Need to sign dist/*.{rpm,deb,zst}
           for artifact in dist/*.{rpm,deb,zst}; do
             echo Signing ${artifact}
-            cosign --verbose=true sign-blob --yes --key cosign.key --output-signature=${artifact}.sig ${artifact}
+            cosign --verbose=true sign-blob --yes --key cosign.key --bundle=${artifact}.sig ${artifact}
           done
         env:
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}

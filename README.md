@@ -464,7 +464,7 @@ the package you want to verify. To verify a package, a command similar to the
 following for the `rpm` package can be used:
 
 ```shell
-cosign verify-blob --key cosign.pub --signature go-hass-agent-*.rpm.sig go-hass-agent-*.rpm
+cosign verify-blob --key cosign.pub --bundle go-hass-agent-*.rpm.sig go-hass-agent-*.rpm
 ```
 
 [⬆️ Back to Top](#-table-of-contents)
