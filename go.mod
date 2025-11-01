@@ -122,7 +122,7 @@ require (
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	howett.net/plist v1.0.2-0.20250314012144-ee69052608d9 // indirect
-	kernel.org/pub/linux/libs/security/libcap/psx v1.2.76 // indirect
+	kernel.org/pub/linux/libs/security/libcap/psx v1.2.77 // indirect
 )
 
 require (
@@ -168,7 +168,7 @@ require (
 	golang.org/x/crypto v0.43.0 // indirect
 	golang.org/x/net v0.46.0
 	golang.org/x/sys v0.37.0
-	kernel.org/pub/linux/libs/security/libcap/cap v1.2.76
+	kernel.org/pub/linux/libs/security/libcap/cap v1.2.77
 )
 
 tool (
