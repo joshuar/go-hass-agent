@@ -25,6 +25,8 @@ services:
     security_opt:
       - seccomp:unconfined
       - label:disable
+    ports:
+      - $GOHASSAGENT_server_port:8223
     command: -c 'sleep infinity'
 
   home-assistant:

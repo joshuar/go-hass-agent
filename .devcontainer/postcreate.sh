@@ -17,6 +17,7 @@ cd /workspace
 bun update || exit -1
 
 # Install Go tools.
+go mod tidy
 go install github.com/air-verse/air@latest
 go install github.com/a-h/templ/cmd/templ@latest
 

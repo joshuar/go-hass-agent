@@ -3,10 +3,10 @@
 
 ARG GO_VERSION
 
-FROM docker.io/alpine AS builder
+FROM docker.io/alpine:3.22.2@sha256:4b7ce07002c69e8f3d704a9c5d6fd3053be500b7f1c69fc0d80990c2ad8dd412 AS builder
 
 # Copy go from official image
-COPY --from=docker.io/golang:1.25.1-alpine /usr/local/go/ /usr/local/go/
+COPY --from=docker.io/golang:1.25.3-alpine /usr/local/go/ /usr/local/go/
 
 # Install additional packages
 RUN apk update && apk add sudo openssh curl git bash fish micro graphviz nodejs npm mosquitto-clients
