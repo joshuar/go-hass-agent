@@ -22,6 +22,17 @@ type Config struct {
 	mqtt.Config
 }
 
+// AfterApply applies MQTT config values that are not exposed via command-line options, as necessary.
+func (c *Config) AfterApply() error {
+	if c.MQTTTopicPrefix == "" {
+		c.MQTTTopicPrefix = mqtt.DefaultTopicPrefix
+	}
+	if c.MQTTServer != "" {
+		c.MQTTEnabled = true
+	}
+	return nil
+}
+
 // Run processes the config command.
 func (c *Config) Run(opts *Opts) error {
 	ctx, cancelFunc := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -31,14 +42,14 @@ func (c *Config) Run(opts *Opts) error {
 	// Validate config options.
 	valid, err := c.Valid()
 	if !valid || err != nil {
-		return fmt.Errorf("unable to register: %w", err)
+		return fmt.Errorf("unable to validate preferences: %w", err)
 	}
 
 	err = config.Save(mqtt.ConfigPrefix, c.Config)
 	if err != nil {
 		return fmt.Errorf("unable to save preferences: %w", err)
 	}
-	slogctx.FromCtx(ctx).Info("Agent registered!")
+	slogctx.FromCtx(ctx).Info("Preferences saved!")
 
 	return nil
 }

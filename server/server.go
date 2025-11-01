@@ -174,7 +174,7 @@ func setupRoutes(static embed.FS, agent *agent.Agent) *chi.Mux {
 	router.With(middlewares.RequireHTMX).Post("/register", handlers.ProcessRegistration(agent))
 	// Preferences.
 	router.Get("/preferences", handlers.ShowPreferences())
-	router.With(middlewares.RequireHTMX).Post("/preferences", handlers.SavePreferences())
+	router.With(middlewares.RequireHTMX).Post("/preferences/mqtt", handlers.SaveMQTTPreferences())
 
 	return router
 }

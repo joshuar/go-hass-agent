@@ -3,11 +3,7 @@
 
 package templates
 
-import (
-	"fmt"
-	"github.com/joshuar/go-hass-agent/agent/workers/mqtt"
-	"github.com/joshuar/go-hass-agent/validation"
-)
+import "github.com/joshuar/go-hass-agent/agent/workers/mqtt"
 
 type Preferences struct {
 	MQTT *mqtt.Config `form:"mqtt"`
@@ -19,24 +15,10 @@ func NewPreferences() *Preferences {
 	}
 }
 
-// Valid returns a boolean indicating whether
-func (p *Preferences) Valid() (bool, error) {
-	err := validation.Validate.Struct(p.MQTT)
-	if err != nil {
-		return false, fmt.Errorf("%w: %s", validation.ErrValidation, validation.ParseValidationErrors(err))
-	}
-
-	return true, nil
-}
-
-func (r *Preferences) Sanitise() error {
-	return nil
-}
-
 templ PreferencesForm(prefs *Preferences) {
 	<div id="preferences-form" class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 		<form
-			hx-post="/preferences"
+			hx-post="/preferences/mqtt"
 			hx-target="#preferences-form"
 			hx-swap="outerHTML"
 			hx-include="[name='csrf_token']"
@@ -60,7 +42,6 @@ templ PreferencesForm(prefs *Preferences) {
 										name="mqtt.mqtt_enabled"
 										aria-describedby="mqtt-enabled-description"
 										class="col-start-1 row-start-1 checkbox"
-										_="on click toggle @disabled on #mqtt_server then toggle @disabled on #mqtt_username then toggle @disabled on #mqtt_password then toggle @disabled on #mqtt_topic_prefix"
 									/>
 								</div>
 							</div>
@@ -80,9 +61,6 @@ templ PreferencesForm(prefs *Preferences) {
 										value={ prefs.MQTT.MQTTServer }
 									}
 									class="block w-full input"
-									if !prefs.MQTT.MQTTEnabled {
-										disabled
-									}
 								/>
 							</div>
 						</div>
@@ -92,14 +70,11 @@ templ PreferencesForm(prefs *Preferences) {
 								<input
 									id="mqtt_username"
 									type="text"
-									name="mqtt.mqtt_username"
+									name="mqtt.mqtt_user"
 									if prefs.MQTT.MQTTUser != "" {
 										value={ prefs.MQTT.MQTTUser }
 									}
 									class="block w-full input"
-									if !prefs.MQTT.MQTTEnabled {
-										disabled
-									}
 								/>
 							</div>
 						</div>
@@ -114,9 +89,6 @@ templ PreferencesForm(prefs *Preferences) {
 										value={ prefs.MQTT.MQTTPassword }
 									}
 									class="block w-full input"
-									if !prefs.MQTT.MQTTEnabled {
-										disabled
-									}
 								/>
 							</div>
 						</div>
@@ -133,9 +105,6 @@ templ PreferencesForm(prefs *Preferences) {
 										value="homeassistant"
 									}
 									class="block w-full input"
-									if !prefs.MQTT.MQTTEnabled {
-										disabled
-									}
 								/>
 							</div>
 						</div>

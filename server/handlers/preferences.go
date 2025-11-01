@@ -22,7 +22,7 @@ func ShowPreferences() http.HandlerFunc {
 		routeLogger,
 	).ThenFunc(func(res http.ResponseWriter, req *http.Request) {
 		prefs := templates.NewPreferences()
-		err := config.Load(mqtt.ConfigPrefix, prefs.MQTT)
+		err := config.Load("mqtt", prefs.MQTT)
 		if err != nil {
 			template := templ.Join(
 				templates.PreferencesForm(prefs),
@@ -34,27 +34,27 @@ func ShowPreferences() http.HandlerFunc {
 }
 
 // SavePreferences handles extracting the new preferences from the request and saving them to the configuration file.
-func SavePreferences() http.HandlerFunc {
+func SaveMQTTPreferences() http.HandlerFunc {
 	return alice.New(
 		routeLogger,
 	).ThenFunc(func(res http.ResponseWriter, req *http.Request) {
-		prefs, valid, err := forms.DecodeForm[*templates.Preferences](req)
+		prefs, valid, err := forms.DecodeForm[*mqtt.Config](req)
 		if err != nil || !valid {
 			template := templ.Join(
-				templates.PreferencesForm(prefs),
+				templates.PreferencesForm(&templates.Preferences{MQTT: prefs}),
 				templates.Notification(models.NewErrorMessage("Invalid details.", err.Error())))
 			renderPartial(template).ServeHTTP(res, req)
 			return
 		}
-		err = config.Save(mqtt.ConfigPrefix, prefs.MQTT)
+		err = config.Save(mqtt.ConfigPrefix, prefs)
 		if err != nil {
 			template := templ.Join(
-				templates.PreferencesForm(prefs),
+				templates.PreferencesForm(&templates.Preferences{MQTT: prefs}),
 				templates.Notification(models.NewErrorMessage("Failed to save preferences.", err.Error())))
 			renderPartial(template).ServeHTTP(res, req)
 		}
 		template := templ.Join(
-			templates.PreferencesForm(prefs),
+			templates.PreferencesForm(&templates.Preferences{MQTT: prefs}),
 			templates.Notification(
 				models.NewSuccessMessage("Preferences saved.", "Remember to restart the agent to use the new settings.")))
 		renderPartial(template).ServeHTTP(res, req)

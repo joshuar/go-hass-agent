@@ -15,16 +15,17 @@ import (
 
 const (
 	// ConfigPrefix is the prefix in the configuration file for MQTT preferences.
-	ConfigPrefix = "mqtt"
+	ConfigPrefix       = "mqtt"
+	DefaultTopicPrefix = "homeassistant"
 )
 
 // Config represents MQTT preferences.
 type Config struct {
-	MQTTServer      string `toml:"server,omitempty" form:"mqtt_server" validate:"required,uri" kong:"required,help='MQTT server URI. Required.',placeholder='scheme://some.host:port'"` //nolint:lll
-	MQTTUser        string `toml:"user,omitempty" form:"mqtt_user" validate:"omitempty" kong:"optional,help='MQTT username.'"`
-	MQTTPassword    string `toml:"password,omitempty" form:"mqtt_password" validate:"omitempty" kong:"optional,help='MQTT password.'"`
-	MQTTTopicPrefix string `toml:"topic_prefix,omitempty" form:"mqtt_topic_prefix" validate:"required,ascii" kong:"optional,help='MQTT topic prefix.'"`
-	MQTTEnabled     bool   `toml:"enabled" form:"mqtt_enabled" validate:"boolean" kong:"-"`
+	MQTTServer      string `toml:"server,omitempty" form:"mqtt.mqtt_server" validate:"required_if=MQTTEnabled true,omitempty,uri" kong:"help='MQTT server URI.',placeholder='scheme://some.host:port'"` //nolint:lll
+	MQTTUser        string `toml:"user,omitempty" form:"mqtt.mqtt_user" validate:"omitempty" kong:"optional,help='MQTT username.'"`
+	MQTTPassword    string `toml:"password,omitempty" form:"mqtt.mqtt_password" validate:"omitempty" kong:"optional,help='MQTT password.'"`
+	MQTTTopicPrefix string `toml:"topic_prefix,omitempty" form:"mqtt.mqtt_topic_prefix" validate:"required,ascii" kong:"optional,help='MQTT topic prefix.'"`
+	MQTTEnabled     bool   `toml:"enabled" form:"mqtt.mqtt_enabled" validate:"boolean" kong:"negatable,help='Enable MQTT features.'"`
 }
 
 func (c *Config) Server() string {
@@ -55,6 +56,9 @@ func (c *Config) Valid() (bool, error) {
 
 // Sanitise will sanitise the values of the MQTT preferences.
 func (c *Config) Sanitise() error {
+	if c == nil {
+		c = &Config{}
+	}
 	return nil
 }
 

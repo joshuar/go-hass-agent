@@ -975,6 +975,10 @@ integration.](https://my.home-assistant.io/badges/integration.svg)](https://my.h
 > to limitations with the Home Assistant architecture, these cannot be combined
 > in a single place.
 
+To disable MQTT features again, navigate back to the preferences URL above and
+toggle **_Use MQTT_** off, or, run the command
+`go-hass-agent config --no-mqtt-enabled`.
+
 [⬆️ Back to Top](#-table-of-contents)
 
 #### Custom D-Bus Controls
