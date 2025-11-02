@@ -45,11 +45,12 @@ type screenControlCommand struct {
 	intr   string
 	path   string
 	method string
+	args   string
 }
 
 // execute represents the D-Bus method call to execute the screen control.
 func (c *screenControlCommand) execute(ctx context.Context) error {
-	err := dbusx.NewMethod(c.bus, c.intr, c.path, c.method).Call(ctx)
+	err := dbusx.NewMethod(c.bus, c.intr, c.path, c.method).Call(ctx, c.args)
 	if err != nil {
 		return fmt.Errorf("failed to issuse screen control commands %s: %w", c.name, err)
 	}
@@ -120,6 +121,7 @@ func setupCommands(_ context.Context, sessionBus *dbusx.Bus, systemBus *dbusx.Bu
 				path:   "/org/cinnamon/ScreenSaver",
 				method: "org.cinnamon.ScreenSaver.Lock",
 				bus:    sessionBus,
+				args:   "Locked by " + config.AppName,
 			})
 	default:
 		return nil, ErrUnsupportedDesktop
