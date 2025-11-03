@@ -143,7 +143,7 @@ require (
 	github.com/go-test/deep v1.1.1
 	github.com/gofrs/uuid/v5 v5.3.2
 	github.com/grandcat/zeroconf v1.0.0
-	github.com/jaypipes/ghw v0.19.1
+	github.com/jaypipes/ghw v0.20.0
 	github.com/jfreymuth/pulse v0.1.1
 	github.com/jsimonetti/rtnetlink v1.4.2
 	github.com/justinas/alice v1.2.0
