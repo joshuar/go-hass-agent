@@ -1,5 +1,13 @@
 # Changelog
 
+## [14.1.1](https://github.com/joshuar/go-hass-agent/compare/v14.1.0...v14.1.1) (2025-11-07)
+
+
+### Bug Fixes
+
+* :bug: fix mqtt preferences issues ([5ffc763](https://github.com/joshuar/go-hass-agent/commit/5ffc76340ce9f5881253d4913e8b407d9cc040a1))
+* **linux/power:** :bug: add args to screen lock D-Bus calls (needed for screen lock on Cinnamon) ([effaeec](https://github.com/joshuar/go-hass-agent/commit/effaeec5494c4af72a83195c7cd2b8737d11ed7c))
+
 ## [14.1.0](https://github.com/joshuar/go-hass-agent/compare/v14.0.3...v14.1.0) (2025-10-12)
 
 
