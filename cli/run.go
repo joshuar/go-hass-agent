@@ -21,7 +21,12 @@ import (
 )
 
 // Run is the command-line option for running the agent.
-type Run struct{}
+type Run struct {
+	ServerHTTPSCert string `help:"Path to cert file for using https for web server component."`
+	ServerHTTPSKey  string `help:"Path to key file for using https for web server component."`
+	ServerHostname  string `help:"Hostname that web server component will listen on." default:"localhost"`
+	ServerPort      string `help:"Port that web server component will listen on." default:"8223"`
+}
 
 // Help shows a help message about the run command.
 func (r *Run) Help() string {
@@ -52,7 +57,14 @@ func (r *Run) Run(opts *Opts) error {
 	}
 
 	// Configure web server.
-	server, err := server.New(opts.StaticContent, agent)
+	server, err := server.New(
+		opts.StaticContent,
+		agent,
+		server.WithHost(r.ServerHostname),
+		server.WithPort(r.ServerPort),
+		server.WithCertFile(r.ServerHTTPSCert),
+		server.WithKeyFile(r.ServerHTTPSKey),
+	)
 	if err != nil {
 		return fmt.Errorf("unable to run: %w", err)
 	}

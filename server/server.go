@@ -13,9 +13,8 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"strconv"
+	"slices"
 	"sync"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -29,6 +28,7 @@ import (
 	"github.com/joshuar/go-hass-agent/config"
 	"github.com/joshuar/go-hass-agent/server/handlers"
 	"github.com/joshuar/go-hass-agent/server/middlewares"
+	"github.com/joshuar/go-hass-agent/validation"
 )
 
 const (
@@ -43,47 +43,34 @@ type Server struct {
 	Config *Config
 }
 
-// Config contains server-related config options.
-type Config struct {
-	// Host is the hostname to listen on.
-	Host string `toml:"host"`
-	// Port is the port to listen on.
-	Port int `toml:"port"`
-	// CertFile points to the file containing a server certificate.
-	CertFile string `toml:"cert"`
-	// KeyFile points to the file containing a server key.
-	KeyFile      string        `toml:"key"`
-	ReadTimeout  time.Duration `toml:"read_timeout"`
-	WriteTimeout time.Duration `toml:"write_timeout"`
-	IdleTimeout  time.Duration `toml:"idle_timeout"`
-}
-
 // New creates a new server component for the agent.
-func New(static embed.FS, agent *agent.Agent) (*Server, error) {
+func New(static embed.FS, agent *agent.Agent, options ...configOption) (*Server, error) {
 	// Create server object with default config.
 	server := &Server{
-		Config: &Config{
-			Host:         "localhost",
-			Port:         8223,
-			CertFile:     "",
-			KeyFile:      "",
-			ReadTimeout:  5 * time.Second,
-			WriteTimeout: 10 * time.Second,
-		},
 		static: static,
+		Config: NewConfig(),
 	}
 	// Load the server config from file, overwriting default config.
 	if err := config.Load(serverConfigPrefix, server.Config); err != nil {
 		return server, fmt.Errorf("unable to load server config: %w", err)
 	}
+	// Overwrite config with any options passed on command-line.
+	for option := range slices.Values(options) {
+		option(server.Config)
+	}
+
+	err := validation.Validate.Struct(server.Config)
+	if err != nil {
+		return nil, fmt.Errorf("create new server: load config failed: %w", err)
+	}
 
 	// Set up routes.
 	router := setupRoutes(static, agent)
-
+	// Set up server object.
 	h2s := &http2.Server{}
 	server.Server = &http.Server{
 		Handler:      h2c.NewHandler(nosurf.New(router), h2s),
-		Addr:         net.JoinHostPort(server.Config.Host, strconv.Itoa(server.Config.Port)),
+		Addr:         net.JoinHostPort(server.Config.Host, server.Config.Port),
 		ReadTimeout:  server.Config.ReadTimeout,
 		WriteTimeout: server.Config.WriteTimeout,
 		IdleTimeout:  server.Config.IdleTimeout,
