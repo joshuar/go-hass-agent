@@ -35,16 +35,15 @@ const (
 	serverConfigPrefix = "server"
 )
 
-// Agent represents the data and methods required for running the agent.
+// Server holds data for implementing the web server component of the agent.
 type Server struct {
 	*http.Server
 
-	agent  *agent.Agent
 	static embed.FS
 	Config *Config
 }
 
-// AgentConfig contains the agent configuration options.
+// Config contains server-related config options.
 type Config struct {
 	// Host is the hostname to listen on.
 	Host string `toml:"host"`
@@ -59,6 +58,7 @@ type Config struct {
 	IdleTimeout  time.Duration `toml:"idle_timeout"`
 }
 
+// New creates a new server component for the agent.
 func New(static embed.FS, agent *agent.Agent) (*Server, error) {
 	// Create server object with default config.
 	server := &Server{
@@ -92,6 +92,7 @@ func New(static embed.FS, agent *agent.Agent) (*Server, error) {
 	return server, nil
 }
 
+// Start starts the web server component of the agent.
 func (s *Server) Start(ctx context.Context) error {
 	slogctx.FromCtx(ctx).Debug("Starting server...",
 		slog.String("address", s.Addr))
@@ -108,7 +109,7 @@ func (s *Server) Start(ctx context.Context) error {
 		signal.Notify(stop, os.Interrupt)
 		<-stop
 
-		err := s.Shutdown(context.Background())
+		err := s.Shutdown(ctx)
 		// Can't do much here except for logging any errors
 		if err != nil {
 			slogctx.FromCtx(ctx).Error("Error occurred when trying to shut down server.",
