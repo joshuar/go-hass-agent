@@ -140,6 +140,9 @@ func (s *Server) Start(ctx context.Context) error {
 func setupRoutes(static embed.FS, agent *agent.Agent) *chi.Mux {
 	// Set up a new chi router.
 	router := chi.NewRouter()
+	// Health check endpoints (for GCP).
+	router.Use(middleware.Heartbeat("/health-check"))
+	// Middleware stack.
 	router.Use(
 		middleware.RequestID,
 		middleware.Recoverer,
@@ -157,8 +160,7 @@ func setupRoutes(static embed.FS, agent *agent.Agent) *chi.Mux {
 		middlewares.SaveCSRFToken,
 		middleware.NoCache,
 	)
-
-	// Routes.
+	// User endpoints.
 	//
 	// Static content.
 	router.Group(func(r chi.Router) {
