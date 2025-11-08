@@ -22,12 +22,13 @@ var (
 	ErrScheduleFailed = errors.New("failed to schedule job")
 )
 
-type ManagerProps struct {
+type manager struct {
 	scheduler quartz.Scheduler
 }
 
-var Manager *ManagerProps
+var Manager *manager
 
+// Start wil start the scheduler component of the agent.
 func Start(ctx context.Context) error {
 	misfiredCh := make(chan quartz.ScheduledJob)
 	scheduler, err := quartz.NewStdScheduler(
@@ -39,7 +40,7 @@ func Start(ctx context.Context) error {
 		return errors.Join(ErrRunFailed, err)
 	}
 
-	Manager = &ManagerProps{
+	Manager = &manager{
 		scheduler: scheduler,
 	}
 
@@ -65,7 +66,7 @@ func Start(ctx context.Context) error {
 	return nil
 }
 
-func (m *ManagerProps) ScheduleJob(idPrefix id.Prefix, job quartz.Job, trigger quartz.Trigger) error {
+func (m *manager) ScheduleJob(idPrefix id.Prefix, job quartz.Job, trigger quartz.Trigger) error {
 	// Generate a job key.
 	jobKey, err := id.NewID(idPrefix)
 	if err != nil {
@@ -74,14 +75,15 @@ func (m *ManagerProps) ScheduleJob(idPrefix id.Prefix, job quartz.Job, trigger q
 	// Generate the job details.
 	jobDetail := quartz.NewJobDetail(job, quartz.NewJobKey(jobKey))
 	// Schedule the job.
-	if err := m.scheduler.ScheduleJob(jobDetail, trigger); err != nil {
+	err = m.scheduler.ScheduleJob(jobDetail, trigger)
+	if err != nil {
 		return errors.Join(ErrScheduleFailed, err)
 	}
-
 	slog.Debug("Scheduled worker.",
 		slog.String("job_key", jobKey),
-		slog.String("job_desc", job.Description()))
-
+		slog.String("job_desc", job.Description()),
+		slog.String("job_trigger", trigger.Description()),
+	)
 	return nil
 }
 
