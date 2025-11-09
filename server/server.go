@@ -51,17 +51,18 @@ func New(static embed.FS, agent *agent.Agent, options ...configOption) (*Server,
 		Config: NewConfig(),
 	}
 	// Load the server config from file, overwriting default config.
-	if err := config.Load(serverConfigPrefix, server.Config); err != nil {
-		return server, fmt.Errorf("unable to load server config: %w", err)
+	err := config.Load(serverConfigPrefix, server.Config)
+	if err != nil {
+		return server, fmt.Errorf("create web server: load config: %w", err)
 	}
 	// Overwrite config with any options passed on command-line.
 	for option := range slices.Values(options) {
 		option(server.Config)
 	}
 
-	err := validation.Validate.Struct(server.Config)
+	err = validation.Validate.Struct(server.Config)
 	if err != nil {
-		return nil, fmt.Errorf("create new server: load config failed: %w", err)
+		return nil, fmt.Errorf("create web server: load config: %w", err)
 	}
 
 	// Set up routes.
