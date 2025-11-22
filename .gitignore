@@ -46,5 +46,6 @@ web/content/*.css.map
 tmp/
 .devcontainer/.env
 dist/
+test/
 deployments/
 node_modules/
