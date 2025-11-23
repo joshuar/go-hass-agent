@@ -71,6 +71,7 @@
     - [On a server using systemd](#on-a-server-using-systemd)
   - [🐳 Running in a container](#-running-in-a-container)
   - [🔧 Alternative System Mount Points](#-alternative-system-mount-points)
+  - [🔧 Web server configuration Options](#-web-server-configuration-options)
   - [🤖 Home Assistant Integration](#-home-assistant-integration)
   - [🗒️ Preferences](#️-preferences)
   - [🐚 Script Sensors](#-script-sensors)
@@ -659,6 +660,17 @@ podman run \
   --env PROCFS_ROOT=/host/proc --env SYSFS_ROOT=/host/sys --env DEVFS_ROOT=/host/dev \
   ...other options...
 ```
+
+[⬆️ Back to Top](#-table-of-contents)
+
+### 🔧 Web server configuration Options
+
+The web server starts by default on `localhost:8223`, without TLS. You can configure a key/cert for TLS and change the hostname/port combination with the following options:
+
+- `--server-hostname=machine.lan`
+- `--server-port=1234`
+- `--server-https-cert=path/to/cert.file`
+- `--server-https-key=path/to/key.file`
 
 [⬆️ Back to Top](#-table-of-contents)
 
