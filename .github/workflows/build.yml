@@ -89,7 +89,7 @@ jobs:
             uploads.github.com:443
             release-assets.githubusercontent.com:443
       - name: Checkout source
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v4
         with:
           fetch-depth: 0
       - name: Set up environment
@@ -199,7 +199,7 @@ jobs:
             release-assets.githubusercontent.com:443
 
       - name: Checkout repo
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v4
         with:
           fetch-depth: 0
 
