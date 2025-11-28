@@ -1,5 +1,13 @@
 # Changelog
 
+## [14.2.0](https://github.com/joshuar/go-hass-agent/compare/v14.1.1...v14.2.0) (2025-11-28)
+
+
+### Features
+
+* **server:** :sparkles: add /health-check endpoint for checking if agent is running/responding ([0435ca2](https://github.com/joshuar/go-hass-agent/commit/0435ca2cbcd60404667c3617c99be70203be3548))
+* **server:** :sparkles: support configuring web server options (https cert/key, hostname, port) on command-line ([0dfcaa5](https://github.com/joshuar/go-hass-agent/commit/0dfcaa564f74815fac4c01639b7592486d6e4f74))
+
 ## [14.1.1](https://github.com/joshuar/go-hass-agent/compare/v14.1.0...v14.1.1) (2025-11-07)
 
 
