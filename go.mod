@@ -106,7 +106,7 @@ require (
 	github.com/spf13/cobra v1.9.1 // indirect
 	github.com/spf13/pflag v1.0.6 // indirect
 	github.com/tadvi/systray v0.0.0-20190226123456-11a2b8fa57af // indirect
-	github.com/tklauser/numcpus v0.10.0 // indirect
+	github.com/tklauser/numcpus v0.11.0 // indirect
 	github.com/ulikunitz/xz v0.5.15 // indirect
 	github.com/vmware-labs/yaml-jsonpath v0.3.2 // indirect
 	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
@@ -162,7 +162,7 @@ require (
 	github.com/reugn/go-quartz v0.15.2
 	github.com/samber/slog-chi v1.17.0
 	github.com/samber/slog-multi v1.5.0
-	github.com/tklauser/go-sysconf v0.3.15
+	github.com/tklauser/go-sysconf v0.3.16
 	github.com/veqryn/slog-context v0.8.0
 	github.com/veqryn/slog-json v0.5.0
 	golang.org/x/crypto v0.44.0 // indirect
