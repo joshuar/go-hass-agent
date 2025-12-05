@@ -140,5 +140,6 @@
   "terminal.integrated.scrollback": 10000,
   "conventionalCommits.promptBody": false,
   "tailwindCSS.emmetCompletions": true,
-  "prettier.singleAttributePerLine": true
+  "prettier.singleAttributePerLine": true,
+  "markdown.validate.enabled": false
 }

@@ -2,7 +2,11 @@
   "trailingComma": "es5",
   "tabWidth": 2,
   "semi": false,
-  "singleQuote": false,
-  "plugins": ["prettier-plugin-toml"],
-  "proseWrap": "always"
+  "singleQuote": true,
+  "plugins": [
+    "prettier-plugin-organize-imports",
+    "prettier-plugin-tailwindcss",
+    "prettier-plugin-toml"
+  ],
+  "proseWrap": "preserve"
 }
