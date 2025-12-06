@@ -57,6 +57,7 @@ templ PreferencesForm(prefs *Preferences) {
 									id="mqtt_server"
 									type="text"
 									name="mqtt.mqtt_server"
+									placeholder="tcp://somehost:1883"
 									if prefs.MQTT.MQTTServer != "" {
 										value={ prefs.MQTT.MQTTServer }
 									}

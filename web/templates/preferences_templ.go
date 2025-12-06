@@ -55,7 +55,7 @@ func PreferencesForm(prefs *Preferences) templ.Component {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, " name=\"mqtt.mqtt_enabled\" aria-describedby=\"mqtt-enabled-description\" class=\"col-start-1 row-start-1 checkbox\"></div></div><div class=\"text-sm/6\"><label for=\"mqtt_enabled\" class=\"font-medium \">Enabled</label><p id=\"mqtt-enabled-description\" class=\"text-base-content/80\">Toggle MQTT functionality (requires agent restart to take effect).</p></div></div><div class=\"sm:col-span-4\"><label for=\"mqtt_server\" class=\"block text-sm/6 font-medium\">Server</label><div class=\"mt-2\"><input id=\"mqtt_server\" type=\"text\" name=\"mqtt.mqtt_server\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, " name=\"mqtt.mqtt_enabled\" aria-describedby=\"mqtt-enabled-description\" class=\"col-start-1 row-start-1 checkbox\"></div></div><div class=\"text-sm/6\"><label for=\"mqtt_enabled\" class=\"font-medium \">Enabled</label><p id=\"mqtt-enabled-description\" class=\"text-base-content/80\">Toggle MQTT functionality (requires agent restart to take effect).</p></div></div><div class=\"sm:col-span-4\"><label for=\"mqtt_server\" class=\"block text-sm/6 font-medium\">Server</label><div class=\"mt-2\"><input id=\"mqtt_server\" type=\"text\" name=\"mqtt.mqtt_server\" placeholder=\"tcp://somehost:1883\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -67,7 +67,7 @@ func PreferencesForm(prefs *Preferences) templ.Component {
 			var templ_7745c5c3_Var2 string
 			templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(prefs.MQTT.MQTTServer)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/preferences.templ`, Line: 61, Col: 39}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/preferences.templ`, Line: 62, Col: 39}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 			if templ_7745c5c3_Err != nil {
@@ -90,7 +90,7 @@ func PreferencesForm(prefs *Preferences) templ.Component {
 			var templ_7745c5c3_Var3 string
 			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(prefs.MQTT.MQTTUser)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/preferences.templ`, Line: 75, Col: 37}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/preferences.templ`, Line: 76, Col: 37}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 			if templ_7745c5c3_Err != nil {
@@ -113,7 +113,7 @@ func PreferencesForm(prefs *Preferences) templ.Component {
 			var templ_7745c5c3_Var4 string
 			templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(prefs.MQTT.MQTTPassword)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/preferences.templ`, Line: 89, Col: 41}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/preferences.templ`, Line: 90, Col: 41}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 			if templ_7745c5c3_Err != nil {
@@ -136,7 +136,7 @@ func PreferencesForm(prefs *Preferences) templ.Component {
 			var templ_7745c5c3_Var5 string
 			templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(prefs.MQTT.MQTTTopicPrefix)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/preferences.templ`, Line: 103, Col: 44}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/preferences.templ`, Line: 104, Col: 44}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 			if templ_7745c5c3_Err != nil {

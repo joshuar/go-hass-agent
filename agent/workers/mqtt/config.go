@@ -5,6 +5,7 @@ package mqtt
 
 import (
 	"fmt"
+	"net/url"
 
 	mqtthass "github.com/joshuar/go-hass-anything/v12/pkg/hass"
 
@@ -17,15 +18,16 @@ const (
 	// ConfigPrefix is the prefix in the configuration file for MQTT preferences.
 	ConfigPrefix       = "mqtt"
 	DefaultTopicPrefix = "homeassistant"
+	defaultMQTTServer  = "tcp://localhost:1883"
 )
 
 // Config represents MQTT preferences.
 type Config struct {
-	MQTTServer      string `toml:"server,omitempty" form:"mqtt.mqtt_server" validate:"required_if=MQTTEnabled true,omitempty,uri" kong:"help='MQTT server URI.',placeholder='scheme://some.host:port'"` //nolint:lll
-	MQTTUser        string `toml:"user,omitempty" form:"mqtt.mqtt_user" validate:"omitempty" kong:"optional,help='MQTT username.'"`
-	MQTTPassword    string `toml:"password,omitempty" form:"mqtt.mqtt_password" validate:"omitempty" kong:"optional,help='MQTT password.'"`
-	MQTTTopicPrefix string `toml:"topic_prefix,omitempty" form:"mqtt.mqtt_topic_prefix" validate:"required,ascii" kong:"optional,help='MQTT topic prefix.'"`
-	MQTTEnabled     bool   `toml:"enabled" form:"mqtt.mqtt_enabled" validate:"boolean" kong:"negatable,help='Enable MQTT features.'"`
+	MQTTServer      string `toml:"server,omitempty"       form:"mqtt.mqtt_server"       validate:"required_if=MQTTEnabled true,omitempty,uri" kong:"help='MQTT server URI.',placeholder='tcp://some.host:port'"`
+	MQTTUser        string `toml:"user,omitempty"         form:"mqtt.mqtt_user"         validate:"omitempty"                                  kong:"optional,help='MQTT username.'"`
+	MQTTPassword    string `toml:"password,omitempty"     form:"mqtt.mqtt_password"     validate:"omitempty"                                  kong:"optional,help='MQTT password.'"`
+	MQTTTopicPrefix string `toml:"topic_prefix,omitempty" form:"mqtt.mqtt_topic_prefix" validate:"required,ascii"                             kong:"optional,help='MQTT topic prefix.'"`
+	MQTTEnabled     bool   `toml:"enabled"                form:"mqtt.mqtt_enabled"      validate:"boolean"                                    kong:"negatable,help='Enable MQTT features.'"`
 }
 
 func (c *Config) Server() string {
@@ -57,7 +59,20 @@ func (c *Config) Valid() (bool, error) {
 // Sanitise will sanitise the values of the MQTT preferences.
 func (c *Config) Sanitise() error {
 	if c == nil {
-		c = &Config{}
+		newCfg := &Config{
+			MQTTServer:      defaultMQTTServer,
+			MQTTTopicPrefix: DefaultTopicPrefix,
+		}
+		c = newCfg
+	} else {
+		server, err := url.Parse(c.MQTTServer)
+		if err != nil {
+			return fmt.Errorf("could not sanitise server value: %w", err)
+		}
+		// Set scheme to tcp, a common error is to use http or https.
+		if server.Scheme != "tcp" {
+			server.Scheme = "tcp"
+		}
 	}
 	return nil
 }
