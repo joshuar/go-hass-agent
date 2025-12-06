@@ -1,7 +1,10 @@
 # Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
 # SPDX-License-Identifier: MIT
 
-FROM --platform=$BUILDPLATFORM docker.io/alpine:3.22.2@sha256:4b7ce07002c69e8f3d704a9c5d6fd3053be500b7f1c69fc0d80990c2ad8dd412 AS builder
+# Alpine base.
+#
+# https://hub.docker.com/_/alpine
+FROM --platform=$BUILDPLATFORM docker.io/alpine:3.23.0@sha256:51183f2cfa6320055da30872f211093f9ff1d3cf06f39a0bdb212314c5dc7375 AS builder
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -10,7 +13,9 @@ ARG APPVERSION
 WORKDIR /usr/src/app
 
 # Copy go from official image.
-COPY --from=docker.io/golang:1.25.1-alpine@sha256:b6ed3fd0452c0e9bcdef5597f29cc1418f61672e9d3a2f55bf02e7222c014abd /usr/local/go/ /usr/local/go/
+#
+# https://hub.docker.com/_/golang
+COPY --from=docker.io/golang:1.25.5-alpine@sha256:26111811bc967321e7b6f852e914d14bede324cd1accb7f81811929a6a57fea9 /usr/local/go/ /usr/local/go/
 ENV PATH="/root/go/bin:/usr/local/go/bin:/usr/local/bin:${PATH}"
 
 # install build deps
@@ -39,7 +44,7 @@ RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -ldflags="-s -w -X github.com
 # compress binary with upx
 RUN upx --best --lzma dist/go-hass-agent
 
-FROM docker.io/alpine:3.22.2@sha256:4b7ce07002c69e8f3d704a9c5d6fd3053be500b7f1c69fc0d80990c2ad8dd412
+FROM docker.io/alpine:3.23.0@sha256:51183f2cfa6320055da30872f211093f9ff1d3cf06f39a0bdb212314c5dc7375
 
 # Don't log to a file when running in a container
 ENV GOHASSAGENT_NOLOGFILE=1
