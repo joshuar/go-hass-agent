@@ -5,7 +5,6 @@ package power
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -19,15 +18,11 @@ import (
 	"github.com/joshuar/go-hass-agent/config"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 	"github.com/joshuar/go-hass-agent/platform/linux"
+	"github.com/joshuar/go-hass-agent/validation"
 )
 
 const (
 	screenLockControlsWorkerPrefID = controlsPrefPrefix + "screen_lock_controls"
-)
-
-var (
-	ErrInitScreenLockControls = errors.New("could not init screen lock controls worker")
-	ErrUnsupportedDesktop     = errors.New("unsupported desktop environment")
 )
 
 type screenLockControlsWorker struct {
@@ -38,19 +33,24 @@ type screenLockControlsWorker struct {
 // for a screen lock control. This information is used to derive the appropriate
 // D-Bus call and MQTT button entity config.
 type screenControlCommand struct {
-	bus    *dbusx.Bus
-	name   string
-	id     string
-	icon   string
-	intr   string
-	path   string
-	method string
+	bus    *dbusx.Bus `validate:"required"`
+	name   string     `validate:"required"`
+	id     string     `validate:"required"`
+	icon   string     `validate:"required"`
+	intr   string     `validate:"required"`
+	path   string     `validate:"required"`
+	method string     `validate:"required"`
 	args   string
 }
 
 // execute represents the D-Bus method call to execute the screen control.
 func (c *screenControlCommand) execute(ctx context.Context) error {
-	err := dbusx.NewMethod(c.bus, c.intr, c.path, c.method).Call(ctx, c.args)
+	var err error
+	if c.args != "" {
+		err = dbusx.NewMethod(c.bus, c.intr, c.path, c.method).Call(ctx, c.args)
+	} else {
+		err = dbusx.NewMethod(c.bus, c.intr, c.path, c.method).Call(ctx)
+	}
 	if err != nil {
 		return fmt.Errorf("failed to issuse screen control commands %s: %w", c.name, err)
 	}
@@ -62,9 +62,12 @@ func (c *screenControlCommand) execute(ctx context.Context) error {
 // the desktop environment. Some environments can use systemd-logind which
 // provides lock and unlock methods while others implement the older
 // xscreensaver lock method.
-//
-//nolint:lll
-func setupCommands(_ context.Context, sessionBus *dbusx.Bus, systemBus *dbusx.Bus, device *mqtthass.Device) ([]*screenControlCommand, error) {
+func setupCommands(
+	_ context.Context,
+	sessionBus *dbusx.Bus,
+	systemBus *dbusx.Bus,
+	device *mqtthass.Device,
+) ([]*screenControlCommand, error) {
 	var commands []*screenControlCommand
 
 	desktop := os.Getenv("XDG_CURRENT_DESKTOP")
@@ -73,7 +76,7 @@ func setupCommands(_ context.Context, sessionBus *dbusx.Bus, systemBus *dbusx.Bu
 	case strings.Contains(desktop, "KDE"), strings.Contains(desktop, "GNOME"):
 		sessionPath, err := systemBus.GetSessionPath()
 		if err != nil {
-			return nil, fmt.Errorf("unable to set up screen control commands: %w", err)
+			return nil, fmt.Errorf("get session path: %w", err)
 		}
 
 		// KDE and Gnome can use systemd-logind session lock/unlock on the
@@ -124,7 +127,7 @@ func setupCommands(_ context.Context, sessionBus *dbusx.Bus, systemBus *dbusx.Bu
 				args:   "Locked by " + config.AppName,
 			})
 	default:
-		return nil, ErrUnsupportedDesktop
+		return nil, linux.ErrUnsupportedDesktop
 	}
 
 	return commands, nil
@@ -140,7 +143,7 @@ func NewScreenLockControl(ctx context.Context, device *mqtthass.Device) ([]*mqtt
 	defaultPrefs := &workers.CommonWorkerPrefs{}
 	worker.prefs, err = workers.LoadWorkerPreferences(screenLockControlsWorkerPrefID, defaultPrefs)
 	if err != nil {
-		return nil, errors.Join(ErrInitScreenLockControls, err)
+		return nil, fmt.Errorf("load screen lock control preferences: %w", err)
 	}
 
 	if worker.prefs.IsDisabled() {
@@ -150,13 +153,13 @@ func NewScreenLockControl(ctx context.Context, device *mqtthass.Device) ([]*mqtt
 	// Retrieve the D-Bus session bus. Needed by some controls.
 	sessionBus, ok := linux.CtxGetSessionBus(ctx)
 	if !ok {
-		return nil, errors.Join(ErrInitScreenLockControls, linux.ErrNoSessionBus)
+		return nil, fmt.Errorf("get session bus: %w", linux.ErrNoSessionBus)
 	}
 
 	// Retrieve the D-Bus system bus. Needed by some controls.
 	systemBus, ok := linux.CtxGetSystemBus(ctx)
 	if !ok {
-		return nil, errors.Join(ErrInitScreenLockControls, linux.ErrNoSystemBus)
+		return nil, fmt.Errorf("get system bus: %w", linux.ErrNoSystemBus)
 	}
 
 	// Decorate a logger for this controller.
@@ -164,7 +167,7 @@ func NewScreenLockControl(ctx context.Context, device *mqtthass.Device) ([]*mqtt
 
 	commands, err := setupCommands(ctx, sessionBus, systemBus, device)
 	if err != nil {
-		return nil, errors.Join(ErrInitScreenLockControls, err)
+		return nil, fmt.Errorf("set up screen control commands: %w", err)
 	}
 
 	buttons := make([]*mqtthass.ButtonEntity, 0, len(commands))
@@ -181,13 +184,19 @@ func NewScreenLockControl(ctx context.Context, device *mqtthass.Device) ([]*mqtt
 				).
 				WithCommand(
 					mqtthass.CommandCallback(func(_ *paho.Publish) {
-						if err := command.execute(ctx); err != nil {
-							logger.Error("Could not execute screen control command.",
-								slog.String("name", command.name),
-								slog.String("path", command.path),
-								slog.String("interface", command.intr),
-								slog.String("method", command.method),
-								slog.Any("error", err))
+						if err := validation.Validate.Struct(command); err != nil {
+							logger.Error("Screen control command is invalid.",
+								slog.Any("error", err),
+							)
+						} else {
+							if err := command.execute(ctx); err != nil {
+								logger.Error("Could not execute screen control command.",
+									slog.String("name", command.name),
+									slog.String("path", command.path),
+									slog.String("interface", command.intr),
+									slog.String("method", command.method),
+									slog.Any("error", err))
+							}
 						}
 					}),
 				),

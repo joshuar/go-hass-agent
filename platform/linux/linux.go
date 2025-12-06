@@ -3,7 +3,10 @@
 
 package linux
 
-import "os"
+import (
+	"errors"
+	"os"
+)
 
 const (
 	// DataSrcDBus indicates that the source of this data is from D-Bus.
@@ -29,6 +32,10 @@ var (
 	DevFSRoot = "/dev"
 	// SysFSRoot is where the agent expects the /sys filesystem to be mounted.
 	SysFSRoot = "/sys"
+)
+
+var (
+	ErrUnsupportedDesktop = errors.New("unsupported desktop environment")
 )
 
 func init() {
