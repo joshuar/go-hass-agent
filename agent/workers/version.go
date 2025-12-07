@@ -22,8 +22,9 @@ var _ EntityWorker = (*Version)(nil)
 var ErrVersion = errors.New("version worker error")
 
 type Version struct {
-	prefs *CommonWorkerPrefs
 	*models.WorkerMetadata
+
+	prefs *CommonWorkerPrefs
 }
 
 func (w *Version) IsDisabled() bool {

@@ -4,7 +4,6 @@
 package agent
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -15,7 +14,7 @@ import (
 )
 
 // CreateDeviceMQTTWorkers sets up the device-specific MQTT workers.
-func CreateDeviceMQTTWorkers(ctx context.Context) ([]workers.MQTTWorker, error) {
+func CreateDeviceMQTTWorkers() ([]workers.MQTTWorker, error) {
 	var mqttWorkers []workers.MQTTWorker
 	// Set up custom MQTT commands worker.
 	device, err := mqtt.Device()

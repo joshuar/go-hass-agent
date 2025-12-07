@@ -117,7 +117,7 @@ func (c *linuxMQTTWorker) Msgs() chan mqttapi.Msg {
 	return c.msgs
 }
 
-func (c *linuxMQTTWorker) Start(ctx context.Context) (*mqtt.WorkerData, error) {
+func (c *linuxMQTTWorker) Start(_ context.Context) (*mqtt.WorkerData, error) {
 	return &mqtt.WorkerData{
 		Configs:       c.Configs(),
 		Subscriptions: c.Subscriptions(),

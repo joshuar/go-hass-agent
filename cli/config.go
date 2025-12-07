@@ -34,7 +34,7 @@ func (c *Config) AfterApply() error {
 }
 
 // Run processes the config command.
-func (c *Config) Run(opts *Opts) error {
+func (c *Config) Run(_ *Opts) error {
 	ctx, cancelFunc := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancelFunc()
 	ctx = slogctx.NewCtx(ctx, slog.Default())

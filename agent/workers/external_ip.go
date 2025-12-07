@@ -143,7 +143,7 @@ func (w *ExternalIP) lookupExternalIPs(ctx context.Context, ver int) (net.IP, er
 	return nil, ErrNoLookupHosts
 }
 
-func NewExternalIPWorker(ctx context.Context) (EntityWorker, error) {
+func NewExternalIPWorker(_ context.Context) (EntityWorker, error) {
 	var err error
 
 	worker := &ExternalIP{

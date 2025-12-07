@@ -58,11 +58,11 @@ func New() (*Agent, error) {
 	if config.Exists("registered") {
 		registered, err := config.Get[bool]("registered")
 		if err != nil {
-			return agent, fmt.Errorf("unable to load agent config: %w", err)
+			return agent, fmt.Errorf("could not get registered status: %w", err)
 		}
 		err = config.Set(map[string]any{"agent.registered": registered})
 		if err != nil {
-			return agent, fmt.Errorf("unable to load agent config: %w", err)
+			return agent, fmt.Errorf("could not set registered status: %w", err)
 		}
 	}
 	// Check for registration and flag as appropriate.
@@ -79,11 +79,11 @@ func (a *Agent) IsRegistered() bool {
 }
 
 // Register will mark the registration status of the agent as registered.
-func (a *Agent) Register() {
+func (a *Agent) Register(ctx context.Context) {
 	a.Config.Registered = true
 	err := config.Save(ConfigPrefix, a.Config)
 	if err != nil {
-		slog.Error("Unable to save registration status to config.",
+		slogctx.FromCtx(ctx).Error("Unable to save registration status to config.",
 			slog.Any("error", err))
 		return
 	}
@@ -91,11 +91,11 @@ func (a *Agent) Register() {
 }
 
 // Reset will undo registration status of the agent.
-func (a *Agent) Reset() {
+func (a *Agent) Reset(ctx context.Context) {
 	a.Config.Registered = false
 	err := config.Save(ConfigPrefix, a.Config)
 	if err != nil {
-		slog.Error("Unable to save registration status to config.",
+		slogctx.FromCtx(ctx).Error("Unable to save registration status to config.",
 			slog.Any("error", err))
 		return
 	}
@@ -109,12 +109,12 @@ func (a *Agent) Run(ctx context.Context) error {
 	for {
 		select {
 		case <-registered:
-			slog.Debug("Agent is registered.")
+			slogctx.FromCtx(ctx).Debug("Agent is registered.")
 			hassClient, err := hass.NewClient(ctx, a)
 			if err != nil {
 				return fmt.Errorf("unable to run agent: %w", err)
 			}
-			manager := workers.NewManager(ctx)
+			manager := workers.NewManager()
 			var wg sync.WaitGroup
 			// Entity/Event workers.
 			wg.Go(func() {
@@ -128,7 +128,7 @@ func (a *Agent) Run(ctx context.Context) error {
 				entityCh := manager.StartEntityWorkers(ctx, entityWorkers...)
 
 				go func() {
-					defer manager.StopAllWorkers(ctx)
+					defer manager.StopAllWorkers()
 					<-ctx.Done()
 				}()
 
@@ -139,7 +139,7 @@ func (a *Agent) Run(ctx context.Context) error {
 			wg.Go(func() {
 				// Don't continue if MQTT isn't configured.
 				if !config.Exists("mqtt") {
-					slog.Debug("Not configuring MQTT functionality, not configured.")
+					slogctx.FromCtx(ctx).Debug("Not configuring MQTT functionality, not configured.")
 					return
 				}
 				// Get MQTT status.
@@ -151,13 +151,13 @@ func (a *Agent) Run(ctx context.Context) error {
 				}
 				// Don't continue if MQTT is explicitly disabled.
 				if !enabled {
-					slog.Debug("Not starting MQTT workers, MQTT functionality explicitly disabled.")
+					slogctx.FromCtx(ctx).Debug("Not starting MQTT workers, MQTT functionality explicitly disabled.")
 					return
 				}
 				// Create MQTT workers.
 				var mqttWorkers []workers.MQTTWorker
 				// Add device-based MQTT workers.
-				deviceMQTTworkers, err := CreateDeviceMQTTWorkers(ctx)
+				deviceMQTTworkers, err := CreateDeviceMQTTWorkers()
 				if err != nil {
 					slogctx.FromCtx(ctx).Warn("Unable to start device MQTT workers.",
 						slog.Any("error", err))
@@ -216,7 +216,7 @@ func (a *Agent) Run(ctx context.Context) error {
 			})
 			wg.Wait()
 		case <-ctx.Done():
-			slog.Debug("Stopping agent.")
+			slogctx.FromCtx(ctx).Debug("Stopping agent.")
 			return nil
 		}
 	}

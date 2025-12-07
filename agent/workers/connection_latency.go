@@ -38,11 +38,12 @@ var (
 var ErrConnLatency = errors.New("connection latency worker error")
 
 type ConnectionLatency struct {
+	*PollingEntityWorkerData
+	*models.WorkerMetadata
+
 	client   *resty.Client
 	endpoint string
 	prefs    *CommonWorkerPrefs
-	*PollingEntityWorkerData
-	*models.WorkerMetadata
 }
 
 func (w *ConnectionLatency) IsDisabled() bool {
