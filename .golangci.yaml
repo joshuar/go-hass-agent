@@ -482,5 +482,5 @@ linters:
           - gosec
           - noctx
           - wrapcheck
-      - text: 'shadow: declaration of "(err|ctx)" shadows declaration at'
+      - text: 'shadow: declaration of "(err|ctx|ok)" shadows declaration at'
         linters: [ govet ]
