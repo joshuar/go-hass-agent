@@ -20,12 +20,10 @@
         "ymotongpoo.licenser",
         "esbenp.prettier-vscode",
         "aaron-bond.better-comments",
-        "github.vscode-github-actions",
         "yzhang.markdown-all-in-one",
         "bierner.markdown-emoji",
         "a-h.templ",
-        "bradlc.vscode-tailwindcss",
-        "elijah-potter.harper"
+        "bradlc.vscode-tailwindcss"
       ]
     }
   },
