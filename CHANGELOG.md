@@ -1,5 +1,12 @@
 # Changelog
 
+## [14.2.1](https://github.com/joshuar/go-hass-agent/compare/v14.2.0...v14.2.1) (2025-12-07)
+
+
+### Bug Fixes
+
+* **linux/power:** don't pass empty args to screen control commands ([ba9a03a](https://github.com/joshuar/go-hass-agent/commit/ba9a03aaa9e55691d07fb4bfdc8aa5f357bc8c7b))
+
 ## [14.2.0](https://github.com/joshuar/go-hass-agent/compare/v14.1.1...v14.2.0) (2025-11-28)
 
 
