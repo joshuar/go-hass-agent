@@ -131,13 +131,13 @@ type MQTTWorker interface {
 
 // Manager tracks running workers.
 type Manager struct {
-	sync.Mutex
+	mu sync.Mutex
 
 	workerCancelFuncs []context.CancelFunc
 }
 
 // NewManager creates a new manager object.
-func NewManager(ctx context.Context) *Manager {
+func NewManager() *Manager {
 	return &Manager{
 		workerCancelFuncs: make([]context.CancelFunc, 0),
 	}
@@ -145,8 +145,8 @@ func NewManager(ctx context.Context) *Manager {
 
 // StartEntityWorkers starts the given EntityWorkers. Any errors will be logged.
 func (m *Manager) StartEntityWorkers(ctx context.Context, workers ...EntityWorker) <-chan models.Entity {
-	m.Lock()
-	defer m.Unlock()
+	m.mu.Lock()
+	defer m.mu.Unlock()
 
 	outCh := make([]<-chan models.Entity, 0, len(workers))
 
@@ -180,8 +180,8 @@ func (m *Manager) StartEntityWorkers(ctx context.Context, workers ...EntityWorke
 
 // StartMQTTWorkers starts the given MQTTWorkers. Any errors will be logged.
 func (m *Manager) StartMQTTWorkers(ctx context.Context, workers ...MQTTWorker) *mqtt.WorkerData {
-	m.Lock()
-	defer m.Unlock()
+	m.mu.Lock()
+	defer m.mu.Unlock()
 
 	data := &mqtt.WorkerData{}
 	msgCh := make([]<-chan models.MQTTMsg, 0, len(workers))
@@ -221,9 +221,9 @@ func (m *Manager) StartMQTTWorkers(ctx context.Context, workers ...MQTTWorker) *
 }
 
 // StopAllWorkers stops all workers.
-func (m *Manager) StopAllWorkers(ctx context.Context) {
-	m.Lock()
-	defer m.Unlock()
+func (m *Manager) StopAllWorkers() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	for workerCancelFunc := range slices.Values(m.workerCancelFuncs) {
 		workerCancelFunc()
 	}
@@ -238,7 +238,7 @@ func MergeCh[T any](ctx context.Context, inCh ...<-chan T) chan T {
 
 	// Start an output goroutine for each input channel in sensorCh.  output
 	// copies values from c to out until c is closed, then calls wg.Done.
-	output := func(ch <-chan T) { //nolint:varnamelen
+	output := func(ch <-chan T) {
 		defer wg.Done()
 
 		if ch == nil {
