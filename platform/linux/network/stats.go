@@ -25,10 +25,10 @@ import (
 	"github.com/joshuar/go-hass-agent/scheduler"
 )
 
-//go:generate go tool stringer -type=netStatsType -output stats_generated.go -linecomment
+//go:generate go tool stringer -type=netStatsType -output stats.gen.go -linecomment
 const (
-	bytesSent     netStatsType = iota // Bytes Sent
-	bytesRecv                         // Bytes Received
+	statBytesSent netStatsType = iota // Bytes Sent
+	statBytesRecv                     // Bytes Received
 	bytesSentRate                     // Bytes Sent Throughput
 	bytesRecvRate                     // Bytes Received Throughput
 
@@ -74,14 +74,47 @@ type netStatsWorker struct {
 	mu           sync.Mutex
 }
 
-//nolint:funlen
+// NewNetStatsWorker sets up a sensor worker that tracks network stats.
+func NewNetStatsWorker(ctx context.Context) (workers.EntityWorker, error) {
+	worker := &netStatsWorker{
+		WorkerMetadata:          models.SetWorkerMetadata(statsWorkerID, statsWorkerDesc),
+		statsSensors:            make(map[string]map[netStatsType]*netRate),
+		PollingEntityWorkerData: &workers.PollingEntityWorkerData{},
+	}
+	worker.statsSensors[totalsName] = newStatsRates()
+
+	defaultPrefs := &StatsWorkerPrefs{
+		UpdateInterval: rateInterval.String(),
+	}
+	defaultPrefs.IgnoredDevices = defaultIgnoredDevices
+	var err error
+	worker.prefs, err = workers.LoadWorkerPreferences(statsWorkerPrefID, defaultPrefs)
+	if err != nil {
+		return nil, fmt.Errorf("unable to load net stats worker preferences: %w", err)
+	}
+
+	pollInterval, err := time.ParseDuration(worker.prefs.UpdateInterval)
+	if err != nil {
+		slogctx.FromCtx(ctx).Warn("Invalid polling interval, using default",
+			slog.String("worker", netRatesWorkerID),
+			slog.String("given_interval", worker.prefs.UpdateInterval),
+			slog.String("default_interval", rateInterval.String()))
+
+		pollInterval = rateInterval
+	}
+	worker.Trigger = scheduler.NewPollTriggerWithJitter(pollInterval, rateJitter)
+
+	return worker, nil
+}
+
+// Execute will gather all link stats and pass them through a channel on which the agent is listening for sensor updates.
 func (w *netStatsWorker) Execute(ctx context.Context) error {
 	delta := w.GetDelta()
 
 	// Get all links.
-	links, err := w.getLinks()
+	links, err := w.nlconn.Link.List()
 	if err != nil {
-		return fmt.Errorf("error accessing netlink: %w", err)
+		return fmt.Errorf("get links from netlink: %w", err)
 	}
 
 	// Get link stats, filtering links as per preferences.
@@ -103,9 +136,9 @@ func (w *netStatsWorker) Execute(ctx context.Context) error {
 		totalBytesTx += stats.TXBytes
 
 		// Generate bytesRecv sensor entity for link.
-		w.OutCh <- newStatsTotalEntity(ctx, name, bytesRecv, link.stats.RXBytes, getRXAttributes(stats))
+		w.OutCh <- newStatsTotalEntity(ctx, name, statBytesRecv, link.stats.RXBytes, getRXAttributes(stats))
 		// Generate bytesSent sensor entity for link.
-		w.OutCh <- newStatsTotalEntity(ctx, name, bytesSent, link.stats.TXBytes, getTXAttributes(stats))
+		w.OutCh <- newStatsTotalEntity(ctx, name, statBytesSent, link.stats.TXBytes, getTXAttributes(stats))
 		// Create new trackers for the link's rates sensor entities if needed.
 		if _, ok := w.statsSensors[name]; !ok {
 			w.statsSensors[name] = newStatsRates()
@@ -129,9 +162,9 @@ func (w *netStatsWorker) Execute(ctx context.Context) error {
 		TXBytes: totalBytesTx,
 	}
 	// Generate total bytesRecv sensor entity.
-	w.OutCh <- newStatsTotalEntity(ctx, totalsName, bytesRecv, totalBytesRx, nil)
+	w.OutCh <- newStatsTotalEntity(ctx, totalsName, statBytesRecv, totalBytesRx, nil)
 	// Generate total bytesSent sensor entity.
-	w.OutCh <- newStatsTotalEntity(ctx, totalsName, bytesSent, totalBytesTx, nil)
+	w.OutCh <- newStatsTotalEntity(ctx, totalsName, statBytesSent, totalBytesTx, nil)
 	// Generate total bytesRecvRate sensor entity.
 	rate = w.statsSensors[totalsName][bytesRecvRate].Calculate(totalStats.RXBytes, delta)
 	w.OutCh <- newStatsRateEntity(ctx, totalsName, bytesRecvRate, rate)
@@ -169,17 +202,6 @@ func (w *netStatsWorker) Start(ctx context.Context) (<-chan models.Entity, error
 		return w.OutCh, fmt.Errorf("could not start disk IO worker: %w", err)
 	}
 	return w.OutCh, nil
-}
-
-// getLinks returns all available links. If a problem occurred, a
-// non-nil error is returned.
-func (w *netStatsWorker) getLinks() ([]rtnetlink.LinkMessage, error) {
-	links, err := w.nlconn.Link.List()
-	if err != nil {
-		return nil, fmt.Errorf("could not retrieve list of devices from netlink: %w", err)
-	}
-
-	return links, nil
 }
 
 // getLinkStats collates the network stats for all links. It filters
@@ -248,39 +270,6 @@ func (w *netStatsWorker) getLinkStats(links []rtnetlink.LinkMessage) []linkStats
 	return allLinkStats
 }
 
-// NewNetStatsWorker sets up a sensor worker that tracks network stats.
-func NewNetStatsWorker(ctx context.Context) (workers.EntityWorker, error) {
-	worker := &netStatsWorker{
-		WorkerMetadata:          models.SetWorkerMetadata(statsWorkerID, statsWorkerDesc),
-		statsSensors:            make(map[string]map[netStatsType]*netRate),
-		PollingEntityWorkerData: &workers.PollingEntityWorkerData{},
-	}
-	worker.statsSensors[totalsName] = newStatsRates()
-
-	defaultPrefs := &StatsWorkerPrefs{
-		UpdateInterval: rateInterval.String(),
-	}
-	defaultPrefs.IgnoredDevices = defaultIgnoredDevices
-	var err error
-	worker.prefs, err = workers.LoadWorkerPreferences(statsWorkerPrefID, defaultPrefs)
-	if err != nil {
-		return nil, fmt.Errorf("unable to load net stats worker preferences: %w", err)
-	}
-
-	pollInterval, err := time.ParseDuration(worker.prefs.UpdateInterval)
-	if err != nil {
-		slogctx.FromCtx(ctx).Warn("Invalid polling interval, using default",
-			slog.String("worker", netRatesWorkerID),
-			slog.String("given_interval", worker.prefs.UpdateInterval),
-			slog.String("default_interval", rateInterval.String()))
-
-		pollInterval = rateInterval
-	}
-	worker.Trigger = scheduler.NewPollTriggerWithJitter(pollInterval, rateJitter)
-
-	return worker, nil
-}
-
 // linkStats represents a link and its stats.
 type linkStats struct {
 	stats *rtnetlink.LinkStats64
@@ -293,9 +282,9 @@ type netStatsType int
 // Icon returns an material design icon representation of the network stat.
 func (t netStatsType) Icon() string {
 	switch t {
-	case bytesSent:
+	case statBytesSent:
 		return "mdi:upload-network"
-	case bytesRecv:
+	case statBytesRecv:
 		return "mdi:download-network"
 	case bytesSentRate:
 		return "mdi:transfer-up"
@@ -310,7 +299,13 @@ func (t netStatsType) Icon() string {
 // device.
 //
 //revive:disable:argument-limit
-func newStatsTotalEntity(ctx context.Context, name string, entityType netStatsType, value uint64, attributes models.Attributes) models.Entity {
+func newStatsTotalEntity(
+	ctx context.Context,
+	name string,
+	entityType netStatsType,
+	value uint64,
+	attributes models.Attributes,
+) models.Entity {
 	return sensor.NewSensor(ctx,
 		sensor.WithName(name+" "+entityType.String()),
 		sensor.WithID(strings.ToLower(name)+"_"+strcase.ToSnake(entityType.String())),
