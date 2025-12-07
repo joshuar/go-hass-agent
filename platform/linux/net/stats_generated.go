@@ -19,8 +19,9 @@ const _netStatsType_name = "Bytes SentBytes ReceivedBytes Sent ThroughputBytes R
 var _netStatsType_index = [...]uint8{0, 10, 24, 45, 70}
 
 func (i netStatsType) String() string {
-	if i < 0 || i >= netStatsType(len(_netStatsType_index)-1) {
+	idx := int(i) - 0
+	if i < 0 || idx >= len(_netStatsType_index)-1 {
 		return "netStatsType(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
-	return _netStatsType_name[_netStatsType_index[i]:_netStatsType_index[i+1]]
+	return _netStatsType_name[_netStatsType_index[idx]:_netStatsType_index[idx+1]]
 }
