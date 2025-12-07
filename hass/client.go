@@ -123,7 +123,7 @@ func (c *Client) UpdateConfig(ctx context.Context) (bool, error) {
 // EntityHandler takes incoming Entity objects via the passed in channel and
 // runs the appropriate handler for the Entity type.
 //
-//nolint:gocognit,gocyclo,funlen
+//nolint:gocognit
 func (c *Client) EntityHandler(ctx context.Context, entityCh <-chan models.Entity) {
 	for entity := range entityCh {
 		if eventData, err := entity.AsEvent(); err == nil && eventData.Valid() {
@@ -320,8 +320,10 @@ func (c *Client) isDisabled(ctx context.Context, details models.Sensor) bool {
 		}
 		return false
 	case !regDisabled && (haConfigErr == nil && haDisabled):
-		c.logger.Debug("Sensor has been disabled in Home Assistant, Disabling in local registry and not sending updates.",
-			details.LogAttributes())
+		c.logger.Debug(
+			"Sensor has been disabled in Home Assistant, Disabling in local registry and not sending updates.",
+			details.LogAttributes(),
+		)
 		if err := c.sensorRegistry.SetDisabled(details.UniqueID, true); err != nil {
 			slogctx.FromCtx(ctx).Warn("Could not update sensor state in registry.",
 				details.LogAttributes())
@@ -359,7 +361,8 @@ func (c *Client) scheduleConfigUpdates() error {
 		return nil
 	}
 	getConfigJob := job.NewFunctionJobWithDesc(c.UpdateConfig, "Fetch Home Assistant Configuration.")
-	err := scheduler.Manager.ScheduleJob(id.HassJob, getConfigJob, quartz.NewSimpleTrigger(30*time.Second))
+	const configCheckTimeout = 30 * time.Second
+	err := scheduler.Manager.ScheduleJob(id.HassJob, getConfigJob, quartz.NewSimpleTrigger(configCheckTimeout))
 	if err != nil {
 		return fmt.Errorf("could not schedule config updates: %w", err)
 	}

@@ -39,7 +39,7 @@ type webSocketRequest struct {
 
 type hassConfig struct {
 	Secret       string `toml:"secret"`
-	WebHookID    string `toml:"webhook_id" validate:"required"`
+	WebHookID    string `toml:"webhook_id"   validate:"required"`
 	WebsocketURL string `toml:"websocketurl" validate:"required"`
 }
 
@@ -124,9 +124,8 @@ func (c *Websocket) OnOpen(socket *gws.Conn) {
 
 func (c *Websocket) OnPing(_ *gws.Conn, _ []byte) {}
 
-//nolint:cyclop
 func (c *Websocket) OnMessage(socket *gws.Conn, message *gws.Message) {
-	defer message.Close() //nolint:errcheck
+	defer message.Close()
 
 	response := &websocketResponse{
 		Success: true,
@@ -218,7 +217,7 @@ func (c *Websocket) Connect(ctx context.Context) (chan WebsocketNotification, er
 		if err != nil {
 			return fmt.Errorf("could not establish connection: %w", err)
 		}
-		defer resp.Body.Close() //nolint:errcheck
+		defer resp.Body.Close()
 
 		return nil
 	}

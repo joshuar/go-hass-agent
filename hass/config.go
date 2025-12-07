@@ -20,9 +20,9 @@ const (
 
 type Config struct {
 	mu           sync.Mutex          `toml:"-"`
-	APIURL       string              `toml:"apiurl" validate:"required"`
+	APIURL       string              `toml:"apiurl"       validate:"required"`
 	Secret       string              `toml:"secret"`
-	WebHookID    string              `toml:"webhook_id" validate:"required"`
+	WebHookID    string              `toml:"webhook_id"   validate:"required"`
 	WebsocketURL string              `toml:"websocketurl" validate:"required"`
 	remote       *api.ConfigResponse `toml:"-"`
 }
@@ -67,7 +67,6 @@ func (c *Config) IsEntityDisabled(id string) (bool, error) {
 		if !ok {
 			return false, nil
 		}
-
 		return disabledState, nil
 	}
 

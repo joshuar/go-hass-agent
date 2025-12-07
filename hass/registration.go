@@ -31,7 +31,7 @@ type RegistrationRequest struct {
 	IgnoreHassURLS bool   `toml:"-"      form:"ignore_hass_urls" validate:"omitempty,boolean" help:"Ignore URLs returned by Home Assistant and use provided server for access." json:"-"`
 }
 
-// Validate will check the registration preferences are valid.
+// Valid checks whether the registration request details are valid.
 func (r *RegistrationRequest) Valid() (bool, error) {
 	err := validation.Validate.Struct(r)
 	if err != nil {

@@ -18,7 +18,7 @@ var (
 
 // Tracker holds details about the last state from all known sensor entities.
 type Tracker struct {
-	sync.Mutex
+	mu     sync.Mutex
 	sensor map[models.UniqueID]*models.Sensor
 }
 
@@ -31,8 +31,8 @@ func NewTracker() *Tracker {
 
 // Get fetches a sensors current tracked state.
 func (t *Tracker) Get(id models.UniqueID) (*models.Sensor, error) {
-	t.Lock()
-	defer t.Unlock()
+	t.mu.Lock()
+	defer t.mu.Unlock()
 
 	if t.sensor[id] != nil {
 		return t.sensor[id], nil
@@ -43,8 +43,8 @@ func (t *Tracker) Get(id models.UniqueID) (*models.Sensor, error) {
 
 // SensorList returns a list of entity IDs of all tracked sensor entities.
 func (t *Tracker) SensorList() []models.UniqueID {
-	t.Lock()
-	defer t.Unlock()
+	t.mu.Lock()
+	defer t.mu.Unlock()
 
 	if t.sensor == nil {
 		return nil
@@ -63,8 +63,8 @@ func (t *Tracker) SensorList() []models.UniqueID {
 
 // Add creates a new sensor in the tracker based on a received state update.
 func (t *Tracker) Add(details *models.Sensor) error {
-	t.Lock()
-	defer t.Unlock()
+	t.mu.Lock()
+	defer t.mu.Unlock()
 
 	if t.sensor == nil {
 		return ErrTrackerNotReady
