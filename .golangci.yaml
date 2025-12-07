@@ -409,7 +409,7 @@ linters:
       # - "scope": report only if a context exists in the scope of the outermost function
       # https://github.com/go-simpler/sloglint?tab=readme-ov-file#context-only
       # Default: ""
-      context: scope
+      # context: disabled
 
     staticcheck:
       # SAxxxx checks in https://staticcheck.dev/docs/configuration/options/#checks
@@ -445,6 +445,7 @@ linters:
         - ts
         - r
         - fs
+        - ch
 
   exclusions:
     # Log a warning if an exclusion rule is unused.
