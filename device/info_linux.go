@@ -75,8 +75,6 @@ func GetOSDetails() (string, string, error) {
 }
 
 // GetKernelVersion will retrieve the kernel version.
-//
-//nolint:prealloc
 func GetKernelVersion() (string, error) {
 	var utsname syscall.Utsname
 

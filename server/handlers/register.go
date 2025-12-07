@@ -30,7 +30,10 @@ func GetRegistration(agent *agent.Agent) http.HandlerFunc {
 		routeLogger,
 	).ThenFunc(func(res http.ResponseWriter, req *http.Request) {
 		if agent.IsRegistered() {
-			renderPage(templates.RegistrationResponse(models.NewInfoMessage("Already registered", "")), "Register - Go Hass Agent").ServeHTTP(res, req)
+			renderPage(
+				templates.RegistrationResponse(models.NewInfoMessage("Already registered", "")),
+				"Register - Go Hass Agent",
+			).ServeHTTP(res, req)
 		} else {
 			renderPage(templates.RegistrationForm(&hass.RegistrationRequest{}), "Register - Go Hass Agent").ServeHTTP(res, req)
 		}
@@ -113,13 +116,20 @@ func ProcessRegistration(agent *agent.Agent) http.HandlerFunc {
 		if err != nil {
 			template := templ.Join(
 				templates.RegistrationForm(request),
-				templates.Notification(models.NewErrorMessage("There was a problem trying to register this device:", err.Error())))
+				templates.Notification(
+					models.NewErrorMessage("There was a problem trying to register this device:", err.Error()),
+				),
+			)
 			renderPartial(template).ServeHTTP(res, req)
 			return
 		}
 
-		agent.Register()
+		agent.Register(req.Context())
 
-		renderPartial(templates.RegistrationResponse(models.NewSuccessMessage("Agent registered!", "You can close this browser window."))).ServeHTTP(res, req)
+		renderPartial(
+			templates.RegistrationResponse(
+				models.NewSuccessMessage("Agent registered!", "You can close this browser window."),
+			),
+		).ServeHTTP(res, req)
 	}).ServeHTTP
 }

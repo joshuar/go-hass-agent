@@ -24,8 +24,8 @@ import (
 type Run struct {
 	ServerHTTPSCert string `help:"Path to cert file for using https for web server component."`
 	ServerHTTPSKey  string `help:"Path to key file for using https for web server component."`
-	ServerHostname  string `help:"Hostname that web server component will listen on." default:"localhost"`
-	ServerPort      string `help:"Port that web server component will listen on." default:"8223"`
+	ServerHostname  string `help:"Hostname that web server component will listen on."          default:"localhost"`
+	ServerPort      string `help:"Port that web server component will listen on."              default:"8223"`
 }
 
 // Help shows a help message about the run command.

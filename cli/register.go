@@ -26,7 +26,7 @@ type Register struct {
 }
 
 // Run processes the register command.
-func (r *Register) Run(opts *Opts) error {
+func (r *Register) Run(_ *Opts) error {
 	ctx, cancelFunc := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancelFunc()
 	ctx = slogctx.NewCtx(ctx, slog.Default())
@@ -68,11 +68,11 @@ func (r *Register) Run(opts *Opts) error {
 			slogctx.FromCtx(ctx).Warn("Could not reset registry state.",
 				slog.Any("error", err))
 		}
-		agent.Reset()
+		agent.Reset(ctx)
 	}
 
 	// Register the agent.
-	agent.Register()
+	agent.Register(ctx)
 
 	slogctx.FromCtx(ctx).Info("Agent registered!")
 

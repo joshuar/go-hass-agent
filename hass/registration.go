@@ -26,9 +26,9 @@ const (
 // RegistrationRequest are the preferences that defines how Go Hass Agent registers
 // with Home Assistant.
 type RegistrationRequest struct {
-	Server         string `toml:"server" form:"server" validate:"required,http_url" help:"URL of the Home Assistant server."`
-	Token          string `toml:"token" form:"token" validate:"required" help:"Personal Access Token obtained from Home Assistant."`
-	IgnoreHassURLS bool   `toml:"-" json:"-" form:"ignore_hass_urls" validate:"omitempty,boolean" help:"Ignore URLs returned by Home Assistant and use provided server for access."`
+	Server         string `toml:"server" form:"server"           validate:"required,http_url" help:"URL of the Home Assistant server."`
+	Token          string `toml:"token"  form:"token"            validate:"required"          help:"Personal Access Token obtained from Home Assistant."`
+	IgnoreHassURLS bool   `toml:"-"      form:"ignore_hass_urls" validate:"omitempty,boolean" help:"Ignore URLs returned by Home Assistant and use provided server for access." json:"-"`
 }
 
 // Validate will check the registration preferences are valid.
