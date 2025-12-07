@@ -30,6 +30,10 @@ import (
 	"github.com/joshuar/go-hass-agent/scheduler"
 )
 
+const (
+	defaultCommandTimeout = 30 * time.Second
+)
+
 var (
 	// ErrExecuteScript represents an error that occurred when running a script.
 	ErrExecuteScript = errors.New("could not execute script")
@@ -47,15 +51,15 @@ type Script struct {
 	outCh    chan models.Entity
 }
 
-// NewScript returns a new script object that can scheduled with the job
+// newScript returns a new script object that can scheduled with the job
 // scheduler by the agent.
-func NewScript(path string) (*Script, error) {
+func newScript(ctx context.Context, path string) (*Script, error) {
 	script := &Script{
 		path:     path,
 		schedule: "",
 	}
 
-	scriptOutput, err := script.parse()
+	scriptOutput, err := script.parse(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("cannot add script %s: %w", path, err)
 	}
@@ -95,7 +99,7 @@ func (s *Script) Schedule() string {
 // script's output channel. If there was an error running the script, a non-nil
 // error is returned.
 func (s *Script) Execute(ctx context.Context) error {
-	output, err := s.parse()
+	output, err := s.parse(ctx)
 	if err != nil {
 		return errors.Join(ErrExecuteScript, err)
 	}
@@ -110,7 +114,7 @@ func (s *Script) Execute(ctx context.Context) error {
 // Run will run the script and return a slice of sensor entities. If there was
 // an error running the script, a non-nil error is returned.
 func (s *Script) Run(ctx context.Context) ([]models.Entity, error) {
-	output, err := s.parse()
+	output, err := s.parse(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error running script: %w", err)
 	}
@@ -131,14 +135,17 @@ func (s *Script) Description() string {
 
 // parse extracts the script schedule and sensor output from the script output.
 // It will return a non-nil error if there was a problem parsing the script output.
-func (s *Script) parse() (*scriptOutput, error) {
+func (s *Script) parse(ctx context.Context) (*scriptOutput, error) {
 	cmdElems := strings.Split(s.path, " ")
 
 	if len(cmdElems) == 0 {
 		return nil, ErrParseCmd
 	}
 
-	out, err := exec.Command(cmdElems[0], cmdElems[1:]...).Output() // #nosec: G204
+	cmdCtx, cancelFunc := context.WithTimeout(ctx, defaultCommandTimeout)
+	defer cancelFunc()
+
+	out, err := exec.CommandContext(cmdCtx, cmdElems[0], cmdElems[1:]...).Output() // #nosec: G204
 	if err != nil {
 		return nil, fmt.Errorf("could not execute script: %w", err)
 	}
@@ -157,7 +164,7 @@ func (s *Script) parse() (*scriptOutput, error) {
 // sensor in Home Assistant.
 type scriptOutput struct {
 	Schedule string         `json:"schedule" yaml:"schedule"`
-	Sensors  []ScriptSensor `json:"sensors" yaml:"sensors"`
+	Sensors  []ScriptSensor `json:"sensors"  yaml:"sensors"`
 }
 
 // Unmarshal will attempt to take the raw output from a script execution and
@@ -194,14 +201,14 @@ var ErrNewSensor = errors.New("could not create sensor entity")
 
 // ScriptSensor represents a sensor generated from script output.
 type ScriptSensor struct {
-	SensorState       any            `json:"sensor_state" yaml:"sensor_state" toml:"sensor_state"`
-	SensorAttributes  map[string]any `json:"sensor_attributes,omitempty" yaml:"sensor_attributes,omitempty" toml:"sensor_attributes,omitempty"`
-	SensorName        string         `json:"sensor_name" yaml:"sensor_name" toml:"sensor_name"`
-	SensorIcon        string         `json:"sensor_icon,omitempty" yaml:"sensor_icon,omitempty" toml:"sensor_icon,omitempty"`
+	SensorState       any            `json:"sensor_state"                  yaml:"sensor_state"                  toml:"sensor_state"`
+	SensorAttributes  map[string]any `json:"sensor_attributes,omitempty"   yaml:"sensor_attributes,omitempty"   toml:"sensor_attributes,omitempty"`
+	SensorName        string         `json:"sensor_name"                   yaml:"sensor_name"                   toml:"sensor_name"`
+	SensorIcon        string         `json:"sensor_icon,omitempty"         yaml:"sensor_icon,omitempty"         toml:"sensor_icon,omitempty"`
 	SensorDeviceClass string         `json:"sensor_device_class,omitempty" yaml:"sensor_device_class,omitempty" toml:"sensor_device_class,omitempty"`
-	SensorStateClass  string         `json:"sensor_state_class,omitempty" yaml:"sensor_state_class,omitempty" toml:"sensor_state_class,omitempty"`
-	SensorStateType   string         `json:"sensor_type,omitempty" yaml:"sensor_type,omitempty" toml:"sensor_type,omitempty"`
-	SensorUnits       string         `json:"sensor_units,omitempty" yaml:"sensor_units,omitempty" toml:"sensor_units,omitempty"`
+	SensorStateClass  string         `json:"sensor_state_class,omitempty"  yaml:"sensor_state_class,omitempty"  toml:"sensor_state_class,omitempty"`
+	SensorStateType   string         `json:"sensor_type,omitempty"         yaml:"sensor_type,omitempty"         toml:"sensor_type,omitempty"`
+	SensorUnits       string         `json:"sensor_units,omitempty"        yaml:"sensor_units,omitempty"        toml:"sensor_units,omitempty"`
 }
 
 func scriptToEntity(ctx context.Context, script ScriptSensor) models.Entity {
@@ -393,7 +400,7 @@ func (c *ScriptWorker) findScripts(ctx context.Context, path string) ([]*Script,
 
 	for _, scriptFile := range files {
 		if isExecutable(scriptFile) {
-			script, err := NewScript(scriptFile)
+			script, err := newScript(ctx, scriptFile)
 			if err != nil {
 				slogctx.FromCtx(ctx).Warn("Script error.",
 					slog.Any("error", err),
@@ -428,7 +435,7 @@ func mergeCh[T any](ctx context.Context, inCh ...<-chan T) chan T {
 
 	// Start an output goroutine for each input channel in sensorCh.  output
 	// copies values from c to out until c is closed, then calls wg.Done.
-	output := func(ch <-chan T) { //nolint:varnamelen
+	output := func(ch <-chan T) {
 		defer wg.Done()
 
 		if ch == nil {
