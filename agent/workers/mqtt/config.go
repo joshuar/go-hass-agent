@@ -93,12 +93,12 @@ func Device() (*mqtthass.Device, error) {
 
 	id, err := config.Get[string]("device.id")
 	if err != nil {
-		return nil, fmt.Errorf("unable to load device config: %w", err)
+		return nil, fmt.Errorf("unable to get a device id: %w", err)
 	}
 
 	name, err := config.Get[string]("device.name")
 	if err != nil {
-		return nil, fmt.Errorf("unable to load device config: %w", err)
+		return nil, fmt.Errorf("unable to get a device name: %w", err)
 	}
 
 	return &mqtthass.Device{

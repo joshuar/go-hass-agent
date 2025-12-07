@@ -39,8 +39,6 @@ const (
 )
 
 var (
-	// ErrNoCommands indicates that no custom commands are configured.
-	ErrNoCommands = errors.New("no commands")
 	// ErrCmdFailed indicates that processing the command has failed.
 	ErrCmdFailed = errors.New("could not execute command for control")
 	// ErrUnknownSwitchState indicates the state of the switch could not be determined.
@@ -88,12 +86,13 @@ type CommandList struct {
 // definitions, which can be passed to Home Assistant to add appropriate
 // entities to control the buttons/switches over MQTT.
 type Worker struct {
+	*models.WorkerMetadata
+
 	device       *mqtthass.Device
 	buttons      []*mqtthass.ButtonEntity
 	switches     []*mqtthass.SwitchEntity
 	intNumbers   []*mqtthass.NumberEntity[int64]
 	floatNumbers []*mqtthass.NumberEntity[float64]
-	*models.WorkerMetadata
 }
 
 // entity is a convienience interface to avoid duplicating a lot of loops when
@@ -282,7 +281,7 @@ func (d *Worker) generateSwitches(switchCmds []Command) {
 // generateNumbers will create MQTT entities for numbers (both ints and floats) defined by the
 // controller.
 //
-//nolint:cyclop,funlen
+//nolint:gocognit,funlen
 func (d *Worker) generateNumbers(numberCommands []Command) {
 	var (
 		id, icon, name string
@@ -439,21 +438,21 @@ func (d *Worker) IsDisabled() bool {
 // NewCommandsWorker is used by the agent to initialize the commands
 // controller, which holds the MQTT configuration for the commands defined by
 // the user.
-func NewCommandsWorker(ctx context.Context, device *mqtthass.Device) (*Worker, error) {
+func NewCommandsWorker(device *mqtthass.Device) (*Worker, error) {
 	commandsFile := filepath.Join(config.GetPath(), commandsFile)
-	if _, err := os.Stat(commandsFile); errors.Is(err, os.ErrNotExist) {
-		return nil, ErrNoCommands
-	}
+	// if _, err := os.Stat(commandsFile); err != nil {
+	// 	return nil, fmt.Errorf("stat commands file: %w", err)
+	// }
 
 	data, err := os.ReadFile(commandsFile) // #nosec: G304
 	if err != nil {
-		return nil, fmt.Errorf("could not read commands file: %w", err)
+		return nil, fmt.Errorf("read commands file: %w", err)
 	}
 
 	cmds := &CommandList{}
 
 	if err := toml.Unmarshal(data, &cmds); err != nil {
-		return nil, fmt.Errorf("could not parse commands file: %w", err)
+		return nil, fmt.Errorf("parse commands file: %w", err)
 	}
 
 	controller := &Worker{

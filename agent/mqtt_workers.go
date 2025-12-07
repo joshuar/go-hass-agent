@@ -7,9 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
-
-	slogctx "github.com/veqryn/slog-context"
+	"os"
 
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/agent/workers/mqtt"
@@ -22,13 +20,12 @@ func CreateDeviceMQTTWorkers(ctx context.Context) ([]workers.MQTTWorker, error) 
 	// Set up custom MQTT commands worker.
 	device, err := mqtt.Device()
 	if err != nil {
-		return nil, fmt.Errorf("unable to create device MQTT workers: %w", err)
+		return nil, fmt.Errorf("create mqtt device: %w", err)
 	}
-	customCommandsWorker, err := commands.NewCommandsWorker(ctx, device)
+	customCommandsWorker, err := commands.NewCommandsWorker(device)
 	if err != nil {
-		if !errors.Is(err, commands.ErrNoCommands) {
-			slogctx.FromCtx(ctx).Warn("Could not setup custom MQTT commands.",
-				slog.Any("error", err))
+		if !errors.Is(err, os.ErrNotExist) {
+			return nil, fmt.Errorf("create mqtt custom commands worker: %w", err)
 		}
 	} else {
 		mqttWorkers = append(mqttWorkers, customCommandsWorker)
