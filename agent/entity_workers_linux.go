@@ -19,7 +19,7 @@ import (
 	"github.com/joshuar/go-hass-agent/platform/linux/location"
 	"github.com/joshuar/go-hass-agent/platform/linux/media"
 	"github.com/joshuar/go-hass-agent/platform/linux/mem"
-	"github.com/joshuar/go-hass-agent/platform/linux/net"
+	"github.com/joshuar/go-hass-agent/platform/linux/network"
 	"github.com/joshuar/go-hass-agent/platform/linux/power"
 	"github.com/joshuar/go-hass-agent/platform/linux/system"
 )
@@ -38,9 +38,9 @@ var linuxWorkers = []func(ctx context.Context) (workers.EntityWorker, error){
 	media.NewWebcamUsageWorker,
 	mem.NewUsageWorker,
 	mem.NewOOMEventsWorker,
-	net.NewNMConnectionWorker,
-	net.NewNetlinkWorker,
-	net.NewNetStatsWorker,
+	network.NewNMConnectionWorker,
+	network.NewNetlinkWorker,
+	network.NewNetStatsWorker,
 	power.NewProfileWorker,
 	power.NewStateWorker,
 	power.NewScreenLockWorker,
