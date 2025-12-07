@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 //revive:disable:unused-receiver
-package net
+package network
 
 import (
 	"context"

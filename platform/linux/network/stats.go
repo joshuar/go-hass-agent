@@ -1,7 +1,7 @@
 // Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
 // SPDX-License-Identifier: MIT
 
-package net
+package network
 
 import (
 	"context"
@@ -27,10 +27,10 @@ import (
 
 //go:generate go tool stringer -type=netStatsType -output stats.gen.go -linecomment
 const (
-	statBytesSent netStatsType = iota // Bytes Sent
-	statBytesRecv                     // Bytes Received
-	bytesSentRate                     // Bytes Sent Throughput
-	bytesRecvRate                     // Bytes Received Throughput
+	statBytesTx netStatsType = iota // Bytes Sent
+	statBytesRx                     // Bytes Received
+	statBytesTxRate                     // Bytes Sent Throughput
+	statBytesRxRate                     // Bytes Received Throughput
 
 )
 
@@ -130,25 +130,25 @@ func (w *netStatsWorker) Execute(ctx context.Context) error {
 	for link := range slices.Values(stats) {
 		var rate uint64
 
-		name := link.name
-		stats := link.stats
-		totalBytesRx += stats.RXBytes
-		totalBytesTx += stats.TXBytes
+		linkName := link.name
+		linkStats := link.stats
+		totalBytesRx += linkStats.RXBytes
+		totalBytesTx += linkStats.TXBytes
 
-		// Generate bytesRecv sensor entity for link.
-		w.OutCh <- newStatsTotalEntity(ctx, name, statBytesRecv, link.stats.RXBytes, getRXAttributes(stats))
-		// Generate bytesSent sensor entity for link.
-		w.OutCh <- newStatsTotalEntity(ctx, name, statBytesSent, link.stats.TXBytes, getTXAttributes(stats))
+		// Generate bytesRx sensor entity for link.
+		w.OutCh <- newStatsTotalEntity(ctx, linkName, statBytesRx, link.stats.RXBytes, getRXAttributes(linkStats))
+		// Generate bytesTx sensor entity for link.
+		w.OutCh <- newStatsTotalEntity(ctx, linkName, statBytesTx, link.stats.TXBytes, getTXAttributes(linkStats))
 		// Create new trackers for the link's rates sensor entities if needed.
-		if _, ok := w.statsSensors[name]; !ok {
-			w.statsSensors[name] = newStatsRates()
+		if _, ok := w.statsSensors[linkName]; !ok {
+			w.statsSensors[linkName] = newStatsRates()
 		}
-		// Generate bytesRecvRate sensor entity for link.
-		rate = w.statsSensors[name][bytesRecvRate].Calculate(stats.RXBytes, delta)
-		w.OutCh <- newStatsRateEntity(ctx, name, bytesRecvRate, rate)
-		// Generate bytesSentRate sensor entity for link.
-		rate = w.statsSensors[name][bytesSentRate].Calculate(stats.TXBytes, delta)
-		w.OutCh <- newStatsRateEntity(ctx, name, bytesSentRate, rate)
+		// Generate bytesRxRate sensor entity for link.
+		rate = w.statsSensors[linkName][statBytesRxRate].Calculate(linkStats.RXBytes, delta)
+		w.OutCh <- newStatsRateEntity(ctx, linkName, statBytesRxRate, rate)
+		// Generate bytesTxRate sensor entity for link.
+		rate = w.statsSensors[linkName][statBytesTxRate].Calculate(linkStats.TXBytes, delta)
+		w.OutCh <- newStatsRateEntity(ctx, linkName, statBytesTxRate, rate)
 	}
 
 	if len(stats) == 0 {
@@ -161,16 +161,16 @@ func (w *netStatsWorker) Execute(ctx context.Context) error {
 		RXBytes: totalBytesRx,
 		TXBytes: totalBytesTx,
 	}
-	// Generate total bytesRecv sensor entity.
-	w.OutCh <- newStatsTotalEntity(ctx, totalsName, statBytesRecv, totalBytesRx, nil)
-	// Generate total bytesSent sensor entity.
-	w.OutCh <- newStatsTotalEntity(ctx, totalsName, statBytesSent, totalBytesTx, nil)
-	// Generate total bytesRecvRate sensor entity.
-	rate = w.statsSensors[totalsName][bytesRecvRate].Calculate(totalStats.RXBytes, delta)
-	w.OutCh <- newStatsRateEntity(ctx, totalsName, bytesRecvRate, rate)
-	// Generate total bytesSentRate sensor entity.
-	rate = w.statsSensors[totalsName][bytesSentRate].Calculate(totalStats.TXBytes, delta)
-	w.OutCh <- newStatsRateEntity(ctx, totalsName, bytesSentRate, rate)
+	// Generate total bytesRx sensor entity.
+	w.OutCh <- newStatsTotalEntity(ctx, totalsName, statBytesRx, totalBytesRx, nil)
+	// Generate total bytesTx sensor entity.
+	w.OutCh <- newStatsTotalEntity(ctx, totalsName, statBytesTx, totalBytesTx, nil)
+	// Generate total bytesRxRate sensor entity.
+	rate = w.statsSensors[totalsName][statBytesRxRate].Calculate(totalStats.RXBytes, delta)
+	w.OutCh <- newStatsRateEntity(ctx, totalsName, statBytesRxRate, rate)
+	// Generate total bytesTxRate sensor entity.
+	rate = w.statsSensors[totalsName][statBytesTxRate].Calculate(totalStats.TXBytes, delta)
+	w.OutCh <- newStatsRateEntity(ctx, totalsName, statBytesTxRate, rate)
 
 	return nil
 }
@@ -182,7 +182,7 @@ func (w *netStatsWorker) IsDisabled() bool {
 func (w *netStatsWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
 	conn, err := rtnetlink.Dial(nil)
 	if err != nil {
-		return nil, fmt.Errorf("unable to start net stats worker: %w", err)
+		return nil, fmt.Errorf("connect to netlink: %w", err)
 	}
 
 	w.nlconn = conn
@@ -199,7 +199,7 @@ func (w *netStatsWorker) Start(ctx context.Context) (<-chan models.Entity, error
 	w.OutCh = make(chan models.Entity)
 	if err := workers.SchedulePollingWorker(ctx, w, w.OutCh); err != nil {
 		close(w.OutCh)
-		return w.OutCh, fmt.Errorf("could not start disk IO worker: %w", err)
+		return w.OutCh, fmt.Errorf("schedule net stats worker: %w", err)
 	}
 	return w.OutCh, nil
 }
@@ -282,13 +282,13 @@ type netStatsType int
 // Icon returns an material design icon representation of the network stat.
 func (t netStatsType) Icon() string {
 	switch t {
-	case statBytesSent:
+	case statBytesTx:
 		return "mdi:upload-network"
-	case statBytesRecv:
+	case statBytesRx:
 		return "mdi:download-network"
-	case bytesSentRate:
+	case statBytesTxRate:
 		return "mdi:transfer-up"
-	case bytesRecvRate:
+	case statBytesRxRate:
 		return "mdi:transfer-down"
 	}
 
@@ -297,8 +297,6 @@ func (t netStatsType) Icon() string {
 
 // newStatsTotalEntity creates an entity for tracking total stats for a network
 // device.
-//
-//revive:disable:argument-limit
 func newStatsTotalEntity(
 	ctx context.Context,
 	name string,
@@ -343,8 +341,8 @@ type netRate struct {
 
 func newStatsRates() map[netStatsType]*netRate {
 	return map[netStatsType]*netRate{
-		bytesRecvRate: {rateType: bytesRecvRate},
-		bytesSentRate: {rateType: bytesSentRate},
+		statBytesRxRate: {rateType: statBytesRxRate},
+		statBytesTxRate: {rateType: statBytesTxRate},
 	}
 }
 

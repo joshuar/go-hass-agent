@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 //go:generate go tool golang.org/x/tools/cmd/stringer -type=connState,connIcon -output nm_connection.gen.go -linecomment
-package net
+package network
 
 import (
 	"context"
