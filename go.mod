@@ -7,7 +7,6 @@ require (
 	github.com/gen2brain/beeep v0.11.1
 	github.com/go-playground/validator/v10 v10.28.0
 	github.com/godbus/dbus/v5 v5.2.0
-	github.com/goforj/godump v1.7.0
 	github.com/iancoleman/strcase v0.3.0
 	github.com/joshuar/go-hass-anything/v12 v12.1.0
 	github.com/matoous/go-nanoid/v2 v2.1.0
@@ -119,7 +118,6 @@ require (
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56 // indirect
 	golang.org/x/mod v0.29.0 // indirect
 	golang.org/x/sync v0.18.0 // indirect
-	golang.org/x/term v0.37.0 // indirect
 	golang.org/x/tools v0.38.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
