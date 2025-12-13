@@ -1,5 +1,13 @@
 # Changelog
 
+## [14.2.2](https://github.com/joshuar/go-hass-agent/compare/v14.2.1...v14.2.2) (2025-12-13)
+
+
+### Bug Fixes
+
+* **linux/net:** :bug: reworked networkmanager connection sensor ([91ef151](https://github.com/joshuar/go-hass-agent/commit/91ef1511139f5994563acbfadadcf5aabfc06937))
+* **linux/net:** :recycle: rename pkg ([f7ca26f](https://github.com/joshuar/go-hass-agent/commit/f7ca26f975a29f48d3d6abded0ba37e4f76e1518))
+
 ## [14.2.1](https://github.com/joshuar/go-hass-agent/compare/v14.2.0...v14.2.1) (2025-12-07)
 
 
