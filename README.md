@@ -5,7 +5,7 @@
 
 <div align="center">
 
-  <img src="internal/agent/ui/assets/go-hass-agent.png" alt="logo" width="200" height="auto" />
+  <img src="web/content/go-hass-agent.png" alt="logo" width="200" height="auto" />
   <h1>Go Hass Agent</h1>
 
   <p>
