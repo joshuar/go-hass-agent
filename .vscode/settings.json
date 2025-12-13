@@ -88,7 +88,8 @@
     "server/middlewares",
     "server",
     "config",
-    "assets"
+    "assets",
+    "js"
   ],
   "css.lint.idSelector": "warning",
   "editor.formatOnSave": true,

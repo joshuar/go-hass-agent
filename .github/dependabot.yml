@@ -32,7 +32,7 @@ updates:
     schedule:
       interval: "weekly"
     commit-message:
-      prefix: "build(bun): ⬆️"
+      prefix: "build(js): ⬆️"
 
   # Enable version updates for Docker
   - package-ecosystem: "docker"
