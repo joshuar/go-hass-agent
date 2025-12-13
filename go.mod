@@ -5,7 +5,7 @@ go 1.25
 require (
 	github.com/eclipse/paho.golang v0.23.0
 	github.com/gen2brain/beeep v0.11.1
-	github.com/go-playground/validator/v10 v10.28.0
+	github.com/go-playground/validator/v10 v10.29.0
 	github.com/godbus/dbus/v5 v5.2.0
 	github.com/iancoleman/strcase v0.3.0
 	github.com/joshuar/go-hass-anything/v12 v12.1.0
@@ -134,7 +134,7 @@ require (
 	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/fatih/color v1.18.0
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
-	github.com/gabriel-vasile/mimetype v1.4.10 // indirect
+	github.com/gabriel-vasile/mimetype v1.4.11 // indirect
 	github.com/go-chi/chi/v5 v5.2.3
 	github.com/go-playground/form/v4 v4.3.0
 	github.com/go-playground/locales v0.14.1 // indirect
@@ -165,7 +165,7 @@ require (
 	github.com/tklauser/go-sysconf v0.3.16
 	github.com/veqryn/slog-context v0.8.0
 	github.com/veqryn/slog-json v0.5.0
-	golang.org/x/crypto v0.44.0 // indirect
+	golang.org/x/crypto v0.45.0 // indirect
 	golang.org/x/net v0.47.0
 	golang.org/x/sys v0.39.0
 	kernel.org/pub/linux/libs/security/libcap/cap v1.2.77
