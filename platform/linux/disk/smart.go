@@ -5,7 +5,6 @@ package disk
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"maps"
@@ -33,11 +32,9 @@ var (
 	_ workers.PollingEntityWorker = (*smartWorker)(nil)
 )
 
-var ErrSmartWorker = errors.New("smart worker encountered an error")
-
 // ignoredSmartDiskPatterns contains prefix patterns of disk devices that don't support SMART and should not be
 // processed.
-var ignoredSmartDiskPatterns = []string{"sr", "dm", "loop", "zram"}
+var ignoredSmartDiskPatterns = []string{"sr", "dm", "loop", "zram", "ram"}
 
 // smartWorkerRequiredChecks are the groups and capabilities required for monitoring SMART attributes.
 //
@@ -52,23 +49,20 @@ const (
 	smartWorkerUpdateInterval = time.Minute
 	smartWorkerUpdateJitter   = 15 * time.Second
 	smartWorkerID             = "smart_status_sensors"
-	smartWorkerDesc           = "Disk SMART Status"
 )
 
 // smartWorker creates sensors for per disk SMART status.
 type smartWorker struct {
 	*models.WorkerMetadata
 	*workers.PollingEntityWorkerData
+
 	prefs *WorkerPrefs
 }
 
 func NewSmartWorker(ctx context.Context) (workers.EntityWorker, error) {
 	passed, err := smartWorkerRequiredChecks.Passed()
-	if err != nil {
-		return nil, fmt.Errorf("%w: %w", ErrSmartWorker, err)
-	}
-	if !passed {
-		return nil, fmt.Errorf("%w: required process permissions are missing", ErrSmartWorker)
+	if err != nil || !passed {
+		return nil, fmt.Errorf("check capabilities: %w", err)
 	}
 
 	smartWorker := &smartWorker{
@@ -81,7 +75,7 @@ func NewSmartWorker(ctx context.Context) (workers.EntityWorker, error) {
 	}
 	smartWorker.prefs, err = workers.LoadWorkerPreferences(smartWorkerPreferencesID, defaultPrefs)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %w", ErrSmartWorker, err)
+		return nil, fmt.Errorf("load preferences: %w", err)
 	}
 
 	pollInterval, err := time.ParseDuration(smartWorker.prefs.UpdateInterval)
@@ -98,11 +92,10 @@ func NewSmartWorker(ctx context.Context) (workers.EntityWorker, error) {
 	return smartWorker, nil
 }
 
-//nolint:funlen
 func (w *smartWorker) Execute(ctx context.Context) error {
 	block, err := ghw.Block()
 	if err != nil {
-		return fmt.Errorf("%w: %w", ErrSmartWorker, err)
+		return fmt.Errorf("get block devices: %w", err)
 	}
 
 	for _, disk := range block.Disks {
@@ -119,7 +112,7 @@ func (w *smartWorker) Execute(ctx context.Context) error {
 			)
 			continue
 		}
-		defer dev.Close() //nolint:errcheck
+		defer dev.Close()
 
 		var smartData smartData
 
@@ -154,7 +147,7 @@ func (w *smartWorker) Execute(ctx context.Context) error {
 				)
 				continue
 			}
-			if string(inq.VendorIdent[:]) == "ATA     " {
+			if strings.HasPrefix(string(inq.VendorIdent[:]), "ATA") {
 				// If it indicates ATA, treat it as a SATA disk.
 				ataSmart, err := smart.OpenSata("/dev/" + disk.Name)
 				if err != nil {
@@ -162,20 +155,20 @@ func (w *smartWorker) Execute(ctx context.Context) error {
 						slog.String("device", details.Disk),
 						slog.Any("error", err),
 					)
+					continue
+				}
+				data, err := ataSmart.ReadSMARTData()
+				if err != nil {
+					slogctx.FromCtx(ctx).Debug("Failed to read SATA disk SMART data.",
+						slog.String("device", details.Disk),
+						slog.Any("error", err),
+					)
 				} else {
-					data, err := ataSmart.ReadSMARTData()
-					if err != nil {
-						slogctx.FromCtx(ctx).Debug("Failed to read SATA disk SMART data.",
-							slog.String("device", details.Disk),
-							slog.Any("error", err),
-						)
-					} else {
-						scsiSmart := &ataSmartDetails{
-							diskDetails:  details,
-							AtaSmartPage: data,
-						}
-						smartData = scsiSmart
+					scsiSmart := &ataSmartDetails{
+						diskDetails:  details,
+						AtaSmartPage: data,
 					}
+					smartData = scsiSmart
 				}
 			}
 		case *smart.NVMeDevice:
@@ -192,6 +185,11 @@ func (w *smartWorker) Execute(ctx context.Context) error {
 				NvmeSMARTLog: data,
 			}
 			smartData = nvmeSmart
+		default:
+			slogctx.FromCtx(ctx).Debug("Unrecognised disk type.",
+				slog.String("type", smartDevice.Type()),
+			)
+			continue
 		}
 		if smartData != nil {
 			w.OutCh <- newSmartSensor(ctx, smartData)
@@ -204,7 +202,7 @@ func (w *smartWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
 	w.OutCh = make(chan models.Entity)
 	if err := workers.SchedulePollingWorker(ctx, w, w.OutCh); err != nil {
 		close(w.OutCh)
-		return w.OutCh, fmt.Errorf("%w: %w", ErrSmartWorker, err)
+		return w.OutCh, fmt.Errorf("schedule worker: %w", err)
 	}
 	return w.OutCh, nil
 }
@@ -277,7 +275,7 @@ type ataSmartDetails struct {
 //
 // https://en.wikipedia.org/wiki/Self-Monitoring,_Analysis_and_Reporting_Technology#In_ATA
 //
-//nolint:gocyclo // ¯\_(ツ)_/¯
+//nolint:gocognit // ¯\_(ツ)_/¯
 func (ata *ataSmartDetails) Problem() bool {
 	// Read Error Rate value greater than zero.
 	if attr, ok := ata.Attrs[1]; ok {
@@ -345,7 +343,7 @@ func (ata *ataSmartDetails) Problem() bool {
 // Attributes are the SMART attributes for ATA disks. Trying to expose most common/interesting attributes. For code
 // spelunkers, if you have suggestions, please open a GitHub issue with your comments!
 //
-//nolint:gocyclo,funlen // ¯\_(ツ)_/¯
+//nolint:gocognit,funlen // ¯\_(ツ)_/¯
 func (ata *ataSmartDetails) Attributes() map[string]any {
 	ataAttrs := make(map[string]any)
 	// Read Error Rate.
