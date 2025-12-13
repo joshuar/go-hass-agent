@@ -6,14 +6,13 @@ package linux
 import (
 	"errors"
 	"fmt"
-	"log/slog"
 	"os"
 	"slices"
 
 	"kernel.org/pub/linux/libs/security/libcap/cap"
 )
 
-var ErrChecksFailed = errors.New("process checks failed")
+var ErrCapChecksFailed = errors.New("capability check failed")
 
 // Checks contains system checks that are required to pass before a worker can start.
 type Checks struct {
@@ -28,17 +27,17 @@ type Checks struct {
 func (c *Checks) Passed() (bool, error) {
 	groupsOK, err := c.hasGroups()
 	if err != nil {
-		return false, fmt.Errorf("%w: %w", ErrChecksFailed, err)
+		return false, fmt.Errorf("%w: check for groups: %w", ErrCapChecksFailed, err)
 	}
 	if !groupsOK {
-		return false, fmt.Errorf("%w: required groups missing", ErrChecksFailed)
+		return false, fmt.Errorf("%w: missing groups", ErrCapChecksFailed)
 	}
 	capsOK, err := c.hasCapabilities()
 	if err != nil {
-		return false, fmt.Errorf("%w: %w", ErrChecksFailed, err)
+		return false, fmt.Errorf("%w: %w", ErrCapChecksFailed, err)
 	}
 	if !capsOK {
-		return false, fmt.Errorf("%w: capabilities missing", ErrChecksFailed)
+		return false, fmt.Errorf("%w: capabilities missing", ErrCapChecksFailed)
 	}
 	return true, nil
 }
@@ -60,16 +59,13 @@ func (c *Checks) hasGroups() (bool, error) {
 // hasCapabilities returns a boolean indicating whether Go Hass Agent has the required capabilties set.
 func (c *Checks) hasCapabilities() (bool, error) {
 	current := cap.GetProc()
-	slog.Debug("Checking capabilities.",
-		slog.String("current set", current.String()),
-	)
 	for required := range slices.Values(c.Capabilities) {
 		found, err := current.GetFlag(cap.Permitted, required)
 		if err != nil {
 			return false, fmt.Errorf("could not parse required capability %s: %w", c.Capabilities, err)
 		}
 		if !found {
-			return false, fmt.Errorf("%w: required capability missing: %s", ErrChecksFailed, required.String())
+			return false, fmt.Errorf("missing %s", required.String())
 		}
 	}
 
