@@ -6,6 +6,7 @@ package hwmon
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -27,7 +28,9 @@ import (
 // ease with writing tests.
 var HWMonPath = "/sys/class/hwmon"
 
-//go:generate go tool stringer -type=MonitorType -output hwmon_MonitorType_generated.go
+var capitaliser = cases.Title(language.English)
+
+//go:generate go tool stringer -type=MonitorType -output hwmon.gen.go
 const (
 	// Unknown hwmon sensor.
 	Unknown MonitorType = iota
@@ -70,25 +73,22 @@ type Chip struct {
 	Sensors     []*Sensor
 }
 
-// Chip returns a formatted string for identifying the chip to which this sensor
-// belongs.
 func (c *Chip) String() string {
-	if c.deviceModel != "" {
+	switch {
+	case c.deviceModel != "":
 		return c.deviceModel
-	}
-
-	if c.chipName != "" {
+	case c.chipName != "":
 		return c.chipName
+	default:
+		return c.chipID
 	}
-
-	return c.chipID
 }
 
 // getSensors retrieves all the sensors for the chip from hwmon sysfs. It
 // returns a slice of the sensors. If it cannot read the hwmon sysfs path, a
 // non-nil error is returned with details. It will not return an error if there
 // was an error retrieving an individual sensor for the chip.
-func (c *Chip) getSensors() ([]*Sensor, error) {
+func (c *Chip) getSensors(ctx context.Context) ([]*Sensor, error) {
 	allSensorFiles, err := getSensorFiles(c.Path)
 	if err != nil {
 		return []*Sensor{}, fmt.Errorf("could not gather sensor files: %w", err)
@@ -105,7 +105,7 @@ func (c *Chip) getSensors() ([]*Sensor, error) {
 		}
 		// Update based on the file contents
 		if err := allSensors[trackerID].updateInfo(&file); err != nil {
-			slog.Debug("Could not update sensor.",
+			slogctx.FromCtx(ctx).Debug("Could not update sensor.",
 				slog.String("sensor", allSensors[trackerID].Name()),
 				slog.Any("error", err))
 		}
@@ -115,7 +115,7 @@ func (c *Chip) getSensors() ([]*Sensor, error) {
 
 	for _, sensor := range allSensors {
 		if sensor.value == nil {
-			slog.Debug("Ignoring sensor with nil value.", slog.String("sensor", sensor.Name()))
+			slogctx.FromCtx(ctx).Debug("Ignoring sensor with nil value.", slog.String("sensor", sensor.Name()))
 			continue
 		}
 
@@ -136,11 +136,8 @@ func getSensorFiles(hwMonPath string) (chan sensorFile, error) {
 	go func() {
 		var wg sync.WaitGroup
 
-		for _, file := range fileList {
-			wg.Add(1)
-
-			go func() {
-				defer wg.Done()
+		for file := range slices.Values(fileList) {
+			wg.Go(func() {
 				// ignore directories
 				if file.IsDir() {
 					return
@@ -151,7 +148,7 @@ func getSensorFiles(hwMonPath string) (chan sensorFile, error) {
 					return
 				}
 				// adjust id for alarms.
-				if strings.Contains(attr, "alarm") {
+				if strings.HasSuffix(attr, "alarm") {
 					id += "_alarm"
 				}
 				// get and store the contents of the sensor file.
@@ -168,7 +165,7 @@ func getSensorFiles(hwMonPath string) (chan sensorFile, error) {
 					sensorType: parseSensorType(id),
 					contents:   contents,
 				}
-			}()
+			})
 		}
 
 		wg.Wait()
@@ -201,7 +198,7 @@ func newChip(ctx context.Context, path string) (*Chip, error) {
 		}
 	}
 
-	sensors, err := chip.getSensors()
+	sensors, err := chip.getSensors(ctx)
 	chip.Sensors = sensors
 
 	return chip, err
@@ -223,9 +220,7 @@ func GetAllChips(ctx context.Context) ([]*Chip, error) {
 	// Spawn a goroutine for each chip to get its details and retrieve its sensors.
 	go func() {
 		defer close(chipCh)
-
 		var wg sync.WaitGroup
-
 		for _, file := range files {
 			wg.Go(func() {
 				if chip, err := newChip(ctx, filepath.Join(HWMonPath, file.Name())); err != nil {
@@ -237,7 +232,6 @@ func GetAllChips(ctx context.Context) ([]*Chip, error) {
 				}
 			})
 		}
-
 		wg.Wait()
 	}()
 
@@ -255,6 +249,7 @@ func GetAllChips(ctx context.Context) ([]*Chip, error) {
 // Attributes, which are additional measurements like max/min/avg of the value.
 type Sensor struct {
 	*Chip
+
 	value any
 	label string
 	id    string
@@ -275,9 +270,12 @@ func (s *Sensor) Value() any {
 // derived from the chip name plus either any label, else name of the sensor
 // itself.
 func (s *Sensor) Name() string {
-	var name strings.Builder
-
-	capitaliser := cases.Title(language.English)
+	bufPtr := stringsBuilderPool.Get().(*strings.Builder)
+	name := *bufPtr
+	defer func() {
+		bufPtr.Reset()
+		fileBufPool.Put(bufPtr)
+	}()
 
 	if s.deviceModel != "" {
 		name.WriteString(s.deviceModel)
@@ -314,7 +312,12 @@ func (s *Sensor) Name() string {
 // this sensor. This will be some combination of the chip and sensor details, as
 // appropriate.
 func (s *Sensor) ID() string {
-	var id strings.Builder
+	bufPtr := stringsBuilderPool.Get().(*strings.Builder)
+	id := *bufPtr
+	defer func() {
+		bufPtr.Reset()
+		fileBufPool.Put(bufPtr)
+	}()
 
 	id.WriteString(s.chipID)
 	id.WriteString("_")
@@ -381,7 +384,7 @@ func (s *Sensor) updateInfo(file *sensorFile) error {
 		} else {
 			s.value = value
 		}
-	case strings.Contains(file.attribute, "intrusion"):
+	case strings.HasPrefix(file.attribute, "intrusion"):
 		id, _, _ := strings.Cut(file.sensorID, "_")
 
 		s.label = strings.Join([]string{id, file.sensorType.String()}, " ")
@@ -453,7 +456,7 @@ type sensorFile struct {
 }
 
 func getScaleFactor(sensorType MonitorType) float64 {
-	switch sensorType {
+	switch sensorType { //nolint:exhaustive // not all types need a scale factor.
 	case Intrusion, Alarm, Fan, PWM, Current, Humidity:
 		return 1
 	case Temp, Voltage, Power, Energy, Frequency:
@@ -464,7 +467,7 @@ func getScaleFactor(sensorType MonitorType) float64 {
 }
 
 func getUnits(sensorType MonitorType) string {
-	switch sensorType {
+	switch sensorType { //nolint:exhaustive // not all types have units.
 	case Temp:
 		return "°C"
 	case Fan:
@@ -522,16 +525,19 @@ func getFileContents(file string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("could not open file: %w", err)
 	}
-	defer handle.Close() //nolint:errcheck
+	defer handle.Close()
 
 	// On some machines, hwmon drivers are broken and return EAGAIN.  This causes
 	// Go's os.ReadFile implementation to poll forever.
 	//
 	// Since we either want to read data or bail immediately, do the simplest
 	// possible read using system call directly.
-	bufPtr := hwmonBufPool.Get().(*[]byte)
+	bufPtr, ok := fileBufPool.Get().(*[]byte)
+	if !ok {
+		return "", errors.New("unable to allocate buffer")
+	}
 	data := *bufPtr
-	defer hwmonBufPool.Put(bufPtr)
+	defer fileBufPool.Put(bufPtr)
 
 	n, err := unix.Read(int(handle.Fd()), data) // #nosec G115 // I do not believe this is a problem.
 	if err != nil {
@@ -541,9 +547,16 @@ func getFileContents(file string) (string, error) {
 	return strings.TrimSpace(string(data[:n])), nil
 }
 
-var hwmonBufPool = sync.Pool{
+var fileBufPool = sync.Pool{
 	New: func() any {
 		buf := make([]byte, 128)
 		return &buf
+	},
+}
+
+var stringsBuilderPool = sync.Pool{
+	New: func() any {
+		var bdr strings.Builder
+		return &bdr
 	},
 }

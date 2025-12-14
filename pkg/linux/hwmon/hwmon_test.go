@@ -129,7 +129,7 @@ func TestChip_getSensors(t *testing.T) {
 			for i := range tt.want {
 				tt.want[i].Chip = c
 			}
-			got, err := c.getSensors()
+			got, err := c.getSensors(t.Context())
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Chip.getSensors() error = %v, wantErr %v", err, tt.wantErr)
 				return
