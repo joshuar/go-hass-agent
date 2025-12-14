@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -226,11 +227,7 @@ func GetAllChips(ctx context.Context) ([]*Chip, error) {
 		var wg sync.WaitGroup
 
 		for _, file := range files {
-			wg.Add(1)
-
-			go func() {
-				defer wg.Done()
-
+			wg.Go(func() {
 				if chip, err := newChip(ctx, filepath.Join(HWMonPath, file.Name())); err != nil {
 					slogctx.FromCtx(ctx).Debug("Could not process hwmon path.",
 						slog.String("path", file.Name()),
@@ -238,7 +235,7 @@ func GetAllChips(ctx context.Context) ([]*Chip, error) {
 				} else {
 					chipCh <- chip
 				}
-			}()
+			})
 		}
 
 		wg.Wait()
@@ -426,13 +423,11 @@ func newSensor(file *sensorFile, chip *Chip) *Sensor {
 // chip sensors found on the host. If there were any errors in fetching chips or
 // chip sensors, it will also return a non-nill composite error.
 func GetAllSensors(ctx context.Context) ([]*Sensor, error) {
-	var sensors []*Sensor
-
 	chips, err := GetAllChips(ctx)
-	for _, chip := range chips {
+	sensors := make([]*Sensor, 0, len(chips))
+	for chip := range slices.Values(chips) {
 		sensors = append(sensors, chip.Sensors...)
 	}
-
 	return sensors, err
 }
 
@@ -534,7 +529,9 @@ func getFileContents(file string) (string, error) {
 	//
 	// Since we either want to read data or bail immediately, do the simplest
 	// possible read using system call directly.
-	data := make([]byte, 128)
+	bufPtr := hwmonBufPool.Get().(*[]byte)
+	data := *bufPtr
+	defer hwmonBufPool.Put(bufPtr)
 
 	n, err := unix.Read(int(handle.Fd()), data) // #nosec G115 // I do not believe this is a problem.
 	if err != nil {
@@ -542,4 +539,11 @@ func getFileContents(file string) (string, error) {
 	}
 
 	return strings.TrimSpace(string(data[:n])), nil
+}
+
+var hwmonBufPool = sync.Pool{
+	New: func() any {
+		buf := make([]byte, 128)
+		return &buf
+	},
 }

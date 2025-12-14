@@ -5,6 +5,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"os"
@@ -32,7 +33,7 @@ func main() {
 	if err = trace.Start(trc); err != nil {
 		slog.Warn("Could not start trace profiling.", "error", err.Error())
 	}
-	sensors, err := hwmon.GetAllSensors()
+	sensors, err := hwmon.GetAllSensors(context.Background())
 	if err != nil && len(sensors) > 0 {
 		slog.Warn("Errors fetching some chip/sensor values.", "error", err.Error())
 	}
