@@ -56,10 +56,12 @@ func Register(ctx context.Context, id string, details *RegistrationRequest) erro
 	resp := api.DeviceRegistrationResponse{}
 
 	// Set up the api request, and the request/response bodies.
-	apiReq := api.NewClient().R().SetContext(ctx)
-	apiReq.SetAuthToken(details.Token)
-	apiReq.SetBody(req)
-	apiReq = apiReq.SetResult(&resp)
+	api.Init()
+
+	apiReq := api.NewRequest().
+		SetAuthToken(details.Token).
+		SetBody(req).
+		SetResult(&resp)
 
 	registrationURL, err := url.Parse(details.Server)
 	if err != nil {

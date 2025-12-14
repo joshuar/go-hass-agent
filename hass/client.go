@@ -54,8 +54,6 @@ type sensorTracker interface {
 type Client struct {
 	sensorRegistry sensorRegistry
 	sensorTracker  sensorTracker
-	restAPI        *resty.Client
-	logger         *slog.Logger
 	config         *Config
 }
 
@@ -66,6 +64,8 @@ var ErrSendRequest = errors.New("send request failed")
 // sensor registration status and handles sending and processing requests to the
 // Home Assistant REST API.
 func NewClient(ctx context.Context, agent agent) (*Client, error) {
+	api.Init()
+
 	var hasscfg Config
 	// Load the hass config.
 	if err := config.Load(ConfigPrefix, &hasscfg); err != nil {
@@ -78,11 +78,9 @@ func NewClient(ctx context.Context, agent agent) (*Client, error) {
 	}
 	// Create the client.
 	client := &Client{
-		logger:         slogctx.FromCtx(ctx).WithGroup("hass"),
 		sensorRegistry: reg,
 		sensorTracker:  tracker.NewTracker(),
 		config:         &hasscfg,
-		restAPI:        api.NewClient(),
 	}
 	// Run the job one-time initially to get the config.
 	if agent.IsRegistered() {
@@ -91,7 +89,7 @@ func NewClient(ctx context.Context, agent agent) (*Client, error) {
 			return nil, fmt.Errorf("could not create client: %w", err)
 		}
 		// Schedule a job to get the Home Assistant on a regular interval.
-		if err := client.scheduleConfigUpdates(); err != nil {
+		if err := client.scheduleConfigUpdates(ctx); err != nil {
 			return nil, fmt.Errorf("could not create client: %w", err)
 		}
 	}
@@ -129,7 +127,7 @@ func (c *Client) EntityHandler(ctx context.Context, entityCh <-chan models.Entit
 		if eventData, err := entity.AsEvent(); err == nil && eventData.Valid() {
 			// Send event.
 			if err := event.Handler(ctx, c, eventData); err != nil {
-				c.logger.Warn("Could not send event.",
+				slogctx.FromCtx(ctx).Warn("Could not send event.",
 					eventData.LogAttributes(),
 					slog.Any("error", err))
 			}
@@ -140,7 +138,7 @@ func (c *Client) EntityHandler(ctx context.Context, entityCh <-chan models.Entit
 		if locationData, err := entity.AsLocation(); err == nil && locationData.Valid() {
 			// Send location update.
 			if err := location.Handler(ctx, c, locationData); err != nil {
-				c.logger.Warn("Could not update location.",
+				slogctx.FromCtx(ctx).Warn("Could not update location.",
 					slog.Any("error", err))
 			}
 
@@ -157,14 +155,14 @@ func (c *Client) EntityHandler(ctx context.Context, entityCh <-chan models.Entit
 				}
 				// Otherwise, send an update.
 				if err := sensor.UpdateHandler(ctx, c, sensorData); err != nil {
-					c.logger.Warn("Could not update sensor.",
+					slogctx.FromCtx(ctx).Warn("Could not update sensor.",
 						sensorData.LogAttributes(),
 						slog.Any("error", err))
 
 					continue
 				}
 
-				c.logger.Log(ctx, logging.LevelTrace, "Sensor updated.",
+				slogctx.FromCtx(ctx).Log(ctx, logging.LevelTrace, "Sensor updated.",
 					sensorData.LogAttributes())
 			} else {
 				// Otherwise, send a registration request.
@@ -172,26 +170,26 @@ func (c *Client) EntityHandler(ctx context.Context, entityCh <-chan models.Entit
 
 				switch {
 				case err != nil:
-					c.logger.Warn("Send sensor registration failed.",
+					slogctx.FromCtx(ctx).Warn("Send sensor registration failed.",
 						sensorData.LogAttributes(),
 						slog.Any("error", err))
 				case !success:
-					c.logger.Warn("Sensor not registered.",
+					slogctx.FromCtx(ctx).Warn("Sensor not registered.",
 						sensorData.LogAttributes())
 				default:
 					if err := c.sensorRegistry.SetRegistered(sensorData.UniqueID, true); err != nil {
-						c.logger.Warn("Could not set local registration status.",
+						slogctx.FromCtx(ctx).Warn("Could not set local registration status.",
 							slog.Any("error", err))
 						continue
 					}
 
-					c.logger.Debug("Sensor registered.",
+					slogctx.FromCtx(ctx).Debug("Sensor registered.",
 						sensorData.LogAttributes())
 				}
 			}
 			// Add sensor details to the tracker.
 			if err := c.sensorTracker.Add(&sensorData); err != nil {
-				c.logger.Warn("Updating sensor tracker failed.",
+				slogctx.FromCtx(ctx).Warn("Updating sensor tracker failed.",
 					sensorData.LogAttributes(),
 					slog.Any("error", err),
 				)
@@ -200,7 +198,7 @@ func (c *Client) EntityHandler(ctx context.Context, entityCh <-chan models.Entit
 			continue
 		}
 
-		c.logger.Warn("Unhandled entity received.",
+		slogctx.FromCtx(ctx).Warn("Unhandled entity received.",
 			slog.String("entity_type", fmt.Sprintf("%T", entity)))
 	}
 }
@@ -212,9 +210,9 @@ func (c *Client) SendRequest(ctx context.Context, url string, req api.Request) (
 	var resp api.Response
 
 	// Set up the api request, and the request/response bodies.
-	apiReq := c.restAPI.R().SetContext(ctx)
-	apiReq.SetBody(req)
-	apiReq = apiReq.SetResult(&resp)
+	apiReq := api.NewRequest().SetContext(ctx).
+		SetBody(req).
+		SetResult(&resp)
 
 	// If request needs to be retried, retry the request on any error.
 	if req.Retryable {
@@ -225,7 +223,7 @@ func (c *Client) SendRequest(ctx context.Context, url string, req api.Request) (
 		)
 	}
 
-	c.logger.
+	slogctx.FromCtx(ctx).
 		LogAttrs(ctx, logging.LevelTrace,
 			"Sending request.",
 			slog.Group("request",
@@ -248,7 +246,7 @@ func (c *Client) SendRequest(ctx context.Context, url string, req api.Request) (
 		return resp, fmt.Errorf("%w: %s", ErrSendRequest, apiResp.Status())
 	}
 
-	c.logger.
+	slogctx.FromCtx(ctx).
 		LogAttrs(ctx, logging.LevelTrace,
 			"Received response.",
 			slog.Group("response",
@@ -276,12 +274,12 @@ func (c *Client) GetSensor(id models.UniqueID) (*models.Sensor, error) {
 	return c.sensorTracker.Get(id) //nolint:wrapcheck
 }
 
-func (c *Client) DisableSensor(id models.UniqueID) {
+func (c *Client) DisableSensor(ctx context.Context, id models.UniqueID) {
 	if !c.isDisabledInReg(id) {
-		c.logger.Debug("Disabling sensor.",
+		slogctx.FromCtx(ctx).Debug("Disabling sensor.",
 			slog.String("id", id))
 		if err := c.sensorRegistry.SetDisabled(id, true); err != nil {
-			c.logger.Warn("Could not disable sensor.", slog.Any("error", err))
+			slogctx.FromCtx(ctx).Warn("Could not disable sensor.", slog.Any("error", err))
 		}
 	}
 }
@@ -312,15 +310,16 @@ func (c *Client) isDisabled(ctx context.Context, details models.Sensor) bool {
 
 	switch {
 	case regDisabled && (haConfigErr == nil && !haDisabled):
-		c.logger.Debug("Sensor re-enabled in Home Assistant, Re-enabling in local registry and sending updates.",
-			details.LogAttributes())
+		slogctx.FromCtx(ctx).
+			Debug("Sensor re-enabled in Home Assistant, Re-enabling in local registry and sending updates.",
+				details.LogAttributes())
 		if err := c.sensorRegistry.SetDisabled(details.UniqueID, false); err != nil {
 			slogctx.FromCtx(ctx).Warn("Could not update sensor state in registry.",
 				details.LogAttributes())
 		}
 		return false
 	case !regDisabled && (haConfigErr == nil && haDisabled):
-		c.logger.Debug(
+		slogctx.FromCtx(ctx).Debug(
 			"Sensor has been disabled in Home Assistant, Disabling in local registry and not sending updates.",
 			details.LogAttributes(),
 		)
@@ -330,7 +329,7 @@ func (c *Client) isDisabled(ctx context.Context, details models.Sensor) bool {
 		}
 		return true
 	case regDisabled && (haConfigErr == nil && haDisabled):
-		c.logger.Debug("Sensor is disabled, not sending updates.",
+		slogctx.FromCtx(ctx).Debug("Sensor is disabled, not sending updates.",
 			details.LogAttributes())
 
 		return true
@@ -355,9 +354,9 @@ func (c *Client) isDisabledInHA(id models.UniqueID) (bool, error) {
 	return status, nil
 }
 
-func (c *Client) scheduleConfigUpdates() error {
+func (c *Client) scheduleConfigUpdates(ctx context.Context) error {
 	if scheduler.Manager == nil {
-		c.logger.Debug("No scheduler active, not scheduling fetch config updates.")
+		slogctx.FromCtx(ctx).Debug("No scheduler active, not scheduling fetch config updates.")
 		return nil
 	}
 	getConfigJob := job.NewFunctionJobWithDesc(c.UpdateConfig, "Fetch Home Assistant Configuration.")

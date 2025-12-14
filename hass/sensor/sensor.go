@@ -17,7 +17,7 @@ var ErrHandleSensor = errors.New("error handling sensor data")
 
 type API interface {
 	SendRequest(ctx context.Context, url string, req api.Request) (api.Response, error)
-	DisableSensor(id models.UniqueID)
+	DisableSensor(ctx context.Context, id models.UniqueID)
 	RestAPIURL() string
 }
 
@@ -98,7 +98,7 @@ func UpdateHandler(ctx context.Context, client API, sensor models.Sensor) error 
 			if status.SensorDisabled() {
 				// If the response indicates the sensor has been disabled in
 				// Home Assistant, also disable in the local registry.
-				client.DisableSensor(id)
+				client.DisableSensor(ctx, id)
 			}
 		}
 	}

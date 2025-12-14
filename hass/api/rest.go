@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-resty/resty/v2"
@@ -23,6 +24,8 @@ const (
 
 // ErrUnknown is returned when an error occurred but the reason/cause could not be determined or was unexpected.
 var ErrUnknown = errors.New("an unknown error occurred")
+
+var restAPIClient *resty.Client
 
 // Error allows an APIError to satisfy the Go Error interface.
 func (e *APIError) Error() string {
@@ -86,10 +89,9 @@ func (r *ResponseStatus) SensorDisabled() bool {
 	return false
 }
 
-// NewClient creates a new resty client that can be used to communicate with the
-// Home Assistant REST API.
-func NewClient() *resty.Client {
-	return resty.New().
+// Init sets up a new client for making requests to the Home Assistant rest api.
+var Init = sync.OnceFunc(func() {
+	restAPIClient = resty.New().
 		SetTimeout(defaultTimeout).
 		SetRetryCount(defaultRetryCount).
 		SetRetryWaitTime(defaultRetryWait).
@@ -97,4 +99,8 @@ func NewClient() *resty.Client {
 		AddRetryCondition(func(r *resty.Response, _ error) bool {
 			return r.StatusCode() == http.StatusTooManyRequests
 		})
+})
+
+func NewRequest() *resty.Request {
+	return restAPIClient.R()
 }
