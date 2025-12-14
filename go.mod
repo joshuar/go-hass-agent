@@ -4,7 +4,7 @@ go 1.25
 
 require (
 	github.com/eclipse/paho.golang v0.23.0
-	github.com/gen2brain/beeep v0.11.1
+	github.com/gen2brain/beeep v0.11.2
 	github.com/go-playground/validator/v10 v10.28.0
 	github.com/godbus/dbus/v5 v5.2.0
 	github.com/iancoleman/strcase v0.3.0
