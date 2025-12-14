@@ -5,7 +5,6 @@ package mem
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"net/url"
@@ -31,12 +30,33 @@ const (
 
 var _ workers.EntityWorker = (*OOMEventsWorker)(nil)
 
-var ErrInitOOMWorker = errors.New("could not init OOM worker")
-
 type OOMEventsWorker struct {
+	*models.WorkerMetadata
+
 	bus   *dbusx.Bus
 	prefs *workers.CommonWorkerPrefs
-	*models.WorkerMetadata
+}
+
+func NewOOMEventsWorker(ctx context.Context) (workers.EntityWorker, error) {
+	worker := &OOMEventsWorker{
+		WorkerMetadata: models.SetWorkerMetadata(oomEventsWorkerID, oomEventsWorkerDesc),
+	}
+
+	var ok bool
+
+	worker.bus, ok = linux.CtxGetSessionBus(ctx)
+	if !ok {
+		return worker, fmt.Errorf("get session bus: %w", linux.ErrNoSessionBus)
+	}
+
+	defaultPrefs := &workers.CommonWorkerPrefs{}
+	var err error
+	worker.prefs, err = workers.LoadWorkerPreferences(oomEventsPreferencesID, defaultPrefs)
+	if err != nil {
+		return worker, fmt.Errorf("load preferences: %w", err)
+	}
+
+	return worker, nil
 }
 
 //nolint:gocognit
@@ -46,8 +66,7 @@ func (w *OOMEventsWorker) Start(ctx context.Context) (<-chan models.Entity, erro
 		dbusx.MatchPropChanged(),
 	).Start(ctx, w.bus)
 	if err != nil {
-		return nil, errors.Join(ErrInitOOMWorker,
-			fmt.Errorf("unable to set-up D-Bus watch for OOM events: %w", err))
+		return nil, fmt.Errorf("watch for OOM events: %w", err)
 	}
 	eventCh := make(chan models.Entity)
 
@@ -93,7 +112,6 @@ func (w *OOMEventsWorker) Start(ctx context.Context) (<-chan models.Entity, erro
 					// Ignore the <RANDOM> string that might be appended.
 					processStr, _, _ = strings.Cut(processStr, "@")
 					// Get the PID.
-					//nolint:errcheck
 					pid, _ := dbusx.VariantToValue[int](props.Changed["MainPID"])
 					if pid == 0 {
 						continue
@@ -120,25 +138,4 @@ func (w *OOMEventsWorker) Start(ctx context.Context) (<-chan models.Entity, erro
 
 func (w *OOMEventsWorker) IsDisabled() bool {
 	return w.prefs.IsDisabled()
-}
-
-func NewOOMEventsWorker(ctx context.Context) (workers.EntityWorker, error) {
-	bus, ok := linux.CtxGetSessionBus(ctx)
-	if !ok {
-		return nil, errors.Join(ErrInitOOMWorker, linux.ErrNoSessionBus)
-	}
-
-	worker := &OOMEventsWorker{
-		WorkerMetadata: models.SetWorkerMetadata(oomEventsWorkerID, oomEventsWorkerDesc),
-		bus:            bus,
-	}
-
-	defaultPrefs := &workers.CommonWorkerPrefs{}
-	var err error
-	worker.prefs, err = workers.LoadWorkerPreferences(oomEventsPreferencesID, defaultPrefs)
-	if err != nil {
-		return nil, errors.Join(ErrInitOOMWorker, err)
-	}
-
-	return worker, nil
 }

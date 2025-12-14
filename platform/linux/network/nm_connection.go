@@ -35,10 +35,6 @@ const (
 	ipv4ConfigPropName = "Ip4Config"
 	ipv6ConfigPropName = "Ip6Config"
 	statePropName      = "State"
-
-	netConnWorkerID   = "network_connection_sensors"
-	netConnWorkerDesc = "NetworkManager connection status"
-	netConnPrefID     = prefPrefix + "connections"
 )
 
 var _ workers.EntityWorker = (*ConnectionsWorker)(nil)
@@ -54,22 +50,23 @@ type ConnectionsWorker struct {
 
 // NewNMConnectionWorker creates a new sensor worker that monitors NetworkManager through D-Bus for new connections.
 func NewNMConnectionWorker(ctx context.Context) (workers.EntityWorker, error) {
-	bus, ok := linux.CtxGetSystemBus(ctx)
-	if !ok {
-		return nil, fmt.Errorf("get system bus: %w", linux.ErrNoSystemBus)
+	worker := &ConnectionsWorker{
+		WorkerMetadata: models.SetWorkerMetadata("networkmanager", "NetworkManager monitor"),
+		list:           make(map[string]*connection),
 	}
 
-	worker := &ConnectionsWorker{
-		WorkerMetadata: models.SetWorkerMetadata(netConnWorkerID, netConnWorkerDesc),
-		bus:            bus,
-		list:           make(map[string]*connection),
+	var ok bool
+
+	worker.bus, ok = linux.CtxGetSystemBus(ctx)
+	if !ok {
+		return worker, fmt.Errorf("get system bus: %w", linux.ErrNoSystemBus)
 	}
 
 	defaultPrefs := &CommonPreferences{
 		IgnoredDevices: defaultIgnoredDevices,
 	}
 	var err error
-	worker.prefs, err = workers.LoadWorkerPreferences(netConnPrefID, defaultPrefs)
+	worker.prefs, err = workers.LoadWorkerPreferences(prefPrefix+"connections", defaultPrefs)
 	if err != nil {
 		return worker, fmt.Errorf("load preferences: %w", err)
 	}
@@ -80,6 +77,7 @@ func NewNMConnectionWorker(ctx context.Context) (workers.EntityWorker, error) {
 func (w *ConnectionsWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
 	sensorCh := make(chan models.Entity)
 	connCtx, connCancel := context.WithCancel(ctx)
+	connCtx = slogctx.With(connCtx, "worker", w.ID())
 
 	triggerCh, err := dbusx.NewWatch(
 		dbusx.MatchPathNamespace(dbusNMActiveConnPath),

@@ -20,24 +20,51 @@ import (
 )
 
 const (
-	lastBootWorkerID     = "boot_time_sensor"
-	lastBootWorkerDesc   = "Last boot time"
 	lastBootWorkerPrefID = infoWorkerPreferencesID
 )
 
 var _ workers.EntityWorker = (*lastBootWorker)(nil)
 
-var ErrInitLastBootWorker = errors.New("could not init last boot worker")
-
 type lastBootWorker struct {
+	*models.WorkerMetadata
+
 	lastBoot time.Time
 	OutCh    chan models.Entity
 	prefs    *workers.CommonWorkerPrefs
-	*models.WorkerMetadata
 }
 
-func (w *lastBootWorker) IsDisabled() bool {
-	return w.prefs.IsDisabled()
+func NewLastBootWorker(ctx context.Context) (workers.EntityWorker, error) {
+	worker := &lastBootWorker{
+		WorkerMetadata: models.SetWorkerMetadata("last_boottime", "Last boot time"),
+	}
+
+	var found bool
+
+	worker.lastBoot, found = linux.CtxGetBoottime(ctx)
+	if !found {
+		return worker, errors.New("no last boot info in context")
+	}
+
+	defaultPrefs := &workers.CommonWorkerPrefs{}
+	var err error
+	worker.prefs, err = workers.LoadWorkerPreferences(lastBootWorkerPrefID, defaultPrefs)
+	if err != nil {
+		return worker, fmt.Errorf("load preferences: %w", err)
+	}
+
+	return worker, nil
+}
+
+func (w *lastBootWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
+	w.OutCh = make(chan models.Entity)
+	go func() {
+		defer close(w.OutCh)
+		if err := w.Execute(ctx); err != nil {
+			slogctx.FromCtx(ctx).Warn("Failed to send info details",
+				slog.Any("error", err))
+		}
+	}()
+	return w.OutCh, nil
 }
 
 func (w *lastBootWorker) Execute(ctx context.Context) error {
@@ -53,36 +80,6 @@ func (w *lastBootWorker) Execute(ctx context.Context) error {
 	return nil
 }
 
-func (w *lastBootWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
-	w.OutCh = make(chan models.Entity)
-	go func() {
-		defer close(w.OutCh)
-		if err := w.Execute(ctx); err != nil {
-			slogctx.FromCtx(ctx).Warn("Failed to send info details",
-				slog.Any("error", err))
-		}
-	}()
-	return w.OutCh, nil
-}
-
-func NewLastBootWorker(ctx context.Context) (workers.EntityWorker, error) {
-	lastBoot, found := linux.CtxGetBoottime(ctx)
-	if !found {
-		return nil, errors.Join(ErrInitLastBootWorker,
-			fmt.Errorf("%w: no lastBoot value", linux.ErrInvalidCtx))
-	}
-
-	worker := &lastBootWorker{
-		WorkerMetadata: models.SetWorkerMetadata(lastBootWorkerID, lastBootWorkerDesc),
-		lastBoot:       lastBoot,
-	}
-
-	defaultPrefs := &workers.CommonWorkerPrefs{}
-	var err error
-	worker.prefs, err = workers.LoadWorkerPreferences(lastBootWorkerPrefID, defaultPrefs)
-	if err != nil {
-		return nil, errors.Join(ErrInitLastBootWorker, err)
-	}
-
-	return worker, nil
+func (w *lastBootWorker) IsDisabled() bool {
+	return w.prefs.IsDisabled()
 }

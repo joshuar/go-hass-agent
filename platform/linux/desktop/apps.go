@@ -9,6 +9,7 @@ import (
 	"log/slog"
 
 	"github.com/godbus/dbus/v5"
+	slogctx "github.com/veqryn/slog-context"
 
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/models"
@@ -26,9 +27,6 @@ const (
 	appStateDBusInterface = "org.freedesktop.impl.portal.Background"
 	appStateDBusEvent     = "org.freedesktop.impl.portal.Background.RunningApplicationsChanged"
 
-	appWorkerID   = "app_sensors"
-	appWorkerDesc = "App sensors"
-
 	activeAppsIcon = "mdi:application"
 	activeAppsName = "Active App"
 	activeAppsID   = "active_app"
@@ -44,12 +42,13 @@ func (w *sensorWorker) IsDisabled() bool {
 }
 
 type sensorWorker struct {
+	*models.WorkerMetadata
+
 	bus              *dbusx.Bus
 	portalDest       string
 	runningApp       string
 	totalRunningApps int
 	prefs            *WorkerPrefs
-	*models.WorkerMetadata
 }
 
 func (w *sensorWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
@@ -59,15 +58,14 @@ func (w *sensorWorker) Start(ctx context.Context) (<-chan models.Entity, error) 
 		dbusx.MatchMembers("RunningApplicationsChanged"),
 	).Start(ctx, w.bus)
 	if err != nil {
-		return nil, fmt.Errorf("could not start worker: %w", err)
+		return nil, fmt.Errorf("watch app states: %w", err)
 	}
 	sensorCh := make(chan models.Entity)
-	logger := slog.Default().With(slog.String("worker", desktopWorkerID))
 
 	sendSensors := func(ctx context.Context, sensorCh chan models.Entity) {
 		appSensors, err := w.generateSensors(ctx)
 		if err != nil {
-			logger.Debug("Failed to update app sensors.", slog.Any("error", err))
+			slogctx.FromCtx(ctx).Debug("Failed to update app sensors.", slog.Any("error", err))
 
 			return
 		}
@@ -158,29 +156,29 @@ func (w *sensorWorker) getAppStates() (map[string]dbus.Variant, error) {
 
 // NewAppStateWorker creates a worker for tracking application states (i.e., number of running and current active apps).
 func NewAppStateWorker(ctx context.Context) (workers.EntityWorker, error) {
+	worker := &sensorWorker{
+		WorkerMetadata: models.SetWorkerMetadata("running_apps", "Running apps"),
+	}
+
+	var ok bool
+
 	// If we cannot find a portal interface, we cannot monitor the active app.
-	portalDest, ok := linux.CtxGetDesktopPortal(ctx)
+	worker.portalDest, ok = linux.CtxGetDesktopPortal(ctx)
 	if !ok {
-		return nil, fmt.Errorf("could not start apps worker: %w", linux.ErrNoDesktopPortal)
+		return worker, fmt.Errorf("get desktop portal: %w", linux.ErrNoDesktopPortal)
 	}
 
 	// Connect to the D-Bus session bus. Bail if we can't.
-	bus, ok := linux.CtxGetSessionBus(ctx)
+	worker.bus, ok = linux.CtxGetSessionBus(ctx)
 	if !ok {
-		return nil, linux.ErrNoSessionBus
-	}
-
-	worker := &sensorWorker{
-		WorkerMetadata: models.SetWorkerMetadata(appWorkerID, appWorkerDesc),
-		bus:            bus,
-		portalDest:     portalDest,
+		return worker, linux.ErrNoSessionBus
 	}
 
 	defaultPrefs := &WorkerPrefs{}
 	var err error
-	worker.prefs, err = workers.LoadWorkerPreferences(prefPrefix+appWorkerID, defaultPrefs)
+	worker.prefs, err = workers.LoadWorkerPreferences(prefPrefix+"app_sensors", defaultPrefs)
 	if err != nil {
-		return worker, fmt.Errorf("could not start apps worker: %w", err)
+		return worker, fmt.Errorf("load preferences: %w", err)
 	}
 
 	return worker, nil

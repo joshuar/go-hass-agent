@@ -6,9 +6,7 @@ package system
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"log/slog"
 	"slices"
 	"time"
 
@@ -27,20 +25,11 @@ import (
 const (
 	hwMonInterval = time.Minute
 	hwMonJitter   = 5 * time.Second
-
-	hwmonWorkerID      = "hwmon_sensors"
-	hwmonWorkerDesc    = "hwmon sensor details"
-	hwmonPreferencesID = sensorsPrefPrefix + "hardware_sensors"
 )
 
 var (
 	_ quartz.Job                  = (*hwMonWorker)(nil)
 	_ workers.PollingEntityWorker = (*hwMonWorker)(nil)
-)
-
-var (
-	ErrNewHWMonSensor  = errors.New("could not create hardware monitor sensor")
-	ErrInitHWMonWorker = errors.New("could not init hardware sensors worker")
 )
 
 func hwmonSensorAttributes(details *hwmon.Sensor) map[string]any {
@@ -104,13 +93,49 @@ func newHWSensor(ctx context.Context, details *hwmon.Sensor) models.Entity {
 }
 
 type hwMonWorker struct {
-	prefs *HWMonPrefs
 	*models.WorkerMetadata
 	*workers.PollingEntityWorkerData
+
+	prefs *HWMonPrefs
+}
+
+func NewHWMonWorker(_ context.Context) (workers.EntityWorker, error) {
+	worker := &hwMonWorker{
+		WorkerMetadata:          models.SetWorkerMetadata("hwmon", "Hardware sensor monitoring"),
+		PollingEntityWorkerData: &workers.PollingEntityWorkerData{},
+	}
+
+	defaultPrefs := &HWMonPrefs{
+		UpdateInterval: hwMonInterval.String(),
+	}
+	var err error
+	worker.prefs, err = workers.LoadWorkerPreferences(sensorsPrefPrefix+"hardware_sensors", defaultPrefs)
+	if err != nil {
+		return worker, fmt.Errorf("load preferences: %w", err)
+	}
+
+	pollInterval, err := time.ParseDuration(worker.prefs.UpdateInterval)
+	if err != nil {
+		pollInterval = hwMonInterval
+	}
+	worker.Trigger = scheduler.NewPollTriggerWithJitter(pollInterval, hwMonJitter)
+
+	return worker, nil
+}
+
+func (w *hwMonWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
+	w.OutCh = make(chan models.Entity)
+	if err := workers.SchedulePollingWorker(ctx, w, w.OutCh); err != nil {
+		close(w.OutCh)
+		return w.OutCh, fmt.Errorf("could not start disk IO worker: %w", err)
+	}
+	return w.OutCh, nil
 }
 
 func (w *hwMonWorker) Execute(ctx context.Context) error {
-	hwmonSensors, err := hwmon.GetAllSensors()
+	ctx = slogctx.With(ctx, "worker", w.ID())
+
+	hwmonSensors, err := hwmon.GetAllSensors(ctx)
 	if err != nil {
 		return fmt.Errorf("could not retrieve hardware sensors: %w", err)
 	}
@@ -124,44 +149,6 @@ func (w *hwMonWorker) Execute(ctx context.Context) error {
 
 func (w *hwMonWorker) IsDisabled() bool {
 	return w.prefs.IsDisabled()
-}
-
-func (w *hwMonWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
-	w.OutCh = make(chan models.Entity)
-	if err := workers.SchedulePollingWorker(ctx, w, w.OutCh); err != nil {
-		close(w.OutCh)
-		return w.OutCh, fmt.Errorf("could not start disk IO worker: %w", err)
-	}
-	return w.OutCh, nil
-}
-
-func NewHWMonWorker(ctx context.Context) (workers.EntityWorker, error) {
-	worker := &hwMonWorker{
-		WorkerMetadata:          models.SetWorkerMetadata(hwmonWorkerID, hwmonWorkerDesc),
-		PollingEntityWorkerData: &workers.PollingEntityWorkerData{},
-	}
-
-	defaultPrefs := &HWMonPrefs{
-		UpdateInterval: hwMonInterval.String(),
-	}
-	var err error
-	worker.prefs, err = workers.LoadWorkerPreferences(hwmonPreferencesID, defaultPrefs)
-	if err != nil {
-		return nil, errors.Join(ErrInitHWMonWorker, err)
-	}
-
-	pollInterval, err := time.ParseDuration(worker.prefs.UpdateInterval)
-	if err != nil {
-		slogctx.FromCtx(ctx).Warn("Invalid polling interval, using default",
-			slog.String("worker", hwmonWorkerID),
-			slog.String("given_interval", worker.prefs.UpdateInterval),
-			slog.String("default_interval", hwMonInterval.String()))
-
-		pollInterval = hwMonInterval
-	}
-	worker.Trigger = scheduler.NewPollTriggerWithJitter(pollInterval, hwMonJitter)
-
-	return worker, nil
 }
 
 func parseSensorType(t string) (string, class.SensorDeviceClass) {

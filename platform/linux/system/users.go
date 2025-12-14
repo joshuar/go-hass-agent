@@ -8,7 +8,6 @@ package system
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"slices"
@@ -38,19 +37,10 @@ const (
 	usersSensorUnits = "users"
 	usersSensorIcon  = "mdi:account"
 
-	userSessionsSensorWorkerID   = "user_sessions_sensor_worker"
-	userSessionsSensorWorkerDesc = "User session sensors"
-	userSessionsEventWorkerID    = "user_sessions_event_worker"
-	userSessionsEventWorkerDesc  = "User session events"
-	userSessionsPreferencesID    = sensorsPrefPrefix + "users"
+	userSessionsPreferencesID = sensorsPrefPrefix + "users"
 
 	sessionStartedEventName = "session_started"
 	sessionStoppedEventName = "session_stopped"
-)
-
-var (
-	ErrNewUsersSensor  = errors.New("could not create users sensor")
-	ErrInitUsersWorker = errors.New("could not init users worker")
 )
 
 var (
@@ -58,41 +48,33 @@ var (
 	_ workers.EntityWorker = (*UserSessionEventsWorker)(nil)
 )
 
-func newUsersSensor(ctx context.Context, users []string) models.Entity {
-	return sensor.NewSensor(ctx,
-		sensor.WithName("Current Users"),
-		sensor.WithID("current_users"),
-		sensor.WithStateClass(class.StateMeasurement),
-		sensor.WithUnits(usersSensorUnits),
-		sensor.WithIcon(usersSensorIcon),
-		sensor.WithState(len(users)),
-		sensor.WithDataSourceAttribute(linux.DataSrcDBus),
-		sensor.WithAttribute("usernames", users),
-	)
-}
-
 type UserSessionSensorWorker struct {
+	*models.WorkerMetadata
+
 	bus   *dbusx.Bus
 	prefs *UserSessionsPrefs
-	*models.WorkerMetadata
 }
 
-func (w *UserSessionSensorWorker) getUsers() ([]string, error) {
-	userData, err := dbusx.GetData[[][]any](w.bus, loginBasePath, loginBaseInterface, listSessionsMethod)
+func NewUserSessionSensorWorker(ctx context.Context) (workers.EntityWorker, error) {
+	worker := &UserSessionSensorWorker{
+		WorkerMetadata: models.SetWorkerMetadata("user_sessions", "User sessions"),
+	}
+
+	var ok bool
+
+	worker.bus, ok = linux.CtxGetSystemBus(ctx)
+	if !ok {
+		return worker, fmt.Errorf("get system bus: %w", linux.ErrNoSystemBus)
+	}
+
+	defaultPrefs := &UserSessionsPrefs{}
+	var err error
+	worker.prefs, err = workers.LoadWorkerPreferences(userSessionsPreferencesID, defaultPrefs)
 	if err != nil {
-		return nil, errors.Join(ErrInitUsersWorker,
-			fmt.Errorf("could not retrieve users from D-Bus: %w", err))
+		return worker, fmt.Errorf("load preferences: %w", err)
 	}
 
-	var users []string
-
-	for _, u := range userData {
-		if user, ok := u[2].(string); ok {
-			users = append(users, user)
-		}
-	}
-
-	return users, nil
+	return worker, nil
 }
 
 func (w *UserSessionSensorWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
@@ -102,15 +84,14 @@ func (w *UserSessionSensorWorker) Start(ctx context.Context) (<-chan models.Enti
 		dbusx.MatchMembers(sessionAddedSignal, sessionRemovedSignal),
 	).Start(ctx, w.bus)
 	if err != nil {
-		return nil, errors.Join(ErrInitUsersWorker,
-			fmt.Errorf("unable to set-up D-Bus watch for user sessions: %w", err))
+		return nil, fmt.Errorf("watch user sessions: %w", err)
 	}
 	sensorCh := make(chan models.Entity)
 
 	sendUpdate := func() {
 		users, err := w.getUsers()
 		if err != nil {
-			slog.With(slog.String("worker", userSessionsSensorWorkerID)).Debug("Failed to get list of user sessions.", slog.Any("error", err))
+			slogctx.FromCtx(ctx).Debug("Failed to get list of user sessions.", slog.Any("error", err))
 		} else {
 			sensorCh <- newUsersSensor(ctx, users)
 		}
@@ -139,31 +120,78 @@ func (w *UserSessionSensorWorker) IsDisabled() bool {
 	return w.prefs.IsDisabled()
 }
 
-func NewUserSessionSensorWorker(ctx context.Context) (workers.EntityWorker, error) {
-	bus, ok := linux.CtxGetSystemBus(ctx)
-	if !ok {
-		return nil, errors.Join(ErrInitUsersWorker, linux.ErrNoSystemBus)
+func (w *UserSessionSensorWorker) getUsers() ([]string, error) {
+	userData, err := dbusx.GetData[[][]any](w.bus, loginBasePath, loginBaseInterface, listSessionsMethod)
+	if err != nil {
+		return nil, fmt.Errorf("get users from D-Bus: %w", err)
 	}
 
-	worker := &UserSessionSensorWorker{
-		WorkerMetadata: models.SetWorkerMetadata(userSessionsSensorWorkerID, userSessionsSensorWorkerDesc),
-		bus:            bus,
+	var users []string
+
+	for _, u := range userData {
+		if user, ok := u[2].(string); ok {
+			users = append(users, user)
+		}
+	}
+
+	return users, nil
+}
+
+func newUsersSensor(ctx context.Context, users []string) models.Entity {
+	return sensor.NewSensor(ctx,
+		sensor.WithName("Current Users"),
+		sensor.WithID("current_users"),
+		sensor.WithStateClass(class.StateMeasurement),
+		sensor.WithUnits(usersSensorUnits),
+		sensor.WithIcon(usersSensorIcon),
+		sensor.WithState(len(users)),
+		sensor.WithDataSourceAttribute(linux.DataSrcDBus),
+		sensor.WithAttribute("usernames", users),
+	)
+}
+
+type UserSessionEventsWorker struct {
+	*sessionTracker
+	*models.WorkerMetadata
+
+	prefs *UserSessionsPrefs
+}
+
+func NewUserSessionEventsWorker(ctx context.Context) (workers.EntityWorker, error) {
+	worker := &UserSessionEventsWorker{
+		WorkerMetadata: models.SetWorkerMetadata("user_session_events", "User session events"),
+	}
+
+	bus, ok := linux.CtxGetSystemBus(ctx)
+	if !ok {
+		return worker, fmt.Errorf("get system bus: %w", linux.ErrNoSystemBus)
+	}
+
+	worker.sessionTracker = &sessionTracker{
+		bus:      bus,
+		sessions: make(map[string]map[string]any),
 	}
 
 	defaultPrefs := &UserSessionsPrefs{}
 	var err error
 	worker.prefs, err = workers.LoadWorkerPreferences(userSessionsPreferencesID, defaultPrefs)
 	if err != nil {
-		return nil, errors.Join(ErrInitUsersWorker, err)
+		return worker, fmt.Errorf("load preferences: %w", err)
+	}
+
+	currentSessions, err := dbusx.GetData[[][]any](bus, loginBasePath, loginBaseInterface, listSessionsMethod)
+	if err != nil {
+		return worker, fmt.Errorf("get user sessions from D-Bus: %w", err)
+	}
+
+	for session := range slices.Values(currentSessions) {
+		s, ok := session[4].(string)
+		if ok {
+			worker.trackSession(s)
+		}
 	}
 
 	return worker, nil
-}
-
-type UserSessionEventsWorker struct {
-	prefs *UserSessionsPrefs
-	*sessionTracker
-	*models.WorkerMetadata
 }
 
 type sessionTracker struct {
@@ -204,7 +232,7 @@ func (t *sessionTracker) getSessionDetails(path string) map[string]any {
 	sessionDetails["user"] = sessionProp[string](t.getSessionProp, path, "Name")
 	sessionDetails["remote"] = sessionProp[bool](t.getSessionProp, path, "Remote")
 
-	if sessionDetails["remote"].(bool) {
+	if _, ok := sessionDetails["remote"].(bool); ok {
 		sessionDetails["remote_host"] = sessionProp[string](t.getSessionProp, path, "RemoteHost")
 		sessionDetails["remote_user"] = sessionProp[string](t.getSessionProp, path, "RemoteUser")
 	}
@@ -224,8 +252,7 @@ func (w *UserSessionEventsWorker) Start(ctx context.Context) (<-chan models.Enti
 		dbusx.MatchMembers(sessionAddedSignal, sessionRemovedSignal),
 	).Start(ctx, w.bus)
 	if err != nil {
-		return nil, errors.Join(ErrInitUsersWorker,
-			fmt.Errorf("unable to set-up D-Bus watch for user sessions: %w", err))
+		return nil, fmt.Errorf("watch user sessions: %w", err)
 	}
 
 	eventCh := make(chan models.Entity)
@@ -278,40 +305,6 @@ func (w *UserSessionEventsWorker) Start(ctx context.Context) (<-chan models.Enti
 
 func (w *UserSessionEventsWorker) IsDisabled() bool {
 	return w.prefs.IsDisabled()
-}
-
-func NewUserSessionEventsWorker(ctx context.Context) (workers.EntityWorker, error) {
-	bus, ok := linux.CtxGetSystemBus(ctx)
-	if !ok {
-		return nil, errors.Join(ErrInitUsersWorker, linux.ErrNoSystemBus)
-	}
-
-	worker := &UserSessionEventsWorker{
-		WorkerMetadata: models.SetWorkerMetadata(userSessionsEventWorkerID, userSessionsEventWorkerDesc),
-		sessionTracker: &sessionTracker{
-			bus:      bus,
-			sessions: make(map[string]map[string]any),
-		},
-	}
-
-	defaultPrefs := &UserSessionsPrefs{}
-	var err error
-	worker.prefs, err = workers.LoadWorkerPreferences(userSessionsPreferencesID, defaultPrefs)
-	if err != nil {
-		return nil, errors.Join(ErrInitUsersWorker, err)
-	}
-
-	currentSessions, err := dbusx.GetData[[][]any](bus, loginBasePath, loginBaseInterface, listSessionsMethod)
-	if err != nil {
-		return nil, errors.Join(ErrInitUsersWorker,
-			fmt.Errorf("could not retrieve sessions from D-Bus: %w", err))
-	}
-
-	for session := range slices.Values(currentSessions) {
-		worker.trackSession(string(session[4].(dbus.ObjectPath)))
-	}
-
-	return worker, nil
 }
 
 func sessionProp[T any](getFunc func(string, string) (dbus.Variant, error), path, prop string) T {

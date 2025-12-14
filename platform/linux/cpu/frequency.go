@@ -37,8 +37,6 @@ const (
 	cpuFreqUpdateInterval = 30 * time.Second
 	cpuFreqUpdateJitter   = time.Second
 
-	cpuFreqWorkerID      = "cpu_freq_sensors"
-	cpuFreqWorkerDesc    = "CPU frequency stats"
 	cpuFreqPreferencesID = prefPrefix + "frequencies"
 )
 
@@ -55,9 +53,9 @@ type freqWorker struct {
 }
 
 // NewFreqWorker creates a worker that will monitor and report CPU frequencies.
-func NewFreqWorker(ctx context.Context) (workers.EntityWorker, error) {
+func NewFreqWorker(_ context.Context) (workers.EntityWorker, error) {
 	worker := &freqWorker{
-		WorkerMetadata:          models.SetWorkerMetadata(cpuFreqWorkerID, cpuFreqWorkerDesc),
+		WorkerMetadata:          models.SetWorkerMetadata("cpu_frequency", "CPU Frequency metrics"),
 		PollingEntityWorkerData: &workers.PollingEntityWorkerData{},
 	}
 
@@ -67,16 +65,11 @@ func NewFreqWorker(ctx context.Context) (workers.EntityWorker, error) {
 	var err error
 	worker.prefs, err = workers.LoadWorkerPreferences(cpuFreqPreferencesID, defaultPrefs)
 	if err != nil {
-		return nil, fmt.Errorf("unable to load CPU frequency preferences: %w", err)
+		return worker, fmt.Errorf("unable to load CPU frequency preferences: %w", err)
 	}
 
 	pollInterval, err := time.ParseDuration(worker.prefs.UpdateInterval)
 	if err != nil {
-		slogctx.FromCtx(ctx).Warn("Invalid polling interval, using default",
-			slog.String("worker", cpuFreqWorkerID),
-			slog.String("given_interval", worker.prefs.UpdateInterval),
-			slog.String("default_interval", cpuFreqUpdateInterval.String()))
-
 		pollInterval = cpuFreqUpdateInterval
 	}
 	worker.Trigger = scheduler.NewPollTriggerWithJitter(pollInterval, cpuFreqUpdateJitter)
@@ -114,7 +107,7 @@ type cpuFreq struct {
 }
 
 func newCPUFreqSensor(ctx context.Context, id string) models.Entity {
-	info := getCPUFreqs(id)
+	info := getCPUFreqs(ctx, id)
 	num := strings.TrimPrefix(info.cpu, "cpu")
 
 	return sensor.NewSensor(ctx,
@@ -136,24 +129,24 @@ func newCPUFreqSensor(ctx context.Context, id string) models.Entity {
 	)
 }
 
-func getCPUFreqs(id string) *cpuFreq {
+func getCPUFreqs(ctx context.Context, id string) *cpuFreq {
 	return &cpuFreq{
 		cpu:      id,
-		freq:     readCPUFreqProp(id, freqFile),
-		governor: readCPUFreqProp(id, governorFile),
-		driver:   readCPUFreqProp(id, driverFile),
+		freq:     readCPUFreqProp(ctx, id, freqFile),
+		governor: readCPUFreqProp(ctx, id, governorFile),
+		driver:   readCPUFreqProp(ctx, id, driverFile),
 	}
 }
 
 // readCPUFreqProp retrieves the current cpu freq governor for this cpu. If
 // it cannot be found, it returns "unknown".
-func readCPUFreqProp(id, file string) string {
+func readCPUFreqProp(ctx context.Context, id, file string) string {
 	path := filepath.Join(linux.SysFSRoot, "devices", "system", "cpu", id, file)
 
 	// Read the current scaling driver.
 	prop, err := os.ReadFile(path) // #nosec:G304
 	if err != nil {
-		slog.Debug("Could not read CPU freq property.",
+		slogctx.FromCtx(ctx).Debug("Could not read CPU freq property.",
 			slog.String("cpu", id),
 			slog.String("property", file),
 			slog.Any("error", err))

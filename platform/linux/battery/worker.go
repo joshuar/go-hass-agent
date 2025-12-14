@@ -23,11 +23,6 @@ var _ workers.EntityWorker = (*BatteryWorker)(nil)
 
 var ErrInitBatterWorker = errors.New("could not init battery worker")
 
-const (
-	workerID   = "battery_sensors"
-	workerDesc = "Battery statistics"
-)
-
 type BatteryWorker struct {
 	bus         *dbusx.Bus
 	batteryList map[dbus.ObjectPath]context.CancelFunc
@@ -213,22 +208,23 @@ func (w *BatteryWorker) monitorBatteryChanges(ctx context.Context) <-chan models
 }
 
 func NewBatteryWorker(ctx context.Context) (workers.EntityWorker, error) {
-	bus, ok := linux.CtxGetSystemBus(ctx)
-	if !ok {
-		return nil, linux.ErrNoSystemBus
+	worker := &BatteryWorker{
+		WorkerMetadata: models.SetWorkerMetadata("battery_status", "Battery status"),
+		batteryList:    make(map[dbus.ObjectPath]context.CancelFunc),
 	}
 
-	worker := &BatteryWorker{
-		WorkerMetadata: models.SetWorkerMetadata(workerID, workerDesc),
-		batteryList:    make(map[dbus.ObjectPath]context.CancelFunc),
-		bus:            bus,
+	bus, ok := linux.CtxGetSystemBus(ctx)
+	if !ok {
+		return worker, linux.ErrNoSystemBus
 	}
+
+	worker.bus = bus
 
 	defaultPrefs := &workers.CommonWorkerPrefs{}
 	var err error
 	worker.prefs, err = workers.LoadWorkerPreferences("sensors.batteries", defaultPrefs)
 	if err != nil {
-		return nil, errors.Join(ErrInitBatterWorker, err)
+		return worker, errors.Join(ErrInitBatterWorker, err)
 	}
 
 	return worker, nil

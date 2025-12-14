@@ -42,54 +42,26 @@ type MPRISWorker struct {
 	prefs       *workers.CommonWorkerPrefs
 }
 
-func (m *MPRISWorker) mprisStateCallback(_ ...any) (json.RawMessage, error) {
-	return json.RawMessage(`{ "value": ` + m.mediaState + ` }`), nil
-}
-
-func (m *MPRISWorker) publishPlaybackState(ctx context.Context, state string) {
-	m.mediaState = fmt.Sprintf("%q", state)
-
-	switch m.mediaState {
-	case "Playing":
-		m.MPRISStatus.Icon = mediaPlayIcon
-	case "Paused":
-		m.MPRISStatus.Icon = mediaPauseIcon
-	case "Stopped":
-		m.MPRISStatus.Icon = mediaStopIcon
-	default:
-		m.MPRISStatus.Icon = mediaOffIcon
-	}
-
-	msg, err := m.MPRISStatus.MarshalState()
-	if err != nil {
-		slogctx.FromCtx(ctx).Warn("Could not publish MPRIS state.", slog.Any("error", err))
-
-		return
-	}
-	m.MsgCh <- *msg
-}
-
 func NewMPRISWorker(ctx context.Context, device *mqtthass.Device) (*MPRISWorker, error) {
+	worker := &MPRISWorker{
+		MsgCh: make(chan mqttapi.Msg),
+	}
+
 	var err error
 
 	bus, ok := linux.CtxGetSessionBus(ctx)
 	if !ok {
-		return nil, errors.Join(ErrInitMPRISWorker, linux.ErrNoSessionBus)
-	}
-
-	worker := &MPRISWorker{
-		MsgCh: make(chan mqttapi.Msg),
+		return worker, errors.Join(ErrInitMPRISWorker, linux.ErrNoSessionBus)
 	}
 
 	defaultPrefs := &workers.CommonWorkerPrefs{}
 	worker.prefs, err = workers.LoadWorkerPreferences(mprisPrefID, defaultPrefs)
 	if err != nil {
-		return nil, errors.Join(ErrInitMPRISWorker, err)
+		return worker, errors.Join(ErrInitMPRISWorker, err)
 	}
 
-	//nolint:nilnil
 	if worker.prefs.IsDisabled() {
-		return nil, nil
+		return worker, nil
 	}
 
 	worker.MPRISStatus = mqtthass.NewSensorEntity().
@@ -138,4 +110,31 @@ func NewMPRISWorker(ctx context.Context, device *mqtthass.Device) (*MPRISWorker,
 	// TODO: send the state on agent startup.
 
 	return worker, nil
+}
+
+func (m *MPRISWorker) mprisStateCallback(_ ...any) (json.RawMessage, error) {
+	return json.RawMessage(`{ "value": ` + m.mediaState + ` }`), nil
+}
+
+func (m *MPRISWorker) publishPlaybackState(ctx context.Context, state string) {
+	m.mediaState = fmt.Sprintf("%q", state)
+
+	switch m.mediaState {
+	case "Playing":
+		m.MPRISStatus.Icon = mediaPlayIcon
+	case "Paused":
+		m.MPRISStatus.Icon = mediaPauseIcon
+	case "Stopped":
+		m.MPRISStatus.Icon = mediaStopIcon
+	default:
+		m.MPRISStatus.Icon = mediaOffIcon
+	}
+
+	msg, err := m.MPRISStatus.MarshalState()
+	if err != nil {
+		slogctx.FromCtx(ctx).Warn("Could not publish MPRIS state.", slog.Any("error", err))
+
+		return
+	}
+	m.MsgCh <- *msg
 }

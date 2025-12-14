@@ -18,38 +18,29 @@ import (
 
 var _ workers.EntityWorker = (*micUsageWorker)(nil)
 
-var (
-	ErrInitMicUsageWorker = errors.New("could not init mic usage worker")
-	ErrNewMicUsageSensor  = errors.New("could not create mic usage sensor")
-)
-
-const (
-	micUsageWorkerID   = "microphone_usage_sensor"
-	micUsageWorkerDesc = "Microphone usage detection"
-)
-
 type micUsageWorker struct {
+	*models.WorkerMetadata
+
 	prefs       *workers.CommonWorkerPrefs
 	pwEventChan chan pwmonitor.Event
 	inUse       bool
-	*models.WorkerMetadata
 }
 
 func NewMicUsageWorker(ctx context.Context) (workers.EntityWorker, error) {
 	worker := &micUsageWorker{
-		WorkerMetadata: models.SetWorkerMetadata(micUsageWorkerID, micUsageWorkerDesc),
+		WorkerMetadata: models.SetWorkerMetadata("mic_in_use", "Microphone in use"),
 	}
 
 	defaultPrefs := &workers.CommonWorkerPrefs{}
 	var err error
-	worker.prefs, err = workers.LoadWorkerPreferences(micUsagePrefID, defaultPrefs)
+	worker.prefs, err = workers.LoadWorkerPreferences(prefPrefix+"microphone_in_use", defaultPrefs)
 	if err != nil {
-		return nil, errors.Join(ErrInitMicUsageWorker, err)
+		return worker, fmt.Errorf("load preferences: %w", err)
 	}
 
 	monitor, found := linux.CtxGetPipewireMonitor(ctx)
 	if !found {
-		return nil, fmt.Errorf("%w: no pipewire monitor in context", ErrInitMicUsageWorker)
+		return worker, errors.New("no pipewire monitor in context")
 	}
 	worker.pwEventChan = monitor.AddListener(ctx, micPipewireEventFilter)
 

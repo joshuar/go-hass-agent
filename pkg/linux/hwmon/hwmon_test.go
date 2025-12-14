@@ -185,7 +185,7 @@ func Test_newChip(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := newChip(tt.args.path)
+			got, err := newChip(t.Context(), tt.args.path)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("newChip() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -203,9 +203,9 @@ func Test_newChip(t *testing.T) {
 func TestGetAllChips(t *testing.T) {
 	var chips []*Chip
 
-	chip0, err := newChip("testdata/hwmon0")
+	chip0, err := newChip(t.Context(), "testdata/hwmon0")
 	require.NoError(t, err)
-	chip1, err := newChip("testdata/hwmon1")
+	chip1, err := newChip(t.Context(), "testdata/hwmon1")
 	require.NoError(t, err)
 
 	chips = append(chips, chip0, chip1)
@@ -233,7 +233,7 @@ func TestGetAllChips(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			HWMonPath = tt.args.path
-			got, err := GetAllChips()
+			got, err := GetAllChips(t.Context())
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetAllChips() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -404,7 +404,7 @@ func TestGetAllSensors(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			HWMonPath = tt.args.path
-			got, err := GetAllSensors()
+			got, err := GetAllSensors(t.Context())
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetAllSensors() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -474,7 +474,7 @@ func Test_getSensorFiles(t *testing.T) {
 func Benchmark_GetAllSensors(b *testing.B) {
 	b.Run(fmt.Sprintf("run %d", b.N), func(b *testing.B) {
 		for b.Loop() {
-			_, err := GetAllSensors()
+			_, err := GetAllSensors(b.Context())
 			if err != nil {
 				b.Log("problem getting sensors: %w", err)
 			}

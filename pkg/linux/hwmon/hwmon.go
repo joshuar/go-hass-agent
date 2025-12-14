@@ -5,6 +5,7 @@
 package hwmon
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"os"
@@ -14,6 +15,7 @@ import (
 	"sync"
 
 	"github.com/iancoleman/strcase"
+	slogctx "github.com/veqryn/slog-context"
 	"golang.org/x/sys/unix"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -176,7 +178,7 @@ func getSensorFiles(hwMonPath string) (chan sensorFile, error) {
 }
 
 // newChip creates a new chip from the given hwmon sysfs path.
-func newChip(path string) (*Chip, error) {
+func newChip(ctx context.Context, path string) (*Chip, error) {
 	chipName, err := getFileContents(filepath.Join(path, "name"))
 	if err != nil {
 		return nil, err
@@ -192,7 +194,7 @@ func newChip(path string) (*Chip, error) {
 	if err == nil && fh.Mode().IsRegular() {
 		chip.deviceModel, err = getFileContents(filepath.Join(path, "device", "model"))
 		if err == nil {
-			slog.Debug("Could not retrieve a device model for chip.",
+			slogctx.FromCtx(ctx).Debug("Could not retrieve a device model for chip.",
 				slog.String("chip", chip.chipName),
 				slog.Any("error", err))
 		}
@@ -207,7 +209,7 @@ func newChip(path string) (*Chip, error) {
 // GetAllChips will return a slice of Chips containing their sensors. If there
 // are any errors in parsing chip or sensor values, it will return a non-nill
 // composite error as well.
-func GetAllChips() ([]*Chip, error) {
+func GetAllChips(ctx context.Context) ([]*Chip, error) {
 	// Get all the hwmon chips.
 	files, err := os.ReadDir(HWMonPath)
 	if err != nil {
@@ -229,8 +231,8 @@ func GetAllChips() ([]*Chip, error) {
 			go func() {
 				defer wg.Done()
 
-				if chip, err := newChip(filepath.Join(HWMonPath, file.Name())); err != nil {
-					slog.Debug("Could not process hwmon path.",
+				if chip, err := newChip(ctx, filepath.Join(HWMonPath, file.Name())); err != nil {
+					slogctx.FromCtx(ctx).Debug("Could not process hwmon path.",
 						slog.String("path", file.Name()),
 						slog.Any("error", err))
 				} else {
@@ -423,10 +425,10 @@ func newSensor(file *sensorFile, chip *Chip) *Sensor {
 // GetAllSensors returns a slice of Sensor objects, representing all detected
 // chip sensors found on the host. If there were any errors in fetching chips or
 // chip sensors, it will also return a non-nill composite error.
-func GetAllSensors() ([]*Sensor, error) {
+func GetAllSensors(ctx context.Context) ([]*Sensor, error) {
 	var sensors []*Sensor
 
-	chips, err := GetAllChips()
+	chips, err := GetAllChips(ctx)
 	for _, chip := range chips {
 		sensors = append(sensors, chip.Sensors...)
 	}

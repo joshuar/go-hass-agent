@@ -33,8 +33,6 @@ const (
 	cpuUsageUpdateInterval = 10 * time.Second
 	cpuUsageUpdateJitter   = 500 * time.Millisecond
 
-	cpuUsageWorkerID      = "cpu_usage_sensors"
-	cpuUsageWorkerDesc    = "CPU usage stats"
 	cpuUsagePreferencesID = prefPrefix + "usage"
 )
 
@@ -44,7 +42,18 @@ var (
 )
 
 var (
-	allTimes     = []string{"user_time", "nice_time", "system_time", "idle_time", "iowait_time", "irq_time", "softirq_time", "steal_time", "guest_time", "guest_nice_time"}
+	allTimes = []string{
+		"user_time",
+		"nice_time",
+		"system_time",
+		"idle_time",
+		"iowait_time",
+		"irq_time",
+		"softirq_time",
+		"steal_time",
+		"guest_time",
+		"guest_nice_time",
+	}
 	idleTimes    = []string{"idle_time", "iowait_time"}
 	nonIdleTimes = []string{"user_time", "nice_time", "system_time", "irq_time", "softirq_time", "steal_time"}
 	guestTimes   = []string{"guest_time", "guest_nice_time"}
@@ -69,24 +78,24 @@ type usageWorker struct {
 
 // NewUsageWorker creates a new worker to generate entities for CPU usage and related stats.
 func NewUsageWorker(ctx context.Context) (workers.EntityWorker, error) {
-	clktck, found := linux.CtxGetClkTck(ctx)
-	if !found {
-		return nil, errors.Join(ErrInitUsageWorker, fmt.Errorf("%w: no clktck value", linux.ErrInvalidCtx))
-	}
-
-	boottime, found := linux.CtxGetBoottime(ctx)
-	if !found {
-		return nil, errors.Join(ErrInitUsageWorker, fmt.Errorf("%w: no boottime value", linux.ErrInvalidCtx))
-	}
-
 	worker := &usageWorker{
-		WorkerMetadata:          models.SetWorkerMetadata(cpuUsageWorkerID, cpuUsageWorkerDesc),
+		WorkerMetadata:          models.SetWorkerMetadata("cpu_usage", "CPU usage metrics"),
 		PollingEntityWorkerData: &workers.PollingEntityWorkerData{},
 		path:                    filepath.Join(linux.ProcFSRoot, "stat"),
-		boottime:                boottime,
-		clktck:                  clktck,
 		rateSensors:             make(map[string]*linux.RateValue[uint64]),
 		cpuSensors:              make(map[string]float64),
+	}
+
+	var found bool
+
+	worker.clktck, found = linux.CtxGetClkTck(ctx)
+	if !found {
+		return worker, errors.Join(ErrInitUsageWorker, fmt.Errorf("%w: no clktck value", linux.ErrInvalidCtx))
+	}
+
+	worker.boottime, found = linux.CtxGetBoottime(ctx)
+	if !found {
+		return worker, errors.Join(ErrInitUsageWorker, fmt.Errorf("%w: no boottime value", linux.ErrInvalidCtx))
 	}
 
 	defaultPrefs := &UsagePrefs{
@@ -95,16 +104,11 @@ func NewUsageWorker(ctx context.Context) (workers.EntityWorker, error) {
 	var err error
 	worker.prefs, err = workers.LoadWorkerPreferences(cpuUsagePreferencesID, defaultPrefs)
 	if err != nil {
-		return nil, errors.Join(ErrInitUsageWorker, err)
+		return worker, errors.Join(ErrInitUsageWorker, err)
 	}
 
 	pollInterval, err := time.ParseDuration(worker.prefs.UpdateInterval)
 	if err != nil {
-		slogctx.FromCtx(ctx).Warn("Invalid polling interval, using default",
-			slog.String("worker", cpuUsageWorkerID),
-			slog.String("given_interval", worker.prefs.UpdateInterval),
-			slog.String("default_interval", cpuUsageUpdateInterval.String()))
-
 		pollInterval = cpuUsageUpdateInterval
 	}
 	worker.Trigger = scheduler.NewPollTriggerWithJitter(pollInterval, cpuUsageUpdateJitter)
@@ -170,7 +174,7 @@ func (w *usageWorker) getUsageStats(ctx context.Context) ([]models.Entity, error
 		return nil, fmt.Errorf("%w: unable to open %s", ErrGetCPUUsage, w.path)
 	}
 
-	defer statsFH.Close() //nolint:errcheck
+	defer statsFH.Close()
 
 	statsFile := bufio.NewScanner(statsFH)
 	for statsFile.Scan() {
@@ -194,14 +198,26 @@ func (w *usageWorker) getUsageStats(ctx context.Context) ([]models.Entity, error
 			sensors = append(sensors, newUsageSensor(ctx, w, cols, models.EntityCategoryDiagnostic))
 		case cols[0] == "ctxt":
 			rate := w.calculateRate(ctx, "ctxt", cols[1])
-			sensors = append(sensors, newRateSensor(ctx, "CPU Context Switch Rate", "mdi:counter", "ctx/s", rate, cols[1]))
+			sensors = append(
+				sensors,
+				newRateSensor(ctx, "CPU Context Switch Rate", "mdi:counter", "ctx/s", rate, cols[1]),
+			)
 		case cols[0] == "processes":
 			rate := w.calculateRate(ctx, "processes", cols[1])
-			sensors = append(sensors, newRateSensor(ctx, "Processes Creation Rate", "mdi:application-cog", "processes/s", rate, cols[1]))
+			sensors = append(
+				sensors,
+				newRateSensor(ctx, "Processes Creation Rate", "mdi:application-cog", "processes/s", rate, cols[1]),
+			)
 		case cols[0] == "procs_running":
-			sensors = append(sensors, newCountSensor(ctx, "Processes Running", "mdi:application-cog", "processes", cols[1]))
+			sensors = append(
+				sensors,
+				newCountSensor(ctx, "Processes Running", "mdi:application-cog", "processes", cols[1]),
+			)
 		case cols[0] == "procs_blocked":
-			sensors = append(sensors, newCountSensor(ctx, "Processes Blocked", "mdi:application-cog", "processes", cols[1]))
+			sensors = append(
+				sensors,
+				newCountSensor(ctx, "Processes Blocked", "mdi:application-cog", "processes", cols[1]),
+			)
 		}
 	}
 
@@ -223,7 +239,12 @@ func newRateSensor(ctx context.Context, name, icon, units string, value uint64, 
 	)
 }
 
-func newUsageSensor(ctx context.Context, worker *usageWorker, details []string, category models.EntityCategory) models.Entity {
+func newUsageSensor(
+	ctx context.Context,
+	worker *usageWorker,
+	details []string,
+	category models.EntityCategory,
+) models.Entity {
 	var name, id string
 
 	switch details[0] {

@@ -31,24 +31,20 @@ const (
 	colorSchemeProp         = "color-scheme"
 	accentColorProp         = "accent-color"
 
-	desktopWorkerID     = "desktop_settings_sensors"
-	desktopWorkerDesc   = "Desktop settings"
-	desktopWorkerPrefID = prefPrefix + "preferences"
-
 	unknownValue = "Unknown"
 )
 
 type settingsWorker struct {
+	*models.WorkerMetadata
+
 	bus   *dbusx.Bus
 	prefs *WorkerPrefs
-	*models.WorkerMetadata
 }
 
 func (w *settingsWorker) IsDisabled() bool {
 	return w.prefs.IsDisabled()
 }
 
-//nolint:cyclop
 func (w *settingsWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
 	triggerCh, err := dbusx.NewWatch(
 		dbusx.MatchPath(desktopPortalPath),
@@ -56,7 +52,7 @@ func (w *settingsWorker) Start(ctx context.Context) (<-chan models.Entity, error
 		dbusx.MatchMembers(settingsChangedSignal),
 	).Start(ctx, w.bus)
 	if err != nil {
-		return nil, fmt.Errorf("could not start desktop worker: %w", err)
+		return nil, fmt.Errorf("watch desktop settings: %w", err)
 	}
 	sensorCh := make(chan models.Entity)
 
@@ -131,32 +127,32 @@ func (w *settingsWorker) getProp(prop string) (dbus.Variant, error) {
 
 // NewDesktopWorker creates a worker to track desktop settings changes.
 func NewDesktopWorker(ctx context.Context) (workers.EntityWorker, error) {
-	_, ok := linux.CtxGetDesktopPortal(ctx)
-	if !ok {
-		return nil, fmt.Errorf("could not start desktop worker: %w", linux.ErrNoDesktopPortal)
-	}
-
-	bus, ok := linux.CtxGetSessionBus(ctx)
-	if !ok {
-		return nil, fmt.Errorf("could not start desktop worker: %w", linux.ErrNoSessionBus)
-	}
-
 	worker := &settingsWorker{
-		WorkerMetadata: models.SetWorkerMetadata(desktopWorkerID, desktopWorkerDesc),
-		bus:            bus,
+		WorkerMetadata: models.SetWorkerMetadata("desktop_settings", "Desktop settings"),
+	}
+
+	var ok bool
+
+	_, ok = linux.CtxGetDesktopPortal(ctx)
+	if !ok {
+		return worker, fmt.Errorf("get desktop portal: %w", linux.ErrNoDesktopPortal)
+	}
+
+	worker.bus, ok = linux.CtxGetSessionBus(ctx)
+	if !ok {
+		return worker, fmt.Errorf("get session bus: %w", linux.ErrNoSessionBus)
 	}
 
 	defaultPrefs := &WorkerPrefs{}
 	var err error
-	worker.prefs, err = workers.LoadWorkerPreferences(prefPrefix+desktopWorkerID, defaultPrefs)
+	worker.prefs, err = workers.LoadWorkerPreferences(prefPrefix+"desktop_settings_sensors", defaultPrefs)
 	if err != nil {
-		return nil, fmt.Errorf("could not start desktop worker: %w", err)
+		return worker, fmt.Errorf("load preferences: %w", err)
 	}
 
 	return worker, nil
 }
 
-//nolint:mnd
 func parseColorScheme(value dbus.Variant) (string, string) {
 	scheme, err := dbusx.VariantToValue[uint32](value)
 	if err != nil {
@@ -173,7 +169,6 @@ func parseColorScheme(value dbus.Variant) (string, string) {
 	}
 }
 
-//nolint:mnd
 func parseAccentColor(value dbus.Variant) string {
 	values, err := dbusx.VariantToValue[[]any](value)
 	if err != nil {

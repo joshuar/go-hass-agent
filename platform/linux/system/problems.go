@@ -5,14 +5,11 @@ package system
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"log/slog"
 	"strconv"
 	"time"
 
 	"github.com/reugn/go-quartz/quartz"
-	slogctx "github.com/veqryn/slog-context"
 
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/models"
@@ -27,8 +24,6 @@ const (
 	abrtProblemsCheckInterval = 15 * time.Minute
 	abrtProblemsCheckJitter   = time.Minute
 
-	abrtProblemsWorkerID      = "abrt_problems_sensor"
-	abrtProblemsWorkerDesc    = "ABRT problems"
 	abrtProblemsPreferencesID = sensorsPrefPrefix + "abrt_problems"
 
 	dBusProblemsDest = "/org/freedesktop/problems"
@@ -40,17 +35,71 @@ var (
 	_ workers.PollingEntityWorker = (*problemsWorker)(nil)
 )
 
-var (
-	ErrNewABRTSensor    = errors.New("could not create ABRT sensor")
-	ErrInitABRTWorker   = errors.New("could not init ABRT worker")
-	ErrNoProblemDetails = errors.New("no details found")
-)
-
 type problemsWorker struct {
-	bus   *dbusx.Bus
-	prefs *ProblemsPrefs
 	*models.WorkerMetadata
 	*workers.PollingEntityWorkerData
+
+	bus   *dbusx.Bus
+	prefs *ProblemsPrefs
+}
+
+func NewProblemsWorker(ctx context.Context) (workers.EntityWorker, error) {
+	worker := &problemsWorker{
+		WorkerMetadata:          models.SetWorkerMetadata("abrt", "ABRT Problems"),
+		PollingEntityWorkerData: &workers.PollingEntityWorkerData{},
+	}
+
+	var ok bool
+
+	worker.bus, ok = linux.CtxGetSystemBus(ctx)
+	if !ok {
+		return worker, fmt.Errorf("get system bus: %w", linux.ErrNoSystemBus)
+	}
+	// Check if we can fetch problem data, bail if we can't.
+	_, err := dbusx.GetData[[]string](worker.bus, dBusProblemsDest, dBusProblemIntr, dBusProblemIntr+".GetProblems")
+	if err != nil {
+		return worker, fmt.Errorf("get abrt problems: %w", err)
+	}
+
+	defaultPrefs := &ProblemsPrefs{
+		UpdateInterval: abrtProblemsCheckInterval.String(),
+	}
+
+	worker.prefs, err = workers.LoadWorkerPreferences(abrtProblemsPreferencesID, defaultPrefs)
+	if err != nil {
+		return worker, fmt.Errorf("load preferences: %w", err)
+	}
+
+	pollInterval, err := time.ParseDuration(worker.prefs.UpdateInterval)
+	if err != nil {
+		pollInterval = abrtProblemsCheckInterval
+	}
+	worker.Trigger = scheduler.NewPollTriggerWithJitter(pollInterval, abrtProblemsCheckJitter)
+
+	return worker, nil
+}
+
+func (w *problemsWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
+	w.OutCh = make(chan models.Entity)
+	if err := workers.SchedulePollingWorker(ctx, w, w.OutCh); err != nil {
+		close(w.OutCh)
+		return w.OutCh, fmt.Errorf("schedule worker: %w", err)
+	}
+	return w.OutCh, nil
+}
+
+func (w *problemsWorker) Execute(ctx context.Context) error {
+	// Get the list of problems.
+	problems, err := w.getProblems()
+	if err != nil {
+		return fmt.Errorf("get abrt problems: %w", err)
+	}
+	w.OutCh <- w.generateEntity(ctx, problems)
+	return nil
+}
+
+func (w *problemsWorker) IsDisabled() bool {
+	return w.prefs.IsDisabled()
 }
 
 func (w *problemsWorker) generateEntity(ctx context.Context, problems []string) models.Entity {
@@ -93,77 +142,11 @@ func (w *problemsWorker) getProblemDetails(problem string) (map[string]string, e
 		dBusProblemIntr+".GetInfo", problem, []string{"time", "count", "package", "reason"})
 
 	switch {
-	case details == nil:
-		return nil, ErrNoProblemDetails
 	case err != nil:
 		return nil, err
 	default:
 		return details, nil
 	}
-}
-
-func (w *problemsWorker) Execute(ctx context.Context) error {
-	// Get the list of problems.
-	problems, err := w.getProblems()
-	if err != nil {
-		return fmt.Errorf("could not retrieve list of problems from D-Bus: %w", err)
-	}
-	w.OutCh <- w.generateEntity(ctx, problems)
-	return nil
-}
-
-func (w *problemsWorker) IsDisabled() bool {
-	return w.prefs.IsDisabled()
-}
-
-func (w *problemsWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
-	w.OutCh = make(chan models.Entity)
-	if err := workers.SchedulePollingWorker(ctx, w, w.OutCh); err != nil {
-		close(w.OutCh)
-		return w.OutCh, fmt.Errorf("could not start disk IO worker: %w", err)
-	}
-	return w.OutCh, nil
-}
-
-func NewProblemsWorker(ctx context.Context) (workers.EntityWorker, error) {
-	bus, ok := linux.CtxGetSystemBus(ctx)
-	if !ok {
-		return nil, linux.ErrNoSystemBus
-	}
-	// Check if we can fetch problem data, bail if we can't.
-	_, err := dbusx.GetData[[]string](bus, dBusProblemsDest, dBusProblemIntr, dBusProblemIntr+".GetProblems")
-	if err != nil {
-		return nil, errors.Join(ErrInitABRTWorker,
-			fmt.Errorf("unable to fetch ABRT problems from D-Bus: %w", err))
-	}
-
-	worker := &problemsWorker{
-		bus:                     bus,
-		WorkerMetadata:          models.SetWorkerMetadata(abrtProblemsWorkerID, abrtProblemsWorkerDesc),
-		PollingEntityWorkerData: &workers.PollingEntityWorkerData{},
-	}
-
-	defaultPrefs := &ProblemsPrefs{
-		UpdateInterval: abrtProblemsCheckInterval.String(),
-	}
-
-	worker.prefs, err = workers.LoadWorkerPreferences(abrtProblemsPreferencesID, defaultPrefs)
-	if err != nil {
-		return nil, errors.Join(ErrInitABRTWorker, err)
-	}
-
-	pollInterval, err := time.ParseDuration(worker.prefs.UpdateInterval)
-	if err != nil {
-		slogctx.FromCtx(ctx).Warn("Invalid polling interval, using default",
-			slog.String("worker", abrtProblemsWorkerID),
-			slog.String("given_interval", worker.prefs.UpdateInterval),
-			slog.String("default_interval", abrtProblemsCheckInterval.String()))
-
-		pollInterval = abrtProblemsCheckInterval
-	}
-	worker.Trigger = scheduler.NewPollTriggerWithJitter(pollInterval, abrtProblemsCheckJitter)
-
-	return worker, nil
 }
 
 func parseProblem(details map[string]string) map[string]any {

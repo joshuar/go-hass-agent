@@ -18,40 +18,31 @@ import (
 
 var _ workers.EntityWorker = (*webcamUsageWorker)(nil)
 
-var (
-	ErrInitWebcamUsageWorker = errors.New("could not init webcam usage worker")
-	ErrNewWebcamUsageSensor  = errors.New("could not create webcam usage sensor")
-)
-
-const (
-	webcamUsageWorkerID   = "webcam_usage_sensor"
-	webcamUsageWorkerDesc = "Webcam usage detection"
-)
-
 type webcamUsageWorker struct {
+	*models.WorkerMetadata
+
 	prefs       *workers.CommonWorkerPrefs
 	pwEventChan chan pwmonitor.Event
 	inUse       bool
-	*models.WorkerMetadata
 }
 
 func NewWebcamUsageWorker(ctx context.Context) (workers.EntityWorker, error) {
 	worker := &webcamUsageWorker{
-		WorkerMetadata: models.SetWorkerMetadata(webcamUsageWorkerID, webcamUsageWorkerDesc),
+		WorkerMetadata: models.SetWorkerMetadata("webcam_in_use", "Webcam in use"),
 	}
 
 	// Get worker preferences.
 	defaultPrefs := &workers.CommonWorkerPrefs{}
 	var err error
-	worker.prefs, err = workers.LoadWorkerPreferences(webcamUsagePrefID, defaultPrefs)
+	worker.prefs, err = workers.LoadWorkerPreferences(prefPrefix+"webcam_in_use", defaultPrefs)
 	if err != nil {
-		return nil, errors.Join(ErrInitWebcamUsageWorker, err)
+		return worker, fmt.Errorf("load preferences: %w", err)
 	}
 
 	// Set up pipewire listener.
 	monitor, found := linux.CtxGetPipewireMonitor(ctx)
 	if !found {
-		return nil, fmt.Errorf("%w: no pipewire monitor in context", ErrInitMicUsageWorker)
+		return worker, errors.New("no pipewire monitor in context")
 	}
 	worker.pwEventChan = monitor.AddListener(ctx, webcamPipewireEventFilter)
 

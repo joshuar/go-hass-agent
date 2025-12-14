@@ -30,8 +30,6 @@ const (
 	loadAvgUpdateInterval = time.Minute
 	loadAvgUpdateJitter   = 5 * time.Second
 
-	loadAvgsWorkerID      = "cpu_loadavg_sensors"
-	loadAvgsWorkerDesc    = "Load averages"
 	loadAvgsPreferencesID = prefPrefix + "load_averages"
 )
 
@@ -110,7 +108,7 @@ func parseLoadAvgs(data []byte) (map[string]string, error) {
 
 func NewLoadAvgWorker(_ context.Context) (workers.EntityWorker, error) {
 	worker := &loadAvgsWorker{
-		WorkerMetadata:          models.SetWorkerMetadata(loadAvgsWorkerID, loadAvgsWorkerDesc),
+		WorkerMetadata:          models.SetWorkerMetadata("load_averages", "CPU load averages"),
 		PollingEntityWorkerData: &workers.PollingEntityWorkerData{},
 		path:                    filepath.Join(linux.ProcFSRoot, "loadavg"),
 	}
@@ -119,7 +117,7 @@ func NewLoadAvgWorker(_ context.Context) (workers.EntityWorker, error) {
 	var err error
 	worker.prefs, err = workers.LoadWorkerPreferences(loadAvgsPreferencesID, defaultPrefs)
 	if err != nil {
-		return nil, errors.Join(ErrInitLoadAvgsWorker, err)
+		return worker, errors.Join(ErrInitLoadAvgsWorker, err)
 	}
 
 	worker.Trigger = scheduler.NewPollTriggerWithJitter(loadAvgUpdateInterval, loadAvgUpdateJitter)

@@ -3,18 +3,21 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//go:generate go tool golang.org/x/tools/cmd/stringer -type=memStatID -output memStats_generated.go -linecomment
+//go:generate go tool stringer -type=memStatID -output stats.gen.go -linecomment
 package mem
 
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	slogctx "github.com/veqryn/slog-context"
 
 	"github.com/joshuar/go-hass-agent/platform/linux"
 )
@@ -165,7 +168,7 @@ func (m memoryStats) get(id memStatID) (uint64, string) {
 }
 
 // getMemStats will create a memoryStats map for this device.
-func getMemStats() (memoryStats, error) {
+func getMemStats(ctx context.Context) (memoryStats, error) {
 	statsFH, err := os.Open(memStatFile)
 	if err != nil {
 		return nil, fmt.Errorf("getMemStats: %w", err)
@@ -192,7 +195,7 @@ func getMemStats() (memoryStats, error) {
 		name = strings.Trim(line.Text(), ":")
 
 		if id, ok = statNames[name]; !ok {
-			slog.Debug("Unknown memory stat. Ignoring.", slog.String("name", name))
+			slogctx.FromCtx(ctx).Debug("Unknown memory stat. Ignoring.", slog.String("stat", name))
 
 			continue
 		}
@@ -202,7 +205,9 @@ func getMemStats() (memoryStats, error) {
 
 		value, err = strconv.ParseUint(line.Text(), 10, 64)
 		if err != nil {
-			slog.Debug("Could not parse memory stat value.", slog.Any("error", err))
+			slogctx.FromCtx(ctx).Debug("Could not parse memory stat value.",
+				slog.String("stat", name),
+				slog.Any("error", err))
 		}
 
 		// If there is a third field, it will be the stat units.

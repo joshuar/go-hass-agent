@@ -7,7 +7,7 @@ package power
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"log/slog"
 
 	"github.com/eclipse/paho.golang/paho"
@@ -17,6 +17,7 @@ import (
 
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/config"
+	"github.com/joshuar/go-hass-agent/models"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 	"github.com/joshuar/go-hass-agent/platform/linux"
 )
@@ -25,10 +26,57 @@ const (
 	powerControlPreferencesID = controlsPrefPrefix + "power_controls"
 )
 
-var ErrInitPowerControls = errors.New("could not init power controls worker")
-
 type powerControlWorker struct {
+	*models.WorkerMetadata
+
 	prefs *workers.CommonWorkerPrefs
+}
+
+func NewPowerControl(ctx context.Context, device *mqtthass.Device) ([]*mqtthass.ButtonEntity, error) {
+	var err error
+
+	worker := &powerControlWorker{
+		WorkerMetadata: models.SetWorkerMetadata("power_controls", "Power controls"),
+	}
+
+	defaultPrefs := &workers.CommonWorkerPrefs{}
+	worker.prefs, err = workers.LoadWorkerPreferences(powerControlPreferencesID, defaultPrefs)
+	if err != nil {
+		return nil, fmt.Errorf("load preferences: %w", err)
+	}
+
+	if worker.prefs.IsDisabled() {
+		return nil, nil
+	}
+
+	bus, ok := linux.CtxGetSystemBus(ctx)
+	if !ok {
+		return nil, fmt.Errorf("get system bus: %w", linux.ErrNoSystemBus)
+	}
+
+	_, ok = linux.CtxGetSessionPath(ctx)
+	if !ok {
+		return nil, fmt.Errorf("get session path: %w", linux.ErrNoSessionPath)
+	}
+
+	commands := generatePowerCommands(ctx, bus, device.Name)
+	entities := make([]*mqtthass.ButtonEntity, 0, len(commands))
+
+	for _, command := range commands {
+		entities = append(entities,
+			mqtthass.NewButtonEntity().
+				WithDetails(
+					mqtthass.App(config.AppName+"_"+device.Name),
+					mqtthass.Name(command.name),
+					mqtthass.ID(command.id),
+					mqtthass.DeviceInfo(device),
+					mqtthass.Icon(command.icon),
+				).
+				WithCommand(mqtthass.CommandCallback(command.callBack)),
+		)
+	}
+
+	return entities, nil
 }
 
 // powerCommand represents a power command in the agent.
@@ -75,9 +123,20 @@ func generatePowerCommands(ctx context.Context, bus *dbusx.Bus, device string) [
 	// Add available system power commands.
 	for _, config := range systemCommands {
 		// Check if this power method is available on the system.
-		available, err := dbusx.GetData[string](bus, loginBasePath, loginBaseInterface, managerInterface+".Can"+config.method)
+		available, err := dbusx.GetData[string](
+			bus,
+			loginBasePath,
+			loginBaseInterface,
+			managerInterface+".Can"+config.method,
+		)
 		if available == "yes" || err == nil {
-			config.callBack = generatePowerControlCallback(ctx, bus, config.name, loginBasePath, managerInterface+"."+config.method)
+			config.callBack = generatePowerControlCallback(
+				ctx,
+				bus,
+				config.name,
+				loginBasePath,
+				managerInterface+"."+config.method,
+			)
 			availableCommands = append(availableCommands, config)
 		}
 	}
@@ -87,7 +146,11 @@ func generatePowerCommands(ctx context.Context, bus *dbusx.Bus, device string) [
 
 // generatePowerControlCallback creates an MQTT callback function that can
 // execute the appropriate D-Bus call to issue a power command on the device.
-func generatePowerControlCallback(ctx context.Context, bus *dbusx.Bus, name, path, method string) func(p *paho.Publish) {
+func generatePowerControlCallback(
+	ctx context.Context,
+	bus *dbusx.Bus,
+	name, path, method string,
+) func(p *paho.Publish) {
 	return func(_ *paho.Publish) {
 		err := dbusx.NewMethod(bus, loginBaseInterface, path, method).Call(ctx, true)
 		if err != nil {
@@ -97,49 +160,4 @@ func generatePowerControlCallback(ctx context.Context, bus *dbusx.Bus, name, pat
 					slog.Any("error", err))
 		}
 	}
-}
-
-func NewPowerControl(ctx context.Context, device *mqtthass.Device) ([]*mqtthass.ButtonEntity, error) {
-	var err error
-
-	worker := &powerControlWorker{}
-
-	defaultPrefs := &workers.CommonWorkerPrefs{}
-	worker.prefs, err = workers.LoadWorkerPreferences(powerControlPreferencesID, defaultPrefs)
-	if err != nil {
-		return nil, errors.Join(ErrInitPowerControls, err)
-	}
-
-	if worker.prefs.IsDisabled() {
-		return nil, nil
-	}
-
-	bus, ok := linux.CtxGetSystemBus(ctx)
-	if !ok {
-		return nil, errors.Join(ErrInitPowerControls, linux.ErrNoSystemBus)
-	}
-
-	_, ok = linux.CtxGetSessionPath(ctx)
-	if !ok {
-		return nil, errors.Join(ErrInitPowerControls, linux.ErrNoSessionPath)
-	}
-
-	commands := generatePowerCommands(ctx, bus, device.Name)
-	entities := make([]*mqtthass.ButtonEntity, 0, len(commands))
-
-	for _, command := range commands {
-		entities = append(entities,
-			mqtthass.NewButtonEntity().
-				WithDetails(
-					mqtthass.App(config.AppName+"_"+device.Name),
-					mqtthass.Name(command.name),
-					mqtthass.ID(command.id),
-					mqtthass.DeviceInfo(device),
-					mqtthass.Icon(command.icon),
-				).
-				WithCommand(mqtthass.CommandCallback(command.callBack)),
-		)
-	}
-
-	return entities, nil
 }

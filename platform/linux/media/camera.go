@@ -13,6 +13,7 @@ import (
 	"slices"
 
 	"github.com/eclipse/paho.golang/paho"
+	slogctx "github.com/veqryn/slog-context"
 
 	"github.com/blackjack/webcam"
 	mqtthass "github.com/joshuar/go-hass-anything/v12/pkg/hass"
@@ -66,64 +67,6 @@ type CameraWorkerPrefs struct {
 	Width         uint32   `toml:"camera_video_width"`
 }
 
-func (w *CameraWorker) Disabled() bool {
-	return w.prefs.Disabled
-}
-
-// openCamera opens the camera device and ensures that it has a preferred image
-// format, framerate and dimensions.
-func (w *CameraWorker) openCamera() (*webcam.Webcam, error) {
-	cam, err := webcam.Open(w.prefs.CameraDevice)
-	if err != nil {
-		return nil, fmt.Errorf("could not open camera %s: %w", w.prefs.CameraDevice, err)
-	}
-
-	// select pixel format
-	var preferredFormat webcam.PixelFormat
-
-	for format, desc := range cam.GetSupportedFormats() {
-		if slices.Contains(w.prefs.CameraFormats, desc) {
-			preferredFormat = format
-			break
-		}
-	}
-
-	if preferredFormat == 0 {
-		return nil, errors.New("could not determine an appropriate format")
-	}
-
-	_, _, _, err = cam.SetImageFormat(preferredFormat, w.prefs.Width, w.prefs.Height)
-	if err != nil {
-		return nil, fmt.Errorf("could not set camera parameters: %w", err)
-	}
-
-	return cam, nil
-}
-
-// publishImages loops over the received frames from the camera and wraps them
-// as a MQTT message to be sent back on the bus.
-func publishImages(cam *webcam.Webcam, topic string, msgCh chan mqttapi.Msg) {
-	if err := cam.StartStreaming(); err != nil {
-		slog.Error("Could not start recording", slog.Any("error", err))
-
-		return
-	}
-
-	for {
-		err := cam.WaitForFrame(uint32(5))
-		if err != nil && errors.Is(err, &webcam.Timeout{}) {
-			continue
-		}
-
-		frame, err := cam.ReadFrame()
-		if len(frame) == 0 || err != nil {
-			break
-		}
-
-		msgCh <- *mqttapi.NewMsg(topic, frame)
-	}
-}
-
 // NewCameraWorker is called by the OS controller to provide the entities for a camera.
 func NewCameraWorker(ctx context.Context, mqttDevice *mqtthass.Device) (*CameraWorker, error) {
 	var err error
@@ -165,16 +108,16 @@ func NewCameraWorker(ctx context.Context, mqttDevice *mqtthass.Device) (*CameraW
 			// Open the camera device.
 			worker.camera, err = worker.openCamera()
 			if err != nil {
-				slog.Error("Could not open camera device.",
+				slogctx.FromCtx(ctx).Error("Could not open camera device.",
 					slog.Any("error", err))
 				return
 			}
 
-			slog.Info("Start recording webcam.")
+			slogctx.FromCtx(ctx).Info("Start recording webcam.")
 
 			worker.state = startedState
 
-			go publishImages(worker.camera, worker.Images.Topic, worker.MsgCh)
+			go publishImages(ctx, worker.camera, worker.Images.Topic, worker.MsgCh)
 			worker.MsgCh <- *mqttapi.NewMsg(worker.Status.StateTopic, []byte(worker.state))
 		}))
 
@@ -189,17 +132,17 @@ func NewCameraWorker(ctx context.Context, mqttDevice *mqtthass.Device) (*CameraW
 		).WithCommand(
 		mqtthass.CommandCallback(func(_ *paho.Publish) {
 			if err := worker.camera.StopStreaming(); err != nil {
-				slog.Error("Stop streaming failed.", slog.Any("error", err))
+				slogctx.FromCtx(ctx).Error("Stop streaming failed.", slog.Any("error", err))
 			}
 
 			if err := worker.camera.Close(); err != nil {
-				slog.Error("Close camera failed.", slog.Any("error", err))
+				slogctx.FromCtx(ctx).Error("Close camera failed.", slog.Any("error", err))
 			}
 
 			worker.state = stoppedState
 			worker.MsgCh <- *mqttapi.NewMsg(worker.Status.StateTopic, []byte(worker.state))
 
-			slog.Info("Stop recording webcam.")
+			slogctx.FromCtx(ctx).Info("Stop recording webcam.")
 		}),
 	)
 
@@ -225,4 +168,62 @@ func NewCameraWorker(ctx context.Context, mqttDevice *mqtthass.Device) (*CameraW
 	}()
 
 	return worker, nil
+}
+
+func (w *CameraWorker) Disabled() bool {
+	return w.prefs.Disabled
+}
+
+// openCamera opens the camera device and ensures that it has a preferred image
+// format, framerate and dimensions.
+func (w *CameraWorker) openCamera() (*webcam.Webcam, error) {
+	cam, err := webcam.Open(w.prefs.CameraDevice)
+	if err != nil {
+		return nil, fmt.Errorf("could not open camera %s: %w", w.prefs.CameraDevice, err)
+	}
+
+	// select pixel format
+	var preferredFormat webcam.PixelFormat
+
+	for format, desc := range cam.GetSupportedFormats() {
+		if slices.Contains(w.prefs.CameraFormats, desc) {
+			preferredFormat = format
+			break
+		}
+	}
+
+	if preferredFormat == 0 {
+		return nil, errors.New("could not determine an appropriate format")
+	}
+
+	_, _, _, err = cam.SetImageFormat(preferredFormat, w.prefs.Width, w.prefs.Height)
+	if err != nil {
+		return nil, fmt.Errorf("could not set camera parameters: %w", err)
+	}
+
+	return cam, nil
+}
+
+// publishImages loops over the received frames from the camera and wraps them
+// as a MQTT message to be sent back on the bus.
+func publishImages(ctx context.Context, cam *webcam.Webcam, topic string, msgCh chan mqttapi.Msg) {
+	if err := cam.StartStreaming(); err != nil {
+		slogctx.FromCtx(ctx).Error("Could not start recording", slog.Any("error", err))
+
+		return
+	}
+
+	for {
+		err := cam.WaitForFrame(uint32(5))
+		if err != nil && errors.Is(err, &webcam.Timeout{}) {
+			continue
+		}
+
+		frame, err := cam.ReadFrame()
+		if len(frame) == 0 || err != nil {
+			break
+		}
+
+		msgCh <- *mqttapi.NewMsg(topic, frame)
+	}
 }

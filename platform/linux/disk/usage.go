@@ -73,6 +73,7 @@ var (
 type usageWorker struct {
 	*models.WorkerMetadata
 	*workers.PollingEntityWorkerData
+
 	prefs *usageWorkerPrefs
 }
 
@@ -83,8 +84,8 @@ type usageWorkerPrefs struct {
 }
 
 // NewUsageWorker creates a new polling sensor worker to monitor disk mount usage.
-func NewUsageWorker(ctx context.Context) (workers.EntityWorker, error) {
-	usageWorker := &usageWorker{
+func NewUsageWorker(_ context.Context) (workers.EntityWorker, error) {
+	worker := &usageWorker{
 		WorkerMetadata:          models.SetWorkerMetadata(usageWorkerID, usageWorkerDesc),
 		PollingEntityWorkerData: &workers.PollingEntityWorkerData{},
 	}
@@ -95,23 +96,18 @@ func NewUsageWorker(ctx context.Context) (workers.EntityWorker, error) {
 	defaultPrefs.UpdateInterval = usageUpdateInterval.String()
 
 	var err error
-	usageWorker.prefs, err = workers.LoadWorkerPreferences(usageWorkerPreferencesID, defaultPrefs)
+	worker.prefs, err = workers.LoadWorkerPreferences(usageWorkerPreferencesID, defaultPrefs)
 	if err != nil {
-		return nil, fmt.Errorf("could not load disk usage worker preferences: %w", err)
+		return worker, fmt.Errorf("could not load disk usage worker preferences: %w", err)
 	}
 
-	pollInterval, err := time.ParseDuration(usageWorker.prefs.UpdateInterval)
+	pollInterval, err := time.ParseDuration(worker.prefs.UpdateInterval)
 	if err != nil {
-		slogctx.FromCtx(ctx).Warn("Invalid polling interval, using default",
-			slog.String("worker", usageWorkerID),
-			slog.String("given_interval", usageWorker.prefs.UpdateInterval),
-			slog.String("default_interval", usageUpdateInterval.String()))
-
 		pollInterval = usageUpdateInterval
 	}
-	usageWorker.Trigger = scheduler.NewPollTriggerWithJitter(pollInterval, usageUpdateJitter)
+	worker.Trigger = scheduler.NewPollTriggerWithJitter(pollInterval, usageUpdateJitter)
 
-	return usageWorker, nil
+	return worker, nil
 }
 
 func (w *usageWorker) Execute(ctx context.Context) error {
@@ -122,7 +118,11 @@ func (w *usageWorker) Execute(ctx context.Context) error {
 
 	for mount := range slices.Values(mounts) {
 		usedBlocks := mount.attributes[mountAttrBlocksTotal].(uint64) - mount.attributes[mountAttrBlocksFree].(uint64) //nolint:lll,forcetypeassert
-		usedPc := float64(usedBlocks) / float64(mount.attributes[mountAttrBlocksTotal].(uint64)) * 100                 //nolint:forcetypeassert
+		usedPc := float64(
+			usedBlocks,
+		) / float64(
+			mount.attributes[mountAttrBlocksTotal].(uint64),
+		) * 100 //nolint:forcetypeassert
 
 		if math.IsNaN(usedPc) {
 			continue
@@ -253,7 +253,10 @@ func getMounts(ctx context.Context, ignoredMounts []string) ([]*mount, error) {
 		// If the fs is in our valid filesystems, It should be in the list of
 		// valid filesystems and not one of the blocked mountpoints.
 		if slices.Contains(filesystems, filesystem) &&
-			!slices.ContainsFunc(ignoredMounts, func(blockedMount string) bool { return strings.HasPrefix(mountpoint, blockedMount) }) {
+			!slices.ContainsFunc(
+				ignoredMounts,
+				func(blockedMount string) bool { return strings.HasPrefix(mountpoint, blockedMount) },
+			) {
 			validmount := &mount{
 				mountpoint: mountpoint,
 				attributes: make(map[string]any),

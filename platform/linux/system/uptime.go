@@ -6,7 +6,6 @@ package system
 import (
 	"bufio"
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -27,9 +26,6 @@ import (
 const (
 	uptimePollInterval = 15 * time.Minute
 	uptimePollJitter   = time.Minute
-
-	uptimeWorkerID   = "uptime_sensor"
-	uptimeWorkerDesc = "Uptime stats"
 )
 
 var (
@@ -37,12 +33,44 @@ var (
 	_ workers.PollingEntityWorker = (*uptimeWorker)(nil)
 )
 
-var ErrInitUptimeWorker = errors.New("could not init uptime worker")
-
 type uptimeWorker struct {
-	prefs *UptimePrefs
 	*workers.PollingEntityWorkerData
 	*models.WorkerMetadata
+
+	prefs *UptimePrefs
+}
+
+func NewUptimeTimeWorker(_ context.Context) (workers.EntityWorker, error) {
+	worker := &uptimeWorker{
+		WorkerMetadata:          models.SetWorkerMetadata("uptime", "System uptime"),
+		PollingEntityWorkerData: &workers.PollingEntityWorkerData{},
+	}
+
+	defaultPrefs := &UptimePrefs{
+		UpdateInterval: uptimePollInterval.String(),
+	}
+	var err error
+	worker.prefs, err = workers.LoadWorkerPreferences(infoWorkerPreferencesID, defaultPrefs)
+	if err != nil {
+		return worker, fmt.Errorf("load preferences: %w", err)
+	}
+
+	pollInterval, err := time.ParseDuration(worker.prefs.UpdateInterval)
+	if err != nil {
+		pollInterval = uptimePollInterval
+	}
+	worker.Trigger = scheduler.NewPollTriggerWithJitter(pollInterval, uptimePollJitter)
+
+	return worker, nil
+}
+
+func (w *uptimeWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
+	w.OutCh = make(chan models.Entity)
+	if err := workers.SchedulePollingWorker(ctx, w, w.OutCh); err != nil {
+		close(w.OutCh)
+		return w.OutCh, fmt.Errorf("could not start disk IO worker: %w", err)
+	}
+	return w.OutCh, nil
 }
 
 func (w *uptimeWorker) Execute(ctx context.Context) error {
@@ -63,15 +91,6 @@ func (w *uptimeWorker) Execute(ctx context.Context) error {
 
 func (w *uptimeWorker) IsDisabled() bool {
 	return w.prefs.IsDisabled()
-}
-
-func (w *uptimeWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
-	w.OutCh = make(chan models.Entity)
-	if err := workers.SchedulePollingWorker(ctx, w, w.OutCh); err != nil {
-		close(w.OutCh)
-		return w.OutCh, fmt.Errorf("could not start disk IO worker: %w", err)
-	}
-	return w.OutCh, nil
 }
 
 // getUptime retrieve the uptime of the device running Go Hass Agent, in
@@ -103,33 +122,4 @@ func (w *uptimeWorker) getUptime(ctx context.Context) float64 {
 	}
 
 	return uptimeValue
-}
-
-func NewUptimeTimeWorker(ctx context.Context) (workers.EntityWorker, error) {
-	worker := &uptimeWorker{
-		WorkerMetadata:          models.SetWorkerMetadata(uptimeWorkerID, uptimeWorkerDesc),
-		PollingEntityWorkerData: &workers.PollingEntityWorkerData{},
-	}
-
-	defaultPrefs := &UptimePrefs{
-		UpdateInterval: uptimePollInterval.String(),
-	}
-	var err error
-	worker.prefs, err = workers.LoadWorkerPreferences(infoWorkerPreferencesID, defaultPrefs)
-	if err != nil {
-		return nil, errors.Join(ErrInitUptimeWorker, err)
-	}
-
-	pollInterval, err := time.ParseDuration(worker.prefs.UpdateInterval)
-	if err != nil {
-		slogctx.FromCtx(ctx).Warn("Invalid polling interval, using default",
-			slog.String("worker", uptimeWorkerID),
-			slog.String("given_interval", worker.prefs.UpdateInterval),
-			slog.String("default_interval", uptimePollInterval.String()))
-
-		pollInterval = uptimePollInterval
-	}
-	worker.Trigger = scheduler.NewPollTriggerWithJitter(pollInterval, uptimePollJitter)
-
-	return worker, nil
 }

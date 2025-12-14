@@ -79,11 +79,6 @@ func (m *manager) ScheduleJob(idPrefix id.Prefix, job quartz.Job, trigger quartz
 	if err != nil {
 		return errors.Join(ErrScheduleFailed, err)
 	}
-	slog.Debug("Scheduled worker.",
-		slog.String("job_key", jobKey),
-		slog.String("job_desc", job.Description()),
-		slog.String("job_trigger", trigger.Description()),
-	)
 	return nil
 }
 

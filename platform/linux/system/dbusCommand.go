@@ -8,7 +8,7 @@ package system
 import (
 	"context"
 	"encoding/json"
-	"errors"
+	"fmt"
 	"log/slog"
 
 	"github.com/eclipse/paho.golang/paho"
@@ -18,6 +18,7 @@ import (
 	mqttapi "github.com/joshuar/go-hass-anything/v12/pkg/mqtt"
 
 	"github.com/joshuar/go-hass-agent/agent/workers"
+	"github.com/joshuar/go-hass-agent/models"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 	"github.com/joshuar/go-hass-agent/platform/linux"
 )
@@ -25,8 +26,6 @@ import (
 const (
 	dbusCmdPreferencesID = controlsPrefPrefix + "dbus_commands"
 )
-
-var ErrInitDBusCommands = errors.New("could not init D-Bus commands worker")
 
 type dbusCommandMsg struct {
 	Bus            string `json:"bus"`
@@ -38,17 +37,21 @@ type dbusCommandMsg struct {
 }
 
 type dbusCmdWorker struct {
+	*models.WorkerMetadata
+
 	prefs *workers.CommonWorkerPrefs
 }
 
 func NewDBusCommandSubscription(ctx context.Context, device *mqtthass.Device) (*mqttapi.Subscription, error) {
-	worker := &dbusCmdWorker{}
+	worker := &dbusCmdWorker{
+		WorkerMetadata: models.SetWorkerMetadata("dbus_commands", "Custom D-Bus Commands"),
+	}
 
 	defaultPrefs := &workers.CommonWorkerPrefs{}
 	var err error
 	worker.prefs, err = workers.LoadWorkerPreferences(dbusCmdPreferencesID, defaultPrefs)
 	if err != nil {
-		return nil, errors.Join(ErrInitDBusCommands, err)
+		return nil, fmt.Errorf("load preferences: %w", err)
 	}
 
 	//nolint:nilnil
@@ -58,12 +61,12 @@ func NewDBusCommandSubscription(ctx context.Context, device *mqtthass.Device) (*
 
 	systemBus, ok := linux.CtxGetSystemBus(ctx)
 	if !ok {
-		return nil, errors.Join(ErrInitDBusCommands, linux.ErrNoSystemBus)
+		return nil, fmt.Errorf("get system bus: %w", err)
 	}
 
 	sessionBus, ok := linux.CtxGetSessionBus(ctx)
 	if !ok {
-		return nil, errors.Join(ErrInitDBusCommands, linux.ErrNoSessionBus)
+		return nil, fmt.Errorf("get session bus: %w", err)
 	}
 
 	busMap := map[string]*dbusx.Bus{"session": sessionBus, "system": systemBus}

@@ -76,15 +76,16 @@ type NetlinkWorker struct {
 // NewNetlinkWorker creates a new netlink worker. Once started, this worker will generate entities for network link
 // states and addresses.
 func NewNetlinkWorker(_ context.Context) (workers.EntityWorker, error) {
-	conn, err := rtnetlink.Dial(nlConfig)
-	if err != nil {
-		return nil, fmt.Errorf("unable to start netlink worker: %w", err)
-	}
-
 	worker := &NetlinkWorker{
 		WorkerMetadata: models.SetWorkerMetadata(addressWorkerID, addressWorkerDesc),
-		nlconn:         conn,
 		donech:         make(chan struct{}),
+	}
+
+	var err error
+
+	worker.nlconn, err = rtnetlink.Dial(nlConfig)
+	if err != nil {
+		return worker, fmt.Errorf("connect to netlink: %w", err)
 	}
 
 	defaultPrefs := &CommonPreferences{
@@ -92,7 +93,7 @@ func NewNetlinkWorker(_ context.Context) (workers.EntityWorker, error) {
 	}
 	worker.prefs, err = workers.LoadWorkerPreferences(addressWorkerPrefID, defaultPrefs)
 	if err != nil {
-		return worker, fmt.Errorf("unable to start netlink worker: %w", err)
+		return worker, fmt.Errorf("load preferences: %w", err)
 	}
 
 	return worker, nil
@@ -100,7 +101,7 @@ func NewNetlinkWorker(_ context.Context) (workers.EntityWorker, error) {
 
 // Start will start the netlink worker. This will generate initial sensors and send updates for address/link state changes.
 //
-//nolint:gocognit,funlen
+//nolint:gocognit
 func (w *NetlinkWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
 	sensorCh := make(chan models.Entity)
 
@@ -326,7 +327,11 @@ func newLinkSensor(ctx context.Context, msg rtnetlink.LinkMessage) models.Entity
 	)
 }
 
-func newAddressSensor(ctx context.Context, link *rtnetlink.LinkService, msg rtnetlink.AddressMessage) (*models.Entity, error) {
+func newAddressSensor(
+	ctx context.Context,
+	link *rtnetlink.LinkService,
+	msg rtnetlink.AddressMessage,
+) (*models.Entity, error) {
 	linkMsg, err := link.Get(msg.Index)
 	if err != nil {
 		return nil, fmt.Errorf("unable to generate address sensor: %w", err)

@@ -51,7 +51,7 @@ func Test_getMemStats(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			memStatFile = tt.args.file
-			got, err := getMemStats()
+			got, err := getMemStats(t.Context())
 			if (err != nil) != tt.wantErr {
 				t.Errorf("getMemStats() error = %v, wantErr %v", err, tt.wantErr)
 				return

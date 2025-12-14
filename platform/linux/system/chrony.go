@@ -7,16 +7,13 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
-	"log/slog"
 	"os/exec"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/reugn/go-quartz/quartz"
-	slogctx "github.com/veqryn/slog-context"
 
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/models"
@@ -29,8 +26,6 @@ const (
 	chronyPollInterval = 5 * time.Minute
 	chronyPollJitter   = 10 * time.Second
 
-	chronyWorkerID      = "chrony_sensors"
-	chronyWorkerDesc    = "Chrony stats"
 	chronyPreferencesID = sensorsPrefPrefix + "chrony"
 
 	sensorStat = "System time"
@@ -41,13 +36,43 @@ var (
 	_ workers.PollingEntityWorker = (*chronyWorker)(nil)
 )
 
-var ErrInitChronyWorker = errors.New("could not init chrony worker")
-
 type chronyWorker struct {
-	chronycPath string
-	prefs       *ChronyPrefs
 	*workers.PollingEntityWorkerData
 	*models.WorkerMetadata
+
+	chronycPath string
+	prefs       *ChronyPrefs
+}
+
+// NewChronyWorker creates a worker to track sensors from chronyd.
+func NewChronyWorker(_ context.Context) (workers.EntityWorker, error) {
+	worker := &chronyWorker{
+		WorkerMetadata:          models.SetWorkerMetadata("chrony", "Chrony stats"),
+		PollingEntityWorkerData: &workers.PollingEntityWorkerData{},
+	}
+
+	var err error
+
+	worker.chronycPath, err = exec.LookPath("chronyc")
+	if err != nil {
+		return worker, fmt.Errorf("find chrony executable: %w", err)
+	}
+
+	defaultPrefs := &ChronyPrefs{
+		UpdateInterval: chronyPollInterval.String(),
+	}
+	worker.prefs, err = workers.LoadWorkerPreferences(chronyPreferencesID, defaultPrefs)
+	if err != nil {
+		return worker, fmt.Errorf("load preferences: %w", err)
+	}
+
+	pollInterval, err := time.ParseDuration(worker.prefs.UpdateInterval)
+	if err != nil {
+		pollInterval = chronyPollInterval
+	}
+	worker.Trigger = scheduler.NewPollTriggerWithJitter(pollInterval, chronyPollJitter)
+
+	return worker, nil
 }
 
 func (w *chronyWorker) Execute(ctx context.Context) error {
@@ -141,40 +166,4 @@ func newChronyOffsetSensor(ctx context.Context, stats map[string]string) models.
 		sensor.WithState(value),
 		sensor.WithAttributes(attrs),
 	)
-}
-
-// NewChronyWorker creates a worker to track sensors from chronyd.
-func NewChronyWorker(ctx context.Context) (workers.EntityWorker, error) {
-	path, err := exec.LookPath("chronyc")
-	if err != nil {
-		return nil, errors.Join(ErrInitChronyWorker,
-			fmt.Errorf("chronyc is not available: %w", err))
-	}
-
-	worker := &chronyWorker{
-		WorkerMetadata:          models.SetWorkerMetadata(chronyWorkerID, chronyWorkerDesc),
-		PollingEntityWorkerData: &workers.PollingEntityWorkerData{},
-		chronycPath:             path,
-	}
-
-	defaultPrefs := &ChronyPrefs{
-		UpdateInterval: chronyPollInterval.String(),
-	}
-	worker.prefs, err = workers.LoadWorkerPreferences(chronyPreferencesID, defaultPrefs)
-	if err != nil {
-		return nil, errors.Join(ErrInitChronyWorker, err)
-	}
-
-	pollInterval, err := time.ParseDuration(worker.prefs.UpdateInterval)
-	if err != nil {
-		slogctx.FromCtx(ctx).Warn("Invalid polling interval, using default",
-			slog.String("worker", chronyWorkerID),
-			slog.String("given_interval", worker.prefs.UpdateInterval),
-			slog.String("default_interval", chronyPollInterval.String()))
-
-		pollInterval = chronyPollInterval
-	}
-	worker.Trigger = scheduler.NewPollTriggerWithJitter(pollInterval, chronyPollJitter)
-
-	return worker, nil
 }

@@ -69,6 +69,7 @@ type EntityWorker interface {
 	// passed-in context should be canceled and the worker cleans itself up. If
 	// the worker cannot be started, a non-nill error is returned.
 	Start(ctx context.Context) (<-chan models.Entity, error)
+	ID() string
 }
 
 // PollingEntityWorker is an entity worker that generates entities via polling for data on a schedule.
@@ -76,6 +77,7 @@ type PollingEntityWorker interface {
 	EntityWorker
 	quartz.Job
 	GetTrigger() quartz.Trigger
+	ID() string
 }
 
 // PollingEntityWorkerData contains the data for handling polling.
@@ -103,7 +105,7 @@ func SchedulePollingWorker(ctx context.Context, worker PollingEntityWorker, outC
 	// Schedule worker.
 	err := scheduler.Manager.ScheduleJob(id.Worker, worker, worker.GetTrigger())
 	if err != nil {
-		return fmt.Errorf("could not schedule polling worker: %w", err)
+		return fmt.Errorf("could not schedule polling worker %s: %w", worker.ID(), err)
 	}
 	// Clean-up on agent close.
 	go func() {
@@ -114,6 +116,7 @@ func SchedulePollingWorker(ctx context.Context, worker PollingEntityWorker, outC
 	go func() {
 		if err := worker.Execute(ctx); err != nil {
 			slogctx.FromCtx(ctx).Warn("Could not send initial polling worker update.",
+				slog.String("worker", worker.ID()),
 				slog.Any("error", err))
 		}
 	}()
@@ -155,8 +158,6 @@ func (m *Manager) StartEntityWorkers(ctx context.Context, workers ...EntityWorke
 			continue
 		}
 		workerCtx, cancelFunc := context.WithCancel(ctx)
-		workerCtx = slogctx.NewCtx(workerCtx,
-			slogctx.FromCtx(workerCtx).WithGroup("entity_worker"))
 		workerCh, err := worker.Start(workerCtx)
 		if workerCh == nil {
 			cancelFunc()
@@ -164,6 +165,7 @@ func (m *Manager) StartEntityWorkers(ctx context.Context, workers ...EntityWorke
 		}
 		if err != nil {
 			slogctx.FromCtx(ctx).Warn("Could not start entity worker.",
+				slog.String("worker", worker.ID()),
 				slog.Any("errors", err))
 		} else {
 			m.workerCancelFuncs = append(m.workerCancelFuncs, cancelFunc)

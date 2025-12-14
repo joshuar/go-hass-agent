@@ -6,7 +6,6 @@ package power
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log/slog"
 	"syscall"
@@ -18,23 +17,86 @@ import (
 
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/config"
+	"github.com/joshuar/go-hass-agent/models"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 	"github.com/joshuar/go-hass-agent/platform/linux"
 )
 
 const (
-	inhibitWorkerID     = "inhibit_control"
 	inhibitWorkerPrefID = controlsPrefPrefix + "inhibit_controls"
 )
 
-var ErrInitInhibitWorker = errors.New("could not init inhibit control worker")
-
 type InhibitWorker struct {
+	*models.WorkerMetadata
+
 	prefs          *workers.CommonWorkerPrefs
 	InhibitControl *mqtthass.SwitchEntity
 	fd             int
 	MsgCh          chan mqttapi.Msg
 	bus            *dbusx.Bus
+}
+
+func NewInhibitWorker(ctx context.Context, device *mqtthass.Device) (*InhibitWorker, error) {
+	var err error
+
+	worker := &InhibitWorker{
+		WorkerMetadata: models.SetWorkerMetadata("inhibit_control", "SystemD inhibitors"),
+		MsgCh:          make(chan mqttapi.Msg),
+	}
+
+	// Create an MQTT switch entity for toggling the inhibit lock.
+	worker.InhibitControl = mqtthass.NewSwitchEntity().
+		OptimisticMode().
+		WithDetails(
+			mqtthass.App(config.AppName+"_"+device.Name),
+			mqtthass.Name("Inhibit Sleep/Shutdown"),
+			mqtthass.ID(device.Name+"_inhibit_lock"),
+			mqtthass.DeviceInfo(device),
+			mqtthass.Icon("mdi:lock"),
+		).
+		WithState(
+			mqtthass.StateCallback(worker.inhibitStateCallback),
+			mqtthass.ValueTemplate("{{ value }}"),
+		).
+		WithCommand(
+			mqtthass.CommandCallback(worker.inhibitCommandCallback),
+		)
+
+	defaultPrefs := &workers.CommonWorkerPrefs{}
+	worker.prefs, err = workers.LoadWorkerPreferences(inhibitWorkerPrefID, defaultPrefs)
+	if err != nil {
+		return worker, fmt.Errorf("load preferences: %w", err)
+	}
+
+	if worker.prefs.IsDisabled() {
+		return worker, nil
+	}
+
+	bus, ok := linux.CtxGetSystemBus(ctx)
+	if !ok {
+		return worker, fmt.Errorf("get system bus: %w", linux.ErrNoSystemBus)
+	}
+
+	worker.bus = bus
+
+	// On agent shutdown, release any inhibit lock currently held.
+	go func() {
+		<-ctx.Done()
+
+		if err := worker.releaseInhibitLock(); err != nil {
+			slogctx.FromCtx(ctx).Error("Could not release inhibit state.",
+				slog.Any("error", err))
+		}
+	}()
+
+	go func() {
+		if err := worker.publishState(worker.MsgCh); err != nil {
+			slogctx.FromCtx(ctx).Warn("Could not publish initial inhibit state.",
+				slog.Any("error", err))
+		}
+	}()
+
+	return worker, nil
 }
 
 // inhibitStateCallback is executed when the inhibit state is read on MQTT.
@@ -112,67 +174,4 @@ func (w *InhibitWorker) createInhibitLock() error {
 	w.fd = fd
 
 	return nil
-}
-
-//nolint:nilnil
-func NewInhibitWorker(ctx context.Context, device *mqtthass.Device) (*InhibitWorker, error) {
-	var err error
-
-	worker := &InhibitWorker{
-		MsgCh: make(chan mqttapi.Msg),
-	}
-
-	// Create an MQTT switch entity for toggling the inhibit lock.
-	worker.InhibitControl = mqtthass.NewSwitchEntity().
-		OptimisticMode().
-		WithDetails(
-			mqtthass.App(config.AppName+"_"+device.Name),
-			mqtthass.Name("Inhibit Sleep/Shutdown"),
-			mqtthass.ID(device.Name+"_inhibit_lock"),
-			mqtthass.DeviceInfo(device),
-			mqtthass.Icon("mdi:lock"),
-		).
-		WithState(
-			mqtthass.StateCallback(worker.inhibitStateCallback),
-			mqtthass.ValueTemplate("{{ value }}"),
-		).
-		WithCommand(
-			mqtthass.CommandCallback(worker.inhibitCommandCallback),
-		)
-
-	defaultPrefs := &workers.CommonWorkerPrefs{}
-	worker.prefs, err = workers.LoadWorkerPreferences(inhibitWorkerPrefID, defaultPrefs)
-	if err != nil {
-		return nil, errors.Join(ErrInitInhibitWorker, err)
-	}
-
-	if worker.prefs.IsDisabled() {
-		return nil, nil
-	}
-
-	bus, ok := linux.CtxGetSystemBus(ctx)
-	if !ok {
-		return nil, errors.Join(linux.ErrNoSystemBus, err)
-	}
-
-	worker.bus = bus
-
-	// On agent shutdown, release any inhibit lock currently held.
-	go func() {
-		<-ctx.Done()
-
-		if err := worker.releaseInhibitLock(); err != nil {
-			slogctx.FromCtx(ctx).Error("Could not release inhibit state.",
-				slog.Any("error", err))
-		}
-	}()
-
-	go func() {
-		if err := worker.publishState(worker.MsgCh); err != nil {
-			slogctx.FromCtx(ctx).Warn("Could not publish initial inhibit state.",
-				slog.Any("error", err))
-		}
-	}()
-
-	return worker, nil
 }

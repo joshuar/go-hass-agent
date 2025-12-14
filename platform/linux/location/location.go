@@ -22,8 +22,6 @@ import (
 
 var _ workers.EntityWorker = (*locationWorker)(nil)
 
-var ErrInitLocationWorker = errors.New("could not init location worker")
-
 const (
 	managerPath           = "/org/freedesktop/GeoClue2/Manager"
 	geoclueInterface      = "org.freedesktop.GeoClue2"
@@ -44,9 +42,33 @@ const (
 )
 
 type locationWorker struct {
+	*models.WorkerMetadata
+
 	bus   *dbusx.Bus
 	prefs *workers.CommonWorkerPrefs
-	*models.WorkerMetadata
+}
+
+func NewLocationWorker(ctx context.Context) (workers.EntityWorker, error) {
+	worker := &locationWorker{
+		WorkerMetadata: models.SetWorkerMetadata(workerID, workerDesc),
+	}
+
+	var ok bool
+
+	worker.bus, ok = linux.CtxGetSystemBus(ctx)
+	if !ok {
+		return worker, fmt.Errorf("get system bus: %w", linux.ErrNoSystemBus)
+	}
+
+	// Load the worker preferences.
+	defaultPrefs := &workers.CommonWorkerPrefs{}
+	var err error
+	worker.prefs, err = workers.LoadWorkerPreferences(preferencesID, defaultPrefs)
+	if err != nil {
+		return worker, fmt.Errorf("load preferences: %w", err)
+	}
+
+	return worker, nil
 }
 
 //nolint:gocognit
@@ -54,14 +76,13 @@ func (w *locationWorker) Start(ctx context.Context) (<-chan models.Entity, error
 	// Create a GeoClue client.
 	clientPath, err := w.createClient()
 	if err != nil {
-		return nil, errors.Join(ErrInitLocationWorker,
-			fmt.Errorf("unable to create geoclue client: %w", err))
+		return nil, fmt.Errorf("create geoclue client: %w", err)
 	}
 	// Set start/stop methods.
 	startMethod := dbusx.NewMethod(w.bus, geoclueInterface, clientPath, startCall)
 	stopMethod := dbusx.NewMethod(w.bus, geoclueInterface, clientPath, stopCall)
 	// Set threshold values.
-	w.setThresholds(clientPath)
+	w.setThresholds(ctx, clientPath)
 	// Start GeoClue client.
 	if err := startMethod.Call(ctx); err != nil {
 		return nil, fmt.Errorf("could not start geoclue client: %w", err)
@@ -72,8 +93,7 @@ func (w *locationWorker) Start(ctx context.Context) (<-chan models.Entity, error
 		dbusx.MatchInterface(clientInterface),
 		dbusx.MatchMembers("LocationUpdated")).Start(ctx, w.bus)
 	if err != nil {
-		return nil, errors.Join(ErrInitLocationWorker,
-			fmt.Errorf("could not setup D-Bus watch for location updates: %w", err))
+		return nil, fmt.Errorf("watch for location updates: %w", err)
 	}
 
 	sensorCh := make(chan models.Entity)
@@ -151,45 +171,22 @@ func (w *locationWorker) createClient() (string, error) {
 	return clientPath, nil
 }
 
-func (w *locationWorker) setThresholds(clientPath string) {
+func (w *locationWorker) setThresholds(ctx context.Context, clientPath string) {
 	// Set a distance threshold.
 	if err := dbusx.NewProperty[uint32](w.bus, clientPath, geoclueInterface, distanceThresholdProp).Set(0); err != nil {
-		slog.Debug("Could not set distance threshold for geoclue requests.", slog.Any("error", err))
+		slogctx.FromCtx(ctx).Debug("Could not set distance threshold for geoclue requests.", slog.Any("error", err))
 	}
 	// Set a time threshold.
 	if err := dbusx.NewProperty[uint32](w.bus, clientPath, geoclueInterface, timeThresholdProp).Set(0); err != nil {
-		slog.Debug("Could not set time threshold for geoclue requests.", slog.Any("error", err))
+		slogctx.FromCtx(ctx).Debug("Could not set time threshold for geoclue requests.", slog.Any("error", err))
 	}
 }
 
 func (w *locationWorker) getLocationProperty(path, prop string) (float64, error) {
 	value, err := dbusx.NewProperty[float64](w.bus, path, geoclueInterface, locationInterface+"."+prop).Get()
 	if err != nil {
-		return 0, errors.Join(ErrInitLocationWorker,
-			fmt.Errorf("could not fetch location property %s: %w", prop, err))
+		return 0, fmt.Errorf("get location property: %w", err)
 	}
 
 	return value, nil
-}
-
-func NewLocationWorker(ctx context.Context) (workers.EntityWorker, error) {
-	bus, ok := linux.CtxGetSystemBus(ctx)
-	if !ok {
-		return nil, errors.Join(ErrInitLocationWorker, linux.ErrNoSystemBus)
-	}
-
-	worker := &locationWorker{
-		WorkerMetadata: models.SetWorkerMetadata(workerID, workerDesc),
-		bus:            bus,
-	}
-
-	// Load the worker preferences.
-	defaultPrefs := &workers.CommonWorkerPrefs{}
-	var err error
-	worker.prefs, err = workers.LoadWorkerPreferences(preferencesID, defaultPrefs)
-	if err != nil {
-		return nil, errors.Join(ErrInitLocationWorker, err)
-	}
-
-	return worker, nil
 }

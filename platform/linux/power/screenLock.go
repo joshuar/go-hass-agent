@@ -8,9 +8,10 @@ package power
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
+
+	slogctx "github.com/veqryn/slog-context"
 
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/models"
@@ -21,10 +22,6 @@ import (
 )
 
 const (
-	screenLockWorkerID      = "screen_lock_sensor"
-	screenLockWorkerDesc    = "Screen lock detection"
-	screenLockPreferencesID = sensorsPrefPrefix + "screen_lock"
-
 	screenLockedIcon      = "mdi:eye-lock"
 	screenUnlockedIcon    = "mdi:eye-lock-open"
 	screenLockUnknownIcon = "mdi:lock-alert"
@@ -32,19 +29,17 @@ const (
 
 var _ workers.EntityWorker = (*screenLockWorker)(nil)
 
-var (
-	ErrNewScreenLockSensor  = errors.New("could not create screen lock sensor")
-	ErrInitScreenLockWorker = errors.New("could not init screen lock worker")
-)
-
 func newScreenlockSensor(ctx context.Context, value bool) models.Entity {
-	return sensor.NewSensor(ctx,
+	return sensor.NewSensor(
+		ctx,
 		sensor.WithName("Screen Lock"),
 		sensor.WithID("screen_lock"),
 		sensor.AsTypeBinarySensor(),
 		sensor.WithDeviceClass(class.BinaryClassLock),
 		sensor.WithIcon(screenLockIcon(value)),
-		sensor.WithState(!value), // For device class BinarySensorDeviceClassLock: On means open (unlocked), Off means closed (locked).
+		sensor.WithState(
+			!value,
+		), // For device class BinarySensorDeviceClassLock: On means open (unlocked), Off means closed (locked).
 		sensor.WithDataSourceAttribute(linux.DataSrcDBus),
 		sensor.AsRetryableRequest(true),
 	)
@@ -60,22 +55,56 @@ func screenLockIcon(value bool) string {
 }
 
 type screenLockWorker struct {
+	*models.WorkerMetadata
+
 	bus            *dbusx.Bus
 	sessionPath    string
 	screenLockProp *dbusx.Property[bool]
 	prefs          *workers.CommonWorkerPrefs
-	*models.WorkerMetadata
 }
 
-//nolint:gocognit
+func NewScreenLockWorker(ctx context.Context) (workers.EntityWorker, error) {
+	worker := &screenLockWorker{
+		WorkerMetadata: models.SetWorkerMetadata("screen_lock", "Screen lock"),
+	}
+
+	var ok bool
+
+	worker.bus, ok = linux.CtxGetSystemBus(ctx)
+	if !ok {
+		return worker, fmt.Errorf("get system bus: %w", linux.ErrNoSystemBus)
+	}
+
+	worker.sessionPath, ok = linux.CtxGetSessionPath(ctx)
+	if !ok {
+		return worker, fmt.Errorf("get session path: %w", linux.ErrNoSessionPath)
+	}
+
+	worker.screenLockProp =
+		dbusx.NewProperty[bool](
+			worker.bus,
+			worker.sessionPath,
+			loginBaseInterface,
+			sessionInterface+"."+sessionLockedProp,
+		)
+
+	defaultPrefs := &workers.CommonWorkerPrefs{}
+	var err error
+	worker.prefs, err = workers.LoadWorkerPreferences(sensorsPrefPrefix+"screen_lock", defaultPrefs)
+	if err != nil {
+		return worker, fmt.Errorf("load preferences: %w", err)
+	}
+
+	return worker, nil
+}
+
 func (w *screenLockWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
 	triggerCh, err := dbusx.NewWatch(
 		dbusx.MatchPath(w.sessionPath),
 		dbusx.MatchMembers(sessionLockSignal, sessionUnlockSignal, sessionLockedProp, "PropertiesChanged"),
 	).Start(ctx, w.bus)
 	if err != nil {
-		return nil, errors.Join(ErrInitScreenLockWorker,
-			fmt.Errorf("unable to create D-Bus watch for screen lock state: %w", err))
+		return nil, fmt.Errorf("watch screen lock: %w", err)
 	}
 	sensorCh := make(chan models.Entity)
 
@@ -106,12 +135,11 @@ func (w *screenLockWorker) Start(ctx context.Context) (<-chan models.Entity, err
 				switch event.Signal {
 				case dbusx.PropChangedSignal:
 					changed, lockState, err = dbusx.HasPropertyChanged[bool](event.Content, sessionLockedProp)
-					if err != nil {
-						slog.With(slog.String("worker", screenLockWorkerID)).Debug("Could not parse received D-Bus signal.", slog.Any("error", err))
-					} else {
-						if changed {
-							sensorCh <- newScreenlockSensor(ctx, lockState)
-						}
+					switch {
+					case err != nil:
+						slogctx.FromCtx(ctx).Debug("Could not parse received D-Bus signal.", slog.Any("error", err))
+					case changed:
+						sensorCh <- newScreenlockSensor(ctx, lockState)
 					}
 				case sessionLockSignal:
 					sensorCh <- newScreenlockSensor(ctx, true)
@@ -127,32 +155,4 @@ func (w *screenLockWorker) Start(ctx context.Context) (<-chan models.Entity, err
 
 func (w *screenLockWorker) IsDisabled() bool {
 	return w.prefs.IsDisabled()
-}
-
-func NewScreenLockWorker(ctx context.Context) (workers.EntityWorker, error) {
-	bus, ok := linux.CtxGetSystemBus(ctx)
-	if !ok {
-		return nil, errors.Join(ErrInitScreenLockWorker, linux.ErrNoSystemBus)
-	}
-
-	sessionPath, ok := linux.CtxGetSessionPath(ctx)
-	if !ok {
-		return nil, errors.Join(ErrInitScreenLockWorker, linux.ErrNoSessionPath)
-	}
-
-	worker := &screenLockWorker{
-		WorkerMetadata: models.SetWorkerMetadata(screenLockWorkerID, screenLockWorkerDesc),
-		bus:            bus,
-		sessionPath:    sessionPath,
-		screenLockProp: dbusx.NewProperty[bool](bus, sessionPath, loginBaseInterface, sessionInterface+"."+sessionLockedProp),
-	}
-
-	defaultPrefs := &workers.CommonWorkerPrefs{}
-	var err error
-	worker.prefs, err = workers.LoadWorkerPreferences(screenLockPreferencesID, defaultPrefs)
-	if err != nil {
-		return nil, errors.Join(ErrInitScreenLockWorker, err)
-	}
-
-	return worker, nil
 }

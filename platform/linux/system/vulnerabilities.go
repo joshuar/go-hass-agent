@@ -5,7 +5,7 @@ package system
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -21,25 +21,44 @@ import (
 	"github.com/joshuar/go-hass-agent/platform/linux"
 )
 
-const (
-	cpuVulnWorkerID      = "cpu_vulnerabilities"
-	cpuVulnWorkerDesc    = "Potential CPU vulnerabilities reported by the kernel"
-	cpuVulnPreferencesID = cpuVulnWorkerID
-	cpuVulnPath          = "devices/system/cpu/vulnerabilities"
-)
+const cpuVulnPath = "devices/system/cpu/vulnerabilities"
 
 var _ workers.EntityWorker = (*cpuVulnWorker)(nil)
 
-var (
-	ErrNewVulnSensor  = errors.New("could not create vulnerabilities sensor")
-	ErrInitVulnWorker = errors.New("could not init vulnerabilities worker")
-)
-
 type cpuVulnWorker struct {
+	*models.WorkerMetadata
+
 	path  string
 	prefs *workers.CommonWorkerPrefs
 	OutCh chan models.Entity
-	*models.WorkerMetadata
+}
+
+func NewCPUVulnerabilityWorker(_ context.Context) (workers.EntityWorker, error) {
+	worker := &cpuVulnWorker{
+		WorkerMetadata: models.SetWorkerMetadata("cpu_vulnerabilities", "Check CPU vulnerabilities"),
+		path:           filepath.Join(linux.SysFSRoot, cpuVulnPath),
+	}
+
+	defaultPrefs := &workers.CommonWorkerPrefs{}
+	var err error
+	worker.prefs, err = workers.LoadWorkerPreferences("cpu_vulnerabilities", defaultPrefs)
+	if err != nil {
+		return worker, fmt.Errorf("load preferences: %w", err)
+	}
+
+	return worker, nil
+}
+
+func (w *cpuVulnWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
+	w.OutCh = make(chan models.Entity)
+	go func() {
+		defer close(w.OutCh)
+		if err := w.Execute(ctx); err != nil {
+			slogctx.FromCtx(ctx).Warn("Failed to send cpu vulnerability details",
+				slog.Any("error", err))
+		}
+	}()
+	return w.OutCh, nil
 }
 
 func (w *cpuVulnWorker) Execute(ctx context.Context) error {
@@ -50,7 +69,7 @@ func (w *cpuVulnWorker) Execute(ctx context.Context) error {
 
 	vulnerabilities, err := filepath.Glob(w.path + "/*")
 	if err != nil {
-		return errors.Join(ErrNewVulnSensor, err)
+		return fmt.Errorf("get vulnerabilities: %w", err)
 	}
 
 	attrs := make(map[string]any)
@@ -89,32 +108,4 @@ func (w *cpuVulnWorker) Execute(ctx context.Context) error {
 
 func (w *cpuVulnWorker) IsDisabled() bool {
 	return w.prefs.IsDisabled()
-}
-
-func (w *cpuVulnWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
-	w.OutCh = make(chan models.Entity)
-	go func() {
-		defer close(w.OutCh)
-		if err := w.Execute(ctx); err != nil {
-			slogctx.FromCtx(ctx).Warn("Failed to send cpu vulnerability details",
-				slog.Any("error", err))
-		}
-	}()
-	return w.OutCh, nil
-}
-
-func NewCPUVulnerabilityWorker(_ context.Context) (workers.EntityWorker, error) {
-	worker := &cpuVulnWorker{
-		WorkerMetadata: models.SetWorkerMetadata(cpuVulnWorkerID, cpuVulnWorkerDesc),
-		path:           filepath.Join(linux.SysFSRoot, cpuVulnPath),
-	}
-
-	defaultPrefs := &workers.CommonWorkerPrefs{}
-	var err error
-	worker.prefs, err = workers.LoadWorkerPreferences(infoWorkerPreferencesID, defaultPrefs)
-	if err != nil {
-		return nil, errors.Join(ErrInitVulnWorker, err)
-	}
-
-	return worker, nil
 }

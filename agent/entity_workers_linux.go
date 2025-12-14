@@ -68,6 +68,7 @@ func CreateOSEntityWorkers(ctx context.Context) []workers.EntityWorker {
 		worker, err := workerInit(ctx)
 		if err != nil {
 			slogctx.FromCtx(ctx).Warn("Could not init worker.",
+				slog.String("worker", worker.ID()),
 				slog.Any("error", err))
 
 			continue
@@ -85,6 +86,7 @@ func CreateOSEntityWorkers(ctx context.Context) []workers.EntityWorker {
 			worker, err := workerInit(ctx)
 			if err != nil {
 				slogctx.FromCtx(ctx).Warn("Could not init worker.",
+					slog.String("worker", worker.ID()),
 					slog.Any("error", err))
 
 				continue

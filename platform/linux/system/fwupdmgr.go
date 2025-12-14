@@ -3,12 +3,11 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-//go:generate go tool golang.org/x/tools/cmd/stringer -type=hsiResult,hsiLevel -output hsi_generated.go -linecomment
+//go:generate go tool stringer -type=hsiResult,hsiLevel -output hsi.gen.go -linecomment
 package system
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -24,9 +23,6 @@ import (
 )
 
 const (
-	fwupdmgrWorkerID   = "fwupdmgr_worker"
-	fwupdmgrWorkerDesc = "fwupdmgr details"
-
 	fwupdInterface          = "org.freedesktop.fwupd"
 	hostSecurityAttrsMethod = "GetHostSecurityAttrs"
 	hostSecurityIDProp      = "HostSecurityId"
@@ -66,14 +62,50 @@ type hsiLevel uint32
 
 var _ workers.EntityWorker = (*fwupdWorker)(nil)
 
-var ErrInitFWUpdWorker = errors.New("could not init fwupdmgr worker")
-
 type fwupdWorker struct {
+	*models.WorkerMetadata
+
 	hostSecurityAttrs *dbusx.Data[[]map[string]dbus.Variant]
 	hostSecurityID    *dbusx.Property[string]
 	prefs             *workers.CommonWorkerPrefs
 	OutCh             chan models.Entity
-	*models.WorkerMetadata
+}
+
+func NewfwupdWorker(ctx context.Context) (workers.EntityWorker, error) {
+	worker := &fwupdWorker{
+		WorkerMetadata: models.SetWorkerMetadata("firmware", "Firmware status"),
+	}
+
+	bus, ok := linux.CtxGetSystemBus(ctx)
+	if !ok {
+		return worker, fmt.Errorf("get system bus: %w", linux.ErrNoSystemBus)
+	}
+
+	defaultPrefs := &workers.CommonWorkerPrefs{}
+	var err error
+	worker.prefs, err = workers.LoadWorkerPreferences(infoWorkerPreferencesID, defaultPrefs)
+	if err != nil {
+		return worker, fmt.Errorf("load preferences: %w", err)
+	}
+
+	worker.hostSecurityAttrs = dbusx.NewData[[]map[string]dbus.Variant](bus,
+		fwupdInterface, "/", fwupdInterface+"."+hostSecurityAttrsMethod)
+	worker.hostSecurityID = dbusx.NewProperty[string](bus,
+		"/", fwupdInterface, fwupdInterface+"."+hostSecurityIDProp)
+
+	return worker, nil
+}
+
+func (w *fwupdWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
+	w.OutCh = make(chan models.Entity)
+	go func() {
+		defer close(w.OutCh)
+		if err := w.Execute(ctx); err != nil {
+			slogctx.FromCtx(ctx).Warn("Failed to send fwupdmgr details",
+				slog.Any("error", err))
+		}
+	}()
+	return w.OutCh, nil
 }
 
 func (w *fwupdWorker) Execute(ctx context.Context) error {
@@ -123,41 +155,4 @@ func (w *fwupdWorker) Execute(ctx context.Context) error {
 
 func (w *fwupdWorker) IsDisabled() bool {
 	return w.prefs.IsDisabled()
-}
-
-func (w *fwupdWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
-	w.OutCh = make(chan models.Entity)
-	go func() {
-		defer close(w.OutCh)
-		if err := w.Execute(ctx); err != nil {
-			slogctx.FromCtx(ctx).Warn("Failed to send fwupdmgr details",
-				slog.Any("error", err))
-		}
-	}()
-	return w.OutCh, nil
-}
-
-func NewfwupdWorker(ctx context.Context) (workers.EntityWorker, error) {
-	bus, ok := linux.CtxGetSystemBus(ctx)
-	if !ok {
-		return nil, errors.Join(ErrInitFWUpdWorker, linux.ErrNoSystemBus)
-	}
-
-	worker := &fwupdWorker{
-		WorkerMetadata: models.SetWorkerMetadata(fwupdmgrWorkerID, fwupdmgrWorkerDesc),
-	}
-
-	defaultPrefs := &workers.CommonWorkerPrefs{}
-	var err error
-	worker.prefs, err = workers.LoadWorkerPreferences(infoWorkerPreferencesID, defaultPrefs)
-	if err != nil {
-		return nil, errors.Join(ErrInitFWUpdWorker, err)
-	}
-
-	worker.hostSecurityAttrs = dbusx.NewData[[]map[string]dbus.Variant](bus,
-		fwupdInterface, "/", fwupdInterface+"."+hostSecurityAttrsMethod)
-	worker.hostSecurityID = dbusx.NewProperty[string](bus,
-		"/", fwupdInterface, fwupdInterface+"."+hostSecurityIDProp)
-
-	return worker, nil
 }

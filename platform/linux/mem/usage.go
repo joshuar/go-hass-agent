@@ -8,9 +8,7 @@ package mem
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"log/slog"
 	"math"
 	"slices"
 	"time"
@@ -35,10 +33,6 @@ const (
 
 	memoryUsageSensorUnits   = "B"
 	memoryUsageSensorPcUnits = "%"
-
-	memUsageWorkerID      = "memory_usage_sensors"
-	memUsageWorkerDesc    = "Memory usage stats"
-	memUsagePreferencesID = prefPrefix + "usage"
 )
 
 var (
@@ -46,16 +40,12 @@ var (
 	_ workers.PollingEntityWorker = (*usageWorker)(nil)
 )
 
-var ErrNewMemStatSensor = errors.New("could not create mem stat sensor")
-
 // Lists of the memory statistics we want to track as sensors. See /proc/meminfo
 // for all possible statistics.
 var (
 	memSensors  = []memStatID{memTotal, memFree, memBuffered, memCached, memAvailable, memCorrupted}
 	swapSensors = []memStatID{swapTotal, swapFree, swapCached}
 )
-
-var ErrInitUsageWorker = errors.New("could not init memory usage worker")
 
 // newMemSensor generates a memorySensor for a memory stat.
 func newMemSensor(ctx context.Context, id memStatID, stat *memStat) models.Entity {
@@ -134,9 +124,34 @@ func newSwapUsedPc(ctx context.Context, stats memoryStats) models.Entity {
 }
 
 type usageWorker struct {
-	prefs *WorkerPreferences
 	*models.WorkerMetadata
 	*workers.PollingEntityWorkerData
+
+	prefs *WorkerPreferences
+}
+
+func NewUsageWorker(_ context.Context) (workers.EntityWorker, error) {
+	worker := &usageWorker{
+		WorkerMetadata:          models.SetWorkerMetadata("mem_usage", "Memory usage"),
+		PollingEntityWorkerData: &workers.PollingEntityWorkerData{},
+	}
+
+	defaultPrefs := &WorkerPreferences{
+		UpdateInterval: memUsageUpdateInterval.String(),
+	}
+	var err error
+	worker.prefs, err = workers.LoadWorkerPreferences(prefPrefix+"usage", defaultPrefs)
+	if err != nil {
+		return worker, fmt.Errorf("load preferences: %w", err)
+	}
+
+	pollInterval, err := time.ParseDuration(worker.prefs.UpdateInterval)
+	if err != nil {
+		pollInterval = memUsageUpdateInterval
+	}
+	worker.Trigger = scheduler.NewPollTriggerWithJitter(pollInterval, memUsageUpdateJitter)
+
+	return worker, nil
 }
 
 func (w *usageWorker) Execute(ctx context.Context) error {
@@ -145,7 +160,9 @@ func (w *usageWorker) Execute(ctx context.Context) error {
 		err   error
 	)
 
-	stats, err = getMemStats()
+	ctx = slogctx.With(ctx, "worker", w.ID())
+
+	stats, err = getMemStats(ctx)
 	if err != nil {
 		return fmt.Errorf("unable to retrieve memory stats: %w", err)
 	}
@@ -184,33 +201,4 @@ func (w *usageWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
 		return w.OutCh, fmt.Errorf("could not start disk usage worker: %w", err)
 	}
 	return w.OutCh, nil
-}
-
-func NewUsageWorker(ctx context.Context) (workers.EntityWorker, error) {
-	worker := &usageWorker{
-		WorkerMetadata:          models.SetWorkerMetadata(memUsageWorkerID, memUsageWorkerDesc),
-		PollingEntityWorkerData: &workers.PollingEntityWorkerData{},
-	}
-
-	defaultPrefs := &WorkerPreferences{
-		UpdateInterval: memUsageUpdateInterval.String(),
-	}
-	var err error
-	worker.prefs, err = workers.LoadWorkerPreferences(memUsagePreferencesID, defaultPrefs)
-	if err != nil {
-		return nil, errors.Join(ErrInitUsageWorker, err)
-	}
-
-	pollInterval, err := time.ParseDuration(worker.prefs.UpdateInterval)
-	if err != nil {
-		slogctx.FromCtx(ctx).Warn("Invalid polling interval, using default",
-			slog.String("worker", memUsageWorkerID),
-			slog.String("given_interval", worker.prefs.UpdateInterval),
-			slog.String("default_interval", memUsageUpdateInterval.String()))
-
-		pollInterval = memUsageUpdateInterval
-	}
-	worker.Trigger = scheduler.NewPollTriggerWithJitter(pollInterval, memUsageUpdateJitter)
-
-	return worker, nil
 }

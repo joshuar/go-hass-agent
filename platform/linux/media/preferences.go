@@ -6,10 +6,8 @@ package media
 import "github.com/joshuar/go-hass-agent/agent/workers"
 
 const (
-	prefPrefix        = "sensors.media."
-	mprisPrefID       = prefPrefix + "mpris"
-	webcamUsagePrefID = prefPrefix + "webcam_in_use"
-	micUsagePrefID    = prefPrefix + "microphone_in_use"
+	prefPrefix  = "sensors.media."
+	mprisPrefID = prefPrefix + "mpris"
 )
 
 type WorkerPrefs struct {

@@ -29,11 +29,6 @@ var _ workers.EntityWorker = (*laptopWorker)(nil)
 
 var laptopPropList = []string{dockedProp, lidClosedProp, externalPowerProp}
 
-var (
-	ErrNewLaptopSensor  = errors.New("could not create laptop sensor")
-	ErrInitLaptopWorker = errors.New("could not init laptop worker")
-)
-
 const (
 	dockedProp        = managerInterface + ".Docked"
 	lidClosedProp     = managerInterface + ".LidClosed"
@@ -45,11 +40,43 @@ const (
 )
 
 type laptopWorker struct {
+	*models.WorkerMetadata
+
 	bus         *dbusx.Bus
 	sessionPath string
 	properties  map[string]*dbusx.Property[bool]
 	prefs       *workers.CommonWorkerPrefs
-	*models.WorkerMetadata
+}
+
+func NewLaptopWorker(ctx context.Context) (workers.EntityWorker, error) {
+	worker := &laptopWorker{
+		WorkerMetadata: models.SetWorkerMetadata(laptopWorkerID, laptopWorkerDesc),
+	}
+
+	var ok bool
+
+	worker.bus, ok = linux.CtxGetSystemBus(ctx)
+	if !ok {
+		return worker, fmt.Errorf("get system bus: %w", linux.ErrNoSystemBus)
+	}
+	// If we can't get a session path, we can't run.
+	worker.sessionPath, ok = linux.CtxGetSessionPath(ctx)
+	if !ok {
+		return worker, fmt.Errorf("get session path: %w", linux.ErrNoSessionPath)
+	}
+	worker.properties = make(map[string]*dbusx.Property[bool])
+	for _, name := range laptopPropList {
+		worker.properties[name] = dbusx.NewProperty[bool](worker.bus, loginBasePath, loginBaseInterface, name)
+	}
+
+	defaultPrefs := &workers.CommonWorkerPrefs{}
+	var err error
+	worker.prefs, err = workers.LoadWorkerPreferences(laptopWorkerPrefID, defaultPrefs)
+	if err != nil {
+		return worker, fmt.Errorf("load preferences: %w", err)
+	}
+
+	return worker, nil
 }
 
 func newLaptopEvent(ctx context.Context, prop string, state bool) models.Entity {
@@ -111,8 +138,7 @@ func (w *laptopWorker) Start(ctx context.Context) (<-chan models.Entity, error) 
 		dbusx.MatchMembers("PropertiesChanged"),
 	).Start(ctx, w.bus)
 	if err != nil {
-		return nil, errors.Join(ErrInitLaptopWorker,
-			fmt.Errorf("unable to create D-Bus watch for laptop property updates: %w", err))
+		return nil, fmt.Errorf("watch laptop events: %w", err)
 	}
 	sensorCh := make(chan models.Entity)
 
@@ -126,8 +152,7 @@ func (w *laptopWorker) Start(ctx context.Context) (<-chan models.Entity, error) 
 			case event := <-triggerCh:
 				props, err := dbusx.ParsePropertiesChanged(event.Content)
 				if err != nil {
-					slog.With(slog.String("worker", laptopWorkerID)).
-						Debug("Received unknown event from D-Bus.", slog.Any("error", err))
+					slogctx.FromCtx(ctx).Debug("Received unknown event from D-Bus.", slog.Any("error", err))
 				} else {
 					sendChangedProps(ctx, props.Changed, sensorCh)
 				}
@@ -139,8 +164,7 @@ func (w *laptopWorker) Start(ctx context.Context) (<-chan models.Entity, error) 
 	go func() {
 		sensors, err := w.generateSensors(ctx)
 		if err != nil {
-			slog.With(slog.String("worker", laptopWorkerID)).
-				Debug("Could not retrieve laptop properties from D-Bus.", slog.Any("error", err))
+			slogctx.FromCtx(ctx).Debug("Could not retrieve laptop properties from D-Bus.", slog.Any("error", err))
 		}
 
 		for _, s := range sensors {
@@ -171,38 +195,6 @@ func (w *laptopWorker) generateSensors(ctx context.Context) ([]models.Entity, er
 
 func (w *laptopWorker) IsDisabled() bool {
 	return w.prefs.IsDisabled()
-}
-
-func NewLaptopWorker(ctx context.Context) (workers.EntityWorker, error) {
-	bus, ok := linux.CtxGetSystemBus(ctx)
-	if !ok {
-		return nil, errors.Join(ErrInitLaptopWorker, linux.ErrNoSystemBus)
-	}
-	// If we can't get a session path, we can't run.
-	sessionPath, ok := linux.CtxGetSessionPath(ctx)
-	if !ok {
-		return nil, linux.ErrNoSessionPath
-	}
-	properties := make(map[string]*dbusx.Property[bool])
-	for _, name := range laptopPropList {
-		properties[name] = dbusx.NewProperty[bool](bus, loginBasePath, loginBaseInterface, name)
-	}
-
-	worker := &laptopWorker{
-		WorkerMetadata: models.SetWorkerMetadata(laptopWorkerID, laptopWorkerDesc),
-		bus:            bus,
-		sessionPath:    sessionPath,
-		properties:     properties,
-	}
-
-	defaultPrefs := &workers.CommonWorkerPrefs{}
-	var err error
-	worker.prefs, err = workers.LoadWorkerPreferences(laptopWorkerPrefID, defaultPrefs)
-	if err != nil {
-		return nil, errors.Join(ErrInitLaptopWorker, err)
-	}
-
-	return worker, nil
 }
 
 func sendChangedProps(ctx context.Context, props map[string]dbus.Variant, sensorCh chan models.Entity) {

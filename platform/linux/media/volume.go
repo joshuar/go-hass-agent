@@ -8,7 +8,6 @@ package media
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log/slog"
 	"strconv"
@@ -21,6 +20,7 @@ import (
 
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/config"
+	"github.com/joshuar/go-hass-agent/models"
 	"github.com/joshuar/go-hass-agent/pkg/linux/pulseaudiox"
 )
 
@@ -35,12 +35,11 @@ const (
 	audioControlPreferencesID = "sensors.media.audio"
 )
 
-var ErrInitAudioWorker = errors.New("could not init audio worker")
-
 // VolumeWorker is a struct containing the data for providing audio state
 // tracking and control.
 type VolumeWorker struct {
 	*workers.CommonWorkerPrefs
+	*models.WorkerMetadata
 
 	pulseAudio    *pulseaudiox.PulseAudioClient
 	MsgCh         chan mqttapi.Msg
@@ -51,6 +50,100 @@ type VolumeWorker struct {
 // entity is a convienience interface to treat all entities the same.
 type entity interface {
 	MarshalState(args ...any) (*mqttapi.Msg, error)
+}
+
+func NewVolumeWorker(ctx context.Context, device *mqtthass.Device) (*VolumeWorker, error) {
+	worker := &VolumeWorker{
+		WorkerMetadata: models.SetWorkerMetadata("volume_control", "Volume control"),
+		MsgCh:          make(chan mqttapi.Msg),
+	}
+
+	var err error
+
+	worker.pulseAudio, err = pulseaudiox.NewPulseClient(ctx)
+	if err != nil {
+		return worker, fmt.Errorf("new pulseaudio client: %w", err)
+	}
+
+	defaultPrefs := &workers.CommonWorkerPrefs{}
+	worker.CommonWorkerPrefs, err = workers.LoadWorkerPreferences(audioControlPreferencesID, defaultPrefs)
+	if err != nil {
+		return worker, fmt.Errorf("load preferences: %w", err)
+	}
+
+	if worker.IsDisabled() {
+		return nil, nil
+	}
+
+	worker.VolumeControl = mqtthass.NewNumberEntity[int]().
+		WithMin(minVolpc).
+		WithMax(maxVolpc).
+		WithStep(volStepPc).
+		WithMode(mqtthass.NumberSlider).
+		WithDetails(
+			mqtthass.App(config.AppName+"_"+device.Name),
+			mqtthass.Name("Volume"),
+			mqtthass.ID(device.Name+"_volume"),
+			mqtthass.DeviceInfo(device),
+			mqtthass.Icon(volIcon),
+		).
+		WithState(
+			mqtthass.StateCallback(worker.volStateCallback),
+			mqtthass.ValueTemplate("{{ value_json.value }}"),
+		).
+		WithCommand(
+			mqtthass.CommandCallback(worker.volCommandCallback),
+		)
+
+	worker.MuteControl = mqtthass.NewSwitchEntity().
+		OptimisticMode().
+		WithDetails(
+			mqtthass.App(config.AppName+"_"+device.Name),
+			mqtthass.Name("Mute"),
+			mqtthass.ID(device.Name+"_mute"),
+			mqtthass.DeviceInfo(device),
+			mqtthass.Icon(muteIcon),
+		).
+		WithState(
+			mqtthass.StateCallback(worker.muteStateCallback),
+			mqtthass.ValueTemplate("{{ value }}"),
+		).
+		WithCommand(
+			mqtthass.CommandCallback(worker.muteCommandCallback),
+		)
+
+	update := func() { // Pulseaudio changed state. Get the new state.
+		// Publish and update mute state if it changed.
+		if err := publishAudioState(worker.MsgCh, worker.MuteControl); err != nil {
+			slogctx.FromCtx(ctx).Error("Failed to publish mute state to MQTT.", slog.Any("error", err))
+		}
+
+		// Publish and update volume if it changed.
+		if err := publishAudioState(worker.MsgCh, worker.VolumeControl); err != nil {
+			slogctx.FromCtx(ctx).Error("Failed to publish mute state to MQTT.", slog.Any("error", err))
+		}
+	}
+
+	// Process Pulseaudio state updates as they are received.
+	go func() {
+		slogctx.FromCtx(ctx).Debug("Monitoring for events.")
+		update()
+
+		for {
+			select {
+			case <-ctx.Done():
+				slogctx.FromCtx(ctx).Debug("Closing connection.")
+
+				return
+			case <-worker.pulseAudio.EventCh:
+				if ctx.Err() == nil {
+					update()
+				}
+			}
+		}
+	}()
+
+	return worker, nil
 }
 
 // volStateCallback is executed when the volume is read on MQTT.
@@ -133,108 +226,4 @@ func publishAudioState(msgCh chan mqttapi.Msg, entity entity) error {
 	msgCh <- *msg
 
 	return nil
-}
-
-// newAudioControl will establish a connection to PulseAudio and return a
-// audioControl object for tracking and controlling audio state.
-func newAudioControl(ctx context.Context) (*VolumeWorker, error) {
-	client, err := pulseaudiox.NewPulseClient(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("unable to connect to Pulseaudio: %w", err)
-	}
-
-	audioDev := &VolumeWorker{
-		pulseAudio: client,
-		MsgCh:      make(chan mqttapi.Msg),
-	}
-
-	return audioDev, nil
-}
-
-//nolint:nilnil
-func NewVolumeWorker(ctx context.Context, device *mqtthass.Device) (*VolumeWorker, error) {
-	worker, err := newAudioControl(ctx)
-	if err != nil {
-		return nil, errors.Join(ErrInitAudioWorker, err)
-	}
-
-	defaultPrefs := &workers.CommonWorkerPrefs{}
-	worker.CommonWorkerPrefs, err = workers.LoadWorkerPreferences(audioControlPreferencesID, defaultPrefs)
-	if err != nil {
-		return nil, errors.Join(ErrInitAudioWorker, err)
-	}
-
-	if worker.IsDisabled() {
-		return nil, nil
-	}
-
-	worker.VolumeControl = mqtthass.NewNumberEntity[int]().
-		WithMin(minVolpc).
-		WithMax(maxVolpc).
-		WithStep(volStepPc).
-		WithMode(mqtthass.NumberSlider).
-		WithDetails(
-			mqtthass.App(config.AppName+"_"+device.Name),
-			mqtthass.Name("Volume"),
-			mqtthass.ID(device.Name+"_volume"),
-			mqtthass.DeviceInfo(device),
-			mqtthass.Icon(volIcon),
-		).
-		WithState(
-			mqtthass.StateCallback(worker.volStateCallback),
-			mqtthass.ValueTemplate("{{ value_json.value }}"),
-		).
-		WithCommand(
-			mqtthass.CommandCallback(worker.volCommandCallback),
-		)
-
-	worker.MuteControl = mqtthass.NewSwitchEntity().
-		OptimisticMode().
-		WithDetails(
-			mqtthass.App(config.AppName+"_"+device.Name),
-			mqtthass.Name("Mute"),
-			mqtthass.ID(device.Name+"_mute"),
-			mqtthass.DeviceInfo(device),
-			mqtthass.Icon(muteIcon),
-		).
-		WithState(
-			mqtthass.StateCallback(worker.muteStateCallback),
-			mqtthass.ValueTemplate("{{ value }}"),
-		).
-		WithCommand(
-			mqtthass.CommandCallback(worker.muteCommandCallback),
-		)
-
-	update := func() { // Pulseaudio changed state. Get the new state.
-		// Publish and update mute state if it changed.
-		if err := publishAudioState(worker.MsgCh, worker.MuteControl); err != nil {
-			slogctx.FromCtx(ctx).Error("Failed to publish mute state to MQTT.", slog.Any("error", err))
-		}
-
-		// Publish and update volume if it changed.
-		if err := publishAudioState(worker.MsgCh, worker.VolumeControl); err != nil {
-			slogctx.FromCtx(ctx).Error("Failed to publish mute state to MQTT.", slog.Any("error", err))
-		}
-	}
-
-	// Process Pulseaudio state updates as they are received.
-	go func() {
-		slogctx.FromCtx(ctx).Debug("Monitoring for events.")
-		update()
-
-		for {
-			select {
-			case <-ctx.Done():
-				slogctx.FromCtx(ctx).Debug("Closing connection.")
-
-				return
-			case <-worker.pulseAudio.EventCh:
-				if ctx.Err() == nil {
-					update()
-				}
-			}
-		}
-	}()
-
-	return worker, nil
 }

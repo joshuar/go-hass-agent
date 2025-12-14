@@ -1,14 +1,10 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
-//revive:disable:unused-receiver
 package power
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 
@@ -23,7 +19,9 @@ import (
 const (
 	suspend powerSignal = iota
 	shutdown
+)
 
+const (
 	sleepSignal    = "PrepareForSleep"
 	shutdownSignal = "PrepareForShutdown"
 
@@ -33,11 +31,6 @@ const (
 )
 
 var _ workers.EntityWorker = (*stateWorker)(nil)
-
-var (
-	ErrNewPowerStateSensor  = errors.New("could not create power state sensor")
-	ErrInitPowerStateWorker = errors.New("could not init power state worker")
-)
 
 type powerSignal int
 
@@ -88,9 +81,32 @@ func powerStateIcon(value any) string {
 }
 
 type stateWorker struct {
+	*models.WorkerMetadata
+
 	bus   *dbusx.Bus
 	prefs *workers.CommonWorkerPrefs
-	*models.WorkerMetadata
+}
+
+func NewStateWorker(ctx context.Context) (workers.EntityWorker, error) {
+	worker := &stateWorker{
+		WorkerMetadata: models.SetWorkerMetadata(powerStateWorkerID, powerStateWorkerDesc),
+	}
+
+	var ok bool
+
+	worker.bus, ok = linux.CtxGetSystemBus(ctx)
+	if !ok {
+		return nil, fmt.Errorf("get system bus: %w", linux.ErrNoSystemBus)
+	}
+
+	defaultPrefs := &workers.CommonWorkerPrefs{}
+	var err error
+	worker.prefs, err = workers.LoadWorkerPreferences(powerStatePreferencesID, defaultPrefs)
+	if err != nil {
+		return nil, fmt.Errorf("load preferences: %w", err)
+	}
+
+	return worker, nil
 }
 
 func (w *stateWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
@@ -100,8 +116,7 @@ func (w *stateWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
 		dbusx.MatchMembers(sleepSignal, shutdownSignal),
 	).Start(ctx, w.bus)
 	if err != nil {
-		return nil, errors.Join(ErrInitPowerStateWorker,
-			fmt.Errorf("unable to set-up D-Bus watch for power state: %w", err))
+		return nil, fmt.Errorf("watch power state: %w", err)
 	}
 	sensorCh := make(chan models.Entity)
 
@@ -136,25 +151,4 @@ func (w *stateWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
 
 func (w *stateWorker) IsDisabled() bool {
 	return w.prefs.IsDisabled()
-}
-
-func NewStateWorker(ctx context.Context) (workers.EntityWorker, error) {
-	bus, ok := linux.CtxGetSystemBus(ctx)
-	if !ok {
-		return nil, errors.Join(ErrInitPowerStateWorker, linux.ErrNoSystemBus)
-	}
-
-	worker := &stateWorker{
-		WorkerMetadata: models.SetWorkerMetadata(powerStateWorkerID, powerStateWorkerDesc),
-		bus:            bus,
-	}
-
-	defaultPrefs := &workers.CommonWorkerPrefs{}
-	var err error
-	worker.prefs, err = workers.LoadWorkerPreferences(powerStatePreferencesID, defaultPrefs)
-	if err != nil {
-		return nil, errors.Join(ErrInitPowerStateWorker, err)
-	}
-
-	return worker, nil
 }

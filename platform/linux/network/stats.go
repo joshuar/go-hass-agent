@@ -27,8 +27,8 @@ import (
 
 //go:generate go tool stringer -type=netStatsType -output stats.gen.go -linecomment
 const (
-	statBytesTx netStatsType = iota // Bytes Sent
-	statBytesRx                     // Bytes Received
+	statBytesTx     netStatsType = iota // Bytes Sent
+	statBytesRx                         // Bytes Received
 	statBytesTxRate                     // Bytes Sent Throughput
 	statBytesRxRate                     // Bytes Received Throughput
 
@@ -75,7 +75,7 @@ type netStatsWorker struct {
 }
 
 // NewNetStatsWorker sets up a sensor worker that tracks network stats.
-func NewNetStatsWorker(ctx context.Context) (workers.EntityWorker, error) {
+func NewNetStatsWorker(_ context.Context) (workers.EntityWorker, error) {
 	worker := &netStatsWorker{
 		WorkerMetadata:          models.SetWorkerMetadata(statsWorkerID, statsWorkerDesc),
 		statsSensors:            make(map[string]map[netStatsType]*netRate),
@@ -90,16 +90,11 @@ func NewNetStatsWorker(ctx context.Context) (workers.EntityWorker, error) {
 	var err error
 	worker.prefs, err = workers.LoadWorkerPreferences(statsWorkerPrefID, defaultPrefs)
 	if err != nil {
-		return nil, fmt.Errorf("unable to load net stats worker preferences: %w", err)
+		return worker, fmt.Errorf("load preferences: %w", err)
 	}
 
 	pollInterval, err := time.ParseDuration(worker.prefs.UpdateInterval)
 	if err != nil {
-		slogctx.FromCtx(ctx).Warn("Invalid polling interval, using default",
-			slog.String("worker", netRatesWorkerID),
-			slog.String("given_interval", worker.prefs.UpdateInterval),
-			slog.String("default_interval", rateInterval.String()))
-
 		pollInterval = rateInterval
 	}
 	worker.Trigger = scheduler.NewPollTriggerWithJitter(pollInterval, rateJitter)

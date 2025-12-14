@@ -1,14 +1,10 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
-//
-// This software is released under the MIT License.
-// https://opensource.org/licenses/MIT
+// Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
 
-//revive:disable:unused-receiver
 package system
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 
@@ -22,23 +18,43 @@ import (
 )
 
 const (
-	infoWorkerID            = "system_info"
-	infoWorkerDesc          = "General system information"
 	infoWorkerPreferencesID = sensorsPrefPrefix + "info_sensors"
 )
 
 var _ workers.EntityWorker = (*infoWorker)(nil)
 
-var ErrNewInfoSensor = errors.New("could not create info sensor")
-
 type infoWorker struct {
+	*models.WorkerMetadata
+
 	OutCh chan models.Entity
 	prefs *workers.CommonWorkerPrefs
-	*models.WorkerMetadata
 }
 
-func (w *infoWorker) IsDisabled() bool {
-	return w.prefs.IsDisabled()
+func NewInfoWorker(_ context.Context) (workers.EntityWorker, error) {
+	worker := &infoWorker{
+		WorkerMetadata: models.SetWorkerMetadata("system_info", "System information"),
+	}
+
+	defaultPrefs := &workers.CommonWorkerPrefs{}
+	var err error
+	worker.prefs, err = workers.LoadWorkerPreferences(infoWorkerPreferencesID, defaultPrefs)
+	if err != nil {
+		return worker, fmt.Errorf("load preferences: %w", err)
+	}
+
+	return worker, nil
+}
+
+func (w *infoWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
+	w.OutCh = make(chan models.Entity)
+	go func() {
+		defer close(w.OutCh)
+		if err := w.Execute(ctx); err != nil {
+			slogctx.FromCtx(ctx).Warn("Failed to send info details",
+				slog.Any("error", err))
+		}
+	}()
+	return w.OutCh, nil
 }
 
 func (w *infoWorker) Execute(ctx context.Context) error {
@@ -86,29 +102,6 @@ func (w *infoWorker) Execute(ctx context.Context) error {
 	return warnings
 }
 
-func (w *infoWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
-	w.OutCh = make(chan models.Entity)
-	go func() {
-		defer close(w.OutCh)
-		if err := w.Execute(ctx); err != nil {
-			slogctx.FromCtx(ctx).Warn("Failed to send info details",
-				slog.Any("error", err))
-		}
-	}()
-	return w.OutCh, nil
-}
-
-func NewInfoWorker(_ context.Context) (workers.EntityWorker, error) {
-	worker := &infoWorker{
-		WorkerMetadata: models.SetWorkerMetadata(infoWorkerID, infoWorkerDesc),
-	}
-
-	defaultPrefs := &workers.CommonWorkerPrefs{}
-	var err error
-	worker.prefs, err = workers.LoadWorkerPreferences(infoWorkerPreferencesID, defaultPrefs)
-	if err != nil {
-		return nil, fmt.Errorf("could not start info worker: %w", err)
-	}
-
-	return worker, nil
+func (w *infoWorker) IsDisabled() bool {
+	return w.prefs.IsDisabled()
 }

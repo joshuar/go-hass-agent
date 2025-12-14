@@ -48,7 +48,6 @@ var smartWorkerRequiredChecks = &linux.Checks{
 const (
 	smartWorkerUpdateInterval = time.Minute
 	smartWorkerUpdateJitter   = 15 * time.Second
-	smartWorkerID             = "smart_status_sensors"
 )
 
 // smartWorker creates sensors for per disk SMART status.
@@ -59,39 +58,36 @@ type smartWorker struct {
 	prefs *WorkerPrefs
 }
 
-func NewSmartWorker(ctx context.Context) (workers.EntityWorker, error) {
-	passed, err := smartWorkerRequiredChecks.Passed()
-	if err != nil || !passed {
-		return nil, fmt.Errorf("check capabilities: %w", err)
+// NewSmartWorker creates a new polling entity worker for monitoring SMART disk status.
+func NewSmartWorker(_ context.Context) (workers.EntityWorker, error) {
+	worker := &smartWorker{
+		WorkerMetadata:          models.SetWorkerMetadata("smart_status", "Report SMART data for disks"),
+		PollingEntityWorkerData: &workers.PollingEntityWorkerData{},
 	}
 
-	smartWorker := &smartWorker{
-		WorkerMetadata:          models.SetWorkerMetadata(ioWorkerID, ioWorkerDesc),
-		PollingEntityWorkerData: &workers.PollingEntityWorkerData{},
+	passed, err := smartWorkerRequiredChecks.Passed()
+	if err != nil || !passed {
+		return worker, fmt.Errorf("check capabilities: %w", err)
 	}
 
 	defaultPrefs := &WorkerPrefs{
 		UpdateInterval: smartWorkerUpdateInterval.String(),
 	}
-	smartWorker.prefs, err = workers.LoadWorkerPreferences(smartWorkerPreferencesID, defaultPrefs)
+	worker.prefs, err = workers.LoadWorkerPreferences(smartWorkerPreferencesID, defaultPrefs)
 	if err != nil {
-		return nil, fmt.Errorf("load preferences: %w", err)
+		return worker, fmt.Errorf("load preferences: %w", err)
 	}
 
-	pollInterval, err := time.ParseDuration(smartWorker.prefs.UpdateInterval)
+	pollInterval, err := time.ParseDuration(worker.prefs.UpdateInterval)
 	if err != nil {
-		slogctx.FromCtx(ctx).Warn("Invalid polling interval, using default",
-			slog.String("worker", smartWorkerID),
-			slog.String("given_interval", smartWorker.prefs.UpdateInterval),
-			slog.String("default_interval", smartWorkerUpdateInterval.String()))
-
 		pollInterval = smartWorkerUpdateInterval
 	}
-	smartWorker.Trigger = scheduler.NewPollTriggerWithJitter(pollInterval, smartWorkerUpdateJitter)
+	worker.Trigger = scheduler.NewPollTriggerWithJitter(pollInterval, smartWorkerUpdateJitter)
 
-	return smartWorker, nil
+	return worker, nil
 }
 
+// Execute fetches and reports current SMART status for disks.
 func (w *smartWorker) Execute(ctx context.Context) error {
 	block, err := ghw.Block()
 	if err != nil {
@@ -198,6 +194,7 @@ func (w *smartWorker) Execute(ctx context.Context) error {
 	return nil
 }
 
+// Start starts the polling entity worker for monitoring disk SMART status.
 func (w *smartWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
 	w.OutCh = make(chan models.Entity)
 	if err := workers.SchedulePollingWorker(ctx, w, w.OutCh); err != nil {
