@@ -141,10 +141,9 @@ require (
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-resty/resty/v2 v2.17.0
 	github.com/go-test/deep v1.1.1
-	github.com/goforj/godump v1.7.1
 	github.com/gofrs/uuid/v5 v5.4.0
 	github.com/grandcat/zeroconf v1.0.0
-	github.com/jaypipes/ghw v0.21.0
+	github.com/jaypipes/ghw v0.21.1
 	github.com/jfreymuth/pulse v0.1.1
 	github.com/jsimonetti/rtnetlink v1.4.2
 	github.com/justinas/alice v1.2.0
