@@ -19,13 +19,12 @@ import (
 	"github.com/joshuar/go-hass-agent/platform/linux"
 )
 
-var _ workers.EntityWorker = (*sensorWorker)(nil)
+var _ workers.EntityWorker = (*appsWorker)(nil)
 
 const (
 	appStateDBusMethod    = "org.freedesktop.impl.portal.Background.GetAppState"
 	appStateDBusPath      = "/org/freedesktop/portal/desktop"
 	appStateDBusInterface = "org.freedesktop.impl.portal.Background"
-	appStateDBusEvent     = "org.freedesktop.impl.portal.Background.RunningApplicationsChanged"
 
 	activeAppsIcon = "mdi:application"
 	activeAppsName = "Active App"
@@ -37,11 +36,7 @@ const (
 	runningAppsID    = "running_apps"
 )
 
-func (w *sensorWorker) IsDisabled() bool {
-	return w.prefs.IsDisabled()
-}
-
-type sensorWorker struct {
+type appsWorker struct {
 	*models.WorkerMetadata
 
 	bus              *dbusx.Bus
@@ -51,7 +46,37 @@ type sensorWorker struct {
 	prefs            *WorkerPrefs
 }
 
-func (w *sensorWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
+// NewAppStateWorker creates a worker for tracking application states (i.e., number of running and current active apps).
+func NewAppStateWorker(ctx context.Context) (workers.EntityWorker, error) {
+	worker := &appsWorker{
+		WorkerMetadata: models.SetWorkerMetadata("running_apps", "Running apps"),
+	}
+
+	var ok bool
+
+	// If we cannot find a portal interface, we cannot monitor the active app.
+	worker.portalDest, ok = linux.CtxGetDesktopPortal(ctx)
+	if !ok {
+		return worker, fmt.Errorf("get desktop portal: %w", linux.ErrNoDesktopPortal)
+	}
+
+	// Connect to the D-Bus session bus. Bail if we can't.
+	worker.bus, ok = linux.CtxGetSessionBus(ctx)
+	if !ok {
+		return worker, linux.ErrNoSessionBus
+	}
+
+	defaultPrefs := &WorkerPrefs{}
+	var err error
+	worker.prefs, err = workers.LoadWorkerPreferences(prefPrefix+"app_sensors", defaultPrefs)
+	if err != nil {
+		return worker, fmt.Errorf("load preferences: %w", err)
+	}
+
+	return worker, nil
+}
+
+func (w *appsWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
 	triggerCh, err := dbusx.NewWatch(
 		dbusx.MatchPath(appStateDBusPath),
 		dbusx.MatchInterface(appStateDBusInterface),
@@ -92,18 +117,23 @@ func (w *sensorWorker) Start(ctx context.Context) (<-chan models.Entity, error) 
 	return sensorCh, nil
 }
 
-func (w *sensorWorker) generateSensors(ctx context.Context) ([]models.Entity, error) {
+func (w *appsWorker) IsDisabled() bool {
+	return w.prefs.IsDisabled()
+}
+
+func (w *appsWorker) generateSensors(ctx context.Context) ([]models.Entity, error) {
 	var (
 		sensors     []models.Entity
 		runningApps []string
 	)
 
-	appStates, err := w.getAppStates()
+	var apps map[string]dbus.Variant
+	apps, err := dbusx.GetData[map[string]dbus.Variant](w.bus, appStateDBusPath, w.portalDest, appStateDBusMethod)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not retrieve app states from D-Bus: %w", err)
 	}
 
-	for name, variant := range appStates {
+	for name, variant := range apps {
 		// Convert the state to something we understand.
 		state, err := dbusx.VariantToValue[uint32](variant)
 		if err != nil {
@@ -143,43 +173,4 @@ func (w *sensorWorker) generateSensors(ctx context.Context) ([]models.Entity, er
 	}
 
 	return sensors, nil
-}
-
-func (w *sensorWorker) getAppStates() (map[string]dbus.Variant, error) {
-	var apps map[string]dbus.Variant
-	apps, err := dbusx.GetData[map[string]dbus.Variant](w.bus, appStateDBusPath, w.portalDest, appStateDBusMethod)
-	if err != nil {
-		return nil, fmt.Errorf("could not retrieve app states from D-Bus: %w", err)
-	}
-	return apps, nil
-}
-
-// NewAppStateWorker creates a worker for tracking application states (i.e., number of running and current active apps).
-func NewAppStateWorker(ctx context.Context) (workers.EntityWorker, error) {
-	worker := &sensorWorker{
-		WorkerMetadata: models.SetWorkerMetadata("running_apps", "Running apps"),
-	}
-
-	var ok bool
-
-	// If we cannot find a portal interface, we cannot monitor the active app.
-	worker.portalDest, ok = linux.CtxGetDesktopPortal(ctx)
-	if !ok {
-		return worker, fmt.Errorf("get desktop portal: %w", linux.ErrNoDesktopPortal)
-	}
-
-	// Connect to the D-Bus session bus. Bail if we can't.
-	worker.bus, ok = linux.CtxGetSessionBus(ctx)
-	if !ok {
-		return worker, linux.ErrNoSessionBus
-	}
-
-	defaultPrefs := &WorkerPrefs{}
-	var err error
-	worker.prefs, err = workers.LoadWorkerPreferences(prefPrefix+"app_sensors", defaultPrefs)
-	if err != nil {
-		return worker, fmt.Errorf("load preferences: %w", err)
-	}
-
-	return worker, nil
 }
