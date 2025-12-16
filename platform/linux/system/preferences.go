@@ -12,33 +12,33 @@ const (
 
 // HWMonPrefs are the preferences for the hwmon sensor worker.
 type HWMonPrefs struct {
-	workers.CommonWorkerPrefs
+	workers.CommonWorkerPrefs `toml:",squash"`
 
 	UpdateInterval string `toml:"update_interval"`
 }
 
 // ProblemsPrefs are the preferences for the abrt problems sensor worker.
 type ProblemsPrefs struct {
-	workers.CommonWorkerPrefs
+	workers.CommonWorkerPrefs `toml:",squash"`
 
 	UpdateInterval string `toml:"update_interval"`
 }
 
 // ChronyPrefs are the preferences for the chrony sensor worker.
 type ChronyPrefs struct {
-	workers.CommonWorkerPrefs
+	workers.CommonWorkerPrefs `toml:",squash"`
 
 	UpdateInterval string `toml:"update_interval"`
 }
 
 // UptimePrefs are the preferences for the system uptime sensor.
 type UptimePrefs struct {
-	workers.CommonWorkerPrefs
+	workers.CommonWorkerPrefs `toml:",squash"`
 
 	UpdateInterval string `toml:"update_interval"`
 }
 
 // UserSessionsPrefs are the preferences for the user sessions worker.
 type UserSessionsPrefs struct {
-	workers.CommonWorkerPrefs
+	workers.CommonWorkerPrefs `toml:",squash"`
 }
