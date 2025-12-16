@@ -57,7 +57,7 @@ var (
 
 // StatsWorkerPrefs are the preferences for the stats worker.
 type StatsWorkerPrefs struct {
-	CommonPreferences
+	CommonPreferences `toml:",squash"`
 
 	UpdateInterval string `toml:"update_interval"`
 }

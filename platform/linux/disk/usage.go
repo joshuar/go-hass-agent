@@ -78,7 +78,7 @@ type usageWorker struct {
 }
 
 type usageWorkerPrefs struct {
-	WorkerPrefs
+	WorkerPrefs `toml:",squash"`
 
 	IgnoredMounts []string `toml:"ignored_mounts"`
 }
