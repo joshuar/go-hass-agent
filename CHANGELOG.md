@@ -1,5 +1,19 @@
 # Changelog
 
+## [14.2.3](https://github.com/joshuar/go-hass-agent/compare/v14.2.2...v14.2.3) (2025-12-19)
+
+
+### Bug Fixes
+
+* **config:** mark embedded config structs as ",squash" thanks [@cmnrd](https://github.com/cmnrd)! ([dce8c09](https://github.com/joshuar/go-hass-agent/commit/dce8c09bfbf8f17e1c433b2577ad4f0920aeb865))
+* **config:** mark embedded config structs as "squash" ([f780f3e](https://github.com/joshuar/go-hass-agent/commit/f780f3eeea89fab74f4412212c096c9cf00d55d8)), closes [#624](https://github.com/joshuar/go-hass-agent/issues/624)
+
+
+### Performance Improvements
+
+* **linux/hwmon:** :zap: more optimisations ([edcf082](https://github.com/joshuar/go-hass-agent/commit/edcf082c59c1fd6f0f72d3d3956564a725cd76e1))
+* **pkg/hwmon:** :zap: hwmon fetching improvements ([59f494e](https://github.com/joshuar/go-hass-agent/commit/59f494e9fd93ba697dfed3d676c3a430972fa64a))
+
 ## [14.2.2](https://github.com/joshuar/go-hass-agent/compare/v14.2.1...v14.2.2) (2025-12-13)
 
 
