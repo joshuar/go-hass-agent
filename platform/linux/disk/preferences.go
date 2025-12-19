@@ -13,7 +13,7 @@ const (
 )
 
 type WorkerPrefs struct {
-	workers.CommonWorkerPrefs
+	workers.CommonWorkerPrefs `toml:",squash"`
 
 	UpdateInterval string `toml:"update_interval"`
 }

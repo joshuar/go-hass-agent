@@ -16,7 +16,7 @@ var defaultIgnoredDevices = []string{"lo", "veth", "podman", "docker", "vnet"}
 // CommonPreferences represents common preferences across all net workers. All workers support being disabled and setting a
 // list of devices to filter.
 type CommonPreferences struct {
-	workers.CommonWorkerPrefs
+	workers.CommonWorkerPrefs `toml:",squash"`
 
 	IgnoredDevices []string `toml:"ignored_devices"`
 }
