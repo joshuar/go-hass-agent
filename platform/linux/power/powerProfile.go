@@ -70,7 +70,7 @@ func NewProfileWorker(ctx context.Context) (workers.EntityWorker, error) {
 	var err error
 	worker.prefs, err = workers.LoadWorkerPreferences(powerProfilePreferencesID, defaultPrefs)
 	if err != nil {
-		return nil, fmt.Errorf("load preferences: %w", err)
+		return worker, fmt.Errorf("load preferences: %w", err)
 	}
 
 	return worker, nil
