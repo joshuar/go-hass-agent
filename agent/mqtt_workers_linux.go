@@ -221,6 +221,15 @@ func CreateOSMQTTWorkers(ctx context.Context) (workers.MQTTWorker, error) {
 		workerMsgs = append(workerMsgs, cameraWorker.MsgCh)
 	}
 
+	backlightWorker, err := power.NewBacklightControl(ctx, mqttDevice)
+	if err != nil {
+		slogctx.FromCtx(ctx).Warn("Could create MQTT backlight control.",
+			slog.Any("error", err))
+	} else if backlightWorker != nil {
+		mqttController.numbers = append(mqttController.numbers, backlightWorker.Entity)
+		workerMsgs = append(workerMsgs, backlightWorker.MsgCh)
+	}
+
 	// Add the D-Bus command action.
 	dbusCmdController, err := system.NewDBusCommandSubscription(ctx, mqttDevice)
 	if err != nil {
