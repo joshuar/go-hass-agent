@@ -5,6 +5,7 @@
 package hwmon
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -18,7 +19,6 @@ import (
 
 	"github.com/iancoleman/strcase"
 	slogctx "github.com/veqryn/slog-context"
-	"golang.org/x/sys/unix"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
@@ -532,24 +532,29 @@ func getFileContents(file string) (string, error) {
 	//
 	// Since we either want to read data or bail immediately, do the simplest
 	// possible read using system call directly.
-	bufPtr, ok := fileBufPool.Get().(*[]byte)
+	bufPtr, ok := fileBufPool.Get().(*bytes.Buffer)
 	if !ok {
 		return "", errors.New("unable to allocate buffer")
 	}
 	data := *bufPtr
+	defer func() {
+		bufPtr.Reset()
+		fileBufPool.Put(bufPtr)
+	}()
+
 	defer fileBufPool.Put(bufPtr)
 
-	n, err := unix.Read(int(handle.Fd()), data) // #nosec G115 // I do not believe this is a problem.
+	_, err = data.ReadFrom(handle)
 	if err != nil {
 		return "", fmt.Errorf("could not read contents of file: %w", err)
 	}
 
-	return strings.TrimSpace(string(data[:n])), nil
+	return string(bytes.TrimSpace(data.Bytes())), nil
 }
 
 var fileBufPool = sync.Pool{
 	New: func() any {
-		buf := make([]byte, 128)
+		var buf bytes.Buffer
 		return &buf
 	},
 }
