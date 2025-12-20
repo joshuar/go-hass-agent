@@ -82,14 +82,47 @@ func StopProfiling(flags ProfileFlags) error {
 //
 //nolint:lll
 func printMemStats(stats *runtime.MemStats) {
-	slog.Debug("Memory stats",
-		"alloc", formatMemory(stats.Alloc), "total_alloc", formatMemory(stats.TotalAlloc), "sys", formatMemory(stats.Sys),
-		"heap_alloc", formatMemory(stats.HeapAlloc), "heap_sys", formatMemory(stats.HeapSys),
-		"heap_idle", formatMemory(stats.HeapIdle), "heap_released", formatMemory(stats.HeapReleased), "heap_in_use", formatMemory(stats.HeapInuse),
-		"stack_in_use", formatMemory(stats.StackInuse), "stack_sys", formatMemory(stats.StackSys),
-		"mspan_sys", formatMemory(stats.MSpanSys), "mcache_sys", formatMemory(stats.MCacheSys), "buck_hash_sys", formatMemory(stats.BuckHashSys),
-		"gc_sys", formatMemory(stats.GCSys), "other_sys", formatMemory(stats.OtherSys),
-		"mallocs_n", stats.Mallocs, "frees_n", stats.Frees, "heap_objects", stats.HeapObjects, "gc_cpu_fraction", stats.GCCPUFraction)
+	slog.Debug(
+		"Memory stats",
+		"alloc",
+		formatMemory(stats.Alloc),
+		"total_alloc",
+		formatMemory(stats.TotalAlloc),
+		"sys",
+		formatMemory(stats.Sys),
+		"heap_alloc",
+		formatMemory(stats.HeapAlloc),
+		"heap_sys",
+		formatMemory(stats.HeapSys),
+		"heap_idle",
+		formatMemory(stats.HeapIdle),
+		"heap_released",
+		formatMemory(stats.HeapReleased),
+		"heap_in_use",
+		formatMemory(stats.HeapInuse),
+		"stack_in_use",
+		formatMemory(stats.StackInuse),
+		"stack_sys",
+		formatMemory(stats.StackSys),
+		"mspan_sys",
+		formatMemory(stats.MSpanSys),
+		"mcache_sys",
+		formatMemory(stats.MCacheSys),
+		"buck_hash_sys",
+		formatMemory(stats.BuckHashSys),
+		"gc_sys",
+		formatMemory(stats.GCSys),
+		"other_sys",
+		formatMemory(stats.OtherSys),
+		"mallocs_n",
+		stats.Mallocs,
+		"frees_n",
+		stats.Frees,
+		"heap_objects",
+		stats.HeapObjects,
+		"gc_cpu_fraction",
+		stats.GCCPUFraction,
+	)
 }
 
 //nolint:varnamelen
@@ -119,7 +152,7 @@ func startWebProfiler(enable string) error {
 		go func() {
 			for i := 6060; i < 6070; i++ {
 				slog.Debug("Starting profiler web interface.",
-					slog.String("address", "http://localhost:"+strconv.Itoa(i)))
+					slog.String("address", "http://localhost:"+strconv.Itoa(i)+"/debug/pprof"))
 
 				err := http.ListenAndServe("localhost:"+strconv.Itoa(i), nil) // #nosec G114
 				if err != nil {
