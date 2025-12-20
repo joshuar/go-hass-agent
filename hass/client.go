@@ -10,7 +10,6 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/go-resty/resty/v2"
 	"github.com/reugn/go-quartz/job"
 	"github.com/reugn/go-quartz/quartz"
 	slogctx "github.com/veqryn/slog-context"
@@ -64,8 +63,6 @@ var ErrSendRequest = errors.New("send request failed")
 // sensor registration status and handles sending and processing requests to the
 // Home Assistant REST API.
 func NewClient(ctx context.Context, agent agent) (*Client, error) {
-	api.Init()
-
 	var hasscfg Config
 	// Load the hass config.
 	if err := config.Load(ConfigPrefix, &hasscfg); err != nil {
@@ -103,7 +100,7 @@ func (c *Client) RestAPIURL() string {
 
 // UpdateConfig will fetch and store the Home Assistant config via the Home Assistant REST API.
 func (c *Client) UpdateConfig(ctx context.Context) (bool, error) {
-	resp, err := c.SendRequest(ctx, c.RestAPIURL(), api.Request{Type: api.GetConfig})
+	resp, err := c.SendRequest(ctx, c.RestAPIURL(), api.RequestData{Type: api.GetConfig})
 	if err != nil {
 		return false, fmt.Errorf("could not update config: %w", err)
 	}
@@ -206,23 +203,7 @@ func (c *Client) EntityHandler(ctx context.Context, entityCh <-chan models.Entit
 // SendRequest will send the given request to the specified URL. It will handle
 // marshaling the request and unmarshaling the response. It will also handle
 // retrying the request with an exponential backoff if requested.
-func (c *Client) SendRequest(ctx context.Context, url string, req api.Request) (api.Response, error) {
-	var resp api.Response
-
-	// Set up the api request, and the request/response bodies.
-	apiReq := api.NewRequest().SetContext(ctx).
-		SetBody(req).
-		SetResult(&resp)
-
-	// If request needs to be retried, retry the request on any error.
-	if req.Retryable {
-		apiReq = apiReq.AddRetryCondition(
-			func(_ *resty.Response, err error) bool {
-				return err != nil
-			},
-		)
-	}
-
+func (c *Client) SendRequest(ctx context.Context, url string, req api.RequestData) (api.ResponseData, error) {
 	slogctx.FromCtx(ctx).
 		LogAttrs(ctx, logging.LevelTrace,
 			"Sending request.",
@@ -234,9 +215,12 @@ func (c *Client) SendRequest(ctx context.Context, url string, req api.Request) (
 			),
 		)
 
-	// Send the request.
-	apiResp, err := apiReq.Post(url)
-	// Handle different response conditions.
+	var resp api.ResponseData
+	apiResp, err := api.NewRequest(
+		api.WithBody(req),
+		api.WithResult(&resp),
+		api.WithRetryable(req.Retryable),
+	).Do(ctx, url)
 	switch {
 	case err != nil:
 		return resp, fmt.Errorf("%w: %w", ErrSendRequest, err)

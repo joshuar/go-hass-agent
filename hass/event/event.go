@@ -16,24 +16,24 @@ import (
 )
 
 type clientAPI interface {
-	SendRequest(ctx context.Context, url string, req api.Request) (api.Response, error)
+	SendRequest(ctx context.Context, url string, req api.RequestData) (api.ResponseData, error)
 	RestAPIURL() string
 }
 
 // NewEventRequest takes event data and creates an event request.
-func newEventRequest(event *models.Event) (*api.Request, error) {
+func newEventRequest(event *models.Event) (*api.RequestData, error) {
 	if valid, problems := validation.ValidateStruct(event); !valid {
 		return nil, fmt.Errorf("could not marshal event data: %w", problems)
 	}
 
-	req := &api.Request{
+	req := &api.RequestData{
 		Type:      api.FireEvent,
-		Data:      api.Request_Data{},
+		Payload:   api.RequestData_Payload{},
 		Retryable: event.Retryable,
 	}
 
 	// Add the sensor registration into the request.
-	err := req.Data.FromEvent(*event)
+	err := req.Payload.FromEvent(*event)
 	if err != nil {
 		return nil, fmt.Errorf("could not marshal event data: %w", err)
 	}

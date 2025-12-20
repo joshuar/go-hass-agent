@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/go-resty/resty/v2"
 	"github.com/reugn/go-quartz/quartz"
 
 	"github.com/joshuar/go-hass-agent/hass/api"
@@ -41,7 +40,6 @@ type ConnectionLatency struct {
 	*PollingEntityWorkerData
 	*models.WorkerMetadata
 
-	client   *resty.Client
 	endpoint string
 	prefs    *CommonWorkerPrefs
 }
@@ -51,9 +49,10 @@ func (w *ConnectionLatency) IsDisabled() bool {
 }
 
 func (w *ConnectionLatency) Execute(ctx context.Context) error {
-	resp, err := w.client.R().
-		SetContext(ctx).SetBody(api.Request{Type: api.GetConfig}).
-		Post(w.endpoint)
+	resp, err := api.NewRequest(
+		api.WithBody(api.RequestData{Type: api.GetConfig}),
+		api.WithTrace(),
+	).Do(ctx, w.endpoint)
 
 	// Handle errors and bad responses.
 	switch {
@@ -101,10 +100,7 @@ func NewConnectionLatencyWorker(_ context.Context, restAPIURL string) (EntityWor
 	worker := &ConnectionLatency{
 		WorkerMetadata:          models.SetWorkerMetadata(connectionLatencyWorkerID, connectionLatencyWorkerDesc),
 		PollingEntityWorkerData: &PollingEntityWorkerData{},
-		client: resty.New().
-			SetTimeout(connectionLatencyTimeout).
-			EnableTrace(),
-		endpoint: restAPIURL,
+		endpoint:                restAPIURL,
 	}
 
 	defaultPrefs := &CommonWorkerPrefs{}

@@ -16,22 +16,22 @@ import (
 )
 
 type clientAPI interface {
-	SendRequest(ctx context.Context, url string, req api.Request) (api.Response, error)
+	SendRequest(ctx context.Context, url string, req api.RequestData) (api.ResponseData, error)
 	RestAPIURL() string
 }
 
 // newLocationRequest takes location data and creates a location request.
-func newLocationRequest(location *models.Location) (*api.Request, error) {
+func newLocationRequest(location *models.Location) (*api.RequestData, error) {
 	if valid, problems := validation.ValidateStruct(location); !valid {
 		return nil, fmt.Errorf("could not marshal location data: %w", problems)
 	}
 
-	req := &api.Request{
+	req := &api.RequestData{
 		Type: api.UpdateLocation,
 	}
 
 	// Add the sensor registration into the request.
-	err := req.Data.FromLocation(*location)
+	err := req.Payload.FromLocation(*location)
 	if err != nil {
 		return nil, fmt.Errorf("could not marshal location data: %w", err)
 	}

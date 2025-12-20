@@ -123,31 +123,31 @@ type Event = externalRef0.Event
 // Location defines location details of the device.
 type Location = externalRef0.Location
 
-// Request defines a request sent through the API.
-type Request struct {
-	// Data is the request payload.
-	Data Request_Data `json:"data,omitempty,omitzero"`
-
+// RequestData defines request data sent through the API.
+type RequestData struct {
 	// Encrypted indicates the request payload is encrypted.
 	Encrypted bool `json:"encrypted,omitempty,omitzero"`
 
-	// Retryable indicates whether the request can be retried.
+	// Payload is the request payload.
+	Payload RequestData_Payload `json:"data"`
+
+	// Retryable indicates whether request for this data can be retried.
 	Retryable bool `json:"-"`
 
 	// Type is the type of request.
 	Type RequestType `json:"type"`
 }
 
-// Request_Data is the request payload.
-type Request_Data struct {
+// RequestData_Payload is the request payload.
+type RequestData_Payload struct {
 	union json.RawMessage
 }
 
 // RequestType is the type of request.
 type RequestType string
 
-// Response defines a response received through the API.
-type Response struct {
+// ResponseData defines response data received through the API.
+type ResponseData struct {
 	union json.RawMessage
 }
 
@@ -183,22 +183,22 @@ type SensorStateResponse map[string]ResponseStatus
 // WebhookID is the webhook ID that can be used to send data back.
 type WebhookID = string
 
-// AsLocation returns the union data inside the Request_Data as a Location
-func (t Request_Data) AsLocation() (Location, error) {
+// AsLocation returns the union data inside the RequestData_Payload as a Location
+func (t RequestData_Payload) AsLocation() (Location, error) {
 	var body Location
 	err := json.Unmarshal(t.union, &body)
 	return body, err
 }
 
-// FromLocation overwrites any union data inside the Request_Data as the provided Location
-func (t *Request_Data) FromLocation(v Location) error {
+// FromLocation overwrites any union data inside the RequestData_Payload as the provided Location
+func (t *RequestData_Payload) FromLocation(v Location) error {
 	b, err := json.Marshal(v)
 	t.union = b
 	return err
 }
 
-// MergeLocation performs a merge with any union data inside the Request_Data, using the provided Location
-func (t *Request_Data) MergeLocation(v Location) error {
+// MergeLocation performs a merge with any union data inside the RequestData_Payload, using the provided Location
+func (t *RequestData_Payload) MergeLocation(v Location) error {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
@@ -209,22 +209,22 @@ func (t *Request_Data) MergeLocation(v Location) error {
 	return err
 }
 
-// AsSensorState returns the union data inside the Request_Data as a SensorState
-func (t Request_Data) AsSensorState() (SensorState, error) {
+// AsSensorState returns the union data inside the RequestData_Payload as a SensorState
+func (t RequestData_Payload) AsSensorState() (SensorState, error) {
 	var body SensorState
 	err := json.Unmarshal(t.union, &body)
 	return body, err
 }
 
-// FromSensorState overwrites any union data inside the Request_Data as the provided SensorState
-func (t *Request_Data) FromSensorState(v SensorState) error {
+// FromSensorState overwrites any union data inside the RequestData_Payload as the provided SensorState
+func (t *RequestData_Payload) FromSensorState(v SensorState) error {
 	b, err := json.Marshal(v)
 	t.union = b
 	return err
 }
 
-// MergeSensorState performs a merge with any union data inside the Request_Data, using the provided SensorState
-func (t *Request_Data) MergeSensorState(v SensorState) error {
+// MergeSensorState performs a merge with any union data inside the RequestData_Payload, using the provided SensorState
+func (t *RequestData_Payload) MergeSensorState(v SensorState) error {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
@@ -235,22 +235,22 @@ func (t *Request_Data) MergeSensorState(v SensorState) error {
 	return err
 }
 
-// AsSensorRegistration returns the union data inside the Request_Data as a SensorRegistration
-func (t Request_Data) AsSensorRegistration() (SensorRegistration, error) {
+// AsSensorRegistration returns the union data inside the RequestData_Payload as a SensorRegistration
+func (t RequestData_Payload) AsSensorRegistration() (SensorRegistration, error) {
 	var body SensorRegistration
 	err := json.Unmarshal(t.union, &body)
 	return body, err
 }
 
-// FromSensorRegistration overwrites any union data inside the Request_Data as the provided SensorRegistration
-func (t *Request_Data) FromSensorRegistration(v SensorRegistration) error {
+// FromSensorRegistration overwrites any union data inside the RequestData_Payload as the provided SensorRegistration
+func (t *RequestData_Payload) FromSensorRegistration(v SensorRegistration) error {
 	b, err := json.Marshal(v)
 	t.union = b
 	return err
 }
 
-// MergeSensorRegistration performs a merge with any union data inside the Request_Data, using the provided SensorRegistration
-func (t *Request_Data) MergeSensorRegistration(v SensorRegistration) error {
+// MergeSensorRegistration performs a merge with any union data inside the RequestData_Payload, using the provided SensorRegistration
+func (t *RequestData_Payload) MergeSensorRegistration(v SensorRegistration) error {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
@@ -261,22 +261,22 @@ func (t *Request_Data) MergeSensorRegistration(v SensorRegistration) error {
 	return err
 }
 
-// AsEvent returns the union data inside the Request_Data as a Event
-func (t Request_Data) AsEvent() (Event, error) {
+// AsEvent returns the union data inside the RequestData_Payload as a Event
+func (t RequestData_Payload) AsEvent() (Event, error) {
 	var body Event
 	err := json.Unmarshal(t.union, &body)
 	return body, err
 }
 
-// FromEvent overwrites any union data inside the Request_Data as the provided Event
-func (t *Request_Data) FromEvent(v Event) error {
+// FromEvent overwrites any union data inside the RequestData_Payload as the provided Event
+func (t *RequestData_Payload) FromEvent(v Event) error {
 	b, err := json.Marshal(v)
 	t.union = b
 	return err
 }
 
-// MergeEvent performs a merge with any union data inside the Request_Data, using the provided Event
-func (t *Request_Data) MergeEvent(v Event) error {
+// MergeEvent performs a merge with any union data inside the RequestData_Payload, using the provided Event
+func (t *RequestData_Payload) MergeEvent(v Event) error {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
@@ -287,22 +287,22 @@ func (t *Request_Data) MergeEvent(v Event) error {
 	return err
 }
 
-// AsConfig returns the union data inside the Request_Data as a Config
-func (t Request_Data) AsConfig() (Config, error) {
+// AsConfig returns the union data inside the RequestData_Payload as a Config
+func (t RequestData_Payload) AsConfig() (Config, error) {
 	var body Config
 	err := json.Unmarshal(t.union, &body)
 	return body, err
 }
 
-// FromConfig overwrites any union data inside the Request_Data as the provided Config
-func (t *Request_Data) FromConfig(v Config) error {
+// FromConfig overwrites any union data inside the RequestData_Payload as the provided Config
+func (t *RequestData_Payload) FromConfig(v Config) error {
 	b, err := json.Marshal(v)
 	t.union = b
 	return err
 }
 
-// MergeConfig performs a merge with any union data inside the Request_Data, using the provided Config
-func (t *Request_Data) MergeConfig(v Config) error {
+// MergeConfig performs a merge with any union data inside the RequestData_Payload, using the provided Config
+func (t *RequestData_Payload) MergeConfig(v Config) error {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
@@ -313,32 +313,58 @@ func (t *Request_Data) MergeConfig(v Config) error {
 	return err
 }
 
-func (t Request_Data) MarshalJSON() ([]byte, error) {
+// AsDeviceRegistrationRequest returns the union data inside the RequestData_Payload as a DeviceRegistrationRequest
+func (t RequestData_Payload) AsDeviceRegistrationRequest() (DeviceRegistrationRequest, error) {
+	var body DeviceRegistrationRequest
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromDeviceRegistrationRequest overwrites any union data inside the RequestData_Payload as the provided DeviceRegistrationRequest
+func (t *RequestData_Payload) FromDeviceRegistrationRequest(v DeviceRegistrationRequest) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeDeviceRegistrationRequest performs a merge with any union data inside the RequestData_Payload, using the provided DeviceRegistrationRequest
+func (t *RequestData_Payload) MergeDeviceRegistrationRequest(v DeviceRegistrationRequest) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t RequestData_Payload) MarshalJSON() ([]byte, error) {
 	b, err := t.union.MarshalJSON()
 	return b, err
 }
 
-func (t *Request_Data) UnmarshalJSON(b []byte) error {
+func (t *RequestData_Payload) UnmarshalJSON(b []byte) error {
 	err := t.union.UnmarshalJSON(b)
 	return err
 }
 
-// AsSensorStateResponse returns the union data inside the Response as a SensorStateResponse
-func (t Response) AsSensorStateResponse() (SensorStateResponse, error) {
+// AsSensorStateResponse returns the union data inside the ResponseData as a SensorStateResponse
+func (t ResponseData) AsSensorStateResponse() (SensorStateResponse, error) {
 	var body SensorStateResponse
 	err := json.Unmarshal(t.union, &body)
 	return body, err
 }
 
-// FromSensorStateResponse overwrites any union data inside the Response as the provided SensorStateResponse
-func (t *Response) FromSensorStateResponse(v SensorStateResponse) error {
+// FromSensorStateResponse overwrites any union data inside the ResponseData as the provided SensorStateResponse
+func (t *ResponseData) FromSensorStateResponse(v SensorStateResponse) error {
 	b, err := json.Marshal(v)
 	t.union = b
 	return err
 }
 
-// MergeSensorStateResponse performs a merge with any union data inside the Response, using the provided SensorStateResponse
-func (t *Response) MergeSensorStateResponse(v SensorStateResponse) error {
+// MergeSensorStateResponse performs a merge with any union data inside the ResponseData, using the provided SensorStateResponse
+func (t *ResponseData) MergeSensorStateResponse(v SensorStateResponse) error {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
@@ -349,22 +375,22 @@ func (t *Response) MergeSensorStateResponse(v SensorStateResponse) error {
 	return err
 }
 
-// AsSensorRegistrationResponse returns the union data inside the Response as a SensorRegistrationResponse
-func (t Response) AsSensorRegistrationResponse() (SensorRegistrationResponse, error) {
+// AsSensorRegistrationResponse returns the union data inside the ResponseData as a SensorRegistrationResponse
+func (t ResponseData) AsSensorRegistrationResponse() (SensorRegistrationResponse, error) {
 	var body SensorRegistrationResponse
 	err := json.Unmarshal(t.union, &body)
 	return body, err
 }
 
-// FromSensorRegistrationResponse overwrites any union data inside the Response as the provided SensorRegistrationResponse
-func (t *Response) FromSensorRegistrationResponse(v SensorRegistrationResponse) error {
+// FromSensorRegistrationResponse overwrites any union data inside the ResponseData as the provided SensorRegistrationResponse
+func (t *ResponseData) FromSensorRegistrationResponse(v SensorRegistrationResponse) error {
 	b, err := json.Marshal(v)
 	t.union = b
 	return err
 }
 
-// MergeSensorRegistrationResponse performs a merge with any union data inside the Response, using the provided SensorRegistrationResponse
-func (t *Response) MergeSensorRegistrationResponse(v SensorRegistrationResponse) error {
+// MergeSensorRegistrationResponse performs a merge with any union data inside the ResponseData, using the provided SensorRegistrationResponse
+func (t *ResponseData) MergeSensorRegistrationResponse(v SensorRegistrationResponse) error {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
@@ -375,22 +401,22 @@ func (t *Response) MergeSensorRegistrationResponse(v SensorRegistrationResponse)
 	return err
 }
 
-// AsConfigResponse returns the union data inside the Response as a ConfigResponse
-func (t Response) AsConfigResponse() (ConfigResponse, error) {
+// AsConfigResponse returns the union data inside the ResponseData as a ConfigResponse
+func (t ResponseData) AsConfigResponse() (ConfigResponse, error) {
 	var body ConfigResponse
 	err := json.Unmarshal(t.union, &body)
 	return body, err
 }
 
-// FromConfigResponse overwrites any union data inside the Response as the provided ConfigResponse
-func (t *Response) FromConfigResponse(v ConfigResponse) error {
+// FromConfigResponse overwrites any union data inside the ResponseData as the provided ConfigResponse
+func (t *ResponseData) FromConfigResponse(v ConfigResponse) error {
 	b, err := json.Marshal(v)
 	t.union = b
 	return err
 }
 
-// MergeConfigResponse performs a merge with any union data inside the Response, using the provided ConfigResponse
-func (t *Response) MergeConfigResponse(v ConfigResponse) error {
+// MergeConfigResponse performs a merge with any union data inside the ResponseData, using the provided ConfigResponse
+func (t *ResponseData) MergeConfigResponse(v ConfigResponse) error {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
@@ -401,22 +427,22 @@ func (t *Response) MergeConfigResponse(v ConfigResponse) error {
 	return err
 }
 
-// AsResponseStatus returns the union data inside the Response as a ResponseStatus
-func (t Response) AsResponseStatus() (ResponseStatus, error) {
+// AsResponseStatus returns the union data inside the ResponseData as a ResponseStatus
+func (t ResponseData) AsResponseStatus() (ResponseStatus, error) {
 	var body ResponseStatus
 	err := json.Unmarshal(t.union, &body)
 	return body, err
 }
 
-// FromResponseStatus overwrites any union data inside the Response as the provided ResponseStatus
-func (t *Response) FromResponseStatus(v ResponseStatus) error {
+// FromResponseStatus overwrites any union data inside the ResponseData as the provided ResponseStatus
+func (t *ResponseData) FromResponseStatus(v ResponseStatus) error {
 	b, err := json.Marshal(v)
 	t.union = b
 	return err
 }
 
-// MergeResponseStatus performs a merge with any union data inside the Response, using the provided ResponseStatus
-func (t *Response) MergeResponseStatus(v ResponseStatus) error {
+// MergeResponseStatus performs a merge with any union data inside the ResponseData, using the provided ResponseStatus
+func (t *ResponseData) MergeResponseStatus(v ResponseStatus) error {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
@@ -427,12 +453,38 @@ func (t *Response) MergeResponseStatus(v ResponseStatus) error {
 	return err
 }
 
-func (t Response) MarshalJSON() ([]byte, error) {
+// AsDeviceRegistrationResponse returns the union data inside the ResponseData as a DeviceRegistrationResponse
+func (t ResponseData) AsDeviceRegistrationResponse() (DeviceRegistrationResponse, error) {
+	var body DeviceRegistrationResponse
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromDeviceRegistrationResponse overwrites any union data inside the ResponseData as the provided DeviceRegistrationResponse
+func (t *ResponseData) FromDeviceRegistrationResponse(v DeviceRegistrationResponse) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeDeviceRegistrationResponse performs a merge with any union data inside the ResponseData, using the provided DeviceRegistrationResponse
+func (t *ResponseData) MergeDeviceRegistrationResponse(v DeviceRegistrationResponse) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t ResponseData) MarshalJSON() ([]byte, error) {
 	b, err := t.union.MarshalJSON()
 	return b, err
 }
 
-func (t *Response) UnmarshalJSON(b []byte) error {
+func (t *ResponseData) UnmarshalJSON(b []byte) error {
 	err := t.union.UnmarshalJSON(b)
 	return err
 }

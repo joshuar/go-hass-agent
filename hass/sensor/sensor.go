@@ -16,22 +16,22 @@ import (
 var ErrHandleSensor = errors.New("error handling sensor data")
 
 type API interface {
-	SendRequest(ctx context.Context, url string, req api.Request) (api.Response, error)
+	SendRequest(ctx context.Context, url string, req api.RequestData) (api.ResponseData, error)
 	DisableSensor(ctx context.Context, id models.UniqueID)
 	RestAPIURL() string
 }
 
 // newSensorRequest takes sensor data and creates an api.Request for the given
 // request type.
-func newSensorRequest(reqType api.RequestType, sensor *models.Sensor) (*api.Request, error) {
+func newSensorRequest(reqType api.RequestType, sensor *models.Sensor) (*api.RequestData, error) {
 	if valid, problems := validation.ValidateStruct(sensor); !valid {
 		return nil, fmt.Errorf("%w: %w", ErrHandleSensor, problems)
 	}
 
-	req := &api.Request{
+	req := &api.RequestData{
 		Type:      reqType,
 		Retryable: sensor.Retryable,
-		Data:      api.Request_Data{},
+		Payload:   api.RequestData_Payload{},
 	}
 
 	switch reqType {
@@ -42,7 +42,7 @@ func newSensorRequest(reqType api.RequestType, sensor *models.Sensor) (*api.Requ
 		}
 
 		// Add the sensor state into the request.
-		err = req.Data.FromSensorState(*state)
+		err = req.Payload.FromSensorState(*state)
 		if err != nil {
 			return nil, fmt.Errorf("%w: %w", ErrHandleSensor, err)
 		}
@@ -53,7 +53,7 @@ func newSensorRequest(reqType api.RequestType, sensor *models.Sensor) (*api.Requ
 		}
 
 		// Add the sensor registration into the request.
-		err = req.Data.FromSensorRegistration(*registration)
+		err = req.Payload.FromSensorRegistration(*registration)
 		if err != nil {
 			return nil, fmt.Errorf("%w: %w", ErrHandleSensor, err)
 		}

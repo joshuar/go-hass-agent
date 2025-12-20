@@ -55,21 +55,17 @@ func Register(ctx context.Context, id string, details *RegistrationRequest) erro
 	req := newDeviceRegistration(ctx, id)
 	resp := api.DeviceRegistrationResponse{}
 
-	// Set up the api request, and the request/response bodies.
-	api.Init()
-
-	apiReq := api.NewRequest().
-		SetAuthToken(details.Token).
-		SetBody(req).
-		SetResult(&resp)
-
 	registrationURL, err := url.Parse(details.Server)
 	if err != nil {
 		return fmt.Errorf("unable to register: %w", err)
 	}
-
 	registrationURL = registrationURL.JoinPath(registrationPath)
-	_, err = apiReq.Post(registrationURL.String())
+
+	_, err = api.NewRequest(
+		api.WithAuth(details.Token),
+		api.WithBody(req),
+		api.WithResult(&resp),
+	).Do(ctx, registrationURL.String())
 	if err != nil {
 		return fmt.Errorf("unable to register: %w", err)
 	}

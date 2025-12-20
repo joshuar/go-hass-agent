@@ -135,8 +135,8 @@ components:
      $ref: 'models.yaml#/components/schemas/Event'
     Config:
       type: object
-    Request:
-      description: defines a request sent through the API.
+    RequestData:
+      description: defines request data sent through the API.
       type: object
       required:
         - type
@@ -144,7 +144,7 @@ components:
       properties:
         type:
           $ref: '#/components/schemas/RequestType'
-        data:
+        payload:
           description: is the request payload.
           oneOf:
             - $ref: '#/components/schemas/Location'
@@ -152,20 +152,24 @@ components:
             - $ref: '#/components/schemas/SensorRegistration'
             - $ref: '#/components/schemas/Event'
             - $ref: '#/components/schemas/Config'
+            - $ref: '#/components/schemas/DeviceRegistrationRequest'
+          x-oapi-codegen-extra-tags:
+            json: 'data'
         encrypted:
           description: indicates the request payload is encrypted.
           type: boolean
         retryable:
-          description: indicates whether the request can be retried.
+          description: indicates whether request for this data can be retried.
           type: boolean
           x-go-json-ignore: true
-    Response:
-      description: defines a response received through the API.
+    ResponseData:
+      description: defines response data received through the API.
       oneOf:
         - $ref: '#/components/schemas/SensorStateResponse'
         - $ref: '#/components/schemas/SensorRegistrationResponse'
         - $ref: '#/components/schemas/ConfigResponse'
         - $ref: '#/components/schemas/ResponseStatus'
+        - $ref: '#/components/schemas/DeviceRegistrationResponse'
     SensorStateResponse:
       description: >
         contains a map of response status for each sensor state sent.

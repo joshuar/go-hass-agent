@@ -5,9 +5,11 @@
 package api
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -24,6 +26,8 @@ const (
 
 // ErrUnknown is returned when an error occurred but the reason/cause could not be determined or was unexpected.
 var ErrUnknown = errors.New("an unknown error occurred")
+
+var ErrUnsupported = errors.New("unsupported request")
 
 var restAPIClient *resty.Client
 
@@ -89,8 +93,8 @@ func (r *ResponseStatus) SensorDisabled() bool {
 	return false
 }
 
-// Init sets up a new client for making requests to the Home Assistant rest api.
-var Init = sync.OnceFunc(func() {
+// setupClient sets up a new client for making requests to the Home Assistant rest api.
+var setupClient = sync.OnceFunc(func() {
 	restAPIClient = resty.New().
 		SetTimeout(defaultTimeout).
 		SetRetryCount(defaultRetryCount).
@@ -101,6 +105,96 @@ var Init = sync.OnceFunc(func() {
 		})
 })
 
-func NewRequest() *resty.Request {
-	return restAPIClient.R()
+type Request struct {
+	*resty.Request
+
+	method string
+}
+
+func NewRequest(options ...RequestOption) *Request {
+	setupClient()
+
+	req := &Request{
+		Request: restAPIClient.R(),
+	}
+	for option := range slices.Values(options) {
+		option(req)
+	}
+
+	if req.method == "" {
+		req.method = http.MethodPost
+	}
+
+	return req
+}
+
+func (r *Request) Do(ctx context.Context, url string) (*Response, error) {
+	r.Request = r.SetContext(ctx)
+
+	var (
+		raw *resty.Response
+		err error
+	)
+	switch r.method {
+	case http.MethodPost:
+		raw, err = r.Request.Post(url)
+	case http.MethodGet:
+		raw, err = r.Request.Get(url)
+	default:
+		return nil, ErrUnsupported
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("do request: %w", err)
+	}
+
+	return &Response{Response: raw}, nil
+}
+
+type RequestOption func(*Request)
+
+func WithMethod(method string) RequestOption {
+	return func(r *Request) {
+		r.method = method
+	}
+}
+
+func WithBody[T any](body T) RequestOption {
+	return func(r *Request) {
+		r.Request = r.SetBody(body)
+	}
+}
+
+func WithResult[T any](res T) RequestOption {
+	return func(r *Request) {
+		r.Request = r.SetResult(res)
+	}
+}
+
+func WithAuth(token string) RequestOption {
+	return func(r *Request) {
+		r.Request = r.SetAuthToken(token)
+	}
+}
+
+func WithRetryable(value bool) RequestOption {
+	return func(r *Request) {
+		if value {
+			r.Request = r.AddRetryCondition(
+				func(_ *resty.Response, err error) bool {
+					return err != nil
+				},
+			)
+		}
+	}
+}
+
+func WithTrace() RequestOption {
+	return func(r *Request) {
+		r.Request = r.EnableTrace()
+	}
+}
+
+type Response struct {
+	*resty.Response
 }
