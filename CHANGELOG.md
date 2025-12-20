@@ -1,5 +1,22 @@
 # Changelog
 
+## [14.3.0](https://github.com/joshuar/go-hass-agent/compare/v14.2.3...v14.3.0) (2025-12-20)
+
+
+### Features
+
+* **linux/power:** :sparkles: implement monitor backlight brightness control/state ([86d42fc](https://github.com/joshuar/go-hass-agent/commit/86d42fcf967ff7ade4852b3c19a00291f1d96b7f))
+
+
+### Bug Fixes
+
+* **linux/power:** :bug: fix nil pointer when power profile sensor settings can't be read ([02585b2](https://github.com/joshuar/go-hass-agent/commit/02585b28603572b8d225e9ce240d0eed3dd16efd))
+
+
+### Performance Improvements
+
+* **linux/hwmon:** :zap: use bytes.Buffer rather than direct []byte for hwmon file pool ([77085a9](https://github.com/joshuar/go-hass-agent/commit/77085a9a2812ef53e19b376362306a8d0a209dff))
+
 ## [14.2.3](https://github.com/joshuar/go-hass-agent/compare/v14.2.2...v14.2.3) (2025-12-19)
 
 
