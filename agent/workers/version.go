@@ -58,7 +58,7 @@ func NewVersionWorker(_ context.Context) (EntityWorker, error) {
 	var err error
 	worker.prefs, err = LoadWorkerPreferences("sensors.agent.version", defaultPrefs)
 	if err != nil {
-		return nil, errors.Join(ErrVersion, err)
+		return worker, errors.Join(ErrVersion, err)
 	}
 
 	return worker, nil

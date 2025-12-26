@@ -156,7 +156,7 @@ func NewExternalIPWorker(_ context.Context) (EntityWorker, error) {
 
 	worker.prefs, err = LoadWorkerPreferences("sensors.agent.external_ip", defaultPrefs)
 	if err != nil {
-		return nil, fmt.Errorf("could not create external IP worker: %w", err)
+		return worker, fmt.Errorf("could not create external IP worker: %w", err)
 	}
 
 	worker.Trigger = scheduler.NewPollTriggerWithJitter(externalIPPollInterval, externalIPJitterAmount)

@@ -72,7 +72,7 @@ func NewVolumeWorker(ctx context.Context, device *mqtthass.Device) (*VolumeWorke
 	}
 
 	if worker.IsDisabled() {
-		return nil, nil
+		return worker, nil
 	}
 
 	worker.VolumeControl = mqtthass.NewNumberEntity[int]().

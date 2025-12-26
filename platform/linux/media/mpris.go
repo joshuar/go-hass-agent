@@ -84,7 +84,7 @@ func NewMPRISWorker(ctx context.Context, device *mqtthass.Device) (*MPRISWorker,
 		dbusx.MatchArgNameSpace(mprisDBusNamespace),
 	).Start(ctx, bus)
 	if err != nil {
-		return nil, errors.Join(ErrInitMPRISWorker,
+		return worker, errors.Join(ErrInitMPRISWorker,
 			fmt.Errorf("could not watch D-Bus for MPRIS signals: %w", err))
 	}
 

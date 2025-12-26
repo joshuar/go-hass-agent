@@ -96,14 +96,14 @@ func NewStateWorker(ctx context.Context) (workers.EntityWorker, error) {
 
 	worker.bus, ok = linux.CtxGetSystemBus(ctx)
 	if !ok {
-		return nil, fmt.Errorf("get system bus: %w", linux.ErrNoSystemBus)
+		return worker, fmt.Errorf("get system bus: %w", linux.ErrNoSystemBus)
 	}
 
 	defaultPrefs := &workers.CommonWorkerPrefs{}
 	var err error
 	worker.prefs, err = workers.LoadWorkerPreferences(powerStatePreferencesID, defaultPrefs)
 	if err != nil {
-		return nil, fmt.Errorf("load preferences: %w", err)
+		return worker, fmt.Errorf("load preferences: %w", err)
 	}
 
 	return worker, nil

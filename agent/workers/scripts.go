@@ -313,13 +313,13 @@ func NewScriptsWorker(ctx context.Context) (*ScriptWorker, error) {
 
 	scripts, err := worker.findScripts(ctx, scriptPath)
 	if err != nil {
-		return nil, fmt.Errorf("could not find scripts: %w", err)
+		return worker, fmt.Errorf("could not find scripts: %w", err)
 	}
 	worker.scripts = scripts
 
 	worker.prefs, err = LoadWorkerPreferences("scripts", defaultPrefs)
 	if err != nil {
-		return nil, fmt.Errorf("could not load preferences: %w", err)
+		return worker, fmt.Errorf("could not load preferences: %w", err)
 	}
 
 	return worker, nil
