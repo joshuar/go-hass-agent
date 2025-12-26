@@ -1,5 +1,12 @@
 # Changelog
 
+## [14.3.1](https://github.com/joshuar/go-hass-agent/compare/v14.3.0...v14.3.1) (2025-12-26)
+
+
+### Bug Fixes
+
+* :bug: don't return nil worker when creating new workers to avoid nil pointer panic ([d8ebd17](https://github.com/joshuar/go-hass-agent/commit/d8ebd17567f13211e503690161dcd39ad3e25ae1))
+
 ## [14.3.0](https://github.com/joshuar/go-hass-agent/compare/v14.2.3...v14.3.0) (2025-12-20)
 
 
