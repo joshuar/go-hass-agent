@@ -13,6 +13,7 @@
 !*.templ
 !go.sum
 !go.mod
+!bun.lock
 !*.yaml
 !*.yml
 !*.toml
