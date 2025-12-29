@@ -452,10 +452,10 @@ Packages (and binaries) are available for **amd64**, **arm (v6 and v7)** and
 **arm64** architectures.
 
 For distributions not listed above, you can try the binary, or build it yourself
-from source (see development [docs](docs/README.md)). Note that while Go is
-known for statically compiled binaries that “run anywhere”, the Fyne UI toolkit
-used by Go Hass Agent makes use of shared libraries that may need to be
-installed as well.
+from source (see development [docs](#%EF%B8%8F-buildingcompiling-manually)). Note
+that while Go is known for statically compiled binaries that “run anywhere”, the
+Fyne UI toolkit used by Go Hass Agent makes use of shared libraries that may need
+to be installed as well.
 
 Package signatures can be verified with
 [cosign](https://github.com/sigstore/cosign). To verify a package, you'll need
