@@ -127,7 +127,7 @@ require (
 
 require (
 	github.com/ConnorsApps/pipewire-monitor-go v0.1.0
-	github.com/a-h/templ v0.3.960
+	github.com/a-h/templ v0.3.977
 	github.com/alecthomas/kong v1.13.0
 	github.com/anatol/smart.go v0.0.0-20241126061019-f03d79b340d2
 	github.com/blackjack/webcam v0.6.1
@@ -141,7 +141,6 @@ require (
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-resty/resty/v2 v2.17.1
 	github.com/go-test/deep v1.1.1
-	github.com/goforj/godump v1.7.1
 	github.com/gofrs/uuid/v5 v5.4.0
 	github.com/grandcat/zeroconf v1.0.0
 	github.com/jaypipes/ghw v0.21.2
