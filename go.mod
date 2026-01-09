@@ -141,7 +141,6 @@ require (
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-resty/resty/v2 v2.17.1
 	github.com/go-test/deep v1.1.1
-	github.com/goforj/godump v1.7.1
 	github.com/gofrs/uuid/v5 v5.4.0
 	github.com/grandcat/zeroconf v1.0.0
 	github.com/jaypipes/ghw v0.21.2
@@ -168,7 +167,7 @@ require (
 	github.com/veqryn/slog-json v0.5.0
 	golang.org/x/crypto v0.46.0 // indirect
 	golang.org/x/net v0.48.0
-	golang.org/x/sys v0.39.0
+	golang.org/x/sys v0.40.0
 	kernel.org/pub/linux/libs/security/libcap/cap v1.2.77
 )
 
