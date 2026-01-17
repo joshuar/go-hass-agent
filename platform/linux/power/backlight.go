@@ -31,6 +31,11 @@ import (
 	mqttapi "github.com/joshuar/go-hass-anything/v12/pkg/mqtt"
 )
 
+const (
+	minBrightnessPc = 0
+	maxBrightnessPc = 100
+)
+
 var ddcutilPath string
 
 var findDDCUtil = sync.OnceValue(func() error {
@@ -50,6 +55,8 @@ type BacklightWorker struct {
 
 	Entity *mqtthass.NumberEntity[int]
 	MsgCh  chan mqttapi.Msg
+
+	desktop string
 }
 
 // NewBacklightControl creates an entity worker that can manipulate the screen backlight brightness.
@@ -66,6 +73,7 @@ func NewBacklightControl(ctx context.Context, device *mqtthass.Device) (*Backlig
 	worker := &BacklightWorker{
 		WorkerMetadata: models.SetWorkerMetadata("backlight", "Backlight (screen brightness)"),
 		MsgCh:          make(chan mqttapi.Msg),
+		desktop:        desktop,
 	}
 
 	var ok bool
@@ -74,7 +82,7 @@ func NewBacklightControl(ctx context.Context, device *mqtthass.Device) (*Backlig
 		return nil, fmt.Errorf("get session bus: %w", linux.ErrNoSystemBus)
 	}
 
-	if !hasBrightnessControls(worker.bus) {
+	if !hasBrightnessControls(worker.desktop, worker.bus) {
 		return nil, fmt.Errorf("check for brightness controls: %w", linux.ErrUnsupportedDesktop)
 	}
 
@@ -87,8 +95,8 @@ func NewBacklightControl(ctx context.Context, device *mqtthass.Device) (*Backlig
 
 	// Generate a number entity for the brightness control.
 	worker.Entity = mqtthass.NewNumberEntity[int]().
-		WithMin(0).
-		WithMax(100).
+		WithMin(minBrightnessPc).
+		WithMax(maxBrightnessPc).
 		WithStep(1).
 		WithMode(mqtthass.NumberSlider).
 		WithDetails(
@@ -146,15 +154,14 @@ func (w *BacklightWorker) publishState(ctx context.Context) {
 
 // stateCallback is called when an MQTT message is published to get the current brightness.
 func (w *BacklightWorker) stateCallback(ctx context.Context) (json.RawMessage, error) {
-	desktop := os.Getenv("XDG_CURRENT_DESKTOP")
 	var (
 		brightness int
 		err        error
 	)
 	switch {
-	case strings.Contains(desktop, "GNOME"):
+	case strings.Contains(w.desktop, "GNOME"):
 		brightness, err = getBrightnessGnome(w.bus)
-	case strings.Contains(desktop, "KDE"):
+	case strings.Contains(w.desktop, "KDE"):
 		brightness, err = getBrightnessKDE(w.bus)
 	default:
 		brightness, err = getBrightnessDDCUtil(ctx)
@@ -169,12 +176,11 @@ func (w *BacklightWorker) stateCallback(ctx context.Context) (json.RawMessage, e
 
 // controlCallback is called when an MQTT message is published to change the brightness.
 func (w *BacklightWorker) controlCallback(ctx context.Context, value int) error {
-	desktop := os.Getenv("XDG_CURRENT_DESKTOP")
 	var err error
 	switch {
-	case strings.Contains(desktop, "GNOME"):
+	case strings.Contains(w.desktop, "GNOME"):
 		err = setBrightnessGnome(ctx, w.bus, value)
-	case strings.Contains(desktop, "KDE"):
+	case strings.Contains(w.desktop, "KDE"):
 		err = setBrightnessKDE(ctx, w.bus, value)
 	default:
 		err = setBrightnessDDCUtil(ctx, value)
@@ -189,12 +195,11 @@ func (w *BacklightWorker) controlCallback(ctx context.Context, value int) error 
 
 // monitor will set up a way to monitor for external brightness changes.
 func (w *BacklightWorker) monitor(ctx context.Context) {
-	desktop := os.Getenv("XDG_CURRENT_DESKTOP")
 	var err error
 	switch {
-	case strings.Contains(desktop, "GNOME"):
+	case strings.Contains(w.desktop, "GNOME"):
 		err = w.monitorBrightnessGnome(ctx)
-	case strings.Contains(desktop, "KDE"):
+	case strings.Contains(w.desktop, "KDE"):
 		err = w.monitorBrightnessKDE(ctx)
 	default:
 		w.monitorBrightnessDDCUtil(ctx)
@@ -206,8 +211,7 @@ func (w *BacklightWorker) monitor(ctx context.Context) {
 	}
 }
 
-func hasBrightnessControls(bus *dbusx.Bus) bool {
-	desktop := os.Getenv("XDG_CURRENT_DESKTOP")
+func hasBrightnessControls(desktop string, bus *dbusx.Bus) bool {
 	switch {
 	case strings.Contains(desktop, "GNOME"):
 		introspection, err := dbusx.NewIntrospection(
@@ -257,11 +261,14 @@ func hasBrightnessControls(bus *dbusx.Bus) bool {
 
 // setBrightnessGnome will use D-Bus to change the brightness on Gnome desktops.
 func setBrightnessGnome(ctx context.Context, bus *dbusx.Bus, value int) error {
-	return dbusx.NewMethod(bus,
+	if err := dbusx.NewMethod(bus,
 		"org.gnome.SettingsDaemon.Power",
 		"/org/gnome/SettingsDaemon/Power",
 		"org.freedesktop.DBus.Properties.Set").
-		Call(ctx, "org.gnome.SettingsDaemon.Power.Screen", "Brightness", value)
+		Call(ctx, "org.gnome.SettingsDaemon.Power.Screen", "Brightness", value); err != nil {
+		return fmt.Errorf("set brightness from Gnome: %w", err)
+	}
+	return nil
 }
 
 // getBrightnessKDE will fetch the current brightness using KDE D-Bus methods.
@@ -312,11 +319,14 @@ func (w *BacklightWorker) monitorBrightnessGnome(ctx context.Context) error {
 
 // setBrightnessKDE will use D-Bus to change the brightness on KDE desktops.
 func setBrightnessKDE(ctx context.Context, bus *dbusx.Bus, value int) error {
-	return dbusx.NewMethod(bus,
+	if err := dbusx.NewMethod(bus,
 		"org.kde.Solid.PowerManagement",
 		"/org/kde/Solid/PowerManagement/Actions/BrightnessControl",
 		"org.kde.Solid.PowerManagement.Actions.BrightnessControl.setBrightness").
-		Call(ctx, value*100)
+		Call(ctx, value*maxBrightnessPc); err != nil {
+		return fmt.Errorf("set brightness from KDE: %w", err)
+	}
+	return nil
 }
 
 // getBrightnessKDE will fetch the current brightness using KDE D-Bus methods.
@@ -328,7 +338,7 @@ func getBrightnessKDE(bus *dbusx.Bus) (int, error) {
 	if err != nil {
 		return 0, fmt.Errorf("get brightness from KDE: %w", err)
 	}
-	return brightness / 100, nil
+	return brightness / maxBrightnessPc, nil
 }
 
 // monitorBrightnessKDE sets up a D-Bus watch for changes to brightness on the KDE desktop.
