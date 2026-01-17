@@ -11,12 +11,14 @@ import (
 	"log/slog"
 	"os"
 	"os/exec"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/eclipse/paho.golang/paho"
+	"github.com/godbus/dbus/v5/introspect"
 	slogctx "github.com/veqryn/slog-context"
 
 	"github.com/joshuar/go-hass-agent/agent/workers"
@@ -70,6 +72,10 @@ func NewBacklightControl(ctx context.Context, device *mqtthass.Device) (*Backlig
 	worker.bus, ok = linux.CtxGetSessionBus(ctx)
 	if !ok {
 		return nil, fmt.Errorf("get session bus: %w", linux.ErrNoSystemBus)
+	}
+
+	if !hasBrightnessControls(worker.bus) {
+		return nil, fmt.Errorf("check for brightness controls: %w", linux.ErrUnsupportedDesktop)
 	}
 
 	defaultPrefs := &workers.CommonWorkerPrefs{}
@@ -198,6 +204,55 @@ func (w *BacklightWorker) monitor(ctx context.Context) {
 			slog.Any("error", err),
 		)
 	}
+}
+
+func hasBrightnessControls(bus *dbusx.Bus) bool {
+	desktop := os.Getenv("XDG_CURRENT_DESKTOP")
+	switch {
+	case strings.Contains(desktop, "GNOME"):
+		introspection, err := dbusx.NewIntrospection(
+			bus,
+			"org.gnome.SettingsDaemon.Power",
+			"/org/gnome/SettingsDaemon/Power",
+		)
+		if err != nil {
+			return false
+		}
+		if slices.ContainsFunc(introspection.Interfaces, func(i introspect.Interface) bool {
+			if i.Name == "org.freedesktop.DBus.Properties" {
+				return slices.ContainsFunc(i.Methods, func(m introspect.Method) bool {
+					return m.Name == "Set"
+				})
+			}
+			return false
+		}) {
+			return true
+		}
+	case strings.Contains(desktop, "KDE"):
+		introspection, err := dbusx.NewIntrospection(
+			bus,
+			"org.kde.Solid.PowerManagement",
+			"/org/kde/Solid/PowerManagement/Actions/BrightnessControl",
+		)
+		if err != nil {
+			return false
+		}
+		if slices.ContainsFunc(introspection.Interfaces, func(i introspect.Interface) bool {
+			if i.Name == "org.kde.Solid.PowerManagement.Actions.BrightnessControl" {
+				return slices.ContainsFunc(i.Methods, func(m introspect.Method) bool {
+					return m.Name == "setBrightness"
+				})
+			}
+			return false
+		}) {
+			return true
+		}
+	default:
+		if err := findDDCUtil(); err != nil {
+			return false
+		}
+	}
+	return false
 }
 
 // setBrightnessGnome will use D-Bus to change the brightness on Gnome desktops.
