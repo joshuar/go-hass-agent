@@ -35,9 +35,6 @@ type APIError struct {
 	Message string `json:"message,omitempty,omitzero"`
 }
 
-// Config defines model for Config.
-type Config = map[string]interface{}
-
 // ConfigResponse is a response containing Home Assistant configuration details.
 type ConfigResponse struct {
 	Components []string `json:"components,omitempty,omitzero"`
@@ -129,7 +126,7 @@ type RequestData struct {
 	Encrypted bool `json:"encrypted,omitempty,omitzero"`
 
 	// Payload is the request payload.
-	Payload RequestData_Payload `json:"data"`
+	Payload *RequestData_Payload `json:"data"`
 
 	// Retryable indicates whether request for this data can be retried.
 	Retryable bool `json:"-"`
@@ -277,32 +274,6 @@ func (t *RequestData_Payload) FromEvent(v Event) error {
 
 // MergeEvent performs a merge with any union data inside the RequestData_Payload, using the provided Event
 func (t *RequestData_Payload) MergeEvent(v Event) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
-	return err
-}
-
-// AsConfig returns the union data inside the RequestData_Payload as a Config
-func (t RequestData_Payload) AsConfig() (Config, error) {
-	var body Config
-	err := json.Unmarshal(t.union, &body)
-	return body, err
-}
-
-// FromConfig overwrites any union data inside the RequestData_Payload as the provided Config
-func (t *RequestData_Payload) FromConfig(v Config) error {
-	b, err := json.Marshal(v)
-	t.union = b
-	return err
-}
-
-// MergeConfig performs a merge with any union data inside the RequestData_Payload, using the provided Config
-func (t *RequestData_Payload) MergeConfig(v Config) error {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err

@@ -31,7 +31,7 @@ func newSensorRequest(reqType api.RequestType, sensor *models.Sensor) (*api.Requ
 	req := &api.RequestData{
 		Type:      reqType,
 		Retryable: sensor.Retryable,
-		Payload:   api.RequestData_Payload{},
+		Payload:   &api.RequestData_Payload{},
 	}
 
 	switch reqType {

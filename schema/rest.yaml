@@ -133,8 +133,6 @@ components:
       $ref: 'models.yaml#/components/schemas/SensorRegistration'
     Event:
      $ref: 'models.yaml#/components/schemas/Event'
-    Config:
-      type: object
     RequestData:
       description: defines request data sent through the API.
       type: object
@@ -151,10 +149,10 @@ components:
             - $ref: '#/components/schemas/SensorState'
             - $ref: '#/components/schemas/SensorRegistration'
             - $ref: '#/components/schemas/Event'
-            - $ref: '#/components/schemas/Config'
             - $ref: '#/components/schemas/DeviceRegistrationRequest'
           x-oapi-codegen-extra-tags:
             json: 'data'
+          x-go-type-skip-optional-pointer: false
         encrypted:
           description: indicates the request payload is encrypted.
           type: boolean
