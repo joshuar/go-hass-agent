@@ -191,7 +191,7 @@ func newChip(ctx context.Context, path string) (*Chip, error) {
 	fh, err := os.Stat(filepath.Join(path, "device", "model"))
 	if err == nil && fh.Mode().IsRegular() {
 		chip.deviceModel, err = getFileContents(filepath.Join(path, "device", "model"))
-		if err == nil {
+		if err != nil {
 			slogctx.FromCtx(ctx).Debug("Could not retrieve a device model for chip.",
 				slog.String("chip", chip.chipName),
 				slog.Any("error", err))
@@ -270,7 +270,11 @@ func (s *Sensor) Value() any {
 // derived from the chip name plus either any label, else name of the sensor
 // itself.
 func (s *Sensor) Name() string {
-	bufPtr := stringsBuilderPool.Get().(*strings.Builder)
+	bufPtr, ok := stringsBuilderPool.Get().(*strings.Builder)
+	if !ok {
+		// Generate a basic name for the sensor.
+		return "Hardware Sensor " + s.id
+	}
 	name := *bufPtr
 	defer func() {
 		bufPtr.Reset()
