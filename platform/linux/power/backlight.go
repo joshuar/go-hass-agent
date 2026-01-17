@@ -273,7 +273,7 @@ func getBrightnessGnome(bus *dbusx.Bus) (int, error) {
 		"org.gnome.SettingsDaemon.Power.Screen", "Brightness",
 	)
 	if err != nil {
-		return 0, fmt.Errorf("get brightness from KDE: %w", err)
+		return 0, fmt.Errorf("get brightness from Gnome: %w", err)
 	}
 	return brightness, nil
 }
