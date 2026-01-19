@@ -68,7 +68,6 @@ jobs:
             auth.docker.io:443
             azure.archive.ubuntu.com:80
             esm.ubuntu.com:443
-            fyne.io:443
             github.com:443
             go.dev:443
             go.googlesource.com:443
