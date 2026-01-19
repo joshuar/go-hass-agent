@@ -23,8 +23,8 @@
   "license": "MIT",
   "name": "go-hass-agent",
   "scripts": {
-    "build:js": "bunx esbuild ./web/assets/scripts.js --bundle --sourcemap --outdir=./web/content/",
-    "build:css": "bunx tailwindcss -i ./web/assets/styles.css -o ./web/content/styles.css --minify --map"
+    "build:js": "esbuild ./web/assets/scripts.js --bundle --sourcemap --outdir=./web/content/",
+    "build:css": "tailwindcss -i ./web/assets/styles.css -o ./web/content/styles.css --minify --map"
   },
   "version": "0.0.0"
 }
