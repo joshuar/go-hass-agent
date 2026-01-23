@@ -161,7 +161,7 @@ require (
 	github.com/pelletier/go-toml/v2 v2.2.4
 	github.com/reugn/go-quartz v0.15.2
 	github.com/samber/slog-chi v1.18.0
-	github.com/samber/slog-multi v1.6.0
+	github.com/samber/slog-multi v1.7.0
 	github.com/tklauser/go-sysconf v0.3.16
 	github.com/veqryn/slog-context v0.8.0
 	github.com/veqryn/slog-json v0.5.0
