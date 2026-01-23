@@ -345,6 +345,11 @@ this app:
       associated **alarms**. Updated ~every 1 minute.
     - Extracted from the `/sys/class/hwmon` file system.
     - [_Preferences_](#️-preferences): `[sensors.system.hardware_sensors]`.
+  - Location:
+    - On some devices such as laptops, exposes a
+      [device_tracker](https://www.home-assistant.io/integrations/device_tracker/) entity with the device's location.
+    - Requires working [geoclue service](https://github.com/erfanoabdi/geoclue) (most popular distributions will have
+      this by default).
 
 #### 🕹️ Controls
 
