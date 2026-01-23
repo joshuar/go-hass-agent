@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>dev.pages.joshuarich.go-hass-agent</id>
+  
+  <name>Go Hass Agent</name>
+  <summary>A Home Assistant, native app for desktop/laptop devices</summary>
+
+  <url type="homepage">https://github.com/joshuar/go-hass-agent</url>
+  <url type="bugtracker">https://github.com/joshuar/go-hass-agent/issues</url>
+  <url type="faq">https://github.com/joshuar/go-hass-agent/blob/main/README.md#-faq</url>
+  <url type="translate">https://github.com/joshuar/go-hass-agent/blob/main/CONTRIBUTING.md#translations</url>
+  <url type="vcs-browser">https://github.com/joshuar/go-hass-agent</url>
+  <url type="contribute">https://github.com/joshuar/go-hass-agent/blob/main/README.md#-contributing</url>
+  
+  <metadata_license>CC-BY-SA-4.0</metadata_license>
+  <project_license>MIT</project_license>
+  
+  <description>
+    <p>
+      Go Hass Agent is an application to expose sensors, controls, and events from a device to Home Assistant. You can think of it as something similar to the Home Assistant companion app for mobile devices, but for your desktop, server, Raspberry Pi, Arduino, toaster, whatever!
+    </p>
+    <p>
+      Out of the box, Go Hass Agent will report lots of details about the system it is running on. You can extend it with additional sensors and controls by hooking it up to MQTT. You can extend it even further with your own custom sensors and controls with scripts/programs.
+    </p>
+    <p>
+      You can then use these sensors, controls, or events in any automations and dashboards, just like the companion app or any other “thing” you&apos;ve added into Home Assistant.
+    </p>
+
+    <p>
+      **Please follow https://github.com/joshuar/go-hass-agent/blob/main/README.md#-first-run after installation.**
+    </p>
+  </description>
+
+  <developer id="dev.pages.joshuarich">
+    <name>Joshua Rich</name>
+  </developer>
+
+  <content_rating type="oars-1.1">
+    <content_attribute id="social-location">intense</content_attribute>
+  </content_rating>
+  
+  <launchable type="desktop-id">dev.pages.joshuarich.go-hass-agent.desktop</launchable>
+</component>
