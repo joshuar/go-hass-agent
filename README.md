@@ -502,10 +502,11 @@ optional configuration options.
 
 ### 🚩 First-run
 
-On first-run, open a browser tab and navigate to
-[http://localhost:8223](http://localhost:8223). You should be redirected to the
-registration form where you will need to enter details to allow Go Hass Agent to
-register with Home Assistant:
+On first-run, Go Hass Agent attempts to open a browser tab to a page for registering the agent with Home Assistant. If
+this does not happen (or you are running the agent remotely on a server), open a browser tab and navigate to
+[http://localhost:8223](http://localhost:8223) (or the address of the device running the agent). You should be
+redirected to the registration form where you will need to enter details to allow Go Hass Agent to register with Home
+Assistant:
 
 ![Registration Window](assets/screenshots/registration-form.png)
 

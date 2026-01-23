@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"os/exec"
 	"os/signal"
 	"syscall"
 
@@ -79,6 +80,20 @@ func (r *Run) Run(opts *Opts) error {
 	err = agent.Run(ctx)
 	if err != nil {
 		return fmt.Errorf("unable to run: %w", err)
+	}
+
+	if !agent.IsRegistered() {
+		xdgOpen, err := exec.LookPath("xdg-open")
+		if err != nil {
+			slogctx.FromCtx(ctx).
+				Info("Agent is not registered. Please open your web browser to " + server.ShowAddress() + "/register to register the agent with Home Assistant")
+		} else {
+			_, err := exec.CommandContext(ctx, xdgOpen, server.ShowAddress()).Output()
+			if err != nil {
+				slogctx.FromCtx(ctx).
+					Info("Agent is not registered. Please open your web browser to " + server.ShowAddress() + "/register to register the agent with Home Assistant")
+			}
+		}
 	}
 
 	return nil
