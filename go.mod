@@ -160,7 +160,7 @@ require (
 	github.com/mattn/go-isatty v0.0.20
 	github.com/pelletier/go-toml/v2 v2.2.4
 	github.com/reugn/go-quartz v0.15.2
-	github.com/samber/slog-chi v1.17.0
+	github.com/samber/slog-chi v1.18.0
 	github.com/samber/slog-multi v1.6.0
 	github.com/tklauser/go-sysconf v0.3.16
 	github.com/veqryn/slog-context v0.8.0
