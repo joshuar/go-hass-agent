@@ -41,6 +41,9 @@ const (
 	minKeyboardKeys = 10
 	// inputReadRetryDelay is the delay between retries when reading from input devices fails
 	inputReadRetryDelay = 100 * time.Millisecond
+	// mediaCheckThrottle determines how often to check media status (half of poll interval)
+	// to balance responsiveness with D-Bus overhead
+	mediaCheckThrottle = 2
 )
 
 var (
@@ -253,7 +256,8 @@ func (w *lastActiveWorker) isMediaPlaying(ctx context.Context) bool {
 		}
 
 		// Get PlaybackStatus property for this specific player
-		// The service name (destination) should be the player's unique bus name
+		// The interface parameter should be the player's bus name (e.g., org.mpris.MediaPlayer2.vlc)
+		// The property name should include the full interface path
 		prop := dbusx.NewProperty[string](w.bus, mprisDBusPath, name, mprisPlayerInterface+".PlaybackStatus")
 		status, err := prop.Get()
 		if err != nil {
@@ -281,7 +285,7 @@ func (w *lastActiveWorker) getLastActiveTime(ctx context.Context) time.Time {
 	w.mu.RUnlock()
 
 	// Only check media status once per polling interval to avoid excessive D-Bus calls
-	if time.Since(lastCheck) >= lastActivePollInterval/2 {
+	if time.Since(lastCheck) >= lastActivePollInterval/mediaCheckThrottle {
 		if w.isMediaPlaying(ctx) {
 			w.mu.Lock()
 			w.lastActivityTime = time.Now()
