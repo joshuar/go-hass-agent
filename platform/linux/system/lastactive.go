@@ -73,7 +73,6 @@ type lastActiveWorker struct {
 	mu               sync.RWMutex
 	inputDevices     []*evdev.InputDevice
 	bus              *dbusx.Bus
-	stopCh           chan struct{}
 }
 
 // NewLastActiveWorker creates a new worker to track the last active time of the system.
@@ -83,7 +82,6 @@ func NewLastActiveWorker(ctx context.Context) (workers.EntityWorker, error) {
 		PollingEntityWorkerData: &workers.PollingEntityWorkerData{},
 		lastActivityTime:        time.Now(),
 		inputDevices:            make([]*evdev.InputDevice, 0),
-		stopCh:                  make(chan struct{}),
 	}
 
 	// Load preferences
@@ -202,8 +200,6 @@ func (w *lastActiveWorker) monitorInputDevices(ctx context.Context) {
 				select {
 				case <-ctx.Done():
 					return
-				case <-w.stopCh:
-					return
 				default:
 					// Read input event
 					ev, err := dev.ReadOne()
@@ -249,8 +245,9 @@ func (w *lastActiveWorker) isMediaPlaying(ctx context.Context) bool {
 			continue
 		}
 
-		// Get PlaybackStatus property
-		prop := dbusx.NewProperty[string](w.bus, mprisDBusPath, mprisPlayerInterface, "PlaybackStatus")
+		// Get PlaybackStatus property for this specific player
+		// The service name (destination) should be the player's unique bus name
+		prop := dbusx.NewProperty[string](w.bus, mprisDBusPath, name, mprisPlayerInterface+".PlaybackStatus")
 		status, err := prop.Get()
 		if err != nil {
 			continue
