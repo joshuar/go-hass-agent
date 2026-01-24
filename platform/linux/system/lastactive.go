@@ -22,7 +22,6 @@ import (
 	"github.com/joshuar/go-hass-agent/models"
 	"github.com/joshuar/go-hass-agent/models/class"
 	"github.com/joshuar/go-hass-agent/models/sensor"
-	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 	"github.com/joshuar/go-hass-agent/platform/linux"
 	"github.com/joshuar/go-hass-agent/scheduler"
 )
@@ -32,18 +31,11 @@ const (
 	lastActivePollJitter    = time.Second
 	lastActivePreferencesID = sensorsPrefPrefix + "last_active"
 
-	mprisDBusPath        = "/org/mpris/MediaPlayer2"
-	mprisDBusNamespace   = "org.mpris.MediaPlayer2"
-	mprisPlayerInterface = "org.mpris.MediaPlayer2.Player"
-
 	// minKeyboardKeys is the minimum number of key capabilities to consider a device a keyboard
 	// (as opposed to a mouse with just a few buttons)
 	minKeyboardKeys = 10
 	// inputReadRetryDelay is the delay between retries when reading from input devices fails
 	inputReadRetryDelay = 100 * time.Millisecond
-	// mediaCheckThrottle determines how often to check media status (half of poll interval)
-	// to balance responsiveness with D-Bus overhead
-	mediaCheckThrottle = 2
 )
 
 var (
@@ -64,25 +56,21 @@ type LastActivePrefs struct {
 }
 
 // lastActiveWorker tracks the last time the system was actively used based on
-// input device activity (keyboard/mouse) and media playback.
+// input device activity (keyboard/mouse).
 //
 // The worker monitors:
 // - Input events from /dev/input/event* devices using evdev (requires read permissions)
-// - MPRIS-compatible media players via D-Bus for active playback
 //
 // System Requirements:
 // - Read access to /dev/input/event* devices (typically via 'input' group membership)
-// - D-Bus session bus access for MPRIS media player detection
 type lastActiveWorker struct {
 	*workers.PollingEntityWorkerData
 	*models.WorkerMetadata
 
 	prefs            *LastActivePrefs
 	lastActivityTime time.Time
-	lastMediaCheck   time.Time
 	mu               sync.RWMutex
 	inputDevices     []*evdev.InputDevice
-	bus              *dbusx.Bus
 }
 
 // NewLastActiveWorker creates a new worker to track the last active time of the system.
@@ -110,14 +98,6 @@ func NewLastActiveWorker(ctx context.Context) (workers.EntityWorker, error) {
 		pollInterval = lastActivePollInterval
 	}
 	worker.Trigger = scheduler.NewPollTriggerWithJitter(pollInterval, lastActivePollJitter)
-
-	// Get session bus for MPRIS
-	bus, ok := linux.CtxGetSessionBus(ctx)
-	if !ok {
-		slogctx.FromCtx(ctx).Warn("Could not get session bus for MPRIS monitoring, media playback detection will be unavailable.")
-	} else {
-		worker.bus = bus
-	}
 
 	// Initialize input device monitoring
 	if err := worker.initInputDevices(ctx); err != nil {
@@ -236,70 +216,11 @@ func (w *lastActiveWorker) monitorInputDevices(ctx context.Context) {
 	}
 }
 
-// isMediaPlaying checks if any MPRIS-compatible media player is currently playing.
-func (w *lastActiveWorker) isMediaPlaying(ctx context.Context) bool {
-	if w.bus == nil {
-		return false
-	}
-
-	// Get list of all MPRIS player names on the session bus
-	names, err := w.bus.ListNames()
-	if err != nil {
-		slogctx.FromCtx(ctx).Debug("Could not list D-Bus names.", slog.Any("error", err))
-		return false
-	}
-
-	// Check each MPRIS player
-	for _, name := range names {
-		if !strings.HasPrefix(name, mprisDBusNamespace) {
-			continue
-		}
-
-		// Get PlaybackStatus property for this specific player
-		// The interface parameter should be the player's bus name (e.g., org.mpris.MediaPlayer2.vlc)
-		// The property name should include the full interface path
-		prop := dbusx.NewProperty[string](w.bus, mprisDBusPath, name, mprisPlayerInterface+".PlaybackStatus")
-		status, err := prop.Get()
-		if err != nil {
-			// Log at debug level - it's normal for some players to not respond
-			slogctx.FromCtx(ctx).Debug("Could not get playback status from media player.",
-				slog.String("player", name),
-				slog.Any("error", err))
-			continue
-		}
-
-		// If any player is playing, consider system active
-		if status == "Playing" {
-			return true
-		}
-	}
-
-	return false
-}
-
 // getLastActiveTime returns the time of the last detected activity.
-func (w *lastActiveWorker) getLastActiveTime(ctx context.Context) time.Time {
+func (w *lastActiveWorker) getLastActiveTime() time.Time {
 	w.mu.RLock()
-	lastActive := w.lastActivityTime
-	lastCheck := w.lastMediaCheck
-	w.mu.RUnlock()
-
-	// Only check media status once per polling interval to avoid excessive D-Bus calls
-	if time.Since(lastCheck) >= lastActivePollInterval/mediaCheckThrottle {
-		if w.isMediaPlaying(ctx) {
-			w.mu.Lock()
-			w.lastActivityTime = time.Now()
-			w.lastMediaCheck = time.Now()
-			lastActive = w.lastActivityTime
-			w.mu.Unlock()
-		} else {
-			w.mu.Lock()
-			w.lastMediaCheck = time.Now()
-			w.mu.Unlock()
-		}
-	}
-
-	return lastActive
+	defer w.mu.RUnlock()
+	return w.lastActivityTime
 }
 
 func (w *lastActiveWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
@@ -316,7 +237,7 @@ func (w *lastActiveWorker) Start(ctx context.Context) (<-chan models.Entity, err
 }
 
 func (w *lastActiveWorker) Execute(ctx context.Context) error {
-	lastActive := w.getLastActiveTime(ctx)
+	lastActive := w.getLastActiveTime()
 	timeSinceActive := time.Since(lastActive)
 
 	w.OutCh <- sensor.NewSensor(ctx,
@@ -328,7 +249,7 @@ func (w *lastActiveWorker) Execute(ctx context.Context) error {
 		sensor.WithState(lastActive.Format(time.RFC3339)),
 		sensor.WithAttribute("seconds_since_active", int(timeSinceActive.Seconds())),
 		sensor.WithAttribute("minutes_since_active", int(timeSinceActive.Minutes())),
-		sensor.WithDataSourceAttribute("evdev+mpris"),
+		sensor.WithDataSourceAttribute("evdev"),
 	)
 	return nil
 }
