@@ -35,6 +35,12 @@ const (
 	mprisDBusPath        = "/org/mpris/MediaPlayer2"
 	mprisDBusNamespace   = "org.mpris.MediaPlayer2"
 	mprisPlayerInterface = "org.mpris.MediaPlayer2.Player"
+
+	// minKeyboardKeys is the minimum number of key capabilities to consider a device a keyboard
+	// (as opposed to a mouse with just a few buttons)
+	minKeyboardKeys = 10
+	// inputReadRetryDelay is the delay between retries when reading from input devices fails
+	inputReadRetryDelay = 100 * time.Millisecond
 )
 
 var (
@@ -70,6 +76,7 @@ type lastActiveWorker struct {
 
 	prefs            *LastActivePrefs
 	lastActivityTime time.Time
+	lastMediaCheck   time.Time
 	mu               sync.RWMutex
 	inputDevices     []*evdev.InputDevice
 	bus              *dbusx.Bus
@@ -156,7 +163,7 @@ func (w *lastActiveWorker) initInputDevices(ctx context.Context) error {
 			if evType == evdev.EV_KEY {
 				// Check if there are actual key events (keyboards have many, mice have few)
 				keyCaps := device.CapableEvents(evdev.EV_KEY)
-				if len(keyCaps) > 10 {
+				if len(keyCaps) > minKeyboardKeys {
 					hasKeys = true
 				}
 			}
@@ -206,7 +213,7 @@ func (w *lastActiveWorker) monitorInputDevices(ctx context.Context) {
 					if err != nil {
 						// Check if it's just an error from closed device
 						if !errors.Is(err, os.ErrClosed) {
-							time.Sleep(100 * time.Millisecond)
+							time.Sleep(inputReadRetryDelay)
 						}
 						continue
 					}
@@ -250,6 +257,10 @@ func (w *lastActiveWorker) isMediaPlaying(ctx context.Context) bool {
 		prop := dbusx.NewProperty[string](w.bus, mprisDBusPath, name, mprisPlayerInterface+".PlaybackStatus")
 		status, err := prop.Get()
 		if err != nil {
+			// Log at debug level - it's normal for some players to not respond
+			slogctx.FromCtx(ctx).Debug("Could not get playback status from media player.",
+				slog.String("player", name),
+				slog.Any("error", err))
 			continue
 		}
 
@@ -266,14 +277,22 @@ func (w *lastActiveWorker) isMediaPlaying(ctx context.Context) bool {
 func (w *lastActiveWorker) getLastActiveTime(ctx context.Context) time.Time {
 	w.mu.RLock()
 	lastActive := w.lastActivityTime
+	lastCheck := w.lastMediaCheck
 	w.mu.RUnlock()
 
-	// Check if media is playing - if so, update last active to now
-	if w.isMediaPlaying(ctx) {
-		w.mu.Lock()
-		w.lastActivityTime = time.Now()
-		lastActive = w.lastActivityTime
-		w.mu.Unlock()
+	// Only check media status once per polling interval to avoid excessive D-Bus calls
+	if time.Since(lastCheck) >= lastActivePollInterval/2 {
+		if w.isMediaPlaying(ctx) {
+			w.mu.Lock()
+			w.lastActivityTime = time.Now()
+			w.lastMediaCheck = time.Now()
+			lastActive = w.lastActivityTime
+			w.mu.Unlock()
+		} else {
+			w.mu.Lock()
+			w.lastMediaCheck = time.Now()
+			w.mu.Unlock()
+		}
 	}
 
 	return lastActive
