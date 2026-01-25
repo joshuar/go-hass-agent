@@ -214,24 +214,15 @@ func (w *BacklightWorker) monitor(ctx context.Context) {
 func hasBrightnessControls(desktop string, bus *dbusx.Bus) bool {
 	switch {
 	case strings.Contains(desktop, "GNOME"):
-		introspection, err := dbusx.NewIntrospection(
-			bus,
-			"org.gnome.SettingsDaemon.Power",
-			"/org/gnome/SettingsDaemon/Power",
-		)
+		hasBrightness, err := dbusx.NewProperty[bool](bus,
+			"/org/gnome/Shell/Brightness",
+			"org.gnome.Shell.Brightness",
+			"org.gnome.Shell.Brightness.HasBrightnessControl",
+		).Get()
 		if err != nil {
 			return false
 		}
-		if slices.ContainsFunc(introspection.Interfaces, func(i introspect.Interface) bool {
-			if i.Name == "org.freedesktop.DBus.Properties" {
-				return slices.ContainsFunc(i.Methods, func(m introspect.Method) bool {
-					return m.Name == "Set"
-				})
-			}
-			return false
-		}) {
-			return true
-		}
+		return hasBrightness
 	case strings.Contains(desktop, "KDE"):
 		introspection, err := dbusx.NewIntrospection(
 			bus,
@@ -262,8 +253,8 @@ func hasBrightnessControls(desktop string, bus *dbusx.Bus) bool {
 // setBrightnessGnome will use D-Bus to change the brightness on Gnome desktops.
 func setBrightnessGnome(ctx context.Context, bus *dbusx.Bus, value int) error {
 	if err := dbusx.NewMethod(bus,
-		"org.gnome.SettingsDaemon.Power",
-		"/org/gnome/SettingsDaemon/Power",
+		"/org/gnome/Shell/Brightness",
+		"org.gnome.Shell.Brightness",
 		"org.freedesktop.DBus.Properties.Set").
 		Call(ctx, "org.gnome.SettingsDaemon.Power.Screen", "Brightness", value); err != nil {
 		return fmt.Errorf("set brightness from Gnome: %w", err)
@@ -274,10 +265,10 @@ func setBrightnessGnome(ctx context.Context, bus *dbusx.Bus, value int) error {
 // getBrightnessKDE will fetch the current brightness using KDE D-Bus methods.
 func getBrightnessGnome(bus *dbusx.Bus) (int, error) {
 	brightness, err := dbusx.GetData[int](bus,
-		"org.gnome.SettingsDaemon.Power",
-		"/org/gnome/SettingsDaemon/Power",
+		"/org/gnome/Shell/Brightness",
+		"org.gnome.Shell.Brightness",
 		"org.freedesktop.DBus.Properties.Get",
-		"org.gnome.SettingsDaemon.Power.Screen", "Brightness",
+		"org.gnome.Shell.Brightness", "Brightness",
 	)
 	if err != nil {
 		return 0, fmt.Errorf("get brightness from Gnome: %w", err)
@@ -288,7 +279,7 @@ func getBrightnessGnome(bus *dbusx.Bus) (int, error) {
 // monitorBrightnessGnome sets up a D-Bus watch for changes to brightness on the Gnome desktop.
 func (w *BacklightWorker) monitorBrightnessGnome(ctx context.Context) error {
 	triggerCh, err := dbusx.NewWatch(
-		dbusx.MatchPath("/org/gnome/SettingsDaemon/Power"),
+		dbusx.MatchPath("/org/gnome/Shell/Brightness"),
 		dbusx.MatchPropChanged(),
 	).Start(ctx, w.bus)
 	if err != nil {
