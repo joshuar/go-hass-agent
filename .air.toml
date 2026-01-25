@@ -1,18 +1,21 @@
+#:schema https://json.schemastore.org/any.json
+
 root = "."
 tmp_dir = "tmp"
+env_files = [".devcontainer/.env"]
 
 [build]
 pre_cmd = [
-  "bun run build:css",
-  "bun run build:js",
+  "npm run build:css",
+  "npm run build:js",
   "go run github.com/a-h/templ/cmd/templ@latest generate -path web",
 ]
 cmd = 'go build -ldflags="-s -w -X github.com/joshuar/go-hass-agent/config.AppVersion=$(git describe --tags --always --long --dirty)" -o ./tmp/go-hass-agent .'
 args_bin = [
-  "--profile='heapprofile=deployments/heap.prof;cpuprofile=deployments/cpu.prof;webui=true'",
+  "--profile='heapprofile=tmp/heap.prof;cpuprofile=tmp/cpu.prof;webui=true'",
   "run",
 ]
-full_bin = "export $(grep -v '^#' .devcontainer/.env | xargs) && tmp/go-hass-agent"
+entrypoint = ["tmp/go-hass-agent"]
 bin = "tmp/go-hass-agent"
 cdelay = 1000
 exclude_dir = [

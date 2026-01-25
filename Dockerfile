@@ -33,8 +33,8 @@ COPY . .
 # install and build frontend with npm (we don't use bun as it is unsupported on some arches we support)
 RUN <<EOF
 npm install
-npm x -c 'esbuild ./web/assets/scripts.js --bundle --minify --outdir=./web/content/'
-npm x -c 'tailwindcss -i ./web/assets/styles.css -o ./web/content/styles.css --minify'
+npm run build:js
+npm run build:css
 EOF
 
 # build the binary

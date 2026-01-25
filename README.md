@@ -1186,9 +1186,9 @@ From the root of the Go Hass Agent repository, use the following commands will
 build/bundle everything needed:
 
 ```shell
-bun install
-bunx esbuild ./web/assets/scripts.js --bundle --minify --outdir=./web/content/
-bunx tailwindcss -i ./web/assets/styles.css -o ./web/content/styles.css --minify
+npm install
+npm run build:js
+npm run build:css
 # the -X ... linker option is *required*
 CGO_ENABLED=0 go build -ldflags="-w -s -X github.com/joshuar/go-hass-agent/config.AppVersion=$(git describe --tags --always --long --dirty)" -o dist/go-hass-agent
 ```
