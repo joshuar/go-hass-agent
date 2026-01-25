@@ -1257,6 +1257,10 @@ podman build --file ./Dockerfile --platform linux/arm/v7 --tag go-hass-agent
 
 ## 👋 Contributing
 
+<a href="https://github.com/joshuar/go-hass-agent/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=joshuar/go-hass-agent" />
+</a>
+
 - Found an issue? Please
   [report it](https://github.com/joshuar/go-hass-agent/issues/new?assignees=joshuar&labels=&template=bug_report.md&title=%5BBUG%5D)!
 - Have a suggestion for a feature? Want a particular sensor/measurement added?
