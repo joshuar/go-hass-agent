@@ -56,6 +56,10 @@ type BacklightWorker struct {
 	Entity *mqtthass.NumberEntity[int]
 	MsgCh  chan mqttapi.Msg
 
+	getBrightnessFunc     func(ctx context.Context, bus *dbusx.Bus) (int, error)
+	setBrightnessFunc     func(ctx context.Context, bus *dbusx.Bus, value int) error
+	monitorBrightnessFunc func(ctx context.Context) error
+
 	desktop string
 }
 
@@ -82,8 +86,8 @@ func NewBacklightControl(ctx context.Context, device *mqtthass.Device) (*Backlig
 		return nil, fmt.Errorf("get session bus: %w", linux.ErrNoSystemBus)
 	}
 
-	if !hasBrightnessControls(worker.desktop, worker.bus) {
-		return nil, fmt.Errorf("check for brightness controls: %w", linux.ErrUnsupportedDesktop)
+	if err := worker.setupBrightnessControls(); err != nil {
+		return nil, fmt.Errorf("setup brightness controls: %w", linux.ErrUnsupportedDesktop)
 	}
 
 	defaultPrefs := &workers.CommonWorkerPrefs{}
@@ -154,19 +158,7 @@ func (w *BacklightWorker) publishState(ctx context.Context) {
 
 // stateCallback is called when an MQTT message is published to get the current brightness.
 func (w *BacklightWorker) stateCallback(ctx context.Context) (json.RawMessage, error) {
-	var (
-		brightness int
-		err        error
-	)
-	switch {
-	case strings.Contains(w.desktop, "GNOME"):
-		brightness, err = getBrightnessGnome(w.bus)
-	case strings.Contains(w.desktop, "KDE"):
-		brightness, err = getBrightnessKDE(w.bus)
-	default:
-		brightness, err = getBrightnessDDCUtil(ctx)
-	}
-
+	brightness, err := w.getBrightnessFunc(ctx, w.bus)
 	if err != nil {
 		return nil, fmt.Errorf("get brightness: %w", err)
 	}
@@ -176,17 +168,7 @@ func (w *BacklightWorker) stateCallback(ctx context.Context) (json.RawMessage, e
 
 // controlCallback is called when an MQTT message is published to change the brightness.
 func (w *BacklightWorker) controlCallback(ctx context.Context, value int) error {
-	var err error
-	switch {
-	case strings.Contains(w.desktop, "GNOME"):
-		err = setBrightnessGnome(ctx, w.bus, value)
-	case strings.Contains(w.desktop, "KDE"):
-		err = setBrightnessKDE(ctx, w.bus, value)
-	default:
-		err = setBrightnessDDCUtil(ctx, value)
-	}
-
-	if err != nil {
+	if err := w.setBrightnessFunc(ctx, w.bus, value); err != nil {
 		return fmt.Errorf("set brightness: %w", err)
 	}
 
@@ -195,42 +177,23 @@ func (w *BacklightWorker) controlCallback(ctx context.Context, value int) error 
 
 // monitor will set up a way to monitor for external brightness changes.
 func (w *BacklightWorker) monitor(ctx context.Context) {
-	var err error
-	switch {
-	case strings.Contains(w.desktop, "GNOME"):
-		err = w.monitorBrightnessGnome(ctx)
-	case strings.Contains(w.desktop, "KDE"):
-		err = w.monitorBrightnessKDE(ctx)
-	default:
-		w.monitorBrightnessDDCUtil(ctx)
-	}
-	if err != nil {
+	if err := w.monitorBrightnessFunc(ctx); err != nil {
 		slogctx.FromCtx(ctx).Warn("Unable to monitor brightness.",
 			slog.Any("error", err),
 		)
 	}
 }
 
-func hasBrightnessControls(desktop string, bus *dbusx.Bus) bool {
+func (w *BacklightWorker) setupBrightnessControls() error {
 	switch {
-	case strings.Contains(desktop, "GNOME"):
-		hasBrightness, err := dbusx.NewProperty[bool](bus,
-			"/org/gnome/Shell/Brightness",
-			"org.gnome.Shell.Brightness",
-			"org.gnome.Shell.Brightness.HasBrightnessControl",
-		).Get()
-		if err != nil {
-			return false
-		}
-		return hasBrightness
-	case strings.Contains(desktop, "KDE"):
+	case strings.Contains(w.desktop, "KDE"):
 		introspection, err := dbusx.NewIntrospection(
-			bus,
+			w.bus,
 			"org.kde.Solid.PowerManagement",
 			"/org/kde/Solid/PowerManagement/Actions/BrightnessControl",
 		)
 		if err != nil {
-			return false
+			return fmt.Errorf("introspect for KDE brightness controls: %w", err)
 		}
 		if slices.ContainsFunc(introspection.Interfaces, func(i introspect.Interface) bool {
 			if i.Name == "org.kde.Solid.PowerManagement.Actions.BrightnessControl" {
@@ -240,14 +203,33 @@ func hasBrightnessControls(desktop string, bus *dbusx.Bus) bool {
 			}
 			return false
 		}) {
-			return true
+			w.getBrightnessFunc = getBrightnessKDE
+			w.setBrightnessFunc = setBrightnessKDE
+			w.monitorBrightnessFunc = w.monitorBrightnessKDE
+			return nil
 		}
+		fallthrough
+	case strings.Contains(w.desktop, "GNOME"):
+		// TODO: find whatever documentation Gnome has on available D-Bus brightness controls.
+		fallthrough
+		// hasBrightness, err := dbusx.NewProperty[bool](bus,
+		// 	"/org/gnome/Shell/Brightness",
+		// 	"org.gnome.Shell.Brightness",
+		// 	"org.gnome.Shell.Brightness.HasBrightnessControl",
+		// ).Get()
+		// if err != nil {
+		// 	return false
+		// }
+		// return hasBrightness
 	default:
 		if err := findDDCUtil(); err != nil {
-			return false
+			return fmt.Errorf("find ddcutil: %w", err)
 		}
+		w.getBrightnessFunc = getBrightnessDDCUtil
+		w.setBrightnessFunc = setBrightnessDDCUtil
+		w.monitorBrightnessFunc = w.monitorBrightnessDDCUtil
 	}
-	return false
+	return fmt.Errorf("setup brightness controls: %w", linux.ErrUnsupportedDesktop)
 }
 
 // setBrightnessGnome will use D-Bus to change the brightness on Gnome desktops.
@@ -263,7 +245,7 @@ func setBrightnessGnome(ctx context.Context, bus *dbusx.Bus, value int) error {
 }
 
 // getBrightnessKDE will fetch the current brightness using KDE D-Bus methods.
-func getBrightnessGnome(bus *dbusx.Bus) (int, error) {
+func getBrightnessGnome(_ context.Context, bus *dbusx.Bus) (int, error) {
 	brightness, err := dbusx.GetData[int](bus,
 		"/org/gnome/Shell/Brightness",
 		"org.gnome.Shell.Brightness",
@@ -321,7 +303,7 @@ func setBrightnessKDE(ctx context.Context, bus *dbusx.Bus, value int) error {
 }
 
 // getBrightnessKDE will fetch the current brightness using KDE D-Bus methods.
-func getBrightnessKDE(bus *dbusx.Bus) (int, error) {
+func getBrightnessKDE(_ context.Context, bus *dbusx.Bus) (int, error) {
 	brightness, err := dbusx.GetData[int](bus,
 		"/org/kde/Solid/PowerManagement/Actions/BrightnessControl",
 		"org.kde.Solid.PowerManagement",
@@ -357,7 +339,7 @@ func (w *BacklightWorker) monitorBrightnessKDE(ctx context.Context) error {
 }
 
 // setBrightnessDDCUtil will use the ddcutil program to set the brightness.
-func setBrightnessDDCUtil(ctx context.Context, value int) error {
+func setBrightnessDDCUtil(ctx context.Context, _ *dbusx.Bus, value int) error {
 	_, err := exec.CommandContext(ctx, ddcutilPath, "-t", "setvcp", "10", strconv.Itoa(value)).Output()
 	if err != nil {
 		return fmt.Errorf("ddcutil setvcp 10: %w", err)
@@ -366,7 +348,7 @@ func setBrightnessDDCUtil(ctx context.Context, value int) error {
 }
 
 // getBrightnessDDCUtil will use the ddcutil program to get the brightness.
-func getBrightnessDDCUtil(ctx context.Context) (int, error) {
+func getBrightnessDDCUtil(ctx context.Context, _ *dbusx.Bus) (int, error) {
 	output, err := exec.CommandContext(ctx, ddcutilPath, "-t", "getvcp", "10").Output()
 	if err != nil {
 		return 0, fmt.Errorf("ddcutil getvcp 10: %w", err)
@@ -386,7 +368,7 @@ func getBrightnessDDCUtil(ctx context.Context) (int, error) {
 
 // monitorBrightnessDDCUtil will monitor brightness changes by polling with ddcutil on an interval. Not very efficient
 // and not real time, but works on any system with ddcutil installed...
-func (w *BacklightWorker) monitorBrightnessDDCUtil(ctx context.Context) {
+func (w *BacklightWorker) monitorBrightnessDDCUtil(ctx context.Context) error {
 	ticker := time.NewTicker(time.Minute)
 
 	go func() {
@@ -402,4 +384,5 @@ func (w *BacklightWorker) monitorBrightnessDDCUtil(ctx context.Context) {
 	}()
 
 	slogctx.FromCtx(ctx).Debug("Monitoring screen brightness by polling with ddcutil, every minute.")
+	return nil
 }
