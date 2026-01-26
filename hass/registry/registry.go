@@ -23,6 +23,10 @@ type metadata struct {
 	Disabled   bool `json:"disabled"`
 }
 
+func (m metadata) String() string {
+	return fmt.Sprintf("Registered %t, Disabled: %t", m.Registered, m.Disabled)
+}
+
 // Reset will handle resetting the registry.
 func Reset(registryPath string) error {
 	registryPath = filepath.Join(registryPath, "sensorRegistry")

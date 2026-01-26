@@ -23,6 +23,8 @@ var content embed.FS
 // CLI contains all of the commands and common options for running Go Hass
 // Agent.
 var CLI struct {
+	logging.Options
+
 	Run cli.Run `cmd:"" help:"Run Go Hass Agent."`
 	// Reset        cmd.Reset            `cmd:"" help:"Reset Go Hass Agent."`
 	Version cli.Version `cmd:"" help:"Show the Go Hass Agent version."`
@@ -30,9 +32,8 @@ var CLI struct {
 	ProfileFlags logging.ProfileFlags `name:"profile" help:"Set profiling flags."`
 	Config       cli.Config           `cmd:"" help:"Configure Go Hass Agent."`
 	Register     cli.Register         `cmd:"" help:"Register with Home Assistant."`
+	Registry     cli.RegistryCmd      `cmd:"" help:"Registry actions"`
 	Path         string               `name:"path" default:"${defaultPath}" help:"Specify a custom path to store preferences/logs/data (for debugging)."`
-
-	logging.Options
 }
 
 func init() {

@@ -9,8 +9,10 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"sync"
 )
 
@@ -82,6 +84,18 @@ func (g *GobRegistry) SetRegistered(id string, value bool) error {
 	}
 
 	return nil
+}
+
+func (g *GobRegistry) List() {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	keys := slices.Collect(maps.Keys(g.sensors))
+	slices.Sort(keys)
+
+	for key := range slices.Values(keys) {
+		fmt.Printf("Entity ID: %s - %s\n", key, g.sensors[key].String())
+	}
 }
 
 // Load will load the registry from disk.
