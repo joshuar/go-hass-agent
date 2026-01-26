@@ -255,7 +255,9 @@ func getMounts(ctx context.Context, ignoredMounts []string) ([]*mount, error) {
 		if slices.Contains(filesystems, filesystem) &&
 			!slices.ContainsFunc(
 				ignoredMounts,
-				func(blockedMount string) bool { return strings.HasPrefix(mountpoint, blockedMount) },
+				func(blockedMount string) bool {
+					return mountpoint != blockedMount || strings.HasPrefix(mountpoint, blockedMount)
+				},
 			) {
 			validmount := &mount{
 				mountpoint: mountpoint,
