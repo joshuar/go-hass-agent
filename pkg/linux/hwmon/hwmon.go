@@ -21,6 +21,8 @@ import (
 	slogctx "github.com/veqryn/slog-context"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
+
+	"github.com/joshuar/go-hass-agent/logging"
 )
 
 // HWMonPath is the detault path prefix where the hwmon userspace API exists in
@@ -115,7 +117,8 @@ func (c *Chip) getSensors(ctx context.Context) ([]*Sensor, error) {
 
 	for _, sensor := range allSensors {
 		if sensor.value == nil {
-			slogctx.FromCtx(ctx).Debug("Ignoring sensor with nil value.", slog.String("sensor", sensor.Name()))
+			slogctx.FromCtx(ctx).Log(ctx, logging.LevelTrace, "Ignoring sensor with nil value.",
+				slog.String("sensor", sensor.Name()))
 			continue
 		}
 

@@ -39,8 +39,8 @@ const (
 
 // Options are options for controlling logging.
 type Options struct {
-	LogLevel  string `env:"GOHASSAGENT_LOGLEVEL" name:"log-level" enum:"info,debug,trace" default:"info" help:"Set logging level."`
-	NoLogFile bool   `env:"GOHASSAGENT_NOLOGFILE" name:"no-log-file" help:"Don't write to a log file." default:"false"`
+	LogLevel  string `env:"GOHASSAGENT_LOGLEVEL"  name:"log-level"   enum:"info,debug,trace" default:"info"  help:"Set logging level."`
+	NoLogFile bool   `env:"GOHASSAGENT_NOLOGFILE" name:"no-log-file"                         default:"false" help:"Don't write to a log file."`
 }
 
 // New creates a new logger with the given options.
