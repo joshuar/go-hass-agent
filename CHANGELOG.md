@@ -1,5 +1,27 @@
 # Changelog
 
+## [14.4.0](https://github.com/joshuar/go-hass-agent/compare/v14.3.1...v14.4.0) (2026-01-26)
+
+
+### Features
+
+* add an AppStream MetaInfo file ([6ef67a8](https://github.com/joshuar/go-hass-agent/commit/6ef67a8fb651e29bfb6a8997accffe790db000b8))
+* add an AppStream MetaInfo file ([98cb7f2](https://github.com/joshuar/go-hass-agent/commit/98cb7f27cf61877608172cac04610a08d0b77eaf)), closes [#703](https://github.com/joshuar/go-hass-agent/issues/703)
+* **agent:** :sparkles: on first run, either open a browser window to the registration page or emit a log message asking the user to do so ([2334a3a](https://github.com/joshuar/go-hass-agent/commit/2334a3a5402412809f266b5c8175d0f6a23191d1))
+
+
+### Bug Fixes
+
+* **linux/hwmon:** :bug: fix when warning about device model is shown ([8cb0669](https://github.com/joshuar/go-hass-agent/commit/8cb0669a24c7abb46e8e25aace97a43c82cceafb))
+* **linux/net:** :bug: would it be silly to assume strings.HasPrefix would return true when the string equals the prefix? yes, yes it would ([3b6fbb3](https://github.com/joshuar/go-hass-agent/commit/3b6fbb35556423b41ec3f87a03305d5ec48ad175))
+* **linux/power:** :bug: add a check to ensure system has required brightness controls when creating brightness worker ([d5c8f6f](https://github.com/joshuar/go-hass-agent/commit/d5c8f6ffae0700cde2223abc8559545c737161f0))
+* **linux/power:** :bug: update D-Bus location for brightness control as per changes in Gnome 49?? ([bdc8d55](https://github.com/joshuar/go-hass-agent/commit/bdc8d5519c2ec2d4947e380a70f10916d4165625))
+
+
+### Reverts
+
+* **linux/power:** :rewind: give up using D-Bus on Gnome for backlight control, just try ddcutil ([4842317](https://github.com/joshuar/go-hass-agent/commit/4842317ece2140419ef998a0173cfa74b2dc93f5))
+
 ## [14.3.1](https://github.com/joshuar/go-hass-agent/compare/v14.3.0...v14.3.1) (2025-12-26)
 
 
