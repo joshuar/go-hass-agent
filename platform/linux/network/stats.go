@@ -18,6 +18,7 @@ import (
 	slogctx "github.com/veqryn/slog-context"
 
 	"github.com/joshuar/go-hass-agent/agent/workers"
+	"github.com/joshuar/go-hass-agent/logging"
 	"github.com/joshuar/go-hass-agent/models"
 	"github.com/joshuar/go-hass-agent/models/class"
 	"github.com/joshuar/go-hass-agent/models/sensor"
@@ -113,7 +114,7 @@ func (w *netStatsWorker) Execute(ctx context.Context) error {
 	}
 
 	// Get link stats, filtering links as per preferences.
-	stats := w.getLinkStats(links)
+	stats := w.getLinkStats(ctx, links)
 
 	w.mu.Lock()
 	defer w.mu.Unlock()
@@ -201,7 +202,7 @@ func (w *netStatsWorker) Start(ctx context.Context) (<-chan models.Entity, error
 
 // getLinkStats collates the network stats for all links. It filters
 // links to those with stats, not in an exclusion list and currently active.
-func (w *netStatsWorker) getLinkStats(links []rtnetlink.LinkMessage) []linkStats {
+func (w *netStatsWorker) getLinkStats(ctx context.Context, links []rtnetlink.LinkMessage) []linkStats {
 	allLinkStats := make([]linkStats, 0, len(links))
 
 	for _, msg := range links {
@@ -213,6 +214,8 @@ func (w *netStatsWorker) getLinkStats(links []rtnetlink.LinkMessage) []linkStats
 		if slices.ContainsFunc(w.prefs.IgnoredDevices, func(e string) bool {
 			return msg.Attributes.Name == e || strings.HasPrefix(msg.Attributes.Name, e)
 		}) {
+			slogctx.FromCtx(ctx).Log(ctx, logging.LevelTrace, "Ignoring device.",
+				slog.String("address", msg.Attributes.Name))
 			continue
 		}
 

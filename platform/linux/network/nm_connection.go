@@ -161,13 +161,15 @@ func (w *ConnectionsWorker) handleConnection(
 		return fmt.Errorf("could not create connection: %w", err)
 	}
 	// Ignore loopback or already tracked connections.
-	if conn.name == "lo" || w.isTracked(conn.name) {
+	if w.isTracked(conn.name) {
 		return nil
 	}
 	// Ignore user-defined devices.
 	if slices.ContainsFunc(w.prefs.IgnoredDevices, func(e string) bool {
 		return conn.name == e || strings.HasPrefix(conn.name, e)
 	}) {
+		slogctx.FromCtx(ctx).Log(ctx, logging.LevelTrace, "Ignoring device connection.",
+			slog.String("address", conn.name))
 		return nil
 	}
 

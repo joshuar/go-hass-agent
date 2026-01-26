@@ -19,6 +19,7 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/joshuar/go-hass-agent/agent/workers"
+	"github.com/joshuar/go-hass-agent/logging"
 	"github.com/joshuar/go-hass-agent/models"
 	"github.com/joshuar/go-hass-agent/models/sensor"
 	"github.com/joshuar/go-hass-agent/platform/linux"
@@ -268,9 +269,8 @@ func (w *NetlinkWorker) getLinks(ctx context.Context) ([]models.Entity, error) {
 	// Filter for valid links.
 	for msg := range slices.Values(msgs) {
 		if w.ignoredDevice(msg.Attributes.Name) {
-			slogctx.FromCtx(ctx).Debug("Ignoring link.",
-				slog.String("link", *&msg.Attributes.Name),
-			)
+			slogctx.FromCtx(ctx).Log(ctx, logging.LevelTrace, "Ignoring device.",
+				slog.String("address", msg.Attributes.Name))
 			continue
 		}
 		entity := newLinkSensor(ctx, msg)
