@@ -211,7 +211,7 @@ func (w *netStatsWorker) getLinkStats(links []rtnetlink.LinkMessage) []linkStats
 
 		// Skip ignored devices.
 		if slices.ContainsFunc(w.prefs.IgnoredDevices, func(e string) bool {
-			return strings.HasPrefix(msg.Attributes.Name, e)
+			return msg.Attributes.Name == e || strings.HasPrefix(msg.Attributes.Name, e)
 		}) {
 			continue
 		}

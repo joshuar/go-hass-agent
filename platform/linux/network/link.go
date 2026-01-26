@@ -19,7 +19,6 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/joshuar/go-hass-agent/agent/workers"
-	"github.com/joshuar/go-hass-agent/logging"
 	"github.com/joshuar/go-hass-agent/models"
 	"github.com/joshuar/go-hass-agent/models/sensor"
 	"github.com/joshuar/go-hass-agent/platform/linux"
@@ -147,15 +146,12 @@ func (w *NetlinkWorker) Start(ctx context.Context) (<-chan models.Entity, error)
 				for _, msg := range nlmsgs {
 					switch value := any(msg).(type) {
 					case *rtnetlink.LinkMessage:
-						if slices.ContainsFunc(w.prefs.IgnoredDevices, func(filter string) bool {
-							return strings.HasPrefix(value.Attributes.Name, filter)
-						}) {
-							slogctx.FromCtx(ctx).Log(ctx, logging.LevelTrace, "Filtering device.",
-								slog.String("name", value.Attributes.Name))
+						// Ignore devices configured in preferences.
+						if w.ignoredDevice(value.Attributes.Name) {
 							continue
 						}
-						link := newLinkSensor(ctx, *value)
-						if link.Valid() {
+
+						if link := newLinkSensor(ctx, *value); link.Valid() {
 							sensorCh <- link
 						}
 					case *rtnetlink.AddressMessage:
@@ -195,14 +191,12 @@ func (w *NetlinkWorker) generateSensors(ctx context.Context) ([]models.Entity, e
 	if err != nil {
 		warnings = errors.Join(warnings, fmt.Errorf("problem fetching address: %w", err))
 	}
-
 	sensors = append(sensors, addresses...)
 
 	links, err := w.getLinks(ctx)
 	if err != nil {
 		warnings = errors.Join(warnings, fmt.Errorf("problem fetching links: %w", err))
 	}
-
 	sensors = append(sensors, links...)
 
 	return sensors, warnings
@@ -247,15 +241,12 @@ func (w *NetlinkWorker) usableAddress(msg rtnetlink.AddressMessage) bool {
 		return false
 	}
 
+	// Don't include devices ignored by preferences.
 	link, err := w.nlconn.Link.Get(msg.Index)
 	if err != nil {
 		return false
 	}
-
-	// Skip ignored devices.
-	if slices.ContainsFunc(w.prefs.IgnoredDevices, func(e string) bool {
-		return strings.HasPrefix(link.Attributes.Name, e)
-	}) {
+	if w.ignoredDevice(link.Attributes.Name) {
 		return false
 	}
 
@@ -276,9 +267,10 @@ func (w *NetlinkWorker) getLinks(ctx context.Context) ([]models.Entity, error) {
 
 	// Filter for valid links.
 	for msg := range slices.Values(msgs) {
-		if slices.ContainsFunc(w.prefs.IgnoredDevices, func(filter string) bool {
-			return strings.HasPrefix(msg.Attributes.Name, filter)
-		}) {
+		if w.ignoredDevice(msg.Attributes.Name) {
+			slogctx.FromCtx(ctx).Debug("Ignoring link.",
+				slog.String("link", *&msg.Attributes.Name),
+			)
 			continue
 		}
 		entity := newLinkSensor(ctx, msg)
@@ -288,6 +280,12 @@ func (w *NetlinkWorker) getLinks(ctx context.Context) ([]models.Entity, error) {
 	}
 
 	return links, warnings
+}
+
+func (w *NetlinkWorker) ignoredDevice(name string) bool {
+	return slices.ContainsFunc(w.prefs.IgnoredDevices, func(e string) bool {
+		return name == e || strings.HasPrefix(name, e)
+	})
 }
 
 func newLinkSensor(ctx context.Context, msg rtnetlink.LinkMessage) models.Entity {

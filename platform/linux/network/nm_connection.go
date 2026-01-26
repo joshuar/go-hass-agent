@@ -166,7 +166,7 @@ func (w *ConnectionsWorker) handleConnection(
 	}
 	// Ignore user-defined devices.
 	if slices.ContainsFunc(w.prefs.IgnoredDevices, func(e string) bool {
-		return strings.HasPrefix(conn.name, e)
+		return conn.name == e || strings.HasPrefix(conn.name, e)
 	}) {
 		return nil
 	}
