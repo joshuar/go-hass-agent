@@ -4,7 +4,7 @@
 # Alpine base.
 #
 # https://hub.docker.com/_/alpine
-FROM --platform=$BUILDPLATFORM docker.io/alpine:3.23.2@sha256:865b95f46d98cf867a156fe4a135ad3fe50d2056aa3f25ed31662dff6da4eb62 AS builder
+FROM --platform=$BUILDPLATFORM docker.io/alpine:3.23.3@sha256:25109184c71bdad752c8312a8623239686a9a2071e8825f20acb8f2198c3f659 AS builder
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -44,7 +44,7 @@ RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -ldflags="-s -w -X github.com
 # compress binary with upx
 RUN upx --best --lzma dist/go-hass-agent
 
-FROM docker.io/alpine:3.23.2@sha256:865b95f46d98cf867a156fe4a135ad3fe50d2056aa3f25ed31662dff6da4eb62
+FROM docker.io/alpine:3.23.3@sha256:25109184c71bdad752c8312a8623239686a9a2071e8825f20acb8f2198c3f659
 
 # Don't log to a file when running in a container
 ENV GOHASSAGENT_NOLOGFILE=1
