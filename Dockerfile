@@ -15,7 +15,7 @@ WORKDIR /usr/src/app
 # Copy go from official image.
 #
 # https://hub.docker.com/_/golang
-COPY --from=docker.io/golang:1.25.5-alpine@sha256:26111811bc967321e7b6f852e914d14bede324cd1accb7f81811929a6a57fea9 /usr/local/go/ /usr/local/go/
+COPY --from=docker.io/golang:1.25.6-alpine@sha256:98e6cffc31ccc44c7c15d83df1d69891efee8115a5bb7ede2bf30a38af3e3c92 /usr/local/go/ /usr/local/go/
 ENV PATH="/root/go/bin:/usr/local/go/bin:/usr/local/bin:${PATH}"
 
 # install build deps
