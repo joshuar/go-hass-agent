@@ -48,7 +48,7 @@ require (
 	github.com/go-git/go-billy/v5 v5.6.2 // indirect
 	github.com/go-git/go-git/v5 v5.16.1 // indirect
 	github.com/go-json-experiment/json v0.0.0-20250714165856-be8212f5270d // indirect
-	github.com/go-logr/logr v1.4.2 // indirect
+	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/go-openapi/jsonpointer v0.21.0 // indirect
 	github.com/go-openapi/swag v0.23.0 // indirect
@@ -164,7 +164,7 @@ require (
 	github.com/samber/slog-chi v1.18.0
 	github.com/samber/slog-multi v1.7.0
 	github.com/tklauser/go-sysconf v0.3.16
-	github.com/veqryn/slog-context v0.8.0
+	github.com/veqryn/slog-context v0.9.0
 	github.com/veqryn/slog-json v0.5.0
 	golang.org/x/crypto v0.47.0 // indirect
 	golang.org/x/net v0.49.0
