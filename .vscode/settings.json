@@ -89,7 +89,8 @@
     "server",
     "config",
     "assets",
-    "js"
+    "js",
+    "web"
   ],
   "css.lint.idSelector": "warning",
   "editor.formatOnSave": true,
@@ -111,7 +112,10 @@
   "go.alternateTools": {
     "customFormatter": "golangci-lint-v2"
   },
-  "go.formatFlags": ["fmt", "--stdin"],
+  "go.formatFlags": [
+    "fmt",
+    "--stdin"
+  ],
   "go.formatTool": "custom",
   "go.inlayHints.constantValues": true,
   "go.lintFlags": [

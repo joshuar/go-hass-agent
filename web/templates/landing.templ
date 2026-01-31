@@ -1,0 +1,86 @@
+// Copyright 2026 Joshua Rich <joshua.rich@gmail.com>.
+// SPDX-License-Identifier: MIT
+
+package templates
+
+import (
+	"github.com/joshuar/go-hass-agent/agent"
+	"github.com/joshuar/go-hass-agent/hass"
+	"github.com/veqryn/slog-context"
+	"log/slog"
+	"slices"
+)
+
+templ Landing(agent *agent.Agent, hassclient *hass.Client) {
+	<div class="flex flex-1 mx-auto stats stats-vertical lg:stats-horizontal shadow">
+		<div class="stat">
+			<div class="stat-title">Sensors</div>
+			<div class="stat-value">{ len(hassclient.GetSensorList()) }</div>
+			// <div class="stat-desc">Jan 1st - Feb 1st</div>
+		</div>
+		<div class="stat">
+			<div class="stat-title">Home Assistant Version</div>
+			<div class="stat-value">{ hassclient.GetHAVersion() }</div>
+		</div>
+		// <div class="stat">
+		// 	<div class="stat-title">New Registers</div>
+		// 	<div class="stat-value">1,200</div>
+		// 	<div class="stat-desc">↘︎ 90 (14%)</div>
+		// </div>
+	</div>
+	<div class="overflow-x-auto">
+		<table class="table">
+			<thead>
+				<tr>
+					<th class="flex flex-1 space-x-4 items-center w-full">
+						<span class="label">Filter Sensors:</span>
+						<input
+							class="input input-primary max-w-md"
+							_="on input show <tbody>tr/> in closest <table/> when its textContent.toLowerCase() contains my value.toLowerCase()"
+						/>
+					</th>
+				</tr>
+				<tr>
+					<th></th>
+					<th>Entity</th>
+					<th>ID</th>
+					<th>Value</th>
+					<th>Disabled?</th>
+				</tr>
+			</thead>
+			<tbody>
+				{{ var idx int }}
+				for id := range slices.Values(hassclient.GetSensorList()) {
+					if sensor, err := hassclient.GetSensor(id); err != nil {
+						{{
+							slogctx.FromCtx(ctx).Debug("Unable to get sensor details.",
+								slog.String("sensor_id", id),
+								slog.Any("error", err),
+							)
+						}}
+					} else {
+						<tr>
+							<th>{ idx+1 }</th>
+							<td>{ sensor.Name }</td>
+							<td>{ sensor.UniqueID }</td>
+							<td>{ sensor.FormatState() }</td>
+							<td>{ hassclient.IsDisabled(ctx,*sensor) }</td>
+						</tr>
+						{{ idx++ }}
+					}
+				}
+			</tbody>
+			// <tfoot>
+			// 	<tr>
+			// 		<th></th>
+			// 		<th>Name</th>
+			// 		<th>Job</th>
+			// 		<th>company</th>
+			// 		<th>location</th>
+			// 		<th>Last Login</th>
+			// 		<th>Favorite Color</th>
+			// 	</tr>
+			// </tfoot>
+		</table>
+	</div>
+}

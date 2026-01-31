@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strconv"
 
 	"github.com/joshuar/go-hass-agent/validation"
 )
@@ -115,4 +116,30 @@ func (s *Sensor) AsRegistration() (*SensorRegistration, error) {
 	}
 
 	return &registration, nil
+}
+
+func (s *Sensor) FormatState() string {
+	var stateValue string
+	switch value := s.State.(type) {
+	case string:
+		stateValue = value
+	case int:
+		stateValue = strconv.Itoa(value)
+	case int64:
+		stateValue = strconv.FormatInt(value, 10)
+	case uint64:
+		stateValue = strconv.FormatUint(value, 10)
+	case float32:
+		stateValue = strconv.FormatFloat(float64(value), 'f', 3, 32)
+	case float64:
+		stateValue = strconv.FormatFloat(value, 'f', 3, 64)
+	case bool:
+		stateValue = strconv.FormatBool(value)
+	default:
+		stateValue = "unsupported"
+	}
+	if s.UnitOfMeasurement != "" {
+		return stateValue + " " + s.UnitOfMeasurement
+	}
+	return stateValue
 }

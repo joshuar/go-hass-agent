@@ -26,6 +26,7 @@ import (
 
 	"github.com/joshuar/go-hass-agent/agent"
 	"github.com/joshuar/go-hass-agent/config"
+	"github.com/joshuar/go-hass-agent/hass"
 	"github.com/joshuar/go-hass-agent/server/handlers"
 	"github.com/joshuar/go-hass-agent/server/middlewares"
 	"github.com/joshuar/go-hass-agent/validation"
@@ -46,7 +47,7 @@ type Server struct {
 }
 
 // New creates a new server component for the agent.
-func New(static embed.FS, agent *agent.Agent, options ...configOption) (*Server, error) {
+func New(ctx context.Context, static embed.FS, agent *agent.Agent, options ...configOption) (*Server, error) {
 	// Create server object with default config.
 	server := &Server{
 		static: static,
@@ -67,8 +68,52 @@ func New(static embed.FS, agent *agent.Agent, options ...configOption) (*Server,
 		return nil, fmt.Errorf("create web server: load config: %w", err)
 	}
 
+	hassclient, err := hass.NewClient(ctx, agent)
+	if err != nil {
+		return nil, fmt.Errorf("new hass client: %w", err)
+	}
+
 	// Set up routes.
-	router := setupRoutes(static, agent)
+	// Set up a new chi router.
+	router := chi.NewRouter()
+	// Health check endpoints (for GCP).
+	router.Use(middleware.Heartbeat("/health-check"))
+	// Middleware stack.
+	router.Use(
+		middleware.RequestID,
+		middleware.Recoverer,
+		slogchi.NewWithConfig(slog.Default(), slogchi.Config{
+			ClientErrorLevel: slog.LevelWarn,
+			ServerErrorLevel: slog.LevelError,
+			WithRequestID:    true,
+		}),
+		middlewares.SetupHTMX,
+
+		// middlewares.SetupCORS(config.Environment()),
+		// middlewares.CSP(server.ServerConfig.CSP),
+		// middlewares.Etag,
+		middleware.StripSlashes,
+		middlewares.SaveCSRFToken,
+		middleware.NoCache,
+	)
+	// User endpoints.
+	//
+	// Static content.
+	router.Group(func(r chi.Router) {
+		r.Handle("/web/content/*", handlers.StaticFileServerHandler(http.FS(static)))
+	})
+	// // Error handling.
+	// router.NotFound(handlers.NotFound())
+	// Landing page.
+	router.Get("/", handlers.Landing(agent, hassclient))
+	// Registration.
+	router.Get("/register", handlers.GetRegistration(agent))
+	router.With(middlewares.RequireHTMX).Get("/register/discovery", handlers.RegistrationDiscovery())
+	router.With(middlewares.RequireHTMX).Post("/register", handlers.ProcessRegistration(agent))
+	// Preferences.
+	router.Get("/preferences", handlers.ShowPreferences())
+	router.With(middlewares.RequireHTMX).Post("/preferences/mqtt", handlers.SaveMQTTPreferences())
+
 	// Set up server object.
 	h2s := &http2.Server{}
 	server.Server = &http.Server{
@@ -133,48 +178,4 @@ func (s *Server) Start(ctx context.Context) error {
 // ShowAddress returns the URL the server is listening on.
 func (s *Server) ShowAddress() string {
 	return s.address
-}
-
-func setupRoutes(static embed.FS, agent *agent.Agent) *chi.Mux {
-	// Set up a new chi router.
-	router := chi.NewRouter()
-	// Health check endpoints (for GCP).
-	router.Use(middleware.Heartbeat("/health-check"))
-	// Middleware stack.
-	router.Use(
-		middleware.RequestID,
-		middleware.Recoverer,
-		slogchi.NewWithConfig(slog.Default(), slogchi.Config{
-			ClientErrorLevel: slog.LevelWarn,
-			ServerErrorLevel: slog.LevelError,
-			WithRequestID:    true,
-		}),
-		middlewares.SetupHTMX,
-
-		// middlewares.SetupCORS(config.Environment()),
-		// middlewares.CSP(server.ServerConfig.CSP),
-		// middlewares.Etag,
-		middleware.StripSlashes,
-		middlewares.SaveCSRFToken,
-		middleware.NoCache,
-	)
-	// User endpoints.
-	//
-	// Static content.
-	router.Group(func(r chi.Router) {
-		r.Handle("/web/content/*", handlers.StaticFileServerHandler(http.FS(static)))
-	})
-	// // Error handling.
-	// router.NotFound(handlers.NotFound())
-	// Landing page.
-	router.Get("/", handlers.Landing(agent))
-	// Registration.
-	router.Get("/register", handlers.GetRegistration(agent))
-	router.With(middlewares.RequireHTMX).Get("/register/discovery", handlers.RegistrationDiscovery())
-	router.With(middlewares.RequireHTMX).Post("/register", handlers.ProcessRegistration(agent))
-	// Preferences.
-	router.Get("/preferences", handlers.ShowPreferences())
-	router.With(middlewares.RequireHTMX).Post("/preferences/mqtt", handlers.SaveMQTTPreferences())
-
-	return router
 }

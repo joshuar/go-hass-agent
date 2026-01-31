@@ -58,7 +58,7 @@ func (r *Run) Run(opts *Opts) error {
 	}
 
 	// Configure web server.
-	server, err := server.New(
+	server, err := server.New(ctx,
 		opts.StaticContent,
 		agent,
 		server.WithHost(r.ServerHostname),
