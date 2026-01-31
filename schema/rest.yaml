@@ -151,11 +151,13 @@ components:
             - $ref: '#/components/schemas/Event'
             - $ref: '#/components/schemas/DeviceRegistrationRequest'
           x-oapi-codegen-extra-tags:
-            json: 'data'
+            json: 'data,omitnil,omitzero'
           x-go-type-skip-optional-pointer: false
         encrypted:
           description: indicates the request payload is encrypted.
           type: boolean
+          x-oapi-codegen-extra-tags:
+            json: 'encrypted,omitzero'
         retryable:
           description: indicates whether request for this data can be retried.
           type: boolean

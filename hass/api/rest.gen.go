@@ -123,10 +123,10 @@ type Location = externalRef0.Location
 // RequestData defines request data sent through the API.
 type RequestData struct {
 	// Encrypted indicates the request payload is encrypted.
-	Encrypted bool `json:"encrypted,omitempty,omitzero"`
+	Encrypted bool `json:"encrypted,omitzero"`
 
 	// Payload is the request payload.
-	Payload *RequestData_Payload `json:"data"`
+	Payload *RequestData_Payload `json:"data,omitnil,omitzero"`
 
 	// Retryable indicates whether request for this data can be retried.
 	Retryable bool `json:"-"`

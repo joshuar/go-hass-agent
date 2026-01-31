@@ -156,7 +156,7 @@ func (c *Client) EntityHandler(ctx context.Context, entityCh <-chan models.Entit
 			// Send sensor details.
 			if c.sensorRegistry.IsRegistered(sensorData.UniqueID) {
 				// Ignore updates for disabled sensors.
-				if c.isDisabled(ctx, sensorData) {
+				if c.IsDisabled(ctx, sensorData) {
 					continue
 				}
 				// Otherwise, send an update.
@@ -286,18 +286,17 @@ func (c *Client) RegisterSensor(id models.UniqueID) error {
 
 // Reset performs a reset of the client. It will remove existing registry data.
 func Reset() error {
-	err := registry.Reset(config.GetPath())
-	if err != nil {
+	if err := registry.Reset(config.GetPath()); err != nil {
 		return fmt.Errorf("unable to reset client: %w", err)
 	}
 	return nil
 }
 
-// isDisabled handles processing a sensor that is disabled. For a sensor that is
+// IsDisabled handles processing a sensor that is disabled. For a sensor that is
 // disabled, we need to make an additional check against Home Assistant to see
 // if the sensor has been re-enabled, and update our local registry before
 // continuing.
-func (c *Client) isDisabled(ctx context.Context, details models.Sensor) bool {
+func (c *Client) IsDisabled(ctx context.Context, details models.Sensor) bool {
 	regDisabled := c.isDisabledInReg(details.UniqueID)
 	haDisabled, haConfigErr := c.isDisabledInHA(details.UniqueID)
 
