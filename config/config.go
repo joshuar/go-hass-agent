@@ -61,7 +61,7 @@ var Init = sync.OnceValue(func() error {
 	// Create the config directory if it does not exist.
 	_, err := os.Stat(globalConfig.path)
 	if errors.Is(err, os.ErrNotExist) {
-		err := os.MkdirAll(globalConfig.path, os.ModeDir)
+		err := os.MkdirAll(globalConfig.path, 0750)
 		if err != nil {
 			return fmt.Errorf("%w: %w", ErrLoadConfig, err)
 		}
