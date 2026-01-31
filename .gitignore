@@ -38,14 +38,15 @@ web/content/*.css.map
 !.vscode/tasks.json
 !.vscode/launch.json
 !.devcontainer/*
+.devcontainer/.env
+.devcontainer/data/**
+!.devcontainer/data/mosquitto/mosquitto.conf.example
 !LICENSE
-!deployments/mosquitto/config/mosquitto.conf.example
 # ...even if they are in subdirectories
 !*/
 
 # always ignore these
 tmp/
-.devcontainer/.env
 dist/
 test/
 deployments/

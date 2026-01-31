@@ -1,3 +1,5 @@
+volumes:
+  mosquitto_data:
 services:
   devcontainer:
     hostname: devcontainer
@@ -39,7 +41,7 @@ services:
       - .env
     image: ghcr.io/home-assistant/home-assistant:$HA_VERSION
     volumes:
-      - ../deployments/home-assistant/config:/config
+      - ./data/home-assistant/config:/config
       - /run/dbus:/run/dbus:ro
     ports:
       - 8123:8123
@@ -50,9 +52,8 @@ services:
       - .env
     image: docker.io/eclipse-mosquitto:$MOSQUITTO_VERSION
     volumes:
-      - ../deployments/mosquitto/config:/mosquitto/config
-      - ../deployments/mosquitto/data:/mosquitto/data
-      - ../deployments/mosquitto/log:/mosquitto/log
+      - ./data/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - mosquitto_data:/mosquitto/data
       - /etc/localtime:/etc/localtime:ro,cached
     ports:
       - 1883:1883
