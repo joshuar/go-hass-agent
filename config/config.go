@@ -41,7 +41,7 @@ const (
 )
 
 type configData struct {
-	sync.Mutex
+	mu sync.Mutex
 
 	src  *koanf.Koanf
 	path string
@@ -59,17 +59,13 @@ var customPath string
 // method. This only happens once.
 var Init = sync.OnceValue(func() error {
 	// Create the config directory if it does not exist.
-	_, err := os.Stat(globalConfig.path)
-	if errors.Is(err, os.ErrNotExist) {
-		err := os.MkdirAll(globalConfig.path, 0750)
-		if err != nil {
-			return fmt.Errorf("%w: %w", ErrLoadConfig, err)
-		}
+	if err := checkPath(globalConfig.path); err != nil {
+		return fmt.Errorf("%w: %w", ErrLoadConfig, err)
 	}
+
 	// Load config file
 	provider := file.Provider(filepath.Join(globalConfig.path, ConfigFile))
-	err = globalConfig.src.Load(provider, toml.Parser())
-	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+	if err := globalConfig.src.Load(provider, toml.Parser()); err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return fmt.Errorf("%w: %w", ErrLoadConfig, err)
 	}
 	// Watch for changes.
@@ -114,8 +110,7 @@ func SetPath(path string) {
 // required.
 func Load(path string, cfg any) error {
 	// Unmarshal config, overwriting defaults.
-	err := globalConfig.src.UnmarshalWithConf(path, cfg, koanf.UnmarshalConf{Tag: "toml"})
-	if err != nil {
+	if err := globalConfig.src.UnmarshalWithConf(path, cfg, koanf.UnmarshalConf{Tag: "toml"}); err != nil {
 		return fmt.Errorf("could not load config %s: %w", path, err)
 	}
 	return nil
@@ -123,12 +118,12 @@ func Load(path string, cfg any) error {
 
 // Save will save the given config at the given path.
 func Save(path string, config any) error {
-	globalConfig.Lock()
+	globalConfig.mu.Lock()
 	err := globalConfig.src.Set(path, config)
 	if err != nil {
 		return fmt.Errorf("unable to save config: %w", err)
 	}
-	globalConfig.Unlock()
+	globalConfig.mu.Unlock()
 	err = save()
 	if err != nil {
 		return fmt.Errorf("unable to save config: %w", err)
@@ -138,10 +133,9 @@ func Save(path string, config any) error {
 
 // Set will set the given options in the config. After all options are set, the config file is written.
 func Set(options map[string]any) error {
-	globalConfig.Lock()
+	globalConfig.mu.Lock()
 	for key, value := range options {
-		err := globalConfig.src.Set(key, value)
-		if err != nil {
+		if err := globalConfig.src.Set(key, value); err != nil {
 			slog.Error("Unable to set config option.",
 				slog.String("key", key),
 				slog.Any("value", value),
@@ -149,9 +143,8 @@ func Set(options map[string]any) error {
 			)
 		}
 	}
-	globalConfig.Unlock()
-	err := save()
-	if err != nil {
+	globalConfig.mu.Unlock()
+	if err := save(); err != nil {
 		return fmt.Errorf("unable to save config: %w", err)
 	}
 	return nil
@@ -159,8 +152,8 @@ func Set(options map[string]any) error {
 
 // Get will return the value located at the given path in the config.
 func Get[T any](path string) (T, error) {
-	globalConfig.Lock()
-	defer globalConfig.Unlock()
+	globalConfig.mu.Lock()
+	defer globalConfig.mu.Unlock()
 	value, ok := globalConfig.src.Get(path).(T)
 	if !ok {
 		return value, fmt.Errorf("%w: %s: not %T", ErrGetConfig, path, value)
@@ -170,16 +163,16 @@ func Get[T any](path string) (T, error) {
 
 // Exists reports whether the given path exists in the config.
 func Exists(path string) bool {
-	globalConfig.Lock()
-	defer globalConfig.Unlock()
+	globalConfig.mu.Lock()
+	defer globalConfig.mu.Unlock()
 	return globalConfig.src.Exists(path)
 }
 
 // save will save the new values of the specified preferences to the existing
 // preferences file.
 func save() error {
-	globalConfig.Lock()
-	defer globalConfig.Unlock()
+	globalConfig.mu.Lock()
+	defer globalConfig.mu.Unlock()
 
 	configFile := filepath.Join(globalConfig.path, ConfigFile)
 
@@ -207,13 +200,10 @@ func save() error {
 // checkPath checks that the given directory exists. If it doesn't it will be
 // created.
 func checkPath(path string) error {
-	_, err := os.Stat(path)
-	if os.IsNotExist(err) {
-		err := os.MkdirAll(path, 0o750)
-		if err != nil {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		if err := os.MkdirAll(path, 0750); err != nil {
 			return fmt.Errorf("unable to create new directory: %w", err)
 		}
 	}
-
 	return nil
 }
