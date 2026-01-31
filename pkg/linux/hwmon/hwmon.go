@@ -19,8 +19,6 @@ import (
 
 	"github.com/iancoleman/strcase"
 	slogctx "github.com/veqryn/slog-context"
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
 
 	"github.com/joshuar/go-hass-agent/logging"
 )
@@ -30,7 +28,7 @@ import (
 // ease with writing tests.
 var HWMonPath = "/sys/class/hwmon"
 
-var capitaliser = cases.Title(language.English)
+// var capitaliser = cases.Title(language.English)
 
 //go:generate go tool stringer -type=MonitorType -output hwmon.gen.go
 const (
@@ -291,7 +289,7 @@ func (s *Sensor) Name() string {
 
 		if s.chipName != "" {
 			name.WriteString(" ")
-			name.WriteString(capitaliser.String(strings.ReplaceAll(s.chipName, "_", " ")))
+			name.WriteString(strings.ReplaceAll(s.chipName, "_", " "))
 		}
 	}
 
@@ -299,16 +297,16 @@ func (s *Sensor) Name() string {
 
 	if s.MonitorType == Alarm || s.MonitorType == Intrusion {
 		if !strings.Contains(s.id, "_") {
-			name.WriteString(capitaliser.String(s.id))
+			name.WriteString(s.id)
 			name.WriteString(" ")
 		}
 
-		name.WriteString(capitaliser.String(s.label))
+		name.WriteString(s.label)
 	} else {
 		if s.label != "" {
-			name.WriteString(capitaliser.String(s.label))
+			name.WriteString(s.label)
 		} else {
-			name.WriteString(capitaliser.String(s.id))
+			name.WriteString(s.id)
 		}
 	}
 
