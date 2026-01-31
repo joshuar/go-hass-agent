@@ -1,5 +1,24 @@
 # Changelog
 
+## [14.5.0](https://github.com/joshuar/go-hass-agent/compare/v14.4.0...v14.5.0) (2026-01-31)
+
+
+### Features
+
+* **cli:** :sparkles: add a cli command to list the entities in the local registry and their state ([6bb1cd2](https://github.com/joshuar/go-hass-agent/commit/6bb1cd20f8bf1853594b3c6f105b347f276ae276))
+
+
+### Bug Fixes
+
+* **config:** :bug: config fixes ([6792ac5](https://github.com/joshuar/go-hass-agent/commit/6792ac50be333efccd00ea0c19aad0428fa3213f))
+* **config:** :bug: fix permissions on `~/.config/go-hass-agent` directory on creation ([1fef209](https://github.com/joshuar/go-hass-agent/commit/1fef209da1ef25f9cf81c4ba5b9daa45fc7532a5))
+* **linux/disk:** :bug: also exclude exact matches for ignored mount points in disk usage sensor ([b589a19](https://github.com/joshuar/go-hass-agent/commit/b589a19f56b46a2260632812f9e76f3e69e2efe1))
+
+
+### Performance Improvements
+
+* **hass:** :sparkles: support being able fetch hass client in multiple places, but only init it once ([6fad90b](https://github.com/joshuar/go-hass-agent/commit/6fad90b942eab56fef39d2028da811dbe3996d34))
+
 ## [14.4.0](https://github.com/joshuar/go-hass-agent/compare/v14.3.1...v14.4.0) (2026-01-26)
 
 
