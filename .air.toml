@@ -12,6 +12,7 @@ pre_cmd = [
 ]
 cmd = 'go build -ldflags="-s -w -X github.com/joshuar/go-hass-agent/config.AppVersion=$(git describe --tags --always --long --dirty)" -o ./tmp/go-hass-agent .'
 args_bin = [
+  "--log-level=debug",
   "--profile='heapprofile=tmp/heap.prof;cpuprofile=tmp/cpu.prof;webui=true'",
   "run",
 ]
