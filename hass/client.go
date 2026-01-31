@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/reugn/go-quartz/job"
@@ -62,7 +63,8 @@ var ErrSendRequest = errors.New("send request failed")
 // NewClient creates a new hass client, which tracks last sensor status,
 // sensor registration status and handles sending and processing requests to the
 // Home Assistant REST API.
-func NewClient(ctx context.Context, agent agent) (*Client, error) {
+
+var setupClient = sync.OnceValues(func() (*Client, error) {
 	var hasscfg Config
 	// Load the hass config.
 	if err := config.Load(ConfigPrefix, &hasscfg); err != nil {
@@ -79,6 +81,14 @@ func NewClient(ctx context.Context, agent agent) (*Client, error) {
 		sensorTracker:  tracker.NewTracker(),
 		config:         &hasscfg,
 	}
+	return client, nil
+})
+
+func NewClient(ctx context.Context, agent agent) (*Client, error) {
+	client, err := setupClient()
+	if err != nil {
+		return nil, fmt.Errorf("could not create client: %w", err)
+	}
 	// Run the job one-time initially to get the config.
 	if agent.IsRegistered() {
 		updated, err := client.UpdateConfig(ctx)
@@ -90,7 +100,6 @@ func NewClient(ctx context.Context, agent agent) (*Client, error) {
 			return nil, fmt.Errorf("could not create client: %w", err)
 		}
 	}
-
 	return client, nil
 }
 
