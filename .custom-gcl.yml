@@ -1,0 +1,11 @@
+---
+version: v2.7.2
+
+name: golangci-lint
+destination: .
+
+plugins:
+  - module: fillmore-labs.com/scopeguard
+    import: fillmore-labs.com/scopeguard/gclplugin
+    version: v0.0.3
+

@@ -25,7 +25,7 @@ go install golang.org/x/tools/gopls@latest
 go install github.com/sigstore/cosign/v3/cmd/cosign@latest
 curl -sSfL https://golangci-lint.run/install.sh | sh -s -- -b $(go env GOPATH)/bin v2.8.0
 cd /tmp && \
-    golangci-lint custom && \
+    ~/go/bin/golangci-lint custom && \
     mv golangci-lint $(go env GOPATH)/bin/golangci-lint-v2
 
 # Set up fish shell.
