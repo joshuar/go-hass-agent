@@ -298,7 +298,7 @@ func TestSensor_Name(t *testing.T) {
 				},
 				id: "Temp1",
 			},
-			want: "Hardware Sensor Coretemp Temp1",
+			want: "Hardware Sensor coretemp Temp1",
 		},
 		{
 			name: "no device model, label",
@@ -311,7 +311,7 @@ func TestSensor_Name(t *testing.T) {
 				id:    "Temp1",
 				label: "Core 1",
 			},
-			want: "Hardware Sensor Coretemp Core 1",
+			want: "Hardware Sensor coretemp Core 1",
 		},
 	}
 	for _, tt := range tests {
