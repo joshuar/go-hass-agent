@@ -1,5 +1,17 @@
 # Changelog
 
+## [14.6.0](https://github.com/joshuar/go-hass-agent/compare/v14.5.0...v14.6.0) (2026-01-31)
+
+
+### Features
+
+* **web:** :sparkles: add simple landing/home page with table of sensor values ([e961ff3](https://github.com/joshuar/go-hass-agent/commit/e961ff38390380f6ac9ed9035972b5cfd3f08571))
+
+
+### Bug Fixes
+
+* **hass/api:** :bug: don't send parts of request with nil/empty values ([6da589c](https://github.com/joshuar/go-hass-agent/commit/6da589c10cf2f0a5f418aac332df9413b4cd9977))
+
 ## [14.5.0](https://github.com/joshuar/go-hass-agent/compare/v14.4.0...v14.5.0) (2026-01-31)
 
 
