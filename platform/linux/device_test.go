@@ -37,8 +37,8 @@ func TestFindPortal(t *testing.T) {
 			args: args{
 				setup: func() { t.Setenv("XDG_CURRENT_DESKTOP", "UNKNOWN") },
 			},
-			want:    "",
-			wantErr: true,
+			want:    "org.freedesktop.impl.portal.desktop.gtk",
+			wantErr: false,
 		},
 	}
 
@@ -46,7 +46,9 @@ func TestFindPortal(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.args.setup()
 
-			got, err := findPortal()
+			ctx := NewContext(t.Context())
+
+			got, err := findPortal(ctx)
 			if got != tt.want {
 				t.Errorf("FindPortal() = %v, want %v", got, tt.want)
 			}
