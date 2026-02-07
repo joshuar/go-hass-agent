@@ -61,8 +61,8 @@ type mount struct {
 }
 
 var (
-	validVirtualFs       = []string{"tmpfs", "ramfs", "cifs", "smb", "nfs"}
-	defaultIgnoredMounts = []string{"/tmp/crun", "/run", "/var/lib/containers", "/sys", "/proc"}
+	validVirtualFs = []string{"tmpfs", "ramfs", "cifs", "smb", "nfs"}
+	ignoredMounts  = []string{"/tmp/crun", "/run", "/var/lib/containers", "/sys", "/proc", "/etc"}
 )
 
 var (
@@ -91,7 +91,7 @@ func NewUsageWorker(_ context.Context) (workers.EntityWorker, error) {
 	}
 
 	defaultPrefs := &usageWorkerPrefs{
-		IgnoredMounts: defaultIgnoredMounts,
+		IgnoredMounts: ignoredMounts,
 	}
 	defaultPrefs.UpdateInterval = usageUpdateInterval.String()
 
@@ -173,8 +173,7 @@ func newDiskUsageSensor(ctx context.Context, mount *mount, value float64) models
 func (m *mount) getMountInfo() error {
 	var stats unix.Statfs_t
 
-	err := unix.Statfs(m.mountpoint, &stats)
-	if err != nil {
+	if err := unix.Statfs(m.mountpoint, &stats); err != nil {
 		return fmt.Errorf("getMountInfo: %w", err)
 	}
 
@@ -250,15 +249,17 @@ func getMounts(ctx context.Context, ignoredMounts []string) ([]*mount, error) {
 		filesystem := line.Text()
 		line.Scan()
 		opts := line.Text()
-		// If the fs is in our valid filesystems, It should be in the list of
-		// valid filesystems and not one of the blocked mountpoints.
-		if slices.Contains(filesystems, filesystem) &&
-			!slices.ContainsFunc(
-				ignoredMounts,
-				func(blockedMount string) bool {
-					return mountpoint != blockedMount || strings.HasPrefix(mountpoint, blockedMount)
-				},
-			) {
+
+		// Only consider mounts with a filesystem in our list of valid filesystems.
+		if slices.Contains(filesystems, filesystem) {
+			// Ignore where the mountpoint is in our ignored mounts or starts with an ignored mounts string.
+			if slices.ContainsFunc(ignoredMounts, func(blockedMount string) bool {
+				return mountpoint == blockedMount || strings.HasPrefix(mountpoint, blockedMount)
+			}) {
+				continue
+			}
+
+			// Create mount details.
 			validmount := &mount{
 				mountpoint: mountpoint,
 				attributes: make(map[string]any),
