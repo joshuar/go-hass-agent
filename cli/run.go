@@ -76,12 +76,6 @@ func (r *Run) Run(opts *Opts) error {
 		return fmt.Errorf("unable to run: %w", err)
 	}
 
-	// Start agent.
-	err = agent.Run(ctx)
-	if err != nil {
-		return fmt.Errorf("unable to run: %w", err)
-	}
-
 	if !agent.IsRegistered() {
 		xdgOpen, err := exec.LookPath("xdg-open")
 		if err != nil {
@@ -94,6 +88,12 @@ func (r *Run) Run(opts *Opts) error {
 					Info("Agent is not registered. Please open your web browser to " + server.ShowAddress() + "/register to register the agent with Home Assistant")
 			}
 		}
+	}
+
+	// Start agent.
+	err = agent.Run(ctx)
+	if err != nil {
+		return fmt.Errorf("unable to run: %w", err)
 	}
 
 	return nil
