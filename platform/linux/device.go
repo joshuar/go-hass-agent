@@ -7,12 +7,16 @@ package linux
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 )
 
 const (
@@ -26,7 +30,12 @@ var (
 
 // findPortal is a helper function to work out which portal interface should be
 // used for getting information on running apps.
-func findPortal() (string, error) {
+func findPortal(ctx context.Context) (string, error) {
+	// Use portal specified in config.
+	if cfg.Portal != "" {
+		return cfg.Portal, nil
+	}
+
 	desktop := os.Getenv("XDG_CURRENT_DESKTOP")
 
 	switch {
@@ -35,8 +44,28 @@ func findPortal() (string, error) {
 	case strings.Contains(desktop, "GNOME"):
 		return "org.freedesktop.impl.portal.desktop.gtk", nil
 	default:
-		return "", ErrDesktopPortalMissing
+		// Query D-Bus to find the portal.
+		bus, found := CtxGetSessionBus(ctx)
+		if !found {
+			return "", ErrDesktopPortalMissing
+		}
+		names, err := dbusx.NewData[[]string](
+			bus,
+			"org.freedesktop.DBus",
+			"/",
+			"org.freedesktop.DBus.ListNames",
+		).Fetch(ctx)
+		if err != nil {
+			return "", fmt.Errorf("%w: %w", ErrDesktopPortalMissing, err)
+		}
+		if slices.Contains(names, "org.freedesktop.impl.portal.desktop.gtk") {
+			return "org.freedesktop.impl.portal.desktop.gtk", nil
+		}
+		if slices.Contains(names, "org.freedesktop.impl.portal.desktop.kde") {
+			return "org.freedesktop.impl.portal.desktop.kde", nil
+		}
 	}
+	return "", ErrDesktopPortalMissing
 }
 
 func getBootTime() (time.Time, error) {
