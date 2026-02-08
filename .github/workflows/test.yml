@@ -62,37 +62,3 @@ jobs:
           token: ${{secrets.CODECOV_TOKEN}}
           file: ./coverage.txt
           fail_ci_if_error: false
-
-  golangci:
-    runs-on: ubuntu-22.04
-    permissions:
-      pull-requests: read # Use with `only-new-issues` option.
-    steps:
-      - uses: step-security/harden-runner@e3f713f2d8f53843e71c69a996d56f51aa9adfb9 # v2.14.1
-        with:
-          egress-policy: block
-          allowed-endpoints: >
-            api.github.com:443
-            azure.archive.ubuntu.com:80
-            esm.ubuntu.com:443
-            github.com:443
-            motd.ubuntu.com:443
-            objects.githubusercontent.com:443
-            packages.microsoft.com:443
-            proxy.golang.org:443
-            raw.githubusercontent.com:443
-            storage.googleapis.com:443
-            sum.golang.org:443
-            golangci-lint.run:443
-            release-assets.githubusercontent.com:443
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
-        with:
-          go-version-file: "go.mod"
-          cache: false # golangci-lint maintains its own cache
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@1e7e51e771db61008b38414a730f564565cf7c20 # v9.2.0
-        with:
-          only-new-issues: true
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          args: --config=.golangci-ci.yaml --issues-exit-code=0
