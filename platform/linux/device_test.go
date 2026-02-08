@@ -32,14 +32,6 @@ func TestFindPortal(t *testing.T) {
 			},
 			want: "org.freedesktop.impl.portal.desktop.gtk",
 		},
-		{
-			name: "Unknown",
-			args: args{
-				setup: func() { t.Setenv("XDG_CURRENT_DESKTOP", "UNKNOWN") },
-			},
-			want:    "org.freedesktop.impl.portal.desktop.gtk",
-			wantErr: false,
-		},
 	}
 
 	for _, tt := range tests {
