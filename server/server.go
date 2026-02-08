@@ -42,8 +42,6 @@ type Server struct {
 
 	static embed.FS
 	Config *Config
-
-	address string
 }
 
 // New creates a new server component for the agent.
@@ -144,9 +142,7 @@ func (s *Server) Start(ctx context.Context) error {
 		signal.Notify(stop, os.Interrupt)
 		<-stop
 
-		err := s.Shutdown(ctx)
-		// Can't do much here except for logging any errors
-		if err != nil {
+		if err := s.Shutdown(ctx); err != nil {
 			slogctx.FromCtx(ctx).Error("Error occurred when trying to shut down server.",
 				slog.Any("error", err),
 			)
@@ -158,10 +154,8 @@ func (s *Server) Start(ctx context.Context) error {
 		var err error
 		if s.Config.CertFile != "" && s.Config.KeyFile != "" {
 			err = s.ListenAndServeTLS(s.Config.CertFile, s.Config.KeyFile)
-			s.address = "https://" + net.JoinHostPort(s.Config.Host, s.Config.Port)
 		} else {
 			err = s.ListenAndServe()
-			s.address = "http://" + net.JoinHostPort(s.Config.Host, s.Config.Port)
 		}
 		if errors.Is(err, http.ErrServerClosed) { // graceful shutdown
 			slogctx.FromCtx(ctx).Debug("Shutting down server...")
@@ -177,5 +171,9 @@ func (s *Server) Start(ctx context.Context) error {
 
 // ShowAddress returns the URL the server is listening on.
 func (s *Server) ShowAddress() string {
-	return s.address
+	if s.TLSConfig != nil {
+		return "https://" + s.Addr
+	} else {
+		return "http://" + s.Addr
+	}
 }
