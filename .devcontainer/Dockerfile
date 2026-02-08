@@ -11,7 +11,7 @@ FROM docker.io/alpine:3.23.0@sha256:51183f2cfa6320055da30872f211093f9ff1d3cf06f3
 COPY --from=docker.io/golang:1.25.6-alpine@sha256:98e6cffc31ccc44c7c15d83df1d69891efee8115a5bb7ede2bf30a38af3e3c92 /usr/local/go/ /usr/local/go/
 
 # Install additional packages
-RUN apk update && apk add sudo openssh curl git bash fish micro graphviz nodejs npm mosquitto-clients
+RUN apk update && apk add sudo openssh curl git bash fish micro graphviz nodejs npm mosquitto-clients dbus
 
 # Install starship
 RUN cd /tmp && curl -sS https://starship.rs/install.sh | sh -s -- -y || exit -1
@@ -29,12 +29,6 @@ RUN addgroup --gid $USER_GID $USER_NAME \
     && chmod 0440 /etc/sudoers.d/$USER_NAME
 
 USER $USER_NAME
-
-RUN <<EOF
-    mkdir -p ~/.config/fish
-    echo 'set --export PATH "/workspace/node_modules/.bin $PATH' >> ~/.config/fish/config.fish
-    echo 'set --export PATH "$HOME/go/bin" /go/bin /usr/local/go/bin $PATH' >> ~/.config/fish/config.fish
-EOF
 
 # The base container sets XDG_CACHE_HOME XDG_CONFIG_HOME specifically for the root user, we can't unset them in a way that vscode will pick up, so we set them to values for the new user.
 # Installing go extensions via vscode use these paths so if we just leave it set to /root/.cache we'll get permission errors.

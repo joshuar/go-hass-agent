@@ -10,6 +10,7 @@ services:
     environment:
       - WAYLAND_DISPLAY=${WAYLAND_DISPLAY}
       - XDG_RUNTIME_DIR=/tmp
+      - GOHASSAGENT_NOLOGFILE=1
     build:
       context: .
       dockerfile: Dockerfile
@@ -20,7 +21,6 @@ services:
       - "${XDG_RUNTIME_DIR}/${WAYLAND_DISPLAY}:/tmp/${WAYLAND_DISPLAY}"
       - /etc/localtime:/etc/localtime:ro,cached
       - /run/dbus:/run/dbus:ro
-      - /run/user/1000/bus:/run/user/1000/bus
     user: vscode
     cap_add:
       - SYS_PTRACE
@@ -29,7 +29,7 @@ services:
       - label:disable
     ports:
       - $GOHASSAGENT_server_port:8223
-    command: -c 'sleep infinity'
+    command: -c 'dbus-daemon --session --fork && sleep infinity'
 
   home-assistant:
     hostname: home-assistant
