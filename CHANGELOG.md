@@ -1,5 +1,19 @@
 # Changelog
 
+## [14.7.0](https://github.com/joshuar/go-hass-agent/compare/v14.6.0...v14.7.0) (2026-02-08)
+
+
+### Features
+
+* **linux:** :sparkles: try to detect desktop portal implementation and provide option to override in preferences if necessary ([bd3c675](https://github.com/joshuar/go-hass-agent/commit/bd3c675bc2137bf97ffc51e5b41d1d672ffb6f07))
+
+
+### Bug Fixes
+
+* **cli:** :bug: fix display of registration status ([a5c4fe5](https://github.com/joshuar/go-hass-agent/commit/a5c4fe52852e8bc5af734553d1f7889464da3648))
+* **linux/disk:** :bug: fix detection of ignored mounts ([df2e8e8](https://github.com/joshuar/go-hass-agent/commit/df2e8e80703ad078e00a26fdefc05236cd120767))
+* **server:** :bug: correct address shown for where registration url ([3868d60](https://github.com/joshuar/go-hass-agent/commit/3868d605a67c03ca27ea0641c25fe945232df0c5))
+
 ## [14.6.0](https://github.com/joshuar/go-hass-agent/compare/v14.5.0...v14.6.0) (2026-01-31)
 
 
