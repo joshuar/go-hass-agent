@@ -8,8 +8,6 @@ services:
     devices:
       - /dev/dri
     environment:
-      - WAYLAND_DISPLAY=${WAYLAND_DISPLAY}
-      - XDG_RUNTIME_DIR=/tmp
       - GOHASSAGENT_NOLOGFILE=1
     build:
       context: .
@@ -18,7 +16,6 @@ services:
         - GO_VERSION=$GO_VERSION
     volumes:
       - ..:/workspace:cached
-      - "${XDG_RUNTIME_DIR}/${WAYLAND_DISPLAY}:/tmp/${WAYLAND_DISPLAY}"
       - /etc/localtime:/etc/localtime:ro,cached
       - /run/dbus:/run/dbus:ro
     user: vscode
@@ -29,7 +26,7 @@ services:
       - label:disable
     ports:
       - $GOHASSAGENT_server_port:8223
-    command: -c 'dbus-daemon --session --fork && sleep infinity'
+    command: -c 'dbus-launch sleep infinity'
 
   home-assistant:
     hostname: home-assistant

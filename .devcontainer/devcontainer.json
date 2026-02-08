@@ -1,11 +1,7 @@
 {
   "containerUser": "vscode",
   "containerEnv": {
-    "HOME": "/home/vscode",
-    "XDG_RUNTIME_DIR": "/tmp",
-    "WAYLAND_DISPLAY": "${env:WAYLAND_DISPLAY}",
-    "APPIMAGE_EXTRACT_AND_RUN": "1",
-    "DBUS_SESSION_BUS_ADDRESS": "${env:DBUS_SESSION_BUS_ADDRESS}"
+    "HOME": "/home/vscode"
   },
   "remoteEnv": {
     "PODMAN_COMPOSE_WARNING_LOGS": "false",
