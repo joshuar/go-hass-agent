@@ -21,6 +21,12 @@ services:
     user: vscode
     cap_add:
       - SYS_PTRACE
+      - SETUID
+      - SETGID
+      - SYS_RAWIO
+      - SYS_ADMIN
+      - MKNOD
+      - DAC_OVERRIDE
     security_opt:
       - seccomp:unconfined
       - label:disable
