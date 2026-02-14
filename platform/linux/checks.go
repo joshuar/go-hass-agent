@@ -7,7 +7,9 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/user"
 	"slices"
+	"strconv"
 
 	"kernel.org/pub/linux/libs/security/libcap/cap"
 )
@@ -17,7 +19,7 @@ var ErrCapChecksFailed = errors.New("capability check failed")
 // Checks contains system checks that are required to pass before a worker can start.
 type Checks struct {
 	// Groups is a list of group ids the user running Go Hass Agent needs to belong to.
-	Groups []int
+	Groups []user.Group
 	// Capabilities is the capabilities the Go Hass Agent binary needs.
 	Capabilities []cap.Value
 }
@@ -48,7 +50,11 @@ func (c *Checks) hasGroups() (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("could not determine groups: %w", err)
 	}
-	for gid := range slices.Values(c.Groups) {
+	for group := range slices.Values(c.Groups) {
+		gid, err := strconv.Atoi(group.Gid)
+		if err != nil {
+			return false, fmt.Errorf("convert gid: %w", err)
+		}
 		if !slices.Contains(gids, gid) {
 			return false, nil
 		}
