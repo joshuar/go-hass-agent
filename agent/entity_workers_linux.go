@@ -48,10 +48,11 @@ var linuxWorkers = []func(ctx context.Context) (workers.EntityWorker, error){
 	system.NewfwupdWorker,
 	system.NewHWMonWorker,
 	system.NewInfoWorker,
-	system.NewLastActiveWorker,
+	// system.NewLastActiveWorker,
 	system.NewLastBootWorker,
 	system.NewProblemsWorker,
 	system.NewUptimeTimeWorker,
+	system.NewUserActivitySensor,
 	system.NewUserSessionEventsWorker,
 	system.NewCPUVulnerabilityWorker,
 }

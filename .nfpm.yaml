@@ -31,34 +31,14 @@ scripts:
 overrides:
   rpm:
     depends:
-      # - libXcursor
-      # - libXrandr
-      # - mesa-libGL
-      # - libXi
-      # - libXinerama
-      # - libXxf86vm
       - dbus-x11
     recommends:
       - libcap
   deb:
     depends:
-      # - libgl1-mesa-dri
-      # - libgl1
-      # - libx11-6
-      # - libglx0
-      # - libglvnd0
-      # - libxcb1
-      # - libxau6
-      # - libxdmcp6
       - dbus-x11
     recommends:
       - libcap2
   archlinux:
-    # depends:
-    #   - xorg-server
-    #   - libxcursor
-    #   - libxrandr
-    #   - libxinerama
-    #   - libxi
     recommends:
       - libcap

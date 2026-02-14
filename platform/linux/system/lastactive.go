@@ -100,7 +100,8 @@ func NewLastActiveWorker(ctx context.Context) (workers.EntityWorker, error) {
 	worker.Trigger = scheduler.NewPollTriggerWithJitter(pollInterval, lastActivePollJitter)
 
 	// Initialize input device monitoring
-	if err := worker.initInputDevices(ctx); err != nil {
+	worker.inputDevices, err = initInputDevices(ctx)
+	if err != nil {
 		slogctx.FromCtx(ctx).Warn("Could not initialize input device monitoring.",
 			slog.Any("error", err))
 	}
@@ -110,11 +111,13 @@ func NewLastActiveWorker(ctx context.Context) (workers.EntityWorker, error) {
 
 // initInputDevices discovers and opens input devices for monitoring.
 // It looks for keyboard and mouse devices in /dev/input/event*.
-func (w *lastActiveWorker) initInputDevices(ctx context.Context) error {
+func initInputDevices(ctx context.Context) ([]*evdev.InputDevice, error) {
+	var inputDevices []*evdev.InputDevice
+
 	inputDir := filepath.Join(linux.DevFSRoot, "input")
 	entries, err := os.ReadDir(inputDir)
 	if err != nil {
-		return fmt.Errorf("could not read input directory: %w", err)
+		return nil, fmt.Errorf("could not read input directory: %w", err)
 	}
 
 	deviceCount := 0
@@ -157,7 +160,7 @@ func (w *lastActiveWorker) initInputDevices(ctx context.Context) error {
 		}
 
 		if hasKeys || hasPointer {
-			w.inputDevices = append(w.inputDevices, device)
+			inputDevices = append(inputDevices, device)
 			deviceCount++
 			name, _ := device.Name()
 			slogctx.FromCtx(ctx).Debug("Monitoring input device.",
@@ -169,13 +172,13 @@ func (w *lastActiveWorker) initInputDevices(ctx context.Context) error {
 	}
 
 	if deviceCount == 0 {
-		return ErrNoInputDevices
+		return nil, ErrNoInputDevices
 	}
 
 	slogctx.FromCtx(ctx).Info("Initialized input device monitoring.",
 		slog.Int("device_count", deviceCount))
 
-	return nil
+	return inputDevices, nil
 }
 
 // monitorInputDevices watches for activity on all configured input devices.

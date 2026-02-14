@@ -335,6 +335,12 @@ this app:
     - Attributes: List of usernames | When user count changes.
     - Via D-Bus. Requires `systemd-logind`.
     - [_Preferences_](#️-preferences): `[sensors.system.users]`.
+  - **User Activity** (whether a user is currently using the device).
+    - Relies on evdev to detect input events (keyboard, mouse).
+    - Requires the following capabilities on the Go Hass Agent binary (already
+      applied for containers and rpm/deb/arch packages):
+      `cap_setgid,cap_setuid=+ep`.
+    - Requires user running Go Hass Agent is in the `input` group.
   - **ABRT Problems** (count of any problems logged to the ABRT daemon). Updated
     ~every 15 minutes.
     - Attributes: extracted problem details.
