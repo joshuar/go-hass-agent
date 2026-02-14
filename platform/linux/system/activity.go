@@ -7,8 +7,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/user"
+	"slices"
 	"sync/atomic"
 	"time"
 
@@ -46,7 +48,7 @@ type activityWorker struct {
 func NewUserActivitySensor(ctx context.Context) (workers.EntityWorker, error) {
 	worker := &activityWorker{
 		WorkerMetadata: models.SetWorkerMetadata(activityWorkerID, "User Activity"),
-		activity:       make(chan bool),
+		activity:       make(chan bool, 1),
 	}
 
 	// Check for required capabilities.
@@ -90,6 +92,10 @@ func (w *activityWorker) Start(ctx context.Context) (<-chan models.Entity, error
 	}
 
 	sensorCh := make(chan models.Entity)
+	go func() {
+		defer close(sensorCh)
+		<-ctx.Done()
+	}()
 	var activityDetected atomic.Bool
 
 	// Start monitoring input devices.
@@ -137,18 +143,25 @@ func (w *activityWorker) IsDisabled() bool {
 }
 
 func (w *activityWorker) monitorInputDevices(ctx context.Context) {
-	for _, device := range w.inputDevices {
-		dev := device // Capture for goroutine
+	for device := range slices.Values(w.inputDevices) {
 		go func() {
-			defer dev.Close()
-
+			name, _ := device.Name()
+			slogctx.FromCtx(ctx).Debug("Monitoring input device.",
+				slog.String("device", device.Path()),
+				slog.String("name", name),
+			)
 			for {
 				select {
 				case <-ctx.Done():
+					defer device.Close()
+					slogctx.FromCtx(ctx).Debug("Stopped monitoring input device.",
+						slog.String("device", device.Path()),
+						slog.String("name", name),
+					)
 					return
 				default:
 					// Read input event
-					event, err := dev.ReadOne()
+					event, err := device.ReadOne()
 					if err != nil {
 						// Check if it's just an error from closed device
 						if !errors.Is(err, os.ErrClosed) {
