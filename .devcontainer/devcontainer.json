@@ -19,7 +19,8 @@
         "yzhang.markdown-all-in-one",
         "bierner.markdown-emoji",
         "a-h.templ",
-        "bradlc.vscode-tailwindcss"
+        "bradlc.vscode-tailwindcss",
+        "tamasfe.even-better-toml"
       ]
     }
   },
