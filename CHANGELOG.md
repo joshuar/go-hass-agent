@@ -1,5 +1,17 @@
 # Changelog
 
+## [14.8.0](https://github.com/joshuar/go-hass-agent/compare/v14.7.0...v14.8.0) (2026-02-15)
+
+
+### Features
+
+* **linux/system:** :sparkles: improved user activity worker ([afdc6c0](https://github.com/joshuar/go-hass-agent/commit/afdc6c0243d625e4379ea2d16bbfd8ab2956bfaf))
+
+
+### Bug Fixes
+
+* **linux/system:** :bug: fix clean-up on shutdown for user activity worker ([2ead3a1](https://github.com/joshuar/go-hass-agent/commit/2ead3a12522e716ecf0f504218f0db3c7688846a))
+
 ## [14.7.0](https://github.com/joshuar/go-hass-agent/compare/v14.6.0...v14.7.0) (2026-02-08)
 
 
