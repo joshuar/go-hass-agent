@@ -13,15 +13,13 @@ Only the latest released version of Go Hass Agent will be supported with securit
 
 ## Reporting a Vulnerability
 
-Security issues and vulnerabilities can be reported privately by following the
-GitHub documentation: [Privately reporting a security
+Security issues and vulnerabilities can be reported privately by following the GitHub documentation: [Privately
+reporting a security
 vulnerability](https://docs.github.com/en/code-security/security-advisories/guidance-on-reporting-and-writing-information-about-vulnerabilities/privately-reporting-a-security-vulnerability#privately-reporting-a-security-vulnerability).
 
-**Please do not report security vulnerabilities through public GitHub issues,
-discussions, or pull requests.**
+**Please do not report security vulnerabilities through public GitHub issues, discussions, or pull requests.**
 
-Please include as much of the information listed below as you can to help us
-better understand and resolve the issue:
+Please include as much of the information listed below as you can to help us better understand and resolve the issue:
 
 - The type of issue (e.g., buffer overflow, SQL injection, or cross-site scripting)
 - Full paths of source file(s) related to the manifestation of the issue
@@ -58,6 +56,7 @@ manual configuration to use.
 Some sensors require additional capabilities on the Go Hass Agent binary:
 
 - SMART disk monitoring: requires `cap_sys_rawio,cap_sys_admin,cap_mknod,cap_dac_override=+ep`
+- User activity monitoring: requires `cap_setuid,cap_setgid=+ep`
 
 When installed via packages (RPM/DEB/ARCH) or using the [official container
 image](https://github.com/joshuar/go-hass-agent/pkgs/container/go-hass-agent), the binary will have the required
