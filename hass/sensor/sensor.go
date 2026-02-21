@@ -24,8 +24,8 @@ type API interface {
 // newSensorRequest takes sensor data and creates an api.Request for the given
 // request type.
 func newSensorRequest(reqType api.RequestType, sensor *models.Sensor) (*api.RequestData, error) {
-	if valid, problems := validation.ValidateStruct(sensor); !valid {
-		return nil, fmt.Errorf("%w: %w", ErrHandleSensor, problems)
+	if err := validation.ValidateStruct(sensor); err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrHandleSensor, err)
 	}
 
 	req := &api.RequestData{

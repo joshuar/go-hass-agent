@@ -184,7 +184,7 @@ func NewScreenLockControl(ctx context.Context, device *mqtthass.Device) ([]*mqtt
 				).
 				WithCommand(
 					mqtthass.CommandCallback(func(_ *paho.Publish) {
-						if err := validation.Validate.Struct(command); err != nil {
+						if err := validation.ValidateStruct(command); err != nil {
 							logger.Error("Screen control command is invalid.",
 								slog.Any("error", err),
 							)

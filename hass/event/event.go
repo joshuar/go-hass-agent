@@ -22,8 +22,8 @@ type clientAPI interface {
 
 // NewEventRequest takes event data and creates an event request.
 func newEventRequest(event *models.Event) (*api.RequestData, error) {
-	if valid, problems := validation.ValidateStruct(event); !valid {
-		return nil, fmt.Errorf("could not marshal event data: %w", problems)
+	if err := validation.ValidateStruct(event); err != nil {
+		return nil, fmt.Errorf("could not marshal event data: %w", err)
 	}
 
 	req := &api.RequestData{
@@ -33,8 +33,7 @@ func newEventRequest(event *models.Event) (*api.RequestData, error) {
 	}
 
 	// Add the sensor registration into the request.
-	err := req.Payload.FromEvent(*event)
-	if err != nil {
+	if err := req.Payload.FromEvent(*event); err != nil {
 		return nil, fmt.Errorf("could not marshal event data: %w", err)
 	}
 

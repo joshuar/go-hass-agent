@@ -21,8 +21,8 @@ var (
 
 // Valid returns a boolean indicating whether the SensorState date is valid.
 func (s *SensorState) Valid() (bool, error) {
-	if err := validation.Validate.Struct(s); err != nil {
-		return false, fmt.Errorf("%w: %s", ErrInvalidSensor, validation.ParseValidationErrors(err))
+	if err := validation.ValidateStruct(s); err != nil {
+		return false, fmt.Errorf("%w: %s", ErrInvalidSensor, err)
 	}
 
 	return true, nil
@@ -30,8 +30,8 @@ func (s *SensorState) Valid() (bool, error) {
 
 // Valid returns a boolean indicating whether the SensorRegistration data is valid.
 func (s *SensorRegistration) Valid() (bool, error) {
-	if err := validation.Validate.Struct(s); err != nil {
-		return false, fmt.Errorf("%w: %s", ErrInvalidSensor, validation.ParseValidationErrors(err))
+	if err := validation.ValidateStruct(s); err != nil {
+		return false, fmt.Errorf("%w: %s", ErrInvalidSensor, err)
 	}
 
 	return true, nil

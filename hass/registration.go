@@ -33,13 +33,11 @@ type RegistrationRequest struct {
 
 // Valid checks whether the registration request details are valid.
 func (r *RegistrationRequest) Valid() (bool, error) {
-	err := validation.Validate.Struct(r)
-	if err != nil {
-		return false, fmt.Errorf("%w: %s", validation.ErrValidation, validation.ParseValidationErrors(err))
+	if err := validation.ValidateStruct(r); err != nil {
+		return false, fmt.Errorf("validate: %w", err)
 	}
-	_, err = url.Parse(r.Server)
-	if err != nil {
-		return false, fmt.Errorf("%w: %w", validation.ErrValidation, err)
+	if _, err := url.Parse(r.Server); err != nil {
+		return false, fmt.Errorf("parse server url: %w", err)
 	}
 
 	return true, nil

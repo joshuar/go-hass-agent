@@ -32,6 +32,9 @@ func Start(ctx context.Context, data *WorkerData) error {
 	if err := config.Load(ConfigPrefix, &mqttcfg); err != nil {
 		return fmt.Errorf("unable to start MQTT: %w", err)
 	}
+	if ok, err := mqttcfg.Valid(); err != nil || !ok {
+		return fmt.Errorf("load mqtt config: %w", err)
+	}
 	// Create a new connection to the MQTT broker, publish subscriptions and
 	// configs.
 	client, err := mqttapi.NewClient(ctx, &mqttcfg, data.Subscriptions, data.Configs)

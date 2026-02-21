@@ -9,7 +9,7 @@ import (
 
 // Valid returns whether the location data is valid.
 func (e *Location) Valid() bool {
-	if err := validation.Validate.Struct(e); err != nil {
+	if err := validation.ValidateStruct(e); err != nil {
 		return false
 	}
 

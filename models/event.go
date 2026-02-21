@@ -30,7 +30,7 @@ func (e *Event) LogAttributes() slog.Attr {
 
 // Valid returns whether the event data is valid.
 func (e *Event) Valid() bool {
-	if err := validation.Validate.Struct(e); err != nil {
+	if err := validation.ValidateStruct(e); err != nil {
 		return false
 	}
 

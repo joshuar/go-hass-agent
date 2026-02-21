@@ -22,8 +22,8 @@ type clientAPI interface {
 
 // newLocationRequest takes location data and creates a location request.
 func newLocationRequest(location *models.Location) (*api.RequestData, error) {
-	if valid, problems := validation.ValidateStruct(location); !valid {
-		return nil, fmt.Errorf("could not marshal location data: %w", problems)
+	if err := validation.ValidateStruct(location); err != nil {
+		return nil, fmt.Errorf("could not marshal location data: %w", err)
 	}
 
 	req := &api.RequestData{
@@ -31,8 +31,7 @@ func newLocationRequest(location *models.Location) (*api.RequestData, error) {
 	}
 
 	// Add the sensor registration into the request.
-	err := req.Payload.FromLocation(*location)
-	if err != nil {
+	if err := req.Payload.FromLocation(*location); err != nil {
 		return nil, fmt.Errorf("could not marshal location data: %w", err)
 	}
 

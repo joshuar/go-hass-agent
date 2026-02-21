@@ -48,22 +48,19 @@ func (c *Config) TopicPrefix() string {
 
 // Valid will check the MQTT preferences are valid.
 func (c *Config) Valid() (bool, error) {
-	err := validation.Validate.Struct(c)
-	if err != nil {
-		return false, fmt.Errorf("%w: %s", validation.ErrValidation, validation.ParseValidationErrors(err))
+	if err := validation.ValidateStruct(c); err != nil {
+		return false, fmt.Errorf("validate config: %w", err)
 	}
-
 	return true, nil
 }
 
 // Sanitise will sanitise the values of the MQTT preferences.
 func (c *Config) Sanitise() error {
 	if c == nil {
-		newCfg := &Config{
+		c = &Config{
 			MQTTServer:      defaultMQTTServer,
 			MQTTTopicPrefix: DefaultTopicPrefix,
 		}
-		c = newCfg
 	} else {
 		server, err := url.Parse(c.MQTTServer)
 		if err != nil {
