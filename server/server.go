@@ -26,7 +26,6 @@ import (
 
 	"github.com/joshuar/go-hass-agent/agent"
 	"github.com/joshuar/go-hass-agent/config"
-	"github.com/joshuar/go-hass-agent/hass"
 	"github.com/joshuar/go-hass-agent/server/handlers"
 	"github.com/joshuar/go-hass-agent/server/middlewares"
 	"github.com/joshuar/go-hass-agent/validation"
@@ -66,11 +65,6 @@ func New(ctx context.Context, static embed.FS, agent *agent.Agent, options ...co
 		return nil, fmt.Errorf("create web server: load config: %w", err)
 	}
 
-	hassclient, err := hass.NewClient(ctx, agent)
-	if err != nil {
-		return nil, fmt.Errorf("new hass client: %w", err)
-	}
-
 	// Set up routes.
 	// Set up a new chi router.
 	router := chi.NewRouter()
@@ -103,7 +97,7 @@ func New(ctx context.Context, static embed.FS, agent *agent.Agent, options ...co
 	// // Error handling.
 	// router.NotFound(handlers.NotFound())
 	// Landing page.
-	router.Get("/", handlers.Landing(agent, hassclient))
+	router.Get("/", handlers.Landing(agent))
 	// Registration.
 	router.Get("/register", handlers.GetRegistration(agent))
 	router.With(middlewares.RequireHTMX).Get("/register/discovery", handlers.RegistrationDiscovery())

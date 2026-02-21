@@ -13,11 +13,15 @@ import (
 	"github.com/joshuar/go-hass-agent/web/templates"
 )
 
-func Landing(agent *agent.Agent, hassclient *hass.Client) http.HandlerFunc {
+func Landing(agent *agent.Agent) http.HandlerFunc {
 	return alice.New(
 		routeLogger,
 	).ThenFunc(func(res http.ResponseWriter, req *http.Request) {
 		if agent.IsRegistered() {
+			hassclient, err := hass.NewClient(req.Context(), agent)
+			if err != nil {
+				http.Error(res, err.Error(), http.StatusInternalServerError)
+			}
 			renderPage(templates.Landing(agent, hassclient), "Go Hass Agent").ServeHTTP(res, req)
 		} else {
 			http.Redirect(res, req, "/register", http.StatusTemporaryRedirect)

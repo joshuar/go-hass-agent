@@ -138,10 +138,8 @@ func (r *Request) Do(ctx context.Context, url string) (*Response, error) {
 	switch r.method {
 	case http.MethodPost:
 		raw, err = r.Request.Post(url)
-	case http.MethodGet:
-		raw, err = r.Request.Get(url)
 	default:
-		return nil, ErrUnsupported
+		raw, err = r.Request.Get(url)
 	}
 
 	if err != nil {
@@ -197,4 +195,16 @@ func WithTrace() RequestOption {
 
 type Response struct {
 	*resty.Response
+}
+
+func (r *RequestData) String() string {
+	var str strings.Builder
+
+	str.WriteString("Type: " + string(r.Type))
+	str.WriteRune('\n')
+	str.WriteString("Payload:")
+	str.WriteRune('\n')
+	str.WriteString(string(r.Payload.union))
+	str.WriteRune('\n')
+	return str.String()
 }

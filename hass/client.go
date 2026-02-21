@@ -109,6 +109,9 @@ func (c *Client) RestAPIURL() string {
 
 // UpdateConfig will fetch and store the Home Assistant config via the Home Assistant REST API.
 func (c *Client) UpdateConfig(ctx context.Context) (bool, error) {
+	if c.RestAPIURL() == "" {
+		return false, nil
+	}
 	resp, err := c.SendRequest(ctx, c.RestAPIURL(), api.RequestData{Type: api.GetConfig})
 	if err != nil {
 		return false, fmt.Errorf("could not update config: %w", err)

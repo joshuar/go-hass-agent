@@ -61,12 +61,12 @@ func Register(ctx context.Context, id string, details *RegistrationRequest) erro
 	}
 	registrationURL = registrationURL.JoinPath(registrationPath)
 
-	_, err = api.NewRequest(
+	apiResp, err := api.NewRequest(
 		api.WithAuth(details.Token),
 		api.WithBody(req),
 		api.WithResult(&resp),
 	).Do(ctx, registrationURL.String())
-	if err != nil {
+	if err != nil || apiResp.IsError() {
 		return fmt.Errorf("unable to register: %w", err)
 	}
 
