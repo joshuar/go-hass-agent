@@ -58,23 +58,29 @@ func NewMonitor(ctx context.Context) (*Monitor, error) {
 					slogctx.FromCtx(ctx).Warn("Unable to allocate event buffer.")
 					continue
 				}
-				if err = dec.Decode(&event); err == io.EOF {
-					break
-				} else if err != nil {
-					slogctx.FromCtx(ctx).Log(ctx, logging.LevelTrace, "Error decoding pw-dump output.",
-						slog.Any("error", err))
-				} else if event == nil {
-					continue
-				}
-				// Filter the event through all listeners and send the event to whichever listeners want it.
-				for listener := range slices.Values(monitor.listeners) {
-					if listener.filterFunc(event) {
-						go func() {
-							listener.eventCh <- *event
-						}()
+				func(e *Event) {
+					defer func() {
+						e = &Event{}
+						eventPool.Put(e)
+					}()
+
+					if err = dec.Decode(e); err == io.EOF {
+						return
+					} else if err != nil {
+						slogctx.FromCtx(ctx).Log(ctx, logging.LevelTrace, "Error decoding pw-dump output.",
+							slog.Any("error", err))
+					} else if event == nil {
+						return
 					}
-				}
-				eventPool.Put(event)
+					// Filter the event through all listeners and send the event to whichever listeners want it.
+					for listener := range slices.Values(monitor.listeners) {
+						if listener.filterFunc(event) {
+							go func() {
+								listener.eventCh <- *event
+							}()
+						}
+					}
+				}(event)
 			}
 
 			_, err = dec.Token()
