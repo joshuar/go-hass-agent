@@ -62,7 +62,7 @@ type mount struct {
 
 var (
 	validVirtualFs = []string{"tmpfs", "ramfs", "cifs", "smb", "nfs"}
-	ignoredMounts  = []string{"/tmp/crun", "/run", "/var/lib/containers", "/sys", "/proc", "/etc"}
+	ignoredMounts  = []string{"/tmp/crun", "/run", "/var/lib/containers", "/sys", "/proc", "/etc", "/host"}
 )
 
 var (
@@ -150,6 +150,7 @@ func newDiskUsageSensor(ctx context.Context, mount *mount, value float64) models
 
 	usedBlocks := mount.attributes[mountAttrBlocksTotal].(uint64) - mount.attributes[mountAttrBlocksFree].(uint64) //nolint:lll,forcetypeassert
 	mount.attributes["blocks_used"] = usedBlocks
+	mount.attributes["bytes_used"] = usedBlocks * uint64(mount.attributes[mountAttBlockSize].(int64))
 
 	var id string
 
@@ -179,7 +180,9 @@ func (m *mount) getMountInfo() error {
 
 	m.attributes[mountAttBlockSize] = stats.Bsize
 	m.attributes[mountAttrBlocksTotal] = stats.Blocks
+	m.attributes["bytes_total"] = stats.Blocks * uint64(stats.Bsize)
 	m.attributes[mountAttrBlocksFree] = stats.Bfree
+	m.attributes["bytes_free"] = stats.Bfree * uint64(stats.Bsize)
 	m.attributes[mountAttrBlocksAvail] = stats.Bavail
 	m.attributes[mountAttrInodesTotal] = stats.Files
 	m.attributes[mountAttrInodesFree] = stats.Ffree
