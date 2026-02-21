@@ -1,5 +1,18 @@
 # Changelog
 
+## [14.9.0](https://github.com/joshuar/go-hass-agent/compare/v14.8.0...v14.9.0) (2026-02-21)
+
+
+### Features
+
+* **linux/disk:** :sparkles: add attributes to disk usage sensors for usage/free/totals in bytes ([6c0bf7f](https://github.com/joshuar/go-hass-agent/commit/6c0bf7f0dea052b748246570ea650824dfc750db))
+
+
+### Bug Fixes
+
+* :bug: improvement registration logic ([884fbb4](https://github.com/joshuar/go-hass-agent/commit/884fbb4ee56f7f45a712d5211b26e9296f401a34))
+* **linux/system:** :bug: open input devices read-only and non-blocking ([5e54843](https://github.com/joshuar/go-hass-agent/commit/5e54843e7b4bddd06b7d3ec7b68157096d105520))
+
 ## [14.8.0](https://github.com/joshuar/go-hass-agent/compare/v14.7.0...v14.8.0) (2026-02-15)
 
 
