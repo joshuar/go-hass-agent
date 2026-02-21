@@ -16,7 +16,7 @@ env:
 
 jobs:
   codeql:
-    name: Analyze Go
+    name: Run CodeQL
     runs-on: "ubuntu-22.04"
     permissions:
       security-events: write
