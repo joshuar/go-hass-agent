@@ -128,8 +128,15 @@ func initInputDevices(ctx context.Context) ([]*evdev.InputDevice, error) {
 		}
 
 		devicePath := filepath.Join(inputDir, entry.Name())
-		device, err := evdev.Open(devicePath)
+		device, err := evdev.OpenWithFlags(devicePath, os.O_RDONLY)
 		if err != nil {
+			// Permission errors are expected for devices we can't access
+			slogctx.FromCtx(ctx).Debug("Could not open input device.",
+				slog.String("device", devicePath),
+				slog.Any("error", err))
+			continue
+		}
+		if err := device.NonBlock(); err != nil {
 			// Permission errors are expected for devices we can't access
 			slogctx.FromCtx(ctx).Debug("Could not open input device.",
 				slog.String("device", devicePath),
@@ -148,8 +155,7 @@ func initInputDevices(ctx context.Context) ([]*evdev.InputDevice, error) {
 		for _, evType := range capableTypes {
 			if evType == evdev.EV_KEY {
 				// Check if there are actual key events (keyboards have many, mice have few)
-				keyCaps := device.CapableEvents(evdev.EV_KEY)
-				if len(keyCaps) > minKeyboardKeys {
+				if keyCaps := device.CapableEvents(evdev.EV_KEY); len(keyCaps) > minKeyboardKeys {
 					hasKeys = true
 				}
 			}
