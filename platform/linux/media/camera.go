@@ -214,8 +214,7 @@ func publishImages(ctx context.Context, cam *webcam.Webcam, topic string, msgCh 
 	}
 
 	for {
-		err := cam.WaitForFrame(uint32(5))
-		if err != nil && errors.Is(err, &webcam.Timeout{}) {
+		if err := cam.WaitForFrame(uint32(5)); err != nil && errors.Is(err, &webcam.Timeout{}) {
 			continue
 		}
 

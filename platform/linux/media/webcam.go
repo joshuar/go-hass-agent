@@ -8,11 +8,10 @@ import (
 	"errors"
 	"fmt"
 
-	pwmonitor "github.com/ConnorsApps/pipewire-monitor-go"
-
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/models"
 	"github.com/joshuar/go-hass-agent/models/sensor"
+	"github.com/joshuar/go-hass-agent/pkg/linux/pipewire"
 	"github.com/joshuar/go-hass-agent/platform/linux"
 )
 
@@ -22,7 +21,7 @@ type webcamUsageWorker struct {
 	*models.WorkerMetadata
 
 	prefs       *workers.CommonWorkerPrefs
-	pwEventChan chan pwmonitor.Event
+	pwEventChan chan pipewire.Event
 	inUse       bool
 }
 
@@ -44,7 +43,7 @@ func NewWebcamUsageWorker(ctx context.Context) (workers.EntityWorker, error) {
 	if !found {
 		return worker, errors.New("no pipewire monitor in context")
 	}
-	worker.pwEventChan = monitor.AddListener(ctx, webcamPipewireEventFilter)
+	worker.pwEventChan = monitor.AddListener(webcamPipewireEventFilter)
 
 	return worker, nil
 }
@@ -75,11 +74,11 @@ func (w *webcamUsageWorker) IsDisabled() bool {
 }
 
 // parsePWState parses a pipewire state value into the appropriate boolean value.
-func (w *webcamUsageWorker) parsePWState(state pwmonitor.State) {
+func (w *webcamUsageWorker) parsePWState(state pipewire.State) {
 	switch state {
-	case pwmonitor.StateRunning, pwmonitor.StateIdle:
+	case pipewire.StateRunning, pipewire.StateIdle:
 		w.inUse = true
-	case pwmonitor.StateSuspended:
+	case pipewire.StateSuspended:
 		fallthrough
 	default:
 		w.inUse = false
@@ -89,17 +88,14 @@ func (w *webcamUsageWorker) parsePWState(state pwmonitor.State) {
 // webcamPipewireEventFilter filters the pipewire events. For webcam monitoring, we are only
 // interested in events of type EventNode that have the "media.class" property
 // of "Video/Source".
-func webcamPipewireEventFilter(e *pwmonitor.Event) bool {
-	if e.Type == pwmonitor.EventNode || e.IsRemovalEvent() {
+func webcamPipewireEventFilter(e *pipewire.Event) bool {
+	if e.Type == pipewire.EventNode || e.IsRemovalEvent() {
 		// Parse props.
 		props, err := e.NodeProps()
 		if err != nil {
 			return false
 		}
-		// Filter for v4l2 node events.
-		if props.MediaClass == "Video/Source" {
-			return true
-		}
+		return props.MediaClass == pipewire.MediaVideoSource
 	}
 
 	return false

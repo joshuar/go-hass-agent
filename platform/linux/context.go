@@ -27,7 +27,7 @@ const (
 	boottimeContextKey      contextKey = "boottime"
 	sessionPathContextKey   contextKey = "sessionPath"
 	desktopPortalContextKey contextKey = "desktopPortal"
-	pwMonitorContextKey     contextKey = "pipewire"
+	pipewireContextKey      contextKey = "pipewire"
 )
 
 var (
@@ -82,7 +82,8 @@ func NewContext(ctx context.Context) context.Context {
 		ctx = context.WithValue(ctx, dbusSystemContextKey, systemBus)
 		// Add session path value.
 		if sessionPath, err := systemBus.GetSessionPath(); err != nil {
-			slog.Warn("Unable to determine user session path from D-Bus. Some sensors requring it may not be available.",
+			slog.Warn(
+				"Unable to determine user session path from D-Bus. Some sensors requring it may not be available.",
 				slog.Any("error", err),
 			)
 		} else {
@@ -108,12 +109,12 @@ func NewContext(ctx context.Context) context.Context {
 		ctx = context.WithValue(ctx, desktopPortalContextKey, portal)
 	}
 
-	if pwmonitor, err := pipewire.NewMonitor(ctx); err != nil {
+	if pipewire, err := pipewire.NewMonitor(ctx); err != nil {
 		slog.Warn("Unable to set up pipewire monitor.",
 			slog.Any("error", err),
 		)
 	} else {
-		ctx = context.WithValue(ctx, pwMonitorContextKey, pwmonitor)
+		ctx = context.WithValue(ctx, pipewireContextKey, pipewire)
 	}
 
 	return ctx
@@ -174,7 +175,7 @@ func CtxGetSessionPath(ctx context.Context) (string, bool) {
 }
 
 func CtxGetPipewireMonitor(ctx context.Context) (*pipewire.Monitor, bool) {
-	monitor, ok := ctx.Value(pwMonitorContextKey).(*pipewire.Monitor)
+	monitor, ok := ctx.Value(pipewireContextKey).(*pipewire.Monitor)
 	if !ok {
 		return nil, false
 	}

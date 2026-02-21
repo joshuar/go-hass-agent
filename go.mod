@@ -7,6 +7,7 @@ require (
 	github.com/gen2brain/beeep v0.11.2
 	github.com/go-playground/validator/v10 v10.30.1
 	github.com/godbus/dbus/v5 v5.2.2
+	github.com/goforj/godump v1.9.0
 	github.com/holoplot/go-evdev v0.0.0-20250804134636-ab1d56a1fe83
 	github.com/iancoleman/strcase v0.3.0
 	github.com/joshuar/go-hass-anything/v12 v12.1.0
@@ -127,7 +128,6 @@ require (
 )
 
 require (
-	github.com/ConnorsApps/pipewire-monitor-go v0.2.0
 	github.com/a-h/templ v0.3.977
 	github.com/alecthomas/kong v1.14.0
 	github.com/anatol/smart.go v0.0.0-20241126061019-f03d79b340d2

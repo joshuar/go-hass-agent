@@ -97,8 +97,10 @@ func NewMPRISWorker(ctx context.Context, device *mqtthass.Device) (*MPRISWorker,
 				slogctx.FromCtx(ctx).Debug("Stopped monitoring for MPRIS signals.")
 				return
 			case event := <-triggerCh:
-				changed, status, err := dbusx.HasPropertyChanged[string](event.Content, "PlaybackStatus")
-				if err != nil {
+				if changed, status, err := dbusx.HasPropertyChanged[string](
+					event.Content,
+					"PlaybackStatus",
+				); err != nil {
 					slogctx.FromCtx(ctx).Warn("Could not parse received D-Bus signal.", slog.Any("error", err))
 				} else if changed {
 					worker.publishPlaybackState(ctx, status)

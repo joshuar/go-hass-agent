@@ -12,8 +12,8 @@ import (
 	"log/slog"
 	"os/exec"
 	"slices"
+	"sync"
 
-	pwmonitor "github.com/ConnorsApps/pipewire-monitor-go"
 	slogctx "github.com/veqryn/slog-context"
 
 	"github.com/joshuar/go-hass-agent/logging"
@@ -25,8 +25,6 @@ type Monitor struct {
 }
 
 // NewMonitor creates a new pipewire monitor.
-//
-//nolint:gocognit
 func NewMonitor(ctx context.Context) (*Monitor, error) {
 	// Set up pw-dump command.
 	cmd := exec.CommandContext(ctx, "pw-dump", "--monitor", "--no-colors")
@@ -55,21 +53,28 @@ func NewMonitor(ctx context.Context) (*Monitor, error) {
 
 			// Read pw-dump output.
 			for dec.More() {
-				var event pwmonitor.Event
+				event, ok := eventPool.Get().(*Event)
+				if !ok {
+					slogctx.FromCtx(ctx).Warn("Unable to allocate event buffer.")
+					continue
+				}
 				if err = dec.Decode(&event); err == io.EOF {
 					break
 				} else if err != nil {
 					slogctx.FromCtx(ctx).Log(ctx, logging.LevelTrace, "Error decoding pw-dump output.",
 						slog.Any("error", err))
+				} else if event == nil {
+					continue
 				}
 				// Filter the event through all listeners and send the event to whichever listeners want it.
 				for listener := range slices.Values(monitor.listeners) {
-					if listener.filterFunc(&event) {
+					if listener.filterFunc(event) {
 						go func() {
-							listener.eventCh <- event
+							listener.eventCh <- *event
 						}()
 					}
 				}
+				eventPool.Put(event)
 			}
 
 			_, err = dec.Token()
@@ -87,11 +92,13 @@ func NewMonitor(ctx context.Context) (*Monitor, error) {
 		}
 	}()
 
+	slogctx.FromCtx(ctx).Debug("Monitoring pipewire for events.")
+
 	return monitor, nil
 }
 
-func (m *Monitor) AddListener(ctx context.Context, filterFunc func(*pwmonitor.Event) bool) chan pwmonitor.Event {
-	eventCh := make(chan pwmonitor.Event)
+func (m *Monitor) AddListener(filterFunc func(*Event) bool) chan Event {
+	eventCh := make(chan Event)
 	m.listeners = append(m.listeners, &Listener{
 		filterFunc: filterFunc,
 		eventCh:    eventCh,
@@ -101,6 +108,13 @@ func (m *Monitor) AddListener(ctx context.Context, filterFunc func(*pwmonitor.Ev
 
 // Listener contains the data for goroutine that wants to listen for pipewire events.
 type Listener struct {
-	filterFunc func(*pwmonitor.Event) bool
-	eventCh    chan pwmonitor.Event
+	filterFunc func(*Event) bool
+	eventCh    chan Event
+}
+
+var eventPool = sync.Pool{
+	New: func() any {
+		var buf Event
+		return &buf
+	},
 }

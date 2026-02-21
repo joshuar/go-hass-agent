@@ -126,7 +126,7 @@ func NewVolumeWorker(ctx context.Context, device *mqtthass.Device) (*VolumeWorke
 
 	// Process Pulseaudio state updates as they are received.
 	go func() {
-		slogctx.FromCtx(ctx).Debug("Monitoring for events.")
+		slogctx.FromCtx(ctx).Debug("Monitoring pulseaudio for events.")
 		update()
 
 		for {
@@ -197,8 +197,7 @@ func (d *VolumeWorker) muteStateCallback(_ ...any) (json.RawMessage, error) {
 func (d *VolumeWorker) muteCommandCallback(p *paho.Publish) {
 	var err error
 
-	state := string(p.Payload)
-	switch state {
+	switch string(p.Payload) {
 	case "ON":
 		err = d.pulseAudio.SetMute(true)
 	case "OFF":

@@ -162,10 +162,6 @@ func initInputDevices(ctx context.Context) ([]*evdev.InputDevice, error) {
 		if hasKeys || hasPointer {
 			inputDevices = append(inputDevices, device)
 			deviceCount++
-			name, _ := device.Name()
-			slogctx.FromCtx(ctx).Debug("Monitoring input device.",
-				slog.String("device", devicePath),
-				slog.String("name", name))
 		} else {
 			device.Close()
 		}
@@ -175,7 +171,7 @@ func initInputDevices(ctx context.Context) ([]*evdev.InputDevice, error) {
 		return nil, ErrNoInputDevices
 	}
 
-	slogctx.FromCtx(ctx).Info("Initialized input device monitoring.",
+	slogctx.FromCtx(ctx).Debug("Initialized input device monitoring.",
 		slog.Int("device_count", deviceCount))
 
 	return inputDevices, nil

@@ -8,11 +8,10 @@ import (
 	"errors"
 	"fmt"
 
-	pwmonitor "github.com/ConnorsApps/pipewire-monitor-go"
-
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/models"
 	"github.com/joshuar/go-hass-agent/models/sensor"
+	"github.com/joshuar/go-hass-agent/pkg/linux/pipewire"
 	"github.com/joshuar/go-hass-agent/platform/linux"
 )
 
@@ -22,7 +21,7 @@ type micUsageWorker struct {
 	*models.WorkerMetadata
 
 	prefs       *workers.CommonWorkerPrefs
-	pwEventChan chan pwmonitor.Event
+	pwEventChan chan pipewire.Event
 	inUse       bool
 }
 
@@ -42,7 +41,7 @@ func NewMicUsageWorker(ctx context.Context) (workers.EntityWorker, error) {
 	if !found {
 		return worker, errors.New("no pipewire monitor in context")
 	}
-	worker.pwEventChan = monitor.AddListener(ctx, micPipewireEventFilter)
+	worker.pwEventChan = monitor.AddListener(micPipewireEventFilter)
 
 	return worker, nil
 }
@@ -74,11 +73,11 @@ func (w *micUsageWorker) IsDisabled() bool {
 }
 
 // parsePWState parses a pipewire state value into the appropriate boolean value.
-func (w *micUsageWorker) parsePWState(state pwmonitor.State) {
+func (w *micUsageWorker) parsePWState(state pipewire.State) {
 	switch state {
-	case pwmonitor.StateRunning:
+	case pipewire.StateRunning:
 		w.inUse = true
-	case pwmonitor.StateIdle, pwmonitor.StateSuspended:
+	case pipewire.StateIdle, pipewire.StateSuspended:
 		fallthrough
 	default:
 		w.inUse = false
@@ -87,15 +86,15 @@ func (w *micUsageWorker) parsePWState(state pwmonitor.State) {
 
 // micPipewireEventFilter filters the pipewire events. For mic monitoring, we are only
 // interested in events of type EventNode that have the audio source media type.
-func micPipewireEventFilter(e *pwmonitor.Event) bool {
-	if e.Type == pwmonitor.EventNode || e.IsRemovalEvent() {
+func micPipewireEventFilter(e *pipewire.Event) bool {
+	if e.Type == pipewire.EventNode || e.IsRemovalEvent() {
 		// Parse props.
 		props, err := e.NodeProps()
 		if err != nil {
 			return false
 		}
 		// Filter for audio stream events.
-		return props.MediaClass == pwmonitor.MediaAudioSource
+		return props.MediaClass == pipewire.MediaAudioSource
 	}
 
 	return false
