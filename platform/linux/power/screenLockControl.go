@@ -72,13 +72,18 @@ func setupCommands(
 
 	desktop := os.Getenv("XDG_CURRENT_DESKTOP")
 
-	switch {
-	case strings.Contains(desktop, "KDE"), strings.Contains(desktop, "GNOME"):
-		sessionPath, err := systemBus.GetSessionPath()
-		if err != nil {
-			return nil, fmt.Errorf("get session path: %w", err)
-		}
+	// Use dbus Introspection to check if systemd-logind is available
+	use_systemd_logind := false
+	sessionPath, err := systemBus.GetSessionPath()
+	if err == nil {
+		_, err := dbusx.NewIntrospection(systemBus, loginBaseInterface, sessionPath)
+		if err == nil {
+			use_systemd_logind = true;
+		};
+	};
 
+	switch {
+	case use_systemd_logind:
 		// KDE and Gnome can use systemd-logind session lock/unlock on the
 		// system bus.
 		commands = append(commands,
