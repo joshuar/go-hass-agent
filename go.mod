@@ -1,13 +1,12 @@
 module github.com/joshuar/go-hass-agent
 
-go 1.25
+go 1.25.0
 
 require (
 	github.com/eclipse/paho.golang v0.23.0
 	github.com/gen2brain/beeep v0.11.2
 	github.com/go-playground/validator/v10 v10.30.1
 	github.com/godbus/dbus/v5 v5.2.2
-	github.com/goforj/godump v1.9.0
 	github.com/holoplot/go-evdev v0.0.0-20250804134636-ab1d56a1fe83
 	github.com/iancoleman/strcase v0.3.0
 	github.com/joshuar/go-hass-anything/v12 v12.1.0
@@ -167,7 +166,7 @@ require (
 	github.com/veqryn/slog-context v0.9.0
 	github.com/veqryn/slog-json v0.5.0
 	golang.org/x/crypto v0.48.0 // indirect
-	golang.org/x/net v0.50.0
+	golang.org/x/net v0.51.0
 	golang.org/x/sys v0.41.0
 	kernel.org/pub/linux/libs/security/libcap/cap v1.2.77
 )
