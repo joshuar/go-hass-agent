@@ -13,7 +13,7 @@ require (
 	github.com/matoous/go-nanoid/v2 v2.1.0
 	github.com/mdlayher/netlink v1.8.0
 	github.com/oapi-codegen/nullable v1.1.0
-	github.com/oapi-codegen/runtime v1.1.2
+	github.com/oapi-codegen/runtime v1.2.0
 	github.com/stretchr/testify v1.11.1
 	gopkg.in/yaml.v3 v3.0.1
 )
