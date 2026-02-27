@@ -21,6 +21,7 @@ import (
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/config"
 	"github.com/joshuar/go-hass-agent/models"
+	"github.com/joshuar/go-hass-agent/pkg/linux/pipewire"
 	"github.com/joshuar/go-hass-agent/pkg/linux/pulseaudiox"
 )
 
@@ -165,7 +166,7 @@ func (d *VolumeWorker) volCommandCallback(p *paho.Publish) {
 	} else {
 		slog.Debug("Received volume change from Home Assistant.", slog.Int("volume", newValue))
 
-		if err := d.pulseAudio.SetVolume(float64(newValue)); err != nil {
+		if err := pipewire.SetVolume(float64(newValue)); err != nil {
 			slog.Error("Could not set volume level.", slog.Any("error", err))
 			return
 		}
@@ -199,9 +200,9 @@ func (d *VolumeWorker) muteCommandCallback(p *paho.Publish) {
 
 	switch string(p.Payload) {
 	case "ON":
-		err = d.pulseAudio.SetMute(true)
+		err = pipewire.Mute()
 	case "OFF":
-		err = d.pulseAudio.SetMute(false)
+		err = pipewire.Unmute()
 	}
 
 	if err != nil {
