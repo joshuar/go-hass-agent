@@ -48,16 +48,21 @@ type configData struct {
 }
 
 var globalConfig = configData{
-	src:  koanf.New("."),
-	path: GetPath(),
+	src: koanf.New("."),
 }
-
-var customPath string
 
 // Init initializes the config store. This will load the global (app) config
 // values and set up a config backend that other components can use via the Load
 // method. This only happens once.
 var Init = sync.OnceValue(func() error {
+	if globalConfig.path == "" {
+		userConfigDir, err := os.UserConfigDir()
+		if err != nil {
+			return fmt.Errorf("%w: %w", ErrLoadConfig, err)
+		}
+		globalConfig.path = filepath.Join(userConfigDir, AppID)
+	}
+
 	// Create the config directory if it does not exist.
 	if err := checkPath(globalConfig.path); err != nil {
 		return fmt.Errorf("%w: %w", ErrLoadConfig, err)
@@ -82,26 +87,20 @@ var Init = sync.OnceValue(func() error {
 	// 	globalConfig.src.Load(provider, toml.Parser())
 	// })
 
-	slog.Debug("Config backend initialized.")
+	slog.Debug("Config backend initialized.",
+		slog.String("config_path", GetPath()))
 
 	return nil
 })
 
 // GetPath returns the directory path under which the config file (and other files/data) is stored.
 func GetPath() string {
-	if customPath != "" {
-		return customPath
-	}
-	userConfigDir, err := os.UserConfigDir()
-	if err != nil {
-		panic("could not determine config directory.")
-	}
-	return filepath.Join(userConfigDir, AppID)
+	return globalConfig.path
 }
 
 // SetPath sets the directory path under which the config file (and other files/data) will be stored.
 func SetPath(path string) {
-	customPath = path
+	globalConfig.path = path
 }
 
 // Load will load the config for a component, using the given file and
