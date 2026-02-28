@@ -55,7 +55,7 @@ services:
       - .env
     image: docker.io/eclipse-mosquitto:$MOSQUITTO_VERSION
     volumes:
-      - ./data/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - ./data/mosquitto:/mosquitto/config
       - mosquitto_data:/mosquitto/data
       - /etc/localtime:/etc/localtime:ro,cached
     ports:
