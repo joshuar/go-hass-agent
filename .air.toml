@@ -14,6 +14,7 @@ cmd = 'go build -ldflags="-s -w -X github.com/joshuar/go-hass-agent/config.AppVe
 args_bin = [
   "--log-level=debug",
   "--profile='heapprofile=tmp/heap.prof;cpuprofile=tmp/cpu.prof;webui=true'",
+  "--path=.devcontainer/data/go-hass-agent",
   "run",
 ]
 entrypoint = ["tmp/go-hass-agent"]
