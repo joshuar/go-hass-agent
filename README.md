@@ -74,7 +74,11 @@
     - [🕹️ Controls](#️-controls)
       - [Volume Control](#volume-control)
       - [Webcam Control](#webcam-control)
+      - [Power Control](#power-control)
+      - [D-Bus Integration](#d-bus-integration)
     - [📢 Events](#-events)
+      - [User Sessions](#user-sessions)
+      - [Out Of Memory (OOM) Events](#out-of-memory-oom-events)
   - [All Operating Systems](#all-operating-systems)
 - [🧰 Getting Started](#-getting-started)
   - [🤝 Compatibility](#-compatibility)
@@ -386,10 +390,12 @@ app or number of apps changes.
 > Only available when [configured with MQTT](#-mqtt-sensors-and-controls)
 
 ##### Volume Control
-- **Volume Control**: Adjust the volume on the default audio output device.
-- **Volume Mute**: Mute/Unmute the default audio output device.
+
+- **Volume Control/Mute**: Adjust the volume on the default audio output device.
+  - Requires Wireplumber `wpctl` command-line utility installed and available.
 
 ##### Webcam Control
+
 - **Webcam Control**: Start/stop a webcam and view the video in Home Assistant.
   - Requires a webcam that is exposed via V4L2 (VideoForLinux2).
 - [_Preferences_](#️-preferences) : `[controls.media.*]` (`audio` or `video`).
