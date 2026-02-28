@@ -4,6 +4,7 @@
 package mqtt
 
 import (
+	"errors"
 	"fmt"
 	"net/url"
 
@@ -57,19 +58,15 @@ func (c *Config) Valid() (bool, error) {
 // Sanitise will sanitise the values of the MQTT preferences.
 func (c *Config) Sanitise() error {
 	if c == nil {
-		c = &Config{
-			MQTTServer:      defaultMQTTServer,
-			MQTTTopicPrefix: DefaultTopicPrefix,
-		}
-	} else {
-		server, err := url.Parse(c.MQTTServer)
-		if err != nil {
-			return fmt.Errorf("could not sanitise server value: %w", err)
-		}
-		// Set scheme to tcp, a common error is to use http or https.
-		if server.Scheme != "tcp" {
-			server.Scheme = "tcp"
-		}
+		return errors.New("no config found")
+	}
+	server, err := url.Parse(c.MQTTServer)
+	if err != nil {
+		return fmt.Errorf("could not sanitise server value: %w", err)
+	}
+	// Set scheme to tcp, a common error is to use http or https.
+	if server.Scheme != "tcp" {
+		server.Scheme = "tcp"
 	}
 	return nil
 }
