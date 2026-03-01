@@ -367,8 +367,7 @@ func (c *ScriptWorker) Start(ctx context.Context) (<-chan models.Entity, error) 
 			continue
 		}
 		// Schedule the script.
-		err = scheduler.Manager.ScheduleJob(id.ScriptJob, script, trigger)
-		if err != nil {
+		if err = scheduler.ScheduleJob(id.ScriptJob, script, trigger); err != nil {
 			slogctx.FromCtx(ctx).Warn("Could not schedule script.",
 				slog.String("script", script.Description()),
 				slog.Any("error", err))

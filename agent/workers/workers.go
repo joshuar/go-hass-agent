@@ -103,8 +103,7 @@ func (d *PollingEntityWorkerData) GetDelta() time.Duration {
 // be submitted as a job, a non-nil error is returned.
 func SchedulePollingWorker(ctx context.Context, worker PollingEntityWorker, outCh chan models.Entity) error {
 	// Schedule worker.
-	err := scheduler.Manager.ScheduleJob(id.Worker, worker, worker.GetTrigger())
-	if err != nil {
+	if err := scheduler.ScheduleJob(id.Worker, worker, worker.GetTrigger()); err != nil {
 		return fmt.Errorf("could not schedule polling worker %s: %w", worker.ID(), err)
 	}
 	// Clean-up on agent close.

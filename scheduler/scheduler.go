@@ -23,10 +23,10 @@ var (
 )
 
 type manager struct {
-	scheduler quartz.Scheduler
+	quartz.Scheduler
 }
 
-var Manager *manager
+var mgr manager
 
 // Start wil start the scheduler component of the agent.
 func Start(ctx context.Context) error {
@@ -40,8 +40,8 @@ func Start(ctx context.Context) error {
 		return errors.Join(ErrRunFailed, err)
 	}
 
-	Manager = &manager{
-		scheduler: scheduler,
+	mgr = manager{
+		Scheduler: scheduler,
 	}
 
 	// Run goroutine to log misfired jobs.
@@ -54,19 +54,23 @@ func Start(ctx context.Context) error {
 		}
 	}()
 
-	slogctx.FromCtx(ctx).Debug("Starting scheduler.")
 	scheduler.Start(ctx)
+	slogctx.FromCtx(ctx).Info("Scheduler started.",
+		slog.Time("timestamp", time.Now()),
+	)
 
 	go func() {
 		<-ctx.Done()
-		slogctx.FromCtx(ctx).Debug("Stopping scheduler.")
 		scheduler.Stop()
+		slogctx.FromCtx(ctx).Info("Scheduler stopped.",
+			slog.Time("timestamp", time.Now()),
+		)
 	}()
 
 	return nil
 }
 
-func (m *manager) ScheduleJob(idPrefix id.Prefix, job quartz.Job, trigger quartz.Trigger) error {
+func ScheduleJob(idPrefix id.Prefix, job quartz.Job, trigger quartz.Trigger) error {
 	// Generate a job key.
 	jobKey, err := id.NewID(idPrefix)
 	if err != nil {
@@ -75,11 +79,15 @@ func (m *manager) ScheduleJob(idPrefix id.Prefix, job quartz.Job, trigger quartz
 	// Generate the job details.
 	jobDetail := quartz.NewJobDetail(job, quartz.NewJobKey(jobKey))
 	// Schedule the job.
-	err = m.scheduler.ScheduleJob(jobDetail, trigger)
+	err = mgr.ScheduleJob(jobDetail, trigger)
 	if err != nil {
 		return errors.Join(ErrScheduleFailed, err)
 	}
 	return nil
+}
+
+func IsStarted() bool {
+	return mgr.IsStarted()
 }
 
 // PollTriggerWithJitter implements the quartz.Trigger interface; uses a fixed

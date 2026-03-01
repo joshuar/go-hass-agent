@@ -350,14 +350,13 @@ func (c *Client) isDisabledInHA(id models.UniqueID) (bool, error) {
 }
 
 func (c *Client) scheduleConfigUpdates(ctx context.Context) error {
-	if scheduler.Manager == nil {
+	if !scheduler.IsStarted() {
 		slogctx.FromCtx(ctx).Debug("No scheduler active, not scheduling fetch config updates.")
 		return nil
 	}
 	getConfigJob := job.NewFunctionJobWithDesc(c.UpdateConfig, "Fetch Home Assistant Configuration.")
 	const configCheckTimeout = 30 * time.Second
-	err := scheduler.Manager.ScheduleJob(id.HassJob, getConfigJob, quartz.NewSimpleTrigger(configCheckTimeout))
-	if err != nil {
+	if err := scheduler.ScheduleJob(id.HassJob, getConfigJob, quartz.NewSimpleTrigger(configCheckTimeout)); err != nil {
 		return fmt.Errorf("could not schedule config updates: %w", err)
 	}
 	return nil
