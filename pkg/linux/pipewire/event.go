@@ -12,17 +12,20 @@ import (
 type EventType string
 
 const (
-	EmptyEvent EventType = ""
-	EventNode  EventType = "PipeWire:Interface:Node"
+	EmptyEvent             EventType = ""
+	InterfaceNodeEvent     EventType = "PipeWire:Interface:Node"
+	InterfaceMetadataEvent EventType = "PipeWire:Interface:Metadata"
 )
 
 type (
 	Event struct {
-		ID          int        `json:"id"`
-		Type        EventType  `json:"type"`
-		Version     int        `json:"version"`
-		Info        *EventInfo `json:"info"`
-		Permissions []string   `json:"permissions"`
+		ID          int             `json:"id"`
+		Type        EventType       `json:"type"`
+		Version     int             `json:"version"`
+		Info        *EventInfo      `json:"info"`
+		Permissions []string        `json:"permissions"`
+		Metadata    []EventMetadata `json:"metadata,omitempty"`
+		Change      string          `json:"change"` // "added" | "changed" | "removed"
 		// When the event was received
 		CapturedAt time.Time `json:"-"`
 	}
@@ -30,10 +33,22 @@ type (
 	EventInfo struct {
 		Direction  string       `json:"direction,omitempty"`
 		ChangeMask []string     `json:"change-mask"`
-		Props      any          `json:"props"`
+		Props      *EventProps  `json:"props,omitempty"`
 		Params     *EventParams `json:"params,omitempty"`
 		State      *State       `json:"state,omitempty"`
 		Error      *any         `json:"error,omitempty"`
+	}
+
+	EventProps struct {
+		MediaClass string `json:"media.class"`
+		NodeName   string `json:"node.name"`
+		NodeNick   string `json:"node.nick"`
+		NodeDesc   string `json:"node.description"`
+	}
+
+	EventMetadata struct {
+		Key   string          `json:"key"`
+		Value json.RawMessage `json:"value"` // string, object {"name":"..."}, or null
 	}
 
 	EventParams struct {
@@ -44,6 +59,7 @@ type (
 		Buffers    []any             `json:"Buffers,omitempty"`
 		Latency    []ParamLatency    `json:"Latency,omitempty"`
 		Tag        []any             `json:"Tag,omitempty"`
+		Props      []ParamProps      `json:"Props,omitempty"`
 	}
 
 	ParamEnumFormat struct {
@@ -60,6 +76,12 @@ type (
 	ParamIO struct {
 		ID   string `json:"id"`
 		Size int    `json:"size"`
+	}
+
+	ParamProps struct {
+		Volume  *float64  `json:"volume"`
+		Mute    *bool     `json:"mute"`
+		Volumes []float64 `json:"channelVolumes"`
 	}
 
 	ParamLatency struct {
@@ -138,7 +160,7 @@ func (e *Event) IsRemovalEvent() bool {
 
 // NodeProps converts the event info to node properties (if possible).
 func (e *Event) NodeProps() (*NodeProps, error) {
-	if e.Type != EventNode {
+	if e.Type != InterfaceNodeEvent {
 		return nil, errors.New("event is not a node event type")
 	} else if e.Info == nil {
 		return nil, errors.New("event info is nil")

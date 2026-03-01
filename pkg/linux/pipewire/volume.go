@@ -4,6 +4,9 @@
 package pipewire
 
 import (
+	"bufio"
+	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -113,4 +116,70 @@ func Status() error {
 		}
 	}
 	return nil
+}
+
+func FindDefaultAudioSink() (id int, name string, err error) {
+	// Step 1: ask pw-metadata for the default configured sink name.
+	metaOut, err := exec.Command("pw-metadata", "-n", "default", "0").Output()
+	if err != nil {
+		return 0, "", fmt.Errorf("pw-metadata: %w", err)
+	}
+
+	sinkName := parseDefaultAudioSinkName(metaOut)
+	if sinkName == "" {
+		return 0, "", errors.New("could not find default sink name in pw-metadata output")
+	}
+
+	// Step 2: dump all PipeWire objects and find the node whose
+	// node.name matches the default sink name.
+	dumpOut, err := exec.Command("pw-dump").Output()
+	if err != nil {
+		return 0, "", fmt.Errorf("pw-dump: %w", err)
+	}
+
+	var objects []Event
+	if err := json.Unmarshal(dumpOut, &objects); err != nil {
+		return 0, "", fmt.Errorf("pw-dump parse: %w", err)
+	}
+
+	for _, obj := range objects {
+		if obj.Type != InterfaceNodeEvent {
+			continue
+		}
+		if obj.Info.Props.NodeName == sinkName {
+			return obj.ID, sinkName, nil
+		}
+	}
+
+	return 0, sinkName, fmt.Errorf("node %q not found in pw-dump output", sinkName)
+}
+
+// parseDefaultSinkName extracts the value of "default.audio.sink"
+// from pw-metadata output, which looks like:
+//
+//	update: id:0 key:'default.configured.audio.sink' value:'{"name":"alsa_output.pci..."}'  type:''
+func parseDefaultAudioSinkName(output []byte) string {
+	const key = "default.audio.sink"
+
+	lines := bufio.NewScanner(bytes.NewBuffer(output))
+	for lines.Scan() {
+		if !strings.Contains(lines.Text(), key) {
+			continue
+		}
+		for part := range strings.SplitSeq(lines.Text(), " ") {
+			if !strings.HasPrefix(part, "value:") {
+				continue
+			}
+			part = strings.TrimPrefix(part, "value:'")
+			part = strings.TrimSuffix(part, "'")
+			var v struct {
+				Name string `json:"name"`
+			}
+			if err := json.Unmarshal([]byte(part), &v); err == nil && v.Name != "" {
+				return v.Name
+			}
+		}
+	}
+
+	return ""
 }
