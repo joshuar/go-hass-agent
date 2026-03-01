@@ -13,6 +13,7 @@ import (
 	"os/exec"
 	"slices"
 	"sync"
+	"time"
 
 	slogctx "github.com/veqryn/slog-context"
 
@@ -63,7 +64,6 @@ func NewMonitor(ctx context.Context) (*Monitor, error) {
 						e = &Event{}
 						eventPool.Put(e)
 					}()
-
 					if err = dec.Decode(e); err == io.EOF {
 						return
 					} else if err != nil {
@@ -72,6 +72,7 @@ func NewMonitor(ctx context.Context) (*Monitor, error) {
 					} else if event == nil {
 						return
 					}
+					event.CapturedAt = time.Now().UTC()
 					// Filter the event through all listeners and send the event to whichever listeners want it.
 					for listener := range slices.Values(monitor.listeners) {
 						if listener.filterFunc(event) {
