@@ -34,11 +34,14 @@ overrides:
       - dbus-x11
     recommends:
       - libcap
+      - pipewire-utils
   deb:
     depends:
       - dbus-x11
     recommends:
       - libcap2
+      - wireplumber
+      - pipewire-bin
   archlinux:
     recommends:
       - libcap

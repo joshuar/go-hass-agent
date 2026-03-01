@@ -392,7 +392,8 @@ app or number of apps changes.
 ##### Volume Control
 
 - **Volume Control/Mute**: Adjust the volume on the default audio output device.
-  - Requires Wireplumber `wpctl` command-line utility installed and available.
+  - Requires Pipwire and Wireplumber both configured and command-line utilities installed and available (most
+    distributions will use Pipewire, command-line utilities might need to be installed manually).
 
 ##### Webcam Control
 
