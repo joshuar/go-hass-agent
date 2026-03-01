@@ -89,7 +89,7 @@ func (w *webcamUsageWorker) parsePWState(state pipewire.State) {
 // interested in events of type EventNode that have the "media.class" property
 // of "Video/Source".
 func webcamPipewireEventFilter(e *pipewire.Event) bool {
-	if e.Type == pipewire.EventNode || e.IsRemovalEvent() {
+	if e.Type == pipewire.InterfaceNodeEvent || e.IsRemovalEvent() {
 		// Parse props.
 		props, err := e.NodeProps()
 		if err != nil {

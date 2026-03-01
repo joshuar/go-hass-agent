@@ -87,7 +87,7 @@ func (w *micUsageWorker) parsePWState(state pipewire.State) {
 // micPipewireEventFilter filters the pipewire events. For mic monitoring, we are only
 // interested in events of type EventNode that have the audio source media type.
 func micPipewireEventFilter(e *pipewire.Event) bool {
-	if e.Type == pipewire.EventNode || e.IsRemovalEvent() {
+	if e.Type == pipewire.InterfaceNodeEvent || e.IsRemovalEvent() {
 		// Parse props.
 		props, err := e.NodeProps()
 		if err != nil {
