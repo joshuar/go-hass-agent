@@ -6,15 +6,12 @@ package server
 import (
 	"context"
 	"embed"
-	"errors"
 	"fmt"
 	"log/slog"
 	"net"
 	"net/http"
-	"os"
-	"os/signal"
 	"slices"
-	"sync"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -32,7 +29,8 @@ import (
 )
 
 const (
-	serverConfigPrefix = "server"
+	serverConfigPrefix      = "server"
+	gracefulShutdownTimeout = 30 * time.Second
 )
 
 // Server holds data for implementing the web server component of the agent.
@@ -119,45 +117,45 @@ func New(ctx context.Context, static embed.FS, agent *agent.Agent, options ...co
 
 // Start starts the web server component of the agent.
 func (s *Server) Start(ctx context.Context) error {
-	slogctx.FromCtx(ctx).Debug("Starting server...",
-		slog.String("address", s.Addr))
 
-	var wg sync.WaitGroup
+	var err error
+	if s.Config.CertFile != "" && s.Config.KeyFile != "" {
+		slogctx.FromCtx(ctx).Info("Server starting.",
+			slog.String("address", s.ShowAddress()),
+			slog.Time("timestamp", time.Now()),
+			slog.String("certificate file", s.Config.CertFile),
+			slog.String("key file", s.Config.KeyFile),
+		)
+		err = s.ListenAndServeTLS(s.Config.CertFile, s.Config.KeyFile)
+	} else {
+		slogctx.FromCtx(ctx).Info("Server starting.",
+			slog.String("address", s.ShowAddress()),
+			slog.Time("timestamp", time.Now()),
+		)
+		err = s.ListenAndServe()
+	}
+	if err != nil && err != http.ErrServerClosed {
+		return fmt.Errorf("start server: %w", err)
+	}
 
-	wg.Add(1)
-	// Listen for shutdown events and process them.
 	go func() {
-		wg.Done()
-
-		stop := make(chan os.Signal, 1)
-
-		signal.Notify(stop, os.Interrupt)
-		<-stop
-
-		if err := s.Shutdown(ctx); err != nil {
-			slogctx.FromCtx(ctx).Error("Error occurred when trying to shut down server.",
+		<-ctx.Done()
+		// Create shutdown context with 30-second timeout
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), gracefulShutdownTimeout)
+		defer cancel()
+		// Trigger graceful shutdown
+		slogctx.FromCtx(ctx).Info("Server stopping...",
+			slog.Time("timestamp", time.Now()),
+		)
+		if err := s.Shutdown(shutdownCtx); err != nil {
+			slogctx.FromCtx(ctx).Error("Server failed to shutdown gracefully.",
 				slog.Any("error", err),
 			)
 		}
-	}()
 
-	// And we serve HTTP until the world ends.
-	go func() {
-		var err error
-		if s.Config.CertFile != "" && s.Config.KeyFile != "" {
-			err = s.ListenAndServeTLS(s.Config.CertFile, s.Config.KeyFile)
-		} else {
-			err = s.ListenAndServe()
-		}
-		if errors.Is(err, http.ErrServerClosed) { // graceful shutdown
-			slogctx.FromCtx(ctx).Debug("Shutting down server...")
-			wg.Wait()
-		} else if err != nil {
-			slogctx.FromCtx(ctx).Debug("Error shutting down server.",
-				slog.Any("error", err))
-		}
+		slogctx.FromCtx(ctx).Info("Server stopped.",
+			slog.Time("timestamp", time.Now()))
 	}()
-
 	return nil
 }
 

@@ -71,10 +71,11 @@ func (r *Run) Run(opts *Opts) error {
 	}
 
 	// Start web server.
-	err = server.Start(ctx)
-	if err != nil {
-		return fmt.Errorf("unable to run: %w", err)
-	}
+	go func() {
+		if err = server.Start(ctx); err != nil {
+			panic(fmt.Errorf("unable to run: %w", err))
+		}
+	}()
 
 	if !agent.IsRegistered() {
 		xdgOpen, err := exec.LookPath("xdg-open")
