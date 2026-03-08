@@ -8,6 +8,9 @@ updates:
     commit-message:
       prefix: "build(go): ⬆️"
 
+    cooldown:
+      default-days: 7
+
   # Maintain dependencies for build tools
   - package-ecosystem: "gomod"
     directory: "/tools"
@@ -16,6 +19,9 @@ updates:
     commit-message:
       prefix: "build(go): ⬆️"
 
+    cooldown:
+      default-days: 7
+
   # Maintain dependencies for GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -23,6 +29,9 @@ updates:
       interval: "weekly"
     commit-message:
       prefix: "ci(github): ⬆️"
+
+    cooldown:
+      default-days: 7
 
   # Enable version updates for bun
   - package-ecosystem: "bun"
@@ -34,6 +43,9 @@ updates:
     commit-message:
       prefix: "build(js): ⬆️"
 
+    cooldown:
+      default-days: 7
+
   # Enable version updates for Docker
   - package-ecosystem: "docker"
     # Look for a `Dockerfile` in the `root` directory
@@ -43,3 +55,6 @@ updates:
       interval: "weekly"
     commit-message:
       prefix: "build(container): ⬆️"
+
+    cooldown:
+      default-days: 7
