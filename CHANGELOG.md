@@ -1,5 +1,21 @@
 # Changelog
 
+## [14.10.0](https://github.com/joshuar/go-hass-agent/compare/v14.9.0...v14.10.0) (2026-03-01)
+
+
+### Features
+
+* **linux/media:** :sparkles: use pipewire for monitoring volume changes instead of pulseaudio ([0f8ae48](https://github.com/joshuar/go-hass-agent/commit/0f8ae48026dff3ee454e3799b8efc606e50c5191))
+* **linux/media:** :sparkles: use pipewire for volume control ([6f8a8e9](https://github.com/joshuar/go-hass-agent/commit/6f8a8e9205587c039fbdee30964d795df46d5bef))
+
+
+### Bug Fixes
+
+* **config:** :bug: actually working support for custom config path ([8f39c10](https://github.com/joshuar/go-hass-agent/commit/8f39c102fdec2c0113e253460ecd3e4575b8cfbe))
+* **linux/media:** :bug: use proper event type for filtering pipewire events ([9d3d597](https://github.com/joshuar/go-hass-agent/commit/9d3d5974f41fcd3fc2ac5a79be07858f20c36857))
+* **mqtt:** :bug: fail sanitisation if config is nil ([d02bf4f](https://github.com/joshuar/go-hass-agent/commit/d02bf4fae1521bfd569878137bb5db90a5b9fad6))
+* **pkg/pipewire:** :bug: add capture time to events ([dadf67b](https://github.com/joshuar/go-hass-agent/commit/dadf67be6e9ae23e4c1933a93e2cdef1da6d6350))
+
 ## [14.9.0](https://github.com/joshuar/go-hass-agent/compare/v14.8.0...v14.9.0) (2026-02-21)
 
 
