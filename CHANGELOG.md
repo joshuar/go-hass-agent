@@ -1,5 +1,12 @@
 # Changelog
 
+## [14.10.1](https://github.com/joshuar/go-hass-agent/compare/v14.10.0...v14.10.1) (2026-03-08)
+
+
+### Bug Fixes
+
+* **pkg/pipewire:** :bug: handle pw-dump errors ([863abcb](https://github.com/joshuar/go-hass-agent/commit/863abcbd32fe67df35ba7628ed5c922fdabeafe0))
+
 ## [14.10.0](https://github.com/joshuar/go-hass-agent/compare/v14.9.0...v14.10.0) (2026-03-01)
 
 
