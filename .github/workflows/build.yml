@@ -106,11 +106,12 @@ jobs:
         if: ${{ needs.check_release.outputs.release_created }}
         run: |
           echo "APPVERSION=${{ needs.check_release.outputs.release_tag }}" >> $GITHUB_ENV
-      - name: Setup Go
-        id: setup_go
+      - name: Set up go
         uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v5
         with:
           go-version-file: "go.mod"
+      - name: Set up npm
+        uses: actions/setup-node@7c12f8017d5436eb855f1ed4399f037a36fbd9e8 # v2.5.2
       - name: Build frontend files
         run: |
           npm install
@@ -123,14 +124,11 @@ jobs:
           CGO_ENABLED: 0
           GOARCH: ${{matrix.goarch}}
           GOARM: ${{matrix.goarm}}
-
       - name: Install upx
         run: sudo apt install -y upx
-
       - name: Compress binary with upx
         run: upx --best --lzma dist/go-hass-agent
-
-      - name: Package
+      - name: Create packages
         run: |
           for format in rpm deb archlinux; do
             go run github.com/goreleaser/nfpm/v2/cmd/nfpm@latest package --packager ${format} --config .nfpm.yaml --target dist
