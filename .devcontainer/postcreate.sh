@@ -14,7 +14,7 @@ echo 'eval "$(starship init bash)"' >>~/.bashrc
 cd /workspace
 
 # Update JS packages.
-npm update || exit -1
+npm clean-install || exit -1
 
 # Install Go packages.
 export PATH="$HOME/go/bin:/go/bin:/usr/local/go/bin:$PATH" && \
