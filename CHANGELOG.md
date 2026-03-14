@@ -1,5 +1,12 @@
 # Changelog
 
+## [14.10.2](https://github.com/joshuar/go-hass-agent/compare/v14.10.1...v14.10.2) (2026-03-14)
+
+
+### Bug Fixes
+
+* **logging:** :bug: fix writing logfile ([116ee88](https://github.com/joshuar/go-hass-agent/commit/116ee8844de04280311ffed153d0aadb48120181))
+
 ## [14.10.1](https://github.com/joshuar/go-hass-agent/compare/v14.10.0...v14.10.1) (2026-03-08)
 
 
