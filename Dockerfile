@@ -32,7 +32,7 @@ COPY . .
 
 # install and build frontend with npm (we don't use bun as it is unsupported on some arches we support)
 RUN <<EOF
-npm install
+npm clean-install
 npm run build:js
 npm run build:css
 EOF

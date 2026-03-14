@@ -114,7 +114,7 @@ jobs:
         uses: actions/setup-node@7c12f8017d5436eb855f1ed4399f037a36fbd9e8 # v2.5.2
       - name: Build frontend files
         run: |
-          npm install
+          npm clean-install
           npm run build:js
           npm run build:css
       - name: Build binary
