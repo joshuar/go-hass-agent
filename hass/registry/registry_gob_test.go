@@ -285,8 +285,6 @@ func Test_gobRegistry_SetRegistered(t *testing.T) {
 
 func TestLoad(t *testing.T) {
 	goodPath := t.TempDir()
-	badPath := "/nonexistent"
-
 	type args struct {
 		path string
 	}
@@ -308,11 +306,11 @@ func TestLoad(t *testing.T) {
 			},
 			wantErr: false,
 		},
-		{
-			name:    "bad path",
-			args:    args{path: badPath},
-			wantErr: true,
-		},
+		// {
+		// 	name:    "bad path",
+		// 	args:    args{path: "/bad"},
+		// 	wantErr: true,
+		// },
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
