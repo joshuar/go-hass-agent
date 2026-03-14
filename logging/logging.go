@@ -17,8 +17,6 @@ import (
 	slogmulti "github.com/samber/slog-multi"
 	slogctx "github.com/veqryn/slog-context"
 	slogjson "github.com/veqryn/slog-json"
-
-	"github.com/joshuar/go-hass-agent/config"
 )
 
 // ErrLogOption indicates an invalid logging option.
@@ -44,11 +42,12 @@ type Options struct {
 }
 
 // New creates a new logger with the given options.
-func New(options Options) {
+func New(path string, options Options) {
 	var (
 		logFile string
 		level   slog.Level
 	)
+
 	// Set the log level.
 	switch options.LogLevel {
 	case "trace":
@@ -62,7 +61,7 @@ func New(options Options) {
 	if options.NoLogFile {
 		logFile = ""
 	} else {
-		logFile = filepath.Join(config.GetPath(), "go-hass-agent.log")
+		logFile = filepath.Join(path, "go-hass-agent.log")
 	}
 
 	// Set up handlers.
@@ -72,8 +71,7 @@ func New(options Options) {
 	)
 	// Unless no log file was requested, set up file logging.
 	if logFile != "" {
-		logFH, err := openLogFile(logFile)
-		if err != nil {
+		if logFH, err := openLogFile(logFile); err != nil {
 			slog.Warn("unable to open log file",
 				slog.String("file", logFile),
 				slog.Any("error", err))
@@ -148,8 +146,7 @@ func fileLevelReplacer(_ []string, attr slog.Attr) slog.Attr {
 		}
 
 		// Format custom log level.
-		levelLabel, exists := LevelNames[level]
-		if exists {
+		if levelLabel, exists := LevelNames[level]; exists {
 			attr.Value = slog.StringValue(levelLabel)
 		}
 	}
@@ -162,9 +159,7 @@ func fileLevelReplacer(_ []string, attr slog.Attr) slog.Attr {
 func openLogFile(logFile string) (*os.File, error) {
 	logDir := filepath.Dir(logFile)
 	// Create the log directory if it does not exist.
-	_, err := os.Stat(logDir)
-
-	if err == nil || errors.Is(err, os.ErrNotExist) {
+	if _, err := os.Stat(logDir); err == nil || errors.Is(err, os.ErrNotExist) {
 		err = os.MkdirAll(logDir, 0o750)
 		if err != nil {
 			return nil, fmt.Errorf("unable to create log file directory %s: %w", logDir, err)

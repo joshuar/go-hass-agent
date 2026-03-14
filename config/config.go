@@ -33,8 +33,8 @@ const (
 	AppURL = "https://github.com/joshuar/go-hass-agent"
 	// AppDescription is the formatted summary of the application.
 	AppDescription = "A Home Assistant, native app for desktop/laptop devices."
-	// ConfigFile is the location of the server configuration file.
-	ConfigFile = "preferences.toml"
+	// configFileName is the location of the server configuration file.
+	configFileName = "preferences.toml"
 
 	// DefaultServer is the default Home Assistant server address.
 	DefaultServer = "http://localhost:8123"
@@ -47,6 +47,10 @@ type configData struct {
 	path string
 }
 
+func (c *configData) file() string {
+	return filepath.Join(c.path, configFileName)
+}
+
 var globalConfig = configData{
 	src: koanf.New("."),
 }
@@ -55,21 +59,14 @@ var globalConfig = configData{
 // values and set up a config backend that other components can use via the Load
 // method. This only happens once.
 var Init = sync.OnceValue(func() error {
-	if globalConfig.path == "" {
-		userConfigDir, err := os.UserConfigDir()
-		if err != nil {
-			return fmt.Errorf("%w: %w", ErrLoadConfig, err)
-		}
-		globalConfig.path = filepath.Join(userConfigDir, AppID)
-	}
 
 	// Create the config directory if it does not exist.
-	if err := checkPath(globalConfig.path); err != nil {
+	if err := checkPath(GetPath()); err != nil {
 		return fmt.Errorf("%w: %w", ErrLoadConfig, err)
 	}
 
 	// Load config file
-	provider := file.Provider(filepath.Join(globalConfig.path, ConfigFile))
+	provider := file.Provider(globalConfig.file())
 	if err := globalConfig.src.Load(provider, toml.Parser()); err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return fmt.Errorf("%w: %w", ErrLoadConfig, err)
 	}
@@ -95,6 +92,13 @@ var Init = sync.OnceValue(func() error {
 
 // GetPath returns the directory path under which the config file (and other files/data) is stored.
 func GetPath() string {
+	if globalConfig.path == "" {
+		userConfigDir, err := os.UserConfigDir()
+		if err != nil {
+			return ""
+		}
+		globalConfig.path = filepath.Join(userConfigDir, AppID)
+	}
 	return globalConfig.path
 }
 
@@ -173,9 +177,7 @@ func save() error {
 	globalConfig.mu.Lock()
 	defer globalConfig.mu.Unlock()
 
-	configFile := filepath.Join(globalConfig.path, ConfigFile)
-
-	if err := checkPath(globalConfig.path); err != nil {
+	if err := checkPath(GetPath()); err != nil {
 		return err
 	}
 
@@ -184,13 +186,13 @@ func save() error {
 		return fmt.Errorf("unable to marshal config: %w", err)
 	}
 
-	err = os.WriteFile(configFile, b, 0o600)
+	err = os.WriteFile(globalConfig.file(), b, 0o600)
 	if err != nil {
-		return fmt.Errorf("unable to write config file %s: %w", configFile, err)
+		return fmt.Errorf("unable to write config file %s: %w", globalConfig.file(), err)
 	}
 
 	slog.Debug("Saved config to disk.",
-		slog.String("file", configFile),
+		slog.String("file", globalConfig.file()),
 	)
 
 	return nil

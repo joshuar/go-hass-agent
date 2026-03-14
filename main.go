@@ -59,7 +59,7 @@ func main() {
 	cmdCtx := kong.Parse(&CLI, kong.Bind(), kong.Vars{"defaultPath": config.GetPath()})
 	config.SetPath(CLI.Path)
 	// Set up the logger.
-	logging.New(logging.Options{LogLevel: CLI.LogLevel, NoLogFile: CLI.NoLogFile})
+	logging.New(config.GetPath(), logging.Options{LogLevel: CLI.LogLevel, NoLogFile: CLI.NoLogFile})
 	// Enable profiling if requested.
 	if CLI.ProfileFlags != nil {
 		if err := logging.StartProfiling(CLI.ProfileFlags); err != nil {
