@@ -5,10 +5,10 @@ ARG GO_VERSION
 
 # Alpine base.
 # https://hub.docker.com/_/alpine
-FROM docker.io/alpine:3.23.0@sha256:51183f2cfa6320055da30872f211093f9ff1d3cf06f39a0bdb212314c5dc7375 AS builder
+FROM docker.io/alpine:3.23.3@sha256:25109184c71bdad752c8312a8623239686a9a2071e8825f20acb8f2198c3f659 AS builder
 
 # Copy go from official image
-COPY --from=docker.io/golang:1.26.0-alpine-3.23.0@sha256:d4c4845f5d60c6a974c6000ce58ae079328d03ab7f721a0734277e69905473e5 /usr/local/go/ /usr/local/go/
+COPY --from=docker.io/golang:1.26.1-alpine-3.23@sha256:2389ebfa5b7f43eeafbd6be0c3700cc46690ef842ad962f6c5bd6be49ed82039 /usr/local/go/ /usr/local/go/
 
 # Install additional packages
 RUN apk update && apk add sudo openssh curl git bash fish micro graphviz nodejs npm mosquitto-clients dbus dbus-x11 starship
