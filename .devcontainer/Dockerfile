@@ -11,10 +11,7 @@ FROM docker.io/alpine:3.23.0@sha256:51183f2cfa6320055da30872f211093f9ff1d3cf06f3
 COPY --from=docker.io/golang:1.26.0-alpine-3.23.0@sha256:d4c4845f5d60c6a974c6000ce58ae079328d03ab7f721a0734277e69905473e5 /usr/local/go/ /usr/local/go/
 
 # Install additional packages
-RUN apk update && apk add sudo openssh curl git bash fish micro graphviz nodejs npm mosquitto-clients dbus dbus-x11
-
-# Install starship
-RUN cd /tmp && curl -sS https://starship.rs/install.sh | sh -s -- -y || exit -1
+RUN apk update && apk add sudo openssh curl git bash fish micro graphviz nodejs npm mosquitto-clients dbus dbus-x11 starship
 
 # Add non-root user
 ARG USER_NAME=vscode
