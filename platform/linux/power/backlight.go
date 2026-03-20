@@ -228,8 +228,8 @@ func (w *BacklightWorker) setupBrightnessControls() error {
 		w.getBrightnessFunc = getBrightnessDDCUtil
 		w.setBrightnessFunc = setBrightnessDDCUtil
 		w.monitorBrightnessFunc = w.monitorBrightnessDDCUtil
+		return nil
 	}
-	return fmt.Errorf("setup brightness controls: %w", linux.ErrUnsupportedDesktop)
 }
 
 // setBrightnessGnome will use D-Bus to change the brightness on Gnome desktops.
@@ -340,8 +340,7 @@ func (w *BacklightWorker) monitorBrightnessKDE(ctx context.Context) error {
 
 // setBrightnessDDCUtil will use the ddcutil program to set the brightness.
 func setBrightnessDDCUtil(ctx context.Context, _ *dbusx.Bus, value int) error {
-	_, err := exec.CommandContext(ctx, ddcutilPath, "-t", "setvcp", "10", strconv.Itoa(value)).Output()
-	if err != nil {
+	if _, err := exec.CommandContext(ctx, ddcutilPath, "-t", "setvcp", "10", strconv.Itoa(value)).Output(); err != nil {
 		return fmt.Errorf("ddcutil setvcp 10: %w", err)
 	}
 	return nil
@@ -355,7 +354,7 @@ func getBrightnessDDCUtil(ctx context.Context, _ *dbusx.Bus) (int, error) {
 	}
 
 	values := strings.Split(string(output), " ")
-	if len(values) < 3 {
+	if len(values) < 3 { //nolint:mnd // valid ddcutil output should have 3 values.
 		return 0, errors.New("invalid ddcutil output")
 	}
 	b, err := strconv.Atoi(values[3])
