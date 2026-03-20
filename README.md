@@ -1209,18 +1209,13 @@ disruptive actions on a device that another user is accessing.
 
 ### Build Requirements
 
-Besides Go, Go Hass Agent requires a javascript runtime/toolkit to bundle/build
-some assets required for the web UI. It's recommended to use
-[bun](https://bun.sh/) for this.
+Besides Go, Go Hass Agent requires a javascript runtime/toolkit to bundle/build some assets required for the web UI.
+[Nodejs](https://nodejs.org/en) works just fine, is packaged in nearly all distributions and has good cross-platform
+support.
 
 > [!NOTE]
 >
-> The devcontainer has all the necessary tooling installed for building Go Hass
-> Agent.
->
-> Some architectures are not supported by bun. In these cases, it's fine to use
-> [npm](https://www.npmjs.com/) as well, which has much wider architecture
-> support.
+> The devcontainer has all the necessary tooling installed for building Go Hass Agent.
 
 ### Compiling
 
@@ -1235,15 +1230,14 @@ npm run build:css
 CGO_ENABLED=0 go build -ldflags="-w -s -X github.com/joshuar/go-hass-agent/config.AppVersion=$(git describe --tags --always --long --dirty)" -o dist/go-hass-agent
 ```
 
-This will build a binary and place it in `dist/go-hass-agent-amd64`.
+This will build a binary and place it in `dist/go-hass-agent`.
 
 [⬆️ Back to Top](#-table-of-contents)
 
 ### Cross Compilation
 
-Go Hass Agent can also be built for **arm (v6/v7)** and **arm64** with
-cross-compilation. Just change the `go build` in the commands above as
-appropriate. For e.g.:
+Go Hass Agent can also be built for **arm (v6/v7)** and **arm64** with cross-compilation. Just change the `go build` in
+the commands above as appropriate. For e.g.:
 
 ```shell
 RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -ldflags="-s -w -X github.com/joshuar/go-hass-agent/config.AppVersion=$(git describe --tags --always --long --dirty)" -o dist/go-hass-agent
@@ -1253,8 +1247,7 @@ RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -ldflags="-s -w -X github.com
 
 ### Packages
 
-Go Hass Agent uses [nfpm](https://nfpm.goreleaser.com/) to create packages for
-Fedora, Arch, and Ubuntu/Debian.
+Go Hass Agent uses [nfpm](https://nfpm.goreleaser.com/) to create packages for Fedora, Arch, and Ubuntu/Debian.
 
 To build packages, use the following invocations:
 
@@ -1264,15 +1257,13 @@ for format in rpm deb archlinux; do
 done
 ```
 
-This will build packages for all possible formats and they will be available
-under the `dist/` folder.
+This will build packages for all possible formats and they will be available under the `dist/` folder.
 
 [⬆️ Back to Top](#-table-of-contents)
 
 ### Container Images
 
-A Dockerfile that you can use to build an image can be found
-[here](../../Dockerfile).
+A Dockerfile that you can use to build an image can be found [here](../../Dockerfile).
 
 You can build an image with a command like the following (using Podman):
 
@@ -1291,9 +1282,8 @@ podman build --file ./Dockerfile --platform linux/arm/v7 --tag go-hass-agent
 
 > [!NOTE]
 >
-> By default, the container will run as a user with UID/GID 1000/1000. You can
-> pick a different UID/GID when building by adding `--build-arg UID=999` and
-> `--build-arg GID=999` (adjusting the values as appropriate).
+> By default, the container will run as a user with UID/GID 1000/1000. You can pick a different UID/GID when building by
+> adding `--build-arg UID=999` and `--build-arg GID=999` (adjusting the values as appropriate).
 
 [⬆️ Back to Top](#-table-of-contents)
 
@@ -1313,17 +1303,14 @@ podman build --file ./Dockerfile --platform linux/arm/v7 --tag go-hass-agent
 
 > [!NOTE]
 >
-> Please note, as an open-source and hobby project, the Go Hass Agent developers
-> cannot commit to a response within any given time-frame. However, we do
-> endeavor to try to provide an initial response, and ongoing cadence of 1 week.
+> Please note, as an open-source and hobby project, the Go Hass Agent developers cannot commit to a response within any
+> given time-frame. However, we do endeavor to try to provide an initial response, and ongoing cadence of 1 week.
 
 ### 💾 Committing Code
 
-This repository is using
-[conventional commit messages](https://www.conventionalcommits.org/en/v1.0.0/#summary).
-This provides the ability to automatically include relevant notes in the
-[changelog](../CHANGELOG.md). The [TL;DR](https://en.wikipedia.org/wiki/TL;DR)
-is when writing commit messages, add a prefix:
+This repository is using [conventional commit messages](https://www.conventionalcommits.org/en/v1.0.0/#summary). This
+provides the ability to automatically include relevant notes in the [changelog](../CHANGELOG.md). The
+[TL;DR](https://en.wikipedia.org/wiki/TL;DR) is when writing commit messages, add a prefix:
 
 - `feat:` for a new feature, like a new sensor.
 - `fix:` when fixing an issue.
@@ -1333,16 +1320,13 @@ is when writing commit messages, add a prefix:
 
 ### 📜 Code of Conduct
 
-Please read the
-[Code of Conduct](https://github.com/joshuar/go-hass-agent/blob/master/CODE_OF_CONDUCT.md)
+Please read the [Code of Conduct](https://github.com/joshuar/go-hass-agent/blob/master/CODE_OF_CONDUCT.md)
 
 [⬆️ Back to Top](#-table-of-contents)
 
 ## 🧭 Roadmap
 
-Check out
-[what I'm working on](https://github.com/joshuar/go-hass-agent/discussions/150)
-for future releases.
+Check out [what I'm working on](https://github.com/joshuar/go-hass-agent/discussions/150) for future releases.
 
 [⬆️ Back to Top](#-table-of-contents)
 
@@ -1350,61 +1334,49 @@ for future releases.
 
 ### _Can I change the units of the sensor?_
 
-- Yes! In the
-  [customization options](https://www.home-assistant.io/docs/configuration/customizing-devices/)
-  for a sensor/entity, you can change the _unit of measurement_ (and _display
-  precision_ if desired). This is useful for sensors whose native unit is not
-  very human-friendly. For example the memory sensors report values in bytes
-  (B), whereas you may wish to change the unit of measurement to gigabytes (GB).
+- Yes! In the [customization options](https://www.home-assistant.io/docs/configuration/customizing-devices/) for a
+  sensor/entity, you can change the _unit of measurement_ (and _display precision_ if desired). This is useful for
+  sensors whose native unit is not very human-friendly. For example the memory sensors report values in bytes (B),
+  whereas you may wish to change the unit of measurement to gigabytes (GB).
 
 [⬆️ Back to Top](#-table-of-contents)
 
 ### _Can I disable some sensors?_
 
-- There is currently some limited support for disabling certain _groups_ of
-  sensors. In the [preferences](#️-preferences), under the `worker` sections,
-  you can find some controls to disable some sensor groups.
-- Alternatively, you can disable the corresponding sensor entity in Home
-  Assistant, and the agent will stop sending updates for it.
-  - To disable a sensor entity, In the
-    [customisation options](https://www.home-assistant.io/docs/configuration/customizing-devices/)
-    for a sensor/entity, toggle the _Enabled_ switch. The agent will
-    automatically detect the disabled state and send/not send updates as
-    appropriate.
-  - Note that disabling a sensor in Home Assistant will **not** stop Go Hass
-    Agent from gathering the raw data for the sensor. Only disabling it via the
-    Agent preferences file will stop any data gathering.
+- There is currently some limited support for disabling certain _groups_ of sensors. In the
+  [preferences](#️-preferences), under the `worker` sections, you can find some controls to disable some sensor groups.
+- Alternatively, you can disable the corresponding sensor entity in Home Assistant, and the agent will stop sending
+  updates for it.
+  - To disable a sensor entity, In the [customisation
+    options](https://www.home-assistant.io/docs/configuration/customizing-devices/) for a sensor/entity, toggle the
+    _Enabled_ switch. The agent will automatically detect the disabled state and send/not send updates as appropriate.
+  - Note that disabling a sensor in Home Assistant will **not** stop Go Hass Agent from gathering the raw data for the
+    sensor. Only disabling it via the Agent preferences file will stop any data gathering.
 
 [⬆️ Back to Top](#-table-of-contents)
 
 ### _What is the resource (CPU, memory) usage of the agent?_
 
-- Very little in most cases. On Linux, the agent with all sensors working,
-  should consume well less than 50 MB of memory with very little CPU usage.
-- On Linux, many sensors rely on D-Bus signals for publishing their data, so CPU
-  usage may be affected by the “business” of the bus. For sensors that are
-  polled on an interval, the agent makes use of some jitter in the polling
-  intervals to avoid a “thundering herd” problem.
+- Very little in most cases. On Linux, the agent with all sensors working, should consume well less than 50 MB of memory
+  with very little CPU usage.
+- On Linux, many sensors rely on D-Bus signals for publishing their data, so CPU usage may be affected by the “business”
+  of the bus. For sensors that are polled on an interval, the agent makes use of some jitter in the polling intervals to
+  avoid a “thundering herd” problem.
 
 [⬆️ Back to Top](#-table-of-contents)
 
 ### _I've updated the agent and now I've got a bunch of duplicate/removed/disabled sensors?_
 
-- Generally, Go Hass Agent will try to reserve sensor renames to
-  [major version upgrades](#️-versioning), which may contain breaking changes.
-- Unfortunately, sometimes sensor names may inadvertently get changed in
-  non-major releases.
-- Regrettably, there is no way to rename the sensors in Home Assistant such that
-  long-term statistics and existing automations and dashboards continue to work
-  uninterrupted.
-- For long-term statistics, you can remove the old sensors manually, under
-  Developer Tools→Statistics in Home Assistant, for example. The list should
-  contain sensors that are no longer “provided” by the agent. Or you can wait
-  until they age out of the Home Assistant long-term statistics database
-  automatically.
-- For automations and dashboards the
-  [repairs integration](https://www.home-assistant.io/integrations/repairs/),
-  will direct you to any broken items and how to fix them.
+- Generally, Go Hass Agent will try to reserve sensor renames to [major version upgrades](#️-versioning), which may
+  contain breaking changes.
+- Unfortunately, sometimes sensor names may inadvertently get changed in non-major releases.
+- Regrettably, there is no way to rename the sensors in Home Assistant such that long-term statistics and existing automations and
+  dashboards continue to work uninterrupted.
+- For long-term statistics, you can remove the old sensors manually, under Developer Tools→Statistics in Home Assistant, for example. The
+  list should contain sensors that are no longer “provided” by the agent. Or you can wait until they age out of the Home Assistant long-term
+  statistics database automatically.
+- For automations and dashboards the [repairs integration](https://www.home-assistant.io/integrations/repairs/), will direct you to any
+  broken items and how to fix them.
 
   [![Open your Home Assistant instance to the repairs
 integration.](https://my.home-assistant.io/badges/repairs.svg)](https://my.home-assistant.io/redirect/repairs)
@@ -1413,8 +1385,7 @@ integration.](https://my.home-assistant.io/badges/repairs.svg)](https://my.home-
 
 ### _Can I reset the agent (start from new)?_
 
-- Yes. You can reset the agent so that it will re-register with Home Assistant
-  and act as a new device. To do this:
+- Yes. You can reset the agent so that it will re-register with Home Assistant and act as a new device. To do this:
 
 1. Stop Go Hass Agent if already running.
 2. Open your Home Assistant **_mobile_app_** integrations page:
@@ -1422,96 +1393,72 @@ integration.](https://my.home-assistant.io/badges/repairs.svg)](https://my.home-
    [![Open your Home Assistant instance to the mobile_app
 integration.](https://my.home-assistant.io/badges/integration.svg)](https://my.home-assistant.io/redirect/integration/?domain=mobile_app)
 
-3. Locate the entry for your existing Go Hass Agent device. It should be named
-   the same as the hostname of the device it is running on.
+3. Locate the entry for your existing Go Hass Agent device. It should be named the same as the hostname of the device it is running on.
 4. Click on the menu (three vertical dots) at the right of the entry:
 
    ![Delete Agent Example](assets/screenshots/delete-from-mobile-app-integrations.png)
 
 5. Choose **Delete**.
-6. From a terminal, run the agent with the command:
-   `go-hass-agent register --force` (add `--server someserver --token sometoken`
-   for non-graphical registration).
-7. The agent will go through the initial registration steps. It should report
-   that registration was successful.
+6. From a terminal, run the agent with the command: `go-hass-agent register --force` (add `--server someserver --token sometoken` for
+   non-graphical registration).
+7. The agent will go through the initial registration steps. It should report that registration was successful.
 8. Restart the agent.
 
 [⬆️ Back to Top](#-table-of-contents)
 
 ### _Can (or does) the agent run as root or with privileges?_
 
-- You cannot run Go Hass Agent with root privileges or as the root user. The
-  agent will refuse to run.
+- You cannot run Go Hass Agent with root privileges or as the root user. The agent will refuse to run.
 - Some sensors do require additional
   [capabilities](https://www.man7.org/linux/man-pages/man7/capabilities.7.html)
   in order to access the required data.
-  - When you install via a package (rpm, deb, etc.), the agent binary will have
-    the required capabilities.
-  - If you build yourself, you need to set the capabilities on your binary
-    manually. Consult the [sensors list](#-sensors) for which sensors require
-    what capabilities.
-- If you have [script sensors](#-script-sensors) or
-  [custom commands](#other-custom-commands) that need privileges, there are most
-  likely ways for the script/command to elevate to the privileges it needs as
-  part of its execution.
+  - When you install via a package (rpm, deb, etc.), the agent binary will have the required capabilities.
+  - If you build yourself, you need to set the capabilities on your binary manually. Consult the [sensors list](#-sensors) for which sensors
+    require what capabilities.
+- If you have [script sensors](#-script-sensors) or [custom commands](#other-custom-commands) that need privileges, there are most likely
+  ways for the script/command to elevate to the privileges it needs as part of its execution.
 
 [⬆️ Back to Top](#-table-of-contents)
 
 ### _Can the agent run in an MQTT-only mode?_
 
-- Unfortunately no, Go Hass Agent cannot run in an MQTT-only credentials. It
-  makes use of the
-  [Native App Integration API](https://developers.home-assistant.io/docs/api/native-app-integration/)
-  that is **not** MQTT only.
+- Unfortunately no, Go Hass Agent cannot run in an MQTT-only credentials. It makes use of the [Native App Integration
+  API](https://developers.home-assistant.io/docs/api/native-app-integration/) that is **not** MQTT only.
 
 [⬆️ Back to Top](#-table-of-contents)
 
 ### _(Linux) Why do the disk rate sensors report a non-zero value while the IO operations in progress sensor is zero?_
 
-- The rate sensors are a derived value, taken by looking at the change in total
-  IO operations since the sensor was last polled. The IO operations in progress
-  sensor is a point-in-time measurement taken at the time of polling. So
-  short-lived IO operations, that generate reads/writes but happen between
-  polling intervals, won't be visible in the IO operations sensor but will
-  contribute to the derived IO rate sensors.
-- If you are wanting to track IO operations, I would recommend focusing on the
-  IO operations value being at a certain value over a period of time. Certainly
-  however, for exact measurements, a dedicated monitoring solution is
-  recommended.
+- The rate sensors are a derived value, taken by looking at the change in total IO operations since the sensor was last polled. The IO
+  operations in progress sensor is a point-in-time measurement taken at the time of polling. So short-lived IO operations, that generate
+  reads/writes but happen between polling intervals, won't be visible in the IO operations sensor but will contribute to the derived IO rate
+  sensors.
+- If you are wanting to track IO operations, I would recommend focusing on the IO operations value being at a certain value over a period of
+  time. Certainly however, for exact measurements, a dedicated monitoring solution is recommended.
 
 [⬆️ Back to Top](#-table-of-contents)
 
 ### _(Linux) What does the value of the Firmware Security sensor mean?_
 
-- This is a **Host Security ID** value. More information can be found
-  [here](https://fwupd.github.io/libfwupdplugin/hsi.html).
+- This is a **Host Security ID** value. More information can be found [here](https://fwupd.github.io/libfwupdplugin/hsi.html).
 
 [⬆️ Back to Top](#-table-of-contents)
 
 ### _(Linux) Some of the hardware sensors are reporting incorrect values?_
 
-- Go Hass Agent sends the raw hardware sensor data without any chip-dependent
-  scaling/transformation. If you are comparing the values to, say, the output of
-  sensors from the `sensors` command (part of _lm-sensors_), there will be
-  discrepancies; _lm-sensors_ has a database of chips with
-  scaling/transformation information for their values and applies those as
-  required before displaying the values.
-- Future versions of Go Hass Agent will hopefully use similar logic to
-  scale/transform the hardware sensor values. As a workaround, you can create a
-  template sensor that scales/transforms values as appropriate.
+- Go Hass Agent sends the raw hardware sensor data without any chip-dependent scaling/transformation. If you are comparing the values to,
+  say, the output of sensors from the `sensors` command (part of _lm-sensors_), there will be discrepancies; _lm-sensors_ has a database of
+  chips with scaling/transformation information for their values and applies those as required before displaying the values.
+- Future versions of Go Hass Agent will hopefully use similar logic to scale/transform the hardware sensor values. As a workaround, you can
+  create a template sensor that scales/transforms values as appropriate.
 
 [⬆️ Back to Top](#-table-of-contents)
 
 ## 🤝 Acknowledgements
 
-- [Home Assistant](https://home-assistant.io), for providing a platform to watch
-  and act on sensors and stuff.
-- [Mage](https://magefile.org/), used to make building Go Hass Agent easier.
-- This
-  [Awesome README Template](https://github.com/Louis3797/awesome-readme-template),
-  to create this awesome README.
-- [Prometheus Node Exporter](https://github.com/prometheus/node_exporter) code,
-  for inspiration on some sensors.
+- [Home Assistant](https://home-assistant.io), for providing a platform to watch and act on sensors and stuff.
+- This [Awesome README Template](https://github.com/Louis3797/awesome-readme-template), to create this awesome README.
+- [Prometheus Node Exporter](https://github.com/prometheus/node_exporter) code, for inspiration on some sensors.
 
 [⬆️ Back to Top](#-table-of-contents)
 
