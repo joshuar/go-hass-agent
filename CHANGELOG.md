@@ -1,5 +1,12 @@
 # Changelog
 
+## [14.10.3](https://github.com/joshuar/go-hass-agent/compare/v14.10.2...v14.10.3) (2026-03-20)
+
+
+### Bug Fixes
+
+* **linux/power:** :bug: fix logic for detecting and using ddcutil on Gnome for backlight control. fixes [#802](https://github.com/joshuar/go-hass-agent/issues/802) ([2dad9e6](https://github.com/joshuar/go-hass-agent/commit/2dad9e6bfe9c7467d7fcdfaf55ac3336fa92772d))
+
 ## [14.10.2](https://github.com/joshuar/go-hass-agent/compare/v14.10.1...v14.10.2) (2026-03-14)
 
 
