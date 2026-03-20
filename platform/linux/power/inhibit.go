@@ -112,8 +112,7 @@ func (w *InhibitWorker) inhibitStateCallback(_ ...any) (json.RawMessage, error) 
 func (w *InhibitWorker) inhibitCommandCallback(p *paho.Publish) {
 	var err error
 
-	state := string(p.Payload)
-	switch state {
+	switch string(p.Payload) {
 	case "ON":
 		err = w.createInhibitLock()
 	case "OFF":

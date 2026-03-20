@@ -32,9 +32,9 @@ const (
 	lastActivePreferencesID = sensorsPrefPrefix + "last_active"
 
 	// minKeyboardKeys is the minimum number of key capabilities to consider a device a keyboard
-	// (as opposed to a mouse with just a few buttons)
+	// (as opposed to a mouse with just a few buttons).
 	minKeyboardKeys = 10
-	// inputReadRetryDelay is the delay between retries when reading from input devices fails
+	// inputReadRetryDelay is the delay between retries when reading from input devices fails.
 	inputReadRetryDelay = 100 * time.Millisecond
 )
 
@@ -59,10 +59,10 @@ type LastActivePrefs struct {
 // input device activity (keyboard/mouse).
 //
 // The worker monitors:
-// - Input events from /dev/input/event* devices using evdev (requires read permissions)
+// - Input events from /dev/input/event* devices using evdev (requires read permissions).
 //
 // System Requirements:
-// - Read access to /dev/input/event* devices (typically via 'input' group membership)
+// - Read access to /dev/input/event* devices (typically via 'input' group membership).
 type lastActiveWorker struct {
 	*workers.PollingEntityWorkerData
 	*models.WorkerMetadata

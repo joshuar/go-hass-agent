@@ -136,15 +136,13 @@ func (w *problemsWorker) getProblems() ([]string, error) {
 }
 
 func (w *problemsWorker) getProblemDetails(problem string) (map[string]string, error) {
-	details, err := dbusx.GetData[map[string]string](w.bus,
+	if details, err := dbusx.GetData[map[string]string](w.bus,
 		dBusProblemsDest,
 		dBusProblemIntr,
-		dBusProblemIntr+".GetInfo", problem, []string{"time", "count", "package", "reason"})
-
-	switch {
-	case err != nil:
+		dBusProblemIntr+".GetInfo", problem, []string{"time", "count", "package", "reason"},
+	); err != nil {
 		return nil, err
-	default:
+	} else {
 		return details, nil
 	}
 }
@@ -155,15 +153,13 @@ func parseProblem(details map[string]string) map[string]any {
 	for key, value := range details {
 		switch key {
 		case "time":
-			timeValue, err := strconv.ParseInt(value, 10, 64)
-			if err != nil {
+			if timeValue, err := strconv.ParseInt(value, 10, 64); err != nil {
 				parsed["time"] = 0
 			} else {
 				parsed["time"] = time.Unix(timeValue, 0).Format(time.RFC3339)
 			}
 		case "count":
-			countValue, err := strconv.Atoi(value)
-			if err != nil {
+			if countValue, err := strconv.Atoi(value); err != nil {
 				parsed["count"] = 0
 			} else {
 				parsed["count"] = countValue

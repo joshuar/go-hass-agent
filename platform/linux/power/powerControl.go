@@ -123,13 +123,12 @@ func generatePowerCommands(ctx context.Context, bus *dbusx.Bus, device string) [
 	// Add available system power commands.
 	for _, config := range systemCommands {
 		// Check if this power method is available on the system.
-		available, err := dbusx.GetData[string](
+		if available, err := dbusx.GetData[string](
 			bus,
 			loginBasePath,
 			loginBaseInterface,
 			managerInterface+".Can"+config.method,
-		)
-		if available == "yes" || err == nil {
+		); available == "yes" || err == nil {
 			config.callBack = generatePowerControlCallback(
 				ctx,
 				bus,
@@ -152,8 +151,7 @@ func generatePowerControlCallback(
 	name, path, method string,
 ) func(p *paho.Publish) {
 	return func(_ *paho.Publish) {
-		err := dbusx.NewMethod(bus, loginBaseInterface, path, method).Call(ctx, true)
-		if err != nil {
+		if err := dbusx.NewMethod(bus, loginBaseInterface, path, method).Call(ctx, true); err != nil {
 			slogctx.FromCtx(ctx).With(slog.String("controller", "power")).
 				Warn("Could not issue power control.",
 					slog.String("control", name),

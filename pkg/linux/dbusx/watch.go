@@ -129,7 +129,7 @@ func NewWatch(options ...WatchOption) *Watch {
 // triggered the match, the path and the contents (what values actually
 // changed).
 //
-//nolint:gocognit,funlen,nestif
+//nolint:gocognit,nestif
 func (w *Watch) Start(ctx context.Context, bus *Bus) (<-chan Trigger, error) {
 	if len(w.methods) > 0 { // Set up a watch for on each method plus all other conditions specified.
 		for method := range slices.Values(w.methods) {

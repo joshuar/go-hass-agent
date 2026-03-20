@@ -82,7 +82,7 @@ func (w *uptimeWorker) Execute(ctx context.Context) error {
 		sensor.WithStateClass(class.StateMeasurement),
 		sensor.WithUnits("h"),
 		sensor.WithIcon("mdi:restart"),
-		sensor.WithState(w.getUptime(ctx)/60/60),
+		sensor.WithState(w.getUptime(ctx)/60/60), //nolint:mnd // convert to hours.
 		sensor.WithDataSourceAttribute(linux.ProcFSRoot),
 		sensor.WithAttribute("native_unit_of_measurement", "h"),
 	)

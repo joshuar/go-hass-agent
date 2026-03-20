@@ -89,8 +89,7 @@ func (w *UserSessionSensorWorker) Start(ctx context.Context) (<-chan models.Enti
 	sensorCh := make(chan models.Entity)
 
 	sendUpdate := func() {
-		users, err := w.getUsers()
-		if err != nil {
+		if users, err := w.getUsers(); err != nil {
 			slogctx.FromCtx(ctx).Debug("Failed to get list of user sessions.", slog.Any("error", err))
 		} else {
 			sensorCh <- newUsersSensor(ctx, users)
@@ -185,8 +184,7 @@ func NewUserSessionEventsWorker(ctx context.Context) (workers.EntityWorker, erro
 	}
 
 	for session := range slices.Values(currentSessions) {
-		s, ok := session[4].(string)
-		if ok {
+		if s, ok := session[4].(string); ok {
 			worker.trackSession(s)
 		}
 	}
@@ -244,7 +242,6 @@ func (t *sessionTracker) getSessionDetails(path string) map[string]any {
 	return sessionDetails
 }
 
-//nolint:gocognit
 func (w *UserSessionEventsWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
 	triggerCh, err := dbusx.NewWatch(
 		dbusx.MatchPath(loginBasePath),
@@ -265,7 +262,7 @@ func (w *UserSessionEventsWorker) Start(ctx context.Context) (<-chan models.Enti
 			case <-ctx.Done():
 				return
 			case trigger := <-triggerCh:
-				if len(trigger.Content) != 2 {
+				if len(trigger.Content) != 2 { //nolint:mnd // valid trigger content will be 2.
 					continue
 				}
 				// If the trigger does not contain a session path, ignore.
@@ -279,16 +276,14 @@ func (w *UserSessionEventsWorker) Start(ctx context.Context) (<-chan models.Enti
 					// Add the session to the tracker.
 					w.trackSession(string(path))
 					// Send the session added event.
-					entity, err := event.NewEvent(sessionStartedEventName, w.sessions[string(path)])
-					if err != nil {
+					if entity, err := event.NewEvent(sessionStartedEventName, w.sessions[string(path)]); err != nil {
 						slogctx.FromCtx(ctx).Warn("Could not generate users event.", slog.Any("error", err))
 					} else {
 						eventCh <- entity
 					}
 				case strings.Contains(trigger.Signal, sessionRemovedSignal):
 					// Send the session removed event.
-					entity, err := event.NewEvent(sessionStoppedEventName, w.sessions[string(path)])
-					if err != nil {
+					if entity, err := event.NewEvent(sessionStoppedEventName, w.sessions[string(path)]); err != nil {
 						slogctx.FromCtx(ctx).Warn("Could not generate users event.", slog.Any("error", err))
 					} else {
 						eventCh <- entity

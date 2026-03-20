@@ -150,8 +150,7 @@ func (w *laptopWorker) Start(ctx context.Context) (<-chan models.Entity, error) 
 			case <-ctx.Done():
 				return
 			case event := <-triggerCh:
-				props, err := dbusx.ParsePropertiesChanged(event.Content)
-				if err != nil {
+				if props, err := dbusx.ParsePropertiesChanged(event.Content); err != nil {
 					slogctx.FromCtx(ctx).Debug("Received unknown event from D-Bus.", slog.Any("error", err))
 				} else {
 					sendChangedProps(ctx, props.Changed, sensorCh)
@@ -182,8 +181,7 @@ func (w *laptopWorker) generateSensors(ctx context.Context) ([]models.Entity, er
 
 	// For each property, get its current state as a sensor.
 	for name, prop := range w.properties {
-		state, err := prop.Get()
-		if err != nil {
+		if state, err := prop.Get(); err != nil {
 			warnings = errors.Join(warnings, fmt.Errorf("could not retrieve property from D-Bus: %w", err))
 		} else {
 			sensors = append(sensors, newLaptopEvent(ctx, name, state))

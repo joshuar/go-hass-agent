@@ -111,8 +111,8 @@ func NewDBusCommandSubscription(ctx context.Context, device *mqtthass.Device) (*
 				).Info("Dispatching D-Bus command.")
 
 				// Call the method.
-				err = dbusx.NewMethod(bus, dbusMsg.Destination, dbusMsg.Path, dbusMsg.Method).Call(ctx, dbusMsg.Args...)
-				if err != nil {
+				if err = dbusx.NewMethod(bus, dbusMsg.Destination, dbusMsg.Path, dbusMsg.Method).
+					Call(ctx, dbusMsg.Args...); err != nil {
 					logger.Warn("Error dispatching D-Bus command.", slog.Any("error", err))
 				}
 			},
