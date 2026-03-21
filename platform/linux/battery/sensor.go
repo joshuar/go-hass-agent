@@ -23,7 +23,12 @@ const unknownValue = "Unknown"
 
 // newBatterySensor creates a new sensor for Home Assistant from a battery
 // property.
-func newBatterySensor(ctx context.Context, battery *upowerBattery, sensorType sensorType, value dbus.Variant) models.Entity {
+func newBatterySensor(
+	ctx context.Context,
+	battery *upowerBattery,
+	sensorType sensorType,
+	value dbus.Variant,
+) models.Entity {
 	var (
 		name, id, icon, units string
 		deviceClass           class.SensorDeviceClass
@@ -133,11 +138,15 @@ func generateSensorAttributes(sensorType sensorType, battery *upowerBattery) map
 		)
 
 		if variant, err = battery.getProp(typeVoltage); err == nil {
-			voltage, _ = dbusx.VariantToValue[float64](variant) //nolint:lll // its not important if this attribute value is not correct due to errors
+			voltage, _ = dbusx.VariantToValue[float64](
+				variant,
+			) //nolint:lll // its not important if this attribute value is not correct due to errors
 		}
 
 		if variant, err = battery.getProp(typeEnergy); err == nil {
-			energy, _ = dbusx.VariantToValue[float64](variant) //nolint:lll // its not important if this attribute value is not correct due to errors
+			energy, _ = dbusx.VariantToValue[float64](
+				variant,
+			) //nolint:lll // its not important if this attribute value is not correct due to errors
 		}
 
 		attributes["voltage"] = voltage
@@ -151,8 +160,6 @@ func generateSensorAttributes(sensorType sensorType, battery *upowerBattery) map
 
 // batteryPercentIcon takes the percent value of level and returns an
 // appropriate icon to represent it.
-//
-//nolint:mnd
 func batteryPercentIcon(v any) string {
 	percentage, ok := v.(float64)
 	if !ok {

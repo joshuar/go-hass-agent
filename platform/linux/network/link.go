@@ -106,8 +106,7 @@ func (w *NetlinkWorker) Start(ctx context.Context) (<-chan models.Entity, error)
 	sensorCh := make(chan models.Entity)
 
 	// Get all current addresses and send as sensors.
-	sensors, err := w.generateSensors(ctx)
-	if err != nil {
+	if sensors, err := w.generateSensors(ctx); err != nil {
 		slogctx.FromCtx(ctx).Debug("Could not get address sensors.", slog.Any("error", err))
 	} else {
 		for _, addressSensor := range sensors {
@@ -221,8 +220,7 @@ func (w *NetlinkWorker) getAddresses(ctx context.Context) ([]models.Entity, erro
 			continue
 		}
 
-		entity, err := newAddressSensor(ctx, w.nlconn.Link, msg)
-		if err != nil {
+		if entity, err := newAddressSensor(ctx, w.nlconn.Link, msg); err != nil {
 			warnings = errors.Join(warnings, fmt.Errorf("could not generate address sensor: %w", err))
 		} else if entity.Valid() {
 			addrs = append(addrs, *entity)
@@ -273,8 +271,7 @@ func (w *NetlinkWorker) getLinks(ctx context.Context) ([]models.Entity, error) {
 				slog.String("address", msg.Attributes.Name))
 			continue
 		}
-		entity := newLinkSensor(ctx, msg)
-		if entity.Valid() {
+		if entity := newLinkSensor(ctx, msg); entity.Valid() {
 			links = append(links, entity)
 		}
 	}

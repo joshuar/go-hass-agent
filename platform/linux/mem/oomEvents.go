@@ -117,13 +117,13 @@ func (w *OOMEventsWorker) Start(ctx context.Context) (<-chan models.Entity, erro
 						continue
 					}
 					// Send an event.
-					entity, err := event.NewEvent(
+					if entity, err := event.NewEvent(
 						oomEventName,
 						map[string]any{
 							"Process": processStr,
 							"PID":     pid,
-						})
-					if err != nil {
+						},
+					); err != nil {
 						slogctx.FromCtx(ctx).Warn("Could not create OOM event.", slog.Any("error", err))
 					} else {
 						eventCh <- entity

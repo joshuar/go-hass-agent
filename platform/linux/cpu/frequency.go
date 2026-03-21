@@ -91,8 +91,7 @@ func (w *freqWorker) IsDisabled() bool {
 
 func (w *freqWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
 	w.OutCh = make(chan models.Entity)
-	err := workers.SchedulePollingWorker(ctx, w, w.OutCh)
-	if err != nil {
+	if err := workers.SchedulePollingWorker(ctx, w, w.OutCh); err != nil {
 		close(w.OutCh)
 		return w.OutCh, fmt.Errorf("could not start disk usage worker: %w", err)
 	}

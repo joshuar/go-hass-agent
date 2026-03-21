@@ -187,7 +187,8 @@ func monitorBattery(ctx context.Context, battery *upowerBattery) <-chan models.E
 			case event := <-events:
 				props, err := dbusx.ParsePropertiesChanged(event.Content)
 				if err != nil {
-					slogctx.FromCtx(ctx).Warn("Received a battery property change event that could not be understood.", slog.Any("error", err))
+					slogctx.FromCtx(ctx).
+						Warn("Received a battery property change event that could not be understood.", slog.Any("error", err))
 
 					continue
 				}

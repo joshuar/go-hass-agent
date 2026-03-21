@@ -414,8 +414,6 @@ func (c *connection) monitorWired(ctx context.Context, bus *dbusx.Bus) <-chan mo
 }
 
 // monitorWireless will monitor wifi connection properties.
-//
-//nolint:gocognit
 func (c *connection) monitorWireless(ctx context.Context, bus *dbusx.Bus) <-chan models.Entity {
 	triggerCh := make(chan dbusx.Trigger)
 	sensorCh := make(chan models.Entity)

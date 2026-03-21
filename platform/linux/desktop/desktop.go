@@ -34,6 +34,13 @@ const (
 	unknownValue = "Unknown"
 )
 
+const (
+	darkTheme  desktopColorScheme = 1
+	lightTheme desktopColorScheme = 2
+)
+
+type desktopColorScheme uint32
+
 type settingsWorker struct {
 	*models.WorkerMetadata
 
@@ -69,7 +76,6 @@ func (w *settingsWorker) Start(ctx context.Context) (<-chan models.Entity, error
 				}
 
 				prop, value := extractProp(event.Content)
-
 				switch prop {
 				case colorSchemeProp:
 					scheme, icon := parseColorScheme(value)
@@ -91,7 +97,7 @@ func (w *settingsWorker) Start(ctx context.Context) (<-chan models.Entity, error
 }
 
 func (w *settingsWorker) generateSensors(ctx context.Context) []models.Entity {
-	sensors := make([]models.Entity, 0, 2)
+	sensors := make([]models.Entity, 0, 2) //nolint:mnd // only two sensors for now.
 
 	// Accent Color Sensor.
 	if value, err := w.getProp(accentColorProp); err != nil {
@@ -154,15 +160,15 @@ func NewDesktopWorker(ctx context.Context) (workers.EntityWorker, error) {
 }
 
 func parseColorScheme(value dbus.Variant) (string, string) {
-	scheme, err := dbusx.VariantToValue[uint32](value)
+	scheme, err := dbusx.VariantToValue[desktopColorScheme](value)
 	if err != nil {
 		return unknownValue, "mdi:theme-light-dark"
 	}
 
 	switch scheme {
-	case 1:
+	case darkTheme:
 		return "dark", "mdi:weather-night"
-	case 2:
+	case lightTheme:
 		return "light", "mdi:weather-sunny"
 	default:
 		return unknownValue, "mdi:theme-light-dark"
@@ -175,7 +181,7 @@ func parseAccentColor(value dbus.Variant) string {
 		return "Unknown"
 	}
 
-	rgb := make([]uint8, 3)
+	rgb := make([]uint8, 3) //nolint:mnd // rgb is three values.
 
 	for color, v := range values {
 		val, ok := v.(float64)

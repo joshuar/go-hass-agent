@@ -95,7 +95,7 @@ func (w *loadAvgsWorker) Start(ctx context.Context) (<-chan models.Entity, error
 func parseLoadAvgs(data []byte) (map[string]string, error) {
 	loadAvgsData := bytes.Split(data, []byte(" "))
 
-	if len(loadAvgsData) != 5 { //nolint:mnd
+	if len(loadAvgsData) != 5 { //nolint:mnd // valid load average output has 5 values.
 		return nil, ErrParseLoadAvgs
 	}
 

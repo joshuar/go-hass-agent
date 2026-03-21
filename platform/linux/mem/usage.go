@@ -77,7 +77,7 @@ func newMemSensorPc(ctx context.Context, name string, value, total uint64) model
 	if total == 0 {
 		valuePc = 0
 	} else {
-		valuePc = math.Round(float64(value)/float64(total)*100/0.05) * 0.05 //nolint:mnd
+		valuePc = math.Round(float64(value)/float64(total)*100/0.05) * 0.05 //nolint:mnd // %
 	}
 
 	return sensor.NewSensor(ctx,

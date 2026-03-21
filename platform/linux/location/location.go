@@ -71,7 +71,6 @@ func NewLocationWorker(ctx context.Context) (workers.EntityWorker, error) {
 	return worker, nil
 }
 
-//nolint:gocognit
 func (w *locationWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
 	// Create a GeoClue client.
 	clientPath, err := w.createClient()
@@ -114,8 +113,7 @@ func (w *locationWorker) Start(ctx context.Context) (<-chan models.Entity, error
 			case event := <-triggerCh:
 				if locationPath, ok := event.Content[1].(dbus.ObjectPath); ok {
 					go func() {
-						locationSensor, err := w.newLocation(ctx, string(locationPath))
-						if err != nil {
+						if locationSensor, err := w.newLocation(ctx, string(locationPath)); err != nil {
 							slogctx.FromCtx(ctx).Error("Could not update location.", slog.Any("error", err))
 						} else {
 							slogctx.FromCtx(ctx).Debug("Location updated.")
@@ -164,7 +162,12 @@ func (w *locationWorker) createClient() (string, error) {
 	}
 
 	// Set an ID for our client.
-	if err = dbusx.NewProperty[string](w.bus, clientPath, geoclueInterface, desktopIDProp).Set(config.AppID); err != nil {
+	if err = dbusx.NewProperty[string](
+		w.bus,
+		clientPath,
+		geoclueInterface,
+		desktopIDProp,
+	).Set(config.AppID); err != nil {
 		return "", fmt.Errorf("could not set geoclue client id: %w", err)
 	}
 

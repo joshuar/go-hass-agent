@@ -19,19 +19,20 @@ import (
 	"github.com/joshuar/go-hass-agent/platform/linux"
 )
 
-var _ workers.EntityWorker = (*BatteryWorker)(nil)
+var _ workers.EntityWorker = (*Worker)(nil)
 
 var ErrInitBatterWorker = errors.New("could not init battery worker")
 
-type BatteryWorker struct {
+type Worker struct {
+	*models.WorkerMetadata
+
 	bus         *dbusx.Bus
 	batteryList map[dbus.ObjectPath]context.CancelFunc
 	mu          sync.Mutex
 	prefs       *workers.CommonWorkerPrefs
-	*models.WorkerMetadata
 }
 
-func (w *BatteryWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
+func (w *Worker) Start(ctx context.Context) (<-chan models.Entity, error) {
 	sensorCh := make(chan models.Entity)
 
 	var wg sync.WaitGroup
@@ -74,13 +75,13 @@ func (w *BatteryWorker) Start(ctx context.Context) (<-chan models.Entity, error)
 	return sensorCh, nil
 }
 
-func (w *BatteryWorker) IsDisabled() bool {
+func (w *Worker) IsDisabled() bool {
 	return w.prefs.Disabled
 }
 
 // getBatteries is a helper function to retrieve all of the known batteries
 // connected to the system.
-func (w *BatteryWorker) getBatteries() ([]dbus.ObjectPath, error) {
+func (w *Worker) getBatteries() ([]dbus.ObjectPath, error) {
 	batteryList, err := dbusx.GetData[[]dbus.ObjectPath](w.bus, upowerDBusPath, upowerDBusDest, upowerGetDevicesMethod)
 	if err != nil {
 		return nil, err
@@ -89,7 +90,7 @@ func (w *BatteryWorker) getBatteries() ([]dbus.ObjectPath, error) {
 	return batteryList, nil
 }
 
-func (w *BatteryWorker) track(ctx context.Context, batteryPath dbus.ObjectPath) <-chan models.Entity {
+func (w *Worker) track(ctx context.Context, batteryPath dbus.ObjectPath) <-chan models.Entity {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
@@ -148,7 +149,7 @@ func (w *BatteryWorker) track(ctx context.Context, batteryPath dbus.ObjectPath) 
 	return sensorCh
 }
 
-func (w *BatteryWorker) remove(batteryPath dbus.ObjectPath) {
+func (w *Worker) remove(batteryPath dbus.ObjectPath) {
 	if cancelFunc, ok := w.batteryList[batteryPath]; ok {
 		cancelFunc()
 		w.mu.Lock()
@@ -159,7 +160,7 @@ func (w *BatteryWorker) remove(batteryPath dbus.ObjectPath) {
 
 // monitorBatteryChanges monitors for battery devices being added/removed from
 // the system and will start/stop monitory each battery as appropriate.
-func (w *BatteryWorker) monitorBatteryChanges(ctx context.Context) <-chan models.Entity {
+func (w *Worker) monitorBatteryChanges(ctx context.Context) <-chan models.Entity {
 	triggerCh, err := dbusx.NewWatch(
 		dbusx.MatchPath(upowerDBusPath),
 		dbusx.MatchInterface(upowerDBusDest),
@@ -208,7 +209,7 @@ func (w *BatteryWorker) monitorBatteryChanges(ctx context.Context) <-chan models
 }
 
 func NewBatteryWorker(ctx context.Context) (workers.EntityWorker, error) {
-	worker := &BatteryWorker{
+	worker := &Worker{
 		WorkerMetadata: models.SetWorkerMetadata("battery_status", "Battery status"),
 		batteryList:    make(map[dbus.ObjectPath]context.CancelFunc),
 	}
