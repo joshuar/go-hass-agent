@@ -8,13 +8,17 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"math/rand"
+	"math/rand/v2"
 	"time"
 
 	"github.com/reugn/go-quartz/quartz"
 	slogctx "github.com/veqryn/slog-context"
 
 	"github.com/joshuar/go-hass-agent/id"
+)
+
+const (
+	outdatedJobThreshold = 50 * time.Second
 )
 
 var (
@@ -32,7 +36,7 @@ var mgr manager
 func Start(ctx context.Context) error {
 	misfiredCh := make(chan quartz.ScheduledJob)
 	scheduler, err := quartz.NewStdScheduler(
-		quartz.WithOutdatedThreshold(50*time.Second),
+		quartz.WithOutdatedThreshold(outdatedJobThreshold),
 		// quartz.WithLogger(&logger{Logger: slogctx.FromCtx(ctx)}),
 		quartz.WithMisfiredChan(misfiredCh),
 	)
@@ -120,11 +124,3 @@ func (pt *PollTriggerWithJitter) NextFireTime(prev int64) (int64, error) {
 func (pt *PollTriggerWithJitter) Description() string {
 	return fmt.Sprintf("PollTriggerWithJitter%s%s", quartz.Sep, pt.Interval)
 }
-
-// type logger struct {
-// 	*slog.Logger
-// }
-
-// func (l *logger) Trace(msg string, args ...any) {
-// 	l.Debug(msg, args...)
-// }
