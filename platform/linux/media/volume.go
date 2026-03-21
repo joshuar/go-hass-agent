@@ -130,11 +130,15 @@ func NewVolumeWorker(ctx context.Context, device *mqtthass.Device) (*VolumeWorke
 			mqtthass.Icon(volIcon),
 		).
 		WithState(
-			mqtthass.StateCallback(worker.volStateCallback),
+			mqtthass.StateCallback(func(args ...any) (json.RawMessage, error) {
+				return worker.volStateCallback(ctx, args)
+			}),
 			mqtthass.ValueTemplate("{{ value_json.value }}"),
 		).
 		WithCommand(
-			mqtthass.CommandCallback(worker.volCommandCallback),
+			mqtthass.CommandCallback(func(p *paho.Publish) {
+				worker.volCommandCallback(ctx, p)
+			}),
 		)
 
 	worker.MuteControl = mqtthass.NewSwitchEntity().
@@ -147,11 +151,15 @@ func NewVolumeWorker(ctx context.Context, device *mqtthass.Device) (*VolumeWorke
 			mqtthass.Icon(muteIcon),
 		).
 		WithState(
-			mqtthass.StateCallback(worker.muteStateCallback),
+			mqtthass.StateCallback(func(args ...any) (json.RawMessage, error) {
+				return worker.muteStateCallback(ctx, args)
+			}),
 			mqtthass.ValueTemplate("{{ value }}"),
 		).
 		WithCommand(
-			mqtthass.CommandCallback(worker.muteCommandCallback),
+			mqtthass.CommandCallback(func(p *paho.Publish) {
+				worker.muteCommandCallback(ctx, p)
+			}),
 		)
 
 	// update := func() { // Pulseaudio changed state. Get the new state.
@@ -182,8 +190,8 @@ func NewVolumeWorker(ctx context.Context, device *mqtthass.Device) (*VolumeWorke
 }
 
 // volStateCallback is executed when the volume is read on MQTT.
-func (d *VolumeWorker) volStateCallback(_ ...any) (json.RawMessage, error) {
-	vol, err := pipewire.GetVolume()
+func (d *VolumeWorker) volStateCallback(ctx context.Context, _ ...any) (json.RawMessage, error) {
+	vol, err := pipewire.GetVolume(ctx)
 	if err != nil {
 		return json.RawMessage(`{ "value": 0 }`), err
 	}
@@ -194,13 +202,13 @@ func (d *VolumeWorker) volStateCallback(_ ...any) (json.RawMessage, error) {
 }
 
 // volCommandCallback is called when the volume is changed on MQTT.
-func (d *VolumeWorker) volCommandCallback(p *paho.Publish) {
+func (d *VolumeWorker) volCommandCallback(ctx context.Context, p *paho.Publish) {
 	if newValue, err := strconv.Atoi(string(p.Payload)); err != nil {
 		slog.Debug("Could not parse new volume level.", slog.Any("error", err))
 	} else {
 		slog.Debug("Received volume change from Home Assistant.", slog.Int("volume", newValue))
 
-		if err := pipewire.SetVolume(float64(newValue)); err != nil {
+		if err := pipewire.SetVolume(ctx, float64(newValue)); err != nil {
 			slog.Error("Could not set volume level.", slog.Any("error", err))
 			return
 		}
@@ -214,8 +222,8 @@ func (d *VolumeWorker) volCommandCallback(p *paho.Publish) {
 }
 
 // muteStateCallback is executed when the mute state is read on MQTT.
-func (d *VolumeWorker) muteStateCallback(_ ...any) (json.RawMessage, error) {
-	muteVal, err := pipewire.IsMuted()
+func (d *VolumeWorker) muteStateCallback(ctx context.Context, _ ...any) (json.RawMessage, error) {
+	muteVal, err := pipewire.IsMuted(ctx)
 	if err != nil {
 		return json.RawMessage(`OFF`), err
 	}
@@ -229,14 +237,14 @@ func (d *VolumeWorker) muteStateCallback(_ ...any) (json.RawMessage, error) {
 }
 
 // muteCommandCallback is executed when the mute state is changed on MQTT.
-func (d *VolumeWorker) muteCommandCallback(p *paho.Publish) {
+func (d *VolumeWorker) muteCommandCallback(ctx context.Context, p *paho.Publish) {
 	var err error
 
 	switch string(p.Payload) {
 	case "ON":
-		err = pipewire.Mute()
+		err = pipewire.Mute(ctx)
 	case "OFF":
-		err = pipewire.Unmute()
+		err = pipewire.Unmute(ctx)
 	}
 
 	if err != nil {
@@ -253,11 +261,11 @@ func (d *VolumeWorker) muteCommandCallback(p *paho.Publish) {
 }
 
 func (d *VolumeWorker) handleMetadata(ctx context.Context, e pipewire.Event) {
-	for _, m := range e.Metadata {
-		if m.Key != "default.audio.sink" {
+	for metadata := range slices.Values(e.Metadata) {
+		if metadata.Key != "default.audio.sink" {
 			continue
 		}
-		if string(m.Value) == "null" || len(m.Value) == 0 {
+		if string(metadata.Value) == "null" || len(metadata.Value) == 0 {
 			d.defaultSinkName = ""
 			d.defaultSinkID = -1
 			slogctx.FromCtx(ctx).Debug("Default audio sink cleared.")
@@ -266,11 +274,11 @@ func (d *VolumeWorker) handleMetadata(ctx context.Context, e pipewire.Event) {
 		// PipeWire may encode the value as {"name":"alsa_output...."} or as a
 		// plain JSON string.  Try the object form first.
 		var obj metaSinkValue
-		if err := json.Unmarshal(m.Value, &obj); err == nil && obj.Name != "" {
+		if err := json.Unmarshal(metadata.Value, &obj); err == nil && obj.Name != "" {
 			d.defaultSinkName = obj.Name
 		} else {
 			var s string
-			if err := json.Unmarshal(m.Value, &s); err == nil {
+			if err := json.Unmarshal(metadata.Value, &s); err == nil {
 				d.defaultSinkName = s
 			}
 		}
@@ -293,47 +301,47 @@ func (d *VolumeWorker) resolveDefault(ctx context.Context) {
 	slogctx.FromCtx(ctx).Debug("Default audio sink changed.")
 }
 
-func (d *VolumeWorker) handleNode(ctx context.Context, e pipewire.Event) {
-	if e.Change == "removed" {
-		st, ok := d.nodes[e.ID]
+func (d *VolumeWorker) handleNode(ctx context.Context, event pipewire.Event) {
+	if event.Change == "removed" {
+		state, ok := d.nodes[event.ID]
 		if !ok {
 			return
 		}
-		if e.ID == d.defaultSinkID {
+		if event.ID == d.defaultSinkID {
 			slogctx.FromCtx(ctx).Debug("Default sink removed.",
-				slog.String("sink_name", audioSinkDisplayName(st)))
+				slog.String("sink_name", audioSinkDisplayName(state)))
 			d.defaultSinkID = -1
 		}
-		delete(d.nodesByName, st.Name)
-		delete(d.nodes, e.ID)
+		delete(d.nodesByName, state.Name)
+		delete(d.nodes, event.ID)
 		return
 	}
 
-	mc := e.Info.Props.MediaClass
+	mediaClass := event.Info.Props.MediaClass
 
-	st, known := d.nodes[e.ID]
+	state, known := d.nodes[event.ID]
 	if !known {
 		// On "changed" diffs MediaClass is typically absent; skip unknown nodes
 		// unless we can confirm they are Audio/Sink from this event.
-		if mc != "Audio/Sink" {
+		if mediaClass != "Audio/Sink" {
 			return
 		}
-		st = &audioNodeState{Volume: -1}
-		d.nodes[e.ID] = st
+		state = &audioNodeState{Volume: -1}
+		d.nodes[event.ID] = state
 	}
 
 	// Update identifying fields when present in this (possibly sparse) diff.
-	if e.Info.Props.NodeName != "" && e.Info.Props.NodeName != st.Name {
-		if st.Name != "" {
-			delete(d.nodesByName, st.Name)
+	if event.Info.Props.NodeName != "" && event.Info.Props.NodeName != state.Name {
+		if state.Name != "" {
+			delete(d.nodesByName, state.Name)
 		}
-		st.Name = e.Info.Props.NodeName
-		d.nodesByName[st.Name] = e.ID
+		state.Name = event.Info.Props.NodeName
+		d.nodesByName[state.Name] = event.ID
 	}
-	if e.Info.Props.NodeDesc != "" {
-		st.Desc = e.Info.Props.NodeDesc
-	} else if e.Info.Props.NodeDesc != "" && st.Desc == "" {
-		st.Desc = e.Info.Props.NodeDesc
+	if event.Info.Props.NodeDesc != "" {
+		state.Desc = event.Info.Props.NodeDesc
+	} else if event.Info.Props.NodeDesc != "" && state.Desc == "" {
+		state.Desc = event.Info.Props.NodeDesc
 	}
 
 	// A newly registered node may be the default sink we were waiting for.
@@ -341,49 +349,48 @@ func (d *VolumeWorker) handleNode(ctx context.Context, e pipewire.Event) {
 
 	// ── volume / mute ────────────────────────────────────────────────────────
 	// Ignore everything that isn't the default sink.
-	if e.ID != d.defaultSinkID {
+	if event.ID != d.defaultSinkID {
 		return
 	}
 
-	for _, pp := range e.Info.Params.Props {
+	for _, pp := range event.Info.Params.Props {
 		vol, hasVol := avgVolume(pp.Volumes, pp.Volume)
 
 		if hasVol {
 			pct := linearToPercent(vol)
-			volChanged := math.Abs(vol-st.Volume) > 0.0001
 
-			if volChanged {
+			if math.Abs(vol-state.Volume) > 0.0001 {
 				slogctx.FromCtx(ctx).Debug("Volume changed.",
-					slog.String("device", audioSinkDisplayName(st)),
+					slog.String("device", audioSinkDisplayName(state)),
 					slog.Float64("volume", pct),
 				)
-				st.Volume = vol
+				state.Volume = vol
 			}
 
-			if pp.Mute != nil && *pp.Mute != st.Muted {
+			if pp.Mute != nil && *pp.Mute != state.Muted {
 				if *pp.Mute {
 					slogctx.FromCtx(ctx).Debug("Muted.",
-						slog.String("device", audioSinkDisplayName(st)),
+						slog.String("device", audioSinkDisplayName(state)),
 					)
 				} else {
 					slogctx.FromCtx(ctx).Debug("Unmuted.",
-						slog.String("device", audioSinkDisplayName(st)),
+						slog.String("device", audioSinkDisplayName(state)),
 					)
 				}
-				st.Muted = *pp.Mute
+				state.Muted = *pp.Mute
 			}
-		} else if pp.Mute != nil && *pp.Mute != st.Muted {
+		} else if pp.Mute != nil && *pp.Mute != state.Muted {
 			// Mute-only update (no volume field in this diff).
 			if *pp.Mute {
 				slogctx.FromCtx(ctx).Debug("Muted.",
-					slog.String("device", audioSinkDisplayName(st)),
+					slog.String("device", audioSinkDisplayName(state)),
 				)
 			} else {
 				slogctx.FromCtx(ctx).Debug("Unmuted.",
-					slog.String("device", audioSinkDisplayName(st)),
+					slog.String("device", audioSinkDisplayName(state)),
 				)
 			}
-			st.Muted = *pp.Mute
+			state.Muted = *pp.Mute
 		}
 	}
 }

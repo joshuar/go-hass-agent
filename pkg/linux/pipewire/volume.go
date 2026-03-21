@@ -6,6 +6,7 @@ package pipewire
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -15,25 +16,28 @@ import (
 	"strings"
 )
 
-const defaultSink = "@DEFAULT_AUDIO_SINK@"
+const (
+	defaultSink = "@DEFAULT_AUDIO_SINK@"
+	wpCmd       = "wpctl"
+)
 
 // runCmd runs a command and returns its trimmed stdout output.
-func runCmd(name string, args ...string) (string, error) {
-	cmd := exec.Command(name, args...)
+func runCmd(ctx context.Context, args ...string) (string, error) {
+	cmd := exec.CommandContext(ctx, wpCmd, args...)
 	out, err := cmd.Output()
 	if err != nil {
 		var exitErr *exec.ExitError
 		if errors.As(err, &exitErr) {
-			return "", fmt.Errorf("%s failed: %s", name, strings.TrimSpace(string(exitErr.Stderr)))
+			return "", fmt.Errorf("%s failed: %s", wpCmd, strings.TrimSpace(string(exitErr.Stderr)))
 		}
-		return "", fmt.Errorf("%s: %w", name, err)
+		return "", fmt.Errorf("%s: %w", wpCmd, err)
 	}
 	return strings.TrimSpace(string(out)), nil
 }
 
 // GetVolume returns the current volume of the default sink as a value 0.0–1.0.
-func GetVolume() (float64, error) {
-	out, err := runCmd("wpctl", "get-volume", defaultSink)
+func GetVolume(ctx context.Context) (float64, error) {
+	out, err := runCmd(ctx, "get-volume", defaultSink)
 	if err != nil {
 		return 0, err
 	}
@@ -50,8 +54,8 @@ func GetVolume() (float64, error) {
 }
 
 // IsMuted returns true if the default sink is muted.
-func IsMuted() (bool, error) {
-	out, err := runCmd("wpctl", "get-volume", defaultSink)
+func IsMuted(ctx context.Context) (bool, error) {
+	out, err := runCmd(ctx, "get-volume", defaultSink)
 	if err != nil {
 		return false, err
 	}
@@ -60,43 +64,43 @@ func IsMuted() (bool, error) {
 
 // SetVolume sets the volume of the default sink. vol is clamped to [0.0, 1.5].
 // Values above 1.0 boost beyond 100% (use with care).
-func SetVolume(vol float64) error {
+func SetVolume(ctx context.Context, vol float64) error {
 	vol = math.Max(0, math.Min(1.5, vol))
 	volStr := fmt.Sprintf("%.2f", vol)
-	_, err := runCmd("wpctl", "set-volume", defaultSink, volStr)
+	_, err := runCmd(ctx, "set-volume", defaultSink, volStr)
 	return err
 }
 
 // ChangeVolume increases or decreases volume by a percentage amount (e.g. 5 means +5%).
-func ChangeVolume(deltaPercent float64) error {
-	current, err := GetVolume()
+func ChangeVolume(ctx context.Context, deltaPercent float64) error {
+	current, err := GetVolume(ctx)
 	if err != nil {
 		return err
 	}
-	return SetVolume(current + deltaPercent/100.0)
+	return SetVolume(ctx, current+deltaPercent/100.0)
 }
 
 // Mute mutes the default sink.
-func Mute() error {
-	_, err := runCmd("wpctl", "set-mute", defaultSink, "1")
+func Mute(ctx context.Context) error {
+	_, err := runCmd(ctx, "set-mute", defaultSink, "1")
 	return err
 }
 
 // Unmute unmutes the default sink.
-func Unmute() error {
-	_, err := runCmd("wpctl", "set-mute", defaultSink, "0")
+func Unmute(ctx context.Context) error {
+	_, err := runCmd(ctx, "set-mute", defaultSink, "0")
 	return err
 }
 
 // ToggleMute toggles the mute state of the default sink.
-func ToggleMute() error {
-	_, err := runCmd("wpctl", "set-mute", defaultSink, "toggle")
+func ToggleMute(ctx context.Context) error {
+	_, err := runCmd(ctx, "set-mute", defaultSink, "toggle")
 	return err
 }
 
 // Status prints a human-readable status of the default audio sink.
-func Status() error {
-	out, err := runCmd("wpctl", "status")
+func Status(ctx context.Context) error {
+	out, err := runCmd(ctx, "status")
 	if err != nil {
 		return err
 	}
