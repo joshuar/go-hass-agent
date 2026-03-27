@@ -38,7 +38,6 @@ require (
 	github.com/cpuguy83/go-md2man/v2 v2.0.6 // indirect
 	github.com/cyphar/filepath-securejoin v0.4.1 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
-	github.com/dolthub/maphash v0.1.0 // indirect
 	github.com/dprotaso/go-yit v0.0.0-20220510233725-9ba8df137936 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/esiqveland/notify v0.13.3 // indirect
@@ -154,7 +153,7 @@ require (
 	github.com/knadh/koanf/v2 v2.3.3
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/lmittmann/tint v1.1.3
-	github.com/lxzan/gws v1.8.9
+	github.com/lxzan/gws v1.9.0
 	github.com/mandykoh/prism v0.35.3
 	github.com/matoous/go-nanoid v1.5.1
 	github.com/mattn/go-isatty v0.0.20
