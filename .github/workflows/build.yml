@@ -241,12 +241,15 @@ jobs:
           labels: ${{ steps.docker_metadata.outputs.labels }}
           annotations: ${{ steps.docker_metadata.outputs.annotations }}
           tags: ${{ steps.docker_metadata.outputs.tags }}
-          platforms: ${{matrix.platform}}
+          platforms: ${{ matrix.platform }}
           outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE }},push=true
           build-args: |
             APPVERSION=${{ env.APPVERSION }}
       - name: Sign image with a key
-        run: cosign sign --yes --key cosign.key ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ env.APPVERSION }}@${DIGEST}
+        run: |
+          for tag in ${{ steps.docker_metadata.outputs.tags }}; do
+            cosign sign --yes --key cosign.key \
+              ${tag}
+          done
         env:
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
-          DIGEST: ${{ steps.build_and_push.outputs.digest }}
