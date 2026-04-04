@@ -26,7 +26,7 @@ jobs:
       release_created: ${{ steps.release_please.outputs.release_created }}
       release_tag: ${{ steps.release_please.outputs.tag_name }}
     steps:
-      - name: Harden Runner
+      - name: Harden runner
         uses: step-security/harden-runner@fa2e9d605c4eeb9fcad4c99c224cee0c6c7f3594 # v2.16.0
         with:
           disable-sudo: true
@@ -58,7 +58,7 @@ jobs:
           - platform: linux/amd64
             goarch: amd64
     steps:
-      - name: Harden Runner
+      - name: Harden runner
         uses: step-security/harden-runner@fa2e9d605c4eeb9fcad4c99c224cee0c6c7f3594 # v2.16.0
         with:
           egress-policy: audit
@@ -179,7 +179,7 @@ jobs:
       matrix:
         platform: [linux/amd64,linux/arm64,linux/arm/v6,linux/arm/v7]
     steps:
-      - name: Harden Runner
+      - name: Harden runner
         uses: step-security/harden-runner@fa2e9d605c4eeb9fcad4c99c224cee0c6c7f3594 # v2.16.0
         with:
           disable-sudo: true
@@ -196,26 +196,21 @@ jobs:
             storage.googleapis.com:443
             sum.golang.org:443
             release-assets.githubusercontent.com:443
-
       - name: Checkout repo
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
         with:
           fetch-depth: 0
           persist-credentials: false
-
       - name: Set up environment
         run: |
           echo "APPVERSION=$(git describe --tags --always --dirty)" >> $GITHUB_ENV
           platform=${{ matrix.platform }}
           echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
-
       - name: Set app version for release
         if: ${{ needs.check_release.outputs.release_created }}
         run: echo "APPVERSION=${{ needs.check_release.outputs.release_tag }}" >> $GITHUB_ENV
-
       - name: Check and install cosign
         uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003 # v3
-
       - name: Log in to the Container registry
         id: registry_login
         uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4.0.0
@@ -223,8 +218,7 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Get Docker metadata
+      - name: Get docker metadata
         id: docker_metadata
         uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf # v6.0.0
         with:
@@ -235,13 +229,10 @@ jobs:
             type=raw,value=${{ env.APPVERSION }}
         env:
           DOCKER_METADATA_ANNOTATIONS_LEVELS: manifest,index
-
       - name: Set up QEMU
         uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4.0.0
-
-      - name: Set up Docker Buildx
+      - name: Set up docker Buildx
         uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
-
       - name: Build container image
         id: build_and_push
         uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v5
@@ -254,15 +245,8 @@ jobs:
           outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE }},push=true
           build-args: |
             APPVERSION=${{ env.APPVERSION }}
-
       - name: Sign image with a key
-        run: |
-          images=""
-          for tag in ${TAGS}; do
-            images+="${tag}@${DIGEST} "
-          done
-          cosign sign --yes --key cosign.key ${images}
+        run: cosign sign --yes --key cosign.key ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ env.APPVERSION }}@${DIGEST}
         env:
-          TAGS: ${{ steps.docker_metadata.outputs.tags }}
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
           DIGEST: ${{ steps.build_and_push.outputs.digest }}
