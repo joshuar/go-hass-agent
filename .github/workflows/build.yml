@@ -17,14 +17,16 @@ concurrency:
 
 jobs:
   check_release:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
       pull-requests: write
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    runs-on: ubuntu-24.04
+
     outputs:
       release_created: ${{ steps.release_please.outputs.release_created }}
       release_tag: ${{ steps.release_please.outputs.tag_name }}
+
     steps:
       - name: Harden runner
         uses: step-security/harden-runner@fa2e9d605c4eeb9fcad4c99c224cee0c6c7f3594 # v2.16.0
@@ -33,6 +35,7 @@ jobs:
           egress-policy: block
           allowed-endpoints: >
             api.github.com:443
+
       - name: Run release please
         uses: googleapis/release-please-action@16a9c90856f42705d54a6fda1823352bdc62cf38 # v4
         id: release_please
@@ -44,6 +47,7 @@ jobs:
     permissions:
       contents: write
     runs-on: ubuntu-24.04
+
     strategy:
       matrix:
         include:
@@ -57,6 +61,7 @@ jobs:
             goarch: arm64
           - platform: linux/amd64
             goarch: amd64
+
     steps:
       - name: Harden runner
         uses: step-security/harden-runner@fa2e9d605c4eeb9fcad4c99c224cee0c6c7f3594 # v2.16.0
@@ -87,11 +92,13 @@ jobs:
             sum.golang.org:443
             uploads.github.com:443
             release-assets.githubusercontent.com:443
+
       - name: Checkout source
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
         with:
           fetch-depth: 0
           persist-credentials: false
+
       - name: Set up environment
         run: |
           if [ -n "${{matrix.goarm}}" ]; then
@@ -102,21 +109,26 @@ jobs:
           echo "APPVERSION=$(git describe --tags --always --long --dirty)" >> $GITHUB_ENV
           platform=${{ matrix.platform }}
           echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
+
       - name: Set app version for release
         if: ${{ needs.check_release.outputs.release_created }}
         run: |
           echo "APPVERSION=${{ needs.check_release.outputs.release_tag }}" >> $GITHUB_ENV
+
       - name: Set up go
         uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v5
         with:
           go-version-file: "go.mod"
+
       - name: Set up npm
         uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+
       - name: Build frontend files
         run: |
           npm clean-install
           npm run build:js
           npm run build:css
+
       - name: Build binary
         run: |
           go build -ldflags="-w -s -X github.com/joshuar/go-hass-agent/config.AppVersion=${{ env.APPVERSION }}" -o dist/go-hass-agent
@@ -124,18 +136,23 @@ jobs:
           CGO_ENABLED: 0
           GOARCH: ${{matrix.goarch}}
           GOARM: ${{matrix.goarm}}
+
       - name: Install upx
         run: sudo apt install -y upx
+
       - name: Compress binary with upx
         run: upx --best --lzma dist/go-hass-agent
+
       - name: Create packages
         run: |
           for format in rpm deb archlinux; do
             go run github.com/goreleaser/nfpm/v2/cmd/nfpm@latest package --packager ${format} --config .nfpm.yaml --target dist
           done
+
       - name: Install cosign
         id: cosign_install
         uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003 # v3
+
       - name: Sign artifacts with cosign
         id: cosign_sign
         shell: bash
@@ -148,6 +165,7 @@ jobs:
           done
         env:
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+
       - name: Upload build artifacts
         id: upload_artifacts
         if: ${{ ! needs.check_release.outputs.release_created }}
@@ -158,6 +176,7 @@ jobs:
             dist/*.rpm
             dist/*.deb
             dist/*.zst
+
       - name: Upload release artifacts
         id: upload_release
         if: ${{ needs.check_release.outputs.release_created }}
@@ -167,17 +186,22 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build_container:
+    name: Build (${{ matrix.platform }})
     needs: check_release
     permissions:
       contents: write
       packages: write
     runs-on: ubuntu-24.04
-    env:
-      REGISTRY: ghcr.io
-      IMAGE: ${{ github.repository }}
+
     strategy:
+      fail-fast: false          # Let other platforms finish even if one fails
       matrix:
         platform: [linux/amd64,linux/arm64,linux/arm/v6,linux/arm/v7]
+
+    env:
+      REGISTRY: ghcr.io
+      IMAGE_NAME: ${{ github.repository }}
+
     steps:
       - name: Harden runner
         uses: step-security/harden-runner@fa2e9d605c4eeb9fcad4c99c224cee0c6c7f3594 # v2.16.0
@@ -196,21 +220,26 @@ jobs:
             storage.googleapis.com:443
             sum.golang.org:443
             release-assets.githubusercontent.com:443
+
       - name: Checkout repo
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
         with:
           fetch-depth: 0
           persist-credentials: false
+
       - name: Set up environment
         run: |
           echo "APPVERSION=$(git describe --tags --always --dirty)" >> $GITHUB_ENV
           platform=${{ matrix.platform }}
           echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
+
       - name: Set app version for release
         if: ${{ needs.check_release.outputs.release_created }}
         run: echo "APPVERSION=${{ needs.check_release.outputs.release_tag }}" >> $GITHUB_ENV
+
       - name: Check and install cosign
         uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003 # v3
+
       - name: Log in to the Container registry
         id: registry_login
         uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4.0.0
@@ -218,36 +247,151 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Get docker metadata
-        id: docker_metadata
+        id: meta
         uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf # v6.0.0
         with:
           images: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE }}
-          tags: |
-            type=sha,format=long
-            type=raw,value=${{ env.APPVERSION }}
-        env:
-          DOCKER_METADATA_ANNOTATIONS_LEVELS: manifest,index
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4.0.0
-      - name: Set up docker Buildx
+
+      - name: Set up docker buildx
         uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
+
       - name: Build container image
-        id: build_and_push
+        id: build
         uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v5
         with:
           context: .
-          labels: ${{ steps.docker_metadata.outputs.labels }}
-          annotations: ${{ steps.docker_metadata.outputs.annotations }}
-          tags: ${{ steps.docker_metadata.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
           platforms: ${{ matrix.platform }}
-          outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE }},push=true
           build-args: |
             APPVERSION=${{ env.APPVERSION }}
-      - name: Sign image with a key
+          outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=${{ github.event_name != 'pull_request' }}
+          cache-from: type=gha,scope=${{ matrix.platform }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.platform }}
+
+      - name: Export digest to artifact
+        if: github.event_name != 'pull_request'
         run: |
-          cosign sign --yes --key cosign.key \
-            ${{ env.REGISTRY }}/${{ env.IMAGE }}@${{ steps.build_and_push.outputs.digest }}
+          mkdir -p /tmp/digests
+          # Sanitise platform name to use as a filename  (e.g. linux_amd64)
+          SAFE_PLATFORM=$(echo "${{ matrix.platform }}" | tr '/' '_')
+          echo "${{ steps.build.outputs.digest }}" > /tmp/digests/${SAFE_PLATFORM}
+          echo "Saved digest ${{ steps.build.outputs.digest }} for ${{ matrix.platform }}"
+
+      - name: Upload digest artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: digest-${{ strategy.job-index }}
+          path: /tmp/digests/
+          if-no-files-found: error
+          retention-days: 1
+
+  merge:
+    name: Merge manifests & Sign
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    needs: build_container
+
+    permissions:
+      contents: read
+      packages: write
+
+    env:
+      REGISTRY: ghcr.io
+      IMAGE_NAME: ${{ github.repository }}
+
+    steps:
+      - name: Set up environment
+        run: |
+          echo "APPVERSION=$(git describe --tags --always --dirty)" >> $GITHUB_ENV
+          platform=${{ matrix.platform }}
+          echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
+
+      - name: Download all digest artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: /tmp/digests
+          pattern: digest-*
+          merge-multiple: true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr,prefix=pr-
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha,prefix=sha-,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=${{ env.APPVERSION }}
+          labels: |
+            org.opencontainers.image.title=${{ github.repository }}
+            org.opencontainers.image.description=Multi-arch image built by GitHub Actions
+            org.opencontainers.image.vendor=${{ github.repository_owner }}
+
+      - name: Create and push multi-arch manifest list
+        id: merge
+        run: |
+          # Collect every digest file and build the source list
+          SOURCES=""
+          for f in /tmp/digests/*; do
+            [ -f "$f" ] || continue
+            DIGEST=$(cat "$f")
+            SOURCES="${SOURCES} ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${DIGEST}"
+          done
+
+          echo "Sources:${SOURCES}"
+
+          # Build --tag flags from metadata-action output
+          TAG_FLAGS=$(echo "${{ steps.meta.outputs.tags }}" \
+            | tr '\n' '\0' \
+            | xargs -0 -I{} echo "--tag {}" \
+            | tr '\n' ' ')
+
+          echo "Tags: ${TAG_FLAGS}"
+
+          # Create the manifest list and push it
+          eval docker buildx imagetools create ${TAG_FLAGS} ${SOURCES}
+
+          # Retrieve the digest of the newly created manifest list for signing
+          MANIFEST_DIGEST=$(docker buildx imagetools inspect \
+            "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}" \
+            --format '{{json .Manifest.Digest}}' | tr -d '"')
+
+          echo "manifest_digest=${MANIFEST_DIGEST}" >> "$GITHUB_OUTPUT"
+          echo "Manifest digest: ${MANIFEST_DIGEST}"
+
+      - name: Sign manifest list with cosign (keyless)
         env:
-          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+          DIGEST: ${{ steps.merge.outputs.manifest_digest }}
+          TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          echo "${TAGS}" | while IFS= read -r tag; do
+            [ -z "$tag" ] && continue
+            IMAGE_REF="${tag}@${DIGEST}"
+            echo "Signing: ${IMAGE_REF}"
+            cosign sign --yes --key cosign.key "${IMAGE_REF}"
+          done
