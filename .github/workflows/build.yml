@@ -43,6 +43,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
   build:
+    name: Build package (${{ matrix.platform }})
     needs: check_release
     permissions:
       contents: write
@@ -186,7 +187,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build_container:
-    name: Build (${{ matrix.platform }})
+    name: Build container (${{ matrix.platform }})
     needs: check_release
     permissions:
       contents: write
@@ -230,8 +231,6 @@ jobs:
       - name: Set up environment
         run: |
           echo "APPVERSION=$(git describe --tags --always --dirty)" >> $GITHUB_ENV
-          platform=${{ matrix.platform }}
-          echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
 
       - name: Set app version for release
         if: ${{ needs.check_release.outputs.release_created }}
@@ -310,8 +309,12 @@ jobs:
       - name: Set up environment
         run: |
           echo "APPVERSION=$(git describe --tags --always --dirty)" >> $GITHUB_ENV
-          platform=${{ matrix.platform }}
-          echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
+
+      - name: Checkout source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
 
       - name: Download all digest artifacts
         uses: actions/download-artifact@v4
