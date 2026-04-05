@@ -391,6 +391,7 @@ jobs:
         env:
           DIGEST: ${{ steps.merge.outputs.manifest_digest }}
           TAGS: ${{ steps.meta.outputs.tags }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
         run: |
           echo "${TAGS}" | while IFS= read -r tag; do
             [ -z "$tag" ] && continue
