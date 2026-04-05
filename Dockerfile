@@ -52,7 +52,7 @@ ENV GOHASSAGENT_NOLOGFILE=1
 # Add image labels.
 LABEL org.opencontainers.image.title="Go Hass Agent"
 LABEL org.opencontainers.image.source=https://github.com/joshuar/go-hass-agent
-LABEL org.opencontainers.image.description=" A Home Assistant, native app for desktop/laptop devices"
+LABEL org.opencontainers.image.description="A Home Assistant, native app for desktop/laptop devices"
 LABEL org.opencontainers.image.licenses=MIT
 
 # Add bash and dbus
