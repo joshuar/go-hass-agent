@@ -247,9 +247,8 @@ jobs:
             APPVERSION=${{ env.APPVERSION }}
       - name: Sign image with a key
         run: |
-          for tag in ${{ steps.docker_metadata.outputs.tags }}; do
-            cosign sign --yes --key cosign.key \
-              ${tag}
-          done
+          DIGEST=$(echo $DOCKER_METADATA_OUTPUT_TAG_NAMES | cut -f2 -d' ')
+          cosign sign --yes --key cosign.key \
+            ${{ env.REGISTRY }}/${{ env.IMAGE }}@${DIGEST}
         env:
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
