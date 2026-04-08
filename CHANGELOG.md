@@ -1,5 +1,12 @@
 # Changelog
 
+## [14.10.4](https://github.com/joshuar/go-hass-agent/compare/v14.10.3...v14.10.4) (2026-04-05)
+
+
+### Bug Fixes
+
+* **scheduler:** :bug: don't use outdated math package ([caad369](https://github.com/joshuar/go-hass-agent/commit/caad369571396f67f22da5b1aafee95969ea7e9e))
+
 ## [14.10.3](https://github.com/joshuar/go-hass-agent/compare/v14.10.2...v14.10.3) (2026-03-20)
 
 
