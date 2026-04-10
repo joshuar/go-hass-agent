@@ -89,7 +89,6 @@ require (
 	github.com/oasdiff/yaml3 v0.0.0-20250309153720-d2182401db90 // indirect
 	github.com/perimeterx/marshmallow v1.1.5 // indirect
 	github.com/pjbgf/sha1cd v0.3.2 // indirect
-	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/samber/lo v1.52.0 // indirect
@@ -142,7 +141,7 @@ require (
 	github.com/go-test/deep v1.1.1
 	github.com/gofrs/uuid/v5 v5.4.0
 	github.com/grandcat/zeroconf v1.0.0
-	github.com/jaypipes/ghw v0.23.0
+	github.com/jaypipes/ghw v0.24.0
 	github.com/jfreymuth/pulse v0.1.1
 	github.com/jsimonetti/rtnetlink v1.4.2
 	github.com/justinas/alice v1.2.0
