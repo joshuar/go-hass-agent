@@ -9,6 +9,7 @@ services:
       - /dev/dri
     environment:
       - GOHASSAGENT_NOLOGFILE=1
+      - PULSE_SERVER=unix:/run/user/1000/pulse/native
     build:
       context: .
       dockerfile: Dockerfile
@@ -18,6 +19,8 @@ services:
       - ..:/workspace:cached
       - /etc/localtime:/etc/localtime:ro,cached
       - /run/dbus:/run/dbus:ro
+      - /run/user/$USER_ID/pipewire-0:/tmp/$USER_UID-runtime-dir/pipewire-0:Z
+      - /run/user/$USER_ID/pulse/native:/tmp/$USER_UID-runtime-dir/pulse/native:Z
     user: vscode
     cap_add:
       - SYS_PTRACE
