@@ -126,7 +126,7 @@ require (
 
 require (
 	github.com/a-h/templ v0.3.1001
-	github.com/alecthomas/kong v1.14.0
+	github.com/alecthomas/kong v1.15.0
 	github.com/anatol/smart.go v0.0.0-20241126061019-f03d79b340d2
 	github.com/blackjack/webcam v0.6.1
 	github.com/cenkalti/backoff/v4 v4.3.0
