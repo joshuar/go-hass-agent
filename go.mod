@@ -11,7 +11,7 @@ require (
 	github.com/iancoleman/strcase v0.3.0
 	github.com/joshuar/go-hass-anything/v12 v12.1.0
 	github.com/matoous/go-nanoid/v2 v2.1.0
-	github.com/mdlayher/netlink v1.9.0
+	github.com/mdlayher/netlink v1.10.0
 	github.com/oapi-codegen/nullable v1.1.0
 	github.com/oapi-codegen/runtime v1.3.1
 	github.com/stretchr/testify v1.11.1
