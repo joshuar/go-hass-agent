@@ -5,5 +5,4 @@
 import 'htmx.org'
 import './htmx.js'
 // hyperscript
-import _hyperscript from 'hyperscript.org/dist/_hyperscript.js'
-_hyperscript.browserInit()
+import 'hyperscript.org'
