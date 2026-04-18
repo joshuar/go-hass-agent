@@ -310,6 +310,11 @@ jobs:
         run: |
           echo "APPVERSION=$(git describe --tags --always --dirty)" >> $GITHUB_ENV
 
+      - name: Set app version for release
+        if: ${{ needs.check_release.outputs.release_created }}
+        run: |
+          echo "APPVERSION=${{ needs.check_release.outputs.release_tag }}" >> $GITHUB_ENV
+
       - name: Checkout source
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
         with:
