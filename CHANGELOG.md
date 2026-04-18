@@ -1,5 +1,15 @@
 # Changelog
 
+## [14.10.4](https://github.com/joshuar/go-hass-agent/compare/v14.10.3...v14.10.4) (2026-04-18)
+
+
+### Bug Fixes
+
+* check disabled preference before D-Bus call in ABRT worker ([c86f9a2](https://github.com/joshuar/go-hass-agent/commit/c86f9a2bc78e55f946b23b9f2065fbfcdaa8d556))
+* check disabled preference before D-Bus call in ABRT worker ([3fb98d4](https://github.com/joshuar/go-hass-agent/commit/3fb98d402a3414e25c540a3c7e9c63f727ac6da5))
+* **scheduler:** :bug: don't use outdated math package ([caad369](https://github.com/joshuar/go-hass-agent/commit/caad369571396f67f22da5b1aafee95969ea7e9e))
+* **web/assets:** :bug: fix import of hyperscript ([29892a0](https://github.com/joshuar/go-hass-agent/commit/29892a080bf1112fde94dfbab4a73c1b2334bc30))
+
 ## [14.10.3](https://github.com/joshuar/go-hass-agent/compare/v14.10.2...v14.10.3) (2026-03-20)
 
 
