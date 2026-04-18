@@ -49,6 +49,21 @@ func NewProblemsWorker(ctx context.Context) (workers.EntityWorker, error) {
 		PollingEntityWorkerData: &workers.PollingEntityWorkerData{},
 	}
 
+	defaultPrefs := &ProblemsPrefs{
+		UpdateInterval: abrtProblemsCheckInterval.String(),
+	}
+
+	var err error
+
+	worker.prefs, err = workers.LoadWorkerPreferences(abrtProblemsPreferencesID, defaultPrefs)
+	if err != nil {
+		return worker, fmt.Errorf("load preferences: %w", err)
+	}
+
+	if worker.prefs.IsDisabled() {
+		return worker, nil
+	}
+
 	var ok bool
 
 	worker.bus, ok = linux.CtxGetSystemBus(ctx)
@@ -56,18 +71,9 @@ func NewProblemsWorker(ctx context.Context) (workers.EntityWorker, error) {
 		return worker, fmt.Errorf("get system bus: %w", linux.ErrNoSystemBus)
 	}
 	// Check if we can fetch problem data, bail if we can't.
-	_, err := dbusx.GetData[[]string](worker.bus, dBusProblemsDest, dBusProblemIntr, dBusProblemIntr+".GetProblems")
+	_, err = dbusx.GetData[[]string](worker.bus, dBusProblemsDest, dBusProblemIntr, dBusProblemIntr+".GetProblems")
 	if err != nil {
 		return worker, fmt.Errorf("get abrt problems: %w", err)
-	}
-
-	defaultPrefs := &ProblemsPrefs{
-		UpdateInterval: abrtProblemsCheckInterval.String(),
-	}
-
-	worker.prefs, err = workers.LoadWorkerPreferences(abrtProblemsPreferencesID, defaultPrefs)
-	if err != nil {
-		return worker, fmt.Errorf("load preferences: %w", err)
 	}
 
 	pollInterval, err := time.ParseDuration(worker.prefs.UpdateInterval)
