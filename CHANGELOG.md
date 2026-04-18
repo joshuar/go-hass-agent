@@ -1,5 +1,12 @@
 # Changelog
 
+## [14.10.5](https://github.com/joshuar/go-hass-agent/compare/v14.10.4...v14.10.5) (2026-04-18)
+
+
+### Miscellaneous Chores
+
+* release 14.10.5 ([9bac9d6](https://github.com/joshuar/go-hass-agent/commit/9bac9d6c696ccb43d954ac4949d5bedc0001e796))
+
 ## [14.10.4](https://github.com/joshuar/go-hass-agent/compare/v14.10.3...v14.10.4) (2026-04-18)
 
 
