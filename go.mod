@@ -121,7 +121,7 @@ require (
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	howett.net/plist v1.0.2-0.20250314012144-ee69052608d9 // indirect
-	kernel.org/pub/linux/libs/security/libcap/psx v1.2.77 // indirect
+	kernel.org/pub/linux/libs/security/libcap/psx v1.2.78 // indirect
 )
 
 require (
@@ -139,7 +139,6 @@ require (
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-resty/resty/v2 v2.17.2
 	github.com/go-test/deep v1.1.1
-	github.com/goforj/godump v1.9.1
 	github.com/gofrs/uuid/v5 v5.4.0
 	github.com/grandcat/zeroconf v1.0.0
 	github.com/jaypipes/ghw v0.24.0
@@ -167,7 +166,7 @@ require (
 	golang.org/x/crypto v0.49.0 // indirect
 	golang.org/x/net v0.52.0
 	golang.org/x/sys v0.43.0
-	kernel.org/pub/linux/libs/security/libcap/cap v1.2.77
+	kernel.org/pub/linux/libs/security/libcap/cap v1.2.78
 )
 
 tool (
