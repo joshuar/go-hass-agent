@@ -34,6 +34,7 @@ var linuxWorkers = []func(ctx context.Context) (workers.EntityWorker, error){
 	cpu.NewFreqWorker,
 	desktop.NewAppStateWorker,
 	desktop.NewDesktopWorker,
+	location.NewLocationWorker,
 	media.NewMicUsageWorker,
 	media.NewWebcamUsageWorker,
 	mem.NewUsageWorker,
@@ -59,7 +60,7 @@ var linuxWorkers = []func(ctx context.Context) (workers.EntityWorker, error){
 
 // linuxLaptopWorkers are sensor workers that should only be run on laptops.
 var linuxLaptopWorkers = []func(ctx context.Context) (workers.EntityWorker, error){
-	power.NewLaptopWorker, location.NewLocationWorker,
+	power.NewLaptopWorker,
 }
 
 // CreateOSEntityWorkers sets up all OS-specific entity workers.

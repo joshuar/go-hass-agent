@@ -8,12 +8,14 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 
 	"github.com/godbus/dbus/v5"
 	slogctx "github.com/veqryn/slog-context"
 
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/config"
+	"github.com/joshuar/go-hass-agent/device"
 	"github.com/joshuar/go-hass-agent/models"
 	"github.com/joshuar/go-hass-agent/models/location"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
@@ -61,7 +63,7 @@ func NewLocationWorker(ctx context.Context) (workers.EntityWorker, error) {
 	}
 
 	// Load the worker preferences.
-	defaultPrefs := &workers.CommonWorkerPrefs{}
+	defaultPrefs := defaultLocationWorkerPreferences()
 	var err error
 	worker.prefs, err = workers.LoadWorkerPreferences(preferencesID, defaultPrefs)
 	if err != nil {
@@ -192,4 +194,12 @@ func (w *locationWorker) getLocationProperty(path, prop string) (float64, error)
 	}
 
 	return value, nil
+}
+
+func defaultLocationWorkerPreferences() *workers.CommonWorkerPrefs {
+	defaultPrefs := &workers.CommonWorkerPrefs{}
+	if chassis, _ := device.Chassis(); !slices.Contains([]string{"Portable", "Laptop", "Notebook"}, chassis) {
+		defaultPrefs.Disabled = true
+	}
+	return defaultPrefs
 }
