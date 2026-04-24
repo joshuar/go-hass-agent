@@ -13,7 +13,7 @@ require (
 	github.com/matoous/go-nanoid/v2 v2.1.0
 	github.com/mdlayher/netlink v1.10.0
 	github.com/oapi-codegen/nullable v1.1.0
-	github.com/oapi-codegen/runtime v1.3.1
+	github.com/oapi-codegen/runtime v1.4.0
 	github.com/stretchr/testify v1.11.1
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -139,7 +139,6 @@ require (
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-resty/resty/v2 v2.17.2
 	github.com/go-test/deep v1.1.1
-	github.com/goforj/godump v1.9.1
 	github.com/gofrs/uuid/v5 v5.4.0
 	github.com/grandcat/zeroconf v1.0.0
 	github.com/jaypipes/ghw v0.24.0
