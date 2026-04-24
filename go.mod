@@ -91,8 +91,8 @@ require (
 	github.com/pjbgf/sha1cd v0.3.2 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
-	github.com/samber/lo v1.52.0 // indirect
-	github.com/samber/slog-common v0.20.0 // indirect
+	github.com/samber/lo v1.53.0 // indirect
+	github.com/samber/slog-common v0.21.0 // indirect
 	github.com/sergeymakinen/go-bmp v1.0.0 // indirect
 	github.com/sergeymakinen/go-ico v1.0.0-beta.0 // indirect
 	github.com/sergi/go-diff v1.3.2-0.20230802210424-5b0b94c5c0d3 // indirect
@@ -139,7 +139,6 @@ require (
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-resty/resty/v2 v2.17.2
 	github.com/go-test/deep v1.1.1
-	github.com/goforj/godump v1.9.1
 	github.com/gofrs/uuid/v5 v5.4.0
 	github.com/grandcat/zeroconf v1.0.0
 	github.com/jaypipes/ghw v0.24.0
@@ -160,7 +159,7 @@ require (
 	github.com/pelletier/go-toml/v2 v2.3.0
 	github.com/reugn/go-quartz v0.15.2
 	github.com/samber/slog-chi v1.19.0
-	github.com/samber/slog-multi v1.7.1
+	github.com/samber/slog-multi v1.8.0
 	github.com/tklauser/go-sysconf v0.3.16
 	github.com/veqryn/slog-context v0.9.0
 	github.com/veqryn/slog-json v0.5.0
