@@ -11,7 +11,7 @@ require (
 	github.com/iancoleman/strcase v0.3.0
 	github.com/joshuar/go-hass-anything/v12 v12.1.0
 	github.com/matoous/go-nanoid/v2 v2.1.0
-	github.com/mdlayher/netlink v1.10.0
+	github.com/mdlayher/netlink v1.11.1
 	github.com/oapi-codegen/nullable v1.1.0
 	github.com/oapi-codegen/runtime v1.3.1
 	github.com/stretchr/testify v1.11.1
@@ -74,7 +74,7 @@ require (
 	github.com/mandykoh/go-parallel v0.1.0 // indirect
 	github.com/matryer/moq v0.5.3 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
-	github.com/mdlayher/socket v0.5.1 // indirect
+	github.com/mdlayher/socket v0.6.0 // indirect
 	github.com/miekg/dns v1.1.27 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
@@ -139,7 +139,6 @@ require (
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-resty/resty/v2 v2.17.2
 	github.com/go-test/deep v1.1.1
-	github.com/goforj/godump v1.9.1
 	github.com/gofrs/uuid/v5 v5.4.0
 	github.com/grandcat/zeroconf v1.0.0
 	github.com/jaypipes/ghw v0.24.0
