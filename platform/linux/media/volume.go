@@ -162,18 +162,6 @@ func NewVolumeWorker(ctx context.Context, device *mqtthass.Device) (*VolumeWorke
 			}),
 		)
 
-	// update := func() { // Pulseaudio changed state. Get the new state.
-	// 	// Publish and update mute state if it changed.
-	// 	if err := publishAudioState(worker.MsgCh, worker.MuteControl); err != nil {
-	// 		slogctx.FromCtx(ctx).Error("Failed to publish mute state to MQTT.", slog.Any("error", err))
-	// 	}
-
-	// 	// Publish and update volume if it changed.
-	// 	if err := publishAudioState(worker.MsgCh, worker.VolumeControl); err != nil {
-	// 		slogctx.FromCtx(ctx).Error("Failed to publish mute state to MQTT.", slog.Any("error", err))
-	// 	}
-	// }
-
 	// Process Pipewire state updates as they are received.
 	go func() {
 		for event := range worker.pwEventChan {
@@ -186,19 +174,33 @@ func NewVolumeWorker(ctx context.Context, device *mqtthass.Device) (*VolumeWorke
 		}
 	}()
 
+	// Get and publish volume/mute state on startup.
+	go func() {
+		// Publish current mute state.
+		if err := publishAudioState(worker.MsgCh, worker.MuteControl); err != nil {
+			slogctx.FromCtx(ctx).Error("Failed to publish mute state to MQTT.", slog.Any("error", err))
+		}
+
+		// Publish current volume state.
+		if err := publishAudioState(worker.MsgCh, worker.VolumeControl); err != nil {
+			slogctx.FromCtx(ctx).Error("Failed to publish volume state to MQTT.", slog.Any("error", err))
+		}
+	}()
+
 	return worker, nil
 }
 
 // volStateCallback is executed when the volume is read on MQTT.
 func (d *VolumeWorker) volStateCallback(ctx context.Context, _ ...any) (json.RawMessage, error) {
+	// Get volume from pipewire. Value will be a float percentage between 0 and 2 (volume can go higher than 100%).
 	vol, err := pipewire.GetVolume(ctx)
 	if err != nil {
 		return json.RawMessage(`{ "value": 0 }`), err
 	}
 
-	slog.Debug("Publishing volume change.", slog.Int("volume", int(vol)))
+	slog.Debug("Publishing volume change.", slog.Int("volume", int(vol*100)))
 
-	return json.RawMessage(`{ "value": ` + strconv.FormatFloat(vol, 'f', 0, 64) + ` }`), nil
+	return json.RawMessage(`{ "value": ` + strconv.Itoa(int(vol*100)) + ` }`), nil
 }
 
 // volCommandCallback is called when the volume is changed on MQTT.
@@ -207,8 +209,8 @@ func (d *VolumeWorker) volCommandCallback(ctx context.Context, p *paho.Publish) 
 		slog.Debug("Could not parse new volume level.", slog.Any("error", err))
 	} else {
 		slog.Debug("Received volume change from Home Assistant.", slog.Int("volume", newValue))
-
-		if err := pipewire.SetVolume(ctx, float64(newValue)); err != nil {
+		// Set volume change with pipewire. Convert the percentage received from Home Assistant to a float.
+		if err := pipewire.SetVolume(ctx, float64(newValue)/100); err != nil {
 			slog.Error("Could not set volume level.", slog.Any("error", err))
 			return
 		}
@@ -392,6 +394,17 @@ func (d *VolumeWorker) handleNode(ctx context.Context, event pipewire.Event) {
 			}
 			state.Muted = *pp.Mute
 		}
+		go func() {
+			// Publish current mute state.
+			if err := publishAudioState(d.MsgCh, d.MuteControl); err != nil {
+				slogctx.FromCtx(ctx).Error("Failed to publish mute state to MQTT.", slog.Any("error", err))
+			}
+
+			// Publish current volume state.
+			if err := publishAudioState(d.MsgCh, d.VolumeControl); err != nil {
+				slogctx.FromCtx(ctx).Error("Failed to publish volume state to MQTT.", slog.Any("error", err))
+			}
+		}()
 	}
 }
 
