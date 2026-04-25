@@ -1,5 +1,17 @@
 # Changelog
 
+## [14.11.0](https://github.com/joshuar/go-hass-agent/compare/v14.10.5...v14.11.0) (2026-04-25)
+
+
+### Features
+
+* **linux/location:** :sparkles: expose location sensor on all device types but disable by default if not running on a laptop ([b7c7d92](https://github.com/joshuar/go-hass-agent/commit/b7c7d92ecf45dfdcfc2e31c3cbc7d330a6f31fca))
+
+
+### Bug Fixes
+
+* **linux/media:** :bug: volume control fixes ([2befa10](https://github.com/joshuar/go-hass-agent/commit/2befa10a3af4e3c76536ba0d532483e5920ca7f6))
+
 ## [14.10.5](https://github.com/joshuar/go-hass-agent/compare/v14.10.4...v14.10.5) (2026-04-18)
 
 
