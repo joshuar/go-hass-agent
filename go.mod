@@ -114,10 +114,10 @@ require (
 	go.opentelemetry.io/otel v1.29.0 // indirect
 	go.opentelemetry.io/otel/trace v1.29.0 // indirect
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56 // indirect
-	golang.org/x/mod v0.33.0 // indirect
+	golang.org/x/mod v0.34.0 // indirect
 	golang.org/x/sync v0.20.0 // indirect
-	golang.org/x/text v0.35.0 // indirect
-	golang.org/x/tools v0.42.0 // indirect
+	golang.org/x/text v0.36.0 // indirect
+	golang.org/x/tools v0.43.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	howett.net/plist v1.0.2-0.20250314012144-ee69052608d9 // indirect
@@ -163,8 +163,8 @@ require (
 	github.com/tklauser/go-sysconf v0.3.16
 	github.com/veqryn/slog-context v0.9.0
 	github.com/veqryn/slog-json v0.5.0
-	golang.org/x/crypto v0.49.0 // indirect
-	golang.org/x/net v0.52.0
+	golang.org/x/crypto v0.50.0 // indirect
+	golang.org/x/net v0.53.0
 	golang.org/x/sys v0.43.0
 	kernel.org/pub/linux/libs/security/libcap/cap v1.2.78
 )
