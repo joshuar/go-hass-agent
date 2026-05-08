@@ -155,7 +155,7 @@ require (
 	github.com/lxzan/gws v1.9.1
 	github.com/mandykoh/prism v0.35.3
 	github.com/matoous/go-nanoid v1.5.1
-	github.com/mattn/go-isatty v0.0.21
+	github.com/mattn/go-isatty v0.0.22
 	github.com/pelletier/go-toml/v2 v2.3.0
 	github.com/reugn/go-quartz v0.15.2
 	github.com/samber/slog-chi v1.19.0
