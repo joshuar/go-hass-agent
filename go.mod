@@ -1,6 +1,6 @@
 module github.com/joshuar/go-hass-agent
 
-go 1.25.0
+go 1.26
 
 require (
 	github.com/eclipse/paho.golang v0.23.0
@@ -8,7 +8,7 @@ require (
 	github.com/go-playground/validator/v10 v10.30.2
 	github.com/godbus/dbus/v5 v5.2.2
 	github.com/goforj/godump v1.9.1
-	github.com/holoplot/go-evdev v0.0.0-20250804134636-ab1d56a1fe83
+	github.com/holoplot/go-evdev v0.0.0-20260504100651-66d1748fe847
 	github.com/iancoleman/strcase v0.3.0
 	github.com/joshuar/go-hass-anything/v12 v12.1.0
 	github.com/matoous/go-nanoid/v2 v2.1.0
@@ -105,7 +105,7 @@ require (
 	github.com/spf13/cobra v1.9.1 // indirect
 	github.com/spf13/pflag v1.0.6 // indirect
 	github.com/tadvi/systray v0.0.0-20190226123456-11a2b8fa57af // indirect
-	github.com/tklauser/numcpus v0.11.0 // indirect
+	github.com/tklauser/numcpus v0.12.0 // indirect
 	github.com/ulikunitz/xz v0.5.15 // indirect
 	github.com/vmware-labs/yaml-jsonpath v0.3.2 // indirect
 	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
@@ -115,10 +115,10 @@ require (
 	go.opentelemetry.io/otel v1.29.0 // indirect
 	go.opentelemetry.io/otel/trace v1.29.0 // indirect
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56 // indirect
-	golang.org/x/mod v0.33.0 // indirect
+	golang.org/x/mod v0.35.0 // indirect
 	golang.org/x/sync v0.20.0 // indirect
-	golang.org/x/text v0.35.0 // indirect
-	golang.org/x/tools v0.42.0 // indirect
+	golang.org/x/text v0.37.0 // indirect
+	golang.org/x/tools v0.44.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	howett.net/plist v1.0.2-0.20250314012144-ee69052608d9 // indirect
@@ -126,9 +126,9 @@ require (
 )
 
 require (
-	github.com/a-h/templ v0.3.1001
+	github.com/a-h/templ v0.3.1020
 	github.com/alecthomas/kong v1.15.0
-	github.com/anatol/smart.go v0.0.0-20241126061019-f03d79b340d2
+	github.com/anatol/smart.go v0.0.0-20260427185427-04c4679efd4e
 	github.com/blackjack/webcam v0.6.1
 	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/fatih/color v1.19.0
@@ -148,7 +148,7 @@ require (
 	github.com/justinas/alice v1.2.0
 	github.com/justinas/nosurf v1.2.0
 	github.com/klauspost/compress v1.18.0 // indirect
-	github.com/knadh/koanf/parsers/toml/v2 v2.2.0
+	github.com/knadh/koanf/parsers/toml/v2 v2.2.1
 	github.com/knadh/koanf/providers/file v1.2.1
 	github.com/knadh/koanf/v2 v2.3.4
 	github.com/leodido/go-urn v1.4.0 // indirect
@@ -161,11 +161,11 @@ require (
 	github.com/reugn/go-quartz v0.15.2
 	github.com/samber/slog-chi v1.19.1
 	github.com/samber/slog-multi v1.8.0
-	github.com/tklauser/go-sysconf v0.3.16
+	github.com/tklauser/go-sysconf v0.4.0
 	github.com/veqryn/slog-context v0.9.0
 	github.com/veqryn/slog-json v0.5.0
-	golang.org/x/crypto v0.49.0 // indirect
-	golang.org/x/net v0.52.0
+	golang.org/x/crypto v0.51.0 // indirect
+	golang.org/x/net v0.54.0
 	golang.org/x/sys v0.44.0
 	kernel.org/pub/linux/libs/security/libcap/cap v1.2.78
 )
