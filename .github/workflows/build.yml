@@ -1,4 +1,4 @@
-name: Build
+name: 🏗️ Build containers and packages
 
 on:
   workflow_run:

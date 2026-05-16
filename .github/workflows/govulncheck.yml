@@ -1,4 +1,4 @@
-name: Determine known CVEs through `govulncheck`
+name: 🔐 Determine known CVEs through `govulncheck`
 on:
   push:
     branches:
