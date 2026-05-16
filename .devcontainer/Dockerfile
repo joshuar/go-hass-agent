@@ -1,14 +1,16 @@
 # Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
 # SPDX-License-Identifier: MIT
 
-ARG GO_VERSION
+ARG ALPINE_VERSION=3.23.4
 
 # Alpine base.
 # https://hub.docker.com/_/alpine
-FROM docker.io/alpine:3.23.3@sha256:25109184c71bdad752c8312a8623239686a9a2071e8825f20acb8f2198c3f659 AS builder
+FROM docker.io/alpine:${ALPINE_VERSION} AS builder
+
+ARG GO_VERSION=1.26.2-alpine3.23
 
 # Copy go from official image
-COPY --from=docker.io/golang:1.26.1-alpine-3.23@sha256:f85330846cde1e57ca9ec309382da3b8e6ae3ab943d2739500e08c86393a21b1 /usr/local/go/ /usr/local/go/
+COPY --from=docker.io/golang:${GO_VERSION} /usr/local/go/ /usr/local/go/
 
 # Install additional packages
 RUN apk update && apk add sudo openssh curl git bash fish micro graphviz nodejs npm mosquitto-clients dbus dbus-x11 starship

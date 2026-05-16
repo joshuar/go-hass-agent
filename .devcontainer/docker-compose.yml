@@ -13,8 +13,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      args:
-        - GO_VERSION=$GO_VERSION
     volumes:
       - ..:/workspace:cached
       - /etc/localtime:/etc/localtime:ro,cached

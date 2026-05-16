@@ -10,8 +10,6 @@
   "customizations": {
     "vscode": {
       "extensions": [
-        "vivaxy.vscode-conventional-commits",
-        "brunodavi.conventional-snippets",
         "golang.go",
         "ymotongpoo.licenser",
         "esbenp.prettier-vscode",
@@ -20,7 +18,10 @@
         "bierner.markdown-emoji",
         "a-h.templ",
         "bradlc.vscode-tailwindcss",
-        "tamasfe.even-better-toml"
+        "tamasfe.even-better-toml",
+        "adam-bender.commit-message-editor",
+        "oderwat.indent-rainbow",
+        "DavidAnson.vscode-markdownlint"
       ]
     }
   },
