@@ -7,7 +7,6 @@ require (
 	github.com/gen2brain/beeep v0.11.2
 	github.com/go-playground/validator/v10 v10.30.2
 	github.com/godbus/dbus/v5 v5.2.2
-	github.com/goforj/godump v1.9.1
 	github.com/holoplot/go-evdev v0.0.0-20260504100651-66d1748fe847
 	github.com/iancoleman/strcase v0.3.0
 	github.com/joshuar/go-hass-anything/v12 v12.1.0
@@ -166,7 +165,7 @@ require (
 	github.com/veqryn/slog-json v0.5.0
 	golang.org/x/crypto v0.51.0 // indirect
 	golang.org/x/net v0.54.0
-	golang.org/x/sys v0.44.0
+	golang.org/x/sys v0.45.0
 	kernel.org/pub/linux/libs/security/libcap/cap v1.2.78
 )
 
