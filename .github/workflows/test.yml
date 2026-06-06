@@ -10,15 +10,28 @@ permissions:
   contents: read
 
 concurrency:
-  group: "tests"
-  cancel-in-progress: false
-
-env:
-  TARGETPLATFORM: linux/amd64
+  group: "tests-${{ github.ref }}"
+  cancel-in-progress: true
 
 jobs:
   test:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
+
+    strategy:
+      fail-fast: false          # Let other platforms finish even if one fails
+      matrix:
+        include:
+          - platform: linux/arm/v6
+            goarch: arm
+            goarm: 6
+          - platform: linux/arm/v7
+            goarch: arm
+            goarm: 7
+          - platform: linux/arm64
+            goarch: arm64
+          - platform: linux/amd64
+            goarch: amd64
+
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
@@ -41,23 +54,27 @@ jobs:
             storage.googleapis.com:443
             sum.golang.org:443
             release-assets.githubusercontent.com:443
+
       - name: Checkout
         id: checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
         with:
           fetch-depth: 0
           persist-credentials: false
+
       - name: Set up Go
         id: setup_go
         uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v5
         with:
           go-version-file: "go.mod"
+          cache: true
+
       - name: Run tests
         run: go test -ldflags="-w -s -X github.com/joshuar/go-hass-agent/config.AppVersion=$(git describe --tags --always --long --dirty)" -coverprofile=coverage.txt -v ./...
+
       - name: Upload Coverage
         id: upload_coverage
         uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354 # v4
-        continue-on-error: true
         with:
           token: ${{secrets.CODECOV_TOKEN}}
           file: ./coverage.txt
