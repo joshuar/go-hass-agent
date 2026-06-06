@@ -38,22 +38,34 @@ jobs:
         with:
           egress-policy: block
           allowed-endpoints: >
+            *.archive.ubuntu.com:80
+            *.microsoft.com:443
+            185.125.188.54:443
+            185.125.188.57:443
+            185.125.188.58:443
+            185.125.188.59:443
+            44.231.40.74:443
+            44.236.18.214:443
+            52.239.171.36:443
             api.codecov.io:443
             api.github.com:443
-            azure.archive.ubuntu.com:80
             cli.codecov.io:443
             esm.ubuntu.com:443
             github.com:443
+            golang.org:443
+            hosted-compute-watchdog-prod-eus-01.githubapp.com:443
+            hosted-compute-watchdog-prod-eus-02.githubapp.com:443
+            hosted-compute-watchdog-prod-iad-02.githubapp.com:443
             ingest.codecov.io:443
             keybase.io:443
             motd.ubuntu.com:443
+            o26192.ingest.us.sentry.io:443
             objects.githubusercontent.com:443
-            packages.microsoft.com:443
             proxy.golang.org:443
             raw.githubusercontent.com:443
+            release-assets.githubusercontent.com:443
             storage.googleapis.com:443
             sum.golang.org:443
-            release-assets.githubusercontent.com:443
 
       - name: Checkout
         id: checkout
@@ -77,5 +89,6 @@ jobs:
         uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354 # v4
         with:
           token: ${{secrets.CODECOV_TOKEN}}
-          file: ./coverage.txt
+          files:
+            - ./coverage.txt
           fail_ci_if_error: false
