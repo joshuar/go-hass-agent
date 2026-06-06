@@ -164,7 +164,7 @@ require (
 	github.com/veqryn/slog-context v0.9.0
 	github.com/veqryn/slog-json v0.5.0
 	golang.org/x/crypto v0.51.0 // indirect
-	golang.org/x/net v0.54.0
+	golang.org/x/net v0.55.0
 	golang.org/x/sys v0.45.0
 	kernel.org/pub/linux/libs/security/libcap/cap v1.2.78
 )
