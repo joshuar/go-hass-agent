@@ -7,7 +7,7 @@ ARG ALPINE_VERSION=3.23.4
 # https://hub.docker.com/_/alpine
 FROM docker.io/alpine:${ALPINE_VERSION} AS builder
 
-ARG GO_VERSION=1.26.2-alpine3.23
+ARG GO_VERSION=1.26.4-alpine3.23
 
 # Copy go from official image
 COPY --from=docker.io/golang:${GO_VERSION} /usr/local/go/ /usr/local/go/
