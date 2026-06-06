@@ -7,11 +7,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync/atomic"
 
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/models"
 	"github.com/joshuar/go-hass-agent/models/sensor"
 	"github.com/joshuar/go-hass-agent/pkg/linux/pipewire"
+	"github.com/joshuar/go-hass-agent/pkg/linux/webcam"
 	"github.com/joshuar/go-hass-agent/platform/linux"
 )
 
@@ -22,7 +24,8 @@ type webcamUsageWorker struct {
 
 	prefs       *workers.CommonWorkerPrefs
 	pwEventChan chan pipewire.Event
-	inUse       bool
+	inMonitor   *webcam.Monitor
+	inUse       atomic.Bool
 }
 
 func NewWebcamUsageWorker(ctx context.Context) (workers.EntityWorker, error) {
@@ -39,17 +42,22 @@ func NewWebcamUsageWorker(ctx context.Context) (workers.EntityWorker, error) {
 	}
 
 	// Set up pipewire listener.
-	monitor, found := linux.CtxGetPipewireMonitor(ctx)
+	pwMonitor, found := linux.CtxGetPipewireMonitor(ctx)
 	if !found {
 		return worker, errors.New("no pipewire monitor in context")
 	}
-	worker.pwEventChan = monitor.AddListener(webcamPipewireEventFilter)
+	worker.pwEventChan = pwMonitor.AddListener(webcamPipewireEventFilter)
+
+	// Set up inotify listener.
+	worker.inMonitor = webcam.NewMonitor()
 
 	return worker, nil
 }
 
 func (w *webcamUsageWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
 	outCh := make(chan models.Entity)
+
+	// Monitor webcam events through pipewire.
 	go func() {
 		defer close(outCh)
 
@@ -59,8 +67,23 @@ func (w *webcamUsageWorker) Start(ctx context.Context) (<-chan models.Entity, er
 				sensor.WithName("Webcam In Use"),
 				sensor.WithID("webcam_in_use"),
 				sensor.AsTypeBinarySensor(),
-				sensor.WithIcon(webcamUseIcon(w.inUse)),
-				sensor.WithState(w.inUse),
+				sensor.WithIcon(webcamUseIcon(w.inUse.Load())),
+				sensor.WithState(w.inUse.Load()),
+				sensor.WithDataSourceAttribute(linux.DataSrcSysFS),
+			)
+		}
+	}()
+
+	// Monitor webcam events through inotify/device files.
+	go func() {
+		for event := range w.inMonitor.Run(ctx) {
+			w.parseInotifyEvent(event)
+			outCh <- sensor.NewSensor(ctx,
+				sensor.WithName("Webcam In Use"),
+				sensor.WithID("webcam_in_use"),
+				sensor.AsTypeBinarySensor(),
+				sensor.WithIcon(webcamUseIcon(w.inUse.Load())),
+				sensor.WithState(w.inUse.Load()),
 				sensor.WithDataSourceAttribute(linux.DataSrcSysFS),
 			)
 		}
@@ -77,11 +100,22 @@ func (w *webcamUsageWorker) IsDisabled() bool {
 func (w *webcamUsageWorker) parsePWState(state pipewire.State) {
 	switch state {
 	case pipewire.StateRunning, pipewire.StateIdle:
-		w.inUse = true
+		w.inUse.Store(true)
 	case pipewire.StateSuspended:
 		fallthrough
 	default:
-		w.inUse = false
+		w.inUse.Store(false)
+	}
+}
+
+func (w *webcamUsageWorker) parseInotifyEvent(event webcam.Event) {
+	switch event.Status {
+	case webcam.StatusActive:
+		w.inUse.Store(true)
+	case webcam.StatusIdle:
+		fallthrough
+	default:
+		w.inUse.Store(false)
 	}
 }
 

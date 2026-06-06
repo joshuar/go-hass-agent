@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync/atomic"
 
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/models"
@@ -22,7 +23,7 @@ type micUsageWorker struct {
 
 	prefs       *workers.CommonWorkerPrefs
 	pwEventChan chan pipewire.Event
-	inUse       bool
+	inUse       atomic.Bool
 }
 
 func NewMicUsageWorker(ctx context.Context) (workers.EntityWorker, error) {
@@ -58,8 +59,8 @@ func (w *micUsageWorker) Start(ctx context.Context) (<-chan models.Entity, error
 				sensor.WithName("Microphone In Use"),
 				sensor.WithID("microphone_in_use"),
 				sensor.AsTypeBinarySensor(),
-				sensor.WithIcon(micUseIcon(w.inUse)),
-				sensor.WithState(w.inUse),
+				sensor.WithIcon(micUseIcon(w.inUse.Load())),
+				sensor.WithState(w.inUse.Load()),
 				sensor.WithDataSourceAttribute(linux.DataSrcSysFS),
 			)
 		}
@@ -76,11 +77,11 @@ func (w *micUsageWorker) IsDisabled() bool {
 func (w *micUsageWorker) parsePWState(state pipewire.State) {
 	switch state {
 	case pipewire.StateRunning:
-		w.inUse = true
+		w.inUse.Store(true)
 	case pipewire.StateIdle, pipewire.StateSuspended:
 		fallthrough
 	default:
-		w.inUse = false
+		w.inUse.Store(false)
 	}
 }
 
