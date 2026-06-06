@@ -4,7 +4,8 @@
 # Alpine base.
 #
 # https://hub.docker.com/_/alpine
-FROM --platform=$BUILDPLATFORM docker.io/alpine:3.23.4@sha256:5b10f432ef3da1b8d4c7eb6c487f2f5a8f096bc91145e68878dd4a5019afde11 AS builder
+ARG ALPINE_VERSION=3.23.4
+FROM --platform=$BUILDPLATFORM docker.io/alpine:${ALPINE_VERSION} AS builder
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -15,7 +16,8 @@ WORKDIR /usr/src/app
 # Copy go from official image.
 #
 # https://hub.docker.com/_/golang
-COPY --from=docker.io/golang:1.25.6-alpine@sha256:98e6cffc31ccc44c7c15d83df1d69891efee8115a5bb7ede2bf30a38af3e3c92 /usr/local/go/ /usr/local/go/
+ARG GO_VERSION=1.26.4-alpine3.23
+COPY --from=docker.io/golang:${GO_VERSION} /usr/local/go/ /usr/local/go/
 ENV PATH="/root/go/bin:/usr/local/go/bin:/usr/local/bin:${PATH}"
 
 # install build deps
@@ -44,7 +46,7 @@ RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -ldflags="-s -w -X github.com
 # compress binary with upx
 RUN upx --best --lzma dist/go-hass-agent
 
-FROM docker.io/alpine:3.23.4@sha256:5b10f432ef3da1b8d4c7eb6c487f2f5a8f096bc91145e68878dd4a5019afde11
+FROM docker.io/alpine:${ALPINE_VERSION}
 
 # Don't log to a file when running in a container
 ENV GOHASSAGENT_NOLOGFILE=1
