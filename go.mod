@@ -5,15 +5,16 @@ go 1.26
 require (
 	github.com/eclipse/paho.golang v0.23.0
 	github.com/gen2brain/beeep v0.11.2
-	github.com/go-playground/validator/v10 v10.30.2
+	github.com/go-playground/validator/v10 v10.30.3
 	github.com/godbus/dbus/v5 v5.2.2
+	github.com/goforj/godump v1.9.1
 	github.com/holoplot/go-evdev v0.0.0-20260504100651-66d1748fe847
 	github.com/iancoleman/strcase v0.3.0
 	github.com/joshuar/go-hass-anything/v12 v12.1.0
 	github.com/matoous/go-nanoid/v2 v2.1.0
-	github.com/mdlayher/netlink v1.11.1
+	github.com/mdlayher/netlink v1.11.2
 	github.com/oapi-codegen/nullable v1.1.0
-	github.com/oapi-codegen/runtime v1.4.0
+	github.com/oapi-codegen/runtime v1.4.1
 	github.com/stretchr/testify v1.11.1
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -133,7 +134,7 @@ require (
 	github.com/fatih/color v1.19.0
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.13 // indirect
-	github.com/go-chi/chi/v5 v5.2.5
+	github.com/go-chi/chi/v5 v5.3.0
 	github.com/go-playground/form/v4 v4.3.0
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
@@ -149,7 +150,7 @@ require (
 	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/knadh/koanf/parsers/toml/v2 v2.2.1
 	github.com/knadh/koanf/providers/file v1.2.1
-	github.com/knadh/koanf/v2 v2.3.4
+	github.com/knadh/koanf/v2 v2.3.5
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/lmittmann/tint v1.1.3
 	github.com/lxzan/gws v1.9.1
@@ -163,7 +164,7 @@ require (
 	github.com/tklauser/go-sysconf v0.4.0
 	github.com/veqryn/slog-context v0.9.0
 	github.com/veqryn/slog-json v0.5.0
-	golang.org/x/crypto v0.51.0 // indirect
+	golang.org/x/crypto v0.52.0 // indirect
 	golang.org/x/net v0.55.0
 	golang.org/x/sys v0.45.0
 	kernel.org/pub/linux/libs/security/libcap/cap v1.2.78
