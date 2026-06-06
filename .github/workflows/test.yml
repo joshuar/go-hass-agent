@@ -89,6 +89,5 @@ jobs:
         uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354 # v4
         with:
           token: ${{secrets.CODECOV_TOKEN}}
-          files:
-            - ./coverage.txt
+          files: ./coverage.txt
           fail_ci_if_error: false
