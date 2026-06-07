@@ -2,8 +2,8 @@ name: 🏗️ Build containers and packages
 
 on:
   workflow_run:
-  workflows: ["🧪 Perform code testing"]
-  branches: [main]
+    workflows: ["🧪 Perform code testing"]
+    branches: [main]
     types:
       - completed
   workflow_dispatch:
