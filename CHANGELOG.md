@@ -1,5 +1,12 @@
 # Changelog
 
+## [14.12.0](https://github.com/joshuar/go-hass-agent/compare/v14.11.0...v14.12.0) (2026-06-07)
+
+
+### Features
+
+* **linux/media:** ✨ monitor webcam usage via pipewire and video4linux ([47fddc2](https://github.com/joshuar/go-hass-agent/commit/47fddc2f735258ad6b426f1b927365774b7076da))
+
 ## [14.11.0](https://github.com/joshuar/go-hass-agent/compare/v14.10.5...v14.11.0) (2026-04-25)
 
 
