@@ -62,9 +62,13 @@ jobs:
   build:
     name: Build package (${{ matrix.platform }})
     needs: check_release
+
     permissions:
       contents: write
+      id-token: write
+
     runs-on: ubuntu-24.04
+
     env:
       APPVERSION: ${{ needs.check_release.outputs.app_version }}
 
@@ -179,10 +183,8 @@ jobs:
           echo Need to sign dist/*.{rpm,deb,zst}
           for artifact in dist/*.{rpm,deb,zst}; do
             echo Signing ${artifact}
-            cosign --verbose=true sign-blob --yes --key cosign.key --bundle=${artifact}.sig ${artifact}
+            cosign --verbose=true sign-blob --yes --bundle=${artifact}.sig ${artifact}
           done
-        env:
-          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
 
       - name: Upload build artifacts
         id: upload_artifacts
@@ -309,6 +311,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+      id-token: write
 
     env:
       REGISTRY: ghcr.io
@@ -401,13 +404,13 @@ jobs:
       - name: Generate SBOM with Syft
         uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
         with:
-          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}
+          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.merge.outputs.manifest_digest }}
           format: cyclonedx-json
           output-file: sbom.cyclonedx.json
 
       - name: Attest SBOM with cosign
         env:
-          CONTAINER: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}
+          CONTAINER: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.merge.outputs.manifest_digest }}
         run: |
           cosign attest --yes \
             --predicate sbom.cyclonedx.json \
@@ -417,8 +420,8 @@ jobs:
       # -----------------------------------------------------------------------
       - name: Print cosign verify command
         env:
-          DIGEST: ${{ steps.build.outputs.digest }}
-          REPO: ${{ github.repository }}
+            DIGEST: ${{ steps.merge.outputs.manifest_digest }}
+            REPO: ${{ github.repository }}
           CONTAINER: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${DIGEST}
         run: |
           echo ""
