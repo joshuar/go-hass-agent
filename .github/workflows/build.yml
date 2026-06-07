@@ -420,8 +420,8 @@ jobs:
       # -----------------------------------------------------------------------
       - name: Print cosign verify command
         env:
-            DIGEST: ${{ steps.merge.outputs.manifest_digest }}
-            REPO: ${{ github.repository }}
+          DIGEST: ${{ steps.merge.outputs.manifest_digest }}
+          REPO: ${{ github.repository }}
           CONTAINER: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${DIGEST}
         run: |
           echo ""
