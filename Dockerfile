@@ -1,10 +1,14 @@
 # Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
 # SPDX-License-Identifier: MIT
 
+ARG ALPINE_VERSION=3.23.4
+ARG GO_VERSION=1.26.4-alpine3.23
+
+
+FROM docker.io/golang:${GO_VERSION} AS golang
 # Alpine base.
 #
 # https://hub.docker.com/_/alpine
-ARG ALPINE_VERSION=3.23.4
 FROM --platform=$BUILDPLATFORM docker.io/alpine:${ALPINE_VERSION} AS builder
 
 ARG TARGETOS
@@ -16,8 +20,7 @@ WORKDIR /usr/src/app
 # Copy go from official image.
 #
 # https://hub.docker.com/_/golang
-ARG GO_VERSION=1.26.4-alpine3.23
-COPY --from=docker.io/golang:${GO_VERSION} /usr/local/go/ /usr/local/go/
+COPY --from=golang /usr/local/go/ /usr/local/go/
 ENV PATH="/root/go/bin:/usr/local/go/bin:/usr/local/bin:${PATH}"
 
 # install build deps
