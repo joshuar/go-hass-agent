@@ -498,6 +498,12 @@ distribution:
 Packages (and binaries) are available for **amd64**, **arm (v6 and v7)** and
 **arm64** architectures.
 
+Install [`go-hass-agent`](https://formulae.brew.sh/formula/go-hass-agent) via [Homebrew](https://brew.sh):
+
+```shell
+brew install go-hass-agent
+```
+
 For distributions not listed above, you can try the binary, or build it yourself
 from source (see development [docs](#%EF%B8%8F-buildingcompiling-manually)).
 
