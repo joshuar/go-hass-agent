@@ -74,7 +74,7 @@ jobs:
           npm run build:css
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@7211b7c8077ea37d8641b6271f6a365a22a5fbfa # v3.29.5
+        uses: github/codeql-action/init@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v3.29.5
         with:
           languages: ${{ matrix.language }}
           build-mode: ${{ matrix.build-mode }}
@@ -85,6 +85,6 @@ jobs:
         run: go build -ldflags="-X github.com/joshuar/go-hass-agent/config.AppVersion=$(git describe --tags --always --long --dirty)"
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@7211b7c8077ea37d8641b6271f6a365a22a5fbfa # v3.29.5
+        uses: github/codeql-action/analyze@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v3.29.5
         with:
           category: "/language:${{matrix.language}}"
