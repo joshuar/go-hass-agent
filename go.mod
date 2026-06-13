@@ -128,7 +128,6 @@ require (
 	github.com/a-h/templ v0.3.1020
 	github.com/alecthomas/kong v1.15.0
 	github.com/anatol/smart.go v0.0.0-20260427185427-04c4679efd4e
-	github.com/blackjack/webcam v0.6.1
 	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/fatih/color v1.19.0
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
