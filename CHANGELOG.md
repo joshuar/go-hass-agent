@@ -1,5 +1,12 @@
 # Changelog
 
+## [14.13.0](https://github.com/joshuar/go-hass-agent/compare/v14.12.0...v14.13.0) (2026-06-13)
+
+
+### Features
+
+* **linux/media:** ✨ improved webcam streaming ([abf6153](https://github.com/joshuar/go-hass-agent/commit/abf615316537068ba875259a9b75d7b3ea20d856))
+
 ## [14.12.0](https://github.com/joshuar/go-hass-agent/compare/v14.11.0...v14.12.0) (2026-06-07)
 
 
