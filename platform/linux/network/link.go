@@ -300,12 +300,24 @@ func newLinkSensor(ctx context.Context, msg rtnetlink.LinkMessage) models.Entity
 	case rtnetlink.OperStateUp:
 		value = "up"
 		icon = "mdi:network"
-	case rtnetlink.OperStateNotPresent:
-		value = "invalid"
-		icon = "mdi:close-network"
 	case rtnetlink.OperStateDown:
 		value = "down"
 		icon = "mdi:network-off"
+	case rtnetlink.OperStateNotPresent:
+		value = "invalid"
+		icon = "mdi:close-network"
+	case rtnetlink.OperStateUnknown:
+		value = "unknown"
+		icon = "mdi:help-network"
+	case rtnetlink.OperStateDormant:
+		value = "dormant"
+		icon = "mdi:minus-network"
+	case rtnetlink.OperStateLowerLayerDown:
+		value = "lower_layer_down"
+		icon = "mdi:network-off"
+	case rtnetlink.OperStateTesting:
+		value = "testing"
+		icon = "mdi:plus-network"
 	}
 
 	if msg.Attributes.Info != nil {
