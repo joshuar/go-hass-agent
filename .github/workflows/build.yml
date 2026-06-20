@@ -51,13 +51,23 @@ jobs:
           persist-credentials: false
 
       - name: Set app version
-        id: set_version
         run: |
           if [ -n "${{ steps.release_please.outputs.tag_name }}" ]; then
-            echo "app_version=${{ steps.release_please.outputs.tag_name }}" >> $GITHUB_OUTPUT
+            RAW_VERSION="${{ steps.release_please.outputs.tag_name }}"
           else
-            echo "app_version=$(git describe --tags --always --long --dirty)" >> $GITHUB_OUTPUT
+            RAW_VERSION="$(git describe --tags --always --long --dirty)"
           fi
+
+          # Replace any character that isn't [a-zA-Z0-9_.-] with '-'
+          SAFE_VERSION=$(echo "$RAW_VERSION" | sed -e 's/[^a-zA-Z0-9_.-]/-/g')
+
+          # Tags can't start with '.' or '-'
+          SAFE_VERSION=$(echo "$SAFE_VERSION" | sed -e 's/^[.-]*//')
+
+          # Enforce 128 char max
+          SAFE_VERSION=$(echo "$SAFE_VERSION" | cut -c1-128)
+
+          echo "app_version=$SAFE_VERSION" >> "$GITHUB_OUTPUT"
 
   build:
     name: Build package (${{ matrix.platform }})
@@ -68,9 +78,6 @@ jobs:
       id-token: write
 
     runs-on: ubuntu-24.04
-
-    env:
-      APPVERSION: ${{ needs.check_release.outputs.app_version }}
 
     strategy:
       fail-fast: false          # Let other platforms finish even if one fails
@@ -153,7 +160,7 @@ jobs:
 
       - name: Build binary
         run: |
-          go build -ldflags="-w -s -X github.com/joshuar/go-hass-agent/config.AppVersion=${{ env.APPVERSION }}" -o dist/go-hass-agent
+          go build -ldflags="-w -s -X github.com/joshuar/go-hass-agent/config.AppVersion=${{ needs.check_release.outputs.app_version }}" -o dist/go-hass-agent
         env:
           CGO_ENABLED: 0
           GOARCH: ${{matrix.goarch}}
@@ -191,7 +198,7 @@ jobs:
         if: ${{ ! needs.check_release.outputs.release_created }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: build-${{ env.PLATFORM_PAIR }}-${{ env.APPVERSION }}.zip
+          name: build-${{ env.PLATFORM_PAIR }}-${{ needs.check_release.outputs.app_version }}.zip
           path: |
             dist/*.rpm
             dist/*.deb
@@ -279,7 +286,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           platforms: ${{ matrix.platform }}
           build-args: |
-            APPVERSION=${{ env.APPVERSION }}
+            APPVERSION=${{ needs.check_release.outputs.app_version }}
           outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=${{ github.event_name != 'pull_request' }}
           cache-from: type=gha,scope=${{ matrix.platform }}
           cache-to: type=gha,mode=max,scope=${{ matrix.platform }}
@@ -351,7 +358,7 @@ jobs:
             type=semver,pattern={{major}}
             type=sha,prefix=sha-,format=short
             type=raw,value=latest,enable={{is_default_branch}}
-            type=raw,value=${{ env.APPVERSION }}
+            type=raw,value=${{ needs.check_release.outputs.app_version }}
           labels: |
             org.opencontainers.image.title=${{ github.repository }}
             org.opencontainers.image.description=Multi-arch image built by GitHub Actions
