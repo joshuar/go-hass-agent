@@ -33,16 +33,21 @@ const (
 	volIcon  = "mdi:knob"
 
 	minVolpc  = 0
-	maxVolpc  = 100
 	volStepPc = 1
 
 	audioControlPreferencesID = "sensors.media.audio"
 )
 
+type VolumeWorkerPrefs struct {
+	*workers.CommonWorkerPrefs
+
+	VolumeLimit int `toml:"volume_limit"`
+}
+
 // VolumeWorker is a struct containing the data for providing audio state
 // tracking and control.
 type VolumeWorker struct {
-	*workers.CommonWorkerPrefs
+	*VolumeWorkerPrefs
 	*models.WorkerMetadata
 
 	MsgCh         chan mqttapi.Msg
@@ -93,8 +98,13 @@ func NewVolumeWorker(ctx context.Context, device *mqtthass.Device) (*VolumeWorke
 
 	var err error
 
-	defaultPrefs := &workers.CommonWorkerPrefs{}
-	worker.CommonWorkerPrefs, err = workers.LoadWorkerPreferences(audioControlPreferencesID, defaultPrefs)
+	defaultPrefs := &VolumeWorkerPrefs{
+		CommonWorkerPrefs: &workers.CommonWorkerPrefs{
+			Disabled: false,
+		},
+		VolumeLimit: 100,
+	}
+	worker.VolumeWorkerPrefs, err = workers.LoadWorkerPreferences(audioControlPreferencesID, defaultPrefs)
 	if err != nil {
 		return worker, fmt.Errorf("load preferences: %w", err)
 	}
@@ -119,7 +129,7 @@ func NewVolumeWorker(ctx context.Context, device *mqtthass.Device) (*VolumeWorke
 
 	worker.VolumeControl = mqtthass.NewNumberEntity[int]().
 		WithMin(minVolpc).
-		WithMax(maxVolpc).
+		WithMax(worker.VolumeWorkerPrefs.VolumeLimit).
 		WithStep(volStepPc).
 		WithMode(mqtthass.NumberSlider).
 		WithDetails(
