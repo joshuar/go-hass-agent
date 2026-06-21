@@ -1,5 +1,17 @@
 # Changelog
 
+## [14.14.0](https://github.com/joshuar/go-hass-agent/compare/v14.13.0...v14.14.0) (2026-06-20)
+
+
+### Features
+
+* **linux/media:** ✨ allow setting a volume limit to support overamplification of volume (i.e., go above 100%) ([2e3a4da](https://github.com/joshuar/go-hass-agent/commit/2e3a4da226d63a2da6e7063e28df275e9e6a5193))
+
+
+### Bug Fixes
+
+* **linux/network:** 🐛 cover all link states ([c547a93](https://github.com/joshuar/go-hass-agent/commit/c547a930ffd539a29925457f514f15eb5394a9d1))
+
 ## [14.13.0](https://github.com/joshuar/go-hass-agent/compare/v14.12.0...v14.13.0) (2026-06-13)
 
 
