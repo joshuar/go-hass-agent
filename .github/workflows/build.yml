@@ -51,6 +51,7 @@ jobs:
           persist-credentials: false
 
       - name: Set app version
+        id: set_version
         run: |
           if [ -n "${{ steps.release_please.outputs.tag_name }}" ]; then
             RAW_VERSION="${{ steps.release_please.outputs.tag_name }}"
