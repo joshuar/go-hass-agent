@@ -70,6 +70,8 @@ jobs:
 
           echo "app_version=$SAFE_VERSION" >> "$GITHUB_OUTPUT"
 
+          echo "Version: $SAFE_VERSION"
+
   build:
     name: Build package (${{ matrix.platform }})
     needs: check_release
@@ -178,6 +180,8 @@ jobs:
           for format in rpm deb archlinux; do
             go run github.com/goreleaser/nfpm/v2/cmd/nfpm@latest package --packager ${format} --config .nfpm.yaml --target dist
           done
+        env:
+          APPVERSION: ${{ needs.check_release.outputs.app_version }}
 
       - name: Install cosign
         id: cosign_install
