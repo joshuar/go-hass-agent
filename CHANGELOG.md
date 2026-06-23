@@ -1,5 +1,13 @@
 # Changelog
 
+## [14.14.1](https://github.com/joshuar/go-hass-agent/compare/v14.14.0...v14.14.1) (2026-06-22)
+
+
+### Bug Fixes
+
+* **ci:** 🔧 set APPVERSION as needed for nfpm packaging ([d6f254f](https://github.com/joshuar/go-hass-agent/commit/d6f254f4d8d2f46cb36204e84686b97487b2f5cf))
+* **github:** 🔧 fix missing version in build workflow ([40b3a47](https://github.com/joshuar/go-hass-agent/commit/40b3a476446e10041ba4c3ee110edd512db406c4))
+
 ## [14.14.0](https://github.com/joshuar/go-hass-agent/compare/v14.13.0...v14.14.0) (2026-06-20)
 
 
