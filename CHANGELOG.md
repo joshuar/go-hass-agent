@@ -1,5 +1,12 @@
 # Changelog
 
+## [14.14.2](https://github.com/joshuar/go-hass-agent/compare/v14.14.1...v14.14.2) (2026-06-27)
+
+
+### Bug Fixes
+
+* **linux/power:** 🔧 separate success and error conditions when determining which power controls to expose ([24a28f7](https://github.com/joshuar/go-hass-agent/commit/24a28f7bacc5bba550a2c05e72a6657b36bd58f5))
+
 ## [14.14.1](https://github.com/joshuar/go-hass-agent/compare/v14.14.0...v14.14.1) (2026-06-22)
 
 
