@@ -123,12 +123,14 @@ func generatePowerCommands(ctx context.Context, bus *dbusx.Bus, device string) [
 	// Add available system power commands.
 	for _, config := range systemCommands {
 		// Check if this power method is available on the system.
-		if available, err := dbusx.GetData[string](
+		available, err := dbusx.GetData[string](
 			bus,
 			loginBasePath,
 			loginBaseInterface,
 			managerInterface+".Can"+config.method,
-		); available == "yes" || err == nil {
+		)
+		switch {
+		case available == "yes":
 			config.callBack = generatePowerControlCallback(
 				ctx,
 				bus,
@@ -137,6 +139,11 @@ func generatePowerCommands(ctx context.Context, bus *dbusx.Bus, device string) [
 				managerInterface+"."+config.method,
 			)
 			availableCommands = append(availableCommands, config)
+		case err != nil:
+			slogctx.Debug(ctx, "Cannot expose power command.",
+				slog.String("command", config.method),
+				slog.Any("error", err),
+			)
 		}
 	}
 
