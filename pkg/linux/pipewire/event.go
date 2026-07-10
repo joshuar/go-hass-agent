@@ -3,6 +3,7 @@
 package pipewire
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -40,10 +41,10 @@ type (
 	}
 
 	EventProps struct {
-		MediaClass string `json:"media.class"`
-		NodeName   string `json:"node.name"`
-		NodeNick   string `json:"node.nick"`
-		NodeDesc   string `json:"node.description"`
+		MediaClass string     `json:"media.class"`
+		NodeName   string     `json:"node.name"`
+		NodeNick   FlexString `json:"node.nick"`
+		NodeDesc   string     `json:"node.description"`
 	}
 
 	EventMetadata struct {
@@ -97,7 +98,7 @@ type (
 	NodeProps struct {
 		Name                     string       `json:"node.name"`
 		Description              string       `json:"node.description"`
-		Nickname                 string       `json:"node.nick"`
+		Nickname                 FlexString   `json:"node.nick"`
 		AudioChannels            int          `json:"audio.channels"`
 		AudioPosition            string       `json:"audio.position"`
 		ClientID                 int          `json:"client.id"`
@@ -115,6 +116,33 @@ type (
 		ObjectSerial             int          `json:"object.serial"`
 	}
 )
+
+// FlexString unmarshals a JSON string as-is, but also tolerates non-string
+// JSON values (numbers, booleans) by taking their literal representation.
+// PipeWire properties are untyped and pw-dump serializes some string
+// properties (e.g. "node.nick") as bare JSON numbers when their value looks
+// numeric, rather than quoting them.
+type FlexString string
+
+func (f *FlexString) UnmarshalJSON(data []byte) error {
+	trimmed := bytes.TrimSpace(data)
+	if len(trimmed) == 0 || string(trimmed) == "null" {
+		*f = ""
+		return nil
+	}
+
+	if trimmed[0] == '"' {
+		var s string
+		if err := json.Unmarshal(trimmed, &s); err != nil {
+			return err
+		}
+		*f = FlexString(s)
+		return nil
+	}
+
+	*f = FlexString(trimmed)
+	return nil
+}
 
 type DeviceClass string
 
