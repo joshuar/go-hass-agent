@@ -163,7 +163,7 @@ require (
 	github.com/veqryn/slog-json v0.5.0
 	golang.org/x/crypto v0.53.0 // indirect
 	golang.org/x/net v0.56.0
-	golang.org/x/sys v0.46.0
+	golang.org/x/sys v0.47.0
 	kernel.org/pub/linux/libs/security/libcap/cap v1.2.78
 )
 
