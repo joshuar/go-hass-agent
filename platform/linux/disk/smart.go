@@ -65,17 +65,22 @@ func NewSmartWorker(_ context.Context) (workers.EntityWorker, error) {
 		PollingEntityWorkerData: &workers.PollingEntityWorkerData{},
 	}
 
-	passed, err := smartWorkerRequiredChecks.Passed()
-	if err != nil || !passed {
-		return worker, fmt.Errorf("check capabilities: %w", err)
-	}
-
 	defaultPrefs := &WorkerPrefs{
 		UpdateInterval: smartWorkerUpdateInterval.String(),
 	}
+	var err error
 	worker.prefs, err = workers.LoadWorkerPreferences(smartWorkerPreferencesID, defaultPrefs)
 	if err != nil {
 		return worker, fmt.Errorf("load preferences: %w", err)
+	}
+
+	if worker.prefs.IsDisabled() {
+		return worker, nil
+	}
+
+	passed, err := smartWorkerRequiredChecks.Passed()
+	if err != nil || !passed {
+		return worker, fmt.Errorf("check capabilities: %w", err)
 	}
 
 	pollInterval, err := time.ParseDuration(worker.prefs.UpdateInterval)
