@@ -33,6 +33,9 @@ const (
 
 	memoryUsageSensorUnits   = "B"
 	memoryUsageSensorPcUnits = "%"
+
+	defaultGPUVendor = GPUVendorNone
+	defaultGPUCard = "card1"
 )
 
 var (
@@ -42,7 +45,9 @@ var (
 
 // Lists of the memory statistics we want to track as sensors. See /proc/meminfo
 // for all possible statistics.
+// For (amd) gpus, more statistics are available at /sys/class/drm/cardX/device/
 var (
+	gpuMemSensors = []gpuMemStatID{memVRamTotal, memGTTTotal, memVRamUsed, memGTTUsed}
 	memSensors  = []memStatID{memTotal, memFree, memBuffered, memCached, memAvailable, memCorrupted}
 	swapSensors = []memStatID{swapTotal, swapFree, swapCached}
 )
@@ -67,6 +72,43 @@ func newMemSensor(ctx context.Context, id memStatID, stat *memStat) models.Entit
 		sensor.WithState(value),
 		sensor.WithDataSourceAttribute(linux.DataSrcProcFS),
 		sensor.WithAttribute("native_unit_of_measurement", memoryUsageSensorUnits),
+	)
+}
+
+// newGpuMemSensor generates a memorySensor for a gpu memory stat.
+func newGpuMemSensor(ctx context.Context, id gpuMemStatID, stat uint64) models.Entity {
+	return sensor.NewSensor(ctx,
+		sensor.WithName(id.String()),
+		sensor.WithID(strcase.ToSnake(id.String())),
+		sensor.WithUnits(memoryUsageSensorUnits),
+		sensor.WithDeviceClass(class.SensorClassDataSize),
+		sensor.WithStateClass(class.StateTotal),
+		sensor.WithIcon(memorySensorIcon),
+		sensor.WithState(stat),
+		sensor.WithDataSourceAttribute(linux.DataSrcSysFS),
+		sensor.WithAttribute("native_unit_of_measurement", memoryUsageSensorUnits),
+	)
+}
+
+// newGpuMemSensorPc generates a gpu memorySensor with a percentage value for a memory
+// stat.
+func newGpuMemSensorPc(ctx context.Context, name string, value, total uint64) models.Entity {
+	var valuePc float64
+	if total == 0 {
+		valuePc = 0
+	} else {
+		valuePc = math.Round(float64(value)/float64(total)*100/0.05) * 0.05 //nolint:mnd // %
+	}
+
+	return sensor.NewSensor(ctx,
+		sensor.WithName(name),
+		sensor.WithID(strcase.ToSnake(name)),
+		sensor.WithUnits(memoryUsageSensorPcUnits),
+		sensor.WithStateClass(class.StateTotal),
+		sensor.WithIcon(memorySensorIcon),
+		sensor.WithState(valuePc),
+		sensor.WithDataSourceAttribute(linux.DataSrcSysFS),
+		sensor.WithAttribute("native_unit_of_measurement", memoryUsageSensorPcUnits),
 	)
 }
 
@@ -138,6 +180,8 @@ func NewUsageWorker(_ context.Context) (workers.EntityWorker, error) {
 
 	defaultPrefs := &WorkerPreferences{
 		UpdateInterval: memUsageUpdateInterval.String(),
+		GPUVendor: defaultGPUVendor.String(),
+		GPUCard: defaultGPUCard,
 	}
 	var err error
 	worker.prefs, err = workers.LoadWorkerPreferences(prefPrefix+"usage", defaultPrefs)
@@ -157,6 +201,7 @@ func NewUsageWorker(_ context.Context) (workers.EntityWorker, error) {
 func (w *usageWorker) Execute(ctx context.Context) error {
 	var (
 		stats memoryStats
+		gpuStats gpuMemoryStats
 		err   error
 	)
 
@@ -172,6 +217,16 @@ func (w *usageWorker) Execute(ctx context.Context) error {
 		w.OutCh <- newMemSensor(ctx, stat, stats[stat])
 	}
 	w.OutCh <- newMemUsedPc(ctx, stats)
+
+	if gpuVendorTypeNames[w.prefs.GPUVendor] == GPUVendorAMD {
+		// (AMD) GPU memory sensors
+		gpuStats, err = getAmdGpuMemStats(ctx, w.prefs.GPUCard)
+		for gpuStat := range slices.Values(gpuMemSensors) {
+			w.OutCh <- newGpuMemSensor(ctx, gpuStat, gpuStats[gpuStat])
+		}
+		w.OutCh <- newGpuMemSensorPc(ctx, "GPU VRam Usage", gpuStats[memVRamUsed], gpuStats[memVRamTotal])
+		w.OutCh <- newGpuMemSensorPc(ctx, "GPU GTT Usage", gpuStats[memGTTUsed], gpuStats[memGTTTotal])
+	}
 
 	// Swap memory sensors.
 	if stat, _ := stats.get(swapTotal); stat > 0 {
