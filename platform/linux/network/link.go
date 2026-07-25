@@ -109,7 +109,7 @@ func (w *NetlinkWorker) Start(ctx context.Context) (<-chan models.Entity, error)
 	if sensors, err := w.generateSensors(ctx); err != nil {
 		slogctx.FromCtx(ctx).Debug("Could not get address sensors.", slog.Any("error", err))
 	} else {
-		for _, addressSensor := range sensors {
+		for addressSensor := range slices.Values(sensors) {
 			go func() {
 				sensorCh <- addressSensor
 			}()
@@ -143,7 +143,7 @@ func (w *NetlinkWorker) Start(ctx context.Context) (<-chan models.Entity, error)
 					break
 				}
 
-				for _, msg := range nlmsgs {
+				for msg := range slices.Values(nlmsgs) {
 					switch value := any(msg).(type) {
 					case *rtnetlink.LinkMessage:
 						// Ignore devices configured in preferences.
@@ -215,7 +215,7 @@ func (w *NetlinkWorker) getAddresses(ctx context.Context) ([]models.Entity, erro
 	}
 
 	// Filter for valid addresses.
-	for _, msg := range msgs {
+	for msg := range slices.Values(msgs) {
 		if !w.usableAddress(msg) {
 			continue
 		}

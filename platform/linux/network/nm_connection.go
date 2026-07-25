@@ -127,7 +127,7 @@ func (w *ConnectionsWorker) Start(ctx context.Context) (<-chan models.Entity, er
 	if err != nil {
 		return nil, fmt.Errorf("list active connections: %w", err)
 	}
-	for _, path := range connectionlist {
+	for path := range slices.Values(connectionlist) {
 		if err := w.handleConnection(connCtx, path, sensorCh); err != nil {
 			slogctx.FromCtx(ctx).Debug("Could not monitor connection.", slog.Any("error", err))
 		}
@@ -421,8 +421,8 @@ func (c *connection) monitorWireless(ctx context.Context, bus *dbusx.Bus) <-chan
 
 	// Get and send initial values for wifi props.
 	go func() {
-		for _, ap := range c.getWifiAPs(ctx, bus) {
-			for _, wifiSensor := range getWifiSensors(ctx, bus, string(ap)) {
+		for accessPoint := range slices.Values(c.getWifiAPs(ctx, bus)) {
+			for wifiSensor := range slices.Values(getWifiSensors(ctx, bus, string(accessPoint))) {
 				sensorCh <- wifiSensor
 			}
 		}
@@ -480,12 +480,12 @@ func (c *connection) watchAccessPointProps(ctx context.Context, bus *dbusx.Bus, 
 
 	go func() {
 		// Monitor access point changes on devices.
-		for _, devicePath := range devices {
+		for devicePath := range slices.Values(devices) {
 			c.monitorDeviceAccessPoint(apWatchCtx, bus, string(devicePath), apCh)
 		}
 		// Send the current active access points.
-		for _, ap := range c.getWifiAPs(ctx, bus) {
-			apCh <- ap
+		for accessPoint := range slices.Values(c.getWifiAPs(ctx, bus)) {
+			apCh <- accessPoint
 		}
 	}()
 
@@ -572,7 +572,7 @@ func (c *connection) getWifiAPs(ctx context.Context, bus *dbusx.Bus) []dbus.Obje
 
 	aps := make([]dbus.ObjectPath, 0, len(devices))
 
-	for _, devicePath := range devices {
+	for devicePath := range slices.Values(devices) {
 		apPath, err := dbusx.NewProperty[dbus.ObjectPath](
 			bus,
 			string(devicePath),
@@ -709,7 +709,7 @@ func newWifiSensor(ctx context.Context, prop string, value any) models.Entity {
 func getWifiSensors(ctx context.Context, bus *dbusx.Bus, apPath string) []models.Entity {
 	sensors := make([]models.Entity, 0, len(apPropList))
 
-	for _, prop := range apPropList {
+	for prop := range slices.Values(apPropList) {
 		value, err := dbusx.NewProperty[any](bus, apPath, dBusNMObj, accessPointInterface+"."+prop).Get()
 		if err != nil {
 			slogctx.FromCtx(ctx).Debug("Could not retrieve access point property.",
@@ -757,9 +757,7 @@ func generateState(prop string, value any) any {
 
 //nolint:mnd // not useful.
 func generateStrIcon(value any) string {
-	str, ok := value.(uint8)
-
-	switch {
+	switch str, ok := value.(uint8); {
 	case !ok:
 		return "mdi:wifi-strength-alert-outline"
 	case str <= 25:
