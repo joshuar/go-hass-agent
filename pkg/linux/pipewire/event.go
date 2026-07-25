@@ -71,7 +71,7 @@ type (
 
 	ParamMeta struct {
 		Type string `json:"type"`
-		Size int    `json:"size"`
+		Size any    `json:"size"`
 	}
 
 	ParamIO struct {
