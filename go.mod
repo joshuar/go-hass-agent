@@ -7,6 +7,7 @@ require (
 	github.com/gen2brain/beeep v0.11.2
 	github.com/go-playground/validator/v10 v10.30.3
 	github.com/godbus/dbus/v5 v5.2.2
+	github.com/goforj/godump v1.9.1
 	github.com/holoplot/go-evdev v0.0.0-20260504100651-66d1748fe847
 	github.com/iancoleman/strcase v0.3.0
 	github.com/joshuar/go-hass-anything/v12 v12.1.0
@@ -126,8 +127,8 @@ require (
 
 require (
 	github.com/a-h/templ v0.3.1020
-	github.com/alecthomas/kong v1.15.0
-	github.com/anatol/smart.go v0.0.0-20260427185427-04c4679efd4e
+	github.com/alecthomas/kong v1.16.0
+	github.com/anatol/smart.go v0.0.0-20260723175002-53b369c3973c
 	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/fatih/color v1.19.0
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
@@ -140,7 +141,7 @@ require (
 	github.com/go-test/deep v1.1.1
 	github.com/gofrs/uuid/v5 v5.4.0
 	github.com/grandcat/zeroconf v1.0.0
-	github.com/jaypipes/ghw v0.24.0
+	github.com/jaypipes/ghw v0.25.0
 	github.com/jsimonetti/rtnetlink v1.4.2
 	github.com/justinas/alice v1.2.0
 	github.com/justinas/nosurf v1.2.0
@@ -149,11 +150,11 @@ require (
 	github.com/knadh/koanf/providers/file v1.2.1
 	github.com/knadh/koanf/v2 v2.3.5
 	github.com/leodido/go-urn v1.4.0 // indirect
-	github.com/lmittmann/tint v1.1.3
-	github.com/lxzan/gws v1.9.1
+	github.com/lmittmann/tint v1.2.0
+	github.com/lxzan/gws v1.10.0
 	github.com/mandykoh/prism v0.35.3
 	github.com/matoous/go-nanoid v1.5.1
-	github.com/mattn/go-isatty v0.0.22
+	github.com/mattn/go-isatty v0.0.24
 	github.com/pelletier/go-toml/v2 v2.4.3
 	github.com/reugn/go-quartz v0.15.2
 	github.com/samber/slog-chi v1.19.1
