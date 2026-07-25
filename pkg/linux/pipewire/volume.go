@@ -122,9 +122,9 @@ func Status(ctx context.Context) error {
 	return nil
 }
 
-func FindDefaultAudioSink() (id int, name string, err error) {
+func FindDefaultAudioSink(ctx context.Context) (int, string, error) {
 	// Step 1: ask pw-metadata for the default configured sink name.
-	metaOut, err := exec.Command("pw-metadata", "-n", "default", "0").Output()
+	metaOut, err := exec.CommandContext(ctx, "pw-metadata", "-n", "default", "0").Output()
 	if err != nil {
 		return 0, "", fmt.Errorf("pw-metadata: %w", err)
 	}
@@ -136,7 +136,7 @@ func FindDefaultAudioSink() (id int, name string, err error) {
 
 	// Step 2: dump all PipeWire objects and find the node whose
 	// node.name matches the default sink name.
-	dumpOut, err := exec.Command("pw-dump").Output()
+	dumpOut, err := exec.CommandContext(ctx, "pw-dump").Output()
 	if err != nil {
 		return 0, "", fmt.Errorf("pw-dump: %w", err)
 	}
@@ -165,8 +165,7 @@ func FindDefaultAudioSink() (id int, name string, err error) {
 func parseDefaultAudioSinkName(output []byte) string {
 	const key = "default.audio.sink"
 
-	lines := bufio.NewScanner(bytes.NewBuffer(output))
-	for lines.Scan() {
+	for lines := bufio.NewScanner(bytes.NewBuffer(output)); lines.Scan(); {
 		if !strings.Contains(lines.Text(), key) {
 			continue
 		}

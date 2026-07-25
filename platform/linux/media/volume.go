@@ -120,7 +120,7 @@ func NewVolumeWorker(ctx context.Context, device *mqtthass.Device) (*VolumeWorke
 	}
 	worker.pwEventChan = monitor.AddListener(volumePipewireEventFilter)
 
-	id, name, err := pipewire.FindDefaultAudioSink()
+	id, name, err := pipewire.FindDefaultAudioSink(ctx)
 	if err != nil {
 		return worker, fmt.Errorf("find default audio sink: %w", err)
 	}
@@ -365,10 +365,8 @@ func (d *VolumeWorker) handleNode(ctx context.Context, event pipewire.Event) {
 		return
 	}
 
-	for _, pp := range event.Info.Params.Props {
-		vol, hasVol := avgVolume(pp.Volumes, pp.Volume)
-
-		if hasVol {
+	for props := range slices.Values(event.Info.Params.Props) {
+		if vol, hasVol := avgVolume(props.Volumes, props.Volume); hasVol {
 			pct := linearToPercent(vol)
 
 			if math.Abs(vol-state.Volume) > 0.0001 {
@@ -379,8 +377,8 @@ func (d *VolumeWorker) handleNode(ctx context.Context, event pipewire.Event) {
 				state.Volume = vol
 			}
 
-			if pp.Mute != nil && *pp.Mute != state.Muted {
-				if *pp.Mute {
+			if props.Mute != nil && *props.Mute != state.Muted {
+				if *props.Mute {
 					slogctx.FromCtx(ctx).Debug("Muted.",
 						slog.String("device", audioSinkDisplayName(state)),
 					)
@@ -389,11 +387,11 @@ func (d *VolumeWorker) handleNode(ctx context.Context, event pipewire.Event) {
 						slog.String("device", audioSinkDisplayName(state)),
 					)
 				}
-				state.Muted = *pp.Mute
+				state.Muted = *props.Mute
 			}
-		} else if pp.Mute != nil && *pp.Mute != state.Muted {
+		} else if props.Mute != nil && *props.Mute != state.Muted {
 			// Mute-only update (no volume field in this diff).
-			if *pp.Mute {
+			if *props.Mute {
 				slogctx.FromCtx(ctx).Debug("Muted.",
 					slog.String("device", audioSinkDisplayName(state)),
 				)
@@ -402,7 +400,7 @@ func (d *VolumeWorker) handleNode(ctx context.Context, event pipewire.Event) {
 					slog.String("device", audioSinkDisplayName(state)),
 				)
 			}
-			state.Muted = *pp.Mute
+			state.Muted = *props.Mute
 		}
 		go func() {
 			// Publish current mute state.
@@ -464,8 +462,8 @@ func linearToPercent(linear float64) float64 {
 func avgVolume(channels []float64, scalar *float64) (float64, bool) {
 	if len(channels) > 0 {
 		sum := 0.0
-		for _, v := range channels {
-			sum += v
+		for vol := range slices.Values(channels) {
+			sum += vol
 		}
 		return sum / float64(len(channels)), true
 	}
