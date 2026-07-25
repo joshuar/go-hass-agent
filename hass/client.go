@@ -26,6 +26,7 @@ import (
 	"github.com/joshuar/go-hass-agent/logging"
 	"github.com/joshuar/go-hass-agent/models"
 	"github.com/joshuar/go-hass-agent/scheduler"
+	"github.com/joshuar/go-hass-agent/validation"
 )
 
 type agent interface {
@@ -91,8 +92,7 @@ func NewClient(ctx context.Context, agent agent) (*Client, error) {
 	}
 	// Run the job one-time initially to get the config.
 	if agent.IsRegistered() {
-		updated, err := client.UpdateConfig(ctx)
-		if !updated || err != nil {
+		if updated, err := client.UpdateConfig(ctx); !updated || err != nil {
 			return nil, fmt.Errorf("could not create client: %w", err)
 		}
 		// Schedule a job to get the Home Assistant on a regular interval.
@@ -129,8 +129,6 @@ func (c *Client) UpdateConfig(ctx context.Context) (bool, error) {
 
 // EntityHandler takes incoming Entity objects via the passed in channel and
 // runs the appropriate handler for the Entity type.
-//
-//nolint:gocognit
 func (c *Client) EntityHandler(ctx context.Context, entityCh <-chan models.Entity) {
 	for entity := range entityCh {
 		if eventData, err := entity.AsEvent(); err == nil && eventData.Valid() {
@@ -140,7 +138,6 @@ func (c *Client) EntityHandler(ctx context.Context, entityCh <-chan models.Entit
 					eventData.LogAttributes(),
 					slog.Any("error", err))
 			}
-
 			continue
 		}
 
@@ -150,65 +147,67 @@ func (c *Client) EntityHandler(ctx context.Context, entityCh <-chan models.Entit
 				slogctx.FromCtx(ctx).Warn("Could not update location.",
 					slog.Any("error", err))
 			}
-
 			continue
 		}
 
-		//nolint:nestif
-		if sensorData, err := entity.AsSensor(); err == nil {
-			// Send sensor details.
-			if c.sensorRegistry.IsRegistered(sensorData.UniqueID) {
-				// Ignore updates for disabled sensors.
-				if c.IsDisabled(ctx, sensorData) {
-					continue
-				}
-				// Otherwise, send an update.
-				if err := sensor.UpdateHandler(ctx, c, sensorData); err != nil {
-					slogctx.FromCtx(ctx).Warn("Could not update sensor.",
-						sensorData.LogAttributes(),
-						slog.Any("error", err))
+		sensorData, err := entity.AsSensor()
+		if err != nil {
+			slogctx.FromCtx(ctx).Warn("Unhandled entity received.",
+				slog.String("entity_type", fmt.Sprintf("%T", entity)))
+			continue
+		}
 
-					continue
-				}
-
-				slogctx.FromCtx(ctx).Log(ctx, logging.LevelTrace, "Sensor updated.",
-					sensorData.LogAttributes())
-			} else {
-				// Otherwise, send a registration request.
-				success, err := sensor.RegistrationHandler(ctx, c, sensorData)
-
-				switch {
-				case err != nil:
-					slogctx.FromCtx(ctx).Warn("Send sensor registration failed.",
-						sensorData.LogAttributes(),
-						slog.Any("error", err))
-				case !success:
-					slogctx.FromCtx(ctx).Warn("Sensor not registered.",
-						sensorData.LogAttributes())
-				default:
-					if err := c.sensorRegistry.SetRegistered(sensorData.UniqueID, true); err != nil {
-						slogctx.FromCtx(ctx).Warn("Could not set local registration status.",
-							slog.Any("error", err))
-						continue
-					}
-
-					slogctx.FromCtx(ctx).Debug("Sensor registered.",
-						sensorData.LogAttributes())
-				}
+		if err := validation.ValidateStruct(sensorData); err != nil {
+			slogctx.FromCtx(ctx).Debug("Invalid sensor data.", slog.Any("error", err))
+			continue
+		}
+		// Send sensor details.
+		if c.sensorRegistry.IsRegistered(sensorData.UniqueID) {
+			// Ignore updates for disabled sensors.
+			if c.IsDisabled(ctx, sensorData) {
+				continue
 			}
-			// Add sensor details to the tracker.
-			if err := c.sensorTracker.Add(&sensorData); err != nil {
-				slogctx.FromCtx(ctx).Warn("Updating sensor tracker failed.",
+			// Otherwise, send an update.
+			if err := sensor.UpdateHandler(ctx, c, sensorData); err != nil {
+				slogctx.FromCtx(ctx).Warn("Could not update sensor.",
 					sensorData.LogAttributes(),
-					slog.Any("error", err),
-				)
+					slog.Any("error", err))
+
+				continue
 			}
 
-			continue
+			slogctx.FromCtx(ctx).Log(ctx, logging.LevelTrace, "Sensor updated.",
+				sensorData.LogAttributes())
+		} else {
+			// Otherwise, send a registration request.
+			switch success, err := sensor.RegistrationHandler(ctx, c, sensorData); {
+			case err != nil:
+				slogctx.FromCtx(ctx).Warn("Send sensor registration failed.",
+					sensorData.LogAttributes(),
+					slog.Any("error", err))
+			case !success:
+				slogctx.FromCtx(ctx).Warn("Sensor not registered.",
+					sensorData.LogAttributes())
+			default:
+				if err := c.sensorRegistry.SetRegistered(sensorData.UniqueID, true); err != nil {
+					slogctx.FromCtx(ctx).Warn("Could not set local registration status.",
+						slog.Any("error", err))
+					continue
+				}
+
+				slogctx.FromCtx(ctx).Debug("Sensor registered.",
+					sensorData.LogAttributes())
+			}
+		}
+		// Add sensor details to the tracker.
+		if err := c.sensorTracker.Add(&sensorData); err != nil {
+			slogctx.FromCtx(ctx).Warn("Updating sensor tracker failed.",
+				sensorData.LogAttributes(),
+				slog.Any("error", err),
+			)
 		}
 
-		slogctx.FromCtx(ctx).Warn("Unhandled entity received.",
-			slog.String("entity_type", fmt.Sprintf("%T", entity)))
+		continue
 	}
 }
 
@@ -267,7 +266,11 @@ func (c *Client) GetSensorList() []models.UniqueID {
 }
 
 func (c *Client) GetSensor(id models.UniqueID) (*models.Sensor, error) {
-	return c.sensorTracker.Get(id) //nolint:wrapcheck
+	sensor, err := c.sensorTracker.Get(id)
+	if err != nil {
+		return nil, fmt.Errorf("get sensor: %w", err)
+	}
+	return sensor, nil
 }
 
 func (c *Client) DisableSensor(ctx context.Context, id models.UniqueID) {
