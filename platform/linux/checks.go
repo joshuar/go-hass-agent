@@ -10,6 +10,7 @@ import (
 	"os/user"
 	"slices"
 	"strconv"
+	"strings"
 
 	"kernel.org/pub/linux/libs/security/libcap/cap"
 )
@@ -27,12 +28,13 @@ type Checks struct {
 // Passed will perform all checks and return a boolean indicating whether they passed (true) or failed (false). On
 // failure, on non-nil error will also be returned.
 func (c *Checks) Passed() (bool, error) {
-	groupsOK, err := c.hasGroups()
+	missingGroups, err := c.hasGroups()
 	if err != nil {
 		return false, fmt.Errorf("%w: check for groups: %w", ErrCapChecksFailed, err)
 	}
-	if !groupsOK {
-		return false, fmt.Errorf("%w: missing groups", ErrCapChecksFailed)
+	if len(missingGroups) > 0 {
+		return false, fmt.Errorf("%w: user is not a member of required group(s): %s",
+			ErrCapChecksFailed, strings.Join(missingGroups, ", "))
 	}
 	capsOK, err := c.hasCapabilities()
 	if err != nil {
@@ -44,22 +46,25 @@ func (c *Checks) Passed() (bool, error) {
 	return true, nil
 }
 
-// hasGroups returns a boolean indicating whether Go Hass Agent is running with the required group permissions.
-func (c *Checks) hasGroups() (bool, error) {
+// hasGroups returns the names of any required groups that Go Hass Agent is
+// not currently running with. An empty slice indicates all required groups
+// are present.
+func (c *Checks) hasGroups() ([]string, error) {
 	gids, err := os.Getgroups()
 	if err != nil {
-		return false, fmt.Errorf("could not determine groups: %w", err)
+		return nil, fmt.Errorf("could not determine groups: %w", err)
 	}
+	var missing []string
 	for group := range slices.Values(c.Groups) {
 		gid, err := strconv.Atoi(group.Gid)
 		if err != nil {
-			return false, fmt.Errorf("convert gid: %w", err)
+			return nil, fmt.Errorf("convert gid: %w", err)
 		}
 		if !slices.Contains(gids, gid) {
-			return false, nil
+			missing = append(missing, group.Name)
 		}
 	}
-	return true, nil
+	return missing, nil
 }
 
 // hasCapabilities returns a boolean indicating whether Go Hass Agent has the required capabilties set.

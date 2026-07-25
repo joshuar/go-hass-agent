@@ -51,6 +51,20 @@ func NewUserActivitySensor(ctx context.Context) (workers.EntityWorker, error) {
 		activity:       make(chan bool, 1),
 	}
 
+	// Load worker preferences.
+	defaultPrefs := &activityWorkerPrefs{
+		IdleTimeout: activityWorkerDefaultIdleTimeout.String(),
+	}
+	var err error
+	worker.prefs, err = workers.LoadWorkerPreferences(sensorsPrefPrefix+"app_sensors", defaultPrefs)
+	if err != nil {
+		return worker, fmt.Errorf("load preferences: %w", err)
+	}
+
+	if worker.prefs.IsDisabled() {
+		return worker, nil
+	}
+
 	// Check for required capabilities.
 	group, err := user.LookupGroup("input")
 	if err != nil {
@@ -63,15 +77,6 @@ func NewUserActivitySensor(ctx context.Context) (workers.EntityWorker, error) {
 	passed, err := capabilities.Passed()
 	if err != nil || !passed {
 		return worker, fmt.Errorf("check capabilities: %w", err)
-	}
-
-	// Load worker preferences.
-	defaultPrefs := &activityWorkerPrefs{
-		IdleTimeout: activityWorkerDefaultIdleTimeout.String(),
-	}
-	worker.prefs, err = workers.LoadWorkerPreferences(sensorsPrefPrefix+"app_sensors", defaultPrefs)
-	if err != nil {
-		return worker, fmt.Errorf("load preferences: %w", err)
 	}
 
 	// Get input devices.
