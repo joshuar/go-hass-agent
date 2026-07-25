@@ -13,4 +13,6 @@ type WorkerPreferences struct {
 	workers.CommonWorkerPrefs `toml:",squash"`
 
 	UpdateInterval string `toml:"update_interval"`
+	GPUVendor string `toml:"gpu_vendor"`
+	GPUCard string `toml:"gpu_card"`
 }
