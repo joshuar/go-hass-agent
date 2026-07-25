@@ -1,5 +1,27 @@
 # Changelog
 
+## [14.15.0](https://github.com/joshuar/go-hass-agent/compare/v14.14.1...v14.15.0) (2026-07-25)
+
+
+### Features
+
+* gpu memory usage ([a0fbdd7](https://github.com/joshuar/go-hass-agent/commit/a0fbdd76b4f85e39c6e9d2710ad860d1c308330d))
+* **linux:** (AMD) GPU memory usage ([521ec76](https://github.com/joshuar/go-hass-agent/commit/521ec76175829222e11b9701e3e4a9d8c1b63b25))
+
+
+### Bug Fixes
+
+* **linux/disk:** respect disabled preference before SMART capability check ([0d27760](https://github.com/joshuar/go-hass-agent/commit/0d277604cd71b2533efdc6f8e8c7380e6f8ebeb7))
+* **linux/disk:** respect disabled preference before SMART capability check ([d52e70d](https://github.com/joshuar/go-hass-agent/commit/d52e70d8e710426f661042e6dac2526a910f997a))
+* **linux/power:** 🔧 separate success and error conditions when determining which power controls to expose ([24a28f7](https://github.com/joshuar/go-hass-agent/commit/24a28f7bacc5bba550a2c05e72a6657b36bd58f5))
+* **linux/power:** honor disabled preference for backlight control ([a15b732](https://github.com/joshuar/go-hass-agent/commit/a15b7329b49f24604ce4cb2ae076cbdae024e2bd))
+* **linux/power:** honor disabled preference for backlight control ([a1d4898](https://github.com/joshuar/go-hass-agent/commit/a1d489806161b42ee0b5c4796dfbe7478b990ce3))
+* **linux:** improve capability error clarity and respect disabled pref for activity worker ([7efe012](https://github.com/joshuar/go-hass-agent/commit/7efe012f6e9ff7833854c162626a3052012a5509))
+* **linux:** improve capability error clarity and respect disabled pref for activity worker ([a9598e9](https://github.com/joshuar/go-hass-agent/commit/a9598e98107fc632119ac0ff36a596e0888d3645))
+* **pipewire:** tolerate non-string node.nick values from pw-dump ([0e285f2](https://github.com/joshuar/go-hass-agent/commit/0e285f27e83c1c50efb6da321182744b9cc83a73))
+* **pipewire:** tolerate non-string node.nick values from pw-dump ([4494ffc](https://github.com/joshuar/go-hass-agent/commit/4494ffc1e46ea1c76ae6b4be45839b83474bf3bc))
+* **pkg/linux/pipewire:** 🔧 use any for undefined size element ([81c27d7](https://github.com/joshuar/go-hass-agent/commit/81c27d76601ad99a4e78949c4dc18dd52e097424))
+
 ## [14.14.1](https://github.com/joshuar/go-hass-agent/compare/v14.14.0...v14.14.1) (2026-06-22)
 
 
