@@ -13,8 +13,6 @@ import (
 
 	"github.com/reugn/go-quartz/quartz"
 	slogctx "github.com/veqryn/slog-context"
-
-	"github.com/joshuar/go-hass-agent/id"
 )
 
 const (
@@ -74,17 +72,11 @@ func Start(ctx context.Context) error {
 	return nil
 }
 
-func ScheduleJob(idPrefix id.Prefix, job quartz.Job, trigger quartz.Trigger) error {
-	// Generate a job key.
-	jobKey, err := id.NewID(idPrefix)
-	if err != nil {
-		return errors.Join(ErrScheduleFailed, err)
-	}
+func ScheduleJob(id string, job quartz.Job, trigger quartz.Trigger) error {
 	// Generate the job details.
-	jobDetail := quartz.NewJobDetail(job, quartz.NewJobKey(jobKey))
+	jobDetail := quartz.NewJobDetail(job, quartz.NewJobKey(id))
 	// Schedule the job.
-	err = mgr.ScheduleJob(jobDetail, trigger)
-	if err != nil {
+	if err := mgr.ScheduleJob(jobDetail, trigger); err != nil {
 		return errors.Join(ErrScheduleFailed, err)
 	}
 	return nil

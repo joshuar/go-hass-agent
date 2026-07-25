@@ -23,7 +23,6 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/joshuar/go-hass-agent/config"
-	"github.com/joshuar/go-hass-agent/id"
 	"github.com/joshuar/go-hass-agent/models"
 	"github.com/joshuar/go-hass-agent/models/class"
 	"github.com/joshuar/go-hass-agent/models/sensor"
@@ -367,7 +366,8 @@ func (c *ScriptWorker) Start(ctx context.Context) (<-chan models.Entity, error) 
 			continue
 		}
 		// Schedule the script.
-		if err = scheduler.ScheduleJob(id.ScriptJob, script, trigger); err != nil {
+		id := strings.ReplaceAll(filepath.Base(script.path), ".", "_")
+		if err = scheduler.ScheduleJob(id, script, trigger); err != nil {
 			slogctx.FromCtx(ctx).Warn("Could not schedule script.",
 				slog.String("script", script.Description()),
 				slog.Any("error", err))

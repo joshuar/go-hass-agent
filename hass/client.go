@@ -22,7 +22,6 @@ import (
 	"github.com/joshuar/go-hass-agent/hass/registry"
 	"github.com/joshuar/go-hass-agent/hass/sensor"
 	"github.com/joshuar/go-hass-agent/hass/tracker"
-	"github.com/joshuar/go-hass-agent/id"
 	"github.com/joshuar/go-hass-agent/logging"
 	"github.com/joshuar/go-hass-agent/models"
 	"github.com/joshuar/go-hass-agent/scheduler"
@@ -359,7 +358,11 @@ func (c *Client) scheduleConfigUpdates(ctx context.Context) error {
 	}
 	getConfigJob := job.NewFunctionJobWithDesc(c.UpdateConfig, "Fetch Home Assistant Configuration.")
 	const configCheckTimeout = 30 * time.Second
-	if err := scheduler.ScheduleJob(id.HassJob, getConfigJob, quartz.NewSimpleTrigger(configCheckTimeout)); err != nil {
+	if err := scheduler.ScheduleJob(
+		"update_hass_config",
+		getConfigJob,
+		quartz.NewSimpleTrigger(configCheckTimeout),
+	); err != nil {
 		return fmt.Errorf("could not schedule config updates: %w", err)
 	}
 	return nil
