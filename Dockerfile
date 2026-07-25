@@ -1,8 +1,8 @@
 # Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
 # SPDX-License-Identifier: MIT
 
-ARG ALPINE_VERSION=3.23.4@sha256:4d889c14e7d5a73929ab00be2ef8ff22437e7cbc545931e52554a7b00e123d8b
-ARG GO_VERSION=1.26.4-alpine3.23@sha256:103c743516b0d9dd69c203ed64f730eb342cae4b85d3f6c5cb376d91abbc6bcb
+ARG ALPINE_VERSION=3.24.1@sha256:79ff19e9084a00eece421b2523fb93e22d730e2c0e525905de047e848e56d95f
+ARG GO_VERSION=1.26.5-alpine3.24@sha256:111d79159b2326f7e80c4a4706e1ba166acb0e2611df853955f3621828cd49e8
 
 FROM docker.io/golang:${GO_VERSION} AS golang
 # Alpine base.
