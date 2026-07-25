@@ -9,6 +9,7 @@ package mem
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"math"
 	"slices"
 	"time"
@@ -35,7 +36,7 @@ const (
 	memoryUsageSensorPcUnits = "%"
 
 	defaultGPUVendor = GPUVendorNone
-	defaultGPUCard = "card1"
+	defaultGPUCard   = "card1"
 )
 
 var (
@@ -48,8 +49,8 @@ var (
 // For (amd) gpus, more statistics are available at /sys/class/drm/cardX/device/
 var (
 	gpuMemSensors = []gpuMemStatID{memVRamTotal, memGTTTotal, memVRamUsed, memGTTUsed}
-	memSensors  = []memStatID{memTotal, memFree, memBuffered, memCached, memAvailable, memCorrupted}
-	swapSensors = []memStatID{swapTotal, swapFree, swapCached}
+	memSensors    = []memStatID{memTotal, memFree, memBuffered, memCached, memAvailable, memCorrupted}
+	swapSensors   = []memStatID{swapTotal, swapFree, swapCached}
 )
 
 // newMemSensor generates a memorySensor for a memory stat.
@@ -180,8 +181,8 @@ func NewUsageWorker(_ context.Context) (workers.EntityWorker, error) {
 
 	defaultPrefs := &WorkerPreferences{
 		UpdateInterval: memUsageUpdateInterval.String(),
-		GPUVendor: defaultGPUVendor.String(),
-		GPUCard: defaultGPUCard,
+		GPUVendor:      defaultGPUVendor.String(),
+		GPUCard:        defaultGPUCard,
 	}
 	var err error
 	worker.prefs, err = workers.LoadWorkerPreferences(prefPrefix+"usage", defaultPrefs)
@@ -200,9 +201,9 @@ func NewUsageWorker(_ context.Context) (workers.EntityWorker, error) {
 
 func (w *usageWorker) Execute(ctx context.Context) error {
 	var (
-		stats memoryStats
+		stats    memoryStats
 		gpuStats gpuMemoryStats
-		err   error
+		err      error
 	)
 
 	ctx = slogctx.With(ctx, "worker", w.ID())
@@ -221,16 +222,21 @@ func (w *usageWorker) Execute(ctx context.Context) error {
 	if gpuVendorTypeNames[w.prefs.GPUVendor] == GPUVendorAMD {
 		// (AMD) GPU memory sensors
 		gpuStats, err = getAmdGpuMemStats(ctx, w.prefs.GPUCard)
-		for gpuStat := range slices.Values(gpuMemSensors) {
-			w.OutCh <- newGpuMemSensor(ctx, gpuStat, gpuStats[gpuStat])
+		if err != nil {
+			slogctx.FromCtx(ctx).Warn("Get AMD gpu stats failed.",
+				slog.Any("error", err))
+		} else {
+			for gpuStat := range slices.Values(gpuMemSensors) {
+				w.OutCh <- newGpuMemSensor(ctx, gpuStat, gpuStats[gpuStat])
+			}
+			w.OutCh <- newGpuMemSensorPc(ctx, "GPU VRam Usage", gpuStats[memVRamUsed], gpuStats[memVRamTotal])
+			w.OutCh <- newGpuMemSensorPc(ctx, "GPU GTT Usage", gpuStats[memGTTUsed], gpuStats[memGTTTotal])
 		}
-		w.OutCh <- newGpuMemSensorPc(ctx, "GPU VRam Usage", gpuStats[memVRamUsed], gpuStats[memVRamTotal])
-		w.OutCh <- newGpuMemSensorPc(ctx, "GPU GTT Usage", gpuStats[memGTTUsed], gpuStats[memGTTTotal])
 	}
 
 	// Swap memory sensors.
 	if stat, _ := stats.get(swapTotal); stat > 0 {
-		for _, id := range swapSensors {
+		for id := range slices.Values(swapSensors) {
 			w.OutCh <- newMemSensor(ctx, id, stats[id])
 		}
 		w.OutCh <- newSwapUsedPc(ctx, stats)

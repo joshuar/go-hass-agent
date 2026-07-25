@@ -178,8 +178,7 @@ func getMemStats(ctx context.Context) (memoryStats, error) {
 
 	stats := make(memoryStats)
 
-	statsFile := bufio.NewScanner(statsFH)
-	for statsFile.Scan() {
+	for statsFile := bufio.NewScanner(statsFH); statsFile.Scan(); {
 		var (
 			name  string
 			id    memStatID
