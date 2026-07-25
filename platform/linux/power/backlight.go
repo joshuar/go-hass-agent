@@ -34,6 +34,8 @@ import (
 const (
 	minBrightnessPc = 0
 	maxBrightnessPc = 100
+
+	backlightControlWorkerPrefID = controlsPrefPrefix + "backlight"
 )
 
 var ddcutilPath string
@@ -65,6 +67,16 @@ type BacklightWorker struct {
 
 // NewBacklightControl creates an entity worker that can manipulate the screen backlight brightness.
 func NewBacklightControl(ctx context.Context, device *mqtthass.Device) (*BacklightWorker, error) {
+	defaultPrefs := &workers.CommonWorkerPrefs{}
+	prefs, err := workers.LoadWorkerPreferences(backlightControlWorkerPrefID, defaultPrefs)
+	if err != nil {
+		return nil, fmt.Errorf("load preferences: %w", err)
+	}
+
+	if prefs.IsDisabled() {
+		return nil, nil
+	}
+
 	desktop := os.Getenv("XDG_CURRENT_DESKTOP")
 	switch {
 	case strings.Contains(desktop, "GNOME"), strings.Contains(desktop, "KDE"):
@@ -78,6 +90,7 @@ func NewBacklightControl(ctx context.Context, device *mqtthass.Device) (*Backlig
 		WorkerMetadata: models.SetWorkerMetadata("backlight", "Backlight (screen brightness)"),
 		MsgCh:          make(chan mqttapi.Msg),
 		desktop:        desktop,
+		prefs:          prefs,
 	}
 
 	var ok bool
@@ -88,13 +101,6 @@ func NewBacklightControl(ctx context.Context, device *mqtthass.Device) (*Backlig
 
 	if err := worker.setupBrightnessControls(); err != nil {
 		return nil, fmt.Errorf("setup brightness controls: %w", linux.ErrUnsupportedDesktop)
-	}
-
-	defaultPrefs := &workers.CommonWorkerPrefs{}
-	var err error
-	worker.prefs, err = workers.LoadWorkerPreferences(sensorsPrefPrefix+"screen_lock", defaultPrefs)
-	if err != nil {
-		return nil, fmt.Errorf("load preferences: %w", err)
 	}
 
 	// Generate a number entity for the brightness control.
@@ -144,6 +150,11 @@ func NewBacklightControl(ctx context.Context, device *mqtthass.Device) (*Backlig
 	go worker.monitor(ctx)
 
 	return worker, nil
+}
+
+// IsDisabled returns whether the backlight control worker has been disabled via preferences.
+func (w *BacklightWorker) IsDisabled() bool {
+	return w.prefs.IsDisabled()
 }
 
 func (w *BacklightWorker) publishState(ctx context.Context) {
