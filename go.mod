@@ -7,7 +7,6 @@ require (
 	github.com/gen2brain/beeep v0.11.2
 	github.com/go-playground/validator/v10 v10.30.3
 	github.com/godbus/dbus/v5 v5.2.2
-	github.com/goforj/godump v1.9.1
 	github.com/holoplot/go-evdev v0.0.0-20260504100651-66d1748fe847
 	github.com/iancoleman/strcase v0.3.0
 	github.com/joshuar/go-hass-anything/v12 v12.1.0
@@ -133,7 +132,7 @@ require (
 	github.com/fatih/color v1.19.0
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.13 // indirect
-	github.com/go-chi/chi/v5 v5.3.0
+	github.com/go-chi/chi/v5 v5.3.1
 	github.com/go-playground/form/v4 v4.3.0
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
@@ -153,7 +152,6 @@ require (
 	github.com/lmittmann/tint v1.2.0
 	github.com/lxzan/gws v1.10.0
 	github.com/mandykoh/prism v0.35.3
-	github.com/matoous/go-nanoid v1.5.1
 	github.com/mattn/go-isatty v0.0.24
 	github.com/pelletier/go-toml/v2 v2.4.3
 	github.com/reugn/go-quartz v0.15.2
