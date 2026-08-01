@@ -15,6 +15,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/iancoleman/strcase"
@@ -70,6 +71,7 @@ type usageWorker struct {
 
 	prefs       *UsagePrefs
 	boottime    time.Time
+	mu          sync.Mutex // guards the two reading maps below
 	rateSensors map[string]*linux.RateValue[uint64]
 	cpuSensors  map[string]float64
 	path        string
@@ -167,6 +169,14 @@ func (w *usageWorker) getUsageStats(ctx context.Context) ([]models.Entity, error
 		sensors  []models.Entity
 		warnings error
 	)
+
+	// Held for the whole read-modify-write cycle: every sensor below derives
+	// its value by comparing the current counters against the previous ones
+	// kept in w.cpuSensors/w.rateSensors, so an overlapping execution must not
+	// interleave with this one. Deliberately not taken in Execute, which would
+	// hold it across the blocking sends on w.OutCh.
+	w.mu.Lock()
+	defer w.mu.Unlock()
 
 	statsFH, err := os.Open(w.path)
 	if err != nil {
