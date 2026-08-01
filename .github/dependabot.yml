@@ -7,10 +7,12 @@ updates:
       interval: "weekly"
     commit-message:
       prefix: "build(go): ⬆️"
-
     cooldown:
       default-days: 7
-
+    groups:
+      monthly-batch:
+        patterns:
+          - '*'
   # Maintain dependencies for build tools
   - package-ecosystem: "gomod"
     directory: "/tools"
@@ -18,10 +20,12 @@ updates:
       interval: "weekly"
     commit-message:
       prefix: "build(go): ⬆️"
-
     cooldown:
       default-days: 7
-
+    groups:
+      monthly-batch:
+        patterns:
+          - '*'
   # Maintain dependencies for GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -29,12 +33,14 @@ updates:
       interval: "weekly"
     commit-message:
       prefix: "ci(github): ⬆️"
-
     cooldown:
       default-days: 7
-
+    groups:
+      monthly-batch:
+        patterns:
+          - '*'
   # Enable version updates for bun
-  - package-ecosystem: "bun"
+  - package-ecosystem: "npm"
     # Look for `package.json` and `lock` files in the `root` directory
     directory: "/"
     # Check the npm registry for updates every day (weekdays)
@@ -42,10 +48,12 @@ updates:
       interval: "weekly"
     commit-message:
       prefix: "build(js): ⬆️"
-
     cooldown:
       default-days: 7
-
+    groups:
+      monthly-batch:
+        patterns:
+          - '*'
   # Enable version updates for Docker
   - package-ecosystem: "docker"
     # Look for a `Dockerfile` in the `root` directory
@@ -55,6 +63,9 @@ updates:
       interval: "weekly"
     commit-message:
       prefix: "build(container): ⬆️"
-
     cooldown:
       default-days: 7
+    groups:
+      monthly-batch:
+        patterns:
+          - '*'
