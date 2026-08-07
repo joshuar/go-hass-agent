@@ -138,7 +138,7 @@ require (
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-resty/resty/v2 v2.17.2
 	github.com/go-test/deep v1.1.1
-	github.com/gofrs/uuid/v5 v5.4.0
+	github.com/gofrs/uuid/v5 v5.5.0
 	github.com/grandcat/zeroconf v1.0.0
 	github.com/jaypipes/ghw v0.25.0
 	github.com/jsimonetti/rtnetlink v1.4.2
@@ -150,7 +150,7 @@ require (
 	github.com/knadh/koanf/v2 v2.3.5
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/lmittmann/tint v1.2.0
-	github.com/lxzan/gws v1.10.0
+	github.com/lxzan/gws v1.10.1
 	github.com/mandykoh/prism v0.35.3
 	github.com/mattn/go-isatty v0.0.24
 	github.com/pelletier/go-toml/v2 v2.4.3
