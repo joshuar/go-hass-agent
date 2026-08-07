@@ -1,7 +1,7 @@
 {
   "browserslist": "> 0.5%, last 2 versions, not dead",
   "dependencies": {
-    "daisyui": "^5.7.0",
+    "daisyui": "^5.7.9",
     "htmx.org": "^2.0.10",
     "hyperscript.org": "^0.9.93",
     "tailwindcss": "^4.3.3"
@@ -15,7 +15,7 @@
     "esbuild": "^0.28.1",
     "eslint": "^10.8.0",
     "eslint-config-prettier": "^10.1.8",
-    "globals": "^17.7.0",
+    "globals": "^17.8.0",
     "prettier": "^3.9.6",
     "prettier-plugin-tailwindcss": "^0.8.1",
     "prettier-plugin-toml": "^2.0.6"
