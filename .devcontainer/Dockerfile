@@ -1,23 +1,17 @@
 # Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
 # SPDX-License-Identifier: MIT
 
-ARG ALPINE_VERSION=3.23.4@sha256:4d889c14e7d5a73929ab00be2ef8ff22437e7cbc545931e52554a7b00e123d8b
-ARG GO_VERSION=1.26.4-alpine3.23@sha256:103c743516b0d9dd69c203ed64f730eb342cae4b85d3f6c5cb376d91abbc6bcb
+ARG ALPINE_VERSION=3.24.1@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b
+ARG GO_VERSION=1.26.5-alpine3.24@sha256:111d79159b2326f7e80c4a4706e1ba166acb0e2611df853955f3621828cd49e8
 
 FROM docker.io/golang:${GO_VERSION} AS golang
-# Alpine base.
-# https://hub.docker.com/_/alpine
 FROM docker.io/alpine:${ALPINE_VERSION} AS builder
-
 
 # Copy go from official image
 COPY --from=golang /usr/local/go/ /usr/local/go/
 
 # Install additional packages
 RUN apk update && apk add sudo openssh curl git bash fish micro graphviz nodejs npm mosquitto-clients dbus dbus-x11 starship
-
-# Install starship
-RUN cd /tmp && curl -sS https://starship.rs/install.sh | sh -s -- -y || exit -1
 
 # Add non-root user
 ARG USER_NAME=vscode
@@ -48,10 +42,5 @@ RUN export XDG_RUNTIME_DIR=/tmp/$USER_UID-runtime-dir \
     && mkdir $XDG_RUNTIME_DIR \
     && chmod 0700 $XDG_RUNTIME_DIR
 ENV XDG_RUNTIME_DIR=/tmp/$USER_UID-runtime-dir
-
-# Set up shell(s).
-RUN mkdir -p ~/.config/fish \
-    && echo "starship init fish | source" >>~/.config/fish/config.fish \
-    && echo 'eval "$(starship init bash)"' >>~/.bashrc
 
 ENTRYPOINT ["/usr/bin/fish"]

@@ -24,5 +24,7 @@ export PATH="$HOME/go/bin:/go/bin:/usr/local/go/bin:$PATH" && \
 mkdir -p ~/.config/fish
 echo 'set --export PATH "/workspace/node_modules/.bin" $PATH' >> ~/.config/fish/config.fish
 echo 'set --export PATH "$HOME/go/bin" /go/bin /usr/local/go/bin $PATH' >> ~/.config/fish/config.fish
+echo "starship init fish | source" >>~/.config/fish/config.fish
+echo 'eval "$(starship init bash)"' >>~/.bashrc
 
 exit 0
