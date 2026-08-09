@@ -76,8 +76,7 @@ func NewSmartWorker(_ context.Context) (workers.EntityWorker, error) {
 		return worker, nil
 	}
 
-	passed, err := smartWorkerRequiredChecks.Passed()
-	if err != nil || !passed {
+	if passed, err := smartWorkerRequiredChecks.Passed(); err != nil || !passed {
 		return worker, fmt.Errorf("check capabilities: %w", err)
 	}
 
@@ -115,24 +114,22 @@ func (w *smartWorker) Execute(ctx context.Context) error {
 
 		var smartData smartData
 
-		details := &diskDetails{
-			Disk:   disk.Name,
-			Model:  disk.Model,
-			Serial: disk.SerialNumber,
-		}
-
 		switch smartDevice := dev.(type) {
 		case *smart.SataDevice:
 			data, err := smartDevice.ReadSMARTData()
 			if err != nil {
 				slogctx.FromCtx(ctx).Debug("Failed to read SATA disk SMART data.",
-					slog.String("device", details.Disk),
+					slog.String("device", disk.Name),
 					slog.Any("error", err),
 				)
 				continue
 			}
 			ataSmart := &ataSmartDetails{
-				diskDetails:  details,
+				diskDetails: &diskDetails{
+					Disk:   disk.Name,
+					Model:  disk.Model,
+					Serial: disk.SerialNumber,
+				},
 				AtaSmartPage: data,
 			}
 			smartData = ataSmart
@@ -141,7 +138,7 @@ func (w *smartWorker) Execute(ctx context.Context) error {
 			inq, err := smartDevice.Inquiry()
 			if err != nil {
 				slogctx.FromCtx(ctx).Debug("Failed to read SCSI disk SMART data.",
-					slog.String("device", details.Disk),
+					slog.String("device", disk.Name),
 					slog.Any("error", err),
 				)
 				continue
@@ -151,20 +148,23 @@ func (w *smartWorker) Execute(ctx context.Context) error {
 				ataSmart, err := smart.OpenSata("/dev/" + disk.Name)
 				if err != nil {
 					slogctx.FromCtx(ctx).Debug("Failed to read SCSI disk as SATA device.",
-						slog.String("device", details.Disk),
+						slog.String("device", disk.Name),
 						slog.Any("error", err),
 					)
 					continue
 				}
-				data, err := ataSmart.ReadSMARTData()
-				if err != nil {
+				if data, err := ataSmart.ReadSMARTData(); err != nil {
 					slogctx.FromCtx(ctx).Debug("Failed to read SATA disk SMART data.",
-						slog.String("device", details.Disk),
+						slog.String("device", disk.Name),
 						slog.Any("error", err),
 					)
 				} else {
 					scsiSmart := &ataSmartDetails{
-						diskDetails:  details,
+						diskDetails: &diskDetails{
+							Disk:   disk.Name,
+							Model:  disk.Model,
+							Serial: disk.SerialNumber,
+						},
 						AtaSmartPage: data,
 					}
 					smartData = scsiSmart
@@ -174,13 +174,17 @@ func (w *smartWorker) Execute(ctx context.Context) error {
 			data, err := smartDevice.ReadSMART()
 			if err != nil {
 				slogctx.FromCtx(ctx).Debug("Failed to read NVMe disk SMART data.",
-					slog.String("device", details.Disk),
+					slog.String("device", disk.Name),
 					slog.Any("error", err),
 				)
 				continue
 			}
 			nvmeSmart := &nvmeSmartDetails{
-				diskDetails:  details,
+				diskDetails: &diskDetails{
+					Disk:   disk.Name,
+					Model:  disk.Model,
+					Serial: disk.SerialNumber,
+				},
 				NvmeSMARTLog: data,
 			}
 			smartData = nvmeSmart
@@ -274,8 +278,6 @@ type ataSmartDetails struct {
 // comments!
 //
 // https://en.wikipedia.org/wiki/Self-Monitoring,_Analysis_and_Reporting_Technology#In_ATA
-//
-//nolint:gocognit // ¯\_(ツ)_/¯
 func (ata *ataSmartDetails) Problem() bool {
 	// Read Error Rate value greater than zero.
 	if attr, ok := ata.Attrs[1]; ok {
@@ -342,8 +344,6 @@ func (ata *ataSmartDetails) Problem() bool {
 
 // Attributes are the SMART attributes for ATA disks. Trying to expose most common/interesting attributes. For code
 // spelunkers, if you have suggestions, please open a GitHub issue with your comments!
-//
-//nolint:gocognit,funlen // ¯\_(ツ)_/¯
 func (ata *ataSmartDetails) Attributes() map[string]any {
 	ataAttrs := make(map[string]any)
 	// Read Error Rate.
@@ -356,8 +356,7 @@ func (ata *ataSmartDetails) Attributes() map[string]any {
 	}
 	// Spin-Up Time.
 	if attr, ok := ata.Attrs[3]; ok {
-		dur, err := attr.ParseAsDuration()
-		if err == nil {
+		if dur, err := attr.ParseAsDuration(); err == nil {
 			ataAttrs[attr.Name] = dur.String()
 		}
 	}
@@ -375,8 +374,7 @@ func (ata *ataSmartDetails) Attributes() map[string]any {
 	}
 	// Power-On Hours.
 	if attr, ok := ata.Attrs[9]; ok {
-		dur, err := attr.ParseAsDuration()
-		if err == nil {
+		if dur, err := attr.ParseAsDuration(); err == nil {
 			ataAttrs[attr.Name] = dur.String()
 		}
 	}
@@ -422,8 +420,7 @@ func (ata *ataSmartDetails) Attributes() map[string]any {
 	}
 	// Temperature.
 	if attr, ok := ata.Attrs[194]; ok {
-		temp, _, _, _, err := attr.ParseAsTemperature()
-		if err == nil {
+		if temp, _, _, _, err := attr.ParseAsTemperature(); err == nil {
 			ataAttrs[attr.Name] = fmt.Sprintf("%d °C", temp)
 		}
 	}

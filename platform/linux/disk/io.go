@@ -236,7 +236,6 @@ func getDeviceNames() ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("getDevices: %w", err)
 	}
-
 	defer data.Close()
 
 	var devices []string
@@ -264,6 +263,9 @@ func getDeviceNames() ([]string, error) {
 		if validDeviceNo(cols) {
 			devices = append(devices, cols[3])
 		}
+	}
+	if err := partitions.Err(); err != nil {
+		return devices, fmt.Errorf("read partitions: %w", err)
 	}
 
 	return devices, nil
@@ -301,11 +303,9 @@ func getDevice(deviceName string) (*device, map[stat]uint64, error) {
 	line.Split(bufio.ScanWords)
 
 	stats := make(map[stat]uint64)
-	statno := stat(0)
 	// Parse the rest as stats.
-	for line.Scan() {
-		readVal, err := strconv.ParseUint(line.Text(), 10, 64)
-		if err != nil {
+	for statno := stat(0); line.Scan(); {
+		if readVal, err := strconv.ParseUint(line.Text(), 10, 64); err != nil {
 			slog.Warn("Unable to parse device stat.",
 				slog.String("device", dev.id),
 				slog.String("stat", line.Text()),

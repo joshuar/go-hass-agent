@@ -193,8 +193,7 @@ func getFilesystems() ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("getFilesystems: %w", err)
 	}
-
-	defer data.Close() //nolint:errcheck
+	defer data.Close()
 
 	var filesystems []string
 
@@ -217,6 +216,9 @@ func getFilesystems() ([]string, error) {
 			}
 		}
 	}
+	if err := entry.Err(); err != nil {
+		return filesystems, fmt.Errorf("scan filesystems: %w", err)
+	}
 
 	return filesystems, nil
 }
@@ -233,6 +235,7 @@ func getMounts(ctx context.Context, ignoredMounts []string) ([]*mount, error) {
 	if err != nil {
 		return nil, fmt.Errorf("getMounts: %w", err)
 	}
+	defer data.Close()
 
 	var mounts []*mount
 	// Scan the file.
@@ -278,11 +281,8 @@ func getMounts(ctx context.Context, ignoredMounts []string) ([]*mount, error) {
 			}
 		}
 	}
-
-	if err := data.Close(); err != nil {
-		slogctx.FromCtx(ctx).
-			With(slog.String("worker", usageWorkerID)).
-			Debug("Failed to close mounts file.", slog.Any("error", err))
+	if err := entry.Err(); err != nil {
+		return mounts, fmt.Errorf("scan mounts: %w", err)
 	}
 
 	return mounts, nil
