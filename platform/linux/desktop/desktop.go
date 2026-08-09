@@ -73,9 +73,7 @@ func (w *settingsWorker) Start(ctx context.Context) (<-chan models.Entity, error
 				if !strings.Contains(event.Signal, settingsChangedSignal) {
 					continue
 				}
-
-				prop, value := extractProp(event.Content)
-				switch prop {
+				switch prop, value := extractProp(event.Content); prop {
 				case colorSchemeProp:
 					scheme, icon := parseColorScheme(value)
 					sensorCh <- newColorSchemeSensor(ctx, scheme, icon)
