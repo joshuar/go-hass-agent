@@ -15,7 +15,6 @@ import (
 
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/models"
-	"github.com/joshuar/go-hass-agent/models/sensor"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 	"github.com/joshuar/go-hass-agent/platform/linux"
 )
@@ -212,23 +211,23 @@ func extractProp(event []any) (string, dbus.Variant) {
 }
 
 func newColorSchemeSensor(ctx context.Context, scheme, icon string) models.Entity {
-	return sensor.NewSensor(ctx,
-		sensor.WithName("Desktop Color Scheme"),
-		sensor.WithID("desktop_color_scheme"),
-		sensor.AsDiagnostic(),
-		sensor.WithIcon(icon),
-		sensor.WithState(scheme),
-		sensor.WithDataSourceAttribute(linux.DataSrcDBus),
+	return models.NewSensor(ctx,
+		models.WithName("Desktop Color Scheme"),
+		models.WithID("desktop_color_scheme"),
+		models.AsDiagnostic(),
+		models.WithIcon(icon),
+		models.WithState(scheme),
+		models.WithDataSourceAttribute(linux.DataSrcDBus),
 	)
 }
 
 func newAccentColorSensor(ctx context.Context, value string) models.Entity {
-	return sensor.NewSensor(ctx,
-		sensor.WithName("Desktop Accent Color"),
-		sensor.WithID("desktop_accent_color"),
-		sensor.AsDiagnostic(),
-		sensor.WithIcon("mdi:palette"),
-		sensor.WithState(value),
-		sensor.WithDataSourceAttribute(linux.DataSrcDBus),
+	return models.NewSensor(ctx,
+		models.WithName("Desktop Accent Color"),
+		models.WithID("desktop_accent_color"),
+		models.AsDiagnostic(),
+		models.WithIcon("mdi:palette"),
+		models.WithState(value),
+		models.WithDataSourceAttribute(linux.DataSrcDBus),
 	)
 }

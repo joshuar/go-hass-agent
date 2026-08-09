@@ -13,7 +13,6 @@ import (
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/device"
 	"github.com/joshuar/go-hass-agent/models"
-	"github.com/joshuar/go-hass-agent/models/sensor"
 	"github.com/joshuar/go-hass-agent/platform/linux"
 )
 
@@ -66,22 +65,22 @@ func (w *infoWorker) Execute(ctx context.Context) error {
 		return fmt.Errorf("could not retrieve distro details: %w", err)
 	}
 
-	w.OutCh <- sensor.NewSensor(ctx,
-		sensor.WithName("Distribution Name"),
-		sensor.WithID("distribution_name"),
-		sensor.AsDiagnostic(),
-		sensor.WithIcon("mdi:linux"),
-		sensor.WithState(distro),
-		sensor.WithDataSourceAttribute(linux.DataSrcProcFS),
+	w.OutCh <- models.NewSensor(ctx,
+		models.WithName("Distribution Name"),
+		models.WithID("distribution_name"),
+		models.AsDiagnostic(),
+		models.WithIcon("mdi:linux"),
+		models.WithState(distro),
+		models.WithDataSourceAttribute(linux.DataSrcProcFS),
 	)
 
-	w.OutCh <- sensor.NewSensor(ctx,
-		sensor.WithName("Distribution Version"),
-		sensor.WithID("distribution_version"),
-		sensor.AsDiagnostic(),
-		sensor.WithIcon("mdi:numeric"),
-		sensor.WithState(version),
-		sensor.WithDataSourceAttribute(linux.DataSrcProcFS),
+	w.OutCh <- models.NewSensor(ctx,
+		models.WithName("Distribution Version"),
+		models.WithID("distribution_version"),
+		models.AsDiagnostic(),
+		models.WithIcon("mdi:numeric"),
+		models.WithState(version),
+		models.WithDataSourceAttribute(linux.DataSrcProcFS),
 	)
 
 	// Get kernel version.
@@ -90,13 +89,13 @@ func (w *infoWorker) Execute(ctx context.Context) error {
 		return fmt.Errorf("could not retrieve kernel version: %w", err)
 	}
 
-	w.OutCh <- sensor.NewSensor(ctx,
-		sensor.WithName("Kernel Version"),
-		sensor.WithID("kernel_version"),
-		sensor.AsDiagnostic(),
-		sensor.WithIcon("mdi:chip"),
-		sensor.WithState(kernelVersion),
-		sensor.WithDataSourceAttribute(linux.DataSrcProcFS),
+	w.OutCh <- models.NewSensor(ctx,
+		models.WithName("Kernel Version"),
+		models.WithID("kernel_version"),
+		models.AsDiagnostic(),
+		models.WithIcon("mdi:chip"),
+		models.WithState(kernelVersion),
+		models.WithDataSourceAttribute(linux.DataSrcProcFS),
 	)
 
 	return warnings

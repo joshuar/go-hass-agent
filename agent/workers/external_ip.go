@@ -19,7 +19,6 @@ import (
 
 	"github.com/joshuar/go-hass-agent/logging"
 	"github.com/joshuar/go-hass-agent/models"
-	"github.com/joshuar/go-hass-agent/models/sensor"
 	"github.com/joshuar/go-hass-agent/scheduler"
 )
 
@@ -85,13 +84,13 @@ func newExternalIPSensor(ctx context.Context, addr net.IP) models.Entity {
 		icon = "mdi:numeric-6-box-outline"
 	}
 
-	return sensor.NewSensor(ctx,
-		sensor.WithName(name),
-		sensor.WithID(id),
-		sensor.AsDiagnostic(),
-		sensor.WithIcon(icon),
-		sensor.WithState(addr.String()),
-		sensor.WithAttribute("last_updated", time.Now().Format(time.RFC3339)),
+	return models.NewSensor(ctx,
+		models.WithName(name),
+		models.WithID(id),
+		models.AsDiagnostic(),
+		models.WithIcon(icon),
+		models.WithState(addr.String()),
+		models.WithAttribute("last_updated", time.Now().Format(time.RFC3339)),
 	)
 }
 

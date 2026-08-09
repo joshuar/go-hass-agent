@@ -21,7 +21,6 @@ import (
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/logging"
 	"github.com/joshuar/go-hass-agent/models"
-	"github.com/joshuar/go-hass-agent/models/sensor"
 	"github.com/joshuar/go-hass-agent/platform/linux"
 )
 
@@ -324,13 +323,13 @@ func newLinkSensor(ctx context.Context, msg rtnetlink.LinkMessage) models.Entity
 		attributes["link_type"] = msg.Attributes.Info.Kind
 	}
 
-	return sensor.NewSensor(ctx,
-		sensor.WithName(name+" Link State"),
-		sensor.WithID(strings.ToLower(name+"_link_state")),
-		sensor.AsDiagnostic(),
-		sensor.WithIcon(icon),
-		sensor.WithState(value),
-		sensor.WithAttributes(attributes),
+	return models.NewSensor(ctx,
+		models.WithName(name+" Link State"),
+		models.WithID(strings.ToLower(name+"_link_state")),
+		models.AsDiagnostic(),
+		models.WithIcon(icon),
+		models.WithState(value),
+		models.WithAttributes(attributes),
 	)
 }
 
@@ -374,13 +373,13 @@ func newAddressSensor(
 		attributes["anycast"] = msg.Attributes.Anycast.String()
 	}
 
-	addrSensor := sensor.NewSensor(ctx,
-		sensor.WithName(name+" "+ipFamily(msg.Family).String()+" Address"),
-		sensor.WithID(strings.ToLower(name+"_"+ipFamily(msg.Family).String()+"_address")),
-		sensor.AsDiagnostic(),
-		sensor.WithIcon(ipFamily(msg.Family).Icon()),
-		sensor.WithState(value),
-		sensor.WithAttributes(attributes),
+	addrSensor := models.NewSensor(ctx,
+		models.WithName(name+" "+ipFamily(msg.Family).String()+" Address"),
+		models.WithID(strings.ToLower(name+"_"+ipFamily(msg.Family).String()+"_address")),
+		models.AsDiagnostic(),
+		models.WithIcon(ipFamily(msg.Family).Icon()),
+		models.WithState(value),
+		models.WithAttributes(attributes),
 	)
 
 	return &addrSensor, nil

@@ -27,7 +27,6 @@ import (
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/models"
 	"github.com/joshuar/go-hass-agent/models/class"
-	"github.com/joshuar/go-hass-agent/models/sensor"
 	"github.com/joshuar/go-hass-agent/platform/linux"
 	"github.com/joshuar/go-hass-agent/scheduler"
 )
@@ -119,7 +118,7 @@ func newDiskStatSensor(
 	var (
 		icon, units      string
 		stateClass       class.SensorStateClass
-		diagnosticOption sensor.Option
+		diagnosticOption models.SensorOption
 	)
 
 	name, id := device.generateIdentifiers(sensorType)
@@ -148,26 +147,26 @@ func newDiskStatSensor(
 	}
 
 	if device.id != "total" {
-		diagnosticOption = sensor.WithCategory(models.EntityCategoryDiagnostic)
+		diagnosticOption = models.WithCategory(models.EntityCategoryDiagnostic)
 	} else {
-		diagnosticOption = sensor.WithCategory("")
+		diagnosticOption = models.WithCategory("")
 	}
 
-	return sensor.NewSensor(ctx,
-		sensor.WithName(name),
-		sensor.WithID(id),
-		sensor.WithUnits(units),
-		sensor.WithStateClass(stateClass),
-		sensor.WithState(value),
-		sensor.WithIcon(icon),
-		sensor.WithAttributes(attributes),
+	return models.NewSensor(ctx,
+		models.WithName(name),
+		models.WithID(id),
+		models.WithUnits(units),
+		models.WithStateClass(stateClass),
+		models.WithState(value),
+		models.WithIcon(icon),
+		models.WithAttributes(attributes),
 		diagnosticOption,
 	)
 }
 
 func newDiskRateSensor(ctx context.Context, device *device, sensorType ioSensor, value uint64) models.Entity {
 	var (
-		diagnosticOption sensor.Option
+		diagnosticOption models.SensorOption
 		icon             string
 	)
 
@@ -185,19 +184,19 @@ func newDiskRateSensor(ctx context.Context, device *device, sensorType ioSensor,
 	}
 
 	if device.id != "total" {
-		diagnosticOption = sensor.WithCategory(models.EntityCategoryDiagnostic)
+		diagnosticOption = models.WithCategory(models.EntityCategoryDiagnostic)
 	} else {
-		diagnosticOption = sensor.WithCategory("")
+		diagnosticOption = models.WithCategory("")
 	}
 
-	return sensor.NewSensor(ctx,
-		sensor.WithName(name),
-		sensor.WithID(id),
-		sensor.WithUnits(units),
-		sensor.WithStateClass(stateClass),
-		sensor.WithState(value),
-		sensor.WithIcon(icon),
-		sensor.WithAttributes(attributes),
+	return models.NewSensor(ctx,
+		models.WithName(name),
+		models.WithID(id),
+		models.WithUnits(units),
+		models.WithStateClass(stateClass),
+		models.WithState(value),
+		models.WithIcon(icon),
+		models.WithAttributes(attributes),
 		diagnosticOption,
 	)
 }

@@ -18,7 +18,6 @@ import (
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/models"
 	"github.com/joshuar/go-hass-agent/models/class"
-	"github.com/joshuar/go-hass-agent/models/sensor"
 	"github.com/joshuar/go-hass-agent/platform/linux"
 	"github.com/joshuar/go-hass-agent/scheduler"
 )
@@ -74,17 +73,17 @@ func (w *uptimeWorker) Start(ctx context.Context) (<-chan models.Entity, error) 
 }
 
 func (w *uptimeWorker) Execute(ctx context.Context) error {
-	w.OutCh <- sensor.NewSensor(ctx,
-		sensor.WithName("Uptime"),
-		sensor.WithID("uptime"),
-		sensor.AsDiagnostic(),
-		sensor.WithDeviceClass(class.SensorClassDuration),
-		sensor.WithStateClass(class.StateMeasurement),
-		sensor.WithUnits("h"),
-		sensor.WithIcon("mdi:restart"),
-		sensor.WithState(w.getUptime(ctx)/60/60), //nolint:mnd // convert to hours.
-		sensor.WithDataSourceAttribute(linux.ProcFSRoot),
-		sensor.WithAttribute("native_unit_of_measurement", "h"),
+	w.OutCh <- models.NewSensor(ctx,
+		models.WithName("Uptime"),
+		models.WithID("uptime"),
+		models.AsDiagnostic(),
+		models.WithDeviceClass(class.SensorClassDuration),
+		models.WithStateClass(class.StateMeasurement),
+		models.WithUnits("h"),
+		models.WithIcon("mdi:restart"),
+		models.WithState(w.getUptime(ctx)/60/60), //nolint:mnd // convert to hours.
+		models.WithDataSourceAttribute(linux.ProcFSRoot),
+		models.WithAttribute("native_unit_of_measurement", "h"),
 	)
 	return nil
 }

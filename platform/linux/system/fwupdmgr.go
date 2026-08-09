@@ -17,7 +17,6 @@ import (
 
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/models"
-	"github.com/joshuar/go-hass-agent/models/sensor"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 	"github.com/joshuar/go-hass-agent/platform/linux"
 )
@@ -141,13 +140,13 @@ func (w *fwupdWorker) Execute(ctx context.Context) error {
 		}
 	}
 
-	w.OutCh <- sensor.NewSensor(ctx,
-		sensor.WithName("Firmware Security"),
-		sensor.WithID("firmware_security"),
-		sensor.AsDiagnostic(),
-		sensor.WithIcon("mdi:security"),
-		sensor.WithState(hsiID[0]),
-		sensor.WithAttributes(attributes),
+	w.OutCh <- models.NewSensor(ctx,
+		models.WithName("Firmware Security"),
+		models.WithID("firmware_security"),
+		models.AsDiagnostic(),
+		models.WithIcon("mdi:security"),
+		models.WithState(hsiID[0]),
+		models.WithAttributes(attributes),
 	)
 
 	return nil

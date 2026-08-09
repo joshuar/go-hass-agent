@@ -20,8 +20,6 @@ import (
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/models"
 	"github.com/joshuar/go-hass-agent/models/class"
-	"github.com/joshuar/go-hass-agent/models/event"
-	"github.com/joshuar/go-hass-agent/models/sensor"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 	"github.com/joshuar/go-hass-agent/platform/linux"
 )
@@ -137,15 +135,15 @@ func (w *UserSessionSensorWorker) getUsers() ([]string, error) {
 }
 
 func newUsersSensor(ctx context.Context, users []string) models.Entity {
-	return sensor.NewSensor(ctx,
-		sensor.WithName("Current Users"),
-		sensor.WithID("current_users"),
-		sensor.WithStateClass(class.StateMeasurement),
-		sensor.WithUnits(usersSensorUnits),
-		sensor.WithIcon(usersSensorIcon),
-		sensor.WithState(len(users)),
-		sensor.WithDataSourceAttribute(linux.DataSrcDBus),
-		sensor.WithAttribute("usernames", users),
+	return models.NewSensor(ctx,
+		models.WithName("Current Users"),
+		models.WithID("current_users"),
+		models.WithStateClass(class.StateMeasurement),
+		models.WithUnits(usersSensorUnits),
+		models.WithIcon(usersSensorIcon),
+		models.WithState(len(users)),
+		models.WithDataSourceAttribute(linux.DataSrcDBus),
+		models.WithAttribute("usernames", users),
 	)
 }
 
@@ -276,14 +274,14 @@ func (w *UserSessionEventsWorker) Start(ctx context.Context) (<-chan models.Enti
 					// Add the session to the tracker.
 					w.trackSession(string(path))
 					// Send the session added event.
-					if entity, err := event.NewEvent(sessionStartedEventName, w.sessions[string(path)]); err != nil {
+					if entity, err := models.NewEvent(sessionStartedEventName, w.sessions[string(path)]); err != nil {
 						slogctx.FromCtx(ctx).Warn("Could not generate users event.", slog.Any("error", err))
 					} else {
 						eventCh <- entity
 					}
 				case strings.Contains(trigger.Signal, sessionRemovedSignal):
 					// Send the session removed event.
-					if entity, err := event.NewEvent(sessionStoppedEventName, w.sessions[string(path)]); err != nil {
+					if entity, err := models.NewEvent(sessionStoppedEventName, w.sessions[string(path)]); err != nil {
 						slogctx.FromCtx(ctx).Warn("Could not generate users event.", slog.Any("error", err))
 					} else {
 						eventCh <- entity

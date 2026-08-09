@@ -14,7 +14,6 @@ import (
 
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/models"
-	"github.com/joshuar/go-hass-agent/models/event"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 	"github.com/joshuar/go-hass-agent/platform/linux"
 )
@@ -117,7 +116,7 @@ func (w *OOMEventsWorker) Start(ctx context.Context) (<-chan models.Entity, erro
 						continue
 					}
 					// Send an event.
-					if entity, err := event.NewEvent(
+					if entity, err := models.NewEvent(
 						oomEventName,
 						map[string]any{
 							"Process": processStr,

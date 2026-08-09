@@ -25,7 +25,6 @@ import (
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/models"
 	"github.com/joshuar/go-hass-agent/models/class"
-	"github.com/joshuar/go-hass-agent/models/sensor"
 	"github.com/joshuar/go-hass-agent/platform/linux"
 	"github.com/joshuar/go-hass-agent/scheduler"
 )
@@ -143,7 +142,7 @@ func (w *usageWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
 }
 
 // calculateRate takes a sensor name and value string and calculates the uint64 rate
-// value for the sensor.
+// value for the models.
 func (w *usageWorker) calculateRate(ctx context.Context, name, value string) uint64 {
 	var state uint64
 
@@ -235,16 +234,16 @@ func (w *usageWorker) getUsageStats(ctx context.Context) ([]models.Entity, error
 
 //revive:disable:argument-limit // Not very useful to reduce the number of arguments.
 func newRateSensor(ctx context.Context, name, icon, units string, value uint64, total string) models.Entity {
-	return sensor.NewSensor(ctx,
-		sensor.WithName(name),
-		sensor.WithID(strcase.ToSnake(name)),
-		sensor.WithStateClass(class.StateMeasurement),
-		sensor.AsDiagnostic(),
-		sensor.WithUnits(units),
-		sensor.WithIcon(icon),
-		sensor.WithState(value),
-		sensor.WithAttribute("Total", total),
-		sensor.WithDataSourceAttribute(linux.DataSrcProcFS),
+	return models.NewSensor(ctx,
+		models.WithName(name),
+		models.WithID(strcase.ToSnake(name)),
+		models.WithStateClass(class.StateMeasurement),
+		models.AsDiagnostic(),
+		models.WithUnits(units),
+		models.WithIcon(icon),
+		models.WithState(value),
+		models.WithAttribute("Total", total),
+		models.WithDataSourceAttribute(linux.DataSrcProcFS),
 	)
 }
 
@@ -318,28 +317,28 @@ func newUsageSensor(
 	worker.cpuSensors[details[0]+"_total"] = totalTime
 	state := currValue / currTotal * 100 //nolint:mnd // %.
 
-	return sensor.NewSensor(ctx,
-		sensor.WithName(name),
-		sensor.WithID(id),
-		sensor.WithUnits("%"),
-		sensor.WithStateClass(class.StateMeasurement),
-		sensor.WithState(state),
-		sensor.WithAttributes(attrs),
-		sensor.WithIcon("mdi:chip"),
-		sensor.WithCategory(category),
+	return models.NewSensor(ctx,
+		models.WithName(name),
+		models.WithID(id),
+		models.WithUnits("%"),
+		models.WithStateClass(class.StateMeasurement),
+		models.WithState(state),
+		models.WithAttributes(attrs),
+		models.WithIcon("mdi:chip"),
+		models.WithCategory(category),
 	)
 }
 
 func newCountSensor(ctx context.Context, name, icon, units, valueStr string) models.Entity {
 	valueInt, _ := strconv.Atoi(valueStr)
-	return sensor.NewSensor(ctx,
-		sensor.WithName(name),
-		sensor.WithID(strcase.ToSnake(name)),
-		sensor.WithStateClass(class.StateMeasurement),
-		sensor.AsDiagnostic(),
-		sensor.WithUnits(units),
-		sensor.WithIcon(icon),
-		sensor.WithState(valueInt),
-		sensor.WithDataSourceAttribute(linux.DataSrcProcFS),
+	return models.NewSensor(ctx,
+		models.WithName(name),
+		models.WithID(strcase.ToSnake(name)),
+		models.WithStateClass(class.StateMeasurement),
+		models.AsDiagnostic(),
+		models.WithUnits(units),
+		models.WithIcon(icon),
+		models.WithState(valueInt),
+		models.WithDataSourceAttribute(linux.DataSrcProcFS),
 	)
 }

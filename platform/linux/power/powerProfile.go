@@ -15,7 +15,6 @@ import (
 
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/models"
-	"github.com/joshuar/go-hass-agent/models/sensor"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 	"github.com/joshuar/go-hass-agent/platform/linux"
 )
@@ -33,13 +32,13 @@ const (
 var _ workers.EntityWorker = (*profileWorker)(nil)
 
 func newPowerSensor(ctx context.Context, profile string) models.Entity {
-	return sensor.NewSensor(ctx,
-		sensor.WithName("Power Profile"),
-		sensor.WithID("power_profile"),
-		sensor.AsDiagnostic(),
-		sensor.WithIcon("mdi:flash"),
-		sensor.WithState(profile),
-		sensor.WithDataSourceAttribute(linux.DataSrcDBus),
+	return models.NewSensor(ctx,
+		models.WithName("Power Profile"),
+		models.WithID("power_profile"),
+		models.AsDiagnostic(),
+		models.WithIcon("mdi:flash"),
+		models.WithState(profile),
+		models.WithDataSourceAttribute(linux.DataSrcDBus),
 	)
 }
 

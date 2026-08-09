@@ -21,7 +21,6 @@ import (
 	"github.com/joshuar/go-hass-agent/logging"
 	"github.com/joshuar/go-hass-agent/models"
 	"github.com/joshuar/go-hass-agent/models/class"
-	"github.com/joshuar/go-hass-agent/models/sensor"
 	"github.com/joshuar/go-hass-agent/platform/linux"
 	"github.com/joshuar/go-hass-agent/scheduler"
 )
@@ -302,32 +301,32 @@ func newStatsTotalEntity(
 	value uint64,
 	attributes models.Attributes,
 ) models.Entity {
-	return sensor.NewSensor(ctx,
-		sensor.WithName(name+" "+entityType.String()),
-		sensor.WithID(strings.ToLower(name)+"_"+strcase.ToSnake(entityType.String())),
-		sensor.WithDeviceClass(class.SensorClassDataSize),
-		sensor.WithStateClass(class.StateMeasurement),
-		sensor.WithUnits(countUnit),
-		sensor.WithIcon(entityType.Icon()),
-		sensor.WithState(value),
-		sensor.WithAttributes(attributes),
-		sensor.WithDataSourceAttribute(linux.DataSrcNetlink),
-		sensor.AsDiagnostic(),
+	return models.NewSensor(ctx,
+		models.WithName(name+" "+entityType.String()),
+		models.WithID(strings.ToLower(name)+"_"+strcase.ToSnake(entityType.String())),
+		models.WithDeviceClass(class.SensorClassDataSize),
+		models.WithStateClass(class.StateMeasurement),
+		models.WithUnits(countUnit),
+		models.WithIcon(entityType.Icon()),
+		models.WithState(value),
+		models.WithAttributes(attributes),
+		models.WithDataSourceAttribute(linux.DataSrcNetlink),
+		models.AsDiagnostic(),
 	)
 }
 
 // newStatsTotalEntity creates an entity for tracking rate stats for a network device.
 func newStatsRateEntity(ctx context.Context, name string, entityType netStatsType, value uint64) models.Entity {
-	return sensor.NewSensor(ctx,
-		sensor.WithName(name+" "+entityType.String()),
-		sensor.WithID(strings.ToLower(name)+"_"+strcase.ToSnake(entityType.String())),
-		sensor.WithDeviceClass(class.SensorClassDataRate),
-		sensor.WithStateClass(class.StateMeasurement),
-		sensor.WithUnits(rateUnit),
-		sensor.WithIcon(entityType.Icon()),
-		sensor.WithState(value),
-		sensor.WithDataSourceAttribute(linux.DataSrcNetlink),
-		sensor.AsDiagnostic(),
+	return models.NewSensor(ctx,
+		models.WithName(name+" "+entityType.String()),
+		models.WithID(strings.ToLower(name)+"_"+strcase.ToSnake(entityType.String())),
+		models.WithDeviceClass(class.SensorClassDataRate),
+		models.WithStateClass(class.StateMeasurement),
+		models.WithUnits(rateUnit),
+		models.WithIcon(entityType.Icon()),
+		models.WithState(value),
+		models.WithDataSourceAttribute(linux.DataSrcNetlink),
+		models.AsDiagnostic(),
 	)
 }
 

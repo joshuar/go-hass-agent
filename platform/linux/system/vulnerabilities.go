@@ -17,7 +17,6 @@ import (
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/models"
 	"github.com/joshuar/go-hass-agent/models/class"
-	"github.com/joshuar/go-hass-agent/models/sensor"
 	"github.com/joshuar/go-hass-agent/platform/linux"
 )
 
@@ -92,15 +91,15 @@ func (w *cpuVulnWorker) Execute(ctx context.Context) error {
 		attrs[name] = details
 	}
 
-	w.OutCh <- sensor.NewSensor(ctx,
-		sensor.WithName("CPU Vulnerabilities"),
-		sensor.WithID("cpu_vulnerabilities"),
-		sensor.AsTypeBinarySensor(),
-		sensor.WithDeviceClass(class.BinaryClassProblem),
-		sensor.AsDiagnostic(),
-		sensor.WithIcon("mdi:security"),
-		sensor.WithState(cpuVulnerabilitiesFound),
-		sensor.WithAttributes(attrs),
+	w.OutCh <- models.NewSensor(ctx,
+		models.WithName("CPU Vulnerabilities"),
+		models.WithID("cpu_vulnerabilities"),
+		models.AsTypeBinarySensor(),
+		models.WithDeviceClass(class.BinaryClassProblem),
+		models.AsDiagnostic(),
+		models.WithIcon("mdi:security"),
+		models.WithState(cpuVulnerabilitiesFound),
+		models.WithAttributes(attrs),
 	)
 
 	return nil

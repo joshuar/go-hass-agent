@@ -16,7 +16,6 @@ import (
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/models"
 	"github.com/joshuar/go-hass-agent/models/class"
-	"github.com/joshuar/go-hass-agent/models/sensor"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 	"github.com/joshuar/go-hass-agent/platform/linux"
 )
@@ -30,18 +29,18 @@ const (
 var _ workers.EntityWorker = (*screenLockWorker)(nil)
 
 func newScreenlockSensor(ctx context.Context, value bool) models.Entity {
-	return sensor.NewSensor(
+	return models.NewSensor(
 		ctx,
-		sensor.WithName("Screen Lock"),
-		sensor.WithID("screen_lock"),
-		sensor.AsTypeBinarySensor(),
-		sensor.WithDeviceClass(class.BinaryClassLock),
-		sensor.WithIcon(screenLockIcon(value)),
-		sensor.WithState(
+		models.WithName("Screen Lock"),
+		models.WithID("screen_lock"),
+		models.AsTypeBinarySensor(),
+		models.WithDeviceClass(class.BinaryClassLock),
+		models.WithIcon(screenLockIcon(value)),
+		models.WithState(
 			!value,
 		), // For device class BinarySensorDeviceClassLock: On means open (unlocked), Off means closed (locked).
-		sensor.WithDataSourceAttribute(linux.DataSrcDBus),
-		sensor.AsRetryableRequest(true),
+		models.WithDataSourceAttribute(linux.DataSrcDBus),
+		models.AsRetryableRequest(true),
 	)
 }
 

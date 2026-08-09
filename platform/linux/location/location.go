@@ -17,7 +17,6 @@ import (
 	"github.com/joshuar/go-hass-agent/config"
 	"github.com/joshuar/go-hass-agent/device"
 	"github.com/joshuar/go-hass-agent/models"
-	"github.com/joshuar/go-hass-agent/models/location"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 	"github.com/joshuar/go-hass-agent/platform/linux"
 )
@@ -148,11 +147,11 @@ func (w *locationWorker) newLocation(ctx context.Context, locationPath string) (
 	accuracy, err := w.getLocationProperty(locationPath, "Accuracy")
 	warnings = errors.Join(warnings, err)
 
-	return location.NewLocation(ctx,
-		location.WithGPSCoords(float32(latitude), float32(longitude)),
-		location.WithGPSAccuracy(int(accuracy)),
-		location.WithSpeed(int(speed)),
-		location.WithAltitude(int(altitude)),
+	return models.NewLocation(ctx,
+		models.WithGPSCoords(float32(latitude), float32(longitude)),
+		models.WithGPSAccuracy(int(accuracy)),
+		models.WithSpeed(int(speed)),
+		models.WithAltitude(int(altitude)),
 	), warnings
 }
 

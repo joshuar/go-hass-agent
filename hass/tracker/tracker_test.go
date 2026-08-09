@@ -11,14 +11,13 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/joshuar/go-hass-agent/models"
-	"github.com/joshuar/go-hass-agent/models/sensor"
 )
 
 func TestTracker_Get(t *testing.T) {
-	mocksensorEntity := sensor.NewSensor(t.Context(),
-		sensor.WithName("Mock sensor.Entity"),
-		sensor.WithID("mock_sensor.Entity"),
-		sensor.WithState("mockValue"),
+	mocksensorEntity := models.NewSensor(t.Context(),
+		models.WithName("Mock sensor.Entity"),
+		models.WithID("mock_sensor.Entity"),
+		models.WithState("mockValue"),
 	)
 
 	mockSensor, err := mocksensorEntity.AsSensor()
@@ -73,10 +72,10 @@ func TestTracker_Get(t *testing.T) {
 }
 
 func TestTracker_SensorList(t *testing.T) {
-	mocksensorEntity := sensor.NewSensor(t.Context(),
-		sensor.WithName("Mock sensor.Entity"),
-		sensor.WithID("mock_sensor.Entity"),
-		sensor.WithState("mockValue"),
+	mocksensorEntity := models.NewSensor(t.Context(),
+		models.WithName("Mock sensor.Entity"),
+		models.WithID("mock_sensor.Entity"),
+		models.WithState("mockValue"),
 	)
 
 	mockSensor, err := mocksensorEntity.AsSensor()
@@ -117,18 +116,18 @@ func TestTracker_SensorList(t *testing.T) {
 }
 
 func TestTracker_Add(t *testing.T) {
-	newEntity := sensor.NewSensor(t.Context(),
-		sensor.WithName("New sensor.Entity"),
-		sensor.WithID("new_sensor.Entity"),
-		sensor.WithState("new"),
+	newEntity := models.NewSensor(t.Context(),
+		models.WithName("New sensor.Entity"),
+		models.WithID("new_sensor.Entity"),
+		models.WithState("new"),
 	)
 	newSensor, err := newEntity.AsSensor()
 	require.NoError(t, err)
 
-	existingEntity := sensor.NewSensor(t.Context(),
-		sensor.WithName("Existing sensor.Entity"),
-		sensor.WithID("existing_sensor.Entity"),
-		sensor.WithState("existing"),
+	existingEntity := models.NewSensor(t.Context(),
+		models.WithName("Existing sensor.Entity"),
+		models.WithID("existing_sensor.Entity"),
+		models.WithState("existing"),
 	)
 
 	existingSensor, err := existingEntity.AsSensor()
@@ -179,10 +178,10 @@ func TestTracker_Add(t *testing.T) {
 }
 
 func TestTracker_Reset(t *testing.T) {
-	mocksensorEntity := sensor.NewSensor(t.Context(),
-		sensor.WithName("Mock sensor.Entity"),
-		sensor.WithID("mock_sensor.Entity"),
-		sensor.WithState("mockValue"),
+	mocksensorEntity := models.NewSensor(t.Context(),
+		models.WithName("Mock sensor.Entity"),
+		models.WithID("mock_sensor.Entity"),
+		models.WithState("mockValue"),
 	)
 
 	mockSensor, err := mocksensorEntity.AsSensor()

@@ -14,7 +14,6 @@ import (
 	"github.com/joshuar/go-hass-agent/hass/api"
 	"github.com/joshuar/go-hass-agent/models"
 	"github.com/joshuar/go-hass-agent/models/class"
-	"github.com/joshuar/go-hass-agent/models/sensor"
 	"github.com/joshuar/go-hass-agent/scheduler"
 )
 
@@ -65,22 +64,22 @@ func (w *ConnectionLatency) Execute(ctx context.Context) error {
 	if resp.Request != nil {
 		info := resp.Request.TraceInfo()
 		// Save the latency info as a connectionLatency models.
-		w.OutCh <- sensor.NewSensor(ctx,
-			sensor.WithName("Connection Latency"),
-			sensor.WithID("connection_latency"),
-			sensor.WithUnits(connectionLatencyUnits),
-			sensor.WithDeviceClass(class.SensorClassDuration),
-			sensor.WithStateClass(class.StateMeasurement),
-			sensor.AsDiagnostic(),
-			sensor.WithIcon("mdi:connection"),
-			sensor.WithState(info.TotalTime.Milliseconds()),
-			sensor.WithAttribute("DNS Lookup Time", info.DNSLookup.Milliseconds()),
-			sensor.WithAttribute("Connection Time", info.ConnTime.Milliseconds()),
-			sensor.WithAttribute("TCP Connection Time", info.TCPConnTime.Milliseconds()),
-			sensor.WithAttribute("TLS Handshake Time", info.TLSHandshake.Milliseconds()),
-			sensor.WithAttribute("Server Time", info.ServerTime.Milliseconds()),
-			sensor.WithAttribute("Response Time", info.ResponseTime.Milliseconds()),
-			sensor.WithAttribute("native_unit_of_measurement", connectionLatencyUnits),
+		w.OutCh <- models.NewSensor(ctx,
+			models.WithName("Connection Latency"),
+			models.WithID("connection_latency"),
+			models.WithUnits(connectionLatencyUnits),
+			models.WithDeviceClass(class.SensorClassDuration),
+			models.WithStateClass(class.StateMeasurement),
+			models.AsDiagnostic(),
+			models.WithIcon("mdi:connection"),
+			models.WithState(info.TotalTime.Milliseconds()),
+			models.WithAttribute("DNS Lookup Time", info.DNSLookup.Milliseconds()),
+			models.WithAttribute("Connection Time", info.ConnTime.Milliseconds()),
+			models.WithAttribute("TCP Connection Time", info.TCPConnTime.Milliseconds()),
+			models.WithAttribute("TLS Handshake Time", info.TLSHandshake.Milliseconds()),
+			models.WithAttribute("Server Time", info.ServerTime.Milliseconds()),
+			models.WithAttribute("Response Time", info.ResponseTime.Milliseconds()),
+			models.WithAttribute("native_unit_of_measurement", connectionLatencyUnits),
 		)
 	}
 

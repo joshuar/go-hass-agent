@@ -21,7 +21,6 @@ import (
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/models"
 	"github.com/joshuar/go-hass-agent/models/class"
-	"github.com/joshuar/go-hass-agent/models/sensor"
 	"github.com/joshuar/go-hass-agent/platform/linux"
 	"github.com/joshuar/go-hass-agent/scheduler"
 )
@@ -245,16 +244,16 @@ func (w *lastActiveWorker) Execute(ctx context.Context) error {
 	lastActive := w.getLastActiveTime()
 	timeSinceActive := time.Since(lastActive)
 
-	w.OutCh <- sensor.NewSensor(ctx,
-		sensor.WithName("Last Active"),
-		sensor.WithID("last_active"),
-		sensor.AsDiagnostic(),
-		sensor.WithDeviceClass(class.SensorClassTimestamp),
-		sensor.WithIcon("mdi:account-clock"),
-		sensor.WithState(lastActive.Format(time.RFC3339)),
-		sensor.WithAttribute("seconds_since_active", int(timeSinceActive.Seconds())),
-		sensor.WithAttribute("minutes_since_active", int(timeSinceActive.Minutes())),
-		sensor.WithDataSourceAttribute("evdev"),
+	w.OutCh <- models.NewSensor(ctx,
+		models.WithName("Last Active"),
+		models.WithID("last_active"),
+		models.AsDiagnostic(),
+		models.WithDeviceClass(class.SensorClassTimestamp),
+		models.WithIcon("mdi:account-clock"),
+		models.WithState(lastActive.Format(time.RFC3339)),
+		models.WithAttribute("seconds_since_active", int(timeSinceActive.Seconds())),
+		models.WithAttribute("minutes_since_active", int(timeSinceActive.Minutes())),
+		models.WithDataSourceAttribute("evdev"),
 	)
 	return nil
 }

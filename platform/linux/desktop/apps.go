@@ -14,7 +14,6 @@ import (
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/models"
 	"github.com/joshuar/go-hass-agent/models/class"
-	"github.com/joshuar/go-hass-agent/models/sensor"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 	"github.com/joshuar/go-hass-agent/platform/linux"
 )
@@ -146,13 +145,13 @@ func (w *appsWorker) generateSensors(ctx context.Context) ([]models.Entity, erro
 		// If the state is 2 this app is running and the currently active app.
 		if state == 2 && w.runningApp != name {
 			w.runningApp = name
-			sensors = append(sensors, sensor.NewSensor(ctx,
-				sensor.WithName(activeAppsName),
-				sensor.WithID(activeAppsID),
-				sensor.AsTypeSensor(),
-				sensor.WithIcon(activeAppsIcon),
-				sensor.WithState(name),
-				sensor.WithDataSourceAttribute(linux.DataSrcDBus),
+			sensors = append(sensors, models.NewSensor(ctx,
+				models.WithName(activeAppsName),
+				models.WithID(activeAppsID),
+				models.AsTypeSensor(),
+				models.WithIcon(activeAppsIcon),
+				models.WithState(name),
+				models.WithDataSourceAttribute(linux.DataSrcDBus),
 			))
 		}
 	}
@@ -160,15 +159,15 @@ func (w *appsWorker) generateSensors(ctx context.Context) ([]models.Entity, erro
 	// Update the running apps sensor.
 	if w.totalRunningApps != len(runningApps) {
 		w.totalRunningApps = len(runningApps)
-		sensors = append(sensors, sensor.NewSensor(ctx,
-			sensor.WithName(runningAppsName),
-			sensor.WithID(runningAppsID),
-			sensor.WithUnits(runningAppsUnits),
-			sensor.WithStateClass(class.StateMeasurement),
-			sensor.WithIcon(runningAppsIcon),
-			sensor.WithState(w.totalRunningApps),
-			sensor.WithDataSourceAttribute(linux.DataSrcDBus),
-			sensor.WithAttribute("apps", runningApps),
+		sensors = append(sensors, models.NewSensor(ctx,
+			models.WithName(runningAppsName),
+			models.WithID(runningAppsID),
+			models.WithUnits(runningAppsUnits),
+			models.WithStateClass(class.StateMeasurement),
+			models.WithIcon(runningAppsIcon),
+			models.WithState(w.totalRunningApps),
+			models.WithDataSourceAttribute(linux.DataSrcDBus),
+			models.WithAttribute("apps", runningApps),
 		))
 	}
 

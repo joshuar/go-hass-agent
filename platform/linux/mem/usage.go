@@ -21,7 +21,6 @@ import (
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/models"
 	"github.com/joshuar/go-hass-agent/models/class"
-	"github.com/joshuar/go-hass-agent/models/sensor"
 	"github.com/joshuar/go-hass-agent/platform/linux"
 	"github.com/joshuar/go-hass-agent/scheduler"
 )
@@ -63,31 +62,31 @@ func newMemSensor(ctx context.Context, id memStatID, stat *memStat) models.Entit
 		value = stat.value
 	}
 
-	return sensor.NewSensor(ctx,
-		sensor.WithName(id.String()),
-		sensor.WithID(strcase.ToSnake(id.String())),
-		sensor.WithUnits(memoryUsageSensorUnits),
-		sensor.WithDeviceClass(class.SensorClassDataSize),
-		sensor.WithStateClass(class.StateTotal),
-		sensor.WithIcon(memorySensorIcon),
-		sensor.WithState(value),
-		sensor.WithDataSourceAttribute(linux.DataSrcProcFS),
-		sensor.WithAttribute("native_unit_of_measurement", memoryUsageSensorUnits),
+	return models.NewSensor(ctx,
+		models.WithName(id.String()),
+		models.WithID(strcase.ToSnake(id.String())),
+		models.WithUnits(memoryUsageSensorUnits),
+		models.WithDeviceClass(class.SensorClassDataSize),
+		models.WithStateClass(class.StateTotal),
+		models.WithIcon(memorySensorIcon),
+		models.WithState(value),
+		models.WithDataSourceAttribute(linux.DataSrcProcFS),
+		models.WithAttribute("native_unit_of_measurement", memoryUsageSensorUnits),
 	)
 }
 
 // newGpuMemSensor generates a memorySensor for a gpu memory stat.
 func newGpuMemSensor(ctx context.Context, id gpuMemStatID, stat uint64) models.Entity {
-	return sensor.NewSensor(ctx,
-		sensor.WithName(id.String()),
-		sensor.WithID(strcase.ToSnake(id.String())),
-		sensor.WithUnits(memoryUsageSensorUnits),
-		sensor.WithDeviceClass(class.SensorClassDataSize),
-		sensor.WithStateClass(class.StateTotal),
-		sensor.WithIcon(memorySensorIcon),
-		sensor.WithState(stat),
-		sensor.WithDataSourceAttribute(linux.DataSrcSysFS),
-		sensor.WithAttribute("native_unit_of_measurement", memoryUsageSensorUnits),
+	return models.NewSensor(ctx,
+		models.WithName(id.String()),
+		models.WithID(strcase.ToSnake(id.String())),
+		models.WithUnits(memoryUsageSensorUnits),
+		models.WithDeviceClass(class.SensorClassDataSize),
+		models.WithStateClass(class.StateTotal),
+		models.WithIcon(memorySensorIcon),
+		models.WithState(stat),
+		models.WithDataSourceAttribute(linux.DataSrcSysFS),
+		models.WithAttribute("native_unit_of_measurement", memoryUsageSensorUnits),
 	)
 }
 
@@ -101,15 +100,15 @@ func newGpuMemSensorPc(ctx context.Context, name string, value, total uint64) mo
 		valuePc = math.Round(float64(value)/float64(total)*100/0.05) * 0.05 //nolint:mnd // %
 	}
 
-	return sensor.NewSensor(ctx,
-		sensor.WithName(name),
-		sensor.WithID(strcase.ToSnake(name)),
-		sensor.WithUnits(memoryUsageSensorPcUnits),
-		sensor.WithStateClass(class.StateTotal),
-		sensor.WithIcon(memorySensorIcon),
-		sensor.WithState(valuePc),
-		sensor.WithDataSourceAttribute(linux.DataSrcSysFS),
-		sensor.WithAttribute("native_unit_of_measurement", memoryUsageSensorPcUnits),
+	return models.NewSensor(ctx,
+		models.WithName(name),
+		models.WithID(strcase.ToSnake(name)),
+		models.WithUnits(memoryUsageSensorPcUnits),
+		models.WithStateClass(class.StateTotal),
+		models.WithIcon(memorySensorIcon),
+		models.WithState(valuePc),
+		models.WithDataSourceAttribute(linux.DataSrcSysFS),
+		models.WithAttribute("native_unit_of_measurement", memoryUsageSensorPcUnits),
 	)
 }
 
@@ -123,15 +122,15 @@ func newMemSensorPc(ctx context.Context, name string, value, total uint64) model
 		valuePc = math.Round(float64(value)/float64(total)*100/0.05) * 0.05 //nolint:mnd // %
 	}
 
-	return sensor.NewSensor(ctx,
-		sensor.WithName(name),
-		sensor.WithID(strcase.ToSnake(name)),
-		sensor.WithUnits(memoryUsageSensorPcUnits),
-		sensor.WithStateClass(class.StateTotal),
-		sensor.WithIcon(memorySensorIcon),
-		sensor.WithState(valuePc),
-		sensor.WithDataSourceAttribute(linux.DataSrcProcFS),
-		sensor.WithAttribute("native_unit_of_measurement", memoryUsageSensorPcUnits),
+	return models.NewSensor(ctx,
+		models.WithName(name),
+		models.WithID(strcase.ToSnake(name)),
+		models.WithUnits(memoryUsageSensorPcUnits),
+		models.WithStateClass(class.StateTotal),
+		models.WithIcon(memorySensorIcon),
+		models.WithState(valuePc),
+		models.WithDataSourceAttribute(linux.DataSrcProcFS),
+		models.WithAttribute("native_unit_of_measurement", memoryUsageSensorPcUnits),
 	)
 }
 

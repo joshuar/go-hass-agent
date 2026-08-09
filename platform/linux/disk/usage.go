@@ -25,7 +25,6 @@ import (
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/models"
 	"github.com/joshuar/go-hass-agent/models/class"
-	"github.com/joshuar/go-hass-agent/models/sensor"
 	"github.com/joshuar/go-hass-agent/platform/linux"
 	"github.com/joshuar/go-hass-agent/scheduler"
 )
@@ -160,14 +159,14 @@ func newDiskUsageSensor(ctx context.Context, mount *mount, value float64) models
 		id = "mountpoint" + strings.ReplaceAll(mount.mountpoint, "/", "_")
 	}
 
-	return sensor.NewSensor(ctx,
-		sensor.WithName("Mountpoint "+mount.mountpoint+" Usage"),
-		sensor.WithID(id),
-		sensor.WithUnits(diskUsageSensorUnits),
-		sensor.WithStateClass(class.StateTotal),
-		sensor.WithIcon(diskUsageSensorIcon),
-		sensor.WithState(math.Round(value/0.05)*0.05),
-		sensor.WithAttributes(mount.attributes),
+	return models.NewSensor(ctx,
+		models.WithName("Mountpoint "+mount.mountpoint+" Usage"),
+		models.WithID(id),
+		models.WithUnits(diskUsageSensorUnits),
+		models.WithStateClass(class.StateTotal),
+		models.WithIcon(diskUsageSensorIcon),
+		models.WithState(math.Round(value/0.05)*0.05),
+		models.WithAttributes(mount.attributes),
 	)
 }
 

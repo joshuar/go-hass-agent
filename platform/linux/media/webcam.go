@@ -11,7 +11,6 @@ import (
 
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/models"
-	"github.com/joshuar/go-hass-agent/models/sensor"
 	"github.com/joshuar/go-hass-agent/pkg/linux/pipewire"
 	"github.com/joshuar/go-hass-agent/pkg/linux/webcam"
 	"github.com/joshuar/go-hass-agent/platform/linux"
@@ -63,13 +62,13 @@ func (w *webcamUsageWorker) Start(ctx context.Context) (<-chan models.Entity, er
 
 		for event := range w.pwEventChan {
 			w.parsePWState(*event.Info.State)
-			outCh <- sensor.NewSensor(ctx,
-				sensor.WithName("Webcam In Use"),
-				sensor.WithID("webcam_in_use"),
-				sensor.AsTypeBinarySensor(),
-				sensor.WithIcon(webcamUseIcon(w.inUse.Load())),
-				sensor.WithState(w.inUse.Load()),
-				sensor.WithDataSourceAttribute(linux.DataSrcSysFS),
+			outCh <- models.NewSensor(ctx,
+				models.WithName("Webcam In Use"),
+				models.WithID("webcam_in_use"),
+				models.AsTypeBinarySensor(),
+				models.WithIcon(webcamUseIcon(w.inUse.Load())),
+				models.WithState(w.inUse.Load()),
+				models.WithDataSourceAttribute(linux.DataSrcSysFS),
 			)
 		}
 	}()
@@ -78,13 +77,13 @@ func (w *webcamUsageWorker) Start(ctx context.Context) (<-chan models.Entity, er
 	go func() {
 		for event := range w.inMonitor.Run(ctx) {
 			w.parseInotifyEvent(event)
-			outCh <- sensor.NewSensor(ctx,
-				sensor.WithName("Webcam In Use"),
-				sensor.WithID("webcam_in_use"),
-				sensor.AsTypeBinarySensor(),
-				sensor.WithIcon(webcamUseIcon(w.inUse.Load())),
-				sensor.WithState(w.inUse.Load()),
-				sensor.WithDataSourceAttribute(linux.DataSrcSysFS),
+			outCh <- models.NewSensor(ctx,
+				models.WithName("Webcam In Use"),
+				models.WithID("webcam_in_use"),
+				models.AsTypeBinarySensor(),
+				models.WithIcon(webcamUseIcon(w.inUse.Load())),
+				models.WithState(w.inUse.Load()),
+				models.WithDataSourceAttribute(linux.DataSrcSysFS),
 			)
 		}
 	}()

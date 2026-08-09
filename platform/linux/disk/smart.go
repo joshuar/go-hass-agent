@@ -20,7 +20,6 @@ import (
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/models"
 	"github.com/joshuar/go-hass-agent/models/class"
-	"github.com/joshuar/go-hass-agent/models/sensor"
 	"github.com/joshuar/go-hass-agent/platform/linux"
 	"github.com/joshuar/go-hass-agent/scheduler"
 
@@ -475,15 +474,15 @@ func (scsi *scsiSmartDetails) Attributes() map[string]any {
 }
 
 func newSmartSensor(ctx context.Context, data smartData) models.Entity {
-	return sensor.NewSensor(ctx,
-		sensor.WithName(data.ID()+" SMART Status"),
-		sensor.WithID(data.ID()+"_smart_status"),
-		sensor.AsTypeBinarySensor(),
-		sensor.WithDeviceClass(class.BinaryClassProblem),
-		sensor.AsDiagnostic(),
-		sensor.WithIcon("mdi:harddisk"),
-		sensor.WithState(data.Problem()),
-		sensor.WithAttributes(data.Attributes()),
+	return models.NewSensor(ctx,
+		models.WithName(data.ID()+" SMART Status"),
+		models.WithID(data.ID()+"_smart_status"),
+		models.AsTypeBinarySensor(),
+		models.WithDeviceClass(class.BinaryClassProblem),
+		models.AsDiagnostic(),
+		models.WithIcon("mdi:harddisk"),
+		models.WithState(data.Problem()),
+		models.WithAttributes(data.Attributes()),
 	)
 }
 

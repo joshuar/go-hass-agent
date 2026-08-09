@@ -9,7 +9,6 @@ import (
 
 	"github.com/joshuar/go-hass-agent/config"
 	"github.com/joshuar/go-hass-agent/models"
-	"github.com/joshuar/go-hass-agent/models/sensor"
 )
 
 const (
@@ -37,12 +36,12 @@ func (w *Version) Start(ctx context.Context) (<-chan models.Entity, error) {
 	go func() {
 		defer close(sensorCh)
 
-		sensorCh <- sensor.NewSensor(ctx,
-			sensor.WithName("Go Hass Agent Version"),
-			sensor.WithID("agent_version"),
-			sensor.AsDiagnostic(),
-			sensor.WithIcon("mdi:face-agent"),
-			sensor.WithState(config.AppVersion),
+		sensorCh <- models.NewSensor(ctx,
+			models.WithName("Go Hass Agent Version"),
+			models.WithID("agent_version"),
+			models.AsDiagnostic(),
+			models.WithIcon("mdi:face-agent"),
+			models.WithState(config.AppVersion),
 		)
 	}()
 

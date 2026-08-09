@@ -21,7 +21,6 @@ import (
 	"github.com/joshuar/go-hass-agent/logging"
 	"github.com/joshuar/go-hass-agent/models"
 	"github.com/joshuar/go-hass-agent/models/class"
-	"github.com/joshuar/go-hass-agent/models/sensor"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 	"github.com/joshuar/go-hass-agent/platform/linux"
 )
@@ -257,12 +256,12 @@ func newConnectionState(bus *dbusx.Bus, connectionPath, connectionName string) (
 }
 
 func (c *connectionState) createSensor(ctx context.Context) models.Entity {
-	return sensor.NewSensor(ctx,
-		sensor.WithName(c.name+" Connection State"),
-		sensor.WithID(strcase.ToSnake(c.name)+"_connection_state"),
-		sensor.WithDataSourceAttribute(linux.DataSrcDBus),
-		sensor.WithState(c.state),
-		sensor.WithIcon(c.icon),
+	return models.NewSensor(ctx,
+		models.WithName(c.name+" Connection State"),
+		models.WithID(strcase.ToSnake(c.name)+"_connection_state"),
+		models.WithDataSourceAttribute(linux.DataSrcDBus),
+		models.WithState(c.state),
+		models.WithIcon(c.icon),
 	)
 }
 
@@ -323,15 +322,15 @@ func newConnection(ctx context.Context, bus *dbusx.Bus, path dbus.ObjectPath) (*
 //nolint:gocognit
 func (c *connection) monitorWired(ctx context.Context, bus *dbusx.Bus) <-chan models.Entity {
 	var (
-		sensor *connectionState
-		err    error
+		connection *connectionState
+		err        error
 	)
 
 	sensorCh := make(chan models.Entity)
 	monitorCtx, monitorCancel := context.WithCancel(ctx)
 
 	// Create sensors for monitored properties.
-	sensor, err = newConnectionState(bus, string(c.path), c.name)
+	connection, err = newConnectionState(bus, string(c.path), c.name)
 	if err != nil {
 		slogctx.FromCtx(ctx).Debug("Could not create wired connection sensor.",
 			slog.String("connection", c.name),
@@ -340,7 +339,7 @@ func (c *connection) monitorWired(ctx context.Context, bus *dbusx.Bus) <-chan mo
 
 	// Send initial states as sensors
 	go func() {
-		sensorCh <- sensor.createSensor(ctx)
+		sensorCh <- connection.createSensor(ctx)
 	}()
 
 	triggerCh, err := dbusx.NewWatch(
@@ -380,13 +379,13 @@ func (c *connection) monitorWired(ctx context.Context, bus *dbusx.Bus) <-chan mo
 					switch {
 					case prop == statePropName && props.Interface == dbusNMActiveConnIntr: // State changed.
 						if state, err := dbusx.VariantToValue[connState](value); err == nil {
-							sensor.state = state.String()
-							sensor.icon = connIcon(state).String()
-							sensorCh <- sensor.createSensor(ctx)
+							connection.state = state.String()
+							connection.icon = connIcon(state).String()
+							sensorCh <- connection.createSensor(ctx)
 						} else if state, err := dbusx.VariantToValue[uint32](value); err == nil {
-							sensor.state = connState(state).String()
-							sensor.icon = connIcon(state).String()
-							sensorCh <- sensor.createSensor(ctx)
+							connection.state = connState(state).String()
+							connection.icon = connIcon(state).String()
+							sensorCh <- connection.createSensor(ctx)
 						} else {
 							slogctx.FromCtx(ctx).Warn("Could not update wired connection state sensor.",
 								slog.String("connection", c.name),
@@ -404,7 +403,7 @@ func (c *connection) monitorWired(ctx context.Context, bus *dbusx.Bus) <-chan mo
 				}
 			}
 
-			if sensor.state == connOffline.String() {
+			if connection.state == connOffline.String() {
 				break
 			}
 		}
@@ -694,15 +693,15 @@ func newWifiSensor(ctx context.Context, prop string, value any) models.Entity {
 		icon = generateStrIcon(value)
 	}
 
-	return sensor.NewSensor(ctx,
-		sensor.WithName(name),
-		sensor.WithID(id),
-		sensor.AsDiagnostic(),
-		sensor.WithIcon(icon),
-		sensor.WithState(generateState(prop, value)),
-		sensor.WithDeviceClass(deviceClass),
-		sensor.WithStateClass(stateClass),
-		sensor.WithUnits(units),
+	return models.NewSensor(ctx,
+		models.WithName(name),
+		models.WithID(id),
+		models.AsDiagnostic(),
+		models.WithIcon(icon),
+		models.WithState(generateState(prop, value)),
+		models.WithDeviceClass(deviceClass),
+		models.WithStateClass(stateClass),
+		models.WithUnits(units),
 	)
 }
 

@@ -14,7 +14,6 @@ import (
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/models"
 	"github.com/joshuar/go-hass-agent/models/class"
-	"github.com/joshuar/go-hass-agent/models/sensor"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 	"github.com/joshuar/go-hass-agent/platform/linux"
 	"github.com/joshuar/go-hass-agent/scheduler"
@@ -120,15 +119,15 @@ func (w *problemsWorker) generateEntity(ctx context.Context, problems []string) 
 		problemDetails[problem] = parseProblem(details)
 	}
 
-	return sensor.NewSensor(ctx,
-		sensor.WithName("Problems"),
-		sensor.WithID("problems"),
-		sensor.WithStateClass(class.StateMeasurement),
-		sensor.WithUnits("problems"),
-		sensor.WithIcon("mdi:alert"),
-		sensor.WithState(len(problems)),
-		sensor.WithDataSourceAttribute(linux.DataSrcDBus),
-		sensor.WithAttribute("problem_list", problemDetails),
+	return models.NewSensor(ctx,
+		models.WithName("Problems"),
+		models.WithID("problems"),
+		models.WithStateClass(class.StateMeasurement),
+		models.WithUnits("problems"),
+		models.WithIcon("mdi:alert"),
+		models.WithState(len(problems)),
+		models.WithDataSourceAttribute(linux.DataSrcDBus),
+		models.WithAttribute("problem_list", problemDetails),
 	)
 }
 

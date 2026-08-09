@@ -11,6 +11,23 @@ import (
 	"github.com/joshuar/go-hass-agent/validation"
 )
 
+// NewEvent creates an event entity with the given options.
+func NewEvent(eventType string, eventData map[string]any) (Entity, error) {
+	event := Event{
+		Type: eventType,
+		Data: eventData,
+	}
+
+	entity := Entity{}
+
+	err := entity.FromEvent(event)
+	if err != nil {
+		return entity, fmt.Errorf("could not generate event entity: %w", err)
+	}
+
+	return entity, nil
+}
+
 // String returns a string representation of an event.
 func (e *Event) String() string {
 	var b strings.Builder

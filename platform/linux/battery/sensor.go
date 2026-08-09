@@ -14,7 +14,6 @@ import (
 
 	"github.com/joshuar/go-hass-agent/models"
 	"github.com/joshuar/go-hass-agent/models/class"
-	"github.com/joshuar/go-hass-agent/models/sensor"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 	"github.com/joshuar/go-hass-agent/platform/linux"
 )
@@ -70,16 +69,16 @@ func newBatterySensor(
 		icon = batteryIcon
 	}
 
-	return sensor.NewSensor(ctx,
-		sensor.WithName(name),
-		sensor.WithID(id),
-		sensor.WithDeviceClass(deviceClass),
-		sensor.WithStateClass(stateClass),
-		sensor.WithUnits(units),
-		sensor.AsDiagnostic(),
-		sensor.WithIcon(icon),
-		sensor.WithState(generateSensorState(sensorType, value.Value())),
-		sensor.WithAttributes(generateSensorAttributes(sensorType, battery)),
+	return models.NewSensor(ctx,
+		models.WithName(name),
+		models.WithID(id),
+		models.WithDeviceClass(deviceClass),
+		models.WithStateClass(stateClass),
+		models.WithUnits(units),
+		models.AsDiagnostic(),
+		models.WithIcon(icon),
+		models.WithState(generateSensorState(sensorType, value.Value())),
+		models.WithAttributes(generateSensorAttributes(sensorType, battery)),
 	)
 }
 

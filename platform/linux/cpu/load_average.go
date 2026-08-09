@@ -18,7 +18,6 @@ import (
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/models"
 	"github.com/joshuar/go-hass-agent/models/class"
-	"github.com/joshuar/go-hass-agent/models/sensor"
 	"github.com/joshuar/go-hass-agent/platform/linux"
 	"github.com/joshuar/go-hass-agent/scheduler"
 )
@@ -65,14 +64,14 @@ func (w *loadAvgsWorker) Execute(ctx context.Context) error {
 	}
 
 	for name, value := range loadAvgs {
-		w.OutCh <- sensor.NewSensor(ctx,
-			sensor.WithName(name),
-			sensor.WithID(strcase.ToSnake(name)),
-			sensor.WithUnits(loadAvgUnit),
-			sensor.WithStateClass(class.StateMeasurement),
-			sensor.WithIcon(loadAvgIcon),
-			sensor.WithState(value),
-			sensor.WithDataSourceAttribute(linux.DataSrcProcFS),
+		w.OutCh <- models.NewSensor(ctx,
+			models.WithName(name),
+			models.WithID(strcase.ToSnake(name)),
+			models.WithUnits(loadAvgUnit),
+			models.WithStateClass(class.StateMeasurement),
+			models.WithIcon(loadAvgIcon),
+			models.WithState(value),
+			models.WithDataSourceAttribute(linux.DataSrcProcFS),
 		)
 	}
 

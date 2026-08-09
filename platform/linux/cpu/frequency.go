@@ -21,7 +21,6 @@ import (
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/models"
 	"github.com/joshuar/go-hass-agent/models/class"
-	"github.com/joshuar/go-hass-agent/models/sensor"
 	"github.com/joshuar/go-hass-agent/platform/linux"
 	"github.com/joshuar/go-hass-agent/scheduler"
 )
@@ -109,17 +108,17 @@ func newCPUFreqSensor(ctx context.Context, id string) models.Entity {
 	info := getCPUFreqs(ctx, id)
 	num := strings.TrimPrefix(info.cpu, "cpu")
 
-	return sensor.NewSensor(ctx,
-		sensor.WithName("Core "+num+" Frequency"),
-		sensor.WithID("cpufreq_core"+num+"_frequency"),
-		sensor.AsTypeSensor(),
-		sensor.WithUnits(cpuFreqUnits),
-		sensor.WithDeviceClass(class.SensorClassFrequency),
-		sensor.WithStateClass(class.StateMeasurement),
-		sensor.AsDiagnostic(),
-		sensor.WithIcon(cpuFreqIcon),
-		sensor.WithState(info.freq),
-		sensor.WithAttributes(models.Attributes{
+	return models.NewSensor(ctx,
+		models.WithName("Core "+num+" Frequency"),
+		models.WithID("cpufreq_core"+num+"_frequency"),
+		models.AsTypeSensor(),
+		models.WithUnits(cpuFreqUnits),
+		models.WithDeviceClass(class.SensorClassFrequency),
+		models.WithStateClass(class.StateMeasurement),
+		models.AsDiagnostic(),
+		models.WithIcon(cpuFreqIcon),
+		models.WithState(info.freq),
+		models.WithAttributes(models.Attributes{
 			"governor":                   info.governor,
 			"driver":                     info.driver,
 			"data_source":                linux.DataSrcSysFS,

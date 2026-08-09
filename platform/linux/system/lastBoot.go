@@ -15,7 +15,6 @@ import (
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/models"
 	"github.com/joshuar/go-hass-agent/models/class"
-	"github.com/joshuar/go-hass-agent/models/sensor"
 	"github.com/joshuar/go-hass-agent/platform/linux"
 )
 
@@ -68,14 +67,14 @@ func (w *lastBootWorker) Start(ctx context.Context) (<-chan models.Entity, error
 }
 
 func (w *lastBootWorker) Execute(ctx context.Context) error {
-	w.OutCh <- sensor.NewSensor(ctx,
-		sensor.WithName("Last Reboot"),
-		sensor.WithID("last_reboot"),
-		sensor.AsDiagnostic(),
-		sensor.WithDeviceClass(class.SensorClassTimestamp),
-		sensor.WithIcon("mdi:restart"),
-		sensor.WithState(w.lastBoot.Format(time.RFC3339)),
-		sensor.WithDataSourceAttribute(linux.ProcFSRoot),
+	w.OutCh <- models.NewSensor(ctx,
+		models.WithName("Last Reboot"),
+		models.WithID("last_reboot"),
+		models.AsDiagnostic(),
+		models.WithDeviceClass(class.SensorClassTimestamp),
+		models.WithIcon("mdi:restart"),
+		models.WithState(w.lastBoot.Format(time.RFC3339)),
+		models.WithDataSourceAttribute(linux.ProcFSRoot),
 	)
 	return nil
 }

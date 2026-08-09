@@ -21,7 +21,6 @@ import (
 
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/models"
-	"github.com/joshuar/go-hass-agent/models/sensor"
 	"github.com/joshuar/go-hass-agent/platform/linux"
 )
 
@@ -117,23 +116,23 @@ func (w *activityWorker) Start(ctx context.Context) (<-chan models.Entity, error
 			case <-w.activity:
 				if !activityDetected.Load() {
 					activityDetected.Store(true)
-					sensorCh <- sensor.NewSensor(ctx,
-						sensor.WithName("User Activity"),
-						sensor.WithID("user_activity"),
-						sensor.AsTypeBinarySensor(),
-						sensor.WithIcon("mdi:bell-ring"),
-						sensor.WithState(true),
+					sensorCh <- models.NewSensor(ctx,
+						models.WithName("User Activity"),
+						models.WithID("user_activity"),
+						models.AsTypeBinarySensor(),
+						models.WithIcon("mdi:bell-ring"),
+						models.WithState(true),
 					)
 				}
 			case <-time.After(idleTimeout):
 				if activityDetected.Load() {
 					activityDetected.Store(false)
-					sensorCh <- sensor.NewSensor(ctx,
-						sensor.WithName("User Activity"),
-						sensor.WithID("user_activity"),
-						sensor.AsTypeBinarySensor(),
-						sensor.WithIcon("mdi:bell-off"),
-						sensor.WithState(false),
+					sensorCh <- models.NewSensor(ctx,
+						models.WithName("User Activity"),
+						models.WithID("user_activity"),
+						models.AsTypeBinarySensor(),
+						models.WithIcon("mdi:bell-off"),
+						models.WithState(false),
 					)
 				}
 			}

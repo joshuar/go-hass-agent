@@ -16,7 +16,6 @@ import (
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/models"
 	"github.com/joshuar/go-hass-agent/models/class"
-	"github.com/joshuar/go-hass-agent/models/sensor"
 	"github.com/joshuar/go-hass-agent/pkg/linux/hwmon"
 	"github.com/joshuar/go-hass-agent/platform/linux"
 	"github.com/joshuar/go-hass-agent/scheduler"
@@ -51,7 +50,7 @@ func newHWSensor(ctx context.Context, details *hwmon.Sensor) models.Entity {
 		icon             string
 		deviceClass      class.SensorDeviceClass
 		stateClass       class.SensorStateClass
-		sensorTypeOption sensor.Option
+		sensorTypeOption models.SensorOption
 	)
 
 	switch details.MonitorType {
@@ -73,22 +72,22 @@ func newHWSensor(ctx context.Context, details *hwmon.Sensor) models.Entity {
 	}
 
 	if details.MonitorType == hwmon.Alarm || details.MonitorType == hwmon.Intrusion {
-		sensorTypeOption = sensor.AsTypeBinarySensor()
+		sensorTypeOption = models.AsTypeBinarySensor()
 	} else {
-		sensorTypeOption = sensor.AsTypeSensor()
+		sensorTypeOption = models.AsTypeSensor()
 	}
 
-	return sensor.NewSensor(ctx,
-		sensor.WithName(details.Name()),
-		sensor.WithID(details.ID()),
-		sensor.WithDeviceClass(deviceClass),
-		sensor.AsDiagnostic(),
+	return models.NewSensor(ctx,
+		models.WithName(details.Name()),
+		models.WithID(details.ID()),
+		models.WithDeviceClass(deviceClass),
+		models.AsDiagnostic(),
 		sensorTypeOption,
-		sensor.WithUnits(details.Units()),
-		sensor.WithIcon(icon),
-		sensor.WithState(details.Value()),
-		sensor.WithAttributes(hwmonSensorAttributes(details)),
-		sensor.WithStateClass(stateClass),
+		models.WithUnits(details.Units()),
+		models.WithIcon(icon),
+		models.WithState(details.Value()),
+		models.WithAttributes(hwmonSensorAttributes(details)),
+		models.WithStateClass(stateClass),
 	)
 }
 

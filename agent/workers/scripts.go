@@ -25,7 +25,6 @@ import (
 	"github.com/joshuar/go-hass-agent/config"
 	"github.com/joshuar/go-hass-agent/models"
 	"github.com/joshuar/go-hass-agent/models/class"
-	"github.com/joshuar/go-hass-agent/models/sensor"
 	"github.com/joshuar/go-hass-agent/scheduler"
 )
 
@@ -211,24 +210,24 @@ type ScriptSensor struct {
 }
 
 func scriptToEntity(ctx context.Context, script ScriptSensor) models.Entity {
-	var typeOption sensor.Option
+	var typeOption models.SensorOption
 
 	switch script.SensorStateType {
 	case "binary":
-		typeOption = sensor.AsTypeBinarySensor()
+		typeOption = models.AsTypeBinarySensor()
 	default:
-		typeOption = sensor.AsTypeSensor()
+		typeOption = models.AsTypeSensor()
 	}
 
-	return sensor.NewSensor(ctx,
-		sensor.WithName(script.SensorName),
-		sensor.WithID(strcase.ToSnake(script.SensorName)),
-		sensor.WithUnits(script.SensorUnits),
-		sensor.WithDeviceClass(script.DeviceClass()),
-		sensor.WithStateClass(script.StateClass()),
-		sensor.WithIcon(script.Icon()),
-		sensor.WithAttributes(script.Attributes()),
-		sensor.WithState(script.SensorState),
+	return models.NewSensor(ctx,
+		models.WithName(script.SensorName),
+		models.WithID(strcase.ToSnake(script.SensorName)),
+		models.WithUnits(script.SensorUnits),
+		models.WithDeviceClass(script.DeviceClass()),
+		models.WithStateClass(script.StateClass()),
+		models.WithIcon(script.Icon()),
+		models.WithAttributes(script.Attributes()),
+		models.WithState(script.SensorState),
 		typeOption,
 	)
 }
