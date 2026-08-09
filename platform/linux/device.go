@@ -36,9 +36,7 @@ func findPortal(ctx context.Context) (string, error) {
 		return cfg.Portal, nil
 	}
 
-	desktop := os.Getenv("XDG_CURRENT_DESKTOP")
-
-	switch {
+	switch desktop := os.Getenv("XDG_CURRENT_DESKTOP"); {
 	case strings.Contains(desktop, "KDE"):
 		return "org.freedesktop.impl.portal.desktop.kde", nil
 	case strings.Contains(desktop, "GNOME"):
@@ -73,8 +71,7 @@ func getBootTime() (time.Time, error) {
 	if err != nil {
 		return time.Now(), fmt.Errorf("unable to read uptime: %w", err)
 	}
-
-	defer data.Close() //nolint:errcheck
+	defer data.Close()
 
 	line := bufio.NewScanner(data)
 	line.Split(bufio.ScanWords)
@@ -88,7 +85,7 @@ func getBootTime() (time.Time, error) {
 		return time.Now(), ErrUptimeInvalid
 	}
 
-	uptime := time.Duration(uptimeValue * 1000000000) //nolint:mnd
+	uptime := time.Duration(uptimeValue * 1000000000)
 
 	return time.Now().Add(-1 * uptime), nil
 }

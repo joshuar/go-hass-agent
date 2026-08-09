@@ -51,8 +51,7 @@ type Config struct {
 
 func NewContext(ctx context.Context) context.Context {
 	// Load the general Linux config values.
-	err := config.Load("linux", &cfg)
-	if err != nil {
+	if err := config.Load("linux", &cfg); err != nil {
 		slog.Warn("Unable to load linux config from preferences.",
 			slog.Any("error", err),
 		)
