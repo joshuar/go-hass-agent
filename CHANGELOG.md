@@ -1,5 +1,18 @@
 # Changelog
 
+## [14.15.1](https://github.com/joshuar/go-hass-agent/compare/v14.15.0...v14.15.1) (2026-08-09)
+
+
+### Bug Fixes
+
+* **cpu:** guard the usage worker's reading maps ([4ad1c07](https://github.com/joshuar/go-hass-agent/commit/4ad1c07fc637e3cbfcf109935df0190b03c9a781))
+* **cpu:** guard the usage worker's reading maps ([5b70152](https://github.com/joshuar/go-hass-agent/commit/5b70152ae8273028ca5ad041e4b5d0fe562c6f3a))
+
+
+### Performance Improvements
+
+* **models:** ⚡ more efficient message string generation ([9bed8a5](https://github.com/joshuar/go-hass-agent/commit/9bed8a533250ec997e46e044198889d1b3662fdd))
+
 ## [14.15.0](https://github.com/joshuar/go-hass-agent/compare/v14.14.1...v14.15.0) (2026-07-25)
 
 
