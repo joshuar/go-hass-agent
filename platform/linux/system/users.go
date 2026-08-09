@@ -181,7 +181,7 @@ func NewUserSessionEventsWorker(ctx context.Context) (workers.EntityWorker, erro
 	}
 
 	for session := range slices.Values(currentSessions) {
-		if s, ok := session[4].(string); ok {
+		if s, valid := session[4].(string); valid {
 			worker.trackSession(s)
 		}
 	}

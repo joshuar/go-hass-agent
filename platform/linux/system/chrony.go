@@ -75,7 +75,7 @@ func NewChronyWorker(_ context.Context) (workers.EntityWorker, error) {
 
 func (w *chronyWorker) Execute(ctx context.Context) error {
 	// Get chrony tracking stats via chronyc.
-	stats, err := w.getChronyTrackingStats()
+	stats, err := w.getChronyTrackingStats(ctx)
 	if err != nil {
 		return fmt.Errorf("could not retrieve chrony stats: %w", err)
 	}
@@ -105,16 +105,15 @@ func (w *chronyWorker) Start(ctx context.Context) (<-chan models.Entity, error) 
 
 // getChronyTrackingStats executes chronyc, parsing its output and returning the
 // individual stats in a map.
-func (w *chronyWorker) getChronyTrackingStats() (map[string]string, error) {
-	chronycOutput, err := exec.Command(w.chronycPath, "-n", "tracking").Output()
+func (w *chronyWorker) getChronyTrackingStats(ctx context.Context) (map[string]string, error) {
+	chronycOutput, err := exec.CommandContext(ctx, w.chronycPath, "-n", "tracking").Output() // #nosec G204
 	if err != nil {
 		return nil, fmt.Errorf("failed to run chronyc: %w", err)
 	}
 
 	stats := make(map[string]string)
 
-	lines := bufio.NewScanner(bytes.NewBuffer(chronycOutput))
-	for lines.Scan() {
+	for lines := bufio.NewScanner(bytes.NewBuffer(chronycOutput)); lines.Scan(); {
 		value := strings.Split(lines.Text(), ":")
 		statName := strings.TrimSpace(value[0])
 		statValue := strings.TrimSpace(value[1])
@@ -132,9 +131,7 @@ func newChronyOffsetSensor(ctx context.Context, stats map[string]string) models.
 
 	// Try to parse the value into a float. If failed, use the string value.
 	valueArr := strings.Split(stats[sensorStat], " ")
-	valueParsed, err := strconv.ParseFloat(valueArr[0], 64)
-
-	if err != nil {
+	if valueParsed, err := strconv.ParseFloat(valueArr[0], 64); err != nil {
 		value = valueArr[0]
 	} else {
 		value = valueParsed

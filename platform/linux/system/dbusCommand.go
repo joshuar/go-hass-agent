@@ -87,8 +87,8 @@ func NewDBusCommandSubscription(ctx context.Context, device *mqtthass.Device) (*
 					return
 				}
 				// Check which bus type was requested.
-				bus, ok := busMap[dbusMsg.Bus]
-				if !ok {
+				bus, busOk := busMap[dbusMsg.Bus]
+				if !busOk {
 					logger.Error("Unsupported D-Bus type.")
 
 					return

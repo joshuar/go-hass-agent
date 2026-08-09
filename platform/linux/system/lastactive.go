@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -150,7 +151,7 @@ func initInputDevices(ctx context.Context) ([]*evdev.InputDevice, error) {
 		hasPointer := false
 
 		// Check for keyboard capabilities (EV_KEY events)
-		for _, evType := range capableTypes {
+		for evType := range slices.Values(capableTypes) {
 			if evType == evdev.EV_KEY {
 				// Check if there are actual key events (keyboards have many, mice have few)
 				if keyCaps := device.CapableEvents(evdev.EV_KEY); len(keyCaps) > minKeyboardKeys {
@@ -167,7 +168,7 @@ func initInputDevices(ctx context.Context) ([]*evdev.InputDevice, error) {
 			inputDevices = append(inputDevices, device)
 			deviceCount++
 		} else {
-			device.Close()
+			device.Close() // #nosec G104
 		}
 	}
 
@@ -195,7 +196,7 @@ func (w *lastActiveWorker) monitorInputDevices(ctx context.Context) {
 					return
 				default:
 					// Read input event
-					ev, err := dev.ReadOne()
+					event, err := dev.ReadOne()
 					if err != nil {
 						// Check if it's just an error from closed device
 						if !errors.Is(err, os.ErrClosed) {
@@ -205,7 +206,7 @@ func (w *lastActiveWorker) monitorInputDevices(ctx context.Context) {
 					}
 
 					// Ignore sync events (they're just markers, not actual input)
-					if ev.Type == evdev.EV_SYN {
+					if event.Type == evdev.EV_SYN {
 						continue
 					}
 

@@ -140,15 +140,15 @@ func (w *problemsWorker) getProblems() ([]string, error) {
 }
 
 func (w *problemsWorker) getProblemDetails(problem string) (map[string]string, error) {
-	if details, err := dbusx.GetData[map[string]string](w.bus,
+	details, err := dbusx.GetData[map[string]string](w.bus,
 		dBusProblemsDest,
 		dBusProblemIntr,
 		dBusProblemIntr+".GetInfo", problem, []string{"time", "count", "package", "reason"},
-	); err != nil {
+	)
+	if err != nil {
 		return nil, err
-	} else {
-		return details, nil
 	}
+	return details, nil
 }
 
 func parseProblem(details map[string]string) map[string]any {
