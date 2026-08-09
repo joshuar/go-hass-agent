@@ -150,21 +150,14 @@ var statNames = map[string]memStatID{
 
 var memStatFile = filepath.Join(linux.ProcFSRoot, "meminfo")
 
-// memStat holds the value and any units for a memory statistic.
-type memStat struct {
-	units string
-	value uint64
-}
-
 // memoryStats is a map of all the memory statistics available on this device.
-type memoryStats map[memStatID]*memStat
+type memoryStats map[memStatID]uint64
 
-func (m memoryStats) get(id memStatID) (uint64, string) {
+func (m memoryStats) get(id memStatID) uint64 {
 	if stat, ok := m[id]; ok {
-		return stat.value, stat.units
+		return stat
 	}
-
-	return 0, ""
+	return 0
 }
 
 // getMemStats will create a memoryStats map for this device.
@@ -214,10 +207,7 @@ func getMemStats(ctx context.Context) (memoryStats, error) {
 		// 	units = line.Text()
 		// }
 
-		stats[id] = &memStat{
-			value: value * 1000, //nolint:mnd // scale to bytes for backwards compatibility
-			units: memoryUsageSensorUnits,
-		}
+		stats[id] = value * 1000 //nolint:mnd // scale to bytes for backwards compatibility
 	}
 
 	return stats, nil

@@ -42,9 +42,8 @@ var (
 	_ workers.PollingEntityWorker = (*usageWorker)(nil)
 )
 
-// Lists of the memory statistics we want to track as sensors. See /proc/meminfo
-// for all possible statistics.
-// For (amd) gpus, more statistics are available at /sys/class/drm/cardX/device/
+// Lists of the memory statistics we want to track as sensors. See /proc/meminfo for all possible statistics. For (amd)
+// gpus, more statistics are available at /sys/class/drm/cardX/device/.
 var (
 	gpuMemSensors = []gpuMemStatID{memVRamTotal, memGTTTotal, memVRamUsed, memGTTUsed}
 	memSensors    = []memStatID{memTotal, memFree, memBuffered, memCached, memAvailable, memCorrupted}
@@ -52,15 +51,7 @@ var (
 )
 
 // newMemSensor generates a memorySensor for a memory stat.
-func newMemSensor(ctx context.Context, id memStatID, stat *memStat) models.Entity {
-	var value uint64
-
-	if stat == nil {
-		value = 0
-	} else {
-		value = stat.value
-	}
-
+func newMemSensor(ctx context.Context, id memStatID, stat uint64) models.Entity {
 	return models.NewSensor(ctx,
 		models.WithName(id.String()),
 		models.WithID(strcase.ToSnake(id.String())),
@@ -68,7 +59,7 @@ func newMemSensor(ctx context.Context, id memStatID, stat *memStat) models.Entit
 		models.WithDeviceClass(models.SensorClassDataSize),
 		models.WithStateClass(models.StateTotal),
 		models.WithIcon(memorySensorIcon),
-		models.WithState(value),
+		models.WithState(stat),
 		models.WithDataSourceAttribute(linux.DataSrcProcFS),
 		models.WithAttribute("native_unit_of_measurement", memoryUsageSensorUnits),
 	)
@@ -140,15 +131,15 @@ func newMemUsedPc(ctx context.Context, stats memoryStats) models.Entity {
 	for name, stat := range stats {
 		switch name {
 		case memFree:
-			memOther += stat.value
+			memOther += stat
 		case memBuffered:
-			memOther += stat.value
+			memOther += stat
 		case memCached:
-			memOther += stat.value
+			memOther += stat
 		}
 	}
 
-	memTotal, _ := stats.get(memTotal)
+	memTotal := stats.get(memTotal)
 
 	memUsed := memTotal - memOther
 
@@ -157,8 +148,8 @@ func newMemUsedPc(ctx context.Context, stats memoryStats) models.Entity {
 
 // Calculate used swap = total - free.
 func newSwapUsedPc(ctx context.Context, stats memoryStats) models.Entity {
-	swapTotal, _ := stats.get(swapTotal)
-	swapFree, _ := stats.get(swapFree)
+	swapTotal := stats.get(swapTotal)
+	swapFree := stats.get(swapFree)
 	swapUsed := swapTotal - swapFree
 
 	return newMemSensorPc(ctx, "Swap Usage", swapUsed, swapTotal)
@@ -233,7 +224,7 @@ func (w *usageWorker) Execute(ctx context.Context) error {
 	}
 
 	// Swap memory sensors.
-	if stat, _ := stats.get(swapTotal); stat > 0 {
+	if stat := stats.get(swapTotal); stat > 0 {
 		for id := range slices.Values(swapSensors) {
 			w.OutCh <- newMemSensor(ctx, id, stats[id])
 		}
