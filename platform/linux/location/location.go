@@ -147,12 +147,16 @@ func (w *locationWorker) newLocation(ctx context.Context, locationPath string) (
 	accuracy, err := w.getLocationProperty(locationPath, "Accuracy")
 	warnings = errors.Join(warnings, err)
 
-	return models.NewLocation(ctx,
+	entity, err := models.NewLocation(ctx,
 		models.WithGPSCoords(float32(latitude), float32(longitude)),
 		models.WithGPSAccuracy(int(accuracy)),
 		models.WithSpeed(int(speed)),
 		models.WithAltitude(int(altitude)),
-	), warnings
+	)
+	if err != nil {
+		return *entity, fmt.Errorf("new location: %w", err)
+	}
+	return *entity, warnings
 }
 
 func (w *locationWorker) createClient() (string, error) {

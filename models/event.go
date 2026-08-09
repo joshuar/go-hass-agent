@@ -20,8 +20,7 @@ func NewEvent(eventType string, eventData map[string]any) (Entity, error) {
 
 	entity := Entity{}
 
-	err := entity.FromEvent(event)
-	if err != nil {
+	if err := entity.FromEvent(event); err != nil {
 		return entity, fmt.Errorf("could not generate event entity: %w", err)
 	}
 

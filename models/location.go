@@ -5,6 +5,7 @@ package models
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/joshuar/go-hass-agent/validation"
 )
@@ -41,7 +42,7 @@ func WithAltitude(altitude int) LocationOption {
 }
 
 // NewLocation provides a way to build a location entity with the given options.
-func NewLocation(_ context.Context, options ...LocationOption) Entity {
+func NewLocation(_ context.Context, options ...LocationOption) (*Entity, error) {
 	location := Location{}
 
 	for _, option := range options {
@@ -49,8 +50,10 @@ func NewLocation(_ context.Context, options ...LocationOption) Entity {
 	}
 
 	entity := Entity{}
-	entity.FromLocation(location)
-	return entity
+	if err := entity.FromLocation(location); err != nil {
+		return nil, fmt.Errorf("generate entity from location: %w", err)
+	}
+	return &entity, nil
 }
 
 // Valid returns whether the location data is valid.
