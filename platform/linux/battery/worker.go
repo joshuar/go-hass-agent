@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"slices"
 	"strings"
 	"sync"
 
@@ -35,37 +36,29 @@ type Worker struct {
 func (w *Worker) Start(ctx context.Context) (<-chan models.Entity, error) {
 	sensorCh := make(chan models.Entity)
 
-	var wg sync.WaitGroup
-
 	// Get a list of all current connected batteries and monitor them.
 	batteries, err := w.getBatteries()
 	if err != nil {
 		slogctx.FromCtx(ctx).Warn("Could not retrieve any battery details from D-Bus.", slog.Any("error", err))
 	}
 
+	var wg sync.WaitGroup
+
 	// For all batteries, start monitoring.
-	for _, path := range batteries {
-		wg.Add(1)
-
-		go func(path dbus.ObjectPath) {
-			defer wg.Done()
-
-			for batterySensor := range w.track(ctx, path) {
+	for battPath := range slices.Values(batteries) {
+		wg.Go(func() {
+			for batterySensor := range w.track(ctx, battPath) {
 				sensorCh <- batterySensor
 			}
-		}(path)
+		})
 	}
 
-	wg.Add(1)
-
 	// Send all sensor updates from all tracked batteries to Home Assistant.
-	go func() {
-		defer wg.Done()
-
+	wg.Go(func() {
 		for batterySensor := range w.monitorBatteryChanges(ctx) {
 			sensorCh <- batterySensor
 		}
-	}()
+	})
 
 	go func() {
 		defer close(sensorCh)
