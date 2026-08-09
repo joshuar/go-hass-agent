@@ -15,7 +15,6 @@ import (
 
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/models"
-	"github.com/joshuar/go-hass-agent/models/class"
 	"github.com/joshuar/go-hass-agent/pkg/linux/hwmon"
 	"github.com/joshuar/go-hass-agent/platform/linux"
 	"github.com/joshuar/go-hass-agent/scheduler"
@@ -48,8 +47,8 @@ func hwmonSensorAttributes(details *hwmon.Sensor) map[string]any {
 func newHWSensor(ctx context.Context, details *hwmon.Sensor) models.Entity {
 	var (
 		icon             string
-		deviceClass      class.SensorDeviceClass
-		stateClass       class.SensorStateClass
+		deviceClass      models.SensorDeviceClass
+		stateClass       models.SensorStateClass
 		sensorTypeOption models.SensorOption
 	)
 
@@ -62,13 +61,13 @@ func newHWSensor(ctx context.Context, details *hwmon.Sensor) models.Entity {
 		}
 
 		if details.MonitorType == hwmon.Alarm {
-			deviceClass = class.BinaryClassProblem
+			deviceClass = models.BinaryClassProblem
 		} else {
-			deviceClass = class.BinaryClassTamper
+			deviceClass = models.BinaryClassTamper
 		}
 	default:
 		icon, deviceClass = parseSensorType(details.MonitorType.String())
-		stateClass = class.StateMeasurement
+		stateClass = models.StateMeasurement
 	}
 
 	if details.MonitorType == hwmon.Alarm || details.MonitorType == hwmon.Intrusion {
@@ -150,24 +149,24 @@ func (w *hwMonWorker) IsDisabled() bool {
 	return w.prefs.IsDisabled()
 }
 
-func parseSensorType(t string) (string, class.SensorDeviceClass) {
+func parseSensorType(t string) (string, models.SensorDeviceClass) {
 	switch t {
 	case "Temp":
-		return "mdi:thermometer", class.SensorClassTemperature
+		return "mdi:thermometer", models.SensorClassTemperature
 	case "Fan":
 		return "mdi:turbine", 0
 	case "Power":
-		return "mdi:flash", class.SensorClassPower
+		return "mdi:flash", models.SensorClassPower
 	case "Voltage":
-		return "mdi:lightning-bolt", class.SensorClassVoltage
+		return "mdi:lightning-bolt", models.SensorClassVoltage
 	case "Energy":
-		return "mdi:lightning-bolt", class.SensorClassEnergyStorage
+		return "mdi:lightning-bolt", models.SensorClassEnergyStorage
 	case "Current":
-		return "mdi:current-ac", class.SensorClassCurrent
+		return "mdi:current-ac", models.SensorClassCurrent
 	case "Frequency", "PWM":
-		return "mdi:sawtooth-wave", class.SensorClassFrequency
+		return "mdi:sawtooth-wave", models.SensorClassFrequency
 	case "Humidity":
-		return "mdi:water-percent", class.SensorClassHumidity
+		return "mdi:water-percent", models.SensorClassHumidity
 	default:
 		return "mdi:chip", 0
 	}

@@ -12,7 +12,6 @@ import (
 	"maps"
 	"strconv"
 
-	"github.com/joshuar/go-hass-agent/models/class"
 	"github.com/joshuar/go-hass-agent/validation"
 )
 
@@ -25,7 +24,7 @@ var (
 // Valid returns a boolean indicating whether the SensorState date is valid.
 func (s *SensorState) Valid() (bool, error) {
 	if err := validation.ValidateStruct(s); err != nil {
-		return false, fmt.Errorf("%w: %s", ErrInvalidSensor, err)
+		return false, fmt.Errorf("%w: %w", ErrInvalidSensor, err)
 	}
 
 	return true, nil
@@ -34,7 +33,7 @@ func (s *SensorState) Valid() (bool, error) {
 // Valid returns a boolean indicating whether the SensorRegistration data is valid.
 func (s *SensorRegistration) Valid() (bool, error) {
 	if err := validation.ValidateStruct(s); err != nil {
-		return false, fmt.Errorf("%w: %s", ErrInvalidSensor, err)
+		return false, fmt.Errorf("%w: %w", ErrInvalidSensor, err)
 	}
 
 	return true, nil
@@ -132,7 +131,7 @@ func WithUnits(units string) SensorOption {
 // For type Binary Sensor:
 //
 // https://developers.home-assistant.io/docs/core/entity/binary-sensor#available-device-classes
-func WithDeviceClass(deviceClass class.SensorDeviceClass) SensorOption {
+func WithDeviceClass(deviceClass SensorDeviceClass) SensorOption {
 	return func(s *Sensor) {
 		if deviceClass.Valid() {
 			str := deviceClass.String()
@@ -145,7 +144,7 @@ func WithDeviceClass(deviceClass class.SensorDeviceClass) SensorOption {
 // state class is an invalid value, it is ignored.
 //
 // https://developers.home-assistant.io/docs/core/entity/sensor/#available-state-classes
-func WithStateClass(stateClass class.SensorStateClass) SensorOption {
+func WithStateClass(stateClass SensorStateClass) SensorOption {
 	return func(s *Sensor) {
 		if stateClass.Valid() {
 			str := stateClass.String()

@@ -20,7 +20,6 @@ import (
 
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/models"
-	"github.com/joshuar/go-hass-agent/models/class"
 	"github.com/joshuar/go-hass-agent/platform/linux"
 	"github.com/joshuar/go-hass-agent/scheduler"
 )
@@ -66,8 +65,8 @@ func newMemSensor(ctx context.Context, id memStatID, stat *memStat) models.Entit
 		models.WithName(id.String()),
 		models.WithID(strcase.ToSnake(id.String())),
 		models.WithUnits(memoryUsageSensorUnits),
-		models.WithDeviceClass(class.SensorClassDataSize),
-		models.WithStateClass(class.StateTotal),
+		models.WithDeviceClass(models.SensorClassDataSize),
+		models.WithStateClass(models.StateTotal),
 		models.WithIcon(memorySensorIcon),
 		models.WithState(value),
 		models.WithDataSourceAttribute(linux.DataSrcProcFS),
@@ -81,8 +80,8 @@ func newGpuMemSensor(ctx context.Context, id gpuMemStatID, stat uint64) models.E
 		models.WithName(id.String()),
 		models.WithID(strcase.ToSnake(id.String())),
 		models.WithUnits(memoryUsageSensorUnits),
-		models.WithDeviceClass(class.SensorClassDataSize),
-		models.WithStateClass(class.StateTotal),
+		models.WithDeviceClass(models.SensorClassDataSize),
+		models.WithStateClass(models.StateTotal),
 		models.WithIcon(memorySensorIcon),
 		models.WithState(stat),
 		models.WithDataSourceAttribute(linux.DataSrcSysFS),
@@ -104,7 +103,7 @@ func newGpuMemSensorPc(ctx context.Context, name string, value, total uint64) mo
 		models.WithName(name),
 		models.WithID(strcase.ToSnake(name)),
 		models.WithUnits(memoryUsageSensorPcUnits),
-		models.WithStateClass(class.StateTotal),
+		models.WithStateClass(models.StateTotal),
 		models.WithIcon(memorySensorIcon),
 		models.WithState(valuePc),
 		models.WithDataSourceAttribute(linux.DataSrcSysFS),
@@ -126,7 +125,7 @@ func newMemSensorPc(ctx context.Context, name string, value, total uint64) model
 		models.WithName(name),
 		models.WithID(strcase.ToSnake(name)),
 		models.WithUnits(memoryUsageSensorPcUnits),
-		models.WithStateClass(class.StateTotal),
+		models.WithStateClass(models.StateTotal),
 		models.WithIcon(memorySensorIcon),
 		models.WithState(valuePc),
 		models.WithDataSourceAttribute(linux.DataSrcProcFS),

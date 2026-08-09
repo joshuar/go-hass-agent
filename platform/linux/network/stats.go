@@ -20,7 +20,6 @@ import (
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/logging"
 	"github.com/joshuar/go-hass-agent/models"
-	"github.com/joshuar/go-hass-agent/models/class"
 	"github.com/joshuar/go-hass-agent/platform/linux"
 	"github.com/joshuar/go-hass-agent/scheduler"
 )
@@ -304,8 +303,8 @@ func newStatsTotalEntity(
 	return models.NewSensor(ctx,
 		models.WithName(name+" "+entityType.String()),
 		models.WithID(strings.ToLower(name)+"_"+strcase.ToSnake(entityType.String())),
-		models.WithDeviceClass(class.SensorClassDataSize),
-		models.WithStateClass(class.StateMeasurement),
+		models.WithDeviceClass(models.SensorClassDataSize),
+		models.WithStateClass(models.StateMeasurement),
 		models.WithUnits(countUnit),
 		models.WithIcon(entityType.Icon()),
 		models.WithState(value),
@@ -320,8 +319,8 @@ func newStatsRateEntity(ctx context.Context, name string, entityType netStatsTyp
 	return models.NewSensor(ctx,
 		models.WithName(name+" "+entityType.String()),
 		models.WithID(strings.ToLower(name)+"_"+strcase.ToSnake(entityType.String())),
-		models.WithDeviceClass(class.SensorClassDataRate),
-		models.WithStateClass(class.StateMeasurement),
+		models.WithDeviceClass(models.SensorClassDataRate),
+		models.WithStateClass(models.StateMeasurement),
 		models.WithUnits(rateUnit),
 		models.WithIcon(entityType.Icon()),
 		models.WithState(value),

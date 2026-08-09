@@ -3,7 +3,7 @@
 
 //go:generate go tool golang.org/x/tools/cmd/stringer -type=SensorDeviceClass -output deviceclass.gen.go -linecomment
 
-package class
+package models
 
 // For sensor entity device class descriptions, see:
 //

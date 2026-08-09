@@ -19,7 +19,6 @@ import (
 
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/models"
-	"github.com/joshuar/go-hass-agent/models/class"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 	"github.com/joshuar/go-hass-agent/platform/linux"
 )
@@ -81,7 +80,7 @@ func NewLaptopWorker(ctx context.Context) (workers.EntityWorker, error) {
 func newLaptopEvent(ctx context.Context, prop string, state bool) models.Entity {
 	var (
 		name, icon  string
-		deviceClass class.SensorDeviceClass
+		deviceClass models.SensorDeviceClass
 	)
 
 	switch prop {
@@ -94,7 +93,7 @@ func newLaptopEvent(ctx context.Context, prop string, state bool) models.Entity 
 			icon = "mdi:laptop"
 		}
 
-		deviceClass = class.BinaryClassConnectivity
+		deviceClass = models.BinaryClassConnectivity
 	case lidClosedProp:
 		name = "Lid Closed"
 
@@ -104,7 +103,7 @@ func newLaptopEvent(ctx context.Context, prop string, state bool) models.Entity 
 			icon = "mdi:laptop-off"
 		}
 
-		deviceClass = class.BinaryClassOpening
+		deviceClass = models.BinaryClassOpening
 		state = !state // Invert state for BinarySensorDeviceClassOpening: On means open, Off means closed.
 	case externalPowerProp:
 		name = "External Power Connected"
@@ -115,7 +114,7 @@ func newLaptopEvent(ctx context.Context, prop string, state bool) models.Entity 
 			icon = "mdi:battery"
 		}
 
-		deviceClass = class.BinaryClassPower
+		deviceClass = models.BinaryClassPower
 	}
 
 	return models.NewSensor(ctx,

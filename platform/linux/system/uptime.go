@@ -17,7 +17,6 @@ import (
 
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/models"
-	"github.com/joshuar/go-hass-agent/models/class"
 	"github.com/joshuar/go-hass-agent/platform/linux"
 	"github.com/joshuar/go-hass-agent/scheduler"
 )
@@ -77,8 +76,8 @@ func (w *uptimeWorker) Execute(ctx context.Context) error {
 		models.WithName("Uptime"),
 		models.WithID("uptime"),
 		models.AsDiagnostic(),
-		models.WithDeviceClass(class.SensorClassDuration),
-		models.WithStateClass(class.StateMeasurement),
+		models.WithDeviceClass(models.SensorClassDuration),
+		models.WithStateClass(models.StateMeasurement),
 		models.WithUnits("h"),
 		models.WithIcon("mdi:restart"),
 		models.WithState(w.getUptime(ctx)/60/60), //nolint:mnd // convert to hours.

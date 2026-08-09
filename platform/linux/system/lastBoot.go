@@ -14,7 +14,6 @@ import (
 
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/models"
-	"github.com/joshuar/go-hass-agent/models/class"
 	"github.com/joshuar/go-hass-agent/platform/linux"
 )
 
@@ -71,7 +70,7 @@ func (w *lastBootWorker) Execute(ctx context.Context) error {
 		models.WithName("Last Reboot"),
 		models.WithID("last_reboot"),
 		models.AsDiagnostic(),
-		models.WithDeviceClass(class.SensorClassTimestamp),
+		models.WithDeviceClass(models.SensorClassTimestamp),
 		models.WithIcon("mdi:restart"),
 		models.WithState(w.lastBoot.Format(time.RFC3339)),
 		models.WithDataSourceAttribute(linux.ProcFSRoot),

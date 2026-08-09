@@ -16,7 +16,6 @@ import (
 
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/models"
-	"github.com/joshuar/go-hass-agent/models/class"
 	"github.com/joshuar/go-hass-agent/platform/linux"
 )
 
@@ -95,7 +94,7 @@ func (w *cpuVulnWorker) Execute(ctx context.Context) error {
 		models.WithName("CPU Vulnerabilities"),
 		models.WithID("cpu_vulnerabilities"),
 		models.AsTypeBinarySensor(),
-		models.WithDeviceClass(class.BinaryClassProblem),
+		models.WithDeviceClass(models.BinaryClassProblem),
 		models.AsDiagnostic(),
 		models.WithIcon("mdi:security"),
 		models.WithState(cpuVulnerabilitiesFound),

@@ -20,7 +20,6 @@ import (
 
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/models"
-	"github.com/joshuar/go-hass-agent/models/class"
 	"github.com/joshuar/go-hass-agent/platform/linux"
 	"github.com/joshuar/go-hass-agent/scheduler"
 )
@@ -113,8 +112,8 @@ func newCPUFreqSensor(ctx context.Context, id string) models.Entity {
 		models.WithID("cpufreq_core"+num+"_frequency"),
 		models.AsTypeSensor(),
 		models.WithUnits(cpuFreqUnits),
-		models.WithDeviceClass(class.SensorClassFrequency),
-		models.WithStateClass(class.StateMeasurement),
+		models.WithDeviceClass(models.SensorClassFrequency),
+		models.WithStateClass(models.StateMeasurement),
 		models.AsDiagnostic(),
 		models.WithIcon(cpuFreqIcon),
 		models.WithState(info.freq),

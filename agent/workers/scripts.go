@@ -24,7 +24,6 @@ import (
 
 	"github.com/joshuar/go-hass-agent/config"
 	"github.com/joshuar/go-hass-agent/models"
-	"github.com/joshuar/go-hass-agent/models/class"
 	"github.com/joshuar/go-hass-agent/scheduler"
 )
 
@@ -242,8 +241,8 @@ func (s *ScriptSensor) Icon() string {
 }
 
 // DeviceClass is a sensor device class for the script state.
-func (s *ScriptSensor) DeviceClass() class.SensorDeviceClass {
-	for d := class.SensorClassMin + 1; d <= class.BinaryClassMax; d++ {
+func (s *ScriptSensor) DeviceClass() models.SensorDeviceClass {
+	for d := models.SensorClassMin + 1; d <= models.BinaryClassMax; d++ {
 		if s.SensorDeviceClass == d.String() {
 			return d
 		}
@@ -253,16 +252,16 @@ func (s *ScriptSensor) DeviceClass() class.SensorDeviceClass {
 }
 
 // StateClass is a sensor state class for the script state.
-func (s *ScriptSensor) StateClass() class.SensorStateClass {
+func (s *ScriptSensor) StateClass() models.SensorStateClass {
 	switch s.SensorStateClass {
 	case "measurement":
-		return class.StateMeasurement
+		return models.StateMeasurement
 	case "total":
-		return class.StateTotal
+		return models.StateTotal
 	case "total_increasing":
-		return class.StateTotalIncreasing
+		return models.StateTotalIncreasing
 	default:
-		return class.StateClassMin
+		return models.StateClassMin
 	}
 }
 

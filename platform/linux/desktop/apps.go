@@ -13,7 +13,6 @@ import (
 
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/models"
-	"github.com/joshuar/go-hass-agent/models/class"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 	"github.com/joshuar/go-hass-agent/platform/linux"
 )
@@ -163,7 +162,7 @@ func (w *appsWorker) generateSensors(ctx context.Context) ([]models.Entity, erro
 			models.WithName(runningAppsName),
 			models.WithID(runningAppsID),
 			models.WithUnits(runningAppsUnits),
-			models.WithStateClass(class.StateMeasurement),
+			models.WithStateClass(models.StateMeasurement),
 			models.WithIcon(runningAppsIcon),
 			models.WithState(w.totalRunningApps),
 			models.WithDataSourceAttribute(linux.DataSrcDBus),

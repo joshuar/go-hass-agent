@@ -26,7 +26,6 @@ import (
 
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/models"
-	"github.com/joshuar/go-hass-agent/models/class"
 	"github.com/joshuar/go-hass-agent/platform/linux"
 	"github.com/joshuar/go-hass-agent/scheduler"
 )
@@ -117,7 +116,7 @@ func newDiskStatSensor(
 ) models.Entity {
 	var (
 		icon, units      string
-		stateClass       class.SensorStateClass
+		stateClass       models.SensorStateClass
 		diagnosticOption models.SensorOption
 	)
 
@@ -132,7 +131,7 @@ func newDiskStatSensor(
 	switch sensorType {
 	case diskIOInProgress:
 		icon = ioOpsIcon
-		stateClass = class.StateMeasurement
+		stateClass = models.StateMeasurement
 		units = diskIOsUnits
 	case diskReads, diskWrites:
 		if sensorType == diskReads {
@@ -142,7 +141,7 @@ func newDiskStatSensor(
 		}
 
 		units = diskCountUnits
-		stateClass = class.StateTotal
+		stateClass = models.StateTotal
 		attributes["native_unit_of_measurement"] = diskCountUnits
 	}
 
@@ -173,7 +172,7 @@ func newDiskRateSensor(ctx context.Context, device *device, sensorType ioSensor,
 	name, id := device.generateIdentifiers(sensorType)
 	attributes := device.generateAttributes()
 	units := diskRateUnits
-	stateClass := class.StateMeasurement
+	stateClass := models.StateMeasurement
 	attributes["native_unit_of_measurement"] = diskRateUnits
 
 	switch sensorType {

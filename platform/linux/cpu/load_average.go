@@ -17,7 +17,6 @@ import (
 
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/models"
-	"github.com/joshuar/go-hass-agent/models/class"
 	"github.com/joshuar/go-hass-agent/platform/linux"
 	"github.com/joshuar/go-hass-agent/scheduler"
 )
@@ -68,7 +67,7 @@ func (w *loadAvgsWorker) Execute(ctx context.Context) error {
 			models.WithName(name),
 			models.WithID(strcase.ToSnake(name)),
 			models.WithUnits(loadAvgUnit),
-			models.WithStateClass(class.StateMeasurement),
+			models.WithStateClass(models.StateMeasurement),
 			models.WithIcon(loadAvgIcon),
 			models.WithState(value),
 			models.WithDataSourceAttribute(linux.DataSrcProcFS),

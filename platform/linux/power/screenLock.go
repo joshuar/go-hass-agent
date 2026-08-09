@@ -15,7 +15,6 @@ import (
 
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/models"
-	"github.com/joshuar/go-hass-agent/models/class"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 	"github.com/joshuar/go-hass-agent/platform/linux"
 )
@@ -34,7 +33,7 @@ func newScreenlockSensor(ctx context.Context, value bool) models.Entity {
 		models.WithName("Screen Lock"),
 		models.WithID("screen_lock"),
 		models.AsTypeBinarySensor(),
-		models.WithDeviceClass(class.BinaryClassLock),
+		models.WithDeviceClass(models.BinaryClassLock),
 		models.WithIcon(screenLockIcon(value)),
 		models.WithState(
 			!value,

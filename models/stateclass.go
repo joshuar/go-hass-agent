@@ -1,7 +1,7 @@
 // Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
 // SPDX-License-Identifier: MIT
 
-package class
+package models
 
 //go:generate go tool golang.org/x/tools/cmd/stringer -type=SensorStateClass -output stateclass.gen.go -linecomment
 const (

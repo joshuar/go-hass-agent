@@ -13,7 +13,6 @@ import (
 	"github.com/iancoleman/strcase"
 
 	"github.com/joshuar/go-hass-agent/models"
-	"github.com/joshuar/go-hass-agent/models/class"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 	"github.com/joshuar/go-hass-agent/platform/linux"
 )
@@ -30,8 +29,8 @@ func newBatterySensor(
 ) models.Entity {
 	var (
 		name, id, icon, units string
-		deviceClass           class.SensorDeviceClass
-		stateClass            class.SensorStateClass
+		deviceClass           models.SensorDeviceClass
+		stateClass            models.SensorStateClass
 	)
 
 	if battery.model == "" {
@@ -45,25 +44,25 @@ func newBatterySensor(
 	switch sensorType {
 	case typePercentage:
 		icon = batteryPercentIcon(value.Value())
-		deviceClass = class.SensorClassBattery
-		stateClass = class.StateMeasurement
+		deviceClass = models.SensorClassBattery
+		stateClass = models.StateMeasurement
 		units = "%"
 	case typeTemp:
-		deviceClass = class.SensorClassTemperature
-		stateClass = class.StateMeasurement
+		deviceClass = models.SensorClassTemperature
+		stateClass = models.StateMeasurement
 		units = "°C"
 	case typeEnergyRate:
 		icon = batteryChargeIcon(value.Value())
-		deviceClass = class.SensorClassPower
-		stateClass = class.StateMeasurement
+		deviceClass = models.SensorClassPower
+		stateClass = models.StateMeasurement
 		units = "W"
 	case typeEnergy:
-		deviceClass = class.SensorClassEnergyStorage
-		stateClass = class.StateMeasurement
+		deviceClass = models.SensorClassEnergyStorage
+		stateClass = models.StateMeasurement
 		units = "Wh"
 	case typeVoltage:
-		deviceClass = class.SensorClassVoltage
-		stateClass = class.StateMeasurement
+		deviceClass = models.SensorClassVoltage
+		stateClass = models.StateMeasurement
 		units = "V"
 	default:
 		icon = batteryIcon

@@ -20,7 +20,6 @@ import (
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/logging"
 	"github.com/joshuar/go-hass-agent/models"
-	"github.com/joshuar/go-hass-agent/models/class"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 	"github.com/joshuar/go-hass-agent/platform/linux"
 )
@@ -654,8 +653,8 @@ var ErrNewWifiPropSensor = errors.New("could not create wifi property sensor")
 func newWifiSensor(ctx context.Context, prop string, value any) models.Entity {
 	var (
 		name, id, units string
-		deviceClass     class.SensorDeviceClass
-		stateClass      class.SensorStateClass
+		deviceClass     models.SensorDeviceClass
+		stateClass      models.SensorStateClass
 	)
 
 	icon := "mdi:wifi"
@@ -671,25 +670,25 @@ func newWifiSensor(ctx context.Context, prop string, value any) models.Entity {
 		name = "Wi-Fi Link Speed"
 		id = "wi_fi_link_speed"
 		units = "kB/s"
-		deviceClass = class.SensorClassDataRate
-		stateClass = class.StateMeasurement
+		deviceClass = models.SensorClassDataRate
+		stateClass = models.StateMeasurement
 	case freqPropName:
 		name = "Wi-Fi Frequency"
 		id = "wi_fi_frequency"
 		units = "MHz"
-		deviceClass = class.SensorClassFrequency
-		stateClass = class.StateMeasurement
+		deviceClass = models.SensorClassFrequency
+		stateClass = models.StateMeasurement
 	case bandwidthPropName:
 		name = "Wi-Fi Bandwidth"
 		id = "wi_fi_bandwidth"
 		units = "MHz"
-		deviceClass = class.SensorClassFrequency
-		stateClass = class.StateMeasurement
+		deviceClass = models.SensorClassFrequency
+		stateClass = models.StateMeasurement
 	case strPropName:
 		name = "Wi-Fi Signal Strength"
 		id = "wi_fi_signal_strength"
 		units = "%"
-		stateClass = class.StateMeasurement
+		stateClass = models.StateMeasurement
 		icon = generateStrIcon(value)
 	}
 

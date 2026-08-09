@@ -19,7 +19,6 @@ import (
 
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/models"
-	"github.com/joshuar/go-hass-agent/models/class"
 	"github.com/joshuar/go-hass-agent/platform/linux"
 	"github.com/joshuar/go-hass-agent/scheduler"
 
@@ -478,7 +477,7 @@ func newSmartSensor(ctx context.Context, data smartData) models.Entity {
 		models.WithName(data.ID()+" SMART Status"),
 		models.WithID(data.ID()+"_smart_status"),
 		models.AsTypeBinarySensor(),
-		models.WithDeviceClass(class.BinaryClassProblem),
+		models.WithDeviceClass(models.BinaryClassProblem),
 		models.AsDiagnostic(),
 		models.WithIcon("mdi:harddisk"),
 		models.WithState(data.Problem()),

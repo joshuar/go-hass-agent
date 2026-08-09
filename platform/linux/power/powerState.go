@@ -10,7 +10,6 @@ import (
 
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/models"
-	"github.com/joshuar/go-hass-agent/models/class"
 	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 	"github.com/joshuar/go-hass-agent/platform/linux"
 )
@@ -37,7 +36,7 @@ func newPowerState(ctx context.Context, name powerSignal, value any) models.Enti
 	return models.NewSensor(ctx,
 		models.WithName("Power State"),
 		models.WithID("power_state"),
-		models.WithDeviceClass(class.SensorClassEnum),
+		models.WithDeviceClass(models.SensorClassEnum),
 		models.AsDiagnostic(),
 		models.WithIcon(powerStateIcon(value)),
 		models.WithState(powerStateString(name, value)),

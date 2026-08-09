@@ -20,7 +20,6 @@ import (
 
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/models"
-	"github.com/joshuar/go-hass-agent/models/class"
 	"github.com/joshuar/go-hass-agent/platform/linux"
 	"github.com/joshuar/go-hass-agent/scheduler"
 )
@@ -248,7 +247,7 @@ func (w *lastActiveWorker) Execute(ctx context.Context) error {
 		models.WithName("Last Active"),
 		models.WithID("last_active"),
 		models.AsDiagnostic(),
-		models.WithDeviceClass(class.SensorClassTimestamp),
+		models.WithDeviceClass(models.SensorClassTimestamp),
 		models.WithIcon("mdi:account-clock"),
 		models.WithState(lastActive.Format(time.RFC3339)),
 		models.WithAttribute("seconds_since_active", int(timeSinceActive.Seconds())),

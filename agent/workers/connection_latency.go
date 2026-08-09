@@ -13,7 +13,6 @@ import (
 
 	"github.com/joshuar/go-hass-agent/hass/api"
 	"github.com/joshuar/go-hass-agent/models"
-	"github.com/joshuar/go-hass-agent/models/class"
 	"github.com/joshuar/go-hass-agent/scheduler"
 )
 
@@ -68,8 +67,8 @@ func (w *ConnectionLatency) Execute(ctx context.Context) error {
 			models.WithName("Connection Latency"),
 			models.WithID("connection_latency"),
 			models.WithUnits(connectionLatencyUnits),
-			models.WithDeviceClass(class.SensorClassDuration),
-			models.WithStateClass(class.StateMeasurement),
+			models.WithDeviceClass(models.SensorClassDuration),
+			models.WithStateClass(models.StateMeasurement),
 			models.AsDiagnostic(),
 			models.WithIcon("mdi:connection"),
 			models.WithState(info.TotalTime.Milliseconds()),

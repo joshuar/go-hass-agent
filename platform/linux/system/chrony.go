@@ -17,7 +17,6 @@ import (
 
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/models"
-	"github.com/joshuar/go-hass-agent/models/class"
 	"github.com/joshuar/go-hass-agent/scheduler"
 )
 
@@ -160,7 +159,7 @@ func newChronyOffsetSensor(ctx context.Context, stats map[string]string) models.
 		models.WithID("chrony_system_time_offset"),
 		models.AsDiagnostic(),
 		models.WithUnits("s"),
-		models.WithStateClass(class.StateMeasurement),
+		models.WithStateClass(models.StateMeasurement),
 		models.WithIcon("mdi:clock"),
 		models.WithState(value),
 		models.WithAttributes(attrs),
