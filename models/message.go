@@ -52,9 +52,10 @@ func (msg *Message) HasDetails() bool {
 // String returns the message as a formatted string. This allows Message to satisfy the Stringer interface.
 func (msg *Message) String() string {
 	var str strings.Builder
-	str.WriteString(fmt.Sprintf("%s: %s", strings.ToTitle(string(msg.Status)), msg.Summary))
+	fmt.Fprintf(&str, "%s: %s", strings.ToTitle(string(msg.Status)), msg.Summary)
 	if msg.Details != "" {
-		str.WriteString("\n" + msg.Details)
+		str.WriteString("\n")
+		str.WriteString(msg.Details)
 	}
 	return str.String()
 }
