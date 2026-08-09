@@ -168,11 +168,10 @@ func (w *usageWorker) getUsageStats(ctx context.Context) ([]models.Entity, error
 		warnings error
 	)
 
-	// Held for the whole read-modify-write cycle: every sensor below derives
-	// its value by comparing the current counters against the previous ones
-	// kept in w.cpuSensors/w.rateSensors, so an overlapping execution must not
-	// interleave with this one. Deliberately not taken in Execute, which would
-	// hold it across the blocking sends on w.OutCh.
+	// Held for the whole read-modify-write cycle: every sensor below derives its value by comparing the current
+	// counters against the previous ones kept in w.cpuSensors/w.rateSensors, so an overlapping execution must not
+	// interleave with this one. Deliberately not taken in Execute, which would hold it across the blocking sends on
+	// w.OutCh.
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
@@ -183,8 +182,7 @@ func (w *usageWorker) getUsageStats(ctx context.Context) ([]models.Entity, error
 
 	defer statsFH.Close()
 
-	statsFile := bufio.NewScanner(statsFH)
-	for statsFile.Scan() {
+	for statsFile := bufio.NewScanner(statsFH); statsFile.Scan(); {
 		// Set up word scanner for line.
 		line := bufio.NewScanner(bytes.NewReader(statsFile.Bytes()))
 		line.Split(bufio.ScanWords)
@@ -271,7 +269,7 @@ func newUsageSensor(
 	attrs := make(map[string]any)
 	attrs["data_source"] = linux.DataSrcProcFS
 
-	for idx, name := range allTimes {
+	for idx, strValue := range allTimes {
 		value, err := strconv.ParseFloat(details[idx+1], 64)
 		if err != nil {
 			continue
@@ -279,17 +277,17 @@ func newUsageSensor(
 
 		// Divide by clock tick to get a time.
 		cpuTime := value / float64(worker.clktck)
-		attrs[name] = cpuTime
+		attrs[strValue] = cpuTime
 		// Don't include guest counters in total times.
-		if !slices.Contains(guestTimes, name) {
+		if !slices.Contains(guestTimes, strValue) {
 			totalTime += cpuTime
 		}
 		// Add up non-idle counters.
-		if slices.Contains(nonIdleTimes, name) {
+		if slices.Contains(nonIdleTimes, strValue) {
 			nonIdleTime += cpuTime
 		}
 		// Add up idle counters.
-		if slices.Contains(idleTimes, name) {
+		if slices.Contains(idleTimes, strValue) {
 			idleTime += cpuTime
 		}
 	}
