@@ -7,7 +7,6 @@ require (
 	github.com/gen2brain/beeep v0.11.2
 	github.com/go-playground/validator/v10 v10.30.3
 	github.com/godbus/dbus/v5 v5.2.2
-	github.com/goforj/godump v1.9.1
 	github.com/holoplot/go-evdev v0.0.0-20260504100651-66d1748fe847
 	github.com/iancoleman/strcase v0.3.0
 	github.com/joshuar/go-hass-anything/v12 v12.1.0
@@ -139,16 +138,16 @@ require (
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-resty/resty/v2 v2.17.2
 	github.com/go-test/deep v1.1.1
-	github.com/gofrs/uuid/v5 v5.5.0
+	github.com/gofrs/uuid/v5 v5.5.1
 	github.com/grandcat/zeroconf v1.0.0
 	github.com/jaypipes/ghw v0.25.0
 	github.com/jsimonetti/rtnetlink v1.4.2
 	github.com/justinas/alice v1.2.0
 	github.com/justinas/nosurf v1.2.0
 	github.com/klauspost/compress v1.18.0 // indirect
-	github.com/knadh/koanf/parsers/toml/v2 v2.2.1
+	github.com/knadh/koanf/parsers/toml/v2 v2.2.2
 	github.com/knadh/koanf/providers/file v1.2.1
-	github.com/knadh/koanf/v2 v2.3.5
+	github.com/knadh/koanf/v2 v2.3.6
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/lmittmann/tint v1.2.0
 	github.com/lxzan/gws v1.10.1
