@@ -115,13 +115,7 @@
     - [Other Custom Commands](#other-custom-commands)
     - [Security Implications](#security-implications-1)
 - [⚙️ Building/Compiling Manually](#️-buildingcompiling-manually)
-  - [Build Requirements](#build-requirements)
-  - [Compiling](#compiling)
-  - [Cross Compilation](#cross-compilation)
-  - [Packages](#packages)
-  - [Container Images](#container-images)
-- [👋 Contributing](#-contributing)
-  - [💾 Committing Code](#-committing-code)
+- [👋 Contributors](#-contributors)
   - [📜 Code of Conduct](#-code-of-conduct)
 - [🧭 Roadmap](#-roadmap)
 - [❔ FAQ](#-faq)
@@ -1213,7 +1207,7 @@ disruptive actions on a device that another user is accessing.
 
 [⬆️ Back to Top](#-table-of-contents)
 
-# ⚙️ Building/Compiling Manually
+## ⚙️ Building/Compiling Manually
 
 See [CONTRIBUTING.md](CONTRIBUTING.md)
 
