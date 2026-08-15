@@ -276,6 +276,7 @@ app or number of apps changes.
   - Sourced via SysFS. Updated ~every 5 seconds.
 
 ##### Disk SMART Monitoring
+
 - **S.M.A.R.T status and attributes** per disk.
   - Requires the following capabilities on the Go Hass Agent binary (already applied for containers and rpm/deb/arch
     packages): `cap_sys_rawio,cap_sys_admin,cap_mknod,cap_dac_override=+ep`.
@@ -372,6 +373,7 @@ app or number of apps changes.
   - [_Preferences_](#️-preferences): `[sensors.system.abrt_problems]`.
 
 ##### Hardware Monitoring
+
 - Any **temp**, **fan**, **power** and other hardware sensors, including associated **alarms**. Updated ~every 1 minute.
 - Extracted from the `/sys/class/hwmon` file system.
 - [_Preferences_](#️-preferences): `[sensors.system.hardware_sensors]`.
@@ -1211,89 +1213,11 @@ disruptive actions on a device that another user is accessing.
 
 [⬆️ Back to Top](#-table-of-contents)
 
-## ⚙️ Building/Compiling Manually
+# ⚙️ Building/Compiling Manually
 
-### Build Requirements
+See [CONTRIBUTING.md](CONTRIBUTING.md)
 
-Besides Go, Go Hass Agent requires a javascript runtime/toolkit to bundle/build some assets required for the web UI.
-[Nodejs](https://nodejs.org/en) works just fine, is packaged in nearly all distributions and has good cross-platform
-support.
-
-> [!NOTE]
->
-> The devcontainer has all the necessary tooling installed for building Go Hass Agent.
-
-### Compiling
-
-From the root of the Go Hass Agent repository, use the following commands will
-build/bundle everything needed:
-
-```shell
-npm install
-npm run build:js
-npm run build:css
-# the -X ... linker option is *required*
-CGO_ENABLED=0 go build -ldflags="-w -s -X github.com/joshuar/go-hass-agent/config.AppVersion=$(git describe --tags --always --long --dirty)" -o dist/go-hass-agent
-```
-
-This will build a binary and place it in `dist/go-hass-agent`.
-
-[⬆️ Back to Top](#-table-of-contents)
-
-### Cross Compilation
-
-Go Hass Agent can also be built for **arm (v6/v7)** and **arm64** with cross-compilation. Just change the `go build` in
-the commands above as appropriate. For e.g.:
-
-```shell
-RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -ldflags="-s -w -X github.com/joshuar/go-hass-agent/config.AppVersion=$(git describe --tags --always --long --dirty)" -o dist/go-hass-agent
-```
-
-[⬆️ Back to Top](#-table-of-contents)
-
-### Packages
-
-Go Hass Agent uses [nfpm](https://nfpm.goreleaser.com/) to create packages for Fedora, Arch, and Ubuntu/Debian.
-
-To build packages, use the following invocations:
-
-```shell
-for format in rpm deb archlinux; do
-  go run github.com/goreleaser/nfpm/v2/cmd/nfpm@latest package --packager ${format} --config .nfpm.yaml --target dist
-done
-```
-
-This will build packages for all possible formats and they will be available under the `dist/` folder.
-
-[⬆️ Back to Top](#-table-of-contents)
-
-### Container Images
-
-A Dockerfile that you can use to build an image can be found [here](../../Dockerfile).
-
-You can build an image with a command like the following (using Podman):
-
-```shell
-podman build --file ./Dockerfile --tag go-hass-agent
-```
-
-As with building a binary,
-[cross-compliation](https://docs.docker.com/build/building/multi-platform/#cross-compilation)
-is supported:
-
-```shell
-# use either linux/arm64, linux/arm/v7 or linux/arm/v6
-podman build --file ./Dockerfile --platform linux/arm/v7 --tag go-hass-agent
-```
-
-> [!NOTE]
->
-> By default, the container will run as a user with UID/GID 1000/1000. You can pick a different UID/GID when building by
-> adding `--build-arg UID=999` and `--build-arg GID=999` (adjusting the values as appropriate).
-
-[⬆️ Back to Top](#-table-of-contents)
-
-## 👋 Contributing
+## 👋 Contributors
 
 <a href="https://github.com/joshuar/go-hass-agent/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=joshuar/go-hass-agent" />
@@ -1311,18 +1235,6 @@ podman build --file ./Dockerfile --platform linux/arm/v7 --tag go-hass-agent
 >
 > Please note, as an open-source and hobby project, the Go Hass Agent developers cannot commit to a response within any
 > given time-frame. However, we do endeavor to try to provide an initial response, and ongoing cadence of 1 week.
-
-### 💾 Committing Code
-
-This repository is using [conventional commit messages](https://www.conventionalcommits.org/en/v1.0.0/#summary). This
-provides the ability to automatically include relevant notes in the [changelog](../CHANGELOG.md). The
-[TL;DR](https://en.wikipedia.org/wiki/TL;DR) is when writing commit messages, add a prefix:
-
-- `feat:` for a new feature, like a new sensor.
-- `fix:` when fixing an issue.
-- `refactor:` when making non-visible but useful code changes.
-- …and so on. See the link above or see the existing commit messages for
-  examples.
 
 ### 📜 Code of Conduct
 
