@@ -73,18 +73,23 @@ func NewScreenLockWorker(ctx context.Context) (workers.EntityWorker, error) {
 		return worker, fmt.Errorf("get system bus: %w", linux.ErrNoSystemBus)
 	}
 
+	// The session path is absent when the user has no graphical session. Rather
+	// than not reporting at all, the worker then reports the screen as locked:
+	// without a graphical session, the desktop is not accessible. The state is
+	// re-evaluated when the agent restarts, which is what happens when a
+	// graphical session starts or ends.
 	worker.sessionPath, ok = linux.CtxGetSessionPath(ctx)
-	if !ok {
-		return worker, fmt.Errorf("get session path: %w", linux.ErrNoSessionPath)
+	if ok {
+		worker.screenLockProp =
+			dbusx.NewProperty[bool](
+				worker.bus,
+				worker.sessionPath,
+				loginBaseInterface,
+				sessionInterface+"."+sessionLockedProp,
+			)
+	} else {
+		slogctx.FromCtx(ctx).Debug("No graphical session, screen lock will be reported as locked.")
 	}
-
-	worker.screenLockProp =
-		dbusx.NewProperty[bool](
-			worker.bus,
-			worker.sessionPath,
-			loginBaseInterface,
-			sessionInterface+"."+sessionLockedProp,
-		)
 
 	defaultPrefs := &workers.CommonWorkerPrefs{}
 	var err error
@@ -97,6 +102,26 @@ func NewScreenLockWorker(ctx context.Context) (workers.EntityWorker, error) {
 }
 
 func (w *screenLockWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
+	// Without a graphical session there is nothing to watch. Report the screen
+	// as locked and leave it at that.
+	if w.sessionPath == "" {
+		sensorCh := make(chan models.Entity)
+
+		go func() {
+			defer close(sensorCh)
+
+			select {
+			case sensorCh <- newScreenlockSensor(ctx, true):
+			case <-ctx.Done():
+				return
+			}
+
+			<-ctx.Done()
+		}()
+
+		return sensorCh, nil
+	}
+
 	triggerCh, err := dbusx.NewWatch(
 		dbusx.MatchPath(w.sessionPath),
 		dbusx.MatchMembers(sessionLockSignal, sessionUnlockSignal, sessionLockedProp, "PropertiesChanged"),
