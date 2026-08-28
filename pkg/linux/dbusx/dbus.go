@@ -153,15 +153,64 @@ func (b *Bus) GetSessionPath() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("unable to retrieve session path: %w", err)
 	}
-	// Extract/validate the session path.
-	sessionPath, ok := displayDetails[1].(dbus.ObjectPath)
-	if !ok || string(sessionPath) == "" {
-		return "", ErrNoSessionPath
+	// Use the display session, but only if it is actually a graphical session.
+	// When the user has no graphical session, systemd-logind reports whichever
+	// other session the user has as the display session - an SSH login, for
+	// example. The sensors that rely on this path (screen lock, backlight,
+	// power controls) are meaningless for such a session, so ignore it and look
+	// for a graphical session instead.
+	if sessionPath, ok := displayDetails[1].(dbus.ObjectPath); ok && b.sessionIsGraphical(string(sessionPath)) {
+		b.logger.Debug("Retrieved session path.", slog.String("path", string(sessionPath)))
+		return string(sessionPath), nil
 	}
-	// We have a valid session path.
-	b.logger.Debug("Retrieved session path.", slog.String("path", string(sessionPath)))
-	// Return the session path as a string.
-	return string(sessionPath), nil
+	// Search the user's remaining sessions for a graphical one.
+	sessions, err := NewProperty[[][]any](b, string(userPath),
+		loginBaseInterface,
+		loginBaseInterface+".User.Sessions").Get()
+	if err != nil {
+		return "", fmt.Errorf("unable to retrieve session path: %w", err)
+	}
+
+	for _, session := range sessions {
+		if sessionPath, ok := session[1].(dbus.ObjectPath); ok && b.sessionIsGraphical(string(sessionPath)) {
+			b.logger.Debug("Retrieved session path.", slog.String("path", string(sessionPath)))
+			return string(sessionPath), nil
+		}
+	}
+	// The user has no graphical session.
+	return "", ErrNoSessionPath
+}
+
+// sessionIsGraphical reports whether the systemd-logind session at the given
+// path is a graphical session.
+func (b *Bus) sessionIsGraphical(sessionPath string) bool {
+	if sessionPath == "" || sessionPath == "/" {
+		return false
+	}
+
+	sessionType, err := NewProperty[string](b, sessionPath,
+		loginBaseInterface,
+		loginBaseInterface+".Session.Type").Get()
+	if err != nil {
+		b.logger.Debug("Could not determine session type.",
+			slog.String("path", sessionPath),
+			slog.Any("error", err))
+
+		return false
+	}
+
+	return isGraphicalSessionType(sessionType)
+}
+
+// isGraphicalSessionType reports whether the given systemd-logind session type
+// denotes a graphical session.
+func isGraphicalSessionType(sessionType string) bool {
+	switch sessionType {
+	case "wayland", "x11", "mir":
+		return true
+	default:
+		return false
+	}
 }
 
 // ListNames lists all interfaces exposed on the bus.

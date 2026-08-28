@@ -175,3 +175,52 @@ func TestParseValueChange(t *testing.T) {
 		})
 	}
 }
+
+func TestIsGraphicalSessionType(t *testing.T) {
+	type args struct {
+		sessionType string
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{
+			name: "wayland session",
+			args: args{sessionType: "wayland"},
+			want: true,
+		},
+		{
+			name: "x11 session",
+			args: args{sessionType: "x11"},
+			want: true,
+		},
+		{
+			name: "mir session",
+			args: args{sessionType: "mir"},
+			want: true,
+		},
+		{
+			name: "tty session",
+			args: args{sessionType: "tty"},
+			want: false,
+		},
+		{
+			name: "unspecified session",
+			args: args{sessionType: "unspecified"},
+			want: false,
+		},
+		{
+			name: "empty session type",
+			args: args{sessionType: ""},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := isGraphicalSessionType(tt.args.sessionType); got != tt.want {
+				t.Errorf("isGraphicalSessionType() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
