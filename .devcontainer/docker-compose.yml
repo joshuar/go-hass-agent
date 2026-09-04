@@ -19,6 +19,7 @@ services:
       - /run/dbus:/run/dbus:ro
       - /run/user/$USER_ID/pipewire-0:/tmp/$USER_UID-runtime-dir/pipewire-0:Z
       - /run/user/$USER_ID/pulse/native:/tmp/$USER_UID-runtime-dir/pulse/native:Z
+      - go-hass-agent-datahome:/datahome
     user: vscode
     cap_add:
       - SYS_PTRACE
@@ -57,8 +58,12 @@ services:
     image: docker.io/eclipse-mosquitto:$MOSQUITTO_VERSION
     volumes:
       - ./data/mosquitto:/mosquitto/config
-      - mosquitto_data:/mosquitto/data
+      - mosquitto-data:/mosquitto/data
       - /etc/localtime:/etc/localtime:ro,cached
     ports:
       - 1883:1883
       - 8883:8883
+
+volumes:
+  go-hass-agent-datahome:
+  mosquitto-data:

@@ -1,8 +1,8 @@
 # Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
 # SPDX-License-Identifier: MIT
 
-ARG ALPINE_VERSION=3.24.1@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b
-ARG GO_VERSION=1.26.5-alpine3.24@sha256:111d79159b2326f7e80c4a4706e1ba166acb0e2611df853955f3621828cd49e8
+ARG ALPINE_VERSION=3.24.1@sha256:79ff19e9084a00eece421b2523fb93e22d730e2c0e525905de047e848e56d95f
+ARG GO_VERSION=1.27.1-alpine3.24@sha256:f86f1a6701e3dcc445fec097a42f78b758f15950ccf032c2d3e54e2754d32fdb
 
 FROM docker.io/golang:${GO_VERSION} AS golang
 FROM docker.io/alpine:${ALPINE_VERSION} AS builder
@@ -11,7 +11,7 @@ FROM docker.io/alpine:${ALPINE_VERSION} AS builder
 COPY --from=golang /usr/local/go/ /usr/local/go/
 
 # Install additional packages
-RUN apk update && apk add sudo openssh curl git bash fish micro graphviz nodejs npm mosquitto-clients dbus dbus-x11 starship
+RUN apk update && apk add sudo openssh curl git bash fish micro graphviz nodejs npm mosquitto-clients dbus dbus-x11
 
 # Add non-root user
 ARG USER_NAME=vscode
@@ -27,6 +27,7 @@ RUN addgroup --gid $USER_GID $USER_NAME \
 
 ENV XDG_RUNTIME_DIR=/run/user/$USER_UID
 RUN mkdir -p $XDG_RUNTIME_DIR && chmod 0700 $XDG_RUNTIME_DIR && chown $USER_UID:$USER_GID $XDG_RUNTIME_DIR
+RUN mkdir -p /datahome/fish /datahome/bash && chown -R $USER_NAME /datahome
 
 USER $USER_NAME
 
@@ -42,5 +43,12 @@ RUN export XDG_RUNTIME_DIR=/tmp/$USER_UID-runtime-dir \
     && mkdir $XDG_RUNTIME_DIR \
     && chmod 0700 $XDG_RUNTIME_DIR
 ENV XDG_RUNTIME_DIR=/tmp/$USER_UID-runtime-dir
+
+# Save shell history.
+RUN SNIPPET="export PROMPT_COMMAND='history -a' && export HISTFILE=/datahome/bash/.bash_history" \
+    && mkdir -p /home/${USER_NAME}/.config/fish \
+    && touch /datahome/bash/.bash_history \
+    && echo 'set -gx XDG_DATA_HOME /datahome' >> /home/${USER_NAME}/.config/fish/config.fish \
+    && echo "$SNIPPET" >> "/home/$USER_NAME/.bashrc"
 
 ENTRYPOINT ["/usr/bin/fish"]
