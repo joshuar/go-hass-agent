@@ -21,6 +21,7 @@ func Landing(agent *agent.Agent) http.HandlerFunc {
 			hassclient, err := hass.NewClient(req.Context(), agent)
 			if err != nil {
 				http.Error(res, err.Error(), http.StatusInternalServerError)
+				return
 			}
 			renderPage(templates.Landing(agent, hassclient), "Go Hass Agent").ServeHTTP(res, req)
 		} else {
