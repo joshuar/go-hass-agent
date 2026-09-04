@@ -81,6 +81,10 @@ var setupClient = sync.OnceValues(func() (*Client, error) {
 		sensorTracker:  tracker.NewTracker(),
 		config:         &hasscfg,
 	}
+	// Schedule a job to get the Home Assistant on a regular interval.
+	if err := client.scheduleConfigUpdates(); err != nil {
+		return nil, fmt.Errorf("could not create client: %w", err)
+	}
 	return client, nil
 })
 
@@ -92,10 +96,6 @@ func NewClient(ctx context.Context, agent agent) (*Client, error) {
 	// Run the job one-time initially to get the config.
 	if agent.IsRegistered() {
 		if updated, err := client.UpdateConfig(ctx); !updated || err != nil {
-			return nil, fmt.Errorf("could not create client: %w", err)
-		}
-		// Schedule a job to get the Home Assistant on a regular interval.
-		if err := client.scheduleConfigUpdates(ctx); err != nil {
 			return nil, fmt.Errorf("could not create client: %w", err)
 		}
 	}
@@ -351,10 +351,9 @@ func (c *Client) isDisabledInHA(id models.UniqueID) (bool, error) {
 	return status, nil
 }
 
-func (c *Client) scheduleConfigUpdates(ctx context.Context) error {
+func (c *Client) scheduleConfigUpdates() error {
 	if !scheduler.IsStarted() {
-		slogctx.FromCtx(ctx).Debug("No scheduler active, not scheduling fetch config updates.")
-		return nil
+		return errors.New("cannot schedule config updates: scheduler not active")
 	}
 	getConfigJob := job.NewFunctionJobWithDesc(c.UpdateConfig, "Fetch Home Assistant Configuration.")
 	const configCheckTimeout = 30 * time.Second
