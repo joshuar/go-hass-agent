@@ -77,7 +77,7 @@ var (
 	DefaultReconcilerInterval = 30 * time.Second
 
 	// DeviceWatchPath is the directory we scan and watch for video devices.
-	DeviceWatchPath = filepath.Join(linux.SysFSRoot, "class", "video4linux")
+	DeviceWatchPath = linux.DevFSRoot
 )
 
 // NewMonitor creates a new video device monitor. It performs an initial scan for video devices on the system and
