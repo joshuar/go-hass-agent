@@ -16,6 +16,7 @@ require (
 	github.com/go-resty/resty/v2 v2.17.2
 	github.com/go-test/deep v1.1.1
 	github.com/godbus/dbus/v5 v5.2.2
+	github.com/goforj/godump v1.9.1
 	github.com/gofrs/uuid/v5 v5.5.1
 	github.com/grandcat/zeroconf v1.0.0
 	github.com/holoplot/go-evdev v0.0.0-20260504100651-66d1748fe847
