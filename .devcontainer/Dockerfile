@@ -19,7 +19,7 @@ ARG USER_UID=1000
 ARG USER_GID=$USER_UID
 
 RUN addgroup --gid $USER_GID $USER_NAME \
-    && adduser --uid $USER_UID --ingroup $USER_NAME --shell /usr/bin/fish $USER_NAME \
+    && adduser --uid $USER_UID --ingroup $USER_NAME --ingroup input --shell /usr/bin/fish $USER_NAME \
     --disabled-password --gecos "" \
     && mkdir -p /etc/sudoers.d \
     && echo "$USER_NAME ALL=(ALL:ALL) NOPASSWD: ALL" > /etc/sudoers.d/$USER_NAME \
