@@ -27,7 +27,7 @@ if [[ -e go.mod ]]; then
         go install github.com/air-verse/air@latest && \
         go install github.com/a-h/templ/cmd/templ@latest && \
         go install github.com/magefile/mage@latest && \
-        curl -sSfL https://golangci-lint.run/install.sh | sh -s -- -b $(go env GOPATH)/bin v2.13.2
+        curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/refs/tags/v2.13.2/install.sh | sh -s -- -b $(go env GOPATH)/bin v2.13.2
 fi
 
 if [[ -e ./.custom-gcl.yaml ]]; then
@@ -36,7 +36,7 @@ if [[ -e ./.custom-gcl.yaml ]]; then
 fi
 
 # Install oh-my-posh.
-mkdir -p ~/.local/bin && curl -s https://ohmyposh.dev/install.sh | bash -s
+mkdir -p ~/.local/bin && curl -s https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/refs/tags/v31.1.2/website/static/install.sh | bash -s
 # Set up shells to use oh-my-posh.
 mkdir -p ~/.config/fish \
     && echo "~/.local/bin/oh-my-posh init fish | source" >>~/.config/fish/config.fish \
