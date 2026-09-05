@@ -23,10 +23,10 @@ echo 'export PATH="$HOME/go/bin:/go/bin:/usr/local/go/bin:$PATH' >> ~/.bashrc
 if [[ -e go.mod ]]; then
     export PATH="$HOME/go/bin:/go/bin:/usr/local/go/bin:$PATH" && \
         go mod tidy && \
-        go install golang.org/x/tools/gopls@latest && \
-        go install github.com/air-verse/air@latest && \
-        go install github.com/a-h/templ/cmd/templ@latest && \
-        go install github.com/magefile/mage@latest && \
+        go install golang.org/x/tools/gopls@v0.23.0 && \
+        go install github.com/air-verse/air@v1.67.4 && \
+        go install github.com/a-h/templ/cmd/templ@v0.3.1020 && \
+        go install github.com/magefile/mage@v1.17.2 && \
         curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/refs/tags/v2.13.2/install.sh | sh -s -- -b $(go env GOPATH)/bin v2.13.2
 fi
 
