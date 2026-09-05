@@ -1,5 +1,21 @@
 # Changelog
 
+## [14.16.0](https://github.com/joshuar/go-hass-agent/compare/v14.15.1...v14.16.0) (2026-09-05)
+
+
+### Features
+
+* **linux:** :sparkles: report the screen as locked when there is no session ([5f91f9c](https://github.com/joshuar/go-hass-agent/commit/5f91f9c9090364ed4bb283edcb9c6c5d0fba944b))
+
+
+### Bug Fixes
+
+* **hass:** 🔧 schedule config updates in sync.Once setupClient ([270d178](https://github.com/joshuar/go-hass-agent/commit/270d178687cb1d27792f6a78eebfb99b203944de))
+* **linux:** :bug: only use a graphical session for session-based sensors ([fc80d82](https://github.com/joshuar/go-hass-agent/commit/fc80d82db76c2be257eccbc93d1e92dca408f871))
+* **linux/webcam:** 🔧 watch /dev rather than /sys for video devices ([5d9f92f](https://github.com/joshuar/go-hass-agent/commit/5d9f92f0f3daffe2b19854f1c40d16eb36562e48))
+* **linux:** only use a graphical session for session-based sensors, and report locked without one ([be63df3](https://github.com/joshuar/go-hass-agent/commit/be63df330e1220bf04f8b6593276426ce92f079e))
+* **server:** 🔧 return immediately after error ([c0b6d9d](https://github.com/joshuar/go-hass-agent/commit/c0b6d9dede9a38897d247cbac35c2db9783b28bd))
+
 ## [14.15.1](https://github.com/joshuar/go-hass-agent/compare/v14.15.0...v14.15.1) (2026-08-09)
 
 
