@@ -28,6 +28,7 @@ func ShowPreferences() http.HandlerFunc {
 				templates.PreferencesForm(prefs),
 				templates.Notification(models.NewErrorMessage("Error retrieving preferences.", err.Error())))
 			renderPartial(template).ServeHTTP(res, req)
+			return
 		}
 		renderPage(templates.PreferencesForm(prefs), "Preferences - Go Hass Agent").ServeHTTP(res, req)
 	}).ServeHTTP
@@ -52,6 +53,7 @@ func SaveMQTTPreferences() http.HandlerFunc {
 				templates.PreferencesForm(&templates.Preferences{MQTT: prefs}),
 				templates.Notification(models.NewErrorMessage("Failed to save preferences.", err.Error())))
 			renderPartial(template).ServeHTTP(res, req)
+			return
 		}
 		template := templ.Join(
 			templates.PreferencesForm(&templates.Preferences{MQTT: prefs}),
