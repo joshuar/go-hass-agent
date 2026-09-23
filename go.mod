@@ -16,12 +16,11 @@ require (
 	github.com/go-resty/resty/v2 v2.17.2
 	github.com/go-test/deep v1.1.1
 	github.com/godbus/dbus/v5 v5.2.2
-	github.com/goforj/godump v1.9.1
 	github.com/gofrs/uuid/v5 v5.5.1
 	github.com/grandcat/zeroconf v1.0.0
 	github.com/holoplot/go-evdev v0.0.0-20260504100651-66d1748fe847
 	github.com/iancoleman/strcase v0.3.0
-	github.com/jaypipes/ghw v0.25.0
+	github.com/jaypipes/ghw v0.25.1-0.20260919174909-28bab225960d
 	github.com/joshuar/go-hass-anything/v12 v12.1.0
 	github.com/jsimonetti/rtnetlink v1.4.2
 	github.com/justinas/alice v1.2.0

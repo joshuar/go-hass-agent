@@ -13,6 +13,7 @@ import (
 
 var macosWorkers = []func(ctx context.Context) (workers.EntityWorker, error){
 	disk.NewUsageWorker,
+	disk.NewSmartWorker,
 }
 
 func CreateOSEntityWorkers(ctx context.Context) []workers.EntityWorker {
