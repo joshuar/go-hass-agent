@@ -11,12 +11,11 @@ require (
 	github.com/fatih/color v1.19.0
 	github.com/gen2brain/beeep v0.11.2
 	github.com/go-chi/chi/v5 v5.3.2
-	github.com/go-playground/form/v4 v4.3.0
+	github.com/go-playground/form/v4 v4.3.1
 	github.com/go-playground/validator/v10 v10.30.4
 	github.com/go-resty/resty/v2 v2.17.2
 	github.com/go-test/deep v1.1.1
 	github.com/godbus/dbus/v5 v5.2.2
-	github.com/goforj/godump v1.9.1
 	github.com/gofrs/uuid/v5 v5.5.1
 	github.com/grandcat/zeroconf v1.0.0
 	github.com/holoplot/go-evdev v0.0.0-20260504100651-66d1748fe847
@@ -30,7 +29,7 @@ require (
 	github.com/knadh/koanf/providers/file v1.2.1
 	github.com/knadh/koanf/v2 v2.3.6
 	github.com/lmittmann/tint v1.2.0
-	github.com/lxzan/gws v1.10.1
+	github.com/lxzan/gws v1.10.2
 	github.com/mandykoh/prism v0.35.3
 	github.com/matoous/go-nanoid/v2 v2.1.0
 	github.com/mattn/go-isatty v0.0.24
@@ -45,8 +44,8 @@ require (
 	github.com/tklauser/go-sysconf v0.4.0
 	github.com/veqryn/slog-context v0.9.0
 	github.com/veqryn/slog-json v0.6.0
-	golang.org/x/net v0.58.0
-	golang.org/x/sys v0.47.0
+	golang.org/x/net v0.59.0
+	golang.org/x/sys v0.48.0
 	gopkg.in/yaml.v3 v3.0.1
 	kernel.org/pub/linux/libs/security/libcap/cap v1.2.78
 )
@@ -149,12 +148,12 @@ require (
 	go.opentelemetry.io/otel v1.29.0 // indirect
 	go.opentelemetry.io/otel/trace v1.29.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
-	golang.org/x/crypto v0.55.0 // indirect
+	golang.org/x/crypto v0.57.0 // indirect
 	golang.org/x/exp v0.0.0-20260410095643-746e56fc9e2f // indirect
-	golang.org/x/mod v0.38.0 // indirect
-	golang.org/x/sync v0.22.0 // indirect
-	golang.org/x/text v0.41.0 // indirect
-	golang.org/x/tools v0.48.0 // indirect
+	golang.org/x/mod v0.41.0 // indirect
+	golang.org/x/sync v0.23.0 // indirect
+	golang.org/x/text v0.42.0 // indirect
+	golang.org/x/tools v0.49.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	howett.net/plist v1.0.2-0.20250314012144-ee69052608d9 // indirect
 	kernel.org/pub/linux/libs/security/libcap/psx v1.2.78 // indirect
