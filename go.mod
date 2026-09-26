@@ -40,6 +40,7 @@ require (
 	github.com/reugn/go-quartz v0.15.2
 	github.com/samber/slog-chi v1.19.1
 	github.com/samber/slog-multi v1.8.0
+	github.com/shirou/gopsutil/v4 v4.26.8
 	github.com/stretchr/testify v1.12.1
 	github.com/tklauser/go-sysconf v0.4.0
 	github.com/veqryn/slog-context v0.9.0
@@ -70,6 +71,7 @@ require (
 	github.com/cpuguy83/go-md2man/v2 v2.0.6 // indirect
 	github.com/cyphar/filepath-securejoin v0.6.1 // indirect
 	github.com/dprotaso/go-yit v0.0.0-20220510233725-9ba8df137936 // indirect
+	github.com/ebitengine/purego v0.10.2 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/esiqveland/notify v0.13.3 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
