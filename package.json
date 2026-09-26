@@ -1,8 +1,8 @@
 {
   "browserslist": "> 0.5%, last 2 versions, not dead",
   "dependencies": {
-    "daisyui": "^5.7.20",
-    "htmx.org": "^2.0.10",
+    "daisyui": "^5.7.42",
+    "htmx.org": "^4.0.0",
     "hyperscript.org": "^0.9.93",
     "tailwindcss": "^4.3.3"
   },
@@ -13,10 +13,10 @@
     "@tailwindcss/cli": "^4.3.3",
     "@tailwindcss/typography": "^0.5.20",
     "esbuild": "^0.28.1",
-    "eslint": "^10.9.0",
+    "eslint": "^10.10.0",
     "eslint-config-prettier": "^10.1.8",
-    "globals": "^17.11.0",
-    "prettier": "^3.9.6",
+    "globals": "^17.12.0",
+    "prettier": "^3.9.8",
     "prettier-plugin-tailwindcss": "^0.8.1",
     "prettier-plugin-toml": "^2.0.6"
   },
