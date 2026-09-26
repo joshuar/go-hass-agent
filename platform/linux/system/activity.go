@@ -21,13 +21,66 @@ import (
 
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/models"
+	"github.com/joshuar/go-hass-agent/pkg/linux/dbusx"
 	"github.com/joshuar/go-hass-agent/platform/linux"
 )
 
 const (
 	activityWorkerID                 = "activity"
 	activityWorkerDefaultIdleTimeout = 5 * time.Second
+
+	sleepSignal    = "PrepareForSleep"
+	shutdownSignal = "PrepareForShutdown"
 )
+
+// newActivityState generates the User Activity sensor with the given state.
+func newActivityState(ctx context.Context, state bool) models.Entity {
+	icon := "mdi:bell-off"
+	if state {
+		icon = "mdi:bell-ring"
+	}
+
+	return models.NewSensor(ctx,
+		models.WithName("User Activity"),
+		models.WithID("user_activity"),
+		models.AsTypeBinarySensor(),
+		models.WithIcon(icon),
+		models.WithState(state),
+	)
+}
+
+// resetOnPowerSignal switches the sensor off when the system announces it is
+// going to sleep or shutting down, and records that input events are to be
+// ignored until it resumes.
+func resetOnPowerSignal(
+	ctx context.Context,
+	event dbusx.Trigger,
+	sensorCh chan<- models.Entity,
+	activityDetected, goingDown *atomic.Bool,
+) {
+	if len(event.Content) == 0 {
+		return
+	}
+
+	going, ok := event.Content[0].(bool)
+	if !ok {
+		return
+	}
+
+	// Both signals are sent again with false on resume, which lifts the
+	// suppression rather than switching the sensor off.
+	goingDown.Store(going)
+
+	if !going {
+		return
+	}
+
+	// Switch the sensor off while the agent can still send it.
+	if activityDetected.Load() {
+		activityDetected.Store(false)
+		sensorCh <- newActivityState(ctx, false)
+	}
+}
 
 type activityWorkerPrefs struct {
 	workers.CommonWorkerPrefs `toml:",squash"`
@@ -39,6 +92,7 @@ type activityWorker struct {
 	*models.WorkerMetadata
 
 	prefs        *activityWorkerPrefs `toml:",squash"`
+	bus          *dbusx.Bus
 	inputDevices []*evdev.InputDevice
 	activity     chan bool
 }
@@ -62,6 +116,14 @@ func NewUserActivitySensor(ctx context.Context) (workers.EntityWorker, error) {
 
 	if worker.prefs.IsDisabled() {
 		return worker, nil
+	}
+
+	// Get the system bus, used to detect the system going to sleep or shutting
+	// down. This is not fatal: without it, the sensor just cannot switch itself
+	// off before the system goes down.
+	var ok bool
+	if worker.bus, ok = linux.CtxGetSystemBus(ctx); !ok {
+		slogctx.FromCtx(ctx).Debug("No system bus, user activity will not be reset on sleep/shutdown.")
 	}
 
 	// Check for required capabilities.
@@ -100,50 +162,85 @@ func (w *activityWorker) Start(ctx context.Context) (<-chan models.Entity, error
 		defer close(sensorCh)
 		<-ctx.Done()
 	}()
-	var activityDetected atomic.Bool
 
 	// Start monitoring input devices.
 	w.monitorInputDevices(ctx)
 
 	// Handle user activity events.
-	go func() {
-		slogctx.FromCtx(ctx).Debug("Started monitoring user activity.")
-		for {
-			select {
-			case <-ctx.Done():
-				slogctx.FromCtx(ctx).Debug("Stopped monitoring user activity.")
-				return
-			case <-w.activity:
-				if !activityDetected.Load() {
-					activityDetected.Store(true)
-					sensorCh <- models.NewSensor(ctx,
-						models.WithName("User Activity"),
-						models.WithID("user_activity"),
-						models.AsTypeBinarySensor(),
-						models.WithIcon("mdi:bell-ring"),
-						models.WithState(true),
-					)
-				}
-			case <-time.After(idleTimeout):
-				if activityDetected.Load() {
-					activityDetected.Store(false)
-					sensorCh <- models.NewSensor(ctx,
-						models.WithName("User Activity"),
-						models.WithID("user_activity"),
-						models.AsTypeBinarySensor(),
-						models.WithIcon("mdi:bell-off"),
-						models.WithState(false),
-					)
-				}
-			}
-		}
-	}()
+	go w.monitorActivity(ctx, sensorCh, w.watchPowerSignals(ctx), idleTimeout)
 
 	return sensorCh, nil
 }
 
 func (w *activityWorker) IsDisabled() bool {
 	return w.prefs.IsDisabled()
+}
+
+// watchPowerSignals watches for the system going to sleep or shutting down. A
+// nil channel is returned when the signals cannot be watched, in which case
+// activity cannot be switched off before the system goes down.
+func (w *activityWorker) watchPowerSignals(ctx context.Context) <-chan dbusx.Trigger {
+	if w.bus == nil {
+		return nil
+	}
+
+	powerCh, err := dbusx.NewWatch(
+		dbusx.MatchPath(loginBasePath),
+		dbusx.MatchInterface(managerInterface),
+		dbusx.MatchMembers(sleepSignal, shutdownSignal),
+	).Start(ctx, w.bus)
+	if err != nil {
+		slogctx.FromCtx(ctx).Warn("Could not watch for sleep/shutdown, user activity will not be reset.",
+			slog.Any("error", err))
+
+		return nil
+	}
+
+	return powerCh
+}
+
+// monitorActivity reports user activity from input events, and switches it off
+// when the system announces it is going to sleep or shutting down. Without
+// that, activity detected as the system goes down is left switched on in Home
+// Assistant until the user is active again.
+func (w *activityWorker) monitorActivity(
+	ctx context.Context,
+	sensorCh chan<- models.Entity,
+	powerCh <-chan dbusx.Trigger,
+	idleTimeout time.Duration,
+) {
+	var activityDetected atomic.Bool
+	// goingDown is set while the system is on its way to sleep or shutdown.
+	// Input events are ignored until it resumes, so an event already queued
+	// when the system went down cannot switch the sensor back on.
+	var goingDown atomic.Bool
+
+	slogctx.FromCtx(ctx).Debug("Started monitoring user activity.")
+
+	for {
+		select {
+		case <-ctx.Done():
+			slogctx.FromCtx(ctx).Debug("Stopped monitoring user activity.")
+
+			return
+		case <-w.activity:
+			if goingDown.Load() {
+				continue
+			}
+
+			if !activityDetected.Load() {
+				activityDetected.Store(true)
+				sensorCh <- newActivityState(ctx, true)
+			}
+		case <-time.After(idleTimeout):
+			if activityDetected.Load() {
+				activityDetected.Store(false)
+				sensorCh <- newActivityState(ctx, false)
+			}
+		case event := <-powerCh:
+			resetOnPowerSignal(ctx, event, sensorCh, &activityDetected, &goingDown)
+		}
+	}
 }
 
 func (w *activityWorker) monitorInputDevices(ctx context.Context) {
