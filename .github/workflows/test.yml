@@ -91,3 +91,51 @@ jobs:
           token: ${{secrets.CODECOV_TOKEN}}
           files: ./coverage.txt
           fail_ci_if_error: false
+
+  test-macos:
+    runs-on: macos-14
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        with:
+          egress-policy: block
+          allowed-endpoints: >
+            api.github.com:443
+            github.com:443
+            golang.org:443
+            hosted-compute-watchdog-prod-eus-01.githubapp.com:443
+            hosted-compute-watchdog-prod-eus-02.githubapp.com:443
+            hosted-compute-watchdog-prod-iad-02.githubapp.com:443
+            keybase.io:443
+            o26192.ingest.us.sentry.io:443
+            objects.githubusercontent.com:443
+            proxy.golang.org:443
+            raw.githubusercontent.com:443
+            release-assets.githubusercontent.com:443
+            storage.googleapis.com:443
+            sum.golang.org:443
+
+      - name: Checkout
+        id: checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Go
+        id: setup_go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: "go.mod"
+          cache: true
+
+      - name: Run tests
+        # platform/linux and pkg/linux are Linux-only packages that aren't
+        # (yet) fully gated by GOOS build constraints at the file level, so
+        # attempting to build them here would fail for reasons unrelated to
+        # macOS support. Scope this run to everything else instead of the
+        # ./... the Linux job uses.
+        run: |
+          packages=$(go list -e ./... | grep -v -E '/(pkg|platform)/linux(/|$)')
+          go test -ldflags="-w -s -X github.com/joshuar/go-hass-agent/config.AppVersion=$(git describe --tags --always --long --dirty)" -v $packages

@@ -19,6 +19,7 @@ import (
 
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/models"
+	commondisk "github.com/joshuar/go-hass-agent/platform/common/disk"
 	"github.com/joshuar/go-hass-agent/platform/linux"
 	"github.com/joshuar/go-hass-agent/scheduler"
 
@@ -112,7 +113,7 @@ func (w *smartWorker) Execute(ctx context.Context) error {
 		}
 		defer dev.Close()
 
-		var smartData smartData
+		var smartData commondisk.SmartData
 
 		switch smartDevice := dev.(type) {
 		case *smart.SataDevice:
@@ -125,7 +126,7 @@ func (w *smartWorker) Execute(ctx context.Context) error {
 				continue
 			}
 			ataSmart := &ataSmartDetails{
-				diskDetails: &diskDetails{
+				DiskDetails: &commondisk.DiskDetails{
 					Disk:   disk.Name,
 					Model:  disk.Model,
 					Serial: disk.SerialNumber,
@@ -160,7 +161,7 @@ func (w *smartWorker) Execute(ctx context.Context) error {
 					)
 				} else {
 					scsiSmart := &ataSmartDetails{
-						diskDetails: &diskDetails{
+						DiskDetails: &commondisk.DiskDetails{
 							Disk:   disk.Name,
 							Model:  disk.Model,
 							Serial: disk.SerialNumber,
@@ -179,8 +180,8 @@ func (w *smartWorker) Execute(ctx context.Context) error {
 				)
 				continue
 			}
-			nvmeSmart := &nvmeSmartDetails{
-				diskDetails: &diskDetails{
+			nvmeSmart := &commondisk.NVMeSmartDetails{
+				DiskDetails: &commondisk.DiskDetails{
 					Disk:   disk.Name,
 					Model:  disk.Model,
 					Serial: disk.SerialNumber,
@@ -195,7 +196,7 @@ func (w *smartWorker) Execute(ctx context.Context) error {
 			continue
 		}
 		if smartData != nil {
-			w.OutCh <- newSmartSensor(ctx, smartData)
+			w.OutCh <- commondisk.NewSmartSensor(ctx, smartData)
 		}
 	}
 	return nil
@@ -215,59 +216,9 @@ func (w *smartWorker) IsDisabled() bool {
 	return w.prefs.IsDisabled()
 }
 
-// smartData is an interface that represents SMART data from any type of disk (nvme, ata, etc.).
-type smartData interface {
-	ID() string
-	Problem() bool
-	Attributes() map[string]any
-}
-
-// diskDetails are the common details about any disk.
-type diskDetails struct {
-	Disk   string
-	Serial string
-	Model  string
-}
-
-func (disk *diskDetails) ID() string {
-	return disk.Disk
-}
-
-func (disk *diskDetails) details() map[string]any {
-	return map[string]any{
-		"Disk":   disk.Disk,
-		"Model":  disk.Model,
-		"Serial": disk.Serial,
-	}
-}
-
-// nvmeSmartDetails are the SMART details for nvme disks.
-type nvmeSmartDetails struct {
-	*diskDetails
-	*smart.NvmeSMARTLog
-}
-
-// Problem returns a boolean indicating whether the SMART data indicates a problem for the NVMe disk. The heuristic for
-// a problem is if the CritWarning attribute has a value greater than zero. For code spelunkers, if you have
-// suggestions, please open a GitHub issue with your comments!
-func (nvme *nvmeSmartDetails) Problem() bool {
-	return nvme.CritWarning != 0
-}
-
-func (nvme *nvmeSmartDetails) Attributes() map[string]any {
-	nvmeAttrs := map[string]any{
-		"Temperature":   fmt.Sprintf("%.2f °C", kelvinToCelsius(nvme.Temperature)),
-		"Percent Used":  fmt.Sprintf("%d %%", nvme.PercentUsed),
-		"Percent Spare": fmt.Sprintf("%d %%", nvme.AvailSpare),
-	}
-	attrs := maps.Clone(nvme.details())
-	maps.Copy(attrs, nvmeAttrs)
-	return attrs
-}
-
 // ataSmartDetails are the SMART details for ata disks.
 type ataSmartDetails struct {
-	*diskDetails
+	*commondisk.DiskDetails
 	*smart.AtaSmartPage
 }
 
@@ -441,13 +392,13 @@ func (ata *ataSmartDetails) Attributes() map[string]any {
 		ataAttrs[attr.Name] = attr.ValueRaw
 	}
 
-	attrs := maps.Clone(ata.details())
+	attrs := maps.Clone(ata.Details())
 	maps.Copy(attrs, ataAttrs)
 	return attrs
 }
 
 type scsiSmartDetails struct {
-	*diskDetails
+	*commondisk.DiskDetails
 	*smart.GenericAttributes
 }
 
@@ -464,24 +415,7 @@ func (scsi *scsiSmartDetails) Attributes() map[string]any {
 	scsiattrs["Power Cycles"] = scsi.PowerCycles
 	scsiattrs["Read Blocks"] = scsi.Read
 	scsiattrs["Written Blocks"] = scsi.Written
-	attrs := maps.Clone(scsi.details())
+	attrs := maps.Clone(scsi.Details())
 	maps.Copy(attrs, scsiattrs)
 	return attrs
-}
-
-func newSmartSensor(ctx context.Context, data smartData) models.Entity {
-	return models.NewSensor(ctx,
-		models.WithName(data.ID()+" SMART Status"),
-		models.WithID(data.ID()+"_smart_status"),
-		models.AsTypeBinarySensor(),
-		models.WithDeviceClass(models.BinaryClassProblem),
-		models.AsDiagnostic(),
-		models.WithIcon("mdi:harddisk"),
-		models.WithState(data.Problem()),
-		models.WithAttributes(data.Attributes()),
-	)
-}
-
-func kelvinToCelsius[T ~int | ~uint16](kelvin T) float32 {
-	return float32(kelvin) - 273.15
 }

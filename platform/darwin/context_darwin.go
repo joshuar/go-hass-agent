@@ -12,7 +12,6 @@ type contextKey string
 const (
 	clktckContextKey   contextKey = "clktck"
 	boottimeContextKey contextKey = "boottime"
-
 )
 
 func NewContext(ctx context.Context) context.Context {

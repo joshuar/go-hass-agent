@@ -1,4 +1,4 @@
-// Copyright (c) 2024 Joshua Rich <joshua.rich@gmail.com>
+// Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
 //
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
@@ -11,19 +11,18 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"math"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 	"time"
 
-	"github.com/reugn/go-quartz/quartz"
 	slogctx "github.com/veqryn/slog-context"
 	"golang.org/x/sys/unix"
 
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/models"
+	"github.com/joshuar/go-hass-agent/platform/common/disk"
 	"github.com/joshuar/go-hass-agent/platform/linux"
 	"github.com/joshuar/go-hass-agent/scheduler"
 )
@@ -36,44 +35,10 @@ const (
 	usageWorkerDesc = "Disk usage stats"
 )
 
-const (
-	diskUsageSensorIcon  = "mdi:harddisk"
-	diskUsageSensorUnits = "%"
-)
-
-const (
-	mountAttrDevice      = "device"
-	mountAttrFs          = "filesystem_type"
-	mountAttrOpts        = "mount_options"
-	mountAttBlockSize    = "block_size"
-	mountAttrBlocksTotal = "blocks_total"
-	mountAttrBlocksFree  = "blocks_free"
-	mountAttrBlocksAvail = "blocks_available"
-	mountAttrInodesTotal = "inodes_total"
-	mountAttrInodesFree  = "inodes_free"
-)
-
-type mount struct {
-	attributes map[string]any
-	mountpoint string
-}
-
 var (
 	validVirtualFs = []string{"tmpfs", "ramfs", "cifs", "smb", "nfs"}
 	ignoredMounts  = []string{"/tmp/crun", "/run", "/var/lib/containers", "/sys", "/proc", "/etc", "/host"}
 )
-
-var (
-	_ quartz.Job                  = (*usageWorker)(nil)
-	_ workers.PollingEntityWorker = (*usageWorker)(nil)
-)
-
-type usageWorker struct {
-	*models.WorkerMetadata
-	*workers.PollingEntityWorkerData
-
-	prefs *usageWorkerPrefs
-}
 
 type usageWorkerPrefs struct {
 	WorkerPrefs `toml:",squash"`
@@ -83,107 +48,51 @@ type usageWorkerPrefs struct {
 
 // NewUsageWorker creates a new polling sensor worker to monitor disk mount usage.
 func NewUsageWorker(_ context.Context) (workers.EntityWorker, error) {
-	worker := &usageWorker{
-		WorkerMetadata:          models.SetWorkerMetadata(usageWorkerID, usageWorkerDesc),
-		PollingEntityWorkerData: &workers.PollingEntityWorkerData{},
-	}
-
 	defaultPrefs := &usageWorkerPrefs{
 		IgnoredMounts: ignoredMounts,
 	}
 	defaultPrefs.UpdateInterval = usageUpdateInterval.String()
 
-	var err error
-	worker.prefs, err = workers.LoadWorkerPreferences(usageWorkerPreferencesID, defaultPrefs)
+	prefs, err := workers.LoadWorkerPreferences(usageWorkerPreferencesID, defaultPrefs)
 	if err != nil {
-		return worker, fmt.Errorf("could not load disk usage worker preferences: %w", err)
+		return nil, fmt.Errorf("could not load disk usage worker preferences: %w", err)
 	}
 
-	pollInterval, err := time.ParseDuration(worker.prefs.UpdateInterval)
+	pollInterval, err := time.ParseDuration(prefs.UpdateInterval)
 	if err != nil {
 		pollInterval = usageUpdateInterval
 	}
-	worker.Trigger = scheduler.NewPollTriggerWithJitter(pollInterval, usageUpdateJitter)
+
+	worker := &disk.Worker{
+		WorkerMetadata: models.SetWorkerMetadata(usageWorkerID, usageWorkerDesc),
+		PollingEntityWorkerData: &workers.PollingEntityWorkerData{
+			Trigger: scheduler.NewPollTriggerWithJitter(pollInterval, usageUpdateJitter),
+		},
+		DataSource: linux.DataSrcProcFS,
+		Disabled:   prefs.Disabled,
+		GetMounts: func(ctx context.Context) ([]disk.Mount, error) {
+			return getMounts(ctx, prefs.IgnoredMounts)
+		},
+	}
 
 	return worker, nil
 }
 
-func (w *usageWorker) Execute(ctx context.Context) error {
-	mounts, err := getMounts(ctx, w.prefs.IgnoredMounts)
-	if err != nil {
-		return fmt.Errorf("could not get mount points: %w", err)
-	}
-
-	for mount := range slices.Values(mounts) {
-		usedBlocks := mount.attributes[mountAttrBlocksTotal].(uint64) - mount.attributes[mountAttrBlocksFree].(uint64) //nolint:lll,forcetypeassert
-		usedPc := float64(
-			usedBlocks,
-		) / float64(
-			mount.attributes[mountAttrBlocksTotal].(uint64),
-		) * 100 //nolint:forcetypeassert
-
-		if math.IsNaN(usedPc) {
-			continue
-		}
-		w.OutCh <- newDiskUsageSensor(ctx, mount, usedPc)
-	}
-	return nil
-}
-
-func (w *usageWorker) IsDisabled() bool {
-	return w.prefs.Disabled
-}
-
-func (w *usageWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
-	w.OutCh = make(chan models.Entity)
-	if err := workers.SchedulePollingWorker(ctx, w, w.OutCh); err != nil {
-		close(w.OutCh)
-		return w.OutCh, fmt.Errorf("could not start disk usage worker: %w", err)
-	}
-	return w.OutCh, nil
-}
-
-func newDiskUsageSensor(ctx context.Context, mount *mount, value float64) models.Entity {
-	mount.attributes["data_source"] = linux.DataSrcProcFS
-
-	usedBlocks := mount.attributes[mountAttrBlocksTotal].(uint64) - mount.attributes[mountAttrBlocksFree].(uint64) //nolint:lll,forcetypeassert
-	mount.attributes["blocks_used"] = usedBlocks
-	mount.attributes["bytes_used"] = usedBlocks * uint64(mount.attributes[mountAttBlockSize].(int64))
-
-	var id string
-
-	if mount.mountpoint == "/" {
-		id = "mountpoint_root"
-	} else {
-		id = "mountpoint" + strings.ReplaceAll(mount.mountpoint, "/", "_")
-	}
-
-	return models.NewSensor(ctx,
-		models.WithName("Mountpoint "+mount.mountpoint+" Usage"),
-		models.WithID(id),
-		models.WithUnits(diskUsageSensorUnits),
-		models.WithStateClass(models.StateTotal),
-		models.WithIcon(diskUsageSensorIcon),
-		models.WithState(math.Round(value/0.05)*0.05),
-		models.WithAttributes(mount.attributes),
-	)
-}
-
-func (m *mount) getMountInfo() error {
+func getMountInfo(m *disk.Mount) error {
 	var stats unix.Statfs_t
 
-	if err := unix.Statfs(m.mountpoint, &stats); err != nil {
+	if err := unix.Statfs(m.Mountpoint, &stats); err != nil {
 		return fmt.Errorf("getMountInfo: %w", err)
 	}
 
-	m.attributes[mountAttBlockSize] = stats.Bsize
-	m.attributes[mountAttrBlocksTotal] = stats.Blocks
-	m.attributes["bytes_total"] = stats.Blocks * uint64(stats.Bsize)
-	m.attributes[mountAttrBlocksFree] = stats.Bfree
-	m.attributes["bytes_free"] = stats.Bfree * uint64(stats.Bsize)
-	m.attributes[mountAttrBlocksAvail] = stats.Bavail
-	m.attributes[mountAttrInodesTotal] = stats.Files
-	m.attributes[mountAttrInodesFree] = stats.Ffree
+	m.Attributes[disk.AttrBlockSize] = uint64(stats.Bsize)
+	m.Attributes[disk.AttrBlocksTotal] = stats.Blocks
+	m.Attributes[disk.AttrBytesTotal] = stats.Blocks * uint64(stats.Bsize)
+	m.Attributes[disk.AttrBlocksFree] = stats.Bfree
+	m.Attributes[disk.AttrBytesFree] = stats.Bfree * uint64(stats.Bsize)
+	m.Attributes[disk.AttrBlocksAvail] = stats.Bavail
+	m.Attributes[disk.AttrInodesTotal] = stats.Files
+	m.Attributes[disk.AttrInodesFree] = stats.Ffree
 
 	return nil
 }
@@ -223,7 +132,7 @@ func getFilesystems() ([]string, error) {
 	return filesystems, nil
 }
 
-func getMounts(ctx context.Context, ignoredMounts []string) ([]*mount, error) {
+func getMounts(ctx context.Context, ignoredMounts []string) ([]disk.Mount, error) {
 	// Get valid filesystems.
 	filesystems, err := getFilesystems()
 	if err != nil {
@@ -237,7 +146,7 @@ func getMounts(ctx context.Context, ignoredMounts []string) ([]*mount, error) {
 	}
 	defer data.Close()
 
-	var mounts []*mount
+	var mounts []disk.Mount
 	// Scan the file.
 	entry := bufio.NewScanner(data)
 	for entry.Scan() {
@@ -264,15 +173,15 @@ func getMounts(ctx context.Context, ignoredMounts []string) ([]*mount, error) {
 			}
 
 			// Create mount details.
-			validmount := &mount{
-				mountpoint: mountpoint,
-				attributes: make(map[string]any),
+			validmount := disk.Mount{
+				Mountpoint: mountpoint,
+				Attributes: make(map[string]any),
 			}
-			validmount.attributes[mountAttrDevice] = device
-			validmount.attributes[mountAttrFs] = filesystem
-			validmount.attributes[mountAttrOpts] = opts
+			validmount.Attributes[disk.AttrDevice] = device
+			validmount.Attributes[disk.AttrFs] = filesystem
+			validmount.Attributes[disk.AttrOpts] = opts
 
-			if err := validmount.getMountInfo(); err != nil {
+			if err := getMountInfo(&validmount); err != nil {
 				slogctx.FromCtx(ctx).
 					With(slog.String("worker", usageWorkerID)).
 					Debug("Error getting mount info.", slog.Any("error", err))
