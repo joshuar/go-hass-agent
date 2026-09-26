@@ -20,7 +20,7 @@ require (
 	github.com/grandcat/zeroconf v1.0.0
 	github.com/holoplot/go-evdev v0.0.0-20260504100651-66d1748fe847
 	github.com/iancoleman/strcase v0.3.0
-	github.com/jaypipes/ghw v0.25.1-0.20260919174909-28bab225960d
+	github.com/jaypipes/ghw v0.25.1-0.20260926035630-72c0c98ee4c1
 	github.com/joshuar/go-hass-anything/v12 v12.1.0
 	github.com/jsimonetti/rtnetlink v1.4.2
 	github.com/justinas/alice v1.2.0

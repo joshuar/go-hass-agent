@@ -2,6 +2,7 @@ package disk
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -29,6 +30,12 @@ func TestSmartWorkerExecute(t *testing.T) {
 		sensor, err := entity.AsSensor()
 		require.NoError(t, err)
 		sensors = append(sensors, sensor)
+	}
+
+	// CI runners are virtualized and expose VirtIO storage rather than a
+	// real NVMe controller, so there's no SMART data to read there.
+	if os.Getenv("CI") != "" && len(sensors) == 0 {
+		t.Skip("no NVMe SMART data available in this CI environment")
 	}
 
 	require.NotEmpty(t, sensors, "expected at least one SMART sensor")
