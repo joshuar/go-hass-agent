@@ -9,11 +9,13 @@ import (
 
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/platform/darwin/disk"
+	"github.com/joshuar/go-hass-agent/platform/darwin/temperature"
 )
 
 var macosWorkers = []func(ctx context.Context) (workers.EntityWorker, error){
 	disk.NewUsageWorker,
 	disk.NewSmartWorker,
+	temperature.NewTemperatureWorker,
 }
 
 func CreateOSEntityWorkers(ctx context.Context) []workers.EntityWorker {
