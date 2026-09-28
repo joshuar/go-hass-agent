@@ -1,5 +1,23 @@
 # Changelog
 
+## [14.17.0](https://github.com/joshuar/go-hass-agent/compare/v14.16.0...v14.17.0) (2026-09-26)
+
+
+### Features
+
+* **disk:** add macOS disk usage sensor, share worker logic with linux ([0d5f073](https://github.com/joshuar/go-hass-agent/commit/0d5f0731d6db256f70b949017a093b59a0f8da8c))
+* **disk:** add macOS SMART status sensor, share NVMe logic with linux ([611e5ba](https://github.com/joshuar/go-hass-agent/commit/611e5ba5b55dddeef635605278d2c9ce9401d88d))
+* **temperature:** add macOS hardware temperature sensors ([d18caba](https://github.com/joshuar/go-hass-agent/commit/d18caba2704cd6618dd613b713f093db71ceaf7c))
+* **temperature:** add macOS hardware temperature sensors ([9770271](https://github.com/joshuar/go-hass-agent/commit/9770271c1e22e783ba38931d668aa86547c9bdc5))
+
+
+### Bug Fixes
+
+* **ci:** gate darwin files by GOOS and add macOS test job ([7a3ec81](https://github.com/joshuar/go-hass-agent/commit/7a3ec81caaaa7f7f79a23a3059c86ec1646dbf97))
+* **linux:** reset user activity sensor on sleep/shutdown ([7e5f434](https://github.com/joshuar/go-hass-agent/commit/7e5f4345a88eec0ff46a57cce4cabcaa225d8bf6))
+* **linux:** reset user activity sensor on sleep/shutdown. Thanks @TheRealMierzen ([dd09930](https://github.com/joshuar/go-hass-agent/commit/dd09930c96934d91ef9288569906ada07fb99ed9))
+* missing return after handler error ([c4eb168](https://github.com/joshuar/go-hass-agent/commit/c4eb168cec9dde472fd35cbe6949b23a68efd263))
+
 ## [14.16.0](https://github.com/joshuar/go-hass-agent/compare/v14.15.1...v14.16.0) (2026-09-05)
 
 
