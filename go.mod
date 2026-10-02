@@ -11,8 +11,8 @@ require (
 	github.com/fatih/color v1.19.0
 	github.com/gen2brain/beeep v0.11.2
 	github.com/go-chi/chi/v5 v5.3.2
-	github.com/go-playground/form/v4 v4.3.1
-	github.com/go-playground/validator/v10 v10.30.4
+	github.com/go-playground/form/v4 v4.5.0
+	github.com/go-playground/validator/v10 v10.30.5
 	github.com/go-resty/resty/v2 v2.17.2
 	github.com/go-test/deep v1.1.1
 	github.com/godbus/dbus/v5 v5.2.2
@@ -27,7 +27,7 @@ require (
 	github.com/justinas/nosurf v1.2.0
 	github.com/knadh/koanf/parsers/toml/v2 v2.2.2
 	github.com/knadh/koanf/providers/file v1.2.1
-	github.com/knadh/koanf/v2 v2.3.6
+	github.com/knadh/koanf/v2 v2.3.7
 	github.com/lmittmann/tint v1.2.0
 	github.com/lxzan/gws v1.10.2
 	github.com/mandykoh/prism v0.35.3
