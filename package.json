@@ -1,7 +1,7 @@
 {
   "browserslist": "> 0.5%, last 2 versions, not dead",
   "dependencies": {
-    "daisyui": "^5.7.42",
+    "daisyui": "^5.7.47",
     "htmx.org": "^4.0.0",
     "hyperscript.org": "^0.9.93",
     "tailwindcss": "^4.3.3"
@@ -13,12 +13,12 @@
     "@tailwindcss/cli": "^4.3.3",
     "@tailwindcss/typography": "^0.5.20",
     "esbuild": "^0.28.1",
-    "eslint": "^10.10.0",
+    "eslint": "^10.11.0",
     "eslint-config-prettier": "^10.1.8",
-    "globals": "^17.12.0",
-    "prettier": "^3.9.8",
+    "globals": "^17.13.0",
+    "prettier": "^3.9.9",
     "prettier-plugin-tailwindcss": "^0.8.1",
-    "prettier-plugin-toml": "^2.0.6"
+    "prettier-plugin-toml": "^3.0.2"
   },
   "license": "MIT",
   "name": "go-hass-agent",
