@@ -55,6 +55,17 @@ type Client struct {
 	sensorRegistry sensorRegistry
 	sensorTracker  sensorTracker
 	config         *Config
+
+	// pending holds sensor updates and registrations that failed to send
+	// (for example because the network was unreachable after a resume) and
+	// need to be retried once Home Assistant is reachable again. It is keyed
+	// by sensor ID so the latest state for a sensor wins.
+	pendingMu sync.Mutex
+	pending   map[models.UniqueID]models.Entity
+
+	// retryInterval is how often pending sensor updates are retried. It is
+	// zero in production and defaults to 30s; tests set it short.
+	retryInterval time.Duration
 }
 
 // ErrSendRequest indicates an error occurred when sending a request to Home Assistant.
@@ -127,87 +138,177 @@ func (c *Client) UpdateConfig(ctx context.Context) (bool, error) {
 }
 
 // EntityHandler takes incoming Entity objects via the passed in channel and
-// runs the appropriate handler for the Entity type.
+// runs the appropriate handler for the Entity type. When a sensor update or
+// registration fails, the entity is stored in a pending map keyed by sensor ID
+// and retried on a ticker until Home Assistant is reachable again, rather than
+// being dropped. This keeps event-driven sensors (for example Power State)
+// from staying stale after a resume where the network is not yet back.
+//
+// All sends happen on this single goroutine, so a retry can never race a newer
+// update for the same sensor.
 func (c *Client) EntityHandler(ctx context.Context, entityCh <-chan models.Entity) {
-	for entity := range entityCh {
-		if eventData, err := entity.AsEvent(); err == nil && eventData.Valid() {
-			// Send event.
-			if err := event.Handler(ctx, c, eventData); err != nil {
-				slogctx.FromCtx(ctx).Warn("Could not send event.",
-					eventData.LogAttributes(),
-					slog.Any("error", err))
-			}
-			continue
-		}
+	const defaultRetryInterval = 30 * time.Second
 
-		if locationData, err := entity.AsLocation(); err == nil && locationData.Valid() {
-			// Send location update.
-			if err := location.Handler(ctx, c, locationData); err != nil {
-				slogctx.FromCtx(ctx).Warn("Could not update location.",
-					slog.Any("error", err))
-			}
-			continue
-		}
-
-		sensorData, err := entity.AsSensor()
-		if err != nil {
-			slogctx.FromCtx(ctx).Warn("Unhandled entity received.",
-				slog.String("entity_type", fmt.Sprintf("%T", entity)))
-			continue
-		}
-
-		if err := validation.ValidateStruct(sensorData); err != nil {
-			slogctx.FromCtx(ctx).Debug("Invalid sensor data.", slog.Any("error", err))
-			continue
-		}
-		// Send sensor details.
-		if c.sensorRegistry.IsRegistered(sensorData.UniqueID) {
-			// Ignore updates for disabled sensors.
-			if c.IsDisabled(ctx, sensorData) {
-				continue
-			}
-			// Otherwise, send an update.
-			if err := sensor.UpdateHandler(ctx, c, sensorData); err != nil {
-				slogctx.FromCtx(ctx).Warn("Could not update sensor.",
-					sensorData.LogAttributes(),
-					slog.Any("error", err))
-
-				continue
-			}
-
-			slogctx.FromCtx(ctx).Log(ctx, logging.LevelTrace, "Sensor updated.",
-				sensorData.LogAttributes())
-		} else {
-			// Otherwise, send a registration request.
-			switch success, err := sensor.RegistrationHandler(ctx, c, sensorData); {
-			case err != nil:
-				slogctx.FromCtx(ctx).Warn("Send sensor registration failed.",
-					sensorData.LogAttributes(),
-					slog.Any("error", err))
-			case !success:
-				slogctx.FromCtx(ctx).Warn("Sensor not registered.",
-					sensorData.LogAttributes())
-			default:
-				if err := c.sensorRegistry.SetRegistered(sensorData.UniqueID, true); err != nil {
-					slogctx.FromCtx(ctx).Warn("Could not set local registration status.",
-						slog.Any("error", err))
-					continue
-				}
-
-				slogctx.FromCtx(ctx).Debug("Sensor registered.",
-					sensorData.LogAttributes())
-			}
-		}
-		// Add sensor details to the tracker.
-		if err := c.sensorTracker.Add(&sensorData); err != nil {
-			slogctx.FromCtx(ctx).Warn("Updating sensor tracker failed.",
-				sensorData.LogAttributes(),
-				slog.Any("error", err),
-			)
-		}
-
-		continue
+	interval := c.retryInterval
+	if interval <= 0 {
+		interval = defaultRetryInterval
 	}
+
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case entity, ok := <-entityCh:
+			if !ok {
+				return
+			}
+			c.processEntity(ctx, entity)
+		case <-ticker.C:
+			c.retryPendingOnce(ctx)
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
+// retryPendingOnce retries the pending sensor updates and registrations that
+// failed to send, until Home Assistant is reachable again. It runs on the
+// handler goroutine, so it cannot race a newer update for the same sensor.
+func (c *Client) retryPendingOnce(ctx context.Context) {
+	c.pendingMu.Lock()
+	ids := make([]models.UniqueID, 0, len(c.pending))
+	for id := range c.pending {
+		ids = append(ids, id)
+	}
+	c.pendingMu.Unlock()
+
+	for _, id := range ids {
+		c.pendingMu.Lock()
+		entity, ok := c.pending[id]
+		c.pendingMu.Unlock()
+		if !ok {
+			continue
+		}
+		// Retry using the same send path. If it succeeds, the pending entry is
+		// cleared; if it fails, the latest state stays.
+		c.processEntity(ctx, entity)
+	}
+}
+
+// processEntity runs the appropriate handler for a single entity. It returns
+// true if the entity was handled successfully, and false if it failed and
+// should be kept pending for retry.
+func (c *Client) processEntity(ctx context.Context, entity models.Entity) bool {
+	if eventData, err := entity.AsEvent(); err == nil && eventData.Valid() {
+		// Send event.
+		if err := event.Handler(ctx, c, eventData); err != nil {
+			slogctx.FromCtx(ctx).Warn("Could not send event.",
+				eventData.LogAttributes(),
+				slog.Any("error", err))
+		}
+		return true
+	}
+
+	if locationData, err := entity.AsLocation(); err == nil && locationData.Valid() {
+		// Send location update.
+		if err := location.Handler(ctx, c, locationData); err != nil {
+			slogctx.FromCtx(ctx).Warn("Could not update location.",
+				slog.Any("error", err))
+		}
+		return true
+	}
+
+	sensorData, err := entity.AsSensor()
+	if err != nil {
+		slogctx.FromCtx(ctx).Warn("Unhandled entity received.",
+			slog.String("entity_type", fmt.Sprintf("%T", entity)))
+		return true
+	}
+
+	if err := validation.ValidateStruct(sensorData); err != nil {
+		slogctx.FromCtx(ctx).Debug("Invalid sensor data.", slog.Any("error", err))
+		return true
+	}
+	// Send sensor details.
+	if c.sensorRegistry.IsRegistered(sensorData.UniqueID) {
+		// Ignore updates for disabled sensors.
+		if c.IsDisabled(ctx, sensorData) {
+			return true
+		}
+		// Otherwise, send an update.
+		if err := sensor.UpdateHandler(ctx, c, sensorData); err != nil {
+			slogctx.FromCtx(ctx).Warn("Could not update sensor.",
+				sensorData.LogAttributes(),
+				slog.Any("error", err))
+
+			// Keep the latest state pending so it is retried once Home
+			// Assistant is reachable again, instead of being dropped.
+			c.setPending(sensorData.UniqueID, entity)
+			return false
+		}
+
+		// The update succeeded, so clear any pending state for this sensor.
+		c.clearPending(sensorData.UniqueID)
+
+		slogctx.FromCtx(ctx).Log(ctx, logging.LevelTrace, "Sensor updated.",
+			sensorData.LogAttributes())
+	} else {
+		// Otherwise, send a registration request.
+		switch success, err := sensor.RegistrationHandler(ctx, c, sensorData); {
+		case err != nil:
+			slogctx.FromCtx(ctx).Warn("Send sensor registration failed.",
+				sensorData.LogAttributes(),
+				slog.Any("error", err))
+			// Keep the registration pending so it is retried once Home
+			// Assistant is reachable again, instead of being dropped.
+			c.setPending(sensorData.UniqueID, entity)
+			return false
+		case !success:
+			slogctx.FromCtx(ctx).Warn("Sensor not registered.",
+				sensorData.LogAttributes())
+		default:
+			if err := c.sensorRegistry.SetRegistered(sensorData.UniqueID, true); err != nil {
+				slogctx.FromCtx(ctx).Warn("Could not set local registration status.",
+					slog.Any("error", err))
+				return true
+			}
+
+			slogctx.FromCtx(ctx).Debug("Sensor registered.",
+				sensorData.LogAttributes())
+		}
+	}
+	// Add sensor details to the tracker.
+	if err := c.sensorTracker.Add(&sensorData); err != nil {
+		slogctx.FromCtx(ctx).Warn("Updating sensor tracker failed.",
+			sensorData.LogAttributes(),
+			slog.Any("error", err),
+		)
+	}
+
+	return true
+}
+
+// setPending stores an entity in the pending map keyed by sensor ID. A newer
+// update for the same sensor ID replaces any older pending entry, so the
+// latest state wins.
+func (c *Client) setPending(id models.UniqueID, entity models.Entity) {
+	c.pendingMu.Lock()
+	defer c.pendingMu.Unlock()
+
+	if c.pending == nil {
+		c.pending = make(map[models.UniqueID]models.Entity)
+	}
+	c.pending[id] = entity
+}
+
+// clearPending removes any pending entry for the given sensor ID, so an old
+// state never overwrites a newer one that has already been sent.
+func (c *Client) clearPending(id models.UniqueID) {
+	c.pendingMu.Lock()
+	defer c.pendingMu.Unlock()
+
+	delete(c.pending, id)
 }
 
 // SendRequest will send the given request to the specified URL. It will handle
