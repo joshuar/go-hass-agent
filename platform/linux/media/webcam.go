@@ -24,7 +24,9 @@ type webcamUsageWorker struct {
 	prefs       *workers.CommonWorkerPrefs
 	pwEventChan chan pipewire.Event
 	inMonitor   *webcam.Monitor
-	inUse       atomic.Bool
+	sources     *pipewire.NodeTracker
+	// deviceInUse is the usage reported by the device file (inotify) monitor.
+	deviceInUse atomic.Bool
 }
 
 func NewWebcamUsageWorker(ctx context.Context) (workers.EntityWorker, error) {
@@ -45,7 +47,10 @@ func NewWebcamUsageWorker(ctx context.Context) (workers.EntityWorker, error) {
 	if !found {
 		return worker, errors.New("no pipewire monitor in context")
 	}
-	worker.pwEventChan = pwMonitor.AddListener(webcamPipewireEventFilter)
+	// Track every video source so that one source changing state does not
+	// mask another that is still in use.
+	worker.sources = pipewire.NewNodeTracker(pipewire.MediaVideoSource)
+	worker.pwEventChan = pwMonitor.AddListener(worker.sources.Filter)
 
 	// Set up inotify listener.
 	worker.inMonitor = webcam.NewMonitor()
@@ -60,16 +65,8 @@ func (w *webcamUsageWorker) Start(ctx context.Context) (<-chan models.Entity, er
 	go func() {
 		defer close(outCh)
 
-		for event := range w.pwEventChan {
-			w.parsePWState(*event.Info.State)
-			outCh <- models.NewSensor(ctx,
-				models.WithName("Webcam In Use"),
-				models.WithID("webcam_in_use"),
-				models.AsTypeBinarySensor(),
-				models.WithIcon(webcamUseIcon(w.inUse.Load())),
-				models.WithState(w.inUse.Load()),
-				models.WithDataSourceAttribute(linux.DataSrcSysFS),
-			)
+		for range w.pwEventChan {
+			outCh <- w.newSensor(ctx)
 		}
 	}()
 
@@ -77,14 +74,7 @@ func (w *webcamUsageWorker) Start(ctx context.Context) (<-chan models.Entity, er
 	go func() {
 		for event := range w.inMonitor.Run(ctx) {
 			w.parseInotifyEvent(event)
-			outCh <- models.NewSensor(ctx,
-				models.WithName("Webcam In Use"),
-				models.WithID("webcam_in_use"),
-				models.AsTypeBinarySensor(),
-				models.WithIcon(webcamUseIcon(w.inUse.Load())),
-				models.WithState(w.inUse.Load()),
-				models.WithDataSourceAttribute(linux.DataSrcSysFS),
-			)
+			outCh <- w.newSensor(ctx)
 		}
 	}()
 
@@ -95,43 +85,30 @@ func (w *webcamUsageWorker) IsDisabled() bool {
 	return w.prefs.IsDisabled()
 }
 
-// parsePWState parses a pipewire state value into the appropriate boolean value.
-func (w *webcamUsageWorker) parsePWState(state pipewire.State) {
-	switch state {
-	case pipewire.StateRunning, pipewire.StateIdle:
-		w.inUse.Store(true)
-	case pipewire.StateSuspended:
-		fallthrough
-	default:
-		w.inUse.Store(false)
-	}
+// newSensor reports the webcam as in use when either pipewire or the device
+// file monitor sees it in use.
+func (w *webcamUsageWorker) newSensor(ctx context.Context) models.Entity {
+	inUse := w.sources.AnyIn(pipewire.StateRunning, pipewire.StateIdle) || w.deviceInUse.Load()
+
+	return models.NewSensor(ctx,
+		models.WithName("Webcam In Use"),
+		models.WithID("webcam_in_use"),
+		models.AsTypeBinarySensor(),
+		models.WithIcon(webcamUseIcon(inUse)),
+		models.WithState(inUse),
+		models.WithDataSourceAttribute(linux.DataSrcSysFS),
+	)
 }
 
 func (w *webcamUsageWorker) parseInotifyEvent(event webcam.Event) {
 	switch event.Status {
 	case webcam.StatusActive:
-		w.inUse.Store(true)
+		w.deviceInUse.Store(true)
 	case webcam.StatusIdle:
 		fallthrough
 	default:
-		w.inUse.Store(false)
+		w.deviceInUse.Store(false)
 	}
-}
-
-// webcamPipewireEventFilter filters the pipewire events. For webcam monitoring, we are only
-// interested in events of type EventNode that have the "media.class" property
-// of "Video/Source".
-func webcamPipewireEventFilter(e *pipewire.Event) bool {
-	if e.Type == pipewire.InterfaceNodeEvent || e.IsRemovalEvent() {
-		// Parse props.
-		props, err := e.NodeProps()
-		if err != nil {
-			return false
-		}
-		return props.MediaClass == pipewire.MediaVideoSource
-	}
-
-	return false
 }
 
 func webcamUseIcon(value bool) string {
