@@ -154,7 +154,7 @@ func (w *locationWorker) newLocation(ctx context.Context, locationPath string) (
 		models.WithAltitude(int(altitude)),
 	)
 	if err != nil {
-		return *entity, fmt.Errorf("new location: %w", err)
+		return models.Entity{}, fmt.Errorf("new location: %w", err)
 	}
 	return *entity, warnings
 }

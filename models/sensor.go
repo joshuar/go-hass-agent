@@ -217,7 +217,7 @@ func NewSensor(_ context.Context, options ...SensorOption) Entity {
 // }
 
 // LogAttributes returns an slog.Group of log attributes for a sensor entity.
-func (s *Sensor) LogAttributes() slog.Attr {
+func (s Sensor) LogAttributes() slog.Attr {
 	var state string
 	if s.UnitOfMeasurement != "" {
 		state = fmt.Sprintf("%v %s", s.State, s.UnitOfMeasurement)
@@ -234,7 +234,7 @@ func (s *Sensor) LogAttributes() slog.Attr {
 
 // AsState returns the Sensor data as a SensorState object, which can be sent to
 // Home Assistant as a sensor update request.
-func (s *Sensor) AsState() (*SensorState, error) {
+func (s Sensor) AsState() (*SensorState, error) {
 	// Marshal the sensor data to json.
 	data, err := json.Marshal(s)
 	if err != nil {
@@ -258,7 +258,7 @@ func (s *Sensor) AsState() (*SensorState, error) {
 
 // AsRegistration returns the Sensor data as a SensorRegistration object, which can be sent to
 // Home Assistant as a sensor registration request.
-func (s *Sensor) AsRegistration() (*SensorRegistration, error) {
+func (s Sensor) AsRegistration() (*SensorRegistration, error) {
 	// Marshal the sensor data to json.
 	data, err := json.Marshal(s)
 	if err != nil {
@@ -280,7 +280,7 @@ func (s *Sensor) AsRegistration() (*SensorRegistration, error) {
 	return &registration, nil
 }
 
-func (s *Sensor) FormatState() string {
+func (s Sensor) FormatState() string {
 	var stateValue string
 	switch value := s.State.(type) {
 	case string:

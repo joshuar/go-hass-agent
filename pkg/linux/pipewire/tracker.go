@@ -73,7 +73,7 @@ func (t *NodeTracker) isTrackedClass(event *Event, tracked bool) bool {
 
 	props, err := event.NodeProps()
 
-	return err == nil && props.MediaClass == t.class
+	return err == nil && props != nil && props.MediaClass == t.class
 }
 
 // remove stops tracking a node, reporting whether it was tracked.

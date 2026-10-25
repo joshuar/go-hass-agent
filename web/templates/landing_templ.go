@@ -78,7 +78,7 @@ func Landing(agent *agent.Agent, hassclient *hass.Client) templ.Component {
 					slog.String("sensor_id", id),
 					slog.Any("error", err),
 				)
-			} else {
+			} else if sensor != nil {
 				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<tr><th>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
@@ -149,6 +149,8 @@ func Landing(agent *agent.Agent, hassclient *hass.Client) templ.Component {
 					return templ_7745c5c3_Err
 				}
 				idx++
+			} else {
+				slogctx.Warn(ctx, "Sensor data is nil!", slog.String("id", id))
 			}
 		}
 		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "</tbody></table></div>")

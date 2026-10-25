@@ -58,7 +58,7 @@ templ Landing(agent *agent.Agent, hassclient *hass.Client) {
 								slog.Any("error", err),
 							)
 						}}
-					} else {
+					} else if sensor != nil {
 						<tr>
 							<th>{ idx+1 }</th>
 							<td>{ sensor.Name }</td>
@@ -67,6 +67,8 @@ templ Landing(agent *agent.Agent, hassclient *hass.Client) {
 							<td>{ hassclient.IsDisabled(ctx,*sensor) }</td>
 						</tr>
 						{{ idx++ }}
+					} else {
+						{{ slogctx.Warn(ctx, "Sensor data is nil!", slog.String("id", id)) }}
 					}
 				}
 			</tbody>

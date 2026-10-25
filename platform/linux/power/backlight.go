@@ -164,7 +164,9 @@ func (w *BacklightWorker) publishState(ctx context.Context) {
 			slog.Any("error", err),
 		)
 	}
-	w.MsgCh <- *msg
+	if msg != nil {
+		w.MsgCh <- *msg
+	}
 }
 
 // stateCallback is called when an MQTT message is published to get the current brightness.
