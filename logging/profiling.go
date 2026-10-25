@@ -53,6 +53,7 @@ func StopProfiling(flags ProfileFlags) error {
 			if err != nil {
 				return fmt.Errorf("cannot create heap profile file: %w", err)
 			}
+			defer heapFile.Close()
 
 			var ms runtime.MemStats
 

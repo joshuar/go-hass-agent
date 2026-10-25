@@ -124,6 +124,7 @@ func (g *GobRegistry) write() error {
 	if err != nil {
 		return fmt.Errorf("could not open registry for writing: %w", err)
 	}
+	defer regFS.Close()
 
 	enc := gob.NewEncoder(regFS)
 
