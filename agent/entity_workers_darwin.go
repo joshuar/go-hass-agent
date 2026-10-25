@@ -9,6 +9,7 @@ import (
 
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/platform/darwin/cpu"
+	"github.com/joshuar/go-hass-agent/platform/darwin/battery"
 	"github.com/joshuar/go-hass-agent/platform/darwin/disk"
 	"github.com/joshuar/go-hass-agent/platform/darwin/mem"
 	"github.com/joshuar/go-hass-agent/platform/darwin/temperature"
@@ -17,6 +18,7 @@ import (
 var macosWorkers = []func(ctx context.Context) (workers.EntityWorker, error){
 	cpu.NewUsageWorker,
 	cpu.NewLoadAvgWorker,
+	battery.NewBatteryWorker,
 	disk.NewUsageWorker,
 	disk.NewSmartWorker,
 	mem.NewUsageWorker,

@@ -9,4 +9,6 @@ const (
 	DataSrcMach = "Mach"
 	// DataSrcSysctl indicates that the source of this data is the sysctl interface.
 	DataSrcSysctl = "sysctl"
+	// DataSrcIoreg indicates that the source of this data is from the ioreg command.
+	DataSrcIoreg = "ioreg"
 )

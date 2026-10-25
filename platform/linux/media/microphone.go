@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sync/atomic"
 
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/models"
@@ -22,7 +21,7 @@ type micUsageWorker struct {
 
 	prefs       *workers.CommonWorkerPrefs
 	pwEventChan chan pipewire.Event
-	inUse       atomic.Bool
+	sources     *pipewire.NodeTracker
 }
 
 func NewMicUsageWorker(ctx context.Context) (workers.EntityWorker, error) {
@@ -41,7 +40,10 @@ func NewMicUsageWorker(ctx context.Context) (workers.EntityWorker, error) {
 	if !found {
 		return worker, errors.New("no pipewire monitor in context")
 	}
-	worker.pwEventChan = monitor.AddListener(micPipewireEventFilter)
+	// Track every audio source so that one source changing state does not
+	// mask another that is still running.
+	worker.sources = pipewire.NewNodeTracker(pipewire.MediaAudioSource)
+	worker.pwEventChan = monitor.AddListener(worker.sources.Filter)
 
 	return worker, nil
 }
@@ -52,14 +54,14 @@ func (w *micUsageWorker) Start(ctx context.Context) (<-chan models.Entity, error
 	go func() {
 		defer close(outCh)
 
-		for event := range w.pwEventChan {
-			w.parsePWState(*event.Info.State)
+		for range w.pwEventChan {
+			inUse := w.sources.AnyIn(pipewire.StateRunning)
 			outCh <- models.NewSensor(ctx,
 				models.WithName("Microphone In Use"),
 				models.WithID("microphone_in_use"),
 				models.AsTypeBinarySensor(),
-				models.WithIcon(micUseIcon(w.inUse.Load())),
-				models.WithState(w.inUse.Load()),
+				models.WithIcon(micUseIcon(inUse)),
+				models.WithState(inUse),
 				models.WithDataSourceAttribute(linux.DataSrcSysFS),
 			)
 		}
@@ -70,34 +72,6 @@ func (w *micUsageWorker) Start(ctx context.Context) (<-chan models.Entity, error
 
 func (w *micUsageWorker) IsDisabled() bool {
 	return w.prefs.IsDisabled()
-}
-
-// parsePWState parses a pipewire state value into the appropriate boolean value.
-func (w *micUsageWorker) parsePWState(state pipewire.State) {
-	switch state {
-	case pipewire.StateRunning:
-		w.inUse.Store(true)
-	case pipewire.StateIdle, pipewire.StateSuspended:
-		fallthrough
-	default:
-		w.inUse.Store(false)
-	}
-}
-
-// micPipewireEventFilter filters the pipewire events. For mic monitoring, we are only
-// interested in events of type EventNode that have the audio source media type.
-func micPipewireEventFilter(e *pipewire.Event) bool {
-	if e.Type == pipewire.InterfaceNodeEvent || e.IsRemovalEvent() {
-		// Parse props.
-		props, err := e.NodeProps()
-		if err != nil {
-			return false
-		}
-		// Filter for audio stream events.
-		return props.MediaClass == pipewire.MediaAudioSource
-	}
-
-	return false
 }
 
 func micUseIcon(value bool) string {
