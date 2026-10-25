@@ -23,6 +23,8 @@
   "license": "MIT",
   "name": "go-hass-agent",
   "scripts": {
+    "server:run": "go tool air -c .air.toml",
+    "templ:generate": "go tool templ generate -path web",
     "build:js": "esbuild ./web/assets/scripts.js --bundle --minify --outdir=./web/content/",
     "build:dev:js": "esbuild ./web/assets/scripts.js --bundle --sourcemap --outdir=./web/content/",
     "build:css": "tailwindcss -i ./web/assets/styles.css -o ./web/content/styles.css --minify",

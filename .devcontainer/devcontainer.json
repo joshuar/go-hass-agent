@@ -1,35 +1,34 @@
 {
-  "containerUser": "vscode",
-  "containerEnv": {
-    "HOME": "/home/vscode"
-  },
-  "remoteEnv": {
-    "PODMAN_COMPOSE_WARNING_LOGS": "false",
-    "TZ": "${localEnv:TZ:Australia/Brisbane}"
-  },
-  "customizations": {
-    "vscode": {
-      "extensions": [
-        "golang.go",
-        "ymotongpoo.licenser",
-        "esbenp.prettier-vscode",
-        "aaron-bond.better-comments",
-        "yzhang.markdown-all-in-one",
-        "bierner.markdown-emoji",
-        "a-h.templ",
-        "bradlc.vscode-tailwindcss",
-        "tamasfe.even-better-toml",
-        "adam-bender.commit-message-editor",
-        "oderwat.indent-rainbow",
-        "DavidAnson.vscode-markdownlint"
-      ]
-    }
-  },
-  "dockerComposeFile": "docker-compose.yml",
-  "name": "Go Hass Agent Development",
-  "postCreateCommand": "bash .devcontainer/postcreate.sh",
-  "service": "devcontainer",
-  "shutdownAction": "stopCompose",
-  "updateRemoteUserUID": true,
-  "workspaceFolder": "/workspace"
+    "containerUser": "vscode",
+    "containerEnv": {
+        "HOME": "/home/vscode"
+    },
+    "remoteEnv": {
+        "PODMAN_COMPOSE_WARNING_LOGS": "false",
+        "TZ": "${localEnv:TZ:Australia/Brisbane}"
+    },
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "golang.go",
+                "esbenp.prettier-vscode",
+                "aaron-bond.better-comments",
+                "yzhang.markdown-all-in-one",
+                "bierner.markdown-emoji",
+                "a-h.templ",
+                "bradlc.vscode-tailwindcss",
+                "tamasfe.even-better-toml",
+                "adam-bender.commit-message-editor",
+                "oderwat.indent-rainbow",
+                "DavidAnson.vscode-markdownlint"
+            ]
+        }
+    },
+    "dockerComposeFile": "docker-compose.yml",
+    "name": "Go Hass Agent Development",
+    "postCreateCommand": "bash .devcontainer/postcreate.sh",
+    "service": "devcontainer",
+    "shutdownAction": "stopCompose",
+    "updateRemoteUserUID": true,
+    "workspaceFolder": "/workspace"
 }

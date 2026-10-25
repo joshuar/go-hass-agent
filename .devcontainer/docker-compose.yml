@@ -1,5 +1,3 @@
-volumes:
-  mosquitto_data:
 services:
   devcontainer:
     hostname: devcontainer
@@ -13,13 +11,22 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        EXTRA_PKGS: ""
     volumes:
-      - ..:/workspace:cached
-      - /etc/localtime:/etc/localtime:ro,cached
+      - ..:/workspace
       - /run/dbus:/run/dbus:ro
       - /run/user/$USER_ID/pipewire-0:/tmp/$USER_UID-runtime-dir/pipewire-0:Z
       - /run/user/$USER_ID/pulse/native:/tmp/$USER_UID-runtime-dir/pulse/native:Z
       - go-hass-agent-datahome:/datahome
+      - go-hass-agent-node_modules:/workspace/node_modules
+      - go-hass-agent-go-mod-cache:/go/pkg/mod
+      - go-hass-agent-go-build-cache:/home/vscode/.cache/go-build
+      - go-hass-agent-golangci-lint-cache:/home/vscode/.cache/golangci-lint
+      - go-hass-agent-npm-build-cache:/home/vscode/.cache/npm
+      - go-hass-agent-npm-global:/home/vscode/.npm-global
+      - go-hass-agent-gcloud:/home/vscode/.config/gcloud
+      - go-hass-agent-tmp-build:/workspace/tmp
     user: vscode
     cap_add:
       - SYS_PTRACE
@@ -34,7 +41,7 @@ services:
       - label:disable
     ports:
       - $GOHASSAGENT_server_port:8223
-    command: -c 'dbus-launch sleep infinity'
+    command: dbus-launch sleep infinity
 
   home-assistant:
     hostname: home-assistant
@@ -59,11 +66,17 @@ services:
     volumes:
       - ./data/mosquitto:/mosquitto/config
       - mosquitto-data:/mosquitto/data
-      - /etc/localtime:/etc/localtime:ro,cached
     ports:
       - 1883:1883
       - 8883:8883
 
 volumes:
   go-hass-agent-datahome:
+  go-hass-agent-node_modules:
+  go-hass-agent-go-mod-cache:
+  go-hass-agent-go-build-cache:
+  go-hass-agent-golangci-lint-cache:
+  go-hass-agent-npm-build-cache:
+  go-hass-agent-npm-global:
+  go-hass-agent-tmp-build:
   mosquitto-data:

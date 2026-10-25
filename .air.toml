@@ -8,7 +8,7 @@ env_files = [".devcontainer/.env"]
 pre_cmd = [
   "npm run build:dev:css",
   "npm run build:dev:js",
-  "go run github.com/a-h/templ/cmd/templ@latest generate -path web",
+  "npm run templ:generate",
 ]
 cmd = 'go build -ldflags="-s -w -X github.com/joshuar/go-hass-agent/config.AppVersion=$(git describe --tags --always --long --dirty)" -o ./tmp/go-hass-agent .'
 args_bin = [

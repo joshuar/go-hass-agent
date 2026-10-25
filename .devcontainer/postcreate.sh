@@ -1,45 +1,41 @@
-#!/usr/bin/bash
-# Copyright 2025 Joshua Rich <joshua.rich@gmail.com>.
-# SPDX-License-Identifier: MIT
+#!/usr/bin/env bash
+set -euo pipefail
 
-set -x
+uid="$(id -u)"
+gid="$(id -g)"
 
-cd /workspace
+# Every path that gets a named volume in devcontainer.json.
+dirs=(
+  /datahome
+  /go/pkg/mod
+  "$HOME/.cache/go-build"
+  "$HOME/.cache/npm"
+  "$HOME/.cache/golangci-lint"
+  "$HOME/.npm-global"
+  "/workspace/tmp"
+)
 
+for d in "${dirs[@]}"; do
+  # Create the directory if the volume or image didn't.
+  [ -d "$d" ] || sudo mkdir -p "$d"
 
-# Update JS packages with bun.
-if [[ -e ./package.json ]]; then
-    npm clean-install || exit -1
-fi
-echo 'set --export PATH "/workspace/node_modules/.bin" $PATH' >> ~/.config/fish/config.fish
-echo 'export PATH=/workspace/node_modules/.bin:${PATH}' >> ~/.bashrc
+  # Only chown when the top level is wrong. A recursive chown over a large
+  # module cache is slow, and a volume is wrong at the root or not at all.
+  if [ "$(stat -c '%u:%g' "$d")" != "$uid:$gid" ]; then
+    echo "Fixing ownership of $d"
+    sudo chown -R "$uid:$gid" "$d"
+  fi
+done
 
-# Update JS packages.
-npm clean-install || exit -1
+# Make sure the parent dirs themselves are yours. Docker creates missing
+# parents of mount targets as root.
+for p in "$HOME/.cache" "$HOME/.config"; do
+  [ -d "$p" ] || mkdir -p "$p"
+  [ "$(stat -c '%u' "$p")" = "$uid" ] || sudo chown "$uid:$gid" "$p"
+done
 
-# Install Go packages.
-echo 'set --export PATH "$HOME/go/bin" /go/bin /usr/local/go/bin $PATH' >> ~/.config/fish/config.fish
-echo 'export PATH="$HOME/go/bin:/go/bin:/usr/local/go/bin:$PATH' >> ~/.bashrc
-if [[ -e go.mod ]]; then
-    export PATH="$HOME/go/bin:/go/bin:/usr/local/go/bin:$PATH" && \
-        go mod tidy && \
-        go install golang.org/x/tools/gopls@v0.23.0 && \
-        go install github.com/air-verse/air@v1.67.4 && \
-        go install github.com/a-h/templ/cmd/templ@v0.3.1020 && \
-        go install github.com/magefile/mage@v1.17.2 && \
-        curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/refs/tags/v2.13.2/install.sh | sh -s -- -b $(go env GOPATH)/bin v2.13.2
-fi
-
-if [[ -e ./.custom-gcl.yaml ]]; then
-    golangci-lint custom && \
-    mv /tmp/golangci-lint-v2 $(go env GOPATH)/bin/
-fi
-
-# Install oh-my-posh.
-mkdir -p ~/.local/bin && curl -s https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/refs/tags/v31.1.2/website/static/install.sh | bash -s
-# Set up shells to use oh-my-posh.
-mkdir -p ~/.config/fish \
-    && echo "~/.local/bin/oh-my-posh init fish | source" >>~/.config/fish/config.fish \
-    && echo 'eval "$(~/.local/bin/oh-my-posh init bash)""' >>~/.bashrc
+# Shell history file for bash (fish creates its own under XDG_DATA_HOME).
+mkdir -p /datahome/bash /datahome/fish
+touch /datahome/bash/.bash_history
 
 exit 0
