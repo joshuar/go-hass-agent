@@ -8,11 +8,13 @@ import (
 	slogctx "github.com/veqryn/slog-context"
 
 	"github.com/joshuar/go-hass-agent/agent/workers"
+	"github.com/joshuar/go-hass-agent/platform/darwin/battery"
 	"github.com/joshuar/go-hass-agent/platform/darwin/disk"
 	"github.com/joshuar/go-hass-agent/platform/darwin/temperature"
 )
 
 var macosWorkers = []func(ctx context.Context) (workers.EntityWorker, error){
+	battery.NewBatteryWorker,
 	disk.NewUsageWorker,
 	disk.NewSmartWorker,
 	temperature.NewTemperatureWorker,

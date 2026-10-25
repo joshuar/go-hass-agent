@@ -48,6 +48,7 @@ require (
 	golang.org/x/net v0.59.0
 	golang.org/x/sys v0.48.0
 	gopkg.in/yaml.v3 v3.0.1
+	howett.net/plist v1.0.2-0.20250314012144-ee69052608d9
 	kernel.org/pub/linux/libs/security/libcap/cap v1.2.78
 )
 
@@ -157,7 +158,6 @@ require (
 	golang.org/x/text v0.42.0 // indirect
 	golang.org/x/tools v0.49.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
-	howett.net/plist v1.0.2-0.20250314012144-ee69052608d9 // indirect
 	kernel.org/pub/linux/libs/security/libcap/psx v1.2.78 // indirect
 )
 
