@@ -1,5 +1,25 @@
 # Changelog
 
+## [14.18.0](https://github.com/joshuar/go-hass-agent/compare/v14.17.0...v14.18.0) (2026-10-25)
+
+
+### Features
+
+* **battery:** add macOS battery sensors ([dffb2f9](https://github.com/joshuar/go-hass-agent/commit/dffb2f908dbb9bbd409142db5b5cd33b73768f03))
+* **battery:** add macOS battery sensors thanks [@mdevils](https://github.com/mdevils)! ([2528ad5](https://github.com/joshuar/go-hass-agent/commit/2528ad51ab584a1f184a5fce3800c68316783990))
+* **controls:** add macOS power and volume MQTT controls ([1dbb661](https://github.com/joshuar/go-hass-agent/commit/1dbb661e1744c421adda212eadfb3192682c9677))
+* **controls:** add macOS power and volume MQTT controls. thanks [@mdevils](https://github.com/mdevils)! ([9691b7e](https://github.com/joshuar/go-hass-agent/commit/9691b7e948b8a7f42965ec663d7cf0278202c1e8))
+* **cpu,mem:** add macOS CPU usage, load average and memory sensors ([d5e2103](https://github.com/joshuar/go-hass-agent/commit/d5e2103b3c27a046429da3adaafbc5e8e60c5a4d))
+* **cpu,mem:** add macOS CPU usage, load average and memory sensors. thanks [@mdevils](https://github.com/mdevils)! ([5e3496c](https://github.com/joshuar/go-hass-agent/commit/5e3496c45aecbc38b8b419440e4fcda06150da89))
+
+
+### Bug Fixes
+
+* 🔧 ensure resources are closed when done using them ([d174ddf](https://github.com/joshuar/go-hass-agent/commit/d174ddfef8f51e966e40d97c3f98f6d78c1b4708))
+* 🔧 remove some potential nil pointer dereferences ([256b396](https://github.com/joshuar/go-hass-agent/commit/256b396d52eb71a1fef9a6b8fc1a4e250d67c4b8))
+* **linux/media:** 🐛 track mic and webcam state per pipewire node ([3e83e77](https://github.com/joshuar/go-hass-agent/commit/3e83e7722fbd76b1fd9614b2d1499ed2dc08c6e9))
+* **linux/media:** 🐛 track mic and webcam state per pipewire node. thanks [@pauci](https://github.com/pauci)! ([d24b5f8](https://github.com/joshuar/go-hass-agent/commit/d24b5f8568b084277278b59e38fe1bfbd7e4e075))
+
 ## [14.17.0](https://github.com/joshuar/go-hass-agent/compare/v14.16.0...v14.17.0) (2026-09-26)
 
 
