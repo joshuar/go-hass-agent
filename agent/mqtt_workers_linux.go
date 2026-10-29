@@ -117,11 +117,29 @@ func (c *linuxMQTTWorker) Msgs() chan mqttapi.Msg {
 	return c.msgs
 }
 
+// States returns the current state messages for all entities that have a
+// state.
+func (c *linuxMQTTWorker) States() []*mqttapi.Msg {
+	totalLength := len(c.sensors) +
+		len(c.binarySensors) +
+		len(c.numbers) +
+		len(c.switches)
+	states := make([]*mqttapi.Msg, 0, totalLength)
+
+	states = appendStates(c.logger, states, c.sensors)
+	states = appendStates(c.logger, states, c.binarySensors)
+	states = appendStates(c.logger, states, c.numbers)
+	states = appendStates(c.logger, states, c.switches)
+
+	return states
+}
+
 func (c *linuxMQTTWorker) Start(_ context.Context) (*mqtt.WorkerData, error) {
 	return &mqtt.WorkerData{
 		Configs:       c.Configs(),
 		Subscriptions: c.Subscriptions(),
 		Msgs:          c.Msgs(),
+		States:        c.States,
 	}, nil
 }
 
@@ -154,7 +172,9 @@ func (c *linuxMQTTWorker) generateConfig(e stateEntity) *mqttapi.Msg {
 // CreateOSMQTTWorkers initializes the list of MQTT workers for sensors and
 // returns those that are supported on this device.
 func CreateOSMQTTWorkers(ctx context.Context) (workers.MQTTWorker, error) {
-	mqttController := &linuxMQTTWorker{}
+	mqttController := &linuxMQTTWorker{
+		logger: slogctx.FromCtx(ctx).WithGroup("mqtt"),
+	}
 
 	mqttDevice, err := mqtt.Device()
 	if err != nil {
