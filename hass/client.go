@@ -56,10 +56,11 @@ type Client struct {
 	sensorTracker  sensorTracker
 	config         *Config
 
-	// pending holds sensor updates and registrations that failed to send
-	// (for example because the network was unreachable after a resume) and
-	// need to be retried once Home Assistant is reachable again. It is keyed
-	// by sensor ID so the latest state for a sensor wins.
+	// pending holds updates and registrations for buffered sensors (see
+	// models.AsBuffered) that failed to send, for example because the
+	// network was unreachable after a resume. They are retried once Home
+	// Assistant is reachable again. It is keyed by sensor ID so the latest
+	// state for a sensor wins.
 	pendingMu sync.Mutex
 	pending   map[models.UniqueID]models.Entity
 
@@ -138,11 +139,13 @@ func (c *Client) UpdateConfig(ctx context.Context) (bool, error) {
 }
 
 // EntityHandler takes incoming Entity objects via the passed in channel and
-// runs the appropriate handler for the Entity type. When a sensor update or
-// registration fails, the entity is stored in a pending map keyed by sensor ID
-// and retried on a ticker until Home Assistant is reachable again, rather than
-// being dropped. This keeps event-driven sensors (for example Power State)
-// from staying stale after a resume where the network is not yet back.
+// runs the appropriate handler for the Entity type. When an update or
+// registration fails for a sensor that opts in with models.AsBuffered, the
+// entity is stored in a pending map keyed by sensor ID and retried on a
+// ticker until Home Assistant is reachable again. This keeps event-driven
+// sensors (for example Power State) from staying stale after a resume where
+// the network is not yet back. Failed updates for other sensors are dropped,
+// as a fresh reading will replace them.
 //
 // All sends happen on this single goroutine, so a retry can never race a newer
 // update for the same sensor.
@@ -242,9 +245,11 @@ func (c *Client) processEntity(ctx context.Context, entity models.Entity) bool {
 				sensorData.LogAttributes(),
 				slog.Any("error", err))
 
-			// Keep the latest state pending so it is retried once Home
-			// Assistant is reachable again, instead of being dropped.
-			c.setPending(sensorData.UniqueID, entity)
+			// Keep the latest state of a buffered sensor pending so it is
+			// retried once Home Assistant is reachable again.
+			if sensorData.Buffered {
+				c.setPending(sensorData.UniqueID, entity)
+			}
 			return false
 		}
 
@@ -260,9 +265,11 @@ func (c *Client) processEntity(ctx context.Context, entity models.Entity) bool {
 			slogctx.FromCtx(ctx).Warn("Send sensor registration failed.",
 				sensorData.LogAttributes(),
 				slog.Any("error", err))
-			// Keep the registration pending so it is retried once Home
-			// Assistant is reachable again, instead of being dropped.
-			c.setPending(sensorData.UniqueID, entity)
+			// Keep the registration of a buffered sensor pending so it is
+			// retried once Home Assistant is reachable again.
+			if sensorData.Buffered {
+				c.setPending(sensorData.UniqueID, entity)
+			}
 			return false
 		case !success:
 			slogctx.FromCtx(ctx).Warn("Sensor not registered.",

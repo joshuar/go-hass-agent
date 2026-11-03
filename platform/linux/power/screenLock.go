@@ -40,6 +40,7 @@ func newScreenlockSensor(ctx context.Context, value bool) models.Entity {
 		), // For device class BinarySensorDeviceClassLock: On means open (unlocked), Off means closed (locked).
 		models.WithDataSourceAttribute(linux.DataSrcDBus),
 		models.AsRetryableRequest(true),
+		models.AsBuffered(true),
 	)
 }
 

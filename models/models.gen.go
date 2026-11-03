@@ -115,6 +115,9 @@ type Sensor struct {
 	// Attributes defines additional custom attributes of a entity.
 	Attributes Attributes `json:"attributes,omitempty,omitzero"`
 
+	// Buffered indicates whether a failed update or registration for this sensor should be kept and resent once Home Assistant is reachable again, instead of being dropped.
+	Buffered bool `json:"buffered,omitempty,omitzero"`
+
 	// DeviceClass is a valid Binary Sensor or Sensor device class.
 	DeviceClass string `json:"device_class,omitempty,omitzero"`
 

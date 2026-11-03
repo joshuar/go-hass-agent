@@ -64,6 +64,19 @@ func (f *fakeTracker) Add(details *models.Sensor) error {
 	return nil
 }
 
+// newFailingServer returns a server that answers every request with a 500.
+func newFailingServer(t *testing.T) *httptest.Server {
+	t.Helper()
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.Copy(io.Discard, r.Body)
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	t.Cleanup(srv.Close)
+
+	return srv
+}
+
 // newTestClient returns a Client whose sensor updates fail fast (the API URL
 // is unreachable) and whose pending retry interval is short.
 func newTestClient() *Client {
@@ -83,6 +96,7 @@ func newTestClient() *Client {
 // send of the second entity to detect a block.
 func TestEntityHandler_FailingSendDoesNotBlockNextEntity(t *testing.T) {
 	client := newTestClient()
+	client.config.APIURL = newFailingServer(t).URL
 
 	entityCh := make(chan models.Entity) // unbuffered, like MergeCh
 	ctx, cancel := context.WithCancel(context.Background())
@@ -94,14 +108,16 @@ func TestEntityHandler_FailingSendDoesNotBlockNextEntity(t *testing.T) {
 		models.WithName("Power State"),
 		models.WithID("power_state"),
 		models.WithState("Powered On"),
+		models.AsBuffered(true),
 	)
 	entityB := models.NewSensor(ctx,
 		models.WithName("Link State"),
 		models.WithID("link_state"),
 		models.WithState("Connected"),
+		models.AsBuffered(true),
 	)
 
-	// Feed the first entity. It fails (unreachable API URL) and is stored
+	// Feed the first entity. It fails (server returns 500) and is stored
 	// pending. If the handler blocked on the failed send, the send of the
 	// second entity would block; the timeout detects that.
 	entityCh <- entityA
@@ -154,6 +170,7 @@ func TestEntityHandler_RetriesFailedUpdateAfterServerComesBack(t *testing.T) {
 		models.WithName("Power State"),
 		models.WithID("power_state"),
 		models.WithState("Powered On"),
+		models.AsBuffered(true),
 	)
 
 	// The first send fails (server returns 500) and is stored pending.
@@ -177,6 +194,7 @@ func TestEntityHandler_RetriesFailedUpdateAfterServerComesBack(t *testing.T) {
 // state wins.
 func TestEntityHandler_NewerStateReplacesPendingOlderOne(t *testing.T) {
 	client := newTestClient()
+	client.config.APIURL = newFailingServer(t).URL
 
 	// Use a buffered channel so both entities are queued and processed in
 	// order. An unbuffered channel does not guarantee the two distinct
@@ -191,14 +209,16 @@ func TestEntityHandler_NewerStateReplacesPendingOlderOne(t *testing.T) {
 		models.WithName("Power State"),
 		models.WithID("power_state"),
 		models.WithState("Powered On"),
+		models.AsBuffered(true),
 	)
 	newer := models.NewSensor(ctx,
 		models.WithName("Power State"),
 		models.WithID("power_state"),
 		models.WithState("Powered Off"),
+		models.AsBuffered(true),
 	)
 
-	// Both fail (unreachable API URL). The pending map should hold only the
+	// Both fail (server returns 500). The pending map should hold only the
 	// newer state for the sensor.
 	entityCh <- older
 	entityCh <- newer
@@ -259,11 +279,13 @@ func TestEntityHandler_PendingOldStateNotSentAfterNewerSuccess(t *testing.T) {
 		models.WithName("Power State"),
 		models.WithID("power_state"),
 		models.WithState("Powered On"),
+		models.AsBuffered(true),
 	)
 	newer := models.NewSensor(ctx,
 		models.WithName("Power State"),
 		models.WithID("power_state"),
 		models.WithState("Powered Off"),
+		models.AsBuffered(true),
 	)
 
 	// The old update fails (server 500) so it is stored pending. The newer
@@ -286,4 +308,69 @@ func TestEntityHandler_PendingOldStateNotSentAfterNewerSuccess(t *testing.T) {
 	defer mu.Unlock()
 	// Exactly one successful request (the newer state), not the old one again.
 	assert.Equal(t, 1, successfulRequests)
+}
+
+// TestEntityHandler_DropsFailedUpdateForUnbufferedSensor verifies that a
+// failed update for a sensor that does not opt in with AsBuffered is
+// dropped as before, and is not resent once the server is reachable again.
+func TestEntityHandler_DropsFailedUpdateForUnbufferedSensor(t *testing.T) {
+	var mu sync.Mutex
+	fail := true
+	requests := 0
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		defer mu.Unlock()
+		_, _ = io.Copy(io.Discard, r.Body)
+		requests++
+		if fail {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{}`))
+	}))
+	defer srv.Close()
+
+	client := newTestClient()
+	client.sensorRegistry = &fakeRegistry{registered: map[string]bool{"cpu_usage": true}}
+	client.config.APIURL = srv.URL
+	client.retryInterval = 50 * time.Millisecond
+
+	entityCh := make(chan models.Entity)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go client.EntityHandler(ctx, entityCh)
+
+	entity := models.NewSensor(ctx,
+		models.WithName("CPU Usage"),
+		models.WithID("cpu_usage"),
+		models.WithState(12),
+	)
+
+	// The send fails (server returns 500) and is dropped, not stored pending.
+	entityCh <- entity
+
+	require.Eventually(t, func() bool {
+		mu.Lock()
+		defer mu.Unlock()
+		return requests == 1
+	}, 2*time.Second, 10*time.Millisecond)
+
+	mu.Lock()
+	fail = false
+	mu.Unlock()
+
+	// Let the retry ticker fire a few times. Nothing is pending, so the
+	// dropped update must not be sent again.
+	time.Sleep(300 * time.Millisecond)
+
+	client.pendingMu.Lock()
+	assert.Empty(t, client.pending)
+	client.pendingMu.Unlock()
+
+	mu.Lock()
+	defer mu.Unlock()
+	assert.Equal(t, 1, requests)
 }

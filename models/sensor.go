@@ -180,6 +180,17 @@ func AsRetryableRequest(value bool) SensorOption {
 	}
 }
 
+// AsBuffered option sets a flag on the sensor that indicates a failed update or
+// registration should be kept and resent once Home Assistant is reachable
+// again, instead of being dropped. Only the latest state is kept. Use it for
+// sensors where a missed state matters, such as event driven sensors that may
+// not change again for a long time.
+func AsBuffered(value bool) SensorOption {
+	return func(s *Sensor) {
+		s.Buffered = value
+	}
+}
+
 // NewSensor provides a way to build a sensor entity with the given options.
 func NewSensor(_ context.Context, options ...SensorOption) Entity {
 	sensor := Sensor{
