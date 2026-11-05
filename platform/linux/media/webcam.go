@@ -7,7 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sync/atomic"
+	"sync"
 
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/models"
@@ -18,6 +18,39 @@ import (
 
 var _ workers.EntityWorker = (*webcamUsageWorker)(nil)
 
+// deviceUsageTracker keeps per-device webcam usage from the V4L2/inotify
+// monitor. A single boolean is wrong on multi-node cameras: an IDLE event from
+// one /dev/video* node would clear "in use" while another node is still active.
+type deviceUsageTracker struct {
+	mu      sync.Mutex
+	devices map[string]bool
+}
+
+func newDeviceUsageTracker() *deviceUsageTracker {
+	return &deviceUsageTracker{devices: make(map[string]bool)}
+}
+
+func (t *deviceUsageTracker) set(device string, inUse bool) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	if device == "" {
+		return
+	}
+	if inUse {
+		t.devices[device] = true
+		return
+	}
+	delete(t.devices, device)
+}
+
+func (t *deviceUsageTracker) any() bool {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	return len(t.devices) > 0
+}
+
 type webcamUsageWorker struct {
 	*models.WorkerMetadata
 
@@ -25,13 +58,18 @@ type webcamUsageWorker struct {
 	pwEventChan chan pipewire.Event
 	inMonitor   *webcam.Monitor
 	sources     *pipewire.NodeTracker
-	// deviceInUse is the usage reported by the device file (inotify) monitor.
-	deviceInUse atomic.Bool
+	devices     *deviceUsageTracker
+
+	// lastSent guards duplicate Home Assistant updates when underlying
+	// PipeWire/V4L2 events leave the aggregated in-use boolean unchanged.
+	lastSentMu sync.Mutex
+	lastSent   *bool
 }
 
 func NewWebcamUsageWorker(ctx context.Context) (workers.EntityWorker, error) {
 	worker := &webcamUsageWorker{
 		WorkerMetadata: models.SetWorkerMetadata("webcam_in_use", "Webcam in use"),
+		devices:        newDeviceUsageTracker(),
 	}
 
 	// Get worker preferences.
@@ -66,7 +104,7 @@ func (w *webcamUsageWorker) Start(ctx context.Context) (<-chan models.Entity, er
 		defer close(outCh)
 
 		for range w.pwEventChan {
-			outCh <- w.newSensor(ctx)
+			w.emitIfChanged(ctx, outCh)
 		}
 	}()
 
@@ -74,7 +112,7 @@ func (w *webcamUsageWorker) Start(ctx context.Context) (<-chan models.Entity, er
 	go func() {
 		for event := range w.inMonitor.Run(ctx) {
 			w.parseInotifyEvent(event)
-			outCh <- w.newSensor(ctx)
+			w.emitIfChanged(ctx, outCh)
 		}
 	}()
 
@@ -85,12 +123,30 @@ func (w *webcamUsageWorker) IsDisabled() bool {
 	return w.prefs.IsDisabled()
 }
 
-// newSensor reports the webcam as in use when either pipewire or the device
+// currentInUse reports the webcam as in use when either pipewire or the device
 // file monitor sees it in use.
-func (w *webcamUsageWorker) newSensor(ctx context.Context) models.Entity {
-	inUse := w.sources.AnyIn(pipewire.StateRunning, pipewire.StateIdle) || w.deviceInUse.Load()
+func (w *webcamUsageWorker) currentInUse() bool {
+	// Match microphone: only treat PipeWire "running" as in use. "idle" is
+	// common for unused camera nodes and caused false positives / flapping.
+	return w.sources.AnyIn(pipewire.StateRunning) || w.devices.any()
+}
 
-	return models.NewSensor(ctx,
+// emitIfChanged sends a sensor update only when the aggregated in-use state
+// changes. Duplicate events with the same boolean are dropped so Home Assistant
+// is not spammed with unchanged webhook updates.
+func (w *webcamUsageWorker) emitIfChanged(ctx context.Context, outCh chan<- models.Entity) {
+	inUse := w.currentInUse()
+
+	w.lastSentMu.Lock()
+	if w.lastSent != nil && *w.lastSent == inUse {
+		w.lastSentMu.Unlock()
+		return
+	}
+	last := inUse
+	w.lastSent = &last
+	w.lastSentMu.Unlock()
+
+	outCh <- models.NewSensor(ctx,
 		models.WithName("Webcam In Use"),
 		models.WithID("webcam_in_use"),
 		models.AsTypeBinarySensor(),
@@ -103,11 +159,11 @@ func (w *webcamUsageWorker) newSensor(ctx context.Context) models.Entity {
 func (w *webcamUsageWorker) parseInotifyEvent(event webcam.Event) {
 	switch event.Status {
 	case webcam.StatusActive:
-		w.deviceInUse.Store(true)
+		w.devices.set(event.Device, true)
 	case webcam.StatusIdle:
 		fallthrough
 	default:
-		w.deviceInUse.Store(false)
+		w.devices.set(event.Device, false)
 	}
 }
 

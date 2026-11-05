@@ -390,7 +390,10 @@ func (m *Monitor) watchDevices(ctx context.Context, devices []string, devDir str
 
 // GetVideoDevices returns the set of /dev/video* paths on the system.
 func GetVideoDevices() ([]string, error) {
-	matches, err := filepath.Glob(DeviceWatchPath + "/*")
+	// Only match video device nodes. Globbing all of /dev would watch every
+	// character device and emit false ACTIVE/IDLE webcam events whenever an
+	// unrelated device (e.g. /dev/null, /dev/urandom) is opened or closed.
+	matches, err := filepath.Glob(filepath.Join(DeviceWatchPath, "video*"))
 	if err != nil {
 		return nil, fmt.Errorf("get video device matches: %w", err)
 	}
