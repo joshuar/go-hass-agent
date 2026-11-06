@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/joshuar/go-hass-agent/models"
-	"github.com/joshuar/go-hass-agent/pkg/linux/pipewire"
 	"github.com/joshuar/go-hass-agent/pkg/linux/webcam"
 )
 
@@ -36,67 +35,69 @@ func TestDeviceUsageTracker_multiNode(t *testing.T) {
 	}
 }
 
-func TestEmitIfChanged_onlyOnValueChange(t *testing.T) {
-	t.Parallel()
+func TestWebcamDebounceDropsProbeFlapping(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
+	outCh := make(chan models.Entity, 16)
 	worker := &webcamUsageWorker{
 		devices: newDeviceUsageTracker(),
-		sources: pipewire.NewNodeTracker(pipewire.MediaVideoSource),
-	}
-	outCh := make(chan models.Entity, 8)
-	ctx := context.Background()
-
-	// First idle emission should send.
-	worker.emitIfChanged(ctx, outCh)
-	if got := drainCount(outCh); got != 1 {
-		t.Fatalf("initial idle: want 1 emission, got %d", got)
+		emitCtx: ctx,
+		outCh:   outCh,
 	}
 
-	// Duplicate idle must not send.
-	worker.emitIfChanged(ctx, outCh)
-	worker.emitIfChanged(ctx, outCh)
-	if got := drainCount(outCh); got != 0 {
-		t.Fatalf("duplicate idle: want 0 emissions, got %d", got)
-	}
-
-	// Transition to in-use should send once.
+	// Simulate a probe burst: open+close within the debounce window.
 	worker.parseInotifyEvent(webcam.Event{Device: "/dev/video0", Status: webcam.StatusActive})
-	worker.emitIfChanged(ctx, outCh)
-	if got := drainCount(outCh); got != 1 {
-		t.Fatalf("became active: want 1 emission, got %d", got)
-	}
-	worker.emitIfChanged(ctx, outCh)
-	if got := drainCount(outCh); got != 0 {
-		t.Fatalf("duplicate active: want 0 emissions, got %d", got)
-	}
-
-	// Sibling idle while still active must not send.
-	worker.parseInotifyEvent(webcam.Event{Device: "/dev/video1", Status: webcam.StatusIdle})
-	worker.emitIfChanged(ctx, outCh)
-	if got := drainCount(outCh); got != 0 {
-		t.Fatalf("sibling idle while active: want 0 emissions, got %d", got)
-	}
-
-	// Real idle transition should send once.
+	worker.scheduleEmit()
 	worker.parseInotifyEvent(webcam.Event{Device: "/dev/video0", Status: webcam.StatusIdle})
-	worker.emitIfChanged(ctx, outCh)
-	if got := drainCount(outCh); got != 1 {
-		t.Fatalf("became idle: want 1 emission, got %d", got)
+	worker.scheduleEmit()
+
+	select {
+	case <-outCh:
+		t.Fatal("emitted during debounce window")
+	case <-time.After(200 * time.Millisecond):
 	}
-	worker.emitIfChanged(ctx, outCh)
-	if got := drainCount(outCh); got != 0 {
-		t.Fatalf("duplicate idle after close: want 0 emissions, got %d", got)
+
+	// After quiet period with idle state, and never having sent before, no update.
+	deadline := time.After(webcamStateDebounce + 500*time.Millisecond)
+	var got int
+	for {
+		select {
+		case <-outCh:
+			got++
+		case <-deadline:
+			if got != 0 {
+				t.Fatalf("expected no HA updates for brief probe, got %d", got)
+			}
+			return
+		}
 	}
 }
 
-func drainCount(ch <-chan models.Entity) int {
-	n := 0
-	for {
-		select {
-		case <-ch:
-			n++
-		case <-time.After(20 * time.Millisecond):
-			return n
+func TestWebcamDebounceEmitsAfterSustainedUse(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	outCh := make(chan models.Entity, 16)
+	worker := &webcamUsageWorker{
+		devices: newDeviceUsageTracker(),
+		emitCtx: ctx,
+		outCh:   outCh,
+	}
+
+	worker.parseInotifyEvent(webcam.Event{Device: "/dev/video0", Status: webcam.StatusActive})
+	worker.scheduleEmit()
+
+	select {
+	case entity := <-outCh:
+		sensor, err := entity.AsSensor()
+		if err != nil {
+			t.Fatalf("AsSensor: %v", err)
 		}
+		if sensor.State != true {
+			t.Fatalf("expected true after sustained use, got %v", sensor.State)
+		}
+	case <-time.After(webcamStateDebounce + 500*time.Millisecond):
+		t.Fatal("timed out waiting for sustained-use emit")
 	}
 }

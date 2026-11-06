@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/joshuar/go-hass-agent/agent/workers"
 	"github.com/joshuar/go-hass-agent/models"
@@ -17,6 +18,10 @@ import (
 )
 
 var _ workers.EntityWorker = (*webcamUsageWorker)(nil)
+
+// webcamStateDebounce ignores brief open/close probes (PipeWire/portal
+// enumeration) that would otherwise flap the Home Assistant binary sensor.
+const webcamStateDebounce = time.Second
 
 // deviceUsageTracker keeps per-device webcam usage from the V4L2/inotify
 // monitor. A single boolean is wrong on multi-node cameras: an IDLE event from
@@ -60,10 +65,16 @@ type webcamUsageWorker struct {
 	sources     *pipewire.NodeTracker
 	devices     *deviceUsageTracker
 
-	// lastSent guards duplicate Home Assistant updates when underlying
-	// PipeWire/V4L2 events leave the aggregated in-use boolean unchanged.
+	// lastSent is the last state emitted to Home Assistant.
 	lastSentMu sync.Mutex
 	lastSent   *bool
+
+	// Debounce: only emit after the aggregated state has been stable.
+	debounceMu sync.Mutex
+	pending    *bool
+	timer      *time.Timer
+	outCh      chan<- models.Entity
+	emitCtx    context.Context
 }
 
 func NewWebcamUsageWorker(ctx context.Context) (workers.EntityWorker, error) {
@@ -98,13 +109,15 @@ func NewWebcamUsageWorker(ctx context.Context) (workers.EntityWorker, error) {
 
 func (w *webcamUsageWorker) Start(ctx context.Context) (<-chan models.Entity, error) {
 	outCh := make(chan models.Entity)
+	w.emitCtx = ctx
+	w.outCh = outCh
 
 	// Monitor webcam events through pipewire.
 	go func() {
 		defer close(outCh)
 
 		for range w.pwEventChan {
-			w.emitIfChanged(ctx, outCh)
+			w.scheduleEmit()
 		}
 	}()
 
@@ -112,7 +125,7 @@ func (w *webcamUsageWorker) Start(ctx context.Context) (<-chan models.Entity, er
 	go func() {
 		for event := range w.inMonitor.Run(ctx) {
 			w.parseInotifyEvent(event)
-			w.emitIfChanged(ctx, outCh)
+			w.scheduleEmit()
 		}
 	}()
 
@@ -128,16 +141,51 @@ func (w *webcamUsageWorker) IsDisabled() bool {
 func (w *webcamUsageWorker) currentInUse() bool {
 	// Match microphone: only treat PipeWire "running" as in use. "idle" is
 	// common for unused camera nodes and caused false positives / flapping.
-	return w.sources.AnyIn(pipewire.StateRunning) || w.devices.any()
+	pwInUse := w.sources != nil && w.sources.AnyIn(pipewire.StateRunning)
+	return pwInUse || w.devices.any()
 }
 
-// emitIfChanged sends a sensor update only when the aggregated in-use state
-// changes. Duplicate events with the same boolean are dropped so Home Assistant
-// is not spammed with unchanged webhook updates.
-func (w *webcamUsageWorker) emitIfChanged(ctx context.Context, outCh chan<- models.Entity) {
+// scheduleEmit records the latest aggregated state and (re)starts a debounce
+// timer. Brief probe open/close pairs settle before the timer fires and are
+// never sent to Home Assistant.
+func (w *webcamUsageWorker) scheduleEmit() {
+	inUse := w.currentInUse()
+
+	w.debounceMu.Lock()
+	defer w.debounceMu.Unlock()
+
+	pending := inUse
+	w.pending = &pending
+	if w.timer == nil {
+		w.timer = time.AfterFunc(webcamStateDebounce, w.flushDebounced)
+		return
+	}
+	w.timer.Reset(webcamStateDebounce)
+}
+
+func (w *webcamUsageWorker) flushDebounced() {
+	w.debounceMu.Lock()
+	pending := w.pending
+	outCh := w.outCh
+	ctx := w.emitCtx
+	w.debounceMu.Unlock()
+
+	if pending == nil || outCh == nil || ctx == nil {
+		return
+	}
+	// Re-sample after the quiet period so we emit the live state, not a
+	// stale intermediate value from the start of the burst.
 	inUse := w.currentInUse()
 
 	w.lastSentMu.Lock()
+	if w.lastSent == nil && !inUse {
+		// Default/idle with no prior send: remember idle without a webhook.
+		// Brief probe bursts that settle idle must not spam Home Assistant.
+		idle := false
+		w.lastSent = &idle
+		w.lastSentMu.Unlock()
+		return
+	}
 	if w.lastSent != nil && *w.lastSent == inUse {
 		w.lastSentMu.Unlock()
 		return
@@ -146,14 +194,18 @@ func (w *webcamUsageWorker) emitIfChanged(ctx context.Context, outCh chan<- mode
 	w.lastSent = &last
 	w.lastSentMu.Unlock()
 
-	outCh <- models.NewSensor(ctx,
+	select {
+	case <-ctx.Done():
+		return
+	case outCh <- models.NewSensor(ctx,
 		models.WithName("Webcam In Use"),
 		models.WithID("webcam_in_use"),
 		models.AsTypeBinarySensor(),
 		models.WithIcon(webcamUseIcon(inUse)),
 		models.WithState(inUse),
 		models.WithDataSourceAttribute(linux.DataSrcSysFS),
-	)
+	):
+	}
 }
 
 func (w *webcamUsageWorker) parseInotifyEvent(event webcam.Event) {

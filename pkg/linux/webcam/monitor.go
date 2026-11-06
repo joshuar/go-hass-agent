@@ -364,6 +364,7 @@ func (m *Monitor) watchDevices(ctx context.Context, devices []string, devDir str
 						slogctx.FromCtx(ctx).Debug("Device removed.",
 							slog.String("device", devPath),
 						)
+						InvalidateCaptureCache(devPath)
 						m.setCount(devPath, 0)
 					}
 					continue
@@ -397,16 +398,22 @@ func GetVideoDevices() ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get video device matches: %w", err)
 	}
-	// Filter to only character devices
+	// Filter to character devices that actually capture video. UVC cameras
+	// expose a sibling metadata node (often /dev/video1) that is frequently
+	// probed by PipeWire/portals; watching it creates false in-use flaps.
 	var out []string
 	for match := range slices.Values(matches) {
 		fi, err := os.Stat(match)
 		if err != nil {
 			continue
 		}
-		if fi.Mode()&os.ModeCharDevice != 0 {
-			out = append(out, match)
+		if fi.Mode()&os.ModeCharDevice == 0 {
+			continue
 		}
+		if !IsVideoCaptureDevice(match) {
+			continue
+		}
+		out = append(out, match)
 	}
 	return out, nil
 }
