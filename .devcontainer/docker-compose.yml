@@ -25,7 +25,6 @@ services:
       - go-hass-agent-golangci-lint-cache:/home/vscode/.cache/golangci-lint
       - go-hass-agent-npm-build-cache:/home/vscode/.cache/npm
       - go-hass-agent-npm-global:/home/vscode/.npm-global
-      - go-hass-agent-gcloud:/home/vscode/.config/gcloud
       - go-hass-agent-tmp-build:/workspace/tmp
     user: vscode
     cap_add:
