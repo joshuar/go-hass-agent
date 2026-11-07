@@ -81,11 +81,23 @@ func (c *darwinMQTTWorker) Msgs() chan mqttapi.Msg {
 	return c.msgs
 }
 
+// States returns the current state messages for all controls that have a
+// state.
+func (c *darwinMQTTWorker) States() []*mqttapi.Msg {
+	states := make([]*mqttapi.Msg, 0, len(c.switches)+len(c.numbers))
+
+	states = appendStates(c.logger, states, c.switches)
+	states = appendStates(c.logger, states, c.numbers)
+
+	return states
+}
+
 func (c *darwinMQTTWorker) Start(_ context.Context) (*mqtt.WorkerData, error) {
 	return &mqtt.WorkerData{
 		Configs:       c.Configs(),
 		Subscriptions: c.Subscriptions(),
 		Msgs:          c.Msgs(),
+		States:        c.States,
 	}, nil
 }
 

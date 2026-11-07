@@ -185,6 +185,7 @@ func (m *Manager) StartMQTTWorkers(ctx context.Context, workers ...MQTTWorker) *
 
 	data := &mqtt.WorkerData{}
 	msgCh := make([]<-chan models.MQTTMsg, 0, len(workers))
+	stateFuncs := make([]func() []*models.MQTTMsg, 0, len(workers))
 
 	for worker := range slices.Values(workers) {
 		if worker.IsDisabled() {
@@ -209,6 +210,10 @@ func (m *Manager) StartMQTTWorkers(ctx context.Context, workers ...MQTTWorker) *
 		if workerData.Msgs != nil {
 			msgCh = append(msgCh, workerData.Msgs)
 		}
+		// Add MQTT worker states, if provided.
+		if workerData.States != nil {
+			stateFuncs = append(stateFuncs, workerData.States)
+		}
 		go func() {
 			defer cancelFunc()
 			<-ctx.Done()
@@ -216,6 +221,17 @@ func (m *Manager) StartMQTTWorkers(ctx context.Context, workers ...MQTTWorker) *
 	}
 	// Merge all worker message channels.
 	data.Msgs = MergeCh(ctx, msgCh...)
+	// Combine all worker states.
+	if len(stateFuncs) > 0 {
+		data.States = func() []*models.MQTTMsg {
+			var states []*models.MQTTMsg
+			for stateFunc := range slices.Values(stateFuncs) {
+				states = append(states, stateFunc()...)
+			}
+
+			return states
+		}
+	}
 
 	return data
 }
