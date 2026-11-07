@@ -91,6 +91,7 @@
   - [🔄 Subsequent runs and running automatically](#-subsequent-runs-and-running-automatically)
     - [On a desktop using autostart functionality](#on-a-desktop-using-autostart-functionality)
     - [On a server using systemd](#on-a-server-using-systemd)
+    - [On a headless server as a dedicated unprivileged user](#on-a-headless-server-as-a-dedicated-unprivileged-user)
   - [🐳 Running in a container](#-running-in-a-container)
   - [🔧 Alternative System Mount Points](#-alternative-system-mount-points)
   - [🔧 Web server configuration Options](#-web-server-configuration-options)
@@ -313,6 +314,14 @@ app or number of apps changes.
 - **CPU Core Frequency** (in Hz). Per-core. Updated ~every 10 seconds. Via ProcFS.
   - Attributes include current driver and governor in use.
   - [_Preferences_](#️-preferences): `[sensors.cpu.frequencies]`.
+- **CPU Power** (in W), per RAPL domain the CPU provides (for example the whole package, the cores, the integrated GPU
+  and the memory controller). Updated ~every 10 seconds. Via SysFS (`/sys/class/powercap`).
+  - Power is worked out from the change in each domain's cumulative energy counter. It is the power the CPU reports for
+    itself, not the power drawn by the whole machine.
+  - The kernel only lets root read the energy counters (the fix for the PLATYPUS side channel, CVE-2020-8694). Run as an
+    unprivileged user, the agent logs a warning once and creates no CPU power sensors. Granting read access to the
+    counters is a decision for the machine's owner.
+  - [_Preferences_](#️-preferences): `[sensors.cpu.power]`.
 
 ##### Power State Monitoring
 
@@ -614,6 +623,124 @@ should start with every boot.
 
 For other init systems, consult their documentation on how to enable and run
 user services.
+
+#### On a headless server as a dedicated unprivileged user
+
+On a server you can run the agent as its own system account that can do very little, and give it a Home Assistant user
+that can do very little too. This is what the steps below set up. They were run on Debian 13 and are not specific to it.
+
+**1. A limited user in Home Assistant**
+
+1. In Home Assistant, go to _Settings_, _People_, _Users_ and add a user for the agent (for example `go-hass-agent`).
+   Leave _Administrator_ off and turn on _Can only log in from the local network_.
+2. Sign in as that user once, open the profile, _Security_, and create a long-lived access token. Home Assistant has no
+   token that never expires, so choose a long lifespan and put the expiry in your calendar.
+3. Sign out. Anyone holding the token can act as this user, so a non-administrator user keeps a leaked token from
+   becoming administrator access to Home Assistant. The agent registers as a Mobile App device, which does not need
+   administrator rights.
+
+**2. A dedicated account on the server**
+
+```shell
+sudo useradd --system --user-group --home-dir /var/lib/go-hass-agent --create-home --shell /usr/sbin/nologin go-hass-agent
+```
+
+The account has no login shell and no password. The agent keeps its configuration and the token in
+`/var/lib/go-hass-agent/.config/go-hass-agent/preferences.toml`, which is created with mode 600.
+
+**3. Give it only the access the sensors need**
+
+- Nvidia GPU sensors need nothing extra. Any user can run `nvidia-smi`.
+- CPU power sensors need read access to the RAPL energy counters, which the kernel limits to root. Create a group for
+  that one purpose and let only the agent's account in:
+
+  ```shell
+  sudo groupadd -f rapl-read
+  sudo usermod -aG rapl-read go-hass-agent
+  ```
+
+  Counter permissions reset at every boot, so make `systemd-tmpfiles` set them. Create `/etc/tmpfiles.d/rapl-energy.conf`
+  containing:
+
+  ```ini
+  z /sys/class/powercap/intel-rapl:*/energy_uj 0440 root rapl-read - -
+  z /sys/class/powercap/intel-rapl:*:*/energy_uj 0440 root rapl-read - -
+  ```
+
+  and apply it now with `sudo systemd-tmpfiles --create /etc/tmpfiles.d/rapl-energy.conf`. This loosens the protection
+  added for the [PLATYPUS](https://access.redhat.com/security/cve/CVE-2020-8694) side channel for that one account only,
+  so decide whether that suits your machine. Check it with
+  `sudo -u go-hass-agent head -c1 /sys/class/powercap/intel-rapl:0/energy_uj`.
+- Not granted by default: SMART status and the desktop, audio and session D-Bus workers. The desktop workers need a
+  desktop session. On a headless server the agent logs that these workers could not start and carries on. SMART status
+  can be switched on as an option, with real risks: see the next section.
+
+**Optional: drive SMART status (read the risks first)**
+
+The SMART worker adds a problem sensor per drive, with the drive's key attributes (pending and reallocated sectors,
+uncorrectable errors, power cycles, temperature). The agent checks its capabilities at start-up, and on the machine
+above it reported the missing ones one at a time. It needs all of these: `CAP_SYS_RAWIO`, `CAP_SYS_ADMIN`, `CAP_MKNOD`
+and `CAP_DAC_OVERRIDE`.
+
+Together that is close to root. `CAP_SYS_ADMIN` covers mounting, namespaces and many device operations, and
+`CAP_DAC_OVERRIDE` bypasses file permission checks, so a compromised or buggy agent could read almost any file the
+`ProtectSystem` and `ProtectHome` settings leave visible and could use raw device access. Only enable it if you accept
+that. The base unit above is deliberately left without these, so the option is a separate systemd drop-in that you can
+add and remove on its own:
+
+```ini
+# /etc/systemd/system/go-hass-agent.service.d/smart.conf
+[Service]
+AmbientCapabilities=CAP_SYS_RAWIO CAP_SYS_ADMIN CAP_MKNOD CAP_DAC_OVERRIDE
+CapabilityBoundingSet=CAP_SYS_RAWIO CAP_SYS_ADMIN CAP_MKNOD CAP_DAC_OVERRIDE
+```
+
+Run `sudo systemctl daemon-reload && sudo systemctl restart go-hass-agent`. The `smart_status` warning should be gone
+from `journalctl -u go-hass-agent`. To turn it off, delete the drop-in and reload and restart again. Keep `NoNewPrivileges`
+and the other restrictions in the base unit, and do not add the account to the `disk` group as well, since the capability
+already covers it. A drive that the SMART data marks as having a problem (for example a non-zero pending sector count)
+shows as "on" in Home Assistant, which can be a real fault or a transient firmware value, so check the attributes.
+
+**4. Register and run it as a system service**
+
+Register as the new account, passing the token from step 1 (read it from a file or prompt rather than typing it into
+shell history):
+
+```shell
+sudo -u go-hass-agent env HOME=/var/lib/go-hass-agent go-hass-agent register --server http://homeassistant.local:8123 --token "$TOKEN"
+```
+
+Then create `/etc/systemd/system/go-hass-agent.service`. A system service needs no lingering, and the unit limits what
+the process can touch:
+
+```ini
+[Unit]
+Description=Go Hass Agent
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=go-hass-agent
+Environment=HOME=/var/lib/go-hass-agent
+ExecStart=/usr/local/bin/go-hass-agent run
+Restart=on-failure
+RestartSec=10
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ReadWritePaths=/var/lib/go-hass-agent
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Enable it with `sudo systemctl daemon-reload && sudo systemctl enable --now go-hass-agent` and watch
+`journalctl -u go-hass-agent` for the expected warnings about workers that need a desktop. A line saying the RAPL
+counters are not readable means step 3 has not taken effect.
+
+To renew the token, create a new one, run `register` again as the account, restart the service and delete the old
+token and any duplicate device in Home Assistant.
 
 [⬆️ Back to Top](#-table-of-contents)
 

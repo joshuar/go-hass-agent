@@ -24,3 +24,10 @@ type UsagePrefs struct {
 
 	UpdateInterval string `toml:"update_interval"`
 }
+
+// RAPLPrefs are the preferences for the CPU power (RAPL) worker.
+type RAPLPrefs struct {
+	workers.CommonWorkerPrefs `toml:",squash"`
+
+	UpdateInterval string `toml:"update_interval"`
+}
