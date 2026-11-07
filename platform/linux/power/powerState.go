@@ -43,6 +43,7 @@ func newPowerState(ctx context.Context, name powerSignal, value any) models.Enti
 		models.WithDataSourceAttribute(linux.DataSrcDBus),
 		models.WithAttribute("options", []string{"Powered On", "Powered Off", "Suspended"}),
 		models.AsRetryableRequest(true),
+		models.AsBuffered(true),
 	)
 }
 

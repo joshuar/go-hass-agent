@@ -215,6 +215,12 @@ components:
                 sending this sensor data to Home Assistant.
               type: boolean
               x-go-json-ignore: true
+            buffered:
+              description: >
+                indicates whether a failed update or registration for this
+                sensor should be kept and resent once Home Assistant is
+                reachable again, instead of being dropped.
+              type: boolean
     Entity:
       description: is any valid Home Assistant Entity type.
       oneOf:
