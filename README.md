@@ -61,6 +61,7 @@
       - [Webcam and Microphone In Use](#webcam-and-microphone-in-use)
       - [Battery Details](#battery-details)
       - [Memory Stats](#memory-stats)
+      - [GPU Stats (Nvidia)](#gpu-stats-nvidia)
       - [Disk Usage and Activity Monitoring](#disk-usage-and-activity-monitoring)
       - [Disk SMART Monitoring](#disk-smart-monitoring)
       - [Network Connection and Activity Monitoring](#network-connection-and-activity-monitoring)
@@ -256,6 +257,20 @@ app or number of apps changes.
 - If swap is enabled, there will be similar sensors for swap.
 - Sourced via ProcFS. Updated ~every minute.
 - [_Preferences_](#️-preferences): `[sensors.memory.usage]`.
+
+##### GPU Stats (Nvidia)
+
+- For each Nvidia GPU, sensors for:
+  - **Power** (board power draw, in W). Instantaneous when the driver supports it, otherwise averaged over one second.
+  - **Temperature** (in °C).
+  - **Utilization** (in %).
+  - **Memory Used** and **Memory Total** (in MiB).
+  - **Fan Speed** (in %), where the card reports one.
+  - **Graphics Clock** (in MHz).
+- Attributes include the GPU name and UUID. Values a card does not report are skipped.
+- Sourced by running `nvidia-smi` (installed with the Nvidia driver). Updated ~every 10 seconds. The worker is disabled
+  automatically when `nvidia-smi` is not found.
+- [_Preferences_](#️-preferences): `[sensors.gpu.nvidia]`.
 
 ##### Disk Usage and Activity Monitoring
 

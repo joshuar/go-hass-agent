@@ -16,6 +16,7 @@ import (
 	"github.com/joshuar/go-hass-agent/platform/linux/cpu"
 	"github.com/joshuar/go-hass-agent/platform/linux/desktop"
 	"github.com/joshuar/go-hass-agent/platform/linux/disk"
+	"github.com/joshuar/go-hass-agent/platform/linux/gpu"
 	"github.com/joshuar/go-hass-agent/platform/linux/location"
 	"github.com/joshuar/go-hass-agent/platform/linux/media"
 	"github.com/joshuar/go-hass-agent/platform/linux/mem"
@@ -35,6 +36,7 @@ var linuxWorkers = []func(ctx context.Context) (workers.EntityWorker, error){
 	cpu.NewRAPLWorker,
 	desktop.NewAppStateWorker,
 	desktop.NewDesktopWorker,
+	gpu.NewNvidiaWorker,
 	location.NewLocationWorker,
 	media.NewMicUsageWorker,
 	media.NewWebcamUsageWorker,
