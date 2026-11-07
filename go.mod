@@ -11,16 +11,17 @@ require (
 	github.com/fatih/color v1.19.0
 	github.com/gen2brain/beeep v0.11.3
 	github.com/go-chi/chi/v5 v5.5.0
-	github.com/go-playground/form/v4 v4.5.0
+	github.com/go-playground/form/v4 v4.5.1
 	github.com/go-playground/validator/v10 v10.30.6
 	github.com/go-resty/resty/v2 v2.17.2
 	github.com/go-test/deep v1.1.2
 	github.com/godbus/dbus/v5 v5.2.4
+	github.com/goforj/godump v1.10.0
 	github.com/gofrs/uuid/v5 v5.5.1
 	github.com/grandcat/zeroconf v1.0.0
 	github.com/holoplot/go-evdev v0.0.0-20260909133534-d873ed210bda
 	github.com/iancoleman/strcase v0.3.0
-	github.com/jaypipes/ghw v0.26.0
+	github.com/jaypipes/ghw v0.27.0
 	github.com/joshuar/go-hass-anything/v12 v12.1.0
 	github.com/jsimonetti/rtnetlink v1.4.2
 	github.com/justinas/alice v1.2.0
@@ -129,7 +130,7 @@ require (
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
 	github.com/klauspost/pgzip v1.2.7 // indirect
 	github.com/knadh/koanf/maps v0.1.2 // indirect
-	github.com/kojah/gohawk v0.7.0 // indirect
+	github.com/kojah/gohawk v0.7.2 // indirect
 	github.com/leodido/go-urn v1.5.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.4.0 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
@@ -148,7 +149,7 @@ require (
 	github.com/muesli/roff v0.1.0 // indirect
 	github.com/natefinch/atomic v1.0.1 // indirect
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646 // indirect
-	github.com/oapi-codegen/oapi-codegen/v2 v2.8.1 // indirect
+	github.com/oapi-codegen/oapi-codegen/v2 v2.8.2 // indirect
 	github.com/oasdiff/yaml v0.1.1 // indirect
 	github.com/oasdiff/yaml3 v0.0.14 // indirect
 	github.com/pb33f/ordered-map/v2 v2.3.1 // indirect
