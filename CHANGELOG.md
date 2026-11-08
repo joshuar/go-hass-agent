@@ -1,5 +1,25 @@
 # Changelog
 
+## [14.19.0](https://github.com/joshuar/go-hass-agent/compare/v14.18.0...v14.19.0) (2026-11-08)
+
+
+### Features
+
+* **linux:** add CPU power sensors from RAPL ([1540b55](https://github.com/joshuar/go-hass-agent/commit/1540b55b790b8bdcf041fed4747ea30f6032ba3a))
+* **linux:** add CPU power sensors from RAPL. thanks [@opticon454](https://github.com/opticon454)! ([71b5475](https://github.com/joshuar/go-hass-agent/commit/71b547576631901635829973e12388a93c10341f))
+* **linux:** add Nvidia GPU sensors ([4b26028](https://github.com/joshuar/go-hass-agent/commit/4b260286315890f92c5b15e9bce7714f74ce5d1f))
+* **linux:** add Nvidia GPU sensors. thanks [@opticon454](https://github.com/opticon454)! ([1090037](https://github.com/joshuar/go-hass-agent/commit/109003791229c5d9dc230fbdcc583fc356afee8f))
+
+
+### Bug Fixes
+
+* **hass:** only buffer failed updates for sensors that opt in ([027a2e1](https://github.com/joshuar/go-hass-agent/commit/027a2e1599565afaa929ae254879db89d7151364))
+* **hass:** retry failed sensor updates instead of dropping them. thanks [@theluckystrike](https://github.com/theluckystrike)! ([520a922](https://github.com/joshuar/go-hass-agent/commit/520a922498f079ae22f53cdf9e9d7c80a887748f))
+* **linux/media:** 🐛 stop busy looping when pw-dump exits ([cebdd03](https://github.com/joshuar/go-hass-agent/commit/cebdd030180867ec2b28a5c3818c202c84158a50))
+* **linux/media:** 🐛 stop busy looping when pw-dump exits thanks @ThePsyjo! ([4f77f11](https://github.com/joshuar/go-hass-agent/commit/4f77f1166c3541a6af8d42fe2a5fe98bbd5bdd1f))
+* **mqtt:** 🐛 republish entity states when Home Assistant comes online ([b87c2f9](https://github.com/joshuar/go-hass-agent/commit/b87c2f9d86d04eb3482b8ea74c9eafebb34234b1))
+* **mqtt:** 🐛 republish entity states when Home Assistant comes online. thanks @ThePsyjo! ([a8af2a1](https://github.com/joshuar/go-hass-agent/commit/a8af2a14205f17a95ee244df585e8873114b5aeb))
+
 ## [14.18.0](https://github.com/joshuar/go-hass-agent/compare/v14.17.0...v14.18.0) (2026-10-25)
 
 
