@@ -93,7 +93,7 @@ jobs:
           fail_ci_if_error: false
 
   test-macos:
-    runs-on: macos-14
+    runs-on: macos-15
 
     steps:
       - name: Harden Runner
