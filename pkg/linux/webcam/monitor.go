@@ -364,6 +364,7 @@ func (m *Monitor) watchDevices(ctx context.Context, devices []string, devDir str
 						slogctx.FromCtx(ctx).Debug("Device removed.",
 							slog.String("device", devPath),
 						)
+						InvalidateCaptureCache(devPath)
 						m.setCount(devPath, 0)
 					}
 					continue
@@ -390,20 +391,29 @@ func (m *Monitor) watchDevices(ctx context.Context, devices []string, devDir str
 
 // GetVideoDevices returns the set of /dev/video* paths on the system.
 func GetVideoDevices() ([]string, error) {
-	matches, err := filepath.Glob(DeviceWatchPath + "/*")
+	// Only match video device nodes. Globbing all of /dev would watch every
+	// character device and emit false ACTIVE/IDLE webcam events whenever an
+	// unrelated device (e.g. /dev/null, /dev/urandom) is opened or closed.
+	matches, err := filepath.Glob(filepath.Join(DeviceWatchPath, "video*"))
 	if err != nil {
 		return nil, fmt.Errorf("get video device matches: %w", err)
 	}
-	// Filter to only character devices
+	// Filter to character devices that actually capture video. UVC cameras
+	// expose a sibling metadata node (often /dev/video1) that is frequently
+	// probed by PipeWire/portals; watching it creates false in-use flaps.
 	var out []string
 	for match := range slices.Values(matches) {
 		fi, err := os.Stat(match)
 		if err != nil {
 			continue
 		}
-		if fi.Mode()&os.ModeCharDevice != 0 {
-			out = append(out, match)
+		if fi.Mode()&os.ModeCharDevice == 0 {
+			continue
 		}
+		if !IsVideoCaptureDevice(match) {
+			continue
+		}
+		out = append(out, match)
 	}
 	return out, nil
 }
