@@ -56,25 +56,32 @@ func Start(ctx context.Context, data *WorkerData) error {
 	// which might not happen for a long time. Listen for Home Assistant coming
 	// online so that the current states can be republished.
 	haOnline := make(chan struct{}, 1)
+	// requestRepublish signals that states should be republished. It doesn't
+	// block the MQTT client; a pending republish covers this one too.
+	requestRepublish := func() {
+		select {
+		case haOnline <- struct{}{}:
+		default:
+		}
+	}
+	var clientOpts []mqttapi.ClientOption
 	if data.States != nil {
 		data.Subscriptions = append(data.Subscriptions, &models.MQTTSubscription{
 			Topic: mqttcfg.TopicPrefix() + "/status",
 			Callback: func(p *paho.Publish) {
-				if string(p.Payload) != haStatusOnline {
-					return
-				}
-				// Don't block the MQTT client; a pending republish covers
-				// this one too.
-				select {
-				case haOnline <- struct{}{}:
-				default:
+				if string(p.Payload) == haStatusOnline {
+					requestRepublish()
 				}
 			},
 		})
+		// After a reconnect the client republishes the configs, but Home
+		// Assistant may also have missed state changes or restarted while
+		// disconnected (e.g., while suspended), so republish states too.
+		clientOpts = append(clientOpts, mqttapi.WithOnReconnect(requestRepublish))
 	}
 	// Create a new connection to the MQTT broker, publish subscriptions and
 	// configs.
-	client, err := mqttapi.NewClient(ctx, &mqttcfg, data.Subscriptions, data.Configs)
+	client, err := mqttapi.NewClient(ctx, &mqttcfg, data.Subscriptions, data.Configs, clientOpts...)
 	if err != nil {
 		return fmt.Errorf("could not start MQTT client: %w", err)
 	}
