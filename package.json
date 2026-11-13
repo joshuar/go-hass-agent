@@ -2,20 +2,20 @@
   "browserslist": "> 0.5%, last 2 versions, not dead",
   "dependencies": {
     "daisyui": "^5.7.50",
-    "htmx.org": "^4.0.0",
+    "htmx.org": "^4.0.1",
     "hyperscript.org": "^0.9.94",
-    "tailwindcss": "^4.3.3"
+    "tailwindcss": "^4.3.5"
   },
   "description": " A Home Assistant, native app for desktop/laptop devices.",
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@prettier/plugin-xml": "^3.4.2",
-    "@tailwindcss/cli": "^4.3.3",
+    "@tailwindcss/cli": "^4.3.5",
     "@tailwindcss/typography": "^0.5.20",
     "esbuild": "^0.28.1",
     "eslint": "^10.14.0",
     "eslint-config-prettier": "^10.1.8",
-    "globals": "^17.13.0",
+    "globals": "^17.14.0",
     "prettier": "^3.9.10",
     "prettier-plugin-tailwindcss": "^0.8.1",
     "prettier-plugin-toml": "^4.1.0"
