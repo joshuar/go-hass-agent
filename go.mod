@@ -16,7 +16,6 @@ require (
 	github.com/go-resty/resty/v2 v2.17.2
 	github.com/go-test/deep v1.1.2
 	github.com/godbus/dbus/v5 v5.2.4
-	github.com/goforj/godump v1.10.0
 	github.com/gofrs/uuid/v5 v5.5.1
 	github.com/grandcat/zeroconf v1.0.0
 	github.com/holoplot/go-evdev v0.0.0-20260909133534-d873ed210bda
@@ -101,7 +100,7 @@ require (
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
 	github.com/go-git/go-billy/v5 v5.9.0 // indirect
 	github.com/go-git/go-git/v5 v5.19.2 // indirect
-	github.com/go-logr/logr v1.4.3 // indirect
+	github.com/go-logr/logr v1.4.4 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/go-openapi/jsonpointer v0.23.1 // indirect
 	github.com/go-openapi/swag/jsonname v0.26.0 // indirect
@@ -185,8 +184,8 @@ require (
 	go.digitalxero.dev/go-msix v1.0.1 // indirect
 	go.digitalxero.dev/rpm v0.3.4 // indirect
 	go.mozilla.org/pkcs7 v0.9.0 // indirect
-	go.opentelemetry.io/otel v1.43.0 // indirect
-	go.opentelemetry.io/otel/trace v1.43.0 // indirect
+	go.opentelemetry.io/otel v1.47.0 // indirect
+	go.opentelemetry.io/otel/trace v1.47.0 // indirect
 	go.uber.org/nilaway v0.0.0-20260918162853-acb8859b9031 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	go.yaml.in/yaml/v4 v4.0.0-rc.6 // indirect
