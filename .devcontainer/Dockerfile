@@ -4,12 +4,12 @@
 # https://hub.docker.com/r/golangci/golangci-lint
 FROM docker.io/golangci/golangci-lint:v2.15.0-alpine@sha256:fb5d87d8e469f583363e2547f04e0b0d87f534dfa4617634730b0bd06e53aac5 AS golangci-lint
 # https://hub.docker.com/_/golang
-FROM docker.io/golang:1.27.3-alpine3.24@sha256:cd410a5c6686417875bc4815688e96ae9769f8562debc545d29fe58e73d174f0
+FROM docker.io/golang:1.27.4-alpine3.24@sha256:ea30e25680a5470bac02b08bb0e0a735fb75bd0ab7d431b9b95ee0abef362586
 
 COPY --from=golangci-lint /usr/bin/golangci-lint /usr/local/bin/golangci-lint-v2
 
 # https://github.com/JanDeDobbeleer/oh-my-posh/releases
-ARG OMP_VERSION=v31.9.1
+ARG OMP_VERSION=v33.4.1
 # Used for selecting package binaries for install.
 ARG TARGETARCH
 # Used for installing additional packages.
